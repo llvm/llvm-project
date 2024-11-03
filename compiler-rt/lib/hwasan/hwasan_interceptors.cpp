@@ -220,6 +220,10 @@ INTERCEPTOR(void, longjmp, __hw_jmp_buf env, int val) {
 namespace __hwasan {
 
 int OnExit() {
+  if (CAN_SANITIZE_LEAKS && common_flags()->detect_leaks &&
+      __lsan::HasReportedLeaks()) {
+    return common_flags()->exitcode;
+  }
   // FIXME: ask frontend whether we need to return failure.
   return 0;
 }

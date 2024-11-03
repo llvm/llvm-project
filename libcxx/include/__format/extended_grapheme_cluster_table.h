@@ -111,7 +111,7 @@ enum class __property : uint8_t {
 /// - https://www.unicode.org/Public/UCD/latest/ucd/emoji/emoji-data.txt
 ///
 /// The data has 3 values
-/// - bits [0, 3] The property. One of the values generated form the datafiles
+/// - bits [0, 3] The property. One of the values generated from the datafiles
 ///   of \ref __property
 /// - bits [4, 10] The size of the range.
 /// - bits [11, 31] The lower bound code point of the range. The upper bound of

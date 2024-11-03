@@ -13,9 +13,7 @@
 #include "../utils/IncludeInserter.h"
 #include "LoopConvertUtils.h"
 
-namespace clang {
-namespace tidy {
-namespace modernize {
+namespace clang::tidy::modernize {
 
 class LoopConvertCheck : public ClangTidyCheck {
 public:
@@ -85,8 +83,6 @@ private:
   std::string ReverseHeader;
 };
 
-} // namespace modernize
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::modernize
 
 #endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MODERNIZE_LOOP_CONVERT_H

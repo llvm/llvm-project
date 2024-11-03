@@ -619,7 +619,7 @@ public:
   uint8_t getBytesInAddress() const override;
   StringRef getFileFormatName() const override;
   Triple::ArchType getArch() const override;
-  SubtargetFeatures getFeatures() const override;
+  Expected<SubtargetFeatures> getFeatures() const override;
   Expected<uint64_t> getStartAddress() const override;
   StringRef mapDebugSectionName(StringRef Name) const override;
   bool isRelocatableObject() const override;

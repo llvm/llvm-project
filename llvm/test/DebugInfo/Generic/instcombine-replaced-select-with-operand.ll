@@ -1,4 +1,4 @@
-; RUN: opt -passes=instcombine -S %s | FileCheck %s
+; RUN: opt -opaque-pointers=0 -passes=instcombine -S %s | FileCheck %s
 
 ;; Ensure that debug uses of a select are replaced when the select is replaced
 ;; with one of its operands in InstCombine's replacedSelectWithOperand.

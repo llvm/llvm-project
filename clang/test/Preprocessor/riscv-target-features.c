@@ -41,10 +41,12 @@
 // CHECK-NOT: __riscv_zicbom
 // CHECK-NOT: __riscv_zicboz
 // CHECK-NOT: __riscv_svnapot
+// CHECK-NOT: __riscv_svpbmt
 // CHECK-NOT: __riscv_svinval
 // CHECK-NOT: __riscv_xventanacondops
 // CHECK-NOT: __riscv_zcd
 // CHECK-NOT: __riscv_zcf
+// CHECK-NOT: __riscv_h
 
 // RUN: %clang -target riscv32-unknown-linux-gnu -march=rv32im -x c -E -dM %s \
 // RUN: -o - | FileCheck --check-prefix=CHECK-M-EXT %s
@@ -436,15 +438,31 @@
 // RUN: -o - | FileCheck --check-prefix=CHECK-SVNAPOT-EXT %s
 // CHECK-SVNAPOT-EXT: __riscv_svnapot 1000000{{$}}
 
+// RUN: %clang -target riscv32 -march=rv32isvpbmt -x c -E -dM %s \
+// RUN: -o - | FileCheck --check-prefix=CHECK-SVPBMT-EXT %s
+// RUN: %clang -target riscv64 -march=rv64isvpbmt -x c -E -dM %s \
+// RUN: -o - | FileCheck --check-prefix=CHECK-SVPBMT-EXT %s
+// CHECK-SVPBMT-EXT: __riscv_svpbmt 1000000{{$}}
+
 // RUN: %clang -target riscv32 -march=rv32isvinval -x c -E -dM %s \
 // RUN: -o - | FileCheck --check-prefix=CHECK-SVINVAL-EXT %s
 // RUN: %clang -target riscv64 -march=rv64isvinval -x c -E -dM %s \
 // RUN: -o - | FileCheck --check-prefix=CHECK-SVINVAL-EXT %s
 // CHECK-SVINVAL-EXT: __riscv_svinval 1000000{{$}}
 
+// RUN: %clang -target riscv32 -march=rv32ih -x c -E -dM %s \
+// RUN: -o - | FileCheck --check-prefix=CHECK-H-EXT %s
+// RUN: %clang -target riscv64 -march=rv64ih -x c -E -dM %s \
+// RUN: -o - | FileCheck --check-prefix=CHECK-H-EXT %s
+// CHECK-H-EXT: __riscv_h 1000000{{$}}
+
 // RUN: %clang -target riscv64 -march=rv64ixventanacondops -x c -E -dM %s \
 // RUN: -o - | FileCheck --check-prefix=CHECK-XVENTANACONDOPS-EXT %s
 // CHECK-XVENTANACONDOPS-EXT: __riscv_xventanacondops 1000000{{$}}
+
+// RUN: %clang -target riscv64 -march=rv64ixtheadvdot -x c -E -dM %s \
+// RUN: -o - | FileCheck --check-prefix=CHECK-XTHEADVDOT-EXT %s
+// CHECK-XTHEADVDOT-EXT: __riscv_xtheadvdot 1000000{{$}}
 
 // RUN: %clang -target riscv32 -march=rv32izcd0p70 -menable-experimental-extensions \
 // RUN: -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-ZCD-EXT %s

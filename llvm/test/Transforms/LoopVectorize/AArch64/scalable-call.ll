@@ -33,7 +33,7 @@ for.end:                                 ; preds = %for.body, %entry
 define void @vec_scalar(i64 %N, ptr nocapture %a) {
 ; CHECK-LABEL: @vec_scalar
 ; CHECK: vector.body:
-; CHECK: call <vscale x 2 x double> @foo_vec(<vscale x 2 x double> shufflevector (<vscale x 2 x double> insertelement (<vscale x 2 x double> poison, double 1.000000e+01, i32 0), <vscale x 2 x double> poison, <vscale x 2 x i32> zeroinitializer))
+; CHECK: call <vscale x 2 x double> @foo_vec(<vscale x 2 x double> shufflevector (<vscale x 2 x double> insertelement (<vscale x 2 x double> poison, double 1.000000e+01, i64 0), <vscale x 2 x double> poison, <vscale x 2 x i32> zeroinitializer))
 entry:
   %cmp7 = icmp sgt i64 %N, 0
   br i1 %cmp7, label %for.body, label %for.end

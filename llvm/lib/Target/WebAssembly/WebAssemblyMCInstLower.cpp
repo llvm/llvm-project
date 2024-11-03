@@ -194,7 +194,7 @@ void WebAssemblyMCInstLower::lower(const MachineInstr *MI,
     case MachineOperand::MO_Immediate: {
       unsigned DescIndex = I - NumVariadicDefs;
       if (DescIndex < Desc.NumOperands) {
-        const MCOperandInfo &Info = Desc.OpInfo[DescIndex];
+        const MCOperandInfo &Info = Desc.operands()[DescIndex];
         if (Info.OperandType == WebAssembly::OPERAND_TYPEINDEX) {
           SmallVector<wasm::ValType, 4> Returns;
           SmallVector<wasm::ValType, 4> Params;

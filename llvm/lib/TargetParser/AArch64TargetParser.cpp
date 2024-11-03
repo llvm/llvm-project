@@ -25,131 +25,95 @@ static unsigned checkArchVersion(llvm::StringRef Arch) {
   return 0;
 }
 
-uint64_t AArch64::getDefaultExtensions(StringRef CPU, AArch64::ArchKind AK) {
+uint64_t AArch64::getDefaultExtensions(StringRef CPU,
+                                       const AArch64::ArchInfo &AI) {
   if (CPU == "generic")
-    return AArch64ARCHNames[static_cast<unsigned>(AK)].ArchBaseExtensions;
+    return AI.DefaultExts;
 
-  return StringSwitch<uint64_t>(CPU)
-#define AARCH64_CPU_NAME(NAME, ID, DEFAULT_EXT)                                \
-  .Case(NAME, AArch64ARCHNames[static_cast<unsigned>(ArchKind::ID)]            \
-                      .ArchBaseExtensions |                                    \
-                  DEFAULT_EXT)
-#include "../../include/llvm/TargetParser/AArch64TargetParser.def"
-      .Default(AArch64::AEK_INVALID);
+  // Note: this now takes cpu aliases into account
+  const CpuInfo &Cpu = parseCpu(CPU);
+  return Cpu.Arch.DefaultExts | Cpu.DefaultExtensions;
 }
 
 void AArch64::getFeatureOption(StringRef Name, std::string &Feature) {
-  Feature = llvm::StringSwitch<std::string>(Name.substr(1))
-#define AARCH64_ARCH_EXT_NAME(NAME, ID, FEATURE, NEGFEATURE, FMV_ID,           \
-                              DEP_FEATURES, FMV_PRIORITY)                      \
-  .Case(NAME, FEATURE)
-#include "../../include/llvm/TargetParser/AArch64TargetParser.def"
-                .Default(Name.str());
+  for (const auto &E : llvm::AArch64::Extensions) {
+    if (Name == E.Name) {
+      Feature = E.Feature;
+      return;
+    }
+  }
+  Feature = Name.str();
 }
 
-AArch64::ArchKind AArch64::getCPUArchKind(StringRef CPU) {
+const AArch64::ArchInfo &AArch64::getArchForCpu(StringRef CPU) {
   if (CPU == "generic")
-    return ArchKind::ARMV8A;
+    return ARMV8A;
 
-  return StringSwitch<AArch64::ArchKind>(CPU)
-#define AARCH64_CPU_NAME(NAME, ID, DEFAULT_EXT) .Case(NAME, ArchKind::ID)
-#include "../../include/llvm/TargetParser/AArch64TargetParser.def"
-      .Default(ArchKind::INVALID);
+  // Note: this now takes cpu aliases into account
+  const CpuInfo &Cpu = parseCpu(CPU);
+  return Cpu.Arch;
 }
 
-AArch64::ArchKind AArch64::getSubArchArchKind(StringRef SubArch) {
-  for (const auto &A : AArch64ARCHNames)
-    if (A.getSubArch() == SubArch)
-      return A.ID;
-  return ArchKind::INVALID;
+const AArch64::ArchInfo &AArch64::ArchInfo::findBySubArch(StringRef SubArch) {
+  for (const auto *A : AArch64::ArchInfos)
+    if (A->getSubArch() == SubArch)
+      return *A;
+  return AArch64::INVALID;
 }
 
 uint64_t AArch64::getCpuSupportsMask(ArrayRef<StringRef> FeatureStrs) {
   uint64_t FeaturesMask = 0;
   for (const StringRef &FeatureStr : FeatureStrs) {
-    unsigned Feature = StringSwitch<unsigned>(FeatureStr)
-#define AARCH64_ARCH_EXT_NAME(NAME, ID, FEATURE, NEGFEATURE, FMV_ID,           \
-                              DEP_FEATURES, FMV_PRIORITY)                      \
-  .Case(NAME, llvm::AArch64::FEAT_##FMV_ID)
-#include "../../include/llvm/TargetParser/AArch64TargetParser.def"
-        ;
-    FeaturesMask |= (1ULL << Feature);
+    for (const auto &E : llvm::AArch64::Extensions)
+      if (FeatureStr == E.Name) {
+        FeaturesMask |= (1ULL << E.CPUFeature);
+        break;
+      }
   }
   return FeaturesMask;
 }
 
-bool AArch64::getExtensionFeatures(uint64_t Extensions,
+bool AArch64::getExtensionFeatures(uint64_t InputExts,
                                    std::vector<StringRef> &Features) {
-  if (Extensions == AArch64::AEK_INVALID)
+  if (InputExts == AArch64::AEK_INVALID)
     return false;
 
-#define AARCH64_ARCH_EXT_NAME(NAME, ID, FEATURE, NEGFEATURE, FMV_ID,           \
-                              DEP_FEATURES, FMV_PRIORITY)                      \
-  if (Extensions & ID) {                                                       \
-    const char *feature = FEATURE;                                             \
-    /* INVALID and NONE have no feature name. */                               \
-    if (feature)                                                               \
-      Features.push_back(feature);                                             \
-  }
-#include "llvm/TargetParser/AArch64TargetParser.def"
+  for (const auto &E : Extensions)
+    /* INVALID and NONE have no feature name. */
+    if ((InputExts & E.ID) && !E.Feature.empty())
+      Features.push_back(E.Feature);
 
   return true;
 }
 
-StringRef AArch64::resolveCPUAlias(StringRef CPU) {
-  return StringSwitch<StringRef>(CPU)
-#define AARCH64_CPU_ALIAS(ALIAS, NAME) .Case(ALIAS, NAME)
-#include "../../include/llvm/TargetParser/AArch64TargetParser.def"
-      .Default(CPU);
-}
-
-StringRef AArch64::getArchFeature(AArch64::ArchKind AK) {
-  return AArch64ARCHNames[static_cast<unsigned>(AK)].ArchFeature;
-}
-
-StringRef AArch64::getArchName(AArch64::ArchKind AK) {
-  return AArch64ARCHNames[static_cast<unsigned>(AK)].Name;
-}
-
-StringRef AArch64::getSubArch(AArch64::ArchKind AK) {
-  return AArch64ARCHNames[static_cast<unsigned>(AK)].getSubArch();
+StringRef AArch64::resolveCPUAlias(StringRef Name) {
+  for (const auto &A : CpuAliases)
+    if (A.Alias == Name)
+      return A.Name;
+  return Name;
 }
 
 StringRef AArch64::getArchExtFeature(StringRef ArchExt) {
   if (ArchExt.startswith("no")) {
     StringRef ArchExtBase(ArchExt.substr(2));
-    for (const auto &AE : AArch64ARCHExtNames) {
+    for (const auto &AE : Extensions) {
       if (!AE.NegFeature.empty() && ArchExtBase == AE.Name)
         return AE.NegFeature;
     }
   }
 
-  for (const auto &AE : AArch64ARCHExtNames)
+  for (const auto &AE : Extensions)
     if (!AE.Feature.empty() && ArchExt == AE.Name)
       return AE.Feature;
   return StringRef();
 }
 
-AArch64::ArchKind AArch64::convertV9toV8(AArch64::ArchKind AK) {
-  if (AK == AArch64::ArchKind::INVALID)
-    return AK;
-  if (AK < AArch64::ArchKind::ARMV9A)
-    return AK;
-  if (AK >= AArch64::ArchKind::ARMV8R)
-    return AArch64::ArchKind::INVALID;
-  unsigned AK_v8 = static_cast<unsigned>(AArch64::ArchKind::ARMV8_5A);
-  AK_v8 += static_cast<unsigned>(AK) -
-           static_cast<unsigned>(AArch64::ArchKind::ARMV9A);
-  return static_cast<AArch64::ArchKind>(AK_v8);
-}
-
 void AArch64::fillValidCPUArchList(SmallVectorImpl<StringRef> &Values) {
-  for (const auto &Arch : AArch64CPUNames) {
-    if (Arch.ArchID != ArchKind::INVALID)
-      Values.push_back(Arch.Name);
-  }
+  for (const auto &C : CpuInfos)
+    if (C.Arch != INVALID)
+      Values.push_back(C.Name);
 
-  for (const auto &Alias: AArch64CPUAliases)
+  for (const auto &Alias : CpuAliases)
     Values.push_back(Alias.Alias);
 }
 
@@ -159,39 +123,37 @@ bool AArch64::isX18ReservedByDefault(const Triple &TT) {
 }
 
 // Allows partial match, ex. "v8a" matches "armv8a".
-AArch64::ArchKind AArch64::parseArch(StringRef Arch) {
+const AArch64::ArchInfo &AArch64::parseArch(StringRef Arch) {
   Arch = llvm::ARM::getCanonicalArchName(Arch);
   if (checkArchVersion(Arch) < 8)
-    return ArchKind::INVALID;
+    return AArch64::INVALID;
 
   StringRef Syn = llvm::ARM::getArchSynonym(Arch);
-  for (const auto &A : AArch64ARCHNames) {
-    if (A.Name.endswith(Syn))
-      return A.ID;
+  for (const auto *A : ArchInfos) {
+    if (A->Name.endswith(Syn))
+      return *A;
   }
-  return ArchKind::INVALID;
+  return AArch64::INVALID;
 }
 
 AArch64::ArchExtKind AArch64::parseArchExt(StringRef ArchExt) {
-  for (const auto &A : AArch64ARCHExtNames) {
+  for (const auto &A : Extensions) {
     if (ArchExt == A.Name)
       return static_cast<ArchExtKind>(A.ID);
   }
   return AArch64::AEK_INVALID;
 }
 
-AArch64::ArchKind AArch64::parseCPUArch(StringRef CPU) {
+const AArch64::CpuInfo &AArch64::parseCpu(StringRef Name) {
   // Resolve aliases first.
-  for (const auto &Alias : AArch64CPUAliases) {
-    if (CPU == Alias.Alias) {
-      CPU = Alias.Name;
-      break;
-    }
-  }
-  // Then find the CPU name.
-  for (const auto &C : AArch64CPUNames)
-    if (CPU == C.Name)
-      return C.ArchID;
+  Name = resolveCPUAlias(Name);
 
-  return ArchKind::INVALID;
+  // Then find the CPU name.
+  for (const auto &C : CpuInfos)
+    if (Name == C.Name)
+      return C;
+
+  // "generic" returns invalid.
+  assert(Name != "invalid" && "Unexpected recursion.");
+  return parseCpu("invalid");
 }

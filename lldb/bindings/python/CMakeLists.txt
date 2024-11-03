@@ -60,13 +60,6 @@ function(finish_swig_python swig_target lldb_python_bindings_dir lldb_python_tar
     DEPENDS ${lldb_python_bindings_dir}/lldb.py
     COMMENT "Python script sym-linking LLDB Python API")
 
-  if(NOT LLDB_USE_SYSTEM_SIX)
-    add_custom_command(TARGET ${swig_target} POST_BUILD VERBATIM
-      COMMAND ${CMAKE_COMMAND} -E copy
-        "${LLDB_SOURCE_DIR}/third_party/Python/module/six/six.py"
-        "${lldb_python_target_dir}/../six.py")
-  endif()
-
   add_custom_command(TARGET ${swig_target} POST_BUILD VERBATIM
     COMMAND ${CMAKE_COMMAND} -E copy
       "${lldb_python_bindings_dir}/lldb.py"
@@ -108,6 +101,13 @@ function(finish_swig_python swig_target lldb_python_bindings_dir lldb_python_tar
     "plugins"
     FILES
     "${LLDB_SOURCE_DIR}/examples/python/scripted_process/scripted_process.py")
+
+  create_python_package(
+    ${swig_target}
+    ${lldb_python_target_dir}
+    "plugins"
+    FILES
+    "${LLDB_SOURCE_DIR}/examples/python/scripted_process/scripted_platform.py")
 
   if(APPLE)
     create_python_package(

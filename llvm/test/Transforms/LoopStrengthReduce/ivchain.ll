@@ -1,5 +1,5 @@
-; RUN: opt < %s -loop-reduce -S | FileCheck %s
-; RUN: opt -passes='require<scalar-evolution>,require<targetir>,loop(loop-reduce)' < %s -S | FileCheck %s
+; RUN: opt -opaque-pointers=0 < %s -loop-reduce -S | FileCheck %s
+; RUN: opt -opaque-pointers=0 -passes='require<scalar-evolution>,require<targetir>,loop(loop-reduce)' < %s -S | FileCheck %s
 ;
 ; PR11782: bad cast to AddRecExpr.
 ; A sign extend feeds an IVUser and cannot be hoisted into the AddRec.

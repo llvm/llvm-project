@@ -1,4 +1,4 @@
-; RUN: opt -passes=sroa,verify -S %s -experimental-assignment-tracking -o - \
+; RUN: opt -passes=sroa,verify -S %s -o - \
 ; RUN: | FileCheck %s --implicit-check-not="call void @llvm.dbg"
 
 ; Check that the new slices of an alloca and memset intructions get dbg.assign
@@ -85,7 +85,7 @@ declare void @llvm.lifetime.end.p0i8(i64 immarg, ptr nocapture) #1
 declare void @llvm.dbg.assign(metadata, metadata, metadata, metadata, metadata, metadata) #3
 
 !llvm.dbg.cu = !{!2}
-!llvm.module.flags = !{!10, !11, !12}
+!llvm.module.flags = !{!10, !11, !12, !1000}
 !llvm.ident = !{!13}
 
 !0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
@@ -128,3 +128,4 @@ declare void @llvm.dbg.assign(metadata, metadata, metadata, metadata, metadata, 
 !43 = !DILocation(line: 12, column: 12, scope: !14)
 !44 = !DILocation(line: 13, column: 1, scope: !14)
 !45 = !DILocation(line: 12, column: 3, scope: !14)
+!1000 = !{i32 7, !"debug-info-assignment-tracking", i1 true}

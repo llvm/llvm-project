@@ -8,6 +8,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "../lib/Transforms/Vectorize/VPlan.h"
+#include "../lib/Transforms/Vectorize/VPlanCFG.h"
 #include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/Analysis/VectorUtils.h"
@@ -345,7 +346,7 @@ TEST(VPBasicBlockTest, TraversingIteratorTest) {
     VPBlockUtils::connectBlocks(VPBB2, VPBB4);
     VPBlockUtils::connectBlocks(VPBB3, VPBB4);
 
-    VPBlockRecursiveTraversalWrapper<const VPBlockBase *> Start(VPBB1);
+    VPBlockDeepTraversalWrapper<const VPBlockBase *> Start(VPBB1);
     SmallVector<const VPBlockBase *> FromIterator(depth_first(Start));
     EXPECT_EQ(4u, FromIterator.size());
     EXPECT_EQ(VPBB1, FromIterator[0]);
@@ -393,10 +394,17 @@ TEST(VPBasicBlockTest, TraversingIteratorTest) {
     VPBlockUtils::connectBlocks(R2BB1, R2BB2);
     VPBlockUtils::connectBlocks(R1, R2);
 
+    // Successors of R1.
+    SmallVector<const VPBlockBase *> FromIterator(
+        VPAllSuccessorsIterator<VPBlockBase *>(R1),
+        VPAllSuccessorsIterator<VPBlockBase *>::end(R1));
+    EXPECT_EQ(1u, FromIterator.size());
+    EXPECT_EQ(R1BB1, FromIterator[0]);
+
     // Depth-first.
-    VPBlockRecursiveTraversalWrapper<VPBlockBase *> Start(R1);
-    SmallVector<const VPBlockBase *> FromIterator(df_begin(Start),
-                                                  df_end(Start));
+    VPBlockDeepTraversalWrapper<VPBlockBase *> Start(R1);
+    FromIterator.clear();
+    copy(df_begin(Start), df_end(Start), std::back_inserter(FromIterator));
     EXPECT_EQ(8u, FromIterator.size());
     EXPECT_EQ(R1, FromIterator[0]);
     EXPECT_EQ(R1BB1, FromIterator[1]);
@@ -492,7 +500,7 @@ TEST(VPBasicBlockTest, TraversingIteratorTest) {
     VPBlockUtils::connectBlocks(R1, VPBB2);
 
     // Depth-first.
-    VPBlockRecursiveTraversalWrapper<VPBlockBase *> Start(VPBB1);
+    VPBlockDeepTraversalWrapper<VPBlockBase *> Start(VPBB1);
     SmallVector<VPBlockBase *> FromIterator(depth_first(Start));
     EXPECT_EQ(10u, FromIterator.size());
     EXPECT_EQ(VPBB1, FromIterator[0]);
@@ -549,7 +557,7 @@ TEST(VPBasicBlockTest, TraversingIteratorTest) {
     VPBlockUtils::connectBlocks(VPBB1, R1);
 
     // Depth-first.
-    VPBlockRecursiveTraversalWrapper<VPBlockBase *> Start(VPBB1);
+    VPBlockDeepTraversalWrapper<VPBlockBase *> Start(VPBB1);
     SmallVector<VPBlockBase *> FromIterator(depth_first(Start));
     EXPECT_EQ(5u, FromIterator.size());
     EXPECT_EQ(VPBB1, FromIterator[0]);
@@ -609,7 +617,7 @@ TEST(VPBasicBlockTest, TraversingIteratorTest) {
     VPBlockUtils::connectBlocks(R1, VPBB2);
 
     // Depth-first.
-    VPBlockRecursiveTraversalWrapper<VPBlockBase *> Start(VPBB1);
+    VPBlockDeepTraversalWrapper<VPBlockBase *> Start(VPBB1);
     SmallVector<VPBlockBase *> FromIterator(depth_first(Start));
     EXPECT_EQ(7u, FromIterator.size());
     EXPECT_EQ(VPBB1, FromIterator[0]);
@@ -641,7 +649,7 @@ TEST(VPBasicBlockTest, TraversingIteratorTest) {
     EXPECT_EQ(VPBB1, FromIterator[6]);
 
     // Post-order, const VPRegionBlocks only.
-    VPBlockRecursiveTraversalWrapper<const VPBlockBase *> StartConst(VPBB1);
+    VPBlockDeepTraversalWrapper<const VPBlockBase *> StartConst(VPBB1);
     SmallVector<const VPRegionBlock *> FromIteratorVPRegion(
         VPBlockUtils::blocksOnly<const VPRegionBlock>(post_order(StartConst)));
     EXPECT_EQ(3u, FromIteratorVPRegion.size());
@@ -703,7 +711,7 @@ TEST(VPBasicBlockTest, print) {
   Plan.printDOT(OS);
 
   const char *ExpectedStr = R"(digraph VPlan {
-graph [labelloc=t, fontsize=30; label="Vectorization Plan"]
+graph [labelloc=t, fontsize=30; label="Vectorization Plan\n for UF\>=1"]
 node [shape=rect, fontname=Courier, fontsize=30]
 edge [fontname=Courier, fontsize=30]
 compound=true
@@ -762,6 +770,63 @@ No successors
     OS << *I4;
     OS.flush();
     EXPECT_EQ("EMIT vp<%4> = mul vp<%2> vp<%1>", I4Dump);
+  }
+}
+
+TEST(VPBasicBlockTest, printPlanWithVFsAndUFs) {
+  VPInstruction *I1 = new VPInstruction(Instruction::Add, {});
+
+  VPBasicBlock *VPBB1 = new VPBasicBlock();
+  VPBB1->appendRecipe(I1);
+  VPBB1->setName("bb1");
+
+  VPlan Plan;
+  Plan.setName("TestPlan");
+  Plan.addVF(ElementCount::getFixed(4));
+  Plan.setEntry(VPBB1);
+
+  {
+    std::string FullDump;
+    raw_string_ostream OS(FullDump);
+    Plan.print(OS);
+
+    const char *ExpectedStr = R"(VPlan 'TestPlan for VF={4},UF>=1' {
+bb1:
+  EMIT vp<%1> = add
+No successors
+}
+)";
+    EXPECT_EQ(ExpectedStr, FullDump);
+  }
+
+  {
+    Plan.addVF(ElementCount::getScalable(8));
+    std::string FullDump;
+    raw_string_ostream OS(FullDump);
+    Plan.print(OS);
+
+    const char *ExpectedStr = R"(VPlan 'TestPlan for VF={4,vscale x 8},UF>=1' {
+bb1:
+  EMIT vp<%1> = add
+No successors
+}
+)";
+    EXPECT_EQ(ExpectedStr, FullDump);
+  }
+
+  {
+    Plan.setUF(4);
+    std::string FullDump;
+    raw_string_ostream OS(FullDump);
+    Plan.print(OS);
+
+    const char *ExpectedStr = R"(VPlan 'TestPlan for VF={4,vscale x 8},UF={4}' {
+bb1:
+  EMIT vp<%1> = add
+No successors
+}
+)";
+    EXPECT_EQ(ExpectedStr, FullDump);
   }
 }
 #endif

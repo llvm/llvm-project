@@ -117,6 +117,32 @@ static void emitIsPositiveIndexAssertion(ImplicitLocOpBuilder &b,
       b.getStringAttr("expected strictly positive tile size and divisor"));
 }
 
+FailureOr<StaticMultiSizeSpecification>
+mlir::linalg::computeStaticMultiTileSizes(LinalgOp op, unsigned dimension,
+                                          int64_t targetSize, int64_t divisor) {
+  assert(!op.hasDynamicShape() &&
+         "cannot compute static multi-tile sizes for an op with dynamic shape");
+  assert(targetSize > 0 && "target size must be non-negative");
+  assert(divisor > 0 && "divisor must be non-negative");
+  assert(dimension < op.getNumLoops() && "dimension overflow");
+
+  StaticMultiSizeSpecification spec;
+  int64_t tripCount = op.getStaticLoopRanges()[dimension];
+  int64_t a = tripCount / divisor;
+  int64_t t = (targetSize + divisor - 1) / divisor;
+  int64_t totalTripCount = (a + t - 1) / t;
+  spec.lowTileSize = (a / totalTripCount) * divisor;
+  spec.highTileSize = spec.lowTileSize + divisor;
+  spec.highTripCount = a % totalTripCount;
+  spec.lowTripCount = totalTripCount - spec.highTripCount;
+  if (spec.lowTileSize * spec.lowTripCount +
+          spec.highTileSize * spec.highTripCount !=
+      tripCount) {
+    return failure();
+  }
+  return spec;
+}
+
 FailureOr<MultiSizeSpecification>
 mlir::linalg::computeMultiTileSizes(OpBuilder &builder, LinalgOp op,
                                     unsigned dimension, OpFoldResult targetSize,
@@ -626,6 +652,10 @@ linalg::tileReductionUsingForeachThread(RewriterBase &b,
                                     "many elements as number of threads");
   int reductionDim = static_cast<int>(redDims.front());
 
+  if (redDims.front() >= numThreads.size())
+    return b.notifyMatchFailure(
+        op, "reduction dimension must be mapped to threads");
+
   // 1. Create the inital tensor value.
   FailureOr<Operation *> identityTensor =
       op.generateInitialTensorForPartialReduction(b, loc, numThreads,
@@ -689,7 +719,7 @@ linalg::tileReductionUsingForeachThread(RewriterBase &b,
     }
 
     // 4.b. Clone the op and update init operands.
-    // We cannot use a BlockAndValueMapping here because it can replace
+    // We cannot use a IRMapping here because it can replace
     // different OpOperands with the same value.
     Operation *clonedOp = b.clone(*op.getOperation());
     b.updateRootInPlace(clonedOp, [&]() {

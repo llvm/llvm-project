@@ -127,7 +127,10 @@ void CompileUnit::addLabelLowPc(uint64_t LabelLowPc, int64_t PcOffset) {
 void CompileUnit::addFunctionRange(uint64_t FuncLowPc, uint64_t FuncHighPc,
                                    int64_t PcOffset) {
   Ranges.insert({FuncLowPc, FuncHighPc}, PcOffset);
-  this->LowPc = std::min(LowPc, FuncLowPc + PcOffset);
+  if (LowPc)
+    LowPc = std::min(*LowPc, FuncLowPc + PcOffset);
+  else
+    LowPc = FuncLowPc + PcOffset;
   this->HighPc = std::max(HighPc, FuncHighPc + PcOffset);
 }
 

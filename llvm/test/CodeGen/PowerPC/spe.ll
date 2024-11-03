@@ -1422,8 +1422,8 @@ define i1 @test_dcmpge(double %a, double %b) #0 {
 ; SPE-NEXT:    efdcmpeq 0, 4, 4
 ; SPE-NEXT:    efdcmpeq 1, 3, 3
 ; SPE-NEXT:    efdcmplt 5, 3, 4
-; SPE-NEXT:    crand 24, 5, 1
-; SPE-NEXT:    crorc 20, 21, 24
+; SPE-NEXT:    crand 20, 5, 1
+; SPE-NEXT:    crorc 20, 21, 20
 ; SPE-NEXT:    bc 12, 20, .LBB47_2
 ; SPE-NEXT:  # %bb.1: # %entry
 ; SPE-NEXT:    ori 3, 7, 0

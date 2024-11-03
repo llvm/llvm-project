@@ -11,9 +11,7 @@
 
 #include "clang/AST/AST.h"
 
-namespace clang {
-namespace tidy {
-namespace utils {
+namespace clang::tidy::utils {
 // Returns the (closest) Function declaration surrounding |Statement| or NULL.
 const FunctionDecl *getSurroundingFunction(ASTContext &Context,
                                            const Stmt &Statement);
@@ -38,8 +36,6 @@ bool rangeContainsMacroExpansion(SourceRange Range, const SourceManager *SM);
 // FIXME: false-negative if the entire range is fully expanded from a macro.
 bool rangeCanBeFixed(SourceRange Range, const SourceManager *SM);
 
-} // namespace utils
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::utils
 
 #endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_ASTUTILS_H

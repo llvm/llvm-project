@@ -16,24 +16,24 @@
 ## get dedup'ed, meaning that the output strings get their offsets "naturally"
 ## preserved.
 
-# RUN: %lld -dylib %t/align-empty.o %t/align-4-0.o %t/align-16-0.o -o %t/align-4-0-16-0
+# RUN: %lld -dylib --no-deduplicate-strings %t/align-empty.o %t/align-4-0.o %t/align-16-0.o -o %t/align-4-0-16-0
 # RUN: llvm-objdump --macho --section="__TEXT,__cstring" %t/align-4-0-16-0 | \
 # RUN:   FileCheck %s -D#OFF1=4 -D#OFF2=16
-# RUN: %lld -dylib %t/align-empty.o %t/align-16-0.o %t/align-4-0.o -o %t/align-16-0-4-0
+# RUN: %lld -dylib --no-deduplicate-strings %t/align-empty.o %t/align-16-0.o %t/align-4-0.o -o %t/align-16-0-4-0
 # RUN: llvm-objdump --macho --section="__TEXT,__cstring" %t/align-16-0-4-0 | \
 # RUN:   FileCheck %s -D#OFF1=16 -D#OFF2=20
 
-# RUN: %lld -dylib %t/align-empty.o %t/align-4-2.o %t/align-16-0.o -o %t/align-4-2-16-0
+# RUN: %lld -dylib --no-deduplicate-strings %t/align-empty.o %t/align-4-2.o %t/align-16-0.o -o %t/align-4-2-16-0
 # RUN: llvm-objdump --macho --section="__TEXT,__cstring" %t/align-4-2-16-0 | \
 # RUN:   FileCheck %s -D#OFF1=6 -D#OFF2=16
-# RUN: %lld -dylib %t/align-empty.o %t/align-16-0.o %t/align-4-2.o -o %t/align-16-0-4-2
+# RUN: %lld -dylib --no-deduplicate-strings %t/align-empty.o %t/align-16-0.o %t/align-4-2.o -o %t/align-16-0-4-2
 # RUN: llvm-objdump --macho --section="__TEXT,__cstring" %t/align-16-0-4-2 | \
 # RUN:   FileCheck %s -D#OFF1=16 -D#OFF2=22
 
-# RUN: %lld -dylib %t/align-empty.o %t/align-4-0.o %t/align-16-2.o -o %t/align-4-0-16-2
+# RUN: %lld -dylib --no-deduplicate-strings %t/align-empty.o %t/align-4-0.o %t/align-16-2.o -o %t/align-4-0-16-2
 # RUN: llvm-objdump --macho --section="__TEXT,__cstring" %t/align-4-0-16-2 | \
 # RUN:   FileCheck %s -D#OFF1=4 -D#OFF2=18
-# RUN: %lld -dylib %t/align-empty.o %t/align-16-2.o %t/align-4-0.o -o %t/align-16-2-4-0
+# RUN: %lld -dylib --no-deduplicate-strings %t/align-empty.o %t/align-16-2.o %t/align-4-0.o -o %t/align-16-2-4-0
 # RUN: llvm-objdump --macho --section="__TEXT,__cstring" %t/align-16-2-4-0 | \
 # RUN:   FileCheck %s -D#OFF1=18 -D#OFF2=20
 
@@ -46,42 +46,42 @@
 ## The dedup cases are more interesting...
 
 ## Same offset, different alignments => pick higher alignment
-# RUN: %lld -dylib --deduplicate-literals %t/align-empty.o %t/align-4-0.o %t/align-16-0.o -o %t/dedup-4-0-16-0
+# RUN: %lld -dylib %t/align-empty.o %t/align-4-0.o %t/align-16-0.o -o %t/dedup-4-0-16-0
 # RUN: llvm-objdump --macho --section="__TEXT,__cstring" %t/dedup-4-0-16-0 | \
 # RUN:   FileCheck %s --check-prefix=DEDUP -D#OFF=16
-# RUN: %lld -dylib --deduplicate-literals %t/align-empty.o %t/align-16-0.o %t/align-4-0.o -o %t/dedup-16-0-4-0
+# RUN: %lld -dylib %t/align-empty.o %t/align-16-0.o %t/align-4-0.o -o %t/dedup-16-0-4-0
 # RUN: llvm-objdump --macho --section="__TEXT,__cstring" %t/dedup-16-0-4-0 | \
 # RUN:   FileCheck %s --check-prefix=DEDUP -D#OFF=16
 
 ## 16 byte alignment vs 2 byte offset => align to 16 bytes
-# RUN: %lld -dylib --deduplicate-literals %t/align-empty.o %t/align-4-2.o %t/align-16-0.o -o %t/dedup-4-2-16-0
+# RUN: %lld -dylib %t/align-empty.o %t/align-4-2.o %t/align-16-0.o -o %t/dedup-4-2-16-0
 # RUN: llvm-objdump --macho --section="__TEXT,__cstring" %t/dedup-4-2-16-0 | \
 # RUN:   FileCheck %s --check-prefix=DEDUP -D#OFF=16
-# RUN: %lld -dylib --deduplicate-literals %t/align-empty.o %t/align-16-0.o %t/align-4-2.o -o %t/dedup-16-0-4-2
+# RUN: %lld -dylib %t/align-empty.o %t/align-16-0.o %t/align-4-2.o -o %t/dedup-16-0-4-2
 # RUN: llvm-objdump --macho --section="__TEXT,__cstring" %t/dedup-16-0-4-2 | \
 # RUN:   FileCheck %s --check-prefix=DEDUP -D#OFF=16
 
 ## 4 byte alignment vs 2 byte offset => align to 4 bytes
-# RUN: %lld -dylib --deduplicate-literals %t/align-empty.o %t/align-4-0.o %t/align-16-2.o -o %t/dedup-4-0-16-2
+# RUN: %lld -dylib %t/align-empty.o %t/align-4-0.o %t/align-16-2.o -o %t/dedup-4-0-16-2
 # RUN: llvm-objdump --macho --section="__TEXT,__cstring" %t/dedup-4-0-16-2 | \
 # RUN:   FileCheck %s --check-prefix=DEDUP -D#OFF=4
-# RUN: %lld -dylib --deduplicate-literals %t/align-empty.o %t/align-16-2.o %t/align-4-0.o -o %t/dedup-16-2-4-0
+# RUN: %lld -dylib %t/align-empty.o %t/align-16-2.o %t/align-4-0.o -o %t/dedup-16-2-4-0
 # RUN: llvm-objdump --macho --section="__TEXT,__cstring" %t/dedup-16-2-4-0 | \
 # RUN:   FileCheck %s --check-prefix=DEDUP -D#OFF=4
 
 ## Both inputs are 4-byte aligned, one via offset and the other via section alignment
-# RUN: %lld -dylib --deduplicate-literals %t/align-empty.o %t/align-4-0.o %t/align-16-4.o -o %t/dedup-4-0-16-4
+# RUN: %lld -dylib %t/align-empty.o %t/align-4-0.o %t/align-16-4.o -o %t/dedup-4-0-16-4
 # RUN: llvm-objdump --macho --section="__TEXT,__cstring" %t/dedup-4-0-16-4 | \
 # RUN:   FileCheck %s --check-prefix=DEDUP -D#OFF=4
-# RUN: %lld -dylib --deduplicate-literals %t/align-empty.o %t/align-16-4.o %t/align-4-0.o -o %t/dedup-16-4-4-0
+# RUN: %lld -dylib %t/align-empty.o %t/align-16-4.o %t/align-4-0.o -o %t/dedup-16-4-4-0
 # RUN: llvm-objdump --macho --section="__TEXT,__cstring" %t/dedup-16-4-4-0 | \
 # RUN:   FileCheck %s --check-prefix=DEDUP -D#OFF=4
 
 ## 8-byte offset vs 4-byte section alignment => align to 8 bytes
-# RUN: %lld -dylib --deduplicate-literals %t/align-empty.o %t/align-4-0.o %t/align-16-8.o -o %t/dedup-4-0-16-8
+# RUN: %lld -dylib %t/align-empty.o %t/align-4-0.o %t/align-16-8.o -o %t/dedup-4-0-16-8
 # RUN: llvm-objdump --macho --section="__TEXT,__cstring" %t/dedup-4-0-16-8 | \
 # RUN:   FileCheck %s --check-prefix=DEDUP -D#OFF=8
-# RUN: %lld -dylib --deduplicate-literals %t/align-empty.o %t/align-16-8.o %t/align-4-0.o -o %t/dedup-16-8-4-0
+# RUN: %lld -dylib %t/align-empty.o %t/align-16-8.o %t/align-4-0.o -o %t/dedup-16-8-4-0
 # RUN: llvm-objdump --macho --section="__TEXT,__cstring" %t/dedup-16-8-4-0 | \
 # RUN:   FileCheck %s --check-prefix=DEDUP -D#OFF=8
 

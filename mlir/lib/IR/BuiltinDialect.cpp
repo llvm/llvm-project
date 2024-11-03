@@ -13,11 +13,11 @@
 
 #include "mlir/IR/BuiltinDialect.h"
 #include "BuiltinDialectBytecode.h"
-#include "mlir/IR/BlockAndValueMapping.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/DialectResourceBlobManager.h"
+#include "mlir/IR/IRMapping.h"
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/TypeRange.h"
@@ -190,7 +190,7 @@ LogicalResult ModuleOp::verify() {
 //===----------------------------------------------------------------------===//
 
 LogicalResult
-UnrealizedConversionCastOp::fold(ArrayRef<Attribute> attrOperands,
+UnrealizedConversionCastOp::fold(FoldAdaptor adaptor,
                                  SmallVectorImpl<OpFoldResult> &foldResults) {
   OperandRange operands = getInputs();
   ResultRange results = getOutputs();

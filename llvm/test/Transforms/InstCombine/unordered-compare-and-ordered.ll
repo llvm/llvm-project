@@ -480,8 +480,8 @@ define i1 @fcmp_ord_and_copysign_fneg_ueq(half %x, half %y, half %z) {
 
 define i1 @fcmp_ord_and_fneg_copysign_ueq(half %x, half %y, half %z) {
 ; CHECK-LABEL: @fcmp_ord_and_fneg_copysign_ueq(
-; CHECK-NEXT:    [[COPYSIGN_X_Y:%.*]] = call half @llvm.copysign.f16(half [[X:%.*]], half [[Z:%.*]])
-; CHECK-NEXT:    [[FNEG_COPYSIGN:%.*]] = fneg half [[COPYSIGN_X_Y]]
+; CHECK-NEXT:    [[TMP1:%.*]] = fneg half [[Z:%.*]]
+; CHECK-NEXT:    [[FNEG_COPYSIGN:%.*]] = call half @llvm.copysign.f16(half [[X:%.*]], half [[TMP1]])
 ; CHECK-NEXT:    [[ORD:%.*]] = fcmp ord half [[X]], 0xH0000
 ; CHECK-NEXT:    [[UEQ:%.*]] = fcmp ueq half [[FNEG_COPYSIGN]], [[Y:%.*]]
 ; CHECK-NEXT:    [[AND:%.*]] = and i1 [[ORD]], [[UEQ]]

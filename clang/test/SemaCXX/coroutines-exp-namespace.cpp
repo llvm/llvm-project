@@ -84,7 +84,7 @@ struct auto_await_suspend {
 
 struct DummyVoidTag {};
 DummyVoidTag no_specialization() { // expected-error {{this function cannot be a coroutine: 'std::experimental::coroutine_traits<DummyVoidTag>' has no member named 'promise_type'}}
-  co_await a;                      // expected-warning {{support for std::experimental::coroutine_traits will be removed}}
+  co_await a;                      // expected-warning {{support for 'std::experimental::coroutine_traits' will be removed}}
 }
 
 template <typename... T>

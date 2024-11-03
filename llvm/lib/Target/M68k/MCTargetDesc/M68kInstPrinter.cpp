@@ -41,8 +41,8 @@ using namespace llvm;
 #define PRINT_ALIAS_INSTR
 #include "M68kGenAsmWriter.inc"
 
-void M68kInstPrinter::printRegName(raw_ostream &OS, unsigned RegNo) const {
-  OS << "%" << getRegisterName(RegNo);
+void M68kInstPrinter::printRegName(raw_ostream &OS, MCRegister Reg) const {
+  OS << "%" << getRegisterName(Reg);
 }
 
 void M68kInstPrinter::printInst(const MCInst *MI, uint64_t Address,

@@ -44,6 +44,7 @@
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/Cloning.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
+#include <optional>
 
 using namespace mlir;
 using namespace mlir::LLVM;
@@ -56,7 +57,7 @@ using namespace mlir::LLVM::detail;
 static FailureOr<llvm::DataLayout>
 translateDataLayout(DataLayoutSpecInterface attribute,
                     const DataLayout &dataLayout,
-                    Optional<Location> loc = std::nullopt) {
+                    std::optional<Location> loc = std::nullopt) {
   if (!loc)
     loc = UnknownLoc::get(attribute.getContext());
 
@@ -119,7 +120,7 @@ translateDataLayout(DataLayoutSpecInterface attribute,
               unsigned preferred =
                   dataLayout.getTypePreferredAlignment(type) * 8u;
               layoutStream << size << ":" << abi << ":" << preferred;
-              if (Optional<unsigned> index = extractPointerSpecValue(
+              if (std::optional<unsigned> index = extractPointerSpecValue(
                       entry.getValue(), PtrDLEntryPos::Index))
                 layoutStream << ":" << *index;
               return success();
@@ -873,6 +874,28 @@ LogicalResult ModuleTranslation::convertDialectAttributes(Operation *op) {
   return success();
 }
 
+/// Converts the function attributes from LLVMFuncOp and attaches them to the
+/// llvm::Function.
+static void convertFunctionAttributes(LLVMFuncOp func,
+                                      llvm::Function *llvmFunc) {
+  if (!func.getMemory())
+    return;
+
+  MemoryEffectsAttr memEffects = func.getMemoryAttr();
+
+  // Add memory effects incrementally.
+  llvm::MemoryEffects newMemEffects =
+      llvm::MemoryEffects(llvm::MemoryEffects::Location::ArgMem,
+                          convertModRefInfoToLLVM(memEffects.getArgMem()));
+  newMemEffects |= llvm::MemoryEffects(
+      llvm::MemoryEffects::Location::InaccessibleMem,
+      convertModRefInfoToLLVM(memEffects.getInaccessibleMem()));
+  newMemEffects |=
+      llvm::MemoryEffects(llvm::MemoryEffects::Location::Other,
+                          convertModRefInfoToLLVM(memEffects.getOther()));
+  llvmFunc->setMemoryEffects(newMemEffects);
+}
+
 LogicalResult ModuleTranslation::convertFunctionSignatures() {
   // Declare all functions first because there may be function calls that form a
   // call graph with cycles, or global initializers that reference functions.
@@ -882,12 +905,16 @@ LogicalResult ModuleTranslation::convertFunctionSignatures() {
         cast<llvm::FunctionType>(convertType(function.getFunctionType())));
     llvm::Function *llvmFunc = cast<llvm::Function>(llvmFuncCst.getCallee());
     llvmFunc->setLinkage(convertLinkageToLLVM(function.getLinkage()));
+    llvmFunc->setCallingConv(convertCConvToLLVM(function.getCConv()));
     mapFunction(function.getName(), llvmFunc);
     addRuntimePreemptionSpecifier(function.getDsoLocal(), llvmFunc);
 
     // Convert function attributes.
-    if (function->getAttrOfType<UnitAttr>(LLVMDialect::getReadnoneAttrName()))
-      llvmFunc->setDoesNotAccessMemory();
+    convertFunctionAttributes(function, llvmFunc);
+
+    // Convert function_entry_count attribute to metadata.
+    if (std::optional<uint64_t> entryCount = function.getFunctionEntryCount())
+      llvmFunc->setEntryCount(entryCount.value());
 
     // Convert result attributes.
     if (ArrayAttr allResultAttrs = function.getAllResultAttrs()) {
@@ -1171,6 +1198,127 @@ void ModuleTranslation::setAliasScopeMetadata(Operation *op,
   populateScopeMetadata(LLVMDialect::getNoAliasScopesAttrName(), "noalias");
 }
 
+llvm::MDNode *ModuleTranslation::getTBAANode(Operation &memOp,
+                                             SymbolRefAttr tagRef) const {
+  StringAttr metadataName = tagRef.getRootReference();
+  StringAttr tagName = tagRef.getLeafReference();
+  auto metadataOp = SymbolTable::lookupNearestSymbolFrom<LLVM::MetadataOp>(
+      memOp.getParentOp(), metadataName);
+  Operation *tagOp = SymbolTable::lookupNearestSymbolFrom(metadataOp, tagName);
+  return tbaaMetadataMapping.lookup(tagOp);
+}
+
+void ModuleTranslation::setTBAAMetadata(Operation *op,
+                                        llvm::Instruction *inst) {
+  auto tbaa = op->getAttrOfType<ArrayAttr>(LLVMDialect::getTBAAAttrName());
+  if (!tbaa || tbaa.empty())
+    return;
+  // LLVM IR currently does not support attaching more than one
+  // TBAA access tag to a memory accessing instruction.
+  // It may be useful to support this in future, but for the time being
+  // just ignore the metadata if MLIR operation has multiple access tags.
+  if (tbaa.size() > 1) {
+    op->emitWarning() << "TBAA access tags were not translated, because LLVM "
+                         "IR only supports a single tag per instruction";
+    return;
+  }
+  SymbolRefAttr tagRef = tbaa[0].cast<SymbolRefAttr>();
+  llvm::MDNode *tagNode = getTBAANode(*op, tagRef);
+  inst->setMetadata(llvm::LLVMContext::MD_tbaa, tagNode);
+}
+
+LogicalResult ModuleTranslation::createTBAAMetadata() {
+  llvm::LLVMContext &ctx = llvmModule->getContext();
+  llvm::IntegerType *offsetTy = llvm::IntegerType::get(ctx, 64);
+
+  // Walk TBAA metadata and create MDNode's with placeholder
+  // operands for the references of other TBAA nodes.
+  for (auto metadata : getModuleBody(mlirModule).getOps<LLVM::MetadataOp>()) {
+    for (auto &op : metadata.getBody().getOps()) {
+      SmallVector<llvm::Metadata *> operands;
+      if (auto rootOp = dyn_cast<LLVM::TBAARootMetadataOp>(op)) {
+        operands.push_back(llvm::MDString::get(ctx, rootOp.getIdentity()));
+      } else if (auto tdOp = dyn_cast<LLVM::TBAATypeDescriptorOp>(op)) {
+        operands.push_back(llvm::MDString::get(
+            ctx, tdOp.getIdentity().value_or(llvm::StringRef{})));
+        for (int64_t offset : tdOp.getOffsets()) {
+          // Use temporary MDNode as the placeholder for the member type
+          // to prevent uniquing the type descriptor nodes until they are
+          // finalized.
+          operands.push_back(
+              llvm::MDNode::getTemporary(ctx, std::nullopt).release());
+          operands.push_back(llvm::ConstantAsMetadata::get(
+              llvm::ConstantInt::get(offsetTy, offset)));
+        }
+      } else if (auto tagOp = dyn_cast<LLVM::TBAATagOp>(op)) {
+        // Use temporary MDNode's as the placeholders for the base and access
+        // types to prevent uniquing the tag nodes until they are finalized.
+        operands.push_back(
+            llvm::MDNode::getTemporary(ctx, std::nullopt).release());
+        operands.push_back(
+            llvm::MDNode::getTemporary(ctx, std::nullopt).release());
+        operands.push_back(llvm::ConstantAsMetadata::get(
+            llvm::ConstantInt::get(offsetTy, tagOp.getOffset())));
+        if (tagOp.getConstant())
+          operands.push_back(llvm::ConstantAsMetadata::get(
+              llvm::ConstantInt::get(offsetTy, 1)));
+      }
+
+      if (operands.empty())
+        continue;
+
+      tbaaMetadataMapping.insert({&op, llvm::MDNode::get(ctx, operands)});
+    }
+  }
+
+  // Walk TBAA metadata second time and update the placeholder
+  // references.
+  for (auto metadata : getModuleBody(mlirModule).getOps<LLVM::MetadataOp>()) {
+    for (auto &op : metadata.getBody().getOps()) {
+      SmallVector<StringRef> refNames;
+      SmallVector<int64_t> operandIndices;
+      if (auto tdOp = dyn_cast<LLVM::TBAATypeDescriptorOp>(op)) {
+        // The type references are in 1, 3, 5, etc. positions.
+        unsigned opNum = 1;
+        for (Attribute typeAttr : tdOp.getMembers()) {
+          refNames.push_back(typeAttr.cast<FlatSymbolRefAttr>().getValue());
+          operandIndices.push_back(opNum);
+          opNum += 2;
+        }
+      } else if (auto tagOp = dyn_cast<LLVM::TBAATagOp>(op)) {
+        refNames.push_back(tagOp.getBaseType());
+        operandIndices.push_back(0);
+        refNames.push_back(tagOp.getAccessType());
+        operandIndices.push_back(1);
+      }
+
+      if (refNames.empty())
+        continue;
+
+      llvm::MDNode *descNode = tbaaMetadataMapping.lookup(&op);
+      for (auto [refName, opNum] : llvm::zip(refNames, operandIndices)) {
+        // refDef availability in the parent MetadataOp
+        // is checked by module verifier.
+        Operation *refDef = SymbolTable::lookupSymbolIn(metadata, refName);
+        llvm::MDNode *refNode = tbaaMetadataMapping.lookup(refDef);
+        if (!refNode) {
+          op.emitOpError() << "llvm::MDNode missing for the member '@"
+                           << refName << "'";
+          return failure();
+        }
+        auto *tempMD = cast<llvm::MDNode>(descNode->getOperand(opNum).get());
+        descNode->replaceOperandWith(opNum, refNode);
+        // Deallocate temporary MDNode's explicitly.
+        // Note that each temporary node has a single use by creation,
+        // so it is valid to deallocate it here.
+        llvm::MDNode::deleteTemporary(tempMD);
+      }
+    }
+  }
+
+  return success();
+}
+
 llvm::Type *ModuleTranslation::convertType(Type type) {
   return typeTranslator.translateType(type);
 }
@@ -1263,6 +1411,8 @@ mlir::translateModuleToLLVMIR(Operation *module, llvm::LLVMContext &llvmContext,
   if (failed(translator.createAccessGroupMetadata()))
     return nullptr;
   if (failed(translator.createAliasScopeMetadata()))
+    return nullptr;
+  if (failed(translator.createTBAAMetadata()))
     return nullptr;
   if (failed(translator.convertFunctions()))
     return nullptr;

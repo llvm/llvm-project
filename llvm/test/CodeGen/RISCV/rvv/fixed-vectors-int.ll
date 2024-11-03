@@ -997,9 +997,7 @@ define void @mulhu_v4i32(ptr %x) {
 ; CHECK-NEXT:    vadd.vv v8, v8, v9
 ; CHECK-NEXT:    vmv.v.i v9, 1
 ; CHECK-NEXT:    vmv.v.i v10, 2
-; CHECK-NEXT:    vsetvli zero, zero, e32, m1, tu, ma
 ; CHECK-NEXT:    vslideup.vi v10, v9, 3
-; CHECK-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
 ; CHECK-NEXT:    vsrl.vv v8, v8, v10
 ; CHECK-NEXT:    vse32.v v8, (a0)
 ; CHECK-NEXT:    ret
@@ -4605,9 +4603,7 @@ define void @mulhu_v8i32(ptr %x) {
 ; LMULMAX1-RV32-NEXT:    vadd.vv v9, v9, v12
 ; LMULMAX1-RV32-NEXT:    vmv.v.i v12, 1
 ; LMULMAX1-RV32-NEXT:    vmv.v.i v13, 2
-; LMULMAX1-RV32-NEXT:    vsetvli zero, zero, e32, m1, tu, ma
 ; LMULMAX1-RV32-NEXT:    vslideup.vi v13, v12, 3
-; LMULMAX1-RV32-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
 ; LMULMAX1-RV32-NEXT:    vsrl.vv v9, v9, v13
 ; LMULMAX1-RV32-NEXT:    vmulhu.vv v10, v8, v10
 ; LMULMAX1-RV32-NEXT:    vsub.vv v8, v8, v10

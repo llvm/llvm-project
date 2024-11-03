@@ -170,3 +170,32 @@ void foo() {
   static_assert(__is_trivially_constructible(int[2], int, double));
   static_assert(__is_trivially_constructible(int[2], int));
 }
+
+namespace gh59675 {
+struct K {
+  template <typename T>
+  K(T);
+
+  virtual ~K();
+};
+
+union V {
+  K k;
+  // expected-note@-1 {{default constructor of 'V' is implicitly deleted because field 'k' has no default constructor}}
+  // expected-note@-2 2{{copy constructor of 'V' is implicitly deleted because variant field 'k' has a non-trivial copy constructor}}
+};
+
+static_assert(!__is_constructible(V, const V&));
+static_assert(!__is_constructible(V, V&&));
+
+void bar() {
+  V v1;
+  // expected-error@-1 {{call to implicitly-deleted default constructor of 'V'}}
+
+  V v2(v1);
+  // expected-error@-1 {{call to implicitly-deleted copy constructor of 'V'}}
+
+  V v3((V&&) v1);
+  // expected-error@-1 {{call to implicitly-deleted copy constructor of 'V'}}
+}
+}

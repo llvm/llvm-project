@@ -25,6 +25,7 @@
 #include "GCNSchedStrategy.h"
 #include "GCNVOPDUtils.h"
 #include "R600.h"
+#include "R600MachineFunctionInfo.h"
 #include "R600TargetMachine.h"
 #include "SIMachineFunctionInfo.h"
 #include "SIMachineScheduler.h"
@@ -1068,7 +1069,7 @@ bool AMDGPUPassConfig::addPreISel() {
 }
 
 bool AMDGPUPassConfig::addInstSelector() {
-  addPass(createAMDGPUISelDag(&getAMDGPUTargetMachine(), getOptLevel()));
+  addPass(createAMDGPUISelDag(getAMDGPUTargetMachine(), getOptLevel()));
   return false;
 }
 
@@ -1085,6 +1086,13 @@ AMDGPUPassConfig::createMachineScheduler(MachineSchedContext *C) const {
   if (ST.shouldClusterStores())
     DAG->addMutation(createStoreClusterDAGMutation(DAG->TII, DAG->TRI));
   return DAG;
+}
+
+MachineFunctionInfo *R600TargetMachine::createMachineFunctionInfo(
+    BumpPtrAllocator &Allocator, const Function &F,
+    const TargetSubtargetInfo *STI) const {
+  return R600MachineFunctionInfo::create<R600MachineFunctionInfo>(
+      Allocator, F, static_cast<const R600Subtarget *>(STI));
 }
 
 //===----------------------------------------------------------------------===//
@@ -1403,6 +1411,13 @@ TargetPassConfig *GCNTargetMachine::createPassConfig(PassManagerBase &PM) {
   return new GCNPassConfig(*this, PM);
 }
 
+MachineFunctionInfo *GCNTargetMachine::createMachineFunctionInfo(
+    BumpPtrAllocator &Allocator, const Function &F,
+    const TargetSubtargetInfo *STI) const {
+  return SIMachineFunctionInfo::create<SIMachineFunctionInfo>(
+      Allocator, F, static_cast<const GCNSubtarget *>(STI));
+}
+
 yaml::MachineFunctionInfo *GCNTargetMachine::createDefaultFuncInfoYAML() const {
   return new yaml::SIMachineFunctionInfo();
 }
@@ -1411,7 +1426,7 @@ yaml::MachineFunctionInfo *
 GCNTargetMachine::convertFuncInfoToYAML(const MachineFunction &MF) const {
   const SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
   return new yaml::SIMachineFunctionInfo(
-      *MFI, *MF.getSubtarget().getRegisterInfo(), MF);
+      *MFI, *MF.getSubtarget<GCNSubtarget>().getRegisterInfo(), MF);
 }
 
 bool GCNTargetMachine::parseMachineFunctionInfo(
@@ -1448,9 +1463,6 @@ bool GCNTargetMachine::parseMachineFunctionInfo(
   };
 
   if (parseOptionalRegister(YamlMFI.VGPRForAGPRCopy, MFI->VGPRForAGPRCopy))
-    return true;
-
-  if (parseOptionalRegister(YamlMFI.SGPRForEXECCopy, MFI->SGPRForEXECCopy))
     return true;
 
   auto diagnoseRegisterClass = [&](const yaml::StringValue &RegName) {
@@ -1579,10 +1591,21 @@ bool GCNTargetMachine::parseMachineFunctionInfo(
 
   MFI->Mode.IEEE = YamlMFI.Mode.IEEE;
   MFI->Mode.DX10Clamp = YamlMFI.Mode.DX10Clamp;
-  MFI->Mode.FP32InputDenormals = YamlMFI.Mode.FP32InputDenormals;
-  MFI->Mode.FP32OutputDenormals = YamlMFI.Mode.FP32OutputDenormals;
-  MFI->Mode.FP64FP16InputDenormals = YamlMFI.Mode.FP64FP16InputDenormals;
-  MFI->Mode.FP64FP16OutputDenormals = YamlMFI.Mode.FP64FP16OutputDenormals;
+
+  // FIXME: Move proper support for denormal-fp-math into base MachineFunction
+  MFI->Mode.FP32Denormals.Input = YamlMFI.Mode.FP32InputDenormals
+                                      ? DenormalMode::IEEE
+                                      : DenormalMode::PreserveSign;
+  MFI->Mode.FP32Denormals.Output = YamlMFI.Mode.FP32OutputDenormals
+                                       ? DenormalMode::IEEE
+                                       : DenormalMode::PreserveSign;
+
+  MFI->Mode.FP64FP16Denormals.Input = YamlMFI.Mode.FP64FP16InputDenormals
+                                          ? DenormalMode::IEEE
+                                          : DenormalMode::PreserveSign;
+  MFI->Mode.FP64FP16Denormals.Output = YamlMFI.Mode.FP64FP16OutputDenormals
+                                           ? DenormalMode::IEEE
+                                           : DenormalMode::PreserveSign;
 
   return false;
 }

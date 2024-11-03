@@ -100,49 +100,47 @@ if.end103:                                        ; preds = %if.else, %if.then88
 }
 
 
-define void @intrapred_luma([13 x i16]* %ptr) {
+define void @intrapred_luma(ptr %ptr) {
 ; CHECK-LABEL: @intrapred_luma(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CONV153:%.*]] = trunc i32 3 to i16
-; CHECK-NEXT:    [[ARRAYIDX154:%.*]] = getelementptr inbounds [13 x i16], [13 x i16]* [[PTR:%.*]], i64 0, i64 12
-; CHECK-NEXT:    store i16 [[CONV153]], i16* [[ARRAYIDX154]], align 8
-; CHECK-NEXT:    [[ARRAYIDX155:%.*]] = getelementptr inbounds [13 x i16], [13 x i16]* [[PTR]], i64 0, i64 11
-; CHECK-NEXT:    store i16 [[CONV153]], i16* [[ARRAYIDX155]], align 2
-; CHECK-NEXT:    [[ARRAYIDX156:%.*]] = getelementptr inbounds [13 x i16], [13 x i16]* [[PTR]], i64 0, i64 10
-; CHECK-NEXT:    store i16 [[CONV153]], i16* [[ARRAYIDX156]], align 4
+; CHECK-NEXT:    [[ARRAYIDX154:%.*]] = getelementptr inbounds [13 x i16], ptr [[PTR:%.*]], i64 0, i64 12
+; CHECK-NEXT:    store i16 [[CONV153]], ptr [[ARRAYIDX154]], align 8
+; CHECK-NEXT:    [[ARRAYIDX155:%.*]] = getelementptr inbounds [13 x i16], ptr [[PTR]], i64 0, i64 11
+; CHECK-NEXT:    store i16 [[CONV153]], ptr [[ARRAYIDX155]], align 2
+; CHECK-NEXT:    [[ARRAYIDX156:%.*]] = getelementptr inbounds [13 x i16], ptr [[PTR]], i64 0, i64 10
+; CHECK-NEXT:    store i16 [[CONV153]], ptr [[ARRAYIDX156]], align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:
   %conv153 = trunc i32 3 to i16
-  %arrayidx154 = getelementptr inbounds [13 x i16], [13 x i16]* %ptr, i64 0, i64 12
-  store i16 %conv153, i16* %arrayidx154, align 8
-  %arrayidx155 = getelementptr inbounds [13 x i16], [13 x i16]* %ptr, i64 0, i64 11
-  store i16 %conv153, i16* %arrayidx155, align 2
-  %arrayidx156 = getelementptr inbounds [13 x i16], [13 x i16]* %ptr, i64 0, i64 10
-  store i16 %conv153, i16* %arrayidx156, align 4
+  %arrayidx154 = getelementptr inbounds [13 x i16], ptr %ptr, i64 0, i64 12
+  store i16 %conv153, ptr %arrayidx154, align 8
+  %arrayidx155 = getelementptr inbounds [13 x i16], ptr %ptr, i64 0, i64 11
+  store i16 %conv153, ptr %arrayidx155, align 2
+  %arrayidx156 = getelementptr inbounds [13 x i16], ptr %ptr, i64 0, i64 10
+  store i16 %conv153, ptr %arrayidx156, align 4
   ret void
 }
 
-define fastcc void @dct36(double* %inbuf) {
+define fastcc void @dct36(ptr %inbuf) {
 ; CHECK-LABEL: @dct36(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[ARRAYIDX44:%.*]] = getelementptr inbounds double, double* [[INBUF:%.*]], i64 1
-; CHECK-NEXT:    [[TMP0:%.*]] = bitcast double* [[INBUF]] to <2 x double>*
-; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x double>, <2 x double>* [[TMP0]], align 8
+; CHECK-NEXT:    [[ARRAYIDX44:%.*]] = getelementptr inbounds double, ptr [[INBUF:%.*]], i64 1
+; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x double>, ptr [[INBUF]], align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <2 x double> [[TMP1]], <2 x double> poison, <2 x i32> <i32 1, i32 undef>
 ; CHECK-NEXT:    [[TMP3:%.*]] = fadd <2 x double> [[TMP1]], [[TMP2]]
-; CHECK-NEXT:    [[TMP4:%.*]] = bitcast double* [[ARRAYIDX44]] to <2 x double>*
-; CHECK-NEXT:    store <2 x double> [[TMP3]], <2 x double>* [[TMP4]], align 8
+; CHECK-NEXT:    store <2 x double> [[TMP3]], ptr [[ARRAYIDX44]], align 8
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  %arrayidx41 = getelementptr inbounds double, double* %inbuf, i64 2
-  %arrayidx44 = getelementptr inbounds double, double* %inbuf, i64 1
-  %0 = load double, double* %arrayidx44, align 8
+  %arrayidx41 = getelementptr inbounds double, ptr %inbuf, i64 2
+  %arrayidx44 = getelementptr inbounds double, ptr %inbuf, i64 1
+  %0 = load double, ptr %arrayidx44, align 8
   %add46 = fadd double %0, poison
-  store double %add46, double* %arrayidx41, align 8
-  %1 = load double, double* %inbuf, align 8
+  store double %add46, ptr %arrayidx41, align 8
+  %1 = load double, ptr %inbuf, align 8
   %add49 = fadd double %1, %0
-  store double %add49, double* %arrayidx44, align 8
+  store double %add49, ptr %arrayidx44, align 8
   ret void
 }

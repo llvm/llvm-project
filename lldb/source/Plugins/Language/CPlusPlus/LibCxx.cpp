@@ -28,6 +28,7 @@
 #include "Plugins/LanguageRuntime/CPlusPlus/CPPLanguageRuntime.h"
 #include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 #include "lldb/lldb-enumerations.h"
+#include <optional>
 #include <tuple>
 
 using namespace lldb;
@@ -321,7 +322,7 @@ bool lldb_private::formatters::LibCxxMapIteratorSyntheticFrontEnd::Update() {
               ast_ctx->GetBasicType(lldb::eBasicTypeVoid).GetPointerType()},
              {"cw", ast_ctx->GetBasicType(lldb::eBasicTypeBool)},
              {"payload", pair_type}});
-        llvm::Optional<uint64_t> size = tree_node_type.GetByteSize(nullptr);
+        std::optional<uint64_t> size = tree_node_type.GetByteSize(nullptr);
         if (!size)
           return false;
         WritableDataBufferSP buffer_sp(new DataBufferHeap(*size, 0));
@@ -483,7 +484,7 @@ bool lldb_private::formatters::LibCxxUnorderedMapIteratorSyntheticFrontEnd::
           ast_ctx->GetBasicType(lldb::eBasicTypeVoid).GetPointerType()},
          {"__hash_", ast_ctx->GetBasicType(lldb::eBasicTypeUnsignedLongLong)},
          {"__value_", pair_type}});
-    llvm::Optional<uint64_t> size = tree_node_type.GetByteSize(nullptr);
+    std::optional<uint64_t> size = tree_node_type.GetByteSize(nullptr);
     if (!size)
       return false;
     WritableDataBufferSP buffer_sp(new DataBufferHeap(*size, 0));
@@ -729,7 +730,7 @@ enum class StringLayout { CSD, DSC };
 /// Determine the size in bytes of \p valobj (a libc++ std::string object) and
 /// extract its data payload. Return the size + payload pair.
 // TODO: Support big-endian architectures.
-static llvm::Optional<std::pair<uint64_t, ValueObjectSP>>
+static std::optional<std::pair<uint64_t, ValueObjectSP>>
 ExtractLibcxxStringInfo(ValueObject &valobj) {
   ValueObjectSP valobj_r_sp =
       valobj.GetChildMemberWithName(ConstString("__r_"), /*can_create=*/true);
@@ -798,7 +799,7 @@ ExtractLibcxxStringInfo(ValueObject &valobj) {
     // inline string buffer (23 bytes on x86_64/Darwin). If it doesn't, it's
     // likely that the string isn't initialized and we're reading garbage.
     ExecutionContext exe_ctx(location_sp->GetExecutionContextRef());
-    const llvm::Optional<uint64_t> max_bytes =
+    const std::optional<uint64_t> max_bytes =
         location_sp->GetCompilerType().GetByteSize(
             exe_ctx.GetBestExecutionContextScope());
     if (!max_bytes || size > *max_bytes || !location_sp)
@@ -852,13 +853,13 @@ LibcxxWStringSummaryProvider(ValueObject &valobj, Stream &stream,
     return false;
 
   // std::wstring::size() is measured in 'characters', not bytes
-  TypeSystemClang *ast_context =
+  TypeSystemClangSP scratch_ts_sp =
       ScratchTypeSystemClang::GetForTarget(*valobj.GetTargetSP());
-  if (!ast_context)
+  if (!scratch_ts_sp)
     return false;
 
   auto wchar_t_size =
-      ast_context->GetBasicType(lldb::eBasicTypeWChar).GetByteSize(nullptr);
+      scratch_ts_sp->GetBasicType(lldb::eBasicTypeWChar).GetByteSize(nullptr);
   if (!wchar_t_size)
     return false;
 

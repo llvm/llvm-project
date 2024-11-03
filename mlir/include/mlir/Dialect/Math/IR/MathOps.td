@@ -197,6 +197,28 @@ def Math_Atan2Op : Math_FloatBinaryOp<"atan2">{
 }
 
 //===----------------------------------------------------------------------===//
+// CbrtOp
+//===----------------------------------------------------------------------===//
+
+def Math_CbrtOp : Math_FloatUnaryOp<"cbrt"> {
+  let summary = "cube root of the specified value";
+  let description = [{
+    The `cbrt` operation computes the cube root. It takes one operand of
+    floating point type (i.e., scalar, tensor or vector) and returns one result
+    of the same type. It has no standard attributes.
+
+    Example:
+
+    ```mlir
+    // Scalar cube root value.
+    %a = math.cbrt %b : f64
+    ```
+
+    Note: This op is not equivalent to powf(..., 1/3.0).
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // CeilOp
 //===----------------------------------------------------------------------===//
 

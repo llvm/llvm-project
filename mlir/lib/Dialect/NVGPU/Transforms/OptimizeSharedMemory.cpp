@@ -181,8 +181,7 @@ mlir::LogicalResult
 mlir::nvgpu::optimizeSharedMemoryReadsAndWrites(Operation *parentOp,
                                                 Value memrefValue) {
   auto memRefType = memrefValue.getType().dyn_cast<MemRefType>();
-  if (!memRefType || memRefType.getMemorySpaceAsInt() !=
-                         gpu::GPUDialect::getWorkgroupAddressSpace())
+  if (!memRefType || !NVGPUDialect::hasSharedMemoryAddressSpace(memRefType))
     return failure();
 
   // Abort if the given value has any sub-views; we do not do any alias
@@ -258,11 +257,7 @@ public:
     Operation *op = getOperation();
     SmallVector<memref::AllocOp> shmAllocOps;
     op->walk([&](memref::AllocOp allocOp) {
-      if (allocOp.getMemref()
-              .getType()
-              .cast<MemRefType>()
-              .getMemorySpaceAsInt() !=
-          gpu::GPUDialect::getWorkgroupAddressSpace())
+      if (!NVGPUDialect::hasSharedMemoryAddressSpace(allocOp.getType()))
         return;
       shmAllocOps.push_back(allocOp);
     });

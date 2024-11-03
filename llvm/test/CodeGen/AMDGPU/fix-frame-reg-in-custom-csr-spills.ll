@@ -25,7 +25,6 @@ define void @test_stack_realign(<8 x i32> %val, i32 %idx) #0 {
 ; GCN-NEXT:    s_add_u32 s16, s16, extern_func@gotpcrel32@lo+4
 ; GCN-NEXT:    s_addc_u32 s17, s17, extern_func@gotpcrel32@hi+12
 ; GCN-NEXT:    s_load_dwordx2 s[16:17], s[16:17], 0x0
-; GCN-NEXT:    ; implicit-def: $vgpr42
 ; GCN-NEXT:    buffer_store_dword v40, off, s[0:3], s33 offset:4 ; 4-byte Folded Spill
 ; GCN-NEXT:    buffer_store_dword v41, off, s[0:3], s33 ; 4-byte Folded Spill
 ; GCN-NEXT:    v_writelane_b32 v42, s30, 0

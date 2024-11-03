@@ -15,19 +15,19 @@
 ; CHECK-DAG:   %tmp.0.s2a = alloca i32
 ; CHECK-DAG:   %tmp.0.phiops = alloca i32
 ; CHECK-LABEL: polly.stmt.bb8:
-; CHECK:       %tmp.0.phiops.reload = load i32, i32* %tmp.0.phiops
-; CHECK:       store i32 %tmp.0.phiops.reload, i32* %tmp.0.s2a
+; CHECK:       %tmp.0.phiops.reload = load i32, ptr %tmp.0.phiops
+; CHECK:       store i32 %tmp.0.phiops.reload, ptr %tmp.0.s2a
 ; CHECK-LABEL: polly.stmt.bb8b:
-; CHECK:       %tmp.0.s2a.reload = load i32, i32* %tmp.0.s2a
+; CHECK:       %tmp.0.s2a.reload = load i32, ptr %tmp.0.s2a
 ; CHECK:       store i32 %tmp.0.s2a.reload,
 ; CHECK-LABEL: polly.stmt.bb7:
-; CHECK:       store i32 5, i32* %tmp.0.phiops
+; CHECK:       store i32 5, ptr %tmp.0.phiops
 ; CHECK-LABEL: polly.stmt.bb6:
-; CHECK:       store i32 3, i32* %tmp.0.phiops
+; CHECK:       store i32 3, ptr %tmp.0.phiops
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
-define void @f(i32* %A, i32 %c, i32 %N) {
+define void @f(ptr %A, i32 %c, i32 %N) {
 bb:
   %tmp = sext i32 %N to i64
   %tmp1 = sext i32 %c to i64
@@ -53,8 +53,8 @@ bb8:                                              ; preds = %bb7, %bb6
   br label %bb8b
 
 bb8b:
-  %tmp9 = getelementptr inbounds i32, i32* %A, i64 %indvars.iv
-  store i32 %tmp.0, i32* %tmp9, align 4
+  %tmp9 = getelementptr inbounds i32, ptr %A, i64 %indvars.iv
+  store i32 %tmp.0, ptr %tmp9, align 4
   br label %bb10
 
 bb10:                                             ; preds = %bb8

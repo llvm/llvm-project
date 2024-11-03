@@ -15,6 +15,7 @@
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/IR/TensorEncoding.h"
+#include <optional>
 
 using namespace mlir;
 using namespace mlir::detail;
@@ -280,7 +281,7 @@ Type Parser::parseNonFunctionType() {
     }
 
     IntegerType::SignednessSemantics signSemantics = IntegerType::Signless;
-    if (Optional<bool> signedness = getToken().getIntTypeSignedness())
+    if (std::optional<bool> signedness = getToken().getIntTypeSignedness())
       signSemantics = *signedness ? IntegerType::Signed : IntegerType::Unsigned;
 
     consumeToken(Token::inttype);
@@ -495,8 +496,9 @@ Parser::parseVectorDimensionList(SmallVectorImpl<int64_t> &dimensions,
 }
 
 /// Parse a dimension list of a tensor or memref type.  This populates the
-/// dimension list, using -1 for the `?` dimensions if `allowDynamic` is set and
-/// errors out on `?` otherwise. Parsing the trailing `x` is configurable.
+/// dimension list, using ShapedType::kDynamic for the `?` dimensions if
+/// `allowDynamic` is set and errors out on `?` otherwise. Parsing the trailing
+/// `x` is configurable.
 ///
 ///   dimension-list ::= eps | dimension (`x` dimension)*
 ///   dimension-list-with-trailing-x ::= (dimension `x`)*
@@ -559,7 +561,7 @@ ParseResult Parser::parseIntegerInDimensionList(int64_t &value) {
     consumeToken();
   } else {
     // Make sure this integer value is in bound and valid.
-    Optional<uint64_t> dimension = getToken().getUInt64IntegerValue();
+    std::optional<uint64_t> dimension = getToken().getUInt64IntegerValue();
     if (!dimension ||
         *dimension > (uint64_t)std::numeric_limits<int64_t>::max())
       return emitError("invalid dimension");

@@ -14,9 +14,7 @@
 
 using namespace clang::ast_matchers;
 
-namespace clang {
-namespace tidy {
-namespace modernize {
+namespace clang::tidy::modernize {
 
 static bool doesNoDiscardMacroExist(ASTContext &Context,
                                     const llvm::StringRef &MacroId) {
@@ -146,6 +144,4 @@ bool UseNodiscardCheck::isLanguageVersionSupported(
   return LangOpts.CPlusPlus;
 }
 
-} // namespace modernize
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::modernize

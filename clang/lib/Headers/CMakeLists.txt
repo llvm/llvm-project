@@ -253,6 +253,7 @@ set(files
 
 set(cuda_wrapper_files
   cuda_wrappers/algorithm
+  cuda_wrappers/cmath
   cuda_wrappers/complex
   cuda_wrappers/new
 )

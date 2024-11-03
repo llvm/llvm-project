@@ -144,8 +144,7 @@ public:
   /// known to be of the correct type.
   template <typename T>
   ArrayRef<T> getDataAs() const {
-    return llvm::makeArrayRef<T>((const T *)data.data(),
-                                 data.size() / sizeof(T));
+    return llvm::ArrayRef<T>((const T *)data.data(), data.size() / sizeof(T));
   }
 
   /// Return a mutable reference to the raw underlying data of this blob.

@@ -14,7 +14,7 @@
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
-define void @foo(i64 %n, [32 x float]* %A) {
+define void @foo(i64 %n, ptr %A) {
 bb:
   br label %bb1
 
@@ -34,12 +34,12 @@ bb3:                                              ; preds = %bb12, %bb2
 bb4:                                              ; preds = %bb3
   %tmp5 = add nuw nsw i64 %j.0, 1
   %tmp6 = add nuw nsw i64 %i.0, 1
-  %tmp7 = getelementptr inbounds [32 x float], [32 x float]* %A, i64 %tmp6, i64 %tmp5
-  %tmp8 = load float, float* %tmp7, align 4
-  %tmp9 = getelementptr inbounds [32 x float], [32 x float]* %A, i64 %i.0, i64 %j.0
-  %tmp10 = load float, float* %tmp9, align 4
+  %tmp7 = getelementptr inbounds [32 x float], ptr %A, i64 %tmp6, i64 %tmp5
+  %tmp8 = load float, ptr %tmp7, align 4
+  %tmp9 = getelementptr inbounds [32 x float], ptr %A, i64 %i.0, i64 %j.0
+  %tmp10 = load float, ptr %tmp9, align 4
   %tmp11 = fadd float %tmp10, %tmp8
-  store float %tmp11, float* %tmp9, align 4
+  store float %tmp11, ptr %tmp9, align 4
   br label %bb12
 
 bb12:                                             ; preds = %bb4

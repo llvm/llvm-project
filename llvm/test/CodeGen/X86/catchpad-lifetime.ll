@@ -1,5 +1,5 @@
-; RUN: llc -mtriple=x86_64-windows-msvc < %s | FileCheck %s --check-prefix=X64
-; RUN: llc -mtriple=i686-windows-msvc < %s | FileCheck %s --check-prefix=X86
+; RUN: llc -opaque-pointers=0 -mtriple=x86_64-windows-msvc < %s | FileCheck %s --check-prefix=X64
+; RUN: llc -opaque-pointers=0 -mtriple=i686-windows-msvc < %s | FileCheck %s --check-prefix=X86
 
 declare void @throw()
 

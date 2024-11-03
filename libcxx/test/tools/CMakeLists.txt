@@ -1,0 +1,7 @@
+
+set(LIBCXX_TEST_TOOLS_PATH ${CMAKE_CURRENT_BINARY_DIR} PARENT_SCOPE)
+
+# TODO: Remove LIBCXX_ENABLE_CLANG_TIDY
+if(LIBCXX_ENABLE_CLANG_TIDY)
+  add_subdirectory(clang_tidy_checks)
+endif()

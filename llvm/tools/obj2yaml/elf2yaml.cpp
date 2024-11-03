@@ -247,8 +247,7 @@ static void dumpSectionOffsets(const typename ELFT::Ehdr &Header,
   else
     ExpectedOffset = sizeof(typename ELFT::Ehdr);
 
-  for (const std::unique_ptr<ELFYAML::Chunk> &C :
-       makeArrayRef(V).drop_front()) {
+  for (const std::unique_ptr<ELFYAML::Chunk> &C : ArrayRef(V).drop_front()) {
     ELFYAML::Section &Sec = *cast<ELFYAML::Section>(C.get());
     const typename ELFT::Shdr &SecHdr = S[Sec.OriginalSecNdx];
 
@@ -360,7 +359,7 @@ template <class ELFT> Expected<ELFYAML::Object *> ELFDumper<ELFT>::dump() {
   std::vector<ELFYAML::Section *> OriginalOrder;
   if (!Chunks.empty())
     for (const std::unique_ptr<ELFYAML::Chunk> &C :
-         makeArrayRef(Chunks).drop_front())
+         ArrayRef(Chunks).drop_front())
       OriginalOrder.push_back(cast<ELFYAML::Section>(C.get()));
 
   // Sometimes the order of sections in the section header table does not match
@@ -897,7 +896,7 @@ ELFDumper<ELFT>::dumpBBAddrMapSection(const Elf_Shdr *Shdr) {
   while (Cur && Cur.tell() < Content.size()) {
     if (Shdr->sh_type == ELF::SHT_LLVM_BB_ADDR_MAP) {
       Version = Data.getU8(Cur);
-      if (Cur && Version > 1)
+      if (Cur && Version > 2)
         return createStringError(
             errc::invalid_argument,
             "invalid SHT_LLVM_BB_ADDR_MAP section version: " +
@@ -908,11 +907,12 @@ ELFDumper<ELFT>::dumpBBAddrMapSection(const Elf_Shdr *Shdr) {
     uint64_t NumBlocks = Data.getULEB128(Cur);
     std::vector<ELFYAML::BBAddrMapEntry::BBEntry> BBEntries;
     // Read the specified number of BB entries, or until decoding fails.
-    for (uint64_t BlockID = 0; Cur && BlockID < NumBlocks; ++BlockID) {
+    for (uint64_t BlockIndex = 0; Cur && BlockIndex < NumBlocks; ++BlockIndex) {
+      uint32_t ID = Version >= 2 ? Data.getULEB128(Cur) : BlockIndex;
       uint64_t Offset = Data.getULEB128(Cur);
       uint64_t Size = Data.getULEB128(Cur);
       uint64_t Metadata = Data.getULEB128(Cur);
-      BBEntries.push_back({Offset, Size, Metadata});
+      BBEntries.push_back({ID, Offset, Size, Metadata});
     }
     Entries.push_back(
         {Version, Feature, Address, /*NumBlocks=*/{}, std::move(BBEntries)});

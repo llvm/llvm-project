@@ -40,7 +40,6 @@
 #include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
@@ -56,6 +55,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
 #include <memory>
+#include <optional>
 #include <string>
 #include <tuple>
 #include <utility>
@@ -436,8 +436,8 @@ reverse_children::reverse_children(Stmt *S) {
     // Note: Fill in this switch with more cases we want to optimize.
     case Stmt::InitListExprClass: {
       InitListExpr *IE = cast<InitListExpr>(S);
-      children = llvm::makeArrayRef(reinterpret_cast<Stmt**>(IE->getInits()),
-                                    IE->getNumInits());
+      children = llvm::ArrayRef(reinterpret_cast<Stmt **>(IE->getInits()),
+                                IE->getNumInits());
       return;
     }
     default:
@@ -968,7 +968,7 @@ private:
     const Expr *LHSExpr = B->getLHS()->IgnoreParens();
     const Expr *RHSExpr = B->getRHS()->IgnoreParens();
 
-    Optional<llvm::APInt> IntLiteral1 =
+    std::optional<llvm::APInt> IntLiteral1 =
         getIntegerLiteralSubexpressionValue(LHSExpr);
     const Expr *BoolExpr = RHSExpr;
 
@@ -986,7 +986,7 @@ private:
       const Expr *LHSExpr2 = BitOp->getLHS()->IgnoreParens();
       const Expr *RHSExpr2 = BitOp->getRHS()->IgnoreParens();
 
-      Optional<llvm::APInt> IntLiteral2 =
+      std::optional<llvm::APInt> IntLiteral2 =
           getIntegerLiteralSubexpressionValue(LHSExpr2);
 
       if (!IntLiteral2)
@@ -1020,7 +1020,8 @@ private:
   // FIXME: it would be good to unify this function with
   // IsIntegerLiteralConstantExpr at some point given the similarity between the
   // functions.
-  Optional<llvm::APInt> getIntegerLiteralSubexpressionValue(const Expr *E) {
+  std::optional<llvm::APInt>
+  getIntegerLiteralSubexpressionValue(const Expr *E) {
 
     // If unary.
     if (const auto *UnOp = dyn_cast<UnaryOperator>(E->IgnoreParens())) {
@@ -5422,7 +5423,7 @@ public:
       unsigned j = 1;
       for (CFGBlock::const_iterator BI = (*I)->begin(), BEnd = (*I)->end() ;
            BI != BEnd; ++BI, ++j ) {
-        if (Optional<CFGStmt> SE = BI->getAs<CFGStmt>()) {
+        if (std::optional<CFGStmt> SE = BI->getAs<CFGStmt>()) {
           const Stmt *stmt= SE->getStmt();
           std::pair<unsigned, unsigned> P((*I)->getBlockID(), j);
           StmtMap[stmt] = P;
@@ -5796,7 +5797,7 @@ static void print_elem(raw_ostream &OS, StmtPrinterHelper &Helper,
       OS << " (BindTemporary)";
     } else if (const CXXConstructExpr *CCE = dyn_cast<CXXConstructExpr>(S)) {
       OS << " (CXXConstructExpr";
-      if (Optional<CFGConstructor> CE = E.getAs<CFGConstructor>()) {
+      if (std::optional<CFGConstructor> CE = E.getAs<CFGConstructor>()) {
         print_construction_context(OS, Helper, CE->getConstructionContext());
       }
       OS << ", " << CCE->getType() << ")";
@@ -6171,7 +6172,7 @@ static bool isImmediateSinkBlock(const CFGBlock *Blk) {
   // we'd need to carefully handle the case when the throw is being
   // immediately caught.
   if (llvm::any_of(*Blk, [](const CFGElement &Elm) {
-        if (Optional<CFGStmt> StmtElm = Elm.getAs<CFGStmt>())
+        if (std::optional<CFGStmt> StmtElm = Elm.getAs<CFGStmt>())
           if (isa<CXXThrowExpr>(StmtElm->getStmt()))
             return true;
         return false;

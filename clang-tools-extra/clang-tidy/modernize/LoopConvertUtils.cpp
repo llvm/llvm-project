@@ -21,14 +21,13 @@
 #include <algorithm>
 #include <cassert>
 #include <cstddef>
+#include <optional>
 #include <string>
 #include <utility>
 
 using namespace clang::ast_matchers;
 
-namespace clang {
-namespace tidy {
-namespace modernize {
+namespace clang::tidy::modernize {
 
 /// Tracks a stack of parent statements during traversal.
 ///
@@ -444,7 +443,7 @@ static bool arrayMatchesBoundExpr(ASTContext *Context,
       Context->getAsConstantArrayType(ArrayType);
   if (!ConstType)
     return false;
-  Optional<llvm::APSInt> ConditionSize =
+  std::optional<llvm::APSInt> ConditionSize =
       ConditionExpr->getIntegerConstantExpr(*Context);
   if (!ConditionSize)
     return false;
@@ -910,6 +909,4 @@ bool VariableNamer::declarationExists(StringRef Symbol) {
   return DeclFinder.findUsages(SourceStmt);
 }
 
-} // namespace modernize
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::modernize

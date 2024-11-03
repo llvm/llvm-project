@@ -753,6 +753,15 @@ public:
     // Only 1 DWORD in the mask should have any procs set.
     // Return the appropriate index, or -1 for an invalid mask.
     virtual int get_proc_group() const { return -1; }
+    int get_max_cpu() const {
+      int cpu;
+      int max_cpu = -1;
+      KMP_CPU_SET_ITERATE(cpu, this) {
+        if (cpu > max_cpu)
+          max_cpu = cpu;
+      }
+      return max_cpu;
+    }
   };
   void *operator new(size_t n);
   void operator delete(void *p);
@@ -836,6 +845,26 @@ typedef struct kmp_affinity_flags_t {
 } kmp_affinity_flags_t;
 KMP_BUILD_ASSERT(sizeof(kmp_affinity_flags_t) == 4);
 
+typedef struct kmp_affinity_ids_t {
+  int ids[KMP_HW_LAST];
+  int operator[](size_t idx) const { return ids[idx]; }
+  int &operator[](size_t idx) { return ids[idx]; }
+  kmp_affinity_ids_t &operator=(const kmp_affinity_ids_t &rhs) {
+    for (int i = 0; i < KMP_HW_LAST; ++i)
+      ids[i] = rhs[i];
+    return *this;
+  }
+} kmp_affinity_ids_t;
+
+typedef struct kmp_affinity_attrs_t {
+  int core_type : 8;
+  int core_eff : 8;
+  unsigned valid : 1;
+  unsigned reserved : 15;
+} kmp_affinity_attrs_t;
+#define KMP_AFFINITY_ATTRS_UNKNOWN                                             \
+  { KMP_HW_CORE_TYPE_UNKNOWN, kmp_hw_attr_t::UNKNOWN_CORE_EFF, 0, 0 }
+
 typedef struct kmp_affinity_t {
   char *proclist;
   enum affinity_type type;
@@ -846,6 +875,8 @@ typedef struct kmp_affinity_t {
   kmp_affinity_flags_t flags;
   unsigned num_masks;
   kmp_affin_mask_t *masks;
+  kmp_affinity_ids_t *ids;
+  kmp_affinity_attrs_t *attrs;
   unsigned num_os_id_masks;
   kmp_affin_mask_t *os_id_masks;
   const char *env_var;
@@ -855,7 +886,7 @@ typedef struct kmp_affinity_t {
   {                                                                            \
     nullptr, affinity_default, KMP_HW_UNKNOWN, -1, 0, 0,                       \
         {TRUE, FALSE, TRUE, affinity_respect_mask_default, FALSE, FALSE}, 0,   \
-        nullptr, 0, nullptr, env                                               \
+        nullptr, nullptr, nullptr, 0, nullptr, env                             \
   }
 
 extern enum affinity_top_method __kmp_affinity_top_method;
@@ -2711,6 +2742,8 @@ typedef struct KMP_ALIGN_CACHE kmp_base_info {
 
 #if KMP_AFFINITY_SUPPORTED
   kmp_affin_mask_t *th_affin_mask; /* thread's current affinity mask */
+  kmp_affinity_ids_t th_topology_ids; /* thread's current topology ids */
+  kmp_affinity_attrs_t th_topology_attrs; /* thread's current topology attrs */
 #endif
   omp_allocator_handle_t th_def_allocator; /* default allocator */
   /* The data set by the primary thread at reinit, then R/W by the worker */

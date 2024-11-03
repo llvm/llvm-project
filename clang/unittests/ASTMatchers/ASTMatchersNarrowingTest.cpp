@@ -3550,6 +3550,41 @@ TEST_P(ASTMatchersTest, InStdNamespace) {
                       cxxRecordDecl(hasName("vector"), isInStdNamespace())));
 }
 
+TEST_P(ASTMatchersTest, InAnonymousNamespace) {
+  if (!GetParam().isCXX()) {
+    return;
+  }
+
+  EXPECT_TRUE(
+      notMatches("class vector {};"
+                 "namespace foo {"
+                 "  class vector {};"
+                 "}",
+                 cxxRecordDecl(hasName("vector"), isInAnonymousNamespace())));
+
+  EXPECT_TRUE(
+      matches("namespace {"
+              "  class vector {};"
+              "}",
+              cxxRecordDecl(hasName("vector"), isInAnonymousNamespace())));
+
+  EXPECT_TRUE(
+      matches("namespace foo {"
+              "  namespace {"
+              "    class vector {};"
+              "  }"
+              "}",
+              cxxRecordDecl(hasName("vector"), isInAnonymousNamespace())));
+
+  EXPECT_TRUE(
+      matches("namespace {"
+              "  namespace foo {"
+              "    class vector {};"
+              "  }"
+              "}",
+              cxxRecordDecl(hasName("vector"), isInAnonymousNamespace())));
+}
+
 TEST_P(ASTMatchersTest, InStdNamespace_CXX11) {
   if (!GetParam().isCXX11OrLater()) {
     return;

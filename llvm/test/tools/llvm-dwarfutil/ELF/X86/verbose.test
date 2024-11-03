@@ -16,7 +16,7 @@
 # RUN: llvm-dwarfutil %t.o %t1 -j 1 --verbose --verify 2>&1 | FileCheck %s --check-prefixes=CHECK,CHECK-VERIFY
 
 # CHECK-NOT: warning: --num-threads set to 1 because verbose mode is specified
-# CHECK: Do garbage collection for debug info ...
+# CHECK: Do debug info linking...
 # CHECK: Input compilation unit:
 # CHECK: DW_TAG_compile_unit
 # CHECK: Keeping subprogram DIE

@@ -25,7 +25,6 @@
 #include "mlir-c/Bindings/Python/Interop.h"
 #include "mlir-c/IR.h"
 
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/Twine.h"
 
 namespace py = pybind11;

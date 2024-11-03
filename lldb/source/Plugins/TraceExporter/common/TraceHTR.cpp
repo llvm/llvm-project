@@ -12,6 +12,7 @@
 #include "lldb/Target/Process.h"
 #include "lldb/Target/Target.h"
 #include "llvm/Support/JSON.h"
+#include <optional>
 #include <sstream>
 #include <string>
 
@@ -22,10 +23,10 @@ size_t HTRBlockMetadata::GetNumInstructions() const {
   return m_num_instructions;
 }
 
-llvm::Optional<llvm::StringRef>
+std::optional<llvm::StringRef>
 HTRBlockMetadata::GetMostFrequentlyCalledFunction() const {
   size_t max_ncalls = 0;
-  llvm::Optional<llvm::StringRef> max_name;
+  std::optional<llvm::StringRef> max_name;
   for (const auto &it : m_func_calls) {
     ConstString name = it.first;
     size_t ncalls = it.second;
@@ -80,7 +81,7 @@ llvm::ArrayRef<lldb::addr_t> HTRInstructionLayer::GetInstructionTrace() const {
 }
 
 void HTRInstructionLayer::AddCallInstructionMetadata(
-    lldb::addr_t load_addr, llvm::Optional<ConstString> func_name) {
+    lldb::addr_t load_addr, std::optional<ConstString> func_name) {
   m_call_isns.emplace(load_addr, func_name);
 }
 
@@ -108,7 +109,7 @@ HTRBlockMetadata HTRInstructionLayer::GetMetadataByIndex(size_t index) const {
 
   auto func_name_it = m_call_isns.find(instruction_load_address);
   if (func_name_it != m_call_isns.end()) {
-    if (llvm::Optional<ConstString> func_name = func_name_it->second) {
+    if (std::optional<ConstString> func_name = func_name_it->second) {
       func_calls[*func_name] = 1;
     }
   }
@@ -137,13 +138,13 @@ TraceHTR::TraceHTR(Thread &thread, TraceCursor &cursor)
   /*
   Target &target = thread.GetProcess()->GetTarget();
   auto function_name_from_load_address =
-      [&](lldb::addr_t load_address) -> llvm::Optional<ConstString> {
+      [&](lldb::addr_t load_address) -> std::optional<ConstString> {
     lldb_private::Address pc_addr;
     SymbolContext sc;
     if (target.ResolveLoadAddress(load_address, pc_addr) &&
         pc_addr.CalculateSymbolContext(&sc))
       return sc.GetFunctionName()
-                 ? llvm::Optional<ConstString>(sc.GetFunctionName())
+                 ? std::optional<ConstString>(sc.GetFunctionName())
                  : std::nullopt;
     else
       return std::nullopt;
@@ -316,7 +317,7 @@ HTRBlockLayerUP lldb_private::BasicSuperBlockMerge(IHTRLayer &layer) {
     // Each super block always has the same first unit (we call this the
     // super block head) This gurantee allows us to use the super block head as
     // the unique key mapping to the super block it begins
-    llvm::Optional<size_t> superblock_head;
+    std::optional<size_t> superblock_head;
     auto construct_next_layer = [&](size_t merge_start, size_t n) -> void {
       if (!superblock_head)
         return;
@@ -440,7 +441,7 @@ llvm::json::Value lldb_private::toJSON(const TraceHTR &htr) {
 
       HTRBlockMetadata metadata = block.GetMetadata();
 
-      llvm::Optional<llvm::StringRef> most_freq_func =
+      std::optional<llvm::StringRef> most_freq_func =
           metadata.GetMostFrequentlyCalledFunction();
       std::stringstream stream;
       stream << "0x" << std::hex << metadata.GetFirstInstructionLoadAddress();

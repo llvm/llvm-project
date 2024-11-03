@@ -21,9 +21,7 @@ namespace {
 #include "Confusables.inc"
 } // namespace
 
-namespace clang {
-namespace tidy {
-namespace misc {
+namespace clang::tidy::misc {
 
 ConfusableIdentifierCheck::ConfusableIdentifierCheck(StringRef Name,
                                                      ClangTidyContext *Context)
@@ -169,6 +167,4 @@ void ConfusableIdentifierCheck::registerMatchers(
   Finder->addMatcher(ast_matchers::namedDecl().bind("nameddecl"), this);
 }
 
-} // namespace misc
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::misc

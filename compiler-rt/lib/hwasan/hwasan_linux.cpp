@@ -541,6 +541,17 @@ void HwasanInstallAtForkHandler() {
   pthread_atfork(before, after, after);
 }
 
+void InstallAtExitCheckLeaks() {
+  if (CAN_SANITIZE_LEAKS) {
+    if (common_flags()->detect_leaks && common_flags()->leak_check_at_exit) {
+      if (flags()->halt_on_error)
+        Atexit(__lsan::DoLeakCheck);
+      else
+        Atexit(__lsan::DoRecoverableLeakCheckVoid);
+    }
+  }
+}
+
 }  // namespace __hwasan
 
 #endif  // SANITIZER_FREEBSD || SANITIZER_LINUX || SANITIZER_NETBSD

@@ -106,13 +106,8 @@ static Instruction *findCommonDominator(ArrayRef<Instruction *> Instructions,
                                         DominatorTree &DT) {
   Instruction *CommonDom = nullptr;
   for (auto *Insn : Instructions)
-    if (!CommonDom || DT.dominates(Insn, CommonDom))
-      CommonDom = Insn;
-    else if (!DT.dominates(CommonDom, Insn))
-      // If there is no dominance relation, use common dominator.
-      CommonDom =
-          DT.findNearestCommonDominator(CommonDom->getParent(),
-                                        Insn->getParent())->getTerminator();
+    CommonDom =
+        CommonDom ? DT.findNearestCommonDominator(CommonDom, Insn) : Insn;
   assert(CommonDom && "Common dominator not found?");
   return CommonDom;
 }

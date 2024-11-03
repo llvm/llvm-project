@@ -24,6 +24,7 @@
 #include "PdbUtil.h"
 #include "UdtRecordCompleter.h"
 #include "SymbolFileNativePDB.h"
+#include <optional>
 
 using namespace lldb_private;
 using namespace lldb_private::npdb;
@@ -128,7 +129,7 @@ AnyScopesHaveTemplateParams(llvm::ArrayRef<llvm::ms_demangle::Node *> scopes) {
   return false;
 }
 
-static llvm::Optional<clang::CallingConv>
+static std::optional<clang::CallingConv>
 TranslateCallingConvention(llvm::codeview::CallingConvention conv) {
   using CC = llvm::codeview::CallingConvention;
   switch (conv) {
@@ -192,7 +193,7 @@ PdbAstBuilder::CreateDeclInfoForType(const TagRecord &record, TypeIndex ti) {
   // If this type doesn't have a parent type in the debug info, then the best we
   // can do is to say that it's either a series of namespaces (if the scope is
   // non-empty), or the translation unit (if the scope is empty).
-  llvm::Optional<TypeIndex> parent_index = pdb->GetParentType(ti);
+  std::optional<TypeIndex> parent_index = pdb->GetParentType(ti);
   if (!parent_index) {
     if (scopes.empty())
       return {context, uname};
@@ -272,7 +273,8 @@ clang::Decl *PdbAstBuilder::GetOrCreateSymbolForId(PdbCompilandSymId id) {
   }
 }
 
-llvm::Optional<CompilerDecl> PdbAstBuilder::GetOrCreateDeclForUid(PdbSymUid uid) {
+std::optional<CompilerDecl>
+PdbAstBuilder::GetOrCreateDeclForUid(PdbSymUid uid) {
   if (clang::Decl *result = TryGetDecl(uid))
     return ToCompilerDecl(*result);
 
@@ -361,7 +363,7 @@ clang::DeclContext *PdbAstBuilder::GetParentDeclContext(PdbSymUid uid) {
   PdbIndex& index = pdb->GetIndex();
   switch (uid.kind()) {
   case PdbSymUidKind::CompilandSym: {
-    llvm::Optional<PdbCompilandSymId> scope =
+    std::optional<PdbCompilandSymId> scope =
         pdb->FindSymbolScope(uid.asCompilandSym());
     if (scope)
       return GetOrCreateDeclContextForUid(*scope);
@@ -373,7 +375,7 @@ clang::DeclContext *PdbAstBuilder::GetParentDeclContext(PdbSymUid uid) {
     // It could be a namespace, class, or global.  We don't support nested
     // functions yet.  Anyway, we just need to consult the parent type map.
     PdbTypeSymId type_id = uid.asTypeSym();
-    llvm::Optional<TypeIndex> parent_index = pdb->GetParentType(type_id.index);
+    std::optional<TypeIndex> parent_index = pdb->GetParentType(type_id.index);
     if (!parent_index)
       return FromCompilerDeclContext(GetTranslationUnitDecl());
     return GetOrCreateDeclContextForUid(PdbTypeSymId(*parent_index));
@@ -1187,7 +1189,7 @@ clang::QualType PdbAstBuilder::CreateFunctionType(
   llvm::cantFail(
       TypeDeserializer::deserializeAs<ArgListRecord>(args_cvt, args));
 
-  llvm::ArrayRef<TypeIndex> arg_indices = llvm::makeArrayRef(args.ArgIndices);
+  llvm::ArrayRef<TypeIndex> arg_indices = llvm::ArrayRef(args.ArgIndices);
   bool is_variadic = IsCVarArgsFunction(arg_indices);
   if (is_variadic)
     arg_indices = arg_indices.drop_back();
@@ -1206,7 +1208,7 @@ clang::QualType PdbAstBuilder::CreateFunctionType(
   if (return_type.isNull())
     return {};
 
-  llvm::Optional<clang::CallingConv> cc =
+  std::optional<clang::CallingConv> cc =
       TranslateCallingConvention(calling_convention);
   if (!cc)
     return {};

@@ -213,7 +213,6 @@ protected:
   const TargetRegisterInfo &TRI;
   const TargetLibraryInfo *LibInfo;
   bool SkipTargetIndependentISel;
-  bool UseInstrRefDebugInfo = false;
 
   /// The position of the last instruction for materializing constants
   /// for use in the current block. It resets to EmitStartPt when it makes sense
@@ -319,12 +318,6 @@ public:
 
   /// Reset InsertPt to the given old insert position.
   void leaveLocalValueArea(SavePoint Old);
-
-  /// Signal whether instruction referencing variable locations are desired for
-  /// this function's debug-info.
-  void useInstrRefDebugInfo(bool Flag) {
-    UseInstrRefDebugInfo = Flag;
-  }
 
 protected:
   explicit FastISel(FunctionLoweringInfo &FuncInfo,

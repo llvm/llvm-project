@@ -678,7 +678,7 @@ define amdgpu_kernel void @simplify_demanded_bfe_sdiv(ptr addrspace(1) %out, ptr
 ; GFX6-NEXT:    s_load_dword s0, s[6:7], 0x0
 ; GFX6-NEXT:    s_mov_b32 s6, -1
 ; GFX6-NEXT:    s_mov_b32 s7, 0xf000
-; GFX6-NEXT:    v_mul_lo_u32 v1, -2, v0
+; GFX6-NEXT:    v_mul_lo_u32 v1, v0, -2
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX6-NEXT:    s_bfe_i32 s0, s0, 0x100001
 ; GFX6-NEXT:    s_ashr_i32 s2, s0, 31

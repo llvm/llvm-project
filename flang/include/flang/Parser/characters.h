@@ -14,6 +14,7 @@
 // also to accomodate Fortran tokenization.
 
 #include <cstddef>
+#include <cstdint>
 #include <optional>
 #include <string>
 

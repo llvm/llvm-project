@@ -38,6 +38,7 @@
 #include <cstddef>
 #include <cstring>
 #include <memory>
+#include <optional>
 
 using namespace clang;
 
@@ -182,7 +183,7 @@ CXXNewExpr::CXXNewExpr(bool IsGlobalNew, FunctionDecl *OperatorNew,
                        FunctionDecl *OperatorDelete, bool ShouldPassAlignment,
                        bool UsualArrayDeleteWantsSize,
                        ArrayRef<Expr *> PlacementArgs, SourceRange TypeIdParens,
-                       Optional<Expr *> ArraySize,
+                       std::optional<Expr *> ArraySize,
                        InitializationStyle InitializationStyle,
                        Expr *Initializer, QualType Ty,
                        TypeSourceInfo *AllocatedTypeInfo, SourceRange Range,
@@ -244,7 +245,7 @@ CXXNewExpr::Create(const ASTContext &Ctx, bool IsGlobalNew,
                    FunctionDecl *OperatorNew, FunctionDecl *OperatorDelete,
                    bool ShouldPassAlignment, bool UsualArrayDeleteWantsSize,
                    ArrayRef<Expr *> PlacementArgs, SourceRange TypeIdParens,
-                   Optional<Expr *> ArraySize,
+                   std::optional<Expr *> ArraySize,
                    InitializationStyle InitializationStyle, Expr *Initializer,
                    QualType Ty, TypeSourceInfo *AllocatedTypeInfo,
                    SourceRange Range, SourceRange DirectInitRange) {
@@ -949,9 +950,43 @@ const IdentifierInfo *UserDefinedLiteral::getUDSuffix() const {
   return cast<FunctionDecl>(getCalleeDecl())->getLiteralIdentifier();
 }
 
+CXXDefaultArgExpr *CXXDefaultArgExpr::CreateEmpty(const ASTContext &C,
+                                                  bool HasRewrittenInit) {
+  size_t Size = totalSizeToAlloc<Expr *>(HasRewrittenInit);
+  auto *Mem = C.Allocate(Size, alignof(CXXDefaultArgExpr));
+  return new (Mem) CXXDefaultArgExpr(EmptyShell(), HasRewrittenInit);
+}
+
+CXXDefaultArgExpr *CXXDefaultArgExpr::Create(const ASTContext &C,
+                                             SourceLocation Loc,
+                                             ParmVarDecl *Param,
+                                             Expr *RewrittenExpr,
+                                             DeclContext *UsedContext) {
+  size_t Size = totalSizeToAlloc<Expr *>(RewrittenExpr != nullptr);
+  auto *Mem = C.Allocate(Size, alignof(CXXDefaultArgExpr));
+  return new (Mem) CXXDefaultArgExpr(CXXDefaultArgExprClass, Loc, Param,
+                                     RewrittenExpr, UsedContext);
+}
+
+Expr *CXXDefaultArgExpr::getExpr() {
+  return CXXDefaultArgExprBits.HasRewrittenInit ? getAdjustedRewrittenExpr()
+                                                : getParam()->getDefaultArg();
+}
+
+Expr *CXXDefaultArgExpr::getAdjustedRewrittenExpr() {
+  assert(hasRewrittenInit() &&
+         "expected this CXXDefaultArgExpr to have a rewritten init.");
+  Expr *Init = getRewrittenExpr();
+  if (auto *E = dyn_cast_if_present<FullExpr>(Init))
+    if (!isa<ConstantExpr>(E))
+      return E->getSubExpr();
+  return Init;
+}
+
 CXXDefaultInitExpr::CXXDefaultInitExpr(const ASTContext &Ctx,
                                        SourceLocation Loc, FieldDecl *Field,
-                                       QualType Ty, DeclContext *UsedContext)
+                                       QualType Ty, DeclContext *UsedContext,
+                                       Expr *RewrittenInitExpr)
     : Expr(CXXDefaultInitExprClass, Ty.getNonLValueExprType(Ctx),
            Ty->isLValueReferenceType()   ? VK_LValue
            : Ty->isRValueReferenceType() ? VK_XValue
@@ -959,9 +994,41 @@ CXXDefaultInitExpr::CXXDefaultInitExpr(const ASTContext &Ctx,
            /*FIXME*/ OK_Ordinary),
       Field(Field), UsedContext(UsedContext) {
   CXXDefaultInitExprBits.Loc = Loc;
+  CXXDefaultInitExprBits.HasRewrittenInit = RewrittenInitExpr != nullptr;
+
+  if (CXXDefaultInitExprBits.HasRewrittenInit)
+    *getTrailingObjects<Expr *>() = RewrittenInitExpr;
+
   assert(Field->hasInClassInitializer());
 
   setDependence(computeDependence(this));
+}
+
+CXXDefaultInitExpr *CXXDefaultInitExpr::CreateEmpty(const ASTContext &C,
+                                                    bool HasRewrittenInit) {
+  size_t Size = totalSizeToAlloc<Expr *>(HasRewrittenInit);
+  auto *Mem = C.Allocate(Size, alignof(CXXDefaultInitExpr));
+  return new (Mem) CXXDefaultInitExpr(EmptyShell(), HasRewrittenInit);
+}
+
+CXXDefaultInitExpr *CXXDefaultInitExpr::Create(const ASTContext &Ctx,
+                                               SourceLocation Loc,
+                                               FieldDecl *Field,
+                                               DeclContext *UsedContext,
+                                               Expr *RewrittenInitExpr) {
+
+  size_t Size = totalSizeToAlloc<Expr *>(RewrittenInitExpr != nullptr);
+  auto *Mem = Ctx.Allocate(Size, alignof(CXXDefaultInitExpr));
+  return new (Mem) CXXDefaultInitExpr(Ctx, Loc, Field, Field->getType(),
+                                      UsedContext, RewrittenInitExpr);
+}
+
+Expr *CXXDefaultInitExpr::getExpr() {
+  assert(Field->getInClassInitializer() && "initializer hasn't been parsed");
+  if (hasRewrittenInit())
+    return getRewrittenExpr();
+
+  return Field->getInClassInitializer();
 }
 
 CXXTemporary *CXXTemporary::Create(const ASTContext &C,
@@ -1554,12 +1621,12 @@ CXXRecordDecl *UnresolvedMemberExpr::getNamingClass() {
   return Record;
 }
 
-SizeOfPackExpr *
-SizeOfPackExpr::Create(ASTContext &Context, SourceLocation OperatorLoc,
-                       NamedDecl *Pack, SourceLocation PackLoc,
-                       SourceLocation RParenLoc,
-                       Optional<unsigned> Length,
-                       ArrayRef<TemplateArgument> PartialArgs) {
+SizeOfPackExpr *SizeOfPackExpr::Create(ASTContext &Context,
+                                       SourceLocation OperatorLoc,
+                                       NamedDecl *Pack, SourceLocation PackLoc,
+                                       SourceLocation RParenLoc,
+                                       std::optional<unsigned> Length,
+                                       ArrayRef<TemplateArgument> PartialArgs) {
   void *Storage =
       Context.Allocate(totalSizeToAlloc<TemplateArgument>(PartialArgs.size()));
   return new (Storage) SizeOfPackExpr(Context.getSizeType(), OperatorLoc, Pack,
@@ -1605,7 +1672,7 @@ SubstNonTypeTemplateParmPackExpr::getParameterPack() const {
 }
 
 TemplateArgument SubstNonTypeTemplateParmPackExpr::getArgumentPack() const {
-  return TemplateArgument(llvm::makeArrayRef(Arguments, NumArguments));
+  return TemplateArgument(llvm::ArrayRef(Arguments, NumArguments));
 }
 
 FunctionParmPackExpr::FunctionParmPackExpr(QualType T, VarDecl *ParamPack,

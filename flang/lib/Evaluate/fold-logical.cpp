@@ -223,7 +223,6 @@ Expr<Type<TypeCategory::Logical, KIND>> FoldIntrinsicFunction(
   } else if (name == "__builtin_ieee_support_datatype" ||
       name == "__builtin_ieee_support_denormal" ||
       name == "__builtin_ieee_support_divide" ||
-      name == "__builtin_ieee_support_divide" ||
       name == "__builtin_ieee_support_inf" ||
       name == "__builtin_ieee_support_io" ||
       name == "__builtin_ieee_support_nan" ||

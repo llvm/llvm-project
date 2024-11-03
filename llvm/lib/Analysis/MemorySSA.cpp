@@ -719,7 +719,7 @@ class ClobberWalker {
     T &curNode() const { return W->Paths[*N]; }
 
     Walker *W = nullptr;
-    std::optional<ListIndex> N = std::nullopt;
+    std::optional<ListIndex> N;
   };
 
   using def_path_iterator = generic_def_path_iterator<DefPath, ClobberWalker>;
@@ -1758,10 +1758,10 @@ MemoryUseOrDef *MemorySSA::createNewAccess(Instruction *I,
     bool DefCheck, UseCheck;
     DefCheck = isModSet(ModRef) || isOrdered(I);
     UseCheck = isRefSet(ModRef);
-    // Use set is not checked since AA may return better results as a result of
-    // other transforms.
-    // FIXME: Would Def value always be consistent after transforms?
-    assert(Def == DefCheck && "Invalid template");
+    // Memory accesses should only be reduced and can not be increased since AA
+    // just might return better results as a result of some transformations.
+    assert((Def == DefCheck || !DefCheck) &&
+           "Memory accesses should only be reduced");
     if (!Def && Use != UseCheck) {
       // New Access should not have more power than template access
       assert(!UseCheck && "Invalid template");

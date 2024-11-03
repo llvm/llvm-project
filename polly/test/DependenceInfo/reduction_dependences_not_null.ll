@@ -14,8 +14,8 @@ entry:
 
 S1:
   %indvar.1 = phi i64 [ 0, %entry ], [ %indvar.next.1, %S1 ]
-  %arrayidx.1 = getelementptr [200 x i32], [200 x i32]* %A, i64 0, i64 %indvar.1
-  store i32 2, i32* %arrayidx.1
+  %arrayidx.1 = getelementptr [200 x i32], ptr %A, i64 0, i64 %indvar.1
+  store i32 2, ptr %arrayidx.1
   %indvar.next.1 = add i64 %indvar.1, 1
   %exitcond.1 = icmp ne i64 %indvar.next.1, 100
   br i1 %exitcond.1, label %S1, label %exit.1

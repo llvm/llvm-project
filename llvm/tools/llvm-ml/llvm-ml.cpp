@@ -60,7 +60,10 @@ enum ID {
 #undef OPTION
 };
 
-#define PREFIX(NAME, VALUE) const char *const NAME[] = VALUE;
+#define PREFIX(NAME, VALUE)                                                    \
+  static constexpr StringLiteral NAME##_init[] = VALUE;                        \
+  static constexpr ArrayRef<StringLiteral> NAME(NAME##_init,                   \
+                                                std::size(NAME##_init) - 1);
 #include "Opts.inc"
 #undef PREFIX
 
@@ -76,9 +79,9 @@ static constexpr opt::OptTable::Info InfoTable[] = {
 #undef OPTION
 };
 
-class MLOptTable : public opt::OptTable {
+class MLOptTable : public opt::GenericOptTable {
 public:
-  MLOptTable() : OptTable(InfoTable, /*IgnoreCase=*/false) {}
+  MLOptTable() : opt::GenericOptTable(InfoTable, /*IgnoreCase=*/false) {}
 };
 } // namespace
 
@@ -202,7 +205,7 @@ int main(int Argc, char **Argv) {
 
   MLOptTable T;
   unsigned MissingArgIndex, MissingArgCount;
-  ArrayRef<const char *> ArgsArr = makeArrayRef(Argv + 1, Argc - 1);
+  ArrayRef<const char *> ArgsArr = ArrayRef(Argv + 1, Argc - 1);
   opt::InputArgList InputArgs =
       T.ParseArgs(ArgsArr, MissingArgIndex, MissingArgCount);
 

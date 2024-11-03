@@ -237,12 +237,6 @@ def Tensor_ExtractOp : Tensor_Op<"extract", [
   let results = (outs AnyType:$result);
   let assemblyFormat = "$tensor `[` $indices `]` attr-dict `:` type($tensor)";
 
-  let builders = [
-    OpBuilder<(ins "Value":$tensor, CArg<"ValueRange", "{}">:$indices), [{
-      auto resType = tensor.getType().cast<ShapedType>().getElementType();
-      build($_builder, $_state, resType, tensor, indices);
-    }]>];
-
   let hasCanonicalizer = 1;
   let hasFolder = 1;
   let hasVerifier = 1;
@@ -292,7 +286,7 @@ def Tensor_ExtractSliceOp : Tensor_OpWithOffsetSizesAndStrides<"extract_slice", 
     between different flavors of ops on that operate on tensors.
 
     #### Verification vs Inference in the rank-reduced case
-    
+
     Note that there may be multiple ways to infer a resulting rank-reduced type.
       e.g. 1x6x1 could potentially rank-reduce to either 1x6 or 6x1 2-D shapes.
 
@@ -724,13 +718,6 @@ def Tensor_InsertOp : Tensor_Op<"insert", [
     $scalar `into` $dest `[` $indices `]` attr-dict `:` type($dest)
   }];
 
-  let builders = [
-    OpBuilder<(ins "Value":$scalar, "Value":$dest,
-      CArg<"ValueRange", "{}">:$indices), [{
-      auto resType = dest.getType();
-      build($_builder, $_state, resType, scalar, dest, indices);
-    }]>];
-
   let extraClassDeclaration = [{
     std::pair<int64_t, int64_t> getDpsInitsPositionRange() {
       return {1, 2};  // `dest` operand
@@ -795,7 +782,7 @@ def Tensor_InsertSliceOp : Tensor_OpWithOffsetSizesAndStrides<"insert_slice", [
     behavior of tensor.extract_slice.
 
     #### Verification in the rank-reduced case
-    
+
     The same verification discussion and mechanisms apply as for ExtractSliceOp.
     Unlike ExtractSliceOp however, there is no need for a specific inference.
 
@@ -1399,7 +1386,7 @@ def Tensor_ParallelInsertSliceOp : Tensor_Op<"parallel_insert_slice", [
     rank-reducing behavior of tensor.insert_slice and tensor.extract_slice.
 
     #### Verification in the rank-reduced case
-    
+
     The same verification discussion and mechanisms apply as for ExtractSliceOp.
     Unlike ExtractSliceOp however, there is no need for a specific inference.
   }];
@@ -1680,8 +1667,8 @@ class Tensor_RelayoutOp<string mnemonic, list<Trait> traits = []> :
                    "$_self">])> {
 
   code commonExtraClassDeclaration = [{
-    int64_t getSourceRank() { return getSource().getType().getRank(); };
-    int64_t getDestRank() { return getDest().getType().getRank(); };
+    size_t getSourceRank() { return getSource().getType().getRank(); };
+    size_t getDestRank() { return getDest().getType().getRank(); };
     RankedTensorType getSourceType() {
       return getSource().getType().cast<RankedTensorType>(); };
     RankedTensorType getDestType() {
@@ -1729,13 +1716,13 @@ def Tensor_PackOp : Tensor_RelayoutOp<"pack", [
     Example NC_to_NCnc:
 
     ```mlir
-    tensor.pack %source inner_dims_pos = [0, 1]
+    %0 = tensor.pack %source inner_dims_pos = [0, 1]
       inner_tiles = [8, 32] into %dest : tensor<128x256xf32> -> tensor<16x8x8x32xf32>
     ```
     Example CK to KCck
 
     ```mlir
-    tensor.pack %source outer_dims_perm = [1, 0] inner_dims_pos = [0, 1]
+    %0 = tensor.pack %source outer_dims_perm = [1, 0] inner_dims_pos = [0, 1]
       inner_tiles = [8, 32] into %dest : tensor<128x256xf32> -> tensor<8x16x8x32xf32>
     ```
 
@@ -1747,7 +1734,7 @@ def Tensor_PackOp : Tensor_RelayoutOp<"pack", [
     Example NC_to_NCnc with padding:
 
     ```mlir
-    tensor.pack %arg padding_value(%pad : f32) inner_dims_pos = [0, 1]
+    %0 = tensor.pack %arg padding_value(%pad : f32) inner_dims_pos = [0, 1]
       inner_tiles = [8, 2] into %arg1 : tensor<13x15xf32> -> tensor<2x8x8x2xf32>
     ```
 
@@ -1774,7 +1761,7 @@ def Tensor_PackOp : Tensor_RelayoutOp<"pack", [
     OpBuilder<(ins "Value":$source, "Value":$dest,
       "ArrayRef<int64_t>":$innerDimsPos,
       "ArrayRef<OpFoldResult>":$innerTiles,
-      CArg<"Optional<Value>", "std::nullopt">:$paddingValue,
+      CArg<"std::optional<Value>", "std::nullopt">:$paddingValue,
       CArg<"ArrayRef<int64_t>", "{}">:$outerDimsPerm)>
   ];
 
@@ -1789,7 +1776,24 @@ def Tensor_PackOp : Tensor_RelayoutOp<"pack", [
     static Value createDestinationTensor(OpBuilder &b, Location loc,
         Value source, ArrayRef<OpFoldResult> innerTileSizes,
         ArrayRef<int64_t> innerDimsPos, ArrayRef<int64_t> outerDimsPerm);
+
+    /// Build and return a new PackOp that is a clone of the current PackOp with
+    /// (innerDimsPos, innerTiles) (resp. outerDimsPerm) are permuted by 
+    /// innerPermutation (resp. outerPermutation).
+    /// A new `tensor.empty` of the proper shape is built in the process.
+    /// Asserts that:
+    ///   - At least one of innerPermutation or outerPermutation is non-empty.
+    ///   - If not empty, innerPermutation is a valid permutation of size
+    ///     matching innerDimPos.
+    ///   - If not empty, outerPermutation is a valid permutation of size 
+    ///     matching outerDimsPerm.
+    PackOp createTransposedClone(OpBuilder &b,
+                                 Location loc,
+                                 ArrayRef<int64_t> innerPermutation,
+                                 ArrayRef<int64_t> outerPermutation);
   }];
+
+  let hasCanonicalizeMethod = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -1809,14 +1813,14 @@ def Tensor_UnPackOp : Tensor_RelayoutOp<"unpack"> {
     Example NCnc_to_NC:
 
     ```mlir
-    tensor.unpack %source inner_dims_pos = [0, 1]
+    %0 = tensor.unpack %source inner_dims_pos = [0, 1]
       inner_tiles = [8, 32] into %dest : tensor<16x8x8x32xf32> -> tensor<128x256xf32>
     ```
 
     Example CK to KCck:
 
     ```mlir
-    tensor.unapck %source outer_dims_perm = [1, 0] inner_dims_pos = [0, 1]
+    %0 = tensor.unapck %source outer_dims_perm = [1, 0] inner_dims_pos = [0, 1]
       inner_tiles = [8, 32] into %dest : tensor<8x16x8x32xf32> -> tensor<128x256xf32>
     ```
   }];
@@ -1843,7 +1847,23 @@ def Tensor_UnPackOp : Tensor_RelayoutOp<"unpack"> {
     CArg<"ArrayRef<int64_t>", "{}">:$outerDimsPerm)>
   ];
 
-  let extraClassDeclaration = commonExtraClassDeclaration;
+  let extraClassDeclaration = commonExtraClassDeclaration # [{
+    /// Build and return a new UnPackOp that is a clone of the current UnPackOp
+    /// with (innerDimsPos, innerTiles) (resp. outerDimsPerm) are permuted by 
+    /// innerPermutation (resp. outerPermutation).
+    /// Asserts that:
+    ///   - At least one of innerPermutation or outerPermutation is non-empty.
+    ///   - If not empty, innerPermutation is a valid permutation of size
+    ///     matching innerDimPos.
+    ///   - If not empty, outerPermutation is a valid permutation of size 
+    ///     matching outerDimsPerm.
+    UnPackOp createTransposedClone(OpBuilder &b,
+                                   Location loc,
+                                   Value transposedSource,
+                                   ArrayRef<int64_t> innerPermutation,
+                                   ArrayRef<int64_t> outerPermutation);
+  }];
+
   let hasCanonicalizeMethod = 1;
 }
 

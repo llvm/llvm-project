@@ -33,6 +33,7 @@ executable("llvm-reduce") {
     "deltas/ReduceInstructionFlagsMIR.cpp",
     "deltas/ReduceInstructions.cpp",
     "deltas/ReduceInstructionsMIR.cpp",
+    "deltas/ReduceInvokes.cpp",
     "deltas/ReduceMemoryOperations.cpp",
     "deltas/ReduceMetadata.cpp",
     "deltas/ReduceModuleData.cpp",

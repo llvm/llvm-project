@@ -337,12 +337,13 @@ void dr496(void) {
    * because it references an array of another struct. Clang calculates the
    * correct offset to each of those fields.
    */
-  _Static_assert(__builtin_offsetof(struct B, a.n) == 0, "");
+  _Static_assert(__builtin_offsetof(struct B, a.n) == 0, ""); /* expected-warning {{using a member access expression within '__builtin_offsetof' is a Clang extension}} */
   /* First int below is for 'n' and the second int is for 'a[0]'; this presumes
    * there is no padding involved.
    */
-  _Static_assert(__builtin_offsetof(struct B, a.a[1]) == sizeof(int) + sizeof(int), "");
-
+  _Static_assert(__builtin_offsetof(struct B, a.a[1]) == sizeof(int) + sizeof(int), ""); /* expected-warning {{using a member access expression within '__builtin_offsetof' is a Clang extension}}
+                                                                                            expected-warning {{using an array subscript expression within '__builtin_offsetof' is a Clang extension}}
+                                                                                          */
   /* However, we do not support using the -> operator to access a member, even
    * if that would be a valid expression. FIXME: GCC accepts this, perhaps we
    * should as well.
@@ -352,11 +353,10 @@ void dr496(void) {
                                              */
 
   /* The DR asked a question about whether defining a new type within offsetof
-   * is allowed. C2x N2350 made this explicitly undefined behavior, but Clang
-   * has always supported defining a type in this location, and GCC also
-   * supports it.
+   * is allowed. C2x N2350 made this explicitly undefined behavior, but GCC and
+   * Clang both support it as an extension.
    */
-   (void)__builtin_offsetof(struct S { int a; }, a);
+   (void)__builtin_offsetof(struct S { int a; }, a); /* expected-warning{{defining a type within '__builtin_offsetof' is a Clang extension}} */
 }
 
 /* WG14 DR499: yes

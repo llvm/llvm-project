@@ -169,8 +169,15 @@ We used the ``LLVM_ENABLE_PROJECTS`` option here to tell the build-system which
 subprojects to build in addition to LLVM (for more options see
 :ref:`CommonCMakeOptions` and :ref:`CMakeCaches`). Parts of the LLDB test suite
 require ``lld``. Add it to the list in order to run all tests. Once CMake is done,
-run ninja to perform the actual build. We pass ``lldb`` here as the target, so
-it only builds what is necessary to run the lldb driver:
+run ninja to perform the actual build.
+
+::
+
+  $ ninja lldb lldb-server
+
+If you only want lldb, or are on a platform where lldb-server is not supported,
+you can pass just ``lldb``. Ninja will only build what is necessary to run the
+lldb driver:
 
 ::
 
@@ -210,7 +217,10 @@ build directory for Clang, remember to pass its module path via ``Clang_DIR``
   $ cmake -B /path/to/lldb-build -G Ninja \
           -DLLVM_DIR=/path/to/llvm-build/lib/cmake/llvm \
           [<more cmake options>] /path/to/llvm-project/lldb
-  $ ninja lldb
+  $ ninja lldb lldb-server
+
+If you do not require or cannot build ``lldb-server`` on your platform, simply
+remove it from the Ninja command.
 
 .. note::
 

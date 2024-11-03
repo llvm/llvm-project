@@ -742,10 +742,14 @@ define float @fnabs_1(float %a) {
   ret float %fneg1
 }
 
+; This is not fabs because that could produce a different signbit for a NAN input.
+; PR59279
+
 define float @fnabs_2_nsz(float %a) {
 ; CHECK-LABEL: @fnabs_2_nsz(
-; CHECK-NEXT:    [[TMP1:%.*]] = call nsz float @llvm.fabs.f32(float [[A:%.*]])
-; CHECK-NEXT:    [[FNEG1:%.*]] = fneg float [[TMP1]]
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp olt float [[A:%.*]], 0.000000e+00
+; CHECK-NEXT:    [[A_NEG:%.*]] = fneg float [[A]]
+; CHECK-NEXT:    [[FNEG1:%.*]] = select nsz i1 [[CMP]], float [[A]], float [[A_NEG]]
 ; CHECK-NEXT:    ret float [[FNEG1]]
 ;
   %fneg = fneg float %a

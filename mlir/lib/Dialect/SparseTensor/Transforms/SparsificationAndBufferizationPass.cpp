@@ -16,6 +16,7 @@
 #include "mlir/Dialect/Bufferization/Transforms/Passes.h"
 #include "mlir/Dialect/Bufferization/Transforms/Transforms.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
+#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/SparseTensor/IR/SparseTensor.h"
 #include "mlir/Dialect/SparseTensor/Transforms/Passes.h"
 #include "mlir/Pass/PassManager.h"
@@ -96,6 +97,7 @@ public:
 
   void getDependentDialects(::mlir::DialectRegistry &registry) const override {
     registry.insert<bufferization::BufferizationDialect>();
+    registry.insert<LLVM::LLVMDialect>();
   }
 
   void runOnOperation() override {
@@ -147,6 +149,7 @@ public:
       } else {
         pm.addPass(createSparseTensorCodegenPass(enableBufferInitialization));
         pm.addPass(createSparseBufferRewritePass(enableBufferInitialization));
+        pm.addPass(createStorageSpecifierToLLVMPass());
       }
       if (failed(runPipeline(pm, getOperation())))
         return signalPassFailure();

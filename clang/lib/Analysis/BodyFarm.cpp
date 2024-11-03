@@ -24,6 +24,7 @@
 #include "clang/Basic/OperatorKinds.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/Debug.h"
+#include <optional>
 
 #define DEBUG_TYPE "body-farm"
 
@@ -697,7 +698,7 @@ static Stmt *create_OSAtomicCompareAndSwap(ASTContext &C, const FunctionDecl *D)
 }
 
 Stmt *BodyFarm::getBody(const FunctionDecl *D) {
-  Optional<Stmt *> &Val = Bodies[D];
+  std::optional<Stmt *> &Val = Bodies[D];
   if (Val)
     return *Val;
 
@@ -872,7 +873,7 @@ Stmt *BodyFarm::getBody(const ObjCMethodDecl *D) {
   if (!D->isImplicit())
     return nullptr;
 
-  Optional<Stmt *> &Val = Bodies[D];
+  std::optional<Stmt *> &Val = Bodies[D];
   if (Val)
     return *Val;
   Val = nullptr;

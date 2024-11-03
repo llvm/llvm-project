@@ -16,6 +16,7 @@ add_libc_unittest(
     libc.include.errno
     libc.include.stdio
     libc.include.stdlib
+    libc.src.__support.CPP.new
     libc.src.__support.File.file
 )
 

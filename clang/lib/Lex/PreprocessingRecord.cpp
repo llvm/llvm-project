@@ -20,7 +20,6 @@
 #include "clang/Lex/MacroInfo.h"
 #include "clang/Lex/Token.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Support/Capacity.h"
@@ -31,6 +30,7 @@
 #include <cstddef>
 #include <cstring>
 #include <iterator>
+#include <optional>
 #include <utility>
 #include <vector>
 
@@ -112,7 +112,7 @@ bool PreprocessingRecord::isEntityInFileID(iterator PPEI, FileID FID) {
 
     // See if the external source can see if the entity is in the file without
     // deserializing it.
-    if (Optional<bool> IsInFile =
+    if (std::optional<bool> IsInFile =
             ExternalSource->isPreprocessedEntityInFileID(LoadedIndex, FID))
       return *IsInFile;
 

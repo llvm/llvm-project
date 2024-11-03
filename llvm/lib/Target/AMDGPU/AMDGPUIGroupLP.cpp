@@ -765,7 +765,7 @@ void MFMASmallGemmOpt::applyIGLPStrategy(
   // Count the number of MFMA instructions.
   unsigned MFMACount = 0;
   for (const MachineInstr &I : *DAG)
-    if (TII->isMFMA(I))
+    if (TII->isMFMAorWMMA(I))
       ++MFMACount;
 
   const unsigned PipelineSyncID = 0;
@@ -848,11 +848,11 @@ bool SchedGroup::canAddMI(const MachineInstr &MI) const {
     Result = false;
 
   else if (((SGMask & SchedGroupMask::ALU) != SchedGroupMask::NONE) &&
-           (TII->isVALU(MI) || TII->isMFMA(MI) || TII->isSALU(MI)))
+           (TII->isVALU(MI) || TII->isMFMAorWMMA(MI) || TII->isSALU(MI)))
     Result = true;
 
   else if (((SGMask & SchedGroupMask::VALU) != SchedGroupMask::NONE) &&
-           TII->isVALU(MI) && !TII->isMFMA(MI))
+           TII->isVALU(MI) && !TII->isMFMAorWMMA(MI))
     Result = true;
 
   else if (((SGMask & SchedGroupMask::SALU) != SchedGroupMask::NONE) &&
@@ -860,7 +860,7 @@ bool SchedGroup::canAddMI(const MachineInstr &MI) const {
     Result = true;
 
   else if (((SGMask & SchedGroupMask::MFMA) != SchedGroupMask::NONE) &&
-           TII->isMFMA(MI))
+           TII->isMFMAorWMMA(MI))
     Result = true;
 
   else if (((SGMask & SchedGroupMask::VMEM) != SchedGroupMask::NONE) &&

@@ -18,11 +18,11 @@
 #include "support/MemoryTree.h"
 #include "support/Path.h"
 #include "support/Threading.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/Support/JSON.h"
 #include <chrono>
 #include <cstddef>
 #include <memory>
+#include <optional>
 #include <vector>
 
 namespace clang {
@@ -43,7 +43,7 @@ public:
     /// set via LSP (extensions) only.
     bool UseDirBasedCDB = true;
     /// The offset-encoding to use, or std::nullopt to negotiate it over LSP.
-    llvm::Optional<OffsetEncoding> Encoding;
+    std::optional<OffsetEncoding> Encoding;
     /// If set, periodically called to release memory.
     /// Consider malloc_trim(3)
     std::function<void()> MemoryCleanup = nullptr;
@@ -120,7 +120,7 @@ private:
                   Callback<std::vector<Location>>);
   void onGoToImplementation(const TextDocumentPositionParams &,
                             Callback<std::vector<Location>>);
-  void onReference(const ReferenceParams &, Callback<std::vector<Location>>);
+  void onReference(const ReferenceParams &, Callback<std::vector<ReferenceLocation>>);
   void onSwitchSourceHeader(const TextDocumentIdentifier &,
                             Callback<std::optional<URIForFile>>);
   void onDocumentHighlight(const TextDocumentPositionParams &,
@@ -262,6 +262,8 @@ private:
   bool SupportsHierarchicalDocumentSymbol = false;
   /// Whether the client supports showing file status.
   bool SupportFileStatus = false;
+  /// Whether the client supports attaching a container string to references.
+  bool SupportsReferenceContainer = false;
   /// Which kind of markup should we use in textDocument/hover responses.
   MarkupKind HoverContentFormat = MarkupKind::PlainText;
   /// Whether the client supports offsets for parameter info labels.
@@ -289,9 +291,9 @@ private:
   // The CDB is created by the "initialize" LSP method.
   std::unique_ptr<GlobalCompilationDatabase> BaseCDB;
   // CDB is BaseCDB plus any commands overridden via LSP extensions.
-  llvm::Optional<OverlayCDB> CDB;
+  std::optional<OverlayCDB> CDB;
   // The ClangdServer is created by the "initialize" LSP method.
-  llvm::Optional<ClangdServer> Server;
+  std::optional<ClangdServer> Server;
 };
 } // namespace clangd
 } // namespace clang

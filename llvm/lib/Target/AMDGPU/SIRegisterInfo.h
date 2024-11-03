@@ -362,7 +362,7 @@ public:
     uint64_t Even = Mask & 0xAAAAAAAAAAAAAAAAULL;
     Mask = (Even >> 1) | Mask;
     uint64_t Odd = Mask & 0x5555555555555555ULL;
-    return countPopulation(Odd);
+    return llvm::popcount(Odd);
   }
 
   // \returns a DWORD offset of a \p SubReg

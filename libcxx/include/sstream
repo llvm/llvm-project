@@ -260,7 +260,7 @@ protected:
     int_type overflow (int_type __c = traits_type::eof()) override;
     pos_type seekoff(off_type __off, ios_base::seekdir __way,
                      ios_base::openmode __wch = ios_base::in | ios_base::out) override;
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI_VIRTUAL
     pos_type seekpos(pos_type __sp,
                      ios_base::openmode __wch = ios_base::in | ios_base::out) override {
         return seekoff(__sp, ios_base::beg, __wch);

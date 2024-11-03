@@ -25,6 +25,7 @@
 #include "Plugins/ExpressionParser/Clang/ClangASTImporter.h"
 #include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 
+#include <optional>
 #include <vector>
 
 namespace lldb_private {
@@ -94,11 +95,6 @@ public:
   /// parameters from the DIE name and instead always adds template parameter
   /// children DIEs.
   ///
-  /// Currently this is only called in two places, when uniquing C++ classes and
-  /// when looking up the definition for a declaration (which is then cached).
-  /// If this is ever called more than twice per DIE, we need to start caching
-  /// the results to prevent unbounded growth of the created clang AST nodes.
-  ///
   /// \param die The struct/class DWARFDIE containing template parameters.
   /// \return A string, including surrounding '<>', of the template parameters.
   /// If the DIE's name already has '<>', returns an empty ConstString because
@@ -144,10 +140,6 @@ protected:
       const DWARFDIE &parent_die,
       lldb_private::TypeSystemClang::TemplateParameterInfos
           &template_param_infos);
-
-  /// Get the template parameters of a die as a string if the die name does not
-  /// already contain them. This happens with -gsimple-template-names.
-  std::string GetTemplateParametersString(const DWARFDIE &die);
 
   std::string GetCPlusPlusQualifiedName(const DWARFDIE &die);
 
@@ -324,7 +316,7 @@ struct ParsedDWARFTypeAttributes {
   DWARFFormValue specification;
   DWARFFormValue type;
   lldb::LanguageType class_language = lldb::eLanguageTypeUnknown;
-  llvm::Optional<uint64_t> byte_size;
+  std::optional<uint64_t> byte_size;
   size_t calling_convention = llvm::dwarf::DW_CC_normal;
   uint32_t bit_stride = 0;
   uint32_t byte_stride = 0;

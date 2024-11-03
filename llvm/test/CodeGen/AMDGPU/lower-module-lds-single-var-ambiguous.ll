@@ -36,7 +36,7 @@ define amdgpu_kernel void @k1() {
 ;; Function accesses variable, reachable from two kernels, can't use kernel lowering for either
 ;; Hybrid can put it in module lds without cost as the first variable is free
 
-; KERNEL: LLVM ERROR: Cannot lower LDS to kernel access as it is reachable from multiple kernels
+; KERNEL: LLVM ERROR: cannot lower LDS 'function.lds' to kernel access as it is reachable from multiple kernels
 
 @function.lds = addrspace(3) global i16 undef
 define void @f0() {

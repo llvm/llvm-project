@@ -1,4 +1,4 @@
-; RUN: opt %s -S -passes=dse -o - -experimental-assignment-tracking | FileCheck %s
+; RUN: opt %s -S -passes=dse -o - | FileCheck %s
 
 ;; Observed in the wild, but test is created by running memcpyopt on
 ;; assignment-tracking/memcpyopt/merge-stores.ll then manually inserting
@@ -67,7 +67,7 @@ declare void @llvm.dbg.assign(metadata, metadata, metadata, metadata, metadata, 
 declare void @llvm.memset.p0i8.i64(ptr nocapture writeonly, i8, i64, i1 immarg)
 
 !llvm.dbg.cu = !{!0}
-!llvm.module.flags = !{!3, !4, !5}
+!llvm.module.flags = !{!3, !4, !5, !1000}
 !llvm.ident = !{!6}
 
 !0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, file: !1, producer: "clang version 12.0.0", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !2, splitDebugInlining: false, nameTableKind: None)
@@ -133,3 +133,4 @@ declare void @llvm.memset.p0i8.i64(ptr nocapture writeonly, i8, i64, i1 immarg)
 !64 = !DISubprogram(name: "esc", linkageName: "_Z3escP1v", scope: !1, file: !1, line: 10, type: !65, flags: DIFlagPrototyped, spFlags: DISPFlagOptimized, retainedNodes: !2)
 !65 = !DISubroutineType(types: !66)
 !66 = !{null, !30}
+!1000 = !{i32 7, !"debug-info-assignment-tracking", i1 true}

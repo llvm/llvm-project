@@ -195,7 +195,7 @@ static bool ConvertToSInt(const APFloat &APF, int64_t &IntVal) {
   bool isExact = false;
   // See if we can convert this to an int64_t
   uint64_t UIntVal;
-  if (APF.convertToInteger(makeMutableArrayRef(UIntVal), 64, true,
+  if (APF.convertToInteger(MutableArrayRef(UIntVal), 64, true,
                            APFloat::rmTowardZero, &isExact) != APFloat::opOK ||
       !isExact)
     return false;
@@ -1371,31 +1371,24 @@ createInvariantCond(const Loop *L, BasicBlock *ExitingBB,
                             BI->getCondition()->getName());
 }
 
-static bool optimizeLoopExitWithUnknownExitCount(
-    const Loop *L, BranchInst *BI, BasicBlock *ExitingBB, const SCEV *MaxIter,
-    bool SkipLastIter, ScalarEvolution *SE, SCEVExpander &Rewriter,
-    SmallVectorImpl<WeakTrackingVH> &DeadInsts) {
-  ICmpInst::Predicate Pred;
-  Value *LHS, *RHS;
-  BasicBlock *TrueSucc, *FalseSucc;
-  if (!match(BI, m_Br(m_ICmp(Pred, m_Value(LHS), m_Value(RHS)),
-                      m_BasicBlock(TrueSucc), m_BasicBlock(FalseSucc))))
-    return false;
-
-  assert((L->contains(TrueSucc) != L->contains(FalseSucc)) &&
-         "Not a loop exit!");
+static std::optional<Value *>
+createReplacement(ICmpInst *ICmp, const Loop *L, BasicBlock *ExitingBB,
+                  const SCEV *MaxIter, bool Inverted, bool SkipLastIter,
+                  ScalarEvolution *SE, SCEVExpander &Rewriter) {
+  ICmpInst::Predicate Pred = ICmp->getPredicate();
+  Value *LHS = ICmp->getOperand(0);
+  Value *RHS = ICmp->getOperand(1);
 
   // 'LHS pred RHS' should now mean that we stay in loop.
-  if (L->contains(FalseSucc))
+  auto *BI = cast<BranchInst>(ExitingBB->getTerminator());
+  if (Inverted)
     Pred = CmpInst::getInversePredicate(Pred);
 
   const SCEV *LHSS = SE->getSCEVAtScope(LHS, L);
   const SCEV *RHSS = SE->getSCEVAtScope(RHS, L);
   // Can we prove it to be trivially true or false?
-  if (auto EV = SE->evaluatePredicateAt(Pred, LHSS, RHSS, BI)) {
-    foldExit(L, ExitingBB, /*IsTaken*/ !*EV, DeadInsts);
-    return true;
-  }
+  if (auto EV = SE->evaluatePredicateAt(Pred, LHSS, RHSS, BI))
+    return createFoldedExitCond(L, ExitingBB, /*IsTaken*/ !*EV);
 
   auto *ARTy = LHSS->getType();
   auto *MaxIterTy = MaxIter->getType();
@@ -1410,25 +1403,135 @@ static bool optimizeLoopExitWithUnknownExitCount(
   }
 
   if (SkipLastIter) {
-    const SCEV *One = SE->getOne(MaxIter->getType());
-    MaxIter = SE->getMinusSCEV(MaxIter, One);
+    // Semantically skip last iter is "subtract 1, do not bother about unsigned
+    // wrap". getLoopInvariantExitCondDuringFirstIterations knows how to deal
+    // with umin in a smart way, but umin(a, b) - 1 will likely not simplify.
+    // So we manually construct umin(a - 1, b - 1).
+    SmallVector<const SCEV *, 4> Elements;
+    if (auto *UMin = dyn_cast<SCEVUMinExpr>(MaxIter)) {
+      for (auto *Op : UMin->operands())
+        Elements.push_back(SE->getMinusSCEV(Op, SE->getOne(Op->getType())));
+      MaxIter = SE->getUMinFromMismatchedTypes(Elements);
+    } else
+      MaxIter = SE->getMinusSCEV(MaxIter, SE->getOne(MaxIter->getType()));
   }
 
   // Check if there is a loop-invariant predicate equivalent to our check.
   auto LIP = SE->getLoopInvariantExitCondDuringFirstIterations(Pred, LHSS, RHSS,
                                                                L, BI, MaxIter);
   if (!LIP)
-    return false;
+    return std::nullopt;
 
   // Can we prove it to be trivially true?
   if (SE->isKnownPredicateAt(LIP->Pred, LIP->LHS, LIP->RHS, BI))
-    foldExit(L, ExitingBB, /*IsTaken*/ false, DeadInsts);
-  else {
-    auto *NewCond = createInvariantCond(L, ExitingBB, *LIP, Rewriter);
-    replaceExitCond(BI, NewCond, DeadInsts);
-  }
+    return createFoldedExitCond(L, ExitingBB, /*IsTaken*/ false);
+  else
+    return createInvariantCond(L, ExitingBB, *LIP, Rewriter);
+}
 
-  return true;
+static bool optimizeLoopExitWithUnknownExitCount(
+    const Loop *L, BranchInst *BI, BasicBlock *ExitingBB, const SCEV *MaxIter,
+    bool SkipLastIter, ScalarEvolution *SE, SCEVExpander &Rewriter,
+    SmallVectorImpl<WeakTrackingVH> &DeadInsts) {
+  assert(
+      (L->contains(BI->getSuccessor(0)) != L->contains(BI->getSuccessor(1))) &&
+      "Not a loop exit!");
+
+  // For branch that stays in loop by TRUE condition, go through AND. For branch
+  // that stays in loop by FALSE condition, go through OR. Both gives the
+  // similar logic: "stay in loop iff all conditions are true(false)".
+  bool Inverted = L->contains(BI->getSuccessor(1));
+  SmallVector<ICmpInst *, 4> LeafConditions;
+  SmallVector<Value *, 4> Worklist;
+  SmallPtrSet<Value *, 4> Visited;
+  Value *OldCond = BI->getCondition();
+  Visited.insert(OldCond);
+  Worklist.push_back(OldCond);
+
+  auto GoThrough = [&](Value *V) {
+    Value *LHS = nullptr, *RHS = nullptr;
+    if (Inverted) {
+      if (!match(V, m_LogicalOr(m_Value(LHS), m_Value(RHS))))
+        return false;
+    } else {
+      if (!match(V, m_LogicalAnd(m_Value(LHS), m_Value(RHS))))
+        return false;
+    }
+    if (Visited.insert(LHS).second)
+      Worklist.push_back(LHS);
+    if (Visited.insert(RHS).second)
+      Worklist.push_back(RHS);
+    return true;
+  };
+
+  do {
+    Value *Curr = Worklist.pop_back_val();
+    // Go through AND/OR conditions. Collect leaf ICMPs. We only care about
+    // those with one use, to avoid instruction duplication.
+    if (Curr->hasOneUse())
+      if (!GoThrough(Curr))
+        if (auto *ICmp = dyn_cast<ICmpInst>(Curr))
+          LeafConditions.push_back(ICmp);
+  } while (!Worklist.empty());
+
+  // If the current basic block has the same exit count as the whole loop, and
+  // it consists of multiple icmp's, try to collect all icmp's that give exact
+  // same exit count. For all other icmp's, we could use one less iteration,
+  // because their value on the last iteration doesn't really matter.
+  SmallPtrSet<ICmpInst *, 4> ICmpsFailingOnLastIter;
+  if (!SkipLastIter && LeafConditions.size() > 1 &&
+      SE->getExitCount(L, ExitingBB,
+                       ScalarEvolution::ExitCountKind::SymbolicMaximum) ==
+          MaxIter)
+    for (auto *ICmp : LeafConditions) {
+      auto EL = SE->computeExitLimitFromCond(L, ICmp, Inverted,
+                                             /*ControlsExit*/ false);
+      auto *ExitMax = EL.SymbolicMaxNotTaken;
+      if (isa<SCEVCouldNotCompute>(ExitMax))
+        continue;
+      // They could be of different types (specifically this happens after
+      // IV widening).
+      auto *WiderType =
+          SE->getWiderType(ExitMax->getType(), MaxIter->getType());
+      auto *WideExitMax = SE->getNoopOrZeroExtend(ExitMax, WiderType);
+      auto *WideMaxIter = SE->getNoopOrZeroExtend(MaxIter, WiderType);
+      if (WideExitMax == WideMaxIter)
+        ICmpsFailingOnLastIter.insert(ICmp);
+    }
+
+  bool Changed = false;
+  for (auto *OldCond : LeafConditions) {
+    // Skip last iteration for this icmp under one of two conditions:
+    // - We do it for all conditions;
+    // - There is another ICmp that would fail on last iter, so this one doesn't
+    // really matter.
+    bool OptimisticSkipLastIter = SkipLastIter;
+    if (!OptimisticSkipLastIter) {
+      if (ICmpsFailingOnLastIter.size() > 1)
+        OptimisticSkipLastIter = true;
+      else if (ICmpsFailingOnLastIter.size() == 1)
+        OptimisticSkipLastIter = !ICmpsFailingOnLastIter.count(OldCond);
+    }
+    if (auto Replaced =
+            createReplacement(OldCond, L, ExitingBB, MaxIter, Inverted,
+                              OptimisticSkipLastIter, SE, Rewriter)) {
+      Changed = true;
+      auto *NewCond = *Replaced;
+      if (auto *NCI = dyn_cast<Instruction>(NewCond)) {
+        NCI->setName(OldCond->getName() + ".first_iter");
+        NCI->moveBefore(cast<Instruction>(OldCond));
+      }
+      LLVM_DEBUG(dbgs() << "Unknown exit count: Replacing " << *OldCond
+                        << " with " << *NewCond << "\n");
+      assert(OldCond->hasOneUse() && "Must be!");
+      OldCond->replaceAllUsesWith(NewCond);
+      DeadInsts.push_back(OldCond);
+      // Make sure we no longer consider this condition as failing on last
+      // iteration.
+      ICmpsFailingOnLastIter.erase(OldCond);
+    }
+  }
+  return Changed;
 }
 
 bool IndVarSimplify::canonicalizeExitCondition(Loop *L) {
@@ -1630,6 +1733,19 @@ bool IndVarSimplify::optimizeLoopExits(Loop *L, SCEVExpander &Rewriter) {
 
   bool Changed = false;
   bool SkipLastIter = false;
+  const SCEV *CurrMaxExit = SE->getCouldNotCompute();
+  auto UpdateSkipLastIter = [&](const SCEV *MaxExitCount) {
+    if (SkipLastIter || isa<SCEVCouldNotCompute>(MaxExitCount))
+      return;
+    if (isa<SCEVCouldNotCompute>(CurrMaxExit))
+      CurrMaxExit = MaxExitCount;
+    else
+      CurrMaxExit = SE->getUMinFromMismatchedTypes(CurrMaxExit, MaxExitCount);
+    // If the loop has more than 1 iteration, all further checks will be
+    // executed 1 iteration less.
+    if (CurrMaxExit == MaxBECount)
+      SkipLastIter = true;
+  };
   SmallSet<const SCEV *, 8> DominatingExactExitCounts;
   for (BasicBlock *ExitingBB : ExitingBlocks) {
     const SCEV *ExactExitCount = SE->getExitCount(L, ExitingBB);
@@ -1665,17 +1781,11 @@ bool IndVarSimplify::optimizeLoopExits(Loop *L, SCEVExpander &Rewriter) {
         Changed = true;
       else if (SkipLastIter && OptimizeCond(true))
         Changed = true;
-      if (MaxBECount == MaxExitCount)
-        // If the loop has more than 1 iteration, all further checks will be
-        // executed 1 iteration less.
-        SkipLastIter = true;
+      UpdateSkipLastIter(MaxExitCount);
       continue;
     }
 
-    if (MaxBECount == MaxExitCount)
-      // If the loop has more than 1 iteration, all further checks will be
-      // executed 1 iteration less.
-      SkipLastIter = true;
+    UpdateSkipLastIter(ExactExitCount);
 
     // If we know we'd exit on the first iteration, rewrite the exit to
     // reflect this.  This does not imply the loop must exit through this

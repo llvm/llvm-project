@@ -862,7 +862,7 @@ private:
     // cast away the constness from the result.
     auto AR = const_cast<const InstrProfRecord *>(this)->getValueSitesForKind(
         ValueKind);
-    return makeMutableArrayRef(
+    return MutableArrayRef(
         const_cast<InstrProfValueSiteRecord *>(AR.data()), AR.size());
   }
   ArrayRef<InstrProfValueSiteRecord>
@@ -1050,7 +1050,9 @@ enum ProfVersion {
   Version7 = 7,
   // An additional (optional) memory profile type is added.
   Version8 = 8,
-  // The current version is 8.
+  // Binary ids are added.
+  Version9 = 9,
+  // The current version is 9.
   CurrentVersion = INSTR_PROF_INDEX_VERSION
 };
 const uint64_t Version = ProfVersion::CurrentVersion;
@@ -1068,6 +1070,7 @@ struct Header {
   uint64_t HashType;
   uint64_t HashOffset;
   uint64_t MemProfOffset;
+  uint64_t BinaryIdOffset;
   // New fields should only be added at the end to ensure that the size
   // computation is correct. The methods below need to be updated to ensure that
   // the new field is read correctly.

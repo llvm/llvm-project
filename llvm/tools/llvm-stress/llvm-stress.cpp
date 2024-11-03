@@ -438,7 +438,7 @@ struct ConstModifier: public Modifier {
       for (unsigned i = 0; i < 2; ++i)
         RandomBits[i] = Ran->Rand64();
 
-      APInt RandomInt(Ty->getPrimitiveSizeInBits(), makeArrayRef(RandomBits));
+      APInt RandomInt(Ty->getPrimitiveSizeInBits(), ArrayRef(RandomBits));
       APFloat RandomFloat(Ty->getFltSemantics(), RandomInt);
 
       if (getRandom() & 1)

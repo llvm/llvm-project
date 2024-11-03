@@ -14,9 +14,7 @@
 
 #include <string>
 
-namespace clang {
-namespace tidy {
-namespace modernize {
+namespace clang::tidy::modernize {
 
 /// Find and remove redundant void argument lists.
 ///
@@ -73,8 +71,6 @@ private:
   void removeVoidToken(Token VoidToken, StringRef Diagnostic);
 };
 
-} // namespace modernize
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::modernize
 
 #endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MODERNIZE_REDUNDANT_VOID_ARG_CHECK_H

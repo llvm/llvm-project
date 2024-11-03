@@ -41,6 +41,7 @@ inline uintmax_t apply_length_modifier(uintmax_t num, LengthModifier lm) {
   case LengthModifier::j:
     return num; // j is intmax, so no mask is necessary.
   }
+  __builtin_unreachable();
 }
 
 #define RET_IF_RESULT_NEGATIVE(func)                                           \

@@ -578,8 +578,8 @@ define void @fcvtzu_v16f64_v16i16(ptr %a, ptr %b) #0 {
 ; CHECK-NEXT:    fcvtzs z4.d, p0/m, z4.d
 ; CHECK-NEXT:    mov z3.s, z2.s[1]
 ; CHECK-NEXT:    uzp1 z4.s, z4.s, z4.s
-; CHECK-NEXT:    fcvtzs z5.d, p0/m, z5.d
 ; CHECK-NEXT:    ldp q0, q1, [x0, #64]
+; CHECK-NEXT:    fcvtzs z5.d, p0/m, z5.d
 ; CHECK-NEXT:    uzp1 z5.s, z5.s, z5.s
 ; CHECK-NEXT:    fmov w10, s5
 ; CHECK-NEXT:    mov z5.s, z5.s[1]
@@ -590,18 +590,18 @@ define void @fcvtzu_v16f64_v16i16(ptr %a, ptr %b) #0 {
 ; CHECK-NEXT:    fmov w8, s4
 ; CHECK-NEXT:    strh w9, [sp, #8]
 ; CHECK-NEXT:    fmov w9, s6
-; CHECK-NEXT:    strh w10, [sp, #4]
 ; CHECK-NEXT:    mov z4.s, z4.s[1]
+; CHECK-NEXT:    strh w10, [sp, #4]
 ; CHECK-NEXT:    strh w8, [sp]
 ; CHECK-NEXT:    fmov w8, s3
-; CHECK-NEXT:    strh w9, [sp, #14]
 ; CHECK-NEXT:    movprfx z3, z7
 ; CHECK-NEXT:    fcvtzs z3.d, p0/m, z7.d
-; CHECK-NEXT:    uzp1 z3.s, z3.s, z3.s
 ; CHECK-NEXT:    fcvtzs z2.d, p0/m, z2.d
+; CHECK-NEXT:    uzp1 z3.s, z3.s, z3.s
+; CHECK-NEXT:    uzp1 z2.s, z2.s, z2.s
 ; CHECK-NEXT:    strh w8, [sp, #10]
 ; CHECK-NEXT:    fmov w8, s3
-; CHECK-NEXT:    uzp1 z2.s, z2.s, z2.s
+; CHECK-NEXT:    strh w9, [sp, #14]
 ; CHECK-NEXT:    fmov w9, s5
 ; CHECK-NEXT:    fmov w10, s4
 ; CHECK-NEXT:    fcvtzs z1.d, p0/m, z1.d
@@ -718,8 +718,8 @@ define <1 x i64> @fcvtzu_v1f64_v1i64(<1 x double> %op1) #0 {
 ; CHECK-LABEL: fcvtzu_v1f64_v1i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
-; CHECK-NEXT:    fcvtzu x8, d0
-; CHECK-NEXT:    mov z0.d, x8
+; CHECK-NEXT:    ptrue p0.d, vl1
+; CHECK-NEXT:    fcvtzu z0.d, p0/m, z0.d
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
   %res = fptoui <1 x double> %op1 to <1 x i64>
@@ -1331,8 +1331,8 @@ define void @fcvtzs_v16f64_v16i16(ptr %a, ptr %b) #0 {
 ; CHECK-NEXT:    fcvtzs z4.d, p0/m, z4.d
 ; CHECK-NEXT:    mov z3.s, z2.s[1]
 ; CHECK-NEXT:    uzp1 z4.s, z4.s, z4.s
-; CHECK-NEXT:    fcvtzs z5.d, p0/m, z5.d
 ; CHECK-NEXT:    ldp q0, q1, [x0, #64]
+; CHECK-NEXT:    fcvtzs z5.d, p0/m, z5.d
 ; CHECK-NEXT:    uzp1 z5.s, z5.s, z5.s
 ; CHECK-NEXT:    fmov w10, s5
 ; CHECK-NEXT:    mov z5.s, z5.s[1]
@@ -1343,18 +1343,18 @@ define void @fcvtzs_v16f64_v16i16(ptr %a, ptr %b) #0 {
 ; CHECK-NEXT:    fmov w8, s4
 ; CHECK-NEXT:    strh w9, [sp, #8]
 ; CHECK-NEXT:    fmov w9, s6
-; CHECK-NEXT:    strh w10, [sp, #4]
 ; CHECK-NEXT:    mov z4.s, z4.s[1]
+; CHECK-NEXT:    strh w10, [sp, #4]
 ; CHECK-NEXT:    strh w8, [sp]
 ; CHECK-NEXT:    fmov w8, s3
-; CHECK-NEXT:    strh w9, [sp, #14]
 ; CHECK-NEXT:    movprfx z3, z7
 ; CHECK-NEXT:    fcvtzs z3.d, p0/m, z7.d
-; CHECK-NEXT:    uzp1 z3.s, z3.s, z3.s
 ; CHECK-NEXT:    fcvtzs z2.d, p0/m, z2.d
+; CHECK-NEXT:    uzp1 z3.s, z3.s, z3.s
+; CHECK-NEXT:    uzp1 z2.s, z2.s, z2.s
 ; CHECK-NEXT:    strh w8, [sp, #10]
 ; CHECK-NEXT:    fmov w8, s3
-; CHECK-NEXT:    uzp1 z2.s, z2.s, z2.s
+; CHECK-NEXT:    strh w9, [sp, #14]
 ; CHECK-NEXT:    fmov w9, s5
 ; CHECK-NEXT:    fmov w10, s4
 ; CHECK-NEXT:    fcvtzs z1.d, p0/m, z1.d
@@ -1471,8 +1471,8 @@ define <1 x i64> @fcvtzs_v1f64_v1i64(<1 x double> %op1) #0 {
 ; CHECK-LABEL: fcvtzs_v1f64_v1i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
-; CHECK-NEXT:    fcvtzs x8, d0
-; CHECK-NEXT:    mov z0.d, x8
+; CHECK-NEXT:    ptrue p0.d, vl1
+; CHECK-NEXT:    fcvtzs z0.d, p0/m, z0.d
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
   %res = fptosi <1 x double> %op1 to <1 x i64>

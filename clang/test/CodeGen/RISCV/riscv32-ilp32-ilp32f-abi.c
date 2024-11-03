@@ -24,20 +24,16 @@ struct large {
   int32_t a, b, c, d;
 };
 
-// Scalars passed on the stack should not have signext/zeroext attributes
-// (they are anyext).
+// Scalars passed on the stack should have signext/zeroext attributes, just as
+// if they were passed in registers.
 
-// CHECK-LABEL: define{{.*}} i32 @f_scalar_stack_1(i32 noundef %a, i64 noundef %b, i32 noundef %c, double noundef %d, fp128 noundef %e, i8 noundef zeroext %f, i8 noundef %g, i8 noundef %h)
+// CHECK-LABEL: define{{.*}} i32 @f_scalar_stack_1(i32 noundef %a, i64 noundef %b, i32 noundef %c, double noundef %d, fp128 noundef %e, i8 noundef zeroext %f, i8 noundef signext %g, i8 noundef zeroext %h)
 int f_scalar_stack_1(int32_t a, int64_t b, int32_t c, double d, long double e,
                      uint8_t f, int8_t g, uint8_t h) {
   return g + h;
 }
 
-// Ensure that scalars passed on the stack are still determined correctly in
-// the presence of large return values that consume a register due to the need
-// to pass a pointer.
-
-// CHECK-LABEL: define{{.*}} void @f_scalar_stack_2(ptr noalias sret(%struct.large) align 4 %agg.result, i32 noundef %a, i64 noundef %b, double noundef %c, fp128 noundef %d, i8 noundef zeroext %e, i8 noundef %f, i8 noundef %g)
+// CHECK-LABEL: define{{.*}} void @f_scalar_stack_2(ptr noalias sret(%struct.large) align 4 %agg.result, i32 noundef %a, i64 noundef %b, double noundef %c, fp128 noundef %d, i8 noundef zeroext %e, i8 noundef signext %f, i8 noundef zeroext %g)
 struct large f_scalar_stack_2(int32_t a, int64_t b, double c, long double d,
                               uint8_t e, int8_t f, uint8_t g) {
   return (struct large){a, e, f, g};

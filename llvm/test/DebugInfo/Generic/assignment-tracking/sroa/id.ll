@@ -1,4 +1,4 @@
-; RUN: opt -passes=sroa -S %s -o - -experimental-assignment-tracking | FileCheck %s
+; RUN: opt -passes=sroa -S %s -o - | FileCheck %s
 
 ;; Check that multiple dbg.assign intrinsics linked to a store that is getting
 ;; split (or at least that is touched by SROA, causing a replacement store to
@@ -104,7 +104,7 @@ declare void @llvm.lifetime.end.p0i8(i64 immarg, ptr nocapture) #1
 declare void @llvm.dbg.assign(metadata, metadata, metadata, metadata, metadata, metadata) #3
 
 !llvm.dbg.cu = !{!2}
-!llvm.module.flags = !{!12, !13, !14}
+!llvm.module.flags = !{!12, !13, !14, !1000}
 !llvm.ident = !{!15}
 
 !0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
@@ -172,3 +172,4 @@ declare void @llvm.dbg.assign(metadata, metadata, metadata, metadata, metadata, 
 !68 = distinct !DIAssignID()
 !69 = distinct !DIAssignID()
 !70 = !DILocation(line: 3, column: 20, scope: !42)
+!1000 = !{i32 7, !"debug-info-assignment-tracking", i1 true}

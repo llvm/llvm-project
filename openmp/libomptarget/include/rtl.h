@@ -50,16 +50,8 @@ struct RTLInfoTy {
   typedef int32_t(data_exchange_async_ty)(int32_t, void *, int32_t, void *,
                                           int64_t, __tgt_async_info *);
   typedef int32_t(data_delete_ty)(int32_t, void *, int32_t);
-  typedef int32_t(run_region_ty)(int32_t, void *, void **, ptrdiff_t *,
-                                 int32_t);
-  typedef int32_t(run_region_async_ty)(int32_t, void *, void **, ptrdiff_t *,
-                                       int32_t, __tgt_async_info *);
-  typedef int32_t(run_team_region_ty)(int32_t, void *, void **, ptrdiff_t *,
-                                      int32_t, int32_t, int32_t, uint64_t);
-  typedef int32_t(run_team_region_async_ty)(int32_t, void *, void **,
-                                            ptrdiff_t *, int32_t, int32_t,
-                                            int32_t, uint64_t,
-                                            __tgt_async_info *);
+  typedef int32_t(launch_kernel_ty)(int32_t, void *, void **, ptrdiff_t *,
+                                    const KernelArgsTy *, __tgt_async_info *);
   typedef int64_t(init_requires_ty)(int64_t);
   typedef int32_t(synchronize_ty)(int32_t, __tgt_async_info *);
   typedef int32_t(query_async_ty)(int32_t, __tgt_async_info *);
@@ -76,6 +68,8 @@ struct RTLInfoTy {
   typedef int32_t(init_async_info_ty)(int32_t, __tgt_async_info **);
   typedef int64_t(init_device_into_ty)(int64_t, __tgt_device_info *,
                                        const char **);
+  typedef int32_t(data_lock_ty)(int32_t, void *, int64_t, void **);
+  typedef int32_t(data_unlock_ty)(int32_t, void *);
 
   int32_t Idx = -1;             // RTL index, index is the number of devices
                                 // of other RTLs that were registered before,
@@ -107,10 +101,7 @@ struct RTLInfoTy {
   data_exchange_ty *data_exchange = nullptr;
   data_exchange_async_ty *data_exchange_async = nullptr;
   data_delete_ty *data_delete = nullptr;
-  run_region_ty *run_region = nullptr;
-  run_region_async_ty *run_region_async = nullptr;
-  run_team_region_ty *run_team_region = nullptr;
-  run_team_region_async_ty *run_team_region_async = nullptr;
+  launch_kernel_ty *launch_kernel = nullptr;
   init_requires_ty *init_requires = nullptr;
   synchronize_ty *synchronize = nullptr;
   query_async_ty *query_async = nullptr;
@@ -127,6 +118,8 @@ struct RTLInfoTy {
   init_async_info_ty *init_async_info = nullptr;
   init_device_into_ty *init_device_info = nullptr;
   release_async_info_ty *release_async_info = nullptr;
+  data_lock_ty *data_lock = nullptr;
+  data_unlock_ty *data_unlock = nullptr;
 
   // Are there images associated with this RTL.
   bool IsUsed = false;
@@ -167,10 +160,8 @@ struct RTLsTy {
   // Unregister a shared library from all RTLs.
   void unregisterLib(__tgt_bin_desc *Desc);
 
-  // Mutex-like object to guarantee thread-safety and unique initialization
-  // (i.e. the library attempts to load the RTLs (plugins) only once).
-  std::once_flag InitFlag;
-  void loadRTLs(); // not thread-safe
+  // not thread-safe, called from global constructor (i.e. once)
+  void loadRTLs();
 
 private:
   static bool attemptLoadRTL(const std::string &RTLName, RTLInfoTy &RTL);

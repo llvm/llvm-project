@@ -131,7 +131,7 @@ void OptionGroupVariable::OptionParsingStarting(
 #define NUM_FRAME_OPTS 3
 
 llvm::ArrayRef<OptionDefinition> OptionGroupVariable::GetDefinitions() {
-  auto result = llvm::makeArrayRef(g_variable_options);
+  auto result = llvm::ArrayRef(g_variable_options);
   // Show the "--no-args", "--no-locals" and "--show-globals" options if we are
   // showing frame specific options
   if (include_frame_options)

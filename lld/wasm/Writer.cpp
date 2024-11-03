@@ -33,6 +33,7 @@
 
 #include <cstdarg>
 #include <map>
+#include <optional>
 
 #define DEBUG_TYPE "lld"
 
@@ -688,7 +689,7 @@ void Writer::calculateExports() {
     StringRef name = sym->getName();
     WasmExport export_;
     if (auto *f = dyn_cast<DefinedFunction>(sym)) {
-      if (Optional<StringRef> exportName = f->function->getExportName()) {
+      if (std::optional<StringRef> exportName = f->function->getExportName()) {
         name = *exportName;
       }
       export_ = {name, WASM_EXTERNAL_FUNCTION, f->getExportedFunctionIndex()};
@@ -1225,7 +1226,7 @@ void Writer::createInitMemoryFunction() {
 
         if (s->isBss) {
           writeI32Const(os, 0, "fill value");
-          writeI32Const(os, s->size, "memory region size");
+          writePtrConst(os, s->size, is64, "memory region size");
           writeU8(os, WASM_OPCODE_MISC_PREFIX, "bulk-memory prefix");
           writeUleb128(os, WASM_OPCODE_MEMORY_FILL, "memory.fill");
           writeU8(os, 0, "memory index immediate");

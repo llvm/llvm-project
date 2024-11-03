@@ -20,7 +20,7 @@
 
 namespace __llvm_libc {
 
-[[maybe_unused]] static inline BcmpReturnType
+[[maybe_unused]] LIBC_INLINE BcmpReturnType
 inline_bcmp_embedded_tiny(CPtr p1, CPtr p2, size_t count) {
   LLVM_LIBC_LOOP_NOUNROLL
   for (size_t offset = 0; offset < count; ++offset)
@@ -30,7 +30,7 @@ inline_bcmp_embedded_tiny(CPtr p1, CPtr p2, size_t count) {
 }
 
 #if defined(LLVM_LIBC_ARCH_X86) || defined(LLVM_LIBC_ARCH_AARCH64)
-[[maybe_unused]] static inline BcmpReturnType
+[[maybe_unused]] LIBC_INLINE BcmpReturnType
 inline_bcmp_generic_gt16(CPtr p1, CPtr p2, size_t count) {
   if (count < 256)
     return generic::Bcmp<16>::loop_and_tail(p1, p2, count);
@@ -42,7 +42,7 @@ inline_bcmp_generic_gt16(CPtr p1, CPtr p2, size_t count) {
 #endif // defined(LLVM_LIBC_ARCH_X86) || defined(LLVM_LIBC_ARCH_AARCH64)
 
 #if defined(LLVM_LIBC_ARCH_X86)
-[[maybe_unused]] static inline BcmpReturnType
+[[maybe_unused]] LIBC_INLINE BcmpReturnType
 inline_bcmp_x86_sse2_gt16(CPtr p1, CPtr p2, size_t count) {
   if (count <= 32)
     return x86::sse2::Bcmp<16>::head_tail(p1, p2, count);
@@ -54,7 +54,7 @@ inline_bcmp_x86_sse2_gt16(CPtr p1, CPtr p2, size_t count) {
   return x86::sse2::Bcmp<64>::loop_and_tail(p1, p2, count);
 }
 
-[[maybe_unused]] static inline BcmpReturnType
+[[maybe_unused]] LIBC_INLINE BcmpReturnType
 inline_bcmp_x86_avx2_gt16(CPtr p1, CPtr p2, size_t count) {
   if (count <= 32)
     return x86::sse2::Bcmp<16>::head_tail(p1, p2, count);
@@ -70,7 +70,7 @@ inline_bcmp_x86_avx2_gt16(CPtr p1, CPtr p2, size_t count) {
   return x86::avx2::Bcmp<64>::loop_and_tail(p1, p2, count);
 }
 
-[[maybe_unused]] static inline BcmpReturnType
+[[maybe_unused]] LIBC_INLINE BcmpReturnType
 inline_bcmp_x86_avx512bw_gt16(CPtr p1, CPtr p2, size_t count) {
   if (count <= 32)
     return x86::sse2::Bcmp<16>::head_tail(p1, p2, count);
@@ -86,8 +86,8 @@ inline_bcmp_x86_avx512bw_gt16(CPtr p1, CPtr p2, size_t count) {
   return x86::avx512bw::Bcmp<64>::loop_and_tail(p1, p2, count);
 }
 
-[[maybe_unused]] static inline BcmpReturnType inline_bcmp_x86(CPtr p1, CPtr p2,
-                                                              size_t count) {
+[[maybe_unused]] LIBC_INLINE BcmpReturnType inline_bcmp_x86(CPtr p1, CPtr p2,
+                                                            size_t count) {
   if (count == 0)
     return BcmpReturnType::ZERO();
   if (count == 1)
@@ -112,8 +112,9 @@ inline_bcmp_x86_avx512bw_gt16(CPtr p1, CPtr p2, size_t count) {
 #endif // defined(LLVM_LIBC_ARCH_X86)
 
 #if defined(LLVM_LIBC_ARCH_AARCH64)
-[[maybe_unused]] static inline BcmpReturnType
-inline_bcmp_aarch64(CPtr p1, CPtr p2, size_t count) {
+[[maybe_unused]] LIBC_INLINE BcmpReturnType inline_bcmp_aarch64(CPtr p1,
+                                                                CPtr p2,
+                                                                size_t count) {
   if (likely(count <= 32)) {
     if (unlikely(count >= 16)) {
       return aarch64::Bcmp<16>::head_tail(p1, p2, count);
@@ -159,7 +160,7 @@ inline_bcmp_aarch64(CPtr p1, CPtr p2, size_t count) {
 }
 #endif // defined(LLVM_LIBC_ARCH_AARCH64)
 
-static inline BcmpReturnType inline_bcmp(CPtr p1, CPtr p2, size_t count) {
+LIBC_INLINE BcmpReturnType inline_bcmp(CPtr p1, CPtr p2, size_t count) {
 #if defined(LLVM_LIBC_ARCH_X86)
   return inline_bcmp_x86(p1, p2, count);
 #elif defined(LLVM_LIBC_ARCH_AARCH64)
@@ -173,7 +174,7 @@ static inline BcmpReturnType inline_bcmp(CPtr p1, CPtr p2, size_t count) {
 #endif
 }
 
-static inline int inline_bcmp(const void *p1, const void *p2, size_t count) {
+LIBC_INLINE int inline_bcmp(const void *p1, const void *p2, size_t count) {
   return static_cast<int>(inline_bcmp(reinterpret_cast<CPtr>(p1),
                                       reinterpret_cast<CPtr>(p2), count));
 }

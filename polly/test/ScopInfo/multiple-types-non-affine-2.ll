@@ -39,7 +39,7 @@
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
-define void @multiple_types(i32* noalias %Short, i32* noalias %Char, i32* noalias %Double) {
+define void @multiple_types(ptr noalias %Short, ptr noalias %Char, ptr noalias %Double) {
 bb:
   br label %bb1
 
@@ -50,24 +50,21 @@ bb1:                                              ; preds = %bb20, %bb
 
 bb2:                                              ; preds = %bb1
   %quad = and i64 %i.0, 8
-  %tmp3 = getelementptr inbounds i32, i32* %Short, i64 %quad
-  %tmp4 = bitcast i32* %tmp3 to i16*
-  %tmp5 = load i16, i16* %tmp4, align 2
+  %tmp3 = getelementptr inbounds i32, ptr %Short, i64 %quad
+  %tmp5 = load i16, ptr %tmp3, align 2
   %tmp6 = zext i16 %tmp5 to i32
-  %tmp7 = getelementptr inbounds i32, i32* %Short, i64 %i.0
-  store i32 %tmp6, i32* %tmp7, align 1
-  %tmp9 = getelementptr inbounds i32, i32* %Char, i64 %quad
-  %tmp10 = bitcast i32* %tmp9 to i8*
-  %tmp11 = load i8, i8* %tmp10, align 4
+  %tmp7 = getelementptr inbounds i32, ptr %Short, i64 %i.0
+  store i32 %tmp6, ptr %tmp7, align 1
+  %tmp9 = getelementptr inbounds i32, ptr %Char, i64 %quad
+  %tmp11 = load i8, ptr %tmp9, align 4
   %tmp12 = zext i8 %tmp11 to i32
-  %tmp13 = getelementptr inbounds i32, i32* %Char, i64 %i.0
-  store i32 %tmp12, i32* %tmp13, align 1
-  %tmp15 = getelementptr inbounds i32, i32* %Double, i64 %quad
-  %tmp16 = bitcast i32* %tmp15 to double*
-  %tmp17 = load double, double* %tmp16, align 8
+  %tmp13 = getelementptr inbounds i32, ptr %Char, i64 %i.0
+  store i32 %tmp12, ptr %tmp13, align 1
+  %tmp15 = getelementptr inbounds i32, ptr %Double, i64 %quad
+  %tmp17 = load double, ptr %tmp15, align 8
   %tmp18 = fptosi double %tmp17 to i32
-  %tmp19 = getelementptr inbounds i32, i32* %Double, i64 %i.0
-  store i32 %tmp18, i32* %tmp19, align 1
+  %tmp19 = getelementptr inbounds i32, ptr %Double, i64 %i.0
+  store i32 %tmp18, ptr %tmp19, align 1
   br label %bb20
 
 bb20:                                             ; preds = %bb2

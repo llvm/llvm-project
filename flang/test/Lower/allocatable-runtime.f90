@@ -163,3 +163,20 @@ subroutine char_explicit_dyn(n, l1, l2)
   ! CHECK: AllocatableDeallocate
   ! CHECK: AllocatableDeallocate
 end subroutine
+
+subroutine mold_allocation()
+  integer :: m(10)
+  integer, allocatable :: a(:)
+
+  allocate(a, mold=m)
+end subroutine
+
+! CHECK-LABEL: func.func @_QPmold_allocation() {
+! CHECK: %[[A:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?xi32>>> {bindc_name = "a", uniq_name = "_QFmold_allocationEa"}
+! CHECK: %[[M:.*]] = fir.alloca !fir.array<10xi32> {bindc_name = "m", uniq_name = "_QFmold_allocationEm"}
+! CHECK: %[[EMBOX_M:.*]] = fir.embox %[[M]](%{{.*}}) : (!fir.ref<!fir.array<10xi32>>, !fir.shape<1>) -> !fir.box<!fir.array<10xi32>>
+! CHECK: %[[A_BOX_NONE:.*]] = fir.convert %[[A]] : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) -> !fir.ref<!fir.box<none>>
+! CHECK: %[[M_BOX_NONE:.*]] = fir.convert %[[EMBOX_M]] : (!fir.box<!fir.array<10xi32>>) -> !fir.box<none>
+! CHECK: %{{.*}} = fir.call @_FortranAAllocatableApplyMold(%[[A_BOX_NONE]], %[[M_BOX_NONE]]) {{.*}} : (!fir.ref<!fir.box<none>>, !fir.box<none>) -> none
+! CHECK: %[[A_BOX_NONE:.*]] = fir.convert %[[A]] : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) -> !fir.ref<!fir.box<none>>
+! CHECK: %{{.*}} = fir.call @_FortranAAllocatableAllocate(%[[A_BOX_NONE]], %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}) {{.*}} : (!fir.ref<!fir.box<none>>, i1, !fir.box<none>, !fir.ref<i8>, i32) -> i32

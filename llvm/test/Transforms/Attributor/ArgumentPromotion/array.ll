@@ -4,21 +4,18 @@
 ;
 ; FIXME: The GEP + BC + GEP solution we create is not great but correct.
 
-declare void @use(i32* nocapture readonly %arg)
+declare void @use(ptr nocapture readonly %arg)
 
 define void @caller() {
 ; TUNIT-LABEL: define {{[^@]+}}@caller() {
 ; TUNIT-NEXT:  entry:
 ; TUNIT-NEXT:    [[LEFT:%.*]] = alloca [3 x i32], align 4
-; TUNIT-NEXT:    [[ARRAYDECAY:%.*]] = getelementptr inbounds [3 x i32], [3 x i32]* [[LEFT]], i64 0, i64 0
-; TUNIT-NEXT:    [[TMP0:%.*]] = bitcast i32* [[ARRAYDECAY]] to [3 x i32]*
-; TUNIT-NEXT:    [[DOTCAST:%.*]] = bitcast [3 x i32]* [[TMP0]] to i32*
-; TUNIT-NEXT:    [[TMP1:%.*]] = load i32, i32* [[DOTCAST]], align 4
-; TUNIT-NEXT:    [[DOT0_1:%.*]] = getelementptr [3 x i32], [3 x i32]* [[TMP0]], i64 0, i64 1
-; TUNIT-NEXT:    [[TMP2:%.*]] = load i32, i32* [[DOT0_1]], align 4
-; TUNIT-NEXT:    [[DOT0_2:%.*]] = getelementptr [3 x i32], [3 x i32]* [[TMP0]], i64 0, i64 2
-; TUNIT-NEXT:    [[TMP3:%.*]] = load i32, i32* [[DOT0_2]], align 4
-; TUNIT-NEXT:    call void @callee(i32 [[TMP1]], i32 [[TMP2]], i32 [[TMP3]])
+; TUNIT-NEXT:    [[TMP0:%.*]] = load i32, ptr [[LEFT]], align 4
+; TUNIT-NEXT:    [[LEFT_0_1:%.*]] = getelementptr [3 x i32], ptr [[LEFT]], i64 0, i64 1
+; TUNIT-NEXT:    [[TMP1:%.*]] = load i32, ptr [[LEFT_0_1]], align 4
+; TUNIT-NEXT:    [[LEFT_0_2:%.*]] = getelementptr [3 x i32], ptr [[LEFT]], i64 0, i64 2
+; TUNIT-NEXT:    [[TMP2:%.*]] = load i32, ptr [[LEFT_0_2]], align 4
+; TUNIT-NEXT:    call void @callee(i32 [[TMP0]], i32 [[TMP1]], i32 [[TMP2]])
 ; TUNIT-NEXT:    ret void
 ;
 ; CGSCC-LABEL: define {{[^@]+}}@caller() {
@@ -28,27 +25,24 @@ define void @caller() {
 ;
 entry:
   %left = alloca [3 x i32], align 4
-  %arraydecay = getelementptr inbounds [3 x i32], [3 x i32]* %left, i64 0, i64 0
-  call void @callee(i32* %arraydecay)
+  call void @callee(ptr %left)
   ret void
 }
 
-define internal void @callee(i32* noalias %arg) {
+define internal void @callee(ptr noalias %arg) {
 ; CHECK-LABEL: define {{[^@]+}}@callee
 ; CHECK-SAME: (i32 [[TMP0:%.*]], i32 [[TMP1:%.*]], i32 [[TMP2:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[ARG_PRIV:%.*]] = alloca [3 x i32], align 4
-; CHECK-NEXT:    [[ARG_PRIV_CAST:%.*]] = bitcast [3 x i32]* [[ARG_PRIV]] to i32*
-; CHECK-NEXT:    store i32 [[TMP0]], i32* [[ARG_PRIV_CAST]], align 4
-; CHECK-NEXT:    [[ARG_PRIV_0_1:%.*]] = getelementptr [3 x i32], [3 x i32]* [[ARG_PRIV]], i64 0, i64 1
-; CHECK-NEXT:    store i32 [[TMP1]], i32* [[ARG_PRIV_0_1]], align 4
-; CHECK-NEXT:    [[ARG_PRIV_0_2:%.*]] = getelementptr [3 x i32], [3 x i32]* [[ARG_PRIV]], i64 0, i64 2
-; CHECK-NEXT:    store i32 [[TMP2]], i32* [[ARG_PRIV_0_2]], align 4
-; CHECK-NEXT:    [[TMP3:%.*]] = bitcast [3 x i32]* [[ARG_PRIV]] to i32*
-; CHECK-NEXT:    call void @use(i32* noalias nocapture noundef nonnull readonly align 4 dereferenceable(12) [[TMP3]])
+; CHECK-NEXT:    store i32 [[TMP0]], ptr [[ARG_PRIV]], align 4
+; CHECK-NEXT:    [[ARG_PRIV_0_1:%.*]] = getelementptr [3 x i32], ptr [[ARG_PRIV]], i64 0, i64 1
+; CHECK-NEXT:    store i32 [[TMP1]], ptr [[ARG_PRIV_0_1]], align 4
+; CHECK-NEXT:    [[ARG_PRIV_0_2:%.*]] = getelementptr [3 x i32], ptr [[ARG_PRIV]], i64 0, i64 2
+; CHECK-NEXT:    store i32 [[TMP2]], ptr [[ARG_PRIV_0_2]], align 4
+; CHECK-NEXT:    call void @use(ptr noalias nocapture noundef nonnull readonly align 4 dereferenceable(12) [[ARG_PRIV]])
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  call void @use(i32* %arg)
+  call void @use(ptr %arg)
   ret void
 }

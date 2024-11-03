@@ -32,6 +32,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include <algorithm>
+#include <optional>
 
 namespace mlir {
 #define GEN_PASS_DEF_AFFINEDATACOPYGENERATION
@@ -145,7 +146,7 @@ void AffineDataCopyGeneration::runOnBlock(Block *block,
 
       // Returns true if the footprint is known to exceed capacity.
       auto exceedsCapacity = [&](AffineForOp forOp) {
-        Optional<int64_t> footprint =
+        std::optional<int64_t> footprint =
             getMemoryFootprintBytes(forOp,
                                     /*memorySpace=*/0);
         return (footprint.has_value() &&
@@ -238,5 +239,6 @@ void AffineDataCopyGeneration::runOnOperation() {
   AffineLoadOp::getCanonicalizationPatterns(patterns, &getContext());
   AffineStoreOp::getCanonicalizationPatterns(patterns, &getContext());
   FrozenRewritePatternSet frozenPatterns(std::move(patterns));
-  (void)applyOpPatternsAndFold(copyOps, frozenPatterns, /*strict=*/true);
+  (void)applyOpPatternsAndFold(copyOps, frozenPatterns,
+                               GreedyRewriteStrictness::ExistingAndNewOps);
 }

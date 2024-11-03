@@ -16,11 +16,11 @@
 #include "clang/Basic/FileManager.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Lex/HeaderMapTypes.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include <memory>
+#include <optional>
 
 namespace clang {
 
@@ -48,7 +48,7 @@ public:
     for (unsigned Bucket = 0; Bucket < NumBuckets; ++Bucket) {
       HMapBucket B = getBucket(Bucket);
       if (B.Key != HMAP_EmptyBucketKey)
-        if (Optional<StringRef> Key = getString(B.Key))
+        if (std::optional<StringRef> Key = getString(B.Key))
           Callback(*Key);
     }
   }
@@ -74,7 +74,7 @@ private:
 
   /// Look up the specified string in the string table.  If the string index is
   /// not valid, return std::nullopt.
-  Optional<StringRef> getString(unsigned StrTabIdx) const;
+  std::optional<StringRef> getString(unsigned StrTabIdx) const;
 };
 
 /// This class represents an Apple concept known as a 'header map'.  To the

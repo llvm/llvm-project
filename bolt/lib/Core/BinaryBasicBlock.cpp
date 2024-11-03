@@ -198,14 +198,13 @@ int32_t BinaryBasicBlock::getCFIStateAtInstr(const MCInst *Instr) const {
   // Find the last CFI preceding Instr in this basic block.
   const MCInst *LastCFI = nullptr;
   bool InstrSeen = (Instr == nullptr);
-  for (auto RII = Instructions.rbegin(), E = Instructions.rend(); RII != E;
-       ++RII) {
+  for (const MCInst &Inst : llvm::reverse(Instructions)) {
     if (!InstrSeen) {
-      InstrSeen = (&*RII == Instr);
+      InstrSeen = (&Inst == Instr);
       continue;
     }
-    if (Function->getBinaryContext().MIB->isCFI(*RII)) {
-      LastCFI = &*RII;
+    if (Function->getBinaryContext().MIB->isCFI(Inst)) {
+      LastCFI = &Inst;
       break;
     }
   }

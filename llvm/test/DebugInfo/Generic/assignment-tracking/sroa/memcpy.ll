@@ -1,4 +1,4 @@
-; RUN: opt -passes=sroa,verify -S %s -o - -experimental-assignment-tracking \
+; RUN: opt -passes=sroa,verify -S %s -o - \
 ; RUN: | FileCheck %s --implicit-check-not="call void @llvm.dbg"
 
 ;; Check that the new slices of an alloca and memcpy intructions get dbg.assign
@@ -79,7 +79,7 @@ declare void @llvm.dbg.assign(metadata, metadata, metadata, metadata, metadata, 
 
 
 !llvm.dbg.cu = !{!2}
-!llvm.module.flags = !{!16, !17, !18}
+!llvm.module.flags = !{!16, !17, !18, !1000}
 !llvm.ident = !{!19}
 
 !0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
@@ -115,3 +115,4 @@ declare void @llvm.dbg.assign(metadata, metadata, metadata, metadata, metadata, 
 !35 = !DILocation(line: 9, column: 13, scope: !20)
 !38 = !DILocation(line: 10, column: 1, scope: !20)
 !39 = !DILocation(line: 9, column: 3, scope: !20)
+!1000 = !{i32 7, !"debug-info-assignment-tracking", i1 true}

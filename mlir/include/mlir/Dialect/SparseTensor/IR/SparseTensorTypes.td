@@ -5,6 +5,7 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+
 #ifndef SPARSETENSOR_TYPES
 #define SPARSETENSOR_TYPES
 
@@ -52,9 +53,9 @@ def SparseTensor_StorageSpecifier : SparseTensor_Type<"StorageSpecifier"> {
 
   let parameters = (ins SparseTensorEncodingAttr : $encoding);
   let builders = [
+    TypeBuilder<(ins "SparseTensorEncodingAttr":$encoding)>,
     TypeBuilderWithInferredContext<(ins "SparseTensorEncodingAttr":$encoding), [{
-      assert(encoding && "sparse tensor encoding should not be null");
-      return $_get(encoding.getContext(), encoding);
+      return get(encoding.getContext(), encoding);
     }]>,
     TypeBuilderWithInferredContext<(ins "Type":$type), [{
       return get(getSparseTensorEncoding(type));
@@ -71,6 +72,10 @@ def SparseTensor_StorageSpecifier : SparseTensor_Type<"StorageSpecifier"> {
     Type getFieldType(StorageSpecifierKind kind, std::optional<APInt> dim) const;
   }];
 
+  // We skipped the default builder that simply takes the input sparse tensor encoding
+  // attribute since we need to normalize the dimension level type and remove unrelated
+  // fields that are irrelavant to sparse tensor storage scheme.
+  let skipDefaultBuilders = 1;
   let assemblyFormat="`<` qualified($encoding) `>`";
 }
 

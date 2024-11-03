@@ -6,7 +6,7 @@ target triple = "x86_64-apple-macosx10.7.0"
 
 @.str = private unnamed_addr constant [6 x i8] c"bingo\00", align 1
 
-define void @reduce_compare(double* nocapture %A, i32 %n) {
+define void @reduce_compare(ptr nocapture %A, i32 %n) {
 ; CHECK-LABEL: @reduce_compare(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CONV:%.*]] = sitofp i32 [[N:%.*]] to double
@@ -16,9 +16,8 @@ define void @reduce_compare(double* nocapture %A, i32 %n) {
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_INC:%.*]] ]
 ; CHECK-NEXT:    [[TMP1:%.*]] = shl nsw i64 [[INDVARS_IV]], 1
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds double, double* [[A:%.*]], i64 [[TMP1]]
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast double* [[ARRAYIDX]] to <2 x double>*
-; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x double>, <2 x double>* [[TMP2]], align 8
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds double, ptr [[A:%.*]], i64 [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x double>, ptr [[ARRAYIDX]], align 8
 ; CHECK-NEXT:    [[TMP4:%.*]] = fmul <2 x double> [[SHUFFLE]], [[TMP3]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = fmul <2 x double> [[TMP4]], <double 7.000000e+00, double 4.000000e+00>
 ; CHECK-NEXT:    [[TMP6:%.*]] = fadd <2 x double> [[TMP5]], <double 5.000000e+00, double 9.000000e+00>
@@ -27,7 +26,7 @@ define void @reduce_compare(double* nocapture %A, i32 %n) {
 ; CHECK-NEXT:    [[CMP11:%.*]] = fcmp ogt double [[TMP7]], [[TMP8]]
 ; CHECK-NEXT:    br i1 [[CMP11]], label [[IF_THEN:%.*]], label [[FOR_INC]]
 ; CHECK:       if.then:
-; CHECK-NEXT:    [[CALL:%.*]] = tail call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([6 x i8], [6 x i8]* @.str, i64 0, i64 0))
+; CHECK-NEXT:    [[CALL:%.*]] = tail call i32 (ptr, ...) @printf(ptr @.str)
 ; CHECK-NEXT:    br label [[FOR_INC]]
 ; CHECK:       for.inc:
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add i64 [[INDVARS_IV]], 1
@@ -44,14 +43,14 @@ entry:
 for.body:                                         ; preds = %for.inc, %entry
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.inc ]
   %0 = shl nsw i64 %indvars.iv, 1
-  %arrayidx = getelementptr inbounds double, double* %A, i64 %0
-  %1 = load double, double* %arrayidx, align 8
+  %arrayidx = getelementptr inbounds double, ptr %A, i64 %0
+  %1 = load double, ptr %arrayidx, align 8
   %mul1 = fmul double %conv, %1
   %mul2 = fmul double %mul1, 7.000000e+00
   %add = fadd double %mul2, 5.000000e+00
   %2 = or i64 %0, 1
-  %arrayidx6 = getelementptr inbounds double, double* %A, i64 %2
-  %3 = load double, double* %arrayidx6, align 8
+  %arrayidx6 = getelementptr inbounds double, ptr %A, i64 %2
+  %3 = load double, ptr %arrayidx6, align 8
   %mul8 = fmul double %conv, %3
   %mul9 = fmul double %mul8, 4.000000e+00
   %add10 = fadd double %mul9, 9.000000e+00
@@ -59,7 +58,7 @@ for.body:                                         ; preds = %for.inc, %entry
   br i1 %cmp11, label %if.then, label %for.inc
 
 if.then:                                          ; preds = %for.body
-  %call = tail call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([6 x i8], [6 x i8]* @.str, i64 0, i64 0))
+  %call = tail call i32 (ptr, ...) @printf(ptr @.str)
   br label %for.inc
 
 for.inc:                                          ; preds = %for.body, %if.then
@@ -72,7 +71,7 @@ for.end:                                          ; preds = %for.inc
   ret void
 }
 
-declare i32 @printf(i8* nocapture, ...)
+declare i32 @printf(ptr nocapture, ...)
 
 ; PR41312 - the order of the reduction ops should not prevent forming a reduction.
 ; The 'wrong' member of the reduction requires a greater cost if grouped with the

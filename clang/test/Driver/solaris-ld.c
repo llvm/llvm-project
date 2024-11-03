@@ -114,3 +114,57 @@
 // CHECK-RELOCATABLE-NOT: "-l
 // CHECK-RELOCATABLE-NOT: /crt{{[^.]+}}.o
 // CHECK-RELOCATABLE-NOT: /values-{{[^.]+}}.o
+
+// Check that crtfastmath.o is linked with -ffast-math.
+
+// Check sparc-sun-solaris2.11, 32bit
+// RUN: %clang --target=sparc-sun-solaris2.11 -### %s \
+// RUN:        --gcc-toolchain="" \
+// RUN:        --sysroot=%S/Inputs/solaris_sparc_tree 2>&1 \
+// RUN:   | FileCheck --check-prefix=CHECK-NOCRTFASTMATH-SPARC32 %s
+// RUN: %clang --target=sparc-sun-solaris2.11 -### %s -ffast-math \
+// RUN:        --gcc-toolchain="" \
+// RUN:        --sysroot=%S/Inputs/solaris_sparc_tree 2>&1 \
+// RUN:   | FileCheck --check-prefix=CHECK-CRTFASTMATH-SPARC32 %s
+// CHECK-CRTFASTMATH-SPARC32: "-isysroot" "[[SYSROOT:[^"]+]]"
+// CHECK-CRTFASTMATH-SPARC32: "[[SYSROOT]]/usr/gcc/4.8/lib/gcc/sparc-sun-solaris2.11/4.8.2{{/|\\\\}}crtfastmath.o"
+// CHECK-NOCRTFASTMATH-SPARC32-NOT: crtfastmath.o
+
+// Check sparc-pc-solaris2.11, 64bit
+// RUN: %clang -m64 --target=sparc-sun-solaris2.11 -### %s \
+// RUN:        --gcc-toolchain="" \
+// RUN:        --sysroot=%S/Inputs/solaris_sparc_tree 2>&1 \
+// RUN:   | FileCheck --check-prefix=CHECK-NOCRTFASTMATH-SPARC64 %s
+// RUN: %clang -m64 --target=sparc-sun-solaris2.11 -### %s -ffast-math \
+// RUN:        --gcc-toolchain="" \
+// RUN:        --sysroot=%S/Inputs/solaris_sparc_tree 2>&1 \
+// RUN:   | FileCheck --check-prefix=CHECK-CRTFASTMATH-SPARC64 %s
+// CHECK-CRTFASTMATH-SPARC64: "-isysroot" "[[SYSROOT:[^"]+]]"
+// CHECK-CRTFASTMATH-SPARC64: "[[SYSROOT]]/usr/gcc/4.8/lib/gcc/sparc-sun-solaris2.11/4.8.2/sparcv9{{/|\\\\}}crtfastmath.o"
+// CHECK-NOCRTFASTMATH-SPARC64-NOT: crtfastmath.o
+
+// Check i386-pc-solaris2.11, 32bit
+// RUN: %clang --target=i386-pc-solaris2.11 -### %s \
+// RUN:        --gcc-toolchain="" \
+// RUN:        --sysroot=%S/Inputs/solaris_x86_tree 2>&1 \
+// RUN:   | FileCheck --check-prefix=CHECK-NOCRTFASTMATH-X32 %s
+// RUN: %clang --target=i386-pc-solaris2.11 -### %s -ffast-math \
+// RUN:        --gcc-toolchain="" \
+// RUN:        --sysroot=%S/Inputs/solaris_x86_tree 2>&1 \
+// RUN:   | FileCheck --check-prefix=CHECK-CRTFASTMATH-X32 %s
+// CHECK-CRTFASTMATH-X32: "-isysroot" "[[SYSROOT:[^"]+]]"
+// CHECK-CRTFASTMATH-X32: "[[SYSROOT]]/usr/gcc/4.9/lib/gcc/i386-pc-solaris2.11/4.9.4{{/|\\\\}}crtfastmath.o"
+// CHECK-NOCRTFASTMATH-X32-NOT: crtfastmath.o
+
+// Check i386-pc-solaris2.11, 64bit
+// RUN: %clang -m64 --target=i386-pc-solaris2.11 -### %s \
+// RUN:        --gcc-toolchain="" \
+// RUN:        --sysroot=%S/Inputs/solaris_x86_tree 2>&1 \
+// RUN:   | FileCheck --check-prefix=CHECK-NOCRTFASTMATH-X64 %s
+// RUN: %clang -m64 --target=i386-pc-solaris2.11 -### %s -ffast-math \
+// RUN:        --gcc-toolchain="" \
+// RUN:        --sysroot=%S/Inputs/solaris_x86_tree 2>&1 \
+// RUN:   | FileCheck --check-prefix=CHECK-CRTFASTMATH-X64 %s
+// CHECK-CRTFASTMATH-X64: "-isysroot" "[[SYSROOT:[^"]+]]"
+// CHECK-CRTFASTMATH-X64: "[[SYSROOT]]/usr/gcc/4.9/lib/gcc/i386-pc-solaris2.11/4.9.4/amd64{{/|\\\\}}crtfastmath.o"
+// CHECK-NOCRTFASTMATH-X64-NOT: crtfastmath.o

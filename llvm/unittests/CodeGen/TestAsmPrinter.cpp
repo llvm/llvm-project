@@ -80,11 +80,5 @@ llvm::Error TestAsmPrinter::init(const Target *TheTarget, StringRef TripleName,
 }
 
 void TestAsmPrinter::setDwarfUsesRelocationsAcrossSections(bool Enable) {
-  struct HackMCAsmInfo : MCAsmInfo {
-    void setDwarfUsesRelocationsAcrossSections(bool Enable) {
-      DwarfUsesRelocationsAcrossSections = Enable;
-    }
-  };
-  static_cast<HackMCAsmInfo *>(const_cast<MCAsmInfo *>(TM->getMCAsmInfo()))
-      ->setDwarfUsesRelocationsAcrossSections(Enable);
+  Asm->setDwarfUsesRelocationsAcrossSections(Enable);
 }

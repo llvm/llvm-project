@@ -24,6 +24,7 @@
 #include "llvm/Support/ThreadPool.h"
 #include "llvm/Support/Threading.h"
 #include <mutex>
+#include <optional>
 #include <thread>
 
 using namespace clang;
@@ -562,7 +563,7 @@ int main(int argc, const char **argv) {
           Filename = std::move(Input->Filename);
           CWD = std::move(Input->Directory);
         }
-        Optional<StringRef> MaybeModuleName;
+        std::optional<StringRef> MaybeModuleName;
         if (!ModuleName.empty())
           MaybeModuleName = ModuleName;
 

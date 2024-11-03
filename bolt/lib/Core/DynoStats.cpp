@@ -111,17 +111,15 @@ void DynoStats::print(raw_ostream &OS, const DynoStats *Other,
 
     // Dump in ascending order: Start with Opcode with Highest execution
     // count.
-    for (auto Stat = SortedHistogram.rbegin(); Stat != SortedHistogram.rend();
-         ++Stat) {
-      OS << format("%20s,%'18lld", Printer->getOpcodeName(Stat->second).data(),
-                   Stat->first * opts::DynoStatsScale);
+    for (auto &Stat : llvm::reverse(SortedHistogram)) {
+      OS << format("%20s,%'18lld", Printer->getOpcodeName(Stat.second).data(),
+                   Stat.first * opts::DynoStatsScale);
 
-      MaxOpcodeHistogramTy MaxMultiMap =
-          OpcodeHistogram.at(Stat->second).second;
+      MaxOpcodeHistogramTy MaxMultiMap = OpcodeHistogram.at(Stat.second).second;
       // Start with function name:BB offset with highest execution count.
-      for (auto Max = MaxMultiMap.rbegin(); Max != MaxMultiMap.rend(); ++Max) {
-        OS << format(", %'18lld, ", Max->first * opts::DynoStatsScale)
-           << Max->second.first.str() << ':' << Max->second.second;
+      for (auto &Max : llvm::reverse(MaxMultiMap)) {
+        OS << format(", %'18lld, ", Max.first * opts::DynoStatsScale)
+           << Max.second.first.str() << ':' << Max.second.second;
       }
       OS << '\n';
     }
@@ -145,14 +143,14 @@ void DynoStats::operator+=(const DynoStats &Other) {
       auto &OtherMMap = Stat.second.second;
       auto Size = MMap.size();
       assert(Size <= opts::PrintDynoOpcodeStat);
-      for (auto Iter = OtherMMap.rbegin(); Iter != OtherMMap.rend(); ++Iter) {
+      for (auto OtherMMapPair : llvm::reverse(OtherMMap)) {
         if (Size++ >= opts::PrintDynoOpcodeStat) {
           auto First = MMap.begin();
-          if (Iter->first <= First->first)
+          if (OtherMMapPair.first <= First->first)
             break;
           MMap.erase(First);
         }
-        MMap.emplace(*Iter);
+        MMap.emplace(OtherMMapPair);
       }
     }
   }

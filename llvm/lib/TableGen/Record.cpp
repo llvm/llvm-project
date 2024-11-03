@@ -416,7 +416,7 @@ BitsInit *BitsInit::get(RecordKeeper &RK, ArrayRef<Init *> Range) {
 }
 
 void BitsInit::Profile(FoldingSetNodeID &ID) const {
-  ProfileBitsInit(ID, makeArrayRef(getTrailingObjects<Init *>(), NumBits));
+  ProfileBitsInit(ID, ArrayRef(getTrailingObjects<Init *>(), NumBits));
 }
 
 Init *BitsInit::convertInitializerTo(RecTy *Ty) const {
@@ -2190,10 +2190,9 @@ static void ProfileCondOpInit(FoldingSetNodeID &ID,
 }
 
 void CondOpInit::Profile(FoldingSetNodeID &ID) const {
-  ProfileCondOpInit(ID,
-      makeArrayRef(getTrailingObjects<Init *>(), NumConds),
-      makeArrayRef(getTrailingObjects<Init *>() + NumConds, NumConds),
-      ValType);
+  ProfileCondOpInit(ID, ArrayRef(getTrailingObjects<Init *>(), NumConds),
+                    ArrayRef(getTrailingObjects<Init *>() + NumConds, NumConds),
+                    ValType);
 }
 
 CondOpInit *CondOpInit::get(ArrayRef<Init *> CondRange,
@@ -2359,7 +2358,9 @@ DagInit::get(Init *V, StringInit *VN,
 }
 
 void DagInit::Profile(FoldingSetNodeID &ID) const {
-  ProfileDagInit(ID, Val, ValName, makeArrayRef(getTrailingObjects<Init *>(), NumArgs), makeArrayRef(getTrailingObjects<StringInit *>(), NumArgNames));
+  ProfileDagInit(ID, Val, ValName,
+                 ArrayRef(getTrailingObjects<Init *>(), NumArgs),
+                 ArrayRef(getTrailingObjects<StringInit *>(), NumArgNames));
 }
 
 Record *DagInit::getOperatorAsDef(ArrayRef<SMLoc> Loc) const {
@@ -2963,7 +2964,7 @@ RecordKeeper::getAllDerivedDefinitions(StringRef ClassName) const {
   // the same vectors multiple times.
   auto Pair = ClassRecordsMap.try_emplace(ClassName);
   if (Pair.second)
-    Pair.first->second = getAllDerivedDefinitions(makeArrayRef(ClassName));
+    Pair.first->second = getAllDerivedDefinitions(ArrayRef(ClassName));
 
   return Pair.first->second;
 }

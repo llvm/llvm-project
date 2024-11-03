@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-codegen -polly-parallel -S < %s | FileCheck %s
+; RUN: opt -opaque-pointers=0 %loadPolly -polly-codegen -polly-parallel -S < %s | FileCheck %s
 ;
 ;    void foo(float *A, float *B) {
 ;      for (long i = 0; i < 1000; i++)

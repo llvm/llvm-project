@@ -1,4 +1,4 @@
-; RUN: opt -passes=instcombine -S < %s | FileCheck %s
+; RUN: opt -opaque-pointers=0 -passes=instcombine -S < %s | FileCheck %s
 
 declare void @llvm.init.trampoline(i8*, i8*, i8*)
 declare i8* @llvm.adjust.trampoline(i8*)

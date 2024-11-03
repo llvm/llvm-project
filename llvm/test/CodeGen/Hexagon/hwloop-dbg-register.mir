@@ -9,7 +9,7 @@
 
   %s.0 = type { i32 }
 
-  @g0 = external dso_local local_unnamed_addr global %s.0*, align 4, !dbg !0
+  @g0 = external dso_local local_unnamed_addr global ptr, align 4, !dbg !0
 
   define dso_local void @f0() local_unnamed_addr #0 !dbg !13 {
   b0:
@@ -21,9 +21,9 @@
     %v2 = add nsw i32 %v1, -8
     %v3 = add nsw i32 %v2, %v0
     call void @llvm.dbg.value(metadata i32 %v3, metadata !19, metadata !DIExpression()), !dbg !24
-    %v4 = load %s.0*, %s.0** @g0, align 4
-    %v5 = getelementptr inbounds %s.0, %s.0* %v4, i32 %v3, i32 0
-    store i32 undef, i32* %v5, align 4
+    %v4 = load ptr, ptr @g0, align 4
+    %v5 = getelementptr inbounds %s.0, ptr %v4, i32 %v3, i32 0
+    store i32 undef, ptr %v5, align 4
     %v6 = icmp eq i32 %v2, 0
     br i1 %v6, label %b2, label %b1
 

@@ -28,7 +28,9 @@
 
 template <size_t S, size_t Align>
 void testForSizeAndAlign() {
-  using T = typename std::aligned_storage<S, Align>::type;
+  struct T {
+    alignas(Align) std::byte buf[S];
+  };
 
   TestResource R;
   std::pmr::polymorphic_allocator<T> a(&R);

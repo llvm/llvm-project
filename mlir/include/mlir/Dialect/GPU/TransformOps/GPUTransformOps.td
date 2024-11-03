@@ -109,7 +109,7 @@ def MapNestedForeachToThreads :
   let extraClassDeclaration = [{
     ::mlir::DiagnosedSilenceableFailure applyToOne(
         ::mlir::Operation *target,
-        ::llvm::SmallVectorImpl<::mlir::Operation *> &results,
+        ::mlir::transform::ApplyToEachResultList &results,
         ::mlir::transform::TransformState &state);
   }];
 }
@@ -130,7 +130,7 @@ def MapForeachToBlocks :
     The operation searches top level `scf.foreach_thread` ops under
     `gpu_launch` and maps each such op to GPU blocks. Mapping is
     one-to-one and the induction variables of `scf.foreach_thread` are
-    rewritten to gpu.block_id according to the `thread_dim_apping` attribute.
+    rewritten to gpu.block_id according to the `thread_dim_mapping` attribute.
 
     Dynamic, `scf.foreach_thread` trip counts are currently not supported.
     Dynamic block dim sizes are currently not supported.
@@ -167,7 +167,7 @@ def MapForeachToBlocks :
   let extraClassDeclaration = [{
     ::mlir::DiagnosedSilenceableFailure applyToOne(
         ::mlir::Operation *target,
-        ::llvm::SmallVectorImpl<::mlir::Operation *> &results,
+        ::mlir::transform::ApplyToEachResultList &results,
         ::mlir::transform::TransformState &state);
   }];
 }

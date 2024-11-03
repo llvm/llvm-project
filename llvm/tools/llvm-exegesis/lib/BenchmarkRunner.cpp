@@ -31,9 +31,8 @@ namespace exegesis {
 
 BenchmarkRunner::BenchmarkRunner(const LLVMState &State,
                                  InstructionBenchmark::ModeE Mode,
-                                 bool BenchmarkSkipMeasurements)
-    : State(State), Mode(Mode),
-      BenchmarkSkipMeasurements(BenchmarkSkipMeasurements),
+                                 BenchmarkPhaseSelectorE BenchmarkPhaseSelector)
+    : State(State), Mode(Mode), BenchmarkPhaseSelector(BenchmarkPhaseSelector),
       Scratch(std::make_unique<ScratchSpace>()) {}
 
 BenchmarkRunner::~BenchmarkRunner() = default;
@@ -171,9 +170,9 @@ BenchmarkRunner::getRunnableConfiguration(
   // Assemble at least kMinInstructionsForSnippet instructions by repeating
   // the snippet for debug/analysis. This is so that the user clearly
   // understands that the inside instructions are repeated.
-  const int MinInstructionsForSnippet = 4 * Instructions.size();
-  const int LoopBodySizeForSnippet = 2 * Instructions.size();
-  {
+  if (BenchmarkPhaseSelector > BenchmarkPhaseSelectorE::PrepareSnippet) {
+    const int MinInstructionsForSnippet = 4 * Instructions.size();
+    const int LoopBodySizeForSnippet = 2 * Instructions.size();
     auto Snippet = assembleSnippet(BC, Repetitor, MinInstructionsForSnippet,
                                    LoopBodySizeForSnippet);
     if (Error E = Snippet.takeError())
@@ -186,7 +185,7 @@ BenchmarkRunner::getRunnableConfiguration(
 
   // Assemble NumRepetitions instructions repetitions of the snippet for
   // measurements.
-  {
+  if (BenchmarkPhaseSelector > BenchmarkPhaseSelectorE::PrepareAndAssembleSnippet) {
     auto Snippet = assembleSnippet(BC, Repetitor, InstrBenchmark.NumRepetitions,
                                    LoopBodySize);
     if (Error E = Snippet.takeError())
@@ -203,7 +202,8 @@ BenchmarkRunner::runConfiguration(RunnableConfiguration &&RC,
   InstructionBenchmark &InstrBenchmark = RC.InstrBenchmark;
   object::OwningBinary<object::ObjectFile> &ObjectFile = RC.ObjectFile;
 
-  if (DumpObjectToDisk) {
+  if (DumpObjectToDisk &&
+      BenchmarkPhaseSelector > BenchmarkPhaseSelectorE::PrepareAndAssembleSnippet) {
     auto ObjectFilePath = writeObjectFile(ObjectFile.getBinary()->getData());
     if (Error E = ObjectFilePath.takeError()) {
       InstrBenchmark.Error = toString(std::move(E));
@@ -213,9 +213,8 @@ BenchmarkRunner::runConfiguration(RunnableConfiguration &&RC,
            << *ObjectFilePath << "\n";
   }
 
-  if (BenchmarkSkipMeasurements) {
-    InstrBenchmark.Error =
-        "in --skip-measurements mode, actual measurements skipped.";
+  if (BenchmarkPhaseSelector < BenchmarkPhaseSelectorE::Measure) {
+    InstrBenchmark.Error = "actual measurements skipped.";
     return std::move(InstrBenchmark);
   }
 

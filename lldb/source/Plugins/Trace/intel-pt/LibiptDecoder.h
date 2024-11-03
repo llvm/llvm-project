@@ -13,6 +13,7 @@
 #include "PerfContextSwitchDecoder.h"
 #include "forward-declarations.h"
 #include "intel-pt.h"
+#include <optional>
 
 namespace lldb_private {
 namespace trace_intel_pt {
@@ -25,14 +26,14 @@ struct PSBBlock {
   /// starts decoding.
   uint64_t psb_offset;
   /// The timestamp associated with the PSB packet above.
-  llvm::Optional<uint64_t> tsc;
+  std::optional<uint64_t> tsc;
   /// Size in bytes of this block
   uint64_t size;
   /// The first ip for this PSB block.
   /// This is \a std::nullopt if tracing was disabled when the PSB block was
   /// emitted.  This means that eventually there's be an enablement event that
   /// will come with an ip.
-  llvm::Optional<lldb::addr_t> starting_ip;
+  std::optional<lldb::addr_t> starting_ip;
 };
 
 /// This struct represents a continuous execution of a thread in a cpu,
@@ -114,7 +115,7 @@ SplitTraceIntoPSBBlock(TraceIntelPT &trace_intel_pt,
 ///     The lowest TSC value in this trace if available, \a std::nullopt if the
 ///     trace is empty or the trace contains no timing information, or an \a
 ///     llvm::Error if it was not possible to set up the decoder.
-llvm::Expected<llvm::Optional<uint64_t>>
+llvm::Expected<std::optional<uint64_t>>
 FindLowestTSCInTrace(TraceIntelPT &trace_intel_pt,
                      llvm::ArrayRef<uint8_t> buffer);
 

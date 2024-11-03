@@ -11,16 +11,16 @@
 ;          BasicBlock). This is misnamed because it actually checks
 ;          strict dominance, causing the pattern to be miscompiled
 ;          (the use receives an undef value).
-define i32 @exiting-used-in-exit(i32* %arg1, i32* %arg2) local_unnamed_addr align 2 {
+define i32 @exiting-used-in-exit(ptr %arg1, ptr %arg2) local_unnamed_addr align 2 {
 ; CHECK-LABEL: @exiting-used-in-exit(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[A:%.*]]
 ; CHECK:       A:
-; CHECK-NEXT:    [[MYTMP42:%.*]] = load i32, i32* [[ARG1:%.*]], align 4
+; CHECK-NEXT:    [[MYTMP42:%.*]] = load i32, ptr [[ARG1:%.*]], align 4
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt i32 [[MYTMP42]], 0
 ; CHECK-NEXT:    br i1 [[CMP1]], label [[B:%.*]], label [[LOOP_EXIT_GUARD:%.*]]
 ; CHECK:       B:
-; CHECK-NEXT:    [[MYTMP41:%.*]] = load i32, i32* [[ARG2:%.*]], align 4
+; CHECK-NEXT:    [[MYTMP41:%.*]] = load i32, ptr [[ARG2:%.*]], align 4
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[MYTMP41]], 0
 ; CHECK-NEXT:    br i1 [[CMP]], label [[A]], label [[LOOP_EXIT_GUARD]]
 ; CHECK:       C:
@@ -39,12 +39,12 @@ entry:
   br label %A
 
 A:
-  %mytmp42 = load i32, i32* %arg1, align 4
+  %mytmp42 = load i32, ptr %arg1, align 4
   %cmp1 = icmp slt i32 %mytmp42, 0
   br i1 %cmp1, label %B, label %return
 
 B:
-  %mytmp41 = load i32, i32* %arg2, align 4
+  %mytmp41 = load i32, ptr %arg2, align 4
   %cmp = icmp slt i32 %mytmp41, 0
   br i1 %cmp, label %A, label %C
 
@@ -64,16 +64,16 @@ return:
 ; - D and return are exit blocks.
 ; Pattern: Value (%mytmp41) defined in internal block (B) and used in an
 ;          exit block (D).
-define i32 @internal-used-in-exit(i32* %arg1, i32* %arg2) local_unnamed_addr align 2 {
+define i32 @internal-used-in-exit(ptr %arg1, ptr %arg2) local_unnamed_addr align 2 {
 ; CHECK-LABEL: @internal-used-in-exit(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[MYTMP42:%.*]] = load i32, i32* [[ARG1:%.*]], align 4
+; CHECK-NEXT:    [[MYTMP42:%.*]] = load i32, ptr [[ARG1:%.*]], align 4
 ; CHECK-NEXT:    br label [[A:%.*]]
 ; CHECK:       A:
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt i32 [[MYTMP42]], 0
 ; CHECK-NEXT:    br i1 [[CMP1]], label [[B:%.*]], label [[LOOP_EXIT_GUARD:%.*]]
 ; CHECK:       B:
-; CHECK-NEXT:    [[MYTMP41:%.*]] = load i32, i32* [[ARG2:%.*]], align 4
+; CHECK-NEXT:    [[MYTMP41:%.*]] = load i32, ptr [[ARG2:%.*]], align 4
 ; CHECK-NEXT:    br label [[C:%.*]]
 ; CHECK:       C:
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[MYTMP42]], 0
@@ -89,7 +89,7 @@ define i32 @internal-used-in-exit(i32* %arg1, i32* %arg2) local_unnamed_addr ali
 ; CHECK-NEXT:    br i1 [[GUARD_RETURN]], label [[RETURN]], label [[D:%.*]]
 ;
 entry:
-  %mytmp42 = load i32, i32* %arg1, align 4
+  %mytmp42 = load i32, ptr %arg1, align 4
   br label %A
 
 A:
@@ -97,7 +97,7 @@ A:
   br i1 %cmp1, label %B, label %return
 
 B:
-  %mytmp41 = load i32, i32* %arg2, align 4
+  %mytmp41 = load i32, ptr %arg2, align 4
   br label %C
 
 C:
@@ -119,10 +119,10 @@ return:
 ; - D and return are exit blocks.
 ; Pattern: %return contains a phi node that receives values from
 ;          %entry, %A and %D. This mixes all the special cases in a single phi.
-define i32 @mixed-use-in-exit(i32* %arg1, i32* %arg2) local_unnamed_addr align 2 {
+define i32 @mixed-use-in-exit(ptr %arg1, ptr %arg2) local_unnamed_addr align 2 {
 ; CHECK-LABEL: @mixed-use-in-exit(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[MYTMP42:%.*]] = load i32, i32* [[ARG1:%.*]], align 4
+; CHECK-NEXT:    [[MYTMP42:%.*]] = load i32, ptr [[ARG1:%.*]], align 4
 ; CHECK-NEXT:    [[CMP2:%.*]] = icmp slt i32 [[MYTMP42]], 0
 ; CHECK-NEXT:    br i1 [[CMP2]], label [[A:%.*]], label [[RETURN:%.*]]
 ; CHECK:       A:
@@ -130,7 +130,7 @@ define i32 @mixed-use-in-exit(i32* %arg1, i32* %arg2) local_unnamed_addr align 2
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt i32 [[MYTMP42]], 0
 ; CHECK-NEXT:    br i1 [[CMP1]], label [[B:%.*]], label [[LOOP_EXIT_GUARD:%.*]]
 ; CHECK:       B:
-; CHECK-NEXT:    [[MYTMP41:%.*]] = load i32, i32* [[ARG2:%.*]], align 4
+; CHECK-NEXT:    [[MYTMP41:%.*]] = load i32, ptr [[ARG2:%.*]], align 4
 ; CHECK-NEXT:    br label [[C:%.*]]
 ; CHECK:       C:
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[MYTMP42]], 0
@@ -147,7 +147,7 @@ define i32 @mixed-use-in-exit(i32* %arg1, i32* %arg2) local_unnamed_addr align 2
 ; CHECK-NEXT:    br i1 [[GUARD_RETURN]], label [[RETURN]], label [[D]]
 ;
 entry:
-  %mytmp42 = load i32, i32* %arg1, align 4
+  %mytmp42 = load i32, ptr %arg1, align 4
   %cmp2 = icmp slt i32 %mytmp42, 0
   br i1 %cmp2, label %A, label %return
 
@@ -157,7 +157,7 @@ A:
   br i1 %cmp1, label %B, label %return
 
 B:
-  %mytmp41 = load i32, i32* %arg2, align 4
+  %mytmp41 = load i32, ptr %arg2, align 4
   br label %C
 
 C:
@@ -184,16 +184,16 @@ return:
 ;          This pattern does not involve either the exiting blocks or
 ;          the exit blocks, which catches any such assumptions built
 ;          into the SSA reconstruction phase.
-define i32 @phi-via-external-block(i32* %arg1, i32* %arg2) local_unnamed_addr align 2 {
+define i32 @phi-via-external-block(ptr %arg1, ptr %arg2) local_unnamed_addr align 2 {
 ; CHECK-LABEL: @phi-via-external-block(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[MYTMP42:%.*]] = load i32, i32* [[ARG1:%.*]], align 4
+; CHECK-NEXT:    [[MYTMP42:%.*]] = load i32, ptr [[ARG1:%.*]], align 4
 ; CHECK-NEXT:    br label [[A:%.*]]
 ; CHECK:       A:
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt i32 [[MYTMP42]], 0
 ; CHECK-NEXT:    br i1 [[CMP1]], label [[B:%.*]], label [[LOOP_EXIT_GUARD:%.*]]
 ; CHECK:       B:
-; CHECK-NEXT:    [[MYTMP41:%.*]] = load i32, i32* [[ARG2:%.*]], align 4
+; CHECK-NEXT:    [[MYTMP41:%.*]] = load i32, ptr [[ARG2:%.*]], align 4
 ; CHECK-NEXT:    br label [[C:%.*]]
 ; CHECK:       C:
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[MYTMP42]], 0
@@ -211,7 +211,7 @@ define i32 @phi-via-external-block(i32* %arg1, i32* %arg2) local_unnamed_addr al
 ; CHECK-NEXT:    br i1 [[GUARD_E]], label [[E]], label [[D]]
 ;
 entry:
-  %mytmp42 = load i32, i32* %arg1, align 4
+  %mytmp42 = load i32, ptr %arg1, align 4
   br label %A
 
 A:
@@ -219,7 +219,7 @@ A:
   br i1 %cmp1, label %B, label %E
 
 B:
-  %mytmp41 = load i32, i32* %arg2, align 4
+  %mytmp41 = load i32, ptr %arg2, align 4
   br label %C
 
 C:

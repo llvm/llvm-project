@@ -2,39 +2,33 @@
 ; RUN: opt < %s -S -mtriple=x86_64-unknown -passes=slp-vectorizer | FileCheck %s
 
 ; Test for PR49898.
-define void @fusion_1506(i8* %temp_buf1) local_unnamed_addr {
+define void @fusion_1506(ptr %temp_buf1) local_unnamed_addr {
 ; CHECK-LABEL: @fusion_1506(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i8, i8* [[TEMP_BUF1:%.*]], i64 5621415936
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, i8* [[TEMP_BUF1]], i64 7278166016
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i8, i8* [[TEMP_BUF1]], i64 5097127936
-; CHECK-NEXT:    [[TMP3:%.*]] = bitcast i8* [[TMP2]] to float*
-; CHECK-NEXT:    [[TMP4:%.*]] = bitcast i8* [[TMP1]] to float*
-; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds float, float* [[TMP4]], i64 undef
-; CHECK-NEXT:    store float undef, float* [[TMP5]], align 16
-; CHECK-NEXT:    [[TMP6:%.*]] = bitcast i8* [[TMP0]] to float*
-; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds float, float* [[TMP6]], i64 undef
-; CHECK-NEXT:    store float undef, float* [[TMP7]], align 16
-; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds float, float* [[TMP6]], i64 undef
-; CHECK-NEXT:    store float undef, float* [[TMP8]], align 4
-; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds float, float* [[TMP3]], i64 undef
-; CHECK-NEXT:    store float undef, float* [[TMP9]], align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i8, ptr [[TEMP_BUF1:%.*]], i64 5621415936
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr [[TEMP_BUF1]], i64 7278166016
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i8, ptr [[TEMP_BUF1]], i64 5097127936
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds float, ptr [[TMP1]], i64 undef
+; CHECK-NEXT:    store float undef, ptr [[TMP5]], align 16
+; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds float, ptr [[TMP0]], i64 undef
+; CHECK-NEXT:    store float undef, ptr [[TMP7]], align 16
+; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds float, ptr [[TMP0]], i64 undef
+; CHECK-NEXT:    store float undef, ptr [[TMP8]], align 4
+; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds float, ptr [[TMP2]], i64 undef
+; CHECK-NEXT:    store float undef, ptr [[TMP9]], align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  %0 = getelementptr inbounds i8, i8* %temp_buf1, i64 5621415936
-  %1 = getelementptr inbounds i8, i8* %temp_buf1, i64 7278166016
-  %2 = getelementptr inbounds i8, i8* %temp_buf1, i64 5097127936
-  %3 = bitcast i8* %2 to float*
-  %4 = bitcast i8* %1 to float*
-  %5 = getelementptr inbounds float, float* %4, i64 undef
-  store float undef, float* %5, align 16
-  %6 = bitcast i8* %0 to float*
-  %7 = getelementptr inbounds float, float* %6, i64 undef
-  store float undef, float* %7, align 16
-  %8 = getelementptr inbounds float, float* %6, i64 undef
-  store float undef, float* %8, align 4
-  %9 = getelementptr inbounds float, float* %3, i64 undef
-  store float undef, float* %9, align 4
+  %0 = getelementptr inbounds i8, ptr %temp_buf1, i64 5621415936
+  %1 = getelementptr inbounds i8, ptr %temp_buf1, i64 7278166016
+  %2 = getelementptr inbounds i8, ptr %temp_buf1, i64 5097127936
+  %3 = getelementptr inbounds float, ptr %1, i64 undef
+  store float undef, ptr %3, align 16
+  %4 = getelementptr inbounds float, ptr %0, i64 undef
+  store float undef, ptr %4, align 16
+  %5 = getelementptr inbounds float, ptr %0, i64 undef
+  store float undef, ptr %5, align 4
+  %6 = getelementptr inbounds float, ptr %2, i64 undef
+  store float undef, ptr %6, align 4
   ret void
 }

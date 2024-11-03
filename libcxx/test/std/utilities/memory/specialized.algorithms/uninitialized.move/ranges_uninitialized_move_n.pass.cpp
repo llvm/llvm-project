@@ -15,6 +15,7 @@
 // uninitialized_copy_n_result<I, O> uninitialized_copy_n(I ifirst, iter_difference_t<I> n, O ofirst, S olast); // since C++20
 
 #include <algorithm>
+#include <array>
 #include <cassert>
 #include <iterator>
 #include <memory>
@@ -23,6 +24,7 @@
 
 #include "../buffer.h"
 #include "../counted.h"
+#include "MoveOnly.h"
 #include "test_iterators.h"
 #include "test_macros.h"
 
@@ -177,6 +179,16 @@ int main(int, char**) {
     MoveOnlyIter in(buffer);
     Buffer<int, N> out;
     std::ranges::uninitialized_move_n(std::move(in), N, out.begin(), out.end());
+  }
+
+  // MoveOnly types are supported
+  {
+    {
+      MoveOnly a[] = {1, 2, 3, 4};
+      Buffer<MoveOnly, 4> out;
+      std::ranges::uninitialized_move_n(std::begin(a), std::size(a), std::begin(out), std::end(out));
+      assert(std::ranges::equal(out, std::array<MoveOnly, 4>{1, 2, 3, 4}));
+    }
   }
 
   return 0;

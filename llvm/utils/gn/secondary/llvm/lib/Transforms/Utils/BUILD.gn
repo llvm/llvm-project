@@ -54,6 +54,7 @@ static_library("Utils") {
     "LoopVersioning.cpp",
     "LowerAtomic.cpp",
     "LowerGlobalDtors.cpp",
+    "LowerIFunc.cpp",
     "LowerInvoke.cpp",
     "LowerMemIntrinsics.cpp",
     "LowerSwitch.cpp",

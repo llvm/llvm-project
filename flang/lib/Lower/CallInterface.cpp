@@ -21,6 +21,7 @@
 #include "flang/Optimizer/Support/InternalNames.h"
 #include "flang/Semantics/symbol.h"
 #include "flang/Semantics/tools.h"
+#include <optional>
 
 //===----------------------------------------------------------------------===//
 // BIND(C) mangling helpers
@@ -107,7 +108,7 @@ bool Fortran::lower::CallerInterface::requireDispatchCall() const {
 std::optional<unsigned>
 Fortran::lower::CallerInterface::getPassArgIndex() const {
   unsigned passArgIdx = 0;
-  std::optional<unsigned> passArg = std::nullopt;
+  std::optional<unsigned> passArg;
   for (const auto &arg : getCallDescription().arguments()) {
     if (arg && arg->isPassedObject()) {
       passArg = passArgIdx;
@@ -685,7 +686,7 @@ public:
                      interface.side().getHostAssociatedTuple(), emptyValue()});
   }
 
-  static llvm::Optional<Fortran::evaluate::DynamicType> getResultDynamicType(
+  static std::optional<Fortran::evaluate::DynamicType> getResultDynamicType(
       const Fortran::evaluate::characteristics::Procedure &procedure) {
     if (const std::optional<Fortran::evaluate::characteristics::FunctionResult>
             &result = procedure.functionResult)
@@ -713,7 +714,7 @@ public:
     // array function with assumed length (f18 forbides defining such
     // interfaces). Hence, passing the length is most likely useless, but stick
     // with ifort/nag/xlf interface here.
-    if (llvm::Optional<Fortran::evaluate::DynamicType> type =
+    if (std::optional<Fortran::evaluate::DynamicType> type =
             getResultDynamicType(procedure))
       return type->category() == Fortran::common::TypeCategory::Character;
     return false;
@@ -986,7 +987,7 @@ private:
         proc.procedure.value();
     mlir::Type funcType =
         getProcedureDesignatorType(&procedure, interface.converter);
-    llvm::Optional<Fortran::evaluate::DynamicType> resultTy =
+    std::optional<Fortran::evaluate::DynamicType> resultTy =
         getResultDynamicType(procedure);
     if (resultTy && mustPassLengthWithDummyProcedure(procedure)) {
       // The result length of dummy procedures that are character functions must

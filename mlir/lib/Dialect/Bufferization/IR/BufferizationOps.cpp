@@ -15,6 +15,7 @@
 #include "mlir/Dialect/SparseTensor/IR/SparseTensor.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/IR/Matchers.h"
+#include <optional>
 
 using namespace mlir;
 using namespace mlir::bufferization;
@@ -458,7 +459,7 @@ void CloneOp::getEffects(
                        SideEffects::DefaultResource::get());
 }
 
-OpFoldResult CloneOp::fold(ArrayRef<Attribute> operands) {
+OpFoldResult CloneOp::fold(FoldAdaptor adaptor) {
   return succeeded(memref::foldMemRefCast(*this)) ? getResult() : Value();
 }
 
@@ -484,12 +485,12 @@ struct SimplifyClones : public OpRewritePattern<CloneOp> {
                canonicalSource.getDefiningOp()))
       canonicalSource = iface.getViewSource();
 
-    llvm::Optional<Operation *> maybeCloneDeallocOp =
+    std::optional<Operation *> maybeCloneDeallocOp =
         memref::findDealloc(cloneOp.getOutput());
     // Skip if either of them has > 1 deallocate operations.
     if (!maybeCloneDeallocOp.has_value())
       return failure();
-    llvm::Optional<Operation *> maybeSourceDeallocOp =
+    std::optional<Operation *> maybeSourceDeallocOp =
         memref::findDealloc(canonicalSource);
     if (!maybeSourceDeallocOp.has_value())
       return failure();
@@ -560,7 +561,7 @@ LogicalResult DeallocTensorOp::bufferize(RewriterBase &rewriter,
 // ToTensorOp
 //===----------------------------------------------------------------------===//
 
-OpFoldResult ToTensorOp::fold(ArrayRef<Attribute>) {
+OpFoldResult ToTensorOp::fold(FoldAdaptor) {
   if (auto toMemref = getMemref().getDefiningOp<ToMemrefOp>())
     // Approximate alias analysis by conservatively folding only when no there
     // is no interleaved operation.
@@ -596,7 +597,7 @@ void ToTensorOp::getCanonicalizationPatterns(RewritePatternSet &results,
 // ToMemrefOp
 //===----------------------------------------------------------------------===//
 
-OpFoldResult ToMemrefOp::fold(ArrayRef<Attribute>) {
+OpFoldResult ToMemrefOp::fold(FoldAdaptor) {
   if (auto memrefToTensor = getTensor().getDefiningOp<ToTensorOp>())
     if (memrefToTensor.getMemref().getType() == getType())
       return memrefToTensor.getMemref();

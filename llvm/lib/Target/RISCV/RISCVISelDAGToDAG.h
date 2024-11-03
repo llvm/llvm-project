@@ -16,6 +16,7 @@
 #include "RISCV.h"
 #include "RISCVTargetMachine.h"
 #include "llvm/CodeGen/SelectionDAGISel.h"
+#include "llvm/Support/KnownBits.h"
 
 // RISCV-specific code to select RISCV machine instructions for
 // SelectionDAG operations.
@@ -26,13 +27,11 @@ class RISCVDAGToDAGISel : public SelectionDAGISel {
 public:
   static char ID;
 
+  RISCVDAGToDAGISel() = delete;
+
   explicit RISCVDAGToDAGISel(RISCVTargetMachine &TargetMachine,
                              CodeGenOpt::Level OptLevel)
       : SelectionDAGISel(ID, TargetMachine, OptLevel) {}
-
-  StringRef getPassName() const override {
-    return "RISCV DAG->DAG Pattern Instruction Selection";
-  }
 
   bool runOnMachineFunction(MachineFunction &MF) override {
     Subtarget = &MF.getSubtarget<RISCVSubtarget>();

@@ -5,6 +5,10 @@
 // CHECK-DAG: @{{.*s.*}} = {{(dso_local )?}}global [[STRUCT_S]] { i32 1, i32 2 }, align 4
 S s = foo(1, 2);
 
+// CHECK-DAG: [[UNION_U:%.*]] = type { i32 }
+// CHECK-DAG: @{{.*u.*}} = {{(dso_local )?}}global [[UNION_U]] { i32 3 }, align 4
+U u = baz(3);
+
 // CHECK: define dso_local void @{{.*bar.*}}
 // CHECK-NEXT: entry:
 // CHECK-NEXT: [[I_ADDR:%.*]] = alloca i32, align 4

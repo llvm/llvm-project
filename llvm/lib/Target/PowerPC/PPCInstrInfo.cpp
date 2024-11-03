@@ -179,7 +179,7 @@ int PPCInstrInfo::getOperandLatency(const InstrItineraryData *ItinData,
   Register Reg = DefMO.getReg();
 
   bool IsRegCR;
-  if (Register::isVirtualRegister(Reg)) {
+  if (Reg.isVirtual()) {
     const MachineRegisterInfo *MRI =
         &DefMI.getParent()->getParent()->getRegInfo();
     IsRegCR = MRI->getRegClass(Reg)->hasSuperClassEq(&PPC::CRRCRegClass) ||
@@ -378,7 +378,7 @@ bool PPCInstrInfo::getFMAPatterns(
 
   auto IsAllOpsVirtualReg = [](const MachineInstr &Instr) {
     for (const auto &MO : Instr.explicit_operands())
-      if (!(MO.isReg() && Register::isVirtualRegister(MO.getReg())))
+      if (!(MO.isReg() && MO.getReg().isVirtual()))
         return false;
     return true;
   };
@@ -480,8 +480,7 @@ bool PPCInstrInfo::getFMAPatterns(
         IsUsedOnceR = true;
       }
 
-      if (!Register::isVirtualRegister(MULRegL) ||
-          !Register::isVirtualRegister(MULRegR))
+      if (!MULRegL.isVirtual() || !MULRegR.isVirtual())
         return false;
 
       MULInstrL = MRI->getVRegDef(MULRegL);
@@ -748,7 +747,7 @@ PPCInstrInfo::getConstantFromConstantPool(MachineInstr *I) const {
     if (!MO.isReg())
       continue;
     Register Reg = MO.getReg();
-    if (Reg == 0 || !Register::isVirtualRegister(Reg))
+    if (Reg == 0 || !Reg.isVirtual())
       continue;
     // Find the toc address.
     MachineInstr *DefMI = MRI->getVRegDef(Reg);
@@ -1541,7 +1540,7 @@ bool PPCInstrInfo::canInsertSelect(const MachineBasicBlock &MBB,
 
   // If the conditional branch uses a physical register, then it cannot be
   // turned into a select.
-  if (Register::isPhysicalRegister(Cond[1].getReg()))
+  if (Cond[1].getReg().isPhysical())
     return false;
 
   // Check register classes.
@@ -2093,7 +2092,7 @@ bool PPCInstrInfo::onlyFoldImmediate(MachineInstr &UseMI, MachineInstr &DefMI,
   assert(UseIdx < UseMI.getNumOperands() && "Cannot find Reg in UseMI");
   assert(UseIdx < UseMCID.getNumOperands() && "No operand description for Reg");
 
-  const MCOperandInfo *UseInfo = &UseMCID.OpInfo[UseIdx];
+  const MCOperandInfo *UseInfo = &UseMCID.operands()[UseIdx];
 
   // We can fold the zero if this register requires a GPRC_NOR0/G8RC_NOX0
   // register (which might also be specified as a pointer class kind).
@@ -2741,18 +2740,18 @@ bool PPCInstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
     const MCInstrDesc &NewDesc = get(NewOpC);
     MI->setDesc(NewDesc);
 
-    if (NewDesc.ImplicitDefs)
-      for (const MCPhysReg *ImpDefs = NewDesc.getImplicitDefs();
-           *ImpDefs; ++ImpDefs)
-        if (!MI->definesRegister(*ImpDefs))
-          MI->addOperand(*MI->getParent()->getParent(),
-                         MachineOperand::CreateReg(*ImpDefs, true, true));
-    if (NewDesc.ImplicitUses)
-      for (const MCPhysReg *ImpUses = NewDesc.getImplicitUses();
-           *ImpUses; ++ImpUses)
-        if (!MI->readsRegister(*ImpUses))
-          MI->addOperand(*MI->getParent()->getParent(),
-                         MachineOperand::CreateReg(*ImpUses, false, true));
+    for (MCPhysReg ImpDef : NewDesc.implicit_defs()) {
+      if (!MI->definesRegister(ImpDef)) {
+        MI->addOperand(*MI->getParent()->getParent(),
+                       MachineOperand::CreateReg(ImpDef, true, true));
+      }
+    }
+    for (MCPhysReg ImpUse : NewDesc.implicit_uses()) {
+      if (!MI->readsRegister(ImpUse)) {
+        MI->addOperand(*MI->getParent()->getParent(),
+                       MachineOperand::CreateReg(ImpUse, false, true));
+      }
+    }
   }
   assert(MI->definesRegister(PPC::CR0) &&
          "Record-form instruction does not define cr0?");
@@ -2993,7 +2992,7 @@ PPCInstrInfo::getSerializableDirectMachineOperandTargetFlags() const {
       {MO_TLSLD_LO, "ppc-tlsld-lo"},
       {MO_TOC_LO, "ppc-toc-lo"},
       {MO_TLS, "ppc-tls"}};
-  return makeArrayRef(TargetFlags);
+  return ArrayRef(TargetFlags);
 }
 
 ArrayRef<std::pair<unsigned, const char *>>
@@ -3012,7 +3011,7 @@ PPCInstrInfo::getSerializableBitmaskMachineOperandTargetFlags() const {
       {MO_GOT_TLSGD_PCREL_FLAG, "ppc-got-tlsgd-pcrel"},
       {MO_GOT_TLSLD_PCREL_FLAG, "ppc-got-tlsld-pcrel"},
       {MO_GOT_TPREL_PCREL_FLAG, "ppc-got-tprel-pcrel"}};
-  return makeArrayRef(TargetFlags);
+  return ArrayRef(TargetFlags);
 }
 
 // Expand VSX Memory Pseudo instruction to either a VSX or a FP instruction.
@@ -3378,10 +3377,10 @@ MachineInstr *PPCInstrInfo::getForwardingDefMI(
       if (!MI.getOperand(i).isReg())
         continue;
       Register Reg = MI.getOperand(i).getReg();
-      if (!Register::isVirtualRegister(Reg))
+      if (!Reg.isVirtual())
         continue;
       Register TrueReg = TRI->lookThruCopyLike(Reg, MRI);
-      if (Register::isVirtualRegister(TrueReg)) {
+      if (TrueReg.isVirtual()) {
         MachineInstr *DefMIForTrueReg = MRI->getVRegDef(TrueReg);
         if (DefMIForTrueReg->getOpcode() == PPC::LI ||
             DefMIForTrueReg->getOpcode() == PPC::LI8 ||
@@ -3852,7 +3851,7 @@ bool PPCInstrInfo::combineRLWINM(MachineInstr &MI,
                                  MachineInstr **ToErase) const {
   MachineRegisterInfo *MRI = &MI.getParent()->getParent()->getRegInfo();
   Register FoldingReg = MI.getOperand(1).getReg();
-  if (!Register::isVirtualRegister(FoldingReg))
+  if (!FoldingReg.isVirtual())
     return false;
   MachineInstr *SrcMI = MRI->getVRegDef(FoldingReg);
   if (SrcMI->getOpcode() != PPC::RLWINM &&
@@ -5197,7 +5196,7 @@ bool PPCInstrInfo::transformToImmFormFedByLI(MachineInstr &MI,
       // If operand at III.ZeroIsSpecialNew is physical reg(eg: ZERO/ZERO8), no
       // need to fix up register class.
       Register RegToModify = MI.getOperand(III.ZeroIsSpecialNew).getReg();
-      if (Register::isVirtualRegister(RegToModify)) {
+      if (RegToModify.isVirtual()) {
         const TargetRegisterClass *NewRC =
           MRI.getRegClass(RegToModify)->hasSuperClassEq(&PPC::GPRCRegClass) ?
           &PPC::GPRC_and_GPRC_NOR0RegClass : &PPC::G8RC_and_G8RC_NOX0RegClass;

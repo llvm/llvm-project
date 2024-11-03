@@ -4,6 +4,8 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown | FileCheck %s --check-prefix=X64
 ; RUN: llc < %s -mtriple=i686-unknown-unknown -mattr=+bmi,+lzcnt | FileCheck %s --check-prefix=X86-CLZ
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+bmi,+lzcnt | FileCheck %s --check-prefix=X64-CLZ
+; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+bmi,+lzcnt,+fast-lzcnt | FileCheck %s --check-prefix=X64-FASTLZCNT
+; RUN: llc < %s -mtriple=i686-unknown-unknown -mattr=+bmi,+lzcnt,+fast-lzcnt | FileCheck %s --check-prefix=X86-FASTLZCNT
 
 declare i8 @llvm.cttz.i8(i8, i1)
 declare i16 @llvm.cttz.i16(i16, i1)
@@ -39,6 +41,18 @@ define i8 @cttz_i8(i8 %x)  {
 ; X64-CLZ-NEXT:    tzcntl %edi, %eax
 ; X64-CLZ-NEXT:    # kill: def $al killed $al killed $eax
 ; X64-CLZ-NEXT:    retq
+;
+; X64-FASTLZCNT-LABEL: cttz_i8:
+; X64-FASTLZCNT:       # %bb.0:
+; X64-FASTLZCNT-NEXT:    tzcntl %edi, %eax
+; X64-FASTLZCNT-NEXT:    # kill: def $al killed $al killed $eax
+; X64-FASTLZCNT-NEXT:    retq
+;
+; X86-FASTLZCNT-LABEL: cttz_i8:
+; X86-FASTLZCNT:       # %bb.0:
+; X86-FASTLZCNT-NEXT:    tzcntl {{[0-9]+}}(%esp), %eax
+; X86-FASTLZCNT-NEXT:    # kill: def $al killed $al killed $eax
+; X86-FASTLZCNT-NEXT:    retl
   %tmp = call i8 @llvm.cttz.i8( i8 %x, i1 true )
   ret i8 %tmp
 }
@@ -67,6 +81,18 @@ define i16 @cttz_i16(i16 %x)  {
 ; X64-CLZ-NEXT:    tzcntl %edi, %eax
 ; X64-CLZ-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X64-CLZ-NEXT:    retq
+;
+; X64-FASTLZCNT-LABEL: cttz_i16:
+; X64-FASTLZCNT:       # %bb.0:
+; X64-FASTLZCNT-NEXT:    tzcntl %edi, %eax
+; X64-FASTLZCNT-NEXT:    # kill: def $ax killed $ax killed $eax
+; X64-FASTLZCNT-NEXT:    retq
+;
+; X86-FASTLZCNT-LABEL: cttz_i16:
+; X86-FASTLZCNT:       # %bb.0:
+; X86-FASTLZCNT-NEXT:    tzcntl {{[0-9]+}}(%esp), %eax
+; X86-FASTLZCNT-NEXT:    # kill: def $ax killed $ax killed $eax
+; X86-FASTLZCNT-NEXT:    retl
   %tmp = call i16 @llvm.cttz.i16( i16 %x, i1 true )
   ret i16 %tmp
 }
@@ -91,6 +117,16 @@ define i32 @cttz_i32(i32 %x)  {
 ; X64-CLZ:       # %bb.0:
 ; X64-CLZ-NEXT:    tzcntl %edi, %eax
 ; X64-CLZ-NEXT:    retq
+;
+; X64-FASTLZCNT-LABEL: cttz_i32:
+; X64-FASTLZCNT:       # %bb.0:
+; X64-FASTLZCNT-NEXT:    tzcntl %edi, %eax
+; X64-FASTLZCNT-NEXT:    retq
+;
+; X86-FASTLZCNT-LABEL: cttz_i32:
+; X86-FASTLZCNT:       # %bb.0:
+; X86-FASTLZCNT-NEXT:    tzcntl {{[0-9]+}}(%esp), %eax
+; X86-FASTLZCNT-NEXT:    retl
   %tmp = call i32 @llvm.cttz.i32( i32 %x, i1 true )
   ret i32 %tmp
 }
@@ -146,6 +182,26 @@ define i64 @cttz_i64(i64 %x)  {
 ; X64-CLZ:       # %bb.0:
 ; X64-CLZ-NEXT:    tzcntq %rdi, %rax
 ; X64-CLZ-NEXT:    retq
+;
+; X64-FASTLZCNT-LABEL: cttz_i64:
+; X64-FASTLZCNT:       # %bb.0:
+; X64-FASTLZCNT-NEXT:    tzcntq %rdi, %rax
+; X64-FASTLZCNT-NEXT:    retq
+;
+; X86-FASTLZCNT-LABEL: cttz_i64:
+; X86-FASTLZCNT:       # %bb.0:
+; X86-FASTLZCNT-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-FASTLZCNT-NEXT:    testl %eax, %eax
+; X86-FASTLZCNT-NEXT:    jne .LBB3_1
+; X86-FASTLZCNT-NEXT:  # %bb.2:
+; X86-FASTLZCNT-NEXT:    tzcntl {{[0-9]+}}(%esp), %eax
+; X86-FASTLZCNT-NEXT:    addl $32, %eax
+; X86-FASTLZCNT-NEXT:    xorl %edx, %edx
+; X86-FASTLZCNT-NEXT:    retl
+; X86-FASTLZCNT-NEXT:  .LBB3_1:
+; X86-FASTLZCNT-NEXT:    tzcntl %eax, %eax
+; X86-FASTLZCNT-NEXT:    xorl %edx, %edx
+; X86-FASTLZCNT-NEXT:    retl
   %tmp = call i64 @llvm.cttz.i64( i64 %x, i1 true )
   ret i64 %tmp
 }
@@ -182,6 +238,22 @@ define i8 @ctlz_i8(i8 %x) {
 ; X64-CLZ-NEXT:    addl $-24, %eax
 ; X64-CLZ-NEXT:    # kill: def $al killed $al killed $eax
 ; X64-CLZ-NEXT:    retq
+;
+; X64-FASTLZCNT-LABEL: ctlz_i8:
+; X64-FASTLZCNT:       # %bb.0:
+; X64-FASTLZCNT-NEXT:    movzbl %dil, %eax
+; X64-FASTLZCNT-NEXT:    lzcntl %eax, %eax
+; X64-FASTLZCNT-NEXT:    addl $-24, %eax
+; X64-FASTLZCNT-NEXT:    # kill: def $al killed $al killed $eax
+; X64-FASTLZCNT-NEXT:    retq
+;
+; X86-FASTLZCNT-LABEL: ctlz_i8:
+; X86-FASTLZCNT:       # %bb.0:
+; X86-FASTLZCNT-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X86-FASTLZCNT-NEXT:    lzcntl %eax, %eax
+; X86-FASTLZCNT-NEXT:    addl $-24, %eax
+; X86-FASTLZCNT-NEXT:    # kill: def $al killed $al killed $eax
+; X86-FASTLZCNT-NEXT:    retl
   %tmp2 = call i8 @llvm.ctlz.i8( i8 %x, i1 true )
   ret i8 %tmp2
 }
@@ -210,6 +282,16 @@ define i16 @ctlz_i16(i16 %x) {
 ; X64-CLZ:       # %bb.0:
 ; X64-CLZ-NEXT:    lzcntw %di, %ax
 ; X64-CLZ-NEXT:    retq
+;
+; X64-FASTLZCNT-LABEL: ctlz_i16:
+; X64-FASTLZCNT:       # %bb.0:
+; X64-FASTLZCNT-NEXT:    lzcntw %di, %ax
+; X64-FASTLZCNT-NEXT:    retq
+;
+; X86-FASTLZCNT-LABEL: ctlz_i16:
+; X86-FASTLZCNT:       # %bb.0:
+; X86-FASTLZCNT-NEXT:    lzcntw {{[0-9]+}}(%esp), %ax
+; X86-FASTLZCNT-NEXT:    retl
   %tmp2 = call i16 @llvm.ctlz.i16( i16 %x, i1 true )
   ret i16 %tmp2
 }
@@ -236,6 +318,16 @@ define i32 @ctlz_i32(i32 %x) {
 ; X64-CLZ:       # %bb.0:
 ; X64-CLZ-NEXT:    lzcntl %edi, %eax
 ; X64-CLZ-NEXT:    retq
+;
+; X64-FASTLZCNT-LABEL: ctlz_i32:
+; X64-FASTLZCNT:       # %bb.0:
+; X64-FASTLZCNT-NEXT:    lzcntl %edi, %eax
+; X64-FASTLZCNT-NEXT:    retq
+;
+; X86-FASTLZCNT-LABEL: ctlz_i32:
+; X86-FASTLZCNT:       # %bb.0:
+; X86-FASTLZCNT-NEXT:    lzcntl {{[0-9]+}}(%esp), %eax
+; X86-FASTLZCNT-NEXT:    retl
   %tmp = call i32 @llvm.ctlz.i32( i32 %x, i1 true )
   ret i32 %tmp
 }
@@ -296,6 +388,26 @@ define i64 @ctlz_i64(i64 %x) {
 ; X64-CLZ:       # %bb.0:
 ; X64-CLZ-NEXT:    lzcntq %rdi, %rax
 ; X64-CLZ-NEXT:    retq
+;
+; X64-FASTLZCNT-LABEL: ctlz_i64:
+; X64-FASTLZCNT:       # %bb.0:
+; X64-FASTLZCNT-NEXT:    lzcntq %rdi, %rax
+; X64-FASTLZCNT-NEXT:    retq
+;
+; X86-FASTLZCNT-LABEL: ctlz_i64:
+; X86-FASTLZCNT:       # %bb.0:
+; X86-FASTLZCNT-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-FASTLZCNT-NEXT:    testl %eax, %eax
+; X86-FASTLZCNT-NEXT:    jne .LBB7_1
+; X86-FASTLZCNT-NEXT:  # %bb.2:
+; X86-FASTLZCNT-NEXT:    lzcntl {{[0-9]+}}(%esp), %eax
+; X86-FASTLZCNT-NEXT:    addl $32, %eax
+; X86-FASTLZCNT-NEXT:    xorl %edx, %edx
+; X86-FASTLZCNT-NEXT:    retl
+; X86-FASTLZCNT-NEXT:  .LBB7_1:
+; X86-FASTLZCNT-NEXT:    lzcntl %eax, %eax
+; X86-FASTLZCNT-NEXT:    xorl %edx, %edx
+; X86-FASTLZCNT-NEXT:    retl
   %tmp = call i64 @llvm.ctlz.i64( i64 %x, i1 true )
   ret i64 %tmp
 }
@@ -348,6 +460,22 @@ define i8 @ctlz_i8_zero_test(i8 %n) {
 ; X64-CLZ-NEXT:    addl $-24, %eax
 ; X64-CLZ-NEXT:    # kill: def $al killed $al killed $eax
 ; X64-CLZ-NEXT:    retq
+;
+; X64-FASTLZCNT-LABEL: ctlz_i8_zero_test:
+; X64-FASTLZCNT:       # %bb.0:
+; X64-FASTLZCNT-NEXT:    movzbl %dil, %eax
+; X64-FASTLZCNT-NEXT:    lzcntl %eax, %eax
+; X64-FASTLZCNT-NEXT:    addl $-24, %eax
+; X64-FASTLZCNT-NEXT:    # kill: def $al killed $al killed $eax
+; X64-FASTLZCNT-NEXT:    retq
+;
+; X86-FASTLZCNT-LABEL: ctlz_i8_zero_test:
+; X86-FASTLZCNT:       # %bb.0:
+; X86-FASTLZCNT-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X86-FASTLZCNT-NEXT:    lzcntl %eax, %eax
+; X86-FASTLZCNT-NEXT:    addl $-24, %eax
+; X86-FASTLZCNT-NEXT:    # kill: def $al killed $al killed $eax
+; X86-FASTLZCNT-NEXT:    retl
   %tmp1 = call i8 @llvm.ctlz.i8(i8 %n, i1 false)
   ret i8 %tmp1
 }
@@ -392,6 +520,16 @@ define i16 @ctlz_i16_zero_test(i16 %n) {
 ; X64-CLZ:       # %bb.0:
 ; X64-CLZ-NEXT:    lzcntw %di, %ax
 ; X64-CLZ-NEXT:    retq
+;
+; X64-FASTLZCNT-LABEL: ctlz_i16_zero_test:
+; X64-FASTLZCNT:       # %bb.0:
+; X64-FASTLZCNT-NEXT:    lzcntw %di, %ax
+; X64-FASTLZCNT-NEXT:    retq
+;
+; X86-FASTLZCNT-LABEL: ctlz_i16_zero_test:
+; X86-FASTLZCNT:       # %bb.0:
+; X86-FASTLZCNT-NEXT:    lzcntw {{[0-9]+}}(%esp), %ax
+; X86-FASTLZCNT-NEXT:    retl
   %tmp1 = call i16 @llvm.ctlz.i16(i16 %n, i1 false)
   ret i16 %tmp1
 }
@@ -432,6 +570,16 @@ define i32 @ctlz_i32_zero_test(i32 %n) {
 ; X64-CLZ:       # %bb.0:
 ; X64-CLZ-NEXT:    lzcntl %edi, %eax
 ; X64-CLZ-NEXT:    retq
+;
+; X64-FASTLZCNT-LABEL: ctlz_i32_zero_test:
+; X64-FASTLZCNT:       # %bb.0:
+; X64-FASTLZCNT-NEXT:    lzcntl %edi, %eax
+; X64-FASTLZCNT-NEXT:    retq
+;
+; X86-FASTLZCNT-LABEL: ctlz_i32_zero_test:
+; X86-FASTLZCNT:       # %bb.0:
+; X86-FASTLZCNT-NEXT:    lzcntl {{[0-9]+}}(%esp), %eax
+; X86-FASTLZCNT-NEXT:    retl
   %tmp1 = call i32 @llvm.ctlz.i32(i32 %n, i1 false)
   ret i32 %tmp1
 }
@@ -506,6 +654,26 @@ define i64 @ctlz_i64_zero_test(i64 %n) {
 ; X64-CLZ:       # %bb.0:
 ; X64-CLZ-NEXT:    lzcntq %rdi, %rax
 ; X64-CLZ-NEXT:    retq
+;
+; X64-FASTLZCNT-LABEL: ctlz_i64_zero_test:
+; X64-FASTLZCNT:       # %bb.0:
+; X64-FASTLZCNT-NEXT:    lzcntq %rdi, %rax
+; X64-FASTLZCNT-NEXT:    retq
+;
+; X86-FASTLZCNT-LABEL: ctlz_i64_zero_test:
+; X86-FASTLZCNT:       # %bb.0:
+; X86-FASTLZCNT-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-FASTLZCNT-NEXT:    testl %eax, %eax
+; X86-FASTLZCNT-NEXT:    jne .LBB11_1
+; X86-FASTLZCNT-NEXT:  # %bb.2:
+; X86-FASTLZCNT-NEXT:    lzcntl {{[0-9]+}}(%esp), %eax
+; X86-FASTLZCNT-NEXT:    addl $32, %eax
+; X86-FASTLZCNT-NEXT:    xorl %edx, %edx
+; X86-FASTLZCNT-NEXT:    retl
+; X86-FASTLZCNT-NEXT:  .LBB11_1:
+; X86-FASTLZCNT-NEXT:    lzcntl %eax, %eax
+; X86-FASTLZCNT-NEXT:    xorl %edx, %edx
+; X86-FASTLZCNT-NEXT:    retl
   %tmp1 = call i64 @llvm.ctlz.i64(i64 %n, i1 false)
   ret i64 %tmp1
 }
@@ -541,6 +709,21 @@ define i8 @cttz_i8_zero_test(i8 %n) {
 ; X64-CLZ-NEXT:    tzcntl %edi, %eax
 ; X64-CLZ-NEXT:    # kill: def $al killed $al killed $eax
 ; X64-CLZ-NEXT:    retq
+;
+; X64-FASTLZCNT-LABEL: cttz_i8_zero_test:
+; X64-FASTLZCNT:       # %bb.0:
+; X64-FASTLZCNT-NEXT:    orl $256, %edi # imm = 0x100
+; X64-FASTLZCNT-NEXT:    tzcntl %edi, %eax
+; X64-FASTLZCNT-NEXT:    # kill: def $al killed $al killed $eax
+; X64-FASTLZCNT-NEXT:    retq
+;
+; X86-FASTLZCNT-LABEL: cttz_i8_zero_test:
+; X86-FASTLZCNT:       # %bb.0:
+; X86-FASTLZCNT-NEXT:    movl $256, %eax # imm = 0x100
+; X86-FASTLZCNT-NEXT:    orl {{[0-9]+}}(%esp), %eax
+; X86-FASTLZCNT-NEXT:    tzcntl %eax, %eax
+; X86-FASTLZCNT-NEXT:    # kill: def $al killed $al killed $eax
+; X86-FASTLZCNT-NEXT:    retl
   %tmp1 = call i8 @llvm.cttz.i8(i8 %n, i1 false)
   ret i8 %tmp1
 }
@@ -576,6 +759,21 @@ define i16 @cttz_i16_zero_test(i16 %n) {
 ; X64-CLZ-NEXT:    tzcntl %edi, %eax
 ; X64-CLZ-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X64-CLZ-NEXT:    retq
+;
+; X64-FASTLZCNT-LABEL: cttz_i16_zero_test:
+; X64-FASTLZCNT:       # %bb.0:
+; X64-FASTLZCNT-NEXT:    orl $65536, %edi # imm = 0x10000
+; X64-FASTLZCNT-NEXT:    tzcntl %edi, %eax
+; X64-FASTLZCNT-NEXT:    # kill: def $ax killed $ax killed $eax
+; X64-FASTLZCNT-NEXT:    retq
+;
+; X86-FASTLZCNT-LABEL: cttz_i16_zero_test:
+; X86-FASTLZCNT:       # %bb.0:
+; X86-FASTLZCNT-NEXT:    movl $65536, %eax # imm = 0x10000
+; X86-FASTLZCNT-NEXT:    orl {{[0-9]+}}(%esp), %eax
+; X86-FASTLZCNT-NEXT:    tzcntl %eax, %eax
+; X86-FASTLZCNT-NEXT:    # kill: def $ax killed $ax killed $eax
+; X86-FASTLZCNT-NEXT:    retl
   %tmp1 = call i16 @llvm.cttz.i16(i16 %n, i1 false)
   ret i16 %tmp1
 }
@@ -614,6 +812,16 @@ define i32 @cttz_i32_zero_test(i32 %n) {
 ; X64-CLZ:       # %bb.0:
 ; X64-CLZ-NEXT:    tzcntl %edi, %eax
 ; X64-CLZ-NEXT:    retq
+;
+; X64-FASTLZCNT-LABEL: cttz_i32_zero_test:
+; X64-FASTLZCNT:       # %bb.0:
+; X64-FASTLZCNT-NEXT:    tzcntl %edi, %eax
+; X64-FASTLZCNT-NEXT:    retq
+;
+; X86-FASTLZCNT-LABEL: cttz_i32_zero_test:
+; X86-FASTLZCNT:       # %bb.0:
+; X86-FASTLZCNT-NEXT:    tzcntl {{[0-9]+}}(%esp), %eax
+; X86-FASTLZCNT-NEXT:    retl
   %tmp1 = call i32 @llvm.cttz.i32(i32 %n, i1 false)
   ret i32 %tmp1
 }
@@ -685,6 +893,26 @@ define i64 @cttz_i64_zero_test(i64 %n) {
 ; X64-CLZ:       # %bb.0:
 ; X64-CLZ-NEXT:    tzcntq %rdi, %rax
 ; X64-CLZ-NEXT:    retq
+;
+; X64-FASTLZCNT-LABEL: cttz_i64_zero_test:
+; X64-FASTLZCNT:       # %bb.0:
+; X64-FASTLZCNT-NEXT:    tzcntq %rdi, %rax
+; X64-FASTLZCNT-NEXT:    retq
+;
+; X86-FASTLZCNT-LABEL: cttz_i64_zero_test:
+; X86-FASTLZCNT:       # %bb.0:
+; X86-FASTLZCNT-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-FASTLZCNT-NEXT:    testl %eax, %eax
+; X86-FASTLZCNT-NEXT:    jne .LBB15_1
+; X86-FASTLZCNT-NEXT:  # %bb.2:
+; X86-FASTLZCNT-NEXT:    tzcntl {{[0-9]+}}(%esp), %eax
+; X86-FASTLZCNT-NEXT:    addl $32, %eax
+; X86-FASTLZCNT-NEXT:    xorl %edx, %edx
+; X86-FASTLZCNT-NEXT:    retl
+; X86-FASTLZCNT-NEXT:  .LBB15_1:
+; X86-FASTLZCNT-NEXT:    tzcntl %eax, %eax
+; X86-FASTLZCNT-NEXT:    xorl %edx, %edx
+; X86-FASTLZCNT-NEXT:    retl
   %tmp1 = call i64 @llvm.cttz.i64(i64 %n, i1 false)
   ret i64 %tmp1
 }
@@ -720,6 +948,19 @@ define i32 @ctlz_i32_fold_cmov(i32 %n) {
 ; X64-CLZ-NEXT:    orl $1, %edi
 ; X64-CLZ-NEXT:    lzcntl %edi, %eax
 ; X64-CLZ-NEXT:    retq
+;
+; X64-FASTLZCNT-LABEL: ctlz_i32_fold_cmov:
+; X64-FASTLZCNT:       # %bb.0:
+; X64-FASTLZCNT-NEXT:    orl $1, %edi
+; X64-FASTLZCNT-NEXT:    lzcntl %edi, %eax
+; X64-FASTLZCNT-NEXT:    retq
+;
+; X86-FASTLZCNT-LABEL: ctlz_i32_fold_cmov:
+; X86-FASTLZCNT:       # %bb.0:
+; X86-FASTLZCNT-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-FASTLZCNT-NEXT:    orl $1, %eax
+; X86-FASTLZCNT-NEXT:    lzcntl %eax, %eax
+; X86-FASTLZCNT-NEXT:    retl
   %or = or i32 %n, 1
   %tmp1 = call i32 @llvm.ctlz.i32(i32 %or, i1 false)
   ret i32 %tmp1
@@ -750,6 +991,18 @@ define i32 @ctlz_bsr(i32 %n) {
 ; X64-CLZ-NEXT:    lzcntl %edi, %eax
 ; X64-CLZ-NEXT:    xorl $31, %eax
 ; X64-CLZ-NEXT:    retq
+;
+; X64-FASTLZCNT-LABEL: ctlz_bsr:
+; X64-FASTLZCNT:       # %bb.0:
+; X64-FASTLZCNT-NEXT:    lzcntl %edi, %eax
+; X64-FASTLZCNT-NEXT:    xorl $31, %eax
+; X64-FASTLZCNT-NEXT:    retq
+;
+; X86-FASTLZCNT-LABEL: ctlz_bsr:
+; X86-FASTLZCNT:       # %bb.0:
+; X86-FASTLZCNT-NEXT:    lzcntl {{[0-9]+}}(%esp), %eax
+; X86-FASTLZCNT-NEXT:    xorl $31, %eax
+; X86-FASTLZCNT-NEXT:    retl
   %ctlz = call i32 @llvm.ctlz.i32(i32 %n, i1 true)
   %bsr = xor i32 %ctlz, 31
   ret i32 %bsr
@@ -799,6 +1052,18 @@ define i32 @ctlz_bsr_zero_test(i32 %n) {
 ; X64-CLZ-NEXT:    lzcntl %edi, %eax
 ; X64-CLZ-NEXT:    xorl $31, %eax
 ; X64-CLZ-NEXT:    retq
+;
+; X64-FASTLZCNT-LABEL: ctlz_bsr_zero_test:
+; X64-FASTLZCNT:       # %bb.0:
+; X64-FASTLZCNT-NEXT:    lzcntl %edi, %eax
+; X64-FASTLZCNT-NEXT:    xorl $31, %eax
+; X64-FASTLZCNT-NEXT:    retq
+;
+; X86-FASTLZCNT-LABEL: ctlz_bsr_zero_test:
+; X86-FASTLZCNT:       # %bb.0:
+; X86-FASTLZCNT-NEXT:    lzcntl {{[0-9]+}}(%esp), %eax
+; X86-FASTLZCNT-NEXT:    xorl $31, %eax
+; X86-FASTLZCNT-NEXT:    retl
   %ctlz = call i32 @llvm.ctlz.i32(i32 %n, i1 false)
   %bsr = xor i32 %ctlz, 31
   ret i32 %bsr
@@ -838,6 +1103,23 @@ define i8 @cttz_i8_knownbits(i8 %x)  {
 ; X64-CLZ-NEXT:    tzcntl %eax, %eax
 ; X64-CLZ-NEXT:    # kill: def $al killed $al killed $eax
 ; X64-CLZ-NEXT:    retq
+;
+; X64-FASTLZCNT-LABEL: cttz_i8_knownbits:
+; X64-FASTLZCNT:       # %bb.0:
+; X64-FASTLZCNT-NEXT:    orb $2, %dil
+; X64-FASTLZCNT-NEXT:    movzbl %dil, %eax
+; X64-FASTLZCNT-NEXT:    tzcntl %eax, %eax
+; X64-FASTLZCNT-NEXT:    # kill: def $al killed $al killed $eax
+; X64-FASTLZCNT-NEXT:    retq
+;
+; X86-FASTLZCNT-LABEL: cttz_i8_knownbits:
+; X86-FASTLZCNT:       # %bb.0:
+; X86-FASTLZCNT-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X86-FASTLZCNT-NEXT:    orb $2, %al
+; X86-FASTLZCNT-NEXT:    movzbl %al, %eax
+; X86-FASTLZCNT-NEXT:    tzcntl %eax, %eax
+; X86-FASTLZCNT-NEXT:    # kill: def $al killed $al killed $eax
+; X86-FASTLZCNT-NEXT:    retl
   %x2 = or i8 %x, 2
   %tmp = call i8 @llvm.cttz.i8(i8 %x2, i1 true )
   %tmp2 = and i8 %tmp, 1
@@ -882,6 +1164,25 @@ define i8 @ctlz_i8_knownbits(i8 %x)  {
 ; X64-CLZ-NEXT:    addl $-24, %eax
 ; X64-CLZ-NEXT:    # kill: def $al killed $al killed $eax
 ; X64-CLZ-NEXT:    retq
+;
+; X64-FASTLZCNT-LABEL: ctlz_i8_knownbits:
+; X64-FASTLZCNT:       # %bb.0:
+; X64-FASTLZCNT-NEXT:    orb $64, %dil
+; X64-FASTLZCNT-NEXT:    movzbl %dil, %eax
+; X64-FASTLZCNT-NEXT:    lzcntl %eax, %eax
+; X64-FASTLZCNT-NEXT:    addl $-24, %eax
+; X64-FASTLZCNT-NEXT:    # kill: def $al killed $al killed $eax
+; X64-FASTLZCNT-NEXT:    retq
+;
+; X86-FASTLZCNT-LABEL: ctlz_i8_knownbits:
+; X86-FASTLZCNT:       # %bb.0:
+; X86-FASTLZCNT-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X86-FASTLZCNT-NEXT:    orb $64, %al
+; X86-FASTLZCNT-NEXT:    movzbl %al, %eax
+; X86-FASTLZCNT-NEXT:    lzcntl %eax, %eax
+; X86-FASTLZCNT-NEXT:    addl $-24, %eax
+; X86-FASTLZCNT-NEXT:    # kill: def $al killed $al killed $eax
+; X86-FASTLZCNT-NEXT:    retl
 
   %x2 = or i8 %x, 64
   %tmp = call i8 @llvm.ctlz.i8(i8 %x2, i1 true )
@@ -955,6 +1256,29 @@ define i64 @ctlz_i64_zero_test_knownneverzero(i64 %n) {
 ; X64-CLZ-NEXT:    orq $1, %rdi
 ; X64-CLZ-NEXT:    lzcntq %rdi, %rax
 ; X64-CLZ-NEXT:    retq
+;
+; X64-FASTLZCNT-LABEL: ctlz_i64_zero_test_knownneverzero:
+; X64-FASTLZCNT:       # %bb.0:
+; X64-FASTLZCNT-NEXT:    orq $1, %rdi
+; X64-FASTLZCNT-NEXT:    lzcntq %rdi, %rax
+; X64-FASTLZCNT-NEXT:    retq
+;
+; X86-FASTLZCNT-LABEL: ctlz_i64_zero_test_knownneverzero:
+; X86-FASTLZCNT:       # %bb.0:
+; X86-FASTLZCNT-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-FASTLZCNT-NEXT:    testl %eax, %eax
+; X86-FASTLZCNT-NEXT:    jne .LBB21_1
+; X86-FASTLZCNT-NEXT:  # %bb.2:
+; X86-FASTLZCNT-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-FASTLZCNT-NEXT:    orl $1, %eax
+; X86-FASTLZCNT-NEXT:    lzcntl %eax, %eax
+; X86-FASTLZCNT-NEXT:    orl $32, %eax
+; X86-FASTLZCNT-NEXT:    xorl %edx, %edx
+; X86-FASTLZCNT-NEXT:    retl
+; X86-FASTLZCNT-NEXT:  .LBB21_1:
+; X86-FASTLZCNT-NEXT:    lzcntl %eax, %eax
+; X86-FASTLZCNT-NEXT:    xorl %edx, %edx
+; X86-FASTLZCNT-NEXT:    retl
   %o = or i64 %n, 1
   %tmp1 = call i64 @llvm.ctlz.i64(i64 %o, i1 false)
   ret i64 %tmp1
@@ -1023,6 +1347,30 @@ define i64 @cttz_i64_zero_test_knownneverzero(i64 %n) {
 ; X64-CLZ-NEXT:    orq %rdi, %rax
 ; X64-CLZ-NEXT:    tzcntq %rax, %rax
 ; X64-CLZ-NEXT:    retq
+;
+; X64-FASTLZCNT-LABEL: cttz_i64_zero_test_knownneverzero:
+; X64-FASTLZCNT:       # %bb.0:
+; X64-FASTLZCNT-NEXT:    movabsq $-9223372036854775808, %rax # imm = 0x8000000000000000
+; X64-FASTLZCNT-NEXT:    orq %rdi, %rax
+; X64-FASTLZCNT-NEXT:    tzcntq %rax, %rax
+; X64-FASTLZCNT-NEXT:    retq
+;
+; X86-FASTLZCNT-LABEL: cttz_i64_zero_test_knownneverzero:
+; X86-FASTLZCNT:       # %bb.0:
+; X86-FASTLZCNT-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-FASTLZCNT-NEXT:    testl %eax, %eax
+; X86-FASTLZCNT-NEXT:    jne .LBB22_1
+; X86-FASTLZCNT-NEXT:  # %bb.2:
+; X86-FASTLZCNT-NEXT:    movl $-2147483648, %eax # imm = 0x80000000
+; X86-FASTLZCNT-NEXT:    orl {{[0-9]+}}(%esp), %eax
+; X86-FASTLZCNT-NEXT:    tzcntl %eax, %eax
+; X86-FASTLZCNT-NEXT:    orl $32, %eax
+; X86-FASTLZCNT-NEXT:    xorl %edx, %edx
+; X86-FASTLZCNT-NEXT:    retl
+; X86-FASTLZCNT-NEXT:  .LBB22_1:
+; X86-FASTLZCNT-NEXT:    tzcntl %eax, %eax
+; X86-FASTLZCNT-NEXT:    xorl %edx, %edx
+; X86-FASTLZCNT-NEXT:    retl
   %o = or i64 %n, -9223372036854775808 ; 0x8000000000000000
   %tmp1 = call i64 @llvm.cttz.i64(i64 %o, i1 false)
   ret i64 %tmp1
@@ -1055,6 +1403,20 @@ define i8 @PR47603_trunc(i32 %0) {
 ; X64-CLZ-NEXT:    xorb $31, %al
 ; X64-CLZ-NEXT:    # kill: def $al killed $al killed $eax
 ; X64-CLZ-NEXT:    retq
+;
+; X64-FASTLZCNT-LABEL: PR47603_trunc:
+; X64-FASTLZCNT:       # %bb.0:
+; X64-FASTLZCNT-NEXT:    lzcntl %edi, %eax
+; X64-FASTLZCNT-NEXT:    xorb $31, %al
+; X64-FASTLZCNT-NEXT:    # kill: def $al killed $al killed $eax
+; X64-FASTLZCNT-NEXT:    retq
+;
+; X86-FASTLZCNT-LABEL: PR47603_trunc:
+; X86-FASTLZCNT:       # %bb.0:
+; X86-FASTLZCNT-NEXT:    lzcntl {{[0-9]+}}(%esp), %eax
+; X86-FASTLZCNT-NEXT:    xorb $31, %al
+; X86-FASTLZCNT-NEXT:    # kill: def $al killed $al killed $eax
+; X86-FASTLZCNT-NEXT:    retl
   %2 = call i32 @llvm.ctlz.i32(i32 %0, i1 true)
   %3 = xor i32 %2, 31
   %4 = trunc i32 %3 to i8
@@ -1090,6 +1452,21 @@ define i32 @PR47603_zext(i32 %a0, ptr %a1) {
 ; X64-CLZ-NEXT:    xorq $31, %rax
 ; X64-CLZ-NEXT:    movsbl (%rsi,%rax), %eax
 ; X64-CLZ-NEXT:    retq
+;
+; X64-FASTLZCNT-LABEL: PR47603_zext:
+; X64-FASTLZCNT:       # %bb.0:
+; X64-FASTLZCNT-NEXT:    lzcntl %edi, %eax
+; X64-FASTLZCNT-NEXT:    xorq $31, %rax
+; X64-FASTLZCNT-NEXT:    movsbl (%rsi,%rax), %eax
+; X64-FASTLZCNT-NEXT:    retq
+;
+; X86-FASTLZCNT-LABEL: PR47603_zext:
+; X86-FASTLZCNT:       # %bb.0:
+; X86-FASTLZCNT-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-FASTLZCNT-NEXT:    lzcntl {{[0-9]+}}(%esp), %ecx
+; X86-FASTLZCNT-NEXT:    xorl $31, %ecx
+; X86-FASTLZCNT-NEXT:    movsbl (%eax,%ecx), %eax
+; X86-FASTLZCNT-NEXT:    retl
   %ctlz = tail call i32 @llvm.ctlz.i32(i32 %a0, i1 true)
   %xor = xor i32 %ctlz, 31
   %zext = zext i32 %xor to i64
@@ -1121,6 +1498,16 @@ define i32 @cttz_i32_osize(i32 %x) optsize {
 ; X64-CLZ:       # %bb.0:
 ; X64-CLZ-NEXT:    tzcntl %edi, %eax
 ; X64-CLZ-NEXT:    retq
+;
+; X64-FASTLZCNT-LABEL: cttz_i32_osize:
+; X64-FASTLZCNT:       # %bb.0:
+; X64-FASTLZCNT-NEXT:    tzcntl %edi, %eax
+; X64-FASTLZCNT-NEXT:    retq
+;
+; X86-FASTLZCNT-LABEL: cttz_i32_osize:
+; X86-FASTLZCNT:       # %bb.0:
+; X86-FASTLZCNT-NEXT:    tzcntl {{[0-9]+}}(%esp), %eax
+; X86-FASTLZCNT-NEXT:    retl
   %tmp = call i32 @llvm.cttz.i32( i32 %x, i1 true)
   ret i32 %tmp
 }
@@ -1147,6 +1534,334 @@ define i32 @cttz_i32_msize(i32 %x) minsize {
 ; X64-CLZ:       # %bb.0:
 ; X64-CLZ-NEXT:    tzcntl %edi, %eax
 ; X64-CLZ-NEXT:    retq
+;
+; X64-FASTLZCNT-LABEL: cttz_i32_msize:
+; X64-FASTLZCNT:       # %bb.0:
+; X64-FASTLZCNT-NEXT:    tzcntl %edi, %eax
+; X64-FASTLZCNT-NEXT:    retq
+;
+; X86-FASTLZCNT-LABEL: cttz_i32_msize:
+; X86-FASTLZCNT:       # %bb.0:
+; X86-FASTLZCNT-NEXT:    tzcntl {{[0-9]+}}(%esp), %eax
+; X86-FASTLZCNT-NEXT:    retl
   %tmp = call i32 @llvm.cttz.i32( i32 %x, i1 true)
   ret i32 %tmp
+}
+
+define i8 @ctlz_xor7_i8_true(i8 %x) {
+; X86-LABEL: ctlz_xor7_i8_true:
+; X86:       # %bb.0:
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    bsrl %eax, %eax
+; X86-NEXT:    # kill: def $al killed $al killed $eax
+; X86-NEXT:    retl
+;
+; X64-LABEL: ctlz_xor7_i8_true:
+; X64:       # %bb.0:
+; X64-NEXT:    movzbl %dil, %eax
+; X64-NEXT:    bsrl %eax, %eax
+; X64-NEXT:    # kill: def $al killed $al killed $eax
+; X64-NEXT:    retq
+;
+; X86-CLZ-LABEL: ctlz_xor7_i8_true:
+; X86-CLZ:       # %bb.0:
+; X86-CLZ-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X86-CLZ-NEXT:    lzcntl %eax, %eax
+; X86-CLZ-NEXT:    addl $-24, %eax
+; X86-CLZ-NEXT:    xorb $7, %al
+; X86-CLZ-NEXT:    # kill: def $al killed $al killed $eax
+; X86-CLZ-NEXT:    retl
+;
+; X64-CLZ-LABEL: ctlz_xor7_i8_true:
+; X64-CLZ:       # %bb.0:
+; X64-CLZ-NEXT:    movzbl %dil, %eax
+; X64-CLZ-NEXT:    lzcntl %eax, %eax
+; X64-CLZ-NEXT:    addl $-24, %eax
+; X64-CLZ-NEXT:    xorb $7, %al
+; X64-CLZ-NEXT:    # kill: def $al killed $al killed $eax
+; X64-CLZ-NEXT:    retq
+;
+; X64-FASTLZCNT-LABEL: ctlz_xor7_i8_true:
+; X64-FASTLZCNT:       # %bb.0:
+; X64-FASTLZCNT-NEXT:    movzbl %dil, %eax
+; X64-FASTLZCNT-NEXT:    lzcntl %eax, %eax
+; X64-FASTLZCNT-NEXT:    addl $-24, %eax
+; X64-FASTLZCNT-NEXT:    xorb $7, %al
+; X64-FASTLZCNT-NEXT:    # kill: def $al killed $al killed $eax
+; X64-FASTLZCNT-NEXT:    retq
+;
+; X86-FASTLZCNT-LABEL: ctlz_xor7_i8_true:
+; X86-FASTLZCNT:       # %bb.0:
+; X86-FASTLZCNT-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X86-FASTLZCNT-NEXT:    lzcntl %eax, %eax
+; X86-FASTLZCNT-NEXT:    addl $-24, %eax
+; X86-FASTLZCNT-NEXT:    xorb $7, %al
+; X86-FASTLZCNT-NEXT:    # kill: def $al killed $al killed $eax
+; X86-FASTLZCNT-NEXT:    retl
+    %clz = call i8 @llvm.ctlz.i8(i8 %x, i1 true)
+    %res = xor i8 %clz, 7
+    ret i8 %res
+}
+
+define i8 @ctlz_xor7_i8_false(i8 %x) {
+; X86-LABEL: ctlz_xor7_i8_false:
+; X86:       # %bb.0:
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    testb %al, %al
+; X86-NEXT:    je .LBB28_1
+; X86-NEXT:  # %bb.2: # %cond.false
+; X86-NEXT:    movzbl %al, %eax
+; X86-NEXT:    bsrl %eax, %eax
+; X86-NEXT:    xorl $7, %eax
+; X86-NEXT:    xorb $7, %al
+; X86-NEXT:    # kill: def $al killed $al killed $eax
+; X86-NEXT:    retl
+; X86-NEXT:  .LBB28_1:
+; X86-NEXT:    movb $8, %al
+; X86-NEXT:    xorb $7, %al
+; X86-NEXT:    # kill: def $al killed $al killed $eax
+; X86-NEXT:    retl
+;
+; X64-LABEL: ctlz_xor7_i8_false:
+; X64:       # %bb.0:
+; X64-NEXT:    testb %dil, %dil
+; X64-NEXT:    je .LBB28_1
+; X64-NEXT:  # %bb.2: # %cond.false
+; X64-NEXT:    movzbl %dil, %eax
+; X64-NEXT:    bsrl %eax, %eax
+; X64-NEXT:    xorl $7, %eax
+; X64-NEXT:    xorb $7, %al
+; X64-NEXT:    # kill: def $al killed $al killed $eax
+; X64-NEXT:    retq
+; X64-NEXT:  .LBB28_1:
+; X64-NEXT:    movb $8, %al
+; X64-NEXT:    xorb $7, %al
+; X64-NEXT:    # kill: def $al killed $al killed $eax
+; X64-NEXT:    retq
+;
+; X86-CLZ-LABEL: ctlz_xor7_i8_false:
+; X86-CLZ:       # %bb.0:
+; X86-CLZ-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X86-CLZ-NEXT:    lzcntl %eax, %eax
+; X86-CLZ-NEXT:    addl $-24, %eax
+; X86-CLZ-NEXT:    xorb $7, %al
+; X86-CLZ-NEXT:    # kill: def $al killed $al killed $eax
+; X86-CLZ-NEXT:    retl
+;
+; X64-CLZ-LABEL: ctlz_xor7_i8_false:
+; X64-CLZ:       # %bb.0:
+; X64-CLZ-NEXT:    movzbl %dil, %eax
+; X64-CLZ-NEXT:    lzcntl %eax, %eax
+; X64-CLZ-NEXT:    addl $-24, %eax
+; X64-CLZ-NEXT:    xorb $7, %al
+; X64-CLZ-NEXT:    # kill: def $al killed $al killed $eax
+; X64-CLZ-NEXT:    retq
+;
+; X64-FASTLZCNT-LABEL: ctlz_xor7_i8_false:
+; X64-FASTLZCNT:       # %bb.0:
+; X64-FASTLZCNT-NEXT:    movzbl %dil, %eax
+; X64-FASTLZCNT-NEXT:    lzcntl %eax, %eax
+; X64-FASTLZCNT-NEXT:    addl $-24, %eax
+; X64-FASTLZCNT-NEXT:    xorb $7, %al
+; X64-FASTLZCNT-NEXT:    # kill: def $al killed $al killed $eax
+; X64-FASTLZCNT-NEXT:    retq
+;
+; X86-FASTLZCNT-LABEL: ctlz_xor7_i8_false:
+; X86-FASTLZCNT:       # %bb.0:
+; X86-FASTLZCNT-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X86-FASTLZCNT-NEXT:    lzcntl %eax, %eax
+; X86-FASTLZCNT-NEXT:    addl $-24, %eax
+; X86-FASTLZCNT-NEXT:    xorb $7, %al
+; X86-FASTLZCNT-NEXT:    # kill: def $al killed $al killed $eax
+; X86-FASTLZCNT-NEXT:    retl
+    %clz = call i8 @llvm.ctlz.i8(i8 %x, i1 false)
+    %res = xor i8 %clz, 7
+    ret i8 %res
+}
+
+define i16 @ctlz_xor15_i16_true(i16 %x) {
+; X86-LABEL: ctlz_xor15_i16_true:
+; X86:       # %bb.0:
+; X86-NEXT:    bsrw {{[0-9]+}}(%esp), %ax
+; X86-NEXT:    retl
+;
+; X64-LABEL: ctlz_xor15_i16_true:
+; X64:       # %bb.0:
+; X64-NEXT:    bsrw %di, %ax
+; X64-NEXT:    retq
+;
+; X86-CLZ-LABEL: ctlz_xor15_i16_true:
+; X86-CLZ:       # %bb.0:
+; X86-CLZ-NEXT:    lzcntw {{[0-9]+}}(%esp), %ax
+; X86-CLZ-NEXT:    xorl $15, %eax
+; X86-CLZ-NEXT:    # kill: def $ax killed $ax killed $eax
+; X86-CLZ-NEXT:    retl
+;
+; X64-CLZ-LABEL: ctlz_xor15_i16_true:
+; X64-CLZ:       # %bb.0:
+; X64-CLZ-NEXT:    lzcntw %di, %ax
+; X64-CLZ-NEXT:    xorl $15, %eax
+; X64-CLZ-NEXT:    # kill: def $ax killed $ax killed $eax
+; X64-CLZ-NEXT:    retq
+;
+; X64-FASTLZCNT-LABEL: ctlz_xor15_i16_true:
+; X64-FASTLZCNT:       # %bb.0:
+; X64-FASTLZCNT-NEXT:    lzcntw %di, %ax
+; X64-FASTLZCNT-NEXT:    xorl $15, %eax
+; X64-FASTLZCNT-NEXT:    # kill: def $ax killed $ax killed $eax
+; X64-FASTLZCNT-NEXT:    retq
+;
+; X86-FASTLZCNT-LABEL: ctlz_xor15_i16_true:
+; X86-FASTLZCNT:       # %bb.0:
+; X86-FASTLZCNT-NEXT:    lzcntw {{[0-9]+}}(%esp), %ax
+; X86-FASTLZCNT-NEXT:    xorl $15, %eax
+; X86-FASTLZCNT-NEXT:    # kill: def $ax killed $ax killed $eax
+; X86-FASTLZCNT-NEXT:    retl
+    %clz = call i16 @llvm.ctlz.i16(i16 %x, i1 true)
+    %res = xor i16 %clz, 15
+    ret i16 %res
+}
+
+define i32 @ctlz_xor31_i32_false(i32 %x) {
+; X86-LABEL: ctlz_xor31_i32_false:
+; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    testl %eax, %eax
+; X86-NEXT:    je .LBB30_1
+; X86-NEXT:  # %bb.2: # %cond.false
+; X86-NEXT:    bsrl %eax, %eax
+; X86-NEXT:    xorl $31, %eax
+; X86-NEXT:    xorl $31, %eax
+; X86-NEXT:    retl
+; X86-NEXT:  .LBB30_1:
+; X86-NEXT:    movl $32, %eax
+; X86-NEXT:    xorl $31, %eax
+; X86-NEXT:    retl
+;
+; X64-LABEL: ctlz_xor31_i32_false:
+; X64:       # %bb.0:
+; X64-NEXT:    testl %edi, %edi
+; X64-NEXT:    je .LBB30_1
+; X64-NEXT:  # %bb.2: # %cond.false
+; X64-NEXT:    bsrl %edi, %eax
+; X64-NEXT:    xorl $31, %eax
+; X64-NEXT:    xorl $31, %eax
+; X64-NEXT:    retq
+; X64-NEXT:  .LBB30_1:
+; X64-NEXT:    movl $32, %eax
+; X64-NEXT:    xorl $31, %eax
+; X64-NEXT:    retq
+;
+; X86-CLZ-LABEL: ctlz_xor31_i32_false:
+; X86-CLZ:       # %bb.0:
+; X86-CLZ-NEXT:    lzcntl {{[0-9]+}}(%esp), %eax
+; X86-CLZ-NEXT:    xorl $31, %eax
+; X86-CLZ-NEXT:    retl
+;
+; X64-CLZ-LABEL: ctlz_xor31_i32_false:
+; X64-CLZ:       # %bb.0:
+; X64-CLZ-NEXT:    lzcntl %edi, %eax
+; X64-CLZ-NEXT:    xorl $31, %eax
+; X64-CLZ-NEXT:    retq
+;
+; X64-FASTLZCNT-LABEL: ctlz_xor31_i32_false:
+; X64-FASTLZCNT:       # %bb.0:
+; X64-FASTLZCNT-NEXT:    lzcntl %edi, %eax
+; X64-FASTLZCNT-NEXT:    xorl $31, %eax
+; X64-FASTLZCNT-NEXT:    retq
+;
+; X86-FASTLZCNT-LABEL: ctlz_xor31_i32_false:
+; X86-FASTLZCNT:       # %bb.0:
+; X86-FASTLZCNT-NEXT:    lzcntl {{[0-9]+}}(%esp), %eax
+; X86-FASTLZCNT-NEXT:    xorl $31, %eax
+; X86-FASTLZCNT-NEXT:    retl
+    %clz = call i32 @llvm.ctlz.i32(i32 %x, i1 false)
+    %res = xor i32 %clz, 31
+    ret i32 %res
+}
+
+define i64 @ctlz_xor63_i64_true(i64 %x) {
+; X86-NOCMOV-LABEL: ctlz_xor63_i64_true:
+; X86-NOCMOV:       # %bb.0:
+; X86-NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NOCMOV-NEXT:    testl %eax, %eax
+; X86-NOCMOV-NEXT:    jne .LBB31_1
+; X86-NOCMOV-NEXT:  # %bb.2:
+; X86-NOCMOV-NEXT:    bsrl {{[0-9]+}}(%esp), %eax
+; X86-NOCMOV-NEXT:    xorl $31, %eax
+; X86-NOCMOV-NEXT:    addl $32, %eax
+; X86-NOCMOV-NEXT:    jmp .LBB31_3
+; X86-NOCMOV-NEXT:  .LBB31_1:
+; X86-NOCMOV-NEXT:    bsrl %eax, %eax
+; X86-NOCMOV-NEXT:    xorl $31, %eax
+; X86-NOCMOV-NEXT:  .LBB31_3:
+; X86-NOCMOV-NEXT:    xorl $63, %eax
+; X86-NOCMOV-NEXT:    xorl %edx, %edx
+; X86-NOCMOV-NEXT:    retl
+;
+; X86-CMOV-LABEL: ctlz_xor63_i64_true:
+; X86-CMOV:       # %bb.0:
+; X86-CMOV-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-CMOV-NEXT:    bsrl %ecx, %edx
+; X86-CMOV-NEXT:    xorl $31, %edx
+; X86-CMOV-NEXT:    bsrl {{[0-9]+}}(%esp), %eax
+; X86-CMOV-NEXT:    xorl $31, %eax
+; X86-CMOV-NEXT:    addl $32, %eax
+; X86-CMOV-NEXT:    testl %ecx, %ecx
+; X86-CMOV-NEXT:    cmovnel %edx, %eax
+; X86-CMOV-NEXT:    xorl $63, %eax
+; X86-CMOV-NEXT:    xorl %edx, %edx
+; X86-CMOV-NEXT:    retl
+;
+; X64-LABEL: ctlz_xor63_i64_true:
+; X64:       # %bb.0:
+; X64-NEXT:    bsrq %rdi, %rax
+; X64-NEXT:    retq
+;
+; X86-CLZ-LABEL: ctlz_xor63_i64_true:
+; X86-CLZ:       # %bb.0:
+; X86-CLZ-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-CLZ-NEXT:    testl %eax, %eax
+; X86-CLZ-NEXT:    jne .LBB31_1
+; X86-CLZ-NEXT:  # %bb.2:
+; X86-CLZ-NEXT:    lzcntl {{[0-9]+}}(%esp), %eax
+; X86-CLZ-NEXT:    addl $32, %eax
+; X86-CLZ-NEXT:    jmp .LBB31_3
+; X86-CLZ-NEXT:  .LBB31_1:
+; X86-CLZ-NEXT:    lzcntl %eax, %eax
+; X86-CLZ-NEXT:  .LBB31_3:
+; X86-CLZ-NEXT:    xorl $63, %eax
+; X86-CLZ-NEXT:    xorl %edx, %edx
+; X86-CLZ-NEXT:    retl
+;
+; X64-CLZ-LABEL: ctlz_xor63_i64_true:
+; X64-CLZ:       # %bb.0:
+; X64-CLZ-NEXT:    lzcntq %rdi, %rax
+; X64-CLZ-NEXT:    xorq $63, %rax
+; X64-CLZ-NEXT:    retq
+;
+; X64-FASTLZCNT-LABEL: ctlz_xor63_i64_true:
+; X64-FASTLZCNT:       # %bb.0:
+; X64-FASTLZCNT-NEXT:    lzcntq %rdi, %rax
+; X64-FASTLZCNT-NEXT:    xorq $63, %rax
+; X64-FASTLZCNT-NEXT:    retq
+;
+; X86-FASTLZCNT-LABEL: ctlz_xor63_i64_true:
+; X86-FASTLZCNT:       # %bb.0:
+; X86-FASTLZCNT-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-FASTLZCNT-NEXT:    testl %eax, %eax
+; X86-FASTLZCNT-NEXT:    jne .LBB31_1
+; X86-FASTLZCNT-NEXT:  # %bb.2:
+; X86-FASTLZCNT-NEXT:    lzcntl {{[0-9]+}}(%esp), %eax
+; X86-FASTLZCNT-NEXT:    addl $32, %eax
+; X86-FASTLZCNT-NEXT:    jmp .LBB31_3
+; X86-FASTLZCNT-NEXT:  .LBB31_1:
+; X86-FASTLZCNT-NEXT:    lzcntl %eax, %eax
+; X86-FASTLZCNT-NEXT:  .LBB31_3:
+; X86-FASTLZCNT-NEXT:    xorl $63, %eax
+; X86-FASTLZCNT-NEXT:    xorl %edx, %edx
+; X86-FASTLZCNT-NEXT:    retl
+    %clz = call i64 @llvm.ctlz.i64(i64 %x, i1 true)
+    %res = xor i64 %clz, 63
+    ret i64 %res
 }

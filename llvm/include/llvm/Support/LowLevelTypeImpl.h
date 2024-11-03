@@ -63,9 +63,11 @@ public:
   static constexpr LLT vector(ElementCount EC, LLT ScalarTy) {
     assert(!EC.isScalar() && "invalid number of vector elements");
     assert(!ScalarTy.isVector() && "invalid vector element type");
-    return LLT{ScalarTy.isPointer(), /*isVector=*/true, /*isScalar=*/false,
+    return LLT{ScalarTy.isPointer(),
+               /*isVector=*/true,
+               /*isScalar=*/false,
                EC,
-               ScalarTy.getSizeInBits().getFixedSize(),
+               ScalarTy.getSizeInBits().getFixedValue(),
                ScalarTy.isPointer() ? ScalarTy.getAddressSpace() : 0};
   }
 
@@ -166,7 +168,7 @@ public:
   /// needed to represent the size in bits. Must only be called on sized types.
   constexpr TypeSize getSizeInBytes() const {
     TypeSize BaseSize = getSizeInBits();
-    return {(BaseSize.getKnownMinSize() + 7) / 8, BaseSize.isScalable()};
+    return {(BaseSize.getKnownMinValue() + 7) / 8, BaseSize.isScalable()};
   }
 
   constexpr LLT getScalarType() const {

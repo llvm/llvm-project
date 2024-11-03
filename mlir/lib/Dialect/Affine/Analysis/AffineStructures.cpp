@@ -150,15 +150,20 @@ FlatAffineValueConstraints::clone() const {
 }
 
 // Construct from an IntegerSet.
-FlatAffineValueConstraints::FlatAffineValueConstraints(IntegerSet set)
+FlatAffineValueConstraints::FlatAffineValueConstraints(IntegerSet set,
+                                                       ValueRange operands)
     : IntegerPolyhedron(set.getNumInequalities(), set.getNumEqualities(),
                         set.getNumDims() + set.getNumSymbols() + 1,
                         PresburgerSpace::getSetSpace(set.getNumDims(),
                                                      set.getNumSymbols(),
                                                      /*numLocals=*/0)) {
-
-  // Resize values.
-  values.resize(getNumDimAndSymbolVars(), std::nullopt);
+  // Populate values.
+  if (operands.empty()) {
+    values.resize(getNumDimAndSymbolVars(), std::nullopt);
+  } else {
+    assert(set.getNumInputs() == operands.size() && "operand count mismatch");
+    values.assign(operands.begin(), operands.end());
+  }
 
   // Flatten expressions and add them to the constraint system.
   std::vector<SmallVector<int64_t, 8>> flatExprs;
@@ -253,7 +258,7 @@ void FlatAffineValueConstraints::reset(
     unsigned newNumLocals, ArrayRef<Value> valArgs) {
   assert(newNumReservedCols >= newNumDims + newNumSymbols + newNumLocals + 1 &&
          "minimum 1 column");
-  SmallVector<Optional<Value>, 8> newVals;
+  SmallVector<std::optional<Value>, 8> newVals;
   if (!valArgs.empty())
     newVals.assign(valArgs.begin(), valArgs.end());
 
@@ -313,7 +318,7 @@ unsigned FlatAffineValueConstraints::insertVar(VarKind kind, unsigned pos,
   // If a Value is provided, insert it; otherwise use None.
   for (unsigned i = 0; i < num; ++i)
     values.insert(values.begin() + absolutePos + i,
-                  vals[i] ? Optional<Value>(vals[i]) : std::nullopt);
+                  vals[i] ? std::optional<Value>(vals[i]) : std::nullopt);
 
   assert(values.size() == getNumDimAndSymbolVars());
   return absolutePos;
@@ -321,7 +326,7 @@ unsigned FlatAffineValueConstraints::insertVar(VarKind kind, unsigned pos,
 
 bool FlatAffineValueConstraints::hasValues() const {
   return llvm::any_of(
-      values, [](const Optional<Value> &var) { return var.has_value(); });
+      values, [](const std::optional<Value> &var) { return var.has_value(); });
 }
 
 /// Checks if two constraint systems are in the same space, i.e., if they are
@@ -354,9 +359,9 @@ static bool LLVM_ATTRIBUTE_UNUSED areVarsUnique(
     return true;
 
   SmallPtrSet<Value, 8> uniqueVars;
-  ArrayRef<Optional<Value>> maybeValues =
+  ArrayRef<std::optional<Value>> maybeValues =
       cst.getMaybeValues().slice(start, end - start);
-  for (Optional<Value> val : maybeValues) {
+  for (std::optional<Value> val : maybeValues) {
     if (val && !uniqueVars.insert(*val).second)
       return false;
   }
@@ -398,13 +403,13 @@ static void mergeAndAlignVars(unsigned offset, FlatAffineValueConstraints *a,
   assert(areVarsUnique(*a) && "A's values aren't unique");
   assert(areVarsUnique(*b) && "B's values aren't unique");
 
-  assert(
-      llvm::all_of(llvm::drop_begin(a->getMaybeValues(), offset),
-                   [](const Optional<Value> &var) { return var.has_value(); }));
+  assert(llvm::all_of(
+      llvm::drop_begin(a->getMaybeValues(), offset),
+      [](const std::optional<Value> &var) { return var.has_value(); }));
 
-  assert(
-      llvm::all_of(llvm::drop_begin(b->getMaybeValues(), offset),
-                   [](const Optional<Value> &var) { return var.has_value(); }));
+  assert(llvm::all_of(
+      llvm::drop_begin(b->getMaybeValues(), offset),
+      [](const std::optional<Value> &var) { return var.has_value(); }));
 
   SmallVector<Value, 4> aDimValues;
   a->getValues(offset, a->getNumDimVars(), &aDimValues);
@@ -571,7 +576,7 @@ void FlatAffineValueConstraints::addInductionVarOrTerminalSymbol(Value val) {
     return;
 
   // Caller is expected to fully compose map/operands if necessary.
-  assert((isTopLevelValue(val) || isForInductionVar(val)) &&
+  assert((isTopLevelValue(val) || isAffineForInductionVar(val)) &&
          "non-terminal symbol / loop IV expected");
   // Outer loop IVs could be used in forOp's bounds.
   if (auto loop = getForInductionVarOwner(val)) {
@@ -718,12 +723,14 @@ FlatAffineValueConstraints::addDomainFromSliceMaps(ArrayRef<AffineMap> lbMaps,
 }
 
 void FlatAffineValueConstraints::addAffineIfOpDomain(AffineIfOp ifOp) {
-  // Create the base constraints from the integer set attached to ifOp.
-  FlatAffineValueConstraints cst(ifOp.getIntegerSet());
+  IntegerSet set = ifOp.getIntegerSet();
+  // Canonicalize set and operands to ensure unique values for
+  // FlatAffineValueConstraints below and for early simplification.
+  SmallVector<Value> operands(ifOp.getOperands());
+  canonicalizeSetAndOperands(&set, &operands);
 
-  // Bind vars in the constraints to ifOp operands.
-  SmallVector<Value, 4> operands = ifOp.getOperands();
-  cst.setValues(0, cst.getNumDimAndSymbolVars(), operands);
+  // Create the base constraints from the integer set attached to ifOp.
+  FlatAffineValueConstraints cst(set, operands);
 
   // Merge the constraints from ifOp to the current domain. We need first merge
   // and align the IDs from both constraints, and then append the constraints
@@ -1363,7 +1370,7 @@ bool FlatAffineValueConstraints::findVar(Value val, unsigned *pos) const {
 }
 
 bool FlatAffineValueConstraints::containsVar(Value val) const {
-  return llvm::any_of(values, [&](const Optional<Value> &mayBeVar) {
+  return llvm::any_of(values, [&](const std::optional<Value> &mayBeVar) {
     return mayBeVar && *mayBeVar == val;
   });
 }
@@ -1375,7 +1382,7 @@ void FlatAffineValueConstraints::swapVar(unsigned posA, unsigned posB) {
       getVarKindAt(posB) == VarKind::Local)
     return;
 
-  // Treat value of a local variable as None.
+  // Treat value of a local variable as std::nullopt.
   if (getVarKindAt(posA) == VarKind::Local)
     values[posB] = std::nullopt;
   else if (getVarKindAt(posB) == VarKind::Local)
@@ -1424,7 +1431,7 @@ void FlatAffineValueConstraints::clearAndCopyFrom(
 
 void FlatAffineValueConstraints::fourierMotzkinEliminate(
     unsigned pos, bool darkShadow, bool *isResultIntegerExact) {
-  SmallVector<Optional<Value>, 8> newVals = values;
+  SmallVector<std::optional<Value>, 8> newVals = values;
   if (getVarKindAt(pos) != VarKind::Local)
     newVals.erase(newVals.begin() + pos);
   // Note: Base implementation discards all associated Values.

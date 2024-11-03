@@ -1158,14 +1158,6 @@ def LoadOp : MemRef_Op<"load",
                        Variadic<Index>:$indices);
   let results = (outs AnyType:$result);
 
-  let builders = [
-    OpBuilder<(ins "Value":$memref, CArg<"ValueRange", "{}">:$indices), [{
-      auto memrefType = memref.getType().cast<MemRefType>();
-      $_state.addOperands(memref);
-      $_state.addOperands(indices);
-      $_state.types.push_back(memrefType.getElementType());
-    }]>];
-
   let extraClassDeclaration = [{
     Value getMemRef() { return getOperand(0); }
     void setMemRef(Value value) { setOperand(0, value); }
@@ -1253,6 +1245,24 @@ def MemRef_ReinterpretCastOp
       sizes: [%size0, %size1],
       strides: [%stride0, %stride1]
     : memref<*xf32> to memref<?x?xf32, strided<[?, ?], offset: ?>>
+    ```
+
+    This operation creates a new memref descriptor using the base of the
+    source and applying the input arguments to the other metadata.
+    In other words:
+    ```mlir
+    %dst = memref.reinterpret_cast %src to
+      offset: [%offset],
+      sizes: [%sizes],
+      strides: [%strides]
+    ```
+    means that `%dst`'s descriptor will be:
+    ```mlir
+    %dst.base = %src.base
+    %dst.aligned = %src.aligned
+    %dst.offset = %offset
+    %dst.sizes = %sizes
+    %dst.strides = %strides
     ```
   }];
 

@@ -39,7 +39,7 @@ wcstoll_l(const wchar_t *__nptr, wchar_t **__endptr, int __base, locale_t) {
   return ::wcstoll(__nptr, __endptr, __base);
 }
 
-inline _LIBCPP_HIDE_FROM_ABI long long
+inline _LIBCPP_HIDE_FROM_ABI unsigned long long
 wcstoull_l(const wchar_t *__nptr, wchar_t **__endptr, int __base, locale_t) {
   return ::wcstoull(__nptr, __endptr, __base);
 }

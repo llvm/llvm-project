@@ -40,6 +40,7 @@
 #include "llvm/Support/xxhash.h"
 #include <algorithm>
 #include <cstddef>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -421,9 +422,9 @@ bool isInsideMainFile(SourceLocation Loc, const SourceManager &SM) {
   return FID == SM.getMainFileID() || FID == SM.getPreambleFileID();
 }
 
-llvm::Optional<SourceRange> toHalfOpenFileRange(const SourceManager &SM,
-                                                const LangOptions &LangOpts,
-                                                SourceRange R) {
+std::optional<SourceRange> toHalfOpenFileRange(const SourceManager &SM,
+                                               const LangOptions &LangOpts,
+                                               SourceRange R) {
   SourceRange R1 = getTokenFileRange(R.getBegin(), SM, LangOpts);
   if (!isValidFileRange(SM, R1))
     return std::nullopt;
@@ -511,8 +512,8 @@ std::vector<TextEdit> replacementsToEdits(llvm::StringRef Code,
   return Edits;
 }
 
-llvm::Optional<std::string> getCanonicalPath(const FileEntry *F,
-                                             const SourceManager &SourceMgr) {
+std::optional<std::string> getCanonicalPath(const FileEntry *F,
+                                            const SourceManager &SourceMgr) {
   if (!F)
     return std::nullopt;
 
@@ -569,7 +570,7 @@ FileDigest digest(llvm::StringRef Content) {
   return Result;
 }
 
-llvm::Optional<FileDigest> digestFile(const SourceManager &SM, FileID FID) {
+std::optional<FileDigest> digestFile(const SourceManager &SM, FileID FID) {
   bool Invalid = false;
   llvm::StringRef Content = SM.getBufferData(FID, &Invalid);
   if (Invalid)
@@ -923,9 +924,9 @@ static bool isLikelyIdentifier(llvm::StringRef Word, llvm::StringRef Before,
   return false;
 }
 
-llvm::Optional<SpelledWord> SpelledWord::touching(SourceLocation SpelledLoc,
-                                                  const syntax::TokenBuffer &TB,
-                                                  const LangOptions &LangOpts) {
+std::optional<SpelledWord> SpelledWord::touching(SourceLocation SpelledLoc,
+                                                 const syntax::TokenBuffer &TB,
+                                                 const LangOptions &LangOpts) {
   const auto &SM = TB.sourceManager();
   auto Touching = syntax::spelledTokensTouching(SpelledLoc, TB);
   for (const auto &T : Touching) {
@@ -973,8 +974,8 @@ llvm::Optional<SpelledWord> SpelledWord::touching(SourceLocation SpelledLoc,
   return Result;
 }
 
-llvm::Optional<DefinedMacro> locateMacroAt(const syntax::Token &SpelledTok,
-                                           Preprocessor &PP) {
+std::optional<DefinedMacro> locateMacroAt(const syntax::Token &SpelledTok,
+                                          Preprocessor &PP) {
   if (SpelledTok.kind() != tok::identifier)
     return std::nullopt;
   SourceLocation Loc = SpelledTok.location();
@@ -1195,7 +1196,7 @@ EligibleRegion getEligiblePoints(llvm::StringRef Code,
 }
 
 bool isHeaderFile(llvm::StringRef FileName,
-                  llvm::Optional<LangOptions> LangOpts) {
+                  std::optional<LangOptions> LangOpts) {
   // Respect the langOpts, for non-file-extension cases, e.g. standard library
   // files.
   if (LangOpts && LangOpts->IsHeaderFile)

@@ -524,32 +524,6 @@ lowerStatepointMetaArgs(SmallVectorImpl<SDValue> &Ops,
                         SelectionDAGBuilder &Builder) {
   // Lower the deopt and gc arguments for this statepoint.  Layout will be:
   // deopt argument length, deopt arguments.., gc arguments...
-#ifndef NDEBUG
-  if (auto *GFI = Builder.GFI) {
-    // Check that each of the gc pointer and bases we've gotten out of the
-    // safepoint is something the strategy thinks might be a pointer (or vector
-    // of pointers) into the GC heap.  This is basically just here to help catch
-    // errors during statepoint insertion. TODO: This should actually be in the
-    // Verifier, but we can't get to the GCStrategy from there (yet).
-    GCStrategy &S = GFI->getStrategy();
-    for (const Value *V : SI.Bases) {
-      auto Opt = S.isGCManagedPointer(V->getType()->getScalarType());
-      if (Opt) {
-        assert(*Opt && "non gc managed base pointer found in statepoint");
-      }
-    }
-    for (const Value *V : SI.Ptrs) {
-      auto Opt = S.isGCManagedPointer(V->getType()->getScalarType());
-      if (Opt) {
-        assert(*Opt && "non gc managed derived pointer found in statepoint");
-      }
-    }
-    assert(SI.Bases.size() == SI.Ptrs.size() && "Pointer without base!");
-  } else {
-    assert(SI.Bases.empty() && "No gc specified, so cannot relocate pointers!");
-    assert(SI.Ptrs.empty() && "No gc specified, so cannot relocate pointers!");
-  }
-#endif
 
   // Figure out what lowering strategy we're going to use for each part
   // Note: Is is conservatively correct to lower both "live-in" and "live-out"
@@ -738,7 +712,9 @@ SDValue SelectionDAGBuilder::LowerAsSTATEPOINT(
   NumOfStatepoints++;
   // Clear state
   StatepointLowering.startNewStatepoint(*this);
-  assert(SI.Bases.size() == SI.Ptrs.size());
+  assert(SI.Bases.size() == SI.Ptrs.size() && "Pointer without base!");
+  assert((GFI || SI.Bases.empty()) &&
+         "No gc specified, so cannot relocate pointers!");
 
   LLVM_DEBUG(dbgs() << "Lowering statepoint " << *SI.StatepointInstr << "\n");
 #ifndef NDEBUG
@@ -1234,10 +1210,6 @@ void SelectionDAGBuilder::visitGCRelocate(const GCRelocateInst &Relocate) {
 
   if (cast<GCStatepointInst>(Statepoint)->getParent() == Relocate.getParent())
     StatepointLowering.relocCallVisited(Relocate);
-
-  auto *Ty = Relocate.getType()->getScalarType();
-  if (auto IsManaged = GFI->getStrategy().isGCManagedPointer(Ty))
-    assert(*IsManaged && "Non gc managed pointer relocated!");
 #endif
 
   const Value *DerivedPtr = Relocate.getDerivedPtr();

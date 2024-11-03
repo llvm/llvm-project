@@ -21,7 +21,7 @@
 #include "clang/Analysis/FlowSensitive/DataflowAnalysis.h"
 #include "clang/Analysis/FlowSensitive/NoopLattice.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/Testing/Support/Annotations.h"
+#include "llvm/Testing/Annotations/Annotations.h"
 #include "llvm/Testing/Support/Error.h"
 #include "gtest/gtest.h"
 #include <memory>

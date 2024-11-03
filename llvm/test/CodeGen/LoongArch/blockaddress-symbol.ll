@@ -18,7 +18,7 @@ define void @operand_block_address() nounwind {
 ; CHECK-NEXT:  .Ltmp0: # Block address taken
 ; CHECK-NEXT:  # %bb.1: # %bb
 ; CHECK-NEXT:    ret
-  call void asm sideeffect "b $0", "i"(i8* blockaddress(@operand_block_address, %bb))
+  call void asm sideeffect "b $0", "i"(ptr blockaddress(@operand_block_address, %bb))
   br label %bb
 bb:
   ret void

@@ -88,7 +88,13 @@ struct Config {
     bool StandardLibrary = true;
   } Index;
 
-  enum UnusedIncludesPolicy { Strict, None };
+  enum UnusedIncludesPolicy {
+    /// Diagnose unused includes.
+    Strict,
+    None,
+    /// The same as Strict, but using the include-cleaner library.
+    Experiment,
+  };
   /// Controls warnings and errors when parsing code.
   struct {
     bool SuppressAll = false;

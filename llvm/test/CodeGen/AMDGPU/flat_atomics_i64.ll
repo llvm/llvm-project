@@ -4032,14 +4032,8 @@ entry:
 define amdgpu_kernel void @atomic_cmpxchg_i64_ret_addr64_offset(ptr %out, ptr %out2, i64 %in, i64 %index, i64 %old) {
 ; GCN1-LABEL: atomic_cmpxchg_i64_ret_addr64_offset:
 ; GCN1:       ; %bb.0: ; %entry
-; GCN1-NEXT:    s_mov_b32 s12, SCRATCH_RSRC_DWORD0
-; GCN1-NEXT:    s_mov_b32 s13, SCRATCH_RSRC_DWORD1
 ; GCN1-NEXT:    s_load_dwordx8 s[4:11], s[0:1], 0x9
 ; GCN1-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x11
-; GCN1-NEXT:    s_mov_b32 s14, -1
-; GCN1-NEXT:    s_mov_b32 s15, 0xe8f000
-; GCN1-NEXT:    s_add_u32 s12, s12, s3
-; GCN1-NEXT:    s_addc_u32 s13, s13, 0
 ; GCN1-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN1-NEXT:    s_lshl_b64 s[2:3], s[10:11], 3
 ; GCN1-NEXT:    v_mov_b32_e32 v2, s0
@@ -4063,14 +4057,8 @@ define amdgpu_kernel void @atomic_cmpxchg_i64_ret_addr64_offset(ptr %out, ptr %o
 ;
 ; GCN2-LABEL: atomic_cmpxchg_i64_ret_addr64_offset:
 ; GCN2:       ; %bb.0: ; %entry
-; GCN2-NEXT:    s_mov_b32 s88, SCRATCH_RSRC_DWORD0
-; GCN2-NEXT:    s_mov_b32 s89, SCRATCH_RSRC_DWORD1
 ; GCN2-NEXT:    s_load_dwordx8 s[4:11], s[0:1], 0x24
 ; GCN2-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x44
-; GCN2-NEXT:    s_mov_b32 s90, -1
-; GCN2-NEXT:    s_mov_b32 s91, 0xe80000
-; GCN2-NEXT:    s_add_u32 s88, s88, s3
-; GCN2-NEXT:    s_addc_u32 s89, s89, 0
 ; GCN2-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN2-NEXT:    s_lshl_b64 s[2:3], s[10:11], 3
 ; GCN2-NEXT:    v_mov_b32_e32 v2, s0
@@ -4231,14 +4219,8 @@ entry:
 define amdgpu_kernel void @atomic_cmpxchg_i64_ret_addr64(ptr %out, ptr %out2, i64 %in, i64 %index, i64 %old) {
 ; GCN1-LABEL: atomic_cmpxchg_i64_ret_addr64:
 ; GCN1:       ; %bb.0: ; %entry
-; GCN1-NEXT:    s_mov_b32 s12, SCRATCH_RSRC_DWORD0
-; GCN1-NEXT:    s_mov_b32 s13, SCRATCH_RSRC_DWORD1
 ; GCN1-NEXT:    s_load_dwordx8 s[4:11], s[0:1], 0x9
 ; GCN1-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x11
-; GCN1-NEXT:    s_mov_b32 s14, -1
-; GCN1-NEXT:    s_mov_b32 s15, 0xe8f000
-; GCN1-NEXT:    s_add_u32 s12, s12, s3
-; GCN1-NEXT:    s_addc_u32 s13, s13, 0
 ; GCN1-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN1-NEXT:    s_lshl_b64 s[2:3], s[10:11], 3
 ; GCN1-NEXT:    s_add_u32 s2, s4, s2
@@ -4260,14 +4242,8 @@ define amdgpu_kernel void @atomic_cmpxchg_i64_ret_addr64(ptr %out, ptr %out2, i6
 ;
 ; GCN2-LABEL: atomic_cmpxchg_i64_ret_addr64:
 ; GCN2:       ; %bb.0: ; %entry
-; GCN2-NEXT:    s_mov_b32 s88, SCRATCH_RSRC_DWORD0
-; GCN2-NEXT:    s_mov_b32 s89, SCRATCH_RSRC_DWORD1
 ; GCN2-NEXT:    s_load_dwordx8 s[4:11], s[0:1], 0x24
 ; GCN2-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x44
-; GCN2-NEXT:    s_mov_b32 s90, -1
-; GCN2-NEXT:    s_mov_b32 s91, 0xe80000
-; GCN2-NEXT:    s_add_u32 s88, s88, s3
-; GCN2-NEXT:    s_addc_u32 s89, s89, 0
 ; GCN2-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN2-NEXT:    s_lshl_b64 s[2:3], s[10:11], 3
 ; GCN2-NEXT:    s_add_u32 s2, s4, s2

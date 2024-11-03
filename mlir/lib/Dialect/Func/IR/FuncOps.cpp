@@ -9,11 +9,11 @@
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 
 #include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
-#include "mlir/IR/BlockAndValueMapping.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/FunctionImplementation.h"
+#include "mlir/IR/IRMapping.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/PatternMatch.h"
@@ -52,14 +52,12 @@ struct FuncInlinerInterface : public DialectInlinerInterface {
   }
 
   /// All operations can be inlined.
-  bool isLegalToInline(Operation *, Region *, bool,
-                       BlockAndValueMapping &) const final {
+  bool isLegalToInline(Operation *, Region *, bool, IRMapping &) const final {
     return true;
   }
 
   /// All functions can be inlined.
-  bool isLegalToInline(Region *, Region *, bool,
-                       BlockAndValueMapping &) const final {
+  bool isLegalToInline(Region *, Region *, bool, IRMapping &) const final {
     return true;
   }
 
@@ -201,8 +199,7 @@ LogicalResult ConstantOp::verify() {
   return success();
 }
 
-OpFoldResult ConstantOp::fold(ArrayRef<Attribute> operands) {
-  assert(operands.empty() && "constant has no operands");
+OpFoldResult ConstantOp::fold(FoldAdaptor adaptor) {
   return getValueAttr();
 }
 
@@ -229,7 +226,7 @@ FuncOp FuncOp::create(Location location, StringRef name, FunctionType type,
 FuncOp FuncOp::create(Location location, StringRef name, FunctionType type,
                       Operation::dialect_attr_range attrs) {
   SmallVector<NamedAttribute, 8> attrRef(attrs);
-  return create(location, name, type, llvm::makeArrayRef(attrRef));
+  return create(location, name, type, llvm::ArrayRef(attrRef));
 }
 FuncOp FuncOp::create(Location location, StringRef name, FunctionType type,
                       ArrayRef<NamedAttribute> attrs,
@@ -276,7 +273,7 @@ void FuncOp::print(OpAsmPrinter &p) {
 
 /// Clone the internal blocks from this function into dest and all attributes
 /// from this function to dest.
-void FuncOp::cloneInto(FuncOp dest, BlockAndValueMapping &mapper) {
+void FuncOp::cloneInto(FuncOp dest, IRMapping &mapper) {
   // Add the attributes of this function to dest.
   llvm::MapVector<StringAttr, Attribute> newAttrMap;
   for (const auto &attr : dest->getAttrs())
@@ -299,7 +296,7 @@ void FuncOp::cloneInto(FuncOp dest, BlockAndValueMapping &mapper) {
 /// provided (leaving them alone if no entry is present). Replaces references
 /// to cloned sub-values with the corresponding value that is copied, and adds
 /// those mappings to the mapper.
-FuncOp FuncOp::clone(BlockAndValueMapping &mapper) {
+FuncOp FuncOp::clone(IRMapping &mapper) {
   // Create the new function.
   FuncOp newFunc = cast<FuncOp>(getOperation()->cloneWithoutRegions());
 
@@ -338,7 +335,7 @@ FuncOp FuncOp::clone(BlockAndValueMapping &mapper) {
   return newFunc;
 }
 FuncOp FuncOp::clone() {
-  BlockAndValueMapping mapper;
+  IRMapping mapper;
   return clone(mapper);
 }
 

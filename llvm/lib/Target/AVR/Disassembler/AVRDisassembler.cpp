@@ -123,6 +123,9 @@ static DecodeStatus decodeFMUL2RdRr(MCInst &Inst, unsigned Insn,
 static DecodeStatus decodeMemri(MCInst &Inst, unsigned Insn, uint64_t Address,
                                 const MCDisassembler *Decoder);
 
+static DecodeStatus decodeFBRk(MCInst &Inst, unsigned Insn, uint64_t Address,
+                               const MCDisassembler *Decoder);
+
 static DecodeStatus decodeLoadStore(MCInst &Inst, unsigned Insn,
                                     uint64_t Address,
                                     const MCDisassembler *Decoder);
@@ -265,6 +268,25 @@ static DecodeStatus decodeMemri(MCInst &Inst, unsigned Insn, uint64_t Address,
   return MCDisassembler::Success;
 }
 
+static DecodeStatus decodeFBRk(MCInst &Inst, unsigned Insn, uint64_t Address,
+                               const MCDisassembler *Decoder) {
+  // Decode the opcode.
+  switch (Insn & 0xf000) {
+  case 0xc000:
+    Inst.setOpcode(AVR::RJMPk);
+    break;
+  case 0xd000:
+    Inst.setOpcode(AVR::RCALLk);
+    break;
+  default: // Unknown relative branch instruction.
+    return MCDisassembler::Fail;
+  }
+  // Decode the relative offset.
+  int16_t Offset = ((int16_t)((Insn & 0xfff) << 4)) >> 3;
+  Inst.addOperand(MCOperand::createImm(Offset));
+  return MCDisassembler::Success;
+}
+
 static DecodeStatus decodeLoadStore(MCInst &Inst, unsigned Insn,
                                     uint64_t Address,
                                     const MCDisassembler *Decoder) {
@@ -275,7 +297,7 @@ static DecodeStatus decodeLoadStore(MCInst &Inst, unsigned Insn,
   if ((Insn & 0xf000) == 0x8000) {
     unsigned RegBase = (Insn & 0x8) ? AVR::R29R28 : AVR::R31R30;
     unsigned Offset = Insn & 7; // We need not consider offset > 7.
-    if ((Insn & 0x200) == 0) { // Decode LDD.
+    if ((Insn & 0x200) == 0) {  // Decode LDD.
       Inst.setOpcode(AVR::LDDRdPtrQ);
       Inst.addOperand(MCOperand::createReg(RegVal));
       Inst.addOperand(MCOperand::createReg(RegBase));
@@ -424,6 +446,14 @@ DecodeStatus AVRDisassembler::getInstruction(MCInst &Instr, uint64_t &Size,
 
     if (Result == MCDisassembler::Fail)
       return MCDisassembler::Fail;
+
+    // Try to decode AVRTiny instructions.
+    if (STI.getFeatureBits()[AVR::FeatureTinyEncoding]) {
+      Result = decodeInstruction(DecoderTableAVRTiny16, Instr, Insn, Address,
+                                 this, STI);
+      if (Result != MCDisassembler::Fail)
+        return Result;
+    }
 
     // Try to auto-decode a 16-bit instruction.
     Result = decodeInstruction(getDecoderTable(Size), Instr, Insn, Address,

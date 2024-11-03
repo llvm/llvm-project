@@ -16,6 +16,7 @@ add_flang_unittest(FlangOptimizerTests
   Builder/DoLoopHelperTest.cpp
   Builder/FIRBuilderTest.cpp
   Builder/HLFIRToolsTest.cpp
+  Builder/Runtime/AllocatableTest.cpp
   Builder/Runtime/AssignTest.cpp
   Builder/Runtime/CommandTest.cpp
   Builder/Runtime/CharacterTest.cpp
@@ -31,7 +32,12 @@ add_flang_unittest(FlangOptimizerTests
   InternalNamesTest.cpp
   KindMappingTest.cpp
   RTBuilder.cpp
-)
+DEPENDS
+  FIRDialect
+  FIRSupport
+  HLFIRDialect
+  ${dialect_libs})
+
 target_link_libraries(FlangOptimizerTests
   PRIVATE
   ${LIBS})

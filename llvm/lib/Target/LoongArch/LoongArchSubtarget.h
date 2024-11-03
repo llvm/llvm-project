@@ -31,6 +31,7 @@ class StringRef;
 
 class LoongArchSubtarget : public LoongArchGenSubtargetInfo {
   virtual void anchor();
+  bool HasLA32 = false;
   bool HasLA64 = false;
   bool HasBasicF = false;
   bool HasBasicD = false;

@@ -1,7 +1,7 @@
 ; RUN: llc < %s -mtriple=arm64-eabi -asm-verbose=false -mattr=v8.2a | FileCheck %s
 ; RUN: llc < %s -mtriple=arm64-eabi -asm-verbose=false -mattr=v8.3a | FileCheck %s --check-prefix=CHECKV83
 
-; Armv8.3-A Pointer Authetication requires a special instruction to strip the
+; Armv8.3-A Pointer Authetication requires a special intsruction to strip the
 ; pointer authentication code from the pointer.
 ; The XPACLRI instruction assembles to a hint-space instruction before Armv8.3-A
 ; therefore this instruction can be safely used for any pre Armv8.3-A architectures.
@@ -34,7 +34,7 @@ entry:
 ; CHECK-NEXT:     ldr     x30, [sp], #16
 ; CHECK-NEXT:     hint    #29
 ; CHECK-NEXT:     ret
-; CHECKV83:       pacia   x30, sp
+; CHECKV83:       paciasp
 ; CHECKV83-NEXT:  str     x30, [sp, #-16]!
 ; CHECKV83-NEXT:  xpaci   x30
 ; CHECKV83-NEXT:  mov     x0, x30

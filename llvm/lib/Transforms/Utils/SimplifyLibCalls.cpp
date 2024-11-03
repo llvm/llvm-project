@@ -511,7 +511,8 @@ Value *LibCallSimplifier::optimizeStrCmp(CallInst *CI, IRBuilderBase &B) {
 
   // strcmp(x, y)  -> cnst  (if both x and y are constant strings)
   if (HasStr1 && HasStr2)
-    return ConstantInt::get(CI->getType(), Str1.compare(Str2));
+    return ConstantInt::get(CI->getType(),
+                            std::clamp(Str1.compare(Str2), -1, 1));
 
   if (HasStr1 && Str1.empty()) // strcmp("", x) -> -*x
     return B.CreateNeg(B.CreateZExt(
@@ -595,7 +596,8 @@ Value *LibCallSimplifier::optimizeStrNCmp(CallInst *CI, IRBuilderBase &B) {
     // Avoid truncating the 64-bit Length to 32 bits in ILP32.
     StringRef SubStr1 = substr(Str1, Length);
     StringRef SubStr2 = substr(Str2, Length);
-    return ConstantInt::get(CI->getType(), SubStr1.compare(SubStr2));
+    return ConstantInt::get(CI->getType(),
+                            std::clamp(SubStr1.compare(SubStr2), -1, 1));
   }
 
   if (HasStr1 && Str1.empty()) // strncmp("", x, n) -> -*x
@@ -1475,7 +1477,7 @@ static Value *optimizeMemCmpConstantSize(CallInst *CI, Value *LHS, Value *RHS,
   // to legal integers or equality comparison. See block below this.
   if (DL.isLegalInteger(Len * 8) && isOnlyUsedInZeroEqualityComparison(CI)) {
     IntegerType *IntType = IntegerType::get(CI->getContext(), Len * 8);
-    unsigned PrefAlignment = DL.getPrefTypeAlignment(IntType);
+    Align PrefAlignment = DL.getPrefTypeAlign(IntType);
 
     // First, see if we can fold either argument to a constant.
     Value *LHSV = nullptr;

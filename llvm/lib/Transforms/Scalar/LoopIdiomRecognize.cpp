@@ -441,7 +441,7 @@ static Constant *getMemSetPatternValue(Value *V, const DataLayout *DL) {
   // array.  We could theoretically do a store to an alloca or something, but
   // that doesn't seem worthwhile.
   Constant *C = dyn_cast<Constant>(V);
-  if (!C)
+  if (!C || isa<ConstantExpr>(C))
     return nullptr;
 
   // Only handle simple values that are a power of two bytes in size.
@@ -496,8 +496,8 @@ LoopIdiomRecognize::isLegalStore(StoreInst *SI) {
   // When storing out scalable vectors we bail out for now, since the code
   // below currently only works for constant strides.
   TypeSize SizeInBits = DL->getTypeSizeInBits(StoredVal->getType());
-  if (SizeInBits.isScalable() || (SizeInBits.getFixedSize() & 7) ||
-      (SizeInBits.getFixedSize() >> 32) != 0)
+  if (SizeInBits.isScalable() || (SizeInBits.getFixedValue() & 7) ||
+      (SizeInBits.getFixedValue() >> 32) != 0)
     return LegalStoreKind::None;
 
   // See if the pointer expression is an AddRec like {base,+,1} on the current
@@ -1272,6 +1272,7 @@ bool LoopIdiomRecognize::processLoopStoreOfLoopLoad(StoreInst *SI,
                                     StoreEv, LoadEv, BECount);
 }
 
+namespace {
 class MemmoveVerifier {
 public:
   explicit MemmoveVerifier(const Value &LoadBasePtr, const Value &StoreBasePtr,
@@ -1295,7 +1296,7 @@ public:
       // Ensure that LoadBasePtr is after StoreBasePtr or before StoreBasePtr
       // for negative stride. LoadBasePtr shouldn't overlap with StoreBasePtr.
       int64_t LoadSize =
-          DL.getTypeSizeInBits(TheLoad.getType()).getFixedSize() / 8;
+          DL.getTypeSizeInBits(TheLoad.getType()).getFixedValue() / 8;
       if (BP1 != BP2 || LoadSize != int64_t(StoreSize))
         return false;
       if ((!IsNegStride && LoadOff < StoreOff + int64_t(StoreSize)) ||
@@ -1315,6 +1316,7 @@ private:
 public:
   const bool IsSameObject;
 };
+} // namespace
 
 bool LoopIdiomRecognize::processLoopStoreOfLoopLoad(
     Value *DestPtr, Value *SourcePtr, const SCEV *StoreSizeSCEV,

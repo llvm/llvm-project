@@ -9,18 +9,22 @@
 
 ; CHECK:         $eax = MOV32rm
 ; INSTRREF-SAME:      debug-instr-number 1
-; INSTRREF:      DBG_INSTR_REF 1, 0
-; CHECK:         DBG_VALUE $eax
+; INSTRREF:      DBG_INSTR_REF {{.+}}, dbg-instr-ref(1, 0)
+; VARLOCS:         DBG_VALUE $eax
+; INSTRREF:        DBG_VALUE_LIST {{.+}} $eax
 ; CHECK:         $eax = SHL32rCL killed renamable $eax,
 ; INSTRREF-SAME:      debug-instr-number 2
-; INSTRREF:      DBG_INSTR_REF 2, 0
-; CHECK:         DBG_VALUE $eax
-; CHECK:         DBG_VALUE $rsp, 0, !{{[0-9]+}}, !DIExpression(DW_OP_constu, 4, DW_OP_minus)
+; INSTRREF:      DBG_INSTR_REF {{.+}}, dbg-instr-ref(2, 0)
+; VARLOCS:       DBG_VALUE $eax
+; INSTRREF:      DBG_VALUE_LIST {{.+}} $eax
+; VARLOCS:       DBG_VALUE $rsp, 0, !{{[0-9]+}}, !DIExpression(DW_OP_constu, 4, DW_OP_minus)
+; INSTRREF:      DBG_VALUE_LIST !{{[0-9]+}}, !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_constu, 4, DW_OP_minus, DW_OP_deref), $rsp
 ; VARLOCS:       DBG_VALUE $eax
 ; CHECK:         $eax = SHL32rCL killed renamable $eax,
 ; INSTRREF-SAME:      debug-instr-number 3
-; INSTRREF:      DBG_INSTR_REF 3, 0
-; CHECK:         DBG_VALUE $eax
+; INSTRREF:      DBG_INSTR_REF {{.+}}, dbg-instr-ref(3, 0)
+; VARLOCS:       DBG_VALUE $eax
+; INSTRREF:      DBG_VALUE_LIST {{.+}} $eax
 ; CHECK:         RET64 $eax
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"

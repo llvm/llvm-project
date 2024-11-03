@@ -20,13 +20,13 @@
 #include "index/SymbolLocation.h"
 #include "index/SymbolOrigin.h"
 #include "clang/Tooling/CompilationDatabase.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/StringSaver.h"
 #include "llvm/Support/YAMLTraits.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cstdint>
+#include <optional>
 
 namespace {
 struct YIncludeHeaderWithReferences;
@@ -41,11 +41,11 @@ using RefBundle =
     std::pair<clang::clangd::SymbolID, std::vector<clang::clangd::Ref>>;
 // This is a pale imitation of std::variant<Symbol, RefBundle, Relation>
 struct VariantEntry {
-  llvm::Optional<clang::clangd::Symbol> Symbol;
-  llvm::Optional<RefBundle> Refs;
-  llvm::Optional<clang::clangd::Relation> Relation;
-  llvm::Optional<clang::clangd::IncludeGraphNode> Source;
-  llvm::Optional<clang::tooling::CompileCommand> Cmd;
+  std::optional<clang::clangd::Symbol> Symbol;
+  std::optional<RefBundle> Refs;
+  std::optional<clang::clangd::Relation> Relation;
+  std::optional<clang::clangd::IncludeGraphNode> Source;
+  std::optional<clang::tooling::CompileCommand> Cmd;
 };
 // A class helps YAML to serialize the 32-bit encoded position (Line&Column),
 // as YAMLIO can't directly map bitfields.
@@ -479,7 +479,7 @@ llvm::Expected<IndexFileIn> readYAML(llvm::StringRef Data,
   llvm::UniqueStringSaver Strings(Arena);
   llvm::yaml::Input Yin(Data, &Strings);
   IncludeGraph Sources;
-  llvm::Optional<tooling::CompileCommand> Cmd;
+  std::optional<tooling::CompileCommand> Cmd;
   while (Yin.setCurrentDocument()) {
     llvm::yaml::EmptyContext Ctx;
     VariantEntry Variant;

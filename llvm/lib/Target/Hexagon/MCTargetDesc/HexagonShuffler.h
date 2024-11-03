@@ -58,7 +58,7 @@ public:
 
   // Check if the resources are in ascending slot order.
   static bool lessUnits(const HexagonResource &A, const HexagonResource &B) {
-    return (countPopulation(A.getUnits()) < countPopulation(B.getUnits()));
+    return (llvm::popcount(A.getUnits()) < llvm::popcount(B.getUnits()));
   }
 
   // Check if the resources are in ascending weight order.

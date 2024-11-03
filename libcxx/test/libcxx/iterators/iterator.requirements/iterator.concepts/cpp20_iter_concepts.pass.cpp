@@ -19,9 +19,13 @@
 // random_access_iterator_tag.
 // (1.4) -- Otherwise, ITER_CONCEPT(I) does not denote a type.
 
+// ADDITIONAL_COMPILE_FLAGS: -Wno-private-header
+
 #include "test_macros.h"
 
+#include <__type_traits/is_valid_expansion.h>
 #include <iterator>
+
 struct OtherTag : std::input_iterator_tag {};
 struct OtherTagTwo : std::output_iterator_tag {};
 

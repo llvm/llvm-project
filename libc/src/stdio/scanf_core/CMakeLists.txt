@@ -79,9 +79,12 @@ add_object_library(
     converter.cpp
     string_converter.cpp
     int_converter.cpp
+    float_converter.cpp
   HDRS
     converter.h
     int_converter.h
+    string_converter.h
+    float_converter.h
   DEPENDS
     .reader
     .core_structs
@@ -89,6 +92,9 @@ add_object_library(
     libc.src.__support.CPP.bitset
     libc.src.__support.CPP.string_view
     libc.src.__support.CPP.limits
+    libc.src.__support.char_vector
+    libc.include.errno
+    libc.src.errno.errno
 )
 
 add_object_library(

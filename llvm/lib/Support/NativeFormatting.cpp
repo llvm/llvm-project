@@ -141,7 +141,7 @@ void llvm::write_hex(raw_ostream &S, uint64_t N, HexPrintStyle Style,
 
   size_t W = std::min(kMaxWidth, Width.value_or(0u));
 
-  unsigned Nibbles = (64 - countLeadingZeros(N) + 3) / 4;
+  unsigned Nibbles = (llvm::bit_width(N) + 3) / 4;
   bool Prefix = (Style == HexPrintStyle::PrefixLower ||
                  Style == HexPrintStyle::PrefixUpper);
   bool Upper =

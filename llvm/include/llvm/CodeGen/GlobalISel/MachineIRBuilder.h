@@ -217,10 +217,12 @@ private:
 /// Helper class to build MachineInstr.
 /// It keeps internally the insertion point and debug location for all
 /// the new instructions we want to create.
-/// This information can be modify via the related setters.
+/// This information can be modified via the related setters.
 class MachineIRBuilder {
 
   MachineIRBuilderState State;
+
+  unsigned getOpcodeForMerge(const DstOp &DstOp, ArrayRef<SrcOp> SrcOps) const;
 
 protected:
   void validateTruncExt(const LLT Dst, const LLT Src, bool IsExtend);
@@ -863,8 +865,8 @@ public:
   /// Build and insert G_ASSERT_SEXT, G_ASSERT_ZEXT, or G_ASSERT_ALIGN
   ///
   /// \return a MachineInstrBuilder for the newly created instruction.
-  MachineInstrBuilder buildAssertOp(unsigned Opc, const DstOp &Res, const SrcOp &Op,
-				    unsigned Val) {
+  MachineInstrBuilder buildAssertInstr(unsigned Opc, const DstOp &Res,
+                                       const SrcOp &Op, unsigned Val) {
     return buildInstr(Opc, Res, Op).addImm(Val);
   }
 
@@ -873,7 +875,7 @@ public:
   /// \return a MachineInstrBuilder for the newly created instruction.
   MachineInstrBuilder buildAssertZExt(const DstOp &Res, const SrcOp &Op,
                                       unsigned Size) {
-    return buildAssertOp(TargetOpcode::G_ASSERT_ZEXT, Res, Op, Size);
+    return buildAssertInstr(TargetOpcode::G_ASSERT_ZEXT, Res, Op, Size);
   }
 
   /// Build and insert \p Res = G_ASSERT_SEXT Op, Size
@@ -881,7 +883,7 @@ public:
   /// \return a MachineInstrBuilder for the newly created instruction.
   MachineInstrBuilder buildAssertSExt(const DstOp &Res, const SrcOp &Op,
                                       unsigned Size) {
-    return buildAssertOp(TargetOpcode::G_ASSERT_SEXT, Res, Op, Size);
+    return buildAssertInstr(TargetOpcode::G_ASSERT_SEXT, Res, Op, Size);
   }
 
   /// Build and insert \p Res = G_ASSERT_ALIGN Op, AlignVal
@@ -889,7 +891,8 @@ public:
   /// \return a MachineInstrBuilder for the newly created instruction.
   MachineInstrBuilder buildAssertAlign(const DstOp &Res, const SrcOp &Op,
 				       Align AlignVal) {
-    return buildAssertOp(TargetOpcode::G_ASSERT_ALIGN, Res, Op, AlignVal.value());
+    return buildAssertInstr(TargetOpcode::G_ASSERT_ALIGN, Res, Op,
+                            AlignVal.value());
   }
 
   /// Build and insert `Res = G_LOAD Addr, MMO`.
@@ -968,7 +971,8 @@ public:
   /// Build and insert \p Res = G_MERGE_VALUES \p Op0, ...
   ///
   /// G_MERGE_VALUES combines the input elements contiguously into a larger
-  /// register.
+  /// register. It should only be used when the destination register is not a
+  /// vector.
   ///
   /// \pre setBasicBlock or setMI must have been called.
   /// \pre The entire register \p Res (and no more) must be covered by the input
@@ -976,9 +980,30 @@ public:
   /// \pre The type of all \p Ops registers must be identical.
   ///
   /// \return a MachineInstrBuilder for the newly created instruction.
-  MachineInstrBuilder buildMerge(const DstOp &Res, ArrayRef<Register> Ops);
-  MachineInstrBuilder buildMerge(const DstOp &Res,
-                                 std::initializer_list<SrcOp> Ops);
+  MachineInstrBuilder buildMergeValues(const DstOp &Res,
+                                       ArrayRef<Register> Ops);
+
+  /// Build and insert \p Res = G_MERGE_VALUES \p Op0, ...
+  ///               or \p Res = G_BUILD_VECTOR \p Op0, ...
+  ///               or \p Res = G_CONCAT_VECTORS \p Op0, ...
+  ///
+  /// G_MERGE_VALUES combines the input elements contiguously into a larger
+  /// register. It is used when the destination register is not a vector.
+  /// G_BUILD_VECTOR combines scalar inputs into a vector register.
+  /// G_CONCAT_VECTORS combines vector inputs into a vector register.
+  ///
+  /// \pre setBasicBlock or setMI must have been called.
+  /// \pre The entire register \p Res (and no more) must be covered by the input
+  ///      registers.
+  /// \pre The type of all \p Ops registers must be identical.
+  ///
+  /// \return a MachineInstrBuilder for the newly created instruction. The
+  ///         opcode of the new instruction will depend on the types of both
+  ///         the destination and the sources.
+  MachineInstrBuilder buildMergeLikeInstr(const DstOp &Res,
+                                          ArrayRef<Register> Ops);
+  MachineInstrBuilder buildMergeLikeInstr(const DstOp &Res,
+                                          std::initializer_list<SrcOp> Ops);
 
   /// Build and insert \p Res0, ... = G_UNMERGE_VALUES \p Op
   ///

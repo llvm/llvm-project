@@ -25,7 +25,11 @@ except for development and testing.
 
 **Enable in Clang**: `-Xclang -fexperimental-assignment-tracking`
 
-**Enable in LLVM tools**: `-experimental-assignment-tracking`
+That causes Clang to get LLVM to run the pass `declare-to-assign`. The pass
+converts conventional debug intrinsics to assignment tracking metadata and sets
+the module flag `debug-info-assignment-tracking` to the value `i1 true`. To
+check whether assignment tracking is enabled for a module call
+`isAssignmentTrackingEnabled(const Module &M)` (from `llvm/IR/DebugInfo.h`).
 
 ## Design and implementation
 
@@ -63,9 +67,11 @@ void @llvm.dbg.assign(Value *Value,
 
 The first three parameters look and behave like an `llvm.dbg.value`. `ID` is a
 reference to a store (see next section). `Address` is the destination address
-of the store and it is modified by `AddressExpression`. LLVM currently encodes
-variable fragment information in `DIExpression`s, so as an implementation quirk
-the `FragmentInfo` for `Variable` is contained within `ValueExpression` only.
+of the store and it is modified by `AddressExpression`. An empty/undef/poison
+address means the address component has been killed (the memory address is no
+longer a valid location). LLVM currently encodes variable fragment information
+in `DIExpression`s, so as an implementation quirk the `FragmentInfo` for
+`Variable` is contained within `ValueExpression` only.
 
 The formal LLVM-IR signature is:
 ```
@@ -197,11 +203,6 @@ the choice at each instruction, iteratively joining the results for each block.
 
 As this is an experimental work in progress so there are some items we still need
 to tackle:
-
-* LLVM is trying to replace usage of `Undef` with `Poison`. Use `Poison` rather
-  than `Undef` as the sentinal to denote "unknown location" for the address. See
-  D133293. This will be unecessary if the address can be removed, as described
-  below.
 
 * As mentioned in test llvm/test/DebugInfo/assignment-tracking/X86/diamond-3.ll,
   the analysis should treat escaping calls like untagged stores.

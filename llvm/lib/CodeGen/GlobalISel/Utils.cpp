@@ -57,7 +57,7 @@ Register llvm::constrainOperandRegClass(
     const TargetRegisterClass &RegClass, MachineOperand &RegMO) {
   Register Reg = RegMO.getReg();
   // Assume physical registers are properly constrained.
-  assert(Register::isVirtualRegister(Reg) && "PhysReg not implemented");
+  assert(Reg.isVirtual() && "PhysReg not implemented");
 
   // Save the old register class to check whether
   // the change notifications will be required.
@@ -109,7 +109,7 @@ Register llvm::constrainOperandRegClass(
     MachineOperand &RegMO, unsigned OpIdx) {
   Register Reg = RegMO.getReg();
   // Assume physical registers are properly constrained.
-  assert(Register::isVirtualRegister(Reg) && "PhysReg not implemented");
+  assert(Reg.isVirtual() && "PhysReg not implemented");
 
   const TargetRegisterClass *OpRC = TII.getRegClass(II, OpIdx, &TRI, MF);
   // Some of the target independent instructions, like COPY, may not impose any
@@ -171,7 +171,7 @@ bool llvm::constrainSelectedInstRegOperands(MachineInstr &I,
 
     Register Reg = MO.getReg();
     // Physical registers don't need to be constrained.
-    if (Register::isPhysicalRegister(Reg))
+    if (Reg.isPhysical())
       continue;
 
     // Register operands with a value of 0 (e.g. predicate operands) don't need
@@ -235,7 +235,7 @@ bool llvm::isTriviallyDead(const MachineInstr &MI,
       continue;
 
     Register Reg = MO.getReg();
-    if (Register::isPhysicalRegister(Reg) || !MRI.use_nodbg_empty(Reg))
+    if (Reg.isPhysical() || !MRI.use_nodbg_empty(Reg))
       return false;
   }
   return true;
@@ -333,7 +333,7 @@ std::optional<ValueAndVReg> getConstantVRegValWithLookThrough(
       break;
     case TargetOpcode::COPY:
       VReg = MI->getOperand(1).getReg();
-      if (Register::isPhysicalRegister(VReg))
+      if (VReg.isPhysical())
         return std::nullopt;
       break;
     case TargetOpcode::G_INTTOPTR:
@@ -1035,14 +1035,19 @@ std::optional<ValueAndVReg> getAnyConstantSplat(Register VReg,
   if (!MI)
     return std::nullopt;
 
-  if (!isBuildVectorOp(MI->getOpcode()))
+  bool isConcatVectorsOp = MI->getOpcode() == TargetOpcode::G_CONCAT_VECTORS;
+  if (!isBuildVectorOp(MI->getOpcode()) && !isConcatVectorsOp)
     return std::nullopt;
 
   std::optional<ValueAndVReg> SplatValAndReg;
   for (MachineOperand &Op : MI->uses()) {
     Register Element = Op.getReg();
+    // If we have a G_CONCAT_VECTOR, we recursively look into the
+    // vectors that we're concatenating to see if they're splats.
     auto ElementValAndReg =
-        getAnyConstantVRegValWithLookThrough(Element, MRI, true, true);
+        isConcatVectorsOp
+            ? getAnyConstantSplat(Element, MRI, AllowUndef)
+            : getAnyConstantVRegValWithLookThrough(Element, MRI, true, true);
 
     // If AllowUndef, treat undef as value that will result in a constant splat.
     if (!ElementValAndReg) {
@@ -1055,7 +1060,7 @@ std::optional<ValueAndVReg> getAnyConstantSplat(Register VReg,
     if (!SplatValAndReg)
       SplatValAndReg = ElementValAndReg;
 
-    // Different constant then the one already recorded, not a constant splat.
+    // Different constant than the one already recorded, not a constant splat.
     if (SplatValAndReg->Value != ElementValAndReg->Value)
       return std::nullopt;
   }

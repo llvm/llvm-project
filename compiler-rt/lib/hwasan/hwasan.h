@@ -144,6 +144,8 @@ void HwasanOnDeadlySignal(int signo, void *info, void *context);
 
 void HwasanInstallAtForkHandler();
 
+void InstallAtExitCheckLeaks();
+
 void UpdateMemoryUsage();
 
 void AppendToErrorMessageBuffer(const char *buffer);

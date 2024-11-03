@@ -13,9 +13,7 @@
 
 using namespace clang::ast_matchers;
 
-namespace clang {
-namespace tidy {
-namespace cppcoreguidelines {
+namespace clang::tidy::cppcoreguidelines {
 
 static bool isControlStatement(const Stmt *S) {
   return isa<IfStmt, SwitchStmt, ForStmt, WhileStmt, DoStmt, ReturnStmt,
@@ -315,6 +313,4 @@ void PreferMemberInitializerCheck::check(
   }
 }
 
-} // namespace cppcoreguidelines
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::cppcoreguidelines

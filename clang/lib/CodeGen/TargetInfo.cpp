@@ -1078,7 +1078,7 @@ static llvm::Type* X86AdjustInlineAsmType(CodeGen::CodeGenFunction &CGF,
                      .Cases("y", "&y", "^Ym", true)
                      .Default(false);
   if (IsMMXCons && Ty->isVectorTy()) {
-    if (cast<llvm::VectorType>(Ty)->getPrimitiveSizeInBits().getFixedSize() !=
+    if (cast<llvm::VectorType>(Ty)->getPrimitiveSizeInBits().getFixedValue() !=
         64) {
       // Invalid MMX constraint
       return nullptr;
@@ -2417,7 +2417,7 @@ public:
     if (info.isDirect()) {
       llvm::Type *ty = info.getCoerceToType();
       if (llvm::VectorType *vectorTy = dyn_cast_or_null<llvm::VectorType>(ty))
-        return vectorTy->getPrimitiveSizeInBits().getFixedSize() > 128;
+        return vectorTy->getPrimitiveSizeInBits().getFixedValue() > 128;
     }
     return false;
   }
@@ -3592,7 +3592,7 @@ GetX86_64ByValArgumentPair(llvm::Type *Lo, llvm::Type *Hi,
   // (e.g. i32 and i32) then the resultant struct type ({i32,i32}) won't have
   // the second element at offset 8.  Check for this:
   unsigned LoSize = (unsigned)TD.getTypeAllocSize(Lo);
-  unsigned HiAlign = TD.getABITypeAlignment(Hi);
+  llvm::Align HiAlign = TD.getABITypeAlign(Hi);
   unsigned HiStart = llvm::alignTo(LoSize, HiAlign);
   assert(HiStart != 0 && HiStart <= 8 && "Invalid x86-64 argument pair!");
 
@@ -4169,13 +4169,13 @@ Address X86_64ABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
     // FIXME: Our choice of alignment here and below is probably pessimistic.
     llvm::Value *V = CGF.Builder.CreateAlignedLoad(
         TyLo, CGF.Builder.CreateBitCast(RegLoAddr, PTyLo),
-        CharUnits::fromQuantity(getDataLayout().getABITypeAlignment(TyLo)));
+        CharUnits::fromQuantity(getDataLayout().getABITypeAlign(TyLo)));
     CGF.Builder.CreateStore(V, CGF.Builder.CreateStructGEP(Tmp, 0));
 
     // Copy the second element.
     V = CGF.Builder.CreateAlignedLoad(
         TyHi, CGF.Builder.CreateBitCast(RegHiAddr, PTyHi),
-        CharUnits::fromQuantity(getDataLayout().getABITypeAlignment(TyHi)));
+        CharUnits::fromQuantity(getDataLayout().getABITypeAlign(TyHi)));
     CGF.Builder.CreateStore(V, CGF.Builder.CreateStructGEP(Tmp, 1));
 
     RegAddr = CGF.Builder.CreateElementBitCast(Tmp, LTy);
@@ -8445,6 +8445,10 @@ public:
       LargeRet = true;
       return getNaturalAlignIndirect(Ty);
     }
+    // An i8 return value should not be extended to i16, since AVR has 8-bit
+    // registers.
+    if (Ty->isIntegralOrEnumerationType() && getContext().getTypeSize(Ty) <= 8)
+      return ABIArgInfo::getDirect();
     // Otherwise we follow the default way which is compatible.
     return DefaultABIInfo::classifyReturnType(Ty);
   }
@@ -9844,7 +9848,7 @@ private:
 
     // Check if Ty is a usable substitute for the coercion type.
     bool isUsableType(llvm::StructType *Ty) const {
-      return llvm::makeArrayRef(Elems) == Ty->elements();
+      return llvm::ArrayRef(Elems) == Ty->elements();
     }
 
     // Get the coercion type as a literal struct type.
@@ -11004,11 +11008,6 @@ void RISCVABIInfo::computeInfo(CGFunctionInfo &FI) const {
     }
   }
 
-  // We must track the number of GPRs used in order to conform to the RISC-V
-  // ABI, as integer scalars passed in registers should have signext/zeroext
-  // when promoted, but are anyext if passed on the stack. As GPR usage is
-  // different for variadic arguments, we must also track whether we are
-  // examining a vararg or not.
   int ArgGPRsLeft = IsRetIndirect ? NumArgGPRs - 1 : NumArgGPRs;
   int ArgFPRsLeft = FLen ? NumArgFPRs : 0;
   int NumFixedArgs = FI.getNumRequiredArgs();
@@ -11200,7 +11199,7 @@ ABIArgInfo RISCVABIInfo::coerceAndExpandFPCCEligibleStruct(
   }
 
   CharUnits Field2Align =
-      CharUnits::fromQuantity(getDataLayout().getABITypeAlignment(Field2Ty));
+      CharUnits::fromQuantity(getDataLayout().getABITypeAlign(Field2Ty));
   CharUnits Field1End = Field1Off +
       CharUnits::fromQuantity(getDataLayout().getTypeStoreSize(Field1Ty));
   CharUnits Field2OffNoPadNoPack = Field1End.alignTo(Field2Align);
@@ -11286,7 +11285,6 @@ ABIArgInfo RISCVABIInfo::classifyArgumentType(QualType Ty, bool IsFixed,
   }
 
   uint64_t NeededAlign = getContext().getTypeAlign(Ty);
-  bool MustUseStack = false;
   // Determine the number of GPRs needed to pass the current argument
   // according to the ABI. 2*XLen-aligned varargs are passed in "aligned"
   // register pairs, so may consume 3 registers.
@@ -11297,7 +11295,6 @@ ABIArgInfo RISCVABIInfo::classifyArgumentType(QualType Ty, bool IsFixed,
     NeededArgGPRs = 2;
 
   if (NeededArgGPRs > ArgGPRsLeft) {
-    MustUseStack = true;
     NeededArgGPRs = ArgGPRsLeft;
   }
 
@@ -11308,14 +11305,13 @@ ABIArgInfo RISCVABIInfo::classifyArgumentType(QualType Ty, bool IsFixed,
     if (const EnumType *EnumTy = Ty->getAs<EnumType>())
       Ty = EnumTy->getDecl()->getIntegerType();
 
-    // All integral types are promoted to XLen width, unless passed on the
-    // stack.
-    if (Size < XLen && Ty->isIntegralOrEnumerationType() && !MustUseStack) {
+    // All integral types are promoted to XLen width
+    if (Size < XLen && Ty->isIntegralOrEnumerationType()) {
       return extendType(Ty);
     }
 
     if (const auto *EIT = Ty->getAs<BitIntType>()) {
-      if (EIT->getNumBits() < XLen && !MustUseStack)
+      if (EIT->getNumBits() < XLen)
         return extendType(Ty);
       if (EIT->getNumBits() > 128 ||
           (!getContext().getTargetInfo().hasInt128Type() &&
@@ -11963,7 +11959,7 @@ ABIArgInfo LoongArchABIInfo::coerceAndExpandFARsEligibleStruct(
   }
 
   CharUnits Field2Align =
-      CharUnits::fromQuantity(getDataLayout().getABITypeAlignment(Field2Ty));
+      CharUnits::fromQuantity(getDataLayout().getABITypeAlign(Field2Ty));
   CharUnits Field1End =
       Field1Off +
       CharUnits::fromQuantity(getDataLayout().getTypeStoreSize(Field1Ty));

@@ -51,37 +51,8 @@ constexpr bool test() {
   return true;
 }
 
-void testException() {
-#ifndef TEST_HAS_NO_EXCEPTIONS
-
-  // int
-  {
-    const std::expected<int, int> e(std::unexpect, 5);
-    try {
-      e.value();
-      assert(false);
-    } catch (const std::bad_expected_access<int>& ex) {
-      assert(ex.error() == 5);
-    }
-  }
-
-  // MoveOnly
-  {
-    std::expected<int, MoveOnly> e(std::unexpect, 5);
-    try {
-      std::move(e).value();
-      assert(false);
-    } catch (const std::bad_expected_access<MoveOnly>& ex) {
-      assert(ex.error() == 5);
-    }
-  }
-
-#endif // TEST_HAS_NO_EXCEPTIONS
-}
-
 int main(int, char**) {
   test();
   static_assert(test());
-  testException();
   return 0;
 }

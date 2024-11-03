@@ -42,5 +42,9 @@ mlir::Value genSize(fir::FirOpBuilder &builder, mlir::Location loc,
 mlir::Value genSizeDim(fir::FirOpBuilder &builder, mlir::Location loc,
                        mlir::Value array, mlir::Value dim);
 
+/// Generate call to `Is_contiguous` runtime routine.
+mlir::Value genIsContiguous(fir::FirOpBuilder &builder, mlir::Location loc,
+                            mlir::Value array);
+
 } // namespace fir::runtime
 #endif // FORTRAN_OPTIMIZER_BUILDER_RUNTIME_INQUIRY_H

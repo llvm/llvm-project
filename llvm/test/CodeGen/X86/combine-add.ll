@@ -249,9 +249,9 @@ define void @PR52039(ptr %pa, ptr %pb) {
 ; AVX1-NEXT:    vpsubd 16(%rdi), %xmm0, %xmm1
 ; AVX1-NEXT:    vpsubd (%rdi), %xmm0, %xmm0
 ; AVX1-NEXT:    vpaddd %xmm0, %xmm0, %xmm2
-; AVX1-NEXT:    vpaddd %xmm2, %xmm0, %xmm2
+; AVX1-NEXT:    vpaddd %xmm0, %xmm2, %xmm2
 ; AVX1-NEXT:    vpaddd %xmm1, %xmm1, %xmm3
-; AVX1-NEXT:    vpaddd %xmm3, %xmm1, %xmm3
+; AVX1-NEXT:    vpaddd %xmm1, %xmm3, %xmm3
 ; AVX1-NEXT:    vmovdqu %xmm1, 16(%rsi)
 ; AVX1-NEXT:    vmovdqu %xmm0, (%rsi)
 ; AVX1-NEXT:    vmovdqu %xmm3, 16(%rdi)

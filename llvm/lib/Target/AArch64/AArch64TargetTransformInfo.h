@@ -170,8 +170,10 @@ public:
                                  const Instruction *I = nullptr);
 
   InstructionCost getVectorInstrCost(unsigned Opcode, Type *Val,
-                                     unsigned Index);
+                                     TTI::TargetCostKind CostKind,
+                                     unsigned Index, Value *Op0, Value *Op1);
   InstructionCost getVectorInstrCost(const Instruction &I, Type *Val,
+                                     TTI::TargetCostKind CostKind,
                                      unsigned Index);
 
   InstructionCost getMinMaxReductionCost(VectorType *Ty, VectorType *CondTy,

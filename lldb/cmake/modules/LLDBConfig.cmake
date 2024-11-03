@@ -65,7 +65,6 @@ add_optional_dependency(LLDB_ENABLE_PYTHON "Enable Python scripting support in L
 add_optional_dependency(LLDB_ENABLE_LIBXML2 "Enable Libxml 2 support in LLDB" LibXml2 LIBXML2_FOUND VERSION 2.8)
 add_optional_dependency(LLDB_ENABLE_FBSDVMCORE "Enable libfbsdvmcore support in LLDB" FBSDVMCore FBSDVMCore_FOUND QUIET)
 
-option(LLDB_USE_SYSTEM_SIX "Use six.py shipped with system and do not install a copy of it" OFF)
 option(LLDB_USE_ENTITLEMENTS "When codesigning, use entitlements if available" ON)
 option(LLDB_BUILD_FRAMEWORK "Build LLDB.framework (Darwin only)" OFF)
 option(LLDB_NO_INSTALL_DEFAULT_RPATH "Disable default RPATH settings in binaries" OFF)
@@ -101,6 +100,20 @@ if(LLDB_BUILD_FRAMEWORK)
   # Essentially, emit the framework's dSYM outside of the framework directory.
   set(LLDB_DEBUGINFO_INSTALL_PREFIX ${CMAKE_BINARY_DIR}/${CMAKE_CFG_INTDIR}/bin CACHE STRING
       "Directory to emit dSYM files stripped from executables and libraries (Darwin Only)")
+
+  # Custom target to remove the targets (binaries, directories) that were
+  # copied into LLDB.framework in the build tree.
+  #
+  # These targets need to be removed before the install phase because otherwise
+  # because otherwise they may overwrite already installed binaries with the
+  # wrong RPATH (i.e. build RPATH instead of install RPATH).
+  #
+  # This target needs to be created here (rather than in API/CMakeLists.txt)
+  # because add_lldb_tool creates the custom rules to copy the binaries before
+  # the framework target exists and that's the only place where this is
+  # tracked.
+  add_custom_target(lldb-framework-cleanup
+    COMMENT "Cleaning up build-tree frameworks in preparation for install")
 endif()
 
 if(APPLE AND CMAKE_GENERATOR STREQUAL Xcode)

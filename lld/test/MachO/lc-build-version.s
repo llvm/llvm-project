@@ -2,67 +2,67 @@
 
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin %s -o %t.o
 
-# RUN: %lld -platform_version macos 10.14 10.15 -o %t.macos_10_14 %t.o
-# RUN: llvm-objdump --macho --all-headers %t.macos_10_14 | FileCheck %s --check-prefix=MACOS_10_14
+# RUN: %lld -platform_version macos 10.14 10.15 -o %t.macos-10-14 %t.o
+# RUN: llvm-objdump --macho --all-headers %t.macos-10-14 | FileCheck %s --check-prefix=MACOS-10-14
 
-# MACOS_10_14: cmd LC_BUILD_VERSION
-# MACOS_10_14-NEXT: cmdsize 32
-# MACOS_10_14-NEXT: platform macos
-# MACOS_10_14-NEXT: sdk 10.15
-# MACOS_10_14-NEXT: minos 10.14
-# MACOS_10_14-NEXT: ntools 1
-# MACOS_10_14-NEXT: tool ld
-# MACOS_10_14-NEXT: version {{[0-9\.]+}}
+# MACOS-10-14: cmd LC_BUILD_VERSION
+# MACOS-10-14-NEXT: cmdsize 32
+# MACOS-10-14-NEXT: platform macos
+# MACOS-10-14-NEXT: sdk 10.15
+# MACOS-10-14-NEXT: minos 10.14
+# MACOS-10-14-NEXT: ntools 1
+# MACOS-10-14-NEXT: tool ld
+# MACOS-10-14-NEXT: version {{[0-9\.]+}}
 
-# RUN: %lld -platform_version macos 10.13 10.15 -o %t.macos_10_13 %t.o
-# RUN: llvm-objdump --macho --all-headers %t.macos_10_13 | FileCheck %s --check-prefix=MACOS_10_13
+# RUN: %lld -platform_version macos 10.13 10.15 -o %t.macos-10-13 %t.o
+# RUN: llvm-objdump --macho --all-headers %t.macos-10-13 | FileCheck %s --check-prefix=MACOS-10-13
 
-# MACOS_10_13: cmd LC_VERSION_MIN_MACOSX
-# MACOS_10_13-NEXT: cmdsize 16
-# MACOS_10_13-NEXT: version 10.13
-# MACOS_10_13-NEXT: sdk 10.15
+# MACOS-10-13: cmd LC_VERSION_MIN_MACOSX
+# MACOS-10-13-NEXT: cmdsize 16
+# MACOS-10-13-NEXT: version 10.13
+# MACOS-10-13-NEXT: sdk 10.15
 
-# RUN: %no-arg-lld -arch x86_64 -platform_version ios 12.0 10.15 -o %t.ios_12_0 %t.o
-# RUN: llvm-objdump --macho --all-headers %t.ios_12_0 | FileCheck %s --check-prefix=IOS_12_0
-# RUN: %no-arg-lld -arch x86_64 -platform_version ios-simulator 13.0 10.15 -o %t.ios_sim_13_0 %t.o
-# RUN: llvm-objdump --macho --all-headers %t.ios_sim_13_0 | FileCheck %s --check-prefix=IOS_12_0
+# RUN: %no-arg-lld -arch x86_64 -platform_version ios 12.0 10.15 -o %t.ios-12-0 %t.o
+# RUN: llvm-objdump --macho --all-headers %t.ios-12-0 | FileCheck %s --check-prefix=IOS-12-0
+# RUN: %no-arg-lld -arch x86_64 -platform_version ios-simulator 13.0 10.15 -o %t.ios-sim-13-0 %t.o
+# RUN: llvm-objdump --macho --all-headers %t.ios-sim-13-0 | FileCheck %s --check-prefix=IOS-12-0
 
-# IOS_12_0: cmd LC_BUILD_VERSION
+# IOS-12-0: cmd LC_BUILD_VERSION
 
-# RUN: %no-arg-lld -arch x86_64 -platform_version ios 11.0 10.15 -o %t.ios_11_0 %t.o
-# RUN: llvm-objdump --macho --all-headers %t.ios_11_0 | FileCheck %s --check-prefix=IOS_11_0
-# RUN: %no-arg-lld -arch x86_64 -platform_version ios-simulator 12.0 10.15 -o %t.ios_sim_12_0 %t.o
-# RUN: llvm-objdump --macho --all-headers %t.ios_sim_12_0 | FileCheck %s --check-prefix=IOS_11_0
+# RUN: %no-arg-lld -arch x86_64 -platform_version ios 11.0 10.15 -o %t.ios-11-0 %t.o
+# RUN: llvm-objdump --macho --all-headers %t.ios-11-0 | FileCheck %s --check-prefix=IOS-11-0
+# RUN: %no-arg-lld -arch x86_64 -platform_version ios-simulator 12.0 10.15 -o %t.ios-sim-12-0 %t.o
+# RUN: llvm-objdump --macho --all-headers %t.ios-sim-12-0 | FileCheck %s --check-prefix=IOS-11-0
 
-# IOS_11_0: cmd LC_VERSION_MIN_IPHONEOS
+# IOS-11-0: cmd LC_VERSION_MIN_IPHONEOS
 
-# RUN: %no-arg-lld -arch x86_64 -platform_version tvos 12.0 10.15 -o %t.tvos_12_0 %t.o
-# RUN: llvm-objdump --macho --all-headers %t.tvos_12_0 | FileCheck %s --check-prefix=TVOS_12_0
-# RUN: %no-arg-lld -arch x86_64 -platform_version tvos-simulator 13.0 10.15 -o %t.tvos_sim_13_0 %t.o
-# RUN: llvm-objdump --macho --all-headers %t.tvos_sim_13_0 | FileCheck %s --check-prefix=TVOS_12_0
+# RUN: %no-arg-lld -arch x86_64 -platform_version tvos 12.0 10.15 -o %t.tvos-12-0 %t.o
+# RUN: llvm-objdump --macho --all-headers %t.tvos-12-0 | FileCheck %s --check-prefix=TVOS-12-0
+# RUN: %no-arg-lld -arch x86_64 -platform_version tvos-simulator 13.0 10.15 -o %t.tvos-sim-13-0 %t.o
+# RUN: llvm-objdump --macho --all-headers %t.tvos-sim-13-0 | FileCheck %s --check-prefix=TVOS-12-0
 
-# TVOS_12_0: cmd LC_BUILD_VERSION
+# TVOS-12-0: cmd LC_BUILD_VERSION
 
-# RUN: %no-arg-lld -arch x86_64 -platform_version tvos 11.0 10.15 -o %t.tvos_11_0 %t.o
-# RUN: llvm-objdump --macho --all-headers %t.tvos_11_0 | FileCheck %s --check-prefix=TVOS_11_0
-# RUN: %no-arg-lld -arch x86_64 -platform_version tvos-simulator 12.0 10.15 -o %t.tvos_sim_12_0 %t.o
-# RUN: llvm-objdump --macho --all-headers %t.tvos_sim_12_0 | FileCheck %s --check-prefix=TVOS_11_0
+# RUN: %no-arg-lld -arch x86_64 -platform_version tvos 11.0 10.15 -o %t.tvos-11-0 %t.o
+# RUN: llvm-objdump --macho --all-headers %t.tvos-11-0 | FileCheck %s --check-prefix=TVOS-11-0
+# RUN: %no-arg-lld -arch x86_64 -platform_version tvos-simulator 12.0 10.15 -o %t.tvos-sim-12-0 %t.o
+# RUN: llvm-objdump --macho --all-headers %t.tvos-sim-12-0 | FileCheck %s --check-prefix=TVOS-11-0
 
-# TVOS_11_0: cmd LC_VERSION_MIN_TVOS
+# TVOS-11-0: cmd LC_VERSION_MIN_TVOS
 
-# RUN: %no-arg-lld -arch x86_64 -platform_version watchos 5.0 10.15 -o %t.watchos_5_0 %t.o
-# RUN: llvm-objdump --macho --all-headers %t.watchos_5_0 | FileCheck %s --check-prefix=WATCHOS_5_0
-# RUN: %no-arg-lld -arch x86_64 -platform_version watchos-simulator 6.0 10.15 -o %t.watchos_sim_6_0 %t.o
-# RUN: llvm-objdump --macho --all-headers %t.watchos_sim_6_0 | FileCheck %s --check-prefix=WATCHOS_5_0
+# RUN: %no-arg-lld -arch x86_64 -platform_version watchos 5.0 10.15 -o %t.watchos-5-0 %t.o
+# RUN: llvm-objdump --macho --all-headers %t.watchos-5-0 | FileCheck %s --check-prefix=WATCHOS-5-0
+# RUN: %no-arg-lld -arch x86_64 -platform_version watchos-simulator 6.0 10.15 -o %t.watchos-sim-6-0 %t.o
+# RUN: llvm-objdump --macho --all-headers %t.watchos-sim-6-0 | FileCheck %s --check-prefix=WATCHOS-5-0
 
-# WATCHOS_5_0: cmd LC_BUILD_VERSION
+# WATCHOS-5-0: cmd LC_BUILD_VERSION
 
-# RUN: %no-arg-lld -arch x86_64 -platform_version watchos 4.0 10.15 -o %t.watchos_4_0 %t.o
-# RUN: llvm-objdump --macho --all-headers %t.watchos_4_0 | FileCheck %s --check-prefix=WATCHOS_4_0
-# RUN: %no-arg-lld -arch x86_64 -platform_version watchos-simulator 5.0 10.15 -o %t.watchos_sim_5_0 %t.o
-# RUN: llvm-objdump --macho --all-headers %t.watchos_sim_5_0 | FileCheck %s --check-prefix=WATCHOS_4_0
+# RUN: %no-arg-lld -arch x86_64 -platform_version watchos 4.0 10.15 -o %t.watchos-4-0 %t.o
+# RUN: llvm-objdump --macho --all-headers %t.watchos-4-0 | FileCheck %s --check-prefix=WATCHOS-4-0
+# RUN: %no-arg-lld -arch x86_64 -platform_version watchos-simulator 5.0 10.15 -o %t.watchos-sim-5-0 %t.o
+# RUN: llvm-objdump --macho --all-headers %t.watchos-sim-5-0 | FileCheck %s --check-prefix=WATCHOS-4-0
 
-# WATCHOS_4_0: cmd LC_VERSION_MIN_WATCHOS
+# WATCHOS-4-0: cmd LC_VERSION_MIN_WATCHOS
 
 .text
 .global _main

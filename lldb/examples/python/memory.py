@@ -272,5 +272,5 @@ if __name__ == '__main__':
 def __lldb_init_module(debugger, internal_dict):
     memfind_command.__doc__ = create_memfind_options().format_help()
     debugger.HandleCommand(
-        'command script add -f memory.memfind_command memfind')
+        'command script add -o -f memory.memfind_command memfind')
     print('"memfind" command installed, use the "--help" option for detailed help')

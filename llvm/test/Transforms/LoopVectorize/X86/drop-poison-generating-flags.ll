@@ -1,4 +1,4 @@
-; RUN: opt %s -passes=loop-vectorize -force-vector-width=4 -force-vector-interleave=1 -S | FileCheck %s
+; RUN: opt -opaque-pointers=0 %s -passes=loop-vectorize -force-vector-width=4 -force-vector-interleave=1 -S | FileCheck %s
 
 ; Make sure that integer poison-generating flags (i.e., nuw/nsw, exact and inbounds)
 ; are dropped from instructions in blocks that need predication and are linearized

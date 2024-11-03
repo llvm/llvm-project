@@ -13,6 +13,7 @@
 #include "mlir/Interfaces/InferTypeOpInterface.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/TypeSwitch.h"
+#include <optional>
 
 using namespace mlir;
 using namespace mlir::pdl;
@@ -48,7 +49,7 @@ static bool hasBindingUse(Operation *op) {
 /// is used by a "binding" operation. On failure, emits an error.
 static LogicalResult verifyHasBindingUse(Operation *op) {
   // If the parent is not a pattern, there is nothing to do.
-  if (!isa<PatternOp>(op->getParentOp()))
+  if (!llvm::isa_and_nonnull<PatternOp>(op->getParentOp()))
     return success();
   if (hasBindingUse(op))
     return success();
@@ -206,7 +207,7 @@ static LogicalResult verifyResultTypesAreInferrable(OperationOp op,
     std::optional<StringRef> rawOpName = op.getOpName();
     if (!rawOpName)
       return success();
-    Optional<RegisteredOperationName> opName =
+    std::optional<RegisteredOperationName> opName =
         RegisteredOperationName::lookup(*rawOpName, op.getContext());
     if (!opName)
       return success();
@@ -265,7 +266,7 @@ static LogicalResult verifyResultTypesAreInferrable(OperationOp op,
 }
 
 LogicalResult OperationOp::verify() {
-  bool isWithinRewrite = isa<RewriteOp>((*this)->getParentOp());
+  bool isWithinRewrite = isa_and_nonnull<RewriteOp>((*this)->getParentOp());
   if (isWithinRewrite && !getOpName())
     return emitOpError("must have an operation name when nested within "
                        "a `pdl.rewrite`");
@@ -381,7 +382,8 @@ LogicalResult PatternOp::verifyRegions() {
 }
 
 void PatternOp::build(OpBuilder &builder, OperationState &state,
-                      Optional<uint16_t> benefit, Optional<StringRef> name) {
+                      std::optional<uint16_t> benefit,
+                      std::optional<StringRef> name) {
   build(builder, state, builder.getI16IntegerAttr(benefit ? *benefit : 0),
         name ? builder.getStringAttr(*name) : StringAttr());
   state.regions[0]->emplaceBlock();

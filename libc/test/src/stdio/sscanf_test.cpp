@@ -7,10 +7,14 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/__support/CPP/limits.h"
+#include "src/__support/FPUtil/FPBits.h"
+#include "src/__support/FPUtil/PlatformDefs.h"
+
 #include "src/stdio/sscanf.h"
 
 #include <stdio.h> // For EOF
 
+#include "utils/UnitTest/FPMatcher.h"
 #include "utils/UnitTest/Test.h"
 
 TEST(LlvmLibcSScanfTest, SimpleStringConv) {
@@ -207,6 +211,365 @@ TEST(LlvmLibcSScanfTest, IntConvNoWriteTests) {
   ret_val = __llvm_libc::sscanf("123", "%*i", &result);
   EXPECT_EQ(ret_val, 1);
   EXPECT_EQ(result, 0);
+}
+
+TEST(LlvmLibcSScanfTest, FloatConvSimple) {
+  int ret_val;
+  float result = 0;
+
+  float inf = __llvm_libc::fputil::FPBits<float>::inf().get_val();
+  float nan = __llvm_libc::fputil::FPBits<float>::build_nan(1);
+
+  ret_val = __llvm_libc::sscanf("123", "%f", &result);
+  EXPECT_EQ(ret_val, 1);
+  EXPECT_FP_EQ(result, 123.0);
+
+  ret_val = __llvm_libc::sscanf("456.1", "%a", &result);
+  EXPECT_EQ(ret_val, 1);
+  EXPECT_FP_EQ(result, 456.1);
+
+  ret_val = __llvm_libc::sscanf("0x789.ap0", "%e", &result);
+  EXPECT_EQ(ret_val, 1);
+  EXPECT_FP_EQ(result, 0x789.ap0);
+
+  ret_val = __llvm_libc::sscanf("0x.8", "%e", &result);
+  EXPECT_EQ(ret_val, 1);
+  EXPECT_FP_EQ(result, 0x0.8p0);
+
+  ret_val = __llvm_libc::sscanf("0x8.", "%e", &result);
+  EXPECT_EQ(ret_val, 1);
+  EXPECT_FP_EQ(result, 0x8.0p0);
+
+  ret_val = __llvm_libc::sscanf("+12.0e1", "%g", &result);
+  EXPECT_EQ(ret_val, 1);
+  EXPECT_FP_EQ(result, 12.0e1);
+
+  ret_val = __llvm_libc::sscanf("inf", "%F", &result);
+  EXPECT_EQ(ret_val, 1);
+  EXPECT_FP_EQ(result, inf);
+
+  ret_val = __llvm_libc::sscanf("NaN", "%A", &result);
+  EXPECT_EQ(ret_val, 1);
+  EXPECT_FP_EQ(result, nan);
+
+  ret_val = __llvm_libc::sscanf("-InFiNiTy", "%E", &result);
+  EXPECT_EQ(ret_val, 1);
+  EXPECT_FP_EQ(result, -inf);
+
+  ret_val = __llvm_libc::sscanf("1e10", "%G", &result);
+  EXPECT_EQ(ret_val, 1);
+  EXPECT_FP_EQ(result, 1e10);
+
+  ret_val = __llvm_libc::sscanf(".1", "%G", &result);
+  EXPECT_EQ(ret_val, 1);
+  EXPECT_FP_EQ(result, 0.1);
+
+  ret_val = __llvm_libc::sscanf("1.", "%G", &result);
+  EXPECT_EQ(ret_val, 1);
+  EXPECT_FP_EQ(result, 1.0);
+
+  ret_val = __llvm_libc::sscanf("0", "%f", &result);
+  EXPECT_EQ(ret_val, 1);
+  EXPECT_FP_EQ(result, 0.0);
+
+  ret_val = __llvm_libc::sscanf("Not a float", "%f", &result);
+  EXPECT_EQ(ret_val, 0);
+}
+
+TEST(LlvmLibcSScanfTest, FloatConvLengthModifier) {
+  int ret_val;
+  double d_result = 0;
+  long double ld_result = 0;
+
+  double d_inf = __llvm_libc::fputil::FPBits<double>::inf().get_val();
+  long double ld_nan = __llvm_libc::fputil::FPBits<long double>::build_nan(1);
+
+  ret_val = __llvm_libc::sscanf("123", "%lf", &d_result);
+  EXPECT_EQ(ret_val, 1);
+  EXPECT_FP_EQ(d_result, 123.0);
+
+  ret_val = __llvm_libc::sscanf("456.1", "%La", &ld_result);
+  EXPECT_EQ(ret_val, 1);
+  EXPECT_FP_EQ(ld_result, 456.1L);
+
+  ret_val = __llvm_libc::sscanf("inf", "%le", &d_result);
+  EXPECT_EQ(ret_val, 1);
+  EXPECT_FP_EQ(d_result, d_inf);
+
+  ret_val = __llvm_libc::sscanf("nan", "%Lg", &ld_result);
+  EXPECT_EQ(ret_val, 1);
+  EXPECT_FP_EQ(ld_result, ld_nan);
+
+  ret_val = __llvm_libc::sscanf("1e-300", "%lF", &d_result);
+  EXPECT_EQ(ret_val, 1);
+  EXPECT_FP_EQ(d_result, 1e-300);
+
+  ret_val = __llvm_libc::sscanf("1.0e600", "%LA", &ld_result);
+  EXPECT_EQ(ret_val, 1);
+// 1e600 may be larger than the maximum long double (if long double is double).
+// In that case both of these should be evaluated as inf.
+#ifdef LONG_DOUBLE_IS_DOUBLE
+  EXPECT_FP_EQ(ld_result, d_inf);
+#else
+  EXPECT_FP_EQ(ld_result, 1.0e600L);
+#endif
+}
+
+TEST(LlvmLibcSScanfTest, FloatConvLongNumber) {
+  int ret_val;
+  float result = 0;
+  double d_result = 0;
+
+  // 32 characters
+  ret_val =
+      __llvm_libc::sscanf("123456789012345678901234567890.0", "%f", &result);
+  EXPECT_EQ(ret_val, 1);
+  EXPECT_FP_EQ(result, 123456789012345678901234567890.0f);
+
+  // 64 characters
+  ret_val = __llvm_libc::sscanf(
+      "123456789012345678901234567890123456789012345678901234567890.000", "%la",
+      &d_result);
+  EXPECT_EQ(ret_val, 1);
+  EXPECT_FP_EQ(
+      d_result,
+      123456789012345678901234567890123456789012345678901234567890.000);
+
+  // 128 characters
+  ret_val = __llvm_libc::sscanf(
+      "123456789012345678901234567890123456789012345678901234567890"
+      "123456789012345678901234567890123456789012345678901234567890.0000000",
+      "%le", &d_result);
+  EXPECT_EQ(ret_val, 1);
+  EXPECT_FP_EQ(
+      d_result,
+      123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890.0000000);
+
+  // 256 characters
+  ret_val = __llvm_libc::sscanf("10000000000000000000000000000000"
+                                "00000000000000000000000000000000"
+                                "00000000000000000000000000000000"
+                                "00000000000000000000000000000000"
+                                "00000000000000000000000000000000"
+                                "00000000000000000000000000000000"
+                                "00000000000000000000000000000000"
+                                "00000000000000000000000000000000",
+                                "%lf", &d_result);
+  EXPECT_EQ(ret_val, 1);
+  EXPECT_FP_EQ(d_result, 1e255);
+
+  // 288 characters
+  ret_val = __llvm_libc::sscanf("10000000000000000000000000000000"
+                                "00000000000000000000000000000000"
+                                "00000000000000000000000000000000"
+                                "00000000000000000000000000000000"
+                                "00000000000000000000000000000000"
+                                "00000000000000000000000000000000"
+                                "00000000000000000000000000000000"
+                                "00000000000000000000000000000000"
+                                "00000000000000000000000000000000",
+                                "%lf", &d_result);
+  EXPECT_EQ(ret_val, 1);
+  EXPECT_FP_EQ(d_result, 1e287);
+}
+
+TEST(LlvmLibcSScanfTest, FloatConvComplexParsing) {
+  int ret_val;
+  float result = 0;
+
+  float inf = __llvm_libc::fputil::FPBits<float>::inf().get_val();
+  float nan = __llvm_libc::fputil::FPBits<float>::build_nan(1);
+
+  ret_val = __llvm_libc::sscanf("0x1.0e3", "%f", &result);
+  EXPECT_EQ(ret_val, 1);
+  EXPECT_FP_EQ(result, 0x1.0e3p0);
+
+  ret_val = __llvm_libc::sscanf("", "%a", &result);
+  EXPECT_EQ(ret_val, 0);
+
+  ret_val = __llvm_libc::sscanf("+", "%a", &result);
+  EXPECT_EQ(ret_val, 0);
+
+  ret_val = __llvm_libc::sscanf("-", "%a", &result);
+  EXPECT_EQ(ret_val, 0);
+
+  ret_val = __llvm_libc::sscanf("+.", "%a", &result);
+  EXPECT_EQ(ret_val, 0);
+
+  ret_val = __llvm_libc::sscanf("-.e+10", "%a", &result);
+  EXPECT_EQ(ret_val, 0);
+
+  // This is a specific example from the standard. Its behavior diverges from
+  // other implementations that accept "100e" as being the same as "100e0"
+  ret_val = __llvm_libc::sscanf("100er", "%a", &result);
+  EXPECT_EQ(ret_val, 0);
+
+  ret_val = __llvm_libc::sscanf("nah", "%a", &result);
+  EXPECT_EQ(ret_val, 0);
+
+  ret_val = __llvm_libc::sscanf("indirection", "%a", &result);
+  EXPECT_EQ(ret_val, 0);
+
+  ret_val = __llvm_libc::sscanf("infnan", "%a", &result);
+  EXPECT_EQ(ret_val, 1);
+  EXPECT_FP_EQ(result, inf);
+
+  ret_val = __llvm_libc::sscanf("naninf", "%a", &result);
+  EXPECT_EQ(ret_val, 1);
+  EXPECT_FP_EQ(result, nan);
+
+  ret_val = __llvm_libc::sscanf("infinityinfinity", "%a", &result);
+  EXPECT_EQ(ret_val, 1);
+  EXPECT_FP_EQ(result, inf);
+
+  // For %f to accept a string as representing it has to be either "inf" or
+  // "infinity" when it stops. It only stops when it encounters a character that
+  // isn't the next one in the string, so it accepts "infi" as the the longest
+  // prefix of a possibly valid floating-point number, but determines that it is
+  // not valid and returns a matching failure. This is because it can only unget
+  // one character so when it finds that the character after the second 'i' is
+  // not the next character in "infinity" it can't rewind to the point where it
+  // had just "inf".
+  ret_val = __llvm_libc::sscanf("infi", "%a", &result);
+  EXPECT_EQ(ret_val, 0);
+
+  ret_val = __llvm_libc::sscanf("infinite", "%a", &result);
+  EXPECT_EQ(ret_val, 0);
+
+  ret_val = __llvm_libc::sscanf("-.1e1", "%f", &result);
+  EXPECT_EQ(ret_val, 1);
+  EXPECT_FP_EQ(result, -.1e1);
+
+  ret_val = __llvm_libc::sscanf("1.2.e1", "%f", &result);
+  EXPECT_EQ(ret_val, 1);
+  EXPECT_FP_EQ(result, 1.2);
+}
+
+/*
+TODO:
+  Max width tests
+*/
+
+TEST(LlvmLibcSScanfTest, FloatConvMaxWidth) {
+  int ret_val;
+  float result = 0;
+
+  float inf = __llvm_libc::fputil::FPBits<float>::inf().get_val();
+
+  ret_val = __llvm_libc::sscanf("123", "%3f", &result);
+  EXPECT_EQ(ret_val, 1);
+  EXPECT_FP_EQ(result, 123.0);
+
+  ret_val = __llvm_libc::sscanf("123", "%5f", &result);
+  EXPECT_EQ(ret_val, 1);
+  EXPECT_FP_EQ(result, 123.0);
+
+  ret_val = __llvm_libc::sscanf("456", "%1f", &result);
+  EXPECT_EQ(ret_val, 1);
+  EXPECT_FP_EQ(result, 4.0);
+
+  ret_val = __llvm_libc::sscanf("-789", "%1f", &result);
+  EXPECT_EQ(ret_val, 0);
+
+  ret_val = __llvm_libc::sscanf("-123", "%2f", &result);
+  EXPECT_EQ(ret_val, 1);
+  EXPECT_FP_EQ(result, -1.0);
+
+  ret_val = __llvm_libc::sscanf("inf", "%2f", &result);
+  EXPECT_EQ(ret_val, 0);
+
+  ret_val = __llvm_libc::sscanf("nan", "%1f", &result);
+  EXPECT_EQ(ret_val, 0);
+
+  ret_val = __llvm_libc::sscanf("-inf", "%3f", &result);
+  EXPECT_EQ(ret_val, 0);
+
+  ret_val = __llvm_libc::sscanf("-nan", "%3f", &result);
+  EXPECT_EQ(ret_val, 0);
+
+  // If the max length were not here this would fail as discussed above, but
+  // since the max length limits it to the 3 it succeeds.
+  ret_val = __llvm_libc::sscanf("infinite", "%3f", &result);
+  EXPECT_EQ(ret_val, 1);
+  EXPECT_FP_EQ(result, inf);
+
+  ret_val = __llvm_libc::sscanf("-infinite", "%4f", &result);
+  EXPECT_EQ(ret_val, 1);
+  EXPECT_FP_EQ(result, -inf);
+
+  ret_val = __llvm_libc::sscanf("01", "%1f", &result);
+  EXPECT_EQ(ret_val, 1);
+  EXPECT_FP_EQ(result, 0.0);
+
+  ret_val = __llvm_libc::sscanf("0x1", "%2f", &result);
+  EXPECT_EQ(ret_val, 1);
+  EXPECT_FP_EQ(result, 0.0);
+
+  ret_val = __llvm_libc::sscanf("100e", "%4f", &result);
+  EXPECT_EQ(ret_val, 0);
+
+  ret_val = __llvm_libc::sscanf("100e+10", "%5f", &result);
+  EXPECT_EQ(ret_val, 0);
+
+  ret_val = __llvm_libc::sscanf("100e10", "%5f", &result);
+  EXPECT_EQ(ret_val, 1);
+  EXPECT_FP_EQ(result, 100e1);
+}
+
+TEST(LlvmLibcSScanfTest, FloatConvNoWrite) {
+  int ret_val;
+  float result = 0;
+
+  ret_val = __llvm_libc::sscanf("123", "%*f", &result);
+  EXPECT_EQ(ret_val, 1);
+  EXPECT_FP_EQ(result, 0.0);
+
+  ret_val = __llvm_libc::sscanf("456.1", "%*a", &result);
+  EXPECT_EQ(ret_val, 1);
+  EXPECT_FP_EQ(result, 0.0);
+
+  ret_val = __llvm_libc::sscanf("0x789.ap0", "%*e", &result);
+  EXPECT_EQ(ret_val, 1);
+  EXPECT_FP_EQ(result, 0.0);
+
+  ret_val = __llvm_libc::sscanf("+12.0e1", "%*g", &result);
+  EXPECT_EQ(ret_val, 1);
+  EXPECT_FP_EQ(result, 0.0);
+
+  ret_val = __llvm_libc::sscanf("inf", "%*F", &result);
+  EXPECT_EQ(ret_val, 1);
+  EXPECT_FP_EQ(result, 0.0);
+
+  ret_val = __llvm_libc::sscanf("NaN", "%*A", &result);
+  EXPECT_EQ(ret_val, 1);
+  EXPECT_FP_EQ(result, 0.0);
+
+  ret_val = __llvm_libc::sscanf("-InFiNiTy", "%*E", &result);
+  EXPECT_EQ(ret_val, 1);
+  EXPECT_FP_EQ(result, 0.0);
+
+  ret_val = __llvm_libc::sscanf("1e10", "%*G", &result);
+  EXPECT_EQ(ret_val, 1);
+  EXPECT_FP_EQ(result, 0.0);
+
+  ret_val = __llvm_libc::sscanf(".1", "%*G", &result);
+  EXPECT_EQ(ret_val, 1);
+  EXPECT_FP_EQ(result, 0.0);
+
+  ret_val = __llvm_libc::sscanf("123", "%*3f", &result);
+  EXPECT_EQ(ret_val, 1);
+  EXPECT_FP_EQ(result, 0.0);
+
+  ret_val = __llvm_libc::sscanf("123", "%*5f", &result);
+  EXPECT_EQ(ret_val, 1);
+  EXPECT_FP_EQ(result, 0.0);
+
+  ret_val = __llvm_libc::sscanf("456", "%*1f", &result);
+  EXPECT_EQ(ret_val, 1);
+  EXPECT_FP_EQ(result, 0.0);
+
+  ret_val = __llvm_libc::sscanf("Not a float", "%*f", &result);
+  EXPECT_EQ(ret_val, 0);
 }
 
 TEST(LlvmLibcSScanfTest, CombinedConv) {

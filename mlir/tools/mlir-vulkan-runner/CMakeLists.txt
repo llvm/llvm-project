@@ -74,6 +74,8 @@ if (MLIR_ENABLE_VULKAN_RUNNER)
     MLIRTargetLLVMIRExport
     MLIRTransforms
     MLIRTranslateLib
+    MLIRVectorDialect
+    MLIRVectorToLLVM
     ${Vulkan_LIBRARY}
   )
 

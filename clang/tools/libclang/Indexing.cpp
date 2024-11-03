@@ -903,9 +903,8 @@ int clang_indexSourceFileFullArgv(
     result = clang_indexSourceFile_Impl(
         idxAction, client_data, index_callbacks, index_callbacks_size,
         index_options, source_filename, command_line_args,
-        num_command_line_args,
-        llvm::makeArrayRef(unsaved_files, num_unsaved_files), out_TU,
-        TU_options);
+        num_command_line_args, llvm::ArrayRef(unsaved_files, num_unsaved_files),
+        out_TU, TU_options);
   };
 
   llvm::CrashRecoveryContext CRC;

@@ -19,9 +19,7 @@
 
 using IncludeMarker =
     clang::tidy::modernize::DeprecatedHeadersCheck::IncludeMarker;
-namespace clang {
-namespace tidy {
-namespace modernize {
+namespace clang::tidy::modernize {
 namespace {
 
 class IncludeModernizePPCallbacks : public PPCallbacks {
@@ -211,6 +209,4 @@ void IncludeModernizePPCallbacks::InclusionDirective(
   }
 }
 
-} // namespace modernize
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::modernize

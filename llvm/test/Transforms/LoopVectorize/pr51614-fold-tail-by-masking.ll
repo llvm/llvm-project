@@ -19,7 +19,7 @@ define dso_local i16 @reverse_interleave_load_fold_mask() optsize {
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <2 x i16> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP25:%.*]], [[PRED_LOAD_CONTINUE4]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = trunc i32 [[INDEX]] to i16
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = sub i16 41, [[TMP0]]
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <2 x i32> poison, i32 [[INDEX]], i32 0
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <2 x i32> poison, i32 [[INDEX]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <2 x i32> [[BROADCAST_SPLATINSERT1]], <2 x i32> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[VEC_IV:%.*]] = add <2 x i32> [[BROADCAST_SPLAT2]], <i32 0, i32 1>
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp ule <2 x i32> [[VEC_IV]], <i32 40, i32 40>

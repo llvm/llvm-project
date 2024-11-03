@@ -593,6 +593,8 @@ if (MINGW)
 endif()
 
 set(armv4t_SOURCES ${arm_min_SOURCES})
+set(armv5te_SOURCES ${arm_min_SOURCES})
+set(armv6_SOURCES ${arm_min_SOURCES})
 set(armhf_SOURCES ${arm_SOURCES})
 set(armv7_SOURCES ${arm_SOURCES})
 set(armv7s_SOURCES ${arm_SOURCES})
@@ -768,6 +770,10 @@ else ()
 
   if(COMPILER_RT_BUILTINS_HIDE_SYMBOLS)
     append_list_if(COMPILER_RT_HAS_VISIBILITY_HIDDEN_FLAG VISIBILITY_HIDDEN BUILTIN_DEFS)
+  endif()
+
+  if(COMPILER_RT_DISABLE_AARCH64_FMV)
+    list(APPEND BUILTIN_DEFS DISABLE_AARCH64_FMV)
   endif()
 
   append_list_if(COMPILER_RT_HAS_ASM_LSE HAS_ASM_LSE BUILTIN_DEFS)

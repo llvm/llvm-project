@@ -105,7 +105,7 @@ findAffectedValues(CallBase *CI, TargetTransformInfo *TTI,
         if (match(V, m_BitwiseLogic(m_Value(A), m_Value(B)))) {
           AddAffected(A);
           AddAffected(B);
-        // (A << C) or (A >>_s C) or (A >>_u C) where C is some constant.
+          // (A << C) or (A >>_s C) or (A >>_u C) where C is some constant.
         } else if (match(V, m_Shift(m_Value(A), m_ConstantInt()))) {
           AddAffected(A);
         }
@@ -113,15 +113,22 @@ findAffectedValues(CallBase *CI, TargetTransformInfo *TTI,
 
       AddAffectedFromEq(A);
       AddAffectedFromEq(B);
+    } else if (Pred == ICmpInst::ICMP_NE) {
+      Value *X, *Y;
+      // Handle (a & b != 0). If a/b is a power of 2 we can use this
+      // information.
+      if (match(A, m_And(m_Value(X), m_Value(Y))) && match(B, m_Zero())) {
+        AddAffected(X);
+        AddAffected(Y);
+      }
+    } else if (Pred == ICmpInst::ICMP_ULT) {
+      Value *X;
+      // Handle (A + C1) u< C2, which is the canonical form of A > C3 && A < C4,
+      // and recognized by LVI at least.
+      if (match(A, m_Add(m_Value(X), m_ConstantInt())) &&
+          match(B, m_ConstantInt()))
+        AddAffected(X);
     }
-
-    Value *X;
-    // Handle (A + C1) u< C2, which is the canonical form of A > C3 && A < C4,
-    // and recognized by LVI at least.
-    if (Pred == ICmpInst::ICMP_ULT &&
-        match(A, m_Add(m_Value(X), m_ConstantInt())) &&
-        match(B, m_ConstantInt()))
-      AddAffected(X);
   }
 
   if (TTI) {

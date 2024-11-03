@@ -4,22 +4,14 @@
 ; Check that we can log more than 1 function.
 ;
 ; RUN: llc -mtriple=x86_64-linux-unknown -regalloc=greedy -regalloc-enable-advisor=development \
-; RUN:   -regalloc-training-log=%t1 -tfutils-text-log < %s
-; RUN: sed -i 's/ \+/ /g' %t1
-; RUN: sed -i 's/\\n key:/\n key:/g' %t1
-; RUN: sed -i 's/\\n feature/\n feature/g' %t1
-; RUN: sed -i 's/\\n/ /g' %t1
+; RUN:   -regalloc-training-log=%t1 < %s
 ; RUN: FileCheck --input-file %t1 %s
 
 ; RUN: rm -rf %t %t_savedmodel
 ; RUN: %python %S/../../../lib/Analysis/models/gen-regalloc-eviction-test-model.py %t_savedmodel
 ; RUN: %python %S/../../../lib/Analysis/models/saved-model-to-tflite.py %t_savedmodel %t
 ; RUN: llc -mtriple=x86_64-linux-unknown -regalloc=greedy -regalloc-enable-advisor=development \
-; RUN:   -regalloc-training-log=%t2 -tfutils-text-log -regalloc-model=%t < %s
-; RUN: sed -i 's/ \+/ /g' %t2
-; RUN: sed -i 's/\\n key:/\n key:/g' %t2
-; RUN: sed -i 's/\\n feature/\n feature/g' %t2
-; RUN: sed -i 's/\\n/ /g' %t2
+; RUN:   -regalloc-training-log=%t2 -regalloc-model=%t < %s
 ; RUN: FileCheck --input-file %t2 %s
 
 declare void @f();
@@ -37,8 +29,8 @@ define void @f2(i64 %lhs, i64 %rhs, i64* %addr) !prof !16 {
   ret void
 }
 
-; CHECK:  key: "f1"
-; CHECK:  key: "f2"
+; CHECK:  {"context":"f1"}
+; CHECK:  {"context":"f2"}
 
 !llvm.module.flags = !{!1}
 !1 = !{i32 1, !"ProfileSummary", !2}

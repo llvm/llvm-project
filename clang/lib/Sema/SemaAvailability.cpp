@@ -19,6 +19,7 @@
 #include "clang/Sema/DelayedDiagnostic.h"
 #include "clang/Sema/ScopeInfo.h"
 #include "clang/Sema/Sema.h"
+#include <optional>
 
 using namespace clang;
 using namespace sema;
@@ -246,7 +247,7 @@ struct AttributeInsertion {
 /// of unsuccessful parsing can contain invalid data.
 /// \returns A number of method parameters if parsing was successful,
 /// std::nullopt otherwise.
-static Optional<unsigned>
+static std::optional<unsigned>
 tryParseObjCMethodName(StringRef Name, SmallVectorImpl<StringRef> &SlotNames,
                        const LangOptions &LangOpts) {
   // Accept replacements starting with - or + as valid ObjC method names.
@@ -279,7 +280,7 @@ tryParseObjCMethodName(StringRef Name, SmallVectorImpl<StringRef> &SlotNames,
 
 /// Returns a source location in which it's appropriate to insert a new
 /// attribute for the given declaration \D.
-static Optional<AttributeInsertion>
+static std::optional<AttributeInsertion>
 createAttributeInsertion(const NamedDecl *D, const SourceManager &SM,
                          const LangOptions &LangOpts) {
   if (isa<ObjCPropertyDecl>(D))
@@ -400,7 +401,7 @@ static void DoEmitAvailabilityWarning(Sema &S, AvailabilityResult K,
         return;
       if (!S.getPreprocessor().isMacroDefined("API_AVAILABLE"))
         return;
-      Optional<AttributeInsertion> Insertion = createAttributeInsertion(
+      std::optional<AttributeInsertion> Insertion = createAttributeInsertion(
           Enclosing, S.getSourceManager(), S.getLangOpts());
       if (!Insertion)
         return;
@@ -502,7 +503,7 @@ static void DoEmitAvailabilityWarning(Sema &S, AvailabilityResult K,
       if (const auto *MethodDecl = dyn_cast<ObjCMethodDecl>(ReferringDecl)) {
         Selector Sel = MethodDecl->getSelector();
         SmallVector<StringRef, 12> SelectorSlotNames;
-        Optional<unsigned> NumParams = tryParseObjCMethodName(
+        std::optional<unsigned> NumParams = tryParseObjCMethodName(
             Replacement, SelectorSlotNames, S.getLangOpts());
         if (NumParams && *NumParams == Sel.getNumArgs()) {
           assert(SelectorSlotNames.size() == Locs.size());
@@ -898,6 +899,11 @@ void Sema::DiagnoseUnguardedAvailabilityViolations(Decl *D) {
       return;
 
     Body = FD->getBody();
+
+    if (auto *CD = dyn_cast<CXXConstructorDecl>(FD))
+      for (const CXXCtorInitializer *CI : CD->inits())
+        DiagnoseUnguardedAvailability(*this, D).IssueDiagnostics(CI->getInit());
+
   } else if (auto *MD = dyn_cast<ObjCMethodDecl>(D))
     Body = MD->getBody();
   else if (auto *BD = dyn_cast<BlockDecl>(D))

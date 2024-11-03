@@ -16,6 +16,7 @@
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/UInt128.h"
 #include "src/__support/builtin_wrappers.h"
+#include "src/__support/common.h"
 
 namespace __llvm_libc {
 namespace fputil {
@@ -23,7 +24,7 @@ namespace fputil {
 namespace internal {
 
 template <typename T>
-static inline T find_leading_one(T mant, int &shift_length) {
+LIBC_INLINE T find_leading_one(T mant, int &shift_length) {
   shift_length = 0;
   if (mant > 0) {
     shift_length = (sizeof(mant) * 8) - 1 - unsafe_clz(mant);
@@ -98,7 +99,7 @@ template <> struct DoubleLength<uint64_t> {
 //   - HYPOT(x, y) is NaN if x or y is NaN.
 //
 template <typename T, cpp::enable_if_t<cpp::is_floating_point_v<T>, int> = 0>
-static inline T hypot(T x, T y) {
+LIBC_INLINE T hypot(T x, T y) {
   using FPBits_t = FPBits<T>;
   using UIntType = typename FPBits<T>::UIntType;
   using DUIntType = typename DoubleLength<UIntType>::Type;

@@ -88,7 +88,7 @@ class CommandObjectStatsDump : public CommandObjectParsed {
     }
 
     llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
-      return llvm::makeArrayRef(g_statistics_dump_options);
+      return llvm::ArrayRef(g_statistics_dump_options);
     }
 
     bool m_all_targets = false;

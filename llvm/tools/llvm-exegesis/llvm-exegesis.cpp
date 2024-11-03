@@ -47,10 +47,6 @@
 namespace llvm {
 namespace exegesis {
 
-static cl::OptionCategory Options("llvm-exegesis options");
-static cl::OptionCategory BenchmarkOptions("llvm-exegesis benchmark options");
-static cl::OptionCategory AnalysisOptions("llvm-exegesis analysis options");
-
 static cl::opt<int> OpcodeIndex(
     "opcode-index",
     cl::desc("opcode to measure, by index, or -1 to measure all opcodes"),
@@ -120,10 +116,29 @@ static cl::opt<bool> BenchmarkMeasurementsPrintProgress(
     cl::desc("Produce progress indicator when performing measurements"),
     cl::cat(BenchmarkOptions), cl::init(false));
 
-static cl::opt<bool> BenchmarkSkipMeasurements(
-    "skip-measurements",
-    cl::desc("do everything except actually performing the measurements"),
-    cl::cat(BenchmarkOptions), cl::init(false));
+static cl::opt<exegesis::BenchmarkPhaseSelectorE> BenchmarkPhaseSelector(
+    "benchmark-phase",
+    cl::desc(
+        "it is possible to stop the benchmarking process after some phase"),
+    cl::cat(BenchmarkOptions),
+    cl::values(
+        clEnumValN(exegesis::BenchmarkPhaseSelectorE::PrepareSnippet,
+                   "prepare-snippet",
+                   "Only generate the minimal instruction sequence"),
+        clEnumValN(exegesis::BenchmarkPhaseSelectorE::PrepareAndAssembleSnippet,
+                   "prepare-and-assemble-snippet",
+                   "Same as prepare-snippet, but also dumps an excerpt of the "
+                   "sequence (hex encoded)"),
+        clEnumValN(exegesis::BenchmarkPhaseSelectorE::AssembleMeasuredCode,
+                   "assemble-measured-code",
+                   "Same as prepare-and-assemble-snippet, but also creates the "
+                   "full sequence "
+                   "that can be dumped to a file using --dump-object-to-disk"),
+        clEnumValN(
+            exegesis::BenchmarkPhaseSelectorE::Measure, "measure",
+            "Same as prepare-measured-code, but also runs the measurement "
+            "(default)")),
+    cl::init(exegesis::BenchmarkPhaseSelectorE::Measure));
 
 static cl::opt<unsigned>
     NumRepetitions("num-repetitions",
@@ -147,6 +162,18 @@ static cl::opt<bool> IgnoreInvalidSchedClass(
     "ignore-invalid-sched-class",
     cl::desc("ignore instructions that do not define a sched class"),
     cl::cat(BenchmarkOptions), cl::init(false));
+
+static cl::opt<exegesis::InstructionBenchmarkFilter> AnalysisSnippetFilter(
+    "analysis-filter", cl::desc("Filter the benchmarks before analysing them"),
+    cl::cat(BenchmarkOptions),
+    cl::values(
+        clEnumValN(exegesis::InstructionBenchmarkFilter::All, "all",
+                   "Keep all benchmarks (default)"),
+        clEnumValN(exegesis::InstructionBenchmarkFilter::RegOnly, "reg-only",
+                   "Keep only those benchmarks that do *NOT* involve memory"),
+        clEnumValN(exegesis::InstructionBenchmarkFilter::WithMem, "mem-only",
+                   "Keep only the benchmarks that *DO* involve memory")),
+    cl::init(exegesis::InstructionBenchmarkFilter::All));
 
 static cl::opt<exegesis::InstructionBenchmarkClustering::ModeE>
     AnalysisClusteringAlgorithm(
@@ -209,11 +236,11 @@ static cl::opt<std::string>
          cl::desc("Target a specific cpu type (-mcpu=help for details)"),
          cl::value_desc("cpu-name"), cl::cat(Options), cl::init("native"));
 
-static cl::opt<bool>
-    DumpObjectToDisk("dump-object-to-disk",
-                     cl::desc("dumps the generated benchmark object to disk "
-                              "and prints a message to access it"),
-                     cl::cat(BenchmarkOptions), cl::init(true));
+static cl::opt<bool> DumpObjectToDisk(
+    "dump-object-to-disk",
+    cl::desc("dumps the generated benchmark object to disk "
+             "and prints a message to access it (default = false)"),
+    cl::cat(BenchmarkOptions), cl::init(false));
 
 static ExitOnError ExitOnErr("llvm-exegesis error: ");
 
@@ -390,7 +417,7 @@ static void runBenchmarkConfigurations(
 }
 
 void benchmarkMain() {
-  if (!BenchmarkSkipMeasurements) {
+  if (BenchmarkPhaseSelector == BenchmarkPhaseSelectorE::Measure) {
 #ifndef HAVE_LIBPFM
     ExitWithError(
         "benchmarking unavailable, LLVM was built without libpfm. You can pass "
@@ -409,12 +436,12 @@ void benchmarkMain() {
 
   // Preliminary check to ensure features needed for requested
   // benchmark mode are present on target CPU and/or OS.
-  if (!BenchmarkSkipMeasurements)
+  if (BenchmarkPhaseSelector == BenchmarkPhaseSelectorE::Measure)
     ExitOnErr(State.getExegesisTarget().checkFeatureSupport());
 
   const std::unique_ptr<BenchmarkRunner> Runner =
       ExitOnErr(State.getExegesisTarget().createBenchmarkRunner(
-          BenchmarkMode, State, BenchmarkSkipMeasurements, ResultAggMode));
+          BenchmarkMode, State, BenchmarkPhaseSelector, ResultAggMode));
   if (!Runner) {
     ExitWithError("cannot create benchmark runner");
   }
@@ -499,6 +526,26 @@ static void maybeRunAnalysis(const Analysis &Analyzer, const std::string &Name,
     ExitOnFileError(OutputFilename, std::move(Err));
 }
 
+static void filterPoints(MutableArrayRef<InstructionBenchmark> Points,
+                         const MCInstrInfo &MCII) {
+  if (AnalysisSnippetFilter == exegesis::InstructionBenchmarkFilter::All)
+    return;
+
+  bool WantPointsWithMemOps =
+      AnalysisSnippetFilter == exegesis::InstructionBenchmarkFilter::WithMem;
+  for (InstructionBenchmark &Point : Points) {
+    if (!Point.Error.empty())
+      continue;
+    if (WantPointsWithMemOps ==
+        any_of(Point.Key.Instructions, [&MCII](const MCInst &Inst) {
+          const MCInstrDesc &MCDesc = MCII.get(Inst.getOpcode());
+          return MCDesc.mayLoad() || MCDesc.mayStore();
+        }))
+      continue;
+    Point.Error = "filtered out by user";
+  }
+}
+
 static void analysisMain() {
   ExitOnErr.setBanner("llvm-exegesis: ");
   if (BenchmarkFile.empty())
@@ -544,7 +591,7 @@ static void analysisMain() {
   // Read benchmarks.
   const LLVMState State = ExitOnErr(
       LLVMState::Create(TripleAndCpu.LLVMTriple, TripleAndCpu.CpuName));
-  const std::vector<InstructionBenchmark> Points = ExitOnFileError(
+  std::vector<InstructionBenchmark> Points = ExitOnFileError(
       BenchmarkFile, InstructionBenchmark::readYamls(State, *MemoryBuffer));
 
   outs() << "Parsed " << Points.size() << " benchmark points\n";
@@ -553,6 +600,8 @@ static void analysisMain() {
     return;
   }
   // FIXME: Merge points from several runs (latency and uops).
+
+  filterPoints(Points, State.getInstrInfo());
 
   const auto Clustering = ExitOnErr(InstructionBenchmarkClustering::create(
       Points, AnalysisClusteringAlgorithm, AnalysisDbscanNumPoints,

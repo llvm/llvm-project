@@ -5,7 +5,7 @@
 ;
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 
-%struct.stCfg_Incell_DetailThreshold.2.30.42.62.74.94.122.126.134.166.194.242.338.342.346.350.354.358.496.0.2.9.16.28.36.37.38.39.40.75 = type { [60 x i8]*, [60 x i32]*, [60 x i32]*, [60 x i32]*, [60 x i32]*, [60 x i32]*, [60 x i32]* }
+%struct.stCfg_Incell_DetailThreshold.2.30.42.62.74.94.122.126.134.166.194.242.338.342.346.350.354.358.496.0.2.9.16.28.36.37.38.39.40.75 = type { ptr, ptr, ptr, ptr, ptr, ptr, ptr }
 @ft8006m_g_stCfg_Incell_DetailThreshold = external dso_local local_unnamed_addr global %struct.stCfg_Incell_DetailThreshold.2.30.42.62.74.94.122.126.134.166.194.242.338.342.346.350.354.358.496.0.2.9.16.28.36.37.38.39.40.75, align 8
 declare dso_local i32 @ft8006m_atoi() local_unnamed_addr #0
 
@@ -33,9 +33,9 @@ for.cond21:                                       ; preds = %for.body23, %for.co
   br i1 %exitcond298, label %for.cond28, label %for.body23
 
 for.body23:                                       ; preds = %for.cond21
-  %1 = load [60 x i32]*, [60 x i32]** getelementptr inbounds (%struct.stCfg_Incell_DetailThreshold.2.30.42.62.74.94.122.126.134.166.194.242.338.342.346.350.354.358.496.0.2.9.16.28.36.37.38.39.40.75, %struct.stCfg_Incell_DetailThreshold.2.30.42.62.74.94.122.126.134.166.194.242.338.342.346.350.354.358.496.0.2.9.16.28.36.37.38.39.40.75* @ft8006m_g_stCfg_Incell_DetailThreshold, i64 0, i32 2), align 8
-  %arrayidx25 = getelementptr [60 x i32], [60 x i32]* %1, i64 %indvars.iv302, i64 %indvars.iv296
-  store i32 undef, i32* %arrayidx25, align 4
+  %1 = load ptr, ptr getelementptr inbounds (%struct.stCfg_Incell_DetailThreshold.2.30.42.62.74.94.122.126.134.166.194.242.338.342.346.350.354.358.496.0.2.9.16.28.36.37.38.39.40.75, ptr @ft8006m_g_stCfg_Incell_DetailThreshold, i64 0, i32 2), align 8
+  %arrayidx25 = getelementptr [60 x i32], ptr %1, i64 %indvars.iv302, i64 %indvars.iv296
+  store i32 undef, ptr %arrayidx25, align 4
   %indvars.iv.next297 = add nuw nsw i64 %indvars.iv296, 1
   br label %for.cond21
 
@@ -45,9 +45,9 @@ for.cond28:                                       ; preds = %for.body30, %for.co
   br i1 %exitcond301, label %for.inc39, label %for.body30
 
 for.body30:                                       ; preds = %for.cond28
-  %2 = load [60 x i32]*, [60 x i32]** getelementptr inbounds (%struct.stCfg_Incell_DetailThreshold.2.30.42.62.74.94.122.126.134.166.194.242.338.342.346.350.354.358.496.0.2.9.16.28.36.37.38.39.40.75, %struct.stCfg_Incell_DetailThreshold.2.30.42.62.74.94.122.126.134.166.194.242.338.342.346.350.354.358.496.0.2.9.16.28.36.37.38.39.40.75* @ft8006m_g_stCfg_Incell_DetailThreshold, i64 0, i32 2), align 8
-  %arrayidx34 = getelementptr [60 x i32], [60 x i32]* %2, i64 %0, i64 %indvars.iv299
-  store i32 undef, i32* %arrayidx34, align 4
+  %2 = load ptr, ptr getelementptr inbounds (%struct.stCfg_Incell_DetailThreshold.2.30.42.62.74.94.122.126.134.166.194.242.338.342.346.350.354.358.496.0.2.9.16.28.36.37.38.39.40.75, ptr @ft8006m_g_stCfg_Incell_DetailThreshold, i64 0, i32 2), align 8
+  %arrayidx34 = getelementptr [60 x i32], ptr %2, i64 %0, i64 %indvars.iv299
+  store i32 undef, ptr %arrayidx34, align 4
   %indvars.iv.next300 = add nuw nsw i64 %indvars.iv299, 1
   br label %for.cond28
 

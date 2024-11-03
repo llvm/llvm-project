@@ -23,6 +23,7 @@
 #include "clang/Tooling/Syntax/Tokens.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/raw_ostream.h"
+#include <optional>
 
 namespace clang {
 namespace clangd {
@@ -87,7 +88,7 @@ class DumpVisitor : public RecursiveASTVisitor<DumpVisitor> {
   // Range: most nodes have getSourceRange(), with a couple of exceptions.
   // We only return it if it's valid at both ends and there are no macros.
 
-  template <typename T> llvm::Optional<Range> getRange(const T &Node) {
+  template <typename T> std::optional<Range> getRange(const T &Node) {
     SourceRange SR = getSourceRange(Node);
     auto Spelled = Tokens.spelledForExpanded(Tokens.expandedTokens(SR));
     if (!Spelled)

@@ -3637,8 +3637,8 @@ define zeroext i1 @smulo2.br.i64(i64 %v1) {
 ; RV32-NEXT:    add a4, a4, t1
 ; RV32-NEXT:    sltu a5, t3, a5
 ; RV32-NEXT:    mulh a2, t2, a2
+; RV32-NEXT:    add a0, a0, a1
 ; RV32-NEXT:    sub a0, t0, a0
-; RV32-NEXT:    sub a0, a0, a1
 ; RV32-NEXT:    add a0, a0, a2
 ; RV32-NEXT:    add a0, a0, a5
 ; RV32-NEXT:    add a0, a4, a0
@@ -3699,8 +3699,8 @@ define zeroext i1 @smulo2.br.i64(i64 %v1) {
 ; RV32ZBA-NEXT:    add a4, a4, t1
 ; RV32ZBA-NEXT:    sltu a5, t3, a5
 ; RV32ZBA-NEXT:    mulh a2, t2, a2
+; RV32ZBA-NEXT:    add a0, a0, a1
 ; RV32ZBA-NEXT:    sub a0, t0, a0
-; RV32ZBA-NEXT:    sub a0, a0, a1
 ; RV32ZBA-NEXT:    add a0, a0, a2
 ; RV32ZBA-NEXT:    add a0, a0, a5
 ; RV32ZBA-NEXT:    add a0, a4, a0

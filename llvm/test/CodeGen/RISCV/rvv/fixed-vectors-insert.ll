@@ -13,7 +13,7 @@ define void @insertelt_v4i64(ptr %x, i64 %y) {
 ; RV32-NEXT:    vsetivli zero, 2, e32, m2, ta, ma
 ; RV32-NEXT:    vslide1down.vx v10, v8, a1
 ; RV32-NEXT:    vslide1down.vx v10, v10, a2
-; RV32-NEXT:    vsetivli zero, 4, e64, m2, tu, ma
+; RV32-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
 ; RV32-NEXT:    vslideup.vi v8, v10, 3
 ; RV32-NEXT:    vse64.v v8, (a0)
 ; RV32-NEXT:    ret
@@ -23,7 +23,6 @@ define void @insertelt_v4i64(ptr %x, i64 %y) {
 ; RV64-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
 ; RV64-NEXT:    vle64.v v8, (a0)
 ; RV64-NEXT:    vmv.s.x v10, a1
-; RV64-NEXT:    vsetvli zero, zero, e64, m2, tu, ma
 ; RV64-NEXT:    vslideup.vi v8, v10, 3
 ; RV64-NEXT:    vse64.v v8, (a0)
 ; RV64-NEXT:    ret

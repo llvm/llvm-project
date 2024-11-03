@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "InterpFrame.h"
+#include "Boolean.h"
 #include "Function.h"
 #include "InterpStack.h"
 #include "InterpState.h"
@@ -20,29 +21,36 @@ using namespace clang;
 using namespace clang::interp;
 
 InterpFrame::InterpFrame(InterpState &S, const Function *Func,
-                         InterpFrame *Caller, CodePtr RetPC, Pointer &&This)
-    : Caller(Caller), S(S), Func(Func), This(std::move(This)), RetPC(RetPC),
+                         InterpFrame *Caller, CodePtr RetPC)
+    : Caller(Caller), S(S), Func(Func), RetPC(RetPC),
       ArgSize(Func ? Func->getArgSize() : 0),
       Args(static_cast<char *>(S.Stk.top())), FrameOffset(S.Stk.size()) {
-  if (Func) {
-    if (unsigned FrameSize = Func->getFrameSize()) {
-      Locals = std::make_unique<char[]>(FrameSize);
-      for (auto &Scope : Func->scopes()) {
-        for (auto &Local : Scope.locals()) {
-          Block *B = new (localBlock(Local.Offset)) Block(Local.Desc);
-          B->invokeCtor();
-        }
-      }
+  if (!Func)
+    return;
+
+  unsigned FrameSize = Func->getFrameSize();
+  if (FrameSize == 0)
+    return;
+
+  Locals = std::make_unique<char[]>(FrameSize);
+  for (auto &Scope : Func->scopes()) {
+    for (auto &Local : Scope.locals()) {
+      Block *B = new (localBlock(Local.Offset)) Block(Local.Desc);
+      B->invokeCtor();
+      InlineDescriptor *ID = localInlineDesc(Local.Offset);
+      ID->Desc = Local.Desc;
+      ID->IsActive = true;
+      ID->Offset = sizeof(InlineDescriptor);
+      ID->IsBase = false;
+      ID->IsFieldMutable = false;
+      ID->IsConst = false;
+      ID->IsInitialized = false;
     }
   }
 }
 
 InterpFrame::InterpFrame(InterpState &S, const Function *Func, CodePtr RetPC)
-    : Caller(S.Current), S(S), Func(Func), RetPC(RetPC),
-      ArgSize(Func ? Func->getArgSize() : 0),
-      Args(static_cast<char *>(S.Stk.top())), FrameOffset(S.Stk.size()) {
-  assert(Func);
-
+    : InterpFrame(S, Func, S.Current, RetPC) {
   // As per our calling convention, the this pointer is
   // part of the ArgSize.
   // If the function has RVO, the RVO pointer is first.
@@ -58,21 +66,9 @@ InterpFrame::InterpFrame(InterpState &S, const Function *Func, CodePtr RetPC)
     else
       This = stackRef<Pointer>(0);
   }
-
-  if (unsigned FrameSize = Func->getFrameSize()) {
-    Locals = std::make_unique<char[]>(FrameSize);
-    for (auto &Scope : Func->scopes()) {
-      for (auto &Local : Scope.locals()) {
-        Block *B = new (localBlock(Local.Offset)) Block(Local.Desc);
-        B->invokeCtor();
-      }
-    }
-  }
 }
 
 InterpFrame::~InterpFrame() {
-  if (Func && Func->isConstructor() && This.isBaseClass())
-    This.initialize();
   for (auto &Param : Params)
     S.deallocate(reinterpret_cast<Block *>(Param.second.get()));
 }
@@ -130,17 +126,17 @@ void print(llvm::raw_ostream &OS, const Pointer &P, ASTContext &Ctx,
   }
 
   printDesc(P.getDeclDesc());
-  for (auto It = Levels.rbegin(); It != Levels.rend(); ++It) {
-    if (It->inArray()) {
-      OS << "[" << It->expand().getIndex() << "]";
+  for (const auto &It : Levels) {
+    if (It.inArray()) {
+      OS << "[" << It.expand().getIndex() << "]";
       continue;
     }
-    if (auto Index = It->getIndex()) {
+    if (auto Index = It.getIndex()) {
       OS << " + " << Index;
       continue;
     }
     OS << ".";
-    printDesc(It->getFieldDesc());
+    printDesc(It.getFieldDesc());
   }
 }
 
@@ -186,10 +182,10 @@ const FunctionDecl *InterpFrame::getCallee() const {
   return Func->getDecl();
 }
 
-Pointer InterpFrame::getLocalPointer(unsigned Offset) {
+Pointer InterpFrame::getLocalPointer(unsigned Offset) const {
   assert(Offset < Func->getFrameSize() && "Invalid local offset.");
-  return Pointer(
-      reinterpret_cast<Block *>(Locals.get() + Offset - sizeof(Block)));
+  return Pointer(reinterpret_cast<Block *>(localBlock(Offset)),
+                 sizeof(InlineDescriptor));
 }
 
 Pointer InterpFrame::getParamPointer(unsigned Off) {

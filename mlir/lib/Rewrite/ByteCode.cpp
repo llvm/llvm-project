@@ -23,6 +23,7 @@
 #include "llvm/Support/Format.h"
 #include "llvm/Support/FormatVariadic.h"
 #include <numeric>
+#include <optional>
 
 #define DEBUG_TYPE "pdl-bytecode"
 
@@ -486,13 +487,13 @@ struct ByteCodeLiveRange {
   std::unique_ptr<llvm::IntervalMap<uint64_t, char, 16>> liveness;
 
   /// The operation range storage index for this range.
-  Optional<unsigned> opRangeIndex;
+  std::optional<unsigned> opRangeIndex;
 
   /// The type range storage index for this range.
-  Optional<unsigned> typeRangeIndex;
+  std::optional<unsigned> typeRangeIndex;
 
   /// The value range storage index for this range.
-  Optional<unsigned> valueRangeIndex;
+  std::optional<unsigned> valueRangeIndex;
 };
 } // namespace
 
@@ -1106,7 +1107,7 @@ public:
   LogicalResult
   execute(PatternRewriter &rewriter,
           SmallVectorImpl<PDLByteCode::MatchResult> *matches = nullptr,
-          Optional<Location> mainRewriteLoc = {});
+          std::optional<Location> mainRewriteLoc = {});
 
 private:
   /// Internal implementation of executing each of the bytecode commands.
@@ -1449,11 +1450,11 @@ LogicalResult ByteCodeExecutor::executeApplyRewrite(PatternRewriter &rewriter) {
 
     // If the result is a range, we need to copy it over to the bytecodes
     // range memory.
-    if (Optional<TypeRange> typeRange = result.dyn_cast<TypeRange>()) {
+    if (std::optional<TypeRange> typeRange = result.dyn_cast<TypeRange>()) {
       unsigned rangeIndex = read();
       typeRangeMemory[rangeIndex] = *typeRange;
       memory[read()] = &typeRangeMemory[rangeIndex];
-    } else if (Optional<ValueRange> valueRange =
+    } else if (std::optional<ValueRange> valueRange =
                    result.dyn_cast<ValueRange>()) {
       unsigned rangeIndex = read();
       valueRangeMemory[rangeIndex] = *valueRange;
@@ -1605,7 +1606,7 @@ void ByteCodeExecutor::executeCreateOperation(PatternRewriter &rewriter,
   unsigned numResults = read();
   if (numResults == kInferTypesMarker) {
     InferTypeOpInterface::Concept *inferInterface =
-        state.name.getRegisteredInfo()->getInterface<InferTypeOpInterface>();
+        state.name.getInterface<InferTypeOpInterface>();
     assert(inferInterface &&
            "expected operation to provide InferTypeOpInterface");
 
@@ -2109,7 +2110,7 @@ void ByteCodeExecutor::executeSwitchTypes() {
 LogicalResult
 ByteCodeExecutor::execute(PatternRewriter &rewriter,
                           SmallVectorImpl<PDLByteCode::MatchResult> *matches,
-                          Optional<Location> mainRewriteLoc) {
+                          std::optional<Location> mainRewriteLoc) {
   while (true) {
     // Print the location of the operation being executed.
     LLVM_DEBUG(llvm::dbgs() << readInline<Location>() << "\n");

@@ -744,6 +744,7 @@ ir_nameless_values = [
     NamelessValue(r'DIASSIGNID' , '!' , r'!DIAssignID '               , None            , None                   , r'![0-9]+'   , None                 , False) ,
     NamelessValue(r'PROF'       , '!' , r'!prof '              , None            , None                   , r'![0-9]+'   , None                 , False) ,
     NamelessValue(r'TBAA'       , '!' , r'!tbaa '              , None            , None                   , r'![0-9]+'   , None                 , False) ,
+    NamelessValue(r'TBAA_STRUCT', '!' , r'!tbaa.struct '       , None            , None                   , r'![0-9]+'   , None                 , False) ,
     NamelessValue(r'RNG'        , '!' , r'!range '             , None            , None                   , r'![0-9]+'   , None                 , False) ,
     NamelessValue(r'LOOP'       , '!' , r'!llvm.loop '         , None            , None                   , r'![0-9]+'   , None                 , False) ,
     NamelessValue(r'META'       , '!' , r'metadata '           , None            , None                   , r'![0-9]+'   , None                 , False) ,
@@ -1159,7 +1160,8 @@ def get_autogennote_suffix(parser, args):
       continue  # Ignore options such as --help that aren't included in args
     # Ignore parameters such as paths to the binary or the list of tests
     if action.dest in ('tests', 'update_only', 'tool_binary', 'opt_binary',
-                       'llc_binary', 'clang', 'opt', 'llvm_bin', 'verbose'):
+                       'llc_binary', 'clang', 'opt', 'llvm_bin', 'verbose',
+                       'force_update'):
       continue
     value = getattr(args, action.dest)
     if action.const is not None:  # action stores a constant (usually True/False)

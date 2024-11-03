@@ -77,9 +77,11 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeRISCVTarget() {
   initializeRISCVCodeGenPreparePass(*PR);
   initializeRISCVMergeBaseOffsetOptPass(*PR);
   initializeRISCVSExtWRemovalPass(*PR);
+  initializeRISCVStripWSuffixPass(*PR);
   initializeRISCVPreRAExpandPseudoPass(*PR);
   initializeRISCVExpandPseudoPass(*PR);
   initializeRISCVInsertVSETVLIPass(*PR);
+  initializeRISCVDAGToDAGISelPass(*PR);
 }
 
 static StringRef computeDataLayout(const Triple &TT) {
@@ -126,6 +128,15 @@ RISCVTargetMachine::getSubtargetImpl(const Function &F) const {
 
   unsigned RVVBitsMin = RVVVectorBitsMinOpt;
   unsigned RVVBitsMax = RVVVectorBitsMaxOpt;
+
+  Attribute VScaleRangeAttr = F.getFnAttribute(Attribute::VScaleRange);
+  if (VScaleRangeAttr.isValid()) {
+    if (!RVVVectorBitsMinOpt.getNumOccurrences())
+      RVVBitsMin = VScaleRangeAttr.getVScaleRangeMin() * RISCV::RVVBitsPerBlock;
+    std::optional<unsigned> VScaleMax = VScaleRangeAttr.getVScaleRangeMax();
+    if (VScaleMax.has_value() && !RVVVectorBitsMaxOpt.getNumOccurrences())
+      RVVBitsMax = *VScaleMax * RISCV::RVVBitsPerBlock;
+  }
 
   if (RVVBitsMin != -1U) {
     // FIXME: Change to >= 32 when VLEN = 32 is supported.
@@ -182,6 +193,13 @@ RISCVTargetMachine::getSubtargetImpl(const Function &F) const {
         TargetTriple, CPU, TuneCPU, FS, ABIName, RVVBitsMin, RVVBitsMax, *this);
   }
   return I.get();
+}
+
+MachineFunctionInfo *RISCVTargetMachine::createMachineFunctionInfo(
+    BumpPtrAllocator &Allocator, const Function &F,
+    const TargetSubtargetInfo *STI) const {
+  return RISCVMachineFunctionInfo::create<RISCVMachineFunctionInfo>(Allocator,
+                                                                    F, STI);
 }
 
 TargetTransformInfo
@@ -325,8 +343,10 @@ void RISCVPassConfig::addMachineSSAOptimization() {
   if (EnableMachineCombiner)
     addPass(&MachineCombinerID);
 
-  if (TM->getTargetTriple().getArch() == Triple::riscv64)
+  if (TM->getTargetTriple().getArch() == Triple::riscv64) {
     addPass(createRISCVSExtWRemovalPass());
+    addPass(createRISCVStripWSuffixPass());
+  }
 }
 
 void RISCVPassConfig::addPreRegAlloc() {

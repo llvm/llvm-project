@@ -13,7 +13,6 @@
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/Object/Binary.h"
 #include "llvm/ProfileData/InstrProfCorrelator.h"
@@ -338,9 +337,16 @@ static void loadInput(const WeightedFile &Input, SymbolRemapper *Remapper,
                              FuncName, firstTime);
     });
   }
-  if (Reader->hasError())
+
+  if (Reader->hasError()) {
     if (Error E = Reader->getError())
       WC->Errors.emplace_back(std::move(E), Filename);
+  }
+
+  std::vector<llvm::object::BuildID> BinaryIds;
+  if (Error E = Reader->readBinaryIds(BinaryIds))
+    WC->Errors.emplace_back(std::move(E), Filename);
+  WC->Writer.addBinaryIds(BinaryIds);
 }
 
 /// Merge the \p Src writer context into \p Dst.

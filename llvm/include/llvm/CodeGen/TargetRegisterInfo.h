@@ -200,7 +200,7 @@ public:
   ///
   /// By default, this method returns all registers in the class.
   ArrayRef<MCPhysReg> getRawAllocationOrder(const MachineFunction &MF) const {
-    return OrderFunc ? OrderFunc(MF) : makeArrayRef(begin(), getNumRegs());
+    return OrderFunc ? OrderFunc(MF) : ArrayRef(begin(), getNumRegs());
   }
 
   /// Returns the combination of all lane masks of register in this class.
@@ -357,7 +357,7 @@ public:
     unsigned NumRegs = getNumRegs();
     assert(Idx < InfoDesc->NumCosts && "CostPerUse index out of bounds");
 
-    return makeArrayRef(&InfoDesc->CostPerUse[Idx * NumRegs], NumRegs);
+    return ArrayRef(&InfoDesc->CostPerUse[Idx * NumRegs], NumRegs);
   }
 
   /// Return true if the register is in the allocation of any register class.

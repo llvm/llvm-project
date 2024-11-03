@@ -10,6 +10,7 @@
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Transforms/InliningUtils.h"
+#include <optional>
 
 using namespace mlir;
 using namespace mlir::memref;
@@ -24,11 +25,11 @@ namespace {
 struct MemRefInlinerInterface : public DialectInlinerInterface {
   using DialectInlinerInterface::DialectInlinerInterface;
   bool isLegalToInline(Region *dest, Region *src, bool wouldBeCloned,
-                       BlockAndValueMapping &valueMapping) const final {
+                       IRMapping &valueMapping) const final {
     return true;
   }
   bool isLegalToInline(Operation *, Region *, bool wouldBeCloned,
-                       BlockAndValueMapping &) const final {
+                       IRMapping &) const final {
     return true;
   }
 };
@@ -43,7 +44,7 @@ void mlir::memref::MemRefDialect::initialize() {
 }
 
 /// Finds the unique dealloc operation (if one exists) for `allocValue`.
-llvm::Optional<Operation *> mlir::memref::findDealloc(Value allocValue) {
+std::optional<Operation *> mlir::memref::findDealloc(Value allocValue) {
   Operation *dealloc = nullptr;
   for (Operation *user : allocValue.getUsers()) {
     if (!hasEffect<MemoryEffects::Free>(user, allocValue))

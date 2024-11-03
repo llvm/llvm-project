@@ -50,5 +50,6 @@ clang_target_link_libraries(ASTTests
 target_link_libraries(ASTTests
   PRIVATE
   clangTesting
+  LLVMTestingAnnotations
   LLVMTestingSupport
 )

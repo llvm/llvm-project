@@ -1209,14 +1209,20 @@ TYPE_PARSER(construct<StatOrErrmsg>("STAT =" >> statVariable) ||
 
 // Directives, extensions, and deprecated statements
 // !DIR$ IGNORE_TKR [ [(tkr...)] name ]...
+// !DIR$ LOOP COUNT (n1[, n2]...)
 // !DIR$ name...
 constexpr auto beginDirective{skipStuffBeforeStatement >> "!"_ch};
 constexpr auto endDirective{space >> endOfLine};
 constexpr auto ignore_tkr{
     "DIR$ IGNORE_TKR" >> optionalList(construct<CompilerDirective::IgnoreTKR>(
                              defaulted(parenthesized(some("tkr"_ch))), name))};
+constexpr auto loopCount{
+    "DIR$ LOOP COUNT" >> construct<CompilerDirective::LoopCount>(
+                             parenthesized(nonemptyList(digitString64)))};
+
 TYPE_PARSER(beginDirective >>
     sourced(construct<CompilerDirective>(ignore_tkr) ||
+        construct<CompilerDirective>(loopCount) ||
         construct<CompilerDirective>(
             "DIR$" >> many(construct<CompilerDirective::NameValue>(name,
                           maybe(("="_tok || ":"_tok) >> digitString64))))) /

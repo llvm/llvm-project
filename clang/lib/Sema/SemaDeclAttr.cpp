@@ -39,7 +39,6 @@
 #include "clang/Sema/Scope.h"
 #include "clang/Sema/ScopeInfo.h"
 #include "clang/Sema/SemaInternal.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/IR/Assumptions.h"
@@ -47,6 +46,7 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
+#include <optional>
 
 using namespace clang;
 using namespace sema;
@@ -217,7 +217,7 @@ template <typename AttrInfo>
 static bool checkUInt32Argument(Sema &S, const AttrInfo &AI, const Expr *Expr,
                                 uint32_t &Val, unsigned Idx = UINT_MAX,
                                 bool StrictlyUnsigned = false) {
-  Optional<llvm::APSInt> I = llvm::APSInt(32);
+  std::optional<llvm::APSInt> I = llvm::APSInt(32);
   if (Expr->isTypeDependent() ||
       !(I = Expr->getIntegerConstantExpr(S.Context))) {
     if (Idx != UINT_MAX)
@@ -309,7 +309,7 @@ static bool checkFunctionOrMethodParameterIndex(
   unsigned NumParams =
       (HP ? getFunctionOrMethodNumParams(D) : 0) + HasImplicitThisParam;
 
-  Optional<llvm::APSInt> IdxInt;
+  std::optional<llvm::APSInt> IdxInt;
   if (IdxExpr->isTypeDependent() ||
       !(IdxInt = IdxExpr->getIntegerConstantExpr(S.Context))) {
     S.Diag(getAttrLoc(AI), diag::err_attribute_argument_n_type)
@@ -1690,7 +1690,7 @@ void Sema::AddAssumeAlignedAttr(Decl *D, const AttributeCommonInfo &CI, Expr *E,
   }
 
   if (!E->isValueDependent()) {
-    Optional<llvm::APSInt> I = llvm::APSInt(64);
+    std::optional<llvm::APSInt> I = llvm::APSInt(64);
     if (!(I = E->getIntegerConstantExpr(Context))) {
       if (OE)
         Diag(AttrLoc, diag::err_attribute_argument_n_type)
@@ -3037,7 +3037,7 @@ static void handleSentinelAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   unsigned sentinel = (unsigned)SentinelAttr::DefaultSentinel;
   if (AL.getNumArgs() > 0) {
     Expr *E = AL.getArgAsExpr(0);
-    Optional<llvm::APSInt> Idx = llvm::APSInt(32);
+    std::optional<llvm::APSInt> Idx = llvm::APSInt(32);
     if (E->isTypeDependent() || !(Idx = E->getIntegerConstantExpr(S.Context))) {
       S.Diag(AL.getLoc(), diag::err_attribute_argument_n_type)
           << AL << 1 << AANT_ArgumentIntegerConstant << E->getSourceRange();
@@ -3056,7 +3056,7 @@ static void handleSentinelAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   unsigned nullPos = (unsigned)SentinelAttr::DefaultNullPos;
   if (AL.getNumArgs() > 1) {
     Expr *E = AL.getArgAsExpr(1);
-    Optional<llvm::APSInt> Idx = llvm::APSInt(32);
+    std::optional<llvm::APSInt> Idx = llvm::APSInt(32);
     if (E->isTypeDependent() || !(Idx = E->getIntegerConstantExpr(S.Context))) {
       S.Diag(AL.getLoc(), diag::err_attribute_argument_n_type)
           << AL << 2 << AANT_ArgumentIntegerConstant << E->getSourceRange();
@@ -3500,7 +3500,6 @@ static void handleTargetAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
 bool Sema::checkTargetClonesAttrString(
     SourceLocation LiteralLoc, StringRef Str, const StringLiteral *Literal,
     bool &HasDefault, bool &HasCommas, bool &HasNotDefault,
-    SmallVectorImpl<StringRef> &Strings,
     SmallVectorImpl<SmallString<64>> &StringsBuffer) {
   enum FirstParam { Unsupported, Duplicate, Unknown };
   enum SecondParam { None, CPU, Tune };
@@ -3530,10 +3529,10 @@ bool Sema::checkTargetClonesAttrString(
       if (Cur == "default") {
         DefaultIsDupe = HasDefault;
         HasDefault = true;
-        if (llvm::is_contained(Strings, Cur) || DefaultIsDupe)
+        if (llvm::is_contained(StringsBuffer, Cur) || DefaultIsDupe)
           Diag(CurLoc, diag::warn_target_clone_duplicate_options);
         else
-          Strings.push_back(Cur);
+          StringsBuffer.push_back(Cur);
       } else {
         std::pair<StringRef, StringRef> CurParts = {{}, Cur};
         llvm::SmallVector<StringRef, 8> CurFeatures;
@@ -3558,7 +3557,7 @@ bool Sema::checkTargetClonesAttrString(
             Res.append("+");
           Res.append(CurFeat);
         }
-        if (llvm::is_contained(Strings, Res) || DefaultIsDupe)
+        if (llvm::is_contained(StringsBuffer, Res) || DefaultIsDupe)
           Diag(CurLoc, diag::warn_target_clone_duplicate_options);
         else if (!HasCodeGenImpact)
           // Ignore features in target_clone attribute that don't impact
@@ -3566,7 +3565,6 @@ bool Sema::checkTargetClonesAttrString(
           Diag(CurLoc, diag::warn_target_clone_no_impact_options);
         else if (!Res.empty()) {
           StringsBuffer.push_back(Res);
-          Strings.push_back(StringsBuffer.back().str());
           HasNotDefault = true;
         }
       }
@@ -3584,10 +3582,10 @@ bool Sema::checkTargetClonesAttrString(
       } else if (!Context.getTargetInfo().isValidFeatureName(Cur))
         return Diag(CurLoc, diag::warn_unsupported_target_attribute)
                << Unsupported << None << Cur << TargetClones;
-      if (llvm::is_contained(Strings, Cur) || DefaultIsDupe)
+      if (llvm::is_contained(StringsBuffer, Cur) || DefaultIsDupe)
         Diag(CurLoc, diag::warn_target_clone_duplicate_options);
       // Note: Add even if there are duplicates, since it changes name mangling.
-      Strings.push_back(Cur);
+      StringsBuffer.push_back(Cur);
     }
   }
   if (Str.rtrim().endswith(","))
@@ -3622,9 +3620,11 @@ static void handleTargetClonesAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
         S.checkTargetClonesAttrString(
             LiteralLoc, CurStr,
             cast<StringLiteral>(AL.getArgAsExpr(I)->IgnoreParenCasts()),
-            HasDefault, HasCommas, HasNotDefault, Strings, StringsBuffer))
+            HasDefault, HasCommas, HasNotDefault, StringsBuffer))
       return;
   }
+  for (auto &SmallStr : StringsBuffer)
+    Strings.push_back(SmallStr.str());
 
   if (HasCommas && AL.getNumArgs() > 1)
     S.Diag(AL.getLoc(), diag::warn_target_clone_mixed_values);
@@ -5505,7 +5505,7 @@ static Expr *makeLaunchBoundsArgExpr(Sema &S, Expr *E,
   if (E->isValueDependent())
     return E;
 
-  Optional<llvm::APSInt> I = llvm::APSInt(64);
+  std::optional<llvm::APSInt> I = llvm::APSInt(64);
   if (!(I = E->getIntegerConstantExpr(S.Context))) {
     S.Diag(E->getExprLoc(), diag::err_attribute_argument_n_type)
         << &AL << Idx << AANT_ArgumentIntegerConstant << E->getSourceRange();
@@ -6551,9 +6551,9 @@ validateSwiftFunctionName(Sema &S, const ParsedAttr &AL, SourceLocation Loc,
   }
 
   StringRef CurrentParam;
-  llvm::Optional<unsigned> SelfLocation;
+  std::optional<unsigned> SelfLocation;
   unsigned NewValueCount = 0;
-  llvm::Optional<unsigned> NewValueLocation;
+  std::optional<unsigned> NewValueLocation;
   do {
     std::tie(CurrentParam, Parameters) = Parameters.split(':');
 
@@ -7289,7 +7289,7 @@ static void handleMSP430InterruptAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   }
 
   Expr *NumParamsExpr = static_cast<Expr *>(AL.getArgAsExpr(0));
-  Optional<llvm::APSInt> NumParams = llvm::APSInt(32);
+  std::optional<llvm::APSInt> NumParams = llvm::APSInt(32);
   if (!(NumParams = NumParamsExpr->getIntegerConstantExpr(S.Context))) {
     S.Diag(AL.getLoc(), diag::err_attribute_argument_type)
         << AL << AANT_ArgumentIntegerConstant

@@ -42,6 +42,11 @@ void SubtargetFeatures::AddFeature(StringRef String, bool Enable) {
                                        : (Enable ? "+" : "-") + String.lower());
 }
 
+void SubtargetFeatures::addFeaturesVector(
+    const ArrayRef<std::string> OtherFeatures) {
+  Features.insert(Features.cend(), OtherFeatures.begin(), OtherFeatures.end());
+}
+
 SubtargetFeatures::SubtargetFeatures(StringRef Initial) {
   // Break up string into separate features
   Split(Features, Initial);

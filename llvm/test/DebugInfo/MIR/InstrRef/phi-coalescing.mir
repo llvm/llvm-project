@@ -100,6 +100,7 @@
 name:            foo
 alignment:       16
 tracksRegLiveness: true
+debugInstrRef: true
 liveins:
   - { reg: '$rdi', virtual-reg: '%3' }
   - { reg: '$rsi', virtual-reg: '%5' }
@@ -147,7 +148,7 @@ body:             |
   bb.2.if.end:
     %2:gr64 = PHI %9, %bb.0, %10, %bb.1, debug-instr-number 1, debug-location !13
   ; CHECK:              DBG_PHI $r14, 1
-    DBG_INSTR_REF 1, 0, !12, !DIExpression(), debug-location !13
+    DBG_INSTR_REF !12, !DIExpression(DW_OP_LLVM_arg, 0), dbg-instr-ref(1, 0), debug-location !13
     %2:gr64 = ADD64rr killed %2, %6, implicit-def $eflags, debug-location !13
     ADJCALLSTACKDOWN64 0, 0, 0, implicit-def $rsp, implicit-def $eflags, implicit-def $ssp, implicit $rsp, implicit $ssp, debug-location !13
     $rdi = COPY %2, debug-location !13

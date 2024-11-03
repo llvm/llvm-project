@@ -2348,7 +2348,7 @@ SDValue SelectionDAG::CreateStackTemporary(TypeSize Bytes, Align Alignment) {
     StackID = TFI->getStackIDForScalableVectors();
   // The stack id gives an indication of whether the object is scalable or
   // not, so it's safe to pass in the minimum size here.
-  int FrameIdx = MFI.CreateStackObject(Bytes.getKnownMinSize(), Alignment,
+  int FrameIdx = MFI.CreateStackObject(Bytes.getKnownMinValue(), Alignment,
                                        false, nullptr, StackID);
   return getFrameIndex(FrameIdx, TLI->getFrameIndexTy(getDataLayout()));
 }
@@ -2366,8 +2366,9 @@ SDValue SelectionDAG::CreateStackTemporary(EVT VT1, EVT VT2) {
   assert(VT1Size.isScalable() == VT2Size.isScalable() &&
          "Don't know how to choose the maximum size when creating a stack "
          "temporary");
-  TypeSize Bytes =
-      VT1Size.getKnownMinSize() > VT2Size.getKnownMinSize() ? VT1Size : VT2Size;
+  TypeSize Bytes = VT1Size.getKnownMinValue() > VT2Size.getKnownMinValue()
+                       ? VT1Size
+                       : VT2Size;
 
   Type *Ty1 = VT1.getTypeForEVT(*getContext());
   Type *Ty2 = VT2.getTypeForEVT(*getContext());
@@ -2557,6 +2558,26 @@ bool SelectionDAG::MaskedValueIsAllOnes(SDValue V, const APInt &Mask,
   return Mask.isSubsetOf(computeKnownBits(V, Depth).One);
 }
 
+APInt SelectionDAG::computeVectorKnownZeroElements(SDValue Op,
+                                                   const APInt &DemandedElts,
+                                                   unsigned Depth) const {
+  EVT VT = Op.getValueType();
+  assert(VT.isVector() && !VT.isScalableVector() && "Only for fixed vectors!");
+
+  unsigned NumElts = VT.getVectorNumElements();
+  assert(DemandedElts.getBitWidth() == NumElts && "Unexpected demanded mask.");
+
+  APInt KnownZeroElements = APInt::getNullValue(NumElts);
+  for (unsigned EltIdx = 0; EltIdx != NumElts; ++EltIdx) {
+    if (!DemandedElts[EltIdx])
+      continue; // Don't query elements that are not demanded.
+    APInt Mask = APInt::getOneBitSet(NumElts, EltIdx);
+    if (MaskedVectorIsZero(Op, Mask, Depth))
+      KnownZeroElements.setBit(EltIdx);
+  }
+  return KnownZeroElements;
+}
+
 /// isSplatValue - Return true if the vector V has the same value
 /// across all DemandedElts. For scalable vectors, we don't know the
 /// number of lanes at compile time.  Instead, we use a 1 bit APInt
@@ -2607,7 +2628,8 @@ bool SelectionDAG::isSplatValue(SDValue V, const APInt &DemandedElts,
   default:
     if (Opcode >= ISD::BUILTIN_OP_END || Opcode == ISD::INTRINSIC_WO_CHAIN ||
         Opcode == ISD::INTRINSIC_W_CHAIN || Opcode == ISD::INTRINSIC_VOID)
-      return TLI->isSplatValueForTargetNode(V, DemandedElts, UndefElts, Depth);
+      return TLI->isSplatValueForTargetNode(V, DemandedElts, UndefElts, *this,
+                                            Depth);
     break;
 }
 
@@ -2957,17 +2979,11 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
                             Depth + 1);
   case ISD::SPLAT_VECTOR: {
     SDValue SrcOp = Op.getOperand(0);
-    if (SrcOp.getValueSizeInBits() != BitWidth) {
-      assert(SrcOp.getValueSizeInBits() > BitWidth &&
-             "Expected SPLAT_VECTOR implicit truncation");
-      // FIXME: We should be able to truncate the known bits here to match
-      // the official semantics of SPLAT_VECTOR, but doing so exposes a
-      // Hexagon target bug which results in an infinite loop during
-      // DAGCombine.  (See D137140 for repo).  Once that's fixed, we can
-      // strengthen this.
-      break;
-    }
-    Known = computeKnownBits(SrcOp, Depth + 1);
+    assert(SrcOp.getValueSizeInBits() >= BitWidth &&
+           "Expected SPLAT_VECTOR implicit truncation");
+    // Implicitly truncate the bits to match the official semantics of
+    // SPLAT_VECTOR.
+    Known = computeKnownBits(SrcOp, Depth + 1).trunc(BitWidth);
     break;
   }
   case ISD::BUILD_VECTOR:
@@ -3393,7 +3409,7 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
     Known2 = computeKnownBits(Op.getOperand(0), DemandedElts, Depth + 1);
     // If we have a known 1, its position is our upper bound.
     unsigned PossibleTZ = Known2.countMaxTrailingZeros();
-    unsigned LowBits = Log2_32(PossibleTZ) + 1;
+    unsigned LowBits = llvm::bit_width(PossibleTZ);
     Known.Zero.setBitsFrom(LowBits);
     break;
   }
@@ -3402,7 +3418,7 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
     Known2 = computeKnownBits(Op.getOperand(0), DemandedElts, Depth + 1);
     // If we have a known 1, its position is our upper bound.
     unsigned PossibleLZ = Known2.countMaxLeadingZeros();
-    unsigned LowBits = Log2_32(PossibleLZ) + 1;
+    unsigned LowBits = llvm::bit_width(PossibleLZ);
     Known.Zero.setBitsFrom(LowBits);
     break;
   }
@@ -3410,7 +3426,7 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
     Known2 = computeKnownBits(Op.getOperand(0), DemandedElts, Depth + 1);
     // If we know some of the bits are zero, they can't be one.
     unsigned PossibleOnes = Known2.countMaxPopulation();
-    Known.Zero.setBitsFrom(Log2_32(PossibleOnes) + 1);
+    Known.Zero.setBitsFrom(llvm::bit_width(PossibleOnes));
     break;
   }
   case ISD::PARITY: {
@@ -4736,6 +4752,7 @@ bool SelectionDAG::canCreateUndefOrPoison(SDValue Op, const APInt &DemandedElts,
   case ISD::SIGN_EXTEND_VECTOR_INREG:
   case ISD::ZERO_EXTEND_VECTOR_INREG:
   case ISD::BITCAST:
+  case ISD::BUILD_VECTOR:
     return false;
 
   case ISD::ADD:
@@ -6199,6 +6216,12 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
         return getNode(ISD::AND, DL, VT, N1, getNOT(DL, N2, VT));
     }
     break;
+  case ISD::ABDS:
+  case ISD::ABDU:
+    assert(VT.isInteger() && "This operator does not apply to FP types!");
+    assert(N1.getValueType() == N2.getValueType() &&
+           N1.getValueType() == VT && "Binary operator types must match!");
+    break;
   case ISD::SMIN:
   case ISD::UMAX:
     assert(VT.isInteger() && "This operator does not apply to FP types!");
@@ -6688,6 +6711,8 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
            "Dest and insert subvector source types must match!");
     assert(VT.isVector() && N2VT.isVector() &&
            "Insert subvector VTs must be vectors!");
+    assert(VT.getVectorElementType() == N2VT.getVectorElementType() &&
+           "Insert subvector VTs must have the same element type!");
     assert((VT.isScalableVector() || N2VT.isFixedLengthVector()) &&
            "Cannot insert a scalable vector into a fixed length vector!");
     assert((VT.isScalableVector() != N2VT.isScalableVector() ||
@@ -6878,10 +6903,10 @@ SDValue SelectionDAG::getMemBasePlusOffset(SDValue Base, TypeSize Offset,
 
   if (Offset.isScalable())
     Index = getVScale(DL, Base.getValueType(),
-                      APInt(Base.getValueSizeInBits().getFixedSize(),
-                            Offset.getKnownMinSize()));
+                      APInt(Base.getValueSizeInBits().getFixedValue(),
+                            Offset.getKnownMinValue()));
   else
-    Index = getConstant(Offset.getFixedSize(), DL, VT);
+    Index = getConstant(Offset.getFixedValue(), DL, VT);
 
   return getMemBasePlusOffset(Base, Index, DL, Flags);
 }
@@ -7786,6 +7811,8 @@ SDValue SelectionDAG::getAtomic(unsigned Opcode, const SDLoc &dl, EVT MemVT,
           Opcode == ISD::ATOMIC_LOAD_FSUB ||
           Opcode == ISD::ATOMIC_LOAD_FMAX ||
           Opcode == ISD::ATOMIC_LOAD_FMIN ||
+          Opcode == ISD::ATOMIC_LOAD_UINC_WRAP ||
+          Opcode == ISD::ATOMIC_LOAD_UDEC_WRAP ||
           Opcode == ISD::ATOMIC_SWAP ||
           Opcode == ISD::ATOMIC_STORE) &&
          "Invalid Atomic Op");
@@ -11084,7 +11111,7 @@ MemSDNode::MemSDNode(unsigned Opc, unsigned Order, const DebugLoc &dl,
   // the MMO. This is because the MMO might indicate only a possible address
   // range instead of specifying the affected memory addresses precisely.
   // TODO: Make MachineMemOperands aware of scalable vectors.
-  assert(memvt.getStoreSize().getKnownMinSize() <= MMO->getSize() &&
+  assert(memvt.getStoreSize().getKnownMinValue() <= MMO->getSize() &&
          "Size mismatch!");
 }
 

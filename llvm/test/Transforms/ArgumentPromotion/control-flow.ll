@@ -2,15 +2,15 @@
 ; RUN: opt < %s -passes=argpromotion -S | FileCheck %s
 
 ; Don't promote around control flow.
-define internal i32 @callee(i1 %C, i32* %P) {
+define internal i32 @callee(i1 %C, ptr %P) {
 ; CHECK-LABEL: define {{[^@]+}}@callee
-; CHECK-SAME: (i1 [[C:%.*]], i32* [[P:%.*]]) {
+; CHECK-SAME: (i1 [[C:%.*]], ptr [[P:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 [[C]], label [[T:%.*]], label [[F:%.*]]
 ; CHECK:       T:
 ; CHECK-NEXT:    ret i32 17
 ; CHECK:       F:
-; CHECK-NEXT:    [[X:%.*]] = load i32, i32* [[P]], align 4
+; CHECK-NEXT:    [[X:%.*]] = load i32, ptr [[P]], align 4
 ; CHECK-NEXT:    ret i32 [[X]]
 ;
 entry:
@@ -20,18 +20,18 @@ T:
   ret i32 17
 
 F:
-  %X = load i32, i32* %P
+  %X = load i32, ptr %P
   ret i32 %X
 }
 
 define i32 @foo() {
 ; CHECK-LABEL: define {{[^@]+}}@foo() {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[X:%.*]] = call i32 @callee(i1 true, i32* null)
+; CHECK-NEXT:    [[X:%.*]] = call i32 @callee(i1 true, ptr null)
 ; CHECK-NEXT:    ret i32 [[X]]
 ;
 entry:
-  %X = call i32 @callee(i1 true, i32* null)
+  %X = call i32 @callee(i1 true, ptr null)
   ret i32 %X
 }
 

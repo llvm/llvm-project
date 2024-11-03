@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -no-opaque-pointers %s -triple "spirv32-unknown-unknown" -verify -emit-llvm -o - | FileCheck %s -check-prefix=SPIRV32
-// RUN: %clang_cc1 -no-opaque-pointers %s -triple "spirv64-unknown-unknown" -verify -emit-llvm -o - | FileCheck %s -check-prefix=SPIRV64
+// RUN: %clang_cc1 %s -triple "spirv32-unknown-unknown" -verify -emit-llvm -o - | FileCheck %s -check-prefix=SPIRV32
+// RUN: %clang_cc1 %s -triple "spirv64-unknown-unknown" -verify -emit-llvm -o - | FileCheck %s -check-prefix=SPIRV64
 
 // SPIRV32: target triple = "spirv32-unknown-unknown"
 // SPIRV64: target triple = "spirv64-unknown-unknown"
@@ -22,10 +22,10 @@ kernel void foo(global long *arg) {
 #endif
   my_st *tmp = 0;
 
-  // SPIRV32: store i64 4, i64 addrspace(1)*
-  // SPIRV64: store i64 8, i64 addrspace(1)*
+  // SPIRV32: store i64 4, ptr addrspace(1)
+  // SPIRV64: store i64 8, ptr addrspace(1)
   arg[0] = (long)(&tmp->v);
-  // SPIRV32: store i64 8, i64 addrspace(1)*
-  // SPIRV64: store i64 16, i64 addrspace(1)*
+  // SPIRV32: store i64 8, ptr addrspace(1)
+  // SPIRV64: store i64 16, ptr addrspace(1)
   arg[1] = (long)(&tmp->v2);
 }

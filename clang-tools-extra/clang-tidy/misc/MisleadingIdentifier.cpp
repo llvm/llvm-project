@@ -11,9 +11,7 @@
 #include "clang/Frontend/CompilerInstance.h"
 #include "llvm/Support/ConvertUTF.h"
 
-namespace clang {
-namespace tidy {
-namespace misc {
+namespace clang::tidy::misc {
 
 // See https://www.unicode.org/Public/14.0.0/ucd/extracted/DerivedBidiClass.txt
 static bool isUnassignedAL(llvm::UTF32 CP) {
@@ -161,6 +159,4 @@ void MisleadingIdentifierCheck::registerMatchers(
   Finder->addMatcher(ast_matchers::namedDecl().bind("nameddecl"), this);
 }
 
-} // namespace misc
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::misc

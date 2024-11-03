@@ -48,10 +48,10 @@ define void @merge_2_v4f32_align32(ptr %a0, ptr %a1) nounwind {
 ;
 ; X64-AVX1-LABEL: merge_2_v4f32_align32:
 ; X64-AVX1:       # %bb.0:
-; X64-AVX1-NEXT:    vmovntdqa 16(%rdi), %xmm0
-; X64-AVX1-NEXT:    vmovntdqa (%rdi), %xmm1
-; X64-AVX1-NEXT:    vmovntdq %xmm1, (%rsi)
-; X64-AVX1-NEXT:    vmovntdq %xmm0, 16(%rsi)
+; X64-AVX1-NEXT:    vmovntdqa (%rdi), %xmm0
+; X64-AVX1-NEXT:    vmovntdqa 16(%rdi), %xmm1
+; X64-AVX1-NEXT:    vmovntdq %xmm0, (%rsi)
+; X64-AVX1-NEXT:    vmovntdq %xmm1, 16(%rsi)
 ; X64-AVX1-NEXT:    retq
 ;
 ; X64-AVX2-LABEL: merge_2_v4f32_align32:

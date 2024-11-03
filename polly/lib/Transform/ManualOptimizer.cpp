@@ -15,12 +15,12 @@
 #include "polly/Options.h"
 #include "polly/ScheduleTreeTransform.h"
 #include "polly/Support/ScopHelper.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/Transforms/Utils/LoopUtils.h"
+#include <optional>
 
 #define DEBUG_TYPE "polly-opt-manual"
 
@@ -40,7 +40,7 @@ static TransformationMode hasUnrollTransformation(MDNode *LoopID) {
   if (getBooleanLoopAttribute(LoopID, "llvm.loop.unroll.disable"))
     return TM_SuppressedByUser;
 
-  Optional<int> Count =
+  std::optional<int> Count =
       getOptionalIntLoopAttribute(LoopID, "llvm.loop.unroll.count");
   if (Count)
     return *Count == 1 ? TM_SuppressedByUser : TM_ForcedByUser;

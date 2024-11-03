@@ -1,4 +1,4 @@
-; RUN: opt < %s -loop-reduce -S | FileCheck %s
+; RUN: opt -opaque-pointers=0 < %s -loop-reduce -S | FileCheck %s
 ; CHECK: bb1:
 ; CHECK: load double, double addrspace(1)* [[IV:%[^,]+]]
 ; CHECK: store double {{.*}}, double addrspace(1)* [[IV]]

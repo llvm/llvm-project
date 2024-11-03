@@ -172,8 +172,14 @@ void ODRHash::AddTemplateArgument(TemplateArgument TA) {
       AddDecl(TA.getAsDecl());
       break;
     case TemplateArgument::NullPtr:
-    case TemplateArgument::Integral:
+      ID.AddPointer(nullptr);
       break;
+    case TemplateArgument::Integral: {
+      // There are integrals (e.g.: _BitInt(128)) that cannot be represented as
+      // any builtin integral type, so we use the hash of APSInt instead.
+      TA.getAsIntegral().Profile(ID);
+      break;
+    }
     case TemplateArgument::Template:
     case TemplateArgument::TemplateExpansion:
       AddTemplateName(TA.getAsTemplateOrTemplatePattern());
@@ -335,6 +341,11 @@ public:
     AddStmt(D->getInClassInitializer());
 
     Inherited::VisitFieldDecl(D);
+  }
+
+  void VisitObjCIvarDecl(const ObjCIvarDecl *D) {
+    ID.AddInteger(D->getCanonicalAccessControl());
+    Inherited::VisitObjCIvarDecl(D);
   }
 
   void VisitObjCPropertyDecl(const ObjCPropertyDecl *D) {
@@ -531,6 +542,7 @@ bool ODRHash::isSubDeclToBeProcessed(const Decl *D, const DeclContext *Parent) {
     case Decl::Typedef:
     case Decl::Var:
     case Decl::ObjCMethod:
+    case Decl::ObjCIvar:
     case Decl::ObjCProperty:
       return true;
   }
@@ -587,6 +599,51 @@ void ODRHash::AddCXXRecordDecl(const CXXRecordDecl *Record) {
     ID.AddInteger(Base.isVirtual());
     ID.AddInteger(Base.getAccessSpecifierAsWritten());
   }
+}
+
+void ODRHash::AddRecordDecl(const RecordDecl *Record) {
+  assert(!isa<CXXRecordDecl>(Record) &&
+         "For CXXRecordDecl should call AddCXXRecordDecl.");
+  AddDecl(Record);
+
+  // Filter out sub-Decls which will not be processed in order to get an
+  // accurate count of Decl's.
+  llvm::SmallVector<const Decl *, 16> Decls;
+  for (Decl *SubDecl : Record->decls()) {
+    if (isSubDeclToBeProcessed(SubDecl, Record))
+      Decls.push_back(SubDecl);
+  }
+
+  ID.AddInteger(Decls.size());
+  for (const Decl *SubDecl : Decls)
+    AddSubDecl(SubDecl);
+}
+
+void ODRHash::AddObjCInterfaceDecl(const ObjCInterfaceDecl *IF) {
+  AddDecl(IF);
+
+  auto *SuperClass = IF->getSuperClass();
+  AddBoolean(SuperClass);
+  if (SuperClass)
+    ID.AddInteger(SuperClass->getODRHash());
+
+  // Hash referenced protocols.
+  ID.AddInteger(IF->getReferencedProtocols().size());
+  for (const ObjCProtocolDecl *RefP : IF->protocols()) {
+    // Hash the name only as a referenced protocol can be a forward declaration.
+    AddDeclarationName(RefP->getDeclName());
+  }
+
+  // Filter out sub-Decls which will not be processed in order to get an
+  // accurate count of Decl's.
+  llvm::SmallVector<const Decl *, 16> Decls;
+  for (Decl *SubDecl : IF->decls())
+    if (isSubDeclToBeProcessed(SubDecl, IF))
+      Decls.push_back(SubDecl);
+
+  ID.AddInteger(Decls.size());
+  for (auto *SubDecl : Decls)
+    AddSubDecl(SubDecl);
 }
 
 void ODRHash::AddFunctionDecl(const FunctionDecl *Function,

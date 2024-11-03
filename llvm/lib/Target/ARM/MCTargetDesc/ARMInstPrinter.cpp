@@ -85,8 +85,8 @@ bool ARMInstPrinter::applyTargetSpecificCLOption(StringRef Opt) {
   return false;
 }
 
-void ARMInstPrinter::printRegName(raw_ostream &OS, unsigned RegNo) const {
-  OS << markup("<reg:") << getRegisterName(RegNo, DefaultAltIdx) << markup(">");
+void ARMInstPrinter::printRegName(raw_ostream &OS, MCRegister Reg) const {
+  OS << markup("<reg:") << getRegisterName(Reg, DefaultAltIdx) << markup(">");
 }
 
 void ARMInstPrinter::printInst(const MCInst *MI, uint64_t Address,
@@ -740,7 +740,7 @@ void ARMInstPrinter::printBitfieldInvMaskImmOperand(const MCInst *MI,
   const MCOperand &MO = MI->getOperand(OpNum);
   uint32_t v = ~MO.getImm();
   int32_t lsb = countTrailingZeros(v);
-  int32_t width = (32 - countLeadingZeros(v)) - lsb;
+  int32_t width = llvm::bit_width(v) - lsb;
   assert(MO.isImm() && "Not a valid bf_inv_mask_imm value!");
   O << markup("<imm:") << '#' << lsb << markup(">") << ", " << markup("<imm:")
     << '#' << width << markup(">");

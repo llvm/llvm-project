@@ -78,6 +78,9 @@ if(COMPILER_RT_CAN_EXECUTE_TESTS)
     # OpenBSD not supporting asan, cannot run the tests
     if(COMPILER_RT_BUILD_LIBFUZZER AND NOT "${CMAKE_SYSTEM_NAME}" STREQUAL "OpenBSD" AND NOT ANDROID)
       compiler_rt_test_runtime(fuzzer)
+
+      # These tests don't need an additional runtime but use asan runtime.
+      add_subdirectory(metadata)
     endif()
 
     foreach(sanitizer ${COMPILER_RT_SANITIZERS_TO_BUILD})
@@ -105,8 +108,6 @@ if(COMPILER_RT_CAN_EXECUTE_TESTS)
   # ShadowCallStack does not yet provide a runtime with compiler-rt, the tests
   # include their own minimal runtime
   add_subdirectory(shadowcallstack)
-  # These tests are self-contained and don't need an additional runtime.
-  add_subdirectory(metadata)
 endif()
 
 if(COMPILER_RT_STANDALONE_BUILD)

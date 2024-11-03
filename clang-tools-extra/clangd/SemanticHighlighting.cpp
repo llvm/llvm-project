@@ -27,12 +27,12 @@
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Tooling/Syntax/Tokens.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Error.h"
 #include <algorithm>
+#include <optional>
 
 namespace clang {
 namespace clangd {
@@ -82,10 +82,10 @@ bool isUniqueDefinition(const NamedDecl *Decl) {
          isa<ObjCImplDecl>(Decl);
 }
 
-llvm::Optional<HighlightingKind> kindForType(const Type *TP,
-                                             const HeuristicResolver *Resolver);
-llvm::Optional<HighlightingKind>
-kindForDecl(const NamedDecl *D, const HeuristicResolver *Resolver) {
+std::optional<HighlightingKind> kindForType(const Type *TP,
+                                            const HeuristicResolver *Resolver);
+std::optional<HighlightingKind> kindForDecl(const NamedDecl *D,
+                                            const HeuristicResolver *Resolver) {
   if (auto *USD = dyn_cast<UsingShadowDecl>(D)) {
     if (auto *Target = USD->getTargetDecl())
       D = Target;
@@ -163,8 +163,8 @@ kindForDecl(const NamedDecl *D, const HeuristicResolver *Resolver) {
   }
   return std::nullopt;
 }
-llvm::Optional<HighlightingKind>
-kindForType(const Type *TP, const HeuristicResolver *Resolver) {
+std::optional<HighlightingKind> kindForType(const Type *TP,
+                                            const HeuristicResolver *Resolver) {
   if (!TP)
     return std::nullopt;
   if (TP->isBuiltinType()) // Builtins are special, they do not have decls.
@@ -331,8 +331,8 @@ unsigned evaluateHighlightPriority(const HighlightingToken &Tok) {
 //
 // In particular, heuristically resolved dependent names get their heuristic
 // kind, plus the dependent modifier.
-llvm::Optional<HighlightingToken> resolveConflict(const HighlightingToken &A,
-                                                  const HighlightingToken &B) {
+std::optional<HighlightingToken> resolveConflict(const HighlightingToken &A,
+                                                 const HighlightingToken &B) {
   unsigned Priority1 = evaluateHighlightPriority(A);
   unsigned Priority2 = evaluateHighlightPriority(B);
   if (Priority1 == Priority2 && A.Kind != B.Kind)
@@ -341,13 +341,14 @@ llvm::Optional<HighlightingToken> resolveConflict(const HighlightingToken &A,
   Result.Modifiers = A.Modifiers | B.Modifiers;
   return Result;
 }
-llvm::Optional<HighlightingToken>
+std::optional<HighlightingToken>
 resolveConflict(ArrayRef<HighlightingToken> Tokens) {
   if (Tokens.size() == 1)
     return Tokens[0];
 
   assert(Tokens.size() >= 2);
-  Optional<HighlightingToken> Winner = resolveConflict(Tokens[0], Tokens[1]);
+  std::optional<HighlightingToken> Winner =
+      resolveConflict(Tokens[0], Tokens[1]);
   for (size_t I = 2; Winner && I < Tokens.size(); ++I)
     Winner = resolveConflict(*Winner, Tokens[I]);
   return Winner;
@@ -473,7 +474,7 @@ public:
   const HeuristicResolver *getResolver() const { return Resolver; }
 
 private:
-  llvm::Optional<Range> getRangeForSourceLocation(SourceLocation Loc) {
+  std::optional<Range> getRangeForSourceLocation(SourceLocation Loc) {
     Loc = getHighlightableSpellingToken(Loc, SourceMgr);
     if (Loc.isInvalid())
       return std::nullopt;
@@ -495,7 +496,7 @@ private:
   HighlightingToken InvalidHighlightingToken;
 };
 
-llvm::Optional<HighlightingModifier> scopeModifier(const NamedDecl *D) {
+std::optional<HighlightingModifier> scopeModifier(const NamedDecl *D) {
   const DeclContext *DC = D->getDeclContext();
   // Injected "Foo" within the class "Foo" has file scope, not class scope.
   if (auto *R = dyn_cast_or_null<RecordDecl>(D))
@@ -523,7 +524,7 @@ llvm::Optional<HighlightingModifier> scopeModifier(const NamedDecl *D) {
   return HighlightingModifier::GlobalScope;
 }
 
-llvm::Optional<HighlightingModifier> scopeModifier(const Type *T) {
+std::optional<HighlightingModifier> scopeModifier(const Type *T) {
   if (!T)
     return std::nullopt;
   if (T->isBuiltinType())
@@ -671,7 +672,7 @@ public:
       return;
     }
 
-    llvm::Optional<SourceLocation> Location;
+    std::optional<SourceLocation> Location;
 
     // FIXME Add "unwrapping" for ArraySubscriptExpr,
     //  e.g. highlight `a` in `a[i]`

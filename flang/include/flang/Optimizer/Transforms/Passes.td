@@ -117,6 +117,12 @@ def ArrayValueCopy : Pass<"array-value-copy", "::mlir::func::FuncOp"> {
   }];
   let constructor = "::fir::createArrayValueCopyPass()";
   let dependentDialects = [ "fir::FIROpsDialect" ];
+  let options = [
+    Option<"optimizeConflicts", "optimize-conflicts", "bool",
+           /*default=*/"false",
+           "do more detailed conflict analysis to reduce the number "
+           "of temporaries">
+  ];
 }
 
 def CharacterConversion : Pass<"character-conversion"> {
@@ -175,6 +181,19 @@ def MemRefDataFlowOpt : Pass<"fir-memref-dataflow-opt", "::mlir::func::FuncOp"> 
   let constructor = "::fir::createMemDataFlowOptPass()";
   let dependentDialects = [
     "fir::FIROpsDialect", "mlir::func::FuncDialect"
+  ];
+}
+
+// This needs to be a "mlir::ModuleOp" pass, because we are creating debug for
+// the module in this pass.
+def AddDebugFoundation : Pass<"add-debug-foundation", "mlir::ModuleOp"> {
+  let summary = "Add the foundation for debug info";
+  let description = [{
+    Add the foundation for emitting debug info that can be understood by llvm.
+  }];
+  let constructor = "::fir::createAddDebugFoundationPass()";
+  let dependentDialects = [
+    "fir::FIROpsDialect", "mlir::func::FuncDialect", "mlir::LLVM::LLVMDialect"
   ];
 }
 

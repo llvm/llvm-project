@@ -33,13 +33,13 @@
 ; CHECK: @nestedarray.2 = alias ptr, getelementptr inbounds ([2 x [4 x ptr]], ptr @nestedarray, i32 0, inrange i32 0, i32 4)
 @nestedarray.2 = alias ptr, getelementptr inbounds ([2 x [4 x ptr]], ptr @nestedarray, i32 0, inrange i32 0, i32 4)
 
-; CHECK: @nestedarray.3 = alias ptr, ptr @nestedarray
+; CHECK: @nestedarray.3 = alias ptr, getelementptr inbounds ([2 x [4 x ptr]], ptr @nestedarray, i32 0, inrange i32 0)
 @nestedarray.3 = alias ptr, getelementptr inbounds ([4 x ptr], ptr getelementptr inbounds ([2 x [4 x ptr]], ptr @nestedarray, i32 0, inrange i32 0), i32 0, i32 0)
 
-; CHECK: @nestedarray.4 = alias ptr, getelementptr inbounds ([4 x ptr], ptr @nestedarray, i32 1, i32 0)
+; CHECK: @nestedarray.4 = alias ptr, getelementptr inbounds ([2 x [4 x ptr]], ptr @nestedarray, i32 0, i32 1, i32 0)
 @nestedarray.4 = alias ptr, getelementptr inbounds ([4 x ptr], ptr getelementptr inbounds ([2 x [4 x ptr]], ptr @nestedarray, i32 0, inrange i32 0), i32 1, i32 0)
 
-; CHECK: @nestedarray.5 = alias ptr, getelementptr inbounds ([4 x ptr], ptr @nestedarray, i32 1, i32 0)
+; CHECK: @nestedarray.5 = alias ptr, getelementptr inbounds ([2 x [4 x ptr]], ptr @nestedarray, inrange i32 0, i32 1, i32 0)
 @nestedarray.5 = alias ptr, getelementptr inbounds ([4 x ptr], ptr getelementptr inbounds ([2 x [4 x ptr]], ptr @nestedarray, inrange i32 0, i32 0), i32 1, i32 0)
 
 ; See if i92 indices work too.

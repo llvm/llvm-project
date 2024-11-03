@@ -4,7 +4,7 @@ target datalayout = "e-p:32:32:32-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:32:64-f3
 
 target triple = "i686-apple-darwin9"
 
-define i8* @foo( i8* %ABC) {
+define ptr @foo( ptr %ABC) {
 entry:
 	switch i8 0, label %bb129 [
 		 i8 0, label %UnifiedReturnBlock
@@ -24,7 +24,7 @@ bb16:		; preds = %cond_next102, %bb16.preheader
 
 cond_next102:		; preds = %bb16
 	%tmp138145.rec = add i32 %ABC.2146.0.rec, 3		; <i32> [#uses=1]
-	%tmp138145 = getelementptr i8, i8* %ABC, i32 %tmp138145.rec		; <i8*> [#uses=4]
+	%tmp138145 = getelementptr i8, ptr %ABC, i32 %tmp138145.rec		; <ptr> [#uses=4]
 	%indvar.next = add i32 %indvar, 1		; <i32> [#uses=1]
 	switch i8 0, label %bb129.loopexit [
 		 i8 0, label %UnifiedReturnBlock.loopexit
@@ -38,17 +38,17 @@ bb129.loopexit:		; preds = %cond_next102
 	br label %bb129
 
 bb129:		; preds = %bb129.loopexit, %entry
-	ret i8* null
+	ret ptr null
 
 UnifiedReturnBlock.loopexit:		; preds = %cond_next102, %cond_next102, %cond_next102, %cond_next102, %bb16
-	%UnifiedRetVal.ph = phi i8* [ %tmp138145, %cond_next102 ], [ %tmp138145, %cond_next102 ], [ %tmp138145, %cond_next102 ], [ %tmp138145, %cond_next102 ], [ null, %bb16 ]		; <i8*> [#uses=0]
+	%UnifiedRetVal.ph = phi ptr [ %tmp138145, %cond_next102 ], [ %tmp138145, %cond_next102 ], [ %tmp138145, %cond_next102 ], [ %tmp138145, %cond_next102 ], [ null, %bb16 ]		; <ptr> [#uses=0]
 	br label %UnifiedReturnBlock
 
 UnifiedReturnBlock:		; preds = %UnifiedReturnBlock.loopexit, %entry, %entry, %entry, %entry
-	ret i8* null
+	ret ptr null
 }
 
-define i8* @bar() {
+define ptr @bar() {
 entry:
 	switch i8 0, label %bb158 [
 		 i8 37, label %bb74
@@ -57,15 +57,15 @@ entry:
 	]
 
 bb11:		; preds = %entry
-	ret i8* null
+	ret ptr null
 
 cond_true:		; preds = %entry
-	ret i8* null
+	ret ptr null
 
 bb74:		; preds = %entry
-	ret i8* null
+	ret ptr null
 
 bb158:		; preds = %entry
-	ret i8* null
+	ret ptr null
 }
 

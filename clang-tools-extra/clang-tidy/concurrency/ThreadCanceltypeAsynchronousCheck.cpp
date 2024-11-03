@@ -13,9 +13,7 @@
 
 using namespace clang::ast_matchers;
 
-namespace clang {
-namespace tidy {
-namespace concurrency {
+namespace clang::tidy::concurrency {
 
 void ThreadCanceltypeAsynchronousCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
@@ -34,6 +32,4 @@ void ThreadCanceltypeAsynchronousCheck::check(
                                    "be 'PTHREAD_CANCEL_ASYNCHRONOUS'");
 }
 
-} // namespace concurrency
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::concurrency

@@ -45,10 +45,6 @@ using namespace llvm;
 
 #define DEBUG_TYPE "riscv-asm-parser"
 
-// Include the auto-generated portion of the compress emitter.
-#define GEN_COMPRESS_INSTR
-#include "RISCVGenCompressInstEmitter.inc"
-
 STATISTIC(RISCVNumInstrsCompressed,
           "Number of RISC-V Compressed instructions emitted");
 
@@ -809,7 +805,7 @@ public:
   }
 
   void print(raw_ostream &OS) const override {
-    auto RegName = [](unsigned Reg) {
+    auto RegName = [](MCRegister Reg) {
       if (Reg)
         return RISCVInstPrinter::getRegisterName(Reg);
       else
@@ -2316,7 +2312,7 @@ bool RISCVAsmParser::parseDirectiveVariantCC() {
 
 void RISCVAsmParser::emitToStreamer(MCStreamer &S, const MCInst &Inst) {
   MCInst CInst;
-  bool Res = compressInst(CInst, Inst, getSTI(), S.getContext());
+  bool Res = RISCVRVC::compress(CInst, Inst, getSTI());
   if (Res)
     ++RISCVNumInstrsCompressed;
   S.emitInstruction((Res ? CInst : Inst), getSTI());

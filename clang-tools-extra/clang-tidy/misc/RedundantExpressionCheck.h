@@ -11,9 +11,7 @@
 
 #include "../ClangTidyCheck.h"
 
-namespace clang {
-namespace tidy {
-namespace misc {
+namespace clang::tidy::misc {
 
 /// The checker detects expressions that are redundant, because they contain
 /// ineffective, useless parts.
@@ -33,8 +31,6 @@ private:
   void checkRelationalExpr(const ast_matchers::MatchFinder::MatchResult &R);
 };
 
-} // namespace misc
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::misc
 
 #endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MISC_REDUNDANT_EXPRESSION_H

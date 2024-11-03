@@ -269,6 +269,8 @@ private:
   void handleLDHideSymbol(StringRef name, StringRef originalName);
   void checkAppExtensionSafety(bool dylibIsAppExtensionSafe) const;
   void parseExportedSymbols(uint32_t offset, uint32_t size);
+  void loadReexport(StringRef path, DylibFile *umbrella,
+                    const llvm::MachO::InterfaceFile *currentTopLevelTapi);
 
   llvm::DenseSet<llvm::CachedHashStringRef> hiddenSymbols;
 };
@@ -355,6 +357,7 @@ std::vector<const CommandType *> findCommands(const void *anyHdr,
   return detail::findCommands<CommandType>(anyHdr, 0, types...);
 }
 
+std::string replaceThinLTOSuffix(StringRef path);
 } // namespace macho
 
 std::string toString(const macho::InputFile *file);

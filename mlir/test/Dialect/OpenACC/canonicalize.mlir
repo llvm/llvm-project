@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -canonicalize -split-input-file | FileCheck %s
+// RUN: mlir-opt %s -canonicalize="test-convergence" -split-input-file | FileCheck %s
 
 func.func @testenterdataop(%a: memref<10xf32>) -> () {
   %ifCond = arith.constant true

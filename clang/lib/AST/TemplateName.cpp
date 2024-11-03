@@ -29,13 +29,14 @@
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
+#include <optional>
 #include <string>
 
 using namespace clang;
 
 TemplateArgument
 SubstTemplateTemplateParmPackStorage::getArgumentPack() const {
-  return TemplateArgument(llvm::makeArrayRef(Arguments, Bits.Data));
+  return TemplateArgument(llvm::ArrayRef(Arguments, Bits.Data));
 }
 
 TemplateTemplateParmDecl *
@@ -56,11 +57,9 @@ void SubstTemplateTemplateParmStorage::Profile(llvm::FoldingSetNodeID &ID) {
   Profile(ID, Replacement, getAssociatedDecl(), getIndex(), getPackIndex());
 }
 
-void SubstTemplateTemplateParmStorage::Profile(llvm::FoldingSetNodeID &ID,
-                                               TemplateName Replacement,
-                                               Decl *AssociatedDecl,
-                                               unsigned Index,
-                                               Optional<unsigned> PackIndex) {
+void SubstTemplateTemplateParmStorage::Profile(
+    llvm::FoldingSetNodeID &ID, TemplateName Replacement, Decl *AssociatedDecl,
+    unsigned Index, std::optional<unsigned> PackIndex) {
   Replacement.Profile(ID);
   ID.AddPointer(AssociatedDecl);
   ID.AddInteger(Index);

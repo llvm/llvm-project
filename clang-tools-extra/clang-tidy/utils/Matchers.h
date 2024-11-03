@@ -11,10 +11,9 @@
 
 #include "TypeTraits.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
+#include <optional>
 
-namespace clang {
-namespace tidy {
-namespace matchers {
+namespace clang::tidy::matchers {
 
 AST_MATCHER(BinaryOperator, isRelationalOperator) {
   return Node.isRelationalOp();
@@ -23,7 +22,7 @@ AST_MATCHER(BinaryOperator, isRelationalOperator) {
 AST_MATCHER(BinaryOperator, isEqualityOperator) { return Node.isEqualityOp(); }
 
 AST_MATCHER(QualType, isExpensiveToCopy) {
-  llvm::Optional<bool> IsExpensive =
+  std::optional<bool> IsExpensive =
       utils::type_traits::isExpensiveToCopy(Node, Finder->getASTContext());
   return IsExpensive && *IsExpensive;
 }
@@ -121,8 +120,6 @@ matchesAnyListedName(llvm::ArrayRef<StringRef> NameList) {
       new MatchesAnyListedNameMatcher(NameList));
 }
 
-} // namespace matchers
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::matchers
 
 #endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_UTILS_MATCHERS_H

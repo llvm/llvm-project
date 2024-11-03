@@ -10,11 +10,9 @@
 #include "LexerUtils.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Type.h"
+#include <optional>
 
-namespace clang {
-namespace tidy {
-namespace utils {
-namespace fixit {
+namespace clang::tidy::utils::fixit {
 
 FixItHint changeVarDeclToReference(const VarDecl &Var, ASTContext &Context) {
   SourceLocation AmpLocation = Var.getLocation();
@@ -41,7 +39,7 @@ static bool locDangerous(SourceLocation S) {
   return S.isInvalid() || S.isMacroID();
 }
 
-static Optional<SourceLocation>
+static std::optional<SourceLocation>
 skipLParensBackwards(SourceLocation Start, const ASTContext &Context) {
   if (locDangerous(Start))
     return std::nullopt;
@@ -62,8 +60,8 @@ skipLParensBackwards(SourceLocation Start, const ASTContext &Context) {
   return Start;
 }
 
-static Optional<FixItHint> fixIfNotDangerous(SourceLocation Loc,
-                                             StringRef Text) {
+static std::optional<FixItHint> fixIfNotDangerous(SourceLocation Loc,
+                                                  StringRef Text) {
   if (locDangerous(Loc))
     return std::nullopt;
   return FixItHint::CreateInsertion(Loc, Text);
@@ -78,17 +76,17 @@ static std::string buildQualifier(DeclSpec::TQ Qualifier,
   return (llvm::Twine(DeclSpec::getSpecifierName(Qualifier)) + " ").str();
 }
 
-static Optional<FixItHint> changeValue(const VarDecl &Var,
-                                       DeclSpec::TQ Qualifier,
-                                       QualifierTarget QualTarget,
-                                       QualifierPolicy QualPolicy,
-                                       const ASTContext &Context) {
+static std::optional<FixItHint> changeValue(const VarDecl &Var,
+                                            DeclSpec::TQ Qualifier,
+                                            QualifierTarget QualTarget,
+                                            QualifierPolicy QualPolicy,
+                                            const ASTContext &Context) {
   switch (QualPolicy) {
   case QualifierPolicy::Left:
     return fixIfNotDangerous(Var.getTypeSpecStartLoc(),
                              buildQualifier(Qualifier));
   case QualifierPolicy::Right:
-    Optional<SourceLocation> IgnoredParens =
+    std::optional<SourceLocation> IgnoredParens =
         skipLParensBackwards(Var.getLocation(), Context);
 
     if (IgnoredParens)
@@ -98,20 +96,20 @@ static Optional<FixItHint> changeValue(const VarDecl &Var,
   llvm_unreachable("Unknown QualifierPolicy enum");
 }
 
-static Optional<FixItHint> changePointerItself(const VarDecl &Var,
-                                               DeclSpec::TQ Qualifier,
-                                               const ASTContext &Context) {
+static std::optional<FixItHint> changePointerItself(const VarDecl &Var,
+                                                    DeclSpec::TQ Qualifier,
+                                                    const ASTContext &Context) {
   if (locDangerous(Var.getLocation()))
     return std::nullopt;
 
-  Optional<SourceLocation> IgnoredParens =
+  std::optional<SourceLocation> IgnoredParens =
       skipLParensBackwards(Var.getLocation(), Context);
   if (IgnoredParens)
     return fixIfNotDangerous(*IgnoredParens, buildQualifier(Qualifier));
   return std::nullopt;
 }
 
-static Optional<FixItHint>
+static std::optional<FixItHint>
 changePointer(const VarDecl &Var, DeclSpec::TQ Qualifier, const Type *Pointee,
               QualifierTarget QualTarget, QualifierPolicy QualPolicy,
               const ASTContext &Context) {
@@ -138,7 +136,7 @@ changePointer(const VarDecl &Var, DeclSpec::TQ Qualifier, const Type *Pointee,
       if (locDangerous(BeforeStar))
         return std::nullopt;
 
-      Optional<SourceLocation> IgnoredParens =
+      std::optional<SourceLocation> IgnoredParens =
           skipLParensBackwards(BeforeStar, Context);
 
       if (IgnoredParens)
@@ -162,7 +160,7 @@ changePointer(const VarDecl &Var, DeclSpec::TQ Qualifier, const Type *Pointee,
   return std::nullopt;
 }
 
-static Optional<FixItHint>
+static std::optional<FixItHint>
 changeReferencee(const VarDecl &Var, DeclSpec::TQ Qualifier, QualType Pointee,
                  QualifierTarget QualTarget, QualifierPolicy QualPolicy,
                  const ASTContext &Context) {
@@ -173,7 +171,7 @@ changeReferencee(const VarDecl &Var, DeclSpec::TQ Qualifier, QualType Pointee,
   SourceLocation BeforeRef = lexer::findPreviousAnyTokenKind(
       Var.getLocation(), Context.getSourceManager(), Context.getLangOpts(),
       tok::amp, tok::ampamp);
-  Optional<SourceLocation> IgnoredParens =
+  std::optional<SourceLocation> IgnoredParens =
       skipLParensBackwards(BeforeRef, Context);
   if (IgnoredParens)
     return fixIfNotDangerous(*IgnoredParens, buildQualifier(Qualifier, true));
@@ -181,11 +179,11 @@ changeReferencee(const VarDecl &Var, DeclSpec::TQ Qualifier, QualType Pointee,
   return std::nullopt;
 }
 
-Optional<FixItHint> addQualifierToVarDecl(const VarDecl &Var,
-                                          const ASTContext &Context,
-                                          DeclSpec::TQ Qualifier,
-                                          QualifierTarget QualTarget,
-                                          QualifierPolicy QualPolicy) {
+std::optional<FixItHint> addQualifierToVarDecl(const VarDecl &Var,
+                                               const ASTContext &Context,
+                                               DeclSpec::TQ Qualifier,
+                                               QualifierTarget QualTarget,
+                                               QualifierPolicy QualPolicy) {
   assert((QualPolicy == QualifierPolicy::Left ||
           QualPolicy == QualifierPolicy::Right) &&
          "Unexpected Insertion Policy");
@@ -223,7 +221,4 @@ Optional<FixItHint> addQualifierToVarDecl(const VarDecl &Var,
 
   return std::nullopt;
 }
-} // namespace fixit
-} // namespace utils
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::utils::fixit

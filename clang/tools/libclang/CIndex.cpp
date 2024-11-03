@@ -39,7 +39,6 @@
 #include "clang/Lex/Lexer.h"
 #include "clang/Lex/PreprocessingRecord.h"
 #include "clang/Lex/Preprocessor.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Config/llvm-config.h"
@@ -57,6 +56,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Support/thread.h"
 #include <mutex>
+#include <optional>
 
 #if LLVM_ENABLE_THREADS != 0 && defined(__APPLE__)
 #define USE_DARWIN_THREADS
@@ -535,7 +535,7 @@ bool CursorVisitor::VisitChildren(CXCursor Cursor) {
           for (ASTUnit::top_level_iterator TL = CXXUnit->top_level_begin(),
                                            TLEnd = CXXUnit->top_level_end();
                TL != TLEnd; ++TL) {
-            const Optional<bool> V = handleDeclForVisitation(*TL);
+            const std::optional<bool> V = handleDeclForVisitation(*TL);
             if (!V)
               continue;
             return *V;
@@ -600,7 +600,7 @@ bool CursorVisitor::VisitBlockDecl(BlockDecl *B) {
   return false;
 }
 
-Optional<bool> CursorVisitor::shouldVisitCursor(CXCursor Cursor) {
+std::optional<bool> CursorVisitor::shouldVisitCursor(CXCursor Cursor) {
   if (RegionOfInterest.isValid()) {
     SourceRange Range = getFullCursorExtent(Cursor, AU->getSourceManager());
     if (Range.isInvalid())
@@ -640,7 +640,7 @@ bool CursorVisitor::VisitDeclContext(DeclContext *DC) {
       if (auto *OMD = dyn_cast<ObjCMethodDecl>(D))
         if (OMD->isSynthesizedAccessorStub())
           continue;
-    const Optional<bool> V = handleDeclForVisitation(D);
+    const std::optional<bool> V = handleDeclForVisitation(D);
     if (!V)
       continue;
     return *V;
@@ -648,7 +648,7 @@ bool CursorVisitor::VisitDeclContext(DeclContext *DC) {
   return false;
 }
 
-Optional<bool> CursorVisitor::handleDeclForVisitation(const Decl *D) {
+std::optional<bool> CursorVisitor::handleDeclForVisitation(const Decl *D) {
   CXCursor Cursor = MakeCXCursor(D, TU, RegionOfInterest);
 
   // Ignore synthesized ivars here, otherwise if we have something like:
@@ -674,7 +674,7 @@ Optional<bool> CursorVisitor::handleDeclForVisitation(const Decl *D) {
       Cursor = MakeCursorObjCProtocolRef(PD, PD->getLocation(), TU);
   }
 
-  const Optional<bool> V = shouldVisitCursor(Cursor);
+  const std::optional<bool> V = shouldVisitCursor(Cursor);
   if (!V)
     return std::nullopt;
   if (!*V)
@@ -1073,7 +1073,7 @@ bool CursorVisitor::VisitObjCContainerDecl(ObjCContainerDecl *D) {
                                          E = DeclsInContainer.end();
        I != E; ++I) {
     CXCursor Cursor = MakeCXCursor(*I, TU, RegionOfInterest);
-    const Optional<bool> &V = shouldVisitCursor(Cursor);
+    const std::optional<bool> &V = shouldVisitCursor(Cursor);
     if (!V)
       continue;
     if (!*V)
@@ -2706,6 +2706,11 @@ void OMPClauseEnqueue::VisitOMPAffinityClause(const OMPAffinityClause *C) {
     Visitor->AddStmt(E);
 }
 void OMPClauseEnqueue::VisitOMPBindClause(const OMPBindClause *C) {}
+void OMPClauseEnqueue::VisitOMPXDynCGroupMemClause(
+    const OMPXDynCGroupMemClause *C) {
+  VisitOMPClauseWithPreInit(C);
+  Visitor->AddStmt(C->getSize());
+}
 
 } // namespace
 
@@ -3802,7 +3807,7 @@ clang_parseTranslationUnit_Impl(CXIndex CIdx, const char *source_filename,
 
   // Configure the diagnostics.
   std::unique_ptr<DiagnosticOptions> DiagOpts = CreateAndPopulateDiagOpts(
-      llvm::makeArrayRef(command_line_args, num_command_line_args));
+      llvm::ArrayRef(command_line_args, num_command_line_args));
   IntrusiveRefCntPtr<DiagnosticsEngine> Diags(
       CompilerInstance::createDiagnostics(DiagOpts.release()));
 
@@ -3885,7 +3890,7 @@ clang_parseTranslationUnit_Impl(CXIndex CIdx, const char *source_filename,
 
   LibclangInvocationReporter InvocationReporter(
       *CXXIdx, LibclangInvocationReporter::OperationKind::ParseOperation,
-      options, llvm::makeArrayRef(*Args), /*InvocationArgs=*/std::nullopt,
+      options, llvm::ArrayRef(*Args), /*InvocationArgs=*/std::nullopt,
       unsaved_files);
   std::unique_ptr<ASTUnit> Unit(ASTUnit::LoadFromCommandLine(
       Args->data(), Args->data() + Args->size(),
@@ -3972,7 +3977,7 @@ enum CXErrorCode clang_parseTranslationUnit2FullArgv(
     noteBottomOfStack();
     result = clang_parseTranslationUnit_Impl(
         CIdx, source_filename, command_line_args, num_command_line_args,
-        llvm::makeArrayRef(unsaved_files, num_unsaved_files), options, out_TU);
+        llvm::ArrayRef(unsaved_files, num_unsaved_files), options, out_TU);
   };
 
   llvm::CrashRecoveryContext CRC;
@@ -4503,7 +4508,7 @@ int clang_reparseTranslationUnit(CXTranslationUnit TU,
   CXErrorCode result;
   auto ReparseTranslationUnitImpl = [=, &result]() {
     result = clang_reparseTranslationUnit_Impl(
-        TU, llvm::makeArrayRef(unsaved_files, num_unsaved_files), options);
+        TU, llvm::ArrayRef(unsaved_files, num_unsaved_files), options);
   };
 
   llvm::CrashRecoveryContext CRC;
@@ -4626,7 +4631,7 @@ const char *clang_getFileContents(CXTranslationUnit TU, CXFile file,
 
   const SourceManager &SM = cxtu::getASTUnit(TU)->getSourceManager();
   FileID fid = SM.translateFile(static_cast<FileEntry *>(file));
-  llvm::Optional<llvm::MemoryBufferRef> buf = SM.getBufferOrNone(fid);
+  std::optional<llvm::MemoryBufferRef> buf = SM.getBufferOrNone(fid);
   if (!buf) {
     if (size)
       *size = 0;
@@ -8393,9 +8398,8 @@ int clang_getCursorPlatformAvailability(CXCursor cursor, int *always_deprecated,
   getCursorPlatformAvailabilityForDecl(D, always_deprecated, deprecated_message,
                                        always_unavailable, unavailable_message,
                                        AvailabilityAttrs);
-  for (const auto &Avail :
-       llvm::enumerate(llvm::makeArrayRef(AvailabilityAttrs)
-                           .take_front(availability_size))) {
+  for (const auto &Avail : llvm::enumerate(
+           llvm::ArrayRef(AvailabilityAttrs).take_front(availability_size))) {
     availability[Avail.index()].Platform =
         cxstring::createDup(Avail.value()->getPlatform()->getName());
     availability[Avail.index()].Introduced =

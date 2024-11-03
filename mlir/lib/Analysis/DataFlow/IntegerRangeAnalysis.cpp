@@ -17,6 +17,7 @@
 #include "mlir/Interfaces/InferIntRangeInterface.h"
 #include "mlir/Interfaces/LoopLikeInterface.h"
 #include "llvm/Support/Debug.h"
+#include <optional>
 
 #define DEBUG_TYPE "int-range-analysis"
 
@@ -25,6 +26,8 @@ using namespace mlir::dataflow;
 
 IntegerValueRange IntegerValueRange::getMaxRange(Value value) {
   unsigned width = ConstantIntRanges::getStorageBitwidth(value.getType());
+  if (width == 0)
+    return {};
   APInt umin = APInt::getMinValue(width);
   APInt umax = APInt::getMaxValue(width);
   APInt smin = width != 0 ? APInt::getSignedMinValue(width) : umin;
@@ -37,7 +40,7 @@ void IntegerValueRangeLattice::onUpdate(DataFlowSolver *solver) const {
 
   // If the integer range can be narrowed to a constant, update the constant
   // value of the SSA value.
-  Optional<APInt> constant = getValue().getValue().getConstantValue();
+  std::optional<APInt> constant = getValue().getValue().getConstantValue();
   auto value = point.get<Value>();
   auto *cv = solver->getOrCreateState<Lattice<ConstantValue>>(value);
   if (!constant)

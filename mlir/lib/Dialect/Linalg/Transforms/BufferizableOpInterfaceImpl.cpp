@@ -9,6 +9,7 @@
 #include "mlir/Dialect/Linalg/Transforms/BufferizableOpInterfaceImpl.h"
 #include "mlir/Dialect/Bufferization/IR/BufferizableOpInterface.h"
 #include "mlir/Dialect/Bufferization/IR/Bufferization.h"
+#include "mlir/Dialect/Bufferization/IR/DstBufferizableOpInterfaceImpl.h"
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/IR/Dialect.h"
@@ -89,8 +90,8 @@ bufferizeDestinationStyleOpInterface(RewriterBase &rewriter,
 /// operates entirely on memrefs.
 template <typename OpTy>
 struct LinalgOpInterface
-    : public BufferizableOpInterface::ExternalModel<LinalgOpInterface<OpTy>,
-                                                    OpTy> {
+    : public DstBufferizableOpInterfaceExternalModel<LinalgOpInterface<OpTy>,
+                                                     OpTy> {
   bool bufferizesToMemoryRead(Operation *op, OpOperand &opOperand,
                               const AnalysisState &state) const {
     // Operand is read if it is used in the computation.
@@ -103,30 +104,6 @@ struct LinalgOpInterface
     // Operand is written to if it has an aliasing OpResult.
     auto bufferizableOp = cast<BufferizableOpInterface>(op);
     return !bufferizableOp.getAliasingOpResult(opOperand, state).empty();
-  }
-
-  SmallVector<OpOperand *>
-  getAliasingOpOperand(Operation *op, OpResult opResult,
-                       const AnalysisState &state) const {
-    auto genericOp = cast<DestinationStyleOpInterface>(op);
-
-    // The i-th OpResult may alias with the i-th "out" tensor.
-    return {genericOp.getDpsInitOperand(opResult.getResultNumber())};
-  }
-
-  SmallVector<OpResult> getAliasingOpResult(Operation *op, OpOperand &opOperand,
-                                            const AnalysisState &state) const {
-    auto genericOp = cast<DestinationStyleOpInterface>(op);
-
-    // The i-th "out" tensor may alias with the i-th OpResult.
-    if (genericOp.isDpsInit(&opOperand))
-      return {genericOp.getTiedOpResult(&opOperand)};
-    return {};
-  }
-
-  BufferRelation bufferRelation(Operation *op, OpResult opResult,
-                                const AnalysisState &state) const {
-    return BufferRelation::Equivalent;
   }
 
   LogicalResult bufferize(Operation *op, RewriterBase &rewriter,

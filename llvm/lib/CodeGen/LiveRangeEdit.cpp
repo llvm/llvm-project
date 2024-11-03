@@ -114,7 +114,7 @@ bool LiveRangeEdit::allUsesAvailableAt(const MachineInstr *OrigMI,
 
     // We can't remat physreg uses, unless it is a constant or target wants
     // to ignore this use.
-    if (Register::isPhysicalRegister(MO.getReg())) {
+    if (MO.getReg().isPhysical()) {
       if (MRI.isConstantPhysReg(MO.getReg()) || TII.isIgnorableUse(MO))
         continue;
       return false;
@@ -336,7 +336,7 @@ void LiveRangeEdit::eliminateDeadDef(MachineInstr *MI, ToShrinkSet &ToShrink) {
     if (!MO.isReg())
       continue;
     Register Reg = MO.getReg();
-    if (!Register::isVirtualRegister(Reg)) {
+    if (!Reg.isVirtual()) {
       // Check if MI reads any unreserved physregs.
       if (Reg && MO.readsReg() && !MRI.isReserved(Reg))
         ReadsPhysRegs = true;
@@ -378,7 +378,7 @@ void LiveRangeEdit::eliminateDeadDef(MachineInstr *MI, ToShrinkSet &ToShrink) {
     // Remove all operands that aren't physregs.
     for (unsigned i = MI->getNumOperands(); i; --i) {
       const MachineOperand &MO = MI->getOperand(i-1);
-      if (MO.isReg() && Register::isPhysicalRegister(MO.getReg()))
+      if (MO.isReg() && MO.getReg().isPhysical())
         continue;
       MI->removeOperand(i-1);
     }

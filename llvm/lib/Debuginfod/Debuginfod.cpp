@@ -425,7 +425,7 @@ Error DebuginfodCollection::findBinaries(StringRef Path) {
   return Error::success();
 }
 
-Expected<Optional<std::string>>
+Expected<std::optional<std::string>>
 DebuginfodCollection::getBinaryPath(BuildIDRef ID) {
   Log.push("getting binary path of ID " + buildIDToString(ID));
   std::shared_lock<sys::RWMutex> Guard(BinariesMutex);
@@ -437,7 +437,7 @@ DebuginfodCollection::getBinaryPath(BuildIDRef ID) {
   return std::nullopt;
 }
 
-Expected<Optional<std::string>>
+Expected<std::optional<std::string>>
 DebuginfodCollection::getDebugBinaryPath(BuildIDRef ID) {
   Log.push("getting debug binary path of ID " + buildIDToString(ID));
   std::shared_lock<sys::RWMutex> Guard(DebugBinariesMutex);
@@ -452,10 +452,10 @@ DebuginfodCollection::getDebugBinaryPath(BuildIDRef ID) {
 Expected<std::string> DebuginfodCollection::findBinaryPath(BuildIDRef ID) {
   {
     // Check collection; perform on-demand update if stale.
-    Expected<Optional<std::string>> PathOrErr = getBinaryPath(ID);
+    Expected<std::optional<std::string>> PathOrErr = getBinaryPath(ID);
     if (!PathOrErr)
       return PathOrErr.takeError();
-    Optional<std::string> Path = *PathOrErr;
+    std::optional<std::string> Path = *PathOrErr;
     if (!Path) {
       Expected<bool> UpdatedOrErr = updateIfStale();
       if (!UpdatedOrErr)
@@ -483,10 +483,10 @@ Expected<std::string> DebuginfodCollection::findBinaryPath(BuildIDRef ID) {
 
 Expected<std::string> DebuginfodCollection::findDebugBinaryPath(BuildIDRef ID) {
   // Check collection; perform on-demand update if stale.
-  Expected<Optional<std::string>> PathOrErr = getDebugBinaryPath(ID);
+  Expected<std::optional<std::string>> PathOrErr = getDebugBinaryPath(ID);
   if (!PathOrErr)
     return PathOrErr.takeError();
-  Optional<std::string> Path = *PathOrErr;
+  std::optional<std::string> Path = *PathOrErr;
   if (!Path) {
     Expected<bool> UpdatedOrErr = updateIfStale();
     if (!UpdatedOrErr)

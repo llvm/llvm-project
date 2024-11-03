@@ -239,6 +239,7 @@ static void CheckStringInit(Expr *Str, QualType &DeclT, const ArrayType *AT,
     if (StrLength > CAT->getSize().getZExtValue())
       S.Diag(Str->getBeginLoc(),
              diag::err_initializer_string_for_char_array_too_long)
+          << CAT->getSize().getZExtValue() << StrLength
           << Str->getSourceRange();
   } else {
     // C99 6.7.8p14.
@@ -5277,22 +5278,25 @@ static void TryOrBuildParenListInitialization(
   SmallVector<Expr *, 4> InitExprs;
   QualType ResultType;
   Expr *ArrayFiller = nullptr;
+  FieldDecl *InitializedFieldInUnion = nullptr;
 
   // Process entities (i.e. array members, base classes, or class fields) by
   // adding an initialization expression to InitExprs for each entity to
   // initialize.
   auto ProcessEntities = [&](auto Range) -> bool {
+    bool IsUnionType = Entity.getType()->isUnionType();
     for (InitializedEntity SubEntity : Range) {
       // Unions should only have one initializer expression.
       // If there are more initializers than it will be caught when we check
       // whether Index equals Args.size().
-      if (ArgIndexToProcess == 1 && Entity.getType()->isUnionType())
+      if (ArgIndexToProcess == 1 && IsUnionType)
         return true;
+
+      bool IsMember = SubEntity.getKind() == InitializedEntity::EK_Member;
 
       // Unnamed bitfields should not be initialized at all, either with an arg
       // or by default.
-      if (SubEntity.getKind() == InitializedEntity::EK_Member &&
-          cast<FieldDecl>(SubEntity.getDecl())->isUnnamedBitfield())
+      if (IsMember && cast<FieldDecl>(SubEntity.getDecl())->isUnnamedBitfield())
         continue;
 
       if (ArgIndexToProcess < Args.size()) {
@@ -5303,7 +5307,7 @@ static void TryOrBuildParenListInitialization(
         // Incomplete array types indicate flexible array members. Do not allow
         // paren list initializations of structs with these members, as GCC
         // doesn't either.
-        if (SubEntity.getKind() == InitializedEntity::EK_Member) {
+        if (IsMember) {
           auto *FD = cast<FieldDecl>(SubEntity.getDecl());
           if (FD->getType()->isIncompleteArrayType()) {
             if (!VerifyOnly) {
@@ -5333,11 +5337,13 @@ static void TryOrBuildParenListInitialization(
         if (!VerifyOnly) {
           ExprResult ER = SubSeq.Perform(S, SubEntity, SubKind, E);
           InitExprs.push_back(ER.get());
+          if (IsMember && IsUnionType)
+            InitializedFieldInUnion = cast<FieldDecl>(SubEntity.getDecl());
         }
       } else {
         // We've processed all of the args, but there are still entities that
         // have to be initialized.
-        if (SubEntity.getKind() == InitializedEntity::EK_Member) {
+        if (IsMember) {
           // C++ [dcl.init]p17.6.2.2
           //   The remaining elements are initialized with their default member
           //   initializers, if any
@@ -5408,8 +5414,8 @@ static void TryOrBuildParenListInitialization(
         return;
 
       ResultType = S.Context.getConstantArrayType(
-          AT->getElementType(), llvm::APInt(32, ArrayLength), nullptr,
-          ArrayType::Normal, 0);
+          AT->getElementType(), llvm::APInt(/*numBits=*/32, ArrayLength),
+          nullptr, ArrayType::Normal, 0);
     }
   } else if (auto *RT = Entity.getType()->getAs<RecordType>()) {
     const CXXRecordDecl *RD = cast<CXXRecordDecl>(RT->getDecl());
@@ -5437,8 +5443,10 @@ static void TryOrBuildParenListInitialization(
     if (!VerifyOnly) {
       QualType T = Entity.getType();
       int InitKind = T->isArrayType() ? 0 : T->isUnionType() ? 3 : 4;
+      SourceRange ExcessInitSR(Args[ArgIndexToProcess]->getBeginLoc(),
+                               Args.back()->getEndLoc());
       S.Diag(Kind.getLocation(), diag::err_excess_initializers)
-          << InitKind << Args[ArgIndexToProcess]->getSourceRange();
+          << InitKind << ExcessInitSR;
     }
     return;
   }
@@ -5451,7 +5459,10 @@ static void TryOrBuildParenListInitialization(
     auto *CPLIE = CXXParenListInitExpr::Create(
         S.getASTContext(), InitExprs, ResultType, Args.size(),
         Kind.getLocation(), SR.getBegin(), SR.getEnd());
-    CPLIE->setArrayFiller(ArrayFiller);
+    if (ArrayFiller)
+      CPLIE->setArrayFiller(ArrayFiller);
+    if (InitializedFieldInUnion)
+      CPLIE->setInitializedFieldInUnion(InitializedFieldInUnion);
     *Result = CPLIE;
     S.Diag(Kind.getLocation(),
            diag::warn_cxx17_compat_aggregate_init_paren_list)
@@ -5930,25 +5941,6 @@ static bool canPerformArrayCopy(const InitializedEntity &Entity) {
   return false;
 }
 
-static bool onlyHasDefaultedCtors(OverloadCandidateSet &OCS) {
-  if (OCS.size() != 3)
-    return false;
-
-  bool HasDefaultCtor = false, HasCopyCtor = false, HasMoveCtor = false;
-  for (const auto &Candidate : OCS) {
-    if (auto *Ctor = dyn_cast_or_null<CXXConstructorDecl>(Candidate.Function);
-        Ctor != nullptr && Ctor->isDefaulted()) {
-      if (Ctor->isDefaultConstructor())
-        HasDefaultCtor = true;
-      else if (Ctor->isCopyConstructor())
-        HasCopyCtor = true;
-      else if (Ctor->isMoveConstructor())
-        HasMoveCtor = true;
-    }
-  }
-  return HasDefaultCtor && HasCopyCtor && HasMoveCtor;
-}
-
 void InitializationSequence::InitializeFrom(Sema &S,
                                             const InitializedEntity &Entity,
                                             const InitializationKind &Kind,
@@ -6195,16 +6187,33 @@ void InitializationSequence::InitializeFrom(Sema &S,
       // constructors. For example, conversion function.
       if (const auto *RD =
               dyn_cast<CXXRecordDecl>(DestType->getAs<RecordType>()->getDecl());
-          S.getLangOpts().CPlusPlus20 && RD && RD->isAggregate() && Failed() &&
-          getFailureKind() == FK_ConstructorOverloadFailed &&
-          onlyHasDefaultedCtors(getFailedCandidateSet())) {
-        // C++20 [dcl.init] 17.6.2.2:
-        //   - Otherwise, if no constructor is viable, the destination type is
-        //   an
-        //      aggregate class, and the initializer is a parenthesized
-        //      expression-list.
-        TryOrBuildParenListInitialization(S, Entity, Kind, Args, *this,
-                                          /*VerifyOnly=*/true);
+          // In general, we should call isCompleteType for RD to check its
+          // completeness, we don't call it here as it was already called in the
+          // above TryConstructorInitialization.
+          S.getLangOpts().CPlusPlus20 && RD && RD->hasDefinition() &&
+          RD->isAggregate() && Failed() &&
+          getFailureKind() == FK_ConstructorOverloadFailed) {
+        // Do not attempt paren list initialization if overload resolution
+        // resolves to a deleted function .
+        //
+        // We may reach this condition if we have a union wrapping a class with
+        // a non-trivial copy or move constructor and we call one of those two
+        // constructors. The union is an aggregate, but the matched constructor
+        // is implicitly deleted, so we need to prevent aggregate initialization
+        // (otherwise, it'll attempt aggregate initialization by initializing
+        // the first element with a reference to the union).
+        OverloadCandidateSet::iterator Best;
+        OverloadingResult OR = getFailedCandidateSet().BestViableFunction(
+            S, Kind.getLocation(), Best);
+        if (OR != OverloadingResult::OR_Deleted) {
+          // C++20 [dcl.init] 17.6.2.2:
+          //   - Otherwise, if no constructor is viable, the destination type is
+          //   an
+          //      aggregate class, and the initializer is a parenthesized
+          //      expression-list.
+          TryOrBuildParenListInitialization(S, Entity, Kind, Args, *this,
+                                            /*VerifyOnly=*/true);
+        }
       }
     } else {
       //     - Otherwise (i.e., for the remaining copy-initialization cases),
@@ -7337,11 +7346,11 @@ static void visitLifetimeBoundArguments(IndirectLocalPath &Path, Expr *Call,
 
   if (auto *CE = dyn_cast<CallExpr>(Call)) {
     Callee = CE->getDirectCallee();
-    Args = llvm::makeArrayRef(CE->getArgs(), CE->getNumArgs());
+    Args = llvm::ArrayRef(CE->getArgs(), CE->getNumArgs());
   } else {
     auto *CCE = cast<CXXConstructExpr>(Call);
     Callee = CCE->getConstructor();
-    Args = llvm::makeArrayRef(CCE->getArgs(), CCE->getNumArgs());
+    Args = llvm::ArrayRef(CCE->getArgs(), CCE->getNumArgs());
   }
   if (!Callee)
     return;
@@ -9166,7 +9175,7 @@ ExprResult InitializationSequence::Perform(Sema &S,
       break;
     }
     case SK_ParenthesizedListInit: {
-      CurInit = false;
+      CurInit = nullptr;
       TryOrBuildParenListInitialization(S, Entity, Kind, Args, *this,
                                         /*VerifyOnly=*/false, &CurInit);
       if (CurInit.get() && ResultType)

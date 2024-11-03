@@ -1,4 +1,4 @@
-; RUN: opt < %s -S -passes=rewrite-statepoints-for-gc | FileCheck %s
+; RUN: opt -opaque-pointers=0 < %s -S -passes=rewrite-statepoints-for-gc | FileCheck %s
 
 declare i64 addrspace(1)* @some_call(i64 addrspace(1)*)
 declare i32 @personality_function()

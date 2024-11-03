@@ -10,7 +10,7 @@ from lldb.macosx.crashlog import CrashLog,CrashLogParser
 
 class CrashLogScriptedProcess(ScriptedProcess):
     def parse_crashlog(self):
-        crashlog_parser = CrashLogParser(self.dbg, self.crashlog_path, False)
+        crashlog_parser = CrashLogParser.create(self.dbg, self.crashlog_path, False)
         crash_log = crashlog_parser.parse()
 
         self.pid = crash_log.process_id
@@ -62,8 +62,8 @@ class CrashLogScriptedProcess(ScriptedProcess):
                                                                self.addr_mask,
                                                                self.target)
 
-    def __init__(self, target: lldb.SBTarget, args : lldb.SBStructuredData):
-        super().__init__(target, args)
+    def __init__(self, exe_ctx: lldb.SBExecutionContext, args : lldb.SBStructuredData):
+        super().__init__(exe_ctx, args)
 
         if not self.target or not self.target.IsValid():
             # Return error

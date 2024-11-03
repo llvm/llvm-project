@@ -22,12 +22,12 @@ define void @_foo(double %p1, double %p2, double %p3) #0 {
 ; CHECK-NEXT:    [[INDVARS_IV266:%.*]] = phi i64 [ 0, [[BB1]] ], [ [[INDVARS_IV_NEXT267:%.*]], [[FOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP4:%.*]] = phi <2 x double> [ [[TMP3]], [[BB1]] ], [ [[TMP6:%.*]], [[FOR_BODY]] ]
 ; CHECK-NEXT:    [[X13:%.*]] = tail call i32 @_xfn(<2 x double> [[TMP4]])
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [256 x i32], [256 x i32]* [[TAB1]], i64 0, i64 [[INDVARS_IV266]]
-; CHECK-NEXT:    store i32 [[X13]], i32* [[ARRAYIDX]], align 4, !tbaa [[TBAA0:![0-9]+]]
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [256 x i32], ptr [[TAB1]], i64 0, i64 [[INDVARS_IV266]]
+; CHECK-NEXT:    store i32 [[X13]], ptr [[ARRAYIDX]], align 4, !tbaa [[TBAA0:![0-9]+]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <2 x double> [[TMP4]], <2 x double> poison, <2 x i32> <i32 1, i32 undef>
 ; CHECK-NEXT:    [[X14:%.*]] = tail call i32 @_xfn(<2 x double> [[TMP5]])
-; CHECK-NEXT:    [[ARRAYIDX26:%.*]] = getelementptr inbounds [256 x i32], [256 x i32]* [[TAB2]], i64 0, i64 [[INDVARS_IV266]]
-; CHECK-NEXT:    store i32 [[X14]], i32* [[ARRAYIDX26]], align 4, !tbaa [[TBAA0]]
+; CHECK-NEXT:    [[ARRAYIDX26:%.*]] = getelementptr inbounds [256 x i32], ptr [[TAB2]], i64 0, i64 [[INDVARS_IV266]]
+; CHECK-NEXT:    store i32 [[X14]], ptr [[ARRAYIDX26]], align 4, !tbaa [[TBAA0]]
 ; CHECK-NEXT:    [[TMP6]] = fadd <2 x double> [[TMP2]], [[TMP4]]
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT267]] = add nuw nsw i64 [[INDVARS_IV266]], 1
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT267]], 256
@@ -56,12 +56,12 @@ for.body:
   %p3.addr.0258 = phi double [ %add, %bb1 ], [ %add28, %for.body ]
   %vecinit.i.i237 = insertelement <2 x double> poison, double %t.0259, i32 0
   %x13 = tail call i32 @_xfn(<2 x double> %vecinit.i.i237) #2
-  %arrayidx = getelementptr inbounds [256 x i32], [256 x i32]* %tab1, i64 0, i64 %indvars.iv266
-  store i32 %x13, i32* %arrayidx, align 4, !tbaa !4
+  %arrayidx = getelementptr inbounds [256 x i32], ptr %tab1, i64 0, i64 %indvars.iv266
+  store i32 %x13, ptr %arrayidx, align 4, !tbaa !4
   %vecinit.i.i = insertelement <2 x double> poison, double %p3.addr.0258, i32 0
   %x14 = tail call i32 @_xfn(<2 x double> %vecinit.i.i) #2
-  %arrayidx26 = getelementptr inbounds [256 x i32], [256 x i32]* %tab2, i64 0, i64 %indvars.iv266
-  store i32 %x14, i32* %arrayidx26, align 4, !tbaa !4
+  %arrayidx26 = getelementptr inbounds [256 x i32], ptr %tab2, i64 0, i64 %indvars.iv266
+  store i32 %x14, ptr %arrayidx26, align 4, !tbaa !4
   %add27 = fadd double %mul19, %t.0259
   %add28 = fadd double %mul21, %p3.addr.0258
   %indvars.iv.next267 = add nuw nsw i64 %indvars.iv266, 1

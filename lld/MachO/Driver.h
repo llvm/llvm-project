@@ -25,7 +25,7 @@ namespace lld::macho {
 class DylibFile;
 class InputFile;
 
-class MachOOptTable : public llvm::opt::OptTable {
+class MachOOptTable : public llvm::opt::GenericOptTable {
 public:
   MachOOptTable();
   llvm::opt::InputArgList parse(ArrayRef<const char *> argv);

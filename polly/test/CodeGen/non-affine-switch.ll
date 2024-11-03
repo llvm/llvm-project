@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly \
+; RUN: opt -opaque-pointers=0 %loadPolly \
 ; RUN: -S -polly-codegen < %s | FileCheck %s
 ;
 ;    void f(int *A, int N) {

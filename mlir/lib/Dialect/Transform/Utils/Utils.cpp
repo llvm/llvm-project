@@ -8,20 +8,15 @@
 
 #include "mlir/Dialect/Transform/Utils/Utils.h"
 
-#include "mlir/Dialect/Transform/IR/TransformDialect.h"
-#include "mlir/Dialect/Transform/IR/TransformTypes.h"
-#include "mlir/Dialect/Utils/StaticValueUtils.h"
-#include "mlir/IR/Matchers.h"
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/Interfaces/ViewLikeInterface.h"
 
 using namespace mlir;
 using namespace mlir::transform;
 
-void transform::printPackedOrDynamicIndexList(OpAsmPrinter &printer,
-                                              Operation *op, Value packed,
-                                              OperandRange values,
-                                              ArrayRef<int64_t> integers) {
+void mlir::transform::printPackedOrDynamicIndexList(
+    OpAsmPrinter &printer, Operation *op, Value packed, OperandRange values,
+    ArrayRef<int64_t> integers) {
   if (packed) {
     assert(values.empty() && integers.empty() && "expected no values/integers");
     printer << packed;
@@ -30,13 +25,13 @@ void transform::printPackedOrDynamicIndexList(OpAsmPrinter &printer,
   printDynamicIndexList(printer, op, values, integers);
 }
 
-ParseResult transform::parsePackedOrDynamicIndexList(
+ParseResult mlir::transform::parsePackedOrDynamicIndexList(
     OpAsmParser &parser, std::optional<OpAsmParser::UnresolvedOperand> &packed,
     SmallVectorImpl<OpAsmParser::UnresolvedOperand> &values,
     DenseI64ArrayAttr &integers) {
   OpAsmParser::UnresolvedOperand packedOperand;
   if (parser.parseOptionalOperand(packedOperand).has_value()) {
-    packed.emplace(std::move(packedOperand));
+    packed.emplace(packedOperand);
     integers = parser.getBuilder().getDenseI64ArrayAttr({});
     return success();
   }

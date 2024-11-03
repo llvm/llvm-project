@@ -22,13 +22,14 @@
 #include <cstddef>
 #include <functional>
 #include <memory>
+#include <optional>
 #include <utility>
 
 namespace clang {
 namespace clangd {
 namespace {
 
-llvm::Optional<std::string> toURI(OptionalFileEntryRef File) {
+std::optional<std::string> toURI(OptionalFileEntryRef File) {
   if (!File)
     return std::nullopt;
   auto AbsolutePath = File->getFileEntry().tryGetRealPathName();

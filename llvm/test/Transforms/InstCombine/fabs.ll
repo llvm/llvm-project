@@ -349,10 +349,15 @@ define fp128 @select_fcmp_ogt_zero(fp128 %x) {
   ret fp128 %fabs
 }
 
+; This is not fabs because that could produce a different signbit for a NAN input.
+; PR59279
+
 define float @select_nsz_fcmp_ogt_fneg(float %a) {
 ; CHECK-LABEL: @select_nsz_fcmp_ogt_fneg(
-; CHECK-NEXT:    [[TMP1:%.*]] = call nsz float @llvm.fabs.f32(float [[A:%.*]])
-; CHECK-NEXT:    ret float [[TMP1]]
+; CHECK-NEXT:    [[FNEG:%.*]] = fneg float [[A:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp ogt float [[A]], 0.000000e+00
+; CHECK-NEXT:    [[R:%.*]] = select nsz i1 [[CMP]], float [[A]], float [[FNEG]]
+; CHECK-NEXT:    ret float [[R]]
 ;
   %fneg = fneg float %a
   %cmp = fcmp ogt float %a, %fneg
@@ -445,18 +450,23 @@ define half @select_fcmp_nnan_oge_negzero(half %x) {
   ret half %fabs
 }
 
-; X < 0.0 ? -X : X --> fabs(X)
+; This is not fabs because that could produce a different signbit for a NAN input.
+; PR59279
 
 define double @select_nsz_fcmp_olt_zero_unary_fneg(double %x) {
 ; CHECK-LABEL: @select_nsz_fcmp_olt_zero_unary_fneg(
-; CHECK-NEXT:    [[TMP1:%.*]] = call nsz double @llvm.fabs.f64(double [[X:%.*]])
-; CHECK-NEXT:    ret double [[TMP1]]
+; CHECK-NEXT:    [[LTZERO:%.*]] = fcmp olt double [[X:%.*]], 0.000000e+00
+; CHECK-NEXT:    [[NEGX:%.*]] = fneg double [[X]]
+; CHECK-NEXT:    [[FABS:%.*]] = select nsz i1 [[LTZERO]], double [[NEGX]], double [[X]]
+; CHECK-NEXT:    ret double [[FABS]]
 ;
   %ltzero = fcmp olt double %x, 0.0
   %negx = fneg double %x
   %fabs = select nsz i1 %ltzero, double %negx, double %x
   ret double %fabs
 }
+
+; X < 0.0 ? -X : X --> fabs(X)
 
 define double @select_nsz_nnan_fcmp_olt_zero_unary_fneg(double %x) {
 ; CHECK-LABEL: @select_nsz_nnan_fcmp_olt_zero_unary_fneg(
@@ -743,18 +753,23 @@ define float @select_fcmp_nnan_nsz_ule_negzero_unary_fneg(float %x) {
   ret float %fabs
 }
 
-; X > 0.0 ? X : (-X) --> fabs(X)
+; This is not fabs because that could produce a different signbit for a NAN input.
+; PR59279
 
 define <2 x float> @select_nsz_fcmp_ogt_zero_unary_fneg(<2 x float> %x) {
 ; CHECK-LABEL: @select_nsz_fcmp_ogt_zero_unary_fneg(
-; CHECK-NEXT:    [[TMP1:%.*]] = call nsz <2 x float> @llvm.fabs.v2f32(<2 x float> [[X:%.*]])
-; CHECK-NEXT:    ret <2 x float> [[TMP1]]
+; CHECK-NEXT:    [[GTZERO:%.*]] = fcmp ogt <2 x float> [[X:%.*]], zeroinitializer
+; CHECK-NEXT:    [[NEGX:%.*]] = fneg <2 x float> [[X]]
+; CHECK-NEXT:    [[FABS:%.*]] = select nsz <2 x i1> [[GTZERO]], <2 x float> [[X]], <2 x float> [[NEGX]]
+; CHECK-NEXT:    ret <2 x float> [[FABS]]
 ;
   %gtzero = fcmp ogt <2 x float> %x, zeroinitializer
   %negx = fneg <2 x float> %x
   %fabs = select nsz <2 x i1> %gtzero, <2 x float> %x, <2 x float> %negx
   ret <2 x float> %fabs
 }
+
+; X > 0.0 ? X : (-X) --> fabs(X)
 
 define <2 x float> @select_nsz_nnan_fcmp_ogt_zero_unary_fneg(<2 x float> %x) {
 ; CHECK-LABEL: @select_nsz_nnan_fcmp_ogt_zero_unary_fneg(

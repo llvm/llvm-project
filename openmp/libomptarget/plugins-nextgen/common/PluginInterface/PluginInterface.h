@@ -15,16 +15,19 @@
 #include <cstdint>
 #include <list>
 #include <map>
+#include <shared_mutex>
 #include <vector>
 
 #include "Debug.h"
 #include "DeviceEnvironment.h"
 #include "GlobalHandler.h"
+#include "JIT.h"
 #include "MemoryManager.h"
 #include "Utilities.h"
 #include "omptarget.h"
 
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/Triple.h"
 #include "llvm/Frontend/OpenMP/OMPConstants.h"
 #include "llvm/Frontend/OpenMP/OMPGridValues.h"
 #include "llvm/Support/Allocator.h"
@@ -35,6 +38,7 @@
 namespace llvm {
 namespace omp {
 namespace target {
+
 namespace plugin {
 
 struct GenericPluginTy;
@@ -109,13 +113,14 @@ class DeviceImageTy {
 
   /// The pointer to the raw __tgt_device_image.
   const __tgt_device_image *TgtImage;
+  const __tgt_device_image *TgtImageBitcode;
 
   /// Table of offload entries.
   OffloadEntryTableTy OffloadEntryTable;
 
 public:
   DeviceImageTy(int32_t Id, const __tgt_device_image *Image)
-      : ImageId(Id), TgtImage(Image) {
+      : ImageId(Id), TgtImage(Image), TgtImageBitcode(nullptr) {
     assert(TgtImage && "Invalid target image");
   }
 
@@ -125,12 +130,20 @@ public:
   /// Get the pointer to the raw __tgt_device_image.
   const __tgt_device_image *getTgtImage() const { return TgtImage; }
 
+  void setTgtImageBitcode(const __tgt_device_image *TgtImageBitcode) {
+    this->TgtImageBitcode = TgtImageBitcode;
+  }
+
+  const __tgt_device_image *getTgtImageBitcode() const {
+    return TgtImageBitcode;
+  }
+
   /// Get the image starting address.
   void *getStart() const { return TgtImage->ImageStart; }
 
   /// Get the image size.
   size_t getSize() const {
-    return ((char *)TgtImage->ImageEnd) - ((char *)TgtImage->ImageStart);
+    return getPtrDiff(TgtImage->ImageEnd, TgtImage->ImageStart);
   }
 
   /// Get a memory buffer reference to the whole image.
@@ -149,7 +162,7 @@ public:
 struct GenericKernelTy {
   /// Construct a kernel with a name and a execution mode.
   GenericKernelTy(const char *Name, OMPTgtExecModeFlags ExecutionMode)
-      : Name(Name), ExecutionMode(ExecutionMode), DynamicMemorySize(0),
+      : Name(Name), ExecutionMode(ExecutionMode),
         PreferredNumThreads(0), MaxNumThreads(0) {}
 
   virtual ~GenericKernelTy() {}
@@ -162,12 +175,11 @@ struct GenericKernelTy {
   /// Launch the kernel on the specific device. The device must be the same
   /// one used to initialize the kernel.
   Error launch(GenericDeviceTy &GenericDevice, void **ArgPtrs,
-               ptrdiff_t *ArgOffsets, int32_t NumArgs, uint64_t NumTeamsClause,
-               uint32_t ThreadLimitClause, uint64_t LoopTripCount,
+               ptrdiff_t *ArgOffsets, KernelArgsTy &KernelArgs,
                AsyncInfoWrapperTy &AsyncInfoWrapper) const;
   virtual Error launchImpl(GenericDeviceTy &GenericDevice, uint32_t NumThreads,
-                           uint64_t NumBlocks, uint32_t DynamicMemorySize,
-                           int32_t NumKernelArgs, void *KernelArgs,
+                           uint64_t NumBlocks,
+                           KernelArgsTy &KernelArgs, void *Args,
                            AsyncInfoWrapperTy &AsyncInfoWrapper) const = 0;
 
   /// Get the kernel name.
@@ -194,14 +206,14 @@ private:
 
   /// Get the default number of threads and blocks for the kernel.
   virtual uint32_t getDefaultNumThreads(GenericDeviceTy &Device) const = 0;
-  virtual uint64_t getDefaultNumBlocks(GenericDeviceTy &Device) const = 0;
+  virtual uint32_t getDefaultNumBlocks(GenericDeviceTy &Device) const = 0;
 
   /// Get the number of threads and blocks for the kernel based on the
   /// user-defined threads and block clauses.
   uint32_t getNumThreads(GenericDeviceTy &GenericDevice,
-                         uint32_t ThreadLimitClause) const;
+                         uint32_t ThreadLimitClause[3]) const;
   uint64_t getNumBlocks(GenericDeviceTy &GenericDevice,
-                        uint64_t BlockLimitClause, uint64_t LoopTripCount,
+                        uint32_t BlockLimitClause[3], uint64_t LoopTripCount,
                         uint32_t NumThreads) const;
 
   /// Indicate if the kernel works in Generic SPMD, Generic or SPMD mode.
@@ -233,14 +245,151 @@ private:
   OMPTgtExecModeFlags ExecutionMode;
 
 protected:
-  /// The dynamic memory size reserved for executing the kernel.
-  uint32_t DynamicMemorySize;
-
   /// The preferred number of threads to run the kernel.
   uint32_t PreferredNumThreads;
 
   /// The maximum number of threads which the kernel could leverage.
   uint32_t MaxNumThreads;
+};
+
+/// Class representing a map of host pinned allocations. We track these pinned
+/// allocations, so memory tranfers invloving these buffers can be optimized.
+class PinnedAllocationMapTy {
+
+  /// Struct representing a map entry.
+  struct EntryTy {
+    /// The host pointer of the pinned allocation.
+    void *HstPtr;
+
+    /// The pointer that devices' driver should use to transfer data from/to the
+    /// pinned allocation. In most plugins, this pointer will be the same as the
+    /// host pointer above.
+    void *DevAccessiblePtr;
+
+    /// The size of the pinned allocation.
+    size_t Size;
+
+    /// The number of references to the pinned allocation. The allocation should
+    /// remain pinned and registered to the map until the number of references
+    /// becomes zero.
+    mutable size_t References;
+
+    /// Create an entry with the host and device acessible pointers, and the
+    /// buffer size.
+    EntryTy(void *HstPtr, void *DevAccessiblePtr, size_t Size)
+        : HstPtr(HstPtr), DevAccessiblePtr(DevAccessiblePtr), Size(Size),
+          References(1) {}
+
+    /// Utility constructor used for std::set searches.
+    EntryTy(void *HstPtr)
+        : HstPtr(HstPtr), DevAccessiblePtr(nullptr), Size(0), References(0) {}
+  };
+
+  /// Comparator of mep entries. Use the host pointer to enforce an order
+  /// between entries.
+  struct EntryCmpTy {
+    bool operator()(const EntryTy &Left, const EntryTy &Right) const {
+      return Left.HstPtr < Right.HstPtr;
+    }
+  };
+
+  typedef std::set<EntryTy, EntryCmpTy> PinnedAllocSetTy;
+
+  /// The map of host pinned allocations.
+  PinnedAllocSetTy Allocs;
+
+  /// The mutex to protect accesses to the map.
+  mutable std::shared_mutex Mutex;
+
+  /// Reference to the corresponding device.
+  GenericDeviceTy &Device;
+
+  /// Find an allocation that intersects with \p Buffer pointer. Assume
+  /// the map's mutex is acquired.
+  PinnedAllocSetTy::iterator findIntersecting(const void *Buffer) const {
+    if (Allocs.empty())
+      return Allocs.end();
+
+    // Search the first allocation with starting address that is not less than
+    // the buffer address.
+    auto It = Allocs.lower_bound({const_cast<void *>(Buffer)});
+
+    // Direct match of starting addresses.
+    if (It != Allocs.end() && It->HstPtr == Buffer)
+      return It;
+
+    // Not direct match but may be a previous pinned allocation in the map which
+    // contains the buffer. Return false if there is no such a previous
+    // allocation.
+    if (It == Allocs.begin())
+      return Allocs.end();
+
+    // Move to the previous pinned allocation.
+    --It;
+
+    // The buffer is not contained in the pinned allocation.
+    if (advanceVoidPtr(It->HstPtr, It->Size) > Buffer)
+      return It;
+
+    // None found.
+    return Allocs.end();
+  }
+
+public:
+  /// Create the map of pinned allocations corresponding to a specific device.
+  PinnedAllocationMapTy(GenericDeviceTy &Device) : Device(Device) {}
+
+  /// Register a host buffer that was recently locked. None of the already
+  /// registered pinned allocations should intersect with this new one. The
+  /// registration requires the host pointer in \p HstPtr, the pointer that the
+  /// devices should use when transferring data from/to the allocation in
+  /// \p DevAccessiblePtr, and the size of the allocation in \p Size. Notice
+  /// that some plugins may use the same pointer for the \p HstPtr and
+  /// \p DevAccessiblePtr. The allocation must be unregistered using the
+  /// unregisterHostBuffer function.
+  Error registerHostBuffer(void *HstPtr, void *DevAccessiblePtr, size_t Size);
+
+  /// Unregister a host pinned allocation passing the host pointer which was
+  /// previously registered using the registerHostBuffer function. When calling
+  /// this function, the pinned allocation cannot have any other user.
+  Error unregisterHostBuffer(void *HstPtr);
+
+  /// Lock the host buffer at \p HstPtr or register a new user if it intersects
+  /// with an already existing one. A partial overlapping with extension is not
+  /// allowed. The function returns the device accessible pointer of the pinned
+  /// buffer. The buffer must be unlocked using the unlockHostBuffer function.
+  Expected<void *> lockHostBuffer(void *HstPtr, size_t Size);
+
+  /// Unlock the host buffer at \p HstPtr or unregister a user if other users
+  /// are still using the pinned allocation. If this was the last user, the
+  /// pinned allocation is removed from the map and the memory is unlocked.
+  Error unlockHostBuffer(void *HstPtr);
+
+  /// Return the device accessible pointer associated to the host pinned
+  /// allocation which the \p HstPtr belongs, if any. Return null in case the
+  /// \p HstPtr does not belong to any host pinned allocation. The device
+  /// accessible pointer is the one that devices should use for data transfers
+  /// that involve a host pinned buffer.
+  void *getDeviceAccessiblePtrFromPinnedBuffer(const void *HstPtr) const {
+    std::shared_lock<std::shared_mutex> Lock(Mutex);
+
+    // Find the intersecting allocation if any.
+    auto It = findIntersecting(HstPtr);
+    if (It == Allocs.end())
+      return nullptr;
+
+    const EntryTy &Entry = *It;
+    return advanceVoidPtr(Entry.DevAccessiblePtr,
+                          getPtrDiff(HstPtr, Entry.HstPtr));
+  }
+
+  /// Check whether a buffer belongs to a registered host pinned allocation.
+  bool isHostPinnedBuffer(const void *HstPtr) const {
+    std::shared_lock<std::shared_mutex> Lock(Mutex);
+
+    // Return whether there is an intersecting allocation.
+    return (findIntersecting(const_cast<void *>(HstPtr)) != Allocs.end());
+  }
 };
 
 /// Class implementing common functionalities of offload devices. Each plugin
@@ -301,6 +450,22 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
   /// Deallocate data from the device or involving the device.
   Error dataDelete(void *TgtPtr, TargetAllocTy Kind);
 
+  /// Pin host memory to optimize transfers and return the device accessible
+  /// pointer that devices should use for memory transfers involving the host
+  /// pinned allocation.
+  Expected<void *> dataLock(void *HstPtr, int64_t Size) {
+    return PinnedAllocs.lockHostBuffer(HstPtr, Size);
+  }
+
+  virtual Expected<void *> dataLockImpl(void *HstPtr, int64_t Size) = 0;
+
+  /// Unpin a host memory buffer that was previously pinned.
+  Error dataUnlock(void *HstPtr) {
+    return PinnedAllocs.unlockHostBuffer(HstPtr);
+  }
+
+  virtual Error dataUnlockImpl(void *HstPtr) = 0;
+
   /// Submit data to the device (host to device transfer).
   Error dataSubmit(void *TgtPtr, const void *HstPtr, int64_t Size,
                    __tgt_async_info *AsyncInfo);
@@ -322,12 +487,9 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
                                  void *DstPtr, int64_t Size,
                                  AsyncInfoWrapperTy &AsyncInfoWrapper) = 0;
 
-  /// Run the target region with multiple teams.
-  Error runTargetTeamRegion(void *EntryPtr, void **ArgPtrs,
-                            ptrdiff_t *ArgOffsets, int32_t NumArgs,
-                            uint64_t NumTeamsClause, uint32_t ThreadLimitClause,
-                            uint64_t LoopTripCount,
-                            __tgt_async_info *AsyncInfo);
+  /// Run the kernel associated with \p EntryPtr
+  Error launchKernel(void *EntryPtr, void **ArgPtrs, ptrdiff_t *ArgOffsets,
+                     KernelArgsTy &KernelArgs, __tgt_async_info *AsyncInfo);
 
   /// Initialize a __tgt_async_info structure. Related to interop features.
   Error initAsyncInfo(__tgt_async_info **AsyncInfoPtr);
@@ -367,14 +529,23 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
   /// Getters of the grid values.
   uint32_t getWarpSize() const { return GridValues.GV_Warp_Size; }
   uint32_t getThreadLimit() const { return GridValues.GV_Max_WG_Size; }
-  uint64_t getBlockLimit() const { return GridValues.GV_Max_Teams; }
+  uint32_t getBlockLimit() const { return GridValues.GV_Max_Teams; }
   uint32_t getDefaultNumThreads() const {
     return GridValues.GV_Default_WG_Size;
   }
-  uint64_t getDefaultNumBlocks() const {
+  uint32_t getDefaultNumBlocks() const {
     return GridValues.GV_Default_Num_Teams;
   }
   uint32_t getDynamicMemorySize() const { return OMPX_SharedMemorySize; }
+
+  /// Get target compute unit kind (e.g., sm_80, or gfx908).
+  virtual std::string getComputeUnitKind() const { return "unknown"; }
+
+  /// Post processing after jit backend. The ownership of \p MB will be taken.
+  virtual Expected<std::unique_ptr<MemoryBuffer>>
+  doJITPostProcessing(std::unique_ptr<MemoryBuffer> MB) const {
+    return std::move(MB);
+  }
 
 private:
   /// Register offload entry for global variable.
@@ -420,6 +591,10 @@ private:
   UInt64Envar OMPX_TargetHeapSize;
 
 protected:
+  /// Return the execution mode used for kernel \p Name.
+  Expected<OMPTgtExecModeFlags> getExecutionModeForKernel(StringRef Name,
+                                                          DeviceImageTy &Image);
+
   /// Environment variables defined by the LLVM OpenMP implementation
   /// regarding the initial number of streams and events.
   UInt32Envar OMPX_InitialNumStreams;
@@ -449,6 +624,9 @@ protected:
   /// does not mean that device J can access device I's memory directly.
   llvm::SmallVector<PeerAccessState> PeerAccesses;
   std::mutex PeerAccessesLock;
+
+  /// Map of host pinned allocations used for optimize device transfers.
+  PinnedAllocationMapTy PinnedAllocs;
 };
 
 /// Class implementing common functionalities of offload plugins. Each plugin
@@ -457,8 +635,8 @@ protected:
 struct GenericPluginTy {
 
   /// Construct a plugin instance.
-  GenericPluginTy()
-      : RequiresFlags(OMP_REQ_UNDEFINED), GlobalHandler(nullptr) {}
+  GenericPluginTy(Triple::ArchType TA)
+      : RequiresFlags(OMP_REQ_UNDEFINED), GlobalHandler(nullptr), JIT(TA) {}
 
   virtual ~GenericPluginTy() {}
 
@@ -486,6 +664,9 @@ struct GenericPluginTy {
   /// Get the ELF code to recognize the binary image of this plugin.
   virtual uint16_t getMagicElfBits() const = 0;
 
+  /// Get the target triple of this plugin.
+  virtual Triple::ArchType getTripleArch() const = 0;
+
   /// Allocate a structure using the internal allocator.
   template <typename Ty> Ty *allocate() {
     return reinterpret_cast<Ty *>(Allocator.Allocate(sizeof(Ty), alignof(Ty)));
@@ -496,6 +677,10 @@ struct GenericPluginTy {
     assert(GlobalHandler && "Global handler not initialized");
     return *GlobalHandler;
   }
+
+  /// Get the reference to the JIT used for all devices connected to this
+  /// plugin.
+  JITEngine &getJIT() { return JIT; }
 
   /// Get the OpenMP requires flags set for this plugin.
   int64_t getRequiresFlags() const { return RequiresFlags; }
@@ -548,6 +733,9 @@ private:
 
   /// Internal allocator for different structures.
   BumpPtrAllocator Allocator;
+
+  /// The JIT engine shared by all devices connected to this plugin.
+  JITEngine JIT;
 };
 
 /// Class for simplifying the getter operation of the plugin. Anywhere on the

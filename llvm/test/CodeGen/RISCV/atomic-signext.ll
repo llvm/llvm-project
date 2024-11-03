@@ -170,7 +170,7 @@ define signext i8 @atomicrmw_xchg_i8_monotonic(ptr %a, i8 %b) nounwind {
 ; RV64IA-LABEL: atomicrmw_xchg_i8_monotonic:
 ; RV64IA:       # %bb.0:
 ; RV64IA-NEXT:    andi a2, a0, -4
-; RV64IA-NEXT:    slliw a0, a0, 3
+; RV64IA-NEXT:    slli a0, a0, 3
 ; RV64IA-NEXT:    li a3, 255
 ; RV64IA-NEXT:    sllw a3, a3, a0
 ; RV64IA-NEXT:    andi a1, a1, 255
@@ -242,7 +242,7 @@ define signext i8 @atomicrmw_add_i8_monotonic(ptr %a, i8 %b) nounwind {
 ; RV64IA-LABEL: atomicrmw_add_i8_monotonic:
 ; RV64IA:       # %bb.0:
 ; RV64IA-NEXT:    andi a2, a0, -4
-; RV64IA-NEXT:    slliw a0, a0, 3
+; RV64IA-NEXT:    slli a0, a0, 3
 ; RV64IA-NEXT:    li a3, 255
 ; RV64IA-NEXT:    sllw a3, a3, a0
 ; RV64IA-NEXT:    andi a1, a1, 255
@@ -314,7 +314,7 @@ define signext i8 @atomicrmw_sub_i8_monotonic(ptr %a, i8 %b) nounwind {
 ; RV64IA-LABEL: atomicrmw_sub_i8_monotonic:
 ; RV64IA:       # %bb.0:
 ; RV64IA-NEXT:    andi a2, a0, -4
-; RV64IA-NEXT:    slliw a0, a0, 3
+; RV64IA-NEXT:    slli a0, a0, 3
 ; RV64IA-NEXT:    li a3, 255
 ; RV64IA-NEXT:    sllw a3, a3, a0
 ; RV64IA-NEXT:    andi a1, a1, 255
@@ -380,7 +380,7 @@ define signext i8 @atomicrmw_and_i8_monotonic(ptr %a, i8 %b) nounwind {
 ; RV64IA-LABEL: atomicrmw_and_i8_monotonic:
 ; RV64IA:       # %bb.0:
 ; RV64IA-NEXT:    andi a2, a0, -4
-; RV64IA-NEXT:    slliw a0, a0, 3
+; RV64IA-NEXT:    slli a0, a0, 3
 ; RV64IA-NEXT:    li a3, 255
 ; RV64IA-NEXT:    sllw a3, a3, a0
 ; RV64IA-NEXT:    not a3, a3
@@ -447,7 +447,7 @@ define signext i8 @atomicrmw_nand_i8_monotonic(ptr %a, i8 %b) nounwind {
 ; RV64IA-LABEL: atomicrmw_nand_i8_monotonic:
 ; RV64IA:       # %bb.0:
 ; RV64IA-NEXT:    andi a2, a0, -4
-; RV64IA-NEXT:    slliw a0, a0, 3
+; RV64IA-NEXT:    slli a0, a0, 3
 ; RV64IA-NEXT:    li a3, 255
 ; RV64IA-NEXT:    sllw a3, a3, a0
 ; RV64IA-NEXT:    andi a1, a1, 255
@@ -510,7 +510,7 @@ define signext i8 @atomicrmw_or_i8_monotonic(ptr %a, i8 %b) nounwind {
 ; RV64IA-LABEL: atomicrmw_or_i8_monotonic:
 ; RV64IA:       # %bb.0:
 ; RV64IA-NEXT:    andi a2, a0, -4
-; RV64IA-NEXT:    slliw a0, a0, 3
+; RV64IA-NEXT:    slli a0, a0, 3
 ; RV64IA-NEXT:    andi a1, a1, 255
 ; RV64IA-NEXT:    sllw a1, a1, a0
 ; RV64IA-NEXT:    amoor.w a1, a1, (a2)
@@ -562,7 +562,7 @@ define signext i8 @atomicrmw_xor_i8_monotonic(ptr %a, i8 %b) nounwind {
 ; RV64IA-LABEL: atomicrmw_xor_i8_monotonic:
 ; RV64IA:       # %bb.0:
 ; RV64IA-NEXT:    andi a2, a0, -4
-; RV64IA-NEXT:    slliw a0, a0, 3
+; RV64IA-NEXT:    slli a0, a0, 3
 ; RV64IA-NEXT:    andi a1, a1, 255
 ; RV64IA-NEXT:    sllw a1, a1, a0
 ; RV64IA-NEXT:    amoxor.w a1, a1, (a2)
@@ -695,7 +695,7 @@ define signext i8 @atomicrmw_max_i8_monotonic(ptr %a, i8 %b) nounwind {
 ; RV64IA-LABEL: atomicrmw_max_i8_monotonic:
 ; RV64IA:       # %bb.0:
 ; RV64IA-NEXT:    andi a2, a0, -4
-; RV64IA-NEXT:    slliw a0, a0, 3
+; RV64IA-NEXT:    slli a0, a0, 3
 ; RV64IA-NEXT:    andi a3, a0, 24
 ; RV64IA-NEXT:    li a4, 255
 ; RV64IA-NEXT:    sllw a4, a4, a0
@@ -847,7 +847,7 @@ define signext i8 @atomicrmw_min_i8_monotonic(ptr %a, i8 %b) nounwind {
 ; RV64IA-LABEL: atomicrmw_min_i8_monotonic:
 ; RV64IA:       # %bb.0:
 ; RV64IA-NEXT:    andi a2, a0, -4
-; RV64IA-NEXT:    slliw a0, a0, 3
+; RV64IA-NEXT:    slli a0, a0, 3
 ; RV64IA-NEXT:    andi a3, a0, 24
 ; RV64IA-NEXT:    li a4, 255
 ; RV64IA-NEXT:    sllw a4, a4, a0
@@ -990,7 +990,7 @@ define signext i8 @atomicrmw_umax_i8_monotonic(ptr %a, i8 %b) nounwind {
 ; RV64IA-LABEL: atomicrmw_umax_i8_monotonic:
 ; RV64IA:       # %bb.0:
 ; RV64IA-NEXT:    andi a2, a0, -4
-; RV64IA-NEXT:    slliw a0, a0, 3
+; RV64IA-NEXT:    slli a0, a0, 3
 ; RV64IA-NEXT:    li a3, 255
 ; RV64IA-NEXT:    sllw a3, a3, a0
 ; RV64IA-NEXT:    andi a1, a1, 255
@@ -1128,7 +1128,7 @@ define signext i8 @atomicrmw_umin_i8_monotonic(ptr %a, i8 %b) nounwind {
 ; RV64IA-LABEL: atomicrmw_umin_i8_monotonic:
 ; RV64IA:       # %bb.0:
 ; RV64IA-NEXT:    andi a2, a0, -4
-; RV64IA-NEXT:    slliw a0, a0, 3
+; RV64IA-NEXT:    slli a0, a0, 3
 ; RV64IA-NEXT:    li a3, 255
 ; RV64IA-NEXT:    sllw a3, a3, a0
 ; RV64IA-NEXT:    andi a1, a1, 255
@@ -1205,7 +1205,7 @@ define signext i16 @atomicrmw_xchg_i16_monotonic(ptr %a, i16 %b) nounwind {
 ; RV64IA-LABEL: atomicrmw_xchg_i16_monotonic:
 ; RV64IA:       # %bb.0:
 ; RV64IA-NEXT:    andi a2, a0, -4
-; RV64IA-NEXT:    slliw a0, a0, 3
+; RV64IA-NEXT:    slli a0, a0, 3
 ; RV64IA-NEXT:    lui a3, 16
 ; RV64IA-NEXT:    addiw a3, a3, -1
 ; RV64IA-NEXT:    sllw a4, a3, a0
@@ -1279,7 +1279,7 @@ define signext i16 @atomicrmw_add_i16_monotonic(ptr %a, i16 %b) nounwind {
 ; RV64IA-LABEL: atomicrmw_add_i16_monotonic:
 ; RV64IA:       # %bb.0:
 ; RV64IA-NEXT:    andi a2, a0, -4
-; RV64IA-NEXT:    slliw a0, a0, 3
+; RV64IA-NEXT:    slli a0, a0, 3
 ; RV64IA-NEXT:    lui a3, 16
 ; RV64IA-NEXT:    addiw a3, a3, -1
 ; RV64IA-NEXT:    sllw a4, a3, a0
@@ -1353,7 +1353,7 @@ define signext i16 @atomicrmw_sub_i16_monotonic(ptr %a, i16 %b) nounwind {
 ; RV64IA-LABEL: atomicrmw_sub_i16_monotonic:
 ; RV64IA:       # %bb.0:
 ; RV64IA-NEXT:    andi a2, a0, -4
-; RV64IA-NEXT:    slliw a0, a0, 3
+; RV64IA-NEXT:    slli a0, a0, 3
 ; RV64IA-NEXT:    lui a3, 16
 ; RV64IA-NEXT:    addiw a3, a3, -1
 ; RV64IA-NEXT:    sllw a4, a3, a0
@@ -1421,7 +1421,7 @@ define signext i16 @atomicrmw_and_i16_monotonic(ptr %a, i16 %b) nounwind {
 ; RV64IA-LABEL: atomicrmw_and_i16_monotonic:
 ; RV64IA:       # %bb.0:
 ; RV64IA-NEXT:    andi a2, a0, -4
-; RV64IA-NEXT:    slliw a0, a0, 3
+; RV64IA-NEXT:    slli a0, a0, 3
 ; RV64IA-NEXT:    lui a3, 16
 ; RV64IA-NEXT:    addiw a3, a3, -1
 ; RV64IA-NEXT:    sllw a4, a3, a0
@@ -1490,7 +1490,7 @@ define signext i16 @atomicrmw_nand_i16_monotonic(ptr %a, i16 %b) nounwind {
 ; RV64IA-LABEL: atomicrmw_nand_i16_monotonic:
 ; RV64IA:       # %bb.0:
 ; RV64IA-NEXT:    andi a2, a0, -4
-; RV64IA-NEXT:    slliw a0, a0, 3
+; RV64IA-NEXT:    slli a0, a0, 3
 ; RV64IA-NEXT:    lui a3, 16
 ; RV64IA-NEXT:    addiw a3, a3, -1
 ; RV64IA-NEXT:    sllw a4, a3, a0
@@ -1555,7 +1555,7 @@ define signext i16 @atomicrmw_or_i16_monotonic(ptr %a, i16 %b) nounwind {
 ; RV64IA-LABEL: atomicrmw_or_i16_monotonic:
 ; RV64IA:       # %bb.0:
 ; RV64IA-NEXT:    andi a2, a0, -4
-; RV64IA-NEXT:    slliw a0, a0, 3
+; RV64IA-NEXT:    slli a0, a0, 3
 ; RV64IA-NEXT:    slli a1, a1, 48
 ; RV64IA-NEXT:    srli a1, a1, 48
 ; RV64IA-NEXT:    sllw a1, a1, a0
@@ -1609,7 +1609,7 @@ define signext i16 @atomicrmw_xor_i16_monotonic(ptr %a, i16 %b) nounwind {
 ; RV64IA-LABEL: atomicrmw_xor_i16_monotonic:
 ; RV64IA:       # %bb.0:
 ; RV64IA-NEXT:    andi a2, a0, -4
-; RV64IA-NEXT:    slliw a0, a0, 3
+; RV64IA-NEXT:    slli a0, a0, 3
 ; RV64IA-NEXT:    slli a1, a1, 48
 ; RV64IA-NEXT:    srli a1, a1, 48
 ; RV64IA-NEXT:    sllw a1, a1, a0
@@ -1745,7 +1745,7 @@ define signext i16 @atomicrmw_max_i16_monotonic(ptr %a, i16 %b) nounwind {
 ; RV64IA-LABEL: atomicrmw_max_i16_monotonic:
 ; RV64IA:       # %bb.0:
 ; RV64IA-NEXT:    andi a2, a0, -4
-; RV64IA-NEXT:    slliw a0, a0, 3
+; RV64IA-NEXT:    slli a0, a0, 3
 ; RV64IA-NEXT:    andi a3, a0, 24
 ; RV64IA-NEXT:    lui a4, 16
 ; RV64IA-NEXT:    addiw a4, a4, -1
@@ -1901,7 +1901,7 @@ define signext i16 @atomicrmw_min_i16_monotonic(ptr %a, i16 %b) nounwind {
 ; RV64IA-LABEL: atomicrmw_min_i16_monotonic:
 ; RV64IA:       # %bb.0:
 ; RV64IA-NEXT:    andi a2, a0, -4
-; RV64IA-NEXT:    slliw a0, a0, 3
+; RV64IA-NEXT:    slli a0, a0, 3
 ; RV64IA-NEXT:    andi a3, a0, 24
 ; RV64IA-NEXT:    lui a4, 16
 ; RV64IA-NEXT:    addiw a4, a4, -1
@@ -2055,7 +2055,7 @@ define signext i16 @atomicrmw_umax_i16_monotonic(ptr %a, i16 %b) nounwind {
 ; RV64IA-LABEL: atomicrmw_umax_i16_monotonic:
 ; RV64IA:       # %bb.0:
 ; RV64IA-NEXT:    andi a2, a0, -4
-; RV64IA-NEXT:    slliw a0, a0, 3
+; RV64IA-NEXT:    slli a0, a0, 3
 ; RV64IA-NEXT:    lui a3, 16
 ; RV64IA-NEXT:    addiw a3, a3, -1
 ; RV64IA-NEXT:    sllw a4, a3, a0
@@ -2203,7 +2203,7 @@ define signext i16 @atomicrmw_umin_i16_monotonic(ptr %a, i16 %b) nounwind {
 ; RV64IA-LABEL: atomicrmw_umin_i16_monotonic:
 ; RV64IA:       # %bb.0:
 ; RV64IA-NEXT:    andi a2, a0, -4
-; RV64IA-NEXT:    slliw a0, a0, 3
+; RV64IA-NEXT:    slli a0, a0, 3
 ; RV64IA-NEXT:    lui a3, 16
 ; RV64IA-NEXT:    addiw a3, a3, -1
 ; RV64IA-NEXT:    sllw a4, a3, a0
@@ -3802,7 +3802,7 @@ define signext i8 @cmpxchg_i8_monotonic_monotonic_val0(ptr %ptr, i8 signext %cmp
 ; RV64IA-LABEL: cmpxchg_i8_monotonic_monotonic_val0:
 ; RV64IA:       # %bb.0:
 ; RV64IA-NEXT:    andi a3, a0, -4
-; RV64IA-NEXT:    slliw a0, a0, 3
+; RV64IA-NEXT:    slli a0, a0, 3
 ; RV64IA-NEXT:    li a4, 255
 ; RV64IA-NEXT:    sllw a4, a4, a0
 ; RV64IA-NEXT:    andi a1, a1, 255
@@ -3885,7 +3885,7 @@ define i1 @cmpxchg_i8_monotonic_monotonic_val1(ptr %ptr, i8 signext %cmp, i8 sig
 ; RV64IA-LABEL: cmpxchg_i8_monotonic_monotonic_val1:
 ; RV64IA:       # %bb.0:
 ; RV64IA-NEXT:    andi a3, a0, -4
-; RV64IA-NEXT:    slliw a0, a0, 3
+; RV64IA-NEXT:    slli a0, a0, 3
 ; RV64IA-NEXT:    li a4, 255
 ; RV64IA-NEXT:    sllw a4, a4, a0
 ; RV64IA-NEXT:    andi a1, a1, 255
@@ -3971,7 +3971,7 @@ define signext i16 @cmpxchg_i16_monotonic_monotonic_val0(ptr %ptr, i16 signext %
 ; RV64IA-LABEL: cmpxchg_i16_monotonic_monotonic_val0:
 ; RV64IA:       # %bb.0:
 ; RV64IA-NEXT:    andi a3, a0, -4
-; RV64IA-NEXT:    slliw a0, a0, 3
+; RV64IA-NEXT:    slli a0, a0, 3
 ; RV64IA-NEXT:    lui a4, 16
 ; RV64IA-NEXT:    addiw a4, a4, -1
 ; RV64IA-NEXT:    sllw a5, a4, a0
@@ -4056,7 +4056,7 @@ define i1 @cmpxchg_i16_monotonic_monotonic_val1(ptr %ptr, i16 signext %cmp, i16 
 ; RV64IA-LABEL: cmpxchg_i16_monotonic_monotonic_val1:
 ; RV64IA:       # %bb.0:
 ; RV64IA-NEXT:    andi a3, a0, -4
-; RV64IA-NEXT:    slliw a0, a0, 3
+; RV64IA-NEXT:    slli a0, a0, 3
 ; RV64IA-NEXT:    lui a4, 16
 ; RV64IA-NEXT:    addiw a4, a4, -1
 ; RV64IA-NEXT:    sllw a5, a4, a0

@@ -9,9 +9,9 @@
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/AffineExpr.h"
 #include "mlir/IR/AffineMap.h"
-#include "mlir/IR/BlockAndValueMapping.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Dialect.h"
+#include "mlir/IR/IRMapping.h"
 #include "mlir/IR/IntegerSet.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/IR/SymbolTable.h"
@@ -507,7 +507,7 @@ LogicalResult OpBuilder::tryFold(Operation *op,
   return success();
 }
 
-Operation *OpBuilder::clone(Operation &op, BlockAndValueMapping &mapper) {
+Operation *OpBuilder::clone(Operation &op, IRMapping &mapper) {
   Operation *newOp = op.clone(mapper);
   // The `insert` call below handles the notification for inserting `newOp`
   // itself. But if `newOp` has any regions, we need to notify the listener
@@ -523,6 +523,6 @@ Operation *OpBuilder::clone(Operation &op, BlockAndValueMapping &mapper) {
 }
 
 Operation *OpBuilder::clone(Operation &op) {
-  BlockAndValueMapping mapper;
+  IRMapping mapper;
   return clone(op, mapper);
 }

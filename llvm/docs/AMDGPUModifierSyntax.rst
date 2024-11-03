@@ -230,6 +230,19 @@ Specifies if the :ref:`exec<amdgpu_synid_exec>` mask is valid for this *export* 
                                              :ref:`exec<amdgpu_synid_exec>` mask.
     ======================================== ================================================
 
+.. _amdgpu_synid_row_en:
+
+row_en
+~~~~~~
+
+Specifies whether to export one row or multiple rows of data.
+
+    ======================================== ================================================
+    Syntax                                   Description
+    ======================================== ================================================
+    row_en                                   Export multiple rows using row index from M0.
+    ======================================== ================================================
+
 FLAT Modifiers
 --------------
 
@@ -402,6 +415,7 @@ This modifier has some limitations depending on the instruction kind:
     64-bit atomic *cmpswap*                             0xF
     64-bit atomic instructions except for *cmpswap*     0x3
     *gather4*                                           0x1, 0x2, 0x4, 0x8
+    GFX11+ *msaa_load*                                  0x1, 0x2, 0x4, 0x8
     Other instructions                                  any value
     =================================================== ========================
 
@@ -897,9 +911,9 @@ provided that the combination of formats can be mapped to a unified format.
 Supported unified formats and equivalent combinations of data and numeric formats
 are defined below:
 
-    ============================== ============================== =============================
-    Unified Format Syntax          Equivalent Data Format         Equivalent Numeric Format
-    ============================== ============================== =============================
+    ============================== ============================== ============================= ============
+    Unified Format Syntax          Equivalent Data Format         Equivalent Numeric Format     Note
+    ============================== ============================== ============================= ============
     BUF_FMT_INVALID                BUF_DATA_FORMAT_INVALID        BUF_NUM_FORMAT_UNORM
 
     BUF_FMT_8_UNORM                BUF_DATA_FORMAT_8              BUF_NUM_FORMAT_UNORM
@@ -936,26 +950,26 @@ are defined below:
     BUF_FMT_16_16_SINT             BUF_DATA_FORMAT_16_16          BUF_NUM_FORMAT_SINT
     BUF_FMT_16_16_FLOAT            BUF_DATA_FORMAT_16_16          BUF_NUM_FORMAT_FLOAT
 
-    BUF_FMT_10_11_11_UNORM         BUF_DATA_FORMAT_10_11_11       BUF_NUM_FORMAT_UNORM
-    BUF_FMT_10_11_11_SNORM         BUF_DATA_FORMAT_10_11_11       BUF_NUM_FORMAT_SNORM
-    BUF_FMT_10_11_11_USCALED       BUF_DATA_FORMAT_10_11_11       BUF_NUM_FORMAT_USCALED
-    BUF_FMT_10_11_11_SSCALED       BUF_DATA_FORMAT_10_11_11       BUF_NUM_FORMAT_SSCALED
-    BUF_FMT_10_11_11_UINT          BUF_DATA_FORMAT_10_11_11       BUF_NUM_FORMAT_UINT
-    BUF_FMT_10_11_11_SINT          BUF_DATA_FORMAT_10_11_11       BUF_NUM_FORMAT_SINT
+    BUF_FMT_10_11_11_UNORM         BUF_DATA_FORMAT_10_11_11       BUF_NUM_FORMAT_UNORM          GFX10 only
+    BUF_FMT_10_11_11_SNORM         BUF_DATA_FORMAT_10_11_11       BUF_NUM_FORMAT_SNORM          GFX10 only
+    BUF_FMT_10_11_11_USCALED       BUF_DATA_FORMAT_10_11_11       BUF_NUM_FORMAT_USCALED        GFX10 only
+    BUF_FMT_10_11_11_SSCALED       BUF_DATA_FORMAT_10_11_11       BUF_NUM_FORMAT_SSCALED        GFX10 only
+    BUF_FMT_10_11_11_UINT          BUF_DATA_FORMAT_10_11_11       BUF_NUM_FORMAT_UINT           GFX10 only
+    BUF_FMT_10_11_11_SINT          BUF_DATA_FORMAT_10_11_11       BUF_NUM_FORMAT_SINT           GFX10 only
     BUF_FMT_10_11_11_FLOAT         BUF_DATA_FORMAT_10_11_11       BUF_NUM_FORMAT_FLOAT
 
-    BUF_FMT_11_11_10_UNORM         BUF_DATA_FORMAT_11_11_10       BUF_NUM_FORMAT_UNORM
-    BUF_FMT_11_11_10_SNORM         BUF_DATA_FORMAT_11_11_10       BUF_NUM_FORMAT_SNORM
-    BUF_FMT_11_11_10_USCALED       BUF_DATA_FORMAT_11_11_10       BUF_NUM_FORMAT_USCALED
-    BUF_FMT_11_11_10_SSCALED       BUF_DATA_FORMAT_11_11_10       BUF_NUM_FORMAT_SSCALED
-    BUF_FMT_11_11_10_UINT          BUF_DATA_FORMAT_11_11_10       BUF_NUM_FORMAT_UINT
-    BUF_FMT_11_11_10_SINT          BUF_DATA_FORMAT_11_11_10       BUF_NUM_FORMAT_SINT
+    BUF_FMT_11_11_10_UNORM         BUF_DATA_FORMAT_11_11_10       BUF_NUM_FORMAT_UNORM          GFX10 only
+    BUF_FMT_11_11_10_SNORM         BUF_DATA_FORMAT_11_11_10       BUF_NUM_FORMAT_SNORM          GFX10 only
+    BUF_FMT_11_11_10_USCALED       BUF_DATA_FORMAT_11_11_10       BUF_NUM_FORMAT_USCALED        GFX10 only
+    BUF_FMT_11_11_10_SSCALED       BUF_DATA_FORMAT_11_11_10       BUF_NUM_FORMAT_SSCALED        GFX10 only
+    BUF_FMT_11_11_10_UINT          BUF_DATA_FORMAT_11_11_10       BUF_NUM_FORMAT_UINT           GFX10 only
+    BUF_FMT_11_11_10_SINT          BUF_DATA_FORMAT_11_11_10       BUF_NUM_FORMAT_SINT           GFX10 only
     BUF_FMT_11_11_10_FLOAT         BUF_DATA_FORMAT_11_11_10       BUF_NUM_FORMAT_FLOAT
 
     BUF_FMT_10_10_10_2_UNORM       BUF_DATA_FORMAT_10_10_10_2     BUF_NUM_FORMAT_UNORM
     BUF_FMT_10_10_10_2_SNORM       BUF_DATA_FORMAT_10_10_10_2     BUF_NUM_FORMAT_SNORM
-    BUF_FMT_10_10_10_2_USCALED     BUF_DATA_FORMAT_10_10_10_2     BUF_NUM_FORMAT_USCALED
-    BUF_FMT_10_10_10_2_SSCALED     BUF_DATA_FORMAT_10_10_10_2     BUF_NUM_FORMAT_SSCALED
+    BUF_FMT_10_10_10_2_USCALED     BUF_DATA_FORMAT_10_10_10_2     BUF_NUM_FORMAT_USCALED        GFX10 only
+    BUF_FMT_10_10_10_2_SSCALED     BUF_DATA_FORMAT_10_10_10_2     BUF_NUM_FORMAT_SSCALED        GFX10 only
     BUF_FMT_10_10_10_2_UINT        BUF_DATA_FORMAT_10_10_10_2     BUF_NUM_FORMAT_UINT
     BUF_FMT_10_10_10_2_SINT        BUF_DATA_FORMAT_10_10_10_2     BUF_NUM_FORMAT_SINT
 
@@ -991,7 +1005,7 @@ are defined below:
     BUF_FMT_32_32_32_32_UINT       BUF_DATA_FORMAT_32_32_32_32    BUF_NUM_FORMAT_UINT
     BUF_FMT_32_32_32_32_SINT       BUF_DATA_FORMAT_32_32_32_32    BUF_NUM_FORMAT_SINT
     BUF_FMT_32_32_32_32_FLOAT      BUF_DATA_FORMAT_32_32_32_32    BUF_NUM_FORMAT_FLOAT
-    ============================== ============================== =============================
+    ============================== ============================== ============================= ============
 
 Examples:
 
@@ -1064,8 +1078,8 @@ Examples:
   offset:0xfffff
   offset:-x
 
-VINTRP Modifiers
-----------------
+VINTRP/VINTERP/LDSDIR Modifiers
+-------------------------------
 
 .. _amdgpu_synid_high:
 
@@ -1079,6 +1093,47 @@ Specifies which half of the LDS word to use. Low half of LDS word is used by def
     ======================================== ================================
     high                                     Use the high half of LDS word.
     ======================================== ================================
+
+neg
+~~~
+
+See a description :ref:`here<amdgpu_synid_neg>`.
+
+.. _amdgpu_synid_wait_exp:
+
+wait_exp
+~~~~~~~~
+
+Specifies a wait on the EXP counter before issuing the current instruction.
+The counter must be less than or equal to this value before the instruction is issued.
+If set to 7, no wait is performed.
+
+The default value is zero. This is a safe value, but it may be suboptimal.
+
+    ================ ======================================================
+    Syntax           Description
+    ================ ======================================================
+    wait_exp:{0..7}  An additional wait on the EXP counter before
+                     issuing this instruction.
+    ================ ======================================================
+
+.. _amdgpu_synid_wait_vdst:
+
+wait_vdst
+~~~~~~~~~
+
+Specifies a wait on the VA_VDST counter before issuing the current instruction.
+The counter must be less than or equal to this value before the instruction is issued.
+If set to 15, no wait is performed.
+
+The default value is zero. This is a safe value, but it may be suboptimal.
+
+    ================== ======================================================
+    Syntax             Description
+    ================== ======================================================
+    wait_vdst:{0..15}  An additional wait on the VA_VDST counter before
+                       issuing this instruction.
+    ================== ======================================================
 
 DPP8 Modifiers
 --------------

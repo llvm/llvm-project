@@ -121,6 +121,8 @@ module attributes {gpu.container_module} {
     }
   }
 
+  func.func private @two_value_generator() -> (f32, memref<?xf32, 1>)
+
   func.func @foo() {
     %0 = "op"() : () -> (f32)
     %1 = "op"() : () -> (memref<?xf32, 1>)
@@ -139,6 +141,11 @@ module attributes {gpu.container_module} {
 
     // CHECK: %{{.*}} = gpu.launch_func async [%{{.*}}] @kernels::@kernel_2 blocks in (%{{.*}}, %{{.*}}, %{{.*}}) threads in (%{{.*}}, %{{.*}}, %{{.*}})
     %t1 = gpu.launch_func async [%t0] @kernels::@kernel_2  blocks in (%cst, %cst, %cst) threads in (%cst, %cst, %cst)
+
+    // CHECK: %[[VALUES:.*]]:2 = call
+    %values:2 = func.call @two_value_generator() : () -> (f32, memref<?xf32, 1>)
+    // CHECK: gpu.launch_func @kernels::@kernel_1 {{.*}} args(%[[VALUES]]#0 : f32, %[[VALUES]]#1 : memref<?xf32, 1>)
+    gpu.launch_func @kernels::@kernel_1 blocks in (%cst, %cst, %cst) threads in (%cst, %cst, %cst) args(%values#0 : f32, %values#1 : memref<?xf32, 1>)
 
     return
   }

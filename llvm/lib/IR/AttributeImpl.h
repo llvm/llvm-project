@@ -275,7 +275,7 @@ public:
   iterator end() const { return begin() + NumAttrs; }
 
   void Profile(FoldingSetNodeID &ID) const {
-    Profile(ID, makeArrayRef(begin(), end()));
+    Profile(ID, ArrayRef(begin(), end()));
   }
 
   static void Profile(FoldingSetNodeID &ID, ArrayRef<Attribute> AttrList) {

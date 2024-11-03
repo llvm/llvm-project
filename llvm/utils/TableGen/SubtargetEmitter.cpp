@@ -1953,11 +1953,11 @@ void SubtargetEmitter::run(raw_ostream &OS) {
      << "StringRef TuneCPU, StringRef FS)\n"
      << "  : TargetSubtargetInfo(TT, CPU, TuneCPU, FS, ";
   if (NumFeatures)
-    OS << "makeArrayRef(" << Target << "FeatureKV, " << NumFeatures << "), ";
+    OS << "ArrayRef(" << Target << "FeatureKV, " << NumFeatures << "), ";
   else
     OS << "std::nullopt, ";
   if (NumProcs)
-    OS << "makeArrayRef(" << Target << "SubTypeKV, " << NumProcs << "), ";
+    OS << "ArrayRef(" << Target << "SubTypeKV, " << NumProcs << "), ";
   else
     OS << "None, ";
   OS << '\n'; OS.indent(24);

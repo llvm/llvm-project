@@ -37,6 +37,7 @@
 #include "Plugins/Process/Utility/StopInfoMachException.h"
 
 #include <memory>
+#include <optional>
 
 using namespace lldb;
 using namespace lldb_private;
@@ -292,7 +293,7 @@ Status ProcessMinidump::DoLoadCore() {
   ReadModuleList();
   if (ModuleSP module = GetTarget().GetExecutableModule())
     GetTarget().MergeArchitecture(module->GetArchitecture());
-  llvm::Optional<lldb::pid_t> pid = m_minidump_parser->GetPid();
+  std::optional<lldb::pid_t> pid = m_minidump_parser->GetPid();
   if (!pid) {
     Debugger::ReportWarning("unable to retrieve process ID from minidump file, "
                             "setting process ID to 1",

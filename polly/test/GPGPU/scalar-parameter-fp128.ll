@@ -2,9 +2,9 @@
 
 ; XFAIL: *
 
-; REQUIRES: pollyacc,nvptx
+; REQUIRES: pollyacc, target=nvptx{{.*}}
 
-; This fails today with "type mismatch between callee prototype and arguments"
+; This fails today with "LowerFormalArguments didn't emit the correct number of values!"
 
 ;    void foo(fp128 A[], fp128 b) {
 ;      for (long i = 0; i < 1024; i++)
@@ -13,7 +13,7 @@
 ;
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
-define void @fp128(fp128* %A, fp128 %b) {
+define void @fp128(ptr %A, fp128 %b) {
 bb:
   br label %bb1
 
@@ -23,10 +23,10 @@ bb1:                                              ; preds = %bb5, %bb
   br i1 %exitcond, label %bb2, label %bb7
 
 bb2:                                              ; preds = %bb1
-  %tmp = getelementptr inbounds fp128, fp128* %A, i64 %i.0
-  %tmp3 = load fp128, fp128* %tmp, align 4
+  %tmp = getelementptr inbounds fp128, ptr %A, i64 %i.0
+  %tmp3 = load fp128, ptr %tmp, align 4
   %tmp4 = fadd fp128 %tmp3, %b
-  store fp128 %tmp4, fp128* %tmp, align 4
+  store fp128 %tmp4, ptr %tmp, align 4
   br label %bb5
 
 bb5:                                              ; preds = %bb2

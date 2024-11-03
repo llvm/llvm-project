@@ -5,17 +5,17 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 ;; Check that we do emit expensive instructions to compute trip
 ;; counts when unrolling loops on the a2 (because we unroll a lot).
 
-define i32 @test(i64 %v12, i8* %array, i64* %loc) {
+define i32 @test(i64 %v12, ptr %array, ptr %loc) {
 ; CHECK-LABEL: @test(
 ; CHECK: udiv
 entry:
-  %step = load i64, i64* %loc, !range !0
+  %step = load i64, ptr %loc, !range !0
   br label %loop
 
 loop:                                           ; preds = %entry, %loop
   %k.015 = phi i64 [ %v15, %loop ], [ %v12, %entry ]
-  %v14 = getelementptr inbounds i8, i8* %array, i64 %k.015
-  store i8 0, i8* %v14
+  %v14 = getelementptr inbounds i8, ptr %array, i64 %k.015
+  store i8 0, ptr %v14
   %v15 = add nuw nsw i64 %k.015, %step
   %v16 = icmp slt i64 %v15, 8193
   br i1 %v16, label %loop, label %loopexit

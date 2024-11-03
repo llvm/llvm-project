@@ -20,7 +20,7 @@ target triple = "x86_64-pc-windows-msvc"
 ; BFIHOIST: br label %endif
 
 ; Function Attrs: norecurse
-define i32 @main(i32 %argc, i8** nocapture readnone %argv) local_unnamed_addr #0 personality i8* bitcast (i32 (...)* @__CxxFrameHandler3 to i8*) {
+define i32 @main(i32 %argc, ptr nocapture readnone %argv) local_unnamed_addr #0 personality ptr @__CxxFrameHandler3 {
   %call = tail call i64 @fn(i64 0)
   %call1 = tail call i64 @fn(i64 1)
   %tobool = icmp eq i32 %argc, 0
@@ -39,7 +39,7 @@ catch.dispatch:                                   ; preds = %2, %1
   %3 = catchswitch within none [label %4] unwind to caller
 
 ; <label>:4:                                      ; preds = %catch.dispatch
-  %5 = catchpad within %3 [i8* null, i32 64, i8* null]
+  %5 = catchpad within %3 [ptr null, i32 64, ptr null]
   br i1 %tobool, label %then, label %else
 
 then:

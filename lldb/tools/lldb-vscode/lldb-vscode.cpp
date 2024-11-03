@@ -79,7 +79,10 @@ enum ID {
 #undef OPTION
 };
 
-#define PREFIX(NAME, VALUE) const char *const NAME[] = VALUE;
+#define PREFIX(NAME, VALUE)                                                    \
+  static constexpr llvm::StringLiteral NAME##_init[] = VALUE;                  \
+  static constexpr llvm::ArrayRef<llvm::StringLiteral> NAME(                   \
+      NAME##_init, std::size(NAME##_init) - 1);
 #include "Options.inc"
 #undef PREFIX
 
@@ -93,9 +96,9 @@ static constexpr llvm::opt::OptTable::Info InfoTable[] = {
 #include "Options.inc"
 #undef OPTION
 };
-class LLDBVSCodeOptTable : public llvm::opt::OptTable {
+class LLDBVSCodeOptTable : public llvm::opt::GenericOptTable {
 public:
-  LLDBVSCodeOptTable() : OptTable(InfoTable, true) {}
+  LLDBVSCodeOptTable() : llvm::opt::GenericOptTable(InfoTable, true) {}
 };
 
 typedef void (*RequestCallback)(const llvm::json::Object &command);
@@ -3224,7 +3227,7 @@ int main(int argc, char *argv[]) {
 
   LLDBVSCodeOptTable T;
   unsigned MAI, MAC;
-  llvm::ArrayRef<const char *> ArgsArr = llvm::makeArrayRef(argv + 1, argc);
+  llvm::ArrayRef<const char *> ArgsArr = llvm::ArrayRef(argv + 1, argc);
   llvm::opt::InputArgList input_args = T.ParseArgs(ArgsArr, MAI, MAC);
 
   if (input_args.hasArg(OPT_help)) {

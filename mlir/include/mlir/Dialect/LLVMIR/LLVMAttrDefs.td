@@ -70,9 +70,9 @@ def LoopOptionsAttr : LLVM_Attr<"LoopOptions", "loopopts"> {
   let extraClassDeclaration = [{
     using OptionValuePair = std::pair<LoopOptionCase, int64_t>;
     using OptionsArray = ArrayRef<std::pair<LoopOptionCase, int64_t>>;
-    Optional<bool> disableUnroll();
-    Optional<bool> disableLICM();
-    Optional<int64_t> interleaveCount();
+    std::optional<bool> disableUnroll();
+    std::optional<bool> disableLICM();
+    std::optional<int64_t> interleaveCount();
   }];
 
   let builders = [
@@ -121,6 +121,15 @@ def LLVM_DILanguageParameter : LLVM_DIParameter<
 def LLVM_DITagParameter : LLVM_DIParameter<
   "tag", /*default=*/"", "Tag"
 >;
+
+//===----------------------------------------------------------------------===//
+// DIVoidResultTypeAttr
+//===----------------------------------------------------------------------===//
+
+def LLVM_DIVoidResultTypeAttr : LLVM_Attr<"DIVoidResultType", "di_void_result_type",
+                                          /*traits=*/[], "DITypeAttr"> {
+  let parameters = (ins);
+}
 
 //===----------------------------------------------------------------------===//
 // DIBasicTypeAttr
@@ -353,14 +362,34 @@ def LLVM_DISubroutineTypeAttr : LLVM_Attr<"DISubroutineType", "di_subroutine_typ
   ], "DITypeAttr"> {
   let parameters = (ins
     LLVM_DICallingConventionParameter:$callingConvention,
-    OptionalParameter<"DITypeAttr">:$resultType,
-    OptionalArrayRefParameter<"DITypeAttr">:$argumentTypes
+    OptionalArrayRefParameter<"DITypeAttr">:$types
   );
   let builders = [
-    TypeBuilder<(ins "DITypeAttr":$resultType,
-                     "ArrayRef<DITypeAttr>":$argumentTypes), [{
-      return $_get($_ctxt, /*callingConvention=*/0, resultType, argumentTypes);
+    TypeBuilder<(ins "ArrayRef<DITypeAttr>":$types), [{
+      return $_get($_ctxt, /*callingConvention=*/0, types);
     }]>
+  ];
+  let assemblyFormat = "`<` struct(params) `>`";
+  let genVerifyDecl = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// MemoryEffectsAttr
+//===----------------------------------------------------------------------===//
+
+def LLVM_MemoryEffectsAttr : LLVM_Attr<"MemoryEffects", "memory_effects", [
+    SubElementAttrInterface
+  ]> {
+  let parameters = (ins
+    "ModRefInfo":$other,
+    "ModRefInfo":$argMem,
+    "ModRefInfo":$inaccessibleMem
+  );
+  let extraClassDeclaration = [{
+    bool isReadWrite();
+  }];
+  let builders = [
+    TypeBuilder<(ins "ArrayRef<ModRefInfo>":$memInfoArgs)>
   ];
   let assemblyFormat = "`<` struct(params) `>`";
 }

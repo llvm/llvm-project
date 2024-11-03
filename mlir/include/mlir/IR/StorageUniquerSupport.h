@@ -140,7 +140,7 @@ public:
                                "that is not itself registered.");
 
     (checkInterfaceTarget<IfaceModels>(), ...);
-    abstract->interfaceMap.template insert<IfaceModels...>();
+    abstract->interfaceMap.template insertModels<IfaceModels...>();
   }
 
   /// Get or create a new ConcreteT instance within the ctx. This

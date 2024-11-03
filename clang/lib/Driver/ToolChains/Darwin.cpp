@@ -1425,15 +1425,22 @@ void DarwinClang::AddLinkRuntimeLibArgs(const ArgList &Args,
   }
 
   const SanitizerArgs &Sanitize = getSanitizerArgs(Args);
+
+  if (!Sanitize.needsSharedRt() && Sanitize.needsUbsanRt()) {
+    getDriver().Diag(diag::err_drv_unsupported_static_ubsan_darwin);
+    return;
+  }
+
   if (Sanitize.needsAsanRt())
     AddLinkSanitizerLibArgs(Args, CmdArgs, "asan");
   if (Sanitize.needsLsanRt())
     AddLinkSanitizerLibArgs(Args, CmdArgs, "lsan");
-  if (Sanitize.needsUbsanRt())
+  if (Sanitize.needsUbsanRt()) {
+    assert(Sanitize.needsSharedRt() && "Static sanitizer runtimes not supported");
     AddLinkSanitizerLibArgs(Args, CmdArgs,
                             Sanitize.requiresMinimalRuntime() ? "ubsan_minimal"
-                                                              : "ubsan",
-                            Sanitize.needsSharedRt());
+                                                              : "ubsan");
+  }
   if (Sanitize.needsTsanRt())
     AddLinkSanitizerLibArgs(Args, CmdArgs, "tsan");
   if (Sanitize.needsFuzzer() && !Args.hasArg(options::OPT_dynamiclib)) {
@@ -1809,7 +1816,7 @@ getDeploymentTargetFromEnvironmentVariables(const Driver &TheDriver,
   };
   static_assert(std::size(EnvVars) == Darwin::LastDarwinPlatform + 1,
                 "Missing platform");
-  for (const auto &I : llvm::enumerate(llvm::makeArrayRef(EnvVars))) {
+  for (const auto &I : llvm::enumerate(llvm::ArrayRef(EnvVars))) {
     if (char *Env = ::getenv(I.value()))
       Targets[I.index()] = Env;
   }
@@ -1840,7 +1847,7 @@ getDeploymentTargetFromEnvironmentVariables(const Driver &TheDriver,
     }
   }
 
-  for (const auto &Target : llvm::enumerate(llvm::makeArrayRef(Targets))) {
+  for (const auto &Target : llvm::enumerate(llvm::ArrayRef(Targets))) {
     if (!Target.value().empty())
       return DarwinPlatform::createDeploymentTargetEnv(
           (Darwin::DarwinPlatformKind)Target.index(), EnvVars[Target.index()],
@@ -2869,7 +2876,6 @@ Darwin::TranslateArgs(const DerivedArgList &Args, StringRef BoundArch,
   // First get the generic Apple args, before moving onto Darwin-specific ones.
   DerivedArgList *DAL =
       MachO::TranslateArgs(Args, BoundArch, DeviceOffloadKind);
-  const OptTable &Opts = getDriver().getOpts();
 
   // If no architecture is bound, none of the translations here are relevant.
   if (BoundArch.empty())
@@ -2898,26 +2904,6 @@ Darwin::TranslateArgs(const DerivedArgList &Args, StringRef BoundArch,
              "missing expected -static argument");
       *it = nullptr;
       ++it;
-    }
-  }
-
-  if (!Args.getLastArg(options::OPT_stdlib_EQ) &&
-      GetCXXStdlibType(Args) == ToolChain::CST_Libcxx)
-    DAL->AddJoinedArg(nullptr, Opts.getOption(options::OPT_stdlib_EQ),
-                      "libc++");
-
-  // Validate the C++ standard library choice.
-  CXXStdlibType Type = GetCXXStdlibType(*DAL);
-  if (Type == ToolChain::CST_Libcxx) {
-    // Check whether the target provides libc++.
-    StringRef where;
-
-    // Complain about targeting iOS < 5.0 in any way.
-    if (isTargetIOSBased() && isIPhoneOSVersionLT(5, 0))
-      where = "iOS 5.0";
-
-    if (where != StringRef()) {
-      getDriver().Diag(clang::diag::err_drv_invalid_libcxx_deployment) << where;
     }
   }
 

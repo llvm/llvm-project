@@ -416,7 +416,9 @@ void OptimizationRemarkAnalysisFPCommute::anchor() {}
 void OptimizationRemarkAnalysisAliasing::anchor() {}
 
 void llvm::diagnoseDontCall(const CallInst &CI) {
-  auto *F = CI.getCalledFunction();
+  const auto *F =
+      dyn_cast<Function>(CI.getCalledOperand()->stripPointerCasts());
+
   if (!F)
     return;
 

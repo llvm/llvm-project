@@ -2,11 +2,11 @@
 ;; Check the cases involving dso_local_equivalent where we do not expect functions to be merged.
 ; RUN: opt -S -passes=mergefunc < %s | FileCheck %s
 
-@x = constant { i32 ()*, i32 ()* } { i32 ()* @a, i32 ()* @b }
-; CHECK: { i32 ()* @a, i32 ()* @b }
+@x = constant { ptr, ptr } { ptr @a, ptr @b }
+; CHECK: { ptr @a, ptr @b }
 
-@x2 = constant { i32 ()*, i32 ()* } { i32 ()* @c, i32 ()* @d }
-; CHECK: { i32 ()* @c, i32 ()* @d }
+@x2 = constant { ptr, ptr } { ptr @c, ptr @d }
+; CHECK: { ptr @c, ptr @d }
 
 ;; func1 and func2 are different functions.
 declare i32 @func1()

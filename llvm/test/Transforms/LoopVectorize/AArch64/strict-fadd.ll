@@ -1,8 +1,8 @@
-; RUN: opt < %s -passes=loop-vectorize -mtriple aarch64-unknown-linux-gnu -force-ordered-reductions=false -hints-allow-reordering=false -S 2>%t | FileCheck %s --check-prefix=CHECK-NOT-VECTORIZED
-; RUN: opt < %s -passes=loop-vectorize -mtriple aarch64-unknown-linux-gnu -force-ordered-reductions=false -hints-allow-reordering=true  -S 2>%t | FileCheck %s --check-prefix=CHECK-UNORDERED
-; RUN: opt < %s -passes=loop-vectorize -mtriple aarch64-unknown-linux-gnu -force-ordered-reductions=true  -hints-allow-reordering=false -S 2>%t | FileCheck %s --check-prefix=CHECK-ORDERED
-; RUN: opt < %s -passes=loop-vectorize -mtriple aarch64-unknown-linux-gnu -force-ordered-reductions=true  -hints-allow-reordering=true  -S 2>%t | FileCheck %s --check-prefix=CHECK-UNORDERED
-; RUN: opt < %s -passes=loop-vectorize -mtriple aarch64-unknown-linux-gnu -hints-allow-reordering=false -S 2>%t | FileCheck %s --check-prefix=CHECK-ORDERED
+; RUN: opt -opaque-pointers=0 < %s -passes=loop-vectorize -mtriple aarch64-unknown-linux-gnu -force-ordered-reductions=false -hints-allow-reordering=false -S 2>%t | FileCheck %s --check-prefix=CHECK-NOT-VECTORIZED
+; RUN: opt -opaque-pointers=0 < %s -passes=loop-vectorize -mtriple aarch64-unknown-linux-gnu -force-ordered-reductions=false -hints-allow-reordering=true  -S 2>%t | FileCheck %s --check-prefix=CHECK-UNORDERED
+; RUN: opt -opaque-pointers=0 < %s -passes=loop-vectorize -mtriple aarch64-unknown-linux-gnu -force-ordered-reductions=true  -hints-allow-reordering=false -S 2>%t | FileCheck %s --check-prefix=CHECK-ORDERED
+; RUN: opt -opaque-pointers=0 < %s -passes=loop-vectorize -mtriple aarch64-unknown-linux-gnu -force-ordered-reductions=true  -hints-allow-reordering=true  -S 2>%t | FileCheck %s --check-prefix=CHECK-UNORDERED
+; RUN: opt -opaque-pointers=0 < %s -passes=loop-vectorize -mtriple aarch64-unknown-linux-gnu -hints-allow-reordering=false -S 2>%t | FileCheck %s --check-prefix=CHECK-ORDERED
 
 define float @fadd_strict(float* noalias nocapture readonly %a, i64 %n) {
 ; CHECK-ORDERED-LABEL: @fadd_strict
@@ -483,7 +483,7 @@ define float @fadd_predicated(float* noalias nocapture %a, i64 %n) {
 ; CHECK-ORDERED-LABEL: @fadd_predicated
 ; CHECK-ORDERED: vector.ph
 ; CHECK-ORDERED: %[[TRIP_MINUS_ONE:.*]] = sub i64 %n, 1
-; CHECK-ORDERED: %[[BROADCAST_INS:.*]] = insertelement <2 x i64> poison, i64 %[[TRIP_MINUS_ONE]], i32 0
+; CHECK-ORDERED: %[[BROADCAST_INS:.*]] = insertelement <2 x i64> poison, i64 %[[TRIP_MINUS_ONE]], i64 0
 ; CHECK-ORDERED: %[[SPLAT:.*]] = shufflevector <2 x i64> %[[BROADCAST_INS]], <2 x i64> poison, <2 x i32> zeroinitializer
 ; CHECK-ORDERED: vector.body
 ; CHECK-ORDERED: %[[RDX_PHI:.*]] =  phi float [ 0.000000e+00, %vector.ph ], [ %[[RDX:.*]], %pred.load.continue2 ]
@@ -498,7 +498,7 @@ define float @fadd_predicated(float* noalias nocapture %a, i64 %n) {
 ; CHECK-UNORDERED-LABEL: @fadd_predicated
 ; CHECK-UNORDERED: vector.ph
 ; CHECK-UNORDERED: %[[TRIP_MINUS_ONE:.*]] = sub i64 %n, 1
-; CHECK-UNORDERED: %[[BROADCAST_INS:.*]] = insertelement <2 x i64> poison, i64 %[[TRIP_MINUS_ONE]], i32 0
+; CHECK-UNORDERED: %[[BROADCAST_INS:.*]] = insertelement <2 x i64> poison, i64 %[[TRIP_MINUS_ONE]], i64 0
 ; CHECK-UNORDERED: %[[SPLAT:.*]] = shufflevector <2 x i64> %[[BROADCAST_INS]], <2 x i64> poison, <2 x i32> zeroinitializer
 ; CHECK-UNORDERED: vector.body
 ; CHECK-UNORDERED: %[[RDX_PHI:.*]] =  phi <2 x float> [ <float 0.000000e+00, float -0.000000e+00>, %vector.ph ], [ %[[FADD:.*]], %pred.load.continue2 ]

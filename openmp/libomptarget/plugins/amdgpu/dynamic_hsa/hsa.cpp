@@ -66,6 +66,7 @@ DLWRAP(hsa_amd_memory_fill, 3)
 DLWRAP(hsa_amd_register_system_event_handler, 2)
 DLWRAP(hsa_amd_signal_create, 5)
 DLWRAP(hsa_amd_signal_async_handler, 5)
+DLWRAP(hsa_amd_pointer_info, 5)
 
 DLWRAP_FINALIZE()
 
@@ -76,7 +77,9 @@ DLWRAP_FINALIZE()
 #ifndef TARGET_NAME
 #error "Missing TARGET_NAME macro"
 #endif
+#ifndef DEBUG_PREFIX
 #define DEBUG_PREFIX "Target " GETNAME(TARGET_NAME) " RTL"
+#endif
 
 static bool checkForHSA() {
   // return true if dlopen succeeded and all functions found

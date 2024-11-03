@@ -88,6 +88,14 @@ void DebugTranslation::translate(LLVMFuncOp func, llvm::Function &llvmFunc) {
 // Attributes
 //===----------------------------------------------------------------------===//
 
+llvm::DIType *DebugTranslation::translateImpl(DIVoidResultTypeAttr attr) {
+  // A DIVoidResultTypeAttr at the beginning of the subroutine types list models
+  // a void result type. Translate the explicit DIVoidResultTypeAttr to a
+  // nullptr since LLVM IR metadata does not have an explicit void result type
+  // representation.
+  return nullptr;
+}
+
 llvm::DIBasicType *DebugTranslation::translateImpl(DIBasicTypeAttr attr) {
   return llvm::DIBasicType::get(
       llvmCtx, attr.getTag(), attr.getName(), attr.getSizeInBits(),
@@ -143,6 +151,10 @@ DebugTranslation::translateImpl(DILexicalBlockFileAttr attr) {
   return llvm::DILexicalBlockFile::getDistinct(
       llvmCtx, translate(attr.getScope()), translate(attr.getFile()),
       attr.getDiscriminator());
+}
+
+llvm::DILocalScope *DebugTranslation::translateImpl(DILocalScopeAttr attr) {
+  return cast<llvm::DILocalScope>(translate(DINodeAttr(attr)));
 }
 
 llvm::DILocalVariable *
@@ -201,8 +213,8 @@ llvm::DISubrange *DebugTranslation::translateImpl(DISubrangeAttr attr) {
 llvm::DISubroutineType *
 DebugTranslation::translateImpl(DISubroutineTypeAttr attr) {
   // Concatenate the result and argument types into a single array.
-  SmallVector<llvm::Metadata *> types = {translate(attr.getResultType())};
-  for (DITypeAttr type : attr.getArgumentTypes())
+  SmallVector<llvm::Metadata *> types;
+  for (DITypeAttr type : attr.getTypes())
     types.push_back(translate(type));
   return llvm::DISubroutineType::get(
       llvmCtx, llvm::DINode::FlagZero, attr.getCallingConvention(),
@@ -222,10 +234,10 @@ llvm::DINode *DebugTranslation::translate(DINodeAttr attr) {
 
   llvm::DINode *node =
       TypeSwitch<DINodeAttr, llvm::DINode *>(attr)
-          .Case<DIBasicTypeAttr, DICompileUnitAttr, DICompositeTypeAttr,
-                DIDerivedTypeAttr, DIFileAttr, DILexicalBlockAttr,
-                DILexicalBlockFileAttr, DILocalVariableAttr, DISubprogramAttr,
-                DISubrangeAttr, DISubroutineTypeAttr>(
+          .Case<DIVoidResultTypeAttr, DIBasicTypeAttr, DICompileUnitAttr,
+                DICompositeTypeAttr, DIDerivedTypeAttr, DIFileAttr,
+                DILexicalBlockAttr, DILexicalBlockFileAttr, DILocalVariableAttr,
+                DISubprogramAttr, DISubrangeAttr, DISubroutineTypeAttr>(
               [&](auto attr) { return translateImpl(attr); });
   attrToNode.insert({attr, node});
   return node;
@@ -275,8 +287,8 @@ DebugTranslation::translateLoc(Location loc, llvm::DILocalScope *scope,
 
     // Check for a scope encoded with the location.
     if (auto scopedAttr =
-            fusedLoc.getMetadata().dyn_cast_or_null<LLVM::DIScopeAttr>())
-      scope = cast<llvm::DILocalScope>(translate(scopedAttr));
+            fusedLoc.getMetadata().dyn_cast_or_null<LLVM::DILocalScopeAttr>())
+      scope = translate(scopedAttr);
 
     // For fused locations, merge each of the nodes.
     llvmLoc = translateLoc(locations.front(), scope, inlinedAt);
@@ -286,11 +298,10 @@ DebugTranslation::translateLoc(Location loc, llvm::DILocalScope *scope,
     }
 
   } else if (auto nameLoc = loc.dyn_cast<NameLoc>()) {
-    llvmLoc = translateLoc(loc.cast<NameLoc>().getChildLoc(), scope, inlinedAt);
+    llvmLoc = translateLoc(nameLoc.getChildLoc(), scope, inlinedAt);
 
   } else if (auto opaqueLoc = loc.dyn_cast<OpaqueLoc>()) {
-    llvmLoc = translateLoc(loc.cast<OpaqueLoc>().getFallbackLocation(), scope,
-                           inlinedAt);
+    llvmLoc = translateLoc(opaqueLoc.getFallbackLocation(), scope, inlinedAt);
   } else {
     llvm_unreachable("unknown location kind");
   }

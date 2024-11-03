@@ -8,7 +8,7 @@
 ; CHECK-DAG:  %polly.loop_cond[[CInner:[0-9]*]] = icmp sle i64 %polly.indvar_next{{[0-9]*}}, 511
 ; CHECK-DAG:  br i1 %polly.loop_cond[[CInner]], label %polly.loop_header{{[0-9]*}}, label %polly.loop_exit{{[0-9]*}}, !llvm.loop ![[IDInner:[0-9]*]]
 ;
-; CHECK-DAG: store i32 %{{[a-z_0-9]*}}, i32* %{{[a-z_0-9]*}}, {{[ ._!,a-zA-Z0-9]*}}, !llvm.access.group ![[GROUPLST6:[0-9]+]]
+; CHECK-DAG: store i32 %{{[a-z_0-9]*}}, ptr %{{[a-z_0-9]*}}, {{[ ._!,a-zA-Z0-9]*}}, !llvm.access.group ![[GROUPLST6:[0-9]+]]
 ;
 ; CHECK-DAG: ![[IDOuter]] = distinct !{![[IDOuter]], ![[ACCGROUP1:[0-9]+]]}
 ; CHECK-DAG: ![[ACCGROUP1]] = !{!"llvm.loop.parallel_accesses", ![[GROUP2:[0-9]+]]}
@@ -28,7 +28,7 @@
 ;
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
-define void @jd(i32* %A) {
+define void @jd(ptr %A) {
 entry:
   br label %for.cond
 
@@ -49,9 +49,9 @@ for.body3:                                        ; preds = %for.cond1
   %tmp = add nsw i64 %indvars.iv3, %indvars.iv
   %tmp7 = shl nsw i64 %indvars.iv3, 9
   %tmp8 = add nsw i64 %tmp7, %indvars.iv
-  %arrayidx = getelementptr inbounds i32, i32* %A, i64 %tmp8
+  %arrayidx = getelementptr inbounds i32, ptr %A, i64 %tmp8
   %tmp9 = trunc i64 %tmp to i32
-  store i32 %tmp9, i32* %arrayidx, align 4
+  store i32 %tmp9, ptr %arrayidx, align 4
   br label %for.inc
 
 for.inc:                                          ; preds = %for.body3

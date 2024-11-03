@@ -246,11 +246,11 @@ static LogicalResult emitOneMLIRBuilder(const Record &record, raw_ostream &os,
         if (isVariadicOperandName(op, name)) {
           as << formatv(
               "FailureOr<SmallVector<Value>> _llvmir_gen_operand_{0} = "
-              "convertValues(llvmOperands.drop_front({1}));\n",
+              "moduleImport.convertValues(llvmOperands.drop_front({1}));\n",
               name, idx);
         } else {
           as << formatv("FailureOr<Value> _llvmir_gen_operand_{0} = "
-                        "convertValue(llvmOperands[{1}]);\n",
+                        "moduleImport.convertValue(llvmOperands[{1}]);\n",
                         name, idx);
         }
         as << formatv("if (failed(_llvmir_gen_operand_{0}))\n"
@@ -261,15 +261,17 @@ static LogicalResult emitOneMLIRBuilder(const Record &record, raw_ostream &os,
     } else if (isResultName(op, name)) {
       if (op.getNumResults() != 1)
         return emitError(record, "expected op to have one result");
-      bs << "mapValue(inst)";
+      bs << "moduleImport.mapValue(inst)";
+    } else if (name == "_op") {
+      bs << "moduleImport.mapNoResultOp(inst)";
     } else if (name == "_int_attr") {
-      bs << "matchIntegerAttr";
+      bs << "moduleImport.matchIntegerAttr";
     } else if (name == "_var_attr") {
-      bs << "matchLocalVariableAttr";
+      bs << "moduleImport.matchLocalVariableAttr";
     } else if (name == "_resultType") {
-      bs << "convertType(inst->getType())";
+      bs << "moduleImport.convertType(inst->getType())";
     } else if (name == "_location") {
-      bs << "translateLoc(inst->getDebugLoc())";
+      bs << "moduleImport.translateLoc(inst->getDebugLoc())";
     } else if (name == "_builder") {
       bs << "odsBuilder";
     } else if (name == "_qualCppClassName") {

@@ -1,6 +1,6 @@
 ; Check that we can handle the case when both alloc function and
 ; the user body consume the same argument.
-; RUN: opt < %s -passes='cgscc(coro-split),simplifycfg,early-cse' -S | FileCheck %s
+; RUN: opt -opaque-pointers=0 < %s -passes='cgscc(coro-split),simplifycfg,early-cse' -S | FileCheck %s
 
 ; using this directly (as it would happen under -O2)
 define i8* @f_direct(i64 %this) presplitcoroutine {

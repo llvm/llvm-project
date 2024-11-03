@@ -186,12 +186,11 @@ define <8 x i64> @vrgather_shuffle_vv_v8i64(<8 x i64> %x, <8 x i64> %y) {
 ; RV32-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
 ; RV32-NEXT:    vmv.v.i v16, 5
 ; RV32-NEXT:    vmv.v.i v20, 2
-; RV32-NEXT:    vsetvli zero, zero, e16, m1, tu, ma
 ; RV32-NEXT:    vslideup.vi v20, v16, 7
 ; RV32-NEXT:    lui a0, %hi(.LCPI11_0)
 ; RV32-NEXT:    addi a0, a0, %lo(.LCPI11_0)
-; RV32-NEXT:    vsetvli zero, zero, e64, m4, ta, mu
 ; RV32-NEXT:    vle16.v v21, (a0)
+; RV32-NEXT:    vsetvli zero, zero, e64, m4, ta, mu
 ; RV32-NEXT:    li a0, 164
 ; RV32-NEXT:    vmv.s.x v0, a0
 ; RV32-NEXT:    vrgatherei16.vv v16, v8, v21
@@ -202,16 +201,13 @@ define <8 x i64> @vrgather_shuffle_vv_v8i64(<8 x i64> %x, <8 x i64> %y) {
 ; RV64-LABEL: vrgather_shuffle_vv_v8i64:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    li a0, 5
-; RV64-NEXT:    vsetivli zero, 8, e64, m1, ta, ma
+; RV64-NEXT:    vsetivli zero, 8, e64, m4, ta, mu
 ; RV64-NEXT:    vmv.s.x v16, a0
-; RV64-NEXT:    vsetivli zero, 8, e64, m4, ta, ma
 ; RV64-NEXT:    vmv.v.i v20, 2
-; RV64-NEXT:    vsetvli zero, zero, e64, m4, tu, ma
-; RV64-NEXT:    vslideup.vi v20, v16, 7
 ; RV64-NEXT:    lui a0, %hi(.LCPI11_0)
 ; RV64-NEXT:    addi a0, a0, %lo(.LCPI11_0)
-; RV64-NEXT:    vsetvli zero, zero, e64, m4, ta, mu
 ; RV64-NEXT:    vle64.v v24, (a0)
+; RV64-NEXT:    vslideup.vi v20, v16, 7
 ; RV64-NEXT:    li a0, 164
 ; RV64-NEXT:    vmv.s.x v0, a0
 ; RV64-NEXT:    vrgather.vv v16, v8, v24
@@ -389,9 +385,8 @@ define <8 x i8> @splat_ve2_we0(<8 x i8> %v, <8 x i8> %w) {
 ; CHECK-LABEL: splat_ve2_we0:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    li a0, 66
-; CHECK-NEXT:    vsetivli zero, 1, e8, mf8, ta, ma
-; CHECK-NEXT:    vmv.s.x v0, a0
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
+; CHECK-NEXT:    vmv.s.x v0, a0
 ; CHECK-NEXT:    vrgather.vi v10, v8, 2
 ; CHECK-NEXT:    vrgather.vi v10, v9, 0, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v10
@@ -423,9 +418,8 @@ define <8 x i8> @splat_ve2_we0_ins_i0we4(<8 x i8> %v, <8 x i8> %w) {
 ; CHECK-LABEL: splat_ve2_we0_ins_i0we4:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    li a0, 67
-; CHECK-NEXT:    vsetivli zero, 1, e8, mf8, ta, ma
-; CHECK-NEXT:    vmv.s.x v0, a0
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
+; CHECK-NEXT:    vmv.s.x v0, a0
 ; CHECK-NEXT:    vrgather.vi v10, v8, 2
 ; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
 ; CHECK-NEXT:    vmv.v.i v8, 4
@@ -591,9 +585,9 @@ define <8 x i16> @splice_unary(<8 x i16> %x) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 6, e16, m1, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v9, v8, 2
-; CHECK-NEXT:    vsetivli zero, 8, e16, m1, tu, ma
+; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
 ; CHECK-NEXT:    vslideup.vi v9, v8, 6
-; CHECK-NEXT:    vmv1r.v v8, v9
+; CHECK-NEXT:    vmv.v.v v8, v9
 ; CHECK-NEXT:    ret
   %s = shufflevector <8 x i16> %x, <8 x i16> poison, <8 x i32> <i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 0, i32 1>
   ret <8 x i16> %s
@@ -604,9 +598,9 @@ define <8 x i32> @splice_unary2(<8 x i32> %x) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 3, e32, m2, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v10, v8, 5
-; CHECK-NEXT:    vsetivli zero, 8, e32, m2, tu, ma
+; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; CHECK-NEXT:    vslideup.vi v10, v8, 3
-; CHECK-NEXT:    vmv2r.v v8, v10
+; CHECK-NEXT:    vmv.v.v v8, v10
 ; CHECK-NEXT:    ret
   %s = shufflevector <8 x i32> %x, <8 x i32> poison, <8 x i32> <i32 undef, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3, i32 4>
   ret <8 x i32> %s
@@ -617,7 +611,7 @@ define <8 x i16> @splice_binary(<8 x i16> %x, <8 x i16> %y) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 6, e16, m1, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v8, v8, 2
-; CHECK-NEXT:    vsetivli zero, 8, e16, m1, tu, ma
+; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
 ; CHECK-NEXT:    vslideup.vi v8, v9, 6
 ; CHECK-NEXT:    ret
   %s = shufflevector <8 x i16> %x, <8 x i16> %y, <8 x i32> <i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 undef, i32 9>
@@ -629,7 +623,7 @@ define <8 x i32> @splice_binary2(<8 x i32> %x, <8 x i32> %y) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 3, e32, m2, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v8, v8, 5
-; CHECK-NEXT:    vsetivli zero, 8, e32, m2, tu, ma
+; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; CHECK-NEXT:    vslideup.vi v8, v10, 3
 ; CHECK-NEXT:    ret
   %s = shufflevector <8 x i32> %x, <8 x i32> %y, <8 x i32> <i32 undef, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12>

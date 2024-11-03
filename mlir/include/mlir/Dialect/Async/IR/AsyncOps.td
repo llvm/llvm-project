@@ -106,7 +106,7 @@ def Async_ExecuteOp :
 
 def Async_FuncOp : Async_Op<"func",
     [CallableOpInterface, FunctionOpInterface,
-     IsolatedFromAbove, OpAsmOpInterface, Symbol]> {
+     IsolatedFromAbove, OpAsmOpInterface]> {
   let summary = "async function operation";
   let description = [{
     An async function is like a normal function, but supports non-blocking
@@ -333,7 +333,7 @@ def Async_AwaitOp : Async_Op<"await"> {
   ];
 
   let extraClassDeclaration = [{
-    Optional<Type> getResultType() {
+    std::optional<Type> getResultType() {
       if (getResultTypes().empty()) return std::nullopt;
       return getResultTypes()[0];
     }

@@ -149,34 +149,32 @@ func.func @materialize_read(%M: index, %N: index, %O: index, %P: index) {
 
 // CHECK-LABEL:func @materialize_write(%{{.*}}: index, %{{.*}}: index, %{{.*}}: index, %{{.*}}: index) {
 func.func @materialize_write(%M: index, %N: index, %O: index, %P: index) {
-  // CHECK-DAG:  %{{.*}} = arith.constant dense<1.000000e+00> : vector<5x4x3xf32>
+  // CHECK-DAG:  %{{.*}} = arith.constant dense<1.000000e+00> : vector<3x4x1x5xf32>
   // CHECK-DAG:  %[[C0:.*]] = arith.constant 0 : index
   // CHECK-DAG:  %[[C1:.*]] = arith.constant 1 : index
   // CHECK-DAG:  %[[C3:.*]] = arith.constant 3 : index
   // CHECK-DAG:  %[[C4:.*]] = arith.constant 4 : index
-  // CHECK-DAG:  %[[C5:.*]] = arith.constant 5 : index
   // CHECK:      %{{.*}} = memref.alloc(%{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}) : memref<?x?x?x?xf32>
   // CHECK-NEXT: affine.for %[[I0:.*]] = 0 to %{{.*}} step 3 {
   // CHECK-NEXT:   affine.for %[[I1:.*]] = 0 to %{{.*}} step 4 {
   // CHECK-NEXT:     affine.for %[[I2:.*]] = 0 to %{{.*}} {
   // CHECK-NEXT:       affine.for %[[I3:.*]] = 0 to %{{.*}} step 5 {
-  // CHECK:              %[[ALLOC:.*]] = memref.alloca() : memref<vector<5x4x3xf32>>
-  // CHECK:              memref.store %{{.*}}, %[[ALLOC]][] : memref<vector<5x4x3xf32>>
-  // CHECK:              %[[VECTOR_VIEW1:.*]] = vector.type_cast %[[ALLOC]] : memref<vector<5x4x3xf32>> to memref<5xvector<4x3xf32>>
-  // CHECK:              scf.for %[[I4:.*]] = %[[C0]] to %[[C5]] step %[[C1]] {
+  // CHECK:              %[[ALLOC:.*]] = memref.alloca() : memref<vector<3x4x1x5xf32>>
+  // CHECK:              memref.store %{{.*}}, %[[ALLOC]][] : memref<vector<3x4x1x5xf32>>
+  // CHECK:              %[[VECTOR_VIEW1:.*]] = vector.type_cast %[[ALLOC]] : memref<vector<3x4x1x5xf32>> to memref<3xvector<4x1x5xf32>>
+  // CHECK:              scf.for %[[I4:.*]] = %[[C0]] to %[[C3]] step %[[C1]] {
   // CHECK:                scf.if
-  // CHECK:                  %[[S3:.*]] = affine.apply #[[$ADD]](%[[I3]], %[[I4]])
-  // CHECK:                  %[[VECTOR_VIEW2:.*]] = vector.type_cast %[[VECTOR_VIEW1]] : memref<5xvector<4x3xf32>> to memref<5x4xvector<3xf32>>
+  // CHECK:                  %[[S3:.*]] = affine.apply #[[$ADD]](%[[I0]], %[[I4]])
+  // CHECK:                  %[[VECTOR_VIEW2:.*]] = vector.type_cast %[[VECTOR_VIEW1]] : memref<3xvector<4x1x5xf32>> to memref<3x4xvector<1x5xf32>>
   // CHECK:                  scf.for %[[I5:.*]] = %[[C0]] to %[[C4]] step %[[C1]] {
   // CHECK:                    scf.if
   // CHECK:                      %[[S1:.*]] = affine.apply #[[$ADD]](%[[I1]], %[[I5]])
-  // CHECK:                      %[[VEC:.*]] = memref.load %[[VECTOR_VIEW2]][%[[I4]], %[[I5]]] : memref<5x4xvector<3xf32>>
-  // CHECK:                      scf.for %[[I6:.*]] = %[[C0]] to %[[C3]] step %[[C1]] {
-  // CHECK:                        %[[S0:.*]] = affine.apply #[[$ADD]](%[[I0]], %[[I6]])
+  // CHECK:                      %[[VECTOR_VIEW3:.*]] = vector.type_cast %[[VECTOR_VIEW2]] : memref<3x4xvector<1x5xf32>> to memref<3x4x1xvector<5xf32>>
+  // CHECK:                      scf.for %[[I6:.*]] = %[[C0]] to %[[C1]] step %[[C1]] {
   // CHECK:                        scf.if
-  // CHECK:                          %[[SCAL:.*]] = vector.extractelement %[[VEC]][%[[I6]] : index] : vector<3xf32>
-  // CHECK:                          memref.store %[[SCAL]], {{.*}}[%[[S0]], %[[S1]], %[[I2]], %[[S3]]] : memref<?x?x?x?xf32>
-  // CHECK:                        }
+  // CHECK:                          %[[S0:.*]] = affine.apply #[[$ADD]](%[[I2]], %[[I6]])
+  // CHECK:                          %[[VEC:.*]] = memref.load %[[VECTOR_VIEW3]][%[[I4]], %[[I5]], %[[I6]]] : memref<3x4x1xvector<5xf32>>
+  // CHECK:                          vector.transfer_write %[[VEC]], %{{.*}}[%[[S3]], %[[S1]], %[[S0]], %[[I3]]] : vector<5xf32>, memref<?x?x?x?xf32>
   // CHECK:                      }
   // CHECK:                    }
   // CHECK:                  }

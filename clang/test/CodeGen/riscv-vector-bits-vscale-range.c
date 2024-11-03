@@ -1,14 +1,14 @@
-// RUN: %clang_cc1 -triple riscv64-none-linux-gnu -target-feature +v -mvscale-min=1 -mvscale-max=1 -S -emit-llvm -o - %s | FileCheck %s -D#VBITS=1
+// RUN: %clang_cc1 -triple riscv64-none-linux-gnu -target-feature +zve64x -mvscale-min=1 -mvscale-max=1 -S -emit-llvm -o - %s | FileCheck %s -D#VBITS=1
 // RUN: %clang_cc1 -triple riscv64-none-linux-gnu -target-feature +v -mvscale-min=2 -mvscale-max=2 -S -emit-llvm -o - %s | FileCheck %s -D#VBITS=2
 // RUN: %clang_cc1 -triple riscv64-none-linux-gnu -target-feature +v -mvscale-min=4 -mvscale-max=4 -S -emit-llvm -o - %s | FileCheck %s -D#VBITS=4
 // RUN: %clang_cc1 -triple riscv64-none-linux-gnu -target-feature +v -mvscale-min=8 -mvscale-max=8 -S -emit-llvm -o - %s | FileCheck %s -D#VBITS=8
 // RUN: %clang_cc1 -triple riscv64-none-linux-gnu -target-feature +v -mvscale-min=16 -mvscale-max=16 -S -emit-llvm -o - %s | FileCheck %s -D#VBITS=16
-// RUN: %clang_cc1 -triple riscv64-none-linux-gnu -target-feature +v -mvscale-min=1 -S -emit-llvm -o - %s | FileCheck %s -D#VBITS=1 --check-prefix=CHECK-NOMAX
+// RUN: %clang_cc1 -triple riscv64-none-linux-gnu -target-feature +zve64x -mvscale-min=1 -S -emit-llvm -o - %s | FileCheck %s -D#VBITS=1 --check-prefix=CHECK-NOMAX
 // RUN: %clang_cc1 -triple riscv64-none-linux-gnu -target-feature +v -mvscale-min=2 -S -emit-llvm -o - %s | FileCheck %s -D#VBITS=2 --check-prefix=CHECK-NOMAX
 // RUN: %clang_cc1 -triple riscv64-none-linux-gnu -target-feature +v -mvscale-min=4 -S -emit-llvm -o - %s | FileCheck %s -D#VBITS=4 --check-prefix=CHECK-NOMAX
 // RUN: %clang_cc1 -triple riscv64-none-linux-gnu -target-feature +v -mvscale-min=8 -S -emit-llvm -o - %s | FileCheck %s -D#VBITS=8 --check-prefix=CHECK-NOMAX
 // RUN: %clang_cc1 -triple riscv64-none-linux-gnu -target-feature +v -mvscale-min=16 -S -emit-llvm -o - %s | FileCheck %s -D#VBITS=16 --check-prefix=CHECK-NOMAX
-// RUN: %clang_cc1 -triple riscv64-none-linux-gnu -target-feature +v -mvscale-min=1 -mvscale-max=0 -S -emit-llvm -o - %s | FileCheck %s --check-prefix=CHECK-UNBOUNDED
+// RUN: %clang_cc1 -triple riscv64-none-linux-gnu -target-feature +zve64x -mvscale-min=1 -mvscale-max=0 -S -emit-llvm -o - %s | FileCheck %s --check-prefix=CHECK-UNBOUNDED
 // RUN: %clang_cc1 -triple riscv64-none-linux-gnu -target-feature +v -S -emit-llvm -o - %s | FileCheck %s --check-prefix=CHECK-V
 // RUN: %clang_cc1 -triple riscv64-none-linux-gnu -target-feature +v -target-feature +zvl512b -S -emit-llvm -o - %s | FileCheck %s --check-prefix=CHECK-ZVL
 // RUN: %clang_cc1 -triple riscv64-none-linux-gnu -target-feature +zve64x -S -emit-llvm -o - %s | FileCheck %s --check-prefix=CHECK-ZVE64

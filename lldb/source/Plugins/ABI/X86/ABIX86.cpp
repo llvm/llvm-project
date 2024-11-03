@@ -51,7 +51,7 @@ enum RegKind {
 struct RegData {
   RegKind subreg_kind;
   llvm::StringRef subreg_name;
-  llvm::Optional<uint32_t> base_index;
+  std::optional<uint32_t> base_index;
 };
 
 static void

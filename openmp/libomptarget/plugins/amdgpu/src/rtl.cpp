@@ -1708,7 +1708,7 @@ struct DeviceEnvironment {
   // If the symbol is in .data (aomp, rocm) it can be written directly.
   // If it is in .bss, we must wait for it to be allocated space on the
   // gpu (trunk) and initialize after loading.
-  const char *sym() { return "omptarget_device_environment"; }
+  const char *sym() { return "__omp_rtl_device_environment"; }
 
   DeviceEnvironmentTy HostDeviceEnv;
   SymbolInfo SI;
@@ -1814,6 +1814,35 @@ bool imageContainsSymbol(void *Data, size_t Size, const char *Sym) {
   SymbolInfo SI;
   int Rc = getSymbolInfoWithoutLoading((char *)Data, Size, Sym, &SI);
   return (Rc == 0) && (SI.Addr != nullptr);
+}
+
+hsa_status_t lock_memory(void *HostPtr, size_t Size, hsa_agent_t Agent,
+                         void **LockedHostPtr) {
+  hsa_status_t err = is_locked(HostPtr, LockedHostPtr);
+  if (err != HSA_STATUS_SUCCESS)
+    return err;
+
+  // HostPtr is already locked, just return it
+  if (*LockedHostPtr)
+    return HSA_STATUS_SUCCESS;
+
+  hsa_agent_t Agents[1] = {Agent};
+  return hsa_amd_memory_lock(HostPtr, Size, Agents, /*num_agent=*/1,
+                             LockedHostPtr);
+}
+
+hsa_status_t unlock_memory(void *HostPtr) {
+  void *LockedHostPtr = nullptr;
+  hsa_status_t err = is_locked(HostPtr, &LockedHostPtr);
+  if (err != HSA_STATUS_SUCCESS)
+    return err;
+
+  // if LockedHostPtr is nullptr, then HostPtr was not locked
+  if (!LockedHostPtr)
+    return HSA_STATUS_SUCCESS;
+
+  err = hsa_amd_memory_unlock(HostPtr);
+  return err;
 }
 
 } // namespace
@@ -2073,7 +2102,7 @@ __tgt_target_table *__tgt_rtl_load_binary_locked(int32_t DeviceId,
   // per-image initialization work. Specifically:
   //
   // - Initialize an DeviceEnvironmentTy instance embedded in the
-  //   image at the symbol "omptarget_device_environment"
+  //   image at the symbol "__omp_rtl_device_environment"
   //   Fields DebugKind, DeviceNum, NumDevices. Used by the deviceRTL.
   //
   // - Allocate a large array per-gpu (could be moved to init_device)
@@ -2516,58 +2545,24 @@ int32_t __tgt_rtl_data_delete(int DeviceId, void *TgtPtr, int32_t) {
   return OFFLOAD_SUCCESS;
 }
 
-int32_t __tgt_rtl_run_target_team_region(int32_t DeviceId, void *TgtEntryPtr,
-                                         void **TgtArgs, ptrdiff_t *TgtOffsets,
-                                         int32_t ArgNum, int32_t NumTeams,
-                                         int32_t ThreadLimit,
-                                         uint64_t LoopTripcount) {
-
-  DeviceInfo().LoadRunLock.lock_shared();
-  int32_t Res = runRegionLocked(DeviceId, TgtEntryPtr, TgtArgs, TgtOffsets,
-                                ArgNum, NumTeams, ThreadLimit, LoopTripcount);
-
-  DeviceInfo().LoadRunLock.unlock_shared();
-  return Res;
-}
-
-int32_t __tgt_rtl_run_target_region(int32_t DeviceId, void *TgtEntryPtr,
-                                    void **TgtArgs, ptrdiff_t *TgtOffsets,
-                                    int32_t ArgNum) {
-  // use one team and one thread
-  // fix thread num
-  int32_t TeamNum = 1;
-  int32_t ThreadLimit = 0; // use default
-  return __tgt_rtl_run_target_team_region(DeviceId, TgtEntryPtr, TgtArgs,
-                                          TgtOffsets, ArgNum, TeamNum,
-                                          ThreadLimit, 0);
-}
-
-int32_t __tgt_rtl_run_target_team_region_async(
-    int32_t DeviceId, void *TgtEntryPtr, void **TgtArgs, ptrdiff_t *TgtOffsets,
-    int32_t ArgNum, int32_t NumTeams, int32_t ThreadLimit,
-    uint64_t LoopTripcount, __tgt_async_info *AsyncInfo) {
+int32_t __tgt_rtl_launch_kernel(int32_t DeviceId, void *TgtEntryPtr,
+                                void **TgtArgs, ptrdiff_t *TgtOffsets,
+                                KernelArgsTy *KernelArgs,
+                                __tgt_async_info *AsyncInfo) {
+  assert(!KernelArgs->NumTeams[1] && !KernelArgs->NumTeams[2] &&
+         !KernelArgs->ThreadLimit[1] && !KernelArgs->ThreadLimit[2] &&
+         "Only one dimensional kernels supported.");
   assert(AsyncInfo && "AsyncInfo is nullptr");
   initAsyncInfo(AsyncInfo);
 
   DeviceInfo().LoadRunLock.lock_shared();
-  int32_t Res = runRegionLocked(DeviceId, TgtEntryPtr, TgtArgs, TgtOffsets,
-                                ArgNum, NumTeams, ThreadLimit, LoopTripcount);
+  int32_t Res =
+      runRegionLocked(DeviceId, TgtEntryPtr, TgtArgs, TgtOffsets,
+                      KernelArgs->NumArgs, KernelArgs->NumTeams[0],
+                      KernelArgs->ThreadLimit[0], KernelArgs->Tripcount);
 
   DeviceInfo().LoadRunLock.unlock_shared();
   return Res;
-}
-
-int32_t __tgt_rtl_run_target_region_async(int32_t DeviceId, void *TgtEntryPtr,
-                                          void **TgtArgs, ptrdiff_t *TgtOffsets,
-                                          int32_t ArgNum,
-                                          __tgt_async_info *AsyncInfo) {
-  // use one team and one thread
-  // fix thread num
-  int32_t TeamNum = 1;
-  int32_t ThreadLimit = 0; // use default
-  return __tgt_rtl_run_target_team_region_async(DeviceId, TgtEntryPtr, TgtArgs,
-                                                TgtOffsets, ArgNum, TeamNum,
-                                                ThreadLimit, 0, AsyncInfo);
 }
 
 int32_t __tgt_rtl_synchronize(int32_t DeviceId, __tgt_async_info *AsyncInfo) {
@@ -2587,6 +2582,34 @@ void __tgt_rtl_print_device_info(int32_t DeviceId) {
   // NOTE: We don't need to set context for print device info.
 
   DeviceInfo().printDeviceInfo(DeviceId, DeviceInfo().HSAAgents[DeviceId]);
+}
+
+int32_t __tgt_rtl_data_lock(int32_t DeviceId, void *HostPtr, int64_t Size,
+                            void **LockedHostPtr) {
+  assert(DeviceId < DeviceInfo().NumberOfDevices && "Device ID too large");
+
+  hsa_agent_t Agent = DeviceInfo().HSAAgents[DeviceId];
+  hsa_status_t err = lock_memory(HostPtr, Size, Agent, LockedHostPtr);
+  if (err != HSA_STATUS_SUCCESS) {
+    DP("Error in tgt_rtl_data_lock\n");
+    return OFFLOAD_FAIL;
+  }
+  DP("Tgt lock host data %ld bytes, (HostPtr:%016llx).\n", Size,
+     (long long unsigned)(Elf64_Addr)*LockedHostPtr);
+  return OFFLOAD_SUCCESS;
+}
+
+int32_t __tgt_rtl_data_unlock(int DeviceId, void *HostPtr) {
+  assert(DeviceId < DeviceInfo().NumberOfDevices && "Device ID too large");
+  hsa_status_t err = unlock_memory(HostPtr);
+  if (err != HSA_STATUS_SUCCESS) {
+    DP("Error in tgt_rtl_data_unlock\n");
+    return OFFLOAD_FAIL;
+  }
+
+  DP("Tgt unlock data (tgt:%016llx).\n",
+     (long long unsigned)(Elf64_Addr)HostPtr);
+  return OFFLOAD_SUCCESS;
 }
 
 } // extern "C"

@@ -866,8 +866,24 @@ The `custom` directive `custom<Foo>($foo)` will in the parser and printer
 respectively generate calls to:
 
 ```c++
-LogicalResult parseFoo(AsmParser &parser, FailureOr<int> &foo);
+LogicalResult parseFoo(AsmParser &parser, int &foo);
 void printFoo(AsmPrinter &printer, int foo);
+```
+
+As you can see, by default parameters are passed into the parse function by 
+reference. This is only possible if the C++ type is default constructible.
+If the C++ type is not default constructible, the parameter is wrapped in a
+`FailureOr`. Therefore, given the following definition: 
+
+```tablegen
+let parameters = (ins "NotDefaultConstructible":$foobar);
+let assemblyFormat = "custom<Fizz>($foobar)";
+```
+
+It will generate calls expecting the following signature for `parseFizz`:
+
+```c++
+LogicalResult parseFizz(AsmParser &parser, FailureOr<NotDefaultConstructible> &foobar);
 ```
 
 A previously bound variable can be passed as a parameter to a `custom` directive
@@ -876,7 +892,7 @@ the first directive. The second directive references it and expects the
 following printer and parser signatures:
 
 ```c++
-LogicalResult parseBar(AsmParser &parser, FailureOr<int> &bar, int foo);
+LogicalResult parseBar(AsmParser &parser, int &bar, int foo);
 void printBar(AsmPrinter &printer, int bar, int foo);
 ```
 
@@ -885,8 +901,7 @@ is that the parameter for the parser must use the storage type of the parameter.
 For example, `StringRefParameter` expects the parser and printer signatures as:
 
 ```c++
-LogicalResult parseStringParam(AsmParser &parser,
-                               FailureOr<std::string> &value);
+LogicalResult parseStringParam(AsmParser &parser, std::string &value);
 void printStringParam(AsmPrinter &printer, StringRef value);
 ```
 

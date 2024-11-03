@@ -125,9 +125,7 @@ define <vscale x 16 x i1> @reinterpret_cmpgt(<vscale x 8 x i1> %p, <vscale x 8 x
 define <vscale x 16 x i1> @chained_reinterpret() {
 ; CHECK-LABEL: chained_reinterpret:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.b
-; CHECK-NEXT:    ptrue p1.d
-; CHECK-NEXT:    and p0.b, p0/z, p0.b, p1.b
+; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    ret
   %in = tail call <vscale x 16 x i1> @llvm.aarch64.sve.ptrue.nxv16i1(i32 31)
   %cast2 = call <vscale x 2 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv2i1(<vscale x 16 x i1> %in)

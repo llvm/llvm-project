@@ -46,6 +46,7 @@
 #include "llvm/Analysis/InstCount.h"
 #include "llvm/Analysis/LazyCallGraph.h"
 #include "llvm/Analysis/LazyValueInfo.h"
+#include "llvm/Analysis/LegacyDivergenceAnalysis.h"
 #include "llvm/Analysis/Lint.h"
 #include "llvm/Analysis/LoopAccessAnalysis.h"
 #include "llvm/Analysis/LoopCacheAnalysis.h"
@@ -72,6 +73,7 @@
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/TypeBasedAliasAnalysis.h"
 #include "llvm/Analysis/UniformityAnalysis.h"
+#include "llvm/CodeGen/TypePromotion.h"
 #include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/PassManager.h"
@@ -236,6 +238,7 @@
 #include "llvm/Transforms/Utils/LoopSimplify.h"
 #include "llvm/Transforms/Utils/LoopVersioning.h"
 #include "llvm/Transforms/Utils/LowerGlobalDtors.h"
+#include "llvm/Transforms/Utils/LowerIFunc.h"
 #include "llvm/Transforms/Utils/LowerInvoke.h"
 #include "llvm/Transforms/Utils/LowerSwitch.h"
 #include "llvm/Transforms/Utils/Mem2Reg.h"
@@ -835,6 +838,23 @@ Expected<GVNOptions> parseGVNOptions(StringRef Params) {
   return Result;
 }
 
+Expected<IPSCCPOptions> parseIPSCCPOptions(StringRef Params) {
+  IPSCCPOptions Result;
+  while (!Params.empty()) {
+    StringRef ParamName;
+    std::tie(ParamName, Params) = Params.split(';');
+
+    bool Enable = !ParamName.consume_front("no-");
+    if (ParamName == "func-spec")
+      Result.setFuncSpec(Enable);
+    else
+      return make_error<StringError>(
+          formatv("invalid IPSCCP pass parameter '{0}' ", ParamName).str(),
+          inconvertibleErrorCode());
+  }
+  return Result;
+}
+
 Expected<SROAOptions> parseSROAOptions(StringRef Params) {
   if (Params.empty() || Params == "modify-cfg")
     return SROAOptions::ModifyCFG;
@@ -998,7 +1018,7 @@ static bool isLoopNestPassName(StringRef Name, CallbacksT &Callbacks,
   if (parseRepeatPassName(Name))
     return true;
 
-  if (Name == "lnicm") {
+  if (checkParametrizedPassName(Name, "lnicm")) {
     UseMemorySSA = true;
     return true;
   }
@@ -1020,7 +1040,7 @@ static bool isLoopPassName(StringRef Name, CallbacksT &Callbacks,
   if (parseRepeatPassName(Name))
     return true;
 
-  if (Name == "licm") {
+  if (checkParametrizedPassName(Name, "licm")) {
     UseMemorySSA = true;
     return true;
   }

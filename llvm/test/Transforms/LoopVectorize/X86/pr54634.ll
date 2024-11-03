@@ -42,21 +42,21 @@ define ptr addrspace(10) @japi1_vect_42283(ptr nocapture readonly %0, i32 %1) lo
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP8]], 16
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP8]], [[N_MOD_VF]]
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x ptr addrspace(10)> poison, ptr addrspace(10) [[DOTUNPACK]], i32 0
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x ptr addrspace(10)> poison, ptr addrspace(10) [[DOTUNPACK]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x ptr addrspace(10)> [[BROADCAST_SPLATINSERT]], <4 x ptr addrspace(10)> poison, <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT7:%.*]] = insertelement <4 x ptr addrspace(10)> poison, ptr addrspace(10) [[DOTUNPACK]], i32 0
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT7:%.*]] = insertelement <4 x ptr addrspace(10)> poison, ptr addrspace(10) [[DOTUNPACK]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT8:%.*]] = shufflevector <4 x ptr addrspace(10)> [[BROADCAST_SPLATINSERT7]], <4 x ptr addrspace(10)> poison, <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT9:%.*]] = insertelement <4 x ptr addrspace(10)> poison, ptr addrspace(10) [[DOTUNPACK]], i32 0
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT9:%.*]] = insertelement <4 x ptr addrspace(10)> poison, ptr addrspace(10) [[DOTUNPACK]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT10:%.*]] = shufflevector <4 x ptr addrspace(10)> [[BROADCAST_SPLATINSERT9]], <4 x ptr addrspace(10)> poison, <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT11:%.*]] = insertelement <4 x ptr addrspace(10)> poison, ptr addrspace(10) [[DOTUNPACK]], i32 0
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT11:%.*]] = insertelement <4 x ptr addrspace(10)> poison, ptr addrspace(10) [[DOTUNPACK]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT12:%.*]] = shufflevector <4 x ptr addrspace(10)> [[BROADCAST_SPLATINSERT11]], <4 x ptr addrspace(10)> poison, <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT13:%.*]] = insertelement <4 x i64> poison, i64 [[DOTUNPACK2]], i32 0
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT13:%.*]] = insertelement <4 x i64> poison, i64 [[DOTUNPACK2]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT14:%.*]] = shufflevector <4 x i64> [[BROADCAST_SPLATINSERT13]], <4 x i64> poison, <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT15:%.*]] = insertelement <4 x i64> poison, i64 [[DOTUNPACK2]], i32 0
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT15:%.*]] = insertelement <4 x i64> poison, i64 [[DOTUNPACK2]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT16:%.*]] = shufflevector <4 x i64> [[BROADCAST_SPLATINSERT15]], <4 x i64> poison, <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT17:%.*]] = insertelement <4 x i64> poison, i64 [[DOTUNPACK2]], i32 0
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT17:%.*]] = insertelement <4 x i64> poison, i64 [[DOTUNPACK2]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT18:%.*]] = shufflevector <4 x i64> [[BROADCAST_SPLATINSERT17]], <4 x i64> poison, <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT19:%.*]] = insertelement <4 x i64> poison, i64 [[DOTUNPACK2]], i32 0
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT19:%.*]] = insertelement <4 x i64> poison, i64 [[DOTUNPACK2]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT20:%.*]] = shufflevector <4 x i64> [[BROADCAST_SPLATINSERT19]], <4 x i64> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:

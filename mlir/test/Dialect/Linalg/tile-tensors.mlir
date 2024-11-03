@@ -30,7 +30,7 @@ func.func @matmul_tensors(
 transform.sequence failures(propagate) {
   ^bb0(%arg1: !pdl.operation):
     %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1
-    %1, %loops:3 = transform.structured.tile %0 [2, 3, 4]
+    %1, %loops:3 = transform.structured.tile %0 [2, 3, 4] : (!pdl.operation) -> (!pdl.operation, !pdl.operation, !pdl.operation, !pdl.operation)
 }
 
 // -----
@@ -61,7 +61,7 @@ func.func @generic_op_tensors(
 transform.sequence failures(propagate) {
   ^bb0(%arg1: !pdl.operation):
     %0 = transform.structured.match ops{["linalg.generic"]} in %arg1
-    %1, %loops:3 = transform.structured.tile %0 [2, 3, 4]
+    %1, %loops:3 = transform.structured.tile %0 [2, 3, 4] : (!pdl.operation) -> (!pdl.operation, !pdl.operation, !pdl.operation, !pdl.operation)
 }
 
 // CHECK-LABEL: func @generic_op_tensors
@@ -132,5 +132,5 @@ func.func @fold_extract_slice(
 transform.sequence failures(propagate) {
   ^bb0(%arg1: !pdl.operation):
     %0 = transform.structured.match ops{["linalg.generic"]} in %arg1
-    %1, %loops:3 = transform.structured.tile %0 [2, 3, 4]
+    %1, %loops:3 = transform.structured.tile %0 [2, 3, 4] : (!pdl.operation) -> (!pdl.operation, !pdl.operation, !pdl.operation, !pdl.operation)
 }

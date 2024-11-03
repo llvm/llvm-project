@@ -49,10 +49,10 @@ define void @interchange_01(i32 %k, i32 %N) {
  for.body4:
    %indvars.iv = phi i64 [ %indvars.iv.next, %for.body4 ], [ 1, %for.cond1.preheader ]
    %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
-   %arrayidx7 = getelementptr inbounds [100 x [100 x i32]], [100 x [100 x i32]]* @A, i64 0, i64 %indvars.iv.next, i64 %indvars.iv.next29
-   %2 = load i32, i32* %arrayidx7
+   %arrayidx7 = getelementptr inbounds [100 x [100 x i32]], ptr @A, i64 0, i64 %indvars.iv.next, i64 %indvars.iv.next29
+   %2 = load i32, ptr %arrayidx7
    %add8 = add nsw i32 %2, %k
-   store i32 %add8, i32* %arrayidx7
+   store i32 %add8, ptr %arrayidx7
    %lftr.wideiv = trunc i64 %indvars.iv to i32
    %exitcond = icmp eq i32 %lftr.wideiv, %0
    br i1 %exitcond, label %for.cond.loopexit, label %for.body4
@@ -79,10 +79,10 @@ for1.header:
 
 for2:
   %j = phi i64 [ %j.next, %latch ], [ 0, %for1.header ]
-  %arrayidx5 = getelementptr inbounds [100 x [100 x i64]], [100 x [100 x i64]]* @C, i64 0, i64 %j, i64 %j23
-  %lv = load i64, i64* %arrayidx5
+  %arrayidx5 = getelementptr inbounds [100 x [100 x i64]], ptr @C, i64 0, i64 %j, i64 %j23
+  %lv = load i64, ptr %arrayidx5
   %add = add nsw i64 %lv, %k
-  store i64 %add, i64* %arrayidx5
+  store i64 %add, ptr %arrayidx5
   %exitcond = icmp eq i64 %j, 99
   br i1 %exitcond, label %for1.inc10, label %latch
 latch:

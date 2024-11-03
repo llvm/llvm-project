@@ -262,7 +262,7 @@ class __base<_Rp(_ArgTypes...)>
     __base& operator=(const __base&);
 public:
     _LIBCPP_INLINE_VISIBILITY __base() {}
-    _LIBCPP_INLINE_VISIBILITY virtual ~__base() {}
+    _LIBCPP_HIDE_FROM_ABI_VIRTUAL virtual ~__base() {}
     virtual __base* __clone() const = 0;
     virtual void __clone(__base*) const = 0;
     virtual void destroy() _NOEXCEPT = 0;
@@ -382,7 +382,9 @@ template <class _Fp> class __value_func;
 
 template <class _Rp, class... _ArgTypes> class __value_func<_Rp(_ArgTypes...)>
 {
+    _LIBCPP_SUPPRESS_DEPRECATED_PUSH
     typename aligned_storage<3 * sizeof(void*)>::type __buf_;
+    _LIBCPP_SUPPRESS_DEPRECATED_POP
 
     typedef __base<_Rp(_ArgTypes...)> __func;
     __func* __f_;
@@ -515,7 +517,9 @@ template <class _Rp, class... _ArgTypes> class __value_func<_Rp(_ArgTypes...)>
             return;
         if ((void*)__f_ == &__buf_ && (void*)__f.__f_ == &__f.__buf_)
         {
+            _LIBCPP_SUPPRESS_DEPRECATED_PUSH
             typename aligned_storage<sizeof(__buf_)>::type __tempbuf;
+            _LIBCPP_SUPPRESS_DEPRECATED_POP
             __func* __t = __as_base(&__tempbuf);
             __f_->__clone(__t);
             __f_->destroy();

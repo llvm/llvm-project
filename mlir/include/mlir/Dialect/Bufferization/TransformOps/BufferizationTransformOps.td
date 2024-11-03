@@ -78,7 +78,7 @@ def EmptyTensorToAllocTensorOp
   let description = [{
     Replace a tensor.empty with a bufferization.tensor_alloc.
 
-    ### Return modes
+    #### Return modes
 
     This operation consumes the `target` handle and produces the `transformed`
     handle. `target` is expected to be a `tensor.empty` operation. The transform
@@ -93,7 +93,7 @@ def EmptyTensorToAllocTensorOp
   let extraClassDeclaration = [{
     ::mlir::DiagnosedSilenceableFailure applyToOne(
         ::mlir::tensor::EmptyOp target,
-        ::llvm::SmallVector<::mlir::Operation *> &results,
+        ::mlir::transform::ApplyToEachResultList &results,
         ::mlir::transform::TransformState &state);
   }];
 }

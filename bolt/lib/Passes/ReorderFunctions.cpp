@@ -138,6 +138,11 @@ void ReorderFunctions::reorder(std::vector<Cluster> &&Clusters,
   if (opts::ReorderFunctions == RT_NONE)
     return;
 
+  printStats(Clusters, FuncAddr);
+}
+
+void ReorderFunctions::printStats(const std::vector<Cluster> &Clusters,
+                                  const std::vector<uint64_t> &FuncAddr) {
   if (opts::Verbosity == 0) {
 #ifndef NDEBUG
     if (!DebugFlag || !isCurrentDebugType("hfsort"))
@@ -152,7 +157,7 @@ void ReorderFunctions::reorder(std::vector<Cluster> &&Clusters,
   PrintDetailed |=
     (DebugFlag && isCurrentDebugType("hfsort") && opts::Verbosity > 0);
 #endif
-  TotalSize   = 0;
+  uint64_t TotalSize   = 0;
   uint64_t CurPage     = 0;
   uint64_t Hotfuncs    = 0;
   double TotalDistance = 0;
@@ -163,7 +168,7 @@ void ReorderFunctions::reorder(std::vector<Cluster> &&Clusters,
   if (PrintDetailed)
     outs() << "BOLT-INFO: Function reordering page layout\n"
            << "BOLT-INFO: ============== page 0 ==============\n";
-  for (Cluster &Cluster : Clusters) {
+  for (const Cluster &Cluster : Clusters) {
     if (PrintDetailed)
       outs() << format(
           "BOLT-INFO: -------- density = %.3lf (%u / %u) --------\n",
@@ -243,9 +248,7 @@ void ReorderFunctions::reorder(std::vector<Cluster> &&Clusters,
                      TotalCalls2MB, 100 * TotalCalls2MB / TotalCalls);
 }
 
-namespace {
-
-std::vector<std::string> readFunctionOrderFile() {
+std::vector<std::string> ReorderFunctions::readFunctionOrderFile() {
   std::vector<std::string> FunctionNames;
   std::ifstream FuncsFile(opts::FunctionOrderFile, std::ios::in);
   if (!FuncsFile) {
@@ -257,8 +260,6 @@ std::vector<std::string> readFunctionOrderFile() {
   while (std::getline(FuncsFile, FuncName))
     FunctionNames.push_back(FuncName);
   return FunctionNames;
-}
-
 }
 
 void ReorderFunctions::runOnFunctions(BinaryContext &BC) {

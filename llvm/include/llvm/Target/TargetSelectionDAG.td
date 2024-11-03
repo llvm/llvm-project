@@ -291,10 +291,6 @@ def SDTPrefetch : SDTypeProfile<0, 4, [     // prefetch
   SDTCisPtrTy<0>, SDTCisSameAs<1, 2>, SDTCisSameAs<1, 3>, SDTCisInt<1>
 ]>;
 
-def SDTMemBarrier : SDTypeProfile<0, 5, [   // memory barrier
-  SDTCisSameAs<0,1>,  SDTCisSameAs<0,2>,  SDTCisSameAs<0,3>, SDTCisSameAs<0,4>,
-  SDTCisInt<0>
-]>;
 def SDTAtomicFence : SDTypeProfile<0, 2, [
   SDTCisSameAs<0,1>, SDTCisPtrTy<0>
 ]>;
@@ -631,6 +627,9 @@ def prefetch   : SDNode<"ISD::PREFETCH"   , SDTPrefetch,
 def readcyclecounter : SDNode<"ISD::READCYCLECOUNTER", SDTIntLeaf,
                      [SDNPHasChain, SDNPSideEffect]>;
 
+def membarrier : SDNode<"ISD::MEMBARRIER", SDTNone,
+                        [SDNPHasChain, SDNPSideEffect]>;
+
 def atomic_fence : SDNode<"ISD::ATOMIC_FENCE" , SDTAtomicFence,
                           [SDNPHasChain, SDNPSideEffect]>;
 
@@ -667,6 +666,10 @@ def atomic_load_fsub : SDNode<"ISD::ATOMIC_LOAD_FSUB" , SDTFPAtomic2,
 def atomic_load_fmax : SDNode<"ISD::ATOMIC_LOAD_FMAX", SDTFPAtomic2,
                     [SDNPHasChain, SDNPMayStore, SDNPMayLoad, SDNPMemOperand]>;
 def atomic_load_fmin : SDNode<"ISD::ATOMIC_LOAD_FMIN", SDTFPAtomic2,
+                    [SDNPHasChain, SDNPMayStore, SDNPMayLoad, SDNPMemOperand]>;
+def atomic_load_uinc_wrap : SDNode<"ISD::ATOMIC_LOAD_UINC_WRAP", SDTAtomic2,
+                    [SDNPHasChain, SDNPMayStore, SDNPMayLoad, SDNPMemOperand]>;
+def atomic_load_udec_wrap : SDNode<"ISD::ATOMIC_LOAD_UDEC_WRAP", SDTAtomic2,
                     [SDNPHasChain, SDNPMayStore, SDNPMayLoad, SDNPMemOperand]>;
 
 def atomic_load      : SDNode<"ISD::ATOMIC_LOAD", SDTAtomicLoad,

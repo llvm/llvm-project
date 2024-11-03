@@ -1,4 +1,4 @@
-; RUN: mlir-translate --import-llvm %s | FileCheck %s
+; RUN: mlir-translate -opaque-pointers=0 --import-llvm %s | FileCheck %s
 
 ; Testing the fix for issue where llvm.getelementptr translated from the second
 ; ConstantExpr-GEP tried to use llvm.constant(0: i32)-s that were below itself,

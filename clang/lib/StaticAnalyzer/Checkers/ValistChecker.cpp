@@ -100,27 +100,26 @@ private:
 };
 
 const SmallVector<ValistChecker::VAListAccepter, 15>
-    ValistChecker::VAListAccepters = {
-        {{"vfprintf", 3}, 2},
-        {{"vfscanf", 3}, 2},
-        {{"vprintf", 2}, 1},
-        {{"vscanf", 2}, 1},
-        {{"vsnprintf", 4}, 3},
-        {{"vsprintf", 3}, 2},
-        {{"vsscanf", 3}, 2},
-        {{"vfwprintf", 3}, 2},
-        {{"vfwscanf", 3}, 2},
-        {{"vwprintf", 2}, 1},
-        {{"vwscanf", 2}, 1},
-        {{"vswprintf", 4}, 3},
-        // vswprintf is the wide version of vsnprintf,
-        // vsprintf has no wide version
-        {{"vswscanf", 3}, 2}};
+    ValistChecker::VAListAccepters = {{{{"vfprintf"}, 3}, 2},
+                                      {{{"vfscanf"}, 3}, 2},
+                                      {{{"vprintf"}, 2}, 1},
+                                      {{{"vscanf"}, 2}, 1},
+                                      {{{"vsnprintf"}, 4}, 3},
+                                      {{{"vsprintf"}, 3}, 2},
+                                      {{{"vsscanf"}, 3}, 2},
+                                      {{{"vfwprintf"}, 3}, 2},
+                                      {{{"vfwscanf"}, 3}, 2},
+                                      {{{"vwprintf"}, 2}, 1},
+                                      {{{"vwscanf"}, 2}, 1},
+                                      {{{"vswprintf"}, 4}, 3},
+                                      // vswprintf is the wide version of
+                                      // vsnprintf, vsprintf has no wide version
+                                      {{{"vswscanf"}, 3}, 2}};
 
-const CallDescription
-    ValistChecker::VaStart("__builtin_va_start", /*Args=*/2, /*Params=*/1),
-    ValistChecker::VaCopy("__builtin_va_copy", 2),
-    ValistChecker::VaEnd("__builtin_va_end", 1);
+const CallDescription ValistChecker::VaStart({"__builtin_va_start"}, /*Args=*/2,
+                                             /*Params=*/1),
+    ValistChecker::VaCopy({"__builtin_va_copy"}, 2),
+    ValistChecker::VaEnd({"__builtin_va_end"}, 1);
 } // end anonymous namespace
 
 void ValistChecker::checkPreCall(const CallEvent &Call,

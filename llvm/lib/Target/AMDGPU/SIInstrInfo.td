@@ -1157,32 +1157,52 @@ class NamedMatchClass<string CName, bit Optional = 1> : AsmOperandClass {
   let DefaultMethod = !if(Optional, "default"#CName, ?);
 }
 
-class NamedOperandBit<string Name, AsmOperandClass MatchClass> : Operand<i1> {
-  let PrintMethod = "print"#Name;
-  let ParserMatchClass = MatchClass;
+class CustomOperandClass<string CName, bit Optional> : AsmOperandClass {
+  let Name = CName;
+  let PredicateMethod = "is"#CName;
+  let ParserMethod = "parse"#CName;
+  let RenderMethod = "addImmOperands";
+  let IsOptional = Optional;
+  let DefaultMethod = "default"#CName;
 }
 
-class NamedOperandBit_0<string Name, AsmOperandClass MatchClass> :
-  OperandWithDefaultOps<i1, (ops (i1 0))> {
-  let PrintMethod = "print"#Name;
-  let ParserMatchClass = MatchClass;
+class CustomOperandProps<bit Optional = 0, string Name = NAME,
+    AsmOperandClass Class = CustomOperandClass<Name, Optional>> {
+  string PrintMethod = "print"#Name;
+  AsmOperandClass ParserMatchClass = Class;
 }
 
-class NamedOperandBit_1<string Name, AsmOperandClass MatchClass> :
-  OperandWithDefaultOps<i1, (ops (i1 1))> {
-  let PrintMethod = "print"#Name;
-  let ParserMatchClass = MatchClass;
+class CustomOperand<ValueType Type, bit Optional = 0, string Name = NAME,
+    AsmOperandClass Class = CustomOperandClass<Name, Optional>>
+  : Operand<Type>, CustomOperandProps<Optional, Name, Class>;
+
+class NamedIntOperandClass<string Prefix, string Name, string ConvertMethod>
+    : CustomOperandClass<Name, 1> {
+  string ImmTy = "AMDGPUOperand::ImmTy"#Name;
+  let ParserMethod =
+    "[this](OperandVector &Operands) -> OperandMatchResultTy { "#
+    "return parseIntWithPrefix(\""#Prefix#"\", Operands, "#ImmTy#", "#
+    ConvertMethod#"); }";
 }
 
-class NamedOperandU8<string Name, AsmOperandClass MatchClass> : Operand<i8> {
-  let PrintMethod = "print"#Name;
-  let ParserMatchClass = MatchClass;
+class NamedIntOperand<ValueType Type, string Prefix, string Name = NAME,
+                      string ConvertMethod = "nullptr">
+  : CustomOperand<Type, 1, Name, NamedIntOperandClass<Prefix, Name, ConvertMethod>>;
+
+class BitOperandClass<string Id, string Name>
+    : CustomOperandClass<Name, 1> {
+  string ImmTy = "AMDGPUOperand::ImmTy"#Name;
+  let ParserMethod =
+    "[this](OperandVector &Operands) -> OperandMatchResultTy { "#
+    "return parseNamedBit(\""#Id#"\", Operands, "#ImmTy#"); }";
 }
 
-class NamedOperandU16<string Name, AsmOperandClass MatchClass> : Operand<i16> {
-  let PrintMethod = "print"#Name;
-  let ParserMatchClass = MatchClass;
-}
+class NamedBitOperand<string Id, string Name = NAME>
+  : CustomOperand<i1, 1, Name, BitOperandClass<Id, Name>>;
+
+class DefaultOperand_0<CustomOperand Op>
+  : OperandWithDefaultOps<Op.Type, (ops (Op.Type 0))>,
+    CustomOperandProps<1, Op.ParserMatchClass.Name, Op.ParserMatchClass>;
 
 class NamedOperandU32<string Name, AsmOperandClass MatchClass> : Operand<i32> {
   let PrintMethod = "print"#Name;
@@ -1209,12 +1229,12 @@ class NamedOperandU32Default1<string Name, AsmOperandClass MatchClass> :
 
 let OperandType = "OPERAND_IMMEDIATE" in {
 
-def flat_offset : NamedOperandU16<"FlatOffset", NamedMatchClass<"FlatOffset">>;
-def offset : NamedOperandU16<"Offset", NamedMatchClass<"Offset">>;
-def offset0 : NamedOperandU8<"Offset0", NamedMatchClass<"Offset0">>;
-def offset1 : NamedOperandU8<"Offset1", NamedMatchClass<"Offset1">>;
+def flat_offset : CustomOperand<i16, 1, "FlatOffset">;
+def offset : NamedIntOperand<i16, "offset", "Offset">;
+def offset0 : NamedIntOperand<i8, "offset0", "Offset0">;
+def offset1 : NamedIntOperand<i8, "offset1", "Offset1">;
 
-def gds : NamedOperandBit<"GDS", NamedMatchClass<"GDS">>;
+def gds : NamedBitOperand<"gds", "GDS">;
 
 def omod : NamedOperandU32<"OModSI", NamedMatchClass<"OModSI">>;
 def omod0 : NamedOperandU32_0<"OModSI", NamedMatchClass<"OModSI">>;
@@ -1222,30 +1242,30 @@ def omod0 : NamedOperandU32_0<"OModSI", NamedMatchClass<"OModSI">>;
 // We need to make the cases with a default of 0 distinct from no
 // default to help deal with some cases where the operand appears
 // before a mandatory operand.
-def clampmod : NamedOperandBit<"ClampSI", NamedMatchClass<"ClampSI">>;
-def clampmod0 : NamedOperandBit_0<"ClampSI", NamedMatchClass<"ClampSI">>;
-def highmod : NamedOperandBit<"High", NamedMatchClass<"High">>;
+def clampmod : NamedBitOperand<"clamp", "ClampSI">;
+def clampmod0 : DefaultOperand_0<clampmod>;
+def highmod : NamedBitOperand<"high", "High">;
 
 def CPol : NamedOperandU32<"CPol", NamedMatchClass<"CPol">>;
 def CPol_0 : NamedOperandU32Default0<"CPol", NamedMatchClass<"CPol">>;
 def CPol_GLC1 : NamedOperandU32Default1<"CPol", NamedMatchClass<"CPol">>;
 
-def TFE : NamedOperandBit<"TFE", NamedMatchClass<"TFE">>;
-def SWZ : NamedOperandBit<"SWZ", NamedMatchClass<"SWZ">>;
-def SWZ_0 : NamedOperandBit_0<"SWZ", NamedMatchClass<"SWZ">>;
-def UNorm : NamedOperandBit<"UNorm", NamedMatchClass<"UNorm">>;
-def DA : NamedOperandBit<"DA", NamedMatchClass<"DA">>;
-def R128A16 : NamedOperandBit<"R128A16", NamedMatchClass<"R128A16">>;
-def GFX10A16 : NamedOperandBit<"GFX10A16", NamedMatchClass<"GFX10A16">>;
-def D16 : NamedOperandBit<"D16", NamedMatchClass<"D16">>;
-def LWE : NamedOperandBit<"LWE", NamedMatchClass<"LWE">>;
-def exp_compr : NamedOperandBit<"ExpCompr", NamedMatchClass<"ExpCompr">>;
-def exp_vm : NamedOperandBit<"ExpVM", NamedMatchClass<"ExpVM">>;
+def TFE : NamedBitOperand<"tfe">;
+def SWZ : NamedBitOperand<"swz">;
+def SWZ_0 : DefaultOperand_0<SWZ>;
+def UNorm : NamedBitOperand<"unorm">;
+def DA : NamedBitOperand<"da">;
+def R128A16 : CustomOperand<i1, 1>;
+def A16 : NamedBitOperand<"a16">;
+def D16 : NamedBitOperand<"d16">;
+def LWE : NamedBitOperand<"lwe">;
+def exp_compr : NamedBitOperand<"compr", "ExpCompr">;
+def exp_vm : NamedBitOperand<"vm", "ExpVM">;
 
-def FORMAT : NamedOperandU8<"FORMAT", NamedMatchClass<"FORMAT", 0>>;
+def FORMAT : CustomOperand<i8>;
 
-def DMask : NamedOperandU16<"DMask", NamedMatchClass<"DMask">>;
-def Dim : NamedOperandU8<"Dim", NamedMatchClass<"Dim", 0>>;
+def DMask : NamedIntOperand<i16, "dmask">;
+def Dim : CustomOperand<i8>;
 
 def dst_sel : NamedOperandU32<"SDWADstSel", NamedMatchClass<"SDWADstSel">>;
 def src0_sel : NamedOperandU32<"SDWASrc0Sel", NamedMatchClass<"SDWASrc0Sel">>;
@@ -1262,7 +1282,7 @@ def dpp_ctrl : NamedOperandU32<"DPPCtrl", NamedMatchClass<"DPPCtrl", 0>>;
 
 def row_mask : NamedOperandU32<"RowMask", NamedMatchClass<"RowMask">>;
 def bank_mask : NamedOperandU32<"BankMask", NamedMatchClass<"BankMask">>;
-def bound_ctrl : NamedOperandBit<"BoundCtrl", NamedMatchClass<"BoundCtrl">>;
+def bound_ctrl : NamedIntOperand<i1, "bound_ctrl", "DppBoundCtrl", "ConvertDppBoundCtrl">;
 def FI : NamedOperandU32<"FI", NamedMatchClass<"FI">>;
 
 def blgp : NamedOperandU32<"BLGP", NamedMatchClass<"BLGP">>;
@@ -1275,8 +1295,8 @@ def exp_tgt : NamedOperandU32<"ExpTgt", NamedMatchClass<"ExpTgt", 0>> {
 
 }
 
-def wait_vdst : NamedOperandU8<"WaitVDST", NamedMatchClass<"WaitVDST">>;
-def wait_exp : NamedOperandU8<"WaitEXP", NamedMatchClass<"WaitEXP">>;
+def wait_vdst : NamedIntOperand<i8, "wait_vdst", "WaitVDST">;
+def wait_exp : NamedIntOperand<i8, "wait_exp", "WaitEXP">;
 
 } // End OperandType = "OPERAND_IMMEDIATE"
 
@@ -2099,8 +2119,7 @@ class getOutsSDWA <bit HasDst, ValueType DstVT, RegisterOperand DstRCSDWA> {
 }
 
 // Returns the assembly string for the inputs and outputs of a VOP[12C]
-// instruction.  This does not add the _e32 suffix, so it can be reused
-// by getAsm64.
+// instruction.
 class getAsm32 <bit HasDst, int NumSrcArgs, ValueType DstVT = i32> {
   string dst = !if(!eq(DstVT.Size, 1), "$sdst", "$vdst"); // use $sdst for VOPC
   string src0 = ", $src0";
@@ -2119,23 +2138,6 @@ class getAsmVOPDPart <int NumSrcArgs, string XorY> {
   string ret = dst #
                !if(!ge(NumSrcArgs, 1), src0, "") #
                !if(!ge(NumSrcArgs, 2), src1, "");
-}
-
-// Returns the assembly string for the inputs and outputs of a VOP3
-// instruction.
-class getAsm64 <bit HasDst, int NumSrcArgs, bit HasIntClamp, bit HasModifiers,
-                bit HasOMod, ValueType DstVT = i32> {
-  string dst = !if(!eq(DstVT.Size, 1), "$sdst", "$vdst"); // use $sdst for VOPC
-  string src0 = !if(!eq(NumSrcArgs, 1), "$src0_modifiers", "$src0_modifiers,");
-  string src1 = !if(!eq(NumSrcArgs, 1), "",
-                   !if(!eq(NumSrcArgs, 2), " $src1_modifiers",
-                                           " $src1_modifiers,"));
-  string src2 = !if(!eq(NumSrcArgs, 3), " $src2_modifiers", "");
-  string iclamp = !if(HasIntClamp, "$clamp", "");
-  string ret =
-  !if(!not(HasModifiers),
-      getAsm32<HasDst, NumSrcArgs, DstVT>.ret # iclamp,
-      dst#", "#src0#src1#src2#"$clamp"#!if(HasOMod, "$omod", ""));
 }
 
 // Returns the assembly string for the inputs and outputs of a VOP3P
@@ -2212,7 +2214,7 @@ class getAsmDPP8 <bit HasDst, int NumSrcArgs, bit HasModifiers, ValueType DstVT 
   let ret = dst#args#" $dpp8$fi";
 }
 
-class getAsmVOP3DPPBase <int NumSrcArgs, bit HasDst, bit HasClamp,
+class getAsmVOP3Base <int NumSrcArgs, bit HasDst, bit HasClamp,
                        bit HasOpSel, bit HasOMod, bit IsVOP3P,
                        bit HasModifiers, bit Src0HasMods,
                        bit Src1HasMods, bit Src2HasMods, ValueType DstVT = i32> {
@@ -2244,7 +2246,7 @@ class getAsmVOP3DPPBase <int NumSrcArgs, bit HasDst, bit HasClamp,
   string clamp = !if(HasClamp, "$clamp", "");
   string omod = !if(HasOMod, "$omod", "");
 
-  string ret = dst#", "#src0#src1#src2#opsel#3PMods#clamp#omod;
+  string ret = dst#!if(!gt(NumSrcArgs,0),", "#src0#src1#src2#opsel#3PMods#clamp#omod, "");
 
 }
 
@@ -2571,7 +2573,16 @@ class VOPProfile <list<ValueType> _ArgVT, bit _EnableClamp = 0> {
 
 
   field string Asm32 = getAsm32<HasDst, NumSrcArgs, DstVT>.ret;
-  field string Asm64 = getAsm64<HasDst, NumSrcArgs, HasIntClamp, HasModifiers, HasOMod, DstVT>.ret;
+  field string AsmDPP = !if(HasExtDPP,
+                            getAsmDPP<HasDst, NumSrcArgs, HasModifiers, DstVT>.ret, "");
+  field string AsmDPP16 = getAsmDPP16<HasDst, NumSrcArgs, HasModifiers, DstVT>.ret;
+  // DPP8 encoding has no fields for modifiers, and it is enforced by setting
+  // the asm operand name via this HasModifiers flag
+  field string AsmDPP8 = getAsmDPP8<HasDst, NumSrcArgs, 0 /*HasModifiers*/, DstVT>.ret;
+  field string AsmVOP3Base = getAsmVOP3Base<NumSrcArgs, HasDst, HasClamp,
+   HasOpSel, HasOMod, IsVOP3P, HasModifiers, HasModifiers, HasModifiers,
+   HasModifiers, DstVT>.ret;
+  field string Asm64 = AsmVOP3Base;
   field string AsmVOP3P = getAsmVOP3P<NumSrcArgs, HasModifiers, HasClamp, HasOpSel>.ret;
   field string AsmVOP3OpSel = getAsmVOP3OpSel<NumSrcArgs,
                                               HasClamp,
@@ -2579,18 +2590,9 @@ class VOPProfile <list<ValueType> _ArgVT, bit _EnableClamp = 0> {
                                               HasSrc0FloatMods,
                                               HasSrc1FloatMods,
                                               HasSrc2FloatMods>.ret;
-  field string AsmDPP = !if(HasExtDPP,
-                            getAsmDPP<HasDst, NumSrcArgs, HasModifiers, DstVT>.ret, "");
-  field string AsmDPP16 = getAsmDPP16<HasDst, NumSrcArgs, HasModifiers, DstVT>.ret;
-  // DPP8 encoding has no fields for modifiers, and it is enforced by setting
-  // the asm operand name via this HasModifiers flag
-  field string AsmDPP8 = getAsmDPP8<HasDst, NumSrcArgs, 0 /*HasModifiers*/, DstVT>.ret;
-  field string AsmVOP3DPPBase = getAsmVOP3DPPBase<NumSrcArgs, HasDst, HasClamp,
-   HasOpSel, HasOMod, IsVOP3P, HasModifiers, HasModifiers, HasModifiers,
-   HasModifiers, DstVT>.ret;
-  field string AsmVOP3DPP = getAsmVOP3DPP<AsmVOP3DPPBase>.ret;
-  field string AsmVOP3DPP16 = getAsmVOP3DPP16<AsmVOP3DPPBase>.ret;
-  field string AsmVOP3DPP8 = getAsmVOP3DPP8<AsmVOP3DPPBase>.ret;
+  field string AsmVOP3DPP = getAsmVOP3DPP<AsmVOP3Base>.ret;
+  field string AsmVOP3DPP16 = getAsmVOP3DPP16<AsmVOP3Base>.ret;
+  field string AsmVOP3DPP8 = getAsmVOP3DPP8<AsmVOP3Base>.ret;
   field string AsmSDWA = getAsmSDWA<HasDst, NumSrcArgs, DstVT>.ret;
   field string AsmSDWA9 = getAsmSDWA9<HasDst, HasSDWAOMod, NumSrcArgs, DstVT>.ret;
   field string AsmVOPDX = getAsmVOPDPart<NumSrcArgs, "X">.ret;

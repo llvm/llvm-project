@@ -42,7 +42,7 @@ public:
     std::shared_ptr<const tidy::ClangTidyOptions> Result;
     read(
         TFS, FreshTime,
-        [this](llvm::Optional<llvm::StringRef> Data) {
+        [this](std::optional<llvm::StringRef> Data) {
           Value.reset();
           if (Data && !Data->empty()) {
             tidy::DiagCallback Diagnostics = [](const llvm::SMDiagnostic &D) {
@@ -205,7 +205,7 @@ TidyProvider disableUnusableChecks(llvm::ArrayRef<std::string> ExtraBadChecks) {
 
                        // Check relies on seeing ifndef/define/endif directives,
                        // clangd doesn't replay those when using a preamble.
-                       "-llvm-header-guard",
+                       "-llvm-header-guard", "-modernize-macro-to-enum",
 
                        // ----- Crashing Checks -----
 

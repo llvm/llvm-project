@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-codegen -S < %s | FileCheck %s
+; RUN: opt -opaque-pointers=0 %loadPolly -polly-codegen -S < %s | FileCheck %s
 ;
 ;    void jd(int *A, int *B, int c) {
 ;      for (int i = 0; i < 1024; i++)

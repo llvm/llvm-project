@@ -2083,7 +2083,7 @@ HexagonInstrInfo::getSerializableDirectMachineOperandTargetFlags() const {
     {MO_IEGOT,  "hexagon-iegot"},
     {MO_TPREL,  "hexagon-tprel"}
   };
-  return makeArrayRef(Flags);
+  return ArrayRef(Flags);
 }
 
 ArrayRef<std::pair<unsigned, const char*>>
@@ -2093,7 +2093,7 @@ HexagonInstrInfo::getSerializableBitmaskMachineOperandTargetFlags() const {
   static const std::pair<unsigned, const char*> Flags[] = {
     {HMOTF_ConstExtended, "hexagon-ext"}
   };
-  return makeArrayRef(Flags);
+  return ArrayRef(Flags);
 }
 
 Register HexagonInstrInfo::createVR(MachineFunction *MF, MVT VT) const {
@@ -2219,12 +2219,12 @@ bool HexagonInstrInfo::isDependent(const MachineInstr &ProdMI,
       if (RegA == RegB)
         return true;
 
-      if (Register::isPhysicalRegister(RegA))
+      if (RegA.isPhysical())
         for (MCSubRegIterator SubRegs(RegA, &HRI); SubRegs.isValid(); ++SubRegs)
           if (RegB == *SubRegs)
             return true;
 
-      if (Register::isPhysicalRegister(RegB))
+      if (RegB.isPhysical())
         for (MCSubRegIterator SubRegs(RegB, &HRI); SubRegs.isValid(); ++SubRegs)
           if (RegA == *SubRegs)
             return true;
@@ -4302,7 +4302,7 @@ int HexagonInstrInfo::getOperandLatency(const InstrItineraryData *ItinData,
   // Get DefIdx and UseIdx for super registers.
   const MachineOperand &DefMO = DefMI.getOperand(DefIdx);
 
-  if (DefMO.isReg() && Register::isPhysicalRegister(DefMO.getReg())) {
+  if (DefMO.isReg() && DefMO.getReg().isPhysical()) {
     if (DefMO.isImplicit()) {
       for (MCSuperRegIterator SR(DefMO.getReg(), &HRI); SR.isValid(); ++SR) {
         int Idx = DefMI.findRegisterDefOperandIdx(*SR, false, false, &HRI);

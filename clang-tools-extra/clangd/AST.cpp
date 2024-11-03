@@ -30,13 +30,13 @@
 #include "clang/Basic/Specifiers.h"
 #include "clang/Index/USRGeneration.h"
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/raw_ostream.h"
 #include <iterator>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -44,7 +44,7 @@ namespace clang {
 namespace clangd {
 
 namespace {
-llvm::Optional<llvm::ArrayRef<TemplateArgumentLoc>>
+std::optional<llvm::ArrayRef<TemplateArgumentLoc>>
 getTemplateSpecializationArgLocs(const NamedDecl &ND) {
   if (auto *Func = llvm::dyn_cast<FunctionDecl>(&ND)) {
     if (const ASTTemplateArgumentListInfo *Args =
@@ -266,7 +266,7 @@ std::string printTemplateSpecializationArgs(const NamedDecl &ND) {
   std::string TemplateArgs;
   llvm::raw_string_ostream OS(TemplateArgs);
   PrintingPolicy Policy(ND.getASTContext().getLangOpts());
-  if (llvm::Optional<llvm::ArrayRef<TemplateArgumentLoc>> Args =
+  if (std::optional<llvm::ArrayRef<TemplateArgumentLoc>> Args =
           getTemplateSpecializationArgLocs(ND)) {
     printTemplateArgumentList(OS, *Args, Policy);
   } else if (auto *Cls = llvm::dyn_cast<ClassTemplateSpecializationDecl>(&ND)) {
@@ -374,6 +374,38 @@ const ObjCImplDecl *getCorrespondingObjCImpl(const ObjCContainerDecl *D) {
     return CD->getImplementation();
   }
   return nullptr;
+}
+
+Symbol::IncludeDirective
+preferredIncludeDirective(llvm::StringRef FileName, const LangOptions &LangOpts,
+                          ArrayRef<Inclusion> MainFileIncludes,
+                          ArrayRef<const Decl *> TopLevelDecls) {
+  // Always prefer #include for non-ObjC code.
+  if (!LangOpts.ObjC)
+    return Symbol::IncludeDirective::Include;
+  // If this is not a header file and has ObjC set as the language, prefer
+  // #import.
+  if (!isHeaderFile(FileName, LangOpts))
+    return Symbol::IncludeDirective::Import;
+
+  // Headers lack proper compile flags most of the time, so we might treat a
+  // header as ObjC accidentally. Perform some extra checks to make sure this
+  // works.
+
+  // Any file with a #import, should keep #import-ing.
+  for (auto &Inc : MainFileIncludes)
+    if (Inc.Directive == tok::pp_import)
+      return Symbol::IncludeDirective::Import;
+
+  // Any file declaring an ObjC decl should also be #import-ing.
+  // No need to look over the references, as the file doesn't have any #imports,
+  // it must be declaring interesting ObjC-like decls.
+  for (const Decl *D : TopLevelDecls)
+    if (isa<ObjCContainerDecl, ObjCIvarDecl, ObjCMethodDecl, ObjCPropertyDecl>(
+            D))
+      return Symbol::IncludeDirective::Import;
+
+  return Symbol::IncludeDirective::Include;
 }
 
 std::string printType(const QualType QT, const DeclContext &CurContext,
@@ -563,8 +595,7 @@ public:
 };
 } // namespace
 
-llvm::Optional<QualType> getDeducedType(ASTContext &ASTCtx,
-                                        SourceLocation Loc) {
+std::optional<QualType> getDeducedType(ASTContext &ASTCtx, SourceLocation Loc) {
   if (!Loc.isValid())
     return {};
   DeducedTypeVisitor V(Loc);
@@ -797,11 +828,11 @@ public:
     ArrayRef<const ParmVarDecl *> Tail;
     // If the parameters were resolved to another forwarding FunctionDecl, this
     // is it.
-    Optional<FunctionDecl *> PackTarget;
+    std::optional<FunctionDecl *> PackTarget;
   };
 
   // The output of this visitor
-  Optional<ForwardingInfo> Info;
+  std::optional<ForwardingInfo> Info;
 
 private:
   // inspects the given callee with the given args to check whether it
@@ -843,7 +874,7 @@ private:
 
   // Returns the beginning of the expanded pack represented by Parameters
   // in the given arguments, if it is there.
-  llvm::Optional<size_t> findPack(typename CallExpr::arg_range Args) {
+  std::optional<size_t> findPack(typename CallExpr::arg_range Args) {
     // find the argument directly referring to the first parameter
     assert(Parameters.size() <= static_cast<size_t>(llvm::size(Args)));
     for (auto Begin = Args.begin(), End = Args.end() - Parameters.size() + 1;

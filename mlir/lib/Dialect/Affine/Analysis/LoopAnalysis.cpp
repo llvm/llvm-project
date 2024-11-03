@@ -83,7 +83,7 @@ void mlir::getTripCountMapAndOperands(
 /// otherwise. This method uses affine expression analysis (in turn using
 /// getTripCount) and is able to determine constant trip count in non-trivial
 /// cases.
-Optional<uint64_t> mlir::getConstantTripCount(AffineForOp forOp) {
+std::optional<uint64_t> mlir::getConstantTripCount(AffineForOp forOp) {
   SmallVector<Value, 4> operands;
   AffineMap map;
   getTripCountMapAndOperands(forOp, &map, &operands);
@@ -92,7 +92,7 @@ Optional<uint64_t> mlir::getConstantTripCount(AffineForOp forOp) {
     return std::nullopt;
 
   // Take the min if all trip counts are constant.
-  Optional<uint64_t> tripCount;
+  std::optional<uint64_t> tripCount;
   for (auto resultExpr : map.getResults()) {
     if (auto constExpr = resultExpr.dyn_cast<AffineConstantExpr>()) {
       if (tripCount.has_value())
@@ -160,7 +160,7 @@ uint64_t mlir::getLargestDivisorOfTripCount(AffineForOp forOp) {
 /// Returns false in cases with more than one AffineApplyOp, this is
 /// conservative.
 static bool isAccessIndexInvariant(Value iv, Value index) {
-  assert(isForInductionVar(iv) && "iv must be a AffineForOp");
+  assert(isAffineForInductionVar(iv) && "iv must be a AffineForOp");
   assert(index.getType().isa<IndexType>() && "index must be of IndexType");
   SmallVector<Operation *, 4> affineApplyOps;
   getReachableAffineApplyOps({index}, affineApplyOps);

@@ -124,6 +124,7 @@ enum VLMUL : uint8_t {
 };
 
 enum {
+  TAIL_UNDISTURBED_MASK_UNDISTURBED = 0,
   TAIL_AGNOSTIC = 1,
   MASK_AGNOSTIC = 2,
 };
@@ -465,6 +466,11 @@ void printVType(unsigned VType, raw_ostream &OS);
 unsigned getSEWLMULRatio(unsigned SEW, RISCVII::VLMUL VLMul);
 
 } // namespace RISCVVType
+
+namespace RISCVRVC {
+bool compress(MCInst &OutInst, const MCInst &MI, const MCSubtargetInfo &STI);
+bool uncompress(MCInst &OutInst, const MCInst &MI, const MCSubtargetInfo &STI);
+} // namespace RISCVRVC
 
 } // namespace llvm
 

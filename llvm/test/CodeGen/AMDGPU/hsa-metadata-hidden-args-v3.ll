@@ -215,7 +215,7 @@ entry:
 ; CHECK-NEXT:         .value_kind:     hidden_hostcall_buffer
 ; CHECK-NEXT:       - .offset:         56
 ; CHECK-NEXT:         .size:           8
-; CHECK-NEXT:         .value_kind:     hidden_none
+; CHECK-NEXT:         .value_kind:     hidden_default_queue
 ; CHECK-NEXT:       - .offset:         64
 ; CHECK-NEXT:         .size:           8
 ; CHECK-NEXT:         .value_kind:     hidden_none
@@ -263,7 +263,7 @@ entry:
 ; CHECK-NEXT:         .value_kind:     hidden_hostcall_buffer
 ; CHECK-NEXT:       - .offset:         56
 ; CHECK-NEXT:         .size:           8
-; CHECK-NEXT:         .value_kind:     hidden_none
+; CHECK-NEXT:         .value_kind:     hidden_default_queue
 ; CHECK-NEXT:       - .offset:         64
 ; CHECK-NEXT:         .size:           8
 ; CHECK-NEXT:         .value_kind:     hidden_none

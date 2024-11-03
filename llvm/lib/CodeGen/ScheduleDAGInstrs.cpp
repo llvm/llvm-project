@@ -84,6 +84,12 @@ static cl::opt<unsigned> ReductionSize(
     cl::desc("A huge scheduling region will have maps reduced by this many "
              "nodes at a time. Defaults to HugeRegion / 2."));
 
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+static cl::opt<bool> SchedPrintCycles(
+    "sched-print-cycles", cl::Hidden, cl::init(false),
+    cl::desc("Report top/bottom cycles when dumping SUnit instances"));
+#endif
+
 static unsigned getReductionSize() {
   // Always reduce a huge region with half of the elements, except
   // when user sets this number explicitly.
@@ -205,9 +211,9 @@ void ScheduleDAGInstrs::addSchedBarrierDeps() {
     for (const MachineOperand &MO : ExitMI->operands()) {
       if (!MO.isReg() || MO.isDef()) continue;
       Register Reg = MO.getReg();
-      if (Register::isPhysicalRegister(Reg)) {
+      if (Reg.isPhysical()) {
         Uses.insert(PhysRegSUOper(&ExitSU, -1, Reg));
-      } else if (Register::isVirtualRegister(Reg) && MO.readsReg()) {
+      } else if (Reg.isVirtual() && MO.readsReg()) {
         addVRegUseDeps(&ExitSU, ExitMI->getOperandNo(&MO));
       }
     }
@@ -839,9 +845,9 @@ void ScheduleDAGInstrs::buildSchedGraph(AAResults *AA,
       if (!MO.isReg() || !MO.isDef())
         continue;
       Register Reg = MO.getReg();
-      if (Register::isPhysicalRegister(Reg)) {
+      if (Reg.isPhysical()) {
         addPhysRegDeps(SU, j);
-      } else if (Register::isVirtualRegister(Reg)) {
+      } else if (Reg.isVirtual()) {
         HasVRegDef = true;
         addVRegDefDeps(SU, j);
       }
@@ -856,9 +862,9 @@ void ScheduleDAGInstrs::buildSchedGraph(AAResults *AA,
       if (!MO.isReg() || !MO.isUse())
         continue;
       Register Reg = MO.getReg();
-      if (Register::isPhysicalRegister(Reg)) {
+      if (Reg.isPhysical()) {
         addPhysRegDeps(SU, j);
-      } else if (Register::isVirtualRegister(Reg) && MO.readsReg()) {
+      } else if (Reg.isVirtual() && MO.readsReg()) {
         addVRegUseDeps(SU, j);
       }
     }
@@ -1158,6 +1164,9 @@ void ScheduleDAGInstrs::fixupKills(MachineBasicBlock &MBB) {
 void ScheduleDAGInstrs::dumpNode(const SUnit &SU) const {
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   dumpNodeName(SU);
+  if (SchedPrintCycles)
+    dbgs() << " [TopReadyCycle = " << SU.TopReadyCycle
+           << ", BottomReadyCycle = " << SU.BotReadyCycle << "]";
   dbgs() << ": ";
   SU.getInstr()->dump();
 #endif

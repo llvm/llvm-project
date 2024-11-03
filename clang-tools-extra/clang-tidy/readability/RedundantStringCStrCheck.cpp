@@ -16,9 +16,7 @@
 
 using namespace clang::ast_matchers;
 
-namespace clang {
-namespace tidy {
-namespace readability {
+namespace clang::tidy::readability {
 
 namespace {
 
@@ -86,6 +84,11 @@ void RedundantStringCStrCheck::registerMatchers(
           // be present explicitly.
           hasArgument(1, cxxDefaultArgExpr()))));
 
+  // Match string constructor.
+  const auto StringViewConstructorExpr = cxxConstructExpr(
+      argumentCountIs(1),
+      hasDeclaration(cxxMethodDecl(hasName("basic_string_view"))));
+
   // Match a call to the string 'c_str()' method.
   const auto StringCStrCallExpr =
       cxxMemberCallExpr(on(StringExpr.bind("arg")),
@@ -101,7 +104,8 @@ void RedundantStringCStrCheck::registerMatchers(
       traverse(
           TK_AsIs,
           cxxConstructExpr(
-              StringConstructorExpr, hasArgument(0, StringCStrCallExpr),
+              anyOf(StringConstructorExpr, StringViewConstructorExpr),
+              hasArgument(0, StringCStrCallExpr),
               unless(anyOf(HasRValueTempParent, hasParent(cxxBindTemporaryExpr(
                                                     HasRValueTempParent)))))),
       this);
@@ -194,6 +198,4 @@ void RedundantStringCStrCheck::check(const MatchFinder::MatchResult &Result) {
       << FixItHint::CreateReplacement(Call->getSourceRange(), ArgText);
 }
 
-} // namespace readability
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::readability

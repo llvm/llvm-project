@@ -15,12 +15,11 @@
 #include "llvm/ADT/StringExtras.h"
 
 #include <cctype>
+#include <optional>
 
 using namespace clang::ast_matchers;
 
-namespace clang {
-namespace tidy {
-namespace modernize {
+namespace clang::tidy::modernize {
 namespace {
 struct UnqualNameVisitor : public RecursiveASTVisitor<UnqualNameVisitor> {
 public:
@@ -177,7 +176,7 @@ static bool isSpecifier(Token T) {
                    tok::kw_static, tok::kw_friend, tok::kw_virtual);
 }
 
-static llvm::Optional<ClassifiedToken>
+static std::optional<ClassifiedToken>
 classifyToken(const FunctionDecl &F, Preprocessor &PP, Token Tok) {
   ClassifiedToken CT;
   CT.T = Tok;
@@ -217,7 +216,7 @@ classifyToken(const FunctionDecl &F, Preprocessor &PP, Token Tok) {
   return CT;
 }
 
-llvm::Optional<SmallVector<ClassifiedToken, 8>>
+std::optional<SmallVector<ClassifiedToken, 8>>
 UseTrailingReturnTypeCheck::classifyTokensBeforeFunctionName(
     const FunctionDecl &F, const ASTContext &Ctx, const SourceManager &SM,
     const LangOptions &LangOpts) {
@@ -251,7 +250,7 @@ UseTrailingReturnTypeCheck::classifyTokensBeforeFunctionName(
       T.setKind(Info.getTokenID());
     }
 
-    if (llvm::Optional<ClassifiedToken> CT = classifyToken(F, *PP, T))
+    if (std::optional<ClassifiedToken> CT = classifyToken(F, *PP, T))
       ClassifiedTokens.push_back(*CT);
     else {
       diag(F.getLocation(), Message);
@@ -293,7 +292,7 @@ SourceRange UseTrailingReturnTypeCheck::findReturnTypeAndCVSourceRange(
     return ReturnTypeRange;
 
   // Include qualifiers to the left and right of the return type.
-  llvm::Optional<SmallVector<ClassifiedToken, 8>> MaybeTokens =
+  std::optional<SmallVector<ClassifiedToken, 8>> MaybeTokens =
       classifyTokensBeforeFunctionName(F, Ctx, SM, LangOpts);
   if (!MaybeTokens)
     return {};
@@ -345,7 +344,7 @@ void UseTrailingReturnTypeCheck::keepSpecifiers(
 
   // Tokenize return type. If it contains macros which contain a mix of
   // qualifiers, specifiers and types, give up.
-  llvm::Optional<SmallVector<ClassifiedToken, 8>> MaybeTokens =
+  std::optional<SmallVector<ClassifiedToken, 8>> MaybeTokens =
       classifyTokensBeforeFunctionName(F, Ctx, SM, LangOpts);
   if (!MaybeTokens)
     return;
@@ -495,6 +494,4 @@ void UseTrailingReturnTypeCheck::check(const MatchFinder::MatchResult &Result) {
       << FixItHint::CreateInsertion(InsertionLoc, " -> " + ReturnType);
 }
 
-} // namespace modernize
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::modernize

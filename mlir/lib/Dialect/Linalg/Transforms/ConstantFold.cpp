@@ -17,6 +17,7 @@
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Support/LLVM.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
+#include <optional>
 
 using namespace mlir;
 using namespace mlir::linalg;
@@ -39,8 +40,8 @@ template <typename ConcreteType>
 class FoldConstantBase : public OpRewritePattern<GenericOp> {
 public:
   struct APIntOrFloat {
-    Optional<APInt> apInt;
-    Optional<APFloat> apFloat;
+    std::optional<APInt> apInt;
+    std::optional<APFloat> apFloat;
   };
   struct APIntOrFloatArray {
     SmallVector<APInt> apInts;

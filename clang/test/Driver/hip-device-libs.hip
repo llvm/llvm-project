@@ -9,7 +9,7 @@
 // RUN:  --cuda-gpu-arch=gfx803 \
 // RUN:  --rocm-path=%S/Inputs/rocm   \
 // RUN:   %S/Inputs/hip_multiple_inputs/b.hip \
-// RUN: 2>&1 | FileCheck %s --check-prefixes=ALL,FLUSHD
+// RUN: 2>&1 | FileCheck %s --check-prefixes=ALL,FLUSHD,ROCMDIR
 
 
 // Test subtarget with flushing off by ddefault.
@@ -17,7 +17,7 @@
 // RUN:  --cuda-gpu-arch=gfx900 \
 // RUN:  --rocm-path=%S/Inputs/rocm \
 // RUN:   %S/Inputs/hip_multiple_inputs/b.hip \
-// RUN: 2>&1 | FileCheck %s --check-prefixes=ALL,NOFLUSHD
+// RUN: 2>&1 | FileCheck %s --check-prefixes=ALL,NOFLUSHD,ROCMDIR
 
 
 // Test explicit flag, opposite of target default.
@@ -26,7 +26,7 @@
 // RUN:   -fgpu-flush-denormals-to-zero \
 // RUN:   --rocm-path=%S/Inputs/rocm \
 // RUN:   %S/Inputs/hip_multiple_inputs/b.hip \
-// RUN: 2>&1 | FileCheck %s --check-prefixes=ALL,FLUSHD
+// RUN: 2>&1 | FileCheck %s --check-prefixes=ALL,FLUSHD,ROCMDIR
 
 
 // Test explicit flag, opposite of target default.
@@ -35,7 +35,7 @@
 // RUN:   -fno-gpu-flush-denormals-to-zero \
 // RUN:   --rocm-path=%S/Inputs/rocm \
 // RUN:   %S/Inputs/hip_multiple_inputs/b.hip \
-// RUN: 2>&1 | FileCheck %s --check-prefixes=ALL,NOFLUSHD
+// RUN: 2>&1 | FileCheck %s --check-prefixes=ALL,NOFLUSHD,ROCMDIR
 
 
 // Test explicit flag, same as target default.
@@ -44,7 +44,7 @@
 // RUN:   -fno-gpu-flush-denormals-to-zero \
 // RUN:   --rocm-path=%S/Inputs/rocm \
 // RUN:   %S/Inputs/hip_multiple_inputs/b.hip \
-// RUN: 2>&1 | FileCheck %s --check-prefixes=ALL,NOFLUSHD
+// RUN: 2>&1 | FileCheck %s --check-prefixes=ALL,NOFLUSHD,ROCMDIR
 
 
 // Test explicit flag, same as target default.
@@ -53,7 +53,7 @@
 // RUN:   -fgpu-flush-denormals-to-zero \
 // RUN:   --rocm-path=%S/Inputs/rocm \
 // RUN:   %S/Inputs/hip_multiple_inputs/b.hip \
-// RUN: 2>&1 | FileCheck %s --check-prefixes=ALL,FLUSHD
+// RUN: 2>&1 | FileCheck %s --check-prefixes=ALL,FLUSHD,ROCMDIR
 
 
 // Test last flag wins, not flushing
@@ -62,7 +62,7 @@
 // RUN:   -fgpu-flush-denormals-to-zero -fno-gpu-flush-denormals-to-zero \
 // RUN:   --rocm-path=%S/Inputs/rocm \
 // RUN:   %S/Inputs/hip_multiple_inputs/b.hip \
-// RUN: 2>&1 | FileCheck %s --check-prefixes=ALL,NOFLUSHD
+// RUN: 2>&1 | FileCheck %s --check-prefixes=ALL,NOFLUSHD,ROCMDIR
 
 
 // RUN: %clang -### --target=x86_64-linux-gnu \
@@ -70,7 +70,7 @@
 // RUN:   -fgpu-flush-denormals-to-zero -fno-gpu-flush-denormals-to-zero \
 // RUN:   --rocm-path=%S/Inputs/rocm   \
 // RUN:   %S/Inputs/hip_multiple_inputs/b.hip \
-// RUN: 2>&1 | FileCheck %s --check-prefixes=ALL,NOFLUSHD
+// RUN: 2>&1 | FileCheck %s --check-prefixes=ALL,NOFLUSHD,ROCMDIR
 
 
 // RUN: %clang -### --target=x86_64-linux-gnu \
@@ -78,7 +78,7 @@
 // RUN:   -fno-gpu-flush-denormals-to-zero -fgpu-flush-denormals-to-zero \
 // RUN:   --rocm-path=%S/Inputs/rocm   \
 // RUN:   %S/Inputs/hip_multiple_inputs/b.hip \
-// RUN: 2>&1 | FileCheck %s --check-prefixes=ALL,FLUSHD
+// RUN: 2>&1 | FileCheck %s --check-prefixes=ALL,FLUSHD,ROCMDIR
 
 
 // RUN: %clang -### --target=x86_64-linux-gnu \
@@ -86,23 +86,44 @@
 // RUN:   -fno-gpu-flush-denormals-to-zero -fgpu-flush-denormals-to-zero \
 // RUN:   --rocm-path=%S/Inputs/rocm \
 // RUN:   %S/Inputs/hip_multiple_inputs/b.hip \
-// RUN: 2>&1 | FileCheck %s --check-prefixes=ALL,FLUSHD
+// RUN: 2>&1 | FileCheck %s --check-prefixes=ALL,FLUSHD,ROCMDIR
 
+// Test finding device lib in resource dir
+// RUN: %clang -### --target=x86_64-linux-gnu \
+// RUN:   --offload-arch=gfx803 -nogpuinc \
+// RUN:   -resource-dir=%S/Inputs/rocm_resource_dir \
+// RUN:   %S/Inputs/hip_multiple_inputs/b.hip \
+// RUN: 2>&1 | FileCheck %s --check-prefixes=ALL,FLUSHD,RESDIR
 
 // Test --hip-device-lib-path flag
 // RUN: %clang -### --target=x86_64-linux-gnu \
 // RUN:   --cuda-gpu-arch=gfx803 -nogpuinc \
 // RUN:   --hip-device-lib-path=%S/Inputs/rocm/amdgcn/bitcode   \
 // RUN:   %S/Inputs/hip_multiple_inputs/b.hip \
-// RUN: 2>&1 | FileCheck %s --check-prefixes=ALL,FLUSHD
+// RUN: 2>&1 | FileCheck %s --check-prefixes=ALL,FLUSHD,ROCMDIR
 
+// Test --hip-device-lib-path wins over -resource-dir
+// RUN: %clang -### --target=x86_64-linux-gnu \
+// RUN:   --cuda-gpu-arch=gfx803 -nogpuinc \
+// RUN:   --hip-device-lib-path=%S/Inputs/rocm/amdgcn/bitcode   \
+// RUN:   -resource-dir=%S/Inputs/rocm_resource_dir \
+// RUN:   %S/Inputs/hip_multiple_inputs/b.hip \
+// RUN: 2>&1 | FileCheck %s --check-prefixes=ALL,FLUSHD,ROCMDIR
 
 // Test environment variable HIP_DEVICE_LIB_PATH
 // RUN: env HIP_DEVICE_LIB_PATH=%S/Inputs/rocm/amdgcn/bitcode \
 // RUN:   %clang -### --target=x86_64-linux-gnu \
 // RUN:   --cuda-gpu-arch=gfx900 -nogpuinc \
 // RUN:   %S/Inputs/hip_multiple_inputs/b.hip \
-// RUN: 2>&1 | FileCheck %s --check-prefixes=ALL
+// RUN: 2>&1 | FileCheck %s --check-prefixes=ALL,ROCMDIR
+
+// Test environment variable HIP_DEVICE_LIB_PATH wins over -resource-dir
+// RUN: env HIP_DEVICE_LIB_PATH=%S/Inputs/rocm/amdgcn/bitcode \
+// RUN:   %clang -### --target=x86_64-linux-gnu \
+// RUN:   --cuda-gpu-arch=gfx900 -nogpuinc \
+// RUN:   -resource-dir=%S/Inputs/rocm_resource_dir \
+// RUN:   %S/Inputs/hip_multiple_inputs/b.hip \
+// RUN: 2>&1 | FileCheck %s --check-prefixes=ALL,ROCMDIR
 
 // Test --gpu-instrument-lib
 // RUN: %clang -### --target=x86_64-linux-gnu \
@@ -110,7 +131,7 @@
 // RUN:   --rocm-path=%S/Inputs/rocm \
 // RUN:   --gpu-instrument-lib=%S/Inputs/hip_multiple_inputs/instrument.bc \
 // RUN:   %S/Inputs/hip_multiple_inputs/b.hip \
-// RUN: 2>&1 | FileCheck %s --check-prefixes=ALL,INST
+// RUN: 2>&1 | FileCheck %s --check-prefixes=ALL,INST,ROCMDIR
 
 // Test -fast-math
 // RUN: %clang -### --target=x86_64-linux-gnu --offload-arch=gfx900 \
@@ -181,18 +202,21 @@
 
 // ALL-NOT: error:
 // ALL: {{"[^"]*clang[^"]*"}}
-// ALL-SAME: "-mlink-builtin-bitcode" "{{.*}}hip.bc"
-// ALL-SAME: "-mlink-builtin-bitcode" "{{.*}}ocml.bc"
-// ALL-SAME: "-mlink-builtin-bitcode" "{{.*}}ockl.bc"
 
-// FLUSHD-SAME: "-mlink-builtin-bitcode" "{{.*}}oclc_daz_opt_on.bc"
-// NOFLUSHD-SAME: "-mlink-builtin-bitcode" "{{.*}}oclc_daz_opt_off.bc"
+// RESDIR-SAME: "-mlink-builtin-bitcode" "[[DEVICELIB_DIR:[^"]+(/|\\\\)rocm_resource_dir(/|\\\\)lib(/|\\\\)amdgcn(/|\\\\).*]]hip.bc"
+// ROCMDIR-SAME: "-mlink-builtin-bitcode" "[[DEVICELIB_DIR:[^"]+(/|\\\\)rocm(/|\\\\)amdgcn(/|\\\\).*]]hip.bc"
 
-// ALL-SAME: "-mlink-builtin-bitcode" "{{.*}}oclc_unsafe_math_off.bc"
-// ALL-SAME: "-mlink-builtin-bitcode" "{{.*}}oclc_finite_only_off.bc"
-// ALL-SAME: "-mlink-builtin-bitcode" "{{.*}}oclc_correctly_rounded_sqrt_on.bc"
-// ALL-SAME: "-mlink-builtin-bitcode" "{{.*}}oclc_wavefrontsize64_on.bc"
-// ALL-SAME: "-mlink-builtin-bitcode" "{{.*}}oclc_isa_version_{{[0-9]+}}.bc"
+// ALL-SAME: "-mlink-builtin-bitcode" "[[DEVICELIB_DIR]]ocml.bc"
+// ALL-SAME: "-mlink-builtin-bitcode" "[[DEVICELIB_DIR]]ockl.bc"
+
+// FLUSHD-SAME: "-mlink-builtin-bitcode" "[[DEVICELIB_DIR]]oclc_daz_opt_on.bc"
+// NOFLUSHD-SAME: "-mlink-builtin-bitcode" "[[DEVICELIB_DIR]]oclc_daz_opt_off.bc"
+
+// ALL-SAME: "-mlink-builtin-bitcode" "[[DEVICELIB_DIR]]oclc_unsafe_math_off.bc"
+// ALL-SAME: "-mlink-builtin-bitcode" "[[DEVICELIB_DIR]]oclc_finite_only_off.bc"
+// ALL-SAME: "-mlink-builtin-bitcode" "[[DEVICELIB_DIR]]oclc_correctly_rounded_sqrt_on.bc"
+// ALL-SAME: "-mlink-builtin-bitcode" "[[DEVICELIB_DIR]]oclc_wavefrontsize64_on.bc"
+// ALL-SAME: "-mlink-builtin-bitcode" "[[DEVICELIB_DIR]]oclc_isa_version_{{[0-9]+}}.bc"
 // INST-SAME: "-mlink-builtin-bitcode" "{{.*}}instrument.bc"
 
 // FAST: "-mlink-builtin-bitcode" "{{.*}}oclc_daz_opt_off.bc"

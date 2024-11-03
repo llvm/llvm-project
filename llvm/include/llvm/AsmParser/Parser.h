@@ -29,7 +29,7 @@ struct SlotMapping;
 class SMDiagnostic;
 class Type;
 
-typedef llvm::function_ref<std::optional<std::string>(StringRef)>
+typedef llvm::function_ref<std::optional<std::string>(StringRef, StringRef)>
     DataLayoutCallbackTy;
 
 /// This function is a main interface to the LLVM Assembly Parser. It parses
@@ -86,7 +86,7 @@ struct ParsedModuleAndIndex {
 ParsedModuleAndIndex parseAssemblyFileWithIndex(
     StringRef Filename, SMDiagnostic &Err, LLVMContext &Context,
     SlotMapping *Slots = nullptr,
-    DataLayoutCallbackTy DataLayoutCallback = [](StringRef) {
+    DataLayoutCallbackTy DataLayoutCallback = [](StringRef, StringRef) {
       return std::nullopt;
     });
 
@@ -127,7 +127,7 @@ parseSummaryIndexAssemblyString(StringRef AsmString, SMDiagnostic &Err);
 std::unique_ptr<Module> parseAssembly(
     MemoryBufferRef F, SMDiagnostic &Err, LLVMContext &Context,
     SlotMapping *Slots = nullptr,
-    DataLayoutCallbackTy DataLayoutCallback = [](StringRef) {
+    DataLayoutCallbackTy DataLayoutCallback = [](StringRef, StringRef) {
       return std::nullopt;
     });
 
@@ -169,7 +169,7 @@ parseSummaryIndexAssembly(MemoryBufferRef F, SMDiagnostic &Err);
 bool parseAssemblyInto(
     MemoryBufferRef F, Module *M, ModuleSummaryIndex *Index, SMDiagnostic &Err,
     SlotMapping *Slots = nullptr,
-    DataLayoutCallbackTy DataLayoutCallback = [](StringRef) {
+    DataLayoutCallbackTy DataLayoutCallback = [](StringRef, StringRef) {
       return std::nullopt;
     });
 

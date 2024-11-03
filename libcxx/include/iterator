@@ -719,7 +719,6 @@ template <class E> constexpr const E* data(initializer_list<E> il) noexcept;    
 #include <__memory/pointer_traits.h>
 #include <cstddef>
 #include <initializer_list>
-#include <type_traits>
 #include <version>
 
 // standard-mandated includes
@@ -735,6 +734,7 @@ template <class E> constexpr const E* data(initializer_list<E> il) noexcept;    
 #if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 20
 #  include <exception>
 #  include <new>
+#  include <type_traits>
 #  include <typeinfo>
 #  include <utility>
 #endif

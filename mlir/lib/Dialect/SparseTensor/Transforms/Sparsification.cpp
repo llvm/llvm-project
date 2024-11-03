@@ -10,7 +10,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "CodegenEnv.h"
 #include "CodegenUtils.h"
+#include "LoopEmitter.h"
 
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
@@ -31,12 +33,13 @@
 #include "mlir/IR/Matchers.h"
 #include "mlir/IR/TensorEncoding.h"
 #include "llvm/ADT/SmallBitVector.h"
+#include <optional>
 
 using namespace mlir;
 using namespace mlir::sparse_tensor;
 
 //===----------------------------------------------------------------------===//
-// Declarations of data structures.
+// Declarations
 //===----------------------------------------------------------------------===//
 
 namespace {
@@ -47,100 +50,6 @@ enum SortMask {
   kIncludeDense = 0x1,
   kIncludeUndef = 0x2,
   kIncludeAll = 0x3
-};
-
-/// Reduction kinds.
-enum Reduction { kNoReduc, kSum, kProduct, kAnd, kOr, kXor, kCustom };
-
-/// Code generation environment. This structure aggregates a number
-/// of data structures needed during code generation. Such an environment
-/// simplifies passing around data during sparsification (rather than
-/// passing around all the individual compoments where needed).
-//
-// TODO: refactor further, move into own file
-//
-struct CodeGenEnv {
-  CodeGenEnv(linalg::GenericOp linop, SparsificationOptions opts,
-             unsigned numTensors, unsigned numLoops, unsigned numFilterLoops)
-      : linalgOp(linop), options(opts), topSort(),
-        merger(numTensors, numLoops, numFilterLoops), loopEmitter(nullptr),
-        redExp(-1u), redKind(kNoReduc), redCustom(-1u), sparseOut(nullptr) {}
-
-  // Start emitting.
-  void startEmit(SparseTensorLoopEmitter *le) {
-    assert(!loopEmitter && "must only start emitting once");
-    loopEmitter = le;
-    if (sparseOut) {
-      insChain = sparseOut->get();
-      merger.setHasSparseOut(true);
-    }
-  }
-
-  // Delegate methods to merger.
-  TensorExp &exp(unsigned e) { return merger.exp(e); }
-  LatPoint &lat(unsigned l) { return merger.lat(l); }
-  SmallVector<unsigned> &set(unsigned s) { return merger.set(s); }
-  DimLevelType dimLevelType(unsigned t, unsigned i) const {
-    return merger.getDimLevelType(t, i);
-  }
-  DimLevelType dimLevelType(unsigned b) const {
-    return merger.getDimLevelType(b);
-  }
-  bool isFilterLoop(unsigned i) const { return merger.isFilterLoop(i); }
-
-  // Delegate methods to loop emitter.
-  Value getLoopIV(unsigned i) const { return loopEmitter->getLoopIV(i); }
-  const std::vector<Value> &getValBuffer() const {
-    return loopEmitter->getValBuffer();
-  }
-
-  // Convenience method to slice topsort.
-  ArrayRef<unsigned> getTopSortSlice(size_t n, size_t m) const {
-    return ArrayRef<unsigned>(topSort).slice(n, m);
-  }
-
-  // Convenience method to get current loop stack.
-  ArrayRef<unsigned> getLoopCurStack() const {
-    return getTopSortSlice(0, loopEmitter->getCurrentDepth());
-  }
-
-  // Convenience method to get the IV of the given loop index.
-  Value getLoopIdxValue(size_t loopIdx) const {
-    for (unsigned lv = 0, lve = topSort.size(); lv < lve; lv++)
-      if (topSort[lv] == loopIdx)
-        return getLoopIV(lv);
-    llvm_unreachable("invalid loop index");
-  }
-
-  // TODO: make private
-
-  /// Linalg operation.
-  linalg::GenericOp linalgOp;
-  /// Sparsification options.
-  SparsificationOptions options;
-  // Topological sort.
-  std::vector<unsigned> topSort;
-  /// Merger helper class.
-  Merger merger;
-  /// Loop emitter helper class (keep reference in scope!).
-  /// TODO: move emitter constructor up in time?
-  SparseTensorLoopEmitter *loopEmitter;
-  /// Current reduction, updated during code generation. When indices of a
-  /// reduction are exhausted, all inner loops can use a scalarized reduction.
-  unsigned redExp;
-  Value redVal;
-  Reduction redKind;
-  unsigned redCustom;
-  /// Sparse tensor as output. Implemented either through direct injective
-  /// insertion in lexicographic index order or through access pattern expansion
-  /// in the innermost loop nest (`expValues` through `expCount`).
-  OpOperand *sparseOut;
-  unsigned outerParNest;
-  Value insChain; // bookkeeping for insertion chain
-  Value expValues;
-  Value expFilled;
-  Value expAdded;
-  Value expCount;
 };
 
 /// A helper class that visits an affine expression and tries to find an
@@ -212,16 +121,16 @@ static bool isInvariantAffine(AffineExpr a, ArrayRef<unsigned> loopStack,
 }
 
 /// Determines if affine expression is invariant.
-static bool isInvariantAffine(CodeGenEnv &env, AffineExpr a, unsigned ldx,
+static bool isInvariantAffine(CodegenEnv &env, AffineExpr a, unsigned ldx,
                               bool &atLevel) {
   return isInvariantAffine(a, env.getLoopCurStack(), ldx, atLevel);
 }
 
 /// Helper method to construct a permuted dimension ordering
 /// that adheres to the given topological sort.
-static AffineMap permute(CodeGenEnv &env, AffineMap m) {
-  assert(m.getNumDims() + env.merger.getNumFilterLoops() ==
-             env.topSort.size() &&
+static AffineMap permute(CodegenEnv &env, AffineMap m) {
+  assert(m.getNumDims() + env.merger().getNumFilterLoops() ==
+             env.topSortSize() &&
          "size mismatch");
   // Construct the inverse of `m`; to avoid the asymptotic complexity
   // of calling `m.getPermutedPosition` repeatedly.
@@ -231,14 +140,14 @@ static AffineMap permute(CodeGenEnv &env, AffineMap m) {
   unsigned loopDepth = 1;
 
   // Construct the permutation.
-  while (worklist.any() && loopDepth <= env.topSort.size()) {
+  while (worklist.any() && loopDepth <= env.topSortSize()) {
     unsigned preSize = perm.size();
     for (auto dim : worklist.set_bits()) {
       bool atLevel = false;
       if (m.getResult(dim).isa<AffineConstantExpr>() ||
           (isInvariantAffine(m.getResult(dim),
                              env.getTopSortSlice(0, loopDepth),
-                             env.topSort[loopDepth - 1], atLevel) &&
+                             env.topSortAt(loopDepth - 1), atLevel) &&
            atLevel)) {
         // If the matching affine is constant expression or just become
         // invariant. We can visit the dimension now without breaking the
@@ -256,7 +165,7 @@ static AffineMap permute(CodeGenEnv &env, AffineMap m) {
   }
 
   assert(perm.size() == numResults);
-  return AffineMap::getPermutationMap(perm, env.linalgOp.getContext());
+  return AffineMap::getPermutationMap(perm, env.op().getContext());
 }
 
 /// Helper method to inspect affine expressions. Rejects cases where the
@@ -346,24 +255,24 @@ static unsigned getNumCompoundAffineOnSparseDims(linalg::GenericOp op) {
 /// Returns true if the sparse annotations and affine subscript
 /// expressions of all tensors are admissible. Returns false if
 /// no annotations are found or inadmissible constructs occur.
-static bool findSparseAnnotations(CodeGenEnv &env) {
+static bool findSparseAnnotations(CodegenEnv &env) {
   bool annotated = false;
-  unsigned filterLdx = env.merger.getFilterLoopStartingIdx();
-  for (OpOperand &t : env.linalgOp->getOpOperands()) {
-    auto map = env.linalgOp.getMatchingIndexingMap(&t);
+  unsigned filterLdx = env.merger().getFilterLoopStartingIdx();
+  for (OpOperand &t : env.op()->getOpOperands()) {
+    auto map = env.op().getMatchingIndexingMap(&t);
     auto enc = getSparseTensorEncoding(t.get().getType());
     if (enc)
       annotated = true;
-    assert(map.getNumResults() == env.linalgOp.getRank(&t));
+    assert(map.getNumResults() == env.op().getRank(&t));
     for (unsigned d = 0, rank = map.getNumResults(); d < rank; d++) {
       unsigned tensor = t.getOperandNumber();
       AffineExpr a = map.getResult(toOrigDim(enc, d));
-      if (!findAffine(env.merger, tensor, d, a, getDimLevelType(enc, d),
+      if (!findAffine(env.merger(), tensor, d, a, getDimLevelType(enc, d),
                       filterLdx))
         return false; // inadmissible affine expression
     }
   }
-  assert(filterLdx == env.merger.getNumLoops());
+  assert(filterLdx == env.merger().getNumLoops());
   return annotated;
 }
 
@@ -371,7 +280,7 @@ static bool findSparseAnnotations(CodeGenEnv &env) {
 /// as we use adj matrix for the graph.
 /// The sorted result will put the first Reduction iterator to the
 /// latest possible index.
-static bool topSortOptimal(CodeGenEnv &env, unsigned n,
+static bool topSortOptimal(CodegenEnv &env, unsigned n,
                            ArrayRef<utils::IteratorType> iteratorTypes,
                            std::vector<unsigned> &inDegree,
                            std::vector<std::vector<bool>> &adjM) {
@@ -380,7 +289,7 @@ static bool topSortOptimal(CodeGenEnv &env, unsigned n,
   std::vector<unsigned> filterIt; // filter loop with 0 degree
   for (unsigned i = 0; i < n; i++) {
     if (inDegree[i] == 0) {
-      if (env.isFilterLoop(i))
+      if (env.merger().isFilterLoop(i))
         filterIt.push_back(i);
       else if (linalg::isReductionIterator(iteratorTypes[i]))
         redIt.push_back(i);
@@ -411,12 +320,12 @@ static bool topSortOptimal(CodeGenEnv &env, unsigned n,
     //        O(X) computation  => O(NK+NMX) time complexity
     auto &it = !filterIt.empty() ? filterIt : (!parIt.empty() ? parIt : redIt);
     auto src = it.back();
-    env.topSort.push_back(src);
+    env.topSortPushBack(src);
     it.pop_back();
     // Update in-degree, and push 0-degree node into worklist.
     for (unsigned dst = 0; dst < n; dst++) {
       if (adjM[src][dst] && --inDegree[dst] == 0) {
-        if (env.isFilterLoop(dst))
+        if (env.merger().isFilterLoop(dst))
           filterIt.push_back(dst);
         else if (linalg::isReductionIterator(iteratorTypes[dst]))
           redIt.push_back(dst);
@@ -425,7 +334,7 @@ static bool topSortOptimal(CodeGenEnv &env, unsigned n,
       }
     }
   }
-  return env.topSort.size() == n;
+  return env.topSortSize() == n;
 }
 
 /// Helper method to add all constraints from the indices in one affine
@@ -437,8 +346,8 @@ static bool topSortOptimal(CodeGenEnv &env, unsigned n,
 /// tidx < a = (i0 + i1) => tidx < i0, tidx < i1.
 static void addAffineOrderings(std::vector<std::vector<bool>> &adjM,
                                std::vector<unsigned> &inDegree, AffineExpr a,
-                               AffineExpr b, Optional<unsigned> fidx,
-                               Optional<unsigned> tidx) {
+                               AffineExpr b, std::optional<unsigned> fidx,
+                               std::optional<unsigned> tidx) {
   if (!a && !b) {
     // Recursion leaf.
     assert(fidx && tidx);
@@ -478,9 +387,9 @@ static void addAffineOrderings(std::vector<std::vector<bool>> &adjM,
 }
 
 static void tryLoosenAffineDenseConstraints(linalg::GenericOp op,
-                                            Optional<unsigned> &fldx,
+                                            std::optional<unsigned> &fldx,
                                             AffineExpr &fa,
-                                            Optional<unsigned> &tldx,
+                                            std::optional<unsigned> &tldx,
                                             AffineExpr &ta) {
   // We use a heuristic here to only pick one dim expression from each
   // compound affine expression to establish the order between two dense
@@ -517,21 +426,20 @@ static void tryLoosenAffineDenseConstraints(linalg::GenericOp op,
 /// along fixed dimensions. Even for dense storage formats, however, the
 /// natural index order yields innermost unit-stride access with better
 /// spatial locality.
-static bool computeIterationGraph(CodeGenEnv &env, unsigned mask,
+static bool computeIterationGraph(CodegenEnv &env, unsigned mask,
                                   OpOperand *skip = nullptr) {
   // Set up an n x n from/to adjacency matrix of the iteration graph
   // for the implicit loop indices i_0 .. i_n-1.
-  unsigned n = env.merger.getNumLoops();
+  unsigned n = env.merger().getNumLoops();
   std::vector<std::vector<bool>> adjM(n, std::vector<bool>(n, false));
   std::vector<unsigned> inDegree(n, 0); // in-degree of each node.
-  auto iteratorTypes = env.linalgOp.getIteratorTypesArray();
+  auto iteratorTypes = env.op().getIteratorTypesArray();
   // Iterate over the indexing maps of every tensor in the tensor expression.
-  for (OpOperand &t : env.linalgOp->getOpOperands()) {
+  for (OpOperand &t : env.op()->getOpOperands()) {
     // Get map and encoding.
-    auto map = env.linalgOp.getMatchingIndexingMap(&t);
+    auto map = env.op().getMatchingIndexingMap(&t);
     auto enc = getSparseTensorEncoding(t.get().getType());
-    assert(map.getNumDims() + getNumCompoundAffineOnSparseDims(env.linalgOp) ==
-           n);
+    assert(map.getNumDims() + getNumCompoundAffineOnSparseDims(env.op()) == n);
     // Skip dense tensor constraints when not requested.
     if (!(mask & SortMask::kIncludeDense) && !enc)
       continue;
@@ -541,11 +449,12 @@ static bool computeIterationGraph(CodeGenEnv &env, unsigned mask,
     // on the loop indices if no explicit dimension ordering is given.
     for (unsigned d = 0, rank = map.getNumResults(); d < rank; d++) {
       AffineExpr ta = map.getResult(toOrigDim(enc, d));
-      Optional<unsigned> tldx = env.merger.getLoopIdx(t.getOperandNumber(), d);
+      std::optional<unsigned> tldx =
+          env.merger().getLoopIdx(t.getOperandNumber(), d);
 
       // Filter loops should be constructed after all the dependent loops,
       // i.e., d0 + d1 < filter_loop(d0 + d1)
-      if (tldx && env.isFilterLoop(*tldx)) {
+      if (tldx && env.merger().isFilterLoop(*tldx)) {
         assert(!ta.isa<AffineDimExpr>() &&
                !isDenseDLT(getDimLevelType(enc, d)));
         addAffineOrderings(adjM, inDegree, ta, AffineExpr(), std::nullopt,
@@ -564,8 +473,8 @@ static bool computeIterationGraph(CodeGenEnv &env, unsigned mask,
 
       if (d > 0) {
         AffineExpr fa = map.getResult(toOrigDim(enc, d - 1));
-        Optional<unsigned> fldx =
-            env.merger.getLoopIdx(t.getOperandNumber(), d - 1);
+        std::optional<unsigned> fldx =
+            env.merger().getLoopIdx(t.getOperandNumber(), d - 1);
 
         // Applying order constraints on every pair of dimExpr between two
         // compound affine expressions can sometime too strict:
@@ -573,7 +482,7 @@ static bool computeIterationGraph(CodeGenEnv &env, unsigned mask,
         // It is totally fine to have loop sequence d0->d2->d1->d3 instead of
         // requiring d0 < d2, d1 < d2, d0 < d3, d1 < d3.
         if (!(mask & SortMask::kIncludeDense))
-          tryLoosenAffineDenseConstraints(env.linalgOp, fldx, fa, tldx, ta);
+          tryLoosenAffineDenseConstraints(env.op(), fldx, fa, tldx, ta);
 
         // (d0 + d1) < (d2 + d3), or
         // filter_loop_d-1 < (d2 + d3), or
@@ -588,23 +497,22 @@ static bool computeIterationGraph(CodeGenEnv &env, unsigned mask,
     if (mask & SortMask::kIncludeUndef) {
       unsigned tensor = t.getOperandNumber();
       for (unsigned i = 0; i < n; i++)
-        if (isCompressedDLT(env.dimLevelType(tensor, i)) ||
-            isSingletonDLT(env.dimLevelType(tensor, i))) {
+        if (isCompressedDLT(env.dlt(tensor, i)) ||
+            isSingletonDLT(env.dlt(tensor, i))) {
           for (unsigned j = 0; j < n; j++)
-            if (isUndefDLT(env.dimLevelType(tensor, j))) {
+            if (isUndefDLT(env.dlt(tensor, j))) {
               adjM[i][j] = true;
               inDegree[j]++;
             }
         } else {
-          assert(isDenseDLT(env.dimLevelType(tensor, i)) ||
-                 isUndefDLT(env.dimLevelType(tensor, i)));
+          assert(isDenseDLT(env.dlt(tensor, i)) ||
+                 isUndefDLT(env.dlt(tensor, i)));
         }
     }
   }
   // Topologically sort the iteration graph to determine loop order.
   // Report failure for a cyclic iteration graph.
-  env.topSort.clear();
-  env.topSort.reserve(n);
+  env.topSortClear(n);
   return topSortOptimal(env, n, iteratorTypes, inDegree, adjM);
 }
 
@@ -614,25 +522,27 @@ static bool isMaterializing(Value val) {
          val.getDefiningOp<bufferization::AllocTensorOp>();
 }
 
-/// Returns true when the tensor expression is admissible for env.
+/// Returns true when the tensor expression is admissible for codegen.
 /// Since all sparse input tensors are admissible, we just need to check
 /// whether the out tensor in the tensor expression codegen is admissible.
 /// Sets `sparseOut` to the tensor and `outerParNest` to the outer injective
 /// nesting depth when a "truly dynamic" sparse tensor output occurs.
-static bool isAdmissibleTensorExp(CodeGenEnv &env, unsigned exp) {
+static bool isAdmissibleTensorExp(CodegenEnv &env, unsigned exp,
+                                  OpOperand **sparseOut,
+                                  unsigned *outerParNest) {
   // We reject any expression that makes a reduction from `-outTensor`, as those
   // expressions create a dependency between the current iteration (i) and the
   // previous iteration (i-1). It would require iterating over the whole
   // coordinate space, which prevent exploiting sparsity for faster code.
-  for (utils::IteratorType it : env.linalgOp.getIteratorTypesArray()) {
+  for (utils::IteratorType it : env.op().getIteratorTypesArray()) {
     if (it == utils::IteratorType::reduction) {
-      if (env.merger.hasNegateOnOut(exp))
+      if (env.merger().hasNegateOnOut(exp))
         return false;
       break;
     }
   }
 
-  OpOperand *lhs = env.linalgOp.getDpsInitOperand(0);
+  OpOperand *lhs = env.op().getDpsInitOperand(0);
   unsigned tensor = lhs->getOperandNumber();
   auto enc = getSparseTensorEncoding(lhs->get().getType());
   // An non-annotated output tensor is assumed dense, and becomes a random
@@ -643,40 +553,39 @@ static bool isAdmissibleTensorExp(CodeGenEnv &env, unsigned exp) {
   // access 1-dim memref. Also admissible since insertions cannot occur.
   bool allDense = true;
   unsigned numLoops =
-      env.merger.getNumLoops(); // numNativeLoops + numFilterLoops
-  for (unsigned i = 0; i < env.merger.getNumLoops(); i++)
-    if (isCompressedDLT(env.dimLevelType(tensor, i)) ||
-        isSingletonDLT(env.dimLevelType(tensor, i))) {
+      env.merger().getNumLoops(); // numNativeLoops + numFilterLoops
+  for (unsigned i = 0; i < env.merger().getNumLoops(); i++)
+    if (isCompressedDLT(env.dlt(tensor, i)) ||
+        isSingletonDLT(env.dlt(tensor, i))) {
       allDense = false;
       break;
     } else {
-      assert(isDenseDLT(env.dimLevelType(tensor, i)) ||
-             isUndefDLT(env.dimLevelType(tensor, i)));
+      assert(isDenseDLT(env.dlt(tensor, i)) || isUndefDLT(env.dlt(tensor, i)));
     }
   if (allDense)
     return true;
 
   // TODO: support compound affine expression on sparse output.
-  if (getNumCompoundAffineOnSparseDims(env.linalgOp.getMatchingIndexingMap(lhs),
+  if (getNumCompoundAffineOnSparseDims(env.op().getMatchingIndexingMap(lhs),
                                        lhs->get()) != 0)
     return false;
 
   // A tensor expression with a sparse output tensor that changes its values
   // but not its nonzero structure, an operation called "simply dynamic" in
   // [Bik96,Ch9], is also admissible without special env.
-  if (env.merger.isSingleCondition(tensor, exp))
+  if (env.merger().isSingleCondition(tensor, exp))
     return true;
 
   // Accept "truly dynamic" if the output tensor materializes uninitialized
   // into the computation and insertions occur in lexicographic index order.
   if (isMaterializing(lhs->get())) {
-    auto iteratorTypes = env.linalgOp.getIteratorTypesArray();
+    auto iteratorTypes = env.op().getIteratorTypesArray();
     unsigned nest = 0;
     for (unsigned i = 0; i < numLoops; i++) {
-      if (!env.isFilterLoop(env.topSort[i])) {
+      if (!env.merger().isFilterLoop(env.topSortAt(i))) {
         // We only count non-filter loops as filter loops should be considered
         // as a special type of parallel loops.
-        if (linalg::isReductionIterator(iteratorTypes[env.topSort[i]]))
+        if (linalg::isReductionIterator(iteratorTypes[env.topSortAt(i)]))
           break; // terminate at first reduction
         nest++;
       }
@@ -684,9 +593,9 @@ static bool isAdmissibleTensorExp(CodeGenEnv &env, unsigned exp) {
     // Determine admissible dynamic insertion situations:
     // (1) fully injective, since there are no reductions,
     // (2) admissible 1-d expansion in innermost dimension.
-    if (nest >= env.linalgOp.getRank(lhs) - 1) {
-      env.sparseOut = lhs;
-      env.outerParNest = nest;
+    if (nest >= env.op().getRank(lhs) - 1) {
+      *sparseOut = lhs;
+      *outerParNest = nest;
       return true;
     }
   }
@@ -694,86 +603,16 @@ static bool isAdmissibleTensorExp(CodeGenEnv &env, unsigned exp) {
 }
 
 //===----------------------------------------------------------------------===//
-// Sparse compiler synthesis methods (reductions).
-//===----------------------------------------------------------------------===//
-
-/// Maps operation to reduction.
-static Reduction getReduction(Kind kind) {
-  switch (kind) {
-  case Kind::kAddF:
-  case Kind::kAddC:
-  case Kind::kAddI:
-  case Kind::kSubF:
-  case Kind::kSubC:
-  case Kind::kSubI:
-    return kSum;
-  case Kind::kMulF:
-  case Kind::kMulC:
-  case Kind::kMulI:
-    return kProduct;
-  case Kind::kAndI:
-    return kAnd;
-  case Kind::kOrI:
-    return kOr;
-  case Kind::kXorI:
-    return kXor;
-  case Kind::kReduce:
-    return kCustom;
-  default:
-    llvm_unreachable("unexpected reduction operator");
-  }
-}
-
-/// Updates scalarized reduction value.
-static void updateReduc(CodeGenEnv &env, Value reduc) {
-  assert(env.redKind != kNoReduc);
-  env.redVal = env.exp(env.redExp).val = reduc;
-}
-
-/// Extracts identity from custom reduce.
-static Value getCustomRedId(Operation *op) {
-  return dyn_cast<sparse_tensor::ReduceOp>(op).getIdentity();
-}
-
-//===----------------------------------------------------------------------===//
 // Sparse compiler synthesis methods (statements and expressions).
 //===----------------------------------------------------------------------===//
 
-/// Generates loop boundary statements (entering/exiting loops). The function
-/// passes and updates the reduction value.
-static Optional<Operation *> genLoopBoundary(
-    CodeGenEnv &env,
-    function_ref<Optional<Operation *>(MutableArrayRef<Value> reduc)>
-        callback) {
-  SmallVector<Value> reduc;
-  if (env.redVal)
-    reduc.push_back(env.redVal);
-  if (env.expValues)
-    reduc.push_back(env.expCount);
-  if (env.insChain)
-    reduc.push_back(env.insChain);
-
-  auto r = callback(reduc);
-
-  // Callback should do in-place update on reduction value vector.
-  unsigned i = 0;
-  if (env.redVal)
-    updateReduc(env, reduc[i++]);
-  if (env.expValues)
-    env.expCount = reduc[i++];
-  if (env.insChain)
-    env.insChain = reduc[i];
-
-  return r;
-}
-
 /// Local bufferization of all dense and sparse data structures.
-static void genBuffers(CodeGenEnv &env, OpBuilder &builder) {
-  linalg::GenericOp op = env.linalgOp;
+static void genBuffers(CodegenEnv &env, OpBuilder &builder) {
+  linalg::GenericOp op = env.op();
   Location loc = op.getLoc();
   assert(op.getNumOperands() == op.getNumDpsInputs() + 1);
 
-  env.loopEmitter->initializeLoopEmit(
+  env.emitter().initializeLoopEmit(
       builder, loc,
       /// Generates buffer for the output tensor.
       /// Note that all sparse kernels assume that when all elements are written
@@ -810,8 +649,8 @@ static void genBuffers(CodeGenEnv &env, OpBuilder &builder) {
 }
 
 /// Generates index for load/store on sparse tensor.
-static Value genIndex(CodeGenEnv &env, OpOperand *t) {
-  auto map = env.linalgOp.getMatchingIndexingMap(t);
+static Value genIndex(CodegenEnv &env, OpOperand *t) {
+  auto map = env.op().getMatchingIndexingMap(t);
   auto enc = getSparseTensorEncoding(t->get().getType());
   AffineExpr a = map.getResult(toOrigDim(enc, map.getNumResults() - 1));
   assert(a.getKind() == AffineExprKind::DimId);
@@ -820,72 +659,75 @@ static Value genIndex(CodeGenEnv &env, OpOperand *t) {
 }
 
 /// Generates subscript for load/store on a dense or sparse tensor.
-static Value genSubscript(CodeGenEnv &env, OpBuilder &builder, OpOperand *t,
+static Value genSubscript(CodegenEnv &env, OpBuilder &builder, OpOperand *t,
                           SmallVectorImpl<Value> &args) {
-  linalg::GenericOp op = env.linalgOp;
+  linalg::GenericOp op = env.op();
   unsigned tensor = t->getOperandNumber();
   auto map = op.getMatchingIndexingMap(t);
   auto enc = getSparseTensorEncoding(t->get().getType());
   unsigned rank = map.getNumResults();
   if (enc) {
-    Value pidx = env.loopEmitter->getPidxs()[tensor].back();
+    Value pidx = env.emitter().getPidxs()[tensor].back();
     assert(pidx);
     args.push_back(pidx); // position index
   } else {
     for (unsigned d = 0; d < rank; d++) {
       AffineExpr a = map.getResult(d);
-      args.push_back(env.loopEmitter->genAffine(builder, a, op.getLoc()));
+      args.push_back(env.emitter().genAffine(builder, a, op.getLoc()));
     }
   }
-  return env.getValBuffer()[tensor];
+  return env.emitter().getValBuffer()[tensor];
 }
 
 /// Generates insertion code to implement dynamic tensor load.
-static Value genInsertionLoad(CodeGenEnv &env, OpBuilder &builder,
+static Value genInsertionLoad(CodegenEnv &env, OpBuilder &builder,
                               OpOperand *t) {
-  linalg::GenericOp op = env.linalgOp;
+  linalg::GenericOp op = env.op();
   Location loc = op.getLoc();
   // Direct lexicographic index order, tensor loads as zero.
-  if (!env.expValues) {
+  if (!env.isExpand()) {
     Type tp = getElementTypeOrSelf(t->get().getType());
     return constantZero(builder, loc, tp);
   }
   // Load from expanded access pattern.
   Value index = genIndex(env, t);
-  return builder.create<memref::LoadOp>(loc, env.expValues, index);
+  return builder.create<memref::LoadOp>(loc, env.getExpandValues(), index);
 }
 
 /// Generates insertion code to implement dynamic tensor load for reduction.
-static Value genInsertionLoadReduce(CodeGenEnv &env, OpBuilder &builder,
+static Value genInsertionLoadReduce(CodegenEnv &env, OpBuilder &builder,
                                     OpOperand *t) {
-  linalg::GenericOp op = env.linalgOp;
+  linalg::GenericOp op = env.op();
   Location loc = op.getLoc();
-  Value identity = getCustomRedId(env.exp(env.redCustom).op);
+  Value identity = env.getCustomRedId();
   // Direct lexicographic index order, tensor loads as identity.
-  if (!env.expValues) {
+  if (!env.isExpand())
     return identity;
-  }
   // Load from expanded access pattern if filled, identity otherwise.
+  Value values = env.getExpandValues();
+  Value filled = env.getExpandFilled();
   Value index = genIndex(env, t);
-  Value isFilled = builder.create<memref::LoadOp>(loc, env.expFilled, index);
-  Value valAtIndex = builder.create<memref::LoadOp>(loc, env.expValues, index);
+  Value isFilled = builder.create<memref::LoadOp>(loc, filled, index);
+  Value valAtIndex = builder.create<memref::LoadOp>(loc, values, index);
   return builder.create<arith::SelectOp>(loc, isFilled, valAtIndex, identity);
 }
 
 /// Generates insertion code to implement dynamic tensor store.
-static void genInsertionStore(CodeGenEnv &env, OpBuilder &builder, OpOperand *t,
+static void genInsertionStore(CodegenEnv &env, OpBuilder &builder, OpOperand *t,
                               Value rhs) {
-  linalg::GenericOp op = env.linalgOp;
+  linalg::GenericOp op = env.op();
   Location loc = op.getLoc();
   // Direct insertion in lexicographic index order.
-  if (!env.expValues) {
+  if (!env.isExpand()) {
     unsigned rank = op.getRank(t);
     SmallVector<Value> indices;
     for (unsigned i = 0; i < rank; i++) {
-      assert(env.getLoopIV(i));
-      indices.push_back(env.getLoopIV(i));
+      assert(env.emitter().getLoopIV(i));
+      indices.push_back(env.emitter().getLoopIV(i));
     }
-    env.insChain = builder.create<InsertOp>(loc, rhs, env.insChain, indices);
+    Value chain = env.getInsertionChain();
+    env.updateInsertionChain(
+        builder.create<InsertOp>(loc, rhs, chain, indices));
     return;
   }
   // Generates insertion code along expanded access pattern.
@@ -894,75 +736,78 @@ static void genInsertionStore(CodeGenEnv &env, OpBuilder &builder, OpOperand *t,
   //     expAdded[inserts++] = i
   //   endif
   //   values[i] = rhs
+  Value values = env.getExpandValues();
+  Value filled = env.getExpandFilled();
+  Value added = env.getExpandAdded();
+  Value count = env.getExpandCount();
   Value index = genIndex(env, t);
   Value fval = constantI1(builder, loc, false);
   Value tval = constantI1(builder, loc, true);
   // If statement.
-  Value filled = builder.create<memref::LoadOp>(loc, env.expFilled, index);
+  Value isFilled = builder.create<memref::LoadOp>(loc, filled, index);
   Value cond = builder.create<arith::CmpIOp>(loc, arith::CmpIPredicate::eq,
-                                             filled, fval);
+                                             isFilled, fval);
   scf::IfOp ifOp = builder.create<scf::IfOp>(loc, builder.getIndexType(), cond,
                                              /*else=*/true);
   // True branch.
   builder.setInsertionPointToStart(&ifOp.getThenRegion().front());
-  builder.create<memref::StoreOp>(loc, tval, env.expFilled, index);
-  builder.create<memref::StoreOp>(loc, index, env.expAdded, env.expCount);
+  builder.create<memref::StoreOp>(loc, tval, filled, index);
+  builder.create<memref::StoreOp>(loc, index, added, count);
   Value one = constantIndex(builder, loc, 1);
-  Value add = builder.create<arith::AddIOp>(loc, env.expCount, one);
+  Value add = builder.create<arith::AddIOp>(loc, count, one);
   builder.create<scf::YieldOp>(loc, add);
   // False branch.
   builder.setInsertionPointToStart(&ifOp.getElseRegion().front());
-  builder.create<scf::YieldOp>(loc, env.expCount);
+  builder.create<scf::YieldOp>(loc, count);
   builder.setInsertionPointAfter(ifOp);
   // Value assignment.
-  env.expCount = ifOp.getResult(0);
-  builder.create<memref::StoreOp>(loc, rhs, env.expValues, index);
+  env.updateExpandCount(ifOp.getResult(0));
+  builder.create<memref::StoreOp>(loc, rhs, values, index);
 }
 
 /// Generates a load on a dense or sparse tensor.
-static Value genTensorLoad(CodeGenEnv &env, OpBuilder &builder, unsigned exp) {
+static Value genTensorLoad(CodegenEnv &env, OpBuilder &builder, unsigned exp) {
   // Test if the load was hoisted to a higher loop nest.
   Value val = env.exp(exp).val;
   if (val)
     return val;
 
   // Load during insertion.
-  linalg::GenericOp op = env.linalgOp;
-  OpOperand &t = op->getOpOperand(env.exp(exp).tensor);
-  if (&t == env.sparseOut) {
-    if (env.redCustom != -1u)
-      return genInsertionLoadReduce(env, builder, &t);
-    return genInsertionLoad(env, builder, &t);
+  linalg::GenericOp op = env.op();
+  OpOperand *t = &op->getOpOperand(env.exp(exp).tensor);
+  if (env.isSparseOutput(t)) {
+    if (env.isCustomReduc())
+      return genInsertionLoadReduce(env, builder, t);
+    return genInsertionLoad(env, builder, t);
   }
   // Actual load.
   SmallVector<Value> args;
-  Value ptr = genSubscript(env, builder, &t, args);
+  Value ptr = genSubscript(env, builder, t, args);
   return builder.create<memref::LoadOp>(op.getLoc(), ptr, args);
 }
 
 /// Generates a store on a dense or sparse tensor.
-static void genTensorStore(CodeGenEnv &env, OpBuilder &builder, unsigned exp,
+static void genTensorStore(CodegenEnv &env, OpBuilder &builder, unsigned exp,
                            Value rhs) {
-  linalg::GenericOp op = env.linalgOp;
+  linalg::GenericOp op = env.op();
   Location loc = op.getLoc();
   // Test if this is a scalarized reduction.
-  if (env.redVal) {
-    updateReduc(env, rhs);
+  if (env.isReduc()) {
+    env.updateReduc(rhs);
     return;
   }
   // Store during insertion.
   OpOperand *t = op.getDpsInitOperand(0);
-  if (t == env.sparseOut) {
+  if (env.isSparseOutput(t)) {
     if (!rhs) {
       // Only unary and binary are allowed to return uninitialized rhs
       // to indicate missing output.
       assert(env.exp(exp).kind == kUnary || env.exp(exp).kind == kBinary);
     } else if (env.exp(exp).kind == kSelect) {
       // Select operation insertion.
-      Value insChain = env.insChain;
-      assert(insChain);
-      scf::IfOp ifOp = builder.create<scf::IfOp>(loc, insChain.getType(), rhs,
-                                                 /*else=*/true);
+      Value chain = env.getInsertionChain();
+      scf::IfOp ifOp =
+          builder.create<scf::IfOp>(loc, chain.getType(), rhs, /*else=*/true);
       builder.setInsertionPointToStart(&ifOp.getThenRegion().front());
       // Existing value was preserved to be used here.
       assert(env.exp(exp).val);
@@ -970,12 +815,13 @@ static void genTensorStore(CodeGenEnv &env, OpBuilder &builder, unsigned exp,
       genInsertionStore(env, builder, t, v0);
       env.exp(exp).val = Value();
       // Yield modified insertion chain along true branch.
-      builder.create<scf::YieldOp>(op.getLoc(), env.insChain);
+      Value mchain = env.getInsertionChain();
+      builder.create<scf::YieldOp>(op.getLoc(), mchain);
       // Yield original insertion chain along false branch.
       builder.setInsertionPointToStart(&ifOp.getElseRegion().front());
-      builder.create<scf::YieldOp>(loc, insChain);
+      builder.create<scf::YieldOp>(loc, chain);
       // Done with if statement.
-      env.insChain = ifOp->getResult(0);
+      env.updateInsertionChain(ifOp->getResult(0));
       builder.setInsertionPointAfter(ifOp);
     } else {
       genInsertionStore(env, builder, t, rhs);
@@ -989,12 +835,12 @@ static void genTensorStore(CodeGenEnv &env, OpBuilder &builder, unsigned exp,
 }
 
 /// Generates an invariant value.
-inline static Value genInvariantValue(CodeGenEnv &env, unsigned exp) {
+inline static Value genInvariantValue(CodegenEnv &env, unsigned exp) {
   return env.exp(exp).val;
 }
 
 /// Generates an index value.
-inline static Value genIndexValue(CodeGenEnv &env, unsigned idx) {
+inline static Value genIndexValue(CodegenEnv &env, unsigned idx) {
   return env.getLoopIdxValue(idx);
 }
 
@@ -1003,7 +849,7 @@ inline static Value genIndexValue(CodeGenEnv &env, unsigned idx) {
 /// branch or otherwise invariantly defined outside the loop nest, with the
 /// exception of index computations, which need to be relinked to actual
 /// inlined cloned code.
-static Value relinkBranch(CodeGenEnv &env, RewriterBase &rewriter, Block *block,
+static Value relinkBranch(CodegenEnv &env, RewriterBase &rewriter, Block *block,
                           Value e, unsigned ldx) {
   if (Operation *def = e.getDefiningOp()) {
     if (auto indexOp = dyn_cast<linalg::IndexOp>(def))
@@ -1018,9 +864,9 @@ static Value relinkBranch(CodeGenEnv &env, RewriterBase &rewriter, Block *block,
 }
 
 /// Recursively generates tensor expression.
-static Value genExp(CodeGenEnv &env, RewriterBase &rewriter, unsigned exp,
+static Value genExp(CodegenEnv &env, RewriterBase &rewriter, unsigned exp,
                     unsigned ldx) {
-  linalg::GenericOp op = env.linalgOp;
+  linalg::GenericOp op = env.op();
   Location loc = op.getLoc();
 
   if (exp == -1u)
@@ -1032,15 +878,12 @@ static Value genExp(CodeGenEnv &env, RewriterBase &rewriter, unsigned exp,
   if (env.exp(exp).kind == Kind::kIndex)
     return genIndexValue(env, env.exp(exp).index);
 
-  // Make custom reduction identity accessible for expanded access pattern.
-  if (env.exp(exp).kind == Kind::kReduce) {
-    assert(env.redCustom == -1u);
-    env.redCustom = exp;
-  }
+  if (env.exp(exp).kind == Kind::kReduce)
+    env.startCustomReduc(exp); // enter custom
 
   Value v0 = genExp(env, rewriter, env.exp(exp).children.e0, ldx);
   Value v1 = genExp(env, rewriter, env.exp(exp).children.e1, ldx);
-  Value ee = env.merger.buildExp(rewriter, loc, exp, v0, v1);
+  Value ee = env.merger().buildExp(rewriter, loc, exp, v0, v1);
   if (ee && (env.exp(exp).kind == Kind::kUnary ||
              env.exp(exp).kind == Kind::kBinary ||
              env.exp(exp).kind == Kind::kBinaryBranch ||
@@ -1048,33 +891,34 @@ static Value genExp(CodeGenEnv &env, RewriterBase &rewriter, unsigned exp,
              env.exp(exp).kind == Kind::kSelect))
     ee = relinkBranch(env, rewriter, ee.getParentBlock(), ee, ldx);
 
+  if (env.exp(exp).kind == Kind::kReduce)
+    env.endCustomReduc(); // exit custom
+
   if (env.exp(exp).kind == kSelect) {
     assert(!env.exp(exp).val);
     env.exp(exp).val = v0; // Preserve value for later use.
-  } else if (env.exp(exp).kind == Kind::kReduce) {
-    assert(env.redCustom != -1u);
-    env.redCustom = -1u;
   }
 
   return ee;
 }
 
 /// Hoists loop invariant tensor loads for which indices have been exhausted.
-static void genInvariants(CodeGenEnv &env, OpBuilder &builder, unsigned exp,
-                          unsigned ldx, bool atStart, unsigned last = -1u) {
+static void genInvariants(CodegenEnv &env, OpBuilder &builder, unsigned exp,
+                          unsigned ldx, bool atStart) {
   if (exp == -1u)
     return;
   if (env.exp(exp).kind == Kind::kTensor) {
     // Inspect tensor indices.
     bool atLevel = ldx == -1u;
-    linalg::GenericOp op = env.linalgOp;
+    linalg::GenericOp op = env.op();
     OpOperand &t = op->getOpOperand(env.exp(exp).tensor);
     auto map = op.getMatchingIndexingMap(&t);
     auto enc = getSparseTensorEncoding(t.get().getType());
     for (unsigned d = 0, rank = map.getNumResults(); d < rank; d++) {
       AffineExpr a = map.getResult(toOrigDim(enc, d));
-      Optional<unsigned> sldx = env.merger.getLoopIdx(t.getOperandNumber(), d);
-      if (sldx && env.isFilterLoop(*sldx)) {
+      std::optional<unsigned> sldx =
+          env.merger().getLoopIdx(t.getOperandNumber(), d);
+      if (sldx && env.merger().isFilterLoop(*sldx)) {
         if (!env.getLoopIdxValue(*sldx))
           // The filter loops has not been constructed.
           return;
@@ -1090,18 +934,11 @@ static void genInvariants(CodeGenEnv &env, OpBuilder &builder, unsigned exp,
     if (lhs == &t) {
       // Start or end a scalarized reduction
       if (atStart) {
-        Kind kind = env.exp(last).kind;
-        Value load = kind == Kind::kReduce ? getCustomRedId(env.exp(last).op)
-                                           : genTensorLoad(env, builder, exp);
-        env.redKind = getReduction(kind);
-        env.redExp = exp;
-        updateReduc(env, load);
+        Value load = env.isCustomReduc() ? env.getCustomRedId()
+                                         : genTensorLoad(env, builder, exp);
+        env.startReduc(exp, load);
       } else {
-        Value redVal = env.redVal;
-        updateReduc(env, Value());
-        env.redExp = -1u;
-        env.redKind = kNoReduc;
-        genTensorStore(env, builder, exp, redVal);
+        genTensorStore(env, builder, exp, env.endReduc());
       }
     } else {
       // Start or end loop invariant hoisting of a tensor load.
@@ -1112,21 +949,25 @@ static void genInvariants(CodeGenEnv &env, OpBuilder &builder, unsigned exp,
     // Traverse into the binary operations. Note that we only hoist
     // tensor loads, since subsequent MLIR/LLVM passes know how to
     // deal with all other kinds of derived loop invariants.
+    if (env.exp(exp).kind == Kind::kReduce)
+      env.startCustomReduc(exp); // enter custom
     unsigned e0 = env.exp(exp).children.e0;
     unsigned e1 = env.exp(exp).children.e1;
-    genInvariants(env, builder, e0, ldx, atStart, exp);
-    genInvariants(env, builder, e1, ldx, atStart, exp);
+    genInvariants(env, builder, e0, ldx, atStart);
+    genInvariants(env, builder, e1, ldx, atStart);
+    if (env.exp(exp).kind == Kind::kReduce)
+      env.endCustomReduc(); // exit custom
   }
 }
 
 /// Generates an expanded access pattern in innermost dimension.
-static void genExpansion(CodeGenEnv &env, OpBuilder &builder, unsigned at,
-                         bool atStart) {
-  linalg::GenericOp op = env.linalgOp;
-  OpOperand *lhs = env.sparseOut;
-  if (!lhs || env.outerParNest != op.getRank(lhs) - 1 || at != env.outerParNest)
+static void genExpand(CodegenEnv &env, OpBuilder &builder, unsigned at,
+                      bool atStart) {
+  linalg::GenericOp op = env.op();
+  OpOperand *lhs = op.getDpsInitOperand(0);
+  if (!env.atExpandLevel(lhs, op.getRank(lhs), at))
     return; // not needed at this level
-  assert(env.redVal == nullptr);
+  assert(!env.isReduc());
   // Generate start or end of an expanded access pattern. Note that because
   // an expension does not rely on the ongoing contents of the sparse storage
   // scheme, we can use the original tensor as incoming SSA value (which
@@ -1141,40 +982,38 @@ static void genExpansion(CodeGenEnv &env, OpBuilder &builder, unsigned at,
     Type t2 = MemRefType::get(dynShape, builder.getI1Type());
     Type t3 = MemRefType::get(dynShape, builder.getIndexType());
     Type t4 = builder.getIndexType();
-    auto res =
-        builder.create<ExpandOp>(loc, TypeRange({t1, t2, t3, t4}), tensor);
-    assert(res.getNumResults() == 4);
-    assert(!env.expValues);
-    env.expValues = res.getResult(0);
-    env.expFilled = res.getResult(1);
-    env.expAdded = res.getResult(2);
-    env.expCount = res.getResult(3);
+    auto r = builder.create<ExpandOp>(loc, TypeRange({t1, t2, t3, t4}), tensor);
+    assert(r.getNumResults() == 4);
+    env.startExpand(r.getResult(0), r.getResult(1), r.getResult(2),
+                    r.getResult(3));
   } else {
-    assert(env.expValues);
     SmallVector<Value> indices;
-    for (unsigned i = 0; i < at; i++) {
-      assert(env.getLoopIV(i));
-      indices.push_back(env.getLoopIV(i));
-    }
-    env.insChain = builder.create<CompressOp>(loc, env.expValues, env.expFilled,
-                                              env.expAdded, env.expCount,
-                                              env.insChain, indices);
-    env.expValues = env.expFilled = env.expAdded = env.expCount = Value();
+    for (unsigned i = 0; i < at; i++)
+      indices.push_back(env.emitter().getLoopIV(i));
+    Value values = env.getExpandValues();
+    Value filled = env.getExpandFilled();
+    Value added = env.getExpandAdded();
+    Value count = env.getExpandCount();
+    Value chain = env.getInsertionChain();
+    Value compress = builder.create<CompressOp>(loc, values, filled, added,
+                                                count, chain, indices);
+    env.updateInsertionChain(compress);
+    env.endExpand();
   }
 }
 
 /// Returns parallelization strategy. Any implicit loop in the Linalg
 /// operation that is marked "parallel" is a candidate. Whether it is actually
 /// converted to a parallel operation depends on the requested strategy.
-static bool isParallelFor(CodeGenEnv &env, bool isOuter, bool isSparse) {
+static bool isParallelFor(CodegenEnv &env, bool isOuter, bool isSparse) {
   // Reject parallelization of sparse output.
-  if (env.sparseOut)
+  if (env.hasSparseOutput())
     return false;
   // Parallel loops on tensor expansion can cause data races.
-  if (env.expCount)
+  if (env.isExpand())
     return false;
   // Inspect strategy.
-  switch (env.options.parallelizationStrategy) {
+  switch (env.options().parallelizationStrategy) {
   case SparseParallelizationStrategy::kNone:
     return false;
   case SparseParallelizationStrategy::kDenseOuterLoop:
@@ -1190,48 +1029,49 @@ static bool isParallelFor(CodeGenEnv &env, bool isOuter, bool isSparse) {
 }
 
 /// Generates a for-loop on a single index.
-static Operation *genFor(CodeGenEnv &env, OpBuilder &builder, bool isOuter,
-                         bool isInner, unsigned idx, size_t tid, size_t dim,
-                         ArrayRef<size_t> extraTids,
-                         ArrayRef<size_t> extraDims) {
-  linalg::GenericOp op = env.linalgOp;
+static Operation *genFor(CodegenEnv &env, OpBuilder &builder, bool isOuter,
+                         bool isInner, unsigned idx, ArrayRef<size_t> tids,
+                         ArrayRef<size_t> dims) {
+  linalg::GenericOp op = env.op();
   Location loc = op.getLoc();
   auto iteratorTypes = op.getIteratorTypesArray();
-  bool isSparse = isCompressedDLT(env.dimLevelType(tid, idx)) ||
-                  isSingletonDLT(env.dimLevelType(tid, idx));
+  bool isSparse = llvm::any_of(tids, [idx, &env](size_t tid) {
+    return isCompressedDLT(env.dlt(tid, idx)) ||
+           isSingletonDLT(env.dlt(tid, idx));
+  });
+
   bool isParallel = isParallelFor(env, isOuter, isSparse);
 
-  Operation *loop = *genLoopBoundary(env, [&](MutableArrayRef<Value> reduc) {
-    if (env.isFilterLoop(idx)) {
-      // extraTids/extraDims must be empty because filter loops only
+  Operation *loop = *env.genLoopBoundary([&](MutableArrayRef<Value> reduc) {
+    if (env.merger().isFilterLoop(idx)) {
+      size_t tid = tids.front(), dim = dims.front();
+      // tids/dims must only have one value because filter loops only
       // corresponding to the one and only sparse tensor level.
-      assert(isSparse && extraTids.empty() && extraDims.empty());
+      assert(isSparse && tids.size() == 1 && dims.size() == 1);
       OpOperand *t = &op->getOpOperand(tid);
       auto enc = getSparseTensorEncoding(t->get().getType());
       // Retrieves the affine expression for the filter loop.
       AffineExpr a =
           op.getMatchingIndexingMap(t).getResult(toOrigDim(enc, dim));
-      return env.loopEmitter->enterFilterLoopOverTensorAtDim(builder, loc, tid,
-                                                             dim, a, reduc);
+      return env.emitter().enterFilterLoopOverTensorAtDim(builder, loc, tid,
+                                                          dim, a, reduc);
     }
-    return env.loopEmitter->enterLoopOverTensorAtDim(
-        builder, loc, tid, dim, reduc, isParallel, extraTids, extraDims);
+    return env.emitter().enterLoopOverTensorAtDim(builder, loc, tids, dims,
+                                                  reduc, isParallel);
   });
   assert(loop);
   return loop;
 }
 
 /// Emit a while-loop for co-iteration over multiple indices.
-static Operation *genWhile(CodeGenEnv &env, OpBuilder &builder, unsigned idx,
-                           bool needsUniv, ArrayRef<size_t> condTids,
-                           ArrayRef<size_t> condDims,
-                           ArrayRef<size_t> extraTids,
-                           ArrayRef<size_t> extraDims) {
-  Operation *loop = *genLoopBoundary(env, [&](MutableArrayRef<Value> reduc) {
-    // Construct the while-loop with a parameter for each index.
-    return env.loopEmitter->enterCoIterationOverTensorsAtDims(
-        builder, env.linalgOp.getLoc(), condTids, condDims, needsUniv, reduc,
-        extraTids, extraDims);
+static Operation *genWhile(CodegenEnv &env, OpBuilder &builder, unsigned idx,
+                           bool needsUniv, ArrayRef<size_t> tids,
+                           ArrayRef<size_t> dims) {
+  Operation *loop = *env.genLoopBoundary([&](MutableArrayRef<Value> reduc) {
+    // Construct the while-loop with a parameter for each
+    // index.
+    return env.emitter().enterCoIterationOverTensorsAtDims(
+        builder, env.op().getLoc(), tids, dims, needsUniv, reduc);
   });
   assert(loop);
   return loop;
@@ -1239,45 +1079,41 @@ static Operation *genWhile(CodeGenEnv &env, OpBuilder &builder, unsigned idx,
 
 /// Generates a for-loop or a while-loop, depending on whether it implements
 /// singleton iteration or co-iteration over the given conjunction.
-static Operation *genLoop(CodeGenEnv &env, OpBuilder &builder, unsigned at,
-                          bool needsUniv, ArrayRef<size_t> condTids,
-                          ArrayRef<size_t> condDims, ArrayRef<size_t> extraTids,
-                          ArrayRef<size_t> extraDims) {
-  assert(condTids.size() == condDims.size());
-  assert(extraTids.size() == extraDims.size());
-  unsigned idx = env.topSort[at];
-  if (condTids.size() == 1) {
+static Operation *genLoop(CodegenEnv &env, OpBuilder &builder, unsigned at,
+                          bool needsUniv, ArrayRef<size_t> tids,
+                          ArrayRef<size_t> dims, bool isFor) {
+  assert(tids.size() == dims.size());
+  unsigned idx = env.topSortAt(at);
+  if (isFor) {
     bool isOuter = at == 0;
-    bool isInner = at == env.topSort.size() - 1;
-    return genFor(env, builder, isOuter, isInner, idx, condTids.front(),
-                  condDims.front(), extraTids, extraDims);
+    bool isInner = at == env.topSortSize() - 1;
+    return genFor(env, builder, isOuter, isInner, idx, tids, dims);
   }
-  return genWhile(env, builder, idx, needsUniv, condTids, condDims, extraTids,
-                  extraDims);
+  return genWhile(env, builder, idx, needsUniv, tids, dims);
 }
 
 /// Generates the induction structure for a while-loop.
-static void finalizeWhileOp(CodeGenEnv &env, OpBuilder &builder, unsigned idx,
+static void finalizeWhileOp(CodegenEnv &env, OpBuilder &builder, unsigned idx,
                             bool needsUniv, BitVector &induction,
                             scf::WhileOp whileOp) {
-  Location loc = env.linalgOp.getLoc();
+  Location loc = env.op().getLoc();
   // Finalize each else branch of all if statements.
-  if (env.redVal || env.expValues || env.insChain) {
+  if (env.isReduc() || env.isExpand() || env.getInsertionChain()) {
     while (auto ifOp = dyn_cast_or_null<scf::IfOp>(
                builder.getInsertionBlock()->getParentOp())) {
       unsigned y = 0;
       SmallVector<Value> yields;
-      if (env.redVal) {
-        yields.push_back(env.redVal);
-        updateReduc(env, ifOp.getResult(y++));
+      if (env.isReduc()) {
+        yields.push_back(env.getReduc());
+        env.updateReduc(ifOp.getResult(y++));
       }
-      if (env.expValues) {
-        yields.push_back(env.expCount);
-        env.expCount = ifOp->getResult(y++);
+      if (env.isExpand()) {
+        yields.push_back(env.getExpandCount());
+        env.updateExpandCount(ifOp->getResult(y++));
       }
-      if (env.insChain) {
-        yields.push_back(env.insChain);
-        env.insChain = ifOp->getResult(y++);
+      if (env.getInsertionChain()) {
+        yields.push_back(env.getInsertionChain());
+        env.updateInsertionChain(ifOp->getResult(y++));
       }
       assert(y == yields.size());
       builder.create<scf::YieldOp>(loc, yields);
@@ -1288,61 +1124,60 @@ static void finalizeWhileOp(CodeGenEnv &env, OpBuilder &builder, unsigned idx,
 }
 
 /// Generates a single if-statement within a while-loop.
-static scf::IfOp genIf(CodeGenEnv &env, OpBuilder &builder, unsigned idx,
+static scf::IfOp genIf(CodegenEnv &env, OpBuilder &builder, unsigned idx,
                        BitVector &conditions) {
-  Location loc = env.linalgOp.getLoc();
+  Location loc = env.op().getLoc();
   SmallVector<Type> types;
   Value cond;
   for (unsigned b = 0, be = conditions.size(); b < be; b++) {
     if (!conditions[b])
       continue;
-    unsigned tensor = env.merger.tensor(b);
-    assert(idx == env.merger.index(b));
+    unsigned tensor = env.merger().tensor(b);
+    assert(idx == env.merger().index(b));
     Value clause;
-    if (isCompressedDLT(env.dimLevelType(b)) ||
-        isSingletonDLT(env.dimLevelType(b))) {
-      auto dim = *env.merger.getDimNum(tensor, idx);
-      Value op1 = env.loopEmitter->getCoord()[tensor][dim];
+    if (isCompressedDLT(env.dlt(b)) || isSingletonDLT(env.dlt(b))) {
+      auto dim = *env.merger().getDimNum(tensor, idx);
+      Value op1 = env.emitter().getCoord()[tensor][dim];
       Value op2 = env.getLoopIdxValue(idx);
       clause = builder.create<arith::CmpIOp>(loc, arith::CmpIPredicate::eq, op1,
                                              op2);
     } else {
-      assert(isDenseDLT(env.dimLevelType(b)) ||
-             isUndefDLT(env.dimLevelType(b)));
+      assert(isDenseDLT(env.merger().getDimLevelType(b)) ||
+             isUndefDLT(env.merger().getDimLevelType(b)));
       clause = constantI1(builder, loc, true);
     }
     cond = cond ? builder.create<arith::AndIOp>(loc, cond, clause) : clause;
   }
-  if (env.redVal)
-    types.push_back(env.redVal.getType());
-  if (env.expValues)
+  if (env.isReduc())
+    types.push_back(env.getReduc().getType());
+  if (env.isExpand())
     types.push_back(builder.getIndexType());
-  if (env.insChain)
-    types.push_back(env.insChain.getType());
+  if (env.getInsertionChain())
+    types.push_back(env.getInsertionChain().getType());
   scf::IfOp ifOp = builder.create<scf::IfOp>(loc, types, cond, /*else=*/true);
   builder.setInsertionPointToStart(&ifOp.getThenRegion().front());
   return ifOp;
 }
 
 /// Generates end of true branch of if-statement within a while-loop.
-static void endIf(CodeGenEnv &env, OpBuilder &builder, scf::IfOp ifOp,
+static void endIf(CodegenEnv &env, OpBuilder &builder, scf::IfOp ifOp,
                   Operation *loop, Value redInput, Value cntInput,
                   Value insInput) {
   SmallVector<Value> operands;
-  if (env.redVal) {
-    operands.push_back(env.redVal);
-    updateReduc(env, redInput);
+  if (env.isReduc()) {
+    operands.push_back(env.getReduc());
+    env.updateReduc(redInput);
   }
-  if (env.expValues) {
-    operands.push_back(env.expCount);
-    env.expCount = cntInput;
+  if (env.isExpand()) {
+    operands.push_back(env.getExpandCount());
+    env.updateExpandCount(cntInput);
   }
-  if (env.insChain) {
-    operands.push_back(env.insChain);
-    env.insChain = insInput;
+  if (env.getInsertionChain()) {
+    operands.push_back(env.getInsertionChain());
+    env.updateInsertionChain(insInput);
   }
   if (!operands.empty())
-    builder.create<scf::YieldOp>(env.linalgOp.getLoc(), operands);
+    builder.create<scf::YieldOp>(env.op().getLoc(), operands);
   builder.setInsertionPointToStart(&ifOp.getElseRegion().front());
 }
 
@@ -1352,24 +1187,24 @@ static void endIf(CodeGenEnv &env, OpBuilder &builder, scf::IfOp ifOp,
 
 /// Starts a loop sequence at given level. Returns true if
 /// the universal loop index must be maintained at this level.
-static bool startLoopSeq(CodeGenEnv &env, OpBuilder &builder, unsigned exp,
+static bool startLoopSeq(CodegenEnv &env, OpBuilder &builder, unsigned exp,
                          unsigned at, unsigned idx, unsigned ldx,
                          unsigned lts) {
   assert(!env.getLoopIdxValue(idx));
   // Emit invariants at this loop sequence level.
   genInvariants(env, builder, exp, ldx, /*atStart=*/true);
   // Emit access pattern expansion for sparse tensor output.
-  genExpansion(env, builder, at, /*atStart=*/true);
+  genExpand(env, builder, at, /*atStart=*/true);
   // Emit further intitialization at this loop sequence level.
   unsigned l0 = env.set(lts)[0];
   bool needsUniv = false;
 
   SmallVector<size_t> tids;
   SmallVector<size_t> dims;
-  env.merger.foreachTidDimPairInBits(
-      env.lat(l0).bits,
-      [&](unsigned b, unsigned tid, Optional<unsigned> dim, DimLevelType dlt) {
-        assert(env.merger.index(b) == idx);
+  env.merger().foreachTidDimPairInBits(
+      env.lat(l0).bits, [&](unsigned b, unsigned tid,
+                            std::optional<unsigned> dim, DimLevelType dlt) {
+        assert(env.merger().index(b) == idx);
         if (isDenseDLT(dlt) || isUndefDLT(dlt)) {
           needsUniv = true;
         } else {
@@ -1379,7 +1214,7 @@ static bool startLoopSeq(CodeGenEnv &env, OpBuilder &builder, unsigned exp,
         }
       });
 
-  env.loopEmitter->enterNewLoopSeq(builder, env.linalgOp.getLoc(), tids, dims);
+  env.emitter().enterNewLoopSeq(builder, env.op().getLoc(), tids, dims);
 
   // Maintain the universal index only if it is actually
   // consumed by a subsequent lattice point.
@@ -1387,18 +1222,18 @@ static bool startLoopSeq(CodeGenEnv &env, OpBuilder &builder, unsigned exp,
     unsigned lsize = env.set(lts).size();
     for (unsigned i = 1; i < lsize; i++) {
       unsigned li = env.set(lts)[i];
-      if (!env.merger.hasAnySparse(env.lat(li).simple))
+      if (!env.merger().hasAnySparse(env.lat(li).simple))
         return true;
     }
   }
   return false;
 }
 
-static void genConstantDenseAddressFromLevel(CodeGenEnv &env,
+static void genConstantDenseAddressFromLevel(CodegenEnv &env,
                                              OpBuilder &builder, unsigned tid,
                                              unsigned lvl) {
   // TODO: Handle affine expression on output tensor.
-  linalg::GenericOp op = env.linalgOp;
+  linalg::GenericOp op = env.op();
   assert(tid < op.getNumDpsInputs());
   OpOperand *input = op.getDpsInputOperands()[tid];
   ArrayRef<AffineExpr> affines = op.getMatchingIndexingMap(input).getResults();
@@ -1408,7 +1243,7 @@ static void genConstantDenseAddressFromLevel(CodeGenEnv &env,
       AffineExpr affine = affines[toOrigDim(enc, i)];
       if (isDenseDLT(getDimLevelType(enc, i)) &&
           affine.isa<AffineConstantExpr>())
-        env.loopEmitter->genDenseAffineAddressAtCurLevel(
+        env.emitter().genDenseAffineAddressAtCurLevel(
             builder, op.getLoc(), input->getOperandNumber(), i, affine);
       else
         return; // break on first non-dense non-constant level
@@ -1416,29 +1251,30 @@ static void genConstantDenseAddressFromLevel(CodeGenEnv &env,
   }
 }
 
-static void genInitConstantDenseAddress(CodeGenEnv &env,
+static void genInitConstantDenseAddress(CodegenEnv &env,
                                         RewriterBase &rewriter) {
   // We can generate address for constant affine expression before any loops
   // starting from the first level as they do not depend on any thing.
   // E.g., [Dense, Dense, Sparse] -> (1, 2, d0), the addresses for the first two
   // levels can be determined before loops.
-  for (unsigned tid = 0, e = env.linalgOp.getNumDpsInputs(); tid < e; tid++)
+  for (unsigned tid = 0, e = env.op().getNumDpsInputs(); tid < e; tid++)
     genConstantDenseAddressFromLevel(env, rewriter, tid, 0);
 }
 
-static void translateBitsToTidDimPairs(
-    CodeGenEnv &env, unsigned li, unsigned idx,
-    SmallVectorImpl<size_t> &condTids, SmallVectorImpl<size_t> &condDims,
-    SmallVectorImpl<size_t> &extraTids, SmallVectorImpl<size_t> &extraDims,
-    SmallVectorImpl<size_t> &affineTids, SmallVectorImpl<size_t> &affineDims,
-    SmallVectorImpl<AffineExpr> &exps) {
+/// Return true if the lattices bit can be iterated by a for loop.
+static bool translateBitsToTidDimPairs(
+    CodegenEnv &env, unsigned li, unsigned idx, SmallVectorImpl<size_t> &tids,
+    SmallVectorImpl<size_t> &dims, SmallVectorImpl<size_t> &affineTids,
+    SmallVectorImpl<size_t> &affineDims, SmallVectorImpl<AffineExpr> &exps) {
   const BitVector &all = env.lat(li).bits;
   const BitVector &simple = env.lat(li).simple;
 
+  unsigned numloopCond = 0;
   // Converts bits to array + dim pair
-  env.merger.foreachTidDimPairInBits(all, [&, idx](unsigned b, unsigned tid,
-                                                   Optional<unsigned> dim,
-                                                   DimLevelType dlt) {
+  env.merger().foreachTidDimPairInBits(all, [&,
+                                             idx](unsigned b, unsigned tid,
+                                                  std::optional<unsigned> dim,
+                                                  DimLevelType dlt) {
     if (simple.test(b)) {
       if (isUndefDLT(dlt)) {
         // An undefined dlt in the lattices, we probably mean to iterate based
@@ -1447,21 +1283,21 @@ static void translateBitsToTidDimPairs(
         // output tensor).
         // out[i][j] = invariant; or a broadcast
         // out[i][j] = in[i] (j is undef for input)
-        tid = env.merger.getOutTensorID();
-        dim = env.merger.getDimNum(tid, idx);
+        tid = env.merger().getOutTensorID();
+        dim = env.merger().getDimNum(tid, idx);
         // Skips invalid dim (e.g., when this is a zero ranked tensor).
         if (!dim)
           return;
       }
-      condTids.push_back(tid);
-      condDims.push_back(*dim);
+      tids.push_back(tid);
+      dims.push_back(*dim);
+      numloopCond++;
     } else if (isDenseDLT(dlt)) {
-      // TODO: get rid of extraTids and extraDims.
-      extraTids.push_back(tid);
-      extraDims.push_back(*dim);
+      tids.push_back(tid);
+      dims.push_back(*dim);
     } else {
       assert(isUndefDLT(dlt));
-      linalg::GenericOp op = env.linalgOp;
+      linalg::GenericOp op = env.op();
       if (tid >= op.getNumDpsInputs())
         // We only handle affine expression on input tensors (for now).
         return;
@@ -1502,48 +1338,48 @@ static void translateBitsToTidDimPairs(
     }
   });
 
-  if (isDenseDLT(env.dimLevelType(env.merger.getOutTensorID(), idx))) {
+  if (isDenseDLT(env.dlt(env.merger().getOutTensorID(), idx))) {
     // Note that we generate dense indices of the output tensor
     // unconditionally, since they may not appear in the lattice, but may be
-    // needed for linearized codegen.
-    auto dim = *env.merger.getDimNum(env.merger.getOutTensorID(), idx);
-    extraTids.push_back(env.merger.getOutTensorID());
-    extraDims.push_back(dim);
+    // needed for linearized env.
+    auto dim = *env.merger().getDimNum(env.merger().getOutTensorID(), idx);
+    tids.push_back(env.merger().getOutTensorID());
+    dims.push_back(dim);
   }
+
+  assert(numloopCond > 0);
+  // If we just need to one loop conditions, the loop can be generated by a for
+  // loop.
+  return numloopCond == 1;
 }
 
 /// Starts a single loop in current sequence.
-static Operation *startLoop(CodeGenEnv &env, OpBuilder &builder, unsigned at,
+static Operation *startLoop(CodegenEnv &env, OpBuilder &builder, unsigned at,
                             unsigned li, bool needsUniv) {
   // The set of tensors + dims to generate loops on
-  SmallVector<size_t> condTids, condDims;
-  // The set of (dense) tensors that is optimized from condition, yet still
-  // need extra locals to iterate on them.
-  SmallVector<size_t> extraTids, extraDims;
+  SmallVector<size_t> tids, dims;
   // The set of dense tensors with non-trivial affine expression that just
   // becomes invariant and the address shall now be generated at the current
   // level.
   SmallVector<size_t> affineTids, affineDims;
   SmallVector<AffineExpr> affines;
-  translateBitsToTidDimPairs(env, li, env.topSort[at], condTids, condDims,
-                             extraTids, extraDims, affineTids, affineDims,
-                             affines);
+  bool isFor = translateBitsToTidDimPairs(
+      env, li, env.topSortAt(at), tids, dims, affineTids, affineDims, affines);
 
   // Emit the for/while-loop control.
-  Operation *loop = genLoop(env, builder, at, needsUniv, condTids, condDims,
-                            extraTids, extraDims);
+  Operation *loop = genLoop(env, builder, at, needsUniv, tids, dims, isFor);
   for (auto [tid, dim, exp] : llvm::zip(affineTids, affineDims, affines)) {
-    env.loopEmitter->genDenseAffineAddressAtCurLevel(
-        builder, env.linalgOp.getLoc(), tid, dim, exp);
+    env.emitter().genDenseAffineAddressAtCurLevel(builder, env.op().getLoc(),
+                                                  tid, dim, exp);
   }
 
   // Until now, we have entered every <tid, dim> pair in {cond, extra,
   // affine}Tids/Dims. The addresses of the upcoming levels which are dependent
   // on constant affines expression may now be determined.
-  auto allTids = llvm::concat<size_t>(condTids, extraTids, affineTids);
-  auto allDims = llvm::concat<size_t>(condDims, extraDims, affineDims);
+  auto allTids = llvm::concat<size_t>(tids, affineTids);
+  auto allDims = llvm::concat<size_t>(dims, affineDims);
   for (auto [tid, dim] : llvm::zip(allTids, allDims)) {
-    if (tid != env.merger.getOutTensorID())
+    if (tid != env.merger().getOutTensorID())
       genConstantDenseAddressFromLevel(env, builder, tid, dim + 1);
   }
 
@@ -1551,7 +1387,7 @@ static Operation *startLoop(CodeGenEnv &env, OpBuilder &builder, unsigned at,
 }
 
 /// Ends a single loop in current sequence. Returns new values for needsUniv.
-static bool endLoop(CodeGenEnv &env, RewriterBase &rewriter, Operation *loop,
+static bool endLoop(CodegenEnv &env, RewriterBase &rewriter, Operation *loop,
                     unsigned idx, unsigned li, bool needsUniv) {
   // End a while-loop.
   if (auto whileOp = dyn_cast<scf::WhileOp>(loop)) {
@@ -1560,8 +1396,8 @@ static bool endLoop(CodeGenEnv &env, RewriterBase &rewriter, Operation *loop,
     needsUniv = false;
   }
 
-  genLoopBoundary(env, [&](MutableArrayRef<Value> reduc) {
-    env.loopEmitter->exitCurrentLoop(rewriter, env.linalgOp.getLoc(), reduc);
+  env.genLoopBoundary([&](MutableArrayRef<Value> reduc) {
+    env.emitter().exitCurrentLoop(rewriter, env.op().getLoc(), reduc);
     return std::nullopt;
   });
 
@@ -1569,33 +1405,33 @@ static bool endLoop(CodeGenEnv &env, RewriterBase &rewriter, Operation *loop,
 }
 
 /// Ends a loop sequence at given level.
-static void endLoopSeq(CodeGenEnv &env, OpBuilder &builder, unsigned exp,
+static void endLoopSeq(CodegenEnv &env, OpBuilder &builder, unsigned exp,
                        unsigned at, unsigned idx, unsigned ldx) {
   assert(env.getLoopIdxValue(idx) == nullptr);
-  env.loopEmitter->exitCurrentLoopSeq();
+  env.emitter().exitCurrentLoopSeq();
   // Unmark bookkeeping of invariants and loop index.
   genInvariants(env, builder, exp, ldx, /*atStart=*/false);
   // Finalize access pattern expansion for sparse tensor output.
-  genExpansion(env, builder, at, /*atStart=*/false);
+  genExpand(env, builder, at, /*atStart=*/false);
 }
 
 /// Recursively generates code while computing iteration lattices in order
 /// to manage the complexity of implementing co-iteration over unions
 /// and intersections of sparse iterations spaces.
-static void genStmt(CodeGenEnv &env, RewriterBase &rewriter, unsigned exp,
+static void genStmt(CodegenEnv &env, RewriterBase &rewriter, unsigned exp,
                     unsigned at) {
   // At each leaf, assign remaining tensor (sub)expression to output tensor.
-  if (at == env.topSort.size()) {
-    unsigned ldx = env.topSort[at - 1];
+  if (at == env.topSortSize()) {
+    unsigned ldx = env.topSortAt(at - 1);
     Value rhs = genExp(env, rewriter, exp, ldx);
     genTensorStore(env, rewriter, exp, rhs);
     return;
   }
 
   // Construct iteration lattices for current loop index, with L0 at top.
-  unsigned idx = env.topSort[at];
-  unsigned ldx = at == 0 ? -1u : env.topSort[at - 1];
-  unsigned lts = env.merger.optimizeSet(env.merger.buildLattices(exp, idx));
+  unsigned idx = env.topSortAt(at);
+  unsigned ldx = at == 0 ? -1u : env.topSortAt(at - 1);
+  unsigned lts = env.merger().optimizeSet(env.merger().buildLattices(exp, idx));
 
   // TODO: sort
   // TODO: dedup
@@ -1612,14 +1448,14 @@ static void genStmt(CodeGenEnv &env, RewriterBase &rewriter, unsigned exp,
 
     // Visit all lattices points with Li >= Lj to generate the
     // loop-body, possibly with if statements for coiteration.
-    Value redInput = env.redVal;
-    Value cntInput = env.expCount;
-    Value insInput = env.insChain;
+    Value redInput = env.getReduc();
+    Value cntInput = env.getExpandCount();
+    Value insInput = env.getInsertionChain();
     bool isWhile = dyn_cast<scf::WhileOp>(loop) != nullptr;
     for (unsigned j = 0; j < lsize; j++) {
       unsigned lj = env.set(lts)[j];
       unsigned ej = env.lat(lj).exp;
-      if (li == lj || env.merger.latGT(li, lj)) {
+      if (li == lj || env.merger().latGT(li, lj)) {
         // Recurse into body of each branch.
         if (isWhile) {
           scf::IfOp ifOp = genIf(env, rewriter, idx, env.lat(lj).simple);
@@ -1640,8 +1476,8 @@ static void genStmt(CodeGenEnv &env, RewriterBase &rewriter, unsigned exp,
 }
 
 /// Converts the result computed by the sparse kernel into the required form.
-static void genResult(CodeGenEnv &env, RewriterBase &rewriter) {
-  linalg::GenericOp op = env.linalgOp;
+static void genResult(CodegenEnv &env, RewriterBase &rewriter) {
+  linalg::GenericOp op = env.op();
   OpOperand *lhs = op.getDpsInitOperand(0);
   Value tensor = lhs->get();
   Type resType = tensor.getType();
@@ -1649,14 +1485,16 @@ static void genResult(CodeGenEnv &env, RewriterBase &rewriter) {
     // The sparse tensor rematerializes from the original sparse tensor's
     // underlying sparse storage format. For an insertion chain, the
     // tensor materializes from the chain with 'hasInserts' enabled.
-    bool hasInserts = env.sparseOut == lhs;
-    if (hasInserts)
-      tensor = env.insChain;
+    bool hasInserts = false;
+    if (Value chain = env.getInsertionChain()) {
+      hasInserts = true;
+      tensor = chain;
+    }
     rewriter.replaceOpWithNewOp<LoadOp>(op, resType, tensor, hasInserts);
   } else {
     // To rematerialize an non-annotated tensor, simply load it
     // from the bufferized value.
-    Value val = env.getValBuffer().back(); // value array
+    Value val = env.emitter().getValBuffer().back(); // value array
     rewriter.replaceOpWithNewOp<bufferization::ToTensorOp>(op, resType, val);
   }
 }
@@ -1683,7 +1521,7 @@ public:
     unsigned numTensors = op->getNumOperands();
     unsigned numLoops = op.getNumLoops();
     unsigned numFilterLoops = getNumCompoundAffineOnSparseDims(op);
-    CodeGenEnv env(op, options, numTensors, numLoops, numFilterLoops);
+    CodegenEnv env(op, options, numTensors, numLoops, numFilterLoops);
 
     // Detects sparse annotations and translates the per-dimension sparsity
     // information for all tensors to loop indices in the kernel.
@@ -1691,8 +1529,8 @@ public:
       return failure();
 
     // Builds the tensor expression for the Linalg operation in SSA form.
-    Optional<unsigned> optExp = env.merger.buildTensorExpFromLinalg(op);
-    if (!optExp.has_value())
+    std::optional<unsigned> optExp = env.merger().buildTensorExpFromLinalg(op);
+    if (!optExp)
       return failure();
     unsigned exp = *optExp;
 
@@ -1703,6 +1541,8 @@ public:
     // to resolve cycles by inserting a conversion.
     bool isAdmissible = false;
     bool hasCycle = true;
+    OpOperand *sparseOut = nullptr;
+    unsigned outerParNest = -1u;
     // An const list of all masks that we used for interation graph
     // computation. Must be ordered from more strict to less strict.
     const auto allMask = {SortMask::kIncludeAll, SortMask::kIncludeUndef,
@@ -1710,7 +1550,7 @@ public:
     for (auto mask : allMask)
       if (computeIterationGraph(env, mask)) {
         hasCycle = false;
-        if (isAdmissibleTensorExp(env, exp)) {
+        if (isAdmissibleTensorExp(env, exp, &sparseOut, &outerParNest)) {
           isAdmissible = true;
           break;
         }
@@ -1721,20 +1561,8 @@ public:
     if (!isAdmissible)
       return failure(); // inadmissible expression, reject
 
-    // Updates environment with a loop emitter.
-    // TODO: refactor so that emitter can be constructed earlier
-    //       and updating is made easy, i.e. remove this whole block?
-    SmallVector<Value> tensors;
-    for (OpOperand &t : op->getOpOperands())
-      tensors.push_back(t.get());
-    SparseTensorLoopEmitter lpe(
-        tensors,
-        StringAttr::get(op.getContext(), linalg::GenericOp::getOperationName()),
-        /*hasOutput=*/true, /*isSparseOut=*/env.sparseOut != nullptr,
-        env.topSort);
-    env.startEmit(&lpe);
-
     // Recursively generates code if admissible.
+    env.startEmit(sparseOut, outerParNest);
     genBuffers(env, rewriter);
     genInitConstantDenseAddress(env, rewriter);
     genStmt(env, rewriter, exp, 0);
@@ -1744,11 +1572,11 @@ public:
 
 private:
   // Last resort cycle resolution.
-  LogicalResult resolveCycle(CodeGenEnv &env, PatternRewriter &rewriter) const {
+  LogicalResult resolveCycle(CodegenEnv &env, PatternRewriter &rewriter) const {
     // Compute topological sort while leaving out every
     // sparse input tensor in succession until an acylic
     // iteration graph results.
-    for (OpOperand *t : env.linalgOp.getDpsInputOperands()) {
+    for (OpOperand *t : env.op().getDpsInputOperands()) {
       unsigned tensor = t->getOperandNumber();
       Value tval = t->get();
       auto srcEnc = getSparseTensorEncoding(tval.getType());
@@ -1761,17 +1589,17 @@ private:
       // TODO: investigate fusing the conversion with computation,
       //       especially if it is a direct yield!
       //
-      auto srcTp = tval.getType().cast<RankedTensorType>();
+      auto srcTp = getRankedTensorType(tval);
       auto dstEnc = SparseTensorEncodingAttr::get(
           getContext(), srcEnc.getDimLevelType(),
-          permute(env, env.linalgOp.getMatchingIndexingMap(t)), // new order
+          permute(env, env.op().getMatchingIndexingMap(t)), // new order
           srcEnc.getHigherOrdering(), srcEnc.getPointerBitWidth(),
           srcEnc.getIndexBitWidth());
       auto dstTp = RankedTensorType::get(srcTp.getShape(),
                                          srcTp.getElementType(), dstEnc);
       auto convert = rewriter.create<ConvertOp>(tval.getLoc(), dstTp, tval);
-      env.linalgOp->setOperand(tensor, convert);
-      rewriter.setInsertionPointAfter(env.linalgOp);
+      env.op()->setOperand(tensor, convert);
+      rewriter.setInsertionPointAfter(env.op());
       rewriter.create<bufferization::DeallocTensorOp>(tval.getLoc(), convert);
       return success();
     }

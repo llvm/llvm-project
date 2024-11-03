@@ -15,50 +15,42 @@ define void @_ZN1C10SwitchModeEv() local_unnamed_addr #0 comdat align 2 {
 ; SSE-LABEL: @_ZN1C10SwitchModeEv(
 ; SSE-NEXT:  for.body.lr.ph.i:
 ; SSE-NEXT:    [[OR_1:%.*]] = or i64 undef, 1
-; SSE-NEXT:    store i64 [[OR_1]], i64* undef, align 8
-; SSE-NEXT:    [[FOO_1:%.*]] = getelementptr inbounds [[CLASS_1:%.*]], %class.1* undef, i64 0, i32 0, i32 0, i32 0, i32 0, i64 0
-; SSE-NEXT:    [[FOO_3:%.*]] = load i64, i64* [[FOO_1]], align 8
-; SSE-NEXT:    [[FOO_2:%.*]] = getelementptr inbounds [[CLASS_1]], %class.1* undef, i64 0, i32 0, i32 0, i32 0, i32 0, i64 1
-; SSE-NEXT:    [[FOO_4:%.*]] = load i64, i64* [[FOO_2]], align 8
-; SSE-NEXT:    [[BAR5:%.*]] = load i64, i64* undef, align 8
+; SSE-NEXT:    store i64 [[OR_1]], ptr undef, align 8
+; SSE-NEXT:    [[FOO_3:%.*]] = load i64, ptr undef, align 8
+; SSE-NEXT:    [[FOO_2:%.*]] = getelementptr inbounds [[CLASS_1:%.*]], ptr undef, i64 0, i32 0, i32 0, i32 0, i32 0, i64 1
+; SSE-NEXT:    [[FOO_4:%.*]] = load i64, ptr [[FOO_2]], align 8
+; SSE-NEXT:    [[BAR5:%.*]] = load i64, ptr undef, align 8
 ; SSE-NEXT:    [[AND_2:%.*]] = and i64 [[OR_1]], [[FOO_3]]
 ; SSE-NEXT:    [[AND_1:%.*]] = and i64 [[BAR5]], [[FOO_4]]
-; SSE-NEXT:    [[BAR3:%.*]] = getelementptr inbounds [[CLASS_2:%.*]], %class.2* undef, i64 0, i32 0, i32 0, i32 0, i64 0
-; SSE-NEXT:    store i64 [[AND_2]], i64* [[BAR3]], align 8
-; SSE-NEXT:    [[BAR4:%.*]] = getelementptr inbounds [[CLASS_2]], %class.2* undef, i64 0, i32 0, i32 0, i32 0, i64 1
-; SSE-NEXT:    store i64 [[AND_1]], i64* [[BAR4]], align 8
+; SSE-NEXT:    store i64 [[AND_2]], ptr undef, align 8
+; SSE-NEXT:    [[BAR4:%.*]] = getelementptr inbounds [[CLASS_2:%.*]], ptr undef, i64 0, i32 0, i32 0, i32 0, i64 1
+; SSE-NEXT:    store i64 [[AND_1]], ptr [[BAR4]], align 8
 ; SSE-NEXT:    ret void
 ;
 ; AVX-LABEL: @_ZN1C10SwitchModeEv(
 ; AVX-NEXT:  for.body.lr.ph.i:
 ; AVX-NEXT:    [[OR_1:%.*]] = or i64 undef, 1
-; AVX-NEXT:    store i64 [[OR_1]], i64* undef, align 8
-; AVX-NEXT:    [[FOO_1:%.*]] = getelementptr inbounds [[CLASS_1:%.*]], %class.1* undef, i64 0, i32 0, i32 0, i32 0, i32 0, i64 0
-; AVX-NEXT:    [[BAR5:%.*]] = load i64, i64* undef, align 8
-; AVX-NEXT:    [[BAR3:%.*]] = getelementptr inbounds [[CLASS_2:%.*]], %class.2* undef, i64 0, i32 0, i32 0, i32 0, i64 0
-; AVX-NEXT:    [[TMP0:%.*]] = bitcast i64* [[FOO_1]] to <2 x i64>*
-; AVX-NEXT:    [[TMP1:%.*]] = load <2 x i64>, <2 x i64>* [[TMP0]], align 8
-; AVX-NEXT:    [[TMP2:%.*]] = insertelement <2 x i64> poison, i64 [[OR_1]], i32 0
-; AVX-NEXT:    [[TMP3:%.*]] = insertelement <2 x i64> [[TMP2]], i64 [[BAR5]], i32 1
-; AVX-NEXT:    [[TMP4:%.*]] = and <2 x i64> [[TMP3]], [[TMP1]]
-; AVX-NEXT:    [[TMP5:%.*]] = bitcast i64* [[BAR3]] to <2 x i64>*
-; AVX-NEXT:    store <2 x i64> [[TMP4]], <2 x i64>* [[TMP5]], align 8
+; AVX-NEXT:    store i64 [[OR_1]], ptr undef, align 8
+; AVX-NEXT:    [[BAR5:%.*]] = load i64, ptr undef, align 8
+; AVX-NEXT:    [[TMP0:%.*]] = load <2 x i64>, ptr undef, align 8
+; AVX-NEXT:    [[TMP1:%.*]] = insertelement <2 x i64> poison, i64 [[OR_1]], i32 0
+; AVX-NEXT:    [[TMP2:%.*]] = insertelement <2 x i64> [[TMP1]], i64 [[BAR5]], i32 1
+; AVX-NEXT:    [[TMP3:%.*]] = and <2 x i64> [[TMP2]], [[TMP0]]
+; AVX-NEXT:    store <2 x i64> [[TMP3]], ptr undef, align 8
 ; AVX-NEXT:    ret void
 ;
 for.body.lr.ph.i:
   %or.1 = or i64 undef, 1
-  store i64 %or.1, i64* undef, align 8
-  %foo.1 = getelementptr inbounds %class.1, %class.1* undef, i64 0, i32 0, i32 0, i32 0, i32 0, i64 0
-  %foo.3 = load i64, i64* %foo.1, align 8
-  %foo.2 = getelementptr inbounds %class.1, %class.1* undef, i64 0, i32 0, i32 0, i32 0, i32 0, i64 1
-  %foo.4 = load i64, i64* %foo.2, align 8
-  %bar5 = load i64, i64* undef, align 8
+  store i64 %or.1, ptr undef, align 8
+  %foo.3 = load i64, ptr undef, align 8
+  %foo.2 = getelementptr inbounds %class.1, ptr undef, i64 0, i32 0, i32 0, i32 0, i32 0, i64 1
+  %foo.4 = load i64, ptr %foo.2, align 8
+  %bar5 = load i64, ptr undef, align 8
   %and.2 = and i64 %or.1, %foo.3
   %and.1 = and i64 %bar5, %foo.4
-  %bar3 = getelementptr inbounds %class.2, %class.2* undef, i64 0, i32 0, i32 0, i32 0, i64 0
-  store i64 %and.2, i64* %bar3, align 8
-  %bar4 = getelementptr inbounds %class.2, %class.2* undef, i64 0, i32 0, i32 0, i32 0, i64 1
-  store i64 %and.1, i64* %bar4, align 8
+  store i64 %and.2, ptr undef, align 8
+  %bar4 = getelementptr inbounds %class.2, ptr undef, i64 0, i32 0, i32 0, i32 0, i64 1
+  store i64 %and.1, ptr %bar4, align 8
   ret void
 }
 
@@ -66,79 +58,72 @@ for.body.lr.ph.i:
 define void @pr35497() local_unnamed_addr #0 {
 ; SSE-LABEL: @pr35497(
 ; SSE-NEXT:  entry:
-; SSE-NEXT:    [[TMP0:%.*]] = load i64, i64* undef, align 1
+; SSE-NEXT:    [[TMP0:%.*]] = load i64, ptr undef, align 1
 ; SSE-NEXT:    [[ADD:%.*]] = add i64 undef, undef
-; SSE-NEXT:    store i64 [[ADD]], i64* undef, align 1
-; SSE-NEXT:    [[ARRAYIDX2_2:%.*]] = getelementptr inbounds [0 x i64], [0 x i64]* undef, i64 0, i64 4
-; SSE-NEXT:    [[ARRAYIDX2_6:%.*]] = getelementptr inbounds [0 x i64], [0 x i64]* undef, i64 0, i64 0
+; SSE-NEXT:    store i64 [[ADD]], ptr undef, align 1
+; SSE-NEXT:    [[ARRAYIDX2_2:%.*]] = getelementptr inbounds [0 x i64], ptr undef, i64 0, i64 4
 ; SSE-NEXT:    [[TMP1:%.*]] = insertelement <2 x i64> <i64 undef, i64 poison>, i64 [[TMP0]], i32 1
 ; SSE-NEXT:    [[TMP2:%.*]] = shl <2 x i64> [[TMP1]], <i64 2, i64 2>
 ; SSE-NEXT:    [[TMP3:%.*]] = and <2 x i64> [[TMP2]], <i64 20, i64 20>
 ; SSE-NEXT:    [[TMP4:%.*]] = add nuw nsw <2 x i64> [[TMP3]], zeroinitializer
-; SSE-NEXT:    [[TMP5:%.*]] = extractelement <2 x i64> [[TMP4]], i32 1
-; SSE-NEXT:    [[TMP6:%.*]] = bitcast i64* [[ARRAYIDX2_6]] to <2 x i64>*
-; SSE-NEXT:    store <2 x i64> [[TMP4]], <2 x i64>* [[TMP6]], align 1
-; SSE-NEXT:    [[TMP7:%.*]] = insertelement <2 x i64> poison, i64 [[TMP5]], i32 0
-; SSE-NEXT:    [[TMP8:%.*]] = insertelement <2 x i64> [[TMP7]], i64 [[ADD]], i32 1
-; SSE-NEXT:    [[TMP9:%.*]] = shl <2 x i64> [[TMP8]], <i64 2, i64 2>
-; SSE-NEXT:    [[TMP10:%.*]] = and <2 x i64> [[TMP9]], <i64 20, i64 20>
-; SSE-NEXT:    [[TMP11:%.*]] = lshr <2 x i64> [[TMP4]], <i64 6, i64 6>
-; SSE-NEXT:    [[TMP12:%.*]] = add nuw nsw <2 x i64> [[TMP10]], [[TMP11]]
-; SSE-NEXT:    [[TMP13:%.*]] = bitcast i64* [[ARRAYIDX2_2]] to <2 x i64>*
-; SSE-NEXT:    store <2 x i64> [[TMP12]], <2 x i64>* [[TMP13]], align 1
+; SSE-NEXT:    store <2 x i64> [[TMP4]], ptr undef, align 1
+; SSE-NEXT:    [[TMP5:%.*]] = insertelement <2 x i64> poison, i64 [[ADD]], i32 0
+; SSE-NEXT:    [[TMP6:%.*]] = shufflevector <2 x i64> [[TMP5]], <2 x i64> [[TMP4]], <2 x i32> <i32 0, i32 3>
+; SSE-NEXT:    [[TMP7:%.*]] = shl <2 x i64> [[TMP6]], <i64 2, i64 2>
+; SSE-NEXT:    [[TMP8:%.*]] = and <2 x i64> [[TMP7]], <i64 20, i64 20>
+; SSE-NEXT:    [[TMP9:%.*]] = shufflevector <2 x i64> [[TMP8]], <2 x i64> poison, <2 x i32> <i32 1, i32 0>
+; SSE-NEXT:    [[TMP10:%.*]] = lshr <2 x i64> [[TMP4]], <i64 6, i64 6>
+; SSE-NEXT:    [[TMP11:%.*]] = add nuw nsw <2 x i64> [[TMP9]], [[TMP10]]
+; SSE-NEXT:    store <2 x i64> [[TMP11]], ptr [[ARRAYIDX2_2]], align 1
 ; SSE-NEXT:    ret void
 ;
 ; AVX-LABEL: @pr35497(
 ; AVX-NEXT:  entry:
-; AVX-NEXT:    [[TMP0:%.*]] = load i64, i64* undef, align 1
+; AVX-NEXT:    [[TMP0:%.*]] = load i64, ptr undef, align 1
 ; AVX-NEXT:    [[ADD:%.*]] = add i64 undef, undef
-; AVX-NEXT:    store i64 [[ADD]], i64* undef, align 1
-; AVX-NEXT:    [[ARRAYIDX2_2:%.*]] = getelementptr inbounds [0 x i64], [0 x i64]* undef, i64 0, i64 4
-; AVX-NEXT:    [[ARRAYIDX2_6:%.*]] = getelementptr inbounds [0 x i64], [0 x i64]* undef, i64 0, i64 0
+; AVX-NEXT:    store i64 [[ADD]], ptr undef, align 1
+; AVX-NEXT:    [[ARRAYIDX2_2:%.*]] = getelementptr inbounds [0 x i64], ptr undef, i64 0, i64 4
 ; AVX-NEXT:    [[TMP1:%.*]] = insertelement <2 x i64> <i64 undef, i64 poison>, i64 [[TMP0]], i32 1
 ; AVX-NEXT:    [[TMP2:%.*]] = shl <2 x i64> [[TMP1]], <i64 2, i64 2>
 ; AVX-NEXT:    [[TMP3:%.*]] = and <2 x i64> [[TMP2]], <i64 20, i64 20>
 ; AVX-NEXT:    [[TMP4:%.*]] = add nuw nsw <2 x i64> [[TMP3]], zeroinitializer
-; AVX-NEXT:    [[TMP5:%.*]] = extractelement <2 x i64> [[TMP4]], i32 1
-; AVX-NEXT:    [[TMP6:%.*]] = bitcast i64* [[ARRAYIDX2_6]] to <2 x i64>*
-; AVX-NEXT:    store <2 x i64> [[TMP4]], <2 x i64>* [[TMP6]], align 1
-; AVX-NEXT:    [[TMP7:%.*]] = insertelement <2 x i64> poison, i64 [[TMP5]], i32 0
-; AVX-NEXT:    [[TMP8:%.*]] = insertelement <2 x i64> [[TMP7]], i64 [[ADD]], i32 1
-; AVX-NEXT:    [[TMP9:%.*]] = shl <2 x i64> [[TMP8]], <i64 2, i64 2>
-; AVX-NEXT:    [[TMP10:%.*]] = and <2 x i64> [[TMP9]], <i64 20, i64 20>
-; AVX-NEXT:    [[TMP11:%.*]] = lshr <2 x i64> [[TMP4]], <i64 6, i64 6>
-; AVX-NEXT:    [[TMP12:%.*]] = add nuw nsw <2 x i64> [[TMP10]], [[TMP11]]
-; AVX-NEXT:    [[TMP13:%.*]] = bitcast i64* [[ARRAYIDX2_2]] to <2 x i64>*
-; AVX-NEXT:    store <2 x i64> [[TMP12]], <2 x i64>* [[TMP13]], align 1
+; AVX-NEXT:    store <2 x i64> [[TMP4]], ptr undef, align 1
+; AVX-NEXT:    [[TMP5:%.*]] = insertelement <2 x i64> poison, i64 [[ADD]], i32 0
+; AVX-NEXT:    [[TMP6:%.*]] = shufflevector <2 x i64> [[TMP5]], <2 x i64> [[TMP4]], <2 x i32> <i32 0, i32 3>
+; AVX-NEXT:    [[TMP7:%.*]] = shl <2 x i64> [[TMP6]], <i64 2, i64 2>
+; AVX-NEXT:    [[TMP8:%.*]] = and <2 x i64> [[TMP7]], <i64 20, i64 20>
+; AVX-NEXT:    [[TMP9:%.*]] = shufflevector <2 x i64> [[TMP8]], <2 x i64> poison, <2 x i32> <i32 1, i32 0>
+; AVX-NEXT:    [[TMP10:%.*]] = lshr <2 x i64> [[TMP4]], <i64 6, i64 6>
+; AVX-NEXT:    [[TMP11:%.*]] = add nuw nsw <2 x i64> [[TMP9]], [[TMP10]]
+; AVX-NEXT:    store <2 x i64> [[TMP11]], ptr [[ARRAYIDX2_2]], align 1
 ; AVX-NEXT:    ret void
 ;
 entry:
-  %0 = load i64, i64* undef, align 1
+  %0 = load i64, ptr undef, align 1
   %and = shl i64 %0, 2
   %shl = and i64 %and, 20
   %add = add i64 undef, undef
-  store i64 %add, i64* undef, align 1
-  %arrayidx2.1 = getelementptr inbounds [0 x i64], [0 x i64]* undef, i64 0, i64 5
+  store i64 %add, ptr undef, align 1
+  %arrayidx2.1 = getelementptr inbounds [0 x i64], ptr undef, i64 0, i64 5
   %and.1 = shl i64 undef, 2
   %shl.1 = and i64 %and.1, 20
   %shr.1 = lshr i64 undef, 6
   %add.1 = add nuw nsw i64 %shl, %shr.1
-  %arrayidx2.2 = getelementptr inbounds [0 x i64], [0 x i64]* undef, i64 0, i64 4
+  %arrayidx2.2 = getelementptr inbounds [0 x i64], ptr undef, i64 0, i64 4
   %shr.2 = lshr i64 undef, 6
   %add.2 = add nuw nsw i64 %shl.1, %shr.2
   %and.4 = shl i64 %add, 2
   %shl.4 = and i64 %and.4, 20
-  %arrayidx2.5 = getelementptr inbounds [0 x i64], [0 x i64]* undef, i64 0, i64 1
-  store i64 %add.1, i64* %arrayidx2.5, align 1
+  %arrayidx2.5 = getelementptr inbounds [0 x i64], ptr undef, i64 0, i64 1
+  store i64 %add.1, ptr %arrayidx2.5, align 1
   %and.5 = shl nuw nsw i64 %add.1, 2
   %shl.5 = and i64 %and.5, 20
   %shr.5 = lshr i64 %add.1, 6
   %add.5 = add nuw nsw i64 %shl.4, %shr.5
-  store i64 %add.5, i64* %arrayidx2.1, align 1
-  %arrayidx2.6 = getelementptr inbounds [0 x i64], [0 x i64]* undef, i64 0, i64 0
-  store i64 %add.2, i64* %arrayidx2.6, align 1
+  store i64 %add.5, ptr %arrayidx2.1, align 1
+  store i64 %add.2, ptr undef, align 1
   %shr.6 = lshr i64 %add.2, 6
   %add.6 = add nuw nsw i64 %shl.5, %shr.6
-  store i64 %add.6, i64* %arrayidx2.2, align 1
+  store i64 %add.6, ptr %arrayidx2.2, align 1
   ret void
 }

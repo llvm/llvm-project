@@ -17,7 +17,7 @@
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
-define void @foo(i64* %A, i64* %B) {
+define void @foo(ptr %A, ptr %B) {
 bb:
   br label %bb1
 
@@ -27,15 +27,15 @@ bb1:                                              ; preds = %bb10, %bb
   br i1 %exitcond, label %bb2, label %bb12
 
 bb2:                                              ; preds = %bb1
-  %tmp = getelementptr inbounds i64, i64* %B, i64 %i.0
-  %tmp3 = load i64, i64* %tmp, align 8
-  %tmp4 = getelementptr inbounds i64, i64* %B, i64 %i.0
-  %tmp5 = ptrtoint i64* %tmp4 to i64
+  %tmp = getelementptr inbounds i64, ptr %B, i64 %i.0
+  %tmp3 = load i64, ptr %tmp, align 8
+  %tmp4 = getelementptr inbounds i64, ptr %B, i64 %i.0
+  %tmp5 = ptrtoint ptr %tmp4 to i64
   %tmp6 = add nsw i64 %tmp3, %tmp5
-  %tmp7 = getelementptr inbounds i64, i64* %A, i64 %i.0
-  %tmp8 = load i64, i64* %tmp7, align 8
+  %tmp7 = getelementptr inbounds i64, ptr %A, i64 %i.0
+  %tmp8 = load i64, ptr %tmp7, align 8
   %tmp9 = add nsw i64 %tmp8, %tmp6
-  store i64 %tmp9, i64* %tmp7, align 8
+  store i64 %tmp9, ptr %tmp7, align 8
   br label %bb10
 
 bb10:                                             ; preds = %bb2

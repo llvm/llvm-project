@@ -786,7 +786,7 @@ TEST(Local, ReplaceAllDbgUsesWith) {
 
   auto *FDbgVal = cast<DbgValueInst>(F_.getNextNode());
   EXPECT_EQ(FDbgVal->getNumVariableLocationOps(), 1u);
-  EXPECT_TRUE(FDbgVal->isUndef());
+  EXPECT_TRUE(FDbgVal->isKillLocation());
 
   SmallVector<DbgValueInst *, 1> FDbgVals;
   findDbgValues(FDbgVals, &F_);

@@ -12,7 +12,7 @@
 //===----------------------------------------------------------------------===//
 #include "mlir/Target/LLVMIR/Dialect/OpenMP/OpenMPToLLVMIRTranslation.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
-#include "mlir/IR/BlockAndValueMapping.h"
+#include "mlir/IR/IRMapping.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/Support/LLVM.h"
 #include "mlir/Target/LLVMIR/ModuleTranslation.h"
@@ -1326,7 +1326,7 @@ convertOmpThreadprivate(Operation &opInst, llvm::IRBuilderBase &builder,
   llvm::TypeSize typeSize =
       builder.GetInsertBlock()->getModule()->getDataLayout().getTypeStoreSize(
           type);
-  llvm::ConstantInt *size = builder.getInt64(typeSize.getFixedSize());
+  llvm::ConstantInt *size = builder.getInt64(typeSize.getFixedValue());
   llvm::StringRef suffix = llvm::StringRef(".cache", 6);
   std::string cacheName = (Twine(global.getSymName()).concat(suffix)).str();
   // Emit runtime function and bitcast its type (i8*) to real data type.

@@ -12,7 +12,7 @@
 #include <__assert>
 #include <__config>
 #include <__memory_resource/memory_resource.h>
-#include <__utility/transaction.h>
+#include <__utility/exception_guard.h>
 #include <cstddef>
 #include <limits>
 #include <new>
@@ -98,7 +98,7 @@ public:
   template <class _Type, class... _CtorArgs>
   [[nodiscard]] _Type* new_object(_CtorArgs&&... __ctor_args) {
     _Type* __ptr = allocate_object<_Type>();
-    __transaction __guard([&] { deallocate_object(__ptr); });
+    __exception_guard __guard([&] { deallocate_object(__ptr); });
     construct(__ptr, std::forward<_CtorArgs>(__ctor_args)...);
     __guard.__complete();
     return __ptr;

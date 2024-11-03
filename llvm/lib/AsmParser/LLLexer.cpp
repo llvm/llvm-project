@@ -672,6 +672,8 @@ lltok::Kind LLLexer::LexIdentifier() {
 
   KEYWORD(xchg); KEYWORD(nand); KEYWORD(max); KEYWORD(min); KEYWORD(umax);
   KEYWORD(umin); KEYWORD(fmax); KEYWORD(fmin);
+  KEYWORD(uinc_wrap);
+  KEYWORD(udec_wrap);
 
   KEYWORD(vscale);
   KEYWORD(x);
@@ -807,10 +809,7 @@ lltok::Kind LLLexer::LexIdentifier() {
   TYPEKEYWORD("token",     Type::getTokenTy(Context));
 
   if (Keyword == "ptr") {
-    // setOpaquePointers() must be called before creating any pointer types.
-    if (!Context.hasSetOpaquePointersValue()) {
-      Context.setOpaquePointers(true);
-    } else if (Context.supportsTypedPointers()) {
+    if (Context.supportsTypedPointers()) {
       Warning("ptr type is only supported in -opaque-pointers mode");
       return lltok::Error;
     }

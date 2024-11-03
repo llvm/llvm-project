@@ -15,8 +15,8 @@
 #include "clang/Basic/MacroBuilder.h"
 #include "clang/Basic/TargetBuiltins.h"
 #include "llvm/ADT/StringSwitch.h"
-#include "llvm/Support/TargetParser.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/TargetParser/RISCVTargetParser.h"
 #include <optional>
 
 using namespace clang;
@@ -41,7 +41,7 @@ ArrayRef<const char *> RISCVTargetInfo::getGCCRegNames() const {
       "v8",  "v9",  "v10", "v11", "v12", "v13", "v14", "v15",
       "v16", "v17", "v18", "v19", "v20", "v21", "v22", "v23",
       "v24", "v25", "v26", "v27", "v28", "v29", "v30", "v31"};
-  return llvm::makeArrayRef(GCCRegNames);
+  return llvm::ArrayRef(GCCRegNames);
 }
 
 ArrayRef<TargetInfo::GCCRegAlias> RISCVTargetInfo::getGCCRegAliases() const {
@@ -62,7 +62,7 @@ ArrayRef<TargetInfo::GCCRegAlias> RISCVTargetInfo::getGCCRegAliases() const {
       {{"fs4"}, "f20"}, {{"fs5"}, "f21"}, {{"fs6"}, "f22"},  {{"fs7"}, "f23"},
       {{"fs8"}, "f24"}, {{"fs9"}, "f25"}, {{"fs10"}, "f26"}, {{"fs11"}, "f27"},
       {{"ft8"}, "f28"}, {{"ft9"}, "f29"}, {{"ft10"}, "f30"}, {{"ft11"}, "f31"}};
-  return llvm::makeArrayRef(GCCRegAliases);
+  return llvm::ArrayRef(GCCRegAliases);
 }
 
 bool RISCVTargetInfo::validateAsmConstraint(
@@ -202,22 +202,22 @@ void RISCVTargetInfo::getTargetDefines(const LangOptions &Opts,
   }
 }
 
-const Builtin::Info RISCVTargetInfo::BuiltinInfo[] = {
+static constexpr Builtin::Info BuiltinInfo[] = {
 #define BUILTIN(ID, TYPE, ATTRS)                                               \
-  {#ID, TYPE, ATTRS, nullptr, ALL_LANGUAGES, nullptr},
+  {#ID, TYPE, ATTRS, nullptr, HeaderDesc::NO_HEADER, ALL_LANGUAGES},
 #define TARGET_BUILTIN(ID, TYPE, ATTRS, FEATURE)                               \
-    {#ID, TYPE, ATTRS, nullptr, ALL_LANGUAGES, FEATURE},
+  {#ID, TYPE, ATTRS, FEATURE, HeaderDesc::NO_HEADER, ALL_LANGUAGES},
 #include "clang/Basic/BuiltinsRISCVVector.def"
 #define BUILTIN(ID, TYPE, ATTRS)                                               \
-  {#ID, TYPE, ATTRS, nullptr, ALL_LANGUAGES, nullptr},
+  {#ID, TYPE, ATTRS, nullptr, HeaderDesc::NO_HEADER, ALL_LANGUAGES},
 #define TARGET_BUILTIN(ID, TYPE, ATTRS, FEATURE)                               \
-    {#ID, TYPE, ATTRS, nullptr, ALL_LANGUAGES, FEATURE},
+  {#ID, TYPE, ATTRS, FEATURE, HeaderDesc::NO_HEADER, ALL_LANGUAGES},
 #include "clang/Basic/BuiltinsRISCV.def"
 };
 
 ArrayRef<Builtin::Info> RISCVTargetInfo::getTargetBuiltins() const {
-  return llvm::makeArrayRef(BuiltinInfo, clang::RISCV::LastTSBuiltin -
-                                             Builtin::FirstTSBuiltin);
+  return llvm::ArrayRef(BuiltinInfo,
+                        clang::RISCV::LastTSBuiltin - Builtin::FirstTSBuiltin);
 }
 
 bool RISCVTargetInfo::initFeatureMap(
@@ -254,18 +254,23 @@ bool RISCVTargetInfo::initFeatureMap(
   return TargetInfo::initFeatureMap(Features, Diags, CPU, ImpliedFeatures);
 }
 
-Optional<std::pair<unsigned, unsigned>>
+std::optional<std::pair<unsigned, unsigned>>
 RISCVTargetInfo::getVScaleRange(const LangOptions &LangOpts) const {
-  if (LangOpts.VScaleMin || LangOpts.VScaleMax)
-    return std::pair<unsigned, unsigned>(
-        LangOpts.VScaleMin ? LangOpts.VScaleMin : 1, LangOpts.VScaleMax);
+  // RISCV::RVVBitsPerBlock is 64.
+  unsigned VScaleMin = ISAInfo->getMinVLen() / llvm::RISCV::RVVBitsPerBlock;
 
-  if (unsigned MinVLen = ISAInfo->getMinVLen();
-      MinVLen >= llvm::RISCV::RVVBitsPerBlock) {
-    unsigned MaxVLen = ISAInfo->getMaxVLen();
-    // RISCV::RVVBitsPerBlock is 64.
-    return std::make_pair(MinVLen / llvm::RISCV::RVVBitsPerBlock,
-                          MaxVLen / llvm::RISCV::RVVBitsPerBlock);
+  if (LangOpts.VScaleMin || LangOpts.VScaleMax) {
+    // Treat Zvl*b as a lower bound on vscale.
+    VScaleMin = std::max(VScaleMin, LangOpts.VScaleMin);
+    unsigned VScaleMax = LangOpts.VScaleMax;
+    if (VScaleMax != 0 && VScaleMax < VScaleMin)
+      VScaleMax = VScaleMin;
+    return std::pair<unsigned, unsigned>(VScaleMin ? VScaleMin : 1, VScaleMax);
+  }
+
+  if (VScaleMin > 0) {
+    unsigned VScaleMax = ISAInfo->getMaxVLen() / llvm::RISCV::RVVBitsPerBlock;
+    return std::make_pair(VScaleMin, VScaleMax);
   }
 
   return std::nullopt;

@@ -29,6 +29,7 @@
 #include "llvm/TableGen/TableGenBackend.h"
 
 #include <list>
+#include <optional>
 
 using llvm::ArrayRef;
 using llvm::formatv;
@@ -235,6 +236,8 @@ static void emitModelDecl(const Availability &availability, raw_ostream &os) {
     os << "  template<typename ConcreteOp>\n";
     os << "  class " << modelClass << " : public Concept {\n"
        << "  public:\n"
+       << "    using Interface = " << availability.getInterfaceClassName()
+       << ";\n"
        << "    " << availability.getQueryFnRetType() << " "
        << availability.getQueryFnName()
        << "(const Concept *impl, Operation *tblgen_opaque_op) const final {\n"
@@ -257,6 +260,7 @@ static void emitInterfaceDecl(const Availability &availability,
 
   StringRef cppNamespace = availability.getInterfaceClassNamespace();
   NamespaceEmitter nsEmitter(os, cppNamespace);
+  os << "class " << interfaceName << ";\n\n";
 
   // Emit the traits struct containing the concept and model declarations.
   os << "namespace detail {\n"
@@ -393,7 +397,7 @@ static void emitAvailabilityQueryForBitEnum(const Record &enumDef,
                   enumName);
 
     os << formatv(
-        "  assert(::llvm::countPopulation(static_cast<{0}>(value)) <= 1"
+        "  assert(::llvm::popcount(static_cast<{0}>(value)) <= 1"
         " && \"cannot have more than one bit set\");\n",
         underlyingType);
 
@@ -924,7 +928,7 @@ static void emitOperandDeserialization(const Operator &op, ArrayRef<SMLoc> loc,
       if (valueArg->isVariableLength()) {
         if (i != e - 1) {
           PrintFatalError(loc, "SPIR-V ops can have Variadic<..> or "
-                               "Optional<...> arguments only if "
+                               "std::optional<...> arguments only if "
                                "it's the last argument");
         }
         os << tabs

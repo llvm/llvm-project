@@ -96,7 +96,11 @@ Expected<FileAnalysis> FileAnalysis::Create(StringRef Filename) {
   }
 
   Analysis.ObjectTriple = Analysis.Object->makeTriple();
-  Analysis.Features = Analysis.Object->getFeatures();
+  Expected<SubtargetFeatures> Features = Analysis.Object->getFeatures();
+  if (!Features)
+    return Features.takeError();
+
+  Analysis.Features = *Features;
 
   // Init the rest of the object.
   if (auto InitResponse = Analysis.initialiseDisassemblyMembers())

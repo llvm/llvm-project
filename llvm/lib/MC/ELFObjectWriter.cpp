@@ -880,8 +880,8 @@ void ELFWriter::writeSectionData(const MCAssembler &Asm, MCSection &Sec,
   raw_svector_ostream VecOS(UncompressedData);
   Asm.writeSectionData(VecOS, &Section, Layout);
   ArrayRef<uint8_t> Uncompressed =
-      makeArrayRef(reinterpret_cast<uint8_t *>(UncompressedData.data()),
-                   UncompressedData.size());
+      ArrayRef(reinterpret_cast<uint8_t *>(UncompressedData.data()),
+               UncompressedData.size());
 
   SmallVector<uint8_t, 128> Compressed;
   uint32_t ChType;

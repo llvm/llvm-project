@@ -6,8 +6,8 @@ target triple = "aarch64-unknown-linux-gnu"
 define <4 x i8> @load_v4i8(ptr %a) #0 {
 ; CHECK-LABEL: load_v4i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr s0, [x0]
-; CHECK-NEXT:    uunpklo z0.h, z0.b
+; CHECK-NEXT:    ptrue p0.h, vl4
+; CHECK-NEXT:    ld1b { z0.h }, p0/z, [x0]
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
   %load = load <4 x i8>, ptr %a

@@ -4,21 +4,19 @@
 define { i128, i8 } @muloti_test(i128 %l, i128 %r) unnamed_addr #0 {
 ; AARCH-LABEL: muloti_test:
 ; AARCH:       // %bb.0: // %start
-; AARCH-NEXT:    mul x8, x3, x0
-; AARCH-NEXT:    umulh x9, x0, x2
-; AARCH-NEXT:    madd x8, x1, x2, x8
-; AARCH-NEXT:    umulh x10, x1, x2
-; AARCH-NEXT:    adds x8, x9, x8
-; AARCH-NEXT:    cset w9, hs
 ; AARCH-NEXT:    cmp x1, #0
+; AARCH-NEXT:    umulh x8, x1, x2
 ; AARCH-NEXT:    ccmp x3, #0, #4, ne
-; AARCH-NEXT:    mov x1, x8
-; AARCH-NEXT:    ccmp xzr, x10, #0, eq
-; AARCH-NEXT:    umulh x10, x3, x0
+; AARCH-NEXT:    umulh x9, x3, x0
+; AARCH-NEXT:    ccmp xzr, x8, #0, eq
+; AARCH-NEXT:    mul x8, x3, x0
+; AARCH-NEXT:    madd x8, x1, x2, x8
+; AARCH-NEXT:    ccmp xzr, x9, #0, eq
+; AARCH-NEXT:    umulh x9, x0, x2
 ; AARCH-NEXT:    mul x0, x0, x2
-; AARCH-NEXT:    ccmp xzr, x10, #0, eq
 ; AARCH-NEXT:    cset w10, ne
-; AARCH-NEXT:    orr w2, w10, w9
+; AARCH-NEXT:    adds x1, x9, x8
+; AARCH-NEXT:    csinc w2, w10, wzr, lo
 ; AARCH-NEXT:    ret
 start:
   %0 = tail call { i128, i1 } @llvm.umul.with.overflow.i128(i128 %l, i128 %r) #2

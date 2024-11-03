@@ -18,6 +18,7 @@
 #include "mlir/Parser/Parser.h"
 #include "mlir/Tools/ParseUtilities.h"
 #include "llvm/Support/SourceMgr.h"
+#include <optional>
 
 using namespace mlir;
 
@@ -49,7 +50,7 @@ static llvm::StringMap<Translation> &getTranslationRegistry() {
 
 /// Register the given translation.
 static void registerTranslation(StringRef name, StringRef description,
-                                Optional<llvm::Align> inputAlignment,
+                                std::optional<llvm::Align> inputAlignment,
                                 const TranslateFunction &function) {
   auto &registry = getTranslationRegistry();
   if (registry.count(name))
@@ -73,10 +74,16 @@ TranslateRegistration::TranslateRegistration(
 // Puts `function` into the to-MLIR translation registry unless there is already
 // a function registered for the same name.
 static void registerTranslateToMLIRFunction(
-    StringRef name, StringRef description, Optional<llvm::Align> inputAlignment,
+    StringRef name, StringRef description,
+    const DialectRegistrationFunction &dialectRegistration,
+    std::optional<llvm::Align> inputAlignment,
     const TranslateSourceMgrToMLIRFunction &function) {
-  auto wrappedFn = [function](const std::shared_ptr<llvm::SourceMgr> &sourceMgr,
-                              raw_ostream &output, MLIRContext *context) {
+  auto wrappedFn = [function, dialectRegistration](
+                       const std::shared_ptr<llvm::SourceMgr> &sourceMgr,
+                       raw_ostream &output, MLIRContext *context) {
+    DialectRegistry registry;
+    dialectRegistration(registry);
+    context->appendDialectRegistry(registry);
     OwningOpRef<Operation *> op = function(sourceMgr, context);
     if (!op || failed(verify(*op)))
       return failure();
@@ -89,15 +96,18 @@ static void registerTranslateToMLIRFunction(
 TranslateToMLIRRegistration::TranslateToMLIRRegistration(
     StringRef name, StringRef description,
     const TranslateSourceMgrToMLIRFunction &function,
-    Optional<llvm::Align> inputAlignment) {
-  registerTranslateToMLIRFunction(name, description, inputAlignment, function);
+    const DialectRegistrationFunction &dialectRegistration,
+    std::optional<llvm::Align> inputAlignment) {
+  registerTranslateToMLIRFunction(name, description, dialectRegistration,
+                                  inputAlignment, function);
 }
 TranslateToMLIRRegistration::TranslateToMLIRRegistration(
     StringRef name, StringRef description,
     const TranslateRawSourceMgrToMLIRFunction &function,
-    Optional<llvm::Align> inputAlignment) {
+    const DialectRegistrationFunction &dialectRegistration,
+    std::optional<llvm::Align> inputAlignment) {
   registerTranslateToMLIRFunction(
-      name, description, inputAlignment,
+      name, description, dialectRegistration, inputAlignment,
       [function](const std::shared_ptr<llvm::SourceMgr> &sourceMgr,
                  MLIRContext *ctx) { return function(*sourceMgr, ctx); });
 }
@@ -106,9 +116,10 @@ TranslateToMLIRRegistration::TranslateToMLIRRegistration(
 TranslateToMLIRRegistration::TranslateToMLIRRegistration(
     StringRef name, StringRef description,
     const TranslateStringRefToMLIRFunction &function,
-    Optional<llvm::Align> inputAlignment) {
+    const DialectRegistrationFunction &dialectRegistration,
+    std::optional<llvm::Align> inputAlignment) {
   registerTranslateToMLIRFunction(
-      name, description, inputAlignment,
+      name, description, dialectRegistration, inputAlignment,
       [function](const std::shared_ptr<llvm::SourceMgr> &sourceMgr,
                  MLIRContext *ctx) {
         const llvm::MemoryBuffer *buffer =
@@ -124,7 +135,7 @@ TranslateToMLIRRegistration::TranslateToMLIRRegistration(
 TranslateFromMLIRRegistration::TranslateFromMLIRRegistration(
     StringRef name, StringRef description,
     const TranslateFromMLIRFunction &function,
-    const std::function<void(DialectRegistry &)> &dialectRegistration) {
+    const DialectRegistrationFunction &dialectRegistration) {
   registerTranslation(
       name, description, /*inputAlignment=*/std::nullopt,
       [function,

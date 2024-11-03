@@ -14,7 +14,7 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 
 declare i64 @foo()
 
-define void @f(i64* %A, i64 %N) nounwind {
+define void @f(ptr %A, i64 %N) nounwind {
 entry:
   fence seq_cst
   br i1 true, label %next, label %next2
@@ -24,8 +24,8 @@ next2:
 
 for.j:
   %indvar2 = phi i64 [ 0, %next2], [ %indvar2.next2, %for.j]
-  %scevgep2 = getelementptr i64, i64* %A, i64 %indvar2
-  store i64 %indvar2, i64* %scevgep2
+  %scevgep2 = getelementptr i64, ptr %A, i64 %indvar2
+  store i64 %indvar2, ptr %scevgep2
   %indvar2.next2 = add nsw i64 %indvar2, 1
   %exitcond2 = icmp eq i64 %indvar2.next2, %N
   br i1 %exitcond2, label %return, label %for.j
@@ -35,8 +35,8 @@ next:
 
 for.i:
   %indvar = phi i64 [ 0, %next], [ %indvar.next, %for.i ]
-  %scevgep = getelementptr i64, i64* %A, i64 %indvar
-  store i64 %indvar, i64* %scevgep
+  %scevgep = getelementptr i64, ptr %A, i64 %indvar
+  store i64 %indvar, ptr %scevgep
   %i = call i64 @foo()
   %indvar.next = add nsw i64 %indvar, 1
   %exitcond = icmp eq i64 %indvar.next, %N

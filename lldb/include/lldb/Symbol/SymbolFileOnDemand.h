@@ -10,6 +10,7 @@
 #define LLDB_SYMBOL_SYMBOLFILEONDEMAND_H
 
 #include <mutex>
+#include <optional>
 #include <vector>
 
 #include "lldb/Symbol/ObjectFile.h"
@@ -96,7 +97,7 @@ public:
   ParseVariablesForContext(const lldb_private::SymbolContext &sc) override;
 
   lldb_private::Type *ResolveTypeUID(lldb::user_id_t type_uid) override;
-  llvm::Optional<ArrayInfo> GetDynamicArrayInfoForUID(
+  std::optional<ArrayInfo> GetDynamicArrayInfoForUID(
       lldb::user_id_t type_uid,
       const lldb_private::ExecutionContext *exe_ctx) override;
 
@@ -224,6 +225,24 @@ public:
   }
   void SetDebugInfoHadFrameVariableErrors() override {
     return m_sym_file_impl->SetDebugInfoHadFrameVariableErrors();
+  }
+
+  lldb::TypeSP MakeType(lldb::user_id_t uid, ConstString name,
+                        std::optional<uint64_t> byte_size,
+                        SymbolContextScope *context,
+                        lldb::user_id_t encoding_uid,
+                        Type::EncodingDataType encoding_uid_type,
+                        const Declaration &decl,
+                        const CompilerType &compiler_qual_type,
+                        Type::ResolveState compiler_type_resolve_state,
+                        uint32_t opaque_payload = 0) override {
+    return m_sym_file_impl->MakeType(
+        uid, name, byte_size, context, encoding_uid, encoding_uid_type, decl,
+        compiler_qual_type, compiler_type_resolve_state, opaque_payload);
+  }
+
+  lldb::TypeSP CopyType(const lldb::TypeSP &other_type) override {
+    return m_sym_file_impl->CopyType(other_type);
   }
 
 private:

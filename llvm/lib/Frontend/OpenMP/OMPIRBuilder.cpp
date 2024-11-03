@@ -330,6 +330,7 @@ BasicBlock *llvm::splitBBWithSuffix(IRBuilderBase &Builder, bool CreateBranch,
 
 void OpenMPIRBuilder::addAttributes(omp::RuntimeFunction FnID, Function &Fn) {
   LLVMContext &Ctx = Fn.getContext();
+  Triple T(M.getTargetTriple());
 
   // Get the function's current attributes.
   auto Attrs = Fn.getAttributes();
@@ -339,6 +340,25 @@ void OpenMPIRBuilder::addAttributes(omp::RuntimeFunction FnID, Function &Fn) {
   for (size_t ArgNo = 0; ArgNo < Fn.arg_size(); ++ArgNo)
     ArgAttrs.emplace_back(Attrs.getParamAttrs(ArgNo));
 
+  // Add AS to FnAS while taking special care with integer extensions.
+  auto addAttrSet = [&](AttributeSet &FnAS, const AttributeSet &AS,
+                        bool Param = true) -> void {
+    bool HasSignExt = AS.hasAttribute(Attribute::SExt);
+    bool HasZeroExt = AS.hasAttribute(Attribute::ZExt);
+    if (HasSignExt || HasZeroExt) {
+      assert(AS.getNumAttributes() == 1 &&
+             "Currently not handling extension attr combined with others.");
+      if (Param) {
+        if (auto AK = TargetLibraryInfo::getExtAttrForI32Param(T, HasSignExt))
+          FnAS = FnAS.addAttribute(Ctx, AK);
+      } else
+        if (auto AK = TargetLibraryInfo::getExtAttrForI32Return(T, HasSignExt))
+          FnAS = FnAS.addAttribute(Ctx, AK);
+    } else {
+      FnAS = FnAS.addAttributes(Ctx, AS);
+    }
+  };
+
 #define OMP_ATTRS_SET(VarName, AttrSet) AttributeSet VarName = AttrSet;
 #include "llvm/Frontend/OpenMP/OMPKinds.def"
 
@@ -347,10 +367,9 @@ void OpenMPIRBuilder::addAttributes(omp::RuntimeFunction FnID, Function &Fn) {
 #define OMP_RTL_ATTRS(Enum, FnAttrSet, RetAttrSet, ArgAttrSets)                \
   case Enum:                                                                   \
     FnAttrs = FnAttrs.addAttributes(Ctx, FnAttrSet);                           \
-    RetAttrs = RetAttrs.addAttributes(Ctx, RetAttrSet);                        \
+    addAttrSet(RetAttrs, RetAttrSet, /*Param*/false);                          \
     for (size_t ArgNo = 0; ArgNo < ArgAttrSets.size(); ++ArgNo)                \
-      ArgAttrs[ArgNo] =                                                        \
-          ArgAttrs[ArgNo].addAttributes(Ctx, ArgAttrSets[ArgNo]);              \
+      addAttrSet(ArgAttrs[ArgNo], ArgAttrSets[ArgNo]);                         \
     Fn.setAttributes(AttributeList::get(Ctx, FnAttrs, RetAttrs, ArgAttrs));    \
     break;
 #include "llvm/Frontend/OpenMP/OMPKinds.def"
@@ -796,7 +815,7 @@ void OpenMPIRBuilder::emitOffloadingEntry(Constant *Addr, StringRef Name,
 OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::emitTargetKernel(
     const LocationDescription &Loc, Value *&Return, Value *Ident,
     Value *DeviceID, Value *NumTeams, Value *NumThreads, Value *HostPtr,
-    ArrayRef<Value *> KernelArgs, ArrayRef<Value *> NoWaitArgs) {
+    ArrayRef<Value *> KernelArgs) {
   if (!updateToLocation(Loc))
     return Loc.IP;
 
@@ -810,16 +829,11 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::emitTargetKernel(
         M.getDataLayout().getPrefTypeAlign(KernelArgs[I]->getType()));
   }
 
-  bool HasNoWait = !NoWaitArgs.empty();
   SmallVector<Value *> OffloadingArgs{Ident,      DeviceID, NumTeams,
                                       NumThreads, HostPtr,  KernelArgsPtr};
-  if (HasNoWait)
-    OffloadingArgs.append(NoWaitArgs.begin(), NoWaitArgs.end());
 
   Return = Builder.CreateCall(
-      HasNoWait
-          ? getOrCreateRuntimeFunction(M, OMPRTL___tgt_target_kernel_nowait)
-          : getOrCreateRuntimeFunction(M, OMPRTL___tgt_target_kernel),
+      getOrCreateRuntimeFunction(M, OMPRTL___tgt_target_kernel),
       OffloadingArgs);
 
   return Builder.saveIP();
@@ -1269,7 +1283,7 @@ OpenMPIRBuilder::InsertPointTy
 OpenMPIRBuilder::createTask(const LocationDescription &Loc,
                             InsertPointTy AllocaIP, BodyGenCallbackTy BodyGenCB,
                             bool Tied, Value *Final, Value *IfCondition,
-                            ArrayRef<DependData *> Dependencies) {
+                            SmallVector<DependData> Dependencies) {
   if (!updateToLocation(Loc))
     return InsertPointTy();
 
@@ -1423,7 +1437,7 @@ OpenMPIRBuilder::createTask(const LocationDescription &Loc,
           Builder.CreateAlloca(DepArrayTy, nullptr, ".dep.arr.addr");
 
       unsigned P = 0;
-      for (DependData *Dep : Dependencies) {
+      for (const DependData &Dep : Dependencies) {
         Value *Base =
             Builder.CreateConstInBoundsGEP2_64(DepArrayTy, DepArray, 0, P);
         // Store the pointer to the variable
@@ -1431,14 +1445,14 @@ OpenMPIRBuilder::createTask(const LocationDescription &Loc,
             DependInfo, Base,
             static_cast<unsigned int>(RTLDependInfoFields::BaseAddr));
         Value *DepValPtr =
-            Builder.CreatePtrToInt(Dep->DepVal, Builder.getInt64Ty());
+            Builder.CreatePtrToInt(Dep.DepVal, Builder.getInt64Ty());
         Builder.CreateStore(DepValPtr, Addr);
         // Store the size of the variable
         Value *Size = Builder.CreateStructGEP(
             DependInfo, Base,
             static_cast<unsigned int>(RTLDependInfoFields::Len));
         Builder.CreateStore(Builder.getInt64(M.getDataLayout().getTypeStoreSize(
-                                Dep->DepValueType)),
+                                Dep.DepValueType)),
                             Size);
         // Store the dependency kind
         Value *Flags = Builder.CreateStructGEP(
@@ -1446,7 +1460,7 @@ OpenMPIRBuilder::createTask(const LocationDescription &Loc,
             static_cast<unsigned int>(RTLDependInfoFields::Flags));
         Builder.CreateStore(
             ConstantInt::get(Builder.getInt8Ty(),
-                             static_cast<unsigned int>(Dep->DepKind)),
+                             static_cast<unsigned int>(Dep.DepKind)),
             Flags);
         ++P;
       }
@@ -3762,9 +3776,9 @@ CallInst *OpenMPIRBuilder::createOMPInteropInit(
   Value *ThreadId = getOrCreateThreadID(Ident);
   if (Device == nullptr)
     Device = ConstantInt::get(Int32, -1);
-  Constant *InteropTypeVal = ConstantInt::get(Int64, (int)InteropType);
+  Constant *InteropTypeVal = ConstantInt::get(Int32, (int)InteropType);
   if (NumDependences == nullptr) {
-    NumDependences = ConstantInt::get(Int32, 0);
+    NumDependences = ConstantInt::get(Int64, 0);
     PointerType *PointerTypeVar = Type::getInt8PtrTy(M.getContext());
     DependenceAddress = ConstantPointerNull::get(PointerTypeVar);
   }
@@ -4334,6 +4348,7 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createAtomicUpdate(
   return Builder.saveIP();
 }
 
+// FIXME: Duplicating AtomicExpand
 Value *OpenMPIRBuilder::emitRMWOpAsInstruction(Value *Src1, Value *Src2,
                                                AtomicRMWInst::BinOp RMWOp) {
   switch (RMWOp) {
@@ -4359,6 +4374,8 @@ Value *OpenMPIRBuilder::emitRMWOpAsInstruction(Value *Src1, Value *Src2,
   case AtomicRMWInst::UMin:
   case AtomicRMWInst::FMax:
   case AtomicRMWInst::FMin:
+  case AtomicRMWInst::UIncWrap:
+  case AtomicRMWInst::UDecWrap:
     llvm_unreachable("Unsupported atomic update operation");
   }
   llvm_unreachable("Unsupported atomic update operation");
@@ -4720,10 +4737,10 @@ void OpenMPIRBuilder::initializeTypes(Module &M) {
 #define OMP_FUNCTION_TYPE(VarName, IsVarArg, ReturnType, ...)                  \
   VarName = FunctionType::get(ReturnType, {__VA_ARGS__}, IsVarArg);            \
   VarName##Ptr = PointerType::getUnqual(VarName);
-#define OMP_STRUCT_TYPE(VarName, StructName, ...)                              \
+#define OMP_STRUCT_TYPE(VarName, StructName, Packed, ...)                      \
   T = StructType::getTypeByName(Ctx, StructName);                              \
   if (!T)                                                                      \
-    T = StructType::create(Ctx, {__VA_ARGS__}, StructName);                    \
+    T = StructType::create(Ctx, {__VA_ARGS__}, StructName, Packed);            \
   VarName = T;                                                                 \
   VarName##Ptr = PointerType::getUnqual(T);
 #include "llvm/Frontend/OpenMP/OMPKinds.def"

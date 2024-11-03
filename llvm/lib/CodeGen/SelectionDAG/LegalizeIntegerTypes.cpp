@@ -843,7 +843,7 @@ SDValue DAGTypeLegalizer::PromoteIntRes_Overflow(SDNode *N) {
 
   SDLoc dl(N);
   SDValue Res = DAG.getNode(N->getOpcode(), dl, DAG.getVTList(VT, SVT),
-                            makeArrayRef(Ops, NumOps));
+                            ArrayRef(Ops, NumOps));
 
   // Modified the sum result - switch anything that used the old sum to use
   // the new one.
@@ -2435,10 +2435,14 @@ void DAGTypeLegalizer::ExpandIntegerResult(SDNode *N, unsigned ResNo) {
   case ISD::FP_TO_UINT:  ExpandIntRes_FP_TO_UINT(N, Lo, Hi); break;
   case ISD::FP_TO_SINT_SAT:
   case ISD::FP_TO_UINT_SAT: ExpandIntRes_FP_TO_XINT_SAT(N, Lo, Hi); break;
+  case ISD::STRICT_LROUND:
+  case ISD::STRICT_LRINT:
+  case ISD::LROUND:
+  case ISD::LRINT:
   case ISD::STRICT_LLROUND:
   case ISD::STRICT_LLRINT:
   case ISD::LLROUND:
-  case ISD::LLRINT:      ExpandIntRes_LLROUND_LLRINT(N, Lo, Hi); break;
+  case ISD::LLRINT:      ExpandIntRes_XROUND_XRINT(N, Lo, Hi); break;
   case ISD::LOAD:        ExpandIntRes_LOAD(cast<LoadSDNode>(N), Lo, Hi); break;
   case ISD::MUL:         ExpandIntRes_MUL(N, Lo, Hi); break;
   case ISD::READCYCLECOUNTER: ExpandIntRes_READCYCLECOUNTER(N, Lo, Hi); break;
@@ -2935,13 +2939,13 @@ void DAGTypeLegalizer::ExpandIntRes_ADDSUB(SDNode *N,
       Lo = DAG.getNode(ISD::UADDO, dl, VTList, LoOps);
       HiOps[2] = Lo.getValue(1);
       Hi = DAG.computeKnownBits(HiOps[2]).isZero()
-               ? DAG.getNode(ISD::UADDO, dl, VTList, makeArrayRef(HiOps, 2))
+               ? DAG.getNode(ISD::UADDO, dl, VTList, ArrayRef(HiOps, 2))
                : DAG.getNode(ISD::ADDCARRY, dl, VTList, HiOps);
     } else {
       Lo = DAG.getNode(ISD::USUBO, dl, VTList, LoOps);
       HiOps[2] = Lo.getValue(1);
       Hi = DAG.computeKnownBits(HiOps[2]).isZero()
-               ? DAG.getNode(ISD::USUBO, dl, VTList, makeArrayRef(HiOps, 2))
+               ? DAG.getNode(ISD::USUBO, dl, VTList, ArrayRef(HiOps, 2))
                : DAG.getNode(ISD::SUBCARRY, dl, VTList, HiOps);
     }
     return;
@@ -2984,11 +2988,11 @@ void DAGTypeLegalizer::ExpandIntRes_ADDSUB(SDNode *N,
     if (N->getOpcode() == ISD::ADD) {
       RevOpc = ISD::SUB;
       Lo = DAG.getNode(ISD::UADDO, dl, VTList, LoOps);
-      Hi = DAG.getNode(ISD::ADD, dl, NVT, makeArrayRef(HiOps, 2));
+      Hi = DAG.getNode(ISD::ADD, dl, NVT, ArrayRef(HiOps, 2));
     } else {
       RevOpc = ISD::ADD;
       Lo = DAG.getNode(ISD::USUBO, dl, VTList, LoOps);
-      Hi = DAG.getNode(ISD::SUB, dl, NVT, makeArrayRef(HiOps, 2));
+      Hi = DAG.getNode(ISD::SUB, dl, NVT, ArrayRef(HiOps, 2));
     }
     SDValue OVF = Lo.getValue(1);
 
@@ -3009,7 +3013,7 @@ void DAGTypeLegalizer::ExpandIntRes_ADDSUB(SDNode *N,
 
   if (N->getOpcode() == ISD::ADD) {
     Lo = DAG.getNode(ISD::ADD, dl, NVT, LoOps);
-    Hi = DAG.getNode(ISD::ADD, dl, NVT, makeArrayRef(HiOps, 2));
+    Hi = DAG.getNode(ISD::ADD, dl, NVT, ArrayRef(HiOps, 2));
     SDValue Cmp = DAG.getSetCC(dl, getSetCCResultType(NVT), Lo, LoOps[0],
                                ISD::SETULT);
 
@@ -3023,7 +3027,7 @@ void DAGTypeLegalizer::ExpandIntRes_ADDSUB(SDNode *N,
     Hi = DAG.getNode(ISD::ADD, dl, NVT, Hi, Carry);
   } else {
     Lo = DAG.getNode(ISD::SUB, dl, NVT, LoOps);
-    Hi = DAG.getNode(ISD::SUB, dl, NVT, makeArrayRef(HiOps, 2));
+    Hi = DAG.getNode(ISD::SUB, dl, NVT, ArrayRef(HiOps, 2));
     SDValue Cmp =
       DAG.getSetCC(dl, getSetCCResultType(LoOps[0].getValueType()),
                    LoOps[0], LoOps[1], ISD::SETULT);
@@ -3474,8 +3478,8 @@ void DAGTypeLegalizer::ExpandIntRes_FP_TO_XINT_SAT(SDNode *N, SDValue &Lo,
   SplitInteger(Res, Lo, Hi);
 }
 
-void DAGTypeLegalizer::ExpandIntRes_LLROUND_LLRINT(SDNode *N, SDValue &Lo,
-                                                   SDValue &Hi) {
+void DAGTypeLegalizer::ExpandIntRes_XROUND_XRINT(SDNode *N, SDValue &Lo,
+                                                 SDValue &Hi) {
   SDLoc dl(N);
   bool IsStrict = N->isStrictFPOpcode();
   SDValue Op = N->getOperand(IsStrict ? 1 : 0);
@@ -3498,7 +3502,33 @@ void DAGTypeLegalizer::ExpandIntRes_LLROUND_LLRINT(SDNode *N, SDValue &Lo,
   }
 
   RTLIB::Libcall LC = RTLIB::UNKNOWN_LIBCALL;
-  if (N->getOpcode() == ISD::LLROUND ||
+  if (N->getOpcode() == ISD::LROUND ||
+      N->getOpcode() == ISD::STRICT_LROUND) {
+    if (VT == MVT::f32)
+      LC = RTLIB::LROUND_F32;
+    else if (VT == MVT::f64)
+      LC = RTLIB::LROUND_F64;
+    else if (VT == MVT::f80)
+      LC = RTLIB::LROUND_F80;
+    else if (VT == MVT::f128)
+      LC = RTLIB::LROUND_F128;
+    else if (VT == MVT::ppcf128)
+      LC = RTLIB::LROUND_PPCF128;
+    assert(LC != RTLIB::UNKNOWN_LIBCALL && "Unexpected lround input type!");
+  } else if (N->getOpcode() == ISD::LRINT ||
+             N->getOpcode() == ISD::STRICT_LRINT) {
+    if (VT == MVT::f32)
+      LC = RTLIB::LRINT_F32;
+    else if (VT == MVT::f64)
+      LC = RTLIB::LRINT_F64;
+    else if (VT == MVT::f80)
+      LC = RTLIB::LRINT_F80;
+    else if (VT == MVT::f128)
+      LC = RTLIB::LRINT_F128;
+    else if (VT == MVT::ppcf128)
+      LC = RTLIB::LRINT_PPCF128;
+    assert(LC != RTLIB::UNKNOWN_LIBCALL && "Unexpected lrint input type!");
+  } else if (N->getOpcode() == ISD::LLROUND ||
       N->getOpcode() == ISD::STRICT_LLROUND) {
     if (VT == MVT::f32)
       LC = RTLIB::LLROUND_F32;
@@ -4110,6 +4140,111 @@ void DAGTypeLegalizer::ExpandIntRes_SDIV(SDNode *N,
   SplitInteger(TLI.makeLibCall(DAG, LC, VT, Ops, CallOptions, dl).first, Lo, Hi);
 }
 
+void DAGTypeLegalizer::ExpandIntRes_ShiftThroughStack(SDNode *N, SDValue &Lo,
+                                                      SDValue &Hi) {
+  SDLoc dl(N);
+  SDValue Shiftee = N->getOperand(0);
+  EVT VT = Shiftee.getValueType();
+  SDValue ShAmt = N->getOperand(1);
+  EVT ShAmtVT = ShAmt.getValueType();
+
+  // This legalization is optimal when the shift is by a multiple of byte width,
+  //   %x * 8 <-> %x << 3   so 3 low bits should be be known zero.
+  bool ShiftByByteMultiple =
+      DAG.computeKnownBits(ShAmt).countMinTrailingZeros() >= 3;
+
+  // If we can't do it as one step, we'll have two uses of shift amount,
+  // and thus must freeze it.
+  if (!ShiftByByteMultiple)
+    ShAmt = DAG.getFreeze(ShAmt);
+
+  unsigned VTBitWidth = VT.getScalarSizeInBits();
+  assert(VTBitWidth % 8 == 0 && "Shifting a not byte multiple value?");
+  unsigned VTByteWidth = VTBitWidth / 8;
+  assert(isPowerOf2_32(VTByteWidth) &&
+         "Shiftee type size is not a power of two!");
+  unsigned StackSlotByteWidth = 2 * VTByteWidth;
+  unsigned StackSlotBitWidth = 8 * StackSlotByteWidth;
+  EVT StackSlotVT = EVT::getIntegerVT(*DAG.getContext(), StackSlotBitWidth);
+
+  // Get a temporary stack slot 2x the width of our VT.
+  // FIXME: reuse stack slots?
+  // FIXME: should we be more picky about alignment?
+  Align StackSlotAlignment(1);
+  SDValue StackPtr = DAG.CreateStackTemporary(
+      TypeSize::getFixed(StackSlotByteWidth), StackSlotAlignment);
+  EVT PtrTy = StackPtr.getValueType();
+  SDValue Ch = DAG.getEntryNode();
+
+  MachinePointerInfo StackPtrInfo = MachinePointerInfo::getFixedStack(
+      DAG.getMachineFunction(),
+      cast<FrameIndexSDNode>(StackPtr.getNode())->getIndex());
+
+  // Extend the value, that is being shifted, to the entire stack slot's width.
+  SDValue Init;
+  if (N->getOpcode() != ISD::SHL) {
+    unsigned WideningOpc =
+        N->getOpcode() == ISD::SRA ? ISD::SIGN_EXTEND : ISD::ZERO_EXTEND;
+    Init = DAG.getNode(WideningOpc, dl, StackSlotVT, Shiftee);
+  } else {
+    // For left-shifts, pad the Shiftee's LSB with zeros to twice it's width.
+    SDValue AllZeros = DAG.getConstant(0, dl, VT);
+    Init = DAG.getNode(ISD::BUILD_PAIR, dl, StackSlotVT, AllZeros, Shiftee);
+  }
+  // And spill it into the stack slot.
+  Ch = DAG.getStore(Ch, dl, Init, StackPtr, StackPtrInfo, StackSlotAlignment);
+
+  // Now, compute the full-byte offset into stack slot from where we can load.
+  // We have shift amount, which is in bits, but in multiples of byte.
+  // So just divide by CHAR_BIT.
+  SDNodeFlags Flags;
+  if (ShiftByByteMultiple)
+    Flags.setExact(true);
+  SDValue ByteOffset = DAG.getNode(ISD::SRL, dl, ShAmtVT, ShAmt,
+                                   DAG.getConstant(3, dl, ShAmtVT), Flags);
+  // And clamp it, because OOB load is an immediate UB,
+  // while shift overflow would have *just* been poison.
+  ByteOffset = DAG.getNode(ISD::AND, dl, ShAmtVT, ByteOffset,
+                           DAG.getConstant(VTByteWidth - 1, dl, ShAmtVT));
+  // We have exactly two strategies on indexing into stack slot here:
+  // 1. upwards starting from the beginning of the slot
+  // 2. downwards starting from the middle of the slot
+  // On little-endian machine, we pick 1. for right shifts and 2. for left-shift
+  // and vice versa on big-endian machine.
+  bool WillIndexUpwards = N->getOpcode() != ISD::SHL;
+  if (DAG.getDataLayout().isBigEndian())
+    WillIndexUpwards = !WillIndexUpwards;
+
+  SDValue AdjStackPtr;
+  if (WillIndexUpwards) {
+    AdjStackPtr = StackPtr;
+  } else {
+    AdjStackPtr = DAG.getMemBasePlusOffset(
+        StackPtr, DAG.getConstant(VTByteWidth, dl, PtrTy), dl);
+    ByteOffset = DAG.getNegative(ByteOffset, dl, ShAmtVT);
+  }
+
+  // Get the pointer somewhere into the stack slot from which we need to load.
+  ByteOffset = DAG.getSExtOrTrunc(ByteOffset, dl, PtrTy);
+  AdjStackPtr = DAG.getMemBasePlusOffset(AdjStackPtr, ByteOffset, dl);
+
+  // And load it! While the load is not legal, legalizing it is obvious.
+  SDValue Res = DAG.getLoad(
+      VT, dl, Ch, AdjStackPtr,
+      MachinePointerInfo::getUnknownStack(DAG.getMachineFunction()), Align(1));
+  // We've performed the shift by a CHAR_BIT * [_ShAmt / CHAR_BIT_]
+
+  // If we may still have a less-than-CHAR_BIT to shift by, do so now.
+  if (!ShiftByByteMultiple) {
+    SDValue ShAmtRem = DAG.getNode(ISD::AND, dl, ShAmtVT, ShAmt,
+                                   DAG.getConstant(7, dl, ShAmtVT));
+    Res = DAG.getNode(N->getOpcode(), dl, VT, Res, ShAmtRem);
+  }
+
+  // Finally, split the computed value.
+  SplitInteger(Res, Lo, Hi);
+}
+
 void DAGTypeLegalizer::ExpandIntRes_Shift(SDNode *N,
                                           SDValue &Lo, SDValue &Hi) {
   EVT VT = N->getValueType(0);
@@ -4145,7 +4280,24 @@ void DAGTypeLegalizer::ExpandIntRes_Shift(SDNode *N,
     (Action == TargetLowering::Legal && TLI.isTypeLegal(NVT)) ||
     Action == TargetLowering::Custom;
 
-  if (LegalOrCustom && TLI.shouldExpandShift(DAG, N)) {
+  unsigned ExpansionFactor = 1;
+  // That VT->NVT expansion is one step. But will we re-expand NVT?
+  for (EVT TmpVT = NVT;;) {
+    EVT NewTMPVT = TLI.getTypeToTransformTo(*DAG.getContext(), TmpVT);
+    if (NewTMPVT == TmpVT)
+      break;
+    TmpVT = NewTMPVT;
+    ++ExpansionFactor;
+  }
+
+  TargetLowering::ShiftLegalizationStrategy S =
+      TLI.preferredShiftLegalizationStrategy(DAG, N, ExpansionFactor);
+
+  if (S == TargetLowering::ShiftLegalizationStrategy::ExpandThroughStack)
+    return ExpandIntRes_ShiftThroughStack(N, Lo, Hi);
+
+  if (LegalOrCustom &&
+      S != TargetLowering::ShiftLegalizationStrategy::LowerToLibcall) {
     // Expand the subcomponents.
     SDValue LHSL, LHSH;
     GetExpandedInteger(N->getOperand(0), LHSL, LHSH);

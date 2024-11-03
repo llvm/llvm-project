@@ -2095,7 +2095,7 @@ MachineInstr *X86InstrInfo::commuteInstructionImpl(MachineInstr &MI, bool NewMI,
     // We can commute insertps if we zero 2 of the elements, the insertion is
     // "inline" and we don't override the insertion with a zero.
     if (DstIdx == SrcIdx && (ZMask & (1 << DstIdx)) == 0 &&
-        countPopulation(ZMask) == 2) {
+        llvm::popcount(ZMask) == 2) {
       unsigned AltIdx = findFirstSet((ZMask | (1 << DstIdx)) ^ 15);
       assert(AltIdx < 4 && "Illegal insertion index");
       unsigned AltImm = (AltIdx << 6) | (AltIdx << 4) | ZMask;
@@ -5802,8 +5802,7 @@ unsigned
 X86InstrInfo::getUndefRegClearance(const MachineInstr &MI, unsigned OpNum,
                                    const TargetRegisterInfo *TRI) const {
   const MachineOperand &MO = MI.getOperand(OpNum);
-  if (Register::isPhysicalRegister(MO.getReg()) &&
-      hasUndefRegUpdate(MI.getOpcode(), OpNum))
+  if (MO.getReg().isPhysical() && hasUndefRegUpdate(MI.getOpcode(), OpNum))
     return UndefRegClearance;
 
   return 0;
@@ -9098,8 +9097,8 @@ X86InstrInfo::describeLoadedValue(const MachineInstr &MI, Register Reg) const {
 
     const MachineOperand &Op1 = MI.getOperand(1);
     const MachineOperand &Op2 = MI.getOperand(3);
-    assert(Op2.isReg() && (Op2.getReg() == X86::NoRegister ||
-                           Register::isPhysicalRegister(Op2.getReg())));
+    assert(Op2.isReg() &&
+           (Op2.getReg() == X86::NoRegister || Op2.getReg().isPhysical()));
 
     // Omit situations like:
     // %rsi = lea %rsi, 4, ...
@@ -9297,7 +9296,7 @@ X86InstrInfo::getSerializableDirectMachineOperandTargetFlags() const {
       {MO_TLVP_PIC_BASE, "x86-tlvp-pic-base"},
       {MO_SECREL, "x86-secrel"},
       {MO_COFFSTUB, "x86-coffstub"}};
-  return makeArrayRef(TargetFlags);
+  return ArrayRef(TargetFlags);
 }
 
 namespace {

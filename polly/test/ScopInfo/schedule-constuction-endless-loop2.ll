@@ -7,9 +7,9 @@
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
 ; Function Attrs: nounwind uwtable
-define void @int_upsample(i32* %A) {
+define void @int_upsample(ptr %A) {
 entry:
-  %0 = load i8, i8* undef, align 1
+  %0 = load i8, ptr undef, align 1
   %conv7 = zext i8 %0 to i32
   br label %while.body.preheader
 
@@ -27,7 +27,7 @@ while.body16.split:
   br label %while.body16
 
 if.end:                                           ; preds = %while.body
-  store i32 0, i32* %A
+  store i32 0, ptr %A
   %add23 = add nuw nsw i32 %outrow.036, 1
   %cmp = icmp slt i32 %add23, 0
   br i1 %cmp, label %while.body, label %while.end24

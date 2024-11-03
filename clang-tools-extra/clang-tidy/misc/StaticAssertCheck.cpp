@@ -15,13 +15,12 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Casting.h"
+#include <optional>
 #include <string>
 
 using namespace clang::ast_matchers;
 
-namespace clang {
-namespace tidy {
-namespace misc {
+namespace clang::tidy::misc {
 
 StaticAssertCheck::StaticAssertCheck(StringRef Name, ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context) {}
@@ -139,7 +138,7 @@ SourceLocation StaticAssertCheck::getLastParenLoc(const ASTContext *ASTCtx,
   const LangOptions &Opts = ASTCtx->getLangOpts();
   const SourceManager &SM = ASTCtx->getSourceManager();
 
-  llvm::Optional<llvm::MemoryBufferRef> Buffer =
+  std::optional<llvm::MemoryBufferRef> Buffer =
       SM.getBufferOrNone(SM.getFileID(AssertLoc));
   if (!Buffer)
     return SourceLocation();
@@ -166,6 +165,4 @@ SourceLocation StaticAssertCheck::getLastParenLoc(const ASTContext *ASTCtx,
   return Token.getLocation();
 }
 
-} // namespace misc
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::misc

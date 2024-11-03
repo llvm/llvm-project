@@ -1659,10 +1659,10 @@ define void @void_func_byval_struct_i8_i32(ptr addrspace(5) byval({ i8, i32 }) %
   ; CHECK-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.0
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(p5) = COPY [[FRAME_INDEX]](p5)
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
-  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(s8) = G_LOAD [[COPY]](p5) :: (dereferenceable load (s8) from %ir.arg0, align 4, addrspace 5)
+  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(s8) = G_LOAD [[COPY]](p5) :: (load (s8) from %ir.arg0, align 4, addrspace 5)
   ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
   ; CHECK-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p5) = G_PTR_ADD [[COPY]], [[C]](s32)
-  ; CHECK-NEXT:   [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD]](p5) :: (dereferenceable load (s32) from %ir.arg0 + 4, addrspace 5)
+  ; CHECK-NEXT:   [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD]](p5) :: (load (s32) from %ir.arg0 + 4, addrspace 5)
   ; CHECK-NEXT:   G_STORE [[LOAD]](s8), [[DEF]](p1) :: (store (s8) into `ptr addrspace(1) undef`, align 4, addrspace 1)
   ; CHECK-NEXT:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 4
   ; CHECK-NEXT:   [[PTR_ADD1:%[0-9]+]]:_(p1) = G_PTR_ADD [[DEF]], [[C1]](s64)
@@ -1685,13 +1685,13 @@ define void @void_func_byval_struct_i8_i32_x2(ptr addrspace(5) byval({ i8, i32 }
   ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr0
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
   ; CHECK-NEXT:   [[DEF1:%[0-9]+]]:_(p3) = G_IMPLICIT_DEF
-  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(s8) = G_LOAD [[COPY]](p5) :: (volatile dereferenceable load (s8) from %ir.arg0, align 4, addrspace 5)
+  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(s8) = G_LOAD [[COPY]](p5) :: (volatile load (s8) from %ir.arg0, align 4, addrspace 5)
   ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
   ; CHECK-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p5) = G_PTR_ADD [[COPY]], [[C]](s32)
-  ; CHECK-NEXT:   [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD]](p5) :: (volatile dereferenceable load (s32) from %ir.arg0 + 4, addrspace 5)
-  ; CHECK-NEXT:   [[LOAD2:%[0-9]+]]:_(s8) = G_LOAD [[COPY1]](p5) :: (volatile dereferenceable load (s8) from %ir.arg1, align 4, addrspace 5)
+  ; CHECK-NEXT:   [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD]](p5) :: (volatile load (s32) from %ir.arg0 + 4, addrspace 5)
+  ; CHECK-NEXT:   [[LOAD2:%[0-9]+]]:_(s8) = G_LOAD [[COPY1]](p5) :: (volatile load (s8) from %ir.arg1, align 4, addrspace 5)
   ; CHECK-NEXT:   [[PTR_ADD1:%[0-9]+]]:_(p5) = G_PTR_ADD [[COPY1]], [[C]](s32)
-  ; CHECK-NEXT:   [[LOAD3:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD1]](p5) :: (volatile dereferenceable load (s32) from %ir.arg1 + 4, addrspace 5)
+  ; CHECK-NEXT:   [[LOAD3:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD1]](p5) :: (volatile load (s32) from %ir.arg1 + 4, addrspace 5)
   ; CHECK-NEXT:   G_STORE [[LOAD]](s8), [[DEF]](p1) :: (volatile store (s8) into `ptr addrspace(1) undef`, align 4, addrspace 1)
   ; CHECK-NEXT:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 4
   ; CHECK-NEXT:   [[PTR_ADD2:%[0-9]+]]:_(p1) = G_PTR_ADD [[DEF]], [[C1]](s64)
@@ -1717,8 +1717,8 @@ define void @void_func_byval_i32_byval_i64(ptr addrspace(5) byval(i32) %arg0, pt
   ; CHECK-NEXT:   [[FRAME_INDEX1:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.0
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(p5) = COPY [[FRAME_INDEX1]](p5)
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
-  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p5) :: (dereferenceable load (s32) from %ir.arg0, addrspace 5)
-  ; CHECK-NEXT:   [[LOAD1:%[0-9]+]]:_(s64) = G_LOAD [[COPY1]](p5) :: (dereferenceable load (s64) from %ir.arg1, addrspace 5)
+  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p5) :: (load (s32) from %ir.arg0, addrspace 5)
+  ; CHECK-NEXT:   [[LOAD1:%[0-9]+]]:_(s64) = G_LOAD [[COPY1]](p5) :: (load (s64) from %ir.arg1, addrspace 5)
   ; CHECK-NEXT:   G_STORE [[LOAD]](s32), [[DEF]](p1) :: (store (s32) into `ptr addrspace(1) undef`, addrspace 1)
   ; CHECK-NEXT:   G_STORE [[LOAD1]](s64), [[DEF]](p1) :: (store (s64) into `ptr addrspace(1) undef`, addrspace 1)
   ; CHECK-NEXT:   SI_RETURN

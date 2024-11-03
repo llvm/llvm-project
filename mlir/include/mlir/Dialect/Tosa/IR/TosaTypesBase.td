@@ -39,6 +39,7 @@ class Tosa_QuantizedType<string n, list<int> params, bit signed>
 //===----------------------------------------------------------------------===//
 
 def Tosa_UInt8 : UI<8>;
+def Tosa_UInt16 : UI<16>;
 
 def Tosa_Int8 : I<8>;
 def Tosa_Int16 : I<16>;
@@ -57,6 +58,7 @@ def Tosa_Bool : I<1>;
 // No unsigned unquantized int types.
 def Tosa_Int : AnyTypeOf<[Tosa_Bool,
                           Tosa_UInt8,
+                          Tosa_UInt16,
                           Tosa_SignedInt]>;
 
 def Tosa_Int32Or64 : AnyTypeOf<[Tosa_Int32,
@@ -163,25 +165,25 @@ def Tosa_Int64Like : Tosa_TypeLike<[Tosa_Int64], "signless-integer-64-bit-like">
 //===----------------------------------------------------------------------===//
 // Attribute predicates and classes.
 //===----------------------------------------------------------------------===//
-class ArrayMaxCt<int n> : AttrConstraint<
-    CPred<"$_self.cast<::mlir::ArrayAttr>().size() <= " # n>,
+class DenseArrayMaxCt<int n> : AttrConstraint<
+    CPred<"$_self.cast<::mlir::DenseArrayAttr>().size() <= " # n>,
     "with at least " # n # " elements">;
 
-def Tosa_Fp32ArrayAttr2 : ConfinedAttr<F32ArrayAttr, [ArrayCount<2>]>;
-def Tosa_Fp32ArrayAttr3 : ConfinedAttr<F32ArrayAttr, [ArrayCount<3>]>;
-def Tosa_Fp32ArrayAttr4 : ConfinedAttr<F32ArrayAttr, [ArrayCount<4>]>;
-def Tosa_Fp32ArrayAttr5 : ConfinedAttr<F32ArrayAttr, [ArrayCount<5>]>;
-def Tosa_Fp32ArrayAttr6 : ConfinedAttr<F32ArrayAttr, [ArrayCount<6>]>;
+def Tosa_Fp32ArrayAttr2 : ConfinedAttr<DenseF32ArrayAttr, [DenseArrayCount<2>]>;
+def Tosa_Fp32ArrayAttr3 : ConfinedAttr<DenseF32ArrayAttr, [DenseArrayCount<3>]>;
+def Tosa_Fp32ArrayAttr4 : ConfinedAttr<DenseF32ArrayAttr, [DenseArrayCount<4>]>;
+def Tosa_Fp32ArrayAttr5 : ConfinedAttr<DenseF32ArrayAttr, [DenseArrayCount<5>]>;
+def Tosa_Fp32ArrayAttr6 : ConfinedAttr<DenseF32ArrayAttr, [DenseArrayCount<6>]>;
 
-def Tosa_IntArrayAttr2 : ConfinedAttr<I64ArrayAttr, [ArrayCount<2>]>;
-def Tosa_IntArrayAttr3 : ConfinedAttr<I64ArrayAttr, [ArrayCount<3>]>;
-def Tosa_IntArrayAttr4 : ConfinedAttr<I64ArrayAttr, [ArrayCount<4>]>;
-def Tosa_IntArrayAttr5 : ConfinedAttr<I64ArrayAttr, [ArrayCount<5>]>;
-def Tosa_IntArrayAttr6 : ConfinedAttr<I64ArrayAttr, [ArrayCount<6>]>;
+def Tosa_IntArrayAttr2 : ConfinedAttr<DenseI64ArrayAttr, [DenseArrayCount<2>]>;
+def Tosa_IntArrayAttr3 : ConfinedAttr<DenseI64ArrayAttr, [DenseArrayCount<3>]>;
+def Tosa_IntArrayAttr4 : ConfinedAttr<DenseI64ArrayAttr, [DenseArrayCount<4>]>;
+def Tosa_IntArrayAttr5 : ConfinedAttr<DenseI64ArrayAttr, [DenseArrayCount<5>]>;
+def Tosa_IntArrayAttr6 : ConfinedAttr<DenseI64ArrayAttr, [DenseArrayCount<6>]>;
 
-def Tosa_IntArrayAttrUpto2 : ConfinedAttr<I64ArrayAttr, [ArrayMaxCt<2>]>;
-def Tosa_IntArrayAttrUpto4 : ConfinedAttr<I64ArrayAttr, [ArrayMaxCt<4>]>;
-def Tosa_IntArrayAttrUpto5 : ConfinedAttr<I64ArrayAttr, [ArrayMaxCt<5>]>;
+def Tosa_IntArrayAttrUpto2 : ConfinedAttr<DenseI64ArrayAttr, [DenseArrayMaxCt<2>]>;
+def Tosa_IntArrayAttrUpto4 : ConfinedAttr<DenseI64ArrayAttr, [DenseArrayMaxCt<4>]>;
+def Tosa_IntArrayAttrUpto5 : ConfinedAttr<DenseI64ArrayAttr, [DenseArrayMaxCt<5>]>;
 
 //===----------------------------------------------------------------------===//
 // Iterable attributes.

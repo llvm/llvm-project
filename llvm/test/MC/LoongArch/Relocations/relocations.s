@@ -74,6 +74,11 @@ addi.d $t1, $t1, %pc_lo12(foo+4)
 # INSTR: addi.d  $t1, $t1, %pc_lo12(foo+4)
 # FIXUP: fixup A - offset: 0, value: %pc_lo12(foo+4), kind: FK_NONE
 
+jirl $zero, $t1, %pc_lo12(foo)
+# RELOC: R_LARCH_PCALA_LO12 foo 0x0
+# INSTR: jirl $zero, $t1, %pc_lo12(foo)
+# FIXUP: fixup A - offset: 0, value: %pc_lo12(foo), kind: FK_NONE
+
 st.b $t1, $a2, %pc_lo12(foo)
 # RELOC: R_LARCH_PCALA_LO12 foo 0x0
 # INSTR: st.b  $t1, $a2, %pc_lo12(foo)

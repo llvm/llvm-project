@@ -7,6 +7,12 @@
 // RUN:   -analyzer-config eagerly-assume=false \
 // RUN:   -triple i686-unknown-linux 2>&1 | FileCheck %s
 
+// CHECK: Loaded summary for: FILE *fopen(const char *restrict pathname, const char *restrict mode)
+// CHECK: Loaded summary for: FILE *tmpfile(void)
+// CHECK: Loaded summary for: FILE *freopen(const char *restrict pathname, const char *restrict mode, FILE *restrict stream)
+// CHECK: Loaded summary for: int fclose(FILE *stream)
+// CHECK: Loaded summary for: int fseek(FILE *stream, long offset, int whence)
+// CHECK: Loaded summary for: int fileno(FILE *stream)
 // CHECK: Loaded summary for: long a64l(const char *str64)
 // CHECK: Loaded summary for: char *l64a(long value)
 // CHECK: Loaded summary for: int access(const char *pathname, int amode)
@@ -63,7 +69,6 @@
 // CHECK: Loaded summary for: void rewinddir(DIR *dir)
 // CHECK: Loaded summary for: void seekdir(DIR *dirp, long loc)
 // CHECK: Loaded summary for: int rand_r(unsigned int *seedp)
-// CHECK: Loaded summary for: int fileno(FILE *stream)
 // CHECK: Loaded summary for: int fseeko(FILE *stream, off_t offset, int whence)
 // CHECK: Loaded summary for: off_t ftello(FILE *stream)
 // CHECK: Loaded summary for: void *mmap(void *addr, size_t length, int prot, int flags, int fd, off_t offset)
@@ -121,6 +126,16 @@
 // CHECK: Loaded summary for: int pthread_mutex_trylock(pthread_mutex_t *mutex)
 // CHECK: Loaded summary for: int pthread_mutex_unlock(pthread_mutex_t *mutex)
 
+typedef struct {
+  int x;
+} FILE;
+FILE *fopen(const char *restrict pathname, const char *restrict mode);
+FILE *tmpfile(void);
+FILE *freopen(const char *restrict pathname, const char *restrict mode,
+              FILE *restrict stream);
+int fclose(FILE *stream);
+int fseek(FILE *stream, long offset, int whence);
+int fileno(FILE *stream);
 long a64l(const char *str64);
 char *l64a(long value);
 int access(const char *pathname, int amode);
@@ -181,9 +196,6 @@ int fstatat(int fd, const char *restrict path, struct stat *restrict buf, int fl
 DIR *opendir(const char *name);
 DIR *fdopendir(int fd);
 int isatty(int fildes);
-typedef struct {
-  int x;
-} FILE;
 FILE *popen(const char *command, const char *type);
 int pclose(FILE *stream);
 int close(int fildes);

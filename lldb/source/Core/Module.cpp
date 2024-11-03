@@ -70,6 +70,7 @@
 #include <cstdint>
 #include <cstring>
 #include <map>
+#include <optional>
 #include <type_traits>
 #include <utility>
 
@@ -1125,7 +1126,7 @@ bool Module::FileHasChanged() const {
 }
 
 void Module::ReportWarningOptimization(
-    llvm::Optional<lldb::user_id_t> debugger_id) {
+    std::optional<lldb::user_id_t> debugger_id) {
   ConstString file_name = GetFileSpec().GetFilename();
   if (file_name.IsEmpty())
     return;
@@ -1139,7 +1140,7 @@ void Module::ReportWarningOptimization(
 }
 
 void Module::ReportWarningUnsupportedLanguage(
-    LanguageType language, llvm::Optional<lldb::user_id_t> debugger_id) {
+    LanguageType language, std::optional<lldb::user_id_t> debugger_id) {
   StreamString ss;
   ss << "This version of LLDB has no plugin for the language \""
      << Language::GetNameForLanguageType(language)
@@ -1149,95 +1150,60 @@ void Module::ReportWarningUnsupportedLanguage(
                           &m_language_warning);
 }
 
-void Module::ReportErrorIfModifyDetected(const char *format, ...) {
+void Module::ReportErrorIfModifyDetected(
+    const llvm::formatv_object_base &payload) {
   if (!m_first_file_changed_log) {
     if (FileHasChanged()) {
       m_first_file_changed_log = true;
-      if (format) {
-        StreamString strm;
-        strm.PutCString("the object file ");
-        GetDescription(strm.AsRawOstream(), lldb::eDescriptionLevelFull);
-        strm.PutCString(" has been modified\n");
-
-        va_list args;
-        va_start(args, format);
-        strm.PrintfVarArg(format, args);
-        va_end(args);
-
-        const int format_len = strlen(format);
-        if (format_len > 0) {
-          const char last_char = format[format_len - 1];
-          if (last_char != '\n' && last_char != '\r')
-            strm.EOL();
-        }
-        strm.PutCString("The debug session should be aborted as the original "
-                        "debug information has been overwritten.");
-        Debugger::ReportError(std::string(strm.GetString()));
-      }
+      StreamString strm;
+      strm.PutCString("the object file ");
+      GetDescription(strm.AsRawOstream(), lldb::eDescriptionLevelFull);
+      strm.PutCString(" has been modified\n");
+      strm.PutCString(payload.str());
+      strm.PutCString("The debug session should be aborted as the original "
+                      "debug information has been overwritten.");
+      Debugger::ReportError(std::string(strm.GetString()));
     }
   }
 }
 
-void Module::ReportError(const char *format, ...) {
-  if (format && format[0]) {
-    StreamString strm;
-    GetDescription(strm.AsRawOstream(), lldb::eDescriptionLevelBrief);
-    strm.PutChar(' ');
-
-    va_list args;
-    va_start(args, format);
-    strm.PrintfVarArg(format, args);
-    va_end(args);
-
-    Debugger::ReportError(std::string(strm.GetString()));
-  }
+void Module::ReportError(const llvm::formatv_object_base &payload) {
+  StreamString strm;
+  GetDescription(strm.AsRawOstream(), lldb::eDescriptionLevelBrief);
+  strm.PutChar(' ');
+  strm.PutCString(payload.str());
+  Debugger::ReportError(strm.GetString().str());
 }
 
-void Module::ReportWarning(const char *format, ...) {
-  if (format && format[0]) {
-    StreamString strm;
-    GetDescription(strm.AsRawOstream(), lldb::eDescriptionLevelFull);
-    strm.PutChar(' ');
-
-    va_list args;
-    va_start(args, format);
-    strm.PrintfVarArg(format, args);
-    va_end(args);
-
-    Debugger::ReportWarning(std::string(strm.GetString()));
-  }
+void Module::ReportWarning(const llvm::formatv_object_base &payload) {
+  StreamString strm;
+  GetDescription(strm.AsRawOstream(), lldb::eDescriptionLevelFull);
+  strm.PutChar(' ');
+  strm.PutCString(payload.str());
+  Debugger::ReportWarning(std::string(strm.GetString()));
 }
 
-void Module::LogMessage(Log *log, const char *format, ...) {
-  if (log != nullptr) {
-    StreamString log_message;
-    GetDescription(log_message.AsRawOstream(), lldb::eDescriptionLevelFull);
-    log_message.PutCString(": ");
-    va_list args;
-    va_start(args, format);
-    log_message.PrintfVarArg(format, args);
-    va_end(args);
-    log->PutCString(log_message.GetData());
-  }
+void Module::LogMessage(Log *log, const llvm::formatv_object_base &payload) {
+  StreamString log_message;
+  GetDescription(log_message.AsRawOstream(), lldb::eDescriptionLevelFull);
+  log_message.PutCString(": ");
+  log_message.PutCString(payload.str());
+  log->PutCString(log_message.GetData());
 }
 
-void Module::LogMessageVerboseBacktrace(Log *log, const char *format, ...) {
-  if (log != nullptr) {
-    StreamString log_message;
-    GetDescription(log_message.AsRawOstream(), lldb::eDescriptionLevelFull);
-    log_message.PutCString(": ");
-    va_list args;
-    va_start(args, format);
-    log_message.PrintfVarArg(format, args);
-    va_end(args);
-    if (log->GetVerbose()) {
-      std::string back_trace;
-      llvm::raw_string_ostream stream(back_trace);
-      llvm::sys::PrintStackTrace(stream);
-      log_message.PutCString(back_trace);
-    }
-    log->PutCString(log_message.GetData());
+void Module::LogMessageVerboseBacktrace(
+    Log *log, const llvm::formatv_object_base &payload) {
+  StreamString log_message;
+  GetDescription(log_message.AsRawOstream(), lldb::eDescriptionLevelFull);
+  log_message.PutCString(": ");
+  log_message.PutCString(payload.str());
+  if (log->GetVerbose()) {
+    std::string back_trace;
+    llvm::raw_string_ostream stream(back_trace);
+    llvm::sys::PrintStackTrace(stream);
+    log_message.PutCString(back_trace);
   }
+  log->PutCString(log_message.GetData());
 }
 
 void Module::Dump(Stream *s) {
@@ -1293,7 +1259,7 @@ ObjectFile *Module::GetObjectFile() {
           // those values that overwrite unspecified unknown values.
           m_arch.MergeFrom(m_objfile_sp->GetArchitecture());
         } else {
-          ReportError("failed to load objfile for %s",
+          ReportError("failed to load objfile for {0}",
                       GetFileSpec().GetPath().c_str());
         }
       }
@@ -1634,8 +1600,7 @@ bool Module::FindSourceFile(const FileSpec &orig_spec,
   return false;
 }
 
-llvm::Optional<std::string>
-Module::RemapSourceFile(llvm::StringRef path) const {
+std::optional<std::string> Module::RemapSourceFile(llvm::StringRef path) const {
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
   if (auto remapped = m_source_mappings.RemapPath(path))
     return remapped->GetPath();

@@ -73,6 +73,7 @@ add_header_library(
     libc.include.sys_stat
     libc.include.sys_syscall
     libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
     libc.src.errno.errno
 )
 

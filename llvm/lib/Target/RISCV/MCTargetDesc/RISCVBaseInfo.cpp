@@ -14,6 +14,8 @@
 #include "RISCVBaseInfo.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/Triple.h"
+#include "llvm/MC/MCInst.h"
+#include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/Support/RISCVISAInfo.h"
 #include "llvm/Support/TargetParser.h"
@@ -195,6 +197,21 @@ unsigned RISCVVType::getSEWLMULRatio(unsigned SEW, RISCVII::VLMUL VLMul) {
 
   assert(SEW >= 8 && "Unexpected SEW value");
   return (SEW * 8) / LMul;
+}
+
+// Include the auto-generated portion of the compress emitter.
+#define GEN_UNCOMPRESS_INSTR
+#define GEN_COMPRESS_INSTR
+#include "RISCVGenCompressInstEmitter.inc"
+
+bool RISCVRVC::compress(MCInst &OutInst, const MCInst &MI,
+                        const MCSubtargetInfo &STI) {
+  return compressInst(OutInst, MI, STI);
+}
+
+bool RISCVRVC::uncompress(MCInst &OutInst, const MCInst &MI,
+                          const MCSubtargetInfo &STI) {
+  return uncompressInst(OutInst, MI, STI);
 }
 
 } // namespace llvm

@@ -24,8 +24,8 @@ Operands
 
 .. _amdgpu_synid_v:
 
-v
--
+v (32-bit)
+----------
 
 Vector registers. There are 256 32-bit vector registers.
 
@@ -83,6 +83,8 @@ Examples:
 
 .. _amdgpu_synid_nsa:
 
+**Non-Sequential Address (NSA) Syntax**
+
 GFX10+ *image* instructions may use special *NSA* (Non-Sequential Address)
 syntax for *image addresses*:
 
@@ -97,6 +99,10 @@ syntax for *image addresses*:
                                           in *NSA* sequence are not required to have
                                           consecutive indices. Moreover, the same register
                                           may appear in the sequence more than once.
+
+                                          GFX11+ has an additional limitation: if address
+                                          size occupies more than 5 dwords, registers
+                                          starting from the 5th element must be contiguous.
     ===================================== =================================================
 
 Examples:
@@ -106,6 +112,35 @@ Examples:
   [v32,v1,v[2]]
   [v[32],v[1:1],[v2]]
   [v4,v4,v4,v4]
+
+.. _amdgpu_synid_v16:
+
+v (16-bit)
+----------
+
+16-bit vector registers. Each :ref:`32-bit vector register<amdgpu_synid_v>` is divided into two 16-bit low and high registers, so there are 512 16-bit vector registers.
+
+Only VOP3, VOP3P and VINTERP instructions may access all 512 registers (using :ref:`op_sel<amdgpu_synid_op_sel>` modifier).
+VOP1, VOP2 and VOPC instructions may currently access only 128 low 16-bit registers using the syntax described below.
+
+.. WARNING:: This section is incomplete. The support of 16-bit registers in the assembler is still WIP.
+
+\
+    =================================================== ====================================================================
+    Syntax                                              Description
+    =================================================== ====================================================================
+    **v**\<N>                                           A single 16-bit *vector* register (low half).
+    =================================================== ====================================================================
+
+Note: *N* must satisfy the following conditions:
+
+* 0 <= *N* <= 127.
+
+Examples:
+
+.. parsed-literal::
+
+  v127
 
 .. _amdgpu_synid_a:
 

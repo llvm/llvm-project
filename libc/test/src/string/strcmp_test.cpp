@@ -95,3 +95,14 @@ TEST(LlvmLibcStrCmpTest, StringArgumentSwapChangesSign) {
   // 'a' - 'b' = -1.
   ASSERT_EQ(result, -1);
 }
+
+TEST(LlvmLibcStrCmpTest, Case) {
+  const char *s1 = "aB";
+  const char *s2 = "ab";
+  int result = __llvm_libc::strcmp(s1, s2);
+  ASSERT_LT(result, 0);
+
+  // Verify operands reversed.
+  result = __llvm_libc::strcmp(s2, s1);
+  ASSERT_GT(result, 0);
+}

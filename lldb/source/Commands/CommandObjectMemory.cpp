@@ -39,6 +39,7 @@
 #include "llvm/Support/MathExtras.h"
 #include <cinttypes>
 #include <memory>
+#include <optional>
 
 using namespace lldb;
 using namespace lldb_private;
@@ -55,7 +56,7 @@ public:
   ~OptionGroupReadMemory() override = default;
 
   llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
-    return llvm::makeArrayRef(g_memory_read_options);
+    return llvm::ArrayRef(g_memory_read_options);
   }
 
   Status SetOptionValue(uint32_t option_idx, llvm::StringRef option_value,
@@ -341,8 +342,8 @@ public:
 
   Options *GetOptions() override { return &m_option_group; }
 
-  llvm::Optional<std::string> GetRepeatCommand(Args &current_command_args,
-                                               uint32_t index) override {
+  std::optional<std::string> GetRepeatCommand(Args &current_command_args,
+                                              uint32_t index) override {
     return m_cmd_name;
   }
 
@@ -476,7 +477,7 @@ protected:
         for (auto lang : languages_to_check) {
           if (auto *persistent_vars =
                   target->GetPersistentExpressionStateForLanguage(lang)) {
-            if (llvm::Optional<CompilerType> type =
+            if (std::optional<CompilerType> type =
                     persistent_vars->GetCompilerTypeFromPersistentDecl(
                         lookup_type_name)) {
               user_defined_types.emplace(*type);
@@ -521,7 +522,7 @@ protected:
         --pointer_count;
       }
 
-      llvm::Optional<uint64_t> size = compiler_type.GetByteSize(nullptr);
+      std::optional<uint64_t> size = compiler_type.GetByteSize(nullptr);
       if (!size) {
         result.AppendErrorWithFormat(
             "unable to get the byte size of the type '%s'\n",
@@ -650,7 +651,7 @@ protected:
       if (!m_format_options.GetFormatValue().OptionWasSet())
         m_format_options.GetFormatValue().SetCurrentValue(eFormatDefault);
 
-      llvm::Optional<uint64_t> size = compiler_type.GetByteSize(nullptr);
+      std::optional<uint64_t> size = compiler_type.GetByteSize(nullptr);
       if (!size) {
         result.AppendError("can't get size of type");
         return false;
@@ -903,7 +904,7 @@ public:
     ~OptionGroupFindMemory() override = default;
 
     llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
-      return llvm::makeArrayRef(g_memory_find_options);
+      return llvm::ArrayRef(g_memory_find_options);
     }
 
     Status SetOptionValue(uint32_t option_idx, llvm::StringRef option_value,
@@ -1075,7 +1076,7 @@ protected:
                m_memory_options.m_expr.GetStringValue(), frame, result_sp)) &&
           result_sp) {
         uint64_t value = result_sp->GetValueAsUnsigned(0);
-        llvm::Optional<uint64_t> size =
+        std::optional<uint64_t> size =
             result_sp->GetCompilerType().GetByteSize(nullptr);
         if (!size)
           return false;
@@ -1206,7 +1207,7 @@ public:
     ~OptionGroupWriteMemory() override = default;
 
     llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
-      return llvm::makeArrayRef(g_memory_write_options);
+      return llvm::ArrayRef(g_memory_write_options);
     }
 
     Status SetOptionValue(uint32_t option_idx, llvm::StringRef option_value,
@@ -1600,8 +1601,8 @@ public:
 
   ~CommandObjectMemoryHistory() override = default;
 
-  llvm::Optional<std::string> GetRepeatCommand(Args &current_command_args,
-                                               uint32_t index) override {
+  std::optional<std::string> GetRepeatCommand(Args &current_command_args,
+                                              uint32_t index) override {
     return m_cmd_name;
   }
 
@@ -1664,7 +1665,7 @@ public:
     ~OptionGroupMemoryRegion() override = default;
 
     llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
-      return llvm::makeArrayRef(g_memory_region_options);
+      return llvm::ArrayRef(g_memory_region_options);
     }
 
     Status SetOptionValue(uint32_t option_idx, llvm::StringRef option_value,
@@ -1736,7 +1737,7 @@ protected:
     if (memory_tagged == MemoryRegionInfo::OptionalBool::eYes)
       result.AppendMessage("memory tagging: enabled");
 
-    const llvm::Optional<std::vector<addr_t>> &dirty_page_list =
+    const std::optional<std::vector<addr_t>> &dirty_page_list =
         range_info.GetDirtyPageList();
     if (dirty_page_list) {
       const size_t page_count = dirty_page_list->size();
@@ -1851,8 +1852,8 @@ protected:
     return false;
   }
 
-  llvm::Optional<std::string> GetRepeatCommand(Args &current_command_args,
-                                               uint32_t index) override {
+  std::optional<std::string> GetRepeatCommand(Args &current_command_args,
+                                              uint32_t index) override {
     // If we repeat this command, repeat it without any arguments so we can
     // show the next memory range
     return m_cmd_name;

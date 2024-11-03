@@ -369,6 +369,46 @@ public:
       JITTargetAddress PointersBlockTargetAddress, unsigned NumStubs);
 };
 
+// @brief loongarch64 support.
+//
+// LoongArch 64 supports lazy JITing.
+class OrcLoongArch64 {
+public:
+  static constexpr unsigned PointerSize = 8;
+  static constexpr unsigned TrampolineSize = 16;
+  static constexpr unsigned StubSize = 16;
+  static constexpr unsigned StubToPointerMaxDisplacement = 1 << 31;
+  static constexpr unsigned ResolverCodeSize = 0xc8;
+
+  /// Write the resolver code into the given memory. The user is
+  /// responsible for allocating the memory and setting permissions.
+  ///
+  /// ReentryFnAddr should be the address of a function whose signature matches
+  /// void* (*)(void *TrampolineAddr, void *ReentryCtxAddr). The ReentryCtxAddr
+  /// argument of writeResolverCode will be passed as the second argument to
+  /// the function at ReentryFnAddr.
+  static void writeResolverCode(char *ResolverWorkingMem,
+                                JITTargetAddress ResolverTargetAddress,
+                                JITTargetAddress ReentryFnAddr,
+                                JITTargetAddress ReentryCtxAddr);
+
+  /// Write the requested number of trampolines into the given memory,
+  /// which must be big enough to hold 1 pointer, plus NumTrampolines
+  /// trampolines.
+  static void writeTrampolines(char *TrampolineBlockWorkingMem,
+                               JITTargetAddress TrampolineBlockTargetAddress,
+                               JITTargetAddress ResolverFnAddr,
+                               unsigned NumTrampolines);
+
+  /// Write NumStubs indirect stubs to working memory at StubsBlockWorkingMem.
+  /// Stubs will be written as if linked at StubsBlockTargetAddress, with the
+  /// Nth stub using the Nth pointer in memory starting at
+  /// PointersBlockTargetAddress.
+  static void writeIndirectStubsBlock(
+      char *StubsBlockWorkingMem, JITTargetAddress StubsBlockTargetAddress,
+      JITTargetAddress PointersBlockTargetAddress, unsigned NumStubs);
+};
+
 } // end namespace orc
 } // end namespace llvm
 

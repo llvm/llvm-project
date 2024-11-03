@@ -18,8 +18,10 @@ using namespace llvm;
 using namespace PatternMatch;
 
 static void
-extractOperandsFromModule(Oracle &O, Module &Program,
+extractOperandsFromModule(Oracle &O, ReducerWorkItem &WorkItem,
                           function_ref<Value *(Use &)> ReduceValue) {
+  Module &Program = WorkItem.getModule();
+
   for (auto &F : Program.functions()) {
     for (auto &I : instructions(&F)) {
       if (PHINode *Phi = dyn_cast<PHINode>(&I)) {
@@ -118,8 +120,8 @@ void llvm::reduceOperandsOneDeltaPass(TestRunner &Test) {
   };
   runDeltaPass(
       Test,
-      [ReduceValue](Oracle &O, Module &Program) {
-        extractOperandsFromModule(O, Program, ReduceValue);
+      [ReduceValue](Oracle &O, ReducerWorkItem &WorkItem) {
+        extractOperandsFromModule(O, WorkItem, ReduceValue);
       },
       "Reducing Operands to one");
 }
@@ -137,7 +139,7 @@ void llvm::reduceOperandsZeroDeltaPass(TestRunner &Test) {
   };
   runDeltaPass(
       Test,
-      [ReduceValue](Oracle &O, Module &Program) {
+      [ReduceValue](Oracle &O, ReducerWorkItem &Program) {
         extractOperandsFromModule(O, Program, ReduceValue);
       },
       "Reducing Operands to zero");
@@ -165,7 +167,7 @@ void llvm::reduceOperandsNaNDeltaPass(TestRunner &Test) {
   };
   runDeltaPass(
       Test,
-      [ReduceValue](Oracle &O, Module &Program) {
+      [ReduceValue](Oracle &O, ReducerWorkItem &Program) {
         extractOperandsFromModule(O, Program, ReduceValue);
       },
       "Reducing Operands to NaN");

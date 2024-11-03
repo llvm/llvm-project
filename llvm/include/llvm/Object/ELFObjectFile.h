@@ -55,7 +55,7 @@ class ELFObjectFileBase : public ObjectFile {
 
   SubtargetFeatures getMIPSFeatures() const;
   SubtargetFeatures getARMFeatures() const;
-  SubtargetFeatures getRISCVFeatures() const;
+  Expected<SubtargetFeatures> getRISCVFeatures() const;
   SubtargetFeatures getLoongArchFeatures() const;
 
   StringRef getAMDGPUCPUName() const;
@@ -87,7 +87,7 @@ public:
 
   static bool classof(const Binary *v) { return v->isELF(); }
 
-  SubtargetFeatures getFeatures() const override;
+  Expected<SubtargetFeatures> getFeatures() const override;
 
   std::optional<StringRef> tryGetCPUName() const override;
 
@@ -860,13 +860,12 @@ Expected<ArrayRef<uint8_t>>
 ELFObjectFile<ELFT>::getSectionContents(DataRefImpl Sec) const {
   const Elf_Shdr *EShdr = getSection(Sec);
   if (EShdr->sh_type == ELF::SHT_NOBITS)
-    return makeArrayRef((const uint8_t *)base(), 0);
+    return ArrayRef((const uint8_t *)base(), (size_t)0);
   if (Error E =
           checkOffset(getMemoryBufferRef(),
                       (uintptr_t)base() + EShdr->sh_offset, EShdr->sh_size))
     return std::move(E);
-  return makeArrayRef((const uint8_t *)base() + EShdr->sh_offset,
-                      EShdr->sh_size);
+  return ArrayRef((const uint8_t *)base() + EShdr->sh_offset, EShdr->sh_size);
 }
 
 template <class ELFT>
@@ -1217,6 +1216,8 @@ StringRef ELFObjectFile<ELFT>::getFileFormatName() const {
       return "elf32-amdgpu";
     case ELF::EM_LOONGARCH:
       return "elf32-loongarch";
+    case ELF::EM_XTENSA:
+      return "elf32-xtensa";
     default:
       return "elf32-unknown";
     }
@@ -1340,6 +1341,9 @@ template <class ELFT> Triple::ArchType ELFObjectFile<ELFT>::getArch() const {
     default:
       report_fatal_error("Invalid ELFCLASS!");
     }
+
+  case ELF::EM_XTENSA:
+    return Triple::xtensa;
 
   default:
     return Triple::UnknownArch;

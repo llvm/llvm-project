@@ -2,43 +2,43 @@
 # RUN: llc -mtriple=i386-linux-gnu  -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s --check-prefix=ALL
 
 --- |
-  define i8 @test_load_i8(i8* %p1) {
-    %r = load i8, i8* %p1
+  define i8 @test_load_i8(ptr %p1) {
+    %r = load i8, ptr %p1
     ret i8 %r
   }
 
-  define i16 @test_load_i16(i16* %p1) {
-    %r = load i16, i16* %p1
+  define i16 @test_load_i16(ptr %p1) {
+    %r = load i16, ptr %p1
     ret i16 %r
   }
 
-  define i32 @test_load_i32(i32* %p1) {
-    %r = load i32, i32* %p1
+  define i32 @test_load_i32(ptr %p1) {
+    %r = load i32, ptr %p1
     ret i32 %r
   }
 
-  define i8* @test_store_i8(i8 %val, i8* %p1) {
-    store i8 %val, i8* %p1
-    ret i8* %p1
+  define ptr @test_store_i8(i8 %val, ptr %p1) {
+    store i8 %val, ptr %p1
+    ret ptr %p1
   }
 
-  define i16* @test_store_i16(i16 %val, i16* %p1) {
-    store i16 %val, i16* %p1
-    ret i16* %p1
+  define ptr @test_store_i16(i16 %val, ptr %p1) {
+    store i16 %val, ptr %p1
+    ret ptr %p1
   }
 
-  define i32* @test_store_i32(i32 %val, i32* %p1) {
-    store i32 %val, i32* %p1
-    ret i32* %p1
+  define ptr @test_store_i32(i32 %val, ptr %p1) {
+    store i32 %val, ptr %p1
+    ret ptr %p1
   }
 
-  define i32* @test_load_ptr(i32** %ptr1) {
-    %p = load i32*, i32** %ptr1
-    ret i32* %p
+  define ptr @test_load_ptr(ptr %ptr1) {
+    %p = load ptr, ptr %ptr1
+    ret ptr %p
   }
 
-  define void @test_store_ptr(i32** %ptr1, i32* %a) {
-    store i32* %a, i32** %ptr1
+  define void @test_store_ptr(ptr %ptr1, ptr %a) {
+    store ptr %a, ptr %ptr1
     ret void
   }
 

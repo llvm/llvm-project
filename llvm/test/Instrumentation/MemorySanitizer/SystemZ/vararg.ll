@@ -188,3 +188,12 @@ define i64 @bar_128() {
 ; CHECK: store {{.*}} @__msan_va_arg_tls {{.*}} 24
 ; CHECK: store {{.*}} @__msan_va_arg_tls {{.*}} 32
 ; CHECK: store {{.*}} 0, {{.*}} @__msan_va_arg_overflow_size_tls
+
+; CHECK: declare void @__msan_maybe_warning_1(i8 zeroext, i32 zeroext)
+; CHECK: declare void @__msan_maybe_store_origin_1(i8 zeroext, ptr, i32 zeroext)
+; CHECK: declare void @__msan_maybe_warning_2(i16 zeroext, i32 zeroext)
+; CHECK: declare void @__msan_maybe_store_origin_2(i16 zeroext, ptr, i32 zeroext)
+; CHECK: declare void @__msan_maybe_warning_4(i32 zeroext, i32 zeroext)
+; CHECK: declare void @__msan_maybe_store_origin_4(i32 zeroext, ptr, i32 zeroext)
+; CHECK: declare void @__msan_maybe_warning_8(i64 zeroext, i32 zeroext)
+; CHECK: declare void @__msan_maybe_store_origin_8(i64 zeroext, ptr, i32 zeroext)

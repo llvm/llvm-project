@@ -173,7 +173,7 @@ generateTileLoopNest(OpBuilder &builder, Location loc,
 /// }
 /// ```
 /// TODO: This API can be cleaned up by using `SubsetExtractOpInterface`.
-static FailureOr<SmallVector<Value>>
+static SmallVector<Value>
 yieldTiledValues(RewriterBase &rewriter, ValueRange initValues,
                  ValueRange yieldedValues,
                  ArrayRef<SmallVector<OpFoldResult>> tileOffsetsList,
@@ -245,6 +245,27 @@ updateDestinationOperandsForTiledOp(OpBuilder &builder,
   }
 }
 
+/// Helper method to yield the values of the tiled op, as well as
+/// update the destination operands of the tiled op, if it is
+/// a destination passing style op.
+static SmallVector<Value>
+yieldTiledValues(RewriterBase &rewriter, ArrayRef<Value> initValues,
+                 Operation *tiledOp,
+                 ArrayRef<SmallVector<OpFoldResult>> tileOffsetsList,
+                 ArrayRef<SmallVector<OpFoldResult>> tileSizesList,
+                 MutableArrayRef<scf::ForOp> loops) {
+  SmallVector<Value> replacements =
+      yieldTiledValues(rewriter, initValues, tiledOp->getResults(),
+                       tileOffsetsList, tileSizesList, loops);
+  if (auto dstOp = dyn_cast<DestinationStyleOpInterface>(tiledOp)) {
+    auto innerMostLoop = loops.back();
+    SmallVector<Value> tiledOpDestinationTensors = dstOp.getDpsInitOperands();
+    updateDestinationOperandsForTiledOp(rewriter, tiledOpDestinationTensors,
+                                        innerMostLoop.getRegionIterArgs());
+  }
+  return replacements;
+}
+
 /// Implementation of tiling transformation of `op` that implements the
 /// `TilingInterface` using `scf.for` to iterate over the tiles.
 FailureOr<scf::SCFTilingResult>
@@ -257,12 +278,6 @@ mlir::scf::tileUsingSCFForOp(RewriterBase &rewriter, TilingInterface op,
     return rewriter.notifyMatchFailure(
         op, "missing tile size computation function");
   }
-
-  // Get destination tensors.
-  SmallVector<Value> destinationTensors;
-  if (failed(tensor::getOrCreateDestinations(rewriter, op.getLoc(), op,
-                                             destinationTensors)))
-    return rewriter.notifyMatchFailure(op, "failed to get destinations");
 
   // 1. Get the range of the loops that are represented by the operation.
   SmallVector<Range> iterationDomain = op.getIterationDomain(rewriter);
@@ -362,24 +377,14 @@ mlir::scf::tileUsingSCFForOp(RewriterBase &rewriter, TilingInterface op,
     }
   }
 
-  FailureOr<SmallVector<Value>> replacementOr = yieldTiledValues(
-      rewriter, destinationTensors, tilingResult.tiledOps.back()->getResults(),
+  SmallVector<Value> destinationTensors;
+  if (failed(tensor::getOrCreateDestinations(rewriter, op.getLoc(), op,
+                                             destinationTensors)))
+    return rewriter.notifyMatchFailure(op, "failed to get destinations");
+
+  tilingResult.replacements = yieldTiledValues(
+      rewriter, destinationTensors, tilingResult.tiledOps.back(),
       resultOffsetsList, resultSizesList, tilingResult.loops);
-  if (failed(replacementOr))
-    return rewriter.notifyMatchFailure(op, "failed to yield replacement");
-
-  if (auto dstOp =
-          dyn_cast<DestinationStyleOpInterface>(tilingResult.tiledOps.back())) {
-    auto innerMostLoop = tilingResult.loops.back();
-    SmallVector<Value> destinationTensors = dstOp.getDpsInitOperands();
-    assert(destinationTensors.size() ==
-               innerMostLoop.getRegionIterArgs().size() &&
-           "unexpected number of outputs");
-    updateDestinationOperandsForTiledOp(rewriter, destinationTensors,
-                                        innerMostLoop.getRegionIterArgs());
-  }
-
-  tilingResult.replacements = *replacementOr;
 
   LLVM_DEBUG({
     if (!tilingResult.loops.empty()) {
@@ -424,6 +429,9 @@ mlir::scf::tileReductionUsingScf(PatternRewriter &b,
       break;
     }
   }
+  if (static_cast<size_t>(reductionDim) >= tileSize.size())
+    return b.notifyMatchFailure(op, "reduction dimension must be tiled");
+
   // 1. create the inital tensor value.
   FailureOr<Operation *> identityTensor =
       op.generateInitialTensorForPartialReduction(b, loc, tileSize,
@@ -446,11 +454,9 @@ mlir::scf::tileReductionUsingScf(PatternRewriter &b,
     resultSizesList.push_back(
         b.createOrFold<tensor::DimOp>(loc, parallelOp->getResult(0), i));
   SmallVector<OpFoldResult> outOffsets(offsets.size(), b.getIndexAttr(0));
-  FailureOr<SmallVector<Value>> replacementOr = yieldTiledValues(
+  SmallVector<Value> replacements = yieldTiledValues(
       b, (*identityTensor)->getResults(), parallelOp->getResults(), outOffsets,
       resultSizesList, loops);
-  if (failed(replacementOr))
-    return b.notifyMatchFailure(op, "failed to yield replacement");
 
   auto dstOp = cast<DestinationStyleOpInterface>(parallelOp);
   auto innerMostLoop = loops.back();
@@ -463,7 +469,7 @@ mlir::scf::tileReductionUsingScf(PatternRewriter &b,
 
   // 4. Apply the merge reduction to combine all the partial values.
   b.setInsertionPointAfter(*loops.begin());
-  Operation *mergeOp = op.mergeReductions(b, loc, *replacementOr, reductionDim);
+  Operation *mergeOp = op.mergeReductions(b, loc, replacements, reductionDim);
   b.replaceOp(op, mergeOp->getResults());
 
   SCFReductionTilingResult results;
@@ -497,6 +503,130 @@ getUntiledProducerFromSliceSource(OpOperand *source,
   if (loopIt == loops.rend())
     destinationIterArg = source;
   return {source->get().dyn_cast<OpResult>(), destinationIterArg};
+}
+
+/// Implementation of fusing producer of a single slice by computing the
+/// slice of the producer in-place.
+std::optional<scf::SCFFuseProducerOfSliceResult>
+mlir::scf::tileAndFuseProducerOfSlice(RewriterBase &rewriter,
+                                      tensor::ExtractSliceOp candidateSliceOp,
+                                      MutableArrayRef<scf::ForOp> loops) {
+  // 1. Get the producer of the source (potentially walking through
+  // `iter_args` of nested `scf.for`)
+  auto [fusableProducer, destinationIterArg] =
+      getUntiledProducerFromSliceSource(&candidateSliceOp->getOpOperand(0),
+                                        loops);
+  if (!fusableProducer)
+    return std::nullopt;
+
+  // 2. Generate the tiled implementation of the producer of the source
+  OpBuilder::InsertionGuard g(rewriter);
+  rewriter.setInsertionPoint(candidateSliceOp);
+  FailureOr<Value> fusedProducerValue =
+      tensor::replaceExtractSliceWithTiledProducer(rewriter, candidateSliceOp,
+                                                   fusableProducer);
+  if (failed(fusedProducerValue))
+    return std::nullopt;
+  rewriter.replaceAllUsesWith(candidateSliceOp, fusedProducerValue.value());
+
+  // 3. If the slice is for a destination operand, for example,
+  //
+  // ```mlir
+  // %0 = linalg.init
+  // %1 = linalg.fill .. outs(%0 : )
+  // %2 = scf.for .. iter_args(%arg0 = %1) {
+  //   %3 = scf.for .. iter_args(%arg1 = %arg0) {
+  //     %4 = tensor.extract_slice %arg1 [..]
+  //     .. = linalg.matmul .. outs(%4 : )
+  //   }
+  // }
+  // ```
+  //
+  // the IR is currently
+  //
+  // ```
+  // %0 = linalg.init
+  // %1 = linalg.fill
+  // %2 = scf.for .. iter_args(%arg0 = %1 /* incorrect value */ ) {
+  //   %3 = scf.for .. iter_args(%arg1 = %arg0) {
+  //     %4 = tensor.extract_slice %0 /*incorrect value */ [..]
+  //     %5 = linalg.fill .. outs(%4 : )
+  //     .. = linalg.matmul .. outs(%5 : )
+  //   }
+  // }
+  // ```
+  //
+  // The untiled `linalg.fill` is still used as the `init_value` since it
+  // was originally a destination operand of the untiled `linalg.matmul`.
+  // When fusing an operand that is a destination operand.
+  //   - Update the iter_arg of the outer most loop to use the destination
+  //     of the untiled producer.
+  //   - Update the destination of the slice of the tiled producer generated
+  //     to use the same basic block argument as the slice that was used to
+  //     generate inplace the tiled implementation of the producer.
+  // With this the IR will be.
+  //
+  // ```
+  // %0 = linalg.init
+  // %1 = scf.for .. iter_args(%arg0 = %0 /* corrected value */ ) {
+  //   %2 = scf.for .. iter_args(%arg1 = %arg0) {
+  //     %3 = tensor.extract_slice %arg1 /* corrected value */ [..]
+  //     %4 = linalg.fill .. outs(%3 : )
+  //     .. = linalg.matmul .. outs(%4 : )
+  //   }
+  // }
+  // ```
+  // TODO: This can be modeled better if the `DestinationStyleOpInterface`.
+  // Update to use that when it does become available.
+  scf::ForOp outerMostLoop = loops.front();
+  Optional<unsigned> iterArgNumber;
+  if (destinationIterArg) {
+    iterArgNumber =
+        outerMostLoop.getIterArgNumberForOpOperand(*destinationIterArg.value());
+  }
+  if (iterArgNumber) {
+    int64_t resultNumber = fusableProducer.getResultNumber();
+    if (auto dstOp =
+            dyn_cast<DestinationStyleOpInterface>(fusableProducer.getOwner())) {
+      outerMostLoop.setIterArg(iterArgNumber.value(),
+                               dstOp.getTiedOpOperand(fusableProducer)->get());
+    }
+    if (auto dstOp = fusedProducerValue.value()
+                         .getDefiningOp<DestinationStyleOpInterface>()) {
+      scf::ForOp innerMostLoop = loops.back();
+      updateDestinationOperandsForTiledOp(
+          rewriter, dstOp.getDpsInitOperand(resultNumber)->get(),
+          innerMostLoop.getRegionIterArgs()[iterArgNumber.value()]);
+    }
+  }
+  return scf::SCFFuseProducerOfSliceResult{fusableProducer,
+                                           fusedProducerValue.value()};
+}
+
+/// Reconstruct the fused producer from within the tiled-and-fused code.
+void mlir::scf::yieldReplacementForFusedProducer(
+    RewriterBase &rewriter, tensor::ExtractSliceOp sliceOp,
+    scf::SCFFuseProducerOfSliceResult fusedProducerInfo,
+    MutableArrayRef<scf::ForOp> loops) {
+  auto [fusableProducer, fusedProducerValue] = fusedProducerInfo;
+  SmallVector<Value> initValues;
+  FailureOr<Value> initValue = tensor::getOrCreateDestination(
+      rewriter, fusableProducer.getOwner()->getLoc(), fusableProducer);
+  if (succeeded(initValue)) {
+    SmallVector<OpFoldResult> resultOffsets = sliceOp.getMixedOffsets();
+    SmallVector<OpFoldResult> resultSizes = sliceOp.getMixedSizes();
+    SmallVector<Value> yieldedVals =
+        yieldTiledValues(rewriter, initValue.value(), fusedProducerValue,
+                         resultOffsets, resultSizes, loops);
+  }
+  if (auto dstStyleProducer =
+          fusedProducerValue.getDefiningOp<DestinationStyleOpInterface>()) {
+    Value dstValue =
+        dstStyleProducer.getDpsInitOperand(fusableProducer.getResultNumber())
+            ->get();
+    updateDestinationOperandsForTiledOp(
+        rewriter, dstValue, loops.back().getRegionIterArgs().back());
+  }
 }
 
 /// Implementation of tile consumer and fuse producer greedily.
@@ -553,104 +683,23 @@ mlir::scf::tileConsumerAndFuseProducerGreedilyUsingSCFForOp(
   addCandidateSlices(tileAndFuseResult.tiledAndFusedOps.back(), candidates);
   OpBuilder::InsertionGuard g(rewriter);
   while (!candidates.empty()) {
-    // 2a. Traverse the slices in BFS fashion.
+    // Traverse the slices in BFS fashion.
     tensor::ExtractSliceOp candidateSliceOp = candidates.front();
     candidates.pop_front();
 
-    // 2b. Get the producer of the source (potentially walking through
-    // `iter_args` of nested `scf.for`)
-    auto [fusableProducer, destinationIterArg] =
-        getUntiledProducerFromSliceSource(&candidateSliceOp->getOpOperand(0),
-                                          tileAndFuseResult.loops);
-    if (!fusableProducer)
+    // The operands of the fused producer might themselved be slices of
+    // values produced by operations that implement the `TilingInterface`.
+    // Add these operations to the worklist.
+    std::optional<scf::SCFFuseProducerOfSliceResult> fusedProducer =
+        tileAndFuseProducerOfSlice(rewriter, candidateSliceOp,
+                                   tileAndFuseResult.loops);
+    if (!fusedProducer)
       continue;
 
-    // 2c. Generate the tiled implementation of the producer of the source
-    rewriter.setInsertionPoint(candidateSliceOp);
-    FailureOr<Value> fusedProducerValue =
-        tensor::replaceExtractSliceWithTiledProducer(rewriter, candidateSliceOp,
-                                                     fusableProducer);
-    if (failed(fusedProducerValue))
-      continue;
-    rewriter.replaceOp(candidateSliceOp, *fusedProducerValue);
-
-    // 2d. The operands of the fused producer might themselved be slices of
-    //     values produced by operations that implement the `TilingInterface`.
-    //     Add these operations to the worklist.
-    Operation *fusedProducer = fusedProducerValue->getDefiningOp();
-    tileAndFuseResult.tiledAndFusedOps.insert(fusedProducer);
-    addCandidateSlices(fusedProducer, candidates);
-
-    // 2e. If the slice is for a destination operand, for example,
-    //
-    // ```mlir
-    // %0 = linalg.init
-    // %1 = linalg.fill .. outs(%0 : )
-    // %2 = scf.for .. iter_args(%arg0 = %1) {
-    //   %3 = scf.for .. iter_args(%arg1 = %arg0) {
-    //     %4 = tensor.extract_slice %arg1 [..]
-    //     .. = linalg.matmul .. outs(%4 : )
-    //   }
-    // }
-    // ```
-    //
-    // the IR is currently
-    //
-    // ```
-    // %0 = linalg.init
-    // %1 = linalg.fill
-    // %2 = scf.for .. iter_args(%arg0 = %1 /* incorrect value */ ) {
-    //   %3 = scf.for .. iter_args(%arg1 = %arg0) {
-    //     %4 = tensor.extract_slice %0 /*incorrect value */ [..]
-    //     %5 = linalg.fill .. outs(%4 : )
-    //     .. = linalg.matmul .. outs(%5 : )
-    //   }
-    // }
-    // ```
-    //
-    // The untiled `linalg.fill` is still used as the `init_value` since it
-    // was originally a destination operand of the untiled `linalg.matmul`.
-    // When fusing an operand that is a destination operand.
-    //   - Update the iter_arg of the outer most loop to use the destination
-    //     of the untiled producer.
-    //   - Update the destination of the slice of the tiled producer generated
-    //     to use the same basic block argument as the slice that was used to
-    //     generate inplace the tiled implementation of the producer.
-    // With this the IR will be.
-    //
-    // ```
-    // %0 = linalg.init
-    // %1 = scf.for .. iter_args(%arg0 = %0 /* corrected value */ ) {
-    //   %2 = scf.for .. iter_args(%arg1 = %arg0) {
-    //     %3 = tensor.extract_slice %arg1 /* corrected value */ [..]
-    //     %4 = linalg.fill .. outs(%3 : )
-    //     .. = linalg.matmul .. outs(%4 : )
-    //   }
-    // }
-    // ```
-    // TODO: This can be modeled better if the `DestinationStyleOpInterface`.
-    // Update to use that when it does become available.
-    scf::ForOp outerMostLoop = tileAndFuseResult.loops.front();
-    std::optional<unsigned> iterArgNumber;
-    if (destinationIterArg) {
-      iterArgNumber = outerMostLoop.getIterArgNumberForOpOperand(
-          *destinationIterArg.value());
-    }
-    if (iterArgNumber) {
-      int64_t resultNumber = fusableProducer.getResultNumber();
-      if (auto dstOp = dyn_cast<DestinationStyleOpInterface>(
-              fusableProducer.getOwner())) {
-        outerMostLoop.setIterArg(
-            iterArgNumber.value(),
-            dstOp.getTiedOpOperand(fusableProducer)->get());
-      }
-      if (auto dstOp = fusedProducerValue
-                           ->getDefiningOp<DestinationStyleOpInterface>()) {
-        scf::ForOp innerMostLoop = tileAndFuseResult.loops.back();
-        updateDestinationOperandsForTiledOp(
-            rewriter, dstOp.getDpsInitOperand(resultNumber)->get(),
-            innerMostLoop.getRegionIterArgs()[iterArgNumber.value()]);
-      }
+    if (Operation *tiledAndFusedOp =
+            fusedProducer->tiledAndFusedProducer.getDefiningOp()) {
+      tileAndFuseResult.tiledAndFusedOps.insert(tiledAndFusedOp);
+      addCandidateSlices(tiledAndFusedOp, candidates);
     }
   }
   return tileAndFuseResult;

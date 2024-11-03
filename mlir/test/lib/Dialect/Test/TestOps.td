@@ -1290,11 +1290,32 @@ def TestOpInPlaceFoldSuccess : TEST_Op<"op_in_place_fold_success"> {
   let results = (outs Variadic<I1>);
   let hasFolder = 1;
   let extraClassDefinition = [{
-    ::mlir::LogicalResult $cppClass::fold(ArrayRef<Attribute> operands,
+    ::mlir::LogicalResult $cppClass::fold(FoldAdaptor adaptor,
         SmallVectorImpl<OpFoldResult> &results) {
       return success();
     }
   }];
+}
+
+def TestOpFoldWithFoldAdaptor
+  : TEST_Op<"fold_with_fold_adaptor",
+      [AttrSizedOperandSegments, NoTerminator]> {
+  let arguments = (ins
+    I32:$op,
+    DenseI32ArrayAttr:$attr,
+    Variadic<I32>:$variadic,
+    VariadicOfVariadic<I32, "attr">:$var_of_var
+  );
+
+  let results = (outs I32:$res);
+
+  let regions = (region AnyRegion:$body);
+
+  let assemblyFormat = [{
+    $op `,` `[` $variadic `]` `,` `{` $var_of_var `}` $body attr-dict-with-keyword
+  }];
+
+  let hasFolder = 1;
 }
 
 // An op that always fold itself.

@@ -23,25 +23,27 @@ inline int globalBuffer[4][4] = {
     {13, 14, 15, 16},
 };
 
-struct ChildView : std::ranges::view_base {
+template <template<class...> class Iter>
+struct ChildViewBase : std::ranges::view_base {
   int* ptr_;
 
-  using iterator = cpp20_input_iterator<int*>;
-  using const_iterator = cpp20_input_iterator<const int*>;
+  using iterator = Iter<int*>;
+  using const_iterator = Iter<const int*>;
   using sentinel = sentinel_wrapper<iterator>;
   using const_sentinel = sentinel_wrapper<const_iterator>;
 
-  constexpr ChildView(int* ptr = globalBuffer[0]) : ptr_(ptr) {}
-  ChildView(const ChildView&) = delete;
-  ChildView(ChildView&&) = default;
-  ChildView& operator=(const ChildView&) = delete;
-  ChildView& operator=(ChildView&&) = default;
+  constexpr ChildViewBase(int* ptr = globalBuffer[0]) : ptr_(ptr) {}
+  ChildViewBase(const ChildViewBase&) = delete;
+  ChildViewBase(ChildViewBase&&) = default;
+  ChildViewBase& operator=(const ChildViewBase&) = delete;
+  ChildViewBase& operator=(ChildViewBase&&) = default;
 
   constexpr iterator begin() { return iterator(ptr_); }
   constexpr const_iterator begin() const { return const_iterator(ptr_); }
   constexpr sentinel end() { return sentinel(iterator(ptr_ + 4)); }
   constexpr const_sentinel end() const { return const_sentinel(const_iterator(ptr_ + 4)); }
 };
+using ChildView = ChildViewBase<cpp20_input_iterator>;
 
 inline ChildView globalChildren[4] = {
     ChildView(globalBuffer[0]),
@@ -194,29 +196,6 @@ struct BufferView : std::ranges::view_base {
       return Sent(Iter(this->data_ + this->size_));
     }
   }
-};
-
-// an `input_iterator` that can be used in a `common_range`
-template <class Base>
-struct common_input_iterator {
-  Base it_;
-
-  using value_type = std::iter_value_t<Base>;
-  using difference_type = std::intptr_t;
-  using iterator_concept = std::input_iterator_tag;
-
-  constexpr common_input_iterator() = default;
-  constexpr explicit common_input_iterator(Base it) : it_(it) {}
-
-  constexpr common_input_iterator& operator++() {
-    ++it_;
-    return *this;
-  }
-  constexpr void operator++(int) { ++it_; }
-
-  constexpr std::iter_reference_t<Base> operator*() const { return *it_; }
-
-  friend constexpr bool operator==(common_input_iterator const&, common_input_iterator const&) = default;
 };
 
 using InputCommonInner = BufferView<common_input_iterator<int*>>;

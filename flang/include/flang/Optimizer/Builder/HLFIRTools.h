@@ -17,6 +17,7 @@
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/Dialect/FortranVariableInterface.h"
 #include "flang/Optimizer/HLFIR/HLFIRDialect.h"
+#include <optional>
 
 namespace fir {
 class FirOpBuilder;
@@ -76,13 +77,20 @@ public:
   bool isBoxAddressOrValue() const {
     return hlfir::isBoxAddressOrValueType(getType());
   }
-  bool isArray() const {
+  /// Is this an array or an assumed ranked entity?
+  bool isArray() const { return getRank() != 0; }
+
+  /// Return the rank of this entity or -1 if it is an assumed rank.
+  int getRank() const {
     mlir::Type type = fir::unwrapPassByRefType(fir::unwrapRefType(getType()));
-    if (type.isa<fir::SequenceType>())
-      return true;
+    if (auto seqTy = type.dyn_cast<fir::SequenceType>()) {
+      if (seqTy.hasUnknownShape())
+        return -1;
+      return seqTy.getDimension();
+    }
     if (auto exprType = type.dyn_cast<hlfir::ExprType>())
-      return exprType.isArray();
-    return false;
+      return exprType.getRank();
+    return 0;
   }
   bool isScalar() const { return !isArray(); }
 
@@ -95,6 +103,9 @@ public:
   mlir::Type getFortranElementType() const {
     return hlfir::getFortranElementType(getType());
   }
+  mlir::Type getElementOrSequenceType() const {
+    return hlfir::getFortranElementOrSequenceType(getType());
+  }
 
   bool hasLengthParameters() const {
     mlir::Type eleTy = getFortranElementType();
@@ -106,22 +117,55 @@ public:
     return getFortranElementType().isa<fir::CharacterType>();
   }
 
+  bool isDerivedWithLengthParameters() const {
+    return fir::isRecordWithTypeParameters(getFortranElementType());
+  }
+
   bool hasNonDefaultLowerBounds() const {
     if (!isBoxAddressOrValue() || isScalar())
       return false;
     if (isMutableBox())
       return true;
-    if (auto varIface = getIfVariableInterface())
+    if (auto varIface = getIfVariableInterface()) {
       if (auto shape = varIface.getShape()) {
         auto shapeTy = shape.getType();
         return shapeTy.isa<fir::ShiftType>() ||
                shapeTy.isa<fir::ShapeShiftType>();
       }
+      return false;
+    }
     return true;
+  }
+
+  // Is this entity known to be contiguous at compile time?
+  // Note that when this returns false, the entity may still
+  // turn-out to be contiguous at runtime.
+  bool isSimplyContiguous() const {
+    // If this can be described without a fir.box in FIR, this must
+    // be contiguous.
+    if (!hlfir::isBoxAddressOrValueType(getFirBase().getType()))
+      return true;
+    // Otherwise, if this entity has a visible declaration in FIR,
+    // or is the dereference of an allocatable or contiguous pointer
+    // it is simply contiguous.
+    if (auto varIface = getMaybeDereferencedVariableInterface())
+      return varIface.isAllocatable() || varIface.hasContiguousAttr();
+    return false;
   }
 
   fir::FortranVariableOpInterface getIfVariableInterface() const {
     return this->getDefiningOp<fir::FortranVariableOpInterface>();
+  }
+
+  // Return a "declaration" operation for this variable if visible,
+  // or the "declaration" operation of the allocatable/pointer this
+  // variable was dereferenced from (if it is visible).
+  fir::FortranVariableOpInterface
+  getMaybeDereferencedVariableInterface() const {
+    mlir::Value base = *this;
+    if (auto loadOp = base.getDefiningOp<fir::LoadOp>())
+      base = loadOp.getMemref();
+    return base.getDefiningOp<fir::FortranVariableOpInterface>();
   }
 
   // Get the entity as an mlir SSA value containing all the shape, type
@@ -162,7 +206,7 @@ public:
 /// In that case, a cleanup function is provided to generate the finalization
 /// code after the end of the fir::ExtendedValue use.
 using CleanupFunction = std::function<void()>;
-std::pair<fir::ExtendedValue, llvm::Optional<CleanupFunction>>
+std::pair<fir::ExtendedValue, std::optional<CleanupFunction>>
 translateToExtendedValue(mlir::Location loc, fir::FirOpBuilder &builder,
                          Entity entity);
 
@@ -223,6 +267,10 @@ hlfir::Entity getElementAt(mlir::Location loc, fir::FirOpBuilder &builder,
 /// Compute the lower and upper bounds of an entity.
 llvm::SmallVector<std::pair<mlir::Value, mlir::Value>>
 genBounds(mlir::Location loc, fir::FirOpBuilder &builder, Entity entity);
+/// Compute the lower and upper bounds given a fir.shape or fir.shape_shift
+/// (fir.shift is not allowed here).
+llvm::SmallVector<std::pair<mlir::Value, mlir::Value>>
+genBounds(mlir::Location loc, fir::FirOpBuilder &builder, mlir::Value shape);
 
 /// Compute fir.shape<> (no lower bounds) for an entity.
 mlir::Value genShape(mlir::Location loc, fir::FirOpBuilder &builder,

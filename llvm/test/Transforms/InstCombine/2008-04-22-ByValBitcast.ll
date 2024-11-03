@@ -7,16 +7,14 @@ target triple = "i386-apple-darwin9"
 
 %struct.NSRect = type { [4 x float] }
 
-define void @foo(i8* %context) nounwind  {
+define void @foo(ptr %context) nounwind  {
 ; CHECK-LABEL: @foo(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i8* [[CONTEXT:%.*]] to %struct.NSRect*
-; CHECK-NEXT:    call void (i32, ...) @bar(i32 3, %struct.NSRect* byval([[STRUCT_NSRECT:%.*]]) align 4 [[TMP1]]) #[[ATTR0:[0-9]+]]
+; CHECK-NEXT:    call void (i32, ...) @bar(i32 3, ptr byval([[STRUCT_NSRECT:%.*]]) align 4 [[CONTEXT:%.*]]) #[[ATTR0:[0-9]+]]
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  %tmp1 = bitcast i8* %context to %struct.NSRect*		; <%struct.NSRect*> [#uses=1]
-  call void (i32, ...) @bar( i32 3, %struct.NSRect* byval(%struct.NSRect) align 4  %tmp1 ) nounwind
+  call void (i32, ...) @bar( i32 3, ptr byval(%struct.NSRect) align 4  %context ) nounwind
   ret void
 }
 

@@ -1745,14 +1745,20 @@ void ASTStmtWriter::VisitCXXDefaultArgExpr(CXXDefaultArgExpr *E) {
   Record.AddDeclRef(E->getParam());
   Record.AddDeclRef(cast_or_null<Decl>(E->getUsedContext()));
   Record.AddSourceLocation(E->getUsedLocation());
+  Record.push_back(E->hasRewrittenInit());
+  if (E->hasRewrittenInit())
+    Record.AddStmt(E->getRewrittenExpr());
   Code = serialization::EXPR_CXX_DEFAULT_ARG;
 }
 
 void ASTStmtWriter::VisitCXXDefaultInitExpr(CXXDefaultInitExpr *E) {
   VisitExpr(E);
+  Record.push_back(E->hasRewrittenInit());
   Record.AddDeclRef(E->getField());
   Record.AddDeclRef(cast_or_null<Decl>(E->getUsedContext()));
   Record.AddSourceLocation(E->getExprLoc());
+  if (E->hasRewrittenInit())
+    Record.AddStmt(E->getRewrittenExpr());
   Code = serialization::EXPR_CXX_DEFAULT_INIT;
 }
 
@@ -2091,10 +2097,17 @@ void ASTStmtWriter::VisitCXXParenListInitExpr(CXXParenListInitExpr *E) {
   Record.AddSourceLocation(E->getEndLoc());
   for (Expr *InitExpr : E->getInitExprs())
     Record.AddStmt(InitExpr);
-  bool HasArrayFiller = E->getArrayFiller();
-  Record.push_back(HasArrayFiller);
-  if (HasArrayFiller)
-    Record.AddStmt(E->getArrayFiller());
+  Expr *ArrayFiller = E->getArrayFiller();
+  FieldDecl *UnionField = E->getInitializedFieldInUnion();
+  bool HasArrayFillerOrUnionDecl = ArrayFiller || UnionField;
+  Record.push_back(HasArrayFillerOrUnionDecl);
+  if (HasArrayFillerOrUnionDecl) {
+    Record.push_back(static_cast<bool>(ArrayFiller));
+    if (ArrayFiller)
+      Record.AddStmt(ArrayFiller);
+    else
+      Record.AddDeclRef(UnionField);
+  }
   Code = serialization::EXPR_CXX_PAREN_LIST_INIT;
 }
 

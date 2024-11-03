@@ -1,4 +1,3 @@
-// REQUIRES: amdgpu-registered-target
 // Begin X86/GCC/Linux tests ----------------
 
 // RUN: %clang -march=i386 -m32 -E -dM %s -o - 2>&1 \
@@ -1646,6 +1645,9 @@
 // RUN: %clang -march=sapphirerapids -m32 -E -dM %s -o - 2>&1 \
 // RUN:     -target i386-unknown-linux \
 // RUN:   | FileCheck -match-full-lines %s -check-prefix=CHECK_SPR_M32
+// RUN: %clang -march=emeraldrapids -m32 -E -dM %s -o - 2>&1 \
+// RUN:     -target i386-unknown-linux \
+// RUN:   | FileCheck -match-full-lines %s -check-prefix=CHECK_SPR_M32
 // CHECK_SPR_M32: #define __AES__ 1
 // CHECK_SPR_M32: #define __AMXBF16__ 1
 // CHECK_SPR_M32: #define __AMXINT8__ 1
@@ -1716,6 +1718,9 @@
 // CHECK_SPR_M32: #define i386 1
 
 // RUN: %clang -march=sapphirerapids -m64 -E -dM %s -o - 2>&1 \
+// RUN:     -target i386-unknown-linux \
+// RUN:   | FileCheck -match-full-lines %s -check-prefix=CHECK_SPR_M64
+// RUN: %clang -march=emeraldrapids -m64 -E -dM %s -o - 2>&1 \
 // RUN:     -target i386-unknown-linux \
 // RUN:   | FileCheck -match-full-lines %s -check-prefix=CHECK_SPR_M64
 // CHECK_SPR_M64: #define __AES__ 1
@@ -4313,3 +4318,89 @@
 // RUN:   | FileCheck -match-full-lines %s -check-prefix=CHECK_R600_FP64
 // CHECK_R600_FP64-DAG: #define __R600__ 1
 // CHECK_R600_FP64-DAG: #define __HAS_FMAF__ 1
+
+// Begin avr tests ----------------
+
+// RUN: %clang --target=avr -mmcu=atmega328 -E -dM %s -o - 2>&1 \
+// RUN:   | FileCheck -match-full-lines %s -check-prefix=CHECK-AVR0
+// CHECK-AVR0: #define __AVR_ARCH__ 5
+// CHECK-AVR0: #define __AVR_ATmega328__ 1
+// CHECK-AVR0: #define __flash __attribute__((__address_space__(1)))
+// RUN: %clang --target=avr -mmcu=atmega2560 -E -dM %s -o - 2>&1 \
+// RUN:   | FileCheck -match-full-lines %s -check-prefix=CHECK-AVR1
+// CHECK-AVR1: #define __AVR_ARCH__ 6
+// CHECK-AVR1: #define __AVR_ATmega2560__ 1
+// CHECK-AVR1: #define __flash  __attribute__((__address_space__(1)))
+// CHECK-AVR1: #define __flash1 __attribute__((__address_space__(2)))
+// CHECK-AVR1: #define __flash2 __attribute__((__address_space__(3)))
+// CHECK-AVR1: #define __flash3 __attribute__((__address_space__(4)))
+
+// Begin M68k tests ----------------
+
+// RUN: %clang -mcpu=68000 -E -dM %s -o - 2>&1 \
+// RUN:     -target m68k-unknown-linux \
+// RUN:   | FileCheck -match-full-lines %s -check-prefix=CHECK_M68K_68000_ATOMICS
+// RUN: %clang -mcpu=68010 -E -dM %s -o - 2>&1 \
+// RUN:     -target m68k-unknown-linux \
+// RUN:   | FileCheck -match-full-lines %s -check-prefix=CHECK_M68K_68000_ATOMICS
+// RUN: %clang -mcpu=68020 -E -dM %s -o - 2>&1 \
+// RUN:     -target m68k-unknown-linux \
+// RUN:   | FileCheck -match-full-lines %s -check-prefix=CHECK_M68K_68020_ATOMICS
+
+// CHECK_M68K_68000_ATOMICS-NOT: #define __GCC_HAVE_SYNC_COMPARE_AND_SWAP
+// CHECK_M68K_68020_ATOMICS: #define __GCC_HAVE_SYNC_COMPARE_AND_SWAP_1 1
+// CHECK_M68K_68020_ATOMICS: #define __GCC_HAVE_SYNC_COMPARE_AND_SWAP_2 1
+// CHECK_M68K_68020_ATOMICS: #define __GCC_HAVE_SYNC_COMPARE_AND_SWAP_4 1
+
+// Begin Hexagon tests ----------------
+
+// RUN: %clang -E -dM %s -o - 2>&1 \
+// RUN:     --target=hexagon-unknown-linux \
+// RUN:   | FileCheck -match-full-lines %s -check-prefix=CHECK_HEXAGON_ATOMICS
+
+// CHECK_HEXAGON_ATOMICS: #define __GCC_HAVE_SYNC_COMPARE_AND_SWAP_1 1
+// CHECK_HEXAGON_ATOMICS: #define __GCC_HAVE_SYNC_COMPARE_AND_SWAP_2 1
+// CHECK_HEXAGON_ATOMICS: #define __GCC_HAVE_SYNC_COMPARE_AND_SWAP_4 1
+// CHECK_HEXAGON_ATOMICS: #define __GCC_HAVE_SYNC_COMPARE_AND_SWAP_8 1
+
+// Begin VE tests ----------------
+
+// RUN: %clang -E -dM %s -o - 2>&1 \
+// RUN:     --target=ve-unknown-linux \
+// RUN:   | FileCheck -match-full-lines %s -check-prefix=CHECK_VE_ATOMICS
+
+// CHECK_VE_ATOMICS: #define __GCC_HAVE_SYNC_COMPARE_AND_SWAP_1 1
+// CHECK_VE_ATOMICS: #define __GCC_HAVE_SYNC_COMPARE_AND_SWAP_2 1
+// CHECK_VE_ATOMICS: #define __GCC_HAVE_SYNC_COMPARE_AND_SWAP_4 1
+// CHECK_VE_ATOMICS: #define __GCC_HAVE_SYNC_COMPARE_AND_SWAP_8 1
+
+// Begin WebAssembly tests ----------------
+
+// RUN: %clang -E -dM %s -o - 2>&1 \
+// RUN:     --target=wasm32-unknown-unknown \
+// RUN:   | FileCheck -match-full-lines %s -check-prefix=CHECK_WASM_ATOMICS
+// RUN: %clang -E -dM %s -o - 2>&1 \
+// RUN:     --target=wasm64-unknown-unknown \
+// RUN:   | FileCheck -match-full-lines %s -check-prefix=CHECK_WASM_ATOMICS
+
+// CHECK_WASM_ATOMICS: #define __GCC_HAVE_SYNC_COMPARE_AND_SWAP_1 1
+// CHECK_WASM_ATOMICS: #define __GCC_HAVE_SYNC_COMPARE_AND_SWAP_2 1
+// CHECK_WASM_ATOMICS: #define __GCC_HAVE_SYNC_COMPARE_AND_SWAP_4 1
+// CHECK_WASM_ATOMICS: #define __GCC_HAVE_SYNC_COMPARE_AND_SWAP_8 1
+
+// Begin LoongArch tests ----------------
+
+// RUN: %clang -E -dM %s -o - 2>&1 \
+// RUN:     --target=loongarch32-unknown-linux-gnu \
+// RUN:   | FileCheck -match-full-lines %s -check-prefix=CHECK_LA32_ATOMICS
+// CHECK_LA32_ATOMICS: #define __GCC_HAVE_SYNC_COMPARE_AND_SWAP_1 1
+// CHECK_LA32_ATOMICS: #define __GCC_HAVE_SYNC_COMPARE_AND_SWAP_2 1
+// CHECK_LA32_ATOMICS: #define __GCC_HAVE_SYNC_COMPARE_AND_SWAP_4 1
+
+// RUN: %clang -E -dM %s -o - 2>&1 \
+// RUN:     --target=loongarch64-unknown-linux-gnu \
+// RUN:   | FileCheck -match-full-lines %s -check-prefix=CHECK_LA64_ATOMICS
+// CHECK_LA64_ATOMICS: #define __GCC_HAVE_SYNC_COMPARE_AND_SWAP_1 1
+// CHECK_LA64_ATOMICS: #define __GCC_HAVE_SYNC_COMPARE_AND_SWAP_2 1
+// CHECK_LA64_ATOMICS: #define __GCC_HAVE_SYNC_COMPARE_AND_SWAP_4 1
+// CHECK_LA64_ATOMICS: #define __GCC_HAVE_SYNC_COMPARE_AND_SWAP_8 1

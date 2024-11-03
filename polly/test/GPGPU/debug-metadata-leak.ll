@@ -3,7 +3,7 @@
 
 ; REQUIRES: pollyacc
 
-; KERNEL-IR: define ptx_kernel void @FUNC_vec_add_1_SCOP_0_KERNEL_0(i8 addrspace(1)* %MemRef_arr, i32 %N) #0 {
+; KERNEL-IR: define ptx_kernel void @FUNC_vec_add_1_SCOP_0_KERNEL_0(ptr addrspace(1) %MemRef_arr, i32 %N) #0 {
 
 ; The instruction marked <<<LeakyInst>>> is copied into the GPUModule,
 ; with changes only to the parameters to access data on the device instead of
@@ -27,10 +27,10 @@ source_filename = "vec_add_1.c"
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
-define void @vec_add_1(i32 %N, i32* %arr) !dbg !7 {
+define void @vec_add_1(i32 %N, ptr %arr) !dbg !7 {
 entry:
   call void @llvm.dbg.value(metadata i32 %N, i64 0, metadata !13, metadata !16), !dbg !17
-  call void @llvm.dbg.value(metadata i32* %arr, i64 0, metadata !14, metadata !16), !dbg !18
+  call void @llvm.dbg.value(metadata ptr %arr, i64 0, metadata !14, metadata !16), !dbg !18
   call void @llvm.dbg.value(metadata i32 0, i64 0, metadata !15, metadata !16), !dbg !19
   %tmp = sext i32 %N to i64, !dbg !20
   br label %for.cond, !dbg !20
@@ -42,10 +42,10 @@ for.cond:                                         ; preds = %for.inc, %entry
   br i1 %cmp, label %for.body, label %for.end, !dbg !24
 
 for.body:                                         ; preds = %for.cond
-  %arrayidx = getelementptr inbounds i32, i32* %arr, i64 %indvars.iv, !dbg !25
-  %tmp1 = load i32, i32* %arrayidx, align 4, !dbg !26, !tbaa !27
+  %arrayidx = getelementptr inbounds i32, ptr %arr, i64 %indvars.iv, !dbg !25
+  %tmp1 = load i32, ptr %arrayidx, align 4, !dbg !26, !tbaa !27
   %add = add nsw i32 %tmp1, 1, !dbg !26    ;   <<<LeakyInst>>>
-  store i32 %add, i32* %arrayidx, align 4, !dbg !26, !tbaa !27
+  store i32 %add, ptr %arrayidx, align 4, !dbg !26, !tbaa !27
   br label %for.inc, !dbg !25
 
 for.inc:                                          ; preds = %for.body

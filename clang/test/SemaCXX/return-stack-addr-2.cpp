@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -std=c++11 -fsyntax-only -verify -std=c++11 %s
+// RUN: %clang_cc1 -std=c++11 -fsyntax-only -verify -std=c++11 -Wno-return-stack-address -Wreturn-local-addr %s
 
 namespace PR26599 {
 template <typename>

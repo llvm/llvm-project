@@ -98,25 +98,18 @@ namespace GH50891 {
   };
 
   static_assert(Numeric<Deferred>); // #STATIC_ASSERT
-  // expected-error@#OP_TO {{satisfaction of constraint 'Numeric<TO>' depends on itself}}
-  // expected-note@#OP_TO {{while substituting template arguments into constraint expression here}}
-  // FIXME: The following two refer to type-parameter-0-0, it would be nice to
-  // see if we could instead diagnose with the sugared name.
-  // expected-note@#FOO_CALL {{while checking constraint satisfaction for template}}
-  // expected-note@#FOO_CALL {{while substituting deduced template arguments into function template}}
-  // expected-note@#FOO_CALL {{in instantiation of requirement here}}
+  // expected-error@#NUMERIC{{satisfaction of constraint 'requires (T a) { foo(a); }' depends on itself}}
   // expected-note@#NUMERIC {{while substituting template arguments into constraint expression here}}
-  // expected-note@#OP_TO {{skipping 2 contexts in backtrace}}
+  // expected-note@#OP_TO {{while checking the satisfaction of concept 'Numeric<GH50891::Deferred>' requested here}}
+  // expected-note@#OP_TO {{while substituting template arguments into constraint expression here}}
   // expected-note@#FOO_CALL {{while checking constraint satisfaction for template}}
   // expected-note@#FOO_CALL {{in instantiation of function template specialization}}
   // expected-note@#FOO_CALL {{in instantiation of requirement here}}
   // expected-note@#NUMERIC {{while substituting template arguments into constraint expression here}}
-  // expected-note@#STATIC_ASSERT{{while checking the satisfaction of concept 'Numeric<Deferred>' requested here}}
 
-  // Fallout of that failure is that deferred does not satisfy numeric,
-  // which is unfortunate, but about what we can accomplish here.
   // expected-error@#STATIC_ASSERT {{static assertion failed}}
-  // expected-note@#STATIC_ASSERT{{because 'Deferred' does not satisfy 'Numeric'}}
-  // expected-note@#FOO_CALL {{because 'foo(a)' would be invalid}}
+  // expected-note@#STATIC_ASSERT{{while checking the satisfaction of concept 'Numeric<GH50891::Deferred>' requested here}}
+  // expected-note@#STATIC_ASSERT{{because substituted constraint expression is ill-formed: constraint depends on a previously diagnosed expression}}
+
 } // namespace GH50891
 

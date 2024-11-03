@@ -1650,6 +1650,9 @@ def err_type_defined_in_condition : Error<
   "%0 cannot be defined in a condition">;
 def err_type_defined_in_enum : Error<
   "%0 cannot be defined in an enumeration">;
+def ext_type_defined_in_offsetof : Extension<
+  "defining a type within '%select{__builtin_offsetof|offsetof}0' is a Clang "
+  "extension">, InGroup<GNUOffsetofExtensions>;
 
 def note_pure_virtual_function : Note<
   "unimplemented pure virtual method %0 in %1">;
@@ -2649,6 +2652,10 @@ def err_invalid_consteval_take_address : Error<
   " of an immediate invocation">;
 def err_invalid_consteval_call : Error<
   "call to consteval function %q0 is not a constant expression">;
+def note_invalid_consteval_initializer : Note<
+  "in the default initalizer of %0">;
+def note_invalid_consteval_initializer_here : Note<
+  "initialized here %0">;
 def err_invalid_consteval_decl_kind : Error<
   "%0 cannot be declared consteval">;
 def err_invalid_constexpr : Error<
@@ -3044,6 +3051,8 @@ def err_attribute_bad_sve_vector_size : Error<
 def err_attribute_arm_feature_sve_bits_unsupported : Error<
   "%0 is only supported when '-msve-vector-bits=<bits>' is specified with a "
   "value of 128, 256, 512, 1024 or 2048.">;
+def err_sve_vector_in_non_sve_target : Error<
+  "SVE vector type %0 cannot be used in a target without sve">;
 def err_attribute_requires_positive_integer : Error<
   "%0 attribute requires a %select{positive|non-negative}1 "
   "integral compile time constant expression">;
@@ -5956,7 +5965,7 @@ def ext_excess_initializers_in_char_array_initializer : ExtWarn<
   "excess elements in char array initializer">,
   InGroup<ExcessInitializers>;
 def err_initializer_string_for_char_array_too_long : Error<
-  "initializer-string for char array is too long">;
+  "initializer-string for char array is too long, array size is %0 but initializer has size %1 (including the null terminating character)">;
 def ext_initializer_string_for_char_array_too_long : ExtWarn<
   "initializer-string for char array is too long">,
   InGroup<ExcessInitializers>;
@@ -9354,6 +9363,9 @@ def err_non_first_default_compare_deletes : Error<
   "defaulting %select{this %sub{select_defaulted_comparison_kind}1|"
   "the corresponding implicit 'operator==' for this defaulted 'operator<=>'}0 "
   "would delete it after its first declaration">;
+def err_non_first_default_compare_in_class : Error<
+  "defaulting this %sub{select_defaulted_comparison_kind}0 "
+  "is not allowed because it was already declared outside the class">;
 def note_defaulted_comparison_union : Note<
   "defaulted %0 is implicitly deleted because "
   "%2 is a %select{union-like class|union}1 with variant members">;
@@ -10849,6 +10861,8 @@ def err_omp_depend_sink_source_with_modifier : Error<
   "depend modifier cannot be used with 'sink' or 'source' depend type">;
 def err_omp_depend_modifier_not_iterator : Error<
   "expected iterator specification as depend modifier">;
+def err_omp_map_modifier_not_iterator : Error<
+  "expected iterator specification as map modifier">;
 def err_omp_linear_ordered : Error<
   "'linear' clause cannot be specified along with 'ordered' clause with a parameter">;
 def err_omp_unexpected_schedule_modifier : Error<
@@ -11235,6 +11249,8 @@ def note_not_module_interface_add_export : Note<
   "add 'export' here if this is intended to be a module interface unit">;
 def err_invalid_module_name : Error<
   "%0 is %select{an invalid|a reserved}1 name for a module">;
+def err_extern_def_in_header_unit : Error<
+  "non-inline external definitions are not permitted in C++ header units">;
 
 def ext_equivalent_internal_linkage_decl_in_modules : ExtWarn<
   "ambiguous use of internal linkage declaration %0 defined in multiple modules">,
@@ -11271,8 +11287,8 @@ def err_implied_coroutine_type_not_found : Error<
   "a coroutine; include <experimental/coroutine> if your version "
   "of libcxx is less than 14.0">;
 def warn_deprecated_coroutine_namespace : Warning<
-  "support for std::experimental::%0 will be removed in LLVM 15; "
-  "use std::%0 instead">,
+  "support for 'std::experimental::%0' will be removed in Clang 17; "
+  "use 'std::%0' instead">,
   InGroup<DeprecatedExperimentalCoroutine>;
 def err_mixed_use_std_and_experimental_namespace_for_coroutine : Error<
   "conflicting mixed use of std and std::experimental namespaces for "
@@ -11351,6 +11367,9 @@ def warn_non_aligned_allocation_function : Warning <
   InGroup<CoroNonAlignedAllocationFunction>;
 def err_conflicting_aligned_options : Error <
   "conflicting option '-fcoro-aligned-allocation' and '-fno-aligned-allocation'"
+>;
+def err_coro_invalid_addr_of_label : Error<
+  "the GNU address of label extension is not allowed in coroutines."
 >;
 } // end of coroutines issue category
 
@@ -11761,10 +11780,16 @@ def err_loongarch_builtin_requires_la64 : Error<
   "this builtin requires target: loongarch64">;
 
 // Unsafe buffer usage diagnostics.
-def warn_unsafe_buffer_expression : Warning<
-  "unchecked operation on raw buffer in expression">,
-  InGroup<UnsafeBufferUsage>, DefaultIgnore;
 def warn_unsafe_buffer_variable : Warning<
-  "variable %0 participates in unchecked buffer operations">,
+  "%0 is an %select{unsafe pointer used for buffer access|unsafe buffer that "
+  "does not perform bounds checks}1">,
   InGroup<UnsafeBufferUsage>, DefaultIgnore;
+def warn_unsafe_buffer_operation : Warning<
+  "%select{unsafe pointer operation|unsafe pointer arithmetic|"
+  "unsafe buffer access}0">,
+  InGroup<UnsafeBufferUsage>, DefaultIgnore;
+def note_unsafe_buffer_operation : Note<
+  "used%select{| in pointer arithmetic| in buffer access}0 here">;
+def err_loongarch_builtin_requires_la32 : Error<
+  "this builtin requires target: loongarch32">;
 } // end of sema component.

@@ -12,6 +12,7 @@ unittest("ASTTests") {
     "//clang/lib/Tooling",
     "//llvm/lib/Support",
     "//llvm/lib/TargetParser",
+    "//llvm/lib/Testing/Annotations",
     "//llvm/lib/Testing/Support",
   ]
   sources = [

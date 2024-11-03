@@ -903,6 +903,20 @@ func.func @trunc_to_veci1(%arg0: vector<4xi32>) -> vector<4xi1> {
   return %0 : vector<4xi1>
 }
 
+// CHECK-LABEL: @fptoui1
+func.func @fptoui1(%arg0 : f32) -> i32 {
+  // CHECK: spirv.ConvertFToU %{{.*}} : f32 to i32
+  %0 = arith.fptoui %arg0 : f32 to i32
+  return %0 : i32
+}
+
+// CHECK-LABEL: @fptoui2
+func.func @fptoui2(%arg0 : f16) -> i16 {
+  // CHECK: spirv.ConvertFToU %{{.*}} : f16 to i16
+  %0 = arith.fptoui %arg0 : f16 to i16
+  return %0 : i16
+}
+
 // CHECK-LABEL: @fptosi1
 func.func @fptosi1(%arg0 : f32) -> i32 {
   // CHECK: spirv.ConvertFToS %{{.*}} : f32 to i32

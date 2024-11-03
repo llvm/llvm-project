@@ -23,12 +23,12 @@
 #include "clang/Tooling/DiagnosticsYaml.h"
 #include "clang/Tooling/ReplacementsYaml.h"
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
+#include <optional>
 
 using namespace llvm;
 using namespace clang;
@@ -155,7 +155,7 @@ groupReplacements(const TUReplacements &TUs, const TUDiagnostics &TUDs,
 
   auto AddToGroup = [&](const tooling::Replacement &R,
                         const tooling::TranslationUnitDiagnostics *SourceTU,
-                        const llvm::Optional<std::string> BuildDir) {
+                        const std::optional<std::string> BuildDir) {
     // Use the file manager to deduplicate paths. FileEntries are
     // automatically canonicalized. Since relative paths can come from different
     // build directories, make them absolute immediately.

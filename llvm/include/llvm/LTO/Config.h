@@ -53,7 +53,7 @@ struct Config {
   /// For adding passes that run right before codegen.
   std::function<void(legacy::PassManager &)> PreCodeGenPassesHook;
   std::optional<Reloc::Model> RelocModel = Reloc::PIC_;
-  std::optional<CodeModel::Model> CodeModel = std::nullopt;
+  std::optional<CodeModel::Model> CodeModel;
   CodeGenOpt::Level CGOptLevel = CodeGenOpt::Default;
   CodeGenFileType CGFileType = CGFT_ObjectFile;
   unsigned OptLevel = 2;
@@ -298,8 +298,7 @@ struct LTOLLVMContext : LLVMContext {
     enableDebugTypeODRUniquing();
     setDiagnosticHandler(
         std::make_unique<LTOLLVMDiagnosticHandler>(&DiagHandler), true);
-    if (!hasSetOpaquePointersValue())
-      setOpaquePointers(C.OpaquePointers);
+    setOpaquePointers(C.OpaquePointers);
   }
   DiagnosticHandlerFunction DiagHandler;
 };

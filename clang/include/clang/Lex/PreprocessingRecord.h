@@ -19,7 +19,6 @@
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Lex/PPCallbacks.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/PointerUnion.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/iterator.h"
@@ -29,6 +28,7 @@
 #include <cassert>
 #include <cstddef>
 #include <iterator>
+#include <optional>
 #include <utility>
 #include <vector>
 
@@ -290,8 +290,8 @@ class Token;
 
     /// Optionally returns true or false if the preallocated preprocessed
     /// entity with index \p Index came from file \p FID.
-    virtual Optional<bool> isPreprocessedEntityInFileID(unsigned Index,
-                                                        FileID FID) {
+    virtual std::optional<bool> isPreprocessedEntityInFileID(unsigned Index,
+                                                             FileID FID) {
       return std::nullopt;
     }
 

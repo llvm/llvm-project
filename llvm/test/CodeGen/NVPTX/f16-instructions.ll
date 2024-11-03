@@ -196,8 +196,10 @@ define half @test_fdiv(half %a, half %b) #0 {
 ; CHECK-F16-FTZ-NEXT: cvt.rzi.ftz.f32.f32 [[DI:%f[0-9]+]], [[D]];
 ; CHECK-F16-FTZ-NEXT: mul.ftz.f32         [[RI:%f[0-9]+]], [[DI]], [[FB]];
 ; CHECK-F16-FTZ-NEXT: sub.ftz.f32         [[RF:%f[0-9]+]], [[FA]], [[RI]];
-; CHECK-NEXT: cvt.rn.f16.f32  [[R:%h[0-9]+]], [[RF]];
-; CHECK-NEXT: st.param.b16    [func_retval0+0], [[R]];
+; CHECK-NEXT: testp.infinite.f32 [[ISBINF:%p[0-9]+]], [[FB]];
+; CHECK-NEXT: selp.f32           [[RESULT:%f[0-9]+]], [[FA]], [[RF]], [[ISBINF]];
+; CHECK-NEXT: cvt.rn.f16.f32     [[R:%h[0-9]+]], [[RESULT]];
+; CHECK-NEXT: st.param.b16       [func_retval0+0], [[R]];
 ; CHECK-NEXT: ret;
 define half @test_frem(half %a, half %b) #0 {
   %r = frem half %a, %b

@@ -14,6 +14,7 @@
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/Sequence.h"
 #include <complex>
+#include <optional>
 
 namespace mlir {
 class AffineMap;
@@ -125,7 +126,7 @@ public:
                                         is_valid_cpp_fp_type<T>::value ||
                                         detail::is_complex_t<T>::value>>
   static DenseElementsAttr get(const ShapedType &type, T value) {
-    return get(type, llvm::makeArrayRef(value));
+    return get(type, llvm::ArrayRef(value));
   }
 
   /// Constructs a dense complex elements attribute from an array of complex
@@ -785,7 +786,7 @@ public:
 
   /// Return the data of this attribute as an ArrayRef<T> if it is present,
   /// returns std::nullopt otherwise.
-  Optional<ArrayRef<T>> tryGetAsArrayRef() const;
+  std::optional<ArrayRef<T>> tryGetAsArrayRef() const;
 
   /// Support for isa<>/cast<>.
   static bool classof(Attribute attr);
@@ -911,7 +912,7 @@ public:
   /// simply wraps the DenseElementsAttr::get calls.
   template <typename Arg>
   static DenseFPElementsAttr get(const ShapedType &type, Arg &&arg) {
-    return DenseElementsAttr::get(type, llvm::makeArrayRef(arg))
+    return DenseElementsAttr::get(type, llvm::ArrayRef(arg))
         .template cast<DenseFPElementsAttr>();
   }
   template <typename T>
@@ -953,7 +954,7 @@ public:
   /// simply wraps the DenseElementsAttr::get calls.
   template <typename Arg>
   static DenseIntElementsAttr get(const ShapedType &type, Arg &&arg) {
-    return DenseElementsAttr::get(type, llvm::makeArrayRef(arg))
+    return DenseElementsAttr::get(type, llvm::ArrayRef(arg))
         .template cast<DenseIntElementsAttr>();
   }
   template <typename T>

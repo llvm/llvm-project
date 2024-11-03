@@ -78,9 +78,6 @@
 ; CHECK-NEXT:      - .offset:         128
 ; CHECK-NEXT:        .size:           8
 ; CHECK-NEXT:        .value_kind:     hidden_default_queue
-; CHECK-NEXT:      - .offset:         136
-; CHECK-NEXT:        .size:           8
-; CHECK-NEXT:        .value_kind:     hidden_completion_action
 ; GFX8-NEXT:      - .offset:         216
 ; GFX8-NEXT:        .size:           4
 ; GFX8-NEXT:        .value_kind:     hidden_private_base
@@ -114,5 +111,5 @@ entry:
 !1 = !{!"1:1:4:%d\5Cn"}
 !2 = !{!"2:1:8:%g\5Cn"}
 
-attributes #0 = { optnone noinline "calls-enqueue-kernel" }
+attributes #0 = { optnone noinline }
 

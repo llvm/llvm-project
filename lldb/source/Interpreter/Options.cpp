@@ -238,7 +238,7 @@ Option *Options::GetLongOptions() {
               llvm::formatv(
                   "option[{0}] --{1} has a short option {2:x} that "
                   "conflicts with option[{3}] --{4}, short option won't "
-                  "be used for --{5}n",
+                  "be used for --{5}",
                   (int)i, defs[i].long_option, short_opt, pos->second,
                   m_getopt_table[pos->second].definition->long_option,
                   defs[i].long_option)
@@ -1007,7 +1007,7 @@ llvm::Expected<Args> Options::ParseAlias(const Args &args,
     // given) from the argument list.  Also remove them from the
     // raw_input_string, if one was passed in.
     // Note: We also need to preserve any option argument values that were
-    // surrounded by backticks, as we lose track of them in the 
+    // surrounded by backticks, as we lose track of them in the
     // option_args_vector.
     size_t idx =
         FindArgumentIndexForOption(args_copy, long_options[long_options_index]);
@@ -1339,7 +1339,7 @@ llvm::Expected<Args> Options::Parse(const Args &args,
       // If the Option setting returned an error, we should stop parsing
       // and return the error.
       if (error.Fail())
-        break;      
+        break;
     } else {
       error.SetErrorStringWithFormat("invalid option with value '%i'", val);
     }

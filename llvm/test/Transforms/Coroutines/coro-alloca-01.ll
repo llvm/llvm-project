@@ -1,6 +1,6 @@
 ; Tests that CoroSplit can succesfully determine allocas should live on the frame
 ; if their aliases are used across suspension points through PHINode.
-; RUN: opt < %s -passes='cgscc(coro-split),simplifycfg,early-cse' -S | FileCheck %s
+; RUN: opt -opaque-pointers=0 < %s -passes='cgscc(coro-split),simplifycfg,early-cse' -S | FileCheck %s
 
 define i8* @f(i1 %n) presplitcoroutine {
 entry:

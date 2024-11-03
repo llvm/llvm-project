@@ -8,6 +8,7 @@
 
 #include "mlir/TableGen/AttrOrTypeDef.h"
 #include "mlir/TableGen/Dialect.h"
+#include "llvm/ADT/FunctionExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/TableGen/Error.h"
@@ -56,9 +57,23 @@ AttrOrTypeDef::AttrOrTypeDef(const llvm::Record *def) : def(def) {
   if (auto *traitList = def->getValueAsListInit("traits")) {
     SmallPtrSet<const llvm::Init *, 32> traitSet;
     traits.reserve(traitSet.size());
-    for (auto *traitInit : *traitList)
-      if (traitSet.insert(traitInit).second)
-        traits.push_back(Trait::create(traitInit));
+    llvm::unique_function<void(llvm::ListInit *)> processTraitList =
+        [&](llvm::ListInit *traitList) {
+          for (auto *traitInit : *traitList) {
+            if (!traitSet.insert(traitInit).second)
+              continue;
+
+            // If this is an interface, add any bases to the trait list.
+            auto *traitDef = cast<llvm::DefInit>(traitInit)->getDef();
+            if (traitDef->isSubClassOf("Interface")) {
+              if (auto *bases = traitDef->getValueAsListInit("baseInterfaces"))
+                processTraitList(bases);
+            }
+
+            traits.push_back(Trait::create(traitInit));
+          }
+        };
+    processTraitList(traitList);
   }
 
   // Populate the parameters.

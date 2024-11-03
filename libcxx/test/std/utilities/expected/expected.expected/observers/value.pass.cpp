@@ -68,7 +68,7 @@ void testException() {
   {
     const std::expected<int, int> e(std::unexpect, 5);
     try {
-      e.value();
+      (void) e.value();
       assert(false);
     } catch (const std::bad_expected_access<int>& ex) {
       assert(ex.error() == 5);
@@ -79,7 +79,7 @@ void testException() {
   {
     std::expected<int, MoveOnly> e(std::unexpect, 5);
     try {
-      std::move(e).value();
+      (void) std::move(e).value();
       assert(false);
     } catch (const std::bad_expected_access<MoveOnly>& ex) {
       assert(ex.error() == 5);

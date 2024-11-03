@@ -838,7 +838,7 @@ unsigned CodeGenSchedModels::findRWForSequence(ArrayRef<unsigned> Seq,
   std::vector<CodeGenSchedRW> &RWVec = IsRead ? SchedReads : SchedWrites;
 
   auto I = find_if(RWVec, [Seq](CodeGenSchedRW &RW) {
-    return makeArrayRef(RW.Sequence) == Seq;
+    return ArrayRef(RW.Sequence) == Seq;
   });
   // Index zero reserved for invalid RW.
   return I == RWVec.end() ? 0 : std::distance(RWVec.begin(), I);

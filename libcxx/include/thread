@@ -199,7 +199,7 @@ __thread_specific_ptr<_Tp>::set_pointer(pointer __p)
 {
     _LIBCPP_ASSERT(get() == nullptr,
                    "Attempting to overwrite thread local data");
-    __libcpp_tls_set(__key_, __p);
+    std::__libcpp_tls_set(__key_, __p);
 }
 
 template<>

@@ -1,4 +1,4 @@
-; RUN: opt -passes=loop-distribute -enable-loop-distribute -verify-loop-info -verify-dom-info -S < %s \
+; RUN: opt -opaque-pointers=0 -passes=loop-distribute -enable-loop-distribute -verify-loop-info -verify-dom-info -S < %s \
 ; RUN:   | FileCheck %s
 
 ; Check that definitions used outside the loop are handled correctly: (1) they

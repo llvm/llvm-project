@@ -14,7 +14,7 @@ func.func @indexed_vector(%arg0: memref<50xindex>) {
 transform.sequence failures(propagate) {
   ^bb0(%arg1: !pdl.operation):
     %0 = transform.structured.match ops{["linalg.generic"]} in %arg1
-    %1, %loop = transform.structured.tile %0 [10]
+    %1, %loop = transform.structured.tile %0 [10] : (!pdl.operation) -> (!pdl.operation, !pdl.operation)
 }
 
 // TILE-10n25-DAG: [[$MAP:#[a-zA-Z0-9_]*]] = affine_map<(d0, d1) -> (d0 + d1)>
@@ -44,7 +44,7 @@ func.func @indexed_matrix(%arg0: memref<50x50xindex>) {
 transform.sequence failures(propagate) {
   ^bb0(%arg1: !pdl.operation):
     %0 = transform.structured.match ops{["linalg.generic"]} in %arg1
-    %1, %loop:2 = transform.structured.tile %0 [10, 25]
+    %1, %loop:2 = transform.structured.tile %0 [10, 25] : (!pdl.operation) -> (!pdl.operation, !pdl.operation, !pdl.operation)
 }
 
 // TILE-10n25-DAG: [[$MAP:#[a-zA-Z0-9_]*]] = affine_map<(d0, d1) -> (d0 + d1)>

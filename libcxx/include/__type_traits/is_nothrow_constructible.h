@@ -34,7 +34,7 @@ template <bool, bool, class _Tp, class... _Args> struct __libcpp_is_nothrow_cons
 
 template <class _Tp, class... _Args>
 struct __libcpp_is_nothrow_constructible</*is constructible*/true, /*is reference*/false, _Tp, _Args...>
-    : public integral_constant<bool, noexcept(_Tp(declval<_Args>()...))>
+    : public integral_constant<bool, noexcept(_Tp(std::declval<_Args>()...))>
 {
 };
 
@@ -43,7 +43,7 @@ void __implicit_conversion_to(_Tp) noexcept { }
 
 template <class _Tp, class _Arg>
 struct __libcpp_is_nothrow_constructible</*is constructible*/true, /*is reference*/true, _Tp, _Arg>
-    : public integral_constant<bool, noexcept(_VSTD::__implicit_conversion_to<_Tp>(declval<_Arg>()))>
+    : public integral_constant<bool, noexcept(_VSTD::__implicit_conversion_to<_Tp>(std::declval<_Arg>()))>
 {
 };
 

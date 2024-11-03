@@ -117,7 +117,7 @@
 // SAVETEMP: [[CLANG:".*clang.*"]] "-cc1" "-triple" "amdgcn-amd-amdhsa" "-aux-triple" "x86_64-unknown-linux-gnu"
 // SAVETEMP-SAME: "-E"
 // SAVETEMP-SAME: {{.*}} "-main-file-name" "a.cu" {{.*}} "-target-cpu" "gfx803"
-// SAVETEMP-SAME: {{.*}} "-o" [[A_GFX803_CUI:"a.*cui"]] "-x" "hip" {{".*a.cu"}}
+// SAVETEMP-SAME: {{.*}} "-o" [[A_GFX803_CUI:"a.*hipi"]] "-x" "hip" {{".*a.cu"}}
 // SAVETEMP-NEXT: [[CLANG]] "-cc1" "-triple" "amdgcn-amd-amdhsa" "-aux-triple" "x86_64-unknown-linux-gnu"
 // SAVETEMP-SAME: "-emit-llvm-bc"
 // SAVETEMP-SAME: {{.*}} "-main-file-name" "a.cu" {{.*}} "-target-cpu" "gfx803"
@@ -130,7 +130,7 @@
 // SAVETEMP: [[CLANG]] "-cc1" "-triple" "amdgcn-amd-amdhsa" "-aux-triple" "x86_64-unknown-linux-gnu"
 // SAVETEMP-SAME: "-E"
 // SAVETEMP-SAME: {{.*}} "-main-file-name" "a.cu" {{.*}} "-target-cpu" "gfx900"
-// SAVETEMP-SAME: {{.*}} "-o" [[A_GFX900_CUI:"a.*cui"]] "-x" "hip" {{".*a.cu"}}
+// SAVETEMP-SAME: {{.*}} "-o" [[A_GFX900_CUI:"a.*hipi"]] "-x" "hip" {{".*a.cu"}}
 // SAVETEMP-NEXT: [[CLANG]] "-cc1" "-triple" "amdgcn-amd-amdhsa" "-aux-triple" "x86_64-unknown-linux-gnu"
 // SAVETEMP-SAME: "-emit-llvm-bc"
 // SAVETEMP-SAME: {{.*}} "-main-file-name" "a.cu" {{.*}} "-target-cpu" "gfx900"
@@ -147,7 +147,7 @@
 // SAVETEMP: [[CLANG]] "-cc1" "-triple" "amdgcn-amd-amdhsa" "-aux-triple" "x86_64-unknown-linux-gnu"
 // SAVETEMP-SAME: "-E"
 // SAVETEMP-SAME: {{.*}} "-main-file-name" "b.hip" {{.*}} "-target-cpu" "gfx803"
-// SAVETEMP-SAME: {{.*}} "-o" [[B_GFX803_CUI:"b.*cui"]] "-x" "hip" {{".*b.hip"}}
+// SAVETEMP-SAME: {{.*}} "-o" [[B_GFX803_CUI:"b.*hipi"]] "-x" "hip" {{".*b.hip"}}
 // SAVETEMP-NEXT: [[CLANG]] "-cc1" "-triple" "amdgcn-amd-amdhsa" "-aux-triple" "x86_64-unknown-linux-gnu"
 // SAVETEMP-SAME: "-emit-llvm-bc"
 // SAVETEMP-SAME: {{.*}} "-main-file-name" "b.hip" {{.*}} "-target-cpu" "gfx803"
@@ -160,7 +160,7 @@
 // SAVETEMP: [[CLANG]] "-cc1" "-triple" "amdgcn-amd-amdhsa" "-aux-triple" "x86_64-unknown-linux-gnu"
 // SAVETEMP-SAME: "-E"
 // SAVETEMP-SAME: {{.*}} "-main-file-name" "b.hip" {{.*}} "-target-cpu" "gfx900"
-// SAVETEMP-SAME: {{.*}} "-o" [[B_GFX900_CUI:"b.*cui"]] "-x" "hip" {{".*b.hip"}}
+// SAVETEMP-SAME: {{.*}} "-o" [[B_GFX900_CUI:"b.*hipi"]] "-x" "hip" {{".*b.hip"}}
 // SAVETEMP-NEXT: [[CLANG]] "-cc1" "-triple" "amdgcn-amd-amdhsa" "-aux-triple" "x86_64-unknown-linux-gnu"
 // SAVETEMP-SAME: "-emit-llvm-bc"
 // SAVETEMP-SAME: {{.*}} "-main-file-name" "b.hip" {{.*}} "-target-cpu" "gfx900"

@@ -20,6 +20,7 @@
 #include "clang/Format/Format.h"
 #include "clang/Lex/Lexer.h"
 #include <memory>
+#include <optional>
 #include <unordered_set>
 
 namespace clang {
@@ -70,6 +71,8 @@ namespace format {
   TYPE(FunctionLBrace)                                                         \
   TYPE(FunctionLikeOrFreestandingMacro)                                        \
   TYPE(FunctionTypeLParen)                                                     \
+  /* The colons as part of a C11 _Generic selection */                         \
+  TYPE(GenericSelectionColon)                                                  \
   /* The colon at the end of a goto label or a case label. Currently only used \
    * for Verilog. */                                                           \
   TYPE(GotoLabelColon)                                                         \
@@ -247,7 +250,8 @@ struct FormatToken {
         CanBreakBefore(false), ClosesTemplateDeclaration(false),
         StartsBinaryExpression(false), EndsBinaryExpression(false),
         PartOfMultiVariableDeclStmt(false), ContinuesLineCommentSection(false),
-        Finalized(false), ClosesRequiresClause(false), BlockKind(BK_Unknown),
+        Finalized(false), ClosesRequiresClause(false),
+        EndsCppAttributeGroup(false), BlockKind(BK_Unknown),
         Decision(FD_Unformatted), PackingKind(PPK_Inconclusive),
         TypeIsFinalized(false), Type(TT_Unknown) {}
 
@@ -317,6 +321,9 @@ struct FormatToken {
 
   /// \c true if this is the last token within requires clause.
   unsigned ClosesRequiresClause : 1;
+
+  /// \c true if this token ends a group of C++ attributes.
+  unsigned EndsCppAttributeGroup : 1;
 
 private:
   /// Contains the kind of block if this token is a brace.
@@ -514,7 +521,7 @@ public:
 
   // Contains all attributes related to how this token takes part
   // in a configured macro expansion.
-  llvm::Optional<MacroExpansion> MacroCtx;
+  std::optional<MacroExpansion> MacroCtx;
 
   /// When macro expansion introduces nodes with children, those are marked as
   /// \c MacroParent.

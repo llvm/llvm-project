@@ -103,6 +103,7 @@ X86_CPU_SUBTYPE(INTEL_COREI7_GRANITERAPIDS,  "graniterapids")
 // Alternate names supported by __builtin_cpu_is and target multiversioning.
 X86_CPU_SUBTYPE_ALIAS(INTEL_COREI7_ALDERLAKE, "raptorlake")
 X86_CPU_SUBTYPE_ALIAS(INTEL_COREI7_ALDERLAKE, "meteorlake")
+X86_CPU_SUBTYPE_ALIAS(INTEL_COREI7_SAPPHIRERAPIDS, "emeraldrapids")
 
 #undef X86_CPU_SUBTYPE_ALIAS
 #undef X86_CPU_SUBTYPE

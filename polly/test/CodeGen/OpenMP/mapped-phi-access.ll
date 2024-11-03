@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-stmt-granularity=bb -polly-parallel -polly-delicm -polly-codegen -S < %s | FileCheck %s
+; RUN: opt -opaque-pointers=0 %loadPolly -polly-stmt-granularity=bb -polly-parallel -polly-delicm -polly-codegen -S < %s | FileCheck %s
 ;
 ; Verify that -polly-parallel can handle mapped scalar MemoryAccesses.
 ;

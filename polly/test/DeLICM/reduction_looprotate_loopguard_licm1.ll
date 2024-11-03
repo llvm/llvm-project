@@ -13,7 +13,7 @@
 ;      }
 ;    }
 ;
-define void @func(i32 %n, double* noalias nonnull %A) {
+define void @func(i32 %n, ptr noalias nonnull %A) {
 entry:
   br label %outer.preheader
 
@@ -27,8 +27,8 @@ outer.for:
 
 
     reduction.guard:
-      %A_idx = getelementptr inbounds double, double* %A, i32 %j
-      %init = load double, double* %A_idx
+      %A_idx = getelementptr inbounds double, ptr %A, i32 %j
+      %init = load double, ptr %A_idx
       %guard.cmp = icmp sle i32 %n,0
       br i1 %guard.cmp, label %reduction.exit, label %reduction.for
 
@@ -52,7 +52,7 @@ outer.for:
 
     reduction.exit:
       %result = phi double [%init, %reduction.guard], [%add, %reduction.inc]
-      store double %result, double* %A_idx
+      store double %result, ptr %A_idx
       br label %outer.inc
 
 

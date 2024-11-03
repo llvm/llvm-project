@@ -1,0 +1,2238 @@
+## Test that .debug_macro table is correctly moved from the source
+## file to the destination file.
+##
+## The %p/Inputs/dwarf5-macro.out test case created using
+## following source files and compilation line:
+##
+## clang++ main.cpp foo.cpp bar.cpp -fdebug-macro -gdwarf-5 -o dwarf5-macro.out
+##
+## cat main.cpp
+##
+## void bar();
+## void foo();
+##
+## int main ( void ) {
+##   bar();
+##   foo();
+##   return 0;
+## }
+##
+## cat foo.cpp
+##
+## include <stdio.h>
+##
+## void __attribute__ ((noinline)) foo ( ) {
+##   printf("\n foo");
+## }
+##
+## cat bar.cpp
+##
+## #include <stdio.h>
+##
+## void __attribute__ ((noinline)) bar ( ) {
+##   printf("\n bar");
+## }
+
+## Check that macro table preserved during garbage collection.
+#
+#RUN: llvm-dwarfutil --garbage-collection %p/Inputs/dwarf5-macro.out %t1
+#RUN: llvm-dwarfdump -verify %t1 | FileCheck %s
+#RUN: llvm-dwarfdump -a  %t1 | FileCheck %s --check-prefix=MACRO
+
+## Check that macro table preserved during simple copying.
+#
+#RUN: llvm-dwarfutil --no-garbage-collection %p/Inputs/dwarf5-macro.out %t1
+#RUN: llvm-dwarfdump -verify %t1 | FileCheck %s
+#RUN: llvm-dwarfdump -a  %t1 | FileCheck %s --check-prefix=MACRO
+
+## Check that macro table preserved during updating accelerator tables.
+#RUN: llvm-dwarfutil --no-garbage-collection --build-accelerator=DWARF %p/Inputs/dwarf5-macro.out %t1
+#RUN: llvm-dwarfdump -verify %t1 | FileCheck %s
+#RUN: llvm-dwarfdump -a  %t1 | FileCheck %s --check-prefixes=MACRO,NAMES
+
+#CHECK: No errors.
+
+#MACRO: .debug_info contents
+#MACRO: DW_TAG_compile_unit
+#MACRO: DW_AT_name        ("main.cpp")
+#MACRO: DW_AT_stmt_list   (0x[[LINE_TABLE_MAIN:[0-9a-f]*]])
+#MACRO: DW_AT_macros (0x[[MAIN_MACRO_OFFSET:[0-9a-f]*]]
+#MACRO: DW_TAG_compile_unit
+#MACRO: DW_AT_name        ("foo.cpp")
+#MACRO: DW_AT_stmt_list   (0x[[LINE_TABLE_FOO:[0-9a-f]*]])
+#MACRO: DW_AT_macros (0x[[FOO_MACRO_OFFSET:[0-9a-f]*]]
+#MACRO: DW_TAG_compile_unit
+#MACRO: DW_AT_name        ("bar.cpp")
+#MACRO: DW_AT_stmt_list   (0x[[LINE_TABLE_BAR:[0-9a-f]*]])
+#MACRO: DW_AT_macros (0x[[BAR_MACRO_OFFSET:[0-9a-f]*]]
+
+#MACRO: .debug_macro contents:
+#MACRO: 0x[[MAIN_MACRO_OFFSET]]
+#MACRO: macro header: version = 0x0005, flags = 0x02, format = DWARF32, debug_line_offset = 0x[[LINE_TABLE_MAIN]]
+#MACRO-NEXT: DW_MACRO_start_file - lineno: 0 filenum: 0
+#MACRO-NEXT: DW_MACRO_end_file
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __llvm__ 1
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __clang__ 1
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __clang_major__ 14
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __clang_minor__ 0
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __clang_patchlevel__ 0
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __clang_version__ "14.0.0 "
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __GNUC__ 4
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __GNUC_MINOR__ 2
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __GNUC_PATCHLEVEL__ 1
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __GXX_ABI_VERSION 1002
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __GNUG__ 4
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __GXX_WEAK__ 1
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __ATOMIC_RELAXED 0
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __ATOMIC_CONSUME 1
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __ATOMIC_ACQUIRE 2
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __ATOMIC_RELEASE 3
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __ATOMIC_ACQ_REL 4
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __ATOMIC_SEQ_CST 5
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __OPENCL_MEMORY_SCOPE_WORK_ITEM 0
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __OPENCL_MEMORY_SCOPE_WORK_GROUP 1
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __OPENCL_MEMORY_SCOPE_DEVICE 2
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __OPENCL_MEMORY_SCOPE_ALL_SVM_DEVICES 3
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __OPENCL_MEMORY_SCOPE_SUB_GROUP 4
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __PRAGMA_REDEFINE_EXTNAME 1
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __VERSION__ "Ubuntu Clang 14.0.0"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __GXX_EXPERIMENTAL_CXX0X__ 1
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __OBJC_BOOL_IS_BOOL 0
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __cpp_rtti 199711L
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __cpp_exceptions 199711L
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __cpp_unicode_characters 200704L
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __cpp_raw_strings 200710L
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __cpp_unicode_literals 200710L
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __cpp_user_defined_literals 200809L
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __cpp_lambdas 200907L
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __cpp_constexpr 201304L
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __cpp_constexpr_in_decltype 201711L
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __cpp_range_based_for 200907
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __cpp_static_assert 200410
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __cpp_decltype 200707L
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __cpp_attributes 200809L
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __cpp_rvalue_references 200610L
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __cpp_variadic_templates 200704L
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __cpp_initializer_lists 200806L
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __cpp_delegating_constructors 200604L
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __cpp_nsdmi 200809L
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __cpp_inheriting_constructors 201511L
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __cpp_ref_qualifiers 200710L
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __cpp_alias_templates 200704L
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __cpp_threadsafe_static_init 200806L
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __cpp_binary_literals 201304L
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __cpp_digit_separators 201309L
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __cpp_init_captures 201304L
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __cpp_generic_lambdas 201304L
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __cpp_decltype_auto 201304L
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __cpp_return_type_deduction 201304L
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __cpp_aggregate_nsdmi 201304L
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __cpp_variable_templates 201304L
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __cpp_impl_destroying_delete 201806L
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __CONSTANT_CFSTRINGS__ 1
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __EXCEPTIONS 1
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __GXX_RTTI 1
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __DEPRECATED 1
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __private_extern__ extern
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __clang_literal_encoding__ "UTF-8"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __clang_wide_literal_encoding__ "UTF-32"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __ORDER_LITTLE_ENDIAN__ 1234
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __ORDER_BIG_ENDIAN__ 4321
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __ORDER_PDP_ENDIAN__ 3412
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __BYTE_ORDER__ __ORDER_LITTLE_ENDIAN__
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __LITTLE_ENDIAN__ 1
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: _LP64 1
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __LP64__ 1
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __CHAR_BIT__ 8
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __BOOL_WIDTH__ 8
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __SHRT_WIDTH__ 16
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __INT_WIDTH__ 32
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __LONG_WIDTH__ 64
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __LLONG_WIDTH__ 64
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __BITINT_MAXWIDTH__ 128
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __SCHAR_MAX__ 127
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __SHRT_MAX__ 32767
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __INT_MAX__ 2147483647
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __LONG_MAX__ 9223372036854775807L
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __LONG_LONG_MAX__ 9223372036854775807LL
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __WCHAR_MAX__ 2147483647
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __WCHAR_WIDTH__ 32
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __WINT_MAX__ 4294967295U
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __WINT_WIDTH__ 32
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __INTMAX_MAX__ 9223372036854775807L
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __INTMAX_WIDTH__ 64
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __SIZE_MAX__ 18446744073709551615UL
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __SIZE_WIDTH__ 64
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINTMAX_MAX__ 18446744073709551615UL
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINTMAX_WIDTH__ 64
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __PTRDIFF_MAX__ 9223372036854775807L
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __PTRDIFF_WIDTH__ 64
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __INTPTR_MAX__ 9223372036854775807L
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __INTPTR_WIDTH__ 64
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINTPTR_MAX__ 18446744073709551615UL
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINTPTR_WIDTH__ 64
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __SIZEOF_DOUBLE__ 8
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __SIZEOF_FLOAT__ 4
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __SIZEOF_INT__ 4
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __SIZEOF_LONG__ 8
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __SIZEOF_LONG_DOUBLE__ 16
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __SIZEOF_LONG_LONG__ 8
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __SIZEOF_POINTER__ 8
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __SIZEOF_SHORT__ 2
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __SIZEOF_PTRDIFF_T__ 8
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __SIZEOF_SIZE_T__ 8
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __SIZEOF_WCHAR_T__ 4
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __SIZEOF_WINT_T__ 4
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __SIZEOF_INT128__ 16
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __INTMAX_TYPE__ long int
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __INTMAX_FMTd__ "ld"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __INTMAX_FMTi__ "li"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __INTMAX_C_SUFFIX__ L
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINTMAX_TYPE__ long unsigned int
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINTMAX_FMTo__ "lo"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINTMAX_FMTu__ "lu"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINTMAX_FMTx__ "lx"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINTMAX_FMTX__ "lX"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINTMAX_C_SUFFIX__ UL
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __PTRDIFF_TYPE__ long int
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __PTRDIFF_FMTd__ "ld"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __PTRDIFF_FMTi__ "li"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __INTPTR_TYPE__ long int
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __INTPTR_FMTd__ "ld"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __INTPTR_FMTi__ "li"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __SIZE_TYPE__ long unsigned int
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __SIZE_FMTo__ "lo"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __SIZE_FMTu__ "lu"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __SIZE_FMTx__ "lx"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __SIZE_FMTX__ "lX"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __WCHAR_TYPE__ int
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __WINT_TYPE__ unsigned int
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __SIG_ATOMIC_MAX__ 2147483647
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __SIG_ATOMIC_WIDTH__ 32
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __CHAR16_TYPE__ unsigned short
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __CHAR32_TYPE__ unsigned int
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINTPTR_TYPE__ long unsigned int
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINTPTR_FMTo__ "lo"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINTPTR_FMTu__ "lu"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINTPTR_FMTx__ "lx"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINTPTR_FMTX__ "lX"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __FLT_DENORM_MIN__ 1.40129846e-45F
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __FLT_HAS_DENORM__ 1
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __FLT_DIG__ 6
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __FLT_DECIMAL_DIG__ 9
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __FLT_EPSILON__ 1.19209290e-7F
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __FLT_HAS_INFINITY__ 1
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __FLT_HAS_QUIET_NAN__ 1
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __FLT_MANT_DIG__ 24
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __FLT_MAX_10_EXP__ 38
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __FLT_MAX_EXP__ 128
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __FLT_MAX__ 3.40282347e+38F
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __FLT_MIN_10_EXP__ (-37)
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __FLT_MIN_EXP__ (-125)
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __FLT_MIN__ 1.17549435e-38F
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __DBL_DENORM_MIN__ 4.9406564584124654e-324
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __DBL_HAS_DENORM__ 1
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __DBL_DIG__ 15
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __DBL_DECIMAL_DIG__ 17
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __DBL_EPSILON__ 2.2204460492503131e-16
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __DBL_HAS_INFINITY__ 1
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __DBL_HAS_QUIET_NAN__ 1
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __DBL_MANT_DIG__ 53
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __DBL_MAX_10_EXP__ 308
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __DBL_MAX_EXP__ 1024
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __DBL_MAX__ 1.7976931348623157e+308
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __DBL_MIN_10_EXP__ (-307)
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __DBL_MIN_EXP__ (-1021)
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __DBL_MIN__ 2.2250738585072014e-308
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __LDBL_DENORM_MIN__ 3.64519953188247460253e-4951L
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __LDBL_HAS_DENORM__ 1
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __LDBL_DIG__ 18
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __LDBL_DECIMAL_DIG__ 21
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __LDBL_EPSILON__ 1.08420217248550443401e-19L
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __LDBL_HAS_INFINITY__ 1
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __LDBL_HAS_QUIET_NAN__ 1
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __LDBL_MANT_DIG__ 64
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __LDBL_MAX_10_EXP__ 4932
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __LDBL_MAX_EXP__ 16384
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __LDBL_MAX__ 1.18973149535723176502e+4932L
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __LDBL_MIN_10_EXP__ (-4931)
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __LDBL_MIN_EXP__ (-16381)
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __LDBL_MIN__ 3.36210314311209350626e-4932L
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __POINTER_WIDTH__ 64
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __BIGGEST_ALIGNMENT__ 16
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __WINT_UNSIGNED__ 1
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __INT8_TYPE__ signed char
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __INT8_FMTd__ "hhd"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __INT8_FMTi__ "hhi"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __INT8_C_SUFFIX__
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __INT16_TYPE__ short
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __INT16_FMTd__ "hd"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __INT16_FMTi__ "hi"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __INT16_C_SUFFIX__
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __INT32_TYPE__ int
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __INT32_FMTd__ "d"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __INT32_FMTi__ "i"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __INT32_C_SUFFIX__
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __INT64_TYPE__ long int
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __INT64_FMTd__ "ld"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __INT64_FMTi__ "li"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __INT64_C_SUFFIX__ L
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINT8_TYPE__ unsigned char
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINT8_FMTo__ "hho"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINT8_FMTu__ "hhu"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINT8_FMTx__ "hhx"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINT8_FMTX__ "hhX"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINT8_C_SUFFIX__
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINT8_MAX__ 255
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __INT8_MAX__ 127
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINT16_TYPE__ unsigned short
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINT16_FMTo__ "ho"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINT16_FMTu__ "hu"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINT16_FMTx__ "hx"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINT16_FMTX__ "hX"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINT16_C_SUFFIX__
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINT16_MAX__ 65535
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __INT16_MAX__ 32767
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINT32_TYPE__ unsigned int
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINT32_FMTo__ "o"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINT32_FMTu__ "u"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINT32_FMTx__ "x"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINT32_FMTX__ "X"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINT32_C_SUFFIX__ U
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINT32_MAX__ 4294967295U
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __INT32_MAX__ 2147483647
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINT64_TYPE__ long unsigned int
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINT64_FMTo__ "lo"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINT64_FMTu__ "lu"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINT64_FMTx__ "lx"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINT64_FMTX__ "lX"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINT64_C_SUFFIX__ UL
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINT64_MAX__ 18446744073709551615UL
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __INT64_MAX__ 9223372036854775807L
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __INT_LEAST8_TYPE__ signed char
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __INT_LEAST8_MAX__ 127
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __INT_LEAST8_WIDTH__ 8
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __INT_LEAST8_FMTd__ "hhd"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __INT_LEAST8_FMTi__ "hhi"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINT_LEAST8_TYPE__ unsigned char
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINT_LEAST8_MAX__ 255
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINT_LEAST8_FMTo__ "hho"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINT_LEAST8_FMTu__ "hhu"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINT_LEAST8_FMTx__ "hhx"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINT_LEAST8_FMTX__ "hhX"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __INT_LEAST16_TYPE__ short
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __INT_LEAST16_MAX__ 32767
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __INT_LEAST16_WIDTH__ 16
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __INT_LEAST16_FMTd__ "hd"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __INT_LEAST16_FMTi__ "hi"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINT_LEAST16_TYPE__ unsigned short
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINT_LEAST16_MAX__ 65535
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINT_LEAST16_FMTo__ "ho"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINT_LEAST16_FMTu__ "hu"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINT_LEAST16_FMTx__ "hx"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINT_LEAST16_FMTX__ "hX"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __INT_LEAST32_TYPE__ int
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __INT_LEAST32_MAX__ 2147483647
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __INT_LEAST32_WIDTH__ 32
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __INT_LEAST32_FMTd__ "d"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __INT_LEAST32_FMTi__ "i"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINT_LEAST32_TYPE__ unsigned int
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINT_LEAST32_MAX__ 4294967295U
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINT_LEAST32_FMTo__ "o"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINT_LEAST32_FMTu__ "u"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINT_LEAST32_FMTx__ "x"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINT_LEAST32_FMTX__ "X"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __INT_LEAST64_TYPE__ long int
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __INT_LEAST64_MAX__ 9223372036854775807L
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __INT_LEAST64_WIDTH__ 64
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __INT_LEAST64_FMTd__ "ld"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __INT_LEAST64_FMTi__ "li"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINT_LEAST64_TYPE__ long unsigned int
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINT_LEAST64_MAX__ 18446744073709551615UL
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINT_LEAST64_FMTo__ "lo"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINT_LEAST64_FMTu__ "lu"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINT_LEAST64_FMTx__ "lx"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINT_LEAST64_FMTX__ "lX"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __INT_FAST8_TYPE__ signed char
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __INT_FAST8_MAX__ 127
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __INT_FAST8_WIDTH__ 8
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __INT_FAST8_FMTd__ "hhd"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __INT_FAST8_FMTi__ "hhi"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINT_FAST8_TYPE__ unsigned char
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINT_FAST8_MAX__ 255
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINT_FAST8_FMTo__ "hho"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINT_FAST8_FMTu__ "hhu"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINT_FAST8_FMTx__ "hhx"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINT_FAST8_FMTX__ "hhX"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __INT_FAST16_TYPE__ short
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __INT_FAST16_MAX__ 32767
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __INT_FAST16_WIDTH__ 16
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __INT_FAST16_FMTd__ "hd"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __INT_FAST16_FMTi__ "hi"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINT_FAST16_TYPE__ unsigned short
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINT_FAST16_MAX__ 65535
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINT_FAST16_FMTo__ "ho"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINT_FAST16_FMTu__ "hu"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINT_FAST16_FMTx__ "hx"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINT_FAST16_FMTX__ "hX"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __INT_FAST32_TYPE__ int
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __INT_FAST32_MAX__ 2147483647
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __INT_FAST32_WIDTH__ 32
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __INT_FAST32_FMTd__ "d"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __INT_FAST32_FMTi__ "i"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINT_FAST32_TYPE__ unsigned int
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINT_FAST32_MAX__ 4294967295U
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINT_FAST32_FMTo__ "o"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINT_FAST32_FMTu__ "u"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINT_FAST32_FMTx__ "x"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINT_FAST32_FMTX__ "X"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __INT_FAST64_TYPE__ long int
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __INT_FAST64_MAX__ 9223372036854775807L
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __INT_FAST64_WIDTH__ 64
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __INT_FAST64_FMTd__ "ld"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __INT_FAST64_FMTi__ "li"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINT_FAST64_TYPE__ long unsigned int
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINT_FAST64_MAX__ 18446744073709551615UL
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINT_FAST64_FMTo__ "lo"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINT_FAST64_FMTu__ "lu"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINT_FAST64_FMTx__ "lx"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINT_FAST64_FMTX__ "lX"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __USER_LABEL_PREFIX__
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __FINITE_MATH_ONLY__ 0
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __GNUC_GNU_INLINE__ 1
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __GCC_ATOMIC_TEST_AND_SET_TRUEVAL 1
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __CLANG_ATOMIC_BOOL_LOCK_FREE 2
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __CLANG_ATOMIC_CHAR_LOCK_FREE 2
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __CLANG_ATOMIC_CHAR16_T_LOCK_FREE 2
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __CLANG_ATOMIC_CHAR32_T_LOCK_FREE 2
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __CLANG_ATOMIC_WCHAR_T_LOCK_FREE 2
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __CLANG_ATOMIC_SHORT_LOCK_FREE 2
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __CLANG_ATOMIC_INT_LOCK_FREE 2
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __CLANG_ATOMIC_LONG_LOCK_FREE 2
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __CLANG_ATOMIC_LLONG_LOCK_FREE 2
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __CLANG_ATOMIC_POINTER_LOCK_FREE 2
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __GCC_ATOMIC_BOOL_LOCK_FREE 2
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __GCC_ATOMIC_CHAR_LOCK_FREE 2
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __GCC_ATOMIC_CHAR16_T_LOCK_FREE 2
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __GCC_ATOMIC_CHAR32_T_LOCK_FREE 2
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __GCC_ATOMIC_WCHAR_T_LOCK_FREE 2
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __GCC_ATOMIC_SHORT_LOCK_FREE 2
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __GCC_ATOMIC_INT_LOCK_FREE 2
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __GCC_ATOMIC_LONG_LOCK_FREE 2
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __GCC_ATOMIC_LLONG_LOCK_FREE 2
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __GCC_ATOMIC_POINTER_LOCK_FREE 2
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __NO_INLINE__ 1
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __PIC__ 2
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __pic__ 2
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __PIE__ 2
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __pie__ 2
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __FLT_EVAL_METHOD__ 0
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __FLT_RADIX__ 2
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __DECIMAL_DIG__ __LDBL_DECIMAL_DIG__
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __GLIBCXX_TYPE_INT_N_0 __int128
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __GLIBCXX_BITSIZE_INT_N_0 128
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __GCC_ASM_FLAG_OUTPUTS__ 1
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __code_model_small__ 1
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __amd64__ 1
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __amd64 1
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __x86_64 1
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __x86_64__ 1
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __SEG_GS 1
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __SEG_FS 1
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __seg_gs __attribute__((address_space(256)))
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __seg_fs __attribute__((address_space(257)))
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __k8 1
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __k8__ 1
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __tune_k8__ 1
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __REGISTER_PREFIX__
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __NO_MATH_INLINES 1
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __FXSR__ 1
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __SSE2__ 1
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __SSE2_MATH__ 1
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __SSE__ 1
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __SSE_MATH__ 1
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __MMX__ 1
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __GCC_HAVE_SYNC_COMPARE_AND_SWAP_1 1
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __GCC_HAVE_SYNC_COMPARE_AND_SWAP_2 1
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __GCC_HAVE_SYNC_COMPARE_AND_SWAP_4 1
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __GCC_HAVE_SYNC_COMPARE_AND_SWAP_8 1
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __SIZEOF_FLOAT128__ 16
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: unix 1
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __unix 1
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __unix__ 1
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: linux 1
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __linux 1
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __linux__ 1
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __ELF__ 1
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __gnu_linux__ 1
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: _GNU_SOURCE 1
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __FLOAT128__ 1
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __STDC__ 1
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __STDC_HOSTED__ 1
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __cplusplus 201402L
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __STDCPP_DEFAULT_NEW_ALIGNMENT__ 16UL
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __STDCPP_THREADS__ 1
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __STDC_UTF_16__ 1
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __STDC_UTF_32__ 1
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __GCC_HAVE_DWARF2_CFI_ASM 1
+#MACRO: 0x[[FOO_MACRO_OFFSET]]
+#MACRO: macro header: version = 0x0005, flags = 0x02, format = DWARF32, debug_line_offset = 0x[[LINE_TABLE_FOO]]
+#MACRO-NEXT: DW_MACRO_start_file - lineno: 0 filenum: 0
+#MACRO-NEXT:   DW_MACRO_start_file - lineno: 1 filenum: 1
+#MACRO-NEXT:     DW_MACRO_define_str{{[px]}} - lineno: 24 macro: _STDIO_H 1
+#MACRO-NEXT:     DW_MACRO_define_str{{[px]}} - lineno: 26 macro: __GLIBC_INTERNAL_STARTING_HEADER_IMPLEMENTATION
+#MACRO-NEXT:     DW_MACRO_start_file - lineno: 27 filenum: 2
+#MACRO-NEXT:       DW_MACRO_undef_str{{[px]}} - lineno: 31 macro: __GLIBC_INTERNAL_STARTING_HEADER_IMPLEMENTATION
+#MACRO-NEXT:       DW_MACRO_start_file - lineno: 33 filenum: 3
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 19 macro: _FEATURES_H 1
+#MACRO-NEXT:         DW_MACRO_undef_str{{[px]}} - lineno: 126 macro: __USE_ISOC11
+#MACRO-NEXT:         DW_MACRO_undef_str{{[px]}} - lineno: 127 macro: __USE_ISOC99
+#MACRO-NEXT:         DW_MACRO_undef_str{{[px]}} - lineno: 128 macro: __USE_ISOC95
+#MACRO-NEXT:         DW_MACRO_undef_str{{[px]}} - lineno: 129 macro: __USE_ISOCXX11
+#MACRO-NEXT:         DW_MACRO_undef_str{{[px]}} - lineno: 130 macro: __USE_POSIX
+#MACRO-NEXT:         DW_MACRO_undef_str{{[px]}} - lineno: 131 macro: __USE_POSIX2
+#MACRO-NEXT:         DW_MACRO_undef_str{{[px]}} - lineno: 132 macro: __USE_POSIX199309
+#MACRO-NEXT:         DW_MACRO_undef_str{{[px]}} - lineno: 133 macro: __USE_POSIX199506
+#MACRO-NEXT:         DW_MACRO_undef_str{{[px]}} - lineno: 134 macro: __USE_XOPEN
+#MACRO-NEXT:         DW_MACRO_undef_str{{[px]}} - lineno: 135 macro: __USE_XOPEN_EXTENDED
+#MACRO-NEXT:         DW_MACRO_undef_str{{[px]}} - lineno: 136 macro: __USE_UNIX98
+#MACRO-NEXT:         DW_MACRO_undef_str{{[px]}} - lineno: 137 macro: __USE_XOPEN2K
+#MACRO-NEXT:         DW_MACRO_undef_str{{[px]}} - lineno: 138 macro: __USE_XOPEN2KXSI
+#MACRO-NEXT:         DW_MACRO_undef_str{{[px]}} - lineno: 139 macro: __USE_XOPEN2K8
+#MACRO-NEXT:         DW_MACRO_undef_str{{[px]}} - lineno: 140 macro: __USE_XOPEN2K8XSI
+#MACRO-NEXT:         DW_MACRO_undef_str{{[px]}} - lineno: 141 macro: __USE_LARGEFILE
+#MACRO-NEXT:         DW_MACRO_undef_str{{[px]}} - lineno: 142 macro: __USE_LARGEFILE64
+#MACRO-NEXT:         DW_MACRO_undef_str{{[px]}} - lineno: 143 macro: __USE_FILE_OFFSET64
+#MACRO-NEXT:         DW_MACRO_undef_str{{[px]}} - lineno: 144 macro: __USE_MISC
+#MACRO-NEXT:         DW_MACRO_undef_str{{[px]}} - lineno: 145 macro: __USE_ATFILE
+#MACRO-NEXT:         DW_MACRO_undef_str{{[px]}} - lineno: 146 macro: __USE_DYNAMIC_STACK_SIZE
+#MACRO-NEXT:         DW_MACRO_undef_str{{[px]}} - lineno: 147 macro: __USE_GNU
+#MACRO-NEXT:         DW_MACRO_undef_str{{[px]}} - lineno: 148 macro: __USE_FORTIFY_LEVEL
+#MACRO-NEXT:         DW_MACRO_undef_str{{[px]}} - lineno: 149 macro: __KERNEL_STRICT_NAMES
+#MACRO-NEXT:         DW_MACRO_undef_str{{[px]}} - lineno: 150 macro: __GLIBC_USE_ISOC2X
+#MACRO-NEXT:         DW_MACRO_undef_str{{[px]}} - lineno: 151 macro: __GLIBC_USE_DEPRECATED_GETS
+#MACRO-NEXT:         DW_MACRO_undef_str{{[px]}} - lineno: 152 macro: __GLIBC_USE_DEPRECATED_SCANF
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 157 macro: __KERNEL_STRICT_NAMES
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 168 macro: __GNUC_PREREQ(maj,min) ((__GNUC__ << 16) + __GNUC_MINOR__ >= ((maj) << 16) + (min))
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 179 macro: __glibc_clang_prereq(maj,min) ((__clang_major__ << 16) + __clang_minor__ >= ((maj) << 16) + (min))
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 186 macro: __GLIBC_USE(F) __GLIBC_USE_ ## F
+#MACRO-NEXT:         DW_MACRO_undef_str{{[px]}} - lineno: 201 macro: _ISOC95_SOURCE
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 202 macro: _ISOC95_SOURCE 1
+#MACRO-NEXT:         DW_MACRO_undef_str{{[px]}} - lineno: 203 macro: _ISOC99_SOURCE
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 204 macro: _ISOC99_SOURCE 1
+#MACRO-NEXT:         DW_MACRO_undef_str{{[px]}} - lineno: 205 macro: _ISOC11_SOURCE
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 206 macro: _ISOC11_SOURCE 1
+#MACRO-NEXT:         DW_MACRO_undef_str{{[px]}} - lineno: 207 macro: _ISOC2X_SOURCE
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 208 macro: _ISOC2X_SOURCE 1
+#MACRO-NEXT:         DW_MACRO_undef_str{{[px]}} - lineno: 209 macro: _POSIX_SOURCE
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 210 macro: _POSIX_SOURCE 1
+#MACRO-NEXT:         DW_MACRO_undef_str{{[px]}} - lineno: 211 macro: _POSIX_C_SOURCE
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 212 macro: _POSIX_C_SOURCE 200809L
+#MACRO-NEXT:         DW_MACRO_undef_str{{[px]}} - lineno: 213 macro: _XOPEN_SOURCE
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 214 macro: _XOPEN_SOURCE 700
+#MACRO-NEXT:         DW_MACRO_undef_str{{[px]}} - lineno: 215 macro: _XOPEN_SOURCE_EXTENDED
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 216 macro: _XOPEN_SOURCE_EXTENDED 1
+#MACRO-NEXT:         DW_MACRO_undef_str{{[px]}} - lineno: 217 macro: _LARGEFILE64_SOURCE
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 218 macro: _LARGEFILE64_SOURCE 1
+#MACRO-NEXT:         DW_MACRO_undef_str{{[px]}} - lineno: 219 macro: _DEFAULT_SOURCE
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 220 macro: _DEFAULT_SOURCE 1
+#MACRO-NEXT:         DW_MACRO_undef_str{{[px]}} - lineno: 221 macro: _ATFILE_SOURCE
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 222 macro: _ATFILE_SOURCE 1
+#MACRO-NEXT:         DW_MACRO_undef_str{{[px]}} - lineno: 223 macro: _DYNAMIC_STACK_SIZE_SOURCE
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 224 macro: _DYNAMIC_STACK_SIZE_SOURCE 1
+#MACRO-NEXT:         DW_MACRO_undef_str{{[px]}} - lineno: 235 macro: _DEFAULT_SOURCE
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 236 macro: _DEFAULT_SOURCE 1
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 242 macro: __GLIBC_USE_ISOC2X 1
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 250 macro: __USE_ISOC11 1
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 257 macro: __USE_ISOC99 1
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 264 macro: __USE_ISOC95 1
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 275 macro: __USE_ISOCXX11 1
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 276 macro: __USE_ISOC99 1
+#MACRO-NEXT:         DW_MACRO_undef_str{{[px]}} - lineno: 287 macro: _POSIX_SOURCE
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 288 macro: _POSIX_SOURCE 1
+#MACRO-NEXT:         DW_MACRO_undef_str{{[px]}} - lineno: 289 macro: _POSIX_C_SOURCE
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 290 macro: _POSIX_C_SOURCE 200809L
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 325 macro: __USE_POSIX 1
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 329 macro: __USE_POSIX2 1
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 333 macro: __USE_POSIX199309 1
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 337 macro: __USE_POSIX199506 1
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 341 macro: __USE_XOPEN2K 1
+#MACRO-NEXT:         DW_MACRO_undef_str{{[px]}} - lineno: 342 macro: __USE_ISOC95
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 343 macro: __USE_ISOC95 1
+#MACRO-NEXT:         DW_MACRO_undef_str{{[px]}} - lineno: 344 macro: __USE_ISOC99
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 345 macro: __USE_ISOC99 1
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 349 macro: __USE_XOPEN2K8 1
+#MACRO-NEXT:         DW_MACRO_undef_str{{[px]}} - lineno: 350 macro: _ATFILE_SOURCE
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 351 macro: _ATFILE_SOURCE 1
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 355 macro: __USE_XOPEN 1
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 357 macro: __USE_XOPEN_EXTENDED 1
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 358 macro: __USE_UNIX98 1
+#MACRO-NEXT:         DW_MACRO_undef_str{{[px]}} - lineno: 359 macro: _LARGEFILE_SOURCE
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 360 macro: _LARGEFILE_SOURCE 1
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 363 macro: __USE_XOPEN2K8 1
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 364 macro: __USE_XOPEN2K8XSI 1
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 366 macro: __USE_XOPEN2K 1
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 367 macro: __USE_XOPEN2KXSI 1
+#MACRO-NEXT:         DW_MACRO_undef_str{{[px]}} - lineno: 368 macro: __USE_ISOC95
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 369 macro: __USE_ISOC95 1
+#MACRO-NEXT:         DW_MACRO_undef_str{{[px]}} - lineno: 370 macro: __USE_ISOC99
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 371 macro: __USE_ISOC99 1
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 381 macro: __USE_LARGEFILE 1
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 385 macro: __USE_LARGEFILE64 1
+#MACRO-NEXT:         DW_MACRO_start_file - lineno: 392 filenum: 4
+#MACRO-NEXT:           DW_MACRO_start_file - lineno: 20 filenum: 5
+#MACRO-NEXT:             DW_MACRO_define_str{{[px]}} - lineno: 4 macro: __WORDSIZE 64
+#MACRO-NEXT:             DW_MACRO_define_str{{[px]}} - lineno: 12 macro: __WORDSIZE_TIME64_COMPAT32 1
+#MACRO-NEXT:             DW_MACRO_define_str{{[px]}} - lineno: 14 macro: __SYSCALL_WORDSIZE 64
+#MACRO-NEXT:           DW_MACRO_end_file
+#MACRO-NEXT:           DW_MACRO_start_file - lineno: 21 filenum: 6
+#MACRO-NEXT:             DW_MACRO_start_file - lineno: 19 filenum: 5
+#MACRO-NEXT:               DW_MACRO_define_str{{[px]}} - lineno: 4 macro: __WORDSIZE 64
+#MACRO-NEXT:               DW_MACRO_define_str{{[px]}} - lineno: 12 macro: __WORDSIZE_TIME64_COMPAT32 1
+#MACRO-NEXT:               DW_MACRO_define_str{{[px]}} - lineno: 14 macro: __SYSCALL_WORDSIZE 64
+#MACRO-NEXT:             DW_MACRO_end_file
+#MACRO-NEXT:             DW_MACRO_define_str{{[px]}} - lineno: 26 macro: __TIMESIZE __WORDSIZE
+#MACRO-NEXT:           DW_MACRO_end_file
+#MACRO-NEXT:         DW_MACRO_end_file
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 395 macro: __USE_MISC 1
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 399 macro: __USE_ATFILE 1
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 403 macro: __USE_DYNAMIC_STACK_SIZE 1
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 407 macro: __USE_GNU 1
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 428 macro: __USE_FORTIFY_LEVEL 0
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 436 macro: __GLIBC_USE_DEPRECATED_GETS 0
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 459 macro: __GLIBC_USE_DEPRECATED_SCANF 0
+#MACRO-NEXT:         DW_MACRO_start_file - lineno: 464 filenum: 7
+#MACRO-NEXT:           DW_MACRO_define_str{{[px]}} - lineno: 19 macro: _STDC_PREDEF_H 1
+#MACRO-NEXT:           DW_MACRO_define_str{{[px]}} - lineno: 42 macro: __STDC_IEC_559__ 1
+#MACRO-NEXT:           DW_MACRO_define_str{{[px]}} - lineno: 43 macro: __STDC_IEC_60559_BFP__ 201404L
+#MACRO-NEXT:           DW_MACRO_define_str{{[px]}} - lineno: 52 macro: __STDC_IEC_559_COMPLEX__ 1
+#MACRO-NEXT:           DW_MACRO_define_str{{[px]}} - lineno: 53 macro: __STDC_IEC_60559_COMPLEX__ 201404L
+#MACRO-NEXT:           DW_MACRO_define_str{{[px]}} - lineno: 62 macro: __STDC_ISO_10646__ 201706L
+#MACRO-NEXT:         DW_MACRO_end_file
+#MACRO-NEXT:         DW_MACRO_undef_str{{[px]}} - lineno: 472 macro: __GNU_LIBRARY__
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 473 macro: __GNU_LIBRARY__ 6
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 477 macro: __GLIBC__ 2
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 478 macro: __GLIBC_MINOR__ 35
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 480 macro: __GLIBC_PREREQ(maj,min) ((__GLIBC__ << 16) + __GLIBC_MINOR__ >= ((maj) << 16) + (min))
+#MACRO-NEXT:         DW_MACRO_start_file - lineno: 486 filenum: 8
+#MACRO-NEXT:           DW_MACRO_define_str{{[px]}} - lineno: 20 macro: _SYS_CDEFS_H 1
+#MACRO-NEXT:           DW_MACRO_undef_str{{[px]}} - lineno: 35 macro: __P
+#MACRO-NEXT:           DW_MACRO_undef_str{{[px]}} - lineno: 36 macro: __PMT
+#MACRO-NEXT:           DW_MACRO_define_str{{[px]}} - lineno: 45 macro: __glibc_has_attribute(attr) __has_attribute (attr)
+#MACRO-NEXT:           DW_MACRO_define_str{{[px]}} - lineno: 50 macro: __glibc_has_builtin(name) __has_builtin (name)
+#MACRO-NEXT:           DW_MACRO_define_str{{[px]}} - lineno: 55 macro: __glibc_has_extension(ext) __has_extension (ext)
+#MACRO-NEXT:           DW_MACRO_define_str{{[px]}} - lineno: 68 macro: __LEAF
+#MACRO-NEXT:           DW_MACRO_define_str{{[px]}} - lineno: 69 macro: __LEAF_ATTR
+#MACRO-NEXT:           DW_MACRO_define_str{{[px]}} - lineno: 86 macro: __THROW noexcept (true)
+#MACRO-NEXT:           DW_MACRO_define_str{{[px]}} - lineno: 90 macro: __THROWNL __THROW
+#MACRO-NEXT:           DW_MACRO_define_str{{[px]}} - lineno: 91 macro: __NTH(fct) __LEAF_ATTR fct __THROW
+#MACRO-NEXT:           DW_MACRO_define_str{{[px]}} - lineno: 92 macro: __NTHNL(fct) fct __THROW
+#MACRO-NEXT:           DW_MACRO_define_str{{[px]}} - lineno: 118 macro: __P(args) args
+#MACRO-NEXT:           DW_MACRO_define_str{{[px]}} - lineno: 119 macro: __PMT(args) args
+#MACRO-NEXT:           DW_MACRO_define_str{{[px]}} - lineno: 124 macro: __CONCAT(x,y) x ## y
+#MACRO-NEXT:           DW_MACRO_define_str{{[px]}} - lineno: 125 macro: __STRING(x) #x
+#MACRO-NEXT:           DW_MACRO_define_str{{[px]}} - lineno: 128 macro: __ptr_t void *
+#MACRO-NEXT:           DW_MACRO_define_str{{[px]}} - lineno: 133 macro: __BEGIN_DECLS extern "C" {
+#MACRO-NEXT:           DW_MACRO_define_str{{[px]}} - lineno: 134 macro: __END_DECLS }
+#MACRO-NEXT:           DW_MACRO_define_str{{[px]}} - lineno: 142 macro: __bos(ptr) __builtin_object_size (ptr, __USE_FORTIFY_LEVEL > 1)
+#MACRO-NEXT:           DW_MACRO_define_str{{[px]}} - lineno: 143 macro: __bos0(ptr) __builtin_object_size (ptr, 0)
+#MACRO-NEXT:           DW_MACRO_define_str{{[px]}} - lineno: 151 macro: __glibc_objsize0(__o) __bos0 (__o)
+#MACRO-NEXT:           DW_MACRO_define_str{{[px]}} - lineno: 152 macro: __glibc_objsize(__o) __bos (__o)
+#MACRO-NEXT:           DW_MACRO_define_str{{[px]}} - lineno: 159 macro: __glibc_safe_len_cond(__l,__s,__osz) ((__l) <= (__osz) / (__s))
+#MACRO-NEXT:           DW_MACRO_define_str{{[px]}} - lineno: 160 macro: __glibc_unsigned_or_positive(__l) ((__typeof (__l)) 0 < (__typeof (__l)) -1 || (__builtin_constant_p (__l) && (__l) > 0))
+#MACRO-NEXT:           DW_MACRO_define_str{{[px]}} - lineno: 167 macro: __glibc_safe_or_unknown_len(__l,__s,__osz) (__glibc_unsigned_or_positive (__l) && __builtin_constant_p (__glibc_safe_len_cond ((__SIZE_TYPE__) (__l), __s, __osz)) && __glibc_safe_len_cond ((__SIZE_TYPE__) (__l), __s, __osz))
+#MACRO-NEXT:           DW_MACRO_define_str{{[px]}} - lineno: 176 macro: __glibc_unsafe_len(__l,__s,__osz) (__glibc_unsigned_or_positive (__l) && __builtin_constant_p (__glibc_safe_len_cond ((__SIZE_TYPE__) (__l), __s, __osz)) && !__glibc_safe_len_cond ((__SIZE_TYPE__) (__l), __s, __osz))
+#MACRO-NEXT:           DW_MACRO_define_str{{[px]}} - lineno: 185 macro: __glibc_fortify(f,__l,__s,__osz,...) (__glibc_safe_or_unknown_len (__l, __s, __osz) ? __ ## f ## _alias (__VA_ARGS__) : (__glibc_unsafe_len (__l, __s, __osz) ? __ ## f ## _chk_warn (__VA_ARGS__, __osz) : __ ## f ## _chk (__VA_ARGS__, __osz)))
+#MACRO-NEXT:           DW_MACRO_define_str{{[px]}} - lineno: 195 macro: __glibc_fortify_n(f,__l,__s,__osz,...) (__glibc_safe_or_unknown_len (__l, __s, __osz) ? __ ## f ## _alias (__VA_ARGS__) : (__glibc_unsafe_len (__l, __s, __osz) ? __ ## f ## _chk_warn (__VA_ARGS__, (__osz) / (__s)) : __ ## f ## _chk (__VA_ARGS__, (__osz) / (__s))))
+#MACRO-NEXT:           DW_MACRO_define_str{{[px]}} - lineno: 207 macro: __warnattr(msg)
+#MACRO-NEXT:           DW_MACRO_define_str{{[px]}} - lineno: 208 macro: __errordecl(name,msg) extern void name (void)
+#MACRO-NEXT:           DW_MACRO_define_str{{[px]}} - lineno: 221 macro: __flexarr []
+#MACRO-NEXT:           DW_MACRO_define_str{{[px]}} - lineno: 222 macro: __glibc_c99_flexarr_available 1
+#MACRO-NEXT:           DW_MACRO_define_str{{[px]}} - lineno: 247 macro: __REDIRECT(name,proto,alias) name proto __asm__ (__ASMNAME (#alias))
+#MACRO-NEXT:           DW_MACRO_define_str{{[px]}} - lineno: 249 macro: __REDIRECT_NTH(name,proto,alias) name proto __THROW __asm__ (__ASMNAME (#alias))
+#MACRO-NEXT:           DW_MACRO_define_str{{[px]}} - lineno: 251 macro: __REDIRECT_NTHNL(name,proto,alias) name proto __THROWNL __asm__ (__ASMNAME (#alias))
+#MACRO-NEXT:           DW_MACRO_define_str{{[px]}} - lineno: 259 macro: __ASMNAME(cname) __ASMNAME2 (__USER_LABEL_PREFIX__, cname)
+#MACRO-NEXT:           DW_MACRO_define_str{{[px]}} - lineno: 260 macro: __ASMNAME2(prefix,cname) __STRING (prefix) cname
+#MACRO-NEXT:           DW_MACRO_define_str{{[px]}} - lineno: 281 macro: __attribute_malloc__ __attribute__ ((__malloc__))
+#MACRO-NEXT:           DW_MACRO_define_str{{[px]}} - lineno: 292 macro: __attribute_alloc_size__(params)
+#MACRO-NEXT:           DW_MACRO_define_str{{[px]}} - lineno: 298 macro: __attribute_alloc_align__(param) __attribute__ ((__alloc_align__ param))
+#MACRO-NEXT:           DW_MACRO_define_str{{[px]}} - lineno: 308 macro: __attribute_pure__ __attribute__ ((__pure__))
+#MACRO-NEXT:           DW_MACRO_define_str{{[px]}} - lineno: 315 macro: __attribute_const__ __attribute__ ((__const__))
+#MACRO-NEXT:           DW_MACRO_define_str{{[px]}} - lineno: 321 macro: __attribute_maybe_unused__ __attribute__ ((__unused__))
+#MACRO-NEXT:           DW_MACRO_define_str{{[px]}} - lineno: 330 macro: __attribute_used__ __attribute__ ((__used__))
+#MACRO-NEXT:           DW_MACRO_define_str{{[px]}} - lineno: 331 macro: __attribute_noinline__ __attribute__ ((__noinline__))
+#MACRO-NEXT:           DW_MACRO_define_str{{[px]}} - lineno: 339 macro: __attribute_deprecated__ __attribute__ ((__deprecated__))
+#MACRO-NEXT:           DW_MACRO_define_str{{[px]}} - lineno: 349 macro: __attribute_deprecated_msg__(msg) __attribute__ ((__deprecated__ (msg)))
+#MACRO-NEXT:           DW_MACRO_define_str{{[px]}} - lineno: 362 macro: __attribute_format_arg__(x) __attribute__ ((__format_arg__ (x)))
+#MACRO-NEXT:           DW_MACRO_define_str{{[px]}} - lineno: 372 macro: __attribute_format_strfmon__(a,b) __attribute__ ((__format__ (__strfmon__, a, b)))
+#MACRO-NEXT:           DW_MACRO_define_str{{[px]}} - lineno: 384 macro: __attribute_nonnull__(params) __attribute__ ((__nonnull__ params))
+#MACRO-NEXT:           DW_MACRO_define_str{{[px]}} - lineno: 390 macro: __nonnull(params) __attribute_nonnull__ (params)
+#MACRO-NEXT:           DW_MACRO_define_str{{[px]}} - lineno: 397 macro: __returns_nonnull __attribute__ ((__returns_nonnull__))
+#MACRO-NEXT:           DW_MACRO_define_str{{[px]}} - lineno: 406 macro: __attribute_warn_unused_result__ __attribute__ ((__warn_unused_result__))
+#MACRO-NEXT:           DW_MACRO_define_str{{[px]}} - lineno: 415 macro: __wur
+#MACRO-NEXT:           DW_MACRO_undef_str{{[px]}} - lineno: 423 macro: __always_inline
+#MACRO-NEXT:           DW_MACRO_define_str{{[px]}} - lineno: 424 macro: __always_inline __inline __attribute__ ((__always_inline__))
+#MACRO-NEXT:           DW_MACRO_define_str{{[px]}} - lineno: 433 macro: __attribute_artificial__ __attribute__ ((__artificial__))
+#MACRO-NEXT:           DW_MACRO_define_str{{[px]}} - lineno: 451 macro: __extern_inline extern __inline __attribute__ ((__gnu_inline__))
+#MACRO-NEXT:           DW_MACRO_define_str{{[px]}} - lineno: 452 macro: __extern_always_inline extern __always_inline __attribute__ ((__gnu_inline__))
+#MACRO-NEXT:           DW_MACRO_define_str{{[px]}} - lineno: 461 macro: __fortify_function __extern_always_inline __attribute_artificial__
+#MACRO-NEXT:           DW_MACRO_define_str{{[px]}} - lineno: 498 macro: __restrict_arr
+#MACRO-NEXT:           DW_MACRO_define_str{{[px]}} - lineno: 510 macro: __glibc_unlikely(cond) __builtin_expect ((cond), 0)
+#MACRO-NEXT:           DW_MACRO_define_str{{[px]}} - lineno: 511 macro: __glibc_likely(cond) __builtin_expect ((cond), 1)
+#MACRO-NEXT:           DW_MACRO_define_str{{[px]}} - lineno: 534 macro: __attribute_nonstring__
+#MACRO-NEXT:           DW_MACRO_undef_str{{[px]}} - lineno: 538 macro: __attribute_copy__
+#MACRO-NEXT:           DW_MACRO_define_str{{[px]}} - lineno: 544 macro: __attribute_copy__(arg)
+#MACRO-NEXT:           DW_MACRO_start_file - lineno: 559 filenum: 5
+#MACRO-NEXT:             DW_MACRO_define_str{{[px]}} - lineno: 4 macro: __WORDSIZE 64
+#MACRO-NEXT:             DW_MACRO_define_str{{[px]}} - lineno: 12 macro: __WORDSIZE_TIME64_COMPAT32 1
+#MACRO-NEXT:             DW_MACRO_define_str{{[px]}} - lineno: 14 macro: __SYSCALL_WORDSIZE 64
+#MACRO-NEXT:           DW_MACRO_end_file
+#MACRO-NEXT:           DW_MACRO_start_file - lineno: 560 filenum: 9
+#MACRO-NEXT:             DW_MACRO_define_str{{[px]}} - lineno: 21 macro: __LDOUBLE_REDIRECTS_TO_FLOAT128_ABI 0
+#MACRO-NEXT:           DW_MACRO_end_file
+#MACRO-NEXT:           DW_MACRO_define_str{{[px]}} - lineno: 616 macro: __LDBL_REDIR1(name,proto,alias) name proto
+#MACRO-NEXT:           DW_MACRO_define_str{{[px]}} - lineno: 617 macro: __LDBL_REDIR(name,proto) name proto
+#MACRO-NEXT:           DW_MACRO_define_str{{[px]}} - lineno: 618 macro: __LDBL_REDIR1_NTH(name,proto,alias) name proto __THROW
+#MACRO-NEXT:           DW_MACRO_define_str{{[px]}} - lineno: 619 macro: __LDBL_REDIR_NTH(name,proto) name proto __THROW
+#MACRO-NEXT:           DW_MACRO_define_str{{[px]}} - lineno: 620 macro: __LDBL_REDIR2_DECL(name)
+#MACRO-NEXT:           DW_MACRO_define_str{{[px]}} - lineno: 621 macro: __LDBL_REDIR_DECL(name)
+#MACRO-NEXT:           DW_MACRO_define_str{{[px]}} - lineno: 623 macro: __REDIRECT_LDBL(name,proto,alias) __REDIRECT (name, proto, alias)
+#MACRO-NEXT:           DW_MACRO_define_str{{[px]}} - lineno: 624 macro: __REDIRECT_NTH_LDBL(name,proto,alias) __REDIRECT_NTH (name, proto, alias)
+#MACRO-NEXT:           DW_MACRO_define_str{{[px]}} - lineno: 635 macro: __glibc_macro_warning1(message) _Pragma (#message)
+#MACRO-NEXT:           DW_MACRO_define_str{{[px]}} - lineno: 636 macro: __glibc_macro_warning(message) __glibc_macro_warning1 (GCC warning message)
+#MACRO-NEXT:           DW_MACRO_define_str{{[px]}} - lineno: 656 macro: __HAVE_GENERIC_SELECTION 0
+#MACRO-NEXT:           DW_MACRO_define_str{{[px]}} - lineno: 681 macro: __fortified_attr_access(a,o,s)
+#MACRO-NEXT:           DW_MACRO_define_str{{[px]}} - lineno: 682 macro: __attr_access(x)
+#MACRO-NEXT:           DW_MACRO_define_str{{[px]}} - lineno: 683 macro: __attr_access_none(argno)
+#MACRO-NEXT:           DW_MACRO_define_str{{[px]}} - lineno: 693 macro: __attr_dealloc(dealloc,argno)
+#MACRO-NEXT:           DW_MACRO_define_str{{[px]}} - lineno: 694 macro: __attr_dealloc_free
+#MACRO-NEXT:           DW_MACRO_define_str{{[px]}} - lineno: 700 macro: __attribute_returns_twice__ __attribute__ ((__returns_twice__))
+#MACRO-NEXT:         DW_MACRO_end_file
+#MACRO-NEXT:         DW_MACRO_start_file - lineno: 510 filenum: 10
+#MACRO-NEXT:           DW_MACRO_start_file - lineno: 10 filenum: 11
+#MACRO-NEXT:             DW_MACRO_define_str{{[px]}} - lineno: 10 macro: __stub___compat_bdflush
+#MACRO-NEXT:             DW_MACRO_define_str{{[px]}} - lineno: 11 macro: __stub_chflags
+#MACRO-NEXT:             DW_MACRO_define_str{{[px]}} - lineno: 12 macro: __stub_fchflags
+#MACRO-NEXT:             DW_MACRO_define_str{{[px]}} - lineno: 13 macro: __stub_gtty
+#MACRO-NEXT:             DW_MACRO_define_str{{[px]}} - lineno: 14 macro: __stub_revoke
+#MACRO-NEXT:             DW_MACRO_define_str{{[px]}} - lineno: 15 macro: __stub_setlogin
+#MACRO-NEXT:             DW_MACRO_define_str{{[px]}} - lineno: 16 macro: __stub_sigreturn
+#MACRO-NEXT:             DW_MACRO_define_str{{[px]}} - lineno: 17 macro: __stub_stty
+#MACRO-NEXT:           DW_MACRO_end_file
+#MACRO-NEXT:         DW_MACRO_end_file
+#MACRO-NEXT:       DW_MACRO_end_file
+#MACRO-NEXT:       DW_MACRO_undef_str{{[px]}} - lineno: 37 macro: __GLIBC_USE_LIB_EXT2
+#MACRO-NEXT:       DW_MACRO_define_str{{[px]}} - lineno: 40 macro: __GLIBC_USE_LIB_EXT2 1
+#MACRO-NEXT:       DW_MACRO_undef_str{{[px]}} - lineno: 67 macro: __GLIBC_USE_IEC_60559_BFP_EXT
+#MACRO-NEXT:       DW_MACRO_define_str{{[px]}} - lineno: 69 macro: __GLIBC_USE_IEC_60559_BFP_EXT 1
+#MACRO-NEXT:       DW_MACRO_undef_str{{[px]}} - lineno: 73 macro: __GLIBC_USE_IEC_60559_BFP_EXT_C2X
+#MACRO-NEXT:       DW_MACRO_define_str{{[px]}} - lineno: 75 macro: __GLIBC_USE_IEC_60559_BFP_EXT_C2X 1
+#MACRO-NEXT:       DW_MACRO_undef_str{{[px]}} - lineno: 79 macro: __GLIBC_USE_IEC_60559_EXT
+#MACRO-NEXT:       DW_MACRO_define_str{{[px]}} - lineno: 81 macro: __GLIBC_USE_IEC_60559_EXT 1
+#MACRO-NEXT:       DW_MACRO_undef_str{{[px]}} - lineno: 90 macro: __GLIBC_USE_IEC_60559_FUNCS_EXT
+#MACRO-NEXT:       DW_MACRO_define_str{{[px]}} - lineno: 92 macro: __GLIBC_USE_IEC_60559_FUNCS_EXT 1
+#MACRO-NEXT:       DW_MACRO_undef_str{{[px]}} - lineno: 96 macro: __GLIBC_USE_IEC_60559_FUNCS_EXT_C2X
+#MACRO-NEXT:       DW_MACRO_define_str{{[px]}} - lineno: 98 macro: __GLIBC_USE_IEC_60559_FUNCS_EXT_C2X 1
+#MACRO-NEXT:       DW_MACRO_undef_str{{[px]}} - lineno: 105 macro: __GLIBC_USE_IEC_60559_TYPES_EXT
+#MACRO-NEXT:       DW_MACRO_define_str{{[px]}} - lineno: 107 macro: __GLIBC_USE_IEC_60559_TYPES_EXT 1
+#MACRO-NEXT:     DW_MACRO_end_file
+#MACRO-NEXT:     DW_MACRO_define_str{{[px]}} - lineno: 31 macro: __need_size_t
+#MACRO-NEXT:     DW_MACRO_define_str{{[px]}} - lineno: 32 macro: __need_NULL
+#MACRO-NEXT:     DW_MACRO_start_file - lineno: 33 filenum: 12
+#MACRO-NEXT:       DW_MACRO_define_str{{[px]}} - lineno: 44 macro: _SIZE_T
+#MACRO-NEXT:       DW_MACRO_undef_str{{[px]}} - lineno: 48 macro: __need_size_t
+#MACRO-NEXT:       DW_MACRO_undef_str{{[px]}} - lineno: 81 macro: NULL
+#MACRO-NEXT:       DW_MACRO_define_str{{[px]}} - lineno: 84 macro: NULL __null
+#MACRO-NEXT:       DW_MACRO_undef_str{{[px]}} - lineno: 97 macro: __need_NULL
+#MACRO-NEXT:     DW_MACRO_end_file
+#MACRO-NEXT:     DW_MACRO_define_str{{[px]}} - lineno: 35 macro: __need___va_list
+#MACRO-NEXT:     DW_MACRO_start_file - lineno: 36 filenum: 13
+#MACRO-NEXT:       DW_MACRO_define_str{{[px]}} - lineno: 11 macro: __STDARG_H
+#MACRO-NEXT:       DW_MACRO_define_str{{[px]}} - lineno: 15 macro: _VA_LIST
+#MACRO-NEXT:       DW_MACRO_define_str{{[px]}} - lineno: 17 macro: va_start(ap,param) __builtin_va_start(ap, param)
+#MACRO-NEXT:       DW_MACRO_define_str{{[px]}} - lineno: 18 macro: va_end(ap) __builtin_va_end(ap)
+#MACRO-NEXT:       DW_MACRO_define_str{{[px]}} - lineno: 19 macro: va_arg(ap,type) __builtin_va_arg(ap, type)
+#MACRO-NEXT:       DW_MACRO_define_str{{[px]}} - lineno: 24 macro: __va_copy(d,s) __builtin_va_copy(d,s)
+#MACRO-NEXT:       DW_MACRO_define_str{{[px]}} - lineno: 27 macro: va_copy(dest,src) __builtin_va_copy(dest, src)
+#MACRO-NEXT:       DW_MACRO_define_str{{[px]}} - lineno: 31 macro: __GNUC_VA_LIST 1
+#MACRO-NEXT:     DW_MACRO_end_file
+#MACRO-NEXT:     DW_MACRO_start_file - lineno: 38 filenum: 14
+#MACRO-NEXT:       DW_MACRO_define_str{{[px]}} - lineno: 24 macro: _BITS_TYPES_H 1
+#MACRO-NEXT:       DW_MACRO_start_file - lineno: 27 filenum: 5
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 4 macro: __WORDSIZE 64
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 12 macro: __WORDSIZE_TIME64_COMPAT32 1
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 14 macro: __SYSCALL_WORDSIZE 64
+#MACRO-NEXT:       DW_MACRO_end_file
+#MACRO-NEXT:       DW_MACRO_start_file - lineno: 28 filenum: 6
+#MACRO-NEXT:         DW_MACRO_start_file - lineno: 19 filenum: 5
+#MACRO-NEXT:           DW_MACRO_define_str{{[px]}} - lineno: 4 macro: __WORDSIZE 64
+#MACRO-NEXT:           DW_MACRO_define_str{{[px]}} - lineno: 12 macro: __WORDSIZE_TIME64_COMPAT32 1
+#MACRO-NEXT:           DW_MACRO_define_str{{[px]}} - lineno: 14 macro: __SYSCALL_WORDSIZE 64
+#MACRO-NEXT:         DW_MACRO_end_file
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 26 macro: __TIMESIZE __WORDSIZE
+#MACRO-NEXT:       DW_MACRO_end_file
+#MACRO-NEXT:       DW_MACRO_define_str{{[px]}} - lineno: 109 macro: __S16_TYPE short int
+#MACRO-NEXT:       DW_MACRO_define_str{{[px]}} - lineno: 110 macro: __U16_TYPE unsigned short int
+#MACRO-NEXT:       DW_MACRO_define_str{{[px]}} - lineno: 111 macro: __S32_TYPE int
+#MACRO-NEXT:       DW_MACRO_define_str{{[px]}} - lineno: 112 macro: __U32_TYPE unsigned int
+#MACRO-NEXT:       DW_MACRO_define_str{{[px]}} - lineno: 113 macro: __SLONGWORD_TYPE long int
+#MACRO-NEXT:       DW_MACRO_define_str{{[px]}} - lineno: 114 macro: __ULONGWORD_TYPE unsigned long int
+#MACRO-NEXT:       DW_MACRO_define_str{{[px]}} - lineno: 128 macro: __SQUAD_TYPE long int
+#MACRO-NEXT:       DW_MACRO_define_str{{[px]}} - lineno: 129 macro: __UQUAD_TYPE unsigned long int
+#MACRO-NEXT:       DW_MACRO_define_str{{[px]}} - lineno: 130 macro: __SWORD_TYPE long int
+#MACRO-NEXT:       DW_MACRO_define_str{{[px]}} - lineno: 131 macro: __UWORD_TYPE unsigned long int
+#MACRO-NEXT:       DW_MACRO_define_str{{[px]}} - lineno: 132 macro: __SLONG32_TYPE int
+#MACRO-NEXT:       DW_MACRO_define_str{{[px]}} - lineno: 133 macro: __ULONG32_TYPE unsigned int
+#MACRO-NEXT:       DW_MACRO_define_str{{[px]}} - lineno: 134 macro: __S64_TYPE long int
+#MACRO-NEXT:       DW_MACRO_define_str{{[px]}} - lineno: 135 macro: __U64_TYPE unsigned long int
+#MACRO-NEXT:       DW_MACRO_define_str{{[px]}} - lineno: 137 macro: __STD_TYPE typedef
+#MACRO-NEXT:       DW_MACRO_start_file - lineno: 141 filenum: 15
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 24 macro: _BITS_TYPESIZES_H 1
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 34 macro: __SYSCALL_SLONG_TYPE __SLONGWORD_TYPE
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 35 macro: __SYSCALL_ULONG_TYPE __ULONGWORD_TYPE
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 38 macro: __DEV_T_TYPE __UQUAD_TYPE
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 39 macro: __UID_T_TYPE __U32_TYPE
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 40 macro: __GID_T_TYPE __U32_TYPE
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 41 macro: __INO_T_TYPE __SYSCALL_ULONG_TYPE
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 42 macro: __INO64_T_TYPE __UQUAD_TYPE
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 43 macro: __MODE_T_TYPE __U32_TYPE
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 45 macro: __NLINK_T_TYPE __SYSCALL_ULONG_TYPE
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 46 macro: __FSWORD_T_TYPE __SYSCALL_SLONG_TYPE
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 51 macro: __OFF_T_TYPE __SYSCALL_SLONG_TYPE
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 52 macro: __OFF64_T_TYPE __SQUAD_TYPE
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 53 macro: __PID_T_TYPE __S32_TYPE
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 54 macro: __RLIM_T_TYPE __SYSCALL_ULONG_TYPE
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 55 macro: __RLIM64_T_TYPE __UQUAD_TYPE
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 56 macro: __BLKCNT_T_TYPE __SYSCALL_SLONG_TYPE
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 57 macro: __BLKCNT64_T_TYPE __SQUAD_TYPE
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 58 macro: __FSBLKCNT_T_TYPE __SYSCALL_ULONG_TYPE
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 59 macro: __FSBLKCNT64_T_TYPE __UQUAD_TYPE
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 60 macro: __FSFILCNT_T_TYPE __SYSCALL_ULONG_TYPE
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 61 macro: __FSFILCNT64_T_TYPE __UQUAD_TYPE
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 62 macro: __ID_T_TYPE __U32_TYPE
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 63 macro: __CLOCK_T_TYPE __SYSCALL_SLONG_TYPE
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 64 macro: __TIME_T_TYPE __SYSCALL_SLONG_TYPE
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 65 macro: __USECONDS_T_TYPE __U32_TYPE
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 66 macro: __SUSECONDS_T_TYPE __SYSCALL_SLONG_TYPE
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 67 macro: __SUSECONDS64_T_TYPE __SQUAD_TYPE
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 68 macro: __DADDR_T_TYPE __S32_TYPE
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 69 macro: __KEY_T_TYPE __S32_TYPE
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 70 macro: __CLOCKID_T_TYPE __S32_TYPE
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 71 macro: __TIMER_T_TYPE void *
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 72 macro: __BLKSIZE_T_TYPE __SYSCALL_SLONG_TYPE
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 73 macro: __FSID_T_TYPE struct { int __val[2]; }
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 74 macro: __SSIZE_T_TYPE __SWORD_TYPE
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 75 macro: __CPU_MASK_TYPE __SYSCALL_ULONG_TYPE
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 81 macro: __OFF_T_MATCHES_OFF64_T 1
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 84 macro: __INO_T_MATCHES_INO64_T 1
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 87 macro: __RLIM_T_MATCHES_RLIM64_T 1
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 90 macro: __STATFS_MATCHES_STATFS64 1
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 93 macro: __KERNEL_OLD_TIMEVAL_MATCHES_TIMEVAL64 1
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 103 macro: __FD_SETSIZE 1024
+#MACRO-NEXT:       DW_MACRO_end_file
+#MACRO-NEXT:       DW_MACRO_start_file - lineno: 142 filenum: 16
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 24 macro: _BITS_TIME64_H 1
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 30 macro: __TIME64_T_TYPE __TIME_T_TYPE
+#MACRO-NEXT:       DW_MACRO_end_file
+#MACRO-NEXT:       DW_MACRO_undef_str{{[px]}} - lineno: 226 macro: __STD_TYPE
+#MACRO-NEXT:     DW_MACRO_end_file
+#MACRO-NEXT:     DW_MACRO_start_file - lineno: 39 filenum: 17
+#MACRO-NEXT:       DW_MACRO_define_str{{[px]}} - lineno: 2 macro: _____fpos_t_defined 1
+#MACRO-NEXT:       DW_MACRO_start_file - lineno: 5 filenum: 18
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 2 macro: ____mbstate_t_defined 1
+#MACRO-NEXT:       DW_MACRO_end_file
+#MACRO-NEXT:     DW_MACRO_end_file
+#MACRO-NEXT:     DW_MACRO_start_file - lineno: 40 filenum: 19
+#MACRO-NEXT:       DW_MACRO_define_str{{[px]}} - lineno: 2 macro: _____fpos64_t_defined 1
+#MACRO-NEXT:     DW_MACRO_end_file
+#MACRO-NEXT:     DW_MACRO_start_file - lineno: 41 filenum: 20
+#MACRO-NEXT:       DW_MACRO_define_str{{[px]}} - lineno: 2 macro: ____FILE_defined 1
+#MACRO-NEXT:     DW_MACRO_end_file
+#MACRO-NEXT:     DW_MACRO_start_file - lineno: 42 filenum: 21
+#MACRO-NEXT:       DW_MACRO_define_str{{[px]}} - lineno: 2 macro: __FILE_defined 1
+#MACRO-NEXT:     DW_MACRO_end_file
+#MACRO-NEXT:     DW_MACRO_start_file - lineno: 43 filenum: 22
+#MACRO-NEXT:       DW_MACRO_define_str{{[px]}} - lineno: 19 macro: __struct_FILE_defined 1
+#MACRO-NEXT:       DW_MACRO_define_str{{[px]}} - lineno: 102 macro: __getc_unlocked_body(_fp) (__glibc_unlikely ((_fp)->_IO_read_ptr >= (_fp)->_IO_read_end) ? __uflow (_fp) : *(unsigned char *) (_fp)->_IO_read_ptr++)
+#MACRO-NEXT:       DW_MACRO_define_str{{[px]}} - lineno: 106 macro: __putc_unlocked_body(_ch,_fp) (__glibc_unlikely ((_fp)->_IO_write_ptr >= (_fp)->_IO_write_end) ? __overflow (_fp, (unsigned char) (_ch)) : (unsigned char) (*(_fp)->_IO_write_ptr++ = (_ch)))
+#MACRO-NEXT:       DW_MACRO_define_str{{[px]}} - lineno: 111 macro: _IO_EOF_SEEN 0x0010
+#MACRO-NEXT:       DW_MACRO_define_str{{[px]}} - lineno: 112 macro: __feof_unlocked_body(_fp) (((_fp)->_flags & _IO_EOF_SEEN) != 0)
+#MACRO-NEXT:       DW_MACRO_define_str{{[px]}} - lineno: 114 macro: _IO_ERR_SEEN 0x0020
+#MACRO-NEXT:       DW_MACRO_define_str{{[px]}} - lineno: 115 macro: __ferror_unlocked_body(_fp) (((_fp)->_flags & _IO_ERR_SEEN) != 0)
+#MACRO-NEXT:       DW_MACRO_define_str{{[px]}} - lineno: 117 macro: _IO_USER_LOCK 0x8000
+#MACRO-NEXT:     DW_MACRO_end_file
+#MACRO-NEXT:     DW_MACRO_start_file - lineno: 46 filenum: 23
+#MACRO-NEXT:       DW_MACRO_define_str{{[px]}} - lineno: 19 macro: __cookie_io_functions_t_defined 1
+#MACRO-NEXT:     DW_MACRO_end_file
+#MACRO-NEXT:     DW_MACRO_define_str{{[px]}} - lineno: 53 macro: _VA_LIST_DEFINED
+#MACRO-NEXT:     DW_MACRO_define_str{{[px]}} - lineno: 67 macro: __off_t_defined
+#MACRO-NEXT:     DW_MACRO_define_str{{[px]}} - lineno: 71 macro: __off64_t_defined
+#MACRO-NEXT:     DW_MACRO_define_str{{[px]}} - lineno: 78 macro: __ssize_t_defined
+#MACRO-NEXT:     DW_MACRO_define_str{{[px]}} - lineno: 93 macro: _IOFBF 0
+#MACRO-NEXT:     DW_MACRO_define_str{{[px]}} - lineno: 94 macro: _IOLBF 1
+#MACRO-NEXT:     DW_MACRO_define_str{{[px]}} - lineno: 95 macro: _IONBF 2
+#MACRO-NEXT:     DW_MACRO_define_str{{[px]}} - lineno: 99 macro: BUFSIZ 8192
+#MACRO-NEXT:     DW_MACRO_define_str{{[px]}} - lineno: 104 macro: EOF (-1)
+#MACRO-NEXT:     DW_MACRO_define_str{{[px]}} - lineno: 109 macro: SEEK_SET 0
+#MACRO-NEXT:     DW_MACRO_define_str{{[px]}} - lineno: 110 macro: SEEK_CUR 1
+#MACRO-NEXT:     DW_MACRO_define_str{{[px]}} - lineno: 111 macro: SEEK_END 2
+#MACRO-NEXT:     DW_MACRO_define_str{{[px]}} - lineno: 113 macro: SEEK_DATA 3
+#MACRO-NEXT:     DW_MACRO_define_str{{[px]}} - lineno: 114 macro: SEEK_HOLE 4
+#MACRO-NEXT:     DW_MACRO_define_str{{[px]}} - lineno: 120 macro: P_tmpdir "/tmp"
+#MACRO-NEXT:     DW_MACRO_start_file - lineno: 133 filenum: 24
+#MACRO-NEXT:       DW_MACRO_define_str{{[px]}} - lineno: 19 macro: _BITS_STDIO_LIM_H 1
+#MACRO-NEXT:       DW_MACRO_define_str{{[px]}} - lineno: 25 macro: L_tmpnam 20
+#MACRO-NEXT:       DW_MACRO_define_str{{[px]}} - lineno: 26 macro: TMP_MAX 238328
+#MACRO-NEXT:       DW_MACRO_define_str{{[px]}} - lineno: 27 macro: FILENAME_MAX 4096
+#MACRO-NEXT:       DW_MACRO_define_str{{[px]}} - lineno: 30 macro: L_ctermid 9
+#MACRO-NEXT:       DW_MACRO_define_str{{[px]}} - lineno: 32 macro: L_cuserid 9
+#MACRO-NEXT:       DW_MACRO_undef_str{{[px]}} - lineno: 36 macro: FOPEN_MAX
+#MACRO-NEXT:       DW_MACRO_define_str{{[px]}} - lineno: 37 macro: FOPEN_MAX 16
+#MACRO-NEXT:     DW_MACRO_end_file
+#MACRO-NEXT:     DW_MACRO_define_str{{[px]}} - lineno: 138 macro: _PRINTF_NAN_LEN_MAX 4
+#MACRO-NEXT:     DW_MACRO_define_str{{[px]}} - lineno: 147 macro: stdin stdin
+#MACRO-NEXT:     DW_MACRO_define_str{{[px]}} - lineno: 148 macro: stdout stdout
+#MACRO-NEXT:     DW_MACRO_define_str{{[px]}} - lineno: 149 macro: stderr stderr
+#MACRO-NEXT:     DW_MACRO_define_str{{[px]}} - lineno: 164 macro: RENAME_NOREPLACE (1 << 0)
+#MACRO-NEXT:     DW_MACRO_define_str{{[px]}} - lineno: 165 macro: RENAME_EXCHANGE (1 << 1)
+#MACRO-NEXT:     DW_MACRO_define_str{{[px]}} - lineno: 166 macro: RENAME_WHITEOUT (1 << 2)
+#MACRO-NEXT:     DW_MACRO_undef_str{{[px]}} - lineno: 180 macro: __attr_dealloc_fclose
+#MACRO-NEXT:     DW_MACRO_define_str{{[px]}} - lineno: 181 macro: __attr_dealloc_fclose __attr_dealloc (fclose, 1)
+#MACRO-NEXT:     DW_MACRO_start_file - lineno: 430 filenum: 25
+#MACRO-NEXT:       DW_MACRO_define_str{{[px]}} - lineno: 20 macro: _BITS_FLOATN_H
+#MACRO-NEXT:       DW_MACRO_define_str{{[px]}} - lineno: 34 macro: __HAVE_FLOAT128 0
+#MACRO-NEXT:       DW_MACRO_define_str{{[px]}} - lineno: 42 macro: __HAVE_DISTINCT_FLOAT128 0
+#MACRO-NEXT:       DW_MACRO_define_str{{[px]}} - lineno: 48 macro: __HAVE_FLOAT64X 1
+#MACRO-NEXT:       DW_MACRO_define_str{{[px]}} - lineno: 54 macro: __HAVE_FLOAT64X_LONG_DOUBLE 1
+#MACRO-NEXT:       DW_MACRO_start_file - lineno: 119 filenum: 26
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 21 macro: _BITS_FLOATN_COMMON_H
+#MACRO-NEXT:         DW_MACRO_start_file - lineno: 24 filenum: 9
+#MACRO-NEXT:           DW_MACRO_define_str{{[px]}} - lineno: 21 macro: __LDOUBLE_REDIRECTS_TO_FLOAT128_ABI 0
+#MACRO-NEXT:         DW_MACRO_end_file
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 34 macro: __HAVE_FLOAT16 0
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 35 macro: __HAVE_FLOAT32 1
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 36 macro: __HAVE_FLOAT64 1
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 37 macro: __HAVE_FLOAT32X 1
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 38 macro: __HAVE_FLOAT128X 0
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 52 macro: __HAVE_DISTINCT_FLOAT16 __HAVE_FLOAT16
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 53 macro: __HAVE_DISTINCT_FLOAT32 0
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 54 macro: __HAVE_DISTINCT_FLOAT64 0
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 55 macro: __HAVE_DISTINCT_FLOAT32X 0
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 56 macro: __HAVE_DISTINCT_FLOAT64X 0
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 57 macro: __HAVE_DISTINCT_FLOAT128X __HAVE_FLOAT128X
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 63 macro: __HAVE_FLOAT128_UNLIKE_LDBL (__HAVE_DISTINCT_FLOAT128 && __LDBL_MANT_DIG__ != 113)
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 72 macro: __HAVE_FLOATN_NOT_TYPEDEF 0
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 91 macro: __f32(x) x##f
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 102 macro: __f64(x) x
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 111 macro: __f32x(x) x
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 120 macro: __f64x(x) x##l
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 149 macro: __CFLOAT32 _Complex float
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 160 macro: __CFLOAT64 _Complex double
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 169 macro: __CFLOAT32X _Complex double
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 178 macro: __CFLOAT64X _Complex long double
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 218 macro: __builtin_huge_valf32() (__builtin_huge_valf ())
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 219 macro: __builtin_inff32() (__builtin_inff ())
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 220 macro: __builtin_nanf32(x) (__builtin_nanf (x))
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 221 macro: __builtin_nansf32(x) (__builtin_nansf (x))
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 255 macro: __builtin_huge_valf64() (__builtin_huge_val ())
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 256 macro: __builtin_inff64() (__builtin_inf ())
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 257 macro: __builtin_nanf64(x) (__builtin_nan (x))
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 258 macro: __builtin_nansf64(x) (__builtin_nans (x))
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 272 macro: __builtin_huge_valf32x() (__builtin_huge_val ())
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 273 macro: __builtin_inff32x() (__builtin_inf ())
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 274 macro: __builtin_nanf32x(x) (__builtin_nan (x))
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 275 macro: __builtin_nansf32x(x) (__builtin_nans (x))
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 289 macro: __builtin_huge_valf64x() (__builtin_huge_vall ())
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 290 macro: __builtin_inff64x() (__builtin_infl ())
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 291 macro: __builtin_nanf64x(x) (__builtin_nanl (x))
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 292 macro: __builtin_nansf64x(x) (__builtin_nansl (x))
+#MACRO-NEXT:       DW_MACRO_end_file
+#MACRO-NEXT:     DW_MACRO_end_file
+#MACRO-NEXT:   DW_MACRO_end_file
+#MACRO-NEXT: DW_MACRO_end_file
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __llvm__ 1
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __clang__ 1
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __clang_major__ 14
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __clang_minor__ 0
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __clang_patchlevel__ 0
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __clang_version__ "14.0.0 "
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __GNUC__ 4
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __GNUC_MINOR__ 2
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __GNUC_PATCHLEVEL__ 1
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __GXX_ABI_VERSION 1002
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __GNUG__ 4
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __GXX_WEAK__ 1
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __ATOMIC_RELAXED 0
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __ATOMIC_CONSUME 1
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __ATOMIC_ACQUIRE 2
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __ATOMIC_RELEASE 3
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __ATOMIC_ACQ_REL 4
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __ATOMIC_SEQ_CST 5
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __OPENCL_MEMORY_SCOPE_WORK_ITEM 0
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __OPENCL_MEMORY_SCOPE_WORK_GROUP 1
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __OPENCL_MEMORY_SCOPE_DEVICE 2
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __OPENCL_MEMORY_SCOPE_ALL_SVM_DEVICES 3
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __OPENCL_MEMORY_SCOPE_SUB_GROUP 4
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __PRAGMA_REDEFINE_EXTNAME 1
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __VERSION__ "Ubuntu Clang 14.0.0"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __GXX_EXPERIMENTAL_CXX0X__ 1
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __OBJC_BOOL_IS_BOOL 0
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __cpp_rtti 199711L
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __cpp_exceptions 199711L
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __cpp_unicode_characters 200704L
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __cpp_raw_strings 200710L
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __cpp_unicode_literals 200710L
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __cpp_user_defined_literals 200809L
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __cpp_lambdas 200907L
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __cpp_constexpr 201304L
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __cpp_constexpr_in_decltype 201711L
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __cpp_range_based_for 200907
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __cpp_static_assert 200410
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __cpp_decltype 200707L
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __cpp_attributes 200809L
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __cpp_rvalue_references 200610L
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __cpp_variadic_templates 200704L
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __cpp_initializer_lists 200806L
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __cpp_delegating_constructors 200604L
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __cpp_nsdmi 200809L
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __cpp_inheriting_constructors 201511L
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __cpp_ref_qualifiers 200710L
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __cpp_alias_templates 200704L
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __cpp_threadsafe_static_init 200806L
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __cpp_binary_literals 201304L
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __cpp_digit_separators 201309L
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __cpp_init_captures 201304L
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __cpp_generic_lambdas 201304L
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __cpp_decltype_auto 201304L
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __cpp_return_type_deduction 201304L
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __cpp_aggregate_nsdmi 201304L
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __cpp_variable_templates 201304L
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __cpp_impl_destroying_delete 201806L
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __CONSTANT_CFSTRINGS__ 1
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __EXCEPTIONS 1
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __GXX_RTTI 1
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __DEPRECATED 1
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __private_extern__ extern
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __clang_literal_encoding__ "UTF-8"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __clang_wide_literal_encoding__ "UTF-32"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __ORDER_LITTLE_ENDIAN__ 1234
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __ORDER_BIG_ENDIAN__ 4321
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __ORDER_PDP_ENDIAN__ 3412
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __BYTE_ORDER__ __ORDER_LITTLE_ENDIAN__
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __LITTLE_ENDIAN__ 1
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: _LP64 1
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __LP64__ 1
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __CHAR_BIT__ 8
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __BOOL_WIDTH__ 8
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __SHRT_WIDTH__ 16
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __INT_WIDTH__ 32
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __LONG_WIDTH__ 64
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __LLONG_WIDTH__ 64
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __BITINT_MAXWIDTH__ 128
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __SCHAR_MAX__ 127
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __SHRT_MAX__ 32767
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __INT_MAX__ 2147483647
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __LONG_MAX__ 9223372036854775807L
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __LONG_LONG_MAX__ 9223372036854775807LL
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __WCHAR_MAX__ 2147483647
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __WCHAR_WIDTH__ 32
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __WINT_MAX__ 4294967295U
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __WINT_WIDTH__ 32
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __INTMAX_MAX__ 9223372036854775807L
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __INTMAX_WIDTH__ 64
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __SIZE_MAX__ 18446744073709551615UL
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __SIZE_WIDTH__ 64
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINTMAX_MAX__ 18446744073709551615UL
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINTMAX_WIDTH__ 64
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __PTRDIFF_MAX__ 9223372036854775807L
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __PTRDIFF_WIDTH__ 64
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __INTPTR_MAX__ 9223372036854775807L
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __INTPTR_WIDTH__ 64
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINTPTR_MAX__ 18446744073709551615UL
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINTPTR_WIDTH__ 64
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __SIZEOF_DOUBLE__ 8
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __SIZEOF_FLOAT__ 4
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __SIZEOF_INT__ 4
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __SIZEOF_LONG__ 8
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __SIZEOF_LONG_DOUBLE__ 16
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __SIZEOF_LONG_LONG__ 8
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __SIZEOF_POINTER__ 8
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __SIZEOF_SHORT__ 2
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __SIZEOF_PTRDIFF_T__ 8
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __SIZEOF_SIZE_T__ 8
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __SIZEOF_WCHAR_T__ 4
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __SIZEOF_WINT_T__ 4
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __SIZEOF_INT128__ 16
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __INTMAX_TYPE__ long int
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __INTMAX_FMTd__ "ld"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __INTMAX_FMTi__ "li"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __INTMAX_C_SUFFIX__ L
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINTMAX_TYPE__ long unsigned int
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINTMAX_FMTo__ "lo"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINTMAX_FMTu__ "lu"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINTMAX_FMTx__ "lx"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINTMAX_FMTX__ "lX"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINTMAX_C_SUFFIX__ UL
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __PTRDIFF_TYPE__ long int
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __PTRDIFF_FMTd__ "ld"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __PTRDIFF_FMTi__ "li"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __INTPTR_TYPE__ long int
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __INTPTR_FMTd__ "ld"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __INTPTR_FMTi__ "li"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __SIZE_TYPE__ long unsigned int
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __SIZE_FMTo__ "lo"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __SIZE_FMTu__ "lu"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __SIZE_FMTx__ "lx"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __SIZE_FMTX__ "lX"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __WCHAR_TYPE__ int
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __WINT_TYPE__ unsigned int
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __SIG_ATOMIC_MAX__ 2147483647
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __SIG_ATOMIC_WIDTH__ 32
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __CHAR16_TYPE__ unsigned short
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __CHAR32_TYPE__ unsigned int
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINTPTR_TYPE__ long unsigned int
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINTPTR_FMTo__ "lo"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINTPTR_FMTu__ "lu"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINTPTR_FMTx__ "lx"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINTPTR_FMTX__ "lX"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __FLT_DENORM_MIN__ 1.40129846e-45F
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __FLT_HAS_DENORM__ 1
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __FLT_DIG__ 6
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __FLT_DECIMAL_DIG__ 9
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __FLT_EPSILON__ 1.19209290e-7F
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __FLT_HAS_INFINITY__ 1
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __FLT_HAS_QUIET_NAN__ 1
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __FLT_MANT_DIG__ 24
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __FLT_MAX_10_EXP__ 38
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __FLT_MAX_EXP__ 128
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __FLT_MAX__ 3.40282347e+38F
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __FLT_MIN_10_EXP__ (-37)
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __FLT_MIN_EXP__ (-125)
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __FLT_MIN__ 1.17549435e-38F
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __DBL_DENORM_MIN__ 4.9406564584124654e-324
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __DBL_HAS_DENORM__ 1
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __DBL_DIG__ 15
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __DBL_DECIMAL_DIG__ 17
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __DBL_EPSILON__ 2.2204460492503131e-16
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __DBL_HAS_INFINITY__ 1
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __DBL_HAS_QUIET_NAN__ 1
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __DBL_MANT_DIG__ 53
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __DBL_MAX_10_EXP__ 308
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __DBL_MAX_EXP__ 1024
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __DBL_MAX__ 1.7976931348623157e+308
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __DBL_MIN_10_EXP__ (-307)
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __DBL_MIN_EXP__ (-1021)
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __DBL_MIN__ 2.2250738585072014e-308
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __LDBL_DENORM_MIN__ 3.64519953188247460253e-4951L
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __LDBL_HAS_DENORM__ 1
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __LDBL_DIG__ 18
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __LDBL_DECIMAL_DIG__ 21
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __LDBL_EPSILON__ 1.08420217248550443401e-19L
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __LDBL_HAS_INFINITY__ 1
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __LDBL_HAS_QUIET_NAN__ 1
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __LDBL_MANT_DIG__ 64
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __LDBL_MAX_10_EXP__ 4932
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __LDBL_MAX_EXP__ 16384
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __LDBL_MAX__ 1.18973149535723176502e+4932L
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __LDBL_MIN_10_EXP__ (-4931)
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __LDBL_MIN_EXP__ (-16381)
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __LDBL_MIN__ 3.36210314311209350626e-4932L
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __POINTER_WIDTH__ 64
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __BIGGEST_ALIGNMENT__ 16
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __WINT_UNSIGNED__ 1
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __INT8_TYPE__ signed char
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __INT8_FMTd__ "hhd"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __INT8_FMTi__ "hhi"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __INT8_C_SUFFIX__
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __INT16_TYPE__ short
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __INT16_FMTd__ "hd"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __INT16_FMTi__ "hi"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __INT16_C_SUFFIX__
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __INT32_TYPE__ int
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __INT32_FMTd__ "d"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __INT32_FMTi__ "i"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __INT32_C_SUFFIX__
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __INT64_TYPE__ long int
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __INT64_FMTd__ "ld"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __INT64_FMTi__ "li"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __INT64_C_SUFFIX__ L
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINT8_TYPE__ unsigned char
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINT8_FMTo__ "hho"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINT8_FMTu__ "hhu"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINT8_FMTx__ "hhx"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINT8_FMTX__ "hhX"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINT8_C_SUFFIX__
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINT8_MAX__ 255
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __INT8_MAX__ 127
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINT16_TYPE__ unsigned short
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINT16_FMTo__ "ho"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINT16_FMTu__ "hu"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINT16_FMTx__ "hx"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINT16_FMTX__ "hX"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINT16_C_SUFFIX__
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINT16_MAX__ 65535
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __INT16_MAX__ 32767
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINT32_TYPE__ unsigned int
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINT32_FMTo__ "o"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINT32_FMTu__ "u"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINT32_FMTx__ "x"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINT32_FMTX__ "X"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINT32_C_SUFFIX__ U
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINT32_MAX__ 4294967295U
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __INT32_MAX__ 2147483647
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINT64_TYPE__ long unsigned int
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINT64_FMTo__ "lo"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINT64_FMTu__ "lu"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINT64_FMTx__ "lx"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINT64_FMTX__ "lX"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINT64_C_SUFFIX__ UL
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINT64_MAX__ 18446744073709551615UL
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __INT64_MAX__ 9223372036854775807L
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __INT_LEAST8_TYPE__ signed char
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __INT_LEAST8_MAX__ 127
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __INT_LEAST8_WIDTH__ 8
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __INT_LEAST8_FMTd__ "hhd"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __INT_LEAST8_FMTi__ "hhi"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINT_LEAST8_TYPE__ unsigned char
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINT_LEAST8_MAX__ 255
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINT_LEAST8_FMTo__ "hho"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINT_LEAST8_FMTu__ "hhu"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINT_LEAST8_FMTx__ "hhx"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINT_LEAST8_FMTX__ "hhX"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __INT_LEAST16_TYPE__ short
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __INT_LEAST16_MAX__ 32767
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __INT_LEAST16_WIDTH__ 16
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __INT_LEAST16_FMTd__ "hd"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __INT_LEAST16_FMTi__ "hi"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINT_LEAST16_TYPE__ unsigned short
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINT_LEAST16_MAX__ 65535
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINT_LEAST16_FMTo__ "ho"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINT_LEAST16_FMTu__ "hu"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINT_LEAST16_FMTx__ "hx"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINT_LEAST16_FMTX__ "hX"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __INT_LEAST32_TYPE__ int
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __INT_LEAST32_MAX__ 2147483647
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __INT_LEAST32_WIDTH__ 32
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __INT_LEAST32_FMTd__ "d"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __INT_LEAST32_FMTi__ "i"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINT_LEAST32_TYPE__ unsigned int
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINT_LEAST32_MAX__ 4294967295U
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINT_LEAST32_FMTo__ "o"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINT_LEAST32_FMTu__ "u"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINT_LEAST32_FMTx__ "x"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINT_LEAST32_FMTX__ "X"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __INT_LEAST64_TYPE__ long int
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __INT_LEAST64_MAX__ 9223372036854775807L
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __INT_LEAST64_WIDTH__ 64
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __INT_LEAST64_FMTd__ "ld"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __INT_LEAST64_FMTi__ "li"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINT_LEAST64_TYPE__ long unsigned int
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINT_LEAST64_MAX__ 18446744073709551615UL
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINT_LEAST64_FMTo__ "lo"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINT_LEAST64_FMTu__ "lu"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINT_LEAST64_FMTx__ "lx"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINT_LEAST64_FMTX__ "lX"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __INT_FAST8_TYPE__ signed char
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __INT_FAST8_MAX__ 127
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __INT_FAST8_WIDTH__ 8
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __INT_FAST8_FMTd__ "hhd"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __INT_FAST8_FMTi__ "hhi"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINT_FAST8_TYPE__ unsigned char
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINT_FAST8_MAX__ 255
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINT_FAST8_FMTo__ "hho"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINT_FAST8_FMTu__ "hhu"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINT_FAST8_FMTx__ "hhx"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINT_FAST8_FMTX__ "hhX"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __INT_FAST16_TYPE__ short
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __INT_FAST16_MAX__ 32767
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __INT_FAST16_WIDTH__ 16
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __INT_FAST16_FMTd__ "hd"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __INT_FAST16_FMTi__ "hi"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINT_FAST16_TYPE__ unsigned short
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINT_FAST16_MAX__ 65535
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINT_FAST16_FMTo__ "ho"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINT_FAST16_FMTu__ "hu"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINT_FAST16_FMTx__ "hx"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINT_FAST16_FMTX__ "hX"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __INT_FAST32_TYPE__ int
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __INT_FAST32_MAX__ 2147483647
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __INT_FAST32_WIDTH__ 32
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __INT_FAST32_FMTd__ "d"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __INT_FAST32_FMTi__ "i"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINT_FAST32_TYPE__ unsigned int
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINT_FAST32_MAX__ 4294967295U
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINT_FAST32_FMTo__ "o"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINT_FAST32_FMTu__ "u"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINT_FAST32_FMTx__ "x"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINT_FAST32_FMTX__ "X"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __INT_FAST64_TYPE__ long int
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __INT_FAST64_MAX__ 9223372036854775807L
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __INT_FAST64_WIDTH__ 64
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __INT_FAST64_FMTd__ "ld"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __INT_FAST64_FMTi__ "li"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINT_FAST64_TYPE__ long unsigned int
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINT_FAST64_MAX__ 18446744073709551615UL
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINT_FAST64_FMTo__ "lo"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINT_FAST64_FMTu__ "lu"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINT_FAST64_FMTx__ "lx"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINT_FAST64_FMTX__ "lX"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __USER_LABEL_PREFIX__
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __FINITE_MATH_ONLY__ 0
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __GNUC_GNU_INLINE__ 1
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __GCC_ATOMIC_TEST_AND_SET_TRUEVAL 1
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __CLANG_ATOMIC_BOOL_LOCK_FREE 2
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __CLANG_ATOMIC_CHAR_LOCK_FREE 2
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __CLANG_ATOMIC_CHAR16_T_LOCK_FREE 2
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __CLANG_ATOMIC_CHAR32_T_LOCK_FREE 2
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __CLANG_ATOMIC_WCHAR_T_LOCK_FREE 2
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __CLANG_ATOMIC_SHORT_LOCK_FREE 2
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __CLANG_ATOMIC_INT_LOCK_FREE 2
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __CLANG_ATOMIC_LONG_LOCK_FREE 2
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __CLANG_ATOMIC_LLONG_LOCK_FREE 2
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __CLANG_ATOMIC_POINTER_LOCK_FREE 2
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __GCC_ATOMIC_BOOL_LOCK_FREE 2
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __GCC_ATOMIC_CHAR_LOCK_FREE 2
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __GCC_ATOMIC_CHAR16_T_LOCK_FREE 2
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __GCC_ATOMIC_CHAR32_T_LOCK_FREE 2
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __GCC_ATOMIC_WCHAR_T_LOCK_FREE 2
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __GCC_ATOMIC_SHORT_LOCK_FREE 2
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __GCC_ATOMIC_INT_LOCK_FREE 2
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __GCC_ATOMIC_LONG_LOCK_FREE 2
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __GCC_ATOMIC_LLONG_LOCK_FREE 2
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __GCC_ATOMIC_POINTER_LOCK_FREE 2
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __NO_INLINE__ 1
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __PIC__ 2
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __pic__ 2
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __PIE__ 2
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __pie__ 2
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __FLT_EVAL_METHOD__ 0
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __FLT_RADIX__ 2
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __DECIMAL_DIG__ __LDBL_DECIMAL_DIG__
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __GLIBCXX_TYPE_INT_N_0 __int128
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __GLIBCXX_BITSIZE_INT_N_0 128
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __GCC_ASM_FLAG_OUTPUTS__ 1
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __code_model_small__ 1
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __amd64__ 1
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __amd64 1
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __x86_64 1
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __x86_64__ 1
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __SEG_GS 1
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __SEG_FS 1
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __seg_gs __attribute__((address_space(256)))
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __seg_fs __attribute__((address_space(257)))
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __k8 1
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __k8__ 1
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __tune_k8__ 1
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __REGISTER_PREFIX__
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __NO_MATH_INLINES 1
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __FXSR__ 1
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __SSE2__ 1
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __SSE2_MATH__ 1
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __SSE__ 1
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __SSE_MATH__ 1
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __MMX__ 1
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __GCC_HAVE_SYNC_COMPARE_AND_SWAP_1 1
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __GCC_HAVE_SYNC_COMPARE_AND_SWAP_2 1
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __GCC_HAVE_SYNC_COMPARE_AND_SWAP_4 1
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __GCC_HAVE_SYNC_COMPARE_AND_SWAP_8 1
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __SIZEOF_FLOAT128__ 16
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: unix 1
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __unix 1
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __unix__ 1
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: linux 1
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __linux 1
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __linux__ 1
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __ELF__ 1
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __gnu_linux__ 1
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: _GNU_SOURCE 1
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __FLOAT128__ 1
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __STDC__ 1
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __STDC_HOSTED__ 1
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __cplusplus 201402L
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __STDCPP_DEFAULT_NEW_ALIGNMENT__ 16UL
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __STDCPP_THREADS__ 1
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __STDC_UTF_16__ 1
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __STDC_UTF_32__ 1
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __GCC_HAVE_DWARF2_CFI_ASM 1
+#MACRO: 0x[[BAR_MACRO_OFFSET]]
+#MACRO: macro header: version = 0x0005, flags = 0x02, format = DWARF32, debug_line_offset = 0x[[LINE_TABLE_BAR]]
+#MACRO-NEXT: DW_MACRO_start_file - lineno: 0 filenum: 0
+#MACRO-NEXT:   DW_MACRO_start_file - lineno: 1 filenum: 1
+#MACRO-NEXT:     DW_MACRO_define_str{{[px]}} - lineno: 24 macro: _STDIO_H 1
+#MACRO-NEXT:     DW_MACRO_define_str{{[px]}} - lineno: 26 macro: __GLIBC_INTERNAL_STARTING_HEADER_IMPLEMENTATION
+#MACRO-NEXT:     DW_MACRO_start_file - lineno: 27 filenum: 2
+#MACRO-NEXT:       DW_MACRO_undef_str{{[px]}} - lineno: 31 macro: __GLIBC_INTERNAL_STARTING_HEADER_IMPLEMENTATION
+#MACRO-NEXT:       DW_MACRO_start_file - lineno: 33 filenum: 3
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 19 macro: _FEATURES_H 1
+#MACRO-NEXT:         DW_MACRO_undef_str{{[px]}} - lineno: 126 macro: __USE_ISOC11
+#MACRO-NEXT:         DW_MACRO_undef_str{{[px]}} - lineno: 127 macro: __USE_ISOC99
+#MACRO-NEXT:         DW_MACRO_undef_str{{[px]}} - lineno: 128 macro: __USE_ISOC95
+#MACRO-NEXT:         DW_MACRO_undef_str{{[px]}} - lineno: 129 macro: __USE_ISOCXX11
+#MACRO-NEXT:         DW_MACRO_undef_str{{[px]}} - lineno: 130 macro: __USE_POSIX
+#MACRO-NEXT:         DW_MACRO_undef_str{{[px]}} - lineno: 131 macro: __USE_POSIX2
+#MACRO-NEXT:         DW_MACRO_undef_str{{[px]}} - lineno: 132 macro: __USE_POSIX199309
+#MACRO-NEXT:         DW_MACRO_undef_str{{[px]}} - lineno: 133 macro: __USE_POSIX199506
+#MACRO-NEXT:         DW_MACRO_undef_str{{[px]}} - lineno: 134 macro: __USE_XOPEN
+#MACRO-NEXT:         DW_MACRO_undef_str{{[px]}} - lineno: 135 macro: __USE_XOPEN_EXTENDED
+#MACRO-NEXT:         DW_MACRO_undef_str{{[px]}} - lineno: 136 macro: __USE_UNIX98
+#MACRO-NEXT:         DW_MACRO_undef_str{{[px]}} - lineno: 137 macro: __USE_XOPEN2K
+#MACRO-NEXT:         DW_MACRO_undef_str{{[px]}} - lineno: 138 macro: __USE_XOPEN2KXSI
+#MACRO-NEXT:         DW_MACRO_undef_str{{[px]}} - lineno: 139 macro: __USE_XOPEN2K8
+#MACRO-NEXT:         DW_MACRO_undef_str{{[px]}} - lineno: 140 macro: __USE_XOPEN2K8XSI
+#MACRO-NEXT:         DW_MACRO_undef_str{{[px]}} - lineno: 141 macro: __USE_LARGEFILE
+#MACRO-NEXT:         DW_MACRO_undef_str{{[px]}} - lineno: 142 macro: __USE_LARGEFILE64
+#MACRO-NEXT:         DW_MACRO_undef_str{{[px]}} - lineno: 143 macro: __USE_FILE_OFFSET64
+#MACRO-NEXT:         DW_MACRO_undef_str{{[px]}} - lineno: 144 macro: __USE_MISC
+#MACRO-NEXT:         DW_MACRO_undef_str{{[px]}} - lineno: 145 macro: __USE_ATFILE
+#MACRO-NEXT:         DW_MACRO_undef_str{{[px]}} - lineno: 146 macro: __USE_DYNAMIC_STACK_SIZE
+#MACRO-NEXT:         DW_MACRO_undef_str{{[px]}} - lineno: 147 macro: __USE_GNU
+#MACRO-NEXT:         DW_MACRO_undef_str{{[px]}} - lineno: 148 macro: __USE_FORTIFY_LEVEL
+#MACRO-NEXT:         DW_MACRO_undef_str{{[px]}} - lineno: 149 macro: __KERNEL_STRICT_NAMES
+#MACRO-NEXT:         DW_MACRO_undef_str{{[px]}} - lineno: 150 macro: __GLIBC_USE_ISOC2X
+#MACRO-NEXT:         DW_MACRO_undef_str{{[px]}} - lineno: 151 macro: __GLIBC_USE_DEPRECATED_GETS
+#MACRO-NEXT:         DW_MACRO_undef_str{{[px]}} - lineno: 152 macro: __GLIBC_USE_DEPRECATED_SCANF
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 157 macro: __KERNEL_STRICT_NAMES
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 168 macro: __GNUC_PREREQ(maj,min) ((__GNUC__ << 16) + __GNUC_MINOR__ >= ((maj) << 16) + (min))
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 179 macro: __glibc_clang_prereq(maj,min) ((__clang_major__ << 16) + __clang_minor__ >= ((maj) << 16) + (min))
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 186 macro: __GLIBC_USE(F) __GLIBC_USE_ ## F
+#MACRO-NEXT:         DW_MACRO_undef_str{{[px]}} - lineno: 201 macro: _ISOC95_SOURCE
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 202 macro: _ISOC95_SOURCE 1
+#MACRO-NEXT:         DW_MACRO_undef_str{{[px]}} - lineno: 203 macro: _ISOC99_SOURCE
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 204 macro: _ISOC99_SOURCE 1
+#MACRO-NEXT:         DW_MACRO_undef_str{{[px]}} - lineno: 205 macro: _ISOC11_SOURCE
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 206 macro: _ISOC11_SOURCE 1
+#MACRO-NEXT:         DW_MACRO_undef_str{{[px]}} - lineno: 207 macro: _ISOC2X_SOURCE
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 208 macro: _ISOC2X_SOURCE 1
+#MACRO-NEXT:         DW_MACRO_undef_str{{[px]}} - lineno: 209 macro: _POSIX_SOURCE
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 210 macro: _POSIX_SOURCE 1
+#MACRO-NEXT:         DW_MACRO_undef_str{{[px]}} - lineno: 211 macro: _POSIX_C_SOURCE
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 212 macro: _POSIX_C_SOURCE 200809L
+#MACRO-NEXT:         DW_MACRO_undef_str{{[px]}} - lineno: 213 macro: _XOPEN_SOURCE
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 214 macro: _XOPEN_SOURCE 700
+#MACRO-NEXT:         DW_MACRO_undef_str{{[px]}} - lineno: 215 macro: _XOPEN_SOURCE_EXTENDED
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 216 macro: _XOPEN_SOURCE_EXTENDED 1
+#MACRO-NEXT:         DW_MACRO_undef_str{{[px]}} - lineno: 217 macro: _LARGEFILE64_SOURCE
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 218 macro: _LARGEFILE64_SOURCE 1
+#MACRO-NEXT:         DW_MACRO_undef_str{{[px]}} - lineno: 219 macro: _DEFAULT_SOURCE
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 220 macro: _DEFAULT_SOURCE 1
+#MACRO-NEXT:         DW_MACRO_undef_str{{[px]}} - lineno: 221 macro: _ATFILE_SOURCE
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 222 macro: _ATFILE_SOURCE 1
+#MACRO-NEXT:         DW_MACRO_undef_str{{[px]}} - lineno: 223 macro: _DYNAMIC_STACK_SIZE_SOURCE
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 224 macro: _DYNAMIC_STACK_SIZE_SOURCE 1
+#MACRO-NEXT:         DW_MACRO_undef_str{{[px]}} - lineno: 235 macro: _DEFAULT_SOURCE
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 236 macro: _DEFAULT_SOURCE 1
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 242 macro: __GLIBC_USE_ISOC2X 1
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 250 macro: __USE_ISOC11 1
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 257 macro: __USE_ISOC99 1
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 264 macro: __USE_ISOC95 1
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 275 macro: __USE_ISOCXX11 1
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 276 macro: __USE_ISOC99 1
+#MACRO-NEXT:         DW_MACRO_undef_str{{[px]}} - lineno: 287 macro: _POSIX_SOURCE
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 288 macro: _POSIX_SOURCE 1
+#MACRO-NEXT:         DW_MACRO_undef_str{{[px]}} - lineno: 289 macro: _POSIX_C_SOURCE
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 290 macro: _POSIX_C_SOURCE 200809L
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 325 macro: __USE_POSIX 1
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 329 macro: __USE_POSIX2 1
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 333 macro: __USE_POSIX199309 1
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 337 macro: __USE_POSIX199506 1
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 341 macro: __USE_XOPEN2K 1
+#MACRO-NEXT:         DW_MACRO_undef_str{{[px]}} - lineno: 342 macro: __USE_ISOC95
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 343 macro: __USE_ISOC95 1
+#MACRO-NEXT:         DW_MACRO_undef_str{{[px]}} - lineno: 344 macro: __USE_ISOC99
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 345 macro: __USE_ISOC99 1
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 349 macro: __USE_XOPEN2K8 1
+#MACRO-NEXT:         DW_MACRO_undef_str{{[px]}} - lineno: 350 macro: _ATFILE_SOURCE
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 351 macro: _ATFILE_SOURCE 1
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 355 macro: __USE_XOPEN 1
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 357 macro: __USE_XOPEN_EXTENDED 1
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 358 macro: __USE_UNIX98 1
+#MACRO-NEXT:         DW_MACRO_undef_str{{[px]}} - lineno: 359 macro: _LARGEFILE_SOURCE
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 360 macro: _LARGEFILE_SOURCE 1
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 363 macro: __USE_XOPEN2K8 1
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 364 macro: __USE_XOPEN2K8XSI 1
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 366 macro: __USE_XOPEN2K 1
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 367 macro: __USE_XOPEN2KXSI 1
+#MACRO-NEXT:         DW_MACRO_undef_str{{[px]}} - lineno: 368 macro: __USE_ISOC95
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 369 macro: __USE_ISOC95 1
+#MACRO-NEXT:         DW_MACRO_undef_str{{[px]}} - lineno: 370 macro: __USE_ISOC99
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 371 macro: __USE_ISOC99 1
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 381 macro: __USE_LARGEFILE 1
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 385 macro: __USE_LARGEFILE64 1
+#MACRO-NEXT:         DW_MACRO_start_file - lineno: 392 filenum: 4
+#MACRO-NEXT:           DW_MACRO_start_file - lineno: 20 filenum: 5
+#MACRO-NEXT:             DW_MACRO_define_str{{[px]}} - lineno: 4 macro: __WORDSIZE 64
+#MACRO-NEXT:             DW_MACRO_define_str{{[px]}} - lineno: 12 macro: __WORDSIZE_TIME64_COMPAT32 1
+#MACRO-NEXT:             DW_MACRO_define_str{{[px]}} - lineno: 14 macro: __SYSCALL_WORDSIZE 64
+#MACRO-NEXT:           DW_MACRO_end_file
+#MACRO-NEXT:           DW_MACRO_start_file - lineno: 21 filenum: 6
+#MACRO-NEXT:             DW_MACRO_start_file - lineno: 19 filenum: 5
+#MACRO-NEXT:               DW_MACRO_define_str{{[px]}} - lineno: 4 macro: __WORDSIZE 64
+#MACRO-NEXT:               DW_MACRO_define_str{{[px]}} - lineno: 12 macro: __WORDSIZE_TIME64_COMPAT32 1
+#MACRO-NEXT:               DW_MACRO_define_str{{[px]}} - lineno: 14 macro: __SYSCALL_WORDSIZE 64
+#MACRO-NEXT:             DW_MACRO_end_file
+#MACRO-NEXT:             DW_MACRO_define_str{{[px]}} - lineno: 26 macro: __TIMESIZE __WORDSIZE
+#MACRO-NEXT:           DW_MACRO_end_file
+#MACRO-NEXT:         DW_MACRO_end_file
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 395 macro: __USE_MISC 1
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 399 macro: __USE_ATFILE 1
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 403 macro: __USE_DYNAMIC_STACK_SIZE 1
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 407 macro: __USE_GNU 1
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 428 macro: __USE_FORTIFY_LEVEL 0
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 436 macro: __GLIBC_USE_DEPRECATED_GETS 0
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 459 macro: __GLIBC_USE_DEPRECATED_SCANF 0
+#MACRO-NEXT:         DW_MACRO_start_file - lineno: 464 filenum: 7
+#MACRO-NEXT:           DW_MACRO_define_str{{[px]}} - lineno: 19 macro: _STDC_PREDEF_H 1
+#MACRO-NEXT:           DW_MACRO_define_str{{[px]}} - lineno: 42 macro: __STDC_IEC_559__ 1
+#MACRO-NEXT:           DW_MACRO_define_str{{[px]}} - lineno: 43 macro: __STDC_IEC_60559_BFP__ 201404L
+#MACRO-NEXT:           DW_MACRO_define_str{{[px]}} - lineno: 52 macro: __STDC_IEC_559_COMPLEX__ 1
+#MACRO-NEXT:           DW_MACRO_define_str{{[px]}} - lineno: 53 macro: __STDC_IEC_60559_COMPLEX__ 201404L
+#MACRO-NEXT:           DW_MACRO_define_str{{[px]}} - lineno: 62 macro: __STDC_ISO_10646__ 201706L
+#MACRO-NEXT:         DW_MACRO_end_file
+#MACRO-NEXT:         DW_MACRO_undef_str{{[px]}} - lineno: 472 macro: __GNU_LIBRARY__
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 473 macro: __GNU_LIBRARY__ 6
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 477 macro: __GLIBC__ 2
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 478 macro: __GLIBC_MINOR__ 35
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 480 macro: __GLIBC_PREREQ(maj,min) ((__GLIBC__ << 16) + __GLIBC_MINOR__ >= ((maj) << 16) + (min))
+#MACRO-NEXT:         DW_MACRO_start_file - lineno: 486 filenum: 8
+#MACRO-NEXT:           DW_MACRO_define_str{{[px]}} - lineno: 20 macro: _SYS_CDEFS_H 1
+#MACRO-NEXT:           DW_MACRO_undef_str{{[px]}} - lineno: 35 macro: __P
+#MACRO-NEXT:           DW_MACRO_undef_str{{[px]}} - lineno: 36 macro: __PMT
+#MACRO-NEXT:           DW_MACRO_define_str{{[px]}} - lineno: 45 macro: __glibc_has_attribute(attr) __has_attribute (attr)
+#MACRO-NEXT:           DW_MACRO_define_str{{[px]}} - lineno: 50 macro: __glibc_has_builtin(name) __has_builtin (name)
+#MACRO-NEXT:           DW_MACRO_define_str{{[px]}} - lineno: 55 macro: __glibc_has_extension(ext) __has_extension (ext)
+#MACRO-NEXT:           DW_MACRO_define_str{{[px]}} - lineno: 68 macro: __LEAF
+#MACRO-NEXT:           DW_MACRO_define_str{{[px]}} - lineno: 69 macro: __LEAF_ATTR
+#MACRO-NEXT:           DW_MACRO_define_str{{[px]}} - lineno: 86 macro: __THROW noexcept (true)
+#MACRO-NEXT:           DW_MACRO_define_str{{[px]}} - lineno: 90 macro: __THROWNL __THROW
+#MACRO-NEXT:           DW_MACRO_define_str{{[px]}} - lineno: 91 macro: __NTH(fct) __LEAF_ATTR fct __THROW
+#MACRO-NEXT:           DW_MACRO_define_str{{[px]}} - lineno: 92 macro: __NTHNL(fct) fct __THROW
+#MACRO-NEXT:           DW_MACRO_define_str{{[px]}} - lineno: 118 macro: __P(args) args
+#MACRO-NEXT:           DW_MACRO_define_str{{[px]}} - lineno: 119 macro: __PMT(args) args
+#MACRO-NEXT:           DW_MACRO_define_str{{[px]}} - lineno: 124 macro: __CONCAT(x,y) x ## y
+#MACRO-NEXT:           DW_MACRO_define_str{{[px]}} - lineno: 125 macro: __STRING(x) #x
+#MACRO-NEXT:           DW_MACRO_define_str{{[px]}} - lineno: 128 macro: __ptr_t void *
+#MACRO-NEXT:           DW_MACRO_define_str{{[px]}} - lineno: 133 macro: __BEGIN_DECLS extern "C" {
+#MACRO-NEXT:           DW_MACRO_define_str{{[px]}} - lineno: 134 macro: __END_DECLS }
+#MACRO-NEXT:           DW_MACRO_define_str{{[px]}} - lineno: 142 macro: __bos(ptr) __builtin_object_size (ptr, __USE_FORTIFY_LEVEL > 1)
+#MACRO-NEXT:           DW_MACRO_define_str{{[px]}} - lineno: 143 macro: __bos0(ptr) __builtin_object_size (ptr, 0)
+#MACRO-NEXT:           DW_MACRO_define_str{{[px]}} - lineno: 151 macro: __glibc_objsize0(__o) __bos0 (__o)
+#MACRO-NEXT:           DW_MACRO_define_str{{[px]}} - lineno: 152 macro: __glibc_objsize(__o) __bos (__o)
+#MACRO-NEXT:           DW_MACRO_define_str{{[px]}} - lineno: 159 macro: __glibc_safe_len_cond(__l,__s,__osz) ((__l) <= (__osz) / (__s))
+#MACRO-NEXT:           DW_MACRO_define_str{{[px]}} - lineno: 160 macro: __glibc_unsigned_or_positive(__l) ((__typeof (__l)) 0 < (__typeof (__l)) -1 || (__builtin_constant_p (__l) && (__l) > 0))
+#MACRO-NEXT:           DW_MACRO_define_str{{[px]}} - lineno: 167 macro: __glibc_safe_or_unknown_len(__l,__s,__osz) (__glibc_unsigned_or_positive (__l) && __builtin_constant_p (__glibc_safe_len_cond ((__SIZE_TYPE__) (__l), __s, __osz)) && __glibc_safe_len_cond ((__SIZE_TYPE__) (__l), __s, __osz))
+#MACRO-NEXT:           DW_MACRO_define_str{{[px]}} - lineno: 176 macro: __glibc_unsafe_len(__l,__s,__osz) (__glibc_unsigned_or_positive (__l) && __builtin_constant_p (__glibc_safe_len_cond ((__SIZE_TYPE__) (__l), __s, __osz)) && !__glibc_safe_len_cond ((__SIZE_TYPE__) (__l), __s, __osz))
+#MACRO-NEXT:           DW_MACRO_define_str{{[px]}} - lineno: 185 macro: __glibc_fortify(f,__l,__s,__osz,...) (__glibc_safe_or_unknown_len (__l, __s, __osz) ? __ ## f ## _alias (__VA_ARGS__) : (__glibc_unsafe_len (__l, __s, __osz) ? __ ## f ## _chk_warn (__VA_ARGS__, __osz) : __ ## f ## _chk (__VA_ARGS__, __osz)))
+#MACRO-NEXT:           DW_MACRO_define_str{{[px]}} - lineno: 195 macro: __glibc_fortify_n(f,__l,__s,__osz,...) (__glibc_safe_or_unknown_len (__l, __s, __osz) ? __ ## f ## _alias (__VA_ARGS__) : (__glibc_unsafe_len (__l, __s, __osz) ? __ ## f ## _chk_warn (__VA_ARGS__, (__osz) / (__s)) : __ ## f ## _chk (__VA_ARGS__, (__osz) / (__s))))
+#MACRO-NEXT:           DW_MACRO_define_str{{[px]}} - lineno: 207 macro: __warnattr(msg)
+#MACRO-NEXT:           DW_MACRO_define_str{{[px]}} - lineno: 208 macro: __errordecl(name,msg) extern void name (void)
+#MACRO-NEXT:           DW_MACRO_define_str{{[px]}} - lineno: 221 macro: __flexarr []
+#MACRO-NEXT:           DW_MACRO_define_str{{[px]}} - lineno: 222 macro: __glibc_c99_flexarr_available 1
+#MACRO-NEXT:           DW_MACRO_define_str{{[px]}} - lineno: 247 macro: __REDIRECT(name,proto,alias) name proto __asm__ (__ASMNAME (#alias))
+#MACRO-NEXT:           DW_MACRO_define_str{{[px]}} - lineno: 249 macro: __REDIRECT_NTH(name,proto,alias) name proto __THROW __asm__ (__ASMNAME (#alias))
+#MACRO-NEXT:           DW_MACRO_define_str{{[px]}} - lineno: 251 macro: __REDIRECT_NTHNL(name,proto,alias) name proto __THROWNL __asm__ (__ASMNAME (#alias))
+#MACRO-NEXT:           DW_MACRO_define_str{{[px]}} - lineno: 259 macro: __ASMNAME(cname) __ASMNAME2 (__USER_LABEL_PREFIX__, cname)
+#MACRO-NEXT:           DW_MACRO_define_str{{[px]}} - lineno: 260 macro: __ASMNAME2(prefix,cname) __STRING (prefix) cname
+#MACRO-NEXT:           DW_MACRO_define_str{{[px]}} - lineno: 281 macro: __attribute_malloc__ __attribute__ ((__malloc__))
+#MACRO-NEXT:           DW_MACRO_define_str{{[px]}} - lineno: 292 macro: __attribute_alloc_size__(params)
+#MACRO-NEXT:           DW_MACRO_define_str{{[px]}} - lineno: 298 macro: __attribute_alloc_align__(param) __attribute__ ((__alloc_align__ param))
+#MACRO-NEXT:           DW_MACRO_define_str{{[px]}} - lineno: 308 macro: __attribute_pure__ __attribute__ ((__pure__))
+#MACRO-NEXT:           DW_MACRO_define_str{{[px]}} - lineno: 315 macro: __attribute_const__ __attribute__ ((__const__))
+#MACRO-NEXT:           DW_MACRO_define_str{{[px]}} - lineno: 321 macro: __attribute_maybe_unused__ __attribute__ ((__unused__))
+#MACRO-NEXT:           DW_MACRO_define_str{{[px]}} - lineno: 330 macro: __attribute_used__ __attribute__ ((__used__))
+#MACRO-NEXT:           DW_MACRO_define_str{{[px]}} - lineno: 331 macro: __attribute_noinline__ __attribute__ ((__noinline__))
+#MACRO-NEXT:           DW_MACRO_define_str{{[px]}} - lineno: 339 macro: __attribute_deprecated__ __attribute__ ((__deprecated__))
+#MACRO-NEXT:           DW_MACRO_define_str{{[px]}} - lineno: 349 macro: __attribute_deprecated_msg__(msg) __attribute__ ((__deprecated__ (msg)))
+#MACRO-NEXT:           DW_MACRO_define_str{{[px]}} - lineno: 362 macro: __attribute_format_arg__(x) __attribute__ ((__format_arg__ (x)))
+#MACRO-NEXT:           DW_MACRO_define_str{{[px]}} - lineno: 372 macro: __attribute_format_strfmon__(a,b) __attribute__ ((__format__ (__strfmon__, a, b)))
+#MACRO-NEXT:           DW_MACRO_define_str{{[px]}} - lineno: 384 macro: __attribute_nonnull__(params) __attribute__ ((__nonnull__ params))
+#MACRO-NEXT:           DW_MACRO_define_str{{[px]}} - lineno: 390 macro: __nonnull(params) __attribute_nonnull__ (params)
+#MACRO-NEXT:           DW_MACRO_define_str{{[px]}} - lineno: 397 macro: __returns_nonnull __attribute__ ((__returns_nonnull__))
+#MACRO-NEXT:           DW_MACRO_define_str{{[px]}} - lineno: 406 macro: __attribute_warn_unused_result__ __attribute__ ((__warn_unused_result__))
+#MACRO-NEXT:           DW_MACRO_define_str{{[px]}} - lineno: 415 macro: __wur
+#MACRO-NEXT:           DW_MACRO_undef_str{{[px]}} - lineno: 423 macro: __always_inline
+#MACRO-NEXT:           DW_MACRO_define_str{{[px]}} - lineno: 424 macro: __always_inline __inline __attribute__ ((__always_inline__))
+#MACRO-NEXT:           DW_MACRO_define_str{{[px]}} - lineno: 433 macro: __attribute_artificial__ __attribute__ ((__artificial__))
+#MACRO-NEXT:           DW_MACRO_define_str{{[px]}} - lineno: 451 macro: __extern_inline extern __inline __attribute__ ((__gnu_inline__))
+#MACRO-NEXT:           DW_MACRO_define_str{{[px]}} - lineno: 452 macro: __extern_always_inline extern __always_inline __attribute__ ((__gnu_inline__))
+#MACRO-NEXT:           DW_MACRO_define_str{{[px]}} - lineno: 461 macro: __fortify_function __extern_always_inline __attribute_artificial__
+#MACRO-NEXT:           DW_MACRO_define_str{{[px]}} - lineno: 498 macro: __restrict_arr
+#MACRO-NEXT:           DW_MACRO_define_str{{[px]}} - lineno: 510 macro: __glibc_unlikely(cond) __builtin_expect ((cond), 0)
+#MACRO-NEXT:           DW_MACRO_define_str{{[px]}} - lineno: 511 macro: __glibc_likely(cond) __builtin_expect ((cond), 1)
+#MACRO-NEXT:           DW_MACRO_define_str{{[px]}} - lineno: 534 macro: __attribute_nonstring__
+#MACRO-NEXT:           DW_MACRO_undef_str{{[px]}} - lineno: 538 macro: __attribute_copy__
+#MACRO-NEXT:           DW_MACRO_define_str{{[px]}} - lineno: 544 macro: __attribute_copy__(arg)
+#MACRO-NEXT:           DW_MACRO_start_file - lineno: 559 filenum: 5
+#MACRO-NEXT:             DW_MACRO_define_str{{[px]}} - lineno: 4 macro: __WORDSIZE 64
+#MACRO-NEXT:             DW_MACRO_define_str{{[px]}} - lineno: 12 macro: __WORDSIZE_TIME64_COMPAT32 1
+#MACRO-NEXT:             DW_MACRO_define_str{{[px]}} - lineno: 14 macro: __SYSCALL_WORDSIZE 64
+#MACRO-NEXT:           DW_MACRO_end_file
+#MACRO-NEXT:           DW_MACRO_start_file - lineno: 560 filenum: 9
+#MACRO-NEXT:             DW_MACRO_define_str{{[px]}} - lineno: 21 macro: __LDOUBLE_REDIRECTS_TO_FLOAT128_ABI 0
+#MACRO-NEXT:           DW_MACRO_end_file
+#MACRO-NEXT:           DW_MACRO_define_str{{[px]}} - lineno: 616 macro: __LDBL_REDIR1(name,proto,alias) name proto
+#MACRO-NEXT:           DW_MACRO_define_str{{[px]}} - lineno: 617 macro: __LDBL_REDIR(name,proto) name proto
+#MACRO-NEXT:           DW_MACRO_define_str{{[px]}} - lineno: 618 macro: __LDBL_REDIR1_NTH(name,proto,alias) name proto __THROW
+#MACRO-NEXT:           DW_MACRO_define_str{{[px]}} - lineno: 619 macro: __LDBL_REDIR_NTH(name,proto) name proto __THROW
+#MACRO-NEXT:           DW_MACRO_define_str{{[px]}} - lineno: 620 macro: __LDBL_REDIR2_DECL(name)
+#MACRO-NEXT:           DW_MACRO_define_str{{[px]}} - lineno: 621 macro: __LDBL_REDIR_DECL(name)
+#MACRO-NEXT:           DW_MACRO_define_str{{[px]}} - lineno: 623 macro: __REDIRECT_LDBL(name,proto,alias) __REDIRECT (name, proto, alias)
+#MACRO-NEXT:           DW_MACRO_define_str{{[px]}} - lineno: 624 macro: __REDIRECT_NTH_LDBL(name,proto,alias) __REDIRECT_NTH (name, proto, alias)
+#MACRO-NEXT:           DW_MACRO_define_str{{[px]}} - lineno: 635 macro: __glibc_macro_warning1(message) _Pragma (#message)
+#MACRO-NEXT:           DW_MACRO_define_str{{[px]}} - lineno: 636 macro: __glibc_macro_warning(message) __glibc_macro_warning1 (GCC warning message)
+#MACRO-NEXT:           DW_MACRO_define_str{{[px]}} - lineno: 656 macro: __HAVE_GENERIC_SELECTION 0
+#MACRO-NEXT:           DW_MACRO_define_str{{[px]}} - lineno: 681 macro: __fortified_attr_access(a,o,s)
+#MACRO-NEXT:           DW_MACRO_define_str{{[px]}} - lineno: 682 macro: __attr_access(x)
+#MACRO-NEXT:           DW_MACRO_define_str{{[px]}} - lineno: 683 macro: __attr_access_none(argno)
+#MACRO-NEXT:           DW_MACRO_define_str{{[px]}} - lineno: 693 macro: __attr_dealloc(dealloc,argno)
+#MACRO-NEXT:           DW_MACRO_define_str{{[px]}} - lineno: 694 macro: __attr_dealloc_free
+#MACRO-NEXT:           DW_MACRO_define_str{{[px]}} - lineno: 700 macro: __attribute_returns_twice__ __attribute__ ((__returns_twice__))
+#MACRO-NEXT:         DW_MACRO_end_file
+#MACRO-NEXT:         DW_MACRO_start_file - lineno: 510 filenum: 10
+#MACRO-NEXT:           DW_MACRO_start_file - lineno: 10 filenum: 11
+#MACRO-NEXT:             DW_MACRO_define_str{{[px]}} - lineno: 10 macro: __stub___compat_bdflush
+#MACRO-NEXT:             DW_MACRO_define_str{{[px]}} - lineno: 11 macro: __stub_chflags
+#MACRO-NEXT:             DW_MACRO_define_str{{[px]}} - lineno: 12 macro: __stub_fchflags
+#MACRO-NEXT:             DW_MACRO_define_str{{[px]}} - lineno: 13 macro: __stub_gtty
+#MACRO-NEXT:             DW_MACRO_define_str{{[px]}} - lineno: 14 macro: __stub_revoke
+#MACRO-NEXT:             DW_MACRO_define_str{{[px]}} - lineno: 15 macro: __stub_setlogin
+#MACRO-NEXT:             DW_MACRO_define_str{{[px]}} - lineno: 16 macro: __stub_sigreturn
+#MACRO-NEXT:             DW_MACRO_define_str{{[px]}} - lineno: 17 macro: __stub_stty
+#MACRO-NEXT:           DW_MACRO_end_file
+#MACRO-NEXT:         DW_MACRO_end_file
+#MACRO-NEXT:       DW_MACRO_end_file
+#MACRO-NEXT:       DW_MACRO_undef_str{{[px]}} - lineno: 37 macro: __GLIBC_USE_LIB_EXT2
+#MACRO-NEXT:       DW_MACRO_define_str{{[px]}} - lineno: 40 macro: __GLIBC_USE_LIB_EXT2 1
+#MACRO-NEXT:       DW_MACRO_undef_str{{[px]}} - lineno: 67 macro: __GLIBC_USE_IEC_60559_BFP_EXT
+#MACRO-NEXT:       DW_MACRO_define_str{{[px]}} - lineno: 69 macro: __GLIBC_USE_IEC_60559_BFP_EXT 1
+#MACRO-NEXT:       DW_MACRO_undef_str{{[px]}} - lineno: 73 macro: __GLIBC_USE_IEC_60559_BFP_EXT_C2X
+#MACRO-NEXT:       DW_MACRO_define_str{{[px]}} - lineno: 75 macro: __GLIBC_USE_IEC_60559_BFP_EXT_C2X 1
+#MACRO-NEXT:       DW_MACRO_undef_str{{[px]}} - lineno: 79 macro: __GLIBC_USE_IEC_60559_EXT
+#MACRO-NEXT:       DW_MACRO_define_str{{[px]}} - lineno: 81 macro: __GLIBC_USE_IEC_60559_EXT 1
+#MACRO-NEXT:       DW_MACRO_undef_str{{[px]}} - lineno: 90 macro: __GLIBC_USE_IEC_60559_FUNCS_EXT
+#MACRO-NEXT:       DW_MACRO_define_str{{[px]}} - lineno: 92 macro: __GLIBC_USE_IEC_60559_FUNCS_EXT 1
+#MACRO-NEXT:       DW_MACRO_undef_str{{[px]}} - lineno: 96 macro: __GLIBC_USE_IEC_60559_FUNCS_EXT_C2X
+#MACRO-NEXT:       DW_MACRO_define_str{{[px]}} - lineno: 98 macro: __GLIBC_USE_IEC_60559_FUNCS_EXT_C2X 1
+#MACRO-NEXT:       DW_MACRO_undef_str{{[px]}} - lineno: 105 macro: __GLIBC_USE_IEC_60559_TYPES_EXT
+#MACRO-NEXT:       DW_MACRO_define_str{{[px]}} - lineno: 107 macro: __GLIBC_USE_IEC_60559_TYPES_EXT 1
+#MACRO-NEXT:     DW_MACRO_end_file
+#MACRO-NEXT:     DW_MACRO_define_str{{[px]}} - lineno: 31 macro: __need_size_t
+#MACRO-NEXT:     DW_MACRO_define_str{{[px]}} - lineno: 32 macro: __need_NULL
+#MACRO-NEXT:     DW_MACRO_start_file - lineno: 33 filenum: 12
+#MACRO-NEXT:       DW_MACRO_define_str{{[px]}} - lineno: 44 macro: _SIZE_T
+#MACRO-NEXT:       DW_MACRO_undef_str{{[px]}} - lineno: 48 macro: __need_size_t
+#MACRO-NEXT:       DW_MACRO_undef_str{{[px]}} - lineno: 81 macro: NULL
+#MACRO-NEXT:       DW_MACRO_define_str{{[px]}} - lineno: 84 macro: NULL __null
+#MACRO-NEXT:       DW_MACRO_undef_str{{[px]}} - lineno: 97 macro: __need_NULL
+#MACRO-NEXT:     DW_MACRO_end_file
+#MACRO-NEXT:     DW_MACRO_define_str{{[px]}} - lineno: 35 macro: __need___va_list
+#MACRO-NEXT:     DW_MACRO_start_file - lineno: 36 filenum: 13
+#MACRO-NEXT:       DW_MACRO_define_str{{[px]}} - lineno: 11 macro: __STDARG_H
+#MACRO-NEXT:       DW_MACRO_define_str{{[px]}} - lineno: 15 macro: _VA_LIST
+#MACRO-NEXT:       DW_MACRO_define_str{{[px]}} - lineno: 17 macro: va_start(ap,param) __builtin_va_start(ap, param)
+#MACRO-NEXT:       DW_MACRO_define_str{{[px]}} - lineno: 18 macro: va_end(ap) __builtin_va_end(ap)
+#MACRO-NEXT:       DW_MACRO_define_str{{[px]}} - lineno: 19 macro: va_arg(ap,type) __builtin_va_arg(ap, type)
+#MACRO-NEXT:       DW_MACRO_define_str{{[px]}} - lineno: 24 macro: __va_copy(d,s) __builtin_va_copy(d,s)
+#MACRO-NEXT:       DW_MACRO_define_str{{[px]}} - lineno: 27 macro: va_copy(dest,src) __builtin_va_copy(dest, src)
+#MACRO-NEXT:       DW_MACRO_define_str{{[px]}} - lineno: 31 macro: __GNUC_VA_LIST 1
+#MACRO-NEXT:     DW_MACRO_end_file
+#MACRO-NEXT:     DW_MACRO_start_file - lineno: 38 filenum: 14
+#MACRO-NEXT:       DW_MACRO_define_str{{[px]}} - lineno: 24 macro: _BITS_TYPES_H 1
+#MACRO-NEXT:       DW_MACRO_start_file - lineno: 27 filenum: 5
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 4 macro: __WORDSIZE 64
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 12 macro: __WORDSIZE_TIME64_COMPAT32 1
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 14 macro: __SYSCALL_WORDSIZE 64
+#MACRO-NEXT:       DW_MACRO_end_file
+#MACRO-NEXT:       DW_MACRO_start_file - lineno: 28 filenum: 6
+#MACRO-NEXT:         DW_MACRO_start_file - lineno: 19 filenum: 5
+#MACRO-NEXT:           DW_MACRO_define_str{{[px]}} - lineno: 4 macro: __WORDSIZE 64
+#MACRO-NEXT:           DW_MACRO_define_str{{[px]}} - lineno: 12 macro: __WORDSIZE_TIME64_COMPAT32 1
+#MACRO-NEXT:           DW_MACRO_define_str{{[px]}} - lineno: 14 macro: __SYSCALL_WORDSIZE 64
+#MACRO-NEXT:         DW_MACRO_end_file
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 26 macro: __TIMESIZE __WORDSIZE
+#MACRO-NEXT:       DW_MACRO_end_file
+#MACRO-NEXT:       DW_MACRO_define_str{{[px]}} - lineno: 109 macro: __S16_TYPE short int
+#MACRO-NEXT:       DW_MACRO_define_str{{[px]}} - lineno: 110 macro: __U16_TYPE unsigned short int
+#MACRO-NEXT:       DW_MACRO_define_str{{[px]}} - lineno: 111 macro: __S32_TYPE int
+#MACRO-NEXT:       DW_MACRO_define_str{{[px]}} - lineno: 112 macro: __U32_TYPE unsigned int
+#MACRO-NEXT:       DW_MACRO_define_str{{[px]}} - lineno: 113 macro: __SLONGWORD_TYPE long int
+#MACRO-NEXT:       DW_MACRO_define_str{{[px]}} - lineno: 114 macro: __ULONGWORD_TYPE unsigned long int
+#MACRO-NEXT:       DW_MACRO_define_str{{[px]}} - lineno: 128 macro: __SQUAD_TYPE long int
+#MACRO-NEXT:       DW_MACRO_define_str{{[px]}} - lineno: 129 macro: __UQUAD_TYPE unsigned long int
+#MACRO-NEXT:       DW_MACRO_define_str{{[px]}} - lineno: 130 macro: __SWORD_TYPE long int
+#MACRO-NEXT:       DW_MACRO_define_str{{[px]}} - lineno: 131 macro: __UWORD_TYPE unsigned long int
+#MACRO-NEXT:       DW_MACRO_define_str{{[px]}} - lineno: 132 macro: __SLONG32_TYPE int
+#MACRO-NEXT:       DW_MACRO_define_str{{[px]}} - lineno: 133 macro: __ULONG32_TYPE unsigned int
+#MACRO-NEXT:       DW_MACRO_define_str{{[px]}} - lineno: 134 macro: __S64_TYPE long int
+#MACRO-NEXT:       DW_MACRO_define_str{{[px]}} - lineno: 135 macro: __U64_TYPE unsigned long int
+#MACRO-NEXT:       DW_MACRO_define_str{{[px]}} - lineno: 137 macro: __STD_TYPE typedef
+#MACRO-NEXT:       DW_MACRO_start_file - lineno: 141 filenum: 15
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 24 macro: _BITS_TYPESIZES_H 1
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 34 macro: __SYSCALL_SLONG_TYPE __SLONGWORD_TYPE
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 35 macro: __SYSCALL_ULONG_TYPE __ULONGWORD_TYPE
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 38 macro: __DEV_T_TYPE __UQUAD_TYPE
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 39 macro: __UID_T_TYPE __U32_TYPE
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 40 macro: __GID_T_TYPE __U32_TYPE
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 41 macro: __INO_T_TYPE __SYSCALL_ULONG_TYPE
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 42 macro: __INO64_T_TYPE __UQUAD_TYPE
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 43 macro: __MODE_T_TYPE __U32_TYPE
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 45 macro: __NLINK_T_TYPE __SYSCALL_ULONG_TYPE
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 46 macro: __FSWORD_T_TYPE __SYSCALL_SLONG_TYPE
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 51 macro: __OFF_T_TYPE __SYSCALL_SLONG_TYPE
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 52 macro: __OFF64_T_TYPE __SQUAD_TYPE
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 53 macro: __PID_T_TYPE __S32_TYPE
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 54 macro: __RLIM_T_TYPE __SYSCALL_ULONG_TYPE
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 55 macro: __RLIM64_T_TYPE __UQUAD_TYPE
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 56 macro: __BLKCNT_T_TYPE __SYSCALL_SLONG_TYPE
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 57 macro: __BLKCNT64_T_TYPE __SQUAD_TYPE
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 58 macro: __FSBLKCNT_T_TYPE __SYSCALL_ULONG_TYPE
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 59 macro: __FSBLKCNT64_T_TYPE __UQUAD_TYPE
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 60 macro: __FSFILCNT_T_TYPE __SYSCALL_ULONG_TYPE
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 61 macro: __FSFILCNT64_T_TYPE __UQUAD_TYPE
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 62 macro: __ID_T_TYPE __U32_TYPE
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 63 macro: __CLOCK_T_TYPE __SYSCALL_SLONG_TYPE
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 64 macro: __TIME_T_TYPE __SYSCALL_SLONG_TYPE
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 65 macro: __USECONDS_T_TYPE __U32_TYPE
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 66 macro: __SUSECONDS_T_TYPE __SYSCALL_SLONG_TYPE
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 67 macro: __SUSECONDS64_T_TYPE __SQUAD_TYPE
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 68 macro: __DADDR_T_TYPE __S32_TYPE
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 69 macro: __KEY_T_TYPE __S32_TYPE
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 70 macro: __CLOCKID_T_TYPE __S32_TYPE
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 71 macro: __TIMER_T_TYPE void *
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 72 macro: __BLKSIZE_T_TYPE __SYSCALL_SLONG_TYPE
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 73 macro: __FSID_T_TYPE struct { int __val[2]; }
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 74 macro: __SSIZE_T_TYPE __SWORD_TYPE
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 75 macro: __CPU_MASK_TYPE __SYSCALL_ULONG_TYPE
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 81 macro: __OFF_T_MATCHES_OFF64_T 1
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 84 macro: __INO_T_MATCHES_INO64_T 1
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 87 macro: __RLIM_T_MATCHES_RLIM64_T 1
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 90 macro: __STATFS_MATCHES_STATFS64 1
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 93 macro: __KERNEL_OLD_TIMEVAL_MATCHES_TIMEVAL64 1
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 103 macro: __FD_SETSIZE 1024
+#MACRO-NEXT:       DW_MACRO_end_file
+#MACRO-NEXT:       DW_MACRO_start_file - lineno: 142 filenum: 16
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 24 macro: _BITS_TIME64_H 1
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 30 macro: __TIME64_T_TYPE __TIME_T_TYPE
+#MACRO-NEXT:       DW_MACRO_end_file
+#MACRO-NEXT:       DW_MACRO_undef_str{{[px]}} - lineno: 226 macro: __STD_TYPE
+#MACRO-NEXT:     DW_MACRO_end_file
+#MACRO-NEXT:     DW_MACRO_start_file - lineno: 39 filenum: 17
+#MACRO-NEXT:       DW_MACRO_define_str{{[px]}} - lineno: 2 macro: _____fpos_t_defined 1
+#MACRO-NEXT:       DW_MACRO_start_file - lineno: 5 filenum: 18
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 2 macro: ____mbstate_t_defined 1
+#MACRO-NEXT:       DW_MACRO_end_file
+#MACRO-NEXT:     DW_MACRO_end_file
+#MACRO-NEXT:     DW_MACRO_start_file - lineno: 40 filenum: 19
+#MACRO-NEXT:       DW_MACRO_define_str{{[px]}} - lineno: 2 macro: _____fpos64_t_defined 1
+#MACRO-NEXT:     DW_MACRO_end_file
+#MACRO-NEXT:     DW_MACRO_start_file - lineno: 41 filenum: 20
+#MACRO-NEXT:       DW_MACRO_define_str{{[px]}} - lineno: 2 macro: ____FILE_defined 1
+#MACRO-NEXT:     DW_MACRO_end_file
+#MACRO-NEXT:     DW_MACRO_start_file - lineno: 42 filenum: 21
+#MACRO-NEXT:       DW_MACRO_define_str{{[px]}} - lineno: 2 macro: __FILE_defined 1
+#MACRO-NEXT:     DW_MACRO_end_file
+#MACRO-NEXT:     DW_MACRO_start_file - lineno: 43 filenum: 22
+#MACRO-NEXT:       DW_MACRO_define_str{{[px]}} - lineno: 19 macro: __struct_FILE_defined 1
+#MACRO-NEXT:       DW_MACRO_define_str{{[px]}} - lineno: 102 macro: __getc_unlocked_body(_fp) (__glibc_unlikely ((_fp)->_IO_read_ptr >= (_fp)->_IO_read_end) ? __uflow (_fp) : *(unsigned char *) (_fp)->_IO_read_ptr++)
+#MACRO-NEXT:       DW_MACRO_define_str{{[px]}} - lineno: 106 macro: __putc_unlocked_body(_ch,_fp) (__glibc_unlikely ((_fp)->_IO_write_ptr >= (_fp)->_IO_write_end) ? __overflow (_fp, (unsigned char) (_ch)) : (unsigned char) (*(_fp)->_IO_write_ptr++ = (_ch)))
+#MACRO-NEXT:       DW_MACRO_define_str{{[px]}} - lineno: 111 macro: _IO_EOF_SEEN 0x0010
+#MACRO-NEXT:       DW_MACRO_define_str{{[px]}} - lineno: 112 macro: __feof_unlocked_body(_fp) (((_fp)->_flags & _IO_EOF_SEEN) != 0)
+#MACRO-NEXT:       DW_MACRO_define_str{{[px]}} - lineno: 114 macro: _IO_ERR_SEEN 0x0020
+#MACRO-NEXT:       DW_MACRO_define_str{{[px]}} - lineno: 115 macro: __ferror_unlocked_body(_fp) (((_fp)->_flags & _IO_ERR_SEEN) != 0)
+#MACRO-NEXT:       DW_MACRO_define_str{{[px]}} - lineno: 117 macro: _IO_USER_LOCK 0x8000
+#MACRO-NEXT:     DW_MACRO_end_file
+#MACRO-NEXT:     DW_MACRO_start_file - lineno: 46 filenum: 23
+#MACRO-NEXT:       DW_MACRO_define_str{{[px]}} - lineno: 19 macro: __cookie_io_functions_t_defined 1
+#MACRO-NEXT:     DW_MACRO_end_file
+#MACRO-NEXT:     DW_MACRO_define_str{{[px]}} - lineno: 53 macro: _VA_LIST_DEFINED
+#MACRO-NEXT:     DW_MACRO_define_str{{[px]}} - lineno: 67 macro: __off_t_defined
+#MACRO-NEXT:     DW_MACRO_define_str{{[px]}} - lineno: 71 macro: __off64_t_defined
+#MACRO-NEXT:     DW_MACRO_define_str{{[px]}} - lineno: 78 macro: __ssize_t_defined
+#MACRO-NEXT:     DW_MACRO_define_str{{[px]}} - lineno: 93 macro: _IOFBF 0
+#MACRO-NEXT:     DW_MACRO_define_str{{[px]}} - lineno: 94 macro: _IOLBF 1
+#MACRO-NEXT:     DW_MACRO_define_str{{[px]}} - lineno: 95 macro: _IONBF 2
+#MACRO-NEXT:     DW_MACRO_define_str{{[px]}} - lineno: 99 macro: BUFSIZ 8192
+#MACRO-NEXT:     DW_MACRO_define_str{{[px]}} - lineno: 104 macro: EOF (-1)
+#MACRO-NEXT:     DW_MACRO_define_str{{[px]}} - lineno: 109 macro: SEEK_SET 0
+#MACRO-NEXT:     DW_MACRO_define_str{{[px]}} - lineno: 110 macro: SEEK_CUR 1
+#MACRO-NEXT:     DW_MACRO_define_str{{[px]}} - lineno: 111 macro: SEEK_END 2
+#MACRO-NEXT:     DW_MACRO_define_str{{[px]}} - lineno: 113 macro: SEEK_DATA 3
+#MACRO-NEXT:     DW_MACRO_define_str{{[px]}} - lineno: 114 macro: SEEK_HOLE 4
+#MACRO-NEXT:     DW_MACRO_define_str{{[px]}} - lineno: 120 macro: P_tmpdir "/tmp"
+#MACRO-NEXT:     DW_MACRO_start_file - lineno: 133 filenum: 24
+#MACRO-NEXT:       DW_MACRO_define_str{{[px]}} - lineno: 19 macro: _BITS_STDIO_LIM_H 1
+#MACRO-NEXT:       DW_MACRO_define_str{{[px]}} - lineno: 25 macro: L_tmpnam 20
+#MACRO-NEXT:       DW_MACRO_define_str{{[px]}} - lineno: 26 macro: TMP_MAX 238328
+#MACRO-NEXT:       DW_MACRO_define_str{{[px]}} - lineno: 27 macro: FILENAME_MAX 4096
+#MACRO-NEXT:       DW_MACRO_define_str{{[px]}} - lineno: 30 macro: L_ctermid 9
+#MACRO-NEXT:       DW_MACRO_define_str{{[px]}} - lineno: 32 macro: L_cuserid 9
+#MACRO-NEXT:       DW_MACRO_undef_str{{[px]}} - lineno: 36 macro: FOPEN_MAX
+#MACRO-NEXT:       DW_MACRO_define_str{{[px]}} - lineno: 37 macro: FOPEN_MAX 16
+#MACRO-NEXT:     DW_MACRO_end_file
+#MACRO-NEXT:     DW_MACRO_define_str{{[px]}} - lineno: 138 macro: _PRINTF_NAN_LEN_MAX 4
+#MACRO-NEXT:     DW_MACRO_define_str{{[px]}} - lineno: 147 macro: stdin stdin
+#MACRO-NEXT:     DW_MACRO_define_str{{[px]}} - lineno: 148 macro: stdout stdout
+#MACRO-NEXT:     DW_MACRO_define_str{{[px]}} - lineno: 149 macro: stderr stderr
+#MACRO-NEXT:     DW_MACRO_define_str{{[px]}} - lineno: 164 macro: RENAME_NOREPLACE (1 << 0)
+#MACRO-NEXT:     DW_MACRO_define_str{{[px]}} - lineno: 165 macro: RENAME_EXCHANGE (1 << 1)
+#MACRO-NEXT:     DW_MACRO_define_str{{[px]}} - lineno: 166 macro: RENAME_WHITEOUT (1 << 2)
+#MACRO-NEXT:     DW_MACRO_undef_str{{[px]}} - lineno: 180 macro: __attr_dealloc_fclose
+#MACRO-NEXT:     DW_MACRO_define_str{{[px]}} - lineno: 181 macro: __attr_dealloc_fclose __attr_dealloc (fclose, 1)
+#MACRO-NEXT:     DW_MACRO_start_file - lineno: 430 filenum: 25
+#MACRO-NEXT:       DW_MACRO_define_str{{[px]}} - lineno: 20 macro: _BITS_FLOATN_H
+#MACRO-NEXT:       DW_MACRO_define_str{{[px]}} - lineno: 34 macro: __HAVE_FLOAT128 0
+#MACRO-NEXT:       DW_MACRO_define_str{{[px]}} - lineno: 42 macro: __HAVE_DISTINCT_FLOAT128 0
+#MACRO-NEXT:       DW_MACRO_define_str{{[px]}} - lineno: 48 macro: __HAVE_FLOAT64X 1
+#MACRO-NEXT:       DW_MACRO_define_str{{[px]}} - lineno: 54 macro: __HAVE_FLOAT64X_LONG_DOUBLE 1
+#MACRO-NEXT:       DW_MACRO_start_file - lineno: 119 filenum: 26
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 21 macro: _BITS_FLOATN_COMMON_H
+#MACRO-NEXT:         DW_MACRO_start_file - lineno: 24 filenum: 9
+#MACRO-NEXT:           DW_MACRO_define_str{{[px]}} - lineno: 21 macro: __LDOUBLE_REDIRECTS_TO_FLOAT128_ABI 0
+#MACRO-NEXT:         DW_MACRO_end_file
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 34 macro: __HAVE_FLOAT16 0
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 35 macro: __HAVE_FLOAT32 1
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 36 macro: __HAVE_FLOAT64 1
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 37 macro: __HAVE_FLOAT32X 1
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 38 macro: __HAVE_FLOAT128X 0
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 52 macro: __HAVE_DISTINCT_FLOAT16 __HAVE_FLOAT16
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 53 macro: __HAVE_DISTINCT_FLOAT32 0
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 54 macro: __HAVE_DISTINCT_FLOAT64 0
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 55 macro: __HAVE_DISTINCT_FLOAT32X 0
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 56 macro: __HAVE_DISTINCT_FLOAT64X 0
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 57 macro: __HAVE_DISTINCT_FLOAT128X __HAVE_FLOAT128X
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 63 macro: __HAVE_FLOAT128_UNLIKE_LDBL (__HAVE_DISTINCT_FLOAT128 && __LDBL_MANT_DIG__ != 113)
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 72 macro: __HAVE_FLOATN_NOT_TYPEDEF 0
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 91 macro: __f32(x) x##f
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 102 macro: __f64(x) x
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 111 macro: __f32x(x) x
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 120 macro: __f64x(x) x##l
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 149 macro: __CFLOAT32 _Complex float
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 160 macro: __CFLOAT64 _Complex double
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 169 macro: __CFLOAT32X _Complex double
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 178 macro: __CFLOAT64X _Complex long double
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 218 macro: __builtin_huge_valf32() (__builtin_huge_valf ())
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 219 macro: __builtin_inff32() (__builtin_inff ())
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 220 macro: __builtin_nanf32(x) (__builtin_nanf (x))
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 221 macro: __builtin_nansf32(x) (__builtin_nansf (x))
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 255 macro: __builtin_huge_valf64() (__builtin_huge_val ())
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 256 macro: __builtin_inff64() (__builtin_inf ())
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 257 macro: __builtin_nanf64(x) (__builtin_nan (x))
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 258 macro: __builtin_nansf64(x) (__builtin_nans (x))
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 272 macro: __builtin_huge_valf32x() (__builtin_huge_val ())
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 273 macro: __builtin_inff32x() (__builtin_inf ())
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 274 macro: __builtin_nanf32x(x) (__builtin_nan (x))
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 275 macro: __builtin_nansf32x(x) (__builtin_nans (x))
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 289 macro: __builtin_huge_valf64x() (__builtin_huge_vall ())
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 290 macro: __builtin_inff64x() (__builtin_infl ())
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 291 macro: __builtin_nanf64x(x) (__builtin_nanl (x))
+#MACRO-NEXT:         DW_MACRO_define_str{{[px]}} - lineno: 292 macro: __builtin_nansf64x(x) (__builtin_nansl (x))
+#MACRO-NEXT:       DW_MACRO_end_file
+#MACRO-NEXT:     DW_MACRO_end_file
+#MACRO-NEXT:   DW_MACRO_end_file
+#MACRO-NEXT: DW_MACRO_end_file
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __llvm__ 1
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __clang__ 1
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __clang_major__ 14
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __clang_minor__ 0
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __clang_patchlevel__ 0
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __clang_version__ "14.0.0 "
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __GNUC__ 4
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __GNUC_MINOR__ 2
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __GNUC_PATCHLEVEL__ 1
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __GXX_ABI_VERSION 1002
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __GNUG__ 4
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __GXX_WEAK__ 1
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __ATOMIC_RELAXED 0
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __ATOMIC_CONSUME 1
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __ATOMIC_ACQUIRE 2
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __ATOMIC_RELEASE 3
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __ATOMIC_ACQ_REL 4
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __ATOMIC_SEQ_CST 5
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __OPENCL_MEMORY_SCOPE_WORK_ITEM 0
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __OPENCL_MEMORY_SCOPE_WORK_GROUP 1
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __OPENCL_MEMORY_SCOPE_DEVICE 2
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __OPENCL_MEMORY_SCOPE_ALL_SVM_DEVICES 3
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __OPENCL_MEMORY_SCOPE_SUB_GROUP 4
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __PRAGMA_REDEFINE_EXTNAME 1
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __VERSION__ "Ubuntu Clang 14.0.0"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __GXX_EXPERIMENTAL_CXX0X__ 1
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __OBJC_BOOL_IS_BOOL 0
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __cpp_rtti 199711L
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __cpp_exceptions 199711L
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __cpp_unicode_characters 200704L
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __cpp_raw_strings 200710L
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __cpp_unicode_literals 200710L
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __cpp_user_defined_literals 200809L
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __cpp_lambdas 200907L
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __cpp_constexpr 201304L
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __cpp_constexpr_in_decltype 201711L
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __cpp_range_based_for 200907
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __cpp_static_assert 200410
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __cpp_decltype 200707L
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __cpp_attributes 200809L
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __cpp_rvalue_references 200610L
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __cpp_variadic_templates 200704L
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __cpp_initializer_lists 200806L
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __cpp_delegating_constructors 200604L
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __cpp_nsdmi 200809L
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __cpp_inheriting_constructors 201511L
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __cpp_ref_qualifiers 200710L
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __cpp_alias_templates 200704L
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __cpp_threadsafe_static_init 200806L
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __cpp_binary_literals 201304L
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __cpp_digit_separators 201309L
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __cpp_init_captures 201304L
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __cpp_generic_lambdas 201304L
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __cpp_decltype_auto 201304L
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __cpp_return_type_deduction 201304L
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __cpp_aggregate_nsdmi 201304L
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __cpp_variable_templates 201304L
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __cpp_impl_destroying_delete 201806L
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __CONSTANT_CFSTRINGS__ 1
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __EXCEPTIONS 1
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __GXX_RTTI 1
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __DEPRECATED 1
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __private_extern__ extern
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __clang_literal_encoding__ "UTF-8"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __clang_wide_literal_encoding__ "UTF-32"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __ORDER_LITTLE_ENDIAN__ 1234
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __ORDER_BIG_ENDIAN__ 4321
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __ORDER_PDP_ENDIAN__ 3412
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __BYTE_ORDER__ __ORDER_LITTLE_ENDIAN__
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __LITTLE_ENDIAN__ 1
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: _LP64 1
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __LP64__ 1
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __CHAR_BIT__ 8
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __BOOL_WIDTH__ 8
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __SHRT_WIDTH__ 16
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __INT_WIDTH__ 32
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __LONG_WIDTH__ 64
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __LLONG_WIDTH__ 64
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __BITINT_MAXWIDTH__ 128
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __SCHAR_MAX__ 127
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __SHRT_MAX__ 32767
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __INT_MAX__ 2147483647
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __LONG_MAX__ 9223372036854775807L
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __LONG_LONG_MAX__ 9223372036854775807LL
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __WCHAR_MAX__ 2147483647
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __WCHAR_WIDTH__ 32
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __WINT_MAX__ 4294967295U
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __WINT_WIDTH__ 32
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __INTMAX_MAX__ 9223372036854775807L
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __INTMAX_WIDTH__ 64
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __SIZE_MAX__ 18446744073709551615UL
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __SIZE_WIDTH__ 64
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINTMAX_MAX__ 18446744073709551615UL
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINTMAX_WIDTH__ 64
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __PTRDIFF_MAX__ 9223372036854775807L
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __PTRDIFF_WIDTH__ 64
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __INTPTR_MAX__ 9223372036854775807L
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __INTPTR_WIDTH__ 64
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINTPTR_MAX__ 18446744073709551615UL
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINTPTR_WIDTH__ 64
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __SIZEOF_DOUBLE__ 8
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __SIZEOF_FLOAT__ 4
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __SIZEOF_INT__ 4
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __SIZEOF_LONG__ 8
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __SIZEOF_LONG_DOUBLE__ 16
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __SIZEOF_LONG_LONG__ 8
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __SIZEOF_POINTER__ 8
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __SIZEOF_SHORT__ 2
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __SIZEOF_PTRDIFF_T__ 8
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __SIZEOF_SIZE_T__ 8
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __SIZEOF_WCHAR_T__ 4
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __SIZEOF_WINT_T__ 4
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __SIZEOF_INT128__ 16
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __INTMAX_TYPE__ long int
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __INTMAX_FMTd__ "ld"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __INTMAX_FMTi__ "li"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __INTMAX_C_SUFFIX__ L
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINTMAX_TYPE__ long unsigned int
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINTMAX_FMTo__ "lo"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINTMAX_FMTu__ "lu"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINTMAX_FMTx__ "lx"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINTMAX_FMTX__ "lX"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINTMAX_C_SUFFIX__ UL
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __PTRDIFF_TYPE__ long int
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __PTRDIFF_FMTd__ "ld"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __PTRDIFF_FMTi__ "li"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __INTPTR_TYPE__ long int
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __INTPTR_FMTd__ "ld"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __INTPTR_FMTi__ "li"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __SIZE_TYPE__ long unsigned int
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __SIZE_FMTo__ "lo"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __SIZE_FMTu__ "lu"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __SIZE_FMTx__ "lx"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __SIZE_FMTX__ "lX"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __WCHAR_TYPE__ int
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __WINT_TYPE__ unsigned int
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __SIG_ATOMIC_MAX__ 2147483647
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __SIG_ATOMIC_WIDTH__ 32
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __CHAR16_TYPE__ unsigned short
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __CHAR32_TYPE__ unsigned int
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINTPTR_TYPE__ long unsigned int
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINTPTR_FMTo__ "lo"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINTPTR_FMTu__ "lu"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINTPTR_FMTx__ "lx"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINTPTR_FMTX__ "lX"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __FLT_DENORM_MIN__ 1.40129846e-45F
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __FLT_HAS_DENORM__ 1
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __FLT_DIG__ 6
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __FLT_DECIMAL_DIG__ 9
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __FLT_EPSILON__ 1.19209290e-7F
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __FLT_HAS_INFINITY__ 1
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __FLT_HAS_QUIET_NAN__ 1
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __FLT_MANT_DIG__ 24
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __FLT_MAX_10_EXP__ 38
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __FLT_MAX_EXP__ 128
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __FLT_MAX__ 3.40282347e+38F
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __FLT_MIN_10_EXP__ (-37)
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __FLT_MIN_EXP__ (-125)
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __FLT_MIN__ 1.17549435e-38F
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __DBL_DENORM_MIN__ 4.9406564584124654e-324
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __DBL_HAS_DENORM__ 1
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __DBL_DIG__ 15
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __DBL_DECIMAL_DIG__ 17
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __DBL_EPSILON__ 2.2204460492503131e-16
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __DBL_HAS_INFINITY__ 1
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __DBL_HAS_QUIET_NAN__ 1
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __DBL_MANT_DIG__ 53
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __DBL_MAX_10_EXP__ 308
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __DBL_MAX_EXP__ 1024
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __DBL_MAX__ 1.7976931348623157e+308
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __DBL_MIN_10_EXP__ (-307)
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __DBL_MIN_EXP__ (-1021)
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __DBL_MIN__ 2.2250738585072014e-308
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __LDBL_DENORM_MIN__ 3.64519953188247460253e-4951L
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __LDBL_HAS_DENORM__ 1
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __LDBL_DIG__ 18
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __LDBL_DECIMAL_DIG__ 21
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __LDBL_EPSILON__ 1.08420217248550443401e-19L
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __LDBL_HAS_INFINITY__ 1
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __LDBL_HAS_QUIET_NAN__ 1
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __LDBL_MANT_DIG__ 64
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __LDBL_MAX_10_EXP__ 4932
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __LDBL_MAX_EXP__ 16384
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __LDBL_MAX__ 1.18973149535723176502e+4932L
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __LDBL_MIN_10_EXP__ (-4931)
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __LDBL_MIN_EXP__ (-16381)
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __LDBL_MIN__ 3.36210314311209350626e-4932L
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __POINTER_WIDTH__ 64
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __BIGGEST_ALIGNMENT__ 16
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __WINT_UNSIGNED__ 1
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __INT8_TYPE__ signed char
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __INT8_FMTd__ "hhd"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __INT8_FMTi__ "hhi"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __INT8_C_SUFFIX__
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __INT16_TYPE__ short
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __INT16_FMTd__ "hd"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __INT16_FMTi__ "hi"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __INT16_C_SUFFIX__
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __INT32_TYPE__ int
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __INT32_FMTd__ "d"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __INT32_FMTi__ "i"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __INT32_C_SUFFIX__
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __INT64_TYPE__ long int
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __INT64_FMTd__ "ld"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __INT64_FMTi__ "li"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __INT64_C_SUFFIX__ L
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINT8_TYPE__ unsigned char
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINT8_FMTo__ "hho"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINT8_FMTu__ "hhu"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINT8_FMTx__ "hhx"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINT8_FMTX__ "hhX"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINT8_C_SUFFIX__
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINT8_MAX__ 255
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __INT8_MAX__ 127
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINT16_TYPE__ unsigned short
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINT16_FMTo__ "ho"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINT16_FMTu__ "hu"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINT16_FMTx__ "hx"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINT16_FMTX__ "hX"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINT16_C_SUFFIX__
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINT16_MAX__ 65535
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __INT16_MAX__ 32767
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINT32_TYPE__ unsigned int
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINT32_FMTo__ "o"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINT32_FMTu__ "u"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINT32_FMTx__ "x"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINT32_FMTX__ "X"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINT32_C_SUFFIX__ U
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINT32_MAX__ 4294967295U
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __INT32_MAX__ 2147483647
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINT64_TYPE__ long unsigned int
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINT64_FMTo__ "lo"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINT64_FMTu__ "lu"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINT64_FMTx__ "lx"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINT64_FMTX__ "lX"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINT64_C_SUFFIX__ UL
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINT64_MAX__ 18446744073709551615UL
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __INT64_MAX__ 9223372036854775807L
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __INT_LEAST8_TYPE__ signed char
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __INT_LEAST8_MAX__ 127
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __INT_LEAST8_WIDTH__ 8
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __INT_LEAST8_FMTd__ "hhd"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __INT_LEAST8_FMTi__ "hhi"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINT_LEAST8_TYPE__ unsigned char
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINT_LEAST8_MAX__ 255
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINT_LEAST8_FMTo__ "hho"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINT_LEAST8_FMTu__ "hhu"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINT_LEAST8_FMTx__ "hhx"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINT_LEAST8_FMTX__ "hhX"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __INT_LEAST16_TYPE__ short
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __INT_LEAST16_MAX__ 32767
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __INT_LEAST16_WIDTH__ 16
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __INT_LEAST16_FMTd__ "hd"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __INT_LEAST16_FMTi__ "hi"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINT_LEAST16_TYPE__ unsigned short
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINT_LEAST16_MAX__ 65535
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINT_LEAST16_FMTo__ "ho"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINT_LEAST16_FMTu__ "hu"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINT_LEAST16_FMTx__ "hx"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINT_LEAST16_FMTX__ "hX"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __INT_LEAST32_TYPE__ int
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __INT_LEAST32_MAX__ 2147483647
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __INT_LEAST32_WIDTH__ 32
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __INT_LEAST32_FMTd__ "d"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __INT_LEAST32_FMTi__ "i"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINT_LEAST32_TYPE__ unsigned int
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINT_LEAST32_MAX__ 4294967295U
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINT_LEAST32_FMTo__ "o"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINT_LEAST32_FMTu__ "u"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINT_LEAST32_FMTx__ "x"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINT_LEAST32_FMTX__ "X"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __INT_LEAST64_TYPE__ long int
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __INT_LEAST64_MAX__ 9223372036854775807L
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __INT_LEAST64_WIDTH__ 64
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __INT_LEAST64_FMTd__ "ld"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __INT_LEAST64_FMTi__ "li"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINT_LEAST64_TYPE__ long unsigned int
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINT_LEAST64_MAX__ 18446744073709551615UL
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINT_LEAST64_FMTo__ "lo"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINT_LEAST64_FMTu__ "lu"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINT_LEAST64_FMTx__ "lx"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINT_LEAST64_FMTX__ "lX"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __INT_FAST8_TYPE__ signed char
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __INT_FAST8_MAX__ 127
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __INT_FAST8_WIDTH__ 8
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __INT_FAST8_FMTd__ "hhd"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __INT_FAST8_FMTi__ "hhi"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINT_FAST8_TYPE__ unsigned char
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINT_FAST8_MAX__ 255
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINT_FAST8_FMTo__ "hho"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINT_FAST8_FMTu__ "hhu"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINT_FAST8_FMTx__ "hhx"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINT_FAST8_FMTX__ "hhX"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __INT_FAST16_TYPE__ short
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __INT_FAST16_MAX__ 32767
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __INT_FAST16_WIDTH__ 16
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __INT_FAST16_FMTd__ "hd"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __INT_FAST16_FMTi__ "hi"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINT_FAST16_TYPE__ unsigned short
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINT_FAST16_MAX__ 65535
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINT_FAST16_FMTo__ "ho"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINT_FAST16_FMTu__ "hu"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINT_FAST16_FMTx__ "hx"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINT_FAST16_FMTX__ "hX"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __INT_FAST32_TYPE__ int
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __INT_FAST32_MAX__ 2147483647
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __INT_FAST32_WIDTH__ 32
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __INT_FAST32_FMTd__ "d"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __INT_FAST32_FMTi__ "i"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINT_FAST32_TYPE__ unsigned int
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINT_FAST32_MAX__ 4294967295U
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINT_FAST32_FMTo__ "o"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINT_FAST32_FMTu__ "u"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINT_FAST32_FMTx__ "x"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINT_FAST32_FMTX__ "X"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __INT_FAST64_TYPE__ long int
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __INT_FAST64_MAX__ 9223372036854775807L
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __INT_FAST64_WIDTH__ 64
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __INT_FAST64_FMTd__ "ld"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __INT_FAST64_FMTi__ "li"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINT_FAST64_TYPE__ long unsigned int
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINT_FAST64_MAX__ 18446744073709551615UL
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINT_FAST64_FMTo__ "lo"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINT_FAST64_FMTu__ "lu"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINT_FAST64_FMTx__ "lx"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __UINT_FAST64_FMTX__ "lX"
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __USER_LABEL_PREFIX__
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __FINITE_MATH_ONLY__ 0
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __GNUC_GNU_INLINE__ 1
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __GCC_ATOMIC_TEST_AND_SET_TRUEVAL 1
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __CLANG_ATOMIC_BOOL_LOCK_FREE 2
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __CLANG_ATOMIC_CHAR_LOCK_FREE 2
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __CLANG_ATOMIC_CHAR16_T_LOCK_FREE 2
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __CLANG_ATOMIC_CHAR32_T_LOCK_FREE 2
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __CLANG_ATOMIC_WCHAR_T_LOCK_FREE 2
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __CLANG_ATOMIC_SHORT_LOCK_FREE 2
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __CLANG_ATOMIC_INT_LOCK_FREE 2
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __CLANG_ATOMIC_LONG_LOCK_FREE 2
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __CLANG_ATOMIC_LLONG_LOCK_FREE 2
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __CLANG_ATOMIC_POINTER_LOCK_FREE 2
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __GCC_ATOMIC_BOOL_LOCK_FREE 2
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __GCC_ATOMIC_CHAR_LOCK_FREE 2
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __GCC_ATOMIC_CHAR16_T_LOCK_FREE 2
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __GCC_ATOMIC_CHAR32_T_LOCK_FREE 2
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __GCC_ATOMIC_WCHAR_T_LOCK_FREE 2
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __GCC_ATOMIC_SHORT_LOCK_FREE 2
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __GCC_ATOMIC_INT_LOCK_FREE 2
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __GCC_ATOMIC_LONG_LOCK_FREE 2
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __GCC_ATOMIC_LLONG_LOCK_FREE 2
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __GCC_ATOMIC_POINTER_LOCK_FREE 2
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __NO_INLINE__ 1
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __PIC__ 2
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __pic__ 2
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __PIE__ 2
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __pie__ 2
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __FLT_EVAL_METHOD__ 0
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __FLT_RADIX__ 2
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __DECIMAL_DIG__ __LDBL_DECIMAL_DIG__
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __GLIBCXX_TYPE_INT_N_0 __int128
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __GLIBCXX_BITSIZE_INT_N_0 128
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __GCC_ASM_FLAG_OUTPUTS__ 1
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __code_model_small__ 1
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __amd64__ 1
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __amd64 1
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __x86_64 1
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __x86_64__ 1
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __SEG_GS 1
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __SEG_FS 1
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __seg_gs __attribute__((address_space(256)))
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __seg_fs __attribute__((address_space(257)))
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __k8 1
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __k8__ 1
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __tune_k8__ 1
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __REGISTER_PREFIX__
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __NO_MATH_INLINES 1
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __FXSR__ 1
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __SSE2__ 1
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __SSE2_MATH__ 1
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __SSE__ 1
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __SSE_MATH__ 1
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __MMX__ 1
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __GCC_HAVE_SYNC_COMPARE_AND_SWAP_1 1
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __GCC_HAVE_SYNC_COMPARE_AND_SWAP_2 1
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __GCC_HAVE_SYNC_COMPARE_AND_SWAP_4 1
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __GCC_HAVE_SYNC_COMPARE_AND_SWAP_8 1
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __SIZEOF_FLOAT128__ 16
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: unix 1
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __unix 1
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __unix__ 1
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: linux 1
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __linux 1
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __linux__ 1
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __ELF__ 1
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __gnu_linux__ 1
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: _GNU_SOURCE 1
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __FLOAT128__ 1
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __STDC__ 1
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __STDC_HOSTED__ 1
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __cplusplus 201402L
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __STDCPP_DEFAULT_NEW_ALIGNMENT__ 16UL
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __STDCPP_THREADS__ 1
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __STDC_UTF_16__ 1
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __STDC_UTF_32__ 1
+#MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __GCC_HAVE_DWARF2_CFI_ASM 1
+
+#NAMES: .debug_names contents
+#NAMES: Name Index

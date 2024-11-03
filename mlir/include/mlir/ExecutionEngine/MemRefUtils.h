@@ -17,7 +17,6 @@
 #include "mlir/ExecutionEngine/CRunnerUtils.h"
 #include "mlir/Support/LLVM.h"
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
 
 #include "llvm/Support/raw_ostream.h"
@@ -29,6 +28,7 @@
 #include <functional>
 #include <initializer_list>
 #include <memory>
+#include <optional>
 
 #ifndef MLIR_EXECUTIONENGINE_MEMREFUTILS_H_
 #define MLIR_EXECUTIONENGINE_MEMREFUTILS_H_
@@ -101,7 +101,7 @@ makeStridedMemRefDescriptor(T *ptr, T *alignedPtr, ArrayRef<int64_t> shape = {},
 template <typename T>
 std::pair<T *, T *>
 allocAligned(size_t nElements, AllocFunType allocFun = &::malloc,
-             llvm::Optional<uint64_t> alignment = llvm::Optional<uint64_t>()) {
+             std::optional<uint64_t> alignment = std::optional<uint64_t>()) {
   assert(sizeof(T) <= UINT_MAX && "Elemental type overflows");
   auto size = nElements * sizeof(T);
   auto desiredAlignment = alignment.value_or(nextPowerOf2(sizeof(T)));
@@ -146,7 +146,7 @@ public:
   OwningMemRef(
       ArrayRef<int64_t> shape, ArrayRef<int64_t> shapeAlloc = {},
       ElementWiseVisitor<T> init = {},
-      llvm::Optional<uint64_t> alignment = llvm::Optional<uint64_t>(),
+      std::optional<uint64_t> alignment = std::optional<uint64_t>(),
       AllocFunType allocFun = &::malloc,
       std::function<void(StridedMemRefType<T, Rank>)> freeFun =
           [](StridedMemRefType<T, Rank> descriptor) {
@@ -191,7 +191,7 @@ public:
     freeFunc = other.freeFunc;
     descriptor = other.descriptor;
     other.freeFunc = nullptr;
-    memset(0, &other.descriptor, sizeof(other.descriptor));
+    memset(&other.descriptor, 0, sizeof(other.descriptor));
   }
   OwningMemRef(OwningMemRef &&other) { *this = std::move(other); }
 

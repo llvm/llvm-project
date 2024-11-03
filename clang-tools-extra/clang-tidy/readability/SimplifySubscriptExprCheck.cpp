@@ -13,9 +13,7 @@
 
 using namespace clang::ast_matchers;
 
-namespace clang {
-namespace tidy {
-namespace readability {
+namespace clang::tidy::readability {
 
 static const char KDefaultTypes[] =
     "::std::basic_string;::std::basic_string_view;::std::vector;::std::array";
@@ -66,6 +64,4 @@ void SimplifySubscriptExprCheck::storeOptions(
   Options.store(Opts, "Types", utils::options::serializeStringList(Types));
 }
 
-} // namespace readability
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::readability

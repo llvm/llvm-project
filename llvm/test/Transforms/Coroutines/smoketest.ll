@@ -22,7 +22,7 @@
 ; CHECK-ALL: CoroSplitPass
 ; CHECK-ALL: CoroCleanupPass
 
-declare token @llvm.coro.id(i32, i8*, i8*, i8*)
+declare token @llvm.coro.id(i32, ptr, ptr, ptr)
 
 define void @foo() {
   ret void

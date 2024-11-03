@@ -999,6 +999,13 @@ nub_bool_t MachTask::DeallocateMemory(nub_addr_t addr) {
   return false;
 }
 
+//----------------------------------------------------------------------
+// MachTask::ClearAllocations
+//----------------------------------------------------------------------
+void MachTask::ClearAllocations() {
+  m_allocations.clear();
+}
+
 void MachTask::TaskPortChanged(task_t task)
 {
   m_task = task;

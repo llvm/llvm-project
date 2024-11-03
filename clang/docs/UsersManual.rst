@@ -1746,6 +1746,47 @@ floating point semantic models: precise (the default), strict, and fast.
    has no effect because the optimizer is prohibited from making unsafe
    transformations.
 
+.. option:: -fexcess-precision:
+
+   The C and C++ standards allow floating-point expressions to be computed as if
+   intermediate results had more precision (and/or a wider range) than the type
+   of the expression strictly allows.  This is called excess precision
+   arithmetic.
+   Excess precision arithmetic can improve the accuracy of results (although not
+   always), and it can make computation significantly faster if the target lacks
+   direct hardware support for arithmetic in a particular type.  However, it can
+   also undermine strict floating-point reproducibility.
+
+   Under the standards, assignments and explicit casts force the operand to be
+   converted to its formal type, discarding any excess precision.  Because data
+   can only flow between statements via an assignment, this means that the use
+   of excess precision arithmetic is a reliable local property of a single
+   statement, and results do not change based on optimization.  However, when
+   excess precision arithmetic is in use, Clang does not guarantee strict
+   reproducibility, and future compiler releases may recognize more
+   opportunities to use excess precision arithmetic, e.g. with floating-point
+   builtins.
+
+   Clang does not use excess precision arithmetic for most types or on most
+   targets. For example, even on pre-SSE X86 targets where ``float`` and
+   ``double`` computations must be performed in the 80-bit X87 format, Clang
+   rounds all intermediate results correctly for their type.  Clang currently
+   uses excess precision arithmetic by default only for the following types and
+   targets:
+
+   * ``_Float16`` on X86 targets without ``AVX512-FP16``.
+
+   The ``-fexcess-precision=<value>`` option can be used to control the use of
+   excess precision arithmetic.  Valid values are:
+
+   * ``standard`` - The default.  Allow the use of excess precision arithmetic
+     under the constraints of the C and C++ standards. Has no effect except on
+     the types and targets listed above.
+   * ``fast`` - Accepted for GCC compatibility, but currently treated as an
+     alias for ``standard``.
+   * ``16`` - Forces ``_Float16`` operations to be emitted without using excess
+     precision arithmetic.
+
 .. _crtfastmath.o:
 
 A note about ``crtfastmath.o``

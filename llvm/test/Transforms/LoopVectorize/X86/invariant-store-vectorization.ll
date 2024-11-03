@@ -72,12 +72,12 @@ define i32 @inv_val_store_to_inv_address_with_reduction(ptr %a, i64 %n, ptr %b) 
 ; CHECK-NEXT:    [[INDEX15:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL]], [[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT18:%.*]], [[VEC_EPILOG_VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI16:%.*]] = phi <8 x i32> [ [[TMP11]], [[VEC_EPILOG_PH]] ], [ [[TMP13:%.*]], [[VEC_EPILOG_VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 [[INDEX15]]
-; CHECK-NEXT:    [[WIDE_LOAD17:%.*]] = load <8 x i32>, ptr [[TMP12]], align 8, !alias.scope !7
+; CHECK-NEXT:    [[WIDE_LOAD17:%.*]] = load <8 x i32>, ptr [[TMP12]], align 8, !alias.scope !8
 ; CHECK-NEXT:    [[TMP13]] = add <8 x i32> [[VEC_PHI16]], [[WIDE_LOAD17]]
-; CHECK-NEXT:    store i32 [[NTRUNC]], ptr [[A]], align 4, !alias.scope !10, !noalias !7
+; CHECK-NEXT:    store i32 [[NTRUNC]], ptr [[A]], align 4, !alias.scope !11, !noalias !8
 ; CHECK-NEXT:    [[INDEX_NEXT18]] = add nuw i64 [[INDEX15]], 8
 ; CHECK-NEXT:    [[TMP14:%.*]] = icmp eq i64 [[INDEX_NEXT18]], [[N_VEC13]]
-; CHECK-NEXT:    br i1 [[TMP14]], label [[VEC_EPILOG_MIDDLE_BLOCK:%.*]], label [[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP12:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP14]], label [[VEC_EPILOG_MIDDLE_BLOCK:%.*]], label [[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP13:![0-9]+]]
 ; CHECK:       vec.epilog.middle.block:
 ; CHECK-NEXT:    [[TMP15:%.*]] = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> [[TMP13]])
 ; CHECK-NEXT:    [[CMP_N14:%.*]] = icmp eq i64 [[SMAX2]], [[N_VEC13]]

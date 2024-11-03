@@ -17,9 +17,7 @@
 
 using namespace clang::ast_matchers;
 
-namespace clang {
-namespace tidy {
-namespace cppcoreguidelines {
+namespace clang::tidy::cppcoreguidelines {
 
 const internal::VariadicDynCastAllOfMatcher<Stmt, VAArgExpr> VAArgExpr;
 
@@ -193,6 +191,4 @@ void ProTypeVarargCheck::check(const MatchFinder::MatchResult &Result) {
   }
 }
 
-} // namespace cppcoreguidelines
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::cppcoreguidelines

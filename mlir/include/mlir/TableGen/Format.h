@@ -44,7 +44,6 @@ public:
     None,
     Custom,  // For custom placeholders
     Builder, // For the $_builder placeholder
-    Op,      // For the $_op placeholder
     Self,    // For the $_self placeholder
   };
 
@@ -58,7 +57,6 @@ public:
 
   // Setters for builtin placeholders
   FmtContext &withBuilder(Twine subst);
-  FmtContext &withOp(Twine subst);
   FmtContext &withSelf(Twine subst);
 
   std::optional<StringRef> getSubstFor(PHKind placeholder) const;

@@ -13,7 +13,7 @@ define double @add(double %a, double %b) {
 }
 
 ; DXC: - Name:            SFI0
-; DXC-NEXT:     Size:            16
+; DXC-NEXT:     Size:            8
 ; DXC-NEXT:     Flags:
 ; DXC-NEXT:       Doubles:         true
 ; DXC-NOT:   {{[A-Za-z]+: +true}}

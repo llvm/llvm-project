@@ -56,6 +56,19 @@ program main
   enddo
   !$omp end target
 
+  !$omp target thread_limit(4)
+  do i = 1, N
+     a = 3.14
+  enddo
+  !$omp end target
+
+  !ERROR: At most one THREAD_LIMIT clause can appear on the TARGET directive
+  !$omp target thread_limit(4) thread_limit(8)
+  do i = 1, N
+     a = 3.14
+  enddo
+  !$omp end target
+
   !$omp teams num_teams(3) thread_limit(10) default(shared) private(i) shared(a)
   do i = 1, N
      a = 3.14
@@ -148,6 +161,14 @@ program main
 
   !ERROR: Only the FROM, RELEASE, DELETE map types are permitted for MAP clauses on the TARGET EXIT DATA directive
   !$omp target exit data map(to:a)
+
+  !$omp target update if(.true.) device(1) to(a) from(b) depend(inout:c) nowait
+
+  !ERROR: At most one IF clause can appear on the TARGET UPDATE directive
+  !$omp target update to(a) if(.true.) if(.false.)
+
+  !ERROR: At most one DEVICE clause can appear on the TARGET UPDATE directive
+  !$omp target update device(0) device(1) from(b)
 
   !$omp target
   !ERROR: `DISTRIBUTE` region has to be strictly nested inside `TEAMS` region.

@@ -51,6 +51,8 @@ add_header_library(
   string_view
   HDRS
     string_view.h
+  DEPENDS
+    libc.src.__support.common
 )
 
 add_header_library(
@@ -82,14 +84,6 @@ add_header_library(
 )
 
 add_header_library(
-  vector
-  HDRS
-    vector.h
-  DEPENDS
-    libc.include.stdlib
-)
-
-add_header_library(
   atomic
   HDRS
     atomic.h
@@ -107,4 +101,7 @@ add_object_library(
     new.cpp
   HDRS
     new.h
+  DEPENDS
+    libc.include.stdlib
+    libc.src.__support.common
 )

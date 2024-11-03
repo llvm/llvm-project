@@ -28,7 +28,7 @@ for.body:                                         ; preds = %entry, %for.body
   ; CHECK: call void @llvm.dbg.value(metadata i32 16, metadata !12, metadata !DIExpression()), !dbg !15
   ; CHECK: call void @llvm.dbg.value(metadata i32 64, metadata !12, metadata !DIExpression()), !dbg !15
 
-  %call = tail call i32 (i32, ...) bitcast (i32 (...)* @bar to i32 (i32, ...)*)(i32 %shr) #3, !dbg !20
+  %call = tail call i32 (i32, ...) @bar(i32 %shr) #3, !dbg !20
   %shl = shl i32 %i.04, 2, !dbg !21
   tail call void @llvm.dbg.value(metadata i32 %shl, metadata !12, metadata !DIExpression()), !dbg !15
   %cmp = icmp slt i32 %shl, 33, !dbg !22

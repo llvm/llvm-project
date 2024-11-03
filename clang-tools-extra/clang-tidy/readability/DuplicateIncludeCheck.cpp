@@ -13,9 +13,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include <memory>
 
-namespace clang {
-namespace tidy {
-namespace readability {
+namespace clang::tidy::readability {
 
 static SourceLocation advanceBeyondCurrentLine(const SourceManager &SM,
                                                SourceLocation Start,
@@ -111,6 +109,4 @@ void DuplicateIncludeCheck::registerPPCallbacks(
   PP->addPPCallbacks(std::make_unique<DuplicateIncludeCallbacks>(*this, SM));
 }
 
-} // namespace readability
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::readability

@@ -17,6 +17,7 @@
 #include "mlir/Support/TypeID.h"
 #include "llvm/ADT/STLExtras.h"
 #include <numeric>
+#include <optional>
 
 using namespace mlir;
 using namespace mlir::detail;
@@ -565,7 +566,7 @@ static AffineExpr simplifyAdd(AffineExpr lhs, AffineExpr rhs) {
   // Detect "c1 * expr + c_2 * expr" as "(c1 + c2) * expr".
   // c1 is rRhsConst, c2 is rLhsConst; firstExpr, secondExpr are their
   // respective multiplicands.
-  Optional<int64_t> rLhsConst, rRhsConst;
+  std::optional<int64_t> rLhsConst, rRhsConst;
   AffineExpr firstExpr, secondExpr;
   AffineConstantExpr rLhsConstExpr;
   auto lBinOpExpr = lhs.dyn_cast<AffineBinaryOpExpr>();

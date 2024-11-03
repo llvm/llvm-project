@@ -18,6 +18,7 @@
 #include "mlir/IR/BuiltinDialect.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Pass/Pass.h"
+#include <optional>
 
 namespace mlir {
 #define GEN_PASS_DEF_CONVERTMATHTOLIBM
@@ -153,24 +154,27 @@ ScalarOpToLibmCall<Op>::matchAndRewrite(Op op,
 
 void mlir::populateMathToLibmConversionPatterns(
     RewritePatternSet &patterns, PatternBenefit benefit,
-    llvm::Optional<PatternBenefit> log1pBenefit) {
-  patterns.add<VecOpToScalarOp<math::Atan2Op>, VecOpToScalarOp<math::ExpM1Op>,
-               VecOpToScalarOp<math::TanhOp>, VecOpToScalarOp<math::CosOp>,
-               VecOpToScalarOp<math::SinOp>, VecOpToScalarOp<math::ErfOp>,
-               VecOpToScalarOp<math::RoundEvenOp>,
+    std::optional<PatternBenefit> log1pBenefit) {
+  patterns.add<VecOpToScalarOp<math::Atan2Op>, VecOpToScalarOp<math::CbrtOp>,
+               VecOpToScalarOp<math::ExpM1Op>, VecOpToScalarOp<math::TanhOp>,
+               VecOpToScalarOp<math::CosOp>, VecOpToScalarOp<math::SinOp>,
+               VecOpToScalarOp<math::ErfOp>, VecOpToScalarOp<math::RoundEvenOp>,
                VecOpToScalarOp<math::RoundOp>, VecOpToScalarOp<math::AtanOp>,
                VecOpToScalarOp<math::TanOp>, VecOpToScalarOp<math::TruncOp>>(
       patterns.getContext(), benefit);
-  patterns.add<PromoteOpToF32<math::Atan2Op>, PromoteOpToF32<math::ExpM1Op>,
-               PromoteOpToF32<math::TanhOp>, PromoteOpToF32<math::CosOp>,
-               PromoteOpToF32<math::SinOp>, PromoteOpToF32<math::ErfOp>,
-               PromoteOpToF32<math::RoundEvenOp>, PromoteOpToF32<math::RoundOp>,
-               PromoteOpToF32<math::AtanOp>, PromoteOpToF32<math::TanOp>,
-               PromoteOpToF32<math::TruncOp>>(patterns.getContext(), benefit);
+  patterns.add<PromoteOpToF32<math::Atan2Op>, PromoteOpToF32<math::CbrtOp>,
+               PromoteOpToF32<math::ExpM1Op>, PromoteOpToF32<math::TanhOp>,
+               PromoteOpToF32<math::CosOp>, PromoteOpToF32<math::SinOp>,
+               PromoteOpToF32<math::ErfOp>, PromoteOpToF32<math::RoundEvenOp>,
+               PromoteOpToF32<math::RoundOp>, PromoteOpToF32<math::AtanOp>,
+               PromoteOpToF32<math::TanOp>, PromoteOpToF32<math::TruncOp>>(
+      patterns.getContext(), benefit);
   patterns.add<ScalarOpToLibmCall<math::AtanOp>>(patterns.getContext(), "atanf",
                                                  "atan", benefit);
   patterns.add<ScalarOpToLibmCall<math::Atan2Op>>(patterns.getContext(),
                                                   "atan2f", "atan2", benefit);
+  patterns.add<ScalarOpToLibmCall<math::CbrtOp>>(patterns.getContext(), "cbrtf",
+                                                 "cbrt", benefit);
   patterns.add<ScalarOpToLibmCall<math::ErfOp>>(patterns.getContext(), "erff",
                                                 "erf", benefit);
   patterns.add<ScalarOpToLibmCall<math::ExpM1Op>>(patterns.getContext(),

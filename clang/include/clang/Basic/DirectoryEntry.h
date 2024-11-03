@@ -23,6 +23,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/ErrorOr.h"
 
+#include <optional>
 #include <utility>
 
 namespace clang {

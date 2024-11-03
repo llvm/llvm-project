@@ -14,21 +14,22 @@
 
 /// Unsafe gadgets correspond to unsafe code patterns that warrant
 /// an immediate warning.
-#ifndef UNSAFE_GADGET
-#define UNSAFE_GADGET(name) GADGET(name)
+#ifndef WARNING_GADGET
+#define WARNING_GADGET(name) GADGET(name)
 #endif
 
 /// Safe gadgets correspond to code patterns that aren't unsafe but need to be
 /// properly recognized in order to emit correct warnings and fixes over unsafe
 /// gadgets.
-#ifndef SAFE_GADGET
-#define SAFE_GADGET(name) GADGET(name)
+#ifndef FIXABLE_GADGET
+#define FIXABLE_GADGET(name) GADGET(name)
 #endif
 
-UNSAFE_GADGET(Increment)
-UNSAFE_GADGET(Decrement)
-UNSAFE_GADGET(ArraySubscript)
+WARNING_GADGET(Increment)
+WARNING_GADGET(Decrement)
+WARNING_GADGET(ArraySubscript)
+WARNING_GADGET(PointerArithmetic)
 
-#undef SAFE_GADGET
-#undef UNSAFE_GADGET
+#undef FIXABLE_GADGET
+#undef WARNING_GADGET
 #undef GADGET

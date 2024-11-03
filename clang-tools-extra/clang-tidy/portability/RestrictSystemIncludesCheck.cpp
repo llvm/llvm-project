@@ -16,9 +16,7 @@
 #include "llvm/Support/Path.h"
 #include <cstring>
 
-namespace clang {
-namespace tidy {
-namespace portability {
+namespace clang::tidy::portability {
 
 void RestrictedIncludesPPCallbacks::InclusionDirective(
     SourceLocation HashLoc, const Token &IncludeTok, StringRef FileName,
@@ -75,6 +73,4 @@ void RestrictSystemIncludesCheck::storeOptions(
   Options.store(Opts, "Includes", AllowedIncludes);
 }
 
-} // namespace portability
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::portability

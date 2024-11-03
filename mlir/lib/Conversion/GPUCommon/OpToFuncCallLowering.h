@@ -107,7 +107,7 @@ private:
     if (funcOp)
       return cast<LLVMFuncOp>(*funcOp);
 
-    mlir::OpBuilder b(op->getParentOfType<LLVMFuncOp>());
+    mlir::OpBuilder b(op->getParentOfType<FunctionOpInterface>());
     return b.create<LLVMFuncOp>(op->getLoc(), funcName, funcType);
   }
 

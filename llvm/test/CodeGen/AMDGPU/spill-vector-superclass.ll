@@ -8,9 +8,9 @@ define amdgpu_kernel void @test_spill_av_class(<4 x i32> %arg) #0 {
   ; GCN-NEXT:   liveins: $sgpr4_sgpr5
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT:   renamable $sgpr0_sgpr1_sgpr2_sgpr3 = S_LOAD_DWORDX4_IMM killed renamable $sgpr4_sgpr5, 0, 0 :: (dereferenceable invariant load (s128) from %ir.arg.kernarg.offset1, addrspace 4)
+  ; GCN-NEXT:   [[COPY:%[0-9]+]]:areg_128 = COPY killed renamable $sgpr0_sgpr1_sgpr2_sgpr3
   ; GCN-NEXT:   [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 1, implicit $exec
   ; GCN-NEXT:   [[V_MOV_B32_e32_1:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 2, implicit $exec
-  ; GCN-NEXT:   [[COPY:%[0-9]+]]:areg_128 = COPY killed renamable $sgpr0_sgpr1_sgpr2_sgpr3
   ; GCN-NEXT:   [[V_MFMA_I32_4X4X4I8_e64_:%[0-9]+]]:areg_128 = V_MFMA_I32_4X4X4I8_e64 [[V_MOV_B32_e32_]], [[V_MOV_B32_e32_1]], [[COPY]], 0, 0, 0, implicit $mode, implicit $exec
   ; GCN-NEXT:   INLINEASM &"; def $0", 1 /* sideeffect attdialect */, 1769482 /* regdef:VGPR_32 */, def undef %22.sub0
   ; GCN-NEXT:   undef %24.sub0:av_64 = COPY %22.sub0

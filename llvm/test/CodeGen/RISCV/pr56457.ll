@@ -7,8 +7,7 @@ define i15 @foo(i15 %x) nounwind {
 ; CHECK-LABEL: foo:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    slli a1, a0, 49
-; CHECK-NEXT:    srli a2, a1, 49
-; CHECK-NEXT:    beqz a2, .LBB0_2
+; CHECK-NEXT:    beqz a1, .LBB0_2
 ; CHECK-NEXT:  # %bb.1: # %cond.false
 ; CHECK-NEXT:    srli a1, a1, 50
 ; CHECK-NEXT:    or a0, a0, a1

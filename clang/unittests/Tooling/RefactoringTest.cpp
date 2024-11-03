@@ -29,6 +29,7 @@
 #include "llvm/ADT/SmallString.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include "gtest/gtest.h"
+#include <optional>
 
 namespace clang {
 namespace tooling {
@@ -104,8 +105,8 @@ TEST_F(ReplacementTest, ReturnsInvalidPath) {
 // error code, expected new replacement, and expected existing replacement.
 static bool checkReplacementError(llvm::Error &&Error,
                                   replacement_error ExpectedErr,
-                                  llvm::Optional<Replacement> ExpectedExisting,
-                                  llvm::Optional<Replacement> ExpectedNew) {
+                                  std::optional<Replacement> ExpectedExisting,
+                                  std::optional<Replacement> ExpectedNew) {
   if (!Error) {
     llvm::errs() << "Error is a success.";
     return false;

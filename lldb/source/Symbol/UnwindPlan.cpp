@@ -17,6 +17,7 @@
 #include "lldb/Utility/Log.h"
 #include "llvm/DebugInfo/DIContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFExpression.h"
+#include <optional>
 
 using namespace lldb;
 using namespace lldb_private;
@@ -68,7 +69,7 @@ void UnwindPlan::Row::RegisterLocation::SetIsDWARFExpression(
   m_location.expr.length = len;
 }
 
-static llvm::Optional<std::pair<lldb::ByteOrder, uint32_t>>
+static std::optional<std::pair<lldb::ByteOrder, uint32_t>>
 GetByteOrderAndAddrSize(Thread *thread) {
   if (!thread)
     return std::nullopt;
@@ -147,7 +148,7 @@ void UnwindPlan::Row::RegisterLocation::Dump(Stream &s,
     if (m_type == atDWARFExpression)
       s.PutChar('[');
     DumpDWARFExpr(
-        s, llvm::makeArrayRef(m_location.expr.opcodes, m_location.expr.length),
+        s, llvm::ArrayRef(m_location.expr.opcodes, m_location.expr.length),
         thread);
     if (m_type == atDWARFExpression)
       s.PutChar(']');
@@ -201,8 +202,7 @@ void UnwindPlan::Row::FAValue::Dump(Stream &s, const UnwindPlan *unwind_plan,
     s.PutChar(']');
     break;
   case isDWARFExpression:
-    DumpDWARFExpr(s,
-                  llvm::makeArrayRef(m_value.expr.opcodes, m_value.expr.length),
+    DumpDWARFExpr(s, llvm::ArrayRef(m_value.expr.opcodes, m_value.expr.length),
                   thread);
     break;
   case unspecified:

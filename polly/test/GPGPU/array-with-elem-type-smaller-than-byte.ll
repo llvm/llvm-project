@@ -21,16 +21,16 @@ target triple = "x86_64-unknown-linux-gnu"
 ; }
 
 ; Function Attrs: nounwind uwtable
-define void @f(i32* noalias %niters.ptr, [0 x i32]* noalias %arr) #0 {
+define void @f(ptr noalias %niters.ptr, ptr noalias %arr) #0 {
 entry:
-  %niters = load i32, i32* %niters.ptr, align 4
+  %niters = load i32, ptr %niters.ptr, align 4
   br label %loop.body
 
 loop.body:                                             ; preds = %loop.body, %entry
   %indvar = phi i32 [ %indvar.next, %loop.body ], [ 1, %entry ]
   %indvar.sext = sext i32 %indvar to i64
-  %arr.slot = getelementptr [0 x i32], [0 x i32]* %arr, i64 0, i64 %indvar.sext
-  store i32 0, i32* %arr.slot, align 4
+  %arr.slot = getelementptr [0 x i32], ptr %arr, i64 0, i64 %indvar.sext
+  store i32 0, ptr %arr.slot, align 4
   %tmp8 = icmp eq i32 %indvar, %niters
   %indvar.next = add i32 %indvar, 1
   br i1 %tmp8, label %loop.exit, label %loop.body

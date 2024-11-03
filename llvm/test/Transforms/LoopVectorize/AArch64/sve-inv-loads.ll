@@ -6,7 +6,7 @@ define void @invariant_load(i64 %n, ptr noalias nocapture %a, ptr nocapture read
 ; CHECK: vector.body:
 ; CHECK: %[[GEP:.*]] = getelementptr inbounds i32, ptr %b, i64 42
 ; CHECK-NEXT: %[[INVLOAD:.*]] = load i32, ptr %[[GEP]]
-; CHECK-NEXT: %[[SPLATINS:.*]] = insertelement <vscale x 4 x i32> poison, i32 %[[INVLOAD]], i32 0
+; CHECK-NEXT: %[[SPLATINS:.*]] = insertelement <vscale x 4 x i32> poison, i32 %[[INVLOAD]], i64 0
 ; CHECK-NEXT: %[[SPLAT:.*]] = shufflevector <vscale x 4 x i32> %[[SPLATINS]], <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
 ; CHECK: %[[LOAD:.*]] = load <vscale x 4 x i32>, ptr
 ; CHECK-NEXT: %[[ADD:.*]] = add nsw <vscale x 4 x i32> %[[SPLAT]], %[[LOAD]]

@@ -99,7 +99,7 @@ using LdStPairFlags = struct LdStPairFlags {
   // If not none, RenameReg can be used to rename the result register of the
   // first store in a pair. Currently this only works when merging stores
   // forward.
-  std::optional<MCPhysReg> RenameReg = std::nullopt;
+  std::optional<MCPhysReg> RenameReg;
 
   LdStPairFlags() = default;
 

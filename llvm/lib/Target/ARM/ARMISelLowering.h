@@ -697,7 +697,9 @@ class VectorType;
       return HasStandaloneRem;
     }
 
-    bool shouldExpandShift(SelectionDAG &DAG, SDNode *N) const override;
+    ShiftLegalizationStrategy
+    preferredShiftLegalizationStrategy(SelectionDAG &DAG, SDNode *N,
+                                       unsigned ExpansionFactor) const override;
 
     CCAssignFn *CCAssignFnForCall(CallingConv::ID CC, bool isVarArg) const;
     CCAssignFn *CCAssignFnForReturn(CallingConv::ID CC, bool isVarArg) const;

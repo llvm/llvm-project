@@ -1,6 +1,6 @@
-; RUN: opt < %s -loop-reduce -mtriple=x86_64-- -S | FileCheck %s -check-prefix=BOTH -check-prefix=INSN
-; RUN: opt < %s -loop-reduce -mtriple=x86_64-- -lsr-insns-cost=false -S | FileCheck %s -check-prefix=BOTH -check-prefix=REGS
-; RUN: llc < %s -O2 -mtriple=x86_64-- -lsr-insns-cost -asm-verbose=0 | FileCheck %s
+; RUN: opt -opaque-pointers=0 < %s -loop-reduce -mtriple=x86_64-- -S | FileCheck %s -check-prefix=BOTH -check-prefix=INSN
+; RUN: opt -opaque-pointers=0 < %s -loop-reduce -mtriple=x86_64-- -lsr-insns-cost=false -S | FileCheck %s -check-prefix=BOTH -check-prefix=REGS
+; RUN: llc -opaque-pointers=0 < %s -O2 -mtriple=x86_64-- -lsr-insns-cost -asm-verbose=0 | FileCheck %s
 
 ; OPT checks that LSR prefers less instructions to less registers.
 ; For x86 LSR should prefer complicated address to new lsr induction

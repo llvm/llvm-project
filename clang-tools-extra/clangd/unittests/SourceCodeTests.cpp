@@ -15,10 +15,11 @@
 #include "clang/Basic/TokenKinds.h"
 #include "clang/Format/Format.h"
 #include "llvm/Support/Error.h"
-#include "llvm/Testing/Support/Annotations.h"
+#include "llvm/Testing/Annotations/Annotations.h"
 #include "llvm/Testing/Support/Error.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include <optional>
 #include <tuple>
 
 namespace clang {
@@ -355,9 +356,9 @@ TEST(SourceCodeTests, CollectWords) {
 }
 
 class SpelledWordsTest : public ::testing::Test {
-  llvm::Optional<ParsedAST> AST;
+  std::optional<ParsedAST> AST;
 
-  llvm::Optional<SpelledWord> tryWord(const char *Text) {
+  std::optional<SpelledWord> tryWord(const char *Text) {
     llvm::Annotations A(Text);
     auto TU = TestTU::withCode(A.code());
     AST = TU.build();
@@ -662,7 +663,7 @@ TEST(SourceCodeTests, HalfOpenFileRangePathologicalPreprocessor) {
   const auto &Func = cast<FunctionDecl>(findDecl(AST, "test"));
   const auto &Body = cast<CompoundStmt>(Func.getBody());
   const auto &Loop = cast<WhileStmt>(*Body->child_begin());
-  llvm::Optional<SourceRange> Range = toHalfOpenFileRange(
+  std::optional<SourceRange> Range = toHalfOpenFileRange(
       AST.getSourceManager(), AST.getLangOpts(), Loop->getSourceRange());
   ASSERT_TRUE(Range) << "Failed to get file range";
   EXPECT_EQ(AST.getSourceManager().getFileOffset(Range->getBegin()),

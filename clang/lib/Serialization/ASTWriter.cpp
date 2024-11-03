@@ -77,7 +77,6 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/Hashing.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/PointerIntPair.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
@@ -111,6 +110,7 @@
 #include <ctime>
 #include <limits>
 #include <memory>
+#include <optional>
 #include <queue>
 #include <tuple>
 #include <utility>
@@ -569,6 +569,7 @@ void TypeLocWriter::VisitPackExpansionTypeLoc(PackExpansionTypeLoc TL) {
 
 void TypeLocWriter::VisitObjCInterfaceTypeLoc(ObjCInterfaceTypeLoc TL) {
   addSourceLocation(TL.getNameLoc());
+  addSourceLocation(TL.getNameEndLoc());
 }
 
 void TypeLocWriter::VisitObjCObjectTypeLoc(ObjCObjectTypeLoc TL) {
@@ -2120,7 +2121,7 @@ void ASTWriter::WriteSourceManagerBlock(SourceManager &SourceMgr,
         // We add one to the size so that we capture the trailing NULL
         // that is required by llvm::MemoryBuffer::getMemBuffer (on
         // the reader side).
-        llvm::Optional<llvm::MemoryBufferRef> Buffer =
+        std::optional<llvm::MemoryBufferRef> Buffer =
             Content->getBufferOrNone(PP.getDiagnostics(), PP.getFileManager());
         StringRef Name = Buffer ? Buffer->getBufferIdentifier() : "";
         Stream.EmitRecordWithBlob(SLocBufferAbbrv, Record,
@@ -2134,7 +2135,7 @@ void ASTWriter::WriteSourceManagerBlock(SourceManager &SourceMgr,
       if (EmitBlob) {
         // Include the implicit terminating null character in the on-disk buffer
         // if we're writing it uncompressed.
-        llvm::Optional<llvm::MemoryBufferRef> Buffer =
+        std::optional<llvm::MemoryBufferRef> Buffer =
             Content->getBufferOrNone(PP.getDiagnostics(), PP.getFileManager());
         if (!Buffer)
           Buffer = llvm::MemoryBufferRef("<<<INVALID BUFFER>>>", "");
@@ -5308,7 +5309,7 @@ void ASTWriter::WriteDeclUpdatesBlocks(RecordDataImpl &OffsetsRecord) {
         break;
 
       case UPD_ADDED_ATTR_TO_RECORD:
-        Record.AddAttributes(llvm::makeArrayRef(Update.getAttr()));
+        Record.AddAttributes(llvm::ArrayRef(Update.getAttr()));
         break;
       }
     }
@@ -6789,9 +6790,12 @@ void OMPClauseWriter::VisitOMPMapClause(OMPMapClause *C) {
   Record.push_back(C->getTotalComponentListNum());
   Record.push_back(C->getTotalComponentsNum());
   Record.AddSourceLocation(C->getLParenLoc());
+  bool HasIteratorModifier = false;
   for (unsigned I = 0; I < NumberOfOMPMapClauseModifiers; ++I) {
     Record.push_back(C->getMapTypeModifier(I));
     Record.AddSourceLocation(C->getMapTypeModifierLoc(I));
+    if (C->getMapTypeModifier(I) == OMPC_MAP_MODIFIER_iterator)
+      HasIteratorModifier = true;
   }
   Record.AddNestedNameSpecifierLoc(C->getMapperQualifierLoc());
   Record.AddDeclarationNameInfo(C->getMapperIdInfo());
@@ -6802,6 +6806,8 @@ void OMPClauseWriter::VisitOMPMapClause(OMPMapClause *C) {
     Record.AddStmt(E);
   for (auto *E : C->mapperlists())
     Record.AddStmt(E);
+  if (HasIteratorModifier)
+    Record.AddStmt(C->getIteratorModifier());
   for (auto *D : C->all_decls())
     Record.AddDeclRef(D);
   for (auto N : C->all_num_lists())
@@ -7114,6 +7120,12 @@ void OMPClauseWriter::VisitOMPBindClause(OMPBindClause *C) {
   Record.writeEnum(C->getBindKind());
   Record.AddSourceLocation(C->getLParenLoc());
   Record.AddSourceLocation(C->getBindKindLoc());
+}
+
+void OMPClauseWriter::VisitOMPXDynCGroupMemClause(OMPXDynCGroupMemClause *C) {
+  VisitOMPClauseWithPreInit(C);
+  Record.AddStmt(C->getSize());
+  Record.AddSourceLocation(C->getLParenLoc());
 }
 
 void ASTRecordWriter::writeOMPTraitInfo(const OMPTraitInfo *TI) {

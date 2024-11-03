@@ -14,14 +14,68 @@ include "mlir/IR/EnumAttr.td"
 include "mlir/Dialect/SparseTensor/IR/SparseTensorBase.td"
 include "mlir/IR/TensorEncoding.td"
 
-//===----------------------------------------------------------------------===//
-// Sparse Tensor Type Encoding Attribute
-//===----------------------------------------------------------------------===//
-
 // All of the Tensor attributes will extend this class.
 class SparseTensor_Attr<string name,
                         list<Trait> traits = []>
     : AttrDef<SparseTensor_Dialect, name, traits>;
+
+//===----------------------------------------------------------------------===//
+// Sparse Tensor Dimension Slice Attribute.
+//===----------------------------------------------------------------------===//
+
+def SparseTensorDimSliceAttr : SparseTensor_Attr<"SparseTensorDimSlice", []> {
+  let mnemonic = "slice";
+
+  let description = [{
+    An attribute to encode slice information of a sparse tensor on a particular
+    dimension (a tuple of offset, size, stride).
+  }];
+
+  let parameters = (
+    ins
+    "int64_t" : $offset,
+    "int64_t" : $size,
+    "int64_t" : $stride
+  );
+
+  let extraClassDeclaration = [{
+    /// Special value for dynamic offset/size/stride.
+    static constexpr int64_t kDynamic = -1;
+
+    static bool isDynamic(int64_t v) {
+      return v == kDynamic;
+    }
+
+    std::optional<uint64_t> getStaticOffset() const {
+      if (isDynamic(getOffset()))
+        return std::nullopt;
+      return static_cast<uint64_t>(getOffset());
+    };
+
+    std::optional<uint64_t> getStaticStride() const {
+      if (isDynamic(getStride()))
+        return std::nullopt;
+      return static_cast<uint64_t>(getStride());
+    }
+
+    std::optional<uint64_t> getStaticSize() const {
+      if (isDynamic(getSize()))
+        return std::nullopt;
+      return static_cast<uint64_t>(getSize());
+    }
+
+    bool isCompletelyDynamic() const {
+      return isDynamic(getOffset()) && isDynamic(getStride()) && isDynamic(getSize());
+    };
+  }];
+
+  let genVerifyDecl = 1;
+  let hasCustomAssemblyFormat = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// Sparse Tensor Type Encoding Attribute.
+//===----------------------------------------------------------------------===//
 
 // Sparse tensor encoding attribute.
 def SparseTensorEncodingAttr : SparseTensor_Attr<"SparseTensorEncoding",
@@ -103,6 +157,9 @@ def SparseTensorEncodingAttr : SparseTensor_Attr<"SparseTensorEncoding",
       choices are `8`, `16`, `32`, `64`, or, the default, `0` to indicate a
       native bit width.
 
+    - An optional array of SparseTensorDimSliceAttr, which specifies how the sparse
+      tensor is partitioned on each level.
+
     Examples:
 
     ```mlir
@@ -142,6 +199,15 @@ def SparseTensorEncodingAttr : SparseTensor_Attr<"SparseTensorEncoding",
       higherOrdering = affine_map<(i, j)[c] -> (c * 4 * i, i, j)>
     }>
     ... tensor<?x?xf64, #ELL> ...
+
+    // CSR slice (offset = 0, size = 4, stride = 1 on the first dimension;
+    // offset = 0, size = 8, and a dynamic stride on the second dimension).
+    #CSR_SLICE = #sparse_tensor.encoding<{
+      dimLevelType = [ "dense", "compressed" ],
+      slice = [ (0, 4, 1), (0, 8, ?) ]
+    }>
+    ... tensor<?x?xf64, #CSC_SLICE> ...
+
     ```
   }];
 
@@ -160,8 +226,28 @@ def SparseTensorEncodingAttr : SparseTensor_Attr<"SparseTensorEncoding",
     // The required bit width for pointer storage.
     "unsigned":$pointerBitWidth,
     // The required bit width for index storage.
-    "unsigned":$indexBitWidth
+    "unsigned":$indexBitWidth,
+    // A dimension level type for each dimension of the tensor type.
+    ArrayRefParameter<
+      "::mlir::sparse_tensor::SparseTensorDimSliceAttr",
+      "per dimension slice metadata"
+      >: $dimSlices
   );
+
+  let builders = [
+    AttrBuilder<(ins "ArrayRef<::mlir::sparse_tensor::DimLevelType>":$dimLevelType,
+                     "AffineMap":$dimOrdering,
+                     "AffineMap":$higherOrdering,
+                     "unsigned":$pointerBitWidth,
+                     "unsigned":$indexBitWidth), [{
+      return $_get($_ctxt, dimLevelType,
+                         dimOrdering,
+                         higherOrdering,
+                         pointerBitWidth,
+                         indexBitWidth,
+                         ArrayRef<::mlir::sparse_tensor::SparseTensorDimSliceAttr>{});
+    }]>
+  ];
 
   let extraClassDeclaration = [{
     /// Returns the type for pointer storage based on pointerBitWidth
@@ -179,6 +265,17 @@ def SparseTensorEncodingAttr : SparseTensor_Attr<"SparseTensorEncoding",
 
     /// Return true if the encoding has an identity dimension ordering.
     bool hasIdDimOrdering() const;
+
+    bool isSlice() const {
+      return !getDimSlices().empty();
+    }
+
+    std::optional<uint64_t> getStaticDimSliceOffset(unsigned dim) const;
+    std::optional<uint64_t> getStaticDimSliceSize(unsigned dim) const;
+    std::optional<uint64_t> getStaticDimSliceStride(unsigned dim) const;
+    std::optional<uint64_t> getStaticLvlSliceOffset(unsigned lvl) const;
+    std::optional<uint64_t> getStaticLvlSliceSize(unsigned lvl) const;
+    std::optional<uint64_t> getStaticLvlSliceStride(unsigned lvl) const;
   }];
 
   let genVerifyDecl = 1;
@@ -186,7 +283,7 @@ def SparseTensorEncodingAttr : SparseTensor_Attr<"SparseTensorEncoding",
 }
 
 //===----------------------------------------------------------------------===//
-// Sparse Tensor Storage Specifier Enum Attribute
+// Sparse Tensor Storage Specifier Enum Attribute.
 //===----------------------------------------------------------------------===//
 
 // The C++ enum for Storage Specifier kind.
@@ -209,7 +306,7 @@ def SparseTensorStorageSpecifierKindAttr
 }
 
 //===----------------------------------------------------------------------===//
-// Sparse Tensor Traits
+// Sparse Tensor Traits.
 //===----------------------------------------------------------------------===//
 
 def IsSparseTensorPred

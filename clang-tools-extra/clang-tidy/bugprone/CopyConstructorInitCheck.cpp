@@ -13,9 +13,7 @@
 
 using namespace clang::ast_matchers;
 
-namespace clang {
-namespace tidy {
-namespace bugprone {
+namespace clang::tidy::bugprone {
 
 void CopyConstructorInitCheck::registerMatchers(MatchFinder *Finder) {
   // In the future this might be extended to move constructors?
@@ -112,6 +110,4 @@ void CopyConstructorInitCheck::check(const MatchFinder::MatchResult &Result) {
   Diag << FixItHint::CreateInsertion(FixItLoc, FixItMsg);
 }
 
-} // namespace bugprone
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::bugprone

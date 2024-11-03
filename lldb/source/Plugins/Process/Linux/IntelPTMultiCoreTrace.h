@@ -16,6 +16,7 @@
 #include "lldb/lldb-types.h"
 #include "llvm/Support/Error.h"
 #include <memory>
+#include <optional>
 
 namespace lldb_private {
 namespace process_linux {
@@ -83,7 +84,7 @@ public:
 
   llvm::Error TraceStop(lldb::tid_t tid) override;
 
-  llvm::Expected<llvm::Optional<std::vector<uint8_t>>>
+  llvm::Expected<std::optional<std::vector<uint8_t>>>
   TryGetBinaryData(const TraceGetBinaryDataRequest &request) override;
 
 private:

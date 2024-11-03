@@ -37,6 +37,7 @@
 
 #include <memory>
 #include <mutex>
+#include <optional>
 
 #include <cassert>
 #include <cctype>
@@ -49,7 +50,6 @@
 
 using namespace lldb;
 using namespace lldb_private;
-using llvm::Optional;
 using llvm::StringRef;
 
 IOHandler::IOHandler(Debugger &debugger, IOHandler::Type type)
@@ -198,7 +198,7 @@ void IOHandlerConfirm::IOHandlerInputComplete(IOHandler &io_handler,
   }
 }
 
-llvm::Optional<std::string>
+std::optional<std::string>
 IOHandlerDelegate::IOHandlerSuggestion(IOHandler &io_handler,
                                        llvm::StringRef line) {
   return io_handler.GetDebugger()
@@ -326,7 +326,7 @@ void IOHandlerEditline::TerminalSizeChanged() {
 }
 
 // Split out a line from the buffer, if there is a full one to get.
-static Optional<std::string> SplitLine(std::string &line_buffer) {
+static std::optional<std::string> SplitLine(std::string &line_buffer) {
   size_t pos = line_buffer.find('\n');
   if (pos == std::string::npos)
     return std::nullopt;
@@ -338,7 +338,7 @@ static Optional<std::string> SplitLine(std::string &line_buffer) {
 
 // If the final line of the file ends without a end-of-line, return
 // it as a line anyway.
-static Optional<std::string> SplitLineEOF(std::string &line_buffer) {
+static std::optional<std::string> SplitLineEOF(std::string &line_buffer) {
   if (llvm::all_of(line_buffer, llvm::isSpace))
     return std::nullopt;
   std::string line = std::move(line_buffer);
@@ -372,7 +372,7 @@ bool IOHandlerEditline::GetLine(std::string &line, bool &interrupted) {
     }
   }
 
-  Optional<std::string> got_line = SplitLine(m_line_buffer);
+  std::optional<std::string> got_line = SplitLine(m_line_buffer);
 
   if (!got_line && !m_input_sp) {
     // No more input file, we are done...
@@ -446,7 +446,7 @@ int IOHandlerEditline::FixIndentationCallback(Editline *editline,
   return m_delegate.IOHandlerFixIndentation(*this, lines, cursor_position);
 }
 
-llvm::Optional<std::string>
+std::optional<std::string>
 IOHandlerEditline::SuggestionCallback(llvm::StringRef line) {
   return m_delegate.IOHandlerSuggestion(*this, line);
 }

@@ -78,7 +78,7 @@ private:
   static constexpr size_t NUMBER_OF_UNITS =
       (NumberOfBits + BITS_PER_UNIT - 1) / BITS_PER_UNIT;
 
-  static inline size_t mask(size_t Index) {
+  static constexpr size_t mask(size_t Index) {
     return size_t{1} << (Index % BITS_PER_UNIT);
   }
   size_t Data[NUMBER_OF_UNITS] = {0};

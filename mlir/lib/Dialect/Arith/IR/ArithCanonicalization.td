@@ -164,6 +164,16 @@ def XOrINotCmpI :
           (ConstantLikeMatcher ConstantAttr<I1Attr, "1">)),
         (Arith_CmpIOp (InvertPredicate $pred), $a, $b)>;
 
+// xor extui(x), extui(y) -> extui(xor(x,y))
+def XOrIOfExtUI :
+    Pat<(Arith_XOrIOp (Arith_ExtUIOp $x), (Arith_ExtUIOp $y)), (Arith_ExtUIOp (Arith_XOrIOp $x, $y)),
+      [(Constraint<CPred<"$0.getType() == $1.getType()">> $x, $y)]>;
+
+// xor extsi(x), extsi(y) -> extsi(xor(x,y))
+def XOrIOfExtSI :
+    Pat<(Arith_XOrIOp (Arith_ExtSIOp $x), (Arith_ExtSIOp $y)), (Arith_ExtSIOp (Arith_XOrIOp $x, $y)),
+      [(Constraint<CPred<"$0.getType() == $1.getType()">> $x, $y)]>;
+
 //===----------------------------------------------------------------------===//
 // CmpIOp
 //===----------------------------------------------------------------------===//

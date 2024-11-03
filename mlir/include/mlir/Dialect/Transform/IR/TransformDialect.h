@@ -14,6 +14,7 @@
 #include "mlir/Support/LLVM.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/StringMap.h"
+#include <optional>
 
 namespace mlir {
 namespace transform {
@@ -25,9 +26,10 @@ namespace detail {
 void checkImplementsTransformOpInterface(StringRef name, MLIRContext *context);
 
 /// Asserts that the type provided as template argument implements the
-/// TransformTypeInterface. This must be a dynamic assertion since interface
-/// implementations may be registered at runtime.
-void checkImplementsTransformTypeInterface(TypeID typeID, MLIRContext *context);
+/// TransformHandleTypeInterface. This must be a dynamic assertion since
+/// interface implementations may be registered at runtime.
+void checkImplementsTransformHandleTypeInterface(TypeID typeID,
+                                                 MLIRContext *context);
 } // namespace detail
 #endif // NDEBUG
 } // namespace transform
@@ -112,7 +114,7 @@ protected:
   }
 
   /// Injects the types into the Transform dialect. The types must implement
-  /// the TransformTypeInterface and the implementation must be already
+  /// the TransformHandleTypeInterface and the implementation must be already
   /// available when the type is injected. Furthermore, the types must provide
   /// a `getMnemonic` static method returning an object convertible to
   /// `StringRef` that is unique across all injected types.
@@ -188,7 +190,7 @@ private:
 template <typename OpTy>
 void TransformDialect::addOperationIfNotRegistered() {
   StringRef name = OpTy::getOperationName();
-  Optional<RegisteredOperationName> opName =
+  std::optional<RegisteredOperationName> opName =
       RegisteredOperationName::lookup(name, getContext());
   if (!opName) {
     addOperations<OpTy>();
@@ -225,8 +227,8 @@ void TransformDialect::addTypeIfNotRegistered() {
   addTypes<Type>();
 
 #ifndef NDEBUG
-  detail::checkImplementsTransformTypeInterface(TypeID::get<Type>(),
-                                                getContext());
+  detail::checkImplementsTransformHandleTypeInterface(TypeID::get<Type>(),
+                                                      getContext());
 #endif // NDEBUG
 }
 

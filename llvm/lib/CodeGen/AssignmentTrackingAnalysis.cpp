@@ -278,6 +278,7 @@ static DebugAggregate getAggregate(const DebugVariable &Var) {
   return DebugAggregate(Var.getVariable(), Var.getInlinedAt());
 }
 
+namespace {
 /// In dwarf emission, the following sequence
 ///    1. dbg.value ... Fragment(0, 64)
 ///    2. dbg.value ... Fragment(0, 32)
@@ -650,14 +651,19 @@ class MemLocFragmentFill {
       // [  -   i   -  ]
       // +
       // [ i ][ f ][ i ]
+
+      // Save values for use after inserting a new interval.
       auto EndBitOfOverlap = FirstOverlap.stop();
+      unsigned OverlapValue = FirstOverlap.value();
+
+      // Shorten the overlapping interval.
       FirstOverlap.setStop(StartBit);
       insertMemLoc(BB, Before, Var, FirstOverlap.start(), StartBit,
-                   *FirstOverlap, VarLoc.DL);
+                   OverlapValue, VarLoc.DL);
 
       // Insert a new interval to represent the end part.
-      FragMap.insert(EndBit, EndBitOfOverlap, *FirstOverlap);
-      insertMemLoc(BB, Before, Var, EndBit, EndBitOfOverlap, *FirstOverlap,
+      FragMap.insert(EndBit, EndBitOfOverlap, OverlapValue);
+      insertMemLoc(BB, Before, Var, EndBit, EndBitOfOverlap, OverlapValue,
                    VarLoc.DL);
 
       // Insert the new (middle) fragment now there is space.
@@ -1121,6 +1127,7 @@ public:
   /// true if any variable locations have been added to FnVarLocs.
   bool run(FunctionVarLocsBuilder *FnVarLocs);
 };
+} // namespace
 
 void AssignmentTrackingLowering::setLocKind(BlockInfo *LiveSet, VariableID Var,
                                             LocKind K) {
@@ -1215,6 +1222,7 @@ bool AssignmentTrackingLowering::hasVarWithAssignment(VariableID Var,
   return true;
 }
 
+#ifndef NDEBUG
 const char *locStr(AssignmentTrackingLowering::LocKind Loc) {
   using LocKind = AssignmentTrackingLowering::LocKind;
   switch (Loc) {
@@ -1227,6 +1235,7 @@ const char *locStr(AssignmentTrackingLowering::LocKind Loc) {
   };
   llvm_unreachable("unknown LocKind");
 }
+#endif
 
 void AssignmentTrackingLowering::emitDbgValue(
     AssignmentTrackingLowering::LocKind Kind,
@@ -1235,10 +1244,8 @@ void AssignmentTrackingLowering::emitDbgValue(
   DILocation *DL = Source->getDebugLoc();
   auto Emit = [this, Source, After, DL](Value *Val, DIExpression *Expr) {
     assert(Expr);
-    // It's possible that getVariableLocationOp(0) is null. Occurs in
-    // llvm/test/DebugInfo/Generic/2010-05-03-OriginDIE.ll Treat it as undef.
     if (!Val)
-      Val = UndefValue::get(Type::getInt1Ty(Source->getContext()));
+      Val = PoisonValue::get(Type::getInt1Ty(Source->getContext()));
 
     // Find a suitable insert point.
     Instruction *InsertBefore = After->getNextNode();
@@ -1259,7 +1266,11 @@ void AssignmentTrackingLowering::emitDbgValue(
     const auto *DAI = cast<DbgAssignIntrinsic>(Source);
     // Check the address hasn't been dropped (e.g. the debug uses may not have
     // been replaced before deleting a Value).
-    if (Value *Val = DAI->getAddress()) {
+    if (DAI->isKillAddress()) {
+      // The address isn't valid so treat this as a non-memory def.
+      Kind = LocKind::Val;
+    } else {
+      Value *Val = DAI->getAddress();
       DIExpression *Expr = DAI->getAddressExpression();
       assert(!Expr->getFragmentInfo() &&
              "fragment info should be stored in value-expression only");
@@ -1275,25 +1286,19 @@ void AssignmentTrackingLowering::emitDbgValue(
           walkToAllocaAndPrependOffsetDeref(Layout, Val, Expr);
       Emit(Val, Expr);
       return;
-    } else {
-      // The address isn't valid so treat this as a non-memory def.
-      Kind = LocKind::Val;
     }
   }
 
   if (Kind == LocKind::Val) {
     /// Get the value component, converting to Undef if it is variadic.
     Value *Val =
-        Source->hasArgList()
-            ? UndefValue::get(Source->getVariableLocationOp(0)->getType())
-            : Source->getVariableLocationOp(0);
+        Source->hasArgList() ? nullptr : Source->getVariableLocationOp(0);
     Emit(Val, Source->getExpression());
     return;
   }
 
   if (Kind == LocKind::None) {
-    Value *Val = UndefValue::get(Source->getVariableLocationOp(0)->getType());
-    Emit(Val, Source->getExpression());
+    Emit(nullptr, Source->getExpression());
     return;
   }
 }
@@ -1479,11 +1484,10 @@ void AssignmentTrackingLowering::processDbgAssign(DbgAssignIntrinsic &DAI,
     // that an assignment happened here, and we know that specific assignment
     // was the last one to take place in memory for this variable.
     LocKind Kind;
-    if (isa<UndefValue>(DAI.getAddress())) {
-      // Address may be undef to indicate that although the store does take
-      // place, this part of the original store has been elided.
+    if (DAI.isKillAddress()) {
       LLVM_DEBUG(
-          dbgs() << "Val, Stack matches Debug program but address is undef\n";);
+          dbgs()
+              << "Val, Stack matches Debug program but address is killed\n";);
       Kind = LocKind::Val;
     } else {
       LLVM_DEBUG(dbgs() << "Mem, Stack matches Debug program\n";);
@@ -2107,12 +2111,11 @@ bool AssignmentTrackingLowering::emitPromotedVarLocs(
         continue;
       // Wrapper to get a single value (or undef) from DVI.
       auto GetValue = [DVI]() -> Value * {
-        // Conditions for undef: Any operand undef, zero operands or single
-        // operand is nullptr. We also can't handle variadic DIExpressions yet.
-        // Some of those conditions don't have a type we can pick for
-        // undef. Use i32.
-        if (DVI->isUndef() || DVI->getValue() == nullptr || DVI->hasArgList())
-          return UndefValue::get(Type::getInt32Ty(DVI->getContext()));
+        // We can't handle variadic DIExpressions yet so treat those as
+        // kill locations.
+        if (DVI->isKillLocation() || DVI->getValue() == nullptr ||
+            DVI->hasArgList())
+          return PoisonValue::get(Type::getInt32Ty(DVI->getContext()));
         return DVI->getValue();
       };
       Instruction *InsertBefore = I.getNextNode();
@@ -2391,6 +2394,9 @@ static void analyzeFunction(Function &Fn, const DataLayout &Layout,
 }
 
 bool AssignmentTrackingAnalysis::runOnFunction(Function &F) {
+  if (!isAssignmentTrackingEnabled(*F.getParent()))
+    return false;
+
   LLVM_DEBUG(dbgs() << "AssignmentTrackingAnalysis run on " << F.getName()
                     << "\n");
   auto DL = std::make_unique<DataLayout>(F.getParent());

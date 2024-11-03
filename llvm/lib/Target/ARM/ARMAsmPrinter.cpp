@@ -212,7 +212,7 @@ void ARMAsmPrinter::printOperand(const MachineInstr *MI, int OpNum,
   default: llvm_unreachable("<unknown operand type>");
   case MachineOperand::MO_Register: {
     Register Reg = MO.getReg();
-    assert(Register::isPhysicalRegister(Reg));
+    assert(Reg.isPhysical());
     assert(!MO.getSubReg() && "Subregs should be eliminated!");
     if(ARM::GPRPairRegClass.contains(Reg)) {
       const MachineFunction &MF = *MI->getParent()->getParent();

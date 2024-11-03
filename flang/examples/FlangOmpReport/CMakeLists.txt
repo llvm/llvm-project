@@ -5,5 +5,6 @@ add_llvm_library(flangOmpReport
 
   DEPENDS
   acc_gen
+  flangFrontend
   omp_gen
 )

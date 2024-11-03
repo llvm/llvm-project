@@ -14,14 +14,13 @@
 #include "clang/Lex/Token.h"
 #include <algorithm>
 #include <cctype>
+#include <optional>
 
 // FixItHint
 
 using namespace clang::ast_matchers;
 
-namespace clang {
-namespace tidy {
-namespace bugprone {
+namespace clang::tidy::bugprone {
 
 static const char DoubleUnderscoreTag[] = "du";
 static const char UnderscoreCapitalTag[] = "uc";
@@ -68,7 +67,7 @@ static bool hasReservedDoubleUnderscore(StringRef Name,
   return Name.startswith("__");
 }
 
-static Optional<std::string>
+static std::optional<std::string>
 getDoubleUnderscoreFixup(StringRef Name, const LangOptions &LangOpts) {
   if (hasReservedDoubleUnderscore(Name, LangOpts))
     return collapseConsecutive(Name, '_');
@@ -79,7 +78,7 @@ static bool startsWithUnderscoreCapital(StringRef Name) {
   return Name.size() >= 2 && Name[0] == '_' && std::isupper(Name[1]);
 }
 
-static Optional<std::string> getUnderscoreCapitalFixup(StringRef Name) {
+static std::optional<std::string> getUnderscoreCapitalFixup(StringRef Name) {
   if (startsWithUnderscoreCapital(Name))
     return std::string(Name.drop_front(1));
   return std::nullopt;
@@ -90,7 +89,7 @@ static bool startsWithUnderscoreInGlobalNamespace(StringRef Name,
   return IsInGlobalNamespace && Name.size() >= 1 && Name[0] == '_';
 }
 
-static Optional<std::string>
+static std::optional<std::string>
 getUnderscoreGlobalNamespaceFixup(StringRef Name, bool IsInGlobalNamespace) {
   if (startsWithUnderscoreInGlobalNamespace(Name, IsInGlobalNamespace))
     return std::string(Name.drop_front(1));
@@ -106,7 +105,7 @@ static std::string getNonReservedFixup(std::string Name) {
   return Name;
 }
 
-static Optional<RenamerClangTidyCheck::FailureInfo>
+static std::optional<RenamerClangTidyCheck::FailureInfo>
 getFailureInfoImpl(StringRef Name, bool IsInGlobalNamespace,
                    const LangOptions &LangOpts, bool Invert,
                    ArrayRef<StringRef> AllowedIdentifiers) {
@@ -120,7 +119,7 @@ getFailureInfoImpl(StringRef Name, bool IsInGlobalNamespace,
 
   using FailureInfo = RenamerClangTidyCheck::FailureInfo;
   if (!Invert) {
-    Optional<FailureInfo> Info;
+    std::optional<FailureInfo> Info;
     auto AppendFailure = [&](StringRef Kind, std::string &&Fixup) {
       if (!Info) {
         Info = FailureInfo{std::string(Kind), std::move(Fixup)};
@@ -152,7 +151,7 @@ getFailureInfoImpl(StringRef Name, bool IsInGlobalNamespace,
   return std::nullopt;
 }
 
-Optional<RenamerClangTidyCheck::FailureInfo>
+std::optional<RenamerClangTidyCheck::FailureInfo>
 ReservedIdentifierCheck::getDeclFailureInfo(const NamedDecl *Decl,
                                             const SourceManager &) const {
   assert(Decl && Decl->getIdentifier() && !Decl->getName().empty() &&
@@ -163,7 +162,7 @@ ReservedIdentifierCheck::getDeclFailureInfo(const NamedDecl *Decl,
                             getLangOpts(), Invert, AllowedIdentifiers);
 }
 
-Optional<RenamerClangTidyCheck::FailureInfo>
+std::optional<RenamerClangTidyCheck::FailureInfo>
 ReservedIdentifierCheck::getMacroFailureInfo(const Token &MacroNameTok,
                                              const SourceManager &) const {
   return getFailureInfoImpl(MacroNameTok.getIdentifierInfo()->getName(), true,
@@ -179,6 +178,4 @@ ReservedIdentifierCheck::getDiagInfo(const NamingCheckId &ID,
                   }};
 }
 
-} // namespace bugprone
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::bugprone

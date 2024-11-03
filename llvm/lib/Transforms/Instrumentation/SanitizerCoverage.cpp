@@ -722,7 +722,7 @@ GlobalVariable *ModuleSanitizerCoverage::CreateFunctionLocalArrayInSection(
     if (auto Comdat = getOrCreateFunctionComdat(F, TargetTriple))
       Array->setComdat(Comdat);
   Array->setSection(getSectionName(Section));
-  Array->setAlignment(Align(DL->getTypeStoreSize(Ty).getFixedSize()));
+  Array->setAlignment(Align(DL->getTypeStoreSize(Ty).getFixedValue()));
 
   // sancov_pcs parallels the other metadata section(s). Optimizers (e.g.
   // GlobalOpt/ConstantMerge) may not discard sancov_pcs and the other

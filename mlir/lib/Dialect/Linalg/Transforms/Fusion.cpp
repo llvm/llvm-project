@@ -31,6 +31,7 @@
 #include "llvm/Support/Debug.h"
 
 #include <set>
+#include <optional>
 
 #define DEBUG_TYPE "linalg-fusion"
 
@@ -298,7 +299,7 @@ findFusableProducer(OpOperand &consumerOpOperand,
                                        << elem.getIndexingValue() << " and "
                                        << elem.getDependentValue() << "\n");
                Value v = elem.getIndexingValue();
-               Optional<unsigned> operandNum =
+               std::optional<unsigned> operandNum =
                    elem.getIndexingOpViewOperandNum();
                return isa<LinalgOp>(elem.getDependentOp()) &&
                       v == consumerOpOperand.get() && operandNum &&
@@ -333,8 +334,8 @@ findFusableProducer(OpOperand &consumerOpOperand,
 FailureOr<FusionInfo>
 mlir::linalg::fuseProducerOfBuffer(OpBuilder &b, OpOperand &consumerOpOperand,
                                    const LinalgDependenceGraph &graph) {
-  Optional<LinalgDependenceGraph::LinalgDependenceGraphElem> fusableDependence =
-      findFusableProducer(consumerOpOperand, graph);
+  std::optional<LinalgDependenceGraph::LinalgDependenceGraphElem>
+      fusableDependence = findFusableProducer(consumerOpOperand, graph);
   if (!fusableDependence)
     return failure();
 
@@ -347,7 +348,7 @@ mlir::linalg::fuseProducerOfBuffer(OpBuilder &b, OpOperand &consumerOpOperand,
       fusableDependence->getDependentValue().getParentBlock())
     return failure();
 
-  Optional<AffineMap> producerMap =
+  std::optional<AffineMap> producerMap =
       fusableDependence->getDependentOpViewIndexingMap();
   if (!producerMap)
     return failure();

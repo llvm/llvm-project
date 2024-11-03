@@ -7,15 +7,15 @@ define i32 @loop(ptr nocapture readonly %x) {
 ; CHECK-NEXT:    .save {r7, lr}
 ; CHECK-NEXT:    push {r7, lr}
 ; CHECK-NEXT:    mov.w lr, #500
-; CHECK-NEXT:    movs r1, #0
+; CHECK-NEXT:    mov r1, r0
+; CHECK-NEXT:    movs r0, #0
 ; CHECK-NEXT:    .p2align 2
 ; CHECK-NEXT:  .LBB0_1: @ %for.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    ldr r2, [r0], #4
-; CHECK-NEXT:    add r1, r2
+; CHECK-NEXT:    ldr r2, [r1], #4
+; CHECK-NEXT:    add r0, r2
 ; CHECK-NEXT:    le lr, .LBB0_1
 ; CHECK-NEXT:  @ %bb.2: @ %for.cond.cleanup
-; CHECK-NEXT:    mov r0, r1
 ; CHECK-NEXT:    pop {r7, pc}
 entry:
   br label %for.body
@@ -43,8 +43,8 @@ define i64 @loopif(ptr nocapture readonly %x, i32 %y, i32 %n) {
 ; CHECK-NEXT:    blt .LBB1_4
 ; CHECK-NEXT:  @ %bb.1: @ %for.body.lr.ph
 ; CHECK-NEXT:    mov lr, r2
-; CHECK-NEXT:    dls lr, r2
 ; CHECK-NEXT:    mov r12, r0
+; CHECK-NEXT:    dls lr, r2
 ; CHECK-NEXT:    movs r0, #0
 ; CHECK-NEXT:    movs r3, #0
 ; CHECK-NEXT:    .p2align 2

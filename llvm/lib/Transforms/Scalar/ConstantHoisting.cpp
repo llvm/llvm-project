@@ -722,7 +722,7 @@ void ConstantHoistingPass::findBaseConstants(GlobalVariable *BaseGV) {
 
 /// Updates the operand at Idx in instruction Inst with the result of
 ///        instruction Mat. If the instruction is a PHI node then special
-///        handling for duplicate values form the same incoming basic block is
+///        handling for duplicate values from the same incoming basic block is
 ///        required.
 /// \return The update will always succeed, but the return value indicated if
 ///         Mat was used for the update or not.

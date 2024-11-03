@@ -13,9 +13,9 @@
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Lex/Preprocessor.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
+#include <optional>
 
 namespace clang {
 
@@ -86,13 +86,15 @@ public:
   /// \return The textual representation of the token sequence which was
   ///         substituted in place of the macro after the preprocessing.
   ///         If no macro was expanded at that location, returns std::nullopt.
-  Optional<StringRef> getExpandedText(SourceLocation MacroExpansionLoc) const;
+  std::optional<StringRef>
+  getExpandedText(SourceLocation MacroExpansionLoc) const;
 
   /// \param MacroExpansionLoc Must be the expansion location of a macro.
   /// \return The text from the original source code which were substituted by
   ///         the macro expansion chain from the given location.
   ///         If no macro was expanded at that location, returns std::nullopt.
-  Optional<StringRef> getOriginalText(SourceLocation MacroExpansionLoc) const;
+  std::optional<StringRef>
+  getOriginalText(SourceLocation MacroExpansionLoc) const;
 
   LLVM_DUMP_METHOD void dumpExpansionRangesToStream(raw_ostream &OS) const;
   LLVM_DUMP_METHOD void dumpExpandedTextsToStream(raw_ostream &OS) const;

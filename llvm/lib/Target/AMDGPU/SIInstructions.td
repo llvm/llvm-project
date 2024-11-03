@@ -890,8 +890,6 @@ defm SI_SPILL_AV384 : SI_SPILL_VGPR <AV_384, 1>;
 defm SI_SPILL_AV512 : SI_SPILL_VGPR <AV_512, 1>;
 defm SI_SPILL_AV1024 : SI_SPILL_VGPR <AV_1024, 1>;
 
-defm SI_SPILL_WWM_V32 : SI_SPILL_VGPR <VGPR_32>;
-
 def SI_PC_ADD_REL_OFFSET : SPseudoInstSI <
   (outs SReg_64:$dst),
   (ins si_ga:$ptr_lo, si_ga:$ptr_hi),
@@ -2821,7 +2819,7 @@ def : GCNPat <
 >;
 }
 
-let SubtargetPredicate = isGFX90APlus in
+let OtherPredicates = [HasFmacF64Inst] in
 // Don't allow source modifiers. If there are any source modifiers then it's
 // better to select fma instead of fmac.
 def : GCNPat <
@@ -3142,7 +3140,7 @@ def IMMZeroBasedBitfieldMask : ImmLeaf <i32, [{
 }]>;
 
 def IMMPopCount : SDNodeXForm<imm, [{
-  return CurDAG->getTargetConstant(countPopulation(N->getZExtValue()), SDLoc(N),
+  return CurDAG->getTargetConstant(llvm::popcount(N->getZExtValue()), SDLoc(N),
                                    MVT::i32);
 }]>;
 

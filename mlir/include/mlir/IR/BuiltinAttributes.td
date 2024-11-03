@@ -531,8 +531,8 @@ def Builtin_DictionaryAttr : Builtin_Attr<"Dictionary", [
     Attribute get(StringAttr name) const;
 
     /// Return the specified named attribute if present, std::nullopt otherwise.
-    Optional<NamedAttribute> getNamed(StringRef name) const;
-    Optional<NamedAttribute> getNamed(StringAttr name) const;
+    std::optional<NamedAttribute> getNamed(StringRef name) const;
+    std::optional<NamedAttribute> getNamed(StringAttr name) const;
 
     /// Return whether the specified attribute is present.
     bool contains(StringRef name) const;
@@ -560,7 +560,7 @@ def Builtin_DictionaryAttr : Builtin_Attr<"Dictionary", [
     /// Returns an entry with a duplicate name in `array`, if it exists, else
     /// returns std::nullopt. If `isSorted` is true, the array is assumed to be
     /// sorted else it will be sorted in place before finding the duplicate entry.
-    static Optional<NamedAttribute>
+    static std::optional<NamedAttribute>
     findDuplicate(SmallVectorImpl<NamedAttribute> &array, bool isSorted);
 
     /// Return the specified attribute if present and is an instance of

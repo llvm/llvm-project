@@ -530,7 +530,7 @@ void GISelKnownBits::computeKnownBitsImpl(Register R, KnownBits &Known,
     // We can bound the space the count needs.  Also, bits known to be zero can't
     // contribute to the population.
     unsigned BitsPossiblySet = Known2.countMaxPopulation();
-    unsigned LowBits = Log2_32(BitsPossiblySet)+1;
+    unsigned LowBits = llvm::bit_width(BitsPossiblySet);
     Known.Zero.setBitsFrom(LowBits);
     // TODO: we could bound Known.One using the lower bound on the number of
     // bits which might be set provided by popcnt KnownOne2.

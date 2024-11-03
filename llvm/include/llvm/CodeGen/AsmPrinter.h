@@ -182,8 +182,8 @@ private:
   /// block's address of label.
   std::unique_ptr<AddrLabelMap> AddrLabelSymbols;
 
-  // The garbage collection metadata printer table.
-  void *GCMetadataPrinters = nullptr; // Really a DenseMap.
+  /// The garbage collection metadata printer table.
+  DenseMap<GCStrategy *, std::unique_ptr<GCMetadataPrinter>> GCMetadataPrinters;
 
   /// Emit comments in assembly output if this is true.
   bool VerboseAsm;
@@ -326,6 +326,14 @@ public:
   /// local symbol if a reference to GV is guaranteed to be resolved to the
   /// definition in the same module.
   MCSymbol *getSymbolPreferLocal(const GlobalValue &GV) const;
+
+  bool doesDwarfUseRelocationsAcrossSections() const {
+    return DwarfUsesRelocationsAcrossSections;
+  }
+
+  void setDwarfUsesRelocationsAcrossSections(bool Enable) {
+    DwarfUsesRelocationsAcrossSections = Enable;
+  }
 
   //===------------------------------------------------------------------===//
   // XRay instrumentation implementation.
@@ -820,6 +828,8 @@ private:
   mutable unsigned LastFn = 0;
   mutable unsigned Counter = ~0U;
 
+  bool DwarfUsesRelocationsAcrossSections = false;
+
   /// This method emits the header for the current function.
   virtual void emitFunctionHeader();
 
@@ -854,7 +864,7 @@ private:
   /// Emit bytes for llvm.commandline metadata.
   void emitModuleCommandLines(Module &M);
 
-  GCMetadataPrinter *GetOrCreateGCPrinter(GCStrategy &S);
+  GCMetadataPrinter *getOrCreateGCPrinter(GCStrategy &S);
   void emitGlobalAlias(Module &M, const GlobalAlias &GA);
   void emitGlobalIFunc(Module &M, const GlobalIFunc &GI);
 

@@ -1,4 +1,4 @@
-; RUN: opt -passes=inline %s -S -o - -experimental-assignment-tracking \
+; RUN: opt -passes=inline %s -S -o - \
 ; RUN: | FileCheck %s
 
 ;; Hand modified from:
@@ -52,7 +52,7 @@ declare void @llvm.dbg.value(metadata, metadata, metadata) #2
 
 
 !llvm.dbg.cu = !{!2}
-!llvm.module.flags = !{!7, !8, !9}
+!llvm.module.flags = !{!7, !8, !9, !1000}
 !llvm.ident = !{!10}
 
 !0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
@@ -77,3 +77,4 @@ declare void @llvm.dbg.value(metadata, metadata, metadata) #2
 !19 = !DILocation(line: 3, column: 15, scope: !16)
 !24 = !DILocation(line: 0, scope: !16)
 !25 = !DILocation(line: 4, column: 3, scope: !16)
+!1000 = !{i32 7, !"debug-info-assignment-tracking", i1 true}

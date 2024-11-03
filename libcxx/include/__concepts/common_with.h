@@ -31,8 +31,8 @@ template<class _Tp, class _Up>
 concept common_with =
   same_as<common_type_t<_Tp, _Up>, common_type_t<_Up, _Tp>> &&
   requires {
-    static_cast<common_type_t<_Tp, _Up>>(declval<_Tp>());
-    static_cast<common_type_t<_Tp, _Up>>(declval<_Up>());
+    static_cast<common_type_t<_Tp, _Up>>(std::declval<_Tp>());
+    static_cast<common_type_t<_Tp, _Up>>(std::declval<_Up>());
   } &&
   common_reference_with<
     add_lvalue_reference_t<const _Tp>,

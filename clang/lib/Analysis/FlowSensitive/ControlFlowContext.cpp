@@ -67,12 +67,5 @@ ControlFlowContext::build(const Decl *D, Stmt &S, ASTContext &C) {
   return ControlFlowContext(D, std::move(Cfg), std::move(StmtToBlock));
 }
 
-llvm::Expected<ControlFlowContext>
-ControlFlowContext::build(const Decl *D, Stmt *S, ASTContext *C) {
-  assert(S != nullptr);
-  assert(C != nullptr);
-  return build(D, *S, *C);
-}
-
 } // namespace dataflow
 } // namespace clang

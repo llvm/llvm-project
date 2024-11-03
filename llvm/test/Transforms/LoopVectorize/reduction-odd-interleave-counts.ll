@@ -1,5 +1,5 @@
-; RUN: opt %s -passes=loop-vectorize -force-vector-interleave=3 -force-vector-width=4 -S | FileCheck --check-prefix=UF3 %s
-; RUN: opt %s -passes=loop-vectorize -force-vector-interleave=5 -force-vector-width=4 -S | FileCheck --check-prefix=UF5 %s
+; RUN: opt -opaque-pointers=0 %s -passes=loop-vectorize -force-vector-interleave=3 -force-vector-width=4 -S | FileCheck --check-prefix=UF3 %s
+; RUN: opt -opaque-pointers=0 %s -passes=loop-vectorize -force-vector-interleave=5 -force-vector-width=4 -S | FileCheck --check-prefix=UF5 %s
 
 define i32 @reduction_sum(i64 %n, i32* noalias nocapture %A) {
 ; UF3-LABEL: vector.body:

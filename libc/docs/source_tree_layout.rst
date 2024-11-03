@@ -59,7 +59,7 @@ This directory contains a ``CMakeLists.txt`` file listing the targets for the
 public libraries ``libc.a``, ``libm.a`` etc.
 
 The ``startup`` directory
-------------------------
+-------------------------
 
 This directory contains the implementations of the application startup objects
 like ``crt1.o`` etc.

@@ -932,7 +932,7 @@ public:
       if (const char *EnvStr = getenv("LIBOMPTARGET_DEVICE_RTL_DEBUG"))
         DeviceEnv.DebugKind = std::stoi(EnvStr);
 
-      const char *DeviceEnvName = "omptarget_device_environment";
+      const char *DeviceEnvName = "__omp_rtl_device_environment";
       CUdeviceptr DeviceEnvPtr;
       size_t CUSize;
 

@@ -74,9 +74,9 @@ config.substitutions.append( ("%clang_lsan ", build_invocation(clang_lsan_cflags
 config.substitutions.append( ("%clangxx_lsan ", build_invocation(clang_lsan_cxxflags)) )
 
 # LeakSanitizer tests are currently supported on
-# Android{aarch64, x86, x86_64}, x86-64 Linux, PowerPC64 Linux, arm Linux, mips64 Linux, s390x Linux and x86_64 Darwin.
+# Android{aarch64, x86, x86_64}, x86-64 Linux, PowerPC64 Linux, arm Linux, mips64 Linux, s390x Linux, loongarch64 Linux and x86_64 Darwin.
 supported_android = config.android and config.target_arch in ['x86_64', 'i386', 'aarch64'] and 'android-thread-properties-api' in config.available_features
-supported_linux = (not config.android) and config.host_os == 'Linux' and config.host_arch in ['aarch64', 'x86_64', 'ppc64', 'ppc64le', 'mips64', 'riscv64', 'arm', 'armhf', 'armv7l', 's390x']
+supported_linux = (not config.android) and config.host_os == 'Linux' and config.host_arch in ['aarch64', 'x86_64', 'ppc64', 'ppc64le', 'mips64', 'riscv64', 'arm', 'armhf', 'armv7l', 's390x', 'loongarch64']
 supported_darwin = config.host_os == 'Darwin' and config.target_arch in ['x86_64']
 supported_netbsd = config.host_os == 'NetBSD' and config.target_arch in ['x86_64', 'i386']
 if not (supported_android or supported_linux or supported_darwin or supported_netbsd):

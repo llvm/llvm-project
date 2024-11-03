@@ -99,7 +99,7 @@ static const TargetRegisterClass *getRegClass(LLT Ty, const RegisterBank *RB) {
   if (RB->getID() == PPC::GPRRegBankID) {
     if (Ty.getSizeInBits() == 64)
       return &PPC::G8RCRegClass;
-    if (Ty.getSizeInBits() == 32)
+    if (Ty.getSizeInBits() <= 32)
       return &PPC::GPRCRegClass;
   }
   if (RB->getID() == PPC::FPRRegBankID) {
@@ -107,6 +107,12 @@ static const TargetRegisterClass *getRegClass(LLT Ty, const RegisterBank *RB) {
       return &PPC::F4RCRegClass;
     if (Ty.getSizeInBits() == 64)
       return &PPC::F8RCRegClass;
+  }
+  if (RB->getID() == PPC::CRRegBankID) {
+    if (Ty.getSizeInBits() == 1)
+      return &PPC::CRBITRCRegClass;
+    if (Ty.getSizeInBits() == 4)
+      return &PPC::CRRCRegClass;
   }
 
   llvm_unreachable("Unknown RegBank!");

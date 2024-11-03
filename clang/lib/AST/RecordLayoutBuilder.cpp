@@ -1968,7 +1968,8 @@ void ItaniumRecordLayoutBuilder::LayoutField(const FieldDecl *D,
                                  FieldClass->hasAttr<PackedAttr>() ||
                                  Context.getLangOpts().getClangABICompat() <=
                                      LangOptions::ClangABI::Ver15 ||
-                                 Target.isPS() || Target.isOSDarwin())) ||
+                                 Target.isPS() || Target.isOSDarwin() ||
+                                 Target.isOSAIX())) ||
                      D->hasAttr<PackedAttr>();
 
   // When used as part of a typedef, or together with a 'packed' attribute, the
@@ -3280,6 +3281,8 @@ ASTContext::getASTRecordLayout(const RecordDecl *D) const {
 
   if (D->hasExternalLexicalStorage() && !D->getDefinition())
     getExternalSource()->CompleteType(const_cast<RecordDecl*>(D));
+  // Complete the redecl chain (if necessary).
+  (void)D->getMostRecentDecl();
 
   D = D->getDefinition();
   assert(D && "Cannot get layout of forward declarations!");

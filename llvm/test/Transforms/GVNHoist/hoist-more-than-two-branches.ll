@@ -16,15 +16,15 @@ entry:
   ]
 
 sw0:
-  store i32 1, i32* @G
+  store i32 1, ptr @G
   br label %exit
 
 sw1:
-  store i32 1, i32* @G
+  store i32 1, ptr @G
   br label %exit
 
 exit1:
-  store i32 1, i32* @G
+  store i32 1, ptr @G
   ret void
 exit:
   ret void

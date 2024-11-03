@@ -17,6 +17,7 @@
 #include "clang/Basic/LLVM.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/raw_ostream.h"
+#include <optional>
 
 namespace clang {
 
@@ -76,7 +77,7 @@ struct ParsedSourceRange {
   ///
   /// If the end line and column are omitted, the starting line and columns
   /// are used as the end values.
-  static Optional<ParsedSourceRange> fromString(StringRef Str) {
+  static std::optional<ParsedSourceRange> fromString(StringRef Str) {
     std::pair<StringRef, StringRef> RangeSplit = Str.rsplit('-');
     unsigned EndLine, EndColumn;
     bool HasEndLoc = false;

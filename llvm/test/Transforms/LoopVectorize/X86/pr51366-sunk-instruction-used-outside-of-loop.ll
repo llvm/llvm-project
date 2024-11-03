@@ -1,4 +1,4 @@
-; RUN: opt -passes=loop-vectorize -mtriple=x86_64-unknown-linux -force-vector-width=2 -force-vector-interleave=1 -S %s | FileCheck %s
+; RUN: opt -opaque-pointers=0 -passes=loop-vectorize -mtriple=x86_64-unknown-linux -force-vector-width=2 -force-vector-interleave=1 -S %s | FileCheck %s
 
 define i32* @test(i32* noalias %src, i32* noalias %dst) {
 ; CHECK-LABEL: @test(

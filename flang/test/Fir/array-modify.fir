@@ -1,5 +1,6 @@
 // Test array-copy-value pass (copy elision) with fir.array_modify
 // RUN: fir-opt %s --array-value-copy | FileCheck %s
+// RUN: fir-opt %s --array-value-copy="optimize-conflicts=true" | FileCheck %s
 
 // Test user_defined_assignment(arg0(:), arg1(:))
 func.func @no_overlap(%arg0: !fir.ref<!fir.array<100xf32>>, %arg1: !fir.ref<!fir.array<100xf32>>) {

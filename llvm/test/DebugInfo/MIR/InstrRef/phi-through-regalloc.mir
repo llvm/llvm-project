@@ -82,6 +82,7 @@
 name:            foo
 alignment:       16
 tracksRegLiveness: true
+debugInstrRef: true
 registers:
   - { id: 0, class: gr32 }
   - { id: 1, class: gr32 }
@@ -120,9 +121,9 @@ body:             |
     ; CHECK-LABEL: bb.2.if.end:
   bb.2.if.end:
     %0:gr32 = PHI %1, %bb.0, %2, %bb.1, debug-instr-number 1, debug-location !18
-    DBG_INSTR_REF 1, 0, !14, !DIExpression(), debug-location !12
+    DBG_INSTR_REF !14, !DIExpression(DW_OP_LLVM_arg, 0), dbg-instr-ref(1, 0), debug-location !12
     ; CHECK:      DBG_PHI $ebp, 1
-    ; CHECK:      DBG_INSTR_REF 1, 0
+    ; CHECK:      DBG_INSTR_REF {{.+}}, dbg-instr-ref(1, 0)
     $eax = COPY killed %0, debug-location !19
     ; Confirm that %0 is allocated in $ebp,
     ; CHECK:      $eax = COPY killed renamable $ebp

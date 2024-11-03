@@ -8,10 +8,10 @@
 
 #include <algorithm>
 #include <iomanip>
+#include <optional>
 #include <sstream>
 #include <string.h>
 
-#include "llvm/ADT/Optional.h"
 #include "llvm/Support/FormatAdapters.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/ScopedPrinter.h"
@@ -307,8 +307,8 @@ llvm::json::Value CreateScope(const llvm::StringRef name,
 //   "required": [ "verified" ]
 // }
 llvm::json::Value CreateBreakpoint(lldb::SBBreakpoint &bp,
-                                   llvm::Optional<llvm::StringRef> request_path,
-                                   llvm::Optional<uint32_t> request_line) {
+                                   std::optional<llvm::StringRef> request_path,
+                                   std::optional<uint32_t> request_line) {
   // Each breakpoint location is treated as a separate breakpoint for VS code.
   // They don't have the notion of a single breakpoint with multiple locations.
   llvm::json::Object object;
@@ -439,8 +439,8 @@ llvm::json::Value CreateModule(lldb::SBModule &module) {
 }
 
 void AppendBreakpoint(lldb::SBBreakpoint &bp, llvm::json::Array &breakpoints,
-                      llvm::Optional<llvm::StringRef> request_path,
-                      llvm::Optional<uint32_t> request_line) {
+                      std::optional<llvm::StringRef> request_path,
+                      std::optional<uint32_t> request_line) {
   breakpoints.emplace_back(CreateBreakpoint(bp, request_path, request_line));
 }
 

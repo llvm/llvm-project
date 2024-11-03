@@ -12,7 +12,7 @@
 ;
 ; Check that A[j] is not used for mapping as it is still in use.
 ;
-define void @func(double* noalias nonnull %A) {
+define void @func(ptr noalias nonnull %A) {
 entry:
   %fsomeval = fadd double 21.0, 21.0
   br label %outer.preheader
@@ -48,9 +48,9 @@ outer.for:
       br label %reduction.for
 
     reduction.exit:
-      %A_idx = getelementptr inbounds double, double* %A, i32 %j
-      %dummy = load double, double* %A_idx
-      store double %phi, double* %A_idx
+      %A_idx = getelementptr inbounds double, ptr %A, i32 %j
+      %dummy = load double, ptr %A_idx
+      store double %phi, ptr %A_idx
       br label %outer.inc
 
 

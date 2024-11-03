@@ -18,9 +18,7 @@
 #include <cctype>
 #include <string>
 
-namespace clang {
-namespace tidy {
-namespace modernize {
+namespace clang::tidy::modernize {
 
 static bool hasOnlyComments(SourceLocation Loc, const LangOptions &Options,
                             StringRef Text) {
@@ -556,6 +554,4 @@ void MacroToEnumCheck::check(
     PPCallback->invalidateRange(Range);
 }
 
-} // namespace modernize
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::modernize

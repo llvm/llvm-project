@@ -58,8 +58,8 @@ const double SIN_K_PI_OVER_32[64] = {
     -0x1.917a6bc29b42cp-4,
 };
 
-static inline void sincosf_eval(double xd, uint32_t x_abs, double &sin_k,
-                                double &cos_k, double &sin_y, double &cosm1_y) {
+LIBC_INLINE void sincosf_eval(double xd, uint32_t x_abs, double &sin_k,
+                              double &cos_k, double &sin_y, double &cosm1_y) {
   int64_t k;
   double y;
 

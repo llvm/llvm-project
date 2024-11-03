@@ -56,7 +56,6 @@ public:
   const TargetLowering *TLI;
   bool FastISelFailed;
   SmallPtrSet<const Instruction *, 4> ElidedArgCopyInstrs;
-  bool UseInstrRefDebugInfo = false;
 
   /// Current optimization remark emitter.
   /// Used to report things like combines and FastISel failures.
@@ -321,6 +320,7 @@ private:
 
   void Select_FREEZE(SDNode *N);
   void Select_ARITH_FENCE(SDNode *N);
+  void Select_MEMBARRIER(SDNode *N);
 
   void pushStackMapLiveVariable(SmallVectorImpl<SDValue> &Ops, SDValue Operand,
                                 SDLoc DL);

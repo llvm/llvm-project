@@ -14,9 +14,7 @@
 
 #include <map>
 
-namespace clang {
-namespace tidy {
-namespace llvm_check {
+namespace clang::tidy::llvm_check {
 
 namespace {
 class IncludeOrderPPCallbacks : public PPCallbacks {
@@ -183,6 +181,4 @@ void IncludeOrderPPCallbacks::EndOfMainFile() {
   IncludeDirectives.clear();
 }
 
-} // namespace llvm_check
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::llvm_check

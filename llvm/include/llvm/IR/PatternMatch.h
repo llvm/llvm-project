@@ -2490,7 +2490,7 @@ struct VScaleVal_match {
         if (GEP->getNumIndices() == 1 && isa<ScalableVectorType>(DerefTy) &&
             m_Zero().match(GEP->getPointerOperand()) &&
             m_SpecificInt(1).match(GEP->idx_begin()->get()) &&
-            DL.getTypeAllocSizeInBits(DerefTy).getKnownMinSize() == 8)
+            DL.getTypeAllocSizeInBits(DerefTy).getKnownMinValue() == 8)
           return true;
       }
     }

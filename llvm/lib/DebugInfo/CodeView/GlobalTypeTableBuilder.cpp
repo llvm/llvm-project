@@ -81,7 +81,7 @@ static inline ArrayRef<uint8_t> stabilize(BumpPtrAllocator &Alloc,
                                           ArrayRef<uint8_t> Data) {
   uint8_t *Stable = Alloc.Allocate<uint8_t>(Data.size());
   memcpy(Stable, Data.data(), Data.size());
-  return makeArrayRef(Stable, Data.size());
+  return ArrayRef(Stable, Data.size());
 }
 
 TypeIndex GlobalTypeTableBuilder::insertRecordBytes(ArrayRef<uint8_t> Record) {

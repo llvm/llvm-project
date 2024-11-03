@@ -1142,7 +1142,7 @@ Register SparcTargetLowering::getRegisterByName(const char* RegName, LLT VT,
 static void fixupVariableFloatArgs(SmallVectorImpl<CCValAssign> &ArgLocs,
                                    ArrayRef<ISD::OutputArg> Outs) {
   for (unsigned i = 0, e = ArgLocs.size(); i != e; ++i) {
-    const CCValAssign &VA = ArgLocs[i];
+    CCValAssign &VA = ArgLocs[i];
     MVT ValTy = VA.getLocVT();
     // FIXME: What about f32 arguments? C promotes them to f64 when calling
     // varargs functions.
@@ -1153,8 +1153,6 @@ static void fixupVariableFloatArgs(SmallVectorImpl<CCValAssign> &ArgLocs,
       continue;
 
     // This floating point argument should be reassigned.
-    CCValAssign NewVA;
-
     // Determine the offset into the argument array.
     Register firstReg = (ValTy == MVT::f64) ? SP::D0 : SP::Q0;
     unsigned argSize  = (ValTy == MVT::f64) ? 8 : 16;
@@ -1166,21 +1164,20 @@ static void fixupVariableFloatArgs(SmallVectorImpl<CCValAssign> &ArgLocs,
       unsigned IReg = SP::I0 + Offset/8;
       if (ValTy == MVT::f64)
         // Full register, just bitconvert into i64.
-        NewVA = CCValAssign::getReg(VA.getValNo(), VA.getValVT(),
-                                    IReg, MVT::i64, CCValAssign::BCvt);
+        VA = CCValAssign::getReg(VA.getValNo(), VA.getValVT(), IReg, MVT::i64,
+                                 CCValAssign::BCvt);
       else {
         assert(ValTy == MVT::f128 && "Unexpected type!");
         // Full register, just bitconvert into i128 -- We will lower this into
         // two i64s in LowerCall_64.
-        NewVA = CCValAssign::getCustomReg(VA.getValNo(), VA.getValVT(),
-                                          IReg, MVT::i128, CCValAssign::BCvt);
+        VA = CCValAssign::getCustomReg(VA.getValNo(), VA.getValVT(), IReg,
+                                       MVT::i128, CCValAssign::BCvt);
       }
     } else {
       // This needs to go to memory, we're out of integer registers.
-      NewVA = CCValAssign::getMem(VA.getValNo(), VA.getValVT(),
-                                  Offset, VA.getLocVT(), VA.getLocInfo());
+      VA = CCValAssign::getMem(VA.getValNo(), VA.getValVT(), Offset,
+                               VA.getLocVT(), VA.getLocInfo());
     }
-    ArgLocs[i] = NewVA;
   }
 }
 
@@ -2646,8 +2643,16 @@ static SDValue LowerSELECT_CC(SDValue Op, SelectionDAG &DAG,
   if (LHS.getValueType().isInteger()) {
     // On V9 processors running in 64-bit mode, if CC compares two `i64`s
     // and the RHS is zero we might be able to use a specialized select.
+    // All SELECT_CC between any two scalar integer types are eligible for
+    // lowering to specialized instructions. Additionally, f32 and f64 types
+    // are also eligible, but for f128 we can only use the specialized
+    // instruction when we have hardquad.
+    EVT ValType = TrueVal.getValueType();
+    bool IsEligibleType = ValType.isScalarInteger() || ValType == MVT::f32 ||
+                          ValType == MVT::f64 ||
+                          (ValType == MVT::f128 && hasHardQuad);
     if (is64Bit && isV9 && LHS.getValueType() == MVT::i64 &&
-        isNullConstant(RHS) && !ISD::isUnsignedIntSetCC(CC))
+        isNullConstant(RHS) && !ISD::isUnsignedIntSetCC(CC) && IsEligibleType)
       return DAG.getNode(
           SPISD::SELECT_REG, dl, TrueVal.getValueType(), TrueVal, FalseVal,
           DAG.getConstant(intCondCCodeToRcond(CC), dl, MVT::i32), LHS);
@@ -2713,7 +2718,7 @@ static SDValue LowerVAARG(SDValue Op, SelectionDAG &DAG) {
   // We can't count on greater alignment than the word size.
   return DAG.getLoad(
       VT, DL, InChain, VAList, MachinePointerInfo(),
-      std::min(PtrVT.getFixedSizeInBits(), VT.getFixedSizeInBits()) / 8);
+      Align(std::min(PtrVT.getFixedSizeInBits(), VT.getFixedSizeInBits()) / 8));
 }
 
 static SDValue LowerDYNAMIC_STACKALLOC(SDValue Op, SelectionDAG &DAG,

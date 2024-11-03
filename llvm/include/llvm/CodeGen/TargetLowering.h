@@ -62,6 +62,7 @@
 
 namespace llvm {
 
+class AssumptionCache;
 class CCState;
 class CCValAssign;
 class Constant;
@@ -424,8 +425,10 @@ public:
     return MachineMemOperand::MONone;
   }
 
-  MachineMemOperand::Flags getLoadMemOperandFlags(const LoadInst &LI,
-                                                  const DataLayout &DL) const;
+  MachineMemOperand::Flags
+  getLoadMemOperandFlags(const LoadInst &LI, const DataLayout &DL,
+                         AssumptionCache *AC = nullptr,
+                         const TargetLibraryInfo *LibInfo = nullptr) const;
   MachineMemOperand::Flags getStoreMemOperandFlags(const StoreInst &SI,
                                                    const DataLayout &DL) const;
   MachineMemOperand::Flags getAtomicMemOperandFlags(const Instruction &AI,
@@ -573,24 +576,7 @@ public:
   /// dag combiner.
   virtual bool isLoadBitCastBeneficial(EVT LoadVT, EVT BitcastVT,
                                        const SelectionDAG &DAG,
-                                       const MachineMemOperand &MMO) const {
-    // Don't do if we could do an indexed load on the original type, but not on
-    // the new one.
-    if (!LoadVT.isSimple() || !BitcastVT.isSimple())
-      return true;
-
-    MVT LoadMVT = LoadVT.getSimpleVT();
-
-    // Don't bother doing this if it's just going to be promoted again later, as
-    // doing so might interfere with other combines.
-    if (getOperationAction(ISD::LOAD, LoadMVT) == Promote &&
-        getTypeToPromoteTo(ISD::LOAD, LoadMVT) == BitcastVT.getSimpleVT())
-      return false;
-
-    unsigned Fast = 0;
-    return allowsMemoryAccess(*DAG.getContext(), DAG.getDataLayout(), BitcastVT,
-                              MMO, &Fast) && Fast;
-  }
+                                       const MachineMemOperand &MMO) const;
 
   /// Return true if the following transform is beneficial:
   /// (store (y (conv x)), y*)) -> (store x, (x*))
@@ -929,11 +915,19 @@ public:
     return RepRegClassCostForVT[VT.SimpleTy];
   }
 
-  /// Return true if SHIFT instructions should be expanded to SHIFT_PARTS
-  /// instructions, and false if a library call is preferred (e.g for code-size
-  /// reasons).
-  virtual bool shouldExpandShift(SelectionDAG &DAG, SDNode *N) const {
-    return true;
+  /// Return the preferred strategy to legalize tihs SHIFT instruction, with
+  /// \p ExpansionFactor being the recursion depth - how many expansion needed.
+  enum class ShiftLegalizationStrategy {
+    ExpandToParts,
+    ExpandThroughStack,
+    LowerToLibcall
+  };
+  virtual ShiftLegalizationStrategy
+  preferredShiftLegalizationStrategy(SelectionDAG &DAG, SDNode *N,
+                                     unsigned ExpansionFactor) const {
+    if (ExpansionFactor == 1)
+      return ShiftLegalizationStrategy::ExpandToParts;
+    return ShiftLegalizationStrategy::ExpandThroughStack;
   }
 
   /// Return true if the target has native support for the specified value type.
@@ -1989,6 +1983,13 @@ public:
     return false;
   }
 
+  /// Whether AtomicExpandPass should automatically insert a trailing fence
+  /// without reducing the ordering for this atomic. Defaults to false.
+  virtual bool
+  shouldInsertTrailingFenceForAtomicStore(const Instruction *I) const {
+    return false;
+  }
+
   /// Perform a load-linked operation on Addr, returning a "Value *" with the
   /// corresponding pointee type. This may entail some non-trivial operations to
   /// truncate or reconstruct types that will be illegal in the backend. See
@@ -2273,7 +2274,7 @@ public:
     if (Exponent < 0)
       Exponent = -Exponent;
     return !OptForSize ||
-           (countPopulation((unsigned int)Exponent) + Log2_32(Exponent) < 7);
+           (llvm::popcount((unsigned int)Exponent) + Log2_32(Exponent) < 7);
   }
 
   //===--------------------------------------------------------------------===//
@@ -3915,6 +3916,7 @@ public:
   /// indicating any elements which may be undef in the output \p UndefElts.
   virtual bool isSplatValueForTargetNode(SDValue Op, const APInt &DemandedElts,
                                          APInt &UndefElts,
+                                         const SelectionDAG &DAG,
                                          unsigned Depth = 0) const;
 
   /// Returns true if the given Opc is considered a canonical constant for the
@@ -4075,20 +4077,32 @@ public:
                                        NegatibleCost &Cost,
                                        unsigned Depth = 0) const;
 
+  SDValue getCheaperOrNeutralNegatedExpression(
+      SDValue Op, SelectionDAG &DAG, bool LegalOps, bool OptForSize,
+      const NegatibleCost CostThreshold = NegatibleCost::Neutral,
+      unsigned Depth = 0) const {
+    NegatibleCost Cost = NegatibleCost::Expensive;
+    SDValue Neg =
+        getNegatedExpression(Op, DAG, LegalOps, OptForSize, Cost, Depth);
+    if (!Neg)
+      return SDValue();
+
+    if (Cost <= CostThreshold)
+      return Neg;
+
+    // Remove the new created node to avoid the side effect to the DAG.
+    if (Neg->use_empty())
+      DAG.RemoveDeadNode(Neg.getNode());
+    return SDValue();
+  }
+
   /// This is the helper function to return the newly negated expression only
   /// when the cost is cheaper.
   SDValue getCheaperNegatedExpression(SDValue Op, SelectionDAG &DAG,
                                       bool LegalOps, bool OptForSize,
                                       unsigned Depth = 0) const {
-    NegatibleCost Cost = NegatibleCost::Expensive;
-    SDValue Neg =
-        getNegatedExpression(Op, DAG, LegalOps, OptForSize, Cost, Depth);
-    if (Neg && Cost == NegatibleCost::Cheaper)
-      return Neg;
-    // Remove the new created node to avoid the side effect to the DAG.
-    if (Neg && Neg->use_empty())
-      DAG.RemoveDeadNode(Neg.getNode());
-    return SDValue();
+    return getCheaperOrNeutralNegatedExpression(Op, DAG, LegalOps, OptForSize,
+                                                NegatibleCost::Cheaper, Depth);
   }
 
   /// This is the helper function to return the newly negated expression if
@@ -4701,7 +4715,7 @@ public:
                                               SelectionDAG &DAG) const;
 
   // Targets may override this function to collect operands from the CallInst
-  // and for example, lower them into the SelectionDAG operands. 
+  // and for example, lower them into the SelectionDAG operands.
   virtual void CollectTargetIntrinsicOperands(const CallInst &I,
                                               SmallVectorImpl<SDValue> &Ops,
                                               SelectionDAG &DAG) const;
@@ -4928,6 +4942,11 @@ public:
   /// \returns The expansion result or SDValue() if it fails.
   SDValue expandCTLZ(SDNode *N, SelectionDAG &DAG) const;
 
+  /// Expand VP_CTLZ/VP_CTLZ_ZERO_UNDEF nodes.
+  /// \param N Node to expand
+  /// \returns The expansion result or SDValue() if it fails.
+  SDValue expandVPCTLZ(SDNode *N, SelectionDAG &DAG) const;
+
   /// Expand CTTZ via Table Lookup.
   /// \param N Node to expand
   /// \returns The expansion result or SDValue() if it fails.
@@ -4939,6 +4958,11 @@ public:
   /// \param N Node to expand
   /// \returns The expansion result or SDValue() if it fails.
   SDValue expandCTTZ(SDNode *N, SelectionDAG &DAG) const;
+
+  /// Expand VP_CTTZ/VP_CTTZ_ZERO_UNDEF nodes.
+  /// \param N Node to expand
+  /// \returns The expansion result or SDValue() if it fails.
+  SDValue expandVPCTTZ(SDNode *N, SelectionDAG &DAG) const;
 
   /// Expand ABS nodes. Expands vector/scalar ABS nodes,
   /// vector nodes can only succeed if all operations are legal/custom.

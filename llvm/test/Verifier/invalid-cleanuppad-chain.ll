@@ -6,7 +6,7 @@
 ; CHECK: Parent pad must be catchpad/cleanuppad/catchswitch
 ; CHECK-NEXT: cleanupret from undef unwind label %bb2
 
-define void @test() personality i32 (...)* undef {
+define void @test() personality ptr undef {
   br label %bb1
 
 bb1:

@@ -12,9 +12,7 @@
 
 using namespace clang::ast_matchers;
 
-namespace clang {
-namespace tidy {
-namespace misc {
+namespace clang::tidy::misc {
 
 void UnconventionalAssignOperatorCheck::registerMatchers(
     ast_matchers::MatchFinder *Finder) {
@@ -89,6 +87,4 @@ void UnconventionalAssignOperatorCheck::check(
   }
 }
 
-} // namespace misc
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::misc

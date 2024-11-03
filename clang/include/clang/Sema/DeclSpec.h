@@ -506,8 +506,16 @@ public:
     assert(isTypeRep((TST) TypeSpecType) && "DeclSpec does not store a type");
     return TypeRep;
   }
+  // Returns the underlying decl, if any.
   Decl *getRepAsDecl() const {
-    assert(isDeclRep((TST) TypeSpecType) && "DeclSpec does not store a decl");
+    auto *D = getRepAsFoundDecl();
+    if (const auto *Using = dyn_cast_or_null<UsingShadowDecl>(D))
+      return Using->getTargetDecl();
+    return D;
+  }
+  // Returns the originally found decl, if any.
+  Decl *getRepAsFoundDecl() const {
+    assert(isDeclRep((TST)TypeSpecType) && "DeclSpec does not store a decl");
     return DeclRep;
   }
   Expr *getRepAsExpr() const {
@@ -1513,7 +1521,7 @@ struct DeclaratorChunk {
     /// prototype. Typically these are tag declarations.
     ArrayRef<NamedDecl *> getDeclsInPrototype() const {
       assert(ExceptionSpecType == EST_None);
-      return llvm::makeArrayRef(DeclsInPrototype, NumExceptionsOrDecls);
+      return llvm::ArrayRef(DeclsInPrototype, NumExceptionsOrDecls);
     }
 
     /// Determine whether this function declarator had a
@@ -1760,7 +1768,7 @@ public:
   }
 
   ArrayRef<Binding> bindings() const {
-    return llvm::makeArrayRef(Bindings, NumBindings);
+    return llvm::ArrayRef(Bindings, NumBindings);
   }
 
   bool isSet() const { return LSquareLoc.isValid(); }

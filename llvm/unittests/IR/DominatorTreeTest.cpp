@@ -722,7 +722,7 @@ TEST(DominatorTree, InsertReachable) {
   PostDominatorTree PDT(*Holder.F);
   EXPECT_TRUE(PDT.verify());
 
-  Optional<CFGBuilder::Update> LastUpdate;
+  std::optional<CFGBuilder::Update> LastUpdate;
   while ((LastUpdate = B.applyUpdate())) {
     EXPECT_EQ(LastUpdate->Action, Insert);
     BasicBlock *From = B.getOrAddBlock(LastUpdate->Edge.From);
@@ -748,7 +748,7 @@ TEST(DominatorTree, InsertReachable2) {
   PostDominatorTree PDT(*Holder.F);
   EXPECT_TRUE(PDT.verify());
 
-  Optional<CFGBuilder::Update> LastUpdate = B.applyUpdate();
+  std::optional<CFGBuilder::Update> LastUpdate = B.applyUpdate();
   EXPECT_TRUE(LastUpdate);
 
   EXPECT_EQ(LastUpdate->Action, Insert);
@@ -776,7 +776,7 @@ TEST(DominatorTree, InsertUnreachable) {
   PostDominatorTree PDT(*Holder.F);
   EXPECT_TRUE(PDT.verify());
 
-  Optional<CFGBuilder::Update> LastUpdate;
+  std::optional<CFGBuilder::Update> LastUpdate;
   while ((LastUpdate = B.applyUpdate())) {
     EXPECT_EQ(LastUpdate->Action, Insert);
     BasicBlock *From = B.getOrAddBlock(LastUpdate->Edge.From);
@@ -797,7 +797,7 @@ TEST(DominatorTree, InsertFromUnreachable) {
   PostDominatorTree PDT(*Holder.F);
   EXPECT_TRUE(PDT.verify());
 
-  Optional<CFGBuilder::Update> LastUpdate = B.applyUpdate();
+  std::optional<CFGBuilder::Update> LastUpdate = B.applyUpdate();
   EXPECT_TRUE(LastUpdate);
 
   EXPECT_EQ(LastUpdate->Action, Insert);
@@ -827,7 +827,7 @@ TEST(DominatorTree, InsertMixed) {
   PostDominatorTree PDT(*Holder.F);
   EXPECT_TRUE(PDT.verify());
 
-  Optional<CFGBuilder::Update> LastUpdate;
+  std::optional<CFGBuilder::Update> LastUpdate;
   while ((LastUpdate = B.applyUpdate())) {
     EXPECT_EQ(LastUpdate->Action, Insert);
     BasicBlock *From = B.getOrAddBlock(LastUpdate->Edge.From);
@@ -857,7 +857,7 @@ TEST(DominatorTree, InsertPermut) {
     PostDominatorTree PDT(*Holder.F);
     EXPECT_TRUE(PDT.verify());
 
-    Optional<CFGBuilder::Update> LastUpdate;
+    std::optional<CFGBuilder::Update> LastUpdate;
     while ((LastUpdate = B.applyUpdate())) {
       EXPECT_EQ(LastUpdate->Action, Insert);
       BasicBlock *From = B.getOrAddBlock(LastUpdate->Edge.From);
@@ -884,7 +884,7 @@ TEST(DominatorTree, DeleteReachable) {
   PostDominatorTree PDT(*Holder.F);
   EXPECT_TRUE(PDT.verify());
 
-  Optional<CFGBuilder::Update> LastUpdate;
+  std::optional<CFGBuilder::Update> LastUpdate;
   while ((LastUpdate = B.applyUpdate())) {
     EXPECT_EQ(LastUpdate->Action, Delete);
     BasicBlock *From = B.getOrAddBlock(LastUpdate->Edge.From);
@@ -910,7 +910,7 @@ TEST(DominatorTree, DeleteUnreachable) {
   PostDominatorTree PDT(*Holder.F);
   EXPECT_TRUE(PDT.verify());
 
-  Optional<CFGBuilder::Update> LastUpdate;
+  std::optional<CFGBuilder::Update> LastUpdate;
   while ((LastUpdate = B.applyUpdate())) {
     EXPECT_EQ(LastUpdate->Action, Delete);
     BasicBlock *From = B.getOrAddBlock(LastUpdate->Edge.From);
@@ -940,7 +940,7 @@ TEST(DominatorTree, InsertDelete) {
   PostDominatorTree PDT(*Holder.F);
   EXPECT_TRUE(PDT.verify());
 
-  Optional<CFGBuilder::Update> LastUpdate;
+  std::optional<CFGBuilder::Update> LastUpdate;
   while ((LastUpdate = B.applyUpdate())) {
     BasicBlock *From = B.getOrAddBlock(LastUpdate->Edge.From);
     BasicBlock *To = B.getOrAddBlock(LastUpdate->Edge.To);
@@ -978,7 +978,7 @@ TEST(DominatorTree, InsertDeleteExhaustive) {
     PostDominatorTree PDT(*Holder.F);
     EXPECT_TRUE(PDT.verify());
 
-    Optional<CFGBuilder::Update> LastUpdate;
+    std::optional<CFGBuilder::Update> LastUpdate;
     while ((LastUpdate = B.applyUpdate())) {
       BasicBlock *From = B.getOrAddBlock(LastUpdate->Edge.From);
       BasicBlock *To = B.getOrAddBlock(LastUpdate->Edge.To);

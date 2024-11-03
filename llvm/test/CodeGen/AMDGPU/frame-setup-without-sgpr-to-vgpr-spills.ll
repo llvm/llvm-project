@@ -16,7 +16,6 @@ define void @callee_with_stack_and_call() #0 {
 ; SPILL-TO-VGPR-NEXT:    buffer_store_dword v40, off, s[0:3], s33 offset:4 ; 4-byte Folded Spill
 ; SPILL-TO-VGPR-NEXT:    buffer_store_dword v41, off, s[0:3], s33 offset:8 ; 4-byte Folded Spill
 ; SPILL-TO-VGPR-NEXT:    s_mov_b64 exec, s[8:9]
-; SPILL-TO-VGPR-NEXT:    ; implicit-def: $vgpr40
 ; SPILL-TO-VGPR-NEXT:    s_addk_i32 s32, 0x400
 ; SPILL-TO-VGPR-NEXT:    v_writelane_b32 v40, s30, 0
 ; SPILL-TO-VGPR-NEXT:    v_mov_b32_e32 v0, 0

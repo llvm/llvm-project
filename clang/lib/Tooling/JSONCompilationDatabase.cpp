@@ -15,7 +15,6 @@
 #include "clang/Tooling/CompilationDatabase.h"
 #include "clang/Tooling/CompilationDatabasePluginRegistry.h"
 #include "clang/Tooling/Tooling.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
@@ -34,6 +33,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
 #include <memory>
+#include <optional>
 #include <string>
 #include <system_error>
 #include <tuple>
@@ -349,7 +349,7 @@ bool JSONCompilationDatabase::parse(std::string &ErrorMessage) {
       return false;
     }
     llvm::yaml::ScalarNode *Directory = nullptr;
-    llvm::Optional<std::vector<llvm::yaml::ScalarNode *>> Command;
+    std::optional<std::vector<llvm::yaml::ScalarNode *>> Command;
     llvm::yaml::ScalarNode *File = nullptr;
     llvm::yaml::ScalarNode *Output = nullptr;
     for (auto& NextKeyValue : *Object) {

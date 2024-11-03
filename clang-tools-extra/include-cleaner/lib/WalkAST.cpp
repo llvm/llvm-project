@@ -66,6 +66,20 @@ class ASTWalker : public RecursiveASTVisitor<ASTWalker> {
 public:
   ASTWalker(DeclCallback Callback) : Callback(Callback) {}
 
+  bool TraverseCXXOperatorCallExpr(CXXOperatorCallExpr *S) {
+    if (!WalkUpFromCXXOperatorCallExpr(S))
+      return false;
+
+    // Operators are always ADL extension points, by design references to them
+    // doesn't count as uses (generally the type should provide them).
+    // Don't traverse the callee.
+
+    for (auto *Arg : S->arguments())
+      if (!TraverseStmt(Arg))
+        return false;
+    return true;
+  }
+
   bool VisitDeclRefExpr(DeclRefExpr *DRE) {
     report(DRE->getLocation(), DRE->getFoundDecl());
     return true;
@@ -77,8 +91,6 @@ public:
     // usage of the base type of the MemberExpr, so that e.g. code
     // `returnFoo().bar` can keep #include "foo.h" (rather than inserting
     // "bar.h" for the underlying base type `Bar`).
-    //
-    // FIXME: support dependent types, e.g., "std::vector<T>().size()".
     QualType Type = E->getBase()->IgnoreImpCasts()->getType();
     report(E->getMemberLoc(), getMemberProvider(Type), RefType::Implicit);
     return true;
@@ -90,7 +102,7 @@ public:
   }
 
   bool VisitCXXConstructExpr(CXXConstructExpr *E) {
-    report(E->getLocation(), E->getConstructor(),
+    report(E->getLocation(), getMemberProvider(E->getType()),
            E->getParenOrBraceRange().isValid() ? RefType::Explicit
                                                : RefType::Implicit);
     return true;

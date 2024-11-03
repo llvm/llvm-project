@@ -24,6 +24,9 @@
 ; CHECK: DW_TAG_member
 ; CHECK-NEXT: DW_AT_name{{.*}}"b"
 ; CHECK-NOT: DW_TAG_member
+; CHECK:      DW_AT_byte_size  {{.*}} (0x04)
+; CHECK-NEXT: DW_AT_bit_size   {{.*}} (0x20)
+; CHECK-NEXT: DW_AT_bit_offset {{.*}} (0x00)
 ; CHECK:      DW_AT_data_member_location {{.*}} (DW_OP_plus_uconst 0x4)
 
 ; CHECK: DW_TAG_member
@@ -63,11 +66,11 @@ target triple = "aarch64_be--linux-gnu"
 !5 = !{!0}
 !6 = !DICompositeType(tag: DW_TAG_structure_type, name: "bitfield", file: !3, line: 1, size: 96, elements: !7)
 !7 = !{!8, !10, !11, !12}
-!8 = !DIDerivedType(tag: DW_TAG_member, name: "a", scope: !6, file: !3, line: 2, baseType: !9, size: 2)
+!8 = !DIDerivedType(tag: DW_TAG_member, name: "a", scope: !6, file: !3, line: 2, baseType: !9, size: 2, flags: DIFlagBitField)
 !9 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
-!10 = !DIDerivedType(tag: DW_TAG_member, name: "b", scope: !6, file: !3, line: 3, baseType: !9, size: 32, offset: 32)
-!11 = !DIDerivedType(tag: DW_TAG_member, name: "c", scope: !6, file: !3, line: 4, baseType: !9, size: 1, offset: 64)
-!12 = !DIDerivedType(tag: DW_TAG_member, name: "d", scope: !6, file: !3, line: 5, baseType: !9, size: 28, offset: 65)
+!10 = !DIDerivedType(tag: DW_TAG_member, name: "b", scope: !6, file: !3, line: 3, baseType: !9, size: 32, offset: 32, flags: DIFlagBitField)
+!11 = !DIDerivedType(tag: DW_TAG_member, name: "c", scope: !6, file: !3, line: 4, baseType: !9, size: 1, offset: 64, flags: DIFlagBitField)
+!12 = !DIDerivedType(tag: DW_TAG_member, name: "d", scope: !6, file: !3, line: 5, baseType: !9, size: 28, offset: 65, flags: DIFlagBitField)
 !13 = !{i32 2, !"Dwarf Version", i32 2}
 !14 = !{i32 2, !"Debug Info Version", i32 3}
 !15 = !{i32 1, !"PIC Level", i32 2}

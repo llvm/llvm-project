@@ -271,7 +271,7 @@ bool ABISysV_arc::PrepareTrivialCall(Thread &thread, addr_t sp, addr_t pc,
         reg_value[byte_index++] = 0;
       }
 
-      RegisterValue reg_val_obj(llvm::makeArrayRef(reg_value, reg_size),
+      RegisterValue reg_val_obj(llvm::ArrayRef(reg_value, reg_size),
                                 eByteOrderLittle);
       if (!reg_ctx->WriteRegister(
             reg_ctx->GetRegisterInfo(eRegisterKindGeneric, reg_index),

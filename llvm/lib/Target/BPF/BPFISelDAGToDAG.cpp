@@ -34,6 +34,7 @@
 using namespace llvm;
 
 #define DEBUG_TYPE "bpf-isel"
+#define PASS_NAME "BPF DAG->DAG Pattern Instruction Selection"
 
 // Instruction Selector Implementation
 namespace {
@@ -47,12 +48,10 @@ class BPFDAGToDAGISel : public SelectionDAGISel {
 public:
   static char ID;
 
+  BPFDAGToDAGISel() = delete;
+
   explicit BPFDAGToDAGISel(BPFTargetMachine &TM)
       : SelectionDAGISel(ID, TM), Subtarget(nullptr) {}
-
-  StringRef getPassName() const override {
-    return "BPF DAG->DAG Pattern Instruction Selection";
-  }
 
   bool runOnMachineFunction(MachineFunction &MF) override {
     // Reset the subtarget each time through.
@@ -99,6 +98,8 @@ private:
 } // namespace
 
 char BPFDAGToDAGISel::ID = 0;
+
+INITIALIZE_PASS(BPFDAGToDAGISel, DEBUG_TYPE, PASS_NAME, false, false)
 
 // ComplexPattern used on BPF Load/Store instructions
 bool BPFDAGToDAGISel::SelectAddr(SDValue Addr, SDValue &Base, SDValue &Offset) {

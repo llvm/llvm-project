@@ -14,6 +14,7 @@
 
 #include "mlir/IR/Operation.h"
 #include "llvm/Support/Debug.h"
+#include <optional>
 
 namespace mlir {
 namespace sparse_tensor {
@@ -210,10 +211,10 @@ Merger::Merger(unsigned t, unsigned l, unsigned fl)
       numNativeLoops(l), numLoops(l + fl), hasSparseOut(false),
       dimTypes(numTensors,
                std::vector<DimLevelType>(numLoops, DimLevelType::Undef)),
-      loopIdxToDim(numTensors,
-                   std::vector<Optional<unsigned>>(numLoops, std::nullopt)),
-      dimToLoopIdx(numTensors,
-                   std::vector<Optional<unsigned>>(numLoops, std::nullopt)) {}
+      loopIdxToDim(numTensors, std::vector<std::optional<unsigned>>(
+                                   numLoops, std::nullopt)),
+      dimToLoopIdx(numTensors, std::vector<std::optional<unsigned>>(
+                                   numLoops, std::nullopt)) {}
 
 //===----------------------------------------------------------------------===//
 // Lattice methods.
@@ -957,7 +958,7 @@ unsigned Merger::buildLattices(unsigned e, unsigned i) {
   llvm_unreachable("unexpected expression kind");
 }
 
-Optional<unsigned> Merger::buildTensorExpFromLinalg(linalg::GenericOp op) {
+std::optional<unsigned> Merger::buildTensorExpFromLinalg(linalg::GenericOp op) {
   // Build the linalg semantics backward from yield.
   Operation *yield = op.getRegion().front().getTerminator();
   assert(isa<linalg::YieldOp>(yield));
@@ -1024,7 +1025,7 @@ static bool isAdmissibleBranch(Operation *op, Region &region) {
   return isAdmissibleBranchExp(op, &region.front(), yield->getOperand(0));
 }
 
-Optional<unsigned> Merger::buildTensorExp(linalg::GenericOp op, Value v) {
+std::optional<unsigned> Merger::buildTensorExp(linalg::GenericOp op, Value v) {
   if (auto arg = v.dyn_cast<BlockArgument>()) {
     unsigned argN = arg.getArgNumber();
     // Any argument of the generic op that is not marked as a scalar
@@ -1204,7 +1205,7 @@ static Value insertYieldOp(RewriterBase &rewriter, Location loc, Region &region,
                            ValueRange vals) {
   // Make a clone of overlap region.
   Region tmpRegion;
-  BlockAndValueMapping mapper;
+  IRMapping mapper;
   region.cloneInto(&tmpRegion, tmpRegion.begin(), mapper);
   Block &clonedBlock = tmpRegion.front();
   YieldOp clonedYield = cast<YieldOp>(clonedBlock.getTerminator());

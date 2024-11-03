@@ -466,6 +466,146 @@ TLI_DEFINE_VECFUNC("__exp2f_finite", "__svml_exp2f4", FIXED(4))
 TLI_DEFINE_VECFUNC("__exp2f_finite", "__svml_exp2f8", FIXED(8))
 TLI_DEFINE_VECFUNC("__exp2f_finite", "__svml_exp2f16", FIXED(16))
 
+#elif defined(TLI_DEFINE_SLEEFGNUABI_VF2_VECFUNCS)
+
+TLI_DEFINE_VECFUNC( "acos", "_ZGVnN2v_acos", FIXED(2))
+TLI_DEFINE_VECFUNC( "llvm.acos.f64", "_ZGVnN2v_acos", FIXED(2))
+
+TLI_DEFINE_VECFUNC( "asin", "_ZGVnN2v_asin", FIXED(2))
+TLI_DEFINE_VECFUNC( "llvm.asin.f64", "_ZGVnN2v_asin", FIXED(2))
+
+TLI_DEFINE_VECFUNC( "atan", "_ZGVnN2v_atan", FIXED(2))
+TLI_DEFINE_VECFUNC( "llvm.atan.f64", "_ZGVnN2v_atan", FIXED(2))
+
+TLI_DEFINE_VECFUNC( "atan2", "_ZGVnN2vv_atan2", FIXED(2))
+TLI_DEFINE_VECFUNC( "llvm.atan2.f64", "_ZGVnN2vv_atan2", FIXED(2))
+TLI_DEFINE_VECFUNC( "llvm.atan2.v2f64", "_ZGVnN2vv_atan2", FIXED(2))
+
+TLI_DEFINE_VECFUNC( "atanh", "_ZGVnN2v_atanh", FIXED(2))
+TLI_DEFINE_VECFUNC( "llvm.atanh.f64", "_ZGVnN2v_atanh", FIXED(2))
+
+TLI_DEFINE_VECFUNC( "cos", "_ZGVnN2v_cos", FIXED(2))
+TLI_DEFINE_VECFUNC( "llvm.cos.f64", "_ZGVnN2v_cos", FIXED(2))
+
+TLI_DEFINE_VECFUNC( "cosh", "_ZGVnN2v_cosh", FIXED(2))
+TLI_DEFINE_VECFUNC( "llvm.cosh.f64", "_ZGVnN2v_cosh", FIXED(2))
+
+TLI_DEFINE_VECFUNC( "exp", "_ZGVnN2v_exp", FIXED(2))
+TLI_DEFINE_VECFUNC( "llvm.exp.f64", "_ZGVnN2v_exp", FIXED(2))
+TLI_DEFINE_VECFUNC( "llvm.exp.v2f64", "_ZGVnN2v_exp", FIXED(2))
+
+TLI_DEFINE_VECFUNC( "exp2", "_ZGVnN2v_exp2", FIXED(2))
+TLI_DEFINE_VECFUNC( "llvm.exp2.f64", "_ZGVnN2v_exp2", FIXED(2))
+TLI_DEFINE_VECFUNC( "llvm.exp2.v2f64", "_ZGVnN2v_exp2", FIXED(2))
+
+TLI_DEFINE_VECFUNC( "exp10", "_ZGVnN2v_exp10", FIXED(2))
+TLI_DEFINE_VECFUNC( "llvm.exp10.f64", "_ZGVnN2v_exp10", FIXED(2))
+TLI_DEFINE_VECFUNC( "llvm.exp10.v2f64", "_ZGVnN2v_exp10", FIXED(2))
+
+TLI_DEFINE_VECFUNC( "lgamma", "_ZGVnN2v_lgamma", FIXED(2))
+TLI_DEFINE_VECFUNC( "llvm.lgamma.f64", "_ZGVnN2v_lgamma", FIXED(2))
+
+TLI_DEFINE_VECFUNC( "log", "_ZGVnN2v_log", FIXED(2))
+TLI_DEFINE_VECFUNC( "llvm.log.f64", "_ZGVnN2v_log", FIXED(2))
+
+TLI_DEFINE_VECFUNC( "log2", "_ZGVnN2v_log2", FIXED(2))
+TLI_DEFINE_VECFUNC( "llvm.log2.f64", "_ZGVnN2v_log2", FIXED(2))
+
+TLI_DEFINE_VECFUNC( "log10", "_ZGVnN2v_log10", FIXED(2))
+TLI_DEFINE_VECFUNC( "llvm.log10.f64", "_ZGVnN2v_log10", FIXED(2))
+
+TLI_DEFINE_VECFUNC( "pow", "_ZGVnN2vv_pow", FIXED(2))
+TLI_DEFINE_VECFUNC( "llvm.pow.f64", "_ZGVnN2vv_pow", FIXED(2))
+TLI_DEFINE_VECFUNC( "llvm.pow.v2f64", "_ZGVnN2vv_pow", FIXED(2))
+
+TLI_DEFINE_VECFUNC( "sin", "_ZGVnN2v_sin", FIXED(2))
+TLI_DEFINE_VECFUNC( "llvm.sin.f64", "_ZGVnN2v_sin", FIXED(2))
+
+TLI_DEFINE_VECFUNC( "sinh", "_ZGVnN2v_sinh", FIXED(2))
+TLI_DEFINE_VECFUNC( "llvm.sinh.f64", "_ZGVnN2v_sinh", FIXED(2))
+
+TLI_DEFINE_VECFUNC( "sqrt", "_ZGVnN2v_sqrt", FIXED(2))
+TLI_DEFINE_VECFUNC( "llvm.sqrt.f64", "_ZGVnN2v_sqrt", FIXED(2))
+
+TLI_DEFINE_VECFUNC( "tan", "_ZGVnN2v_tan", FIXED(2))
+TLI_DEFINE_VECFUNC( "llvm.tan.f64", "_ZGVnN2v_tan", FIXED(2))
+
+TLI_DEFINE_VECFUNC( "tanh", "_ZGVnN2v_tanh", FIXED(2))
+TLI_DEFINE_VECFUNC( "llvm.tanh.f64", "_ZGVnN2v_tanh", FIXED(2))
+
+TLI_DEFINE_VECFUNC( "tgamma", "_ZGVnN2v_tgamma", FIXED(2))
+TLI_DEFINE_VECFUNC( "llvm.tgamma.f64", "_ZGVnN2v_tgamma", FIXED(2))
+
+#elif defined(TLI_DEFINE_SLEEFGNUABI_VF4_VECFUNCS)
+
+TLI_DEFINE_VECFUNC( "acosf", "_ZGVnN4v_acosf", FIXED(4))
+TLI_DEFINE_VECFUNC( "llvm.acos.f32", "_ZGVnN4v_acosf", FIXED(4))
+
+TLI_DEFINE_VECFUNC( "asinf", "_ZGVnN4v_asinf", FIXED(4))
+TLI_DEFINE_VECFUNC( "llvm.asin.f32", "_ZGVnN4v_asinf", FIXED(4))
+
+TLI_DEFINE_VECFUNC( "atanf", "_ZGVnN4v_atanf", FIXED(4))
+TLI_DEFINE_VECFUNC( "llvm.atan.f32", "_ZGVnN4v_atanf", FIXED(4))
+
+TLI_DEFINE_VECFUNC( "atan2f", "_ZGVnN4vv_atan2f", FIXED(4))
+TLI_DEFINE_VECFUNC( "llvm.atan2.f32", "_ZGVnN4vv_atan2f", FIXED(4))
+TLI_DEFINE_VECFUNC( "llvm.atan2.v4f32", "_ZGVnN4vv_atan2f", FIXED(4))
+
+TLI_DEFINE_VECFUNC( "atanhf", "_ZGVnN4v_atanhf", FIXED(4))
+TLI_DEFINE_VECFUNC( "llvm.atanh.f32", "_ZGVnN4v_atanhf", FIXED(4))
+
+TLI_DEFINE_VECFUNC( "cosf", "_ZGVnN4v_cosf", FIXED(4))
+TLI_DEFINE_VECFUNC( "llvm.cos.f32", "_ZGVnN4v_cosf", FIXED(4))
+
+TLI_DEFINE_VECFUNC( "coshf", "_ZGVnN4v_coshf", FIXED(4))
+TLI_DEFINE_VECFUNC( "llvm.cosh.f32", "_ZGVnN4v_coshf", FIXED(4))
+
+TLI_DEFINE_VECFUNC( "expf", "_ZGVnN4v_expf", FIXED(4))
+TLI_DEFINE_VECFUNC( "llvm.exp.f32", "_ZGVnN4v_expf", FIXED(4))
+TLI_DEFINE_VECFUNC( "llvm.exp.v4f32", "_ZGVnN4v_expf", FIXED(4))
+
+TLI_DEFINE_VECFUNC( "exp2f", "_ZGVnN4v_exp2f", FIXED(4))
+TLI_DEFINE_VECFUNC( "llvm.exp2.f32", "_ZGVnN4v_exp2f", FIXED(4))
+TLI_DEFINE_VECFUNC( "llvm.exp2.v4f32", "_ZGVnN4v_exp2f", FIXED(4))
+
+TLI_DEFINE_VECFUNC( "exp10f", "_ZGVnN4v_exp10f", FIXED(4))
+TLI_DEFINE_VECFUNC( "llvm.exp10.f32", "_ZGVnN4v_exp10f", FIXED(4))
+TLI_DEFINE_VECFUNC( "llvm.exp10.v4f32", "_ZGVnN4v_exp10f", FIXED(4))
+
+TLI_DEFINE_VECFUNC( "lgammaf", "_ZGVnN4v_lgammaf", FIXED(4))
+TLI_DEFINE_VECFUNC( "llvm.lgamma.f32", "_ZGVnN4v_lgammaf", FIXED(4))
+
+TLI_DEFINE_VECFUNC( "logf", "_ZGVnN4v_logf", FIXED(4))
+TLI_DEFINE_VECFUNC( "llvm.log.f32", "_ZGVnN4v_logf", FIXED(4))
+
+TLI_DEFINE_VECFUNC( "log2f", "_ZGVnN4v_log2f", FIXED(4))
+TLI_DEFINE_VECFUNC( "llvm.log2.f32", "_ZGVnN4v_log2f", FIXED(4))
+
+TLI_DEFINE_VECFUNC( "log10f", "_ZGVnN4v_log10f", FIXED(4))
+TLI_DEFINE_VECFUNC( "llvm.log10.f32", "_ZGVnN4v_log10f", FIXED(4))
+
+TLI_DEFINE_VECFUNC( "powf", "_ZGVnN4vv_powf", FIXED(4))
+TLI_DEFINE_VECFUNC( "llvm.pow.f32", "_ZGVnN4vv_powf", FIXED(4))
+TLI_DEFINE_VECFUNC( "llvm.pow.v4f32", "_ZGVnN4vv_powf", FIXED(4))
+
+TLI_DEFINE_VECFUNC( "sinf", "_ZGVnN4v_sinf", FIXED(4))
+TLI_DEFINE_VECFUNC( "llvm.sin.f32", "_ZGVnN4v_sinf", FIXED(4))
+
+TLI_DEFINE_VECFUNC( "sinhf", "_ZGVnN4v_sinhf", FIXED(4))
+TLI_DEFINE_VECFUNC( "llvm.sinh.f32", "_ZGVnN4v_sinhf", FIXED(4))
+
+TLI_DEFINE_VECFUNC( "sqrtf", "_ZGVnN4v_sqrtf", FIXED(4))
+TLI_DEFINE_VECFUNC( "llvm.sqrt.f32", "_ZGVnN4v_sqrtf", FIXED(4))
+
+TLI_DEFINE_VECFUNC( "tanf", "_ZGVnN4v_tanf", FIXED(4))
+TLI_DEFINE_VECFUNC( "llvm.tan.f32", "_ZGVnN4v_tanf", FIXED(4))
+
+TLI_DEFINE_VECFUNC( "tanhf", "_ZGVnN4v_tanhf", FIXED(4))
+TLI_DEFINE_VECFUNC( "llvm.tanh.f32", "_ZGVnN4v_tanhf", FIXED(4))
+
+TLI_DEFINE_VECFUNC( "tgammaf", "_ZGVnN4v_tgammaf", FIXED(4))
+TLI_DEFINE_VECFUNC( "llvm.tgamma.f32", "_ZGVnN4v_tgammaf", FIXED(4))
+
 #else
 #error "Must choose which vector library functions are to be defined."
 #endif
@@ -476,4 +616,6 @@ TLI_DEFINE_VECFUNC("__exp2f_finite", "__svml_exp2f16", FIXED(16))
 #undef TLI_DEFINE_LIBMVEC_X86_VECFUNCS
 #undef TLI_DEFINE_MASSV_VECFUNCS
 #undef TLI_DEFINE_SVML_VECFUNCS
+#undef TLI_DEFINE_SLEEFGNUABI_VF2_VECFUNCS
+#undef TLI_DEFINE_SLEEFGNUABI_VF4_VECFUNCS
 #undef TLI_DEFINE_MASSV_VECFUNCS_NAMES

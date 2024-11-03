@@ -150,9 +150,9 @@ IRNumberingState::IRNumberingState(Operation *op) {
   // bytes it takes to encode a varint index to that sub-section. This allows
   // for more efficiently encoding components of the same dialect (e.g. we only
   // have to encode the dialect reference once).
-  groupByDialectPerByte(llvm::makeMutableArrayRef(orderedAttrs));
-  groupByDialectPerByte(llvm::makeMutableArrayRef(orderedOpNames));
-  groupByDialectPerByte(llvm::makeMutableArrayRef(orderedTypes));
+  groupByDialectPerByte(llvm::MutableArrayRef(orderedAttrs));
+  groupByDialectPerByte(llvm::MutableArrayRef(orderedOpNames));
+  groupByDialectPerByte(llvm::MutableArrayRef(orderedTypes));
 
   // Finalize the numbering of the dialect resources.
   finalizeDialectResourceNumberings(op);

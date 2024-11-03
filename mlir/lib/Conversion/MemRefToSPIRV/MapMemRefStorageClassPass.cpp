@@ -222,7 +222,9 @@ static bool isLegalAttr(Attribute attr) {
 static bool isLegalOp(Operation *op) {
   if (auto funcOp = dyn_cast<FunctionOpInterface>(op)) {
     return llvm::all_of(funcOp.getArgumentTypes(), isLegalType) &&
-           llvm::all_of(funcOp.getResultTypes(), isLegalType);
+           llvm::all_of(funcOp.getResultTypes(), isLegalType) &&
+           llvm::all_of(funcOp.getFunctionBody().getArgumentTypes(),
+                        isLegalType);
   }
 
   auto attrs = llvm::map_range(op->getAttrs(), [](const NamedAttribute &attr) {

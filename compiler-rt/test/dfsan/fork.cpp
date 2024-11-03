@@ -7,8 +7,6 @@
 //
 // RUN: %clangxx_dfsan -mllvm -dfsan-track-origins=1 %s -o %t
 // RUN: DFSAN_OPTIONS=store_context_size=1000,origin_history_size=0,origin_history_per_stack_limit=0 %run %t 2>&1 | FileCheck %s
-//
-// REQUIRES: x86_64-target-arch
 
 #include <assert.h>
 #include <errno.h>

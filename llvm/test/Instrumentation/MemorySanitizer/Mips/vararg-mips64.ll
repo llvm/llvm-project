@@ -78,3 +78,12 @@ entry:
 ; CHECK: i64 add (i64 ptrtoint (ptr @__msan_va_arg_tls to i64), i64 792)
 ; CHECK-NOT: i64 add (i64 ptrtoint (ptr @__msan_va_arg_tls to i64), i64 800)
 declare i64 @sum(i64 %n, ...)
+
+; CHECK: declare void @__msan_maybe_warning_1(i8 signext, i32 signext)
+; CHECK: declare void @__msan_maybe_store_origin_1(i8 signext, ptr, i32 signext)
+; CHECK: declare void @__msan_maybe_warning_2(i16 signext, i32 signext)
+; CHECK: declare void @__msan_maybe_store_origin_2(i16 signext, ptr, i32 signext)
+; CHECK: declare void @__msan_maybe_warning_4(i32 signext, i32 signext)
+; CHECK: declare void @__msan_maybe_store_origin_4(i32 signext, ptr, i32 signext)
+; CHECK: declare void @__msan_maybe_warning_8(i64 signext, i32 signext)
+; CHECK: declare void @__msan_maybe_store_origin_8(i64 signext, ptr, i32 signext)

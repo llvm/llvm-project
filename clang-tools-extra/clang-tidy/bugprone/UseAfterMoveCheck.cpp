@@ -17,14 +17,12 @@
 #include "llvm/ADT/STLExtras.h"
 
 #include "../utils/ExprSequence.h"
+#include <optional>
 
 using namespace clang::ast_matchers;
 using namespace clang::tidy::utils;
 
-
-namespace clang {
-namespace tidy {
-namespace bugprone {
+namespace clang::tidy::bugprone {
 
 namespace {
 
@@ -259,7 +257,7 @@ void UseAfterMoveFinder::getDeclRefs(
     llvm::SmallPtrSetImpl<const DeclRefExpr *> *DeclRefs) {
   DeclRefs->clear();
   for (const auto &Elem : *Block) {
-    Optional<CFGStmt> S = Elem.getAs<CFGStmt>();
+    std::optional<CFGStmt> S = Elem.getAs<CFGStmt>();
     if (!S)
       continue;
 
@@ -355,7 +353,7 @@ void UseAfterMoveFinder::getReinits(
   Stmts->clear();
   DeclRefs->clear();
   for (const auto &Elem : *Block) {
-    Optional<CFGStmt> S = Elem.getAs<CFGStmt>();
+    std::optional<CFGStmt> S = Elem.getAs<CFGStmt>();
     if (!S)
       continue;
 
@@ -466,6 +464,4 @@ void UseAfterMoveCheck::check(const MatchFinder::MatchResult &Result) {
     emitDiagnostic(MovingCall, Arg, Use, this, Result.Context);
 }
 
-} // namespace bugprone
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::bugprone

@@ -27,6 +27,7 @@
 using namespace llvm;
 
 #define DEBUG_TYPE "nvptx-isel"
+#define PASS_NAME "NVPTX DAG->DAG Pattern Instruction Selection"
 
 /// createNVPTXISelDag - This pass converts a legalized DAG into a
 /// NVPTX-specific DAG, ready for instruction scheduling.
@@ -36,6 +37,8 @@ FunctionPass *llvm::createNVPTXISelDag(NVPTXTargetMachine &TM,
 }
 
 char NVPTXDAGToDAGISel::ID = 0;
+
+INITIALIZE_PASS(NVPTXDAGToDAGISel, DEBUG_TYPE, PASS_NAME, false, false)
 
 NVPTXDAGToDAGISel::NVPTXDAGToDAGISel(NVPTXTargetMachine &tm,
                                      CodeGenOpt::Level OptLevel)
@@ -1667,9 +1670,6 @@ bool NVPTXDAGToDAGISel::tryLDGLDU(SDNode *N) {
     SDValue Ops[] = { Op1, Chain };
     LD = CurDAG->getMachineNode(*Opcode, DL, InstVTList, Ops);
   }
-
-  MachineMemOperand *MemRef = Mem->getMemOperand();
-  CurDAG->setNodeMemRefs(cast<MachineSDNode>(LD), {MemRef});
 
   // For automatic generation of LDG (through SelectLoad[Vector], not the
   // intrinsics), we may have an extending load like:

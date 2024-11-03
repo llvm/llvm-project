@@ -13,9 +13,7 @@
 
 using namespace clang::ast_matchers;
 
-namespace clang {
-namespace tidy {
-namespace misc {
+namespace clang::tidy::misc {
 
 namespace {
 
@@ -36,6 +34,18 @@ static bool shouldCheckDecl(const Decl *TargetDecl) {
          isa<FunctionDecl>(TargetDecl) || isa<VarDecl>(TargetDecl) ||
          isa<FunctionTemplateDecl>(TargetDecl) || isa<EnumDecl>(TargetDecl) ||
          isa<EnumConstantDecl>(TargetDecl);
+}
+
+UnusedUsingDeclsCheck::UnusedUsingDeclsCheck(StringRef Name,
+                                             ClangTidyContext *Context)
+    : ClangTidyCheck(Name, Context),
+      RawStringHeaderFileExtensions(Options.getLocalOrGlobal(
+          "HeaderFileExtensions", utils::defaultHeaderFileExtensions())) {
+  if (!utils::parseFileExtensions(RawStringHeaderFileExtensions,
+                                  HeaderFileExtensions,
+                                  utils::defaultFileExtensionDelimiters()))
+    this->configurationDiag("Invalid header file extension: '%0'")
+        << RawStringHeaderFileExtensions;
 }
 
 void UnusedUsingDeclsCheck::registerMatchers(MatchFinder *Finder) {
@@ -65,6 +75,12 @@ void UnusedUsingDeclsCheck::registerMatchers(MatchFinder *Finder) {
 
 void UnusedUsingDeclsCheck::check(const MatchFinder::MatchResult &Result) {
   if (Result.Context->getDiagnostics().hasUncompilableErrorOccurred())
+    return;
+  // We don't emit warnings on unused-using-decls from headers, so bail out if
+  // the main file is a header.
+  if (const auto *MainFile = Result.SourceManager->getFileEntryForID(
+          Result.SourceManager->getMainFileID());
+      utils::isFileExtension(MainFile->getName(), HeaderFileExtensions))
     return;
 
   if (const auto *Using = Result.Nodes.getNodeAs<UsingDecl>("using")) {
@@ -183,6 +199,4 @@ void UnusedUsingDeclsCheck::onEndOfTranslationUnit() {
   Contexts.clear();
 }
 
-} // namespace misc
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::misc

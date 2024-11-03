@@ -5,22 +5,18 @@
 ; RUN: opt < %s -mtriple=x86_64-unknown -mcpu=core-avx2 -passes=slp-vectorizer -S | FileCheck %s
 
 ;
-; dot4(float *x, float *y) - ((x[0]*y[0])+(x[1]*y[1])+(x[2]*y[2])+(x[3]*y[3]))
+; dot4(ptr x, ptr y) - ((xptr y[0])+(xptr y[1])+(xptr y[2])+(xptr y[3]))
 ;
 
-define double @dot4f64(double* dereferenceable(32) %ptrx, double* dereferenceable(32) %ptry) {
+define double @dot4f64(ptr dereferenceable(32) %ptrx, ptr dereferenceable(32) %ptry) {
 ; CHECK-LABEL: @dot4f64(
-; CHECK-NEXT:    [[PTRX2:%.*]] = getelementptr inbounds double, double* [[PTRX:%.*]], i64 2
-; CHECK-NEXT:    [[PTRY2:%.*]] = getelementptr inbounds double, double* [[PTRY:%.*]], i64 2
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast double* [[PTRX]] to <2 x double>*
-; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x double>, <2 x double>* [[TMP1]], align 4
-; CHECK-NEXT:    [[TMP3:%.*]] = bitcast double* [[PTRY]] to <2 x double>*
-; CHECK-NEXT:    [[TMP4:%.*]] = load <2 x double>, <2 x double>* [[TMP3]], align 4
+; CHECK-NEXT:    [[PTRX2:%.*]] = getelementptr inbounds double, ptr [[PTRX:%.*]], i64 2
+; CHECK-NEXT:    [[PTRY2:%.*]] = getelementptr inbounds double, ptr [[PTRY:%.*]], i64 2
+; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x double>, ptr [[PTRX]], align 4
+; CHECK-NEXT:    [[TMP4:%.*]] = load <2 x double>, ptr [[PTRY]], align 4
 ; CHECK-NEXT:    [[TMP5:%.*]] = fmul <2 x double> [[TMP2]], [[TMP4]]
-; CHECK-NEXT:    [[TMP6:%.*]] = bitcast double* [[PTRX2]] to <2 x double>*
-; CHECK-NEXT:    [[TMP7:%.*]] = load <2 x double>, <2 x double>* [[TMP6]], align 4
-; CHECK-NEXT:    [[TMP8:%.*]] = bitcast double* [[PTRY2]] to <2 x double>*
-; CHECK-NEXT:    [[TMP9:%.*]] = load <2 x double>, <2 x double>* [[TMP8]], align 4
+; CHECK-NEXT:    [[TMP7:%.*]] = load <2 x double>, ptr [[PTRX2]], align 4
+; CHECK-NEXT:    [[TMP9:%.*]] = load <2 x double>, ptr [[PTRY2]], align 4
 ; CHECK-NEXT:    [[TMP10:%.*]] = fmul <2 x double> [[TMP7]], [[TMP9]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <2 x double> [[TMP5]], i32 0
 ; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <2 x double> [[TMP5]], i32 1
@@ -31,20 +27,20 @@ define double @dot4f64(double* dereferenceable(32) %ptrx, double* dereferenceabl
 ; CHECK-NEXT:    [[DOT0123:%.*]] = fadd double [[DOT012]], [[TMP14]]
 ; CHECK-NEXT:    ret double [[DOT0123]]
 ;
-  %ptrx1 = getelementptr inbounds double, double* %ptrx, i64 1
-  %ptry1 = getelementptr inbounds double, double* %ptry, i64 1
-  %ptrx2 = getelementptr inbounds double, double* %ptrx, i64 2
-  %ptry2 = getelementptr inbounds double, double* %ptry, i64 2
-  %ptrx3 = getelementptr inbounds double, double* %ptrx, i64 3
-  %ptry3 = getelementptr inbounds double, double* %ptry, i64 3
-  %x0 = load double, double* %ptrx, align 4
-  %y0 = load double, double* %ptry, align 4
-  %x1 = load double, double* %ptrx1, align 4
-  %y1 = load double, double* %ptry1, align 4
-  %x2 = load double, double* %ptrx2, align 4
-  %y2 = load double, double* %ptry2, align 4
-  %x3 = load double, double* %ptrx3, align 4
-  %y3 = load double, double* %ptry3, align 4
+  %ptrx1 = getelementptr inbounds double, ptr %ptrx, i64 1
+  %ptry1 = getelementptr inbounds double, ptr %ptry, i64 1
+  %ptrx2 = getelementptr inbounds double, ptr %ptrx, i64 2
+  %ptry2 = getelementptr inbounds double, ptr %ptry, i64 2
+  %ptrx3 = getelementptr inbounds double, ptr %ptrx, i64 3
+  %ptry3 = getelementptr inbounds double, ptr %ptry, i64 3
+  %x0 = load double, ptr %ptrx, align 4
+  %y0 = load double, ptr %ptry, align 4
+  %x1 = load double, ptr %ptrx1, align 4
+  %y1 = load double, ptr %ptry1, align 4
+  %x2 = load double, ptr %ptrx2, align 4
+  %y2 = load double, ptr %ptry2, align 4
+  %x3 = load double, ptr %ptrx3, align 4
+  %y3 = load double, ptr %ptry3, align 4
   %mul0 = fmul double %x0, %y0
   %mul1 = fmul double %x1, %y1
   %mul2 = fmul double %x2, %y2
@@ -55,19 +51,15 @@ define double @dot4f64(double* dereferenceable(32) %ptrx, double* dereferenceabl
   ret double %dot0123
 }
 
-define float @dot4f32(float* dereferenceable(16) %ptrx, float* dereferenceable(16) %ptry) {
+define float @dot4f32(ptr dereferenceable(16) %ptrx, ptr dereferenceable(16) %ptry) {
 ; CHECK-LABEL: @dot4f32(
-; CHECK-NEXT:    [[PTRX2:%.*]] = getelementptr inbounds float, float* [[PTRX:%.*]], i64 2
-; CHECK-NEXT:    [[PTRY2:%.*]] = getelementptr inbounds float, float* [[PTRY:%.*]], i64 2
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast float* [[PTRX]] to <2 x float>*
-; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x float>, <2 x float>* [[TMP1]], align 4
-; CHECK-NEXT:    [[TMP3:%.*]] = bitcast float* [[PTRY]] to <2 x float>*
-; CHECK-NEXT:    [[TMP4:%.*]] = load <2 x float>, <2 x float>* [[TMP3]], align 4
+; CHECK-NEXT:    [[PTRX2:%.*]] = getelementptr inbounds float, ptr [[PTRX:%.*]], i64 2
+; CHECK-NEXT:    [[PTRY2:%.*]] = getelementptr inbounds float, ptr [[PTRY:%.*]], i64 2
+; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x float>, ptr [[PTRX]], align 4
+; CHECK-NEXT:    [[TMP4:%.*]] = load <2 x float>, ptr [[PTRY]], align 4
 ; CHECK-NEXT:    [[TMP5:%.*]] = fmul <2 x float> [[TMP2]], [[TMP4]]
-; CHECK-NEXT:    [[TMP6:%.*]] = bitcast float* [[PTRX2]] to <2 x float>*
-; CHECK-NEXT:    [[TMP7:%.*]] = load <2 x float>, <2 x float>* [[TMP6]], align 4
-; CHECK-NEXT:    [[TMP8:%.*]] = bitcast float* [[PTRY2]] to <2 x float>*
-; CHECK-NEXT:    [[TMP9:%.*]] = load <2 x float>, <2 x float>* [[TMP8]], align 4
+; CHECK-NEXT:    [[TMP7:%.*]] = load <2 x float>, ptr [[PTRX2]], align 4
+; CHECK-NEXT:    [[TMP9:%.*]] = load <2 x float>, ptr [[PTRY2]], align 4
 ; CHECK-NEXT:    [[TMP10:%.*]] = fmul <2 x float> [[TMP7]], [[TMP9]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <2 x float> [[TMP5]], i32 0
 ; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <2 x float> [[TMP5]], i32 1
@@ -78,20 +70,20 @@ define float @dot4f32(float* dereferenceable(16) %ptrx, float* dereferenceable(1
 ; CHECK-NEXT:    [[DOT0123:%.*]] = fadd float [[DOT012]], [[TMP14]]
 ; CHECK-NEXT:    ret float [[DOT0123]]
 ;
-  %ptrx1 = getelementptr inbounds float, float* %ptrx, i64 1
-  %ptry1 = getelementptr inbounds float, float* %ptry, i64 1
-  %ptrx2 = getelementptr inbounds float, float* %ptrx, i64 2
-  %ptry2 = getelementptr inbounds float, float* %ptry, i64 2
-  %ptrx3 = getelementptr inbounds float, float* %ptrx, i64 3
-  %ptry3 = getelementptr inbounds float, float* %ptry, i64 3
-  %x0 = load float, float* %ptrx, align 4
-  %y0 = load float, float* %ptry, align 4
-  %x1 = load float, float* %ptrx1, align 4
-  %y1 = load float, float* %ptry1, align 4
-  %x2 = load float, float* %ptrx2, align 4
-  %y2 = load float, float* %ptry2, align 4
-  %x3 = load float, float* %ptrx3, align 4
-  %y3 = load float, float* %ptry3, align 4
+  %ptrx1 = getelementptr inbounds float, ptr %ptrx, i64 1
+  %ptry1 = getelementptr inbounds float, ptr %ptry, i64 1
+  %ptrx2 = getelementptr inbounds float, ptr %ptrx, i64 2
+  %ptry2 = getelementptr inbounds float, ptr %ptry, i64 2
+  %ptrx3 = getelementptr inbounds float, ptr %ptrx, i64 3
+  %ptry3 = getelementptr inbounds float, ptr %ptry, i64 3
+  %x0 = load float, ptr %ptrx, align 4
+  %y0 = load float, ptr %ptry, align 4
+  %x1 = load float, ptr %ptrx1, align 4
+  %y1 = load float, ptr %ptry1, align 4
+  %x2 = load float, ptr %ptrx2, align 4
+  %y2 = load float, ptr %ptry2, align 4
+  %x3 = load float, ptr %ptrx3, align 4
+  %y3 = load float, ptr %ptry3, align 4
   %mul0 = fmul float %x0, %y0
   %mul1 = fmul float %x1, %y1
   %mul2 = fmul float %x2, %y2
@@ -102,30 +94,28 @@ define float @dot4f32(float* dereferenceable(16) %ptrx, float* dereferenceable(1
   ret float %dot0123
 }
 
-define double @dot4f64_fast(double* dereferenceable(32) %ptrx, double* dereferenceable(32) %ptry) {
+define double @dot4f64_fast(ptr dereferenceable(32) %ptrx, ptr dereferenceable(32) %ptry) {
 ; CHECK-LABEL: @dot4f64_fast(
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast double* [[PTRX:%.*]] to <4 x double>*
-; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x double>, <4 x double>* [[TMP1]], align 4
-; CHECK-NEXT:    [[TMP3:%.*]] = bitcast double* [[PTRY:%.*]] to <4 x double>*
-; CHECK-NEXT:    [[TMP4:%.*]] = load <4 x double>, <4 x double>* [[TMP3]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x double>, ptr [[PTRX:%.*]], align 4
+; CHECK-NEXT:    [[TMP4:%.*]] = load <4 x double>, ptr [[PTRY:%.*]], align 4
 ; CHECK-NEXT:    [[TMP5:%.*]] = fmul <4 x double> [[TMP2]], [[TMP4]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = call fast double @llvm.vector.reduce.fadd.v4f64(double -0.000000e+00, <4 x double> [[TMP5]])
 ; CHECK-NEXT:    ret double [[TMP6]]
 ;
-  %ptrx1 = getelementptr inbounds double, double* %ptrx, i64 1
-  %ptry1 = getelementptr inbounds double, double* %ptry, i64 1
-  %ptrx2 = getelementptr inbounds double, double* %ptrx, i64 2
-  %ptry2 = getelementptr inbounds double, double* %ptry, i64 2
-  %ptrx3 = getelementptr inbounds double, double* %ptrx, i64 3
-  %ptry3 = getelementptr inbounds double, double* %ptry, i64 3
-  %x0 = load double, double* %ptrx, align 4
-  %y0 = load double, double* %ptry, align 4
-  %x1 = load double, double* %ptrx1, align 4
-  %y1 = load double, double* %ptry1, align 4
-  %x2 = load double, double* %ptrx2, align 4
-  %y2 = load double, double* %ptry2, align 4
-  %x3 = load double, double* %ptrx3, align 4
-  %y3 = load double, double* %ptry3, align 4
+  %ptrx1 = getelementptr inbounds double, ptr %ptrx, i64 1
+  %ptry1 = getelementptr inbounds double, ptr %ptry, i64 1
+  %ptrx2 = getelementptr inbounds double, ptr %ptrx, i64 2
+  %ptry2 = getelementptr inbounds double, ptr %ptry, i64 2
+  %ptrx3 = getelementptr inbounds double, ptr %ptrx, i64 3
+  %ptry3 = getelementptr inbounds double, ptr %ptry, i64 3
+  %x0 = load double, ptr %ptrx, align 4
+  %y0 = load double, ptr %ptry, align 4
+  %x1 = load double, ptr %ptrx1, align 4
+  %y1 = load double, ptr %ptry1, align 4
+  %x2 = load double, ptr %ptrx2, align 4
+  %y2 = load double, ptr %ptry2, align 4
+  %x3 = load double, ptr %ptrx3, align 4
+  %y3 = load double, ptr %ptry3, align 4
   %mul0 = fmul double %x0, %y0
   %mul1 = fmul double %x1, %y1
   %mul2 = fmul double %x2, %y2
@@ -136,30 +126,28 @@ define double @dot4f64_fast(double* dereferenceable(32) %ptrx, double* dereferen
   ret double %dot0123
 }
 
-define float @dot4f32_fast(float* dereferenceable(16) %ptrx, float* dereferenceable(16) %ptry) {
+define float @dot4f32_fast(ptr dereferenceable(16) %ptrx, ptr dereferenceable(16) %ptry) {
 ; CHECK-LABEL: @dot4f32_fast(
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast float* [[PTRX:%.*]] to <4 x float>*
-; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x float>, <4 x float>* [[TMP1]], align 4
-; CHECK-NEXT:    [[TMP3:%.*]] = bitcast float* [[PTRY:%.*]] to <4 x float>*
-; CHECK-NEXT:    [[TMP4:%.*]] = load <4 x float>, <4 x float>* [[TMP3]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x float>, ptr [[PTRX:%.*]], align 4
+; CHECK-NEXT:    [[TMP4:%.*]] = load <4 x float>, ptr [[PTRY:%.*]], align 4
 ; CHECK-NEXT:    [[TMP5:%.*]] = fmul <4 x float> [[TMP2]], [[TMP4]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = call fast float @llvm.vector.reduce.fadd.v4f32(float -0.000000e+00, <4 x float> [[TMP5]])
 ; CHECK-NEXT:    ret float [[TMP6]]
 ;
-  %ptrx1 = getelementptr inbounds float, float* %ptrx, i64 1
-  %ptry1 = getelementptr inbounds float, float* %ptry, i64 1
-  %ptrx2 = getelementptr inbounds float, float* %ptrx, i64 2
-  %ptry2 = getelementptr inbounds float, float* %ptry, i64 2
-  %ptrx3 = getelementptr inbounds float, float* %ptrx, i64 3
-  %ptry3 = getelementptr inbounds float, float* %ptry, i64 3
-  %x0 = load float, float* %ptrx, align 4
-  %y0 = load float, float* %ptry, align 4
-  %x1 = load float, float* %ptrx1, align 4
-  %y1 = load float, float* %ptry1, align 4
-  %x2 = load float, float* %ptrx2, align 4
-  %y2 = load float, float* %ptry2, align 4
-  %x3 = load float, float* %ptrx3, align 4
-  %y3 = load float, float* %ptry3, align 4
+  %ptrx1 = getelementptr inbounds float, ptr %ptrx, i64 1
+  %ptry1 = getelementptr inbounds float, ptr %ptry, i64 1
+  %ptrx2 = getelementptr inbounds float, ptr %ptrx, i64 2
+  %ptry2 = getelementptr inbounds float, ptr %ptry, i64 2
+  %ptrx3 = getelementptr inbounds float, ptr %ptrx, i64 3
+  %ptry3 = getelementptr inbounds float, ptr %ptry, i64 3
+  %x0 = load float, ptr %ptrx, align 4
+  %y0 = load float, ptr %ptry, align 4
+  %x1 = load float, ptr %ptrx1, align 4
+  %y1 = load float, ptr %ptry1, align 4
+  %x2 = load float, ptr %ptrx2, align 4
+  %y2 = load float, ptr %ptry2, align 4
+  %x3 = load float, ptr %ptrx3, align 4
+  %y3 = load float, ptr %ptry3, align 4
   %mul0 = fmul float %x0, %y0
   %mul1 = fmul float %x1, %y1
   %mul2 = fmul float %x2, %y2
@@ -171,20 +159,18 @@ define float @dot4f32_fast(float* dereferenceable(16) %ptrx, float* dereferencea
 }
 
 ;
-; dot3(float *x, float *y) - ((x[0]*y[0])+(x[1]*y[1])+(x[2]*y[2]))
+; dot3(ptr x, ptr y) - ((xptr y[0])+(xptr y[1])+(xptr y[2]))
 ;
 
-define double @dot3f64(double* dereferenceable(32) %ptrx, double* dereferenceable(32) %ptry) {
+define double @dot3f64(ptr dereferenceable(32) %ptrx, ptr dereferenceable(32) %ptry) {
 ; CHECK-LABEL: @dot3f64(
-; CHECK-NEXT:    [[PTRX1:%.*]] = getelementptr inbounds double, double* [[PTRX:%.*]], i64 1
-; CHECK-NEXT:    [[PTRY1:%.*]] = getelementptr inbounds double, double* [[PTRY:%.*]], i64 1
-; CHECK-NEXT:    [[X0:%.*]] = load double, double* [[PTRX]], align 4
-; CHECK-NEXT:    [[Y0:%.*]] = load double, double* [[PTRY]], align 4
+; CHECK-NEXT:    [[PTRX1:%.*]] = getelementptr inbounds double, ptr [[PTRX:%.*]], i64 1
+; CHECK-NEXT:    [[PTRY1:%.*]] = getelementptr inbounds double, ptr [[PTRY:%.*]], i64 1
+; CHECK-NEXT:    [[X0:%.*]] = load double, ptr [[PTRX]], align 4
+; CHECK-NEXT:    [[Y0:%.*]] = load double, ptr [[PTRY]], align 4
 ; CHECK-NEXT:    [[MUL0:%.*]] = fmul double [[X0]], [[Y0]]
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast double* [[PTRX1]] to <2 x double>*
-; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x double>, <2 x double>* [[TMP1]], align 4
-; CHECK-NEXT:    [[TMP3:%.*]] = bitcast double* [[PTRY1]] to <2 x double>*
-; CHECK-NEXT:    [[TMP4:%.*]] = load <2 x double>, <2 x double>* [[TMP3]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x double>, ptr [[PTRX1]], align 4
+; CHECK-NEXT:    [[TMP4:%.*]] = load <2 x double>, ptr [[PTRY1]], align 4
 ; CHECK-NEXT:    [[TMP5:%.*]] = fmul <2 x double> [[TMP2]], [[TMP4]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <2 x double> [[TMP5]], i32 0
 ; CHECK-NEXT:    [[DOT01:%.*]] = fadd double [[MUL0]], [[TMP6]]
@@ -192,16 +178,16 @@ define double @dot3f64(double* dereferenceable(32) %ptrx, double* dereferenceabl
 ; CHECK-NEXT:    [[DOT012:%.*]] = fadd double [[DOT01]], [[TMP7]]
 ; CHECK-NEXT:    ret double [[DOT012]]
 ;
-  %ptrx1 = getelementptr inbounds double, double* %ptrx, i64 1
-  %ptry1 = getelementptr inbounds double, double* %ptry, i64 1
-  %ptrx2 = getelementptr inbounds double, double* %ptrx, i64 2
-  %ptry2 = getelementptr inbounds double, double* %ptry, i64 2
-  %x0 = load double, double* %ptrx, align 4
-  %y0 = load double, double* %ptry, align 4
-  %x1 = load double, double* %ptrx1, align 4
-  %y1 = load double, double* %ptry1, align 4
-  %x2 = load double, double* %ptrx2, align 4
-  %y2 = load double, double* %ptry2, align 4
+  %ptrx1 = getelementptr inbounds double, ptr %ptrx, i64 1
+  %ptry1 = getelementptr inbounds double, ptr %ptry, i64 1
+  %ptrx2 = getelementptr inbounds double, ptr %ptrx, i64 2
+  %ptry2 = getelementptr inbounds double, ptr %ptry, i64 2
+  %x0 = load double, ptr %ptrx, align 4
+  %y0 = load double, ptr %ptry, align 4
+  %x1 = load double, ptr %ptrx1, align 4
+  %y1 = load double, ptr %ptry1, align 4
+  %x2 = load double, ptr %ptrx2, align 4
+  %y2 = load double, ptr %ptry2, align 4
   %mul0 = fmul double %x0, %y0
   %mul1 = fmul double %x1, %y1
   %mul2 = fmul double %x2, %y2
@@ -210,17 +196,15 @@ define double @dot3f64(double* dereferenceable(32) %ptrx, double* dereferenceabl
   ret double %dot012
 }
 
-define float @dot3f32(float* dereferenceable(16) %ptrx, float* dereferenceable(16) %ptry) {
+define float @dot3f32(ptr dereferenceable(16) %ptrx, ptr dereferenceable(16) %ptry) {
 ; CHECK-LABEL: @dot3f32(
-; CHECK-NEXT:    [[PTRX1:%.*]] = getelementptr inbounds float, float* [[PTRX:%.*]], i64 1
-; CHECK-NEXT:    [[PTRY1:%.*]] = getelementptr inbounds float, float* [[PTRY:%.*]], i64 1
-; CHECK-NEXT:    [[X0:%.*]] = load float, float* [[PTRX]], align 4
-; CHECK-NEXT:    [[Y0:%.*]] = load float, float* [[PTRY]], align 4
+; CHECK-NEXT:    [[PTRX1:%.*]] = getelementptr inbounds float, ptr [[PTRX:%.*]], i64 1
+; CHECK-NEXT:    [[PTRY1:%.*]] = getelementptr inbounds float, ptr [[PTRY:%.*]], i64 1
+; CHECK-NEXT:    [[X0:%.*]] = load float, ptr [[PTRX]], align 4
+; CHECK-NEXT:    [[Y0:%.*]] = load float, ptr [[PTRY]], align 4
 ; CHECK-NEXT:    [[MUL0:%.*]] = fmul float [[X0]], [[Y0]]
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast float* [[PTRX1]] to <2 x float>*
-; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x float>, <2 x float>* [[TMP1]], align 4
-; CHECK-NEXT:    [[TMP3:%.*]] = bitcast float* [[PTRY1]] to <2 x float>*
-; CHECK-NEXT:    [[TMP4:%.*]] = load <2 x float>, <2 x float>* [[TMP3]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x float>, ptr [[PTRX1]], align 4
+; CHECK-NEXT:    [[TMP4:%.*]] = load <2 x float>, ptr [[PTRY1]], align 4
 ; CHECK-NEXT:    [[TMP5:%.*]] = fmul <2 x float> [[TMP2]], [[TMP4]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <2 x float> [[TMP5]], i32 0
 ; CHECK-NEXT:    [[DOT01:%.*]] = fadd float [[MUL0]], [[TMP6]]
@@ -228,16 +212,16 @@ define float @dot3f32(float* dereferenceable(16) %ptrx, float* dereferenceable(1
 ; CHECK-NEXT:    [[DOT012:%.*]] = fadd float [[DOT01]], [[TMP7]]
 ; CHECK-NEXT:    ret float [[DOT012]]
 ;
-  %ptrx1 = getelementptr inbounds float, float* %ptrx, i64 1
-  %ptry1 = getelementptr inbounds float, float* %ptry, i64 1
-  %ptrx2 = getelementptr inbounds float, float* %ptrx, i64 2
-  %ptry2 = getelementptr inbounds float, float* %ptry, i64 2
-  %x0 = load float, float* %ptrx, align 4
-  %y0 = load float, float* %ptry, align 4
-  %x1 = load float, float* %ptrx1, align 4
-  %y1 = load float, float* %ptry1, align 4
-  %x2 = load float, float* %ptrx2, align 4
-  %y2 = load float, float* %ptry2, align 4
+  %ptrx1 = getelementptr inbounds float, ptr %ptrx, i64 1
+  %ptry1 = getelementptr inbounds float, ptr %ptry, i64 1
+  %ptrx2 = getelementptr inbounds float, ptr %ptrx, i64 2
+  %ptry2 = getelementptr inbounds float, ptr %ptry, i64 2
+  %x0 = load float, ptr %ptrx, align 4
+  %y0 = load float, ptr %ptry, align 4
+  %x1 = load float, ptr %ptrx1, align 4
+  %y1 = load float, ptr %ptry1, align 4
+  %x2 = load float, ptr %ptrx2, align 4
+  %y2 = load float, ptr %ptry2, align 4
   %mul0 = fmul float %x0, %y0
   %mul1 = fmul float %x1, %y1
   %mul2 = fmul float %x2, %y2
@@ -246,17 +230,15 @@ define float @dot3f32(float* dereferenceable(16) %ptrx, float* dereferenceable(1
   ret float %dot012
 }
 
-define double @dot3f64_fast(double* dereferenceable(32) %ptrx, double* dereferenceable(32) %ptry) {
+define double @dot3f64_fast(ptr dereferenceable(32) %ptrx, ptr dereferenceable(32) %ptry) {
 ; CHECK-LABEL: @dot3f64_fast(
-; CHECK-NEXT:    [[PTRX1:%.*]] = getelementptr inbounds double, double* [[PTRX:%.*]], i64 1
-; CHECK-NEXT:    [[PTRY1:%.*]] = getelementptr inbounds double, double* [[PTRY:%.*]], i64 1
-; CHECK-NEXT:    [[X0:%.*]] = load double, double* [[PTRX]], align 4
-; CHECK-NEXT:    [[Y0:%.*]] = load double, double* [[PTRY]], align 4
+; CHECK-NEXT:    [[PTRX1:%.*]] = getelementptr inbounds double, ptr [[PTRX:%.*]], i64 1
+; CHECK-NEXT:    [[PTRY1:%.*]] = getelementptr inbounds double, ptr [[PTRY:%.*]], i64 1
+; CHECK-NEXT:    [[X0:%.*]] = load double, ptr [[PTRX]], align 4
+; CHECK-NEXT:    [[Y0:%.*]] = load double, ptr [[PTRY]], align 4
 ; CHECK-NEXT:    [[MUL0:%.*]] = fmul double [[X0]], [[Y0]]
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast double* [[PTRX1]] to <2 x double>*
-; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x double>, <2 x double>* [[TMP1]], align 4
-; CHECK-NEXT:    [[TMP3:%.*]] = bitcast double* [[PTRY1]] to <2 x double>*
-; CHECK-NEXT:    [[TMP4:%.*]] = load <2 x double>, <2 x double>* [[TMP3]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x double>, ptr [[PTRX1]], align 4
+; CHECK-NEXT:    [[TMP4:%.*]] = load <2 x double>, ptr [[PTRY1]], align 4
 ; CHECK-NEXT:    [[TMP5:%.*]] = fmul <2 x double> [[TMP2]], [[TMP4]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <2 x double> [[TMP5]], i32 0
 ; CHECK-NEXT:    [[DOT01:%.*]] = fadd fast double [[MUL0]], [[TMP6]]
@@ -264,16 +246,16 @@ define double @dot3f64_fast(double* dereferenceable(32) %ptrx, double* dereferen
 ; CHECK-NEXT:    [[DOT012:%.*]] = fadd fast double [[DOT01]], [[TMP7]]
 ; CHECK-NEXT:    ret double [[DOT012]]
 ;
-  %ptrx1 = getelementptr inbounds double, double* %ptrx, i64 1
-  %ptry1 = getelementptr inbounds double, double* %ptry, i64 1
-  %ptrx2 = getelementptr inbounds double, double* %ptrx, i64 2
-  %ptry2 = getelementptr inbounds double, double* %ptry, i64 2
-  %x0 = load double, double* %ptrx, align 4
-  %y0 = load double, double* %ptry, align 4
-  %x1 = load double, double* %ptrx1, align 4
-  %y1 = load double, double* %ptry1, align 4
-  %x2 = load double, double* %ptrx2, align 4
-  %y2 = load double, double* %ptry2, align 4
+  %ptrx1 = getelementptr inbounds double, ptr %ptrx, i64 1
+  %ptry1 = getelementptr inbounds double, ptr %ptry, i64 1
+  %ptrx2 = getelementptr inbounds double, ptr %ptrx, i64 2
+  %ptry2 = getelementptr inbounds double, ptr %ptry, i64 2
+  %x0 = load double, ptr %ptrx, align 4
+  %y0 = load double, ptr %ptry, align 4
+  %x1 = load double, ptr %ptrx1, align 4
+  %y1 = load double, ptr %ptry1, align 4
+  %x2 = load double, ptr %ptrx2, align 4
+  %y2 = load double, ptr %ptry2, align 4
   %mul0 = fmul double %x0, %y0
   %mul1 = fmul double %x1, %y1
   %mul2 = fmul double %x2, %y2
@@ -282,17 +264,15 @@ define double @dot3f64_fast(double* dereferenceable(32) %ptrx, double* dereferen
   ret double %dot012
 }
 
-define float @dot3f32_fast(float* dereferenceable(16) %ptrx, float* dereferenceable(16) %ptry) {
+define float @dot3f32_fast(ptr dereferenceable(16) %ptrx, ptr dereferenceable(16) %ptry) {
 ; CHECK-LABEL: @dot3f32_fast(
-; CHECK-NEXT:    [[PTRX1:%.*]] = getelementptr inbounds float, float* [[PTRX:%.*]], i64 1
-; CHECK-NEXT:    [[PTRY1:%.*]] = getelementptr inbounds float, float* [[PTRY:%.*]], i64 1
-; CHECK-NEXT:    [[X0:%.*]] = load float, float* [[PTRX]], align 4
-; CHECK-NEXT:    [[Y0:%.*]] = load float, float* [[PTRY]], align 4
+; CHECK-NEXT:    [[PTRX1:%.*]] = getelementptr inbounds float, ptr [[PTRX:%.*]], i64 1
+; CHECK-NEXT:    [[PTRY1:%.*]] = getelementptr inbounds float, ptr [[PTRY:%.*]], i64 1
+; CHECK-NEXT:    [[X0:%.*]] = load float, ptr [[PTRX]], align 4
+; CHECK-NEXT:    [[Y0:%.*]] = load float, ptr [[PTRY]], align 4
 ; CHECK-NEXT:    [[MUL0:%.*]] = fmul float [[X0]], [[Y0]]
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast float* [[PTRX1]] to <2 x float>*
-; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x float>, <2 x float>* [[TMP1]], align 4
-; CHECK-NEXT:    [[TMP3:%.*]] = bitcast float* [[PTRY1]] to <2 x float>*
-; CHECK-NEXT:    [[TMP4:%.*]] = load <2 x float>, <2 x float>* [[TMP3]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x float>, ptr [[PTRX1]], align 4
+; CHECK-NEXT:    [[TMP4:%.*]] = load <2 x float>, ptr [[PTRY1]], align 4
 ; CHECK-NEXT:    [[TMP5:%.*]] = fmul <2 x float> [[TMP2]], [[TMP4]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <2 x float> [[TMP5]], i32 0
 ; CHECK-NEXT:    [[DOT01:%.*]] = fadd fast float [[MUL0]], [[TMP6]]
@@ -300,16 +280,16 @@ define float @dot3f32_fast(float* dereferenceable(16) %ptrx, float* dereferencea
 ; CHECK-NEXT:    [[DOT012:%.*]] = fadd fast float [[DOT01]], [[TMP7]]
 ; CHECK-NEXT:    ret float [[DOT012]]
 ;
-  %ptrx1 = getelementptr inbounds float, float* %ptrx, i64 1
-  %ptry1 = getelementptr inbounds float, float* %ptry, i64 1
-  %ptrx2 = getelementptr inbounds float, float* %ptrx, i64 2
-  %ptry2 = getelementptr inbounds float, float* %ptry, i64 2
-  %x0 = load float, float* %ptrx, align 4
-  %y0 = load float, float* %ptry, align 4
-  %x1 = load float, float* %ptrx1, align 4
-  %y1 = load float, float* %ptry1, align 4
-  %x2 = load float, float* %ptrx2, align 4
-  %y2 = load float, float* %ptry2, align 4
+  %ptrx1 = getelementptr inbounds float, ptr %ptrx, i64 1
+  %ptry1 = getelementptr inbounds float, ptr %ptry, i64 1
+  %ptrx2 = getelementptr inbounds float, ptr %ptrx, i64 2
+  %ptry2 = getelementptr inbounds float, ptr %ptry, i64 2
+  %x0 = load float, ptr %ptrx, align 4
+  %y0 = load float, ptr %ptry, align 4
+  %x1 = load float, ptr %ptrx1, align 4
+  %y1 = load float, ptr %ptry1, align 4
+  %x2 = load float, ptr %ptrx2, align 4
+  %y2 = load float, ptr %ptry2, align 4
   %mul0 = fmul float %x0, %y0
   %mul1 = fmul float %x1, %y1
   %mul2 = fmul float %x2, %y2
@@ -319,99 +299,91 @@ define float @dot3f32_fast(float* dereferenceable(16) %ptrx, float* dereferencea
 }
 
 ;
-; dot2(float *x, float *y) - ((x[0]*y[0])+(x[1]*y[1]))
+; dot2(ptr x, ptr y) - ((xptr y[0])+(xptr y[1]))
 ;
 
-define double @dot2f64(double* dereferenceable(16) %ptrx, double* dereferenceable(16) %ptry) {
+define double @dot2f64(ptr dereferenceable(16) %ptrx, ptr dereferenceable(16) %ptry) {
 ; CHECK-LABEL: @dot2f64(
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast double* [[PTRX:%.*]] to <2 x double>*
-; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x double>, <2 x double>* [[TMP1]], align 4
-; CHECK-NEXT:    [[TMP3:%.*]] = bitcast double* [[PTRY:%.*]] to <2 x double>*
-; CHECK-NEXT:    [[TMP4:%.*]] = load <2 x double>, <2 x double>* [[TMP3]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x double>, ptr [[PTRX:%.*]], align 4
+; CHECK-NEXT:    [[TMP4:%.*]] = load <2 x double>, ptr [[PTRY:%.*]], align 4
 ; CHECK-NEXT:    [[TMP5:%.*]] = fmul <2 x double> [[TMP2]], [[TMP4]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <2 x double> [[TMP5]], i32 0
 ; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <2 x double> [[TMP5]], i32 1
 ; CHECK-NEXT:    [[DOT01:%.*]] = fadd double [[TMP6]], [[TMP7]]
 ; CHECK-NEXT:    ret double [[DOT01]]
 ;
-  %ptrx1 = getelementptr inbounds double, double* %ptrx, i64 1
-  %ptry1 = getelementptr inbounds double, double* %ptry, i64 1
-  %x0 = load double, double* %ptrx, align 4
-  %y0 = load double, double* %ptry, align 4
-  %x1 = load double, double* %ptrx1, align 4
-  %y1 = load double, double* %ptry1, align 4
+  %ptrx1 = getelementptr inbounds double, ptr %ptrx, i64 1
+  %ptry1 = getelementptr inbounds double, ptr %ptry, i64 1
+  %x0 = load double, ptr %ptrx, align 4
+  %y0 = load double, ptr %ptry, align 4
+  %x1 = load double, ptr %ptrx1, align 4
+  %y1 = load double, ptr %ptry1, align 4
   %mul0 = fmul double %x0, %y0
   %mul1 = fmul double %x1, %y1
   %dot01 = fadd double %mul0, %mul1
   ret double %dot01
 }
 
-define float @dot2f32(float* dereferenceable(16) %ptrx, float* dereferenceable(16) %ptry) {
+define float @dot2f32(ptr dereferenceable(16) %ptrx, ptr dereferenceable(16) %ptry) {
 ; CHECK-LABEL: @dot2f32(
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast float* [[PTRX:%.*]] to <2 x float>*
-; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x float>, <2 x float>* [[TMP1]], align 4
-; CHECK-NEXT:    [[TMP3:%.*]] = bitcast float* [[PTRY:%.*]] to <2 x float>*
-; CHECK-NEXT:    [[TMP4:%.*]] = load <2 x float>, <2 x float>* [[TMP3]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x float>, ptr [[PTRX:%.*]], align 4
+; CHECK-NEXT:    [[TMP4:%.*]] = load <2 x float>, ptr [[PTRY:%.*]], align 4
 ; CHECK-NEXT:    [[TMP5:%.*]] = fmul <2 x float> [[TMP2]], [[TMP4]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <2 x float> [[TMP5]], i32 0
 ; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <2 x float> [[TMP5]], i32 1
 ; CHECK-NEXT:    [[DOT01:%.*]] = fadd float [[TMP6]], [[TMP7]]
 ; CHECK-NEXT:    ret float [[DOT01]]
 ;
-  %ptrx1 = getelementptr inbounds float, float* %ptrx, i64 1
-  %ptry1 = getelementptr inbounds float, float* %ptry, i64 1
-  %x0 = load float, float* %ptrx, align 4
-  %y0 = load float, float* %ptry, align 4
-  %x1 = load float, float* %ptrx1, align 4
-  %y1 = load float, float* %ptry1, align 4
+  %ptrx1 = getelementptr inbounds float, ptr %ptrx, i64 1
+  %ptry1 = getelementptr inbounds float, ptr %ptry, i64 1
+  %x0 = load float, ptr %ptrx, align 4
+  %y0 = load float, ptr %ptry, align 4
+  %x1 = load float, ptr %ptrx1, align 4
+  %y1 = load float, ptr %ptry1, align 4
   %mul0 = fmul float %x0, %y0
   %mul1 = fmul float %x1, %y1
   %dot01 = fadd float %mul0, %mul1
   ret float %dot01
 }
 
-define double @dot2f64_fast(double* dereferenceable(16) %ptrx, double* dereferenceable(16) %ptry) {
+define double @dot2f64_fast(ptr dereferenceable(16) %ptrx, ptr dereferenceable(16) %ptry) {
 ; CHECK-LABEL: @dot2f64_fast(
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast double* [[PTRX:%.*]] to <2 x double>*
-; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x double>, <2 x double>* [[TMP1]], align 4
-; CHECK-NEXT:    [[TMP3:%.*]] = bitcast double* [[PTRY:%.*]] to <2 x double>*
-; CHECK-NEXT:    [[TMP4:%.*]] = load <2 x double>, <2 x double>* [[TMP3]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x double>, ptr [[PTRX:%.*]], align 4
+; CHECK-NEXT:    [[TMP4:%.*]] = load <2 x double>, ptr [[PTRY:%.*]], align 4
 ; CHECK-NEXT:    [[TMP5:%.*]] = fmul <2 x double> [[TMP2]], [[TMP4]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <2 x double> [[TMP5]], i32 0
 ; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <2 x double> [[TMP5]], i32 1
 ; CHECK-NEXT:    [[DOT01:%.*]] = fadd fast double [[TMP6]], [[TMP7]]
 ; CHECK-NEXT:    ret double [[DOT01]]
 ;
-  %ptrx1 = getelementptr inbounds double, double* %ptrx, i64 1
-  %ptry1 = getelementptr inbounds double, double* %ptry, i64 1
-  %x0 = load double, double* %ptrx, align 4
-  %y0 = load double, double* %ptry, align 4
-  %x1 = load double, double* %ptrx1, align 4
-  %y1 = load double, double* %ptry1, align 4
+  %ptrx1 = getelementptr inbounds double, ptr %ptrx, i64 1
+  %ptry1 = getelementptr inbounds double, ptr %ptry, i64 1
+  %x0 = load double, ptr %ptrx, align 4
+  %y0 = load double, ptr %ptry, align 4
+  %x1 = load double, ptr %ptrx1, align 4
+  %y1 = load double, ptr %ptry1, align 4
   %mul0 = fmul double %x0, %y0
   %mul1 = fmul double %x1, %y1
   %dot01 = fadd fast double %mul0, %mul1
   ret double %dot01
 }
 
-define float @dot2f32_fast(float* dereferenceable(16) %ptrx, float* dereferenceable(16) %ptry) {
+define float @dot2f32_fast(ptr dereferenceable(16) %ptrx, ptr dereferenceable(16) %ptry) {
 ; CHECK-LABEL: @dot2f32_fast(
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast float* [[PTRX:%.*]] to <2 x float>*
-; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x float>, <2 x float>* [[TMP1]], align 4
-; CHECK-NEXT:    [[TMP3:%.*]] = bitcast float* [[PTRY:%.*]] to <2 x float>*
-; CHECK-NEXT:    [[TMP4:%.*]] = load <2 x float>, <2 x float>* [[TMP3]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x float>, ptr [[PTRX:%.*]], align 4
+; CHECK-NEXT:    [[TMP4:%.*]] = load <2 x float>, ptr [[PTRY:%.*]], align 4
 ; CHECK-NEXT:    [[TMP5:%.*]] = fmul <2 x float> [[TMP2]], [[TMP4]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <2 x float> [[TMP5]], i32 0
 ; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <2 x float> [[TMP5]], i32 1
 ; CHECK-NEXT:    [[DOT01:%.*]] = fadd fast float [[TMP6]], [[TMP7]]
 ; CHECK-NEXT:    ret float [[DOT01]]
 ;
-  %ptrx1 = getelementptr inbounds float, float* %ptrx, i64 1
-  %ptry1 = getelementptr inbounds float, float* %ptry, i64 1
-  %x0 = load float, float* %ptrx, align 4
-  %y0 = load float, float* %ptry, align 4
-  %x1 = load float, float* %ptrx1, align 4
-  %y1 = load float, float* %ptry1, align 4
+  %ptrx1 = getelementptr inbounds float, ptr %ptrx, i64 1
+  %ptry1 = getelementptr inbounds float, ptr %ptry, i64 1
+  %x0 = load float, ptr %ptrx, align 4
+  %y0 = load float, ptr %ptry, align 4
+  %x1 = load float, ptr %ptrx1, align 4
+  %y1 = load float, ptr %ptry1, align 4
   %mul0 = fmul float %x0, %y0
   %mul1 = fmul float %x1, %y1
   %dot01 = fadd fast float %mul0, %mul1

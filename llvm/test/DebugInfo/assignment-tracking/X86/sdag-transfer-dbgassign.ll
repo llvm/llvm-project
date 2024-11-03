@@ -1,9 +1,7 @@
 ; RUN: llc %s -start-after=codegenprepare -stop-before finalize-isel -o - \
-; RUN:    -experimental-assignment-tracking   \
 ; RUN:    -experimental-debug-variable-locations=false \
 ; RUN: | FileCheck %s --check-prefixes=CHECK,DBGVALUE
 ; RUN: llc %s -start-after=codegenprepare -stop-before finalize-isel -o - \
-; RUN:    -experimental-assignment-tracking   \
 ; RUN:    -experimental-debug-variable-locations=true \
 ; RUN: | FileCheck %s --check-prefixes=CHECK,INSTRREF
 
@@ -30,7 +28,7 @@ target triple = "x86_64-unknown-linux-gnu"
 ; DBGVALUE:       %[[REG:[0-9]+]]:gr32 = ADD32ri %1, 512
 ; DBGVALUE-NEXT:  DBG_VALUE %[[REG]]
 ; INSTRREF:       ADD32ri %1, 512, {{.*}}debug-instr-number 1
-; INSTRREF-NEXT:  DBG_INSTR_REF 1, 0
+; INSTRREF-NEXT:  DBG_INSTR_REF {{.+}}, dbg-instr-ref(1, 0)
 
 ; Function Attrs: nofree norecurse nounwind uwtable writeonly
 define dso_local i32 @foo(i32 %a, ptr nocapture %b) local_unnamed_addr !dbg !7 {
@@ -52,7 +50,7 @@ if.end:                                           ; preds = %entry, %if.then
 declare void @llvm.dbg.assign(metadata, metadata, metadata, metadata, metadata, metadata)
 
 !llvm.dbg.cu = !{!0}
-!llvm.module.flags = !{!3, !4, !5}
+!llvm.module.flags = !{!3, !4, !5, !1000}
 !llvm.ident = !{!6}
 
 !0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 10.0.0", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !2, nameTableKind: None)
@@ -75,3 +73,4 @@ declare void @llvm.dbg.assign(metadata, metadata, metadata, metadata, metadata, 
 !17 = !DILocation(line: 0, scope: !7)
 !18 = !DILocation(line: 2, column: 13, scope: !7)
 !19 = distinct !DIAssignID()
+!1000 = !{i32 7, !"debug-info-assignment-tracking", i1 true}

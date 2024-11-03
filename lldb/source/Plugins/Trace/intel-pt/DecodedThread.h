@@ -14,6 +14,7 @@
 #include "lldb/Utility/TraceIntelPTGDBRemotePackets.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/Error.h"
+#include <optional>
 #include <utility>
 #include <vector>
 
@@ -150,7 +151,7 @@ public:
 
   DecodedThread(
       lldb::ThreadSP thread_sp,
-      const llvm::Optional<LinuxPerfZeroTscConversion> &tsc_conversion);
+      const std::optional<LinuxPerfZeroTscConversion> &tsc_conversion);
 
   /// Get the total number of instruction, errors and events from the decoded
   /// trace.
@@ -189,7 +190,7 @@ public:
   ///
   /// \return
   ///   The requested TSC range, or \a std::nullopt if not available.
-  llvm::Optional<DecodedThread::TSCRange>
+  std::optional<DecodedThread::TSCRange>
   GetTSCRangeByIndex(uint64_t item_index) const;
 
   /// Get a maximal range of trace items that include the given \p item_index
@@ -200,7 +201,7 @@ public:
   ///
   /// \return
   ///   The requested nanoseconds range, or \a std::nullopt if not available.
-  llvm::Optional<DecodedThread::NanosecondsRange>
+  std::optional<DecodedThread::NanosecondsRange>
   GetNanosecondsRangeByIndex(uint64_t item_index);
 
   /// \return
@@ -295,7 +296,7 @@ private:
   /// TSCs are sporadic and we can think of them as ranges.
   std::map<uint64_t, TSCRange> m_tscs;
   /// This is the chronologically last TSC that has been added.
-  llvm::Optional<std::map<uint64_t, TSCRange>::iterator> m_last_tsc =
+  std::optional<std::map<uint64_t, TSCRange>::iterator> m_last_tsc =
       std::nullopt;
   /// This map contains the non-interpolated nanoseconds timestamps of the
   /// decoded trace items. It maps `item index -> nanoseconds`, where `item
@@ -303,7 +304,7 @@ private:
   /// We use this representation because timestamps are sporadic and we think of
   /// them as ranges.
   std::map<uint64_t, NanosecondsRange> m_nanoseconds;
-  llvm::Optional<std::map<uint64_t, NanosecondsRange>::iterator>
+  std::optional<std::map<uint64_t, NanosecondsRange>::iterator>
       m_last_nanoseconds = std::nullopt;
 
   // The cpu information is stored as a map. It maps `item index -> CPU`.
@@ -311,13 +312,13 @@ private:
   // cpu is seen.
   std::map<uint64_t, lldb::cpu_id_t> m_cpus;
   /// This is the chronologically last CPU ID.
-  llvm::Optional<uint64_t> m_last_cpu = std::nullopt;
+  std::optional<uint64_t> m_last_cpu;
 
   // The PSB offsets are stored as a map. It maps `item index -> psb offset`.
   llvm::DenseMap<uint64_t, lldb::addr_t> m_psb_offsets;
 
   /// TSC -> nanos conversion utility.
-  llvm::Optional<LinuxPerfZeroTscConversion> m_tsc_conversion;
+  std::optional<LinuxPerfZeroTscConversion> m_tsc_conversion;
 
   /// Statistics of all tracing errors.
   ErrorStats m_error_stats;

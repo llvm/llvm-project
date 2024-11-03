@@ -1092,8 +1092,7 @@ static MachineInstr *canFoldAsPredicatedOp(Register Reg,
     if (MO.isDef())
       return nullptr;
     // Allow constant physregs.
-    if (Register::isPhysicalRegister(MO.getReg()) &&
-        !MRI.isConstantPhysReg(MO.getReg()))
+    if (MO.getReg().isPhysical() && !MRI.isConstantPhysReg(MO.getReg()))
       return nullptr;
   }
   bool DontMoveAcrossStores = true;
@@ -1206,12 +1205,7 @@ unsigned RISCVInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
   }
 
   if (MI.getParent() && MI.getParent()->getParent()) {
-    const auto MF = MI.getMF();
-    const auto &TM = static_cast<const RISCVTargetMachine &>(MF->getTarget());
-    const MCRegisterInfo &MRI = *TM.getMCRegisterInfo();
-    const MCSubtargetInfo &STI = *TM.getMCSubtargetInfo();
-    const RISCVSubtarget &ST = MF->getSubtarget<RISCVSubtarget>();
-    if (isCompressibleInst(MI, &ST, MRI, STI))
+    if (isCompressibleInst(MI, STI))
       return 2;
   }
   return get(Opcode).getSize();
@@ -1345,7 +1339,13 @@ bool RISCVInstrInfo::hasReassociableSibling(const MachineInstr &Inst,
   const MachineInstr &Sibling =
       *MRI.getVRegDef(Inst.getOperand(OperandIdx).getReg());
 
-  return RISCV::hasEqualFRM(Inst, Sibling);
+  int16_t InstFrmOpIdx =
+      RISCV::getNamedOperandIdx(Inst.getOpcode(), RISCV::OpName::frm);
+  int16_t SiblingFrmOpIdx =
+      RISCV::getNamedOperandIdx(Sibling.getOpcode(), RISCV::OpName::frm);
+
+  return (InstFrmOpIdx < 0 && SiblingFrmOpIdx < 0) ||
+         RISCV::hasEqualFRM(Inst, Sibling);
 }
 
 bool RISCVInstrInfo::isAssociativeAndCommutative(const MachineInstr &Inst,
@@ -1361,6 +1361,42 @@ bool RISCVInstrInfo::isAssociativeAndCommutative(const MachineInstr &Inst,
   if (isFADD(Opc) || isFMUL(Opc))
     return Inst.getFlag(MachineInstr::MIFlag::FmReassoc) &&
            Inst.getFlag(MachineInstr::MIFlag::FmNsz);
+
+  switch (Opc) {
+  default:
+    return false;
+  case RISCV::ADD:
+  case RISCV::ADDW:
+  case RISCV::AND:
+  case RISCV::OR:
+  case RISCV::XOR:
+  // From RISC-V ISA spec, if both the high and low bits of the same product
+  // are required, then the recommended code sequence is:
+  //
+  // MULH[[S]U] rdh, rs1, rs2
+  // MUL        rdl, rs1, rs2
+  // (source register specifiers must be in same order and rdh cannot be the
+  //  same as rs1 or rs2)
+  //
+  // Microarchitectures can then fuse these into a single multiply operation
+  // instead of performing two separate multiplies.
+  // MachineCombiner may reassociate MUL operands and lose the fusion
+  // opportunity.
+  case RISCV::MUL:
+  case RISCV::MULW:
+  case RISCV::MIN:
+  case RISCV::MINU:
+  case RISCV::MAX:
+  case RISCV::MAXU:
+  case RISCV::FMIN_H:
+  case RISCV::FMIN_S:
+  case RISCV::FMIN_D:
+  case RISCV::FMAX_H:
+  case RISCV::FMAX_S:
+  case RISCV::FMAX_D:
+    return true;
+  }
+
   return false;
 }
 
@@ -1381,13 +1417,21 @@ RISCVInstrInfo::getInverseOpcode(unsigned Opcode) const {
     return RISCV::FADD_S;
   case RISCV::FSUB_D:
     return RISCV::FADD_D;
+  case RISCV::ADD:
+    return RISCV::SUB;
+  case RISCV::SUB:
+    return RISCV::ADD;
+  case RISCV::ADDW:
+    return RISCV::SUBW;
+  case RISCV::SUBW:
+    return RISCV::ADDW;
   }
 }
 
 static bool canCombineFPFusedMultiply(const MachineInstr &Root,
                                       const MachineOperand &MO,
                                       bool DoRegPressureReduce) {
-  if (!MO.isReg() || !Register::isVirtualRegister(MO.getReg()))
+  if (!MO.isReg() || !MO.getReg().isVirtual())
     return false;
   const MachineRegisterInfo &MRI = Root.getMF()->getRegInfo();
   MachineInstr *MI = MRI.getVRegDef(MO.getReg());
@@ -1783,7 +1827,7 @@ RISCVInstrInfo::getSerializableDirectMachineOperandTargetFlags() const {
       {MO_TPREL_ADD, "riscv-tprel-add"},
       {MO_TLS_GOT_HI, "riscv-tls-got-hi"},
       {MO_TLS_GD_HI, "riscv-tls-gd-hi"}};
-  return makeArrayRef(TargetFlags);
+  return ArrayRef(TargetFlags);
 }
 bool RISCVInstrInfo::isFunctionSafeToOutlineFrom(
     MachineFunction &MF, bool OutlineFromLinkOnceODRs) const {
@@ -2488,6 +2532,226 @@ void RISCVInstrInfo::getVLENFactoredAmount(MachineFunction &MF,
         .addReg(N, RegState::Kill)
         .setMIFlag(Flag);
   }
+}
+
+// Checks if all users only demand the lower \p OrigBits of the original
+// instruction's result.
+// TODO: handle multiple interdependent transformations
+bool RISCVInstrInfo::hasAllNBitUsers(const MachineInstr &OrigMI,
+                                     const MachineRegisterInfo &MRI,
+                                     unsigned OrigBits) const {
+
+  SmallSet<std::pair<const MachineInstr *, unsigned>, 4> Visited;
+  SmallVector<std::pair<const MachineInstr *, unsigned>, 4> Worklist;
+
+  Worklist.push_back(std::make_pair(&OrigMI, OrigBits));
+
+  while (!Worklist.empty()) {
+    auto P = Worklist.pop_back_val();
+    const MachineInstr *MI = P.first;
+    unsigned Bits = P.second;
+
+    if (!Visited.insert(P).second)
+      continue;
+
+    // Only handle instructions with one def.
+    if (MI->getNumExplicitDefs() != 1)
+      return false;
+
+    for (auto &UserOp : MRI.use_operands(MI->getOperand(0).getReg())) {
+      const MachineInstr *UserMI = UserOp.getParent();
+      unsigned OpIdx = UserMI->getOperandNo(&UserOp);
+
+      switch (UserMI->getOpcode()) {
+      default:
+        return false;
+
+      case RISCV::ADDIW:
+      case RISCV::ADDW:
+      case RISCV::DIVUW:
+      case RISCV::DIVW:
+      case RISCV::MULW:
+      case RISCV::REMUW:
+      case RISCV::REMW:
+      case RISCV::SLLIW:
+      case RISCV::SLLW:
+      case RISCV::SRAIW:
+      case RISCV::SRAW:
+      case RISCV::SRLIW:
+      case RISCV::SRLW:
+      case RISCV::SUBW:
+      case RISCV::ROLW:
+      case RISCV::RORW:
+      case RISCV::RORIW:
+      case RISCV::CLZW:
+      case RISCV::CTZW:
+      case RISCV::CPOPW:
+      case RISCV::SLLI_UW:
+      case RISCV::FMV_W_X:
+      case RISCV::FCVT_H_W:
+      case RISCV::FCVT_H_WU:
+      case RISCV::FCVT_S_W:
+      case RISCV::FCVT_S_WU:
+      case RISCV::FCVT_D_W:
+      case RISCV::FCVT_D_WU:
+        if (Bits >= 32)
+          break;
+        return false;
+      case RISCV::SEXT_B:
+      case RISCV::PACKH:
+        if (Bits >= 8)
+          break;
+        return false;
+      case RISCV::SEXT_H:
+      case RISCV::FMV_H_X:
+      case RISCV::ZEXT_H_RV32:
+      case RISCV::ZEXT_H_RV64:
+      case RISCV::PACKW:
+        if (Bits >= 16)
+          break;
+        return false;
+
+      case RISCV::PACK:
+        if (Bits >= (STI.getXLen() / 2))
+          break;
+        return false;
+
+      case RISCV::SRLI: {
+        // If we are shifting right by less than Bits, and users don't demand
+        // any bits that were shifted into [Bits-1:0], then we can consider this
+        // as an N-Bit user.
+        unsigned ShAmt = UserMI->getOperand(2).getImm();
+        if (Bits > ShAmt) {
+          Worklist.push_back(std::make_pair(UserMI, Bits - ShAmt));
+          break;
+        }
+        return false;
+      }
+
+      // these overwrite higher input bits, otherwise the lower word of output
+      // depends only on the lower word of input. So check their uses read W.
+      case RISCV::SLLI:
+        if (Bits >= (STI.getXLen() - UserMI->getOperand(2).getImm()))
+          break;
+        Worklist.push_back(std::make_pair(UserMI, Bits));
+        break;
+      case RISCV::ANDI: {
+        uint64_t Imm = UserMI->getOperand(2).getImm();
+        if (Bits >= (unsigned)llvm::bit_width(Imm))
+          break;
+        Worklist.push_back(std::make_pair(UserMI, Bits));
+        break;
+      }
+      case RISCV::ORI: {
+        uint64_t Imm = UserMI->getOperand(2).getImm();
+        if (Bits >= (unsigned)llvm::bit_width<uint64_t>(~Imm))
+          break;
+        Worklist.push_back(std::make_pair(UserMI, Bits));
+        break;
+      }
+
+      case RISCV::SLL:
+      case RISCV::BSET:
+      case RISCV::BCLR:
+      case RISCV::BINV:
+        // Operand 2 is the shift amount which uses log2(xlen) bits.
+        if (OpIdx == 2) {
+          if (Bits >= Log2_32(STI.getXLen()))
+            break;
+          return false;
+        }
+        Worklist.push_back(std::make_pair(UserMI, Bits));
+        break;
+
+      case RISCV::SRA:
+      case RISCV::SRL:
+      case RISCV::ROL:
+      case RISCV::ROR:
+        // Operand 2 is the shift amount which uses 6 bits.
+        if (OpIdx == 2 && Bits >= Log2_32(STI.getXLen()))
+          break;
+        return false;
+
+      case RISCV::ADD_UW:
+      case RISCV::SH1ADD_UW:
+      case RISCV::SH2ADD_UW:
+      case RISCV::SH3ADD_UW:
+        // Operand 1 is implicitly zero extended.
+        if (OpIdx == 1 && Bits >= 32)
+          break;
+        Worklist.push_back(std::make_pair(UserMI, Bits));
+        break;
+
+      case RISCV::BEXTI:
+        if (UserMI->getOperand(2).getImm() >= Bits)
+          return false;
+        break;
+
+      case RISCV::SB:
+        // The first argument is the value to store.
+        if (OpIdx == 0 && Bits >= 8)
+          break;
+        return false;
+      case RISCV::SH:
+        // The first argument is the value to store.
+        if (OpIdx == 0 && Bits >= 16)
+          break;
+        return false;
+      case RISCV::SW:
+        // The first argument is the value to store.
+        if (OpIdx == 0 && Bits >= 32)
+          break;
+        return false;
+
+      // For these, lower word of output in these operations, depends only on
+      // the lower word of input. So, we check all uses only read lower word.
+      case RISCV::COPY:
+      case RISCV::PHI:
+
+      case RISCV::ADD:
+      case RISCV::ADDI:
+      case RISCV::AND:
+      case RISCV::MUL:
+      case RISCV::OR:
+      case RISCV::SUB:
+      case RISCV::XOR:
+      case RISCV::XORI:
+
+      case RISCV::ANDN:
+      case RISCV::BREV8:
+      case RISCV::CLMUL:
+      case RISCV::ORC_B:
+      case RISCV::ORN:
+      case RISCV::SH1ADD:
+      case RISCV::SH2ADD:
+      case RISCV::SH3ADD:
+      case RISCV::XNOR:
+      case RISCV::BSETI:
+      case RISCV::BCLRI:
+      case RISCV::BINVI:
+        Worklist.push_back(std::make_pair(UserMI, Bits));
+        break;
+
+      case RISCV::PseudoCCMOVGPR:
+        // Either operand 4 or operand 5 is returned by this instruction. If
+        // only the lower word of the result is used, then only the lower word
+        // of operand 4 and 5 is used.
+        if (OpIdx != 4 && OpIdx != 5)
+          return false;
+        Worklist.push_back(std::make_pair(UserMI, Bits));
+        break;
+
+      case RISCV::VT_MASKC:
+      case RISCV::VT_MASKCN:
+        if (OpIdx != 1)
+          return false;
+        Worklist.push_back(std::make_pair(UserMI, Bits));
+        break;
+      }
+    }
+  }
+
+  return true;
 }
 
 // Returns true if this is the sext.w pattern, addiw rd, rs1, 0.

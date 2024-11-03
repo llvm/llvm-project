@@ -1,16 +1,16 @@
-# RUN: llvm-exegesis -mtriple=x86_64-unknown-unknown -mcpu=x86-64 -mode=latency --skip-measurements -opcode-name=LEA64_32r -repetition-mode=duplicate -max-configs-per-opcode=2 | FileCheck %s
-# RUN: llvm-exegesis -mtriple=x86_64-unknown-unknown -mcpu=x86-64 -mode=latency --skip-measurements -opcode-name=LEA64_32r -repetition-mode=duplicate -max-configs-per-opcode=2 | FileCheck --check-prefix CHECK-COUNTS %s
+# RUN: llvm-exegesis -mtriple=x86_64-unknown-unknown -mcpu=x86-64 -mode=latency --benchmark-phase=assemble-measured-code -opcode-name=LEA64_32r -repetition-mode=duplicate -max-configs-per-opcode=2 | FileCheck %s
+# RUN: llvm-exegesis -mtriple=x86_64-unknown-unknown -mcpu=x86-64 -mode=latency --benchmark-phase=assemble-measured-code -opcode-name=LEA64_32r -repetition-mode=duplicate -max-configs-per-opcode=2 | FileCheck --check-prefix CHECK-COUNTS %s
 
-# RUN: llvm-exegesis -mtriple=x86_64-unknown-unknown -mcpu=x86-64 -mode=latency --skip-measurements -opcode-name=LEA64_32r -repetition-mode=loop -max-configs-per-opcode=2 | FileCheck %s
-# RUN: llvm-exegesis -mtriple=x86_64-unknown-unknown -mcpu=x86-64 -mode=latency --skip-measurements -opcode-name=LEA64_32r -repetition-mode=loop -max-configs-per-opcode=2 | FileCheck --check-prefix CHECK-COUNTS %s
+# RUN: llvm-exegesis -mtriple=x86_64-unknown-unknown -mcpu=x86-64 -mode=latency --benchmark-phase=assemble-measured-code -opcode-name=LEA64_32r -repetition-mode=loop -max-configs-per-opcode=2 | FileCheck %s
+# RUN: llvm-exegesis -mtriple=x86_64-unknown-unknown -mcpu=x86-64 -mode=latency --benchmark-phase=assemble-measured-code -opcode-name=LEA64_32r -repetition-mode=loop -max-configs-per-opcode=2 | FileCheck --check-prefix CHECK-COUNTS %s
 
 ## Intentionally run llvm-exegesis twice per output!
-# RUN: llvm-exegesis -mtriple=x86_64-unknown-unknown -mcpu=x86-64 -mode=latency --skip-measurements -opcode-name=LEA64_32r -repetition-mode=duplicate -max-configs-per-opcode=2 --benchmarks-file=%t.duplicate.yaml
-# RUN: llvm-exegesis -mtriple=x86_64-unknown-unknown -mcpu=x86-64 -mode=latency --skip-measurements -opcode-name=LEA64_32r -repetition-mode=duplicate -max-configs-per-opcode=2 --benchmarks-file=%t.duplicate.yaml
+# RUN: llvm-exegesis -mtriple=x86_64-unknown-unknown -mcpu=x86-64 -mode=latency --benchmark-phase=assemble-measured-code -opcode-name=LEA64_32r -repetition-mode=duplicate -max-configs-per-opcode=2 --benchmarks-file=%t.duplicate.yaml
+# RUN: llvm-exegesis -mtriple=x86_64-unknown-unknown -mcpu=x86-64 -mode=latency --benchmark-phase=assemble-measured-code -opcode-name=LEA64_32r -repetition-mode=duplicate -max-configs-per-opcode=2 --benchmarks-file=%t.duplicate.yaml
 # RUN: FileCheck --input-file %t.duplicate.yaml %s
 # RUN: FileCheck --input-file %t.duplicate.yaml --check-prefix CHECK-COUNTS %s
-# RUN: llvm-exegesis -mtriple=x86_64-unknown-unknown -mcpu=x86-64 -mode=latency --skip-measurements -opcode-name=LEA64_32r -repetition-mode=loop -max-configs-per-opcode=2 --benchmarks-file=%t.loop.yaml
-# RUN: llvm-exegesis -mtriple=x86_64-unknown-unknown -mcpu=x86-64 -mode=latency --skip-measurements -opcode-name=LEA64_32r -repetition-mode=loop -max-configs-per-opcode=2 --benchmarks-file=%t.loop.yaml
+# RUN: llvm-exegesis -mtriple=x86_64-unknown-unknown -mcpu=x86-64 -mode=latency --benchmark-phase=assemble-measured-code -opcode-name=LEA64_32r -repetition-mode=loop -max-configs-per-opcode=2 --benchmarks-file=%t.loop.yaml
+# RUN: llvm-exegesis -mtriple=x86_64-unknown-unknown -mcpu=x86-64 -mode=latency --benchmark-phase=assemble-measured-code -opcode-name=LEA64_32r -repetition-mode=loop -max-configs-per-opcode=2 --benchmarks-file=%t.loop.yaml
 # RUN: FileCheck --input-file %t.loop.yaml %s
 # RUN: FileCheck --input-file %t.loop.yaml --check-prefix CHECK-COUNTS %s
 

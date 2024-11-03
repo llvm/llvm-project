@@ -18,9 +18,9 @@
 #ifndef LLVM_FUZZMUTATE_IRMUTATOR_H
 #define LLVM_FUZZMUTATE_IRMUTATOR_H
 
-#include "llvm/ADT/Optional.h"
 #include "llvm/FuzzMutate/OpDescriptor.h"
 #include "llvm/Support/ErrorHandling.h"
+#include <optional>
 
 namespace llvm {
 class BasicBlock;
@@ -77,8 +77,8 @@ public:
 class InjectorIRStrategy : public IRMutationStrategy {
   std::vector<fuzzerop::OpDescriptor> Operations;
 
-  Optional<fuzzerop::OpDescriptor> chooseOperation(Value *Src,
-                                                   RandomIRBuilder &IB);
+  std::optional<fuzzerop::OpDescriptor> chooseOperation(Value *Src,
+                                                        RandomIRBuilder &IB);
 
 public:
   InjectorIRStrategy(std::vector<fuzzerop::OpDescriptor> &&Operations)

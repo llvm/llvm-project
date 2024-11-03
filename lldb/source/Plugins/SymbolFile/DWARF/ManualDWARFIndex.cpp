@@ -23,6 +23,7 @@
 #include "lldb/Utility/Timer.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/ThreadPool.h"
+#include <optional>
 
 using namespace lldb_private;
 using namespace lldb;
@@ -81,7 +82,7 @@ void ManualDWARFIndex::Index() {
 
   // Keep memory down by clearing DIEs for any units if indexing
   // caused us to load the unit's DIEs.
-  std::vector<llvm::Optional<DWARFUnit::ScopedExtractDIEs>> clear_cu_dies(
+  std::vector<std::optional<DWARFUnit::ScopedExtractDIEs>> clear_cu_dies(
       units_to_index.size());
   auto parser_fn = [&](size_t cu_idx) {
     IndexUnit(*units_to_index[cu_idx], dwp_dwarf, sets[cu_idx]);
@@ -142,7 +143,7 @@ void ManualDWARFIndex::IndexUnit(DWARFUnit &unit, SymbolFileDWARFDwo *dwp,
 
   if (log) {
     m_module.LogMessage(
-        log, "ManualDWARFIndex::IndexUnit for unit at .debug_info[0x%8.8x]",
+        log, "ManualDWARFIndex::IndexUnit for unit at .debug_info[{0:x16}]",
         unit.GetOffset());
   }
 

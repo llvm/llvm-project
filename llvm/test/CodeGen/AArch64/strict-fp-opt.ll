@@ -177,4 +177,4 @@ declare float @llvm.experimental.constrained.fdiv.f32(float, float, metadata, me
 declare i32 @llvm.get.rounding()
 declare void @llvm.set.rounding(i32)
 
-attributes #0 = { "strictfp" }
+attributes #0 = { strictfp }

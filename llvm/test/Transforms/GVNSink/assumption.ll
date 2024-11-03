@@ -13,13 +13,13 @@ define void @main() {
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    br label [[BB4_I:%.*]]
 ; CHECK:       bb4.i:
-; CHECK-NEXT:    [[I1_I:%.*]] = load volatile i32, i32* @g, align 4
+; CHECK-NEXT:    [[I1_I:%.*]] = load volatile i32, ptr @g, align 4
 ; CHECK-NEXT:    [[I32_I:%.*]] = icmp eq i32 [[I1_I]], 0
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[I32_I]])
-; CHECK-NEXT:    [[I1_I_1:%.*]] = load volatile i32, i32* @g, align 4
+; CHECK-NEXT:    [[I1_I_1:%.*]] = load volatile i32, ptr @g, align 4
 ; CHECK-NEXT:    [[I32_I_1:%.*]] = icmp eq i32 [[I1_I_1]], 0
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[I32_I_1]])
-; CHECK-NEXT:    [[I1_I_2:%.*]] = load volatile i32, i32* @g, align 4
+; CHECK-NEXT:    [[I1_I_2:%.*]] = load volatile i32, ptr @g, align 4
 ; CHECK-NEXT:    [[I32_I_2:%.*]] = icmp eq i32 [[I1_I_2]], 0
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[I32_I_2]])
 ; CHECK-NEXT:    br label [[BB4_I]], !llvm.loop [[LOOP0:![0-9]+]]
@@ -27,13 +27,13 @@ define void @main() {
 ; CHECK-NEXT:    unreachable
 ;
 bb:
-  %i1.i = load volatile i32, i32* @g
+  %i1.i = load volatile i32, ptr @g
   %i32.i = icmp eq i32 %i1.i, 0
   call void @llvm.assume(i1 %i32.i) #3
   br label %bb4.i
 
 bb4.i:                                            ; preds = %bb4.i, %bb
-  %i.i = load volatile i32, i32* @g
+  %i.i = load volatile i32, ptr @g
   %i3.i = icmp eq i32 %i.i, 0
   call void @llvm.assume(i1 %i3.i) #3
   br label %bb4.i

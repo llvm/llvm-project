@@ -146,7 +146,7 @@ mgpuMemHostRegisterMemRef(int64_t rank, StridedMemRefType<char, 1> *descriptor,
   std::rotate(denseStrides.begin(), denseStrides.begin() + 1,
               denseStrides.end());
   denseStrides.back() = 1;
-  assert(strides == llvm::makeArrayRef(denseStrides));
+  assert(strides == llvm::ArrayRef(denseStrides));
 
   auto ptr = descriptor->data + descriptor->offset * elementSizeBytes;
   mgpuMemHostRegister(ptr, sizeBytes);

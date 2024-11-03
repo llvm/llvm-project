@@ -12,9 +12,7 @@
 #include "../ClangTidyCheck.h"
 #include "../utils/FileExtensionsUtils.h"
 
-namespace clang {
-namespace tidy {
-namespace utils {
+namespace clang::tidy::utils {
 
 /// Finds and fixes header guards.
 /// The check supports these options:
@@ -63,8 +61,6 @@ private:
   utils::FileExtensionsSet HeaderFileExtensions;
 };
 
-} // namespace utils
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::utils
 
 #endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_UTILS_HEADERGUARD_H

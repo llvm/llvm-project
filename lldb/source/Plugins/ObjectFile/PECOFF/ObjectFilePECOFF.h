@@ -9,6 +9,7 @@
 #ifndef LLDB_SOURCE_PLUGINS_OBJECTFILE_PECOFF_OBJECTFILEPECOFF_H
 #define LLDB_SOURCE_PLUGINS_OBJECTFILE_PECOFF_OBJECTFILEPECOFF_H
 
+#include <optional>
 #include <vector>
 
 #include "lldb/Symbol/ObjectFile.h"
@@ -123,7 +124,7 @@ public:
 
   /// Return the contents of the .gnu_debuglink section, if the object file
   /// contains it.
-  llvm::Optional<lldb_private::FileSpec> GetDebugLink();
+  std::optional<lldb_private::FileSpec> GetDebugLink();
 
   uint32_t GetDependentModules(lldb_private::FileSpecList &files) override;
 
@@ -281,7 +282,7 @@ private:
   SectionHeaderColl m_sect_headers;
   lldb::addr_t m_image_base;
   lldb_private::Address m_entry_point_address;
-  llvm::Optional<lldb_private::FileSpecList> m_deps_filespec;
+  std::optional<lldb_private::FileSpecList> m_deps_filespec;
   std::unique_ptr<llvm::object::COFFObjectFile> m_binary;
   lldb_private::UUID m_uuid;
 };

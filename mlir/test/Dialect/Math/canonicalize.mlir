@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -canonicalize | FileCheck %s
+// RUN: mlir-opt %s -canonicalize="test-convergence" | FileCheck %s
 
 // CHECK-LABEL: @ceil_fold
 // CHECK: %[[cst:.+]] = arith.constant 1.000000e+00 : f32

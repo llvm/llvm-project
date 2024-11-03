@@ -243,7 +243,6 @@ define void @func_caller_stack() {
 ; MUBUF-NEXT:    v_mov_b32_e32 v0, 9
 ; MUBUF-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:4
 ; MUBUF-NEXT:    v_mov_b32_e32 v0, 10
-; MUBUF-NEXT:    ; implicit-def: $vgpr40
 ; MUBUF-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:8
 ; MUBUF-NEXT:    v_mov_b32_e32 v0, 11
 ; MUBUF-NEXT:    v_writelane_b32 v40, s30, 0
@@ -281,7 +280,6 @@ define void @func_caller_stack() {
 ; FLATSCR-NEXT:    v_mov_b32_e32 v0, 9
 ; FLATSCR-NEXT:    scratch_store_dword off, v0, s32 offset:4
 ; FLATSCR-NEXT:    v_mov_b32_e32 v0, 10
-; FLATSCR-NEXT:    ; implicit-def: $vgpr40
 ; FLATSCR-NEXT:    scratch_store_dword off, v0, s32 offset:8
 ; FLATSCR-NEXT:    v_mov_b32_e32 v0, 11
 ; FLATSCR-NEXT:    v_writelane_b32 v40, s30, 0
@@ -322,9 +320,8 @@ define void @func_caller_byval(ptr addrspace(5) %argptr) {
 ; MUBUF-NEXT:    buffer_load_dword v1, v0, s[0:3], 0 offen
 ; MUBUF-NEXT:    buffer_load_dword v2, v0, s[0:3], 0 offen offset:4
 ; MUBUF-NEXT:    s_addk_i32 s32, 0x400
-; MUBUF-NEXT:    ; implicit-def: $vgpr40
-; MUBUF-NEXT:    v_writelane_b32 v41, s4, 0
 ; MUBUF-NEXT:    v_writelane_b32 v40, s30, 0
+; MUBUF-NEXT:    v_writelane_b32 v41, s4, 0
 ; MUBUF-NEXT:    v_writelane_b32 v40, s31, 1
 ; MUBUF-NEXT:    s_getpc_b64 s[4:5]
 ; MUBUF-NEXT:    s_add_u32 s4, s4, external_void_func_byval@rel32@lo+4
@@ -406,9 +403,8 @@ define void @func_caller_byval(ptr addrspace(5) %argptr) {
 ; FLATSCR-NEXT:    s_mov_b64 exec, s[2:3]
 ; FLATSCR-NEXT:    scratch_load_dwordx2 v[1:2], v0, off
 ; FLATSCR-NEXT:    s_add_i32 s32, s32, 16
-; FLATSCR-NEXT:    ; implicit-def: $vgpr40
-; FLATSCR-NEXT:    v_writelane_b32 v41, s0, 0
 ; FLATSCR-NEXT:    v_writelane_b32 v40, s30, 0
+; FLATSCR-NEXT:    v_writelane_b32 v41, s0, 0
 ; FLATSCR-NEXT:    v_writelane_b32 v40, s31, 1
 ; FLATSCR-NEXT:    s_getpc_b64 s[0:1]
 ; FLATSCR-NEXT:    s_add_u32 s0, s0, external_void_func_byval@rel32@lo+4

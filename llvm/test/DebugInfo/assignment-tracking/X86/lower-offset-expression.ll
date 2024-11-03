@@ -1,5 +1,4 @@
 ; RUN: llc %s -stop-after=finalize-isel -o - \
-; RUN:    -experimental-assignment-tracking  \
 ; RUN: | FileCheck %s
 
 ;; Handwritten test.
@@ -12,6 +11,8 @@
 ;;     c) Has a DW_OP_deref appended.
 
 ; CHECK: DBG_VALUE %stack.0.a, $noreg, {{.+}}, !DIExpression(DW_OP_plus_uconst, 8, DW_OP_deref, DW_OP_LLVM_fragment, 64, 32), debug-location
+
+target triple = "x86_64-unknown-linux-gnu"
 
 define dso_local void @fun() !dbg !7 {
 entry:
@@ -28,7 +29,7 @@ entry:
 declare void @llvm.dbg.assign(metadata, metadata, metadata, metadata, metadata, metadata)
 
 !llvm.dbg.cu = !{!0}
-!llvm.module.flags = !{!3, !4, !5}
+!llvm.module.flags = !{!3, !4, !5, !1000}
 !llvm.ident = !{!6}
 
 !0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus_14, file: !1, producer: "clang version 12.0.0", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !2, splitDebugInlining: false, nameTableKind: None)
@@ -66,3 +67,4 @@ declare void @llvm.dbg.assign(metadata, metadata, metadata, metadata, metadata, 
 !55 = !{!10, !56}
 !56 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !10, size: 64)
 
+!1000 = !{i32 7, !"debug-info-assignment-tracking", i1 true}

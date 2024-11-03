@@ -58,6 +58,7 @@
 #include <algorithm>
 #include <fstream>
 #include <memory>
+#include <optional>
 #include <system_error>
 
 #undef  DEBUG_TYPE
@@ -1882,7 +1883,7 @@ uint32_t getRelocationSymbol(const ELFObjectFileBase *Obj,
 } // anonymous namespace
 
 bool RewriteInstance::analyzeRelocation(
-    const RelocationRef &Rel, uint64_t RType, std::string &SymbolName,
+    const RelocationRef &Rel, uint64_t &RType, std::string &SymbolName,
     bool &IsSectionRelocation, uint64_t &SymbolAddress, int64_t &Addend,
     uint64_t &ExtractedValue, bool &Skip) const {
   Skip = false;
@@ -2536,12 +2537,12 @@ void RewriteInstance::handleRelocation(const SectionRef &RelocatedSection,
             BC->getBinaryFunctionAtAddress(Address + 1)) {
       // Do an extra check that the function was referenced previously.
       // It's a linear search, but it should rarely happen.
-      bool Found =
-          llvm::any_of(llvm::make_second_range(ContainingBF->Relocations),
-                       [&](const Relocation &Rel) {
-                         return Rel.Symbol == RogueBF->getSymbol() &&
-                                !Relocation::isPCRelative(Rel.Type);
-                       });
+      auto CheckReloc = [&](const Relocation &Rel) {
+        return Rel.Symbol == RogueBF->getSymbol() &&
+               !Relocation::isPCRelative(Rel.Type);
+      };
+      bool Found = llvm::any_of(
+          llvm::make_second_range(ContainingBF->Relocations), CheckReloc);
 
       if (Found) {
         errs() << "BOLT-WARNING: detected possible compiler de-virtualization "
@@ -2554,7 +2555,8 @@ void RewriteInstance::handleRelocation(const SectionRef &RelocatedSection,
   }
 
   if (ForceRelocation) {
-    std::string Name = Relocation::isGOT(RType) ? "Zero" : SymbolName;
+    std::string Name =
+        Relocation::isGOT(RType) ? "__BOLT_got_zero" : SymbolName;
     ReferencedSymbol = BC->registerNameAtAddress(Name, 0, 0, 0);
     SymbolAddress = 0;
     if (Relocation::isGOT(RType))
@@ -2579,7 +2581,7 @@ void RewriteInstance::handleRelocation(const SectionRef &RelocatedSection,
           ReferencedBF->registerReferencedOffset(RefFunctionOffset);
         }
         if (opts::Verbosity > 1 &&
-            !BinarySection(*BC, RelocatedSection).isReadOnly())
+            BinarySection(*BC, RelocatedSection).isWritable())
           errs() << "BOLT-WARNING: writable reference into the middle of the "
                  << formatv("function {0} detected at address {1:x}\n",
                             *ReferencedBF, Rel.getOffset());
@@ -2673,15 +2675,13 @@ void RewriteInstance::handleRelocation(const SectionRef &RelocatedSection,
 
   auto checkMaxDataRelocations = [&]() {
     ++NumDataRelocations;
-    if (opts::MaxDataRelocations &&
-        NumDataRelocations + 1 == opts::MaxDataRelocations) {
-      LLVM_DEBUG({
-        dbgs() << "BOLT-DEBUG: processing ending on data relocation "
-               << NumDataRelocations << ": ";
-      });
+    LLVM_DEBUG(if (opts::MaxDataRelocations &&
+                   NumDataRelocations + 1 == opts::MaxDataRelocations) {
+      dbgs() << "BOLT-DEBUG: processing ending on data relocation "
+             << NumDataRelocations << ": ";
       printRelocationInfo(Rel, ReferencedSymbol->getName(), SymbolAddress,
                           Addend, ExtractedValue);
-    }
+    });
 
     return (!opts::MaxDataRelocations ||
             NumDataRelocations < opts::MaxDataRelocations);
@@ -2755,6 +2755,13 @@ void RewriteInstance::selectFunctionsToProcess() {
   LiteThresholdExecCount = std::max(
       LiteThresholdExecCount, static_cast<uint64_t>(opts::LiteThresholdCount));
 
+  StringSet<> ReorderFunctionsUserSet;
+  if (opts::ReorderFunctions == ReorderFunctions::RT_USER) {
+    for (const std::string &Function :
+         ReorderFunctions::readFunctionOrderFile())
+      ReorderFunctionsUserSet.insert(Function);
+  }
+
   uint64_t NumFunctionsToProcess = 0;
   auto shouldProcess = [&](const BinaryFunction &Function) {
     if (opts::MaxFunctions && NumFunctionsToProcess > opts::MaxFunctions)
@@ -2780,6 +2787,16 @@ void RewriteInstance::selectFunctionsToProcess() {
         return false;
 
     if (opts::Lite) {
+      // Forcibly include functions specified in the -function-order file.
+      if (opts::ReorderFunctions == ReorderFunctions::RT_USER) {
+        std::optional<StringRef> Match =
+            Function.forEachName([&](StringRef Name) {
+              return ReorderFunctionsUserSet.contains(Name);
+            });
+        if (Match.has_value())
+          return true;
+      }
+
       if (ProfileReader && !ProfileReader->mayHaveProfileData(Function))
         return false;
 
@@ -2933,7 +2950,7 @@ void RewriteInstance::disassembleFunctions() {
     }
 
     if (opts::PrintAll || opts::PrintDisasm)
-      Function.print(outs(), "after disassembly", true);
+      Function.print(outs(), "after disassembly");
   }
 
   BC->processInterproceduralReferences();
@@ -3000,7 +3017,7 @@ void RewriteInstance::buildFunctionsCFG() {
 
         if (opts::PrintAll) {
           auto L = BC->scopeLock();
-          BF.print(outs(), "while building cfg", true);
+          BF.print(outs(), "while building cfg");
         }
       };
 
@@ -3033,7 +3050,7 @@ void RewriteInstance::postProcessFunctions() {
     Function.postProcessCFG();
 
     if (opts::PrintAll || opts::PrintCFG)
-      Function.print(outs(), "after building cfg", true);
+      Function.print(outs(), "after building cfg");
 
     if (opts::DumpDotAll)
       Function.dumpGraphForPass("00_build-cfg");
@@ -3896,7 +3913,7 @@ void RewriteInstance::mapAllocatableSections(RuntimeDyld &RTDyld) {
       if (!Section.hasValidSectionID())
         continue;
 
-      if (Section.isReadOnly() != (SType == ST_READONLY))
+      if (Section.isWritable() == (SType == ST_READONLY))
         continue;
 
       if (Section.getOutputAddress()) {
@@ -4146,7 +4163,7 @@ void RewriteInstance::rewriteNoteSections() {
     // Set/modify section info.
     BinarySection &NewSection = BC->registerOrUpdateNoteSection(
         SectionName, SectionData, Size, Section.sh_addralign,
-        BSec->isReadOnly(), BSec->getELFType());
+        !BSec->isWritable(), BSec->getELFType());
     NewSection.setOutputAddress(0);
     NewSection.setOutputFileOffset(NextAvailableOffset);
 
@@ -4762,7 +4779,7 @@ void RewriteInstance::updateELFSymbolTable(
     assert(SymbolName && "cannot get symbol name");
 
     auto updateSymbolValue = [&](const StringRef Name,
-                                 Optional<uint64_t> Value = std::nullopt) {
+                                 std::optional<uint64_t> Value = std::nullopt) {
       NewSymbol.st_value = Value ? *Value : getNewValueForSymbol(Name);
       NewSymbol.st_shndx = ELF::SHN_ABS;
       outs() << "BOLT-INFO: setting " << Name << " to 0x"

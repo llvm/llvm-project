@@ -699,9 +699,7 @@ define i32 @extractelt_sdiv_v4i32(<4 x i32> %x) {
 ; RV32NOM-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; RV32NOM-NEXT:    vmv.v.i v9, -1
 ; RV32NOM-NEXT:    vmv.v.i v10, 0
-; RV32NOM-NEXT:    vsetvli zero, zero, e32, m1, tu, ma
 ; RV32NOM-NEXT:    vslideup.vi v10, v9, 3
-; RV32NOM-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
 ; RV32NOM-NEXT:    lui a0, %hi(.LCPI38_0)
 ; RV32NOM-NEXT:    addi a0, a0, %lo(.LCPI38_0)
 ; RV32NOM-NEXT:    vle32.v v9, (a0)
@@ -737,9 +735,7 @@ define i32 @extractelt_sdiv_v4i32(<4 x i32> %x) {
 ; RV64-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; RV64-NEXT:    vmv.v.i v9, -1
 ; RV64-NEXT:    vmv.v.i v10, 0
-; RV64-NEXT:    vsetvli zero, zero, e32, m1, tu, ma
 ; RV64-NEXT:    vslideup.vi v10, v9, 3
-; RV64-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
 ; RV64-NEXT:    lui a0, %hi(.LCPI38_0)
 ; RV64-NEXT:    addi a0, a0, %lo(.LCPI38_0)
 ; RV64-NEXT:    vle32.v v9, (a0)

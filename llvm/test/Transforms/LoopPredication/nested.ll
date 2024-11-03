@@ -4,7 +4,7 @@
 
 declare void @llvm.experimental.guard(i1, ...)
 
-define i32 @signed_loop_0_to_n_nested_0_to_l_inner_index_check(i32* %array, i32 %length, i32 %n, i32 %l) {
+define i32 @signed_loop_0_to_n_nested_0_to_l_inner_index_check(ptr %array, i32 %length, i32 %n, i32 %l) {
 ; CHECK-LABEL: @signed_loop_0_to_n_nested_0_to_l_inner_index_check(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp sle i32 [[N:%.*]], 0
@@ -28,8 +28,8 @@ define i32 @signed_loop_0_to_n_nested_0_to_l_inner_index_check(i32* %array, i32 
 ; CHECK-NEXT:    call void (i1, ...) @llvm.experimental.guard(i1 [[TMP2]], i32 9) [ "deopt"() ]
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[WITHIN_BOUNDS]])
 ; CHECK-NEXT:    [[J_I64:%.*]] = zext i32 [[J]] to i64
-; CHECK-NEXT:    [[ARRAY_J_PTR:%.*]] = getelementptr inbounds i32, i32* [[ARRAY:%.*]], i64 [[J_I64]]
-; CHECK-NEXT:    [[ARRAY_J:%.*]] = load i32, i32* [[ARRAY_J_PTR]], align 4
+; CHECK-NEXT:    [[ARRAY_J_PTR:%.*]] = getelementptr inbounds i32, ptr [[ARRAY:%.*]], i64 [[J_I64]]
+; CHECK-NEXT:    [[ARRAY_J:%.*]] = load i32, ptr [[ARRAY_J_PTR]], align 4
 ; CHECK-NEXT:    [[INNER_LOOP_ACC_NEXT]] = add i32 [[INNER_LOOP_ACC]], [[ARRAY_J]]
 ; CHECK-NEXT:    [[J_NEXT]] = add nsw i32 [[J]], 1
 ; CHECK-NEXT:    [[INNER_CONTINUE:%.*]] = icmp slt i32 [[J_NEXT]], [[L]]
@@ -73,8 +73,8 @@ inner.loop:
   call void (i1, ...) @llvm.experimental.guard(i1 %within.bounds, i32 9) [ "deopt"() ]
 
   %j.i64 = zext i32 %j to i64
-  %array.j.ptr = getelementptr inbounds i32, i32* %array, i64 %j.i64
-  %array.j = load i32, i32* %array.j.ptr, align 4
+  %array.j.ptr = getelementptr inbounds i32, ptr %array, i64 %j.i64
+  %array.j = load i32, ptr %array.j.ptr, align 4
   %inner.loop.acc.next = add i32 %inner.loop.acc, %array.j
 
   %j.next = add nsw i32 %j, 1
@@ -92,7 +92,7 @@ exit:
   ret i32 %result
 }
 
-define i32 @signed_loop_0_to_n_nested_0_to_l_outer_index_check(i32* %array, i32 %length, i32 %n, i32 %l) {
+define i32 @signed_loop_0_to_n_nested_0_to_l_outer_index_check(ptr %array, i32 %length, i32 %n, i32 %l) {
 ; CHECK-LABEL: @signed_loop_0_to_n_nested_0_to_l_outer_index_check(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp sle i32 [[N:%.*]], 0
@@ -116,8 +116,8 @@ define i32 @signed_loop_0_to_n_nested_0_to_l_outer_index_check(i32* %array, i32 
 ; CHECK-NEXT:    call void (i1, ...) @llvm.experimental.guard(i1 [[TMP2]], i32 9) [ "deopt"() ]
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[WITHIN_BOUNDS]])
 ; CHECK-NEXT:    [[I_I64:%.*]] = zext i32 [[I]] to i64
-; CHECK-NEXT:    [[ARRAY_I_PTR:%.*]] = getelementptr inbounds i32, i32* [[ARRAY:%.*]], i64 [[I_I64]]
-; CHECK-NEXT:    [[ARRAY_I:%.*]] = load i32, i32* [[ARRAY_I_PTR]], align 4
+; CHECK-NEXT:    [[ARRAY_I_PTR:%.*]] = getelementptr inbounds i32, ptr [[ARRAY:%.*]], i64 [[I_I64]]
+; CHECK-NEXT:    [[ARRAY_I:%.*]] = load i32, ptr [[ARRAY_I_PTR]], align 4
 ; CHECK-NEXT:    [[INNER_LOOP_ACC_NEXT]] = add i32 [[INNER_LOOP_ACC]], [[ARRAY_I]]
 ; CHECK-NEXT:    [[J_NEXT]] = add nsw i32 [[J]], 1
 ; CHECK-NEXT:    [[INNER_CONTINUE:%.*]] = icmp slt i32 [[J_NEXT]], [[L]]
@@ -162,8 +162,8 @@ inner.loop:
   call void (i1, ...) @llvm.experimental.guard(i1 %within.bounds, i32 9) [ "deopt"() ]
 
   %i.i64 = zext i32 %i to i64
-  %array.i.ptr = getelementptr inbounds i32, i32* %array, i64 %i.i64
-  %array.i = load i32, i32* %array.i.ptr, align 4
+  %array.i.ptr = getelementptr inbounds i32, ptr %array, i64 %i.i64
+  %array.i = load i32, ptr %array.i.ptr, align 4
   %inner.loop.acc.next = add i32 %inner.loop.acc, %array.i
 
   %j.next = add nsw i32 %j, 1
@@ -181,7 +181,7 @@ exit:
   ret i32 %result
 }
 
-define i32 @signed_loop_0_to_n_nested_i_to_l_inner_index_check(i32* %array, i32 %length, i32 %n, i32 %l) {
+define i32 @signed_loop_0_to_n_nested_i_to_l_inner_index_check(ptr %array, i32 %length, i32 %n, i32 %l) {
 ; CHECK-LABEL: @signed_loop_0_to_n_nested_i_to_l_inner_index_check(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp sle i32 [[N:%.*]], 0
@@ -210,8 +210,8 @@ define i32 @signed_loop_0_to_n_nested_i_to_l_inner_index_check(i32* %array, i32 
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[TMP5]])
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[WITHIN_BOUNDS]])
 ; CHECK-NEXT:    [[J_I64:%.*]] = zext i32 [[J]] to i64
-; CHECK-NEXT:    [[ARRAY_J_PTR:%.*]] = getelementptr inbounds i32, i32* [[ARRAY:%.*]], i64 [[J_I64]]
-; CHECK-NEXT:    [[ARRAY_J:%.*]] = load i32, i32* [[ARRAY_J_PTR]], align 4
+; CHECK-NEXT:    [[ARRAY_J_PTR:%.*]] = getelementptr inbounds i32, ptr [[ARRAY:%.*]], i64 [[J_I64]]
+; CHECK-NEXT:    [[ARRAY_J:%.*]] = load i32, ptr [[ARRAY_J_PTR]], align 4
 ; CHECK-NEXT:    [[INNER_LOOP_ACC_NEXT]] = add i32 [[INNER_LOOP_ACC]], [[ARRAY_J]]
 ; CHECK-NEXT:    [[J_NEXT]] = add nsw i32 [[J]], 1
 ; CHECK-NEXT:    [[INNER_CONTINUE:%.*]] = icmp slt i32 [[J_NEXT]], [[L]]
@@ -255,8 +255,8 @@ inner.loop:
   call void (i1, ...) @llvm.experimental.guard(i1 %within.bounds, i32 9) [ "deopt"() ]
 
   %j.i64 = zext i32 %j to i64
-  %array.j.ptr = getelementptr inbounds i32, i32* %array, i64 %j.i64
-  %array.j = load i32, i32* %array.j.ptr, align 4
+  %array.j.ptr = getelementptr inbounds i32, ptr %array, i64 %j.i64
+  %array.j = load i32, ptr %array.j.ptr, align 4
   %inner.loop.acc.next = add i32 %inner.loop.acc, %array.j
 
   %j.next = add nsw i32 %j, 1
@@ -274,7 +274,7 @@ exit:
   ret i32 %result
 }
 
-define i32 @cant_expand_guard_check_start(i32* %array, i32 %length, i32 %n, i32 %l, i32 %maybezero) {
+define i32 @cant_expand_guard_check_start(ptr %array, i32 %length, i32 %n, i32 %l, i32 %maybezero) {
 ; CHECK-LABEL: @cant_expand_guard_check_start(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp sle i32 [[N:%.*]], 0
@@ -295,8 +295,8 @@ define i32 @cant_expand_guard_check_start(i32* %array, i32 %length, i32 %n, i32 
 ; CHECK-NEXT:    [[WITHIN_BOUNDS:%.*]] = icmp ult i32 [[J]], [[LENGTH:%.*]]
 ; CHECK-NEXT:    call void (i1, ...) @llvm.experimental.guard(i1 [[WITHIN_BOUNDS]], i32 9) [ "deopt"() ]
 ; CHECK-NEXT:    [[J_I64:%.*]] = zext i32 [[J]] to i64
-; CHECK-NEXT:    [[ARRAY_J_PTR:%.*]] = getelementptr inbounds i32, i32* [[ARRAY:%.*]], i64 [[J_I64]]
-; CHECK-NEXT:    [[ARRAY_J:%.*]] = load i32, i32* [[ARRAY_J_PTR]], align 4
+; CHECK-NEXT:    [[ARRAY_J_PTR:%.*]] = getelementptr inbounds i32, ptr [[ARRAY:%.*]], i64 [[J_I64]]
+; CHECK-NEXT:    [[ARRAY_J:%.*]] = load i32, ptr [[ARRAY_J_PTR]], align 4
 ; CHECK-NEXT:    [[INNER_LOOP_ACC_NEXT]] = add i32 [[INNER_LOOP_ACC]], [[ARRAY_J]]
 ; CHECK-NEXT:    [[J_NEXT]] = add nsw i32 [[J]], 1
 ; CHECK-NEXT:    [[INNER_CONTINUE:%.*]] = icmp slt i32 [[J_NEXT]], [[L]]
@@ -341,8 +341,8 @@ inner.loop:
   call void (i1, ...) @llvm.experimental.guard(i1 %within.bounds, i32 9) [ "deopt"() ]
 
   %j.i64 = zext i32 %j to i64
-  %array.j.ptr = getelementptr inbounds i32, i32* %array, i64 %j.i64
-  %array.j = load i32, i32* %array.j.ptr, align 4
+  %array.j.ptr = getelementptr inbounds i32, ptr %array, i64 %j.i64
+  %array.j = load i32, ptr %array.j.ptr, align 4
   %inner.loop.acc.next = add i32 %inner.loop.acc, %array.j
 
   %j.next = add nsw i32 %j, 1

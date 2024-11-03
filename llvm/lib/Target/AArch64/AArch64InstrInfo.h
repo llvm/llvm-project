@@ -539,10 +539,11 @@ static inline unsigned getPACOpcodeForKey(AArch64PACKey::ID K, bool Zero) {
 }
 
 // struct TSFlags {
-#define TSFLAG_ELEMENT_SIZE_TYPE(X)      (X)       // 3-bits
-#define TSFLAG_DESTRUCTIVE_INST_TYPE(X) ((X) << 3) // 4-bits
-#define TSFLAG_FALSE_LANE_TYPE(X)       ((X) << 7) // 2-bits
-#define TSFLAG_INSTR_FLAGS(X)           ((X) << 9) // 2-bits
+#define TSFLAG_ELEMENT_SIZE_TYPE(X)      (X)        // 3-bits
+#define TSFLAG_DESTRUCTIVE_INST_TYPE(X) ((X) << 3)  // 4-bits
+#define TSFLAG_FALSE_LANE_TYPE(X)       ((X) << 7)  // 2-bits
+#define TSFLAG_INSTR_FLAGS(X)           ((X) << 9)  // 2-bits
+#define TSFLAG_SME_MATRIX_TYPE(X)       ((X) << 11) // 3-bits
 // }
 
 namespace AArch64 {
@@ -580,14 +581,28 @@ enum FalseLaneType {
 static const uint64_t InstrFlagIsWhile     = TSFLAG_INSTR_FLAGS(0x1);
 static const uint64_t InstrFlagIsPTestLike = TSFLAG_INSTR_FLAGS(0x2);
 
+enum SMEMatrixType {
+  SMEMatrixTypeMask = TSFLAG_SME_MATRIX_TYPE(0x7),
+  SMEMatrixNone     = TSFLAG_SME_MATRIX_TYPE(0x0),
+  SMEMatrixTileB    = TSFLAG_SME_MATRIX_TYPE(0x1),
+  SMEMatrixTileH    = TSFLAG_SME_MATRIX_TYPE(0x2),
+  SMEMatrixTileS    = TSFLAG_SME_MATRIX_TYPE(0x3),
+  SMEMatrixTileD    = TSFLAG_SME_MATRIX_TYPE(0x4),
+  SMEMatrixTileQ    = TSFLAG_SME_MATRIX_TYPE(0x5),
+  SMEMatrixArray    = TSFLAG_SME_MATRIX_TYPE(0x6),
+};
+
 #undef TSFLAG_ELEMENT_SIZE_TYPE
 #undef TSFLAG_DESTRUCTIVE_INST_TYPE
 #undef TSFLAG_FALSE_LANE_TYPE
 #undef TSFLAG_INSTR_FLAGS
+#undef TSFLAG_SME_MATRIX_TYPE
 
 int getSVEPseudoMap(uint16_t Opcode);
 int getSVERevInstr(uint16_t Opcode);
 int getSVENonRevInstr(uint16_t Opcode);
+
+int getSMEPseudoMap(uint16_t Opcode);
 }
 
 } // end namespace llvm

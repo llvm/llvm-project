@@ -65,6 +65,7 @@ public:
   bool noteUndefinedBehavior() override {
     return Parent.noteUndefinedBehavior();
   }
+  bool inConstantContext() const { return Parent.InConstantContext; }
   bool hasActiveDiagnostic() override { return Parent.hasActiveDiagnostic(); }
   void setActiveDiagnostic(bool Flag) override {
     Parent.setActiveDiagnostic(Flag);

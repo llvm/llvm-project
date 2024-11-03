@@ -345,10 +345,10 @@ void SelectionDAGISel::getAnalysisUsage(AnalysisUsage &AU) const {
   if (UseMBPI && OptLevel != CodeGenOpt::None)
     AU.addRequired<BranchProbabilityInfoWrapperPass>();
   AU.addRequired<ProfileSummaryInfoWrapperPass>();
-  if (getEnableAssignmentTracking()) {
-    AU.addRequired<AssignmentTrackingAnalysis>();
-    AU.addPreserved<AssignmentTrackingAnalysis>();
-  }
+  // AssignmentTrackingAnalysis only runs if assignment tracking is enabled for
+  // the module.
+  AU.addRequired<AssignmentTrackingAnalysis>();
+  AU.addPreserved<AssignmentTrackingAnalysis>();
   if (OptLevel != CodeGenOpt::None)
     LazyBlockFrequencyInfoPass::getLazyBFIAnalysisUsage(AU);
   MachineFunctionPass::getAnalysisUsage(AU);
@@ -392,8 +392,8 @@ bool SelectionDAGISel::runOnMachineFunction(MachineFunction &mf) {
 
   // Decide what flavour of variable location debug-info will be used, before
   // we change the optimisation level.
-  UseInstrRefDebugInfo = mf.useDebugInstrRef();
-  CurDAG->useInstrRefDebugInfo(UseInstrRefDebugInfo);
+  bool InstrRef = mf.shouldUseDebugInstrRef();
+  mf.setUseDebugInstrRef(InstrRef);
 
   // Reset the target options before resetting the optimization
   // level below.
@@ -420,7 +420,7 @@ bool SelectionDAGISel::runOnMachineFunction(MachineFunction &mf) {
     BFI = &getAnalysis<LazyBlockFrequencyInfoPass>().getBFI();
 
   FunctionVarLocs const *FnVarLocs = nullptr;
-  if (getEnableAssignmentTracking())
+  if (isAssignmentTrackingEnabled(*Fn.getParent()))
     FnVarLocs = getAnalysis<AssignmentTrackingAnalysis>().getResults();
 
   LLVM_DEBUG(dbgs() << "\n\n\n=== " << Fn.getName() << "\n");
@@ -504,7 +504,7 @@ bool SelectionDAGISel::runOnMachineFunction(MachineFunction &mf) {
       To = J->second;
     }
     // Make sure the new register has a sufficiently constrained register class.
-    if (Register::isVirtualRegister(From) && Register::isVirtualRegister(To))
+    if (From.isVirtual() && To.isVirtual())
       MRI.constrainRegClass(To, MRI.getRegClass(From));
     // Replace it.
 
@@ -546,15 +546,14 @@ bool SelectionDAGISel::runOnMachineFunction(MachineFunction &mf) {
         LiveInMap.insert(LI);
 
   // Insert DBG_VALUE instructions for function arguments to the entry block.
-  bool InstrRef = MF->useDebugInstrRef();
   for (unsigned i = 0, e = FuncInfo->ArgDbgValues.size(); i != e; ++i) {
     MachineInstr *MI = FuncInfo->ArgDbgValues[e - i - 1];
     assert(MI->getOpcode() != TargetOpcode::DBG_VALUE_LIST &&
            "Function parameters should not be described by DBG_VALUE_LIST.");
-    bool hasFI = MI->getOperand(0).isFI();
+    bool hasFI = MI->getDebugOperand(0).isFI();
     Register Reg =
-        hasFI ? TRI.getFrameRegister(*MF) : MI->getOperand(0).getReg();
-    if (Register::isPhysicalRegister(Reg))
+        hasFI ? TRI.getFrameRegister(*MF) : MI->getDebugOperand(0).getReg();
+    if (Reg.isPhysical())
       EntryMBB->insert(EntryMBB->begin(), MI);
     else {
       MachineInstr *Def = RegInfo->getVRegDef(Reg);
@@ -583,7 +582,7 @@ bool SelectionDAGISel::runOnMachineFunction(MachineFunction &mf) {
       DebugLoc DL = MI->getDebugLoc();
       bool IsIndirect = MI->isIndirectDebugValue();
       if (IsIndirect)
-        assert(MI->getOperand(1).getImm() == 0 &&
+        assert(MI->getDebugOffset().getImm() == 0 &&
                "DBG_VALUE with nonzero offset");
       assert(cast<DILocalVariable>(Variable)->isValidLocationForIntrinsic(DL) &&
              "Expected inlined-at fields to agree");
@@ -624,7 +623,7 @@ bool SelectionDAGISel::runOnMachineFunction(MachineFunction &mf) {
 
   // For debug-info, in instruction referencing mode, we need to perform some
   // post-isel maintenence.
-  if (UseInstrRefDebugInfo)
+  if (MF->useDebugInstrRef())
     MF->finalizeDebugInstrRefs();
 
   // Determine if there are any calls in this machine function.
@@ -1352,7 +1351,7 @@ static void processDbgDeclares(FunctionLoweringInfo &FuncInfo) {
         if (!Address) {
           LLVM_DEBUG(dbgs() << "processDbgDeclares skipping " << *DI
                             << " (bad address)\n");
-          return;
+          continue;
         }
         processDbgDeclare(FuncInfo, Address, DI->getExpression(),
                           DI->getVariable(), DI->getDebugLoc());
@@ -1380,8 +1379,6 @@ void SelectionDAGISel::SelectAllBasicBlocks(const Function &Fn) {
   if (TM.Options.EnableFastISel) {
     LLVM_DEBUG(dbgs() << "Enabling fast-isel\n");
     FastIS = TLI->createFastISel(*FuncInfo, LibInfo);
-    if (FastIS)
-      FastIS->useInstrRefDebugInfo(UseInstrRefDebugInfo);
   }
 
   ReversePostOrderTraversal<const Function*> RPOT(&Fn);
@@ -1435,7 +1432,7 @@ void SelectionDAGISel::SelectAllBasicBlocks(const Function &Fn) {
   if (FastIS && Inserted)
     FastIS->setLastLocalValue(&*std::prev(FuncInfo->InsertPt));
 
-  if (getEnableAssignmentTracking()) {
+  if (isAssignmentTrackingEnabled(*Fn.getParent())) {
     assert(CurDAG->getFunctionVarLocs() &&
            "expected AssignmentTrackingAnalysis pass results");
     processSingleLocVars(*FuncInfo, CurDAG->getFunctionVarLocs());
@@ -2245,6 +2242,11 @@ void SelectionDAGISel::Select_ARITH_FENCE(SDNode *N) {
                        N->getOperand(0));
 }
 
+void SelectionDAGISel::Select_MEMBARRIER(SDNode *N) {
+  CurDAG->SelectNodeTo(N, TargetOpcode::MEMBARRIER, N->getValueType(0),
+                       N->getOperand(0));
+}
+
 void SelectionDAGISel::pushStackMapLiveVariable(SmallVectorImpl<SDValue> &Ops,
                                                 SDValue OpVal, SDLoc DL) {
   SDNode *OpNode = OpVal.getNode();
@@ -2898,6 +2900,9 @@ void SelectionDAGISel::SelectCodeCommon(SDNode *NodeToMatch,
     return;
   case ISD::ARITH_FENCE:
     Select_ARITH_FENCE(NodeToMatch);
+    return;
+  case ISD::MEMBARRIER:
+    Select_MEMBARRIER(NodeToMatch);
     return;
   case ISD::STACKMAP:
     Select_STACKMAP(NodeToMatch);

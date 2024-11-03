@@ -52,44 +52,13 @@ struct CommentInfo {
   CommentInfo(CommentInfo &&Other) = default;
   CommentInfo &operator=(CommentInfo &&Other) = default;
 
-  bool operator==(const CommentInfo &Other) const {
-    auto FirstCI = std::tie(Kind, Text, Name, Direction, ParamName, CloseName,
-                            SelfClosing, Explicit, AttrKeys, AttrValues, Args);
-    auto SecondCI =
-        std::tie(Other.Kind, Other.Text, Other.Name, Other.Direction,
-                 Other.ParamName, Other.CloseName, Other.SelfClosing,
-                 Other.Explicit, Other.AttrKeys, Other.AttrValues, Other.Args);
-
-    if (FirstCI != SecondCI || Children.size() != Other.Children.size())
-      return false;
-
-    return std::equal(Children.begin(), Children.end(), Other.Children.begin(),
-                      llvm::deref<std::equal_to<>>{});
-  }
+  bool operator==(const CommentInfo &Other) const;
 
   // This operator is used to sort a vector of CommentInfos.
   // No specific order (attributes more important than others) is required. Any
   // sort is enough, the order is only needed to call std::unique after sorting
   // the vector.
-  bool operator<(const CommentInfo &Other) const {
-    auto FirstCI = std::tie(Kind, Text, Name, Direction, ParamName, CloseName,
-                            SelfClosing, Explicit, AttrKeys, AttrValues, Args);
-    auto SecondCI =
-        std::tie(Other.Kind, Other.Text, Other.Name, Other.Direction,
-                 Other.ParamName, Other.CloseName, Other.SelfClosing,
-                 Other.Explicit, Other.AttrKeys, Other.AttrValues, Other.Args);
-
-    if (FirstCI < SecondCI)
-      return true;
-
-    if (FirstCI == SecondCI) {
-      return std::lexicographical_compare(
-          Children.begin(), Children.end(), Other.Children.begin(),
-          Other.Children.end(), llvm::deref<std::less<>>());
-    }
-
-    return false;
-  }
+  bool operator<(const CommentInfo &Other) const;
 
   SmallString<16>
       Kind; // Kind of comment (FullComment, ParagraphComment, TextComment,
@@ -330,8 +299,7 @@ struct Info {
 // Info for namespaces.
 struct NamespaceInfo : public Info {
   NamespaceInfo(SymbolID USR = SymbolID(), StringRef Name = StringRef(),
-                StringRef Path = StringRef())
-      : Info(InfoType::IT_namespace, USR, Name, Path) {}
+                StringRef Path = StringRef());
 
   void merge(NamespaceInfo &&I);
 
@@ -381,8 +349,7 @@ struct FunctionInfo : public SymbolInfo {
 // Info for types.
 struct RecordInfo : public SymbolInfo {
   RecordInfo(SymbolID USR = SymbolID(), StringRef Name = StringRef(),
-             StringRef Path = StringRef())
-      : SymbolInfo(InfoType::IT_record, USR, Name, Path) {}
+             StringRef Path = StringRef());
 
   void merge(RecordInfo &&I);
 
@@ -434,11 +401,9 @@ struct TypedefInfo : public SymbolInfo {
 };
 
 struct BaseRecordInfo : public RecordInfo {
-  BaseRecordInfo() : RecordInfo() {}
+  BaseRecordInfo();
   BaseRecordInfo(SymbolID USR, StringRef Name, StringRef Path, bool IsVirtual,
-                 AccessSpecifier Access, bool IsParent)
-      : RecordInfo(USR, Name, Path), IsVirtual(IsVirtual), Access(Access),
-        IsParent(IsParent) {}
+                 AccessSpecifier Access, bool IsParent);
 
   // Indicates if base corresponds to a virtual inheritance
   bool IsVirtual = false;

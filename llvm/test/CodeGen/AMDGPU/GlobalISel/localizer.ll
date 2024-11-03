@@ -8,9 +8,9 @@ define amdgpu_kernel void @localize_constants(i1 %cond) {
 ; GFX9-LABEL: localize_constants:
 ; GFX9:       ; %bb.0: ; %entry
 ; GFX9-NEXT:    s_load_dword s1, s[4:5], 0x0
-; GFX9-NEXT:    s_mov_b32 s0, -1
+; GFX9-NEXT:    s_mov_b32 s0, 1
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-NEXT:    s_xor_b32 s1, s1, -1
+; GFX9-NEXT:    s_xor_b32 s1, s1, 1
 ; GFX9-NEXT:    s_and_b32 s1, s1, 1
 ; GFX9-NEXT:    s_cmp_lg_u32 s1, 0
 ; GFX9-NEXT:    s_cbranch_scc0 .LBB0_2
@@ -35,7 +35,7 @@ define amdgpu_kernel void @localize_constants(i1 %cond) {
 ; GFX9-NEXT:    global_store_dword v[0:1], v0, off
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:  .LBB0_2: ; %Flow
-; GFX9-NEXT:    s_xor_b32 s0, s0, -1
+; GFX9-NEXT:    s_xor_b32 s0, s0, 1
 ; GFX9-NEXT:    s_and_b32 s0, s0, 1
 ; GFX9-NEXT:    s_cmp_lg_u32 s0, 0
 ; GFX9-NEXT:    s_cbranch_scc1 .LBB0_4
@@ -96,9 +96,9 @@ define amdgpu_kernel void @localize_globals(i1 %cond) {
 ; GFX9-LABEL: localize_globals:
 ; GFX9:       ; %bb.0: ; %entry
 ; GFX9-NEXT:    s_load_dword s1, s[4:5], 0x0
-; GFX9-NEXT:    s_mov_b32 s0, -1
+; GFX9-NEXT:    s_mov_b32 s0, 1
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-NEXT:    s_xor_b32 s1, s1, -1
+; GFX9-NEXT:    s_xor_b32 s1, s1, 1
 ; GFX9-NEXT:    s_and_b32 s1, s1, 1
 ; GFX9-NEXT:    s_cmp_lg_u32 s1, 0
 ; GFX9-NEXT:    s_cbranch_scc0 .LBB1_2
@@ -120,7 +120,7 @@ define amdgpu_kernel void @localize_globals(i1 %cond) {
 ; GFX9-NEXT:    global_store_dword v0, v1, s[4:5]
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:  .LBB1_2: ; %Flow
-; GFX9-NEXT:    s_xor_b32 s0, s0, -1
+; GFX9-NEXT:    s_xor_b32 s0, s0, 1
 ; GFX9-NEXT:    s_and_b32 s0, s0, 1
 ; GFX9-NEXT:    s_cmp_lg_u32 s0, 0
 ; GFX9-NEXT:    s_cbranch_scc1 .LBB1_4
@@ -242,9 +242,8 @@ define void @sink_null_insert_pt(ptr addrspace(4) %arg0) {
 ; GFX9-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX9-NEXT:    global_load_dword v0, v[0:1], off glc
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-NEXT:    ; implicit-def: $vgpr40
-; GFX9-NEXT:    v_writelane_b32 v41, s16, 0
 ; GFX9-NEXT:    v_writelane_b32 v40, s30, 0
+; GFX9-NEXT:    v_writelane_b32 v41, s16, 0
 ; GFX9-NEXT:    s_addk_i32 s32, 0x400
 ; GFX9-NEXT:    v_writelane_b32 v40, s31, 1
 ; GFX9-NEXT:    s_swappc_b64 s[30:31], 0

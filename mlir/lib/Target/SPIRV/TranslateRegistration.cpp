@@ -49,8 +49,8 @@ deserializeModule(const llvm::MemoryBuffer *input, MLIRContext *context) {
     return {};
   }
 
-  auto binary = llvm::makeArrayRef(reinterpret_cast<const uint32_t *>(start),
-                                   size / sizeof(uint32_t));
+  auto binary = llvm::ArrayRef(reinterpret_cast<const uint32_t *>(start),
+                               size / sizeof(uint32_t));
   return spirv::deserialize(binary, context);
 }
 

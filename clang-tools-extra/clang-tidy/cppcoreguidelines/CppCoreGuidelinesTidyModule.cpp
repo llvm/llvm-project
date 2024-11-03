@@ -18,6 +18,7 @@
 #include "AvoidDoWhileCheck.h"
 #include "AvoidGotoCheck.h"
 #include "AvoidNonConstGlobalVariablesCheck.h"
+#include "AvoidReferenceCoroutineParametersCheck.h"
 #include "InitVariablesCheck.h"
 #include "InterfacesGlobalInitCheck.h"
 #include "MacroUsageCheck.h"
@@ -39,8 +40,7 @@
 #include "SpecialMemberFunctionsCheck.h"
 #include "VirtualClassDestructorCheck.h"
 
-namespace clang {
-namespace tidy {
+namespace clang::tidy {
 namespace cppcoreguidelines {
 
 /// A module containing checks of the C++ Core Guidelines
@@ -59,6 +59,8 @@ public:
         "cppcoreguidelines-avoid-magic-numbers");
     CheckFactories.registerCheck<AvoidNonConstGlobalVariablesCheck>(
         "cppcoreguidelines-avoid-non-const-global-variables");
+    CheckFactories.registerCheck<AvoidReferenceCoroutineParametersCheck>(
+        "cppcoreguidelines-avoid-reference-coroutine-parameters");
     CheckFactories.registerCheck<modernize::UseOverrideCheck>(
         "cppcoreguidelines-explicit-virtual-functions");
     CheckFactories.registerCheck<InitVariablesCheck>(
@@ -126,5 +128,4 @@ static ClangTidyModuleRegistry::Add<CppCoreGuidelinesModule>
 // and thus register the CppCoreGuidelinesModule.
 volatile int CppCoreGuidelinesModuleAnchorSource = 0;
 
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy

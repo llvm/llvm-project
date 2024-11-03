@@ -20,6 +20,7 @@
 #include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
 #include "llvm/ADT/DenseSet.h"
+#include <optional>
 
 using namespace clang;
 using namespace ento;
@@ -169,7 +170,7 @@ public:
     if (!ArgType)
       return;
 
-    Optional<bool> IsUncountedPtr = isUncountedPtr(ArgType);
+    std::optional<bool> IsUncountedPtr = isUncountedPtr(ArgType);
     if (IsUncountedPtr && *IsUncountedPtr) {
       const Expr *const InitExpr = V->getInit();
       if (!InitExpr)

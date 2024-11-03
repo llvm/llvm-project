@@ -515,8 +515,9 @@ static void DiagnoseInvalidUnicodeCharacterName(
 
     std::string Str;
     llvm::UTF32 V = Match.Value;
-    LLVM_ATTRIBUTE_UNUSED bool Converted =
+    bool Converted =
         llvm::convertUTF32ToUTF8String(llvm::ArrayRef<llvm::UTF32>(&V, 1), Str);
+    (void)Converted;
     assert(Converted && "Found a match wich is not a unicode character");
 
     Diag(Diags, Features, Loc, TokBegin, TokRangeBegin, TokRangeEnd,
@@ -942,9 +943,13 @@ NumericLiteralParser::NumericLiteralParser(StringRef TokSpelling,
 
       // CUDA host and device may have different _Float16 support, therefore
       // allows f16 literals to avoid false alarm.
+      // When we compile for OpenMP target offloading on NVPTX, f16 suffix
+      // should also be supported.
       // ToDo: more precise check for CUDA.
-      if ((Target.hasFloat16Type() || LangOpts.CUDA) && s + 2 < ThisTokEnd &&
-          s[1] == '1' && s[2] == '6') {
+      // TODO: AMDGPU might also support it in the future.
+      if ((Target.hasFloat16Type() || LangOpts.CUDA ||
+           (LangOpts.OpenMPIsDevice && Target.getTriple().isNVPTX())) &&
+          s + 2 < ThisTokEnd && s[1] == '1' && s[2] == '6') {
         s += 2; // success, eat up 2 characters.
         isFloat16 = true;
         continue;

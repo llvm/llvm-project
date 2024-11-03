@@ -11,12 +11,12 @@
 
 #include <memory>
 #include <mutex>
+#include <optional>
 #include <string>
 
 #include "lldb/Core/Address.h"
 #include "lldb/Core/Disassembler.h"
 #include "lldb/Core/PluginManager.h"
-#include "llvm/ADT/Optional.h"
 
 class InstructionLLVMC;
 
@@ -77,7 +77,7 @@ protected:
   // this is a pc-relative address calculation and we need both
   // parts to calculate the symbolication.
   lldb::addr_t m_adrp_address;
-  llvm::Optional<uint32_t> m_adrp_insn;
+  std::optional<uint32_t> m_adrp_insn;
 
   // Since we need to make two actual MC Disassemblers for ARM (ARM & THUMB),
   // and there's a bit of goo to set up and own in the MC disassembler world,

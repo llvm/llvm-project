@@ -12,9 +12,7 @@
 #include "clang/Lex/Lexer.h"
 #include <algorithm>
 
-namespace clang {
-namespace tidy {
-namespace modernize {
+namespace clang::tidy::modernize {
 
 static bool locationsInSameFile(const SourceManager &Sources,
                                 SourceLocation Loc1, SourceLocation Loc2) {
@@ -102,6 +100,4 @@ void ConcatNestedNamespacesCheck::check(
   Namespaces.clear();
 }
 
-} // namespace modernize
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::modernize

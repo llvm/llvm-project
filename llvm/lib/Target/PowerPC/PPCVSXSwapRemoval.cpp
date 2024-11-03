@@ -608,7 +608,7 @@ void PPCVSXSwapRemoval::formWebs() {
       if (!isVecReg(Reg) && !isScalarVecReg(Reg))
         continue;
 
-      if (!Register::isVirtualRegister(Reg)) {
+      if (!Reg.isVirtual()) {
         if (!(MI->isCopy() && isScalarVecReg(Reg)))
           SwapVector[EntryIdx].MentionsPhysVR = 1;
         continue;

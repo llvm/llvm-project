@@ -18,8 +18,8 @@
 ; CHECK: l1.loopexit:
 ; CHECK-NEXT:   br label %l1
 ; CHECK: l1:
-; CHECK-NEXT:   %0 = load i16, i16* null, align 2
-; CHECK-NEXT:   %g.0.g.0..pr = load i16, i16* null, align 2
+; CHECK-NEXT:   %0 = load i16, ptr null, align 2
+; CHECK-NEXT:   %g.0.g.0..pr = load i16, ptr null, align 2
 ; CHECK-NEXT:   ret void
 ; CHECK: for.cond18:
 ; CHECK-NEXT:   br label %l1
@@ -47,10 +47,10 @@ l1.loopexit:
   br label %l1
 
 l1:
-  %h.0 = phi i16* [ undef, %for.cond18 ], [ null, %l1.loopexit ]
-  %0 = load i16, i16* %h.0, align 2
-  store i16 %0, i16* null, align 2
-  %g.0.g.0..pr = load i16, i16* null, align 2
+  %h.0 = phi ptr [ undef, %for.cond18 ], [ null, %l1.loopexit ]
+  %0 = load i16, ptr %h.0, align 2
+  store i16 %0, ptr null, align 2
+  %g.0.g.0..pr = load i16, ptr null, align 2
   %tobool15 = icmp eq i16 %g.0.g.0..pr, 0
   ret void
 

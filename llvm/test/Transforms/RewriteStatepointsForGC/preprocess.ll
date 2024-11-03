@@ -1,4 +1,4 @@
-; RUN: opt -passes=rewrite-statepoints-for-gc -S < %s | FileCheck %s
+; RUN: opt -opaque-pointers=0 -passes=rewrite-statepoints-for-gc -S < %s | FileCheck %s
 
 ; Test to make sure we destroy LCSSA's single entry phi nodes before
 ; running liveness

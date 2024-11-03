@@ -16,13 +16,13 @@ for.cond:
   br i1 %tobool, label %for.cond, label %for.end
 
 for.end:
-; CHECK:  %tmp1 = load i32, i32* @d, align 4
-; CHECK-NEXT:  %tmp2 = load i32, i32* @d, align 4
+; CHECK:  %tmp1 = load i32, ptr @d, align 4
+; CHECK-NEXT:  %tmp2 = load i32, ptr @d, align 4
 ; CHECK-NEXT:  %0 = sub i32 %tmp1, %tmp2
 
-  %tmp1 = load i32, i32* @d, align 4
+  %tmp1 = load i32, ptr @d, align 4
   %add = add nsw i32 %tmp1, %g.0
-  %tmp2 = load i32, i32* @d, align 4
+  %tmp2 = load i32, ptr @d, align 4
   %tobool26 = icmp eq i32 %x, 0
   br i1 %tobool26, label %for.end5, label %for.body.lr.ph
 

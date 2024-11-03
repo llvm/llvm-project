@@ -12,6 +12,7 @@
 #include "clang/AST/Type.h"
 #include "clang/Index/USRGeneration.h"
 #include "clang/Sema/CodeCompleteConsumer.h"
+#include <optional>
 
 namespace clang {
 namespace clangd {
@@ -39,8 +40,7 @@ static const Type *toEquivClass(ASTContext &Ctx, QualType T) {
   return T.getTypePtr();
 }
 
-static llvm::Optional<QualType>
-typeOfCompletion(const CodeCompletionResult &R) {
+static std::optional<QualType> typeOfCompletion(const CodeCompletionResult &R) {
   const NamedDecl *D = R.Declaration;
   // Templates do not have a type on their own, look at the templated decl.
   if (auto *Template = dyn_cast_or_null<TemplateDecl>(D))
@@ -62,7 +62,7 @@ typeOfCompletion(const CodeCompletionResult &R) {
 }
 } // namespace
 
-llvm::Optional<OpaqueType> OpaqueType::encode(ASTContext &Ctx, QualType T) {
+std::optional<OpaqueType> OpaqueType::encode(ASTContext &Ctx, QualType T) {
   if (T.isNull())
     return std::nullopt;
   const Type *C = toEquivClass(Ctx, T);
@@ -76,12 +76,11 @@ llvm::Optional<OpaqueType> OpaqueType::encode(ASTContext &Ctx, QualType T) {
 
 OpaqueType::OpaqueType(std::string Data) : Data(std::move(Data)) {}
 
-llvm::Optional<OpaqueType> OpaqueType::fromType(ASTContext &Ctx,
-                                                QualType Type) {
+std::optional<OpaqueType> OpaqueType::fromType(ASTContext &Ctx, QualType Type) {
   return encode(Ctx, Type);
 }
 
-llvm::Optional<OpaqueType>
+std::optional<OpaqueType>
 OpaqueType::fromCompletionResult(ASTContext &Ctx,
                                  const CodeCompletionResult &R) {
   auto T = typeOfCompletion(R);

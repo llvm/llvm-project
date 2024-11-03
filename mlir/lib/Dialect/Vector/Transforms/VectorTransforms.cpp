@@ -3040,3 +3040,9 @@ void mlir::vector::populateVectorScanLoweringPatterns(
     RewritePatternSet &patterns, PatternBenefit benefit) {
   patterns.add<ScanToArithOps>(patterns.getContext(), benefit);
 }
+
+//===----------------------------------------------------------------------===//
+// TableGen'd enum attribute definitions
+//===----------------------------------------------------------------------===//
+
+#include "mlir/Dialect/Vector/Transforms/VectorTransformsEnums.cpp.inc"

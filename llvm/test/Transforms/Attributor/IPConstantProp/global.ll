@@ -19,12 +19,12 @@ define void @_Z7test1f1v() nounwind {
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  %tmp = load i32, i32* @_ZL6test1g, align 4
+  %tmp = load i32, ptr @_ZL6test1g, align 4
   %cmp = icmp eq i32 %tmp, 0
   br i1 %cmp, label %if.then, label %if.end
 
 if.then:                                          ; preds = %entry
-  store i32 0, i32* @_ZL6test1g, align 4
+  store i32 0, ptr @_ZL6test1g, align 4
   br label %if.end
 
 if.end:                                           ; preds = %if.then, %entry
@@ -39,7 +39,7 @@ define i32 @_Z7test1f2v() nounwind {
 ; CHECK-NEXT:    ret i32 42
 ;
 entry:
-  %tmp = load i32, i32* @_ZL6test1g, align 4
+  %tmp = load i32, ptr @_ZL6test1g, align 4
   ret i32 %tmp
 }
 ;.

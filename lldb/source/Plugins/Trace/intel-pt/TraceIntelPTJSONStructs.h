@@ -11,9 +11,9 @@
 
 #include "lldb/Utility/TraceIntelPTGDBRemotePackets.h"
 #include "lldb/lldb-types.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/Support/JSON.h"
 #include <intel-pt.h>
+#include <optional>
 #include <vector>
 
 namespace lldb_private {
@@ -21,19 +21,19 @@ namespace trace_intel_pt {
 
 struct JSONModule {
   std::string system_path;
-  llvm::Optional<std::string> file;
+  std::optional<std::string> file;
   JSONUINT64 load_address;
-  llvm::Optional<std::string> uuid;
+  std::optional<std::string> uuid;
 };
 
 struct JSONThread {
   uint64_t tid;
-  llvm::Optional<std::string> ipt_trace;
+  std::optional<std::string> ipt_trace;
 };
 
 struct JSONProcess {
   uint64_t pid;
-  llvm::Optional<std::string> triple;
+  std::optional<std::string> triple;
   std::vector<JSONThread> threads;
   std::vector<JSONModule> modules;
 };
@@ -45,19 +45,19 @@ struct JSONCpu {
 };
 
 struct JSONKernel {
-  llvm::Optional<JSONUINT64> load_address;
+  std::optional<JSONUINT64> load_address;
   std::string file;
 };
 
 struct JSONTraceBundleDescription {
   std::string type;
   pt_cpu cpu_info;
-  llvm::Optional<std::vector<JSONProcess>> processes;
-  llvm::Optional<std::vector<JSONCpu>> cpus;
-  llvm::Optional<LinuxPerfZeroTscConversion> tsc_perf_zero_conversion;
-  llvm::Optional<JSONKernel> kernel;
+  std::optional<std::vector<JSONProcess>> processes;
+  std::optional<std::vector<JSONCpu>> cpus;
+  std::optional<LinuxPerfZeroTscConversion> tsc_perf_zero_conversion;
+  std::optional<JSONKernel> kernel;
 
-  llvm::Optional<std::vector<lldb::cpu_id_t>> GetCpuIds();
+  std::optional<std::vector<lldb::cpu_id_t>> GetCpuIds();
 };
 
 llvm::json::Value toJSON(const JSONModule &module);

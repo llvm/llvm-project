@@ -833,6 +833,8 @@ def HINVAL_GVMA : Priv_rr<"hinval.gvma", 0b0110011>, Sched<[]>;
 } // Predicates = [HasStdExtSvinval]
 
 def SFENCE_VMA  : Priv_rr<"sfence.vma", 0b0001001>, Sched<[]>;
+
+let Predicates = [HasStdExtH] in {
 def HFENCE_VVMA : Priv_rr<"hfence.vvma", 0b0010001>, Sched<[]>;
 def HFENCE_GVMA : Priv_rr<"hfence.gvma", 0b0110001>, Sched<[]>;
 
@@ -846,8 +848,8 @@ def HLVX_WU : HLoad_r<0b0110100, 0b00011, "hlvx.wu">, Sched<[]>;
 def HSV_B   : HStore_rr<0b0110001, "hsv.b">, Sched<[]>;
 def HSV_H   : HStore_rr<0b0110011, "hsv.h">, Sched<[]>;
 def HSV_W   : HStore_rr<0b0110101, "hsv.w">, Sched<[]>;
-
-let Predicates = [IsRV64] in {
+}
+let Predicates = [IsRV64, HasStdExtH] in {
 def HLV_WU  : HLoad_r<0b0110100, 0b00001, "hlv.wu">, Sched<[]>;
 def HLV_D   : HLoad_r<0b0110110, 0b00000, "hlv.d">, Sched<[]>;
 def HSV_D   : HStore_rr<0b0110111, "hsv.d">, Sched<[]>;
@@ -1238,6 +1240,15 @@ def : PatGprSimm12<xor, XORI>;
 def : PatGprUimmLog2XLen<shl, SLLI>;
 def : PatGprUimmLog2XLen<srl, SRLI>;
 def : PatGprUimmLog2XLen<sra, SRAI>;
+
+// Select 'or' as ADDI if the immediate bits are known to be 0 in $rs1. This
+// can improve compressibility.
+def or_is_add : PatFrag<(ops node:$lhs, node:$rhs), (or node:$lhs, node:$rhs),[{
+  KnownBits Known0 = CurDAG->computeKnownBits(N->getOperand(0), 0);
+  KnownBits Known1 = CurDAG->computeKnownBits(N->getOperand(1), 0);
+  return KnownBits::haveNoCommonBitsSet(Known0, Known1);
+}]>;
+def : PatGprSimm12<or_is_add, ADDI>;
 
 // negate of low bit can be done via two (compressible) shifts.  The negate
 // is never compressible since rs1 and rd can't be the same register.
@@ -1852,3 +1863,4 @@ include "RISCVInstrInfoZicbo.td"
 //===----------------------------------------------------------------------===//
 
 include "RISCVInstrInfoXVentana.td"
+include "RISCVInstrInfoXTHead.td"

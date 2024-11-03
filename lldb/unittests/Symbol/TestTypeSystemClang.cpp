@@ -969,13 +969,10 @@ TEST(TestScratchTypeSystemClang, InferSubASTFromLangOpts) {
       ScratchTypeSystemClang::InferIsolatedASTKindFromLangOpts(lang_opts));
 }
 
-TEST_F(TestTypeSystemClang, GetExeModuleWhenMissingSymbolFile) {
-  CompilerType compiler_type = m_ast->GetBasicTypeFromAST(lldb::eBasicTypeInt);
-  lldb_private::Type t(0, nullptr, ConstString("MyType"), std::nullopt, nullptr,
-                       0, {}, {}, compiler_type,
-                       lldb_private::Type::ResolveState::Full);
-  // Test that getting the execution module when no type system is present
-  // is handled gracefully.
-  ModuleSP module = t.GetExeModule();
-  EXPECT_EQ(module.get(), nullptr);
+TEST_F(TestTypeSystemClang, GetDeclContextByNameWhenMissingSymbolFile) {
+  // Test that a type system without a symbol file is handled gracefully.
+  std::vector<CompilerDecl> decls =
+      m_ast->DeclContextFindDeclByName(nullptr, ConstString("SomeName"), true);
+
+  EXPECT_TRUE(decls.empty());
 }

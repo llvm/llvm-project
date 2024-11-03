@@ -7,7 +7,7 @@
 
 ; CHECK: @_Z3fooi
 ; CHECK-V8A: hint #25
-; CHECK-V83A: pacia x30, sp
+; CHECK-V83A: paciasp
 ; CHECK-NEXT: .cfi_negate_ra_state
 ; CHECK-NOT: .cfi_negate_ra_state
 define dso_local i32 @_Z3fooi(i32 %x) #0 {

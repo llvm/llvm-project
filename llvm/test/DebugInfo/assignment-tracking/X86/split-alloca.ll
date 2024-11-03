@@ -1,5 +1,4 @@
 ; RUN: llc %s -o - -stop-after=finalize-isel \
-; RUN:    -experimental-assignment-tracking  \
 ; RUN: | FileCheck %s --implicit-check-not=DBG
 
 ;; Hand written. Check that we fall back to emitting a list of defs for
@@ -31,7 +30,7 @@ entry:
 declare void @llvm.dbg.assign(metadata, metadata, metadata, metadata, metadata, metadata)
 
 !llvm.dbg.cu = !{!0}
-!llvm.module.flags = !{!2, !3, !4, !5}
+!llvm.module.flags = !{!2, !3, !4, !5, !1000}
 !llvm.ident = !{!6}
 
 !0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 14.0.0", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, splitDebugInlining: false, nameTableKind: None)
@@ -56,3 +55,4 @@ declare void @llvm.dbg.assign(metadata, metadata, metadata, metadata, metadata, 
 !19 = !DILocation(line: 3, column: 1, scope: !7)
 !20 = distinct !DIAssignID()
 !21 = distinct !DIAssignID()
+!1000 = !{i32 7, !"debug-info-assignment-tracking", i1 true}

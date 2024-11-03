@@ -10,9 +10,9 @@
 #define LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_DIEREF_H
 
 #include "lldb/Core/dwarf.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/Support/FormatProviders.h"
 #include <cassert>
+#include <optional>
 #include <vector>
 
 /// Identifies a DWARF debug info entry within a given Module. It contains three
@@ -27,14 +27,14 @@ class DIERef {
 public:
   enum Section : uint8_t { DebugInfo, DebugTypes };
 
-  DIERef(llvm::Optional<uint32_t> dwo_num, Section section,
+  DIERef(std::optional<uint32_t> dwo_num, Section section,
          dw_offset_t die_offset)
       : m_dwo_num(dwo_num.value_or(0)), m_dwo_num_valid(bool(dwo_num)),
         m_section(section), m_die_offset(die_offset) {
     assert(this->dwo_num() == dwo_num && "Dwo number out of range?");
   }
 
-  llvm::Optional<uint32_t> dwo_num() const {
+  std::optional<uint32_t> dwo_num() const {
     if (m_dwo_num_valid)
       return m_dwo_num;
     return std::nullopt;
@@ -73,8 +73,8 @@ public:
   /// \return
   ///   Returns a valid DIERef if decoding succeeded, std::nullopt if there was
   ///   unsufficient or invalid values that were decoded.
-  static llvm::Optional<DIERef> Decode(const lldb_private::DataExtractor &data,
-                                       lldb::offset_t *offset_ptr);
+  static std::optional<DIERef> Decode(const lldb_private::DataExtractor &data,
+                                      lldb::offset_t *offset_ptr);
 
   /// Encode this object into a data encoder object.
   ///

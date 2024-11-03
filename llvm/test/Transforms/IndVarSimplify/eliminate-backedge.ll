@@ -23,8 +23,7 @@ define i1 @kill_backedge_and_phis(ptr align 1 %lhs, ptr align 1 %rhs, i32 %len) 
 ; CHECK-NEXT:    br i1 %bar_ret, label %exit.loopexit, label %exiting_3
 ; CHECK:       exiting_3:
 ; CHECK-NEXT:    %baz_ret = call i1 @baz()
-; CHECK-NEXT:    %continue = icmp ne i32 1, %len
-; CHECK-NEXT:    %or.cond = select i1 %baz_ret, i1 %continue, i1 false
+; CHECK-NEXT:    %or.cond = select i1 %baz_ret, i1 true, i1 false
 ; CHECK-NEXT:    br i1 %or.cond, label %loop, label %exit.loopexit
 ; CHECK:       exit.loopexit:
 ; CHECK-NEXT:    %val.ph = phi i1 [ %baz_ret, %exiting_3 ], [ %bar_ret, %exiting_2 ], [ false, %exiting_1 ], [ %result, %loop ]
@@ -89,7 +88,6 @@ define i1 @siblings(ptr align 1 %lhs, ptr align 1 %rhs, i32 %len) {
 ; CHECK-NEXT:    %weird.iv.lcssa = phi i32 [ %weird.iv, %weird_loop ]
 ; CHECK-NEXT:    br label %loop
 ; CHECK:       loop:
-; CHECK-NEXT:    %iv.next = add i32 %weird.iv.lcssa, 1
 ; CHECK-NEXT:    %left_ptr = getelementptr inbounds i8, ptr %lhs, i32 %weird.iv.lcssa
 ; CHECK-NEXT:    %right_ptr = getelementptr inbounds i8, ptr %rhs, i32 %weird.iv.lcssa
 ; CHECK-NEXT:    %result = call i1 @foo(ptr %left_ptr, ptr %right_ptr)
@@ -101,8 +99,7 @@ define i1 @siblings(ptr align 1 %lhs, ptr align 1 %rhs, i32 %len) {
 ; CHECK-NEXT:    br i1 %bar_ret, label %exit.loopexit, label %exiting_3
 ; CHECK:       exiting_3:
 ; CHECK-NEXT:    %baz_ret = call i1 @baz()
-; CHECK-NEXT:    %continue = icmp ne i32 %iv.next, %len
-; CHECK-NEXT:    %or.cond = select i1 %baz_ret, i1 %continue, i1 false
+; CHECK-NEXT:    %or.cond = select i1 %baz_ret, i1 true, i1 false
 ; CHECK-NEXT:    br i1 %or.cond, label %loop, label %exit.loopexit
 ; CHECK:       exit.loopexit:
 ; CHECK-NEXT:    %val.ph = phi i1 [ %baz_ret, %exiting_3 ], [ %bar_ret, %exiting_2 ], [ false, %exiting_1 ], [ %result, %loop ]

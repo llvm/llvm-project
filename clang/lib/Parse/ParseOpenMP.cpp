@@ -25,6 +25,7 @@
 #include "llvm/ADT/UniqueVector.h"
 #include "llvm/Frontend/OpenMP/OMPAssume.h"
 #include "llvm/Frontend/OpenMP/OMPContext.h"
+#include <optional>
 
 using namespace clang;
 using namespace llvm::omp;
@@ -1483,7 +1484,7 @@ void Parser::ParseOMPDeclareVariantClauses(Parser::DeclGroupPtrTy Ptr,
       ConsumeToken();
   }
 
-  Optional<std::pair<FunctionDecl *, Expr *>> DeclVarData =
+  std::optional<std::pair<FunctionDecl *, Expr *>> DeclVarData =
       Actions.checkOpenMPDeclareVariantFunction(
           Ptr, AssociatedFunction.get(), TI, AppendArgs.size(),
           SourceRange(Loc, Tok.getLocation()));
@@ -1781,7 +1782,7 @@ struct SimpleClauseData {
 };
 } // anonymous namespace
 
-static Optional<SimpleClauseData>
+static std::optional<SimpleClauseData>
 parseOpenMPSimpleClause(Parser &P, OpenMPClauseKind Kind) {
   const Token &Tok = P.getCurToken();
   SourceLocation Loc = Tok.getLocation();
@@ -1876,7 +1877,7 @@ void Parser::ParseOMPDeclareTargetClauses(
       }
       // Parse 'device_type' clause and go to next clause if any.
       if (IsDeviceTypeClause) {
-        Optional<SimpleClauseData> DevTypeData =
+        std::optional<SimpleClauseData> DevTypeData =
             parseOpenMPSimpleClause(*this, OMPC_device_type);
         if (DevTypeData) {
           if (DeviceTypeLoc.isValid()) {
@@ -3194,6 +3195,7 @@ OMPClause *Parser::ParseOpenMPClause(OpenMPDirectiveKind DKind,
   case OMPC_partial:
   case OMPC_align:
   case OMPC_message:
+  case OMPC_ompx_dyn_cgroup_mem:
     // OpenMP [2.5, Restrictions]
     //  At most one num_threads clause can appear on the directive.
     // OpenMP [2.8.1, simd construct, Restrictions]
@@ -3693,7 +3695,7 @@ OMPClause *Parser::ParseOpenMPInteropClause(OpenMPClauseKind Kind,
 ///
 OMPClause *Parser::ParseOpenMPSimpleClause(OpenMPClauseKind Kind,
                                            bool ParseOnly) {
-  llvm::Optional<SimpleClauseData> Val = parseOpenMPSimpleClause(*this, Kind);
+  std::optional<SimpleClauseData> Val = parseOpenMPSimpleClause(*this, Kind);
   if (!Val || ParseOnly)
     return nullptr;
   if (getLangOpts().OpenMP < 51 && Kind == OMPC_default &&
@@ -4130,7 +4132,8 @@ bool Parser::parseMapTypeModifiers(Sema::OpenMPVarListDataTy &Data) {
       if (PP.LookAhead(0).is(tok::colon))
         return false;
       Diag(Tok, diag::err_omp_unknown_map_type_modifier)
-          << (getLangOpts().OpenMP >= 51 ? 1 : 0)
+          << (getLangOpts().OpenMP >= 51 ? (getLangOpts().OpenMP >= 52 ? 2 : 1)
+                                         : 0)
           << getLangOpts().OpenMPExtensions;
       ConsumeToken();
     }
@@ -4319,6 +4322,7 @@ bool Parser::ParseOpenMPVarList(OpenMPDirectiveKind DKind,
     return true;
 
   bool HasIterator = false;
+  bool InvalidIterator = false;
   bool NeedRParenForLinear = false;
   BalancedDelimiterTracker LinearT(*this, tok::l_paren,
                                    tok::annot_pragma_openmp_end);
@@ -4424,6 +4428,23 @@ bool Parser::ParseOpenMPVarList(OpenMPDirectiveKind DKind,
       Data.ColonLoc = ConsumeToken();
     }
   } else if (Kind == OMPC_map) {
+    // Handle optional iterator map modifier.
+    if (Tok.is(tok::identifier) && PP.getSpelling(Tok) == "iterator") {
+      HasIterator = true;
+      EnterScope(Scope::OpenMPDirectiveScope | Scope::DeclScope);
+      Data.MapTypeModifiers.push_back(OMPC_MAP_MODIFIER_iterator);
+      Data.MapTypeModifiersLoc.push_back(Tok.getLocation());
+      ExprResult IteratorRes = ParseOpenMPIteratorsExpr();
+      Data.IteratorExpr = IteratorRes.get();
+      // Parse ','
+      ExpectAndConsume(tok::comma);
+      if (getLangOpts().OpenMP < 52) {
+        Diag(Tok, diag::err_omp_unknown_map_type_modifier)
+            << (getLangOpts().OpenMP >= 51 ? 1 : 0)
+            << getLangOpts().OpenMPExtensions;
+        InvalidIterator = true;
+      }
+    }
     // Handle map type for map clause.
     ColonProtectionRAIIObject ColonRAII(*this);
 
@@ -4621,7 +4642,7 @@ bool Parser::ParseOpenMPVarList(OpenMPDirectiveKind DKind,
     ExitScope();
   return (Kind != OMPC_depend && Kind != OMPC_map && Vars.empty()) ||
          (MustHaveTail && !Data.DepModOrTailExpr) || InvalidReductionId ||
-         IsInvalidMapperModifier;
+         IsInvalidMapperModifier || InvalidIterator;
 }
 
 /// Parsing of OpenMP clause 'private', 'firstprivate', 'lastprivate',

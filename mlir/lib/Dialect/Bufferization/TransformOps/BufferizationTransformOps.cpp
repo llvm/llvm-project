@@ -75,7 +75,7 @@ void transform::OneShotBufferizeOp::getEffects(
 
 DiagnosedSilenceableFailure
 EmptyTensorToAllocTensorOp::applyToOne(tensor::EmptyOp target,
-                                       SmallVector<Operation *> &results,
+                                       ApplyToEachResultList &results,
                                        transform::TransformState &state) {
   IRRewriter rewriter(target->getContext());
   rewriter.setInsertionPoint(target);

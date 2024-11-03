@@ -352,7 +352,7 @@ public:
   subtype_iterator subtype_begin() const { return ContainedTys; }
   subtype_iterator subtype_end() const { return &ContainedTys[NumContainedTys];}
   ArrayRef<Type*> subtypes() const {
-    return makeArrayRef(subtype_begin(), subtype_end());
+    return ArrayRef(subtype_begin(), subtype_end());
   }
 
   using subtype_reverse_iterator = std::reverse_iterator<subtype_iterator>;

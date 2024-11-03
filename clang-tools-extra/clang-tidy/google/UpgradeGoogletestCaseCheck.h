@@ -11,9 +11,7 @@
 
 #include "../ClangTidyCheck.h"
 
-namespace clang {
-namespace tidy {
-namespace google {
+namespace clang::tidy::google {
 
 /// Finds uses of deprecated Googletest APIs with names containing "case" and
 /// replaces them with equivalent names containing "suite".
@@ -36,8 +34,6 @@ private:
   llvm::DenseSet<SourceLocation> MatchedTemplateLocations;
 };
 
-} // namespace google
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::google
 
 #endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_GOOGLE_UPGRADEGOOGLETESTCASECHECK_H

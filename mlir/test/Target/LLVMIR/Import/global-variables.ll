@@ -12,9 +12,17 @@
 ; CHECK-SAME:  {addr_space = 0 : i32, alignment = 8 : i64} : f64
 @global_float = external global double, align 8
 
+; CHECK:  llvm.mlir.global internal constant @address_before
+; CHECK:  = llvm.mlir.addressof @global_int : !llvm.ptr
+@address_before = internal constant ptr @global_int
+
 ; CHECK:  llvm.mlir.global external @global_int
 ; CHECK-SAME:  {addr_space = 0 : i32, alignment = 8 : i64} : i32
 @global_int = external global i32, align 8
+
+; CHECK:  llvm.mlir.global internal constant @address_after
+; CHECK:  = llvm.mlir.addressof @global_int : !llvm.ptr
+@address_after = internal constant ptr @global_int
 
 ; CHECK:  llvm.mlir.global internal @global_string("hello world")
 @global_string = internal global [11 x i8] c"hello world"
@@ -24,13 +32,13 @@
 @global_vector = external global <8 x i32>
 
 ; CHECK: llvm.mlir.global internal constant @global_gep_const_expr
-; CHECK-SAME:  {addr_space = 0 : i32, dso_local} : !llvm.ptr<i32> {
-; CHECK:  %[[ADDR:[0-9]+]] = llvm.mlir.addressof @global_int : !llvm.ptr<i32>
+; CHECK-SAME:  {addr_space = 0 : i32, dso_local} : !llvm.ptr {
+; CHECK:  %[[ADDR:[0-9]+]] = llvm.mlir.addressof @global_int : !llvm.ptr
 ; CHECK:  %[[IDX:[0-9]+]] = llvm.mlir.constant(2 : i32) : i32
-; CHECK:  %[[GEP:[0-9]+]] = llvm.getelementptr %[[ADDR]][%[[IDX]]] : (!llvm.ptr<i32>, i32) -> !llvm.ptr<i32>
-; CHECK:  llvm.return %[[GEP]] : !llvm.ptr<i32>
+; CHECK:  %[[GEP:[0-9]+]] = llvm.getelementptr %[[ADDR]][%[[IDX]]] : (!llvm.ptr, i32) -> !llvm.ptr
+; CHECK:  llvm.return %[[GEP]] : !llvm.ptr
 ; CHECK:  }
-@global_gep_const_expr = internal constant i32* getelementptr (i32, i32* @global_int, i32 2)
+@global_gep_const_expr = internal constant ptr getelementptr (i32, ptr @global_int, i32 2)
 
 ; // -----
 
@@ -174,3 +182,18 @@
 ; CHECK-SAME:  (dense<[{{\[}}[1, 2], [3, 4]]]> : vector<1x2x2xi32>)
 ; CHECK-SAME:   {addr_space = 0 : i32, dso_local} : !llvm.array<1 x array<2 x vector<2xi32>>>
 @nested_array_vector = internal constant [1 x [2 x <2 x i32>]] [[2 x <2 x i32>] [<2 x i32> <i32 1, i32 2>, <2 x i32> <i32 3, i32 4>]]
+
+; // -----
+
+; CHECK: llvm.mlir.global_ctors {ctors = [@foo, @bar], priorities = [0 : i32, 42 : i32]}
+; CHECK: llvm.mlir.global_dtors {dtors = [@foo], priorities = [0 : i32]}
+@llvm.global_ctors = appending global [2 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 0, ptr @foo, ptr null }, { i32, ptr, ptr } { i32 42, ptr @bar, ptr null }]
+@llvm.global_dtors = appending global [1 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 0, ptr @foo, ptr null }]
+
+define void @foo() {
+  ret void
+}
+
+define void @bar() {
+  ret void
+}

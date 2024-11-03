@@ -33,6 +33,7 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/SymbolManager.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/Support/ErrorHandling.h"
+#include <optional>
 #include <string>
 
 using namespace clang;
@@ -85,10 +86,10 @@ private:
   using SmartPtrMethodHandlerFn =
       void (SmartPtrModeling::*)(const CallEvent &Call, CheckerContext &) const;
   CallDescriptionMap<SmartPtrMethodHandlerFn> SmartPtrMethodHandlers{
-      {{"reset"}, &SmartPtrModeling::handleReset},
-      {{"release"}, &SmartPtrModeling::handleRelease},
-      {{"swap", 1}, &SmartPtrModeling::handleSwapMethod},
-      {{"get"}, &SmartPtrModeling::handleGet}};
+      {{{"reset"}}, &SmartPtrModeling::handleReset},
+      {{{"release"}}, &SmartPtrModeling::handleRelease},
+      {{{"swap"}, 1}, &SmartPtrModeling::handleSwapMethod},
+      {{{"get"}}, &SmartPtrModeling::handleGet}};
   const CallDescription StdSwapCall{{"std", "swap"}, 2};
   const CallDescription StdMakeUniqueCall{{"std", "make_unique"}};
   const CallDescription StdMakeUniqueForOverwriteCall{
@@ -298,8 +299,9 @@ bool SmartPtrModeling::evalCall(const CallEvent &Call,
   if (matchesAny(Call, StdMakeUniqueCall, StdMakeUniqueForOverwriteCall)) {
     if (!ModelSmartPtrDereference)
       return false;
-    
-    const Optional<SVal> ThisRegionOpt = Call.getReturnValueUnderConstruction();
+
+    const std::optional<SVal> ThisRegionOpt =
+        Call.getReturnValueUnderConstruction();
     if (!ThisRegionOpt)
       return false;
 

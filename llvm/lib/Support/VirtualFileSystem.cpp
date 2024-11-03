@@ -14,7 +14,6 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
@@ -1638,7 +1637,7 @@ class llvm::vfs::RedirectingFileSystemParser {
     return std::nullopt;
   }
 
-  Optional<RedirectingFileSystem::RootRelativeKind>
+  std::optional<RedirectingFileSystem::RootRelativeKind>
   parseRootRelativeKind(yaml::Node *N) {
     SmallString<12> Storage;
     StringRef Value;

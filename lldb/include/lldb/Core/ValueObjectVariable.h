@@ -20,6 +20,7 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <optional>
 
 namespace lldb_private {
 class DataExtractor;
@@ -37,7 +38,7 @@ public:
   static lldb::ValueObjectSP Create(ExecutionContextScope *exe_scope,
                                     const lldb::VariableSP &var_sp);
 
-  llvm::Optional<uint64_t> GetByteSize() override;
+  std::optional<uint64_t> GetByteSize() override;
 
   ConstString GetTypeName() override;
 

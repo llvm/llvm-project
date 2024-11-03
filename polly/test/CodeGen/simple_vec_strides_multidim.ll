@@ -21,7 +21,7 @@
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
-define void @foo(i64 %n, float* noalias %A, float* noalias %B, float* noalias %C, float* noalias %D) {
+define void @foo(i64 %n, ptr noalias %A, ptr noalias %B, ptr noalias %C, ptr noalias %D) {
 bb:
   br label %bb3
 
@@ -40,24 +40,24 @@ bb5:                                              ; preds = %bb22, %bb4
 
 bb6:                                              ; preds = %bb5
   %tmp = mul nsw i64 %i.0, %n
-  %tmp7 = getelementptr inbounds float, float* %B, i64 %tmp
-  %tmp8 = load float, float* %tmp7, align 4
+  %tmp7 = getelementptr inbounds float, ptr %B, i64 %tmp
+  %tmp8 = load float, ptr %tmp7, align 4
   %tmp9 = shl nsw i64 %j.0, 1
   %tmp10 = mul nsw i64 %i.0, %n
   %.sum = add i64 %tmp10, %tmp9
-  %tmp11 = getelementptr inbounds float, float* %C, i64 %.sum
-  %tmp12 = load float, float* %tmp11, align 4
+  %tmp11 = getelementptr inbounds float, ptr %C, i64 %.sum
+  %tmp12 = load float, ptr %tmp11, align 4
   %tmp13 = fadd float %tmp8, %tmp12
   %tmp14 = mul nsw i64 %j.0, %n
-  %tmp15 = getelementptr inbounds float, float* %D, i64 %tmp14
-  %tmp16 = load float, float* %tmp15, align 4
+  %tmp15 = getelementptr inbounds float, ptr %D, i64 %tmp14
+  %tmp16 = load float, ptr %tmp15, align 4
   %tmp17 = fadd float %tmp13, %tmp16
   %tmp18 = mul nsw i64 %i.0, %n
   %.sum1 = add i64 %tmp18, %j.0
-  %tmp19 = getelementptr inbounds float, float* %A, i64 %.sum1
-  %tmp20 = load float, float* %tmp19, align 4
+  %tmp19 = getelementptr inbounds float, ptr %A, i64 %.sum1
+  %tmp20 = load float, ptr %tmp19, align 4
   %tmp21 = fadd float %tmp20, %tmp17
-  store float %tmp21, float* %tmp19, align 4
+  store float %tmp21, ptr %tmp19, align 4
   br label %bb22
 
 bb22:                                             ; preds = %bb6

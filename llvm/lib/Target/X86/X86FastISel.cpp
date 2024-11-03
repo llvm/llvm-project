@@ -3999,8 +3999,9 @@ unsigned X86FastISel::fastEmitInst_rrrr(unsigned MachineInstOpcode,
         .addReg(Op1)
         .addReg(Op2)
         .addReg(Op3);
-    BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD,
-            TII.get(TargetOpcode::COPY), ResultReg).addReg(II.ImplicitDefs[0]);
+    BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD, TII.get(TargetOpcode::COPY),
+            ResultReg)
+        .addReg(II.implicit_defs()[0]);
   }
   return ResultReg;
 }

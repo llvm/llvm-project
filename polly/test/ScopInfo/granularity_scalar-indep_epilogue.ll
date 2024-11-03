@@ -12,7 +12,7 @@
 ;   phi = 42.0;
 ; }
 ;
-define void @func(i32 %n, double* noalias nonnull %A) {
+define void @func(i32 %n, ptr noalias nonnull %A) {
 entry:
   br label %for
 
@@ -22,8 +22,8 @@ for:
   br i1 %j.cmp, label %bodyA, label %exit
 
     bodyA:
-      %valA = load double, double* %A
-      store double %valA, double* %A
+      %valA = load double, ptr %A
+      store double %valA, ptr %A
       br label %bodyB
 
     bodyB:
@@ -53,8 +53,8 @@ return:
 ; CHECK-NEXT:         MustWriteAccess :=  [Reduction Type: NONE] [Scalar: 0]
 ; CHECK-NEXT:             [n] -> { Stmt_bodyA[i0] -> MemRef_A[0] };
 ; CHECK-NEXT:         Instructions {
-; CHECK-NEXT:             %valA = load double, double* %A, align 8
-; CHECK-NEXT:             store double %valA, double* %A, align 8
+; CHECK-NEXT:             %valA = load double, ptr %A, align 8
+; CHECK-NEXT:             store double %valA, ptr %A, align 8
 ; CHECK-NEXT:         }
 ; CHECK-NEXT:     Stmt_bodyA_last
 ; CHECK-NEXT:         Domain :=

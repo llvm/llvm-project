@@ -7,10 +7,11 @@
 # CHECK-NEXT: - { srcinst: 1, srcop: 0, dstinst: 2, dstop: 0, subreg: 0 }
 #
 # CHECK:      MOV64rr $rdi, debug-instr-number 2
-# CHECK-NEXT: DBG_INSTR_REF 1, 0
+# CHECK-NEXT: DBG_INSTR_REF dbg-instr-ref(1, 0)
 ---
 name: test
 tracksRegLiveness: true
+debugInstrRef: true
 liveins:
   - { reg: '$rdi', virtual-reg: '' }
 debugValueSubstitutions:
@@ -19,7 +20,7 @@ body:  |
   bb.0:
   liveins: $rdi, $rax
     $rbp = MOV64rr $rdi, debug-instr-number 2
-    DBG_INSTR_REF 1, 0
+    DBG_INSTR_REF dbg-instr-ref(1, 0)
     dead $rcx = MOV64ri 0
     CMP64ri8 renamable $rax, 1, implicit-def $eflags
     RET64 $rax

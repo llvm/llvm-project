@@ -265,7 +265,8 @@ private:
 PreservedAnalyses LICMPass::run(Loop &L, LoopAnalysisManager &AM,
                                 LoopStandardAnalysisResults &AR, LPMUpdater &) {
   if (!AR.MSSA)
-    report_fatal_error("LICM requires MemorySSA (loop-mssa)");
+    report_fatal_error("LICM requires MemorySSA (loop-mssa)",
+                       /*GenCrashDiag*/false);
 
   // For the new PM, we also can't use OptimizationRemarkEmitter as an analysis
   // pass.  Function analyses need to be preserved across loop transformations
@@ -301,7 +302,8 @@ PreservedAnalyses LNICMPass::run(LoopNest &LN, LoopAnalysisManager &AM,
                                  LoopStandardAnalysisResults &AR,
                                  LPMUpdater &) {
   if (!AR.MSSA)
-    report_fatal_error("LNICM requires MemorySSA (loop-mssa)");
+    report_fatal_error("LNICM requires MemorySSA (loop-mssa)",
+                       /*GenCrashDiag*/false);
 
   // For the new PM, we also can't use OptimizationRemarkEmitter as an analysis
   // pass.  Function analyses need to be preserved across loop transformations
@@ -1097,7 +1099,7 @@ static bool isLoadInvariantInLoop(LoadInst *LI, DominatorTree *DT,
     // in bits. Also, the invariant.start should dominate the load, and we
     // should not hoist the load out of a loop that contains this dominating
     // invariant.start.
-    if (LocSizeInBits.getFixedSize() <= InvariantSizeInBits &&
+    if (LocSizeInBits.getFixedValue() <= InvariantSizeInBits &&
         DT->properlyDominates(II->getParent(), CurLoop->getHeader()))
       return true;
   }

@@ -259,8 +259,7 @@ wholeprogramdevirt::findLowestOffset(ArrayRef<VirtualCallTarget> Targets,
         if (I < B.size())
           BitsUsed |= B[I];
       if (BitsUsed != 0xff)
-        return (MinByte + I) * 8 +
-               countTrailingZeros(uint8_t(~BitsUsed), ZB_Undefined);
+        return (MinByte + I) * 8 + countTrailingZeros(uint8_t(~BitsUsed));
     }
   } else {
     // Find a free (Size/8) byte region in each member of Used.

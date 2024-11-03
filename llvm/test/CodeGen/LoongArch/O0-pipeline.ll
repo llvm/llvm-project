@@ -40,6 +40,7 @@
 ; CHECK-NEXT:       Natural Loop Information
 ; CHECK-NEXT:       Post-Dominator Tree Construction
 ; CHECK-NEXT:       Branch Probability Analysis
+; CHECK-NEXT:       Assignment Tracking Analysis
 ; CHECK-NEXT:       Lazy Branch Probability Analysis
 ; CHECK-NEXT:       Lazy Block Frequency Analysis
 ; CHECK-NEXT:       LoongArch DAG->DAG Pattern Instruction Selection
@@ -64,6 +65,9 @@
 ; CHECK-NEXT:       StackMap Liveness Analysis
 ; CHECK-NEXT:       Live DEBUG_VALUE analysis
 ; CHECK-NEXT:       Machine Sanitizer Binary Metadata
+; CHECK-NEXT:       Lazy Machine Block Frequency Analysis
+; CHECK-NEXT:       Machine Optimization Remark Emitter
+; CHECK-NEXT:       Stack Frame Layout Analysis
 ; CHECK-NEXT:       LoongArch atomic pseudo instruction expansion pass
 ; CHECK-NEXT:       Lazy Machine Block Frequency Analysis
 ; CHECK-NEXT:       Machine Optimization Remark Emitter

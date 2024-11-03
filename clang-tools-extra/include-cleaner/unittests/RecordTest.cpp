@@ -11,9 +11,10 @@
 #include "clang/Frontend/FrontendAction.h"
 #include "clang/Frontend/FrontendActions.h"
 #include "clang/Testing/TestAST.h"
+#include "clang/Tooling/Inclusions/StandardLibrary.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Testing/Support/Annotations.h"
+#include "llvm/Testing/Annotations/Annotations.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
@@ -99,6 +100,29 @@ TEST_F(RecordASTTest, Macros) {
   )cpp";
   auto AST = build();
   EXPECT_THAT(Recorded.Roots, testing::ElementsAre(named("x")));
+}
+
+// Decl from template instantiation is filtered out from roots.
+TEST_F(RecordASTTest, ImplicitTemplates) {
+  Inputs.ExtraFiles["dispatch.h"] = R"cpp(
+  struct A {
+    static constexpr int value = 1;
+  };
+  template <class Getter>
+  int dispatch() {
+    return Getter::template get<A>();
+  }
+  )cpp";
+  Inputs.Code = R"cpp(
+  #include "dispatch.h"  
+  struct MyGetter {
+    template <class T> static int get() { return T::value; }
+  };
+  int v = dispatch<MyGetter>();
+  )cpp";
+  auto AST = build();
+  EXPECT_THAT(Recorded.Roots,
+              testing::ElementsAre(named("MyGetter"), named("v")));
 }
 
 class RecordPPTest : public ::testing::Test {
@@ -407,6 +431,21 @@ TEST_F(PragmaIncludeTest, IWYUExport) {
   EXPECT_TRUE(PI.getExporters(FM.getFile("export3.h").get(), FM).empty());
   EXPECT_TRUE(
       PI.getExporters(SM.getFileEntryForID(SM.getMainFileID()), FM).empty());
+}
+
+TEST_F(PragmaIncludeTest, IWYUExportForStandardHeaders) {
+  Inputs.Code = R"cpp(
+    #include "export.h"
+  )cpp";
+  Inputs.ExtraFiles["export.h"] = R"cpp(
+    #include <string> // IWYU pragma: export
+  )cpp";
+  Inputs.ExtraFiles["string"] = "";
+  Inputs.ExtraArgs = {"-isystem."};
+  TestAST Processed = build();
+  auto &FM = Processed.fileManager();
+  EXPECT_THAT(PI.getExporters(*tooling::stdlib::Header::named("<string>"), FM),
+              testing::UnorderedElementsAre(FileNamed("export.h")));
 }
 
 TEST_F(PragmaIncludeTest, IWYUExportBlock) {

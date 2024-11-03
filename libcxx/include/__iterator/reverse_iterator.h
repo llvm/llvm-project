@@ -25,12 +25,20 @@
 #include <__iterator/next.h>
 #include <__iterator/prev.h>
 #include <__iterator/readable_traits.h>
+#include <__iterator/segmented_iterator.h>
 #include <__memory/addressof.h>
 #include <__ranges/access.h>
 #include <__ranges/concepts.h>
 #include <__ranges/subrange.h>
+#include <__type_traits/conditional.h>
+#include <__type_traits/enable_if.h>
+#include <__type_traits/is_assignable.h>
+#include <__type_traits/is_convertible.h>
+#include <__type_traits/is_nothrow_copy_constructible.h>
+#include <__type_traits/is_pointer.h>
+#include <__type_traits/is_same.h>
+#include <__utility/declval.h>
 #include <__utility/move.h>
-#include <type_traits>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -177,7 +185,7 @@ public:
     _LIBCPP_HIDE_FROM_ABI friend constexpr
     iter_rvalue_reference_t<_Iter> iter_move(const reverse_iterator& __i)
       noexcept(is_nothrow_copy_constructible_v<_Iter> &&
-          noexcept(ranges::iter_move(--declval<_Iter&>()))) {
+          noexcept(ranges::iter_move(--std::declval<_Iter&>()))) {
       auto __tmp = __i.base();
       return ranges::iter_move(--__tmp);
     }
@@ -187,19 +195,13 @@ public:
     void iter_swap(const reverse_iterator& __x, const reverse_iterator<_Iter2>& __y)
       noexcept(is_nothrow_copy_constructible_v<_Iter> &&
           is_nothrow_copy_constructible_v<_Iter2> &&
-          noexcept(ranges::iter_swap(--declval<_Iter&>(), --declval<_Iter2&>()))) {
+          noexcept(ranges::iter_swap(--std::declval<_Iter&>(), --std::declval<_Iter2&>()))) {
       auto __xtmp = __x.base();
       auto __ytmp = __y.base();
       ranges::iter_swap(--__xtmp, --__ytmp);
     }
 #endif // _LIBCPP_STD_VER > 17
 };
-
-template <class _Iter>
-struct __is_reverse_iterator : false_type {};
-
-template <class _Iter>
-struct __is_reverse_iterator<reverse_iterator<_Iter> > : true_type {};
 
 template <class _Iter1, class _Iter2>
 inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX17
@@ -394,7 +396,7 @@ public:
   _LIBCPP_HIDE_FROM_ABI friend constexpr
   iter_rvalue_reference_t<_Iter> iter_move(const __unconstrained_reverse_iterator& __i)
     noexcept(is_nothrow_copy_constructible_v<_Iter> &&
-        noexcept(ranges::iter_move(--declval<_Iter&>()))) {
+        noexcept(ranges::iter_move(--std::declval<_Iter&>()))) {
     auto __tmp = __i.base();
     return ranges::iter_move(--__tmp);
   }
@@ -477,9 +479,6 @@ public:
     return __lhs.base() <= __rhs.base();
   }
 };
-
-template <class _Iter>
-struct __is_reverse_iterator<__unconstrained_reverse_iterator<_Iter>> : true_type {};
 
 #endif // _LIBCPP_STD_VER <= 17
 

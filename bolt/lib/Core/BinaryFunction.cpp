@@ -392,7 +392,7 @@ bool BinaryFunction::isForwardCall(const MCSymbol *CalleeSymbol) const {
   }
 }
 
-void BinaryFunction::dump(bool PrintInstructions) const {
+void BinaryFunction::dump() const {
   // getDynoStats calls FunctionLayout::updateLayoutIndices and
   // BasicBlock::analyzeBranch. The former cannot be const, but should be
   // removed, the latter should be made const, but seems to require refactoring.
@@ -402,11 +402,10 @@ void BinaryFunction::dump(bool PrintInstructions) const {
   // modified. Only BinaryBasicBlocks are actually modified (if it all) and we
   // have mutable pointers to those regardless whether this function is
   // const-qualified or not.
-  const_cast<BinaryFunction &>(*this).print(dbgs(), "", PrintInstructions);
+  const_cast<BinaryFunction &>(*this).print(dbgs(), "");
 }
 
-void BinaryFunction::print(raw_ostream &OS, std::string Annotation,
-                           bool PrintInstructions) {
+void BinaryFunction::print(raw_ostream &OS, std::string Annotation) {
   if (!opts::shouldPrint(*this))
     return;
 
@@ -485,7 +484,7 @@ void BinaryFunction::print(raw_ostream &OS, std::string Annotation,
 
   OS << "\n}\n";
 
-  if (opts::PrintDynoStatsOnly || !PrintInstructions || !BC.InstPrinter)
+  if (opts::PrintDynoStatsOnly || !BC.InstPrinter)
     return;
 
   // Offset of the instruction in function.
@@ -793,8 +792,9 @@ BinaryFunction::processIndirectBranch(MCInst &Instruction, unsigned Size,
     // Start at the last label as an approximation of the current basic block.
     // This is a heuristic, since the full set of labels have yet to be
     // determined
-    for (auto LI = Labels.rbegin(); LI != Labels.rend(); ++LI) {
-      auto II = Instructions.find(LI->first);
+    for (const uint32_t Offset :
+         llvm::make_first_range(llvm::reverse(Labels))) {
+      auto II = Instructions.find(Offset);
       if (II != Instructions.end()) {
         Begin = II;
         break;
@@ -891,7 +891,7 @@ BinaryFunction::processIndirectBranch(MCInst &Instruction, unsigned Size,
     if (!Value)
       return IndirectBranchType::UNKNOWN;
 
-    if (!BC.getSectionForAddress(ArrayStart)->isReadOnly())
+    if (BC.getSectionForAddress(ArrayStart)->isWritable())
       return IndirectBranchType::UNKNOWN;
 
     outs() << "BOLT-INFO: fixed indirect branch detected in " << *this
@@ -2659,10 +2659,10 @@ bool BinaryFunction::replayCFIInstrs(int32_t FromState, int32_t ToState,
   }
 
   // Replay instructions while avoiding duplicates
-  for (auto I = NewCFIs.rbegin(), E = NewCFIs.rend(); I != E; ++I) {
-    if (CFIDiff.isRedundant(FrameInstructions[*I]))
+  for (int32_t State : llvm::reverse(NewCFIs)) {
+    if (CFIDiff.isRedundant(FrameInstructions[State]))
       continue;
-    InsertIt = addCFIPseudo(InBB, InsertIt, *I);
+    InsertIt = addCFIPseudo(InBB, InsertIt, State);
   }
 
   return true;

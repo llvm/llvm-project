@@ -25,16 +25,16 @@ bb2:
 
 bb11:
   %tmp12 = phi i64 [ %tmp23, %bb24 ], [ 1, %bb2 ]
-  %tmp14 = getelementptr inbounds [17 x i32], [17 x i32]* %tmp1, i64 0, i64 1
+  %tmp14 = getelementptr inbounds [17 x i32], ptr %tmp1, i64 0, i64 1
   br label %bb15
 
 bb15:
   %tmp16 = sub nsw i64 %tmp12, 1
   %tmp17 = shl i64 %tmp16, 32
   %tmp18 = ashr exact i64 %tmp17, 32
-  %tmp19 = getelementptr inbounds [18 x [16 x i32]], [18 x [16 x i32]]* %tmp, i64 0, i64 %tmp4, i64 %tmp18
-  %tmp20 = load i32, i32* %tmp19, align 4
-  store i32 4, i32* %tmp19
+  %tmp19 = getelementptr inbounds [18 x [16 x i32]], ptr %tmp, i64 0, i64 %tmp4, i64 %tmp18
+  %tmp20 = load i32, ptr %tmp19, align 4
+  store i32 4, ptr %tmp19
   br label %bb21
 
 bb21:

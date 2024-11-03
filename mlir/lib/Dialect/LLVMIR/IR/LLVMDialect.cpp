@@ -22,6 +22,7 @@
 #include "mlir/IR/Matchers.h"
 #include "mlir/Transforms/InliningUtils.h"
 
+#include "llvm/ADT/SCCIterator.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/AsmParser/Parser.h"
 #include "llvm/Bitcode/BitcodeReader.h"
@@ -34,6 +35,7 @@
 #include "llvm/Support/SourceMgr.h"
 
 #include <numeric>
+#include <optional>
 
 using namespace mlir;
 using namespace mlir::LLVM;
@@ -99,16 +101,6 @@ static Type getI1SameShape(Type type) {
 //===----------------------------------------------------------------------===//
 // Printing, parsing and builder for LLVM::CmpOp.
 //===----------------------------------------------------------------------===//
-
-void ICmpOp::build(OpBuilder &builder, OperationState &result,
-                   ICmpPredicate predicate, Value lhs, Value rhs) {
-  build(builder, result, getI1SameShape(lhs.getType()), predicate, lhs, rhs);
-}
-
-void FCmpOp::build(OpBuilder &builder, OperationState &result,
-                   FCmpPredicate predicate, Value lhs, Value rhs) {
-  build(builder, result, getI1SameShape(lhs.getType()), predicate, lhs, rhs);
-}
 
 void ICmpOp::print(OpAsmPrinter &p) {
   p << " \"" << stringifyICmpPredicate(getPredicate()) << "\" " << getOperand(0)
@@ -217,7 +209,7 @@ ParseResult AllocaOp::parse(OpAsmParser &parser, OperationState &result) {
       parser.getCurrentLocation(&trailingTypeLoc) || parser.parseType(type))
     return failure();
 
-  Optional<NamedAttribute> alignmentAttr =
+  std::optional<NamedAttribute> alignmentAttr =
       result.attributes.getNamed("alignment");
   if (alignmentAttr.has_value()) {
     auto alignmentInt = alignmentAttr->getValue().dyn_cast<IntegerAttr>();
@@ -681,8 +673,18 @@ LogicalResult verifySymbolAttribute(
     llvm::function_ref<LogicalResult(Operation *, SymbolRefAttr)>
         verifySymbolType) {
   if (Attribute attribute = op->getAttr(attributeName)) {
-    // The attribute is already verified to be a symbol ref array attribute via
-    // a constraint in the operation definition.
+    // Verify that the attribute is a symbol ref array attribute,
+    // because this constraint is not verified for all attribute
+    // names processed here (e.g. 'tbaa'). This verification
+    // is redundant in some cases.
+    if (!(attribute.isa<ArrayAttr>() &&
+          llvm::all_of(attribute.cast<ArrayAttr>(), [&](Attribute attr) {
+            return attr && attr.isa<SymbolRefAttr>();
+          })))
+      return op->emitOpError("attribute '")
+             << attributeName
+             << "' failed to satisfy constraint: symbol ref array attribute";
+
     for (SymbolRefAttr symbolRef :
          attribute.cast<ArrayAttr>().getAsRange<SymbolRefAttr>()) {
       StringAttr metadataName = symbolRef.getRootReference();
@@ -742,6 +744,11 @@ static LogicalResult verifyMemoryOpMetadata(Operation *op) {
           op, LLVMDialect::getNoAliasScopesAttrName())))
     return failure();
 
+  // tbaa
+  if (failed(verifyOpMetadata<LLVM::TBAATagOp>(op,
+                                               LLVMDialect::getTBAAAttrName())))
+    return failure();
+
   return success();
 }
 
@@ -775,8 +782,8 @@ void LoadOp::print(OpAsmPrinter &p) {
 // Extract the pointee type from the LLVM pointer type wrapped in MLIR. Return
 // the resulting type if any, null type if opaque pointers are used, and
 // std::nullopt if the given type is not the pointer type.
-static Optional<Type> getLoadStoreElementType(OpAsmParser &parser, Type type,
-                                              SMLoc trailingTypeLoc) {
+static std::optional<Type>
+getLoadStoreElementType(OpAsmParser &parser, Type type, SMLoc trailingTypeLoc) {
   auto llvmTy = type.dyn_cast<LLVM::LLVMPointerType>();
   if (!llvmTy) {
     parser.emitError(trailingTypeLoc, "expected LLVM pointer type");
@@ -801,7 +808,7 @@ ParseResult LoadOp::parse(OpAsmParser &parser, OperationState &result) {
       parser.resolveOperand(addr, type, result.operands))
     return failure();
 
-  Optional<Type> elemTy =
+  std::optional<Type> elemTy =
       getLoadStoreElementType(parser, type, trailingTypeLoc);
   if (!elemTy)
     return failure();
@@ -870,7 +877,7 @@ ParseResult StoreOp::parse(OpAsmParser &parser, OperationState &result) {
     if (parser.parseType(type))
       return failure();
   } else {
-    Optional<Type> maybeOperandType =
+    std::optional<Type> maybeOperandType =
         getLoadStoreElementType(parser, type, trailingTypeLoc);
     if (!maybeOperandType)
       return failure();
@@ -1017,7 +1024,7 @@ ParseResult InvokeOp::parse(OpAsmParser &parser, OperationState &result) {
     auto llvmFuncType = LLVM::LLVMFunctionType::get(llvmResultType, argTypes);
     auto wrappedFuncType = LLVM::LLVMPointerType::get(llvmFuncType);
 
-    auto funcArguments = llvm::makeArrayRef(operands).drop_front();
+    auto funcArguments = llvm::ArrayRef(operands).drop_front();
 
     // Make sure that the first operand (indirect callee) matches the wrapped
     // LLVM IR function type, and that the types of the other call operands
@@ -1140,7 +1147,13 @@ void CallOp::build(OpBuilder &builder, OperationState &state, TypeRange results,
 
 void CallOp::build(OpBuilder &builder, OperationState &state, TypeRange results,
                    StringAttr callee, ValueRange args) {
-  build(builder, state, results, SymbolRefAttr::get(callee), args, nullptr);
+  build(builder, state, results, SymbolRefAttr::get(callee), args, nullptr,
+        nullptr);
+}
+
+void CallOp::build(OpBuilder &builder, OperationState &state, TypeRange results,
+                   FlatSymbolRefAttr callee, ValueRange args) {
+  build(builder, state, results, callee, args, nullptr, nullptr);
 }
 
 void CallOp::build(OpBuilder &builder, OperationState &state, LLVMFuncOp func,
@@ -1149,7 +1162,8 @@ void CallOp::build(OpBuilder &builder, OperationState &state, LLVMFuncOp func,
   Type resultType = func.getFunctionType().getReturnType();
   if (!resultType.isa<LLVM::LLVMVoidType>())
     results.push_back(resultType);
-  build(builder, state, results, SymbolRefAttr::get(func), args, nullptr);
+  build(builder, state, results, SymbolRefAttr::get(func), args, nullptr,
+        nullptr);
 }
 
 CallInterfaceCallable CallOp::getCallableForCallee() {
@@ -1185,6 +1199,10 @@ LogicalResult CallOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
     if (!ptrType)
       return emitOpError("indirect call expects a pointer as callee: ")
              << ptrType;
+
+    if (ptrType.isOpaque())
+      return success();
+
     fnType = ptrType.getElementType();
   } else {
     Operation *callee =
@@ -1350,20 +1368,6 @@ ParseResult CallOp::parse(OpAsmParser &parser, OperationState &result) {
 }
 
 //===----------------------------------------------------------------------===//
-// ExtractElementOp
-//===----------------------------------------------------------------------===//
-
-/// Expects vector to be an LLVM vector type and position to be an integer type.
-void LLVM::ExtractElementOp::build(OpBuilder &b, OperationState &result,
-                                   Value vector, Value position,
-                                   ArrayRef<NamedAttribute> attrs) {
-  auto vectorType = vector.getType();
-  auto llvmType = LLVM::getVectorElementType(vectorType);
-  build(b, result, llvmType, vector, position);
-  result.addAttributes(attrs);
-}
-
-//===----------------------------------------------------------------------===//
 // ExtractValueOp
 //===----------------------------------------------------------------------===//
 
@@ -1418,7 +1422,7 @@ static Type getInsertExtractValueElementType(Type llvmType,
   return llvmType;
 }
 
-OpFoldResult LLVM::ExtractValueOp::fold(ArrayRef<Attribute> operands) {
+OpFoldResult LLVM::ExtractValueOp::fold(FoldAdaptor adaptor) {
   auto insertValueOp = getContainer().getDefiningOp<InsertValueOp>();
   OpFoldResult result = {};
   while (insertValueOp) {
@@ -1992,7 +1996,8 @@ void LLVMFuncOp::build(OpBuilder &builder, OperationState &result,
                        StringRef name, Type type, LLVM::Linkage linkage,
                        bool dsoLocal, CConv cconv,
                        ArrayRef<NamedAttribute> attrs,
-                       ArrayRef<DictionaryAttr> argAttrs) {
+                       ArrayRef<DictionaryAttr> argAttrs,
+                       std::optional<uint64_t> functionEntryCount) {
   result.addRegion();
   result.addAttribute(SymbolTable::getSymbolAttrName(),
                       builder.getStringAttr(name));
@@ -2004,7 +2009,11 @@ void LLVMFuncOp::build(OpBuilder &builder, OperationState &result,
                       CConvAttr::get(builder.getContext(), cconv));
   result.attributes.append(attrs.begin(), attrs.end());
   if (dsoLocal)
-    result.addAttribute("dso_local", builder.getUnitAttr());
+    result.addAttribute(getDsoLocalAttrName(result.name),
+                        builder.getUnitAttr());
+  if (functionEntryCount)
+    result.addAttribute(getFunctionEntryCountAttrName(result.name),
+                        builder.getI64IntegerAttr(functionEntryCount.value()));
   if (argAttrs.empty())
     return;
 
@@ -2247,7 +2256,7 @@ LogicalResult LLVM::ConstantOp::verify() {
 }
 
 // Constant op constant-folds to its value.
-OpFoldResult LLVM::ConstantOp::fold(ArrayRef<Attribute>) { return getValue(); }
+OpFoldResult LLVM::ConstantOp::fold(FoldAdaptor) { return getValue(); }
 
 //===----------------------------------------------------------------------===//
 // Utility functions for parsing atomic ops
@@ -2339,7 +2348,7 @@ ParseResult AtomicRMWOp::parse(OpAsmParser &parser, OperationState &result) {
 LogicalResult AtomicRMWOp::verify() {
   auto ptrType = getPtr().getType().cast<LLVM::LLVMPointerType>();
   auto valType = getVal().getType();
-  if (valType != ptrType.getElementType())
+  if (!ptrType.isOpaque() && valType != ptrType.getElementType())
     return emitOpError("expected LLVM IR element type for operand #0 to "
                        "match type for operand #1");
   auto resType = getRes().getType();
@@ -2421,7 +2430,9 @@ LogicalResult AtomicCmpXchgOp::verify() {
     return emitOpError("expected LLVM IR pointer type for operand #0");
   auto cmpType = getCmp().getType();
   auto valType = getVal().getType();
-  if (cmpType != ptrType.getElementType() || cmpType != valType)
+  if (cmpType != valType)
+    return emitOpError("expected both value operands to have the same type");
+  if (!ptrType.isOpaque() && cmpType != ptrType.getElementType())
     return emitOpError("expected LLVM IR element type for operand #0 to "
                        "match type for all other operands");
   auto intType = valType.dyn_cast<IntegerType>();
@@ -2485,7 +2496,7 @@ LogicalResult FenceOp::verify() {
 // Folder for LLVM::BitcastOp
 //===----------------------------------------------------------------------===//
 
-OpFoldResult LLVM::BitcastOp::fold(ArrayRef<Attribute> operands) {
+OpFoldResult LLVM::BitcastOp::fold(FoldAdaptor adaptor) {
   // bitcast(x : T0, T0) -> x
   if (getArg().getType() == getType())
     return getArg();
@@ -2500,7 +2511,7 @@ OpFoldResult LLVM::BitcastOp::fold(ArrayRef<Attribute> operands) {
 // Folder for LLVM::AddrSpaceCastOp
 //===----------------------------------------------------------------------===//
 
-OpFoldResult LLVM::AddrSpaceCastOp::fold(ArrayRef<Attribute> operands) {
+OpFoldResult LLVM::AddrSpaceCastOp::fold(FoldAdaptor adaptor) {
   // addrcast(x : T0, T0) -> x
   if (getArg().getType() == getType())
     return getArg();
@@ -2515,9 +2526,9 @@ OpFoldResult LLVM::AddrSpaceCastOp::fold(ArrayRef<Attribute> operands) {
 // Folder for LLVM::GEPOp
 //===----------------------------------------------------------------------===//
 
-OpFoldResult LLVM::GEPOp::fold(ArrayRef<Attribute> operands) {
+OpFoldResult LLVM::GEPOp::fold(FoldAdaptor adaptor) {
   GEPIndicesAdaptor<ArrayRef<Attribute>> indices(getRawConstantIndicesAttr(),
-                                                 operands.drop_front());
+                                                 adaptor.getDynamicIndices());
 
   // gep %x:T, 0 -> %x
   if (getBase().getType() == getType() && indices.size() == 1)
@@ -2562,6 +2573,256 @@ OpFoldResult LLVM::GEPOp::fold(ArrayRef<Attribute> operands) {
 }
 
 //===----------------------------------------------------------------------===//
+// Utilities for LLVM::MetadataOp
+//===----------------------------------------------------------------------===//
+
+void MetadataOp::build(OpBuilder &builder, OperationState &result,
+                       StringRef symName, bool createBodyBlock,
+                       ArrayRef<NamedAttribute> attributes) {
+  result.addAttribute(getSymNameAttrName(result.name),
+                      builder.getStringAttr(symName));
+  result.attributes.append(attributes.begin(), attributes.end());
+  Region *body = result.addRegion();
+  if (createBodyBlock)
+    body->emplaceBlock();
+}
+
+ParseResult MetadataOp::parse(OpAsmParser &parser, OperationState &result) {
+  StringAttr symName;
+  if (parser.parseSymbolName(symName, getSymNameAttrName(result.name),
+                             result.attributes) ||
+      parser.parseOptionalAttrDictWithKeyword(result.attributes))
+    return failure();
+
+  Region *bodyRegion = result.addRegion();
+  if (parser.parseRegion(*bodyRegion))
+    return failure();
+
+  // If the region appeared to be empty to parseRegion(),
+  // add the body block explicitly.
+  if (bodyRegion->empty())
+    bodyRegion->emplaceBlock();
+
+  return success();
+}
+
+void MetadataOp::print(OpAsmPrinter &printer) {
+  printer << ' ';
+  printer.printSymbolName(getSymName());
+  printer.printOptionalAttrDictWithKeyword((*this)->getAttrs(),
+                                           {getSymNameAttrName().getValue()});
+  printer << ' ';
+  printer.printRegion(getBody());
+}
+
+namespace {
+// A node of the TBAA graph.
+struct TBAAGraphNode {
+  // Symbol name defined by a TBAA operation.
+  StringRef symbol;
+  // Operands (if any) of the TBAA operation.
+  SmallVector<TBAAGraphNode *> operands;
+};
+
+// TBAA graph.
+class TBAAGraph {
+  // Mapping between symbol names defined by TBAA
+  // operations and corresponding TBAAGraphNode's.
+  DenseMap<StringAttr, TBAAGraphNode> nodeMap;
+  // Synthetic root node that has all graph nodes
+  // in its operands list.
+  TBAAGraphNode root;
+
+public:
+  using iterator = SmallVectorImpl<TBAAGraphNode *>::iterator;
+
+  iterator begin() { return root.operands.begin(); }
+  iterator end() { return root.operands.end(); }
+  TBAAGraphNode *getEntryNode() { return &root; }
+
+  // Add new graph node corresponding to `symbol`
+  // defined by a TBAA operation.
+  void addNodeDefinition(StringAttr symbol) {
+    TBAAGraphNode &node = nodeMap[symbol];
+    assert(node.symbol.empty() && "node is already in the graph");
+    node.symbol = symbol;
+    root.operands.push_back(&node);
+  }
+
+  // Get a pointer to TBAAGraphNode corresponding
+  // to `symbol`. The node must be already in the graph.
+  TBAAGraphNode *operator[](StringAttr symbol) {
+    auto it = nodeMap.find(symbol);
+    assert(it != nodeMap.end() && "node must be in the graph");
+    return &it->second;
+  }
+};
+} // end anonymous namespace
+namespace llvm {
+// GraphTraits definitions for using TBAAGraph with
+// scc_iterator.
+template <>
+struct GraphTraits<TBAAGraphNode *> {
+  using NodeRef = TBAAGraphNode *;
+  using ChildIteratorType = SmallVectorImpl<TBAAGraphNode *>::iterator;
+  static ChildIteratorType child_begin(NodeRef ref) {
+    return ref->operands.begin();
+  }
+  static ChildIteratorType child_end(NodeRef ref) {
+    return ref->operands.end();
+  }
+};
+template <>
+struct GraphTraits<TBAAGraph *> : public GraphTraits<TBAAGraphNode *> {
+  static NodeRef getEntryNode(TBAAGraph *graph) {
+    return graph->getEntryNode();
+  }
+  static ChildIteratorType nodes_begin(TBAAGraph *graph) {
+    return graph->begin();
+  }
+  static ChildIteratorType nodes_end(TBAAGraph *graph) { return graph->end(); }
+};
+} // end namespace llvm
+
+LogicalResult MetadataOp::verifyRegions() {
+  // Verify correctness of TBAA-related symbol references.
+  Region &body = getBody();
+  // Symbol names defined by TBAARootMetadataOp and TBAATypeDescriptorOp.
+  llvm::SmallDenseSet<StringAttr> definedGraphSymbols;
+  // Complete TBAA graph consisting of TBAARootMetadataOp,
+  // TBAATypeDescriptorOp, and TBAATagOp symbols. It is used
+  // for detecting cycles in the TBAA graph, which is illegal.
+  TBAAGraph tbaaGraph;
+
+  for (Operation &op : body.getOps())
+    if (isa<LLVM::TBAARootMetadataOp>(op) ||
+        isa<LLVM::TBAATypeDescriptorOp>(op)) {
+      StringAttr symbolDef = cast<SymbolOpInterface>(op).getNameAttr();
+      definedGraphSymbols.insert(symbolDef);
+      tbaaGraph.addNodeDefinition(symbolDef);
+    } else if (auto tagOp = dyn_cast<LLVM::TBAATagOp>(op)) {
+      tbaaGraph.addNodeDefinition(tagOp.getSymNameAttr());
+    }
+
+  // Verify that TBAA metadata operations refer symbols
+  // from definedGraphSymbols only. Note that TBAATagOp
+  // cannot refer a symbol defined by TBAATagOp.
+  auto verifyReference = [&](Operation &op, StringAttr symbolName,
+                             StringAttr referencingAttr) -> LogicalResult {
+    if (definedGraphSymbols.contains(symbolName))
+      return success();
+    return op.emitOpError()
+           << "expected " << referencingAttr << " to reference a symbol from '"
+           << (*this)->getName() << " @" << getSymName()
+           << "' defined by either '"
+           << LLVM::TBAARootMetadataOp::getOperationName() << "' or '"
+           << LLVM::TBAATypeDescriptorOp::getOperationName()
+           << "' while it references '@" << symbolName.getValue() << "'";
+  };
+  for (Operation &op : body.getOps()) {
+    if (auto tdOp = dyn_cast<LLVM::TBAATypeDescriptorOp>(op)) {
+      SmallVectorImpl<TBAAGraphNode *> &operands =
+          tbaaGraph[tdOp.getSymNameAttr()]->operands;
+      for (Attribute attr : tdOp.getMembers()) {
+        StringAttr symbolRef = attr.cast<FlatSymbolRefAttr>().getAttr();
+        if (failed(verifyReference(op, symbolRef, tdOp.getMembersAttrName())))
+          return failure();
+
+        // Since the reference is valid, we have to be able
+        // to find TBAAGraphNode corresponding to the operand.
+        operands.push_back(tbaaGraph[symbolRef]);
+      }
+    }
+
+    if (auto tagOp = dyn_cast<LLVM::TBAATagOp>(op)) {
+      SmallVectorImpl<TBAAGraphNode *> &operands =
+          tbaaGraph[tagOp.getSymNameAttr()]->operands;
+      if (failed(verifyReference(op, tagOp.getBaseTypeAttr().getAttr(),
+                                 tagOp.getBaseTypeAttrName())))
+        return failure();
+      if (failed(verifyReference(op, tagOp.getAccessTypeAttr().getAttr(),
+                                 tagOp.getAccessTypeAttrName())))
+        return failure();
+
+      operands.push_back(tbaaGraph[tagOp.getBaseTypeAttr().getAttr()]);
+      operands.push_back(tbaaGraph[tagOp.getAccessTypeAttr().getAttr()]);
+    }
+  }
+
+  // Detect cycles in the TBAA graph.
+  for (llvm::scc_iterator<TBAAGraph *> sccIt = llvm::scc_begin(&tbaaGraph);
+       !sccIt.isAtEnd(); ++sccIt) {
+    if (!sccIt.hasCycle())
+      continue;
+    auto diagOut = emitOpError() << "has cycle in TBAA graph (graph closure: <";
+    llvm::interleaveComma(
+        *sccIt, diagOut, [&](TBAAGraphNode *node) { diagOut << node->symbol; });
+    return diagOut << ">)";
+  }
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// Utilities for TBAA related operations/attributes
+//===----------------------------------------------------------------------===//
+
+static ParseResult parseTBAAMembers(OpAsmParser &parser, ArrayAttr &members,
+                                    DenseI64ArrayAttr &offsets) {
+  SmallVector<Attribute> membersVec;
+  SmallVector<int64_t> offsetsVec;
+  auto parseMembers = [&]() {
+    // Parse a pair of `<@tbaa_type_desc_sym, integer-offset>`.
+    FlatSymbolRefAttr member;
+    int64_t offset;
+    if (parser.parseLess() || parser.parseAttribute(member, Type()) ||
+        parser.parseComma() || parser.parseInteger(offset) ||
+        parser.parseGreater())
+      return failure();
+
+    membersVec.push_back(member);
+    offsetsVec.push_back(offset);
+    return success();
+  };
+
+  if (parser.parseCommaSeparatedList(parseMembers))
+    return failure();
+
+  members = ArrayAttr::get(parser.getContext(), membersVec);
+  offsets = DenseI64ArrayAttr::get(parser.getContext(), offsetsVec);
+  return success();
+}
+
+static void printTBAAMembers(OpAsmPrinter &printer,
+                             LLVM::TBAATypeDescriptorOp tdOp, ArrayAttr members,
+                             DenseI64ArrayAttr offsets) {
+  llvm::interleaveComma(
+      llvm::zip(members, offsets.asArrayRef()), printer, [&](auto it) {
+        // Print `<@tbaa_type_desc_sym, integer-offset>`.
+        printer << '<' << std::get<0>(it) << ", " << std::get<1>(it) << '>';
+      });
+}
+
+LogicalResult TBAARootMetadataOp::verify() {
+  if (!getIdentity().empty())
+    return success();
+  return emitOpError() << "expected non-empty " << getIdentityAttrName();
+}
+
+LogicalResult TBAATypeDescriptorOp::verify() {
+  // Verify that the members and offsets arrays have the same
+  // number of elements.
+  ArrayAttr members = getMembers();
+  StringAttr membersName = getMembersAttrName();
+  if (members.size() != getOffsets().size())
+    return emitOpError() << "expected the same number of elements in "
+                         << membersName << " and " << getOffsetsAttrName()
+                         << ": " << members.size()
+                         << " != " << getOffsets().size();
+
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // OpAsmDialectInterface
 //===----------------------------------------------------------------------===//
 
@@ -2571,10 +2832,10 @@ struct LLVMOpAsmDialectInterface : public OpAsmDialectInterface {
 
   AliasResult getAlias(Attribute attr, raw_ostream &os) const override {
     return TypeSwitch<Attribute, AliasResult>(attr)
-        .Case<DIBasicTypeAttr, DICompileUnitAttr, DICompositeTypeAttr,
-              DIDerivedTypeAttr, DIFileAttr, DILexicalBlockAttr,
-              DILexicalBlockFileAttr, DILocalVariableAttr, DISubprogramAttr,
-              DISubroutineTypeAttr>([&](auto attr) {
+        .Case<DIVoidResultTypeAttr, DIBasicTypeAttr, DICompileUnitAttr,
+              DICompositeTypeAttr, DIDerivedTypeAttr, DIFileAttr,
+              DILexicalBlockAttr, DILexicalBlockFileAttr, DILocalVariableAttr,
+              DISubprogramAttr, DISubroutineTypeAttr>([&](auto attr) {
           os << decltype(attr)::getMnemonic();
           return AliasResult::OverridableAlias;
         })
@@ -2591,10 +2852,117 @@ namespace {
 struct LLVMInlinerInterface : public DialectInlinerInterface {
   using DialectInlinerInterface::DialectInlinerInterface;
 
-  /// Conservatively only allow inlining of pure ops.
-  bool isLegalToInline(Operation *op, Region *, bool,
-                       BlockAndValueMapping &) const final {
-    return isPure(op);
+  bool isLegalToInline(Operation *call, Operation *callable,
+                       bool wouldBeCloned) const final {
+    if (!wouldBeCloned)
+      return false;
+    auto callOp = dyn_cast<LLVM::CallOp>(call);
+    auto funcOp = dyn_cast<LLVM::LLVMFuncOp>(callable);
+    if (!callOp || !funcOp)
+      return false;
+    return isLegalToInlineCallAttributes(callOp) &&
+           isLegalToInlineFuncAttributes(funcOp);
+  }
+
+  bool isLegalToInline(Region *, Region *, bool, IRMapping &) const final {
+    return true;
+  }
+
+  /// Conservative allowlist-based inlining of operations supported so far.
+  bool isLegalToInline(Operation *op, Region *, bool, IRMapping &) const final {
+    if (isPure(op))
+      return true;
+    return llvm::TypeSwitch<Operation *, bool>(op)
+        .Case<LLVM::LoadOp, LLVM::StoreOp>([&](auto memOp) {
+          // Some attributes on load and store operations require handling
+          // during inlining. Since this is not yet implemented, refuse to
+          // inline memory operations that have any of these attributes.
+          if (memOp.getAccessGroups())
+            return false;
+          if (memOp.getAliasScopes())
+            return false;
+          if (memOp.getNoaliasScopes())
+            return false;
+          return true;
+        })
+        .Case<LLVM::CallOp>([](auto) { return true; })
+        .Default([](auto) { return false; });
+  }
+
+  /// Handle the given inlined return by replacing it with a branch. This
+  /// overload is called when the inlined region has more than one block.
+  void handleTerminator(Operation *op, Block *newDest) const final {
+    // Only return needs to be handled here.
+    auto returnOp = dyn_cast<LLVM::ReturnOp>(op);
+    if (!returnOp)
+      return;
+
+    // Replace the return with a branch to the dest.
+    OpBuilder builder(op);
+    builder.create<LLVM::BrOp>(op->getLoc(), returnOp.getOperands(), newDest);
+    op->erase();
+  }
+
+  /// Handle the given inlined return by replacing the uses of the call with the
+  /// operands of the return. This overload is called when the inlined region
+  /// only contains one block.
+  void handleTerminator(Operation *op,
+                        ArrayRef<Value> valuesToRepl) const final {
+    // Return will be the only terminator present.
+    auto returnOp = cast<LLVM::ReturnOp>(op);
+
+    // Replace the values directly with the return operands.
+    assert(returnOp.getNumOperands() == valuesToRepl.size());
+    for (const auto &[dst, src] :
+         llvm::zip(valuesToRepl, returnOp.getOperands()))
+      dst.replaceAllUsesWith(src);
+  }
+
+private:
+  /// Returns true if all attributes of `callOp` are handled during inlining.
+  [[nodiscard]] static bool isLegalToInlineCallAttributes(LLVM::CallOp callOp) {
+    return all_of(callOp.getAttributeNames(), [&](StringRef attrName) {
+      return llvm::StringSwitch<bool>(attrName)
+          // TODO: Propagate and update branch weights.
+          .Case("branch_weights", !callOp.getBranchWeights())
+          .Case("callee", true)
+          .Case("fastmathFlags", true)
+          .Default(false);
+    });
+  }
+
+  /// Returns true if all attributes of `funcOp` are handled during inlining.
+  [[nodiscard]] static bool
+  isLegalToInlineFuncAttributes(LLVM::LLVMFuncOp funcOp) {
+    return all_of(funcOp.getAttributeNames(), [&](StringRef attrName) {
+      return llvm::StringSwitch<bool>(attrName)
+          .Case("CConv", true)
+          .Case("arg_attrs", ([&]() {
+                  if (!funcOp.getArgAttrs())
+                    return true;
+                  return llvm::all_of(funcOp.getArgAttrs().value(),
+                                      [&](Attribute) {
+                                        // TODO: Handle argument attributes.
+                                        return false;
+                                      });
+                })())
+          .Case("dso_local", true)
+          .Case("function_entry_count", true)
+          .Case("function_type", true)
+          // TODO: Once the garbage collector attribute is supported on
+          // LLVM::CallOp, make sure that the garbage collector matches.
+          .Case("garbageCollector", !funcOp.getGarbageCollector())
+          .Case("linkage", true)
+          .Case("memory", true)
+          .Case("passthrough", !funcOp.getPassthrough())
+          // Exception handling is not yet supported, so bail out if the
+          // personality is set.
+          .Case("personality", !funcOp.getPersonality())
+          // TODO: Handle result attributes.
+          .Case("res_attrs", !funcOp.getResAttrs())
+          .Case("sym_name", true)
+          .Default(false);
+    });
   }
 };
 } // end anonymous namespace
@@ -2663,7 +3031,7 @@ LogicalResult LLVMDialect::verifyOperationAttribute(Operation *op,
     if (!loopAttr)
       return op->emitOpError() << "expected '" << LLVMDialect::getLoopAttrName()
                                << "' to be a dictionary attribute";
-    Optional<NamedAttribute> parallelAccessGroup =
+    std::optional<NamedAttribute> parallelAccessGroup =
         loopAttr.getNamed(LLVMDialect::getParallelAccessAttrName());
     if (parallelAccessGroup) {
       auto accessGroups = parallelAccessGroup->getValue().dyn_cast<ArrayAttr>();
@@ -2692,23 +3060,12 @@ LogicalResult LLVMDialect::verifyOperationAttribute(Operation *op,
       }
     }
 
-    Optional<NamedAttribute> loopOptions =
+    std::optional<NamedAttribute> loopOptions =
         loopAttr.getNamed(LLVMDialect::getLoopOptionsAttrName());
     if (loopOptions && !loopOptions->getValue().isa<LoopOptionsAttr>())
       return op->emitOpError()
              << "expected '" << LLVMDialect::getLoopOptionsAttrName()
              << "' to be a `loopopts` attribute";
-  }
-
-  if (attr.getName() == LLVMDialect::getReadnoneAttrName()) {
-    const auto attrName = LLVMDialect::getReadnoneAttrName();
-    if (!isa<FunctionOpInterface>(op))
-      return op->emitOpError()
-             << "'" << attrName
-             << "' is permitted only on FunctionOpInterface operations";
-    if (!attr.getValue().isa<UnitAttr>())
-      return op->emitOpError()
-             << "expected '" << attrName << "' to be a unit attribute";
   }
 
   if (attr.getName() == LLVMDialect::getStructAttrsAttrName()) {

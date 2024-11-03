@@ -463,7 +463,8 @@ bool PresburgerRelation::isIntegerEmpty() const {
 bool PresburgerRelation::findIntegerSample(SmallVectorImpl<MPInt> &sample) {
   // A sample exists iff any of the disjuncts contains a sample.
   for (const IntegerRelation &disjunct : disjuncts) {
-    if (Optional<SmallVector<MPInt, 8>> opt = disjunct.findIntegerSample()) {
+    if (std::optional<SmallVector<MPInt, 8>> opt =
+            disjunct.findIntegerSample()) {
       sample = std::move(*opt);
       return true;
     }
@@ -471,13 +472,13 @@ bool PresburgerRelation::findIntegerSample(SmallVectorImpl<MPInt> &sample) {
   return false;
 }
 
-Optional<MPInt> PresburgerRelation::computeVolume() const {
+std::optional<MPInt> PresburgerRelation::computeVolume() const {
   assert(getNumSymbolVars() == 0 && "Symbols are not yet supported!");
   // The sum of the volumes of the disjuncts is a valid overapproximation of the
   // volume of their union, even if they overlap.
   MPInt result(0);
   for (const IntegerRelation &disjunct : disjuncts) {
-    Optional<MPInt> volume = disjunct.computeVolume();
+    std::optional<MPInt> volume = disjunct.computeVolume();
     if (!volume)
       return {};
     result += *volume;

@@ -284,6 +284,45 @@ TEST_F(ProgramEnvTest, TestExecuteAndWaitTimeout) {
   ASSERT_EQ(-2, RetCode);
 }
 
+TEST_F(ProgramEnvTest, TestExecuteNoWaitTimeoutPolling) {
+  using namespace llvm::sys;
+
+  if (getenv("LLVM_PROGRAM_TEST_TIMEOUT")) {
+    sleep_for(/*seconds*/ 5);
+    exit(0);
+  }
+
+  std::string Executable =
+      sys::fs::getMainExecutable(TestMainArgv0, &ProgramTestStringArg1);
+  StringRef argv[] = {
+      Executable,
+      "--gtest_filter=ProgramEnvTest.TestExecuteNoWaitTimeoutPolling"};
+
+  // Add LLVM_PROGRAM_TEST_TIMEOUT to the environment of the child.
+  addEnvVar("LLVM_PROGRAM_TEST_TIMEOUT=1");
+
+  std::string Error;
+  bool ExecutionFailed;
+  ProcessInfo PI0 = ExecuteNoWait(Executable, argv, getEnviron(),
+                                  /*Redirects=*/{}, /*MemoryLimit=*/0, &Error,
+                                  &ExecutionFailed);
+  ASSERT_FALSE(ExecutionFailed) << Error;
+  ASSERT_NE(PI0.Pid, ProcessInfo::InvalidPid) << "Invalid process id";
+
+  // Check that we don't kill the process with a non-0 SecondsToWait if Polling.
+  unsigned LoopCount = 0;
+  ProcessInfo WaitResult;
+  do {
+    ++LoopCount;
+    WaitResult = llvm::sys::Wait(PI0, /*SecondsToWait=*/1, &Error,
+                                 /*ProcStats=*/nullptr,
+                                 /*Polling=*/true);
+    ASSERT_TRUE(Error.empty()) << Error;
+  } while (WaitResult.Pid != PI0.Pid);
+
+  ASSERT_GT(LoopCount, 1u) << "LoopCount should be >1";
+}
+
 TEST(ProgramTest, TestExecuteNegative) {
   std::string Executable = "i_dont_exist";
   StringRef argv[] = {Executable};

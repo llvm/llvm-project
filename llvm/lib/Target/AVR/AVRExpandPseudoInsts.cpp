@@ -635,30 +635,42 @@ bool AVRExpandPseudo::expand<AVR::LDSWRdK>(Block &MBB, BlockIt MBBI) {
 template <>
 bool AVRExpandPseudo::expand<AVR::LDWRdPtr>(Block &MBB, BlockIt MBBI) {
   MachineInstr &MI = *MBBI;
-  Register DstLoReg, DstHiReg;
   Register DstReg = MI.getOperand(0).getReg();
   Register SrcReg = MI.getOperand(1).getReg();
+  bool DstIsKill = MI.getOperand(0).isKill();
   bool SrcIsKill = MI.getOperand(1).isKill();
-  unsigned OpLo = AVR::LDRdPtr;
-  unsigned OpHi = AVR::LDDRdPtrQ;
-  TRI->splitReg(DstReg, DstLoReg, DstHiReg);
+  const AVRSubtarget &STI = MBB.getParent()->getSubtarget<AVRSubtarget>();
 
   // DstReg has an earlyclobber so the register allocator will allocate them in
   // separate registers.
   assert(DstReg != SrcReg && "Dst and Src registers are the same!");
 
-  // Load low byte.
-  buildMI(MBB, MBBI, OpLo)
-      .addReg(DstLoReg, RegState::Define)
-      .addReg(SrcReg)
-      .setMemRefs(MI.memoperands());
+  if (STI.hasTinyEncoding()) {
+    // Handle this case in the expansion of LDDWRdPtrQ because it is very
+    // similar.
+    buildMI(MBB, MBBI, AVR::LDDWRdPtrQ)
+        .addDef(DstReg, getKillRegState(DstIsKill))
+        .addReg(SrcReg, getKillRegState(SrcIsKill))
+        .addImm(0)
+        .setMemRefs(MI.memoperands());
 
-  // Load high byte.
-  buildMI(MBB, MBBI, OpHi)
-      .addReg(DstHiReg, RegState::Define)
-      .addReg(SrcReg, getKillRegState(SrcIsKill))
-      .addImm(1)
-      .setMemRefs(MI.memoperands());
+  } else {
+    Register DstLoReg, DstHiReg;
+    TRI->splitReg(DstReg, DstLoReg, DstHiReg);
+
+    // Load low byte.
+    buildMI(MBB, MBBI, AVR::LDRdPtr)
+        .addReg(DstLoReg, RegState::Define)
+        .addReg(SrcReg)
+        .setMemRefs(MI.memoperands());
+
+    // Load high byte.
+    buildMI(MBB, MBBI, AVR::LDDRdPtrQ)
+        .addReg(DstHiReg, RegState::Define)
+        .addReg(SrcReg, getKillRegState(SrcIsKill))
+        .addImm(1)
+        .setMemRefs(MI.memoperands());
+  }
 
   MI.eraseFromParent();
   return true;
@@ -733,14 +745,12 @@ bool AVRExpandPseudo::expand<AVR::LDWRdPtrPd>(Block &MBB, BlockIt MBBI) {
 template <>
 bool AVRExpandPseudo::expand<AVR::LDDWRdPtrQ>(Block &MBB, BlockIt MBBI) {
   MachineInstr &MI = *MBBI;
-  Register DstLoReg, DstHiReg;
   Register DstReg = MI.getOperand(0).getReg();
   Register SrcReg = MI.getOperand(1).getReg();
   unsigned Imm = MI.getOperand(2).getImm();
+  bool DstIsKill = MI.getOperand(0).isKill();
   bool SrcIsKill = MI.getOperand(1).isKill();
-  unsigned OpLo = AVR::LDDRdPtrQ;
-  unsigned OpHi = AVR::LDDRdPtrQ;
-  TRI->splitReg(DstReg, DstLoReg, DstHiReg);
+  const AVRSubtarget &STI = MBB.getParent()->getSubtarget<AVRSubtarget>();
 
   // Since we add 1 to the Imm value for the high byte below, and 63 is the
   // highest Imm value allowed for the instruction, 62 is the limit here.
@@ -750,19 +760,51 @@ bool AVRExpandPseudo::expand<AVR::LDDWRdPtrQ>(Block &MBB, BlockIt MBBI) {
   // separate registers.
   assert(DstReg != SrcReg && "Dst and Src registers are the same!");
 
-  // Load low byte.
-  buildMI(MBB, MBBI, OpLo)
-      .addReg(DstLoReg, RegState::Define)
-      .addReg(SrcReg)
-      .addImm(Imm)
-      .setMemRefs(MI.memoperands());
+  if (STI.hasTinyEncoding()) {
+    // Reduced tiny cores don't support load/store with displacement. However,
+    // they do support postincrement. So we'll simply adjust the pointer before
+    // and after and use postincrement to load multiple registers.
 
-  // Load high byte.
-  buildMI(MBB, MBBI, OpHi)
-      .addReg(DstHiReg, RegState::Define)
-      .addReg(SrcReg, getKillRegState(SrcIsKill))
-      .addImm(Imm + 1)
-      .setMemRefs(MI.memoperands());
+    // Add offset. The offset can be 0 when expanding this instruction from the
+    // more specific LDWRdPtr instruction.
+    if (Imm != 0) {
+      buildMI(MBB, MBBI, AVR::SUBIWRdK, SrcReg)
+          .addReg(SrcReg)
+          .addImm(0x10000 - Imm);
+    }
+
+    // Do a word load with postincrement. This will be lowered to a two byte
+    // load.
+    buildMI(MBB, MBBI, AVR::LDWRdPtrPi)
+        .addDef(DstReg, getKillRegState(DstIsKill))
+        .addReg(SrcReg, getKillRegState(SrcIsKill))
+        .addImm(0)
+        .setMemRefs(MI.memoperands());
+
+    // If the pointer is used after the store instruction, subtract the new
+    // offset (with 2 added after the postincrement instructions) so it is the
+    // same as before.
+    if (!SrcIsKill) {
+      buildMI(MBB, MBBI, AVR::SUBIWRdK, SrcReg).addReg(SrcReg).addImm(Imm + 2);
+    }
+  } else {
+    Register DstLoReg, DstHiReg;
+    TRI->splitReg(DstReg, DstLoReg, DstHiReg);
+
+    // Load low byte.
+    buildMI(MBB, MBBI, AVR::LDDRdPtrQ)
+        .addReg(DstLoReg, RegState::Define)
+        .addReg(SrcReg)
+        .addImm(Imm)
+        .setMemRefs(MI.memoperands());
+
+    // Load high byte.
+    buildMI(MBB, MBBI, AVR::LDDRdPtrQ)
+        .addReg(DstHiReg, RegState::Define)
+        .addReg(SrcReg, getKillRegState(SrcIsKill))
+        .addImm(Imm + 1)
+        .setMemRefs(MI.memoperands());
+  }
 
   MI.eraseFromParent();
   return true;
@@ -846,7 +888,7 @@ bool AVRExpandPseudo::expand<AVR::LPMWRdZPi>(Block &MBB, BlockIt MBBI) {
 
 template <>
 bool AVRExpandPseudo::expand<AVR::ELPMBRdZPi>(Block &MBB, BlockIt MBBI) {
-  llvm_unreachable("byte ELPMPi is unimplemented");
+  llvm_unreachable("8-bit ELPMPi is unimplemented");
 }
 
 template <>
@@ -972,27 +1014,39 @@ bool AVRExpandPseudo::expand<AVR::STSWKRr>(Block &MBB, BlockIt MBBI) {
 template <>
 bool AVRExpandPseudo::expand<AVR::STWPtrRr>(Block &MBB, BlockIt MBBI) {
   MachineInstr &MI = *MBBI;
-  Register SrcLoReg, SrcHiReg;
   Register DstReg = MI.getOperand(0).getReg();
   Register SrcReg = MI.getOperand(1).getReg();
+  bool DstIsKill = MI.getOperand(0).isKill();
   bool DstIsUndef = MI.getOperand(0).isUndef();
   bool SrcIsKill = MI.getOperand(1).isKill();
-  unsigned OpLo = AVR::STPtrRr;
-  unsigned OpHi = AVR::STDPtrQRr;
-  TRI->splitReg(SrcReg, SrcLoReg, SrcHiReg);
+  const AVRSubtarget &STI = MBB.getParent()->getSubtarget<AVRSubtarget>();
 
   //: TODO: need to reverse this order like inw and stsw?
-  auto MIBLO = buildMI(MBB, MBBI, OpLo)
-                   .addReg(DstReg, getUndefRegState(DstIsUndef))
-                   .addReg(SrcLoReg, getKillRegState(SrcIsKill));
 
-  auto MIBHI = buildMI(MBB, MBBI, OpHi)
-                   .addReg(DstReg, getUndefRegState(DstIsUndef))
-                   .addImm(1)
-                   .addReg(SrcHiReg, getKillRegState(SrcIsKill));
+  if (STI.hasTinyEncoding()) {
+    // Handle this case in the expansion of STDWPtrQRr because it is very
+    // similar.
+    buildMI(MBB, MBBI, AVR::STDWPtrQRr)
+        .addReg(DstReg,
+                getKillRegState(DstIsKill) | getUndefRegState(DstIsUndef))
+        .addImm(0)
+        .addReg(SrcReg, getKillRegState(SrcIsKill))
+        .setMemRefs(MI.memoperands());
 
-  MIBLO.setMemRefs(MI.memoperands());
-  MIBHI.setMemRefs(MI.memoperands());
+  } else {
+    Register SrcLoReg, SrcHiReg;
+    TRI->splitReg(SrcReg, SrcLoReg, SrcHiReg);
+    buildMI(MBB, MBBI, AVR::STPtrRr)
+        .addReg(DstReg, getUndefRegState(DstIsUndef))
+        .addReg(SrcLoReg, getKillRegState(SrcIsKill))
+        .setMemRefs(MI.memoperands());
+
+    buildMI(MBB, MBBI, AVR::STDPtrQRr)
+        .addReg(DstReg, getUndefRegState(DstIsUndef))
+        .addImm(1)
+        .addReg(SrcHiReg, getKillRegState(SrcIsKill))
+        .setMemRefs(MI.memoperands());
+  }
 
   MI.eraseFromParent();
   return true;
@@ -1071,6 +1125,7 @@ bool AVRExpandPseudo::expand<AVR::STWPtrPdRr>(Block &MBB, BlockIt MBBI) {
 template <>
 bool AVRExpandPseudo::expand<AVR::STDWPtrQRr>(Block &MBB, BlockIt MBBI) {
   MachineInstr &MI = *MBBI;
+  const AVRSubtarget &STI = MBB.getParent()->getSubtarget<AVRSubtarget>();
 
   Register DstReg = MI.getOperand(0).getReg();
   bool DstIsKill = MI.getOperand(0).isKill();
@@ -1079,23 +1134,32 @@ bool AVRExpandPseudo::expand<AVR::STDWPtrQRr>(Block &MBB, BlockIt MBBI) {
   bool SrcIsKill = MI.getOperand(2).isKill();
 
   // STD's maximum displacement is 63, so larger stores have to be split into a
-  // set of operations
-  if (Imm >= 63) {
-    if (!DstIsKill) {
-      buildMI(MBB, MBBI, AVR::PUSHWRr).addReg(DstReg);
+  // set of operations.
+  // For avrtiny chips, STD is not available at all so we always have to fall
+  // back to manual pointer adjustments.
+  if (Imm >= 63 || STI.hasTinyEncoding()) {
+    // Add offset. The offset can be 0 when expanding this instruction from the
+    // more specific STWPtrRr instruction.
+    if (Imm != 0) {
+      buildMI(MBB, MBBI, AVR::SUBIWRdK, DstReg)
+          .addReg(DstReg, RegState::Kill)
+          .addImm(0x10000 - Imm);
     }
 
-    buildMI(MBB, MBBI, AVR::SUBIWRdK)
-        .addReg(DstReg, RegState::Define)
-        .addReg(DstReg, RegState::Kill)
-        .addImm(-Imm);
+    // Do the store. This is a word store, that will be expanded further.
+    buildMI(MBB, MBBI, AVR::STWPtrPiRr, DstReg)
+        .addReg(DstReg, getKillRegState(DstIsKill))
+        .addReg(SrcReg, getKillRegState(SrcIsKill))
+        .addImm(0)
+        .setMemRefs(MI.memoperands());
 
-    buildMI(MBB, MBBI, AVR::STWPtrRr)
-        .addReg(DstReg, RegState::Kill)
-        .addReg(SrcReg, getKillRegState(SrcIsKill));
-
+    // If the pointer is used after the store instruction, subtract the new
+    // offset (with 2 added after the postincrement instructions) so it is the
+    // same as before.
     if (!DstIsKill) {
-      buildMI(MBB, MBBI, AVR::POPWRd).addDef(DstReg, RegState::Define);
+      buildMI(MBB, MBBI, AVR::SUBIWRdK, DstReg)
+          .addReg(DstReg, RegState::Kill)
+          .addImm(Imm + 2);
     }
   } else {
     unsigned OpLo = AVR::STDPtrQRr;

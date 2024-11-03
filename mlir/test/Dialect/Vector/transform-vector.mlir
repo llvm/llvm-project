@@ -16,11 +16,11 @@ func.func @matmul_tensors(
 transform.sequence failures(propagate) {
 ^bb1(%module_op: !pdl.operation):
   %0 = transform.structured.match ops{["linalg.matmul"]} in %module_op
-  %1, %loops:3 = transform.structured.tile %0 [8, 4, 2]
+  %1, %loops:3 = transform.structured.tile %0 [8, 4, 2] : (!pdl.operation) -> (!pdl.operation, !pdl.operation, !pdl.operation, !pdl.operation)
   %2 = get_closest_isolated_parent %1 : (!pdl.operation) -> !pdl.operation
   transform.structured.vectorize %2
   transform.bufferization.one_shot_bufferize %module_op
 
   %func = transform.structured.match ops{["func.func"]} in %module_op
-  transform.vector.lower_vectors %func { multireduction_lowering = "innerreduce"}
+  transform.vector.lower_vectors %func multireduction_lowering = "innerreduction"
 }

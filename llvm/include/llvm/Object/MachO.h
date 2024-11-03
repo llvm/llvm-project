@@ -514,7 +514,9 @@ public:
 
   StringRef getFileFormatName() const override;
   Triple::ArchType getArch() const override;
-  SubtargetFeatures getFeatures() const override { return SubtargetFeatures(); }
+  Expected<SubtargetFeatures> getFeatures() const override {
+    return SubtargetFeatures();
+  }
   Triple getArchTriple(const char **McpuDefault = nullptr) const;
 
   relocation_iterator section_rel_begin(unsigned Index) const;

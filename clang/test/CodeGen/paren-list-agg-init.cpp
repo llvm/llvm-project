@@ -1,9 +1,25 @@
 // RUN: %clang_cc1 -std=c++20 %s -emit-llvm -triple x86_64-unknown-linux-gnu -o - | FileCheck %s
 
+template <typename T>
+struct IsChar {
+  constexpr operator bool() const { return false; }
+};
+
+template<>
+struct IsChar<char> {
+  constexpr operator bool() const { return true; }
+};
+
+template <typename T>
+concept SameAsChar = (bool)IsInt<T>();
+
 // CHECK-DAG: [[STRUCT_A:%.*]] = type { i8, double }
 struct A {
   char i;
   double j;
+
+  template <SameAsChar T>
+  operator T() const { return i; };
 };
 
 // CHECK-DAG: [[STRUCT_B:%.*]] = type { [[STRUCT_A]], i32 }
@@ -29,6 +45,7 @@ struct D {
 struct E {
   int a;
   const char* fn = __builtin_FUNCTION();
+  ~E() {};
 };
 
 // CHECK-DAG: [[STRUCT_F:%.*]] = type { i8 }

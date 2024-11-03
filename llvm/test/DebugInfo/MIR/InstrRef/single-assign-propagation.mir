@@ -2,10 +2,6 @@
 # RUN:       -experimental-debug-variable-locations=true \
 # RUN:     | FileCheck %s -implicit-check-not=DBG_VALUE \
 # RUN:        --check-prefixes=CHECK,COMMON
-# RUN: llc %s -march=x86-64 -run-pass=livedebugvalues -o - \
-# RUN:       -experimental-debug-variable-locations=false \
-# RUN:     | FileCheck %s -implicit-check-not=DBG_VALUE \
-# RUN:        --check-prefixes=VARLOC,COMMON
 #
 # This test is designed to stimulate a simplification of variable-value
 # propagation in InstrRefBasedLDV. When we only have a single assignment of
@@ -57,13 +53,14 @@
 #
 ## VarLocBasedLDV will take the DBG_VALUE in the assignment block, propagate
 ## to bb.3, but not into bb.4 because of the intervening out-of-scope block.
+## Disabled actual testing of this because it's just for comparison purposes.
 #
-# VARLOC-LABEL: bb.1:
-# VARLOC:       DBG_VALUE
-# VARLOC-LABEL: bb.2:
+# varloc-label: bb.1:
+# varloc:       DBG_VALUE
+# varloc-label: bb.2:
 ## No location here because it's out-of-scope.
-# VARLOC-LABEL: bb.3:
-# VARLOC:       DBG_VALUE
+# varloc-label: bb.3:
+# varloc:       DBG_VALUE
 #
 ## Common tail for 'test2' -- this is checking that the assignment of undef or
 ## $noreg in single-assignment mode doesn't lead to trouble further down the
@@ -118,6 +115,7 @@
 ...
 ---
 name: _Z8bb_to_bb
+debugInstrRef: true
 debugValueSubstitutions:
   - { srcinst: 4, srcop: 0, dstinst: 3, dstop: 0, subreg: 0 }
 body:  |

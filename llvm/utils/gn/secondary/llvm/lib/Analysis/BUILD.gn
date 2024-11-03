@@ -75,6 +75,7 @@ static_library("Analysis") {
     "LegacyDivergenceAnalysis.cpp",
     "Lint.cpp",
     "Loads.cpp",
+    "Local.cpp",
     "LoopAccessAnalysis.cpp",
     "LoopAnalysisManager.cpp",
     "LoopCacheAnalysis.cpp",

@@ -9,6 +9,7 @@
 #include "TraceIntelPTMultiCpuDecoder.h"
 #include "TraceIntelPT.h"
 #include "llvm/Support/Error.h"
+#include <optional>
 
 using namespace lldb;
 using namespace lldb_private;
@@ -33,15 +34,15 @@ bool TraceIntelPTMultiCpuDecoder::TracesThread(lldb::tid_t tid) const {
   return m_tids.count(tid);
 }
 
-Expected<Optional<uint64_t>> TraceIntelPTMultiCpuDecoder::FindLowestTSC() {
-  Optional<uint64_t> lowest_tsc;
+Expected<std::optional<uint64_t>> TraceIntelPTMultiCpuDecoder::FindLowestTSC() {
+  std::optional<uint64_t> lowest_tsc;
   TraceIntelPTSP trace_sp = GetTrace();
 
   Error err = GetTrace()->OnAllCpusBinaryDataRead(
       IntelPTDataKinds::kIptTrace,
       [&](const DenseMap<cpu_id_t, ArrayRef<uint8_t>> &buffers) -> Error {
         for (auto &cpu_id_to_buffer : buffers) {
-          Expected<Optional<uint64_t>> tsc =
+          Expected<std::optional<uint64_t>> tsc =
               FindLowestTSCInTrace(*trace_sp, cpu_id_to_buffer.second);
           if (!tsc)
             return tsc.takeError();
@@ -114,7 +115,7 @@ TraceIntelPTMultiCpuDecoder::DoCorrelateContextSwitchesAndIntelPtTraces() {
       continuous_executions_per_thread;
   TraceIntelPTSP trace_sp = GetTrace();
 
-  Optional<LinuxPerfZeroTscConversion> conv_opt =
+  std::optional<LinuxPerfZeroTscConversion> conv_opt =
       trace_sp->GetPerfZeroTscConversion();
   if (!conv_opt)
     return createStringError(

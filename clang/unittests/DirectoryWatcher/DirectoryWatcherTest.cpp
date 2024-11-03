@@ -15,6 +15,7 @@
 #include <condition_variable>
 #include <future>
 #include <mutex>
+#include <optional>
 #include <thread>
 
 using namespace llvm;
@@ -177,7 +178,7 @@ struct VerifyingConsumer {
   }
 
   // Not locking - caller has to lock Mtx.
-  llvm::Optional<bool> result() const {
+  std::optional<bool> result() const {
     if (ExpectedInitial.empty() && ExpectedNonInitial.empty() &&
         UnexpectedInitial.empty() && UnexpectedNonInitial.empty())
       return true;

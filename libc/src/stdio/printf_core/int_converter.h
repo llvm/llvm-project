@@ -11,6 +11,7 @@
 
 #include "src/__support/CPP/span.h"
 #include "src/__support/CPP/string_view.h"
+#include "src/__support/common.h"
 #include "src/__support/integer_to_string.h"
 #include "src/stdio/printf_core/converter_utils.h"
 #include "src/stdio/printf_core/core_structs.h"
@@ -24,12 +25,11 @@ namespace printf_core {
 
 // These functions only work on characters that are already known to be in the
 // alphabet. Their behavior is undefined otherwise.
-constexpr char inline to_lower(char a) { return a | 32; }
-constexpr bool inline is_lower(char a) { return (a & 32) > 0; }
+LIBC_INLINE constexpr char to_lower(char a) { return a | 32; }
+LIBC_INLINE constexpr bool is_lower(char a) { return (a & 32) > 0; }
 
-cpp::optional<cpp::string_view> inline num_to_strview(uintmax_t num,
-                                                      cpp::span<char> bufref,
-                                                      char conv_name) {
+LIBC_INLINE cpp::optional<cpp::string_view>
+num_to_strview(uintmax_t num, cpp::span<char> bufref, char conv_name) {
   if (to_lower(conv_name) == 'x') {
     return IntegerToString::hex(num, bufref, is_lower(conv_name));
   } else if (conv_name == 'o') {
@@ -39,7 +39,7 @@ cpp::optional<cpp::string_view> inline num_to_strview(uintmax_t num,
   }
 }
 
-int inline convert_int(Writer *writer, const FormatSection &to_conv) {
+LIBC_INLINE int convert_int(Writer *writer, const FormatSection &to_conv) {
   static constexpr size_t BITS_IN_BYTE = 8;
   static constexpr size_t BITS_IN_NUM = sizeof(uintmax_t) * BITS_IN_BYTE;
 

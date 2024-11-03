@@ -14,9 +14,9 @@
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/SCF/IR/DeviceMappingInterface.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
-#include "mlir/IR/BlockAndValueMapping.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/FunctionInterfaces.h"
+#include "mlir/IR/IRMapping.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Support/MathExtras.h"
@@ -38,13 +38,12 @@ struct SCFInlinerInterface : public DialectInlinerInterface {
   // We don't have any special restrictions on what can be inlined into
   // destination regions (e.g. while/conditional bodies). Always allow it.
   bool isLegalToInline(Region *dest, Region *src, bool wouldBeCloned,
-                       BlockAndValueMapping &valueMapping) const final {
+                       IRMapping &valueMapping) const final {
     return true;
   }
   // Operations in scf dialect are always legal to inline since they are
   // pure.
-  bool isLegalToInline(Operation *, Region *, bool,
-                       BlockAndValueMapping &) const final {
+  bool isLegalToInline(Operation *, Region *, bool, IRMapping &) const final {
     return true;
   }
   // Handle the given inlined terminator by replacing it with a new operation
@@ -77,6 +76,23 @@ void SCFDialect::initialize() {
 /// Default callback for IfOp builders. Inserts a yield without arguments.
 void mlir::scf::buildTerminatedBody(OpBuilder &builder, Location loc) {
   builder.create<scf::YieldOp>(loc);
+}
+
+/// Verifies that the first block of the given `region` is terminated by a
+/// TerminatorTy. Reports errors on the given operation if it is not the case.
+template <typename TerminatorTy>
+static TerminatorTy verifyAndGetTerminator(Operation *op, Region &region,
+                                           StringRef errorMessage) {
+  Operation *terminatorOperation = nullptr;
+  if (!region.empty() && !region.front().empty()) {
+    terminatorOperation = &region.front().back();
+    if (auto yield = dyn_cast_or_null<TerminatorTy>(terminatorOperation))
+      return yield;
+  }
+  auto diag = op->emitOpError(errorMessage);
+  if (terminatorOperation)
+    diag.attachNote(terminatorOperation->getLoc()) << "terminator here";
+  return nullptr;
 }
 
 //===----------------------------------------------------------------------===//
@@ -621,7 +637,7 @@ struct ForOpIterArgsFolder : public OpRewritePattern<scf::ForOp> {
     // An internal flat vector of block transfer
     // arguments `newBlockTransferArgs` keeps the 1-1 mapping of original to
     // transformed block argument mappings. This plays the role of a
-    // BlockAndValueMapping for the particular use case of calling into
+    // IRMapping for the particular use case of calling into
     // `mergeBlockBefore`.
     SmallVector<bool, 4> keepMask;
     keepMask.reserve(yieldOp.getNumOperands());
@@ -1094,10 +1110,6 @@ Speculation::Speculatability ForOp::getSpeculatability() {
 //===----------------------------------------------------------------------===//
 
 LogicalResult ForeachThreadOp::verify() {
-  // Call terminator's verify to produce most informative error messages.
-  if (failed(getTerminator().verify()))
-    return failure();
-
   // Check number of outputs.
   if (getNumResults() != getOutputs().size())
     return emitOpError("produces ")
@@ -1451,50 +1463,92 @@ bool mlir::scf::insideMutuallyExclusiveBranches(Operation *a, Operation *b) {
   return false;
 }
 
+LogicalResult
+IfOp::inferReturnTypes(MLIRContext *ctx, std::optional<Location> loc,
+                       ValueRange operands, DictionaryAttr attrs,
+                       RegionRange regions,
+                       SmallVectorImpl<Type> &inferredReturnTypes) {
+  if (regions.empty())
+    return failure();
+  Region *r = regions.front();
+  if (r->empty())
+    return failure();
+  Block &b = r->front();
+  if (b.empty())
+    return failure();
+  auto yieldOp = llvm::dyn_cast<YieldOp>(b.back());
+  if (!yieldOp)
+    return failure();
+  TypeRange types = yieldOp.getOperandTypes();
+  inferredReturnTypes.insert(inferredReturnTypes.end(), types.begin(),
+                             types.end());
+  return success();
+}
+
+void IfOp::build(OpBuilder &builder, OperationState &result,
+                 TypeRange resultTypes, Value cond) {
+  result.addTypes(resultTypes);
+  result.addOperands(cond);
+
+  // Build regions.
+  OpBuilder::InsertionGuard guard(builder);
+  result.addRegion();
+  result.addRegion();
+}
+
 void IfOp::build(OpBuilder &builder, OperationState &result, Value cond,
                  bool withElseRegion) {
-  build(builder, result, /*resultTypes=*/std::nullopt, cond, withElseRegion);
+  build(builder, result, TypeRange{}, cond, withElseRegion);
 }
 
 void IfOp::build(OpBuilder &builder, OperationState &result,
                  TypeRange resultTypes, Value cond, bool withElseRegion) {
-  auto addTerminator = [&](OpBuilder &nested, Location loc) {
-    if (resultTypes.empty())
-      IfOp::ensureTerminator(*nested.getInsertionBlock()->getParent(), nested,
-                             loc);
-  };
+  result.addTypes(resultTypes);
+  result.addOperands(cond);
 
-  build(builder, result, resultTypes, cond, addTerminator,
-        withElseRegion ? addTerminator
-                       : function_ref<void(OpBuilder &, Location)>());
+  // Build then region.
+  OpBuilder::InsertionGuard guard(builder);
+  Region *thenRegion = result.addRegion();
+  builder.createBlock(thenRegion);
+  if (resultTypes.empty())
+    IfOp::ensureTerminator(*thenRegion, builder, result.location);
+
+  // Build else region.
+  Region *elseRegion = result.addRegion();
+  if (withElseRegion) {
+    builder.createBlock(elseRegion);
+    if (resultTypes.empty())
+      IfOp::ensureTerminator(*elseRegion, builder, result.location);
+  }
 }
 
-void IfOp::build(OpBuilder &builder, OperationState &result,
-                 TypeRange resultTypes, Value cond,
+void IfOp::build(OpBuilder &builder, OperationState &result, Value cond,
                  function_ref<void(OpBuilder &, Location)> thenBuilder,
                  function_ref<void(OpBuilder &, Location)> elseBuilder) {
   assert(thenBuilder && "the builder callback for 'then' must be present");
-
   result.addOperands(cond);
-  result.addTypes(resultTypes);
 
+  // Build then region.
   OpBuilder::InsertionGuard guard(builder);
   Region *thenRegion = result.addRegion();
   builder.createBlock(thenRegion);
   thenBuilder(builder, result.location);
 
+  // Build else region.
   Region *elseRegion = result.addRegion();
-  if (!elseBuilder)
-    return;
+  if (elseBuilder) {
+    builder.createBlock(elseRegion);
+    elseBuilder(builder, result.location);
+  }
 
-  builder.createBlock(elseRegion);
-  elseBuilder(builder, result.location);
-}
-
-void IfOp::build(OpBuilder &builder, OperationState &result, Value cond,
-                 function_ref<void(OpBuilder &, Location)> thenBuilder,
-                 function_ref<void(OpBuilder &, Location)> elseBuilder) {
-  build(builder, result, TypeRange(), cond, thenBuilder, elseBuilder);
+  // Infer result types.
+  SmallVector<Type> inferredReturnTypes;
+  MLIRContext *ctx = builder.getContext();
+  auto attrDict = DictionaryAttr::get(ctx, result.attributes);
+  if (succeeded(inferReturnTypes(ctx, std::nullopt, result.operands, attrDict,
+                                 result.regions, inferredReturnTypes))) {
+    result.addTypes(inferredReturnTypes);
+  }
 }
 
 LogicalResult IfOp::verify() {
@@ -1598,7 +1652,7 @@ void IfOp::getSuccessorRegions(std::optional<unsigned> index,
   regions.push_back(RegionSuccessor(condition ? &getThenRegion() : elseRegion));
 }
 
-LogicalResult IfOp::fold(ArrayRef<Attribute> operands,
+LogicalResult IfOp::fold(FoldAdaptor adaptor,
                          SmallVectorImpl<OpFoldResult> &results) {
   // if (!c) then A() else B() -> if c then B() else A()
   if (getElseRegion().empty())
@@ -1673,9 +1727,10 @@ struct RemoveUnusedResults : public OpRewritePattern<IfOp> {
                     [](OpResult result) { return result.getType(); });
 
     // Create a replacement operation with empty then and else regions.
-    auto emptyBuilder = [](OpBuilder &, Location) {};
-    auto newOp = rewriter.create<IfOp>(op.getLoc(), newTypes, op.getCondition(),
-                                       emptyBuilder, emptyBuilder);
+    auto newOp =
+        rewriter.create<IfOp>(op.getLoc(), newTypes, op.getCondition());
+    rewriter.createBlock(&newOp.getThenRegion());
+    rewriter.createBlock(&newOp.getElseRegion());
 
     // Move the bodies and replace the terminators (note there is a then and
     // an else region since the operation returns results).
@@ -1739,7 +1794,8 @@ struct ConvertTrivialIfToSelect : public OpRewritePattern<IfOp> {
     if (nonHoistable.size() == op->getNumResults())
       return failure();
 
-    IfOp replacement = rewriter.create<IfOp>(op.getLoc(), nonHoistable, cond);
+    IfOp replacement = rewriter.create<IfOp>(op.getLoc(), nonHoistable, cond,
+                                             /*withElseRegion=*/false);
     if (replacement.thenBlock())
       rewriter.eraseBlock(replacement.thenBlock());
     replacement.getThenRegion().takeBody(op.getThenRegion());
@@ -2192,6 +2248,7 @@ struct CombineNestedIfs : public OpRewritePattern<IfOp> {
     Value newCondition = rewriter.create<arith::AndIOp>(
         loc, op.getCondition(), nestedIf.getCondition());
     auto newIf = rewriter.create<IfOp>(loc, op.getResultTypes(), newCondition);
+    Block *newIfBlock = rewriter.createBlock(&newIf.getThenRegion());
 
     SmallVector<Value> results;
     llvm::append_range(results, newIf.getResults());
@@ -2201,11 +2258,6 @@ struct CombineNestedIfs : public OpRewritePattern<IfOp> {
       results[idx] = rewriter.create<arith::SelectOp>(
           op.getLoc(), op.getCondition(), thenYield[idx], elseYield[idx]);
 
-    Block *newIfBlock = newIf.thenBlock();
-    if (newIfBlock)
-      rewriter.eraseOp(newIfBlock->getTerminator());
-    else
-      newIfBlock = rewriter.createBlock(&newIf.getThenRegion());
     rewriter.mergeBlocks(nestedIf.thenBlock(), newIfBlock);
     rewriter.setInsertionPointToEnd(newIf.thenBlock());
     rewriter.replaceOpWithNewOp<YieldOp>(newIf.thenYield(), thenYield);
@@ -2324,10 +2376,13 @@ LogicalResult ParallelOp::verify() {
           "expects arguments for the induction variable to be of index type");
 
   // Check that the yield has no results
-  Operation *yield = body->getTerminator();
+  auto yield = verifyAndGetTerminator<scf::YieldOp>(
+      *this, getRegion(), "expects body to terminate with 'scf.yield'");
+  if (!yield)
+    return failure();
   if (yield->getNumOperands() != 0)
-    return yield->emitOpError() << "not allowed to have operands inside '"
-                                << ParallelOp::getOperationName() << "'";
+    return yield.emitOpError() << "not allowed to have operands inside '"
+                               << ParallelOp::getOperationName() << "'";
 
   // Check that the number of results is the same as the number of ReduceOps.
   SmallVector<ReduceOp, 4> reductions(body->getOps<ReduceOp>());
@@ -2454,7 +2509,7 @@ struct CollapseSingleIterationLoops : public OpRewritePattern<ParallelOp> {
 
   LogicalResult matchAndRewrite(ParallelOp op,
                                 PatternRewriter &rewriter) const override {
-    BlockAndValueMapping mapping;
+    IRMapping mapping;
     // Compute new loop bounds that omit all single-iteration loop dimensions.
     SmallVector<Value, 2> newLowerBounds;
     SmallVector<Value, 2> newUpperBounds;
@@ -2573,7 +2628,7 @@ struct MergeNestedParallelLoops : public OpRewritePattern<ParallelOp> {
       Block &innerBody = innerOp.getLoopBody().front();
       assert(iterVals.size() ==
              (outerBody.getNumArguments() + innerBody.getNumArguments()));
-      BlockAndValueMapping mapping;
+      IRMapping mapping;
       mapping.map(outerBody.getArguments(),
                   iterVals.take_front(outerBody.getNumArguments()));
       mapping.map(innerBody.getArguments(),
@@ -2853,21 +2908,6 @@ static LogicalResult verifyTypeRangesMatch(OpTy op, TypeRange left,
   }
 
   return success();
-}
-
-/// Verifies that the first block of the given `region` is terminated by a
-/// YieldOp. Reports errors on the given operation if it is not the case.
-template <typename TerminatorTy>
-static TerminatorTy verifyAndGetTerminator(scf::WhileOp op, Region &region,
-                                           StringRef errorMessage) {
-  Operation *terminatorOperation = region.front().getTerminator();
-  if (auto yield = dyn_cast_or_null<TerminatorTy>(terminatorOperation))
-    return yield;
-
-  auto diag = op.emitOpError(errorMessage);
-  if (terminatorOperation)
-    diag.attachNote(terminatorOperation->getLoc()) << "terminator here";
-  return nullptr;
 }
 
 LogicalResult scf::WhileOp::verify() {

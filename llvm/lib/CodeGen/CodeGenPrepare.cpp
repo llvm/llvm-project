@@ -1241,7 +1241,7 @@ simplifyRelocatesOffABase(GCRelocateInst *RelocatedBase,
     }
     Value *Replacement =
         Builder.CreateGEP(Derived->getSourceElementType(), ActualRelocatedBase,
-                          makeArrayRef(OffsetV));
+                          ArrayRef(OffsetV));
     Replacement->takeName(ToReplace);
     // If the newly generated derived pointer's type does not match the original
     // derived pointer's type, cast the new derived pointer to match it. Same
@@ -2355,7 +2355,7 @@ bool CodeGenPrepare::optimizeCallInst(CallInst *CI, ModifyDT &ModifiedDT) {
       // to benefit from cheap constant propagation.
       Type *ScalableVectorTy =
           VectorType::get(Type::getInt8Ty(II->getContext()), 1, true);
-      if (DL->getTypeAllocSize(ScalableVectorTy).getKnownMinSize() == 8) {
+      if (DL->getTypeAllocSize(ScalableVectorTy).getKnownMinValue() == 8) {
         auto *Null = Constant::getNullValue(ScalableVectorTy->getPointerTo());
         auto *One = ConstantInt::getSigned(II->getType(), 1);
         auto *CGep =
@@ -2603,7 +2603,7 @@ struct ExtAddrMode : public TargetLowering::AddrMode {
     if (Scale && other.Scale && Scale != other.Scale)
       Result |= ScaleField;
 
-    if (countPopulation(Result) > 1)
+    if (llvm::popcount(Result) > 1)
       return MultipleFields;
     else
       return static_cast<FieldName>(Result);
@@ -4694,7 +4694,7 @@ bool AddressingModeMatcher::matchOperationAddr(User *AddrInst, unsigned Opcode,
           // The optimisations below currently only work for fixed offsets.
           if (TS.isScalable())
             return false;
-          int64_t TypeSize = TS.getFixedSize();
+          int64_t TypeSize = TS.getFixedValue();
           if (ConstantInt *CI =
                   dyn_cast<ConstantInt>(AddrInst->getOperand(i))) {
             const APInt &CVal = CI->getValue();
@@ -5680,11 +5680,10 @@ bool CodeGenPrepare::optimizeGatherScatterInst(Instruction *MemoryInst,
     // If the final index isn't a vector, emit a scalar GEP containing all ops
     // and a vector GEP with all zeroes final index.
     if (!Ops[FinalIndex]->getType()->isVectorTy()) {
-      NewAddr =
-          Builder.CreateGEP(SourceTy, Ops[0], makeArrayRef(Ops).drop_front());
+      NewAddr = Builder.CreateGEP(SourceTy, Ops[0], ArrayRef(Ops).drop_front());
       auto *IndexTy = VectorType::get(ScalarIndexTy, NumElts);
       auto *SecondTy = GetElementPtrInst::getIndexedType(
-          SourceTy, makeArrayRef(Ops).drop_front());
+          SourceTy, ArrayRef(Ops).drop_front());
       NewAddr =
           Builder.CreateGEP(SecondTy, NewAddr, Constant::getNullValue(IndexTy));
     } else {
@@ -5695,10 +5694,9 @@ bool CodeGenPrepare::optimizeGatherScatterInst(Instruction *MemoryInst,
       if (Ops.size() != 2) {
         // Replace the last index with 0.
         Ops[FinalIndex] = Constant::getNullValue(ScalarIndexTy);
-        Base =
-            Builder.CreateGEP(SourceTy, Base, makeArrayRef(Ops).drop_front());
+        Base = Builder.CreateGEP(SourceTy, Base, ArrayRef(Ops).drop_front());
         SourceTy = GetElementPtrInst::getIndexedType(
-            SourceTy, makeArrayRef(Ops).drop_front());
+            SourceTy, ArrayRef(Ops).drop_front());
       }
 
       // Now create the GEP with scalar pointer and vector index.
@@ -7385,11 +7383,11 @@ class VectorPromoteHelper {
     // The scalar chain of computation has to pay for the transition
     // scalar to vector.
     // The vector chain has to account for the combining cost.
-    InstructionCost ScalarCost =
-        TTI.getVectorInstrCost(*Transition, PromotedType, Index);
-    InstructionCost VectorCost = StoreExtractCombineCost;
     enum TargetTransformInfo::TargetCostKind CostKind =
         TargetTransformInfo::TCK_RecipThroughput;
+    InstructionCost ScalarCost =
+        TTI.getVectorInstrCost(*Transition, PromotedType, CostKind, Index);
+    InstructionCost VectorCost = StoreExtractCombineCost;
     for (const auto &Inst : InstsToBePromoted) {
       // Compute the cost.
       // By construction, all instructions being promoted are arithmetic ones.
@@ -8328,7 +8326,7 @@ bool CodeGenPrepare::placeDbgValues(Function &F) {
               dbgs()
               << "Unable to find valid location for Debug Value, undefing:\n"
               << *DVI);
-          DVI->setUndef();
+          DVI->setKillLocation();
           break;
         }
 
@@ -8487,7 +8485,7 @@ bool CodeGenPrepare::splitBranchCondition(Function &F, ModifyDT &ModifiedDT) {
     // Replace the old BB with the new BB.
     TBB->replacePhiUsesWith(&BB, TmpBB);
 
-    // Add another incoming edge form the new BB.
+    // Add another incoming edge from the new BB.
     for (PHINode &PN : FBB->phis()) {
       auto *Val = PN.getIncomingValueForBlock(&BB);
       PN.addIncoming(Val, TmpBB);

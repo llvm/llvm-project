@@ -290,6 +290,13 @@ getModel<const Fortran::runtime::typeInfo::DerivedType &>() {
   };
 }
 template <>
+constexpr TypeBuilderFunc
+getModel<const Fortran::runtime::typeInfo::DerivedType *>() {
+  return [](mlir::MLIRContext *context) -> mlir::Type {
+    return fir::ReferenceType::get(mlir::NoneType::get(context));
+  };
+}
+template <>
 constexpr TypeBuilderFunc getModel<void>() {
   return [](mlir::MLIRContext *context) -> mlir::Type {
     return mlir::NoneType::get(context);

@@ -12,6 +12,7 @@
 #include "clang/AST/DeclGroup.h"
 #include "clang/Basic/Builtins.h"
 #include "clang/Basic/DiagnosticOptions.h"
+#include "clang/Basic/FileEntry.h"
 #include "clang/Basic/LangStandard.h"
 #include "clang/Basic/Sarif.h"
 #include "clang/Frontend/ASTUnit.h"
@@ -376,7 +377,9 @@ static std::error_code collectModuleHeaderIncludes(
     llvm::sys::path::native(UmbrellaDir.Entry->getName(), DirNative);
 
     llvm::vfs::FileSystem &FS = FileMgr.getVirtualFileSystem();
-    SmallVector<std::pair<std::string, const FileEntry *>, 8> Headers;
+    SmallVector<
+        std::pair<std::string, OptionalFileEntryRefDegradesToFileEntryPtr>, 8>
+        Headers;
     for (llvm::vfs::recursive_directory_iterator Dir(FS, DirNative, EC), End;
          Dir != End && !EC; Dir.increment(EC)) {
       // Check whether this entry has an extension typically associated with
@@ -386,7 +389,7 @@ static std::error_code collectModuleHeaderIncludes(
                .Default(false))
         continue;
 
-      auto Header = FileMgr.getFile(Dir->path());
+      auto Header = FileMgr.getOptionalFileRef(Dir->path());
       // FIXME: This shouldn't happen unless there is a file system race. Is
       // that worth diagnosing?
       if (!Header)

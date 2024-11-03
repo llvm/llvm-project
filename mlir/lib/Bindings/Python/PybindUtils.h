@@ -10,8 +10,8 @@
 #define MLIR_BINDINGS_PYTHON_PYBINDUTILS_H
 
 #include "mlir-c/Support.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/Twine.h"
+#include "llvm/Support/DataTypes.h"
 
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>

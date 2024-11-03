@@ -38,12 +38,14 @@ extern int targetDataUpdate(ident_t *Loc, DeviceTy &Device, int32_t ArgNum,
                             void **ArgMappers, AsyncInfoTy &AsyncInfo,
                             bool FromMapper = false);
 
-extern int target(ident_t *Loc, DeviceTy &Device, void *HostPtr, int32_t ArgNum,
-                  void **ArgBases, void **Args, int64_t *ArgSizes,
-                  int64_t *ArgTypes, map_var_info_t *ArgNames,
-                  void **ArgMappers, int32_t TeamNum, int32_t ThreadLimit,
-                  uint64_t Tripcount, int IsTeamConstruct,
-                  AsyncInfoTy &AsyncInfo);
+extern int target(ident_t *Loc, DeviceTy &Device, void *HostPtr,
+                  KernelArgsTy &KernelArgs, AsyncInfoTy &AsyncInfo);
+
+extern int target_replay(ident_t *Loc, DeviceTy &Device, void *HostPtr,
+                         void *DeviceMemory, int64_t DeviceMemorySize,
+                         void **TgtArgs, ptrdiff_t *TgtOffsets, int32_t NumArgs,
+                         int32_t NumTeams, int32_t ThreadLimit,
+                         uint64_t LoopTripCount, AsyncInfoTy &AsyncInfo);
 
 extern void handleTargetOutcome(bool Success, ident_t *Loc);
 extern bool checkDeviceAndCtors(int64_t &DeviceID, ident_t *Loc);
@@ -51,6 +53,10 @@ extern void *targetAllocExplicit(size_t Size, int DeviceNum, int Kind,
                                  const char *Name);
 extern void targetFreeExplicit(void *DevicePtr, int DeviceNum, int Kind,
                                const char *Name);
+extern void *targetLockExplicit(void *HostPtr, size_t Size, int DeviceNum,
+                                const char *Name);
+extern void targetUnlockExplicit(void *HostPtr, int DeviceNum,
+                                 const char *Name);
 
 // This structure stores information of a mapped memory region.
 struct MapComponentInfoTy {

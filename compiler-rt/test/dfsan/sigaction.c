@@ -1,7 +1,5 @@
 // RUN: %clang_dfsan -DUSE_SIGNAL_ACTION -Wno-error=int-conversion %s -o %t && %run %t
 // RUN: %clang_dfsan -Wno-error=int-conversion %s -o %t && %run %t
-//
-// REQUIRES: x86_64-target-arch
 
 #include <sanitizer/dfsan_interface.h>
 

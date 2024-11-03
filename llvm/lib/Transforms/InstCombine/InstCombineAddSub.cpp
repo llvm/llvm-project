@@ -1444,6 +1444,13 @@ Instruction *InstCombinerImpl::visitAdd(BinaryOperator &I) {
     return BinaryOperator::CreateAnd(A, NewMask);
   }
 
+  // ZExt (B - A) + ZExt(A) --> ZExt(B)
+  if ((match(RHS, m_ZExt(m_Value(A))) &&
+       match(LHS, m_ZExt(m_NUWSub(m_Value(B), m_Specific(A))))) ||
+      (match(LHS, m_ZExt(m_Value(A))) &&
+       match(RHS, m_ZExt(m_NUWSub(m_Value(B), m_Specific(A))))))
+    return new ZExtInst(B, LHS->getType());
+
   // A+B --> A|B iff A and B have no bits set in common.
   if (haveNoCommonBitsSet(LHS, RHS, DL, &AC, &I, &DT))
     return BinaryOperator::CreateOr(LHS, RHS);
@@ -1511,6 +1518,19 @@ Instruction *InstCombinerImpl::visitAdd(BinaryOperator &I) {
     Constant *ShiftAmtC = ConstantInt::get(Ty, NegPow2C->countTrailingZeros());
     Value *Shl = Builder.CreateShl(A, ShiftAmtC);
     return BinaryOperator::CreateSub(B, Shl);
+  }
+
+  // Canonicalize signum variant that ends in add:
+  // (A s>> (BW - 1)) + (zext (A s> 0)) --> (A s>> (BW - 1)) | (zext (A != 0))
+  ICmpInst::Predicate Pred;
+  uint64_t BitWidth = Ty->getScalarSizeInBits();
+  if (match(LHS, m_AShr(m_Value(A), m_SpecificIntAllowUndef(BitWidth - 1))) &&
+      match(RHS, m_OneUse(m_ZExt(
+                     m_OneUse(m_ICmp(Pred, m_Specific(A), m_ZeroInt()))))) &&
+      Pred == CmpInst::ICMP_SGT) {
+    Value *NotZero = Builder.CreateIsNotNull(A, "isnotnull");
+    Value *Zext = Builder.CreateZExt(NotZero, Ty, "isnotnull.zext");
+    return BinaryOperator::CreateOr(LHS, Zext);
   }
 
   if (Instruction *Ashr = foldAddToAshr(I))
@@ -2284,8 +2304,9 @@ Instruction *InstCombinerImpl::visitSub(BinaryOperator &I) {
   Value *A;
   const APInt *ShAmt;
   Type *Ty = I.getType();
+  unsigned BitWidth = Ty->getScalarSizeInBits();
   if (match(Op1, m_AShr(m_Value(A), m_APInt(ShAmt))) &&
-      Op1->hasNUses(2) && *ShAmt == Ty->getScalarSizeInBits() - 1 &&
+      Op1->hasNUses(2) && *ShAmt == BitWidth - 1 &&
       match(Op0, m_OneUse(m_c_Xor(m_Specific(A), m_Specific(Op1))))) {
     // B = ashr i32 A, 31 ; smear the sign bit
     // sub (xor A, B), B  ; flip bits if negative and subtract -1 (add 1)
@@ -2304,7 +2325,6 @@ Instruction *InstCombinerImpl::visitSub(BinaryOperator &I) {
   const APInt *AddC, *AndC;
   if (match(Op0, m_Add(m_Value(X), m_APInt(AddC))) &&
       match(Op1, m_And(m_Specific(X), m_APInt(AndC)))) {
-    unsigned BitWidth = Ty->getScalarSizeInBits();
     unsigned Cttz = AddC->countTrailingZeros();
     APInt HighMask(APInt::getHighBitsSet(BitWidth, BitWidth - Cttz));
     if ((HighMask & *AndC).isZero())
@@ -2346,11 +2366,27 @@ Instruction *InstCombinerImpl::visitSub(BinaryOperator &I) {
   }
 
   // C - ctpop(X) => ctpop(~X) if C is bitwidth
-  if (match(Op0, m_SpecificInt(Ty->getScalarSizeInBits())) &&
+  if (match(Op0, m_SpecificInt(BitWidth)) &&
       match(Op1, m_OneUse(m_Intrinsic<Intrinsic::ctpop>(m_Value(X)))))
     return replaceInstUsesWith(
         I, Builder.CreateIntrinsic(Intrinsic::ctpop, {I.getType()},
                                    {Builder.CreateNot(X)}));
+
+  // Reduce multiplies for difference-of-squares by factoring:
+  // (X * X) - (Y * Y) --> (X + Y) * (X - Y)
+  if (match(Op0, m_OneUse(m_Mul(m_Value(X), m_Deferred(X)))) &&
+      match(Op1, m_OneUse(m_Mul(m_Value(Y), m_Deferred(Y))))) {
+    auto *OBO0 = cast<OverflowingBinaryOperator>(Op0);
+    auto *OBO1 = cast<OverflowingBinaryOperator>(Op1);
+    bool PropagateNSW = I.hasNoSignedWrap() && OBO0->hasNoSignedWrap() &&
+                        OBO1->hasNoSignedWrap() && BitWidth > 2;
+    bool PropagateNUW = I.hasNoUnsignedWrap() && OBO0->hasNoUnsignedWrap() &&
+                        OBO1->hasNoUnsignedWrap() && BitWidth > 1;
+    Value *Add = Builder.CreateAdd(X, Y, "add", PropagateNUW, PropagateNSW);
+    Value *Sub = Builder.CreateSub(X, Y, "sub", PropagateNUW, PropagateNSW);
+    Value *Mul = Builder.CreateMul(Add, Sub, "", PropagateNUW, PropagateNSW);
+    return replaceInstUsesWith(I, Mul);
+  }
 
   return TryToNarrowDeduceFlags();
 }
@@ -2436,9 +2472,13 @@ Instruction *InstCombinerImpl::visitFNeg(UnaryOperator &I) {
   if (Instruction *R = hoistFNegAboveFMulFDiv(I, Builder))
     return R;
 
+  Value *OneUse;
+  if (!match(Op, m_OneUse(m_Value(OneUse))))
+    return nullptr;
+
   // Try to eliminate fneg if at least 1 arm of the select is negated.
   Value *Cond;
-  if (match(Op, m_OneUse(m_Select(m_Value(Cond), m_Value(X), m_Value(Y))))) {
+  if (match(OneUse, m_Select(m_Value(Cond), m_Value(X), m_Value(Y)))) {
     // Unlike most transforms, this one is not safe to propagate nsz unless
     // it is present on the original select. We union the flags from the select
     // and fneg and then remove nsz if needed.
@@ -2468,6 +2508,21 @@ Instruction *InstCombinerImpl::visitFNeg(UnaryOperator &I) {
       propagateSelectFMF(NewSel, P == X);
       return NewSel;
     }
+  }
+
+  // fneg (copysign x, y) -> copysign x, (fneg y)
+  if (match(OneUse, m_CopySign(m_Value(X), m_Value(Y)))) {
+    // The source copysign has an additional value input, so we can't propagate
+    // flags the copysign doesn't also have.
+    FastMathFlags FMF = I.getFastMathFlags();
+    FMF &= cast<FPMathOperator>(OneUse)->getFastMathFlags();
+
+    IRBuilder<>::FastMathFlagGuard FMFGuard(Builder);
+    Builder.setFastMathFlags(FMF);
+
+    Value *NegY = Builder.CreateFNeg(Y);
+    Value *NewCopySign = Builder.CreateCopySign(X, NegY);
+    return replaceInstUsesWith(I, NewCopySign);
   }
 
   return nullptr;

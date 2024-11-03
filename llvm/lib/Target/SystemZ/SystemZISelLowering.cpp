@@ -643,6 +643,8 @@ SystemZTargetLowering::SystemZTargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::VACOPY,  MVT::Other, Custom);
   setOperationAction(ISD::VAEND,   MVT::Other, Expand);
 
+  setOperationAction(ISD::GET_ROUNDING, MVT::i32, Custom);
+
   // Codes for which we want to perform some z-specific combinations.
   setTargetDAGCombine({ISD::ZERO_EXTEND,
                        ISD::SIGN_EXTEND,
@@ -1022,8 +1024,8 @@ EVT SystemZTargetLowering::getOptimalMemOpType(const MemOp &Op,
 bool SystemZTargetLowering::isTruncateFree(Type *FromType, Type *ToType) const {
   if (!FromType->isIntegerTy() || !ToType->isIntegerTy())
     return false;
-  unsigned FromBits = FromType->getPrimitiveSizeInBits().getFixedSize();
-  unsigned ToBits = ToType->getPrimitiveSizeInBits().getFixedSize();
+  unsigned FromBits = FromType->getPrimitiveSizeInBits().getFixedValue();
+  unsigned ToBits = ToType->getPrimitiveSizeInBits().getFixedValue();
   return FromBits > ToBits;
 }
 
@@ -1628,8 +1630,8 @@ SDValue SystemZTargetLowering::LowerFormalArguments(
       }
       // Join the stores, which are independent of one another.
       Chain = DAG.getNode(ISD::TokenFactor, DL, MVT::Other,
-                          makeArrayRef(&MemOps[NumFixedFPRs],
-                                       SystemZ::ELFNumArgFPRs-NumFixedFPRs));
+                          ArrayRef(&MemOps[NumFixedFPRs],
+                                   SystemZ::ELFNumArgFPRs - NumFixedFPRs));
     }
   }
 
@@ -2489,8 +2491,8 @@ static void adjustICmpTruncate(SelectionDAG &DAG, const SDLoc &DL,
       C.Op1.getOpcode() == ISD::Constant &&
       cast<ConstantSDNode>(C.Op1)->getZExtValue() == 0) {
     auto *L = cast<LoadSDNode>(C.Op0.getOperand(0));
-    if (L->getMemoryVT().getStoreSizeInBits().getFixedSize() <=
-        C.Op0.getValueSizeInBits().getFixedSize()) {
+    if (L->getMemoryVT().getStoreSizeInBits().getFixedValue() <=
+        C.Op0.getValueSizeInBits().getFixedValue()) {
       unsigned Type = L->getExtensionType();
       if ((Type == ISD::ZEXTLOAD && C.ICmpType != SystemZICMP::SignedOnly) ||
           (Type == ISD::SEXTLOAD && C.ICmpType != SystemZICMP::UnsignedOnly)) {
@@ -3672,7 +3674,7 @@ SystemZTargetLowering::lowerDYNAMIC_STACKALLOC_XPLINK(SDValue Op,
   bool IsReturnValueUsed = false;
   EVT VT = Op.getValueType();
   SDValue AllocaCall =
-      makeExternalCall(Chain, DAG, "@@ALCAXP", VT, makeArrayRef(NeededSpace),
+      makeExternalCall(Chain, DAG, "@@ALCAXP", VT, ArrayRef(NeededSpace),
                        CallingConv::C, IsSigned, DL, DoesNotReturn,
                        IsReturnValueUsed)
           .first;
@@ -4102,7 +4104,7 @@ SDValue SystemZTargetLowering::lowerCTPOP(SDValue Op,
 
   // Skip known-zero high parts of the operand.
   int64_t OrigBitSize = VT.getSizeInBits();
-  int64_t BitSize = (int64_t)1 << Log2_32_Ceil(NumSignificantBits);
+  int64_t BitSize = llvm::bit_ceil(NumSignificantBits);
   BitSize = std::min(BitSize, OrigBitSize);
 
   // The POPCNT instruction counts the number of bits in each byte.
@@ -4146,7 +4148,7 @@ SDValue SystemZTargetLowering::lowerATOMIC_FENCE(SDValue Op,
   }
 
   // MEMBARRIER is a compiler barrier; it codegens to a no-op.
-  return DAG.getNode(SystemZISD::MEMBARRIER, DL, MVT::Other, Op.getOperand(0));
+  return DAG.getNode(ISD::MEMBARRIER, DL, MVT::Other, Op.getOperand(0));
 }
 
 // Op is an atomic load.  Lower it into a normal volatile load.
@@ -5806,6 +5808,8 @@ SDValue SystemZTargetLowering::LowerOperation(SDValue Op,
     return lowerShift(Op, DAG, SystemZISD::VSRA_BY_SCALAR);
   case ISD::IS_FPCLASS:
     return lowerIS_FPCLASS(Op, DAG);
+  case ISD::GET_ROUNDING:
+    return lowerGET_ROUNDING(Op, DAG);
   default:
     llvm_unreachable("Unexpected node to lower");
   }
@@ -5944,7 +5948,6 @@ const char *SystemZTargetLowering::getTargetNodeName(unsigned Opcode) const {
     OPCODE(STRCMP);
     OPCODE(SEARCH_STRING);
     OPCODE(IPM);
-    OPCODE(MEMBARRIER);
     OPCODE(TBEGIN);
     OPCODE(TBEGIN_NOFLOAT);
     OPCODE(TEND);
@@ -9035,4 +9038,44 @@ SystemZTargetLowering::getRepRegClassFor(MVT VT) const {
   if (VT == MVT::Untyped)
     return &SystemZ::ADDR128BitRegClass;
   return TargetLowering::getRepRegClassFor(VT);
+}
+
+SDValue SystemZTargetLowering::lowerGET_ROUNDING(SDValue Op,
+                                                 SelectionDAG &DAG) const {
+  SDLoc dl(Op);
+  /*
+   The rounding method is in FPC Byte 3 bits 6-7, and has the following
+   settings:
+     00 Round to nearest
+     01 Round to 0
+     10 Round to +inf
+     11 Round to -inf
+
+  FLT_ROUNDS, on the other hand, expects the following:
+    -1 Undefined
+     0 Round to 0
+     1 Round to nearest
+     2 Round to +inf
+     3 Round to -inf
+  */
+
+  // Save FPC to register.
+  SDValue Chain = Op.getOperand(0);
+  SDValue EFPC(
+      DAG.getMachineNode(SystemZ::EFPC, dl, {MVT::i32, MVT::Other}, Chain), 0);
+  Chain = EFPC.getValue(1);
+
+  // Transform as necessary
+  SDValue CWD1 = DAG.getNode(ISD::AND, dl, MVT::i32, EFPC,
+                             DAG.getConstant(3, dl, MVT::i32));
+  // RetVal = (CWD1 ^ (CWD1 >> 1)) ^ 1
+  SDValue CWD2 = DAG.getNode(ISD::XOR, dl, MVT::i32, CWD1,
+                             DAG.getNode(ISD::SRL, dl, MVT::i32, CWD1,
+                                         DAG.getConstant(1, dl, MVT::i32)));
+
+  SDValue RetVal = DAG.getNode(ISD::XOR, dl, MVT::i32, CWD2,
+                               DAG.getConstant(1, dl, MVT::i32));
+  RetVal = DAG.getZExtOrTrunc(RetVal, dl, Op.getValueType());
+
+  return DAG.getMergeValues({RetVal, Chain}, dl);
 }

@@ -276,6 +276,9 @@ bool isPointerType(mlir::Type ty);
 /// Return true iff `ty` is the type of an ALLOCATABLE entity or value.
 bool isAllocatableType(mlir::Type ty);
 
+/// Return true iff `ty` is !fir.box<none>.
+bool isBoxNone(mlir::Type ty);
+
 /// Return true iff `ty` is the type of a boxed record type.
 /// e.g. !fir.box<!fir.type<derived>>
 bool isBoxedRecordType(mlir::Type ty);

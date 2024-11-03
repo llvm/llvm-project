@@ -1,7 +1,7 @@
-; RUN: llc -O2 -mtriple powerpc64-ibm-aix-xcoff -stop-after=machine-cp -verify-machineinstrs < %s | \
+; RUN: llc -opaque-pointers=0 -O2 -mtriple powerpc64-ibm-aix-xcoff -stop-after=machine-cp -verify-machineinstrs < %s | \
 ; RUN: FileCheck --check-prefix=64BIT %s
 
-; RUN: llc -O2 -verify-machineinstrs -mcpu=pwr4 -mattr=-altivec \
+; RUN: llc -opaque-pointers=0 -O2 -verify-machineinstrs -mcpu=pwr4 -mattr=-altivec \
 ; RUN: -mtriple powerpc64-ibm-aix-xcoff < %s | \
 ; RUN: FileCheck --check-prefix=ASM64 %s
 

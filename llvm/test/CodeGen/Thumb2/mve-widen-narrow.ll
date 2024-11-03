@@ -45,42 +45,32 @@ entry:
 define void @foo_int8_int32_double(ptr %dest, ptr readonly %src, i32 %n) {
 ; CHECK-LE-LABEL: foo_int8_int32_double:
 ; CHECK-LE:       @ %bb.0: @ %entry
-; CHECK-LE-NEXT:    vldrh.u16 q1, [r1]
-; CHECK-LE-NEXT:    vmov r2, r3, d2
-; CHECK-LE-NEXT:    vmov.16 q0[0], r2
-; CHECK-LE-NEXT:    vmov.16 q0[1], r3
-; CHECK-LE-NEXT:    vmov r2, r3, d3
-; CHECK-LE-NEXT:    vldrh.u16 q1, [r1, #16]
-; CHECK-LE-NEXT:    vmov.16 q0[2], r2
-; CHECK-LE-NEXT:    vmov.16 q0[3], r3
-; CHECK-LE-NEXT:    vmov r1, r2, d2
-; CHECK-LE-NEXT:    vmov.16 q0[4], r1
-; CHECK-LE-NEXT:    vmov.16 q0[5], r2
-; CHECK-LE-NEXT:    vmov r1, r2, d3
-; CHECK-LE-NEXT:    vmov.16 q0[6], r1
-; CHECK-LE-NEXT:    vmov.16 q0[7], r2
+; CHECK-LE-NEXT:    .pad #16
+; CHECK-LE-NEXT:    sub sp, #16
+; CHECK-LE-NEXT:    vldrh.u16 q0, [r1, #16]
+; CHECK-LE-NEXT:    mov r2, sp
+; CHECK-LE-NEXT:    vstrh.32 q0, [r2, #8]
+; CHECK-LE-NEXT:    vldrh.u16 q0, [r1]
+; CHECK-LE-NEXT:    vstrh.32 q0, [r2]
+; CHECK-LE-NEXT:    vldrw.u32 q0, [r2]
 ; CHECK-LE-NEXT:    vstrb.16 q0, [r0]
+; CHECK-LE-NEXT:    add sp, #16
 ; CHECK-LE-NEXT:    bx lr
 ;
 ; CHECK-BE-LABEL: foo_int8_int32_double:
 ; CHECK-BE:       @ %bb.0: @ %entry
+; CHECK-BE-NEXT:    .pad #16
+; CHECK-BE-NEXT:    sub sp, #16
+; CHECK-BE-NEXT:    vldrb.u8 q0, [r1, #16]
+; CHECK-BE-NEXT:    mov r2, sp
+; CHECK-BE-NEXT:    vrev32.8 q0, q0
+; CHECK-BE-NEXT:    vstrh.32 q0, [r2, #8]
 ; CHECK-BE-NEXT:    vldrb.u8 q0, [r1]
-; CHECK-BE-NEXT:    vrev32.8 q1, q0
-; CHECK-BE-NEXT:    vmov r2, r3, d2
-; CHECK-BE-NEXT:    vmov.16 q0[0], r2
-; CHECK-BE-NEXT:    vmov.16 q0[1], r3
-; CHECK-BE-NEXT:    vmov r2, r3, d3
-; CHECK-BE-NEXT:    vldrb.u8 q1, [r1, #16]
-; CHECK-BE-NEXT:    vmov.16 q0[2], r2
-; CHECK-BE-NEXT:    vmov.16 q0[3], r3
-; CHECK-BE-NEXT:    vrev32.8 q1, q1
-; CHECK-BE-NEXT:    vmov r1, r2, d2
-; CHECK-BE-NEXT:    vmov.16 q0[4], r1
-; CHECK-BE-NEXT:    vmov.16 q0[5], r2
-; CHECK-BE-NEXT:    vmov r1, r2, d3
-; CHECK-BE-NEXT:    vmov.16 q0[6], r1
-; CHECK-BE-NEXT:    vmov.16 q0[7], r2
+; CHECK-BE-NEXT:    vrev32.8 q0, q0
+; CHECK-BE-NEXT:    vstrh.32 q0, [r2]
+; CHECK-BE-NEXT:    vldrh.u16 q0, [r2]
 ; CHECK-BE-NEXT:    vstrb.16 q0, [r0]
+; CHECK-BE-NEXT:    add sp, #16
 ; CHECK-BE-NEXT:    bx lr
 entry:
   %wide.load = load <8 x i32>, ptr %src, align 2

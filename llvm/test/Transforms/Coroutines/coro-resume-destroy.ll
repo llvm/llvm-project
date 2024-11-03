@@ -1,5 +1,5 @@
 ; Tests that CoroEarly pass correctly lowers coro.resume, coro.destroy
-; RUN: opt < %s -S -passes=coro-early | FileCheck %s
+; RUN: opt -opaque-pointers=0 < %s -S -passes=coro-early | FileCheck %s
 
 ; CHECK-LABEL: @callResume(
 define void @callResume(i8* %hdl) {

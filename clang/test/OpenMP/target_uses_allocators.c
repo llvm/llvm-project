@@ -6,7 +6,7 @@
 #ifndef HEADER
 #define HEADER
 
-enum omp_allocator_handle_t {
+typedef enum omp_allocator_handle_t {
   omp_null_allocator = 0,
   omp_default_mem_alloc = 1,
   omp_large_cap_mem_alloc = 2,
@@ -17,7 +17,7 @@ enum omp_allocator_handle_t {
   omp_pteam_mem_alloc = 7,
   omp_thread_mem_alloc = 8,
   KMP_ALLOCATOR_MAX_HANDLE = __UINTPTR_MAX__
-};
+} omp_allocator_handle_t;
 
 // CHECK: define {{.*}}[[FIE:@.+]]()
 void fie(void) {

@@ -24,6 +24,14 @@ namespace llvm {
 class TargetTransformInfo;
 
 template <typename ContextT> class GenericUniformityAnalysisImpl;
+template <typename ImplT> struct GenericUniformityAnalysisImplDeleter {
+  // Ugly hack around the fact that recent (> 15.0) clang will run into an
+  // is_invocable() check in some GNU libc++'s unique_ptr implementation
+  // and reject this deleter if you just make it callable with an ImplT *,
+  // whether or not the type of ImplT is spelled out.
+  using pointer = ImplT *;
+  void operator()(ImplT *Impl);
+};
 
 template <typename ContextT> class GenericUniformityInfo {
 public:
@@ -63,12 +71,9 @@ public:
 
 private:
   using ImplT = GenericUniformityAnalysisImpl<ContextT>;
-  struct ImplDeleter {
-    void operator()(GenericUniformityAnalysisImpl<ContextT> *Impl);
-  };
 
   FunctionT *F;
-  std::unique_ptr<ImplT, ImplDeleter> DA;
+  std::unique_ptr<ImplT, GenericUniformityAnalysisImplDeleter<ImplT>> DA;
 
   GenericUniformityInfo(const GenericUniformityInfo &) = delete;
   GenericUniformityInfo &operator=(const GenericUniformityInfo &) = delete;

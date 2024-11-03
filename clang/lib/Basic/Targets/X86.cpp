@@ -18,25 +18,26 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/X86TargetParser.h"
+#include <optional>
 
 namespace clang {
 namespace targets {
 
-const Builtin::Info BuiltinInfoX86[] = {
+static constexpr Builtin::Info BuiltinInfoX86[] = {
 #define BUILTIN(ID, TYPE, ATTRS)                                               \
-  {#ID, TYPE, ATTRS, nullptr, ALL_LANGUAGES, nullptr},
+  {#ID, TYPE, ATTRS, nullptr, HeaderDesc::NO_HEADER, ALL_LANGUAGES},
 #define TARGET_BUILTIN(ID, TYPE, ATTRS, FEATURE)                               \
-  {#ID, TYPE, ATTRS, nullptr, ALL_LANGUAGES, FEATURE},
+  {#ID, TYPE, ATTRS, FEATURE, HeaderDesc::NO_HEADER, ALL_LANGUAGES},
 #define TARGET_HEADER_BUILTIN(ID, TYPE, ATTRS, HEADER, LANGS, FEATURE)         \
-  {#ID, TYPE, ATTRS, HEADER, LANGS, FEATURE},
+  {#ID, TYPE, ATTRS, FEATURE, HeaderDesc::HEADER, LANGS},
 #include "clang/Basic/BuiltinsX86.def"
 
 #define BUILTIN(ID, TYPE, ATTRS)                                               \
-  {#ID, TYPE, ATTRS, nullptr, ALL_LANGUAGES, nullptr},
+  {#ID, TYPE, ATTRS, nullptr, HeaderDesc::NO_HEADER, ALL_LANGUAGES},
 #define TARGET_BUILTIN(ID, TYPE, ATTRS, FEATURE)                               \
-  {#ID, TYPE, ATTRS, nullptr, ALL_LANGUAGES, FEATURE},
+  {#ID, TYPE, ATTRS, FEATURE, HeaderDesc::NO_HEADER, ALL_LANGUAGES},
 #define TARGET_HEADER_BUILTIN(ID, TYPE, ATTRS, HEADER, LANGS, FEATURE)         \
-  {#ID, TYPE, ATTRS, HEADER, LANGS, FEATURE},
+  {#ID, TYPE, ATTRS, FEATURE, HeaderDesc::HEADER, LANGS},
 #include "clang/Basic/BuiltinsX86_64.def"
 };
 
@@ -529,6 +530,7 @@ void X86TargetInfo::getTargetDefines(const LangOptions &Opts,
   case CK_Sierraforest:
   case CK_Grandridge:
   case CK_Graniterapids:
+  case CK_Emeraldrapids:
     // FIXME: Historically, we defined this legacy name, it would be nice to
     // remove it at some point. We've never exposed fine-grained names for
     // recent primary x86 CPUs, and we should keep it that way.
@@ -1356,7 +1358,7 @@ bool X86TargetInfo::validateAsmConstraint(
 // | Knights Landing                    |                      64 | https://software.intel.com/en-us/articles/intel-xeon-phi-processor-7200-family-memory-management-optimizations "The Intel® Xeon Phi™ Processor Architecture" |
 // | Knights Mill                       |                      64 | https://software.intel.com/sites/default/files/managed/9e/bc/64-ia-32-architectures-optimization-manual.pdf?countrylabel=Colombia "2.5.5.2 L1 DCache "       |
 // +------------------------------------+-------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------+
-Optional<unsigned> X86TargetInfo::getCPUCacheLineSize() const {
+std::optional<unsigned> X86TargetInfo::getCPUCacheLineSize() const {
   using namespace llvm::X86;
   switch (CPU) {
     // i386
@@ -1422,6 +1424,7 @@ Optional<unsigned> X86TargetInfo::getCPUCacheLineSize() const {
     case CK_Sierraforest:
     case CK_Grandridge:
     case CK_Graniterapids:
+    case CK_Emeraldrapids:
     case CK_KNL:
     case CK_KNM:
     // K7
@@ -1597,19 +1600,19 @@ void X86TargetInfo::fillValidTuneCPUList(SmallVectorImpl<StringRef> &Values) con
 }
 
 ArrayRef<const char *> X86TargetInfo::getGCCRegNames() const {
-  return llvm::makeArrayRef(GCCRegNames);
+  return llvm::ArrayRef(GCCRegNames);
 }
 
 ArrayRef<TargetInfo::AddlRegName> X86TargetInfo::getGCCAddlRegNames() const {
-  return llvm::makeArrayRef(AddlRegNames);
+  return llvm::ArrayRef(AddlRegNames);
 }
 
 ArrayRef<Builtin::Info> X86_32TargetInfo::getTargetBuiltins() const {
-  return llvm::makeArrayRef(BuiltinInfoX86, clang::X86::LastX86CommonBuiltin -
-                                                Builtin::FirstTSBuiltin + 1);
+  return llvm::ArrayRef(BuiltinInfoX86, clang::X86::LastX86CommonBuiltin -
+                                            Builtin::FirstTSBuiltin + 1);
 }
 
 ArrayRef<Builtin::Info> X86_64TargetInfo::getTargetBuiltins() const {
-  return llvm::makeArrayRef(BuiltinInfoX86,
-                            X86::LastTSBuiltin - Builtin::FirstTSBuiltin);
+  return llvm::ArrayRef(BuiltinInfoX86,
+                        X86::LastTSBuiltin - Builtin::FirstTSBuiltin);
 }

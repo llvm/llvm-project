@@ -569,8 +569,8 @@ verifyMemorySemantics(Operation *op, spirv::MemorySemantics memorySemantics) {
                         spirv::MemorySemantics::AcquireRelease |
                         spirv::MemorySemantics::SequentiallyConsistent;
 
-  auto bitCount = llvm::countPopulation(
-      static_cast<uint32_t>(memorySemantics & atMostOneInSet));
+  auto bitCount =
+      llvm::popcount(static_cast<uint32_t>(memorySemantics & atMostOneInSet));
   if (bitCount > 1) {
     return op->emitError(
         "expected at most one of these four memory constraints "
@@ -1005,28 +1005,6 @@ static LogicalResult verifyShiftOp(Operation *op) {
   return success();
 }
 
-static void buildLogicalBinaryOp(OpBuilder &builder, OperationState &state,
-                                 Value lhs, Value rhs) {
-  assert(lhs.getType() == rhs.getType());
-
-  Type boolType = builder.getI1Type();
-  if (auto vecType = lhs.getType().dyn_cast<VectorType>())
-    boolType = VectorType::get(vecType.getShape(), boolType);
-  state.addTypes(boolType);
-
-  state.addOperands({lhs, rhs});
-}
-
-static void buildLogicalUnaryOp(OpBuilder &builder, OperationState &state,
-                                Value value) {
-  Type boolType = builder.getI1Type();
-  if (auto vecType = value.getType().dyn_cast<VectorType>())
-    boolType = VectorType::get(vecType.getShape(), boolType);
-  state.addTypes(boolType);
-
-  state.addOperands(value);
-}
-
 //===----------------------------------------------------------------------===//
 // spirv.AccessChainOp
 //===----------------------------------------------------------------------===//
@@ -1129,7 +1107,7 @@ ParseResult spirv::AccessChainOp::parse(OpAsmParser &parser,
     return failure();
 
   auto resultType = getElementPtrType(
-      type, llvm::makeArrayRef(result.operands).drop_front(), result.location);
+      type, llvm::ArrayRef(result.operands).drop_front(), result.location);
   if (!resultType) {
     return failure();
   }
@@ -2146,6 +2124,8 @@ void mlir::spirv::ConstantOp::getAsmResultNames(
 
     if (intTy.isSignless()) {
       specialName << intCst.getInt();
+    } else if (intTy.isUnsigned()) {
+      specialName << intCst.getUInt();
     } else {
       specialName << intCst.getSInt();
     }
@@ -4677,7 +4657,7 @@ static ParseResult parsePtrAccessChainOpImpl(StringRef opName,
     return failure();
 
   auto resultType = getElementPtrType(
-      type, llvm::makeArrayRef(state.operands).drop_front(2), state.location);
+      type, llvm::ArrayRef(state.operands).drop_front(2), state.location);
   if (!resultType)
     return failure();
 

@@ -20,9 +20,6 @@ define void @sink_with_sideeffects(i1 %c, ptr %ptr) {
 ; CHECK-NEXT:   CLONE ir<%tmp2> = getelementptr ir<%ptr>, vp<[[STEPS]]>
 ; CHECK-NEXT:   CLONE ir<%tmp3> = load ir<%tmp2>
 ; CHECK-NEXT:   CLONE store ir<0>, ir<%tmp2>
-; CHECK-NEXT: Successor(s): if.then
-
-; CHECK:      if.then:
 ; CHECK-NEXT: Successor(s): pred.store
 
 ; CHECK:      <xVFxUF> pred.store: {
@@ -41,9 +38,6 @@ define void @sink_with_sideeffects(i1 %c, ptr %ptr) {
 ; CHECK-NEXT: }
 
 ; CHECK:      if.then.0:
-; CHECK-NEXT: Successor(s): for.inc
-
-; CHECK:      for.inc:
 ; CHECK-NEXT:  EMIT vp<[[CAN_IV_NEXT:%.+]]> = VF * UF +(nuw) vp<[[CAN_IV]]>
 ; CHECK-NEXT:  EMIT branch-on-count vp<[[CAN_IV_NEXT]]> vp<[[VEC_TC]]>
 ; CHECK-NEXT: No successors

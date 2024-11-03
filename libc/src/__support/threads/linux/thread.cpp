@@ -12,6 +12,7 @@
 #include "src/__support/CPP/string_view.h"
 #include "src/__support/CPP/stringstream.h"
 #include "src/__support/OSUtil/syscall.h" // For syscall functions.
+#include "src/__support/common.h"
 #include "src/__support/error_or.h"
 #include "src/__support/threads/linux/futex_word.h" // For FutexWordType
 
@@ -54,7 +55,7 @@ static constexpr unsigned CLONE_SYSCALL_FLAGS =
                            // wake the joining thread.
     | CLONE_SETTLS;        // Setup the thread pointer of the new thread.
 
-static inline ErrorOr<void *> alloc_stack(size_t size) {
+LIBC_INLINE ErrorOr<void *> alloc_stack(size_t size) {
   long mmap_result =
       __llvm_libc::syscall_impl(MMAP_SYSCALL_NUMBER,
                                 0, // No special address
@@ -69,7 +70,7 @@ static inline ErrorOr<void *> alloc_stack(size_t size) {
   return reinterpret_cast<void *>(mmap_result);
 }
 
-static inline void free_stack(void *stack, size_t size) {
+LIBC_INLINE void free_stack(void *stack, size_t size) {
   __llvm_libc::syscall_impl(SYS_munmap, stack, size);
 }
 

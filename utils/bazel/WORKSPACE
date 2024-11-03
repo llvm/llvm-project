@@ -4,7 +4,7 @@
 
 load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
 load("@bazel_tools//tools/build_defs/repo:utils.bzl", "maybe")
-load("@bazel_tools//tools/build_defs/repo:git.bzl", "git_repository")
+load("@bazel_tools//tools/build_defs/repo:git.bzl", "git_repository", "new_git_repository")
 
 SKYLIB_VERSION = "1.3.0"
 
@@ -19,8 +19,8 @@ http_archive(
 
 new_local_repository(
     name = "llvm-raw",
-    path = "../../",
     build_file_content = "# empty",
+    path = "../../",
 )
 
 load("@llvm-raw//utils/bazel:configure.bzl", "llvm_configure")
@@ -81,11 +81,12 @@ maybe(
 
 git_repository(
     name = "rules_foreign_cc",
+    remote = "https://github.com/bazelbuild/rules_foreign_cc.git",
     tag = "0.9.0",
-    remote = "https://github.com/bazelbuild/rules_foreign_cc.git"
 )
 
 load("@rules_foreign_cc//foreign_cc:repositories.bzl", "rules_foreign_cc_dependencies")
+
 rules_foreign_cc_dependencies()
 
 maybe(
@@ -101,12 +102,22 @@ maybe(
 )
 
 # https://www.mpfr.org/mpfr-current/
+#
+# When updating to a newer version, don't use URLs with "mpfr-current" in them.
+# Instead, find a stable URL like the one used currently.
 maybe(
     http_archive,
     name = "mpfr",
     build_file = "@llvm-raw//utils/bazel/third_party_build:mpfr.BUILD",
     sha256 = "9cbed5d0af0d9ed5e9f8dd013e17838eb15e1db9a6ae0d371d55d35f93a782a7",
     strip_prefix = "mpfr-4.1.1",
-    urls = ["https://www.mpfr.org/mpfr-current/mpfr-4.1.1.tar.gz"],
+    urls = ["https://www.mpfr.org/mpfr-4.1.1/mpfr-4.1.1.tar.gz"],
 )
 
+maybe(
+    new_git_repository,
+    name = "pfm",
+    build_file = "@llvm-raw//utils/bazel/third_party_build:pfm.BUILD",
+    remote = "https://git.code.sf.net/p/perfmon2/libpfm4",
+    tag = "v4.12.1",
+)

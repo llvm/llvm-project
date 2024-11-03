@@ -288,6 +288,13 @@ else:
                                  .format(config.llvm_shlib_dir,
                                          config.llvm_shlib_ext)))
 
+if config.linked_exampleirtransforms_extension:
+    config.substitutions.append(('%loadexampleirtransforms',''))
+else:
+    config.substitutions.append(('%loadexampleirtransforms',
+                                 '-load-pass-plugin={}/ExampleIRTransforms{}'
+                                 .format(config.llvm_shlib_dir,
+                                 config.llvm_shlib_ext)))
 
 # Static libraries are not built if BUILD_SHARED_LIBS is ON.
 if not config.build_shared_libs and not config.link_llvm_dylib:

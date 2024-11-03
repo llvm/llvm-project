@@ -860,7 +860,7 @@ void IntrinsicEmitter::EmitAttributes(const CodeGenIntrinsicTable &Ints,
 
   OS << "    }\n";
   OS << "  }\n";
-  OS << "  return AttributeList::get(C, makeArrayRef(AS, NumAttrs));\n";
+  OS << "  return AttributeList::get(C, ArrayRef(AS, NumAttrs));\n";
   OS << "}\n";
   OS << "#endif // GET_INTRINSIC_ATTRIBUTES\n\n";
 }

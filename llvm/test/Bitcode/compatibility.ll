@@ -874,6 +874,34 @@ define void @fp_atomics(ptr %word) {
   ret void
 }
 
+define void @uinc_udec_wrap_atomics(ptr %word) {
+; CHECK: %atomicrmw.inc0 = atomicrmw uinc_wrap ptr %word, i32 64 monotonic
+  %atomicrmw.inc0 = atomicrmw uinc_wrap ptr %word, i32 64 monotonic
+
+; CHECK: %atomicrmw.inc1 = atomicrmw uinc_wrap ptr %word, i32 128 seq_cst
+  %atomicrmw.inc1 = atomicrmw uinc_wrap ptr %word, i32 128 seq_cst
+
+; CHECK: %atomicrmw.inc2 = atomicrmw volatile uinc_wrap ptr %word, i32 128 seq_cst
+  %atomicrmw.inc2 = atomicrmw volatile uinc_wrap ptr %word, i32 128 seq_cst
+
+; CHECK: %atomicrmw.inc0.syncscope = atomicrmw uinc_wrap ptr %word, i32 27 syncscope("agent") monotonic
+  %atomicrmw.inc0.syncscope = atomicrmw uinc_wrap ptr %word, i32 27 syncscope("agent") monotonic
+
+; CHECK: %atomicrmw.dec0 = atomicrmw udec_wrap ptr %word, i32 99 monotonic
+  %atomicrmw.dec0 = atomicrmw udec_wrap ptr %word, i32 99 monotonic
+
+; CHECK: %atomicrmw.dec1 = atomicrmw udec_wrap ptr %word, i32 12 seq_cst
+  %atomicrmw.dec1 = atomicrmw udec_wrap ptr %word, i32 12 seq_cst
+
+; CHECK: %atomicrmw.dec2 = atomicrmw volatile udec_wrap ptr %word, i32 12 seq_cst
+  %atomicrmw.dec2 = atomicrmw volatile udec_wrap ptr %word, i32 12 seq_cst
+
+; CHECK: %atomicrmw.dec0.syncscope = atomicrmw udec_wrap ptr %word, i32 5 syncscope("system") monotonic
+  %atomicrmw.dec0.syncscope = atomicrmw udec_wrap ptr %word, i32 5 syncscope("system") monotonic
+
+  ret void
+}
+
 define void @pointer_atomics(ptr %word) {
 ; CHECK: %atomicrmw.xchg = atomicrmw xchg ptr %word, ptr null monotonic
   %atomicrmw.xchg = atomicrmw xchg ptr %word, ptr null monotonic
@@ -1401,10 +1429,10 @@ define void @instructions.memops(ptr %base) {
   alloca inalloca i32, i8 4, align 4
   ; CHECK: alloca inalloca i32, i8 4, align 4
 
-  load ptr, ptr %base, align 8, !invariant.load !7, !nontemporal !8, !nonnull !7, !dereferenceable !9, !dereferenceable_or_null !9
-  ; CHECK: load ptr, ptr %base, align 8, !invariant.load !7, !nontemporal !8, !nonnull !7, !dereferenceable !9, !dereferenceable_or_null !9
-  load volatile ptr, ptr %base, align 8, !invariant.load !7, !nontemporal !8, !nonnull !7, !dereferenceable !9, !dereferenceable_or_null !9
-  ; CHECK: load volatile ptr, ptr %base, align 8, !invariant.load !7, !nontemporal !8, !nonnull !7, !dereferenceable !9, !dereferenceable_or_null !9
+  load ptr, ptr %base, align 8, !invariant.load !7, !nontemporal !8, !nonnull !8, !dereferenceable !9, !dereferenceable_or_null !9
+  ; CHECK: load ptr, ptr %base, align 8, !invariant.load !7, !nontemporal !8, !nonnull !8, !dereferenceable !9, !dereferenceable_or_null !9
+  load volatile ptr, ptr %base, align 8, !invariant.load !7, !nontemporal !8, !nonnull !8, !dereferenceable !9, !dereferenceable_or_null !9
+  ; CHECK: load volatile ptr, ptr %base, align 8, !invariant.load !7, !nontemporal !8, !nonnull !8, !dereferenceable !9, !dereferenceable_or_null !9
 
   store ptr null, ptr %base, align 4, !nontemporal !8
   ; CHECK: store ptr null, ptr %base, align 4, !nontemporal !8

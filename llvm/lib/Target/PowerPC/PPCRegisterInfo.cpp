@@ -595,7 +595,7 @@ bool PPCRegisterInfo::getRegAllocationHints(Register VirtReg,
     case TargetOpcode::COPY: {
       ResultOp = &Use.getOperand(0);
       ResultReg = ResultOp->getReg();
-      if (Register::isVirtualRegister(ResultReg) &&
+      if (ResultReg.isVirtual() &&
           MRI->getRegClass(ResultReg)->contains(PPC::UACC0) &&
           VRM->hasPhys(ResultReg)) {
         Register UACCPhys = VRM->getPhys(ResultReg);

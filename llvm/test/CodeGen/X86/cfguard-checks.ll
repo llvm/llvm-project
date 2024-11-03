@@ -1,7 +1,7 @@
-; RUN: llc < %s -mtriple=i686-pc-windows-msvc | FileCheck %s -check-prefix=X32
-; RUN: llc < %s -mtriple=x86_64-pc-windows-msvc | FileCheck %s -check-prefixes=X64,X64_MSVC
-; RUN: llc < %s -mtriple=i686-w64-windows-gnu | FileCheck %s -check-prefixes=X32,X32_MINGW
-; RUN: llc < %s -mtriple=x86_64-w64-windows-gnu | FileCheck %s -check-prefixes=X64,X64_MINGW
+; RUN: llc -opaque-pointers=0 < %s -mtriple=i686-pc-windows-msvc | FileCheck %s -check-prefix=X32
+; RUN: llc -opaque-pointers=0 < %s -mtriple=x86_64-pc-windows-msvc | FileCheck %s -check-prefixes=X64,X64_MSVC
+; RUN: llc -opaque-pointers=0 < %s -mtriple=i686-w64-windows-gnu | FileCheck %s -check-prefixes=X32,X32_MINGW
+; RUN: llc -opaque-pointers=0 < %s -mtriple=x86_64-w64-windows-gnu | FileCheck %s -check-prefixes=X64,X64_MINGW
 ; Control Flow Guard is currently only available on Windows
 
 ; Test that Control Flow Guard checks are correctly added when required.

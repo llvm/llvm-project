@@ -510,8 +510,8 @@ define i64 @pr58109b(i8 signext %0, i64 %a, i64 %b) {
 ; CHECK-SD-LABEL: pr58109b:
 ; CHECK-SD:       ; %bb.0:
 ; CHECK-SD-NEXT:    add w8, w0, #1
-; CHECK-SD-NEXT:    cmp w8, #2
-; CHECK-SD-NEXT:    csel x0, x1, x2, lo
+; CHECK-SD-NEXT:    tst w8, #0xfe
+; CHECK-SD-NEXT:    csel x0, x1, x2, eq
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: pr58109b:

@@ -29,10 +29,10 @@ namespace {
 // An MCStreamer that reads a BenchmarkCode definition from a file.
 class BenchmarkCodeStreamer : public MCStreamer, public AsmCommentConsumer {
 public:
-  explicit BenchmarkCodeStreamer(MCContext *Context,
-                                 const MCRegisterInfo *TheRegInfo,
-                                 BenchmarkCode *Result)
-      : MCStreamer(*Context), RegInfo(TheRegInfo), Result(Result) {}
+  explicit BenchmarkCodeStreamer(
+      MCContext *Context, const DenseMap<StringRef, unsigned> &RegNameToRegNo,
+      BenchmarkCode *Result)
+      : MCStreamer(*Context), RegNameToRegNo(RegNameToRegNo), Result(Result) {}
 
   // Implementation of the MCStreamer interface. We only care about
   // instructions.
@@ -99,17 +99,15 @@ private:
                     Align ByteAlignment, SMLoc Loc) override {}
 
   unsigned findRegisterByName(const StringRef RegName) const {
-    // FIXME: Can we do better than this ?
-    for (unsigned I = 0, E = RegInfo->getNumRegs(); I < E; ++I) {
-      if (RegName == RegInfo->getName(I))
-        return I;
-    }
+    auto Iter = RegNameToRegNo.find(RegName);
+    if (Iter != RegNameToRegNo.end())
+      return Iter->second;
     errs() << "'" << RegName
            << "' is not a valid register name for the target\n";
     return 0;
   }
 
-  const MCRegisterInfo *const RegInfo;
+  const DenseMap<StringRef, unsigned> &RegNameToRegNo;
   BenchmarkCode *const Result;
   unsigned InvalidComments = 0;
 };
@@ -137,7 +135,8 @@ Expected<std::vector<BenchmarkCode>> readSnippets(const LLVMState &State,
       TM.getTarget().createMCObjectFileInfo(Context, /*PIC=*/false));
   Context.setObjectFileInfo(ObjectFileInfo.get());
   Context.initInlineSourceManager();
-  BenchmarkCodeStreamer Streamer(&Context, TM.getMCRegisterInfo(), &Result);
+  BenchmarkCodeStreamer Streamer(&Context, State.getRegNameToRegNoMapping(),
+                                 &Result);
 
   std::string Error;
   raw_string_ostream ErrorStream(Error);

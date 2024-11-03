@@ -9,10 +9,9 @@
 #include "SuspiciousIncludeCheck.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/Lex/Preprocessor.h"
+#include <optional>
 
-namespace clang {
-namespace tidy {
-namespace bugprone {
+namespace clang::tidy::bugprone {
 
 namespace {
 class SuspiciousIncludePPCallbacks : public PPCallbacks {
@@ -80,7 +79,7 @@ void SuspiciousIncludePPCallbacks::InclusionDirective(
 
   SourceLocation DiagLoc = FilenameRange.getBegin().getLocWithOffset(1);
 
-  const Optional<StringRef> IFE =
+  const std::optional<StringRef> IFE =
       utils::getFileExtension(FileName, Check.ImplementationFileExtensions);
   if (!IFE)
     return;
@@ -103,6 +102,4 @@ void SuspiciousIncludePPCallbacks::InclusionDirective(
   }
 }
 
-} // namespace bugprone
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::bugprone

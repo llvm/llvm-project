@@ -12,6 +12,7 @@
 #include <cstdint>
 
 #include <memory>
+#include <optional>
 #include <vector>
 
 #include "lldb/Core/DebuggerEvents.h"
@@ -173,7 +174,7 @@ public:
 
   ScriptInterpreter *
   GetScriptInterpreter(bool can_create = true,
-                       llvm::Optional<lldb::ScriptLanguage> language = {});
+                       std::optional<lldb::ScriptLanguage> language = {});
 
   lldb::ListenerSP GetListener() { return m_listener_sp; }
 
@@ -402,7 +403,7 @@ public:
   ///   ensure the given warning is only broadcast once.
   static void
   ReportWarning(std::string message,
-                llvm::Optional<lldb::user_id_t> debugger_id = std::nullopt,
+                std::optional<lldb::user_id_t> debugger_id = std::nullopt,
                 std::once_flag *once = nullptr);
 
   /// Report error events.
@@ -424,7 +425,7 @@ public:
   ///   ensure the given error is only broadcast once.
   static void
   ReportError(std::string message,
-              llvm::Optional<lldb::user_id_t> debugger_id = std::nullopt,
+              std::optional<lldb::user_id_t> debugger_id = std::nullopt,
               std::once_flag *once = nullptr);
 
   /// Report info events.
@@ -444,7 +445,7 @@ public:
   ///   ensure the given info is only logged once.
   static void
   ReportInfo(std::string message,
-             llvm::Optional<lldb::user_id_t> debugger_id = std::nullopt,
+             std::optional<lldb::user_id_t> debugger_id = std::nullopt,
              std::once_flag *once = nullptr);
 
   static void ReportSymbolChange(const ModuleSpec &module_spec);
@@ -485,11 +486,11 @@ protected:
   ///   delivered to all debuggers.
   static void ReportProgress(uint64_t progress_id, const std::string &message,
                              uint64_t completed, uint64_t total,
-                             llvm::Optional<lldb::user_id_t> debugger_id);
+                             std::optional<lldb::user_id_t> debugger_id);
 
   static void ReportDiagnosticImpl(DiagnosticEventData::Type type,
                                    std::string message,
-                                   llvm::Optional<lldb::user_id_t> debugger_id,
+                                   std::optional<lldb::user_id_t> debugger_id,
                                    std::once_flag *once);
 
   void PrintProgress(const ProgressEventData &data);
@@ -573,7 +574,7 @@ protected:
   IOHandlerStack m_io_handler_stack;
   std::recursive_mutex m_io_handler_synchronous_mutex;
 
-  llvm::Optional<uint64_t> m_current_event_id;
+  std::optional<uint64_t> m_current_event_id;
 
   llvm::StringMap<std::weak_ptr<LogHandler>> m_stream_handlers;
   std::shared_ptr<CallbackLogHandler> m_callback_handler_sp;

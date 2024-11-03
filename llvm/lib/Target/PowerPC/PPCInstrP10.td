@@ -1744,6 +1744,20 @@ let Predicates = [IsISA3_1] in {
                                v2i64:$vB))]>;
   def XVTLSBB : XX2_BF3_XO5_XB6_XO9<60, 2, 475, (outs crrc:$BF), (ins vsrc:$XB),
                                     "xvtlsbb $BF, $XB", IIC_VecGeneral, []>;
+  def BRH : XForm_11<31, 219, (outs gprc:$RA), (ins gprc:$RS),
+                     "brh $RA, $RS", IIC_IntRotate, []>;
+  def BRW : XForm_11<31, 155, (outs gprc:$RA), (ins gprc:$RS),
+                     "brw $RA, $RS", IIC_IntRotate,
+                     [(set i32:$RA, (bswap i32:$RS))]>;
+  let isCodeGenOnly = 1 in {
+    def BRH8 : XForm_11<31, 219, (outs g8rc:$RA), (ins g8rc:$RS),
+                        "brh $RA, $RS", IIC_IntRotate, []>;
+    def BRW8 : XForm_11<31, 155, (outs g8rc:$RA), (ins g8rc:$RS),
+                        "brw $RA, $RS", IIC_IntRotate, []>;
+  }
+  def BRD : XForm_11<31, 187, (outs g8rc:$RA), (ins g8rc:$RS),
+                     "brd $RA, $RS", IIC_IntRotate,
+                     [(set i64:$RA, (bswap i64:$RS))]>;
 
   // The XFormMemOp flag for the following 8 instructions is set on
   // the instruction format.
@@ -1976,7 +1990,10 @@ let Predicates = [IsISA3_1] in {
             (EXTRACT_SUBREG (XVTLSBB (COPY_TO_REGCLASS $XB, VSRC)), sub_lt)>;
   def : Pat<(i32 (int_ppc_vsx_xvtlsbb v16i8:$XB, 0)),
             (EXTRACT_SUBREG (XVTLSBB (COPY_TO_REGCLASS $XB, VSRC)), sub_eq)>;
-
+  def : Pat<(srl (bswap i32:$RS), (i32 16)),
+            (RLDICL_32 (BRH $RS), 0, 48)>;
+  def : Pat<(i64 (zext (i32 (srl (bswap i32:$RS), (i32 16))))),
+            (RLDICL_32_64 (BRH $RS), 0, 48)>;
   def : Pat <(v1i128 (PPClxvrzx ForceXForm:$src, 8)),
              (v1i128 (COPY_TO_REGCLASS (LXVRBX ForceXForm:$src), VRRC))>;
   def : Pat <(v1i128 (PPClxvrzx ForceXForm:$src, 16)),

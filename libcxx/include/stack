@@ -255,6 +255,8 @@ public:
         swap(c, __s.c);
     }
 
+    _LIBCPP_NODISCARD _LIBCPP_HIDE_FROM_ABI const _Container& __get_container() const { return c; }
+
     template <class T1, class _C1>
     friend
     bool

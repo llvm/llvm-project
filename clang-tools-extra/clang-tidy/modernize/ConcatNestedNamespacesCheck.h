@@ -13,9 +13,7 @@
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 
-namespace clang {
-namespace tidy {
-namespace modernize {
+namespace clang::tidy::modernize {
 
 class ConcatNestedNamespacesCheck : public ClangTidyCheck {
 public:
@@ -36,8 +34,6 @@ private:
   NamespaceString concatNamespaces();
   NamespaceContextVec Namespaces;
 };
-} // namespace modernize
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::modernize
 
 #endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MODERNIZE_CONCATNESTEDNAMESPACESCHECK_H

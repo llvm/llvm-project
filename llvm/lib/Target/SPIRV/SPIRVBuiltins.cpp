@@ -416,6 +416,36 @@ static Register buildConstantIntReg(uint64_t Val, MachineIRBuilder &MIRBuilder,
   return GR->buildConstantInt(Val, MIRBuilder, IntType);
 }
 
+static Register buildScopeReg(Register CLScopeRegister,
+                              MachineIRBuilder &MIRBuilder,
+                              SPIRVGlobalRegistry *GR,
+                              const MachineRegisterInfo *MRI) {
+  auto CLScope =
+      static_cast<SPIRV::CLMemoryScope>(getIConstVal(CLScopeRegister, MRI));
+  SPIRV::Scope::Scope Scope = getSPIRVScope(CLScope);
+
+  if (CLScope == static_cast<unsigned>(Scope))
+    return CLScopeRegister;
+
+  return buildConstantIntReg(Scope, MIRBuilder, GR);
+}
+
+static Register buildMemSemanticsReg(Register SemanticsRegister,
+                                     Register PtrRegister,
+                                     const MachineRegisterInfo *MRI,
+                                     SPIRVGlobalRegistry *GR) {
+  std::memory_order Order =
+      static_cast<std::memory_order>(getIConstVal(SemanticsRegister, MRI));
+  unsigned Semantics =
+      getSPIRVMemSemantics(Order) |
+      getMemSemanticsForStorageClass(GR->getPointerStorageClass(PtrRegister));
+
+  if (Order == Semantics)
+    return SemanticsRegister;
+
+  return Register();
+}
+
 /// Helper function for translating atomic init to OpStore.
 static bool buildAtomicInitInst(const SPIRV::IncomingCall *Call,
                                 MachineIRBuilder &MIRBuilder) {
@@ -585,31 +615,26 @@ static bool buildAtomicRMWInst(const SPIRV::IncomingCall *Call, unsigned Opcode,
                                MachineIRBuilder &MIRBuilder,
                                SPIRVGlobalRegistry *GR) {
   const MachineRegisterInfo *MRI = MIRBuilder.getMRI();
-  Register ScopeRegister;
   SPIRV::Scope::Scope Scope = SPIRV::Scope::Workgroup;
+  Register ScopeRegister;
+
   if (Call->Arguments.size() >= 4) {
-    assert(Call->Arguments.size() == 4 && "Extra args for explicit atomic RMW");
-    auto CLScope = static_cast<SPIRV::CLMemoryScope>(
-        getIConstVal(Call->Arguments[3], MRI));
-    Scope = getSPIRVScope(CLScope);
-    if (CLScope == static_cast<unsigned>(Scope))
-      ScopeRegister = Call->Arguments[3];
+    assert(Call->Arguments.size() == 4 &&
+           "Too many args for explicit atomic RMW");
+    ScopeRegister = buildScopeReg(Call->Arguments[3], MIRBuilder, GR, MRI);
   }
+
   if (!ScopeRegister.isValid())
     ScopeRegister = buildConstantIntReg(Scope, MIRBuilder, GR);
 
   Register PtrRegister = Call->Arguments[0];
-  Register MemSemanticsReg;
   unsigned Semantics = SPIRV::MemorySemantics::None;
-  if (Call->Arguments.size() >= 3) {
-    std::memory_order Order =
-        static_cast<std::memory_order>(getIConstVal(Call->Arguments[2], MRI));
-    Semantics =
-        getSPIRVMemSemantics(Order) |
-        getMemSemanticsForStorageClass(GR->getPointerStorageClass(PtrRegister));
-    if (Order == Semantics)
-      MemSemanticsReg = Call->Arguments[2];
-  }
+  Register MemSemanticsReg;
+
+  if (Call->Arguments.size() >= 3)
+    MemSemanticsReg =
+        buildMemSemanticsReg(Call->Arguments[2], PtrRegister, MRI, GR);
+
   if (!MemSemanticsReg.isValid())
     MemSemanticsReg = buildConstantIntReg(Semantics, MIRBuilder, GR);
 
@@ -620,6 +645,47 @@ static bool buildAtomicRMWInst(const SPIRV::IncomingCall *Call, unsigned Opcode,
       .addUse(ScopeRegister)
       .addUse(MemSemanticsReg)
       .addUse(Call->Arguments[1]);
+  return true;
+}
+
+/// Helper function for building atomic flag instructions (e.g.
+/// OpAtomicFlagTestAndSet).
+static bool buildAtomicFlagInst(const SPIRV::IncomingCall *Call,
+                                unsigned Opcode, MachineIRBuilder &MIRBuilder,
+                                SPIRVGlobalRegistry *GR) {
+  const MachineRegisterInfo *MRI = MIRBuilder.getMRI();
+
+  Register PtrRegister = Call->Arguments[0];
+  unsigned Semantics = SPIRV::MemorySemantics::SequentiallyConsistent;
+  Register MemSemanticsReg;
+
+  if (Call->Arguments.size() >= 2)
+    MemSemanticsReg =
+        buildMemSemanticsReg(Call->Arguments[1], PtrRegister, MRI, GR);
+
+  if (!MemSemanticsReg.isValid())
+    MemSemanticsReg = buildConstantIntReg(Semantics, MIRBuilder, GR);
+
+  assert((Opcode != SPIRV::OpAtomicFlagClear ||
+          (Semantics != SPIRV::MemorySemantics::Acquire &&
+           Semantics != SPIRV::MemorySemantics::AcquireRelease)) &&
+         "Invalid memory order argument!");
+
+  SPIRV::Scope::Scope Scope = SPIRV::Scope::Device;
+  Register ScopeRegister;
+
+  if (Call->Arguments.size() >= 3)
+    ScopeRegister = buildScopeReg(Call->Arguments[2], MIRBuilder, GR, MRI);
+
+  if (!ScopeRegister.isValid())
+    ScopeRegister = buildConstantIntReg(Scope, MIRBuilder, GR);
+
+  auto MIB = MIRBuilder.buildInstr(Opcode);
+  if (Opcode == SPIRV::OpAtomicFlagTestAndSet)
+    MIB.addDef(Call->ReturnRegister)
+        .addUse(GR->getSPIRVTypeID(Call->ReturnType));
+
+  MIB.addUse(PtrRegister).addUse(ScopeRegister).addUse(MemSemanticsReg);
   return true;
 }
 
@@ -992,6 +1058,9 @@ static bool generateAtomicInst(const SPIRV::IncomingCall *Call,
     return buildAtomicRMWInst(Call, Opcode, MIRBuilder, GR);
   case SPIRV::OpMemoryBarrier:
     return buildBarrierInst(Call, SPIRV::OpMemoryBarrier, MIRBuilder, GR);
+  case SPIRV::OpAtomicFlagTestAndSet:
+  case SPIRV::OpAtomicFlagClear:
+    return buildAtomicFlagInst(Call, Opcode, MIRBuilder, GR);
   default:
     return false;
   }
@@ -1381,6 +1450,19 @@ static MachineInstr *getBlockStructInstr(Register ParamReg,
   return ValueMI;
 }
 
+// Return an integer constant corresponding to the given register and
+// defined in spv_track_constant.
+// TODO: maybe unify with prelegalizer pass.
+static unsigned getConstFromIntrinsic(Register Reg, MachineRegisterInfo *MRI) {
+  MachineInstr *DefMI = MRI->getUniqueVRegDef(Reg);
+  assert(isSpvIntrinsic(*DefMI, Intrinsic::spv_track_constant) &&
+         DefMI->getOperand(2).isReg());
+  MachineInstr *DefMI2 = MRI->getUniqueVRegDef(DefMI->getOperand(2).getReg());
+  assert(DefMI2->getOpcode() == TargetOpcode::G_CONSTANT &&
+         DefMI2->getOperand(1).isCImm());
+  return DefMI2->getOperand(1).getCImm()->getValue().getZExtValue();
+}
+
 // Return type of the instruction result from spv_assign_type intrinsic.
 // TODO: maybe unify with prelegalizer pass.
 static const Type *getMachineInstrType(MachineInstr *MI) {
@@ -1718,6 +1800,35 @@ static bool generateVectorLoadStoreInst(const SPIRV::IncomingCall *Call,
   return true;
 }
 
+static bool generateLoadStoreInst(const SPIRV::IncomingCall *Call,
+                                  MachineIRBuilder &MIRBuilder,
+                                  SPIRVGlobalRegistry *GR) {
+  // Lookup the instruction opcode in the TableGen records.
+  const SPIRV::DemangledBuiltin *Builtin = Call->Builtin;
+  unsigned Opcode =
+      SPIRV::lookupNativeBuiltin(Builtin->Name, Builtin->Set)->Opcode;
+  bool IsLoad = Opcode == SPIRV::OpLoad;
+  // Build the instruction.
+  auto MIB = MIRBuilder.buildInstr(Opcode);
+  if (IsLoad) {
+    MIB.addDef(Call->ReturnRegister);
+    MIB.addUse(GR->getSPIRVTypeID(Call->ReturnType));
+  }
+  // Add a pointer to the value to load/store.
+  MIB.addUse(Call->Arguments[0]);
+  // Add a value to store.
+  if (!IsLoad)
+    MIB.addUse(Call->Arguments[1]);
+  // Add optional memory attributes and an alignment.
+  MachineRegisterInfo *MRI = MIRBuilder.getMRI();
+  unsigned NumArgs = Call->Arguments.size();
+  if ((IsLoad && NumArgs >= 2) || NumArgs >= 3)
+    MIB.addImm(getConstFromIntrinsic(Call->Arguments[IsLoad ? 1 : 2], MRI));
+  if ((IsLoad && NumArgs >= 3) || NumArgs >= 4)
+    MIB.addImm(getConstFromIntrinsic(Call->Arguments[IsLoad ? 2 : 3], MRI));
+  return true;
+}
+
 /// Lowers a builtin funtion call using the provided \p DemangledCall skeleton
 /// and external instruction \p Set.
 namespace SPIRV {
@@ -1795,6 +1906,8 @@ std::optional<bool> lowerBuiltin(const StringRef DemangledCall,
     return generateConvertInst(DemangledCall, Call.get(), MIRBuilder, GR);
   case SPIRV::VectorLoadStore:
     return generateVectorLoadStoreInst(Call.get(), MIRBuilder, GR);
+  case SPIRV::LoadStore:
+    return generateLoadStoreInst(Call.get(), MIRBuilder, GR);
   }
   return false;
 }

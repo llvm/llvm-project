@@ -278,6 +278,9 @@ bool MetadataVerifier::verifyKernel(msgpack::DocNode &Node) {
     return false;
   if (!verifyIntegerEntry(KernelMap, ".vgpr_spill_count", false))
     return false;
+  if (!verifyIntegerEntry(KernelMap, ".uniform_work_group_size", false))
+    return false;
+
 
   return true;
 }

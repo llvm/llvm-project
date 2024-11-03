@@ -21,6 +21,7 @@
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
+#include <optional>
 
 using namespace mlir;
 using namespace presburger;
@@ -754,8 +755,8 @@ TEST(SetTest, coalesceDivOtherContained) {
 
 static void
 expectComputedVolumeIsValidOverapprox(const PresburgerSet &set,
-                                      Optional<int64_t> trueVolume,
-                                      Optional<int64_t> resultBound) {
+                                      std::optional<int64_t> trueVolume,
+                                      std::optional<int64_t> resultBound) {
   expectComputedVolumeIsValidOverapprox(set.computeVolume(), trueVolume,
                                         resultBound);
 }

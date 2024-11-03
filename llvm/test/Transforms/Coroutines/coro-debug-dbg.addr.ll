@@ -5,7 +5,7 @@
 ; create the debug_value for us, make sure that we propagate llvm.dbg.addr into
 ; the beginning coroutine and all other funclets.
 
-; RUN: opt < %s -passes='module(coro-early),cgscc(coro-split,coro-split)' -S | FileCheck %s
+; RUN: opt -opaque-pointers=0 < %s -passes='module(coro-early),cgscc(coro-split,coro-split)' -S | FileCheck %s
 
 ; This file is based on coro-debug-frame-variable.ll.
 ; CHECK:  define internal fastcc void @f.resume(%f.Frame* noundef nonnull align 16 dereferenceable(80) %FramePtr) !dbg ![[RESUME_FN_DBG_NUM:[0-9]+]]

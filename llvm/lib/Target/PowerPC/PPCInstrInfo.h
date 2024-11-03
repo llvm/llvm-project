@@ -794,7 +794,7 @@ public:
   /// operands).
   static unsigned getRegNumForOperand(const MCInstrDesc &Desc, unsigned Reg,
                                       unsigned OpNo) {
-    int16_t regClass = Desc.OpInfo[OpNo].RegClass;
+    int16_t regClass = Desc.operands()[OpNo].RegClass;
     switch (regClass) {
       // We store F0-F31, VF0-VF31 in MCOperand and it should be F0-F31,
       // VSX32-VSX63 during encoding/disassembling

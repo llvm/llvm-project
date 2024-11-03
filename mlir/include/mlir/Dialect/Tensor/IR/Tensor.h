@@ -142,10 +142,10 @@ FailureOr<Value> getOrCreateDestination(OpBuilder &b, Location loc,
 LogicalResult getOrCreateDestinations(OpBuilder &b, Location loc, Operation *op,
                                       SmallVector<Value> &result);
 
-/// Function to control the folding of constant and extract slice
+/// Function to control the folding of constant and extract slice.
 using ControlConstantExtractSliceFusionFn = std::function<bool(ExtractSliceOp)>;
 
-/// Patterns to fold the extract slice op with its constant operand
+/// Patterns to fold the extract slice op with its constant operand.
 void populateFoldConstantExtractSlicePatterns(
     RewritePatternSet &patterns,
     const ControlConstantExtractSliceFusionFn &controlFn =
@@ -154,6 +154,9 @@ void populateFoldConstantExtractSlicePatterns(
           // constant tensor, which would affect the compile time and storage.
           return false;
         });
+
+/// Patterns to simplify tensor.pack.
+void populateSimplifyTensorPack(RewritePatternSet &patterns);
 
 } // namespace tensor
 } // namespace mlir

@@ -5,7 +5,7 @@
 ; PHI-nodes in non-affine regions are code generated correctly.
 
 ; CHECK: polly.stmt.bb3.entry:
-; CHECK-NEXT:   %j.0.phiops.reload = load i64, i64* %j.0.phiops
+; CHECK-NEXT:   %j.0.phiops.reload = load i64, ptr %j.0.phiops
 ; CHECK-NEXT:   br label %polly.stmt.bb3
 
 ; CHECK: polly.stmt.bb3:
@@ -20,7 +20,7 @@
 ;
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
-define void @foo(i64* %A, float* %B, i64* %xptr) {
+define void @foo(ptr %A, ptr %B, ptr %xptr) {
 bb:
   br label %bb1
 
@@ -30,7 +30,7 @@ bb1:                                              ; preds = %bb12, %bb
   br i1 %exitcond, label %bb2, label %bb14
 
 bb2:                                              ; preds = %bb1
-  %x = load i64, i64* %xptr
+  %x = load i64, ptr %xptr
   br label %bb3
 
 bb3:                                              ; preds = %bb9, %bb2
@@ -40,10 +40,10 @@ bb3:                                              ; preds = %bb9, %bb2
   br i1 %tmp4, label %bb5, label %bb11
 
 bb5:                                              ; preds = %bb3
-  %tmp6 = getelementptr inbounds float, float* %B, i64 42
-  %tmp7 = load float, float* %tmp6, align 4
+  %tmp6 = getelementptr inbounds float, ptr %B, i64 42
+  %tmp7 = load float, ptr %tmp6, align 4
   %tmp8 = fadd float %tmp7, 1.000000e+00
-  store float %tmp8, float* %tmp6, align 4
+  store float %tmp8, ptr %tmp6, align 4
   br label %bb9
 
 bb9:                                              ; preds = %bb5

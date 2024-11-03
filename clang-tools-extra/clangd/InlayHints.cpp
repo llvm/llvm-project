@@ -18,6 +18,7 @@
 #include "clang/Basic/Builtins.h"
 #include "clang/Basic/SourceManager.h"
 #include "llvm/ADT/ScopeExit.h"
+#include <optional>
 
 namespace clang {
 namespace clangd {
@@ -647,7 +648,7 @@ private:
   }
 
   // Get the range of the main file that *exactly* corresponds to R.
-  llvm::Optional<Range> getHintRange(SourceRange R) {
+  std::optional<Range> getHintRange(SourceRange R) {
     const auto &SM = AST.getSourceManager();
     auto Spelled = Tokens.spelledForExpanded(Tokens.expandedTokens(R));
     // TokenBuffer will return null if e.g. R corresponds to only part of a
@@ -662,7 +663,22 @@ private:
                  sourceLocToPosition(SM, Spelled->back().endLocation())};
   }
 
+  static bool shouldPrintCanonicalType(QualType QT) {
+    // The sugared type is more useful in some cases, and the canonical
+    // type in other cases. For now, prefer the sugared type unless
+    // we are printing `decltype(expr)`. This could be refined further
+    // (see https://github.com/clangd/clangd/issues/1298).
+    if (QT->isDecltypeType())
+      return true;
+    if (const AutoType *AT = QT->getContainedAutoType())
+      if (!AT->getDeducedType().isNull() &&
+          AT->getDeducedType()->isDecltypeType())
+        return true;
+    return false;
+  }
+
   void addTypeHint(SourceRange R, QualType T, llvm::StringRef Prefix) {
+    TypeHintPolicy.PrintCanonicalTypes = shouldPrintCanonicalType(T);
     addTypeHint(R, T, Prefix, TypeHintPolicy);
   }
 

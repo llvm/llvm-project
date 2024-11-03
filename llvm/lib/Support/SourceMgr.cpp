@@ -15,6 +15,7 @@
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
@@ -51,17 +52,20 @@ unsigned SourceMgr::AddIncludeFile(const std::string &Filename,
 ErrorOr<std::unique_ptr<MemoryBuffer>>
 SourceMgr::OpenIncludeFile(const std::string &Filename,
                            std::string &IncludedFile) {
-  IncludedFile = Filename;
   ErrorOr<std::unique_ptr<MemoryBuffer>> NewBufOrErr =
-      MemoryBuffer::getFile(IncludedFile);
+      MemoryBuffer::getFile(Filename);
 
+  SmallString<64> Buffer(Filename);
   // If the file didn't exist directly, see if it's in an include path.
   for (unsigned i = 0, e = IncludeDirectories.size(); i != e && !NewBufOrErr;
        ++i) {
-    IncludedFile =
-        IncludeDirectories[i] + sys::path::get_separator().data() + Filename;
-    NewBufOrErr = MemoryBuffer::getFile(IncludedFile);
+    Buffer = IncludeDirectories[i];
+    sys::path::append(Buffer, Filename);
+    NewBufOrErr = MemoryBuffer::getFile(Buffer);
   }
+
+  if (NewBufOrErr)
+    IncludedFile = static_cast<std::string>(Buffer);
 
   return NewBufOrErr;
 }
@@ -546,9 +550,8 @@ void SMDiagnostic::print(const char *ProgName, raw_ostream &OS, bool ShowColors,
   // Add any fix-its.
   // FIXME: Find the beginning of the line properly for multibyte characters.
   std::string FixItInsertionLine;
-  buildFixItLine(
-      CaretLine, FixItInsertionLine, FixIts,
-      makeArrayRef(Loc.getPointer() - ColumnNo, LineContents.size()));
+  buildFixItLine(CaretLine, FixItInsertionLine, FixIts,
+                 ArrayRef(Loc.getPointer() - ColumnNo, LineContents.size()));
 
   // Finally, plop on the caret.
   if (unsigned(ColumnNo) <= NumColumns)

@@ -660,16 +660,16 @@ define void @store_i16_stride7_vf8(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.vec
 ; SSE-NEXT:    punpckhqdq {{.*#+}} xmm13 = xmm13[1],xmm11[1]
 ; SSE-NEXT:    movdqa {{.*#+}} xmm11 = [65535,65535,65535,0,0,65535,65535,65535]
 ; SSE-NEXT:    pandn %xmm13, %xmm11
+; SSE-NEXT:    movdqa %xmm6, %xmm12
+; SSE-NEXT:    psrldq {{.*#+}} xmm12 = xmm12[10,11,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; SSE-NEXT:    por %xmm11, %xmm12
 ; SSE-NEXT:    psrld $16, %xmm9
-; SSE-NEXT:    movdqa %xmm4, %xmm12
-; SSE-NEXT:    punpckhdq {{.*#+}} xmm12 = xmm12[2],xmm9[2],xmm12[3],xmm9[3]
+; SSE-NEXT:    movdqa %xmm4, %xmm11
+; SSE-NEXT:    punpckhdq {{.*#+}} xmm11 = xmm11[2],xmm9[2],xmm11[3],xmm9[3]
 ; SSE-NEXT:    movdqa {{.*#+}} xmm0 = [65535,65535,65535,65535,65535,0,0,65535]
 ; SSE-NEXT:    movdqa %xmm0, %xmm13
-; SSE-NEXT:    pandn %xmm12, %xmm13
-; SSE-NEXT:    movdqa %xmm6, %xmm9
-; SSE-NEXT:    psrldq {{.*#+}} xmm9 = xmm9[10,11,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
-; SSE-NEXT:    por %xmm11, %xmm13
-; SSE-NEXT:    por %xmm9, %xmm13
+; SSE-NEXT:    pandn %xmm11, %xmm13
+; SSE-NEXT:    por %xmm12, %xmm13
 ; SSE-NEXT:    movdqa {{.*#+}} xmm9 = [0,65535,65535,65535,65535,65535,65535,0]
 ; SSE-NEXT:    pand %xmm9, %xmm13
 ; SSE-NEXT:    pshufd {{.*#+}} xmm11 = xmm3[3,3,3,3]

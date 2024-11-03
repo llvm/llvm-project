@@ -16,3 +16,21 @@ bool OnlyOnce() {
 }
 } // namespace test
 } // namespace gwp_asan
+
+// Optnone to ensure that the calls to these functions are not optimized away,
+// as we're looking for them in the backtraces.
+__attribute__((optnone)) char *
+AllocateMemory(gwp_asan::GuardedPoolAllocator &GPA) {
+  return static_cast<char *>(GPA.allocate(1));
+}
+__attribute__((optnone)) void
+DeallocateMemory(gwp_asan::GuardedPoolAllocator &GPA, void *Ptr) {
+  GPA.deallocate(Ptr);
+}
+__attribute__((optnone)) void
+DeallocateMemory2(gwp_asan::GuardedPoolAllocator &GPA, void *Ptr) {
+  GPA.deallocate(Ptr);
+}
+__attribute__((optnone)) void TouchMemory(void *Ptr) {
+  *(reinterpret_cast<volatile char *>(Ptr)) = 7;
+}

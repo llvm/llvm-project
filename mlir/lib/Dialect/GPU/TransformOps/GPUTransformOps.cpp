@@ -17,7 +17,7 @@
 #include "mlir/Dialect/Transform/IR/TransformDialect.h"
 #include "mlir/Dialect/Transform/IR/TransformInterfaces.h"
 #include "mlir/Dialect/Transform/IR/TransformUtils.h"
-#include "mlir/IR/BlockAndValueMapping.h"
+#include "mlir/IR/IRMapping.h"
 
 using namespace mlir;
 using namespace mlir::gpu;
@@ -225,7 +225,7 @@ DiagnosedSilenceableFailure mlir::transform::gpu::mapForeachToBlocksImpl(
   // induction variables to the newly created ops.
   SmallVector<Value> blockOps;
   blockIdGenerator(rewriter, foreachThreadOp, blockOps);
-  BlockAndValueMapping bvm;
+  IRMapping bvm;
   for (auto [blockIdx, blockDim] :
        llvm::zip(foreachThreadOp.getThreadIndices(), blockMapping)) {
     bvm.map(blockIdx,
@@ -291,14 +291,13 @@ static void generateGpuBlockIds(RewriterBase &rewriter,
 
 DiagnosedSilenceableFailure
 transform::MapForeachToBlocks::applyToOne(Operation *target,
-                                          SmallVectorImpl<Operation *> &results,
+                                          ApplyToEachResultList &results,
                                           transform::TransformState &state) {
   LaunchOp gpuLaunch = dyn_cast<LaunchOp>(target);
   TrivialPatternRewriter rewriter(getContext());
   auto transformOp = cast<TransformOpInterface>(getOperation());
 
   if (!getGenerateGpuLaunch() && !gpuLaunch) {
-    results.assign({target});
     DiagnosedSilenceableFailure diag =
         emitSilenceableError()
         << "Given target is not gpu.launch, set `generate_gpu_launch` "
@@ -312,7 +311,6 @@ transform::MapForeachToBlocks::applyToOne(Operation *target,
       mlir::transform::gpu::findTopLevelForeachThreadOp(
           target, topLevelForeachThreadOp, transformOp);
   if (!diag.succeeded()) {
-    results.assign({target});
     diag.attachNote(target->getLoc()) << "when applied to this payload op";
     return diag;
   }
@@ -325,7 +323,6 @@ transform::MapForeachToBlocks::applyToOne(Operation *target,
     DiagnosedSilenceableFailure diag =
         createGpuLaunch(rewriter, target->getLoc(), transformOp, gpuLaunch);
     if (!diag.succeeded()) {
-      results.assign({target});
       return diag;
     }
     rewriter.setInsertionPointToStart(&gpuLaunch.getBody().front());
@@ -352,7 +349,7 @@ transform::MapForeachToBlocks::applyToOne(Operation *target,
                           gridDim[0], gridDim[1], gridDim[2]);
   }
 
-  results.assign({gpuLaunch});
+  results.push_back(gpuLaunch);
   return diag;
 }
 
@@ -363,7 +360,7 @@ transform::MapForeachToBlocks::applyToOne(Operation *target,
 /// Searches `scf.foreach_thread` ops nested under `target` and maps each such
 /// op to GPU threads. Mapping is one-to-one and the induction variables of
 /// `scf.foreach_thread` are rewritten to gpu.thread_id according to the
-/// thread_dim_apping attribute. Sibling `scf.foreach_thread` are supported in
+/// thread_dim_mapping attribute. Sibling `scf.foreach_thread` are supported in
 /// which case, the union of the number of threads is computed and may result
 /// in predication. Dynamic, `scf.foreach_thread` trip counts are currently
 /// not supported. Dynamic block dim sizes are currently not supported.
@@ -434,7 +431,13 @@ static DiagnosedSilenceableFailure rewriteOneForeachThreadToGpuThreads(
       rewriter.create<ThreadIdOp>(loc, indexType, Dimension::x),
       rewriter.create<ThreadIdOp>(loc, indexType, Dimension::y),
       rewriter.create<ThreadIdOp>(loc, indexType, Dimension::z)};
-  BlockAndValueMapping bvm;
+  // Replace ids of dimension size 1 by zero to simplify the IR.
+  Value zero = rewriter.create<arith::ConstantIndexOp>(loc, 0);
+  for (size_t i : llvm::seq(size_t(0), globalBlockDims.size())) {
+    if (globalBlockDims[i] == 1)
+      threadOps[i] = zero;
+  }
+  IRMapping bvm;
   for (auto [blockIdx, blockDim] :
        llvm::zip(foreachThreadOp.getThreadIndices(), threadMapping)) {
     bvm.map(
@@ -520,14 +523,11 @@ DiagnosedSilenceableFailure mlir::transform::gpu::mapNestedForeachToThreadsImpl(
 }
 
 DiagnosedSilenceableFailure transform::MapNestedForeachToThreads::applyToOne(
-    ::mlir::Operation *target,
-    ::llvm::SmallVectorImpl<::mlir::Operation *> &results,
-    ::mlir::transform::TransformState &state) {
+    Operation *target, ApplyToEachResultList &results, TransformState &state) {
   LaunchOp gpuLaunch = dyn_cast<LaunchOp>(target);
   auto transformOp = cast<TransformOpInterface>(getOperation());
 
   if (!gpuLaunch) {
-    results.assign({target});
     return emitSilenceableError() << "Given target is not gpu.launch";
   }
 
@@ -538,7 +538,6 @@ DiagnosedSilenceableFailure transform::MapNestedForeachToThreads::applyToOne(
       checkGpuLimits(transformOp, std::nullopt, std::nullopt, std::nullopt,
                      blockDim[0], blockDim[1], blockDim[2]);
   if (diag.isSilenceableFailure()) {
-    results.assign({target});
     diag.attachNote(getLoc()) << getBlockDimAttrName() << " is very large";
     return diag;
   }
@@ -562,7 +561,7 @@ DiagnosedSilenceableFailure transform::MapNestedForeachToThreads::applyToOne(
                           blockDim[2]);
   }
 
-  results.assign({gpuLaunch});
+  results.push_back(gpuLaunch.getOperation());
   return diag;
 }
 

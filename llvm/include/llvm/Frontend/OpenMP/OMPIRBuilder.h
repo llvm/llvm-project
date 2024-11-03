@@ -94,7 +94,7 @@ public:
   std::optional<bool> HasRequiresUnifiedSharedMemory;
 
   // Flag for specifying if offloading is mandatory.
-  Optional<bool> OpenMPOffloadMandatory;
+  std::optional<bool> OpenMPOffloadMandatory;
 
   /// First separator used between the initial two parts of a name.
   std::optional<StringRef> FirstSeparator;
@@ -776,7 +776,7 @@ public:
                            InsertPointTy AllocaIP, BodyGenCallbackTy BodyGenCB,
                            bool Tied = true, Value *Final = nullptr,
                            Value *IfCondition = nullptr,
-                           ArrayRef<DependData *> Dependencies = {});
+                           SmallVector<DependData> Dependencies = {});
 
   /// Generator for the taskgroup construct
   ///
@@ -988,12 +988,10 @@ public:
   /// \param NumThreads Number of threads via the 'thread_limit' clause.
   /// \param HostPtr Pointer to the host-side pointer of the target kernel.
   /// \param KernelArgs Array of arguments to the kernel.
-  /// \param NoWaitArgs Optional array of arguments to the nowait kernel.
   InsertPointTy emitTargetKernel(const LocationDescription &Loc, Value *&Return,
                                  Value *Ident, Value *DeviceID, Value *NumTeams,
                                  Value *NumThreads, Value *HostPtr,
-                                 ArrayRef<Value *> KernelArgs,
-                                 ArrayRef<Value *> NoWaitArgs = {});
+                                 ArrayRef<Value *> KernelArgs);
 
   /// Generate a barrier runtime call.
   ///

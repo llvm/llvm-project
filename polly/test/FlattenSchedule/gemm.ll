@@ -8,7 +8,7 @@
 
 target datalayout = "e-m:x-p:32:32-i64:64-f80:32-n8:16:32-a:0:32-S32"
 
-define void @gemm(i32 %ni, i32 %nj, i32 %nk, double %alpha, double %beta, double* noalias nonnull %C, double* noalias nonnull %A, double* noalias nonnull %B) {
+define void @gemm(i32 %ni, i32 %nj, i32 %nk, double %alpha, double %beta, ptr noalias nonnull %C, ptr noalias nonnull %A, ptr noalias nonnull %B) {
 entry:
   br label %ni.for
 
@@ -24,13 +24,13 @@ ni.for:
 
     nj_beta:
      %c_stride = mul nsw i32 %i, 3; %nj
-     %c_idx_i = getelementptr inbounds double, double* %C, i32 %c_stride
-     %c_idx_ij = getelementptr inbounds double, double* %c_idx_i, i32 %j
+     %c_idx_i = getelementptr inbounds double, ptr %C, i32 %c_stride
+     %c_idx_ij = getelementptr inbounds double, ptr %c_idx_i, i32 %j
 
-     ; C[i][j] *= beta
-     %c = load double, double* %c_idx_ij
+     ; C[i]ptr= beta
+     %c = load double, ptr %c_idx_ij
      %c_beta = fmul double %c, %beta
-     store double %c_beta, double* %c_idx_ij
+     store double %c_beta, ptr %c_idx_ij
 
      br label %nk.for
 
@@ -41,23 +41,23 @@ ni.for:
 
       nk_alpha:
         %a_stride = mul nsw i32 %i, 3; %nk
-        %a_idx_i = getelementptr inbounds double, double* %A, i32 %a_stride
-        %a_idx_ik = getelementptr inbounds double, double* %a_idx_i, i32 %k
+        %a_idx_i = getelementptr inbounds double, ptr %A, i32 %a_stride
+        %a_idx_ik = getelementptr inbounds double, ptr %a_idx_i, i32 %k
 
         %b_stride = mul nsw i32 %k, 3; %nj
-        %b_idx_k = getelementptr inbounds double, double* %B, i32 %b_stride
-        %b_idx_kj = getelementptr inbounds double, double* %b_idx_k, i32 %j
+        %b_idx_k = getelementptr inbounds double, ptr %B, i32 %b_stride
+        %b_idx_kj = getelementptr inbounds double, ptr %b_idx_k, i32 %j
 
-        ; C[i][j] += alpha * A[i][k] * B[k][j]
-        %a = load double, double* %a_idx_ik
-        %b = load double, double* %b_idx_kj
-        %beta_c = load double, double* %c_idx_ij
+        ; C[i][j] += alpha * A[i]ptr B[k][j]
+        %a = load double, ptr %a_idx_ik
+        %b = load double, ptr %b_idx_kj
+        %beta_c = load double, ptr %c_idx_ij
 
         %alpha_a = fmul double %a, %alpha
         %alpha_a_b = fmul double %alpha_a, %b
         %beta_c_alpha_a_b = fadd double %beta_c, %alpha_a_b
 
-        store double %beta_c_alpha_a_b, double* %c_idx_ij
+        store double %beta_c_alpha_a_b, ptr %c_idx_ij
 
         br label %nk.inc
 
@@ -66,7 +66,7 @@ ni.for:
       br label %nk.for
 
     nk.exit:
-      ; store double %c, double* %c_idx_ij
+      ; store double %c, ptr %c_idx_ij
       br label %nj.inc
 
   nj.inc:

@@ -810,7 +810,7 @@ M68kInstrInfo::getSerializableDirectMachineOperandTargetFlags() const {
       {MO_GOTOFF, "m68k-gotoff"},
       {MO_GOTPCREL, "m68k-gotpcrel"},
       {MO_PLT, "m68k-plt"}};
-  return makeArrayRef(TargetFlags);
+  return ArrayRef(TargetFlags);
 }
 
 namespace {

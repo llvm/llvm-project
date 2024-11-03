@@ -68,19 +68,26 @@ std::string FormatExtensionFlags(uint64_t Flags) {
   return llvm::join(Features, ", ");
 }
 
-template <ARM::ISAKind ISAKind>
-testing::AssertionResult
-AssertSameExtensionFlags(const char *m_expr, const char *n_expr,
-                         uint64_t ExpectedFlags, uint64_t GotFlags) {
-  if (ExpectedFlags == GotFlags)
-    return testing::AssertionSuccess();
+template <ARM::ISAKind ISAKind> struct AssertSameExtensionFlags {
+  AssertSameExtensionFlags(StringRef CPUName) : CPUName(CPUName) {}
 
-  return testing::AssertionFailure() << llvm::formatv(
-             "Expected extension flags: {0} ({1:x})\n"
-             "     Got extension flags: {2} ({3:x})\n",
-             FormatExtensionFlags<ISAKind>(ExpectedFlags), ExpectedFlags,
-             FormatExtensionFlags<ISAKind>(GotFlags), GotFlags);
-}
+  testing::AssertionResult operator()(const char *m_expr, const char *n_expr,
+                                      uint64_t ExpectedFlags,
+                                      uint64_t GotFlags) {
+    if (ExpectedFlags == GotFlags)
+      return testing::AssertionSuccess();
+
+    return testing::AssertionFailure() << llvm::formatv(
+               "CPU: {4}\n"
+               "Expected extension flags: {0} ({1:x})\n"
+               "     Got extension flags: {2} ({3:x})\n",
+               FormatExtensionFlags<ISAKind>(ExpectedFlags), ExpectedFlags,
+               FormatExtensionFlags<ISAKind>(GotFlags), GotFlags, CPUName);
+  }
+
+private:
+  StringRef CPUName;
+};
 
 struct ARMCPUTestParams {
   ARMCPUTestParams(StringRef CPUName, StringRef ExpectedArch,
@@ -116,8 +123,9 @@ TEST_P(ARMCPUTestFixture, ARMCPUTests) {
   EXPECT_EQ(params.ExpectedFPU, ARM::getFPUName(FPUKind));
 
   uint64_t default_extensions = ARM::getDefaultExtensions(params.CPUName, AK);
-  EXPECT_PRED_FORMAT2(AssertSameExtensionFlags<ARM::ISAKind::ARM>,
-                      params.ExpectedFlags, default_extensions);
+  EXPECT_PRED_FORMAT2(
+      AssertSameExtensionFlags<ARM::ISAKind::ARM>(params.CPUName),
+      params.ExpectedFlags, default_extensions);
 
   EXPECT_EQ(params.CPUAttr, ARM::getCPUAttr(AK));
 }
@@ -953,13 +961,14 @@ class AArch64CPUTestFixture
 TEST_P(AArch64CPUTestFixture, testAArch64CPU) {
   ARMCPUTestParams params = GetParam();
 
-  AArch64::ArchKind AK = AArch64::parseCPUArch(params.CPUName);
-  EXPECT_EQ(params.ExpectedArch, AArch64::getArchName(AK));
+  const AArch64::ArchInfo &AI = AArch64::parseCpu(params.CPUName).Arch;
+  EXPECT_EQ(params.ExpectedArch, AI.Name);
 
   uint64_t default_extensions =
-      AArch64::getDefaultExtensions(params.CPUName, AK);
-  EXPECT_PRED_FORMAT2(AssertSameExtensionFlags<ARM::ISAKind::AARCH64>,
-                      params.ExpectedFlags, default_extensions);
+      AArch64::getDefaultExtensions(params.CPUName, AI);
+  EXPECT_PRED_FORMAT2(
+      AssertSameExtensionFlags<ARM::ISAKind::AARCH64>(params.CPUName),
+      params.ExpectedFlags, default_extensions);
 }
 
 INSTANTIATE_TEST_SUITE_P(
@@ -988,17 +997,16 @@ INSTANTIATE_TEST_SUITE_P(
                              AArch64::AEK_RDM | AArch64::AEK_FP16 |
                              AArch64::AEK_DOTPROD | AArch64::AEK_RCPC,
                          "8.2-A"),
-        ARMCPUTestParams("cortex-a510", "armv9-a", "neon-fp-armv8",
-                         AArch64::AEK_CRC | AArch64::AEK_FP |
-                             AArch64::AEK_SIMD | AArch64::AEK_RAS |
-                             AArch64::AEK_LSE | AArch64::AEK_RDM |
-                             AArch64::AEK_RCPC | AArch64::AEK_DOTPROD |
-                             AArch64::AEK_BF16 | AArch64::AEK_I8MM |
-                             AArch64::AEK_SVE | AArch64::AEK_SVE2 |
-                             AArch64::AEK_SVE2BITPERM | AArch64::AEK_PAUTH |
-                             AArch64::AEK_MTE | AArch64::AEK_SSBS |
-                             AArch64::AEK_FP16FML | AArch64::AEK_SB,
-                         "9-A"),
+        ARMCPUTestParams(
+            "cortex-a510", "armv9-a", "neon-fp-armv8",
+            AArch64::AEK_CRC | AArch64::AEK_FP | AArch64::AEK_SIMD |
+                AArch64::AEK_RAS | AArch64::AEK_LSE | AArch64::AEK_RDM |
+                AArch64::AEK_RCPC | AArch64::AEK_DOTPROD | AArch64::AEK_BF16 |
+                AArch64::AEK_I8MM | AArch64::AEK_SVE | AArch64::AEK_SVE2 |
+                AArch64::AEK_SVE2BITPERM | AArch64::AEK_PAUTH |
+                AArch64::AEK_MTE | AArch64::AEK_SSBS | AArch64::AEK_FP16 |
+                AArch64::AEK_FP16FML | AArch64::AEK_SB,
+            "9-A"),
         ARMCPUTestParams("cortex-a57", "armv8-a", "crypto-neon-fp-armv8",
                          AArch64::AEK_CRC | AArch64::AEK_CRYPTO |
                              AArch64::AEK_FP | AArch64::AEK_SIMD,
@@ -1076,30 +1084,28 @@ INSTANTIATE_TEST_SUITE_P(
                              AArch64::AEK_PROFILE | AArch64::AEK_FLAGM |
                              AArch64::AEK_PAUTH | AArch64::AEK_FP16FML,
                          "8.2-A"),
-        ARMCPUTestParams("cortex-a710", "armv9-a", "neon-fp-armv8",
-                         AArch64::AEK_CRC | AArch64::AEK_FP |
-                             AArch64::AEK_SIMD | AArch64::AEK_RAS |
-                             AArch64::AEK_LSE | AArch64::AEK_RDM |
-                             AArch64::AEK_RCPC | AArch64::AEK_DOTPROD |
-                             AArch64::AEK_MTE | AArch64::AEK_FP16FML |
-                             AArch64::AEK_SVE | AArch64::AEK_SVE2 |
-                             AArch64::AEK_SVE2BITPERM | AArch64::AEK_PAUTH |
-                             AArch64::AEK_FLAGM | AArch64::AEK_SB |
-                             AArch64::AEK_I8MM | AArch64::AEK_BF16,
-                         "9-A"),
-        ARMCPUTestParams("cortex-a715", "armv9-a", "neon-fp-armv8",
-                         AArch64::AEK_CRC | AArch64::AEK_FP | AArch64::AEK_BF16 |
-                             AArch64::AEK_SIMD | AArch64::AEK_RAS |
-                             AArch64::AEK_LSE | AArch64::AEK_RDM |
-                             AArch64::AEK_RCPC | AArch64::AEK_DOTPROD |
-                             AArch64::AEK_MTE | AArch64::AEK_PAUTH |
-                             AArch64::AEK_SVE | AArch64::AEK_SVE2 |
-                             AArch64::AEK_SVE2BITPERM | AArch64::AEK_SSBS |
-                             AArch64::AEK_SB | AArch64::AEK_I8MM |
-                             AArch64::AEK_PERFMON | AArch64::AEK_PREDRES |
-                             AArch64::AEK_PROFILE | AArch64::AEK_FP16FML |
-                             AArch64::AEK_FP16 | AArch64::AEK_FLAGM,
-                         "9-A"),
+        ARMCPUTestParams(
+            "cortex-a710", "armv9-a", "neon-fp-armv8",
+            AArch64::AEK_CRC | AArch64::AEK_FP | AArch64::AEK_SIMD |
+                AArch64::AEK_RAS | AArch64::AEK_LSE | AArch64::AEK_RDM |
+                AArch64::AEK_RCPC | AArch64::AEK_DOTPROD | AArch64::AEK_MTE |
+                AArch64::AEK_FP16 | AArch64::AEK_FP16FML | AArch64::AEK_SVE |
+                AArch64::AEK_SVE2 | AArch64::AEK_SVE2BITPERM |
+                AArch64::AEK_PAUTH | AArch64::AEK_FLAGM | AArch64::AEK_SB |
+                AArch64::AEK_I8MM | AArch64::AEK_BF16,
+            "9-A"),
+        ARMCPUTestParams(
+            "cortex-a715", "armv9-a", "neon-fp-armv8",
+            AArch64::AEK_CRC | AArch64::AEK_FP | AArch64::AEK_BF16 |
+                AArch64::AEK_SIMD | AArch64::AEK_RAS | AArch64::AEK_LSE |
+                AArch64::AEK_RDM | AArch64::AEK_RCPC | AArch64::AEK_DOTPROD |
+                AArch64::AEK_MTE | AArch64::AEK_PAUTH | AArch64::AEK_SVE |
+                AArch64::AEK_SVE2 | AArch64::AEK_SVE2BITPERM |
+                AArch64::AEK_SSBS | AArch64::AEK_SB | AArch64::AEK_I8MM |
+                AArch64::AEK_PERFMON | AArch64::AEK_PREDRES |
+                AArch64::AEK_PROFILE | AArch64::AEK_FP16FML |
+                AArch64::AEK_FP16 | AArch64::AEK_FLAGM,
+            "9-A"),
         ARMCPUTestParams(
             "neoverse-v1", "armv8.4-a", "crypto-neon-fp-armv8",
             AArch64::AEK_RAS | AArch64::AEK_SVE | AArch64::AEK_SSBS |
@@ -1110,17 +1116,18 @@ INSTANTIATE_TEST_SUITE_P(
                 AArch64::AEK_PROFILE | AArch64::AEK_RAND |
                 AArch64::AEK_FP16FML | AArch64::AEK_I8MM,
             "8.4-A"),
-        ARMCPUTestParams(
-            "neoverse-v2", "armv9-a", "neon-fp-armv8",
-            AArch64::AEK_RAS | AArch64::AEK_SVE | AArch64::AEK_SSBS |
-                AArch64::AEK_RCPC | AArch64::AEK_CRC | AArch64::AEK_FP |
-                AArch64::AEK_SIMD | AArch64::AEK_MTE | AArch64::AEK_LSE |
-                AArch64::AEK_RDM | AArch64::AEK_RCPC | AArch64::AEK_DOTPROD |
-                AArch64::AEK_FP16 | AArch64::AEK_BF16 | AArch64::AEK_SVE2 |
-                AArch64::AEK_PROFILE | AArch64::AEK_FP16FML |
-                AArch64::AEK_I8MM | AArch64::AEK_SVE2BITPERM |
-                AArch64::AEK_RAND,
-            "9-A"),
+        ARMCPUTestParams("neoverse-v2", "armv9-a", "neon-fp-armv8",
+                         AArch64::AEK_RAS | AArch64::AEK_SVE |
+                             AArch64::AEK_SSBS | AArch64::AEK_RCPC |
+                             AArch64::AEK_CRC | AArch64::AEK_FP |
+                             AArch64::AEK_SIMD | AArch64::AEK_MTE |
+                             AArch64::AEK_LSE | AArch64::AEK_RDM |
+                             AArch64::AEK_RCPC | AArch64::AEK_DOTPROD |
+                             AArch64::AEK_FP16 | AArch64::AEK_BF16 |
+                             AArch64::AEK_SVE2 | AArch64::AEK_PROFILE |
+                             AArch64::AEK_FP16FML | AArch64::AEK_I8MM |
+                             AArch64::AEK_SVE2BITPERM | AArch64::AEK_RAND,
+                         "9-A"),
         ARMCPUTestParams("cortex-r82", "armv8-r", "crypto-neon-fp-armv8",
                          AArch64::AEK_CRC | AArch64::AEK_RDM |
                              AArch64::AEK_SSBS | AArch64::AEK_DOTPROD |
@@ -1155,21 +1162,21 @@ INSTANTIATE_TEST_SUITE_P(
                              AArch64::AEK_I8MM | AArch64::AEK_BF16 |
                              AArch64::AEK_SVE | AArch64::AEK_SVE2 |
                              AArch64::AEK_SVE2BITPERM | AArch64::AEK_SSBS |
-                             AArch64::AEK_SB | AArch64::AEK_FP16FML,
+                             AArch64::AEK_SB | AArch64::AEK_FP16 |
+                             AArch64::AEK_FP16FML,
                          "9-A"),
-        ARMCPUTestParams("cortex-x3", "armv9-a", "neon-fp-armv8",
-                         AArch64::AEK_CRC | AArch64::AEK_FP | AArch64::AEK_BF16 |
-                             AArch64::AEK_SIMD | AArch64::AEK_RAS |
-                             AArch64::AEK_LSE | AArch64::AEK_RDM |
-                             AArch64::AEK_RCPC | AArch64::AEK_DOTPROD |
-                             AArch64::AEK_MTE | AArch64::AEK_PAUTH |
-                             AArch64::AEK_SVE | AArch64::AEK_SVE2 |
-                             AArch64::AEK_SVE2BITPERM | AArch64::AEK_SB |
-                             AArch64::AEK_PROFILE | AArch64::AEK_PERFMON |
-                             AArch64::AEK_I8MM | AArch64::AEK_FP16 |
-                             AArch64::AEK_FP16FML | AArch64::AEK_PREDRES |
-                             AArch64::AEK_FLAGM | AArch64::AEK_SSBS,
-                         "9-A"),
+        ARMCPUTestParams(
+            "cortex-x3",
+            "armv9-a", "neon-fp-armv8",
+            AArch64::AEK_CRC | AArch64::AEK_FP | AArch64::AEK_BF16 |
+                AArch64::AEK_SIMD | AArch64::AEK_RAS | AArch64::AEK_LSE |
+                AArch64::AEK_RDM | AArch64::AEK_RCPC | AArch64::AEK_DOTPROD |
+                AArch64::AEK_MTE | AArch64::AEK_PAUTH | AArch64::AEK_SVE |
+                AArch64::AEK_SVE2 | AArch64::AEK_SVE2BITPERM | AArch64::AEK_SB |
+                AArch64::AEK_PROFILE | AArch64::AEK_PERFMON |
+                AArch64::AEK_I8MM | AArch64::AEK_FP16 | AArch64::AEK_FP16FML |
+                AArch64::AEK_PREDRES | AArch64::AEK_FLAGM | AArch64::AEK_SSBS,
+            "9-A"),
         ARMCPUTestParams("cyclone", "armv8-a", "crypto-neon-fp-armv8",
                          AArch64::AEK_NONE | AArch64::AEK_CRYPTO |
                              AArch64::AEK_FP | AArch64::AEK_SIMD,
@@ -1323,14 +1330,25 @@ INSTANTIATE_TEST_SUITE_P(
                              AArch64::AEK_SVE2 | AArch64::AEK_SVE2BITPERM |
                              AArch64::AEK_BF16 | AArch64::AEK_I8MM,
                          "8.5-A"),
-        ARMCPUTestParams("ampere1", "armv8.6-a", "crypto-neon-fp-armv8",
-                         AArch64::AEK_CRC  | AArch64::AEK_FP   | AArch64::AEK_FP16   |
-                             AArch64::AEK_SIMD | AArch64::AEK_RAS  | AArch64::AEK_LSE     |
-                             AArch64::AEK_RDM  | AArch64::AEK_RCPC | AArch64::AEK_DOTPROD |
-                             AArch64::AEK_SM4  | AArch64::AEK_SHA3 | AArch64::AEK_BF16    |
-                             AArch64::AEK_SHA2 | AArch64::AEK_AES  | AArch64::AEK_I8MM    |
-                             AArch64::AEK_SSBS | AArch64::AEK_SB,
-                         "8.6-A"),
+        ARMCPUTestParams(
+            "ampere1", "armv8.6-a", "crypto-neon-fp-armv8",
+            AArch64::AEK_CRC | AArch64::AEK_FP | AArch64::AEK_FP16 |
+                AArch64::AEK_SIMD | AArch64::AEK_RAS | AArch64::AEK_LSE |
+                AArch64::AEK_RDM | AArch64::AEK_RCPC | AArch64::AEK_DOTPROD |
+                AArch64::AEK_SHA3 | AArch64::AEK_BF16 | AArch64::AEK_SHA2 |
+                AArch64::AEK_AES | AArch64::AEK_I8MM | AArch64::AEK_SSBS |
+                AArch64::AEK_SB | AArch64::AEK_RAND,
+            "8.6-A"),
+        ARMCPUTestParams(
+            "ampere1a", "armv8.6-a", "crypto-neon-fp-armv8",
+            AArch64::AEK_CRC | AArch64::AEK_FP | AArch64::AEK_FP16 |
+                AArch64::AEK_SIMD | AArch64::AEK_RAS | AArch64::AEK_LSE |
+                AArch64::AEK_RDM | AArch64::AEK_RCPC | AArch64::AEK_DOTPROD |
+                AArch64::AEK_SM4 | AArch64::AEK_SHA3 | AArch64::AEK_BF16 |
+                AArch64::AEK_SHA2 | AArch64::AEK_AES | AArch64::AEK_I8MM |
+                AArch64::AEK_SSBS | AArch64::AEK_SB | AArch64::AEK_RAND |
+                AArch64::AEK_MTE,
+            "8.6-A"),
         ARMCPUTestParams(
             "neoverse-512tvb", "armv8.4-a", "crypto-neon-fp-armv8",
             AArch64::AEK_RAS | AArch64::AEK_SVE | AArch64::AEK_SSBS |
@@ -1342,17 +1360,15 @@ INSTANTIATE_TEST_SUITE_P(
                 AArch64::AEK_FP16FML | AArch64::AEK_I8MM,
             "8.4-A"),
         ARMCPUTestParams("thunderx2t99", "armv8.1-a", "crypto-neon-fp-armv8",
-                         AArch64::AEK_NONE | AArch64::AEK_CRC |
-                             AArch64::AEK_CRYPTO | AArch64::AEK_LSE |
-                             AArch64::AEK_RDM | AArch64::AEK_FP |
-                             AArch64::AEK_SIMD,
+                         AArch64::AEK_CRC | AArch64::AEK_CRYPTO |
+                             AArch64::AEK_LSE | AArch64::AEK_RDM |
+                             AArch64::AEK_FP | AArch64::AEK_SIMD,
                          "8.1-A"),
         ARMCPUTestParams("thunderx3t110", "armv8.3-a", "crypto-neon-fp-armv8",
-                         AArch64::AEK_NONE | AArch64::AEK_CRC |
-                             AArch64::AEK_CRYPTO | AArch64::AEK_LSE |
-                             AArch64::AEK_RDM | AArch64::AEK_FP |
-                             AArch64::AEK_SIMD | AArch64::AEK_RAS |
-                             AArch64::AEK_RCPC,
+                         AArch64::AEK_CRC | AArch64::AEK_CRYPTO |
+                             AArch64::AEK_LSE | AArch64::AEK_RDM |
+                             AArch64::AEK_FP | AArch64::AEK_SIMD |
+                             AArch64::AEK_RAS | AArch64::AEK_RCPC,
                          "8.3-A"),
         ARMCPUTestParams("thunderx", "armv8-a", "crypto-neon-fp-armv8",
                          AArch64::AEK_CRC | AArch64::AEK_CRYPTO |
@@ -1393,7 +1409,7 @@ INSTANTIATE_TEST_SUITE_P(
                          "8.2-A")));
 
 // Note: number of CPUs includes aliases.
-static constexpr unsigned NumAArch64CPUArchs = 61;
+static constexpr unsigned NumAArch64CPUArchs = 62;
 
 TEST(TargetParserTest, testAArch64CPUArchList) {
   SmallVector<StringRef, NumAArch64CPUArchs> List;
@@ -1403,14 +1419,14 @@ TEST(TargetParserTest, testAArch64CPUArchList) {
   // valid, and match the expected 'magic' count.
   EXPECT_EQ(List.size(), NumAArch64CPUArchs);
   for(StringRef CPU : List) {
-    EXPECT_NE(AArch64::parseCPUArch(CPU), AArch64::ArchKind::INVALID);
+    EXPECT_NE(AArch64::parseCpu(CPU).Arch, AArch64::INVALID);
   }
 }
 
 bool testAArch64Arch(StringRef Arch, StringRef DefaultCPU, StringRef SubArch,
                      unsigned ArchAttr) {
-  AArch64::ArchKind AK = AArch64::parseArch(Arch);
-  return AK != AArch64::ArchKind::INVALID;
+  const AArch64::ArchInfo &AI = AArch64::parseArch(Arch);
+  return AI != AArch64::INVALID;
 }
 
 TEST(TargetParserTest, testAArch64Arch) {
@@ -1446,148 +1462,81 @@ TEST(TargetParserTest, testAArch64Arch) {
                               ARMBuildAttrs::CPUArch::v8_A));
 }
 
-bool testAArch64Extension(StringRef CPUName, AArch64::ArchKind AK,
+bool testAArch64Extension(StringRef CPUName, const AArch64::ArchInfo &AI,
                           StringRef ArchExt) {
-  return AArch64::getDefaultExtensions(CPUName, AK) &
+  return AArch64::getDefaultExtensions(CPUName, AI) &
          AArch64::parseArchExt(ArchExt);
 }
 
 TEST(TargetParserTest, testAArch64Extension) {
-  EXPECT_FALSE(testAArch64Extension("cortex-a34",
-                                    AArch64::ArchKind::INVALID, "ras"));
-  EXPECT_FALSE(testAArch64Extension("cortex-a35",
-                                    AArch64::ArchKind::INVALID, "ras"));
-  EXPECT_FALSE(testAArch64Extension("cortex-a53",
-                                    AArch64::ArchKind::INVALID, "ras"));
-  EXPECT_TRUE(testAArch64Extension("cortex-a55",
-                                    AArch64::ArchKind::INVALID, "ras"));
-  EXPECT_TRUE(testAArch64Extension("cortex-a55",
-                                    AArch64::ArchKind::INVALID, "fp16"));
-  EXPECT_FALSE(testAArch64Extension("cortex-a55",
-                                    AArch64::ArchKind::INVALID, "fp16fml"));
-  EXPECT_TRUE(testAArch64Extension("cortex-a55",
-                                    AArch64::ArchKind::INVALID, "dotprod"));
-  EXPECT_FALSE(testAArch64Extension("cortex-a57",
-                                    AArch64::ArchKind::INVALID, "ras"));
-  EXPECT_FALSE(testAArch64Extension("cortex-a72",
-                                    AArch64::ArchKind::INVALID, "ras"));
-  EXPECT_FALSE(testAArch64Extension("cortex-a73",
-                                    AArch64::ArchKind::INVALID, "ras"));
-  EXPECT_TRUE(testAArch64Extension("cortex-a75",
-                                    AArch64::ArchKind::INVALID, "ras"));
-  EXPECT_TRUE(testAArch64Extension("cortex-a75",
-                                    AArch64::ArchKind::INVALID, "fp16"));
-  EXPECT_FALSE(testAArch64Extension("cortex-a75",
-                                    AArch64::ArchKind::INVALID, "fp16fml"));
-  EXPECT_TRUE(testAArch64Extension("cortex-a75",
-                                   AArch64::ArchKind::INVALID, "dotprod"));
-  EXPECT_TRUE(testAArch64Extension("cortex-r82",
-                                   AArch64::ArchKind::INVALID, "ras"));
-  EXPECT_TRUE(testAArch64Extension("cortex-r82",
-                                   AArch64::ArchKind::INVALID, "fp16"));
-  EXPECT_TRUE(testAArch64Extension("cortex-r82",
-                                   AArch64::ArchKind::INVALID, "fp16fml"));
-  EXPECT_TRUE(testAArch64Extension("cortex-r82",
-                                   AArch64::ArchKind::INVALID, "dotprod"));
-  EXPECT_TRUE(testAArch64Extension("cortex-r82",
-                                   AArch64::ArchKind::INVALID, "lse"));
-  EXPECT_FALSE(testAArch64Extension("cyclone",
-                                    AArch64::ArchKind::INVALID, "ras"));
-  EXPECT_FALSE(testAArch64Extension("exynos-m3",
-                                    AArch64::ArchKind::INVALID, "ras"));
-  EXPECT_TRUE(testAArch64Extension("exynos-m4",
-                                   AArch64::ArchKind::INVALID, "dotprod"));
-  EXPECT_TRUE(testAArch64Extension("exynos-m4",
-                                   AArch64::ArchKind::INVALID, "fp16"));
-  EXPECT_TRUE(testAArch64Extension("exynos-m4",
-                                   AArch64::ArchKind::INVALID, "lse"));
-  EXPECT_TRUE(testAArch64Extension("exynos-m4",
-                                   AArch64::ArchKind::INVALID, "ras"));
-  EXPECT_TRUE(testAArch64Extension("exynos-m4",
-                                   AArch64::ArchKind::INVALID, "rdm"));
-  EXPECT_TRUE(testAArch64Extension("exynos-m5",
-                                   AArch64::ArchKind::INVALID, "dotprod"));
-  EXPECT_TRUE(testAArch64Extension("exynos-m5",
-                                   AArch64::ArchKind::INVALID, "fp16"));
-  EXPECT_TRUE(testAArch64Extension("exynos-m5",
-                                   AArch64::ArchKind::INVALID, "lse"));
-  EXPECT_TRUE(testAArch64Extension("exynos-m5",
-                                   AArch64::ArchKind::INVALID, "ras"));
-  EXPECT_TRUE(testAArch64Extension("exynos-m5",
-                                   AArch64::ArchKind::INVALID, "rdm"));
-  EXPECT_TRUE(testAArch64Extension("falkor",
-                                   AArch64::ArchKind::INVALID, "rdm"));
-  EXPECT_FALSE(testAArch64Extension("kryo",
-                                    AArch64::ArchKind::INVALID, "ras"));
-  EXPECT_TRUE(testAArch64Extension("saphira",
-                                    AArch64::ArchKind::INVALID, "crc"));
-  EXPECT_TRUE(testAArch64Extension("saphira",
-                                    AArch64::ArchKind::INVALID, "lse"));
-  EXPECT_TRUE(testAArch64Extension("saphira",
-                                   AArch64::ArchKind::INVALID, "rdm"));
-  EXPECT_TRUE(testAArch64Extension("saphira",
-                                   AArch64::ArchKind::INVALID, "ras"));
-  EXPECT_TRUE(testAArch64Extension("saphira",
-                                   AArch64::ArchKind::INVALID, "rcpc"));
-  EXPECT_TRUE(testAArch64Extension("saphira",
-                                   AArch64::ArchKind::INVALID, "profile"));
-  EXPECT_FALSE(testAArch64Extension("saphira",
-                                    AArch64::ArchKind::INVALID, "fp16"));
-  EXPECT_FALSE(testAArch64Extension("thunderx2t99",
-                                    AArch64::ArchKind::INVALID, "ras"));
-  EXPECT_FALSE(testAArch64Extension("thunderx",
-                                    AArch64::ArchKind::INVALID, "lse"));
-  EXPECT_FALSE(testAArch64Extension("thunderxt81",
-                                    AArch64::ArchKind::INVALID, "lse"));
-  EXPECT_FALSE(testAArch64Extension("thunderxt83",
-                                    AArch64::ArchKind::INVALID, "lse"));
-  EXPECT_FALSE(testAArch64Extension("thunderxt88",
-                                    AArch64::ArchKind::INVALID, "lse"));
-  EXPECT_TRUE(testAArch64Extension("tsv110",
-                                   AArch64::ArchKind::INVALID, "crypto"));
-  EXPECT_FALSE(testAArch64Extension("tsv110",
-                                    AArch64::ArchKind::INVALID, "sha3"));
-  EXPECT_FALSE(testAArch64Extension("tsv110",
-                                    AArch64::ArchKind::INVALID, "sm4"));
-  EXPECT_TRUE(testAArch64Extension("tsv110",
-                                   AArch64::ArchKind::INVALID, "ras"));
-  EXPECT_TRUE(testAArch64Extension("tsv110",
-                                   AArch64::ArchKind::INVALID, "profile"));
-  EXPECT_TRUE(testAArch64Extension("tsv110",
-                                   AArch64::ArchKind::INVALID, "fp16"));
-  EXPECT_TRUE(testAArch64Extension("tsv110",
-                                   AArch64::ArchKind::INVALID, "fp16fml"));
-  EXPECT_TRUE(testAArch64Extension("tsv110",
-                                   AArch64::ArchKind::INVALID, "dotprod"));
-  EXPECT_TRUE(testAArch64Extension("a64fx",
-                                   AArch64::ArchKind::INVALID, "fp16"));
-  EXPECT_TRUE(testAArch64Extension("a64fx",
-                                   AArch64::ArchKind::INVALID, "sve"));
-  EXPECT_FALSE(testAArch64Extension("a64fx",
-                                   AArch64::ArchKind::INVALID, "sve2"));
-  EXPECT_TRUE(
-      testAArch64Extension("carmel", AArch64::ArchKind::INVALID, "crypto"));
-  EXPECT_TRUE(
-      testAArch64Extension("carmel", AArch64::ArchKind::INVALID, "fp16"));
+  EXPECT_FALSE(testAArch64Extension("cortex-a34", AArch64::INVALID, "ras"));
+  EXPECT_FALSE(testAArch64Extension("cortex-a35", AArch64::INVALID, "ras"));
+  EXPECT_FALSE(testAArch64Extension("cortex-a53", AArch64::INVALID, "ras"));
+  EXPECT_TRUE(testAArch64Extension("cortex-a55", AArch64::INVALID, "ras"));
+  EXPECT_TRUE(testAArch64Extension("cortex-a55", AArch64::INVALID, "fp16"));
+  EXPECT_FALSE(testAArch64Extension("cortex-a55", AArch64::INVALID, "fp16fml"));
+  EXPECT_TRUE(testAArch64Extension("cortex-a55", AArch64::INVALID, "dotprod"));
+  EXPECT_FALSE(testAArch64Extension("cortex-a57", AArch64::INVALID, "ras"));
+  EXPECT_FALSE(testAArch64Extension("cortex-a72", AArch64::INVALID, "ras"));
+  EXPECT_FALSE(testAArch64Extension("cortex-a73", AArch64::INVALID, "ras"));
+  EXPECT_TRUE(testAArch64Extension("cortex-a75", AArch64::INVALID, "ras"));
+  EXPECT_TRUE(testAArch64Extension("cortex-a75", AArch64::INVALID, "fp16"));
+  EXPECT_FALSE(testAArch64Extension("cortex-a75", AArch64::INVALID, "fp16fml"));
+  EXPECT_TRUE(testAArch64Extension("cortex-a75", AArch64::INVALID, "dotprod"));
+  EXPECT_TRUE(testAArch64Extension("cortex-r82", AArch64::INVALID, "ras"));
+  EXPECT_TRUE(testAArch64Extension("cortex-r82", AArch64::INVALID, "fp16"));
+  EXPECT_TRUE(testAArch64Extension("cortex-r82", AArch64::INVALID, "fp16fml"));
+  EXPECT_TRUE(testAArch64Extension("cortex-r82", AArch64::INVALID, "dotprod"));
+  EXPECT_TRUE(testAArch64Extension("cortex-r82", AArch64::INVALID, "lse"));
+  EXPECT_FALSE(testAArch64Extension("cyclone", AArch64::INVALID, "ras"));
+  EXPECT_FALSE(testAArch64Extension("exynos-m3", AArch64::INVALID, "ras"));
+  EXPECT_TRUE(testAArch64Extension("exynos-m4", AArch64::INVALID, "dotprod"));
+  EXPECT_TRUE(testAArch64Extension("exynos-m4", AArch64::INVALID, "fp16"));
+  EXPECT_TRUE(testAArch64Extension("exynos-m4", AArch64::INVALID, "lse"));
+  EXPECT_TRUE(testAArch64Extension("exynos-m4", AArch64::INVALID, "ras"));
+  EXPECT_TRUE(testAArch64Extension("exynos-m4", AArch64::INVALID, "rdm"));
+  EXPECT_TRUE(testAArch64Extension("exynos-m5", AArch64::INVALID, "dotprod"));
+  EXPECT_TRUE(testAArch64Extension("exynos-m5", AArch64::INVALID, "fp16"));
+  EXPECT_TRUE(testAArch64Extension("exynos-m5", AArch64::INVALID, "lse"));
+  EXPECT_TRUE(testAArch64Extension("exynos-m5", AArch64::INVALID, "ras"));
+  EXPECT_TRUE(testAArch64Extension("exynos-m5", AArch64::INVALID, "rdm"));
+  EXPECT_TRUE(testAArch64Extension("falkor", AArch64::INVALID, "rdm"));
+  EXPECT_FALSE(testAArch64Extension("kryo", AArch64::INVALID, "ras"));
+  EXPECT_TRUE(testAArch64Extension("saphira", AArch64::INVALID, "crc"));
+  EXPECT_TRUE(testAArch64Extension("saphira", AArch64::INVALID, "lse"));
+  EXPECT_TRUE(testAArch64Extension("saphira", AArch64::INVALID, "rdm"));
+  EXPECT_TRUE(testAArch64Extension("saphira", AArch64::INVALID, "ras"));
+  EXPECT_TRUE(testAArch64Extension("saphira", AArch64::INVALID, "rcpc"));
+  EXPECT_TRUE(testAArch64Extension("saphira", AArch64::INVALID, "profile"));
+  EXPECT_FALSE(testAArch64Extension("saphira", AArch64::INVALID, "fp16"));
+  EXPECT_FALSE(testAArch64Extension("thunderx2t99", AArch64::INVALID, "ras"));
+  EXPECT_FALSE(testAArch64Extension("thunderx", AArch64::INVALID, "lse"));
+  EXPECT_FALSE(testAArch64Extension("thunderxt81", AArch64::INVALID, "lse"));
+  EXPECT_FALSE(testAArch64Extension("thunderxt83", AArch64::INVALID, "lse"));
+  EXPECT_FALSE(testAArch64Extension("thunderxt88", AArch64::INVALID, "lse"));
+  EXPECT_TRUE(testAArch64Extension("tsv110", AArch64::INVALID, "crypto"));
+  EXPECT_FALSE(testAArch64Extension("tsv110", AArch64::INVALID, "sha3"));
+  EXPECT_FALSE(testAArch64Extension("tsv110", AArch64::INVALID, "sm4"));
+  EXPECT_TRUE(testAArch64Extension("tsv110", AArch64::INVALID, "ras"));
+  EXPECT_TRUE(testAArch64Extension("tsv110", AArch64::INVALID, "profile"));
+  EXPECT_TRUE(testAArch64Extension("tsv110", AArch64::INVALID, "fp16"));
+  EXPECT_TRUE(testAArch64Extension("tsv110", AArch64::INVALID, "fp16fml"));
+  EXPECT_TRUE(testAArch64Extension("tsv110", AArch64::INVALID, "dotprod"));
+  EXPECT_TRUE(testAArch64Extension("a64fx", AArch64::INVALID, "fp16"));
+  EXPECT_TRUE(testAArch64Extension("a64fx", AArch64::INVALID, "sve"));
+  EXPECT_FALSE(testAArch64Extension("a64fx", AArch64::INVALID, "sve2"));
+  EXPECT_TRUE(testAArch64Extension("carmel", AArch64::INVALID, "crypto"));
+  EXPECT_TRUE(testAArch64Extension("carmel", AArch64::INVALID, "fp16"));
 
-  EXPECT_FALSE(testAArch64Extension(
-      "generic", AArch64::ArchKind::ARMV8A, "ras"));
-  EXPECT_FALSE(testAArch64Extension(
-      "generic", AArch64::ArchKind::ARMV8_1A, "ras"));
-  EXPECT_FALSE(testAArch64Extension(
-      "generic", AArch64::ArchKind::ARMV8_2A, "profile"));
-  EXPECT_FALSE(testAArch64Extension(
-      "generic", AArch64::ArchKind::ARMV8_2A, "fp16"));
-  EXPECT_FALSE(testAArch64Extension(
-      "generic", AArch64::ArchKind::ARMV8_2A, "fp16fml"));
-  EXPECT_FALSE(testAArch64Extension(
-      "generic", AArch64::ArchKind::ARMV8_3A, "fp16"));
-  EXPECT_FALSE(testAArch64Extension(
-      "generic", AArch64::ArchKind::ARMV8_3A, "fp16fml"));
-  EXPECT_FALSE(testAArch64Extension(
-      "generic", AArch64::ArchKind::ARMV8_4A, "fp16"));
-  EXPECT_FALSE(testAArch64Extension(
-      "generic", AArch64::ArchKind::ARMV8_4A, "fp16fml"));
+  EXPECT_FALSE(testAArch64Extension("generic", AArch64::ARMV8A, "ras"));
+  EXPECT_FALSE(testAArch64Extension("generic", AArch64::ARMV8_1A, "ras"));
+  EXPECT_FALSE(testAArch64Extension("generic", AArch64::ARMV8_2A, "profile"));
+  EXPECT_FALSE(testAArch64Extension("generic", AArch64::ARMV8_2A, "fp16"));
+  EXPECT_FALSE(testAArch64Extension("generic", AArch64::ARMV8_2A, "fp16fml"));
+  EXPECT_FALSE(testAArch64Extension("generic", AArch64::ARMV8_3A, "fp16"));
+  EXPECT_FALSE(testAArch64Extension("generic", AArch64::ARMV8_3A, "fp16fml"));
+  EXPECT_FALSE(testAArch64Extension("generic", AArch64::ARMV8_4A, "fp16"));
+  EXPECT_FALSE(testAArch64Extension("generic", AArch64::ARMV8_4A, "fp16fml"));
 }
 
 TEST(TargetParserTest, AArch64ExtensionFeatures) {
@@ -1610,6 +1559,7 @@ TEST(TargetParserTest, AArch64ExtensionFeatures) {
       AArch64::AEK_B16B16,  AArch64::AEK_SMEF16F16, AArch64::AEK_CSSC,
       AArch64::AEK_RCPC3,   AArch64::AEK_THE,       AArch64::AEK_D128,
       AArch64::AEK_LSE128,  AArch64::AEK_SPECRES2,  AArch64::AEK_RASv2,
+      AArch64::AEK_ITE,
   };
 
   std::vector<StringRef> Features;
@@ -1681,6 +1631,7 @@ TEST(TargetParserTest, AArch64ExtensionFeatures) {
   EXPECT_TRUE(llvm::is_contained(Features, "+d128"));
   EXPECT_TRUE(llvm::is_contained(Features, "+lse128"));
   EXPECT_TRUE(llvm::is_contained(Features, "+specres2"));
+  EXPECT_TRUE(llvm::is_contained(Features, "+ite"));
 
   // Assuming we listed every extension above, this should produce the same
   // result. (note that AEK_NONE doesn't have a name so it won't be in the
@@ -1691,44 +1642,78 @@ TEST(TargetParserTest, AArch64ExtensionFeatures) {
 }
 
 TEST(TargetParserTest, AArch64ArchFeatures) {
-  EXPECT_EQ(AArch64::getArchFeature(AArch64::ArchKind::INVALID), "+");
-  EXPECT_EQ(AArch64::getArchFeature(AArch64::ArchKind::ARMV8A), "+v8a");
-  EXPECT_EQ(AArch64::getArchFeature(AArch64::ArchKind::ARMV8_1A), "+v8.1a");
-  EXPECT_EQ(AArch64::getArchFeature(AArch64::ArchKind::ARMV8_2A), "+v8.2a");
-  EXPECT_EQ(AArch64::getArchFeature(AArch64::ArchKind::ARMV8_3A), "+v8.3a");
-  EXPECT_EQ(AArch64::getArchFeature(AArch64::ArchKind::ARMV8_4A), "+v8.4a");
-  EXPECT_EQ(AArch64::getArchFeature(AArch64::ArchKind::ARMV8_5A), "+v8.5a");
-  EXPECT_EQ(AArch64::getArchFeature(AArch64::ArchKind::ARMV8_6A), "+v8.6a");
-  EXPECT_EQ(AArch64::getArchFeature(AArch64::ArchKind::ARMV8_7A), "+v8.7a");
-  EXPECT_EQ(AArch64::getArchFeature(AArch64::ArchKind::ARMV8_8A), "+v8.8a");
-  EXPECT_EQ(AArch64::getArchFeature(AArch64::ArchKind::ARMV8_9A), "+v8.9a");
-  EXPECT_EQ(AArch64::getArchFeature(AArch64::ArchKind::ARMV9A), "+v9a");
-  EXPECT_EQ(AArch64::getArchFeature(AArch64::ArchKind::ARMV9_1A), "+v9.1a");
-  EXPECT_EQ(AArch64::getArchFeature(AArch64::ArchKind::ARMV9_2A), "+v9.2a");
-  EXPECT_EQ(AArch64::getArchFeature(AArch64::ArchKind::ARMV9_3A), "+v9.3a");
-  EXPECT_EQ(AArch64::getArchFeature(AArch64::ArchKind::ARMV9_4A), "+v9.4a");
-  EXPECT_EQ(AArch64::getArchFeature(AArch64::ArchKind::ARMV8R), "+v8r");
+  EXPECT_EQ(AArch64::INVALID.ArchFeature, "+");
+  EXPECT_EQ(AArch64::ARMV8A.ArchFeature, "+v8a");
+  EXPECT_EQ(AArch64::ARMV8_1A.ArchFeature, "+v8.1a");
+  EXPECT_EQ(AArch64::ARMV8_2A.ArchFeature, "+v8.2a");
+  EXPECT_EQ(AArch64::ARMV8_3A.ArchFeature, "+v8.3a");
+  EXPECT_EQ(AArch64::ARMV8_4A.ArchFeature, "+v8.4a");
+  EXPECT_EQ(AArch64::ARMV8_5A.ArchFeature, "+v8.5a");
+  EXPECT_EQ(AArch64::ARMV8_6A.ArchFeature, "+v8.6a");
+  EXPECT_EQ(AArch64::ARMV8_7A.ArchFeature, "+v8.7a");
+  EXPECT_EQ(AArch64::ARMV8_8A.ArchFeature, "+v8.8a");
+  EXPECT_EQ(AArch64::ARMV8_9A.ArchFeature, "+v8.9a");
+  EXPECT_EQ(AArch64::ARMV9A.ArchFeature, "+v9a");
+  EXPECT_EQ(AArch64::ARMV9_1A.ArchFeature, "+v9.1a");
+  EXPECT_EQ(AArch64::ARMV9_2A.ArchFeature, "+v9.2a");
+  EXPECT_EQ(AArch64::ARMV9_3A.ArchFeature, "+v9.3a");
+  EXPECT_EQ(AArch64::ARMV9_4A.ArchFeature, "+v9.4a");
+  EXPECT_EQ(AArch64::ARMV8R.ArchFeature, "+v8r");
 }
 
-TEST(TargetParserTest, AArch64ArchV9toV8Conversion) {
-  for (auto AK : AArch64::ArchKinds) {
-    if (AK == AArch64::ArchKind::INVALID)
-      EXPECT_EQ(AK, AArch64::convertV9toV8(AK));
-    else if (AK < AArch64::ArchKind::ARMV9A)
-      EXPECT_EQ(AK, AArch64::convertV9toV8(AK));
-    else if (AK >= AArch64::ArchKind::ARMV8R)
-      EXPECT_EQ(AArch64::ArchKind::INVALID, AArch64::convertV9toV8(AK));
-    else
-      EXPECT_TRUE(AArch64::convertV9toV8(AK) < AArch64::ArchKind::ARMV9A);
+TEST(TargetParserTest, AArch64ArchPartialOrder) {
+  EXPECT_FALSE(AArch64::INVALID.implies(AArch64::INVALID));
+
+  for (const auto *A : AArch64::ArchInfos) {
+    EXPECT_EQ(*A, *A);
+    // Comparison with invalid is always false
+    EXPECT_FALSE(A->implies(AArch64::INVALID));
+    EXPECT_FALSE(AArch64::INVALID.implies(*A));
+
+    // v8r has no relation to other valid architectures
+    if (*A != AArch64::ARMV8R) {
+      EXPECT_FALSE(A->implies(AArch64::ARMV8R));
+      EXPECT_FALSE(AArch64::ARMV8R.implies(*A));
+    }
   }
-  EXPECT_EQ(AArch64::ArchKind::ARMV8_5A,
-              AArch64::convertV9toV8(AArch64::ArchKind::ARMV9A));
-  EXPECT_EQ(AArch64::ArchKind::ARMV8_6A,
-              AArch64::convertV9toV8(AArch64::ArchKind::ARMV9_1A));
-  EXPECT_EQ(AArch64::ArchKind::ARMV8_7A,
-              AArch64::convertV9toV8(AArch64::ArchKind::ARMV9_2A));
-  EXPECT_EQ(AArch64::ArchKind::ARMV8_8A,
-              AArch64::convertV9toV8(AArch64::ArchKind::ARMV9_3A));
+
+  for (const auto *A : {
+           &AArch64::ARMV8_1A,
+           &AArch64::ARMV8_2A,
+           &AArch64::ARMV8_3A,
+           &AArch64::ARMV8_4A,
+           &AArch64::ARMV8_5A,
+           &AArch64::ARMV8_6A,
+           &AArch64::ARMV8_7A,
+           &AArch64::ARMV8_8A,
+           &AArch64::ARMV8_9A,
+       })
+    EXPECT_TRUE(A->implies(AArch64::ARMV8A));
+
+  for (const auto *A : {&AArch64::ARMV9_1A, &AArch64::ARMV9_2A,
+                        &AArch64::ARMV9_3A, &AArch64::ARMV9_4A})
+    EXPECT_TRUE(A->implies(AArch64::ARMV9A));
+
+  EXPECT_TRUE(AArch64::ARMV8_1A.implies(AArch64::ARMV8A));
+  EXPECT_TRUE(AArch64::ARMV8_2A.implies(AArch64::ARMV8_1A));
+  EXPECT_TRUE(AArch64::ARMV8_3A.implies(AArch64::ARMV8_2A));
+  EXPECT_TRUE(AArch64::ARMV8_4A.implies(AArch64::ARMV8_3A));
+  EXPECT_TRUE(AArch64::ARMV8_5A.implies(AArch64::ARMV8_4A));
+  EXPECT_TRUE(AArch64::ARMV8_6A.implies(AArch64::ARMV8_5A));
+  EXPECT_TRUE(AArch64::ARMV8_7A.implies(AArch64::ARMV8_6A));
+  EXPECT_TRUE(AArch64::ARMV8_8A.implies(AArch64::ARMV8_7A));
+  EXPECT_TRUE(AArch64::ARMV8_9A.implies(AArch64::ARMV8_8A));
+
+  EXPECT_TRUE(AArch64::ARMV9_1A.implies(AArch64::ARMV9A));
+  EXPECT_TRUE(AArch64::ARMV9_2A.implies(AArch64::ARMV9_1A));
+  EXPECT_TRUE(AArch64::ARMV9_3A.implies(AArch64::ARMV9_2A));
+  EXPECT_TRUE(AArch64::ARMV9_4A.implies(AArch64::ARMV9_3A));
+
+  EXPECT_TRUE(AArch64::ARMV9A.implies(AArch64::ARMV8_5A));
+  EXPECT_TRUE(AArch64::ARMV9_1A.implies(AArch64::ARMV8_6A));
+  EXPECT_TRUE(AArch64::ARMV9_2A.implies(AArch64::ARMV8_7A));
+  EXPECT_TRUE(AArch64::ARMV9_3A.implies(AArch64::ARMV8_8A));
+  EXPECT_TRUE(AArch64::ARMV9_4A.implies(AArch64::ARMV8_9A));
 }
 
 TEST(TargetParserTest, AArch64ArchExtFeature) {

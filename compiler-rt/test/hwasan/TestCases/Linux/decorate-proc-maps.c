@@ -51,5 +51,8 @@ int main(void) {
   void * volatile res2 = malloc(100000);
   pthread_create(&t, 0, ThreadFn, 0);
   pthread_join(t, 0);
-  return (int)(size_t)res;
+  int ret_val = (int)(size_t)res;
+  free(res);
+  free(res2);
+  return ret_val;
 }

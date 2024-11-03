@@ -7,6 +7,7 @@ name:            test2add_32
 # CHECK: name: test2add_32
 alignment:       16
 tracksRegLiveness: true
+debugInstrRef: true
 liveins:
   - { reg: '$eax' }
   - { reg: '$ebp' }
@@ -26,6 +27,7 @@ name:            test1mov1add_ebp_32
 # CHECK-LABEL: name: test1mov1add_ebp_32
 alignment:       16
 tracksRegLiveness: true
+debugInstrRef: true
 liveins:
   - { reg: '$eax' }
   - { reg: '$ebx' }
@@ -46,6 +48,7 @@ name:            testleaadd_ebp_index_32
 # CHECK-LABEL: name: testleaadd_ebp_index_32
 alignment:       16
 tracksRegLiveness: true
+debugInstrRef: true
 liveins:
   - { reg: '$ebx' }
   - { reg: '$ebp' }

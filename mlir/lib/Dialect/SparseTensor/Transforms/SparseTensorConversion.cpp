@@ -428,20 +428,6 @@ static SmallVector<Value> loadIndices(OpBuilder &builder, Location loc,
   return ivs;
 }
 
-/// Converts the vector indices and store it into the memory pointed by
-/// `ind`, apply (optional) `offset` on `offsetDim`.
-static void storeIndices(OpBuilder &builder, Location loc, unsigned rank,
-                         Value ind, ValueRange ivs, unsigned offsetDim = 0,
-                         Value offset = Value()) {
-  for (unsigned i = 0; i < rank; i++) {
-    Value idx = ivs[i];
-    if (offsetDim == i && offset)
-      idx = builder.create<arith::AddIOp>(loc, idx, offset);
-    builder.create<memref::StoreOp>(loc, idx, ind,
-                                    constantIndex(builder, loc, i));
-  }
-}
-
 /// Inserts a value stored in `elemPtr` into a dense tensor created by
 /// allocDenseTensor().
 static void insertScalarIntoDenseTensor(OpBuilder &builder, Location loc,
@@ -1122,10 +1108,24 @@ public:
     Type resType = op.getType();
     Type indType = resType.cast<ShapedType>().getElementType();
     SmallString<15> name{"sparseIndices", overheadTypeFunctionSuffix(indType)};
-    Value dim =
-        constantIndex(rewriter, op->getLoc(), op.getDimension().getZExtValue());
-    replaceOpWithFuncCall(rewriter, op, name, resType,
-                          {adaptor.getTensor(), dim}, EmitCInterface::On);
+    Location loc = op->getLoc();
+    Value dim = constantIndex(rewriter, loc, op.getDimension().getZExtValue());
+
+    // The function returns a MemRef without a layout.
+    MemRefType callRetType = get1DMemRefType(indType, false);
+    SmallVector<Value> operands{adaptor.getTensor(), dim};
+    auto fn = getFunc(op->getParentOfType<ModuleOp>(), name, callRetType,
+                      operands, EmitCInterface::On);
+    Value callRet =
+        rewriter.create<func::CallOp>(loc, callRetType, fn, operands)
+            .getResult(0);
+
+    // Cast the MemRef type to the type expected by the users, though these
+    // two types should be compatible at runtime.
+    if (resType != callRetType)
+      callRet = rewriter.create<memref::CastOp>(loc, resType, callRet);
+    rewriter.replaceOp(op, callRet);
+
     return success();
   }
 };
@@ -1361,19 +1361,8 @@ public:
         dst = genValuesCall(rewriter, loc,
                             MemRefType::get({ShapedType::kDynamic}, elemTp),
                             {dst});
-
         // Use the dstIdx to store the level sizes.
-        SmallVector<Value> lvlSizes;
-        for (unsigned i = 0; i < sizes.size(); i++)
-          lvlSizes.push_back(sizes[toOrigDim(encDst, i)]);
-        storeIndices(rewriter, loc, rank, dstIdx, lvlSizes);
-        // The memref ReshapeOp requires the sizes buffer to have a static
-        // shape.
-        Value typedBuffer = rewriter.create<memref::CastOp>(
-            loc, MemRefType::get({rank}, rewriter.getIndexType()), dstIdx);
-        SmallVector<int64_t> shape(rank, ShapedType::kDynamic);
-        dst = rewriter.create<memref::ReshapeOp>(
-            loc, MemRefType::get(shape, elemTp), dst, typedBuffer);
+        dst = reshapeValuesToLevels(rewriter, loc, encDst, sizes, dst, dstIdx);
       } else {
         dstPerm = params.getDim2LvlMap();
         elemPtr = genAllocaScalar(rewriter, loc, elemTp);

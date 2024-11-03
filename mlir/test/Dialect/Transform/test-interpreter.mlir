@@ -409,9 +409,8 @@ transform.with_pdl_patterns {
   transform.sequence %arg0 : !pdl.operation failures(propagate) {
   ^bb0(%arg1: !pdl.operation):
     %0 = pdl_match @some in %arg1 : (!pdl.operation) -> !pdl.operation
-    // expected-error @below {{applications of transform.test_wrong_number_of_results expected to produce 3 results (actually produced 1).}}
-    // expected-note @below {{If you need variadic results, consider a generic `apply` instead of the specialized `applyToOne`.}}
-    // expected-note @below {{Producing 3 null results is allowed if the use case warrants it.}}
+    // expected-error @below {{application of transform.test_wrong_number_of_results expected to produce 3 results (actually produced 1).}}
+    // expected-note @below {{if you need variadic results, consider a generic `apply` instead of the specialized `applyToOne`.}}
     transform.test_wrong_number_of_results %0
   }
 }
@@ -437,9 +436,8 @@ transform.with_pdl_patterns {
   transform.sequence %arg0 : !pdl.operation failures(propagate) {
   ^bb0(%arg1: !pdl.operation):
     %0 = pdl_match @some in %arg1 : (!pdl.operation) -> !pdl.operation
-    // expected-error @below {{applications of transform.test_wrong_number_of_multi_results expected to produce 1 results (actually produced 0)}}
-    // expected-note @below {{If you need variadic results, consider a generic `apply` instead of the specialized `applyToOne`.}}
-    // expected-note @below {{Producing 1 null results is allowed if the use case warrants it.}}
+    // expected-error @below {{application of transform.test_wrong_number_of_multi_results expected to produce 1 results (actually produced 0)}}
+    // expected-note @below {{if you need variadic results, consider a generic `apply` instead of the specialized `applyToOne`.}}
     transform.test_wrong_number_of_multi_results %0
   }
 }
@@ -514,7 +512,7 @@ transform.with_pdl_patterns {
   transform.sequence %arg0 : !pdl.operation failures(propagate) {
   ^bb0(%arg1: !pdl.operation):
     %0 = pdl_match @some in %arg1 : (!pdl.operation) -> !pdl.operation
-    // expected-error @below {{unexpected application of transform.test_mixed_null_and_non_null_results produces both null and non null results.}}
+    // expected-error @below {{null result #0 produced}}
     transform.test_mixed_null_and_non_null_results %0
   }
 }
@@ -775,6 +773,53 @@ transform.sequence failures(propagate) {
 
 // -----
 
+func.func @get_consumer(%arg0: index, %arg1: index) {
+  %0 = arith.muli %arg0, %arg1 : index
+  // expected-remark @below {{found addi}}
+  arith.addi %0, %arg1 : index
+  return
+}
+
+transform.sequence failures(propagate) {
+^bb1(%arg1: !pdl.operation):
+  %muli = transform.structured.match ops{["arith.muli"]} in %arg1
+  %addi = get_consumers_of_result %muli[0] : (!pdl.operation) -> !pdl.operation
+  transform.test_print_remark_at_operand %addi, "found addi" : !pdl.operation
+}
+
+// -----
+
+func.func @get_consumer_fail_1(%arg0: index, %arg1: index) {
+  %0 = arith.muli %arg0, %arg1 : index
+  %1 = arith.muli %arg0, %arg1 : index
+  return
+}
+
+transform.sequence failures(propagate) {
+^bb1(%arg1: !pdl.operation):
+  %muli = transform.structured.match ops{["arith.muli"]} in %arg1
+  // expected-error @below {{handle must be mapped to exactly one payload op}}
+  %bbarg = get_consumers_of_result %muli[0] : (!pdl.operation) -> !pdl.operation
+
+}
+
+// -----
+
+func.func @get_consumer_fail_2(%arg0: index, %arg1: index) {
+  %0 = arith.muli %arg0, %arg1 : index
+  return
+}
+
+transform.sequence failures(propagate) {
+^bb1(%arg1: !pdl.operation):
+  %muli = transform.structured.match ops{["arith.muli"]} in %arg1
+  // expected-error @below {{result number overflow}}
+  %bbarg = get_consumers_of_result %muli[1] : (!pdl.operation) -> !pdl.operation
+
+}
+
+// -----
+
 func.func @split_handles(%a: index, %b: index, %c: index) {
   %0 = arith.muli %a, %b : index
   %1 = arith.muli %a, %c : index
@@ -920,6 +965,7 @@ transform.with_pdl_patterns {
 }
 
 "test.some_op"() : () -> ()
+
 // -----
 
 func.func @split_handles(%a: index, %b: index, %c: index) {
@@ -936,4 +982,112 @@ transform.sequence -> !pdl.operation failures(propagate) {
   /// Test that yield does not crash in the presence of silenceable error in
   /// propagate mode.
   yield %fun : !pdl.operation
+}
+
+// -----
+
+transform.sequence failures(propagate) {
+^bb0(%arg0: !transform.any_op):
+  %0 = transform.test_produce_integer_param_with_type i32 : !transform.test_dialect_param
+  // expected-remark @below {{0 : i32}}
+  transform.test_print_param %0 : !transform.test_dialect_param
+}
+
+// -----
+
+transform.sequence failures(propagate) {
+^bb0(%arg0: !transform.any_op):
+  // expected-error @below {{expected the type of the parameter attribute ('i32') to match the parameter type ('i64')}}
+  transform.test_produce_integer_param_with_type i32 : !transform.param<i64>
+}
+
+// -----
+
+
+transform.sequence failures(propagate) {
+^bb0(%arg0: !transform.any_op):
+  %0 = transform.test_add_to_param 40
+  %1 = transform.test_add_to_param %0, 2
+  // expected-remark @below {{42 : i32}}
+  transform.test_print_param %1 : !transform.test_dialect_param
+}
+
+// -----
+
+transform.sequence failures(propagate) {
+^bb0(%arg0: !pdl.operation):
+  %0 = transform.structured.match ops{["func.func"]} in %arg0
+  %1 = transform.test_produce_param_with_number_of_test_ops %0 : !pdl.operation
+  // expected-remark @below {{1 : i32, 3 : i32}}
+  transform.test_print_param %1 : !transform.test_dialect_param
+  %2 = transform.test_add_to_param %1, 100
+  // expected-remark @below {{101 : i32, 103 : i32}}
+  transform.test_print_param %2 : !transform.test_dialect_param
+}
+
+func.func private @one_test_op(%arg0: i32) {
+  "test.op_a"(%arg0) { attr = 0 : i32} : (i32) -> i32
+  return
+}
+
+func.func private @three_test_ops(%arg0: i32) {
+  "test.op_a"(%arg0) { attr = 0 : i32} : (i32) -> i32
+  "test.op_a"(%arg0) { attr = 0 : i32} : (i32) -> i32
+  "test.op_a"(%arg0) { attr = 0 : i32} : (i32) -> i32
+  return
+}
+
+// -----
+
+// expected-note @below {{when applied to this op}}
+module {
+  transform.sequence failures(propagate) {
+  ^bb0(%arg0: !transform.any_op):
+    // expected-error @below {{expected to produce an Operation * for result #0}}
+    transform.test_produce_transform_param_or_forward_operand %arg0
+      { first_result_is_param }
+      : (!transform.any_op) -> (!transform.any_op, !transform.param<i64>)
+  }
+}
+
+// -----
+
+// expected-note @below {{when applied to this op}}
+module {
+  transform.sequence failures(propagate) {
+  ^bb0(%arg0: !transform.any_op):
+    // expected-error @below {{null result #0 produced}}
+    transform.test_produce_transform_param_or_forward_operand %arg0
+      { first_result_is_null }
+      : (!transform.any_op) -> (!transform.any_op, !transform.param<i64>)
+  }
+}
+
+// -----
+
+// expected-note @below {{when applied to this op}}
+module {
+  transform.sequence failures(propagate) {
+  ^bb0(%arg0: !transform.any_op):
+    // expected-error @below {{expected to produce an Attribute for result #1}}
+    transform.test_produce_transform_param_or_forward_operand %arg0
+      { second_result_is_handle }
+      : (!transform.any_op) -> (!transform.any_op, !transform.param<i64>)
+  }
+}
+
+// -----
+
+transform.sequence failures(propagate) {
+^bb0(%arg0: !transform.any_op):
+  // expected-error @below {{attempting to assign a null payload op to this transform value}}
+  %0 = transform.test_produce_null_payload : !transform.any_op
+}
+
+// -----
+
+transform.sequence failures(propagate) {
+^bb0(%arg0: !transform.any_op):
+  // expected-error @below {{attempting to assign a null parameter to this transform value}}
+  %0 = transform.test_produce_null_param : !transform.param<i64>
 }

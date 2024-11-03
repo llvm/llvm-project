@@ -19,6 +19,7 @@
 #include <__algorithm/find_if.h>
 #include <__algorithm/min.h>
 #include <__assert>
+#include <__concepts/arithmetic.h>
 #include <__concepts/same_as.h>
 #include <__config>
 #include <__debug>
@@ -101,6 +102,7 @@ __substitute_arg_id(basic_format_arg<_Context> __format_arg) {
 ///
 /// They default to false so when a new field is added it needs to be opted in
 /// explicitly.
+// TODO FMT Use an ABI tag for this struct.
 struct __fields {
   uint8_t __sign_ : 1 {false};
   uint8_t __alternate_form_ : 1 {false};
@@ -108,6 +110,13 @@ struct __fields {
   uint8_t __precision_ : 1 {false};
   uint8_t __locale_specific_form_ : 1 {false};
   uint8_t __type_ : 1 {false};
+  // Determines the valid values for fill.
+  //
+  // Originally the fill could be any character except { and }. Range-based
+  // formatters use the colon to mark the beginning of the
+  // underlying-format-spec. To avoid parsing ambiguities these formatter
+  // specializations prohibit the use of the colon as a fill character.
+  uint8_t __allow_colon_in_fill_ : 1 {false};
 };
 
 // By not placing this constant in the formatter class it's not duplicated for
@@ -127,6 +136,11 @@ inline constexpr __fields __fields_floating_point{
     .__type_                 = true};
 inline constexpr __fields __fields_string{.__precision_ = true, .__type_ = true};
 inline constexpr __fields __fields_pointer{.__type_ = true};
+
+#  if _LIBCPP_STD_VER > 20
+inline constexpr __fields __fields_tuple{.__type_ = false, .__allow_colon_in_fill_ = true};
+inline constexpr __fields __fields_range{.__type_ = false, .__allow_colon_in_fill_ = true};
+#  endif
 
 enum class _LIBCPP_ENUM_VIS __alignment : uint8_t {
   /// No alignment is set in the format string.
@@ -183,6 +197,9 @@ struct __chrono {
   __alignment __alignment_ : 3;
   bool __locale_specific_form_ : 1;
   bool __weekday_name_ : 1;
+  bool __weekday_              : 1;
+  bool __day_of_year_          : 1;
+  bool __week_of_year_         : 1;
   bool __month_name_ : 1;
 };
 
@@ -256,7 +273,7 @@ public:
     if (__begin == __end)
       return __begin;
 
-    if (__parse_fill_align(__begin, __end) && __begin == __end)
+    if (__parse_fill_align(__begin, __end, __fields.__allow_colon_in_fill_) && __begin == __end)
       return __begin;
 
     if (__fields.__sign_ && __parse_sign(__begin) && __begin == __end)
@@ -306,10 +323,14 @@ public:
 
   _LIBCPP_HIDE_FROM_ABI __parsed_specifications<_CharT> __get_parsed_chrono_specifications(auto& __ctx) const {
     return __parsed_specifications<_CharT>{
-        .__chrono_ = __chrono{.__alignment_            = __alignment_,
-                              .__locale_specific_form_ = __locale_specific_form_,
-                              .__weekday_name_         = __weekday_name_,
-                              .__month_name_           = __month_name_},
+        .__chrono_ =
+            __chrono{.__alignment_            = __alignment_,
+                     .__locale_specific_form_ = __locale_specific_form_,
+                     .__weekday_name_         = __weekday_name_,
+                     .__weekday_              = __weekday_,
+                     .__day_of_year_          = __day_of_year_,
+                     .__week_of_year_         = __week_of_year_,
+                     .__month_name_           = __month_name_},
         .__width_{__get_width(__ctx)},
         .__precision_{__get_precision(__ctx)},
         .__fill_{__fill_}};
@@ -322,12 +343,17 @@ public:
   bool __reserved_0_ : 1 {false};
   __type __type_{__type::__default};
 
-  // These two flags are used for formatting chrono. Since the struct has
+  // These flags are only used for formatting chrono. Since the struct has
   // padding space left it's added to this structure.
   bool __weekday_name_ : 1 {false};
+  bool __weekday_      : 1 {false};
+
+  bool __day_of_year_  : 1 {false};
+  bool __week_of_year_ : 1 {false};
+
   bool __month_name_ : 1 {false};
 
-  uint8_t __reserved_1_ : 6 {0};
+  uint8_t __reserved_1_ : 3 {0};
   uint8_t __reserved_2_ : 6 {0};
   // These two flags are only used internally and not part of the
   // __parsed_specifications. Therefore put them at the end.
@@ -364,12 +390,16 @@ private:
     return false;
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr bool __parse_fill_align(const _CharT*& __begin, const _CharT* __end) {
+  // range-fill and tuple-fill are identical
+  _LIBCPP_HIDE_FROM_ABI constexpr bool
+  __parse_fill_align(const _CharT*& __begin, const _CharT* __end, bool __use_range_fill) {
     _LIBCPP_ASSERT(__begin != __end, "when called with an empty input the function will cause "
                                      "undefined behavior by evaluating data not in the input");
     if (__begin + 1 != __end) {
       if (__parse_alignment(*(__begin + 1))) {
-        if (*__begin == _CharT('{') || *__begin == _CharT('}'))
+        if (__use_range_fill && (*__begin == _CharT('{') || *__begin == _CharT('}') || *__begin == _CharT(':')))
+          std::__throw_format_error("The format-spec range-fill field contains an invalid character");
+        else if (*__begin == _CharT('{') || *__begin == _CharT('}'))
           std::__throw_format_error("The format-spec fill field contains an invalid character");
 
         __fill_ = *__begin;
@@ -875,7 +905,7 @@ _LIBCPP_HIDE_FROM_ABI constexpr __column_width_result<_CharT> __estimate_column_
   // unit is non-ASCII we omit the current code unit and let the Grapheme
   // clustering algorithm do its work.
   const _CharT* __it = __str.begin();
-  if (__is_ascii(*__it)) {
+  if (__format_spec::__is_ascii(*__it)) {
     do {
       --__maximum;
       ++__it;
@@ -883,12 +913,12 @@ _LIBCPP_HIDE_FROM_ABI constexpr __column_width_result<_CharT> __estimate_column_
         return {__str.size(), __str.end()};
 
       if (__maximum == 0) {
-        if (__is_ascii(*__it))
+        if (__format_spec::__is_ascii(*__it))
           return {static_cast<size_t>(__it - __str.begin()), __it};
 
         break;
       }
-    } while (__is_ascii(*__it));
+    } while (__format_spec::__is_ascii(*__it));
     --__it;
     ++__maximum;
   }

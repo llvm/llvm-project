@@ -182,6 +182,8 @@ add_libc_unittest(
     sscanf_test.cpp
   DEPENDS
     libc.src.stdio.sscanf
+  LINK_LIBRARIES
+    LibcFPTestHelpers
 )
 
 add_libc_unittest(

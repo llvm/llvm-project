@@ -495,7 +495,7 @@ void llvm::calculateDbgEntityHistory(const MachineFunction *MF,
             continue;
           // If this is a virtual register, only clobber it since it doesn't
           // have aliases.
-          if (Register::isVirtualRegister(MO.getReg()))
+          if (MO.getReg().isVirtual())
             clobberRegisterUses(RegVars, MO.getReg(), DbgValues, LiveEntries,
                                 MI);
           // If this is a register def operand, it may end a debug value

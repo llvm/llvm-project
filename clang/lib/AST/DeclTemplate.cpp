@@ -35,6 +35,7 @@
 #include <cassert>
 #include <cstdint>
 #include <memory>
+#include <optional>
 #include <utility>
 
 using namespace clang;
@@ -130,7 +131,7 @@ unsigned TemplateParameterList::getMinRequiredArguments() const {
   unsigned NumRequiredArgs = 0;
   for (const NamedDecl *P : asArray()) {
     if (P->isTemplateParameterPack()) {
-      if (Optional<unsigned> Expansions = getExpandedPackSize(P)) {
+      if (std::optional<unsigned> Expansions = getExpandedPackSize(P)) {
         NumRequiredArgs += *Expansions;
         continue;
       }
@@ -365,7 +366,7 @@ ArrayRef<TemplateArgument> RedeclarableTemplateDecl::getInjectedTemplateArgs() {
               CommonPtr->InjectedArgs);
   }
 
-  return llvm::makeArrayRef(CommonPtr->InjectedArgs, Params->size());
+  return llvm::ArrayRef(CommonPtr->InjectedArgs, Params->size());
 }
 
 //===----------------------------------------------------------------------===//
@@ -636,13 +637,11 @@ ClassTemplateDecl::getInjectedClassNameSpecialization() {
 // TemplateTypeParm Allocation/Deallocation Method Implementations
 //===----------------------------------------------------------------------===//
 
-TemplateTypeParmDecl *
-TemplateTypeParmDecl::Create(const ASTContext &C, DeclContext *DC,
-                             SourceLocation KeyLoc, SourceLocation NameLoc,
-                             unsigned D, unsigned P, IdentifierInfo *Id,
-                             bool Typename, bool ParameterPack,
-                             bool HasTypeConstraint,
-                             Optional<unsigned> NumExpanded) {
+TemplateTypeParmDecl *TemplateTypeParmDecl::Create(
+    const ASTContext &C, DeclContext *DC, SourceLocation KeyLoc,
+    SourceLocation NameLoc, unsigned D, unsigned P, IdentifierInfo *Id,
+    bool Typename, bool ParameterPack, bool HasTypeConstraint,
+    std::optional<unsigned> NumExpanded) {
   auto *TTPDecl =
       new (C, DC,
            additionalSizeToAlloc<TypeConstraint>(HasTypeConstraint ? 1 : 0))
@@ -1515,8 +1514,8 @@ createTypePackElementParameterList(const ASTContext &C, DeclContext *DC) {
   // template <std::size_t Index, typename ...T>
   NamedDecl *Params[] = {Index, Ts};
   return TemplateParameterList::Create(C, SourceLocation(), SourceLocation(),
-                                       llvm::makeArrayRef(Params),
-                                       SourceLocation(), nullptr);
+                                       llvm::ArrayRef(Params), SourceLocation(),
+                                       nullptr);
 }
 
 static TemplateParameterList *createBuiltinTemplateParameterList(

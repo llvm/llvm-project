@@ -14,6 +14,7 @@
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/OpImplementation.h"
 #include "llvm/Support/Base64.h"
+#include <optional>
 
 namespace mlir {
 namespace detail {
@@ -286,7 +287,7 @@ public:
 
     // Check for a hexadecimal float value.
     if (curTok.is(Token::integer)) {
-      Optional<APFloat> apResult;
+      std::optional<APFloat> apResult;
       if (failed(parser.parseFloatFromIntegerLiteral(
               apResult, curTok, isNegative, APFloat::IEEEdouble(),
               /*typeSizeInBits=*/64)))

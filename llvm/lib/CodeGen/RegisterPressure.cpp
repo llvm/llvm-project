@@ -361,8 +361,7 @@ void RegPressureTracker::initLiveThru(const RegPressureTracker &RPTracker) {
   assert(isBottomClosed() && "need bottom-up tracking to intialize.");
   for (const RegisterMaskPair &Pair : P.LiveOutRegs) {
     Register RegUnit = Pair.RegUnit;
-    if (Register::isVirtualRegister(RegUnit)
-        && !RPTracker.hasUntiedDef(RegUnit))
+    if (RegUnit.isVirtual() && !RPTracker.hasUntiedDef(RegUnit))
       increaseSetPressure(LiveThruPressure, *MRI, RegUnit,
                           LaneBitmask::getNone(), Pair.LaneMask);
   }
@@ -608,8 +607,8 @@ void RegisterOperands::adjustLaneLiveness(const LiveIntervals &LIS,
     // If the def is all that is live after the instruction, then in case
     // of a subregister def we need a read-undef flag.
     Register RegUnit = I->RegUnit;
-    if (Register::isVirtualRegister(RegUnit) &&
-        AddFlagsMI != nullptr && (LiveAfter & ~I->LaneMask).none())
+    if (RegUnit.isVirtual() && AddFlagsMI != nullptr &&
+        (LiveAfter & ~I->LaneMask).none())
       AddFlagsMI->setRegisterDefReadUndef(RegUnit);
 
     LaneBitmask ActualDef = I->LaneMask & LiveAfter;
@@ -634,7 +633,7 @@ void RegisterOperands::adjustLaneLiveness(const LiveIntervals &LIS,
   if (AddFlagsMI != nullptr) {
     for (const RegisterMaskPair &P : DeadDefs) {
       Register RegUnit = P.RegUnit;
-      if (!Register::isVirtualRegister(RegUnit))
+      if (!RegUnit.isVirtual())
         continue;
       LaneBitmask LiveAfter = getLiveLanesAt(LIS, MRI, true, RegUnit,
                                              Pos.getDeadSlot());
@@ -843,7 +842,7 @@ void RegPressureTracker::recede(const RegisterOperands &RegOpers,
   if (TrackUntiedDefs) {
     for (const RegisterMaskPair &Def : RegOpers.Defs) {
       Register RegUnit = Def.RegUnit;
-      if (Register::isVirtualRegister(RegUnit) &&
+      if (RegUnit.isVirtual() &&
           (LiveRegs.contains(RegUnit) & Def.LaneMask).none())
         UntiedDefs.insert(RegUnit);
     }

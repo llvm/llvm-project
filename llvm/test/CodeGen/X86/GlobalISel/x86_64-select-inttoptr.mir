@@ -3,10 +3,10 @@
 
 --- |
 
-  define i64* @inttoptr_p0_s64(i64 %val) {
+  define ptr @inttoptr_p0_s64(i64 %val) {
   entry:
-    %0 = inttoptr i64 %val to i64*
-    ret i64* %0
+    %0 = inttoptr i64 %val to ptr
+    ret ptr %0
   }
 
 ...

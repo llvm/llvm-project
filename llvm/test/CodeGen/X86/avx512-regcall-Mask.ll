@@ -35,29 +35,29 @@ define dso_local x86_regcallcc i64 @test_argv64i1(<64 x i1> %x0, <64 x i1> %x1, 
 ;
 ; WIN64-LABEL: test_argv64i1:
 ; WIN64:       # %bb.0:
-; WIN64-NEXT:    addq %rdx, %rcx
-; WIN64-NEXT:    addq %rdi, %rcx
-; WIN64-NEXT:    addq %rsi, %rcx
-; WIN64-NEXT:    addq %r8, %rcx
+; WIN64-NEXT:    addq %rcx, %rax
+; WIN64-NEXT:    addq %rdx, %rax
+; WIN64-NEXT:    addq %rdi, %rax
+; WIN64-NEXT:    leaq (%rsi,%r8), %rcx
 ; WIN64-NEXT:    addq %r9, %rcx
-; WIN64-NEXT:    addq %r10, %rcx
-; WIN64-NEXT:    addq %r11, %rcx
+; WIN64-NEXT:    addq %rcx, %rax
+; WIN64-NEXT:    leaq (%r10,%r11), %rcx
 ; WIN64-NEXT:    addq %r12, %rcx
 ; WIN64-NEXT:    addq %r14, %rcx
-; WIN64-NEXT:    addq %r15, %rcx
 ; WIN64-NEXT:    addq %rcx, %rax
+; WIN64-NEXT:    addq %r15, %rax
 ; WIN64-NEXT:    addq {{[0-9]+}}(%rsp), %rax
 ; WIN64-NEXT:    retq
 ;
 ; LINUXOSX64-LABEL: test_argv64i1:
 ; LINUXOSX64:       # %bb.0:
-; LINUXOSX64-NEXT:    addq %rdx, %rcx
-; LINUXOSX64-NEXT:    addq %rdi, %rcx
-; LINUXOSX64-NEXT:    addq %rsi, %rcx
-; LINUXOSX64-NEXT:    addq %r8, %rcx
+; LINUXOSX64-NEXT:    addq %rcx, %rax
+; LINUXOSX64-NEXT:    addq %rdx, %rax
+; LINUXOSX64-NEXT:    addq %rdi, %rax
+; LINUXOSX64-NEXT:    leaq (%rsi,%r8), %rcx
 ; LINUXOSX64-NEXT:    addq %r9, %rcx
-; LINUXOSX64-NEXT:    addq %r12, %rcx
-; LINUXOSX64-NEXT:    addq %r13, %rcx
+; LINUXOSX64-NEXT:    addq %rcx, %rax
+; LINUXOSX64-NEXT:    leaq (%r12,%r13), %rcx
 ; LINUXOSX64-NEXT:    addq %r14, %rcx
 ; LINUXOSX64-NEXT:    addq %r15, %rcx
 ; LINUXOSX64-NEXT:    addq %rcx, %rax

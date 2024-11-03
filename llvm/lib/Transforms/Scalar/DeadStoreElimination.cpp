@@ -520,7 +520,7 @@ static void shortenAssignment(Instruction *Inst, uint64_t OldOffsetInBits,
       LinkToNothing = DIAssignID::getDistinct(Inst->getContext());
     NewAssign->setAssignId(LinkToNothing);
     NewAssign->setExpression(CreateDeadFragExpr());
-    NewAssign->setAddress(UndefValue::get(DAI->getAddress()->getType()));
+    NewAssign->setKillAddress();
   }
 }
 

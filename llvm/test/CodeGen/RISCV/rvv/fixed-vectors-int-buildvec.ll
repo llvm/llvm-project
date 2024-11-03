@@ -467,9 +467,8 @@ define void @buildvec_seq_v9i8(ptr %x) {
 ; RV32-NEXT:    li a1, 3
 ; RV32-NEXT:    sb a1, 8(a0)
 ; RV32-NEXT:    li a1, 73
-; RV32-NEXT:    vsetivli zero, 1, e8, mf8, ta, ma
-; RV32-NEXT:    vmv.s.x v0, a1
 ; RV32-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
+; RV32-NEXT:    vmv.s.x v0, a1
 ; RV32-NEXT:    vmv.v.i v9, 2
 ; RV32-NEXT:    li a1, 36
 ; RV32-NEXT:    vmv.s.x v8, a1
@@ -523,7 +522,6 @@ define void @buildvec_vid_step1o2_v4i32(ptr %z0, ptr %z1, ptr %z2, ptr %z3, ptr 
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; CHECK-NEXT:    vse32.v v10, (a5)
 ; CHECK-NEXT:    vmv.v.i v8, 0
-; CHECK-NEXT:    vsetvli zero, zero, e32, m1, tu, ma
 ; CHECK-NEXT:    vslideup.vi v8, v9, 3
 ; CHECK-NEXT:    vse32.v v8, (a6)
 ; CHECK-NEXT:    ret
@@ -556,7 +554,7 @@ define void @buildvec_vid_step1o2_add3_v4i16(ptr %z0, ptr %z1, ptr %z2, ptr %z3,
 ; CHECK-NEXT:    vsetivli zero, 2, e16, mf2, tu, ma
 ; CHECK-NEXT:    vmv1r.v v10, v9
 ; CHECK-NEXT:    vslideup.vi v10, v8, 1
-; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, tu, ma
+; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
 ; CHECK-NEXT:    vse16.v v10, (a5)
 ; CHECK-NEXT:    vslideup.vi v8, v9, 3
 ; CHECK-NEXT:    vse16.v v8, (a6)

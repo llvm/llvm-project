@@ -336,8 +336,8 @@ DecodeStatus AArch64Disassembler::getInstruction(MCInst &MI, uint64_t &Size,
     // operand for the accumulator (ZA) or implicit immediate zero which isn't
     // encoded, manually insert operand.
     for (unsigned i = 0; i < Desc.getNumOperands(); i++) {
-      if (Desc.OpInfo[i].OperandType == MCOI::OPERAND_REGISTER) {
-        switch (Desc.OpInfo[i].RegClass) {
+      if (Desc.operands()[i].OperandType == MCOI::OPERAND_REGISTER) {
+        switch (Desc.operands()[i].RegClass) {
         default:
           break;
         case AArch64::MPRRegClassID:
@@ -350,7 +350,7 @@ DecodeStatus AArch64Disassembler::getInstruction(MCInst &MI, uint64_t &Size,
           MI.insert(MI.begin() + i, MCOperand::createReg(AArch64::ZT0));
           break;
         }
-      } else if (Desc.OpInfo[i].OperandType ==
+      } else if (Desc.operands()[i].OperandType ==
                  AArch64::OPERAND_IMPLICIT_IMM_0) {
         MI.insert(MI.begin() + i, MCOperand::createImm(0));
       }

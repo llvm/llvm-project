@@ -1435,9 +1435,8 @@ define i64 @vwreduce_add_v32i64(ptr %x) {
 ; RV32-NEXT:    vslidedown.vi v16, v8, 16
 ; RV32-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
 ; RV32-NEXT:    vwadd.vv v24, v8, v16
-; RV32-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
-; RV32-NEXT:    vmv.s.x v8, zero
 ; RV32-NEXT:    vsetivli zero, 16, e64, m8, ta, ma
+; RV32-NEXT:    vmv.s.x v8, zero
 ; RV32-NEXT:    vredsum.vs v8, v24, v8
 ; RV32-NEXT:    vmv.x.s a0, v8
 ; RV32-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
@@ -1454,9 +1453,8 @@ define i64 @vwreduce_add_v32i64(ptr %x) {
 ; RV64-NEXT:    vslidedown.vi v16, v8, 16
 ; RV64-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
 ; RV64-NEXT:    vwadd.vv v24, v8, v16
-; RV64-NEXT:    vsetivli zero, 16, e64, m1, ta, ma
-; RV64-NEXT:    vmv.s.x v8, zero
 ; RV64-NEXT:    vsetivli zero, 16, e64, m8, ta, ma
+; RV64-NEXT:    vmv.s.x v8, zero
 ; RV64-NEXT:    vredsum.vs v8, v24, v8
 ; RV64-NEXT:    vmv.x.s a0, v8
 ; RV64-NEXT:    ret
@@ -1476,9 +1474,8 @@ define i64 @vwreduce_uadd_v32i64(ptr %x) {
 ; RV32-NEXT:    vslidedown.vi v16, v8, 16
 ; RV32-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
 ; RV32-NEXT:    vwaddu.vv v24, v8, v16
-; RV32-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
-; RV32-NEXT:    vmv.s.x v8, zero
 ; RV32-NEXT:    vsetivli zero, 16, e64, m8, ta, ma
+; RV32-NEXT:    vmv.s.x v8, zero
 ; RV32-NEXT:    vredsum.vs v8, v24, v8
 ; RV32-NEXT:    vmv.x.s a0, v8
 ; RV32-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
@@ -1495,9 +1492,8 @@ define i64 @vwreduce_uadd_v32i64(ptr %x) {
 ; RV64-NEXT:    vslidedown.vi v16, v8, 16
 ; RV64-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
 ; RV64-NEXT:    vwaddu.vv v24, v8, v16
-; RV64-NEXT:    vsetivli zero, 16, e64, m1, ta, ma
-; RV64-NEXT:    vmv.s.x v8, zero
 ; RV64-NEXT:    vsetivli zero, 16, e64, m8, ta, ma
+; RV64-NEXT:    vmv.s.x v8, zero
 ; RV64-NEXT:    vredsum.vs v8, v24, v8
 ; RV64-NEXT:    vmv.x.s a0, v8
 ; RV64-NEXT:    ret

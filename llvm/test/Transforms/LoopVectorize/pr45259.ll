@@ -34,7 +34,7 @@ define i8 @widget(ptr %arr, i8 %t9) {
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[TMP3]], 4
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i32 [[TMP3]], [[N_MOD_VF]]
 ; CHECK-NEXT:    [[IND_END:%.*]] = trunc i32 [[N_VEC]] to i8
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i8> poison, i8 [[T9:%.*]], i32 0
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i8> poison, i8 [[T9:%.*]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i8> [[BROADCAST_SPLATINSERT]], <4 x i8> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:

@@ -1,6 +1,6 @@
 ; Need to move users of allocas that were moved into the coroutine frame after
 ; coro.begin.
-; RUN: opt < %s -passes='cgscc(coro-split),simplifycfg,early-cse' -S | FileCheck %s
+; RUN: opt -opaque-pointers=0 < %s -passes='cgscc(coro-split),simplifycfg,early-cse' -S | FileCheck %s
 
 define nonnull i8* @f(i32 %n) presplitcoroutine {
 ; CHECK-LABEL: @f(

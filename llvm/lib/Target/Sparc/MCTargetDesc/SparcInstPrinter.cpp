@@ -38,9 +38,8 @@ bool SparcInstPrinter::isV9(const MCSubtargetInfo &STI) const {
   return (STI.getFeatureBits()[Sparc::FeatureV9]) != 0;
 }
 
-void SparcInstPrinter::printRegName(raw_ostream &OS, unsigned RegNo) const
-{
-  OS << '%' << StringRef(getRegisterName(RegNo)).lower();
+void SparcInstPrinter::printRegName(raw_ostream &OS, MCRegister Reg) const {
+  OS << '%' << StringRef(getRegisterName(Reg)).lower();
 }
 
 void SparcInstPrinter::printInst(const MCInst *MI, uint64_t Address,

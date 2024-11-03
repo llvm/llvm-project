@@ -191,11 +191,6 @@ typedef enum omp_allocator_handle_t {
   KMP_ALLOCATOR_MAX_HANDLE = ~(0U)
 } omp_allocator_handle_t;
 
-enum OMPTgtExecModeFlags : int8_t {
-  OMP_TGT_EXEC_MODE_GENERIC = 1 << 0,
-  OMP_TGT_EXEC_MODE_SPMD = 1 << 1,
-};
-
 #define __PRAGMA(STR) _Pragma(#STR)
 #define OMP_PRAGMA(STR) __PRAGMA(omp STR)
 

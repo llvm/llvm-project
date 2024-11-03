@@ -4,7 +4,7 @@
 ; RUN: llc --mtriple=loongarch64 --verify-machineinstrs < %s \
 ; RUN:   | FileCheck %s --check-prefix=LA64
 
-declare void @callee(i8*, i32*)
+declare void @callee(ptr, ptr)
 
 define void @caller(i32 %n) {
 ; LA32-LABEL: caller:
@@ -68,6 +68,6 @@ define void @caller(i32 %n) {
 ; LA64-NEXT:    ret
   %1 = alloca i8, i32 %n
   %2 = alloca i32, align 64
-  call void @callee(i8* %1, i32 *%2)
+  call void @callee(ptr %1, ptr %2)
   ret void
 }

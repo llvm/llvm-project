@@ -17,6 +17,7 @@
 #include <chrono>
 #include <fstream>
 #include <future>
+#include <optional>
 #include <thread>
 
 #include "llvm/Support/FileSystem.h"
@@ -52,7 +53,7 @@ FifoFileIO::FifoFileIO(StringRef fifo_file, StringRef other_endpoint_name)
 Expected<json::Value> FifoFileIO::ReadJSON(std::chrono::milliseconds timeout) {
   // We use a pointer for this future, because otherwise its normal destructor
   // would wait for the getline to end, rendering the timeout useless.
-  Optional<std::string> line;
+  std::optional<std::string> line;
   std::future<void> *future =
       new std::future<void>(std::async(std::launch::async, [&]() {
         std::ifstream reader(m_fifo_file, std::ifstream::in);

@@ -102,6 +102,7 @@ enum stats_state_e {
   macro(OMP_BARRIER, 0, arg)                                                   \
   macro(OMP_CRITICAL, 0, arg)                                                  \
   macro(OMP_SINGLE, 0, arg)                                                    \
+  macro(OMP_SECTIONS, 0, arg)                                                  \
   macro(OMP_MASTER, 0, arg)                                                    \
   macro(OMP_MASKED, 0, arg)                                                    \
   macro(OMP_TEAMS, 0, arg)                                                     \
@@ -150,6 +151,8 @@ enum stats_state_e {
   macro (OMP_critical, 0, arg)                                                 \
   macro (OMP_critical_wait, 0, arg)                                            \
   macro (OMP_single, 0, arg)                                                   \
+  macro (OMP_sections, 0, arg)                                                 \
+  macro (OMP_sections_overhead, 0, arg)                                        \
   macro (OMP_master, 0, arg)                                                   \
   macro (OMP_masked, 0, arg)                                                   \
   macro (OMP_task_immediate, 0, arg)                                           \

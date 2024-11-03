@@ -57,8 +57,8 @@ public:
 
   void emitInstruction(const MachineInstr *MI) override;
 
-  static const char *getRegisterName(unsigned RegNo) {
-    return VEInstPrinter::getRegisterName(RegNo);
+  static const char *getRegisterName(MCRegister Reg) {
+    return VEInstPrinter::getRegisterName(Reg);
   }
   void printOperand(const MachineInstr *MI, int OpNum, raw_ostream &OS);
   bool PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,

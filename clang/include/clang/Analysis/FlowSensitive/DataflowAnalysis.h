@@ -15,6 +15,7 @@
 #define LLVM_CLANG_ANALYSIS_FLOWSENSITIVE_DATAFLOWANALYSIS_H
 
 #include <iterator>
+#include <optional>
 #include <type_traits>
 #include <utility>
 #include <vector>
@@ -26,7 +27,6 @@
 #include "clang/Analysis/FlowSensitive/DataflowLattice.h"
 #include "clang/Analysis/FlowSensitive/TypeErasedDataflowAnalysis.h"
 #include "llvm/ADT/Any.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/Error.h"
 
@@ -82,9 +82,11 @@ public:
 
   /// Deprecated. Use the `DataflowAnalysisOptions` constructor instead.
   explicit DataflowAnalysis(ASTContext &Context, bool ApplyBuiltinTransfer)
-      : DataflowAnalysis(Context, {ApplyBuiltinTransfer
-                                       ? TransferOptions{}
-                                       : llvm::Optional<TransferOptions>()}) {}
+      : DataflowAnalysis(
+            Context,
+            {ApplyBuiltinTransfer
+                 ? DataflowAnalysisContext::Options{}
+                 : std::optional<DataflowAnalysisContext::Options>()}) {}
 
   explicit DataflowAnalysis(ASTContext &Context,
                             DataflowAnalysisOptions Options)
@@ -187,7 +189,7 @@ template <typename LatticeT> struct DataflowAnalysisState {
 /// program point.
 template <typename AnalysisT>
 llvm::Expected<std::vector<
-    llvm::Optional<DataflowAnalysisState<typename AnalysisT::Lattice>>>>
+    std::optional<DataflowAnalysisState<typename AnalysisT::Lattice>>>>
 runDataflowAnalysis(
     const ControlFlowContext &CFCtx, AnalysisT &Analysis,
     const Environment &InitEnv,
@@ -213,8 +215,7 @@ runDataflowAnalysis(
   if (!TypeErasedBlockStates)
     return TypeErasedBlockStates.takeError();
 
-  std::vector<
-      llvm::Optional<DataflowAnalysisState<typename AnalysisT::Lattice>>>
+  std::vector<std::optional<DataflowAnalysisState<typename AnalysisT::Lattice>>>
       BlockStates;
   BlockStates.reserve(TypeErasedBlockStates->size());
 

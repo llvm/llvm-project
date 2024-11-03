@@ -67,7 +67,7 @@ define void @call_non_nounwind(){
 
 define i32 @maybe_throw(i1 zeroext %0) {
 ; CHECK-LABEL: define {{[^@]+}}@maybe_throw
-; CHECK-SAME: (i1 zeroext [[TMP0:%.*]]) {
+; CHECK-SAME: (i1 noundef zeroext [[TMP0:%.*]]) {
 ; CHECK-NEXT:    br i1 [[TMP0]], label [[TMP2:%.*]], label [[TMP3:%.*]]
 ; CHECK:       2:
 ; CHECK-NEXT:    tail call void @__cxa_rethrow()
@@ -96,17 +96,17 @@ declare void @__cxa_rethrow()
 ;   return 1;
 ; }
 
-define i32 @catch_thing() personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
-; CHECK-LABEL: define {{[^@]+}}@catch_thing() personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
+define i32 @catch_thing() personality ptr @__gxx_personality_v0 {
+; CHECK-LABEL: define {{[^@]+}}@catch_thing() personality ptr @__gxx_personality_v0 {
 ; CHECK-NEXT:    invoke void @__cxa_rethrow()
 ; CHECK-NEXT:    to label [[TMP1:%.*]] unwind label [[TMP2:%.*]]
 ; CHECK:       1:
 ; CHECK-NEXT:    unreachable
 ; CHECK:       2:
-; CHECK-NEXT:    [[TMP3:%.*]] = landingpad { i8*, i32 }
-; CHECK-NEXT:    catch i8* null
-; CHECK-NEXT:    [[TMP4:%.*]] = extractvalue { i8*, i32 } [[TMP3]], 0
-; CHECK-NEXT:    [[TMP5:%.*]] = tail call i8* @__cxa_begin_catch(i8* [[TMP4]])
+; CHECK-NEXT:    [[TMP3:%.*]] = landingpad { ptr, i32 }
+; CHECK-NEXT:    catch ptr null
+; CHECK-NEXT:    [[TMP4:%.*]] = extractvalue { ptr, i32 } [[TMP3]], 0
+; CHECK-NEXT:    [[TMP5:%.*]] = tail call ptr @__cxa_begin_catch(ptr [[TMP4]])
 ; CHECK-NEXT:    tail call void @__cxa_end_catch()
 ; CHECK-NEXT:    ret i32 -1
 ;
@@ -117,10 +117,10 @@ define i32 @catch_thing() personality i8* bitcast (i32 (...)* @__gxx_personality
   unreachable
 
 2:                                                ; preds = %0
-  %3 = landingpad { i8*, i32 }
-  catch i8* null
-  %4 = extractvalue { i8*, i32 } %3, 0
-  %5 = tail call i8* @__cxa_begin_catch(i8* %4) #2
+  %3 = landingpad { ptr, i32 }
+  catch ptr null
+  %4 = extractvalue { ptr, i32 } %3, 0
+  %5 = tail call ptr @__cxa_begin_catch(ptr %4) #2
   tail call void @__cxa_end_catch()
   ret i32 -1
 }
@@ -141,7 +141,7 @@ define i32 @catch_thing_user() {
 
 declare i32 @__gxx_personality_v0(...)
 
-declare i8* @__cxa_begin_catch(i8*)
+declare ptr @__cxa_begin_catch(ptr)
 
 declare void @__cxa_end_catch()
 ;.

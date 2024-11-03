@@ -37,7 +37,6 @@
 #include <iosfwd>
 #include <new>
 #include <stdexcept>
-#include <type_traits>
 #include <typeinfo>
 #if !defined(_LIBCPP_HAS_NO_ATOMIC_HEADER)
 #  include <atomic>
@@ -261,6 +260,8 @@ __shared_ptr_pointer<_Tp, _Dp, _Alloc>::__on_zero_shared_weak() _NOEXCEPT
     __a.deallocate(_PTraits::pointer_to(*this), 1);
 }
 
+struct __default_initialize_tag {};
+
 template <class _Tp, class _Alloc>
 struct __shared_ptr_emplace
     : __shared_weak_count
@@ -278,6 +279,16 @@ struct __shared_ptr_emplace
         ::new ((void*)__get_elem()) _Tp(_VSTD::forward<_Args>(__args)...);
 #endif
     }
+
+
+#if _LIBCPP_STD_VER >= 20
+    _LIBCPP_HIDE_FROM_ABI
+    explicit __shared_ptr_emplace(__default_initialize_tag, _Alloc __a)
+        : __storage_(std::move(__a))
+    {
+        ::new ((void*)__get_elem()) _Tp;
+    }
+#endif
 
     _LIBCPP_HIDE_FROM_ABI
     _Alloc* __get_alloc() _NOEXCEPT { return __storage_.__get_alloc(); }
@@ -367,22 +378,22 @@ struct __compatible_with
 template <class _Ptr, class = void>
 struct __is_deletable : false_type { };
 template <class _Ptr>
-struct __is_deletable<_Ptr, decltype(delete declval<_Ptr>())> : true_type { };
+struct __is_deletable<_Ptr, decltype(delete std::declval<_Ptr>())> : true_type { };
 
 template <class _Ptr, class = void>
 struct __is_array_deletable : false_type { };
 template <class _Ptr>
-struct __is_array_deletable<_Ptr, decltype(delete[] declval<_Ptr>())> : true_type { };
+struct __is_array_deletable<_Ptr, decltype(delete[] std::declval<_Ptr>())> : true_type { };
 
 template <class _Dp, class _Pt,
-    class = decltype(declval<_Dp>()(declval<_Pt>()))>
+    class = decltype(std::declval<_Dp>()(std::declval<_Pt>()))>
 static true_type __well_formed_deleter_test(int);
 
 template <class, class>
 static false_type __well_formed_deleter_test(...);
 
 template <class _Dp, class _Pt>
-struct __well_formed_deleter : decltype(__well_formed_deleter_test<_Dp, _Pt>(0)) {};
+struct __well_formed_deleter : decltype(std::__well_formed_deleter_test<_Dp, _Pt>(0)) {};
 
 template<class _Dp, class _Tp, class _Yp>
 struct __shared_ptr_deleter_ctor_reqs
@@ -946,6 +957,29 @@ shared_ptr<_Tp> make_shared(_Args&& ...__args)
     return _VSTD::allocate_shared<_Tp>(allocator<_Tp>(), _VSTD::forward<_Args>(__args)...);
 }
 
+#if _LIBCPP_STD_VER >= 20
+
+template<class _Tp, class _Alloc, __enable_if_t<!is_array<_Tp>::value, int> = 0>
+_LIBCPP_HIDE_FROM_ABI
+shared_ptr<_Tp> allocate_shared_for_overwrite(const _Alloc& __a)
+{
+    using _ControlBlock = __shared_ptr_emplace<_Tp, _Alloc>;
+    using _ControlBlockAllocator = typename __allocator_traits_rebind<_Alloc, _ControlBlock>::type;
+    __allocation_guard<_ControlBlockAllocator> __guard(__a, 1);
+    ::new ((void*)_VSTD::addressof(*__guard.__get())) _ControlBlock(__default_initialize_tag{}, __a);
+    auto __control_block = __guard.__release_ptr();
+    return shared_ptr<_Tp>::__create_with_control_block((*__control_block).__get_elem(), _VSTD::addressof(*__control_block));
+}
+
+template<class _Tp, __enable_if_t<!is_array<_Tp>::value, int> = 0>
+_LIBCPP_HIDE_FROM_ABI
+shared_ptr<_Tp> make_shared_for_overwrite()
+{
+    return std::allocate_shared_for_overwrite<_Tp>(allocator<_Tp>());
+}
+
+#endif // _LIBCPP_STD_VER >= 20
+
 #if _LIBCPP_STD_VER > 14
 
 template <size_t _Alignment>
@@ -976,6 +1010,17 @@ struct __unbounded_array_control_block<_Tp[], _Alloc> : __shared_weak_count
         std::__uninitialized_allocator_value_construct_n(__alloc_, std::begin(__data_), __count_);
     }
 
+#if _LIBCPP_STD_VER >= 20
+    _LIBCPP_HIDE_FROM_ABI
+    explicit __unbounded_array_control_block(_Alloc const& __alloc, size_t __count, __default_initialize_tag)
+        : __alloc_(__alloc), __count_(__count)
+    {
+        // We are purposefully not using an allocator-aware default construction because the spec says so.
+        // There's currently no way of expressing default initialization in an allocator-aware manner anyway.
+        std::uninitialized_default_construct_n(std::begin(__data_), __count_);
+    }
+#endif
+
     // Returns the number of bytes required to store a control block followed by the given number
     // of elements of _Tp, with the whole storage being aligned to a multiple of _Tp's alignment.
     _LIBCPP_HIDE_FROM_ABI
@@ -992,7 +1037,7 @@ struct __unbounded_array_control_block<_Tp[], _Alloc> : __shared_weak_count
         return (__bytes + __align - 1) & ~(__align - 1);
     }
 
-    _LIBCPP_HIDE_FROM_ABI
+    _LIBCPP_HIDE_FROM_ABI_VIRTUAL
     ~__unbounded_array_control_block() override { } // can't be `= default` because of the sometimes-non-trivial union member __data_
 
 private:
@@ -1059,7 +1104,16 @@ struct __bounded_array_control_block<_Tp[_Count], _Alloc>
         std::__uninitialized_allocator_value_construct_n(__alloc_, std::addressof(__data_[0]), _Count);
     }
 
+#if _LIBCPP_STD_VER >= 20
     _LIBCPP_HIDE_FROM_ABI
+    explicit __bounded_array_control_block(_Alloc const& __alloc, __default_initialize_tag) : __alloc_(__alloc) {
+        // We are purposefully not using an allocator-aware default construction because the spec says so.
+        // There's currently no way of expressing default initialization in an allocator-aware manner anyway.
+        std::uninitialized_default_construct_n(std::addressof(__data_[0]), _Count);
+    }
+#endif
+
+    _LIBCPP_HIDE_FROM_ABI_VIRTUAL
     ~__bounded_array_control_block() override { } // can't be `= default` because of the sometimes-non-trivial union member __data_
 
 private:
@@ -1102,6 +1156,7 @@ shared_ptr<_Array> __allocate_shared_bounded_array(const _Alloc& __a, _Arg&& ...
 
 #if _LIBCPP_STD_VER > 17
 
+// bounded array variants
 template<class _Tp, class _Alloc, class = __enable_if_t<is_bounded_array<_Tp>::value>>
 _LIBCPP_HIDE_FROM_ABI
 shared_ptr<_Tp> allocate_shared(const _Alloc& __a)
@@ -1116,18 +1171,11 @@ shared_ptr<_Tp> allocate_shared(const _Alloc& __a, const remove_extent_t<_Tp>& _
     return std::__allocate_shared_bounded_array<_Tp>(__a, __u);
 }
 
-template<class _Tp, class _Alloc, class = __enable_if_t<is_unbounded_array<_Tp>::value>>
+template<class _Tp, class _Alloc, __enable_if_t<is_bounded_array<_Tp>::value, int> = 0>
 _LIBCPP_HIDE_FROM_ABI
-shared_ptr<_Tp> allocate_shared(const _Alloc& __a, size_t __n)
+shared_ptr<_Tp> allocate_shared_for_overwrite(const _Alloc& __a)
 {
-    return std::__allocate_shared_unbounded_array<_Tp>(__a, __n);
-}
-
-template<class _Tp, class _Alloc, class = __enable_if_t<is_unbounded_array<_Tp>::value>>
-_LIBCPP_HIDE_FROM_ABI
-shared_ptr<_Tp> allocate_shared(const _Alloc& __a, size_t __n, const remove_extent_t<_Tp>& __u)
-{
-    return std::__allocate_shared_unbounded_array<_Tp>(__a, __n, __u);
+    return std::__allocate_shared_bounded_array<_Tp>(__a, __default_initialize_tag{});
 }
 
 template<class _Tp, class = __enable_if_t<is_bounded_array<_Tp>::value>>
@@ -1144,6 +1192,35 @@ shared_ptr<_Tp> make_shared(const remove_extent_t<_Tp>& __u)
     return std::__allocate_shared_bounded_array<_Tp>(allocator<_Tp>(), __u);
 }
 
+template<class _Tp, __enable_if_t<is_bounded_array<_Tp>::value, int> = 0>
+_LIBCPP_HIDE_FROM_ABI
+shared_ptr<_Tp> make_shared_for_overwrite()
+{
+    return std::__allocate_shared_bounded_array<_Tp>(allocator<_Tp>(), __default_initialize_tag{});
+}
+
+// unbounded array variants
+template<class _Tp, class _Alloc, class = __enable_if_t<is_unbounded_array<_Tp>::value>>
+_LIBCPP_HIDE_FROM_ABI
+shared_ptr<_Tp> allocate_shared(const _Alloc& __a, size_t __n)
+{
+    return std::__allocate_shared_unbounded_array<_Tp>(__a, __n);
+}
+
+template<class _Tp, class _Alloc, class = __enable_if_t<is_unbounded_array<_Tp>::value>>
+_LIBCPP_HIDE_FROM_ABI
+shared_ptr<_Tp> allocate_shared(const _Alloc& __a, size_t __n, const remove_extent_t<_Tp>& __u)
+{
+    return std::__allocate_shared_unbounded_array<_Tp>(__a, __n, __u);
+}
+
+template<class _Tp, class _Alloc, __enable_if_t<is_unbounded_array<_Tp>::value, int> = 0>
+_LIBCPP_HIDE_FROM_ABI
+shared_ptr<_Tp> allocate_shared_for_overwrite(const _Alloc& __a, size_t __n)
+{
+    return std::__allocate_shared_unbounded_array<_Tp>(__a, __n, __default_initialize_tag{});
+}
+
 template<class _Tp, class = __enable_if_t<is_unbounded_array<_Tp>::value>>
 _LIBCPP_HIDE_FROM_ABI
 shared_ptr<_Tp> make_shared(size_t __n)
@@ -1156,6 +1233,13 @@ _LIBCPP_HIDE_FROM_ABI
 shared_ptr<_Tp> make_shared(size_t __n, const remove_extent_t<_Tp>& __u)
 {
     return std::__allocate_shared_unbounded_array<_Tp>(allocator<_Tp>(), __n, __u);
+}
+
+template<class _Tp, __enable_if_t<is_unbounded_array<_Tp>::value, int> = 0>
+_LIBCPP_HIDE_FROM_ABI
+shared_ptr<_Tp> make_shared_for_overwrite(size_t __n)
+{
+    return std::__allocate_shared_unbounded_array<_Tp>(allocator<_Tp>(), __n, __default_initialize_tag{});
 }
 
 #endif // _LIBCPP_STD_VER > 17
@@ -1810,7 +1894,7 @@ _LIBCPP_AVAILABILITY_ATOMIC_SHARED_PTR
 _LIBCPP_HIDE_FROM_ABI shared_ptr<_Tp>
 atomic_load(const shared_ptr<_Tp>* __p)
 {
-    __sp_mut& __m = __get_sp_mut(__p);
+    __sp_mut& __m = std::__get_sp_mut(__p);
     __m.lock();
     shared_ptr<_Tp> __q = *__p;
     __m.unlock();
@@ -1823,7 +1907,7 @@ _LIBCPP_AVAILABILITY_ATOMIC_SHARED_PTR
 shared_ptr<_Tp>
 atomic_load_explicit(const shared_ptr<_Tp>* __p, memory_order)
 {
-    return atomic_load(__p);
+    return std::atomic_load(__p);
 }
 
 template <class _Tp>
@@ -1831,7 +1915,7 @@ _LIBCPP_AVAILABILITY_ATOMIC_SHARED_PTR
 _LIBCPP_HIDE_FROM_ABI void
 atomic_store(shared_ptr<_Tp>* __p, shared_ptr<_Tp> __r)
 {
-    __sp_mut& __m = __get_sp_mut(__p);
+    __sp_mut& __m = std::__get_sp_mut(__p);
     __m.lock();
     __p->swap(__r);
     __m.unlock();
@@ -1843,7 +1927,7 @@ _LIBCPP_AVAILABILITY_ATOMIC_SHARED_PTR
 void
 atomic_store_explicit(shared_ptr<_Tp>* __p, shared_ptr<_Tp> __r, memory_order)
 {
-    atomic_store(__p, __r);
+    std::atomic_store(__p, __r);
 }
 
 template <class _Tp>
@@ -1851,7 +1935,7 @@ _LIBCPP_AVAILABILITY_ATOMIC_SHARED_PTR
 _LIBCPP_HIDE_FROM_ABI shared_ptr<_Tp>
 atomic_exchange(shared_ptr<_Tp>* __p, shared_ptr<_Tp> __r)
 {
-    __sp_mut& __m = __get_sp_mut(__p);
+    __sp_mut& __m = std::__get_sp_mut(__p);
     __m.lock();
     __p->swap(__r);
     __m.unlock();
@@ -1864,7 +1948,7 @@ _LIBCPP_AVAILABILITY_ATOMIC_SHARED_PTR
 shared_ptr<_Tp>
 atomic_exchange_explicit(shared_ptr<_Tp>* __p, shared_ptr<_Tp> __r, memory_order)
 {
-    return atomic_exchange(__p, __r);
+    return std::atomic_exchange(__p, __r);
 }
 
 template <class _Tp>
@@ -1873,7 +1957,7 @@ _LIBCPP_HIDE_FROM_ABI bool
 atomic_compare_exchange_strong(shared_ptr<_Tp>* __p, shared_ptr<_Tp>* __v, shared_ptr<_Tp> __w)
 {
     shared_ptr<_Tp> __temp;
-    __sp_mut& __m = __get_sp_mut(__p);
+    __sp_mut& __m = std::__get_sp_mut(__p);
     __m.lock();
     if (__p->__owner_equivalent(*__v))
     {
@@ -1894,7 +1978,7 @@ _LIBCPP_AVAILABILITY_ATOMIC_SHARED_PTR
 bool
 atomic_compare_exchange_weak(shared_ptr<_Tp>* __p, shared_ptr<_Tp>* __v, shared_ptr<_Tp> __w)
 {
-    return atomic_compare_exchange_strong(__p, __v, __w);
+    return std::atomic_compare_exchange_strong(__p, __v, __w);
 }
 
 template <class _Tp>
@@ -1904,7 +1988,7 @@ bool
 atomic_compare_exchange_strong_explicit(shared_ptr<_Tp>* __p, shared_ptr<_Tp>* __v,
                                         shared_ptr<_Tp> __w, memory_order, memory_order)
 {
-    return atomic_compare_exchange_strong(__p, __v, __w);
+    return std::atomic_compare_exchange_strong(__p, __v, __w);
 }
 
 template <class _Tp>
@@ -1914,7 +1998,7 @@ bool
 atomic_compare_exchange_weak_explicit(shared_ptr<_Tp>* __p, shared_ptr<_Tp>* __v,
                                       shared_ptr<_Tp> __w, memory_order, memory_order)
 {
-    return atomic_compare_exchange_weak(__p, __v, __w);
+    return std::atomic_compare_exchange_weak(__p, __v, __w);
 }
 
 #endif // !defined(_LIBCPP_HAS_NO_THREADS)

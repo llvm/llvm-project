@@ -678,31 +678,38 @@ const Loop *SCEVExpander::getRelevantLoop(const SCEV *S) {
   if (!Pair.second)
     return Pair.first->second;
 
-  if (isa<SCEVConstant>(S))
-    // A constant has no relevant loops.
-    return nullptr;
-  if (const SCEVUnknown *U = dyn_cast<SCEVUnknown>(S)) {
+  switch (S->getSCEVType()) {
+  case scConstant:
+    return nullptr; // A constant has no relevant loops.
+  case scTruncate:
+  case scZeroExtend:
+  case scSignExtend:
+  case scPtrToInt:
+  case scAddExpr:
+  case scMulExpr:
+  case scUDivExpr:
+  case scAddRecExpr:
+  case scUMaxExpr:
+  case scSMaxExpr:
+  case scUMinExpr:
+  case scSMinExpr:
+  case scSequentialUMinExpr: {
+    const Loop *L = nullptr;
+    if (const SCEVAddRecExpr *AR = dyn_cast<SCEVAddRecExpr>(S))
+      L = AR->getLoop();
+    for (const SCEV *Op : S->operands())
+      L = PickMostRelevantLoop(L, getRelevantLoop(Op), SE.DT);
+    return RelevantLoops[S] = L;
+  }
+  case scUnknown: {
+    const SCEVUnknown *U = cast<SCEVUnknown>(S);
     if (const Instruction *I = dyn_cast<Instruction>(U->getValue()))
       return Pair.first->second = SE.LI.getLoopFor(I->getParent());
     // A non-instruction has no relevant loops.
     return nullptr;
   }
-  if (const SCEVNAryExpr *N = dyn_cast<SCEVNAryExpr>(S)) {
-    const Loop *L = nullptr;
-    if (const SCEVAddRecExpr *AR = dyn_cast<SCEVAddRecExpr>(S))
-      L = AR->getLoop();
-    for (const SCEV *Op : N->operands())
-      L = PickMostRelevantLoop(L, getRelevantLoop(Op), SE.DT);
-    return RelevantLoops[N] = L;
-  }
-  if (const SCEVCastExpr *C = dyn_cast<SCEVCastExpr>(S)) {
-    const Loop *Result = getRelevantLoop(C->getOperand());
-    return RelevantLoops[C] = Result;
-  }
-  if (const SCEVUDivExpr *D = dyn_cast<SCEVUDivExpr>(S)) {
-    const Loop *Result = PickMostRelevantLoop(
-        getRelevantLoop(D->getLHS()), getRelevantLoop(D->getRHS()), SE.DT);
-    return RelevantLoops[D] = Result;
+  case scCouldNotCompute:
+    llvm_unreachable("Attempt to use a SCEVCouldNotCompute object!");
   }
   llvm_unreachable("Unexpected SCEV type!");
 }
@@ -1026,8 +1033,25 @@ void SCEVExpander::fixupInsertPoints(Instruction *I) {
 /// until we reach a value that dominates InsertPos.
 bool SCEVExpander::hoistIVInc(Instruction *IncV, Instruction *InsertPos,
                               bool RecomputePoisonFlags) {
-  if (SE.DT.dominates(IncV, InsertPos))
-      return true;
+  auto FixupPoisonFlags = [this](Instruction *I) {
+    // Drop flags that are potentially inferred from old context and infer flags
+    // in new context.
+    I->dropPoisonGeneratingFlags();
+    if (auto *OBO = dyn_cast<OverflowingBinaryOperator>(I))
+      if (auto Flags = SE.getStrengthenedNoWrapFlagsFromBinOp(OBO)) {
+        auto *BO = cast<BinaryOperator>(I);
+        BO->setHasNoUnsignedWrap(
+            ScalarEvolution::maskFlags(*Flags, SCEV::FlagNUW) == SCEV::FlagNUW);
+        BO->setHasNoSignedWrap(
+            ScalarEvolution::maskFlags(*Flags, SCEV::FlagNSW) == SCEV::FlagNSW);
+      }
+  };
+
+  if (SE.DT.dominates(IncV, InsertPos)) {
+    if (RecomputePoisonFlags)
+      FixupPoisonFlags(IncV);
+    return true;
+  }
 
   // InsertPos must itself dominate IncV so that IncV's new position satisfies
   // its existing users.
@@ -1053,19 +1077,8 @@ bool SCEVExpander::hoistIVInc(Instruction *IncV, Instruction *InsertPos,
   for (Instruction *I : llvm::reverse(IVIncs)) {
     fixupInsertPoints(I);
     I->moveBefore(InsertPos);
-    if (!RecomputePoisonFlags)
-      continue;
-    // Drop flags that are potentially inferred from old context and infer flags
-    // in new context.
-    I->dropPoisonGeneratingFlags();
-    if (auto *OBO = dyn_cast<OverflowingBinaryOperator>(I))
-      if (auto Flags = SE.getStrengthenedNoWrapFlagsFromBinOp(OBO)) {
-        auto *BO = cast<BinaryOperator>(I);
-        BO->setHasNoUnsignedWrap(
-            ScalarEvolution::maskFlags(*Flags, SCEV::FlagNUW) == SCEV::FlagNUW);
-        BO->setHasNoSignedWrap(
-            ScalarEvolution::maskFlags(*Flags, SCEV::FlagNSW) == SCEV::FlagNSW);
-      }
+    if (RecomputePoisonFlags)
+      FixupPoisonFlags(I);
   }
   return true;
 }
@@ -1900,8 +1913,8 @@ SCEVExpander::replaceCongruentIVs(Loop *L, const DominatorTree *DT,
       // Put pointers at the back and make sure pointer < pointer = false.
       if (!LHS->getType()->isIntegerTy() || !RHS->getType()->isIntegerTy())
         return RHS->getType()->isIntegerTy() && !LHS->getType()->isIntegerTy();
-      return RHS->getType()->getPrimitiveSizeInBits().getFixedSize() <
-             LHS->getType()->getPrimitiveSizeInBits().getFixedSize();
+      return RHS->getType()->getPrimitiveSizeInBits().getFixedValue() <
+             LHS->getType()->getPrimitiveSizeInBits().getFixedValue();
     });
 
   unsigned NumElim = 0;
@@ -2100,7 +2113,7 @@ template<typename T> static InstructionCost costAndCollectOperands(
   auto CmpSelCost = [&](unsigned Opcode, unsigned NumRequired, unsigned MinIdx,
                         unsigned MaxIdx) -> InstructionCost {
     Operations.emplace_back(Opcode, MinIdx, MaxIdx);
-    Type *OpType = S->getOperand(0)->getType();
+    Type *OpType = S->getType();
     return NumRequired * TTI.getCmpSelInstrCost(
                              Opcode, OpType, CmpInst::makeCmpResultType(OpType),
                              CmpInst::BAD_ICMP_PREDICATE, CostKind);

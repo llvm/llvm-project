@@ -217,7 +217,7 @@ define i32 @add_mul_combine_reject_c1(i32 %x) {
 ;
 ; RV64IMB-LABEL: add_mul_combine_reject_c1:
 ; RV64IMB:       # %bb.0:
-; RV64IMB-NEXT:    addi a0, a0, 1000
+; RV64IMB-NEXT:    addiw a0, a0, 1000
 ; RV64IMB-NEXT:    sh3add a1, a0, a0
 ; RV64IMB-NEXT:    sh3add a0, a1, a0
 ; RV64IMB-NEXT:    sext.w a0, a0
@@ -237,7 +237,7 @@ define signext i32 @add_mul_combine_reject_c2(i32 signext %x) {
 ;
 ; RV64IMB-LABEL: add_mul_combine_reject_c2:
 ; RV64IMB:       # %bb.0:
-; RV64IMB-NEXT:    addi a0, a0, 1000
+; RV64IMB-NEXT:    addiw a0, a0, 1000
 ; RV64IMB-NEXT:    sh3add a1, a0, a0
 ; RV64IMB-NEXT:    sh3add a0, a1, a0
 ; RV64IMB-NEXT:    sext.w a0, a0
@@ -483,7 +483,7 @@ define i32 @add_mul_combine_reject_g1(i32 %x) {
 ;
 ; RV64IMB-LABEL: add_mul_combine_reject_g1:
 ; RV64IMB:       # %bb.0:
-; RV64IMB-NEXT:    addi a0, a0, 100
+; RV64IMB-NEXT:    addiw a0, a0, 100
 ; RV64IMB-NEXT:    sh3add a1, a0, a0
 ; RV64IMB-NEXT:    sh3add a0, a1, a0
 ; RV64IMB-NEXT:    addiw a0, a0, 10
@@ -504,7 +504,7 @@ define signext i32 @add_mul_combine_reject_g2(i32 signext %x) {
 ;
 ; RV64IMB-LABEL: add_mul_combine_reject_g2:
 ; RV64IMB:       # %bb.0:
-; RV64IMB-NEXT:    addi a0, a0, 100
+; RV64IMB-NEXT:    addiw a0, a0, 100
 ; RV64IMB-NEXT:    sh3add a1, a0, a0
 ; RV64IMB-NEXT:    sh3add a0, a1, a0
 ; RV64IMB-NEXT:    addiw a0, a0, 10

@@ -1,4 +1,4 @@
-; RUN: opt < %s -passes=loop-vectorize,dce,instcombine -force-vector-interleave=1 -force-vector-width=4 -S | FileCheck %s
+; RUN: opt -opaque-pointers=0 < %s -passes=loop-vectorize,dce,instcombine -force-vector-interleave=1 -force-vector-width=4 -S | FileCheck %s
 
 ; From a simple program with two address spaces:
 ; char Y[4*10000] __attribute__((address_space(1)));

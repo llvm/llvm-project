@@ -266,20 +266,20 @@ define amdgpu_kernel void @lshr_v4i64(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
 ; SI-NEXT:    s_mov_b32 s8, s6
 ; SI-NEXT:    s_mov_b32 s9, s7
-; SI-NEXT:    buffer_load_dwordx4 v[0:3], off, s[8:11], 0 offset:16
-; SI-NEXT:    buffer_load_dwordx4 v[4:7], off, s[8:11], 0 offset:48
-; SI-NEXT:    buffer_load_dwordx4 v[7:10], off, s[8:11], 0
-; SI-NEXT:    buffer_load_dwordx4 v[11:14], off, s[8:11], 0 offset:32
+; SI-NEXT:    buffer_load_dwordx4 v[0:3], off, s[8:11], 0
+; SI-NEXT:    buffer_load_dwordx4 v[4:7], off, s[8:11], 0 offset:16
+; SI-NEXT:    buffer_load_dwordx4 v[8:11], off, s[8:11], 0 offset:32
+; SI-NEXT:    buffer_load_dwordx4 v[11:14], off, s[8:11], 0 offset:48
 ; SI-NEXT:    s_mov_b32 s0, s4
 ; SI-NEXT:    s_mov_b32 s1, s5
-; SI-NEXT:    s_waitcnt vmcnt(2)
-; SI-NEXT:    v_lshr_b64 v[2:3], v[2:3], v6
-; SI-NEXT:    v_lshr_b64 v[0:1], v[0:1], v4
+; SI-NEXT:    s_waitcnt vmcnt(1)
+; SI-NEXT:    v_lshr_b64 v[2:3], v[2:3], v10
 ; SI-NEXT:    s_waitcnt vmcnt(0)
-; SI-NEXT:    v_lshr_b64 v[9:10], v[9:10], v13
-; SI-NEXT:    v_lshr_b64 v[7:8], v[7:8], v11
-; SI-NEXT:    buffer_store_dwordx4 v[0:3], off, s[0:3], 0 offset:16
-; SI-NEXT:    buffer_store_dwordx4 v[7:10], off, s[0:3], 0
+; SI-NEXT:    v_lshr_b64 v[6:7], v[6:7], v13
+; SI-NEXT:    v_lshr_b64 v[4:5], v[4:5], v11
+; SI-NEXT:    v_lshr_b64 v[0:1], v[0:1], v8
+; SI-NEXT:    buffer_store_dwordx4 v[4:7], off, s[0:3], 0 offset:16
+; SI-NEXT:    buffer_store_dwordx4 v[0:3], off, s[0:3], 0
 ; SI-NEXT:    s_endpgm
 ;
 ; VI-LABEL: lshr_v4i64:

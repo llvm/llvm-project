@@ -177,19 +177,20 @@ public:
     return R->getAdvisorMode() == AdvisorMode::Development;
   }
 
-  /// get the logger for the given function, or nullptr if we didn't collect
-  /// one. This is used to inject the score by the RegAllocScoring pass.
-  Logger *getLogger(const MachineFunction &MF) const {
-    auto I = LogMap.find(MF.getName());
-    if (I == LogMap.end())
-      return nullptr;
-    return I->second.get();
-  }
-
   void logRewardIfNeeded(const MachineFunction &MF,
                          llvm::function_ref<float()> GetReward) override {
-    if (auto *Log = this->getLogger(MF))
-      Log->logFloatFinalReward(GetReward());
+    if (!Log)
+      return;
+    // The function pass manager would run all the function passes for a
+    // function, so we assume the last context belongs to this function. If
+    // this invariant ever changes, we can implement at that time switching
+    // contexts. At this point, it'd be an error
+    if (Log->currentContext() != MF.getName()) {
+      MF.getFunction().getContext().emitError(
+          "The training log context shouldn't have had changed.");
+    }
+    if (Log->hasObservationInProgress())
+      Log->logReward<float>(GetReward());
   }
 
 private:
@@ -200,7 +201,22 @@ private:
   }
 
   // Save all the logs (when requested).
-  bool doFinalization(Module &M) override {
+  bool doInitialization(Module &M) override {
+    LLVMContext &Ctx = M.getContext();
+    if (ModelUnderTraining.empty() && TrainingLog.empty()) {
+      Ctx.emitError("Regalloc development mode should be requested with at "
+                    "least logging enabled and/or a training model");
+      return false;
+    }
+    if (ModelUnderTraining.empty())
+      Runner = std::make_unique<NoInferenceModelRunner>(Ctx, InputFeatures);
+    else
+      Runner = ModelUnderTrainingRunner::createAndEnsureValid(
+          Ctx, ModelUnderTraining, DecisionName, TrainingInputFeatures);
+    if (!Runner) {
+      Ctx.emitError("Regalloc: could not set up the model runner");
+      return false;
+    }
     if (TrainingLog.empty())
       return false;
     std::error_code EC;
@@ -209,53 +225,33 @@ private:
       M.getContext().emitError(EC.message() + ":" + TrainingLog);
       return false;
     }
-    Logger::flushLogs(*OS, LogMap);
+    std::vector<TensorSpec> LFS = InputFeatures;
+    if (auto *MUTR = dyn_cast<ModelUnderTrainingRunner>(Runner.get()))
+      append_range(LFS, MUTR->extraOutputsForLoggingSpecs());
+    // We always log the output; in particular, if we're not evaluating, we
+    // don't have an output spec json file. That's why we handle the
+    // 'normal' output separately.
+    LFS.push_back(Output);
+
+    Log = std::make_unique<Logger>(std::move(OS), LFS, Reward,
+                                   /*IncludeReward*/ true);
     return false;
   }
 
   std::unique_ptr<RegAllocPriorityAdvisor>
   getAdvisor(const MachineFunction &MF, const RAGreedy &RA) override {
-
-    LLVMContext &Ctx = MF.getFunction().getContext();
-    if (ModelUnderTraining.empty() && TrainingLog.empty()) {
-      Ctx.emitError("Regalloc development mode should be requested with at "
-                    "least logging enabled and/or a training model");
+    if (!Runner)
       return nullptr;
-    }
-    if (!Runner) {
-      if (ModelUnderTraining.empty())
-        Runner = std::make_unique<NoInferenceModelRunner>(Ctx, InputFeatures);
-      else
-        Runner = ModelUnderTrainingRunner::createAndEnsureValid(
-            Ctx, ModelUnderTraining, DecisionName, TrainingInputFeatures);
-      if (!Runner) {
-        Ctx.emitError("Regalloc: could not set up the model runner");
-        return nullptr;
-      }
-    }
-
-    Logger *Log = nullptr;
-    if (!TrainingLog.empty()) {
-      std::vector<TensorSpec> LFS = InputFeatures;
-      if (auto *MUTR = dyn_cast<ModelUnderTrainingRunner>(Runner.get()))
-        append_range(LFS, MUTR->extraOutputsForLoggingSpecs());
-      // We always log the output; in particular, if we're not evaluating, we
-      // don't have an output spec json file. That's why we handle the
-      // 'normal' output separately.
-      LFS.push_back(Output);
-      auto I = LogMap.insert(std::make_pair(
-          MF.getFunction().getName(),
-          std::make_unique<Logger>(LFS, Reward, /*IncludeReward*/ true)));
-      assert(I.second);
-      Log = I.first->second.get();
+    if (Log) {
+      Log->switchContext(MF.getName());
     }
 
     return std::make_unique<DevelopmentModePriorityAdvisor>(
-        MF, RA, &getAnalysis<SlotIndexes>(), Runner.get(), Log);
+        MF, RA, &getAnalysis<SlotIndexes>(), Runner.get(), Log.get());
   }
 
   std::unique_ptr<MLModelRunner> Runner;
-  StringMap<std::unique_ptr<Logger>> LogMap;
+  std::unique_ptr<Logger> Log;
 };
 #endif //#ifdef LLVM_HAVE_TFLITE
 
@@ -307,23 +303,31 @@ DevelopmentModePriorityAdvisor::getPriority(const LiveInterval &LI) const {
   if (TrainingLog.empty())
     return Prio;
 
+  // TODO(mtrofin): when we support optional rewards, this can go away. In the
+  // meantime, we log the "pretend" reward (0) for the previous observation
+  // before starting a new one.
+  if (Log->hasObservationInProgress())
+    Log->logReward<float>(0.0);
+
+  Log->startObservation();
   size_t CurrentFeature = 0;
   for (; CurrentFeature < InputFeatures.size(); ++CurrentFeature) {
-    Log->logSpecifiedTensorValue(
-        CurrentFeature, reinterpret_cast<const char *>(
+    Log->logTensorValue(CurrentFeature,
+                        reinterpret_cast<const char *>(
                             getRunner().getTensorUntyped(CurrentFeature)));
   }
 
   if (auto *MUTR = dyn_cast<ModelUnderTrainingRunner>(&getRunner())) {
     for (size_t I = 0; I < MUTR->extraOutputsForLoggingSpecs().size();
          ++I, ++CurrentFeature)
-      Log->logSpecifiedTensorValue(
+      Log->logTensorValue(
           CurrentFeature,
           reinterpret_cast<const char *>(MUTR->getUntypedExtraOutputValue(I)));
   }
 
   float Ret = static_cast<float>(Prio);
-  Log->logFloatValue(CurrentFeature, &Ret);
+  Log->logTensorValue(CurrentFeature, reinterpret_cast<const char *>(&Ret));
+  Log->endObservation();
 
   return static_cast<unsigned>(Prio);
 }

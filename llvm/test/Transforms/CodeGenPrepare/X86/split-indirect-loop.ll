@@ -10,12 +10,12 @@
 ; CHECK: while.body.clone:
 ; CHECK: br label %.split
 
-define void @test() {
+define void @test(i1 %c) {
 entry:
   br label %if.else
 
 if.else:
-  br i1 undef, label %while.body, label %preheader
+  br i1 %c, label %while.body, label %preheader
 
 preheader:
   br label %if.else1

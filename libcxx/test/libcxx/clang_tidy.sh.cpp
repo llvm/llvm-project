@@ -12,7 +12,8 @@
 // UNSUPPORTED: gcc
 
 // TODO: run clang-tidy with modules enabled once they are supported
-// RUN: clang-tidy %s --warnings-as-errors=* -header-filter=.* --config-file=%S/../../.clang-tidy -- -Wweak-vtables %{compile_flags} -fno-modules
+// RUN: %{clang-tidy} %s --warnings-as-errors=* -header-filter=.* --checks='-*,libcpp-*' --load=%{test-tools}/clang_tidy_checks/libcxx-tidy.plugin -- %{compile_flags} -fno-modules
+// RUN: %{clang-tidy} %s --warnings-as-errors=* -header-filter=.* --config-file=%S/../../.clang-tidy -- -Wweak-vtables %{compile_flags} -fno-modules
 
 // Prevent <ext/hash_map> from generating deprecated warnings for this test.
 #if defined(__DEPRECATED)
@@ -67,7 +68,9 @@ END-SCRIPT
 #include <complex.h>
 #include <concepts>
 #include <condition_variable>
-#include <coroutine>
+#if (defined(__cpp_impl_coroutine) && __cpp_impl_coroutine >= 201902L) || (defined(__cpp_coroutines) && __cpp_coroutines >= 201703L)
+#   include <coroutine>
+#endif
 #include <csetjmp>
 #include <csignal>
 #include <cstdarg>
@@ -164,6 +167,7 @@ END-SCRIPT
 #if !defined(_LIBCPP_HAS_NO_THREADS)
 #   include <shared_mutex>
 #endif
+#include <source_location>
 #include <span>
 #if !defined(_LIBCPP_HAS_NO_LOCALIZATION)
 #   include <sstream>

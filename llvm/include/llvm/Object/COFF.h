@@ -980,7 +980,9 @@ public:
   StringRef getFileFormatName() const override;
   Triple::ArchType getArch() const override;
   Expected<uint64_t> getStartAddress() const override;
-  SubtargetFeatures getFeatures() const override { return SubtargetFeatures(); }
+  Expected<SubtargetFeatures> getFeatures() const override {
+    return SubtargetFeatures();
+  }
 
   import_directory_iterator import_directory_begin() const;
   import_directory_iterator import_directory_end() const;

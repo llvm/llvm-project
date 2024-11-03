@@ -549,6 +549,10 @@ class SVE_Shift_Add_All_Active_Pat<ValueType vtd, SDPatternOperator op, ValueTyp
 : Pat<(vtd (add vt1:$Op1, (op (pt (SVEAllActive)), vt2:$Op2, vt3:$Op3))),
       (inst $Op1, $Op2, $Op3)>;
 
+class SVE2p1_Cvt_VG2_Pat<string name, SDPatternOperator intrinsic, ValueType out_vt, ValueType in_vt>
+    : Pat<(out_vt (intrinsic in_vt:$Zn1, in_vt:$Zn2)),
+                  (!cast<Instruction>(name) (REG_SEQUENCE ZPR2Mul2, in_vt:$Zn1, zsub0, in_vt:$Zn2, zsub1))>;
+
 //===----------------------------------------------------------------------===//
 // SVE pattern match helpers.
 //===----------------------------------------------------------------------===//
@@ -7916,6 +7920,8 @@ class sve_int_bin_cons_misc_0_c<bits<8> opc, string asm, ZPRRegOp zprty>
   let Inst{10}    = opc{0};
   let Inst{9-5}   = Zn;
   let Inst{4-0}   = Zd;
+
+  let hasSideEffects = 0;
 }
 
 multiclass sve_int_bin_cons_misc_0_c_fexpa<string asm, SDPatternOperator op> {
@@ -8723,10 +8729,14 @@ class sve2p1_fclamp<string asm, bits<2> sz, ZPRRegOp zpr_ty>
   let ElementSize = zpr_ty.ElementSize;
 }
 
-multiclass sve2p1_fclamp<string asm> {
+multiclass sve2p1_fclamp<string asm, SDPatternOperator op> {
   def _H : sve2p1_fclamp<asm, 0b01, ZPR16>;
   def _S : sve2p1_fclamp<asm, 0b10, ZPR32>;
   def _D : sve2p1_fclamp<asm, 0b11, ZPR64>;
+
+  def : SVE_3_Op_Pat<nxv8f16, op, nxv8f16, nxv8f16, nxv8f16, !cast<Instruction>(NAME # _H)>;
+  def : SVE_3_Op_Pat<nxv4f32, op, nxv4f32, nxv4f32, nxv4f32, !cast<Instruction>(NAME # _S)>;
+  def : SVE_3_Op_Pat<nxv2f64, op, nxv2f64, nxv2f64, nxv2f64, !cast<Instruction>(NAME # _D)>;
 }
 
 // SVE two-way dot product
@@ -8855,8 +8865,9 @@ class sve2p1_multi_vec_extract_narrow<string mnemonic, bits<2> opc, bits<3> tsz>
   let Inst{4-0}   = Zd;
 }
 
-multiclass sve2p1_multi_vec_extract_narrow<string mnemonic, bits<2> opc> {
-  def : sve2p1_multi_vec_extract_narrow<mnemonic, opc, 0b010>;
+multiclass sve2p1_multi_vec_extract_narrow<string mnemonic, bits<2> opc, SDPatternOperator intrinsic> {
+  def NAME : sve2p1_multi_vec_extract_narrow<mnemonic, opc, 0b010>;
+  def : SVE2p1_Cvt_VG2_Pat<NAME, intrinsic, nxv8i16, nxv4i32>;
 }
 
 // SVE2 multi-vec shift narrow

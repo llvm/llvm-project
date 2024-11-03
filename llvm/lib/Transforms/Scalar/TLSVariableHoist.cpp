@@ -187,19 +187,7 @@ Instruction *TLSVariableHoistPass::getDomInst(Instruction *I1,
                                               Instruction *I2) {
   if (!I1)
     return I2;
-  if (DT->dominates(I1, I2))
-    return I1;
-  if (DT->dominates(I2, I1))
-    return I2;
-
-  // If there is no dominance relation, use common dominator.
-  BasicBlock *DomBB =
-      DT->findNearestCommonDominator(I1->getParent(), I2->getParent());
-
-  Instruction *Dom = DomBB->getTerminator();
-  assert(Dom && "Common dominator not found!");
-
-  return Dom;
+  return DT->findNearestCommonDominator(I1, I2);
 }
 
 BasicBlock::iterator TLSVariableHoistPass::findInsertPos(Function &Fn,

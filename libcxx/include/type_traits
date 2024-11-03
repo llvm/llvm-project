@@ -158,8 +158,8 @@ namespace std
     // Alignment properties and transformations:
     template <class T> struct alignment_of;
     template <size_t Len, size_t Align = most_stringent_alignment_requirement>
-        struct aligned_storage;
-    template <size_t Len, class... Types> struct aligned_union;
+        struct aligned_storage;                                 // deprecated in C++23
+    template <size_t Len, class... Types> struct aligned_union; // deprecated in C++23
     template <class T> struct remove_cvref; // C++20
 
     template <class T> struct decay;

@@ -612,7 +612,8 @@ void DefFormat::genCustomParser(CustomDirective *el, FmtContext &ctx,
   for (FormatElement *arg : el->getArguments()) {
     os << ",\n";
     if (auto *param = dyn_cast<ParameterElement>(arg))
-      os << "_result_" << param->getName();
+      os << "::mlir::detail::unwrapForCustomParse(_result_" << param->getName()
+         << ")";
     else if (auto *ref = dyn_cast<RefDirective>(arg))
       os << "*_result_" << cast<ParameterElement>(ref->getArg())->getName();
     else
@@ -658,7 +659,7 @@ void DefFormat::genOptionalGroupParser(OptionalElement *el, FmtContext &ctx,
     os << ") {\n";
   } else if (auto *param = dyn_cast<ParameterElement>(first)) {
     genVariableParser(param, ctx, os);
-    guardOn(llvm::makeArrayRef(param));
+    guardOn(llvm::ArrayRef(param));
   } else if (auto *params = dyn_cast<ParamsDirective>(first)) {
     genParamsParser(params, ctx, os);
     guardOn(params->getParams());
@@ -852,7 +853,7 @@ void DefFormat::genOptionalGroupPrinter(OptionalElement *el, FmtContext &ctx,
                                         MethodBody &os) {
   FormatElement *anchor = el->getAnchor();
   if (auto *param = dyn_cast<ParameterElement>(anchor)) {
-    guardOnAny(ctx, os, llvm::makeArrayRef(param), el->isInverted());
+    guardOnAny(ctx, os, llvm::ArrayRef(param), el->isInverted());
   } else if (auto *params = dyn_cast<ParamsDirective>(anchor)) {
     guardOnAny(ctx, os, params->getParams(), el->isInverted());
   } else if (auto *strct = dyn_cast<StructDirective>(anchor)) {

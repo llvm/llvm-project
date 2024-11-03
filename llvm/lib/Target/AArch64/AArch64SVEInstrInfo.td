@@ -3673,7 +3673,7 @@ defm PSEL_PPPRI : sve2_int_perm_sel_p<"psel", int_aarch64_sve_psel>;
 //===----------------------------------------------------------------------===//
 
 let Predicates = [HasSVE2p1_or_HasSME2] in {
-defm FCLAMP_ZZZ : sve2p1_fclamp<"fclamp">;
+defm FCLAMP_ZZZ : sve2p1_fclamp<"fclamp", int_aarch64_sve_fclamp>;
 def FDOT_ZZZ_S  : sve_float_dot<0b0, "fdot">;
 def FDOT_ZZZI_S : sve_float_dot_indexed<0b0, "fdot">;
 def BFMLSLB_ZZZ_S : sve2_fp_mla_long<0b110, "bfmlslb">;
@@ -3691,9 +3691,9 @@ defm PEXT_PCI : sve2p1_pred_as_ctr_to_mask<"pext">;
 defm PEXT_2PCI : sve2p1_pred_as_ctr_to_mask_pair<"pext">;
 defm PTRUE_C  : sve2p1_ptrue_pn<"ptrue">;
 
-defm SQCVTN_Z2Z_StoH  : sve2p1_multi_vec_extract_narrow<"sqcvtn", 0b00>;
-defm UQCVTN_Z2Z_StoH  : sve2p1_multi_vec_extract_narrow<"uqcvtn", 0b01>;
-defm SQCVTUN_Z2Z_StoH : sve2p1_multi_vec_extract_narrow<"sqcvtun", 0b10>;
+defm SQCVTN_Z2Z_StoH  : sve2p1_multi_vec_extract_narrow<"sqcvtn", 0b00, int_aarch64_sve_sqcvtn_x2>;
+defm UQCVTN_Z2Z_StoH  : sve2p1_multi_vec_extract_narrow<"uqcvtn", 0b01, int_aarch64_sve_uqcvtn_x2>;
+defm SQCVTUN_Z2Z_StoH : sve2p1_multi_vec_extract_narrow<"sqcvtun", 0b10, int_aarch64_sve_sqcvtun_x2>;
 defm SQRSHRN_Z2ZI_StoH  : sve2p1_multi_vec_shift_narrow<"sqrshrn", 0b101>;
 defm UQRSHRN_Z2ZI_StoH  : sve2p1_multi_vec_shift_narrow<"uqrshrn", 0b111>;
 defm SQRSHRUN_Z2ZI_StoH : sve2p1_multi_vec_shift_narrow<"sqrshrun", 0b001>;

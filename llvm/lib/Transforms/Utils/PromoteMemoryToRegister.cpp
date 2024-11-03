@@ -383,6 +383,19 @@ static void addAssumeNonNull(AssumptionCache *AC, LoadInst *LI) {
   AC->registerAssumption(cast<AssumeInst>(CI));
 }
 
+static void convertMetadataToAssumes(LoadInst *LI, Value *Val,
+                                     const DataLayout &DL, AssumptionCache *AC,
+                                     const DominatorTree *DT) {
+  // If the load was marked as nonnull we don't want to lose that information
+  // when we erase this Load. So we preserve it with an assume. As !nonnull
+  // returns poison while assume violations are immediate undefined behavior,
+  // we can only do this if the value is known non-poison.
+  if (AC && LI->getMetadata(LLVMContext::MD_nonnull) &&
+      LI->getMetadata(LLVMContext::MD_noundef) &&
+      !isKnownNonZero(Val, DL, 0, AC, LI, DT))
+    addAssumeNonNull(AC, LI);
+}
+
 static void removeIntrinsicUsers(AllocaInst *AI) {
   // Knowing that this alloca is promotable, we know that it's safe to kill all
   // instructions except for load and store.
@@ -475,13 +488,7 @@ static bool rewriteSingleStoreAlloca(AllocaInst *AI, AllocaInfo &Info,
     if (ReplVal == LI)
       ReplVal = PoisonValue::get(LI->getType());
 
-    // If the load was marked as nonnull we don't want to lose
-    // that information when we erase this Load. So we preserve
-    // it with an assume.
-    if (AC && LI->getMetadata(LLVMContext::MD_nonnull) &&
-        !isKnownNonZero(ReplVal, DL, 0, AC, LI, &DT))
-      addAssumeNonNull(AC, LI);
-
+    convertMetadataToAssumes(LI, ReplVal, DL, AC, &DT);
     LI->replaceAllUsesWith(ReplVal);
     LI->eraseFromParent();
     LBI.deleteValue(LI);
@@ -584,11 +591,7 @@ static bool promoteSingleBlockAlloca(AllocaInst *AI, const AllocaInfo &Info,
       ReplVal = std::prev(I)->second->getOperand(0);
     }
 
-    // Note, if the load was marked as nonnull we don't want to lose that
-    // information when we erase it. So we preserve it with an assume.
-    if (AC && LI->getMetadata(LLVMContext::MD_nonnull) &&
-        !isKnownNonZero(ReplVal, DL, 0, AC, LI, &DT))
-      addAssumeNonNull(AC, LI);
+    convertMetadataToAssumes(LI, ReplVal, DL, AC, &DT);
 
     // If the replacement value is the load, this must occur in unreachable
     // code.
@@ -1047,13 +1050,7 @@ NextIteration:
         continue;
 
       Value *V = IncomingVals[AI->second];
-
-      // If the load was marked as nonnull we don't want to lose
-      // that information when we erase this Load. So we preserve
-      // it with an assume.
-      if (AC && LI->getMetadata(LLVMContext::MD_nonnull) &&
-          !isKnownNonZero(V, SQ.DL, 0, AC, LI, &DT))
-        addAssumeNonNull(AC, LI);
+      convertMetadataToAssumes(LI, V, SQ.DL, AC, &DT);
 
       // Anything using the load now uses the current value.
       LI->replaceAllUsesWith(V);

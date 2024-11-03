@@ -1,8 +1,6 @@
 ; RUN: opt %loadPolly -polly-codegen-ppcg -polly-acc-dump-code -disable-output %s
 
-; REQUIRES: pollyacc,nvptx
-
-; This fails today with "unexpected type" in the LLVM PTX backend.
+; REQUIRES: pollyacc, target=nvptx{{.*}}
 
 ;    void foo(half A[], half b) {
 ;      for (long i = 0; i < 1024; i++)
@@ -11,7 +9,7 @@
 ;
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
-define void @half(half* %A, half %b) {
+define void @half(ptr %A, half %b) {
 bb:
   br label %bb1
 
@@ -21,10 +19,10 @@ bb1:                                              ; preds = %bb5, %bb
   br i1 %exitcond, label %bb2, label %bb7
 
 bb2:                                              ; preds = %bb1
-  %tmp = getelementptr inbounds half, half* %A, i64 %i.0
-  %tmp3 = load half, half* %tmp, align 4
+  %tmp = getelementptr inbounds half, ptr %A, i64 %i.0
+  %tmp3 = load half, ptr %tmp, align 4
   %tmp4 = fadd half %tmp3, %b
-  store half %tmp4, half* %tmp, align 4
+  store half %tmp4, ptr %tmp, align 4
   br label %bb5
 
 bb5:                                              ; preds = %bb2

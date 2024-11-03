@@ -39,6 +39,7 @@ def hlfir_Dialect : Dialect {
 
   let useDefaultTypePrinterParser = 1;
   let cppNamespace = "hlfir";
+  let useFoldAPI = kEmitFoldAdaptorFolder;
 }
 
 

@@ -1,4 +1,4 @@
-;RUN: opt %loadPolly -polly-import-jscop -polly-import-jscop-postfix=transformed -polly-codegen -instnamer < %s -S | FileCheck %s
+;RUN: opt -opaque-pointers=0 %loadPolly -polly-import-jscop -polly-import-jscop-postfix=transformed -polly-codegen -instnamer < %s -S | FileCheck %s
 
 ;int A[100];
 ;

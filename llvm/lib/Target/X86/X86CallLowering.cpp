@@ -398,7 +398,7 @@ bool X86CallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
       return false;
 
     if (!NewRegs.empty())
-      MIRBuilder.buildMerge(Info.OrigRet.Regs[0], NewRegs);
+      MIRBuilder.buildMergeLikeInstr(Info.OrigRet.Regs[0], NewRegs);
   }
 
   CallSeqStart.addImm(Assigner.getStackSize())

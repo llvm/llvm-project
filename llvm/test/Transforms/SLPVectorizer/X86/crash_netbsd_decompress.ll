@@ -15,15 +15,15 @@ target triple = "x86_64-apple-macosx10.8.0"
 define i32 @fn1() {
 ; CHECK-LABEL: @fn1(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = load i32, i32* getelementptr inbounds ([[STRUCT_DSTATE:%.*]], %struct.DState* @b, i32 0, i32 0), align 4
-; CHECK-NEXT:    [[TMP1:%.*]] = load i32, i32* getelementptr inbounds ([[STRUCT_DSTATE]], %struct.DState* @b, i32 0, i32 1), align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = load i32, i32* @d, align 4
-; CHECK-NEXT:    [[COND:%.*]] = icmp eq i32 [[TMP2]], 0
+; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x i32>, ptr @b, align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr @d, align 4
+; CHECK-NEXT:    [[COND:%.*]] = icmp eq i32 [[TMP1]], 0
 ; CHECK-NEXT:    br i1 [[COND]], label [[SW_BB:%.*]], label [[SAVE_STATE_AND_RETURN:%.*]]
 ; CHECK:       sw.bb:
-; CHECK-NEXT:    [[TMP3:%.*]] = load i32, i32* @c, align 4
-; CHECK-NEXT:    [[AND:%.*]] = and i32 [[TMP3]], 7
-; CHECK-NEXT:    store i32 [[AND]], i32* @a, align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr @c, align 4
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[TMP2]], 7
+; CHECK-NEXT:    store i32 [[AND]], ptr @a, align 4
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <2 x i32> <i32 poison, i32 0>, <2 x i32> [[TMP0]], <2 x i32> <i32 2, i32 1>
 ; CHECK-NEXT:    switch i32 [[AND]], label [[IF_END:%.*]] [
 ; CHECK-NEXT:    i32 7, label [[SAVE_STATE_AND_RETURN]]
 ; CHECK-NEXT:    i32 0, label [[SAVE_STATE_AND_RETURN]]
@@ -31,23 +31,21 @@ define i32 @fn1() {
 ; CHECK:       if.end:
 ; CHECK-NEXT:    br label [[SAVE_STATE_AND_RETURN]]
 ; CHECK:       save_state_and_return:
-; CHECK-NEXT:    [[T_0:%.*]] = phi i32 [ 0, [[IF_END]] ], [ [[TMP0]], [[ENTRY:%.*]] ], [ [[TMP0]], [[SW_BB]] ], [ [[TMP0]], [[SW_BB]] ]
-; CHECK-NEXT:    [[F_0:%.*]] = phi i32 [ 0, [[IF_END]] ], [ [[TMP1]], [[ENTRY]] ], [ 0, [[SW_BB]] ], [ 0, [[SW_BB]] ]
-; CHECK-NEXT:    store i32 [[T_0]], i32* getelementptr inbounds ([[STRUCT_DSTATE]], %struct.DState* @b, i32 0, i32 0), align 4
-; CHECK-NEXT:    store i32 [[F_0]], i32* getelementptr inbounds ([[STRUCT_DSTATE]], %struct.DState* @b, i32 0, i32 1), align 4
+; CHECK-NEXT:    [[TMP4:%.*]] = phi <2 x i32> [ zeroinitializer, [[IF_END]] ], [ [[TMP0]], [[ENTRY:%.*]] ], [ [[TMP3]], [[SW_BB]] ], [ [[TMP3]], [[SW_BB]] ]
+; CHECK-NEXT:    store <2 x i32> [[TMP4]], ptr @b, align 4
 ; CHECK-NEXT:    ret i32 undef
 ;
 entry:
-  %0 = load i32, i32* getelementptr inbounds (%struct.DState, %struct.DState* @b, i32 0, i32 0), align 4
-  %1 = load i32, i32* getelementptr inbounds (%struct.DState, %struct.DState* @b, i32 0, i32 1), align 4
-  %2 = load i32, i32* @d, align 4
+  %0 = load i32, ptr @b, align 4
+  %1 = load i32, ptr getelementptr inbounds (%struct.DState, ptr @b, i32 0, i32 1), align 4
+  %2 = load i32, ptr @d, align 4
   %cond = icmp eq i32 %2, 0
   br i1 %cond, label %sw.bb, label %save_state_and_return
 
 sw.bb:                                            ; preds = %entry
-  %3 = load i32, i32* @c, align 4
+  %3 = load i32, ptr @c, align 4
   %and = and i32 %3, 7
-  store i32 %and, i32* @a, align 4
+  store i32 %and, ptr @a, align 4
   switch i32 %and, label %if.end [
   i32 7, label %save_state_and_return
   i32 0, label %save_state_and_return
@@ -59,8 +57,8 @@ if.end:                                           ; preds = %sw.bb
 save_state_and_return:                            ; preds = %sw.bb, %sw.bb, %if.end, %entry
   %t.0 = phi i32 [ 0, %if.end ], [ %0, %entry ], [ %0, %sw.bb ], [ %0, %sw.bb ]
   %f.0 = phi i32 [ 0, %if.end ], [ %1, %entry ], [ 0, %sw.bb ], [ 0, %sw.bb ]
-  store i32 %t.0, i32* getelementptr inbounds (%struct.DState, %struct.DState* @b, i32 0, i32 0), align 4
-  store i32 %f.0, i32* getelementptr inbounds (%struct.DState, %struct.DState* @b, i32 0, i32 1), align 4
+  store i32 %t.0, ptr @b, align 4
+  store i32 %f.0, ptr getelementptr inbounds (%struct.DState, ptr @b, i32 0, i32 1), align 4
   ret i32 undef
 }
 

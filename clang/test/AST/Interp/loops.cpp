@@ -5,6 +5,7 @@
 
 // ref-no-diagnostics
 // expected-no-diagnostics
+// expected-cpp20-no-diagnostics
 
 namespace WhileLoop {
   constexpr int f() {
@@ -165,8 +166,6 @@ namespace DoWhileLoop {
   static_assert(f5(true) == 8, "");
   static_assert(f5(false) == 5, "");
 
-  /// FIXME: This should be accepted in C++20 but is currently being rejected
-  ///   because the variable declaration doesn't have an initializier.
 #if __cplusplus >= 202002L
   constexpr int f6() {
     int i;
@@ -176,7 +175,7 @@ namespace DoWhileLoop {
     } while (true);
     return i;
   }
-  static_assert(f6() == 5, ""); // expected-cpp20-error {{not an integral constant}}
+  static_assert(f6() == 5, "");
 #endif
 
 #if 0

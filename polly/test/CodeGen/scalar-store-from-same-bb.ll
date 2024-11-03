@@ -4,10 +4,10 @@
 ; This test ensures that the expression N + 1 that is stored in the phi-node
 ; alloca, is directly computed and not incorrectly transfered through memory.
 
-; CHECK: store i64 [[REG:%.*]], i64* %res.phiops
+; CHECK: store i64 [[REG:%.*]], ptr %res.phiops
 ; CHECK: [[REG]] = add i64 %N, 1
 
-define i64 @foo(float* %A, i64 %N) {
+define i64 @foo(ptr %A, i64 %N) {
 entry:
   br label %next
 
@@ -19,7 +19,7 @@ loop:
   %indvar = phi i64 [0, %next], [%indvar.next, %loop]
   %indvar.next = add i64 %indvar, 1
   %sum = add i64 %N, 1
-  store float 4.0, float* %A
+  store float 4.0, ptr %A
   %cmp = icmp sle i64 %indvar.next, 100
   br i1 %cmp, label %loop, label %merge
 

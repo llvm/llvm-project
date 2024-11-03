@@ -449,7 +449,6 @@ getIntelProcessorTypeAndSubtype(unsigned Family, unsigned Model,
     // Raptorlake:
     case 0xb7:
     // Meteorlake:
-    case 0xb5:
     case 0xaa:
     case 0xac:
       CPU = "alderlake";
@@ -465,6 +464,8 @@ getIntelProcessorTypeAndSubtype(unsigned Family, unsigned Model,
       *Subtype = INTEL_COREI7_ICELAKE_SERVER;
       break;
 
+    // Emerald Rapids:
+    case 0xcf:
     // Sapphire Rapids:
     case 0x8f:
       CPU = "sapphirerapids";
@@ -472,7 +473,7 @@ getIntelProcessorTypeAndSubtype(unsigned Family, unsigned Model,
       *Subtype = INTEL_COREI7_SAPPHIRERAPIDS;
       break;
 
-    // Graniterapids:
+    // Granite Rapids:
     case 0xae:
     case 0xad:
       CPU = "graniterapids";
@@ -837,90 +838,10 @@ int CONSTRUCTOR_ATTRIBUTE __cpu_indicator_init(void) {
   return 0;
 }
 #elif defined(__aarch64__)
-// CPUFeatures must correspond to the same AArch64 features in
-// AArch64TargetParser.h
-enum CPUFeatures {
-  FEAT_RNG,
-  FEAT_FLAGM,
-  FEAT_FLAGM2,
-  FEAT_FP16FML,
-  FEAT_DOTPROD,
-  FEAT_SM4,
-  FEAT_RDM,
-  FEAT_LSE,
-  FEAT_FP,
-  FEAT_SIMD,
-  FEAT_CRC,
-  FEAT_SHA1,
-  FEAT_SHA2,
-  FEAT_SHA3,
-  FEAT_AES,
-  FEAT_PMULL,
-  FEAT_FP16,
-  FEAT_DIT,
-  FEAT_DPB,
-  FEAT_DPB2,
-  FEAT_JSCVT,
-  FEAT_FCMA,
-  FEAT_RCPC,
-  FEAT_RCPC2,
-  FEAT_FRINTTS,
-  FEAT_DGH,
-  FEAT_I8MM,
-  FEAT_BF16,
-  FEAT_EBF16,
-  FEAT_RPRES,
-  FEAT_SVE,
-  FEAT_SVE_BF16,
-  FEAT_SVE_EBF16,
-  FEAT_SVE_I8MM,
-  FEAT_SVE_F32MM,
-  FEAT_SVE_F64MM,
-  FEAT_SVE2,
-  FEAT_SVE_AES,
-  FEAT_SVE_PMULL128,
-  FEAT_SVE_BITPERM,
-  FEAT_SVE_SHA3,
-  FEAT_SVE_SM4,
-  FEAT_SME,
-  FEAT_MEMTAG,
-  FEAT_MEMTAG2,
-  FEAT_MEMTAG3,
-  FEAT_SB,
-  FEAT_PREDRES,
-  FEAT_SSBS,
-  FEAT_SSBS2,
-  FEAT_BTI,
-  FEAT_LS64,
-  FEAT_LS64_V,
-  FEAT_LS64_ACCDATA,
-  FEAT_WFXT,
-  FEAT_SME_F64,
-  FEAT_SME_I64,
-  FEAT_SME2,
-  FEAT_MAX
-};
-// Architecture features used
-// in Function Multi Versioning
-struct {
-  unsigned long long features;
-  // As features grows new fields could be added
-} __aarch64_cpu_features __attribute__((visibility("hidden"), nocommon));
-
-// LSE support detection for out-of-line atomics
-// using HWCAP and Auxiliary vector
-_Bool __aarch64_have_lse_atomics
-    __attribute__((visibility("hidden"), nocommon));
-#if defined(__has_include)
-#if __has_include(<sys/auxv.h>)
-#include <sys/auxv.h>
-#if __has_include(<asm/hwcap.h>)
-#include <asm/hwcap.h>
 
 #ifndef AT_HWCAP
 #define AT_HWCAP 16
 #endif
-
 #ifndef HWCAP_CPUID
 #define HWCAP_CPUID (1 << 11)
 #endif
@@ -1085,6 +1006,17 @@ _Bool __aarch64_have_lse_atomics
 #define HWCAP2_SVE_EBF16 (1UL << 33)
 #endif
 
+// LSE support detection for out-of-line atomics
+// using HWCAP and Auxiliary vector
+_Bool __aarch64_have_lse_atomics
+    __attribute__((visibility("hidden"), nocommon));
+
+#if defined(__has_include)
+#if __has_include(<sys/auxv.h>)
+#include <sys/auxv.h>
+#if __has_include(<asm/hwcap.h>)
+#include <asm/hwcap.h>
+
 #if defined(__ANDROID__)
 #include <string.h>
 #include <sys/system_properties.h>
@@ -1132,6 +1064,78 @@ static void CONSTRUCTOR_ATTRIBUTE init_have_lse_atomics(void) {
   __aarch64_have_lse_atomics = result;
 #endif // defined(__FreeBSD__)
 }
+
+#if !defined(DISABLE_AARCH64_FMV)
+// CPUFeatures must correspond to the same AArch64 features in
+// AArch64TargetParser.h
+enum CPUFeatures {
+  FEAT_RNG,
+  FEAT_FLAGM,
+  FEAT_FLAGM2,
+  FEAT_FP16FML,
+  FEAT_DOTPROD,
+  FEAT_SM4,
+  FEAT_RDM,
+  FEAT_LSE,
+  FEAT_FP,
+  FEAT_SIMD,
+  FEAT_CRC,
+  FEAT_SHA1,
+  FEAT_SHA2,
+  FEAT_SHA3,
+  FEAT_AES,
+  FEAT_PMULL,
+  FEAT_FP16,
+  FEAT_DIT,
+  FEAT_DPB,
+  FEAT_DPB2,
+  FEAT_JSCVT,
+  FEAT_FCMA,
+  FEAT_RCPC,
+  FEAT_RCPC2,
+  FEAT_FRINTTS,
+  FEAT_DGH,
+  FEAT_I8MM,
+  FEAT_BF16,
+  FEAT_EBF16,
+  FEAT_RPRES,
+  FEAT_SVE,
+  FEAT_SVE_BF16,
+  FEAT_SVE_EBF16,
+  FEAT_SVE_I8MM,
+  FEAT_SVE_F32MM,
+  FEAT_SVE_F64MM,
+  FEAT_SVE2,
+  FEAT_SVE_AES,
+  FEAT_SVE_PMULL128,
+  FEAT_SVE_BITPERM,
+  FEAT_SVE_SHA3,
+  FEAT_SVE_SM4,
+  FEAT_SME,
+  FEAT_MEMTAG,
+  FEAT_MEMTAG2,
+  FEAT_MEMTAG3,
+  FEAT_SB,
+  FEAT_PREDRES,
+  FEAT_SSBS,
+  FEAT_SSBS2,
+  FEAT_BTI,
+  FEAT_LS64,
+  FEAT_LS64_V,
+  FEAT_LS64_ACCDATA,
+  FEAT_WFXT,
+  FEAT_SME_F64,
+  FEAT_SME_I64,
+  FEAT_SME2,
+  FEAT_MAX
+};
+
+// Architecture features used
+// in Function Multi Versioning
+struct {
+  unsigned long long features;
+  // As features grows new fields could be added
+} __aarch64_cpu_features __attribute__((visibility("hidden"), nocommon));
 
 void init_cpu_features_resolver(unsigned long hwcap, unsigned long hwcap2) {
 #define setCPUFeature(F) __aarch64_cpu_features.features |= 1ULL << F
@@ -1343,6 +1347,7 @@ void CONSTRUCTOR_ATTRIBUTE init_cpu_features(void) {
 #undef setCPUFeature
 #undef IF_EXYNOS9810
 }
+#endif // !defined(DISABLE_AARCH64_FMV)
 #endif // defined(__has_include)
 #endif // __has_include(<sys/auxv.h>)
 #endif // __has_include(<asm/hwcap.h>)

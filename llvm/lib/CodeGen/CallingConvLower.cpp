@@ -231,7 +231,7 @@ void CCState::getRemainingRegParmsForType(SmallVectorImpl<MCPhysReg> &Regs,
   // when i64 and f64 are both passed in GPRs.
   StackOffset = SavedStackOffset;
   MaxStackArgAlign = SavedMaxStackArgAlign;
-  Locs.resize(NumLocs);
+  Locs.truncate(NumLocs);
 }
 
 void CCState::analyzeMustTailForwardedRegisters(
@@ -270,19 +270,20 @@ bool CCState::resultsCompatible(CallingConv::ID CalleeCC,
   CCState CCInfo2(CallerCC, false, MF, RVLocs2, C);
   CCInfo2.AnalyzeCallResult(Ins, CallerFn);
 
-  if (RVLocs1.size() != RVLocs2.size())
-    return false;
-  for (unsigned I = 0, E = RVLocs1.size(); I != E; ++I) {
-    const CCValAssign &Loc1 = RVLocs1[I];
-    const CCValAssign &Loc2 = RVLocs2[I];
-
-    if ( // Must both be in registers, or both in memory
-        Loc1.isRegLoc() != Loc2.isRegLoc() ||
-        // Must fill the same part of their locations
-        Loc1.getLocInfo() != Loc2.getLocInfo() ||
-        // Memory offset/register number must be the same
-        Loc1.getExtraInfo() != Loc2.getExtraInfo())
+  auto AreCompatible = [](const CCValAssign &Loc1, const CCValAssign &Loc2) {
+    assert(!Loc1.isPendingLoc() && !Loc2.isPendingLoc() &&
+           "The location must have been decided by now");
+    // Must fill the same part of their locations.
+    if (Loc1.getLocInfo() != Loc2.getLocInfo())
       return false;
-  }
-  return true;
+    // Must both be in the same registers, or both in memory at the same offset.
+    if (Loc1.isRegLoc() && Loc2.isRegLoc())
+      return Loc1.getLocReg() == Loc2.getLocReg();
+    if (Loc1.isMemLoc() && Loc2.isMemLoc())
+      return Loc1.getLocMemOffset() == Loc2.getLocMemOffset();
+    llvm_unreachable("Unknown location kind");
+  };
+
+  return std::equal(RVLocs1.begin(), RVLocs1.end(), RVLocs2.begin(),
+                    RVLocs2.end(), AreCompatible);
 }

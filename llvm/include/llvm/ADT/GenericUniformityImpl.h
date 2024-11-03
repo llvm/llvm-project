@@ -467,9 +467,8 @@ private:
                            ConstValueRefT Val) const;
 };
 
-template <typename ContextT>
-void GenericUniformityInfo<ContextT>::ImplDeleter::operator()(
-    GenericUniformityAnalysisImpl<ContextT> *Impl) {
+template <typename ImplT>
+void GenericUniformityAnalysisImplDeleter<ImplT>::operator()(ImplT *Impl) {
   delete Impl;
 }
 
@@ -765,6 +764,7 @@ auto llvm::GenericSyncDependenceAnalysis<ContextT>::getJoinBlocks(
              << "):\n  JoinDivBlocks: " << printBlockSet(DivDesc->JoinDivBlocks)
              << "  CycleDivBlocks: " << printBlockSet(DivDesc->CycleDivBlocks)
              << "\n");
+  (void)printBlockSet;
 
   auto ItInserted =
       CachedControlDivDescs.try_emplace(DivTermBlock, std::move(DivDesc));

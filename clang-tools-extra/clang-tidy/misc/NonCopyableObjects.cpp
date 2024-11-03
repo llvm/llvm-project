@@ -13,9 +13,7 @@
 
 using namespace clang::ast_matchers;
 
-namespace clang {
-namespace tidy {
-namespace misc {
+namespace clang::tidy::misc {
 
 void NonCopyableObjectsCheck::registerMatchers(MatchFinder *Finder) {
   // There are two ways to get into trouble with objects like FILE *:
@@ -67,7 +65,4 @@ void NonCopyableObjectsCheck::check(const MatchFinder::MatchResult &Result) {
         << BD;
 }
 
-} // namespace misc
-} // namespace tidy
-} // namespace clang
-
+} // namespace clang::tidy::misc

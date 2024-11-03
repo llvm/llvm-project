@@ -16,10 +16,7 @@
 
 using namespace clang::ast_matchers;
 
-namespace clang {
-namespace tidy {
-namespace google {
-namespace objc {
+namespace clang::tidy::google::objc {
 
 namespace {
 
@@ -98,7 +95,4 @@ void GlobalVariableDeclarationCheck::check(
   }
 }
 
-}  // namespace objc
-}  // namespace google
-}  // namespace tidy
-}  // namespace clang
+} // namespace clang::tidy::google::objc

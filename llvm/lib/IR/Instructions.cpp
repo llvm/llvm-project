@@ -31,6 +31,7 @@
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Operator.h"
+#include "llvm/IR/ProfDataUtils.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Support/AtomicOrdering.h"
@@ -56,8 +57,8 @@ static cl::opt<bool> DisableI2pP2iOpt(
 //===----------------------------------------------------------------------===//
 
 std::optional<TypeSize>
-AllocaInst::getAllocationSizeInBits(const DataLayout &DL) const {
-  TypeSize Size = DL.getTypeAllocSizeInBits(getAllocatedType());
+AllocaInst::getAllocationSize(const DataLayout &DL) const {
+  TypeSize Size = DL.getTypeAllocSize(getAllocatedType());
   if (isArrayAllocation()) {
     auto *C = dyn_cast<ConstantInt>(getArraySize());
     if (!C)
@@ -66,6 +67,14 @@ AllocaInst::getAllocationSizeInBits(const DataLayout &DL) const {
     Size *= C->getZExtValue();
   }
   return Size;
+}
+
+std::optional<TypeSize>
+AllocaInst::getAllocationSizeInBits(const DataLayout &DL) const {
+  std::optional<TypeSize> Size = getAllocationSize(DL);
+  if (Size)
+    return *Size * 8;
+  return std::nullopt;
 }
 
 //===----------------------------------------------------------------------===//
@@ -1511,7 +1520,7 @@ bool AllocaInst::isStaticAlloca() const {
 
   // Must be in the entry block.
   const BasicBlock *Parent = getParent();
-  return Parent == &Parent->getParent()->front() && !isUsedWithInAlloca();
+  return Parent->isEntryBlock() && !isUsedWithInAlloca();
 }
 
 //===----------------------------------------------------------------------===//
@@ -1793,6 +1802,10 @@ StringRef AtomicRMWInst::getOperationName(BinOp Op) {
     return "fmax";
   case AtomicRMWInst::FMin:
     return "fmin";
+  case AtomicRMWInst::UIncWrap:
+    return "uinc_wrap";
+  case AtomicRMWInst::UDecWrap:
+    return "udec_wrap";
   case AtomicRMWInst::BAD_BINOP:
     return "<invalid operation>";
   }
@@ -3586,7 +3599,7 @@ bool CastInst::isBitCastable(Type *SrcTy, Type *DestTy) {
 
   // Could still have vectors of pointers if the number of elements doesn't
   // match
-  if (SrcBits.getKnownMinSize() == 0 || DestBits.getKnownMinSize() == 0)
+  if (SrcBits.getKnownMinValue() == 0 || DestBits.getKnownMinValue() == 0)
     return false;
 
   if (SrcBits != DestBits)
@@ -4564,15 +4577,6 @@ void SwitchInst::growOperands() {
   growHungoffUses(ReservedSpace);
 }
 
-MDNode *
-SwitchInstProfUpdateWrapper::getProfBranchWeightsMD(const SwitchInst &SI) {
-  if (MDNode *ProfileData = SI.getMetadata(LLVMContext::MD_prof))
-    if (auto *MDName = dyn_cast<MDString>(ProfileData->getOperand(0)))
-      if (MDName->getString() == "branch_weights")
-        return ProfileData;
-  return nullptr;
-}
-
 MDNode *SwitchInstProfUpdateWrapper::buildProfBranchWeightsMD() {
   assert(Changed && "called only if metadata has changed");
 
@@ -4591,7 +4595,7 @@ MDNode *SwitchInstProfUpdateWrapper::buildProfBranchWeightsMD() {
 }
 
 void SwitchInstProfUpdateWrapper::init() {
-  MDNode *ProfileData = getProfBranchWeightsMD(SI);
+  MDNode *ProfileData = getBranchWeightMDNode(SI);
   if (!ProfileData)
     return;
 
@@ -4601,11 +4605,8 @@ void SwitchInstProfUpdateWrapper::init() {
   }
 
   SmallVector<uint32_t, 8> Weights;
-  for (unsigned CI = 1, CE = SI.getNumSuccessors(); CI <= CE; ++CI) {
-    ConstantInt *C = mdconst::extract<ConstantInt>(ProfileData->getOperand(CI));
-    uint32_t CW = C->getValue().getZExtValue();
-    Weights.push_back(CW);
-  }
+  if (!extractBranchWeights(ProfileData, Weights))
+    return;
   this->Weights = std::move(Weights);
 }
 
@@ -4678,7 +4679,7 @@ void SwitchInstProfUpdateWrapper::setSuccessorWeight(
 SwitchInstProfUpdateWrapper::CaseWeightOpt
 SwitchInstProfUpdateWrapper::getSuccessorWeight(const SwitchInst &SI,
                                                 unsigned idx) {
-  if (MDNode *ProfileData = getProfBranchWeightsMD(SI))
+  if (MDNode *ProfileData = getBranchWeightMDNode(SI))
     if (ProfileData->getNumOperands() == SI.getNumSuccessors() + 1)
       return mdconst::extract<ConstantInt>(ProfileData->getOperand(idx + 1))
           ->getValue()

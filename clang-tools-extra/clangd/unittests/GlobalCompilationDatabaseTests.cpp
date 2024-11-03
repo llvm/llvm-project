@@ -14,7 +14,6 @@
 #include "support/Path.h"
 #include "support/ThreadsafeFS.h"
 #include "clang/Tooling/CompilationDatabase.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
@@ -24,6 +23,7 @@
 #include "gtest/gtest.h"
 #include <chrono>
 #include <fstream>
+#include <optional>
 #include <string>
 
 namespace clang {
@@ -63,7 +63,7 @@ static tooling::CompileCommand cmd(llvm::StringRef File, llvm::StringRef Arg) {
 class OverlayCDBTest : public ::testing::Test {
   class BaseCDB : public GlobalCompilationDatabase {
   public:
-    llvm::Optional<tooling::CompileCommand>
+    std::optional<tooling::CompileCommand>
     getCompileCommand(llvm::StringRef File) const override {
       if (File == testPath("foo.cc"))
         return cmd(File, "-DA=1");
@@ -75,7 +75,7 @@ class OverlayCDBTest : public ::testing::Test {
       return cmd(File, "-DA=2");
     }
 
-    llvm::Optional<ProjectInfo> getProjectInfo(PathRef File) const override {
+    std::optional<ProjectInfo> getProjectInfo(PathRef File) const override {
       return ProjectInfo{testRoot()};
     }
   };

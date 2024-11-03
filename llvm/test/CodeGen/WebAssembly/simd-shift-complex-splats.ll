@@ -47,11 +47,10 @@ define <16 x i8> @shl_abs(<16 x i8> %v, i8 %a) {
 ; CHECK-NEXT: i8x16.splat $push1=, $1
 ; CHECK-NEXT: i8x16.splat $push0=, $2
 ; CHECK-NEXT: i8x16.add $push2=, $pop1, $pop0
-; CHECK-NEXT: i8x16.shuffle $push3=, $pop2, $0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-; CHECK-NEXT: i8x16.abs $push4=, $pop3
-; CHECK-NEXT: i8x16.extract_lane_u $push5=, $pop4, 0
-; CHECK-NEXT: i8x16.shl $push6=, $0, $pop5
-; CHECK-NEXT: return $pop6
+; CHECK-NEXT: i8x16.abs $push3=, $pop2
+; CHECK-NEXT: i8x16.extract_lane_u $push4=, $pop3, 0
+; CHECK-NEXT: i8x16.shl $push5=, $0, $pop4
+; CHECK-NEXT: return $pop5
 define <16 x i8> @shl_abs_add(<16 x i8> %v, i8 %a, i8 %b) {
   %t1 = insertelement <16 x i8> undef, i8 %a, i32 0
   %va = shufflevector <16 x i8> %t1, <16 x i8> undef, <16 x i32> zeroinitializer

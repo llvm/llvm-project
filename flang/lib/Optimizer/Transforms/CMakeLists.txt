@@ -12,6 +12,7 @@ add_flang_library(FIRTransforms
   SimplifyRegionLite.cpp
   AlgebraicSimplification.cpp
   SimplifyIntrinsics.cpp
+  AddDebugFoundation.cpp
 
   DEPENDS
   FIRBuilder

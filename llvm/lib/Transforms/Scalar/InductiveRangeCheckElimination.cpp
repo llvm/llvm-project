@@ -1538,7 +1538,7 @@ bool LoopConstrainer::run() {
   auto NewBlocksEnd =
       std::remove(std::begin(NewBlocks), std::end(NewBlocks), nullptr);
 
-  addToParentLoopIfNeeded(makeArrayRef(std::begin(NewBlocks), NewBlocksEnd));
+  addToParentLoopIfNeeded(ArrayRef(std::begin(NewBlocks), NewBlocksEnd));
 
   DT.recalculate(F);
 

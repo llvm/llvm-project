@@ -18,7 +18,7 @@
 
 ; Check that the kernel launch is generated in the host IR.
 ; This declaration would not have been generated unless a kernel launch exists.
-; HOST-IR: declare void @polly_launchKernel(i8*, i32, i32, i32, i32, i32, i8*)
+; HOST-IR: declare void @polly_launchKernel(ptr, i32, i32, i32, i32, i32, ptr)
 
 ;
 ; void f(int *begin, int *arr) {
@@ -29,12 +29,12 @@
 
 target datalayout = "e-m:o-p:32:32-f64:32:64-f80:128-n8:16:32-S128"
 
-define void @f(i32* %begin, i32* %arr) {
+define void @f(ptr %begin, ptr %arr) {
 entry:
   br label %entry.split
 
 entry.split:                                      ; preds = %entry
-  %beginval = load i32, i32* %begin, align 4
+  %beginval = load i32, ptr %begin, align 4
   %cmp1 = icmp slt i32 %beginval, 100
   br i1 %cmp1, label %for.body, label %for.end
 
@@ -42,8 +42,8 @@ entry.split:                                      ; preds = %entry
 
 for.body:                                         ; preds = %for.body.lr.ph, %for.body
   %ival = phi i32 [ %beginval, %entry.split ], [ %inc, %for.body ]
-  %arrayidx = getelementptr inbounds i32, i32* %arr, i32 %ival
-  store i32 0, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %arr, i32 %ival
+  store i32 0, ptr %arrayidx, align 4
   %inc = add nsw i32 %ival, 1
   %cmp = icmp slt i32 %ival, 99
   br i1 %cmp, label %for.body, label %for.cond.for.end_crit_edge

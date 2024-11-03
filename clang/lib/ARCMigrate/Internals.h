@@ -13,8 +13,8 @@
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Frontend/MigratorOptions.h"
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/Optional.h"
 #include <list>
+#include <optional>
 
 namespace clang {
   class ASTContext;
@@ -152,7 +152,7 @@ public:
   TransformActions &TA;
   const CapturedDiagList &CapturedDiags;
   std::vector<SourceLocation> &ARCMTMacroLocs;
-  Optional<bool> EnableCFBridgeFns;
+  std::optional<bool> EnableCFBridgeFns;
 
   MigrationPass(ASTContext &Ctx, LangOptions::GCMode OrigGCMode, Sema &sema,
                 TransformActions &TA, const CapturedDiagList &capturedDiags,

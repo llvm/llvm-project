@@ -1358,12 +1358,15 @@ bool DIExpression::isValid() const {
       break;
     }
     case dwarf::DW_OP_LLVM_entry_value: {
-      // An entry value operator must appear at the beginning and the number of
-      // operations it cover can currently only be 1, because we support only
-      // entry values of a simple register location. One reason for this is that
-      // we currently can't calculate the size of the resulting DWARF block for
-      // other expressions.
-      return I->get() == expr_op_begin()->get() && I->getArg(0) == 1;
+      // An entry value operator must appear at the beginning or immediately
+      // following `DW_OP_LLVM_arg 0`, and the number of operations it cover can
+      // currently only be 1, because we support only entry values of a simple
+      // register location. One reason for this is that we currently can't
+      // calculate the size of the resulting DWARF block for other expressions.
+      auto FirstOp = expr_op_begin();
+      if (FirstOp->getOp() == dwarf::DW_OP_LLVM_arg && FirstOp->getArg(0) == 0)
+        ++FirstOp;
+      return I->get() == FirstOp->get() && I->getArg(0) == 1;
     }
     case dwarf::DW_OP_LLVM_implicit_pointer:
     case dwarf::DW_OP_LLVM_convert:
@@ -1432,6 +1435,7 @@ bool DIExpression::isComplex() const {
     switch (It.getOp()) {
     case dwarf::DW_OP_LLVM_tag_offset:
     case dwarf::DW_OP_LLVM_fragment:
+    case dwarf::DW_OP_LLVM_arg:
       continue;
     default:
       return true;
@@ -1439,6 +1443,67 @@ bool DIExpression::isComplex() const {
   }
 
   return false;
+}
+
+bool DIExpression::isSingleLocationExpression() const {
+  if (!isValid())
+    return false;
+
+  if (getNumElements() == 0)
+    return true;
+
+  auto ExprOpBegin = expr_ops().begin();
+  auto ExprOpEnd = expr_ops().end();
+  if (ExprOpBegin->getOp() == dwarf::DW_OP_LLVM_arg)
+    ++ExprOpBegin;
+
+  return !std::any_of(ExprOpBegin, ExprOpEnd, [](auto Op) {
+    return Op.getOp() == dwarf::DW_OP_LLVM_arg;
+  });
+}
+
+const DIExpression *
+DIExpression::convertToUndefExpression(const DIExpression *Expr) {
+  SmallVector<uint64_t, 3> UndefOps;
+  if (auto FragmentInfo = Expr->getFragmentInfo()) {
+    UndefOps.append({dwarf::DW_OP_LLVM_fragment, FragmentInfo->OffsetInBits,
+                     FragmentInfo->SizeInBits});
+  }
+  return DIExpression::get(Expr->getContext(), UndefOps);
+}
+
+const DIExpression *
+DIExpression::convertToVariadicExpression(const DIExpression *Expr) {
+  if (any_of(Expr->expr_ops(), [](auto ExprOp) {
+        return ExprOp.getOp() == dwarf::DW_OP_LLVM_arg;
+      }))
+    return Expr;
+  SmallVector<uint64_t> NewOps;
+  NewOps.reserve(Expr->getNumElements() + 2);
+  NewOps.append({dwarf::DW_OP_LLVM_arg, 0});
+  NewOps.append(Expr->elements_begin(), Expr->elements_end());
+  return DIExpression::get(Expr->getContext(), NewOps);
+}
+
+std::optional<const DIExpression *>
+DIExpression::convertToNonVariadicExpression(const DIExpression *Expr) {
+  // Check for `isValid` covered by `isSingleLocationExpression`.
+  if (!Expr->isSingleLocationExpression())
+    return std::nullopt;
+
+  // An empty expression is already non-variadic.
+  if (!Expr->getNumElements())
+    return Expr;
+
+  auto ElementsBegin = Expr->elements_begin();
+  // If Expr does not have a leading DW_OP_LLVM_arg then we don't need to do
+  // anything.
+  if (*ElementsBegin != dwarf::DW_OP_LLVM_arg)
+    return Expr;
+
+  SmallVector<uint64_t> NonVariadicOps(
+      make_range(ElementsBegin + 2, Expr->elements_end()));
+  return DIExpression::get(Expr->getContext(), NonVariadicOps);
 }
 
 void DIExpression::canonicalizeExpressionOps(SmallVectorImpl<uint64_t> &Ops,
@@ -1558,8 +1623,8 @@ const DIExpression *DIExpression::extractAddressClass(const DIExpression *Expr,
     if (Expr->Elements.size() == PatternSize)
       return nullptr;
     return DIExpression::get(Expr->getContext(),
-                             makeArrayRef(&*Expr->Elements.begin(),
-                                          Expr->Elements.size() - PatternSize));
+                             ArrayRef(&*Expr->Elements.begin(),
+                                      Expr->Elements.size() - PatternSize));
   }
   return Expr;
 }
@@ -1596,10 +1661,21 @@ DIExpression *DIExpression::appendOpsToArg(const DIExpression *Expr,
 
   SmallVector<uint64_t, 8> NewOps;
   for (auto Op : Expr->expr_ops()) {
+    // A DW_OP_stack_value comes at the end, but before a DW_OP_LLVM_fragment.
+    if (StackValue) {
+      if (Op.getOp() == dwarf::DW_OP_stack_value)
+        StackValue = false;
+      else if (Op.getOp() == dwarf::DW_OP_LLVM_fragment) {
+        NewOps.push_back(dwarf::DW_OP_stack_value);
+        StackValue = false;
+      }
+    }
     Op.appendToVector(NewOps);
     if (Op.getOp() == dwarf::DW_OP_LLVM_arg && Op.getArg(0) == ArgNo)
       NewOps.insert(NewOps.end(), Ops.begin(), Ops.end());
   }
+  if (StackValue)
+    NewOps.push_back(dwarf::DW_OP_stack_value);
 
   return DIExpression::get(Expr->getContext(), NewOps);
 }

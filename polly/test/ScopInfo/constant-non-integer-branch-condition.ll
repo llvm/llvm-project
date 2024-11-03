@@ -9,15 +9,15 @@
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
 ; Function Attrs: nounwind uwtable
-define i32 @main(i32* %A) #0 {
+define i32 @main(ptr %A) #0 {
 entry:
   br label %entry.split
 
 entry.split:                                      ; preds = %entry
-  br i1 icmp ne (i32 (...)* @test_weak, i32 (...)* null), label %if.then, label %cleanup
+  br i1 icmp ne (ptr @test_weak, ptr null), label %if.then, label %cleanup
 
 if.then:                                          ; preds = %entry.split
-  store i32 0, i32* %A
+  store i32 0, ptr %A
   br label %cleanup
 
 cleanup:                                          ; preds = %if.then, %entry.split

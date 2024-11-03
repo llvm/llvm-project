@@ -25,7 +25,7 @@ using namespace mlir;
 
 namespace mlir {
 namespace spirv {
-#define GEN_PASS_DEF_SPIRVCOMPOSITETYPELAYOUT
+#define GEN_PASS_DEF_SPIRVCOMPOSITETYPELAYOUTPASS
 #include "mlir/Dialect/SPIRV/Transforms/Passes.h.inc"
 } // namespace spirv
 } // namespace mlir
@@ -106,7 +106,7 @@ static void populateSPIRVLayoutInfoPatterns(RewritePatternSet &patterns) {
 
 namespace {
 class DecorateSPIRVCompositeTypeLayoutPass
-    : public spirv::impl::SPIRVCompositeTypeLayoutBase<
+    : public spirv::impl::SPIRVCompositeTypeLayoutPassBase<
           DecorateSPIRVCompositeTypeLayoutPass> {
   void runOnOperation() override;
 };
@@ -145,9 +145,4 @@ void DecorateSPIRVCompositeTypeLayoutPass::runOnOperation() {
   for (auto spirvModule : module.getOps<spirv::ModuleOp>())
     if (failed(applyFullConversion(spirvModule, target, frozenPatterns)))
       signalPassFailure();
-}
-
-std::unique_ptr<OperationPass<ModuleOp>>
-mlir::spirv::createDecorateSPIRVCompositeTypeLayoutPass() {
-  return std::make_unique<DecorateSPIRVCompositeTypeLayoutPass>();
 }

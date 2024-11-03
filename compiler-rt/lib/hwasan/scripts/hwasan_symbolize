@@ -307,7 +307,7 @@ class Symbolizer:
     match = re.match(r'^(.*?)HWAddressSanitizer: tag-mismatch on address (0x[0-9a-f]+) ', line, re.UNICODE)
     if match:
       self.__last_access_address = int(match.group(2), 16)
-    match = re.match(r'^(.*?) of size [0-9]+ at 0x[0-9a-f]* tags: ([0-9a-f]+)/[0-9a-f]+ \(ptr/mem\)', line, re.UNICODE)
+    match = re.match(r'^(.*?) of size [0-9]+ at 0x[0-9a-f]* tags: ([0-9a-f]+)/[0-9a-f]+(\([0-9a-f]+\))? \(ptr/mem\)', line, re.UNICODE)
     if match:
       self.__last_access_tag = int(match.group(2), 16)
 

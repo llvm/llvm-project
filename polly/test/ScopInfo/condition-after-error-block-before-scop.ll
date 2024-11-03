@@ -3,14 +3,14 @@
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
-%class.node = type { i32 (...)**, %class.node* }
+%class.node = type { ptr, ptr }
 
-define void @foobar(double* %A) {
+define void @foobar(ptr %A) {
 if.end:
   br i1 undef, label %if.then29, label %lor.lhs.false
 
 lor.lhs.false:
-  %call25 = tail call i32 undef(%class.node* undef)
+  %call25 = tail call i32 undef(ptr undef)
   br i1 undef, label %if.then29, label %if.end30
 
 if.then29:
@@ -33,7 +33,7 @@ if.end91:
   br i1 %tobool76.not, label %if.end98, label %if.then93
 
 if.then93:
-  store double 0.0, double* %A
+  store double 0.0, ptr %A
   br label %if.end98
 
 if.end98:
@@ -43,6 +43,6 @@ if.end98:
 
 
 ; CHECK: polly.stmt.if.then93:
-; CHECK:   store double 0.000000e+00, double* %A
+; CHECK:   store double 0.000000e+00, ptr %A
 ; CHECK:   br label %polly.exiting
 

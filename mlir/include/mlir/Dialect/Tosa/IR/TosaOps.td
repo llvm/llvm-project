@@ -271,6 +271,34 @@ def Tosa_MaxPool2dOp : Tosa_Op<"max_pool2d", [
 }
 
 //===----------------------------------------------------------------------===//
+// Operator: rfft2d
+//===----------------------------------------------------------------------===//
+def Tosa_RFFT2dOp : Tosa_Op<"rfft2d", [
+    DeclareOpInterfaceMethods<InferShapedTypeOpInterface,
+                              ["inferReturnTypeComponents"]>,
+    Pure]> {
+  let summary = "Performs RFFT2D operation on the input.";
+
+  let description = [{
+    Performs a batched 2D real-valued Fast Fourier Transform over the input where
+    the input tensor consists of real values producing complex valued output. The
+    complex output values will be split into the output_real and output_imag
+    tensor arguments. RFFT2D takes advantage of Hermitian symmetry to only
+    calculate the first half of the final output axis. Imaginary values with
+    locations (0,0), (0,W/2), (H/2,0) and (H/2,W/2) are zero.
+  }];
+
+  let arguments = (ins
+    Tosa_Tensor3D:$input
+  );
+
+  let results = (outs
+    Tosa_Tensor3D:$output_real,
+    Tosa_Tensor3D:$output_imag
+  );
+}
+
+//===----------------------------------------------------------------------===//
 // Operator: transpose_conv2d
 //===----------------------------------------------------------------------===//
 def Tosa_TransposeConv2DOp : Tosa_Op<"transpose_conv2d", [
@@ -1431,10 +1459,11 @@ def Tosa_ReshapeOp: Tosa_Op<"reshape", [
 
   let hasCanonicalizer = 1;
   let hasFolder = 1;
+  let hasVerifier = 1;
 
   let arguments = (ins
     Tosa_Tensor:$input1,
-    I64ArrayAttr:$new_shape
+    DenseI64ArrayAttr:$new_shape
   );
 
   let results = (outs
@@ -1484,8 +1513,8 @@ def Tosa_SliceOp: Tosa_Op<"slice", [
 
   let arguments = (ins
     Tosa_Tensor1Dto6D:$input,
-    I64ArrayAttr:$start,
-    I64ArrayAttr:$size
+    DenseI64ArrayAttr:$start,
+    DenseI64ArrayAttr:$size
   );
 
   let results = (outs
@@ -1510,7 +1539,7 @@ def Tosa_TileOp: Tosa_Op<"tile", [
 
   let arguments = (ins
     Tosa_Tensor1Dto4D:$input1,
-    I64ArrayAttr:$multiples);
+    DenseI64ArrayAttr:$multiples);
 
   let results = (outs
     Tosa_Tensor1Dto4D:$output
@@ -1540,6 +1569,10 @@ def Tosa_TransposeOp : Tosa_Op<"transpose", [
   let results = (
     outs Tosa_Tensor1Dto6D:$output
   );
+
+  let extraClassDeclaration = [{
+    LogicalResult getConstantPerms(llvm::SmallVector<int64_t> &perms);
+  }];
 
   let hasCanonicalizer = 1;
   let hasFolder = 1;
@@ -1716,8 +1749,8 @@ def Tosa_RescaleOp: Tosa_Op<"rescale", [Pure,
     Tosa_Tensor:$input,
     I32Attr:$input_zp,
     I32Attr:$output_zp,
-    I32ArrayAttr:$multiplier,
-    I32ArrayAttr:$shift,
+    DenseI32ArrayAttr:$multiplier,
+    DenseI32ArrayAttr:$shift,
     BoolAttr:$scale32,
     BoolAttr:$double_round,
     BoolAttr:$per_channel

@@ -880,7 +880,7 @@ void Mapper::flush() {
       AppendingInits.resize(PrefixSize);
       mapAppendingVariable(*E.Data.AppendingGV.GV,
                            E.Data.AppendingGV.InitPrefix,
-                           E.AppendingGVIsOldCtorDtor, makeArrayRef(NewInits));
+                           E.AppendingGVIsOldCtorDtor, ArrayRef(NewInits));
       break;
     }
     case WorklistEntry::MapAliasOrIFunc: {

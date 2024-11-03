@@ -132,7 +132,7 @@ private:
     unsigned Flags = 0;
   };
 
-  void initialize(Module &M);
+  void initialize(Module &M, const TargetLibraryInfo &TLI);
   bool instrumentLoadOrStore(const InstructionInfo &II, const DataLayout &DL);
   bool instrumentAtomic(Instruction *I, const DataLayout &DL);
   bool instrumentMemIntrinsic(Instruction *I);
@@ -195,13 +195,14 @@ PreservedAnalyses ModuleThreadSanitizerPass::run(Module &M,
   insertModuleCtor(M);
   return PreservedAnalyses::none();
 }
-void ThreadSanitizer::initialize(Module &M) {
+void ThreadSanitizer::initialize(Module &M, const TargetLibraryInfo &TLI) {
   const DataLayout &DL = M.getDataLayout();
-  IntptrTy = DL.getIntPtrType(M.getContext());
+  LLVMContext &Ctx = M.getContext();
+  IntptrTy = DL.getIntPtrType(Ctx);
 
-  IRBuilder<> IRB(M.getContext());
+  IRBuilder<> IRB(Ctx);
   AttributeList Attr;
-  Attr = Attr.addFnAttribute(M.getContext(), Attribute::NoUnwind);
+  Attr = Attr.addFnAttribute(Ctx, Attribute::NoUnwind);
   // Initialize the callbacks.
   TsanFuncEntry = M.getOrInsertFunction("__tsan_func_entry", Attr,
                                         IRB.getVoidTy(), IRB.getInt8PtrTy());
@@ -260,24 +261,24 @@ void ThreadSanitizer::initialize(Module &M) {
     TsanUnalignedCompoundRW[i] = M.getOrInsertFunction(
         UnalignedCompoundRWName, Attr, IRB.getVoidTy(), IRB.getInt8PtrTy());
 
-    Type *Ty = Type::getIntNTy(M.getContext(), BitSize);
+    Type *Ty = Type::getIntNTy(Ctx, BitSize);
     Type *PtrTy = Ty->getPointerTo();
     SmallString<32> AtomicLoadName("__tsan_atomic" + BitSizeStr + "_load");
-    {
-      AttributeList AL = Attr;
-      AL = AL.addParamAttribute(M.getContext(), 1, Attribute::ZExt);
-      TsanAtomicLoad[i] =
-          M.getOrInsertFunction(AtomicLoadName, AL, Ty, PtrTy, OrdTy);
-    }
+    TsanAtomicLoad[i] =
+        M.getOrInsertFunction(AtomicLoadName,
+                              TLI.getAttrList(&Ctx, {1}, /*Signed=*/true,
+                                              /*Ret=*/BitSize <= 32, Attr),
+                              Ty, PtrTy, OrdTy);
 
+    // Args of type Ty need extension only when BitSize is 32 or less.
+    using Idxs = std::vector<unsigned>;
+    Idxs Idxs2Or12   ((BitSize <= 32) ? Idxs({1, 2})       : Idxs({2}));
+    Idxs Idxs34Or1234((BitSize <= 32) ? Idxs({1, 2, 3, 4}) : Idxs({3, 4}));
     SmallString<32> AtomicStoreName("__tsan_atomic" + BitSizeStr + "_store");
-    {
-      AttributeList AL = Attr;
-      AL = AL.addParamAttribute(M.getContext(), 1, Attribute::ZExt);
-      AL = AL.addParamAttribute(M.getContext(), 2, Attribute::ZExt);
-      TsanAtomicStore[i] = M.getOrInsertFunction(
-          AtomicStoreName, AL, IRB.getVoidTy(), PtrTy, Ty, OrdTy);
-    }
+    TsanAtomicStore[i] = M.getOrInsertFunction(
+        AtomicStoreName,
+        TLI.getAttrList(&Ctx, Idxs2Or12, /*Signed=*/true, /*Ret=*/false, Attr),
+        IRB.getVoidTy(), PtrTy, Ty, OrdTy);
 
     for (unsigned Op = AtomicRMWInst::FIRST_BINOP;
          Op <= AtomicRMWInst::LAST_BINOP; ++Op) {
@@ -300,44 +301,35 @@ void ThreadSanitizer::initialize(Module &M) {
       else
         continue;
       SmallString<32> RMWName("__tsan_atomic" + itostr(BitSize) + NamePart);
-      {
-        AttributeList AL = Attr;
-        AL = AL.addParamAttribute(M.getContext(), 1, Attribute::ZExt);
-        AL = AL.addParamAttribute(M.getContext(), 2, Attribute::ZExt);
-        TsanAtomicRMW[Op][i] =
-            M.getOrInsertFunction(RMWName, AL, Ty, PtrTy, Ty, OrdTy);
-      }
+      TsanAtomicRMW[Op][i] = M.getOrInsertFunction(
+          RMWName,
+          TLI.getAttrList(&Ctx, Idxs2Or12, /*Signed=*/true,
+                          /*Ret=*/BitSize <= 32, Attr),
+          Ty, PtrTy, Ty, OrdTy);
     }
 
     SmallString<32> AtomicCASName("__tsan_atomic" + BitSizeStr +
                                   "_compare_exchange_val");
-    {
-      AttributeList AL = Attr;
-      AL = AL.addParamAttribute(M.getContext(), 1, Attribute::ZExt);
-      AL = AL.addParamAttribute(M.getContext(), 2, Attribute::ZExt);
-      AL = AL.addParamAttribute(M.getContext(), 3, Attribute::ZExt);
-      AL = AL.addParamAttribute(M.getContext(), 4, Attribute::ZExt);
-      TsanAtomicCAS[i] = M.getOrInsertFunction(AtomicCASName, AL, Ty, PtrTy, Ty,
-                                               Ty, OrdTy, OrdTy);
-    }
+    TsanAtomicCAS[i] = M.getOrInsertFunction(
+        AtomicCASName,
+        TLI.getAttrList(&Ctx, Idxs34Or1234, /*Signed=*/true,
+                        /*Ret=*/BitSize <= 32, Attr),
+        Ty, PtrTy, Ty, Ty, OrdTy, OrdTy);
   }
   TsanVptrUpdate =
       M.getOrInsertFunction("__tsan_vptr_update", Attr, IRB.getVoidTy(),
                             IRB.getInt8PtrTy(), IRB.getInt8PtrTy());
   TsanVptrLoad = M.getOrInsertFunction("__tsan_vptr_read", Attr,
                                        IRB.getVoidTy(), IRB.getInt8PtrTy());
-  {
-    AttributeList AL = Attr;
-    AL = AL.addParamAttribute(M.getContext(), 0, Attribute::ZExt);
-    TsanAtomicThreadFence = M.getOrInsertFunction("__tsan_atomic_thread_fence",
-                                                  AL, IRB.getVoidTy(), OrdTy);
-  }
-  {
-    AttributeList AL = Attr;
-    AL = AL.addParamAttribute(M.getContext(), 0, Attribute::ZExt);
-    TsanAtomicSignalFence = M.getOrInsertFunction("__tsan_atomic_signal_fence",
-                                                  AL, IRB.getVoidTy(), OrdTy);
-  }
+  TsanAtomicThreadFence = M.getOrInsertFunction(
+      "__tsan_atomic_thread_fence",
+      TLI.getAttrList(&Ctx, {0}, /*Signed=*/true, /*Ret=*/false, Attr),
+      IRB.getVoidTy(), OrdTy);
+
+  TsanAtomicSignalFence = M.getOrInsertFunction(
+      "__tsan_atomic_signal_fence",
+      TLI.getAttrList(&Ctx, {0}, /*Signed=*/true, /*Ret=*/false, Attr),
+      IRB.getVoidTy(), OrdTy);
 
   MemmoveFn =
       M.getOrInsertFunction("__tsan_memmove", Attr, IRB.getInt8PtrTy(),
@@ -345,9 +337,10 @@ void ThreadSanitizer::initialize(Module &M) {
   MemcpyFn =
       M.getOrInsertFunction("__tsan_memcpy", Attr, IRB.getInt8PtrTy(),
                             IRB.getInt8PtrTy(), IRB.getInt8PtrTy(), IntptrTy);
-  MemsetFn =
-      M.getOrInsertFunction("__tsan_memset", Attr, IRB.getInt8PtrTy(),
-                            IRB.getInt8PtrTy(), IRB.getInt32Ty(), IntptrTy);
+  MemsetFn = M.getOrInsertFunction(
+      "__tsan_memset",
+      TLI.getAttrList(&Ctx, {1}, /*Signed=*/true, /*Ret=*/false, Attr),
+      IRB.getInt8PtrTy(), IRB.getInt8PtrTy(), IRB.getInt32Ty(), IntptrTy);
 }
 
 static bool isVtableAccess(Instruction *I) {
@@ -516,7 +509,7 @@ bool ThreadSanitizer::sanitizeFunction(Function &F,
   if (F.hasFnAttribute(Attribute::DisableSanitizerInstrumentation))
     return false;
 
-  initialize(*F.getParent());
+  initialize(*F.getParent(), TLI);
   SmallVector<InstructionInfo, 8> AllLoadsAndStores;
   SmallVector<Instruction*, 8> LocalLoadsAndStores;
   SmallVector<Instruction*, 8> AtomicAccesses;

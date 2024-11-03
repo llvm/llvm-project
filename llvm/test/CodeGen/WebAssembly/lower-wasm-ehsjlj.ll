@@ -1,5 +1,5 @@
-; RUN: opt < %s -wasm-lower-em-ehsjlj -wasm-enable-eh -wasm-enable-sjlj -S | FileCheck %s
-; RUN: llc < %s -wasm-enable-eh -wasm-enable-sjlj -exception-model=wasm -mattr=+exception-handling -verify-machineinstrs
+; RUN: opt -opaque-pointers=0 < %s -wasm-lower-em-ehsjlj -wasm-enable-eh -wasm-enable-sjlj -S | FileCheck %s
+; RUN: llc -opaque-pointers=0 < %s -wasm-enable-eh -wasm-enable-sjlj -exception-model=wasm -mattr=+exception-handling -verify-machineinstrs
 
 target datalayout = "e-m:e-p:32:32-i64:64-n32:64-S128"
 target triple = "wasm32-unknown-unknown"

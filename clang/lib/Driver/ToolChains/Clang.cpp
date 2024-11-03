@@ -2641,8 +2641,8 @@ static void CollectArgsForIntegratedAssembler(Compilation &C,
   }
   if (ImplicitIt.size())
     AddARMImplicitITArgs(Args, CmdArgs, ImplicitIt);
-  if (UseRelaxRelocations)
-    CmdArgs.push_back("--mrelax-relocations");
+  if (!UseRelaxRelocations)
+    CmdArgs.push_back("-mrelax-relocations=no");
   if (UseNoExecStack)
     CmdArgs.push_back("-mnoexecstack");
   if (MipsTargetFeature != nullptr) {
@@ -2705,6 +2705,7 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
       !JA.isOffloading(Action::OFK_HIP))
     FPContract = "on";
   bool StrictFPModel = false;
+  StringRef Float16ExcessPrecision = "";
 
   if (const Arg *A = Args.getLastArg(options::OPT_flimited_precision_EQ)) {
     CmdArgs.push_back("-mlimit-float-precision");
@@ -2901,6 +2902,27 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
       break;
     }
 
+    case options::OPT_fexcess_precision_EQ: {
+      StringRef Val = A->getValue();
+      const llvm::Triple::ArchType Arch = TC.getArch();
+      if (Arch == llvm::Triple::x86 || Arch == llvm::Triple::x86_64) {
+        if (Val.equals("standard") || Val.equals("fast"))
+          Float16ExcessPrecision = Val;
+        // To make it GCC compatible, allow the value of "16" which
+        // means disable excess precision, the same meaning than clang's
+        // equivalent value "none".
+        else if (Val.equals("16"))
+          Float16ExcessPrecision = "none";
+        else
+          D.Diag(diag::err_drv_unsupported_option_argument)
+              << A->getSpelling() << Val;
+      } else {
+        if (!(Val.equals("standard") || Val.equals("fast")))
+          D.Diag(diag::err_drv_unsupported_option_argument)
+              << A->getSpelling() << Val;
+      }
+      break;
+    }
     case options::OPT_ffinite_math_only:
       HonorINFs = false;
       HonorNaNs = false;
@@ -3071,6 +3093,10 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
   if (!FPEvalMethod.empty())
     CmdArgs.push_back(Args.MakeArgString("-ffp-eval-method=" + FPEvalMethod));
 
+  if (!Float16ExcessPrecision.empty())
+    CmdArgs.push_back(Args.MakeArgString("-ffloat16-excess-precision=" +
+                                         Float16ExcessPrecision));
+
   ParseMRecip(D, Args, CmdArgs);
 
   // -ffast-math enables the __FAST_MATH__ preprocessor macro, but check for the
@@ -3213,6 +3239,12 @@ static void RenderSSPOptions(const Driver &D, const ToolChain &TC,
       StackProtectorLevel = LangOptions::SSPStrong;
     else if (A->getOption().matches(options::OPT_fstack_protector_all))
       StackProtectorLevel = LangOptions::SSPReq;
+
+    if (EffectiveTriple.isBPF() && StackProtectorLevel != LangOptions::SSPOff) {
+      D.Diag(diag::warn_drv_unsupported_option_for_target)
+          << A->getSpelling() << EffectiveTriple.getTriple();
+      StackProtectorLevel = DefaultStackProtectorLevel;
+    }
   } else {
     StackProtectorLevel = DefaultStackProtectorLevel;
   }
@@ -3608,6 +3640,7 @@ static bool RenderModulesOptions(Compilation &C, const Driver &D,
 
   HaveModules |= HaveClangModules;
   if (Args.hasArg(options::OPT_fmodules_ts)) {
+    D.Diag(diag::warn_deprecated_fmodules_ts_flag);
     CmdArgs.push_back("-fmodules-ts");
     HaveModules = true;
   }
@@ -3771,6 +3804,10 @@ static bool RenderModulesOptions(Compilation &C, const Driver &D,
     Args.ClaimAllArgs(options::OPT_fno_modules_validate_system_headers);
     Args.ClaimAllArgs(options::OPT_fmodules_disable_diagnostic_validation);
   }
+
+  // Claim `-fmodule-output` and `-fmodule-output=` to avoid unused warnings.
+  Args.ClaimAllArgs(options::OPT_fmodule_output);
+  Args.ClaimAllArgs(options::OPT_fmodule_output_EQ);
 
   return HaveModules;
 }
@@ -4188,9 +4225,11 @@ static void renderDebugOptions(const ToolChain &TC, const Driver &D,
     CmdArgs.push_back("-gno-column-info");
 
   // FIXME: Move backend command line options to the module.
-  // If -gline-tables-only or -gline-directives-only is the last option it wins.
-  if (const Arg *A = Args.getLastArg(options::OPT_gmodules))
-    if (checkDebugInfoOption(A, Args, D, TC)) {
+  if (Args.hasFlag(options::OPT_gmodules, options::OPT_gno_modules, false)) {
+    // If -gline-tables-only or -gline-directives-only is the last option it
+    // wins.
+    if (checkDebugInfoOption(Args.getLastArg(options::OPT_gmodules), Args, D,
+                             TC)) {
       if (DebugInfoKind != codegenoptions::DebugLineTablesOnly &&
           DebugInfoKind != codegenoptions::DebugDirectivesOnly) {
         DebugInfoKind = codegenoptions::DebugInfoConstructor;
@@ -4198,6 +4237,7 @@ static void renderDebugOptions(const ToolChain &TC, const Driver &D,
         CmdArgs.push_back("-fmodule-format=obj");
       }
     }
+  }
 
   if (T.isOSBinFormatELF() && SplitDWARFInlining)
     CmdArgs.push_back("-fsplit-dwarf-inlining");
@@ -5100,7 +5140,26 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     }
   }
 
-  Args.AddLastArg(CmdArgs, options::OPT_fveclib);
+  if (Arg *A = Args.getLastArg(options::OPT_fveclib)) {
+    StringRef Name = A->getValue();
+    if (Name == "SVML") {
+      if (Triple.getArch() != llvm::Triple::x86 &&
+          Triple.getArch() != llvm::Triple::x86_64)
+        D.Diag(diag::err_drv_unsupported_opt_for_target)
+            << Name << Triple.getArchName();
+    } else if (Name == "LIBMVEC-X86") {
+      if (Triple.getArch() != llvm::Triple::x86 &&
+          Triple.getArch() != llvm::Triple::x86_64)
+        D.Diag(diag::err_drv_unsupported_opt_for_target)
+            << Name << Triple.getArchName();
+    } else if (Name == "SLEEF") {
+      if (Triple.getArch() != llvm::Triple::aarch64 &&
+          Triple.getArch() != llvm::Triple::aarch64_be)
+        D.Diag(diag::err_drv_unsupported_opt_for_target)
+            << Name << Triple.getArchName();
+    }
+    A->render(Args, CmdArgs);
+  }
 
   if (Args.hasFlag(options::OPT_fmerge_all_constants,
                    options::OPT_fno_merge_all_constants, false))
@@ -6003,7 +6062,8 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back("-fvisibility=protected");
   }
 
-  if (!RawTriple.isPS4())
+  // PS4/PS5 process these options in addClangTargetOptions.
+  if (!RawTriple.isPS()) {
     if (const Arg *A =
             Args.getLastArg(options::OPT_fvisibility_from_dllstorageclass,
                             options::OPT_fno_visibility_from_dllstorageclass)) {
@@ -6017,6 +6077,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
                         options::OPT_fvisibility_externs_nodllstorageclass_EQ);
       }
     }
+  }
 
   if (const Arg *A = Args.getLastArg(options::OPT_mignore_xcoff_visibility)) {
     if (Triple.isOSAIX())
@@ -6361,9 +6422,6 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
         Args.MakeArgString(Twine("-fcf-protection=") + A->getValue()));
   }
 
-  if (IsUsingLTO)
-    Args.AddLastArg(CmdArgs, options::OPT_mibt_seal);
-
   if (Arg *A = Args.getLastArg(options::OPT_mfunction_return_EQ))
     CmdArgs.push_back(
         Args.MakeArgString(Twine("-mfunction-return=") + A->getValue()));
@@ -6426,6 +6484,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   if (Args.hasFlag(options::OPT_fcoroutines_ts, options::OPT_fno_coroutines_ts,
                    false) &&
       types::isCXX(InputType)) {
+    D.Diag(diag::warn_deperecated_fcoroutines_ts_flag);
     CmdArgs.push_back("-fcoroutines-ts");
   }
 
@@ -6939,11 +6998,6 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
         !isa<PreprocessJobAction>(JA)) {
       if (StringRef(Arg->getValue()) == "-finclude-default-header")
         continue;
-    }
-    if (StringRef(Arg->getValue()) == "-fexperimental-assignment-tracking") {
-      // Add the llvm version of this flag too.
-      CmdArgs.push_back("-mllvm");
-      CmdArgs.push_back("-experimental-assignment-tracking");
     }
     CmdArgs.push_back(Arg->getValue());
   }
@@ -8372,7 +8426,7 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
   }
 
   for (const auto &A : Args.getAllArgValues(options::OPT_Xcuda_ptxas))
-    CmdArgs.push_back(Args.MakeArgString("--ptxas-args=" + A));
+    CmdArgs.push_back(Args.MakeArgString("--ptxas-arg=" + A));
 
   // Forward remarks passes to the LLVM backend in the wrapper.
   if (const Arg *A = Args.getLastArg(options::OPT_Rpass_EQ))
@@ -8404,6 +8458,11 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
           A->getValue(1)));
   }
   Args.ClaimAllArgs(options::OPT_Xoffload_linker);
+
+  // Embed bitcode instead of an object in JIT mode.
+  if (Args.hasFlag(options::OPT_fopenmp_target_jit,
+                   options::OPT_fno_openmp_target_jit, false))
+    CmdArgs.push_back("--embed-bitcode");
 
   // Forward `-mllvm` arguments to the LLVM invocations if present.
   for (Arg *A : Args.filtered(options::OPT_mllvm)) {

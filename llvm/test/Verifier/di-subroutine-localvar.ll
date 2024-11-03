@@ -5,8 +5,8 @@
 
 
 %timespec.0.1.2.3.0.1.2 = type { i64, i64 }
-define internal i64 @init_vdso_clock_gettime(i32, %timespec.0.1.2.3.0.1.2* nonnull) unnamed_addr !dbg !142 {
-  call void @llvm.dbg.value(metadata i64 (i32, %timespec.0.1.2.3.0.1.2*)* null, metadata !162, metadata !DIExpression()), !dbg !167
+define internal i64 @init_vdso_clock_gettime(i32, ptr nonnull) unnamed_addr !dbg !142 {
+  call void @llvm.dbg.value(metadata ptr null, metadata !162, metadata !DIExpression()), !dbg !167
   ret i64 -38, !dbg !168
 }
 declare void @llvm.dbg.value(metadata, metadata, metadata) #0

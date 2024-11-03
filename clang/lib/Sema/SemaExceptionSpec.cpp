@@ -21,6 +21,7 @@
 #include "clang/Basic/SourceManager.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallString.h"
+#include <optional>
 
 namespace clang {
 
@@ -1547,7 +1548,7 @@ CanThrowResult Sema::canThrow(const Stmt *S) {
 
     // For 'if constexpr', consider only the non-discarded case.
     // FIXME: We should add a DiscardedStmt marker to the AST.
-    if (Optional<const Stmt *> Case = IS->getNondiscardedCase(Context))
+    if (std::optional<const Stmt *> Case = IS->getNondiscardedCase(Context))
       return *Case ? mergeCanThrow(CT, canThrow(*Case)) : CT;
 
     CanThrowResult Then = canThrow(IS->getThen());

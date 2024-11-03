@@ -12,11 +12,11 @@
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Lex/PreprocessorOptions.h"
 #include "clang/Serialization/ASTReader.h"
+#include <optional>
 
 #define DEBUG_TYPE "clang-tidy"
 
-namespace clang {
-namespace tooling {
+namespace clang::tooling {
 
 class ExpandModularHeadersPPCallbacks::FileRecorder {
 public:
@@ -39,7 +39,7 @@ public:
       return;
 
     // FIXME: Why is this happening? We might be losing contents here.
-    llvm::Optional<StringRef> Data = ContentCache.getBufferDataIfLoaded();
+    std::optional<StringRef> Data = ContentCache.getBufferDataIfLoaded();
     if (!Data)
       return;
 
@@ -305,5 +305,4 @@ void ExpandModularHeadersPPCallbacks::Endif(SourceLocation Loc,
   parseToLocation(Loc);
 }
 
-} // namespace tooling
-} // namespace clang
+} // namespace clang::tooling

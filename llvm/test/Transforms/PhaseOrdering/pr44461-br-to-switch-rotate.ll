@@ -19,8 +19,7 @@ define i64 @test() {
 ; CHECK:       bb3.i.i:
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[ITER1_SROA_5_0]], 0
 ; CHECK-NEXT:    [[TMP3]] = zext i1 [[TMP2]] to i8
-; CHECK-NEXT:    [[_5_0_I_I_I_I:%.*]] = add i64 [[ITER1_SROA_5_0]], -1
-; CHECK-NEXT:    [[SPEC_SELECT]] = select i1 [[TMP2]], i64 0, i64 [[_5_0_I_I_I_I]]
+; CHECK-NEXT:    [[SPEC_SELECT]] = tail call i64 @llvm.usub.sat.i64(i64 [[ITER1_SROA_5_0]], i64 1)
 ; CHECK-NEXT:    [[TMP4]] = add i64 [[COUNT_1]], [[ITER1_SROA_5_0]]
 ; CHECK-NEXT:    br label [[BB10]]
 ; CHECK:       bb12:

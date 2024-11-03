@@ -318,7 +318,8 @@ public:
     LoongArchMCExpr::VariantKind VK = LoongArchMCExpr::VK_LoongArch_None;
     bool IsConstantImm = evaluateConstantImm(getImm(), Imm, VK);
     bool IsValidKind = VK == LoongArchMCExpr::VK_LoongArch_None ||
-                       VK == LoongArchMCExpr::VK_LoongArch_B16;
+                       VK == LoongArchMCExpr::VK_LoongArch_B16 ||
+                       VK == LoongArchMCExpr::VK_LoongArch_PCALA_LO12;
     return IsConstantImm
                ? isShiftedInt<16, 2>(Imm) && IsValidKind
                : LoongArchAsmParser::classifySymbolRef(getImm(), VK) &&
@@ -443,7 +444,7 @@ public:
   }
 
   void print(raw_ostream &OS) const override {
-    auto RegName = [](unsigned Reg) {
+    auto RegName = [](MCRegister Reg) {
       if (Reg)
         return LoongArchInstPrinter::getRegisterName(Reg);
       else
@@ -1177,9 +1178,8 @@ unsigned LoongArchAsmParser::checkTargetMatchPredicate(MCInst &Inst) {
       unsigned Rd = Inst.getOperand(0).getReg();
       unsigned Rk = Inst.getOperand(1).getReg();
       unsigned Rj = Inst.getOperand(2).getReg();
-      if (Rd == Rk || Rd == Rj)
-        return Rd == LoongArch::R0 ? Match_Success
-                                   : Match_RequiresAMORdDifferRkRj;
+      if ((Rd == Rk || Rd == Rj) && Rd != LoongArch::R0)
+        return Match_RequiresAMORdDifferRkRj;
     }
     break;
   case LoongArch::PseudoLA_PCREL_LARGE:

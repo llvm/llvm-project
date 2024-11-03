@@ -111,15 +111,14 @@ INITIALIZE_PASS_END(AMDGPUDAGToDAGISel, "amdgpu-isel",
 
 /// This pass converts a legalized DAG into a AMDGPU-specific
 // DAG, ready for instruction scheduling.
-FunctionPass *llvm::createAMDGPUISelDag(TargetMachine *TM,
+FunctionPass *llvm::createAMDGPUISelDag(TargetMachine &TM,
                                         CodeGenOpt::Level OptLevel) {
   return new AMDGPUDAGToDAGISel(TM, OptLevel);
 }
 
-AMDGPUDAGToDAGISel::AMDGPUDAGToDAGISel(
-    TargetMachine *TM /*= nullptr*/,
-    CodeGenOpt::Level OptLevel /*= CodeGenOpt::Default*/)
-    : SelectionDAGISel(ID, *TM, OptLevel) {
+AMDGPUDAGToDAGISel::AMDGPUDAGToDAGISel(TargetMachine &TM,
+                                       CodeGenOpt::Level OptLevel)
+    : SelectionDAGISel(ID, TM, OptLevel) {
   EnableLateStructurizeCFG = AMDGPUTargetMachine::EnableLateStructurizeCFG;
 }
 
@@ -369,7 +368,7 @@ const TargetRegisterClass *AMDGPUDAGToDAGISel::getOperandRegClass(SDNode *N,
     unsigned OpIdx = Desc.getNumDefs() + OpNo;
     if (OpIdx >= Desc.getNumOperands())
       return nullptr;
-    int RegClass = Desc.OpInfo[OpIdx].RegClass;
+    int RegClass = Desc.operands()[OpIdx].RegClass;
     if (RegClass == -1)
       return nullptr;
 
@@ -2152,7 +2151,7 @@ void AMDGPUDAGToDAGISel::SelectS_BFE(SDNode *N) {
         uint32_t MaskVal = Mask->getZExtValue();
 
         if (isMask_32(MaskVal)) {
-          uint32_t WidthVal = countPopulation(MaskVal);
+          uint32_t WidthVal = llvm::popcount(MaskVal);
           ReplaceNode(N, getBFE32(false, SDLoc(N), Srl.getOperand(0), ShiftVal,
                                   WidthVal));
           return;
@@ -2173,7 +2172,7 @@ void AMDGPUDAGToDAGISel::SelectS_BFE(SDNode *N) {
         uint32_t MaskVal = Mask->getZExtValue() >> ShiftVal;
 
         if (isMask_32(MaskVal)) {
-          uint32_t WidthVal = countPopulation(MaskVal);
+          uint32_t WidthVal = llvm::popcount(MaskVal);
           ReplaceNode(N, getBFE32(false, SDLoc(N), And.getOperand(0), ShiftVal,
                       WidthVal));
           return;
@@ -2939,7 +2938,7 @@ bool AMDGPUDAGToDAGISel::isVGPRImm(const SDNode * N) const {
       SDNode * User = *U;
       if (User->isMachineOpcode()) {
         unsigned Opc = User->getMachineOpcode();
-        MCInstrDesc Desc = SII->get(Opc);
+        const MCInstrDesc &Desc = SII->get(Opc);
         if (Desc.isCommutable()) {
           unsigned OpIdx = Desc.getNumDefs() + U.getOperandNo();
           unsigned CommuteIdx1 = TargetInstrInfo::CommuteAnyOperandIndex;

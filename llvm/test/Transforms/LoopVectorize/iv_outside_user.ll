@@ -1,5 +1,5 @@
-; RUN: opt -S -passes=loop-vectorize -force-vector-interleave=1 -force-vector-width=2 < %s | FileCheck --check-prefixes=CHECK,VEC %s
-; RUN: opt -S -passes=loop-vectorize -force-vector-interleave=2 -force-vector-width=1 < %s | FileCheck --check-prefixes=CHECK %s
+; RUN: opt -opaque-pointers=0 -S -passes=loop-vectorize -force-vector-interleave=1 -force-vector-width=2 < %s | FileCheck --check-prefixes=CHECK,VEC %s
+; RUN: opt -opaque-pointers=0 -S -passes=loop-vectorize -force-vector-interleave=2 -force-vector-width=1 < %s | FileCheck --check-prefixes=CHECK %s
 
 ; CHECK-LABEL: @postinc
 ; CHECK-LABEL: scalar.ph:

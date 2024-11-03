@@ -8,19 +8,19 @@
 
   define void @store_float_align1(float %a) #0 {
   entry:
-    store float %a, float* @float_align1, align 1
+    store float %a, ptr @float_align1, align 1
     ret void
   }
 
   define void @store_float_align8(float %a) #0 {
   entry:
-    store float %a, float* @float_align8, align 8
+    store float %a, ptr @float_align8, align 8
     ret void
   }
 
   define void @store_i32_align2(i32 signext %a) #0 {
   entry:
-    store i32 %a, i32* @i32_align2, align 2
+    store i32 %a, ptr @i32_align2, align 2
     ret void
   }
 

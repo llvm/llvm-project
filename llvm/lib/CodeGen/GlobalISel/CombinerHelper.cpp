@@ -389,7 +389,7 @@ void CombinerHelper::applyCombineShuffleVector(MachineInstr &MI,
   if (Ops.size() == 1)
     Builder.buildCopy(NewDstReg, Ops[0]);
   else
-    Builder.buildMerge(NewDstReg, Ops);
+    Builder.buildMergeLikeInstr(NewDstReg, Ops);
 
   MI.eraseFromParent();
   replaceRegWith(MRI, DstReg, NewDstReg);
@@ -1731,7 +1731,7 @@ bool CombinerHelper::matchCombineUnmergeMergeToPlainValues(
   auto &Unmerge = cast<GUnmerge>(MI);
   Register SrcReg = peekThroughBitcast(Unmerge.getSourceReg(), MRI);
 
-  auto *SrcInstr = getOpcodeDef<GMergeLikeOp>(SrcReg, MRI);
+  auto *SrcInstr = getOpcodeDef<GMergeLikeInstr>(SrcReg, MRI);
   if (!SrcInstr)
     return false;
 
@@ -1972,7 +1972,7 @@ void CombinerHelper::applyCombineShiftToUnmerge(MachineInstr &MI,
     }
 
     auto Zero = Builder.buildConstant(HalfTy, 0);
-    Builder.buildMerge(DstReg, { Narrowed, Zero });
+    Builder.buildMergeLikeInstr(DstReg, {Narrowed, Zero});
   } else if (MI.getOpcode() == TargetOpcode::G_SHL) {
     Register Narrowed = Unmerge.getReg(0);
     //  dst = G_SHL s64:x, C for C >= 32
@@ -1985,7 +1985,7 @@ void CombinerHelper::applyCombineShiftToUnmerge(MachineInstr &MI,
     }
 
     auto Zero = Builder.buildConstant(HalfTy, 0);
-    Builder.buildMerge(DstReg, { Zero, Narrowed });
+    Builder.buildMergeLikeInstr(DstReg, {Zero, Narrowed});
   } else {
     assert(MI.getOpcode() == TargetOpcode::G_ASHR);
     auto Hi = Builder.buildAShr(
@@ -1995,13 +1995,13 @@ void CombinerHelper::applyCombineShiftToUnmerge(MachineInstr &MI,
     if (ShiftVal == HalfSize) {
       // (G_ASHR i64:x, 32) ->
       //   G_MERGE_VALUES hi_32(x), (G_ASHR hi_32(x), 31)
-      Builder.buildMerge(DstReg, { Unmerge.getReg(1), Hi });
+      Builder.buildMergeLikeInstr(DstReg, {Unmerge.getReg(1), Hi});
     } else if (ShiftVal == Size - 1) {
       // Don't need a second shift.
       // (G_ASHR i64:x, 63) ->
       //   %narrowed = (G_ASHR hi_32(x), 31)
       //   G_MERGE_VALUES %narrowed, %narrowed
-      Builder.buildMerge(DstReg, { Hi, Hi });
+      Builder.buildMergeLikeInstr(DstReg, {Hi, Hi});
     } else {
       auto Lo = Builder.buildAShr(
         HalfTy, Unmerge.getReg(1),
@@ -2009,7 +2009,7 @@ void CombinerHelper::applyCombineShiftToUnmerge(MachineInstr &MI,
 
       // (G_ASHR i64:x, C) ->, for C >= 32
       //   G_MERGE_VALUES (G_ASHR hi_32(x), C - 32), (G_ASHR hi_32(x), 31)
-      Builder.buildMerge(DstReg, { Lo, Hi });
+      Builder.buildMergeLikeInstr(DstReg, {Lo, Hi});
     }
   }
 
@@ -4948,34 +4948,33 @@ MachineInstr *CombinerHelper::buildUDivUsingMul(MachineInstr &MI) {
   auto BuildUDIVPattern = [&](const Constant *C) {
     auto *CI = cast<ConstantInt>(C);
     const APInt &Divisor = CI->getValue();
-    UnsignedDivisionByConstantInfo magics =
-        UnsignedDivisionByConstantInfo::get(Divisor);
+
+    bool SelNPQ = false;
+    APInt Magic(Divisor.getBitWidth(), 0);
     unsigned PreShift = 0, PostShift = 0;
 
-    // If the divisor is even, we can avoid using the expensive fixup by
-    // shifting the divided value upfront.
-    if (magics.IsAdd && !Divisor[0]) {
-      PreShift = Divisor.countTrailingZeros();
-      // Get magic number for the shifted divisor.
-      magics =
-          UnsignedDivisionByConstantInfo::get(Divisor.lshr(PreShift), PreShift);
-      assert(!magics.IsAdd && "Should use cheap fixup now");
-    }
+    // Magic algorithm doesn't work for division by 1. We need to emit a select
+    // at the end.
+    // TODO: Use undef values for divisor of 1.
+    if (!Divisor.isOneValue()) {
+      UnsignedDivisionByConstantInfo magics =
+          UnsignedDivisionByConstantInfo::get(Divisor);
 
-    unsigned SelNPQ;
-    if (!magics.IsAdd || Divisor.isOneValue()) {
-      assert(magics.ShiftAmount < Divisor.getBitWidth() &&
+      Magic = std::move(magics.Magic);
+
+      assert(magics.PreShift < Divisor.getBitWidth() &&
              "We shouldn't generate an undefined shift!");
-      PostShift = magics.ShiftAmount;
-      SelNPQ = false;
-    } else {
-      PostShift = magics.ShiftAmount - 1;
-      SelNPQ = true;
+      assert(magics.PostShift < Divisor.getBitWidth() &&
+             "We shouldn't generate an undefined shift!");
+      assert((!magics.IsAdd || magics.PreShift == 0) && "Unexpected pre-shift");
+      PreShift = magics.PreShift;
+      PostShift = magics.PostShift;
+      SelNPQ = magics.IsAdd;
     }
 
     PreShifts.push_back(
         MIB.buildConstant(ScalarShiftAmtTy, PreShift).getReg(0));
-    MagicFactors.push_back(MIB.buildConstant(ScalarTy, magics.Magic).getReg(0));
+    MagicFactors.push_back(MIB.buildConstant(ScalarTy, Magic).getReg(0));
     NPQFactors.push_back(
         MIB.buildConstant(ScalarTy,
                           SelNPQ ? APInt::getOneBitSet(EltBits, EltBits - 1)

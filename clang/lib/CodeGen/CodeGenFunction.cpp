@@ -46,6 +46,7 @@
 #include "llvm/Support/CRC.h"
 #include "llvm/Transforms/Scalar/LowerExpectIntrinsic.h"
 #include "llvm/Transforms/Utils/PromoteMemToReg.h"
+#include <optional>
 
 using namespace clang;
 using namespace CodeGen;
@@ -360,17 +361,18 @@ void CodeGenFunction::FinishFunction(SourceLocation EndLoc) {
   bool HasOnlyLifetimeMarkers =
       HasCleanups && EHStack.containsOnlyLifetimeMarkers(PrologueCleanupDepth);
   bool EmitRetDbgLoc = !HasCleanups || HasOnlyLifetimeMarkers;
+
+  std::optional<ApplyDebugLocation> OAL;
   if (HasCleanups) {
     // Make sure the line table doesn't jump back into the body for
     // the ret after it's been at EndLoc.
-    Optional<ApplyDebugLocation> AL;
     if (CGDebugInfo *DI = getDebugInfo()) {
       if (OnlySimpleReturnStmts)
         DI->EmitLocation(Builder, EndLoc);
       else
         // We may not have a valid end location. Try to apply it anyway, and
         // fall back to an artificial location if needed.
-        AL = ApplyDebugLocation::CreateDefaultArtificial(*this, EndLoc);
+        OAL = ApplyDebugLocation::CreateDefaultArtificial(*this, EndLoc);
     }
 
     PopCleanupBlocks(PrologueCleanupDepth);
@@ -481,13 +483,13 @@ void CodeGenFunction::FinishFunction(SourceLocation EndLoc) {
     if (auto *VT = dyn_cast<llvm::VectorType>(A.getType()))
       LargestVectorWidth =
           std::max((uint64_t)LargestVectorWidth,
-                   VT->getPrimitiveSizeInBits().getKnownMinSize());
+                   VT->getPrimitiveSizeInBits().getKnownMinValue());
 
   // Update vector width based on return type.
   if (auto *VT = dyn_cast<llvm::VectorType>(CurFn->getReturnType()))
     LargestVectorWidth =
         std::max((uint64_t)LargestVectorWidth,
-                 VT->getPrimitiveSizeInBits().getKnownMinSize());
+                 VT->getPrimitiveSizeInBits().getKnownMinValue());
 
   if (CurFnInfo->getMaxVectorWidth() > LargestVectorWidth)
     LargestVectorWidth = CurFnInfo->getMaxVectorWidth();
@@ -499,10 +501,12 @@ void CodeGenFunction::FinishFunction(SourceLocation EndLoc) {
   // 4. Width of vector arguments and return types for this function.
   // 5. Width of vector aguments and return types for functions called by this
   //    function.
-  CurFn->addFnAttr("min-legal-vector-width", llvm::utostr(LargestVectorWidth));
+  if (getContext().getTargetInfo().getTriple().isX86())
+    CurFn->addFnAttr("min-legal-vector-width",
+                     llvm::utostr(LargestVectorWidth));
 
   // Add vscale_range attribute if appropriate.
-  Optional<std::pair<unsigned, unsigned>> VScaleRange =
+  std::optional<std::pair<unsigned, unsigned>> VScaleRange =
       getContext().getTargetInfo().getVScaleRange(getLangOpts());
   if (VScaleRange) {
     CurFn->addFnAttr(llvm::Attribute::getWithVScaleRangeArgs(
@@ -846,8 +850,8 @@ void CodeGenFunction::StartFunction(GlobalDecl GD, QualType RetTy,
 
     auto FuncGroups = CGM.getCodeGenOpts().XRayTotalFunctionGroups;
     if (FuncGroups > 1) {
-      auto FuncName = llvm::makeArrayRef<uint8_t>(
-          CurFn->getName().bytes_begin(), CurFn->getName().bytes_end());
+      auto FuncName = llvm::ArrayRef<uint8_t>(CurFn->getName().bytes_begin(),
+                                              CurFn->getName().bytes_end());
       auto Group = crc32(FuncName) % FuncGroups;
       if (Group != CGM.getCodeGenOpts().XRaySelectedFunctionGroup &&
           !AlwaysXRayAttr)

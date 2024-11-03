@@ -34,7 +34,6 @@
 #include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/FoldingSet.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/PointerIntPair.h"
 #include "llvm/ADT/PointerUnion.h"
 #include "llvm/ADT/StringRef.h"
@@ -50,6 +49,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
+#include <optional>
 #include <string>
 #include <type_traits>
 #include <utility>
@@ -762,6 +762,8 @@ public:
 
   unsigned getLocalFastQualifiers() const { return Value.getInt(); }
   void setLocalFastQualifiers(unsigned Quals) { Value.setInt(Quals); }
+
+  bool UseExcessPrecision(const ASTContext &Ctx);
 
   /// Retrieves a pointer to the underlying (unqualified) type.
   ///
@@ -2024,6 +2026,9 @@ public:
   bool isSizelessType() const;
   bool isSizelessBuiltinType() const;
 
+  /// Returns true for SVE scalable vector types.
+  bool isSVESizelessBuiltinType() const;
+
   /// Determines if this is a sizeless type supported by the
   /// 'arm_sve_vector_bits' type attribute, which can be applied to a single
   /// SVE vector or predicate, excluding tuple types such as svint32x4_t.
@@ -2547,9 +2552,7 @@ public:
   /// Note that nullability is only captured as sugar within the type
   /// system, not as part of the canonical type, so nullability will
   /// be lost by canonicalization and desugaring.
-  Optional<NullabilityKind> getNullability() const;
-  // TODO: Remove overload.
-  Optional<NullabilityKind> getNullability(const ASTContext &) const;
+  std::optional<NullabilityKind> getNullability() const;
 
   /// Determine whether the given type can have a nullability
   /// specifier applied to it, i.e., if it is any kind of pointer type.
@@ -2573,7 +2576,7 @@ public:
   /// the type parameters of the given declaration context in any type described
   /// within that context, or an empty optional to indicate that no
   /// substitution is required.
-  Optional<ArrayRef<QualType>>
+  std::optional<ArrayRef<QualType>>
   getObjCSubstitutions(const DeclContext *dc) const;
 
   /// Determines if this is an ObjC interface type that may accept type
@@ -4234,7 +4237,7 @@ public:
   }
 
   ArrayRef<QualType> getParamTypes() const {
-    return llvm::makeArrayRef(param_type_begin(), param_type_end());
+    return llvm::ArrayRef(param_type_begin(), param_type_end());
   }
 
   ExtProtoInfo getExtProtoInfo() const {
@@ -4381,7 +4384,7 @@ public:
   using param_type_iterator = const QualType *;
 
   ArrayRef<QualType> param_types() const {
-    return llvm::makeArrayRef(param_type_begin(), param_type_end());
+    return llvm::ArrayRef(param_type_begin(), param_type_end());
   }
 
   param_type_iterator param_type_begin() const {
@@ -4395,7 +4398,7 @@ public:
   using exception_iterator = const QualType *;
 
   ArrayRef<QualType> exceptions() const {
-    return llvm::makeArrayRef(exception_begin(), exception_end());
+    return llvm::ArrayRef(exception_begin(), exception_end());
   }
 
   exception_iterator exception_begin() const {
@@ -4919,7 +4922,7 @@ public:
 
   bool isCallingConv() const;
 
-  llvm::Optional<NullabilityKind> getImmediateNullability() const;
+  std::optional<NullabilityKind> getImmediateNullability() const;
 
   /// Retrieve the attribute kind corresponding to the given
   /// nullability kind.
@@ -4949,7 +4952,7 @@ public:
   /// to the underlying modified type.
   ///
   /// \returns the top-level nullability, if present.
-  static Optional<NullabilityKind> stripOuterNullability(QualType &T);
+  static std::optional<NullabilityKind> stripOuterNullability(QualType &T);
 
   void Profile(llvm::FoldingSetNodeID &ID) {
     Profile(ID, getAttrKind(), ModifiedType, EquivalentType);
@@ -5090,7 +5093,7 @@ class SubstTemplateTypeParmType final
   Decl *AssociatedDecl;
 
   SubstTemplateTypeParmType(QualType Replacement, Decl *AssociatedDecl,
-                            unsigned Index, Optional<unsigned> PackIndex);
+                            unsigned Index, std::optional<unsigned> PackIndex);
 
 public:
   /// Gets the type that was substituted for the template
@@ -5113,7 +5116,7 @@ public:
   /// This should match the result of `getReplacedParameter()->getIndex()`.
   unsigned getIndex() const { return SubstTemplateTypeParmTypeBits.Index; }
 
-  Optional<unsigned> getPackIndex() const {
+  std::optional<unsigned> getPackIndex() const {
     if (SubstTemplateTypeParmTypeBits.PackIndex == 0)
       return std::nullopt;
     return SubstTemplateTypeParmTypeBits.PackIndex - 1;
@@ -5129,7 +5132,7 @@ public:
 
   static void Profile(llvm::FoldingSetNodeID &ID, QualType Replacement,
                       const Decl *AssociatedDecl, unsigned Index,
-                      Optional<unsigned> PackIndex) {
+                      std::optional<unsigned> PackIndex) {
     Replacement.Profile(ID);
     ID.AddPointer(AssociatedDecl);
     ID.AddInteger(Index);
@@ -5843,7 +5846,7 @@ class PackExpansionType : public Type, public llvm::FoldingSetNode {
   QualType Pattern;
 
   PackExpansionType(QualType Pattern, QualType Canon,
-                    Optional<unsigned> NumExpansions)
+                    std::optional<unsigned> NumExpansions)
       : Type(PackExpansion, Canon,
              (Pattern->getDependence() | TypeDependence::Dependent |
               TypeDependence::Instantiation) &
@@ -5861,7 +5864,7 @@ public:
 
   /// Retrieve the number of expansions that this pack expansion will
   /// generate, if known.
-  Optional<unsigned> getNumExpansions() const {
+  std::optional<unsigned> getNumExpansions() const {
     if (PackExpansionTypeBits.NumExpansions)
       return PackExpansionTypeBits.NumExpansions - 1;
     return std::nullopt;
@@ -5875,7 +5878,7 @@ public:
   }
 
   static void Profile(llvm::FoldingSetNodeID &ID, QualType Pattern,
-                      Optional<unsigned> NumExpansions) {
+                      std::optional<unsigned> NumExpansions) {
     ID.AddPointer(Pattern.getAsOpaquePtr());
     ID.AddBoolean(NumExpansions.has_value());
     if (NumExpansions)
@@ -6132,8 +6135,7 @@ public:
   /// Retrieve the type arguments of this object type as they were
   /// written.
   ArrayRef<QualType> getTypeArgsAsWritten() const {
-    return llvm::makeArrayRef(getTypeArgStorage(),
-                              ObjCObjectTypeBits.NumTypeArgs);
+    return llvm::ArrayRef(getTypeArgStorage(), ObjCObjectTypeBits.NumTypeArgs);
   }
 
   /// Whether this is a "__kindof" type as written.

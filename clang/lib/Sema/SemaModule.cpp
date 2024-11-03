@@ -15,6 +15,7 @@
 #include "clang/Lex/HeaderSearch.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Sema/SemaInternal.h"
+#include <optional>
 
 using namespace clang;
 using namespace sema;
@@ -119,12 +120,12 @@ void Sema::HandleStartOfHeaderUnit() {
   // TODO: Make the C++20 header lookup independent.
   // When the input is pre-processed source, we need a file ref to the original
   // file for the header map.
-  auto F = SourceMgr.getFileManager().getFile(HUName);
+  auto F = SourceMgr.getFileManager().getOptionalFileRef(HUName);
   // For the sake of error recovery (if someone has moved the original header
   // after creating the pre-processed output) fall back to obtaining the file
   // ref for the input file, which must be present.
   if (!F)
-    F = SourceMgr.getFileEntryForID(SourceMgr.getMainFileID());
+    F = SourceMgr.getFileEntryRefForID(SourceMgr.getMainFileID());
   assert(F && "failed to find the header unit source?");
   Module::Header H{HUName.str(), HUName.str(), *F};
   auto &Map = PP.getHeaderSearchInfo().getModuleMap();
@@ -540,7 +541,7 @@ DeclResult Sema::ActOnModuleImport(SourceLocation StartLoc,
   // of the same top-level module. Until we do, make it an error rather than
   // silently ignoring the import.
   // FIXME: Should we warn on a redundant import of the current module?
-  if (Mod->getTopLevelModuleName() == getLangOpts().CurrentModule &&
+  if (Mod->isForBuilding(getLangOpts()) &&
       (getLangOpts().isCompilingModule() || !getLangOpts().ModulesTS)) {
     Diag(ImportLoc, getLangOpts().isCompilingModule()
                         ? diag::err_module_self_import
@@ -590,9 +591,6 @@ DeclResult Sema::ActOnModuleImport(SourceLocation StartLoc,
              (ModuleScopes.back().ModuleInterface ||
               (getLangOpts().CPlusPlusModules &&
                ModuleScopes.back().Module->isGlobalModule()))) {
-    assert((!ModuleScopes.back().Module->isGlobalModule() ||
-            Mod->Kind == Module::ModuleKind::ModuleHeaderUnit) &&
-           "should only be importing a header unit into the GMF");
     // Re-export the module if the imported module is exported.
     // Note that we don't need to add re-exported module to Imports field
     // since `Exports` implies the module is imported already.
@@ -826,7 +824,7 @@ enum class UnnamedDeclKind {
 };
 }
 
-static llvm::Optional<UnnamedDeclKind> getUnnamedDeclKind(Decl *D) {
+static std::optional<UnnamedDeclKind> getUnnamedDeclKind(Decl *D) {
   if (isa<EmptyDecl>(D))
     return UnnamedDeclKind::Empty;
   if (isa<StaticAssertDecl>(D))

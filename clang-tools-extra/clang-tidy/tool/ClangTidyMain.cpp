@@ -46,12 +46,14 @@ Configuration files:
 
     $ clang-tidy -dump-config
     ---
-    Checks:              '-*,some-check'
-    WarningsAsErrors:    ''
-    HeaderFilterRegex:   ''
-    FormatStyle:         none
-    InheritParentConfig: true
-    User:                user
+    Checks:                       '-*,some-check'
+    WarningsAsErrors:             ''
+    HeaderFileExtensions:         ['', 'h','hh','hpp','hxx']
+    ImplementationFileExtensions: ['c','cc','cpp','cxx']
+    HeaderFilterRegex:            ''
+    FormatStyle:                  none
+    InheritParentConfig:          true
+    User:                         user
     CheckOptions:
       some-check.SomeOption: 'some value'
     ...
@@ -130,10 +132,10 @@ well.
                                cl::init(false), cl::cat(ClangTidyCategory));
 
 static cl::opt<bool> FixNotes("fix-notes", cl::desc(R"(
-If a warning has no fix, but a single fix can 
-be found through an associated diagnostic note, 
-apply the fix. 
-Specifying this flag will implicitly enable the 
+If a warning has no fix, but a single fix can
+be found through an associated diagnostic note,
+apply the fix.
+Specifying this flag will implicitly enable the
 '--fix' flag.
 )"),
                               cl::init(false), cl::cat(ClangTidyCategory));
@@ -263,8 +265,7 @@ option is recognized.
 )"),
                                   cl::init(false), cl::cat(ClangTidyCategory));
 
-namespace clang {
-namespace tidy {
+namespace clang::tidy {
 
 static void printStats(const ClangTidyStats &Stats) {
   if (Stats.errorsIgnored()) {
@@ -459,6 +460,26 @@ static bool verifyChecks(const StringSet<> &AllChecks, StringRef CheckGlob,
   return AnyInvalid;
 }
 
+static bool verifyFileExtensions(
+    const std::vector<std::string> &HeaderFileExtensions,
+    const std::vector<std::string> &ImplementationFileExtensions,
+    StringRef Source) {
+  bool AnyInvalid = false;
+  for (const auto &HeaderExtension : HeaderFileExtensions) {
+    for (const auto &ImplementationExtension : ImplementationFileExtensions) {
+      if (HeaderExtension == ImplementationExtension) {
+        AnyInvalid = true;
+        auto &Output = llvm::WithColor::warning(llvm::errs(), Source)
+                       << "HeaderFileExtension '" << HeaderExtension << '\''
+                       << " is the same as ImplementationFileExtension '"
+                       << ImplementationExtension << '\'';
+        Output << VerifyConfigWarningEnd;
+      }
+    }
+  }
+  return AnyInvalid;
+}
+
 int clangTidyMain(int argc, const char **argv) {
   llvm::InitLLVM X(argc, argv);
 
@@ -562,6 +583,11 @@ int clangTidyMain(int argc, const char **argv) {
       if (Opts.Checks)
         AnyInvalid |= verifyChecks(Valid.Names, *Opts.Checks, Source);
 
+      if (Opts.HeaderFileExtensions && Opts.ImplementationFileExtensions)
+        AnyInvalid |=
+            verifyFileExtensions(*Opts.HeaderFileExtensions,
+                                 *Opts.ImplementationFileExtensions, Source);
+
       for (auto Key : Opts.CheckOptions.keys()) {
         if (Valid.Options.contains(Key))
           continue;
@@ -660,5 +686,4 @@ int clangTidyMain(int argc, const char **argv) {
   return 0;
 }
 
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy

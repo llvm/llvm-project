@@ -10,6 +10,7 @@
 #include "DecodedThread.h"
 #include "TraceIntelPT.h"
 #include <cstdlib>
+#include <optional>
 
 using namespace lldb;
 using namespace lldb_private;
@@ -18,8 +19,8 @@ using namespace llvm;
 
 TraceCursorIntelPT::TraceCursorIntelPT(
     ThreadSP thread_sp, DecodedThreadSP decoded_thread_sp,
-    const Optional<LinuxPerfZeroTscConversion> &tsc_conversion,
-    Optional<uint64_t> beginning_of_time_nanos)
+    const std::optional<LinuxPerfZeroTscConversion> &tsc_conversion,
+    std::optional<uint64_t> beginning_of_time_nanos)
     : TraceCursor(thread_sp), m_decoded_thread_sp(decoded_thread_sp),
       m_tsc_conversion(tsc_conversion),
       m_beginning_of_time_nanos(beginning_of_time_nanos) {
@@ -48,7 +49,7 @@ void TraceCursorIntelPT::ClearTimingRangesIfInvalid() {
   }
 }
 
-const Optional<DecodedThread::TSCRange> &
+const std::optional<DecodedThread::TSCRange> &
 TraceCursorIntelPT::GetTSCRange() const {
   if (!m_tsc_range_calculated) {
     m_tsc_range_calculated = true;
@@ -57,7 +58,7 @@ TraceCursorIntelPT::GetTSCRange() const {
   return m_tsc_range;
 }
 
-const Optional<DecodedThread::NanosecondsRange> &
+const std::optional<DecodedThread::NanosecondsRange> &
 TraceCursorIntelPT::GetNanosecondsRange() const {
   if (!m_nanoseconds_range_calculated) {
     m_nanoseconds_range_calculated = true;
@@ -103,13 +104,13 @@ lldb::addr_t TraceCursorIntelPT::GetLoadAddress() const {
 }
 
 std::optional<uint64_t> TraceCursorIntelPT::GetHWClock() const {
-  if (const Optional<DecodedThread::TSCRange> &range = GetTSCRange())
+  if (const std::optional<DecodedThread::TSCRange> &range = GetTSCRange())
     return range->tsc;
   return std::nullopt;
 }
 
-Optional<double> TraceCursorIntelPT::GetWallClockTime() const {
-  if (const Optional<DecodedThread::NanosecondsRange> &range =
+std::optional<double> TraceCursorIntelPT::GetWallClockTime() const {
+  if (const std::optional<DecodedThread::NanosecondsRange> &range =
           GetNanosecondsRange())
     return range->GetInterpolatedTime(m_pos, *m_beginning_of_time_nanos,
                                       *m_tsc_conversion);

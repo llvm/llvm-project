@@ -164,12 +164,11 @@ ArrayRef<uint64_t> TestExtern1DI64ElementsAttr::getElements() const {
 // TestCustomAnchorAttr
 //===----------------------------------------------------------------------===//
 
-static ParseResult parseTrueFalse(AsmParser &p,
-                                  FailureOr<std::optional<int>> &result) {
+static ParseResult parseTrueFalse(AsmParser &p, std::optional<int> &result) {
   bool b;
   if (p.parseInteger(b))
     return failure();
-  result = std::optional<int>(b);
+  result = b;
   return success();
 }
 

@@ -822,7 +822,9 @@ public:
   /// \brief Given a branch instruction try to get the address the branch
   /// targets. Return true on success, and the address in Target.
   virtual bool evaluateBranch(const MCInst &Inst, uint64_t Addr, uint64_t Size,
-                              uint64_t &Target) const;
+                              uint64_t &Target) const {
+    return Analysis->evaluateBranch(Inst, Addr, Size, Target);
+  }
 
   /// Return true if one of the operands of the \p Inst instruction uses
   /// PC-relative addressing.
@@ -1418,6 +1420,11 @@ public:
                                      MCInst *&TargetLowBits,
                                      uint64_t &Target) const {
     llvm_unreachable("not implemented");
+  }
+
+  virtual bool matchAdrpAddPair(const MCInst &Adrp, const MCInst &Add) const {
+    llvm_unreachable("not implemented");
+    return false;
   }
 
   virtual int getShortJmpEncodingSize() const {

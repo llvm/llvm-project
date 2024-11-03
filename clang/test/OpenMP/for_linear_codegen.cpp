@@ -1461,32 +1461,32 @@ int main() {
 // CHECK4-NEXT:    [[BLOCK_CAPTURED11:%.*]] = getelementptr inbounds <{ ptr, i32, i32, ptr, ptr, ptr, i32 }>, ptr [[BLOCK]], i32 0, i32 5
 // CHECK4-NEXT:    [[TMP20:%.*]] = load ptr, ptr [[_TMP3]], align 8
 // CHECK4-NEXT:    store ptr [[TMP20]], ptr [[BLOCK_CAPTURED11]], align 8
-// CHECK4-NEXT:    [[TMP22:%.*]] = getelementptr inbounds [[STRUCT___BLOCK_LITERAL_GENERIC:%.*]], ptr [[BLOCK]], i32 0, i32 3
-// CHECK4-NEXT:    [[TMP24:%.*]] = load ptr, ptr [[TMP22]], align 8
-// CHECK4-NEXT:    call void [[TMP24]](ptr noundef [[BLOCK]])
+// CHECK4-NEXT:    [[TMP21:%.*]] = getelementptr inbounds [[STRUCT___BLOCK_LITERAL_GENERIC:%.*]], ptr [[BLOCK]], i32 0, i32 3
+// CHECK4-NEXT:    [[TMP22:%.*]] = load ptr, ptr [[TMP21]], align 8
+// CHECK4-NEXT:    call void [[TMP22]](ptr noundef [[BLOCK]])
 // CHECK4-NEXT:    br label [[OMP_BODY_CONTINUE:%.*]]
 // CHECK4:       omp.body.continue:
 // CHECK4-NEXT:    br label [[OMP_INNER_FOR_INC:%.*]]
 // CHECK4:       omp.inner.for.inc:
-// CHECK4-NEXT:    [[TMP26:%.*]] = load i32, ptr [[DOTOMP_IV]], align 4
-// CHECK4-NEXT:    [[ADD12:%.*]] = add nsw i32 [[TMP26]], 1
+// CHECK4-NEXT:    [[TMP23:%.*]] = load i32, ptr [[DOTOMP_IV]], align 4
+// CHECK4-NEXT:    [[ADD12:%.*]] = add nsw i32 [[TMP23]], 1
 // CHECK4-NEXT:    store i32 [[ADD12]], ptr [[DOTOMP_IV]], align 4
 // CHECK4-NEXT:    br label [[OMP_INNER_FOR_COND]]
 // CHECK4:       omp.inner.for.end:
 // CHECK4-NEXT:    br label [[OMP_LOOP_EXIT:%.*]]
 // CHECK4:       omp.loop.exit:
 // CHECK4-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB2]], i32 [[TMP4]])
-// CHECK4-NEXT:    [[TMP27:%.*]] = load i32, ptr [[DOTOMP_IS_LAST]], align 4
-// CHECK4-NEXT:    [[TMP28:%.*]] = icmp ne i32 [[TMP27]], 0
-// CHECK4-NEXT:    br i1 [[TMP28]], label [[DOTOMP_LINEAR_PU:%.*]], label [[DOTOMP_LINEAR_PU_DONE:%.*]]
+// CHECK4-NEXT:    [[TMP24:%.*]] = load i32, ptr [[DOTOMP_IS_LAST]], align 4
+// CHECK4-NEXT:    [[TMP25:%.*]] = icmp ne i32 [[TMP24]], 0
+// CHECK4-NEXT:    br i1 [[TMP25]], label [[DOTOMP_LINEAR_PU:%.*]], label [[DOTOMP_LINEAR_PU_DONE:%.*]]
 // CHECK4:       .omp.linear.pu:
-// CHECK4-NEXT:    [[TMP29:%.*]] = load i32, ptr [[G]], align 4
-// CHECK4-NEXT:    store i32 [[TMP29]], ptr @g, align 4
-// CHECK4-NEXT:    [[TMP30:%.*]] = load ptr, ptr @g1, align 8
-// CHECK4-NEXT:    store ptr [[TMP30]], ptr [[_TMP13]], align 8
-// CHECK4-NEXT:    [[TMP31:%.*]] = load i32, ptr [[G1]], align 4
-// CHECK4-NEXT:    [[TMP32:%.*]] = load ptr, ptr [[_TMP13]], align 8
-// CHECK4-NEXT:    store volatile i32 [[TMP31]], ptr [[TMP32]], align 4
+// CHECK4-NEXT:    [[TMP26:%.*]] = load i32, ptr [[G]], align 4
+// CHECK4-NEXT:    store i32 [[TMP26]], ptr @g, align 4
+// CHECK4-NEXT:    [[TMP27:%.*]] = load ptr, ptr @g1, align 8
+// CHECK4-NEXT:    store ptr [[TMP27]], ptr [[_TMP13]], align 8
+// CHECK4-NEXT:    [[TMP28:%.*]] = load i32, ptr [[G1]], align 4
+// CHECK4-NEXT:    [[TMP29:%.*]] = load ptr, ptr [[_TMP13]], align 8
+// CHECK4-NEXT:    store volatile i32 [[TMP28]], ptr [[TMP29]], align 4
 // CHECK4-NEXT:    br label [[DOTOMP_LINEAR_PU_DONE]]
 // CHECK4:       .omp.linear.pu.done:
 // CHECK4-NEXT:    call void @__kmpc_barrier(ptr @[[GLOB1]], i32 [[TMP4]])
@@ -1650,42 +1650,42 @@ int main() {
 // CHECK4-NEXT:    [[BLOCK_CAPTURED20:%.*]] = getelementptr inbounds <{ ptr, i32, i32, ptr, ptr, ptr, ptr, ptr, i32 }>, ptr [[BLOCK]], i32 0, i32 7
 // CHECK4-NEXT:    [[TMP25:%.*]] = load ptr, ptr [[_TMP11]], align 8
 // CHECK4-NEXT:    store ptr [[TMP25]], ptr [[BLOCK_CAPTURED20]], align 8
-// CHECK4-NEXT:    [[TMP27:%.*]] = getelementptr inbounds [[STRUCT___BLOCK_LITERAL_GENERIC:%.*]], ptr [[BLOCK]], i32 0, i32 3
-// CHECK4-NEXT:    [[TMP29:%.*]] = load ptr, ptr [[TMP27]], align 8
-// CHECK4-NEXT:    call void [[TMP29]](ptr noundef [[BLOCK]])
+// CHECK4-NEXT:    [[TMP26:%.*]] = getelementptr inbounds [[STRUCT___BLOCK_LITERAL_GENERIC:%.*]], ptr [[BLOCK]], i32 0, i32 3
+// CHECK4-NEXT:    [[TMP27:%.*]] = load ptr, ptr [[TMP26]], align 8
+// CHECK4-NEXT:    call void [[TMP27]](ptr noundef [[BLOCK]])
 // CHECK4-NEXT:    br label [[OMP_BODY_CONTINUE:%.*]]
 // CHECK4:       omp.body.continue:
 // CHECK4-NEXT:    br label [[OMP_INNER_FOR_INC:%.*]]
 // CHECK4:       omp.inner.for.inc:
-// CHECK4-NEXT:    [[TMP31:%.*]] = load i32, ptr [[DOTOMP_IV]], align 4
-// CHECK4-NEXT:    [[ADD21:%.*]] = add nsw i32 [[TMP31]], 1
+// CHECK4-NEXT:    [[TMP28:%.*]] = load i32, ptr [[DOTOMP_IV]], align 4
+// CHECK4-NEXT:    [[ADD21:%.*]] = add nsw i32 [[TMP28]], 1
 // CHECK4-NEXT:    store i32 [[ADD21]], ptr [[DOTOMP_IV]], align 4
 // CHECK4-NEXT:    br label [[OMP_INNER_FOR_COND]]
 // CHECK4:       omp.inner.for.end:
 // CHECK4-NEXT:    br label [[OMP_LOOP_EXIT:%.*]]
 // CHECK4:       omp.loop.exit:
 // CHECK4-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB2]], i32 [[TMP10]])
-// CHECK4-NEXT:    [[TMP32:%.*]] = load i32, ptr [[DOTOMP_IS_LAST]], align 4
-// CHECK4-NEXT:    [[TMP33:%.*]] = icmp ne i32 [[TMP32]], 0
-// CHECK4-NEXT:    br i1 [[TMP33]], label [[DOTOMP_LINEAR_PU:%.*]], label [[DOTOMP_LINEAR_PU_DONE:%.*]]
+// CHECK4-NEXT:    [[TMP29:%.*]] = load i32, ptr [[DOTOMP_IS_LAST]], align 4
+// CHECK4-NEXT:    [[TMP30:%.*]] = icmp ne i32 [[TMP29]], 0
+// CHECK4-NEXT:    br i1 [[TMP30]], label [[DOTOMP_LINEAR_PU:%.*]], label [[DOTOMP_LINEAR_PU_DONE:%.*]]
 // CHECK4:       .omp.linear.pu:
-// CHECK4-NEXT:    [[TMP34:%.*]] = load ptr, ptr [[TMP]], align 8
-// CHECK4-NEXT:    store ptr [[TMP34]], ptr [[_TMP22]], align 8
-// CHECK4-NEXT:    [[TMP35:%.*]] = load i32, ptr [[A7]], align 4
-// CHECK4-NEXT:    [[TMP36:%.*]] = load ptr, ptr [[_TMP22]], align 8
-// CHECK4-NEXT:    store i32 [[TMP35]], ptr [[TMP36]], align 4
-// CHECK4-NEXT:    [[TMP37:%.*]] = load i32, ptr [[B9]], align 4
-// CHECK4-NEXT:    store i32 [[TMP37]], ptr [[B]], align 4
-// CHECK4-NEXT:    [[TMP38:%.*]] = load ptr, ptr [[_TMP3]], align 8
-// CHECK4-NEXT:    store ptr [[TMP38]], ptr [[_TMP23]], align 8
-// CHECK4-NEXT:    [[TMP39:%.*]] = load i32, ptr [[C10]], align 4
-// CHECK4-NEXT:    [[TMP40:%.*]] = load ptr, ptr [[_TMP23]], align 8
-// CHECK4-NEXT:    store i32 [[TMP39]], ptr [[TMP40]], align 4
-// CHECK4-NEXT:    [[TMP41:%.*]] = load i32, ptr [[B]], align 4
+// CHECK4-NEXT:    [[TMP31:%.*]] = load ptr, ptr [[TMP]], align 8
+// CHECK4-NEXT:    store ptr [[TMP31]], ptr [[_TMP22]], align 8
+// CHECK4-NEXT:    [[TMP32:%.*]] = load i32, ptr [[A7]], align 4
+// CHECK4-NEXT:    [[TMP33:%.*]] = load ptr, ptr [[_TMP22]], align 8
+// CHECK4-NEXT:    store i32 [[TMP32]], ptr [[TMP33]], align 4
+// CHECK4-NEXT:    [[TMP34:%.*]] = load i32, ptr [[B9]], align 4
+// CHECK4-NEXT:    store i32 [[TMP34]], ptr [[B]], align 4
+// CHECK4-NEXT:    [[TMP35:%.*]] = load ptr, ptr [[_TMP3]], align 8
+// CHECK4-NEXT:    store ptr [[TMP35]], ptr [[_TMP23]], align 8
+// CHECK4-NEXT:    [[TMP36:%.*]] = load i32, ptr [[C10]], align 4
+// CHECK4-NEXT:    [[TMP37:%.*]] = load ptr, ptr [[_TMP23]], align 8
+// CHECK4-NEXT:    store i32 [[TMP36]], ptr [[TMP37]], align 4
+// CHECK4-NEXT:    [[TMP38:%.*]] = load i32, ptr [[B]], align 4
 // CHECK4-NEXT:    [[B24:%.*]] = getelementptr inbounds [[STRUCT_SS]], ptr [[TMP0]], i32 0, i32 1
-// CHECK4-NEXT:    [[TMP42:%.*]] = trunc i32 [[TMP41]] to i8
+// CHECK4-NEXT:    [[TMP39:%.*]] = trunc i32 [[TMP38]] to i8
 // CHECK4-NEXT:    [[BF_LOAD:%.*]] = load i8, ptr [[B24]], align 4
-// CHECK4-NEXT:    [[BF_VALUE:%.*]] = and i8 [[TMP42]], 15
+// CHECK4-NEXT:    [[BF_VALUE:%.*]] = and i8 [[TMP39]], 15
 // CHECK4-NEXT:    [[BF_CLEAR:%.*]] = and i8 [[BF_LOAD]], -16
 // CHECK4-NEXT:    [[BF_SET:%.*]] = or i8 [[BF_CLEAR]], [[BF_VALUE]]
 // CHECK4-NEXT:    store i8 [[BF_SET]], ptr [[B24]], align 4

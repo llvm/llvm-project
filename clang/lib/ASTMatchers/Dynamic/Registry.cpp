@@ -17,7 +17,6 @@
 #include "clang/ASTMatchers/ASTMatchers.h"
 #include "clang/ASTMatchers/Dynamic/Diagnostics.h"
 #include "clang/ASTMatchers/Dynamic/VariantValue.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
@@ -26,6 +25,7 @@
 #include <cassert>
 #include <iterator>
 #include <memory>
+#include <optional>
 #include <set>
 #include <string>
 #include <utility>
@@ -428,6 +428,7 @@ RegistryMaps::RegistryMaps() {
   REGISTER_MATCHER(isPrivateKind);
   REGISTER_MATCHER(isFirstPrivateKind);
   REGISTER_MATCHER(isImplicit);
+  REGISTER_MATCHER(isInAnonymousNamespace);
   REGISTER_MATCHER(isInStdNamespace);
   REGISTER_MATCHER(isInTemplateInstantiation);
   REGISTER_MATCHER(isInitCapture);
@@ -620,11 +621,10 @@ Registry::buildMatcherCtor(MatcherCtor Ctor, SourceRange NameRange,
 }
 
 // static
-llvm::Optional<MatcherCtor> Registry::lookupMatcherCtor(StringRef MatcherName) {
+std::optional<MatcherCtor> Registry::lookupMatcherCtor(StringRef MatcherName) {
   auto it = RegistryData->constructors().find(MatcherName);
-  return it == RegistryData->constructors().end()
-             ? llvm::Optional<MatcherCtor>()
-             : it->second.get();
+  return it == RegistryData->constructors().end() ? std::optional<MatcherCtor>()
+                                                  : it->second.get();
 }
 
 static llvm::raw_ostream &operator<<(llvm::raw_ostream &OS,
@@ -797,9 +797,9 @@ VariantMatcher Registry::constructBoundMatcher(MatcherCtor Ctor,
   VariantMatcher Out = constructMatcher(Ctor, NameRange, Args, Error);
   if (Out.isNull()) return Out;
 
-  llvm::Optional<DynTypedMatcher> Result = Out.getSingleMatcher();
+  std::optional<DynTypedMatcher> Result = Out.getSingleMatcher();
   if (Result) {
-    llvm::Optional<DynTypedMatcher> Bound = Result->tryBind(BindID);
+    std::optional<DynTypedMatcher> Bound = Result->tryBind(BindID);
     if (Bound) {
       return VariantMatcher::SingleMatcher(*Bound);
     }

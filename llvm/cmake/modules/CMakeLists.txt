@@ -3,7 +3,7 @@ include(LLVMDistributionSupport)
 include(FindPrefixFromConfig)
 
 # CMAKE_INSTALL_PACKAGEDIR might be absolute, so don't reuse below.
-string(REPLACE "${CMAKE_CFG_INTDIR}" "." llvm_cmake_builddir  "${LLVM_LIBRARY_DIR}")
+string(REPLACE "${CMAKE_CFG_INTDIR}" "." llvm_cmake_builddir "${LLVM_LIBRARY_DIR}")
 set(llvm_cmake_builddir "${llvm_cmake_builddir}/cmake/llvm")
 
 # First for users who use an installed LLVM, create the LLVMExports.cmake file.
@@ -108,6 +108,7 @@ file(COPY .
   NO_SOURCE_PERMISSIONS
   FILES_MATCHING PATTERN *.cmake
   PATTERN CMakeFiles EXCLUDE
+  PATTERN llvm-driver-template.cpp.in
   )
 
 #

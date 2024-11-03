@@ -58,9 +58,15 @@ libc_test(
     ],
 )
 
+cc_library(
+    name = "strtol_test_helper",
+    hdrs = ["StrtolTest.h"],
+)
+
 libc_test(
     name = "strtol_test",
     srcs = ["strtol_test.cpp"],
+    deps = [":strtol_test_helper"],
     libc_function_deps = [
         "//libc:strtol",
     ],
@@ -69,6 +75,7 @@ libc_test(
 libc_test(
     name = "strtoll_test",
     srcs = ["strtoll_test.cpp"],
+    deps = [":strtol_test_helper"],
     libc_function_deps = [
         "//libc:strtoll",
     ],
@@ -77,6 +84,7 @@ libc_test(
 libc_test(
     name = "strtoul_test",
     srcs = ["strtoul_test.cpp"],
+    deps = [":strtol_test_helper"],
     libc_function_deps = [
         "//libc:strtoul",
     ],
@@ -85,6 +93,7 @@ libc_test(
 libc_test(
     name = "strtoull_test",
     srcs = ["strtoull_test.cpp"],
+    deps = [":strtol_test_helper"],
     libc_function_deps = [
         "//libc:strtoull",
     ],

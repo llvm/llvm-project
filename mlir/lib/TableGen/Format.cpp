@@ -38,11 +38,6 @@ FmtContext &FmtContext::withBuilder(Twine subst) {
   return *this;
 }
 
-FmtContext &FmtContext::withOp(Twine subst) {
-  builtinSubstMap[PHKind::Op] = subst.str();
-  return *this;
-}
-
 FmtContext &FmtContext::withSelf(Twine subst) {
   builtinSubstMap[PHKind::Self] = subst.str();
   return *this;
@@ -69,7 +64,6 @@ std::optional<StringRef> FmtContext::getSubstFor(StringRef placeholder) const {
 FmtContext::PHKind FmtContext::getPlaceHolderKind(StringRef str) {
   return StringSwitch<FmtContext::PHKind>(str)
       .Case("_builder", FmtContext::PHKind::Builder)
-      .Case("_op", FmtContext::PHKind::Op)
       .Case("_self", FmtContext::PHKind::Self)
       .Case("", FmtContext::PHKind::None)
       .Default(FmtContext::PHKind::Custom);
@@ -185,7 +179,7 @@ void FmtObjectBase::format(raw_ostream &s) const {
         s << repl.spec << kMarkerForNoSubst;
         continue;
       }
-      auto range = llvm::makeArrayRef(adapters);
+      auto range = llvm::ArrayRef(adapters);
       range = range.drop_front(repl.index);
       if (repl.end != FmtReplacement::kUnset)
         range = range.drop_back(adapters.size() - repl.end);

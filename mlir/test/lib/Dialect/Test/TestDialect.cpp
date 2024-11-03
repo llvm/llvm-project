@@ -32,6 +32,9 @@
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSwitch.h"
+#include <optional>
+
+#include <numeric>
 
 // Include this before the using namespace lines below to
 // test that we don't have namespace dependencies.
@@ -192,13 +195,11 @@ struct TestInlinerInterface : public DialectInlinerInterface {
     // Don't allow inlining calls that are marked `noinline`.
     return !call->hasAttr("noinline");
   }
-  bool isLegalToInline(Region *, Region *, bool,
-                       BlockAndValueMapping &) const final {
+  bool isLegalToInline(Region *, Region *, bool, IRMapping &) const final {
     // Inlining into test dialect regions is legal.
     return true;
   }
-  bool isLegalToInline(Operation *, Region *, bool,
-                       BlockAndValueMapping &) const final {
+  bool isLegalToInline(Operation *, Region *, bool, IRMapping &) const final {
     return true;
   }
 
@@ -945,8 +946,8 @@ ParseResult PrettyPrintedRegionOp::parse(OpAsmParser &parser,
   //  test.pretty_printed_region start <inner-op> end : <functional-type>
   // Else fallback to parsing the "non pretty-printed" version.
   if (!succeeded(parser.parseOptionalKeyword("start")))
-    return parser.parseGenericOperationAfterOpName(
-        result, llvm::makeArrayRef(operands));
+    return parser.parseGenericOperationAfterOpName(result,
+                                                   llvm::ArrayRef(operands));
 
   FailureOr<OperationName> parseOpNameInfo = parser.parseCustomOperationName();
   if (failed(parseOpNameInfo))
@@ -955,7 +956,7 @@ ParseResult PrettyPrintedRegionOp::parse(OpAsmParser &parser,
   StringAttr innerOpName = parseOpNameInfo->getIdentifier();
 
   FunctionType opFntype;
-  Optional<Location> explicitLoc;
+  std::optional<Location> explicitLoc;
   if (parser.parseKeyword("end") || parser.parseColon() ||
       parser.parseType(opFntype) ||
       parser.parseOptionalLocationSpecifier(explicitLoc))
@@ -1058,7 +1059,7 @@ void PolyForOp::getAsmBlockArgumentNames(Region &region,
 //===----------------------------------------------------------------------===//
 
 static ParseResult parseOptionalLoc(OpAsmParser &p, Attribute &loc) {
-  Optional<Location> result;
+  std::optional<Location> result;
   SMLoc sourceLoc = p.getCurrentLocation();
   if (p.parseOptionalLocationSpecifier(result))
     return failure();
@@ -1097,33 +1098,51 @@ void TestOpWithRegionPattern::getCanonicalizationPatterns(
   results.add<TestRemoveOpWithInnerOps>(context);
 }
 
-OpFoldResult TestOpWithRegionFold::fold(ArrayRef<Attribute> operands) {
+OpFoldResult TestOpWithRegionFold::fold(FoldAdaptor adaptor) {
   return getOperand();
 }
 
-OpFoldResult TestOpConstant::fold(ArrayRef<Attribute> operands) {
+OpFoldResult TestOpConstant::fold(FoldAdaptor adaptor) {
   return getValue();
 }
 
 LogicalResult TestOpWithVariadicResultsAndFolder::fold(
-    ArrayRef<Attribute> operands, SmallVectorImpl<OpFoldResult> &results) {
+    FoldAdaptor adaptor, SmallVectorImpl<OpFoldResult> &results) {
   for (Value input : this->getOperands()) {
     results.push_back(input);
   }
   return success();
 }
 
-OpFoldResult TestOpInPlaceFold::fold(ArrayRef<Attribute> operands) {
-  assert(operands.size() == 1);
-  if (operands.front()) {
-    (*this)->setAttr("attr", operands.front());
+OpFoldResult TestOpInPlaceFold::fold(FoldAdaptor adaptor) {
+  if (adaptor.getOp()) {
+    (*this)->setAttr("attr", adaptor.getOp());
     return getResult();
   }
   return {};
 }
 
-OpFoldResult TestPassthroughFold::fold(ArrayRef<Attribute> operands) {
+OpFoldResult TestPassthroughFold::fold(FoldAdaptor adaptor) {
   return getOperand();
+}
+
+OpFoldResult TestOpFoldWithFoldAdaptor::fold(FoldAdaptor adaptor) {
+  int64_t sum = 0;
+  if (auto value = dyn_cast_or_null<IntegerAttr>(adaptor.getOp()))
+    sum += value.getValue().getSExtValue();
+
+  for (Attribute attr : adaptor.getVariadic())
+    if (auto value = dyn_cast_or_null<IntegerAttr>(attr))
+      sum += 2 * value.getValue().getSExtValue();
+
+  for (ArrayRef<Attribute> attrs : adaptor.getVarOfVar())
+    for (Attribute attr : attrs)
+      if (auto value = dyn_cast_or_null<IntegerAttr>(attr))
+        sum += 3 * value.getValue().getSExtValue();
+
+  sum += 4 * std::distance(adaptor.getBody().begin(), adaptor.getBody().end());
+
+  return IntegerAttr::get(getType(), sum);
 }
 
 LogicalResult OpWithInferTypeInterfaceOp::inferReturnTypes(
@@ -1183,8 +1202,8 @@ LogicalResult OpWithShapedTypeInferTypeInterfaceOp::inferReturnTypeComponents(
   auto type = IntegerType::get(context, 17);
 
   Attribute encoding;
-  if (auto ranked_ty = sval.dyn_cast<RankedTensorType>())
-    encoding = ranked_ty.getEncoding();
+  if (auto rankedTy = sval.dyn_cast<RankedTensorType>())
+    encoding = rankedTy.getEncoding();
   inferredReturnShapes.push_back(ShapedTypeComponents({dim}, type, encoding));
   return success();
 }

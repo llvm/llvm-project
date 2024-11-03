@@ -302,7 +302,7 @@ INITIALIZE_PASS(RegAllocFast, "regallocfast", "Fast Register Allocator", false,
                 false)
 
 bool RegAllocFast::shouldAllocateRegister(const Register Reg) const {
-  assert(Register::isVirtualRegister(Reg));
+  assert(Reg.isVirtual());
   const TargetRegisterClass &RC = *MRI->getRegClass(Reg);
   return ShouldAllocateClass(*TRI, RC);
 }
@@ -451,6 +451,9 @@ void RegAllocFast::spill(MachineBasicBlock::iterator Before, Register VirtReg,
     SpilledOperandsMap[MO->getParent()].push_back(MO);
   for (auto MISpilledOperands : SpilledOperandsMap) {
     MachineInstr &DBG = *MISpilledOperands.first;
+    // We don't have enough support for tracking operands of DBG_VALUE_LISTs.
+    if (DBG.isDebugValueList())
+      continue;
     MachineInstr *NewDV = buildDbgValueForSpill(
         *MBB, Before, *MISpilledOperands.first, FI, MISpilledOperands.second);
     assert(NewDV->getParent() == MBB && "dangling parent pointer");
@@ -846,7 +849,7 @@ void RegAllocFast::allocVirtReg(MachineInstr &MI, LiveReg &LR,
 void RegAllocFast::allocVirtRegUndef(MachineOperand &MO) {
   assert(MO.isUndef() && "expected undef use");
   Register VirtReg = MO.getReg();
-  assert(Register::isVirtualRegister(VirtReg) && "Expected virtreg");
+  assert(VirtReg.isVirtual() && "Expected virtreg");
   if (!shouldAllocateRegister(VirtReg))
     return;
 
@@ -1443,7 +1446,7 @@ void RegAllocFast::handleDebugValue(MachineInstr &MI) {
   // Ignore DBG_VALUEs that aren't based on virtual registers. These are
   // mostly constants and frame indices.
   for (Register Reg : MI.getUsedDebugRegs()) {
-    if (!Register::isVirtualRegister(Reg))
+    if (!Reg.isVirtual())
       continue;
     if (!shouldAllocateRegister(Reg))
       continue;

@@ -1,4 +1,4 @@
-; RUN: opt -S -mtriple=amdgcn-- -mcpu=bonaire -loop-reduce < %s | FileCheck -check-prefix=OPT %s
+; RUN: opt -opaque-pointers=0 -S -mtriple=amdgcn-- -mcpu=bonaire -loop-reduce < %s | FileCheck -check-prefix=OPT %s
 
 ; Test that loops with different maximum offsets for different address
 ; spaces are correctly handled.

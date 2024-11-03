@@ -163,9 +163,7 @@ public:
   /// we want to drop it from the NewRegs set.
   void pop_back() { NewRegs.pop_back(); }
 
-  ArrayRef<Register> regs() const {
-    return makeArrayRef(NewRegs).slice(FirstNew);
-  }
+  ArrayRef<Register> regs() const { return ArrayRef(NewRegs).slice(FirstNew); }
 
   /// createFrom - Create a new virtual register based on OldReg.
   Register createFrom(Register OldReg);

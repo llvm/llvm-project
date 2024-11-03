@@ -563,6 +563,11 @@ void MachineBasicBlock::printName(raw_ostream &os, unsigned printNameFlags,
       }
       hasAttributes = true;
     }
+    if (getBBID().has_value()) {
+      os << (hasAttributes ? ", " : " (");
+      os << "bb_id " << *getBBID();
+      hasAttributes = true;
+    }
   }
 
   if (hasAttributes)
@@ -939,7 +944,7 @@ const MachineBasicBlock *MachineBasicBlock::getSingleSuccessor() const {
   return Successors.size() == 1 ? Successors[0] : nullptr;
 }
 
-MachineBasicBlock *MachineBasicBlock::getFallThrough() {
+MachineBasicBlock *MachineBasicBlock::getFallThrough(bool JumpToFallThrough) {
   MachineFunction::iterator Fallthrough = getIterator();
   ++Fallthrough;
   // If FallthroughBlock is off the end of the function, it can't fall through.
@@ -970,8 +975,8 @@ MachineBasicBlock *MachineBasicBlock::getFallThrough() {
 
   // If there is some explicit branch to the fallthrough block, it can obviously
   // reach, even though the branch should get folded to fall through implicitly.
-  if (MachineFunction::iterator(TBB) == Fallthrough ||
-      MachineFunction::iterator(FBB) == Fallthrough)
+  if (!JumpToFallThrough && (MachineFunction::iterator(TBB) == Fallthrough ||
+                           MachineFunction::iterator(FBB) == Fallthrough))
     return &*Fallthrough;
 
   // If it's an unconditional branch to some block not the fall through, it
@@ -1066,8 +1071,7 @@ MachineBasicBlock *MachineBasicBlock::SplitCriticalEdge(
             MO.isUndef())
           continue;
         Register Reg = MO.getReg();
-        if (Register::isPhysicalRegister(Reg) ||
-            LV->getVarInfo(Reg).removeKill(MI)) {
+        if (Reg.isPhysical() || LV->getVarInfo(Reg).removeKill(MI)) {
           KilledRegs.push_back(Reg);
           LLVM_DEBUG(dbgs() << "Removing terminator kill: " << MI);
           MO.setIsKill(false);
@@ -1153,7 +1157,7 @@ MachineBasicBlock *MachineBasicBlock::SplitCriticalEdge(
       for (instr_iterator I = instr_end(), E = instr_begin(); I != E;) {
         if (!(--I)->addRegisterKilled(Reg, TRI, /* AddIfNotFound= */ false))
           continue;
-        if (Register::isVirtualRegister(Reg))
+        if (Reg.isVirtual())
           LV->getVarInfo(Reg).Kills.push_back(&*I);
         LLVM_DEBUG(dbgs() << "Restored terminator kill: " << *I);
         break;
@@ -1649,6 +1653,11 @@ bool MachineBasicBlock::sizeWithoutDebugLargerThan(unsigned Limit) const {
       return true;
   }
   return false;
+}
+
+unsigned MachineBasicBlock::getBBIDOrNumber() const {
+  uint8_t BBAddrMapVersion = getParent()->getContext().getBBAddrMapVersion();
+  return BBAddrMapVersion < 2 ? getNumber() : *getBBID();
 }
 
 const MBBSectionID MBBSectionID::ColdSectionID(MBBSectionID::SectionType::Cold);

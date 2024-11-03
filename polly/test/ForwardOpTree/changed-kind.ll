@@ -28,7 +28,7 @@ lor.end.thread:
 
 lor.rhs87:
   %0 = phi i64 [ 0, %lor.end.thread ], [ 0, %lor.end ]
-  store i64 %0, i64* @c, align 8
+  store i64 %0, ptr @c, align 8
   %neg79 = xor i64 %0, -1
   br label %lor.end93
 
