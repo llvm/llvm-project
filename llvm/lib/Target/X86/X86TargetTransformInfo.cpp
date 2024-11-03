@@ -1564,6 +1564,7 @@ InstructionCost X86TTIImpl::getShuffleCost(
   bool IsInLaneShuffle = false;
   if (BaseTp->getPrimitiveSizeInBits() > 0 &&
       (BaseTp->getPrimitiveSizeInBits() % 128) == 0 &&
+      BaseTp->getScalarSizeInBits() == LT.second.getScalarSizeInBits() &&
       Mask.size() == BaseTp->getElementCount().getKnownMinValue()) {
     unsigned NumLanes = BaseTp->getPrimitiveSizeInBits() / 128;
     unsigned NumEltsPerLane = Mask.size() / NumLanes;
