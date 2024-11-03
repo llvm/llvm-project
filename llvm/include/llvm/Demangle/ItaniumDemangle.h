@@ -2077,17 +2077,25 @@ public:
 class CallExpr : public Node {
   const Node *Callee;
   NodeArray Args;
+  bool IsParen; // (func)(args ...) ?
 
 public:
-  CallExpr(const Node *Callee_, NodeArray Args_, Prec Prec_)
-      : Node(KCallExpr, Prec_), Callee(Callee_), Args(Args_) {}
+  CallExpr(const Node *Callee_, NodeArray Args_, bool IsParen_, Prec Prec_)
+      : Node(KCallExpr, Prec_), Callee(Callee_), Args(Args_),
+        IsParen(IsParen_) {}
 
   template <typename Fn> void match(Fn F) const {
     F(Callee, Args, getPrecedence());
   }
 
   void printLeft(OutputBuffer &OB) const override {
-    Callee->print(OB);
+    if (IsParen) {
+      OB.printOpen();
+      Callee->print(OB);
+      OB.printClose();
+    } else {
+      Callee->print(OB);
+    }
     OB.printOpen();
     Args.printWithComma(OB);
     OB.printClose();
@@ -3354,10 +3362,10 @@ const typename AbstractManglingParser<
      "operator co_await"},
     {"az", OperatorInfo::OfIdOp, /*Type*/ false, Node::Prec::Unary, "alignof "},
     {"cc", OperatorInfo::NamedCast, false, Node::Prec::Postfix, "const_cast"},
-    {"cl", OperatorInfo::Call, false, Node::Prec::Postfix, "operator()"},
+    {"cl", OperatorInfo::Call, /*Paren*/ false, Node::Prec::Postfix, "operator()"},
     {"cm", OperatorInfo::Binary, false, Node::Prec::Comma, "operator,"},
     {"co", OperatorInfo::Prefix, false, Node::Prec::Unary, "operator~"},
-    {"cp", OperatorInfo::Call, false, Node::Prec::Postfix, "operator()"},
+    {"cp", OperatorInfo::Call, /*Paren*/ true, Node::Prec::Postfix, "operator()"},
     {"cv", OperatorInfo::CCast, false, Node::Prec::Cast, "operator"}, // C Cast
     {"dV", OperatorInfo::Binary, false, Node::Prec::Assign, "operator/="},
     {"da", OperatorInfo::Del, /*Ary*/ true, Node::Prec::Unary,
@@ -5005,6 +5013,7 @@ Node *AbstractManglingParser<Derived, Alloc>::parseRequiresExpr() {
 //              ::= <binary operator-name> <expression> <expression>
 //              ::= <ternary operator-name> <expression> <expression> <expression>
 //              ::= cl <expression>+ E                                   # call
+//              ::= cp <base-unresolved-name> <expression>* E            # (name) (expr-list), call that would use argument-dependent lookup but for the parentheses
 //              ::= cv <type> <expression>                               # conversion with one argument
 //              ::= cv <type> _ <expression>* E                          # conversion with a different number of arguments
 //              ::= [gs] nw <expression>* _ <type> E                     # new (expr-list) type
@@ -5140,7 +5149,7 @@ Node *AbstractManglingParser<Derived, Alloc>::parseExpr() {
         Names.push_back(E);
       }
       return make<CallExpr>(Callee, popTrailingNodeArray(ExprsBegin),
-                            Op->getPrecedence());
+                            /*IsParen=*/Op->getFlag(), Op->getPrecedence());
     }
     case OperatorInfo::CCast: {
       // C Cast: (type)expr
@@ -5327,7 +5336,7 @@ Node *AbstractManglingParser<Derived, Alloc>::parseExpr() {
       }
     }
     return make<CallExpr>(Name, popTrailingNodeArray(ExprsBegin),
-                          Node::Prec::Postfix);
+                          /*IsParen=*/false, Node::Prec::Postfix);
   }
 
   // Only unresolved names remain.
