@@ -1133,6 +1133,7 @@ static bool CheckFunctionConstraintsWithoutInstantiation(
                                            /*RelativeToPrimary=*/true,
                                            /*ForConstraintInstantiation=*/true);
 
+  Sema::ContextRAII SavedContext(SemaRef, FD);
   std::optional<Sema::CXXThisScopeRAII> ThisScope;
   if (auto *Method = dyn_cast<CXXMethodDecl>(FD))
     ThisScope.emplace(SemaRef, /*Record=*/Method->getParent(),

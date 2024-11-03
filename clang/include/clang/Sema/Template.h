@@ -522,6 +522,9 @@ enum class TemplateSubstitutionKind : char {
     llvm::PointerUnion<Decl *, DeclArgumentPack *> *
     findInstantiationOf(const Decl *D);
 
+    /// Similar to \p findInstantiationOf(), but it wouldn't assert if the
+    /// instantiation was not found within the current instantiation scope. This
+    /// is helpful for on-demand declaration instantiation.
     llvm::PointerUnion<Decl *, DeclArgumentPack *> *
     findInstantiationUnsafe(const Decl *D);
 
