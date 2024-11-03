@@ -612,8 +612,8 @@ set(TARGET_LIBM_ENTRYPOINTS
 if(LIBC_TYPES_HAS_FLOAT16)
   list(APPEND TARGET_LIBM_ENTRYPOINTS
     # complex.h C23 _Complex _Float16 entrypoints
-    libc.src.complex.crealf16
-    libc.src.complex.cimagf16
+    # libc.src.complex.crealf16
+    # libc.src.complex.cimagf16
     
     # math.h C23 _Float16 entrypoints
     libc.src.math.canonicalizef16
