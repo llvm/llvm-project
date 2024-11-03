@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "new.h"
-#include <stdlib.h> // For free, etc
+#include "hdr/func/free.h"
 
 void operator delete(void *mem) noexcept { ::free(mem); }
 
