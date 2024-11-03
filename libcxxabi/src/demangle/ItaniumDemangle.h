@@ -5013,6 +5013,7 @@ Node *AbstractManglingParser<Derived, Alloc>::parseRequiresExpr() {
 //              ::= <binary operator-name> <expression> <expression>
 //              ::= <ternary operator-name> <expression> <expression> <expression>
 //              ::= cl <expression>+ E                                   # call
+//              ::= cp <base-unresolved-name> <expression>* E            # (name) (expr-list), call that would use argument-dependent lookup but for the parentheses
 //              ::= cv <type> <expression>                               # conversion with one argument
 //              ::= cv <type> _ <expression>* E                          # conversion with a different number of arguments
 //              ::= [gs] nw <expression>* _ <type> E                     # new (expr-list) type
