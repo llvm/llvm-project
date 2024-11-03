@@ -3933,10 +3933,11 @@ TemplateDeductionResult Sema::FinishTemplateArgumentDeduction(
     FD = const_cast<FunctionDecl *>(FDFriend);
     Owner = FD->getLexicalDeclContext();
   }
-  // C++20 [temp.deduct.general]p5: (CWG2369)
-  // If the function template has associated constraints, those constraints are
-  // checked for satisfaction. If the constraints are not satisfied, type
-  // deduction fails.
+  // C++20 [temp.deduct.general]p5: [CWG2369]
+  //   If the function template has associated constraints, those constraints
+  //   are checked for satisfaction. If the constraints are not satisfied, type
+  //   deduction fails.
+  //
   // FIXME: We haven't implemented CWG2369 for lambdas yet, because we need
   // to figure out how to instantiate lambda captures to the scope without
   // first instantiating the lambda.
