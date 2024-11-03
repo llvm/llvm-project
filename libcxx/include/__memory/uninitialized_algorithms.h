@@ -375,7 +375,7 @@ __allocator_destroy_multidimensional(_Alloc& __alloc, _BidirIter __first, _Bidir
     return;
 
   if constexpr (is_array_v<_ValueType>) {
-    static_assert(!__libcpp_is_unbounded_array<_ValueType>::value,
+    static_assert(!__is_unbounded_array_v<_ValueType>,
                   "arrays of unbounded arrays don't exist, but if they did we would mess up here");
 
     using _Element = remove_extent_t<_ValueType>;
