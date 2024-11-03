@@ -25,6 +25,8 @@ list(INSERT CMAKE_MODULE_PATH 0
 include(GNUInstallDirs)
 include(GetDarwinLinkerVersion)
 
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-deprecated-declarations")
+
 if(CLANG_BUILT_STANDALONE)
   set(CMAKE_CXX_STANDARD 17 CACHE STRING "C++ standard to conform to")
   set(CMAKE_CXX_STANDARD_REQUIRED YES)
