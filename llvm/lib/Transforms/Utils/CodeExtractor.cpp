@@ -942,6 +942,7 @@ Function *CodeExtractor::constructFunctionDeclaration(
       case Attribute::NoSanitizeBounds:
       case Attribute::NoSanitizeCoverage:
       case Attribute::NullPointerIsValid:
+      case Attribute::OptimizeForDebugging:
       case Attribute::OptForFuzzing:
       case Attribute::OptimizeNone:
       case Attribute::OptimizeForSize:
