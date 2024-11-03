@@ -32,6 +32,7 @@ id<ForwardDeclaredProtocolWithoutDefinition> forwardDeclaredProtocol(
 
 @interface NSObject @end
 @class ForwardDeclaredInterfaceWithoutDefinition;
+@interface NSObject(CategoryForTesting) @end
 
 NSObject *interfaceDefinition(NSObject *o);
 NSObject *forwardDeclaredInterface(NSObject *o);

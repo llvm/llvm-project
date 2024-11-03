@@ -124,12 +124,9 @@ void CSE::replaceUsesAndDelete(ScopedMapTy &knownValues, Operation *op,
   } else {
     // When the region does not have SSA dominance, we need to check if we
     // have visited a use before replacing any use.
-    for (auto it : llvm::zip(op->getResults(), existing->getResults())) {
-      std::get<0>(it).replaceUsesWithIf(
-          std::get<1>(it), [&](OpOperand &operand) {
-            return !knownValues.count(operand.getOwner());
-          });
-    }
+    op->replaceUsesWithIf(existing->getResults(), [&](OpOperand &operand) {
+      return !knownValues.count(operand.getOwner());
+    });
 
     // There may be some remaining uses of the operation.
     if (op->use_empty())

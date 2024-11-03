@@ -10,15 +10,17 @@
 #include "AMDGPU.h"
 #include "AMDGPUAsmUtils.h"
 #include "AMDKernelCodeT.h"
-#include "GCNSubtarget.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/IR/Attributes.h"
+#include "llvm/IR/Constants.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/IR/IntrinsicsR600.h"
 #include "llvm/IR/LLVMContext.h"
+#include "llvm/MC/MCInstrInfo.h"
+#include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/Support/AMDHSAKernelDescriptor.h"
 #include "llvm/Support/CommandLine.h"
@@ -1943,6 +1945,15 @@ bool hasPackedD16(const MCSubtargetInfo &STI) {
          !isSI(STI);
 }
 
+unsigned getNSAMaxSize(const MCSubtargetInfo &STI) {
+  auto Version = getIsaVersion(STI.getCPU());
+  if (Version.Major == 10)
+    return Version.Minor >= 3 ? 13 : 5;
+  if (Version.Major == 11)
+    return 5;
+  return 0;
+}
+
 bool isSI(const MCSubtargetInfo &STI) {
   return STI.hasFeature(AMDGPU::FeatureSouthernIslands);
 }
@@ -2585,77 +2596,6 @@ unsigned getNumFlatOffsetBits(const MCSubtargetInfo &ST) {
     return 12;
 
   return 13;
-}
-
-// Given Imm, split it into the values to put into the SOffset and ImmOffset
-// fields in an MUBUF instruction. Return false if it is not possible (due to a
-// hardware bug needing a workaround).
-//
-// The required alignment ensures that individual address components remain
-// aligned if they are aligned to begin with. It also ensures that additional
-// offsets within the given alignment can be added to the resulting ImmOffset.
-bool splitMUBUFOffset(uint32_t Imm, uint32_t &SOffset, uint32_t &ImmOffset,
-                      const GCNSubtarget *Subtarget, Align Alignment) {
-  const uint32_t MaxImm = alignDown(4095, Alignment.value());
-  uint32_t Overflow = 0;
-
-  if (Imm > MaxImm) {
-    if (Imm <= MaxImm + 64) {
-      // Use an SOffset inline constant for 4..64
-      Overflow = Imm - MaxImm;
-      Imm = MaxImm;
-    } else {
-      // Try to keep the same value in SOffset for adjacent loads, so that
-      // the corresponding register contents can be re-used.
-      //
-      // Load values with all low-bits (except for alignment bits) set into
-      // SOffset, so that a larger range of values can be covered using
-      // s_movk_i32.
-      //
-      // Atomic operations fail to work correctly when individual address
-      // components are unaligned, even if their sum is aligned.
-      uint32_t High = (Imm + Alignment.value()) & ~4095;
-      uint32_t Low = (Imm + Alignment.value()) & 4095;
-      Imm = Low;
-      Overflow = High - Alignment.value();
-    }
-  }
-
-  // There is a hardware bug in SI and CI which prevents address clamping in
-  // MUBUF instructions from working correctly with SOffsets. The immediate
-  // offset is unaffected.
-  if (Overflow > 0 &&
-      Subtarget->getGeneration() <= AMDGPUSubtarget::SEA_ISLANDS)
-    return false;
-
-  ImmOffset = Imm;
-  SOffset = Overflow;
-  return true;
-}
-
-SIModeRegisterDefaults::SIModeRegisterDefaults(const Function &F) {
-  *this = getDefaultForCallingConv(F.getCallingConv());
-
-  StringRef IEEEAttr = F.getFnAttribute("amdgpu-ieee").getValueAsString();
-  if (!IEEEAttr.empty())
-    IEEE = IEEEAttr == "true";
-
-  StringRef DX10ClampAttr
-    = F.getFnAttribute("amdgpu-dx10-clamp").getValueAsString();
-  if (!DX10ClampAttr.empty())
-    DX10Clamp = DX10ClampAttr == "true";
-
-  StringRef DenormF32Attr = F.getFnAttribute("denormal-fp-math-f32").getValueAsString();
-  if (!DenormF32Attr.empty())
-    FP32Denormals = parseDenormalFPAttribute(DenormF32Attr);
-
-  StringRef DenormAttr = F.getFnAttribute("denormal-fp-math").getValueAsString();
-  if (!DenormAttr.empty()) {
-    DenormalMode DenormMode = parseDenormalFPAttribute(DenormAttr);
-    if (DenormF32Attr.empty())
-      FP32Denormals = DenormMode;
-    FP64FP16Denormals = DenormMode;
-  }
 }
 
 namespace {

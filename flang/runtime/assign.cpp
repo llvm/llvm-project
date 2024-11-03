@@ -205,6 +205,11 @@ static void DoElementalDefinedAssignment(const Descriptor &to,
 // of the capabilities of this function -- but when the LHS is allocatable,
 // the type might have a user-defined ASSIGNMENT(=), or the type might be
 // finalizable, this function should be used.
+// When "to" is not a whole allocatable, "from" is an array, and defined
+// assignments are not used, "to" and "from" only need to have the same number
+// of elements, but their shape need not to conform (the assignment is done in
+// element sequence order). This facilitates some internal usages, like when
+// dealing with array constructors.
 static void Assign(Descriptor &to, const Descriptor &from,
     Terminator &terminator, bool maybeReallocate, bool needFinalization,
     bool canBeDefinedAssignment, bool componentCanBeDefinedAssignment) {

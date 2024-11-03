@@ -143,7 +143,7 @@ template <class _Tp>
 struct __atomic_base<_Tp, true>
     : public __atomic_base<_Tp, false>
 {
-    typedef __atomic_base<_Tp, false> __base;
+    using __base = __atomic_base<_Tp, false>;
 
     _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20
     __atomic_base() _NOEXCEPT = default;

@@ -55,6 +55,26 @@ public:
     { res = A + B; }
   }
 };
+struct descriptor {
+  int A;
+  int C;
+};
+
+class BASE {};
+
+class C : public BASE {
+public:
+  void bar(descriptor &d) {
+    auto Asize = 4;
+    auto Csize = 4;
+
+#pragma omp target data map(to : d.A) map(from : d.C)
+    {
+#pragma omp target teams firstprivate(Csize)
+      d.C = 1;
+    }
+  }
+};
 
 int main(int argc, char *argv[]) {
   B<int> b(2, 3);
@@ -65,4 +85,10 @@ int main(int argc, char *argv[]) {
   c.run();
   // CHECK: 5
   printf("c.res = %d \n", c.res);
+
+  descriptor d;
+  C z;
+  z.bar(d);
+  // CHECK 1
+  printf("%d\n", d.C);
 }

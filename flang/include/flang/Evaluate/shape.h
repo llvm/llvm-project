@@ -168,8 +168,9 @@ private:
     return common::visit(
         common::visitors{
             [&](const Expr<T> &x) -> MaybeExtentExpr {
-              if (auto xShape{
-                      context_ ? GetShape(*context_, x) : GetShape(x)}) {
+              if (auto xShape{!useResultSymbolShape_ ? (*this)(x)
+                          : context_                 ? GetShape(*context_, x)
+                                                     : GetShape(x)}) {
                 // Array values in array constructors get linearized.
                 return GetSize(std::move(*xShape));
               } else {
@@ -183,8 +184,10 @@ private:
                   !ContainsAnyImpliedDoIndex(ido.upper()) &&
                   !ContainsAnyImpliedDoIndex(ido.stride())) {
                 if (auto nValues{GetArrayConstructorExtent(ido.values())}) {
-                  return std::move(*nValues) *
-                      CountTrips(ido.lower(), ido.upper(), ido.stride());
+                  if (!ContainsAnyImpliedDoIndex(*nValues)) {
+                    return std::move(*nValues) *
+                        CountTrips(ido.lower(), ido.upper(), ido.stride());
+                  }
                 }
               }
               return std::nullopt;

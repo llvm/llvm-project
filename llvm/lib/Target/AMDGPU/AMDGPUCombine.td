@@ -104,6 +104,14 @@ def foldable_fneg : GICombineRule<
          [{ return Helper.matchFoldableFneg(*${ffn}, ${matchinfo}); }]),
   (apply [{ Helper.applyFoldableFneg(*${ffn}, ${matchinfo}); }])>;
 
+def sign_exension_in_reg_matchdata : GIDefMatchData<"MachineInstr *">;
+
+def sign_extension_in_reg : GICombineRule<
+  (defs root:$sign_inreg, sign_exension_in_reg_matchdata:$matchinfo),
+  (match (wip_match_opcode G_SEXT_INREG):$sign_inreg,
+         [{ return PostLegalizerHelper.matchCombineSignExtendInReg(*${sign_inreg}, ${matchinfo}); }]),
+  (apply [{ PostLegalizerHelper.applyCombineSignExtendInReg(*${sign_inreg}, ${matchinfo}); }])>;
+
 // Combines which should only apply on SI/VI
 def gfx6gfx7_combines : GICombineGroup<[fcmp_select_to_fmin_fmax_legacy]>;
 
@@ -119,7 +127,7 @@ def AMDGPUPostLegalizerCombinerHelper: GICombinerHelper<
   "AMDGPUGenPostLegalizerCombinerHelper",
   [all_combines, gfx6gfx7_combines,
    uchar_to_float, cvt_f32_ubyteN, remove_fcanonicalize, foldable_fneg,
-   rcp_sqrt_to_rsq]> {
+   rcp_sqrt_to_rsq, sign_extension_in_reg]> {
   let DisableRuleOption = "amdgpupostlegalizercombiner-disable-rule";
   let StateClass = "AMDGPUPostLegalizerCombinerHelperState";
   let AdditionalArguments = [];

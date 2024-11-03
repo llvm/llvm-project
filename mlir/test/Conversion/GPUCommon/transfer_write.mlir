@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s --gpu-to-llvm | FileCheck %s
+// RUN: mlir-opt %s --gpu-to-llvm='use-opaque-pointers=1' | FileCheck %s
 
   func.func @warp_extract(%arg0: index, %arg1: memref<1024x1024xf32>, %arg2: index, %arg3: vector<1xf32>) {
     %c0 = arith.constant 0 : index

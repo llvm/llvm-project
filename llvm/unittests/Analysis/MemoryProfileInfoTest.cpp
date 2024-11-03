@@ -86,6 +86,15 @@ TEST_F(MemoryProfileInfoTest, GetAllocType) {
       AllocationType::NotCold);
 }
 
+// Test the hasSingleAllocType helper.
+TEST_F(MemoryProfileInfoTest, SingleAllocType) {
+  uint8_t NotCold = (uint8_t)AllocationType::NotCold;
+  uint8_t Cold = (uint8_t)AllocationType::Cold;
+  EXPECT_TRUE(hasSingleAllocType(NotCold));
+  EXPECT_TRUE(hasSingleAllocType(Cold));
+  EXPECT_FALSE(hasSingleAllocType(NotCold | Cold));
+}
+
 // Test buildCallstackMetadata helper.
 TEST_F(MemoryProfileInfoTest, BuildCallStackMD) {
   LLVMContext C;

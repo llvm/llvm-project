@@ -1702,9 +1702,12 @@ fir::ExtendedValue
 IntrinsicLibrary::genElementalCall<IntrinsicLibrary::ExtendedGenerator>(
     ExtendedGenerator generator, llvm::StringRef name, mlir::Type resultType,
     llvm::ArrayRef<fir::ExtendedValue> args, bool outline) {
-  for (const fir::ExtendedValue &arg : args)
-    if (!arg.getUnboxed() && !arg.getCharBox())
+  for (const fir::ExtendedValue &arg : args) {
+    auto *box = arg.getBoxOf<fir::BoxValue>();
+    if (!arg.getUnboxed() && !arg.getCharBox() &&
+        !(box && fir::isPolymorphicType(fir::getBase(*box).getType())))
       fir::emitFatalError(loc, "nonscalar intrinsic argument");
+  }
   if (outline)
     return outlineInExtendedWrapper(generator, name, resultType, args);
   return std::invoke(generator, *this, resultType, args);
@@ -4896,9 +4899,6 @@ IntrinsicLibrary::genStorageSize(mlir::Type resultType,
         fir::isPointerType(boxTy)
             ? "unlimited polymorphic disassociated POINTER in STORAGE_SIZE"
             : "unlimited polymorphic unallocated ALLOCATABLE in STORAGE_SIZE";
-  } else if (fir::isPolymorphicType(boxTy) && fir::isPointerType(boxTy)) {
-    needRuntimeCheck = true;
-    errorMsg = "polymorphic disassociated POINTER in STORAGE_SIZE";
   }
   const fir::MutableBoxValue *mutBox = args[0].getBoxOf<fir::MutableBoxValue>();
   if (needRuntimeCheck && mutBox) {
@@ -4922,8 +4922,11 @@ IntrinsicLibrary::genStorageSize(mlir::Type resultType,
         builder.getKindMap().getIntegerBitsize(fir::toInt(constOp)));
   }
 
-  if (box.getType().isa<fir::ReferenceType>())
+  if (args[0].getBoxOf<fir::PolymorphicValue>()) {
+    box = builder.createBox(loc, args[0], /*isPolymorphic=*/true);
+  } else if (box.getType().isa<fir::ReferenceType>()) {
     box = builder.create<fir::LoadOp>(loc, box);
+  }
   mlir::Value eleSize = builder.create<fir::BoxEleSizeOp>(loc, kindTy, box);
   mlir::Value c8 = builder.createIntegerConstant(loc, kindTy, 8);
   return builder.create<mlir::arith::MulIOp>(loc, eleSize, c8);

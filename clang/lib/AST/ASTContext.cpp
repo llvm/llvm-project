@@ -349,7 +349,7 @@ RawComment *ASTContext::getRawCommentForDeclNoCacheImpl(
 
   // There should be no other declarations or preprocessor directives between
   // comment and declaration.
-  if (Text.find_first_of(";{}#@") != StringRef::npos)
+  if (Text.find_last_of(";{}#@") != StringRef::npos)
     return nullptr;
 
   return CommentBeforeDecl;
@@ -6685,10 +6685,6 @@ bool ASTContext::isSameEntity(const NamedDecl *X, const NamedDecl *Y) const {
 
     if (!isSameConstraintExpr(FuncX->getTrailingRequiresClause(),
                               FuncY->getTrailingRequiresClause()))
-      return false;
-
-    // Constrained friends are different in certain cases, see: [temp.friend]p9.
-    if (FriendsDifferByConstraints(FuncX, FuncY))
       return false;
 
     auto GetTypeAsWritten = [](const FunctionDecl *FD) {

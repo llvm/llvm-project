@@ -123,7 +123,7 @@ set (LIBOMPTARGET_LLVM_INCLUDE_DIRS_DEVICERTL "${LIBOMPTARGET_LLVM_INCLUDE_DIRS}
 list(TRANSFORM LIBOMPTARGET_LLVM_INCLUDE_DIRS_DEVICERTL PREPEND "-I")
 
 # Set flags for LLVM Bitcode compilation.
-set(bc_flags -c -emit-llvm -std=c++17 -fvisibility=hidden
+set(bc_flags -c -foffload-lto -std=c++17 -fvisibility=hidden
               ${clang_opt_flags} --offload-device-only
              -nocudalib -nogpulib -nostdinc
              -fopenmp -fopenmp-cuda-mode
@@ -234,10 +234,15 @@ function(compileDeviceRTLLibrary target_cpu target_name target_triple)
       APPEND)
   endif()
 
+  set(target_feature "")
+  if("${target_triple}" STREQUAL "nvptx64-nvidia-cuda")
+    set(target_feature "feature=+ptx61")
+  endif()
+
   # Package the bitcode in the bitcode and embed it in an ELF for the static library
   add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/packaged_${bclib_name}
       COMMAND ${PACKAGER_TOOL} -o ${CMAKE_CURRENT_BINARY_DIR}/packaged_${bclib_name}
-        "--image=file=${CMAKE_CURRENT_BINARY_DIR}/extracted_${bclib_name},triple=${target_triple},arch=${target_cpu},kind=openmp"
+        "--image=file=${CMAKE_CURRENT_BINARY_DIR}/extracted_${bclib_name},${target_feature},triple=${target_triple},arch=${target_cpu},kind=openmp"
       DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/extracted_${bclib_name}
       COMMENT "Packaging LLVM offloading binary ${bclib_name}.out"
   )

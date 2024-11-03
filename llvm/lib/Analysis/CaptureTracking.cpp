@@ -403,12 +403,7 @@ UseCaptureKind llvm::DetermineUseCaptureKind(
           return UseCaptureKind::NO_CAPTURE;
       }
     }
-    // Comparison against value stored in global variable. Given the pointer
-    // does not escape, its value cannot be guessed and stored separately in a
-    // global variable.
-    auto *LI = dyn_cast<LoadInst>(I->getOperand(OtherIdx));
-    if (LI && isa<GlobalVariable>(LI->getPointerOperand()))
-      return UseCaptureKind::NO_CAPTURE;
+
     // Otherwise, be conservative. There are crazy ways to capture pointers
     // using comparisons.
     return UseCaptureKind::MAY_CAPTURE;

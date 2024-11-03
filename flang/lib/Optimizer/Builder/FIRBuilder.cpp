@@ -562,6 +562,17 @@ mlir::Value fir::FirOpBuilder::createBox(mlir::Location loc,
       });
 }
 
+mlir::Value fir::FirOpBuilder::createBox(mlir::Location loc, mlir::Type boxType,
+                                         mlir::Value addr, mlir::Value shape,
+                                         mlir::Value slice,
+                                         llvm::ArrayRef<mlir::Value> lengths,
+                                         mlir::Value tdesc) {
+  mlir::Type valueOrSequenceType = fir::unwrapPassByRefType(boxType);
+  return create<fir::EmboxOp>(
+      loc, boxType, addr, shape, slice,
+      elideLengthsAlreadyInType(valueOrSequenceType, lengths), tdesc);
+}
+
 void fir::FirOpBuilder::dumpFunc() { getFunction().dump(); }
 
 static mlir::Value
@@ -1197,7 +1208,7 @@ static bool recordTypeCanBeMemCopied(fir::RecordType recordType) {
     if (fir::unwrapSequenceType(fieldType).isa<fir::RecordType>())
       return false;
     // Allocatable components need deep copy.
-    if (auto boxType = fieldType.dyn_cast<fir::BoxType>())
+    if (auto boxType = fieldType.dyn_cast<fir::BaseBoxType>())
       if (boxType.getEleTy().isa<fir::HeapType>())
         return false;
   }

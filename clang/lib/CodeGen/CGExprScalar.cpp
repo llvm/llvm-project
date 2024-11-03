@@ -3734,8 +3734,6 @@ static Value *emitPointerArithmetic(CodeGenFunction &CGF,
 static Value* buildFMulAdd(llvm::Instruction *MulOp, Value *Addend,
                            const CodeGenFunction &CGF, CGBuilderTy &Builder,
                            bool negMul, bool negAdd) {
-  assert(!(negMul && negAdd) && "Only one of negMul and negAdd should be set.");
-
   Value *MulOp0 = MulOp->getOperand(0);
   Value *MulOp1 = MulOp->getOperand(1);
   if (negMul)
@@ -3780,31 +3778,70 @@ static Value* tryEmitFMulAdd(const BinOpInfo &op,
   if (!op.FPFeatures.allowFPContractWithinStatement())
     return nullptr;
 
+  Value *LHS = op.LHS;
+  Value *RHS = op.RHS;
+
+  // Peek through fneg to look for fmul. Make sure fneg has no users, and that
+  // it is the only use of its operand.
+  bool NegLHS = false;
+  if (auto *LHSUnOp = dyn_cast<llvm::UnaryOperator>(LHS)) {
+    if (LHSUnOp->getOpcode() == llvm::Instruction::FNeg &&
+        LHSUnOp->use_empty() && LHSUnOp->getOperand(0)->hasOneUse()) {
+      LHS = LHSUnOp->getOperand(0);
+      NegLHS = true;
+    }
+  }
+
+  bool NegRHS = false;
+  if (auto *RHSUnOp = dyn_cast<llvm::UnaryOperator>(RHS)) {
+    if (RHSUnOp->getOpcode() == llvm::Instruction::FNeg &&
+        RHSUnOp->use_empty() && RHSUnOp->getOperand(0)->hasOneUse()) {
+      RHS = RHSUnOp->getOperand(0);
+      NegRHS = true;
+    }
+  }
+
   // We have a potentially fusable op. Look for a mul on one of the operands.
   // Also, make sure that the mul result isn't used directly. In that case,
   // there's no point creating a muladd operation.
-  if (auto *LHSBinOp = dyn_cast<llvm::BinaryOperator>(op.LHS)) {
+  if (auto *LHSBinOp = dyn_cast<llvm::BinaryOperator>(LHS)) {
     if (LHSBinOp->getOpcode() == llvm::Instruction::FMul &&
-        LHSBinOp->use_empty())
-      return buildFMulAdd(LHSBinOp, op.RHS, CGF, Builder, false, isSub);
+        (LHSBinOp->use_empty() || NegLHS)) {
+      // If we looked through fneg, erase it.
+      if (NegLHS)
+        cast<llvm::Instruction>(op.LHS)->eraseFromParent();
+      return buildFMulAdd(LHSBinOp, op.RHS, CGF, Builder, NegLHS, isSub);
+    }
   }
-  if (auto *RHSBinOp = dyn_cast<llvm::BinaryOperator>(op.RHS)) {
+  if (auto *RHSBinOp = dyn_cast<llvm::BinaryOperator>(RHS)) {
     if (RHSBinOp->getOpcode() == llvm::Instruction::FMul &&
-        RHSBinOp->use_empty())
-      return buildFMulAdd(RHSBinOp, op.LHS, CGF, Builder, isSub, false);
+        (RHSBinOp->use_empty() || NegRHS)) {
+      // If we looked through fneg, erase it.
+      if (NegRHS)
+        cast<llvm::Instruction>(op.RHS)->eraseFromParent();
+      return buildFMulAdd(RHSBinOp, op.LHS, CGF, Builder, isSub ^ NegRHS, false);
+    }
   }
 
-  if (auto *LHSBinOp = dyn_cast<llvm::CallBase>(op.LHS)) {
+  if (auto *LHSBinOp = dyn_cast<llvm::CallBase>(LHS)) {
     if (LHSBinOp->getIntrinsicID() ==
             llvm::Intrinsic::experimental_constrained_fmul &&
-        LHSBinOp->use_empty())
-      return buildFMulAdd(LHSBinOp, op.RHS, CGF, Builder, false, isSub);
+        (LHSBinOp->use_empty() || NegLHS)) {
+      // If we looked through fneg, erase it.
+      if (NegLHS)
+        cast<llvm::Instruction>(op.LHS)->eraseFromParent();
+      return buildFMulAdd(LHSBinOp, op.RHS, CGF, Builder, NegLHS, isSub);
+    }
   }
-  if (auto *RHSBinOp = dyn_cast<llvm::CallBase>(op.RHS)) {
+  if (auto *RHSBinOp = dyn_cast<llvm::CallBase>(RHS)) {
     if (RHSBinOp->getIntrinsicID() ==
             llvm::Intrinsic::experimental_constrained_fmul &&
-        RHSBinOp->use_empty())
-      return buildFMulAdd(RHSBinOp, op.LHS, CGF, Builder, isSub, false);
+        (RHSBinOp->use_empty() || NegRHS)) {
+      // If we looked through fneg, erase it.
+      if (NegRHS)
+        cast<llvm::Instruction>(op.RHS)->eraseFromParent();
+      return buildFMulAdd(RHSBinOp, op.LHS, CGF, Builder, isSub ^ NegRHS, false);
+    }
   }
 
   return nullptr;

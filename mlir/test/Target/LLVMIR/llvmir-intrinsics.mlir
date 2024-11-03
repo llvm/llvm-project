@@ -432,16 +432,16 @@ llvm.func @umul_with_overflow_test(%arg0: i32, %arg1: i32, %arg2: vector<8xi32>,
 llvm.func @coro_id(%arg0: i32, %arg1: !llvm.ptr<i8>) {
   // CHECK: call token @llvm.coro.id
   %null = llvm.mlir.null : !llvm.ptr<i8>
-  llvm.intr.coro.id %arg0, %arg1, %arg1, %null : !llvm.token
+  llvm.intr.coro.id %arg0, %arg1, %arg1, %null : (i32, !llvm.ptr<i8>, !llvm.ptr<i8>, !llvm.ptr<i8>) -> !llvm.token
   llvm.return
 }
 
 // CHECK-LABEL: @coro_begin
 llvm.func @coro_begin(%arg0: i32, %arg1: !llvm.ptr<i8>) {
   %null = llvm.mlir.null : !llvm.ptr<i8>
-  %token = llvm.intr.coro.id %arg0, %arg1, %arg1, %null : !llvm.token
+  %token = llvm.intr.coro.id %arg0, %arg1, %arg1, %null : (i32, !llvm.ptr<i8>, !llvm.ptr<i8>, !llvm.ptr<i8>) -> !llvm.token
   // CHECK: call ptr @llvm.coro.begin
-  llvm.intr.coro.begin %token, %arg1 : !llvm.ptr<i8>
+  llvm.intr.coro.begin %token, %arg1 : (!llvm.token, !llvm.ptr<i8>) -> !llvm.ptr<i8>
   llvm.return
 }
 
@@ -466,14 +466,14 @@ llvm.func @coro_align() {
 // CHECK-LABEL: @coro_save
 llvm.func @coro_save(%arg0: !llvm.ptr<i8>) {
   // CHECK: call token @llvm.coro.save
-  %0 = llvm.intr.coro.save %arg0 : !llvm.token
+  %0 = llvm.intr.coro.save %arg0 : (!llvm.ptr<i8>) -> !llvm.token
   llvm.return
 }
 
 // CHECK-LABEL: @coro_suspend
 llvm.func @coro_suspend(%arg0: i32, %arg1 : i1, %arg2 : !llvm.ptr<i8>) {
   %null = llvm.mlir.null : !llvm.ptr<i8>
-  %token = llvm.intr.coro.id %arg0, %arg2, %arg2, %null : !llvm.token
+  %token = llvm.intr.coro.id %arg0, %arg2, %arg2, %null : (i32, !llvm.ptr<i8>, !llvm.ptr<i8>, !llvm.ptr<i8>) -> !llvm.token
   // CHECK: call i8 @llvm.coro.suspend
   %0 = llvm.intr.coro.suspend %token, %arg1 : i8
   llvm.return
@@ -482,30 +482,30 @@ llvm.func @coro_suspend(%arg0: i32, %arg1 : i1, %arg2 : !llvm.ptr<i8>) {
 // CHECK-LABEL: @coro_end
 llvm.func @coro_end(%arg0: !llvm.ptr<i8>, %arg1 : i1) {
   // CHECK: call i1 @llvm.coro.end
-  %0 = llvm.intr.coro.end %arg0, %arg1 : i1
+  %0 = llvm.intr.coro.end %arg0, %arg1 : (!llvm.ptr<i8>, i1) -> i1
   llvm.return
 }
 
 // CHECK-LABEL: @coro_free
 llvm.func @coro_free(%arg0: i32, %arg1 : !llvm.ptr<i8>) {
   %null = llvm.mlir.null : !llvm.ptr<i8>
-  %token = llvm.intr.coro.id %arg0, %arg1, %arg1, %null : !llvm.token
+  %token = llvm.intr.coro.id %arg0, %arg1, %arg1, %null : (i32, !llvm.ptr<i8>, !llvm.ptr<i8>, !llvm.ptr<i8>) -> !llvm.token
   // CHECK: call ptr @llvm.coro.free
-  %0 = llvm.intr.coro.free %token, %arg1 : !llvm.ptr<i8>
+  %0 = llvm.intr.coro.free %token, %arg1 : (!llvm.token, !llvm.ptr<i8>) -> !llvm.ptr<i8>
   llvm.return
 }
 
 // CHECK-LABEL: @coro_resume
 llvm.func @coro_resume(%arg0: !llvm.ptr<i8>) {
   // CHECK: call void @llvm.coro.resume
-  llvm.intr.coro.resume %arg0
+  llvm.intr.coro.resume %arg0 : !llvm.ptr<i8>
   llvm.return
 }
 
 // CHECK-LABEL: @eh_typeid_for
 llvm.func @eh_typeid_for(%arg0 : !llvm.ptr<i8>) {
     // CHECK: call i32 @llvm.eh.typeid.for
-    %0 = llvm.intr.eh.typeid.for %arg0 : i32
+    %0 = llvm.intr.eh.typeid.for %arg0 : (!llvm.ptr<i8>) -> i32
     llvm.return
 }
 
@@ -519,7 +519,7 @@ llvm.func @stack_save() {
 // CHECK-LABEL: @stack_restore
 llvm.func @stack_restore(%arg0: !llvm.ptr<i8>) {
   // CHECK: call void @llvm.stackrestore
-  llvm.intr.stackrestore %arg0
+  llvm.intr.stackrestore %arg0 : !llvm.ptr<i8>
   llvm.return
 }
 

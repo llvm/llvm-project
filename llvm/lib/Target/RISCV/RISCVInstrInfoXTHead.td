@@ -11,6 +11,26 @@
 //===----------------------------------------------------------------------===//
 
 //===----------------------------------------------------------------------===//
+// T-HEAD specific DAG Nodes.
+//===----------------------------------------------------------------------===//
+
+def SDT_LoadPair : SDTypeProfile<2, 2,
+  [SDTCisSameAs<0, 1>, SDTCisSameAs<1, 3>, SDTCisPtrTy<2>, SDTCisVT<3, XLenVT>]>;
+def SDT_StorePair : SDTypeProfile<0, 4,
+  [SDTCisSameAs<0, 1>, SDTCisSameAs<1, 3>, SDTCisPtrTy<2>, SDTCisVT<3, XLenVT>]>;
+
+def th_lwud : SDNode<"RISCVISD::TH_LWUD", SDT_LoadPair,
+  [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
+def th_lwd : SDNode<"RISCVISD::TH_LWD", SDT_LoadPair,
+  [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
+def th_ldd : SDNode<"RISCVISD::TH_LDD", SDT_LoadPair,
+  [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
+def th_swd : SDNode<"RISCVISD::TH_SWD", SDT_StorePair,
+  [SDNPHasChain, SDNPMayStore, SDNPMemOperand]>;
+def th_sdd : SDNode<"RISCVISD::TH_SDD", SDT_StorePair,
+  [SDNPHasChain, SDNPMayStore, SDNPMemOperand]>;
+
+//===----------------------------------------------------------------------===//
 // Instruction class templates
 //===----------------------------------------------------------------------===//
 class THInstVdotVV<bits<6> funct6, RISCVVFormat opv, dag outs, dag ins,
@@ -48,7 +68,7 @@ let Predicates = [HasVendorXTHeadBa], DecoderNamespace = "THeadBa",
 class THShiftALU_rri<bits<3> funct3, string opcodestr>
     : RVInstR<0, funct3, OPC_CUSTOM_0, (outs GPR:$rd),
               (ins GPR:$rs1, GPR:$rs2, uimm2:$uimm2),
-	      opcodestr, "$rd, $rs1, $rs2, $uimm2"> {
+              opcodestr, "$rd, $rs1, $rs2, $uimm2"> {
   bits<2> uimm2;
   let Inst{31-27} = 0;
   let Inst{26-25} = uimm2;
@@ -59,12 +79,12 @@ let Predicates = [HasVendorXTHeadBb], DecoderNamespace = "THeadBb",
 class THShift_ri<bits<5> funct5, bits<3> funct3, string opcodestr>
     : RVInstIShift<funct5, funct3, OPC_CUSTOM_0, (outs GPR:$rd),
                    (ins GPR:$rs1, uimmlog2xlen:$shamt),
-		   opcodestr, "$rd, $rs1, $shamt">;
+                   opcodestr, "$rd, $rs1, $shamt">;
 
 class THBitfieldExtract_rii<bits<3> funct3, string opcodestr>
     : RVInstI<funct3, OPC_CUSTOM_0, (outs GPR:$rd),
               (ins GPR:$rs1, uimmlog2xlen:$msb, uimmlog2xlen:$lsb),
-	      opcodestr, "$rd, $rs1, $msb, $lsb"> {
+              opcodestr, "$rd, $rs1, $msb, $lsb"> {
   bits<6> msb;
   bits<6> lsb;
   let Inst{31-26} = msb;
@@ -84,7 +104,7 @@ let Predicates = [HasVendorXTHeadBb, IsRV64], DecoderNamespace = "THeadBb",
 class THShiftW_ri<bits<7> funct7, bits<3> funct3, string opcodestr>
     : RVInstIShiftW<funct7, funct3, OPC_CUSTOM_0, (outs GPR:$rd),
                     (ins GPR:$rs1, uimm5:$shamt),
-		    opcodestr, "$rd, $rs1, $shamt">;
+                    opcodestr, "$rd, $rs1, $shamt">;
 
 
 let Predicates = [HasVendorXTHeadMac], DecoderNamespace = "THeadMac",
@@ -96,6 +116,97 @@ class THMulAccumulate_rr<bits<7> funct7, string opcodestr>
   let Constraints = "$rd_wb = $rd";
 }
 
+let Predicates = [HasVendorXTHeadMemPair], DecoderNamespace = "THeadMemPair",
+  hasSideEffects = 0, mayLoad = 1, mayStore = 0 in
+class THLoadPair<bits<5> funct5, string opcodestr>
+  : RVInstR<!shl(funct5, 2), 0b100, OPC_CUSTOM_0,
+            (outs GPR:$rd, GPR:$rs2),
+            (ins GPR:$rs1, uimm2:$uimm2, uimm7:$const3or4),
+             opcodestr, "$rd, $rs2, (${rs1}), $uimm2, $const3or4"> {
+  bits<2> uimm2;
+  let Inst{26-25} = uimm2;
+  let DecoderMethod = "decodeXTHeadMemPair";
+  let Constraints = "@earlyclobber $rd,@earlyclobber $rs2";
+}
+
+let Predicates = [HasVendorXTHeadMemPair], DecoderNamespace = "THeadMemPair",
+  hasSideEffects = 0, mayLoad = 0, mayStore = 1 in
+class THStorePair<bits<5> funct5, string opcodestr>
+  : RVInstR<!shl(funct5, 2), 0b101, OPC_CUSTOM_0,
+            (outs),
+            (ins GPR:$rd, GPR:$rs2, GPR:$rs1, uimm2:$uimm2, uimm7:$const3or4),
+            opcodestr, "$rd, $rs2, (${rs1}), $uimm2, $const3or4"> {
+  bits<2> uimm2;
+  let Inst{26-25} = uimm2;
+  let DecoderMethod = "decodeXTHeadMemPair";
+}
+
+let hasSideEffects = 1, mayLoad = 0, mayStore = 0 in
+class THCacheInst_r<bits<5> funct5, string opcodestr>
+    : RVInstR<0b0000001, 0, OPC_CUSTOM_0, (outs), (ins GPR:$rs1),
+              opcodestr, "$rs1"> {
+  let rd = 0;
+  let rs2 = funct5;
+}
+
+let hasSideEffects = 1, mayLoad = 0, mayStore = 0 in
+class THCacheInst_rr<bits<7> funct7, string opcodestr>
+    : RVInstR<funct7, 0, OPC_CUSTOM_0, (outs), (ins GPR:$rs1, GPR:$rs2),
+      opcodestr, "$rs1, $rs2"> {
+  let rd = 0;
+}
+
+let hasSideEffects = 1, mayLoad = 0, mayStore = 0 in
+class THCacheInst_void<bits<5> funct5, string opcodestr>
+    : RVInstR<0b0000000, 0, OPC_CUSTOM_0, (outs), (ins), opcodestr, ""> {
+  let rd = 0;
+  let rs1 = 0;
+  let rs2 = funct5;
+}
+
+let hasSideEffects = 0, mayLoad = 1, mayStore = 0 in {
+class THLoadIndexed<RegisterClass Ty, bits<5> funct5, string opcodestr>
+    : RVInstR<!shl(funct5, 2), !if(!eq(Ty, GPR), 0b100, 0b110), OPC_CUSTOM_0,
+              (outs Ty:$rd), (ins GPR:$rs1, GPR:$rs2, uimm2:$uimm2),
+              opcodestr, "$rd, $rs1, $rs2, $uimm2"> {
+  bits<2> uimm2;
+  let Inst{26-25} = uimm2;
+}
+
+class THLoadUpdate<bits<5> funct5, string opcodestr>
+    : RVInstI<0b100, OPC_CUSTOM_0, (outs GPR:$rd, GPR:$rs1_wb),
+              (ins GPR:$rs1, simm5:$simm5, uimm2:$uimm2),
+              opcodestr, "$rd, (${rs1}), $simm5, $uimm2"> {
+  bits<5> simm5;
+  bits<2> uimm2;
+  let imm12{11-7} = funct5;
+  let imm12{6-5} = uimm2;
+  let imm12{4-0} = simm5;
+  let Constraints = "@earlyclobber $rd, $rs1_wb = $rs1";
+}
+}
+
+let hasSideEffects = 0, mayLoad = 0, mayStore = 1 in {
+class THStoreIndexed<RegisterClass StTy, bits<5> funct5, string opcodestr>
+    : RVInstR<!shl(funct5, 2), !if(!eq(StTy, GPR), 0b101, 0b111), OPC_CUSTOM_0,
+              (outs), (ins StTy:$rd, GPR:$rs1, GPR:$rs2, uimm2:$uimm2),
+              opcodestr, "$rd, $rs1, $rs2, $uimm2"> {
+  bits<2> uimm2;
+  let Inst{26-25} = uimm2;
+}
+
+class THStoreUpdate<bits<5> funct5, string opcodestr>
+    : RVInstI<0b101, OPC_CUSTOM_0, (outs GPR:$rs1_up),
+              (ins GPR:$rd, GPR:$rs1, simm5:$simm5, uimm2:$uimm2),
+              opcodestr, "$rd, (${rs1}), $simm5, $uimm2"> {
+  bits<5> simm5;
+  bits<2> uimm2;
+  let imm12{11-7} = funct5;
+  let imm12{6-5} = uimm2;
+  let imm12{4-0} = simm5;
+  let Constraints = "$rs1_up = $rs1";
+}
+}
 
 //===----------------------------------------------------------------------===//
 // Combination of instruction classes.
@@ -153,6 +264,171 @@ let Predicates = [HasVendorXTHeadMac, IsRV64], IsSignExtendingOpW = 1 in {
 def TH_MULAW : THMulAccumulate_rr<0b0010010, "th.mulaw">;
 def TH_MULSW : THMulAccumulate_rr<0b0010011, "th.mulsw">;
 } // Predicates = [HasVendorXTHeadMac, IsRV64]
+
+let Predicates = [HasVendorXTHeadMemPair] in {
+def TH_LWUD : THLoadPair<0b11110, "th.lwud">,
+              Sched<[WriteLDW, WriteLDW, ReadMemBase]>;
+def TH_SWD  : THStorePair<0b11100, "th.swd">,
+              Sched<[WriteSTW, WriteSTW, ReadStoreData, ReadMemBase]>;
+let IsSignExtendingOpW = 1 in
+def TH_LWD  : THLoadPair<0b11100, "th.lwd">,
+              Sched<[WriteLDW, WriteLDW, ReadMemBase]>;
+}
+
+let Predicates = [HasVendorXTHeadMemPair, IsRV64] in {
+def TH_LDD  : THLoadPair<0b11111, "th.ldd">,
+              Sched<[WriteLDD, WriteLDD, ReadMemBase]>;
+def TH_SDD  : THStorePair<0b11111, "th.sdd">,
+              Sched<[WriteSTD, WriteSTD, ReadStoreData, ReadMemBase]>;
+}
+
+let Predicates = [HasVendorXTHeadMemIdx], DecoderNamespace = "THeadMemIdx" in {
+// T-Head Load/Store + Update instructions.
+def TH_LBIA : THLoadUpdate<0b00011, "th.lbia">,
+  Sched<[WriteLDB, ReadMemBase]>;
+def TH_LBIB : THLoadUpdate<0b00001, "th.lbib">,
+  Sched<[WriteLDB, ReadMemBase]>;
+def TH_LBUIA : THLoadUpdate<0b10011, "th.lbuia">,
+   Sched<[WriteLDB, ReadMemBase]>;
+def TH_LBUIB : THLoadUpdate<0b10001, "th.lbuib">,
+   Sched<[WriteLDB, ReadMemBase]>;
+
+def TH_LHIA : THLoadUpdate<0b00111, "th.lhia">,
+  Sched<[WriteLDH, ReadMemBase]>;
+def TH_LHIB : THLoadUpdate<0b00101, "th.lhib">,
+  Sched<[WriteLDH, ReadMemBase]>;
+def TH_LHUIA : THLoadUpdate<0b10111, "th.lhuia">,
+   Sched<[WriteLDH, ReadMemBase]>;
+def TH_LHUIB : THLoadUpdate<0b10101, "th.lhuib">,
+   Sched<[WriteLDH, ReadMemBase]>;
+
+def TH_LWIA : THLoadUpdate<0b01011, "th.lwia">,
+  Sched<[WriteLDW, ReadMemBase]>;
+def TH_LWIB : THLoadUpdate<0b01001, "th.lwib">,
+  Sched<[WriteLDW, ReadMemBase]>;
+
+def TH_SBIA : THStoreUpdate<0b00011, "th.sbia">,
+  Sched<[WriteSTB, ReadStoreData, ReadMemBase]>;
+def TH_SBIB : THStoreUpdate<0b00001, "th.sbib">,
+  Sched<[WriteSTB, ReadStoreData, ReadMemBase]>;
+
+def TH_SHIA : THStoreUpdate<0b00111, "th.shia">,
+  Sched<[WriteSTH, ReadStoreData, ReadMemBase]>;
+def TH_SHIB : THStoreUpdate<0b00101, "th.shib">,
+  Sched<[WriteSTH, ReadStoreData, ReadMemBase]>;
+
+def TH_SWIA : THStoreUpdate<0b01011, "th.swia">,
+  Sched<[WriteSTW, ReadStoreData, ReadMemBase]>;
+def TH_SWIB : THStoreUpdate<0b01001, "th.swib">,
+  Sched<[WriteSTW, ReadStoreData, ReadMemBase]>;
+
+// T-Head Load/Store Indexed instructions.
+def TH_LRB : THLoadIndexed<GPR, 0b00000, "th.lrb">,
+  Sched<[WriteLDB, ReadMemBase]>;
+def TH_LRBU : THLoadIndexed<GPR, 0b10000, "th.lrbu">,
+  Sched<[WriteLDB, ReadMemBase]>;
+def TH_LURB : THLoadIndexed<GPR, 0b00010, "th.lurb">,
+  Sched<[WriteLDB, ReadMemBase]>;
+def TH_LURBU : THLoadIndexed<GPR, 0b10010, "th.lurbu">,
+  Sched<[WriteLDB, ReadMemBase]>;
+
+def TH_LRH : THLoadIndexed<GPR, 0b00100, "th.lrh">,
+  Sched<[WriteLDH, ReadMemBase]>;
+def TH_LRHU : THLoadIndexed<GPR, 0b10100, "th.lrhu">,
+  Sched<[WriteLDH, ReadMemBase]>;
+def TH_LURH : THLoadIndexed<GPR, 0b00110, "th.lurh">,
+  Sched<[WriteLDB, ReadMemBase]>;
+def TH_LURHU : THLoadIndexed<GPR, 0b10110, "th.lurhu">,
+  Sched<[WriteLDB, ReadMemBase]>;
+
+def TH_LRW : THLoadIndexed<GPR, 0b01000, "th.lrw">,
+  Sched<[WriteLDW, ReadMemBase]>;
+def TH_LURW : THLoadIndexed<GPR, 0b01010, "th.lurw">,
+  Sched<[WriteLDB, ReadMemBase]>;
+
+def TH_SRB : THStoreIndexed<GPR, 0b00000, "th.srb">,
+  Sched<[WriteSTB, ReadStoreData, ReadMemBase]>;
+def TH_SURB : THStoreIndexed<GPR, 0b00010, "th.surb">,
+  Sched<[WriteLDB, ReadMemBase]>;
+
+def TH_SRH : THStoreIndexed<GPR, 0b00100, "th.srh">,
+  Sched<[WriteSTH, ReadStoreData, ReadMemBase]>;
+def TH_SURH : THStoreIndexed<GPR, 0b00110, "th.surh">,
+  Sched<[WriteLDB, ReadMemBase]>;
+
+def TH_SRW : THStoreIndexed<GPR, 0b01000, "th.srw">,
+  Sched<[WriteSTW, ReadStoreData, ReadMemBase]>;
+def TH_SURW : THStoreIndexed<GPR, 0b01010, "th.surw">,
+  Sched<[WriteLDB, ReadMemBase]>;
+}
+
+let Predicates = [HasVendorXTHeadMemIdx, IsRV64], DecoderNamespace = "THeadMemIdx" in {
+// T-Head Load/Store + Update instructions.
+def TH_LWUIA : THLoadUpdate<0b11011, "th.lwuia">,
+  Sched<[WriteLDH, ReadMemBase]>;
+def TH_LWUIB : THLoadUpdate<0b11001, "th.lwuib">,
+  Sched<[WriteLDH, ReadMemBase]>;
+
+def TH_LDIA : THLoadUpdate<0b01111, "th.ldia">,
+  Sched<[WriteLDW, ReadMemBase]>;
+def TH_LDIB : THLoadUpdate<0b01101, "th.ldib">,
+  Sched<[WriteLDW, ReadMemBase]>;
+
+def TH_SDIA : THStoreUpdate<0b01111, "th.sdia">,
+  Sched<[WriteSTW, ReadStoreData, ReadMemBase]>;
+def TH_SDIB : THStoreUpdate<0b01101, "th.sdib">,
+  Sched<[WriteSTW, ReadStoreData, ReadMemBase]>;
+
+// T-Head Load/Store Indexed instructions.
+def TH_LRWU : THLoadIndexed<GPR, 0b11000, "th.lrwu">,
+  Sched<[WriteLDW, ReadMemBase]>;
+def TH_LURWU : THLoadIndexed<GPR, 0b11010, "th.lurwu">,
+  Sched<[WriteLDB, ReadMemBase]>;
+
+def TH_LRD : THLoadIndexed<GPR, 0b01100, "th.lrd">,
+  Sched<[WriteLDW, ReadMemBase]>;
+def TH_LURD : THLoadIndexed<GPR, 0b01110, "th.lurd">,
+  Sched<[WriteLDB, ReadMemBase]>;
+
+def TH_SRD : THStoreIndexed<GPR, 0b01100, "th.srd">,
+  Sched<[WriteSTW, ReadStoreData, ReadMemBase]>;
+def TH_SURD : THStoreIndexed<GPR, 0b01110, "th.surd">,
+  Sched<[WriteLDB, ReadMemBase]>;
+}
+
+// T-Head Load/Store Indexed instructions for floating point registers.
+
+let Predicates = [HasVendorXTHeadFMemIdx, HasStdExtF],
+    DecoderNamespace = "THeadFMemIdx" in {
+def TH_FLRW : THLoadIndexed<FPR32, 0b01000, "th.flrw">,
+              Sched<[WriteFLD32, ReadFMemBase]>;
+def TH_FSRW : THStoreIndexed<FPR32, 0b01000, "th.fsrw">,
+              Sched<[WriteFST32, ReadFStoreData, ReadFMemBase]>;
+}
+
+let Predicates = [HasVendorXTHeadFMemIdx, HasStdExtD],
+    DecoderNamespace = "THeadFMemIdx" in {
+def TH_FLRD : THLoadIndexed<FPR64, 0b01100, "th.flrd">,
+              Sched<[WriteFLD64, ReadFMemBase]>;
+def TH_FSRD : THStoreIndexed<FPR64, 0b01100, "th.fsrd">,
+              Sched<[WriteFST64, ReadFStoreData, ReadFMemBase]>;
+}
+
+let Predicates = [HasVendorXTHeadFMemIdx, HasStdExtF, IsRV64],
+    DecoderNamespace = "THeadFMemIdx" in {
+def TH_FLURW : THLoadIndexed<FPR32, 0b01010, "th.flurw">,
+               Sched<[WriteFLD32, ReadFMemBase]>;
+def TH_FSURW : THStoreIndexed<FPR32, 0b01010, "th.fsurw">,
+               Sched<[WriteFST32, ReadFStoreData, ReadFMemBase]>;
+}
+
+let Predicates = [HasVendorXTHeadFMemIdx, HasStdExtD, IsRV64],
+    DecoderNamespace = "THeadFMemIdx" in {
+def TH_FLURD : THLoadIndexed<FPR64, 0b01110, "th.flurd">,
+               Sched<[WriteFLD64, ReadFMemBase]>;
+def TH_FSURD : THStoreIndexed<FPR64, 0b01110, "th.fsurd">,
+               Sched<[WriteFST64, ReadFStoreData, ReadFMemBase]>;
+}
 
 let Predicates = [HasVendorXTHeadVdot],
     Constraints = "@earlyclobber $vd",
@@ -276,31 +552,31 @@ def : Pat<(mul GPR:$r, C9LeftShift:$i),
                 (TrailingZeros C9LeftShift:$i))>;
 
 def : Pat<(mul_const_oneuse GPR:$r, (XLenVT 11)),
-	  (TH_ADDSL GPR:$r, (TH_ADDSL GPR:$r, GPR:$r, 2), 1)>;
+          (TH_ADDSL GPR:$r, (TH_ADDSL GPR:$r, GPR:$r, 2), 1)>;
 def : Pat<(mul_const_oneuse GPR:$r, (XLenVT 19)),
-	  (TH_ADDSL GPR:$r, (TH_ADDSL GPR:$r, GPR:$r, 3), 1)>;
+          (TH_ADDSL GPR:$r, (TH_ADDSL GPR:$r, GPR:$r, 3), 1)>;
 def : Pat<(mul_const_oneuse GPR:$r, (XLenVT 13)),
-	  (TH_ADDSL GPR:$r, (TH_ADDSL GPR:$r, GPR:$r, 1), 2)>;
+          (TH_ADDSL GPR:$r, (TH_ADDSL GPR:$r, GPR:$r, 1), 2)>;
 def : Pat<(mul_const_oneuse GPR:$r, (XLenVT 21)),
-	  (TH_ADDSL GPR:$r, (TH_ADDSL GPR:$r, GPR:$r, 2), 2)>;
+          (TH_ADDSL GPR:$r, (TH_ADDSL GPR:$r, GPR:$r, 2), 2)>;
 def : Pat<(mul_const_oneuse GPR:$r, (XLenVT 37)),
-	  (TH_ADDSL GPR:$r, (TH_ADDSL GPR:$r, GPR:$r, 3), 2)>;
+          (TH_ADDSL GPR:$r, (TH_ADDSL GPR:$r, GPR:$r, 3), 2)>;
 def : Pat<(mul_const_oneuse GPR:$r, (XLenVT 25)),
-	  (TH_ADDSL (TH_ADDSL GPR:$r, GPR:$r, 2), (TH_ADDSL GPR:$r, GPR:$r, 2), 2)>;
+          (TH_ADDSL (TH_ADDSL GPR:$r, GPR:$r, 2), (TH_ADDSL GPR:$r, GPR:$r, 2), 2)>;
 def : Pat<(mul_const_oneuse GPR:$r, (XLenVT 41)),
-	  (TH_ADDSL GPR:$r, (TH_ADDSL GPR:$r, GPR:$r, 2), 3)>;
+          (TH_ADDSL GPR:$r, (TH_ADDSL GPR:$r, GPR:$r, 2), 3)>;
 def : Pat<(mul_const_oneuse GPR:$r, (XLenVT 73)),
-	  (TH_ADDSL GPR:$r, (TH_ADDSL GPR:$r, GPR:$r, 3), 3)>;
+          (TH_ADDSL GPR:$r, (TH_ADDSL GPR:$r, GPR:$r, 3), 3)>;
 def : Pat<(mul_const_oneuse GPR:$r, (XLenVT 27)),
-	  (TH_ADDSL (TH_ADDSL GPR:$r, GPR:$r, 3), (TH_ADDSL GPR:$r, GPR:$r, 3), 1)>;
+          (TH_ADDSL (TH_ADDSL GPR:$r, GPR:$r, 3), (TH_ADDSL GPR:$r, GPR:$r, 3), 1)>;
 def : Pat<(mul_const_oneuse GPR:$r, (XLenVT 45)),
-	  (TH_ADDSL (TH_ADDSL GPR:$r, GPR:$r, 3), (TH_ADDSL GPR:$r, GPR:$r, 3), 2)>;
+          (TH_ADDSL (TH_ADDSL GPR:$r, GPR:$r, 3), (TH_ADDSL GPR:$r, GPR:$r, 3), 2)>;
 def : Pat<(mul_const_oneuse GPR:$r, (XLenVT 81)),
-	  (TH_ADDSL (TH_ADDSL GPR:$r, GPR:$r, 3), (TH_ADDSL GPR:$r, GPR:$r, 3), 3)>;
+          (TH_ADDSL (TH_ADDSL GPR:$r, GPR:$r, 3), (TH_ADDSL GPR:$r, GPR:$r, 3), 3)>;
 
 def : Pat<(mul_const_oneuse GPR:$r, (XLenVT 200)),
-	  (SLLI (TH_ADDSL (TH_ADDSL GPR:$r, GPR:$r, 2),
-		       (TH_ADDSL GPR:$r, GPR:$r, 2), 2), 3)>;
+          (SLLI (TH_ADDSL (TH_ADDSL GPR:$r, GPR:$r, 2),
+                          (TH_ADDSL GPR:$r, GPR:$r, 2), 2), 3)>;
 } // Predicates = [HasVendorXTHeadBa]
 
 let Predicates = [HasVendorXTHeadBb] in {
@@ -373,9 +649,9 @@ def : Pat<(binop_allwusers<sub> GPR:$rd, (mul
 
 let Predicates = [HasVendorXTHeadMac, IsRV32] in {
 def : Pat<(add GPR:$rd, (mul (sexti16 GPR:$rs1), (sexti16 GPR:$rs2))),
-	  (TH_MULAH GPR:$rd, GPR:$rs1, GPR:$rs2)>;
+         (TH_MULAH GPR:$rd, GPR:$rs1, GPR:$rs2)>;
 def : Pat<(sub GPR:$rd, (mul (sexti16 GPR:$rs1), (sexti16 GPR:$rs2))),
-	  (TH_MULSH GPR:$rd, GPR:$rs1, GPR:$rs2)>;
+          (TH_MULSH GPR:$rd, GPR:$rs1, GPR:$rs2)>;
 } // Predicates = [HasVendorXTHeadMac, IsRV32]
 
 defm PseudoTHVdotVMAQA      : VPseudoVMAQA_VV_VX;
@@ -388,4 +664,194 @@ defm : VPatTernaryVMAQA_VV_VX<"int_riscv_th_vmaqa",  "PseudoTHVdotVMAQA",  AllQu
 defm : VPatTernaryVMAQA_VV_VX<"int_riscv_th_vmaqau", "PseudoTHVdotVMAQAU", AllQuadWidenableInt8NoVLMulVectors>;
 defm : VPatTernaryVMAQA_VV_VX<"int_riscv_th_vmaqasu","PseudoTHVdotVMAQASU",AllQuadWidenableInt8NoVLMulVectors>;
 defm : VPatTernaryVMAQA_VX<"int_riscv_th_vmaqaus",   "PseudoTHVdotVMAQAUS",AllQuadWidenableInt8NoVLMulVectors>;
+}
+
+def uimm2_3_XFORM : SDNodeXForm<imm, [{
+  return CurDAG->getTargetConstant((N->getZExtValue() >> 3) & 0x3,
+                                   SDLoc(N), Subtarget->getXLenVT());
+}]>;
+
+def uimm2_3 : Operand<XLenVT>, ImmLeaf<XLenVT, [{
+  return isShiftedUInt<2, 3>(Imm);
+}], uimm2_3_XFORM>;
+
+def uimm2_4_XFORM : SDNodeXForm<imm, [{
+  return CurDAG->getTargetConstant((N->getZExtValue() >> 4) & 0x3,
+                                   SDLoc(N), Subtarget->getXLenVT());
+}]>;
+
+def uimm2_4 : Operand<XLenVT>, ImmLeaf<XLenVT, [{
+  return isShiftedUInt<2, 4>(Imm);
+}], uimm2_4_XFORM>;
+
+let Predicates = [HasVendorXTHeadMemPair, IsRV64] in {
+def : Pat<(th_lwud i64:$rs1, uimm2_3:$uimm2_3), (TH_LWUD i64:$rs1, uimm2_3:$uimm2_3, 3)>;
+def : Pat<(th_ldd i64:$rs1, uimm2_4:$uimm2_4), (TH_LDD i64:$rs1, uimm2_4:$uimm2_4, 4)>;
+
+def : Pat<(th_sdd i64:$rd1, i64:$rd2, i64:$rs1, uimm2_4:$uimm2_4),
+          (TH_SDD i64:$rd1, i64:$rd2, i64:$rs1, uimm2_4:$uimm2_4, 4)>;
+}
+
+let Predicates = [HasVendorXTHeadMemPair] in {
+  def : Pat<(th_lwd GPR:$rs1, uimm2_3:$uimm2_3), (TH_LWD GPR:$rs1, uimm2_3:$uimm2_3, 3)>;
+  def : Pat<(th_swd GPR:$rd1, GPR:$rd2, GPR:$rs1, uimm2_3:$uimm2_3),
+            (TH_SWD GPR:$rd1, GPR:$rd2, GPR:$rs1, uimm2_3:$uimm2_3, 3)>;
+}
+
+let Predicates = [HasVendorXTHeadCmo], DecoderNamespace = "THeadCmo" in {
+def TH_DCACHE_CSW    : THCacheInst_r<0b00001, "th.dcache.csw">;
+def TH_DCACHE_ISW    : THCacheInst_r<0b00010, "th.dcache.isw">;
+def TH_DCACHE_CISW   : THCacheInst_r<0b00011, "th.dcache.cisw">;
+def TH_DCACHE_CVAL1  : THCacheInst_r<0b00100, "th.dcache.cval1">;
+def TH_DCACHE_CVA    : THCacheInst_r<0b00101, "th.dcache.cva">;
+def TH_DCACHE_IVA    : THCacheInst_r<0b00110, "th.dcache.iva">;
+def TH_DCACHE_CIVA   : THCacheInst_r<0b00111, "th.dcache.civa">;
+def TH_DCACHE_CPAL1  : THCacheInst_r<0b01000, "th.dcache.cpal1">;
+def TH_DCACHE_CPA    : THCacheInst_r<0b01001, "th.dcache.cpa">;
+def TH_DCACHE_IPA    : THCacheInst_r<0b01010, "th.dcache.ipa">;
+def TH_DCACHE_CIPA   : THCacheInst_r<0b01011, "th.dcache.cipa">;
+def TH_ICACHE_IVA    : THCacheInst_r<0b10000, "th.icache.iva">;
+def TH_ICACHE_IPA    : THCacheInst_r<0b11000, "th.icache.ipa">;
+
+def TH_DCACHE_CALL   : THCacheInst_void<0b00001, "th.dcache.call">;
+def TH_DCACHE_IALL   : THCacheInst_void<0b00010, "th.dcache.iall">;
+def TH_DCACHE_CIALL  : THCacheInst_void<0b00011, "th.dcache.ciall">;
+def TH_ICACHE_IALL   : THCacheInst_void<0b10000, "th.icache.iall">;
+def TH_ICACHE_IALLS  : THCacheInst_void<0b10001, "th.icache.ialls">;
+def TH_L2CACHE_CALL  : THCacheInst_void<0b10101, "th.l2cache.call">;
+def TH_L2CACHE_IALL  : THCacheInst_void<0b10110, "th.l2cache.iall">;
+def TH_L2CACHE_CIALL : THCacheInst_void<0b10111, "th.l2cache.ciall">;
+}
+
+let Predicates = [HasVendorXTHeadSync], DecoderNamespace = "THeadSync" in {
+def TH_SFENCE_VMAS : THCacheInst_rr<0b0000010, "th.sfence.vmas">;
+def TH_SYNC        : THCacheInst_void<0b11000, "th.sync">;
+def TH_SYNC_S      : THCacheInst_void<0b11001, "th.sync.s">;
+def TH_SYNC_I      : THCacheInst_void<0b11010, "th.sync.i">;
+def TH_SYNC_IS     : THCacheInst_void<0b11011, "th.sync.is">;
+}
+
+def AddrRegRegScale : ComplexPattern<iPTR, 3, "SelectAddrRegRegScale<3>">;
+def AddrRegZextRegScale
+    : ComplexPattern<iPTR, 3, "SelectAddrRegZextRegScale<3, 32>",
+                     [], [], 10>;
+
+multiclass LdIdxPat<PatFrag LoadOp, RVInst Inst, ValueType vt = XLenVT> {
+def : Pat<(vt (LoadOp (AddrRegRegScale GPR:$rs1, GPR:$rs2, uimm2:$uimm2))),
+          (Inst GPR:$rs1, GPR:$rs2, uimm2:$uimm2)>;
+}
+
+multiclass LdZextIdxPat<PatFrag LoadOp, RVInst Inst, ValueType vt = XLenVT> {
+def : Pat<(vt (LoadOp (AddrRegZextRegScale GPR:$rs1, GPR:$rs2, uimm2:$uimm2))),
+          (Inst GPR:$rs1, GPR:$rs2, uimm2:$uimm2)>;
+}
+
+multiclass StIdxPat<PatFrag StoreOp, RVInst Inst, RegisterClass StTy,
+                    ValueType vt = XLenVT> {
+def : Pat<(StoreOp (vt StTy:$rd),
+            (AddrRegRegScale GPR:$rs1, GPR:$rs2, uimm2:$uimm2)),
+          (Inst StTy:$rd, GPR:$rs1, GPR:$rs2, uimm2:$uimm2)>;
+}
+
+multiclass StZextIdxPat<PatFrag StoreOp, RVInst Inst, RegisterClass StTy,
+                        ValueType vt = XLenVT> {
+def : Pat<(StoreOp (vt StTy:$rd),
+            (AddrRegZextRegScale GPR:$rs1, GPR:$rs2, uimm2:$uimm2)),
+          (Inst StTy:$rd, GPR:$rs1, GPR:$rs2, uimm2:$uimm2)>;
+}
+
+let Predicates = [HasVendorXTHeadMemIdx] in {
+defm : LdIdxPat<extloadi8, TH_LRB>;
+defm : LdIdxPat<sextloadi8, TH_LRB>;
+defm : LdIdxPat<zextloadi8, TH_LRBU>;
+
+defm : LdIdxPat<extloadi16, TH_LRH>;
+defm : LdIdxPat<sextloadi16, TH_LRH>;
+defm : LdIdxPat<zextloadi16, TH_LRHU>;
+
+defm : StIdxPat<truncstorei8, TH_SRB, GPR>;
+defm : StIdxPat<truncstorei16, TH_SRH, GPR>;
+}
+
+let Predicates = [HasVendorXTHeadMemIdx, IsRV32] in {
+defm : LdIdxPat<load, TH_LRW>;
+defm : StIdxPat<store, TH_SRW, GPR>;
+}
+
+let Predicates = [HasVendorXTHeadMemIdx, IsRV64] in {
+defm : LdZextIdxPat<extloadi8, TH_LURB>;
+defm : LdZextIdxPat<sextloadi8, TH_LURB>;
+defm : LdZextIdxPat<zextloadi8, TH_LURBU>;
+
+defm : LdZextIdxPat<extloadi16, TH_LURH>;
+defm : LdZextIdxPat<sextloadi16, TH_LURH>;
+defm : LdZextIdxPat<zextloadi16, TH_LURHU>;
+
+defm : LdIdxPat<extloadi32, TH_LRW>;
+defm : LdIdxPat<sextloadi32, TH_LRW>;
+defm : LdIdxPat<zextloadi32, TH_LRWU>;
+
+defm : LdZextIdxPat<extloadi32, TH_LURW>;
+defm : LdZextIdxPat<sextloadi32, TH_LURW>;
+defm : LdZextIdxPat<zextloadi32, TH_LURWU>;
+
+defm : LdIdxPat<load, TH_LRD>;
+defm : LdZextIdxPat<load, TH_LURD>;
+
+defm : StZextIdxPat<truncstorei8, TH_SURB, GPR>;
+defm : StZextIdxPat<truncstorei16, TH_SURH, GPR>;
+defm : StIdxPat<truncstorei32, TH_SRW, GPR>;
+defm : StZextIdxPat<truncstorei32, TH_SURW, GPR>;
+defm : StIdxPat<store, TH_SRD, GPR>;
+defm : StZextIdxPat<store, TH_SURD, GPR>;
+}
+
+let Predicates = [HasVendorXTHeadFMemIdx, HasStdExtF, IsRV32] in {
+defm : LdIdxPat<load, TH_FLRW, f32>;
+defm : StIdxPat<store, TH_FSRW, FPR32, f32>;
+}
+
+let Predicates = [HasVendorXTHeadFMemIdx, HasStdExtD, IsRV32] in {
+defm : LdIdxPat<load, TH_FLRD, f64>;
+defm : StIdxPat<store, TH_FSRD, FPR64, f64>;
+}
+
+let Predicates = [HasVendorXTHeadFMemIdx, HasStdExtF, IsRV64] in {
+defm : LdIdxPat<load, TH_FLRW, f32>;
+defm : LdZextIdxPat<load, TH_FLURW, f32>;
+defm : StIdxPat<store, TH_FSRW, FPR32, f32>;
+defm : StZextIdxPat<store, TH_FSURW, FPR32, f32>;
+}
+
+let Predicates = [HasVendorXTHeadFMemIdx, HasStdExtD, IsRV64] in {
+defm : LdIdxPat<load, TH_FLRD, f64>;
+defm : LdZextIdxPat<load, TH_FLURD, f64>;
+defm : StIdxPat<store, TH_FSRD, FPR64, f64>;
+defm : StZextIdxPat<store, TH_FSURD, FPR64, f64>;
+}
+
+def simm5shl2 : ComplexPattern<XLenVT, 2, "selectSimm5Shl2">;
+
+multiclass StoreUpdatePat<PatFrag st, Instruction Inst, ValueType vt = XLenVT> {
+def : Pat<(st (vt GPR:$rd), GPR:$rs1, (simm5shl2 simm5:$simm5, uimm2:$uimm2)),
+          (Inst GPR:$rd, GPR:$rs1, simm5:$simm5, uimm2:$uimm2)>;
+}
+
+let Predicates = [HasVendorXTHeadMemIdx] in {
+defm : StoreUpdatePat<post_truncsti8, TH_SBIA>;
+defm : StoreUpdatePat<pre_truncsti8, TH_SBIB>;
+defm : StoreUpdatePat<post_truncsti16, TH_SHIA>;
+defm : StoreUpdatePat<pre_truncsti16, TH_SHIB>;
+}
+
+let Predicates = [HasVendorXTHeadMemIdx, IsRV32] in {
+defm : StoreUpdatePat<post_store, TH_SWIA>;
+defm : StoreUpdatePat<pre_store, TH_SWIB>;
+}
+
+let Predicates = [HasVendorXTHeadMemIdx, IsRV64] in {
+defm : StoreUpdatePat<post_truncsti32, TH_SWIA>;
+defm : StoreUpdatePat<pre_truncsti32, TH_SWIB>;
+defm : StoreUpdatePat<post_store, TH_SDIA>;
+defm : StoreUpdatePat<pre_store, TH_SDIB>;
 }

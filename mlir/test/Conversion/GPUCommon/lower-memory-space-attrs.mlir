@@ -1,5 +1,5 @@
-// RUN: mlir-opt %s -split-input-file -convert-gpu-to-rocdl | FileCheck %s --check-prefixes=CHECK,ROCDL
-// RUN: mlir-opt %s -split-input-file -convert-gpu-to-nvvm | FileCheck %s --check-prefixes=CHECK,NVVM
+// RUN: mlir-opt %s -split-input-file -convert-gpu-to-rocdl='use-opaque-pointers=1' | FileCheck %s --check-prefixes=CHECK,ROCDL
+// RUN: mlir-opt %s -split-input-file -convert-gpu-to-nvvm='use-opaque-pointers=1' | FileCheck %s --check-prefixes=CHECK,NVVM
 
 gpu.module @kernel {
   gpu.func @private(%arg0: f32) private(%arg1: memref<4xf32, #gpu.address_space<private>>) {
@@ -11,8 +11,8 @@ gpu.module @kernel {
 
 // CHECK-LABEL:  llvm.func @private
 //      CHECK:  llvm.store
-// ROCDL-SAME:   : !llvm.ptr<f32, 5>
-//  NVVM-SAME:   : !llvm.ptr<f32>
+// ROCDL-SAME:   : f32, !llvm.ptr<5>
+//  NVVM-SAME:   : f32, !llvm.ptr
 
 
 // -----
@@ -27,7 +27,7 @@ gpu.module @kernel {
 
 // CHECK-LABEL:  llvm.func @workgroup
 //       CHECK:  llvm.store
-//  CHECK-SAME:   : !llvm.ptr<f32, 3>
+//  CHECK-SAME:   : f32, !llvm.ptr<3>
 
 // -----
 
@@ -42,7 +42,7 @@ gpu.module @kernel {
 
 // CHECK-LABEL:  llvm.func @nested_memref
 //       CHECK:  llvm.load
-//  CHECK-SAME:   : !llvm.ptr<{{.*}}, 1>
+//  CHECK-SAME:   : !llvm.ptr<1>
 //       CHECK: [[value:%.+]] = llvm.load
-//  CHECK-SAME:   : !llvm.ptr<f32, 1>
+//  CHECK-SAME:   : !llvm.ptr<1> -> f32
 //       CHECK: llvm.return [[value]]

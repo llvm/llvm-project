@@ -7,6 +7,7 @@ add_llvm_component_library(LLVMWebAssemblyUtils
   Core
   MC
   Support
+  WebAssemblyDesc
 
   ADD_TO_COMPONENT
   WebAssembly

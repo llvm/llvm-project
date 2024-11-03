@@ -197,6 +197,36 @@ TEST_F(HeadersTest, OnlyCollectInclusionsInMain) {
                                    Distance(getID(BazHeader, Includes), 1u)));
 }
 
+TEST_F(HeadersTest, CacheBySpellingIsBuiltForMainInclusions) {
+  std::string FooHeader = testPath("foo.h");
+  FS.Files[FooHeader] = R"cpp(
+  void foo();
+)cpp";
+  std::string BarHeader = testPath("bar.h");
+  FS.Files[BarHeader] = R"cpp(
+  void bar();
+)cpp";
+  std::string BazHeader = testPath("baz.h");
+  FS.Files[BazHeader] = R"cpp(
+  void baz();
+)cpp";
+  FS.Files[MainFile] = R"cpp(
+#include "foo.h"
+#include "bar.h"
+#include "baz.h"
+)cpp";
+  auto Includes = collectIncludes();
+  EXPECT_THAT(Includes.MainFileIncludes,
+              UnorderedElementsAre(written("\"foo.h\""), written("\"bar.h\""),
+                                   written("\"baz.h\"")));
+  EXPECT_THAT(Includes.mainFileIncludesWithSpelling("\"foo.h\""),
+              UnorderedElementsAre(&Includes.MainFileIncludes[0]));
+  EXPECT_THAT(Includes.mainFileIncludesWithSpelling("\"bar.h\""),
+              UnorderedElementsAre(&Includes.MainFileIncludes[1]));
+  EXPECT_THAT(Includes.mainFileIncludesWithSpelling("\"baz.h\""),
+              UnorderedElementsAre(&Includes.MainFileIncludes[2]));
+}
+
 TEST_F(HeadersTest, PreambleIncludesPresentOnce) {
   // We use TestTU here, to ensure we use the preamble replay logic.
   // We're testing that the logic doesn't crash, and doesn't result in duplicate

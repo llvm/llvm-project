@@ -46,10 +46,9 @@ define i64 @optbranch_64(i64 %Arg) {
 ; RV32-NEXT:    li a3, -1
 ; RV32-NEXT:    beq a2, a3, .LBB1_2
 ; RV32-NEXT:  # %bb.1: # %bb3
-; RV32-NEXT:    addi a2, a0, 1
-; RV32-NEXT:    sltu a0, a2, a0
-; RV32-NEXT:    add a1, a1, a0
-; RV32-NEXT:    mv a0, a2
+; RV32-NEXT:    addi a0, a0, 1
+; RV32-NEXT:    seqz a2, a0
+; RV32-NEXT:    add a1, a1, a2
 ; RV32-NEXT:    ret
 ; RV32-NEXT:  .LBB1_2: # %bb2
 ; RV32-NEXT:    li a0, -1

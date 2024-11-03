@@ -13,9 +13,9 @@ define <2 x half> @masked_load_v2f16(ptr %ap, ptr %bp) vscale_range(2,0) #0 {
 ; CHECK-LABEL: masked_load_v2f16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr s1, [x0]
-; CHECK-NEXT:    movi d0, #0000000000000000
-; CHECK-NEXT:    ldr s2, [x1]
 ; CHECK-NEXT:    ptrue p0.h, vl4
+; CHECK-NEXT:    ldr s2, [x1]
+; CHECK-NEXT:    movi v0.2d, #0000000000000000
 ; CHECK-NEXT:    fcmeq v1.4h, v1.4h, v2.4h
 ; CHECK-NEXT:    sshll v1.4s, v1.4h, #0
 ; CHECK-NEXT:    fmov w8, s1

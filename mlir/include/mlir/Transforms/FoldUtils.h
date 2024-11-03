@@ -17,6 +17,7 @@
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/DialectInterface.h"
+#include "mlir/IR/PatternMatch.h"
 #include "mlir/Interfaces/FoldInterfaces.h"
 
 namespace mlir {
@@ -31,19 +32,14 @@ class Value;
 /// generated along the way.
 class OperationFolder {
 public:
-  OperationFolder(MLIRContext *ctx) : interfaces(ctx) {}
+  OperationFolder(MLIRContext *ctx, RewriterBase::Listener *listener = nullptr)
+      : interfaces(ctx), listener(listener) {}
 
   /// Tries to perform folding on the given `op`, including unifying
   /// deduplicated constants. If successful, replaces `op`'s uses with
-  /// folded results, and returns success. `preReplaceAction` is invoked on `op`
-  /// before it is replaced. 'processGeneratedConstants' is invoked for any new
-  /// operations generated when folding. If the op was completely folded it is
+  /// folded results, and returns success. If the op was completely folded it is
   /// erased. If it is just updated in place, `inPlaceUpdate` is set to true.
-  LogicalResult
-  tryToFold(Operation *op,
-            function_ref<void(Operation *)> processGeneratedConstants = nullptr,
-            function_ref<void(Operation *)> preReplaceAction = nullptr,
-            bool *inPlaceUpdate = nullptr);
+  LogicalResult tryToFold(Operation *op, bool *inPlaceUpdate = nullptr);
 
   /// Tries to fold a pre-existing constant operation. `constValue` represents
   /// the value of the constant, and can be optionally passed if the value is
@@ -122,23 +118,23 @@ private:
   using ConstantMap =
       DenseMap<std::tuple<Dialect *, Attribute, Type>, Operation *>;
 
+  /// Erase the given operation and notify the listener.
+  void eraseOp(Operation *op);
+
   /// Returns true if the given operation is an already folded constant that is
   /// owned by this folder.
   bool isFolderOwnedConstant(Operation *op) const;
 
   /// Tries to perform folding on the given `op`. If successful, populates
   /// `results` with the results of the folding.
-  LogicalResult tryToFold(
-      OpBuilder &builder, Operation *op, SmallVectorImpl<Value> &results,
-      function_ref<void(Operation *)> processGeneratedConstants = nullptr);
+  LogicalResult tryToFold(OpBuilder &builder, Operation *op,
+                          SmallVectorImpl<Value> &results);
 
   /// Try to process a set of fold results, generating constants as necessary.
   /// Populates `results` on success, otherwise leaves it unchanged.
-  LogicalResult
-  processFoldResults(OpBuilder &builder, Operation *op,
-                     SmallVectorImpl<Value> &results,
-                     ArrayRef<OpFoldResult> foldResults,
-                     function_ref<void(Operation *)> processGeneratedConstants);
+  LogicalResult processFoldResults(OpBuilder &builder, Operation *op,
+                                   SmallVectorImpl<Value> &results,
+                                   ArrayRef<OpFoldResult> foldResults);
 
   /// Try to get or create a new constant entry. On success this returns the
   /// constant operation, nullptr otherwise.
@@ -156,6 +152,9 @@ private:
 
   /// A collection of dialect folder interfaces.
   DialectInterfaceCollection<DialectFoldInterface> interfaces;
+
+  /// An optional listener that is notified of all IR changes.
+  RewriterBase::Listener *listener = nullptr;
 };
 
 } // namespace mlir

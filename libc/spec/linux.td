@@ -94,6 +94,19 @@ def Linux : StandardSpec<"Linux"> {
       ]
   >;
 
+  HeaderSpec SysSocket = HeaderSpec<
+      "sys/socket.h",
+      [
+        Macro<"AF_UNSPEC">,
+        Macro<"AF_LOCAL">,
+        Macro<"AF_INET">,
+        Macro<"AF_INET6">,
+      ],
+      [], // Types
+      [], // Enumerations
+      []  // Functions
+  >;
+
   HeaderSpec SysTime = HeaderSpec<
       "sys/time.h",
       [
@@ -155,6 +168,7 @@ def Linux : StandardSpec<"Linux"> {
     SysMMan,
     SysPrctl,
     SysRandom,
+    SysSocket,
     SysTime,
     Signal,
   ];

@@ -12,6 +12,7 @@ set(LLVM_COMMON_CMAKE_UTILS "${CMAKE_CURRENT_SOURCE_DIR}/../cmake")
 list(INSERT CMAKE_MODULE_PATH 0
   "${CMAKE_CURRENT_SOURCE_DIR}/cmake"
   "${CMAKE_CURRENT_SOURCE_DIR}/cmake/Modules"
+  "${CMAKE_CURRENT_SOURCE_DIR}/../runtimes/cmake/Modules"
   "${LLVM_COMMON_CMAKE_UTILS}"
   "${LLVM_COMMON_CMAKE_UTILS}/Modules"
   )
@@ -245,11 +246,11 @@ include(HandleLibcxxabiFlags)
 
 # Configure target flags
 if(ZOS)
-  add_target_flags_if_supported("-fzos-le-char-mode=ebcdic")
+  add_flags_if_supported("-fzos-le-char-mode=ebcdic")
 endif()
 
 if (${CMAKE_SYSTEM_NAME} MATCHES "AIX")
-  add_target_flags_if_supported("-mdefault-visibility-export-mapping=explicit")
+  add_flags_if_supported("-mdefault-visibility-export-mapping=explicit")
   set(CMAKE_AIX_EXPORT_ALL_SYMBOLS OFF)
 endif()
 add_compile_flags("${LIBCXXABI_ADDITIONAL_COMPILE_FLAGS}")

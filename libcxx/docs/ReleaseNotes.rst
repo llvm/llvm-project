@@ -42,6 +42,8 @@ Implemented Papers
 
 Improvements and New Features
 -----------------------------
+- ``std::equal`` and ``std::ranges::equal`` are now forwarding to ``std::memcmp`` for integral types and pointers,
+  which can lead up to 40x performance improvements.
 
 - ``std::string_view`` now provides iterators that check for out-of-bounds accesses when the safe
   libc++ mode is enabled.
@@ -57,7 +59,7 @@ Deprecations and Removals
   includes are removed based on the language version used. Incidental transitive
   inclusions of the following headers have been removed:
 
-  - C++2b: ``bit``, ``type_traits``
+  - C++2b: ``bit``, ``cstring``, ``type_traits``
 
 Upcoming Deprecations and Removals
 ----------------------------------

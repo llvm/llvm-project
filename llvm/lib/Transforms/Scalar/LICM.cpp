@@ -293,9 +293,9 @@ void LICMPass::printPipeline(
   static_cast<PassInfoMixin<LICMPass> *>(this)->printPipeline(
       OS, MapClassName2PassName);
 
-  OS << "<";
+  OS << '<';
   OS << (Opts.AllowSpeculation ? "" : "no-") << "allowspeculation";
-  OS << ">";
+  OS << '>';
 }
 
 PreservedAnalyses LNICMPass::run(LoopNest &LN, LoopAnalysisManager &AM,
@@ -334,9 +334,9 @@ void LNICMPass::printPipeline(
   static_cast<PassInfoMixin<LNICMPass> *>(this)->printPipeline(
       OS, MapClassName2PassName);
 
-  OS << "<";
+  OS << '<';
   OS << (Opts.AllowSpeculation ? "" : "no-") << "allowspeculation";
-  OS << ">";
+  OS << '>';
 }
 
 char LegacyLICMPass::ID = 0;

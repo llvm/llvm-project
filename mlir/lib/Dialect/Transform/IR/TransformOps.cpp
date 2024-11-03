@@ -448,6 +448,27 @@ transform::GetConsumersOfResult::apply(transform::TransformResults &results,
 }
 
 //===----------------------------------------------------------------------===//
+// GetDefiningOp
+//===----------------------------------------------------------------------===//
+
+DiagnosedSilenceableFailure
+transform::GetDefiningOp::apply(transform::TransformResults &results,
+                              transform::TransformState &state) {
+  SmallVector<Operation *> definingOps;
+  for (Value v : state.getPayloadValues(getTarget())) {
+    if (v.isa<BlockArgument>()) {
+      DiagnosedSilenceableFailure diag =
+          emitSilenceableError() << "cannot get defining op of block argument";
+      diag.attachNote(v.getLoc()) << "target value";
+      return diag;
+    }
+    definingOps.push_back(v.getDefiningOp());
+  }
+  results.set(getResult().cast<OpResult>(), definingOps);
+  return DiagnosedSilenceableFailure::success();
+}
+
+//===----------------------------------------------------------------------===//
 // GetProducerOfOperand
 //===----------------------------------------------------------------------===//
 

@@ -4225,10 +4225,9 @@ void CGDebugInfo::EmitFunctionDecl(GlobalDecl GD, SourceLocation Loc,
 
   llvm::DINodeArray Annotations = CollectBTFDeclTagAnnotations(D);
   llvm::DISubroutineType *STy = getOrCreateFunctionType(D, FnType, Unit);
-  llvm::DISubprogram *SP =
-      DBuilder.createFunction(FDContext, Name, LinkageName, Unit, LineNo, STy,
-                              ScopeLine, Flags, SPFlags, TParamsArray.get(),
-                              getFunctionDeclaration(D), nullptr, Annotations);
+  llvm::DISubprogram *SP = DBuilder.createFunction(
+      FDContext, Name, LinkageName, Unit, LineNo, STy, ScopeLine, Flags,
+      SPFlags, TParamsArray.get(), nullptr, nullptr, Annotations);
 
   // Preserve btf_decl_tag attributes for parameters of extern functions
   // for BPF target. The parameters created in this loop are attached as

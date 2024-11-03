@@ -161,11 +161,13 @@ struct PackOpTiling
       }
 
       // Limit the size of the input operand for incomplete tiles.
-      OpFoldResult dimSize = srcDimValues[dim];
-      auto avDimSize = AV(dim0).bind(dimSize);
-      auto avInputIdx = AV(dim1).bind(inputIndices.back());
-      inputSizes.back() =
-          ab.min({inputSizes.back(), ab.sub(avDimSize, avInputIdx)});
+      if (packOp.getPaddingValue()) {
+        OpFoldResult dimSize = srcDimValues[dim];
+        auto avDimSize = AV(dim0).bind(dimSize);
+        auto avInputIdx = AV(dim1).bind(inputIndices.back());
+        inputSizes.back() =
+            ab.min({inputSizes.back(), ab.sub(avDimSize, avInputIdx)});
+      }
     }
 
     auto oneAttr = b.getI64IntegerAttr(1);

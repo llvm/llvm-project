@@ -113,6 +113,9 @@ def warn_drv_unsupported_option_for_target : Warning<
 def warn_drv_unsupported_option_for_flang : Warning<
   "the argument '%0' is not supported for option '%1'. Mapping to '%1%2'">,
   InGroup<OptionIgnored>;
+def warn_drv_unsupported_diag_option_for_flang : Warning<
+  "The warning option '-%0' is not supported">,
+  InGroup<OptionIgnored>;
 
 def err_drv_invalid_thread_model_for_target : Error<
   "invalid thread model '%0' in '%1' for this target">;
@@ -633,11 +636,6 @@ def warn_drv_libstdcxx_not_found : Warning<
   "include path for libstdc++ headers not found; pass '-stdlib=libc++' on the "
   "command line to use the libc++ standard library instead">,
   InGroup<DiagGroup<"stdlibcxx-not-found">>;
-
-def warn_deperecated_fcoroutines_ts_flag : Warning<
-  "the '-fcoroutines-ts' flag is deprecated and it will be removed in Clang 17; "
-  "use '-std=c++20' or higher to use standard C++ coroutines instead">,
-  InGroup<DeprecatedExperimentalCoroutine>;
 
 def err_drv_cannot_mix_options : Error<"cannot specify '%1' along with '%0'">;
 

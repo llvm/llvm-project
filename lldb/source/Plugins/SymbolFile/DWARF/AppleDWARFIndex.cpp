@@ -80,7 +80,6 @@ void AppleDWARFIndex::GetGlobalVariables(
   if (!m_apple_names_up)
     return;
 
-  lldbassert(!cu.GetSymbolFileDWARF().GetDwoNum());
   const DWARFUnit &non_skeleton_cu = cu.GetNonSkeletonUnit();
   DWARFMappedHash::DIEInfoArray hash_data;
   m_apple_names_up->AppendAllDIEsInRange(non_skeleton_cu.GetOffset(),

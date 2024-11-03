@@ -13,6 +13,7 @@
 #ifndef LLVM_CLANG_LIB_BASIC_TARGETS_SPIR_H
 #define LLVM_CLANG_LIB_BASIC_TARGETS_SPIR_H
 
+#include "Targets.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Basic/TargetOptions.h"
 #include "llvm/Support/Compiler.h"
@@ -79,8 +80,10 @@ static const unsigned SPIRDefIsGenMap[] = {
 
 // Base class for SPIR and SPIR-V target info.
 class LLVM_LIBRARY_VISIBILITY BaseSPIRTargetInfo : public TargetInfo {
+  std::unique_ptr<TargetInfo> HostTarget;
+
 protected:
-  BaseSPIRTargetInfo(const llvm::Triple &Triple, const TargetOptions &)
+  BaseSPIRTargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts)
       : TargetInfo(Triple) {
     assert((Triple.isSPIR() || Triple.isSPIRV()) &&
            "Invalid architecture for SPIR or SPIR-V.");
@@ -98,6 +101,52 @@ protected:
     // Define available target features
     // These must be defined in sorted order!
     NoAsmVariants = true;
+
+    llvm::Triple HostTriple(Opts.HostTriple);
+    if (!HostTriple.isSPIR() && !HostTriple.isSPIRV() &&
+        HostTriple.getArch() != llvm::Triple::UnknownArch) {
+      HostTarget.reset(AllocateTarget(llvm::Triple(Opts.HostTriple), Opts));
+
+      // Copy properties from host target.
+      BoolWidth = HostTarget->getBoolWidth();
+      BoolAlign = HostTarget->getBoolAlign();
+      IntWidth = HostTarget->getIntWidth();
+      IntAlign = HostTarget->getIntAlign();
+      HalfWidth = HostTarget->getHalfWidth();
+      HalfAlign = HostTarget->getHalfAlign();
+      FloatWidth = HostTarget->getFloatWidth();
+      FloatAlign = HostTarget->getFloatAlign();
+      DoubleWidth = HostTarget->getDoubleWidth();
+      DoubleAlign = HostTarget->getDoubleAlign();
+      LongWidth = HostTarget->getLongWidth();
+      LongAlign = HostTarget->getLongAlign();
+      LongLongWidth = HostTarget->getLongLongWidth();
+      LongLongAlign = HostTarget->getLongLongAlign();
+      MinGlobalAlign = HostTarget->getMinGlobalAlign(/* TypeSize = */ 0);
+      NewAlign = HostTarget->getNewAlign();
+      DefaultAlignForAttributeAligned =
+          HostTarget->getDefaultAlignForAttributeAligned();
+      IntMaxType = HostTarget->getIntMaxType();
+      WCharType = HostTarget->getWCharType();
+      WIntType = HostTarget->getWIntType();
+      Char16Type = HostTarget->getChar16Type();
+      Char32Type = HostTarget->getChar32Type();
+      Int64Type = HostTarget->getInt64Type();
+      SigAtomicType = HostTarget->getSigAtomicType();
+      ProcessIDType = HostTarget->getProcessIDType();
+
+      UseBitFieldTypeAlignment = HostTarget->useBitFieldTypeAlignment();
+      UseZeroLengthBitfieldAlignment =
+          HostTarget->useZeroLengthBitfieldAlignment();
+      UseExplicitBitFieldAlignment = HostTarget->useExplicitBitFieldAlignment();
+      ZeroLengthBitfieldBoundary = HostTarget->getZeroLengthBitfieldBoundary();
+
+      // This is a bit of a lie, but it controls __GCC_ATOMIC_XXX_LOCK_FREE, and
+      // we need those macros to be identical on host and device, because (among
+      // other things) they affect which standard library classes are defined,
+      // and we need all classes to be defined on both the host and device.
+      MaxAtomicInlineWidth = HostTarget->getMaxAtomicInlineWidth();
+    }
   }
 
 public:

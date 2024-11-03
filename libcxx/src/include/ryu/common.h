@@ -43,7 +43,8 @@
 // clang-format off
 
 #include <__assert>
-#include "__config"
+#include <__config>
+#include <cstring>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 

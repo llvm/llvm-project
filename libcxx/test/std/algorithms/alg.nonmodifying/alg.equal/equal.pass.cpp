@@ -20,68 +20,119 @@
 
 #include <algorithm>
 #include <cassert>
+#include <functional>
 
-#include "test_macros.h"
 #include "test_iterators.h"
+#include "test_macros.h"
+#include "type_algorithms.h"
 
-template <class Iter1, class Iter2 = Iter1>
-void test_equal() {
-  int a[]          = {0, 1, 2, 3, 4, 5};
-  const unsigned s = sizeof(a) / sizeof(a[0]);
-  int b[s]         = {0, 1, 2, 5, 4, 5};
+template <class UnderlyingType, class Iter1>
+struct Test {
+  template <class Iter2>
+  TEST_CONSTEXPR_CXX20 void operator()() {
+    UnderlyingType a[]  = {0, 1, 2, 3, 4, 5};
+    const unsigned s    = sizeof(a) / sizeof(a[0]);
+    UnderlyingType b[s] = {0, 1, 2, 5, 4, 5};
 
-  assert(std::equal(Iter1(a), Iter1(a + s), Iter2(a)));
-  assert(std::equal(Iter2(a), Iter2(a + s), Iter1(a)));
-  assert(!std::equal(Iter1(a), Iter1(a + s), Iter2(b)));
+    assert(std::equal(Iter1(a), Iter1(a + s), Iter2(a)));
+    assert(!std::equal(Iter1(a), Iter1(a + s), Iter2(b)));
 
 #if TEST_STD_VER >= 14
-  assert(std::equal(Iter1(a), Iter1(a + s), Iter2(a), Iter2(a + s)));
-  assert(std::equal(Iter2(a), Iter2(a + s), Iter1(a), Iter1(a + s)));
-  assert(!std::equal(Iter1(a), Iter1(a + s), Iter2(a), Iter2(a + s - 1)));
-  assert(!std::equal(Iter1(a), Iter1(a + s), Iter2(b), Iter2(b + s)));
+    assert(std::equal(Iter1(a), Iter1(a + s), Iter2(a), std::equal_to<>()));
+    assert(!std::equal(Iter1(a), Iter1(a + s), Iter2(b), std::equal_to<>()));
+
+    assert(std::equal(Iter1(a), Iter1(a + s), Iter2(a), Iter2(a + s)));
+    assert(!std::equal(Iter1(a), Iter1(a + s), Iter2(a), Iter2(a + s - 1)));
+    assert(!std::equal(Iter1(a), Iter1(a + s), Iter2(b), Iter2(b + s)));
+
+    assert(std::equal(Iter1(a), Iter1(a + s), Iter2(a), Iter2(a + s), std::equal_to<>()));
+    assert(!std::equal(Iter1(a), Iter1(a + s), Iter2(a), Iter2(a + s - 1), std::equal_to<>()));
+    assert(!std::equal(Iter1(a), Iter1(a + s), Iter2(b), Iter2(b + s), std::equal_to<>()));
 #endif
+  }
+};
+
+struct TestNarrowingEqualTo {
+  template <class UnderlyingType>
+  TEST_CONSTEXPR_CXX20 void operator()() {
+    UnderlyingType a[] = {
+        UnderlyingType(0x1000),
+        UnderlyingType(0x1001),
+        UnderlyingType(0x1002),
+        UnderlyingType(0x1003),
+        UnderlyingType(0x1004)};
+    UnderlyingType b[] = {
+        UnderlyingType(0x1600),
+        UnderlyingType(0x1601),
+        UnderlyingType(0x1602),
+        UnderlyingType(0x1603),
+        UnderlyingType(0x1604)};
+
+    assert(std::equal(a, a + 5, b, std::equal_to<char>()));
+#if TEST_STD_VER >= 14
+    assert(std::equal(a, a + 5, b, b + 5, std::equal_to<char>()));
+#endif
+  }
+};
+
+template <class UnderlyingType, class TypeList>
+struct TestIter2 {
+  template <class Iter1>
+  TEST_CONSTEXPR_CXX20 void operator()() {
+    meta::for_each(TypeList(), Test<UnderlyingType, Iter1>());
+  }
+};
+
+struct AddressCompare {
+  int i = 0;
+  TEST_CONSTEXPR_CXX20 AddressCompare(int) {}
+
+  operator char() { return static_cast<char>(i); }
+
+  friend TEST_CONSTEXPR_CXX20 bool operator==(const AddressCompare& lhs, const AddressCompare& rhs) {
+    return &lhs == &rhs;
+  }
+
+  friend TEST_CONSTEXPR_CXX20 bool operator!=(const AddressCompare& lhs, const AddressCompare& rhs) {
+    return &lhs != &rhs;
+  }
+};
+
+TEST_CONSTEXPR_CXX20 bool test() {
+  meta::for_each(meta::cpp17_input_iterator_list<int*>(), TestIter2<int, meta::cpp17_input_iterator_list<int*> >());
+  meta::for_each(meta::cpp17_input_iterator_list<char*>(), TestIter2<char, meta::cpp17_input_iterator_list<char*> >());
+  meta::for_each(meta::cpp17_input_iterator_list<AddressCompare*>(),
+                 TestIter2<AddressCompare, meta::cpp17_input_iterator_list<AddressCompare*> >());
+
+  meta::for_each(meta::integral_types(), TestNarrowingEqualTo());
+
+  return true;
 }
 
-#if TEST_STD_VER > 17
-TEST_CONSTEXPR bool test_constexpr() {
-    int ia[] = {1, 3, 6, 7};
-    int ib[] = {1, 3};
-    int ic[] = {1, 3, 5, 7};
-    typedef cpp17_input_iterator<int*>         II;
-    typedef bidirectional_iterator<int*> BI;
+struct Base {};
+struct Derived : virtual Base {};
 
-    return !std::equal(std::begin(ia), std::end(ia), std::begin(ic))
-        && !std::equal(std::begin(ia), std::end(ia), std::begin(ic), std::end(ic))
-        &&  std::equal(std::begin(ib), std::end(ib), std::begin(ic))
-        && !std::equal(std::begin(ib), std::end(ib), std::begin(ic), std::end(ic))
-
-        &&  std::equal(II(std::begin(ib)), II(std::end(ib)), II(std::begin(ic)))
-        && !std::equal(BI(std::begin(ib)), BI(std::end(ib)), BI(std::begin(ic)), BI(std::end(ic)))
-        ;
-    }
+int main(int, char**) {
+  test();
+#if TEST_STD_VER >= 20
+  static_assert(test());
 #endif
 
+  meta::for_each(meta::as_pointers<meta::cv_qualified_versions<int> >(),
+                 TestIter2<int, meta::as_pointers<meta::cv_qualified_versions<int> > >());
+  meta::for_each(meta::as_pointers<meta::cv_qualified_versions<char> >(),
+                 TestIter2<char, meta::as_pointers<meta::cv_qualified_versions<char> > >());
 
-int main(int, char**)
-{
-  test_equal<cpp17_input_iterator<const int*> >();
-  test_equal<random_access_iterator<const int*> >();
+  {
+    Derived d;
+    Derived* a[] = {&d, nullptr};
+    Base* b[]    = {&d, nullptr};
 
-  // Test all combinations of cv-qualifiers:
-  test_equal<int*>();
-  test_equal<int*, const int*>();
-  test_equal<int*, volatile int*>();
-  test_equal<int*, const volatile int*>();
-  test_equal<const int*>();
-  test_equal<const int*, volatile int*>();
-  test_equal<const int*, const volatile int*>();
-  test_equal<volatile int*>();
-  test_equal<volatile int*, const volatile int*>();
-  test_equal<const volatile int*>();
-
-#if TEST_STD_VER > 17
-    static_assert(test_constexpr());
+    assert(std::equal(a, a + 2, b));
+#if TEST_STD_VER >= 14
+    assert(std::equal(a, a + 2, b, b + 2));
 #endif
+  }
 
   return 0;
 }

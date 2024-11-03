@@ -482,8 +482,14 @@ llvm::SetVector<Value> AnalysisState::findValueInReverseUseDefChain(
 
   while (!workingSet.empty()) {
     Value value = workingSet.pop_back_val();
-    if (condition(value) || value.isa<BlockArgument>()) {
+    if (condition(value)) {
       result.insert(value);
+      continue;
+    }
+
+    if (value.isa<BlockArgument>()) {
+      if (alwaysIncludeLeaves)
+        result.insert(value);
       continue;
     }
 

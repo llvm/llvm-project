@@ -790,6 +790,7 @@ constexpr chrono::year                                  operator ""y(unsigned lo
 #if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 20
 #  include <bit>
 #  include <concepts>
+#  include <cstring>
 #endif
 
 #endif // _LIBCPP_CHRONO

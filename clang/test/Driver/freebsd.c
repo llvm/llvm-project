@@ -7,18 +7,18 @@
 // CHECK-ARM64: "--eh-frame-hdr" "-dynamic-linker" "{{.*}}ld-elf{{.*}}" "-o" "a.out" "{{.*}}crt1.o" "{{.*}}crti.o" "{{.*}}crtbegin.o" "-L[[SYSROOT]]/usr/lib" "{{.*}}.o" "-lgcc" "--as-needed" "-lgcc_s" "--no-as-needed" "-lc" "-lgcc" "--as-needed" "-lgcc_s" "--no-as-needed" "{{.*}}crtend.o" "{{.*}}crtn.o"
 //
 // RUN: %clang \
-// RUN:   --target=powerpc-pc-freebsd8 %s    \
+// RUN:   --target=powerpc-pc-freebsd %s    \
 // RUN:   --sysroot=%S/Inputs/basic_freebsd_tree -### 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-PPC %s
-// CHECK-PPC: "-cc1" "-triple" "powerpc-pc-freebsd8"
+// CHECK-PPC: "-cc1" "-triple" "powerpc-pc-freebsd"
 // CHECK-PPC: ld{{.*}}" "--sysroot=[[SYSROOT:[^"]+]]"
 // CHECK-PPC: "--eh-frame-hdr" "-dynamic-linker" "{{.*}}ld-elf{{.*}}" "-o" "a.out" "{{.*}}crt1.o" "{{.*}}crti.o" "{{.*}}crtbegin.o" "-L[[SYSROOT]]/usr/lib" "{{.*}}.o" "-lgcc" "--as-needed" "-lgcc_s" "--no-as-needed" "-lc" "-lgcc" "--as-needed" "-lgcc_s" "--no-as-needed" "{{.*}}crtend.o" "{{.*}}crtn.o"
 //
 // RUN: %clang \
-// RUN:   --target=powerpc64-pc-freebsd8 %s                              \
+// RUN:   --target=powerpc64-pc-freebsd %s                              \
 // RUN:   --sysroot=%S/Inputs/basic_freebsd64_tree -### 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-PPC64 %s
-// CHECK-PPC64: "-cc1" "-triple" "powerpc64-pc-freebsd8"
+// CHECK-PPC64: "-cc1" "-triple" "powerpc64-pc-freebsd"
 // CHECK-PPC64: ld{{.*}}" "--sysroot=[[SYSROOT:[^"]+]]"
 // CHECK-PPC64: "--eh-frame-hdr" "-dynamic-linker" "{{.*}}ld-elf{{.*}}" "-o" "a.out" "{{.*}}crt1.o" "{{.*}}crti.o" "{{.*}}crtbegin.o" "-L[[SYSROOT]]/usr/lib" "{{.*}}.o" "-lgcc" "--as-needed" "-lgcc_s" "--no-as-needed" "-lc" "-lgcc" "--as-needed" "-lgcc_s" "--no-as-needed" "{{.*}}crtend.o" "{{.*}}crtn.o"
 
@@ -33,13 +33,13 @@
 //
 // Check that -m32 properly adjusts the toolchain flags.
 //
-// RUN: %clang --target=x86_64-pc-freebsd8 -m32 %s \
+// RUN: %clang --target=x86_64-pc-freebsd -m32 %s \
 // RUN:   --sysroot=%S/Inputs/multiarch_freebsd64_tree -### 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-LIB32 %s
-// CHECK-LIB32: "-cc1" "-triple" "i386-pc-freebsd8"
+// CHECK-LIB32: "-cc1" "-triple" "i386-pc-freebsd"
 // CHECK-LIB32: ld{{.*}}" {{.*}} "-m" "elf_i386_fbsd"
 //
-// RUN: %clang --target=x86_64-pc-freebsd8 -m32 %s 2>&1 \
+// RUN: %clang --target=x86_64-pc-freebsd -m32 %s 2>&1 \
 // RUN:   --sysroot=%S/Inputs/multiarch_freebsd64_tree -print-search-dirs 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-LIB32PATHS %s
 // CHECK-LIB32PATHS: libraries: ={{.*:?}}/usr/lib32
@@ -81,19 +81,14 @@
 // CHECK-RV64I-LD: ld{{.*}}" {{.*}} "-m" "elf64lriscv"
 //
 // Check that the new linker flags are passed to FreeBSD
-// RUN: %clang --target=x86_64-pc-freebsd8 -m32 %s \
-// RUN:   --sysroot=%S/Inputs/multiarch_freebsd64_tree -### 2>&1 \
-// RUN:   | FileCheck --check-prefix=CHECK-LDFLAGS8 %s
-// RUN: %clang --target=x86_64-pc-freebsd9 -m32 %s \
-// RUN:   --sysroot=%S/Inputs/multiarch_freebsd64_tree -### 2>&1 \
-// RUN:   | FileCheck --check-prefix=CHECK-LDFLAGS9 %s
 // RUN: %clang --target=x86_64-pc-freebsd10.0 -m32 %s \
 // RUN:   --sysroot=%S/Inputs/multiarch_freebsd64_tree -### 2>&1 \
-// RUN:   | FileCheck --check-prefix=CHECK-LDFLAGS9 %s
-// CHECK-LDFLAGS8-NOT: --hash-style=both
-// CHECK-LDFLAGS8: --enable-new-dtags
-// CHECK-LDFLAGS9: --hash-style=both
-// CHECK-LDFLAGS9: --enable-new-dtags
+// RUN:   | FileCheck --check-prefix=CHECK-LDFLAGS_HASH %s
+// RUN: %clang --target=x86_64-pc-freebsd -m32 %s \
+// RUN:   --sysroot=%S/Inputs/multiarch_freebsd64_tree -### 2>&1 \
+// RUN:   | FileCheck --check-prefix=CHECK-LDFLAGS_HASH %s
+// CHECK-LDFLAGS_HASH: --hash-style=both
+// CHECK-LDFLAGS_HASH: --enable-new-dtags
 //
 // Check that we do not pass --hash-style=gnu and --hash-style=both to linker
 // and provide correct path to the dynamic linker for MIPS platforms.
@@ -123,27 +118,27 @@
 // CHECK-MIPS64EL: "-dynamic-linker" "{{.*}}/libexec/ld-elf.so.1"
 // CHECK-MIPS64EL-NOT: "--hash-style={{gnu|both}}"
 
-// RUN: %clang --target=x86_64-pc-freebsd8 -static %s \
+// RUN: %clang --target=x86_64-pc-freebsd -static %s \
 // RUN:   --sysroot=%S/Inputs/multiarch_freebsd64_tree -### 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-STATIC %s
 // CHECK-STATIC: ld{{.*}}" "--eh-frame-hdr" "-Bstatic"
 // CHECK-STATIC: crt1.o
 // CHECK-STATIC: crtbeginT.o
 
-// RUN: %clang --target=x86_64-pc-freebsd8 -shared %s \
+// RUN: %clang --target=x86_64-pc-freebsd -shared %s \
 // RUN:   --sysroot=%S/Inputs/multiarch_freebsd64_tree -### 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-SHARED %s
 // CHECK-SHARED: crti.o
 // CHECK-SHARED: crtbeginS.o
 
-// RUN: %clang --target=x86_64-pc-freebsd8 -pie %s \
+// RUN: %clang --target=x86_64-pc-freebsd -pie %s \
 // RUN:   --sysroot=%S/Inputs/multiarch_freebsd64_tree -### 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-PIE %s
 // CHECK-PIE: pie
 // CHECK-PIE: Scrt1.o
 // CHECK-PIE: crtbeginS.o
 
-// RUN: %clang --target=x86_64-pc-freebsd8 %s \
+// RUN: %clang --target=x86_64-pc-freebsd %s \
 // RUN:   --sysroot=%S/Inputs/multiarch_freebsd64_tree -### 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-NORMAL %s
 // CHECK-NORMAL: crt1.o
@@ -169,11 +164,11 @@
 // CHECK-ARM-EABIHF-NOT: as{{.*}}" "-mfpu=softvfp"
 // CHECK-ARM-EABIHF-NOT: as{{.*}}" "-matpcs"
 
-// RUN: %clang --target=sparc-unknown-freebsd8 -### %s -fpic -no-integrated-as 2>&1 \
+// RUN: %clang --target=sparc-unknown-freebsd -### %s -fpic -no-integrated-as 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-SPARC-PIE %s
 // CHECK-SPARC-PIE: as{{.*}}" "-KPIC
 
-// RUN: %clang -mcpu=ultrasparc --target=sparc64-unknown-freebsd8 -### %s -no-integrated-as 2>&1 \
+// RUN: %clang -mcpu=ultrasparc --target=sparc64-unknown-freebsd -### %s -no-integrated-as 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-SPARC-CPU %s
 // CHECK-SPARC-CPU: cc1{{.*}}" "-target-cpu" "ultrasparc"
 // CHECK-SPARC-CPU: as{{.*}}" "-Av9a

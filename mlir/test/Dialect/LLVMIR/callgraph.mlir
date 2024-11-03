@@ -77,7 +77,7 @@ module attributes {"test.name" = "Invoke call"} {
 
   ^bb1:
     %10 = llvm.landingpad cleanup (catch %3 : !llvm.ptr<ptr<i8>>) (catch %6 : !llvm.ptr<i8>) (filter %2 : !llvm.array<1 x i8>) : !llvm.struct<(ptr<i8>, i32)>
-    %11 = llvm.intr.eh.typeid.for %6 : i32
+    %11 = llvm.intr.eh.typeid.for %6 : (!llvm.ptr<i8>) -> i32
     llvm.resume %10 : !llvm.struct<(ptr<i8>, i32)>
 
   ^bb2:

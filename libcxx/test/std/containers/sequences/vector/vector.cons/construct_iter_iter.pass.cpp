@@ -81,6 +81,13 @@ TEST_CONSTEXPR_CXX20 void basic_test_cases() {
       random_access_iterator<const int*>(a),
       random_access_iterator<const int*>(an));
   test<std::vector<int> >(a, an);
+  test<std::vector<int, safe_allocator<int> > >(
+      cpp17_input_iterator<const int*>(a), cpp17_input_iterator<const int*>(an));
+  test<std::vector<int, safe_allocator<int> > >(forward_iterator<const int*>(a), forward_iterator<const int*>(an));
+  test<std::vector<int, safe_allocator<int> > >(
+      bidirectional_iterator<const int*>(a), bidirectional_iterator<const int*>(an));
+  test<std::vector<int, safe_allocator<int> > >(
+      random_access_iterator<const int*>(a), random_access_iterator<const int*>(an));
 #endif
 }
 

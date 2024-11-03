@@ -23,6 +23,7 @@
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/DiagnosticSema.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/JSON.h"
 #include "llvm/Support/ScopedPrinter.h"
 #include "llvm/Support/TargetSelect.h"
 #include "gmock/gmock.h"
@@ -1012,6 +1013,7 @@ TEST(DiagnosticsTest, ToLSP) {
   D.Severity = DiagnosticsEngine::Error;
   D.File = "foo/bar/main.cpp";
   D.AbsFile = std::string(MainFile.file());
+  D.OpaqueData["test"] = "bar";
 
   clangd::Note NoteInMain;
   NoteInMain.Message = "declared somewhere in the main file";
@@ -1050,6 +1052,7 @@ main.cpp:6:7: remark: declared somewhere in the main file
 ../foo/baz/header.h:10:11:
 note: declared somewhere in the header file)";
   MainLSP.tags = {DiagnosticTag::Unnecessary};
+  MainLSP.data = D.OpaqueData;
 
   clangd::Diagnostic NoteInMainLSP;
   NoteInMainLSP.range = NoteInMain.Range;

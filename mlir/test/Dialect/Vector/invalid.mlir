@@ -1604,13 +1604,6 @@ func.func @warp_mismatch_rank(%laneid: index) {
 
 // -----
 
-func.func @vector_mask_empty(%m0: vector<16xi1>) -> i32 {
-  // expected-error@+1 {{'vector.mask' op expects an operation to mask}}
-  vector.mask %m0 { } : vector<16xi1>
-}
-
-// -----
-
 func.func @vector_mask_multiple_ops(%t0: tensor<?xf32>, %t1: tensor<?xf32>, %idx: index, %val: vector<16xf32>, %m0: vector<16xi1>) {
   %ft0 = arith.constant 0.0 : f32
   // expected-error@+1 {{'vector.mask' op expects only one operation to mask}}

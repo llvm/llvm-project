@@ -976,9 +976,9 @@ Instruction *InstCombinerImpl::commonIDivTransforms(BinaryOperator &I) {
                                       ConstantInt::get(Ty, Product));
     }
 
+    APInt Quotient(C2->getBitWidth(), /*val=*/0ULL, IsSigned);
     if ((IsSigned && match(Op0, m_NSWMul(m_Value(X), m_APInt(C1)))) ||
         (!IsSigned && match(Op0, m_NUWMul(m_Value(X), m_APInt(C1))))) {
-      APInt Quotient(C1->getBitWidth(), /*val=*/0ULL, IsSigned);
 
       // (X * C1) / C2 -> X / (C2 / C1) if C2 is a multiple of C1.
       if (isMultiple(*C2, *C1, Quotient, IsSigned)) {
@@ -1003,7 +1003,6 @@ Instruction *InstCombinerImpl::commonIDivTransforms(BinaryOperator &I) {
          C1->ult(C1->getBitWidth() - 1)) ||
         (!IsSigned && match(Op0, m_NUWShl(m_Value(X), m_APInt(C1))) &&
          C1->ult(C1->getBitWidth()))) {
-      APInt Quotient(C1->getBitWidth(), /*val=*/0ULL, IsSigned);
       APInt C1Shifted = APInt::getOneBitSet(
           C1->getBitWidth(), static_cast<unsigned>(C1->getZExtValue()));
 
@@ -1024,6 +1023,23 @@ Instruction *InstCombinerImpl::commonIDivTransforms(BinaryOperator &I) {
         Mul->setHasNoSignedWrap(OBO->hasNoSignedWrap());
         return Mul;
       }
+    }
+
+    // Distribute div over add to eliminate a matching div/mul pair:
+    // ((X * C2) + C1) / C2 --> X + C1/C2
+    // We need a multiple of the divisor for a signed add constant, but
+    // unsigned is fine with any constant pair.
+    if (IsSigned &&
+        match(Op0, m_NSWAdd(m_NSWMul(m_Value(X), m_SpecificInt(*C2)),
+                            m_APInt(C1))) &&
+        isMultiple(*C1, *C2, Quotient, IsSigned)) {
+      return BinaryOperator::CreateNSWAdd(X, ConstantInt::get(Ty, Quotient));
+    }
+    if (!IsSigned &&
+        match(Op0, m_NUWAdd(m_NUWMul(m_Value(X), m_SpecificInt(*C2)),
+                            m_APInt(C1)))) {
+      return BinaryOperator::CreateNUWAdd(X,
+                                          ConstantInt::get(Ty, C1->udiv(*C2)));
     }
 
     if (!C2->isZero()) // avoid X udiv 0
@@ -1785,6 +1801,17 @@ Instruction *InstCombinerImpl::visitURem(BinaryOperator &I) {
   if (match(Op1, m_SExt(m_Value(X))) && X->getType()->isIntOrIntVectorTy(1)) {
     Value *Cmp = Builder.CreateICmpEQ(Op0, ConstantInt::getAllOnesValue(Ty));
     return SelectInst::Create(Cmp, ConstantInt::getNullValue(Ty), Op0);
+  }
+
+  // For "(X + 1) % Op1" and if (X u< Op1) => (X + 1) == Op1 ? 0 : X + 1 .
+  if (match(Op0, m_Add(m_Value(X), m_One()))) {
+    Value *Val =
+        simplifyICmpInst(ICmpInst::ICMP_ULT, X, Op1, SQ.getWithInstruction(&I));
+    if (Val && match(Val, m_One())) {
+      Value *FrozenOp0 = Builder.CreateFreeze(Op0, Op0->getName() + ".frozen");
+      Value *Cmp = Builder.CreateICmpEQ(FrozenOp0, Op1);
+      return SelectInst::Create(Cmp, ConstantInt::getNullValue(Ty), FrozenOp0);
+    }
   }
 
   return nullptr;

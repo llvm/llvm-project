@@ -43,7 +43,7 @@ struct __unwrap_range_impl {
   }
 
   _LIBCPP_HIDE_FROM_ABI static constexpr auto
-  __rewrap(_Iter __orig_iter, decltype(std::__unwrap_iter(__orig_iter)) __iter)
+  __rewrap(_Iter __orig_iter, decltype(std::__unwrap_iter(std::move(__orig_iter))) __iter)
     requires random_access_iterator<_Iter> && sized_sentinel_for<_Sent, _Iter>
   {
     return std::__rewrap_iter(std::move(__orig_iter), std::move(__iter));

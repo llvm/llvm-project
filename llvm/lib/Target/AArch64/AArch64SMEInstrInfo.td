@@ -518,8 +518,8 @@ defm SMLALL_VG4_M4ZZI_BtoS : sme2_mla_ll_array_vg4_index_32b<"smlall", 0b000>;
 defm SMLALL_MZZ_BtoS       : sme2_mla_ll_array_single<"smlall", 0b0000, MatrixOp32, ZPR8, ZPR4b8, nxv16i8, int_aarch64_sme_smla_za32_single_vg4x1>;
 defm SMLALL_VG2_M2ZZ_BtoS  : sme2_mla_ll_array_vg2_single<"smlall", 0b00000, MatrixOp32, ZZ_b, ZPR4b8, nxv16i8, int_aarch64_sme_smla_za32_single_vg4x2>;
 defm SMLALL_VG4_M4ZZ_BtoS  : sme2_mla_ll_array_vg4_single<"smlall", 0b01000, MatrixOp32, ZZZZ_b, ZPR4b8, nxv16i8, int_aarch64_sme_smla_za32_single_vg4x4>;
-defm SMLALL_VG2_M2Z2Z_BtoS : sme2_mla_ll_array_vg2_multi<"smlall", 0b0000, MatrixOp32, ZZ_b_mul_r>;
-defm SMLALL_VG4_M4Z4Z_BtoS : sme2_mla_ll_array_vg4_multi<"smlall", 0b0000, MatrixOp32, ZZZZ_b_mul_r>;
+defm SMLALL_VG2_M2Z2Z_BtoS : sme2_mla_ll_array_vg2_multi<"smlall", 0b0000, MatrixOp32, ZZ_b_mul_r, nxv16i8, int_aarch64_sme_smla_za32_vg4x2>;
+defm SMLALL_VG4_M4Z4Z_BtoS : sme2_mla_ll_array_vg4_multi<"smlall", 0b0000, MatrixOp32, ZZZZ_b_mul_r, nxv16i8, int_aarch64_sme_smla_za32_vg4x4>;
 
 def  USMLALL_MZZI_BtoS      : sme2_mla_ll_array_index_32b<"usmlall", 0b001>;
 defm USMLALL_VG2_M2ZZI_BtoS : sme2_mla_ll_array_vg2_index_32b<"usmlall", 0b100>;
@@ -527,8 +527,8 @@ defm USMLALL_VG4_M4ZZI_BtoS : sme2_mla_ll_array_vg4_index_32b<"usmlall", 0b100>;
 defm USMLALL_MZZ_BtoS       : sme2_mla_ll_array_single<"usmlall", 0b0001, MatrixOp32, ZPR8, ZPR4b8, nxv16i8, int_aarch64_sme_usmla_za32_single_vg4x1>;
 defm USMLALL_VG2_M2ZZ_BtoS  : sme2_mla_ll_array_vg2_single<"usmlall", 0b00001, MatrixOp32, ZZ_b, ZPR4b8, nxv16i8, int_aarch64_sme_usmla_za32_single_vg4x2>;
 defm USMLALL_VG4_M4ZZ_BtoS  : sme2_mla_ll_array_vg4_single<"usmlall", 0b01001, MatrixOp32, ZZZZ_b, ZPR4b8, nxv16i8, int_aarch64_sme_usmla_za32_single_vg4x4>;
-defm USMLALL_VG2_M2Z2Z_BtoS : sme2_mla_ll_array_vg2_multi<"usmlall", 0b0001, MatrixOp32, ZZ_b_mul_r>;
-defm USMLALL_VG4_M4Z4Z_BtoS : sme2_mla_ll_array_vg4_multi<"usmlall", 0b0001, MatrixOp32, ZZZZ_b_mul_r>;
+defm USMLALL_VG2_M2Z2Z_BtoS : sme2_mla_ll_array_vg2_multi<"usmlall", 0b0001, MatrixOp32, ZZ_b_mul_r, nxv16i8, int_aarch64_sme_usmla_za32_vg4x2>;
+defm USMLALL_VG4_M4Z4Z_BtoS : sme2_mla_ll_array_vg4_multi<"usmlall", 0b0001, MatrixOp32, ZZZZ_b_mul_r, nxv16i8, int_aarch64_sme_usmla_za32_vg4x4>;
 
 def  SMLSLL_MZZI_BtoS      : sme2_mla_ll_array_index_32b<"smlsll", 0b010>;
 defm SMLSLL_VG2_M2ZZI_BtoS : sme2_mla_ll_array_vg2_index_32b<"smlsll", 0b001>;
@@ -536,8 +536,8 @@ defm SMLSLL_VG4_M4ZZI_BtoS : sme2_mla_ll_array_vg4_index_32b<"smlsll", 0b001>;
 defm SMLSLL_MZZ_BtoS       : sme2_mla_ll_array_single<"smlsll", 0b0010, MatrixOp32, ZPR8, ZPR4b8, nxv16i8, int_aarch64_sme_smls_za32_single_vg4x1>;
 defm SMLSLL_VG2_M2ZZ_BtoS  : sme2_mla_ll_array_vg2_single<"smlsll", 0b00010, MatrixOp32, ZZ_b, ZPR4b8, nxv16i8, int_aarch64_sme_smls_za32_single_vg4x2>;
 defm SMLSLL_VG4_M4ZZ_BtoS  : sme2_mla_ll_array_vg4_single<"smlsll", 0b01010, MatrixOp32, ZZZZ_b, ZPR4b8, nxv16i8, int_aarch64_sme_smls_za32_single_vg4x4>;
-defm SMLSLL_VG2_M2Z2Z_BtoS : sme2_mla_ll_array_vg2_multi<"smlsll", 0b0010, MatrixOp32, ZZ_b_mul_r>;
-defm SMLSLL_VG4_M4Z4Z_BtoS : sme2_mla_ll_array_vg4_multi<"smlsll", 0b0010, MatrixOp32, ZZZZ_b_mul_r>;
+defm SMLSLL_VG2_M2Z2Z_BtoS : sme2_mla_ll_array_vg2_multi<"smlsll", 0b0010, MatrixOp32, ZZ_b_mul_r, nxv16i8, int_aarch64_sme_smls_za32_vg4x2>;
+defm SMLSLL_VG4_M4Z4Z_BtoS : sme2_mla_ll_array_vg4_multi<"smlsll", 0b0010, MatrixOp32, ZZZZ_b_mul_r, nxv16i8, int_aarch64_sme_smls_za32_vg4x4>;
 
 def  UMLALL_MZZI_BtoS      : sme2_mla_ll_array_index_32b<"umlall", 0b100>;
 defm UMLALL_VG2_M2ZZI_BtoS : sme2_mla_ll_array_vg2_index_32b<"umlall", 0b010>;
@@ -545,8 +545,8 @@ defm UMLALL_VG4_M4ZZI_BtoS : sme2_mla_ll_array_vg4_index_32b<"umlall", 0b010>;
 defm UMLALL_MZZ_BtoS       : sme2_mla_ll_array_single<"umlall", 0b0100, MatrixOp32, ZPR8, ZPR4b8, nxv16i8, int_aarch64_sme_umla_za32_single_vg4x1>;
 defm UMLALL_VG2_M2ZZ_BtoS  : sme2_mla_ll_array_vg2_single<"umlall", 0b00100, MatrixOp32, ZZ_b, ZPR4b8, nxv16i8, int_aarch64_sme_umla_za32_single_vg4x2>;
 defm UMLALL_VG4_M4ZZ_BtoS  : sme2_mla_ll_array_vg4_single<"umlall", 0b01100, MatrixOp32, ZZZZ_b, ZPR4b8, nxv16i8, int_aarch64_sme_umla_za32_single_vg4x4>;
-defm UMLALL_VG2_M2Z2Z_BtoS : sme2_mla_ll_array_vg2_multi<"umlall", 0b0100, MatrixOp32, ZZ_b_mul_r>;
-defm UMLALL_VG4_M4Z4Z_BtoS : sme2_mla_ll_array_vg4_multi<"umlall", 0b0100, MatrixOp32, ZZZZ_b_mul_r>;
+defm UMLALL_VG2_M2Z2Z_BtoS : sme2_mla_ll_array_vg2_multi<"umlall", 0b0100, MatrixOp32, ZZ_b_mul_r, nxv16i8, int_aarch64_sme_umla_za32_vg4x2>;
+defm UMLALL_VG4_M4Z4Z_BtoS : sme2_mla_ll_array_vg4_multi<"umlall", 0b0100, MatrixOp32, ZZZZ_b_mul_r, nxv16i8, int_aarch64_sme_umla_za32_vg4x4>;
 
 def  SUMLALL_MZZI_BtoS      : sme2_mla_ll_array_index_32b<"sumlall", 0b101>;
 defm SUMLALL_VG2_M2ZZI_BtoS : sme2_mla_ll_array_vg2_index_32b<"sumlall", 0b110>;
@@ -560,8 +560,8 @@ defm UMLSLL_VG4_M4ZZI_BtoS : sme2_mla_ll_array_vg4_index_32b<"umlsll", 0b011>;
 defm UMLSLL_MZZ_BtoS       : sme2_mla_ll_array_single<"umlsll", 0b0110, MatrixOp32, ZPR8, ZPR4b8, nxv16i8, int_aarch64_sme_umls_za32_single_vg4x1>;
 defm UMLSLL_VG2_M2ZZ_BtoS  : sme2_mla_ll_array_vg2_single<"umlsll", 0b00110, MatrixOp32, ZZ_b, ZPR4b8, nxv16i8, int_aarch64_sme_umls_za32_single_vg4x2>;
 defm UMLSLL_VG4_M4ZZ_BtoS  : sme2_mla_ll_array_vg4_single<"umlsll", 0b01110, MatrixOp32, ZZZZ_b, ZPR4b8, nxv16i8, int_aarch64_sme_umls_za32_single_vg4x4>;
-defm UMLSLL_VG2_M2Z2Z_BtoS : sme2_mla_ll_array_vg2_multi<"umlsll", 0b0110, MatrixOp32, ZZ_b_mul_r>;
-defm UMLSLL_VG4_M4Z4Z_BtoS : sme2_mla_ll_array_vg4_multi<"umlsll", 0b0110, MatrixOp32, ZZZZ_b_mul_r>;
+defm UMLSLL_VG2_M2Z2Z_BtoS : sme2_mla_ll_array_vg2_multi<"umlsll", 0b0110, MatrixOp32, ZZ_b_mul_r, nxv16i8, int_aarch64_sme_umls_za32_vg4x2>;
+defm UMLSLL_VG4_M4Z4Z_BtoS : sme2_mla_ll_array_vg4_multi<"umlsll", 0b0110, MatrixOp32, ZZZZ_b_mul_r, nxv16i8, int_aarch64_sme_umls_za32_vg4x4>;
 
 defm BMOPA_MPPZZ_S : sme2_int_bmopx_tile<"bmopa", 0b100, int_aarch64_sme_bmopa_za32>;
 defm BMOPS_MPPZZ_S : sme2_int_bmopx_tile<"bmops", 0b101, int_aarch64_sme_bmops_za32>;
@@ -745,8 +745,8 @@ defm SMLALL_VG4_M4ZZI_HtoD : sme2_mla_ll_array_vg4_index_64b<"smlall", 0b00>;
 defm SMLALL_MZZ_HtoD       : sme2_mla_ll_array_single<"smlall", 0b1000, MatrixOp64, ZPR16, ZPR4b16, nxv8i16, int_aarch64_sme_smla_za64_single_vg4x1>;
 defm SMLALL_VG2_M2ZZ_HtoD  : sme2_mla_ll_array_vg2_single<"smlall", 0b10000, MatrixOp64, ZZ_h, ZPR4b16, nxv8i16, int_aarch64_sme_smla_za64_single_vg4x2>;
 defm SMLALL_VG4_M4ZZ_HtoD  : sme2_mla_ll_array_vg4_single<"smlall", 0b11000, MatrixOp64, ZZZZ_h, ZPR4b16, nxv8i16, int_aarch64_sme_smla_za64_single_vg4x4>;
-defm SMLALL_VG2_M2Z2Z_HtoD : sme2_mla_ll_array_vg2_multi<"smlall",  0b1000, MatrixOp64, ZZ_h_mul_r>;
-defm SMLALL_VG4_M4Z4Z_HtoD : sme2_mla_ll_array_vg4_multi<"smlall",  0b1000, MatrixOp64, ZZZZ_h_mul_r>;
+defm SMLALL_VG2_M2Z2Z_HtoD : sme2_mla_ll_array_vg2_multi<"smlall",  0b1000, MatrixOp64, ZZ_h_mul_r, nxv8i16, int_aarch64_sme_smla_za64_vg4x2>;
+defm SMLALL_VG4_M4Z4Z_HtoD : sme2_mla_ll_array_vg4_multi<"smlall",  0b1000, MatrixOp64, ZZZZ_h_mul_r, nxv8i16, int_aarch64_sme_smla_za64_vg4x4>;
 
 def  SMLSLL_MZZI_HtoD      : sme2_mla_ll_array_index_64b<"smlsll", 0b01>;
 defm SMLSLL_VG2_M2ZZI_HtoD : sme2_mla_ll_array_vg2_index_64b<"smlsll", 0b01>;
@@ -754,8 +754,8 @@ defm SMLSLL_VG4_M4ZZI_HtoD : sme2_mla_ll_array_vg4_index_64b<"smlsll", 0b01>;
 defm SMLSLL_MZZ_HtoD       : sme2_mla_ll_array_single<"smlsll", 0b1010, MatrixOp64, ZPR16, ZPR4b16, nxv8i16, int_aarch64_sme_smls_za64_single_vg4x1>;
 defm SMLSLL_VG2_M2ZZ_HtoD  : sme2_mla_ll_array_vg2_single<"smlsll", 0b10010, MatrixOp64, ZZ_h, ZPR4b16, nxv8i16, int_aarch64_sme_smls_za64_single_vg4x2>;
 defm SMLSLL_VG4_M4ZZ_HtoD  : sme2_mla_ll_array_vg4_single<"smlsll", 0b11010, MatrixOp64, ZZZZ_h, ZPR4b16, nxv8i16, int_aarch64_sme_smls_za64_single_vg4x4>;
-defm SMLSLL_VG2_M2Z2Z_HtoD : sme2_mla_ll_array_vg2_multi<"smlsll",  0b1010, MatrixOp64, ZZ_h_mul_r>;
-defm SMLSLL_VG4_M4Z4Z_HtoD : sme2_mla_ll_array_vg4_multi<"smlsll",  0b1010, MatrixOp64, ZZZZ_h_mul_r>;
+defm SMLSLL_VG2_M2Z2Z_HtoD : sme2_mla_ll_array_vg2_multi<"smlsll",  0b1010, MatrixOp64, ZZ_h_mul_r, nxv8i16, int_aarch64_sme_smls_za64_vg4x2>;
+defm SMLSLL_VG4_M4Z4Z_HtoD : sme2_mla_ll_array_vg4_multi<"smlsll",  0b1010, MatrixOp64, ZZZZ_h_mul_r, nxv8i16, int_aarch64_sme_smls_za64_vg4x4>;
 
 def  UMLALL_MZZI_HtoD      : sme2_mla_ll_array_index_64b<"umlall", 0b10>;
 defm UMLALL_VG2_M2ZZI_HtoD : sme2_mla_ll_array_vg2_index_64b<"umlall", 0b10>;
@@ -763,8 +763,8 @@ defm UMLALL_VG4_M4ZZI_HtoD : sme2_mla_ll_array_vg4_index_64b<"umlall", 0b10>;
 defm UMLALL_MZZ_HtoD       : sme2_mla_ll_array_single<"umlall", 0b1100, MatrixOp64, ZPR16, ZPR4b16, nxv8i16, int_aarch64_sme_umla_za64_single_vg4x1>;
 defm UMLALL_VG2_M2ZZ_HtoD  : sme2_mla_ll_array_vg2_single<"umlall", 0b10100, MatrixOp64, ZZ_h, ZPR4b16, nxv8i16, int_aarch64_sme_umla_za64_single_vg4x2>;
 defm UMLALL_VG4_M4ZZ_HtoD  : sme2_mla_ll_array_vg4_single<"umlall", 0b11100, MatrixOp64, ZZZZ_h, ZPR4b16, nxv8i16, int_aarch64_sme_umla_za64_single_vg4x4>;
-defm UMLALL_VG2_M2Z2Z_HtoD : sme2_mla_ll_array_vg2_multi<"umlall",  0b1100, MatrixOp64, ZZ_h_mul_r>;
-defm UMLALL_VG4_M4Z4Z_HtoD : sme2_mla_ll_array_vg4_multi<"umlall",  0b1100, MatrixOp64, ZZZZ_h_mul_r>;
+defm UMLALL_VG2_M2Z2Z_HtoD : sme2_mla_ll_array_vg2_multi<"umlall",  0b1100, MatrixOp64, ZZ_h_mul_r, nxv8i16, int_aarch64_sme_umla_za64_vg4x2>;
+defm UMLALL_VG4_M4Z4Z_HtoD : sme2_mla_ll_array_vg4_multi<"umlall",  0b1100, MatrixOp64, ZZZZ_h_mul_r, nxv8i16, int_aarch64_sme_umla_za64_vg4x4>;
 
 def  UMLSLL_MZZI_HtoD      : sme2_mla_ll_array_index_64b<"umlsll", 0b11>;
 defm UMLSLL_VG2_M2ZZI_HtoD : sme2_mla_ll_array_vg2_index_64b<"umlsll", 0b11>;
@@ -772,8 +772,8 @@ defm UMLSLL_VG4_M4ZZI_HtoD : sme2_mla_ll_array_vg4_index_64b<"umlsll", 0b11>;
 defm UMLSLL_MZZ_HtoD       : sme2_mla_ll_array_single<"umlsll", 0b1110, MatrixOp64, ZPR16, ZPR4b16, nxv8i16, int_aarch64_sme_umls_za64_single_vg4x1>;
 defm UMLSLL_VG2_M2ZZ_HtoD  : sme2_mla_ll_array_vg2_single<"umlsll", 0b10110, MatrixOp64, ZZ_h, ZPR4b16, nxv8i16, int_aarch64_sme_umls_za64_single_vg4x2>;
 defm UMLSLL_VG4_M4ZZ_HtoD  : sme2_mla_ll_array_vg4_single<"umlsll", 0b11110, MatrixOp64, ZZZZ_h, ZPR4b16, nxv8i16, int_aarch64_sme_umls_za64_single_vg4x4>;
-defm UMLSLL_VG2_M2Z2Z_HtoD : sme2_mla_ll_array_vg2_multi<"umlsll",  0b1110, MatrixOp64, ZZ_h_mul_r>;
-defm UMLSLL_VG4_M4Z4Z_HtoD : sme2_mla_ll_array_vg4_multi<"umlsll",  0b1110, MatrixOp64, ZZZZ_h_mul_r>;
+defm UMLSLL_VG2_M2Z2Z_HtoD : sme2_mla_ll_array_vg2_multi<"umlsll",  0b1110, MatrixOp64, ZZ_h_mul_r, nxv8i16, int_aarch64_sme_umls_za64_vg4x2>;
+defm UMLSLL_VG4_M4Z4Z_HtoD : sme2_mla_ll_array_vg4_multi<"umlsll",  0b1110, MatrixOp64, ZZZZ_h_mul_r, nxv8i16, int_aarch64_sme_umls_za64_vg4x4>;
 }
 
 let Predicates = [HasSME2, HasSMEF64F64] in {

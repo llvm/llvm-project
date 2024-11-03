@@ -61,6 +61,7 @@ AVRELFStreamer::AVRELFStreamer(MCStreamer &S, const MCSubtargetInfo &STI)
   unsigned EFlags = MCA.getELFHeaderEFlags();
 
   EFlags |= getEFlagsForFeatureSet(STI.getFeatureBits());
+  EFlags |= ELF::EF_AVR_LINKRELAX_PREPARED;
 
   MCA.setELFHeaderEFlags(EFlags);
 }

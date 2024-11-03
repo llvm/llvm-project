@@ -2221,6 +2221,7 @@ TEST_F(FormatTestJS, OptionalTypes) {
                "  aaaaaaaaaaaaaaa?: boolean,\n"
                "  aaaaaa?: List<string>\n"
                "}) {}");
+  verifyFormat("type X = [y?];");
 }
 
 TEST_F(FormatTestJS, IndexSignature) {

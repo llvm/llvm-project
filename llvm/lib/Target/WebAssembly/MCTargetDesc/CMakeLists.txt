@@ -4,6 +4,7 @@ add_llvm_component_library(LLVMWebAssemblyDesc
   WebAssemblyMCAsmInfo.cpp
   WebAssemblyMCCodeEmitter.cpp
   WebAssemblyMCTargetDesc.cpp
+  WebAssemblyMCTypeUtilities.cpp
   WebAssemblyTargetStreamer.cpp
   WebAssemblyWasmObjectWriter.cpp
 
@@ -12,7 +13,6 @@ add_llvm_component_library(LLVMWebAssemblyDesc
   Support
   TargetParser
   WebAssemblyInfo
-  WebAssemblyUtils
 
   ADD_TO_COMPONENT
   WebAssembly

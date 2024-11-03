@@ -396,8 +396,39 @@ public:
 /// This class serves as a common API for IR mutation between pattern rewrites
 /// and non-pattern rewrites, and facilitates the development of shared
 /// IR transformation utilities.
-class RewriterBase : public OpBuilder, public OpBuilder::Listener {
+class RewriterBase : public OpBuilder {
 public:
+  struct Listener : public OpBuilder::Listener {
+    Listener()
+        : OpBuilder::Listener(ListenerBase::Kind::RewriterBaseListener) {}
+
+    /// Notify the listener that the specified operation was modified in-place.
+    virtual void notifyOperationModified(Operation *op) {}
+
+    /// Notify the listener that the specified operation is about to be replaced
+    /// with the set of values potentially produced by new operations. This is
+    /// called before the uses of the operation have been changed.
+    virtual void notifyOperationReplaced(Operation *op,
+                                         ValueRange replacement) {}
+
+    /// This is called on an operation that a rewrite is removing, right before
+    /// the operation is deleted. At this point, the operation has zero uses.
+    virtual void notifyOperationRemoved(Operation *op) {}
+
+    /// Notify the listener that the pattern failed to match the given
+    /// operation, and provide a callback to populate a diagnostic with the
+    /// reason why the failure occurred. This method allows for derived
+    /// listeners to optionally hook into the reason why a rewrite failed, and
+    /// display it to users.
+    virtual LogicalResult
+    notifyMatchFailure(Location loc,
+                       function_ref<void(Diagnostic &)> reasonCallback) {
+      return failure();
+    }
+
+    static bool classof(const OpBuilder::Listener *base);
+  };
+
   /// Move the blocks that belong to "region" before the given position in
   /// another region "parent". The two regions must be different. The caller
   /// is responsible for creating or updating the operation transferring flow
@@ -486,7 +517,7 @@ public:
   /// This method is used to signal the end of a root update on the given
   /// operation. This can only be called on operations that were provided to a
   /// call to `startRootUpdate`.
-  virtual void finalizeRootUpdate(Operation *op) {}
+  virtual void finalizeRootUpdate(Operation *op);
 
   /// This method cancels a pending root update. This can only be called on
   /// operations that were provided to a call to `startRootUpdate`.
@@ -519,14 +550,15 @@ public:
   /// Find uses of `from` and replace them with `to` if the `functor` returns
   /// true. It also marks every modified uses and notifies the rewriter that an
   /// in-place operation modification is about to happen.
-  void replaceUseIf(Value from, Value to,
+  void
+  replaceUsesWithIf(Value from, Value to,
                     llvm::unique_function<bool(OpOperand &) const> functor);
 
   /// Find uses of `from` and replace them with `to` except if the user is
   /// `exceptedUser`. It also marks every modified uses and notifies the
   /// rewriter that an in-place operation modification is about to happen.
   void replaceAllUsesExcept(Value from, Value to, Operation *exceptedUser) {
-    return replaceUseIf(from, to, [&](OpOperand &use) {
+    return replaceUsesWithIf(from, to, [&](OpOperand &use) {
       Operation *user = use.getOwner();
       return user != exceptedUser;
     });
@@ -541,8 +573,10 @@ public:
   std::enable_if_t<!std::is_convertible<CallbackT, Twine>::value, LogicalResult>
   notifyMatchFailure(Location loc, CallbackT &&reasonCallback) {
 #ifndef NDEBUG
-    return notifyMatchFailure(loc,
-                              function_ref<void(Diagnostic &)>(reasonCallback));
+    if (auto *rewriteListener = dyn_cast_if_present<Listener>(listener))
+      return rewriteListener->notifyMatchFailure(
+          loc, function_ref<void(Diagnostic &)>(reasonCallback));
+    return failure();
 #else
     return failure();
 #endif
@@ -550,8 +584,10 @@ public:
   template <typename CallbackT>
   std::enable_if_t<!std::is_convertible<CallbackT, Twine>::value, LogicalResult>
   notifyMatchFailure(Operation *op, CallbackT &&reasonCallback) {
-    return notifyMatchFailure(op->getLoc(),
-                              function_ref<void(Diagnostic &)>(reasonCallback));
+    if (auto *rewriteListener = dyn_cast_if_present<Listener>(listener))
+      return rewriteListener->notifyMatchFailure(
+          op->getLoc(), function_ref<void(Diagnostic &)>(reasonCallback));
+    return failure();
   }
   template <typename ArgT>
   LogicalResult notifyMatchFailure(ArgT &&arg, const Twine &msg) {
@@ -564,35 +600,11 @@ public:
   }
 
 protected:
-  /// Initialize the builder with this rewriter as the listener.
-  explicit RewriterBase(MLIRContext *ctx) : OpBuilder(ctx, /*listener=*/this) {}
+  /// Initialize the builder.
+  explicit RewriterBase(MLIRContext *ctx) : OpBuilder(ctx) {}
   explicit RewriterBase(const OpBuilder &otherBuilder)
-      : OpBuilder(otherBuilder) {
-    setListener(this);
-  }
-  ~RewriterBase() override;
-
-  /// These are the callback methods that subclasses can choose to implement if
-  /// they would like to be notified about certain types of mutations.
-
-  /// Notify the rewriter that the specified operation is about to be replaced
-  /// with the set of values potentially produced by new operations. This is
-  /// called before the uses of the operation have been changed.
-  virtual void notifyRootReplaced(Operation *op, ValueRange replacement) {}
-
-  /// This is called on an operation that a rewrite is removing, right before
-  /// the operation is deleted. At this point, the operation has zero uses.
-  virtual void notifyOperationRemoved(Operation *op) {}
-
-  /// Notify the rewriter that the pattern failed to match the given operation,
-  /// and provide a callback to populate a diagnostic with the reason why the
-  /// failure occurred. This method allows for derived rewriters to optionally
-  /// hook into the reason why a rewrite failed, and display it to users.
-  virtual LogicalResult
-  notifyMatchFailure(Location loc,
-                     function_ref<void(Diagnostic &)> reasonCallback) {
-    return failure();
-  }
+      : OpBuilder(otherBuilder) {}
+  virtual ~RewriterBase();
 
 private:
   void operator=(const RewriterBase &) = delete;

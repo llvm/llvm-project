@@ -1,7 +1,7 @@
 // Remove UNSUPPORTED for powerpc64le when the problem introduced by
 // r288563 is resolved.
 // UNSUPPORTED: target=powerpc64le{{.*}}
-// RUN: %check_clang_tidy %s readability-identifier-naming %t -- \
+// RUN: %check_clang_tidy -std=c++20 %s readability-identifier-naming %t -- \
 // RUN:   -config='{CheckOptions: [ \
 // RUN:     {key: readability-identifier-naming.AbstractClassCase, value: CamelCase}, \
 // RUN:     {key: readability-identifier-naming.AbstractClassPrefix, value: 'A'}, \
@@ -81,7 +81,7 @@
 // RUN:     {key: readability-identifier-naming.LocalPointerPrefix, value: 'l_'}, \
 // RUN:     {key: readability-identifier-naming.LocalConstantPointerCase, value: CamelCase}, \
 // RUN:     {key: readability-identifier-naming.LocalConstantPointerPrefix, value: 'lc_'}, \
-// RUN:   ]}' -- -fno-delayed-template-parsing -Dbad_macro -std=c++17 -fcoroutines-ts \
+// RUN:   ]}' -- -fno-delayed-template-parsing -Dbad_macro \
 // RUN:   -I%S/Inputs/identifier-naming \
 // RUN:   -isystem %S/Inputs/identifier-naming/system
 

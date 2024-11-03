@@ -1133,10 +1133,10 @@ void AddressSanitizerPass::printPipeline(
     raw_ostream &OS, function_ref<StringRef(StringRef)> MapClassName2PassName) {
   static_cast<PassInfoMixin<AddressSanitizerPass> *>(this)->printPipeline(
       OS, MapClassName2PassName);
-  OS << "<";
+  OS << '<';
   if (Options.CompileKernel)
     OS << "kernel";
-  OS << ">";
+  OS << '>';
 }
 
 AddressSanitizerPass::AddressSanitizerPass(

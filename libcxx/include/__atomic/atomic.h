@@ -29,9 +29,9 @@ template <class _Tp>
 struct atomic
     : public __atomic_base<_Tp>
 {
-    typedef __atomic_base<_Tp> __base;
-    typedef _Tp value_type;
-    typedef value_type difference_type;
+  using __base          = __atomic_base<_Tp>;
+  using value_type      = _Tp;
+  using difference_type = value_type;
 
 #if _LIBCPP_STD_VER >= 20
     _LIBCPP_HIDE_FROM_ABI
@@ -61,9 +61,9 @@ template <class _Tp>
 struct atomic<_Tp*>
     : public __atomic_base<_Tp*>
 {
-    typedef __atomic_base<_Tp*> __base;
-    typedef _Tp* value_type;
-    typedef ptrdiff_t difference_type;
+    using __base          = __atomic_base<_Tp*>;
+    using value_type      = _Tp*;
+    using difference_type = ptrdiff_t;
 
     _LIBCPP_HIDE_FROM_ABI
     atomic() _NOEXCEPT = default;

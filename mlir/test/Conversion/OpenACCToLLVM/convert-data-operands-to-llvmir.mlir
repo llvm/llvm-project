@@ -1,20 +1,20 @@
-// RUN: mlir-opt -convert-openacc-to-llvm -split-input-file %s | FileCheck %s
+// RUN: mlir-opt -convert-openacc-to-llvm='use-opaque-pointers=1' -split-input-file %s | FileCheck %s
 
 func.func @testenterdataop(%a: memref<10xf32>, %b: memref<10xf32>) -> () {
   acc.enter_data copyin(%b : memref<10xf32>) create(%a : memref<10xf32>)
   return
 }
 
-// CHECK: acc.enter_data copyin(%{{.*}} : !llvm.struct<"openacc_data", (struct<(ptr<f32>, ptr<f32>, i64, array<1 x i64>, array<1 x i64>)>, ptr<f32>, i64)>) create(%{{.*}} : !llvm.struct<"openacc_data.1", (struct<(ptr<f32>, ptr<f32>, i64, array<1 x i64>, array<1 x i64>)>, ptr<f32>, i64)>)
+// CHECK: acc.enter_data copyin(%{{.*}} : !llvm.struct<"openacc_data", (struct<(ptr, ptr, i64, array<1 x i64>, array<1 x i64>)>, ptr, i64)>) create(%{{.*}} : !llvm.struct<"openacc_data.1", (struct<(ptr, ptr, i64, array<1 x i64>, array<1 x i64>)>, ptr, i64)>)
 
 // -----
 
-func.func @testenterdataop(%a: !llvm.ptr<f32>, %b: memref<10xf32>) -> () {
-  acc.enter_data copyin(%b : memref<10xf32>) create(%a : !llvm.ptr<f32>)
+func.func @testenterdataop(%a: !llvm.ptr, %b: memref<10xf32>) -> () {
+  acc.enter_data copyin(%b : memref<10xf32>) create(%a : !llvm.ptr)
   return
 }
 
-// CHECK: acc.enter_data copyin(%{{.*}} : !llvm.struct<"openacc_data", (struct<(ptr<f32>, ptr<f32>, i64, array<1 x i64>, array<1 x i64>)>, ptr<f32>, i64)>) create(%{{.*}} : !llvm.ptr<f32>)
+// CHECK: acc.enter_data copyin(%{{.*}} : !llvm.struct<"openacc_data", (struct<(ptr, ptr, i64, array<1 x i64>, array<1 x i64>)>, ptr, i64)>) create(%{{.*}} : !llvm.ptr)
 
 // -----
 
@@ -23,7 +23,7 @@ func.func @testenterdataop(%a: memref<10xi64>, %b: memref<10xf32>) -> () {
   return
 }
 
-// CHECK: acc.enter_data copyin(%{{.*}} : !llvm.struct<"openacc_data", (struct<(ptr<f32>, ptr<f32>, i64, array<1 x i64>, array<1 x i64>)>, ptr<f32>, i64)>) create_zero(%{{.*}} : !llvm.struct<"openacc_data.1", (struct<(ptr<i64>, ptr<i64>, i64, array<1 x i64>, array<1 x i64>)>, ptr<i64>, i64)>) attributes {async}
+// CHECK: acc.enter_data copyin(%{{.*}} : !llvm.struct<"openacc_data", (struct<(ptr, ptr, i64, array<1 x i64>, array<1 x i64>)>, ptr, i64)>) create_zero(%{{.*}} : !llvm.struct<"openacc_data.1", (struct<(ptr, ptr, i64, array<1 x i64>, array<1 x i64>)>, ptr, i64)>) attributes {async}
 
 // -----
 
@@ -33,7 +33,7 @@ func.func @testenterdataop(%a: memref<10xf32>, %b: memref<10xf32>) -> () {
   return
 }
 
-// CHECK: acc.enter_data if(%{{.*}}) copyin(%{{.*}} : !llvm.struct<"openacc_data", (struct<(ptr<f32>, ptr<f32>, i64, array<1 x i64>, array<1 x i64>)>, ptr<f32>, i64)>) create(%{{.*}} : !llvm.struct<"openacc_data.1", (struct<(ptr<f32>, ptr<f32>, i64, array<1 x i64>, array<1 x i64>)>, ptr<f32>, i64)>)
+// CHECK: acc.enter_data if(%{{.*}}) copyin(%{{.*}} : !llvm.struct<"openacc_data", (struct<(ptr, ptr, i64, array<1 x i64>, array<1 x i64>)>, ptr, i64)>) create(%{{.*}} : !llvm.struct<"openacc_data.1", (struct<(ptr, ptr, i64, array<1 x i64>, array<1 x i64>)>, ptr, i64)>)
 
 // -----
 
@@ -42,16 +42,16 @@ func.func @testexitdataop(%a: memref<10xf32>, %b: memref<10xf32>) -> () {
   return
 }
 
-// CHECK: acc.exit_data copyout(%{{.*}} : !llvm.struct<"openacc_data", (struct<(ptr<f32>, ptr<f32>, i64, array<1 x i64>, array<1 x i64>)>, ptr<f32>, i64)>) delete(%{{.*}} : !llvm.struct<"openacc_data.1", (struct<(ptr<f32>, ptr<f32>, i64, array<1 x i64>, array<1 x i64>)>, ptr<f32>, i64)>)
+// CHECK: acc.exit_data copyout(%{{.*}} : !llvm.struct<"openacc_data", (struct<(ptr, ptr, i64, array<1 x i64>, array<1 x i64>)>, ptr, i64)>) delete(%{{.*}} : !llvm.struct<"openacc_data.1", (struct<(ptr, ptr, i64, array<1 x i64>, array<1 x i64>)>, ptr, i64)>)
 
 // -----
 
-func.func @testexitdataop(%a: !llvm.ptr<f32>, %b: memref<10xf32>) -> () {
-  acc.exit_data copyout(%b : memref<10xf32>) delete(%a : !llvm.ptr<f32>)
+func.func @testexitdataop(%a: !llvm.ptr, %b: memref<10xf32>) -> () {
+  acc.exit_data copyout(%b : memref<10xf32>) delete(%a : !llvm.ptr)
   return
 }
 
-// CHECK: acc.exit_data copyout(%{{.*}} : !llvm.struct<"openacc_data", (struct<(ptr<f32>, ptr<f32>, i64, array<1 x i64>, array<1 x i64>)>, ptr<f32>, i64)>) delete(%{{.*}} : !llvm.ptr<f32>)
+// CHECK: acc.exit_data copyout(%{{.*}} : !llvm.struct<"openacc_data", (struct<(ptr, ptr, i64, array<1 x i64>, array<1 x i64>)>, ptr, i64)>) delete(%{{.*}} : !llvm.ptr)
 
 // -----
 
@@ -60,7 +60,7 @@ func.func @testexitdataop(%a: memref<10xi64>, %b: memref<10xf32>) -> () {
   return
 }
 
-// CHECK: acc.exit_data copyout(%{{.*}} : !llvm.struct<"openacc_data", (struct<(ptr<f32>, ptr<f32>, i64, array<1 x i64>, array<1 x i64>)>, ptr<f32>, i64)>) delete(%{{.*}} : !llvm.struct<"openacc_data.1", (struct<(ptr<i64>, ptr<i64>, i64, array<1 x i64>, array<1 x i64>)>, ptr<i64>, i64)>) attributes {async}
+// CHECK: acc.exit_data copyout(%{{.*}} : !llvm.struct<"openacc_data", (struct<(ptr, ptr, i64, array<1 x i64>, array<1 x i64>)>, ptr, i64)>) delete(%{{.*}} : !llvm.struct<"openacc_data.1", (struct<(ptr, ptr, i64, array<1 x i64>, array<1 x i64>)>, ptr, i64)>) attributes {async}
 
 // -----
 
@@ -70,7 +70,7 @@ func.func @testexitdataop(%a: memref<10xf32>, %b: memref<10xf32>) -> () {
   return
 }
 
-// CHECK: acc.exit_data if(%{{.*}}) copyout(%{{.*}} : !llvm.struct<"openacc_data", (struct<(ptr<f32>, ptr<f32>, i64, array<1 x i64>, array<1 x i64>)>, ptr<f32>, i64)>) delete(%{{.*}} : !llvm.struct<"openacc_data.1", (struct<(ptr<f32>, ptr<f32>, i64, array<1 x i64>, array<1 x i64>)>, ptr<f32>, i64)>)
+// CHECK: acc.exit_data if(%{{.*}}) copyout(%{{.*}} : !llvm.struct<"openacc_data", (struct<(ptr, ptr, i64, array<1 x i64>, array<1 x i64>)>, ptr, i64)>) delete(%{{.*}} : !llvm.struct<"openacc_data.1", (struct<(ptr, ptr, i64, array<1 x i64>, array<1 x i64>)>, ptr, i64)>)
 
 // -----
 
@@ -79,16 +79,16 @@ func.func @testupdateop(%a: memref<10xf32>, %b: memref<10xf32>) -> () {
   return
 }
 
-// CHECK: acc.update host(%{{.*}} : !llvm.struct<"openacc_data", (struct<(ptr<f32>, ptr<f32>, i64, array<1 x i64>, array<1 x i64>)>, ptr<f32>, i64)>) device(%{{.*}} : !llvm.struct<"openacc_data.1", (struct<(ptr<f32>, ptr<f32>, i64, array<1 x i64>, array<1 x i64>)>, ptr<f32>, i64)>)
+// CHECK: acc.update host(%{{.*}} : !llvm.struct<"openacc_data", (struct<(ptr, ptr, i64, array<1 x i64>, array<1 x i64>)>, ptr, i64)>) device(%{{.*}} : !llvm.struct<"openacc_data.1", (struct<(ptr, ptr, i64, array<1 x i64>, array<1 x i64>)>, ptr, i64)>)
 
 // -----
 
-func.func @testupdateop(%a: !llvm.ptr<f32>, %b: memref<10xf32>) -> () {
-  acc.update host(%b : memref<10xf32>) device(%a : !llvm.ptr<f32>)
+func.func @testupdateop(%a: !llvm.ptr, %b: memref<10xf32>) -> () {
+  acc.update host(%b : memref<10xf32>) device(%a : !llvm.ptr)
   return
 }
 
-// CHECK: acc.update host(%{{.*}} : !llvm.struct<"openacc_data", (struct<(ptr<f32>, ptr<f32>, i64, array<1 x i64>, array<1 x i64>)>, ptr<f32>, i64)>) device(%{{.*}} : !llvm.ptr<f32>)
+// CHECK: acc.update host(%{{.*}} : !llvm.struct<"openacc_data", (struct<(ptr, ptr, i64, array<1 x i64>, array<1 x i64>)>, ptr, i64)>) device(%{{.*}} : !llvm.ptr)
 
 // -----
 
@@ -97,7 +97,7 @@ func.func @testupdateop(%a: memref<10xi64>, %b: memref<10xf32>) -> () {
   return
 }
 
-// CHECK: acc.update host(%{{.*}} : !llvm.struct<"openacc_data", (struct<(ptr<f32>, ptr<f32>, i64, array<1 x i64>, array<1 x i64>)>, ptr<f32>, i64)>) device(%{{.*}} : !llvm.struct<"openacc_data.1", (struct<(ptr<i64>, ptr<i64>, i64, array<1 x i64>, array<1 x i64>)>, ptr<i64>, i64)>) attributes {async}
+// CHECK: acc.update host(%{{.*}} : !llvm.struct<"openacc_data", (struct<(ptr, ptr, i64, array<1 x i64>, array<1 x i64>)>, ptr, i64)>) device(%{{.*}} : !llvm.struct<"openacc_data.1", (struct<(ptr, ptr, i64, array<1 x i64>, array<1 x i64>)>, ptr, i64)>) attributes {async}
 
 // -----
 
@@ -107,7 +107,7 @@ func.func @testupdateop(%a: memref<10xf32>, %b: memref<10xf32>) -> () {
   return
 }
 
-// CHECK: acc.update if(%{{.*}}) host(%{{.*}} : !llvm.struct<"openacc_data", (struct<(ptr<f32>, ptr<f32>, i64, array<1 x i64>, array<1 x i64>)>, ptr<f32>, i64)>) device(%{{.*}} : !llvm.struct<"openacc_data.1", (struct<(ptr<f32>, ptr<f32>, i64, array<1 x i64>, array<1 x i64>)>, ptr<f32>, i64)>)
+// CHECK: acc.update if(%{{.*}}) host(%{{.*}} : !llvm.struct<"openacc_data", (struct<(ptr, ptr, i64, array<1 x i64>, array<1 x i64>)>, ptr, i64)>) device(%{{.*}} : !llvm.struct<"openacc_data.1", (struct<(ptr, ptr, i64, array<1 x i64>, array<1 x i64>)>, ptr, i64)>)
 
 // -----
 
@@ -117,17 +117,17 @@ func.func @testdataregion(%a: memref<10xf32>, %b: memref<10xf32>) -> () {
   return
 }
 
-// CHECK: acc.data copy(%{{.*}} : !llvm.struct<"openacc_data", (struct<(ptr<f32>, ptr<f32>, i64, array<1 x i64>, array<1 x i64>)>, ptr<f32>, i64)>) copyout(%{{.*}} : !llvm.struct<"openacc_data.1", (struct<(ptr<f32>, ptr<f32>, i64, array<1 x i64>, array<1 x i64>)>, ptr<f32>, i64)>)
+// CHECK: acc.data copy(%{{.*}} : !llvm.struct<"openacc_data", (struct<(ptr, ptr, i64, array<1 x i64>, array<1 x i64>)>, ptr, i64)>) copyout(%{{.*}} : !llvm.struct<"openacc_data.1", (struct<(ptr, ptr, i64, array<1 x i64>, array<1 x i64>)>, ptr, i64)>)
 
 // -----
 
-func.func @testdataregion(%a: !llvm.ptr<f32>, %b: memref<10xf32>, %c: !llvm.ptr<f32>) -> () {
-  acc.data copyin(%b : memref<10xf32>) deviceptr(%c: !llvm.ptr<f32>) attach(%a : !llvm.ptr<f32>) {
+func.func @testdataregion(%a: !llvm.ptr, %b: memref<10xf32>, %c: !llvm.ptr) -> () {
+  acc.data copyin(%b : memref<10xf32>) deviceptr(%c: !llvm.ptr) attach(%a : !llvm.ptr) {
   }
   return
 }
 
-// CHECK: acc.data copyin(%{{.*}} : !llvm.struct<"openacc_data", (struct<(ptr<f32>, ptr<f32>, i64, array<1 x i64>, array<1 x i64>)>, ptr<f32>, i64)>) deviceptr(%{{.*}} : !llvm.ptr<f32>) attach(%{{.*}} : !llvm.ptr<f32>)
+// CHECK: acc.data copyin(%{{.*}} : !llvm.struct<"openacc_data", (struct<(ptr, ptr, i64, array<1 x i64>, array<1 x i64>)>, ptr, i64)>) deviceptr(%{{.*}} : !llvm.ptr) attach(%{{.*}} : !llvm.ptr)
 
 // -----
 
@@ -138,17 +138,17 @@ func.func @testdataregion(%a: memref<10xf32>, %b: memref<10xf32>) -> () {
   return
 }
 
-// CHECK: acc.data if(%{{.*}}) copyin_readonly(%{{.*}} : !llvm.struct<"openacc_data", (struct<(ptr<f32>, ptr<f32>, i64, array<1 x i64>, array<1 x i64>)>, ptr<f32>, i64)>) copyout_zero(%{{.*}} : !llvm.struct<"openacc_data.1", (struct<(ptr<f32>, ptr<f32>, i64, array<1 x i64>, array<1 x i64>)>, ptr<f32>, i64)>)
+// CHECK: acc.data if(%{{.*}}) copyin_readonly(%{{.*}} : !llvm.struct<"openacc_data", (struct<(ptr, ptr, i64, array<1 x i64>, array<1 x i64>)>, ptr, i64)>) copyout_zero(%{{.*}} : !llvm.struct<"openacc_data.1", (struct<(ptr, ptr, i64, array<1 x i64>, array<1 x i64>)>, ptr, i64)>)
 
 // -----
 
-func.func @testdataregion(%a: !llvm.ptr<f32>, %b: memref<10xf32>, %c: !llvm.ptr<f32>) -> () {
-  acc.data create(%b : memref<10xf32>) create_zero(%c: !llvm.ptr<f32>) no_create(%a : !llvm.ptr<f32>) {
+func.func @testdataregion(%a: !llvm.ptr, %b: memref<10xf32>, %c: !llvm.ptr) -> () {
+  acc.data create(%b : memref<10xf32>) create_zero(%c: !llvm.ptr) no_create(%a : !llvm.ptr) {
   }
   return
 }
 
-// CHECK: acc.data create(%{{.*}} : !llvm.struct<"openacc_data", (struct<(ptr<f32>, ptr<f32>, i64, array<1 x i64>, array<1 x i64>)>, ptr<f32>, i64)>) create_zero(%{{.*}} : !llvm.ptr<f32>) no_create(%{{.*}} : !llvm.ptr<f32>)
+// CHECK: acc.data create(%{{.*}} : !llvm.struct<"openacc_data", (struct<(ptr, ptr, i64, array<1 x i64>, array<1 x i64>)>, ptr, i64)>) create_zero(%{{.*}} : !llvm.ptr) no_create(%{{.*}} : !llvm.ptr)
 
 // -----
 
@@ -158,7 +158,7 @@ func.func @testdataregion(%a: memref<10xf32>, %b: memref<10xf32>) -> () {
   return
 }
 
-// CHECK: acc.data present(%{{.*}}, %{{.*}} : !llvm.struct<"openacc_data", (struct<(ptr<f32>, ptr<f32>, i64, array<1 x i64>, array<1 x i64>)>, ptr<f32>, i64)>, !llvm.struct<"openacc_data.1", (struct<(ptr<f32>, ptr<f32>, i64, array<1 x i64>, array<1 x i64>)>, ptr<f32>, i64)>)
+// CHECK: acc.data present(%{{.*}}, %{{.*}} : !llvm.struct<"openacc_data", (struct<(ptr, ptr, i64, array<1 x i64>, array<1 x i64>)>, ptr, i64)>, !llvm.struct<"openacc_data.1", (struct<(ptr, ptr, i64, array<1 x i64>, array<1 x i64>)>, ptr, i64)>)
 
 // -----
 
@@ -168,17 +168,17 @@ func.func @testparallelop(%a: memref<10xf32>, %b: memref<10xf32>) -> () {
   return
 }
 
-// CHECK: acc.parallel copy(%{{.*}}: !llvm.struct<"openacc_data", (struct<(ptr<f32>, ptr<f32>, i64, array<1 x i64>, array<1 x i64>)>, ptr<f32>, i64)>) copyout(%{{.*}}: !llvm.struct<"openacc_data.1", (struct<(ptr<f32>, ptr<f32>, i64, array<1 x i64>, array<1 x i64>)>, ptr<f32>, i64)>)
+// CHECK: acc.parallel copy(%{{.*}}: !llvm.struct<"openacc_data", (struct<(ptr, ptr, i64, array<1 x i64>, array<1 x i64>)>, ptr, i64)>) copyout(%{{.*}}: !llvm.struct<"openacc_data.1", (struct<(ptr, ptr, i64, array<1 x i64>, array<1 x i64>)>, ptr, i64)>)
 
 // -----
 
-func.func @testparallelop(%a: !llvm.ptr<f32>, %b: memref<10xf32>, %c: !llvm.ptr<f32>) -> () {
-  acc.parallel copyin(%b : memref<10xf32>) deviceptr(%c: !llvm.ptr<f32>) attach(%a : !llvm.ptr<f32>) {
+func.func @testparallelop(%a: !llvm.ptr, %b: memref<10xf32>, %c: !llvm.ptr) -> () {
+  acc.parallel copyin(%b : memref<10xf32>) deviceptr(%c: !llvm.ptr) attach(%a : !llvm.ptr) {
   }
   return
 }
 
-// CHECK: acc.parallel copyin(%{{.*}}: !llvm.struct<"openacc_data", (struct<(ptr<f32>, ptr<f32>, i64, array<1 x i64>, array<1 x i64>)>, ptr<f32>, i64)>) deviceptr(%{{.*}}: !llvm.ptr<f32>) attach(%{{.*}}: !llvm.ptr<f32>)
+// CHECK: acc.parallel copyin(%{{.*}}: !llvm.struct<"openacc_data", (struct<(ptr, ptr, i64, array<1 x i64>, array<1 x i64>)>, ptr, i64)>) deviceptr(%{{.*}}: !llvm.ptr) attach(%{{.*}}: !llvm.ptr)
 
 // -----
 
@@ -189,17 +189,17 @@ func.func @testparallelop(%a: memref<10xf32>, %b: memref<10xf32>) -> () {
   return
 }
 
-// CHECK: acc.parallel if(%{{.*}}) copyin_readonly(%{{.*}}: !llvm.struct<"openacc_data", (struct<(ptr<f32>, ptr<f32>, i64, array<1 x i64>, array<1 x i64>)>, ptr<f32>, i64)>) copyout_zero(%{{.*}}: !llvm.struct<"openacc_data.1", (struct<(ptr<f32>, ptr<f32>, i64, array<1 x i64>, array<1 x i64>)>, ptr<f32>, i64)>)
+// CHECK: acc.parallel if(%{{.*}}) copyin_readonly(%{{.*}}: !llvm.struct<"openacc_data", (struct<(ptr, ptr, i64, array<1 x i64>, array<1 x i64>)>, ptr, i64)>) copyout_zero(%{{.*}}: !llvm.struct<"openacc_data.1", (struct<(ptr, ptr, i64, array<1 x i64>, array<1 x i64>)>, ptr, i64)>)
 
 // -----
 
-func.func @testparallelop(%a: !llvm.ptr<f32>, %b: memref<10xf32>, %c: !llvm.ptr<f32>) -> () {
-  acc.parallel create(%b : memref<10xf32>) create_zero(%c: !llvm.ptr<f32>) no_create(%a : !llvm.ptr<f32>) {
+func.func @testparallelop(%a: !llvm.ptr, %b: memref<10xf32>, %c: !llvm.ptr) -> () {
+  acc.parallel create(%b : memref<10xf32>) create_zero(%c: !llvm.ptr) no_create(%a : !llvm.ptr) {
   }
   return
 }
 
-// CHECK: acc.parallel create(%{{.*}}: !llvm.struct<"openacc_data", (struct<(ptr<f32>, ptr<f32>, i64, array<1 x i64>, array<1 x i64>)>, ptr<f32>, i64)>) create_zero(%{{.*}}: !llvm.ptr<f32>) no_create(%{{.*}}: !llvm.ptr<f32>)
+// CHECK: acc.parallel create(%{{.*}}: !llvm.struct<"openacc_data", (struct<(ptr, ptr, i64, array<1 x i64>, array<1 x i64>)>, ptr, i64)>) create_zero(%{{.*}}: !llvm.ptr) no_create(%{{.*}}: !llvm.ptr)
 
 // -----
 
@@ -209,7 +209,7 @@ func.func @testparallelop(%a: memref<10xf32>, %b: memref<10xf32>) -> () {
   return
 }
 
-// CHECK: acc.parallel present(%{{.*}}: !llvm.struct<"openacc_data", (struct<(ptr<f32>, ptr<f32>, i64, array<1 x i64>, array<1 x i64>)>, ptr<f32>, i64)>, %{{.*}}: !llvm.struct<"openacc_data.1", (struct<(ptr<f32>, ptr<f32>, i64, array<1 x i64>, array<1 x i64>)>, ptr<f32>, i64)>)
+// CHECK: acc.parallel present(%{{.*}}: !llvm.struct<"openacc_data", (struct<(ptr, ptr, i64, array<1 x i64>, array<1 x i64>)>, ptr, i64)>, %{{.*}}: !llvm.struct<"openacc_data.1", (struct<(ptr, ptr, i64, array<1 x i64>, array<1 x i64>)>, ptr, i64)>)
 
 // -----
 
@@ -219,5 +219,5 @@ func.func @testparallelop(%i: i64, %a: memref<10xf32>, %b: memref<10xf32>) -> ()
   return
 }
 
-// CHECK: acc.parallel num_gangs(%{{.*}}: i64) present(%{{.*}}: !llvm.struct<"openacc_data", (struct<(ptr<f32>, ptr<f32>, i64, array<1 x i64>, array<1 x i64>)>, ptr<f32>, i64)>, %{{.*}}: !llvm.struct<"openacc_data.1", (struct<(ptr<f32>, ptr<f32>, i64, array<1 x i64>, array<1 x i64>)>, ptr<f32>, i64)>)
+// CHECK: acc.parallel num_gangs(%{{.*}}: i64) present(%{{.*}}: !llvm.struct<"openacc_data", (struct<(ptr, ptr, i64, array<1 x i64>, array<1 x i64>)>, ptr, i64)>, %{{.*}}: !llvm.struct<"openacc_data.1", (struct<(ptr, ptr, i64, array<1 x i64>, array<1 x i64>)>, ptr, i64)>)
 // CHECK-NEXT: } attributes {async}

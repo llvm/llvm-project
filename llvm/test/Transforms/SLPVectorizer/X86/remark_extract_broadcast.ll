@@ -18,7 +18,7 @@ define void @fextr(ptr %ptr) {
 ; YAML-NEXT: Function:        fextr
 ; YAML-NEXT: Args:
 ; YAML-NEXT:   - String:          'Stores SLP vectorized with cost '
-; YAML-NEXT:   - Cost:            '-20'
+; YAML-NEXT:   - Cost:            '-19'
 ; YAML-NEXT:   - String:          ' and with tree size '
 ; YAML-NEXT:   - TreeSize:        '4'
 

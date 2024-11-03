@@ -13,7 +13,9 @@
 #include "src/__support/arg_list.h"
 
 #include "src/__support/CPP/bit.h"
+#include "src/__support/CPP/optional.h"
 #include "src/__support/CPP/string_view.h"
+#include "src/__support/CPP/type_traits.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/ctype_utils.h"
 #include "src/__support/str_to_integer.h"
@@ -22,10 +24,29 @@
 namespace __llvm_libc {
 namespace printf_core {
 
+template <typename T> struct int_type_of {
+  using type = T;
+};
+template <> struct int_type_of<double> {
+  using type = fputil::FPBits<double>::UIntType;
+};
+template <> struct int_type_of<long double> {
+  using type = fputil::FPBits<long double>::UIntType;
+};
+template <typename T> using int_type_of_v = typename int_type_of<T>::type;
+
 #ifndef LIBC_COPT_PRINTF_DISABLE_INDEX_MODE
-#define GET_ARG_VAL_SIMPLEST(arg_type, index) get_arg_value<arg_type>(index)
+#define WRITE_ARG_VAL_SIMPLEST(dst, arg_type, index)                           \
+  {                                                                            \
+    auto temp = get_arg_value<arg_type>(index);                                \
+    if (!temp.has_value()) {                                                   \
+      section.has_conv = false;                                                \
+    }                                                                          \
+    dst = cpp::bit_cast<int_type_of_v<arg_type>>(temp.value());                \
+  }
 #else
-#define GET_ARG_VAL_SIMPLEST(arg_type, _) get_next_arg_value<arg_type>()
+#define WRITE_ARG_VAL_SIMPLEST(dst, arg_type, _)                               \
+  dst = cpp::bit_cast<int_type_of_v<arg_type>>(get_next_arg_value<arg_type>())
 #endif // LIBC_COPT_PRINTF_DISABLE_INDEX_MODE
 
 FormatSection Parser::get_next_section() {
@@ -49,7 +70,7 @@ FormatSection Parser::get_next_section() {
     if (str[cur_pos] == '*') {
       ++cur_pos;
 
-      section.min_width = GET_ARG_VAL_SIMPLEST(int, parse_index(&cur_pos));
+      WRITE_ARG_VAL_SIMPLEST(section.min_width, int, parse_index(&cur_pos));
     } else if (internal::isdigit(str[cur_pos])) {
       auto result = internal::strtointeger<int>(str + cur_pos, 10);
       section.min_width = result.value;
@@ -70,7 +91,7 @@ FormatSection Parser::get_next_section() {
       if (str[cur_pos] == '*') {
         ++cur_pos;
 
-        section.precision = GET_ARG_VAL_SIMPLEST(int, parse_index(&cur_pos));
+        WRITE_ARG_VAL_SIMPLEST(section.precision, int, parse_index(&cur_pos));
 
       } else if (internal::isdigit(str[cur_pos])) {
         auto result = internal::strtointeger<int>(str + cur_pos, 10);
@@ -87,7 +108,7 @@ FormatSection Parser::get_next_section() {
     case ('%'):
       break;
     case ('c'):
-      section.conv_val_raw = GET_ARG_VAL_SIMPLEST(int, conv_index);
+      WRITE_ARG_VAL_SIMPLEST(section.conv_val_raw, int, conv_index);
       break;
     case ('d'):
     case ('i'):
@@ -99,24 +120,28 @@ FormatSection Parser::get_next_section() {
       case (LengthModifier::hh):
       case (LengthModifier::h):
       case (LengthModifier::none):
-        section.conv_val_raw = GET_ARG_VAL_SIMPLEST(int, conv_index);
+        WRITE_ARG_VAL_SIMPLEST(section.conv_val_raw, int, conv_index);
         break;
       case (LengthModifier::l):
-        section.conv_val_raw = GET_ARG_VAL_SIMPLEST(long, conv_index);
+        WRITE_ARG_VAL_SIMPLEST(section.conv_val_raw, long, conv_index);
         break;
       case (LengthModifier::ll):
       case (LengthModifier::L): // This isn't in the standard, but is in other
                                 // libc implementations.
-        section.conv_val_raw = GET_ARG_VAL_SIMPLEST(long long, conv_index);
+
+        WRITE_ARG_VAL_SIMPLEST(section.conv_val_raw, long long, conv_index);
         break;
       case (LengthModifier::j):
-        section.conv_val_raw = GET_ARG_VAL_SIMPLEST(intmax_t, conv_index);
+
+        WRITE_ARG_VAL_SIMPLEST(section.conv_val_raw, intmax_t, conv_index);
         break;
       case (LengthModifier::z):
-        section.conv_val_raw = GET_ARG_VAL_SIMPLEST(size_t, conv_index);
+
+        WRITE_ARG_VAL_SIMPLEST(section.conv_val_raw, size_t, conv_index);
         break;
       case (LengthModifier::t):
-        section.conv_val_raw = GET_ARG_VAL_SIMPLEST(ptrdiff_t, conv_index);
+
+        WRITE_ARG_VAL_SIMPLEST(section.conv_val_raw, ptrdiff_t, conv_index);
         break;
       }
       break;
@@ -129,13 +154,11 @@ FormatSection Parser::get_next_section() {
     case ('A'):
     case ('g'):
     case ('G'):
-      if (lm != LengthModifier::L)
-        section.conv_val_raw =
-            cpp::bit_cast<uint64_t>(GET_ARG_VAL_SIMPLEST(double, conv_index));
-      else
-        section.conv_val_raw =
-            cpp::bit_cast<fputil::FPBits<long double>::UIntType>(
-                GET_ARG_VAL_SIMPLEST(long double, conv_index));
+      if (lm != LengthModifier::L) {
+        WRITE_ARG_VAL_SIMPLEST(section.conv_val_raw, double, conv_index);
+      } else {
+        WRITE_ARG_VAL_SIMPLEST(section.conv_val_raw, long double, conv_index);
+      }
       break;
 #endif // LIBC_COPT_PRINTF_DISABLE_FLOAT
 #ifndef LIBC_COPT_PRINTF_DISABLE_WRITE_INT
@@ -143,7 +166,7 @@ FormatSection Parser::get_next_section() {
 #endif // LIBC_COPT_PRINTF_DISABLE_WRITE_INT
     case ('p'):
     case ('s'):
-      section.conv_val_ptr = GET_ARG_VAL_SIMPLEST(void *, conv_index);
+      WRITE_ARG_VAL_SIMPLEST(section.conv_val_ptr, void *, conv_index);
       break;
     default:
       // if the conversion is undefined, change this to a raw section.
@@ -300,7 +323,8 @@ TypeDesc Parser::get_type_desc(size_t index) {
       // has been for skipping past this conversion properly to avoid
       // weirdness with %%.
       if (conv_index == 0) {
-        ++local_pos;
+        if (str[local_pos] != '\0')
+          ++local_pos;
         continue;
       }
 
@@ -380,12 +404,12 @@ TypeDesc Parser::get_type_desc(size_t index) {
       ++local_pos;
   }
 
-  // If there is no size for the requested index, then just guess that it's an
-  // int.
-  return type_desc_from_type<int>();
+  // If there is no size for the requested index, then it's unknown. Return
+  // void.
+  return type_desc_from_type<void>();
 }
 
-void Parser::args_to_index(size_t index) {
+bool Parser::args_to_index(size_t index) {
   if (args_index > index) {
     args_index = 1;
     args_cur = args_start;
@@ -398,6 +422,13 @@ void Parser::args_to_index(size_t index) {
 
     if (cur_type_desc == type_desc_from_type<void>())
       cur_type_desc = get_type_desc(args_index);
+
+    // A type of void represents the type being unknown. If the type for the
+    // requested index isn't in the desc_arr and isn't found by parsing the
+    // string, then then advancing to the requested index is impossible. In that
+    // case the function returns false.
+    if (cur_type_desc == type_desc_from_type<void>())
+      return false;
 
     if (cur_type_desc == type_desc_from_type<uint32_t>())
       args_cur.next_var<uint32_t>();
@@ -418,6 +449,7 @@ void Parser::args_to_index(size_t index) {
 
     ++args_index;
   }
+  return true;
 }
 
 #endif // LIBC_COPT_PRINTF_DISABLE_INDEX_MODE

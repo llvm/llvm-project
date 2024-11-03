@@ -142,9 +142,34 @@ def : VOP3PSatPat<usubsat, V_PK_SUB_U16>;
 def : VOP3PSatPat<ssubsat, V_PK_SUB_I16>;
 } // End SubtargetPredicate = HasVOP3PInsts
 
+// TODO: Make sure we're doing the right thing with denormals. Note
+// that FMA and MAD will differ.
 multiclass MadFmaMixPats<SDPatternOperator fma_like,
+                         Instruction mix_inst,
                          Instruction mixlo_inst,
                          Instruction mixhi_inst> {
+  // At least one of the operands needs to be an fpextend of an f16
+  // for this to be worthwhile, so we need three patterns here.
+  // TODO: Could we use a predicate to inspect src1/2/3 instead?
+  def : GCNPat <
+    (f32 (fma_like (f32 (VOP3PMadMixModsExt f16:$src0, i32:$src0_mods)),
+                   (f32 (VOP3PMadMixMods f16:$src1, i32:$src1_mods)),
+                   (f32 (VOP3PMadMixMods f16:$src2, i32:$src2_mods)))),
+    (mix_inst $src0_mods, $src0, $src1_mods, $src1, $src2_mods, $src2,
+              DSTCLAMP.NONE)>;
+  def : GCNPat <
+    (f32 (fma_like (f32 (VOP3PMadMixMods f16:$src0, i32:$src0_mods)),
+                   (f32 (VOP3PMadMixModsExt f16:$src1, i32:$src1_mods)),
+                   (f32 (VOP3PMadMixMods f32:$src2, i32:$src2_mods)))),
+    (mix_inst $src0_mods, $src0, $src1_mods, $src1, $src2_mods, $src2,
+              DSTCLAMP.NONE)>;
+  def : GCNPat <
+    (f32 (fma_like (f32 (VOP3PMadMixMods f16:$src0, i32:$src0_mods)),
+                   (f32 (VOP3PMadMixMods f32:$src1, i32:$src1_mods)),
+                   (f32 (VOP3PMadMixModsExt f16:$src2, i32:$src2_mods)))),
+    (mix_inst $src0_mods, $src0, $src1_mods, $src1, $src2_mods, $src2,
+              DSTCLAMP.NONE)>;
+
   def : GCNPat <
     (f16 (fpround (fma_like (f32 (VOP3PMadMixMods f16:$src0, i32:$src0_modifiers)),
                             (f32 (VOP3PMadMixMods f16:$src1, i32:$src1_modifiers)),
@@ -222,7 +247,7 @@ defm V_MAD_MIXHI_F16 : VOP3_VOP3PInst<"v_mad_mixhi_f16", VOP3P_Mix_Profile<VOP_F
 } // End FPDPRounding = 1
 }
 
-defm : MadFmaMixPats<fmad, V_MAD_MIXLO_F16, V_MAD_MIXHI_F16>;
+defm : MadFmaMixPats<fmad, V_MAD_MIX_F32, V_MAD_MIXLO_F16, V_MAD_MIXHI_F16>;
 } // End SubtargetPredicate = HasMadMixInsts
 
 
@@ -243,7 +268,7 @@ defm V_FMA_MIXHI_F16 : VOP3_VOP3PInst<"v_fma_mixhi_f16", VOP3P_Mix_Profile<VOP_F
 } // End FPDPRounding = 1
 }
 
-defm : MadFmaMixPats<fma, V_FMA_MIXLO_F16, V_FMA_MIXHI_F16>;
+defm : MadFmaMixPats<fma, V_FMA_MIX_F32, V_FMA_MIXLO_F16, V_FMA_MIXHI_F16>;
 }
 
 // Defines patterns that extract signed 4bit from each Idx[0].

@@ -35,19 +35,6 @@ class CppDeprecated<string reason> {
 // Dialect definitions
 //===----------------------------------------------------------------------===//
 
-class EmitFolderBase;
-// Generate 'fold' method with 'ArrayRef<Attribute>' parameter.
-// New code should prefer using 'kEmitFoldAdaptorFolder' and
-// consider 'kEmitRawAttributesFolder' deprecated and to be
-// removed in the future.
-def kEmitRawAttributesFolder : EmitFolderBase, Deprecated<
-  "'useFoldAPI' of 'kEmitRawAttributesFolder' (default) has been deprecated "
-  # "and is pending removal. Please switch to 'kEmitFoldAdaptorFolder'. See "
-  # "https://discourse.llvm.org/t/psa-new-improved-fold-method-signature-has-landed-please-update-your-downstream-projects/67618"
-> {}
-// Generate 'fold' method with 'FoldAdaptor' parameter.
-def kEmitFoldAdaptorFolder : EmitFolderBase {}
-
 class Dialect {
   // The name of the dialect.
   string name = ?;
@@ -116,9 +103,6 @@ class Dialect {
 
   // If this dialect can be extended at runtime with new operations or types.
   bit isExtensible = 0;
-
-  // Fold API to use for operations in this dialect.
-  EmitFolderBase useFoldAPI = kEmitFoldAdaptorFolder;
 }
 
 #endif // DIALECTBASE_TD

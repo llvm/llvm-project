@@ -569,7 +569,7 @@ define amdgpu_ps float @v_fneg_negk_minnum_f32_no_ieee(float %a) #0 {
 
 ; GCN-LABEL: {{^}}v_fneg_0_minnum_f32:
 ; GCN: {{buffer|flat}}_load_dword [[A:v[0-9]+]]
-; GCN-NOT [[A]]
+; GCN-NOT: [[A]]
 ; GCN: v_min_f32_e32 [[MIN:v[0-9]+]], 0, [[A]]
 ; GCN: v_xor_b32_e32 [[RESULT:v[0-9]+]], 0x80000000, [[MIN]]
 ; GCN: flat_store_dword v{{\[[0-9]+:[0-9]+\]}}, [[RESULT]]

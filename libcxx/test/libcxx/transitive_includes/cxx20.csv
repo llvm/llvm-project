@@ -338,7 +338,6 @@ format charconv
 format cstddef
 format cstdint
 format cstdlib
-format cstring
 format initializer_list
 format limits
 format locale
@@ -349,7 +348,6 @@ format stdexcept
 format string
 format string_view
 format tuple
-format type_traits
 format vector
 format version
 forward_list algorithm

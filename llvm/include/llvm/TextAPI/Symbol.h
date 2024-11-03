@@ -123,10 +123,7 @@ public:
   void dump() const { dump(llvm::errs()); }
 #endif
 
-  bool operator==(const Symbol &O) const {
-    return std::tie(Name, Kind, Targets, Flags) ==
-           std::tie(O.Name, O.Kind, O.Targets, O.Flags);
-  }
+  bool operator==(const Symbol &O) const;
 
   bool operator!=(const Symbol &O) const { return !(*this == O); }
 

@@ -221,3 +221,13 @@ func.func @regression_do_not_eliminate_non_empty(
       : tensor<5xf32> into tensor<10xf32>
   return %2 : tensor<10xf32>
 }
+
+// -----
+
+// This is a regression test. Make sure that there is no crash.
+
+// CHECK-LABEL: func.func @regression_insert_of_bbarg(
+func.func @regression_insert_of_bbarg(%t0: tensor<5xf32>, %t1: tensor<10xf32>) -> tensor<10xf32> {
+  %0 = tensor.insert_slice %t0 into %t1 [2] [5] [1] : tensor<5xf32> into tensor<10xf32>
+  return %0 : tensor<10xf32>
+}

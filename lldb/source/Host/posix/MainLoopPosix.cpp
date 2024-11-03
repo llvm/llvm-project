@@ -156,9 +156,12 @@ Status MainLoopPosix::RunImpl::Poll() {
     size_t sigset_len;
   } extra_data = {&kernel_sigset, sizeof(kernel_sigset)};
   if (syscall(__NR_pselect6, nfds, &read_fd_set, nullptr, nullptr, nullptr,
-              &extra_data) == -1 &&
-      errno != EINTR)
-    return Status(errno, eErrorTypePOSIX);
+              &extra_data) == -1) {
+    if (errno != EINTR)
+      return Status(errno, eErrorTypePOSIX);
+    else
+      FD_ZERO(&read_fd_set);
+  }
 
   return Status();
 }

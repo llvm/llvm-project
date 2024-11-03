@@ -13,9 +13,9 @@ define void @masked_store_v2f16(ptr %ap, ptr %bp) vscale_range(2,0) #0 {
 ; CHECK-LABEL: masked_store_v2f16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr s1, [x0]
-; CHECK-NEXT:    movi d0, #0000000000000000
-; CHECK-NEXT:    ldr s2, [x1]
 ; CHECK-NEXT:    ptrue p0.h, vl4
+; CHECK-NEXT:    ldr s2, [x1]
+; CHECK-NEXT:    movi v0.2d, #0000000000000000
 ; CHECK-NEXT:    fcmeq v2.4h, v1.4h, v2.4h
 ; CHECK-NEXT:    sshll v2.4s, v2.4h, #0
 ; CHECK-NEXT:    fmov w8, s2

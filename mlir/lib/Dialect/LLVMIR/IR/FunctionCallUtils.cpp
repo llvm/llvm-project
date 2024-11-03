@@ -45,14 +45,14 @@ static constexpr llvm::StringRef kMemRefCopy = "memrefCopy";
 /// Generic print function lookupOrCreate helper.
 LLVM::LLVMFuncOp mlir::LLVM::lookupOrCreateFn(ModuleOp moduleOp, StringRef name,
                                               ArrayRef<Type> paramTypes,
-                                              Type resultType) {
+                                              Type resultType, bool isVarArg) {
   auto func = moduleOp.lookupSymbol<LLVM::LLVMFuncOp>(name);
   if (func)
     return func;
   OpBuilder b(moduleOp.getBodyRegion());
   return b.create<LLVM::LLVMFuncOp>(
       moduleOp->getLoc(), name,
-      LLVM::LLVMFunctionType::get(resultType, paramTypes));
+      LLVM::LLVMFunctionType::get(resultType, paramTypes, isVarArg));
 }
 
 LLVM::LLVMFuncOp mlir::LLVM::lookupOrCreatePrintI64Fn(ModuleOp moduleOp) {

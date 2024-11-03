@@ -297,6 +297,8 @@ std::string SDNode::getOperationName(const SelectionDAG *G) const {
   case ISD::CONCAT_VECTORS:             return "concat_vectors";
   case ISD::INSERT_SUBVECTOR:           return "insert_subvector";
   case ISD::EXTRACT_SUBVECTOR:          return "extract_subvector";
+  case ISD::VECTOR_DEINTERLEAVE:        return "vector_deinterleave";
+  case ISD::VECTOR_INTERLEAVE:          return "vector_interleave";
   case ISD::SCALAR_TO_VECTOR:           return "scalar_to_vector";
   case ISD::VECTOR_SHUFFLE:             return "vector_shuffle";
   case ISD::VECTOR_SPLICE:              return "vector_splice";

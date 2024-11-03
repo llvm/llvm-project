@@ -107,9 +107,10 @@ class CheckRunner:
     # If the test does not specify a config style, force an empty one; otherwise
     # auto-detection logic can discover a ".clang-tidy" file that is not related to
     # the test.
-    if not any(
-        [arg.startswith('-config=') for arg in self.clang_tidy_extra_args]):
-      self.clang_tidy_extra_args.append('-config={}')
+    if not any([
+        re.match('^-?-config(-file)?=', arg)
+        for arg in self.clang_tidy_extra_args]):
+      self.clang_tidy_extra_args.append('--config={}')
 
     if extension in ['.m', '.mm']:
       self.clang_extra_args = ['-fobjc-abi-version=2', '-fobjc-arc', '-fblocks'] + \

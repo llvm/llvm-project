@@ -109,4 +109,22 @@ TEST(PointerIntPairTest, ManyUnusedBits) {
                 "trivially copyable");
 }
 
+TEST(PointerIntPairTest, TypePunning) {
+  int I = 0;
+  int *IntPtr = &I;
+
+  int **IntPtrBegin = &IntPtr;
+  int **IntPtrEnd = IntPtrBegin + 1;
+
+  PointerIntPair<int *, 1> Pair;
+  int **PairAddr = Pair.getAddrOfPointer();
+
+  while (IntPtrBegin != IntPtrEnd) {
+    *PairAddr = *IntPtrBegin;
+    ++PairAddr;
+    ++IntPtrBegin;
+  }
+  EXPECT_EQ(Pair.getPointer(), IntPtr);
+}
+
 } // end anonymous namespace

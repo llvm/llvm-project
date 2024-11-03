@@ -538,7 +538,7 @@ TEST(IncludeCleaner, IWYUPragmas) {
     void foo() {}
   )cpp");
   Config Cfg;
-  Cfg.Diagnostics.UnusedIncludes = Config::Experiment;
+  Cfg.Diagnostics.UnusedIncludes = Config::UnusedIncludesPolicy::Experiment;
   WithContextValue Ctx(Config::Key, std::move(Cfg));
   ParsedAST AST = TU.build();
 
@@ -627,7 +627,7 @@ TEST(IncludeCleaner, NoDiagsForObjC) {
   TU.ExtraArgs.emplace_back("-xobjective-c");
 
   Config Cfg;
-  Cfg.Diagnostics.UnusedIncludes = Config::Strict;
+  Cfg.Diagnostics.UnusedIncludes = Config::UnusedIncludesPolicy::Strict;
   WithContextValue Ctx(Config::Key, std::move(Cfg));
   ParsedAST AST = TU.build();
   EXPECT_THAT(AST.getDiagnostics(), llvm::ValueIs(IsEmpty()));

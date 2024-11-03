@@ -141,6 +141,10 @@ void InterfaceFile::addDocument(std::shared_ptr<InterfaceFile> &&Document) {
   Documents.insert(Pos, Document);
 }
 
+static bool isYAMLTextStub(const FileType &Kind) {
+  return (Kind >= FileType::TBD_V1) && (Kind < FileType::TBD_V5);
+}
+
 bool InterfaceFile::operator==(const InterfaceFile &O) const {
   if (Targets != O.Targets)
     return false;
@@ -165,6 +169,13 @@ bool InterfaceFile::operator==(const InterfaceFile &O) const {
     return false;
   if (Symbols != O.Symbols)
     return false;
+  // Don't compare run search paths for older filetypes that cannot express
+  // them.
+  if (!(isYAMLTextStub(FileKind)) && !(isYAMLTextStub(O.FileKind))) {
+    if (RPaths != O.RPaths)
+      return false;
+  }
+
   if (!std::equal(Documents.begin(), Documents.end(), O.Documents.begin(),
                   O.Documents.end(),
                   [](const std::shared_ptr<InterfaceFile> LHS,

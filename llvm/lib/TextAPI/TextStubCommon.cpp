@@ -82,7 +82,7 @@ void ScalarTraits<PlatformSet>::output(const PlatformSet &Values, void *IO,
     OS << "bridgeos";
     break;
   case PLATFORM_MACCATALYST:
-    OS << "iosmac";
+    OS << "maccatalyst";
     break;
   case PLATFORM_DRIVERKIT:
     OS << "driverkit";
@@ -112,6 +112,7 @@ StringRef ScalarTraits<PlatformSet>::input(StringRef Scalar, void *IO,
                       .Case("tvos", PLATFORM_TVOS)
                       .Case("bridgeos", PLATFORM_BRIDGEOS)
                       .Case("iosmac", PLATFORM_MACCATALYST)
+                      .Case("maccatalyst", PLATFORM_MACCATALYST)
                       .Case("driverkit", PLATFORM_DRIVERKIT)
                       .Default(PLATFORM_UNKNOWN);
 

@@ -464,7 +464,7 @@ void PrimaryExpressions(Ts... a) {
   // CHECK-NEXT: CXXMethodDecl 0x{{[^ ]*}} <col:8, col:19> col:3 constexpr operator() 'auto () const' inline
   // CHECK-NEXT: CompoundStmt
   // CHECK-NEXT: CXXConversionDecl 0x{{[^ ]*}} <col:3, col:19> col:3 implicit constexpr operator auto (*)() 'auto (*() const noexcept)()' inline
-  // CHECK-NEXT: CXXMethodDecl 0x{{[^ ]*}} <col:3, col:19> col:3 implicit __invoke 'auto ()' static inline
+  // CHECK-NEXT: CXXMethodDecl 0x{{[^ ]*}} <col:3, col:19> col:3 implicit constexpr __invoke 'auto ()' static inline
   // CHECK-NEXT: CompoundStmt 0x{{[^ ]*}} <col:18, col:19>
 
   []() mutable {};

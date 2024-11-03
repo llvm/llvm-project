@@ -6447,6 +6447,10 @@ def : Pat<(v2i64 immAllZerosV), (MOVIv2d_ns (i32 0))>;
 def : Pat<(v4i32 immAllZerosV), (MOVIv2d_ns (i32 0))>;
 def : Pat<(v8i16 immAllZerosV), (MOVIv2d_ns (i32 0))>;
 def : Pat<(v16i8 immAllZerosV), (MOVIv2d_ns (i32 0))>;
+def : Pat<(v2f64 immAllZerosV), (MOVIv2d_ns (i32 0))>;
+def : Pat<(v4f32 immAllZerosV), (MOVIv2d_ns (i32 0))>;
+def : Pat<(v8f16 immAllZerosV), (MOVIv2d_ns (i32 0))>;
+def : Pat<(v8bf16 immAllZerosV), (MOVIv2d_ns (i32 0))>;
 
 def : Pat<(v2i64 immAllOnesV), (MOVIv2d_ns (i32 255))>;
 def : Pat<(v4i32 immAllOnesV), (MOVIv2d_ns (i32 255))>;
@@ -6459,6 +6463,10 @@ def : Pat<(v1i64 immAllZerosV), (EXTRACT_SUBREG (MOVIv2d_ns (i32 0)), dsub)>;
 def : Pat<(v2i32 immAllZerosV), (EXTRACT_SUBREG (MOVIv2d_ns (i32 0)), dsub)>;
 def : Pat<(v4i16 immAllZerosV), (EXTRACT_SUBREG (MOVIv2d_ns (i32 0)), dsub)>;
 def : Pat<(v8i8  immAllZerosV), (EXTRACT_SUBREG (MOVIv2d_ns (i32 0)), dsub)>;
+def : Pat<(v1f64 immAllZerosV), (MOVID (i32 0))>;
+def : Pat<(v2f32 immAllZerosV), (MOVID (i32 0))>;
+def : Pat<(v4f16 immAllZerosV), (MOVID (i32 0))>;
+def : Pat<(v4bf16 immAllZerosV), (MOVID (i32 0))>;
 
 def : Pat<(v1i64 immAllOnesV), (EXTRACT_SUBREG (MOVIv2d_ns (i32 255)), dsub)>;
 def : Pat<(v2i32 immAllOnesV), (EXTRACT_SUBREG (MOVIv2d_ns (i32 255)), dsub)>;

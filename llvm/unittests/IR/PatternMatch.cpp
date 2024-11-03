@@ -1760,7 +1760,7 @@ TEST_F(PatternMatchTest, VScale) {
   Value *NullPtrVec = Constant::getNullValue(VecPtrTy);
   Value *GEP = IRB.CreateGEP(VecTy, NullPtrVec, IRB.getInt64(1));
   Value *PtrToInt = IRB.CreatePtrToInt(GEP, DL.getIntPtrType(GEP->getType()));
-  EXPECT_TRUE(match(PtrToInt, m_VScale(DL)));
+  EXPECT_TRUE(match(PtrToInt, m_VScale()));
 
   // This used to cause assertion failures when attempting to match m_VScale.
   // With opaque pointers the bitcast is no longer present.
@@ -1770,7 +1770,7 @@ TEST_F(PatternMatchTest, VScale) {
   Value *GEP2 = IRB.CreateGEP(VecTy, BitCast, IRB.getInt64(1));
   Value *PtrToInt2 =
       IRB.CreatePtrToInt(GEP2, DL.getIntPtrType(GEP2->getType()));
-  EXPECT_TRUE(match(PtrToInt2, m_VScale(DL)));
+  EXPECT_TRUE(match(PtrToInt2, m_VScale()));
 }
 
 TEST_F(PatternMatchTest, NotForbidUndef) {

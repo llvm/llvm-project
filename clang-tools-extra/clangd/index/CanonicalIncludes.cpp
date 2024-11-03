@@ -717,7 +717,8 @@ llvm::StringRef CanonicalIncludes::mapSymbol(llvm::StringRef Scope,
   if (Scope == "std::" && Name == "move")
     return "<utility>";
   if (auto StdSym = tooling::stdlib::Symbol::named(Scope, Name, Lang))
-    return StdSym->header().name();
+    if (auto Header = StdSym->header())
+      return Header->name();
   return "";
 }
 

@@ -41,8 +41,7 @@ public:
     unsigned PointerSize;
     support::endianness Endianness;
     jitlink::Edge::Kind EdgeKind;
-    const auto &TT =
-        ENP.getExecutionSession().getExecutorProcessControl().getTargetTriple();
+    const auto &TT = ENP.getExecutionSession().getTargetTriple();
 
     switch (TT.getArch()) {
     case Triple::x86_64:
@@ -107,13 +106,13 @@ Expected<std::unique_ptr<ELFNixPlatform>> ELFNixPlatform::Create(
     JITDylib &PlatformJD, std::unique_ptr<DefinitionGenerator> OrcRuntime,
     std::optional<SymbolAliasMap> RuntimeAliases) {
 
-  auto &EPC = ES.getExecutorProcessControl();
-
   // If the target is not supported then bail out immediately.
-  if (!supportedTarget(EPC.getTargetTriple()))
+  if (!supportedTarget(ES.getTargetTriple()))
     return make_error<StringError>("Unsupported ELFNixPlatform triple: " +
-                                       EPC.getTargetTriple().str(),
+                                       ES.getTargetTriple().str(),
                                    inconvertibleErrorCode());
+
+  auto &EPC = ES.getExecutorProcessControl();
 
   // Create default aliases if the caller didn't supply any.
   if (!RuntimeAliases) {
@@ -154,8 +153,7 @@ ELFNixPlatform::Create(ExecutionSession &ES,
 
   // Create a generator for the ORC runtime archive.
   auto OrcRuntimeArchiveGenerator = StaticLibraryDefinitionGenerator::Load(
-      ObjLinkingLayer, OrcRuntimePath,
-      ES.getExecutorProcessControl().getTargetTriple());
+      ObjLinkingLayer, OrcRuntimePath, ES.getTargetTriple());
   if (!OrcRuntimeArchiveGenerator)
     return OrcRuntimeArchiveGenerator.takeError();
 

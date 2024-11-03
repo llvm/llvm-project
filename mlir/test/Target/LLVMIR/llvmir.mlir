@@ -2120,16 +2120,16 @@ llvm.func @vararg_function(%arg0: i32, ...) {
   %2 = llvm.alloca %1 x !llvm.struct<"struct.va_list", (ptr<i8>)> {alignment = 8 : i64} : (i32) -> !llvm.ptr<struct<"struct.va_list", (ptr<i8>)>>
   %3 = llvm.bitcast %2 : !llvm.ptr<struct<"struct.va_list", (ptr<i8>)>> to !llvm.ptr<i8>
   // CHECK: call void @llvm.va_start(ptr %[[ALLOCA0]])
-  llvm.intr.vastart %3
+  llvm.intr.vastart %3 : !llvm.ptr<i8>
   // CHECK: %[[ALLOCA1:.+]] = alloca ptr, align 8
   %4 = llvm.alloca %0 x !llvm.ptr<i8> {alignment = 8 : i64} : (i32) -> !llvm.ptr<ptr<i8>>
   %5 = llvm.bitcast %4 : !llvm.ptr<ptr<i8>> to !llvm.ptr<i8>
   // CHECK: call void @llvm.va_copy(ptr %[[ALLOCA1]], ptr %[[ALLOCA0]])
-  llvm.intr.vacopy %3 to %5
+  llvm.intr.vacopy %3 to %5 : !llvm.ptr<i8>, !llvm.ptr<i8>
   // CHECK: call void @llvm.va_end(ptr %[[ALLOCA1]])
   // CHECK: call void @llvm.va_end(ptr %[[ALLOCA0]])
-  llvm.intr.vaend %5
-  llvm.intr.vaend %3
+  llvm.intr.vaend %5 : !llvm.ptr<i8>
+  llvm.intr.vaend %3 : !llvm.ptr<i8>
   // CHECK: ret void
   llvm.return
 }

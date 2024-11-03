@@ -147,7 +147,7 @@ protected:
         << "(<8 x i16>, <8 x i16>, metadata, <8 x i1>, i32) ";
 
     Str << " declare <8 x i16> @llvm.vp.abs.v8i16"
-        << "(<8 x i16>, <8 x i1>, i32, i1 immarg) ";
+        << "(<8 x i16>, i1 immarg, <8 x i1>, i32) ";
     Str << " declare <8 x i16> @llvm.vp.bitreverse.v8i16"
         << "(<8 x i16>, <8 x i1>, i32) ";
     Str << " declare <8 x i16> @llvm.vp.bswap.v8i16"
@@ -155,9 +155,9 @@ protected:
     Str << " declare <8 x i16> @llvm.vp.ctpop.v8i16"
         << "(<8 x i16>, <8 x i1>, i32) ";
     Str << " declare <8 x i16> @llvm.vp.ctlz.v8i16"
-        << "(<8 x i16>, <8 x i1>, i32, i1 immarg) ";
+        << "(<8 x i16>, i1 immarg, <8 x i1>, i32) ";
     Str << " declare <8 x i16> @llvm.vp.cttz.v8i16"
-        << "(<8 x i16>, <8 x i1>, i32, i1 immarg) ";
+        << "(<8 x i16>, i1 immarg, <8 x i1>, i32) ";
     Str << " declare <8 x i16> @llvm.vp.fshl.v8i16"
         << "(<8 x i16>, <8 x i16>, <8 x i16>, <8 x i1>, i32) ";
     Str << " declare <8 x i16> @llvm.vp.fshr.v8i16"
