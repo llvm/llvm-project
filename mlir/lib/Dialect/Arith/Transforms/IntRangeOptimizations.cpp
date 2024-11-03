@@ -495,7 +495,7 @@ struct IntRangeNarrowingPass final
 
     GreedyRewriteConfig config;
     // We specifically need bottom-up traversal as cmpi pattern needs range
-    // data, attched to it's original arguments.
+    // data, attached to its original argument values.
     config.useTopDownTraversal = false;
     config.listener = &listener;
 
