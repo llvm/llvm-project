@@ -1337,18 +1337,18 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
 
   normalizeCFGForExtraction(header);
 
-   if (!KeepOldBlocks) {
-  // Remove CondGuardInsts that will be moved to the new function from the old
-  // function's assumption cache.
-  for (BasicBlock *Block : Blocks) {
-    for (Instruction &I : llvm::make_early_inc_range(*Block)) {
-      if (auto *CI = dyn_cast<CondGuardInst>(&I)) {
-        if (AC)
-          AC->unregisterAssumption(CI);
-        CI->eraseFromParent();
+  if (!KeepOldBlocks) {
+    // Remove CondGuardInsts that will be moved to the new function from the old
+    // function's assumption cache.
+    for (BasicBlock *Block : Blocks) {
+      for (Instruction &I : llvm::make_early_inc_range(*Block)) {
+        if (auto *CI = dyn_cast<CondGuardInst>(&I)) {
+          if (AC)
+            AC->unregisterAssumption(CI);
+          CI->eraseFromParent();
+        }
       }
     }
-  }
   }
 
   ValueSet SinkingCands, HoistingCands;
