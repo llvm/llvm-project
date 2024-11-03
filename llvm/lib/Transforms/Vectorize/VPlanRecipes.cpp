@@ -292,18 +292,6 @@ InstructionCost VPRecipeBase::computeCost(ElementCount VF,
   llvm_unreachable("subclasses should implement computeCost");
 }
 
-InstructionCost VPSingleDefRecipe::computeCost(ElementCount VF,
-                                               VPCostContext &Ctx) const {
-  Instruction *UI = dyn_cast_or_null<Instruction>(getUnderlyingValue());
-  if (isa<VPReplicateRecipe>(this)) {
-    assert(UI && "VPReplicateRecipe must have an underlying instruction");
-    // VPReplicateRecipe may be cloned as part of an existing VPlan-to-VPlan
-    // transform, avoid computing their cost multiple times for now.
-    Ctx.SkipCostComputation.insert(UI);
-  }
-  return UI ? Ctx.getLegacyCost(UI, VF) : 0;
-}
-
 FastMathFlags VPRecipeWithIRFlags::getFastMathFlags() const {
   assert(OpType == OperationType::FPMathOp &&
          "recipe doesn't have fast math flags");
@@ -2281,6 +2269,15 @@ bool VPReplicateRecipe::shouldPack() const {
       });
     return false;
   });
+}
+
+InstructionCost VPReplicateRecipe::computeCost(ElementCount VF,
+                                               VPCostContext &Ctx) const {
+  Instruction *UI = cast<Instruction>(getUnderlyingValue());
+  // VPReplicateRecipe may be cloned as part of an existing VPlan-to-VPlan
+  // transform, avoid computing their cost multiple times for now.
+  Ctx.SkipCostComputation.insert(UI);
+  return Ctx.getLegacyCost(UI, VF);
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
