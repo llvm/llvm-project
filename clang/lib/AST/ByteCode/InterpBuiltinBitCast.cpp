@@ -315,19 +315,34 @@ static bool readPointerToBuffer(const Context &Ctx, const Pointer &FromPtr,
           assert(false && "Implement casting to pointer types");
 
         CharUnits ObjectReprChars = ASTCtx.getTypeSizeInChars(P.getType());
-        unsigned BitWidth;
-        if (const FieldDecl *FD = P.getField(); FD && FD->isBitField())
-          BitWidth = FD->getBitWidthValue(ASTCtx);
-        else
-          BitWidth = ASTCtx.toBits(ObjectReprChars);
-
+        unsigned BitWidth = ASTCtx.toBits(ObjectReprChars);
         llvm::SmallVector<std::byte> Buff(ObjectReprChars.getQuantity());
-        BITCAST_TYPE_SWITCH_WITH_FLOAT(T, {
-          T Val = P.deref<T>();
-          Val.bitcastToMemory(Buff.data());
-        });
-        if (SwapData)
-          swapBytes(Buff.data(), ObjectReprChars.getQuantity());
+        // Work around floating point types that contain unused padding bytes.
+        // This is really just `long double` on x86, which is the only
+        // fundamental type with padding bytes.
+        if (T == PT_Float) {
+          Floating &F = P.deref<Floating>();
+          unsigned NumBits =
+              llvm::APFloatBase::getSizeInBits(F.getAPFloat().getSemantics());
+          assert(NumBits % 8 == 0);
+          assert(NumBits <= (ObjectReprChars.getQuantity() * 8));
+          F.bitcastToMemory(Buff.data());
+          // Now, only (maybe) swap the actual size of the float, excluding the
+          // padding bits.
+          if (SwapData)
+            swapBytes(Buff.data(), NumBits / 8);
+
+        } else {
+          if (const FieldDecl *FD = P.getField(); FD && FD->isBitField())
+            BitWidth = FD->getBitWidthValue(ASTCtx);
+
+          BITCAST_TYPE_SWITCH(T, {
+            T Val = P.deref<T>();
+            Val.bitcastToMemory(Buff.data());
+          });
+          if (SwapData)
+            swapBytes(Buff.data(), ObjectReprChars.getQuantity());
+        }
 
         if (BitWidth != (Buff.size() * 8) && BigEndianTarget) {
           Buffer.pushData(Buff.data() + (Buff.size() - 1 - (BitWidth / 8)),
