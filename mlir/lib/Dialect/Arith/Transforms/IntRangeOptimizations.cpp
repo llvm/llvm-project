@@ -196,24 +196,23 @@ private:
 };
 
 /// Check if `type` is index or integer type with `getWidth() > targetBitwidth`.
-static Type checkIntType(Type type, unsigned targetBitwidth) {
+static bool checkIntType(Type type, unsigned targetBitwidth) {
   Type elemType = getElementTypeOrSelf(type);
   if (isa<IndexType>(elemType))
-    return type;
+    return true;
 
   if (auto intType = dyn_cast<IntegerType>(elemType))
     if (intType.getWidth() > targetBitwidth)
-      return type;
+      return true;
 
-  return nullptr;
+  return false;
 }
 
 /// Check if op have same type for all operands and results and this type
 /// is suitable for truncation.
-/// Retuns args type or empty.
-static Type checkElementwiseOpType(Operation *op, unsigned targetBitwidth) {
+static bool checkElementwiseOpType(Operation *op, unsigned targetBitwidth) {
   if (op->getNumOperands() == 0 || op->getNumResults() == 0)
-    return nullptr;
+    return false;
 
   Type type;
   for (Value val : llvm::concat<Value>(op->getOperands(), op->getResults())) {
@@ -223,7 +222,7 @@ static Type checkElementwiseOpType(Operation *op, unsigned targetBitwidth) {
     }
 
     if (type != val.getType())
-      return nullptr;
+      return false;
   }
 
   return checkIntType(type, targetBitwidth);
@@ -325,9 +324,10 @@ struct NarrowElementwise final : OpTraitRewritePattern<OpTrait::Elementwise> {
       return failure();
 
     for (unsigned targetBitwidth : targetBitwidths) {
-      Type srcType = checkElementwiseOpType(op, targetBitwidth);
-      if (!srcType)
+      if (!checkElementwiseOpType(op, targetBitwidth))
         continue;
+
+      Type srcType = op->getResult(0).getType();
 
       // We are truncating op args to the desired bitwidth before the op and
       // then extending op results back to the original width after. extui and
@@ -387,8 +387,8 @@ struct NarrowCmpI final : OpRewritePattern<arith::CmpIOp> {
       return failure();
 
     for (unsigned targetBitwidth : targetBitwidths) {
-      Type srcType = checkIntType(lhs.getType(), targetBitwidth);
-      if (!srcType)
+      Type srcType = lhs.getType();
+      if (!checkIntType(srcType, targetBitwidth))
         continue;
 
       auto smin = APInt::getSignedMinValue(targetBitwidth);
