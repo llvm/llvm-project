@@ -57,15 +57,19 @@ class RISCVTuneProcessorModel<string n,
                               list<SubtargetFeature> f = []>
     : ProcessorModel<n, m, f,tunef>;
 
+defvar GenericTuneFeatures = [TuneOptimizedNF2SegmentLoadStore];
+
 def GENERIC_RV32 : RISCVProcessorModel<"generic-rv32",
                                        NoSchedModel,
                                        [Feature32Bit,
-                                        FeatureStdExtI]>,
+                                        FeatureStdExtI],
+                                       GenericTuneFeatures>,
                    GenericTuneInfo;
 def GENERIC_RV64 : RISCVProcessorModel<"generic-rv64",
                                        NoSchedModel,
                                        [Feature64Bit,
-                                        FeatureStdExtI]>,
+                                        FeatureStdExtI],
+                                       GenericTuneFeatures>,
                    GenericTuneInfo;
 // Support generic for compatibility with other targets. The triple will be used
 // to change to the appropriate rv32/rv64 version.
@@ -221,7 +225,8 @@ def SIFIVE_U74 : RISCVProcessorModel<"sifive-u74",
 
 defvar SiFiveX280TuneFeatures = !listconcat(SiFive7TuneFeatures,
                                             [TuneDLenFactor2,
-                                             TuneOptimizedZeroStrideLoad]);
+                                             TuneOptimizedZeroStrideLoad,
+                                             TuneOptimizedNF2SegmentLoadStore]);
 def SIFIVE_X280 : RISCVProcessorModel<"sifive-x280", SiFive7Model,
                                       [Feature64Bit,
                                        FeatureStdExtI,
@@ -472,7 +477,10 @@ def SPACEMIT_X60 : RISCVProcessorModel<"spacemit-x60",
                                         FeatureStdExtZvfh,
                                         FeatureStdExtZvkt,
                                         FeatureStdExtZvl256b]),
-                                       [TuneDLenFactor2]>;
+                                       [TuneDLenFactor2,
+                                        TuneOptimizedNF2SegmentLoadStore,
+                                        TuneOptimizedNF3SegmentLoadStore,
+                                        TuneOptimizedNF4SegmentLoadStore]>;
 
 def RP2350_HAZARD3 : RISCVProcessorModel<"rp2350-hazard3",
                                          NoSchedModel,
