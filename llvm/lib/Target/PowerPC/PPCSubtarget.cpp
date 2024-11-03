@@ -29,6 +29,7 @@
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Target/TargetMachine.h"
+#include "llvm/TargetParser/PPCTargetParser.h"
 #include <cstdlib>
 
 using namespace llvm;
@@ -84,6 +85,8 @@ void PPCSubtarget::initSubtargetFeatures(StringRef CPU, StringRef TuneCPU,
       CPUName = "ppc64le";
     else if (TargetTriple.getSubArch() == Triple::PPCSubArch_spe)
       CPUName = "e500";
+    else if (TargetTriple.isOSAIX() && CPUName.empty())
+      CPUName = std::string(PPC::getNormalizedPPCTargetCPU(TargetTriple));
     else
       CPUName = "generic";
   }
