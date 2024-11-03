@@ -245,11 +245,7 @@ static std::optional<ConstantIntRanges> getOperandsRange(DataFlowSolver &solver,
     const ConstantIntRanges &inferredRange =
         maybeInferredRange->getValue().getValue();
 
-    if (!ret) {
-      ret = inferredRange;
-    } else {
-      ret = ret->rangeUnion(inferredRange);
-    }
+    ret = (ret ? ret->rangeUnion(inferredRange) : inferredRange);
   }
   return ret;
 }
@@ -265,7 +261,7 @@ static Type getTargetType(Type srcType, unsigned targetBitwidth) {
   return dstType;
 }
 
-/// Check privided `range` is inside `smin, smax, umin, umax` bounds.
+/// Check provided `range` is inside `smin, smax, umin, umax` bounds.
 static bool checkRange(const ConstantIntRanges &range, APInt smin, APInt smax,
                        APInt umin, APInt umax) {
   auto sge = [](APInt val1, APInt val2) -> bool {
@@ -321,8 +317,7 @@ static Value doCast(OpBuilder &builder, Location loc, Value src, Type dstType) {
 struct NarrowElementwise final : OpTraitRewritePattern<OpTrait::Elementwise> {
   NarrowElementwise(MLIRContext *context, DataFlowSolver &s,
                     ArrayRef<unsigned> target)
-      : OpTraitRewritePattern<OpTrait::Elementwise>(context), solver(s),
-        targetBitwidths(target) {}
+      : OpTraitRewritePattern(context), solver(s), targetBitwidths(target) {}
 
   using OpTraitRewritePattern::OpTraitRewritePattern;
   LogicalResult matchAndRewrite(Operation *op,
