@@ -1567,13 +1567,12 @@ InstructionCost X86TTIImpl::getShuffleCost(
       Mask.size() == BaseTp->getElementCount().getKnownMinValue()) {
     unsigned NumLanes = BaseTp->getPrimitiveSizeInBits() / 128;
     unsigned NumEltsPerLane = Mask.size() / NumLanes;
-    if ((Mask.size() % NumLanes) == 0) {
-      IsInLaneShuffle = true;
-      for (auto [I, M] : enumerate(Mask))
-        if (0 <= M)
-          IsInLaneShuffle &=
-              ((M % Mask.size()) / NumEltsPerLane) == (I / NumEltsPerLane);
-    }
+    if ((Mask.size() % NumLanes) == 0)
+      IsInLaneShuffle = all_of(enumerate(Mask), [&](const auto &P) {
+        return P.value() == PoisonMaskElem ||
+               ((P.value() % Mask.size()) / NumEltsPerLane) ==
+                   (P.index() / NumEltsPerLane);
+      });
   }
 
   // Treat <X x bfloat> shuffles as <X x half>.
