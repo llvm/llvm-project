@@ -149,10 +149,11 @@ public:
     CodeExtractor(ArrayRef<BasicBlock *> BBs, DominatorTree *DT = nullptr,
                   bool AggregateArgs = false, BlockFrequencyInfo *BFI = nullptr,
                   BranchProbabilityInfo *BPI = nullptr,
-                        AssumptionCache *AC = nullptr, bool AllowVarArgs = false,
-                        bool AllowAlloca = false,
-                        BasicBlock *AllocationBlock = nullptr,
-                        std::string Suffix = "", bool ArgsInZeroAddressSpace = false, bool KeepOldBlocks = false);
+                  AssumptionCache *AC = nullptr, bool AllowVarArgs = false,
+                  bool AllowAlloca = false,
+                  BasicBlock *AllocationBlock = nullptr,
+                  std::string Suffix = "", bool ArgsInZeroAddressSpace = false,
+                  bool KeepOldBlocks = false);
 
     /// Create a code extractor for a loop body.
     ///

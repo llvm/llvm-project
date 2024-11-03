@@ -251,14 +251,15 @@ buildExtractionBlockSet(ArrayRef<BasicBlock *> BBs, DominatorTree *DT,
 CodeExtractor::CodeExtractor(ArrayRef<BasicBlock *> BBs, DominatorTree *DT,
                              bool AggregateArgs, BlockFrequencyInfo *BFI,
                              BranchProbabilityInfo *BPI, AssumptionCache *AC,
-                                   bool AllowVarArgs, bool AllowAlloca,
-                                   BasicBlock *AllocationBlock, std::string Suffix, bool KeepOldBlocks,
-                                   bool ArgsInZeroAddressSpace)
-        : DT(DT), AggregateArgs(AggregateArgs || AggregateArgsOpt), BFI(BFI),
-          BPI(BPI), AC(AC), AllocationBlock(AllocationBlock),
-          AllowVarArgs(AllowVarArgs), KeepOldBlocks(KeepOldBlocks),
-          Blocks(buildExtractionBlockSet(BBs, DT, AllowVarArgs, AllowAlloca,KeepOldBlocks)),
-          Suffix(Suffix), ArgsInZeroAddressSpace(ArgsInZeroAddressSpace) {}
+                             bool AllowVarArgs, bool AllowAlloca,
+                             BasicBlock *AllocationBlock, std::string Suffix,
+                             bool KeepOldBlocks, bool ArgsInZeroAddressSpace)
+    : DT(DT), AggregateArgs(AggregateArgs || AggregateArgsOpt), BFI(BFI),
+      BPI(BPI), AC(AC), AllocationBlock(AllocationBlock),
+      AllowVarArgs(AllowVarArgs), KeepOldBlocks(KeepOldBlocks),
+      Blocks(buildExtractionBlockSet(BBs, DT, AllowVarArgs, AllowAlloca,
+                                     KeepOldBlocks)),
+      Suffix(Suffix), ArgsInZeroAddressSpace(ArgsInZeroAddressSpace) {}
 
 CodeExtractor::CodeExtractor(DominatorTree &DT, Loop &L, bool AggregateArgs,
                              BlockFrequencyInfo *BFI,
@@ -1870,14 +1871,14 @@ CallInst *CodeExtractor::emitReplacerCall(
     Struct = new AllocaInst(StructArgTy, DL.getAllocaAddrSpace(), nullptr,
                             "structArg", &*AllocaBlock->getFirstInsertionPt());
 
-          if (ArgsInZeroAddressSpace && DL.getAllocaAddrSpace() != 0) {
-            auto *StructSpaceCast = new AddrSpaceCastInst(
-                Struct, PointerType ::get(Context, 0), "structArg.ascast");
-            StructSpaceCast->insertAfter(Struct);
-            params.push_back(StructSpaceCast);
-          } else {
-            params.push_back(Struct);
-          }
+    if (ArgsInZeroAddressSpace && DL.getAllocaAddrSpace() != 0) {
+      auto *StructSpaceCast = new AddrSpaceCastInst(
+          Struct, PointerType ::get(Context, 0), "structArg.ascast");
+      StructSpaceCast->insertAfter(Struct);
+      params.push_back(StructSpaceCast);
+    } else {
+      params.push_back(Struct);
+    }
 
     unsigned AggIdx = 0;
     for (Value *input : inputs) {
