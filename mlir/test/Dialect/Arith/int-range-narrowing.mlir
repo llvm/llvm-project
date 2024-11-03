@@ -107,6 +107,25 @@ func.func @test_add_cmpi() -> i1 {
   return %5 : i1
 }
 
+// CHECK-LABEL: func @test_add_cmpi_i64
+//       CHECK:  %[[A:.*]] = test.with_bounds {smax = 10 : i64, smin = 0 : i64, umax = 10 : i64, umin = 0 : i64} : i64
+//       CHECK:  %[[B:.*]] = test.with_bounds {smax = 10 : i64, smin = 0 : i64, umax = 10 : i64, umin = 0 : i64} : i64
+//       CHECK:  %[[C:.*]] = test.with_bounds {smax = 10 : i64, smin = 0 : i64, umax = 10 : i64, umin = 0 : i64} : i64
+//       CHECK:  %[[A_CASTED:.*]] = arith.trunci %[[A]] : i64 to i8
+//       CHECK:  %[[B_CASTED:.*]] = arith.trunci %[[B]] : i64 to i8
+//       CHECK:  %[[RES1:.*]] = arith.addi %[[A_CASTED]], %[[B_CASTED]] : i8
+//       CHECK:  %[[C_CASTED:.*]] = arith.trunci %[[C]] : i64 to i8
+//       CHECK:  %[[RES2:.*]] = arith.cmpi slt, %[[C_CASTED]], %[[RES1]] : i8
+//       CHECK:  return %[[RES2]] : i1
+func.func @test_add_cmpi_i64() -> i1 {
+  %0 = test.with_bounds { umin = 0 : i64, umax = 10 : i64, smin = 0 : i64, smax = 10 : i64 } : i64
+  %1 = test.with_bounds { umin = 0 : i64, umax = 10 : i64, smin = 0 : i64, smax = 10 : i64 } : i64
+  %3 = test.with_bounds { umin = 0 : i64, umax = 10 : i64, smin = 0 : i64, smax = 10 : i64 } : i64
+  %4 = arith.addi %0, %1 : i64
+  %5 = arith.cmpi slt, %3, %4 : i64
+  return %5 : i1
+}
+
 //===----------------------------------------------------------------------===//
 // arith.addi
 //===----------------------------------------------------------------------===//
