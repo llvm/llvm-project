@@ -6,6 +6,7 @@ revert: breaks MIOpen composableKernel build
 Revert: breaking MIOpen test 2
 f8b1ca4992a2 [MCParser] .altmacro: Support argument expansion not preceded by
 812f9e81d2f7 [MCParser] .altmacro: ignore & after a token
+MatthewC working to land
 ---
 ============== above are sema/mipopen/composable-kernel related
 ---
@@ -16,6 +17,7 @@ Ron: still broken 9-6-24
 ---
 Revert: breaks build of hipCUB
 commit 55783bd0 [HIP] fix host min/max in header (#82956)
+Sam
 ---
 Revert "Recommit "[InstCombine] Expand `foldSelectICmpAndOr` -> `foldSelectICmpAndBinOp` to work for more binops" (3rd Try)"
     Backup fix for SWDEV-454675
@@ -24,9 +26,5 @@ contact: Selehov
 ---
 breaks devicelibs
 6e0b0038 [clang][OpenCL][CodeGen][AMDGPU] Do not use `private` as the default AS for when `generic` is available (#112442)
-Ron
+AlexV and MarkS
 ---
-breaks hipRuntime build
-054c23d7 X86: Improve cost model of fp16 conversion (#113195)
-Ron
---

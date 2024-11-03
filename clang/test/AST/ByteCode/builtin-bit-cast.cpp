@@ -74,6 +74,17 @@ constexpr bool operator==(const struct bits<N, T, P>& lhs, const struct bits<N, 
 #ifdef __SIZEOF_INT128__
 static_assert(check_round_trip<__int128_t>((__int128_t)34));
 static_assert(check_round_trip<__int128_t>((__int128_t)-34));
+
+constexpr unsigned char OneBit[] = {
+  0x1, 0x0,  0x0,  0x0,
+  0x0, 0x0,  0x0,  0x0,
+  0x0, 0x0,  0x0,  0x0,
+  0x0, 0x0,  0x0,  0x0,
+};
+constexpr __int128_t One = 1;
+constexpr __int128_t Expected = One << 120;
+static_assert(__builtin_bit_cast(__int128_t, OneBit) == (LITTLE_END ? 1 : Expected));
+
 #endif
 
 
