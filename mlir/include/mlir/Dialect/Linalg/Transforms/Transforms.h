@@ -1786,7 +1786,6 @@ void populateBubbleUpExtractSliceOpPatterns(RewritePatternSet &patterns);
 /// linalg.fill(%cst, tensor.extract_slice(%init)).
 void populateSwapExtractSliceWithFillPatterns(RewritePatternSet &patterns);
 
-
 /// Add patterns to make explicit broadcasts and transforms in the
 /// input operands of a genericOp.
 void populateUnfoldProjectedPermutationPatterns(RewritePatternSet &patterns);
