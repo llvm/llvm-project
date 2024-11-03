@@ -55,6 +55,9 @@ def ArithIntRangeNarrowing : Pass<"arith-int-range-narrowing"> {
   let description = [{
     This pass runs integer range analysis and tries to narrow arith ops to the
     specified bitwidth based on its results.
+
+    `bitwidthsSupported` assumed to be not wider than `index` type.
+    TODO: get index width from DLTI.
   }];
 
   let options = [
