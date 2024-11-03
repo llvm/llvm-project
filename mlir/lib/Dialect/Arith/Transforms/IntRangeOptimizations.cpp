@@ -216,17 +216,14 @@ static Type checkElementwiseOpType(Operation *op, unsigned targetBitwidth) {
     return nullptr;
 
   Type type;
-  for (auto range :
-       {ValueRange(op->getOperands()), ValueRange(op->getResults())}) {
-    for (Value val : range) {
-      if (!type) {
-        type = val.getType();
-        continue;
-      }
-
-      if (type != val.getType())
-        return nullptr;
+  for (Value val : llvm::concat<Value>(op->getOperands(), op->getResults())) {
+    if (!type) {
+      type = val.getType();
+      continue;
     }
+
+    if (type != val.getType())
+      return nullptr;
   }
 
   return checkIntType(type, targetBitwidth);
