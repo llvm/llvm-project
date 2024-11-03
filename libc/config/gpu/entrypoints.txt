@@ -104,6 +104,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.stdio.fgetc
     libc.src.stdio.getc
     libc.src.stdio.getchar
+    libc.src.stdio.ungetc
     libc.src.stdio.stdin
     libc.src.stdio.stdout
     libc.src.stdio.stderr

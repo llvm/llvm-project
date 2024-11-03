@@ -1,0 +1,48 @@
+# LLVM Documentation CI
+# Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+# See https://llvm.org/LICENSE.txt for license information.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
+name: "Test documentation build"
+
+permissions:
+  contents: read
+
+on:
+  push:
+    branches:
+      - 'main'
+    paths:
+      - 'llvm/docs/**'
+  pull_request:
+    paths:
+      - 'llvm/docs/**'
+
+jobs:
+  check-docs-build:
+    name: "Test documentation build"
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fetch LLVM sources
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+      - name: Setup Python env
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+          cache-dependency-path: 'llvm/docs/requirements.txt'
+      - name: Install python dependencies
+        run: pip install -r llvm/docs/requirements.txt
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake ninja-build
+      - name: Build docs
+        run: |
+          mkdir build
+          cd build
+          cmake -GNinja -DCMAKE_BUILD_TYPE=Release -DLLVM_ENABLE_SPHINX=ON -DSPHINX_OUTPUT_HTML=ON -DSPHINX_OUTPUT_MAN=ON ../llvm
+          TZ=UTC ninja docs-llvm-html docs-llvm-man
+

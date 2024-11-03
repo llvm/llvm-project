@@ -263,10 +263,12 @@ RT_API_ATTRS static void Assign(
   }
   std::size_t toElementBytes{to.ElementBytes()};
   std::size_t fromElementBytes{from.ElementBytes()};
-  auto isSimpleMemmove{[&]() {
+  // The following lambda definition violates the conding style,
+  // but cuda-11.8 nvcc hits an internal error with the brace initialization.
+  auto isSimpleMemmove = [&]() {
     return !toDerived && to.rank() == from.rank() && to.IsContiguous() &&
         from.IsContiguous() && toElementBytes == fromElementBytes;
-  }};
+  };
   StaticDescriptor<maxRank, true, 10 /*?*/> deferredDeallocStatDesc;
   Descriptor *deferDeallocation{nullptr};
   if (MayAlias(to, from)) {

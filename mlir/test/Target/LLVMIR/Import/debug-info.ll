@@ -222,15 +222,18 @@ define void @subprogram() !dbg !3 {
 define void @func_loc() !dbg !3 {
   ret void
 }
-; CHECK: #[[SP:.+]] =  #llvm.di_subprogram<compileUnit = #{{.*}}, scope = #{{.*}}, name = "func_loc", file = #{{.*}}, subprogramFlags = Definition>
-; CHECK: loc(fused<#[[SP]]>[
+; CHECK-DAG: #[[NAME_LOC:.+]] = loc("func_loc")
+; CHECK-DAG: #[[FILE_LOC:.+]] = loc("debug-info.ll":42:0)
+; CHECK-DAG: #[[SP:.+]] =  #llvm.di_subprogram<compileUnit = #{{.*}}, scope = #{{.*}}, name = "func_loc", file = #{{.*}}, line = 42, subprogramFlags = Definition>
+
+; CHECK: loc(fused<#[[SP]]>[#[[NAME_LOC]], #[[FILE_LOC]]]
 
 !llvm.dbg.cu = !{!1}
 !llvm.module.flags = !{!0}
 !0 = !{i32 2, !"Debug Info Version", i32 3}
 !1 = distinct !DICompileUnit(language: DW_LANG_C, file: !2)
 !2 = !DIFile(filename: "debug-info.ll", directory: "/")
-!3 = distinct !DISubprogram(name: "func_loc", scope: !2, file: !2, spFlags: DISPFlagDefinition, unit: !1)
+!3 = distinct !DISubprogram(name: "func_loc", scope: !2, file: !2, spFlags: DISPFlagDefinition, unit: !1, line: 42)
 
 ; // -----
 
@@ -538,7 +541,7 @@ define void @noname_subprogram(ptr %arg) !dbg !8 {
 ; // -----
 
 ; CHECK:      #[[MODULE:.+]] = #llvm.di_module<
-; CHECK-SAME: file = #{{.*}}, scope = #{{.*}}, name = "module", 
+; CHECK-SAME: file = #{{.*}}, scope = #{{.*}}, name = "module",
 ; CHECK-SAME: configMacros = "bar", includePath = "/",
 ; CHECK-SAME: apinotes = "/", line = 42, isDecl = true
 ; CHECK-SAME: >

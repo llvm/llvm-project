@@ -18,7 +18,13 @@
 #include "test_macros.h"
 
 // alignment of the string heap buffer is hardcoded to 16
-static const std::size_t alignment = 16;
+
+static const std::size_t alignment =
+#ifdef _LIBCPP_ABI_STRING_8_BYTE_ALIGNMENT
+    8;
+#else
+    16;
+#endif
 
 template <class = int>
 TEST_CONSTEXPR_CXX20 void full_size() {

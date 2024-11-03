@@ -32,7 +32,6 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/SymExpr.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SymbolManager.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/StringMap.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <optional>
 #include <string>
@@ -202,7 +201,7 @@ static QualType getInnerPointerType(CheckerContext C, const CXXRecordDecl *RD) {
 static QualType getPointerTypeFromTemplateArg(const CallEvent &Call,
                                               CheckerContext &C) {
   const auto *FD = dyn_cast_or_null<FunctionDecl>(Call.getDecl());
-  if (!FD || !FD->isFunctionTemplateSpecialization())
+  if (!FD || !FD->getPrimaryTemplate())
     return {};
   const auto &TemplateArgs = FD->getTemplateSpecializationArgs()->asArray();
   if (TemplateArgs.size() == 0)

@@ -333,3 +333,28 @@ void instantiate_a_class_template() {
   AClassTemplate<Obj&> withObjRef(o);
   withObjRef.never_moves(o);
 }
+
+namespace gh68209
+{
+  void f1([[maybe_unused]] int&& x) {}
+
+  void f2(__attribute__((unused)) int&& x) {}
+
+  void f3(int&& x) {}
+  // CHECK-MESSAGES: :[[@LINE-1]]:17: warning: rvalue reference parameter 'x' is never moved from inside the function body [cppcoreguidelines-rvalue-reference-param-not-moved]
+
+  template <typename T>
+  void f4([[maybe_unused]] T&& x) {}
+
+  template <typename T>
+  void f5(__attribute((unused)) T&& x) {}
+
+  template<typename T>
+  void f6(T&& x) {}
+
+  void f7([[maybe_unused]] int&& x) { x += 1; }
+  // CHECK-MESSAGES: :[[@LINE-1]]:34: warning: rvalue reference parameter 'x' is never moved from inside the function body [cppcoreguidelines-rvalue-reference-param-not-moved]
+
+  void f8(__attribute__((unused)) int&& x) { x += 1; }
+  // CHECK-MESSAGES: :[[@LINE-1]]:41: warning: rvalue reference parameter 'x' is never moved from inside the function body [cppcoreguidelines-rvalue-reference-param-not-moved]
+} // namespace gh68209

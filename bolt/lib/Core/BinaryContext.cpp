@@ -1803,6 +1803,10 @@ MarkerSymType BinaryContext::getMarkerType(const SymbolRef &Symbol) const {
   if (*NameOrError == "$x" || NameOrError->startswith("$x."))
     return MarkerSymType::CODE;
 
+  // $x<ISA>
+  if (isRISCV() && NameOrError->startswith("$x"))
+    return MarkerSymType::CODE;
+
   if (*NameOrError == "$d" || NameOrError->startswith("$d."))
     return MarkerSymType::DATA;
 
@@ -1888,6 +1892,8 @@ void BinaryContext::printInstruction(raw_ostream &OS, const MCInst &Instruction,
   }
   if (std::optional<uint32_t> Offset = MIB->getOffset(Instruction))
     OS << " # Offset: " << *Offset;
+  if (auto Label = MIB->getLabel(Instruction))
+    OS << " # Label: " << **Label;
 
   MIB->printAnnotations(Instruction, OS);
 

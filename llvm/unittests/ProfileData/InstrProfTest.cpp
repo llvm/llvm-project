@@ -844,13 +844,13 @@ TEST_P(MaybeSparseInstrProfTest, get_icall_data_read_write_big_endian) {
   Writer.addRecord({"callee3", 0x1235, {3, 4}}, Err);
 
   // Set big endian output.
-  Writer.setValueProfDataEndianness(support::big);
+  Writer.setValueProfDataEndianness(llvm::endianness::big);
 
   auto Profile = Writer.writeBuffer();
   readProfile(std::move(Profile));
 
   // Set big endian input.
-  Reader->setValueProfDataEndianness(support::big);
+  Reader->setValueProfDataEndianness(llvm::endianness::big);
 
   Expected<InstrProfRecord> R = Reader->getInstrProfRecord("caller", 0x1234);
   EXPECT_THAT_ERROR(R.takeError(), Succeeded());
@@ -867,7 +867,7 @@ TEST_P(MaybeSparseInstrProfTest, get_icall_data_read_write_big_endian) {
   ASSERT_EQ(StringRef((const char *)VD[2].Value, 7), StringRef("callee1"));
 
   // Restore little endian default:
-  Writer.setValueProfDataEndianness(support::little);
+  Writer.setValueProfDataEndianness(llvm::endianness::little);
 }
 
 TEST_P(MaybeSparseInstrProfTest, get_icall_data_merge1) {

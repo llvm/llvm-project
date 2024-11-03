@@ -267,7 +267,7 @@ func.func @bad_concat(%arg0: !fir.ref<!fir.char<1,10>>, %arg1: !fir.ref<!fir.cha
 // -----
 func.func @bad_concat_2(%arg0: !fir.ref<!fir.array<100x!fir.char<1,10>>>, %arg1: !fir.ref<!fir.array<100x!fir.char<1,20>>>) {
   %c30 = arith.constant 30 : index
-  // expected-error@+1 {{'hlfir.concat' op operand #0 must be any character scalar type, but got '!fir.ref<!fir.array<100x!fir.char<1,10>>>'}}
+  // expected-error@+1 {{'hlfir.concat' op operand #0 must be variadic of any character scalar type, but got '!fir.ref<!fir.array<100x!fir.char<1,10>>>'}}
   %0 = hlfir.concat %arg0, %arg1 len %c30 : (!fir.ref<!fir.array<100x!fir.char<1,10>>>, !fir.ref<!fir.array<100x!fir.char<1,20>>>, index) -> (!hlfir.expr<100x!fir.char<1,30>>)
   return
 }
@@ -275,7 +275,7 @@ func.func @bad_concat_2(%arg0: !fir.ref<!fir.array<100x!fir.char<1,10>>>, %arg1:
 // -----
 func.func @bad_concat_3(%arg0: !fir.ref<!fir.char<1,10>>, %arg1: !fir.ref<i32>) {
   %c30 = arith.constant 30 : index
-  // expected-error@+1 {{'hlfir.concat' op operand #1 must be any character scalar type, but got '!fir.ref<i32>'}}
+  // expected-error@+1 {{'hlfir.concat' op operand #1 must be variadic of any character scalar type, but got '!fir.ref<i32>'}}
   %0 = hlfir.concat %arg0, %arg1 len %c30 : (!fir.ref<!fir.char<1,10>>, !fir.ref<i32>, index) -> (!hlfir.expr<!fir.char<1,30>>)
   return
 }

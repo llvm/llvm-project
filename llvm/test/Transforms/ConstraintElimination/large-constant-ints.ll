@@ -96,6 +96,7 @@ else:
   ret i1 false
 }
 
+; TODO: This could be folded.
 define i1 @sub_decomp_i80(i80 %a) {
 ; CHECK-LABEL: @sub_decomp_i80(
 ; CHECK-NEXT:  entry:
@@ -104,7 +105,8 @@ define i1 @sub_decomp_i80(i80 %a) {
 ; CHECK-NEXT:    br i1 [[C]], label [[THEN:%.*]], label [[ELSE:%.*]]
 ; CHECK:       then:
 ; CHECK-NEXT:    [[SUB_1:%.*]] = sub nuw i80 [[A]], 1973801615886922022913
-; CHECK-NEXT:    ret i1 true
+; CHECK-NEXT:    [[C_1:%.*]] = icmp ult i80 [[SUB_1]], 1346612317380797267967
+; CHECK-NEXT:    ret i1 [[C_1]]
 ; CHECK:       else:
 ; CHECK-NEXT:    ret i1 false
 ;
@@ -416,6 +418,19 @@ entry:
   %cmp.uge = icmp uge ptr %gep.1, %gep.2
   %res = xor i1 %cmp.ule, %cmp.ule
   ret i1 %res
+}
+
+define i1 @pr68751(i128 %arg) {
+; CHECK-LABEL: @pr68751(
+; CHECK-NEXT:    [[SHL1:%.*]] = shl nuw nsw i128 [[ARG:%.*]], 32
+; CHECK-NEXT:    [[SHL2:%.*]] = shl nuw nsw i128 [[SHL1]], 32
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i128 [[SHL2]], 0
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %shl1 = shl nuw nsw i128 %arg, 32
+  %shl2 = shl nuw nsw i128 %shl1, 32
+  %cmp = icmp eq i128 %shl2, 0
+  ret i1 %cmp
 }
 
 declare void @llvm.assume(i1)

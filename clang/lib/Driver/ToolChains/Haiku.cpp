@@ -42,6 +42,9 @@ void haiku::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   // Silence warning for "clang -pie foo.o -o foo"
   Args.ClaimAllArgs(options::OPT_pie);
 
+  // -rdynamic is a no-op with Haiku. Claim argument to avoid warning.
+  Args.ClaimAllArgs(options::OPT_rdynamic);
+
   if (!D.SysRoot.empty())
     CmdArgs.push_back(Args.MakeArgString("--sysroot=" + D.SysRoot));
 
@@ -49,8 +52,6 @@ void haiku::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   if (Static) {
     CmdArgs.push_back("-Bstatic");
   } else {
-    if (Args.hasArg(options::OPT_rdynamic))
-      CmdArgs.push_back("-export-dynamic");
     if (Shared)
       CmdArgs.push_back("-shared");
     CmdArgs.push_back("--enable-new-dtags");
@@ -79,9 +80,8 @@ void haiku::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back(Args.MakeArgString(ToolChain.GetFilePath("init_term_dyn.o")));
   }
 
-  Args.AddAllArgs(CmdArgs,
-                  {options::OPT_L, options::OPT_T_Group, options::OPT_s,
-                   options::OPT_t, options::OPT_Z_Flag, options::OPT_r});
+  Args.addAllArgs(CmdArgs, {options::OPT_L, options::OPT_T_Group,
+                            options::OPT_s, options::OPT_t, options::OPT_r});
   ToolChain.AddFilePathLibArgs(Args, CmdArgs);
 
   addLinkerCompressDebugSectionsOption(ToolChain, Args, CmdArgs);

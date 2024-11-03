@@ -12,7 +12,7 @@ corresponding `linalg.generic` IR for the composition.
 
 The tool is bundled with the MLIR Python bindings. To use from the CMake build
 tree, MLIR must be build with Python bindings enabled
-(`-DMLIR_ENALBE_BINDINGS_PYTHON=ON`). Then add the `python` directory in the
+(`-DMLIR_ENABLE_BINDINGS_PYTHON=ON`). Then add the `python` directory in the
 build tree to your `PYTHONPATH` environment variable (i.e. `export
 PYTHONPATH=$PWD/build/tools/mlir/python_packages/mlir_core`). Optionally, use an
 installed MLIR package, if available, to avoid building.

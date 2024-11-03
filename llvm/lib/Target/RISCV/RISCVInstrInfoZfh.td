@@ -248,7 +248,6 @@ def PseudoQuietFLT_H_INX : PseudoQuietFCMP<FPR16INX>;
 // Pseudo-instructions and codegen patterns
 //===----------------------------------------------------------------------===//
 
-let Predicates = [HasStdExtZfh] in {
 
 /// Float conversion operations
 
@@ -257,11 +256,14 @@ let Predicates = [HasStdExtZfh] in {
 
 /// Float arithmetic operations
 
-def : PatFprFprDynFrm<any_fadd, FADD_H, FPR16, f16>;
-def : PatFprFprDynFrm<any_fsub, FSUB_H, FPR16, f16>;
-def : PatFprFprDynFrm<any_fmul, FMUL_H, FPR16, f16>;
-def : PatFprFprDynFrm<any_fdiv, FDIV_H, FPR16, f16>;
+foreach Ext = ZfhExts in {
+  defm : PatFprFprDynFrm_m<any_fadd, FADD_H, Ext>;
+  defm : PatFprFprDynFrm_m<any_fsub, FSUB_H, Ext>;
+  defm : PatFprFprDynFrm_m<any_fmul, FMUL_H, Ext>;
+  defm : PatFprFprDynFrm_m<any_fdiv, FDIV_H, Ext>;
+}
 
+let Predicates = [HasStdExtZfh] in {
 def : Pat<(f16 (any_fsqrt FPR16:$rs1)), (FSQRT_H FPR16:$rs1, FRM_DYN)>;
 
 def : Pat<(f16 (fneg FPR16:$rs1)), (FSGNJN_H $rs1, $rs1)>;
@@ -303,11 +305,6 @@ let Predicates = [HasStdExtZhinx] in {
 // are defined later.
 
 /// Float arithmetic operations
-
-def : PatFprFprDynFrm<any_fadd, FADD_H_INX, FPR16INX, f16>;
-def : PatFprFprDynFrm<any_fsub, FSUB_H_INX, FPR16INX, f16>;
-def : PatFprFprDynFrm<any_fmul, FMUL_H_INX, FPR16INX, f16>;
-def : PatFprFprDynFrm<any_fdiv, FDIV_H_INX, FPR16INX, f16>;
 
 def : Pat<(any_fsqrt FPR16INX:$rs1), (FSQRT_H_INX FPR16INX:$rs1, FRM_DYN)>;
 
@@ -358,12 +355,12 @@ foreach Ext = ZfhExts in {
 
 // Match non-signaling FEQ_D
 foreach Ext = ZfhExts in {
-  defm : PatSetCC_m<any_fsetcc,    SETEQ,  FEQ_H,            Ext, f16>;
-  defm : PatSetCC_m<any_fsetcc,    SETOEQ, FEQ_H,            Ext, f16>;
-  defm : PatSetCC_m<strict_fsetcc, SETLT,  PseudoQuietFLT_H, Ext, f16>;
-  defm : PatSetCC_m<strict_fsetcc, SETOLT, PseudoQuietFLT_H, Ext, f16>;
-  defm : PatSetCC_m<strict_fsetcc, SETLE,  PseudoQuietFLE_H, Ext, f16>;
-  defm : PatSetCC_m<strict_fsetcc, SETOLE, PseudoQuietFLE_H, Ext, f16>;
+  defm : PatSetCC_m<any_fsetcc,    SETEQ,  FEQ_H,            Ext>;
+  defm : PatSetCC_m<any_fsetcc,    SETOEQ, FEQ_H,            Ext>;
+  defm : PatSetCC_m<strict_fsetcc, SETLT,  PseudoQuietFLT_H, Ext>;
+  defm : PatSetCC_m<strict_fsetcc, SETOLT, PseudoQuietFLT_H, Ext>;
+  defm : PatSetCC_m<strict_fsetcc, SETLE,  PseudoQuietFLE_H, Ext>;
+  defm : PatSetCC_m<strict_fsetcc, SETOLE, PseudoQuietFLE_H, Ext>;
 }
 
 let Predicates = [HasStdExtZfh] in {
@@ -397,10 +394,10 @@ def : Pat<(XLenVT (strict_fsetccs FPR16INX:$rs1, FPR16INX:$rs1, SETOEQ)),
 } // Predicates = [HasStdExtZhinx]
 
 foreach Ext = ZfhExts in {
-  defm : PatSetCC_m<any_fsetccs, SETLT,  FLT_H, Ext, f16>;
-  defm : PatSetCC_m<any_fsetccs, SETOLT, FLT_H, Ext, f16>;
-  defm : PatSetCC_m<any_fsetccs, SETLE,  FLE_H, Ext, f16>;
-  defm : PatSetCC_m<any_fsetccs, SETOLE, FLE_H, Ext, f16>;
+  defm : PatSetCC_m<any_fsetccs, SETLT,  FLT_H, Ext>;
+  defm : PatSetCC_m<any_fsetccs, SETOLT, FLT_H, Ext>;
+  defm : PatSetCC_m<any_fsetccs, SETLE,  FLE_H, Ext>;
+  defm : PatSetCC_m<any_fsetccs, SETOLE, FLE_H, Ext>;
 }
 
 let Predicates = [HasStdExtZfh] in {

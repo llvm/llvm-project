@@ -45,7 +45,8 @@ namespace fir {
 /// This converts FIR types to LLVM types (for now)
 class LLVMTypeConverter : public mlir::LLVMTypeConverter {
 public:
-  LLVMTypeConverter(mlir::ModuleOp module, bool applyTBAA);
+  LLVMTypeConverter(mlir::ModuleOp module, bool applyTBAA,
+                    bool forceUnifiedTBAATree);
 
   // i32 is used here because LLVM wants i32 constants when indexing into struct
   // types. Indexing into other aggregate types is more flexible.

@@ -178,7 +178,7 @@ void LanaiMCCodeEmitter::encodeInstruction(
   unsigned Value = getBinaryCodeForInstr(Inst, Fixups, SubtargetInfo);
   ++MCNumEmitted; // Keep track of the number of emitted insns.
 
-  support::endian::write<uint32_t>(CB, Value, support::big);
+  support::endian::write<uint32_t>(CB, Value, llvm::endianness::big);
 }
 
 // Encode Lanai Memory Operand

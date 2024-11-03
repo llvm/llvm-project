@@ -753,6 +753,7 @@ void LoopConvertCheck::doConversion(
   bool IsCheapToCopy =
       !Descriptor.ElemType.isNull() &&
       Descriptor.ElemType.isTriviallyCopyableType(*Context) &&
+      !Descriptor.ElemType->isDependentSizedArrayType() &&
       // TypeInfo::Width is in bits.
       Context->getTypeInfo(Descriptor.ElemType).Width <= 8 * MaxCopySize;
   bool UseCopy = CanCopy && ((VarNameFromAlias && !AliasVarIsRef) ||

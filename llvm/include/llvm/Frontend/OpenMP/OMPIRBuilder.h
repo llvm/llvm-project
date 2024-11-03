@@ -1917,8 +1917,18 @@ public:
   ///
   /// \param Loc The location where the teams construct was encountered.
   /// \param BodyGenCB Callback that will generate the region code.
-  InsertPointTy createTeams(const LocationDescription &Loc,
-                            BodyGenCallbackTy BodyGenCB);
+  /// \param NumTeamsLower Lower bound on number of teams. If this is nullptr,
+  ///        it is as if lower bound is specified as equal to upperbound. If
+  ///        this is non-null, then upperbound must also be non-null.
+  /// \param NumTeamsUpper Upper bound on the number of teams.
+  /// \param ThreadLimit on the number of threads that may participate in a
+  ///        contention group created by each team.
+  /// \param IfExpr is the integer argument value of the if condition on the
+  ///        teams clause.
+  InsertPointTy
+  createTeams(const LocationDescription &Loc, BodyGenCallbackTy BodyGenCB,
+              Value *NumTeamsLower = nullptr, Value *NumTeamsUpper = nullptr,
+              Value *ThreadLimit = nullptr, Value *IfExpr = nullptr);
 
   /// Generate conditional branch and relevant BasicBlocks through which private
   /// threads copy the 'copyin' variables from Master copy to threadprivate
@@ -2166,6 +2176,10 @@ public:
   using TargetBodyGenCallbackTy = function_ref<InsertPointTy(
       InsertPointTy AllocaIP, InsertPointTy CodeGenIP)>;
 
+  using TargetGenArgAccessorsCallbackTy = function_ref<InsertPointTy(
+      Argument &Arg, Value *Input, Value *&RetVal, InsertPointTy AllocaIP,
+      InsertPointTy CodeGenIP)>;
+
   /// Generator for '#omp target'
   ///
   /// \param Loc where the target data construct was encountered.
@@ -2177,6 +2191,8 @@ public:
   /// \param Inputs The input values to the region that will be passed.
   /// as arguments to the outlined function.
   /// \param BodyGenCB Callback that will generate the region code.
+  /// \param ArgAccessorFuncCB Callback that will generate accessors
+  /// instructions for passed in target arguments where neccessary
   InsertPointTy createTarget(const LocationDescription &Loc,
                              OpenMPIRBuilder::InsertPointTy AllocaIP,
                              OpenMPIRBuilder::InsertPointTy CodeGenIP,
@@ -2184,7 +2200,8 @@ public:
                              int32_t NumThreads,
                              SmallVectorImpl<Value *> &Inputs,
                              GenMapInfoCallbackTy GenMapInfoCB,
-                             TargetBodyGenCallbackTy BodyGenCB);
+                             TargetBodyGenCallbackTy BodyGenCB,
+                             TargetGenArgAccessorsCallbackTy ArgAccessorFuncCB);
 
   /// Returns __kmpc_for_static_init_* runtime function for the specified
   /// size \a IVSize and sign \a IVSigned. Will create a distribute call

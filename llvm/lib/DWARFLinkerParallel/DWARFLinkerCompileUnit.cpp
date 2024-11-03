@@ -1090,8 +1090,7 @@ void CompileUnit::cloneDieAttrExpression(
         OutputExpression.push_back(dwarf::DW_OP_addr);
         uint64_t LinkedAddress =
             SA->Address + (VarAddressAdjustment ? *VarAddressAdjustment : 0);
-        if ((getEndianness() == support::endianness::little) !=
-            sys::IsLittleEndianHost)
+        if (getEndianness() != llvm::endianness::native)
           sys::swapByteOrder(LinkedAddress);
         ArrayRef<uint8_t> AddressBytes(
             reinterpret_cast<const uint8_t *>(&LinkedAddress),
@@ -1128,8 +1127,7 @@ void CompileUnit::cloneDieAttrExpression(
           OutputExpression.push_back(*OutOperandKind);
           uint64_t LinkedAddress =
               SA->Address + (VarAddressAdjustment ? *VarAddressAdjustment : 0);
-          if ((getEndianness() == support::endianness::little) !=
-              sys::IsLittleEndianHost)
+          if (getEndianness() != llvm::endianness::native)
             sys::swapByteOrder(LinkedAddress);
           ArrayRef<uint8_t> AddressBytes(
               reinterpret_cast<const uint8_t *>(&LinkedAddress),

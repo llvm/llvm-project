@@ -15,7 +15,7 @@ int test__divtf3(long double a, long double b,
                  uint64_t expectedHi, uint64_t expectedLo)
 {
     long double x = __divtf3(a, b);
-    int ret = compareResultLD(x, expectedHi, expectedLo);
+    int ret = compareResultF128(x, expectedHi, expectedLo);
 
     if (ret){
         printf("error in test__divtf3(%.20Le, %.20Le) = %.20Le, "

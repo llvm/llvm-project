@@ -1,6 +1,6 @@
 ! RUN: bbc -polymorphic-type -emit-fir %s -o - | FileCheck %s
 
-! Tests the generation of fir.dispatch_table operations.
+! Tests the generation of fir.type_info operations.
 
 module polymorphic_types
   type p1
@@ -53,20 +53,20 @@ contains
 
 end module
 
-! CHECK-LABEL: fir.dispatch_table @_QMpolymorphic_typesTp1 {
+! CHECK-LABEL: fir.type_info @_QMpolymorphic_typesTp1
 ! CHECK:         fir.dt_entry "aproc", @_QMpolymorphic_typesPaproc
 ! CHECK:         fir.dt_entry "proc1", @_QMpolymorphic_typesPproc1_p1
 ! CHECK:         fir.dt_entry "zproc", @_QMpolymorphic_typesPzproc
 ! CHECK:       }
 
-! CHECK-LABEL: fir.dispatch_table @_QMpolymorphic_typesTp2 extends("_QMpolymorphic_typesTp1") {
+! CHECK-LABEL: fir.type_info @_QMpolymorphic_typesTp2 {{.*}}extends !fir.type<_QMpolymorphic_typesTp1{{.*}}>
 ! CHECK:         fir.dt_entry "aproc", @_QMpolymorphic_typesPaproc
 ! CHECK:         fir.dt_entry "proc1", @_QMpolymorphic_typesPproc1_p2
 ! CHECK:         fir.dt_entry "zproc", @_QMpolymorphic_typesPzproc
 ! CHECK:         fir.dt_entry "aproc2", @_QMpolymorphic_typesPaproc2
 ! CHECK:       }
 
-! CHECK-LABEL: fir.dispatch_table @_QMpolymorphic_typesTp3 extends("_QMpolymorphic_typesTp2") {
+! CHECK-LABEL: fir.type_info @_QMpolymorphic_typesTp3 {{.*}}extends !fir.type<_QMpolymorphic_typesTp2{{.*}}>
 ! CHECK:         fir.dt_entry "aproc", @_QMpolymorphic_typesPaproc
 ! CHECK:         fir.dt_entry "proc1", @_QMpolymorphic_typesPproc1_p2
 ! CHECK:         fir.dt_entry "zproc", @_QMpolymorphic_typesPzproc

@@ -330,9 +330,6 @@ void PHIElimination::LowerPHINode(MachineBasicBlock &MBB,
     if (IncomingReg) {
       LiveVariables::VarInfo &VI = LV->getVarInfo(IncomingReg);
 
-      // Increment use count of the newly created virtual register.
-      LV->setPHIJoin(IncomingReg);
-
       MachineInstr *OldKill = nullptr;
       bool IsPHICopyAfterOldKill = false;
 

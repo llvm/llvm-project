@@ -36,11 +36,11 @@ ConstantSubscripts ConstantBounds::ComputeUbounds(
     std::optional<int> dim) const {
   if (dim) {
     CHECK(*dim < Rank());
-    return {lbounds_[*dim] + shape_[*dim] - 1};
+    return {lbounds_[*dim] + (shape_[*dim] - 1)};
   } else {
     ConstantSubscripts ubounds(Rank());
     for (int i{0}; i < Rank(); ++i) {
-      ubounds[i] = lbounds_[i] + shape_[i] - 1;
+      ubounds[i] = lbounds_[i] + (shape_[i] - 1);
     }
     return ubounds;
   }
@@ -73,7 +73,7 @@ ConstantSubscript ConstantBounds::SubscriptsToOffset(
   for (auto j : index) {
     auto lb{lbounds_[dim]};
     auto extent{shape_[dim++]};
-    CHECK(j >= lb && j < lb + extent);
+    CHECK(j >= lb && j - lb < extent);
     offset += stride * (j - lb);
     stride *= extent;
   }
@@ -93,10 +93,10 @@ bool ConstantBounds::IncrementSubscripts(
     ConstantSubscript k{dimOrder ? (*dimOrder)[j] : j};
     auto lb{lbounds_[k]};
     CHECK(indices[k] >= lb);
-    if (++indices[k] < lb + shape_[k]) {
+    if (++indices[k] - lb < shape_[k]) {
       return true;
     } else {
-      CHECK(indices[k] == lb + std::max<ConstantSubscript>(shape_[k], 1));
+      CHECK(indices[k] - lb == std::max<ConstantSubscript>(shape_[k], 1));
       indices[k] = lb;
     }
   }

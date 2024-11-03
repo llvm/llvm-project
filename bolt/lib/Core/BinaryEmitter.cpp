@@ -309,7 +309,7 @@ bool BinaryEmitter::emitFunction(BinaryFunction &Function,
     // tentative layout.
     Section->ensureMinAlignment(Align(opts::AlignFunctions));
 
-    Streamer.emitCodeAlignment(Align(BinaryFunction::MinAlign), &*BC.STI);
+    Streamer.emitCodeAlignment(Function.getMinAlign(), &*BC.STI);
     uint16_t MaxAlignBytes = FF.isSplitFragment()
                                  ? Function.getMaxColdAlignmentBytes()
                                  : Function.getMaxAlignmentBytes();
@@ -497,6 +497,9 @@ void BinaryEmitter::emitFunctionBody(BinaryFunction &BF, FunctionFragment &FF,
         Streamer.emitLabel(LocSym);
         BB->getLocSyms().emplace_back(Offset, LocSym);
       }
+
+      if (auto Label = BC.MIB->getLabel(Instr))
+        Streamer.emitLabel(*Label);
 
       Streamer.emitInstruction(Instr, *BC.STI);
       LastIsPrefix = BC.MIB->isPrefix(Instr);

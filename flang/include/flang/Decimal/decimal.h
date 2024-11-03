@@ -43,14 +43,6 @@ struct ConversionToDecimalResult {
   enum ConversionResultFlags flags;
 };
 
-enum FortranRounding {
-  RoundNearest, /* RN and RP */
-  RoundUp, /* RU */
-  RoundDown, /* RD */
-  RoundToZero, /* RZ - no rounding */
-  RoundCompatible, /* RC: like RN, but ties go away from 0 */
-};
-
 /* The "minimize" flag causes the fewest number of output digits
  * to be emitted such that reading them back into the same binary
  * floating-point format with RoundNearest will return the same

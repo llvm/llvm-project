@@ -5,13 +5,9 @@
 set(LLVM_DIR_SAVE ${LLVM_DIR})
 set(Clang_DIR_SAVE ${Clang_DIR})
 
-# TODO LLVM 17 prefer to use the stable release again instead of ToT.
-# libc++ normally prefers the use the last stable release instead of the ToT.
-# For modules we need ToT since they are still under heavy development. So
-# temporary the ToT version is preferred.
 find_package(Clang 17)
 if (NOT Clang_FOUND)
-  find_package(Clang 16)
+  find_package(Clang 18)
 endif()
 
 set(SOURCES

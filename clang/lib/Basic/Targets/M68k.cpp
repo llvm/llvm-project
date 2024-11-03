@@ -238,5 +238,15 @@ TargetInfo::BuiltinVaListKind M68kTargetInfo::getBuiltinVaListKind() const {
   return TargetInfo::VoidPtrBuiltinVaList;
 }
 
+TargetInfo::CallingConvCheckResult
+M68kTargetInfo::checkCallingConvention(CallingConv CC) const {
+  switch (CC) {
+  case CC_C:
+  case CC_M68kRTD:
+    return CCCR_OK;
+  default:
+    return TargetInfo::checkCallingConvention(CC);
+  }
+}
 } // namespace targets
 } // namespace clang

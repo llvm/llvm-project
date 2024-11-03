@@ -15,13 +15,13 @@
 #define SVE_ACLE_FUNC(A1,A2,A3,A4) A1##A2##A3##A4
 #endif
 
-// CHECK-LABEL: define {{[^@]+}}@test_svst1_bf16(
+// CHECK-LABEL: @test_svst1_bf16(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv8i1(<vscale x 16 x i1> [[PG:%.*]])
 // CHECK-NEXT:    tail call void @llvm.masked.store.nxv8bf16.p0(<vscale x 8 x bfloat> [[DATA:%.*]], ptr [[BASE:%.*]], i32 1, <vscale x 8 x i1> [[TMP0]])
 // CHECK-NEXT:    ret void
 //
-// CPP-CHECK-LABEL: define {{[^@]+}}@_Z15test_svst1_bf16u10__SVBool_tPu6__bf16u14__SVBFloat16_t(
+// CPP-CHECK-LABEL: @_Z15test_svst1_bf16u10__SVBool_tPu6__bf16u14__SVBFloat16_t(
 // CPP-CHECK-NEXT:  entry:
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv8i1(<vscale x 16 x i1> [[PG:%.*]])
 // CPP-CHECK-NEXT:    tail call void @llvm.masked.store.nxv8bf16.p0(<vscale x 8 x bfloat> [[DATA:%.*]], ptr [[BASE:%.*]], i32 1, <vscale x 8 x i1> [[TMP0]])
@@ -32,14 +32,14 @@ void test_svst1_bf16(svbool_t pg, bfloat16_t *base, svbfloat16_t data)
   return SVE_ACLE_FUNC(svst1,_bf16,,)(pg, base, data);
 }
 
-// CHECK-LABEL: define {{[^@]+}}@test_svst1_vnum_bf16(
+// CHECK-LABEL: @test_svst1_vnum_bf16(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv8i1(<vscale x 16 x i1> [[PG:%.*]])
 // CHECK-NEXT:    [[TMP1:%.*]] = getelementptr <vscale x 8 x bfloat>, ptr [[BASE:%.*]], i64 [[VNUM:%.*]]
 // CHECK-NEXT:    tail call void @llvm.masked.store.nxv8bf16.p0(<vscale x 8 x bfloat> [[DATA:%.*]], ptr [[TMP1]], i32 1, <vscale x 8 x i1> [[TMP0]])
 // CHECK-NEXT:    ret void
 //
-// CPP-CHECK-LABEL: define {{[^@]+}}@_Z20test_svst1_vnum_bf16u10__SVBool_tPu6__bf16lu14__SVBFloat16_t(
+// CPP-CHECK-LABEL: @_Z20test_svst1_vnum_bf16u10__SVBool_tPu6__bf16lu14__SVBFloat16_t(
 // CPP-CHECK-NEXT:  entry:
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv8i1(<vscale x 16 x i1> [[PG:%.*]])
 // CPP-CHECK-NEXT:    [[TMP1:%.*]] = getelementptr <vscale x 8 x bfloat>, ptr [[BASE:%.*]], i64 [[VNUM:%.*]]

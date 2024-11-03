@@ -25,6 +25,7 @@ struct B : public A {
 
 static_assert(__builtin_offsetof(B, d) == 12,
   "We can't allocate the bitfield into the padding under ms_struct");
+// expected-warning@-2 {{offset of on non-standard-layout type 'B'}}
 
 struct C {
 #ifdef TEST_FOR_ERROR
@@ -38,6 +39,5 @@ struct C {
 
 static_assert(__builtin_offsetof(C, n) == 8,
               "long long field in ms_struct should be 8-byte aligned");
-#if !defined(TEST_FOR_ERROR) && !defined(TEST_FOR_WARNING)
-// expected-no-diagnostics
-#endif
+// expected-warning@-2 {{offset of on non-standard-layout type 'C'}}
+

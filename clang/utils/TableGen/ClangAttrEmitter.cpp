@@ -2690,7 +2690,8 @@ static void emitAttributes(RecordKeeper &Records, raw_ostream &OS,
         OS << ", ";
         emitFormInitializer(OS, Spellings[0], "0");
       } else {
-        OS << ", (\n";
+        OS << ", [&]() {\n";
+        OS << "    switch (S) {\n";
         std::set<std::string> Uniques;
         unsigned Idx = 0;
         for (auto I = Spellings.begin(), E = Spellings.end(); I != E;
@@ -2698,15 +2699,19 @@ static void emitAttributes(RecordKeeper &Records, raw_ostream &OS,
           const FlattenedSpelling &S = *I;
           const auto &Name = SemanticToSyntacticMap[Idx];
           if (Uniques.insert(Name).second) {
-            OS << "    S == " << Name << " ? AttributeCommonInfo::Form";
+            OS << "    case " << Name << ":\n";
+            OS << "      return AttributeCommonInfo::Form";
             emitFormInitializer(OS, S, Name);
-            OS << " :\n";
+            OS << ";\n";
           }
         }
-        OS << "    (llvm_unreachable(\"Unknown attribute spelling!\"), "
-           << " AttributeCommonInfo::Form";
+        OS << "    default:\n";
+        OS << "      llvm_unreachable(\"Unknown attribute spelling!\");\n"
+           << "      return AttributeCommonInfo::Form";
         emitFormInitializer(OS, Spellings[0], "0");
-        OS << "))";
+        OS << ";\n"
+           << "    }\n"
+           << "  }()";
       }
 
       OS << ");\n";
@@ -3429,9 +3434,10 @@ static bool GenerateTargetSpecificAttrChecks(const Record *R,
 }
 
 static void GenerateHasAttrSpellingStringSwitch(
-    const std::vector<Record *> &Attrs, raw_ostream &OS,
-    const std::string &Variety = "", const std::string &Scope = "") {
-  for (const auto *Attr : Attrs) {
+    const std::vector<std::pair<const Record *, FlattenedSpelling>> &Attrs,
+    raw_ostream &OS, const std::string &Variety,
+    const std::string &Scope = "") {
+  for (const auto &[Attr, Spelling] : Attrs) {
     // C++11-style attributes have specific version information associated with
     // them. If the attribute has no scope, the version information must not
     // have the default value (1), as that's incorrect. Instead, the unscoped
@@ -3450,26 +3456,22 @@ static void GenerateHasAttrSpellingStringSwitch(
     // a way that is impactful to the end user.
     int Version = 1;
 
-    std::vector<FlattenedSpelling> Spellings = GetFlattenedSpellings(*Attr);
+    assert(Spelling.variety() == Variety);
     std::string Name = "";
-    for (const auto &Spelling : Spellings) {
-      if (Spelling.variety() == Variety &&
-          (Spelling.nameSpace().empty() || Scope == Spelling.nameSpace())) {
-        Name = Spelling.name();
-        Version = static_cast<int>(
-            Spelling.getSpellingRecord().getValueAsInt("Version"));
-        // Verify that explicitly specified CXX11 and C23 spellings (i.e.
-        // not inferred from Clang/GCC spellings) have a version that's
-        // different than the default (1).
-        bool RequiresValidVersion =
-            (Variety == "CXX11" || Variety == "C23") &&
-            Spelling.getSpellingRecord().getValueAsString("Variety") == Variety;
-        if (RequiresValidVersion && Scope.empty() && Version == 1)
-          PrintError(Spelling.getSpellingRecord().getLoc(),
-                     "Standard attributes must have "
-                     "valid version information.");
-        break;
-      }
+    if (Spelling.nameSpace().empty() || Scope == Spelling.nameSpace()) {
+      Name = Spelling.name();
+      Version = static_cast<int>(
+          Spelling.getSpellingRecord().getValueAsInt("Version"));
+      // Verify that explicitly specified CXX11 and C23 spellings (i.e.
+      // not inferred from Clang/GCC spellings) have a version that's
+      // different from the default (1).
+      bool RequiresValidVersion =
+          (Variety == "CXX11" || Variety == "C23") &&
+          Spelling.getSpellingRecord().getValueAsString("Variety") == Variety;
+      if (RequiresValidVersion && Scope.empty() && Version == 1)
+        PrintError(Spelling.getSpellingRecord().getLoc(),
+                   "Standard attributes must have "
+                   "valid version information.");
     }
 
     std::string Test;
@@ -3509,10 +3511,8 @@ static void GenerateHasAttrSpellingStringSwitch(
     std::string TestStr = !Test.empty()
                               ? Test + " ? " + llvm::itostr(Version) + " : 0"
                               : llvm::itostr(Version);
-    for (const auto &S : Spellings)
-      if (Variety.empty() || (Variety == S.variety() &&
-                              (Scope.empty() || Scope == S.nameSpace())))
-        OS << "    .Case(\"" << S.name() << "\", " << TestStr << ")\n";
+    if (Scope.empty() || Scope == Spelling.nameSpace())
+      OS << "    .Case(\"" << Spelling.name() << "\", " << TestStr << ")\n";
   }
   OS << "    .Default(0);\n";
 }
@@ -3545,8 +3545,11 @@ void EmitClangAttrHasAttrImpl(RecordKeeper &Records, raw_ostream &OS) {
   // Separate all of the attributes out into four group: generic, C++11, GNU,
   // and declspecs. Then generate a big switch statement for each of them.
   std::vector<Record *> Attrs = Records.getAllDerivedDefinitions("Attr");
-  std::vector<Record *> Declspec, Microsoft, GNU, Pragma, HLSLSemantic;
-  std::map<std::string, std::vector<Record *>> CXX, C23;
+  std::vector<std::pair<const Record *, FlattenedSpelling>> Declspec, Microsoft,
+      GNU, Pragma, HLSLSemantic;
+  std::map<std::string,
+           std::vector<std::pair<const Record *, FlattenedSpelling>>>
+      CXX, C23;
 
   // Walk over the list of all attributes, and split them out based on the
   // spelling variety.
@@ -3555,19 +3558,19 @@ void EmitClangAttrHasAttrImpl(RecordKeeper &Records, raw_ostream &OS) {
     for (const auto &SI : Spellings) {
       const std::string &Variety = SI.variety();
       if (Variety == "GNU")
-        GNU.push_back(R);
+        GNU.emplace_back(R, SI);
       else if (Variety == "Declspec")
-        Declspec.push_back(R);
+        Declspec.emplace_back(R, SI);
       else if (Variety == "Microsoft")
-        Microsoft.push_back(R);
+        Microsoft.emplace_back(R, SI);
       else if (Variety == "CXX11")
-        CXX[SI.nameSpace()].push_back(R);
+        CXX[SI.nameSpace()].emplace_back(R, SI);
       else if (Variety == "C23")
-        C23[SI.nameSpace()].push_back(R);
+        C23[SI.nameSpace()].emplace_back(R, SI);
       else if (Variety == "Pragma")
-        Pragma.push_back(R);
+        Pragma.emplace_back(R, SI);
       else if (Variety == "HLSLSemantic")
-        HLSLSemantic.push_back(R);
+        HLSLSemantic.emplace_back(R, SI);
     }
   }
 
@@ -3589,7 +3592,10 @@ void EmitClangAttrHasAttrImpl(RecordKeeper &Records, raw_ostream &OS) {
   OS << "  return llvm::StringSwitch<int>(Name)\n";
   GenerateHasAttrSpellingStringSwitch(HLSLSemantic, OS, "HLSLSemantic");
   auto fn = [&OS](const char *Spelling,
-                  const std::map<std::string, std::vector<Record *>> &List) {
+                  const std::map<
+                      std::string,
+                      std::vector<std::pair<const Record *, FlattenedSpelling>>>
+                      &List) {
     OS << "case AttributeCommonInfo::Syntax::AS_" << Spelling << ": {\n";
     // C++11-style attributes are further split out based on the Scope.
     for (auto I = List.cbegin(), E = List.cend(); I != E; ++I) {

@@ -212,12 +212,10 @@ public:
 
   /// Register a runtime derived type information object symbol to ensure its
   /// object will be generated as a global.
-  virtual void registerRuntimeTypeInfo(mlir::Location loc,
-                                       SymbolRef typeInfoSym) = 0;
-
-  virtual void registerDispatchTableInfo(
-      mlir::Location loc,
-      const Fortran::semantics::DerivedTypeSpec *typeSpec) = 0;
+  virtual void
+  registerTypeInfo(mlir::Location loc, SymbolRef typeInfoSym,
+                   const Fortran::semantics::DerivedTypeSpec &typeSpec,
+                   fir::RecordType type) = 0;
 
   //===--------------------------------------------------------------------===//
   // Locations

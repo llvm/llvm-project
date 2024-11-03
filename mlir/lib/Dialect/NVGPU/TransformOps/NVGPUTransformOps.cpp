@@ -62,10 +62,28 @@ void transform::ApplyNVGPUToNVVMConversionPatternsOp::populatePatterns(
   });
   llvmTypeConverter.addConversion(
       [&](nvgpu::WarpgroupAccumulatorType type) -> Type {
-        VectorType vtype = type.getFragmented();
+        Type elemType = type.getFragmented().getElementType();
+        int64_t sizeM = type.getFragmented().getDimSize(0);
+        int64_t sizeN = type.getFragmented().getDimSize(1);
+
+        unsigned numMembers;
+        if (elemType.isF32() || elemType.isInteger(32))
+          numMembers = sizeN / 2;
+        else if (elemType.isF16())
+          numMembers = sizeN / 4;
+        else
+          llvm_unreachable("unsupported type for warpgroup accumulator");
+
+        SmallVector<Type> innerStructBody;
+        for (unsigned i = 0; i < numMembers; i++)
+          innerStructBody.push_back(elemType);
+        auto innerStructType = LLVM::LLVMStructType::getLiteral(
+            type.getContext(), innerStructBody);
+
         SmallVector<Type> structBody;
-        for (unsigned i = 0; i < vtype.getDimSize(0); i++)
-          structBody.push_back(vtype.getElementType());
+        for (int i = 0; i < sizeM; i += kWgmmaSizeM)
+          structBody.push_back(innerStructType);
+
         auto convertedType =
             LLVM::LLVMStructType::getLiteral(type.getContext(), structBody);
         return llvmTypeConverter.convertType(convertedType);

@@ -179,7 +179,7 @@ ObjectFilePDB::loadPDBFile(std::string PdbPath,
 
   llvm::StringRef Path = Buffer->getBufferIdentifier();
   auto Stream = std::make_unique<llvm::MemoryBufferByteStream>(
-      std::move(Buffer), llvm::support::little);
+      std::move(Buffer), llvm::endianness::little);
 
   auto File = std::make_unique<PDBFile>(Path, std::move(Stream), Allocator);
   if (auto EC = File->parseFileHeaders()) {

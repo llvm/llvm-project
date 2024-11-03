@@ -726,6 +726,8 @@ function(llvm_add_library name)
     endforeach()
   endif()
 
+  add_custom_linker_flags(${name})
+
   if(ARG_SHARED OR ARG_MODULE)
     llvm_externalize_debuginfo(${name})
     llvm_codesign(${name} ENTITLEMENTS ${ARG_ENTITLEMENTS} BUNDLE_PATH ${ARG_BUNDLE_PATH})
@@ -1018,6 +1020,8 @@ macro(add_llvm_executable name)
       add_dependencies(${objlib} ${LLVM_COMMON_DEPENDS})
     endforeach()
   endif( LLVM_COMMON_DEPENDS )
+
+  add_custom_linker_flags(${name})
 
   if(NOT ARG_IGNORE_EXTERNALIZE_DEBUGINFO)
     llvm_externalize_debuginfo(${name})
@@ -1523,6 +1527,13 @@ endmacro()
 macro(add_llvm_tool_subdirectory name)
   add_llvm_external_project(${name})
 endmacro(add_llvm_tool_subdirectory)
+
+macro(add_custom_linker_flags name)
+  if (LLVM_${name}_LINKER_FLAGS)
+    message(STATUS "Applying ${LLVM_${name}_LINKER_FLAGS} to ${name}")
+    target_link_options(${name} PRIVATE ${LLVM_${name}_LINKER_FLAGS})
+  endif()
+endmacro()
 
 function(get_project_name_from_src_var var output)
   string(REGEX MATCH "LLVM_EXTERNAL_(.*)_SOURCE_DIR"

@@ -231,8 +231,8 @@ extern "C" __device__ uint64_t test___make_mantissa(const char *p) {
 
 // CHECK-LABEL: @test_abs(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call noundef i32 @llvm.abs.i32(i32 [[X:%.*]], i1 true)
-// CHECK-NEXT:    ret i32 [[TMP0]]
+// CHECK-NEXT:    [[ABS_I:%.*]] = tail call noundef i32 @llvm.abs.i32(i32 [[X:%.*]], i1 true)
+// CHECK-NEXT:    ret i32 [[ABS_I]]
 //
 extern "C" __device__ int test_abs(int x) {
   return abs(x);
@@ -240,8 +240,8 @@ extern "C" __device__ int test_abs(int x) {
 
 // CHECK-LABEL: @test_labs(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call noundef i64 @llvm.abs.i64(i64 [[X:%.*]], i1 true)
-// CHECK-NEXT:    ret i64 [[TMP0]]
+// CHECK-NEXT:    [[ABS_I:%.*]] = tail call noundef i64 @llvm.abs.i64(i64 [[X:%.*]], i1 true)
+// CHECK-NEXT:    ret i64 [[ABS_I]]
 //
 extern "C" __device__ long test_labs(long x) {
   return labs(x);
@@ -249,8 +249,8 @@ extern "C" __device__ long test_labs(long x) {
 
 // CHECK-LABEL: @test_llabs(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call noundef i64 @llvm.abs.i64(i64 [[X:%.*]], i1 true)
-// CHECK-NEXT:    ret i64 [[TMP0]]
+// CHECK-NEXT:    [[ABS_I:%.*]] = tail call noundef i64 @llvm.abs.i64(i64 [[X:%.*]], i1 true)
+// CHECK-NEXT:    ret i64 [[ABS_I]]
 //
 extern "C" __device__ long long test_llabs(long x) {
   return llabs(x);
@@ -2557,65 +2557,33 @@ extern "C" __device__ double test_nan(const char *tag) {
   return nan(tag);
 }
 
-// DEFAULT-LABEL: @test_nanf_emptystr(
-// DEFAULT-NEXT:  entry:
-// DEFAULT-NEXT:    ret float 0x7FF8000000000000
-//
-// FINITEONLY-LABEL: @test_nanf_emptystr(
-// FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    ret float poison
-//
-// APPROX-LABEL: @test_nanf_emptystr(
-// APPROX-NEXT:  entry:
-// APPROX-NEXT:    ret float 0x7FF8000000000000
+// CHECK-LABEL: @test_nanf_emptystr(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    ret float 0x7FF8000000000000
 //
 extern "C" __device__ float test_nanf_emptystr() {
   return nanf("");
 }
 
-// DEFAULT-LABEL: @test_nan_emptystr(
-// DEFAULT-NEXT:  entry:
-// DEFAULT-NEXT:    ret double 0x7FF8000000000000
-//
-// FINITEONLY-LABEL: @test_nan_emptystr(
-// FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    ret double poison
-//
-// APPROX-LABEL: @test_nan_emptystr(
-// APPROX-NEXT:  entry:
-// APPROX-NEXT:    ret double 0x7FF8000000000000
+// CHECK-LABEL: @test_nan_emptystr(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    ret double 0x7FF8000000000000
 //
 extern "C" __device__ double test_nan_emptystr() {
   return nan("");
 }
 
-// DEFAULT-LABEL: @test_nanf_fill(
-// DEFAULT-NEXT:  entry:
-// DEFAULT-NEXT:    ret float 0x7FF8000000000000
-//
-// FINITEONLY-LABEL: @test_nanf_fill(
-// FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    ret float poison
-//
-// APPROX-LABEL: @test_nanf_fill(
-// APPROX-NEXT:  entry:
-// APPROX-NEXT:    ret float 0x7FF8000000000000
+// CHECK-LABEL: @test_nanf_fill(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    ret float 0x7FF8000000000000
 //
 extern "C" __device__ float test_nanf_fill() {
   return nanf("0x456");
 }
 
-// DEFAULT-LABEL: @test_nan_fill(
-// DEFAULT-NEXT:  entry:
-// DEFAULT-NEXT:    ret double 0x7FF8000000000000
-//
-// FINITEONLY-LABEL: @test_nan_fill(
-// FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    ret double poison
-//
-// APPROX-LABEL: @test_nan_fill(
-// APPROX-NEXT:  entry:
-// APPROX-NEXT:    ret double 0x7FF8000000000000
+// CHECK-LABEL: @test_nan_fill(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    ret double 0x7FF8000000000000
 //
 extern "C" __device__ double test_nan_fill() {
   return nan("0x123");

@@ -165,9 +165,8 @@
 # CHECK-NEXT:       String: 0x00000000 "foo"
 # CHECK-NEXT:       Entry @ 0x4f {
 # CHECK-NEXT:         Abbrev: [[ABBREV]]
-# CHECK-NEXT:         	Tag: DW_TAG_subprogram
-# CHECK-NEXT:         	DW_IDX_die_offset: 0x00000001
-# CHECK-NEXT:         }
+# CHECK-NEXT:         Tag: DW_TAG_subprogram
+# CHECK-NEXT:         DW_IDX_die_offset: 0x00000001
 # CHECK-NEXT:       }
 # CHECK-NEXT:     }
 # CHECK-NEXT:     Name 2 {
@@ -175,9 +174,8 @@
 # CHECK-NEXT:       String: 0x00000004 "_Z3foov"
 # CHECK-NEXT:       Entry @ 0x58 {
 # CHECK-NEXT:         Abbrev: [[ABBREV]]
-# CHECK-NEXT:         	Tag: DW_TAG_subprogram
-# CHECK-NEXT:         	DW_IDX_die_offset: 0x00000001
-# CHECK-NEXT:         }
+# CHECK-NEXT:         Tag: DW_TAG_subprogram
+# CHECK-NEXT:         DW_IDX_die_offset: 0x00000001
 # CHECK-NEXT:       }
 # CHECK-NEXT:     }
 # CHECK-NEXT:   ]
@@ -210,9 +208,8 @@
 # CHECK-NEXT:       String: 0x0000000c "bar"
 # CHECK-NEXT:       Entry @ 0xa3 {
 # CHECK-NEXT:         Abbrev: [[ABBREV1]]
-# CHECK-NEXT:         	Tag: DW_TAG_variable
-# CHECK-NEXT:         	DW_IDX_die_offset: 0x00000001
-# CHECK-NEXT:         }
+# CHECK-NEXT:         Tag: DW_TAG_variable
+# CHECK-NEXT:         DW_IDX_die_offset: 0x00000001
 # CHECK-NEXT:       }
 # CHECK-NEXT:     }
 # CHECK-NEXT:   ]
@@ -252,10 +249,9 @@
 # CHECK-NEXT:       String: 0x00000000 "foo"
 # CHECK-NEXT:       Entry @ 0x111 {
 # CHECK-NEXT:         Abbrev: [[ABBREV2]]
-# CHECK-NEXT:           Tag: DW_TAG_base_type
-# CHECK-NEXT:         	DW_IDX_type_unit: 0x00000001
-# CHECK-NEXT:         	DW_IDX_type_hash: 0x0000ff03ffffffff
-# CHECK-NEXT:        }
+# CHECK-NEXT:         Tag: DW_TAG_base_type
+# CHECK-NEXT:         DW_IDX_type_unit: 0x00000001
+# CHECK-NEXT:         DW_IDX_type_hash: 0x0000ff03ffffffff
 # CHECK-NEXT:       }
 # CHECK-NEXT:     }
 # CHECK-NEXT:   ]

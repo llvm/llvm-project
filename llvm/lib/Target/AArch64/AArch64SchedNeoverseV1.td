@@ -624,14 +624,14 @@ def : SchedAlias<WriteAdr,   V1Write_1c_1I>;
 // Load pair, immed offset
 def : SchedAlias<WriteLDHi, V1Write_4c_1L>;
 def : InstRW<[V1Write_4c_1L, V1Write_0c_0Z], (instrs LDPWi, LDNPWi)>;
-def : InstRW<[V1Write_4c_1L, V1Write_0c_0Z, WriteAdr],
+def : InstRW<[WriteAdr, V1Write_4c_1L, V1Write_0c_0Z],
              (instrs LDPWpost, LDPWpre)>;
 
 // Load pair, signed immed offset, signed words
 def : InstRW<[V1Write_5c_1I_1L, V1Write_0c_0Z], (instrs LDPSWi)>;
 
 // Load pair, immed post or pre-index, signed words
-def : InstRW<[V1Write_5c_1I_1L, V1Write_0c_0Z, WriteAdr],
+def : InstRW<[WriteAdr, V1Write_5c_1I_1L, V1Write_0c_0Z],
              (instrs LDPSWpost, LDPSWpre)>;
 
 
@@ -735,7 +735,7 @@ def : InstRW<[V1Write_6c_1L, ReadAdrBase], (instregex "^LDR[SDQ]l$",
 
 // Load vector reg, immed post-index
 // Load vector reg, immed pre-index
-def : InstRW<[V1Write_6c_1L, WriteAdr],
+def : InstRW<[WriteAdr, V1Write_6c_1L],
              (instregex "^LDR[BHSDQ](post|pre)$")>;
 
 // Load vector reg, register offset, basic
@@ -756,12 +756,12 @@ def : InstRW<[V1Write_6c_1L, WriteLDHi], (instrs LDPQi, LDNPQi)>;
 
 // Load vector pair, immed post-index, S/D-form
 // Load vector pair, immed pre-index, S/D-form
-def : InstRW<[V1Write_6c_1L, V1Write_0c_0Z, WriteAdr],
+def : InstRW<[WriteAdr, V1Write_6c_1L, V1Write_0c_0Z],
              (instregex "^LDP[SD](pre|post)$")>;
 
 // Load vector pair, immed post-index, Q-form
 // Load vector pair, immed pre-index, Q-form
-def : InstRW<[V1Write_6c_1L, WriteLDHi, WriteAdr],
+def : InstRW<[WriteAdr, V1Write_6c_1L, WriteLDHi],
              (instrs LDPQpost, LDPQpre)>;
 
 
@@ -773,7 +773,7 @@ def : InstRW<[V1Write_2c_1L01_1V01], (instregex "^STUR[BHSDQ]i$")>;
 
 // Store vector reg, immed post-index, B/H/S/D/Q-form
 // Store vector reg, immed pre-index, B/H/S/D/Q-form
-def : InstRW<[V1Write_2c_1L01_1V01, WriteAdr],
+def : InstRW<[WriteAdr, V1Write_2c_1L01_1V01],
              (instregex "^STR[BHSDQ](pre|post)$")>;
 
 // Store vector reg, unsigned immed, B/H/S/D/Q-form
@@ -798,12 +798,12 @@ def : InstRW<[V1Write_2c_1L01_1V01], (instregex "^STN?P[SDQ]i$")>;
 
 // Store vector pair, immed post-index, S/D-form
 // Store vector pair, immed pre-index, S/D-form
-def : InstRW<[V1Write_2c_1L01_1V01, WriteAdr],
+def : InstRW<[WriteAdr, V1Write_2c_1L01_1V01],
              (instregex "^STP[SD](pre|post)$")>;
 
 // Store vector pair, immed post-index, Q-form
 // Store vector pair, immed pre-index, Q-form
-def : InstRW<[V1Write_2c_2L01_1V01, WriteAdr], (instrs STPQpre, STPQpost)>;
+def : InstRW<[WriteAdr, V1Write_2c_2L01_1V01], (instrs STPQpre, STPQpost)>;
 
 
 // ASIMD integer instructions
@@ -1074,31 +1074,31 @@ def : InstRW<[V1Write_5c_1M0_1V], (instregex "^INSvi(8|16|32|64)gpr$")>;
 // ASIMD load, 1 element, multiple, 1 reg
 def : InstRW<[V1Write_6c_1L],
              (instregex "^LD1Onev(8b|16b|4h|8h|2s|4s|1d|2d)$")>;
-def : InstRW<[V1Write_6c_1L, WriteAdr],
+def : InstRW<[WriteAdr, V1Write_6c_1L],
              (instregex "^LD1Onev(8b|16b|4h|8h|2s|4s|1d|2d)_POST$")>;
 
 // ASIMD load, 1 element, multiple, 2 reg
 def : InstRW<[V1Write_6c_2L],
              (instregex "^LD1Twov(8b|16b|4h|8h|2s|4s|1d|2d)$")>;
-def : InstRW<[V1Write_6c_2L, WriteAdr],
+def : InstRW<[WriteAdr, V1Write_6c_2L],
              (instregex "^LD1Twov(8b|16b|4h|8h|2s|4s|1d|2d)_POST$")>;
 
 // ASIMD load, 1 element, multiple, 3 reg
 def : InstRW<[V1Write_6c_3L],
              (instregex "^LD1Threev(8b|16b|4h|8h|2s|4s|1d|2d)$")>;
-def : InstRW<[V1Write_6c_3L, WriteAdr],
+def : InstRW<[WriteAdr, V1Write_6c_3L],
              (instregex "^LD1Threev(8b|16b|4h|8h|2s|4s|1d|2d)_POST$")>;
 
 // ASIMD load, 1 element, multiple, 4 reg, D-form
 def : InstRW<[V1Write_6c_2L],
              (instregex "^LD1Fourv(8b|4h|2s|1d)$")>;
-def : InstRW<[V1Write_6c_2L, WriteAdr],
+def : InstRW<[WriteAdr, V1Write_6c_2L],
              (instregex "^LD1Fourv(8b|4h|2s|1d)_POST$")>;
 
 // ASIMD load, 1 element, multiple, 4 reg, Q-form
 def : InstRW<[V1Write_7c_4L],
              (instregex "^LD1Fourv(16b|8h|4s|2d)$")>;
-def : InstRW<[V1Write_7c_4L, WriteAdr],
+def : InstRW<[WriteAdr, V1Write_7c_4L],
              (instregex "^LD1Fourv(16b|8h|4s|2d)_POST$")>;
 
 // ASIMD load, 1 element, one lane
@@ -1106,20 +1106,20 @@ def : InstRW<[V1Write_7c_4L, WriteAdr],
 def : InstRW<[V1Write_8c_1L_1V],
              (instregex "^LD1(i|Rv)(8|16|32|64)$",
                         "^LD1Rv(8b|16b|4h|8h|2s|4s|1d|2d)$")>;
-def : InstRW<[V1Write_8c_1L_1V, WriteAdr],
+def : InstRW<[WriteAdr, V1Write_8c_1L_1V],
              (instregex "^LD1i(8|16|32|64)_POST$",
                         "^LD1Rv(8b|16b|4h|8h|2s|4s|1d|2d)_POST$")>;
 
 // ASIMD load, 2 element, multiple, D-form
 def : InstRW<[V1Write_8c_1L_2V],
              (instregex "^LD2Twov(8b|4h|2s)$")>;
-def : InstRW<[V1Write_8c_1L_2V, WriteAdr],
+def : InstRW<[WriteAdr, V1Write_8c_1L_2V],
              (instregex "^LD2Twov(8b|4h|2s)_POST$")>;
                         
 // ASIMD load, 2 element, multiple, Q-form
 def : InstRW<[V1Write_8c_2L_2V],
              (instregex "^LD2Twov(16b|8h|4s|2d)$")>;
-def : InstRW<[V1Write_8c_2L_2V, WriteAdr],
+def : InstRW<[WriteAdr, V1Write_8c_2L_2V],
              (instregex "^LD2Twov(16b|8h|4s|2d)_POST$")>;
                         
 // ASIMD load, 2 element, one lane
@@ -1127,7 +1127,7 @@ def : InstRW<[V1Write_8c_2L_2V, WriteAdr],
 def : InstRW<[V1Write_8c_1L_2V],
              (instregex "^LD2i(8|16|32|64)$",
                         "^LD2Rv(8b|16b|4h|8h|2s|4s|1d|2d)$")>;
-def : InstRW<[V1Write_8c_1L_2V, WriteAdr],
+def : InstRW<[WriteAdr, V1Write_8c_1L_2V],
              (instregex "^LD2i(8|16|32|64)_POST$",
                         "^LD2Rv(8b|16b|4h|8h|2s|4s|1d|2d)_POST$")>;
                         
@@ -1138,7 +1138,7 @@ def : InstRW<[V1Write_8c_2L_3V],
              (instregex "^LD3Threev(8b|4h|2s)$",
                         "^LD3i(8|16|32|64)$",
                         "^LD3Rv(8b|16b|4h|8h|2s|4s|1d|2d)$")>;
-def : InstRW<[V1Write_8c_2L_3V, WriteAdr],
+def : InstRW<[WriteAdr, V1Write_8c_2L_3V],
              (instregex "^LD3Threev(8b|4h|2s)_POST$",
                         "^LD3i(8|16|32|64)_POST$",
                         "^LD3Rv(8b|16b|4h|8h|2s|4s|1d|2d)_POST$")>;
@@ -1146,7 +1146,7 @@ def : InstRW<[V1Write_8c_2L_3V, WriteAdr],
 // ASIMD load, 3 element, multiple, Q-form
 def : InstRW<[V1Write_8c_3L_3V],
              (instregex "^LD3Threev(16b|8h|4s|2d)$")>;
-def : InstRW<[V1Write_8c_3L_3V, WriteAdr],
+def : InstRW<[WriteAdr, V1Write_8c_3L_3V],
              (instregex "^LD3Threev(16b|8h|4s|2d)_POST$")>;
 
 // ASIMD load, 4 element, multiple, D-form
@@ -1156,7 +1156,7 @@ def : InstRW<[V1Write_8c_3L_4V],
              (instregex "^LD4Fourv(8b|4h|2s)$",
                         "^LD4i(8|16|32|64)$",
                         "^LD4Rv(8b|16b|4h|8h|2s|4s|1d|2d)$")>;
-def : InstRW<[V1Write_8c_3L_4V, WriteAdr], 
+def : InstRW<[WriteAdr, V1Write_8c_3L_4V],
              (instregex "^LD4Fourv(8b|4h|2s)_POST$",
                         "^LD4i(8|16|32|64)_POST$",
                         "^LD4Rv(8b|16b|4h|8h|2s|4s|1d|2d)_POST$")>;
@@ -1164,7 +1164,7 @@ def : InstRW<[V1Write_8c_3L_4V, WriteAdr],
 // ASIMD load, 4 element, multiple, Q-form
 def : InstRW<[V1Write_9c_4L_4V],
              (instregex "^LD4Fourv(16b|8h|4s|2d)$")>;
-def : InstRW<[V1Write_9c_4L_4V, WriteAdr],
+def : InstRW<[WriteAdr, V1Write_9c_4L_4V],
              (instregex "^LD4Fourv(16b|8h|4s|2d)_POST$")>;
 
 
@@ -1176,7 +1176,7 @@ def : InstRW<[V1Write_9c_4L_4V, WriteAdr],
 def : InstRW<[V1Write_2c_1L01_1V01],
              (instregex "^ST1Onev(8b|16b|4h|8h|2s|4s|1d|2d)$",
                         "^ST1Twov(8b|4h|2s|1d)$")>;
-def : InstRW<[V1Write_2c_1L01_1V01, WriteAdr],
+def : InstRW<[WriteAdr, V1Write_2c_1L01_1V01],
              (instregex "^ST1Onev(8b|16b|4h|8h|2s|4s|1d|2d)_POST$",
                         "^ST1Twov(8b|4h|2s|1d)_POST$")>;
 
@@ -1187,7 +1187,7 @@ def : InstRW<[V1Write_2c_2L01_2V01],
              (instregex "^ST1Twov(16b|8h|4s|2d)$",
                         "^ST1Threev(8b|4h|2s|1d)$",
                         "^ST1Fourv(8b|4h|2s|1d)$")>;
-def : InstRW<[V1Write_2c_2L01_2V01, WriteAdr],
+def : InstRW<[WriteAdr, V1Write_2c_2L01_2V01],
              (instregex "^ST1Twov(16b|8h|4s|2d)_POST$",
                         "^ST1Threev(8b|4h|2s|1d)_POST$",
                         "^ST1Fourv(8b|4h|2s|1d)_POST$")>;
@@ -1195,13 +1195,13 @@ def : InstRW<[V1Write_2c_2L01_2V01, WriteAdr],
 // ASIMD store, 1 element, multiple, 3 reg, Q-form
 def : InstRW<[V1Write_2c_3L01_3V01],
              (instregex "^ST1Threev(16b|8h|4s|2d)$")>;
-def : InstRW<[V1Write_2c_3L01_3V01, WriteAdr],
+def : InstRW<[WriteAdr, V1Write_2c_3L01_3V01],
              (instregex "^ST1Threev(16b|8h|4s|2d)_POST$")>;
 
 // ASIMD store, 1 element, multiple, 4 reg, Q-form
 def : InstRW<[V1Write_2c_4L01_4V01],
              (instregex "^ST1Fourv(16b|8h|4s|2d)$")>;
-def : InstRW<[V1Write_2c_4L01_4V01, WriteAdr],
+def : InstRW<[WriteAdr, V1Write_2c_4L01_4V01],
              (instregex "^ST1Fourv(16b|8h|4s|2d)_POST$")>;
 
 // ASIMD store, 1 element, one lane
@@ -1211,7 +1211,7 @@ def : InstRW<[V1Write_4c_1L01_1V01],
              (instregex "^ST1i(8|16|32|64)$",
                         "^ST2Twov(8b|4h|2s)$",
                         "^ST2i(8|16|32|64)$")>;
-def : InstRW<[V1Write_4c_1L01_1V01, WriteAdr],
+def : InstRW<[WriteAdr, V1Write_4c_1L01_1V01],
              (instregex "^ST1i(8|16|32|64)_POST$",
                         "^ST2Twov(8b|4h|2s)_POST$",
                         "^ST2i(8|16|32|64)_POST$")>;
@@ -1225,7 +1225,7 @@ def : InstRW<[V1Write_4c_2L01_2V01],
                         "^ST3Threev(8b|4h|2s)$",
                         "^ST3i(8|16|32|64)$",
                         "^ST4i64$")>;
-def : InstRW<[V1Write_4c_2L01_2V01, WriteAdr],
+def : InstRW<[WriteAdr, V1Write_4c_2L01_2V01],
              (instregex "^ST2Twov(16b|8h|4s|2d)_POST$",
                         "^ST3Threev(8b|4h|2s)_POST$",
                         "^ST3i(8|16|32|64)_POST$",
@@ -1234,31 +1234,31 @@ def : InstRW<[V1Write_4c_2L01_2V01, WriteAdr],
 // ASIMD store, 3 element, multiple, Q-form
 def : InstRW<[V1Write_5c_3L01_3V01],
              (instregex "^ST3Threev(16b|8h|4s|2d)$")>;
-def : InstRW<[V1Write_5c_3L01_3V01, WriteAdr],
+def : InstRW<[WriteAdr, V1Write_5c_3L01_3V01],
              (instregex "^ST3Threev(16b|8h|4s|2d)_POST$")>;
 
 // ASIMD store, 4 element, multiple, D-form
 def : InstRW<[V1Write_6c_3L01_3V01],
              (instregex "^ST4Fourv(8b|4h|2s)$")>;
-def : InstRW<[V1Write_6c_3L01_3V01, WriteAdr],
+def : InstRW<[WriteAdr, V1Write_6c_3L01_3V01],
              (instregex "^ST4Fourv(8b|4h|2s)_POST$")>;
 
 // ASIMD store, 4 element, multiple, Q-form, B/H/S
 def : InstRW<[V1Write_7c_6L01_6V01],
              (instregex "^ST4Fourv(16b|8h|4s)$")>;
-def : InstRW<[V1Write_7c_6L01_6V01, WriteAdr],
+def : InstRW<[WriteAdr, V1Write_7c_6L01_6V01],
              (instregex "^ST4Fourv(16b|8h|4s)_POST$")>;
 
 // ASIMD store, 4 element, multiple, Q-form, D
 def : InstRW<[V1Write_4c_4L01_4V01],
              (instrs ST4Fourv2d)>;
-def : InstRW<[V1Write_4c_4L01_4V01, WriteAdr],
+def : InstRW<[WriteAdr, V1Write_4c_4L01_4V01],
              (instrs ST4Fourv2d_POST)>;
 
 // ASIMD store, 4 element, one lane, B/H/S
 def : InstRW<[V1Write_6c_3L_3V],
              (instregex "^ST4i(8|16|32)$")>;
-def : InstRW<[V1Write_6c_3L_3V, WriteAdr],
+def : InstRW<[WriteAdr, V1Write_6c_3L_3V],
              (instregex "^ST4i(8|16|32)_POST$")>;
 
 

@@ -113,8 +113,9 @@ llvm::orc::createDWARFContext(LinkGraph &G) {
           std::make_unique<SmallVectorMemoryBuffer>(std::move(SecData));
     }
   }
-  auto Ctx = DWARFContext::create(DWARFSectionData, G.getPointerSize(),
-                                  G.getEndianness() == support::little);
+  auto Ctx =
+      DWARFContext::create(DWARFSectionData, G.getPointerSize(),
+                           G.getEndianness() == llvm::endianness::little);
   dumpDWARFContext(*Ctx);
   return std::make_pair(std::move(Ctx), std::move(DWARFSectionData));
 }
