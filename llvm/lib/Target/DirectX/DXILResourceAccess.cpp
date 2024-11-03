@@ -22,7 +22,7 @@
 using namespace llvm;
 
 static void replaceTypedBufferAccess(IntrinsicInst *II,
-                                     dxil::ResourceInfo &RI) {
+                                     dxil::ResourceTypeInfo &RTI) {
   const DataLayout &DL = II->getDataLayout();
 
   auto *HandleType = cast<TargetExtType>(II->getOperand(0)->getType());
@@ -119,46 +119,43 @@ static void replaceTypedBufferAccess(IntrinsicInst *II,
   II->eraseFromParent();
 }
 
-static bool transformResourcePointers(Function &F, DXILResourceMap &DRM) {
-  // TODO: Should we have a more efficient way to find resources used in a
-  // particular function?
-  SmallVector<std::pair<IntrinsicInst *, dxil::ResourceInfo &>> Resources;
+static bool transformResourcePointers(Function &F, DXILResourceTypeMap &DRTM) {
+  bool Changed = false;
+  SmallVector<std::pair<IntrinsicInst *, dxil::ResourceTypeInfo>> Resources;
   for (BasicBlock &BB : F)
     for (Instruction &I : BB)
-      if (auto *CI = dyn_cast<CallInst>(&I)) {
-        auto It = DRM.find(CI);
-        if (It == DRM.end())
-          continue;
-        for (User *U : CI->users())
-          if (IntrinsicInst *II = dyn_cast<IntrinsicInst>(U))
-            if (II->getIntrinsicID() == Intrinsic::dx_resource_getpointer)
-              Resources.emplace_back(II, *It);
-      }
+      if (auto *II = dyn_cast<IntrinsicInst>(&I))
+        if (II->getIntrinsicID() == Intrinsic::dx_resource_getpointer) {
+          auto *HandleTy = cast<TargetExtType>(II->getArgOperand(0)->getType());
+          Resources.emplace_back(II, DRTM[HandleTy]);
+        }
 
-  for (const auto &[II, RI] : Resources) {
-    if (RI.isTyped())
+  for (auto &[II, RI] : Resources) {
+    if (RI.isTyped()) {
+      Changed = true;
       replaceTypedBufferAccess(II, RI);
+    }
 
     // TODO: handle other resource types. We should probably have an
     // `unreachable` here once we've added support for all of them.
   }
 
-  return false;
+  return Changed;
 }
 
 PreservedAnalyses DXILResourceAccess::run(Function &F,
                                           FunctionAnalysisManager &FAM) {
   auto &MAMProxy = FAM.getResult<ModuleAnalysisManagerFunctionProxy>(F);
-  DXILResourceMap *DRM =
-      MAMProxy.getCachedResult<DXILResourceAnalysis>(*F.getParent());
-  assert(DRM && "DXILResourceAnalysis must be available");
+  DXILResourceTypeMap *DRTM =
+      MAMProxy.getCachedResult<DXILResourceTypeAnalysis>(*F.getParent());
+  assert(DRTM && "DXILResourceTypeAnalysis must be available");
 
-  bool MadeChanges = transformResourcePointers(F, *DRM);
+  bool MadeChanges = transformResourcePointers(F, *DRTM);
   if (!MadeChanges)
     return PreservedAnalyses::all();
 
   PreservedAnalyses PA;
-  PA.preserve<DXILResourceAnalysis>();
+  PA.preserve<DXILResourceTypeAnalysis>();
   PA.preserve<DominatorTreeAnalysis>();
   return PA;
 }
@@ -167,18 +164,17 @@ namespace {
 class DXILResourceAccessLegacy : public FunctionPass {
 public:
   bool runOnFunction(Function &F) override {
-    DXILResourceMap &DRM =
-        getAnalysis<DXILResourceWrapperPass>().getResourceMap();
+    DXILResourceTypeMap &DRTM =
+        getAnalysis<DXILResourceTypeWrapperPass>().getResourceTypeMap();
 
-    return transformResourcePointers(F, DRM);
+    return transformResourcePointers(F, DRTM);
   }
   StringRef getPassName() const override { return "DXIL Resource Access"; }
   DXILResourceAccessLegacy() : FunctionPass(ID) {}
 
   static char ID; // Pass identification.
   void getAnalysisUsage(llvm::AnalysisUsage &AU) const override {
-    AU.addRequired<DXILResourceWrapperPass>();
-    AU.addPreserved<DXILResourceWrapperPass>();
+    AU.addRequired<DXILResourceTypeWrapperPass>();
     AU.addPreserved<DominatorTreeWrapperPass>();
   }
 };
@@ -187,7 +183,7 @@ char DXILResourceAccessLegacy::ID = 0;
 
 INITIALIZE_PASS_BEGIN(DXILResourceAccessLegacy, DEBUG_TYPE,
                       "DXIL Resource Access", false, false)
-INITIALIZE_PASS_DEPENDENCY(DXILResourceWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(DXILResourceTypeWrapperPass)
 INITIALIZE_PASS_END(DXILResourceAccessLegacy, DEBUG_TYPE,
                     "DXIL Resource Access", false, false)
 

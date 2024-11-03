@@ -18,7 +18,6 @@
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Twine.h"
-#include "llvm/Analysis/DXILResource.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/VectorUtils.h"
 #include "llvm/IR/Argument.h"
@@ -352,7 +351,6 @@ void ScalarizerLegacyPass::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequired<DominatorTreeWrapperPass>();
   AU.addRequired<TargetTransformInfoWrapperPass>();
   AU.addPreserved<DominatorTreeWrapperPass>();
-  AU.addPreserved<DXILResourceWrapperPass>();
 }
 
 char ScalarizerLegacyPass::ID = 0;
@@ -1350,6 +1348,5 @@ PreservedAnalyses ScalarizerPass::run(Function &F, FunctionAnalysisManager &AM) 
   bool Changed = Impl.visit(F);
   PreservedAnalyses PA;
   PA.preserve<DominatorTreeAnalysis>();
-  PA.preserve<DXILResourceAnalysis>();
   return Changed ? PA : PreservedAnalyses::all();
 }
