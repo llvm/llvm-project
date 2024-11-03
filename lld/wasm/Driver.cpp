@@ -333,9 +333,15 @@ void LinkerDriver::addFile(StringRef path) {
     return;
   }
   case file_magic::bitcode:
-  case file_magic::wasm_object:
-    files.push_back(createObjectFile(mbref, "", 0, inLib));
+  case file_magic::wasm_object: {
+    auto obj = createObjectFile(mbref, "", 0, inLib);
+    if (config->isStatic && isa<SharedFile>(obj)) {
+      error("attempted static link of dynamic object " + path);
+      break;
+    }
+    files.push_back(obj);
     break;
+  }
   case file_magic::unknown:
     if (mbref.getBuffer().starts_with("#STUB")) {
       files.push_back(make<StubFile>(mbref));
@@ -911,17 +917,6 @@ static void createSyntheticSymbols() {
             is64 ? i64ArgSignature : i32ArgSignature,
             "__wasm_init_tls"));
   }
-
-  if (ctx.isPic ||
-      config->unresolvedSymbols == UnresolvedPolicy::ImportDynamic) {
-    // For PIC code, or when dynamically importing addresses, we create
-    // synthetic functions that apply relocations.  These get called from
-    // __wasm_call_ctors before the user-level constructors.
-    WasmSym::applyDataRelocs = symtab->addSyntheticFunction(
-        "__wasm_apply_data_relocs",
-        WASM_SYMBOL_VISIBILITY_DEFAULT | WASM_SYMBOL_EXPORTED,
-        make<SyntheticFunction>(nullSignature, "__wasm_apply_data_relocs"));
-  }
 }
 
 static void createOptionalSymbols() {
@@ -1223,11 +1218,9 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
     return;
   }
 
-  // Handle --version
-  if (args.hasArg(OPT_version) || args.hasArg(OPT_v)) {
+  // Handle -v or -version.
+  if (args.hasArg(OPT_v) || args.hasArg(OPT_version))
     lld::outs() << getLLDVersion() << "\n";
-    return;
-  }
 
   // Handle --reproduce
   if (const char *path = getReproduceOption(args)) {
@@ -1252,6 +1245,13 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
 
   readConfigs(args);
   setConfigs();
+
+  // The behavior of -v or --version is a bit strange, but this is
+  // needed for compatibility with GNU linkers.
+  if (args.hasArg(OPT_v) && !args.hasArg(OPT_INPUT))
+    return;
+  if (args.hasArg(OPT_version))
+    return;
 
   createFiles(args);
   if (errorCount())

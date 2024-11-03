@@ -29,7 +29,7 @@ using namespace mlir;
   os << "neither the scoping op nor the type class provide data layout "
         "information for "
      << type;
-  llvm::report_fatal_error(Twine(os.str()));
+  llvm::report_fatal_error(Twine(message));
 }
 
 /// Returns the bitwidth of the index type if specified in the param list.

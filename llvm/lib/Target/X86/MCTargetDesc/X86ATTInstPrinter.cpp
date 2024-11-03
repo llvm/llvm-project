@@ -35,7 +35,7 @@ using namespace llvm;
 #define PRINT_ALIAS_INSTR
 #include "X86GenAsmWriter.inc"
 
-void X86ATTInstPrinter::printRegName(raw_ostream &OS, MCRegister Reg) const {
+void X86ATTInstPrinter::printRegName(raw_ostream &OS, MCRegister Reg) {
   markup(OS, Markup::Register) << '%' << getRegisterName(Reg);
 }
 
@@ -216,8 +216,6 @@ bool X86ATTInstPrinter::printVecCompareInstr(const MCInst *MI,
               printdwordmem(MI, CurOp--, OS);
           } else if ((Desc.TSFlags & X86II::OpPrefixMask) == X86II::XD &&
                      (Desc.TSFlags & X86II::OpMapMask) != X86II::TA) {
-            assert((Desc.TSFlags & X86II::OpMapMask) != X86II::TA &&
-                   "Unexpected op map!");
             printqwordmem(MI, CurOp--, OS);
           } else if (Desc.TSFlags & X86II::EVEX_L2) {
             printzmmwordmem(MI, CurOp--, OS);
@@ -518,8 +516,7 @@ void X86ATTInstPrinter::printU8Imm(const MCInst *MI, unsigned Op,
 
 void X86ATTInstPrinter::printSTiRegOperand(const MCInst *MI, unsigned OpNo,
                                            raw_ostream &OS) {
-  const MCOperand &Op = MI->getOperand(OpNo);
-  unsigned Reg = Op.getReg();
+  MCRegister Reg = MI->getOperand(OpNo).getReg();
   // Override the default printing to print st(0) instead st.
   if (Reg == X86::ST0)
     markup(OS, Markup::Register) << "%st(0)";

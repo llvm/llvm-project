@@ -30,7 +30,7 @@ public:
 
   void printInst(MCInst const *MI, uint64_t Address, StringRef Annot,
                  const MCSubtargetInfo &STI, raw_ostream &O) override;
-  void printRegName(raw_ostream &O, MCRegister Reg) const override;
+  void printRegName(raw_ostream &O, MCRegister Reg) override;
 
   static char const *getRegisterName(MCRegister Reg);
 

@@ -66,6 +66,7 @@ public:
         {"fixup_aarch64_ldst_imm12_scale16", 10, 12, 0},
         {"fixup_aarch64_ldr_pcrel_imm19", 5, 19, PCRelFlagVal},
         {"fixup_aarch64_movw", 5, 16, 0},
+        {"fixup_aarch64_pcrel_branch9", 5, 9,  PCRelFlagVal},
         {"fixup_aarch64_pcrel_branch14", 5, 14, PCRelFlagVal},
         {"fixup_aarch64_pcrel_branch16", 5, 16, PCRelFlagVal},
         {"fixup_aarch64_pcrel_branch19", 5, 19, PCRelFlagVal},
@@ -120,6 +121,7 @@ static unsigned getFixupKindNumBytes(unsigned Kind) {
     return 2;
 
   case AArch64::fixup_aarch64_movw:
+  case AArch64::fixup_aarch64_pcrel_branch9:
   case AArch64::fixup_aarch64_pcrel_branch14:
   case AArch64::fixup_aarch64_pcrel_branch16:
   case AArch64::fixup_aarch64_add_imm12:
@@ -307,6 +309,14 @@ static uint64_t adjustFixupValue(const MCFixup &Fixup, const MCValue &Target,
     }
     return Value;
   }
+  case AArch64::fixup_aarch64_pcrel_branch9:
+    // Signed 11-bit(9bits + 2 shifts) label
+    if (!isInt<11>(SignedValue))
+      Ctx.reportError(Fixup.getLoc(), "fixup value out of range");
+    // Low two bits are not encoded (4-byte alignment assumed).
+    if (Value & 0b11)
+      Ctx.reportError(Fixup.getLoc(), "fixup not sufficiently aligned");
+    return (Value >> 2) & 0x1ff;
   case AArch64::fixup_aarch64_pcrel_branch14:
     // Signed 16-bit immediate
     if (!isInt<16>(SignedValue))
@@ -391,6 +401,7 @@ unsigned AArch64AsmBackend::getFixupKindContainereSizeInBytes(unsigned Kind) con
     return 8;
 
   case AArch64::fixup_aarch64_movw:
+  case AArch64::fixup_aarch64_pcrel_branch9:
   case AArch64::fixup_aarch64_pcrel_branch14:
   case AArch64::fixup_aarch64_pcrel_branch16:
   case AArch64::fixup_aarch64_add_imm12:
@@ -622,7 +633,7 @@ public:
         return CU::UNWIND_ARM64_MODE_DWARF;
       case MCCFIInstruction::OpDefCfa: {
         // Defines a frame pointer.
-        unsigned XReg =
+        MCRegister XReg =
             getXRegFromWReg(*MRI.getLLVMRegNum(Inst.getRegister(), true));
 
         // Other CFA registers than FP are not supported by compact unwind.
@@ -646,8 +657,8 @@ public:
           return CU::UNWIND_ARM64_MODE_DWARF;
         CurOffset = FPPush.getOffset();
 
-        unsigned LRReg = *MRI.getLLVMRegNum(LRPush.getRegister(), true);
-        unsigned FPReg = *MRI.getLLVMRegNum(FPPush.getRegister(), true);
+        MCRegister LRReg = *MRI.getLLVMRegNum(LRPush.getRegister(), true);
+        MCRegister FPReg = *MRI.getLLVMRegNum(FPPush.getRegister(), true);
 
         LRReg = getXRegFromWReg(LRReg);
         FPReg = getXRegFromWReg(FPReg);
@@ -669,7 +680,7 @@ public:
       case MCCFIInstruction::OpOffset: {
         // Registers are saved in pairs. We expect there to be two consecutive
         // `.cfi_offset' instructions with the appropriate registers specified.
-        unsigned Reg1 = *MRI.getLLVMRegNum(Inst.getRegister(), true);
+        MCRegister Reg1 = *MRI.getLLVMRegNum(Inst.getRegister(), true);
         if (i + 1 == e)
           return CU::UNWIND_ARM64_MODE_DWARF;
 
@@ -680,7 +691,7 @@ public:
         const MCCFIInstruction &Inst2 = Instrs[++i];
         if (Inst2.getOperation() != MCCFIInstruction::OpOffset)
           return CU::UNWIND_ARM64_MODE_DWARF;
-        unsigned Reg2 = *MRI.getLLVMRegNum(Inst2.getRegister(), true);
+        MCRegister Reg2 = *MRI.getLLVMRegNum(Inst2.getRegister(), true);
 
         if (Inst2.getOffset() != CurOffset - 8)
           return CU::UNWIND_ARM64_MODE_DWARF;

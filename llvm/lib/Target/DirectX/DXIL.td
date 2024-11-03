@@ -40,10 +40,14 @@ def Int64Ty : DXILOpParamType;
 def HalfTy : DXILOpParamType;
 def FloatTy : DXILOpParamType;
 def DoubleTy : DXILOpParamType;
-def ResRetTy : DXILOpParamType;
+def ResRetHalfTy : DXILOpParamType;
+def ResRetFloatTy : DXILOpParamType;
+def ResRetInt16Ty : DXILOpParamType;
+def ResRetInt32Ty : DXILOpParamType;
 def HandleTy : DXILOpParamType;
 def ResBindTy : DXILOpParamType;
 def ResPropsTy : DXILOpParamType;
+def SplitDoubleTy : DXILOpParamType;
 
 class DXILOpClass;
 
@@ -290,6 +294,43 @@ class Attributes<Version ver = DXIL1_0, list<DXILAttribute> attrs> {
   list<DXILAttribute> op_attrs = attrs;
 }
 
+class DXILConstant<int value_> {
+  int value = value_;
+}
+
+defset list<DXILConstant> BarrierModes = {
+  def BarrierMode_DeviceMemoryBarrier              : DXILConstant<2>;
+  def BarrierMode_DeviceMemoryBarrierWithGroupSync : DXILConstant<3>;
+  def BarrierMode_GroupMemoryBarrier               : DXILConstant<8>;
+  def BarrierMode_GroupMemoryBarrierWithGroupSync  : DXILConstant<9>;
+  def BarrierMode_AllMemoryBarrier                 : DXILConstant<10>;
+  def BarrierMode_AllMemoryBarrierWithGroupSync    : DXILConstant<11>;
+}
+
+// Intrinsic arg selection
+class Arg {
+  int index = -1;
+  DXILConstant value;
+  bit is_i8 = 0;
+  bit is_i32 = 0;
+}
+class ArgSelect<int index_> : Arg {
+  let index = index_;
+}
+class ArgI32<DXILConstant value_> : Arg {
+  let value = value_;
+  let is_i32 = 1;
+}
+class ArgI8<DXILConstant value_> : Arg {
+  let value = value_;
+  let is_i8 = 1;
+}
+
+class IntrinsicSelect<Intrinsic intrinsic_, list<Arg> args_> {
+  Intrinsic intrinsic = intrinsic_;
+  list<Arg> args = args_;
+}
+
 // Abstraction DXIL Operation
 class DXILOp<int opcode, DXILOpClass opclass> {
   // A short description of the operation
@@ -303,6 +344,9 @@ class DXILOp<int opcode, DXILOpClass opclass> {
 
   // LLVM Intrinsic DXIL Operation maps to
   Intrinsic LLVMIntrinsic = ?;
+
+  // Non-trivial LLVM Intrinsics DXIL Operation maps to
+  list<IntrinsicSelect> intrinsic_selects = [];
 
   // Result type of the op
   DXILOpParamType result;
@@ -550,6 +594,16 @@ def Rbits :  DXILOp<30, unary> {
   let attributes = [Attributes<DXIL1_0, [ReadNone]>];
 }
 
+def CountBits :  DXILOp<31, unaryBits> {
+  let Doc = "Returns the number of 1 bits in the specified value.";
+  let arguments = [OverloadTy];
+  let result = Int32Ty;
+  let overloads =
+      [Overloads<DXIL1_0, [Int16Ty, Int32Ty, Int64Ty]>];
+  let stages = [Stages<DXIL1_0, [all_stages]>];
+  let attributes = [Attributes<DXIL1_0, [ReadNone]>];
+}
+
 def FMax :  DXILOp<35, binary> {
   let Doc = "Float maximum. FMax(a,b) = a > b ? a : b";
   let LLVMIntrinsic = int_maxnum;
@@ -693,6 +747,38 @@ def CreateHandle : DXILOp<57, createHandle> {
   let stages = [Stages<DXIL1_0, [all_stages]>, Stages<DXIL1_6, [removed]>];
 }
 
+def BufferLoad : DXILOp<68, bufferLoad> {
+  let Doc = "reads from a TypedBuffer";
+  // Handle, Coord0, Coord1
+  let arguments = [HandleTy, Int32Ty, Int32Ty];
+  let result = OverloadTy;
+  let overloads =
+      [Overloads<DXIL1_0,
+                 [ResRetHalfTy, ResRetFloatTy, ResRetInt16Ty, ResRetInt32Ty]>];
+  let stages = [Stages<DXIL1_0, [all_stages]>];
+}
+
+def BufferStore : DXILOp<69, bufferStore> {
+  let Doc = "writes to an RWTypedBuffer";
+  // Handle, Coord0, Coord1, Val0, Val1, Val2, Val3, Mask
+  let arguments = [
+    HandleTy, Int32Ty, Int32Ty, OverloadTy, OverloadTy, OverloadTy, OverloadTy,
+    Int8Ty
+  ];
+  let result = VoidTy;
+  let overloads = [Overloads<DXIL1_0, [HalfTy, FloatTy, Int16Ty, Int32Ty]>];
+  let stages = [Stages<DXIL1_0, [all_stages]>];
+}
+
+def CheckAccessFullyMapped : DXILOp<71, checkAccessFullyMapped> {
+  let Doc = "checks whether a Sample, Gather, or Load operation "
+            "accessed mapped tiles in a tiled resource";
+  let arguments = [OverloadTy];
+  let result = Int1Ty;
+  let overloads = [Overloads<DXIL1_0, [Int32Ty]>];
+  let stages = [Stages<DXIL1_0, [all_stages]>];
+}
+
 def ThreadId :  DXILOp<93, threadId> {
   let Doc = "Reads the thread ID";
   let LLVMIntrinsic = int_dx_thread_id;
@@ -733,6 +819,15 @@ def FlattenedThreadIdInGroup :  DXILOp<96, flattenedThreadIdInGroup> {
   let attributes = [Attributes<DXIL1_0, [ReadNone]>];
 }
 
+def SplitDouble :  DXILOp<102, splitDouble> {
+  let Doc = "Splits a double into 2 uints";
+  let arguments = [OverloadTy];
+  let result = SplitDoubleTy;
+  let overloads = [Overloads<DXIL1_0, [DoubleTy]>];
+  let stages = [Stages<DXIL1_0, [all_stages]>];
+  let attributes = [Attributes<DXIL1_0, [ReadNone]>];
+}
+
 def AnnotateHandle : DXILOp<217, annotateHandle> {
   let Doc = "annotate handle with resource properties";
   let arguments = [HandleTy, ResPropsTy];
@@ -754,4 +849,37 @@ def WaveIsFirstLane :  DXILOp<110, waveIsFirstLane> {
   let result = Int1Ty;
   let stages = [Stages<DXIL1_0, [all_stages]>];
   let attributes = [Attributes<DXIL1_0, [ReadNone]>];
+}
+
+def WaveReadLaneAt:  DXILOp<117, waveReadLaneAt> {
+  let Doc = "returns the value from the specified lane";
+  let LLVMIntrinsic = int_dx_wave_readlane;
+  let arguments = [OverloadTy, Int32Ty];
+  let result = OverloadTy;
+  let overloads = [Overloads<DXIL1_0, [HalfTy, FloatTy, DoubleTy, Int1Ty, Int16Ty, Int32Ty, Int64Ty]>];
+  let stages = [Stages<DXIL1_0, [all_stages]>];
+  let attributes = [Attributes<DXIL1_0, [ReadNone]>];
+}
+
+def WaveGetLaneIndex : DXILOp<111, waveGetLaneIndex> {
+  let Doc = "returns the index of the current lane in the wave";
+  let LLVMIntrinsic = int_dx_wave_getlaneindex;
+  let arguments = [];
+  let result = Int32Ty;
+  let stages = [Stages<DXIL1_0, [all_stages]>];
+  let attributes = [Attributes<DXIL1_0, [ReadNone]>];
+}
+
+def Barrier : DXILOp<80, barrier> {
+  let Doc = "inserts a memory barrier in the shader";
+  let intrinsic_selects = [
+    IntrinsicSelect<
+        int_dx_group_memory_barrier_with_group_sync,
+        [ ArgI32<BarrierMode_GroupMemoryBarrierWithGroupSync> ]>,
+  ];
+
+  let arguments = [Int32Ty];
+  let result = VoidTy;
+  let stages = [Stages<DXIL1_0, [compute, library]>];
+  let attributes = [Attributes<DXIL1_0, []>];
 }

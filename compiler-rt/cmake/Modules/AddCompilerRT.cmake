@@ -161,7 +161,8 @@ endmacro()
 #                         LINK_LIBS <linked libraries> (only for shared library)
 #                         OBJECT_LIBS <object libraries to use as sources>
 #                         PARENT_TARGET <convenience parent target>
-#                         ADDITIONAL_HEADERS <header files>)
+#                         ADDITIONAL_HEADERS <header files>
+#                         EXTENSIONS <boolean>)
 function(add_compiler_rt_runtime name type)
   if(NOT type MATCHES "^(OBJECT|STATIC|SHARED|MODULE)$")
     message(FATAL_ERROR
@@ -171,7 +172,7 @@ function(add_compiler_rt_runtime name type)
   cmake_parse_arguments(LIB
     ""
     "PARENT_TARGET"
-    "OS;ARCHS;SOURCES;CFLAGS;LINK_FLAGS;DEFS;DEPS;LINK_LIBS;OBJECT_LIBS;ADDITIONAL_HEADERS"
+    "OS;ARCHS;SOURCES;CFLAGS;LINK_FLAGS;DEFS;DEPS;LINK_LIBS;OBJECT_LIBS;ADDITIONAL_HEADERS;EXTENSIONS"
     ${ARGN})
   set(libnames)
   # Until we support this some other way, build compiler-rt runtime without LTO
@@ -434,6 +435,10 @@ function(add_compiler_rt_runtime name type)
 
     if(type STREQUAL "SHARED")
       rt_externalize_debuginfo(${libname})
+    endif()
+
+    if(DEFINED LIB_EXTENSIONS)
+      set_target_properties(${libname} PROPERTIES C_EXTENSIONS ${LIB_EXTENSIONS})
     endif()
   endforeach()
   if(LIB_PARENT_TARGET)

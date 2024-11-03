@@ -58,6 +58,7 @@ MODULE_PASS("coro-early", CoroEarlyPass())
 MODULE_PASS("cross-dso-cfi", CrossDSOCFIPass())
 MODULE_PASS("ctx-instr-gen",
             PGOInstrumentationGen(PGOInstrumentationType::CTXPROF))
+MODULE_PASS("ctx-prof-flatten", PGOCtxProfFlatteningPass())
 MODULE_PASS("deadargelim", DeadArgumentEliminationPass())
 MODULE_PASS("debugify", NewPMDebugifyPass())
 MODULE_PASS("dfsan", DataFlowSanitizerPass())
@@ -146,7 +147,6 @@ MODULE_PASS("strip-dead-prototypes", StripDeadPrototypesPass())
 MODULE_PASS("strip-debug-declare", StripDebugDeclarePass())
 MODULE_PASS("strip-nondebug", StripNonDebugSymbolsPass())
 MODULE_PASS("strip-nonlinetable-debuginfo", StripNonLineTableDebugInfoPass())
-MODULE_PASS("synthetic-counts-propagation", SyntheticCountsPropagation())
 MODULE_PASS("trigger-crash-module", TriggerCrashModulePass())
 MODULE_PASS("trigger-verifier-error", TriggerVerifierErrorPass())
 MODULE_PASS("tsan-module", ModuleThreadSanitizerPass())
@@ -220,10 +220,11 @@ MODULE_PASS_WITH_PARAMS(
     parseMSanPassOptions, "recover;kernel;eager-checks;track-origins=N")
 MODULE_PASS_WITH_PARAMS(
     "print<structural-hash>", "StructuralHashPrinterPass",
-    [](bool EnableDetailedStructuralHash) {
-      return StructuralHashPrinterPass(dbgs(), EnableDetailedStructuralHash);
+    [](StructuralHashOptions Options) {
+      return StructuralHashPrinterPass(dbgs(), Options);
     },
-    parseStructuralHashPrinterPassOptions, "detailed")
+    parseStructuralHashPrinterPassOptions, "detailed;call-target-ignored")
+
 #undef MODULE_PASS_WITH_PARAMS
 
 #ifndef CGSCC_ANALYSIS
@@ -339,9 +340,11 @@ FUNCTION_PASS("callbr-prepare", CallBrPreparePass())
 FUNCTION_PASS("callsite-splitting", CallSiteSplittingPass())
 FUNCTION_PASS("chr", ControlHeightReductionPass())
 FUNCTION_PASS("codegenprepare", CodeGenPreparePass(TM))
+FUNCTION_PASS("complex-deinterleaving", ComplexDeinterleavingPass(TM))
 FUNCTION_PASS("consthoist", ConstantHoistingPass())
 FUNCTION_PASS("constraint-elimination", ConstraintEliminationPass())
 FUNCTION_PASS("coro-elide", CoroElidePass())
+FUNCTION_PASS("coro-annotation-elide", CoroAnnotationElidePass())
 FUNCTION_PASS("correlated-propagation", CorrelatedValuePropagationPass())
 FUNCTION_PASS("count-visits", CountVisitsPass())
 FUNCTION_PASS("dce", DCEPass())
@@ -453,8 +456,8 @@ FUNCTION_PASS("reassociate", ReassociatePass())
 FUNCTION_PASS("redundant-dbg-inst-elim", RedundantDbgInstEliminationPass())
 FUNCTION_PASS("reg2mem", RegToMemPass())
 FUNCTION_PASS("safe-stack", SafeStackPass(TM))
+FUNCTION_PASS("sandbox-vectorizer", SandboxVectorizerPass())
 FUNCTION_PASS("scalarize-masked-mem-intrin", ScalarizeMaskedMemIntrinPass())
-FUNCTION_PASS("scalarizer", ScalarizerPass())
 FUNCTION_PASS("sccp", SCCPPass())
 FUNCTION_PASS("select-optimize", SelectOptimizePass(TM))
 FUNCTION_PASS("separate-const-offset-from-gep",
@@ -571,6 +574,12 @@ FUNCTION_PASS_WITH_PARAMS(
       return StackLifetimePrinterPass(dbgs(), Type);
     },
     parseStackLifetimeOptions, "may;must")
+FUNCTION_PASS_WITH_PARAMS(
+    "scalarizer", "ScalarizerPass",
+    [](ScalarizerPassOptions Opts) { return ScalarizerPass(Opts); },
+    parseScalarizerOptions,
+    "load-store;no-load-store;variable-insert-extract;"
+    "no-variable-insert-extract;min-bits=N;")
 FUNCTION_PASS_WITH_PARAMS(
     "separate-const-offset-from-gep", "SeparateConstOffsetFromGEPPass",
     [](bool LowerGEP) { return SeparateConstOffsetFromGEPPass(LowerGEP); },

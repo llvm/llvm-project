@@ -68,18 +68,19 @@ using GUID = uint64_t;
 class ContextNode final {
   const GUID Guid;
   ContextNode *const Next;
-  const uint32_t NrCounters;
-  const uint32_t NrCallsites;
+  const uint32_t NumCounters;
+  const uint32_t NumCallsites;
 
 public:
-  ContextNode(GUID Guid, uint32_t NrCounters, uint32_t NrCallsites,
+  ContextNode(GUID Guid, uint32_t NumCounters, uint32_t NumCallsites,
               ContextNode *Next = nullptr)
-      : Guid(Guid), Next(Next), NrCounters(NrCounters),
-        NrCallsites(NrCallsites) {}
+      : Guid(Guid), Next(Next), NumCounters(NumCounters),
+        NumCallsites(NumCallsites) {}
 
-  static inline size_t getAllocSize(uint32_t NrCounters, uint32_t NrCallsites) {
-    return sizeof(ContextNode) + sizeof(uint64_t) * NrCounters +
-           sizeof(ContextNode *) * NrCallsites;
+  static inline size_t getAllocSize(uint32_t NumCounters,
+                                    uint32_t NumCallsites) {
+    return sizeof(ContextNode) + sizeof(uint64_t) * NumCounters +
+           sizeof(ContextNode *) * NumCallsites;
   }
 
   // The counters vector starts right after the static header.
@@ -88,8 +89,8 @@ public:
     return reinterpret_cast<uint64_t *>(addr_after);
   }
 
-  uint32_t counters_size() const { return NrCounters; }
-  uint32_t callsites_size() const { return NrCallsites; }
+  uint32_t counters_size() const { return NumCounters; }
+  uint32_t callsites_size() const { return NumCallsites; }
 
   const uint64_t *counters() const {
     return const_cast<ContextNode *>(this)->counters();
@@ -97,7 +98,7 @@ public:
 
   // The subcontexts vector starts right after the end of the counters vector.
   ContextNode **subContexts() {
-    return reinterpret_cast<ContextNode **>(&(counters()[NrCounters]));
+    return reinterpret_cast<ContextNode **>(&(counters()[NumCounters]));
   }
 
   ContextNode *const *subContexts() const {
@@ -107,7 +108,7 @@ public:
   GUID guid() const { return Guid; }
   ContextNode *next() const { return Next; }
 
-  size_t size() const { return getAllocSize(NrCounters, NrCallsites); }
+  size_t size() const { return getAllocSize(NumCounters, NumCallsites); }
 
   uint64_t entrycount() const { return counters()[0]; }
 };

@@ -366,3 +366,78 @@ entry:
   ret void
 }
 declare i16 @llvm.vector.reduce.add.v4i16(<4 x i16>)
+
+define i64 @op_then_reduce(<4 x i64> %v, <4 x i64> %v2) {
+; CHECK-LABEL: op_then_reduce:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
+; CHECK-NEXT:    vadd.vv v8, v8, v10
+; CHECK-NEXT:    vmv.s.x v10, zero
+; CHECK-NEXT:    vredsum.vs v8, v8, v10
+; CHECK-NEXT:    vmv.x.s a0, v8
+; CHECK-NEXT:    ret
+entry:
+  %rdx1 = call i64 @llvm.vector.reduce.add.v4i64(<4 x i64> %v)
+  %rdx2 = call i64 @llvm.vector.reduce.add.v4i64(<4 x i64> %v2)
+  %res = add i64 %rdx1, %rdx2
+  ret i64 %res
+}
+
+
+define i64 @two_reduce_scalar_bypass(<4 x i64> %v, <4 x i64> %v2) {
+; CHECK-LABEL: two_reduce_scalar_bypass:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
+; CHECK-NEXT:    vmv.s.x v12, zero
+; CHECK-NEXT:    vredxor.vs v8, v8, v12
+; CHECK-NEXT:    vredsum.vs v8, v10, v8
+; CHECK-NEXT:    vmv.x.s a0, v8
+; CHECK-NEXT:    ret
+entry:
+  %rdx1 = call i64 @llvm.vector.reduce.xor.v4i64(<4 x i64> %v)
+  %rdx2 = call i64 @llvm.vector.reduce.add.v4i64(<4 x i64> %v2)
+  %res = add i64 %rdx1, %rdx2
+  ret i64 %res
+}
+
+define i64 @two_reduce_scalar_bypass_zext(<4 x i64> %v, <4 x i32> %v2) {
+; CHECK-LABEL: two_reduce_scalar_bypass_zext:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; CHECK-NEXT:    vmv.s.x v11, zero
+; CHECK-NEXT:    vredsum.vs v10, v10, v11
+; CHECK-NEXT:    vmv.x.s a0, v10
+; CHECK-NEXT:    slli a0, a0, 32
+; CHECK-NEXT:    srli a0, a0, 32
+; CHECK-NEXT:    vsetvli zero, zero, e64, m2, ta, ma
+; CHECK-NEXT:    vmv.s.x v10, a0
+; CHECK-NEXT:    vredsum.vs v8, v8, v10
+; CHECK-NEXT:    vmv.x.s a0, v8
+; CHECK-NEXT:    ret
+entry:
+  %rdx1 = call i64 @llvm.vector.reduce.add.v4i64(<4 x i64> %v)
+  %rdx2 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %v2)
+  %rdx2.zext = zext i32 %rdx2 to i64
+  %res = add i64 %rdx1, %rdx2.zext
+  ret i64 %res
+}
+
+define i64 @two_reduce_scalar_bypass_sext(<4 x i64> %v, <4 x i32> %v2) {
+; CHECK-LABEL: two_reduce_scalar_bypass_sext:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; CHECK-NEXT:    vmv.s.x v11, zero
+; CHECK-NEXT:    vredsum.vs v10, v10, v11
+; CHECK-NEXT:    vmv.x.s a0, v10
+; CHECK-NEXT:    vsetvli zero, zero, e64, m2, ta, ma
+; CHECK-NEXT:    vmv.s.x v10, a0
+; CHECK-NEXT:    vredsum.vs v8, v8, v10
+; CHECK-NEXT:    vmv.x.s a0, v8
+; CHECK-NEXT:    ret
+entry:
+  %rdx1 = call i64 @llvm.vector.reduce.add.v4i64(<4 x i64> %v)
+  %rdx2 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %v2)
+  %rdx2.zext = sext i32 %rdx2 to i64
+  %res = add i64 %rdx1, %rdx2.zext
+  ret i64 %res
+}

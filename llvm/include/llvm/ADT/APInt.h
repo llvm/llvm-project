@@ -112,14 +112,21 @@ public:
         bool implicitTrunc = true)
       : BitWidth(numBits) {
     if (!implicitTrunc) {
-      if (BitWidth == 0) {
-        assert(val == 0 && "Value must be zero for 0-bit APInt");
-      } else if (isSigned) {
-        assert(llvm::isIntN(BitWidth, val) &&
-               "Value is not an N-bit signed value");
+      if (isSigned) {
+        if (BitWidth == 0) {
+          assert((val == 0 || val == uint64_t(-1)) &&
+                 "Value must be 0 or -1 for signed 0-bit APInt");
+        } else {
+          assert(llvm::isIntN(BitWidth, val) &&
+                 "Value is not an N-bit signed value");
+        }
       } else {
-        assert(llvm::isUIntN(BitWidth, val) &&
-               "Value is not an N-bit unsigned value");
+        if (BitWidth == 0) {
+          assert(val == 0 && "Value must be zero for unsigned 0-bit APInt");
+        } else {
+          assert(llvm::isUIntN(BitWidth, val) &&
+                 "Value is not an N-bit unsigned value");
+        }
       }
     }
     if (isSingleWord()) {

@@ -178,6 +178,22 @@ func.func @affine_min(%arg0 : index, %arg1 : index, %arg2 : index) {
 
 // -----
 
+func.func @affine_min() {
+  // expected-error@+1 {{'affine.min' op affine map expect at least one result}}
+  %0 = affine.min affine_map<() -> ()> ()
+  return
+}
+
+// -----
+
+func.func @affine_min(%arg0 : index) {
+  // expected-error@+1 {{'affine.min' op affine map expect at least one result}}
+  %0 = affine.min affine_map<(d0) -> ()> (%arg0)
+  return
+}
+
+// -----
+
 func.func @affine_max(%arg0 : index, %arg1 : index, %arg2 : index) {
   // expected-error@+1 {{operand count and affine map dimension and symbol count must match}}
   %0 = affine.max affine_map<(d0) -> (d0)> (%arg0, %arg1)
@@ -200,6 +216,22 @@ func.func @affine_max(%arg0 : index, %arg1 : index, %arg2 : index) {
   // expected-error@+1 {{operand count and affine map dimension and symbol count must match}}
   %0 = affine.max affine_map<(d0) -> (d0)> ()
 
+  return
+}
+
+// -----
+
+func.func @affine_max() {
+  // expected-error@+1 {{'affine.max' op affine map expect at least one result}}
+  %0 = affine.max affine_map<() -> ()> ()
+  return
+}
+
+// -----
+
+func.func @affine_max(%arg0 : index) {
+  // expected-error@+1 {{'affine.max' op affine map expect at least one result}}
+  %0 = affine.max affine_map<(d0) -> ()> (%arg0)
   return
 }
 

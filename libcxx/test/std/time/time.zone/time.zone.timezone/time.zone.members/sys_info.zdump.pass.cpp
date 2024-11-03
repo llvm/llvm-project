@@ -13,9 +13,6 @@
 // XFAIL: libcpp-has-no-experimental-tzdb
 // XFAIL: availability-tzdb-missing
 
-// TODO TZDB Investigate
-// UNSUPPORTED: target={{armv(7|8)l-linux-gnueabihf}}
-
 #include <chrono>
 #include <format>
 #include <fstream>
@@ -28,7 +25,7 @@
 // The year range to validate. The dates used in practice are expected to be
 // inside the tested range.
 constexpr std::chrono::year first{1800};
-constexpr std::chrono::year last{2100};
+constexpr std::chrono::year last{sizeof(time_t) == 8 ? 2100 : 2037};
 
 // A custom sys_info class that also stores the name of the time zone.
 // Its formatter matches the output of zdump.

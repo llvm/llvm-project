@@ -446,7 +446,12 @@ static bool tryDiagnoseOverloadedCast(Sema &S, CastType CT,
     : InitializationKind::CreateCast(/*type range?*/ range);
   InitializationSequence sequence(S, entity, initKind, src);
 
-  assert(sequence.Failed() && "initialization succeeded on second try?");
+  // It could happen that a constructor failed to be used because
+  // it requires a temporary of a broken type. Still, it will be found when
+  // looking for a match.
+  if (!sequence.Failed())
+    return false;
+
   switch (sequence.getFailureKind()) {
   default: return false;
 

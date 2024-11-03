@@ -14,6 +14,7 @@ from clang.cindex import TemplateArgumentKind
 from clang.cindex import TranslationUnit
 from clang.cindex import TypeKind
 from clang.cindex import BinaryOperator
+from clang.cindex import StorageClass
 from .util import get_cursor
 from .util import get_cursors
 from .util import get_tu
@@ -279,6 +280,90 @@ class TestCursor(unittest.TestCase):
         self.assertTrue(xc.is_default_method())
         self.assertFalse(yc.is_default_method())
 
+    def test_is_deleted_method(self):
+        source = "class X { X() = delete; }; class Y { Y(); };"
+        tu = get_tu(source, lang="cpp")
+
+        xs = get_cursors(tu, "X")
+        ys = get_cursors(tu, "Y")
+
+        self.assertEqual(len(xs), 2)
+        self.assertEqual(len(ys), 2)
+
+        xc = xs[1]
+        yc = ys[1]
+
+        self.assertTrue(xc.is_deleted_method())
+        self.assertFalse(yc.is_deleted_method())
+
+    def test_is_copy_assignment_operator_method(self):
+        source_with_copy_assignment_operators = """
+        struct Foo {
+           // Those are copy-assignment operators
+           bool operator=(const Foo&);
+           bool operator=(Foo&);
+           Foo operator=(Foo);
+           bool operator=(volatile Foo&);
+           bool operator=(const volatile Foo&);
+
+        // Positive-check that the recognition works for templated classes too
+        template <typename T>
+        class Bar {
+            bool operator=(const Bar&);
+            Bar operator=(const Bar);
+            bool operator=(Bar<T>&);
+            bool operator=(volatile Bar&);
+            bool operator=(const volatile Bar<T>&);
+        };
+        """
+        source_without_copy_assignment_operators = """
+        struct Foo {
+            // Those are not copy-assignment operators
+            template<typename T>
+            bool operator=(const T&);
+            bool operator=(const bool&);
+            bool operator=(char&);
+            bool operator=(volatile unsigned int&);
+            bool operator=(const volatile unsigned char&);
+            bool operator=(int);
+            bool operator=(Foo&&);
+        };
+        """
+        tu_with_copy_assignment_operators = get_tu(
+            source_with_copy_assignment_operators, lang="cpp"
+        )
+        tu_without_copy_assignment_operators = get_tu(
+            source_without_copy_assignment_operators, lang="cpp"
+        )
+
+        copy_assignment_operators_cursors = get_cursors(
+            tu_with_copy_assignment_operators, "operator="
+        )
+        non_copy_assignment_operators_cursors = get_cursors(
+            tu_without_copy_assignment_operators, "operator="
+        )
+
+        self.assertEqual(len(copy_assignment_operators_cursors), 10)
+        self.assertTrue(len(non_copy_assignment_operators_cursors), 9)
+
+        self.assertTrue(
+            all(
+                [
+                    cursor.is_copy_assignment_operator_method()
+                    for cursor in copy_assignment_operators_cursors
+                ]
+            )
+        )
+
+        self.assertFalse(
+            any(
+                [
+                    cursor.is_copy_assignment_operator_method()
+                    for cursor in non_copy_assignment_operators_cursors
+                ]
+            )
+        )
+
     def test_is_move_assignment_operator_method(self):
         """Ensure Cursor.is_move_assignment_operator_method works."""
         source_with_move_assignment_operators = """
@@ -482,6 +567,41 @@ class TestCursor(unittest.TestCase):
         self.assertFalse(regular_enum.is_scoped_enum())
         self.assertTrue(scoped_enum.is_scoped_enum())
 
+    def test_get_definition(self):
+        """Ensure Cursor.get_definition works."""
+        tu = get_tu(
+            """
+class A {
+    constexpr static int f(){return 3;}
+};
+struct B {
+    int b = A::f();
+};
+""",
+            lang="cpp",
+        )
+        curs = get_cursors(tu, "f")
+        self.assertEqual(len(curs), 4)
+        self.assertEqual(curs[0].kind, CursorKind.CXX_METHOD)
+        self.assertEqual(curs[1].get_definition(), curs[0])
+        self.assertEqual(curs[2].get_definition(), curs[0])
+        self.assertEqual(curs[3].get_definition(), curs[0])
+
+    def test_get_usr(self):
+        """Ensure Cursor.get_usr works."""
+        tu = get_tu(
+            """
+int add(int, int);
+int add(int a, int b) { return a + b; }
+int add(float a, float b) { return a + b; }
+""",
+            lang="cpp",
+        )
+        curs = get_cursors(tu, "add")
+        self.assertEqual(len(curs), 3)
+        self.assertEqual(curs[0].get_usr(), curs[1].get_usr())
+        self.assertNotEqual(curs[0].get_usr(), curs[2].get_usr())
+
     def test_underlying_type(self):
         tu = get_tu("typedef int foo;")
         typedef = get_cursor(tu, "foo")
@@ -570,6 +690,23 @@ class TestCursor(unittest.TestCase):
         self.assertEqual(ham.kind, CursorKind.ENUM_CONSTANT_DECL)
         self.assertEqual(ham.enum_value, 0x10000000000)
 
+    def test_enum_values_unsigned(self):
+        tu = get_tu("enum TEST : unsigned char { SPAM=0, HAM = 200};", lang="cpp")
+        enum = get_cursor(tu, "TEST")
+        self.assertIsNotNone(enum)
+
+        self.assertEqual(enum.kind, CursorKind.ENUM_DECL)
+
+        enum_constants = list(enum.get_children())
+        self.assertEqual(len(enum_constants), 2)
+
+        spam, ham = enum_constants
+
+        self.assertEqual(spam.kind, CursorKind.ENUM_CONSTANT_DECL)
+        self.assertEqual(spam.enum_value, 0)
+        self.assertEqual(ham.kind, CursorKind.ENUM_CONSTANT_DECL)
+        self.assertEqual(ham.enum_value, 200)
+
     def test_annotation_attribute(self):
         tu = get_tu(
             'int foo (void) __attribute__ ((annotate("here be annotation attribute")));'
@@ -624,6 +761,25 @@ class TestCursor(unittest.TestCase):
         result_type = cursor.result_type
         self.assertEqual(cursor.kind, CursorKind.OBJC_INSTANCE_METHOD_DECL)
         self.assertEqual(result_type.kind, TypeKind.VOID)
+
+    def test_storage_class(self):
+        tu = get_tu(
+            """
+extern int ex;
+register int reg;
+int count(int a, int b){
+    static int counter = 0;
+    return 0;
+}
+""",
+            lang="cpp",
+        )
+        cursor = get_cursor(tu, "ex")
+        self.assertEqual(cursor.storage_class, StorageClass.EXTERN)
+        cursor = get_cursor(tu, "counter")
+        self.assertEqual(cursor.storage_class, StorageClass.STATIC)
+        cursor = get_cursor(tu, "reg")
+        self.assertEqual(cursor.storage_class, StorageClass.REGISTER)
 
     def test_availability(self):
         tu = get_tu("class A { A(A const&) = delete; };", lang="cpp")
@@ -680,6 +836,23 @@ class TestCursor(unittest.TestCase):
         self.assertEqual(t_cursor.kind, CursorKind.TYPE_REF)
         r_cursor = t_cursor.referenced  # should not raise an exception
         self.assertEqual(r_cursor.kind, CursorKind.CLASS_DECL)
+
+    def test_get_field_offsetof(self):
+        tu = get_tu(
+            "struct myStruct {int a; char b; char c; short d; char e;};", lang="cpp"
+        )
+        c1 = get_cursor(tu, "myStruct")
+        c2 = get_cursor(tu, "a")
+        c3 = get_cursor(tu, "b")
+        c4 = get_cursor(tu, "c")
+        c5 = get_cursor(tu, "d")
+        c6 = get_cursor(tu, "e")
+        self.assertEqual(c1.get_field_offsetof(), -1)
+        self.assertEqual(c2.get_field_offsetof(), 0)
+        self.assertEqual(c3.get_field_offsetof(), 32)
+        self.assertEqual(c4.get_field_offsetof(), 40)
+        self.assertEqual(c5.get_field_offsetof(), 48)
+        self.assertEqual(c6.get_field_offsetof(), 64)
 
     def test_get_arguments(self):
         tu = get_tu("void foo(int i, int j);")
@@ -799,3 +972,13 @@ class TestCursor(unittest.TestCase):
         for op, typ in operators.items():
             c = get_cursor(tu, op)
             assert c.binary_operator == typ
+
+    def test_from_result_null(self):
+        tu = get_tu("int a = 1+2;", lang="cpp")
+        op = next(next(tu.cursor.get_children()).get_children())
+        self.assertEqual(op.kind, CursorKind.BINARY_OPERATOR)
+        self.assertEqual(op.get_definition(), None)
+
+    def test_from_cursor_result_null(self):
+        tu = get_tu("")
+        self.assertEqual(tu.cursor.semantic_parent, None)

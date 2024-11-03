@@ -24,7 +24,7 @@ public:
   NVPTXInstPrinter(const MCAsmInfo &MAI, const MCInstrInfo &MII,
                    const MCRegisterInfo &MRI);
 
-  void printRegName(raw_ostream &OS, MCRegister Reg) const override;
+  void printRegName(raw_ostream &OS, MCRegister Reg) override;
   void printInst(const MCInst *MI, uint64_t Address, StringRef Annot,
                  const MCSubtargetInfo &STI, raw_ostream &OS) override;
 
@@ -45,6 +45,8 @@ public:
                     const char *Modifier = nullptr);
   void printMemOperand(const MCInst *MI, int OpNum,
                        raw_ostream &O, const char *Modifier = nullptr);
+  void printOffseti32imm(const MCInst *MI, int OpNum, raw_ostream &O,
+                         const char *Modifier = nullptr);
   void printProtoIdent(const MCInst *MI, int OpNum,
                        raw_ostream &O, const char *Modifier = nullptr);
   void printPrmtMode(const MCInst *MI, int OpNum, raw_ostream &O,

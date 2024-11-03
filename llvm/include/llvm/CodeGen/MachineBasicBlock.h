@@ -983,6 +983,12 @@ public:
     return SplitCriticalEdge(Succ, nullptr, &MFAM, LiveInSets);
   }
 
+  // Helper method for new pass manager migration.
+  MachineBasicBlock *
+  SplitCriticalEdge(MachineBasicBlock *Succ, Pass *P,
+                    MachineFunctionAnalysisManager *MFAM,
+                    std::vector<SparseBitVector<>> *LiveInSets);
+
   /// Check if the edge between this block and the given successor \p
   /// Succ, can be split. If this returns true a subsequent call to
   /// SplitCriticalEdge is guaranteed to return a valid basic block if
@@ -1256,12 +1262,6 @@ private:
   /// unless you know what you're doing, because it doesn't update Pred's
   /// successors list. Use Pred->removeSuccessor instead.
   void removePredecessor(MachineBasicBlock *Pred);
-
-  // Helper method for new pass manager migration.
-  MachineBasicBlock *
-  SplitCriticalEdge(MachineBasicBlock *Succ, Pass *P,
-                    MachineFunctionAnalysisManager *MFAM,
-                    std::vector<SparseBitVector<>> *LiveInSets);
 };
 
 raw_ostream& operator<<(raw_ostream &OS, const MachineBasicBlock &MBB);

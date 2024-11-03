@@ -1154,6 +1154,9 @@ Value *SplitPtrStructs::handleMemoryInst(Instruction *I, Value *Arg, Value *Ptr,
       break;
     case AtomicRMWInst::BAD_BINOP:
       llvm_unreachable("Not sure how we got a bad binop");
+    case AtomicRMWInst::USubCond:
+    case AtomicRMWInst::USubSat:
+      break;
     }
   }
 

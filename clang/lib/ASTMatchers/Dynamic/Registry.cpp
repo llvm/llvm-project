@@ -791,7 +791,7 @@ Registry::getMatcherCompletions(ArrayRef<ArgKind> AcceptedTypes) {
           TypedText += "\"";
       }
 
-      Completions.emplace_back(TypedText, OS.str(), MaxSpecificity);
+      Completions.emplace_back(TypedText, Decl, MaxSpecificity);
     }
   }
 

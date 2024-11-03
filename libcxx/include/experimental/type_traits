@@ -68,7 +68,7 @@ inline namespace fundamentals_v1 {
 
  */
 
-#include <experimental/__config>
+#include <__config>
 
 #if _LIBCPP_STD_VER >= 14
 

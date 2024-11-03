@@ -3607,6 +3607,21 @@ ExecutionSession::IL_failSymbols(JITDylib &JD,
       assert(MI.DefiningEDU->Symbols.count(NonOwningSymbolStringPtr(Name)) &&
              "Symbol does not appear in its DefiningEDU");
       MI.DefiningEDU->Symbols.erase(NonOwningSymbolStringPtr(Name));
+
+      // Remove this EDU from the dependants lists of its dependencies.
+      for (auto &[DepJD, DepSyms] : MI.DefiningEDU->Dependencies) {
+        for (auto DepSym : DepSyms) {
+          assert(DepJD->Symbols.count(SymbolStringPtr(DepSym)) &&
+                 "DepSym not in DepJD");
+          assert(DepJD->MaterializingInfos.count(SymbolStringPtr(DepSym)) &&
+                 "DepSym has not MaterializingInfo");
+          auto &SymMI = DepJD->MaterializingInfos[SymbolStringPtr(DepSym)];
+          assert(SymMI.DependantEDUs.count(MI.DefiningEDU.get()) &&
+                 "DefiningEDU missing from DependantEDUs list of dependency");
+          SymMI.DependantEDUs.erase(MI.DefiningEDU.get());
+        }
+      }
+
       MI.DefiningEDU = nullptr;
     } else {
       // Otherwise if there are any EDUs waiting on this symbol then move

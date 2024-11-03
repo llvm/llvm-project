@@ -848,7 +848,7 @@ define <16 x i32> @scmp_wide_vec_result(<16 x i8> %x, <16 x i8> %y) nounwind {
 ; AVX512-NEXT:    vpcmpgtb %xmm0, %xmm1, %k1
 ; AVX512-NEXT:    vpcmpgtb %xmm1, %xmm0, %k2
 ; AVX512-NEXT:    vpbroadcastd {{.*#+}} zmm0 {%k2} {z} = [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
-; AVX512-NEXT:    vpternlogd $255, %zmm1, %zmm1, %zmm1
+; AVX512-NEXT:    vpternlogd {{.*#+}} zmm1 = -1
 ; AVX512-NEXT:    vmovdqa32 %zmm1, %zmm0 {%k1}
 ; AVX512-NEXT:    retq
 ;

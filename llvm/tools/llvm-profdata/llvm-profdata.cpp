@@ -13,6 +13,7 @@
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Debuginfod/HTTPClient.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/Object/Binary.h"
 #include "llvm/ProfileData/InstrProfCorrelator.h"
@@ -130,6 +131,23 @@ cl::opt<std::string>
                    cl::desc("For merge, use the provided unstripped bianry to "
                             "correlate the raw profile."),
                    cl::sub(MergeSubcommand));
+cl::list<std::string> DebugFileDirectory(
+    "debug-file-directory",
+    cl::desc("Directories to search for object files by build ID"));
+cl::opt<bool> DebugInfod("debuginfod", cl::init(false), cl::Hidden,
+                         cl::sub(MergeSubcommand),
+                         cl::desc("Enable debuginfod"));
+cl::opt<ProfCorrelatorKind> BIDFetcherProfileCorrelate(
+    "correlate",
+    cl::desc("Use debug-info or binary correlation to correlate profiles with "
+             "build id fetcher"),
+    cl::init(InstrProfCorrelator::NONE),
+    cl::values(clEnumValN(InstrProfCorrelator::NONE, "",
+                          "No profile correlation"),
+               clEnumValN(InstrProfCorrelator::DEBUG_INFO, "debug-info",
+                          "Use debug info to correlate"),
+               clEnumValN(InstrProfCorrelator::BINARY, "binary",
+                          "Use binary to correlate")));
 cl::opt<std::string> FuncNameFilter(
     "function",
     cl::desc("Only functions matching the filter are shown in the output. For "
@@ -314,7 +332,7 @@ cl::opt<bool> DoWritePrevVersion(
 cl::opt<memprof::IndexedVersion> MemProfVersionRequested(
     "memprof-version", cl::Hidden, cl::sub(MergeSubcommand),
     cl::desc("Specify the version of the memprof format to use"),
-    cl::init(memprof::Version0),
+    cl::init(memprof::Version3),
     cl::values(clEnumValN(memprof::Version0, "0", "version 0"),
                clEnumValN(memprof::Version1, "1", "version 1"),
                clEnumValN(memprof::Version2, "2", "version 2"),
@@ -323,6 +341,15 @@ cl::opt<memprof::IndexedVersion> MemProfVersionRequested(
 cl::opt<bool> MemProfFullSchema(
     "memprof-full-schema", cl::Hidden, cl::sub(MergeSubcommand),
     cl::desc("Use the full schema for serialization"), cl::init(false));
+
+static cl::opt<bool>
+    MemprofGenerateRandomHotness("memprof-random-hotness", cl::init(false),
+                                 cl::Hidden, cl::sub(MergeSubcommand),
+                                 cl::desc("Generate random hotness values"));
+static cl::opt<unsigned> MemprofGenerateRandomHotnessSeed(
+    "memprof-random-hotness-seed", cl::init(0), cl::Hidden,
+    cl::sub(MergeSubcommand),
+    cl::desc("Random hotness seed to use (0 to generate new seed)"));
 
 // Options specific to overlap subcommand.
 cl::opt<std::string> BaseFilename(cl::Positional, cl::Required,
@@ -623,7 +650,8 @@ struct WriterContext {
                 SmallSet<instrprof_error, 4> &WriterErrorCodes,
                 uint64_t ReservoirSize = 0, uint64_t MaxTraceLength = 0)
       : Writer(IsSparse, ReservoirSize, MaxTraceLength, DoWritePrevVersion,
-               MemProfVersionRequested, MemProfFullSchema),
+               MemProfVersionRequested, MemProfFullSchema,
+               MemprofGenerateRandomHotness, MemprofGenerateRandomHotnessSeed),
         ErrLock(ErrLock), WriterErrorCodes(WriterErrorCodes) {}
 };
 
@@ -656,9 +684,11 @@ static void overlapInput(const std::string &BaseFilename,
 }
 
 /// Load an input into a writer context.
-static void loadInput(const WeightedFile &Input, SymbolRemapper *Remapper,
-                      const InstrProfCorrelator *Correlator,
-                      const StringRef ProfiledBinary, WriterContext *WC) {
+static void
+loadInput(const WeightedFile &Input, SymbolRemapper *Remapper,
+          const InstrProfCorrelator *Correlator, const StringRef ProfiledBinary,
+          WriterContext *WC, const object::BuildIDFetcher *BIDFetcher = nullptr,
+          const ProfCorrelatorKind *BIDFetcherCorrelatorKind = nullptr) {
   std::unique_lock<std::mutex> CtxGuard{WC->Lock};
 
   // Copy the filename, because llvm::ThreadPool copied the input "const
@@ -736,8 +766,12 @@ static void loadInput(const WeightedFile &Input, SymbolRemapper *Remapper,
     auto [ErrCode, Msg] = InstrProfError::take(std::move(E));
     ReaderWarning = {make_error<InstrProfError>(ErrCode, Msg), Filename};
   };
-  auto ReaderOrErr =
-      InstrProfReader::create(Input.Filename, *FS, Correlator, Warn);
+
+  const ProfCorrelatorKind CorrelatorKind = BIDFetcherCorrelatorKind
+                                                ? *BIDFetcherCorrelatorKind
+                                                : ProfCorrelatorKind::NONE;
+  auto ReaderOrErr = InstrProfReader::create(Input.Filename, *FS, Correlator,
+                                             BIDFetcher, CorrelatorKind, Warn);
   if (Error E = ReaderOrErr.takeError()) {
     // Skip the empty profiles by returning silently.
     auto [ErrCode, Msg] = InstrProfError::take(std::move(E));
@@ -921,8 +955,15 @@ static void mergeInstrProfile(const WeightedFileVector &Inputs,
 
   // TODO: Maybe we should support correlation with mixture of different
   // correlation modes(w/wo debug-info/object correlation).
-  if (!DebugInfoFilename.empty() && !BinaryFilename.empty())
-    exitWithError("Expected only one of -debug-info, -binary-file");
+  if (DebugInfoFilename.empty()) {
+    if (!BinaryFilename.empty() && (DebugInfod || !DebugFileDirectory.empty()))
+      exitWithError("Expected only one of -binary-file, -debuginfod or "
+                    "-debug-file-directory");
+  } else if (!BinaryFilename.empty() || DebugInfod ||
+             !DebugFileDirectory.empty()) {
+    exitWithError("Expected only one of -debug-info, -binary-file, -debuginfod "
+                  "or -debug-file-directory");
+  }
   std::string CorrelateFilename;
   ProfCorrelatorKind CorrelateKind = ProfCorrelatorKind::NONE;
   if (!DebugInfoFilename.empty()) {
@@ -940,6 +981,25 @@ static void mergeInstrProfile(const WeightedFileVector &Inputs,
       exitWithError(std::move(Err), CorrelateFilename);
     if (auto Err = Correlator->correlateProfileData(MaxDbgCorrelationWarnings))
       exitWithError(std::move(Err), CorrelateFilename);
+  }
+
+  ProfCorrelatorKind BIDFetcherCorrelateKind = ProfCorrelatorKind::NONE;
+  std::unique_ptr<object::BuildIDFetcher> BIDFetcher;
+  if (DebugInfod) {
+    llvm::HTTPClient::initialize();
+    BIDFetcher = std::make_unique<DebuginfodFetcher>(DebugFileDirectory);
+    if (!BIDFetcherProfileCorrelate)
+      exitWithError("Expected --correlate when --debuginfod is provided");
+    BIDFetcherCorrelateKind = BIDFetcherProfileCorrelate;
+  } else if (!DebugFileDirectory.empty()) {
+    BIDFetcher = std::make_unique<object::BuildIDFetcher>(DebugFileDirectory);
+    if (!BIDFetcherProfileCorrelate)
+      exitWithError("Expected --correlate when --debug-file-directory "
+                    "is provided");
+    BIDFetcherCorrelateKind = BIDFetcherProfileCorrelate;
+  } else if (BIDFetcherProfileCorrelate) {
+    exitWithError("Expected --debuginfod or --debug-file-directory when "
+                  "--correlate is provided");
   }
 
   std::mutex ErrorLock;
@@ -960,7 +1020,7 @@ static void mergeInstrProfile(const WeightedFileVector &Inputs,
   if (NumThreads == 1) {
     for (const auto &Input : Inputs)
       loadInput(Input, Remapper, Correlator.get(), ProfiledBinary,
-                Contexts[0].get());
+                Contexts[0].get(), BIDFetcher.get(), &BIDFetcherCorrelateKind);
   } else {
     DefaultThreadPool Pool(hardware_concurrency(NumThreads));
 
@@ -968,7 +1028,8 @@ static void mergeInstrProfile(const WeightedFileVector &Inputs,
     unsigned Ctx = 0;
     for (const auto &Input : Inputs) {
       Pool.async(loadInput, Input, Remapper, Correlator.get(), ProfiledBinary,
-                 Contexts[Ctx].get());
+                 Contexts[Ctx].get(), BIDFetcher.get(),
+                 &BIDFetcherCorrelateKind);
       Ctx = (Ctx + 1) % NumThreads;
     }
     Pool.wait();
@@ -1169,11 +1230,9 @@ adjustInstrProfile(std::unique_ptr<WriterContext> &WC,
       }
     }
 
-    if (!StaticFuncMap.contains(NewName)) {
-      StaticFuncMap[NewName] = Name;
-    } else {
-      StaticFuncMap[NewName] = DuplicateNameStr;
-    }
+    auto [It, Inserted] = StaticFuncMap.try_emplace(NewName, Name);
+    if (!Inserted)
+      It->second = DuplicateNameStr;
   };
 
   // We need to flatten the SampleFDO profile as the InstrFDO
@@ -1248,7 +1307,7 @@ adjustInstrProfile(std::unique_ptr<WriterContext> &WC,
       } else {
         auto NewName = StaticFuncMap.find(Name);
         if (NewName != StaticFuncMap.end()) {
-          It = InstrProfileMap.find(NewName->second.str());
+          It = InstrProfileMap.find(NewName->second);
           if (NewName->second != DuplicateNameStr) {
             NewRootName = &NewName->second;
           }
@@ -1333,7 +1392,7 @@ adjustInstrProfile(std::unique_ptr<WriterContext> &WC,
     if (It == InstrProfileMap.end()) {
       auto NewName = StaticFuncMap.find(Name);
       if (NewName != StaticFuncMap.end()) {
-        It = InstrProfileMap.find(NewName->second.str());
+        It = InstrProfileMap.find(NewName->second);
         if (NewName->second == DuplicateNameStr) {
           WithColor::warning()
               << "Static function " << Name
@@ -3364,8 +3423,9 @@ int llvm_profdata_main(int argc, char **argvNonConst,
   StringRef ProgName(sys::path::filename(argv[0]));
 
   if (argc < 2) {
-    errs() << ProgName
-           << ": No subcommand specified! Run llvm-profata --help for usage.\n";
+    errs()
+        << ProgName
+        << ": No subcommand specified! Run llvm-profdata --help for usage.\n";
     return 1;
   }
 

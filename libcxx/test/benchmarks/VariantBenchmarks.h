@@ -50,6 +50,6 @@ static void BM_Visit(benchmark::State& state) {
   }
 }
 
-} // end namespace VariantBenchmarks
+} // namespace VariantBenchmarks
 
 #endif // BENCHMARK_VARIANT_BENCHMARKS_H

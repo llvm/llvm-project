@@ -221,7 +221,7 @@ LIBC_INLINE size_t strlcpy(char *__restrict dst, const char *__restrict src,
     return len;
   size_t n = len < size - 1 ? len : size - 1;
   inline_memcpy(dst, src, n);
-  inline_bzero(dst + n, size - n);
+  dst[n] = '\0';
   return len;
 }
 

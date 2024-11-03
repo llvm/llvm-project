@@ -247,26 +247,26 @@ module attributes {fir.defaultkind = "a1c4d8i4l4r4", fir.kindmap = "", llvm.targ
 
 // Call to SUM with 1D COMPLEX array is not replaced.
 module attributes {fir.defaultkind = "a1c4d8i4l4r4", fir.kindmap = "", llvm.target_triple = "native"} {
-  func.func @sum_1d_complex(%arg0: !fir.ref<!fir.array<10x!fir.complex<4>>> {fir.bindc_name = "a"}) -> !fir.complex<4> {
-    %0 = fir.alloca !fir.complex<4>
+  func.func @sum_1d_complex(%arg0: !fir.ref<!fir.array<10xcomplex<f32>>> {fir.bindc_name = "a"}) -> complex<f32> {
+    %0 = fir.alloca complex<f32>
     %c10 = arith.constant 10 : index
-    %1 = fir.alloca !fir.complex<4> {bindc_name = "sum_1d_complex", uniq_name = "_QFsum_1d_complexEsum_1d_complex"}
+    %1 = fir.alloca complex<f32> {bindc_name = "sum_1d_complex", uniq_name = "_QFsum_1d_complexEsum_1d_complex"}
     %2 = fir.shape %c10 : (index) -> !fir.shape<1>
-    %3 = fir.embox %arg0(%2) : (!fir.ref<!fir.array<10x!fir.complex<4>>>, !fir.shape<1>) -> !fir.box<!fir.array<10x!fir.complex<4>>>
+    %3 = fir.embox %arg0(%2) : (!fir.ref<!fir.array<10xcomplex<f32>>>, !fir.shape<1>) -> !fir.box<!fir.array<10xcomplex<f32>>>
     %4 = fir.absent !fir.box<i1>
     %c0 = arith.constant 0 : index
     %5 = fir.address_of(@_QQclX2E2F6973756D5F362E66393000) : !fir.ref<!fir.char<1,13>>
     %c5_i32 = arith.constant 5 : i32
-    %6 = fir.convert %0 : (!fir.ref<!fir.complex<4>>) -> !fir.ref<complex<f32>>
-    %7 = fir.convert %3 : (!fir.box<!fir.array<10x!fir.complex<4>>>) -> !fir.box<none>
+    %6 = fir.convert %0 : (!fir.ref<complex<f32>>) -> !fir.ref<complex<f32>>
+    %7 = fir.convert %3 : (!fir.box<!fir.array<10xcomplex<f32>>>) -> !fir.box<none>
     %8 = fir.convert %5 : (!fir.ref<!fir.char<1,13>>) -> !fir.ref<i8>
     %9 = fir.convert %c0 : (index) -> i32
     %10 = fir.convert %4 : (!fir.box<i1>) -> !fir.box<none>
     %11 = fir.call @_FortranACppSumComplex4(%6, %7, %8, %c5_i32, %9, %10) : (!fir.ref<complex<f32>>, !fir.box<none>, !fir.ref<i8>, i32, i32, !fir.box<none>) -> none
-    %12 = fir.load %0 : !fir.ref<!fir.complex<4>>
-    fir.store %12 to %1 : !fir.ref<!fir.complex<4>>
-    %13 = fir.load %1 : !fir.ref<!fir.complex<4>>
-    return %13 : !fir.complex<4>
+    %12 = fir.load %0 : !fir.ref<complex<f32>>
+    fir.store %12 to %1 : !fir.ref<complex<f32>>
+    %13 = fir.load %1 : !fir.ref<complex<f32>>
+    return %13 : complex<f32>
   }
   func.func private @_FortranACppSumComplex4(!fir.ref<complex<f32>>, !fir.box<none>, !fir.ref<i8>, i32, i32, !fir.box<none>) -> none attributes {fir.runtime}
   fir.global linkonce @_QQclX2E2F6973756D5F362E66393000 constant : !fir.char<1,13> {
@@ -275,7 +275,7 @@ module attributes {fir.defaultkind = "a1c4d8i4l4r4", fir.kindmap = "", llvm.targ
   }
 }
 
-// CHECK-LABEL:   func.func @sum_1d_complex(%{{.*}}: !fir.ref<!fir.array<10x!fir.complex<4>>> {fir.bindc_name = "a"}) -> !fir.complex<4> {
+// CHECK-LABEL:   func.func @sum_1d_complex(%{{.*}}: !fir.ref<!fir.array<10xcomplex<f32>>> {fir.bindc_name = "a"}) -> complex<f32> {
 // CHECK-NOT:       fir.call @_FortranACppSumComplex4x1_simplified({{.*}})
 // CHECK:           fir.call @_FortranACppSumComplex4({{.*}}) : (!fir.ref<complex<f32>>, !fir.box<none>, !fir.ref<i8>, i32, i32, !fir.box<none>) -> none
 // CHECK-NOT:       fir.call @_FortranACppSumComplex4x1_simplified({{.*}})

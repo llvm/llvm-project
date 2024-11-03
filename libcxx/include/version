@@ -138,6 +138,7 @@ __cpp_lib_ios_noreplace                                 202207L <ios>
 __cpp_lib_is_aggregate                                  201703L <type_traits>
 __cpp_lib_is_constant_evaluated                         201811L <type_traits>
 __cpp_lib_is_final                                      201402L <type_traits>
+__cpp_lib_is_implicit_lifetime                          202302L <type_traits>
 __cpp_lib_is_invocable                                  201703L <type_traits>
 __cpp_lib_is_layout_compatible                          201907L <type_traits>
 __cpp_lib_is_nothrow_convertible                        201806L <type_traits>
@@ -173,6 +174,7 @@ __cpp_lib_nonmember_container_access                    201411L <array> <deque> 
 __cpp_lib_not_fn                                        201603L <functional>
 __cpp_lib_null_iterators                                201304L <iterator>
 __cpp_lib_optional                                      202110L <optional>
+                                                        202106L // C++20
                                                         201606L // C++17
 __cpp_lib_optional_range_support                        202406L <optional>
 __cpp_lib_out_ptr                                       202311L <memory>
@@ -260,7 +262,9 @@ __cpp_lib_uncaught_exceptions                           201411L <exception>
 __cpp_lib_unordered_map_try_emplace                     201411L <unordered_map>
 __cpp_lib_unreachable                                   202202L <utility>
 __cpp_lib_unwrap_ref                                    201811L <functional>
-__cpp_lib_variant                                       202102L <variant>
+__cpp_lib_variant                                       202306L <variant>
+                                                        202106L // C++20
+                                                        202102L // C++17
 __cpp_lib_void_t                                        201411L <type_traits>
 
 */
@@ -383,7 +387,7 @@ __cpp_lib_void_t                                        201411L <type_traits>
 # define __cpp_lib_bit_cast                             201806L
 # define __cpp_lib_bitops                               201907L
 # define __cpp_lib_bounded_array_traits                 201902L
-# if !defined(_LIBCPP_HAS_NO_CHAR8_T)
+# if _LIBCPP_HAS_CHAR8_T
 #   define __cpp_lib_char8_t                            201907L
 # endif
 # define __cpp_lib_concepts                             202002L
@@ -417,7 +421,7 @@ __cpp_lib_void_t                                        201411L <type_traits>
 // # define __cpp_lib_is_layout_compatible                 201907L
 # define __cpp_lib_is_nothrow_convertible               201806L
 // # define __cpp_lib_is_pointer_interconvertible          201907L
-# if !defined(_LIBCPP_HAS_NO_THREADS) && !defined(_LIBCPP_HAS_NO_EXPERIMENTAL_STOP_TOKEN) && _LIBCPP_AVAILABILITY_HAS_SYNC
+# if !defined(_LIBCPP_HAS_NO_THREADS) && _LIBCPP_AVAILABILITY_HAS_SYNC
 #   define __cpp_lib_jthread                            201911L
 # endif
 # if !defined(_LIBCPP_HAS_NO_THREADS) && _LIBCPP_AVAILABILITY_HAS_SYNC
@@ -426,6 +430,8 @@ __cpp_lib_void_t                                        201411L <type_traits>
 # define __cpp_lib_list_remove_return_type              201806L
 # define __cpp_lib_math_constants                       201907L
 # define __cpp_lib_move_iterator_concept                202207L
+# undef  __cpp_lib_optional
+# define __cpp_lib_optional                             202106L
 # if _LIBCPP_AVAILABILITY_HAS_PMR
 #   define __cpp_lib_polymorphic_allocator              201902L
 # endif
@@ -452,6 +458,8 @@ __cpp_lib_void_t                                        201411L <type_traits>
 # define __cpp_lib_to_array                             201907L
 # define __cpp_lib_type_identity                        201806L
 # define __cpp_lib_unwrap_ref                           201811L
+# undef  __cpp_lib_variant
+# define __cpp_lib_variant                              202106L
 #endif
 
 #if _LIBCPP_STD_VER >= 23
@@ -473,6 +481,9 @@ __cpp_lib_void_t                                        201411L <type_traits>
 # define __cpp_lib_forward_like                         202207L
 # define __cpp_lib_invoke_r                             202106L
 # define __cpp_lib_ios_noreplace                        202207L
+# if __has_builtin(__builtin_is_implicit_lifetime)
+#   define __cpp_lib_is_implicit_lifetime               202302L
+# endif
 # define __cpp_lib_is_scoped_enum                       202011L
 # define __cpp_lib_mdspan                               202207L
 # define __cpp_lib_modules                              202207L
@@ -566,6 +577,8 @@ __cpp_lib_void_t                                        201411L <type_traits>
 // # define __cpp_lib_to_string                            202306L
 # undef  __cpp_lib_tuple_like
 // # define __cpp_lib_tuple_like                           202311L
+# undef  __cpp_lib_variant
+# define __cpp_lib_variant                              202306L
 #endif
 
 // clang-format on

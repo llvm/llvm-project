@@ -57,6 +57,7 @@
 
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Config/llvm-config.h" // for LLVM_ENABLE_CURL
 #include "llvm/Support/DynamicLibrary.h"
 #include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/PrettyStackTrace.h"
@@ -220,7 +221,7 @@ lldb::SBError SBDebugger::InitializeWithErrorHandling() {
   SBError error;
   if (auto e = g_debugger_lifetime->Initialize(
           std::make_unique<SystemInitializerFull>(), LoadPlugin)) {
-    error.SetError(Status(std::move(e)));
+    error.SetError(Status::FromError(std::move(e)));
   }
   return error;
 }
@@ -1360,7 +1361,7 @@ SBError SBDebugger::SetInternalVariable(const char *var_name, const char *value,
         "invalid debugger instance name '%s'", debugger_instance_name);
   }
   if (error.Fail())
-    sb_error.SetError(error);
+    sb_error.SetError(std::move(error));
   return sb_error;
 }
 
@@ -1480,6 +1481,12 @@ bool SBDebugger::GetUseColor() const {
   LLDB_INSTRUMENT_VA(this);
 
   return (m_opaque_sp ? m_opaque_sp->GetUseColor() : false);
+}
+
+bool SBDebugger::SetShowInlineDiagnostics(bool value) {
+  LLDB_INSTRUMENT_VA(this, value);
+
+  return (m_opaque_sp ? m_opaque_sp->SetShowInlineDiagnostics(value) : false);
 }
 
 bool SBDebugger::SetUseSourceCache(bool value) {

@@ -414,7 +414,6 @@ def SYCL : LangOpt<"SYCLIsDevice">;
 def COnly : LangOpt<"", "!LangOpts.CPlusPlus">;
 def CPlusPlus : LangOpt<"CPlusPlus">;
 def OpenCL : LangOpt<"OpenCL">;
-def RenderScript : LangOpt<"RenderScript">;
 def ObjC : LangOpt<"ObjC">;
 def BlocksSupported : LangOpt<"Blocks">;
 def ObjCAutoRefCount : LangOpt<"ObjCAutoRefCount">;
@@ -762,6 +761,11 @@ class TargetSpecificAttr<TargetSpec target> {
 /// redeclarations, even when it's written on a parameter.
 class InheritableParamAttr : InheritableAttr;
 
+/// A attribute that is either a declaration attribute or a statement attribute,
+/// and if used as a declaration attribute, is inherited by later
+/// redeclarations, even when it's written on a parameter.
+class InheritableParamOrStmtAttr : InheritableParamAttr;
+
 /// An attribute which changes the ABI rules for a specific parameter.
 class ParameterABIAttr : InheritableParamAttr {
   let Subjects = SubjectList<[ParmVar]>;
@@ -931,7 +935,7 @@ def AnalyzerNoReturn : InheritableAttr {
   let Documentation = [Undocumented];
 }
 
-def Annotate : InheritableParamAttr {
+def Annotate : InheritableParamOrStmtAttr {
   let Spellings = [Clang<"annotate">];
   let Args = [StringArgument<"Annotation">, VariadicExprArgument<"Args">];
   // Ensure that the annotate attribute can be used with
@@ -1250,6 +1254,22 @@ def CoroDisableLifetimeBound : InheritableAttr {
   let Subjects = SubjectList<[Function]>;
   let LangOpts = [CPlusPlus];
   let Documentation = [CoroLifetimeBoundDoc];
+  let SimpleHandler = 1;
+}
+
+def CoroAwaitElidable : InheritableAttr {
+  let Spellings = [Clang<"coro_await_elidable">];
+  let Subjects = SubjectList<[CXXRecord]>;
+  let LangOpts = [CPlusPlus];
+  let Documentation = [CoroAwaitElidableDoc];
+  let SimpleHandler = 1;
+}
+
+def CoroAwaitElidableArgument : InheritableAttr {
+  let Spellings = [Clang<"coro_await_elidable_argument">];
+  let Subjects = SubjectList<[ParmVar]>;
+  let LangOpts = [CPlusPlus];
+  let Documentation = [CoroAwaitElidableArgumentDoc];
   let SimpleHandler = 1;
 }
 
@@ -1609,14 +1629,6 @@ def OpenCLNoSVM : Attr {
   let Documentation = [OpenCLNoSVMDocs];
   let LangOpts = [OpenCL];
   let ASTNode = 0;
-}
-
-def RenderScriptKernel : Attr {
-  let Spellings = [GNU<"kernel">];
-  let Subjects = SubjectList<[Function]>;
-  let Documentation = [RenderScriptKernelAttributeDocs];
-  let LangOpts = [RenderScript];
-  let SimpleHandler = 1;
 }
 
 def Deprecated : InheritableAttr {
@@ -4584,6 +4596,31 @@ def HLSLResourceBinding: InheritableAttr {
   let LangOpts = [HLSL];
   let Args = [StringArgument<"Slot">, StringArgument<"Space", 1>];
   let Documentation = [HLSLResourceBindingDocs];
+  let AdditionalMembers = [{
+  public:
+      enum class RegisterType : unsigned { SRV, UAV, CBuffer, Sampler, C, I };
+
+  private:
+      RegisterType RegType;
+      unsigned SlotNumber;
+      unsigned SpaceNumber;
+
+  public:
+      void setBinding(RegisterType RT, unsigned SlotNum, unsigned SpaceNum) {
+        RegType = RT;
+        SlotNumber = SlotNum;
+        SpaceNumber = SpaceNum;
+      }
+      RegisterType getRegisterType() const {
+        return RegType;
+      }
+      unsigned getSlotNumber() const {
+        return SlotNumber;
+      }
+      unsigned getSpaceNumber() const {
+        return SpaceNumber;
+      }
+  }];
 }
 
 def HLSLPackOffset: HLSLAnnotationAttr {
@@ -4655,16 +4692,14 @@ def HLSLResource : InheritableAttr {
   let Documentation = [InternalOnly];
 }
 
-def HLSLROV : InheritableAttr {
+def HLSLROV : TypeAttr {
   let Spellings = [CXX11<"hlsl", "is_rov">];
-  let Subjects = SubjectList<[Struct]>;
   let LangOpts = [HLSL];
   let Documentation = [InternalOnly];
 }
 
-def HLSLResourceClass : InheritableAttr {
+def HLSLResourceClass : TypeAttr {
   let Spellings = [CXX11<"hlsl", "resource_class">];
-  let Subjects = SubjectList<[Field]>;
   let LangOpts = [HLSL];
   let Args = [
 	EnumArgument<"ResourceClass", "llvm::hlsl::ResourceClass",
@@ -4672,6 +4707,19 @@ def HLSLResourceClass : InheritableAttr {
 				 ["SRV", "UAV", "CBuffer", "Sampler"],
 				 /*opt=*/0, /*fake=*/0, /*isExternalType=*/1>
   ];
+  let Documentation = [InternalOnly];
+}
+
+def HLSLContainedType : TypeAttr {
+  let Spellings = [CXX11<"hlsl", "contained_type">];
+  let LangOpts = [HLSL];
+  let Args = [TypeArgument<"Type", /*opt=*/0>];
+  let Documentation = [InternalOnly];
+}
+
+def HLSLRawBuffer : TypeAttr {
+  let Spellings = [CXX11<"hlsl", "raw_buffer">];
+  let LangOpts = [HLSL];
   let Documentation = [InternalOnly];
 }
 

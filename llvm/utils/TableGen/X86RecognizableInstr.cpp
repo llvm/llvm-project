@@ -77,17 +77,15 @@ unsigned X86Disassembler::getMemOperandSize(const Record *MemRec) {
 /// @param init - A reference to the BitsInit to be decoded.
 /// @return     - The field, with the first bit in the BitsInit as the lowest
 ///               order bit.
-static uint8_t byteFromBitsInit(BitsInit &init) {
+static uint8_t byteFromBitsInit(const BitsInit &init) {
   int width = init.getNumBits();
 
   assert(width <= 8 && "Field is too large for uint8_t!");
 
-  int index;
   uint8_t mask = 0x01;
-
   uint8_t ret = 0;
 
-  for (index = 0; index < width; index++) {
+  for (int index = 0; index < width; index++) {
     if (cast<BitInit>(init.getBit(index))->getValue())
       ret |= mask;
 
@@ -104,7 +102,7 @@ static uint8_t byteFromBitsInit(BitsInit &init) {
 /// @param name - The name of the field in the record.
 /// @return     - The field, as translated by byteFromBitsInit().
 static uint8_t byteFromRec(const Record *rec, StringRef name) {
-  BitsInit *bits = rec->getValueAsBitsInit(name);
+  const BitsInit *bits = rec->getValueAsBitsInit(name);
   return byteFromBitsInit(*bits);
 }
 
@@ -154,14 +152,13 @@ RecognizableInstr::RecognizableInstr(DisassemblerTables &tables,
       UID(uid), Spec(&tables.specForUID(uid)) {
   // Check for 64-bit inst which does not require REX
   // FIXME: Is there some better way to check for In64BitMode?
-  std::vector<Record *> Predicates = Rec->getValueAsListOfDefs("Predicates");
-  for (unsigned i = 0, e = Predicates.size(); i != e; ++i) {
-    if (Predicates[i]->getName().contains("Not64Bit") ||
-        Predicates[i]->getName().contains("In32Bit")) {
+  for (const Record *Predicate : Rec->getValueAsListOfDefs("Predicates")) {
+    if (Predicate->getName().contains("Not64Bit") ||
+        Predicate->getName().contains("In32Bit")) {
       Is32Bit = true;
       break;
     }
-    if (Predicates[i]->getName().contains("In64Bit")) {
+    if (Predicate->getName().contains("In64Bit")) {
       Is64Bit = true;
       break;
     }

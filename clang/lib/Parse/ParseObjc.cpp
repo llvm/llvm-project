@@ -3227,13 +3227,13 @@ Parser::ParseObjCMessageExpressionBody(SourceLocation LBracLoc,
     cutOffParsing();
     if (SuperLoc.isValid())
       Actions.CodeCompletion().CodeCompleteObjCSuperMessage(
-          getCurScope(), SuperLoc, std::nullopt, false);
+          getCurScope(), SuperLoc, {}, false);
     else if (ReceiverType)
       Actions.CodeCompletion().CodeCompleteObjCClassMessage(
-          getCurScope(), ReceiverType, std::nullopt, false);
+          getCurScope(), ReceiverType, {}, false);
     else
       Actions.CodeCompletion().CodeCompleteObjCInstanceMessage(
-          getCurScope(), ReceiverExpr, std::nullopt, false);
+          getCurScope(), ReceiverExpr, {}, false);
     return ExprError();
   }
 

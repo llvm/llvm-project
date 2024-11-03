@@ -104,6 +104,7 @@ set(ASAN_DYNAMIC_UNITTEST_INSTRUMENTED_LINK_FLAGS
 set(ASAN_UNITTEST_INSTRUMENTED_LIBS)
 
 set(ASAN_UNITTEST_NOINST_LINK_FLAGS ${ASAN_UNITTEST_COMMON_LINK_FLAGS})
+append_list_if(MSVC -Wl,-nodefaultlib:msvcrt ASAN_UNITTEST_NOINST_LINK_FLAGS)
 if(NOT APPLE)
   append_list_if(COMPILER_RT_HAS_LIBM -lm ASAN_UNITTEST_NOINST_LINK_FLAGS)
   append_list_if(COMPILER_RT_HAS_LIBDL -ldl ASAN_UNITTEST_NOINST_LINK_FLAGS)
@@ -203,7 +204,7 @@ function(add_asan_tests arch test_runtime)
         CFLAGS ${ASAN_UNITTEST_INSTRUMENTED_CFLAGS} -D_MT -D_DLL
         SOURCES ${ASAN_INST_TEST_SOURCES}
         LINK_FLAGS ${ASAN_DYNAMIC_UNITTEST_INSTRUMENTED_LINK_FLAGS}
-          -Wl,-nodefaultlib:libcmt,-defaultlib:msvcrt,-defaultlib:oldnames
+          -D_MT -D_DLL -Wl,-nodefaultlib:libcmt,-defaultlib:msvcrt,-defaultlib:oldnames
         )
     else()
       set(DYNAMIC_LINK_FLAGS)

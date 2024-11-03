@@ -147,7 +147,7 @@ subroutine return_complex()
   print *, cplxfoo()
 end subroutine
 ! CHECK-LABEL: func.func @_QPreturn_complex(
-! CHECK:  fir.call @_QPcplxfoo() fastmath<contract> : () -> !fir.complex<4>
+! CHECK:  fir.call @_QPcplxfoo() fastmath<contract> : () -> complex<f32>
 
 subroutine return_char(n)
   integer(8) :: n

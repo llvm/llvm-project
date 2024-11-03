@@ -12,6 +12,7 @@
 #include <memory>
 #include <string>
 
+#include "lldb/Host/MainLoopBase.h"
 #include "lldb/lldb-private.h"
 
 #include "lldb/Host/SocketAddress.h"
@@ -97,7 +98,17 @@ public:
 
   virtual Status Connect(llvm::StringRef name) = 0;
   virtual Status Listen(llvm::StringRef name, int backlog) = 0;
-  virtual Status Accept(Socket *&socket) = 0;
+
+  // Use the provided main loop instance to accept new connections. The callback
+  // will be called (from MainLoop::Run) for each new connection. This function
+  // does not block.
+  virtual llvm::Expected<std::vector<MainLoopBase::ReadHandleUP>>
+  Accept(MainLoopBase &loop,
+         std::function<void(std::unique_ptr<Socket> socket)> sock_cb) = 0;
+
+  // Accept a single connection and "return" it in the pointer argument. This
+  // function blocks until the connection arrives.
+  virtual Status Accept(Socket *&socket);
 
   // Initialize a Tcp Socket object in listening mode.  listen and accept are
   // implemented separately because the caller may wish to manipulate or query

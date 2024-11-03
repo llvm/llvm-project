@@ -16,6 +16,7 @@ add_mlir_library(MLIRTransformUtils
 
   LINK_LIBS PUBLIC
   MLIRAnalysis
+  MLIRCallInterfaces
   MLIRControlFlowInterfaces
   MLIRFunctionInterfaces
   MLIRLoopLikeInterface

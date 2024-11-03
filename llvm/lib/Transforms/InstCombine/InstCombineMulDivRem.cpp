@@ -1427,6 +1427,18 @@ static Value *takeLog2(IRBuilderBase &Builder, Value *Op, unsigned Depth,
     if (Value *LogX = takeLog2(Builder, X, Depth, AssumeNonZero, DoFold))
       return IfFold([&]() { return Builder.CreateZExt(LogX, Op->getType()); });
 
+  // log2(trunc x) -> trunc log2(X)
+  // FIXME: Require one use?
+  if (match(Op, m_Trunc(m_Value(X)))) {
+    auto *TI = cast<TruncInst>(Op);
+    if (AssumeNonZero || TI->hasNoUnsignedWrap())
+      if (Value *LogX = takeLog2(Builder, X, Depth, AssumeNonZero, DoFold))
+        return IfFold([&]() {
+          return Builder.CreateTrunc(LogX, Op->getType(), "",
+                                     /*IsNUW=*/TI->hasNoUnsignedWrap());
+        });
+  }
+
   // log2(X << Y) -> log2(X) + Y
   // FIXME: Require one use unless X is 1?
   if (match(Op, m_Shl(m_Value(X), m_Value(Y)))) {
@@ -1435,6 +1447,24 @@ static Value *takeLog2(IRBuilderBase &Builder, Value *Op, unsigned Depth,
     if (AssumeNonZero || BO->hasNoUnsignedWrap() || BO->hasNoSignedWrap())
       if (Value *LogX = takeLog2(Builder, X, Depth, AssumeNonZero, DoFold))
         return IfFold([&]() { return Builder.CreateAdd(LogX, Y); });
+  }
+
+  // log2(X >>u Y) -> log2(X) - Y
+  // FIXME: Require one use?
+  if (match(Op, m_LShr(m_Value(X), m_Value(Y)))) {
+    auto *PEO = cast<PossiblyExactOperator>(Op);
+    if (AssumeNonZero || PEO->isExact())
+      if (Value *LogX = takeLog2(Builder, X, Depth, AssumeNonZero, DoFold))
+        return IfFold([&]() { return Builder.CreateSub(LogX, Y); });
+  }
+
+  // log2(X & Y) -> either log2(X) or log2(Y)
+  // This requires `AssumeNonZero` as `X & Y` may be zero when X != Y.
+  if (AssumeNonZero && match(Op, m_And(m_Value(X), m_Value(Y)))) {
+    if (Value *LogX = takeLog2(Builder, X, Depth, AssumeNonZero, DoFold))
+      return IfFold([&]() { return LogX; });
+    if (Value *LogY = takeLog2(Builder, Y, Depth, AssumeNonZero, DoFold))
+      return IfFold([&]() { return LogY; });
   }
 
   // log2(Cond ? X : Y) -> Cond ? log2(X) : log2(Y)

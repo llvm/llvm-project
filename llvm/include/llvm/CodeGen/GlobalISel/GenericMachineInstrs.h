@@ -28,7 +28,7 @@ namespace llvm {
 class GenericMachineInstr : public MachineInstr {
   constexpr static unsigned PoisonFlags = NoUWrap | NoSWrap | NoUSWrap |
                                           IsExact | Disjoint | NonNeg |
-                                          FmNoNans | FmNoInfs;
+                                          FmNoNans | FmNoInfs | SameSign;
 
 public:
   GenericMachineInstr() = delete;
@@ -800,6 +800,29 @@ public:
   }
 };
 
+/// Represents an extract subvector.
+class GExtractSubvector : public GenericMachineInstr {
+public:
+  Register getSrcVec() const { return getOperand(1).getReg(); }
+  uint64_t getIndexImm() const { return getOperand(2).getImm(); }
+
+  static bool classof(const MachineInstr *MI) {
+    return MI->getOpcode() == TargetOpcode::G_EXTRACT_SUBVECTOR;
+  }
+};
+
+/// Represents a insert subvector.
+class GInsertSubvector : public GenericMachineInstr {
+public:
+  Register getBigVec() const { return getOperand(1).getReg(); }
+  Register getSubVec() const { return getOperand(2).getReg(); }
+  uint64_t getIndexImm() const { return getOperand(3).getImm(); }
+
+  static bool classof(const MachineInstr *MI) {
+    return MI->getOpcode() == TargetOpcode::G_INSERT_SUBVECTOR;
+  }
+};
+
 /// Represents a freeze.
 class GFreeze : public GenericMachineInstr {
 public:
@@ -823,6 +846,8 @@ public:
     case TargetOpcode::G_FPEXT:
     case TargetOpcode::G_FPTOSI:
     case TargetOpcode::G_FPTOUI:
+    case TargetOpcode::G_FPTOSI_SAT:
+    case TargetOpcode::G_FPTOUI_SAT:
     case TargetOpcode::G_FPTRUNC:
     case TargetOpcode::G_INTTOPTR:
     case TargetOpcode::G_PTRTOINT:
@@ -852,6 +877,14 @@ class GZext : public GCastOp {
 public:
   static bool classof(const MachineInstr *MI) {
     return MI->getOpcode() == TargetOpcode::G_ZEXT;
+  };
+};
+
+/// Represents an any ext.
+class GAnyExt : public GCastOp {
+public:
+  static bool classof(const MachineInstr *MI) {
+    return MI->getOpcode() == TargetOpcode::G_ANYEXT;
   };
 };
 
@@ -947,6 +980,16 @@ public:
     default:
       return false;
     }
+  };
+};
+
+/// Represents a splat vector.
+class GSplatVector : public GenericMachineInstr {
+public:
+  Register getScalarReg() const { return getOperand(1).getReg(); }
+
+  static bool classof(const MachineInstr *MI) {
+    return MI->getOpcode() == TargetOpcode::G_SPLAT_VECTOR;
   };
 };
 

@@ -82,42 +82,124 @@ def sub_gpr_odd  : SubRegIndex<32, 32> {
 // instructions.
 
 let RegAltNameIndices = [ABIRegAltName] in {
+  // 16-bit sub-registers for use by Zhinx. Having a 16-bit sub-register reduces
+  // the spill size for these operations.
   let isConstant = true in
-  def X0  : RISCVReg<0, "x0", ["zero"]>, DwarfRegNum<[0]>;
+  def X0_H  : RISCVReg<0, "x0", ["zero"]>;
   let CostPerUse = [0, 1] in {
-  def X1  : RISCVReg<1, "x1", ["ra"]>, DwarfRegNum<[1]>;
-  def X2  : RISCVReg<2, "x2", ["sp"]>, DwarfRegNum<[2]>;
-  def X3  : RISCVReg<3, "x3", ["gp"]>, DwarfRegNum<[3]>;
-  def X4  : RISCVReg<4, "x4", ["tp"]>, DwarfRegNum<[4]>;
-  def X5  : RISCVReg<5, "x5", ["t0"]>, DwarfRegNum<[5]>;
-  def X6  : RISCVReg<6, "x6", ["t1"]>, DwarfRegNum<[6]>;
-  def X7  : RISCVReg<7, "x7", ["t2"]>, DwarfRegNum<[7]>;
+  def X1_H  : RISCVReg<1, "x1", ["ra"]>;
+  def X2_H  : RISCVReg<2, "x2", ["sp"]>;
+  def X3_H  : RISCVReg<3, "x3", ["gp"]>;
+  def X4_H  : RISCVReg<4, "x4", ["tp"]>;
+  def X5_H  : RISCVReg<5, "x5", ["t0"]>;
+  def X6_H  : RISCVReg<6, "x6", ["t1"]>;
+  def X7_H  : RISCVReg<7, "x7", ["t2"]>;
   }
-  def X8  : RISCVReg<8, "x8", ["s0", "fp"]>, DwarfRegNum<[8]>;
-  def X9  : RISCVReg<9, "x9", ["s1"]>, DwarfRegNum<[9]>;
-  def X10 : RISCVReg<10,"x10", ["a0"]>, DwarfRegNum<[10]>;
-  def X11 : RISCVReg<11,"x11", ["a1"]>, DwarfRegNum<[11]>;
-  def X12 : RISCVReg<12,"x12", ["a2"]>, DwarfRegNum<[12]>;
-  def X13 : RISCVReg<13,"x13", ["a3"]>, DwarfRegNum<[13]>;
-  def X14 : RISCVReg<14,"x14", ["a4"]>, DwarfRegNum<[14]>;
-  def X15 : RISCVReg<15,"x15", ["a5"]>, DwarfRegNum<[15]>;
+  def X8_H  : RISCVReg<8, "x8", ["s0", "fp"]>;
+  def X9_H  : RISCVReg<9, "x9", ["s1"]>;
+  def X10_H : RISCVReg<10,"x10", ["a0"]>;
+  def X11_H : RISCVReg<11,"x11", ["a1"]>;
+  def X12_H : RISCVReg<12,"x12", ["a2"]>;
+  def X13_H : RISCVReg<13,"x13", ["a3"]>;
+  def X14_H : RISCVReg<14,"x14", ["a4"]>;
+  def X15_H : RISCVReg<15,"x15", ["a5"]>;
   let CostPerUse = [0, 1] in {
-  def X16 : RISCVReg<16,"x16", ["a6"]>, DwarfRegNum<[16]>;
-  def X17 : RISCVReg<17,"x17", ["a7"]>, DwarfRegNum<[17]>;
-  def X18 : RISCVReg<18,"x18", ["s2"]>, DwarfRegNum<[18]>;
-  def X19 : RISCVReg<19,"x19", ["s3"]>, DwarfRegNum<[19]>;
-  def X20 : RISCVReg<20,"x20", ["s4"]>, DwarfRegNum<[20]>;
-  def X21 : RISCVReg<21,"x21", ["s5"]>, DwarfRegNum<[21]>;
-  def X22 : RISCVReg<22,"x22", ["s6"]>, DwarfRegNum<[22]>;
-  def X23 : RISCVReg<23,"x23", ["s7"]>, DwarfRegNum<[23]>;
-  def X24 : RISCVReg<24,"x24", ["s8"]>, DwarfRegNum<[24]>;
-  def X25 : RISCVReg<25,"x25", ["s9"]>, DwarfRegNum<[25]>;
-  def X26 : RISCVReg<26,"x26", ["s10"]>, DwarfRegNum<[26]>;
-  def X27 : RISCVReg<27,"x27", ["s11"]>, DwarfRegNum<[27]>;
-  def X28 : RISCVReg<28,"x28", ["t3"]>, DwarfRegNum<[28]>;
-  def X29 : RISCVReg<29,"x29", ["t4"]>, DwarfRegNum<[29]>;
-  def X30 : RISCVReg<30,"x30", ["t5"]>, DwarfRegNum<[30]>;
-  def X31 : RISCVReg<31,"x31", ["t6"]>, DwarfRegNum<[31]>;
+  def X16_H : RISCVReg<16,"x16", ["a6"]>;
+  def X17_H : RISCVReg<17,"x17", ["a7"]>;
+  def X18_H : RISCVReg<18,"x18", ["s2"]>;
+  def X19_H : RISCVReg<19,"x19", ["s3"]>;
+  def X20_H : RISCVReg<20,"x20", ["s4"]>;
+  def X21_H : RISCVReg<21,"x21", ["s5"]>;
+  def X22_H : RISCVReg<22,"x22", ["s6"]>;
+  def X23_H : RISCVReg<23,"x23", ["s7"]>;
+  def X24_H : RISCVReg<24,"x24", ["s8"]>;
+  def X25_H : RISCVReg<25,"x25", ["s9"]>;
+  def X26_H : RISCVReg<26,"x26", ["s10"]>;
+  def X27_H : RISCVReg<27,"x27", ["s11"]>;
+  def X28_H : RISCVReg<28,"x28", ["t3"]>;
+  def X29_H : RISCVReg<29,"x29", ["t4"]>;
+  def X30_H : RISCVReg<30,"x30", ["t5"]>;
+  def X31_H : RISCVReg<31,"x31", ["t6"]>;
+  }
+
+  let SubRegIndices = [sub_16] in {
+  let isConstant = true in
+  def X0_W  : RISCVRegWithSubRegs<0, "x0", [X0_H], ["zero"]>;
+  let CostPerUse = [0, 1] in {
+  def X1_W  : RISCVRegWithSubRegs<1, "x1", [X1_H], ["ra"]>;
+  def X2_W  : RISCVRegWithSubRegs<2, "x2", [X2_H], ["sp"]>;
+  def X3_W  : RISCVRegWithSubRegs<3, "x3", [X3_H], ["gp"]>;
+  def X4_W  : RISCVRegWithSubRegs<4, "x4", [X4_H], ["tp"]>;
+  def X5_W  : RISCVRegWithSubRegs<5, "x5", [X5_H], ["t0"]>;
+  def X6_W  : RISCVRegWithSubRegs<6, "x6", [X6_H], ["t1"]>;
+  def X7_W  : RISCVRegWithSubRegs<7, "x7", [X7_H], ["t2"]>;
+  }
+  def X8_W  : RISCVRegWithSubRegs<8, "x8", [X8_H], ["s0", "fp"]>;
+  def X9_W  : RISCVRegWithSubRegs<9, "x9", [X9_H], ["s1"]>;
+  def X10_W : RISCVRegWithSubRegs<10,"x10", [X10_H], ["a0"]>;
+  def X11_W : RISCVRegWithSubRegs<11,"x11", [X11_H], ["a1"]>;
+  def X12_W : RISCVRegWithSubRegs<12,"x12", [X12_H], ["a2"]>;
+  def X13_W : RISCVRegWithSubRegs<13,"x13", [X13_H], ["a3"]>;
+  def X14_W : RISCVRegWithSubRegs<14,"x14", [X14_H], ["a4"]>;
+  def X15_W : RISCVRegWithSubRegs<15,"x15", [X15_H], ["a5"]>;
+  let CostPerUse = [0, 1] in {
+  def X16_W : RISCVRegWithSubRegs<16,"x16", [X16_H], ["a6"]>;
+  def X17_W : RISCVRegWithSubRegs<17,"x17", [X17_H], ["a7"]>;
+  def X18_W : RISCVRegWithSubRegs<18,"x18", [X18_H], ["s2"]>;
+  def X19_W : RISCVRegWithSubRegs<19,"x19", [X19_H], ["s3"]>;
+  def X20_W : RISCVRegWithSubRegs<20,"x20", [X20_H], ["s4"]>;
+  def X21_W : RISCVRegWithSubRegs<21,"x21", [X21_H], ["s5"]>;
+  def X22_W : RISCVRegWithSubRegs<22,"x22", [X22_H], ["s6"]>;
+  def X23_W : RISCVRegWithSubRegs<23,"x23", [X23_H], ["s7"]>;
+  def X24_W : RISCVRegWithSubRegs<24,"x24", [X24_H], ["s8"]>;
+  def X25_W : RISCVRegWithSubRegs<25,"x25", [X25_H], ["s9"]>;
+  def X26_W : RISCVRegWithSubRegs<26,"x26", [X26_H], ["s10"]>;
+  def X27_W : RISCVRegWithSubRegs<27,"x27", [X27_H], ["s11"]>;
+  def X28_W : RISCVRegWithSubRegs<28,"x28", [X28_H], ["t3"]>;
+  def X29_W : RISCVRegWithSubRegs<29,"x29", [X29_H], ["t4"]>;
+  def X30_W : RISCVRegWithSubRegs<30,"x30", [X30_H], ["t5"]>;
+  def X31_W : RISCVRegWithSubRegs<31,"x31", [X31_H], ["t6"]>;
+  }
+  }
+
+  let SubRegIndices = [sub_32] in {
+  let isConstant = true in
+  def X0  : RISCVRegWithSubRegs<0, "x0", [X0_W], ["zero"]>, DwarfRegNum<[0]>;
+  let CostPerUse = [0, 1] in {
+  def X1  : RISCVRegWithSubRegs<1, "x1", [X1_W], ["ra"]>, DwarfRegNum<[1]>;
+  def X2  : RISCVRegWithSubRegs<2, "x2", [X2_W], ["sp"]>, DwarfRegNum<[2]>;
+  def X3  : RISCVRegWithSubRegs<3, "x3", [X3_W], ["gp"]>, DwarfRegNum<[3]>;
+  def X4  : RISCVRegWithSubRegs<4, "x4", [X4_W], ["tp"]>, DwarfRegNum<[4]>;
+  def X5  : RISCVRegWithSubRegs<5, "x5", [X5_W], ["t0"]>, DwarfRegNum<[5]>;
+  def X6  : RISCVRegWithSubRegs<6, "x6", [X6_W], ["t1"]>, DwarfRegNum<[6]>;
+  def X7  : RISCVRegWithSubRegs<7, "x7", [X7_W], ["t2"]>, DwarfRegNum<[7]>;
+  }
+  def X8  : RISCVRegWithSubRegs<8, "x8", [X8_W], ["s0", "fp"]>, DwarfRegNum<[8]>;
+  def X9  : RISCVRegWithSubRegs<9, "x9", [X9_W], ["s1"]>, DwarfRegNum<[9]>;
+  def X10 : RISCVRegWithSubRegs<10,"x10", [X10_W], ["a0"]>, DwarfRegNum<[10]>;
+  def X11 : RISCVRegWithSubRegs<11,"x11", [X11_W], ["a1"]>, DwarfRegNum<[11]>;
+  def X12 : RISCVRegWithSubRegs<12,"x12", [X12_W], ["a2"]>, DwarfRegNum<[12]>;
+  def X13 : RISCVRegWithSubRegs<13,"x13", [X13_W], ["a3"]>, DwarfRegNum<[13]>;
+  def X14 : RISCVRegWithSubRegs<14,"x14", [X14_W], ["a4"]>, DwarfRegNum<[14]>;
+  def X15 : RISCVRegWithSubRegs<15,"x15", [X15_W], ["a5"]>, DwarfRegNum<[15]>;
+  let CostPerUse = [0, 1] in {
+  def X16 : RISCVRegWithSubRegs<16,"x16", [X16_W], ["a6"]>, DwarfRegNum<[16]>;
+  def X17 : RISCVRegWithSubRegs<17,"x17", [X17_W], ["a7"]>, DwarfRegNum<[17]>;
+  def X18 : RISCVRegWithSubRegs<18,"x18", [X18_W], ["s2"]>, DwarfRegNum<[18]>;
+  def X19 : RISCVRegWithSubRegs<19,"x19", [X19_W], ["s3"]>, DwarfRegNum<[19]>;
+  def X20 : RISCVRegWithSubRegs<20,"x20", [X20_W], ["s4"]>, DwarfRegNum<[20]>;
+  def X21 : RISCVRegWithSubRegs<21,"x21", [X21_W], ["s5"]>, DwarfRegNum<[21]>;
+  def X22 : RISCVRegWithSubRegs<22,"x22", [X22_W], ["s6"]>, DwarfRegNum<[22]>;
+  def X23 : RISCVRegWithSubRegs<23,"x23", [X23_W], ["s7"]>, DwarfRegNum<[23]>;
+  def X24 : RISCVRegWithSubRegs<24,"x24", [X24_W], ["s8"]>, DwarfRegNum<[24]>;
+  def X25 : RISCVRegWithSubRegs<25,"x25", [X25_W], ["s9"]>, DwarfRegNum<[25]>;
+  def X26 : RISCVRegWithSubRegs<26,"x26", [X26_W], ["s10"]>, DwarfRegNum<[26]>;
+  def X27 : RISCVRegWithSubRegs<27,"x27", [X27_W], ["s11"]>, DwarfRegNum<[27]>;
+  def X28 : RISCVRegWithSubRegs<28,"x28", [X28_W], ["t3"]>, DwarfRegNum<[28]>;
+  def X29 : RISCVRegWithSubRegs<29,"x29", [X29_W], ["t4"]>, DwarfRegNum<[29]>;
+  def X30 : RISCVRegWithSubRegs<30,"x30", [X30_W], ["t5"]>, DwarfRegNum<[30]>;
+  def X31 : RISCVRegWithSubRegs<31,"x31", [X31_W], ["t6"]>, DwarfRegNum<[31]>;
+  }
   }
 }
 
@@ -254,6 +336,11 @@ def FPR16 : RISCVRegisterClass<[f16, bf16], 16, (add
     (sequence "F%u_H", 28, 31), // ft8-ft11
     (sequence "F%u_H", 8, 9),   // fs0-fs1
     (sequence "F%u_H", 18, 27)  // fs2-fs11
+)>;
+
+def FPR16C : RISCVRegisterClass<[f16, bf16], 16, (add
+    (sequence "F%u_H", 15, 10),
+    (sequence "F%u_H", 8, 9)
 )>;
 
 def FPR32 : RISCVRegisterClass<[f32], 32, (add
@@ -565,10 +652,30 @@ def VRM8NoV0 : VReg<VM8VTs, (sub VRM8, V0M8), 8>;
 
 def VMV0 : VReg<VMaskVTs, (add V0), 1>;
 
-let RegInfos = XLenRI in {
-def GPRF16  : RISCVRegisterClass<[f16], 16, (add GPR)>;
-def GPRF32  : RISCVRegisterClass<[f32], 32, (add GPR)>;
-} // RegInfos = XLenRI
+// 16-bit GPR sub-register class used by Zhinx instructions.
+def GPRF16 : RISCVRegisterClass<[f16], 16, (add (sequence "X%u_H", 10, 17),
+                                                (sequence "X%u_H", 5, 7),
+                                                (sequence "X%u_H", 28, 31),
+                                                (sequence "X%u_H", 8, 9),
+                                                (sequence "X%u_H", 18, 27),
+                                                (sequence "X%u_H", 0, 4))>;
+def GPRF16C : RISCVRegisterClass<[f16], 16, (add (sequence "X%u_H", 10, 15),
+                                                 (sequence "X%u_H", 8, 9))>;
+def GPRF16NoX0 : RISCVRegisterClass<[f16], 16, (sub GPRF16, X0_H)>;
+
+def GPRF32 : RISCVRegisterClass<[f32], 32, (add (sequence "X%u_W", 10, 17),
+                                                (sequence "X%u_W", 5, 7),
+                                                (sequence "X%u_W", 28, 31),
+                                                (sequence "X%u_W", 8, 9),
+                                                (sequence "X%u_W", 18, 27),
+                                                (sequence "X%u_W", 0, 4))>;
+def GPRF32C : RISCVRegisterClass<[f32], 32, (add (sequence "X%u_W", 10, 15),
+                                                 (sequence "X%u_W", 8, 9))>;
+def GPRF32NoX0 : RISCVRegisterClass<[f32], 32, (sub GPRF32, X0_W)>;
+
+def XLenPairRI : RegInfoByHwMode<
+      [RV32,                RV64],
+      [RegInfo<64, 64, 32>, RegInfo<128, 128, 64>]>;
 
 // Dummy zero register for use in the register pair containing X0 (as X1 is
 // not read to or written when the X0 register pair is used).
@@ -601,9 +708,8 @@ let RegAltNameIndices = [ABIRegAltName] in {
   }
 }
 
-let RegInfos = RegInfoByHwMode<[RV32, RV64],
-                               [RegInfo<64, 64, 32>, RegInfo<128, 128, 64>]>,
-    DecoderMethod = "DecodeGPRPairRegisterClass" in
+let RegInfos = XLenPairRI,
+    DecoderMethod = "DecodeGPRPairRegisterClass" in {
 def GPRPair : RISCVRegisterClass<[XLenPairFVT], 64, (add
     X10_X11, X12_X13, X14_X15, X16_X17,
     X6_X7,
@@ -612,6 +718,13 @@ def GPRPair : RISCVRegisterClass<[XLenPairFVT], 64, (add
     X18_X19, X20_X21, X22_X23, X24_X25, X26_X27,
     X0_Pair, X2_X3, X4_X5
 )>;
+
+def GPRPairC : RISCVRegisterClass<[XLenPairFVT], 64, (add
+  X10_X11, X12_X13, X14_X15, X8_X9
+)>;
+
+def GPRPairNoX0 : RISCVRegisterClass<[XLenPairFVT], 64, (sub GPRPair, X0_Pair)>;
+} // let RegInfos = XLenPairRI, DecoderMethod = "DecodeGPRPairRegisterClass"
 
 // The register class is added for inline assembly for vector mask types.
 def VM : VReg<VMaskVTs, (add VR), 1>;
@@ -666,3 +779,7 @@ def SSP    : RISCVReg<0, "ssp">;
 
 // Dummy SiFive VCIX state register
 def SF_VCIX_STATE : RISCVReg<0, "sf.vcix_state">;
+def : RISCVRegisterClass<[XLenVT], 32, (add SF_VCIX_STATE)> {
+  let RegInfos = XLenRI;
+  let isAllocatable = 0;
+}

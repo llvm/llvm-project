@@ -227,6 +227,8 @@ public:
 
   bool legalizeSBufferLoad(LegalizerHelper &Helper, MachineInstr &MI) const;
 
+  bool legalizeSBufferPrefetch(LegalizerHelper &Helper, MachineInstr &MI) const;
+
   bool legalizeTrap(MachineInstr &MI, MachineRegisterInfo &MRI,
                     MachineIRBuilder &B) const;
   bool legalizeTrapEndpgm(MachineInstr &MI, MachineRegisterInfo &MRI,

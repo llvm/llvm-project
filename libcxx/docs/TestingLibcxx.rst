@@ -26,7 +26,7 @@ Please see the `Lit Command Guide`_ for more information about LIT.
 Usage
 -----
 
-After building libc++, you can run parts of the libc++ test suite by simply
+After :ref:`building libc++ <VendorDocumentation>`, you can run parts of the libc++ test suite by simply
 running ``llvm-lit`` on a specified test or directory. If you're unsure
 whether the required libraries have been built, you can use the
 ``cxx-test-depends`` target. For example:

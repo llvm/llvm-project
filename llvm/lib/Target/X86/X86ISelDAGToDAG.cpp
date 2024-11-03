@@ -453,8 +453,8 @@ namespace {
 
       // Create zero.
       SDVTList VTs = CurDAG->getVTList(MVT::i32, MVT::i32);
-      SDValue Zero = SDValue(
-          CurDAG->getMachineNode(X86::MOV32r0, dl, VTs, std::nullopt), 0);
+      SDValue Zero =
+          SDValue(CurDAG->getMachineNode(X86::MOV32r0, dl, VTs, {}), 0);
       if (VT == MVT::i64) {
         Zero = SDValue(
             CurDAG->getMachineNode(
@@ -1647,10 +1647,10 @@ void X86DAGToDAGISel::PostprocessISelDAG() {
     // used. We're doing this late so we can prefer to fold the AND into masked
     // comparisons. Doing that can be better for the live range of the mask
     // register.
-    case X86::KORTESTBrr:
-    case X86::KORTESTWrr:
-    case X86::KORTESTDrr:
-    case X86::KORTESTQrr: {
+    case X86::KORTESTBkk:
+    case X86::KORTESTWkk:
+    case X86::KORTESTDkk:
+    case X86::KORTESTQkk: {
       SDValue Op0 = N->getOperand(0);
       if (Op0 != N->getOperand(1) || !N->isOnlyUserOf(Op0.getNode()) ||
           !Op0.isMachineOpcode() || !onlyUsesZeroFlag(SDValue(N, 0)))
@@ -1661,10 +1661,10 @@ void X86DAGToDAGISel::PostprocessISelDAG() {
       switch (Op0.getMachineOpcode()) {
       default:
         continue;
-        CASE(KANDBrr)
-        CASE(KANDWrr)
-        CASE(KANDDrr)
-        CASE(KANDQrr)
+        CASE(KANDBkk)
+        CASE(KANDWkk)
+        CASE(KANDDkk)
+        CASE(KANDQkk)
       }
       unsigned NewOpc;
 #define FROM_TO(A, B)                                                          \
@@ -1672,14 +1672,14 @@ void X86DAGToDAGISel::PostprocessISelDAG() {
     NewOpc = X86::B;                                                           \
     break;
       switch (Opc) {
-        FROM_TO(KORTESTBrr, KTESTBrr)
-        FROM_TO(KORTESTWrr, KTESTWrr)
-        FROM_TO(KORTESTDrr, KTESTDrr)
-        FROM_TO(KORTESTQrr, KTESTQrr)
+        FROM_TO(KORTESTBkk, KTESTBkk)
+        FROM_TO(KORTESTWkk, KTESTWkk)
+        FROM_TO(KORTESTDkk, KTESTDkk)
+        FROM_TO(KORTESTQkk, KTESTQkk)
       }
       // KANDW is legal with AVX512F, but KTESTW requires AVX512DQ. The other
       // KAND instructions and KTEST use the same ISA feature.
-      if (NewOpc == X86::KTESTWrr && !Subtarget->hasDQI())
+      if (NewOpc == X86::KTESTWkk && !Subtarget->hasDQI())
         continue;
 #undef FROM_TO
       MachineSDNode *KTest = CurDAG->getMachineNode(
@@ -1975,6 +1975,16 @@ bool X86DAGToDAGISel::matchAddress(SDValue N, X86ISelAddressMode &AM) {
       AM.Scale == 1 && AM.BaseType == X86ISelAddressMode::RegBase &&
       AM.Base_Reg.getNode() == nullptr && AM.IndexReg.getNode() == nullptr &&
       AM.SymbolFlags == X86II::MO_NO_FLAG && AM.hasSymbolicDisplacement()) {
+    // However, when GV is a local function symbol and in the same section as
+    // the current instruction, and AM.Disp is negative and near INT32_MIN,
+    // referencing GV+Disp generates a relocation referencing the section symbol
+    // with an even smaller offset, which might underflow. We should bail out if
+    // the negative offset is too close to INT32_MIN. Actually, we are more
+    // conservative here, using a smaller magic number also used by
+    // isOffsetSuitableForCodeModel.
+    if (isa_and_nonnull<Function>(AM.GV) && AM.Disp < -16 * 1024 * 1024)
+      return true;
+
     AM.Base_Reg = CurDAG->getRegister(X86::RIP, MVT::i64);
   }
 
@@ -5826,8 +5836,8 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
       } else {
         // Zero out the high part, effectively zero extending the input.
         SDVTList VTs = CurDAG->getVTList(MVT::i32, MVT::i32);
-        SDValue ClrNode = SDValue(
-            CurDAG->getMachineNode(X86::MOV32r0, dl, VTs, std::nullopt), 0);
+        SDValue ClrNode =
+            SDValue(CurDAG->getMachineNode(X86::MOV32r0, dl, VTs, {}), 0);
         switch (NVT.SimpleTy) {
         case MVT::i16:
           ClrNode =

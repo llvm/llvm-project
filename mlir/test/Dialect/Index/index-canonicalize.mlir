@@ -32,6 +32,19 @@ func.func @add_overflow() -> (index, index) {
   return %2, %3 : index, index
 }
 
+// CHECK-LABEL: @add
+func.func @add_fold_constants(%arg: index) -> (index) {
+  %0 = index.constant 1
+  %1 = index.constant 2
+  %2 = index.add %arg, %0
+  %3 = index.add %2, %1
+
+  // CHECK-DAG: [[C3:%.*]] = index.constant 3
+  // CHECK-DAG: [[V0:%.*]] = index.add %arg0, [[C3]]
+  // CHECK: return [[V0]]
+  return %3 : index
+}
+
 // CHECK-LABEL: @sub
 func.func @sub() -> index {
   %0 = index.constant -2000000000

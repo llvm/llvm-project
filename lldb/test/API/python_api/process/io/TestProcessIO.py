@@ -95,6 +95,36 @@ class ProcessIOTestCase(TestBase):
         error = self.read_error_file_and_delete()
         self.check_process_output(output, error)
 
+    @skipIfWindows  # stdio manipulation unsupported on Windows
+    @expectedFlakeyLinux(bugnumber="llvm.org/pr26437")
+    @skipIfDarwinEmbedded  # debugserver can't create/write files on the device
+    def test_stdout_stderr_redirection_to_existing_files(self):
+        """Exercise SBLaunchInfo::AddOpenFileAction() for STDOUT and STDERR without redirecting STDIN to output files already exist."""
+        self.setup_test()
+        self.build()
+        self.create_target()
+        self.write_file_with_placeholder(self.output_file)
+        self.write_file_with_placeholder(self.error_file)
+        self.redirect_stdout()
+        self.redirect_stderr()
+        self.run_process(True)
+        output = self.read_output_file_and_delete()
+        error = self.read_error_file_and_delete()
+        self.check_process_output(output, error)
+
+    def write_file_with_placeholder(self, target_file):
+        placeholder = "This content should be overwritten."
+        if lldb.remote_platform:
+            self.runCmd(
+                'platform file write "{target}" -d "{data}"'.format(
+                    target=target_file, data=placeholder
+                )
+            )
+        else:
+            f = open(target_file, "w")
+            f.write(placeholder)
+            f.close()
+
     # target_file - path on local file system or remote file system if running remote
     # local_file - path on local system
     def read_file_and_delete(self, target_file, local_file):

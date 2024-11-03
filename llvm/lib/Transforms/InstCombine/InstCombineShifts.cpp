@@ -1478,6 +1478,11 @@ Instruction *InstCombinerImpl::visitLShr(BinaryOperator &I) {
         Value *Signbit = Builder.CreateLShr(X, ShAmtC);
         return BinaryOperator::CreateAnd(Signbit, X);
       }
+
+      // lshr iN (X - 1) & ~X, N-1 --> zext (X == 0)
+      if (match(Op0, m_OneUse(m_c_And(m_Add(m_Value(X), m_AllOnes()),
+                                      m_Not(m_Deferred(X))))))
+        return new ZExtInst(Builder.CreateIsNull(X), Ty);
     }
 
     Instruction *TruncSrc;
@@ -1754,6 +1759,11 @@ Instruction *InstCombinerImpl::visitAShr(BinaryOperator &I) {
       Value *Y;
       if (match(Op0, m_OneUse(m_NSWSub(m_Value(X), m_Value(Y)))))
         return new SExtInst(Builder.CreateICmpSLT(X, Y), Ty);
+
+      // ashr iN (X - 1) & ~X, N-1 --> sext (X == 0)
+      if (match(Op0, m_OneUse(m_c_And(m_Add(m_Value(X), m_AllOnes()),
+                                      m_Not(m_Deferred(X))))))
+        return new SExtInst(Builder.CreateIsNull(X), Ty);
     }
 
     const APInt *MulC;

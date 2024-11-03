@@ -127,69 +127,6 @@ Example: 64-bit PTX for CUDA Driver API: ``nvptx64-nvidia-cuda``
 NVPTX Intrinsics
 ================
 
-Address Space Conversion
-------------------------
-
-'``llvm.nvvm.ptr.*.to.gen``' Intrinsics
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-Syntax:
-"""""""
-
-These are overloaded intrinsics.  You can use these on any pointer types.
-
-.. code-block:: llvm
-
-    declare ptr @llvm.nvvm.ptr.global.to.gen.p0.p1(ptr addrspace(1))
-    declare ptr @llvm.nvvm.ptr.shared.to.gen.p0.p3(ptr addrspace(3))
-    declare ptr @llvm.nvvm.ptr.constant.to.gen.p0.p4(ptr addrspace(4))
-    declare ptr @llvm.nvvm.ptr.local.to.gen.p0.p5(ptr addrspace(5))
-
-Overview:
-"""""""""
-
-The '``llvm.nvvm.ptr.*.to.gen``' intrinsics convert a pointer in a non-generic
-address space to a generic address space pointer.
-
-Semantics:
-""""""""""
-
-These intrinsics modify the pointer value to be a valid generic address space
-pointer.
-
-
-'``llvm.nvvm.ptr.gen.to.*``' Intrinsics
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-Syntax:
-"""""""
-
-These are overloaded intrinsics.  You can use these on any pointer types.
-
-.. code-block:: llvm
-
-    declare ptr addrspace(1) @llvm.nvvm.ptr.gen.to.global.p1.p0(ptr)
-    declare ptr addrspace(3) @llvm.nvvm.ptr.gen.to.shared.p3.p0(ptr)
-    declare ptr addrspace(4) @llvm.nvvm.ptr.gen.to.constant.p4.p0(ptr)
-    declare ptr addrspace(5) @llvm.nvvm.ptr.gen.to.local.p5.p0(ptr)
-
-Overview:
-"""""""""
-
-The '``llvm.nvvm.ptr.gen.to.*``' intrinsics convert a pointer in the generic
-address space to a pointer in the target address space.  Note that these
-intrinsics are only useful if the address space of the target address space of
-the pointer is known.  It is not legal to use address space conversion
-intrinsics to convert a pointer from one non-generic address space to another
-non-generic address space.
-
-Semantics:
-""""""""""
-
-These intrinsics modify the pointer value to be a valid pointer in the target
-non-generic address space.
-
-
 Reading PTX Special Registers
 -----------------------------
 
@@ -382,6 +319,64 @@ used in the '``llvm.nvvm.idp4a.[us].u``' variants, while sign-extension is used
 with '``llvm.nvvm.idp4a.[us].s``' variants. The dot product of these 4-element
 vectors is added to ``%c`` to produce the return.
 
+Bit Manipulation Intrinsics
+---------------------------
+
+'``llvm.nvvm.fshl.clamp.*``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+    declare i32 @llvm.nvvm.fshl.clamp.i32(i32 %hi, i32 %lo, i32 %n)
+
+Overview:
+"""""""""
+
+The '``llvm.nvvm.fshl.clamp``' family of intrinsics performs a clamped funnel
+shift left. These intrinsics are very similar to '``llvm.fshl``', except the
+shift ammont is clamped at the integer width (instead of modulo it). Currently,
+only ``i32`` is supported.
+
+Semantics:
+""""""""""
+
+The '``llvm.nvvm.fshl.clamp``' family of intrinsic functions performs a clamped
+funnel shift left: the first two values are concatenated as { %hi : %lo } (%hi
+is the most significant bits of the wide value), the combined value is shifted
+left, and the most significant bits are extracted to produce a result that is
+the same size as the original arguments. The shift amount is the minimum of the
+value of %n and the bit width of the integer type.
+
+'``llvm.nvvm.fshr.clamp.*``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+    declare i32 @llvm.nvvm.fshr.clamp.i32(i32 %hi, i32 %lo, i32 %n)
+
+Overview:
+"""""""""
+
+The '``llvm.nvvm.fshr.clamp``' family of intrinsics perform a clamped funnel
+shift right. These intrinsics are very similar to '``llvm.fshr``', except the
+shift ammont is clamped at the integer width (instead of modulo it). Currently,
+only ``i32`` is supported.
+
+Semantics:
+""""""""""
+
+The '``llvm.nvvm.fshr.clamp``' family of intrinsic functions performs a clamped
+funnel shift right: the first two values are concatenated as { %hi : %lo } (%hi
+is the most significant bits of the wide value), the combined value is shifted
+right, and the least significant bits are extracted to produce a result that is
+the same size as the original arguments. The shift amount is the minimum of the
+value of %n and the bit width of the integer type.
 
 
 Other Intrinsics

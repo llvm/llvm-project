@@ -26,9 +26,6 @@ extern "C" {
 #include <inttypes.h>
 #include <iso646.h>
 #include <limits.h>
-#ifndef _LIBCPP_HAS_NO_LOCALIZATION
-#   include <locale.h>
-#endif
 #include <math.h>
 #include <setjmp.h>
 #include <signal.h>

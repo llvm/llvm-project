@@ -4,7 +4,7 @@
 
 using namespace llvm;
 
-void clang::EmitClangDataCollectors(RecordKeeper &RK, raw_ostream &OS) {
+void clang::EmitClangDataCollectors(const RecordKeeper &RK, raw_ostream &OS) {
   const auto &Defs = RK.getClasses();
   for (const auto &Entry : Defs) {
     Record &R = *Entry.second;

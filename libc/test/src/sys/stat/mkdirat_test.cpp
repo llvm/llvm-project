@@ -11,7 +11,7 @@
 #include "test/UnitTest/ErrnoSetterMatcher.h"
 #include "test/UnitTest/Test.h"
 
-#include <fcntl.h>
+#include "hdr/fcntl_macros.h"
 
 TEST(LlvmLibcMkdiratTest, CreateAndRemove) {
   using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Succeeds;

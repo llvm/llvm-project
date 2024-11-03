@@ -13,6 +13,7 @@
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/PolyEval.h"
+#include "src/__support/FPUtil/cast.h"
 #include "src/__support/FPUtil/except_value_utils.h"
 #include "src/__support/FPUtil/rounding_mode.h"
 #include "src/__support/common.h"
@@ -103,7 +104,7 @@ LLVM_LIBC_FUNCTION(float16, expf16, (float16 x)) {
       //   > display = hexadecimal;
       //   > P = fpminimax(expm1(x)/x, 2, [|SG...|], [-2^-5, 2^-5]);
       //   > 1 + x * P;
-      return static_cast<float16>(
+      return fputil::cast<float16>(
           fputil::polyeval(xf, 0x1p+0f, 0x1p+0f, 0x1.0004p-1f, 0x1.555778p-3f));
     }
   }
@@ -113,7 +114,7 @@ LLVM_LIBC_FUNCTION(float16, expf16, (float16 x)) {
 
   // exp(x) = exp(hi + mid) * exp(lo)
   auto [exp_hi_mid, exp_lo] = exp_range_reduction(x);
-  return static_cast<float16>(exp_hi_mid * exp_lo);
+  return fputil::cast<float16>(exp_hi_mid * exp_lo);
 }
 
 } // namespace LIBC_NAMESPACE_DECL

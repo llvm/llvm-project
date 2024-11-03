@@ -108,11 +108,6 @@ size_t wcsrtombs(char* restrict dst, const wchar_t** restrict src, size_t len,
 #  include <__config>
 #  include <stddef.h>
 
-#  if defined(_LIBCPP_HAS_NO_WIDE_CHARACTERS)
-#    error                                                                                                             \
-        "The <wchar.h> header is not supported since libc++ has been configured with LIBCXX_ENABLE_WIDE_CHARACTERS disabled"
-#  endif
-
 #  if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #    pragma GCC system_header
 #  endif
@@ -142,7 +137,8 @@ size_t wcsrtombs(char* restrict dst, const wchar_t** restrict src, size_t len,
 #    endif
 #  endif
 
-#  if defined(__cplusplus) && !defined(_LIBCPP_WCHAR_H_HAS_CONST_OVERLOADS) && defined(_LIBCPP_PREFERRED_OVERLOAD)
+#  ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#    if defined(__cplusplus) && !defined(_LIBCPP_WCHAR_H_HAS_CONST_OVERLOADS) && defined(_LIBCPP_PREFERRED_OVERLOAD)
 extern "C++" {
 inline _LIBCPP_HIDE_FROM_ABI wchar_t* __libcpp_wcschr(const wchar_t* __s, wchar_t __c) {
   return (wchar_t*)wcschr(__s, __c);
@@ -197,15 +193,16 @@ inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_PREFERRED_OVERLOAD wchar_t* wmemchr(wchar_t
   return __libcpp_wmemchr(__s, __c, __n);
 }
 }
-#  endif
+#    endif
 
-#  if defined(__cplusplus) && (defined(_LIBCPP_MSVCRT_LIKE) || defined(__MVS__))
+#    if defined(__cplusplus) && (defined(_LIBCPP_MSVCRT_LIKE) || defined(__MVS__))
 extern "C" {
 size_t mbsnrtowcs(
     wchar_t* __restrict __dst, const char** __restrict __src, size_t __nmc, size_t __len, mbstate_t* __restrict __ps);
 size_t wcsnrtombs(
     char* __restrict __dst, const wchar_t** __restrict __src, size_t __nwc, size_t __len, mbstate_t* __restrict __ps);
 } // extern "C"
-#  endif // __cplusplus && (_LIBCPP_MSVCRT || __MVS__)
+#    endif // __cplusplus && (_LIBCPP_MSVCRT || __MVS__)
+#  endif   // !_LIBCPP_HAS_NO_WIDE_CHARACTERS
 
 #endif // _LIBCPP_WCHAR_H

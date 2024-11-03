@@ -25,6 +25,7 @@
 #include "lldb/Interpreter/OptionArgParser.h"
 #include "lldb/Interpreter/OptionGroupPythonClassWithDict.h"
 #include "lldb/Interpreter/Options.h"
+#include "lldb/Symbol/SaveCoreOptions.h"
 #include "lldb/Target/Platform.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/StopInfo.h"
@@ -1419,7 +1420,7 @@ protected:
 
       PlatformSP platform_sp = process->GetTarget().GetPlatform();
       if (!platform_sp) {
-        result.AppendError("Couldn'retrieve the target's platform");
+        result.AppendError("Couldn't retrieve the target's platform");
         return;
       }
 

@@ -296,6 +296,7 @@ def : GINodeEquiv<G_AMDGPU_S_BUFFER_LOAD_SBYTE, SIsbuffer_load_byte>;
 def : GINodeEquiv<G_AMDGPU_S_BUFFER_LOAD_UBYTE, SIsbuffer_load_ubyte>;
 def : GINodeEquiv<G_AMDGPU_S_BUFFER_LOAD_SSHORT, SIsbuffer_load_short>;
 def : GINodeEquiv<G_AMDGPU_S_BUFFER_LOAD_USHORT, SIsbuffer_load_ushort>;
+def : GINodeEquiv<G_AMDGPU_S_BUFFER_PREFETCH, SIsbuffer_prefetch>;
 
 class GISelSop2Pat <
   SDPatternOperator node,

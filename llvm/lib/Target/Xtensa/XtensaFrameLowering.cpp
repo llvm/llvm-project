@@ -27,7 +27,7 @@ XtensaFrameLowering::XtensaFrameLowering(const XtensaSubtarget &STI)
                           Align(4)),
       TII(*STI.getInstrInfo()), TRI(STI.getRegisterInfo()) {}
 
-bool XtensaFrameLowering::hasFP(const MachineFunction &MF) const {
+bool XtensaFrameLowering::hasFPImpl(const MachineFunction &MF) const {
   const MachineFrameInfo &MFI = MF.getFrameInfo();
   return MF.getTarget().Options.DisableFramePointerElim(MF) ||
          MFI.hasVarSizedObjects();

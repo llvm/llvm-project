@@ -37,7 +37,7 @@ template <typename SourceOp>
 class DecomposeCallGraphTypesOpConversionPattern
     : public OpConversionPattern<SourceOp> {
 public:
-  DecomposeCallGraphTypesOpConversionPattern(TypeConverter &typeConverter,
+  DecomposeCallGraphTypesOpConversionPattern(const TypeConverter &typeConverter,
                                              MLIRContext *context,
                                              ValueDecomposer &decomposer,
                                              PatternBenefit benefit = 1)
@@ -188,7 +188,7 @@ struct DecomposeCallGraphTypesForCallOp
 } // namespace
 
 void mlir::populateDecomposeCallGraphTypesPatterns(
-    MLIRContext *context, TypeConverter &typeConverter,
+    MLIRContext *context, const TypeConverter &typeConverter,
     ValueDecomposer &decomposer, RewritePatternSet &patterns) {
   patterns
       .add<DecomposeCallGraphTypesForCallOp, DecomposeCallGraphTypesForFuncArgs,

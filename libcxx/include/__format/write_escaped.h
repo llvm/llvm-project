@@ -16,6 +16,7 @@
 #include <__charconv/to_chars_result.h>
 #include <__chrono/statically_widen.h>
 #include <__format/escaped_output_table.h>
+#include <__format/extended_grapheme_cluster_table.h>
 #include <__format/formatter_output.h>
 #include <__format/parser_std_format_spec.h>
 #include <__format/unicode.h>

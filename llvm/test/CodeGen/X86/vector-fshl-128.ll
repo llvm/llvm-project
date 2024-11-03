@@ -1454,7 +1454,7 @@ define void @sink_splatvar(ptr %p, i32 %shift_amt) {
 ; SSE-NEXT:    movd %esi, %xmm0
 ; SSE-NEXT:    movq $-1024, %rax # imm = 0xFC00
 ; SSE-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
-; SSE-NEXT:    .p2align 4, 0x90
+; SSE-NEXT:    .p2align 4
 ; SSE-NEXT:  .LBB8_1: # %loop
 ; SSE-NEXT:    # =>This Inner Loop Header: Depth=1
 ; SSE-NEXT:    movdqu 1024(%rdi,%rax), %xmm1
@@ -1474,7 +1474,7 @@ define void @sink_splatvar(ptr %p, i32 %shift_amt) {
 ; AVX1-NEXT:    vmovd %esi, %xmm0
 ; AVX1-NEXT:    movq $-1024, %rax # imm = 0xFC00
 ; AVX1-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
-; AVX1-NEXT:    .p2align 4, 0x90
+; AVX1-NEXT:    .p2align 4
 ; AVX1-NEXT:  .LBB8_1: # %loop
 ; AVX1-NEXT:    # =>This Inner Loop Header: Depth=1
 ; AVX1-NEXT:    vmovdqu 1024(%rdi,%rax), %xmm1
@@ -1498,7 +1498,7 @@ define void @sink_splatvar(ptr %p, i32 %shift_amt) {
 ; AVX2-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [32,32,32,32]
 ; AVX2-NEXT:    vpsubd %xmm0, %xmm1, %xmm1
-; AVX2-NEXT:    .p2align 4, 0x90
+; AVX2-NEXT:    .p2align 4
 ; AVX2-NEXT:  .LBB8_1: # %loop
 ; AVX2-NEXT:    # =>This Inner Loop Header: Depth=1
 ; AVX2-NEXT:    vmovdqu 1024(%rdi,%rax), %xmm2
@@ -1516,7 +1516,7 @@ define void @sink_splatvar(ptr %p, i32 %shift_amt) {
 ; AVX512F-NEXT:    vmovd %esi, %xmm0
 ; AVX512F-NEXT:    vpbroadcastd %xmm0, %xmm0
 ; AVX512F-NEXT:    movq $-1024, %rax # imm = 0xFC00
-; AVX512F-NEXT:    .p2align 4, 0x90
+; AVX512F-NEXT:    .p2align 4
 ; AVX512F-NEXT:  .LBB8_1: # %loop
 ; AVX512F-NEXT:    # =>This Inner Loop Header: Depth=1
 ; AVX512F-NEXT:    vmovdqu 1024(%rdi,%rax), %xmm1
@@ -1532,7 +1532,7 @@ define void @sink_splatvar(ptr %p, i32 %shift_amt) {
 ; AVX512VL:       # %bb.0: # %entry
 ; AVX512VL-NEXT:    vpbroadcastd %esi, %xmm0
 ; AVX512VL-NEXT:    movq $-1024, %rax # imm = 0xFC00
-; AVX512VL-NEXT:    .p2align 4, 0x90
+; AVX512VL-NEXT:    .p2align 4
 ; AVX512VL-NEXT:  .LBB8_1: # %loop
 ; AVX512VL-NEXT:    # =>This Inner Loop Header: Depth=1
 ; AVX512VL-NEXT:    vmovdqu 1024(%rdi,%rax), %xmm1
@@ -1548,7 +1548,7 @@ define void @sink_splatvar(ptr %p, i32 %shift_amt) {
 ; AVX512BW-NEXT:    vmovd %esi, %xmm0
 ; AVX512BW-NEXT:    vpbroadcastd %xmm0, %xmm0
 ; AVX512BW-NEXT:    movq $-1024, %rax # imm = 0xFC00
-; AVX512BW-NEXT:    .p2align 4, 0x90
+; AVX512BW-NEXT:    .p2align 4
 ; AVX512BW-NEXT:  .LBB8_1: # %loop
 ; AVX512BW-NEXT:    # =>This Inner Loop Header: Depth=1
 ; AVX512BW-NEXT:    vmovdqu 1024(%rdi,%rax), %xmm1
@@ -1565,7 +1565,7 @@ define void @sink_splatvar(ptr %p, i32 %shift_amt) {
 ; AVX512VBMI2-NEXT:    vmovd %esi, %xmm0
 ; AVX512VBMI2-NEXT:    vpbroadcastd %xmm0, %xmm0
 ; AVX512VBMI2-NEXT:    movq $-1024, %rax # imm = 0xFC00
-; AVX512VBMI2-NEXT:    .p2align 4, 0x90
+; AVX512VBMI2-NEXT:    .p2align 4
 ; AVX512VBMI2-NEXT:  .LBB8_1: # %loop
 ; AVX512VBMI2-NEXT:    # =>This Inner Loop Header: Depth=1
 ; AVX512VBMI2-NEXT:    vmovdqu 1024(%rdi,%rax), %xmm1
@@ -1581,7 +1581,7 @@ define void @sink_splatvar(ptr %p, i32 %shift_amt) {
 ; AVX512VLBW:       # %bb.0: # %entry
 ; AVX512VLBW-NEXT:    vpbroadcastd %esi, %xmm0
 ; AVX512VLBW-NEXT:    movq $-1024, %rax # imm = 0xFC00
-; AVX512VLBW-NEXT:    .p2align 4, 0x90
+; AVX512VLBW-NEXT:    .p2align 4
 ; AVX512VLBW-NEXT:  .LBB8_1: # %loop
 ; AVX512VLBW-NEXT:    # =>This Inner Loop Header: Depth=1
 ; AVX512VLBW-NEXT:    vmovdqu 1024(%rdi,%rax), %xmm1
@@ -1596,7 +1596,7 @@ define void @sink_splatvar(ptr %p, i32 %shift_amt) {
 ; AVX512VLVBMI2:       # %bb.0: # %entry
 ; AVX512VLVBMI2-NEXT:    vpbroadcastd %esi, %xmm0
 ; AVX512VLVBMI2-NEXT:    movq $-1024, %rax # imm = 0xFC00
-; AVX512VLVBMI2-NEXT:    .p2align 4, 0x90
+; AVX512VLVBMI2-NEXT:    .p2align 4
 ; AVX512VLVBMI2-NEXT:  .LBB8_1: # %loop
 ; AVX512VLVBMI2-NEXT:    # =>This Inner Loop Header: Depth=1
 ; AVX512VLVBMI2-NEXT:    vmovdqu 1024(%rdi,%rax), %xmm1
@@ -1612,7 +1612,7 @@ define void @sink_splatvar(ptr %p, i32 %shift_amt) {
 ; XOPAVX1-NEXT:    vmovd %esi, %xmm0
 ; XOPAVX1-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
 ; XOPAVX1-NEXT:    movq $-1024, %rax # imm = 0xFC00
-; XOPAVX1-NEXT:    .p2align 4, 0x90
+; XOPAVX1-NEXT:    .p2align 4
 ; XOPAVX1-NEXT:  .LBB8_1: # %loop
 ; XOPAVX1-NEXT:    # =>This Inner Loop Header: Depth=1
 ; XOPAVX1-NEXT:    vprotd %xmm0, 1024(%rdi,%rax), %xmm1
@@ -1627,7 +1627,7 @@ define void @sink_splatvar(ptr %p, i32 %shift_amt) {
 ; XOPAVX2-NEXT:    vmovd %esi, %xmm0
 ; XOPAVX2-NEXT:    vpbroadcastd %xmm0, %xmm0
 ; XOPAVX2-NEXT:    movq $-1024, %rax # imm = 0xFC00
-; XOPAVX2-NEXT:    .p2align 4, 0x90
+; XOPAVX2-NEXT:    .p2align 4
 ; XOPAVX2-NEXT:  .LBB8_1: # %loop
 ; XOPAVX2-NEXT:    # =>This Inner Loop Header: Depth=1
 ; XOPAVX2-NEXT:    vprotd %xmm0, 1024(%rdi,%rax), %xmm1
@@ -1647,7 +1647,7 @@ define void @sink_splatvar(ptr %p, i32 %shift_amt) {
 ; X86-SSE2-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; X86-SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-SSE2-NEXT:    xorl %edx, %edx
-; X86-SSE2-NEXT:    .p2align 4, 0x90
+; X86-SSE2-NEXT:    .p2align 4
 ; X86-SSE2-NEXT:  .LBB8_1: # %loop
 ; X86-SSE2-NEXT:    # =>This Inner Loop Header: Depth=1
 ; X86-SSE2-NEXT:    movdqu (%eax,%ecx,4), %xmm1

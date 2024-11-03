@@ -17,6 +17,7 @@
 #include "lldb/Interpreter/OptionValueDictionary.h"
 #include "lldb/Interpreter/OptionValueProperties.h"
 #include "lldb/Symbol/ObjectFile.h"
+#include "lldb/Symbol/SaveCoreOptions.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/SectionLoadList.h"
 #include "lldb/Target/Target.h"

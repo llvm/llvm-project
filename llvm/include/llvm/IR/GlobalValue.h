@@ -77,9 +77,9 @@ public:
   };
 
 protected:
-  GlobalValue(Type *Ty, ValueTy VTy, Use *Ops, unsigned NumOps,
-              LinkageTypes Linkage, const Twine &Name, unsigned AddressSpace)
-      : Constant(PointerType::get(Ty, AddressSpace), VTy, Ops, NumOps),
+  GlobalValue(Type *Ty, ValueTy VTy, AllocInfo AllocInfo, LinkageTypes Linkage,
+              const Twine &Name, unsigned AddressSpace)
+      : Constant(PointerType::get(Ty, AddressSpace), VTy, AllocInfo),
         ValueType(Ty), Visibility(DefaultVisibility),
         UnnamedAddrVal(unsigned(UnnamedAddr::None)),
         DllStorageClass(DefaultStorageClass), ThreadLocal(NotThreadLocal),

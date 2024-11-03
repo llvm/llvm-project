@@ -16,7 +16,8 @@ Record::Record(const RecordDecl *Decl, BaseList &&SrcBases,
                FieldList &&SrcFields, VirtualBaseList &&SrcVirtualBases,
                unsigned VirtualSize, unsigned BaseSize)
     : Decl(Decl), Bases(std::move(SrcBases)), Fields(std::move(SrcFields)),
-      BaseSize(BaseSize), VirtualSize(VirtualSize), IsUnion(Decl->isUnion()) {
+      BaseSize(BaseSize), VirtualSize(VirtualSize), IsUnion(Decl->isUnion()),
+      IsAnonymousUnion(IsUnion && Decl->isAnonymousStructOrUnion()) {
   for (Base &V : SrcVirtualBases)
     VirtualBases.push_back({V.Decl, V.Offset + BaseSize, V.Desc, V.R});
 

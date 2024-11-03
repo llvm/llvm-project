@@ -24,8 +24,8 @@
 #include "lldb/Host/ConnectionFileDescriptor.h"
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/Pipe.h"
-#include "lldb/Host/Socket.h"
 #include "lldb/Host/common/NativeProcessProtocol.h"
+#include "lldb/Host/common/TCPSocket.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Status.h"
@@ -195,17 +195,28 @@ void ConnectToRemote(MainLoop &mainloop,
                      bool reverse_connect, llvm::StringRef host_and_port,
                      const char *const progname, const char *const subcommand,
                      const char *const named_pipe_path, pipe_t unnamed_pipe,
-                     int connection_fd) {
+                     shared_fd_t connection_fd) {
   Status error;
 
   std::unique_ptr<Connection> connection_up;
   std::string url;
 
-  if (connection_fd != -1) {
+  if (connection_fd != SharedSocket::kInvalidFD) {
+#ifdef _WIN32
+    NativeSocket sockfd;
+    error = SharedSocket::GetNativeSocket(connection_fd, sockfd);
+    if (error.Fail()) {
+      llvm::errs() << llvm::formatv("error: GetNativeSocket failed: {0}\n",
+                                    error.AsCString());
+      exit(-1);
+    }
+    connection_up =
+        std::unique_ptr<Connection>(new ConnectionFileDescriptor(new TCPSocket(
+            sockfd, /*should_close=*/true, /*child_processes_inherit=*/false)));
+#else
     url = llvm::formatv("fd://{0}", connection_fd).str();
 
     // Create the connection.
-#if LLDB_ENABLE_POSIX && !defined _WIN32
     ::fcntl(connection_fd, F_SETFD, FD_CLOEXEC);
 #endif
   } else if (!host_and_port.empty()) {
@@ -338,7 +349,7 @@ int main_gdbserver(int argc, char *argv[]) {
       log_channels; // e.g. "lldb process threads:gdb-remote default:linux all"
   lldb::pipe_t unnamed_pipe = LLDB_INVALID_PIPE;
   bool reverse_connect = false;
-  int connection_fd = -1;
+  shared_fd_t connection_fd = SharedSocket::kInvalidFD;
 
   // ProcessLaunchInfo launch_info;
   ProcessAttachInfo attach_info;
@@ -404,10 +415,12 @@ int main_gdbserver(int argc, char *argv[]) {
     unnamed_pipe = (pipe_t)Arg;
   }
   if (Args.hasArg(OPT_fd)) {
-    if (!llvm::to_integer(Args.getLastArgValue(OPT_fd), connection_fd)) {
+    int64_t fd;
+    if (!llvm::to_integer(Args.getLastArgValue(OPT_fd), fd)) {
       WithColor::error() << "invalid '--fd' argument\n" << HelpText;
       return 1;
     }
+    connection_fd = (shared_fd_t)fd;
   }
 
   if (!LLDBServerUtilities::SetupLogging(
@@ -423,7 +436,7 @@ int main_gdbserver(int argc, char *argv[]) {
     for (const char *Val : Arg->getValues())
       Inputs.push_back(Val);
   }
-  if (Inputs.empty() && connection_fd == -1) {
+  if (Inputs.empty() && connection_fd == SharedSocket::kInvalidFD) {
     WithColor::error() << "no connection arguments\n" << HelpText;
     return 1;
   }
@@ -432,7 +445,7 @@ int main_gdbserver(int argc, char *argv[]) {
   GDBRemoteCommunicationServerLLGS gdb_server(mainloop, manager);
 
   llvm::StringRef host_and_port;
-  if (!Inputs.empty()) {
+  if (!Inputs.empty() && connection_fd == SharedSocket::kInvalidFD) {
     host_and_port = Inputs.front();
     Inputs.erase(Inputs.begin());
   }

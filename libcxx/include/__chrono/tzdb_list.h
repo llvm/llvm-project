@@ -21,6 +21,7 @@
 #  include <__config>
 #  include <__fwd/string.h>
 #  include <forward_list>
+#  include <string_view>
 
 #  if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #    pragma GCC system_header

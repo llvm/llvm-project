@@ -19,7 +19,7 @@ define signext i32 @sum(ptr %a, i32 signext %n, i1 %prof.min.iters.check, <vscal
 ; CHECK-NEXT:    mv a0, a2
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:  .LBB0_4: # %vector.ph
-; CHECK-NEXT:    vsetvli a0, zero, e32, m4, ta, ma
+; CHECK-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
 ; CHECK-NEXT:    vmv.s.x v8, zero
 ; CHECK-NEXT:    vmv.v.i v12, 0
 ; CHECK-NEXT:    vsetivli zero, 1, e32, m4, ta, ma

@@ -60,30 +60,3 @@ template <class T>
 [[clang::no_specializations]] void func(); // expected-note {{marked 'no_specializations' here}}
 
 template <> void func<int>(); // expected-error {{'func' cannot be specialized}}
-
-template <class T>
-struct [[clang::no_specializations]] MemberSpecializations {
-  [[clang::no_specializations]] void member_function() {}
-  [[clang::no_specializations]] static void static_member_function();
-
-  enum [[clang::no_specializations]] member_enumeration {};
-
-  template <class>
-  struct [[clang::no_specializations]] member_class_template {};
-
-  template <class>
-  [[clang::no_specializations]] void member_function_template();
-};
-
-template <> void MemberSpecializations<int>::member_function() {}
-template <> void MemberSpecializations<int>::static_member_function() {}
-
-template <> enum MemberSpecializations<int>::member_enumeration {};
-
-template <>
-template <class T>
-MemberSpecializations<int>::member_class_template<T> {};
-
-template <>
-template <class T>
-void MemberSpecializations<int>::member_function_template<T>() {};

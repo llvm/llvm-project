@@ -15,11 +15,13 @@
 #define LLVM_CGDATA_CODEGENDATA_H
 
 #include "llvm/ADT/BitmaskEnum.h"
+#include "llvm/ADT/StableHashing.h"
 #include "llvm/Bitcode/BitcodeReader.h"
 #include "llvm/CGData/OutlinedHashTree.h"
 #include "llvm/CGData/OutlinedHashTreeRecord.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Object/ObjectFile.h"
+#include "llvm/Support/Caching.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/TargetParser/Triple.h"
 #include <mutex>
@@ -163,6 +165,74 @@ inline void
 publishOutlinedHashTree(std::unique_ptr<OutlinedHashTree> HashTree) {
   CodeGenData::getInstance().publishOutlinedHashTree(std::move(HashTree));
 }
+
+struct StreamCacheData {
+  /// Backing buffer for serialized data stream.
+  SmallVector<SmallString<0>> Outputs;
+  /// Callback function to add serialized data to the stream.
+  AddStreamFn AddStream;
+  /// Backing buffer for cached data.
+  SmallVector<std::unique_ptr<MemoryBuffer>> Files;
+  /// Cache mechanism for storing data.
+  FileCache Cache;
+
+  StreamCacheData(unsigned Size, const FileCache &OrigCache,
+                  const Twine &CachePrefix)
+      : Outputs(Size), Files(Size) {
+    AddStream = [&](size_t Task, const Twine &ModuleName) {
+      return std::make_unique<CachedFileStream>(
+          std::make_unique<raw_svector_ostream>(Outputs[Task]));
+    };
+
+    if (OrigCache.isValid()) {
+      auto CGCacheOrErr =
+          localCache("ThinLTO", CachePrefix, OrigCache.getCacheDirectoryPath(),
+                     [&](size_t Task, const Twine &ModuleName,
+                         std::unique_ptr<MemoryBuffer> MB) {
+                       Files[Task] = std::move(MB);
+                     });
+      if (Error Err = CGCacheOrErr.takeError())
+        report_fatal_error(std::move(Err));
+      Cache = std::move(*CGCacheOrErr);
+    }
+  }
+  StreamCacheData() = delete;
+
+  /// Retrieve results from either the cache or the stream.
+  std::unique_ptr<SmallVector<StringRef>> getResult() {
+    unsigned NumOutputs = Outputs.size();
+    auto Result = std::make_unique<SmallVector<StringRef>>(NumOutputs);
+    for (unsigned I = 0; I < NumOutputs; ++I)
+      if (Files[I])
+        (*Result)[I] = Files[I]->getBuffer();
+      else
+        (*Result)[I] = Outputs[I];
+    return Result;
+  }
+};
+
+/// Save \p TheModule before the first codegen round.
+/// \p Task represents the partition number in the parallel code generation
+/// process. \p AddStream is the callback used to add the serialized module to
+/// the stream.
+void saveModuleForTwoRounds(const Module &TheModule, unsigned Task,
+                            AddStreamFn AddStream);
+
+/// Load the optimized bitcode module for the second codegen round.
+/// \p OrigModule is the original bitcode module.
+/// \p Task identifies the partition number in the parallel code generation
+/// process. \p Context provides the environment settings for module operations.
+/// \p IRFiles contains optimized bitcode module files needed for loading.
+/// \return A unique_ptr to the loaded Module, or nullptr if loading fails.
+std::unique_ptr<Module> loadModuleForTwoRounds(BitcodeModule &OrigModule,
+                                               unsigned Task,
+                                               LLVMContext &Context,
+                                               ArrayRef<StringRef> IRFiles);
+
+/// Merge the codegen data from the scratch objects \p ObjectFiles from the
+/// first codegen round.
+/// \return the combined hash of the merged codegen data.
+Expected<stable_hash> mergeCodeGenData(ArrayRef<StringRef> ObjectFiles);
 
 void warn(Error E, StringRef Whence = "");
 void warn(Twine Message, std::string Whence = "", std::string Hint = "");

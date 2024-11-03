@@ -154,9 +154,9 @@ export namespace std {
   using std::reinterpret_pointer_cast;
   using std::static_pointer_cast;
 
-#ifndef _LIBCPP_HAS_NO_RTTI
+#if _LIBCPP_HAS_RTTI
   using std::get_deleter;
-#endif // _LIBCPP_HAS_NO_RTTI
+#endif // _LIBCPP_HAS_RTTI
 
   // [util.smartptr.shared.io], shared_ptr I/O
 

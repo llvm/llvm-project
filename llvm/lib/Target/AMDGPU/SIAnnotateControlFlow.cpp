@@ -117,13 +117,15 @@ void SIAnnotateControlFlow::initialize(Module &M, const GCNSubtarget &ST) {
   BoolUndef = PoisonValue::get(Boolean);
   IntMaskZero = ConstantInt::get(IntMask, 0);
 
-  If = Intrinsic::getDeclaration(&M, Intrinsic::amdgcn_if, { IntMask });
-  Else = Intrinsic::getDeclaration(&M, Intrinsic::amdgcn_else,
-                                   { IntMask, IntMask });
-  IfBreak = Intrinsic::getDeclaration(&M, Intrinsic::amdgcn_if_break,
-                                      { IntMask });
-  Loop = Intrinsic::getDeclaration(&M, Intrinsic::amdgcn_loop, { IntMask });
-  EndCf = Intrinsic::getDeclaration(&M, Intrinsic::amdgcn_end_cf, { IntMask });
+  If = Intrinsic::getOrInsertDeclaration(&M, Intrinsic::amdgcn_if, {IntMask});
+  Else = Intrinsic::getOrInsertDeclaration(&M, Intrinsic::amdgcn_else,
+                                           {IntMask, IntMask});
+  IfBreak = Intrinsic::getOrInsertDeclaration(&M, Intrinsic::amdgcn_if_break,
+                                              {IntMask});
+  Loop =
+      Intrinsic::getOrInsertDeclaration(&M, Intrinsic::amdgcn_loop, {IntMask});
+  EndCf = Intrinsic::getOrInsertDeclaration(&M, Intrinsic::amdgcn_end_cf,
+                                            {IntMask});
 }
 
 /// Is the branch condition uniform or did the StructurizeCFG pass

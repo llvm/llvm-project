@@ -18,8 +18,8 @@
 #include "test/UnitTest/MemoryMatcher.h"
 #include "test/UnitTest/Test.h"
 
+#include "hdr/stdio_macros.h"
 #include "src/errno/libc_errno.h"
-#include <stdio.h>
 #include <stdlib.h>
 
 using MemoryView = LIBC_NAMESPACE::testing::MemoryView;

@@ -89,18 +89,14 @@ define i64 @test_ctlz_i64(i64 %a) nounwind {
 define i8 @test_not_ctlz_i8(i8 %a) nounwind {
 ; LA32-LABEL: test_not_ctlz_i8:
 ; LA32:       # %bb.0:
-; LA32-NEXT:    ori $a1, $zero, 255
-; LA32-NEXT:    andn $a0, $a1, $a0
-; LA32-NEXT:    clz.w $a0, $a0
-; LA32-NEXT:    addi.w $a0, $a0, -24
+; LA32-NEXT:    slli.w $a0, $a0, 24
+; LA32-NEXT:    clo.w $a0, $a0
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: test_not_ctlz_i8:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    ori $a1, $zero, 255
-; LA64-NEXT:    andn $a0, $a1, $a0
-; LA64-NEXT:    clz.d $a0, $a0
-; LA64-NEXT:    addi.d $a0, $a0, -56
+; LA64-NEXT:    slli.d $a0, $a0, 56
+; LA64-NEXT:    clo.d $a0, $a0
 ; LA64-NEXT:    ret
   %neg = xor i8 %a, -1
   %tmp = call i8 @llvm.ctlz.i8(i8 %neg, i1 false)
@@ -110,18 +106,14 @@ define i8 @test_not_ctlz_i8(i8 %a) nounwind {
 define i16 @test_not_ctlz_i16(i16 %a) nounwind {
 ; LA32-LABEL: test_not_ctlz_i16:
 ; LA32:       # %bb.0:
-; LA32-NEXT:    nor $a0, $a0, $zero
-; LA32-NEXT:    bstrpick.w $a0, $a0, 15, 0
-; LA32-NEXT:    clz.w $a0, $a0
-; LA32-NEXT:    addi.w $a0, $a0, -16
+; LA32-NEXT:    slli.w $a0, $a0, 16
+; LA32-NEXT:    clo.w $a0, $a0
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: test_not_ctlz_i16:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    nor $a0, $a0, $zero
-; LA64-NEXT:    bstrpick.d $a0, $a0, 15, 0
-; LA64-NEXT:    clz.d $a0, $a0
-; LA64-NEXT:    addi.d $a0, $a0, -48
+; LA64-NEXT:    slli.d $a0, $a0, 48
+; LA64-NEXT:    clo.d $a0, $a0
 ; LA64-NEXT:    ret
   %neg = xor i16 %a, -1
   %tmp = call i16 @llvm.ctlz.i16(i16 %neg, i1 false)

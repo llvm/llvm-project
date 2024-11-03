@@ -104,4 +104,12 @@
 // RUN: %clang -target nvptx64-nvidia-cuda --cuda-feature=+ptx63 -march=sm_52 -### %s 2>&1 \
 // RUN:   | FileCheck -check-prefix=FEATURE %s
 
-// FEATURE: clang-nvlink-wrapper{{.*}}"--feature" "+ptx63"
+// FEATURE: clang-nvlink-wrapper{{.*}}"--plugin-opt=-mattr=+ptx63"
+
+//
+// Test including the libc startup files and libc
+//
+// RUN: %clang -target nvptx64-nvidia-cuda -march=sm_61 -stdlib -startfiles \
+// RUN:   -nogpulib -nogpuinc -### %s 2>&1 | FileCheck -check-prefix=STARTUP %s
+
+// STARTUP: clang-nvlink-wrapper{{.*}}"-lc" "-lm" "{{.*}}crt1.o"

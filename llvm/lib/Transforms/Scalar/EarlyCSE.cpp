@@ -362,7 +362,7 @@ static bool isEqualImpl(SimpleValue LHS, SimpleValue RHS) {
 
   if (LHSI->getOpcode() != RHSI->getOpcode())
     return false;
-  if (LHSI->isIdenticalToWhenDefined(RHSI)) {
+  if (LHSI->isIdenticalToWhenDefined(RHSI, /*IntersectAttrs=*/true)) {
     // Convergent calls implicitly depend on the set of threads that is
     // currently executing, so conservatively return false if they are in
     // different basic blocks.
@@ -551,7 +551,7 @@ bool DenseMapInfo<CallValue>::isEqual(CallValue LHS, CallValue RHS) {
   if (LHSI->isConvergent() && LHSI->getParent() != RHSI->getParent())
     return false;
 
-  return LHSI->isIdenticalTo(RHSI);
+  return LHSI->isIdenticalToWhenDefined(RHSI, /*IntersectAttrs=*/true);
 }
 
 //===----------------------------------------------------------------------===//
@@ -1307,6 +1307,23 @@ static void combineIRFlags(Instruction &From, Value *To) {
         (I->hasPoisonGeneratingFlags() && !programUndefinedIfPoison(I)))
       I->andIRFlags(&From);
   }
+  if (isa<CallBase>(&From) && isa<CallBase>(To)) {
+    // NB: Intersection of attrs between InVal.first and Inst is overly
+    // conservative. Since we only CSE readonly functions that have the same
+    // memory state, we can preserve (or possibly in some cases combine)
+    // more attributes. Likewise this implies when checking equality of
+    // callsite for CSEing, we can probably ignore more attributes.
+    // Generally poison generating attributes need to be handled with more
+    // care as they can create *new* UB if preserved/combined and violated.
+    // Attributes that imply immediate UB on the other hand would have been
+    // violated either way.
+    bool Success =
+        cast<CallBase>(To)->tryIntersectAttributes(cast<CallBase>(&From));
+    assert(Success && "Failed to intersect attributes in callsites that "
+                      "passed identical check");
+    // For NDEBUG Compile.
+    (void)Success;
+  }
 }
 
 bool EarlyCSE::overridingStores(const ParseMemoryInst &Earlier,
@@ -1632,6 +1649,7 @@ bool EarlyCSE::processNode(DomTreeNode *Node) {
           LLVM_DEBUG(dbgs() << "Skipping due to debug counter\n");
           continue;
         }
+        combineIRFlags(Inst, InVal.first);
         if (!Inst.use_empty())
           Inst.replaceAllUsesWith(InVal.first);
         salvageKnowledge(&Inst, &AC);

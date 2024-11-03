@@ -9,7 +9,6 @@
 #include "src/errno/libc_errno.h"
 #include "src/sys/prctl/prctl.h"
 #include "test/UnitTest/ErrnoSetterMatcher.h"
-#include <errno.h>
 #include <sys/prctl.h>
 
 using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Fails;

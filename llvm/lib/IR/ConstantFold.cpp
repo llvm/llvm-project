@@ -81,8 +81,9 @@ static Constant *FoldBitCast(Constant *V, Type *DestTy) {
     // Canonicalize scalar-to-vector bitcasts into vector-to-vector bitcasts
     // This allows for other simplifications (although some of them
     // can only be handled by Analysis/ConstantFolding.cpp).
-    if (isa<ConstantInt>(V) || isa<ConstantFP>(V))
-      return ConstantExpr::getBitCast(ConstantVector::get(V), DestPTy);
+    if (!isa<VectorType>(SrcTy))
+      if (isa<ConstantInt>(V) || isa<ConstantFP>(V))
+        return ConstantExpr::getBitCast(ConstantVector::get(V), DestPTy);
     return nullptr;
   }
 
@@ -580,26 +581,27 @@ Constant *llvm::ConstantFoldUnaryInstruction(unsigned Opcode, Constant *C) {
     case Instruction::FNeg:
       return ConstantFP::get(C->getContext(), neg(CV));
     }
-  } else if (auto *VTy = dyn_cast<FixedVectorType>(C->getType())) {
-
-    Type *Ty = IntegerType::get(VTy->getContext(), 32);
+  } else if (auto *VTy = dyn_cast<VectorType>(C->getType())) {
     // Fast path for splatted constants.
     if (Constant *Splat = C->getSplatValue())
       if (Constant *Elt = ConstantFoldUnaryInstruction(Opcode, Splat))
         return ConstantVector::getSplat(VTy->getElementCount(), Elt);
 
-    // Fold each element and create a vector constant from those constants.
-    SmallVector<Constant *, 16> Result;
-    for (unsigned i = 0, e = VTy->getNumElements(); i != e; ++i) {
-      Constant *ExtractIdx = ConstantInt::get(Ty, i);
-      Constant *Elt = ConstantExpr::getExtractElement(C, ExtractIdx);
-      Constant *Res = ConstantFoldUnaryInstruction(Opcode, Elt);
-      if (!Res)
-        return nullptr;
-      Result.push_back(Res);
-    }
+    if (auto *FVTy = dyn_cast<FixedVectorType>(VTy)) {
+      // Fold each element and create a vector constant from those constants.
+      Type *Ty = IntegerType::get(FVTy->getContext(), 32);
+      SmallVector<Constant *, 16> Result;
+      for (unsigned i = 0, e = FVTy->getNumElements(); i != e; ++i) {
+        Constant *ExtractIdx = ConstantInt::get(Ty, i);
+        Constant *Elt = ConstantExpr::getExtractElement(C, ExtractIdx);
+        Constant *Res = ConstantFoldUnaryInstruction(Opcode, Elt);
+        if (!Res)
+          return nullptr;
+        Result.push_back(Res);
+      }
 
-    return ConstantVector::get(Result);
+      return ConstantVector::get(Result);
+    }
   }
 
   // We don't know how to fold this.
@@ -731,11 +733,11 @@ Constant *llvm::ConstantFoldBinaryInstruction(unsigned Opcode, Constant *C1,
 
   // Handle simplifications when the RHS is a constant int.
   if (ConstantInt *CI2 = dyn_cast<ConstantInt>(C2)) {
+    if (C2 == ConstantExpr::getBinOpAbsorber(Opcode, C2->getType(),
+                                             /*AllowLHSConstant*/ false))
+      return C2;
+
     switch (Opcode) {
-    case Instruction::Mul:
-      if (CI2->isZero())
-        return C2; // X * 0 == 0
-      break;
     case Instruction::UDiv:
     case Instruction::SDiv:
       if (CI2->isZero())
@@ -749,9 +751,7 @@ Constant *llvm::ConstantFoldBinaryInstruction(unsigned Opcode, Constant *C1,
         return PoisonValue::get(CI2->getType());              // X % 0 == poison
       break;
     case Instruction::And:
-      if (CI2->isZero())
-        return C2; // X & 0 == 0
-
+      assert(!CI2->isZero() && "And zero handled above");
       if (ConstantExpr *CE1 = dyn_cast<ConstantExpr>(C1)) {
         // If and'ing the address of a global with a constant, fold it.
         if (CE1->getOpcode() == Instruction::PtrToInt &&
@@ -790,10 +790,6 @@ Constant *llvm::ConstantFoldBinaryInstruction(unsigned Opcode, Constant *C1,
           }
         }
       }
-      break;
-    case Instruction::Or:
-      if (CI2->isMinusOne())
-        return C2; // X | -1 == -1
       break;
     }
   } else if (isa<ConstantInt>(C1)) {
@@ -854,19 +850,9 @@ Constant *llvm::ConstantFoldBinaryInstruction(unsigned Opcode, Constant *C1,
       }
     }
 
-    switch (Opcode) {
-    case Instruction::SDiv:
-    case Instruction::UDiv:
-    case Instruction::URem:
-    case Instruction::SRem:
-    case Instruction::LShr:
-    case Instruction::AShr:
-    case Instruction::Shl:
-      if (CI1->isZero()) return C1;
-      break;
-    default:
-      break;
-    }
+    if (C1 == ConstantExpr::getBinOpAbsorber(Opcode, C1->getType(),
+                                             /*AllowLHSConstant*/ true))
+      return C1;
   } else if (ConstantFP *CFP1 = dyn_cast<ConstantFP>(C1)) {
     if (ConstantFP *CFP2 = dyn_cast<ConstantFP>(C2)) {
       const APFloat &C1V = CFP1->getValueAPF();
