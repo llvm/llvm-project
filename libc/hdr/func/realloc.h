@@ -1,4 +1,4 @@
-//===-- Definition of the free.h proxy ------------------------------------===//
+//===-- Definition of the realloc.h proxy ---------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,15 +6,16 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_HDR_FREE_H
-#define LLVM_LIBC_HDR_FREE_H
+#ifndef LLVM_LIBC_HDR_REALLOC_H
+#define LLVM_LIBC_HDR_REALLOC_H
 
 #ifdef LIBC_FULL_BUILD
-extern "C" void free(void *);
+#include "hdr/types/size_t.h"
+extern "C" void *realloc(void *ptr, size_t new_size);
 
 #else // Overlay mode
 
-#include "stdlib_overlay.h"
+#include "hdr/stdlib_overlay.h"
 
 #endif
 

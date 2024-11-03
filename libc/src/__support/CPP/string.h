@@ -9,9 +9,9 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_CPP_STRING_H
 #define LLVM_LIBC_SRC___SUPPORT_CPP_STRING_H
 
-#include "hdr/free.h"
-#include "hdr/malloc.h"
-#include "hdr/realloc.h"
+#include "hdr/func/free.h"
+#include "hdr/func/malloc.h"
+#include "hdr/func/realloc.h"
 #include "src/__support/CPP/string_view.h"
 #include "src/__support/integer_to_string.h" // IntegerToString
 #include "src/__support/macros/config.h"

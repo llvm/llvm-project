@@ -9,9 +9,9 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_CHARVECTOR_H
 #define LLVM_LIBC_SRC___SUPPORT_CHARVECTOR_H
 
-#include "hdr/free.h"
-#include "hdr/malloc.h"
-#include "hdr/realloc.h"
+#include "hdr/func/free.h"
+#include "hdr/func/malloc.h"
+#include "hdr/func/realloc.h"
 #include "src/__support/common.h" // LIBC_INLINE
 #include "src/__support/macros/config.h"
 

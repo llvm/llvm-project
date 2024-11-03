@@ -8,7 +8,7 @@
 
 #include "file.h"
 
-#include "hdr/realloc.h"
+#include "hdr/func/realloc.h"
 #include "hdr/stdio_macros.h"
 #include "hdr/types/off_t.h"
 #include "src/__support/CPP/new.h"

@@ -6,9 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "hdr/free.h"
-#include "hdr/malloc.h"
-#include "hdr/realloc.h"
+#include "hdr/func/free.h"
+#include "hdr/func/malloc.h"
+#include "hdr/func/realloc.h"
 #include "src/__support/arg_list.h"
 #include "src/stdio/printf.h"
 #include "src/stdio/printf_core/core_structs.h"

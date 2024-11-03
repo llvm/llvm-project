@@ -129,9 +129,9 @@ add_header_library(
   HDRS
     vasprintf_internal.h
   DEPENDS
-    libc.hdr.malloc
-    libc.hdr.free
-    libc.hdr.realloc
+    libc.hdr.func.malloc
+    libc.hdr.func.free
+    libc.hdr.func.realloc
     libc.src.__support.arg_list
     libc.src.stdio.printf_core.printf_main
     libc.src.stdio.printf_core.writer

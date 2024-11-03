@@ -81,9 +81,9 @@ add_header_library(
     string.h
   DEPENDS
     .string_view
-    libc.hdr.free
-    libc.hdr.malloc
-    libc.hdr.realloc 
+    libc.hdr.func.free
+    libc.hdr.func.malloc
+    libc.hdr.func.realloc 
     libc.src.__support.common
     libc.src.__support.integer_to_string
     libc.src.string.memory_utils.inline_memcpy
@@ -201,9 +201,9 @@ add_object_library(
   HDRS
     new.h
   DEPENDS
-    libc.hdr.free
-    libc.hdr.malloc
-    libc.hdr.aligned_alloc 
+    libc.hdr.func.free
+    libc.hdr.func.malloc
+    libc.hdr.func.aligned_alloc 
     libc.src.__support.common
     libc.src.__support.macros.properties.os
 )

@@ -9,9 +9,9 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_CPP_NEW_H
 #define LLVM_LIBC_SRC___SUPPORT_CPP_NEW_H
 
-#include "hdr/aligned_alloc.h"
-#include "hdr/free.h"
-#include "hdr/malloc.h"
+#include "hdr/func/aligned_alloc.h"
+#include "hdr/func/free.h"
+#include "hdr/func/malloc.h"
 #include "src/__support/common.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/properties/os.h"

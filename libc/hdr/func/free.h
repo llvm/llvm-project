@@ -1,4 +1,4 @@
-//===-- Definition of the malloc.h proxy ----------------------------------===//
+//===-- Definition of the free.h proxy ------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,15 +6,16 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_HDR_MALLOC_H
-#define LLVM_LIBC_HDR_MALLOC_H
+#ifndef LLVM_LIBC_HDR_FREE_H
+#define LLVM_LIBC_HDR_FREE_H
 
 #ifdef LIBC_FULL_BUILD
-extern "C" void *malloc(size_t);
+#include "hdr/types/size_t.h"
+extern "C" void free(void *);
 
 #else // Overlay mode
 
-#include "stdlib_overlay.h"
+#include "hdr/stdlib_overlay.h"
 
 #endif
 
