@@ -193,7 +193,7 @@ public:
   constexpr iterator(iterator<!Const> i)
     requires Const && (convertible_to<iterator_t<First>, iterator_t<const First>> && ... &&
                        convertible_to<iterator_t<Vs>, iterator_t<const Vs>>)
-      : parent_(std::addressof(i.parent_)), current_(std::move(i.current_)) {}
+      : parent_(i.parent_), current_(std::move(i.current_)) {}
 
   constexpr auto operator*() const {
     return __tuple_transform([](auto& i) -> decltype(auto) { return *i; }, current_);
@@ -204,13 +204,13 @@ public:
     return *this;
   }
 
-  constexpr void operator++(int) { next(); }
+  constexpr void operator++(int) { ++*this; }
 
   constexpr iterator operator++(int)
     requires forward_range<__maybe_const<Const, First>>
   {
     auto tmp = *this;
-    next();
+    ++*this;
     return tmp;
   }
 
@@ -225,7 +225,7 @@ public:
     requires cartesian_product_is_bidirectional<Const, First, Vs...>
   {
     auto tmp = *this;
-    prev();
+    --*this;
     return tmp;
   }
 
@@ -281,8 +281,8 @@ public:
     return iterator(x) -= y;
   }
 
-  friend constexpr iterator operator-(const iterator& x, const iterator& y)
-    requires cartesian_product_is_random_access<Const, First, Vs...>
+  friend constexpr difference_type operator-(const iterator& x, const iterator& y)
+    requires cartesian_is_sized_sentinel<Const, iterator_t, First, Vs...>
   {
     return x.distance_from(y.current_);
   }
@@ -290,10 +290,9 @@ public:
   friend constexpr difference_type operator-(const iterator& i, default_sentinel_t)
     requires cartesian_is_sized_sentinel<Const, sentinel_t, First, Vs...>
   {
-    MultiIterator end_tuple;
-    std::get<0>(end_tuple) = ranges::end(std::get<0>(i.parent_->bases_));
-    for (int N = 1; N <= sizeof...(Vs); N++)
-      std::get<N>(end_tuple) = ranges::begin(std::get<N>(i.parent_->bases_));
+    tuple end_tuple = [&b = i.parent_->bases_]<size_t... I>(index_sequence<I...>) {
+      return tuple{ranges::end(std::get<0>(b)), ranges::begin(std::get<1 + I>(b))...};
+    }(std::make_index_sequence<sizeof...(Vs)>{});
     return i.distance_from(end_tuple);
   }
 
@@ -311,19 +310,16 @@ public:
     requires(indirectly_swappable<iterator_t<__maybe_const<Const, First>>> && ... &&
              indirectly_swappable<iterator_t<__maybe_const<Const, Vs>>>)
   {
-    iter_swap_helper(l, r);
+    iter_swap_impl(l, r);
   }
 
 private:
-  using Parent    = __maybe_const<Const, cartesian_product_view>;
-  Parent* parent_ = nullptr;
+  using Parent        = __maybe_const<Const, cartesian_product_view>;
+  Parent* parent_     = nullptr;
   using MultiIterator = tuple<iterator_t<__maybe_const<Const, First>>, iterator_t<__maybe_const<Const, Vs>>...>;
   MultiIterator current_;
 
-  constexpr iterator(Parent& parent, decltype(current_) current)
-      : parent_(std::addressof(parent)), current_(std::move(current)) {}
-
-  template <auto N = sizeof...(Vs)>
+  template <size_t N = sizeof...(Vs)>
   constexpr void next() {
     auto& it = std::get<N>(current_);
     ++it;
@@ -335,7 +331,7 @@ private:
     }
   }
 
-  template <auto N = sizeof...(Vs)>
+  template <size_t N = sizeof...(Vs)>
   constexpr void prev() {
     auto& it = std::get<N>(current_);
     if constexpr (N > 0) {
@@ -347,7 +343,7 @@ private:
     --it;
   }
 
-  template <std::size_t N = sizeof...(Vs)>
+  template <auto N = sizeof...(Vs)>
   constexpr void advance(difference_type x) {
     if (x == 0)
       return;
@@ -416,11 +412,14 @@ private:
     return static_cast<difference_type>(0);
   }
 
+  constexpr iterator(Parent& parent, MultiIterator current)
+      : parent_(std::addressof(parent)), current_(std::move(current)) {}
+
   template <auto N = sizeof...(Vs)>
-  static constexpr void iter_swap_helper(const iterator& l, const iterator& r) {
+  static constexpr void iter_swap_impl(const iterator& l, const iterator& r) {
     ranges::iter_swap(std::get<N>(l.current_), std::get<N>(r.current_));
     if constexpr (N > 0)
-      iter_swap_helper<N - 1>(l, r);
+      iter_swap_impl<N - 1>(l, r);
   }
 };
 
