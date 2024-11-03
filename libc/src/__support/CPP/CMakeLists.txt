@@ -80,10 +80,10 @@ add_header_library(
   HDRS
     string.h
   DEPENDS
+    .string_view
     libc.hdr.free
     libc.hdr.malloc
     libc.hdr.realloc 
-    .string_view
     libc.src.__support.common
     libc.src.__support.integer_to_string
     libc.src.string.memory_utils.inline_memcpy

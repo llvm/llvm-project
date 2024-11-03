@@ -28,7 +28,7 @@ add_proxy_header_library(
   HDRS
     aligned_alloc.h
   DEPENDS
-    .stdlib_overlay.h
+    .stdlib_overlay
   FULL_BUILD_DEPENDS
     libc.include.stdlib
 )
@@ -90,6 +90,8 @@ add_proxy_header_library(
     libc.include.llvm-libc-macros.signal_macros
     libc.include.signal
 )
+
+add_header_library(stdlib_overlay HDRS stdlib_overlay.h)
 
 add_proxy_header_library(
   stdlib_macros
@@ -167,7 +169,7 @@ add_proxy_header_library(
   HDRS
     free.h
   DEPENDS
-    .stdlib_overlay.h
+    .stdlib_overlay
   FULL_BUILD_DEPENDS
     libc.include.stdlib
 )
@@ -195,7 +197,7 @@ add_proxy_header_library(
   HDRS
     malloc.h
   DEPENDS
-    .stdlib_overlay.h
+    .stdlib_overlay
   FULL_BUILD_DEPENDS
     libc.include.stdlib
 )
@@ -205,7 +207,7 @@ add_proxy_header_library(
   HDRS
     realloc.h
   DEPENDS
-    .stdlib_overlay.h
+    .stdlib_overlay
   FULL_BUILD_DEPENDS
     libc.include.stdlib
 )

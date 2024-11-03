@@ -129,12 +129,12 @@ add_header_library(
   HDRS
     vasprintf_internal.h
   DEPENDS
-    libc.src.__support.arg_list
-    libc.src.stdio.printf_core.printf_main
-    libc.src.stdio.printf_core.writer
     libc.hdr.malloc
     libc.hdr.free
     libc.hdr.realloc
+    libc.src.__support.arg_list
+    libc.src.stdio.printf_core.printf_main
+    libc.src.stdio.printf_core.writer
 )
 
 if(NOT (TARGET libc.src.__support.File.file) AND LLVM_LIBC_FULL_BUILD)
