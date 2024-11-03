@@ -1899,6 +1899,12 @@ DylibFile::DylibFile(const InterfaceFile &interface, DylibFile *umbrella,
   exportingFile = (canBeImplicitlyLinked && isImplicitlyLinked(installName))
                       ? this
                       : umbrella;
+
+  if (!canBeImplicitlyLinked)
+    for (const auto &allowableClient : interface.allowableClients())
+      allowableClients.push_back(
+          *make<std::string>(allowableClient.getInstallName().data()));
+
   auto addSymbol = [&](const llvm::MachO::Symbol &symbol,
                        const Twine &name) -> void {
     StringRef savedName = saver().save(name);
