@@ -143,11 +143,11 @@ private:
     return it;
   }
 
-  template <auto N = 0>
+  template <auto N = 1>
   constexpr bool end_is_empty() const {
-    if constexpr (N == sizeof...(Vs))
+    if constexpr (N == 1 + sizeof...(Vs))
       return false;
-    if (const auto& v = std::get<N + 1>(bases_); ranges::empty(v))
+    if (const auto& v = std::get<N>(bases_); ranges::empty(v))
       return true;
     return end_is_empty<N + 1>();
   }
