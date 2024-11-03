@@ -87,6 +87,8 @@ static_assert(__builtin_bit_cast(__int128_t, OneBit) == (LITTLE_END ? 1 : Expect
 
 #endif
 
+static_assert(check_round_trip<double>(17.0));
+
 
 namespace simple {
   constexpr int A = __builtin_bit_cast(int, 10);
@@ -119,7 +121,7 @@ namespace simple {
   static_assert(check_round_trip<unsigned>((int)0x12345678));
   static_assert(check_round_trip<unsigned>((int)0x87654321));
   static_assert(check_round_trip<unsigned>((int)0x0C05FEFE));
-  // static_assert(round_trip<float>((int)0x0C05FEFE));
+  static_assert(round_trip<float>((int)0x0C05FEFE));
 
 
   /// This works in GCC and in the bytecode interpreter, but the current interpreter
