@@ -169,8 +169,20 @@ template <input_range First, forward_range... Vs>
   requires(view<First> && ... && view<Vs>)
 template <bool Const>
 class cartesian_product_view<First, Vs...>::iterator {
+  static constexpr auto get_iterator_tag() {
+    if constexpr (cartesian_product_is_random_access<Const, First, Vs...>)
+      return random_access_iterator_tag{};
+    else if constexpr (cartesian_product_is_bidirectional<Const, First, Vs...>)
+      return bidirectional_iterator_tag{};
+    else if constexpr (forward_range<__maybe_const<Const, First>>)
+      return forward_iterator_tag{};
+    else
+      return input_iterator_tag{};
+  }
+
 public:
   using iterator_category = input_iterator_tag;
+  using iterator_concept  = decltype(get_iterator_tag());
   using value_type = tuple<range_value_t<__maybe_const<Const, First>>, range_value_t<__maybe_const<Const, Vs>>...>;
   using reference =
       tuple<range_reference_t<__maybe_const<Const, First>>, range_reference_t<__maybe_const<Const, Vs>>...>;
