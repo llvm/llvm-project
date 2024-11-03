@@ -645,6 +645,11 @@ BitVector X86RegisterInfo::getReservedRegs(const MachineFunction &MF) const {
   // Reserve low half pair registers in case they are used by RA aggressively.
   Reserved.set(X86::TMM0_TMM1);
   Reserved.set(X86::TMM2_TMM3);
+  // Reserve other pair registers.
+  if (!MF.getSubtarget<X86Subtarget>().hasAMXTRANSPOSE()) {
+    Reserved.set(X86::TMM4_TMM5);
+    Reserved.set(X86::TMM6_TMM7);
+  }
 
   assert(checkAllSuperRegsMarked(Reserved,
                                  {X86::SIL, X86::DIL, X86::BPL, X86::SPL,
