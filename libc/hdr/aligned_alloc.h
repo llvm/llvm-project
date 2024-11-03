@@ -10,7 +10,7 @@
 #define LLVM_LIBC_HDR_ALIGNED_ALLOC_H
 
 #ifdef LIBC_FULL_BUILD
-extern "C" void* aligned_alloc(size_t, size_t);
+extern "C" void *aligned_alloc(size_t, size_t);
 
 #else // Overlay mode
 

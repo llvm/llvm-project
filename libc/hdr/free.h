@@ -10,7 +10,7 @@
 #define LLVM_LIBC_HDR_FREE_H
 
 #ifdef LIBC_FULL_BUILD
-extern "C" void free(void*);
+extern "C" void free(void *);
 
 #else // Overlay mode
 

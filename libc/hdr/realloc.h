@@ -10,7 +10,7 @@
 #define LLVM_LIBC_HDR_REALLOC_H
 
 #ifdef LIBC_FULL_BUILD
-extern "C" void* realloc(void* ptr, size_t new_size);
+extern "C" void *realloc(void *ptr, size_t new_size);
 
 #else // Overlay mode
 

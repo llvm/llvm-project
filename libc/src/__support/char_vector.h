@@ -14,8 +14,8 @@
 
 #include <stddef.h> // size_t
 
-#include "hdr/malloc.h"
 #include "hdr/free.h"
+#include "hdr/malloc.h"
 #include "hdr/realloc.h"
 
 namespace LIBC_NAMESPACE_DECL {

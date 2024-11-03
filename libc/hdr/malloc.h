@@ -10,7 +10,7 @@
 #define LLVM_LIBC_HDR_MALLOC_H
 
 #ifdef LIBC_FULL_BUILD
-extern "C" void* malloc(size_t);
+extern "C" void *malloc(size_t);
 
 #else // Overlay mode
 
