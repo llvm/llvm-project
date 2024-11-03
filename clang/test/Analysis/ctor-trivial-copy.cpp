@@ -83,8 +83,9 @@ void _02_structs_with_members() {
   clang_analyzer_dump_val(Aggr2); // expected-warning {{lazyCompoundVal}}
   clang_analyzer_dump_val(Aggr3); // expected-warning {{lazyCompoundVal}}
 
-  // We have fields in the struct we copy, thus we also have the entries for the copies
-  // (and for all of their fields).
+  // We should have the same Conjured symbol for "Aggr", "Aggr2" and "Aggr3".
+  // We used to have Derived symbols for the individual fields that were
+  // copied as part of copying the whole struct.
   clang_analyzer_printState();
   // CHECK:       "store": { "pointer": "0x{{[0-9a-f]+}}", "items": [
   // CHECK-NEXT:    { "cluster": "GlobalInternalSpaceRegion", "pointer": "0x{{[0-9a-f]+}}", "items": [
@@ -97,12 +98,10 @@ void _02_structs_with_members() {
   // CHECK-NEXT:      { "kind": "Default", "offset": 0, "value": "[[AGGR_CONJ:conj_\$[0-9]+{int, LC[0-9]+, S[0-9]+, #[0-9]+}]]" }
   // CHECK-NEXT:    ]},
   // CHECK-NEXT:    { "cluster": "Aggr2", "pointer": "0x{{[0-9a-f]+}}", "items": [
-  // CHECK-NEXT:      { "kind": "Direct", "offset": 0, "value": "derived_${{[0-9]+}}{[[AGGR_CONJ]],Aggr.x}" },
-  // CHECK-NEXT:      { "kind": "Direct", "offset": 32, "value": "derived_${{[0-9]+}}{[[AGGR_CONJ]],Aggr.y}" }
+  // CHECK-NEXT:      { "kind": "Default", "offset": 0, "value": "[[AGGR_CONJ]]" }
   // CHECK-NEXT:    ]},
   // CHECK-NEXT:    { "cluster": "Aggr3", "pointer": "0x{{[0-9a-f]+}}", "items": [
-  // CHECK-NEXT:      { "kind": "Direct", "offset": 0, "value": "derived_${{[0-9]+}}{[[AGGR_CONJ]],Aggr.x}" },
-  // CHECK-NEXT:      { "kind": "Direct", "offset": 32, "value": "derived_${{[0-9]+}}{[[AGGR_CONJ]],Aggr.y}" }
+  // CHECK-NEXT:      { "kind": "Default", "offset": 0, "value": "[[AGGR_CONJ]]" }
   // CHECK-NEXT:    ]}
   // CHECK-NEXT:  ]},
 
