@@ -12,10 +12,10 @@
 #include "src/__support/common.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/properties/os.h"
-
 #include "hdr/aligned_alloc.h"
 #include "hdr/free.h"
 #include "hdr/malloc.h"
+
 #include <stddef.h> // For size_t
 
 // Defining members in the std namespace is not preferred. But, we do it here

@@ -11,7 +11,6 @@
 #include "src/stdio/printf_core/core_structs.h"
 #include "src/stdio/printf_core/printf_main.h"
 #include "src/stdio/printf_core/writer.h"
-// #include <stdlib.h> // malloc, realloc, free
 #include "hdr/free.h"
 #include "hdr/malloc.h"
 #include "hdr/realloc.h"

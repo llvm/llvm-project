@@ -15,10 +15,10 @@
 #include "src/string/memory_utils/inline_memcpy.h"
 #include "src/string/memory_utils/inline_memset.h"
 #include "src/string/string_utils.h" // string_length
-
 #include "hdr/free.h"
 #include "hdr/malloc.h"
 #include "hdr/realloc.h"
+
 #include <stddef.h> // size_t
 
 namespace LIBC_NAMESPACE_DECL {

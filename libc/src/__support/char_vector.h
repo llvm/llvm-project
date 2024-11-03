@@ -11,12 +11,11 @@
 
 #include "src/__support/common.h" // LIBC_INLINE
 #include "src/__support/macros/config.h"
-
-#include <stddef.h> // size_t
-
 #include "hdr/free.h"
 #include "hdr/malloc.h"
 #include "hdr/realloc.h"
+
+#include <stddef.h> // size_t
 
 namespace LIBC_NAMESPACE_DECL {
 
