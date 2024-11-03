@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "hdr/func/_Exit.h"
 #include "src/__support/CPP/array.h"
 #include "src/__support/CPP/utility.h"
 #include "src/stdlib/at_quick_exit.h"
