@@ -2633,9 +2633,13 @@ static Constant *ConstantFoldLibCall2(StringRef Name, Type *Ty,
   case LibFunc_scalblnf:
   case LibFunc_scalblnl:
     if (TLI->has(Func)) {
-      APFloat V = Op1->getValueAPF();
-      if (APFloat::opStatus::opOK == V.ldexp(Op2->getValueAPF()))
-        return ConstantFP::get(Ty->getContext(), V);
+      if (const auto *ConstrIntr =
+              dyn_cast_if_present<ConstrainedFPIntrinsic>(Call)) {
+        RoundingMode RM = getEvaluationRoundingMode(ConstrIntr);
+        auto tmp = ConstantFoldBinaryFP(pow, APFloat(2.0), Op2V, Ty);
+        Op1V.multiply(APFloat(tmp, RM));
+        return ConstantFP::get(Ty->getContext(), Op1V);
+      }
     }
     break;
   case LibFunc_pow:
