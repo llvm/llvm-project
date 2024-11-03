@@ -35,3 +35,27 @@ TEST_F(LlvmLibcAsinhfTest, SpecialNumbers) {
   EXPECT_FP_EQ_ALL_ROUNDING(neg_inf, LIBC_NAMESPACE::asinhf(neg_inf));
   EXPECT_MATH_ERRNO(0);
 }
+
+#ifdef LIBC_TEST_FTZ_DAZ
+
+using namespace LIBC_NAMESPACE::testing;
+
+TEST_F(LlvmLibcAsinhfTest, FTZMode) {
+  ModifyMXCSR mxcsr(FTZ);
+
+  EXPECT_FP_EQ(0.0f, LIBC_NAMESPACE::asinhf(min_denormal));
+}
+
+TEST_F(LlvmLibcAsinhfTest, DAZMode) {
+  ModifyMXCSR mxcsr(DAZ);
+
+  EXPECT_FP_EQ(0.0f, LIBC_NAMESPACE::asinhf(min_denormal));
+}
+
+TEST_F(LlvmLibcAsinhfTest, FTZDAZMode) {
+  ModifyMXCSR mxcsr(FTZ | DAZ);
+
+  EXPECT_FP_EQ(0.0f, LIBC_NAMESPACE::asinhf(min_denormal));
+}
+
+#endif

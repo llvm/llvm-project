@@ -64,8 +64,6 @@ define amdgpu_kernel void @test_convert_fp16_to_fp64(ptr addrspace(1) noalias %o
 ; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-TRUE16-NEXT:    v_cvt_f64_f32_e32 v[0:1], v0
 ; GFX11-TRUE16-NEXT:    buffer_store_b64 v[0:1], off, s[4:7], 0
-; GFX11-TRUE16-NEXT:    s_nop 0
-; GFX11-TRUE16-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-TRUE16-NEXT:    s_endpgm
 ;
 ; GFX11-FAKE16-LABEL: test_convert_fp16_to_fp64:
@@ -86,8 +84,6 @@ define amdgpu_kernel void @test_convert_fp16_to_fp64(ptr addrspace(1) noalias %o
 ; GFX11-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-FAKE16-NEXT:    v_cvt_f64_f32_e32 v[0:1], v0
 ; GFX11-FAKE16-NEXT:    buffer_store_b64 v[0:1], off, s[4:7], 0
-; GFX11-FAKE16-NEXT:    s_nop 0
-; GFX11-FAKE16-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-FAKE16-NEXT:    s_endpgm
   %val = load i16, ptr addrspace(1) %in, align 2
   %cvt = call double @llvm.convert.from.fp16.f64(i16 %val) nounwind readnone

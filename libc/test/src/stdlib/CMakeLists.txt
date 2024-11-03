@@ -259,7 +259,7 @@ add_libc_test(
   HDRS
     DivTest.h
   DEPENDS
-    libc.include.stdlib
+    libc.hdr.types.div_t
     libc.src.stdlib.div
 )
 
@@ -272,7 +272,7 @@ add_libc_test(
   HDRS
     DivTest.h
   DEPENDS
-    libc.include.stdlib
+    libc.hdr.types.ldiv_t
     libc.src.stdlib.ldiv
 )
 
@@ -285,7 +285,7 @@ add_libc_test(
   HDRS
     DivTest.h
   DEPENDS
-    libc.include.stdlib
+    libc.hdr.types.lldiv_t
     libc.src.stdlib.lldiv
 )
 
@@ -296,7 +296,7 @@ add_libc_test(
   SRCS
     bsearch_test.cpp
   DEPENDS
-    libc.include.stdlib
+    libc.hdr.types.size_t
     libc.src.stdlib.bsearch
 )
 
@@ -343,7 +343,7 @@ add_libc_test(
   SRCS
     qsort_r_test.cpp
   DEPENDS
-    libc.include.stdlib
+    libc.hdr.types.size_t
     libc.src.stdlib.qsort_r
 )
 
@@ -354,7 +354,6 @@ add_libc_test(
   SRCS
     rand_test.cpp
   DEPENDS
-    libc.include.stdlib
     libc.src.stdlib.rand
     libc.src.stdlib.srand
 )
@@ -370,7 +369,6 @@ if(LLVM_LIBC_FULL_BUILD)
     SRCS
       _Exit_test.cpp
     DEPENDS
-      libc.include.stdlib
       libc.src.stdlib._Exit
       libc.src.stdlib.exit
   )
@@ -414,7 +412,6 @@ if(LLVM_LIBC_FULL_BUILD)
     SRCS
       abort_test.cpp
     DEPENDS
-      libc.include.stdlib
       libc.include.signal
       libc.src.stdlib.abort
       libc.src.stdlib._Exit

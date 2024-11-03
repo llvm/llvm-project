@@ -9,5 +9,7 @@ int main() {
   // typedef of a reference
   td_int_ref td_to_ref_type = i;
 
+  TTT *pl_ref = &l_ref;
+  TTT *pr_ref = &r_ref;
   return l_ref; // break here
 }

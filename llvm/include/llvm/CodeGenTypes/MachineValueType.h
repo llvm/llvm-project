@@ -320,7 +320,7 @@ namespace llvm {
         llvm_unreachable("Value type is non-standard value, Other.");
       case iPTR:
         llvm_unreachable("Value type size is target-dependent. Ask TLI.");
-      case iPTRAny:
+      case pAny:
       case iAny:
       case fAny:
       case vAny:

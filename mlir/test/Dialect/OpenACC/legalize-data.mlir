@@ -1,5 +1,5 @@
-// RUN: mlir-opt -split-input-file --openacc-legalize-data %s | FileCheck %s --check-prefixes=CHECK,DEVICE
-// RUN: mlir-opt -split-input-file --openacc-legalize-data=host-to-device=false %s | FileCheck %s --check-prefixes=CHECK,HOST
+// RUN: mlir-opt -split-input-file --openacc-legalize-data-values %s | FileCheck %s --check-prefixes=CHECK,DEVICE
+// RUN: mlir-opt -split-input-file --openacc-legalize-data-values=host-to-device=false %s | FileCheck %s --check-prefixes=CHECK,HOST
 
 func.func @test(%a: memref<10xf32>, %i : index) {
   %create = acc.create varPtr(%a : memref<10xf32>) -> memref<10xf32>
@@ -54,6 +54,32 @@ func.func @test(%a: memref<10xf32>, %i : index) {
 // CHECK-SAME: (%[[A:.*]]: memref<10xf32>, %[[I:.*]]: index)
 // CHECK: %[[CREATE:.*]] = acc.create varPtr(%[[A]] : memref<10xf32>) -> memref<10xf32>
 // CHECK: acc.kernels dataOperands(%[[CREATE]] : memref<10xf32>) {
+// DEVICE:   %{{.*}} = memref.load %[[CREATE]][%[[I]]] : memref<10xf32>
+// HOST:    %{{.*}} = memref.load %[[A]][%[[I]]] : memref<10xf32>
+// CHECK:   acc.terminator
+// CHECK: }
+
+// -----
+
+func.func @test(%a: memref<10xf32>, %i : index) {
+  %create = acc.create varPtr(%a : memref<10xf32>) -> memref<10xf32>
+  acc.data dataOperands(%create : memref<10xf32>) {
+    %c0 = arith.constant 0.000000e+00 : f32
+    memref.store %c0, %a[%i] : memref<10xf32>
+    acc.serial {
+      %cs = memref.load %a[%i] : memref<10xf32>
+      acc.yield
+    }
+    acc.terminator
+  }
+  return
+}
+
+// CHECK-LABEL: func.func @test
+// CHECK-SAME: (%[[A:.*]]: memref<10xf32>, %[[I:.*]]: index)
+// CHECK: %[[CREATE:.*]] = acc.create varPtr(%[[A]] : memref<10xf32>) -> memref<10xf32>
+// CHECK: acc.data dataOperands(%[[CREATE]] : memref<10xf32>) {
+// CHECK: memref.store %{{.*}}, %[[A]][%[[I]]] : memref<10xf32>
 // DEVICE:   %{{.*}} = memref.load %[[CREATE]][%[[I]]] : memref<10xf32>
 // HOST:    %{{.*}} = memref.load %[[A]][%[[I]]] : memref<10xf32>
 // CHECK:   acc.terminator

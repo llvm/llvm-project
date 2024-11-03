@@ -1,0 +1,137 @@
+add_entrypoint_object(
+  creal
+  SRCS
+    creal.cpp
+  HDRS
+    ../creal.h
+  COMPILE_OPTIONS
+    -O3
+  DEPENDS
+    libc.src.__support.CPP.bit
+    libc.src.__support.complex_type
+)
+
+add_entrypoint_object(
+  crealf
+  SRCS
+    crealf.cpp
+  HDRS
+    ../crealf.h
+  COMPILE_OPTIONS
+    -O3
+  DEPENDS
+    libc.src.__support.CPP.bit
+    libc.src.__support.complex_type
+)
+
+add_entrypoint_object(
+  creall
+  SRCS
+    creall.cpp
+  HDRS
+    ../creall.h
+  COMPILE_OPTIONS
+    -O3
+  DEPENDS
+    libc.src.__support.CPP.bit
+    libc.src.__support.complex_type
+)
+
+add_entrypoint_object(
+  crealf16
+  SRCS
+    crealf16.cpp
+  HDRS
+    ../crealf16.h
+  COMPILE_OPTIONS
+    -O3
+  DEPENDS
+    libc.src.__support.CPP.bit
+    libc.src.__support.complex_type
+    libc.src.__support.macros.properties.types
+    libc.src.__support.macros.properties.complex_types
+)
+
+add_entrypoint_object(
+  crealf128
+  SRCS
+    crealf128.cpp
+  HDRS
+    ../crealf128.h
+  COMPILE_OPTIONS
+    -O3
+  DEPENDS
+    libc.src.__support.CPP.bit
+    libc.src.__support.complex_type
+    libc.src.__support.macros.properties.types
+    libc.src.__support.macros.properties.complex_types
+)
+
+add_entrypoint_object(
+  cimag
+  SRCS
+    cimag.cpp
+  HDRS
+    ../cimag.h
+  COMPILE_OPTIONS
+    -O3
+  DEPENDS
+    libc.src.__support.CPP.bit
+    libc.src.__support.complex_type
+)
+
+add_entrypoint_object(
+  cimagf
+  SRCS
+    cimagf.cpp
+  HDRS
+    ../cimagf.h
+  COMPILE_OPTIONS
+    -O3
+  DEPENDS
+    libc.src.__support.CPP.bit
+    libc.src.__support.complex_type
+)
+
+add_entrypoint_object(
+  cimagl
+  SRCS
+    cimagl.cpp
+  HDRS
+    ../cimagl.h
+  COMPILE_OPTIONS
+    -O3
+  DEPENDS
+    libc.src.__support.CPP.bit
+    libc.src.__support.complex_type
+)
+
+add_entrypoint_object(
+  cimagf16
+  SRCS
+    cimagf16.cpp
+  HDRS
+    ../cimagf16.h
+  COMPILE_OPTIONS
+    -O3
+  DEPENDS
+    libc.src.__support.CPP.bit
+    libc.src.__support.complex_type
+    libc.src.__support.macros.properties.types
+    libc.src.__support.macros.properties.complex_types
+)
+
+add_entrypoint_object(
+  cimagf128
+  SRCS
+    cimagf128.cpp
+  HDRS
+    ../cimagf128.h
+  COMPILE_OPTIONS
+    -O3
+  DEPENDS
+    libc.src.__support.CPP.bit
+    libc.src.__support.complex_type
+    libc.src.__support.macros.properties.types
+    libc.src.__support.macros.properties.complex_types
+)
