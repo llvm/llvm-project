@@ -425,7 +425,9 @@ bool ValueObjectPrinter::PrintValueAndSummaryIfNeeded(bool &value_printed,
         if (m_options.m_hide_pointer_value &&
             IsPointerValue(m_valobj->GetCompilerType())) {
         } else {
-          m_stream->Printf(" %s", m_value.c_str());
+          if (!m_options.m_hide_name)
+            m_stream->PutChar(' ');
+          m_stream->PutCString(m_value);
           value_printed = true;
         }
       }

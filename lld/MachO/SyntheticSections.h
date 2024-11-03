@@ -162,7 +162,7 @@ public:
 
   void addEntry(const InputSection *isec, uint64_t offset) {
     if (config->isPic)
-      locations.push_back({isec, offset});
+      locations.emplace_back(isec, offset);
   }
 
 private:
@@ -174,7 +174,7 @@ struct BindingEntry {
   int64_t addend;
   Location target;
   BindingEntry(int64_t addend, Location target)
-      : addend(addend), target(std::move(target)) {}
+      : addend(addend), target(target) {}
 };
 
 template <class Sym>

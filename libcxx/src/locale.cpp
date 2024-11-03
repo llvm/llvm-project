@@ -118,7 +118,7 @@ countof(const T * const begin, const T * const end)
 
 _LIBCPP_NORETURN static void __throw_runtime_error(const string &msg)
 {
-#ifndef _LIBCPP_NO_EXCEPTIONS
+#ifndef _LIBCPP_HAS_NO_EXCEPTIONS
     throw runtime_error(msg);
 #else
     (void)msg;
@@ -236,10 +236,10 @@ locale::__imp::__imp(const string& name, size_t refs)
       facets_(N),
       name_(name)
 {
-#ifndef _LIBCPP_NO_EXCEPTIONS
+#ifndef _LIBCPP_HAS_NO_EXCEPTIONS
     try
     {
-#endif // _LIBCPP_NO_EXCEPTIONS
+#endif // _LIBCPP_HAS_NO_EXCEPTIONS
         facets_ = locale::classic().__locale_->facets_;
         for (unsigned i = 0; i < facets_.size(); ++i)
             if (facets_[i])
@@ -286,7 +286,7 @@ _LIBCPP_SUPPRESS_DEPRECATED_POP
 #ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
         install(new messages_byname<wchar_t>(name_));
 #endif
-#ifndef _LIBCPP_NO_EXCEPTIONS
+#ifndef _LIBCPP_HAS_NO_EXCEPTIONS
     }
     catch (...)
     {
@@ -295,7 +295,7 @@ _LIBCPP_SUPPRESS_DEPRECATED_POP
                 facets_[i]->__release_shared();
         throw;
     }
-#endif // _LIBCPP_NO_EXCEPTIONS
+#endif // _LIBCPP_HAS_NO_EXCEPTIONS
 }
 
 locale::__imp::__imp(const __imp& other)
@@ -316,10 +316,10 @@ locale::__imp::__imp(const __imp& other, const string& name, locale::category c)
     for (unsigned i = 0; i < facets_.size(); ++i)
         if (facets_[i])
             facets_[i]->__add_shared();
-#ifndef _LIBCPP_NO_EXCEPTIONS
+#ifndef _LIBCPP_HAS_NO_EXCEPTIONS
     try
     {
-#endif // _LIBCPP_NO_EXCEPTIONS
+#endif // _LIBCPP_HAS_NO_EXCEPTIONS
         if (c & locale::collate)
         {
             install(new collate_byname<char>(name));
@@ -380,7 +380,7 @@ _LIBCPP_SUPPRESS_DEPRECATED_POP
             install(new messages_byname<wchar_t>(name));
 #endif
         }
-#ifndef _LIBCPP_NO_EXCEPTIONS
+#ifndef _LIBCPP_HAS_NO_EXCEPTIONS
     }
     catch (...)
     {
@@ -389,7 +389,7 @@ _LIBCPP_SUPPRESS_DEPRECATED_POP
                 facets_[i]->__release_shared();
         throw;
     }
-#endif // _LIBCPP_NO_EXCEPTIONS
+#endif // _LIBCPP_HAS_NO_EXCEPTIONS
 }
 
 template<class F>
@@ -409,10 +409,10 @@ locale::__imp::__imp(const __imp& other, const __imp& one, locale::category c)
     for (unsigned i = 0; i < facets_.size(); ++i)
         if (facets_[i])
             facets_[i]->__add_shared();
-#ifndef _LIBCPP_NO_EXCEPTIONS
+#ifndef _LIBCPP_HAS_NO_EXCEPTIONS
     try
     {
-#endif // _LIBCPP_NO_EXCEPTIONS
+#endif // _LIBCPP_HAS_NO_EXCEPTIONS
         if (c & locale::collate)
         {
             install_from<_VSTD::collate<char> >(one);
@@ -489,7 +489,7 @@ _LIBCPP_SUPPRESS_DEPRECATED_POP
             install_from<_VSTD::messages<wchar_t> >(one);
 #endif
         }
-#ifndef _LIBCPP_NO_EXCEPTIONS
+#ifndef _LIBCPP_HAS_NO_EXCEPTIONS
     }
     catch (...)
     {
@@ -498,7 +498,7 @@ _LIBCPP_SUPPRESS_DEPRECATED_POP
                 facets_[i]->__release_shared();
         throw;
     }
-#endif // _LIBCPP_NO_EXCEPTIONS
+#endif // _LIBCPP_HAS_NO_EXCEPTIONS
 }
 
 locale::__imp::__imp(const __imp& other, facet* f, long id)
@@ -6529,7 +6529,7 @@ void __do_nothing(void*) {}
 
 void __throw_runtime_error(const char* msg)
 {
-#ifndef _LIBCPP_NO_EXCEPTIONS
+#ifndef _LIBCPP_HAS_NO_EXCEPTIONS
     throw runtime_error(msg);
 #else
     (void)msg;

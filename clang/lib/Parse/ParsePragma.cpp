@@ -665,18 +665,10 @@ void Parser::HandlePragmaVisibility() {
   Actions.ActOnPragmaVisibility(VisType, VisLoc);
 }
 
-namespace {
-struct PragmaPackInfo {
-  Sema::PragmaMsStackAction Action;
-  StringRef SlotLabel;
-  Token Alignment;
-};
-} // end anonymous namespace
-
 void Parser::HandlePragmaPack() {
   assert(Tok.is(tok::annot_pragma_pack));
-  PragmaPackInfo *Info =
-    static_cast<PragmaPackInfo *>(Tok.getAnnotationValue());
+  Sema::PragmaPackInfo *Info =
+      static_cast<Sema::PragmaPackInfo *>(Tok.getAnnotationValue());
   SourceLocation PragmaLoc = Tok.getLocation();
   ExprResult Alignment;
   if (Info->Alignment.is(tok::numeric_constant)) {
@@ -2110,8 +2102,8 @@ void PragmaPackHandler::HandlePragma(Preprocessor &PP,
     return;
   }
 
-  PragmaPackInfo *Info =
-      PP.getPreprocessorAllocator().Allocate<PragmaPackInfo>(1);
+  Sema::PragmaPackInfo *Info =
+      PP.getPreprocessorAllocator().Allocate<Sema::PragmaPackInfo>(1);
   Info->Action = Action;
   Info->SlotLabel = SlotLabel;
   Info->Alignment = Alignment;

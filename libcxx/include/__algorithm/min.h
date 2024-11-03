@@ -28,7 +28,7 @@ template <class _Tp, class _Compare>
 _LIBCPP_NODISCARD_EXT inline
 _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX14
 const _Tp&
-min(const _Tp& __a, const _Tp& __b, _Compare __comp)
+min(_LIBCPP_LIFETIMEBOUND const _Tp& __a, _LIBCPP_LIFETIMEBOUND const _Tp& __b, _Compare __comp)
 {
     return __comp(__b, __a) ? __b : __a;
 }
@@ -37,7 +37,7 @@ template <class _Tp>
 _LIBCPP_NODISCARD_EXT inline
 _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX14
 const _Tp&
-min(const _Tp& __a, const _Tp& __b)
+min(_LIBCPP_LIFETIMEBOUND const _Tp& __a, _LIBCPP_LIFETIMEBOUND const _Tp& __b)
 {
     return _VSTD::min(__a, __b, __less<_Tp>());
 }

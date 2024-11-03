@@ -69,7 +69,7 @@ void PressureTracker::handleInstructionIssuedEvent(
   for (const ResourceUse &Use : Event.UsedResources) {
     const ResourceRef &RR = Use.first;
     unsigned Index = ProcResID2ResourceUsersIndex[RR.first];
-    Index += countTrailingZeros(RR.second);
+    Index += llvm::countr_zero(RR.second);
     ResourceUsers[Index] = std::make_pair(IID, Use.second.getNumerator());
   }
 }

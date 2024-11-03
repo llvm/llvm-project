@@ -9,8 +9,8 @@
 #ifndef FORTRAN_DECIMAL_BIG_RADIX_FLOATING_POINT_H_
 #define FORTRAN_DECIMAL_BIG_RADIX_FLOATING_POINT_H_
 
-// This is a helper class for use in floating-point conversions
-// between binary decimal representations.  It holds a multiple-precision
+// This is a helper class for use in floating-point conversions between
+// binary and decimal representations.  It holds a multiple-precision
 // integer value using digits of a radix that is a large even power of ten
 // (10,000,000,000,000,000 by default, 10**16).  These digits are accompanied
 // by a signed exponent that denotes multiplication by a power of ten.

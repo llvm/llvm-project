@@ -760,7 +760,7 @@ void SystemZAsmPrinter::LowerPATCHPOINT(const MachineInstr &MI,
 void SystemZAsmPrinter::emitAttributes(Module &M) {
   if (M.getModuleFlag("s390x-visible-vector-ABI")) {
     bool HasVectorFeature =
-      TM.getMCSubtargetInfo()->getFeatureBits()[SystemZ::FeatureVector];
+      TM.getMCSubtargetInfo()->hasFeature(SystemZ::FeatureVector);
     OutStreamer->emitGNUAttribute(8, HasVectorFeature ? 2 : 1);
   }
 }

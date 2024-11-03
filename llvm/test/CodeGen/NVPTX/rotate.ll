@@ -1,7 +1,7 @@
 ; RUN: llc < %s -march=nvptx -mcpu=sm_20 | FileCheck --check-prefix=SM20 %s
 ; RUN: llc < %s -march=nvptx -mcpu=sm_35 | FileCheck --check-prefix=SM35 %s
 ; RUN: %if ptxas %{ llc < %s -march=nvptx -mcpu=sm_20 | %ptxas-verify %}
-; RUN: %if ptxas %{ llc < %s -march=nvptx -mcpu=sm_35 | %ptxas-verify -arch=sm_35 %}
+; RUN: %if ptxas %{ llc < %s -march=nvptx -mcpu=sm_35 | %ptxas-verify %}
 
 
 declare i32 @llvm.nvvm.rotate.b32(i32, i32)

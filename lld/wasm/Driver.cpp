@@ -27,12 +27,12 @@
 #include "llvm/Option/Arg.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Support/CommandLine.h"
-#include "llvm/Support/Host.h"
 #include "llvm/Support/Parallel.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Process.h"
 #include "llvm/Support/TarWriter.h"
 #include "llvm/Support/TargetSelect.h"
+#include "llvm/TargetParser/Host.h"
 #include <optional>
 
 #define DEBUG_TYPE "lld"
@@ -296,7 +296,7 @@ static std::optional<std::string> findFromSearchPaths(StringRef path) {
 // search paths.
 static std::optional<std::string> searchLibraryBaseName(StringRef name) {
   for (StringRef dir : config->searchPaths) {
-    // Currently we don't enable dyanmic linking at all unless -shared or -pie
+    // Currently we don't enable dynamic linking at all unless -shared or -pie
     // are used, so don't even look for .so files in that case..
     if (config->isPic && !config->isStatic)
       if (std::optional<std::string> s = findFile(dir, "lib" + name + ".so"))
@@ -424,6 +424,14 @@ static void readConfigs(opt::InputArgList &args) {
   config->importTable = args.hasArg(OPT_import_table);
   config->importUndefined = args.hasArg(OPT_import_undefined);
   config->ltoo = args::getInteger(args, OPT_lto_O, 2);
+  if (config->ltoo > 3)
+    error("invalid optimization level for LTO: " + Twine(config->ltoo));
+  unsigned ltoCgo =
+      args::getInteger(args, OPT_lto_CGO, args::getCGOptLevel(config->ltoo));
+  if (auto level = CodeGenOpt::getLevel(ltoCgo))
+    config->ltoCgo = *level;
+  else
+    error("invalid codegen optimization level for LTO: " + Twine(ltoCgo));
   config->ltoPartitions = args::getInteger(args, OPT_lto_partitions, 1);
   config->ltoDebugPassManager = args.hasArg(OPT_lto_debug_pass_manager);
   config->mapFile = args.getLastArgValue(OPT_Map);
@@ -560,8 +568,6 @@ static void checkOptions(opt::InputArgList &args) {
     error("--compress-relocations is incompatible with output debug"
           " information. Please pass --strip-debug or --strip-all");
 
-  if (config->ltoo > 3)
-    error("invalid optimization level for LTO: " + Twine(config->ltoo));
   if (config->ltoPartitions == 0)
     error("--lto-partitions: number of threads must be > 0");
   if (!get_threadpool_strategy(config->thinLTOJobs))

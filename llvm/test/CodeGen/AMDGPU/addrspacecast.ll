@@ -1,5 +1,5 @@
-; RUN: llc -march=amdgcn -mtriple=amdgcn-amd-amdhsa -mcpu=kaveri --amdhsa-code-object-version=2 -mattr=-promote-alloca -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=HSA -check-prefix=CI %s
-; RUN: llc -march=amdgcn -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 --amdhsa-code-object-version=2 -mattr=-promote-alloca -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=HSA -check-prefix=GFX9 %s
+; RUN: llc -march=amdgcn -mtriple=amdgcn-amd-amdhsa -mcpu=kaveri -mattr=-promote-alloca -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=HSA -check-prefix=CI %s
+; RUN: llc -march=amdgcn -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -mattr=-promote-alloca -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=HSA -check-prefix=GFX9 %s
 
 ; HSA-LABEL: {{^}}use_group_to_flat_addrspacecast:
 ; HSA: enable_sgpr_private_segment_buffer = 1
@@ -414,3 +414,6 @@ attributes #0 = { nounwind }
 attributes #1 = { nounwind convergent }
 attributes #2 = { nounwind readnone }
 attributes #3 = { nounwind "amdgpu-32bit-address-high-bits"="0xffff8000" }
+
+!llvm.module.flags = !{!0}
+!0 = !{i32 1, !"amdgpu_code_object_version", i32 200}

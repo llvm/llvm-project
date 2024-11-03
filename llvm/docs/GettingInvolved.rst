@@ -292,7 +292,7 @@ don't find anyone present, chances are they happen to be off that day.
     - English, German, Spanish, French
   * - Anastasia Stulova
     - Clang internals for C/C++ language extensions and dialects, OpenCL, GPU, SPIR-V, how to contribute, women in compilers. 
-    - Monthly, 2nd Thursday of the month at 17:00 BST - London time (9:00am PT except for 2 weeks in spring), 1 hour slot.
+    - Monthly, 1st Tuesday of the month at 17:00 BST - London time (9:00am PT except for 2 weeks in spring), 30 mins slot.
     - `GoogleMeet <https://meet.google.com/kdy-fdbv-nuk>`__
     - English, Russian, German (not fluently)
   * - Alexey Bader

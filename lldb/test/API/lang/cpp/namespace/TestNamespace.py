@@ -220,8 +220,8 @@ class NamespaceTestCase(TestBase):
         # global namespace qualification with function in anonymous namespace
         self.expect_expr("myanonfunc(4)", result_value="8")
 
-        self.expect("p myanonfunc",
+        self.expect("expression myanonfunc",
                     patterns=['\(anonymous namespace\)::myanonfunc\(int\)'])
 
-        self.expect("p variadic_sum", patterns=[
+        self.expect("expression variadic_sum", patterns=[
                     '\(anonymous namespace\)::variadic_sum\(int, ...\)'])

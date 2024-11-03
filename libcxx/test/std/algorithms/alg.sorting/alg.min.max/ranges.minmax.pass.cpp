@@ -30,6 +30,7 @@
 #include <functional>
 #include <memory>
 #include <ranges>
+#include <string>
 
 #include "test_iterators.h"
 
@@ -324,6 +325,26 @@ constexpr void test_range() {
     assert(ret.min == 1);
     assert(ret.max == 4);
   }
+  {
+    // check that the input iterator isn't moved from multiple times
+    const std::string str{"this long string will be dynamically allocated"};
+    std::string a[] = {str};
+    auto range      = std::ranges::subrange(
+        cpp20_input_iterator(std::move_iterator(a)), sentinel_wrapper(cpp20_input_iterator(std::move_iterator(a + 1))));
+    auto ret = std::ranges::minmax(range);
+    assert(ret.min == str);
+    assert(ret.max == str);
+  }
+  {
+    // check that the forward iterator isn't moved from multiple times
+    const std::string str{"this long string will be dynamically allocated"};
+    std::string a[] = {str};
+    auto range =
+        std::ranges::subrange(forward_iterator(std::move_iterator(a)), forward_iterator(std::move_iterator(a + 1)));
+    auto ret = std::ranges::minmax(range);
+    assert(ret.min == str);
+    assert(ret.max == str);
+  }
 }
 
 constexpr bool test() {
@@ -337,16 +358,6 @@ constexpr bool test() {
 int main(int, char**) {
   test();
   static_assert(test());
-
-  {
-    // check that the iterator isn't moved from multiple times
-    std::shared_ptr<int> a[] = { std::make_shared<int>(42) };
-    auto range = std::ranges::subrange(std::move_iterator(a), std::move_iterator(a + 1));
-    auto [min, max] = std::ranges::minmax(range);
-    assert(a[0] == nullptr);
-    assert(min != nullptr);
-    assert(max == min);
-  }
 
   return 0;
 }

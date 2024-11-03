@@ -27,7 +27,6 @@
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/ADT/Triple.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/BinaryFormat/COFF.h"
 #include "llvm/BinaryFormat/ELF.h"
@@ -55,6 +54,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
+#include "llvm/TargetParser/Triple.h"
 #include "llvm/Transforms/Instrumentation/HWAddressSanitizer.h"
 #include <algorithm>
 #include <cassert>
@@ -1254,7 +1254,9 @@ void AArch64AsmPrinter::emitFMov0(const MachineInstr &MI) {
     switch (MI.getOpcode()) {
     default: llvm_unreachable("Unexpected opcode");
     case AArch64::FMOVH0:
-      FMov.setOpcode(AArch64::FMOVWHr);
+      FMov.setOpcode(STI->hasFullFP16() ? AArch64::FMOVWHr : AArch64::FMOVWSr);
+      if (!STI->hasFullFP16())
+        DestReg = (AArch64::S0 + (DestReg - AArch64::H0));
       FMov.addOperand(MCOperand::createReg(DestReg));
       FMov.addOperand(MCOperand::createReg(AArch64::WZR));
       break;

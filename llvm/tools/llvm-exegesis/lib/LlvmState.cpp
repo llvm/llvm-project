@@ -14,10 +14,10 @@
 #include "llvm/MC/MCFixup.h"
 #include "llvm/MC/MCObjectFileInfo.h"
 #include "llvm/MC/TargetRegistry.h"
-#include "llvm/Support/Host.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetOptions.h"
+#include "llvm/TargetParser/Host.h"
 
 namespace llvm {
 namespace exegesis {

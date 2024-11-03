@@ -646,7 +646,7 @@ getAMDProcessorTypeAndSubtype(unsigned Family, unsigned Model,
 
 static void getAvailableFeatures(unsigned ECX, unsigned EDX, unsigned MaxLeaf,
                                  unsigned *Features) {
-  unsigned EAX, EBX;
+  unsigned EAX = 0, EBX = 0;
 
 #define setFeature(F)                                                          \
   Features[F / 32] |= 1U << (F % 32)

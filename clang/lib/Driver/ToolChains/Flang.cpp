@@ -57,6 +57,13 @@ void Flang::addOtherOptions(const ArgList &Args, ArgStringList &CmdArgs) const {
                    options::OPT_fintrinsic_modules_path, options::OPT_pedantic,
                    options::OPT_std_EQ, options::OPT_W_Joined,
                    options::OPT_fconvert_EQ, options::OPT_fpass_plugin_EQ});
+
+  Arg *stackArrays =
+      Args.getLastArg(options::OPT_Ofast, options::OPT_fstack_arrays,
+                      options::OPT_fno_stack_arrays);
+  if (stackArrays &&
+      !stackArrays->getOption().matches(options::OPT_fno_stack_arrays))
+    CmdArgs.push_back("-fstack-arrays");
 }
 
 void Flang::addPicOptions(const ArgList &Args, ArgStringList &CmdArgs) const {

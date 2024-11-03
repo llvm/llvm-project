@@ -15,12 +15,12 @@
 #include "llvm/Transforms/CFGuard.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
-#include "llvm/ADT/Triple.h"
 #include "llvm/IR/CallingConv.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
+#include "llvm/TargetParser/Triple.h"
 
 using namespace llvm;
 

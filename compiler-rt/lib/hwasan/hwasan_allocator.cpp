@@ -45,6 +45,7 @@ enum {
 
 // Initialized in HwasanAllocatorInit, an never changed.
 static ALIGNED(16) u8 tail_magic[kShadowAlignment - 1];
+static uptr max_malloc_size;
 
 bool HwasanChunkView::IsAllocated() const {
   return metadata_ && metadata_->IsAllocated();
@@ -94,8 +95,7 @@ inline void Metadata::SetUnallocated() {
 }
 
 inline bool Metadata::IsAllocated() const {
-  return atomic_load(&chunk_state, memory_order_relaxed) == CHUNK_ALLOCATED &&
-         GetRequestedSize();
+  return atomic_load(&chunk_state, memory_order_relaxed) == CHUNK_ALLOCATED;
 }
 
 inline u64 Metadata::GetRequestedSize() const {
@@ -143,6 +143,12 @@ void HwasanAllocatorInit() {
                  GetAliasRegionStart());
   for (uptr i = 0; i < sizeof(tail_magic); i++)
     tail_magic[i] = GetCurrentThread()->GenerateRandomTag();
+  if (common_flags()->max_allocation_size_mb) {
+    max_malloc_size = common_flags()->max_allocation_size_mb << 20;
+    max_malloc_size = Min(max_malloc_size, kMaxAllowedMallocSize);
+  } else {
+    max_malloc_size = kMaxAllowedMallocSize;
+  }
 }
 
 void HwasanAllocatorLock() { allocator.ForceLock(); }
@@ -162,13 +168,16 @@ static uptr TaggedSize(uptr size) {
 
 static void *HwasanAllocate(StackTrace *stack, uptr orig_size, uptr alignment,
                             bool zeroise) {
-  if (orig_size > kMaxAllowedMallocSize) {
+  // Keep this consistent with LSAN and ASAN behavior.
+  if (UNLIKELY(orig_size == 0))
+    orig_size = 1;
+  if (UNLIKELY(orig_size > max_malloc_size)) {
     if (AllocatorMayReturnNull()) {
       Report("WARNING: HWAddressSanitizer failed to allocate 0x%zx bytes\n",
              orig_size);
       return nullptr;
     }
-    ReportAllocationSizeTooBig(orig_size, kMaxAllowedMallocSize, stack);
+    ReportAllocationSizeTooBig(orig_size, max_malloc_size, stack);
   }
   if (UNLIKELY(IsRssLimitExceeded())) {
     if (AllocatorMayReturnNull())
@@ -532,6 +541,13 @@ uptr GetUserBegin(uptr chunk) {
     return 0;
 
   return reinterpret_cast<uptr>(block);
+}
+
+uptr GetUserAddr(uptr chunk) {
+  tag_t mem_tag = *(tag_t *)__hwasan::MemToShadow(chunk);
+  if (!__hwasan::InTaggableRegion(chunk))
+    return chunk;
+  return AddTagToPointer(chunk, mem_tag);
 }
 
 LsanMetadata::LsanMetadata(uptr chunk) {

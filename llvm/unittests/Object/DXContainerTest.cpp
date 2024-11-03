@@ -9,6 +9,8 @@
 #include "llvm/Object/DXContainer.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/BinaryFormat/Magic.h"
+#include "llvm/ObjectYAML/DXContainerYAML.h"
+#include "llvm/ObjectYAML/yaml2obj.h"
 #include "llvm/Support/MemoryBufferRef.h"
 #include "llvm/Testing/Support/Error.h"
 #include "gtest/gtest.h"
@@ -170,4 +172,171 @@ TEST(DXCFile, ParseEmptyParts) {
     ++It; // Don't increment past the end
     EXPECT_TRUE(memcmp(It->Part.Name, "FKE6", 4) == 0);
   }
+}
+
+static Expected<DXContainer>
+generateDXContainer(StringRef Yaml, SmallVectorImpl<char> &BinaryData) {
+  DXContainerYAML::Object Obj;
+  SMDiagnostic GenerateDiag;
+  yaml::Input YIn(
+      Yaml, /*Ctxt=*/nullptr,
+      [](const SMDiagnostic &Diag, void *DiagContext) {
+        *static_cast<SMDiagnostic *>(DiagContext) = Diag;
+      },
+      &GenerateDiag);
+
+  YIn >> Obj;
+  if (YIn.error())
+    return createStringError(YIn.error(), GenerateDiag.getMessage());
+
+  raw_svector_ostream OS(BinaryData);
+  std::string ErrorMsg;
+  if (!yaml::yaml2dxcontainer(
+          Obj, OS, [&ErrorMsg](const Twine &Msg) { ErrorMsg = Msg.str(); }))
+    return createStringError(YIn.error(), ErrorMsg);
+
+  MemoryBufferRef BinaryDataRef = MemoryBufferRef(OS.str(), "");
+
+  return DXContainer::create(BinaryDataRef);
+}
+
+TEST(DXCFile, PSVResourceIterators) {
+  const char *Yaml = R"(
+--- !dxcontainer
+Header:
+  Hash:            [ 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 
+                     0x0, 0x0, 0x0, 0x0, 0x0, 0x0 ]
+  Version:
+    Major:           1
+    Minor:           0
+  PartCount:       2
+Parts:
+  - Name:            PSV0
+    Size:            144
+    PSVInfo:
+      Version:         0
+      ShaderStage:     14
+      PayloadSizeInBytes: 4092
+      MinimumWaveLaneCount: 0
+      MaximumWaveLaneCount: 4294967295
+      Resources:
+        - Type:            1
+          Space:           1
+          LowerBound:      1
+          UpperBound:      1
+        - Type:            2
+          Space:           2
+          LowerBound:      2
+          UpperBound:      2
+        - Type:            3
+          Space:           3
+          LowerBound:      3
+          UpperBound:      3
+  - Name:            DXIL
+    Size:            24
+    Program:
+      MajorVersion:    6
+      MinorVersion:    0
+      ShaderKind:      14
+      Size:            6
+      DXILMajorVersion: 0
+      DXILMinorVersion: 1
+      DXILSize:        0
+...
+)";
+
+  SmallVector<char, 256> BinaryData;
+  auto C = generateDXContainer(Yaml, BinaryData);
+
+  ASSERT_THAT_EXPECTED(C, Succeeded());
+
+  const auto &PSVInfo = C->getPSVInfo();
+  ASSERT_TRUE(PSVInfo.has_value());
+
+  EXPECT_EQ(PSVInfo->getResourceCount(), 3u);
+
+  auto It = PSVInfo->getResources().begin();
+
+  EXPECT_TRUE(It == PSVInfo->getResources().begin());
+
+  dxbc::PSV::v2::ResourceBindInfo Binding;
+
+  Binding = *It;
+  EXPECT_EQ(Binding.Type, 1u);
+  EXPECT_EQ(Binding.Flags, 0u);
+
+  ++It;
+  Binding = *It;
+
+  EXPECT_EQ(Binding.Type, 2u);
+  EXPECT_EQ(Binding.Flags, 0u);
+
+  --It;
+  Binding = *It;
+
+  EXPECT_TRUE(It == PSVInfo->getResources().begin());
+
+  EXPECT_EQ(Binding.Type, 1u);
+  EXPECT_EQ(Binding.Flags, 0u);
+
+  --It;
+  Binding = *It;
+
+  EXPECT_EQ(Binding.Type, 1u);
+  EXPECT_EQ(Binding.Flags, 0u);
+
+  ++It;
+  Binding = *It;
+
+  EXPECT_EQ(Binding.Type, 2u);
+  EXPECT_EQ(Binding.Flags, 0u);
+
+  ++It;
+  Binding = *It;
+
+  EXPECT_EQ(Binding.Type, 3u);
+  EXPECT_EQ(Binding.Flags, 0u);
+
+  EXPECT_FALSE(It == PSVInfo->getResources().end());
+
+  ++It;
+  Binding = *It;
+
+  EXPECT_TRUE(It == PSVInfo->getResources().end());
+  EXPECT_FALSE(It != PSVInfo->getResources().end());
+
+  EXPECT_EQ(Binding.Type, 0u);
+  EXPECT_EQ(Binding.Flags, 0u);
+
+  {
+    auto Old = It++;
+    Binding = *Old;
+
+    EXPECT_TRUE(Old == PSVInfo->getResources().end());
+    EXPECT_FALSE(Old != PSVInfo->getResources().end());
+
+    EXPECT_EQ(Binding.Type, 0u);
+    EXPECT_EQ(Binding.Flags, 0u);
+  }
+
+  Binding = *It;
+
+  EXPECT_TRUE(It == PSVInfo->getResources().end());
+
+  EXPECT_EQ(Binding.Type, 0u);
+  EXPECT_EQ(Binding.Flags, 0u);
+
+  {
+    auto Old = It--;
+    Binding = *Old;
+    EXPECT_TRUE(Old == PSVInfo->getResources().end());
+
+    EXPECT_EQ(Binding.Type, 0u);
+    EXPECT_EQ(Binding.Flags, 0u);
+  }
+  
+  Binding = *It;
+
+  EXPECT_EQ(Binding.Type, 3u);
+  EXPECT_EQ(Binding.Flags, 0u);
 }

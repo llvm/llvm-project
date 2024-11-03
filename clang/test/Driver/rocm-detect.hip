@@ -80,12 +80,12 @@
 // ROCM-REL: ROCm installation search path: {{.*}}/opt/rocm
 // ROCM-REL: ROCm installation search path: {{.*}}/opt/rocm-3.10.0
 
-// SPACK: ROCm installation search path (Spack 4.0.0): [[DIR:.*]]
+// SPACK: InstalledDir: [[DIR:.*]]/llvm-amdgpu-4.0.0-ieagcs7inf7runpyfvepqkurasoglq4z/bin
+// SPACK: ROCm installation search path (Spack 4.0.0): [[DIR]]
 // SPACK: ROCm installation search path: [[CLANG:.*]]
 // SPACK: ROCm installation search path: [[DIR]]/llvm-amdgpu-4.0.0-ieagcs7inf7runpyfvepqkurasoglq4z
 // SPACK: ROCm installation search path: [[DIR]]/llvm-amdgpu-4.0.0-ieagcs7inf7runpyfvepqkurasoglq4z/lib/clang
 // SPACK: ROCm installation search path: /opt/rocm
-// SPACK: InstalledDir: [[DIR]]/llvm-amdgpu-4.0.0-ieagcs7inf7runpyfvepqkurasoglq4z/bin
 // SPACK: Found HIP installation: [[DIR]]/hip-4.0.0-5f63slrursbrvfe2txrrjkynbsywsob5, version 4.0.20214-a2917cd
 // SPACK: "-triple" "amdgcn-amd-amdhsa"
 // SPACK-SAME: "-mlink-builtin-bitcode" "[[DIR]]/llvm-amdgpu-4.0.0-ieagcs7inf7runpyfvepqkurasoglq4z/amdgcn/bitcode/hip.bc"

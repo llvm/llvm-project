@@ -46,19 +46,32 @@ define i32 @udiv_constant_add(i32 %a) nounwind {
 ; RV32-NEXT:    srli a0, a0, 2
 ; RV32-NEXT:    ret
 ;
-; RV64-LABEL: udiv_constant_add:
-; RV64:       # %bb.0:
-; RV64-NEXT:    slli a1, a0, 32
-; RV64-NEXT:    lui a2, 149797
-; RV64-NEXT:    addiw a2, a2, -1755
-; RV64-NEXT:    slli a2, a2, 32
-; RV64-NEXT:    mulhu a1, a1, a2
-; RV64-NEXT:    srli a1, a1, 32
-; RV64-NEXT:    subw a0, a0, a1
-; RV64-NEXT:    srliw a0, a0, 1
-; RV64-NEXT:    add a0, a0, a1
-; RV64-NEXT:    srli a0, a0, 2
-; RV64-NEXT:    ret
+; RV64IM-LABEL: udiv_constant_add:
+; RV64IM:       # %bb.0:
+; RV64IM-NEXT:    slli a1, a0, 32
+; RV64IM-NEXT:    lui a2, 149797
+; RV64IM-NEXT:    addiw a2, a2, -1755
+; RV64IM-NEXT:    slli a2, a2, 32
+; RV64IM-NEXT:    mulhu a1, a1, a2
+; RV64IM-NEXT:    srli a1, a1, 32
+; RV64IM-NEXT:    subw a0, a0, a1
+; RV64IM-NEXT:    srliw a0, a0, 1
+; RV64IM-NEXT:    add a0, a0, a1
+; RV64IM-NEXT:    srli a0, a0, 2
+; RV64IM-NEXT:    ret
+;
+; RV64IMZB-LABEL: udiv_constant_add:
+; RV64IMZB:       # %bb.0:
+; RV64IMZB-NEXT:    zext.w a1, a0
+; RV64IMZB-NEXT:    lui a2, 149797
+; RV64IMZB-NEXT:    addiw a2, a2, -1755
+; RV64IMZB-NEXT:    mul a1, a1, a2
+; RV64IMZB-NEXT:    srli a1, a1, 32
+; RV64IMZB-NEXT:    subw a0, a0, a1
+; RV64IMZB-NEXT:    srliw a0, a0, 1
+; RV64IMZB-NEXT:    add a0, a0, a1
+; RV64IMZB-NEXT:    srli a0, a0, 2
+; RV64IMZB-NEXT:    ret
   %1 = udiv i32 %a, 7
   ret i32 %1
 }

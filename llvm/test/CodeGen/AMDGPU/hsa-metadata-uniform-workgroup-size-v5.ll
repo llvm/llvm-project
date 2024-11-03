@@ -1,5 +1,5 @@
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 --amdhsa-code-object-version=5 -filetype=obj -o - < %s | llvm-readelf --notes - | FileCheck %s
-; RUN: llc -mtriple=amdgcn--amdhsa -mcpu=gfx900 --amdhsa-code-object-version=5 < %s | FileCheck %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -filetype=obj -o - < %s | llvm-readelf --notes - | FileCheck %s
+; RUN: llc -mtriple=amdgcn--amdhsa -mcpu=gfx900 < %s | FileCheck %s
 
 ; CHECK: ---
 ; CHECK: amdhsa.kernels:
@@ -28,3 +28,6 @@ bb:
 }
 attributes #0 = { "uniform-work-group-size"="true" }
 attributes #1 = { "uniform-work-group-size"="false" }
+
+!llvm.module.flags = !{!0}
+!0 = !{i32 1, !"amdgpu_code_object_version", i32 500}

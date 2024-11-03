@@ -63,12 +63,11 @@ using LVScopeKindSet = std::set<LVScopeKind>;
 using LVScopeDispatch = std::map<LVScopeKind, LVScopeGetFunction>;
 using LVScopeRequest = std::vector<LVScopeGetFunction>;
 
-using LVOffsetList = std::list<LVOffset>;
 using LVOffsetElementMap = std::map<LVOffset, LVElement *>;
-using LVOffsetLinesMap = std::map<LVOffset, LVLines *>;
-using LVOffsetLocationsMap = std::map<LVOffset, LVLocations *>;
+using LVOffsetLinesMap = std::map<LVOffset, LVLines>;
+using LVOffsetLocationsMap = std::map<LVOffset, LVLocations>;
 using LVOffsetSymbolMap = std::map<LVOffset, LVSymbol *>;
-using LVTagOffsetsMap = std::map<dwarf::Tag, LVOffsetList *>;
+using LVTagOffsetsMap = std::map<dwarf::Tag, LVOffsets>;
 
 // Class to represent a DWARF Scope.
 class LVScope : public LVElement {
@@ -100,7 +99,8 @@ class LVScope : public LVElement {
   // Calculate coverage factor.
   void calculateCoverage() {
     float CoveragePercentage = 0;
-    LVLocation::calculateCoverage(Ranges, CoverageFactor, CoveragePercentage);
+    LVLocation::calculateCoverage(Ranges.get(), CoverageFactor,
+                                  CoveragePercentage);
   }
 
   // Decide if the scope will be printed, using some conditions given by:
@@ -117,11 +117,11 @@ class LVScope : public LVElement {
 
 protected:
   // Types, Symbols, Scopes, Lines, Locations in this scope.
-  LVAutoTypes *Types = nullptr;
-  LVAutoSymbols *Symbols = nullptr;
-  LVAutoScopes *Scopes = nullptr;
-  LVAutoLines *Lines = nullptr;
-  LVAutoLocations *Ranges = nullptr;
+  std::unique_ptr<LVTypes> Types;
+  std::unique_ptr<LVSymbols> Symbols;
+  std::unique_ptr<LVScopes> Scopes;
+  std::unique_ptr<LVLines> Lines;
+  std::unique_ptr<LVLocations> Ranges;
 
   // Vector of elements (types, scopes and symbols).
   // It is the union of (*Types, *Symbols and *Scopes) to be used for
@@ -129,7 +129,7 @@ protected:
   // - Preserve the order the logical elements are read in.
   // - To have a single container with all the logical elements, when
   //   the traversal does not require any specific element kind.
-  LVElements *Children = nullptr;
+  std::unique_ptr<LVElements> Children;
 
   // Resolve the template parameters/arguments relationship.
   void resolveTemplate();
@@ -150,7 +150,7 @@ public:
   }
   LVScope(const LVScope &) = delete;
   LVScope &operator=(const LVScope &) = delete;
-  virtual ~LVScope();
+  virtual ~LVScope() = default;
 
   static bool classof(const LVElement *Element) {
     return Element->getSubclassID() == LVSubclassID::LV_SCOPE;
@@ -202,12 +202,12 @@ public:
   const char *kind() const override;
 
   // Get the specific children.
-  const LVLines *getLines() const { return Lines; }
-  const LVLocations *getRanges() const { return Ranges; }
-  const LVScopes *getScopes() const { return Scopes; }
-  const LVSymbols *getSymbols() const { return Symbols; }
-  const LVTypes *getTypes() const { return Types; }
-  const LVElements *getChildren() const { return Children; }
+  const LVLines *getLines() const { return Lines.get(); }
+  const LVLocations *getRanges() const { return Ranges.get(); }
+  const LVScopes *getScopes() const { return Scopes.get(); }
+  const LVSymbols *getSymbols() const { return Symbols.get(); }
+  const LVTypes *getTypes() const { return Types.get(); }
+  const LVElements *getChildren() const { return Children.get(); }
 
   void addElement(LVElement *Element);
   void addElement(LVLine *Line);
@@ -456,8 +456,8 @@ class LVScopeCompileUnit final : public LVScope {
                                  LVOffsetLocationsMap *Map) {
     LVOffset Offset = Element->getOffset();
     addInvalidOffset(Offset, Element);
-    addItem<LVOffsetLocationsMap, LVLocations, LVOffset, LVLocation *>(
-        Map, Offset, Location);
+    addItem<LVOffsetLocationsMap, LVOffset, LVLocation *>(Map, Offset,
+                                                          Location);
   }
 
   // Record scope sizes indexed by lexical level.
@@ -489,12 +489,7 @@ public:
   }
   LVScopeCompileUnit(const LVScopeCompileUnit &) = delete;
   LVScopeCompileUnit &operator=(const LVScopeCompileUnit &) = delete;
-  ~LVScopeCompileUnit() {
-    deleteList<LVTagOffsetsMap>(DebugTags);
-    deleteList<LVOffsetLocationsMap>(InvalidLocations);
-    deleteList<LVOffsetLocationsMap>(InvalidRanges);
-    deleteList<LVOffsetLinesMap>(LinesZero);
-  }
+  ~LVScopeCompileUnit() = default;
 
   LVScope *getCompileUnitParent() const override {
     return static_cast<LVScope *>(const_cast<LVScopeCompileUnit *>(this));

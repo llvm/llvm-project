@@ -11,7 +11,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/Triple.h"
 #include "llvm/BinaryFormat/MachO.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
@@ -28,8 +27,10 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileOutputBuffer.h"
 #include "llvm/Support/InitLLVM.h"
+#include "llvm/Support/LLVMDriver.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/WithColor.h"
+#include "llvm/TargetParser/Triple.h"
 #include "llvm/TextAPI/Architecture.h"
 #include <optional>
 
@@ -723,7 +724,7 @@ replaceSlices(LLVMContext &LLVMCtx,
   exit(EXIT_SUCCESS);
 }
 
-int llvm_lipo_main(int argc, char **argv) {
+int llvm_lipo_main(int argc, char **argv, const llvm::ToolContext &) {
   InitLLVM X(argc, argv);
   llvm::InitializeAllTargetInfos();
   llvm::InitializeAllTargetMCs();

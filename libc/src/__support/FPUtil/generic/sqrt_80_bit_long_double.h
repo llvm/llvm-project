@@ -14,12 +14,13 @@
 #include "src/__support/FPUtil/PlatformDefs.h"
 #include "src/__support/UInt128.h"
 #include "src/__support/builtin_wrappers.h"
+#include "src/__support/common.h"
 
 namespace __llvm_libc {
 namespace fputil {
 namespace x86 {
 
-inline void normalize(int &exponent, UInt128 &mantissa) {
+LIBC_INLINE void normalize(int &exponent, UInt128 &mantissa) {
   const int shift =
       unsafe_clz(static_cast<uint64_t>(mantissa)) -
       (8 * sizeof(uint64_t) - 1 - MantissaWidth<long double>::VALUE);

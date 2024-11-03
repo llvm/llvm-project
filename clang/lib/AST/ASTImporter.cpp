@@ -27,6 +27,7 @@
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/DeclVisitor.h"
 #include "clang/AST/DeclarationName.h"
+#include "clang/AST/Designator.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/ExprObjC.h"
@@ -436,8 +437,6 @@ namespace clang {
     Expected<CXXCastPath> ImportCastPath(CastExpr *E);
     Expected<APValue> ImportAPValue(const APValue &FromValue);
 
-    using Designator = DesignatedInitExpr::Designator;
-
     /// What we should import from the definition.
     enum ImportDefinitionKind {
       /// Import the default subset of the definition, which might be
@@ -836,7 +835,8 @@ ASTNodeImporter::import(const TemplateArgument &From) {
     ExpectedType ToTypeOrErr = import(From.getAsType());
     if (!ToTypeOrErr)
       return ToTypeOrErr.takeError();
-    return TemplateArgument(*ToTypeOrErr);
+    return TemplateArgument(*ToTypeOrErr, /*isNullPtr*/ false,
+                            From.getIsDefaulted());
   }
 
   case TemplateArgument::Integral: {
@@ -853,14 +853,15 @@ ASTNodeImporter::import(const TemplateArgument &From) {
     ExpectedType ToTypeOrErr = import(From.getParamTypeForDecl());
     if (!ToTypeOrErr)
       return ToTypeOrErr.takeError();
-    return TemplateArgument(*ToOrErr, *ToTypeOrErr);
+    return TemplateArgument(*ToOrErr, *ToTypeOrErr, From.getIsDefaulted());
   }
 
   case TemplateArgument::NullPtr: {
     ExpectedType ToTypeOrErr = import(From.getNullPtrType());
     if (!ToTypeOrErr)
       return ToTypeOrErr.takeError();
-    return TemplateArgument(*ToTypeOrErr, /*isNullPtr*/true);
+    return TemplateArgument(*ToTypeOrErr, /*isNullPtr*/ true,
+                            From.getIsDefaulted());
   }
 
   case TemplateArgument::Template: {
@@ -868,7 +869,7 @@ ASTNodeImporter::import(const TemplateArgument &From) {
     if (!ToTemplateOrErr)
       return ToTemplateOrErr.takeError();
 
-    return TemplateArgument(*ToTemplateOrErr);
+    return TemplateArgument(*ToTemplateOrErr, From.getIsDefaulted());
   }
 
   case TemplateArgument::TemplateExpansion: {
@@ -877,13 +878,13 @@ ASTNodeImporter::import(const TemplateArgument &From) {
     if (!ToTemplateOrErr)
       return ToTemplateOrErr.takeError();
 
-    return TemplateArgument(
-        *ToTemplateOrErr, From.getNumTemplateExpansions());
+    return TemplateArgument(*ToTemplateOrErr, From.getNumTemplateExpansions(),
+                            From.getIsDefaulted());
   }
 
   case TemplateArgument::Expression:
     if (ExpectedExpr ToExpr = import(From.getAsExpr()))
-      return TemplateArgument(*ToExpr);
+      return TemplateArgument(*ToExpr, From.getIsDefaulted());
     else
       return ToExpr.takeError();
 
@@ -960,9 +961,7 @@ Expected<DeclGroupRef> ASTNodeImporter::import(const DeclGroupRef &DG) {
                               NumDecls);
 }
 
-template <>
-Expected<ASTNodeImporter::Designator>
-ASTNodeImporter::import(const Designator &D) {
+template <> Expected<Designator> ASTNodeImporter::import(const Designator &D) {
   if (D.isFieldDesignator()) {
     IdentifierInfo *ToFieldName = Importer.Import(D.getFieldName());
 
@@ -974,7 +973,8 @@ ASTNodeImporter::import(const Designator &D) {
     if (!ToFieldLocOrErr)
       return ToFieldLocOrErr.takeError();
 
-    return Designator(ToFieldName, *ToDotLocOrErr, *ToFieldLocOrErr);
+    return Designator::CreateFieldDesignator(ToFieldName, *ToDotLocOrErr,
+                                             *ToFieldLocOrErr);
   }
 
   ExpectedSLoc ToLBracketLocOrErr = import(D.getLBracketLoc());
@@ -986,15 +986,15 @@ ASTNodeImporter::import(const Designator &D) {
     return ToRBracketLocOrErr.takeError();
 
   if (D.isArrayDesignator())
-    return Designator(D.getFirstExprIndex(),
-                      *ToLBracketLocOrErr, *ToRBracketLocOrErr);
+    return Designator::CreateArrayDesignator(
+        D.getFirstExprIndex(), *ToLBracketLocOrErr, *ToRBracketLocOrErr);
 
   ExpectedSLoc ToEllipsisLocOrErr = import(D.getEllipsisLoc());
   if (!ToEllipsisLocOrErr)
     return ToEllipsisLocOrErr.takeError();
 
   assert(D.isArrayRangeDesignator());
-  return Designator(
+  return Designator::CreateArrayRangeDesignator(
       D.getFirstExprIndex(), *ToLBracketLocOrErr, *ToEllipsisLocOrErr,
       *ToRBracketLocOrErr);
 }
@@ -1094,6 +1094,10 @@ ExpectedType ASTNodeImporter::VisitBuiltinType(const BuiltinType *T) {
   case BuiltinType::Id:                                                        \
     return Importer.getToContext().SingletonId;
 #include "clang/Basic/RISCVVTypes.def"
+#define WASM_TYPE(Name, Id, SingletonId)                                       \
+  case BuiltinType::Id:                                                        \
+    return Importer.getToContext().SingletonId;
+#include "clang/Basic/WebAssemblyReferenceTypes.def"
 #define SHARED_SINGLETON_TYPE(Expansion)
 #define BUILTIN_TYPE(Id, SingletonId) \
   case BuiltinType::Id: return Importer.getToContext().SingletonId;

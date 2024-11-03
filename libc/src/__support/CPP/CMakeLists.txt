@@ -9,7 +9,7 @@ add_header_library(
   HDRS
     bit.h
   DEPENDS
-    libc.src.__support.compiler_features
+    libc.src.__support.macros.properties.compiler
 )
 
 add_header_library(

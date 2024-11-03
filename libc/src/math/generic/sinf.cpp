@@ -14,10 +14,12 @@
 #include "src/__support/FPUtil/PolyEval.h"
 #include "src/__support/FPUtil/multiply_add.h"
 #include "src/__support/common.h"
+#include "src/__support/macros/optimization.h"            // LIBC_UNLIKELY
+#include "src/__support/macros/properties/cpu_features.h" // LIBC_TARGET_CPU_HAS_FMA
 
 #include <errno.h>
 
-#if defined(LIBC_TARGET_HAS_FMA)
+#if defined(LIBC_TARGET_CPU_HAS_FMA)
 #include "range_reduction_fma.h"
 #else
 #include "range_reduction.h"
@@ -71,11 +73,11 @@ LLVM_LIBC_FUNCTION(float, sinf, (float x)) {
   // Sollya respectively.
 
   // |x| <= pi/16
-  if (unlikely(x_abs <= 0x3e49'0fdbU)) {
+  if (LIBC_UNLIKELY(x_abs <= 0x3e49'0fdbU)) {
 
     // |x| < 0x1.d12ed2p-12f
-    if (unlikely(x_abs < 0x39e8'9769U)) {
-      if (unlikely(x_abs == 0U)) {
+    if (LIBC_UNLIKELY(x_abs < 0x39e8'9769U)) {
+      if (LIBC_UNLIKELY(x_abs == 0U)) {
         // For signed zeros.
         return x;
       }
@@ -99,11 +101,11 @@ LLVM_LIBC_FUNCTION(float, sinf, (float x)) {
       // |x| < 2^-125. For targets without FMA instructions, we simply use
       // double for intermediate results as it is more efficient than using an
       // emulated version of FMA.
-#if defined(LIBC_TARGET_HAS_FMA)
+#if defined(LIBC_TARGET_CPU_HAS_FMA)
       return fputil::multiply_add(x, -0x1.0p-25f, x);
 #else
       return static_cast<float>(fputil::multiply_add(xd, -0x1.0p-25, xd));
-#endif // LIBC_TARGET_HAS_FMA
+#endif // LIBC_TARGET_CPU_HAS_FMA
     }
 
     // |x| < pi/16.
@@ -122,7 +124,7 @@ LLVM_LIBC_FUNCTION(float, sinf, (float x)) {
     return xd * result;
   }
 
-  if (unlikely(x_abs == 0x4619'9998U)) { // x = 0x1.33333p13
+  if (LIBC_UNLIKELY(x_abs == 0x4619'9998U)) { // x = 0x1.33333p13
     float r = -0x1.63f4bap-2f;
     int rounding = fputil::get_round();
     bool sign = xbits.get_sign();
@@ -131,7 +133,7 @@ LLVM_LIBC_FUNCTION(float, sinf, (float x)) {
     return xbits.get_sign() ? -r : r;
   }
 
-  if (unlikely(x_abs >= 0x7f80'0000U)) {
+  if (LIBC_UNLIKELY(x_abs >= 0x7f80'0000U)) {
     if (x_abs == 0x7f80'0000U) {
       errno = EDOM;
       fputil::set_except(FE_INVALID);

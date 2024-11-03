@@ -8,6 +8,7 @@
 
 #include "GPUOpsLowering.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/IR/Attributes.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "llvm/ADT/STLExtras.h"
@@ -473,4 +474,19 @@ LogicalResult impl::scalarizeVectorOp(Operation *op, ValueRange operands,
 
   rewriter.replaceOp(op, result);
   return success();
+}
+
+static IntegerAttr wrapNumericMemorySpace(MLIRContext *ctx, unsigned space) {
+  return IntegerAttr::get(IntegerType::get(ctx, 64), space);
+}
+
+void mlir::populateGpuMemorySpaceAttributeConversions(
+    TypeConverter &typeConverter, const MemorySpaceMapping &mapping) {
+  typeConverter.addTypeAttributeConversion(
+      [mapping](BaseMemRefType type, gpu::AddressSpaceAttr memorySpaceAttr) {
+        gpu::AddressSpace memorySpace = memorySpaceAttr.getValue();
+        unsigned addressSpace = mapping(memorySpace);
+        return wrapNumericMemorySpace(memorySpaceAttr.getContext(),
+                                      addressSpace);
+      });
 }

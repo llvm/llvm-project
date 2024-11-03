@@ -2,7 +2,7 @@
 
 transform.sequence failures(propagate) {
 ^bb0(%arg1: !pdl.operation):
-  %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1
+  %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!pdl.operation) -> !pdl.operation
   %1, %loops:3 = transform.structured.tile %0 [4, 4, 4] : (!pdl.operation) -> (!pdl.operation, !pdl.operation, !pdl.operation, !pdl.operation)
 }
 
@@ -38,8 +38,8 @@ func.func @tile_linalg_matmul(
 
 transform.sequence failures(propagate) {
 ^bb0(%arg1: !pdl.operation):
-  %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1
-  %1 = transform.structured.match ops{["func.call"]} in %arg1
+  %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!pdl.operation) -> !pdl.operation
+  %1 = transform.structured.match ops{["func.call"]} in %arg1 : (!pdl.operation) -> !pdl.operation
   %2, %loops:3 = transform.structured.tile %0 [%1, %1, 4] : (!pdl.operation, !pdl.operation, !pdl.operation) -> (!pdl.operation, !pdl.operation, !pdl.operation, !pdl.operation)
 }
 
@@ -78,7 +78,7 @@ func.func @tile_linalg_matmul_dynamic(
 
 transform.sequence failures(propagate) {
 ^bb0(%arg1: !pdl.operation):
-  %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1
+  %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!pdl.operation) -> !pdl.operation
   // expected-note @below {{for this parameter}}
   %1 = transform.test_produce_integer_param_with_type i64 : !transform.param<i64>
   // expected-error @below {{expected as many parameter values (0) as target ops (2)}}
@@ -103,9 +103,9 @@ func.func @tile_linalg_matmul(
 
 transform.sequence failures(propagate) {
 ^bb0(%arg1: !pdl.operation):
-  %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1
+  %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!pdl.operation) -> !pdl.operation
   // expected-note @below {{for this handle}}
-  %1 = transform.structured.match ops{["arith.constant"]} in %arg1
+  %1 = transform.structured.match ops{["arith.constant"]} in %arg1 : (!pdl.operation) -> !pdl.operation
   // expected-error @below {{expected as many dynamic size-producing operations (0) as target ops (2)}}
   transform.structured.tile %0 [%1, %1, 1]
     : (!pdl.operation, !pdl.operation, !pdl.operation)

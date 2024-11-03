@@ -546,6 +546,8 @@ static bool printAsmMRegister(const X86AsmPrinter &P, const MachineOperand &MO,
     break;
   case 'h': // Print QImode high register
     Reg = getX86SubSuperRegister(Reg, 8, true);
+    if (!Reg.isValid())
+      return true;
     break;
   case 'w': // Print HImode register
     Reg = getX86SubSuperRegister(Reg, 16);

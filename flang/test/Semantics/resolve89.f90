@@ -54,7 +54,6 @@ subroutine s(iArg, allocArg, pointerArg, arrayArg, ioArg, optionalArg)
   ! This is OK
   real, dimension(merge(1, 2, allocated(mVar))) :: rVar
 
-
   integer :: var = 3
     !ERROR: Invalid specification expression: reference to impure function 'ivolatilestmtfunc'
   real, dimension(iVolatileStmtFunc()) :: arrayVarWithVolatile

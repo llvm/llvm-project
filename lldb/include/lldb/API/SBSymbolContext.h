@@ -25,7 +25,9 @@ public:
 
   SBSymbolContext(const lldb::SBSymbolContext &rhs);
 
+#ifndef SWIG
   SBSymbolContext(const lldb_private::SymbolContext &sc_ptr);
+#endif
 
   ~SBSymbolContext();
 

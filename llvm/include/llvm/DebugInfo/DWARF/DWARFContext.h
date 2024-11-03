@@ -21,7 +21,7 @@
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Support/DataExtractor.h"
 #include "llvm/Support/Error.h"
-#include "llvm/Support/Host.h"
+#include "llvm/TargetParser/Host.h"
 #include <cstdint>
 #include <memory>
 

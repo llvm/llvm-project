@@ -880,10 +880,10 @@ func.func @reduce_dispatch_0() -> tensor<4x2xf32> {
   %c4 = arith.constant 4 : index
   %cst = arith.constant 0.000000e+00 : f32
   %0 = tensor.empty() : tensor<4x2xf32>
-  %res = scf.foreach_thread (%arg0, %arg1) in (%c4, %c2) shared_outs(%o = %0) -> (tensor<4x2xf32>) {
+  %res = scf.forall (%arg0, %arg1) in (%c4, %c2) shared_outs(%o = %0) -> (tensor<4x2xf32>) {
     %1 = tensor.empty() : tensor<1x1xf32>
     %2 = linalg.fill ins(%cst : f32) outs(%1 : tensor<1x1xf32>) -> tensor<1x1xf32>
-    scf.foreach_thread.perform_concurrently {
+    scf.forall.in_parallel {
       //      CHECK: tensor.parallel_insert_slice %{{[0-9a-z]*}} into %{{[0-9a-z]*}}
       // CHECK-SAME: [%{{.*}}, %{{.*}}] [1, 1] [1, 1] : tensor<f32> into tensor<4x2xf32>
       tensor.parallel_insert_slice %2 into %o[%arg0, %arg1] [1, 1] [1, 1] :

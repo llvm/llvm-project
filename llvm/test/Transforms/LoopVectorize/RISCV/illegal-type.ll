@@ -102,38 +102,33 @@ define void @uniform_store_i1(ptr noalias %dst, ptr noalias %start, i64 %N) {
 ; CHECK-LABEL: @uniform_store_i1(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[N:%.*]], 1
-; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP0]], 4
+; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP0]], 32
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP0]], 4
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP0]], 32
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP0]], [[N_MOD_VF]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = mul i64 [[N_VEC]], 8
 ; CHECK-NEXT:    [[IND_END:%.*]] = getelementptr i8, ptr [[START:%.*]], i64 [[TMP1]]
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x ptr> poison, ptr [[START]], i64 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <2 x ptr> [[BROADCAST_SPLATINSERT]], <2 x ptr> poison, <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT3:%.*]] = insertelement <2 x ptr> poison, ptr [[START]], i64 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT4:%.*]] = shufflevector <2 x ptr> [[BROADCAST_SPLATINSERT3]], <2 x ptr> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <16 x ptr> poison, ptr [[START]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <16 x ptr> [[BROADCAST_SPLATINSERT]], <16 x ptr> poison, <16 x i32> zeroinitializer
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT2:%.*]] = insertelement <16 x ptr> poison, ptr [[START]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT3:%.*]] = shufflevector <16 x ptr> [[BROADCAST_SPLATINSERT2]], <16 x ptr> poison, <16 x i32> zeroinitializer
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[POINTER_PHI:%.*]] = phi ptr [ [[START]], [[VECTOR_PH]] ], [ [[PTR_IND:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[POINTER_PHI]], <2 x i64> <i64 0, i64 8>
-; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[POINTER_PHI]], <2 x i64> <i64 16, i64 24>
-; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x ptr> [[TMP2]], i32 0
-; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i64, ptr [[TMP4]], i32 0
-; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i64>, ptr [[TMP5]], align 4
-; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr i64, ptr [[TMP4]], i32 2
-; CHECK-NEXT:    [[WIDE_LOAD2:%.*]] = load <2 x i64>, ptr [[TMP6]], align 4
-; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i64, <2 x ptr> [[TMP2]], i64 1
-; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i64, <2 x ptr> [[TMP3]], i64 1
-; CHECK-NEXT:    [[TMP9:%.*]] = icmp eq <2 x ptr> [[TMP7]], [[BROADCAST_SPLAT]]
-; CHECK-NEXT:    [[TMP10:%.*]] = icmp eq <2 x ptr> [[TMP8]], [[BROADCAST_SPLAT4]]
-; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <2 x i1> [[TMP10]], i32 1
-; CHECK-NEXT:    store i1 [[TMP11]], ptr [[DST:%.*]], align 1
-; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
-; CHECK-NEXT:    [[PTR_IND]] = getelementptr i8, ptr [[POINTER_PHI]], i64 32
-; CHECK-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[TMP12]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP2:![0-9]+]]
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[POINTER_PHI]], <16 x i64> <i64 0, i64 8, i64 16, i64 24, i64 32, i64 40, i64 48, i64 56, i64 64, i64 72, i64 80, i64 88, i64 96, i64 104, i64 112, i64 120>
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[POINTER_PHI]], <16 x i64> <i64 128, i64 136, i64 144, i64 152, i64 160, i64 168, i64 176, i64 184, i64 192, i64 200, i64 208, i64 216, i64 224, i64 232, i64 240, i64 248>
+; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i64, <16 x ptr> [[TMP2]], i64 1
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i64, <16 x ptr> [[TMP3]], i64 1
+; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq <16 x ptr> [[TMP4]], [[BROADCAST_SPLAT]]
+; CHECK-NEXT:    [[TMP7:%.*]] = icmp eq <16 x ptr> [[TMP5]], [[BROADCAST_SPLAT3]]
+; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <16 x i1> [[TMP7]], i32 15
+; CHECK-NEXT:    store i1 [[TMP8]], ptr [[DST:%.*]], align 1
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 32
+; CHECK-NEXT:    [[PTR_IND]] = getelementptr i8, ptr [[POINTER_PHI]], i64 256
+; CHECK-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[TMP9]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP2:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP0]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[END:%.*]], label [[SCALAR_PH]]
@@ -145,12 +140,11 @@ define void @uniform_store_i1(ptr noalias %dst, ptr noalias %start, i64 %N) {
 ; CHECK-NEXT:    [[FIRST_SROA:%.*]] = phi ptr [ [[INCDEC_PTR:%.*]], [[FOR_BODY]] ], [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ]
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[IV_NEXT:%.*]], [[FOR_BODY]] ], [ [[BC_RESUME_VAL1]], [[SCALAR_PH]] ]
 ; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
-; CHECK-NEXT:    [[TMP13:%.*]] = load i64, ptr [[FIRST_SROA]], align 4
 ; CHECK-NEXT:    [[INCDEC_PTR]] = getelementptr inbounds i64, ptr [[FIRST_SROA]], i64 1
 ; CHECK-NEXT:    [[CMP_NOT:%.*]] = icmp eq ptr [[INCDEC_PTR]], [[START]]
 ; CHECK-NEXT:    store i1 [[CMP_NOT]], ptr [[DST]], align 1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i64 [[IV]], [[N]]
-; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY]], label [[END]], !llvm.loop [[LOOP4:![0-9]+]]
+; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY]], label [[END]], !llvm.loop [[LOOP5:![0-9]+]]
 ; CHECK:       end:
 ; CHECK-NEXT:    ret void
 ;
@@ -161,7 +155,6 @@ for.body:
   %first.sroa = phi ptr [ %incdec.ptr, %for.body ], [ %start, %entry ]
   %iv = phi i64 [ %iv.next, %for.body ], [ 0, %entry ]
   %iv.next = add i64 %iv, 1
-  %0 = load i64, ptr %first.sroa
   %incdec.ptr = getelementptr inbounds i64, ptr %first.sroa, i64 1
   %cmp.not = icmp eq ptr %incdec.ptr, %start
   store i1 %cmp.not, ptr %dst

@@ -1567,36 +1567,27 @@ define i8 @icmp0_v8i1(<8 x i8>) {
 ; SSE2-LABEL: icmp0_v8i1:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    punpcklbw {{.*#+}} xmm0 = xmm0[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7]
-; SSE2-NEXT:    pcmpeqd %xmm1, %xmm1
-; SSE2-NEXT:    pxor %xmm0, %xmm1
-; SSE2-NEXT:    psllw $15, %xmm1
-; SSE2-NEXT:    packsswb %xmm1, %xmm1
-; SSE2-NEXT:    pmovmskb %xmm1, %eax
-; SSE2-NEXT:    cmpb $-1, %al
+; SSE2-NEXT:    psllw $15, %xmm0
+; SSE2-NEXT:    pmovmskb %xmm0, %eax
+; SSE2-NEXT:    testl $43690, %eax # imm = 0xAAAA
 ; SSE2-NEXT:    sete %al
 ; SSE2-NEXT:    retq
 ;
 ; SSE41-LABEL: icmp0_v8i1:
 ; SSE41:       # %bb.0:
 ; SSE41-NEXT:    pmovzxbw {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
-; SSE41-NEXT:    pcmpeqd %xmm1, %xmm1
-; SSE41-NEXT:    pxor %xmm0, %xmm1
-; SSE41-NEXT:    psllw $15, %xmm1
-; SSE41-NEXT:    packsswb %xmm1, %xmm1
-; SSE41-NEXT:    pmovmskb %xmm1, %eax
-; SSE41-NEXT:    cmpb $-1, %al
+; SSE41-NEXT:    psllw $15, %xmm0
+; SSE41-NEXT:    pmovmskb %xmm0, %eax
+; SSE41-NEXT:    testl $43690, %eax # imm = 0xAAAA
 ; SSE41-NEXT:    sete %al
 ; SSE41-NEXT:    retq
 ;
 ; AVX-LABEL: icmp0_v8i1:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vpmovzxbw {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
-; AVX-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
-; AVX-NEXT:    vpxor %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    vpsllw $15, %xmm0, %xmm0
-; AVX-NEXT:    vpacksswb %xmm0, %xmm0, %xmm0
 ; AVX-NEXT:    vpmovmskb %xmm0, %eax
-; AVX-NEXT:    cmpb $-1, %al
+; AVX-NEXT:    testl $43690, %eax # imm = 0xAAAA
 ; AVX-NEXT:    sete %al
 ; AVX-NEXT:    retq
 ;

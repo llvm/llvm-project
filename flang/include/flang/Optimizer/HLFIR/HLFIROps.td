@@ -18,6 +18,8 @@ include "flang/Optimizer/HLFIR/HLFIROpBase.td"
 include "flang/Optimizer/Dialect/FIRTypes.td"
 include "flang/Optimizer/Dialect/FIRAttr.td"
 include "flang/Optimizer/Dialect/FortranVariableInterface.td"
+include "mlir/Dialect/Arith/IR/ArithBase.td"
+include "mlir/Dialect/Arith/IR/ArithOpsInterfaces.td"
 include "mlir/IR/BuiltinAttributes.td"
 
 // Base class for FIR operations.
@@ -254,6 +256,54 @@ def hlfir_SetLengthOp : hlfir_Op<"set_length", []> {
   }];
 
   let builders = [OpBuilder<(ins "mlir::Value":$string,"mlir::Value":$len)>];
+}
+
+def hlfir_SumOp : hlfir_Op<"sum", [AttrSizedOperandSegments,
+    DeclareOpInterfaceMethods<ArithFastMathInterface>]> {
+  let summary = "SUM transformational intrinsic";
+  let description = [{
+    Sums the elements of an array, optionally along a particular dimension,
+    optionally if a mask is true.
+  }];
+
+  let arguments = (ins
+    AnyFortranNumericalArrayObject:$array,
+    Optional<AnyIntegerType>:$dim,
+    Optional<AnyFortranLogicalOrI1ArrayObject>:$mask,
+    DefaultValuedAttr<Arith_FastMathAttr,
+                      "::mlir::arith::FastMathFlags::none">:$fastmath
+  );
+
+  let results = (outs hlfir_ExprType);
+
+  let assemblyFormat = [{
+    $array (`dim` $dim^)? (`mask` $mask^)? attr-dict `:` functional-type(operands, results)
+  }];
+
+  let hasVerifier = 1;
+}
+
+def hlfir_MatmulOp : hlfir_Op<"matmul",
+    [DeclareOpInterfaceMethods<ArithFastMathInterface>]> {
+  let summary = "MATMUL transformational intrinsic";
+  let description = [{
+    Matrix multiplication
+  }];
+
+  let arguments = (ins
+    AnyFortranNumericalOrLogicalArrayObject:$lhs,
+    AnyFortranNumericalOrLogicalArrayObject:$rhs,
+    DefaultValuedAttr<Arith_FastMathAttr,
+                      "::mlir::arith::FastMathFlags::none">:$fastmath
+  );
+
+  let results = (outs hlfir_ExprType);
+
+  let assemblyFormat = [{
+    $lhs $rhs attr-dict `:` functional-type(operands, results)
+  }];
+
+  let hasVerifier = 1;
 }
 
 def hlfir_AssociateOp : hlfir_Op<"associate", [AttrSizedOperandSegments,
@@ -521,6 +571,74 @@ def hlfir_DestroyOp : hlfir_Op<"destroy", []> {
   let arguments = (ins hlfir_ExprType:$expr);
 
   let assemblyFormat = "$expr attr-dict `:` qualified(type($expr))";
+}
+
+def hlfir_CopyInOp : hlfir_Op<"copy_in", []> {
+  let summary = "copy a variable into a contiguous temporary if it is not contiguous";
+  let description = [{
+    Copy a variable into a contiguous temporary if the variable is not
+    an absent optional and is not contiguous at runtime. When a copy is made this
+    operation returns the temporary as first result, otherwise, it returns the
+    potentially absent variable storage. The second result indicates if a copy
+    was made.
+
+    This operation is meant to be used in combination with the hlfir.copy_out
+    operation that deletes the temporary if it was created and copies the data
+    back if needed.
+    This operation allows passing non contiguous arrays to contiguous dummy
+    arguments, which is possible in Fortran procedure references.
+
+    To deal with the optional case, an extra boolean value can be pass to the
+    operation. In such cases, the copy-in will only be done if "var_is_present"
+    is true and, when it is false, the original value will be returned instead.
+  }];
+
+  let arguments = (ins fir_BaseBoxType:$var,
+                   Optional<I1>:$var_is_present);
+
+  let results = (outs fir_BaseBoxType, I1);
+
+  let assemblyFormat = [{
+    $var (`handle_optional` $var_is_present^)?
+    attr-dict `:` functional-type(operands, results)
+  }];
+
+  let builders = [
+    OpBuilder<(ins "mlir::Value":$var, "mlir::Value":$var_is_present)>
+  ];
+
+  let extraClassDeclaration = [{
+    /// Get the resulting copied-in fir.box or fir.class.
+    mlir::Value getCopiedIn() {
+      return getResult(0);
+    }
+
+    /// Get the result indicating if a copy was made.
+    mlir::Value getWasCopied() {
+      return getResult(1);
+    }
+  }];
+}
+
+def hlfir_CopyOutOp : hlfir_Op<"copy_out", []> {
+  let summary = "copy out a variable after a copy in";
+  let description = [{
+    If the variable was copied in a temporary in the related hlfir.copy_in,
+    optionally copy back the temporary value to it (that may have been
+    modified between the hlfir.copy_in and hlfir.copy_out). Then deallocate
+    the temporary.
+    The copy back is done if $var is provided and $was_copied is true.
+    The deallocation of $temp is done if $was_copied is true.
+  }];
+
+  let arguments = (ins fir_BaseBoxType:$temp,
+                       I1:$was_copied,
+                       Optional<fir_BaseBoxType>:$var);
+
+  let assemblyFormat = [{
+    $temp `,` $was_copied (`to` $var^)?
+    attr-dict `:` functional-type(operands, results)
+  }];
 }
 
 #endif // FORTRAN_DIALECT_HLFIR_OPS

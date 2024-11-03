@@ -14,7 +14,7 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/Option/ArgList.h"
-#include "llvm/Support/Host.h"
+#include "llvm/TargetParser/Host.h"
 
 using namespace clang::driver;
 using namespace clang::driver::tools;

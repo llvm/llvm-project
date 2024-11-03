@@ -1,15 +1,14 @@
-; RUN: opt -mtriple amdgcn-- -passes='print<divergence>' -disable-output %s 2>&1 | FileCheck %s --check-prefixes=CHECK,LOOPDA
-; RUN: opt -mtriple amdgcn-- -passes='print<uniformity>' -disable-output %s 2>&1 | FileCheck %s --check-prefixes=CHECK,CYCLEDA
+; RUN: opt -mtriple amdgcn-- -passes='print<divergence>' -disable-output %s 2>&1 | FileCheck %s
+; RUN: opt -mtriple amdgcn-- -passes='print<uniformity>' -disable-output %s 2>&1 | FileCheck %s
 
 ; CHECK-LABEL: 'test1':
 ; CHECK: DIVERGENT: i32 %bound
-; CYCLEDA: DIVERGENT: %counter =
-; LOOPDA: {{^  *}} %counter =
-; CHECK-NEXT: DIVERGENT: %break = icmp sge i32 %counter, %bound
-; CYCLEDA: DIVERGENT: %counter.next =
-; CYCLEDA: DIVERGENT: %counter.footer =
-; LOOPDA: {{^  *}}%counter.next =
-; LOOPDA: {{^  *}}%counter.footer =
+; CHECK: {{^  *}} %counter =
+; CHECK: DIVERGENT: %break = icmp sge i32 %counter, %bound
+; CHECK: DIVERGENT: br i1 %break, label %footer, label %body
+; CHECK: {{^  *}}%counter.next =
+; CHECK: {{^  *}}%counter.footer =
+; CHECK: DIVERGENT: br i1 %break, label %end, label %header
 
 ; Note: %counter is not divergent!
 

@@ -19,7 +19,7 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#if _LIBCPP_STD_VER > 14
+#if _LIBCPP_STD_VER >= 17
 template<class _Tp, class _Compare>
 _LIBCPP_NODISCARD_EXT inline
 _LIBCPP_INLINE_VISIBILITY constexpr

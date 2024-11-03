@@ -13,7 +13,7 @@
 // CHECK-RV64-NEXT:    ret <vscale x 1 x half> [[TMP0]]
 //
 vfloat16mf4_t test_vfslide1up_vf_f16mf4(vfloat16mf4_t src, _Float16 value, size_t vl) {
-  return vfslide1up(src, value, vl);
+  return __riscv_vfslide1up(src, value, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vfslide1up_vf_f16mf2(
@@ -22,7 +22,7 @@ vfloat16mf4_t test_vfslide1up_vf_f16mf4(vfloat16mf4_t src, _Float16 value, size_
 // CHECK-RV64-NEXT:    ret <vscale x 2 x half> [[TMP0]]
 //
 vfloat16mf2_t test_vfslide1up_vf_f16mf2(vfloat16mf2_t src, _Float16 value, size_t vl) {
-  return vfslide1up(src, value, vl);
+  return __riscv_vfslide1up(src, value, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vfslide1up_vf_f16m1(
@@ -31,7 +31,7 @@ vfloat16mf2_t test_vfslide1up_vf_f16mf2(vfloat16mf2_t src, _Float16 value, size_
 // CHECK-RV64-NEXT:    ret <vscale x 4 x half> [[TMP0]]
 //
 vfloat16m1_t test_vfslide1up_vf_f16m1(vfloat16m1_t src, _Float16 value, size_t vl) {
-  return vfslide1up(src, value, vl);
+  return __riscv_vfslide1up(src, value, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vfslide1up_vf_f16m2(
@@ -40,7 +40,7 @@ vfloat16m1_t test_vfslide1up_vf_f16m1(vfloat16m1_t src, _Float16 value, size_t v
 // CHECK-RV64-NEXT:    ret <vscale x 8 x half> [[TMP0]]
 //
 vfloat16m2_t test_vfslide1up_vf_f16m2(vfloat16m2_t src, _Float16 value, size_t vl) {
-  return vfslide1up(src, value, vl);
+  return __riscv_vfslide1up(src, value, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vfslide1up_vf_f16m4(
@@ -49,7 +49,7 @@ vfloat16m2_t test_vfslide1up_vf_f16m2(vfloat16m2_t src, _Float16 value, size_t v
 // CHECK-RV64-NEXT:    ret <vscale x 16 x half> [[TMP0]]
 //
 vfloat16m4_t test_vfslide1up_vf_f16m4(vfloat16m4_t src, _Float16 value, size_t vl) {
-  return vfslide1up(src, value, vl);
+  return __riscv_vfslide1up(src, value, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vfslide1up_vf_f16m8(
@@ -58,7 +58,7 @@ vfloat16m4_t test_vfslide1up_vf_f16m4(vfloat16m4_t src, _Float16 value, size_t v
 // CHECK-RV64-NEXT:    ret <vscale x 32 x half> [[TMP0]]
 //
 vfloat16m8_t test_vfslide1up_vf_f16m8(vfloat16m8_t src, _Float16 value, size_t vl) {
-  return vfslide1up(src, value, vl);
+  return __riscv_vfslide1up(src, value, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vfslide1up_vf_f32mf2(
@@ -67,7 +67,7 @@ vfloat16m8_t test_vfslide1up_vf_f16m8(vfloat16m8_t src, _Float16 value, size_t v
 // CHECK-RV64-NEXT:    ret <vscale x 1 x float> [[TMP0]]
 //
 vfloat32mf2_t test_vfslide1up_vf_f32mf2(vfloat32mf2_t src, float value, size_t vl) {
-  return vfslide1up(src, value, vl);
+  return __riscv_vfslide1up(src, value, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vfslide1up_vf_f32m1(
@@ -76,7 +76,7 @@ vfloat32mf2_t test_vfslide1up_vf_f32mf2(vfloat32mf2_t src, float value, size_t v
 // CHECK-RV64-NEXT:    ret <vscale x 2 x float> [[TMP0]]
 //
 vfloat32m1_t test_vfslide1up_vf_f32m1(vfloat32m1_t src, float value, size_t vl) {
-  return vfslide1up(src, value, vl);
+  return __riscv_vfslide1up(src, value, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vfslide1up_vf_f32m2(
@@ -85,7 +85,7 @@ vfloat32m1_t test_vfslide1up_vf_f32m1(vfloat32m1_t src, float value, size_t vl) 
 // CHECK-RV64-NEXT:    ret <vscale x 4 x float> [[TMP0]]
 //
 vfloat32m2_t test_vfslide1up_vf_f32m2(vfloat32m2_t src, float value, size_t vl) {
-  return vfslide1up(src, value, vl);
+  return __riscv_vfslide1up(src, value, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vfslide1up_vf_f32m4(
@@ -94,7 +94,7 @@ vfloat32m2_t test_vfslide1up_vf_f32m2(vfloat32m2_t src, float value, size_t vl) 
 // CHECK-RV64-NEXT:    ret <vscale x 8 x float> [[TMP0]]
 //
 vfloat32m4_t test_vfslide1up_vf_f32m4(vfloat32m4_t src, float value, size_t vl) {
-  return vfslide1up(src, value, vl);
+  return __riscv_vfslide1up(src, value, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vfslide1up_vf_f32m8(
@@ -103,7 +103,7 @@ vfloat32m4_t test_vfslide1up_vf_f32m4(vfloat32m4_t src, float value, size_t vl) 
 // CHECK-RV64-NEXT:    ret <vscale x 16 x float> [[TMP0]]
 //
 vfloat32m8_t test_vfslide1up_vf_f32m8(vfloat32m8_t src, float value, size_t vl) {
-  return vfslide1up(src, value, vl);
+  return __riscv_vfslide1up(src, value, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vfslide1up_vf_f64m1(
@@ -112,7 +112,7 @@ vfloat32m8_t test_vfslide1up_vf_f32m8(vfloat32m8_t src, float value, size_t vl) 
 // CHECK-RV64-NEXT:    ret <vscale x 1 x double> [[TMP0]]
 //
 vfloat64m1_t test_vfslide1up_vf_f64m1(vfloat64m1_t src, double value, size_t vl) {
-  return vfslide1up(src, value, vl);
+  return __riscv_vfslide1up(src, value, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vfslide1up_vf_f64m2(
@@ -121,7 +121,7 @@ vfloat64m1_t test_vfslide1up_vf_f64m1(vfloat64m1_t src, double value, size_t vl)
 // CHECK-RV64-NEXT:    ret <vscale x 2 x double> [[TMP0]]
 //
 vfloat64m2_t test_vfslide1up_vf_f64m2(vfloat64m2_t src, double value, size_t vl) {
-  return vfslide1up(src, value, vl);
+  return __riscv_vfslide1up(src, value, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vfslide1up_vf_f64m4(
@@ -130,7 +130,7 @@ vfloat64m2_t test_vfslide1up_vf_f64m2(vfloat64m2_t src, double value, size_t vl)
 // CHECK-RV64-NEXT:    ret <vscale x 4 x double> [[TMP0]]
 //
 vfloat64m4_t test_vfslide1up_vf_f64m4(vfloat64m4_t src, double value, size_t vl) {
-  return vfslide1up(src, value, vl);
+  return __riscv_vfslide1up(src, value, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vfslide1up_vf_f64m8(
@@ -139,7 +139,7 @@ vfloat64m4_t test_vfslide1up_vf_f64m4(vfloat64m4_t src, double value, size_t vl)
 // CHECK-RV64-NEXT:    ret <vscale x 8 x double> [[TMP0]]
 //
 vfloat64m8_t test_vfslide1up_vf_f64m8(vfloat64m8_t src, double value, size_t vl) {
-  return vfslide1up(src, value, vl);
+  return __riscv_vfslide1up(src, value, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vfslide1up_vf_f16mf4_m(
@@ -148,7 +148,7 @@ vfloat64m8_t test_vfslide1up_vf_f64m8(vfloat64m8_t src, double value, size_t vl)
 // CHECK-RV64-NEXT:    ret <vscale x 1 x half> [[TMP0]]
 //
 vfloat16mf4_t test_vfslide1up_vf_f16mf4_m(vbool64_t mask, vfloat16mf4_t src, _Float16 value, size_t vl) {
-  return vfslide1up(mask, src, value, vl);
+  return __riscv_vfslide1up(mask, src, value, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vfslide1up_vf_f16mf2_m(
@@ -157,7 +157,7 @@ vfloat16mf4_t test_vfslide1up_vf_f16mf4_m(vbool64_t mask, vfloat16mf4_t src, _Fl
 // CHECK-RV64-NEXT:    ret <vscale x 2 x half> [[TMP0]]
 //
 vfloat16mf2_t test_vfslide1up_vf_f16mf2_m(vbool32_t mask, vfloat16mf2_t src, _Float16 value, size_t vl) {
-  return vfslide1up(mask, src, value, vl);
+  return __riscv_vfslide1up(mask, src, value, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vfslide1up_vf_f16m1_m(
@@ -166,7 +166,7 @@ vfloat16mf2_t test_vfslide1up_vf_f16mf2_m(vbool32_t mask, vfloat16mf2_t src, _Fl
 // CHECK-RV64-NEXT:    ret <vscale x 4 x half> [[TMP0]]
 //
 vfloat16m1_t test_vfslide1up_vf_f16m1_m(vbool16_t mask, vfloat16m1_t src, _Float16 value, size_t vl) {
-  return vfslide1up(mask, src, value, vl);
+  return __riscv_vfslide1up(mask, src, value, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vfslide1up_vf_f16m2_m(
@@ -175,7 +175,7 @@ vfloat16m1_t test_vfslide1up_vf_f16m1_m(vbool16_t mask, vfloat16m1_t src, _Float
 // CHECK-RV64-NEXT:    ret <vscale x 8 x half> [[TMP0]]
 //
 vfloat16m2_t test_vfslide1up_vf_f16m2_m(vbool8_t mask, vfloat16m2_t src, _Float16 value, size_t vl) {
-  return vfslide1up(mask, src, value, vl);
+  return __riscv_vfslide1up(mask, src, value, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vfslide1up_vf_f16m4_m(
@@ -184,7 +184,7 @@ vfloat16m2_t test_vfslide1up_vf_f16m2_m(vbool8_t mask, vfloat16m2_t src, _Float1
 // CHECK-RV64-NEXT:    ret <vscale x 16 x half> [[TMP0]]
 //
 vfloat16m4_t test_vfslide1up_vf_f16m4_m(vbool4_t mask, vfloat16m4_t src, _Float16 value, size_t vl) {
-  return vfslide1up(mask, src, value, vl);
+  return __riscv_vfslide1up(mask, src, value, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vfslide1up_vf_f16m8_m(
@@ -193,7 +193,7 @@ vfloat16m4_t test_vfslide1up_vf_f16m4_m(vbool4_t mask, vfloat16m4_t src, _Float1
 // CHECK-RV64-NEXT:    ret <vscale x 32 x half> [[TMP0]]
 //
 vfloat16m8_t test_vfslide1up_vf_f16m8_m(vbool2_t mask, vfloat16m8_t src, _Float16 value, size_t vl) {
-  return vfslide1up(mask, src, value, vl);
+  return __riscv_vfslide1up(mask, src, value, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vfslide1up_vf_f32mf2_m(
@@ -202,7 +202,7 @@ vfloat16m8_t test_vfslide1up_vf_f16m8_m(vbool2_t mask, vfloat16m8_t src, _Float1
 // CHECK-RV64-NEXT:    ret <vscale x 1 x float> [[TMP0]]
 //
 vfloat32mf2_t test_vfslide1up_vf_f32mf2_m(vbool64_t mask, vfloat32mf2_t src, float value, size_t vl) {
-  return vfslide1up(mask, src, value, vl);
+  return __riscv_vfslide1up(mask, src, value, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vfslide1up_vf_f32m1_m(
@@ -211,7 +211,7 @@ vfloat32mf2_t test_vfslide1up_vf_f32mf2_m(vbool64_t mask, vfloat32mf2_t src, flo
 // CHECK-RV64-NEXT:    ret <vscale x 2 x float> [[TMP0]]
 //
 vfloat32m1_t test_vfslide1up_vf_f32m1_m(vbool32_t mask, vfloat32m1_t src, float value, size_t vl) {
-  return vfslide1up(mask, src, value, vl);
+  return __riscv_vfslide1up(mask, src, value, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vfslide1up_vf_f32m2_m(
@@ -220,7 +220,7 @@ vfloat32m1_t test_vfslide1up_vf_f32m1_m(vbool32_t mask, vfloat32m1_t src, float 
 // CHECK-RV64-NEXT:    ret <vscale x 4 x float> [[TMP0]]
 //
 vfloat32m2_t test_vfslide1up_vf_f32m2_m(vbool16_t mask, vfloat32m2_t src, float value, size_t vl) {
-  return vfslide1up(mask, src, value, vl);
+  return __riscv_vfslide1up(mask, src, value, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vfslide1up_vf_f32m4_m(
@@ -229,7 +229,7 @@ vfloat32m2_t test_vfslide1up_vf_f32m2_m(vbool16_t mask, vfloat32m2_t src, float 
 // CHECK-RV64-NEXT:    ret <vscale x 8 x float> [[TMP0]]
 //
 vfloat32m4_t test_vfslide1up_vf_f32m4_m(vbool8_t mask, vfloat32m4_t src, float value, size_t vl) {
-  return vfslide1up(mask, src, value, vl);
+  return __riscv_vfslide1up(mask, src, value, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vfslide1up_vf_f32m8_m(
@@ -238,7 +238,7 @@ vfloat32m4_t test_vfslide1up_vf_f32m4_m(vbool8_t mask, vfloat32m4_t src, float v
 // CHECK-RV64-NEXT:    ret <vscale x 16 x float> [[TMP0]]
 //
 vfloat32m8_t test_vfslide1up_vf_f32m8_m(vbool4_t mask, vfloat32m8_t src, float value, size_t vl) {
-  return vfslide1up(mask, src, value, vl);
+  return __riscv_vfslide1up(mask, src, value, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vfslide1up_vf_f64m1_m(
@@ -247,7 +247,7 @@ vfloat32m8_t test_vfslide1up_vf_f32m8_m(vbool4_t mask, vfloat32m8_t src, float v
 // CHECK-RV64-NEXT:    ret <vscale x 1 x double> [[TMP0]]
 //
 vfloat64m1_t test_vfslide1up_vf_f64m1_m(vbool64_t mask, vfloat64m1_t src, double value, size_t vl) {
-  return vfslide1up(mask, src, value, vl);
+  return __riscv_vfslide1up(mask, src, value, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vfslide1up_vf_f64m2_m(
@@ -256,7 +256,7 @@ vfloat64m1_t test_vfslide1up_vf_f64m1_m(vbool64_t mask, vfloat64m1_t src, double
 // CHECK-RV64-NEXT:    ret <vscale x 2 x double> [[TMP0]]
 //
 vfloat64m2_t test_vfslide1up_vf_f64m2_m(vbool32_t mask, vfloat64m2_t src, double value, size_t vl) {
-  return vfslide1up(mask, src, value, vl);
+  return __riscv_vfslide1up(mask, src, value, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vfslide1up_vf_f64m4_m(
@@ -265,7 +265,7 @@ vfloat64m2_t test_vfslide1up_vf_f64m2_m(vbool32_t mask, vfloat64m2_t src, double
 // CHECK-RV64-NEXT:    ret <vscale x 4 x double> [[TMP0]]
 //
 vfloat64m4_t test_vfslide1up_vf_f64m4_m(vbool16_t mask, vfloat64m4_t src, double value, size_t vl) {
-  return vfslide1up(mask, src, value, vl);
+  return __riscv_vfslide1up(mask, src, value, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vfslide1up_vf_f64m8_m(
@@ -274,6 +274,6 @@ vfloat64m4_t test_vfslide1up_vf_f64m4_m(vbool16_t mask, vfloat64m4_t src, double
 // CHECK-RV64-NEXT:    ret <vscale x 8 x double> [[TMP0]]
 //
 vfloat64m8_t test_vfslide1up_vf_f64m8_m(vbool8_t mask, vfloat64m8_t src, double value, size_t vl) {
-  return vfslide1up(mask, src, value, vl);
+  return __riscv_vfslide1up(mask, src, value, vl);
 }
 

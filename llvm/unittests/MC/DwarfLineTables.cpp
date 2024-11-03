@@ -65,7 +65,7 @@ void verifyEncoding(MCDwarfLineTableParams Params, int LineDelta, int AddrDelta,
 
 TEST(DwarfLineTables, TestDefaultParams) {
   if (!getContext())
-    return;
+    GTEST_SKIP();
 
   MCDwarfLineTableParams Params;
 
@@ -115,7 +115,7 @@ TEST(DwarfLineTables, TestDefaultParams) {
 
 TEST(DwarfLineTables, TestCustomParams) {
   if (!getContext())
-    return;
+    GTEST_SKIP();
 
   // Some tests against the example values given in the standard.
   MCDwarfLineTableParams Params;
@@ -169,7 +169,7 @@ TEST(DwarfLineTables, TestCustomParams) {
 
 TEST(DwarfLineTables, TestCustomParams2) {
   if (!getContext())
-    return;
+    GTEST_SKIP();
 
   // Corner case param values.
   MCDwarfLineTableParams Params;

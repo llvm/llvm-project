@@ -2222,8 +2222,14 @@ void SymbolFileDWARF::FindGlobalVariables(
       if (DWARFASTParser *dwarf_ast = GetDWARFParser(*die.GetCU())) {
         CompilerDeclContext actual_parent_decl_ctx =
             dwarf_ast->GetDeclContextContainingUIDFromDWARF(die);
+
+        /// If the actual namespace is inline (i.e., had a DW_AT_export_symbols)
+        /// and a child (possibly through other layers of inline namespaces)
+        /// of the namespace referred to by 'basename', allow the lookup to
+        /// succeed.
         if (!actual_parent_decl_ctx ||
-            actual_parent_decl_ctx != parent_decl_ctx)
+            (actual_parent_decl_ctx != parent_decl_ctx &&
+             !parent_decl_ctx.IsContainedInLookup(actual_parent_decl_ctx)))
           return true;
       }
     }
@@ -4217,8 +4223,6 @@ LanguageType SymbolFileDWARF::LanguageTypeFromDWARF(uint64_t val) {
   switch (val) {
   case DW_LANG_Mips_Assembler:
     return eLanguageTypeMipsAssembler;
-  case DW_LANG_GOOGLE_RenderScript:
-    return eLanguageTypeExtRenderScript;
   default:
     return static_cast<LanguageType>(val);
   }

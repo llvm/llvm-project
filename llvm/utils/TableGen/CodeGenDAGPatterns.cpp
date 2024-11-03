@@ -13,6 +13,7 @@
 
 #include "CodeGenDAGPatterns.h"
 #include "CodeGenInstruction.h"
+#include "CodeGenRegisters.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/STLExtras.h"
@@ -2038,6 +2039,7 @@ TreePatternNodePtr TreePatternNode::clone() const {
   New->setNamesAsPredicateArg(getNamesAsPredicateArg());
   New->Types = Types;
   New->setPredicateCalls(getPredicateCalls());
+  New->setGISelFlagsRecord(getGISelFlagsRecord());
   New->setTransformFn(getTransformFn());
   return New;
 }
@@ -2140,6 +2142,7 @@ void TreePatternNode::InlinePatternFragments(
       R->setName(getName());
       R->setNamesAsPredicateArg(getNamesAsPredicateArg());
       R->setPredicateCalls(getPredicateCalls());
+      R->setGISelFlagsRecord(getGISelFlagsRecord());
       R->setTransformFn(getTransformFn());
       for (unsigned i = 0, e = getNumTypes(); i != e; ++i)
         R->setType(i, getExtType(i));
@@ -2208,6 +2211,9 @@ void TreePatternNode::InlinePatternFragments(
     FragTree->setName(getName());
     for (unsigned i = 0, e = FragTree->getNumTypes(); i != e; ++i)
       FragTree->UpdateNodeType(i, getExtType(i), TP);
+
+    if (Op->isSubClassOf("GISelFlags"))
+      FragTree->setGISelFlagsRecord(Op);
 
     // Transfer in the old predicates.
     for (const TreePredicateCall &Pred : getPredicateCalls())
@@ -4542,6 +4548,7 @@ static void CombineChildVariants(
     R->setName(Orig->getName());
     R->setNamesAsPredicateArg(Orig->getNamesAsPredicateArg());
     R->setPredicateCalls(Orig->getPredicateCalls());
+    R->setGISelFlagsRecord(Orig->getGISelFlagsRecord());
     R->setTransformFn(Orig->getTransformFn());
     for (unsigned i = 0, e = Orig->getNumTypes(); i != e; ++i)
       R->setType(i, Orig->getExtType(i));

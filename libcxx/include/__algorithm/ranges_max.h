@@ -27,7 +27,7 @@
 #  pragma GCC system_header
 #endif
 
-#if _LIBCPP_STD_VER > 17
+#if _LIBCPP_STD_VER >= 20
 
 _LIBCPP_PUSH_MACROS
 #include <__undef_macros>
@@ -40,7 +40,10 @@ struct __fn {
   template <class _Tp, class _Proj = identity,
             indirect_strict_weak_order<projected<const _Tp*, _Proj>> _Comp = ranges::less>
   _LIBCPP_NODISCARD_EXT _LIBCPP_HIDE_FROM_ABI constexpr
-  const _Tp& operator()(const _Tp& __a, const _Tp& __b, _Comp __comp = {}, _Proj __proj = {}) const {
+  const _Tp& operator()(_LIBCPP_LIFETIMEBOUND const _Tp& __a,
+                        _LIBCPP_LIFETIMEBOUND const _Tp& __b,
+                        _Comp __comp = {},
+                        _Proj __proj = {}) const {
     return std::invoke(__comp, std::invoke(__proj, __a), std::invoke(__proj, __b)) ? __b : __a;
   }
 
@@ -88,6 +91,6 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP_STD_VER > 17 &&
+#endif // _LIBCPP_STD_VER >= 20 &&
 
 #endif // _LIBCPP___ALGORITHM_RANGES_MAX_H

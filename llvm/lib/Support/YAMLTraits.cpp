@@ -435,6 +435,11 @@ std::unique_ptr<Input::HNode> Input::createHNodes(Node *N) {
         // Copy string to permanent storage
         KeyStr = StringStorage.str().copy(StringAllocator);
       }
+      if (mapHNode->Mapping.count(KeyStr))
+        // From YAML spec: "The content of a mapping node is an unordered set of
+        // key/value node pairs, with the restriction that each of the keys is
+        // unique."
+        setError(KeyNode, Twine("duplicated mapping key '") + KeyStr + "'");
       auto ValueHNode = createHNodes(Value);
       if (EC)
         break;

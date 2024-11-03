@@ -1980,14 +1980,14 @@ bool DWARFASTParserClang::ParseTemplateDIE(
 
   switch (tag) {
   case DW_TAG_GNU_template_parameter_pack: {
-    template_param_infos.packed_args =
-        std::make_unique<TypeSystemClang::TemplateParameterInfos>();
+    template_param_infos.SetParameterPack(
+        std::make_unique<TypeSystemClang::TemplateParameterInfos>());
     for (DWARFDIE child_die : die.children()) {
-      if (!ParseTemplateDIE(child_die, *template_param_infos.packed_args))
+      if (!ParseTemplateDIE(child_die, template_param_infos.GetParameterPack()))
         return false;
     }
     if (const char *name = die.GetName()) {
-      template_param_infos.pack_name = name;
+      template_param_infos.SetPackName(name);
     }
     return true;
   }
@@ -2003,6 +2003,7 @@ bool DWARFASTParserClang::ParseTemplateDIE(
     CompilerType clang_type;
     uint64_t uval64 = 0;
     bool uval64_valid = false;
+    bool is_default_template_arg = false;
     if (num_attributes > 0) {
       DWARFFormValue form_value;
       for (size_t i = 0; i < num_attributes; ++i) {
@@ -2033,6 +2034,10 @@ bool DWARFASTParserClang::ParseTemplateDIE(
             uval64 = form_value.Unsigned();
           }
           break;
+        case DW_AT_default_value:
+          if (attributes.ExtractFormValueAtIndex(i, form_value))
+            is_default_template_arg = form_value.Boolean();
+          break;
         default:
           break;
         }
@@ -2044,31 +2049,33 @@ bool DWARFASTParserClang::ParseTemplateDIE(
 
       if (!is_template_template_argument) {
         bool is_signed = false;
-        if (name && name[0])
-          template_param_infos.names.push_back(name);
-        else
-          template_param_infos.names.push_back(nullptr);
-
         // Get the signed value for any integer or enumeration if available
         clang_type.IsIntegerOrEnumerationType(is_signed);
+
+        if (name && !name[0])
+          name = nullptr;
 
         if (tag == DW_TAG_template_value_parameter && uval64_valid) {
           std::optional<uint64_t> size = clang_type.GetBitSize(nullptr);
           if (!size)
             return false;
           llvm::APInt apint(*size, uval64, is_signed);
-          template_param_infos.args.push_back(
+          template_param_infos.InsertArg(
+              name,
               clang::TemplateArgument(ast, llvm::APSInt(apint, !is_signed),
-                                      ClangUtil::GetQualType(clang_type)));
+                                      ClangUtil::GetQualType(clang_type),
+                                      is_default_template_arg));
         } else {
-          template_param_infos.args.push_back(
-              clang::TemplateArgument(ClangUtil::GetQualType(clang_type)));
+          template_param_infos.InsertArg(
+              name, clang::TemplateArgument(ClangUtil::GetQualType(clang_type),
+                                            /*isNullPtr*/ false,
+                                            is_default_template_arg));
         }
       } else {
         auto *tplt_type = m_ast.CreateTemplateTemplateParmDecl(template_name);
-        template_param_infos.names.push_back(name);
-        template_param_infos.args.push_back(
-            clang::TemplateArgument(clang::TemplateName(tplt_type)));
+        template_param_infos.InsertArg(
+            name, clang::TemplateArgument(clang::TemplateName(tplt_type),
+                                          is_default_template_arg));
       }
     }
   }
@@ -2102,10 +2109,9 @@ bool DWARFASTParserClang::ParseTemplateParameterInfos(
       break;
     }
   }
-  return template_param_infos.args.size() ==
-             template_param_infos.names.size() &&
-         (!template_param_infos.args.empty() ||
-          template_param_infos.packed_args);
+
+  return !template_param_infos.IsEmpty() ||
+         template_param_infos.hasParameterPack();
 }
 
 bool DWARFASTParserClang::CompleteRecordType(const DWARFDIE &die,
@@ -2701,7 +2707,7 @@ llvm::Expected<llvm::APInt> DWARFASTParserClang::ExtractIntFromFormValue(
   // For signed types, ask APInt how many bits are required to represent the
   // signed integer.
   const unsigned required_bits =
-      is_unsigned ? result.getActiveBits() : result.getMinSignedBits();
+      is_unsigned ? result.getActiveBits() : result.getSignificantBits();
 
   // If the input value doesn't fit into the integer type, return an error.
   if (required_bits > type_bits) {
@@ -3298,6 +3304,11 @@ DWARFASTParserClang::GetClangDeclContextForDIE(const DWARFDIE &die) {
       try_parsing_type = false;
       break;
 
+    case DW_TAG_imported_declaration:
+      decl_ctx = ResolveImportedDeclarationDIE(die);
+      try_parsing_type = false;
+      break;
+
     case DW_TAG_lexical_block:
       decl_ctx = GetDeclContextForBlock(die);
       try_parsing_type = false;
@@ -3457,6 +3468,42 @@ DWARFASTParserClang::ResolveNamespaceDIE(const DWARFDIE &die) {
     }
   }
   return nullptr;
+}
+
+clang::NamespaceDecl *
+DWARFASTParserClang::ResolveImportedDeclarationDIE(const DWARFDIE &die) {
+  assert(die && die.Tag() == DW_TAG_imported_declaration);
+
+  // See if we cached a NamespaceDecl for this imported declaration
+  // already
+  auto it = m_die_to_decl_ctx.find(die.GetDIE());
+  if (it != m_die_to_decl_ctx.end())
+    return static_cast<clang::NamespaceDecl *>(it->getSecond());
+
+  clang::NamespaceDecl *namespace_decl = nullptr;
+
+  const DWARFDIE imported_uid =
+      die.GetAttributeValueAsReferenceDIE(DW_AT_import);
+  if (!imported_uid)
+    return nullptr;
+
+  switch (imported_uid.Tag()) {
+  case DW_TAG_imported_declaration:
+    namespace_decl = ResolveImportedDeclarationDIE(imported_uid);
+    break;
+  case DW_TAG_namespace:
+    namespace_decl = ResolveNamespaceDIE(imported_uid);
+    break;
+  default:
+    return nullptr;
+  }
+
+  if (!namespace_decl)
+    return nullptr;
+
+  LinkDeclContextToDIE(namespace_decl, die);
+
+  return namespace_decl;
 }
 
 clang::DeclContext *DWARFASTParserClang::GetClangDeclContextContainingDIE(

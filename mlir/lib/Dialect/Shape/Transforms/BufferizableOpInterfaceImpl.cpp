@@ -27,9 +27,9 @@ namespace {
 struct AssumingOpInterface
     : public BufferizableOpInterface::ExternalModel<AssumingOpInterface,
                                                     shape::AssumingOp> {
-  SmallVector<OpOperand *>
-  getAliasingOpOperand(Operation *op, OpResult opResult,
-                       const AnalysisState &state) const {
+  AliasingOpOperandList
+  getAliasingOpOperands(Operation *op, OpResult opResult,
+                        const AnalysisState &state) const {
     // AssumingOps do not have tensor OpOperands. The yielded value can be any
     // SSA value that is in scope. To allow for use-def chain traversal through
     // AssumingOps in the analysis, the corresponding yield value is considered
@@ -43,19 +43,7 @@ struct AssumingOpInterface
     auto yieldOp = dyn_cast<shape::AssumingYieldOp>(
         assumingOp.getDoRegion().front().getTerminator());
     assert(yieldOp && "expected shape.assuming_yield terminator");
-    return {&yieldOp->getOpOperand(resultNum)};
-  }
-
-  // TODO: For better bufferization results, this could return `true` only if
-  // there is a memory write in the region.
-  bool isMemoryWrite(Operation *op, OpResult opResult,
-                     const AnalysisState &state) const {
-    // Similar to scf.if, results of this op are always considered memory writes
-    // in the analysis. This is a useful pattern for all ops that have tensor
-    // OpResults but no tensor OpOperands. By default, `isMemoryWrite` is
-    // implemented in terms of `bufferizesToMemoryWrite`, which does not work on
-    // ops without OpOperands.
-    return true;
+    return {{&yieldOp->getOpOperand(resultNum), BufferRelation::Equivalent}};
   }
 
   LogicalResult bufferize(Operation *op, RewriterBase &rewriter,
@@ -89,11 +77,6 @@ struct AssumingOpInterface
 
     return success();
   }
-
-  BufferRelation bufferRelation(Operation *op, OpResult opResult,
-                                const AnalysisState &state) const {
-    return BufferRelation::Equivalent;
-  }
 };
 
 /// Bufferization of shape.assuming_yield. Bufferized as part of their enclosing
@@ -111,11 +94,13 @@ struct AssumingYieldOpInterface
     return false;
   }
 
-  SmallVector<OpResult> getAliasingOpResult(Operation *op, OpOperand &opOperand,
+  AliasingOpResultList getAliasingOpResults(Operation *op, OpOperand &opOperand,
                                             const AnalysisState &state) const {
     assert(isa<shape::AssumingOp>(op->getParentOp()) &&
            "expected that parent is an AssumingOp");
-    return {op->getParentOp()->getResult(opOperand.getOperandNumber())};
+    OpResult opResult =
+        op->getParentOp()->getResult(opOperand.getOperandNumber());
+    return {{opResult, BufferRelation::Equivalent}};
   }
 
   bool mustBufferizeInPlace(Operation *op, OpOperand &opOperand,

@@ -209,8 +209,8 @@ OffloadBinary::write(const OffloadingImage &OffloadingData) {
   // Create a null-terminated string table with all the used strings.
   StringTableBuilder StrTab(StringTableBuilder::ELF);
   for (auto &KeyAndValue : OffloadingData.StringData) {
-    StrTab.add(KeyAndValue.getKey());
-    StrTab.add(KeyAndValue.getValue());
+    StrTab.add(KeyAndValue.first);
+    StrTab.add(KeyAndValue.second);
   }
   StrTab.finalize();
 
@@ -250,8 +250,8 @@ OffloadBinary::write(const OffloadingImage &OffloadingData) {
   OS << StringRef(reinterpret_cast<char *>(&TheEntry), sizeof(Entry));
   for (auto &KeyAndValue : OffloadingData.StringData) {
     uint64_t Offset = sizeof(Header) + sizeof(Entry) + StringEntrySize;
-    StringEntry Map{Offset + StrTab.getOffset(KeyAndValue.getKey()),
-                    Offset + StrTab.getOffset(KeyAndValue.getValue())};
+    StringEntry Map{Offset + StrTab.getOffset(KeyAndValue.first),
+                    Offset + StrTab.getOffset(KeyAndValue.second)};
     OS << StringRef(reinterpret_cast<char *>(&Map), sizeof(StringEntry));
   }
   StrTab.write(OS);

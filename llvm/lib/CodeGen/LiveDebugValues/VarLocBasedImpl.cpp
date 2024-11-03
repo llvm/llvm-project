@@ -2151,7 +2151,9 @@ bool VarLocBasedLDV::isEntryValueCandidate(
 
   // TODO: Add support for parameters that have a pre-existing debug expressions
   // (e.g. fragments).
-  if (MI.getDebugExpression()->getNumElements() > 0)
+  // A simple deref expression is equivalent to an indirect debug value.
+  const DIExpression *Expr = MI.getDebugExpression();
+  if (Expr->getNumElements() > 0 && !Expr->isDeref())
     return false;
 
   return true;

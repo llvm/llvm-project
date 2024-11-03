@@ -1,9 +1,7 @@
-// RUN: %clang_cc1 -no-opaque-pointers -triple i386-unknown-unknown %s -emit-llvm -Wno-strict-prototypes -o - -fblocks | FileCheck %s
+// RUN: %clang_cc1 -triple i386-unknown-unknown %s -emit-llvm -Wno-strict-prototypes -o - -fblocks | FileCheck %s
 
-// CHECK: %[[STRUCT_BLOCK_DESCRIPTOR:.*]] = type { i32, i32 }
-
-// CHECK: @{{.*}} = internal constant { i32, i32, i8*, i8*, i8*, i8* } { i32 0, i32 24, i8* bitcast (void (i8*, i8*)* @__copy_helper_block_4_20r to i8*), i8* bitcast (void (i8*)* @__destroy_helper_block_4_20r to i8*), i8* getelementptr inbounds ([6 x i8], [6 x i8]* @{{.*}}, i32 0, i32 0), i8* null }, align 4
-// CHECK: @[[BLOCK_DESCRIPTOR_TMP21:.*]] = internal constant { i32, i32, i8*, i8*, i8*, i8* } { i32 0, i32 24, i8* bitcast (void (i8*, i8*)* @__copy_helper_block_4_20r to i8*), i8* bitcast (void (i8*)* @__destroy_helper_block_4_20r to i8*), i8* getelementptr inbounds ([6 x i8], [6 x i8]* @{{.*}}, i32 0, i32 0), i8* null }, align 4
+// CHECK: @{{.*}} = internal constant { i32, i32, ptr, ptr, ptr, ptr } { i32 0, i32 24, ptr @__copy_helper_block_4_20r, ptr @__destroy_helper_block_4_20r, ptr @{{.*}}, ptr null }, align 4
+// CHECK: @[[BLOCK_DESCRIPTOR_TMP21:.*]] = internal constant { i32, i32, ptr, ptr, ptr, ptr } { i32 0, i32 24, ptr @__copy_helper_block_4_20r, ptr @__destroy_helper_block_4_20r, ptr @{{.*}}, ptr null }, align 4
 
 void (^f)(void) = ^{};
 
@@ -18,7 +16,7 @@ struct s0 {
   int a[64];
 };
 
-// CHECK: define internal void @__f2_block_invoke(%struct.s0* noalias sret(%struct.s0) align 4 {{%.*}}, i8* noundef {{%.*}}, %struct.s0* noundef byval(%struct.s0) align 4 {{.*}})
+// CHECK: define internal void @__f2_block_invoke(ptr noalias sret(%struct.s0) align 4 {{%.*}}, ptr noundef {{%.*}}, ptr noundef byval(%struct.s0) align 4 {{.*}})
 struct s0 f2(struct s0 a0) {
   return ^(struct s0 a1){ return a1; }(a0);
 }
@@ -33,30 +31,26 @@ void (^test1)(void) = ^(void) {
   ^ { i = 1; }();
 };
 
-// CHECK-LABEL: define linkonce_odr hidden void @__copy_helper_block_4_20r(i8* noundef %0, i8* noundef %1) unnamed_addr
-// CHECK: %[[_ADDR:.*]] = alloca i8*, align 4
-// CHECK-NEXT: %[[_ADDR1:.*]] = alloca i8*, align 4
-// CHECK-NEXT: store i8* %0, i8** %[[_ADDR]], align 4
-// CHECK-NEXT: store i8* %1, i8** %[[_ADDR1]], align 4
-// CHECK-NEXT: %[[V2:.*]] = load i8*, i8** %[[_ADDR1]], align 4
-// CHECK-NEXT: %[[BLOCK_SOURCE:.*]] = bitcast i8* %[[V2]] to <{ i8*, i32, i32, i8*, %[[STRUCT_BLOCK_DESCRIPTOR]]*, i8* }>*
-// CHECK-NEXT: %[[V3:.*]] = load i8*, i8** %[[_ADDR]], align 4
-// CHECK-NEXT: %[[BLOCK_DEST:.*]] = bitcast i8* %[[V3]] to <{ i8*, i32, i32, i8*, %[[STRUCT_BLOCK_DESCRIPTOR]]*, i8* }>*
-// CHECK-NEXT: %[[V4:.*]] = getelementptr inbounds <{ i8*, i32, i32, i8*, %[[STRUCT_BLOCK_DESCRIPTOR]]*, i8* }>, <{ i8*, i32, i32, i8*, %[[STRUCT_BLOCK_DESCRIPTOR]]*, i8* }>* %[[BLOCK_SOURCE]], i32 0, i32 5
-// CHECK-NEXT: %[[V5:.*]] = getelementptr inbounds <{ i8*, i32, i32, i8*, %[[STRUCT_BLOCK_DESCRIPTOR]]*, i8* }>, <{ i8*, i32, i32, i8*, %[[STRUCT_BLOCK_DESCRIPTOR]]*, i8* }>* %[[BLOCK_DEST]], i32 0, i32 5
-// CHECK-NEXT: %[[BLOCKCOPY_SRC:.*]] = load i8*, i8** %[[V4]], align 4
-// CHECK-NEXT: %[[V6:.*]] = bitcast i8** %[[V5]] to i8*
-// CHECK-NEXT: call void @_Block_object_assign(i8* %[[V6]], i8* %[[BLOCKCOPY_SRC]], i32 8)
+// CHECK-LABEL: define linkonce_odr hidden void @__copy_helper_block_4_20r(ptr noundef %0, ptr noundef %1) unnamed_addr
+// CHECK: %[[_ADDR:.*]] = alloca ptr, align 4
+// CHECK-NEXT: %[[_ADDR1:.*]] = alloca ptr, align 4
+// CHECK-NEXT: store ptr %0, ptr %[[_ADDR]], align 4
+// CHECK-NEXT: store ptr %1, ptr %[[_ADDR1]], align 4
+// CHECK-NEXT: %[[V2:.*]] = load ptr, ptr %[[_ADDR1]], align 4
+// CHECK-NEXT: %[[V3:.*]] = load ptr, ptr %[[_ADDR]], align 4
+// CHECK-NEXT: %[[V4:.*]] = getelementptr inbounds <{ ptr, i32, i32, ptr, ptr, ptr }>, ptr %[[V2]], i32 0, i32 5
+// CHECK-NEXT: %[[V5:.*]] = getelementptr inbounds <{ ptr, i32, i32, ptr, ptr, ptr }>, ptr %[[V3]], i32 0, i32 5
+// CHECK-NEXT: %[[BLOCKCOPY_SRC:.*]] = load ptr, ptr %[[V4]], align 4
+// CHECK-NEXT: call void @_Block_object_assign(ptr %[[V5]], ptr %[[BLOCKCOPY_SRC]], i32 8)
 // CHECK-NEXT: ret void
 
-// CHECK-LABEL: define linkonce_odr hidden void @__destroy_helper_block_4_20r(i8* noundef %0) unnamed_addr
-// CHECK: %[[_ADDR:.*]] = alloca i8*, align 4
-// CHECK-NEXT: store i8* %0, i8** %[[_ADDR]], align 4
-// CHECK-NEXT: %[[V1:.*]] = load i8*, i8** %[[_ADDR]], align 4
-// CHECK-NEXT: %[[BLOCK:.*]] = bitcast i8* %[[V1]] to <{ i8*, i32, i32, i8*, %[[STRUCT_BLOCK_DESCRIPTOR]]*, i8* }>*
-// CHECK-NEXT: %[[V2:.*]] = getelementptr inbounds <{ i8*, i32, i32, i8*, %[[STRUCT_BLOCK_DESCRIPTOR]]*, i8* }>, <{ i8*, i32, i32, i8*, %[[STRUCT_BLOCK_DESCRIPTOR]]*, i8* }>* %[[BLOCK]], i32 0, i32 5
-// CHECK-NEXT: %[[V3:.*]] = load i8*, i8** %[[V2]], align 4
-// CHECK-NEXT: call void @_Block_object_dispose(i8* %[[V3]], i32 8)
+// CHECK-LABEL: define linkonce_odr hidden void @__destroy_helper_block_4_20r(ptr noundef %0) unnamed_addr
+// CHECK: %[[_ADDR:.*]] = alloca ptr, align 4
+// CHECK-NEXT: store ptr %0, ptr %[[_ADDR]], align 4
+// CHECK-NEXT: %[[V1:.*]] = load ptr, ptr %[[_ADDR]], align 4
+// CHECK-NEXT: %[[V2:.*]] = getelementptr inbounds <{ ptr, i32, i32, ptr, ptr, ptr }>, ptr %[[V1]], i32 0, i32 5
+// CHECK-NEXT: %[[V3:.*]] = load ptr, ptr %[[V2]], align 4
+// CHECK-NEXT: call void @_Block_object_dispose(ptr %[[V3]], i32 8)
 // CHECK-NEXT: ret void
 
 typedef double ftype(double);
@@ -81,7 +75,7 @@ void f4_helper(long long (^)(void));
 void f4(void) {
   _Bool b = 0;
   long long ll = 0;
-  // CHECK: alloca <{ i8*, i32, i32, i8*, {{%.*}}*, i8, [3 x i8], i64 }>, align 8
+  // CHECK: alloca <{ ptr, i32, i32, ptr, ptr, i8, [3 x i8], i64 }>, align 8
   f4_helper(^{ if (b) return ll; return 0LL; });
 }
 
@@ -95,7 +89,7 @@ void f5_helper(void (^)(struct F5 *));
 // CHECK-LABEL: define{{.*}} void @f5()
 void f5(void) {
   struct F5 value;
-  // CHECK: alloca <{ i8*, i32, i32, i8*, {{%.*}}*, [12 x i8], [[F5:%.*]] }>, align 16
+  // CHECK: alloca <{ ptr, i32, i32, ptr, ptr, [12 x i8], [[F5:%.*]] }>, align 16
   f5_helper(^(struct F5 *slot) { *slot = value; });
 }
 
@@ -104,11 +98,10 @@ void (^b)() = ^{};
 int main(void) {
    (b?: ^{})();
 }
-// CHECK: [[ZERO:%.*]] = load void (...)*, void (...)** @b
-// CHECK-NEXT: [[TB:%.*]] = icmp ne void (...)* [[ZERO]], null
+// CHECK: [[ZERO:%.*]] = load ptr, ptr @b
+// CHECK-NEXT: [[TB:%.*]] = icmp ne ptr [[ZERO]], null
 // CHECK-NEXT: br i1 [[TB]], label [[CT:%.*]], label [[CF:%.*]]
-// CHECK: [[ONE:%.*]] = bitcast void (...)* [[ZERO]] to void ()*
-// CHECK-NEXT:   br label [[CE:%.*]]
+// CHECK:   br label [[CE:%.*]]
 
 // Ensure that we don't emit helper code in copy/dispose routines for variables
 // that are const-captured.
@@ -118,7 +111,7 @@ void testConstCaptureInCopyAndDestroyHelpers(void) {
   (^ { i = x; })();
 }
 // CHECK-LABEL: define{{.*}} void @testConstCaptureInCopyAndDestroyHelpers(
-// CHECK: %[[BLOCK_DESCRIPTOR:.*]] = getelementptr inbounds <{ i8*, i32, i32, i8*, %[[STRUCT_BLOCK_DESCRIPTOR]]*, i8* }>, <{ i8*, i32, i32, i8*, %[[STRUCT_BLOCK_DESCRIPTOR]]*, i8* }>* %{{.*}}, i32 0, i32 4
-// CHECK: store %[[STRUCT_BLOCK_DESCRIPTOR]]* bitcast ({ i32, i32, i8*, i8*, i8*, i8* }* @[[BLOCK_DESCRIPTOR_TMP21]] to %[[STRUCT_BLOCK_DESCRIPTOR]]*), %[[STRUCT_BLOCK_DESCRIPTOR]]** %[[BLOCK_DESCRIPTOR]], align 4
+// CHECK: %[[BLOCK_DESCRIPTOR:.*]] = getelementptr inbounds <{ ptr, i32, i32, ptr, ptr, ptr }>, ptr %{{.*}}, i32 0, i32 4
+// CHECK: store ptr @[[BLOCK_DESCRIPTOR_TMP21]], ptr %[[BLOCK_DESCRIPTOR]], align 4
 
 // CHECK-LABEL: define internal void @__testConstCaptureInCopyAndDestroyHelpers_block_invoke

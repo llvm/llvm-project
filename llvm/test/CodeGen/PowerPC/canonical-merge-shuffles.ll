@@ -731,8 +731,7 @@ define dso_local <4 x i32> @replace_undefs_in_splat(<4 x i32> %a) local_unnamed_
 ; CHECK-P8:       # %bb.0: # %entry
 ; CHECK-P8-NEXT:    addis r3, r2, .LCPI15_0@toc@ha
 ; CHECK-P8-NEXT:    addi r3, r3, .LCPI15_0@toc@l
-; CHECK-P8-NEXT:    lxvd2x vs0, 0, r3
-; CHECK-P8-NEXT:    xxswapd v3, vs0
+; CHECK-P8-NEXT:    lxvd2x v3, 0, r3
 ; CHECK-P8-NEXT:    vmrgow v2, v3, v2
 ; CHECK-P8-NEXT:    blr
 ;
@@ -1196,8 +1195,7 @@ define dso_local void @testByteSplat() #0 {
 ; CHECK-P7-NEXT:    lvx v3, 0, r3
 ; CHECK-P7-NEXT:    vperm v2, v3, v3, v2
 ; CHECK-P7-NEXT:    vspltb v2, v2, 15
-; CHECK-P7-NEXT:    xxswapd vs0, v2
-; CHECK-P7-NEXT:    stxvd2x vs0, 0, r3
+; CHECK-P7-NEXT:    stxvd2x v2, 0, r3
 ; CHECK-P7-NEXT:    blr
 ;
 ; P8-AIX-LABEL: testByteSplat:

@@ -79,6 +79,11 @@ end
   kind 4, because the grammar of Fortran expressions parses it as a
   negation of a literal constant, not a negative literal constant.
   This compiler accepts it with a portability warning.
+* Construct names like `loop` in `loop: do j=1,n` are defined to
+  be "local identifiers" and should be distinct in the "inclusive
+  scope" -- i.e., not scoped by `BLOCK` constructs.
+  As most (but not all) compilers implement `BLOCK` scoping of construct
+  names, so does f18, with a portability warning.
 
 ## Extensions, deletions, and legacy features supported by default
 
@@ -256,6 +261,7 @@ end
   to apply only to a scalar data-ref, but most compilers don't
   enforce it and the constraint is not necessary for a correct
   implementation.
+* A label may follow a semicolon in fixed form source.
 
 ### Extensions supported when enabled by options
 
@@ -526,6 +532,26 @@ end module
   or `BLOCK DATA` subprogram to also be the name of an local entity in its
   scope, with a portability warning, since that global name is not actually
   capable of being "used" in its scope.
+
+* In the definition of the `ASSOCIATED` intrinsic function (16.9.16), its optional
+  second argument `TARGET=` is required to be "allowable as the data-target or
+  proc-target in a pointer assignment statement (10.2.2) in which POINTER is
+  data-pointer-object or proc-pointer-object."  Some Fortran compilers
+  interpret this to require that the first argument (`POINTER=`) be a valid
+  left-hand side for a pointer assignment statement -- in particular, it
+  cannot be `NULL()`, but also it is required to be modifiable.
+  As there is  no good reason to disallow (say) an `INTENT(IN)` pointer here,
+  or even `NULL()` as a well-defined case that is always `.FALSE.`,
+  this compiler doesn't require the `POINTER=` argument to be a valid
+  left-hand side for a pointer assignment statement, and we emit a
+  portability warning when it is not.
+
+* F18 allows a `USE` statement to reference a module that is defined later
+  in the same compilation unit, so long as mutual dependencies do not form
+  a cycle.
+  This feature forestalls any risk of such a `USE` statement reading an
+  obsolete module file from a previous compilation and then overwriting
+  that file later.
 
 ## De Facto Standard Features
 

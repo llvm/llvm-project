@@ -19,6 +19,7 @@
 #include "clang/AST/CXXInheritance.h"
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/DeclTemplate.h"
+#include "clang/AST/Designator.h"
 #include "clang/AST/EvaluatedExprVisitor.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
@@ -40,7 +41,6 @@
 #include "clang/Sema/AnalysisBasedWarnings.h"
 #include "clang/Sema/DeclSpec.h"
 #include "clang/Sema/DelayedDiagnostic.h"
-#include "clang/Sema/Designator.h"
 #include "clang/Sema/Initialization.h"
 #include "clang/Sema/Lookup.h"
 #include "clang/Sema/Overload.h"
@@ -939,6 +939,11 @@ Sema::VarArgKind Sema::isValidVarArgType(const QualType &Ty) {
 
   if (Ty.isDestructedType() == QualType::DK_nontrivial_c_struct)
     return VAK_Invalid;
+
+  if (Context.getTargetInfo().getTriple().isWasm() &&
+      Ty->isWebAssemblyReferenceType()) {
+    return VAK_Invalid;
+  }
 
   if (Ty.isCXX98PODType(Context))
     return VAK_Valid;
@@ -6567,6 +6572,8 @@ static bool isPlaceholderToRemoveAsArg(QualType type) {
 #include "clang/Basic/PPCTypes.def"
 #define RVV_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
 #include "clang/Basic/RISCVVTypes.def"
+#define WASM_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
+#include "clang/Basic/WebAssemblyReferenceTypes.def"
 #define PLACEHOLDER_TYPE(ID, SINGLETON_ID)
 #define BUILTIN_TYPE(ID, SINGLETON_ID) case BuiltinType::ID:
 #include "clang/AST/BuiltinTypes.def"
@@ -6655,10 +6662,10 @@ static FunctionDecl *rewriteBuiltinFunctionDecl(Sema *Sema, ASTContext &Context,
       return nullptr;
     Expr *Arg = ArgRes.get();
     QualType ArgType = Arg->getType();
-    if (!ParamType->isPointerType() ||
-        ParamType.hasAddressSpace() ||
+    if (!ParamType->isPointerType() || ParamType.hasAddressSpace() ||
         !ArgType->isPointerType() ||
-        !ArgType->getPointeeType().hasAddressSpace()) {
+        !ArgType->getPointeeType().hasAddressSpace() ||
+        isPtrSizeAddressSpace(ArgType->getPointeeType().getAddressSpace())) {
       OverloadParams.push_back(ParamType);
       continue;
     }
@@ -10495,7 +10502,7 @@ static bool canConvertIntToOtherIntTy(Sema &S, ExprResult *Int,
     // bits that the vector element type, reject it.
     llvm::APSInt Result = EVResult.Val.getInt();
     unsigned NumBits = IntSigned
-                           ? (Result.isNegative() ? Result.getMinSignedBits()
+                           ? (Result.isNegative() ? Result.getSignificantBits()
                                                   : Result.getActiveBits())
                            : Result.getActiveBits();
     if (Order < 0 && S.Context.getIntWidth(OtherIntTy) < NumBits)
@@ -11738,7 +11745,7 @@ static void DiagnoseBadShiftValues(Sema& S, ExprResult &LHS, ExprResult &RHS,
   }
 
   llvm::APInt ResultBits =
-      static_cast<llvm::APInt&>(Right) + Left.getMinSignedBits();
+      static_cast<llvm::APInt &>(Right) + Left.getSignificantBits();
   if (LeftBits.uge(ResultBits))
     return;
   llvm::APSInt Result = Left.extend(ResultBits.getLimitedValue());
@@ -11761,9 +11768,9 @@ static void DiagnoseBadShiftValues(Sema& S, ExprResult &LHS, ExprResult &RHS,
   }
 
   S.Diag(Loc, diag::warn_shift_result_gt_typewidth)
-    << HexResult.str() << Result.getMinSignedBits() << LHSType
-    << Left.getBitWidth() << LHS.get()->getSourceRange()
-    << RHS.get()->getSourceRange();
+      << HexResult.str() << Result.getSignificantBits() << LHSType
+      << Left.getBitWidth() << LHS.get()->getSourceRange()
+      << RHS.get()->getSourceRange();
 }
 
 /// Return the resulting type when a vector is shifted
@@ -14739,6 +14746,13 @@ QualType Sema::CheckAddressOfOperand(ExprResult &OrigOp, SourceLocation OpLoc) {
   // If the operand has type "type", the result has type "pointer to type".
   if (op->getType()->isObjCObjectType())
     return Context.getObjCObjectPointerType(op->getType());
+
+  if (Context.getTargetInfo().getTriple().isWasm() &&
+      op->getType()->isWebAssemblyReferenceType()) {
+    Diag(OpLoc, diag::err_wasm_ca_reference)
+        << 1 << OrigOp.get()->getSourceRange();
+    return QualType();
+  }
 
   CheckAddressOfPackedMember(op);
 
@@ -18851,6 +18865,12 @@ static bool captureInLambda(LambdaScopeInfo *LSI, ValueDecl *Var,
     Invalid = true;
   }
 
+  if (BuildAndDiagnose && S.Context.getTargetInfo().getTriple().isWasm() &&
+      CaptureType.getNonReferenceType()->isWebAssemblyReferenceType()) {
+    S.Diag(Loc, diag::err_wasm_ca_reference) << 0;
+    Invalid = true;
+  }
+
   // Compute the type of the field that will capture this variable.
   if (ByRef) {
     // C++11 [expr.prim.lambda]p15:
@@ -21096,6 +21116,8 @@ ExprResult Sema::CheckPlaceholderExpr(Expr *E) {
 #include "clang/Basic/PPCTypes.def"
 #define RVV_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
 #include "clang/Basic/RISCVVTypes.def"
+#define WASM_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
+#include "clang/Basic/WebAssemblyReferenceTypes.def"
 #define BUILTIN_TYPE(Id, SingletonId) case BuiltinType::Id:
 #define PLACEHOLDER_TYPE(Id, SingletonId)
 #include "clang/AST/BuiltinTypes.def"

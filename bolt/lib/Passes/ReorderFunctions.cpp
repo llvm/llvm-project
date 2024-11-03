@@ -12,6 +12,8 @@
 
 #include "bolt/Passes/ReorderFunctions.h"
 #include "bolt/Passes/HFSort.h"
+#include "bolt/Utils/Utils.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/CommandLine.h"
 #include <fstream>
 
@@ -292,10 +294,8 @@ void ReorderFunctions::runOnFunctions(BinaryContext &BC) {
     {
       std::vector<BinaryFunction *> SortedFunctions(BFs.size());
       uint32_t Index = 0;
-      llvm::transform(BFs, SortedFunctions.begin(),
-                      [](std::pair<const uint64_t, BinaryFunction> &BFI) {
-                        return &BFI.second;
-                      });
+      llvm::transform(llvm::make_second_range(BFs), SortedFunctions.begin(),
+                      [](BinaryFunction &BF) { return &BF; });
       llvm::stable_sort(SortedFunctions, [&](const BinaryFunction *A,
                                              const BinaryFunction *B) {
         if (A->isIgnored())
@@ -332,15 +332,23 @@ void ReorderFunctions::runOnFunctions(BinaryContext &BC) {
     break;
   case RT_USER:
     {
+      // Build LTOCommonNameMap
+      StringMap<std::vector<uint64_t>> LTOCommonNameMap;
+      for (const BinaryFunction &BF : llvm::make_second_range(BFs))
+        for (StringRef Name : BF.getNames())
+          if (std::optional<StringRef> LTOCommonName = getLTOCommonName(Name))
+            LTOCommonNameMap[*LTOCommonName].push_back(BF.getAddress());
+
       uint32_t Index = 0;
+      uint32_t InvalidEntries = 0;
       for (const std::string &Function : readFunctionOrderFile()) {
         std::vector<uint64_t> FuncAddrs;
 
         BinaryData *BD = BC.getBinaryDataByName(Function);
         if (!BD) {
+          // If we can't find the main symbol name, look for alternates.
           uint32_t LocalID = 1;
           while (true) {
-            // If we can't find the main symbol name, look for alternates.
             const std::string FuncName =
                 Function + "/" + std::to_string(LocalID);
             BD = BC.getBinaryDataByName(FuncName);
@@ -350,13 +358,19 @@ void ReorderFunctions::runOnFunctions(BinaryContext &BC) {
               break;
             LocalID++;
           }
+          // Strip LTO suffixes
+          if (std::optional<StringRef> CommonName = getLTOCommonName(Function))
+            if (LTOCommonNameMap.find(*CommonName) != LTOCommonNameMap.end())
+              llvm::append_range(FuncAddrs, LTOCommonNameMap[*CommonName]);
         } else {
           FuncAddrs.push_back(BD->getAddress());
         }
 
         if (FuncAddrs.empty()) {
-          errs() << "BOLT-WARNING: Reorder functions: can't find function for "
-                 << Function << ".\n";
+          if (opts::Verbosity >= 1)
+            errs() << "BOLT-WARNING: Reorder functions: can't find function "
+                   << "for " << Function << "\n";
+          ++InvalidEntries;
           continue;
         }
 
@@ -366,17 +380,22 @@ void ReorderFunctions::runOnFunctions(BinaryContext &BC) {
 
           BinaryFunction *BF = BC.getFunctionForSymbol(FuncBD->getSymbol());
           if (!BF) {
-            errs() << "BOLT-WARNING: Reorder functions: can't find function for "
-                   << Function << ".\n";
+            if (opts::Verbosity >= 1)
+              errs() << "BOLT-WARNING: Reorder functions: can't find function "
+                     << "for " << Function << "\n";
+            ++InvalidEntries;
             break;
           }
           if (!BF->hasValidIndex())
             BF->setIndex(Index++);
           else if (opts::Verbosity > 0)
             errs() << "BOLT-WARNING: Duplicate reorder entry for " << Function
-                   << ".\n";
+                   << "\n";
         }
       }
+      if (InvalidEntries)
+        errs() << "BOLT-WARNING: Reorder functions: can't find functions for "
+               << InvalidEntries << " entries in -function-order list\n";
     }
     break;
   }
@@ -407,10 +426,8 @@ void ReorderFunctions::runOnFunctions(BinaryContext &BC) {
 
   if (FuncsFile || LinkSectionsFile) {
     std::vector<BinaryFunction *> SortedFunctions(BFs.size());
-    llvm::transform(BFs, SortedFunctions.begin(),
-                    [](std::pair<const uint64_t, BinaryFunction> &BFI) {
-                      return &BFI.second;
-                    });
+    llvm::transform(llvm::make_second_range(BFs), SortedFunctions.begin(),
+                    [](BinaryFunction &BF) { return &BF; });
 
     // Sort functions by index.
     llvm::stable_sort(SortedFunctions,

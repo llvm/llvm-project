@@ -9,15 +9,15 @@
 #ifndef LLVM_LIBC_SUPPORT_CPP_BIT_H
 #define LLVM_LIBC_SUPPORT_CPP_BIT_H
 
-#include "src/__support/compiler_features.h"
+#include "src/__support/macros/config.h" // LIBC_HAS_BUILTIN
 
 namespace __llvm_libc::cpp {
 
-#if LLVM_LIBC_HAS_BUILTIN(__builtin_bit_cast)
+#if LIBC_HAS_BUILTIN(__builtin_bit_cast)
 #define LLVM_LIBC_HAS_BUILTIN_BIT_CAST
 #endif
 
-#if LLVM_LIBC_HAS_BUILTIN(__builtin_memcpy_inline)
+#if LIBC_HAS_BUILTIN(__builtin_memcpy_inline)
 #define LLVM_LIBC_HAS_BUILTIN_MEMCPY_INLINE
 #endif
 

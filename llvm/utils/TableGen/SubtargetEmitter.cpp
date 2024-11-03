@@ -10,11 +10,13 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "CodeGenHwModes.h"
 #include "CodeGenSchedule.h"
 #include "CodeGenTarget.h"
 #include "PredicateExpander.h"
-#include "llvm/ADT/SmallPtrSet.h"
+#include "TableGenBackends.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/MC/MCInstrItineraries.h"

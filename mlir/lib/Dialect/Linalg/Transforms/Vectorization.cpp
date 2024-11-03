@@ -9,6 +9,7 @@
 // This file implements the linalg dialect Vectorization transformations.
 //
 //===----------------------------------------------------------------------===//
+#include "mlir/Dialect/Affine/Utils.h"
 
 #include "mlir/Analysis/SliceAnalysis.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
@@ -415,8 +416,7 @@ static Value broadcastIfNeeded(OpBuilder &b, Value value,
       vector::BroadcastableToResult::Success)
     return value;
   Location loc = b.getInsertionPoint()->getLoc();
-  return b.createOrFold<vector::BroadcastOp>(loc, targetVectorType,
-                                                    value);
+  return b.createOrFold<vector::BroadcastOp>(loc, targetVectorType, value);
 }
 
 /// Create MultiDimReductionOp to compute the reduction for `reductionOp`. This
@@ -531,14 +531,16 @@ vectorizeLinalgYield(RewriterBase &rewriter, Operation *op,
 /// VectorizationStatus::NewOp to signal the vectorization algorithm that it
 /// should map the produced operations. This function is meant to be used as a
 /// CustomVectorizationHook.
-static VectorizationResult
-vectorizeLinalgIndex(RewriterBase &rewriter, Operation *op, LinalgOp linalgOp) {
+static VectorizationResult vectorizeLinalgIndex(RewriterBase &rewriter,
+                                                VectorizationState &state,
+                                                Operation *op,
+                                                LinalgOp linalgOp) {
   IndexOp indexOp = dyn_cast<linalg::IndexOp>(op);
   if (!indexOp)
     return VectorizationResult{VectorizationStatus::Failure, nullptr};
   auto loc = indexOp.getLoc();
   // Compute the static loop sizes of the index op.
-  auto targetShape = linalgOp.computeStaticLoopSizes();
+  auto targetShape = llvm::to_vector(state.getCanonicalVecShape());
   // Compute a one-dimensional index vector for the index op dimension.
   SmallVector<int64_t> constantSeq =
       llvm::to_vector<16>(llvm::seq<int64_t>(0, targetShape[indexOp.getDim()]));
@@ -596,32 +598,33 @@ tensorExtractVectorizationPrecondition(Operation *op, bool vectorizeNDExtract) {
 ///
 /// For tensor<45 x 80 x 15 x f32> and index [1, 2, 3], this leads to:
 ///  offset = ( ( 1 ) * 80 +  2 ) * 15  + 3
-static Value
-calculateGatherOffset(OpBuilder &b, tensor::ExtractOp extractOp,
-                      const IRMapping &bvm,
-                      const SmallVectorImpl<int64_t> &targetShape) {
+static Value calculateGatherOffset(RewriterBase &rewriter,
+                                   tensor::ExtractOp extractOp,
+                                   const IRMapping &bvm,
+                                   const ArrayRef<int64_t> targetShape) {
   // The vector of indices for GatherOp should be shaped as the output vector
-  auto indexVecType = VectorType::get(targetShape, b.getIndexType());
+  auto indexVecType = VectorType::get(targetShape, rewriter.getIndexType());
   auto loc = extractOp.getLoc();
 
-  Value offset = b.create<vector::BroadcastOp>(
-      loc, indexVecType, bvm.lookup(extractOp.getIndices()[0]));
+  Value offset = broadcastIfNeeded(
+      rewriter, bvm.lookup(extractOp.getIndices()[0]), indexVecType.getShape());
 
   const size_t numIndices = extractOp.getIndices().size();
   for (size_t i = 1; i < numIndices; i++) {
     auto dimSize = broadcastIfNeeded(
-        b,
-        b.create<arith::ConstantIndexOp>(
+        rewriter,
+        rewriter.create<arith::ConstantIndexOp>(
             loc,
             extractOp.getTensor().getType().cast<ShapedType>().getDimSize(i)),
         indexVecType.getShape());
 
-    offset = b.create<arith::MulIOp>(loc, offset, dimSize);
+    offset = rewriter.create<arith::MulIOp>(loc, offset, dimSize);
 
-    auto extractOpIndex = broadcastIfNeeded(
-        b, bvm.lookup(extractOp.getIndices()[i]), indexVecType.getShape());
+    auto extractOpIndex =
+        broadcastIfNeeded(rewriter, bvm.lookup(extractOp.getIndices()[i]),
+                          indexVecType.getShape());
 
-    offset = b.create<arith::AddIOp>(loc, extractOpIndex, offset);
+    offset = rewriter.create<arith::AddIOp>(loc, extractOpIndex, offset);
   }
 
   return offset;
@@ -631,17 +634,16 @@ calculateGatherOffset(OpBuilder &b, tensor::ExtractOp extractOp,
 /// VectorizationStatus::NewOp to signal the vectorization algorithm that it
 /// should map the produced operations. This function is meant to be used as a
 /// CustomVectorizationHook.
-static VectorizationResult vectorizeTensorExtract(RewriterBase &rewriter,
-                                                  Operation *op,
-                                                  LinalgOp linalgOp,
-                                                  const IRMapping &bvm) {
+static VectorizationResult
+vectorizeTensorExtract(RewriterBase &rewriter, VectorizationState &state,
+                       Operation *op, LinalgOp linalgOp, const IRMapping &bvm) {
   tensor::ExtractOp extractOp = dyn_cast<tensor::ExtractOp>(op);
   if (!extractOp)
     return VectorizationResult{VectorizationStatus::Failure, nullptr};
   auto loc = extractOp.getLoc();
 
   // Compute the static loop sizes of the extract op.
-  auto targetShape = linalgOp.computeStaticLoopSizes();
+  auto targetShape = state.getCanonicalVecShape();
 
   auto resultType =
       VectorType::get(targetShape, extractOp.getResult().getType());
@@ -661,9 +663,10 @@ static VectorizationResult vectorizeTensorExtract(RewriterBase &rewriter,
   Value offset = calculateGatherOffset(rewriter, extractOp, bvm, targetShape);
 
   // Generate the gather load
-  auto gatherOp = rewriter.create<vector::GatherOp>(
+  Operation *gatherOp = rewriter.create<vector::GatherOp>(
       loc, resultType, extractOp.getTensor(), baseIndices, offset,
       maskConstantOp, passThruConstantOp);
+  gatherOp = state.maskOperation(rewriter, gatherOp, linalgOp);
 
   return VectorizationResult{VectorizationStatus::NewOp, gatherOp};
 }
@@ -903,14 +906,14 @@ vectorizeAsLinalgGeneric(RewriterBase &rewriter, VectorizationState &state,
   // 4b. Register CustomVectorizationHook for indexOp.
   CustomVectorizationHook vectorizeIndex =
       [&](Operation *op, const IRMapping &bvm) -> VectorizationResult {
-    return vectorizeLinalgIndex(rewriter, op, linalgOp);
+    return vectorizeLinalgIndex(rewriter, state, op, linalgOp);
   };
   hooks.push_back(vectorizeIndex);
 
   // 4c. Register CustomVectorizationHook for extractOp.
   CustomVectorizationHook vectorizeExtract =
       [&](Operation *op, const IRMapping &bvm) -> VectorizationResult {
-    return vectorizeTensorExtract(rewriter, op, linalgOp, bvm);
+    return vectorizeTensorExtract(rewriter, state, op, linalgOp, bvm);
   };
   hooks.push_back(vectorizeExtract);
 
@@ -959,6 +962,10 @@ static LogicalResult vectorizeDynamicLinalgOpPrecondition(linalg::LinalgOp op) {
   if (!isa<linalg::GenericOp>(op))
     return failure();
 
+  // TODO: Index vectorization assumes static shape.
+  if (op.hasIndexSemantics())
+    return failure();
+
   // TODO: 0-d vectors are not supported yet.
   if (llvm::any_of(op.getIndexingMapsArray(), [](AffineMap map) {
         return map.isEmpty() || map.getResults().empty();
@@ -973,32 +980,34 @@ LogicalResult
 mlir::linalg::vectorizeLinalgOpPrecondition(LinalgOp linalgOp,
                                             ArrayRef<int64_t> inputVectorSizes,
                                             bool vectorizeNDExtract) {
+  // tensor with dimension of 0 cannot be vectorized.
+  if (llvm::any_of(linalgOp.getStaticShape(),
+                   [](int64_t dim) { return dim == 0; }))
+    return failure();
   // Check API contract for input vector sizes.
   if (!inputVectorSizes.empty()) {
     assert(inputVectorSizes.size() == linalgOp.getNumLoops() &&
            "Input vector sizes don't match the number of loops");
     assert(!ShapedType::isDynamicShape(inputVectorSizes) &&
            "Input vector sizes can't have dynamic dimensions");
-    assert(llvm::all_of(
-               llvm::zip(linalgOp.getStaticLoopRanges(), inputVectorSizes),
-               [](std::tuple<int64_t, int64_t> sizePair) {
-                 int64_t staticSize = std::get<0>(sizePair);
-                 int64_t inputSize = std::get<1>(sizePair);
-                 return ShapedType::isDynamic(staticSize) ||
-                        staticSize <= inputSize;
-               }) &&
-           "Input vector sizes must be smaller or equal than iteration space "
-           "static sizes");
+    assert(
+        llvm::all_of(
+            llvm::zip(linalgOp.getStaticLoopRanges(), inputVectorSizes),
+            [](std::tuple<int64_t, int64_t> sizePair) {
+              int64_t staticSize = std::get<0>(sizePair);
+              int64_t inputSize = std::get<1>(sizePair);
+              return ShapedType::isDynamic(staticSize) ||
+                     staticSize <= inputSize;
+            }) &&
+        "Input vector sizes must be greater than or equal to iteration space "
+        "static sizes");
   }
 
-  // TODO: Masking is only supported for dynamic shapes so input vector sizes
-  // must be empty if the op is not dynamic.
-  if (!linalgOp.hasDynamicShape() && !inputVectorSizes.empty())
-    return failure();
-
   if (linalgOp.hasDynamicShape() &&
-      failed(vectorizeDynamicLinalgOpPrecondition(linalgOp)))
+      failed(vectorizeDynamicLinalgOpPrecondition(linalgOp))) {
+    LDBG("Dynamically-shaped op failed vectorization pre-conditions\n");
     return failure();
+  }
 
   SmallVector<CustomVectorizationPrecondition> customPreconditions;
 
@@ -1048,10 +1057,25 @@ mlir::linalg::vectorizeLinalgOpPrecondition(LinalgOp linalgOp,
   return success();
 }
 
+/// Converts affine.apply Ops to arithmetic operations.
+static void convertAffineApply(RewriterBase &rewriter, LinalgOp linalgOp) {
+  OpBuilder::InsertionGuard g(rewriter);
+  auto toReplace = linalgOp.getBlock()->getOps<AffineApplyOp>();
+
+  for (auto op : make_early_inc_range(toReplace)) {
+    rewriter.setInsertionPoint(op);
+    auto expanded = expandAffineExpr(
+        rewriter, op->getLoc(), op.getAffineMap().getResult(0),
+        op.getOperands().take_front(op.getAffineMap().getNumDims()),
+        op.getOperands().take_back(op.getAffineMap().getNumSymbols()));
+    rewriter.replaceOp(op, expanded);
+  }
+}
+
 /// Emit a suitable vector form for a Linalg op. If provided, `inputVectorSizes`
 /// are used to vectorize this operation. `inputVectorSizes` must match the rank
-/// of the iteration space of the operation and the sizes must be smaller or
-/// equal than their counterpart interation space sizes, if static.
+/// of the iteration space of the operation and the input vector sizes must be
+/// greater than or equal to their counterpart iteration space sizes, if static.
 /// `inputVectorShapes` also allows the vectorization of operations with dynamic
 /// shapes.
 LogicalResult mlir::linalg::vectorize(RewriterBase &rewriter, LinalgOp linalgOp,
@@ -1063,8 +1087,10 @@ LogicalResult mlir::linalg::vectorize(RewriterBase &rewriter, LinalgOp linalgOp,
   LLVM_DEBUG(llvm::dbgs() << "\n");
 
   if (failed(vectorizeLinalgOpPrecondition(linalgOp, inputVectorSizes,
-                                           vectorizeNDExtract)))
+                                           vectorizeNDExtract))) {
+    LDBG("Vectorization pre-conditions failed\n");
     return failure();
+  }
 
   // Initialize vectorization state.
   VectorizationState state(rewriter);
@@ -1084,6 +1110,10 @@ LogicalResult mlir::linalg::vectorize(RewriterBase &rewriter, LinalgOp linalgOp,
                                              vectorizeNDExtract)))
       return failure();
     LDBG("Vectorize generic by broadcasting to the canonical vector shape\n");
+
+    // Pre-process before proceeding.
+    convertAffineApply(rewriter, linalgOp);
+
     // TODO: 'vectorize' takes in a 'RewriterBase' which is up-casted to
     // 'OpBuilder' when it is passed over to some methods like
     // 'vectorizeAsLinalgGeneric'. This is highly problematic: if we erase an op

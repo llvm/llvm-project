@@ -33,7 +33,7 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#if _LIBCPP_STD_VER > 17
+#if _LIBCPP_STD_VER >= 20
 
 template <__fmt_char_type _CharT>
 struct _LIBCPP_TEMPLATE_VIS _LIBCPP_AVAILABILITY_FORMAT formatter<bool, _CharT> {
@@ -71,7 +71,7 @@ public:
   __format_spec::__parser<_CharT> __parser_;
 };
 
-#endif //_LIBCPP_STD_VER > 17
+#endif //_LIBCPP_STD_VER >= 20
 
 _LIBCPP_END_NAMESPACE_STD
 

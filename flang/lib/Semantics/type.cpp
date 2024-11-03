@@ -11,6 +11,7 @@
 #include "compute-offsets.h"
 #include "flang/Evaluate/fold.h"
 #include "flang/Evaluate/tools.h"
+#include "flang/Evaluate/type.h"
 #include "flang/Parser/characters.h"
 #include "flang/Parser/parse-tree-visitor.h"
 #include "flang/Semantics/scope.h"
@@ -325,28 +326,33 @@ void DerivedTypeSpec::Instantiate(Scope &containingScope) {
     const SourceName &name{symbol.name()};
     if (typeScope.find(symbol.name()) != typeScope.end()) {
       // This type parameter belongs to the derived type itself, not to
-      // one of its ancestors.  Put the type parameter expression value
-      // into the new scope as the initialization value for the parameter.
+      // one of its ancestors.  Put the type parameter expression value,
+      // when there is one, into the new scope as the initialization value
+      // for the parameter.  And when there is no explicit value, add an
+      // uninitialized type parameter to forestall use of any default.
       if (ParamValue * paramValue{FindParameter(name)}) {
         const TypeParamDetails &details{symbol.get<TypeParamDetails>()};
         paramValue->set_attr(details.attr());
+        TypeParamDetails instanceDetails{details.attr()};
+        if (const DeclTypeSpec * type{details.type()}) {
+          instanceDetails.set_type(*type);
+        }
+        desc += sep;
+        desc += name.ToString();
+        desc += '=';
+        sep = ',';
         if (MaybeIntExpr expr{paramValue->GetExplicit()}) {
           if (auto folded{evaluate::NonPointerInitializationExpr(symbol,
                   SomeExpr{std::move(*expr)}, foldingContext, &newScope)}) {
-            desc += sep;
-            desc += name.ToString();
-            desc += '=';
             desc += folded->AsFortran();
-            sep = ',';
-            TypeParamDetails instanceDetails{details.attr()};
-            if (const DeclTypeSpec * type{details.type()}) {
-              instanceDetails.set_type(*type);
-            }
             instanceDetails.set_init(
                 std::move(DEREF(evaluate::UnwrapExpr<SomeIntExpr>(*folded))));
-            newScope.try_emplace(name, std::move(instanceDetails));
           }
         }
+        if (!instanceDetails.init()) {
+          desc += '*';
+        }
+        newScope.try_emplace(name, std::move(instanceDetails));
       }
     }
   }
@@ -362,7 +368,6 @@ void DerivedTypeSpec::Instantiate(Scope &containingScope) {
   }
   // Instantiate every non-parameter symbol from the original derived
   // type's scope into the new instance.
-  newScope.AddSourceRange(typeScope.sourceRange());
   auto restorer2{foldingContext.messages().SetContext(contextMessage)};
   if (PlumbPDTInstantiationDepth(&containingScope) > 100) {
     foldingContext.messages().Say(
@@ -788,6 +793,11 @@ std::string DeclTypeSpec::AsFortran() const {
 
 llvm::raw_ostream &operator<<(llvm::raw_ostream &o, const DeclTypeSpec &x) {
   return o << x.AsFortran();
+}
+
+bool IsInteroperableIntrinsicType(const DeclTypeSpec &type) {
+  auto dyType{evaluate::DynamicType::From(type)};
+  return dyType && IsInteroperableIntrinsicType(*dyType);
 }
 
 } // namespace Fortran::semantics

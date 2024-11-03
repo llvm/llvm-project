@@ -57,6 +57,7 @@ on support follow.
      ``Svnapot``      Assembly Support
      ``Svpbmt``       Supported
      ``V``            Supported
+     ``Zawrs``        Assembly Support
      ``Zba``          Supported
      ``Zbb``          Supported
      ``Zbc``          Supported
@@ -73,6 +74,8 @@ on support follow.
      ``Zicbom``       Assembly Support
      ``Zicbop``       Assembly Support
      ``Zicboz``       Assembly Support
+     ``Zicsr``        (`See Note <#riscv-i2p1-note>`__)
+     ``Zifencei``     (`See Note <#riscv-i2p1-note>`__)
      ``Zihintpause``  Assembly Support
      ``Zkn``          Supported
      ``Zknd``         Supported (`See note <#riscv-scalar-crypto-note2>`__)
@@ -125,6 +128,11 @@ Supported
 ``Zve32x``, ``Zve32f``, ``Zvl32b``
   LLVM currently assumes a minimum VLEN (vector register width) of 64 bits during compilation, and as a result ``Zve32x`` and ``Zve32f`` are supported only for VLEN>=64.  Assembly support doesn't have this restriction.
 
+.. _riscv-i2p1-note:
+
+``zicsr``, ``zifencei``
+  Between versions 2.0 and 2.1 of the base I specification, a backwards incompatible change was made to remove selected instructions and CSRs from the base ISA.  These instructions were grouped into a set of new extensions, but were no longer required by the base ISA.  This change is described in "Preface to Document Version 20190608-Base-Ratified" from the specification document.  LLVM currently implements version 2.0 of the base specification.  Thus, instructions from these extensions are accepted as part of the base ISA.  LLVM also allows the explicit specification of the extensions in an march string.
+
 Experimental Extensions
 =======================
 
@@ -132,17 +140,26 @@ LLVM supports (to various degrees) a number of experimental extensions.  All exp
 
 The primary goal of experimental support is to assist in the process of ratification by providing an existence proof of an implementation, and simplifying efforts to validate the value of a proposed extension against large code bases.  Experimental extensions are expected to either transition to ratified status, or be eventually removed.  The decision on whether to accept an experimental extension is currently done on an entirely case by case basis; if you want to propose one, attending the bi-weekly RISC-V sync-up call is strongly advised.
 
-``experimental-zawrs``
-  LLVM implements the `1.0-rc3 draft specification <https://github.com/riscv/riscv-zawrs/releases/download/V1.0-rc3/Zawrs.pdf>`_.  Note that have been backwards incompatible changes made between release candidates for the 1.0 draft.
-
 ``experimental-zca``
-  LLVM implements the `0.70 draft specification <https://github.com/riscv/riscv-code-size-reduction/releases/tag/V0.70.1-TOOLCHAIN-DEV>`_.
+  LLVM implements the `1.0.1 draft specification <https://github.com/riscv/riscv-code-size-reduction/releases/tag/v1.0.1>`_.
+
+``experimental-zcb``
+  LLVM implements the `1.0.1 draft specification <https://github.com/riscv/riscv-code-size-reduction/releases/tag/v1.0.1>`_.
+
+``experimental-zcd``
+  LLVM implements the `1.0.1 draft specification <https://github.com/riscv/riscv-code-size-reduction/releases/tag/v1.0.1>`_.
+
+``experimental-zcf``
+  LLVM implements the `1.0.1 draft specification <https://github.com/riscv/riscv-code-size-reduction/releases/tag/v1.0.1>`_.
+
+``experimental-zfa``
+  LLVM implements a subset of `0.1 draft specification <https://github.com/riscv/riscv-isa-manual/releases/download/draft-20221119-5234c63/riscv-spec.pdf>`_ (see Chapter 25). Load-immediate instructions (fli.s/fli.d/fli.h) haven't been implemented yet.
 
 ``experimental-zihintntl``
   LLVM implements the `0.2 draft specification <https://github.com/riscv/riscv-isa-manual/releases/tag/draft-20220831-bf5a151>`_.
 
 ``experimental-ztso``
-  LLVM implements the `v0.1 proposed specification <https://github.com/riscv/riscv-isa-manual/releases/download/draft-20220723-10eea63/riscv-spec.pdf>`_ (see Chapter 25).  Using will set appropriate ELF flags and attributes, but does not yet change code generation.
+  LLVM implements the `v0.1 proposed specification <https://github.com/riscv/riscv-isa-manual/releases/download/draft-20220723-10eea63/riscv-spec.pdf>`_ (see Chapter 25).  The mapping from the C/C++ memory model to Ztso has not yet been ratified in any standards document.  There are multiple possible mappings, and they are *not* mutually ABI compatible.  The mapping LLVM implements is ABI compatible with the default WMO mapping.  This mapping may change and there is *explicitly* no ABI stability offered while the extension remains in experimental status.  User beware.
 
 ``experimental-zvfh``
   LLVM implements `this draft text <https://github.com/riscv/riscv-v-spec/pull/780>`_.
@@ -160,12 +177,23 @@ It is our intention to follow the naming conventions described in `riscv-non-isa
 
 The current vendor extensions supported are:
 
-``XVentanaCondOps``
-  LLVM implements `version 1.0.0 of the VTx-family custom instructions specification <https://github.com/ventanamicro/ventana-custom-extensions/releases/download/v1.0.0/ventana-custom-extensions-v1.0.0.pdf>`_ by Ventana Micro Systems.  All instructions are prefixed with `vt.` as described in the specification, and the riscv-toolchain-convention document linked above.  These instructions are only available for riscv64 at this time.
+``XTHeadBa``
+  LLVM implements `the THeadBa (address-generation) vendor-defined instructions specified in <https://github.com/T-head-Semi/thead-extension-spec/releases/download/2.2.2/xthead-2023-01-30-2.2.2.pdf>`_  by T-HEAD of Alibaba.  Instructions are prefixed with `th.` as described in the specification.
+
+``XTHeadBb``
+  LLVM implements `the THeadBb (basic bit-manipulation) vendor-defined instructions specified in <https://github.com/T-head-Semi/thead-extension-spec/releases/download/2.2.2/xthead-2023-01-30-2.2.2.pdf>`_  by T-HEAD of Alibaba.  Instructions are prefixed with `th.` as described in the specification.
+
+``XTHeadBs``
+  LLVM implements `the THeadBs (single-bit operations) vendor-defined instructions specified in <https://github.com/T-head-Semi/thead-extension-spec/releases/download/2.2.2/xthead-2023-01-30-2.2.2.pdf>`_  by T-HEAD of Alibaba.  Instructions are prefixed with `th.` as described in the specification.
+
+``XTheadMac``
+  LLVM implements `the XTheadMac (multiply-accumulate instructions) vendor-defined instructions specified in <https://github.com/T-head-Semi/thead-extension-spec/releases/download/2.2.2/xthead-2023-01-30-2.2.2.pdf>`_  by T-HEAD of Alibaba.  Instructions are prefixed with `th.` as described in the specification.
 
 ``XTHeadVdot``
   LLVM implements `version 1.0.0 of the THeadV-family custom instructions specification <https://github.com/T-head-Semi/thead-extension-spec/releases/download/2.2.0/xthead-2022-12-04-2.2.0.pdf>`_ by T-HEAD of Alibaba.  All instructions are prefixed with `th.` as described in the specification, and the riscv-toolchain-convention document linked above.
 
+``XVentanaCondOps``
+  LLVM implements `version 1.0.0 of the VTx-family custom instructions specification <https://github.com/ventanamicro/ventana-custom-extensions/releases/download/v1.0.0/ventana-custom-extensions-v1.0.0.pdf>`_ by Ventana Micro Systems.  All instructions are prefixed with `vt.` as described in the specification, and the riscv-toolchain-convention document linked above.  These instructions are only available for riscv64 at this time.
 
 Specification Documents
 =======================

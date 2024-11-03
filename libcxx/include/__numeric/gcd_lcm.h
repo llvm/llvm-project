@@ -28,7 +28,7 @@ _LIBCPP_PUSH_MACROS
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#if _LIBCPP_STD_VER > 14
+#if _LIBCPP_STD_VER >= 17
 
 template <typename _Result, typename _Source, bool _IsSigned = is_signed<_Source>::value> struct __ct_abs;
 

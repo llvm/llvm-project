@@ -578,6 +578,11 @@ struct WasmSym {
   // Unlike __wasm_apply_data_relocs this needs to run on every thread.
   static DefinedFunction *applyGlobalRelocs;
 
+  // __wasm_apply_tls_relocs
+  // Like applyDataRelocs but for TLS section.  These must be delayed until
+  // __wasm_init_tls.
+  static DefinedFunction *applyTLSRelocs;
+
   // __wasm_apply_global_tls_relocs
   // Like applyGlobalRelocs but for globals that hold TLS addresses.  These
   // must be delayed until __wasm_init_tls.

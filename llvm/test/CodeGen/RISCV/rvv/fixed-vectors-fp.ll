@@ -1994,9 +1994,9 @@ define void @trunc_v4f32(ptr %x) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; CHECK-NEXT:    vle32.v v8, (a0)
-; CHECK-NEXT:    lui a1, %hi(.LCPI92_0)
-; CHECK-NEXT:    flw ft0, %lo(.LCPI92_0)(a1)
 ; CHECK-NEXT:    vfabs.v v9, v8
+; CHECK-NEXT:    lui a1, 307200
+; CHECK-NEXT:    fmv.w.x ft0, a1
 ; CHECK-NEXT:    vmflt.vf v0, v9, ft0
 ; CHECK-NEXT:    vfcvt.rtz.x.f.v v9, v8, v0.t
 ; CHECK-NEXT:    vfcvt.f.x.v v9, v9, v0.t
@@ -2062,9 +2062,9 @@ define void @ceil_v4f32(ptr %x) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; CHECK-NEXT:    vle32.v v8, (a0)
-; CHECK-NEXT:    lui a1, %hi(.LCPI95_0)
-; CHECK-NEXT:    flw ft0, %lo(.LCPI95_0)(a1)
 ; CHECK-NEXT:    vfabs.v v9, v8
+; CHECK-NEXT:    lui a1, 307200
+; CHECK-NEXT:    fmv.w.x ft0, a1
 ; CHECK-NEXT:    vmflt.vf v0, v9, ft0
 ; CHECK-NEXT:    fsrmi a1, 3
 ; CHECK-NEXT:    vfcvt.x.f.v v9, v8, v0.t
@@ -2134,9 +2134,9 @@ define void @floor_v4f32(ptr %x) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; CHECK-NEXT:    vle32.v v8, (a0)
-; CHECK-NEXT:    lui a1, %hi(.LCPI98_0)
-; CHECK-NEXT:    flw ft0, %lo(.LCPI98_0)(a1)
 ; CHECK-NEXT:    vfabs.v v9, v8
+; CHECK-NEXT:    lui a1, 307200
+; CHECK-NEXT:    fmv.w.x ft0, a1
 ; CHECK-NEXT:    vmflt.vf v0, v9, ft0
 ; CHECK-NEXT:    fsrmi a1, 2
 ; CHECK-NEXT:    vfcvt.x.f.v v9, v8, v0.t
@@ -2206,9 +2206,9 @@ define void @round_v4f32(ptr %x) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; CHECK-NEXT:    vle32.v v8, (a0)
-; CHECK-NEXT:    lui a1, %hi(.LCPI101_0)
-; CHECK-NEXT:    flw ft0, %lo(.LCPI101_0)(a1)
 ; CHECK-NEXT:    vfabs.v v9, v8
+; CHECK-NEXT:    lui a1, 307200
+; CHECK-NEXT:    fmv.w.x ft0, a1
 ; CHECK-NEXT:    vmflt.vf v0, v9, ft0
 ; CHECK-NEXT:    fsrmi a1, 4
 ; CHECK-NEXT:    vfcvt.x.f.v v9, v8, v0.t

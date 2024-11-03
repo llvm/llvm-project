@@ -386,6 +386,11 @@ let Command = "expression" in {
     Arg<"Boolean">,
     Desc<"Controls whether the expression can fall back to being JITted if it's "
     "not supported by the interpreter (defaults to true).">;
+  def persistent_result : Option<"persistent-result", "\\x01">, Groups<[1,2]>,
+    Arg<"Boolean">,
+    Desc<"Persist expression result in a variable for subsequent use. "
+    "Expression results will be labeled with $-prefixed variables, e.g. $0, "
+    "$1, etc. Defaults to true.">;
 }
 
 let Command = "frame diag" in {

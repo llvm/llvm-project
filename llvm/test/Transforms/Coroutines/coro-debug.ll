@@ -193,7 +193,8 @@ attributes #7 = { noduplicate }
 ; CHECK: %[[CALLBR_RES:.+]] = callbr i32 asm
 ; CHECK-NEXT: to label %[[DEFAULT_DEST:.+]] [label
 ; CHECK: [[DEFAULT_DEST]]:
-; CHECK-NEXT: call void @llvm.dbg.declare(metadata i32 %[[CALLBR_RES]]
+; CHECK-NOT: {{.*}}:
+; CHECK: call void @llvm.dbg.declare(metadata i32 %[[CALLBR_RES]]
 ; CHECK: define internal fastcc void @f.destroy(%f.Frame* noundef nonnull align 8 dereferenceable(40) %FramePtr) #0 personality i32 0 !dbg ![[DESTROY:[0-9]+]]
 ; CHECK: define internal fastcc void @f.cleanup(%f.Frame* noundef nonnull align 8 dereferenceable(40) %FramePtr) #0 personality i32 0 !dbg ![[CLEANUP:[0-9]+]]
 

@@ -502,10 +502,10 @@ multiclass ACC_NEG_UM_M42_XOM84C<bits<6> opcode, bits<8> xo, dag IOL,
 
 let Predicates = [MMA, IsNotISAFuture] in {
   def XXMFACC :
-    XForm_AT3<31, 0, 177, (outs acc:$ASo), (ins acc:$AS), "xxmfacc $AS",
+    XForm_AT3<31, 0, 177, (outs acc:$ATo), (ins acc:$AT), "xxmfacc $AT",
               IIC_VecGeneral,
-              [(set v512i1:$ASo, (int_ppc_mma_xxmfacc v512i1:$AS))]>,
-              RegConstraint<"$ASo = $AS">, NoEncode<"$ASo">;
+              [(set v512i1:$ATo, (int_ppc_mma_xxmfacc v512i1:$AT))]>,
+              RegConstraint<"$ATo = $AT">, NoEncode<"$ATo">;
   def XXMTACC :
     XForm_AT3<31, 1, 177, (outs acc:$AT), (ins acc:$ATi), "xxmtacc $AT",
               IIC_VecGeneral,
@@ -550,9 +550,9 @@ let Predicates = [MMA, IsISAFuture], isCodeGenOnly = 1 in {
   // On top of that Future CPU has a more convenient way to move between vsrs
   // and wacc registers using xxextfdmr512 and xxinstdmr512.
   def XXMFACCW :
-    XForm_AT3<31, 0, 177, (outs wacc:$ASo), (ins wacc:$AS), "xxmfacc $AS",
+    XForm_AT3<31, 0, 177, (outs wacc:$ATo), (ins wacc:$AT), "xxmfacc $AT",
               IIC_VecGeneral, []>,
-              RegConstraint<"$ASo = $AS">, NoEncode<"$ASo">;
+              RegConstraint<"$ATo = $AT">, NoEncode<"$ATo">;
   def XXMTACCW :
     XForm_AT3<31, 1, 177, (outs wacc:$AT), (ins wacc:$ATi), "xxmtacc $AT",
               IIC_VecGeneral, []>,

@@ -28,10 +28,8 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/TinyPtrVector.h"
-#include "llvm/ADT/Triple.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Analysis/ConstantFolding.h"
-#include "llvm/Analysis/EHPersonalities.h"
 #include "llvm/Analysis/MemoryLocation.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/BinaryFormat/COFF.h"
@@ -39,6 +37,7 @@
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/CodeGen/GCMetadata.h"
 #include "llvm/CodeGen/GCMetadataPrinter.h"
+#include "llvm/CodeGen/LazyMachineBlockFrequencyInfo.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineConstantPool.h"
 #include "llvm/CodeGen/MachineDominators.h"
@@ -67,6 +66,7 @@
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/EHPersonalities.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GCStrategy.h"
 #include "llvm/IR/GlobalAlias.h"
@@ -113,6 +113,7 @@
 #include "llvm/Target/TargetLoweringObjectFile.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetOptions.h"
+#include "llvm/TargetParser/Triple.h"
 #include <algorithm>
 #include <cassert>
 #include <cinttypes>
@@ -127,6 +128,13 @@
 using namespace llvm;
 
 #define DEBUG_TYPE "asm-printer"
+
+static cl::opt<std::string> BasicBlockProfileDump(
+    "mbb-profile-dump", cl::Hidden,
+    cl::desc("Basic block profile dump for external cost modelling. If "
+             "matching up BBs with afterwards, the compilation must be "
+             "performed with -fbasic-block-sections=labels. Enabling this "
+             "flag during in-process ThinLTO is not supported."));
 
 const char DWARFGroupName[] = "dwarf";
 const char DWARFGroupDescription[] = "DWARF Emission";
@@ -414,6 +422,7 @@ void AsmPrinter::getAnalysisUsage(AnalysisUsage &AU) const {
   MachineFunctionPass::getAnalysisUsage(AU);
   AU.addRequired<MachineOptimizationRemarkEmitterPass>();
   AU.addRequired<GCModuleInfo>();
+  AU.addRequired<LazyMachineBlockFrequencyInfoPass>();
 }
 
 bool AsmPrinter::doInitialization(Module &M) {
@@ -583,6 +592,16 @@ bool AsmPrinter::doInitialization(Module &M) {
     NamedRegionTimer T(HI.TimerName, HI.TimerDescription, HI.TimerGroupName,
                        HI.TimerGroupDescription, TimePassesIsEnabled);
     HI.Handler->beginModule(&M);
+  }
+
+  if (!BasicBlockProfileDump.empty()) {
+    std::error_code PossibleFileError;
+    MBBProfileDumpFileOutput = std::make_unique<raw_fd_ostream>(
+        BasicBlockProfileDump, PossibleFileError);
+    if (PossibleFileError) {
+      M.getContext().emitError("Failed to open file for MBB Profile Dump: " +
+                               PossibleFileError.message() + "\n");
+    }
   }
 
   return false;
@@ -1496,9 +1515,22 @@ void AsmPrinter::emitPCSections(const MachineFunction &MF) {
     // constants may appear, which will simply be emitted into the current
     // section (the user of MD_pcsections decides the format of encoded data).
     assert(isa<MDString>(MD.getOperand(0)) && "first operand not a string");
+    bool ConstULEB128 = false;
     for (const MDOperand &MDO : MD.operands()) {
       if (auto *S = dyn_cast<MDString>(MDO)) {
-        SwitchSection(S->getString());
+        // Found string, start of new section!
+        // Find options for this section "<section>!<opts>" - supported options:
+        //   C = Compress constant integers of size 2-8 bytes as ULEB128.
+        const StringRef SecWithOpt = S->getString();
+        const size_t OptStart = SecWithOpt.find('!'); // likely npos
+        const StringRef Sec = SecWithOpt.substr(0, OptStart);
+        const StringRef Opts = SecWithOpt.substr(OptStart); // likely empty
+        ConstULEB128 = Opts.find('C') != StringRef::npos;
+#ifndef NDEBUG
+        for (char O : Opts)
+          assert((O == '!' || O == 'C') && "Invalid !pcsections options");
+#endif
+        SwitchSection(Sec);
         const MCSymbol *Prev = Syms.front();
         for (const MCSymbol *Sym : Syms) {
           if (Sym == Prev || !Deltas) {
@@ -1510,17 +1542,30 @@ void AsmPrinter::emitPCSections(const MachineFunction &MF) {
             // `base + addr`.
             emitLabelDifference(Sym, Base, RelativeRelocSize);
           } else {
-            emitLabelDifference(Sym, Prev, 4);
+            // Emit delta between symbol and previous symbol.
+            if (ConstULEB128)
+              emitLabelDifferenceAsULEB128(Sym, Prev);
+            else
+              emitLabelDifference(Sym, Prev, 4);
           }
           Prev = Sym;
         }
       } else {
+        // Emit auxiliary data after PC.
         assert(isa<MDNode>(MDO) && "expecting either string or tuple");
         const auto *AuxMDs = cast<MDNode>(MDO);
         for (const MDOperand &AuxMDO : AuxMDs->operands()) {
           assert(isa<ConstantAsMetadata>(AuxMDO) && "expecting a constant");
-          const auto *C = cast<ConstantAsMetadata>(AuxMDO);
-          emitGlobalConstant(F.getParent()->getDataLayout(), C->getValue());
+          const Constant *C = cast<ConstantAsMetadata>(AuxMDO)->getValue();
+          const DataLayout &DL = F.getParent()->getDataLayout();
+          const uint64_t Size = DL.getTypeStoreSize(C->getType());
+
+          if (auto *CI = dyn_cast<ConstantInt>(C);
+              CI && ConstULEB128 && Size > 1 && Size <= 8) {
+            emitULEB128(CI->getZExtValue());
+          } else {
+            emitGlobalConstant(DL, C);
+          }
         }
       }
     }
@@ -1862,6 +1907,18 @@ void AsmPrinter::emitFunctionBody() {
     OutStreamer->getCommentOS() << "-- End function\n";
 
   OutStreamer->addBlankLine();
+
+  // Output MBB numbers, function names, and frequencies if the flag to dump
+  // MBB profile information has been set
+  if (MBBProfileDumpFileOutput) {
+    MachineBlockFrequencyInfo &MBFI =
+        getAnalysis<LazyMachineBlockFrequencyInfoPass>().getBFI();
+    for (const auto &MBB : *MF) {
+      *MBBProfileDumpFileOutput.get()
+          << MF->getName() << "," << MBB.getNumber() << ","
+          << MBFI.getBlockFreqRelativeToEntryBlock(&MBB) << "\n";
+    }
+  }
 }
 
 /// Compute the number of Global Variables that uses a Constant.
@@ -2235,6 +2292,8 @@ bool AsmPrinter::doFinalization(Module &M) {
   SmallVector<const GlobalAlias *, 16> AliasStack;
   SmallPtrSet<const GlobalAlias *, 16> AliasVisited;
   for (const auto &Alias : M.aliases()) {
+    if (Alias.hasAvailableExternallyLinkage())
+      continue;
     for (const GlobalAlias *Cur = &Alias; Cur;
          Cur = dyn_cast<GlobalAlias>(Cur->getAliasee())) {
       if (!AliasVisited.insert(Cur).second)
@@ -2786,6 +2845,22 @@ void AsmPrinter::emitInt16(int Value) const { OutStreamer->emitInt16(Value); }
 /// Emit a long directive and value.
 void AsmPrinter::emitInt32(int Value) const { OutStreamer->emitInt32(Value); }
 
+/// EmitSLEB128 - emit the specified signed leb128 value.
+void AsmPrinter::emitSLEB128(int64_t Value, const char *Desc) const {
+  if (isVerbose() && Desc)
+    OutStreamer->AddComment(Desc);
+
+  OutStreamer->emitSLEB128IntValue(Value);
+}
+
+void AsmPrinter::emitULEB128(uint64_t Value, const char *Desc,
+                             unsigned PadTo) const {
+  if (isVerbose() && Desc)
+    OutStreamer->AddComment(Desc);
+
+  OutStreamer->emitULEB128IntValue(Value, PadTo);
+}
+
 /// Emit a long long directive and value.
 void AsmPrinter::emitInt64(uint64_t Value) const {
   OutStreamer->emitInt64(Value);
@@ -2797,6 +2872,12 @@ void AsmPrinter::emitInt64(uint64_t Value) const {
 void AsmPrinter::emitLabelDifference(const MCSymbol *Hi, const MCSymbol *Lo,
                                      unsigned Size) const {
   OutStreamer->emitAbsoluteSymbolDiff(Hi, Lo, Size);
+}
+
+/// Emit something like ".uleb128 Hi-Lo".
+void AsmPrinter::emitLabelDifferenceAsULEB128(const MCSymbol *Hi,
+                                              const MCSymbol *Lo) const {
+  OutStreamer->emitAbsoluteSymbolDiffAsULEB128(Hi, Lo);
 }
 
 /// EmitLabelPlusOffset - Emit something like ".long Label+Offset"

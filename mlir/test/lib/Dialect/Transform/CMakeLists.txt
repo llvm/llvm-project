@@ -19,4 +19,5 @@ add_mlir_library(MLIRTestTransformDialect
   MLIRPass
   MLIRPDLDialect
   MLIRTransformDialect
+  MLIRTransformDialectTransforms
 )

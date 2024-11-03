@@ -47,12 +47,10 @@
 #include "mlir/Pass/PassRegistry.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "mlir/Transforms/Passes.h"
-#include "llvm/ADT/Triple.h"
 #include "llvm/Passes/OptimizationLevel.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/FileSystem.h"
-#include "llvm/Support/Host.h"
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
@@ -60,6 +58,8 @@
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/ToolOutputFile.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/TargetParser/Host.h"
+#include "llvm/TargetParser/Triple.h"
 
 //===----------------------------------------------------------------------===//
 // Some basic command-line options
@@ -249,7 +249,8 @@ static mlir::LogicalResult convertFortranSourceToMLIR(
            << outputName;
 
   // Otherwise run the default passes.
-  mlir::PassManager pm(&ctx, mlir::OpPassManager::Nesting::Implicit);
+  mlir::PassManager pm(mlirModule->getName(),
+                       mlir::OpPassManager::Nesting::Implicit);
   pm.enableVerifier(/*verifyPasses=*/true);
   mlir::applyPassManagerCLOptions(pm);
   if (passPipeline.hasAnyOccurrences()) {

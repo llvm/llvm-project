@@ -838,7 +838,12 @@ void WhitespaceManager::alignConsecutiveAssignments() {
 
         return Style.AlignConsecutiveAssignments.AlignCompound
                    ? C.Tok->getPrecedence() == prec::Assignment
-                   : C.Tok->is(tok::equal);
+                   : (C.Tok->is(tok::equal) ||
+                      // In Verilog the '<=' is not a compound assignment, thus
+                      // it is aligned even when the AlignCompound option is not
+                      // set.
+                      (Style.isVerilog() && C.Tok->is(tok::lessequal) &&
+                       C.Tok->getPrecedence() == prec::Assignment));
       },
       Changes, /*StartAt=*/0, Style.AlignConsecutiveAssignments,
       /*RightJustify=*/true);

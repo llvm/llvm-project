@@ -12,6 +12,6 @@ func.func @generalize_unary(%arg0: tensor<?x?xf32>, %arg1: tensor<?x?xf32>) -> t
 
 transform.sequence failures(propagate) {
 ^bb1(%arg1: !pdl.operation):
-  %0 = transform.structured.match ops{["linalg.elemwise_unary"]} in %arg1
+  %0 = transform.structured.match ops{["linalg.elemwise_unary"]} in %arg1 : (!pdl.operation) -> !pdl.operation
   %1 = transform.structured.generalize %0
 }

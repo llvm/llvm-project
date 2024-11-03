@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/string/strlcpy.h"
-#include "utils/UnitTest/Test.h"
+#include "test/UnitTest/Test.h"
 #include <stdlib.h>
 
 TEST(LlvmLibcStrlcpyTest, TooBig) {

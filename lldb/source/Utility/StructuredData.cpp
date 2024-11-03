@@ -68,6 +68,9 @@ static StructuredData::ObjectSP ParseJSONValue(json::Value &value) {
   if (auto b = value.getAsBoolean())
     return std::make_shared<StructuredData::Boolean>(*b);
 
+  if (auto u = value.getAsUINT64())
+    return std::make_shared<StructuredData::Integer>(*u);
+
   if (auto i = value.getAsInteger())
     return std::make_shared<StructuredData::Integer>(*i);
 

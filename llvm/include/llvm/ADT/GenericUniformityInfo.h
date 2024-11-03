@@ -5,9 +5,6 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-//
-//
-//===----------------------------------------------------------------------===//
 
 #ifndef LLVM_ADT_GENERICUNIFORMITYINFO_H
 #define LLVM_ADT_GENERICUNIFORMITYINFO_H

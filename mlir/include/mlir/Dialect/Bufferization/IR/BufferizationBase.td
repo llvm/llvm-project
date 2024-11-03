@@ -69,7 +69,6 @@ def Bufferization_Dialect : Dialect {
         kEscapeAttrName = "bufferization.escape";
   }];
   let hasOperationAttrVerify = 1;
-  let useFoldAPI = kEmitFoldAdaptorFolder;
 }
 
 #endif // BUFFERIZATION_BASE

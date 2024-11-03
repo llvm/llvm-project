@@ -37,11 +37,18 @@ func.func @integer16(%arg0: i16, %arg1: si16, %arg2: ui16) { return }
 // CHECK-SAME: i64
 // CHECK-SAME: si64
 // CHECK-SAME: ui64
-// NOEMU-LABEL: func @integer64
+// NOEMU-LABEL: func.func @integer64
 // NOEMU-SAME: i64
 // NOEMU-SAME: si64
 // NOEMU-SAME: ui64
 func.func @integer64(%arg0: i64, %arg1: si64, %arg2: ui64) { return }
+
+// i128 is not supported by SPIR-V.
+// CHECK-LABEL: func.func @integer128
+// CHECK-SAME: i128
+// NOEMU-LABEL: func.func @integer128
+// NOEMU-SAME: i128
+func.func @integer128(%arg0: i128) { return }
 
 } // end module
 
@@ -142,6 +149,13 @@ func.func @float16(%arg0: f16) { return }
 // NOEMU-LABEL: func.func @float64
 // NOEMU-SAME: f64
 func.func @float64(%arg0: f64) { return }
+
+// f80 is not supported by SPIR-V.
+// CHECK-LABEL: func.func @float80
+// CHECK-SAME: f80
+// NOEMU-LABEL: func.func @float80
+// NOEMU-SAME: f80
+func.func @float80(%arg0: f80) { return }
 
 } // end module
 

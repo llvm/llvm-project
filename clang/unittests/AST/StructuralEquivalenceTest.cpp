@@ -4,7 +4,7 @@
 #include "clang/Frontend/ASTUnit.h"
 #include "clang/Testing/CommandLineArgs.h"
 #include "clang/Tooling/Tooling.h"
-#include "llvm/Support/Host.h"
+#include "llvm/TargetParser/Host.h"
 
 #include "DeclMatcher.h"
 
@@ -460,7 +460,7 @@ TEST_F(StructuralEquivalenceFunctionTest,
   // These attributes may not be available on certain platforms.
   if (llvm::Triple(llvm::sys::getDefaultTargetTriple()).getArch() !=
       llvm::Triple::x86_64)
-    return;
+    GTEST_SKIP();
   auto t = makeNamedDecls("__attribute__((preserve_all)) void foo();",
                           "__attribute__((ms_abi))   void foo();", Lang_C99);
   EXPECT_FALSE(testStructuralMatch(t));
@@ -469,7 +469,7 @@ TEST_F(StructuralEquivalenceFunctionTest,
 TEST_F(StructuralEquivalenceFunctionTest, FunctionsWithDifferentSavedRegsAttr) {
   if (llvm::Triple(llvm::sys::getDefaultTargetTriple()).getArch() !=
       llvm::Triple::x86_64)
-    return;
+    GTEST_SKIP();
   auto t = makeNamedDecls(
       "__attribute__((no_caller_saved_registers)) void foo();",
       "                                           void foo();", Lang_C99);

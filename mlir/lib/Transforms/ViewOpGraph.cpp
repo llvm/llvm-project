@@ -13,11 +13,11 @@
 #include "mlir/IR/Operation.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Support/IndentedOstream.h"
-#include "llvm/ADT/StringMap.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/GraphWriter.h"
-#include <utility>
+#include <map>
 #include <optional>
+#include <utility>
 
 namespace mlir {
 #define GEN_PASS_DEF_VIEWOPGRAPH
@@ -58,7 +58,7 @@ static std::string quoteString(const std::string &str) {
   return "\"" + str + "\"";
 }
 
-using AttributeMap = llvm::StringMap<std::string>;
+using AttributeMap = std::map<std::string, std::string>;
 
 namespace {
 
@@ -134,7 +134,7 @@ private:
   void emitAttrList(raw_ostream &os, const AttributeMap &map) {
     os << "[";
     interleaveComma(map, os, [&](const auto &it) {
-      os << this->attrStmt(it.getKey(), it.getValue());
+      os << this->attrStmt(it.first, it.second);
     });
     os << "]";
   }

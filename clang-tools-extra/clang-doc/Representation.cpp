@@ -54,51 +54,16 @@ int getChildIndexIfExists(std::vector<T> &Children, T &ChildToMerge) {
   return -1;
 }
 
-void reduceChildren(std::vector<Reference> &Children,
-                    std::vector<Reference> &&ChildrenToMerge) {
+template <typename T>
+void reduceChildren(std::vector<T> &Children,
+                    std::vector<T> &&ChildrenToMerge) {
   for (auto &ChildToMerge : ChildrenToMerge) {
-    int mergeIdx = getChildIndexIfExists(Children, ChildToMerge);
-    if (mergeIdx == -1) {
+    int MergeIdx = getChildIndexIfExists(Children, ChildToMerge);
+    if (MergeIdx == -1) {
       Children.push_back(std::move(ChildToMerge));
       continue;
     }
-    Children[mergeIdx].merge(std::move(ChildToMerge));
-  }
-}
-
-void reduceChildren(std::vector<FunctionInfo> &Children,
-                    std::vector<FunctionInfo> &&ChildrenToMerge) {
-  for (auto &ChildToMerge : ChildrenToMerge) {
-    int mergeIdx = getChildIndexIfExists(Children, ChildToMerge);
-    if (mergeIdx == -1) {
-      Children.push_back(std::move(ChildToMerge));
-      continue;
-    }
-    Children[mergeIdx].merge(std::move(ChildToMerge));
-  }
-}
-
-void reduceChildren(std::vector<EnumInfo> &Children,
-                    std::vector<EnumInfo> &&ChildrenToMerge) {
-  for (auto &ChildToMerge : ChildrenToMerge) {
-    int mergeIdx = getChildIndexIfExists(Children, ChildToMerge);
-    if (mergeIdx == -1) {
-      Children.push_back(std::move(ChildToMerge));
-      continue;
-    }
-    Children[mergeIdx].merge(std::move(ChildToMerge));
-  }
-}
-
-void reduceChildren(std::vector<TypedefInfo> &Children,
-                    std::vector<TypedefInfo> &&ChildrenToMerge) {
-  for (auto &ChildToMerge : ChildrenToMerge) {
-    int mergeIdx = getChildIndexIfExists(Children, ChildToMerge);
-    if (mergeIdx == -1) {
-      Children.push_back(std::move(ChildToMerge));
-      continue;
-    }
-    Children[mergeIdx].merge(std::move(ChildToMerge));
+    Children[MergeIdx].merge(std::move(ChildToMerge));
   }
 }
 

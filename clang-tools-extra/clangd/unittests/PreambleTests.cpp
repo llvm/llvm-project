@@ -15,6 +15,7 @@
 #include "TestFS.h"
 #include "TestTU.h"
 #include "XRefs.h"
+#include "clang/Basic/SourceManager.h"
 #include "clang/Format/Format.h"
 #include "clang/Frontend/FrontendActions.h"
 #include "clang/Frontend/PrecompiledPreamble.h"
@@ -23,6 +24,7 @@
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include "gmock/gmock.h"
+#include "gtest/gtest-matchers.h"
 #include "gtest/gtest.h"
 #include <memory>
 #include <optional>
@@ -166,8 +168,11 @@ TEST(PreamblePatchTest, PatchesPreambleIncludes) {
   MockFS FS;
   IgnoreDiagnostics Diags;
   auto TU = TestTU::withCode(R"cpp(
-    #include "a.h"
+    #include "a.h" // IWYU pragma: keep
     #include "c.h"
+    #ifdef FOO
+    #include "d.h"
+    #endif
   )cpp");
   TU.AdditionalFiles["a.h"] = "#include \"b.h\"";
   TU.AdditionalFiles["b.h"] = "";
@@ -176,18 +181,27 @@ TEST(PreamblePatchTest, PatchesPreambleIncludes) {
   auto BaselinePreamble = buildPreamble(
       TU.Filename, *buildCompilerInvocation(PI, Diags), PI, true, nullptr);
   // We drop c.h from modified and add a new header. Since the latter is patched
-  // we should only get a.h in preamble includes.
+  // we should only get a.h in preamble includes. d.h shouldn't be part of the
+  // preamble, as it's coming from a disabled region.
   TU.Code = R"cpp(
     #include "a.h"
     #include "b.h"
+    #ifdef FOO
+    #include "d.h"
+    #endif
   )cpp";
   auto PP = PreamblePatch::createFullPatch(testPath(TU.Filename), TU.inputs(FS),
                                            *BaselinePreamble);
   // Only a.h should exists in the preamble, as c.h has been dropped and b.h was
   // newly introduced.
-  EXPECT_THAT(PP.preambleIncludes(),
-              ElementsAre(AllOf(Field(&Inclusion::Written, "\"a.h\""),
-                                Field(&Inclusion::Resolved, testPath("a.h")))));
+  EXPECT_THAT(
+      PP.preambleIncludes(),
+      ElementsAre(AllOf(
+          Field(&Inclusion::Written, "\"a.h\""),
+          Field(&Inclusion::Resolved, testPath("a.h")),
+          Field(&Inclusion::HeaderID, testing::Not(testing::Eq(std::nullopt))),
+          Field(&Inclusion::BehindPragmaKeep, true),
+          Field(&Inclusion::FileKind, SrcMgr::CharacteristicKind::C_User))));
 }
 
 std::optional<ParsedAST> createPatchedAST(llvm::StringRef Baseline,
@@ -223,6 +237,26 @@ std::string getPreamblePatch(llvm::StringRef Baseline,
                                         *BaselinePreamble)
       .text()
       .str();
+}
+
+TEST(PreamblePatchTest, IncludesArePreserved) {
+  llvm::StringLiteral Baseline = R"(//error-ok
+#include <foo>
+#include <bar>
+)";
+  llvm::StringLiteral Modified = R"(//error-ok
+#include <foo>
+#include <bar>
+#define FOO)";
+
+  auto Includes = createPatchedAST(Baseline, Modified.str())
+                      ->getIncludeStructure()
+                      .MainFileIncludes;
+  EXPECT_TRUE(!Includes.empty());
+  EXPECT_EQ(Includes, TestTU::withCode(Baseline)
+                          .build()
+                          .getIncludeStructure()
+                          .MainFileIncludes);
 }
 
 TEST(PreamblePatchTest, Define) {

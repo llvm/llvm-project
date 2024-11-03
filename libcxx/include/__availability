@@ -270,10 +270,10 @@
 
 #endif
 
-// Define availability attributes that depend on _LIBCPP_NO_EXCEPTIONS.
+// Define availability attributes that depend on _LIBCPP_HAS_NO_EXCEPTIONS.
 // Those are defined in terms of the availability attributes above, and
 // should not be vendor-specific.
-#if defined(_LIBCPP_NO_EXCEPTIONS)
+#if defined(_LIBCPP_HAS_NO_EXCEPTIONS)
 #   define _LIBCPP_AVAILABILITY_FUTURE
 #   define _LIBCPP_AVAILABILITY_THROW_BAD_ANY_CAST
 #   define _LIBCPP_AVAILABILITY_THROW_BAD_OPTIONAL_ACCESS

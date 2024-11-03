@@ -159,8 +159,9 @@ public:
       std::vector<outliner::Candidate> &RepeatedSequenceLocs) const override;
 
   // Return if/how a given MachineInstr should be outlined.
-  outliner::InstrType getOutliningType(MachineBasicBlock::iterator &MBBI,
-                                       unsigned Flags) const override;
+  virtual outliner::InstrType
+  getOutliningTypeImpl(MachineBasicBlock::iterator &MBBI,
+                       unsigned Flags) const override;
 
   // Insert a custom frame for outlined functions.
   void buildOutlinedFrame(MachineBasicBlock &MBB, MachineFunction &MF,
@@ -193,6 +194,8 @@ public:
       int64_t Amount, MachineInstr::MIFlag Flag = MachineInstr::NoFlags) const;
 
   bool useMachineCombiner() const override { return true; }
+
+  MachineTraceStrategy getMachineCombinerTraceStrategy() const override;
 
   void setSpecialOperandAttr(MachineInstr &OldMI1, MachineInstr &OldMI2,
                              MachineInstr &NewMI1,

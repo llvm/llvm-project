@@ -30,7 +30,7 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#if _LIBCPP_STD_VER > 17
+#if _LIBCPP_STD_VER >= 20
 
 // [concept.swappable]
 
@@ -114,7 +114,7 @@ concept swappable_with =
     ranges::swap(_VSTD::forward<_Up>(__u), _VSTD::forward<_Tp>(__t));
   };
 
-#endif // _LIBCPP_STD_VER > 17
+#endif // _LIBCPP_STD_VER >= 20
 
 _LIBCPP_END_NAMESPACE_STD
 

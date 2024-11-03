@@ -9,9 +9,11 @@
 #ifndef LLVM_UTIL_TABLEGEN_SUBTARGETFEATUREINFO_H
 #define LLVM_UTIL_TABLEGEN_SUBTARGETFEATUREINFO_H
 
+#include "llvm/ADT/StringRef.h"
 #include "llvm/TableGen/Record.h"
 #include <map>
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace llvm {

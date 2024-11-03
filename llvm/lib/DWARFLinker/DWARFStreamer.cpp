@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/DWARFLinker/DWARFStreamer.h"
-#include "llvm/ADT/Triple.h"
 #include "llvm/CodeGen/NonRelocatableStringpool.h"
 #include "llvm/DWARFLinker/DWARFLinkerCompileUnit.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
@@ -25,6 +24,7 @@
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/LEB128.h"
 #include "llvm/Target/TargetOptions.h"
+#include "llvm/TargetParser/Triple.h"
 
 namespace llvm {
 
@@ -402,10 +402,9 @@ void DwarfStreamer::emitUnitRangesEntries(CompileUnit &Unit,
   // Linked addresses might end up in a different order.
   // Build linked address ranges.
   AddressRanges LinkedRanges;
-  for (size_t Idx = 0; Idx < FunctionRanges.size(); Idx++)
+  for (const AddressRangeValuePair &Range : FunctionRanges)
     LinkedRanges.insert(
-        {FunctionRanges[Idx].first.start() + FunctionRanges[Idx].second,
-         FunctionRanges[Idx].first.end() + FunctionRanges[Idx].second});
+        {Range.Range.start() + Range.Value, Range.Range.end() + Range.Value});
 
   if (!FunctionRanges.empty())
     emitDwarfDebugArangesTable(Unit, LinkedRanges);

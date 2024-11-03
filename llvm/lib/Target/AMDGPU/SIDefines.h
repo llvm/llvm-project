@@ -133,6 +133,9 @@ enum : uint64_t {
 
   // Whether tied sources will be read.
   TiedSourceNotRead = UINT64_C(1) << 60,
+
+  // Is never uniform.
+  IsNeverUniform = UINT64_C(1) << 61,
 };
 
 // v_cmp_class_* etc. use a 10-bit mask for what operation is checked.
@@ -333,7 +336,7 @@ enum Id { // Message ID, width(4) [3:0].
   ID_SAVEWAVE = 4,           // added in GFX8, removed in GFX11
   ID_STALL_WAVE_GEN = 5,     // added in GFX9
   ID_HALT_WAVES = 6,         // added in GFX9
-  ID_ORDERED_PS_DONE = 7,    // added in GFX9
+  ID_ORDERED_PS_DONE = 7,    // added in GFX9, removed in GFX11
   ID_EARLY_PRIM_DEALLOC = 8, // added in GFX9, removed in GFX10
   ID_GS_ALLOC_REQ = 9,       // added in GFX9
   ID_GET_DOORBELL = 10,      // added in GFX9, removed in GFX11
@@ -401,18 +404,25 @@ enum Id { // HwRegCode, (6) [5:0]
   ID_TBA_HI = 17,
   ID_TMA_LO = 18,
   ID_TMA_HI = 19,
-  ID_XCC_ID = 20,
-  ID_SQ_PERF_SNAPSHOT_DATA = 21,
-  ID_SQ_PERF_SNAPSHOT_DATA1 = 22,
-  ID_SQ_PERF_SNAPSHOT_PC_LO = 23,
-  ID_SQ_PERF_SNAPSHOT_PC_HI = 24,
   ID_FLAT_SCR_LO = 20,
   ID_FLAT_SCR_HI = 21,
   ID_XNACK_MASK = 22,
   ID_HW_ID1 = 23,
   ID_HW_ID2 = 24,
   ID_POPS_PACKER = 25,
+  ID_PERF_SNAPSHOT_DATA = 27,
   ID_SHADER_CYCLES = 29,
+
+  // Register numbers reused in GFX11+
+  ID_PERF_SNAPSHOT_PC_LO = 18,
+  ID_PERF_SNAPSHOT_PC_HI = 19,
+
+  // GFX940 specific registers
+  ID_XCC_ID = 20,
+  ID_SQ_PERF_SNAPSHOT_DATA = 21,
+  ID_SQ_PERF_SNAPSHOT_DATA1 = 22,
+  ID_SQ_PERF_SNAPSHOT_PC_LO = 23,
+  ID_SQ_PERF_SNAPSHOT_PC_HI = 24,
 
   ID_SHIFT_ = 0,
   ID_WIDTH_ = 6,

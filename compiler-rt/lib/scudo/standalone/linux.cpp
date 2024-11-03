@@ -11,6 +11,7 @@
 #if SCUDO_LINUX
 
 #include "common.h"
+#include "internal_defs.h"
 #include "linux.h"
 #include "mutex.h"
 #include "string_utils.h"
@@ -126,6 +127,10 @@ void HybridMutex::unlock() {
     syscall(SYS_futex, reinterpret_cast<uptr>(&M), FUTEX_WAKE_PRIVATE, 1,
             nullptr, nullptr, 0);
   }
+}
+
+void HybridMutex::assertHeldImpl() {
+  CHECK(atomic_load(&M, memory_order_acquire) != Unlocked);
 }
 
 u64 getMonotonicTime() {

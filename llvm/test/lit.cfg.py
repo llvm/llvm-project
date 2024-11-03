@@ -203,6 +203,9 @@ def ptxas_version(ptxas):
     print('couldn\'t determine ptxas version')
     return None
 
+# Enable %ptxas and %ptxas-verify tools.
+# %ptxas-verify defaults to sm_60 architecture. It can be overriden
+# by specifying required one, for instance: %ptxas-verify -arch=sm_80.
 def enable_ptxas(ptxas_executable):
     version = ptxas_version(ptxas_executable)
     if version:
@@ -213,6 +216,7 @@ def enable_ptxas(ptxas_executable):
             (9, 0), (9, 1), (9, 2),
             (10, 0), (10, 1), (10, 2),
             (11, 0), (11, 1), (11, 2), (11, 3), (11, 4), (11, 5), (11, 6),
+            (11, 7), (11, 8), (12, 0),
         ]
 
         def version_int(ver):
@@ -235,7 +239,7 @@ def enable_ptxas(ptxas_executable):
 
     config.available_features.add('ptxas')
     tools.extend([ToolSubst('%ptxas', ptxas_executable),
-                  ToolSubst('%ptxas-verify', '{} -c -o /dev/null -'.format(
+                  ToolSubst('%ptxas-verify', '{} -arch=sm_60 -c -'.format(
                       ptxas_executable))])
 
 ptxas_executable = \

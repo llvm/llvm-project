@@ -205,6 +205,18 @@ TEST_F(StringMapTest, CopyCtorTest) {
   EXPECT_EQ(5, Map2.lookup("funf"));
 }
 
+TEST_F(StringMapTest, AtTest) {
+  llvm::StringMap<int> Map;
+
+  // keys both found and not found on non-empty map
+  Map["a"] = 1;
+  Map["b"] = 2;
+  Map["c"] = 3;
+  EXPECT_EQ(1, Map.at("a"));
+  EXPECT_EQ(2, Map.at("b"));
+  EXPECT_EQ(3, Map.at("c"));
+}
+
 // A more complex iteration test.
 TEST_F(StringMapTest, IterationTest) {
   bool visited[100];

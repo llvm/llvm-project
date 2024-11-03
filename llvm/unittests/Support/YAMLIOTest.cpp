@@ -96,11 +96,30 @@ TEST(YAMLIO, TestMapRead) {
     EXPECT_EQ(doc.foo, 3);
     EXPECT_EQ(doc.bar, 5);
   }
+
+  {
+    Input yin("{\"foo\": 3\n, \"bar\": 5}");
+    yin >> doc;
+
+    EXPECT_FALSE(yin.error());
+    EXPECT_EQ(doc.foo, 3);
+    EXPECT_EQ(doc.bar, 5);
+  }
 }
 
 TEST(YAMLIO, TestMalformedMapRead) {
   FooBar doc;
   Input yin("{foo: 3; bar: 5}", nullptr, suppressErrorMessages);
+  yin >> doc;
+  EXPECT_TRUE(!!yin.error());
+}
+
+TEST(YAMLIO, TestMapDuplicatedKeysRead) {
+  auto testDiagnostic = [](const llvm::SMDiagnostic &Error, void *) {
+    EXPECT_EQ(Error.getMessage(), "duplicated mapping key 'foo'");
+  };
+  FooBar doc;
+  Input yin("{foo: 3, bar: 5, foo: 4}", nullptr, testDiagnostic);
   yin >> doc;
   EXPECT_TRUE(!!yin.error());
 }

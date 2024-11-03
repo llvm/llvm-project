@@ -192,7 +192,7 @@ void DenormalMode::print(raw_ostream &OS) const {
   OS << denormalModeKindName(Output) << ',' << denormalModeKindName(Input);
 }
 
-}
+} // namespace llvm
 
 /// Floating-point class tests, supported by 'is_fpclass' intrinsic. Actual
 /// test may be an OR combination of basic tests.

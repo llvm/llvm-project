@@ -465,6 +465,8 @@ int SelectedCharKind(const std::string &, int defaultKind);
 std::optional<DynamicType> ComparisonType(
     const DynamicType &, const DynamicType &);
 
+bool IsInteroperableIntrinsicType(const DynamicType &);
+
 // For generating "[extern] template class", &c. boilerplate
 #define EXPAND_FOR_EACH_INTEGER_KIND(M, P, S) \
   M(P, S, 1) M(P, S, 2) M(P, S, 4) M(P, S, 8) M(P, S, 16)

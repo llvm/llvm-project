@@ -571,7 +571,7 @@ Constant *OpenMPIRBuilder::getOrCreateIdent(Constant *SrcLocStr,
 
     // Look for existing encoding of the location + flags, not needed but
     // minimizes the difference to the existing solution while we transition.
-    for (GlobalVariable &GV : M.getGlobalList())
+    for (GlobalVariable &GV : M.globals())
       if (GV.getValueType() == OpenMPIRBuilder::Ident && GV.hasInitializer())
         if (GV.getInitializer() == Initializer)
           Ident = &GV;
@@ -601,7 +601,7 @@ Constant *OpenMPIRBuilder::getOrCreateSrcLocStr(StringRef LocStr,
 
     // Look for existing encoding of the location, not needed but minimizes the
     // difference to the existing solution while we transition.
-    for (GlobalVariable &GV : M.getGlobalList())
+    for (GlobalVariable &GV : M.globals())
       if (GV.isConstant() && GV.hasInitializer() &&
           GV.getInitializer() == Initializer)
         return SrcLocStr = ConstantExpr::getPointerCast(&GV, Int8Ptr);
@@ -3051,6 +3051,23 @@ void OpenMPIRBuilder::createIfVersion(CanonicalLoopInfo *CanonicalLoop,
   }
   remapInstructionsInBlocks(NewBlocks, VMap);
   Builder.CreateBr(NewBlocks.front());
+}
+
+unsigned
+OpenMPIRBuilder::getOpenMPDefaultSimdAlign(const Triple &TargetTriple,
+                                           const StringMap<bool> &Features) {
+  if (TargetTriple.isX86()) {
+    if (Features.lookup("avx512f"))
+      return 512;
+    else if (Features.lookup("avx"))
+      return 256;
+    return 128;
+  }
+  if (TargetTriple.isPPC())
+    return 128;
+  if (TargetTriple.isWasm())
+    return 128;
+  return 0;
 }
 
 void OpenMPIRBuilder::applySimd(CanonicalLoopInfo *CanonicalLoop,

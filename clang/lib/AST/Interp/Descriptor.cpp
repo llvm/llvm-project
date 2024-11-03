@@ -8,6 +8,7 @@
 
 #include "Descriptor.h"
 #include "Boolean.h"
+#include "Floating.h"
 #include "Pointer.h"
 #include "PrimType.h"
 #include "Record.h"
@@ -170,6 +171,11 @@ static void moveRecord(Block *B, char *Src, char *Dst, Descriptor *D) {
 }
 
 static BlockCtorFn getCtorPrim(PrimType Type) {
+  // Floating types are special. They are primitives, but need their
+  // constructor called.
+  if (Type == PT_Float)
+    return ctorTy<PrimConv<PT_Float>::T>;
+
   COMPOSITE_TYPE_SWITCH(Type, return ctorTy<T>, return nullptr);
 }
 

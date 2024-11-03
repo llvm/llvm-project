@@ -678,7 +678,7 @@ private:
     template <class...> friend class __scoped_allocator_storage;
 };
 
-#if _LIBCPP_STD_VER > 14
+#if _LIBCPP_STD_VER >= 17
 template<class _OuterAlloc, class... _InnerAllocs>
     scoped_allocator_adaptor(_OuterAlloc, _InnerAllocs...)
         -> scoped_allocator_adaptor<_OuterAlloc, _InnerAllocs...>;

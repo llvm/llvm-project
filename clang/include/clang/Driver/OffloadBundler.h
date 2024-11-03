@@ -17,8 +17,8 @@
 #ifndef LLVM_CLANG_DRIVER_OFFLOADBUNDLER_H
 #define LLVM_CLANG_DRIVER_OFFLOADBUNDLER_H
 
-#include "llvm/ADT/Triple.h"
 #include "llvm/Support/Error.h"
+#include "llvm/TargetParser/Triple.h"
 #include <string>
 #include <vector>
 

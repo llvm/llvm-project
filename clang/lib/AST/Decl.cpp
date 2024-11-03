@@ -58,10 +58,10 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
-#include "llvm/ADT/Triple.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/TargetParser/Triple.h"
 #include <algorithm>
 #include <cassert>
 #include <cstddef>
@@ -601,22 +601,14 @@ static bool isExportedFromModuleInterfaceUnit(const NamedDecl *D) {
 }
 
 static LinkageInfo getInternalLinkageFor(const NamedDecl *D) {
-  // (for the modules ts) Internal linkage declarations within a module
-  // interface unit are modeled as "module-internal linkage", which means that
-  // they have internal linkage formally but can be indirectly accessed from
-  // outside the module via inline functions and templates defined within the
-  // module.
-  if (isInModulePurview(D) && D->getASTContext().getLangOpts().ModulesTS)
-    return LinkageInfo(ModuleInternalLinkage, DefaultVisibility, false);
-
   return LinkageInfo::internal();
 }
 
 static LinkageInfo getExternalLinkageFor(const NamedDecl *D) {
-  // C++ Modules TS [basic.link]/6.8:
-  //   - A name declared at namespace scope that does not have internal linkage
-  //     by the previous rules and that is introduced by a non-exported
-  //     declaration has module linkage.
+  // C++ [basic.link]p4.8:
+  //   - if the declaration of the name is attached to a named module and is not
+  //   exported
+  //     the name has module linkage;
   //
   // [basic.namespace.general]/p2
   //   A namespace is never attached to a named module and never has a name with
@@ -4355,6 +4347,10 @@ bool FieldDecl::isZeroSize(const ASTContext &Ctx) const {
   return true;
 }
 
+bool FieldDecl::isPotentiallyOverlapping() const {
+  return hasAttr<NoUniqueAddressAttr>() && getType()->getAsCXXRecordDecl();
+}
+
 unsigned FieldDecl::getFieldIndex() const {
   const FieldDecl *Canonical = getCanonicalDecl();
   if (Canonical != this)
@@ -4770,7 +4766,10 @@ bool RecordDecl::isOrContainsUnion() const {
 RecordDecl::field_iterator RecordDecl::field_begin() const {
   if (hasExternalLexicalStorage() && !hasLoadedFieldsFromExternalStorage())
     LoadFieldsFromExternalStorage();
-
+  // This is necessary for correctness for C++ with modules.
+  // FIXME: Come up with a test case that breaks without definition.
+  if (RecordDecl *D = getDefinition(); D && D != this)
+    return D->field_begin();
   return field_iterator(decl_iterator(FirstDecl));
 }
 

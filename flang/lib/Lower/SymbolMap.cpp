@@ -33,17 +33,6 @@ void Fortran::lower::SymMap::addSymbol(Fortran::semantics::SymbolRef sym,
             });
 }
 
-Fortran::lower::SymbolBox toSymbolBox(
-    std::variant<Fortran::lower::SymbolBox, fir::FortranVariableOpInterface>
-        symboxOrdefiningOp) {
-  if (const Fortran::lower::SymbolBox *symBox =
-          std::get_if<Fortran::lower::SymbolBox>(&symboxOrdefiningOp))
-    return *symBox;
-  auto definingOp =
-      std::get<fir::FortranVariableOpInterface>(symboxOrdefiningOp);
-  TODO(definingOp.getLoc(), "FortranVariableOpInterface lookup as SymbolBox");
-}
-
 Fortran::lower::SymbolBox
 Fortran::lower::SymMap::lookupSymbol(Fortran::semantics::SymbolRef symRef) {
   Fortran::semantics::SymbolRef sym = symRef.get().GetUltimate();
@@ -51,7 +40,7 @@ Fortran::lower::SymMap::lookupSymbol(Fortran::semantics::SymbolRef symRef) {
        jmap != jend; ++jmap) {
     auto iter = jmap->find(&*sym);
     if (iter != jmap->end())
-      return toSymbolBox(iter->second);
+      return iter->second;
   }
   return SymbolBox::None{};
 }
@@ -61,7 +50,7 @@ Fortran::lower::SymbolBox Fortran::lower::SymMap::shallowLookupSymbol(
   auto &map = symbolMapStack.back();
   auto iter = map.find(&symRef.get().GetUltimate());
   if (iter != map.end())
-    return toSymbolBox(iter->second);
+    return iter->second;
   return SymbolBox::None{};
 }
 
@@ -79,7 +68,7 @@ Fortran::lower::SymbolBox Fortran::lower::SymMap::lookupOneLevelUpSymbol(
   for (++jmap; jmap != jend; ++jmap) {
     auto iter = jmap->find(&*sym);
     if (iter != jmap->end())
-      return toSymbolBox(iter->second);
+      return iter->second;
   }
   return SymbolBox::None{};
 }
@@ -90,23 +79,6 @@ Fortran::lower::SymMap::lookupImpliedDo(Fortran::lower::SymMap::AcDoVar var) {
     if (var == marker)
       return binding;
   return {};
-}
-
-std::optional<fir::FortranVariableOpInterface>
-Fortran::lower::SymMap::lookupVariableDefinition(semantics::SymbolRef symRef) {
-  Fortran::semantics::SymbolRef sym = symRef.get().GetUltimate();
-  for (auto jmap = symbolMapStack.rbegin(), jend = symbolMapStack.rend();
-       jmap != jend; ++jmap) {
-    auto iter = jmap->find(&*sym);
-    if (iter != jmap->end()) {
-      if (const auto *varDef =
-              std::get_if<fir::FortranVariableOpInterface>(&iter->second))
-        return *varDef;
-      else
-        return std::nullopt;
-    }
-  }
-  return std::nullopt;
 }
 
 llvm::raw_ostream &
@@ -123,18 +95,6 @@ Fortran::lower::operator<<(llvm::raw_ostream &os,
   return os;
 }
 
-static llvm::raw_ostream &
-dump(llvm::raw_ostream &os,
-     const std::variant<Fortran::lower::SymbolBox,
-                        fir::FortranVariableOpInterface> &symboxOrdefiningOp) {
-  if (const Fortran::lower::SymbolBox *symBox =
-          std::get_if<Fortran::lower::SymbolBox>(&symboxOrdefiningOp))
-    return os << *symBox;
-  auto definingOp =
-      std::get<fir::FortranVariableOpInterface>(symboxOrdefiningOp);
-  return os << definingOp << "\n";
-}
-
 llvm::raw_ostream &
 Fortran::lower::operator<<(llvm::raw_ostream &os,
                            const Fortran::lower::SymMap &symMap) {
@@ -144,7 +104,7 @@ Fortran::lower::operator<<(llvm::raw_ostream &os,
     for (auto iter : i.value()) {
       os << "  symbol @" << static_cast<const void *>(iter.first) << " ["
          << *iter.first << "] ->\n    ";
-      dump(os, iter.second);
+      os << iter.second;
     }
     os << " }>\n";
   }

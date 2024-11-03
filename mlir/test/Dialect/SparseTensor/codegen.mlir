@@ -363,6 +363,19 @@ func.func @sparse_alloc_3d() -> tensor<10x20x30xf64, #Dense3D> {
   return %1 : tensor<10x20x30xf64, #Dense3D>
 }
 
+// CHECK-LABEL: func.func @sparse_alloc_coo_with_size_hint(
+// CHECK-SAME:  %[[HINT:.*]]: index)
+// CHECK:       %[[C2:.*]] = arith.constant 2 : index
+// CHECK:       %[[M2:.*]] = arith.muli %[[HINT]], %c2 : index
+// CHECK:       %[[A1:.*]] = memref.alloc() : memref<2xindex>
+// CHECK:       %[[A2:.*]] = memref.alloc(%[[M2]]) : memref<?xindex>
+// CHECK:       %[[A3:.*]] = memref.alloc(%[[HINT]]) : memref<?xf64>
+func.func @sparse_alloc_coo_with_size_hint(%arg0: index) -> tensor<10x20xf64, #Coo> {
+  %0 = bufferization.alloc_tensor()  size_hint=%arg0 : tensor<10x20xf64, #Coo>
+  %1 = sparse_tensor.load %0 : tensor<10x20xf64, #Coo>
+  return %1 : tensor<10x20xf64, #Coo>
+}
+
 // CHECK-LABEL: func.func @sparse_expansion1()
 //       CHECK: %[[A:.*]] = memref.alloc() : memref<8xf64>
 //       CHECK: %[[B:.*]] = memref.alloc() : memref<8xi1>
@@ -430,7 +443,7 @@ func.func @sparse_expansion3(%arg0: index, %arg1: index) -> memref<?xindex> {
 //   CHECK-DAG: %[[A9:.*]] = arith.constant 0.000000e+00 : f64
 //   CHECK-DAG: %[[A10:.*]] = arith.constant 1 : index
 //   CHECK-DAG: %[[A11:.*]] = arith.constant 0 : index
-//       CHECK: sparse_tensor.sort %[[A7]], %[[A6]] : memref<?xindex>
+//       CHECK: sparse_tensor.sort hybrid_quick_sort %[[A7]], %[[A6]] : memref<?xindex>
 //       CHECK: %[[A12:.*]]:4 = scf.for %[[A13:.*]] = %[[A11]] to %[[A7]] step %[[A10]] iter_args(%[[A14:.*]] = %[[A0]], %[[A15:.*]] = %[[A1]], %[[A16:.*]] = %[[A2]], %[[A17:.*]] = %[[A3]])
 //       CHECK:   %[[A18:.*]] = memref.load %[[A6]]{{\[}}%[[A13]]] : memref<?xindex>
 //       CHECK:   %[[A19:.*]] = memref.load %[[A4]]{{\[}}%[[A18]]] : memref<?xf64>
@@ -478,7 +491,7 @@ func.func @sparse_compression_1d(%tensor: tensor<100xf64, #SV>,
 //       CHECK:     %[[A11:.*]] = arith.constant 0.000000e+00 : f64
 //       CHECK:     %[[A12:.*]] = arith.constant 1 : index
 //       CHECK:     %[[A13:.*]] = arith.constant 0 : index
-//       CHECK:     sparse_tensor.sort %[[A7]], %[[A6]] : memref<?xindex>
+//       CHECK:     sparse_tensor.sort hybrid_quick_sort %[[A7]], %[[A6]] : memref<?xindex>
 //       CHECK:     %[[A14:.*]]:4 = scf.for %[[A15:.*]] = %[[A13]] to %[[A7]] step %[[A12]] iter_args(%[[A16:.*]] = %[[A0]], %[[A17:.*]] = %[[A1]], %[[A18:.*]] = %[[A2]], %[[A19:.*]] = %[[A3]]) -> (memref<?xi32>, memref<?xi64>, memref<?xf64>, !sparse_tensor.storage_specifier
 //       CHECK:       %[[A20:.*]] = memref.load %[[A6]]{{\[}}%[[A15]]] : memref<?xindex>
 //       CHECK:       %[[A21:.*]] = memref.load %[[A4]]{{\[}}%[[A20]]] : memref<?xf64>

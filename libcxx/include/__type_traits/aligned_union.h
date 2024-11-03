@@ -46,7 +46,7 @@ struct _LIBCPP_DEPRECATED_IN_CXX23 aligned_union
     typedef typename aligned_storage<__len, alignment_value>::type type;
 };
 
-#if _LIBCPP_STD_VER > 11
+#if _LIBCPP_STD_VER >= 14
 template <size_t _Len, class... _Types>
 using aligned_union_t _LIBCPP_DEPRECATED_IN_CXX23 = typename aligned_union<_Len, _Types...>::type;
 #endif

@@ -12,6 +12,8 @@
 
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
 #include "flang/Optimizer/Dialect/FIROpsSupport.h"
+#include "flang/Optimizer/Dialect/FIRType.h"
+#include "flang/Optimizer/HLFIR/HLFIRDialect.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/DialectImplementation.h"
@@ -421,6 +423,142 @@ void hlfir::SetLengthOp::build(mlir::OpBuilder &builder,
 }
 
 //===----------------------------------------------------------------------===//
+// SumOp
+//===----------------------------------------------------------------------===//
+
+mlir::LogicalResult hlfir::SumOp::verify() {
+  mlir::Operation *op = getOperation();
+
+  auto results = op->getResultTypes();
+  assert(results.size() == 1);
+
+  mlir::Value array = getArray();
+  mlir::Value mask = getMask();
+
+  fir::SequenceType arrayTy =
+      hlfir::getFortranElementOrSequenceType(array.getType())
+          .cast<fir::SequenceType>();
+  mlir::Type numTy = arrayTy.getEleTy();
+  llvm::ArrayRef<int64_t> arrayShape = arrayTy.getShape();
+  hlfir::ExprType resultTy = results[0].cast<hlfir::ExprType>();
+
+  if (mask) {
+    fir::SequenceType maskSeq =
+        hlfir::getFortranElementOrSequenceType(mask.getType())
+            .dyn_cast<fir::SequenceType>();
+    llvm::ArrayRef<int64_t> maskShape;
+
+    if (maskSeq)
+      maskShape = maskSeq.getShape();
+
+    if (!maskShape.empty()) {
+      if (maskShape.size() != arrayShape.size())
+        return emitWarning("MASK must be conformable to ARRAY");
+      static_assert(fir::SequenceType::getUnknownExtent() ==
+                    hlfir::ExprType::getUnknownExtent());
+      constexpr int64_t unknownExtent = fir::SequenceType::getUnknownExtent();
+      for (std::size_t i = 0; i < arrayShape.size(); ++i) {
+        int64_t arrayExtent = arrayShape[i];
+        int64_t maskExtent = maskShape[i];
+        if ((arrayExtent != maskExtent) && (arrayExtent != unknownExtent) &&
+            (maskExtent != unknownExtent))
+          return emitWarning("MASK must be conformable to ARRAY");
+      }
+    }
+  }
+
+  if (resultTy.isArray()) {
+    // Result is of the same type as ARRAY
+    if (resultTy.getEleTy() != numTy)
+      return emitOpError(
+          "result must have the same element type as ARRAY argument");
+
+    llvm::ArrayRef<int64_t> resultShape = resultTy.getShape();
+
+    // Result has rank n-1
+    if (resultShape.size() != (arrayShape.size() - 1))
+      return emitOpError("result rank must be one less than ARRAY");
+  } else {
+    // Result is of the same type as ARRAY
+    if (resultTy.getElementType() != numTy)
+      return emitOpError(
+          "result must have the same element type as ARRAY argument");
+  }
+
+  return mlir::success();
+}
+
+//===----------------------------------------------------------------------===//
+// MatmulOp
+//===----------------------------------------------------------------------===//
+
+mlir::LogicalResult hlfir::MatmulOp::verify() {
+  mlir::Value lhs = getLhs();
+  mlir::Value rhs = getRhs();
+  fir::SequenceType lhsTy =
+      hlfir::getFortranElementOrSequenceType(lhs.getType())
+          .cast<fir::SequenceType>();
+  fir::SequenceType rhsTy =
+      hlfir::getFortranElementOrSequenceType(rhs.getType())
+          .cast<fir::SequenceType>();
+  llvm::ArrayRef<int64_t> lhsShape = lhsTy.getShape();
+  llvm::ArrayRef<int64_t> rhsShape = rhsTy.getShape();
+  std::size_t lhsRank = lhsShape.size();
+  std::size_t rhsRank = rhsShape.size();
+  mlir::Type lhsEleTy = lhsTy.getEleTy();
+  mlir::Type rhsEleTy = rhsTy.getEleTy();
+  hlfir::ExprType resultTy = getResult().getType().cast<hlfir::ExprType>();
+  llvm::ArrayRef<int64_t> resultShape = resultTy.getShape();
+  mlir::Type resultEleTy = resultTy.getEleTy();
+
+  if (((lhsRank != 1) && (lhsRank != 2)) || ((rhsRank != 1) && (rhsRank != 2)))
+    return emitOpError("array must have either rank 1 or rank 2");
+
+  if ((lhsRank == 1) && (rhsRank == 1))
+    return emitOpError("at least one array must have rank 2");
+
+  if (mlir::isa<fir::LogicalType>(lhsEleTy) !=
+      mlir::isa<fir::LogicalType>(rhsEleTy))
+    return emitOpError("if one array is logical, so should the other be");
+
+  int64_t lastLhsDim = lhsShape[lhsRank - 1];
+  int64_t firstRhsDim = rhsShape[0];
+  constexpr int64_t unknownExtent = fir::SequenceType::getUnknownExtent();
+  if (lastLhsDim != firstRhsDim)
+    if ((lastLhsDim != unknownExtent) && (firstRhsDim != unknownExtent))
+      return emitOpError(
+          "the last dimension of LHS should match the first dimension of RHS");
+
+  if (mlir::isa<fir::LogicalType>(lhsEleTy) !=
+      mlir::isa<fir::LogicalType>(resultEleTy))
+    return emitOpError("the result type should be a logical only if the "
+                       "argument types are logical");
+
+  llvm::SmallVector<int64_t, 2> expectedResultShape;
+  if (lhsRank == 2) {
+    if (rhsRank == 2) {
+      expectedResultShape.push_back(lhsShape[0]);
+      expectedResultShape.push_back(rhsShape[1]);
+    } else {
+      // rhsRank == 1
+      expectedResultShape.push_back(lhsShape[0]);
+    }
+  } else {
+    // lhsRank == 1
+    // rhsRank == 2
+    expectedResultShape.push_back(rhsShape[1]);
+  }
+  if (resultShape.size() != expectedResultShape.size())
+    return emitOpError("incorrect result shape");
+  if (resultShape[0] != expectedResultShape[0])
+    return emitOpError("incorrect result shape");
+  if (resultShape.size() == 2 && resultShape[1] != expectedResultShape[1])
+    return emitOpError("incorrect result shape");
+
+  return mlir::success();
+}
+
+//===----------------------------------------------------------------------===//
 // AssociateOp
 //===----------------------------------------------------------------------===//
 
@@ -513,6 +651,17 @@ void hlfir::NullOp::build(mlir::OpBuilder &builder,
                           mlir::OperationState &odsState) {
   return build(builder, odsState,
                fir::ReferenceType::get(builder.getNoneType()));
+}
+
+//===----------------------------------------------------------------------===//
+// CopyInOp
+//===----------------------------------------------------------------------===//
+
+void hlfir::CopyInOp::build(mlir::OpBuilder &builder,
+                            mlir::OperationState &odsState, mlir::Value var,
+                            mlir::Value var_is_present) {
+  return build(builder, odsState, {var.getType(), builder.getI1Type()}, var,
+               var_is_present);
 }
 
 #define GET_OP_CLASSES

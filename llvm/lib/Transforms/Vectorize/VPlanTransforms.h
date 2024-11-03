@@ -25,6 +25,7 @@ class ScalarEvolution;
 class Loop;
 class PredicatedScalarEvolution;
 class TargetLibraryInfo;
+class VPBuilder;
 
 struct VPlanTransforms {
   /// Replaces the VPInstructions in \p Plan with corresponding
@@ -70,6 +71,13 @@ struct VPlanTransforms {
   /// Remove redundant EpxandSCEVRecipes in \p Plan's entry block by replacing
   /// them with already existing recipes expanding the same SCEV expression.
   static void removeRedundantExpandSCEVRecipes(VPlan &Plan);
+
+  /// Sink users of fixed-order recurrences after the recipe defining their
+  /// previous value. Then introduce FirstOrderRecurrenceSplice VPInstructions
+  /// to combine the value from the recurrence phis and previous values. The
+  /// current implementation assumes all users can be sunk after the previous
+  /// value, which is enforced by earlier legality checks.
+  static void adjustFixedOrderRecurrences(VPlan &Plan, VPBuilder &Builder);
 
   /// Optimize \p Plan based on \p BestVF and \p BestUF. This may restrict the
   /// resulting plan to \p BestVF and \p BestUF.

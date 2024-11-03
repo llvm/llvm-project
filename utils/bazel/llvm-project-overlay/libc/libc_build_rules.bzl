@@ -88,7 +88,7 @@ def libc_function(
     func_attrs = ["__attribute__((visibility(\"default\")))"]
     if weak:
         func_attrs.append("__attribute__((weak))")
-    local_defines = local_defines or ["LLVM_LIBC_PUBLIC_PACKAGING"]
+    local_defines = local_defines or ["LIBC_COPT_PUBLIC_PACKAGING"]
     local_defines.append("LLVM_LIBC_FUNCTION_ATTR='%s'" % " ".join(func_attrs))
     _libc_library(
         name = name,

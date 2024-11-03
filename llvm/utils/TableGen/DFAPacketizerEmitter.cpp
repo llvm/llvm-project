@@ -17,6 +17,7 @@
 #include "CodeGenSchedule.h"
 #include "CodeGenTarget.h"
 #include "DFAEmitter.h"
+#include "TableGenBackends.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"

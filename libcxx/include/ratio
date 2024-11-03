@@ -501,7 +501,7 @@ struct __ratio_gcd
                   __static_lcm<_R1::den, _R2::den>::value> type;
 };
 
-#if _LIBCPP_STD_VER > 14
+#if _LIBCPP_STD_VER >= 17
 template <class _R1, class _R2>
 inline constexpr bool ratio_equal_v = ratio_equal<_R1, _R2>::value;
 

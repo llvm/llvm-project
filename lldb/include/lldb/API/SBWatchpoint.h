@@ -19,7 +19,9 @@ public:
 
   SBWatchpoint(const lldb::SBWatchpoint &rhs);
 
+#ifndef SWIG
   SBWatchpoint(const lldb::WatchpointSP &wp_sp);
+#endif
 
   ~SBWatchpoint();
 
@@ -62,9 +64,11 @@ public:
 
   void Clear();
 
+#ifndef SWIG
   lldb::WatchpointSP GetSP() const;
 
   void SetSP(const lldb::WatchpointSP &sp);
+#endif
 
   static bool EventIsWatchpointEvent(const lldb::SBEvent &event);
 

@@ -34,7 +34,7 @@ public:
     typedef typename iterator_traits<iterator_type>::pointer           pointer;
     typedef typename iterator_traits<iterator_type>::reference         reference;
     typedef typename iterator_traits<iterator_type>::iterator_category iterator_category;
-#if _LIBCPP_STD_VER > 17
+#if _LIBCPP_STD_VER >= 20
     typedef contiguous_iterator_tag                                    iterator_concept;
 #endif
 

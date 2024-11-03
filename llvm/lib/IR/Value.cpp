@@ -737,7 +737,7 @@ const Value *Value::stripAndAccumulateConstantOffsets(
       // Stop traversal if the pointer offset wouldn't fit in the bit-width
       // provided by the Offset argument. This can happen due to AddrSpaceCast
       // stripping.
-      if (GEPOffset.getMinSignedBits() > BitWidth)
+      if (GEPOffset.getSignificantBits() > BitWidth)
         return V;
 
       // External Analysis can return a result higher/lower than the value
@@ -972,7 +972,7 @@ Align Value::getPointerAlignment(const DataLayout &DL) const {
     if (auto *CstInt = dyn_cast_or_null<ConstantInt>(ConstantExpr::getPtrToInt(
             const_cast<Constant *>(CstPtr), DL.getIntPtrType(getType()),
             /*OnlyIfReduced=*/true))) {
-      size_t TrailingZeros = CstInt->getValue().countTrailingZeros();
+      size_t TrailingZeros = CstInt->getValue().countr_zero();
       // While the actual alignment may be large, elsewhere we have
       // an arbitrary upper alignmet limit, so let's clamp to it.
       return Align(TrailingZeros < Value::MaxAlignmentExponent

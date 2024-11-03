@@ -10,15 +10,17 @@
 #define MEMREF_TRANSFORM_OPS
 
 include "mlir/Dialect/Transform/IR/TransformDialect.td"
-include "mlir/Dialect/Transform/IR/TransformEffects.td"
 include "mlir/Dialect/Transform/IR/TransformInterfaces.td"
+include "mlir/Dialect/Transform/IR/TransformTypes.td"
 include "mlir/Dialect/PDL/IR/PDLTypes.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 include "mlir/IR/OpBase.td"
 
+def Transform_MemRefAllocOp : Transform_ConcreteOpType<"memref.alloc">;
+
 def MemRefMultiBufferOp : Op<Transform_Dialect, "memref.multibuffer",
     [FunctionalStyleTransformOpTrait, MemoryEffectsOpInterface,
-     TransformOpInterface, TransformEachOpTrait]> {
+     DeclareOpInterfaceMethods<TransformOpInterface>]> {
   let summary = "Multibuffers an allocation";
   let description = [{
      Transformation to do multi-buffering/array expansion to remove
@@ -26,6 +28,9 @@ def MemRefMultiBufferOp : Op<Transform_Dialect, "memref.multibuffer",
      iterations. This transform expands the size of an allocation by
      a given multiplicative factor and fixes up any users of the
      multibuffered allocation.
+     If skip analysis is not set the transformation will only apply
+     if it can prove that there is no data being carried across loop
+     iterations.
 
      #### Return modes
 
@@ -34,19 +39,14 @@ def MemRefMultiBufferOp : Op<Transform_Dialect, "memref.multibuffer",
   }];
 
   let arguments =
-      (ins PDL_Operation:$target,
-           ConfinedAttr<I64Attr, [IntPositive]>:$factor);
+      (ins Transform_MemRefAllocOp:$target,
+           ConfinedAttr<I64Attr, [IntPositive]>:$factor,
+           UnitAttr:$skip_analysis);
 
   let results = (outs PDL_Operation:$transformed);
 
-  let assemblyFormat = "$target attr-dict";
-
-  let extraClassDeclaration = [{
-    ::mlir::DiagnosedSilenceableFailure applyToOne(
-        memref::AllocOp target,
-        ::mlir::transform::ApplyToEachResultList &results,
-        ::mlir::transform::TransformState &state);
-  }];
+  let assemblyFormat =
+    "$target attr-dict `:` functional-type(operands, results)";
 }
 
 #endif // MEMREF_TRANSFORM_OPS

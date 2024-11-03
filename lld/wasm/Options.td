@@ -256,6 +256,8 @@ def: JoinedOrSeparate<["-"], "u">, Alias<undefined>;
 // LTO-related options.
 def lto_O: JJ<"lto-O">, MetaVarName<"<opt-level>">,
   HelpText<"Optimization level for LTO">;
+def lto_CGO: JJ<"lto-CGO">, MetaVarName<"<cgopt-level>">,
+  HelpText<"Codegen optimization level for LTO">;
 def lto_partitions: JJ<"lto-partitions=">,
   HelpText<"Number of LTO codegen partitions">;
 def disable_verify: F<"disable-verify">;
@@ -265,8 +267,6 @@ def thinlto_cache_dir: JJ<"thinlto-cache-dir=">,
 defm thinlto_cache_policy: EEq<"thinlto-cache-policy", "Pruning policy for the ThinLTO cache">;
 def thinlto_jobs: JJ<"thinlto-jobs=">,
   HelpText<"Number of ThinLTO jobs. Default to --threads=">;
-def no_lto_legacy_pass_manager: FF<"no-lto-legacy-pass-manager">,
-  HelpText<"Use new pass manager">;
 def lto_debug_pass_manager: FF<"lto-debug-pass-manager">,
   HelpText<"Debug new pass manager">;
 

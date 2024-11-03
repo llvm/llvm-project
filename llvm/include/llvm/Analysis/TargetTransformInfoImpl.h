@@ -171,8 +171,8 @@ public:
     return false;
   }
 
-  PredicationStyle emitGetActiveLaneMask() const {
-    return PredicationStyle::None;
+  TailFoldingStyle getPreferredTailFoldingStyle() const {
+    return TailFoldingStyle::DataWithoutLaneMask;
   }
 
   std::optional<Instruction *> instCombineIntrinsic(InstCombiner &IC,
@@ -862,6 +862,8 @@ public:
         /* OperatorStrategy */ TargetTransformInfo::VPLegalization::Convert);
   }
 
+  bool hasArmWideBranch(bool) const { return false; }
+
 protected:
   // Obtain the minimum required size to hold the value (without the sign)
   // In case of a vector it returns the min required size for one element.
@@ -887,7 +889,7 @@ protected:
           bool signedElement = IntElement->getValue().isNegative();
           // Get the element min required size.
           unsigned ElementMinRequiredSize =
-              IntElement->getValue().getMinSignedBits() - 1;
+              IntElement->getValue().getSignificantBits() - 1;
           // In case one element is signed then all the vector is signed.
           isSigned |= signedElement;
           // Save the max required bit size between all the elements.
@@ -902,7 +904,7 @@ protected:
 
     if (const auto *CI = dyn_cast<ConstantInt>(Val)) {
       isSigned = CI->getValue().isNegative();
-      return CI->getValue().getMinSignedBits() - 1;
+      return CI->getValue().getSignificantBits() - 1;
     }
 
     if (const auto *Cast = dyn_cast<SExtInst>(Val)) {
@@ -1213,7 +1215,7 @@ public:
         int ReplicationFactor, VF;
         if (Shuffle->isReplicationMask(ReplicationFactor, VF)) {
           APInt DemandedDstElts =
-              APInt::getNullValue(Shuffle->getShuffleMask().size());
+              APInt::getZero(Shuffle->getShuffleMask().size());
           for (auto I : enumerate(Shuffle->getShuffleMask())) {
             if (I.value() != UndefMaskElem)
               DemandedDstElts.setBit(I.index());

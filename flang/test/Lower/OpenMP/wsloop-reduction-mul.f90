@@ -57,7 +57,7 @@
 !CHECK:    omp.wsloop   reduction(@[[RED_I32_NAME]] -> %[[XREF]] : !fir.ref<i32>) for  (%[[IVAL:.*]]) : i32 = (%[[C1_1]]) to (%[[C10]]) inclusive step (%[[C1_2]])
 !CHECK:      fir.store %[[IVAL]] to %[[I_PVT_REF]] : !fir.ref<i32>
 !CHECK:      %[[I_PVT_VAL:.*]] = fir.load %[[I_PVT_REF]] : !fir.ref<i32>
-!CHECK:      omp.reduction %[[I_PVT_VAL]], %[[XREF]] : !fir.ref<i32>
+!CHECK:      omp.reduction %[[I_PVT_VAL]], %[[XREF]] : i32, !fir.ref<i32>
 !CHECK:      omp.yield
 !CHECK:    omp.terminator
 !CHECK:  return
@@ -87,7 +87,7 @@ end subroutine
 !CHECK:      fir.store %[[IVAL]] to %[[I_PVT_REF]] : !fir.ref<i32>
 !CHECK:      %[[I_PVT_VAL_i32:.*]] = fir.load %[[I_PVT_REF]] : !fir.ref<i32>
 !CHECK:      %[[I_PVT_VAL_f32:.*]] = fir.convert %[[I_PVT_VAL_i32]] : (i32) -> f32
-!CHECK:      omp.reduction %[[I_PVT_VAL_f32]], %[[XREF]] : !fir.ref<f32>
+!CHECK:      omp.reduction %[[I_PVT_VAL_f32]], %[[XREF]] : f32, !fir.ref<f32>
 !CHECK:      omp.yield
 !CHECK:    omp.terminator
 !CHECK:  return
@@ -115,7 +115,7 @@ end subroutine
 !CHECK:    omp.wsloop   reduction(@[[RED_I32_NAME]] -> %[[XREF]] : !fir.ref<i32>) for  (%[[IVAL:.*]]) : i32 = (%[[C1_1]]) to (%[[C10]]) inclusive step (%[[C1_2]])
 !CHECK:      fir.store %[[IVAL]] to %[[I_PVT_REF]] : !fir.ref<i32>
 !CHECK:      %[[I_PVT_VAL:.*]] = fir.load %[[I_PVT_REF]] : !fir.ref<i32>
-!CHECK:      omp.reduction %[[I_PVT_VAL]], %[[XREF]] : !fir.ref<i32>
+!CHECK:      omp.reduction %[[I_PVT_VAL]], %[[XREF]] : i32, !fir.ref<i32>
 !CHECK:      omp.yield
 !CHECK:    omp.terminator
 !CHECK:  return
@@ -144,7 +144,7 @@ end subroutine
 !CHECK:      fir.store %[[IVAL]] to %[[I_PVT_REF]] : !fir.ref<i32>
 !CHECK:      %[[I_PVT_VAL_i32:.*]] = fir.load %[[I_PVT_REF]] : !fir.ref<i32>
 !CHECK:      %[[I_PVT_VAL_f32:.*]] = fir.convert %[[I_PVT_VAL_i32]] : (i32) -> f32
-!CHECK:      omp.reduction %[[I_PVT_VAL_f32]], %[[XREF]] : !fir.ref<f32>
+!CHECK:      omp.reduction %[[I_PVT_VAL_f32]], %[[XREF]] : f32, !fir.ref<f32>
 !CHECK:      omp.yield
 !CHECK:    omp.terminator
 !CHECK:  return
@@ -169,11 +169,11 @@ end subroutine
 !CHECK:    omp.wsloop   reduction(@[[RED_I32_NAME]] -> %[[XREF]] : !fir.ref<i32>, @[[RED_I32_NAME]] -> %[[YREF]] : !fir.ref<i32>, @[[RED_I32_NAME]] -> %[[ZREF]] : !fir.ref<i32>) for  (%[[IVAL]]) : i32
 !CHECK:      fir.store %[[IVAL]] to %[[I_PVT_REF]] : !fir.ref<i32>
 !CHECK:      %[[I_PVT_VAL1:.*]] = fir.load %[[I_PVT_REF]] : !fir.ref<i32>
-!CHECK:      omp.reduction %[[I_PVT_VAL1]], %[[XREF]] : !fir.ref<i32>
+!CHECK:      omp.reduction %[[I_PVT_VAL1]], %[[XREF]] : i32, !fir.ref<i32>
 !CHECK:      %[[I_PVT_VAL2:.*]] = fir.load %[[I_PVT_REF]] : !fir.ref<i32>
-!CHECK:      omp.reduction %[[I_PVT_VAL2]], %[[YREF]] : !fir.ref<i32>
+!CHECK:      omp.reduction %[[I_PVT_VAL2]], %[[YREF]] : i32, !fir.ref<i32>
 !CHECK:      %[[I_PVT_VAL3:.*]] = fir.load %[[I_PVT_REF]] : !fir.ref<i32>
-!CHECK:      omp.reduction %[[I_PVT_VAL3]], %[[ZREF]] : !fir.ref<i32>
+!CHECK:      omp.reduction %[[I_PVT_VAL3]], %[[ZREF]] : i32, !fir.ref<i32>
 !CHECK:      omp.yield
 !CHECK:    omp.terminator
 !CHECK:  return
@@ -203,13 +203,13 @@ end subroutine
 !CHECK:      fir.store %[[IVAL]] to %[[I_PVT_REF]] : !fir.ref<i32>
 !CHECK:      %[[I_PVT_VAL1_I32:.*]] = fir.load %[[I_PVT_REF]] : !fir.ref<i32>
 !CHECK:      %[[I_PVT_VAL1_F32:.*]] = fir.convert %[[I_PVT_VAL1_I32]] : (i32) -> f32
-!CHECK:      omp.reduction %[[I_PVT_VAL1_F32]], %[[XREF]] : !fir.ref<f32>
+!CHECK:      omp.reduction %[[I_PVT_VAL1_F32]], %[[XREF]] : f32, !fir.ref<f32>
 !CHECK:      %[[I_PVT_VAL2_I32:.*]] = fir.load %[[I_PVT_REF]] : !fir.ref<i32>
 !CHECK:      %[[I_PVT_VAL2_F32:.*]] = fir.convert %[[I_PVT_VAL2_I32]] : (i32) -> f32
-!CHECK:      omp.reduction %[[I_PVT_VAL2_F32]], %[[YREF]] : !fir.ref<f32>
+!CHECK:      omp.reduction %[[I_PVT_VAL2_F32]], %[[YREF]] : f32, !fir.ref<f32>
 !CHECK:      %[[I_PVT_VAL3_I32:.*]] = fir.load %[[I_PVT_REF]] : !fir.ref<i32>
 !CHECK:      %[[I_PVT_VAL3_F32:.*]] = fir.convert %[[I_PVT_VAL3_I32]] : (i32) -> f32
-!CHECK:      omp.reduction %[[I_PVT_VAL3_F32]], %[[ZREF]] : !fir.ref<f32>
+!CHECK:      omp.reduction %[[I_PVT_VAL3_F32]], %[[ZREF]] : f32, !fir.ref<f32>
 !CHECK:      omp.yield
 !CHECK:    omp.terminator
 !CHECK:  return
@@ -239,16 +239,16 @@ end subroutine
 !CHECK:    omp.wsloop   reduction(@[[RED_I32_NAME]] -> %2 : !fir.ref<i32>, @[[RED_I64_NAME]] -> %3 : !fir.ref<i64>, @[[RED_F32_NAME]] -> %4 : !fir.ref<f32>, @[[RED_F64_NAME]] -> %1 : !fir.ref<f64>) for  (%[[IVAL:.*]]) : i32
 !CHECK:      fir.store %[[IVAL]] to %[[I_PVT_REF]] : !fir.ref<i32>
 !CHECK:      %[[I_PVT_VAL1_I32:.*]] = fir.load %[[I_PVT_REF]] : !fir.ref<i32>
-!CHECK:      omp.reduction %[[I_PVT_VAL1_I32]], %[[XREF]] : !fir.ref<i32>
+!CHECK:      omp.reduction %[[I_PVT_VAL1_I32]], %[[XREF]] : i32, !fir.ref<i32>
 !CHECK:      %[[I_PVT_VAL2_I32:.*]] = fir.load %[[I_PVT_REF]] : !fir.ref<i32>
 !CHECK:      %[[I_PVT_VAL2_I64:.*]] = fir.convert %[[I_PVT_VAL2_I32]] : (i32) -> i64
-!CHECK:      omp.reduction %[[I_PVT_VAL2_I64]], %[[YREF]] : !fir.ref<i64>
+!CHECK:      omp.reduction %[[I_PVT_VAL2_I64]], %[[YREF]] : i64, !fir.ref<i64>
 !CHECK:      %[[I_PVT_VAL3_I32:.*]] = fir.load %[[I_PVT_REF]] : !fir.ref<i32>
 !CHECK:      %[[I_PVT_VAL3_F32:.*]] = fir.convert %[[I_PVT_VAL3_I32]] : (i32) -> f32
-!CHECK:      omp.reduction %[[I_PVT_VAL3_F32]], %[[ZREF]] : !fir.ref<f32>
+!CHECK:      omp.reduction %[[I_PVT_VAL3_F32]], %[[ZREF]] : f32, !fir.ref<f32>
 !CHECK:      %[[I_PVT_VAL4_I32:.*]] = fir.load %[[I_PVT_REF]] : !fir.ref<i32>
 !CHECK:      %[[I_PVT_VAL4_F64:.*]] = fir.convert %[[I_PVT_VAL4_I32]] : (i32) -> f64
-!CHECK:      omp.reduction %[[I_PVT_VAL4_F64]], %[[WREF]] : !fir.ref<f64>
+!CHECK:      omp.reduction %[[I_PVT_VAL4_F64]], %[[WREF]] : f64, !fir.ref<f64>
 !CHECK:      omp.yield
 !CHECK:    omp.terminator
 !CHECK:  return

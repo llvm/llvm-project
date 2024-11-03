@@ -21,10 +21,12 @@ class DummyScriptedProcess(ScriptedProcess):
         return {}
 
     def read_memory_at_address(self, addr: int, size: int, error: lldb.SBError) -> lldb.SBData:
+        debugger = self.target.GetDebugger()
+        index = debugger.GetIndexOfTarget(self.target)
         data = lldb.SBData().CreateDataFromCString(
                                     self.target.GetByteOrder(),
                                     self.target.GetCodeByteSize(),
-                                    "Hello, world!")
+                                    "Hello, target " + str(index))
 
         return data
 
@@ -42,6 +44,12 @@ class DummyScriptedProcess(ScriptedProcess):
 
     def get_scripted_thread_plugin(self):
         return DummyScriptedThread.__module__ + "." + DummyScriptedThread.__name__
+
+    def my_super_secret_method(self):
+        if hasattr(self, 'my_super_secret_member'):
+            return self.my_super_secret_member
+        else:
+            return None
 
 
 class DummyScriptedThread(ScriptedThread):

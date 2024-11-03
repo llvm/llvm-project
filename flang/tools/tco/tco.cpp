@@ -103,7 +103,8 @@ compileFIR(const mlir::PassPipelineCLParser &passPipeline) {
   fir::KindMapping kindMap{&context};
   fir::setTargetTriple(*owningRef, targetTriple);
   fir::setKindMapping(*owningRef, kindMap);
-  mlir::PassManager pm(&context, mlir::OpPassManager::Nesting::Implicit);
+  mlir::PassManager pm((*owningRef)->getName(),
+                       mlir::OpPassManager::Nesting::Implicit);
   pm.enableVerifier(/*verifyPasses=*/true);
   mlir::applyPassManagerCLOptions(pm);
   if (emitFir) {

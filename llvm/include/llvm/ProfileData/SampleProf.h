@@ -427,6 +427,14 @@ public:
   void print(raw_ostream &OS, unsigned Indent) const;
   void dump() const;
 
+  bool operator==(const SampleRecord &Other) const {
+    return NumSamples == Other.NumSamples && CallTargets == Other.CallTargets;
+  }
+
+  bool operator!=(const SampleRecord &Other) const {
+    return !(*this == Other);
+  }
+
 private:
   uint64_t NumSamples = 0;
   CallTargetMap CallTargets;
@@ -1148,6 +1156,21 @@ public:
   // Find all the names in the current FunctionSamples including names in
   // all the inline instances and names of call targets.
   void findAllNames(DenseSet<StringRef> &NameSet) const;
+
+  bool operator==(const FunctionSamples &Other) const {
+    return (GUIDToFuncNameMap == Other.GUIDToFuncNameMap ||
+            (GUIDToFuncNameMap && Other.GUIDToFuncNameMap &&
+             *GUIDToFuncNameMap == *Other.GUIDToFuncNameMap)) &&
+           FunctionHash == Other.FunctionHash && Context == Other.Context &&
+           TotalSamples == Other.TotalSamples &&
+           TotalHeadSamples == Other.TotalHeadSamples &&
+           BodySamples == Other.BodySamples &&
+           CallsiteSamples == Other.CallsiteSamples;
+  }
+
+  bool operator!=(const FunctionSamples &Other) const {
+    return !(*this == Other);
+  }
 
 private:
   /// CFG hash value for the function.

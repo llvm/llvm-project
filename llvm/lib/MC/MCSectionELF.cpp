@@ -7,12 +7,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/MC/MCSectionELF.h"
-#include "llvm/ADT/Triple.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/TargetParser/Triple.h"
 #include <cassert>
 
 using namespace llvm;

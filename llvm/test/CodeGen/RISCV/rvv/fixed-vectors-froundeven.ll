@@ -130,10 +130,10 @@ declare <32 x half> @llvm.roundeven.v32f16(<32 x half>)
 define <1 x float> @roundeven_v1f32(<1 x float> %x) {
 ; CHECK-LABEL: roundeven_v1f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    lui a0, %hi(.LCPI6_0)
-; CHECK-NEXT:    flw ft0, %lo(.LCPI6_0)(a0)
 ; CHECK-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
 ; CHECK-NEXT:    vfabs.v v9, v8
+; CHECK-NEXT:    lui a0, 307200
+; CHECK-NEXT:    fmv.w.x ft0, a0
 ; CHECK-NEXT:    vmflt.vf v0, v9, ft0
 ; CHECK-NEXT:    fsrmi a0, 0
 ; CHECK-NEXT:    vfcvt.x.f.v v9, v8, v0.t
@@ -150,10 +150,10 @@ declare <1 x float> @llvm.roundeven.v1f32(<1 x float>)
 define <2 x float> @roundeven_v2f32(<2 x float> %x) {
 ; CHECK-LABEL: roundeven_v2f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    lui a0, %hi(.LCPI7_0)
-; CHECK-NEXT:    flw ft0, %lo(.LCPI7_0)(a0)
 ; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
 ; CHECK-NEXT:    vfabs.v v9, v8
+; CHECK-NEXT:    lui a0, 307200
+; CHECK-NEXT:    fmv.w.x ft0, a0
 ; CHECK-NEXT:    vmflt.vf v0, v9, ft0
 ; CHECK-NEXT:    fsrmi a0, 0
 ; CHECK-NEXT:    vfcvt.x.f.v v9, v8, v0.t
@@ -170,10 +170,10 @@ declare <2 x float> @llvm.roundeven.v2f32(<2 x float>)
 define <4 x float> @roundeven_v4f32(<4 x float> %x) {
 ; CHECK-LABEL: roundeven_v4f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    lui a0, %hi(.LCPI8_0)
-; CHECK-NEXT:    flw ft0, %lo(.LCPI8_0)(a0)
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; CHECK-NEXT:    vfabs.v v9, v8
+; CHECK-NEXT:    lui a0, 307200
+; CHECK-NEXT:    fmv.w.x ft0, a0
 ; CHECK-NEXT:    vmflt.vf v0, v9, ft0
 ; CHECK-NEXT:    fsrmi a0, 0
 ; CHECK-NEXT:    vfcvt.x.f.v v9, v8, v0.t
@@ -190,10 +190,10 @@ declare <4 x float> @llvm.roundeven.v4f32(<4 x float>)
 define <8 x float> @roundeven_v8f32(<8 x float> %x) {
 ; CHECK-LABEL: roundeven_v8f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    lui a0, %hi(.LCPI9_0)
-; CHECK-NEXT:    flw ft0, %lo(.LCPI9_0)(a0)
 ; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; CHECK-NEXT:    vfabs.v v10, v8
+; CHECK-NEXT:    lui a0, 307200
+; CHECK-NEXT:    fmv.w.x ft0, a0
 ; CHECK-NEXT:    vmflt.vf v0, v10, ft0
 ; CHECK-NEXT:    fsrmi a0, 0
 ; CHECK-NEXT:    vfcvt.x.f.v v10, v8, v0.t
@@ -210,10 +210,10 @@ declare <8 x float> @llvm.roundeven.v8f32(<8 x float>)
 define <16 x float> @roundeven_v16f32(<16 x float> %x) {
 ; CHECK-LABEL: roundeven_v16f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    lui a0, %hi(.LCPI10_0)
-; CHECK-NEXT:    flw ft0, %lo(.LCPI10_0)(a0)
 ; CHECK-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
 ; CHECK-NEXT:    vfabs.v v12, v8
+; CHECK-NEXT:    lui a0, 307200
+; CHECK-NEXT:    fmv.w.x ft0, a0
 ; CHECK-NEXT:    vmflt.vf v0, v12, ft0
 ; CHECK-NEXT:    fsrmi a0, 0
 ; CHECK-NEXT:    vfcvt.x.f.v v12, v8, v0.t

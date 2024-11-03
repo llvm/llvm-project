@@ -19,7 +19,6 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/ADT/Triple.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/BinaryFormat/MachO.h"
 #include "llvm/BinaryFormat/Swift.h"
@@ -31,6 +30,7 @@
 #include "llvm/Support/Format.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/TargetParser/Triple.h"
 #include <cstdint>
 #include <memory>
 #include <string>
@@ -503,6 +503,8 @@ public:
   basic_symbol_iterator symbol_begin() const override;
   basic_symbol_iterator symbol_end() const override;
 
+  bool is64Bit() const override;
+
   // MachO specific.
   symbol_iterator getSymbolByIndex(unsigned Index) const;
   uint64_t getSymbolIndex(DataRefImpl Symb) const;
@@ -735,7 +737,7 @@ public:
   ArrayRef<uint8_t> getUuid() const;
 
   StringRef getStringTableData() const;
-  bool is64Bit() const;
+
   void ReadULEB128s(uint64_t Index, SmallVectorImpl<uint64_t> &Out) const;
 
   static StringRef guessLibraryShortName(StringRef Name, bool &isFramework,

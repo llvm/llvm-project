@@ -94,6 +94,12 @@ static DecodeStatus DecodeCCRCRegisterClass(MCInst &Inst, APInt &Insn,
   llvm_unreachable("unimplemented");
 }
 
+static DecodeStatus DecodeImm32(MCInst &Inst, uint64_t Imm, uint64_t Address,
+                                const void *Decoder) {
+  Inst.addOperand(MCOperand::createImm(M68k::swapWord<uint32_t>(Imm)));
+  return DecodeStatus::Success;
+}
+
 #include "M68kGenDisassemblerTable.inc"
 
 /// A disassembler class for M68k.

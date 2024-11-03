@@ -115,7 +115,7 @@ def Tensor_DimOp : Tensor_Op<"dim", [
     ```
   }];
 
-  let arguments = (ins AnyTensor:$source,
+  let arguments = (ins AnyNon0RankedOrUnrankedTensor:$source,
                        Index:$index);
   let results = (outs Index:$result);
 
@@ -143,7 +143,6 @@ def Tensor_DimOp : Tensor_Op<"dim", [
 
   let hasCanonicalizer = 1;
   let hasFolder = 1;
-  let hasVerifier = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -1113,7 +1112,13 @@ def Tensor_CollapseShapeOp : Tensor_ReassociativeReshapeOp<"collapse_shape"> {
     }]>
   ];
 
-  let extraClassDeclaration = commonExtraClassDeclaration;
+  let extraClassDeclaration = commonExtraClassDeclaration # [{  
+    static RankedTensorType
+    inferCollapsedType(RankedTensorType type, ArrayRef<AffineMap> reassociation);
+    static RankedTensorType
+    inferCollapsedType(RankedTensorType type, 
+                       SmallVector<ReassociationIndices> reassociation);
+  }];
   let hasVerifier = 1;
 }
 
@@ -1320,7 +1325,7 @@ def Tensor_PadOp : Tensor_Op<"pad", [
 // ParallelInsertSliceOp
 //===----------------------------------------------------------------------===//
 
-// TODO: Implement PerformConcurrentlyOpInterface.
+// TODO: Implement InParallelOpInterface.
 def Tensor_ParallelInsertSliceOp : Tensor_Op<"parallel_insert_slice", [
        AttrSizedOperandSegments,
        OffsetSizeAndStrideOpInterface,
@@ -1436,7 +1441,7 @@ def Tensor_ParallelInsertSliceOp : Tensor_Op<"parallel_insert_slice", [
     /// `strides` operands.
     static unsigned getOffsetSizeAndStrideStartOperandIndex() { return 1; }
 
-    /// Return the OpResult of the enclosing ForeachThreadOp that is
+    /// Return the OpResult of the enclosing ForallOp that is
     /// corresponding to this ParallelInsertSliceOp.
     OpResult getTiedOpResult();
   }];
@@ -1766,6 +1771,14 @@ def Tensor_PackOp : Tensor_RelayoutOp<"pack", [
   ];
 
   let extraClassDeclaration = commonExtraClassDeclaration # [{
+    // Method to get the shape of the result as `SmallVector<OpFoldResult>`.
+    // This is a static method to allow getting the shape of the destination
+    // expected while creating a `pack` op.
+    static SmallVector<OpFoldResult> getResultShape(OpBuilder &builder,
+        Location loc, ArrayRef<OpFoldResult> sourceDims,
+        ArrayRef<OpFoldResult> innerTileDims, ArrayRef<int64_t> innerDimsPos,
+        ArrayRef<int64_t> outerDimsPerm = {});
+
     // Method to get the `ShapedType` of the result based on the inner tiles,
     // position of the inner tiles (innerDimsPos)  and interchange vector of
     // outer loops (outerDimsPerm).

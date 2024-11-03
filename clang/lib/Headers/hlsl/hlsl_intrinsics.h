@@ -219,5 +219,94 @@ double3 trunc(double3);
 __attribute__((clang_builtin_alias(__builtin_elementwise_trunc)))
 double4 trunc(double4);
 
+// log builtins
+#ifdef __HLSL_ENABLE_16_BIT
+__attribute__((clang_builtin_alias(__builtin_elementwise_log))) half log(half);
+__attribute__((clang_builtin_alias(__builtin_elementwise_log)))
+half2 log(half2);
+__attribute__((clang_builtin_alias(__builtin_elementwise_log)))
+half3 log(half3);
+__attribute__((clang_builtin_alias(__builtin_elementwise_log)))
+half4 log(half4);
+#endif
+
+__attribute__((clang_builtin_alias(__builtin_elementwise_log))) float
+log(float);
+__attribute__((clang_builtin_alias(__builtin_elementwise_log)))
+float2 log(float2);
+__attribute__((clang_builtin_alias(__builtin_elementwise_log)))
+float3 log(float3);
+__attribute__((clang_builtin_alias(__builtin_elementwise_log)))
+float4 log(float4);
+
+__attribute__((clang_builtin_alias(__builtin_elementwise_log))) double
+log(double);
+__attribute__((clang_builtin_alias(__builtin_elementwise_log)))
+double2 log(double2);
+__attribute__((clang_builtin_alias(__builtin_elementwise_log)))
+double3 log(double3);
+__attribute__((clang_builtin_alias(__builtin_elementwise_log)))
+double4 log(double4);
+
+// log2 builtins
+#ifdef __HLSL_ENABLE_16_BIT
+__attribute__((clang_builtin_alias(__builtin_elementwise_log2)))
+half log2(half);
+__attribute__((clang_builtin_alias(__builtin_elementwise_log2)))
+half2 log2(half2);
+__attribute__((clang_builtin_alias(__builtin_elementwise_log2)))
+half3 log2(half3);
+__attribute__((clang_builtin_alias(__builtin_elementwise_log2)))
+half4 log2(half4);
+#endif
+
+__attribute__((clang_builtin_alias(__builtin_elementwise_log2))) float
+log2(float);
+__attribute__((clang_builtin_alias(__builtin_elementwise_log2)))
+float2 log2(float2);
+__attribute__((clang_builtin_alias(__builtin_elementwise_log2)))
+float3 log2(float3);
+__attribute__((clang_builtin_alias(__builtin_elementwise_log2)))
+float4 log2(float4);
+
+__attribute__((clang_builtin_alias(__builtin_elementwise_log2))) double
+log2(double);
+__attribute__((clang_builtin_alias(__builtin_elementwise_log2)))
+double2 log2(double2);
+__attribute__((clang_builtin_alias(__builtin_elementwise_log2)))
+double3 log2(double3);
+__attribute__((clang_builtin_alias(__builtin_elementwise_log2)))
+double4 log2(double4);
+
+// log10 builtins
+#ifdef __HLSL_ENABLE_16_BIT
+__attribute__((clang_builtin_alias(__builtin_elementwise_log10)))
+half log10(half);
+__attribute__((clang_builtin_alias(__builtin_elementwise_log10)))
+half2 log10(half2);
+__attribute__((clang_builtin_alias(__builtin_elementwise_log10)))
+half3 log10(half3);
+__attribute__((clang_builtin_alias(__builtin_elementwise_log10)))
+half4 log10(half4);
+#endif
+
+__attribute__((clang_builtin_alias(__builtin_elementwise_log10))) float
+log10(float);
+__attribute__((clang_builtin_alias(__builtin_elementwise_log10)))
+float2 log10(float2);
+__attribute__((clang_builtin_alias(__builtin_elementwise_log10)))
+float3 log10(float3);
+__attribute__((clang_builtin_alias(__builtin_elementwise_log10)))
+float4 log10(float4);
+
+__attribute__((clang_builtin_alias(__builtin_elementwise_log10))) double
+log10(double);
+__attribute__((clang_builtin_alias(__builtin_elementwise_log10)))
+double2 log10(double2);
+__attribute__((clang_builtin_alias(__builtin_elementwise_log10)))
+double3 log10(double3);
+__attribute__((clang_builtin_alias(__builtin_elementwise_log10)))
+double4 log10(double4);
+
 } // namespace hlsl
 #endif //_HLSL_HLSL_INTRINSICS_H_

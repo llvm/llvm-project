@@ -1086,32 +1086,20 @@ static void insertLifetimeMarkersSurroundingCall(
     Module *M, ArrayRef<Value *> LifetimesStart, ArrayRef<Value *> LifetimesEnd,
     CallInst *TheCall) {
   LLVMContext &Ctx = M->getContext();
-  auto Int8PtrTy = Type::getInt8PtrTy(Ctx);
   auto NegativeOne = ConstantInt::getSigned(Type::getInt64Ty(Ctx), -1);
   Instruction *Term = TheCall->getParent()->getTerminator();
 
-  // The memory argument to a lifetime marker must be a i8*. Cache any bitcasts
-  // needed to satisfy this requirement so they may be reused.
-  DenseMap<Value *, Value *> Bitcasts;
-
   // Emit lifetime markers for the pointers given in \p Objects. Insert the
   // markers before the call if \p InsertBefore, and after the call otherwise.
-  auto insertMarkers = [&](Function *MarkerFunc, ArrayRef<Value *> Objects,
+  auto insertMarkers = [&](Intrinsic::ID MarkerFunc, ArrayRef<Value *> Objects,
                            bool InsertBefore) {
     for (Value *Mem : Objects) {
       assert((!isa<Instruction>(Mem) || cast<Instruction>(Mem)->getFunction() ==
                                             TheCall->getFunction()) &&
              "Input memory not defined in original function");
-      Value *&MemAsI8Ptr = Bitcasts[Mem];
-      if (!MemAsI8Ptr) {
-        if (Mem->getType() == Int8PtrTy)
-          MemAsI8Ptr = Mem;
-        else
-          MemAsI8Ptr =
-              CastInst::CreatePointerCast(Mem, Int8PtrTy, "lt.cast", TheCall);
-      }
 
-      auto Marker = CallInst::Create(MarkerFunc, {NegativeOne, MemAsI8Ptr});
+      Function *Func = Intrinsic::getDeclaration(M, MarkerFunc, Mem->getType());
+      auto Marker = CallInst::Create(Func, {NegativeOne, Mem});
       if (InsertBefore)
         Marker->insertBefore(TheCall);
       else
@@ -1120,15 +1108,13 @@ static void insertLifetimeMarkersSurroundingCall(
   };
 
   if (!LifetimesStart.empty()) {
-    auto StartFn = llvm::Intrinsic::getDeclaration(
-        M, llvm::Intrinsic::lifetime_start, Int8PtrTy);
-    insertMarkers(StartFn, LifetimesStart, /*InsertBefore=*/true);
+    insertMarkers(Intrinsic::lifetime_start, LifetimesStart,
+                  /*InsertBefore=*/true);
   }
 
   if (!LifetimesEnd.empty()) {
-    auto EndFn = llvm::Intrinsic::getDeclaration(
-        M, llvm::Intrinsic::lifetime_end, Int8PtrTy);
-    insertMarkers(EndFn, LifetimesEnd, /*InsertBefore=*/false);
+    insertMarkers(Intrinsic::lifetime_end, LifetimesEnd,
+                  /*InsertBefore=*/false);
   }
 }
 
@@ -1351,18 +1337,18 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
 
   normalizeCFGForExtraction(header);
 
-  if (!KeepOldBlocks) {
-    // Remove @llvm.assume calls that will be moved to the new function from the
-    // old function's assumption cache.
-    for (BasicBlock *Block : Blocks) {
-      for (Instruction &I : llvm::make_early_inc_range(*Block)) {
-        if (auto *AI = dyn_cast<AssumeInst>(&I)) {
-          if (AC)
-            AC->unregisterAssumption(AI);
-          AI->eraseFromParent();
-        }
+   if (!KeepOldBlocks) {
+  // Remove CondGuardInsts that will be moved to the new function from the old
+  // function's assumption cache.
+  for (BasicBlock *Block : Blocks) {
+    for (Instruction &I : llvm::make_early_inc_range(*Block)) {
+      if (auto *CI = dyn_cast<CondGuardInst>(&I)) {
+        if (AC)
+          AC->unregisterAssumption(CI);
+        CI->eraseFromParent();
       }
     }
+  }
   }
 
   ValueSet SinkingCands, HoistingCands;
@@ -2110,7 +2096,7 @@ bool CodeExtractor::verifyAssumptionCache(const Function &OldFunc,
                                           const Function &NewFunc,
                                           AssumptionCache *AC) {
   for (auto AssumeVH : AC->assumptions()) {
-    auto *I = dyn_cast_or_null<CallInst>(AssumeVH);
+    auto *I = dyn_cast_or_null<CondGuardInst>(AssumeVH);
     if (!I)
       continue;
 
@@ -2122,7 +2108,7 @@ bool CodeExtractor::verifyAssumptionCache(const Function &OldFunc,
     // that were previously in the old function, but that have now been moved
     // to the new function.
     for (auto AffectedValVH : AC->assumptionsFor(I->getOperand(0))) {
-      auto *AffectedCI = dyn_cast_or_null<CallInst>(AffectedValVH);
+      auto *AffectedCI = dyn_cast_or_null<CondGuardInst>(AffectedValVH);
       if (!AffectedCI)
         continue;
       if (AffectedCI->getFunction() != &OldFunc)

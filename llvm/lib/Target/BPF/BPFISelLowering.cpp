@@ -325,7 +325,7 @@ SDValue BPFTargetLowering::LowerFormalArguments(
       switch (SimpleTy) {
       default: {
         errs() << "LowerFormalArguments Unhandled argument type: "
-               << RegVT.getEVTString() << '\n';
+               << RegVT << '\n';
         llvm_unreachable(nullptr);
       }
       case MVT::i32:

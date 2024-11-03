@@ -963,8 +963,10 @@ Scope *ModFileReader::Read(const SourceName &name,
     // directory lists, the intrinsic module directory takes precedence.
     options.searchDirectories = context_.searchDirectories();
     for (const auto &dir : context_.intrinsicModuleDirectories()) {
-      std::remove(options.searchDirectories.begin(),
-          options.searchDirectories.end(), dir);
+      options.searchDirectories.erase(
+          std::remove(options.searchDirectories.begin(),
+              options.searchDirectories.end(), dir),
+          options.searchDirectories.end());
     }
     options.searchDirectories.insert(options.searchDirectories.begin(), "."s);
   }

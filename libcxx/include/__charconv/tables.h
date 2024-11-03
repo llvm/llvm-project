@@ -19,7 +19,7 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#if _LIBCPP_STD_VER > 14
+#if _LIBCPP_STD_VER >= 17
 
 namespace __itoa {
 
@@ -147,7 +147,7 @@ inline constexpr char __digits_base_10[200] = {
 
 } // namespace __itoa
 
-#endif // _LIBCPP_STD_VER > 14
+#endif // _LIBCPP_STD_VER >= 17
 
 _LIBCPP_END_NAMESPACE_STD
 

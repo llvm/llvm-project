@@ -29,6 +29,7 @@
 #include <format>
 #include <cassert>
 #include <concepts>
+#include <iterator>
 #include <type_traits>
 
 #include "test_format_context.h"

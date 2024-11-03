@@ -184,6 +184,6 @@ func.func @pooling_nchw_max(%input: tensor<?x?x1x?xf32>, %filter: tensor<1x?xf32
 
 transform.sequence failures(propagate) {
 ^bb1(%arg1: !pdl.operation):
-  %0 = transform.structured.match interface{LinalgOp} in %arg1
+  %0 = transform.structured.match interface{LinalgOp} in %arg1 : (!pdl.operation) -> !pdl.operation
   %1 = transform.structured.decompose %0
 }

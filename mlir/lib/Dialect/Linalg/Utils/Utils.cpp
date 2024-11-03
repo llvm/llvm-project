@@ -44,18 +44,6 @@ using namespace presburger;
 using namespace mlir::linalg;
 using namespace mlir::scf;
 
-static bool isZero(OpFoldResult v) {
-  if (!v)
-    return false;
-  if (auto attr = v.dyn_cast<Attribute>()) {
-    IntegerAttr intAttr = attr.dyn_cast<IntegerAttr>();
-    return intAttr && intAttr.getValue().isZero();
-  }
-  if (auto cst = v.get<Value>().getDefiningOp<arith::ConstantIndexOp>())
-    return cst.value() == 0;
-  return false;
-}
-
 namespace {
 
 // Helper visitor to determine whether an AffineExpr is tiled.
@@ -70,7 +58,7 @@ struct TileCheck : public AffineExprVisitor<TileCheck> {
   TileCheck(ArrayRef<OpFoldResult> tileSizes) : tileSizes(tileSizes) {}
 
   void visitDimExpr(AffineDimExpr expr) {
-    isTiled |= !isZero(tileSizes[expr.getPosition()]);
+    isTiled |= !isZeroIndex(tileSizes[expr.getPosition()]);
   }
   void visitAffineBinaryOpExpr(AffineBinaryOpExpr expr) {
     visit(expr.getLHS());
@@ -164,7 +152,7 @@ bool hasOnlyScalarElementwiseOp(Region &r) {
     return false;
   for (Operation &op : r.front()) {
     if (!(isa<arith::ConstantOp, func::ConstantOp, tensor::ExtractOp,
-              linalg::YieldOp, linalg::IndexOp>(op) ||
+              linalg::YieldOp, linalg::IndexOp, AffineApplyOp>(op) ||
           OpTrait::hasElementwiseMappableTraits(&op)) ||
         llvm::any_of(op.getResultTypes(),
                      [](Type type) { return !type.isIntOrIndexOrFloat(); }))
@@ -869,7 +857,7 @@ SmallVector<OpFoldResult> computeTileOffsets(OpBuilder &b, Location loc,
   SmallVector<OpFoldResult> offsets;
   for (unsigned idx = 0, idxIvs = 0, e = tileSizes.size(); idx < e; ++idx) {
     LLVM_DEBUG(llvm::dbgs() << "makeTiledShapes: for loop#" << idx << "\n");
-    bool isTiled = !isZero(tileSizes[idx]);
+    bool isTiled = !isZeroIndex(tileSizes[idx]);
     offsets.push_back(isTiled ? ivs[idxIvs++] : b.getIndexAttr(0));
     LLVM_DEBUG(llvm::dbgs()
                << "computeTileOffsets: " << offsets.back() << "\n");
@@ -882,7 +870,7 @@ SmallVector<OpFoldResult> computeTileSizes(OpBuilder &b, Location loc,
                                            ArrayRef<OpFoldResult> sizeBounds) {
   SmallVector<OpFoldResult> sizes;
   for (unsigned idx = 0, e = tileSizes.size(); idx < e; ++idx) {
-    bool isTiled = !isZero(tileSizes[idx]);
+    bool isTiled = !isZeroIndex(tileSizes[idx]);
     // Before composing, we need to make range a closed interval.
     OpFoldResult size = isTiled ? tileSizes[idx] : sizeBounds[idx];
     AffineExpr d0 = getAffineDimExpr(0, b.getContext());
@@ -938,7 +926,7 @@ computeAllSliceParameters(OpBuilder &builder, Location loc, LinalgOp linalgOp,
                           bool omitPartialTileCheck) {
   assert(ivs.size() == static_cast<size_t>(llvm::count_if(
                            llvm::make_range(tileSizes.begin(), tileSizes.end()),
-                           [](OpFoldResult v) { return !isZero(v); })) &&
+                           [](OpFoldResult v) { return !isZeroIndex(v); })) &&
          "expected as many ivs as non-zero sizes");
 
   // Construct (potentially temporary) mins and maxes on which to apply maps
@@ -1077,7 +1065,7 @@ std::optional<Attribute> getNeutralElement(Operation *op) {
     if (isa<arith::MinFOp>(op))
       return b.getFloatAttr(
           resultType, llvm::APFloat::getInf(semantic, /*Negative=*/false));
-    return Attribute();
+    return std::nullopt;
   }
   if (isa<arith::AddIOp, arith::OrIOp, arith::XOrIOp>(op))
     return b.getIntegerAttr(resultType, 0);

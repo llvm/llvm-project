@@ -112,7 +112,7 @@ public:
 
   static NonConvergingLattice initialElement() { return {0}; }
 
-  void transfer(const CFGElement *, NonConvergingLattice &E, Environment &) {
+  void transfer(const CFGElement &, NonConvergingLattice &E, Environment &) {
     ++E.State;
   }
 };
@@ -194,8 +194,8 @@ public:
 
   static FunctionCallLattice initialElement() { return {}; }
 
-  void transfer(const CFGElement *Elt, FunctionCallLattice &E, Environment &) {
-    auto CS = Elt->getAs<CFGStmt>();
+  void transfer(const CFGElement &Elt, FunctionCallLattice &E, Environment &) {
+    auto CS = Elt.getAs<CFGStmt>();
     if (!CS)
       return;
     const auto *S = CS->getStmt();
@@ -350,8 +350,8 @@ public:
 
   static NoopLattice initialElement() { return {}; }
 
-  void transfer(const CFGElement *Elt, NoopLattice &, Environment &Env) {
-    auto CS = Elt->getAs<CFGStmt>();
+  void transfer(const CFGElement &Elt, NoopLattice &, Environment &Env) {
+    auto CS = Elt.getAs<CFGStmt>();
     if (!CS)
       return;
     const auto *S = CS->getStmt();
@@ -508,8 +508,8 @@ public:
 
   static NoopLattice initialElement() { return {}; }
 
-  void transfer(const CFGElement *Elt, NoopLattice &, Environment &Env) {
-    auto CS = Elt->getAs<CFGStmt>();
+  void transfer(const CFGElement &Elt, NoopLattice &, Environment &Env) {
+    auto CS = Elt.getAs<CFGStmt>();
     if (!CS)
       return;
     const Stmt *S = CS->getStmt();
@@ -1202,8 +1202,8 @@ public:
 
   static NoopLattice initialElement() { return {}; }
 
-  void transfer(const CFGElement *Elt, NoopLattice &, Environment &Env) {
-    auto CS = Elt->getAs<CFGStmt>();
+  void transfer(const CFGElement &Elt, NoopLattice &, Environment &Env) {
+    auto CS = Elt.getAs<CFGStmt>();
     if (!CS)
       return;
     const Stmt *S = CS->getStmt();

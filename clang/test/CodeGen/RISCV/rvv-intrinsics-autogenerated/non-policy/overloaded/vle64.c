@@ -13,7 +13,7 @@
 // CHECK-RV64-NEXT:    ret <vscale x 1 x double> [[TMP0]]
 //
 vfloat64m1_t test_vle64_v_f64m1_m(vbool64_t mask, const double *base, size_t vl) {
-  return vle64(mask, base, vl);
+  return __riscv_vle64(mask, base, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vle64_v_f64m2_m(
@@ -22,7 +22,7 @@ vfloat64m1_t test_vle64_v_f64m1_m(vbool64_t mask, const double *base, size_t vl)
 // CHECK-RV64-NEXT:    ret <vscale x 2 x double> [[TMP0]]
 //
 vfloat64m2_t test_vle64_v_f64m2_m(vbool32_t mask, const double *base, size_t vl) {
-  return vle64(mask, base, vl);
+  return __riscv_vle64(mask, base, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vle64_v_f64m4_m(
@@ -31,7 +31,7 @@ vfloat64m2_t test_vle64_v_f64m2_m(vbool32_t mask, const double *base, size_t vl)
 // CHECK-RV64-NEXT:    ret <vscale x 4 x double> [[TMP0]]
 //
 vfloat64m4_t test_vle64_v_f64m4_m(vbool16_t mask, const double *base, size_t vl) {
-  return vle64(mask, base, vl);
+  return __riscv_vle64(mask, base, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vle64_v_f64m8_m(
@@ -40,7 +40,7 @@ vfloat64m4_t test_vle64_v_f64m4_m(vbool16_t mask, const double *base, size_t vl)
 // CHECK-RV64-NEXT:    ret <vscale x 8 x double> [[TMP0]]
 //
 vfloat64m8_t test_vle64_v_f64m8_m(vbool8_t mask, const double *base, size_t vl) {
-  return vle64(mask, base, vl);
+  return __riscv_vle64(mask, base, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vle64_v_i64m1_m(
@@ -49,7 +49,7 @@ vfloat64m8_t test_vle64_v_f64m8_m(vbool8_t mask, const double *base, size_t vl) 
 // CHECK-RV64-NEXT:    ret <vscale x 1 x i64> [[TMP0]]
 //
 vint64m1_t test_vle64_v_i64m1_m(vbool64_t mask, const int64_t *base, size_t vl) {
-  return vle64(mask, base, vl);
+  return __riscv_vle64(mask, base, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vle64_v_i64m2_m(
@@ -58,7 +58,7 @@ vint64m1_t test_vle64_v_i64m1_m(vbool64_t mask, const int64_t *base, size_t vl) 
 // CHECK-RV64-NEXT:    ret <vscale x 2 x i64> [[TMP0]]
 //
 vint64m2_t test_vle64_v_i64m2_m(vbool32_t mask, const int64_t *base, size_t vl) {
-  return vle64(mask, base, vl);
+  return __riscv_vle64(mask, base, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vle64_v_i64m4_m(
@@ -67,7 +67,7 @@ vint64m2_t test_vle64_v_i64m2_m(vbool32_t mask, const int64_t *base, size_t vl) 
 // CHECK-RV64-NEXT:    ret <vscale x 4 x i64> [[TMP0]]
 //
 vint64m4_t test_vle64_v_i64m4_m(vbool16_t mask, const int64_t *base, size_t vl) {
-  return vle64(mask, base, vl);
+  return __riscv_vle64(mask, base, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vle64_v_i64m8_m(
@@ -76,7 +76,7 @@ vint64m4_t test_vle64_v_i64m4_m(vbool16_t mask, const int64_t *base, size_t vl) 
 // CHECK-RV64-NEXT:    ret <vscale x 8 x i64> [[TMP0]]
 //
 vint64m8_t test_vle64_v_i64m8_m(vbool8_t mask, const int64_t *base, size_t vl) {
-  return vle64(mask, base, vl);
+  return __riscv_vle64(mask, base, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vle64_v_u64m1_m(
@@ -85,7 +85,7 @@ vint64m8_t test_vle64_v_i64m8_m(vbool8_t mask, const int64_t *base, size_t vl) {
 // CHECK-RV64-NEXT:    ret <vscale x 1 x i64> [[TMP0]]
 //
 vuint64m1_t test_vle64_v_u64m1_m(vbool64_t mask, const uint64_t *base, size_t vl) {
-  return vle64(mask, base, vl);
+  return __riscv_vle64(mask, base, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vle64_v_u64m2_m(
@@ -94,7 +94,7 @@ vuint64m1_t test_vle64_v_u64m1_m(vbool64_t mask, const uint64_t *base, size_t vl
 // CHECK-RV64-NEXT:    ret <vscale x 2 x i64> [[TMP0]]
 //
 vuint64m2_t test_vle64_v_u64m2_m(vbool32_t mask, const uint64_t *base, size_t vl) {
-  return vle64(mask, base, vl);
+  return __riscv_vle64(mask, base, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vle64_v_u64m4_m(
@@ -103,7 +103,7 @@ vuint64m2_t test_vle64_v_u64m2_m(vbool32_t mask, const uint64_t *base, size_t vl
 // CHECK-RV64-NEXT:    ret <vscale x 4 x i64> [[TMP0]]
 //
 vuint64m4_t test_vle64_v_u64m4_m(vbool16_t mask, const uint64_t *base, size_t vl) {
-  return vle64(mask, base, vl);
+  return __riscv_vle64(mask, base, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vle64_v_u64m8_m(
@@ -112,6 +112,6 @@ vuint64m4_t test_vle64_v_u64m4_m(vbool16_t mask, const uint64_t *base, size_t vl
 // CHECK-RV64-NEXT:    ret <vscale x 8 x i64> [[TMP0]]
 //
 vuint64m8_t test_vle64_v_u64m8_m(vbool8_t mask, const uint64_t *base, size_t vl) {
-  return vle64(mask, base, vl);
+  return __riscv_vle64(mask, base, vl);
 }
 

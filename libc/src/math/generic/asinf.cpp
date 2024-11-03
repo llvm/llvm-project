@@ -13,6 +13,8 @@
 #include "src/__support/FPUtil/except_value_utils.h"
 #include "src/__support/FPUtil/multiply_add.h"
 #include "src/__support/FPUtil/sqrt.h"
+#include "src/__support/macros/optimization.h"            // LIBC_UNLIKELY
+#include "src/__support/macros/properties/cpu_features.h" // LIBC_TARGET_CPU_HAS_FMA
 
 #include <errno.h>
 
@@ -51,7 +53,7 @@ LLVM_LIBC_FUNCTION(float, asinf, (float x)) {
   // |x| <= 0.5-ish
   if (x_abs < 0x3f04'471dU) {
     // |x| < 0x1.d12edp-12
-    if (unlikely(x_abs < 0x39e8'9768U)) {
+    if (LIBC_UNLIKELY(x_abs < 0x39e8'9768U)) {
       // When |x| < 2^-12, the relative error of the approximation asin(x) ~ x
       // is:
       //   |asin(x) - x| / |asin(x)| < |x^3| / (6|x|)
@@ -72,17 +74,17 @@ LLVM_LIBC_FUNCTION(float, asinf, (float x)) {
       // |x| < 2^-125. For targets without FMA instructions, we simply use
       // double for intermediate results as it is more efficient than using an
       // emulated version of FMA.
-#if defined(LIBC_TARGET_HAS_FMA)
+#if defined(LIBC_TARGET_CPU_HAS_FMA)
       return fputil::multiply_add(x, 0x1.0p-25f, x);
 #else
       double xd = static_cast<double>(x);
       return static_cast<float>(fputil::multiply_add(xd, 0x1.0p-25, xd));
-#endif // LIBC_TARGET_HAS_FMA
+#endif // LIBC_TARGET_CPU_HAS_FMA
     }
 
     // Check for exceptional values
     if (auto r = ASINF_EXCEPTS_LO.lookup_odd(x_abs, x_sign);
-        unlikely(r.has_value()))
+        LIBC_UNLIKELY(r.has_value()))
       return r.value();
 
     // For |x| <= 0.5, we approximate asinf(x) by:
@@ -101,7 +103,7 @@ LLVM_LIBC_FUNCTION(float, asinf, (float x)) {
   }
 
   // |x| > 1, return NaNs.
-  if (unlikely(x_abs > 0x3f80'0000U)) {
+  if (LIBC_UNLIKELY(x_abs > 0x3f80'0000U)) {
     if (x_abs <= 0x7f80'0000U) {
       errno = EDOM;
       fputil::set_except(FE_INVALID);
@@ -112,7 +114,7 @@ LLVM_LIBC_FUNCTION(float, asinf, (float x)) {
 
   // Check for exceptional values
   if (auto r = ASINF_EXCEPTS_HI.lookup_odd(x_abs, x_sign);
-      unlikely(r.has_value()))
+      LIBC_UNLIKELY(r.has_value()))
     return r.value();
 
   // When |x| > 0.5, we perform range reduction as follow:

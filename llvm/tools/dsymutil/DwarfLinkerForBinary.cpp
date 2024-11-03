@@ -23,7 +23,6 @@
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/ADT/Triple.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/BinaryFormat/MachO.h"
@@ -82,6 +81,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetOptions.h"
+#include "llvm/TargetParser/Triple.h"
 #include <algorithm>
 #include <cassert>
 #include <cinttypes>
@@ -1061,19 +1061,6 @@ bool DwarfLinkerForBinary::AddressManager::applyValidRelocs(
   }
 
   return Relocs.size() > 0;
-}
-
-llvm::Expected<uint64_t>
-DwarfLinkerForBinary::AddressManager::relocateIndexedAddr(uint64_t StartOffset,
-                                                          uint64_t EndOffset) {
-  std::vector<ValidReloc> Relocs =
-      getRelocations(ValidDebugAddrRelocs, StartOffset, EndOffset);
-  if (Relocs.size() == 0)
-    return createStringError(
-        std::make_error_code(std::errc::invalid_argument),
-        "no relocation for offset %llu in debug_addr section", StartOffset);
-
-  return relocate(Relocs[0]);
 }
 
 bool linkDwarf(raw_fd_ostream &OutFile, BinaryHolder &BinHolder,

@@ -254,6 +254,8 @@ if (POLLY_BUNDLED_ISL)
     isl/isl_schedule_read.c
     isl/isl_schedule_tree.c
     isl/isl_scheduler.c
+    isl/isl_scheduler_clustering.c
+    isl/isl_scheduler_scc.c
     isl/isl_seq.c
     isl/isl_set_list.c
     isl/isl_set_to_ast_graft_list.c

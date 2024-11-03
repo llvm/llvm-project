@@ -7255,9 +7255,8 @@ define <2 x double> @constrained_vector_sitofp_v2f64_v2i16(<2 x i16> %x) #0 {
 ; PC64LE-NEXT:    addis 3, 2, .LCPI155_1@toc@ha
 ; PC64LE-NEXT:    addi 3, 3, .LCPI155_1@toc@l
 ; PC64LE-NEXT:    xxswapd 35, 0
-; PC64LE-NEXT:    lxvd2x 0, 0, 3
 ; PC64LE-NEXT:    vperm 2, 2, 2, 3
-; PC64LE-NEXT:    xxswapd 35, 0
+; PC64LE-NEXT:    lxvd2x 35, 0, 3
 ; PC64LE-NEXT:    vsld 2, 2, 3
 ; PC64LE-NEXT:    vsrad 2, 2, 3
 ; PC64LE-NEXT:    xvcvsxddp 34, 34

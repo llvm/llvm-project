@@ -1098,6 +1098,7 @@ bool X86InstrInfo::classifyLEAReg(MachineInstr &MI, const MachineOperand &Src,
     ImplicitOp.setImplicit();
 
     NewSrc = getX86SubSuperRegister(SrcReg, 64);
+    assert(NewSrc.isValid() && "Invalid Operand");
     assert(!Src.isUndef() && "Undef op doesn't need optimization");
   } else {
     // Virtual register of the wrong class, we have to create a temporary 64-bit
@@ -2096,7 +2097,7 @@ MachineInstr *X86InstrInfo::commuteInstructionImpl(MachineInstr &MI, bool NewMI,
     // "inline" and we don't override the insertion with a zero.
     if (DstIdx == SrcIdx && (ZMask & (1 << DstIdx)) == 0 &&
         llvm::popcount(ZMask) == 2) {
-      unsigned AltIdx = findFirstSet((ZMask | (1 << DstIdx)) ^ 15);
+      unsigned AltIdx = llvm::countr_zero((ZMask | (1 << DstIdx)) ^ 15);
       assert(AltIdx < 4 && "Illegal insertion index");
       unsigned AltImm = (AltIdx << 6) | (AltIdx << 4) | ZMask;
       auto &WorkingMI = cloneIfNew(MI);
@@ -5057,6 +5058,45 @@ bool X86InstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
     MI.setDesc(get(X86::MOV32ri));
     MIB->getOperand(0).setReg(Reg32);
     MIB.addReg(Reg, RegState::ImplicitDefine);
+    return true;
+  }
+
+  case X86::RDFLAGS32:
+  case X86::RDFLAGS64: {
+    unsigned Is64Bit = MI.getOpcode() == X86::RDFLAGS64;
+    MachineBasicBlock &MBB = *MIB->getParent();
+
+    MachineInstr *NewMI =
+        BuildMI(MBB, MI, MIB->getDebugLoc(),
+                get(Is64Bit ? X86::PUSHF64 : X86::PUSHF32))
+            .getInstr();
+
+    // Permit reads of the EFLAGS and DF registers without them being defined.
+    // This intrinsic exists to read external processor state in flags, such as
+    // the trap flag, interrupt flag, and direction flag, none of which are
+    // modeled by the backend.
+    assert(NewMI->getOperand(2).getReg() == X86::EFLAGS &&
+           "Unexpected register in operand! Should be EFLAGS.");
+    NewMI->getOperand(2).setIsUndef();
+    assert(NewMI->getOperand(3).getReg() == X86::DF &&
+           "Unexpected register in operand! Should be DF.");
+    NewMI->getOperand(3).setIsUndef();
+
+    MIB->setDesc(get(Is64Bit ? X86::POP64r : X86::POP32r));
+    return true;
+  }
+
+  case X86::WRFLAGS32:
+  case X86::WRFLAGS64: {
+    unsigned Is64Bit = MI.getOpcode() == X86::WRFLAGS64;
+    MachineBasicBlock &MBB = *MIB->getParent();
+
+    BuildMI(MBB, MI, MIB->getDebugLoc(),
+            get(Is64Bit ? X86::PUSH64r : X86::PUSH32r))
+        .addReg(MI.getOperand(0).getReg());
+    BuildMI(MBB, MI, MIB->getDebugLoc(),
+            get(Is64Bit ? X86::POPF64 : X86::POPF32));
+    MI.eraseFromParent();
     return true;
   }
 
@@ -9638,31 +9678,14 @@ bool X86InstrInfo::isFunctionSafeToOutlineFrom(MachineFunction &MF,
 }
 
 outliner::InstrType
-X86InstrInfo::getOutliningType(MachineBasicBlock::iterator &MIT,  unsigned Flags) const {
+X86InstrInfo::getOutliningTypeImpl(MachineBasicBlock::iterator &MIT,  unsigned Flags) const {
   MachineInstr &MI = *MIT;
-  // Don't allow debug values to impact outlining type.
-  if (MI.isDebugInstr() || MI.isIndirectDebugValue())
-    return outliner::InstrType::Invisible;
 
-  // At this point, KILL instructions don't really tell us much so we can go
-  // ahead and skip over them.
-  if (MI.isKill())
-    return outliner::InstrType::Invisible;
-
-  // Is this a tail call? If yes, we can outline as a tail call.
-  if (isTailCall(MI))
+  // Is this a terminator for a basic block?
+  if (MI.isTerminator())
+    // TargetInstrInfo::getOutliningType has already filtered out anything
+    // that would break this, so we can allow it here.
     return outliner::InstrType::Legal;
-
-  // Is this the terminator of a basic block?
-  if (MI.isTerminator() || MI.isReturn()) {
-
-    // Does its parent have any successors in its MachineFunction?
-    if (MI.getParent()->succ_empty())
-      return outliner::InstrType::Legal;
-
-    // It does, so we can't tail call it.
-    return outliner::InstrType::Illegal;
-  }
 
   // Don't outline anything that modifies or reads from the stack pointer.
   //
@@ -9684,15 +9707,9 @@ X86InstrInfo::getOutliningType(MachineBasicBlock::iterator &MIT,  unsigned Flags
       MI.getDesc().hasImplicitDefOfPhysReg(X86::RIP))
     return outliner::InstrType::Illegal;
 
-  // Positions can't safely be outlined.
-  if (MI.isPosition())
+  // Don't outline CFI instructions.
+  if (MI.isCFIInstruction())
     return outliner::InstrType::Illegal;
-
-  // Make sure none of the operands of this instruction do anything tricky.
-  for (const MachineOperand &MOP : MI.operands())
-    if (MOP.isCPI() || MOP.isJTI() || MOP.isCFIIndex() || MOP.isFI() ||
-        MOP.isTargetIndex())
-      return outliner::InstrType::Illegal;
 
   return outliner::InstrType::Legal;
 }

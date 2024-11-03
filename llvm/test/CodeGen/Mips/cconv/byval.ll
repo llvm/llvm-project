@@ -151,7 +151,7 @@ define dso_local void @g() #0 {
 ; N64-NEXT:    jr $ra
 ; N64-NEXT:    daddu $sp, $sp, $1
 entry:
-  %a = alloca %struct.S1, align 4
+  %a = alloca %struct.S1, align 8
   call void @f2(ptr byval(%struct.S1) align 4 %a)
   ret void
 }
@@ -340,8 +340,8 @@ define dso_local void @g2(ptr %a) {
 ; N64-NEXT:    jr $ra
 ; N64-NEXT:    daddu $sp, $sp, $1
 entry:
-  %a.addr = alloca ptr, align 4
-  %byval-temp = alloca %struct.S1, align 4
+  %a.addr = alloca ptr
+  %byval-temp = alloca %struct.S1, align 8
   store ptr %a, ptr %a.addr, align 4
   %0 = load ptr, ptr %a.addr, align 4
   call void @llvm.memcpy.p0.p0.i32(ptr align 4 %byval-temp, ptr align 1 %0, i32 65520, i1 false)
@@ -410,8 +410,8 @@ define dso_local i32 @g3(ptr %a, ptr %b) #0 {
 ; N64-NEXT:    jr $ra
 ; N64-NEXT:    daddiu $sp, $sp, 32
 entry:
-  %a.addr = alloca ptr, align 4
-  %b.addr = alloca ptr, align 4
+  %a.addr = alloca ptr
+  %b.addr = alloca ptr
   store ptr %a, ptr %a.addr, align 4
   store ptr %b, ptr %b.addr, align 4
   %0 = load ptr, ptr %a.addr, align 4

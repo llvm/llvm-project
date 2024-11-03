@@ -23,7 +23,7 @@ Options
 .. option:: HeaderFileExtensions
 
    Note: this option is deprecated, it will be removed in :program:`clang-tidy`
-   version 18. Please use the global configuration option
+   version 19. Please use the global configuration option
    `HeaderFileExtensions`.
 
    A semicolon-separated list of filename extensions of header files (the filename

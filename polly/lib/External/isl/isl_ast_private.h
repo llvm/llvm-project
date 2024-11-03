@@ -7,6 +7,12 @@
 #include <isl/map.h>
 #include <isl/vec.h>
 #include <isl/list.h>
+#include <isl/stream.h>
+
+#undef EL
+#define EL isl_ast_expr
+
+#include <isl_list_templ.h>
 
 /* An expression is either an integer, an identifier or an operation
  * with zero or more arguments.
@@ -23,23 +29,21 @@ struct isl_ast_expr {
 		isl_id *id;
 		struct {
 			enum isl_ast_expr_op_type op;
-			unsigned n_arg;
-			isl_ast_expr **args;
+			isl_ast_expr_list *args;
 		} op;
 	} u;
 };
 
-#undef EL
-#define EL isl_ast_expr
-
-#include <isl_list_templ.h>
-
 __isl_give isl_ast_expr *isl_ast_expr_alloc_int_si(isl_ctx *ctx, int i);
 __isl_give isl_ast_expr *isl_ast_expr_alloc_op(isl_ctx *ctx,
 	enum isl_ast_expr_op_type op, int n_arg);
+__isl_give isl_ast_expr *isl_ast_expr_op_add_arg(__isl_take isl_ast_expr *expr,
+	__isl_take isl_ast_expr *arg);
 __isl_give isl_ast_expr *isl_ast_expr_alloc_binary(
 	enum isl_ast_expr_op_type type,
 	__isl_take isl_ast_expr *expr1, __isl_take isl_ast_expr *expr2);
+
+__isl_give isl_ast_expr *isl_stream_read_ast_expr(__isl_keep isl_stream *s);
 
 #undef EL
 #define EL isl_ast_node
@@ -96,10 +100,18 @@ __isl_give isl_ast_node *isl_ast_node_alloc_mark(__isl_take isl_id *id,
 	__isl_take isl_ast_node *node);
 __isl_give isl_ast_node *isl_ast_node_from_ast_node_list(
 	__isl_take isl_ast_node_list *list);
+__isl_give isl_ast_node *isl_ast_node_for_set_init(
+	__isl_take isl_ast_node *node, __isl_take isl_ast_expr *init);
+__isl_give isl_ast_node *isl_ast_node_for_set_cond(
+	__isl_take isl_ast_node *node, __isl_take isl_ast_expr *init);
+__isl_give isl_ast_node *isl_ast_node_for_set_inc(
+	__isl_take isl_ast_node *node, __isl_take isl_ast_expr *init);
 __isl_give isl_ast_node *isl_ast_node_for_set_body(
 	__isl_take isl_ast_node *node, __isl_take isl_ast_node *body);
 __isl_give isl_ast_node *isl_ast_node_if_set_then(
 	__isl_take isl_ast_node *node, __isl_take isl_ast_node *child);
+
+__isl_give isl_ast_node *isl_stream_read_ast_node(__isl_keep isl_stream *s);
 
 struct isl_ast_print_options {
 	int ref;

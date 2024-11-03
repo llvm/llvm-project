@@ -113,7 +113,7 @@ void init(Triple TT) {
   initializeExpandVectorPredicationPass(Registry);
   initializeWasmEHPreparePass(Registry);
   initializeWriteBitcodePassPass(Registry);
-  initializeHardwareLoopsPass(Registry);
+  initializeHardwareLoopsLegacyPass(Registry);
   initializeTypePromotionLegacyPass(Registry);
   initializeReplaceWithVeclibLegacyPass(Registry);
   initializeJMCInstrumenterPass(Registry);

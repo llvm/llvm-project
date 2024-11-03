@@ -16,37 +16,33 @@ class RISCVReg<bits<5> Enc, string n, list<string> alt = []> : Register<n> {
   let AltNames = alt;
 }
 
+class RISCVRegWithSubRegs<bits<5> Enc, string n, list<Register> subregs,
+                          list<string> alt = []>
+      : RegisterWithSubRegs<n, subregs> {
+  let HWEncoding{4-0} = Enc;
+  let AltNames = alt;
+}
+
 class RISCVReg16<bits<5> Enc, string n, list<string> alt = []> : Register<n> {
   let HWEncoding{4-0} = Enc;
   let AltNames = alt;
 }
 
 def sub_16 : SubRegIndex<16>;
-class RISCVReg32<RISCVReg16 subreg> : Register<""> {
-  let HWEncoding{4-0} = subreg.HWEncoding{4-0};
-  let SubRegs = [subreg];
+class RISCVReg32<RISCVReg16 subreg>
+  : RISCVRegWithSubRegs<subreg.HWEncoding{4-0}, subreg.AsmName, [subreg],
+                        subreg.AltNames> {
   let SubRegIndices = [sub_16];
-  let AsmName = subreg.AsmName;
-  let AltNames = subreg.AltNames;
 }
 
 // Because RISCVReg64 register have AsmName and AltNames that alias with their
 // 16/32-bit sub-register, RISCVAsmParser will need to coerce a register number
 // from a RISCVReg16/RISCVReg32 to the equivalent RISCVReg64 when appropriate.
 def sub_32 : SubRegIndex<32>;
-class RISCVReg64<RISCVReg32 subreg> : Register<""> {
-  let HWEncoding{4-0} = subreg.HWEncoding{4-0};
-  let SubRegs = [subreg];
+class RISCVReg64<RISCVReg32 subreg>
+  : RISCVRegWithSubRegs<subreg.HWEncoding{4-0}, subreg.AsmName, [subreg],
+                        subreg.AltNames> {
   let SubRegIndices = [sub_32];
-  let AsmName = subreg.AsmName;
-  let AltNames = subreg.AltNames;
-}
-
-class RISCVRegWithSubRegs<bits<5> Enc, string n, list<Register> subregs,
-                          list<string> alt = []>
-      : RegisterWithSubRegs<n, subregs> {
-  let HWEncoding{4-0} = Enc;
-  let AltNames = alt;
 }
 
 def ABIRegAltName : RegAltNameIndex;
@@ -543,14 +539,15 @@ def GPRF64  : RegisterClass<"RISCV", [f64], 64, (add GPR)>;
 } // RegInfos = XLenRI
 
 let RegAltNameIndices = [ABIRegAltName] in {
-  foreach Index = [0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22,
-                   24, 26, 28, 30] in {
+  foreach I = 0-15 in {
+    defvar Index = !shl(I, 1);
     defvar Reg = !cast<Register>("X"#Index);
+    defvar RegP1 = !cast<Register>("X"#!add(Index,1));
     def X#Index#_PD : RISCVRegWithSubRegs<Index, Reg.AsmName,
-                                          [!cast<Register>("X"#Index),
-                                           !cast<Register>("X"#!add(Index, 1))],
-                                           Reg.AltNames> {
+                                          [Reg, RegP1],
+                                          Reg.AltNames> {
       let SubRegIndices = [sub_32, sub_32_hi];
+      let CoveredBySubRegs = 1;
     }
   }
 }

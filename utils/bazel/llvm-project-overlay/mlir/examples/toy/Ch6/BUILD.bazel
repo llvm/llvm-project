@@ -114,6 +114,7 @@ cc_binary(
         "//mlir:IR",
         "//mlir:LLVMCommonConversion",
         "//mlir:LLVMDialect",
+        "//mlir:LLVMIRTransforms",
         "//mlir:LLVMToLLVMIRTranslation",
         "//mlir:MemRefDialect",
         "//mlir:MemRefToLLVM",

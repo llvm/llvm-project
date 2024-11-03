@@ -525,3 +525,11 @@ func.func @bubble_up_bitcast_in_strided_slice_insert_larger_odd_shape(%dst: vect
   %cast = vector.bitcast %0: vector<8xf16> to vector<4xf32>
   return %cast: vector<4xf32>
 }
+
+// Make sure not crash on 0-D vector.
+// CHECK-LABEL:func.func @vec_0D
+// CHECK-NEXT:vector.bitcast
+func.func @vec_0D(%arg0: vector<f32>) -> vector<i32> {
+  %0 = vector.bitcast %arg0 : vector<f32> to vector<i32>
+  return %0 : vector<i32>
+}

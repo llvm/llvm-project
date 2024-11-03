@@ -54,15 +54,15 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FileSystem.h"
-#include "llvm/Support/Host.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Process.h"
 #include "llvm/Support/Program.h"
 #include "llvm/Support/ScopedPrinter.h"
-#include "llvm/Support/TargetParser.h"
 #include "llvm/Support/Threading.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/YAMLParser.h"
+#include "llvm/TargetParser/Host.h"
+#include "llvm/TargetParser/TargetParser.h"
 #include <optional>
 
 using namespace clang::driver;
@@ -567,6 +567,7 @@ void tools::addLTOOptions(const ToolChain &ToolChain, const ArgList &Args,
                           ArgStringList &CmdArgs, const InputInfo &Output,
                           const InputInfo &Input, bool IsThinLTO) {
   const bool IsOSAIX = ToolChain.getTriple().isOSAIX();
+  const bool IsAMDGCN = ToolChain.getTriple().isAMDGCN();
   const char *Linker = Args.MakeArgString(ToolChain.GetLinkerPath());
   const Driver &D = ToolChain.getDriver();
   if (llvm::sys::path::filename(Linker) != "ld.lld" &&
@@ -631,9 +632,12 @@ void tools::addLTOOptions(const ToolChain &ToolChain, const ArgList &Args,
         OOpt = "2";
     } else if (A->getOption().matches(options::OPT_O0))
       OOpt = "0";
-    if (!OOpt.empty())
+    if (!OOpt.empty()) {
       CmdArgs.push_back(
           Args.MakeArgString(Twine(PluginOptPrefix) + ExtraDash + "O" + OOpt));
+      if (IsAMDGCN)
+        CmdArgs.push_back(Args.MakeArgString(Twine("--lto-CGO") + OOpt));
+    }
   }
 
   if (Args.hasArg(options::OPT_gsplit_dwarf))
@@ -1417,10 +1421,6 @@ tools::ParsePICArgs(const ToolChain &ToolChain, const ArgList &Args) {
       break;
     }
   }
-
-  // AMDGPU-specific defaults for PIC.
-  if (Triple.getArch() == llvm::Triple::amdgcn)
-    PIC = true;
 
   // The last argument relating to either PIC or PIE wins, and no
   // other argument is used. If the last argument is any flavor of the

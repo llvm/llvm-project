@@ -26,7 +26,6 @@
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSwitch.h"
-#include "llvm/ADT/Triple.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/IntrinsicsNVPTX.h"
@@ -34,6 +33,7 @@
 #include "llvm/IR/Type.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/TargetParser/Triple.h"
 #include <algorithm>
 
 using namespace clang;
@@ -898,6 +898,11 @@ public:
       if (!FD->doesThisDeclarationHaveABody() && !FD->hasPrototype())
         Fn->addFnAttr("no-prototype");
     }
+  }
+
+  /// Return the WebAssembly externref reference type.
+  virtual llvm::Type *getWasmExternrefReferenceType() const override {
+    return llvm::Type::getWasm_ExternrefTy(getABIInfo().getVMContext());
   }
 };
 
@@ -7418,18 +7423,28 @@ public:
 };
 
 class SystemZTargetCodeGenInfo : public TargetCodeGenInfo {
+  ASTContext &Ctx;
+
+  const SystemZABIInfo &getABIInfo() const {
+    return static_cast<const SystemZABIInfo&>(TargetCodeGenInfo::getABIInfo());
+  }
+
   // These are used for speeding up the search for a visible vector ABI.
   mutable bool HasVisibleVecABIFlag = false;
   mutable std::set<const Type *> SeenTypes;
 
-  // Returns true (the first time) if Ty is or found to make use of a vector
-  // type (e.g. as a function argument).
-  bool isVectorTypeBased(const Type *Ty) const;
+  // Returns true (the first time) if Ty is, or is found to include, a vector
+  // type that exposes the vector ABI. This is any vector >=16 bytes which
+  // with vector support are aligned to only 8 bytes. When IsParam is true,
+  // the type belongs to a value as passed between functions. If it is a
+  // vector <=16 bytes it will be passed in a vector register (if supported).
+  bool isVectorTypeBased(const Type *Ty, bool IsParam) const;
 
 public:
   SystemZTargetCodeGenInfo(CodeGenTypes &CGT, bool HasVector, bool SoftFloatABI)
       : TargetCodeGenInfo(
-            std::make_unique<SystemZABIInfo>(CGT, HasVector, SoftFloatABI)) {
+            std::make_unique<SystemZABIInfo>(CGT, HasVector, SoftFloatABI)),
+            Ctx(CGT.getContext()) {
     SwiftInfo =
         std::make_unique<SwiftABIInfo>(CGT, /*SwiftErrorInRegister=*/false);
   }
@@ -7439,9 +7454,9 @@ public:
   // indicating a visible vector ABI is added. Eventually this will result in
   // a GNU attribute indicating the vector ABI of the module.  Ty is the type
   // of a variable or function parameter that is globally visible.
-  void handleExternallyVisibleObjABI(const Type *Ty,
-                                     CodeGen::CodeGenModule &M) const {
-    if (!HasVisibleVecABIFlag && isVectorTypeBased(Ty)) {
+  void handleExternallyVisibleObjABI(const Type *Ty, CodeGen::CodeGenModule &M,
+                                     bool IsParam) const {
+    if (!HasVisibleVecABIFlag && isVectorTypeBased(Ty, IsParam)) {
       M.getModule().addModuleFlag(llvm::Module::Warning,
                                   "s390x-visible-vector-ABI", 1);
       HasVisibleVecABIFlag = true;
@@ -7457,11 +7472,13 @@ public:
     // variable or function.
     if (const auto *VD = dyn_cast<VarDecl>(D)) {
       if (VD->isExternallyVisible())
-        handleExternallyVisibleObjABI(VD->getType().getTypePtr(), M);
+        handleExternallyVisibleObjABI(VD->getType().getTypePtr(), M,
+                                      /*IsParam*/false);
     }
     else if (const FunctionDecl *FD = dyn_cast<FunctionDecl>(D)) {
       if (FD->isExternallyVisible())
-        handleExternallyVisibleObjABI(FD->getType().getTypePtr(), M);
+        handleExternallyVisibleObjABI(FD->getType().getTypePtr(), M,
+                                      /*IsParam*/false);
     }
   }
 
@@ -7571,17 +7588,18 @@ QualType SystemZABIInfo::GetSingleElementType(QualType Ty) const {
 
     // If this is a C++ record, check the bases first.
     if (const CXXRecordDecl *CXXRD = dyn_cast<CXXRecordDecl>(RD))
-      for (const auto &I : CXXRD->bases()) {
-        QualType Base = I.getType();
+      if (CXXRD->hasDefinition())
+        for (const auto &I : CXXRD->bases()) {
+          QualType Base = I.getType();
 
-        // Empty bases don't affect things either way.
-        if (isEmptyRecord(getContext(), Base, true))
-          continue;
+          // Empty bases don't affect things either way.
+          if (isEmptyRecord(getContext(), Base, true))
+            continue;
 
-        if (!Found.isNull())
-          return Ty;
-        Found = GetSingleElementType(Base);
-      }
+          if (!Found.isNull())
+            return Ty;
+          Found = GetSingleElementType(Base);
+        }
 
     // Check the fields.
     for (const auto *FD : RD->fields()) {
@@ -7635,7 +7653,8 @@ Address SystemZABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
   bool IsVector = false;
   CharUnits UnpaddedSize;
   CharUnits DirectAlign;
-  SZCGI.handleExternallyVisibleObjABI(Ty.getTypePtr(), CGT.getCGM());
+  SZCGI.handleExternallyVisibleObjABI(Ty.getTypePtr(), CGT.getCGM(),
+                                      /*IsParam*/true);
   if (IsIndirect) {
     DirectTy = llvm::PointerType::getUnqual(DirectTy);
     UnpaddedSize = DirectAlign = CharUnits::fromQuantity(8);
@@ -7843,35 +7862,57 @@ void SystemZABIInfo::computeInfo(CGFunctionInfo &FI) const {
       // Check if a vararg vector argument is passed, in which case the
       // vector ABI becomes visible as the va_list could be passed on to
       // other functions.
-      SZCGI.handleExternallyVisibleObjABI(I.type.getTypePtr(), CGT.getCGM());
+      SZCGI.handleExternallyVisibleObjABI(I.type.getTypePtr(), CGT.getCGM(),
+                                          /*IsParam*/true);
   }
 }
 
-bool SystemZTargetCodeGenInfo::isVectorTypeBased(const Type *Ty) const {
-  while (Ty->isPointerType() || Ty->isArrayType())
-    Ty = Ty->getPointeeOrArrayElementType();
+bool SystemZTargetCodeGenInfo::isVectorTypeBased(const Type *Ty,
+                                                 bool IsParam) const {
   if (!SeenTypes.insert(Ty).second)
     return false;
-  if (Ty->isVectorType())
-    return true;
+
+  if (IsParam) {
+    // A narrow (<16 bytes) vector will as a parameter also expose the ABI as
+    // it will be passed in a vector register. A wide (>16 bytes) vector will
+    // be passed via "hidden" pointer where any extra alignment is not
+    // required (per GCC).
+    const Type *SingleEltTy =
+      getABIInfo().GetSingleElementType(QualType(Ty, 0)).getTypePtr();
+    bool SingleVecEltStruct = SingleEltTy != Ty && SingleEltTy->isVectorType() &&
+      Ctx.getTypeSize(SingleEltTy) == Ctx.getTypeSize(Ty);
+    if (Ty->isVectorType() || SingleVecEltStruct)
+      return Ctx.getTypeSize(Ty) / 8 <= 16;
+  }
+
+  // Assume pointers are dereferenced.
+  while (Ty->isPointerType() || Ty->isArrayType())
+    Ty = Ty->getPointeeOrArrayElementType();
+
+  // Vectors >= 16 bytes expose the ABI through alignment requirements.
+  if (Ty->isVectorType() && Ctx.getTypeSize(Ty) / 8 >= 16)
+      return true;
+
   if (const auto *RecordTy = Ty->getAs<RecordType>()) {
     const RecordDecl *RD = RecordTy->getDecl();
     if (const CXXRecordDecl *CXXRD = dyn_cast<CXXRecordDecl>(RD))
       if (CXXRD->hasDefinition())
         for (const auto &I : CXXRD->bases())
-          if (isVectorTypeBased(I.getType().getTypePtr()))
+          if (isVectorTypeBased(I.getType().getTypePtr(), /*IsParam*/false))
             return true;
     for (const auto *FD : RD->fields())
-      if (isVectorTypeBased(FD->getType().getTypePtr()))
+      if (isVectorTypeBased(FD->getType().getTypePtr(), /*IsParam*/false))
         return true;
   }
+
   if (const auto *FT = Ty->getAs<FunctionType>())
-    if (isVectorTypeBased(FT->getReturnType().getTypePtr()))
+    if (isVectorTypeBased(FT->getReturnType().getTypePtr(), /*IsParam*/true))
       return true;
   if (const FunctionProtoType *Proto = Ty->getAs<FunctionProtoType>())
     for (auto ParamType : Proto->getParamTypes())
-      if (isVectorTypeBased(ParamType.getTypePtr()))
+      if (isVectorTypeBased(ParamType.getTypePtr(), /*IsParam*/true))
         return true;
+
   return false;
 }
 
@@ -8725,8 +8766,7 @@ ABIArgInfo HexagonABIInfo::classifyArgumentType(QualType Ty,
     Align = Size <= 32 ? 32 : 64;
   if (Size <= Align) {
     // Pass in the smallest viable integer type.
-    if (!llvm::isPowerOf2_64(Size))
-      Size = llvm::NextPowerOf2(Size);
+    Size = llvm::bit_ceil(Size);
     return ABIArgInfo::getDirect(llvm::Type::getIntNTy(getVMContext(), Size));
   }
   return DefaultABIInfo::classifyArgumentType(Ty);
@@ -8771,8 +8811,7 @@ ABIArgInfo HexagonABIInfo::classifyReturnType(QualType RetTy) const {
   // are returned indirectly.
   if (Size <= 64) {
     // Return in the smallest viable integer type.
-    if (!llvm::isPowerOf2_64(Size))
-      Size = llvm::NextPowerOf2(Size);
+    Size = llvm::bit_ceil(Size);
     return ABIArgInfo::getDirect(llvm::Type::getIntNTy(getVMContext(), Size));
   }
   return getNaturalAlignIndirect(RetTy, /*ByVal=*/true);
@@ -9424,10 +9463,9 @@ public:
                                          SyncScope Scope,
                                          llvm::AtomicOrdering Ordering,
                                          llvm::LLVMContext &Ctx) const override;
-  llvm::Function *
-  createEnqueuedBlockKernel(CodeGenFunction &CGF,
-                            llvm::Function *BlockInvokeFunc,
-                            llvm::Type *BlockTy) const override;
+  llvm::Value *createEnqueuedBlockKernel(CodeGenFunction &CGF,
+                                         llvm::Function *BlockInvokeFunc,
+                                         llvm::Type *BlockTy) const override;
   bool shouldEmitStaticExternCAliases() const override;
   void setCUDAKernelCallingConvention(const FunctionType *&FT) const override;
 };
@@ -12395,10 +12433,8 @@ const TargetCodeGenInfo &CodeGenModule::getTargetCodeGenInfo() {
 /// The kernel has the same function type as the block invoke function. Its
 /// name is the name of the block invoke function postfixed with "_kernel".
 /// It simply calls the block invoke function then returns.
-llvm::Function *
-TargetCodeGenInfo::createEnqueuedBlockKernel(CodeGenFunction &CGF,
-                                             llvm::Function *Invoke,
-                                             llvm::Type *BlockTy) const {
+llvm::Value *TargetCodeGenInfo::createEnqueuedBlockKernel(
+    CodeGenFunction &CGF, llvm::Function *Invoke, llvm::Type *BlockTy) const {
   auto *InvokeFT = Invoke->getFunctionType();
   auto &C = CGF.getLLVMContext();
   std::string Name = Invoke->getName().str() + "_kernel";
@@ -12406,13 +12442,24 @@ TargetCodeGenInfo::createEnqueuedBlockKernel(CodeGenFunction &CGF,
                                      InvokeFT->params(), false);
   auto *F = llvm::Function::Create(FT, llvm::GlobalValue::ExternalLinkage, Name,
                                    &CGF.CGM.getModule());
+  llvm::CallingConv::ID KernelCC =
+      CGF.getTypes().ClangCallConvToLLVMCallConv(CallingConv::CC_OpenCLKernel);
+  F->setCallingConv(KernelCC);
+
+  llvm::AttrBuilder KernelAttrs(C);
+
+  // FIXME: This is missing setTargetAttributes
+  CGF.CGM.addDefaultFunctionDefinitionAttributes(KernelAttrs);
+  F->addFnAttrs(KernelAttrs);
+
   auto IP = CGF.Builder.saveIP();
   auto *BB = llvm::BasicBlock::Create(C, "entry", F);
   auto &Builder = CGF.Builder;
   Builder.SetInsertPoint(BB);
   llvm::SmallVector<llvm::Value *, 2> Args(llvm::make_pointer_range(F->args()));
-  llvm::CallInst *call = Builder.CreateCall(Invoke, Args);
-  call->setCallingConv(Invoke->getCallingConv());
+  llvm::CallInst *Call = Builder.CreateCall(Invoke, Args);
+  Call->setCallingConv(Invoke->getCallingConv());
+
   Builder.CreateRetVoid();
   Builder.restoreIP(IP);
   return F;
@@ -12426,9 +12473,8 @@ TargetCodeGenInfo::createEnqueuedBlockKernel(CodeGenFunction &CGF,
 /// allocates the same type of struct on stack and stores the block literal
 /// to it and passes its pointer to the block invoke function. The kernel
 /// has "enqueued-block" function attribute and kernel argument metadata.
-llvm::Function *AMDGPUTargetCodeGenInfo::createEnqueuedBlockKernel(
-    CodeGenFunction &CGF, llvm::Function *Invoke,
-    llvm::Type *BlockTy) const {
+llvm::Value *AMDGPUTargetCodeGenInfo::createEnqueuedBlockKernel(
+    CodeGenFunction &CGF, llvm::Function *Invoke, llvm::Type *BlockTy) const {
   auto &Builder = CGF.Builder;
   auto &C = CGF.getLLVMContext();
 
@@ -12462,7 +12508,15 @@ llvm::Function *AMDGPUTargetCodeGenInfo::createEnqueuedBlockKernel(
   auto *FT = llvm::FunctionType::get(llvm::Type::getVoidTy(C), ArgTys, false);
   auto *F = llvm::Function::Create(FT, llvm::GlobalValue::InternalLinkage, Name,
                                    &CGF.CGM.getModule());
-  F->addFnAttr("enqueued-block");
+  F->setCallingConv(llvm::CallingConv::AMDGPU_KERNEL);
+
+  llvm::AttrBuilder KernelAttrs(C);
+  // FIXME: The invoke isn't applying the right attributes either
+  // FIXME: This is missing setTargetAttributes
+  CGF.CGM.addDefaultFunctionDefinitionAttributes(KernelAttrs);
+  KernelAttrs.addAttribute("enqueued-block");
+  F->addFnAttrs(KernelAttrs);
+
   auto IP = CGF.Builder.saveIP();
   auto *BB = llvm::BasicBlock::Create(C, "entry", F);
   Builder.SetInsertPoint(BB);

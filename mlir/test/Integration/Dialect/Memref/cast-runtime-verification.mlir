@@ -1,8 +1,8 @@
-// RUN: mlir-opt %s -generate-runtime-verification -convert-memref-to-llvm \
+// RUN: mlir-opt %s -generate-runtime-verification -finalize-memref-to-llvm \
 // RUN:     -test-cf-assert \
 // RUN:     -convert-func-to-llvm -reconcile-unrealized-casts | \
 // RUN: mlir-cpu-runner -e main -entry-point-result=void \
-// RUN:     -shared-libs=%mlir_lib_dir/libmlir_runner_utils%shlibext 2>&1 | \
+// RUN:     -shared-libs=%mlir_runner_utils 2>&1 | \
 // RUN: FileCheck %s
 
 func.func @cast_to_static_dim(%m: memref<?xf32>) -> memref<10xf32> {

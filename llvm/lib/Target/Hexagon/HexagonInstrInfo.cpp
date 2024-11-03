@@ -3844,7 +3844,7 @@ int HexagonInstrInfo::getDotOldOp(const MachineInstr &MI) const {
     // All Hexagon architectures have prediction bits on dot-new branches,
     // but only Hexagon V60+ has prediction bits on dot-old ones. Make sure
     // to pick the right opcode when converting back to dot-old.
-    if (!Subtarget.getFeatureBits()[Hexagon::ArchV60]) {
+    if (!Subtarget.hasFeature(Hexagon::ArchV60)) {
       switch (NewOp) {
       case Hexagon::J2_jumptpt:
         NewOp = Hexagon::J2_jumpt;

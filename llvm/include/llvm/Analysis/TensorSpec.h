@@ -103,6 +103,9 @@ private:
   size_t ElementSize = 0;
 };
 
+/// For debugging.
+std::string tensorValueToString(const char *Buffer, const TensorSpec &Spec);
+
 /// Construct a TensorSpec from a JSON dictionary of the form:
 /// { "name": <string>,
 ///   "port": <int>,

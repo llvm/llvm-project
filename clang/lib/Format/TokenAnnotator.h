@@ -34,6 +34,15 @@ enum LineType {
   LT_CommentAbovePPDirective,
 };
 
+enum ScopeType {
+  // Contained in class declaration/definition.
+  ST_Class,
+  // Contained within function definition.
+  ST_Function,
+  // Contained within other scope block (loop, if/else, etc).
+  ST_Other,
+};
+
 class AnnotatedLine {
 public:
   AnnotatedLine(const UnwrappedLine &Line)
@@ -178,7 +187,7 @@ public:
   // FIXME: Can/should this be done in the UnwrappedLineParser?
   void setCommentLineLevels(SmallVectorImpl<AnnotatedLine *> &Lines) const;
 
-  void annotate(AnnotatedLine &Line) const;
+  void annotate(AnnotatedLine &Line);
   void calculateFormattingInformation(AnnotatedLine &Line) const;
 
 private:
@@ -220,6 +229,8 @@ private:
   const FormatStyle &Style;
 
   const AdditionalKeywords &Keywords;
+
+  SmallVector<ScopeType> Scopes;
 };
 
 } // end namespace format

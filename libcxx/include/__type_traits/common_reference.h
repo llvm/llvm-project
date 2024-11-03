@@ -27,7 +27,7 @@
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 // common_reference
-#if _LIBCPP_STD_VER > 17
+#if _LIBCPP_STD_VER >= 20
 // Let COND_RES(X, Y) be:
 template <class _Xp, class _Yp>
 using __cond_res =
@@ -181,7 +181,7 @@ struct common_reference<_Tp, _Up, _Vp, _Rest...>
 // bullet 5 - Otherwise, there shall be no member `type`.
 template <class...> struct common_reference {};
 
-#endif // _LIBCPP_STD_VER > 17
+#endif // _LIBCPP_STD_VER >= 20
 
 _LIBCPP_END_NAMESPACE_STD
 

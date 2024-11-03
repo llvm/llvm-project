@@ -70,14 +70,14 @@ adiw r24, b   ; R_AVR_6_ADIW
 in    r20, b  ; R_AVR_PORT6
 sbic  b, 1    ; R_AVR_PORT5
 
-;; The disassembler is not yet able to decode those opcodes
-;; 0f c0    rjmp   .+30
-;; ee cf    rjmp   .-36
-;; 69 f0    breq   .+26
-;; 61 f3    breq   .-40
 .section .PCREL,"ax",@progbits
-; HEX-LABEL: section .PCREL:
-; HEX-NEXT:  0fc0eecf 69f061f3
+; CHECK-LABEL: section .PCREL
+; CHECK:       rjmp .+30
+; CHECK-NEXT:  rjmp .-36
+; CHECK-NEXT:  breq .+26
+; CHECK-NEXT:  breq .-40
+; HEX-LABEL:   section .PCREL:
+; HEX-NEXT:    0fc0eecf 69f061f3
 foo:
 rjmp foo + 32  ; R_AVR_13_PCREL
 rjmp foo - 32  ; R_AVR_13_PCREL

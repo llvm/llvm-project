@@ -313,7 +313,7 @@ struct ScoredBundleGreater {
 struct CodeCompletionBuilder {
   CodeCompletionBuilder(ASTContext *ASTCtx, const CompletionCandidate &C,
                         CodeCompletionString *SemaCCS,
-                        llvm::ArrayRef<std::string> QueryScopes,
+                        llvm::ArrayRef<std::string> AccessibleScopes,
                         const IncludeInserter &Includes,
                         llvm::StringRef FileName,
                         CodeCompletionContext::Kind ContextKind,
@@ -367,7 +367,7 @@ struct CodeCompletionBuilder {
       // avoids unneeded qualifiers in cases like with `using ns::X`.
       if (Completion.RequiredQualifier.empty() && !C.SemaResult) {
         llvm::StringRef ShortestQualifier = C.IndexResult->Scope;
-        for (llvm::StringRef Scope : QueryScopes) {
+        for (llvm::StringRef Scope : AccessibleScopes) {
           llvm::StringRef Qualifier = C.IndexResult->Scope;
           if (Qualifier.consume_front(Scope) &&
               Qualifier.size() < ShortestQualifier.size())
@@ -646,40 +646,70 @@ struct SpecifiedScope {
   //
   // Examples of unqualified completion:
   //
-  //   "vec^"                                       => {""}
-  //   "using namespace std; vec^"                  => {"", "std::"}
-  //   "using namespace std; namespace ns { vec^ }" => {"ns::", "std::", ""}
+  //   "vec^"                                        => {""}
+  //   "using namespace std; vec^"                   => {"", "std::"}
+  //   "namespace ns {inline namespace ni { struct Foo {}}}
+  //    using namespace ns::ni; Fo^ "                => {"", "ns::ni::"}
+  //   "using namespace std; namespace ns { vec^ }"  => {"ns::", "std::", ""}
   //
   // "" for global namespace, "ns::" for normal namespace.
   std::vector<std::string> AccessibleScopes;
+  // This is an overestimate of AccessibleScopes, e.g. it ignores inline
+  // namespaces, to fetch more relevant symbols from index.
+  std::vector<std::string> QueryScopes;
   // The full scope qualifier as typed by the user (without the leading "::").
   // Set if the qualifier is not fully resolved by Sema.
   std::optional<std::string> UnresolvedQualifier;
 
-  // Construct scopes being queried in indexes. The results are deduplicated.
-  // This method format the scopes to match the index request representation.
-  std::vector<std::string> scopesForIndexQuery() {
+  std::optional<std::string> EnclosingNamespace;
+
+  bool AllowAllScopes = false;
+
+  // Scopes that are accessible from current context. Used for dropping
+  // unnecessary namespecifiers.
+  std::vector<std::string> scopesForQualification() {
     std::set<std::string> Results;
     for (llvm::StringRef AS : AccessibleScopes)
       Results.insert(
           (AS + (UnresolvedQualifier ? *UnresolvedQualifier : "")).str());
     return {Results.begin(), Results.end()};
   }
+
+  // Construct scopes being queried in indexes. The results are deduplicated.
+  // This method formats the scopes to match the index request representation.
+  std::vector<std::string> scopesForIndexQuery() {
+    // The enclosing namespace must be first, it gets a quality boost.
+    std::vector<std::string> EnclosingAtFront;
+    if (EnclosingNamespace.has_value())
+      EnclosingAtFront.push_back(*EnclosingNamespace);
+    std::set<std::string> Deduplicated;
+    for (llvm::StringRef S : QueryScopes)
+      if (S != EnclosingNamespace)
+        Deduplicated.insert((S + UnresolvedQualifier.value_or("")).str());
+
+    EnclosingAtFront.reserve(EnclosingAtFront.size() + Deduplicated.size());
+    llvm::copy(Deduplicated, std::back_inserter(EnclosingAtFront));
+
+    return EnclosingAtFront;
+  }
 };
 
 // Get all scopes that will be queried in indexes and whether symbols from
 // any scope is allowed. The first scope in the list is the preferred scope
 // (e.g. enclosing namespace).
-std::pair<std::vector<std::string>, bool>
-getQueryScopes(CodeCompletionContext &CCContext, const Sema &CCSema,
-               const CompletionPrefix &HeuristicPrefix,
-               const CodeCompleteOptions &Opts) {
+SpecifiedScope getQueryScopes(CodeCompletionContext &CCContext,
+                              const Sema &CCSema,
+                              const CompletionPrefix &HeuristicPrefix,
+                              const CodeCompleteOptions &Opts) {
   SpecifiedScope Scopes;
   for (auto *Context : CCContext.getVisitedContexts()) {
-    if (isa<TranslationUnitDecl>(Context))
-      Scopes.AccessibleScopes.push_back(""); // global namespace
-    else if (isa<NamespaceDecl>(Context))
-      Scopes.AccessibleScopes.push_back(printNamespaceScope(*Context));
+    if (isa<TranslationUnitDecl>(Context)) {
+      Scopes.QueryScopes.push_back("");
+      Scopes.AccessibleScopes.push_back("");
+    } else if (const auto *ND = dyn_cast<NamespaceDecl>(Context)) {
+      Scopes.QueryScopes.push_back(printNamespaceScope(*Context));
+      Scopes.AccessibleScopes.push_back(printQualifiedName(*ND) + "::");
+    }
   }
 
   const CXXScopeSpec *SemaSpecifier =
@@ -692,39 +722,40 @@ getQueryScopes(CodeCompletionContext &CCContext, const Sema &CCSema,
       vlog("Sema said no scope specifier, but we saw {0} in the source code",
            HeuristicPrefix.Qualifier);
       StringRef SpelledSpecifier = HeuristicPrefix.Qualifier;
-      if (SpelledSpecifier.consume_front("::"))
+      if (SpelledSpecifier.consume_front("::")) {
         Scopes.AccessibleScopes = {""};
+        Scopes.QueryScopes = {""};
+      }
       Scopes.UnresolvedQualifier = std::string(SpelledSpecifier);
-      return {Scopes.scopesForIndexQuery(), false};
+      return Scopes;
     }
-    // The enclosing namespace must be first, it gets a quality boost.
-    std::vector<std::string> EnclosingAtFront;
-    std::string EnclosingScope = printNamespaceScope(*CCSema.CurContext);
-    EnclosingAtFront.push_back(EnclosingScope);
-    for (auto &S : Scopes.scopesForIndexQuery()) {
-      if (EnclosingScope != S)
-        EnclosingAtFront.push_back(std::move(S));
-    }
+    /// FIXME: When the enclosing namespace contains an inline namespace,
+    /// it's dropped here. This leads to a behavior similar to
+    /// https://github.com/clangd/clangd/issues/1451
+    Scopes.EnclosingNamespace = printNamespaceScope(*CCSema.CurContext);
     // Allow AllScopes completion as there is no explicit scope qualifier.
-    return {EnclosingAtFront, Opts.AllScopes};
+    Scopes.AllowAllScopes = Opts.AllScopes;
+    return Scopes;
   }
   // Case 3: sema saw and resolved a scope qualifier.
   if (SemaSpecifier && SemaSpecifier->isValid())
-    return {Scopes.scopesForIndexQuery(), false};
+    return Scopes;
 
   // Case 4: There was a qualifier, and Sema didn't resolve it.
-  Scopes.AccessibleScopes.push_back(""); // Make sure global scope is included.
+  Scopes.QueryScopes.push_back(""); // Make sure global scope is included.
   llvm::StringRef SpelledSpecifier = Lexer::getSourceText(
       CharSourceRange::getCharRange(SemaSpecifier->getRange()),
       CCSema.SourceMgr, clang::LangOptions());
-  if (SpelledSpecifier.consume_front("::"))
-    Scopes.AccessibleScopes = {""};
+  if (SpelledSpecifier.consume_front("::")) 
+      Scopes.QueryScopes = {""};
   Scopes.UnresolvedQualifier = std::string(SpelledSpecifier);
   // Sema excludes the trailing "::".
   if (!Scopes.UnresolvedQualifier->empty())
     *Scopes.UnresolvedQualifier += "::";
 
-  return {Scopes.scopesForIndexQuery(), false};
+  Scopes.AccessibleScopes = Scopes.QueryScopes;
+
+  return Scopes;
 }
 
 // Should we perform index-based completion in a context of the specified kind?
@@ -1464,6 +1495,7 @@ class CodeCompleteFlow {
   std::optional<FuzzyMatcher> Filter; // Initialized once Sema runs.
   Range ReplacedRange;
   std::vector<std::string> QueryScopes; // Initialized once Sema runs.
+  std::vector<std::string> AccessibleScopes; // Initialized once Sema runs.
   // Initialized once QueryScopes is initialized, if there are scopes.
   std::optional<ScopeDistance> ScopeProximity;
   std::optional<OpaqueType> PreferredType; // Initialized once Sema runs.
@@ -1623,21 +1655,22 @@ public:
     //  - accessible scopes are determined heuristically.
     //  - all-scopes query if no qualifier was typed (and it's allowed).
     SpecifiedScope Scopes;
-    Scopes.AccessibleScopes = visibleNamespaces(
+    Scopes.QueryScopes = visibleNamespaces(
         Content.take_front(Offset), format::getFormattingLangOpts(Style));
-    for (std::string &S : Scopes.AccessibleScopes)
+    for (std::string &S : Scopes.QueryScopes)
       if (!S.empty())
         S.append("::"); // visibleNamespaces doesn't include trailing ::.
     if (HeuristicPrefix.Qualifier.empty())
       AllScopes = Opts.AllScopes;
     else if (HeuristicPrefix.Qualifier.startswith("::")) {
-      Scopes.AccessibleScopes = {""};
+      Scopes.QueryScopes = {""};
       Scopes.UnresolvedQualifier =
           std::string(HeuristicPrefix.Qualifier.drop_front(2));
     } else
       Scopes.UnresolvedQualifier = std::string(HeuristicPrefix.Qualifier);
     // First scope is the (modified) enclosing scope.
     QueryScopes = Scopes.scopesForIndexQuery();
+    AccessibleScopes = QueryScopes;
     ScopeProximity.emplace(QueryScopes);
 
     SymbolSlab IndexResults = Opts.Index ? queryIndex() : SymbolSlab();
@@ -1689,8 +1722,12 @@ private:
     }
     Filter = FuzzyMatcher(
         Recorder->CCSema->getPreprocessor().getCodeCompletionFilter());
-    std::tie(QueryScopes, AllScopes) = getQueryScopes(
+    auto SpecifiedScopes = getQueryScopes(
         Recorder->CCContext, *Recorder->CCSema, HeuristicPrefix, Opts);
+
+    QueryScopes = SpecifiedScopes.scopesForIndexQuery();
+    AccessibleScopes = SpecifiedScopes.scopesForQualification();
+    AllScopes = SpecifiedScopes.AllowAllScopes;
     if (!QueryScopes.empty())
       ScopeProximity.emplace(QueryScopes);
     PreferredType =
@@ -1963,7 +2000,7 @@ private:
                           : nullptr;
       if (!Builder)
         Builder.emplace(Recorder ? &Recorder->CCSema->getASTContext() : nullptr,
-                        Item, SemaCCS, QueryScopes, *Inserter, FileName,
+                        Item, SemaCCS, AccessibleScopes, *Inserter, FileName,
                         CCContextKind, Opts, IsUsingDeclaration, NextTokenKind);
       else
         Builder->add(Item, SemaCCS);

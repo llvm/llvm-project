@@ -5,11 +5,13 @@ import("//llvm/utils/gn/build/toolchain/compiler.gni")
 # In the GN build, compiler-rt is always built by just-built clang and lld.
 # FIXME: For macOS and iOS builds, depend on lib in all needed target arch
 # toolchains and then lipo them together for the final output.
-if (current_os == "win") {
-  supported_toolchains = [ "//llvm/utils/gn/build/toolchain:stage2_win" ]
+supported_toolchains = []
+if (current_os == "win" || win_sysroot != "") {
+  supported_toolchains += [ "//llvm/utils/gn/build/toolchain:stage2_win_x64" ]
   supported_toolchains += [ "//llvm/utils/gn/build/toolchain:stage2_win_x86" ]
-} else {
-  supported_toolchains = [ "//llvm/utils/gn/build/toolchain:stage2_unix" ]
+}
+if (current_os != "win") {
+  supported_toolchains += [ "//llvm/utils/gn/build/toolchain:stage2_unix" ]
 }
 supported_toolchains += supported_android_toolchains
 if (llvm_build_AArch64) {

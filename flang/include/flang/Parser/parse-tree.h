@@ -3396,6 +3396,12 @@ struct OmpDeviceClause {
   std::tuple<std::optional<DeviceModifier>, ScalarIntExpr> t;
 };
 
+// device_type(any | host | nohost)
+struct OmpDeviceTypeClause {
+  ENUM_CLASS(Type, Any, Host, Nohost)
+  WRAPPER_CLASS_BOILERPLATE(OmpDeviceTypeClause, Type);
+};
+
 // 2.12 if-clause -> IF ([ directive-name-modifier :] scalar-logical-expr)
 struct OmpIfClause {
   TUPLE_CLASS_BOILERPLATE(OmpIfClause);

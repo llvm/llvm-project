@@ -796,11 +796,17 @@ def operand;
 /// Both DAG represent bit 6 to 8 (total of 3 bits) in the encoding of operand
 /// `$src`.
 def slice;
-/// You can use `encoder` to specify a custom encoder function for a specific
-/// `operand` or `encoder` directive. For example:
+/// You can use `encoder` or `decoder` to specify a custom encoder or decoder
+/// function for a specific `operand` or `slice` directive. For example:
 ///     (operand "$src", 4, (encoder "encodeMyImm"))
 ///     (slice "$src", 8, 6, (encoder "encodeMyReg"))
+///     (operand "$src", 4, (encoder "encodeMyImm"), (decoder "decodeMyImm"))
+/// The ordering of `encoder` and `decoder` in the same `operand` or `slice`
+/// doesn't matter.
+/// Note that currently we cannot assign different decoders in the same
+/// (instruction) operand.
 def encoder;
+def decoder;
 
 /// PointerLikeRegClass - Values that are designed to have pointer width are
 /// derived from this.  TableGen treats the register class as having a symbolic

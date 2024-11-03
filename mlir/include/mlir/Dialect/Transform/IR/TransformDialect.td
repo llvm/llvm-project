@@ -23,7 +23,6 @@ def Transform_Dialect : Dialect {
     "::mlir::pdl_interp::PDLInterpDialect",
   ];
 
-  let useFoldAPI = kEmitFoldAdaptorFolder;
 
   let extraClassDeclaration = [{
       /// Returns the named PDL constraint functions available in the dialect

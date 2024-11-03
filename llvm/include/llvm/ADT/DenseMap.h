@@ -201,6 +201,14 @@ public:
     return ValueT();
   }
 
+  /// at - Return the entry for the specified key, or abort if no such
+  /// entry exists.
+  const ValueT &at(const_arg_type_t<KeyT> Val) const {
+    auto Iter = this->find(std::move(Val));
+    assert(Iter != this->end() && "DenseMap::at failed due to a missing key");
+    return Iter->second;
+  }
+
   // Inserts key,value pair into the map if the key isn't already in the map.
   // If the key is already in the map, it returns false and doesn't update the
   // value.
@@ -906,7 +914,7 @@ class SmallDenseMap
 public:
   explicit SmallDenseMap(unsigned NumInitBuckets = 0) {
     if (NumInitBuckets > InlineBuckets)
-      NumInitBuckets = NextPowerOf2(NumInitBuckets - 1);
+      NumInitBuckets = llvm::bit_ceil(NumInitBuckets);
     init(NumInitBuckets);
   }
 

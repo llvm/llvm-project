@@ -1940,7 +1940,7 @@ HexagonTargetLowering::validateConstPtrAlignment(SDValue Ptr, Align NeedAlign,
     return true;
   unsigned Addr = CA->getZExtValue();
   Align HaveAlign =
-      Addr != 0 ? Align(1ull << countTrailingZeros(Addr)) : NeedAlign;
+      Addr != 0 ? Align(1ull << llvm::countr_zero(Addr)) : NeedAlign;
   if (HaveAlign >= NeedAlign)
     return true;
 
@@ -2573,7 +2573,7 @@ HexagonTargetLowering::buildVector32(ArrayRef<SDValue> Elem, const SDLoc &dl,
   }
 
 #ifndef NDEBUG
-  dbgs() << "VecTy: " << EVT(VecTy).getEVTString() << '\n';
+  dbgs() << "VecTy: " << VecTy << '\n';
 #endif
   llvm_unreachable("Unexpected vector element type");
 }

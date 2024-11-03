@@ -8,7 +8,7 @@ func.func @reduce() {
   linalg.fill ins(%cst_0 : f32) outs(%0 : memref<128x384xf32>)
   %2 = memref.alloc() : memref<128xf32>
   linalg.fill ins(%cst_0 : f32) outs(%2 : memref<128xf32>)
-  scf.foreach_thread (%arg0) in (%c2) {
+  scf.forall (%arg0) in (%c2) {
     %7 = affine.min affine_map<(d0) -> (d0 * -64 + 128, 64)>(%arg0)
     %8 = affine.max affine_map<(d0) -> (0, d0)>(%7)
     %9 = affine.apply affine_map<(d0) -> (d0 * 64)>(%arg0)

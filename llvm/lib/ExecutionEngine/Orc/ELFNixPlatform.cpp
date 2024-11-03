@@ -14,6 +14,7 @@
 #include "llvm/ExecutionEngine/JITLink/x86_64.h"
 #include "llvm/ExecutionEngine/Orc/DebugUtils.h"
 #include "llvm/ExecutionEngine/Orc/ExecutionUtils.h"
+#include "llvm/ExecutionEngine/Orc/Shared/ObjectFormats.h"
 #include "llvm/Support/BinaryByteStream.h"
 #include "llvm/Support/Debug.h"
 #include <optional>
@@ -96,22 +97,15 @@ private:
   ELFNixPlatform &ENP;
 };
 
-StringRef EHFrameSectionName = ".eh_frame";
-StringRef InitArrayFuncSectionName = ".init_array";
-
-StringRef ThreadBSSSectionName = ".tbss";
-StringRef ThreadDataSectionName = ".tdata";
-
 } // end anonymous namespace
 
 namespace llvm {
 namespace orc {
 
-Expected<std::unique_ptr<ELFNixPlatform>>
-ELFNixPlatform::Create(ExecutionSession &ES,
-                       ObjectLinkingLayer &ObjLinkingLayer,
-                       JITDylib &PlatformJD, const char *OrcRuntimePath,
-                       std::optional<SymbolAliasMap> RuntimeAliases) {
+Expected<std::unique_ptr<ELFNixPlatform>> ELFNixPlatform::Create(
+    ExecutionSession &ES, ObjectLinkingLayer &ObjLinkingLayer,
+    JITDylib &PlatformJD, std::unique_ptr<DefinitionGenerator> OrcRuntime,
+    std::optional<SymbolAliasMap> RuntimeAliases) {
 
   auto &EPC = ES.getExecutorProcessControl();
 
@@ -143,20 +137,31 @@ ELFNixPlatform::Create(ExecutionSession &ES,
              JITSymbolFlags::Exported}}})))
     return std::move(Err);
 
-  // Create a generator for the ORC runtime archive.
-  auto OrcRuntimeArchiveGenerator = StaticLibraryDefinitionGenerator::Load(
-      ObjLinkingLayer, OrcRuntimePath, EPC.getTargetTriple());
-  if (!OrcRuntimeArchiveGenerator)
-    return OrcRuntimeArchiveGenerator.takeError();
-
   // Create the instance.
   Error Err = Error::success();
-  auto P = std::unique_ptr<ELFNixPlatform>(
-      new ELFNixPlatform(ES, ObjLinkingLayer, PlatformJD,
-                         std::move(*OrcRuntimeArchiveGenerator), Err));
+  auto P = std::unique_ptr<ELFNixPlatform>(new ELFNixPlatform(
+      ES, ObjLinkingLayer, PlatformJD, std::move(OrcRuntime), Err));
   if (Err)
     return std::move(Err);
   return std::move(P);
+}
+
+Expected<std::unique_ptr<ELFNixPlatform>>
+ELFNixPlatform::Create(ExecutionSession &ES,
+                       ObjectLinkingLayer &ObjLinkingLayer,
+                       JITDylib &PlatformJD, const char *OrcRuntimePath,
+                       std::optional<SymbolAliasMap> RuntimeAliases) {
+
+  // Create a generator for the ORC runtime archive.
+  auto OrcRuntimeArchiveGenerator = StaticLibraryDefinitionGenerator::Load(
+      ObjLinkingLayer, OrcRuntimePath,
+      ES.getExecutorProcessControl().getTargetTriple());
+  if (!OrcRuntimeArchiveGenerator)
+    return OrcRuntimeArchiveGenerator.takeError();
+
+  return Create(ES, ObjLinkingLayer, PlatformJD,
+                std::move(*OrcRuntimeArchiveGenerator),
+                std::move(RuntimeAliases));
 }
 
 Error ELFNixPlatform::setupJITDylib(JITDylib &JD) {
@@ -270,13 +275,6 @@ ELFNixPlatform::standardRuntimeUtilityAliases() {
 
   return ArrayRef<std::pair<const char *, const char *>>(
       StandardRuntimeUtilityAliases);
-}
-
-bool ELFNixPlatform::isInitializerSection(StringRef SecName) {
-  if (SecName.consume_front(InitArrayFuncSectionName) &&
-      (SecName.empty() || SecName[0] == '.'))
-    return true;
-  return false;
 }
 
 bool ELFNixPlatform::supportedTarget(const Triple &TT) {
@@ -724,7 +722,7 @@ void ELFNixPlatform::ELFNixPlatformPlugin::addEHAndTLVSupportPasses(
   Config.PostFixupPasses.push_back([this](jitlink::LinkGraph &G) -> Error {
     ELFPerObjectSectionsToRegister POSR;
 
-    if (auto *EHFrameSection = G.findSectionByName(EHFrameSectionName)) {
+    if (auto *EHFrameSection = G.findSectionByName(ELFEHFrameSectionName)) {
       jitlink::SectionRange R(*EHFrameSection);
       if (!R.empty())
         POSR.EHFrameSection = {ExecutorAddr(R.getStart()),
@@ -734,10 +732,10 @@ void ELFNixPlatform::ELFNixPlatformPlugin::addEHAndTLVSupportPasses(
     // Get a pointer to the thread data section if there is one. It will be used
     // below.
     jitlink::Section *ThreadDataSection =
-        G.findSectionByName(ThreadDataSectionName);
+        G.findSectionByName(ELFThreadDataSectionName);
 
     // Handle thread BSS section if there is one.
-    if (auto *ThreadBSSSection = G.findSectionByName(ThreadBSSSectionName)) {
+    if (auto *ThreadBSSSection = G.findSectionByName(ELFThreadBSSSectionName)) {
       // If there's already a thread data section in this graph then merge the
       // thread BSS section content into it, otherwise just treat the thread
       // BSS section as the thread data section.
@@ -781,7 +779,7 @@ Error ELFNixPlatform::ELFNixPlatformPlugin::preserveInitSections(
   JITLinkSymbolSet InitSectionSymbols;
   for (auto &InitSection : G.sections()) {
     // Skip non-init sections.
-    if (!isInitializerSection(InitSection.getName()))
+    if (!isELFInitializerSection(InitSection.getName()))
       continue;
 
     // Make a pass over live symbols in the section: those blocks are already
@@ -819,7 +817,7 @@ Error ELFNixPlatform::ELFNixPlatformPlugin::registerInitSections(
   LLVM_DEBUG({ dbgs() << "ELFNixPlatform::registerInitSections\n"; });
 
   for (auto &Sec : G.sections()) {
-    if (isInitializerSection(Sec.getName())) {
+    if (isELFInitializerSection(Sec.getName())) {
       InitSections.push_back(&Sec);
     }
   }

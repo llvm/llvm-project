@@ -90,8 +90,6 @@ std::optional<AttrInfo> findAttributeInfo(const DWARFDie DIE,
 
 const DebugLineTableRowRef DebugLineTableRowRef::NULL_ROW{0, 0};
 
-namespace {
-
 LLVM_ATTRIBUTE_UNUSED
 static void printLE64(const std::string &S) {
   for (uint32_t I = 0, Size = S.size(); I < Size; ++I) {
@@ -106,9 +104,10 @@ static void printLE64(const std::string &S) {
 // the form (begin address, range size), otherwise (begin address, end address).
 // Terminates the list by writing a pair of two zeroes.
 // Returns the number of written bytes.
-uint64_t writeAddressRanges(raw_svector_ostream &Stream,
-                            const DebugAddressRangesVector &AddressRanges,
-                            const bool WriteRelativeRanges = false) {
+static uint64_t
+writeAddressRanges(raw_svector_ostream &Stream,
+                   const DebugAddressRangesVector &AddressRanges,
+                   const bool WriteRelativeRanges = false) {
   for (const DebugAddressRange &Range : AddressRanges) {
     support::endian::write(Stream, Range.LowPC, support::little);
     support::endian::write(
@@ -120,8 +119,6 @@ uint64_t writeAddressRanges(raw_svector_ostream &Stream,
   support::endian::write(Stream, 0ULL, support::little);
   return AddressRanges.size() * 16 + 16;
 }
-
-} // namespace
 
 DebugRangesSectionWriter::DebugRangesSectionWriter() {
   RangesBuffer = std::make_unique<DebugBufferVector>();

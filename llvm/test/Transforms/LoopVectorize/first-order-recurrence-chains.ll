@@ -475,9 +475,8 @@ define void @test_first_order_recurrences_and_induction(ptr %ptr) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x i64> [[VECTOR_RECUR]], <4 x i64> [[VEC_IND]], <4 x i32> <i32 3, i32 4, i32 5, i32 6>
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i64, ptr [[PTR:%.*]], i64 [[TMP0]]
-; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i64, ptr [[TMP2]], i32 0
-; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i64>, ptr [[TMP3]], align 2
 ; CHECK-NEXT:    [[TMP4:%.*]] = add <4 x i64> [[TMP1]], <i64 10, i64 10, i64 10, i64 10>
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i64, ptr [[TMP2]], i32 0
 ; CHECK-NEXT:    store <4 x i64> [[TMP4]], ptr [[TMP3]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <4 x i64> [[VEC_IND]], <i64 4, i64 4, i64 4, i64 4>
@@ -497,7 +496,6 @@ loop:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
   %iv.next = add nuw nsw i64 %iv, 1
   %gep.ptr = getelementptr inbounds i64, ptr %ptr, i64 %iv
-  %for.1.next = load i64, ptr %gep.ptr, align 2
   %add.1 = add i64 %for.1, 10
   store i64 %add.1, ptr %gep.ptr
   %exitcond.not = icmp eq i64 %iv.next, 1000
@@ -518,9 +516,8 @@ define void @test_first_order_recurrences_and_induction2(ptr %ptr) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x i64> [[VECTOR_RECUR]], <4 x i64> [[VEC_IND]], <4 x i32> <i32 3, i32 4, i32 5, i32 6>
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i64, ptr [[PTR:%.*]], i64 [[TMP0]]
-; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i64, ptr [[TMP2]], i32 0
-; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i64>, ptr [[TMP3]], align 2
 ; CHECK-NEXT:    [[TMP4:%.*]] = add <4 x i64> [[TMP1]], <i64 10, i64 10, i64 10, i64 10>
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i64, ptr [[TMP2]], i32 0
 ; CHECK-NEXT:    store <4 x i64> [[TMP4]], ptr [[TMP3]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <4 x i64> [[VEC_IND]], <i64 4, i64 4, i64 4, i64 4>
@@ -540,7 +537,6 @@ loop:
   %for.1 = phi i64 [ 22, %entry ], [ %iv, %loop ]
   %iv.next = add nuw nsw i64 %iv, 1
   %gep.ptr = getelementptr inbounds i64, ptr %ptr, i64 %iv
-  %for.1.next = load i64, ptr %gep.ptr, align 2
   %add.1 = add i64 %for.1, 10
   store i64 %add.1, ptr %gep.ptr
   %exitcond.not = icmp eq i64 %iv.next, 1000

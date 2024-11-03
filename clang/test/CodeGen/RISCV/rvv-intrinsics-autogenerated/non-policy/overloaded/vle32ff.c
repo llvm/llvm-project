@@ -16,7 +16,7 @@
 // CHECK-RV64-NEXT:    ret <vscale x 1 x float> [[TMP1]]
 //
 vfloat32mf2_t test_vle32ff_v_f32mf2_m(vbool64_t mask, const float *base, size_t *new_vl, size_t vl) {
-  return vle32ff(mask, base, new_vl, vl);
+  return __riscv_vle32ff(mask, base, new_vl, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vle32ff_v_f32m1_m(
@@ -28,7 +28,7 @@ vfloat32mf2_t test_vle32ff_v_f32mf2_m(vbool64_t mask, const float *base, size_t 
 // CHECK-RV64-NEXT:    ret <vscale x 2 x float> [[TMP1]]
 //
 vfloat32m1_t test_vle32ff_v_f32m1_m(vbool32_t mask, const float *base, size_t *new_vl, size_t vl) {
-  return vle32ff(mask, base, new_vl, vl);
+  return __riscv_vle32ff(mask, base, new_vl, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vle32ff_v_f32m2_m(
@@ -40,7 +40,7 @@ vfloat32m1_t test_vle32ff_v_f32m1_m(vbool32_t mask, const float *base, size_t *n
 // CHECK-RV64-NEXT:    ret <vscale x 4 x float> [[TMP1]]
 //
 vfloat32m2_t test_vle32ff_v_f32m2_m(vbool16_t mask, const float *base, size_t *new_vl, size_t vl) {
-  return vle32ff(mask, base, new_vl, vl);
+  return __riscv_vle32ff(mask, base, new_vl, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vle32ff_v_f32m4_m(
@@ -52,7 +52,7 @@ vfloat32m2_t test_vle32ff_v_f32m2_m(vbool16_t mask, const float *base, size_t *n
 // CHECK-RV64-NEXT:    ret <vscale x 8 x float> [[TMP1]]
 //
 vfloat32m4_t test_vle32ff_v_f32m4_m(vbool8_t mask, const float *base, size_t *new_vl, size_t vl) {
-  return vle32ff(mask, base, new_vl, vl);
+  return __riscv_vle32ff(mask, base, new_vl, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vle32ff_v_f32m8_m(
@@ -64,7 +64,7 @@ vfloat32m4_t test_vle32ff_v_f32m4_m(vbool8_t mask, const float *base, size_t *ne
 // CHECK-RV64-NEXT:    ret <vscale x 16 x float> [[TMP1]]
 //
 vfloat32m8_t test_vle32ff_v_f32m8_m(vbool4_t mask, const float *base, size_t *new_vl, size_t vl) {
-  return vle32ff(mask, base, new_vl, vl);
+  return __riscv_vle32ff(mask, base, new_vl, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vle32ff_v_i32mf2_m(
@@ -76,7 +76,7 @@ vfloat32m8_t test_vle32ff_v_f32m8_m(vbool4_t mask, const float *base, size_t *ne
 // CHECK-RV64-NEXT:    ret <vscale x 1 x i32> [[TMP1]]
 //
 vint32mf2_t test_vle32ff_v_i32mf2_m(vbool64_t mask, const int32_t *base, size_t *new_vl, size_t vl) {
-  return vle32ff(mask, base, new_vl, vl);
+  return __riscv_vle32ff(mask, base, new_vl, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vle32ff_v_i32m1_m(
@@ -88,7 +88,7 @@ vint32mf2_t test_vle32ff_v_i32mf2_m(vbool64_t mask, const int32_t *base, size_t 
 // CHECK-RV64-NEXT:    ret <vscale x 2 x i32> [[TMP1]]
 //
 vint32m1_t test_vle32ff_v_i32m1_m(vbool32_t mask, const int32_t *base, size_t *new_vl, size_t vl) {
-  return vle32ff(mask, base, new_vl, vl);
+  return __riscv_vle32ff(mask, base, new_vl, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vle32ff_v_i32m2_m(
@@ -100,7 +100,7 @@ vint32m1_t test_vle32ff_v_i32m1_m(vbool32_t mask, const int32_t *base, size_t *n
 // CHECK-RV64-NEXT:    ret <vscale x 4 x i32> [[TMP1]]
 //
 vint32m2_t test_vle32ff_v_i32m2_m(vbool16_t mask, const int32_t *base, size_t *new_vl, size_t vl) {
-  return vle32ff(mask, base, new_vl, vl);
+  return __riscv_vle32ff(mask, base, new_vl, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vle32ff_v_i32m4_m(
@@ -112,7 +112,7 @@ vint32m2_t test_vle32ff_v_i32m2_m(vbool16_t mask, const int32_t *base, size_t *n
 // CHECK-RV64-NEXT:    ret <vscale x 8 x i32> [[TMP1]]
 //
 vint32m4_t test_vle32ff_v_i32m4_m(vbool8_t mask, const int32_t *base, size_t *new_vl, size_t vl) {
-  return vle32ff(mask, base, new_vl, vl);
+  return __riscv_vle32ff(mask, base, new_vl, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vle32ff_v_i32m8_m(
@@ -124,7 +124,7 @@ vint32m4_t test_vle32ff_v_i32m4_m(vbool8_t mask, const int32_t *base, size_t *ne
 // CHECK-RV64-NEXT:    ret <vscale x 16 x i32> [[TMP1]]
 //
 vint32m8_t test_vle32ff_v_i32m8_m(vbool4_t mask, const int32_t *base, size_t *new_vl, size_t vl) {
-  return vle32ff(mask, base, new_vl, vl);
+  return __riscv_vle32ff(mask, base, new_vl, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vle32ff_v_u32mf2_m(
@@ -136,7 +136,7 @@ vint32m8_t test_vle32ff_v_i32m8_m(vbool4_t mask, const int32_t *base, size_t *ne
 // CHECK-RV64-NEXT:    ret <vscale x 1 x i32> [[TMP1]]
 //
 vuint32mf2_t test_vle32ff_v_u32mf2_m(vbool64_t mask, const uint32_t *base, size_t *new_vl, size_t vl) {
-  return vle32ff(mask, base, new_vl, vl);
+  return __riscv_vle32ff(mask, base, new_vl, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vle32ff_v_u32m1_m(
@@ -148,7 +148,7 @@ vuint32mf2_t test_vle32ff_v_u32mf2_m(vbool64_t mask, const uint32_t *base, size_
 // CHECK-RV64-NEXT:    ret <vscale x 2 x i32> [[TMP1]]
 //
 vuint32m1_t test_vle32ff_v_u32m1_m(vbool32_t mask, const uint32_t *base, size_t *new_vl, size_t vl) {
-  return vle32ff(mask, base, new_vl, vl);
+  return __riscv_vle32ff(mask, base, new_vl, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vle32ff_v_u32m2_m(
@@ -160,7 +160,7 @@ vuint32m1_t test_vle32ff_v_u32m1_m(vbool32_t mask, const uint32_t *base, size_t 
 // CHECK-RV64-NEXT:    ret <vscale x 4 x i32> [[TMP1]]
 //
 vuint32m2_t test_vle32ff_v_u32m2_m(vbool16_t mask, const uint32_t *base, size_t *new_vl, size_t vl) {
-  return vle32ff(mask, base, new_vl, vl);
+  return __riscv_vle32ff(mask, base, new_vl, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vle32ff_v_u32m4_m(
@@ -172,7 +172,7 @@ vuint32m2_t test_vle32ff_v_u32m2_m(vbool16_t mask, const uint32_t *base, size_t 
 // CHECK-RV64-NEXT:    ret <vscale x 8 x i32> [[TMP1]]
 //
 vuint32m4_t test_vle32ff_v_u32m4_m(vbool8_t mask, const uint32_t *base, size_t *new_vl, size_t vl) {
-  return vle32ff(mask, base, new_vl, vl);
+  return __riscv_vle32ff(mask, base, new_vl, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vle32ff_v_u32m8_m(
@@ -184,6 +184,6 @@ vuint32m4_t test_vle32ff_v_u32m4_m(vbool8_t mask, const uint32_t *base, size_t *
 // CHECK-RV64-NEXT:    ret <vscale x 16 x i32> [[TMP1]]
 //
 vuint32m8_t test_vle32ff_v_u32m8_m(vbool4_t mask, const uint32_t *base, size_t *new_vl, size_t vl) {
-  return vle32ff(mask, base, new_vl, vl);
+  return __riscv_vle32ff(mask, base, new_vl, vl);
 }
 

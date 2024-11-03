@@ -1418,3 +1418,24 @@ func.func @test_affine_if_4(%arg0 : memref<10xf32>) -> memref<10xf32> {
 // CHECK-NEXT:    %[[ALLOC:.*]] = memref.alloc() : memref<10xf32>
 // CHECK-NEXT:    memref.dealloc %[[ALLOC]] : memref<10xf32>
 // CHECK-NEXT:    affine.if
+
+// -----
+
+// Ensure we free the realloc, not the alloc.
+
+// CHECK-LABEL: func @auto_dealloc()
+func.func @auto_dealloc() {
+  %c10 = arith.constant 10 : index
+  %c100 = arith.constant 100 : index
+  %alloc = memref.alloc(%c10) : memref<?xi32>
+  %realloc = memref.realloc %alloc(%c100) : memref<?xi32> to memref<?xi32>
+  return
+}
+// CHECK-DAG:   %[[C10:.*]] = arith.constant 10 : index
+// CHECK-DAG:   %[[C100:.*]] = arith.constant 100 : index
+// CHECK-NEXT:  %[[A:.*]] = memref.alloc(%[[C10]]) : memref<?xi32>
+// CHECK-NEXT:  %[[R:.*]] = memref.realloc %alloc(%[[C100]]) : memref<?xi32> to memref<?xi32>
+// CHECK-NEXT:  memref.dealloc %[[R]] : memref<?xi32>
+// CHECK-NEXT:  return
+
+

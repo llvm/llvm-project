@@ -12,10 +12,11 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "CodeGenHwModes.h"
 #include "CodeGenInstruction.h"
 #include "CodeGenTarget.h"
-#include "SubtargetFeatureInfo.h"
-#include "Types.h"
+#include "InfoByHwMode.h"
+#include "TableGenBackends.h"
 #include "VarLenCodeEmitterGen.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"

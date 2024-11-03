@@ -16,8 +16,8 @@
 #include <__iterator/distance.h>
 #include <__iterator/iterator_traits.h>
 #include <__random/uniform_int_distribution.h>
+#include <__type_traits/common_type.h>
 #include <__utility/move.h>
-#include <type_traits>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -88,7 +88,7 @@ _SampleIterator __sample(_PopulationIterator __first,
       __g, _PopIterCategory());
 }
 
-#if _LIBCPP_STD_VER > 14
+#if _LIBCPP_STD_VER >= 17
 template <class _PopulationIterator, class _SampleIterator, class _Distance,
           class _UniformRandomNumberGenerator>
 inline _LIBCPP_INLINE_VISIBILITY
@@ -103,7 +103,7 @@ _SampleIterator sample(_PopulationIterator __first,
       std::move(__first), std::move(__last), std::move(__output_iter), __n, __g);
 }
 
-#endif // _LIBCPP_STD_VER > 14
+#endif // _LIBCPP_STD_VER >= 17
 
 _LIBCPP_END_NAMESPACE_STD
 

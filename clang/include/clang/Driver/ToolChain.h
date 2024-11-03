@@ -21,11 +21,11 @@
 #include "llvm/ADT/FloatingPointMode.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/ADT/Triple.h"
 #include "llvm/MC/MCTargetOptions.h"
 #include "llvm/Option/Option.h"
 #include "llvm/Support/VersionTuple.h"
 #include "llvm/Target/TargetOptions.h"
+#include "llvm/TargetParser/Triple.h"
 #include <cassert>
 #include <climits>
 #include <memory>

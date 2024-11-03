@@ -38,11 +38,16 @@ class PersistObjCPointeeType(TestBase):
 
         self.runCmd("run", RUN_SUCCEEDED)
 
-        self.expect("p *self", substrs=['_sc_name = nil',
-                                        '_sc_name2 = nil',
-                                        '_sc_name3 = nil',
-                                        '_sc_name4 = nil',
-                                        '_sc_name5 = nil',
-                                        '_sc_name6 = nil',
-                                        '_sc_name7 = nil',
-                                        '_sc_name8 = nil'])
+        self.expect(
+            "expression *self",
+            substrs=[
+                "_sc_name = nil",
+                "_sc_name2 = nil",
+                "_sc_name3 = nil",
+                "_sc_name4 = nil",
+                "_sc_name5 = nil",
+                "_sc_name6 = nil",
+                "_sc_name7 = nil",
+                "_sc_name8 = nil",
+            ],
+        )

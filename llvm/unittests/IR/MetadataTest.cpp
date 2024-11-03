@@ -1610,7 +1610,7 @@ TEST_F(DIEnumeratorTest, get) {
 
 TEST_F(DIEnumeratorTest, getWithLargeValues) {
   auto *N = DIEnumerator::get(Context, APInt::getMaxValue(128), false, "val");
-  EXPECT_EQ(128U, N->getValue().countPopulation());
+  EXPECT_EQ(128U, N->getValue().popcount());
   EXPECT_EQ(N,
             DIEnumerator::get(Context, APInt::getMaxValue(128), false, "val"));
   EXPECT_NE(N,

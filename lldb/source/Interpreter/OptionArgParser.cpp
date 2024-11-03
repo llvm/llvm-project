@@ -140,16 +140,40 @@ lldb::ScriptLanguage OptionArgParser::ToScriptLanguage(
   return fail_value;
 }
 
+lldb::addr_t OptionArgParser::ToRawAddress(const ExecutionContext *exe_ctx,
+                                           llvm::StringRef s,
+                                           lldb::addr_t fail_value,
+                                           Status *error_ptr) {
+  std::optional<lldb::addr_t> maybe_addr = DoToAddress(exe_ctx, s, error_ptr);
+  return maybe_addr ? *maybe_addr : fail_value;
+}
+
 lldb::addr_t OptionArgParser::ToAddress(const ExecutionContext *exe_ctx,
                                         llvm::StringRef s,
                                         lldb::addr_t fail_value,
                                         Status *error_ptr) {
+  std::optional<lldb::addr_t> maybe_addr = DoToAddress(exe_ctx, s, error_ptr);
+  if (!maybe_addr)
+    return fail_value;
+
+  lldb::addr_t addr = *maybe_addr;
+
+  if (Process *process = exe_ctx->GetProcessPtr())
+    if (ABISP abi_sp = process->GetABI())
+      addr = abi_sp->FixCodeAddress(addr);
+
+  return addr;
+}
+
+std::optional<lldb::addr_t>
+OptionArgParser::DoToAddress(const ExecutionContext *exe_ctx, llvm::StringRef s,
+                             Status *error_ptr) {
   bool error_set = false;
   if (s.empty()) {
     if (error_ptr)
       error_ptr->SetErrorStringWithFormat("invalid address expression \"%s\"",
                                           s.str().c_str());
-    return fail_value;
+    return {};
   }
 
   llvm::StringRef sref = s;
@@ -158,10 +182,7 @@ lldb::addr_t OptionArgParser::ToAddress(const ExecutionContext *exe_ctx,
   if (!s.getAsInteger(0, addr)) {
     if (error_ptr)
       error_ptr->Clear();
-    Process *process = exe_ctx->GetProcessPtr();
-    if (process)
-      if (ABISP abi_sp = process->GetABI())
-        addr = abi_sp->FixCodeAddress(addr);
+
     return addr;
   }
 
@@ -177,7 +198,7 @@ lldb::addr_t OptionArgParser::ToAddress(const ExecutionContext *exe_ctx,
     if (error_ptr)
       error_ptr->SetErrorStringWithFormat("invalid address expression \"%s\"",
                                           s.str().c_str());
-    return fail_value;
+    return {};
   }
 
   lldb::ValueObjectSP valobj_sp;
@@ -197,7 +218,7 @@ lldb::addr_t OptionArgParser::ToAddress(const ExecutionContext *exe_ctx,
           valobj_sp->GetDynamicValueType(), true);
     // Get the address to watch.
     if (valobj_sp)
-      addr = valobj_sp->GetValueAsUnsigned(fail_value, &success);
+      addr = valobj_sp->GetValueAsUnsigned(0, &success);
     if (success) {
       if (error_ptr)
         error_ptr->Clear();
@@ -249,5 +270,5 @@ lldb::addr_t OptionArgParser::ToAddress(const ExecutionContext *exe_ctx,
       error_ptr->SetErrorStringWithFormat("invalid address expression \"%s\"",
                                           s.str().c_str());
   }
-  return fail_value;
+  return {};
 }

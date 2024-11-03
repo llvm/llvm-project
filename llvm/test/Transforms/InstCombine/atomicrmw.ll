@@ -273,7 +273,7 @@ define double @sat_fsub_nan(ptr %addr) {
 
 define void @sat_fsub_nan_unused(ptr %addr) {
 ; CHECK-LABEL: @sat_fsub_nan_unused(
-; CHECK-NEXT:    store atomic double 0x7FF00000FFFFFFFF, ptr [[ADDR:%.*]] monotonic, align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = atomicrmw xchg ptr [[ADDR:%.*]], double 0x7FF00000FFFFFFFF monotonic, align 8
 ; CHECK-NEXT:    ret void
 ;
   atomicrmw fsub ptr %addr, double 0x7FF00000FFFFFFFF monotonic
@@ -282,7 +282,7 @@ define void @sat_fsub_nan_unused(ptr %addr) {
 
 define void @xchg_unused_monotonic(ptr %addr) {
 ; CHECK-LABEL: @xchg_unused_monotonic(
-; CHECK-NEXT:    store atomic i32 0, ptr [[ADDR:%.*]] monotonic, align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = atomicrmw xchg ptr [[ADDR:%.*]], i32 0 monotonic, align 4
 ; CHECK-NEXT:    ret void
 ;
   atomicrmw xchg ptr %addr, i32 0 monotonic
@@ -291,7 +291,7 @@ define void @xchg_unused_monotonic(ptr %addr) {
 
 define void @xchg_unused_release(ptr %addr) {
 ; CHECK-LABEL: @xchg_unused_release(
-; CHECK-NEXT:    store atomic i32 -1, ptr [[ADDR:%.*]] release, align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = atomicrmw xchg ptr [[ADDR:%.*]], i32 -1 release, align 4
 ; CHECK-NEXT:    ret void
 ;
   atomicrmw xchg ptr %addr, i32 -1 release
@@ -300,7 +300,7 @@ define void @xchg_unused_release(ptr %addr) {
 
 define void @xchg_unused_under_aligned(ptr %addr) {
 ; CHECK-LABEL: @xchg_unused_under_aligned(
-; CHECK-NEXT:    store atomic i32 -1, ptr [[ADDR:%.*]] release, align 1
+; CHECK-NEXT:    [[TMP1:%.*]] = atomicrmw xchg ptr [[ADDR:%.*]], i32 -1 release, align 1
 ; CHECK-NEXT:    ret void
 ;
   atomicrmw xchg ptr %addr, i32 -1 release, align 1
@@ -309,7 +309,7 @@ define void @xchg_unused_under_aligned(ptr %addr) {
 
 define void @xchg_unused_over_aligned(ptr %addr) {
 ; CHECK-LABEL: @xchg_unused_over_aligned(
-; CHECK-NEXT:    store atomic i32 -1, ptr [[ADDR:%.*]] release, align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = atomicrmw xchg ptr [[ADDR:%.*]], i32 -1 release, align 8
 ; CHECK-NEXT:    ret void
 ;
   atomicrmw xchg ptr %addr, i32 -1 release, align 8
@@ -336,7 +336,7 @@ define void @xchg_unused_volatile(ptr %addr) {
 
 define void @sat_or_allones_unused(ptr %addr) {
 ; CHECK-LABEL: @sat_or_allones_unused(
-; CHECK-NEXT:    store atomic i32 -1, ptr [[ADDR:%.*]] monotonic, align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = atomicrmw xchg ptr [[ADDR:%.*]], i32 -1 monotonic, align 4
 ; CHECK-NEXT:    ret void
 ;
   atomicrmw or ptr %addr, i32 -1 monotonic

@@ -1402,6 +1402,12 @@ LogicalResult WhileOp::inferReturnTypeComponents(
   return success();
 }
 
+std::optional<SmallVector<int64_t, 4>> ApplyScaleOp::getShapeForUnroll() {
+  if (auto vt = getType().dyn_cast<VectorType>())
+    return llvm::to_vector<4>(vt.getShape());
+  return std::nullopt;
+}
+
 //===----------------------------------------------------------------------===//
 // TOSA Attribute Definitions.
 //===----------------------------------------------------------------------===//

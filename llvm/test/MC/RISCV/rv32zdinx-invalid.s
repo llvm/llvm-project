@@ -1,7 +1,7 @@
 # RUN: not llvm-mc -triple riscv32 -mattr=+zdinx %s 2>&1 | FileCheck %s
 
 # Unsupport Odd Registers in RV32
-fadd.d a0, a1, a2 # CHECK: :[[@LINE]]:12: error: invalid operand for instruction
+fadd.d a0, a1, a2 # CHECK: :[[@LINE]]:1: error: double precision floating point operands must use even numbered X register
 
 # Not support float registers
 flw fa4, 12(sp) # CHECK: :[[@LINE]]:1: error: instruction requires the following: 'F' (Single-Precision Floating-Point){{$}}

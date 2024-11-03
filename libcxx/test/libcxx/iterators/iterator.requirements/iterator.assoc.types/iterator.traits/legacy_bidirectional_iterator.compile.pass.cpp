@@ -72,7 +72,7 @@ static_assert(!std::__iterator_traits_detail::__cpp17_bidirectional_iterator<std
 static_assert(!std::__iterator_traits_detail::__cpp17_bidirectional_iterator<std::back_insert_iterator<std::vector<int>>>);
 static_assert(!std::__iterator_traits_detail::__cpp17_bidirectional_iterator<std::front_insert_iterator<std::vector<int>>>);
 static_assert(!std::__iterator_traits_detail::__cpp17_bidirectional_iterator<std::insert_iterator<std::vector<int>>>);
-static_assert(!std::__iterator_traits_detail::__cpp17_bidirectional_iterator<std::move_iterator<int*>>);
+static_assert(std::__iterator_traits_detail::__cpp17_bidirectional_iterator<std::move_iterator<int*>>);
 
 // <list>
 static_assert(std::__iterator_traits_detail::__cpp17_bidirectional_iterator<std::list<int>::iterator>);

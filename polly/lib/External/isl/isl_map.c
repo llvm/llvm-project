@@ -1464,14 +1464,7 @@ __isl_give isl_basic_set *isl_basic_set_dup(__isl_keep isl_basic_set *bset)
 
 __isl_give isl_basic_set *isl_basic_set_copy(__isl_keep isl_basic_set *bset)
 {
-	if (!bset)
-		return NULL;
-
-	if (ISL_F_ISSET(bset, ISL_BASIC_SET_FINAL)) {
-		bset->ref++;
-		return bset;
-	}
-	return isl_basic_set_dup(bset);
+	return bset_from_bmap(isl_basic_map_copy(bset_to_bmap(bset)));
 }
 
 __isl_give isl_set *isl_set_copy(__isl_keep isl_set *set)
@@ -4622,6 +4615,7 @@ error:
 #undef TYPE
 #define TYPE	isl_map
 #include "isl_project_out_all_params_templ.c"
+#include "isl_project_out_param_templ.c"
 
 /* Turn all the dimensions of type "type", except the "n" starting at "first"
  * into existentially quantified variables.
@@ -4655,19 +4649,7 @@ __isl_give isl_set *isl_set_project_out(__isl_take isl_set *set,
 __isl_give isl_set *isl_set_project_out_param_id(__isl_take isl_set *set,
 	__isl_take isl_id *id)
 {
-	int pos;
-
-	if (!set || !id)
-		goto error;
-	pos = isl_set_find_dim_by_id(set, isl_dim_param, id);
-	isl_id_free(id);
-	if (pos < 0)
-		return set;
-	return isl_set_project_out(set, isl_dim_param, pos, 1);
-error:
-	isl_set_free(set);
-	isl_id_free(id);
-	return NULL;
+	return set_from_map(isl_map_project_out_param_id(set_to_map(set), id));
 }
 
 /* If "set" involves any of the parameters with identifiers in "list",
@@ -4676,25 +4658,11 @@ error:
 __isl_give isl_set *isl_set_project_out_param_id_list(__isl_take isl_set *set,
 	__isl_take isl_id_list *list)
 {
-	int i;
-	isl_size n;
+	isl_map *map;
 
-	n = isl_id_list_size(list);
-	if (n < 0)
-		goto error;
-	for (i = 0; i < n; ++i) {
-		isl_id *id;
-
-		id = isl_id_list_get_at(list, i);
-		set = isl_set_project_out_param_id(set, id);
-	}
-
-	isl_id_list_free(list);
-	return set;
-error:
-	isl_id_list_free(list);
-	isl_set_free(set);
-	return NULL;
+	map = set_to_map(set);
+	map = isl_map_project_out_param_id_list(map, list);
+	return set_from_map(map);
 }
 
 /* Project out all parameters from "set" by existentially quantifying
@@ -8587,6 +8555,46 @@ __isl_give isl_set *isl_set_intersect_factor_range(__isl_take isl_set *set,
 						set_to_map(range), &control));
 }
 
+/* Given a map "map" in a space [A -> B] -> C and a set "domain"
+ * in the space A, return the intersection.
+ *
+ * The set "domain" is extended to a set living in the space [A -> B] and
+ * the domain of "map" is intersected with this set.
+ */
+__isl_give isl_map *isl_map_intersect_domain_wrapped_domain(
+	__isl_take isl_map *map, __isl_take isl_set *domain)
+{
+	isl_space *space;
+	isl_set *factor;
+
+	isl_map_align_params_set(&map, &domain);
+	space = isl_map_get_space(map);
+	space = isl_space_domain_wrapped_range(space);
+	factor = isl_set_universe(space);
+	domain = isl_set_product(domain, factor);
+	return isl_map_intersect_domain(map, domain);
+}
+
+/* Given a map "map" in a space A -> [B -> C] and a set "domain"
+ * in the space B, return the intersection.
+ *
+ * The set "domain" is extended to a set living in the space [B -> C] and
+ * the range of "map" is intersected with this set.
+ */
+__isl_give isl_map *isl_map_intersect_range_wrapped_domain(
+	__isl_take isl_map *map, __isl_take isl_set *domain)
+{
+	isl_space *space;
+	isl_set *factor;
+
+	isl_map_align_params_set(&map, &domain);
+	space = isl_map_get_space(map);
+	space = isl_space_range_wrapped_range(space);
+	factor = isl_set_universe(space);
+	domain = isl_set_product(domain, factor);
+	return isl_map_intersect_range(map, domain);
+}
+
 __isl_give isl_map *isl_map_apply_domain(__isl_take isl_map *map1,
 	__isl_take isl_map *map2)
 {
@@ -10361,6 +10369,18 @@ int isl_basic_map_plain_cmp(__isl_keep isl_basic_map *bmap1,
 			return cmp;
 	}
 	for (i = 0; i < bmap1->n_div; ++i) {
+		isl_bool unknown1, unknown2;
+
+		unknown1 = isl_basic_map_div_is_marked_unknown(bmap1, i);
+		unknown2 = isl_basic_map_div_is_marked_unknown(bmap2, i);
+		if (unknown1 < 0 || unknown2 < 0)
+			return -1;
+		if (unknown1 && unknown2)
+			continue;
+		if (unknown1)
+			return 1;
+		if (unknown2)
+			return -1;
 		cmp = isl_seq_cmp(bmap1->div[i], bmap2->div[i], 1+1+total);
 		if (cmp)
 			return cmp;
@@ -12469,10 +12489,11 @@ __isl_give isl_map *isl_map_align_params(__isl_take isl_map *map,
 	if (aligned < 0)
 		goto error;
 	if (!aligned) {
+		isl_space *space;
 		isl_reordering *exp;
 
-		exp = isl_parameter_alignment_reordering(map->dim, model);
-		exp = isl_reordering_extend_space(exp, isl_map_get_space(map));
+		space = isl_map_peek_space(map);
+		exp = isl_parameter_alignment_reordering(space, model);
 		map = isl_map_realign(map, exp);
 	}
 
@@ -12498,6 +12519,7 @@ __isl_give isl_basic_map *isl_basic_map_align_params(
 {
 	isl_ctx *ctx;
 	isl_bool equal_params;
+	isl_space *bmap_space;
 
 	if (!bmap || !model)
 		goto error;
@@ -12508,16 +12530,15 @@ __isl_give isl_basic_map *isl_basic_map_align_params(
 			"model has unnamed parameters", goto error);
 	if (isl_basic_map_check_named_params(bmap) < 0)
 		goto error;
-	equal_params = isl_space_has_equal_params(bmap->dim, model);
+	bmap_space = isl_basic_map_peek_space(bmap);
+	equal_params = isl_space_has_equal_params(bmap_space, model);
 	if (equal_params < 0)
 		goto error;
 	if (!equal_params) {
 		isl_reordering *exp;
 		struct isl_dim_map *dim_map;
 
-		exp = isl_parameter_alignment_reordering(bmap->dim, model);
-		exp = isl_reordering_extend_space(exp,
-					isl_basic_map_get_space(bmap));
+		exp = isl_parameter_alignment_reordering(bmap_space, model);
 		dim_map = isl_dim_map_from_reordering(exp);
 		bmap = isl_basic_map_realign(bmap,
 				    isl_reordering_get_space(exp),

@@ -134,7 +134,7 @@ std::unique_ptr<BenchmarkRunner> ExegesisTarget::createUopsBenchmarkRunner(
   return std::make_unique<UopsBenchmarkRunner>(State, BenchmarkPhaseSelector);
 }
 
-static_assert(std::is_pod<PfmCountersInfo>::value,
+static_assert(std::is_trivial_v<PfmCountersInfo>,
               "We shouldn't have dynamic initialization here");
 const PfmCountersInfo PfmCountersInfo::Default = {nullptr, nullptr, nullptr,
                                                   0u};

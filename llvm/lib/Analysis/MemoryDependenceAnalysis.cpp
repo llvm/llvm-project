@@ -1238,7 +1238,7 @@ bool MemoryDependenceResults::getNonLocalPointerDepFromBB(
     // phi translation to change it into a value live in the predecessor block.
     // If not, we just add the predecessors to the worklist and scan them with
     // the same Pointer.
-    if (!Pointer.NeedsPHITranslationFromBlock(BB)) {
+    if (!Pointer.needsPHITranslationFromBlock(BB)) {
       SkipFirstBlock = false;
       SmallVector<BasicBlock *, 16> NewBlocks;
       for (BasicBlock *Pred : PredCache.get(BB)) {
@@ -1277,7 +1277,7 @@ bool MemoryDependenceResults::getNonLocalPointerDepFromBB(
 
     // We do need to do phi translation, if we know ahead of time we can't phi
     // translate this value, don't even try.
-    if (!Pointer.IsPotentiallyPHITranslatable())
+    if (!Pointer.isPotentiallyPHITranslatable())
       goto PredTranslationFailure;
 
     // We may have added values to the cache list before this PHI translation.
@@ -1298,8 +1298,8 @@ bool MemoryDependenceResults::getNonLocalPointerDepFromBB(
       // Get the PHI translated pointer in this predecessor.  This can fail if
       // not translatable, in which case the getAddr() returns null.
       PHITransAddr &PredPointer = PredList.back().second;
-      PredPointer.PHITranslateValue(BB, Pred, &DT, /*MustDominate=*/false);
-      Value *PredPtrVal = PredPointer.getAddr();
+      Value *PredPtrVal =
+          PredPointer.translateValue(BB, Pred, &DT, /*MustDominate=*/false);
 
       // Check to see if we have already visited this pred block with another
       // pointer.  If so, we can't do this lookup.  This failure can occur

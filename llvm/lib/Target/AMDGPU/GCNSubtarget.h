@@ -15,6 +15,7 @@
 #define LLVM_LIB_TARGET_AMDGPU_GCNSUBTARGET_H
 
 #include "AMDGPUCallLowering.h"
+#include "AMDGPURegisterBankInfo.h"
 #include "AMDGPUSubtarget.h"
 #include "SIFrameLowering.h"
 #include "SIISelLowering.h"
@@ -51,7 +52,7 @@ private:
   std::unique_ptr<InlineAsmLowering> InlineAsmLoweringInfo;
   std::unique_ptr<InstructionSelector> InstSelector;
   std::unique_ptr<LegalizerInfo> Legalizer;
-  std::unique_ptr<RegisterBankInfo> RegBankInfo;
+  std::unique_ptr<AMDGPURegisterBankInfo> RegBankInfo;
 
 protected:
   // Basic subtarget description.
@@ -146,6 +147,7 @@ protected:
   bool HasDot7Insts = false;
   bool HasDot8Insts = false;
   bool HasDot9Insts = false;
+  bool HasDot10Insts = false;
   bool HasMAIInsts = false;
   bool HasFP8Insts = false;
   bool HasPkFmacF16Inst = false;
@@ -173,6 +175,7 @@ protected:
   bool ScalarFlatScratchInsts = false;
   bool HasArchitectedFlatScratch = false;
   bool EnableFlatScratch = false;
+  bool HasArchitectedSGPRs = false;
   bool AddNoCarryInsts = false;
   bool HasUnpackedD16VMem = false;
   bool LDSMisalignedBug = false;
@@ -248,7 +251,7 @@ public:
     return Legalizer.get();
   }
 
-  const RegisterBankInfo *getRegBankInfo() const override {
+  const AMDGPURegisterBankInfo *getRegBankInfo() const override {
     return RegBankInfo.get();
   }
 
@@ -283,7 +286,7 @@ public:
 
   /// Return the number of high bits known to be zero for a frame index.
   unsigned getKnownHighZeroBitsForFrameIndex() const {
-    return countLeadingZeros(getMaxWaveScratchSize()) + getWavefrontSizeLog2();
+    return llvm::countl_zero(getMaxWaveScratchSize()) + getWavefrontSizeLog2();
   }
 
   int getLDSBankCount() const {
@@ -738,6 +741,10 @@ public:
     return HasDot9Insts;
   }
 
+  bool hasDot10Insts() const {
+    return HasDot10Insts;
+  }
+
   bool hasMAIInsts() const {
     return HasMAIInsts;
   }
@@ -1125,6 +1132,9 @@ public:
   /// \returns true if the flat_scratch register is initialized by the HW.
   /// In this case it is readonly.
   bool flatScratchIsArchitected() const { return HasArchitectedFlatScratch; }
+
+  /// \returns true if the architected SGPRs are enabled.
+  bool hasArchitectedSGPRs() const { return HasArchitectedSGPRs; }
 
   /// \returns true if the machine has merged shaders in which s0-s7 are
   /// reserved by the hardware and user SGPRs start at s8

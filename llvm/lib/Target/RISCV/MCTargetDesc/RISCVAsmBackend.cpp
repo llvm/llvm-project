@@ -134,7 +134,7 @@ bool RISCVAsmBackend::shouldForceRelocation(const MCAssembler &Asm,
     return true;
   }
 
-  return STI.getFeatureBits()[RISCV::FeatureRelax] || ForceRelocs;
+  return STI.hasFeature(RISCV::FeatureRelax) || ForceRelocs;
 }
 
 bool RISCVAsmBackend::fixupNeedsRelaxationAdvanced(const MCFixup &Fixup,
@@ -143,6 +143,15 @@ bool RISCVAsmBackend::fixupNeedsRelaxationAdvanced(const MCFixup &Fixup,
                                                    const MCRelaxableFragment *DF,
                                                    const MCAsmLayout &Layout,
                                                    const bool WasForced) const {
+  int64_t Offset = int64_t(Value);
+  unsigned Kind = Fixup.getTargetKind();
+
+  // We only do conditional branch relaxation when the symbol is resolved.
+  // For conditional branch, the immediate must be in the range
+  // [-4096, 4094].
+  if (Kind == RISCV::fixup_riscv_branch)
+    return Resolved && !isInt<13>(Offset);
+
   // Return true if the symbol is actually unresolved.
   // Resolved could be always false when shouldForceRelocation return true.
   // We use !WasForced to indicate that the symbol is unresolved and not forced
@@ -150,8 +159,7 @@ bool RISCVAsmBackend::fixupNeedsRelaxationAdvanced(const MCFixup &Fixup,
   if (!Resolved && !WasForced)
     return true;
 
-  int64_t Offset = int64_t(Value);
-  switch (Fixup.getTargetKind()) {
+  switch (Kind) {
   default:
     return false;
   case RISCV::fixup_riscv_rvc_branch:
@@ -174,10 +182,22 @@ void RISCVAsmBackend::relaxInstruction(MCInst &Inst,
   case RISCV::C_BEQZ:
   case RISCV::C_BNEZ:
   case RISCV::C_J:
-  case RISCV::C_JAL:
+  case RISCV::C_JAL: {
     bool Success = RISCVRVC::uncompress(Res, Inst, STI);
     assert(Success && "Can't uncompress instruction");
     (void)Success;
+    break;
+  }
+  case RISCV::BEQ:
+  case RISCV::BNE:
+  case RISCV::BLT:
+  case RISCV::BGE:
+  case RISCV::BLTU:
+  case RISCV::BGEU:
+    Res.setOpcode(getRelaxedOpcode(Inst.getOpcode()));
+    Res.addOperand(Inst.getOperand(0));
+    Res.addOperand(Inst.getOperand(1));
+    Res.addOperand(Inst.getOperand(2));
     break;
   }
   Inst = std::move(Res);
@@ -210,7 +230,7 @@ bool RISCVAsmBackend::relaxDwarfLineAddr(MCDwarfLineAddrFragment &DF,
   }
 
   unsigned Offset;
-  std::pair<unsigned, unsigned> Fixup;
+  std::pair<MCFixupKind, MCFixupKind> Fixup;
 
   // According to the DWARF specification, the `DW_LNS_fixed_advance_pc` opcode
   // takes a single unsigned half (unencoded) operand. The maximum encodable
@@ -223,23 +243,19 @@ bool RISCVAsmBackend::relaxDwarfLineAddr(MCDwarfLineAddrFragment &DF,
 
     OS << uint8_t(dwarf::DW_LNE_set_address);
     Offset = OS.tell();
-    Fixup = PtrSize == 4 ? std::make_pair(RISCV::fixup_riscv_add_32,
-                                          RISCV::fixup_riscv_sub_32)
-                         : std::make_pair(RISCV::fixup_riscv_add_64,
-                                          RISCV::fixup_riscv_sub_64);
+    assert((PtrSize == 4 || PtrSize == 8) && "Unexpected pointer size");
+    Fixup = RISCV::getRelocPairForSize(PtrSize);
     OS.write_zeros(PtrSize);
   } else {
     OS << uint8_t(dwarf::DW_LNS_fixed_advance_pc);
     Offset = OS.tell();
-    Fixup = {RISCV::fixup_riscv_add_16, RISCV::fixup_riscv_sub_16};
+    Fixup = RISCV::getRelocPairForSize(2);
     support::endian::write<uint16_t>(OS, 0, support::little);
   }
 
   const MCBinaryExpr &MBE = cast<MCBinaryExpr>(AddrDelta);
-  Fixups.push_back(MCFixup::create(
-      Offset, MBE.getLHS(), static_cast<MCFixupKind>(std::get<0>(Fixup))));
-  Fixups.push_back(MCFixup::create(
-      Offset, MBE.getRHS(), static_cast<MCFixupKind>(std::get<1>(Fixup))));
+  Fixups.push_back(MCFixup::create(Offset, MBE.getLHS(), std::get<0>(Fixup)));
+  Fixups.push_back(MCFixup::create(Offset, MBE.getRHS(), std::get<1>(Fixup)));
 
   if (LineDelta == INT64_MAX) {
     OS << uint8_t(dwarf::DW_LNS_extended_op);
@@ -325,6 +341,18 @@ unsigned RISCVAsmBackend::getRelaxedOpcode(unsigned Op) const {
   case RISCV::C_J:
   case RISCV::C_JAL: // fall through.
     return RISCV::JAL;
+  case RISCV::BEQ:
+    return RISCV::PseudoLongBEQ;
+  case RISCV::BNE:
+    return RISCV::PseudoLongBNE;
+  case RISCV::BLT:
+    return RISCV::PseudoLongBLT;
+  case RISCV::BGE:
+    return RISCV::PseudoLongBGE;
+  case RISCV::BLTU:
+    return RISCV::PseudoLongBLTU;
+  case RISCV::BGEU:
+    return RISCV::PseudoLongBGEU;
   }
 }
 
@@ -346,11 +374,11 @@ bool RISCVAsmBackend::writeNopData(raw_ostream &OS, uint64_t Count,
     Count -= 1;
   }
 
-  bool HasStdExtC = STI->getFeatureBits()[RISCV::FeatureStdExtC];
-  bool HasStdExtZca = STI->getFeatureBits()[RISCV::FeatureExtZca];
+  bool UseCompressedNop = STI->hasFeature(RISCV::FeatureStdExtC) ||
+                          STI->hasFeature(RISCV::FeatureExtZca);
   // The canonical nop on RVC is c.nop.
   if (Count % 4 == 2) {
-    OS.write((HasStdExtC || HasStdExtZca) ? "\x01\0" : "\0\0", 2);
+    OS.write(UseCompressedNop ? "\x01\0" : "\0\0", 2);
     Count -= 2;
   }
 
@@ -574,11 +602,11 @@ bool RISCVAsmBackend::shouldInsertExtraNopBytesForCodeAlign(
     const MCAlignFragment &AF, unsigned &Size) {
   // Calculate Nops Size only when linker relaxation enabled.
   const MCSubtargetInfo *STI = AF.getSubtargetInfo();
-  if (!STI->getFeatureBits()[RISCV::FeatureRelax])
+  if (!STI->hasFeature(RISCV::FeatureRelax))
     return false;
 
-  bool UseCompressedNop = STI->getFeatureBits()[RISCV::FeatureStdExtC] ||
-                          STI->getFeatureBits()[RISCV::FeatureExtZca];
+  bool UseCompressedNop = STI->hasFeature(RISCV::FeatureStdExtC) ||
+                          STI->hasFeature(RISCV::FeatureExtZca);
   unsigned MinNopLen = UseCompressedNop ? 2 : 4;
 
   if (AF.getAlignment() <= MinNopLen) {
@@ -599,7 +627,7 @@ bool RISCVAsmBackend::shouldInsertFixupForCodeAlign(MCAssembler &Asm,
                                                     MCAlignFragment &AF) {
   // Insert the fixup only when linker relaxation enabled.
   const MCSubtargetInfo *STI = AF.getSubtargetInfo();
-  if (!STI->getFeatureBits()[RISCV::FeatureRelax])
+  if (!STI->hasFeature(RISCV::FeatureRelax))
     return false;
 
   // Calculate total Nops we need to insert. If there are none to insert

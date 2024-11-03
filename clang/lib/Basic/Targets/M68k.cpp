@@ -17,7 +17,7 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
-#include "llvm/Support/TargetParser.h"
+#include "llvm/TargetParser/TargetParser.h"
 #include <cstdint>
 #include <cstring>
 #include <limits>

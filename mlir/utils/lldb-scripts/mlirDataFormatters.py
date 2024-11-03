@@ -52,6 +52,8 @@ builtin_attr_type_mnemonics = {
     "mlir::UnknownLoc": '"loc(unknown)"',
     "mlir::Float8E5M2Type": '"f8E5M2"',
     "mlir::Float8E4M3FNType": '"f8E4M3FN"',
+    "mlir::Float8E5M2FNUZType": '"f8E5M2FNUZ"',
+    "mlir::Float8E4M3FNUZType": '"f8E4M3FNUZ"',
     "mlir::BFloat16Type": '"bf16"',
     "mlir::Float16Type": '"f16"',
     "mlir::Float32Type": '"f32"',

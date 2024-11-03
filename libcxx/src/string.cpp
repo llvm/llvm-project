@@ -63,7 +63,7 @@ namespace
 
 template<typename T>
 inline void throw_helper(const string& msg) {
-#ifndef _LIBCPP_NO_EXCEPTIONS
+#ifndef _LIBCPP_HAS_NO_EXCEPTIONS
     throw T(msg);
 #else
     fprintf(stderr, "%s\n", msg.c_str());

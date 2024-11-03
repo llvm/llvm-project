@@ -208,9 +208,7 @@ bool EvalEmitter::emitGetPtrLocal(uint32_t I, const SourceInfo &Info) {
   if (!isActive())
     return true;
 
-  auto It = Locals.find(I);
-  assert(It != Locals.end() && "Missing local variable");
-  Block *B = reinterpret_cast<Block *>(It->second.get());
+  Block *B = getLocal(I);
   S.Stk.push<Pointer>(B, sizeof(InlineDescriptor));
   return true;
 }
@@ -222,9 +220,7 @@ bool EvalEmitter::emitGetLocal(uint32_t I, const SourceInfo &Info) {
 
   using T = typename PrimConv<OpType>::T;
 
-  auto It = Locals.find(I);
-  assert(It != Locals.end() && "Missing local variable");
-  auto *B = reinterpret_cast<Block *>(It->second.get());
+  Block *B = getLocal(I);
   S.Stk.push<T>(*reinterpret_cast<T *>(B->data()));
   return true;
 }
@@ -236,9 +232,7 @@ bool EvalEmitter::emitSetLocal(uint32_t I, const SourceInfo &Info) {
 
   using T = typename PrimConv<OpType>::T;
 
-  auto It = Locals.find(I);
-  assert(It != Locals.end() && "Missing local variable");
-  auto *B = reinterpret_cast<Block *>(It->second.get());
+  Block *B = getLocal(I);
   *reinterpret_cast<T *>(B->data()) = S.Stk.pop<T>();
   InlineDescriptor &Desc = *reinterpret_cast<InlineDescriptor *>(B->rawData());
   Desc.IsInitialized = true;
@@ -251,9 +245,8 @@ bool EvalEmitter::emitDestroy(uint32_t I, const SourceInfo &Info) {
     return true;
 
   for (auto &Local : Descriptors[I]) {
-    auto It = Locals.find(Local.Offset);
-    assert(It != Locals.end() && "Missing local variable");
-    S.deallocate(reinterpret_cast<Block *>(It->second.get()));
+    Block *B = getLocal(Local.Offset);
+    S.deallocate(B);
   }
 
   return true;

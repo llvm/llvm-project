@@ -17,7 +17,6 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/ADT/Triple.h"
 #include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/Analysis/PostDominators.h"
 #include "llvm/Analysis/StackSafetyAnalysis.h"
@@ -50,6 +49,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/TargetParser/Triple.h"
 #include "llvm/Transforms/Instrumentation/AddressSanitizerCommon.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/MemoryTaggingSupport.h"
@@ -788,7 +788,7 @@ static unsigned getPointerOperandIndex(Instruction *I) {
 }
 
 static size_t TypeSizeToSizeIndex(uint32_t TypeSize) {
-  size_t Res = countTrailingZeros(TypeSize / 8);
+  size_t Res = llvm::countr_zero(TypeSize / 8);
   assert(Res < kNumberOfAccessSizes);
   return Res;
 }

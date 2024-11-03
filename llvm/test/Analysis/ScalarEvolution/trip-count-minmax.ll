@@ -10,12 +10,12 @@ define void @nomulitply(i32 noundef %a, i32 noundef %b) {
 ; CHECK-NEXT:    %cond = select i1 %cmp, i32 %a, i32 %b
 ; CHECK-NEXT:    --> (%a umin %b) U: full-set S: full-set
 ; CHECK-NEXT:    %i.08 = phi i32 [ %inc, %for.body ], [ 0, %entry ]
-; CHECK-NEXT:    --> {0,+,1}<nuw><nsw><%for.body> U: [0,-2147483648) S: [0,-2147483648) Exits: (-1 + (%a umin %b)) LoopDispositions: { %for.body: Computable }
+; CHECK-NEXT:    --> {0,+,1}<nuw><nsw><%for.body> U: [0,2147483647) S: [0,2147483647) Exits: (-1 + (%a umin %b)) LoopDispositions: { %for.body: Computable }
 ; CHECK-NEXT:    %inc = add nuw nsw i32 %i.08, 1
-; CHECK-NEXT:    --> {1,+,1}<nuw><%for.body> U: [1,0) S: [1,0) Exits: (%a umin %b) LoopDispositions: { %for.body: Computable }
+; CHECK-NEXT:    --> {1,+,1}<nuw><nsw><%for.body> U: [1,-2147483648) S: [1,-2147483648) Exits: (%a umin %b) LoopDispositions: { %for.body: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @nomulitply
 ; CHECK-NEXT:  Loop %for.body: backedge-taken count is (-1 + (%a umin %b))
-; CHECK-NEXT:  Loop %for.body: constant max backedge-taken count is -2
+; CHECK-NEXT:  Loop %for.body: constant max backedge-taken count is 2147483646
 ; CHECK-NEXT:  Loop %for.body: symbolic max backedge-taken count is (-1 + (%a umin %b))
 ; CHECK-NEXT:  Loop %for.body: Predicated backedge-taken count is (-1 + (%a umin %b))
 ; CHECK-NEXT:   Predicates:
@@ -56,16 +56,16 @@ define void @umin(i32 noundef %a, i32 noundef %b) {
 ; CHECK-NEXT:    %cond = select i1 %cmp, i32 %mul, i32 %mul1
 ; CHECK-NEXT:    --> ((2 * %a) umin (4 * %b)) U: [0,-3) S: [-2147483648,2147483647)
 ; CHECK-NEXT:    %i.011 = phi i32 [ %inc, %for.body ], [ 0, %entry ]
-; CHECK-NEXT:    --> {0,+,1}<nuw><nsw><%for.body> U: [0,-2147483648) S: [0,-2147483648) Exits: (-1 + ((2 * %a) umin (4 * %b))) LoopDispositions: { %for.body: Computable }
+; CHECK-NEXT:    --> {0,+,1}<nuw><nsw><%for.body> U: [0,2147483647) S: [0,2147483647) Exits: (-1 + ((2 * %a) umin (4 * %b))) LoopDispositions: { %for.body: Computable }
 ; CHECK-NEXT:    %inc = add nuw nsw i32 %i.011, 1
-; CHECK-NEXT:    --> {1,+,1}<nuw><%for.body> U: [1,-3) S: [1,-3) Exits: ((2 * %a) umin (4 * %b)) LoopDispositions: { %for.body: Computable }
+; CHECK-NEXT:    --> {1,+,1}<nuw><nsw><%for.body> U: [1,-2147483648) S: [1,-2147483648) Exits: ((2 * %a) umin (4 * %b)) LoopDispositions: { %for.body: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @umin
 ; CHECK-NEXT:  Loop %for.body: backedge-taken count is (-1 + ((2 * %a) umin (4 * %b)))
-; CHECK-NEXT:  Loop %for.body: constant max backedge-taken count is -5
+; CHECK-NEXT:  Loop %for.body: constant max backedge-taken count is 2147483646
 ; CHECK-NEXT:  Loop %for.body: symbolic max backedge-taken count is (-1 + ((2 * %a) umin (4 * %b)))
 ; CHECK-NEXT:  Loop %for.body: Predicated backedge-taken count is (-1 + ((2 * %a) umin (4 * %b)))
 ; CHECK-NEXT:   Predicates:
-; CHECK:       Loop %for.body: Trip multiple is 2
+; CHECK:       Loop %for.body: Trip multiple is 1
 ;
 ; void umin(unsigned a, unsigned b) {
 ;   a *= 2;
@@ -156,16 +156,16 @@ define void @smin(i32 noundef %a, i32 noundef %b) {
 ; CHECK-NEXT:    %cond = select i1 %cmp, i32 %mul, i32 %mul1
 ; CHECK-NEXT:    --> ((2 * %a)<nsw> smin (4 * %b)<nsw>) U: [0,-1) S: [-2147483648,2147483645)
 ; CHECK-NEXT:    %i.011 = phi i32 [ %inc, %for.body ], [ 0, %entry ]
-; CHECK-NEXT:    --> {0,+,1}<nuw><nsw><%for.body> U: [0,-2147483648) S: [0,-2147483648) Exits: (-1 + ((2 * %a)<nsw> smin (4 * %b)<nsw>)) LoopDispositions: { %for.body: Computable }
+; CHECK-NEXT:    --> {0,+,1}<nuw><nsw><%for.body> U: [0,2147483647) S: [0,2147483647) Exits: (-1 + ((2 * %a)<nsw> smin (4 * %b)<nsw>)) LoopDispositions: { %for.body: Computable }
 ; CHECK-NEXT:    %inc = add nuw nsw i32 %i.011, 1
-; CHECK-NEXT:    --> {1,+,1}<nuw><%for.body> U: [1,-1) S: [1,-1) Exits: ((2 * %a)<nsw> smin (4 * %b)<nsw>) LoopDispositions: { %for.body: Computable }
+; CHECK-NEXT:    --> {1,+,1}<nuw><nsw><%for.body> U: [1,-2147483648) S: [1,-2147483648) Exits: ((2 * %a)<nsw> smin (4 * %b)<nsw>) LoopDispositions: { %for.body: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @smin
 ; CHECK-NEXT:  Loop %for.body: backedge-taken count is (-1 + ((2 * %a)<nsw> smin (4 * %b)<nsw>))
-; CHECK-NEXT:  Loop %for.body: constant max backedge-taken count is -3
+; CHECK-NEXT:  Loop %for.body: constant max backedge-taken count is 2147483646
 ; CHECK-NEXT:  Loop %for.body: symbolic max backedge-taken count is (-1 + ((2 * %a)<nsw> smin (4 * %b)<nsw>))
 ; CHECK-NEXT:  Loop %for.body: Predicated backedge-taken count is (-1 + ((2 * %a)<nsw> smin (4 * %b)<nsw>))
 ; CHECK-NEXT:   Predicates:
-; CHECK:       Loop %for.body: Trip multiple is 2
+; CHECK:       Loop %for.body: Trip multiple is 1
 ;
 ; void smin(signed a, signed b) {
 ;   a *= 2;
@@ -292,12 +292,12 @@ define void @umin-3and6(i32 noundef %a, i32 noundef %b) {
 ; CHECK-NEXT:    %cond = select i1 %cmp, i32 %mul, i32 %mul1
 ; CHECK-NEXT:    --> ((3 * %a) umin (6 * %b)) U: [0,-1) S: full-set
 ; CHECK-NEXT:    %i.011 = phi i32 [ %inc, %for.body ], [ 0, %entry ]
-; CHECK-NEXT:    --> {0,+,1}<nuw><nsw><%for.body> U: [0,-2147483648) S: [0,-2147483648) Exits: (-1 + ((3 * %a) umin (6 * %b))) LoopDispositions: { %for.body: Computable }
+; CHECK-NEXT:    --> {0,+,1}<nuw><nsw><%for.body> U: [0,2147483647) S: [0,2147483647) Exits: (-1 + ((3 * %a) umin (6 * %b))) LoopDispositions: { %for.body: Computable }
 ; CHECK-NEXT:    %inc = add nuw nsw i32 %i.011, 1
-; CHECK-NEXT:    --> {1,+,1}<nuw><%for.body> U: [1,-1) S: [1,-1) Exits: ((3 * %a) umin (6 * %b)) LoopDispositions: { %for.body: Computable }
+; CHECK-NEXT:    --> {1,+,1}<nuw><nsw><%for.body> U: [1,-2147483648) S: [1,-2147483648) Exits: ((3 * %a) umin (6 * %b)) LoopDispositions: { %for.body: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @umin-3and6
 ; CHECK-NEXT:  Loop %for.body: backedge-taken count is (-1 + ((3 * %a) umin (6 * %b)))
-; CHECK-NEXT:  Loop %for.body: constant max backedge-taken count is -3
+; CHECK-NEXT:  Loop %for.body: constant max backedge-taken count is 2147483646
 ; CHECK-NEXT:  Loop %for.body: symbolic max backedge-taken count is (-1 + ((3 * %a) umin (6 * %b)))
 ; CHECK-NEXT:  Loop %for.body: Predicated backedge-taken count is (-1 + ((3 * %a) umin (6 * %b)))
 ; CHECK-NEXT:   Predicates:

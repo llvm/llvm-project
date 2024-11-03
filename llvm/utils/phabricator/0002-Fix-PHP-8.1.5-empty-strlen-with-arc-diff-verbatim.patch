@@ -1,0 +1,36 @@
+From 3a6e789fe893fc8c855826994d044d17a281fd85 Mon Sep 17 00:00:00 2001
+From: Justin Stitt <justinstitt@google.com>
+Date: Thu, 11 Aug 2022 10:26:21 -0700
+Subject: [PATCH] Fix PHP 8.1.5 empty strlen with <$ arc diff --verbatim>
+
+Fixes the following observed error with PHP 8.1.5:
+| EXCEPTION: (RuntimeException) strlen(): Passing null to parameter #1 ($string) of type string is deprecated at [<arcanist>/src/error/PhutilErrorHandler.php:261]
+| arcanist(head=master, ref.master=680fe6d06e5a)
+|   #0 PhutilErrorHandler::handleError(integer, string, string, integer) called at [<arcanist>/src/workflow/ArcanistDiffWorkflow.php:2364]
+|   #1 ArcanistDiffWorkflow::getDiffOntoTargets() called at [<arcanist>/src/workflow/ArcanistDiffWorkflow.php:2342]
+|   #2 ArcanistDiffWorkflow::updateOntoDiffProperty() called at [<arcanist>/src/workflow/ArcanistDiffWorkflow.php:409]
+|   #3 ArcanistDiffWorkflow::run() called at [<arcanist>/scripts/arcanist.php:427]
+
+Link: https://secure.phabricator.com/book/phabcontrib/article/contributing_code/
+Link: https://reviews.llvm.org/D129232#3634072
+Signed-off-by: Justin Stitt <justinstitt@google.com>
+---
+ src/workflow/ArcanistDiffWorkflow.php | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/src/workflow/ArcanistDiffWorkflow.php b/src/workflow/ArcanistDiffWorkflow.php
+index 5b8ff40c..1b717b23 100644
+--- a/src/workflow/ArcanistDiffWorkflow.php
++++ b/src/workflow/ArcanistDiffWorkflow.php
+@@ -2361,7 +2361,7 @@ EOTEXT
+ 
+     // If we track an upstream branch either directly or indirectly, use that.
+     $branch = $api->getBranchName();
+-    if (strlen($branch)) {
++    if (phutil_nonempty_string($branch) && strlen($branch)) {
+       $upstream_path = $api->getPathToUpstream($branch);
+       $remote_branch = $upstream_path->getRemoteBranchName();
+       if ($remote_branch !== null) {
+-- 
+2.37.1.559.g78731f0fdb-goog
+

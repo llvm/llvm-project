@@ -14,10 +14,8 @@ define <4 x i8> @srem_v4i8(<4 x i8> %op1, <4 x i8> %op2) #0 {
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    ptrue p0.h, vl4
 ; CHECK-NEXT:    ptrue p1.s, vl4
-; CHECK-NEXT:    lsl z1.h, p0/m, z1.h, #8
-; CHECK-NEXT:    lsl z0.h, p0/m, z0.h, #8
-; CHECK-NEXT:    asr z1.h, p0/m, z1.h, #8
-; CHECK-NEXT:    asr z0.h, p0/m, z0.h, #8
+; CHECK-NEXT:    sxtb z1.h, p0/m, z1.h
+; CHECK-NEXT:    sxtb z0.h, p0/m, z0.h
 ; CHECK-NEXT:    sunpklo z2.s, z1.h
 ; CHECK-NEXT:    sunpklo z3.s, z0.h
 ; CHECK-NEXT:    sdivr z2.s, p1/m, z2.s, z3.s

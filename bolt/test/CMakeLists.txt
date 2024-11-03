@@ -52,6 +52,7 @@ list(APPEND BOLT_TEST_DEPS
   merge-fdata
   not
   perf2bolt
+  split-file
   yaml2obj
   )
 

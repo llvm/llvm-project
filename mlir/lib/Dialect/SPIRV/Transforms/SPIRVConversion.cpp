@@ -252,8 +252,6 @@ convertVectorType(const spirv::TargetEnv &targetEnv,
     return convertScalarType(targetEnv, options, scalarType, storageClass);
 
   if (!spirv::CompositeType::isValid(type)) {
-    // TODO: Vector types with more than four elements can be translated into
-    // array types.
     LLVM_DEBUG(llvm::dbgs() << type << " illegal: > 4-element unimplemented\n");
     return nullptr;
   }

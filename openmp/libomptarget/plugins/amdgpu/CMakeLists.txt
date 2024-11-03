@@ -22,7 +22,7 @@ endif()
 # as of rocm-3.7, hsa is installed with cmake packages and kmt is found via hsa
 find_package(hsa-runtime64 QUIET 1.2.0 HINTS ${CMAKE_INSTALL_PREFIX} PATHS /opt/rocm)
 
-if(NOT CMAKE_SYSTEM_PROCESSOR MATCHES "(x86_64)|(ppc64le)|(aarch64)$" AND CMAKE_SYSTEM_NAME MATCHES "Linux")
+if(NOT (CMAKE_SYSTEM_PROCESSOR MATCHES "(x86_64)|(ppc64le)|(aarch64)$" AND CMAKE_SYSTEM_NAME MATCHES "Linux"))
   libomptarget_say("Not building AMDGPU plugin: only support AMDGPU in Linux x86_64, ppc64le, or aarch64 hosts")
   return()
 endif()
@@ -90,7 +90,6 @@ add_llvm_library(omptarget.rtl.amdgpu SHARED
 
   NO_INSTALL_RPATH
 )
-add_dependencies(omptarget.rtl.amdgpu omptarget.devicertl.amdgpu)
 
 target_include_directories(
   omptarget.rtl.amdgpu
@@ -114,8 +113,7 @@ set_target_properties(omptarget.rtl.amdgpu PROPERTIES
 option(LIBOMPTARGET_FORCE_AMDGPU_TESTS "Build AMDGPU libomptarget tests" OFF)
 if (LIBOMPTARGET_FOUND_AMDGPU_GPU OR LIBOMPTARGET_FORCE_AMDGPU_TESTS)
   # Report to the parent scope that we are building a plugin for amdgpu
-  set(LIBOMPTARGET_SYSTEM_TARGETS "${LIBOMPTARGET_SYSTEM_TARGETS} amdgcn-amd-amdhsa amdgcn-amd-amdhsa-oldDriver" PARENT_SCOPE)
-  set(LIBOMPTARGET_SYSTEM_TARGETS "${LIBOMPTARGET_SYSTEM_TARGETS} amdgcn-amd-amdhsa amdgcn-amd-amdhsa-LTO" PARENT_SCOPE)
+  set(LIBOMPTARGET_SYSTEM_TARGETS "${LIBOMPTARGET_SYSTEM_TARGETS} amdgcn-amd-amdhsa" PARENT_SCOPE)
   list(APPEND LIBOMPTARGET_TESTED_PLUGINS "omptarget.rtl.amdgpu")
   set(LIBOMPTARGET_TESTED_PLUGINS "${LIBOMPTARGET_TESTED_PLUGINS}" PARENT_SCOPE)
 else()

@@ -4,9 +4,9 @@
       module m
        contains
         subroutine subr(parg)
-          !PORTABILITY: A procedure pointer should not have assumed-length CHARACTER(*) result type
+          !PORTABILITY: A dummy procedure pointer should not have assumed-length CHARACTER(*) result type
           procedure(character(*)), pointer :: parg
-          !PORTABILITY: A procedure pointer should not have assumed-length CHARACTER(*) result type
+          !ERROR: An assumed (*) type parameter may be used only for a (non-statement function) dummy argument, associate name, named constant, or external function result
           procedure(character(*)), pointer :: plocal
           print *, parg()
           plocal => parg
@@ -14,7 +14,7 @@
         end subroutine
 
         subroutine subr_1(parg_1)
-          !PORTABILITY: A procedure pointer should not have assumed-length CHARACTER(*) result type
+          !PORTABILITY: A dummy procedure pointer should not have assumed-length CHARACTER(*) result type
           procedure(character(*)), pointer :: parg_1
           print *, parg_1()
         end subroutine

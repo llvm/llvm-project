@@ -1100,6 +1100,10 @@ bool UnclusteredHighRPStage::shouldRevertScheduling(unsigned WavesAfter) {
     return true;
   }
 
+  // Do not attempt to relax schedule even more if we are already spilling.
+  if (isRegionWithExcessRP())
+    return false;
+
   LLVM_DEBUG(
       dbgs()
       << "\n\t      *** In shouldRevertScheduling ***\n"

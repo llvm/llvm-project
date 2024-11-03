@@ -71,5 +71,6 @@ declare void @_ZSt9terminatev()
 ; CHECK-LABEL: Contents of section .eh_frame:
 ; CHECK-NEXT: {{^ 0000}}
 ; CHECK-NEXT: {{^ 0010}}
-; CHECK-NEXT: 0000 0000001c
+; CHECK-NEXT: 0020 0000000c 00440e10 9e040000 0000001c .....D..........
+; CHECK-NEXT: 0030 00000000 017a504c 5200017c 1e0b9c00 .....zPLR..|....
 

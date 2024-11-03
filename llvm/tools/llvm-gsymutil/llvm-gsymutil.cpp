@@ -8,7 +8,6 @@
 
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringSet.h"
-#include "llvm/ADT/Triple.h"
 #include "llvm/DebugInfo/DIContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/Object/Archive.h"
@@ -25,6 +24,7 @@
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/TargetParser/Triple.h"
 #include <algorithm>
 #include <cstring>
 #include <inttypes.h>

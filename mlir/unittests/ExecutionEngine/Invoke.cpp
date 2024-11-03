@@ -52,8 +52,8 @@ static struct LLVMInitializer {
 /// Simple conversion pipeline for the purpose of testing sources written in
 /// dialects lowering to LLVM Dialect.
 static LogicalResult lowerToLLVMDialect(ModuleOp module) {
-  PassManager pm(module.getContext());
-  pm.addPass(mlir::createMemRefToLLVMConversionPass());
+  PassManager pm(module->getName());
+  pm.addPass(mlir::createFinalizeMemRefToLLVMConversionPass());
   pm.addNestedPass<func::FuncOp>(mlir::createArithToLLVMConversionPass());
   pm.addPass(mlir::createConvertFuncToLLVMPass());
   pm.addPass(mlir::createReconcileUnrealizedCastsPass());

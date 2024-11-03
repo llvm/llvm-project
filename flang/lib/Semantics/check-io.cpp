@@ -613,11 +613,9 @@ void IoChecker::Enter(const parser::OutputItem &item) {
       if (evaluate::IsBOZLiteral(*expr)) {
         context_.Say(parser::FindSourceLocation(*x), // C7109
             "Output item must not be a BOZ literal constant"_err_en_US);
-      }
-      const Symbol *last{GetLastSymbol(*expr)};
-      if (last && IsProcedurePointer(*last)) {
+      } else if (IsProcedure(*expr)) {
         context_.Say(parser::FindSourceLocation(*x),
-            "Output item must not be a procedure pointer"_err_en_US); // C1233
+            "Output item must not be a procedure"_err_en_US); // C1233
       }
       CheckForBadIoType(*expr,
           flags_.test(Flag::FmtOrNml)

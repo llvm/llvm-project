@@ -817,12 +817,17 @@ public:
 
     // Normalize the summed value by the number of elements grouped in each
     // pool.
-    auto poolingOpTy = poolingOp.getType().cast<ShapedType>();
-    auto affineMap = rewriter.getMultiDimIdentityMap(resultTy.getRank());
+    Value iH = rewriter.create<tensor::DimOp>(loc, poolingOp, 1);
+    Value iW = rewriter.create<tensor::DimOp>(loc, poolingOp, 2);
+
+    auto one = rewriter.create<arith::ConstantIndexOp>(loc, 1);
+    iH = rewriter.create<arith::SubIOp>(loc, iH, one);
+    iW = rewriter.create<arith::SubIOp>(loc, iW, one);
 
     Value genericEmptyTensor = rewriter.create<tensor::EmptyOp>(
         loc, resultTy.getShape(), resultETy, dynamicDims);
 
+    auto affineMap = rewriter.getMultiDimIdentityMap(resultTy.getRank());
     auto genericOp = rewriter.create<linalg::GenericOp>(
         loc, ArrayRef<Type>({resultTy}), ValueRange{poolingOp},
         ValueRange{genericEmptyTensor},
@@ -830,60 +835,59 @@ public:
         getNParallelLoopsAttrs(resultTy.getRank()),
         [&](OpBuilder &b, Location loc, ValueRange args) {
           auto zero = rewriter.create<arith::ConstantIndexOp>(loc, 0);
-          auto one = rewriter.create<arith::ConstantIndexOp>(loc, 1);
-          auto iH = rewriter.create<arith::ConstantIndexOp>(
-              loc, poolingOpTy.getDimSize(1) - 1);
-          auto iW = rewriter.create<arith::ConstantIndexOp>(
-              loc, poolingOpTy.getDimSize(2) - 1);
-
-          // Compute the indices from either end.
-          auto y0 = rewriter.create<linalg::IndexOp>(loc, 1);
-          auto x0 = rewriter.create<linalg::IndexOp>(loc, 2);
-          auto y1 = rewriter.create<arith::SubIOp>(loc, iH, y0);
-          auto x1 = rewriter.create<arith::SubIOp>(loc, iW, x0);
 
           // Determines what the portion of valid input is covered by the
           // kernel.
-          auto padFn = [&](Value v, Value x, int64_t pad) -> Value {
+          auto padFn = [&](Value valid, Value pos, int64_t pad) -> Value {
             if (pad == 0)
-              return v;
+              return valid;
 
             auto padVal = rewriter.create<arith::ConstantIndexOp>(loc, pad);
-            Value dx = rewriter.create<arith::SubIOp>(loc, x, padVal);
+            Value dpos = rewriter.create<arith::SubIOp>(loc, pos, padVal);
 
             Value cmp = rewriter.create<arith::CmpIOp>(
-                loc, arith::CmpIPredicate::slt, dx, zero);
-            Value offset = rewriter.create<arith::SelectOp>(loc, cmp, dx, zero);
-            return rewriter.create<arith::AddIOp>(loc, v, offset)->getResult(0);
+                loc, arith::CmpIPredicate::slt, dpos, zero);
+            Value offset =
+                rewriter.create<arith::SelectOp>(loc, cmp, dpos, zero);
+            return rewriter.create<arith::AddIOp>(loc, valid, offset)
+                ->getResult(0);
           };
 
-          // Compute the vertical component of coverage.
-          auto kH0 = rewriter.create<arith::ConstantIndexOp>(loc, kernel[0]);
-          auto kH1 = padFn(kH0, y0, pad[2]);
-          auto kH2 = padFn(kH1, y1, pad[3]);
-          auto kHCmp = rewriter.create<arith::CmpIOp>(
-              loc, arith::CmpIPredicate::slt, kH2, one);
-          auto kH3 = rewriter.create<arith::SelectOp>(loc, kHCmp, one, kH2);
+          auto coverageFn = [&](int64_t i, Value isize) -> Value {
+            Value strideVal =
+                rewriter.create<arith::ConstantIndexOp>(loc, stride[i - 1]);
+            Value val =
+                rewriter.create<arith::ConstantIndexOp>(loc, kernel[i - 1]);
 
-          // compute the horizontal component of coverage.
-          auto kW0 = rewriter.create<arith::ConstantIndexOp>(loc, kernel[1]);
-          auto kW1 = padFn(kW0, x0, pad[4]);
-          auto kW2 = padFn(kW1, x1, pad[5]);
-          auto kWCmp = rewriter.create<arith::CmpIOp>(
-              loc, arith::CmpIPredicate::slt, kW2, one);
-          auto kW3 = rewriter.create<arith::SelectOp>(loc, kWCmp, one, kW2);
+            // Find the position relative to the input tensor's ends.
+            Value left = rewriter.create<linalg::IndexOp>(loc, i);
+            Value right = rewriter.create<arith::SubIOp>(loc, isize, left);
+            left = rewriter.create<arith::MulIOp>(loc, left, strideVal);
+            right = rewriter.create<arith::MulIOp>(loc, right, strideVal);
+
+            // Determine how much padding was included.
+            val = padFn(val, left, pad[i * 2]);
+            val = padFn(val, right, pad[i * 2 + 1]);
+            Value cmp = rewriter.create<arith::CmpIOp>(
+                loc, arith::CmpIPredicate::slt, val, one);
+            return rewriter.create<arith::SelectOp>(loc, cmp, one, val);
+          };
+
+          // Compute the indices from either end.
+          Value kH3 = coverageFn(1, iH);
+          Value kW3 = coverageFn(2, iW);
 
           // Compute the total number of elements and normalize.
-          Value count = rewriter.create<arith::MulIOp>(loc, kH3, kW3);
-          auto countI = rewriter.create<arith::IndexCastOp>(
-              loc, rewriter.getI32Type(), count);
+          auto count = rewriter.create<arith::IndexCastOp>(
+              loc, rewriter.getI32Type(),
+              rewriter.create<arith::MulIOp>(loc, kH3, kW3));
 
           // Divide by the number of summed values. For floats this is just
           // a div however for quantized values input normalization had
           // to be applied.
           Value poolVal = args[0];
           if (accETy.isa<FloatType>()) {
-            auto countF = rewriter.create<arith::SIToFPOp>(loc, accETy, countI);
+            auto countF = rewriter.create<arith::SIToFPOp>(loc, accETy, count);
             poolVal = rewriter.create<arith::DivFOp>(loc, poolVal, countF)
                           ->getResult(0);
           } else {
@@ -895,33 +899,52 @@ public:
               auto inputZp = rewriter.create<arith::ConstantOp>(
                   loc, b.getIntegerAttr(accETy, quantizationInfo.getInputZp()));
               Value offset =
-                  rewriter.create<arith::MulIOp>(loc, accETy, countI, inputZp);
+                  rewriter.create<arith::MulIOp>(loc, accETy, count, inputZp);
               poolVal =
                   rewriter.create<arith::SubIOp>(loc, accETy, poolVal, offset);
             }
 
-            // Compute the multiplier and shift values for the quantization
-            // normalization. Preferably we would want to compute more bits
-            // however 32-bits should be enough for compute. Honestly we
-            // should probably straight divide.
-            int64_t numerator = ((1 << 30) + 1);
-            int64_t shift = 30;
+            // Compute: k = 32 - count_leading_zeros(value - 1)
+            Value one32 = rewriter.create<arith::ConstantOp>(
+                loc, rewriter.getI32IntegerAttr(1));
+            Value thirtyTwo32 = rewriter.create<arith::ConstantOp>(
+                loc, rewriter.getI32IntegerAttr(32));
 
-            Value numeratorVal = rewriter.create<arith::ConstantOp>(
-                loc, rewriter.getI32IntegerAttr(numerator));
-            Value multiplierVal =
-                rewriter
-                    .create<arith::DivUIOp>(loc, rewriter.getI32Type(),
-                                            numeratorVal, countI)
-                    .getResult();
-            Value shiftVal = rewriter.create<arith::ConstantOp>(
-                loc, rewriter.getI8IntegerAttr(shift));
+            Value countSubOne =
+                rewriter.create<arith::SubIOp>(loc, count, one32);
+            Value leadingZeros =
+                rewriter.create<math::CountLeadingZerosOp>(loc, countSubOne);
+            Value k =
+                rewriter.create<arith::SubIOp>(loc, thirtyTwo32, leadingZeros);
+
+            // Compute: numerator = ((1 << 30) + 1) << k
+            Value k64 =
+                rewriter.create<arith::ExtUIOp>(loc, rewriter.getI64Type(), k);
+            Value thirtyShiftPlusOne = rewriter.create<arith::ConstantOp>(
+                loc, rewriter.getI64IntegerAttr((1 << 30) + 1));
+            Value numerator =
+                rewriter.create<arith::ShLIOp>(loc, thirtyShiftPlusOne, k64);
+
+            // Compute: scale.multiplier = numerator / value;
+            Value count64 = rewriter.create<arith::ExtUIOp>(
+                loc, rewriter.getI64Type(), count);
+            Value multiplier =
+                rewriter.create<arith::DivUIOp>(loc, numerator, count64);
+            multiplier = rewriter.create<arith::TruncIOp>(
+                loc, rewriter.getI32Type(), multiplier);
+
+            // Compute: scale.shift = 30 + k
+            Value k8 =
+                rewriter.create<arith::TruncIOp>(loc, rewriter.getI8Type(), k);
+            Value thirty8 = rewriter.create<arith::ConstantOp>(
+                loc, rewriter.getI8IntegerAttr(30));
+            Value shift = rewriter.create<arith::AddIOp>(loc, k8, thirty8);
 
             auto scaled =
                 rewriter
-                    .create<tosa::ApplyScaleOp>(
-                        loc, rewriter.getI32Type(), poolVal, multiplierVal,
-                        shiftVal, rewriter.getBoolAttr(false))
+                    .create<tosa::ApplyScaleOp>(loc, rewriter.getI32Type(),
+                                                poolVal, multiplier, shift,
+                                                rewriter.getBoolAttr(false))
                     .getResult();
 
             // If we have quantization information we need to apply output

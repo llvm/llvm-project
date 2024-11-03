@@ -1,5 +1,5 @@
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 --amdhsa-code-object-version=5 -filetype=obj -o - < %s | llvm-readelf --notes - | FileCheck %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 --amdhsa-code-object-version=5 < %s | FileCheck --check-prefix=CHECK %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -filetype=obj -o - < %s | llvm-readelf --notes - | FileCheck %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 < %s | FileCheck --check-prefix=CHECK %s
 
 declare void @function1()
 
@@ -292,3 +292,6 @@ define amdgpu_kernel void @test_kernel72() #2 {
 attributes #0 = { "amdgpu-no-heap-ptr" }
 attributes #1 = { nounwind readnone speculatable willreturn }
 attributes #2 = { noinline }
+
+!llvm.module.flags = !{!0}
+!0 = !{i32 1, !"amdgpu_code_object_version", i32 500}

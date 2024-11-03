@@ -13,6 +13,7 @@
 #ifndef MLIR_IR_STORAGEUNIQUERSUPPORT_H
 #define MLIR_IR_STORAGEUNIQUERSUPPORT_H
 
+#include "mlir/IR/AttrTypeSubElements.h"
 #include "mlir/Support/InterfaceSupport.h"
 #include "mlir/Support/LogicalResult.h"
 #include "mlir/Support/StorageUniquer.h"
@@ -123,6 +124,26 @@ public:
   static HasTraitFn getHasTraitFn() {
     return [](TypeID id) {
       return storage_user_base_impl::hasTrait<Traits...>(id);
+    };
+  }
+
+  /// Returns a function that walks immediate sub elements of a given instance
+  /// of the storage user.
+  static auto getWalkImmediateSubElementsFn() {
+    return [](auto instance, function_ref<void(Attribute)> walkAttrsFn,
+              function_ref<void(Type)> walkTypesFn) {
+      ::mlir::detail::walkImmediateSubElementsImpl(
+          llvm::cast<ConcreteT>(instance), walkAttrsFn, walkTypesFn);
+    };
+  }
+
+  /// Returns a function that replaces immediate sub elements of a given
+  /// instance of the storage user.
+  static auto getReplaceImmediateSubElementsFn() {
+    return [](auto instance, ArrayRef<Attribute> replAttrs,
+              ArrayRef<Type> replTypes) {
+      return ::mlir::detail::replaceImmediateSubElementsImpl(
+          llvm::cast<ConcreteT>(instance), replAttrs, replTypes);
     };
   }
 

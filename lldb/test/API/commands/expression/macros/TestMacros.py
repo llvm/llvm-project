@@ -129,3 +129,9 @@ class TestMacros(TestBase):
         result = frame.EvaluateExpression("MACRO_2")
         self.assertTrue(result.GetError().Fail(),
                         "Printing MACRO_2 fails in the header file")
+
+        # Check that the macro definitions do not trigger bogus Clang
+        # diagnostics about macro redefinitions.
+        result = frame.EvaluateExpression("does_not_parse")
+        self.assertNotIn("macro redefined", str(result.GetError()))
+        self.assertNotIn("redefining builtin macro", str(result.GetError()))

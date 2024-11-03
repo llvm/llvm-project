@@ -284,6 +284,12 @@ TEST(KnownBitsTest, UnaryExhaustive) {
     KnownAbs.Zero.setAllBits();
     KnownAbs.One.setAllBits();
     KnownBits KnownAbsPoison(KnownAbs);
+    KnownBits KnownBlsi(Bits);
+    KnownBlsi.Zero.setAllBits();
+    KnownBlsi.One.setAllBits();
+    KnownBits KnownBlsmsk(Bits);
+    KnownBlsmsk.Zero.setAllBits();
+    KnownBlsmsk.One.setAllBits();
 
     ForeachNumInKnownBits(Known, [&](const APInt &N) {
       APInt Res = N.abs();
@@ -294,6 +300,14 @@ TEST(KnownBitsTest, UnaryExhaustive) {
         KnownAbsPoison.One &= Res;
         KnownAbsPoison.Zero &= ~Res;
       }
+
+      Res = N & -N;
+      KnownBlsi.One &= Res;
+      KnownBlsi.Zero &= ~Res;
+
+      Res = N ^ (N - 1);
+      KnownBlsmsk.One &= Res;
+      KnownBlsmsk.Zero &= ~Res;
     });
 
     // abs() is conservatively correct, but not guaranteed to be precise.
@@ -304,6 +318,12 @@ TEST(KnownBitsTest, UnaryExhaustive) {
     KnownBits ComputedAbsPoison = Known.abs(true);
     EXPECT_TRUE(ComputedAbsPoison.Zero.isSubsetOf(KnownAbsPoison.Zero));
     EXPECT_TRUE(ComputedAbsPoison.One.isSubsetOf(KnownAbsPoison.One));
+
+    KnownBits ComputedBlsi = Known.blsi();
+    EXPECT_EQ(KnownBlsi, ComputedBlsi);
+
+    KnownBits ComputedBlsmsk = Known.blsmsk();
+    EXPECT_EQ(KnownBlsmsk, ComputedBlsmsk);
   });
 }
 

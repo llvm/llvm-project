@@ -1,8 +1,6 @@
 // RUN: %libomptarget-compileopt-run-and-check-generic
 
 // UNSUPPORTED: amdgcn-amd-amdhsa
-// UNSUPPORTED: amdgcn-amd-amdhsa-oldDriver
-// UNSUPPORTED: amdgcn-amd-amdhsa-LTO
 
 #include <omp.h>
 #include <stdio.h>

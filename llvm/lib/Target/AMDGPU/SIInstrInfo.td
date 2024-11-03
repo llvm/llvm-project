@@ -50,14 +50,6 @@ def SIds_ordered_count : SDNode<"AMDGPUISD::DS_ORDERED_COUNT",
   [SDNPMayLoad, SDNPMayStore, SDNPMemOperand, SDNPHasChain, SDNPInGlue]
 >;
 
-def SIatomic_inc : SDNode<"AMDGPUISD::ATOMIC_INC", SDTAtomic2,
-  [SDNPMayLoad, SDNPMayStore, SDNPMemOperand, SDNPHasChain]
->;
-
-def SIatomic_dec : SDNode<"AMDGPUISD::ATOMIC_DEC", SDTAtomic2,
-  [SDNPMayLoad, SDNPMayStore, SDNPMemOperand, SDNPHasChain]
->;
-
 def SDTAtomic2_f32 : SDTypeProfile<1, 2, [
   SDTCisSameAs<0,2>, SDTCisFP<0>, SDTCisPtrTy<1>
 ]>;
@@ -355,8 +347,6 @@ class isPackedType<ValueType SrcVT> {
 // PatFrags for global memory operations
 //===----------------------------------------------------------------------===//
 
-defm atomic_inc : binary_atomic_op_all_as<SIatomic_inc>;
-defm atomic_dec : binary_atomic_op_all_as<SIatomic_dec>;
 defm atomic_load_fmin : binary_atomic_op_all_as<SIatomic_fmin, 0>;
 defm atomic_load_fmax : binary_atomic_op_all_as<SIatomic_fmax, 0>;
 
@@ -762,8 +752,8 @@ multiclass SIAtomicM0Glue2 <string op_name, bit is_amdgpu = 0,
 
 defm atomic_load_add : SIAtomicM0Glue2 <"LOAD_ADD">;
 defm atomic_load_sub : SIAtomicM0Glue2 <"LOAD_SUB">;
-defm atomic_inc : SIAtomicM0Glue2 <"INC", 1>;
-defm atomic_dec : SIAtomicM0Glue2 <"DEC", 1>;
+defm atomic_load_uinc_wrap : SIAtomicM0Glue2 <"LOAD_UINC_WRAP">;
+defm atomic_load_udec_wrap : SIAtomicM0Glue2 <"LOAD_UDEC_WRAP">;
 defm atomic_load_and : SIAtomicM0Glue2 <"LOAD_AND">;
 defm atomic_load_min : SIAtomicM0Glue2 <"LOAD_MIN">;
 defm atomic_load_max : SIAtomicM0Glue2 <"LOAD_MAX">;
@@ -1229,8 +1219,8 @@ class NamedOperandU32Default1<string Name, AsmOperandClass MatchClass> :
 
 let OperandType = "OPERAND_IMMEDIATE" in {
 
-def flat_offset : CustomOperand<i16, 1, "FlatOffset">;
-def offset : NamedIntOperand<i16, "offset", "Offset">;
+def flat_offset : CustomOperand<i32, 1, "FlatOffset">;
+def offset : NamedIntOperand<i32, "offset", "Offset">;
 def offset0 : NamedIntOperand<i8, "offset0", "Offset0">;
 def offset1 : NamedIntOperand<i8, "offset1", "Offset1">;
 
@@ -1717,7 +1707,7 @@ class getVOP3SrcForVT<ValueType VT> {
   bit isFP = isFloatType<VT>.ret;
   RegisterOperand ret =
   !if(!eq(VT.Size, 128),
-     VSrc_128,
+     VRegSrc_128,
      !if(!eq(VT.Size, 64),
         !if(isFP,
            !if(!eq(VT.Value, v2f32.Value),
@@ -2445,7 +2435,7 @@ class VOPProfile <list<ValueType> _ArgVT, bit _EnableClamp = 0> {
   field RegisterClass Src1DPP = getVregSrcForVT<Src1VT>.ret;
   field RegisterClass Src2DPP = getVregSrcForVT<Src2VT>.ret;
   field RegisterOperand Src0VOP3DPP = VGPRSrc_32;
-  field RegisterOperand Src1VOP3DPP = VGPRSrc_32;
+  field RegisterOperand Src1VOP3DPP = VRegSrc_32;
   field RegisterOperand Src2VOP3DPP = getVOP3DPPSrcForVT<Src2VT>.ret;
   field RegisterOperand Src0SDWA = getSDWASrcForVT<Src0VT>.ret;
   field RegisterOperand Src1SDWA = getSDWASrcForVT<Src0VT>.ret;

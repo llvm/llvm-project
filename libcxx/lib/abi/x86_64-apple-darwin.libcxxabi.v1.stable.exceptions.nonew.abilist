@@ -1540,21 +1540,6 @@
 {'is_defined': True, 'name': '__ZNSt3__123__libcpp_atomic_monitorEPVKNS_17__cxx_atomic_implIxNS_22__cxx_atomic_base_implIxEEEE', 'type': 'FUNC'}
 {'is_defined': True, 'name': '__ZNSt3__123__libcpp_atomic_monitorEPVKv', 'type': 'FUNC'}
 {'is_defined': True, 'name': '__ZNSt3__125notify_all_at_thread_exitERNS_18condition_variableENS_11unique_lockINS_5mutexEEE', 'type': 'FUNC'}
-{'is_defined': True, 'name': '__ZNSt3__127__insertion_sort_incompleteIRNS_6__lessIaaEEPaEEbT0_S5_T_', 'type': 'FUNC'}
-{'is_defined': True, 'name': '__ZNSt3__127__insertion_sort_incompleteIRNS_6__lessIccEEPcEEbT0_S5_T_', 'type': 'FUNC'}
-{'is_defined': True, 'name': '__ZNSt3__127__insertion_sort_incompleteIRNS_6__lessIddEEPdEEbT0_S5_T_', 'type': 'FUNC'}
-{'is_defined': True, 'name': '__ZNSt3__127__insertion_sort_incompleteIRNS_6__lessIeeEEPeEEbT0_S5_T_', 'type': 'FUNC'}
-{'is_defined': True, 'name': '__ZNSt3__127__insertion_sort_incompleteIRNS_6__lessIffEEPfEEbT0_S5_T_', 'type': 'FUNC'}
-{'is_defined': True, 'name': '__ZNSt3__127__insertion_sort_incompleteIRNS_6__lessIhhEEPhEEbT0_S5_T_', 'type': 'FUNC'}
-{'is_defined': True, 'name': '__ZNSt3__127__insertion_sort_incompleteIRNS_6__lessIiiEEPiEEbT0_S5_T_', 'type': 'FUNC'}
-{'is_defined': True, 'name': '__ZNSt3__127__insertion_sort_incompleteIRNS_6__lessIjjEEPjEEbT0_S5_T_', 'type': 'FUNC'}
-{'is_defined': True, 'name': '__ZNSt3__127__insertion_sort_incompleteIRNS_6__lessIllEEPlEEbT0_S5_T_', 'type': 'FUNC'}
-{'is_defined': True, 'name': '__ZNSt3__127__insertion_sort_incompleteIRNS_6__lessImmEEPmEEbT0_S5_T_', 'type': 'FUNC'}
-{'is_defined': True, 'name': '__ZNSt3__127__insertion_sort_incompleteIRNS_6__lessIssEEPsEEbT0_S5_T_', 'type': 'FUNC'}
-{'is_defined': True, 'name': '__ZNSt3__127__insertion_sort_incompleteIRNS_6__lessIttEEPtEEbT0_S5_T_', 'type': 'FUNC'}
-{'is_defined': True, 'name': '__ZNSt3__127__insertion_sort_incompleteIRNS_6__lessIwwEEPwEEbT0_S5_T_', 'type': 'FUNC'}
-{'is_defined': True, 'name': '__ZNSt3__127__insertion_sort_incompleteIRNS_6__lessIxxEEPxEEbT0_S5_T_', 'type': 'FUNC'}
-{'is_defined': True, 'name': '__ZNSt3__127__insertion_sort_incompleteIRNS_6__lessIyyEEPyEEbT0_S5_T_', 'type': 'FUNC'}
 {'is_defined': True, 'name': '__ZNSt3__131__arrive_barrier_algorithm_baseEPNS_24__barrier_algorithm_baseEh', 'type': 'FUNC'}
 {'is_defined': True, 'name': '__ZNSt3__132__destroy_barrier_algorithm_baseEPNS_24__barrier_algorithm_baseE', 'type': 'FUNC'}
 {'is_defined': True, 'name': '__ZNSt3__134__construct_barrier_algorithm_baseERl', 'type': 'FUNC'}
@@ -1739,7 +1724,6 @@
 {'is_defined': True, 'name': '__ZNSt3__16thread6detachEv', 'type': 'FUNC'}
 {'is_defined': True, 'name': '__ZNSt3__16threadD1Ev', 'type': 'FUNC'}
 {'is_defined': True, 'name': '__ZNSt3__16threadD2Ev', 'type': 'FUNC'}
-{'is_defined': True, 'name': '__ZNSt3__17__sort5IRNS_6__lessIeeEEPeEEjT0_S5_S5_S5_S5_T_', 'type': 'FUNC'}
 {'is_defined': True, 'name': '__ZNSt3__17codecvtIDiDu11__mbstate_tE2idE', 'size': 0, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '__ZNSt3__17codecvtIDiDu11__mbstate_tED0Ev', 'type': 'FUNC'}
 {'is_defined': True, 'name': '__ZNSt3__17codecvtIDiDu11__mbstate_tED1Ev', 'type': 'FUNC'}

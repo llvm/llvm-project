@@ -320,7 +320,7 @@ uint64_t ResourceManager::checkAvailability(const InstrDesc &Desc) const {
         continue;
       }
 
-      uint64_t ResourceMask = PowerOf2Floor(ReadyMask);
+      uint64_t ResourceMask = llvm::bit_floor(ReadyMask);
 
       auto it = AvailableUnits.find(ResourceMask);
       if (it == AvailableUnits.end()) {

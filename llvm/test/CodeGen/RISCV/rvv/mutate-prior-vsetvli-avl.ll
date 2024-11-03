@@ -12,16 +12,14 @@ define dso_local void @test(ptr nocapture noundef %var_99) {
 ; CHECK-NEXT:    addi a1, a1, %lo(.L__const.test.var_45)
 ; CHECK-NEXT:    vsetivli zero, 2, e8, m4, ta, ma
 ; CHECK-NEXT:    vle8.v v8, (a1)
-; CHECK-NEXT:    li a1, 1
-; CHECK-NEXT:    vmul.vx v12, v8, a1
 ; CHECK-NEXT:    lui a1, %hi(.L__const.test.var_101)
 ; CHECK-NEXT:    addi a1, a1, %lo(.L__const.test.var_101)
-; CHECK-NEXT:    vle8.v v16, (a1)
-; CHECK-NEXT:    li a1, 32
-; CHECK-NEXT:    vsetivli zero, 2, e8, m4, ta, ma
-; CHECK-NEXT:    vmv.x.s a1, v12
+; CHECK-NEXT:    vle8.v v12, (a1)
+; CHECK-NEXT:    li a1, 1
+; CHECK-NEXT:    vmul.vx v16, v8, a1
+; CHECK-NEXT:    vmv.x.s a1, v16
 ; CHECK-NEXT:    vmsleu.vx v0, v8, a1
-; CHECK-NEXT:    vssra.vv v8, v16, v8
+; CHECK-NEXT:    vssra.vv v8, v12, v8
 ; CHECK-NEXT:    vmerge.vvm v8, v8, v8, v0
 ; CHECK-NEXT:    vse8.v v8, (a0)
 ; CHECK-NEXT:    ret

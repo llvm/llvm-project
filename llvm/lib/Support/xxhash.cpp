@@ -104,14 +104,15 @@ uint64_t llvm::xxHash64(StringRef Data) {
 
   H64 += (uint64_t)Len;
 
-  while (P + 8 <= BEnd) {
+  while (reinterpret_cast<uintptr_t>(P) + 8 <=
+         reinterpret_cast<uintptr_t>(BEnd)) {
     uint64_t const K1 = round(0, endian::read64le(P));
     H64 ^= K1;
     H64 = rotl64(H64, 27) * PRIME64_1 + PRIME64_4;
     P += 8;
   }
 
-  if (P + 4 <= BEnd) {
+  if (reinterpret_cast<uintptr_t>(P) + 4 <= reinterpret_cast<uintptr_t>(BEnd)) {
     H64 ^= (uint64_t)(endian::read32le(P)) * PRIME64_1;
     H64 = rotl64(H64, 23) * PRIME64_2 + PRIME64_3;
     P += 4;

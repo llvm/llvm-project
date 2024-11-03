@@ -14,6 +14,11 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/MachineValueType.h"
+#include <cassert>
+#include <cstddef>
+#include <memory>
+#include <string>
+#include <utility>
 
 namespace llvm {
   struct CodeGenRegister;

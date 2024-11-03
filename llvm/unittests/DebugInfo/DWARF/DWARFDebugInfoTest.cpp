@@ -11,7 +11,6 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/ADT/Triple.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/CodeGen/AsmPrinter.h"
 #include "llvm/DebugInfo/DWARF/DWARFCompileUnit.h"
@@ -29,6 +28,7 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/TargetSelect.h"
+#include "llvm/TargetParser/Triple.h"
 #include "llvm/Testing/Support/Error.h"
 #include "gtest/gtest.h"
 #include <string>
@@ -48,6 +48,12 @@ void TestAllForms() {
 
   // Test that we can decode all DW_FORM values correctly.
   const AddrType AddrValue = (AddrType)0x0123456789abcdefULL;
+  const AddrType AddrxValue = (AddrType)0x4231abcd4231abcdULL;
+  const AddrType Addrx1Value = (AddrType)0x0000aaaabbbbccccULL;
+  const AddrType Addrx2Value = (AddrType)0xf00123f00456f000ULL;
+  const AddrType Addrx3Value = (AddrType)0xABABA000B111C222ULL;
+  const AddrType Addrx4Value = (AddrType)0xa1b2c3d4e5f6e5d4ULL;
+
   const uint8_t BlockData[] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 0};
   const uint32_t BlockSize = sizeof(BlockData);
   const RefAddrType RefAddr = 0x12345678;
@@ -79,8 +85,10 @@ void TestAllForms() {
   dwarfgen::CompileUnit &CU = DG->addCompileUnit();
   dwarfgen::DIE CUDie = CU.getUnitDIE();
 
-  if (Version >= 5)
+  if (Version >= 5) {
     CUDie.addStrOffsetsBaseAttribute();
+    CUDie.addAddrBaseAttribute();
+  }
 
   uint16_t Attr = DW_AT_lo_user;
 
@@ -89,6 +97,20 @@ void TestAllForms() {
   //----------------------------------------------------------------------
   const auto Attr_DW_FORM_addr = static_cast<dwarf::Attribute>(Attr++);
   CUDie.addAttribute(Attr_DW_FORM_addr, DW_FORM_addr, AddrValue);
+
+  const auto Attr_DW_FORM_addrx = static_cast<dwarf::Attribute>(Attr++);
+  const auto Attr_DW_FORM_addrx1 = static_cast<dwarf::Attribute>(Attr++);
+  const auto Attr_DW_FORM_addrx2 = static_cast<dwarf::Attribute>(Attr++);
+  const auto Attr_DW_FORM_addrx3 = static_cast<dwarf::Attribute>(Attr++);
+  const auto Attr_DW_FORM_addrx4 = static_cast<dwarf::Attribute>(Attr++);
+
+  if (Version >= 5) {
+    CUDie.addAttribute(Attr_DW_FORM_addrx, DW_FORM_addrx, AddrxValue);
+    CUDie.addAttribute(Attr_DW_FORM_addrx1, DW_FORM_addrx1, Addrx1Value);
+    CUDie.addAttribute(Attr_DW_FORM_addrx2, DW_FORM_addrx2, Addrx2Value);
+    CUDie.addAttribute(Attr_DW_FORM_addrx3, DW_FORM_addrx3, Addrx3Value);
+    CUDie.addAttribute(Attr_DW_FORM_addrx4, DW_FORM_addrx4, Addrx4Value);
+  }
 
   //----------------------------------------------------------------------
   // Test block forms
@@ -240,6 +262,28 @@ void TestAllForms() {
   // Test address forms
   //----------------------------------------------------------------------
   EXPECT_EQ(AddrValue, toAddress(DieDG.find(Attr_DW_FORM_addr), 0));
+
+  if (Version >= 5) {
+    auto ExtractedAddrxValue = toAddress(DieDG.find(Attr_DW_FORM_addrx));
+    EXPECT_TRUE(ExtractedAddrxValue.has_value());
+    EXPECT_EQ(AddrxValue, *ExtractedAddrxValue);
+
+    auto ExtractedAddrx1Value = toAddress(DieDG.find(Attr_DW_FORM_addrx1));
+    EXPECT_TRUE(ExtractedAddrx1Value.has_value());
+    EXPECT_EQ(Addrx1Value, *ExtractedAddrx1Value);
+
+    auto ExtractedAddrx2Value = toAddress(DieDG.find(Attr_DW_FORM_addrx2));
+    EXPECT_TRUE(ExtractedAddrx2Value.has_value());
+    EXPECT_EQ(Addrx2Value, *ExtractedAddrx2Value);
+
+    auto ExtractedAddrx3Value = toAddress(DieDG.find(Attr_DW_FORM_addrx3));
+    EXPECT_TRUE(ExtractedAddrx3Value.has_value());
+    EXPECT_EQ(Addrx3Value, *ExtractedAddrx3Value);
+
+    auto ExtractedAddrx4Value = toAddress(DieDG.find(Attr_DW_FORM_addrx4));
+    EXPECT_TRUE(ExtractedAddrx1Value.has_value());
+    EXPECT_EQ(Addrx4Value, *ExtractedAddrx4Value);
+  }
 
   //----------------------------------------------------------------------
   // Test block forms

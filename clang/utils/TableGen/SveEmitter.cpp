@@ -298,7 +298,7 @@ public:
     auto It = FlagTypes.find(MaskName);
     if (It != FlagTypes.end()) {
       uint64_t Mask = It->getValue();
-      unsigned Shift = llvm::countTrailingZeros(Mask);
+      unsigned Shift = llvm::countr_zero(Mask);
       return (V << Shift) & Mask;
     }
     llvm_unreachable("Unsupported flag");

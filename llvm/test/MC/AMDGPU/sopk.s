@@ -197,14 +197,14 @@ s_getreg_b32 s2, hwreg(17)
 s_getreg_b32 s2, hwreg(18)
 // SICI:  s_getreg_b32 s2, hwreg(18) ; encoding: [0x12,0xf8,0x02,0xb9]
 // GFX10: s_getreg_b32 s2, hwreg(HW_REG_TMA_LO) ; encoding: [0x12,0xf8,0x02,0xb9]
-// GFX11: s_getreg_b32 s2, hwreg(18) ; encoding: [0x12,0xf8,0x82,0xb8]
+// GFX11: s_getreg_b32 s2, hwreg(HW_REG_PERF_SNAPSHOT_PC_LO) ; encoding: [0x12,0xf8,0x82,0xb8]
 // GFX9: s_getreg_b32 s2, hwreg(HW_REG_TMA_LO) ; encoding: [0x12,0xf8,0x82,0xb8]
 // VI: s_getreg_b32 s2, hwreg(18) ; encoding: [0x12,0xf8,0x82,0xb8]
 
 s_getreg_b32 s2, hwreg(19)
 // SICI:  s_getreg_b32 s2, hwreg(19) ; encoding: [0x13,0xf8,0x02,0xb9]
 // GFX10: s_getreg_b32 s2, hwreg(HW_REG_TMA_HI) ; encoding: [0x13,0xf8,0x02,0xb9]
-// GFX11: s_getreg_b32 s2, hwreg(19) ; encoding: [0x13,0xf8,0x82,0xb8]
+// GFX11: s_getreg_b32 s2, hwreg(HW_REG_PERF_SNAPSHOT_PC_HI) ; encoding: [0x13,0xf8,0x82,0xb8]
 // GFX9: s_getreg_b32 s2, hwreg(HW_REG_TMA_HI) ; encoding: [0x13,0xf8,0x82,0xb8]
 // VI: s_getreg_b32 s2, hwreg(19) ; encoding: [0x13,0xf8,0x82,0xb8]
 
@@ -324,14 +324,14 @@ s_setreg_b32 hwreg(17), s2
 s_setreg_b32 hwreg(18), s2
 // SICI:  s_setreg_b32 hwreg(18), s2      ; encoding: [0x12,0xf8,0x82,0xb9]
 // GFX10: s_setreg_b32 hwreg(HW_REG_TMA_LO), s2 ; encoding: [0x12,0xf8,0x82,0xb9]
-// GFX11: s_setreg_b32 hwreg(18), s2 ; encoding: [0x12,0xf8,0x02,0xb9]
+// GFX11: s_setreg_b32 hwreg(HW_REG_PERF_SNAPSHOT_PC_LO), s2 ; encoding: [0x12,0xf8,0x02,0xb9]
 // GFX9: s_setreg_b32 hwreg(HW_REG_TMA_LO), s2 ; encoding: [0x12,0xf8,0x02,0xb9]
 // VI: s_setreg_b32 hwreg(18), s2 ; encoding: [0x12,0xf8,0x02,0xb9]
 
 s_setreg_b32 hwreg(19), s2
 // SICI:  s_setreg_b32 hwreg(19), s2      ; encoding: [0x13,0xf8,0x82,0xb9]
 // GFX10: s_setreg_b32 hwreg(HW_REG_TMA_HI), s2 ; encoding: [0x13,0xf8,0x82,0xb9]
-// GFX11: s_setreg_b32 hwreg(19), s2 ; encoding: [0x13,0xf8,0x02,0xb9]
+// GFX11: s_setreg_b32 hwreg(HW_REG_PERF_SNAPSHOT_PC_HI), s2 ; encoding: [0x13,0xf8,0x02,0xb9]
 // GFX9: s_setreg_b32 hwreg(HW_REG_TMA_HI), s2 ; encoding: [0x13,0xf8,0x02,0xb9]
 // VI: s_setreg_b32 hwreg(19), s2 ; encoding: [0x13,0xf8,0x02,0xb9]
 

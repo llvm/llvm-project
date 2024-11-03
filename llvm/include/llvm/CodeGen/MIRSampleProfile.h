@@ -14,6 +14,7 @@
 #ifndef LLVM_CODEGEN_MIRSAMPLEPROFILE_H
 #define LLVM_CODEGEN_MIRSAMPLEPROFILE_H
 
+#include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/Support/Discriminator.h"
@@ -25,6 +26,10 @@ class AnalysisUsage;
 class MachineBlockFrequencyInfo;
 class MachineFunction;
 class Module;
+
+namespace vfs {
+class FileSystem;
+} // namespace vfs
 
 using namespace sampleprof;
 
@@ -41,7 +46,8 @@ public:
   /// FS bits will only use the '1' bits in the Mask.
   MIRProfileLoaderPass(std::string FileName = "",
                        std::string RemappingFileName = "",
-                       FSDiscriminatorPass P = FSDiscriminatorPass::Pass1);
+                       FSDiscriminatorPass P = FSDiscriminatorPass::Pass1,
+                       IntrusiveRefCntPtr<vfs::FileSystem> FS = nullptr);
 
   /// getMachineFunction - Return the last machine function computed.
   const MachineFunction *getMachineFunction() const { return MF; }

@@ -24,9 +24,12 @@
 
 typedef std::deque<void *> container;
 
+TEST_DIAGNOSTIC_PUSH
+TEST_CLANG_DIAGNOSTIC_IGNORED("-Wprivate-header")
 // #define  DEBUG_FALLBACK_MALLOC
 #define INSTRUMENT_FALLBACK_MALLOC
 #include "../src/fallback_malloc.cpp"
+TEST_DIAGNOSTIC_POP
 
 void assertAlignment(void* ptr) { assert(reinterpret_cast<size_t>(ptr) % alignof(FallbackMaxAlignType) == 0); }
 

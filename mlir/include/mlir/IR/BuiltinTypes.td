@@ -17,7 +17,6 @@
 include "mlir/IR/AttrTypeBase.td"
 include "mlir/IR/BuiltinDialect.td"
 include "mlir/IR/BuiltinTypeInterfaces.td"
-include "mlir/IR/SubElementInterfaces.td"
 
 // TODO: Currently the types defined in this file are prefixed with `Builtin_`.
 // This is to differentiate the types here with the ones in OpBase.td. We should
@@ -120,6 +119,50 @@ def Builtin_Float8E4M3FN : Builtin_FloatType<"Float8E4M3FN"> {
 }
 
 //===----------------------------------------------------------------------===//
+// Float8E5M2FNUZType
+
+def Builtin_Float8E5M2FNUZ : Builtin_FloatType<"Float8E5M2FNUZ"> {
+  let summary = "8-bit floating point with 2 bit mantissa";
+  let description = [{
+    An 8-bit floating point type with 1 sign bit, 5 bits exponent and 2 bits
+    mantissa. This is not a standard type as defined by IEEE-754, but it follows
+    similar conventions, with the exception that there are no infinity values,
+    no negative zero, and only one NaN representation. This type has the
+    following characteristics:
+
+      * bit encoding: S1E5M2
+      * exponent bias: 16
+      * infinities: Not supported
+      * NaNs: Supported with sign bit set to 1, exponent bits and mantissa bits set to all 0s
+      * denormals when exponent is 0
+
+    Described in: https://arxiv.org/abs/2206.02915
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// Float8E4M3FNUZType
+
+def Builtin_Float8E4M3FNUZ : Builtin_FloatType<"Float8E4M3FNUZ"> {
+  let summary = "8-bit floating point with 3 bit mantissa";
+  let description = [{
+    An 8-bit floating point type with 1 sign bit, 4 bits exponent and 3 bits
+    mantissa. This is not a standard type as defined by IEEE-754, but it follows
+    similar conventions, with the exception that there are no infinity values,
+    no negative zero, and only one NaN representation. This type has the
+    following characteristics:
+
+      * bit encoding: S1E4M3
+      * exponent bias: 8
+      * infinities: Not supported
+      * NaNs: Supported with sign bit set to 1, exponent bits and mantissa bits set to all 0s
+      * denormals when exponent is 0
+
+    Described in: https://arxiv.org/abs/2209.05433
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // BFloat16Type
 
 def Builtin_BFloat16 : Builtin_FloatType<"BFloat16"> {
@@ -165,9 +208,7 @@ def Builtin_Float128 : Builtin_FloatType<"Float128"> {
 // FunctionType
 //===----------------------------------------------------------------------===//
 
-def Builtin_Function : Builtin_Type<"Function", [
-    DeclareTypeInterfaceMethods<SubElementTypeInterface>
-  ]> {
+def Builtin_Function : Builtin_Type<"Function"> {
   let summary = "Map from a list of inputs to a list of results";
   let description = [{
     Syntax:
@@ -314,7 +355,7 @@ def Builtin_Integer : Builtin_Type<"Integer"> {
 //===----------------------------------------------------------------------===//
 
 def Builtin_MemRef : Builtin_Type<"MemRef", [
-    DeclareTypeInterfaceMethods<SubElementTypeInterface>, ShapedTypeInterface
+    ShapedTypeInterface
   ], "BaseMemRefType"> {
   let summary = "Shaped reference to a region of memory";
   let description = [{
@@ -649,7 +690,7 @@ def Builtin_Opaque : Builtin_Type<"Opaque"> {
 //===----------------------------------------------------------------------===//
 
 def Builtin_RankedTensor : Builtin_Type<"RankedTensor", [
-    DeclareTypeInterfaceMethods<SubElementTypeInterface>, ShapedTypeInterface
+    ShapedTypeInterface
   ], "TensorType"> {
   let summary = "Multi-dimensional array with a fixed number of dimensions";
   let description = [{
@@ -753,9 +794,7 @@ def Builtin_RankedTensor : Builtin_Type<"RankedTensor", [
 // TupleType
 //===----------------------------------------------------------------------===//
 
-def Builtin_Tuple : Builtin_Type<"Tuple", [
-    DeclareTypeInterfaceMethods<SubElementTypeInterface>
-  ]> {
+def Builtin_Tuple : Builtin_Type<"Tuple"> {
   let summary = "Fixed-sized collection of other types";
   let description = [{
     Syntax:
@@ -823,7 +862,7 @@ def Builtin_Tuple : Builtin_Type<"Tuple", [
 //===----------------------------------------------------------------------===//
 
 def Builtin_UnrankedMemRef : Builtin_Type<"UnrankedMemRef", [
-    DeclareTypeInterfaceMethods<SubElementTypeInterface>, ShapedTypeInterface
+    ShapedTypeInterface
   ], "BaseMemRefType"> {
   let summary = "Shaped reference, with unknown rank, to a region of memory";
   let description = [{
@@ -895,7 +934,7 @@ def Builtin_UnrankedMemRef : Builtin_Type<"UnrankedMemRef", [
 //===----------------------------------------------------------------------===//
 
 def Builtin_UnrankedTensor : Builtin_Type<"UnrankedTensor", [
-    DeclareTypeInterfaceMethods<SubElementTypeInterface>, ShapedTypeInterface
+    ShapedTypeInterface
   ], "TensorType"> {
   let summary = "Multi-dimensional array with unknown dimensions";
   let description = [{
@@ -943,9 +982,7 @@ def Builtin_UnrankedTensor : Builtin_Type<"UnrankedTensor", [
 // VectorType
 //===----------------------------------------------------------------------===//
 
-def Builtin_Vector : Builtin_Type<"Vector", [
-    DeclareTypeInterfaceMethods<SubElementTypeInterface>, ShapedTypeInterface
-  ], "Type"> {
+def Builtin_Vector : Builtin_Type<"Vector", [ShapedTypeInterface], "Type"> {
   let summary = "Multi-dimensional SIMD vector type";
   let description = [{
     Syntax:

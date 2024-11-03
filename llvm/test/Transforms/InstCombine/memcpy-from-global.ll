@@ -303,9 +303,7 @@ entry:
 define float @test11(i64 %i) {
 ; CHECK-LABEL: @test11(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[G:%.*]] = getelementptr [4 x float], ptr addrspace(1) @I, i64 0, i64 [[I:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = load float, ptr addrspace(1) [[G]], align 4
-; CHECK-NEXT:    ret float [[R]]
+; CHECK-NEXT:    ret float 0.000000e+00
 ;
 
 entry:

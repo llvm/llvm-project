@@ -37,7 +37,6 @@ def DLTI_Dialect : Dialect {
   }];
 
   let useDefaultAttributePrinterParser = 1;
-  let useFoldAPI = kEmitFoldAdaptorFolder;
 }
 
 def DLTI_DataLayoutEntryAttr : DialectAttr<

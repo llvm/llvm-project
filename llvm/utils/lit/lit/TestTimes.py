@@ -19,7 +19,7 @@ def record_test_times(tests, lit_config):
     times_by_suite = {}
     for t in tests:
         assert t.suite.test_times is None
-        if not t.result.elapsed:
+        if t.result.elapsed is None:
             continue
         if not t.suite.exec_root in times_by_suite:
             times_by_suite[t.suite.exec_root] = read_test_times(t.suite)

@@ -167,10 +167,6 @@ static cl::opt<bool>
                  cl::desc("Run PGO context sensitive IR instrumentation"),
                  cl::Hidden);
 
-static cl::opt<bool> LtoOpaquePointers("lto-opaque-pointers",
-                                       cl::desc("Enable opaque pointer types"),
-                                       cl::init(true), cl::Hidden);
-
 static cl::opt<bool>
     DebugPassManager("debug-pass-manager", cl::Hidden,
                      cl::desc("Print pass management debugging information"));
@@ -321,7 +317,6 @@ static int run(int argc, char **argv) {
   Conf.StatsFile = StatsFile;
   Conf.PTO.LoopVectorization = Conf.OptLevel > 1;
   Conf.PTO.SLPVectorization = Conf.OptLevel > 1;
-  Conf.OpaquePointers = LtoOpaquePointers;
 
   ThinBackend Backend;
   if (ThinLTODistributedIndexes)

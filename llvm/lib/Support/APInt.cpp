@@ -68,7 +68,7 @@ inline static unsigned getDigit(char cdigit, uint8_t radix) {
   if (r < radix)
     return r;
 
-  return -1U;
+  return UINT_MAX;
 }
 
 
@@ -626,7 +626,7 @@ unsigned APInt::countLeadingZerosSlowCase() const {
     if (V == 0)
       Count += APINT_BITS_PER_WORD;
     else {
-      Count += llvm::countLeadingZeros(V);
+      Count += llvm::countl_zero(V);
       break;
     }
   }
@@ -646,13 +646,13 @@ unsigned APInt::countLeadingOnesSlowCase() const {
     shift = APINT_BITS_PER_WORD - highWordBits;
   }
   int i = getNumWords() - 1;
-  unsigned Count = llvm::countLeadingOnes(U.pVal[i] << shift);
+  unsigned Count = llvm::countl_one(U.pVal[i] << shift);
   if (Count == highWordBits) {
     for (i--; i >= 0; --i) {
       if (U.pVal[i] == WORDTYPE_MAX)
         Count += APINT_BITS_PER_WORD;
       else {
-        Count += llvm::countLeadingOnes(U.pVal[i]);
+        Count += llvm::countl_one(U.pVal[i]);
         break;
       }
     }
@@ -666,7 +666,7 @@ unsigned APInt::countTrailingZerosSlowCase() const {
   for (; i < getNumWords() && U.pVal[i] == 0; ++i)
     Count += APINT_BITS_PER_WORD;
   if (i < getNumWords())
-    Count += llvm::countTrailingZeros(U.pVal[i]);
+    Count += llvm::countr_zero(U.pVal[i]);
   return std::min(Count, BitWidth);
 }
 
@@ -676,7 +676,7 @@ unsigned APInt::countTrailingOnesSlowCase() const {
   for (; i < getNumWords() && U.pVal[i] == WORDTYPE_MAX; ++i)
     Count += APINT_BITS_PER_WORD;
   if (i < getNumWords())
-    Count += llvm::countTrailingOnes(U.pVal[i]);
+    Count += llvm::countr_one(U.pVal[i]);
   assert(Count <= BitWidth);
   return Count;
 }
@@ -707,18 +707,18 @@ bool APInt::isSubsetOfSlowCase(const APInt &RHS) const {
 APInt APInt::byteSwap() const {
   assert(BitWidth >= 16 && BitWidth % 8 == 0 && "Cannot byteswap!");
   if (BitWidth == 16)
-    return APInt(BitWidth, ByteSwap_16(uint16_t(U.VAL)));
+    return APInt(BitWidth, llvm::byteswap<uint16_t>(U.VAL));
   if (BitWidth == 32)
-    return APInt(BitWidth, ByteSwap_32(unsigned(U.VAL)));
+    return APInt(BitWidth, llvm::byteswap<uint32_t>(U.VAL));
   if (BitWidth <= 64) {
-    uint64_t Tmp1 = ByteSwap_64(U.VAL);
+    uint64_t Tmp1 = llvm::byteswap<uint64_t>(U.VAL);
     Tmp1 >>= (64 - BitWidth);
     return APInt(BitWidth, Tmp1);
   }
 
   APInt Result(getNumWords() * APINT_BITS_PER_WORD, 0);
   for (unsigned I = 0, N = getNumWords(); I != N; ++I)
-    Result.U.pVal[I] = ByteSwap_64(U.pVal[N - I - 1]);
+    Result.U.pVal[I] = llvm::byteswap<uint64_t>(U.pVal[N - I - 1]);
   if (Result.BitWidth != BitWidth) {
     Result.lshrInPlace(Result.BitWidth - BitWidth);
     Result.BitWidth = BitWidth;
@@ -767,8 +767,8 @@ APInt llvm::APIntOps::GreatestCommonDivisor(APInt A, APInt B) {
   // Count common powers of 2 and remove all other powers of 2.
   unsigned Pow2;
   {
-    unsigned Pow2_A = A.countTrailingZeros();
-    unsigned Pow2_B = B.countTrailingZeros();
+    unsigned Pow2_A = A.countr_zero();
+    unsigned Pow2_B = B.countr_zero();
     if (Pow2_A > Pow2_B) {
       A.lshrInPlace(Pow2_A - Pow2_B);
       Pow2 = Pow2_B;
@@ -789,10 +789,10 @@ APInt llvm::APIntOps::GreatestCommonDivisor(APInt A, APInt B) {
   while (A != B) {
     if (A.ugt(B)) {
       A -= B;
-      A.lshrInPlace(A.countTrailingZeros() - Pow2);
+      A.lshrInPlace(A.countr_zero() - Pow2);
     } else {
       B -= A;
-      B.lshrInPlace(B.countTrailingZeros() - Pow2);
+      B.lshrInPlace(B.countr_zero() - Pow2);
     }
   }
 
@@ -1318,7 +1318,7 @@ static void KnuthDiv(uint32_t *u, uint32_t *v, uint32_t *q, uint32_t* r,
   // and v so that its high bits are shifted to the top of v's range without
   // overflow. Note that this can require an extra word in u so that u must
   // be of length m+n+1.
-  unsigned shift = countLeadingZeros(v[n-1]);
+  unsigned shift = llvm::countl_zero(v[n - 1]);
   uint32_t v_carry = 0;
   uint32_t u_carry = 0;
   if (shift) {
@@ -1967,7 +1967,7 @@ APInt APInt::smul_ov(const APInt &RHS, bool &Overflow) const {
 }
 
 APInt APInt::umul_ov(const APInt &RHS, bool &Overflow) const {
-  if (countLeadingZeros() + RHS.countLeadingZeros() + 2 <= BitWidth) {
+  if (countl_zero() + RHS.countl_zero() + 2 <= BitWidth) {
     Overflow = true;
     return *this * RHS;
   }
@@ -1989,9 +1989,9 @@ APInt APInt::sshl_ov(const APInt &ShAmt, bool &Overflow) const {
     return APInt(BitWidth, 0);
 
   if (isNonNegative()) // Don't allow sign change.
-    Overflow = ShAmt.uge(countLeadingZeros());
+    Overflow = ShAmt.uge(countl_zero());
   else
-    Overflow = ShAmt.uge(countLeadingOnes());
+    Overflow = ShAmt.uge(countl_one());
 
   return *this << ShAmt;
 }
@@ -2001,7 +2001,7 @@ APInt APInt::ushl_ov(const APInt &ShAmt, bool &Overflow) const {
   if (Overflow)
     return APInt(BitWidth, 0);
 
-  Overflow = ShAmt.ugt(countLeadingZeros());
+  Overflow = ShAmt.ugt(countl_zero());
 
   return *this << ShAmt;
 }
@@ -2290,14 +2290,6 @@ static inline APInt::WordType highHalf(APInt::WordType part) {
   return part >> (APInt::APINT_BITS_PER_WORD / 2);
 }
 
-/// Returns the bit number of the most significant set bit of a part.
-/// If the input number has no bits set -1U is returned.
-static unsigned partMSB(APInt::WordType value) { return findLastSet(value); }
-
-/// Returns the bit number of the least significant set bit of a part.  If the
-/// input number has no bits set -1U is returned.
-static unsigned partLSB(APInt::WordType value) { return findFirstSet(value); }
-
 /// Sets the least significant part of a bignum to the input value, and zeroes
 /// out higher parts.
 void APInt::tcSet(WordType *dst, WordType part, unsigned parts) {
@@ -2338,32 +2330,33 @@ void APInt::tcClearBit(WordType *parts, unsigned bit) {
 }
 
 /// Returns the bit number of the least significant set bit of a number.  If the
-/// input number has no bits set -1U is returned.
+/// input number has no bits set UINT_MAX is returned.
 unsigned APInt::tcLSB(const WordType *parts, unsigned n) {
   for (unsigned i = 0; i < n; i++) {
     if (parts[i] != 0) {
-      unsigned lsb = partLSB(parts[i]);
+      unsigned lsb = llvm::countr_zero(parts[i]);
       return lsb + i * APINT_BITS_PER_WORD;
     }
   }
 
-  return -1U;
+  return UINT_MAX;
 }
 
 /// Returns the bit number of the most significant set bit of a number.
-/// If the input number has no bits set -1U is returned.
+/// If the input number has no bits set UINT_MAX is returned.
 unsigned APInt::tcMSB(const WordType *parts, unsigned n) {
   do {
     --n;
 
     if (parts[n] != 0) {
-      unsigned msb = partMSB(parts[n]);
+      static_assert(sizeof(parts[n]) <= sizeof(uint64_t));
+      unsigned msb = llvm::Log2_64(parts[n]);
 
       return msb + n * APINT_BITS_PER_WORD;
     }
   } while (n);
 
-  return -1U;
+  return UINT_MAX;
 }
 
 /// Copy the bit vector of width srcBITS from SRC, starting at bit srcLSB, to
@@ -2961,7 +2954,7 @@ llvm::APIntOps::GetMostSignificantDifferentBit(const APInt &A, const APInt &B) {
   assert(A.getBitWidth() == B.getBitWidth() && "Must have the same bitwidth");
   if (A == B)
     return std::nullopt;
-  return A.getBitWidth() - ((A ^ B).countLeadingZeros() + 1);
+  return A.getBitWidth() - ((A ^ B).countl_zero() + 1);
 }
 
 APInt llvm::APIntOps::ScaleBitMask(const APInt &A, unsigned NewBitWidth,

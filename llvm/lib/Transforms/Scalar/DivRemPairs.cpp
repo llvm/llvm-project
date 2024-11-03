@@ -371,6 +371,10 @@ static bool optimizeDivRem(Function &F, const TargetTransformInfo &TTI,
       Mul->insertAfter(RemInst);
       Sub->insertAfter(Mul);
 
+      // If DivInst has the exact flag, remove it. Otherwise this optimization
+      // may replace a well-defined value 'X % Y' with poison.
+      DivInst->dropPoisonGeneratingFlags();
+
       // If X can be undef, X should be frozen first.
       // For example, let's assume that Y = 1 & X = undef:
       //   %div = sdiv undef, 1 // %div = undef

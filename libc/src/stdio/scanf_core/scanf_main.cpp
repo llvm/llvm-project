@@ -29,7 +29,10 @@ int scanf_main(Reader *reader, const char *__restrict str,
        cur_section = parser.get_next_section()) {
     if (cur_section.has_conv) {
       ret_val = convert(reader, cur_section);
-      conversions += ret_val == READ_OK ? 1 : 0;
+      // The %n (current position) conversion doesn't increment the number of
+      // assignments.
+      if (cur_section.conv_name != 'n')
+        conversions += ret_val == READ_OK ? 1 : 0;
     } else {
       ret_val = raw_match(reader, cur_section.raw_string);
     }

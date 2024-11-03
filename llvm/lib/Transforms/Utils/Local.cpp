@@ -25,7 +25,6 @@
 #include "llvm/Analysis/AssumeBundleQueries.h"
 #include "llvm/Analysis/ConstantFolding.h"
 #include "llvm/Analysis/DomTreeUpdater.h"
-#include "llvm/Analysis/EHPersonalities.h"
 #include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/Analysis/MemoryBuiltins.h"
 #include "llvm/Analysis/MemorySSAUpdater.h"
@@ -47,6 +46,7 @@
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Dominators.h"
+#include "llvm/IR/EHPersonalities.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GetElementPtrTypeIterator.h"
 #include "llvm/IR/GlobalObject.h"
@@ -201,16 +201,16 @@ bool llvm::ConstantFoldTerminator(BasicBlock *BB, bool DeleteDeadConditions,
     bool Changed = false;
 
     // Figure out which case it goes to.
-    for (auto i = SI->case_begin(), e = SI->case_end(); i != e;) {
+    for (auto It = SI->case_begin(), End = SI->case_end(); It != End;) {
       // Found case matching a constant operand?
-      if (i->getCaseValue() == CI) {
-        TheOnlyDest = i->getCaseSuccessor();
+      if (It->getCaseValue() == CI) {
+        TheOnlyDest = It->getCaseSuccessor();
         break;
       }
 
       // Check to see if this branch is going to the same place as the default
       // dest.  If so, eliminate it as an explicit compare.
-      if (i->getCaseSuccessor() == DefaultDest) {
+      if (It->getCaseSuccessor() == DefaultDest) {
         MDNode *MD = getValidBranchWeightMDNode(*SI);
         unsigned NCases = SI->getNumCases();
         // Fold the case metadata into the default if there will be any branches
@@ -221,11 +221,11 @@ bool llvm::ConstantFoldTerminator(BasicBlock *BB, bool DeleteDeadConditions,
           extractBranchWeights(MD, Weights);
 
           // Merge weight of this case to the default weight.
-          unsigned idx = i->getCaseIndex();
+          unsigned Idx = It->getCaseIndex();
           // TODO: Add overflow check.
-          Weights[0] += Weights[idx+1];
+          Weights[0] += Weights[Idx + 1];
           // Remove weight for this case.
-          std::swap(Weights[idx+1], Weights.back());
+          std::swap(Weights[Idx + 1], Weights.back());
           Weights.pop_back();
           SI->setMetadata(LLVMContext::MD_prof,
                           MDBuilder(BB->getContext()).
@@ -234,14 +234,14 @@ bool llvm::ConstantFoldTerminator(BasicBlock *BB, bool DeleteDeadConditions,
         // Remove this entry.
         BasicBlock *ParentBB = SI->getParent();
         DefaultDest->removePredecessor(ParentBB);
-        i = SI->removeCase(i);
-        e = SI->case_end();
+        It = SI->removeCase(It);
+        End = SI->case_end();
 
         // Removing this case may have made the condition constant. In that
         // case, update CI and restart iteration through the cases.
         if (auto *NewCI = dyn_cast<ConstantInt>(SI->getCondition())) {
           CI = NewCI;
-          i = SI->case_begin();
+          It = SI->case_begin();
         }
 
         Changed = true;
@@ -251,11 +251,11 @@ bool llvm::ConstantFoldTerminator(BasicBlock *BB, bool DeleteDeadConditions,
       // Otherwise, check to see if the switch only branches to one destination.
       // We do this by reseting "TheOnlyDest" to null when we find two non-equal
       // destinations.
-      if (i->getCaseSuccessor() != TheOnlyDest)
+      if (It->getCaseSuccessor() != TheOnlyDest)
         TheOnlyDest = nullptr;
 
       // Increment this iterator as we haven't removed the case.
-      ++i;
+      ++It;
     }
 
     if (CI && !TheOnlyDest) {
@@ -1423,6 +1423,12 @@ static Align tryEnforceAlignment(Value *V, Align PrefAlign,
     if (!GO->canIncreaseAlignment())
       return CurrentAlign;
 
+    if (GO->isThreadLocal()) {
+      unsigned MaxTLSAlign = GO->getParent()->getMaxTLSAlignment() / CHAR_BIT;
+      if (MaxTLSAlign && PrefAlign > Align(MaxTLSAlign))
+        PrefAlign = Align(MaxTLSAlign);
+    }
+
     GO->setAlignment(PrefAlign);
     return PrefAlign;
   }
@@ -1524,19 +1530,34 @@ void llvm::ConvertDebugDeclareToDebugValue(DbgVariableIntrinsic *DII,
 
   DebugLoc NewLoc = getDebugValueLoc(DII);
 
-  if (!valueCoversEntireFragment(DV->getType(), DII)) {
-    // FIXME: If storing to a part of the variable described by the dbg.declare,
-    // then we want to insert a dbg.value for the corresponding fragment.
-    LLVM_DEBUG(dbgs() << "Failed to convert dbg.declare to dbg.value: "
-                      << *DII << '\n');
-    // For now, when there is a store to parts of the variable (but we do not
-    // know which part) we insert an dbg.value intrinsic to indicate that we
-    // know nothing about the variable's content.
-    DV = UndefValue::get(DV->getType());
+  // If the alloca describes the variable itself, i.e. the expression in the
+  // dbg.declare doesn't start with a dereference, we can perform the
+  // conversion if the value covers the entire fragment of DII.
+  // If the alloca describes the *address* of DIVar, i.e. DIExpr is
+  // *just* a DW_OP_deref, we use DV as is for the dbg.value.
+  // We conservatively ignore other dereferences, because the following two are
+  // not equivalent:
+  //     dbg.declare(alloca, ..., !Expr(deref, plus_uconstant, 2))
+  //     dbg.value(DV, ..., !Expr(deref, plus_uconstant, 2))
+  // The former is adding 2 to the address of the variable, whereas the latter
+  // is adding 2 to the value of the variable. As such, we insist on just a
+  // deref expression.
+  bool CanConvert =
+      DIExpr->isDeref() || (!DIExpr->startsWithDeref() &&
+                            valueCoversEntireFragment(DV->getType(), DII));
+  if (CanConvert) {
     Builder.insertDbgValueIntrinsic(DV, DIVar, DIExpr, NewLoc, SI);
     return;
   }
 
+  // FIXME: If storing to a part of the variable described by the dbg.declare,
+  // then we want to insert a dbg.value for the corresponding fragment.
+  LLVM_DEBUG(dbgs() << "Failed to convert dbg.declare to dbg.value: " << *DII
+                    << '\n');
+  // For now, when there is a store to parts of the variable (but we do not
+  // know which part) we insert an dbg.value intrinsic to indicate that we
+  // know nothing about the variable's content.
+  DV = UndefValue::get(DV->getType());
   Builder.insertDbgValueIntrinsic(DV, DIVar, DIExpr, NewLoc, SI);
 }
 
@@ -2698,6 +2719,11 @@ void llvm::combineMetadata(Instruction *K, const Instruction *J,
       case LLVMContext::MD_preserve_access_index:
         // Preserve !preserve.access.index in K.
         break;
+      case LLVMContext::MD_noundef:
+        // If K does move, keep noundef if it is present in both instructions.
+        if (DoesKMove)
+          K->setMetadata(Kind, JMD);
+        break;
     }
   }
   // Set !invariant.group from J if J has it. If both instructions have it
@@ -2804,7 +2830,8 @@ void llvm::patchReplacementInstruction(Instruction *I, Value *Repl) {
       LLVMContext::MD_noalias,         LLVMContext::MD_range,
       LLVMContext::MD_fpmath,          LLVMContext::MD_invariant_load,
       LLVMContext::MD_invariant_group, LLVMContext::MD_nonnull,
-      LLVMContext::MD_access_group,    LLVMContext::MD_preserve_access_index};
+      LLVMContext::MD_access_group,    LLVMContext::MD_preserve_access_index,
+      LLVMContext::MD_noundef};
   combineMetadata(ReplInst, I, KnownIDs, false);
 }
 
@@ -3125,7 +3152,7 @@ collectBitParts(Value *V, bool MatchBSwaps, bool MatchBitReversals,
 
       // Check that the mask allows a multiple of 8 bits for a bswap, for an
       // early exit.
-      unsigned NumMaskedBits = AndMask.countPopulation();
+      unsigned NumMaskedBits = AndMask.popcount();
       if (!MatchBitReversals && (NumMaskedBits % 8) != 0)
         return Result;
 

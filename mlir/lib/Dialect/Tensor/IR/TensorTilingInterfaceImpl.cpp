@@ -318,8 +318,11 @@ static UnpackTileDimInfo getUnpackTileDimInfo(OpBuilder &b, UnPackOp unpackOp,
       ab.add(AV(dim0).bind(lengthMinusOne), AV(dim1).bind(oneAttr));
   info.sourceOffset = firstCoord.quotient;
   info.resultOffset = firstCoord.remainder;
-  info.destExpandedSize =
-      ab.mul(AV(dim0).bind(info.sourceSize), AV(sym0).bind(innerTileSize));
+  // Do not create an Affine ops for expanded size because the affine op is too
+  // complicated which would trigger an issue in affine ops simplification.
+  info.destExpandedSize = b.createOrFold<arith::MulIOp>(
+      loc, getValueOrCreateConstantIndexOp(b, loc, info.sourceSize),
+      getValueOrCreateConstantIndexOp(b, loc, innerTileSize));
   return info;
 }
 
@@ -402,9 +405,12 @@ struct UnPackOpTiling
                                     unpackOp.getDestType().getElementType());
     }
 
-    Operation *tiledUnpackOp =
-        b.create<UnPackOp>(loc, TypeRange{sliceDest.getType()},
-                           ValueRange{sliceSource, sliceDest}, op->getAttrs());
+    SmallVector<Value> tiledOperands = {sliceSource, sliceDest};
+    for (auto tile : unpackOp.getInnerTiles())
+      tiledOperands.push_back(tile);
+
+    Operation *tiledUnpackOp = b.create<UnPackOp>(
+        loc, TypeRange{sliceDest.getType()}, tiledOperands, op->getAttrs());
 
     if (isPerfectTilingCase)
       return {tiledUnpackOp};
@@ -650,6 +656,14 @@ void mlir::tensor::registerTilingInterfaceExternalModels(
     DialectRegistry &registry) {
   registry.addExtension(+[](MLIRContext *ctx, TensorDialect *dialect) {
     tensor::PadOp::attachInterface<PadOpTiling>(*ctx);
+    tensor::PackOp::attachInterface<PackOpTiling>(*ctx);
+    tensor::UnPackOp::attachInterface<UnPackOpTiling>(*ctx);
+  });
+}
+
+void mlir::tensor::registerTilingInterfaceExternalModelsForPackUnPackOps(
+    DialectRegistry &registry) {
+  registry.addExtension(+[](MLIRContext *ctx, TensorDialect *dialect) {
     tensor::PackOp::attachInterface<PackOpTiling>(*ctx);
     tensor::UnPackOp::attachInterface<UnPackOpTiling>(*ctx);
   });

@@ -281,7 +281,7 @@ const TargetRegisterClass *firstCommonClass(const uint32_t *A,
                                             const TargetRegisterInfo *TRI) {
   for (unsigned I = 0, E = TRI->getNumRegClasses(); I < E; I += 32)
     if (unsigned Common = *A++ & *B++)
-      return TRI->getRegClass(I + countTrailingZeros(Common));
+      return TRI->getRegClass(I + llvm::countr_zero(Common));
   return nullptr;
 }
 

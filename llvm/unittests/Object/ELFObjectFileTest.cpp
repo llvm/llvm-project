@@ -14,8 +14,8 @@
 #include "llvm/Testing/Support/Error.h"
 #include "gtest/gtest.h"
 
-#include "llvm/Support/Host.h"
 #include "llvm/Support/thread.h"
+#include "llvm/TargetParser/Host.h"
 
 using namespace llvm;
 using namespace llvm::object;
@@ -474,7 +474,8 @@ Sections:
 
 // Tests for error paths of the ELFFile::decodeBBAddrMap API.
 TEST(ELFObjectFileTest, InvalidDecodeBBAddrMap) {
-  if (IsHostWindows()) return;
+  if (IsHostWindows())
+    GTEST_SKIP();
   StringRef CommonYamlString(R"(
 --- !ELF
 FileHeader:
@@ -605,7 +606,8 @@ Sections:
 
 // Test for the ELFObjectFile::readBBAddrMap API.
 TEST(ELFObjectFileTest, ReadBBAddrMap) {
-  if (IsHostWindows()) return;
+  if (IsHostWindows())
+    GTEST_SKIP();
   StringRef CommonYamlString(R"(
 --- !ELF
 FileHeader:

@@ -31,7 +31,6 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
-#include "llvm/Analysis/EHPersonalities.h"
 #include "llvm/CodeGen/CodeGenCommonISel.h"
 #include "llvm/CodeGen/LiveInterval.h"
 #include "llvm/CodeGen/LiveIntervals.h"
@@ -58,6 +57,7 @@
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/EHPersonalities.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/InlineAsm.h"
 #include "llvm/IR/Instructions.h"
@@ -627,8 +627,11 @@ MachineVerifier::visitMachineBasicBlockBefore(const MachineBasicBlock *MBB) {
     // it is an entry block or landing pad.
     for (const auto &LI : MBB->liveins()) {
       if (isAllocatable(LI.PhysReg) && !MBB->isEHPad() &&
-          MBB->getIterator() != MBB->getParent()->begin()) {
-        report("MBB has allocatable live-in, but isn't entry or landing-pad.", MBB);
+          MBB->getIterator() != MBB->getParent()->begin() &&
+          !MBB->isInlineAsmBrIndirectTarget()) {
+        report("MBB has allocatable live-in, but isn't entry, landing-pad, or "
+               "inlineasm-br-indirect-target.",
+               MBB);
         report_context(LI.PhysReg);
       }
     }
@@ -1744,6 +1747,13 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
   case TargetOpcode::G_ASSERT_ALIGN: {
     if (MI->getOperand(2).getImm() < 1)
       report("alignment immediate must be >= 1", MI);
+    break;
+  }
+  case TargetOpcode::G_CONSTANT_POOL: {
+    if (!MI->getOperand(1).isCPI())
+      report("Src operand 1 must be a constant pool index", MI);
+    if (!MRI->getType(MI->getOperand(0).getReg()).isPointer())
+      report("Dst operand 0 must be a pointer", MI);
     break;
   }
   default:

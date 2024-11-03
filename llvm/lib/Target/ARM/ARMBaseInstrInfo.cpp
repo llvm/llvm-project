@@ -24,7 +24,6 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/Triple.h"
 #include "llvm/CodeGen/DFAPacketizer.h"
 #include "llvm/CodeGen/LiveVariables.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
@@ -61,6 +60,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
+#include "llvm/TargetParser/Triple.h"
 #include <algorithm>
 #include <cassert>
 #include <cstdint>
@@ -2499,7 +2499,7 @@ void llvm::emitARMRegPlusImmediate(MachineBasicBlock &MBB,
 
   while (NumBytes) {
     unsigned RotAmt = ARM_AM::getSOImmValRotate(NumBytes);
-    unsigned ThisVal = NumBytes & ARM_AM::rotr32(0xFF, RotAmt);
+    unsigned ThisVal = NumBytes & llvm::rotr<uint32_t>(0xFF, RotAmt);
     assert(ThisVal && "Didn't extract field correctly");
 
     // We will handle these bits from offset, clear them.
@@ -2680,7 +2680,7 @@ bool llvm::rewriteARMFrameIndex(MachineInstr &MI, unsigned FrameRegIdx,
     // Otherwise, pull as much of the immedidate into this ADDri/SUBri
     // as possible.
     unsigned RotAmt = ARM_AM::getSOImmValRotate(Offset);
-    unsigned ThisImmVal = Offset & ARM_AM::rotr32(0xFF, RotAmt);
+    unsigned ThisImmVal = Offset & llvm::rotr<uint32_t>(0xFF, RotAmt);
 
     // We will handle these bits from offset, clear them.
     Offset &= ~ThisImmVal;
@@ -5433,7 +5433,7 @@ void ARMBaseInstrInfo::breakPartialRegDependency(
 }
 
 bool ARMBaseInstrInfo::hasNOP() const {
-  return Subtarget.getFeatureBits()[ARM::HasV6KOps];
+  return Subtarget.hasFeature(ARM::HasV6KOps);
 }
 
 bool ARMBaseInstrInfo::isSwiftFastImmShift(const MachineInstr *MI) const {
@@ -6275,23 +6275,10 @@ bool ARMBaseInstrInfo::isMBBSafeToOutlineFrom(MachineBasicBlock &MBB,
 }
 
 outliner::InstrType
-ARMBaseInstrInfo::getOutliningType(MachineBasicBlock::iterator &MIT,
+ARMBaseInstrInfo::getOutliningTypeImpl(MachineBasicBlock::iterator &MIT,
                                    unsigned Flags) const {
   MachineInstr &MI = *MIT;
   const TargetRegisterInfo *TRI = &getRegisterInfo();
-
-  // Be conservative with inline ASM
-  if (MI.isInlineAsm())
-    return outliner::InstrType::Illegal;
-
-  // Don't allow debug values to impact outlining type.
-  if (MI.isDebugInstr() || MI.isIndirectDebugValue())
-    return outliner::InstrType::Invisible;
-
-  // At this point, KILL or IMPLICIT_DEF instructions don't really tell us much
-  // so we can go ahead and skip over them.
-  if (MI.isKill() || MI.isImplicitDef())
-    return outliner::InstrType::Invisible;
 
   // PIC instructions contain labels, outlining them would break offset
   // computing.  unsigned Opc = MI.getOpcode();
@@ -6318,25 +6305,10 @@ ARMBaseInstrInfo::getOutliningType(MachineBasicBlock::iterator &MIT,
     return outliner::InstrType::Illegal;
 
   // Is this a terminator for a basic block?
-  if (MI.isTerminator()) {
-    // Don't outline if the branch is not unconditional.
-    if (isPredicated(MI))
-      return outliner::InstrType::Illegal;
-
-    // Is this the end of a function?
-    if (MI.getParent()->succ_empty())
-      return outliner::InstrType::Legal;
-
-    // It's not, so don't outline it.
-    return outliner::InstrType::Illegal;
-  }
-
-  // Make sure none of the operands are un-outlinable.
-  for (const MachineOperand &MOP : MI.operands()) {
-    if (MOP.isCPI() || MOP.isJTI() || MOP.isCFIIndex() || MOP.isFI() ||
-        MOP.isTargetIndex())
-      return outliner::InstrType::Illegal;
-  }
+  if (MI.isTerminator())
+    // TargetInstrInfo::getOutliningType has already filtered out anything
+    // that would break this, so we can allow it here.
+    return outliner::InstrType::Legal;
 
   // Don't outline if link register or program counter value are used.
   if (MI.readsRegister(ARM::LR, TRI) || MI.readsRegister(ARM::PC, TRI))
@@ -6441,8 +6413,8 @@ ARMBaseInstrInfo::getOutliningType(MachineBasicBlock::iterator &MIT,
       MI.modifiesRegister(ARM::ITSTATE, TRI))
     return outliner::InstrType::Illegal;
 
-  // Don't outline positions.
-  if (MI.isPosition())
+  // Don't outline CFI instructions.
+  if (MI.isCFIInstruction())
     return outliner::InstrType::Illegal;
 
   return outliner::InstrType::Legal;

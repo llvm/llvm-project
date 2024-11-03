@@ -107,7 +107,7 @@ class GenericMultiSetDataFormatterTestCase(TestBase):
             ])
         self.check("ss", 4)
         self.expect(
-            "p ss",
+            "expression ss",
             substrs=[
                 "size=4",
                 '[0] = "a"',

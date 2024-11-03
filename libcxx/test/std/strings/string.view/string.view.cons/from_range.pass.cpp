@@ -20,7 +20,6 @@
 #include <type_traits>
 #include <vector>
 
-#include "constexpr_char_traits.h"
 #include "make_string.h"
 #include "test_iterators.h"
 #include "test_range.h"
@@ -107,6 +106,15 @@ constexpr bool test() {
     assert(sv == "test");
   }
 
+  // Different trait types
+  {
+    struct OtherTraits : std::char_traits<char> {};
+    std::basic_string_view<char> sv1{"hello"};
+    std::basic_string_view<char, OtherTraits> sv2(sv1);
+    assert(sv1.size() == sv2.size());
+    assert(sv1.data() == sv2.data());
+  }
+
   return true;
 }
 
@@ -135,25 +143,7 @@ struct WithStringViewConversionOperator {
 
 static_assert(std::is_constructible_v<std::string_view, WithStringViewConversionOperator>); // lvalue
 static_assert(std::is_constructible_v<std::string_view, const WithStringViewConversionOperator&>); // const lvalue
-static_assert(std::is_constructible_v<std::string_view, WithStringViewConversionOperator&&>); // rvalue
-
-template <class CharTraits>
-struct WithTraitsType {
-  typename CharTraits::char_type* begin() const;
-  typename CharTraits::char_type* end() const;
-  using traits_type = CharTraits;
-};
-
-using CCT = constexpr_char_traits<char>;
-static_assert(std::is_constructible_v<std::string_view, WithTraitsType<std::char_traits<char>>>);
-#ifndef TEST_HAS_NO_WIDE_CHARACTERS
-static_assert(std::is_constructible_v<std::wstring_view, WithTraitsType<std::char_traits<wchar_t>>>);
-#endif
-static_assert(std::is_constructible_v<std::basic_string_view<char, CCT>, WithTraitsType<CCT>>);
-static_assert(!std::is_constructible_v<std::string_view, WithTraitsType<CCT>>);  // wrong traits type
-#ifndef TEST_HAS_NO_WIDE_CHARACTERS
-static_assert(!std::is_constructible_v<std::wstring_view, WithTraitsType<std::char_traits<char>>>);  // wrong traits type
-#endif
+static_assert(std::is_constructible_v<std::string_view, WithStringViewConversionOperator&&>);      // rvalue
 
 #ifndef TEST_HAS_NO_EXCEPTIONS
 void test_throwing() {

@@ -35,9 +35,9 @@ struct ProcessStatus {
     return failure == reinterpret_cast<const char *>(TIMEOUT);
   }
   const char *get_error() const { return timed_out() ? nullptr : failure; }
-  bool exited_normally() const;
-  int get_exit_code() const;
-  int get_fatal_signal() const;
+  bool exited_normally();
+  int get_exit_code();
+  int get_fatal_signal();
 };
 
 ProcessStatus invoke_in_subprocess(FunctionCaller *func,

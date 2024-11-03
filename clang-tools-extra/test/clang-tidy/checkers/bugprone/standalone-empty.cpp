@@ -80,6 +80,10 @@ template <class T>
 void empty(T &&);
 } // namespace test
 
+namespace test_no_args {
+bool empty();
+} // namespace test_no_args
+
 namespace base {
 template <typename T>
 struct base_vector {
@@ -305,6 +309,9 @@ bool test_qualified_empty() {
     // CHECK-FIXES: {{^  }}  v.clear();{{$}}
 
     test::empty(v);
+    // no-warning
+
+    test_no_args::empty();
     // no-warning
   }
 
@@ -875,4 +882,25 @@ bool test_clear_with_qualifiers() {
     return empty(v);
     // no-warning
   }
+}
+
+namespace user_lib {
+template <typename T>
+struct vector {
+  bool empty();
+  bool test_empty_inside_impl() {
+    empty();
+    // no-warning
+    return empty();
+    // no-warning
+  }
+};
+} // namespace user_lib
+
+bool test_template_empty_outside_impl() {
+  user_lib::vector<int> v;
+  v.empty();
+  // CHECK-MESSAGES: :[[#@LINE-1]]:3: warning: ignoring the result of 'empty()' [bugprone-standalone-empty]
+  return v.empty();
+  // no-warning
 }

@@ -43,7 +43,7 @@ _LIBCPP_PUSH_MACROS
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#if _LIBCPP_STD_VER > 17
+#if _LIBCPP_STD_VER >= 20
 
 namespace __formatter {
 
@@ -748,7 +748,7 @@ template <__fmt_char_type _CharT>
 struct _LIBCPP_TEMPLATE_VIS _LIBCPP_AVAILABILITY_FORMAT formatter<long double, _CharT>
     : public __formatter_floating_point<_CharT> {};
 
-#endif //_LIBCPP_STD_VER > 17
+#endif //_LIBCPP_STD_VER >= 20
 
 _LIBCPP_END_NAMESPACE_STD
 

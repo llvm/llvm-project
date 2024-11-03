@@ -1079,7 +1079,15 @@ void RelocationScanner::processAux(RelExpr expr, RelType type, uint64_t offset,
     return;
   }
 
-  bool canWrite = (sec->flags & SHF_WRITE) || !config->zText;
+  // Use a simple -z notext rule that treats all sections except .eh_frame as
+  // writable. GNU ld does not produce dynamic relocations in .eh_frame (and our
+  // SectionBase::getOffset would incorrectly adjust the offset).
+  //
+  // For MIPS, we don't implement GNU ld's DW_EH_PE_absptr to DW_EH_PE_pcrel
+  // conversion. We still emit a dynamic relocation.
+  bool canWrite = (sec->flags & SHF_WRITE) ||
+                  !(config->zText ||
+                    (isa<EhInputSection>(sec) && config->emachine != EM_MIPS));
   if (canWrite) {
     RelType rel = target->getDynRel(type);
     if (expr == R_GOT || (rel == target->symbolicRel && !sym.isPreemptible)) {

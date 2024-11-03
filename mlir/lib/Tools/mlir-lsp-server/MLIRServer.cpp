@@ -7,8 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "MLIRServer.h"
-#include "../lsp-server-support/Logging.h"
-#include "../lsp-server-support/SourceMgrUtils.h"
 #include "Protocol.h"
 #include "mlir/AsmParser/AsmParser.h"
 #include "mlir/AsmParser/AsmParserState.h"
@@ -17,11 +15,20 @@
 #include "mlir/IR/FunctionInterfaces.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/Parser/Parser.h"
+#include "mlir/Tools/lsp-server-support/Logging.h"
+#include "mlir/Tools/lsp-server-support/SourceMgrUtils.h"
 #include "llvm/Support/Base64.h"
 #include "llvm/Support/SourceMgr.h"
 #include <optional>
 
 using namespace mlir;
+
+/// Returns the range of a lexical token given a SMLoc corresponding to the
+/// start of an token location. The range is computed heuristically, and
+/// supports identifier-like tokens, strings, etc.
+static SMRange convertTokenLocToRange(SMLoc loc) {
+  return lsp::convertTokenLocToRange(loc, "$-.");
+}
 
 /// Returns a language server location from the given MLIR file location.
 /// `uriScheme` is the scheme to use when building new uris.
@@ -65,7 +72,7 @@ getLocationFromLoc(llvm::SourceMgr &sourceMgr, Location loc,
       // Use range of potential identifier starting at location, else length 1
       // range.
       location->range.end.character += 1;
-      if (std::optional<SMRange> range = lsp::convertTokenLocToRange(loc)) {
+      if (std::optional<SMRange> range = convertTokenLocToRange(loc)) {
         auto lineCol = sourceMgr.getLineAndColumn(range->End);
         location->range.end.character =
             std::max(fileLoc.getColumn() + 1, lineCol.second - 1);

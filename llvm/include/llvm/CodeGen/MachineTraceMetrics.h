@@ -82,6 +82,16 @@ struct LiveRegUnit {
   LiveRegUnit(unsigned RU) : RegUnit(RU) {}
 };
 
+/// Strategies for selecting traces.
+enum class MachineTraceStrategy {
+  /// Select the trace through a block that has the fewest instructions.
+  TS_MinInstrCount,
+  /// Select the trace that contains only the current basic block. For instance,
+  /// this strategy can be used by MachineCombiner to make better decisions when
+  /// we estimate critical path for in-order cores.
+  TS_Local,
+  TS_NumStrategies
+};
 
 class MachineTraceMetrics : public MachineFunctionPass {
   const MachineFunction *MF = nullptr;
@@ -372,18 +382,10 @@ public:
 
   };
 
-  /// Strategies for selecting traces.
-  enum Strategy {
-    /// Select the trace through a block that has the fewest instructions.
-    TS_MinInstrCount,
-
-    TS_NumStrategies
-  };
-
   /// Get the trace ensemble representing the given trace selection strategy.
   /// The returned Ensemble object is owned by the MachineTraceMetrics analysis,
   /// and valid for the lifetime of the analysis pass.
-  Ensemble *getEnsemble(Strategy);
+  Ensemble *getEnsemble(MachineTraceStrategy);
 
   /// Invalidate cached information about MBB. This must be called *before* MBB
   /// is erased, or the CFG is otherwise changed.
@@ -407,7 +409,8 @@ private:
   SmallVector<unsigned, 0> ProcResourceCycles;
 
   // One ensemble per strategy.
-  Ensemble* Ensembles[TS_NumStrategies];
+  Ensemble
+      *Ensembles[static_cast<size_t>(MachineTraceStrategy::TS_NumStrategies)];
 
   // Convert scaled resource usage to a cycle count that can be compared with
   // latencies.

@@ -72,20 +72,22 @@ public:
       } else if (bytes == 0) {
         return Ok;
       } else {
+        Result result{Ok};
         for (auto at{x.lbounds()}; elements-- > 0; x.IncrementSubscripts(at)) {
           auto scalar{x.At(at)}; // this is a std string; size() in chars
-          // Subtle: an initializer for a substring may have been
-          // expanded to the length of the entire string.
           auto scalarBytes{scalar.size() * KIND};
-          if (scalarBytes < elementBytes ||
-              (scalarBytes > elementBytes && elements != 0)) {
-            return SizeMismatch;
+          if (scalarBytes != elementBytes) {
+            result = SizeMismatch;
+          }
+          // Blank padding when short
+          for (; scalarBytes < elementBytes; scalarBytes += KIND) {
+            scalar += ' ';
           }
           // TODO endianness
           std::memcpy(&data_.at(offset), scalar.data(), elementBytes);
           offset += elementBytes;
         }
-        return Ok;
+        return result;
       }
     }
   }

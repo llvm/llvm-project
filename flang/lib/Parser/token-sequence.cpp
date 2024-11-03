@@ -264,8 +264,10 @@ TokenSequence &TokenSequence::ClipComment(bool skipFirst) {
 }
 
 void TokenSequence::Emit(CookedSource &cooked) const {
-  cooked.Put(&char_[0], char_.size());
-  cooked.PutProvenanceMappings(provenances_);
+  if (auto n{char_.size()}) {
+    cooked.Put(&char_[0], n);
+    cooked.PutProvenanceMappings(provenances_);
+  }
 }
 
 llvm::raw_ostream &TokenSequence::Dump(llvm::raw_ostream &o) const {

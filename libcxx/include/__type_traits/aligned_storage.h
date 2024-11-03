@@ -93,7 +93,7 @@ struct _LIBCPP_DEPRECATED_IN_CXX23 _LIBCPP_TEMPLATE_VIS aligned_storage
     };
 };
 
-#if _LIBCPP_STD_VER > 11
+#if _LIBCPP_STD_VER >= 14
 
   _LIBCPP_SUPPRESS_DEPRECATED_PUSH
 template <size_t _Len, size_t _Align = __find_max_align<__all_types, _Len>::value>

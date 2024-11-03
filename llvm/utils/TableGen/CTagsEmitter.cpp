@@ -12,12 +12,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Support/SourceMgr.h"
+#include "TableGenBackends.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/SourceMgr.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
 #include <algorithm>
-#include <string>
 #include <vector>
 using namespace llvm;
 
@@ -90,4 +90,4 @@ namespace llvm {
 
 void EmitCTags(RecordKeeper &RK, raw_ostream &OS) { CTagsEmitter(RK).run(OS); }
 
-} // End llvm namespace.
+} // namespace llvm

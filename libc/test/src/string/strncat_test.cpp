@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/string/strncat.h"
-#include "utils/UnitTest/Test.h"
+#include "test/UnitTest/Test.h"
 
 TEST(LlvmLibcStrNCatTest, EmptyDest) {
   const char *abc = "abc";

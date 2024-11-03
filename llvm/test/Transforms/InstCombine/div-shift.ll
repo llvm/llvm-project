@@ -90,8 +90,7 @@ define i32 @t5(i1 %x, i1 %y, i32 %V) {
 
 define i32 @t6(i32 %x, i32 %z) {
 ; CHECK-LABEL: @t6(
-; CHECK-NEXT:    [[X_IS_ZERO:%.*]] = icmp eq i32 [[X:%.*]], 0
-; CHECK-NEXT:    [[DIVISOR:%.*]] = select i1 [[X_IS_ZERO]], i32 1, i32 [[X]]
+; CHECK-NEXT:    [[DIVISOR:%.*]] = call i32 @llvm.umax.i32(i32 [[X:%.*]], i32 1)
 ; CHECK-NEXT:    [[Y:%.*]] = udiv i32 [[Z:%.*]], [[DIVISOR]]
 ; CHECK-NEXT:    ret i32 [[Y]]
 ;

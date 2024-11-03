@@ -24,7 +24,7 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#if _LIBCPP_STD_VER > 17 && !defined(_LIBCPP_HAS_NO_INCOMPLETE_FORMAT)
+#if _LIBCPP_STD_VER >= 20 && !defined(_LIBCPP_HAS_NO_INCOMPLETE_FORMAT)
 
 namespace __format_spec {
 
@@ -137,17 +137,19 @@ _LIBCPP_HIDE_FROM_ABI constexpr void __validate_time_zone(__flags __flags) {
 
 template <class _CharT>
 class _LIBCPP_TEMPLATE_VIS __parser_chrono {
+  using _ConstIterator = typename basic_format_parse_context<_CharT>::const_iterator;
+
 public:
   _LIBCPP_HIDE_FROM_ABI constexpr auto
   __parse(basic_format_parse_context<_CharT>& __parse_ctx, __fields __fields, __flags __flags)
       -> decltype(__parse_ctx.begin()) {
-    const _CharT* __begin = __parser_.__parse(__parse_ctx, __fields);
-    const _CharT* __end   = __parse_ctx.end();
+    _ConstIterator __begin = __parser_.__parse(__parse_ctx, __fields);
+    _ConstIterator __end   = __parse_ctx.end();
     if (__begin == __end)
       return __begin;
 
-    const _CharT* __last = __parse_chrono_specs(__begin, __end, __flags);
-    __chrono_specs_      = basic_string_view<_CharT>{__begin, __last};
+    _ConstIterator __last = __parse_chrono_specs(__begin, __end, __flags);
+    __chrono_specs_       = basic_string_view<_CharT>{__begin, __last};
 
     return __last;
   }
@@ -156,8 +158,8 @@ public:
   basic_string_view<_CharT> __chrono_specs_;
 
 private:
-  _LIBCPP_HIDE_FROM_ABI constexpr const _CharT*
-  __parse_chrono_specs(const _CharT* __begin, const _CharT* __end, __flags __flags) {
+  _LIBCPP_HIDE_FROM_ABI constexpr _ConstIterator
+  __parse_chrono_specs(_ConstIterator __begin, _ConstIterator __end, __flags __flags) {
     _LIBCPP_ASSERT(__begin != __end,
                    "When called with an empty input the function will cause "
                    "undefined behavior by evaluating data not in the input");
@@ -190,7 +192,7 @@ private:
   /// \pre *__begin == '%'
   /// \post __begin points at the end parsed conversion-spec
   _LIBCPP_HIDE_FROM_ABI constexpr void
-  __parse_conversion_spec(const _CharT*& __begin, const _CharT* __end, __flags __flags) {
+  __parse_conversion_spec(_ConstIterator& __begin, _ConstIterator __end, __flags __flags) {
     ++__begin;
     if (__begin == __end)
       std::__throw_format_error("End of input while parsing the modifier chrono conversion-spec");
@@ -212,6 +214,7 @@ private:
     case _CharT('p'): // TODO FMT does the formater require an hour or a time?
     case _CharT('H'):
     case _CharT('I'):
+      __parser_.__hour_ = true;
       __validate_hour(__flags);
       break;
 
@@ -219,6 +222,7 @@ private:
     case _CharT('R'):
     case _CharT('T'):
     case _CharT('X'):
+      __parser_.__hour_ = true;
       __format_spec::__validate_time(__flags);
       break;
 
@@ -304,13 +308,14 @@ private:
   /// \pre *__begin == 'E'
   /// \post __begin is incremented by one.
   _LIBCPP_HIDE_FROM_ABI constexpr void
-  __parse_modifier_E(const _CharT*& __begin, const _CharT* __end, __flags __flags) {
+  __parse_modifier_E(_ConstIterator& __begin, _ConstIterator __end, __flags __flags) {
     ++__begin;
     if (__begin == __end)
       std::__throw_format_error("End of input while parsing the modifier E");
 
     switch (*__begin) {
     case _CharT('X'):
+      __parser_.__hour_ = true;
       __format_spec::__validate_time(__flags);
       break;
 
@@ -343,7 +348,7 @@ private:
   /// \pre *__begin == 'O'
   /// \post __begin is incremented by one.
   _LIBCPP_HIDE_FROM_ABI constexpr void
-  __parse_modifier_O(const _CharT*& __begin, const _CharT* __end, __flags __flags) {
+  __parse_modifier_O(_ConstIterator& __begin, _ConstIterator __end, __flags __flags) {
     ++__begin;
     if (__begin == __end)
       std::__throw_format_error("End of input while parsing the modifier O");
@@ -359,6 +364,7 @@ private:
 
     case _CharT('I'):
     case _CharT('H'):
+      __parser_.__hour_ = true;
       __format_spec::__validate_hour(__flags);
       break;
 
@@ -403,7 +409,7 @@ private:
 
 } // namespace __format_spec
 
-#endif //_LIBCPP_STD_VER > 17 && !defined(_LIBCPP_HAS_NO_INCOMPLETE_FORMAT)
+#endif //_LIBCPP_STD_VER >= 20 && !defined(_LIBCPP_HAS_NO_INCOMPLETE_FORMAT)
 
 _LIBCPP_END_NAMESPACE_STD
 

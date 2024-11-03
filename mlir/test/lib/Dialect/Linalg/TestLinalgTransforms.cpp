@@ -128,10 +128,6 @@ struct TestLinalgTransforms
       *this, "test-erase-unnecessary-inputs",
       llvm::cl::desc("Test patterns to erase unnecessary inputs"),
       llvm::cl::init(false)};
-  Option<bool> testConvertToDestinationStylePatterns{
-      *this, "test-convert-to-destination-style-patterns",
-      llvm::cl::desc("Test patterns that convert ops to destination style"),
-      llvm::cl::init(false)};
 };
 } // namespace
 
@@ -222,12 +218,6 @@ static void applyEraseUnnecessaryInputs(func::FuncOp funcOp) {
   (void)applyPatternsAndFoldGreedily(funcOp, std::move(patterns));
 }
 
-static void applyConvertToDestinationStylePatterns(Operation *rootOp) {
-  RewritePatternSet patterns(rootOp->getContext());
-  populateConvertToDestinationStylePatterns(patterns);
-  (void)applyPatternsAndFoldGreedily(rootOp, std::move(patterns));
-}
-
 /// Apply transformations specified as patterns.
 void TestLinalgTransforms::runOnOperation() {
   if (testPatterns)
@@ -254,8 +244,6 @@ void TestLinalgTransforms::runOnOperation() {
     return applyEraseUnusedOperandsAndResultsPatterns(getOperation());
   if (testEraseUnnecessaryInputs)
     return applyEraseUnnecessaryInputs(getOperation());
-  if (testConvertToDestinationStylePatterns)
-    applyConvertToDestinationStylePatterns(getOperation());
 }
 
 namespace mlir {

@@ -13,14 +13,18 @@
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/CommonFolders.h"
 #include "mlir/IR/Builders.h"
+#include "mlir/IR/BuiltinAttributeInterfaces.h"
+#include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/TypeUtilities.h"
 
+#include "llvm/ADT/APInt.h"
 #include "llvm/ADT/APSInt.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
-#include "llvm/ADT/TypeSwitch.h"
+#include "llvm/ADT/SmallVector.h"
 
 using namespace mlir;
 using namespace mlir::arith;
@@ -105,6 +109,23 @@ static FailureOr<APInt> getIntOrSplatIntValue(Attribute attr) {
 namespace {
 #include "ArithCanonicalization.inc"
 } // namespace
+
+//===----------------------------------------------------------------------===//
+// Common helpers
+//===----------------------------------------------------------------------===//
+
+/// Return the type of the same shape (scalar, vector or tensor) containing i1.
+static Type getI1SameShape(Type type) {
+  auto i1Type = IntegerType::get(type.getContext(), 1);
+  if (auto tensorType = type.dyn_cast<RankedTensorType>())
+    return RankedTensorType::get(tensorType.getShape(), i1Type);
+  if (type.isa<UnrankedTensorType>())
+    return UnrankedTensorType::get(i1Type);
+  if (auto vectorType = type.dyn_cast<VectorType>())
+    return VectorType::get(vectorType.getShape(), i1Type,
+                           vectorType.getNumScalableDims());
+  return i1Type;
+}
 
 //===----------------------------------------------------------------------===//
 // ConstantOp
@@ -275,41 +296,16 @@ arith::AddUIExtendedOp::fold(FoldAdaptor adaptor,
   // addui_extended(constant_a, constant_b) -> constant_sum, constant_carry
   // Let the `constFoldBinaryOp` utility attempt to fold the sum of both
   // operands. If that succeeds, calculate the overflow bit based on the sum
-  // and the first (constant) operand, `lhs`. Note that we cannot simply call
-  // `constFoldBinaryOp` again to calculate the overflow bit because the
-  // constructed attribute is of the same element type as both operands.
+  // and the first (constant) operand, `lhs`.
   if (Attribute sumAttr = constFoldBinaryOp<IntegerAttr>(
           adaptor.getOperands(),
           [](APInt a, const APInt &b) { return std::move(a) + b; })) {
-    Attribute overflowAttr;
-    if (auto lhs = adaptor.getLhs().dyn_cast<IntegerAttr>()) {
-      // Both arguments are scalars, calculate the scalar overflow value.
-      auto sum = sumAttr.cast<IntegerAttr>();
-      overflowAttr = IntegerAttr::get(
-          overflowTy,
-          calculateUnsignedOverflow(sum.getValue(), lhs.getValue()));
-    } else if (auto lhs = adaptor.getLhs().dyn_cast<SplatElementsAttr>()) {
-      // Both arguments are splats, calculate the splat overflow value.
-      auto sum = sumAttr.cast<SplatElementsAttr>();
-      APInt overflow = calculateUnsignedOverflow(sum.getSplatValue<APInt>(),
-                                                 lhs.getSplatValue<APInt>());
-      overflowAttr = SplatElementsAttr::get(overflowTy, overflow);
-    } else if (auto lhs = adaptor.getLhs().dyn_cast<ElementsAttr>()) {
-      // Othwerwise calculate element-wise overflow values.
-      auto sum = sumAttr.cast<ElementsAttr>();
-      const auto numElems = static_cast<size_t>(sum.getNumElements());
-      SmallVector<APInt> overflowValues;
-      overflowValues.reserve(numElems);
-
-      auto sumIt = sum.value_begin<APInt>();
-      auto lhsIt = lhs.value_begin<APInt>();
-      for (size_t i = 0, e = numElems; i != e; ++i, ++sumIt, ++lhsIt)
-        overflowValues.push_back(calculateUnsignedOverflow(*sumIt, *lhsIt));
-
-      overflowAttr = DenseElementsAttr::get(overflowTy, overflowValues);
-    } else {
+    Attribute overflowAttr = constFoldBinaryOp<IntegerAttr>(
+        ArrayRef({sumAttr, adaptor.getLhs()}),
+        getI1SameShape(sumAttr.cast<TypedAttr>().getType()),
+        calculateUnsignedOverflow);
+    if (!overflowAttr)
       return failure();
-    }
 
     results.push_back(sumAttr);
     results.push_back(overflowAttr);
@@ -712,7 +708,7 @@ OpFoldResult arith::RemUIOp::fold(FoldAdaptor adaptor) {
   bool div0 = false;
   auto result = constFoldBinaryOp<IntegerAttr>(adaptor.getOperands(),
                                                [&](APInt a, const APInt &b) {
-                                                 if (div0 || b.isNullValue()) {
+                                                 if (div0 || b.isZero()) {
                                                    div0 = true;
                                                    return a;
                                                  }
@@ -735,7 +731,7 @@ OpFoldResult arith::RemSIOp::fold(FoldAdaptor adaptor) {
   bool div0 = false;
   auto result = constFoldBinaryOp<IntegerAttr>(adaptor.getOperands(),
                                                [&](APInt a, const APInt &b) {
-                                                 if (div0 || b.isNullValue()) {
+                                                 if (div0 || b.isZero()) {
                                                    div0 = true;
                                                    return a;
                                                  }
@@ -778,12 +774,12 @@ OpFoldResult arith::AndIOp::fold(FoldAdaptor adaptor) {
   if (matchPattern(getRhs(), m_Op<XOrIOp>(matchers::m_Val(getLhs()),
                                           m_ConstantInt(&intValue))) &&
       intValue.isAllOnes())
-    return IntegerAttr::get(getType(), 0);
+    return Builder(getContext()).getZeroAttr(getType());
   /// and(not(x), x) -> 0
   if (matchPattern(getLhs(), m_Op<XOrIOp>(matchers::m_Val(getRhs()),
                                           m_ConstantInt(&intValue))) &&
       intValue.isAllOnes())
-    return IntegerAttr::get(getType(), 0);
+    return Builder(getContext()).getZeroAttr(getType());
 
   /// and(a, and(a, b)) -> and(a, b)
   if (Value result = foldAndIofAndI(*this))
@@ -1534,23 +1530,6 @@ void arith::BitcastOp::getCanonicalizationPatterns(RewritePatternSet &patterns,
 }
 
 //===----------------------------------------------------------------------===//
-// Helpers for compare ops
-//===----------------------------------------------------------------------===//
-
-/// Return the type of the same shape (scalar, vector or tensor) containing i1.
-static Type getI1SameShape(Type type) {
-  auto i1Type = IntegerType::get(type.getContext(), 1);
-  if (auto tensorType = type.dyn_cast<RankedTensorType>())
-    return RankedTensorType::get(tensorType.getShape(), i1Type);
-  if (type.isa<UnrankedTensorType>())
-    return UnrankedTensorType::get(i1Type);
-  if (auto vectorType = type.dyn_cast<VectorType>())
-    return VectorType::get(vectorType.getShape(), i1Type,
-                           vectorType.getNumScalableDims());
-  return i1Type;
-}
-
-//===----------------------------------------------------------------------===//
 // CmpIOp
 //===----------------------------------------------------------------------===//
 
@@ -1670,16 +1649,18 @@ OpFoldResult arith::CmpIOp::fold(FoldAdaptor adaptor) {
     llvm_unreachable("unknown cmpi predicate kind");
   }
 
-  auto lhs = adaptor.getLhs().dyn_cast_or_null<IntegerAttr>();
-  if (!lhs)
-    return {};
-
   // We are moving constants to the right side; So if lhs is constant rhs is
   // guaranteed to be a constant.
-  auto rhs = adaptor.getRhs().cast<IntegerAttr>();
+  if (auto lhs = adaptor.getLhs().dyn_cast_or_null<TypedAttr>()) {
+    return constFoldBinaryOp<IntegerAttr>(
+        adaptor.getOperands(), getI1SameShape(lhs.getType()),
+        [pred = getPredicate()](const APInt &lhs, const APInt &rhs) {
+          return APInt(1,
+                       static_cast<int64_t>(applyCmpPredicate(pred, lhs, rhs)));
+        });
+  }
 
-  auto val = applyCmpPredicate(getPredicate(), lhs.getValue(), rhs.getValue());
-  return BoolAttr::get(getContext(), val);
+  return {};
 }
 
 void arith::CmpIOp::getCanonicalizationPatterns(RewritePatternSet &patterns,
@@ -2157,6 +2138,33 @@ OpFoldResult arith::SelectOp::fold(FoldAdaptor adaptor) {
         return pred == arith::CmpIPredicate::ne ? trueVal : falseVal;
     }
   }
+
+  // Constant-fold constant operands over non-splat constant condition.
+  // select %cst_vec, %cst0, %cst1 => %cst2
+  if (auto cond =
+          adaptor.getCondition().dyn_cast_or_null<DenseElementsAttr>()) {
+    if (auto lhs =
+            adaptor.getTrueValue().dyn_cast_or_null<DenseElementsAttr>()) {
+      if (auto rhs =
+              adaptor.getFalseValue().dyn_cast_or_null<DenseElementsAttr>()) {
+        SmallVector<Attribute> results;
+        results.reserve(static_cast<size_t>(cond.getNumElements()));
+        auto condVals = llvm::make_range(cond.value_begin<BoolAttr>(),
+                                         cond.value_end<BoolAttr>());
+        auto lhsVals = llvm::make_range(lhs.value_begin<Attribute>(),
+                                        lhs.value_end<Attribute>());
+        auto rhsVals = llvm::make_range(rhs.value_begin<Attribute>(),
+                                        rhs.value_end<Attribute>());
+
+        for (auto [condVal, lhsVal, rhsVal] :
+             llvm::zip_equal(condVals, lhsVals, rhsVals))
+          results.push_back(condVal.getValue() ? lhsVal : rhsVal);
+
+        return DenseElementsAttr::get(lhs.getType(), results);
+      }
+    }
+  }
+
   return nullptr;
 }
 

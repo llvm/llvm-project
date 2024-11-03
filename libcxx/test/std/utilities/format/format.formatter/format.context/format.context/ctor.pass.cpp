@@ -24,6 +24,7 @@
 
 #include <format>
 #include <cassert>
+#include <iterator>
 #include <type_traits>
 
 #include "test_basic_format_arg.h"

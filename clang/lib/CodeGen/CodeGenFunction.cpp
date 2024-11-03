@@ -1104,8 +1104,9 @@ void CodeGenFunction::StartFunction(GlobalDecl GD, QualType RetTy,
     auto AI = CurFn->arg_begin();
     if (CurFnInfo->getReturnInfo().isSRetAfterThis())
       ++AI;
-    ReturnValue = Address(&*AI, ConvertType(RetTy),
-                          CurFnInfo->getReturnInfo().getIndirectAlign());
+    ReturnValue =
+        Address(&*AI, ConvertType(RetTy),
+                CurFnInfo->getReturnInfo().getIndirectAlign(), KnownNonNull);
     if (!CurFnInfo->getReturnInfo().getIndirectByVal()) {
       ReturnValuePointer =
           CreateDefaultAlignTempAlloca(Int8PtrTy, "result.ptr");
@@ -1125,8 +1126,8 @@ void CodeGenFunction::StartFunction(GlobalDecl GD, QualType RetTy,
         cast<llvm::GetElementPtrInst>(Addr)->getResultElementType();
     ReturnValuePointer = Address(Addr, Ty, getPointerAlign());
     Addr = Builder.CreateAlignedLoad(Ty, Addr, getPointerAlign(), "agg.result");
-    ReturnValue =
-        Address(Addr, ConvertType(RetTy), CGM.getNaturalTypeAlignment(RetTy));
+    ReturnValue = Address(Addr, ConvertType(RetTy),
+                          CGM.getNaturalTypeAlignment(RetTy), KnownNonNull);
   } else {
     ReturnValue = CreateIRTemp(RetTy, "retval");
 

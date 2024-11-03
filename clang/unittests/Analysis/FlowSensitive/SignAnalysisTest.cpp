@@ -330,9 +330,9 @@ public:
 
   static NoopLattice initialElement() { return {}; }
 
-  void transfer(const CFGElement *Elt, NoopLattice &L, Environment &Env) {
+  void transfer(const CFGElement &Elt, NoopLattice &L, Environment &Env) {
     LatticeTransferState State(L, Env);
-    TransferMatchSwitch(*Elt, getASTContext(), State);
+    TransferMatchSwitch(Elt, getASTContext(), State);
   }
   bool merge(QualType Type, const Value &Val1, const Environment &Env1,
              const Value &Val2, const Environment &Env2, Value &MergedVal,

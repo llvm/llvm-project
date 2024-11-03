@@ -27,7 +27,7 @@
 #  pragma GCC system_header
 #endif
 
-#if _LIBCPP_STD_VER > 17
+#if _LIBCPP_STD_VER >= 20
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
@@ -250,6 +250,6 @@ _LIBCPP_HIDE_FROM_ABI inline constexpr year_month_weekday_last& year_month_weekd
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP_STD_VER > 17
+#endif // _LIBCPP_STD_VER >= 20
 
 #endif // _LIBCPP___CHRONO_YEAR_MONTH_WEEKDAY_H

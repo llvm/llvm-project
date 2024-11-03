@@ -19,6 +19,7 @@
 // - otherwise, if T is char and char_type is wchar_t, initializes value with static_cast<wchar_t>(v);
 
 #include <format>
+#include <iterator>
 #include <string>
 
 void test() {

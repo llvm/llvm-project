@@ -76,7 +76,8 @@ template <class T> LIBC_INLINE void set_implicit_bit(fputil::FPBits<T> &) {
 
 #if defined(SPECIAL_X86_LONG_DOUBLE)
 template <>
-inline void set_implicit_bit<long double>(fputil::FPBits<long double> &result) {
+LIBC_INLINE void
+set_implicit_bit<long double>(fputil::FPBits<long double> &result) {
   result.set_implicit_bit(result.get_unbiased_exponent() != 0);
 }
 #endif
@@ -190,7 +191,7 @@ eisel_lemire(typename fputil::FPBits<T>::UIntType mantissa, int32_t exp10,
 
 #if !defined(LONG_DOUBLE_IS_DOUBLE)
 template <>
-inline bool eisel_lemire<long double>(
+LIBC_INLINE bool eisel_lemire<long double>(
     typename fputil::FPBits<long double>::UIntType mantissa, int32_t exp10,
     typename fputil::FPBits<long double>::UIntType *outputMantissa,
     uint32_t *outputExp2) {
@@ -615,15 +616,15 @@ decimal_exp_to_float(typename fputil::FPBits<T>::UIntType mantissa,
     return;
   }
 
-#ifndef LLVM_LIBC_DISABLE_CLINGER_FAST_PATH
+#ifndef LIBC_COPT_STRTOFLOAT_DISABLE_CLINGER_FAST_PATH
   if (!truncated) {
     if (clinger_fast_path<T>(mantissa, exp10, outputMantissa, outputExp2)) {
       return;
     }
   }
-#endif // LLVM_LIBC_DISABLE_CLINGER_FAST_PATH
+#endif // LIBC_COPT_STRTOFLOAT_DISABLE_CLINGER_FAST_PATH
 
-#ifndef LLVM_LIBC_DISABLE_EISEL_LEMIRE
+#ifndef LIBC_COPT_STRTOFLOAT_DISABLE_EISEL_LEMIRE
   // Try Eisel-Lemire
   if (eisel_lemire<T>(mantissa, exp10, outputMantissa, outputExp2)) {
     if (!truncated) {
@@ -640,11 +641,13 @@ decimal_exp_to_float(typename fputil::FPBits<T>::UIntType mantissa,
       }
     }
   }
-#endif // LLVM_LIBC_DISABLE_EISEL_LEMIRE
+#endif // LIBC_COPT_STRTOFLOAT_DISABLE_EISEL_LEMIRE
 
-#ifndef LLVM_LIBC_DISABLE_SIMPLE_DECIMAL_CONVERSION
+#ifndef LIBC_COPT_STRTOFLOAT_DISABLE_SIMPLE_DECIMAL_CONVERSION
   simple_decimal_conversion<T>(numStart, outputMantissa, outputExp2);
-#endif // LLVM_LIBC_DISABLE_SIMPLE_DECIMAL_CONVERSION
+#else
+#warning "Simple decimal conversion is disabled, result may not be correct."
+#endif // LIBC_COPT_STRTOFLOAT_DISABLE_SIMPLE_DECIMAL_CONVERSION
 
   return;
 }

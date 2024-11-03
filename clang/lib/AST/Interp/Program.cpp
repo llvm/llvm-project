@@ -340,7 +340,7 @@ Descriptor *Program::createDescriptor(const DeclTy &D, const Type *Ty,
             D, ElemTy.getTypePtr(), std::nullopt, IsConst, IsTemporary);
         if (!ElemDesc)
           return nullptr;
-        InterpSize ElemSize =
+        unsigned ElemSize =
             ElemDesc->getAllocSize() + sizeof(InlineDescriptor);
         if (std::numeric_limits<unsigned>::max() / ElemSize <= NumElems)
           return {};

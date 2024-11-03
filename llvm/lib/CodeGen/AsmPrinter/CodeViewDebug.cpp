@@ -16,7 +16,6 @@
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/TinyPtrVector.h"
-#include "llvm/ADT/Triple.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/BinaryFormat/COFF.h"
 #include "llvm/BinaryFormat/Dwarf.h"
@@ -65,6 +64,7 @@
 #include "llvm/Support/ScopedPrinter.h"
 #include "llvm/Target/TargetLoweringObjectFile.h"
 #include "llvm/Target/TargetMachine.h"
+#include "llvm/TargetParser/Triple.h"
 #include <algorithm>
 #include <cassert>
 #include <cctype>
@@ -488,10 +488,10 @@ void CodeViewDebug::recordLocalVariable(LocalVariable &&Var,
     // This variable was inlined. Associate it with the InlineSite.
     const DISubprogram *Inlinee = Var.DIVar->getScope()->getSubprogram();
     InlineSite &Site = getInlineSite(InlinedAt, Inlinee);
-    Site.InlinedLocals.emplace_back(Var);
+    Site.InlinedLocals.emplace_back(std::move(Var));
   } else {
     // This variable goes into the corresponding lexical scope.
-    ScopeVariables[LS].emplace_back(Var);
+    ScopeVariables[LS].emplace_back(std::move(Var));
   }
 }
 

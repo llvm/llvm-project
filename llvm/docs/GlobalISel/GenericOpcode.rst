@@ -69,6 +69,15 @@ The address of a basic block.
 
   %0:_(p0) = G_BLOCK_ADDR blockaddress(@test_blockaddress, %ir-block.block)
 
+G_CONSTANT_POOL
+^^^^^^^^^^^^^^^
+
+The address of an object in the constant pool.
+
+.. code-block:: none
+
+  %0:_(p0) = G_CONSTANT_POOL %const.0
+
 Integer Extension and Truncation
 --------------------------------
 

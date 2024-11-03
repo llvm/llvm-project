@@ -16,6 +16,7 @@
 #include "bolt/Utils/CommandLineOpts.h"
 #include "bolt/Utils/NameResolver.h"
 #include "bolt/Utils/Utils.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/DebugInfo/DWARF/DWARFCompileUnit.h"
 #include "llvm/DebugInfo/DWARF/DWARFFormValue.h"
@@ -478,18 +479,6 @@ MemoryContentsType BinaryContext::analyzeMemoryAt(uint64_t Address,
   return MemoryContentsType::UNKNOWN;
 }
 
-/// Check if <fragment restored name> == <parent restored name>.cold(.\d+)?
-bool isPotentialFragmentByName(BinaryFunction &Fragment,
-                               BinaryFunction &Parent) {
-  for (StringRef Name : Parent.getNames()) {
-    std::string NamePrefix = Regex::escape(NameResolver::restore(Name));
-    std::string NameRegex = Twine(NamePrefix, "\\.cold(\\.[0-9]+)?").str();
-    if (Fragment.hasRestoredNameRegex(NameRegex))
-      return true;
-  }
-  return false;
-}
-
 bool BinaryContext::analyzeJumpTable(
     const uint64_t Address, const JumpTable::JumpTableType Type,
     BinaryFunction &BF, const uint64_t NextJTAddress,
@@ -512,14 +501,8 @@ bool BinaryContext::analyzeJumpTable(
     // Nothing to do if we failed to identify the containing function.
     if (!TargetBF)
       return false;
-    // Case 1: check if BF is a fragment and TargetBF is its parent.
-    if (BF.isFragment()) {
-      // Parent function may or may not be already registered.
-      // Set parent link based on function name matching heuristic.
-      return registerFragment(BF, *TargetBF);
-    }
-    // Case 2: check if TargetBF is a fragment and BF is its parent.
-    return TargetBF->isFragment() && registerFragment(*TargetBF, BF);
+    // Check if BF is a fragment of TargetBF or vice versa.
+    return BF.isChildOf(*TargetBF) || TargetBF->isChildOf(BF);
   };
 
   ErrorOr<BinarySection &> Section = getSectionForAddress(Address);
@@ -761,11 +744,6 @@ BinaryFunction *BinaryContext::createBinaryFunction(
 const MCSymbol *
 BinaryContext::getOrCreateJumpTable(BinaryFunction &Function, uint64_t Address,
                                     JumpTable::JumpTableType Type) {
-  auto isFragmentOf = [](BinaryFunction *Fragment, BinaryFunction *Parent) {
-    return (Fragment->isFragment() && Fragment->isParentFragment(Parent));
-  };
-  (void)isFragmentOf;
-
   // Two fragments of same function access same jump table
   if (JumpTable *JT = getJumpTableContainingAddress(Address)) {
     assert(JT->Type == Type && "jump table types have to match");
@@ -774,8 +752,8 @@ BinaryContext::getOrCreateJumpTable(BinaryFunction &Function, uint64_t Address,
     // Prevent associating a jump table to a specific fragment twice.
     // This simple check arises from the assumption: no more than 2 fragments.
     if (JT->Parents.size() == 1 && JT->Parents[0] != &Function) {
-      assert((isFragmentOf(JT->Parents[0], &Function) ||
-              isFragmentOf(&Function, JT->Parents[0])) &&
+      assert((JT->Parents[0]->isChildOf(Function) ||
+              Function.isChildOf(*JT->Parents[0])) &&
              "cannot re-use jump table of a different function");
       // Duplicate the entry for the parent function for easy access
       JT->Parents.push_back(&Function);
@@ -1115,10 +1093,8 @@ void BinaryContext::generateSymbolHashes() {
 
 bool BinaryContext::registerFragment(BinaryFunction &TargetFunction,
                                      BinaryFunction &Function) const {
-  if (!isPotentialFragmentByName(TargetFunction, Function))
-    return false;
   assert(TargetFunction.isFragment() && "TargetFunction must be a fragment");
-  if (TargetFunction.isParentFragment(&Function))
+  if (TargetFunction.isChildOf(Function))
     return true;
   TargetFunction.addParentFragment(Function);
   Function.addFragment(TargetFunction);
@@ -1241,7 +1217,7 @@ void BinaryContext::processInterproceduralReferences() {
 
     if (TargetFunction) {
       if (TargetFunction->isFragment() &&
-          !registerFragment(*TargetFunction, Function)) {
+          !TargetFunction->isChildOf(Function)) {
         errs() << "BOLT-WARNING: interprocedural reference between unrelated "
                   "fragments: "
                << Function.getPrintName() << " and "
@@ -1500,10 +1476,9 @@ unsigned BinaryContext::addDebugFilenameToUnit(const uint32_t DestCUID,
 
 std::vector<BinaryFunction *> BinaryContext::getSortedFunctions() {
   std::vector<BinaryFunction *> SortedFunctions(BinaryFunctions.size());
-  llvm::transform(BinaryFunctions, SortedFunctions.begin(),
-                  [](std::pair<const uint64_t, BinaryFunction> &BFI) {
-                    return &BFI.second;
-                  });
+  llvm::transform(llvm::make_second_range(BinaryFunctions),
+                  SortedFunctions.begin(),
+                  [](BinaryFunction &BF) { return &BF; });
 
   llvm::stable_sort(SortedFunctions,
                     [](const BinaryFunction *A, const BinaryFunction *B) {
@@ -1518,10 +1493,9 @@ std::vector<BinaryFunction *> BinaryContext::getSortedFunctions() {
 std::vector<BinaryFunction *> BinaryContext::getAllBinaryFunctions() {
   std::vector<BinaryFunction *> AllFunctions;
   AllFunctions.reserve(BinaryFunctions.size() + InjectedBinaryFunctions.size());
-  llvm::transform(BinaryFunctions, std::back_inserter(AllFunctions),
-                  [](std::pair<const uint64_t, BinaryFunction> &BFI) {
-                    return &BFI.second;
-                  });
+  llvm::transform(llvm::make_second_range(BinaryFunctions),
+                  std::back_inserter(AllFunctions),
+                  [](BinaryFunction &BF) { return &BF; });
   llvm::copy(InjectedBinaryFunctions, std::back_inserter(AllFunctions));
 
   return AllFunctions;
@@ -1561,6 +1535,8 @@ void BinaryContext::preprocessDWODebugInfo() {
       DWOCUs[*DWOId] = DWOCU;
     }
   }
+  if (!DWOCUs.empty())
+    outs() << "BOLT-INFO: processing split DWARF\n";
 }
 
 void BinaryContext::preprocessDebugInfo() {

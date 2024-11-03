@@ -103,7 +103,6 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetOperations.h"
 #include "llvm/ADT/SetVector.h"
-#include "llvm/ADT/Triple.h"
 #include "llvm/ADT/iterator.h"
 #include "llvm/Analysis/AssumeBundleQueries.h"
 #include "llvm/Analysis/CFG.h"
@@ -127,6 +126,7 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/DOTGraphTraits.h"
 #include "llvm/Support/TimeProfiler.h"
+#include "llvm/TargetParser/Triple.h"
 #include "llvm/Transforms/Utils/CallGraphUpdater.h"
 
 #include <limits>
@@ -448,10 +448,12 @@ struct DenseMapInfo<const AA::InstExclusionSetTy *>
     if (LHS == getEmptyKey() || RHS == getEmptyKey() ||
         LHS == getTombstoneKey() || RHS == getTombstoneKey())
       return false;
-    if (!LHS || !RHS)
-      return ((LHS && LHS->empty()) || (RHS && RHS->empty()));
-    if (LHS->size() != RHS->size())
+    auto SizeLHS = LHS ? LHS->size() : 0;
+    auto SizeRHS = RHS ? RHS->size() : 0;
+    if (SizeLHS != SizeRHS)
       return false;
+    if (SizeRHS == 0)
+      return true;
     return llvm::set_is_subset(*LHS, *RHS);
   }
 };
@@ -483,24 +485,24 @@ struct AADepGraphNode {
 public:
   virtual ~AADepGraphNode() = default;
   using DepTy = PointerIntPair<AADepGraphNode *, 1>;
+  using DepSetTy = SmallSetVector<DepTy, 2>;
 
 protected:
   /// Set of dependency graph nodes which should be updated if this one
   /// is updated. The bit encodes if it is optional.
-  TinyPtrVector<DepTy> Deps;
+  DepSetTy Deps;
 
-  static AADepGraphNode *DepGetVal(DepTy &DT) { return DT.getPointer(); }
-  static AbstractAttribute *DepGetValAA(DepTy &DT) {
+  static AADepGraphNode *DepGetVal(const DepTy &DT) { return DT.getPointer(); }
+  static AbstractAttribute *DepGetValAA(const DepTy &DT) {
     return cast<AbstractAttribute>(DT.getPointer());
   }
 
   operator AbstractAttribute *() { return cast<AbstractAttribute>(this); }
 
 public:
-  using iterator =
-      mapped_iterator<TinyPtrVector<DepTy>::iterator, decltype(&DepGetVal)>;
+  using iterator = mapped_iterator<DepSetTy::iterator, decltype(&DepGetVal)>;
   using aaiterator =
-      mapped_iterator<TinyPtrVector<DepTy>::iterator, decltype(&DepGetValAA)>;
+      mapped_iterator<DepSetTy::iterator, decltype(&DepGetValAA)>;
 
   aaiterator begin() { return aaiterator(Deps.begin(), &DepGetValAA); }
   aaiterator end() { return aaiterator(Deps.end(), &DepGetValAA); }
@@ -508,7 +510,7 @@ public:
   iterator child_end() { return iterator(Deps.end(), &DepGetVal); }
 
   virtual void print(raw_ostream &OS) const { OS << "AADepNode Impl\n"; }
-  TinyPtrVector<DepTy> &getDeps() { return Deps; }
+  DepSetTy &getDeps() { return Deps; }
 
   friend struct Attributor;
   friend struct AADepGraph;
@@ -524,9 +526,9 @@ struct AADepGraph {
   ~AADepGraph() = default;
 
   using DepTy = AADepGraphNode::DepTy;
-  static AADepGraphNode *DepGetVal(DepTy &DT) { return DT.getPointer(); }
+  static AADepGraphNode *DepGetVal(const DepTy &DT) { return DT.getPointer(); }
   using iterator =
-      mapped_iterator<TinyPtrVector<DepTy>::iterator, decltype(&DepGetVal)>;
+      mapped_iterator<AADepGraphNode::DepSetTy::iterator, decltype(&DepGetVal)>;
 
   /// There is no root node for the dependency graph. But the SCCIterator
   /// requires a single entry point, so we maintain a fake("synthetic") root
@@ -1297,15 +1299,16 @@ struct InformationCache {
   /// Return the map conaining all the knowledge we have from `llvm.assume`s.
   const RetainedKnowledgeMap &getKnowledgeMap() const { return KnowledgeMap; }
 
-  /// Given \p BES, return a uniqued version. \p BES is destroyed in the
-  /// process.
+  /// Given \p BES, return a uniqued version.
   const AA::InstExclusionSetTy *
   getOrCreateUniqueBlockExecutionSet(const AA::InstExclusionSetTy *BES) {
     auto It = BESets.find(BES);
     if (It != BESets.end())
       return *It;
     auto *UniqueBES = new (Allocator) AA::InstExclusionSetTy(*BES);
-    BESets.insert(UniqueBES);
+    bool Success = BESets.insert(UniqueBES).second;
+    (void)Success;
+    assert(Success && "Expected only new entries to be added");
     return UniqueBES;
   }
 
@@ -1376,7 +1379,7 @@ private:
   SetVector<const Instruction *> AssumeOnlyValues;
 
   /// Cache for block sets to allow reuse.
-  DenseSet<AA::InstExclusionSetTy *> BESets;
+  DenseSet<const AA::InstExclusionSetTy *> BESets;
 
   /// Getters for analysis.
   AnalysisGetter &AG;
@@ -1699,7 +1702,7 @@ struct Attributor {
 
     // Register AA with the synthetic root only before the manifest stage.
     if (Phase == AttributorPhase::SEEDING || Phase == AttributorPhase::UPDATE)
-      DG.SyntheticRoot.Deps.push_back(
+      DG.SyntheticRoot.Deps.insert(
           AADepGraphNode::DepTy(&AA, unsigned(DepClassTy::REQUIRED)));
 
     return AA;
@@ -5483,6 +5486,7 @@ struct AAPointerInfo : public AbstractAttribute {
   /// read the intial value of the underlying memory.
   virtual bool forallInterferingAccesses(
       Attributor &A, const AbstractAttribute &QueryingAA, Instruction &I,
+      bool FindInterferingWrites, bool FindInterferingReads,
       function_ref<bool(const Access &, bool)> CB, bool &HasBeenWrittenTo,
       AA::RangeTy &Range) const = 0;
 

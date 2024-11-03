@@ -16,6 +16,7 @@
 #include "flang/Optimizer/Builder/Runtime/Derived.h"
 #include "flang/Optimizer/Builder/Runtime/Stop.h"
 #include "flang/Optimizer/Builder/Todo.h"
+#include "flang/Optimizer/Dialect/FIRAttr.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/Dialect/FIROpsSupport.h"
 #include "flang/Optimizer/Support/FatalError.h"
@@ -440,6 +441,13 @@ fir::factory::genIsAllocatedOrAssociatedTest(fir::FirOpBuilder &builder,
   return builder.genIsNotNullAddr(loc, addr);
 }
 
+mlir::Value fir::factory::genIsNotAllocatedOrAssociatedTest(
+    fir::FirOpBuilder &builder, mlir::Location loc,
+    const fir::MutableBoxValue &box) {
+  auto addr = MutablePropertyReader(builder, loc, box).readBaseAddress();
+  return builder.genIsNullAddr(loc, addr);
+}
+
 /// Generate finalizer call and inlined free. This does not check that the
 /// address was allocated.
 static void genFinalizeAndFree(fir::FirOpBuilder &builder, mlir::Location loc,
@@ -712,13 +720,11 @@ static mlir::Value allocateAndInitNewStorage(fir::FirOpBuilder &builder,
   return newStorage;
 }
 
-void fir::factory::genInlinedAllocation(fir::FirOpBuilder &builder,
-                                        mlir::Location loc,
-                                        const fir::MutableBoxValue &box,
-                                        mlir::ValueRange lbounds,
-                                        mlir::ValueRange extents,
-                                        mlir::ValueRange lenParams,
-                                        llvm::StringRef allocName) {
+void fir::factory::genInlinedAllocation(
+    fir::FirOpBuilder &builder, mlir::Location loc,
+    const fir::MutableBoxValue &box, mlir::ValueRange lbounds,
+    mlir::ValueRange extents, mlir::ValueRange lenParams,
+    llvm::StringRef allocName, bool mustBeHeap) {
   auto lengths = getNewLengths(builder, loc, box, lenParams);
   llvm::SmallVector<mlir::Value> safeExtents;
   for (mlir::Value extent : extents)
@@ -735,6 +741,9 @@ void fir::factory::genInlinedAllocation(fir::FirOpBuilder &builder,
     mlir::Value irBox = fir::factory::getMutableIRBox(builder, loc, box);
     fir::runtime::genDerivedTypeInitialize(builder, loc, irBox);
   }
+
+  heap->setAttr(fir::MustBeHeapAttr::getAttrName(),
+                fir::MustBeHeapAttr::get(builder.getContext(), mustBeHeap));
 }
 
 void fir::factory::genInlinedDeallocate(fir::FirOpBuilder &builder,

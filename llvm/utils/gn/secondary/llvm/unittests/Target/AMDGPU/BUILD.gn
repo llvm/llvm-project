@@ -4,6 +4,10 @@ unittest("AMDGPUTests") {
   deps = [
     "//llvm/lib/Support",
     "//llvm/lib/Target",
+
+    # AMDGPUBaseInfo.cpp includes GCNSubtarget.h which after 490e348e679
+    # includes the generated AMDGPUGenRegisterBank.inc file :/
+    "//llvm/lib/Target/AMDGPU/:AMDGPUGenRegisterBank",
     "//llvm/lib/Target/AMDGPU:LLVMAMDGPUCodeGen",
     "//llvm/lib/Target/AMDGPU/MCTargetDesc",
     "//llvm/lib/Target/AMDGPU/TargetInfo",

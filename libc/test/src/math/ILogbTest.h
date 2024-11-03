@@ -11,7 +11,7 @@
 
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/ManipulationFunctions.h"
-#include "utils/UnitTest/Test.h"
+#include "test/UnitTest/Test.h"
 #include <math.h>
 
 #include <limits.h>

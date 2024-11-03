@@ -22,7 +22,7 @@
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/Support/AMDHSAKernelDescriptor.h"
 #include "llvm/Support/CommandLine.h"
-#include "llvm/Support/TargetParser.h"
+#include "llvm/TargetParser/TargetParser.h"
 #include <optional>
 
 #define GET_INSTRINFO_NAMED_OPS
@@ -150,56 +150,62 @@ unsigned getAmdhsaCodeObjectVersion() {
   return AmdhsaCodeObjectVersion;
 }
 
-unsigned getMultigridSyncArgImplicitArgPosition() {
-  switch (AmdhsaCodeObjectVersion) {
-  case 2:
-  case 3:
-  case 4:
+unsigned getCodeObjectVersion(const Module &M) {
+  if (auto Ver = mdconst::extract_or_null<ConstantInt>(
+      M.getModuleFlag("amdgpu_code_object_version"))) {
+    return (unsigned)Ver->getZExtValue() / 100;
+  }
+
+  // Default code object version.
+  return AMDHSA_COV4;
+}
+
+unsigned getMultigridSyncArgImplicitArgPosition(unsigned CodeObjectVersion) {
+  switch (CodeObjectVersion) {
+  case AMDHSA_COV2:
+  case AMDHSA_COV3:
+  case AMDHSA_COV4:
     return 48;
-  case 5:
-    return AMDGPU::ImplicitArg::MULTIGRID_SYNC_ARG_OFFSET;
+  case AMDHSA_COV5:
   default:
-    llvm_unreachable("Unexpected code object version");
-    return 0;
+    return AMDGPU::ImplicitArg::MULTIGRID_SYNC_ARG_OFFSET;
   }
 }
 
 
 // FIXME: All such magic numbers about the ABI should be in a
 // central TD file.
-unsigned getHostcallImplicitArgPosition() {
-  switch (AmdhsaCodeObjectVersion) {
-  case 2:
-  case 3:
-  case 4:
+unsigned getHostcallImplicitArgPosition(unsigned CodeObjectVersion) {
+  switch (CodeObjectVersion) {
+  case AMDHSA_COV2:
+  case AMDHSA_COV3:
+  case AMDHSA_COV4:
     return 24;
-  case 5:
-    return AMDGPU::ImplicitArg::HOSTCALL_PTR_OFFSET;
+  case AMDHSA_COV5:
   default:
-    llvm_unreachable("Unexpected code object version");
-    return 0;
+    return AMDGPU::ImplicitArg::HOSTCALL_PTR_OFFSET;
   }
 }
 
-unsigned getDefaultQueueImplicitArgPosition() {
-  switch (AmdhsaCodeObjectVersion) {
-  case 2:
-  case 3:
-  case 4:
+unsigned getDefaultQueueImplicitArgPosition(unsigned CodeObjectVersion) {
+  switch (CodeObjectVersion) {
+  case AMDHSA_COV2:
+  case AMDHSA_COV3:
+  case AMDHSA_COV4:
     return 32;
-  case 5:
+  case AMDHSA_COV5:
   default:
     return AMDGPU::ImplicitArg::DEFAULT_QUEUE_OFFSET;
   }
 }
 
-unsigned getCompletionActionImplicitArgPosition() {
-  switch (AmdhsaCodeObjectVersion) {
-  case 2:
-  case 3:
-  case 4:
+unsigned getCompletionActionImplicitArgPosition(unsigned CodeObjectVersion) {
+  switch (CodeObjectVersion) {
+  case AMDHSA_COV2:
+  case AMDHSA_COV3:
+  case AMDHSA_COV4:
     return 40;
-  case 5:
+  case AMDHSA_COV5:
   default:
     return AMDGPU::ImplicitArg::COMPLETION_ACTION_OFFSET;
   }
@@ -624,7 +630,7 @@ namespace IsaInfo {
 
 AMDGPUTargetID::AMDGPUTargetID(const MCSubtargetInfo &STI)
     : STI(STI), XnackSetting(TargetIDSetting::Any),
-      SramEccSetting(TargetIDSetting::Any) {
+      SramEccSetting(TargetIDSetting::Any), CodeObjectVersion(0) {
   if (!STI.getFeatureBits().test(FeatureSupportsXNACK))
     XnackSetting = TargetIDSetting::Unsupported;
   if (!STI.getFeatureBits().test(FeatureSupportsSRAMECC))
@@ -735,9 +741,9 @@ std::string AMDGPUTargetID::toString() const {
                     .str();
 
   std::string Features;
-  if (std::optional<uint8_t> HsaAbiVersion = getHsaAbiVersion(&STI)) {
-    switch (*HsaAbiVersion) {
-    case ELF::ELFABIVERSION_AMDGPU_HSA_V2:
+  if (STI.getTargetTriple().getOS() == Triple::AMDHSA) {
+    switch (CodeObjectVersion) {
+    case AMDGPU::AMDHSA_COV2:
       // Code object V2 only supported specific processors and had fixed
       // settings for the XNACK.
       if (Processor == "gfx600") {
@@ -785,7 +791,7 @@ std::string AMDGPUTargetID::toString() const {
             Twine(Processor));
       }
       break;
-    case ELF::ELFABIVERSION_AMDGPU_HSA_V3:
+    case AMDGPU::AMDHSA_COV3:
       // xnack.
       if (isXnackOnOrAny())
         Features += "+xnack";
@@ -794,8 +800,8 @@ std::string AMDGPUTargetID::toString() const {
       if (isSramEccOnOrAny())
         Features += "+sram-ecc";
       break;
-    case ELF::ELFABIVERSION_AMDGPU_HSA_V4:
-    case ELF::ELFABIVERSION_AMDGPU_HSA_V5:
+    case AMDGPU::AMDHSA_COV4:
+    case AMDGPU::AMDHSA_COV5:
       // sramecc.
       if (getSramEccSetting() == TargetIDSetting::Off)
         Features += ":sramecc-";
@@ -1913,44 +1919,44 @@ bool isKernelCC(const Function *Func) {
 }
 
 bool hasXNACK(const MCSubtargetInfo &STI) {
-  return STI.getFeatureBits()[AMDGPU::FeatureXNACK];
+  return STI.hasFeature(AMDGPU::FeatureXNACK);
 }
 
 bool hasSRAMECC(const MCSubtargetInfo &STI) {
-  return STI.getFeatureBits()[AMDGPU::FeatureSRAMECC];
+  return STI.hasFeature(AMDGPU::FeatureSRAMECC);
 }
 
 bool hasMIMG_R128(const MCSubtargetInfo &STI) {
-  return STI.getFeatureBits()[AMDGPU::FeatureMIMG_R128] && !STI.getFeatureBits()[AMDGPU::FeatureR128A16];
+  return STI.hasFeature(AMDGPU::FeatureMIMG_R128) && !STI.hasFeature(AMDGPU::FeatureR128A16);
 }
 
 bool hasA16(const MCSubtargetInfo &STI) {
-  return STI.getFeatureBits()[AMDGPU::FeatureA16];
+  return STI.hasFeature(AMDGPU::FeatureA16);
 }
 
 bool hasG16(const MCSubtargetInfo &STI) {
-  return STI.getFeatureBits()[AMDGPU::FeatureG16];
+  return STI.hasFeature(AMDGPU::FeatureG16);
 }
 
 bool hasPackedD16(const MCSubtargetInfo &STI) {
-  return !STI.getFeatureBits()[AMDGPU::FeatureUnpackedD16VMem] && !isCI(STI) &&
+  return !STI.hasFeature(AMDGPU::FeatureUnpackedD16VMem) && !isCI(STI) &&
          !isSI(STI);
 }
 
 bool isSI(const MCSubtargetInfo &STI) {
-  return STI.getFeatureBits()[AMDGPU::FeatureSouthernIslands];
+  return STI.hasFeature(AMDGPU::FeatureSouthernIslands);
 }
 
 bool isCI(const MCSubtargetInfo &STI) {
-  return STI.getFeatureBits()[AMDGPU::FeatureSeaIslands];
+  return STI.hasFeature(AMDGPU::FeatureSeaIslands);
 }
 
 bool isVI(const MCSubtargetInfo &STI) {
-  return STI.getFeatureBits()[AMDGPU::FeatureVolcanicIslands];
+  return STI.hasFeature(AMDGPU::FeatureVolcanicIslands);
 }
 
 bool isGFX9(const MCSubtargetInfo &STI) {
-  return STI.getFeatureBits()[AMDGPU::FeatureGFX9];
+  return STI.hasFeature(AMDGPU::FeatureGFX9);
 }
 
 bool isGFX9_GFX10(const MCSubtargetInfo &STI) {
@@ -1970,7 +1976,7 @@ bool isGFX9Plus(const MCSubtargetInfo &STI) {
 }
 
 bool isGFX10(const MCSubtargetInfo &STI) {
-  return STI.getFeatureBits()[AMDGPU::FeatureGFX10];
+  return STI.hasFeature(AMDGPU::FeatureGFX10);
 }
 
 bool isGFX10Plus(const MCSubtargetInfo &STI) {
@@ -1978,7 +1984,7 @@ bool isGFX10Plus(const MCSubtargetInfo &STI) {
 }
 
 bool isGFX11(const MCSubtargetInfo &STI) {
-  return STI.getFeatureBits()[AMDGPU::FeatureGFX11];
+  return STI.hasFeature(AMDGPU::FeatureGFX11);
 }
 
 bool isGFX11Plus(const MCSubtargetInfo &STI) {
@@ -1998,39 +2004,39 @@ bool isGFX10Before1030(const MCSubtargetInfo &STI) {
 }
 
 bool isGCN3Encoding(const MCSubtargetInfo &STI) {
-  return STI.getFeatureBits()[AMDGPU::FeatureGCN3Encoding];
+  return STI.hasFeature(AMDGPU::FeatureGCN3Encoding);
 }
 
 bool isGFX10_AEncoding(const MCSubtargetInfo &STI) {
-  return STI.getFeatureBits()[AMDGPU::FeatureGFX10_AEncoding];
+  return STI.hasFeature(AMDGPU::FeatureGFX10_AEncoding);
 }
 
 bool isGFX10_BEncoding(const MCSubtargetInfo &STI) {
-  return STI.getFeatureBits()[AMDGPU::FeatureGFX10_BEncoding];
+  return STI.hasFeature(AMDGPU::FeatureGFX10_BEncoding);
 }
 
 bool hasGFX10_3Insts(const MCSubtargetInfo &STI) {
-  return STI.getFeatureBits()[AMDGPU::FeatureGFX10_3Insts];
+  return STI.hasFeature(AMDGPU::FeatureGFX10_3Insts);
 }
 
 bool isGFX90A(const MCSubtargetInfo &STI) {
-  return STI.getFeatureBits()[AMDGPU::FeatureGFX90AInsts];
+  return STI.hasFeature(AMDGPU::FeatureGFX90AInsts);
 }
 
 bool isGFX940(const MCSubtargetInfo &STI) {
-  return STI.getFeatureBits()[AMDGPU::FeatureGFX940Insts];
+  return STI.hasFeature(AMDGPU::FeatureGFX940Insts);
 }
 
 bool hasArchitectedFlatScratch(const MCSubtargetInfo &STI) {
-  return STI.getFeatureBits()[AMDGPU::FeatureArchitectedFlatScratch];
+  return STI.hasFeature(AMDGPU::FeatureArchitectedFlatScratch);
 }
 
 bool hasMAIInsts(const MCSubtargetInfo &STI) {
-  return STI.getFeatureBits()[AMDGPU::FeatureMAIInsts];
+  return STI.hasFeature(AMDGPU::FeatureMAIInsts);
 }
 
 bool hasVOPD(const MCSubtargetInfo &STI) {
-  return STI.getFeatureBits()[AMDGPU::FeatureVOPD];
+  return STI.hasFeature(AMDGPU::FeatureVOPD);
 }
 
 int32_t getTotalNumVGPRs(bool has90AInsts, int32_t ArgNumAGPR,
@@ -2362,15 +2368,15 @@ bool isInlinableLiteral64(int64_t Literal, bool HasInv2Pi) {
     return true;
 
   uint64_t Val = static_cast<uint64_t>(Literal);
-  return (Val == DoubleToBits(0.0)) ||
-         (Val == DoubleToBits(1.0)) ||
-         (Val == DoubleToBits(-1.0)) ||
-         (Val == DoubleToBits(0.5)) ||
-         (Val == DoubleToBits(-0.5)) ||
-         (Val == DoubleToBits(2.0)) ||
-         (Val == DoubleToBits(-2.0)) ||
-         (Val == DoubleToBits(4.0)) ||
-         (Val == DoubleToBits(-4.0)) ||
+  return (Val == llvm::bit_cast<uint64_t>(0.0)) ||
+         (Val == llvm::bit_cast<uint64_t>(1.0)) ||
+         (Val == llvm::bit_cast<uint64_t>(-1.0)) ||
+         (Val == llvm::bit_cast<uint64_t>(0.5)) ||
+         (Val == llvm::bit_cast<uint64_t>(-0.5)) ||
+         (Val == llvm::bit_cast<uint64_t>(2.0)) ||
+         (Val == llvm::bit_cast<uint64_t>(-2.0)) ||
+         (Val == llvm::bit_cast<uint64_t>(4.0)) ||
+         (Val == llvm::bit_cast<uint64_t>(-4.0)) ||
          (Val == 0x3fc45f306dc9c882 && HasInv2Pi);
 }
 
@@ -2388,15 +2394,15 @@ bool isInlinableLiteral32(int32_t Literal, bool HasInv2Pi) {
   // floating-point, so it is a legal inline immediate.
 
   uint32_t Val = static_cast<uint32_t>(Literal);
-  return (Val == FloatToBits(0.0f)) ||
-         (Val == FloatToBits(1.0f)) ||
-         (Val == FloatToBits(-1.0f)) ||
-         (Val == FloatToBits(0.5f)) ||
-         (Val == FloatToBits(-0.5f)) ||
-         (Val == FloatToBits(2.0f)) ||
-         (Val == FloatToBits(-2.0f)) ||
-         (Val == FloatToBits(4.0f)) ||
-         (Val == FloatToBits(-4.0f)) ||
+  return (Val == llvm::bit_cast<uint32_t>(0.0f)) ||
+         (Val == llvm::bit_cast<uint32_t>(1.0f)) ||
+         (Val == llvm::bit_cast<uint32_t>(-1.0f)) ||
+         (Val == llvm::bit_cast<uint32_t>(0.5f)) ||
+         (Val == llvm::bit_cast<uint32_t>(-0.5f)) ||
+         (Val == llvm::bit_cast<uint32_t>(2.0f)) ||
+         (Val == llvm::bit_cast<uint32_t>(-2.0f)) ||
+         (Val == llvm::bit_cast<uint32_t>(4.0f)) ||
+         (Val == llvm::bit_cast<uint32_t>(-4.0f)) ||
          (Val == 0x3e22f983 && HasInv2Pi);
 }
 
@@ -2475,10 +2481,35 @@ bool isArgPassedInSGPR(const Argument *A) {
   case CallingConv::AMDGPU_PS:
   case CallingConv::AMDGPU_CS:
   case CallingConv::AMDGPU_Gfx:
-    // For non-compute shaders, SGPR inputs are marked with either inreg or byval.
-    // Everything else is in VGPRs.
-    return F->getAttributes().hasParamAttr(A->getArgNo(), Attribute::InReg) ||
-           F->getAttributes().hasParamAttr(A->getArgNo(), Attribute::ByVal);
+    // For non-compute shaders, SGPR inputs are marked with either inreg or
+    // byval. Everything else is in VGPRs.
+    return A->hasAttribute(Attribute::InReg) ||
+           A->hasAttribute(Attribute::ByVal);
+  default:
+    // TODO: Should calls support inreg for SGPR inputs?
+    return false;
+  }
+}
+
+bool isArgPassedInSGPR(const CallBase *CB, unsigned ArgNo) {
+  // Arguments to compute shaders are never a source of divergence.
+  CallingConv::ID CC = CB->getCallingConv();
+  switch (CC) {
+  case CallingConv::AMDGPU_KERNEL:
+  case CallingConv::SPIR_KERNEL:
+    return true;
+  case CallingConv::AMDGPU_VS:
+  case CallingConv::AMDGPU_LS:
+  case CallingConv::AMDGPU_HS:
+  case CallingConv::AMDGPU_ES:
+  case CallingConv::AMDGPU_GS:
+  case CallingConv::AMDGPU_PS:
+  case CallingConv::AMDGPU_CS:
+  case CallingConv::AMDGPU_Gfx:
+    // For non-compute shaders, SGPR inputs are marked with either inreg or
+    // byval. Everything else is in VGPRs.
+    return CB->paramHasAttr(ArgNo, Attribute::InReg) ||
+           CB->paramHasAttr(ArgNo, Attribute::ByVal);
   default:
     // TODO: Should calls support inreg for SGPR inputs?
     return false;
@@ -2634,7 +2665,13 @@ struct SourceOfDivergence {
 };
 const SourceOfDivergence *lookupSourceOfDivergence(unsigned Intr);
 
+struct AlwaysUniform {
+  unsigned Intr;
+};
+const AlwaysUniform *lookupAlwaysUniform(unsigned Intr);
+
 #define GET_SourcesOfDivergence_IMPL
+#define GET_UniformIntrinsics_IMPL
 #define GET_Gfx9BufferFormat_IMPL
 #define GET_Gfx10BufferFormat_IMPL
 #define GET_Gfx11PlusBufferFormat_IMPL
@@ -2644,6 +2681,10 @@ const SourceOfDivergence *lookupSourceOfDivergence(unsigned Intr);
 
 bool isIntrinsicSourceOfDivergence(unsigned IntrID) {
   return lookupSourceOfDivergence(IntrID);
+}
+
+bool isIntrinsicAlwaysUniform(unsigned IntrID) {
+  return lookupAlwaysUniform(IntrID);
 }
 
 const GcnBufferFormatInfo *getGcnBufferFormatInfo(uint8_t BitsPerComp,

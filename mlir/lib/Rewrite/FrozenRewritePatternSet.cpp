@@ -34,7 +34,7 @@ convertPDLToPDLInterp(ModuleOp pdlModule,
   pdlModule.getBody()->walk(simplifyFn);
 
   /// Lower the PDL pattern module to the interpreter dialect.
-  PassManager pdlPipeline(pdlModule.getContext());
+  PassManager pdlPipeline(pdlModule->getName());
 #ifdef NDEBUG
   // We don't want to incur the hit of running the verifier when in release
   // mode.

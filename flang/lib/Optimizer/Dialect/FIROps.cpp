@@ -604,7 +604,7 @@ void fir::BoxAddrOp::build(mlir::OpBuilder &builder,
                            mlir::OperationState &result, mlir::Value val) {
   mlir::Type type =
       llvm::TypeSwitch<mlir::Type, mlir::Type>(val.getType())
-          .Case<fir::BoxType>([&](fir::BoxType ty) -> mlir::Type {
+          .Case<fir::BaseBoxType>([&](fir::BaseBoxType ty) -> mlir::Type {
             mlir::Type eleTy = ty.getEleTy();
             if (fir::isa_ref_type(eleTy))
               return eleTy;
@@ -940,24 +940,26 @@ bool fir::ConvertOp::isPointerCompatible(mlir::Type ty) {
                 fir::TypeDescType>();
 }
 
-mlir::LogicalResult fir::ConvertOp::verify() {
-  auto inType = getValue().getType();
-  auto outType = getType();
+bool fir::ConvertOp::canBeConverted(mlir::Type inType, mlir::Type outType) {
   if (inType == outType)
-    return mlir::success();
-  if ((isPointerCompatible(inType) && isPointerCompatible(outType)) ||
-      (isIntegerCompatible(inType) && isIntegerCompatible(outType)) ||
-      (isIntegerCompatible(inType) && isFloatCompatible(outType)) ||
-      (isFloatCompatible(inType) && isIntegerCompatible(outType)) ||
-      (isFloatCompatible(inType) && isFloatCompatible(outType)) ||
-      (isIntegerCompatible(inType) && isPointerCompatible(outType)) ||
-      (isPointerCompatible(inType) && isIntegerCompatible(outType)) ||
-      (inType.isa<fir::BoxType>() && outType.isa<fir::BoxType>()) ||
-      (inType.isa<fir::BoxProcType>() && outType.isa<fir::BoxProcType>()) ||
-      (fir::isa_complex(inType) && fir::isa_complex(outType)) ||
-      (fir::isBoxedRecordType(inType) && fir::isPolymorphicType(outType)) ||
-      (fir::isPolymorphicType(inType) && fir::isPolymorphicType(outType)) ||
-      (fir::isPolymorphicType(inType) && outType.isa<BoxType>()))
+    return true;
+  return (isPointerCompatible(inType) && isPointerCompatible(outType)) ||
+         (isIntegerCompatible(inType) && isIntegerCompatible(outType)) ||
+         (isIntegerCompatible(inType) && isFloatCompatible(outType)) ||
+         (isFloatCompatible(inType) && isIntegerCompatible(outType)) ||
+         (isFloatCompatible(inType) && isFloatCompatible(outType)) ||
+         (isIntegerCompatible(inType) && isPointerCompatible(outType)) ||
+         (isPointerCompatible(inType) && isIntegerCompatible(outType)) ||
+         (inType.isa<fir::BoxType>() && outType.isa<fir::BoxType>()) ||
+         (inType.isa<fir::BoxProcType>() && outType.isa<fir::BoxProcType>()) ||
+         (fir::isa_complex(inType) && fir::isa_complex(outType)) ||
+         (fir::isBoxedRecordType(inType) && fir::isPolymorphicType(outType)) ||
+         (fir::isPolymorphicType(inType) && fir::isPolymorphicType(outType)) ||
+         (fir::isPolymorphicType(inType) && outType.isa<BoxType>());
+}
+
+mlir::LogicalResult fir::ConvertOp::verify() {
+  if (canBeConverted(getValue().getType(), getType()))
     return mlir::success();
   return emitOpError("invalid type conversion");
 }
@@ -1232,17 +1234,17 @@ mlir::LogicalResult fir::EmboxProcOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
-// GenTypeDescOp
+// TypeDescOp
 //===----------------------------------------------------------------------===//
 
-void fir::GenTypeDescOp::build(mlir::OpBuilder &, mlir::OperationState &result,
-                               mlir::TypeAttr inty) {
+void fir::TypeDescOp::build(mlir::OpBuilder &, mlir::OperationState &result,
+                            mlir::TypeAttr inty) {
   result.addAttribute("in_type", inty);
   result.addTypes(TypeDescType::get(inty.getValue()));
 }
 
-mlir::ParseResult fir::GenTypeDescOp::parse(mlir::OpAsmParser &parser,
-                                            mlir::OperationState &result) {
+mlir::ParseResult fir::TypeDescOp::parse(mlir::OpAsmParser &parser,
+                                         mlir::OperationState &result) {
   mlir::Type intype;
   if (parser.parseType(intype))
     return mlir::failure();
@@ -1253,12 +1255,12 @@ mlir::ParseResult fir::GenTypeDescOp::parse(mlir::OpAsmParser &parser,
   return mlir::success();
 }
 
-void fir::GenTypeDescOp::print(mlir::OpAsmPrinter &p) {
+void fir::TypeDescOp::print(mlir::OpAsmPrinter &p) {
   p << ' ' << getOperation()->getAttr("in_type");
   p.printOptionalAttrDict(getOperation()->getAttrs(), {"in_type"});
 }
 
-mlir::LogicalResult fir::GenTypeDescOp::verify() {
+mlir::LogicalResult fir::TypeDescOp::verify() {
   mlir::Type resultTy = getType();
   if (auto tdesc = resultTy.dyn_cast<fir::TypeDescType>()) {
     if (tdesc.getOfTy() != getInType())

@@ -46,7 +46,8 @@ int RTNAME(AllocatableCheckAllocated)(Descriptor &,
 // For MOLD= allocation; sets bounds, cobounds, and length type
 // parameters from another descriptor. The destination descriptor must
 // be initialized and deallocated.
-void RTNAME(AllocatableApplyMold)(Descriptor &, const Descriptor &mold);
+void RTNAME(AllocatableApplyMold)(
+    Descriptor &, const Descriptor &mold, int rank = 0);
 
 // Explicitly sets the bounds and length type parameters of an initialized
 // deallocated allocatable.

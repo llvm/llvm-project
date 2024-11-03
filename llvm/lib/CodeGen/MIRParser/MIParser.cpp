@@ -2414,7 +2414,7 @@ bool MIParser::parseMetadataOperand(MachineOperand &Dest) {
 bool MIParser::parseCFIOffset(int &Offset) {
   if (Token.isNot(MIToken::IntegerLiteral))
     return error("expected a cfi offset");
-  if (Token.integerValue().getMinSignedBits() > 32)
+  if (Token.integerValue().getSignificantBits() > 32)
     return error("expected a 32 bit integer (the cfi offset is too large)");
   Offset = (int)Token.integerValue().getExtValue();
   lex();
@@ -3001,7 +3001,7 @@ bool MIParser::parseOffset(int64_t &Offset) {
   lex();
   if (Token.isNot(MIToken::IntegerLiteral))
     return error("expected an integer literal after '" + Sign + "'");
-  if (Token.integerValue().getMinSignedBits() > 64)
+  if (Token.integerValue().getSignificantBits() > 64)
     return error("expected 64-bit integer (too large)");
   Offset = Token.integerValue().getExtValue();
   if (IsNegative)

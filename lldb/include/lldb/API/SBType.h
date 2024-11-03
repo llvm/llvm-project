@@ -106,7 +106,9 @@ public:
   SBType();
 
   SBType(const lldb::SBType &rhs);
+#ifndef SWIG
   SBType(const lldb::TypeImplSP &);
+#endif
 
   ~SBType();
 

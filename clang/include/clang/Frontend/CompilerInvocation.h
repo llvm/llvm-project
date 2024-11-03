@@ -241,6 +241,17 @@ public:
   /// This is a (less-efficient) wrapper over generateCC1CommandLine().
   std::vector<std::string> getCC1CommandLine() const;
 
+  /// Check that \p Args can be parsed and re-serialized without change,
+  /// emiting diagnostics for any differences.
+  ///
+  /// This check is only suitable for command-lines that are expected to already
+  /// be canonical.
+  ///
+  /// \return false if there are any errors.
+  static bool checkCC1RoundTrip(ArrayRef<const char *> Args,
+                                DiagnosticsEngine &Diags,
+                                const char *Argv0 = nullptr);
+
   /// Reset all of the options that are not considered when building a
   /// module.
   void resetNonModularOptions();

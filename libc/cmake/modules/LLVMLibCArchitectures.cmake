@@ -46,6 +46,8 @@ function(get_arch_and_system_from_triple triple arch_var sys_var)
   if(target_arch MATCHES "^mips")
     set(target_arch "mips")
   elseif(target_arch MATCHES "^arm")
+    # TODO(lntue): Shall we separate `arm64`?  It is currently recognized as
+    # `arm` here.
     set(target_arch "arm")
   elseif(target_arch MATCHES "^aarch64")
     set(target_arch "aarch64")
@@ -59,23 +61,35 @@ function(get_arch_and_system_from_triple triple arch_var sys_var)
 
   set(${arch_var} ${target_arch} PARENT_SCOPE)
   list(GET triple_comps ${system_index} target_sys)
+
+  # Correcting OS name for Apple's systems.
+  if(target_sys STREQUAL "apple")
+    list(GET triple_comps 2 target_sys)
+  endif()
+  # Strip version from `darwin###`
+  if(target_sys MATCHES "^darwin")
+    set(target_sys "darwin")
+  endif()
+
   set(${sys_var} ${target_sys} PARENT_SCOPE)
 endfunction(get_arch_and_system_from_triple)
 
-# Query the default target triple of the compiler.
-set(target_triple_option "-print-target-triple")
-if(CMAKE_COMPILER_IS_GNUCXX)
-  # GCC does not support the "-print-target-triple" option but supports
-  # "-print-multiarch" which clang does not support for all targets.
-  set(target_triple_option "-print-multiarch")
+execute_process(COMMAND ${CMAKE_CXX_COMPILER} -v
+                RESULT_VARIABLE libc_compiler_info_result
+                OUTPUT_VARIABLE libc_compiler_info
+                ERROR_VARIABLE libc_compiler_info)
+if(NOT (libc_compiler_info_result EQUAL "0"))
+  message(FATAL_ERROR "libc build: error querying compiler info from the "
+                      "compiler: ${libc_compiler_info}")
 endif()
-execute_process(COMMAND ${CMAKE_CXX_COMPILER} ${target_triple_option}
-                RESULT_VARIABLE libc_compiler_triple_check
-                OUTPUT_VARIABLE libc_compiler_triple)
-if(NOT (libc_compiler_triple_check EQUAL "0"))
-  message(FATAL_ERROR "libc build: error querying target triple from the "
-                      "compiler: ${libc_compiler_triple}")
+string(REGEX MATCH "Target: [-_a-z0-9.]+[ \r\n]+"
+       libc_compiler_target_info ${libc_compiler_info})
+if(NOT libc_compiler_target_info)
+  message(FATAL_ERROR "libc build: could not read compiler target info from:\n"
+                      "${libc_compiler_info}")
 endif()
+string(STRIP ${libc_compiler_target_info} libc_compiler_target_info)
+string(SUBSTRING ${libc_compiler_target_info} 8 -1 libc_compiler_triple)
 get_arch_and_system_from_triple(${libc_compiler_triple}
                                 compiler_arch compiler_sys)
 if(NOT compiler_arch)

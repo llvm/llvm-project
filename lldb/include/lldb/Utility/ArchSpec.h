@@ -15,7 +15,7 @@
 #include "lldb/lldb-forward.h"
 #include "lldb/lldb-private-enumerations.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/ADT/Triple.h"
+#include "llvm/TargetParser/Triple.h"
 #include <cstddef>
 #include <cstdint>
 #include <string>

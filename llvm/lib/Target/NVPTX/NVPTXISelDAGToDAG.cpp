@@ -3405,7 +3405,7 @@ bool NVPTXDAGToDAGISel::tryBFE(SDNode *N) {
     }
 
     // How many bits are in our mask?
-    uint64_t NumBits = countTrailingOnes(MaskVal);
+    uint64_t NumBits = llvm::countr_one(MaskVal);
     Len = CurDAG->getTargetConstant(NumBits, DL, MVT::i32);
 
     if (LHS.getOpcode() == ISD::SRL || LHS.getOpcode() == ISD::SRA) {
@@ -3469,10 +3469,10 @@ bool NVPTXDAGToDAGISel::tryBFE(SDNode *N) {
         NumZeros = 0;
         // The number of bits in the result bitfield will be the number of
         // trailing ones (the AND) minus the number of bits we shift off
-        NumBits = countTrailingOnes(MaskVal) - ShiftAmt;
+        NumBits = llvm::countr_one(MaskVal) - ShiftAmt;
       } else if (isShiftedMask_64(MaskVal)) {
-        NumZeros = countTrailingZeros(MaskVal);
-        unsigned NumOnes = countTrailingOnes(MaskVal >> NumZeros);
+        NumZeros = llvm::countr_zero(MaskVal);
+        unsigned NumOnes = llvm::countr_one(MaskVal >> NumZeros);
         // The number of bits in the result bitfield will be the number of
         // trailing zeros plus the number of set bits in the mask minus the
         // number of bits we shift off

@@ -466,7 +466,9 @@ static void allocateHSAUserSGPRs(CCState &CCInfo,
     CCInfo.AllocateReg(DispatchPtrReg);
   }
 
-  if (Info.hasQueuePtr() && AMDGPU::getAmdhsaCodeObjectVersion() < 5) {
+  const Module *M = MF.getFunction().getParent();
+  if (Info.hasQueuePtr() &&
+      AMDGPU::getCodeObjectVersion(*M) < AMDGPU::AMDHSA_COV5) {
     Register QueuePtrReg = Info.addQueuePtr(TRI);
     MF.addLiveIn(QueuePtrReg, &AMDGPU::SGPR_64RegClass);
     CCInfo.AllocateReg(QueuePtrReg);
@@ -701,7 +703,7 @@ bool AMDGPUCallLowering::lowerFormalArguments(
       if ((PsInputBits & 0x7F) == 0 ||
           ((PsInputBits & 0xF) == 0 &&
            (PsInputBits >> 11 & 1)))
-        Info->markPSInputEnabled(countTrailingZeros(Info->getPSInputAddr()));
+        Info->markPSInputEnabled(llvm::countr_zero(Info->getPSInputAddr()));
     }
   }
 

@@ -45,15 +45,6 @@ const char *const KindUnion = "Union";
 //===----------------------------------------------------------------------===//
 // DWARF lexical block, such as: namespace, function, compile unit, module, etc.
 //===----------------------------------------------------------------------===//
-LVScope::~LVScope() {
-  delete Types;
-  delete Symbols;
-  delete Scopes;
-  delete Lines;
-  delete Ranges;
-  delete Children;
-}
-
 // Return a string representation for the scope kind.
 const char *LVScope::kind() const {
   const char *Kind = KindUndefined;
@@ -114,7 +105,7 @@ LVScopeDispatch LVScope::Dispatch = {
 
 void LVScope::addToChildren(LVElement *Element) {
   if (!Children)
-    Children = new LVElements();
+    Children = std::make_unique<LVElements>();
   Children->push_back(Element);
 }
 
@@ -137,7 +128,7 @@ void LVScope::addElement(LVLine *Line) {
   assert(Line && "Invalid line.");
   assert(!Line->getParent() && "Line already inserted");
   if (!Lines)
-    Lines = new LVAutoLines();
+    Lines = std::make_unique<LVLines>();
 
   // Add it to parent.
   Lines->push_back(Line);
@@ -161,7 +152,7 @@ void LVScope::addObject(LVLocation *Location) {
   assert(Location && "Invalid location.");
   assert(!Location->getParent() && "Location already inserted");
   if (!Ranges)
-    Ranges = new LVAutoLocations();
+    Ranges = std::make_unique<LVLocations>();
 
   // Add it to parent.
   Location->setParent(this);
@@ -176,7 +167,7 @@ void LVScope::addElement(LVScope *Scope) {
   assert(Scope && "Invalid scope.");
   assert(!Scope->getParent() && "Scope already inserted");
   if (!Scopes)
-    Scopes = new LVAutoScopes();
+    Scopes = std::make_unique<LVScopes>();
 
   // Add it to parent.
   Scopes->push_back(Scope);
@@ -203,7 +194,7 @@ void LVScope::addElement(LVSymbol *Symbol) {
   assert(Symbol && "Invalid symbol.");
   assert(!Symbol->getParent() && "Symbol already inserted");
   if (!Symbols)
-    Symbols = new LVAutoSymbols();
+    Symbols = std::make_unique<LVSymbols>();
 
   // Add it to parent.
   Symbols->push_back(Symbol);
@@ -230,7 +221,7 @@ void LVScope::addElement(LVType *Type) {
   assert(Type && "Invalid type.");
   assert(!Type->getParent() && "Type already inserted");
   if (!Types)
-    Types = new LVAutoTypes();
+    Types = std::make_unique<LVTypes>();
 
   // Add it to parent.
   Types->push_back(Type);
@@ -255,7 +246,7 @@ void LVScope::addElement(LVType *Type) {
 // Add a pair of ranges.
 void LVScope::addObject(LVAddress LowerAddress, LVAddress UpperAddress) {
   // Pack the ranges into a Location object.
-  LVLocation *Location = new LVLocation();
+  LVLocation *Location = getReader().createLocation();
   Location->setLowerAddress(LowerAddress);
   Location->setUpperAddress(UpperAddress);
   Location->setIsAddressRange();
@@ -341,7 +332,7 @@ void LVScope::addMissingElements(LVScope *Reference) {
       // information that is incorrect for the element to be inserted.
       // As the symbol being added does not exist in the debug section,
       // use its parent scope offset, to indicate its DIE location.
-      LVSymbol *Symbol = new LVSymbol();
+      LVSymbol *Symbol = getReader().createSymbol();
       addElement(Symbol);
       Symbol->setOffset(getOffset());
       Symbol->setIsOptimized();
@@ -690,7 +681,7 @@ void LVScope::sort() {
   if (SortFunction) {
     std::function<void(LVScope * Parent, LVSortFunction SortFunction)> Sort =
         [&](LVScope *Parent, LVSortFunction SortFunction) {
-          auto Traverse = [&](auto *Set, LVSortFunction SortFunction) {
+          auto Traverse = [&](auto &Set, LVSortFunction SortFunction) {
             if (Set)
               std::stable_sort(Set->begin(), Set->end(), SortFunction);
           };
@@ -877,7 +868,7 @@ bool LVScope::equalNumberOfChildren(const LVScope *Scope) const {
 }
 
 void LVScope::markMissingParents(const LVScope *Target, bool TraverseChildren) {
-  auto SetCompareState = [&](auto *Container) {
+  auto SetCompareState = [&](auto &Container) {
     if (Container)
       for (auto *Entry : *Container)
         Entry->setIsInCompare();
@@ -1356,8 +1347,7 @@ void LVScopeCompileUnit::addedElement(LVType *Type) {
 
 // Record unsuported DWARF tags.
 void LVScopeCompileUnit::addDebugTag(dwarf::Tag Target, LVOffset Offset) {
-  addItem<LVTagOffsetsMap, LVOffsetList, dwarf::Tag, LVOffset>(&DebugTags,
-                                                               Target, Offset);
+  addItem<LVTagOffsetsMap, dwarf::Tag, LVOffset>(&DebugTags, Target, Offset);
 }
 
 // Record elements with invalid offsets.
@@ -1390,8 +1380,7 @@ void LVScopeCompileUnit::addLineZero(LVLine *Line) {
   LVScope *Scope = Line->getParentScope();
   LVOffset Offset = Scope->getOffset();
   addInvalidOffset(Offset, Scope);
-  addItem<LVOffsetLinesMap, LVLines, LVOffset, LVLine *>(&LinesZero, Offset,
-                                                         Line);
+  addItem<LVOffsetLinesMap, LVOffset, LVLine *>(&LinesZero, Offset, Line);
 }
 
 void LVScopeCompileUnit::printLocalNames(raw_ostream &OS, bool Full) const {
@@ -1481,7 +1470,7 @@ void LVScopeCompileUnit::printWarnings(raw_ostream &OS, bool Full) const {
     PrintHeader(Header);
     for (LVOffsetLocationsMap::const_reference Entry : Map) {
       PrintElement(WarningOffsets, Entry.first);
-      for (const LVLocation *Location : *Entry.second)
+      for (const LVLocation *Location : Entry.second)
         OS << hexSquareString(Location->getOffset()) << " "
            << Location->getIntervalInfo() << "\n";
     }
@@ -1494,7 +1483,7 @@ void LVScopeCompileUnit::printWarnings(raw_ostream &OS, bool Full) const {
       OS << format("\n0x%02x", (unsigned)Entry.first) << ", "
          << dwarf::TagString(Entry.first) << "\n";
       unsigned Count = 0;
-      for (const LVOffset &Offset : *Entry.second)
+      for (const LVOffset &Offset : Entry.second)
         PrintOffset(Count, Offset);
       OS << "\n";
     }
@@ -1519,7 +1508,7 @@ void LVScopeCompileUnit::printWarnings(raw_ostream &OS, bool Full) const {
     for (LVOffsetLinesMap::const_reference Entry : LinesZero) {
       PrintElement(WarningOffsets, Entry.first);
       unsigned Count = 0;
-      for (const LVLine *Line : *Entry.second)
+      for (const LVLine *Line : Entry.second)
         PrintOffset(Count, Line->getOffset());
       OS << "\n";
     }

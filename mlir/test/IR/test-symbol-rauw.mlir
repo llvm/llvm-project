@@ -76,7 +76,7 @@ module {
 
 // -----
 
-// Check that replacement works in any implementations of SubElementsAttrInterface
+// Check that replacement works in any implementations of SubElements.
 module {
     // CHECK: func private @replaced_foo
     func.func private @symbol_foo() attributes {sym.new_name = "replaced_foo" }

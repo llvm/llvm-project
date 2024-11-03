@@ -144,7 +144,5 @@ bool RTNAME(ExtendsTypeOf)(const Descriptor &a, const Descriptor &mold) {
   return false;
 }
 
-// TODO: Assign()
-
 } // extern "C"
 } // namespace Fortran::runtime

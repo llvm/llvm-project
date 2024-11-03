@@ -138,7 +138,7 @@ bool canonicalizePacketImpl(MCInstrInfo const &MCII, MCSubtargetInfo const &STI,
   HexagonMCShuffle(Context, false, MCII, STI, MCB);
 
   const SmallVector<DuplexCandidate, 8> possibleDuplexes =
-      (STI.getFeatureBits()[Hexagon::FeatureDuplex])
+      (STI.hasFeature(Hexagon::FeatureDuplex))
           ? HexagonMCInstrInfo::getDuplexPossibilties(MCII, STI, MCB)
           : SmallVector<DuplexCandidate, 8>();
 
@@ -907,7 +907,7 @@ bool HexagonMCInstrInfo::s27_2_reloc(MCExpr const &Expr) {
 }
 
 unsigned HexagonMCInstrInfo::packetSizeSlots(MCSubtargetInfo const &STI) {
-  const bool IsTiny = STI.getFeatureBits()[Hexagon::ProcTinyCore];
+  const bool IsTiny = STI.hasFeature(Hexagon::ProcTinyCore);
 
   return IsTiny ? (HEXAGON_PACKET_SIZE - 1) : HEXAGON_PACKET_SIZE;
 }

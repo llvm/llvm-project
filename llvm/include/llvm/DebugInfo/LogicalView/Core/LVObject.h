@@ -74,21 +74,6 @@ using LVSymbolGetFunction = bool (LVSymbol::*)() const;
 using LVTypeSetFunction = void (LVType::*)();
 using LVTypeGetFunction = bool (LVType::*)() const;
 
-// The LVScope class represents a logical scope and uses vectors to store its
-// children, which are pointers to other allocated logical elements (types,
-// symbols, lines, scopes, ranges). On destruction, we have to traverse each
-// vector and destroy its elements. The other case is LVSymbol.
-// These definitions are intended to be used by the LVScope and LVSymbol
-// to support automatic vector cleanup.
-using LVAutoLines = LVAutoSmallVector<LVLine *>;
-using LVAutoLocations = LVAutoSmallVector<LVLocation *>;
-using LVAutoOperations = LVAutoSmallVector<LVOperation *, 8>;
-using LVAutoScopes = LVAutoSmallVector<LVScope *>;
-using LVAutoSymbols = LVAutoSmallVector<LVSymbol *>;
-using LVAutoTypes = LVAutoSmallVector<LVType *>;
-
-// These definitions are intended to be used when the vector will be used
-// just a container, with no automatic destruction.
 using LVElements = SmallVector<LVElement *, 8>;
 using LVLines = SmallVector<LVLine *, 8>;
 using LVLocations = SmallVector<LVLocation *, 8>;

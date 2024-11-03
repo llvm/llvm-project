@@ -234,13 +234,13 @@ getDerefOffsetInBytes(const DIExpression *DIExpr) {
   int64_t Offset = 0;
   const unsigned NumElements = DIExpr->getNumElements();
   const auto Elements = DIExpr->getElements();
-  unsigned NextElement = 0;
+  unsigned ExpectedDerefIdx = 0;
   // Extract the offset.
   if (NumElements > 2 && Elements[0] == dwarf::DW_OP_plus_uconst) {
     Offset = Elements[1];
-    NextElement = 2;
+    ExpectedDerefIdx = 2;
   } else if (NumElements > 3 && Elements[0] == dwarf::DW_OP_constu) {
-    NextElement = 3;
+    ExpectedDerefIdx = 3;
     if (Elements[2] == dwarf::DW_OP_plus)
       Offset = Elements[1];
     else if (Elements[2] == dwarf::DW_OP_minus)
@@ -250,19 +250,21 @@ getDerefOffsetInBytes(const DIExpression *DIExpr) {
   }
 
   // If that's all there is it means there's no deref.
-  if (NextElement >= NumElements)
+  if (ExpectedDerefIdx >= NumElements)
     return std::nullopt;
 
   // Check the next element is DW_OP_deref - otherwise this is too complex or
   // isn't a deref expression.
-  if (Elements[NextElement] != dwarf::DW_OP_deref)
+  if (Elements[ExpectedDerefIdx] != dwarf::DW_OP_deref)
     return std::nullopt;
 
   // Check the final operation is either the DW_OP_deref or is a fragment.
-  if (NumElements == NextElement + 1)
+  if (NumElements == ExpectedDerefIdx + 1)
     return Offset; // Ends with deref.
-  else if (NumElements == NextElement + 3 &&
-           Elements[NextElement] == dwarf::DW_OP_LLVM_fragment)
+  unsigned ExpectedFragFirstIdx = ExpectedDerefIdx + 1;
+  unsigned ExpectedFragFinalIdx = ExpectedFragFirstIdx + 2;
+  if (NumElements == ExpectedFragFinalIdx + 1 &&
+      Elements[ExpectedFragFirstIdx] == dwarf::DW_OP_LLVM_fragment)
     return Offset; // Ends with deref + fragment.
 
   // Don't bother trying to interpret anything more complex.

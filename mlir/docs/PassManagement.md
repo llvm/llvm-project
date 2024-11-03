@@ -399,11 +399,8 @@ Below is an example of constructing a pipeline that operates on the above
 structure:
 
 ```c++
-// Create a top-level `PassManager` class. If an operation type is not
-// explicitly specific, the default is the builtin `module` operation.
-PassManager pm(ctx);
-// Note: We could also create the above `PassManager` this way.
-PassManager pm(ctx, /*operationName=*/"builtin.module");
+// Create a top-level `PassManager` class.
+auto pm = PassManager::on<ModuleOp>(ctx);
 
 // Add a pass on the top-level module operation.
 pm.addPass(std::make_unique<MyModulePass>());

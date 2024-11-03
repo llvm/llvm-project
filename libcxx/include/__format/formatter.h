@@ -20,7 +20,7 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#if _LIBCPP_STD_VER > 17
+#if _LIBCPP_STD_VER >= 20
 
 /// The default formatter template.
 ///
@@ -38,7 +38,7 @@ struct _LIBCPP_TEMPLATE_VIS _LIBCPP_AVAILABILITY_FORMAT formatter {
   formatter& operator=(const formatter&) = delete;
 };
 
-#  if _LIBCPP_STD_VER > 20
+#  if _LIBCPP_STD_VER >= 23
 
 template <class _Tp>
 _LIBCPP_HIDE_FROM_ABI constexpr void __set_debug_format(_Tp& __formatter) {
@@ -46,8 +46,8 @@ _LIBCPP_HIDE_FROM_ABI constexpr void __set_debug_format(_Tp& __formatter) {
     __formatter.set_debug_format();
 }
 
-#  endif // _LIBCPP_STD_VER > 20
-#endif   // _LIBCPP_STD_VER > 17
+#  endif // _LIBCPP_STD_VER >= 23
+#endif   // _LIBCPP_STD_VER >= 20
 
 _LIBCPP_END_NAMESPACE_STD
 

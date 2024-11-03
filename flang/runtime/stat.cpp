@@ -60,6 +60,9 @@ const char *StatErrorString(int stat) {
   case StatMissingEnvVariable:
     return "Missing environment variable";
 
+  case StatMoveAllocSameAllocatable:
+    return "MOVE_ALLOC passed the same address as to and from";
+
   default:
     return nullptr;
   }

@@ -1196,3 +1196,27 @@ func.func @parrallel_contract_lowering_scalar(%arg0: vector<1x1xf32>, %arg1: vec
   %arg0, %arg1, %arg2 : vector<1x1xf32>, vector<1x1xf32> into f32
   return %0 : f32
 }
+
+func.func @masked_vector_contract(%arg0: vector<2x3xf32>,
+                                  %arg1: vector<3xf32>,
+                                  %arg2: vector<2xf32>,
+                                  %m: vector<2x3xi1>) -> vector<2xf32> {
+  %0 = vector.mask %m { vector.contract #matvec_trait %arg0, %arg1, %arg2
+          : vector<2x3xf32>, vector<3xf32> into vector<2xf32> } : vector<2x3xi1> -> vector<2xf32>
+  return %0 : vector<2xf32>
+}
+
+// OUTERPRODUCT-LABEL:   func.func @masked_vector_contract(
+// OUTERPRODUCT-SAME:                                      %[[VAL_0:.*]]: vector<2x3xf32>,
+// OUTERPRODUCT-SAME:                                      %[[VAL_1:.*]]: vector<3xf32>,
+// OUTERPRODUCT-SAME:                                      %[[VAL_2:.*]]: vector<2xf32>,
+// OUTERPRODUCT-SAME:                                      %[[IN_MASK:.*]]: vector<2x3xi1>) -> vector<2xf32>
+// OUTERPRODUCT:           %[[T_MASK:.*]] = vector.transpose %[[IN_MASK]], [1, 0] : vector<2x3xi1> to vector<3x2xi1>
+// OUTERPRODUCT:           %[[MASK0:.*]] = vector.extract %[[T_MASK]][0] : vector<3x2xi1>
+// OUTERPRODUCT:           vector.mask %[[MASK0]] { vector.outerproduct
+
+// OUTERPRODUCT:           %[[MASK1:.*]] = vector.extract %[[T_MASK]][1] : vector<3x2xi1>
+// OUTERPRODUCT:           vector.mask %[[MASK1]] { vector.outerproduct
+
+// OUTERPRODUCT:           %[[MASK2:.*]] = vector.extract %[[T_MASK]][2] : vector<3x2xi1>
+// OUTERPRODUCT:           vector.mask %[[MASK2]] { vector.outerproduct

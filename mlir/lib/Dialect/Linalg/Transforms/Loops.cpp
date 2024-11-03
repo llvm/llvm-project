@@ -261,8 +261,10 @@ public:
   LogicalResult matchAndRewrite(Operation *op,
                                 PatternRewriter &rewriter) const override {
     auto linalgOp = dyn_cast<LinalgOp>(op);
-    if (!isa<LinalgOp>(op))
-      return failure();
+    if (!isa<LinalgOp>(op) || !linalgOp.hasBufferSemantics()) {
+      return rewriter.notifyMatchFailure(
+          op, "expected linalg op with buffer semantics");
+    }
     if (failed(linalgOpToLoopsImpl<LoopType>(rewriter, linalgOp)))
       return failure();
     rewriter.eraseOp(op);

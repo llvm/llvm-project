@@ -2,7 +2,7 @@
 
 ! RUN: %flang_fc1 -emit-fir -fopenmp %s -o - | FileCheck %s
 
-!CHECK: func @_QQmain() {
+!CHECK: func @_QQmain() attributes {fir.bindc_name = "sample"} {
 !CHECK:   %[[COUNT:.*]] = fir.address_of(@_QFEcount) : !fir.ref<i32>
 !CHECK:   %[[ETA:.*]] = fir.alloca f32 {bindc_name = "eta", uniq_name = "_QFEeta"}
 !CHECK:   %[[CONST_1:.*]] = arith.constant 1 : i32

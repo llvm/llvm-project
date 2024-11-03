@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/string/strsignal.h"
-#include "utils/UnitTest/Test.h"
+#include "test/UnitTest/Test.h"
 
 #include <signal.h>
 

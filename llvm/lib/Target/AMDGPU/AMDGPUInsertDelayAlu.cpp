@@ -380,7 +380,7 @@ public:
         // TODO: Scan implicit defs too?
         for (const auto &Op : MI.defs()) {
           unsigned Latency = SchedModel.computeOperandLatency(
-              &MI, MI.getOperandNo(&Op), nullptr, 0);
+              &MI, Op.getOperandNo(), nullptr, 0);
           for (MCRegUnitIterator UI(Op.getReg(), TRI); UI.isValid(); ++UI)
             State[*UI] = DelayInfo(Type, Latency);
         }

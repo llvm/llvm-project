@@ -30,10 +30,10 @@ add_subdirectory(__support)
 add_subdirectory(ctype)
 add_subdirectory(errno)
 add_subdirectory(fenv)
-add_subdirectory(inttypes)
 add_subdirectory(math)
 add_subdirectory(string)
 add_subdirectory(stdlib)
+add_subdirectory(inttypes)
 add_subdirectory(stdio)
 
 if(${LIBC_TARGET_OS} STREQUAL "linux")
@@ -50,6 +50,7 @@ endif()
 
 add_subdirectory(dirent)
 add_subdirectory(assert)
+add_subdirectory(network)
 add_subdirectory(setjmp)
 add_subdirectory(signal)
 add_subdirectory(spawn)
@@ -57,6 +58,15 @@ add_subdirectory(time)
 
 if(${LIBC_TARGET_OS} STREQUAL "linux")
   add_subdirectory(pthread)
+endif()
+
+if(LLVM_RUNTIMES_BUILD OR LIBC_HDRGEN_EXE)
+  # The public API test below uses tablegen to generate the test
+  # source file. Since tablegen is not available during a runtimes
+  # build, we will skip the test.
+  # If a different libc-hdrgen binary is being used, then also we
+  # skip the api-test as we cannot generate the test source file.
+  return()
 endif()
 
 set(public_test ${CMAKE_CURRENT_BINARY_DIR}/public_api_test.cpp)

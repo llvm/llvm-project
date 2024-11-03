@@ -60,7 +60,7 @@ func.func @promote_subview_matmul(%arg0: memref<?x?xf32, strided<[?, 1], offset:
 
 transform.sequence failures(propagate) {
 ^bb0(%arg1: !pdl.operation):
-  %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1
+  %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!pdl.operation) -> !pdl.operation
   %1 = transform.structured.promote %0 { operands_to_promote = [0, 1, 2], use_full_tiles_by_default }
 }
 
@@ -122,7 +122,7 @@ transform.with_pdl_patterns {
 ^bb0(%arg0: !pdl.operation):
   sequence %arg0 : !pdl.operation failures(propagate) {
     ^bb0(%arg1: !pdl.operation):
-      %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1
+      %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!pdl.operation) -> !pdl.operation
       %1 = transform.structured.promote %0 { operands_to_promote = [0], use_full_tiles_by_default }
   }
 }
@@ -155,7 +155,7 @@ transform.with_pdl_patterns {
 ^bb0(%arg0: !pdl.operation):
   sequence %arg0 : !pdl.operation failures(propagate) {
     ^bb0(%arg1: !pdl.operation):
-      %0 = transform.structured.match ops{["linalg.fill"]} in %arg1
+      %0 = transform.structured.match ops{["linalg.fill"]} in %arg1 : (!pdl.operation) -> !pdl.operation
       %1 = transform.structured.promote %0 { operands_to_promote = [1], use_full_tile_buffers = [false, true], alignment = 32}
   }
 }
@@ -189,7 +189,7 @@ transform.with_pdl_patterns {
 ^bb0(%arg0: !pdl.operation):
   sequence %arg0 : !pdl.operation failures(propagate) {
     ^bb0(%arg1: !pdl.operation):
-      %0 = transform.structured.match ops{["linalg.fill"]} in %arg1
+      %0 = transform.structured.match ops{["linalg.fill"]} in %arg1 : (!pdl.operation) -> !pdl.operation
       %1 = transform.structured.promote %0 { operands_to_promote = [1], use_full_tile_buffers = [false, true], alignment = 32}
   }
 }

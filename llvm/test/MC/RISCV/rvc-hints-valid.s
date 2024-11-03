@@ -4,18 +4,20 @@
 # RUN:     | FileCheck -check-prefixes=CHECK-ASM,CHECK-ASM-AND-OBJ %s
 # RUN: llvm-mc -filetype=obj -triple=riscv32 -mattr=+c < %s \
 # RUN:     | llvm-objdump -M no-aliases -d -r - \
-# RUN:     | FileCheck -check-prefixes=CHECK-OBJ,CHECK-ASM-AND-OBJ %s
+# RUN:     | FileCheck -check-prefixes=CHECK-ASM-AND-OBJ %s
 # RUN: llvm-mc -filetype=obj -triple=riscv64 -mattr=+c < %s \
 # RUN:     | llvm-objdump -M no-aliases -d -r - \
-# RUN:     | FileCheck -check-prefixes=CHECK-OBJ,CHECK-ASM-AND-OBJ %s
+# RUN:     | FileCheck -check-prefixes=CHECK-ASM-AND-OBJ %s
+# RUN: llvm-mc -filetype=obj -triple=riscv64 -mattr=+c < %s \
+# RUN:     | llvm-objdump -d -r - \
+# RUN:     | FileCheck -check-prefixes=CHECK-ASM-AND-OBJ %s
 
 # CHECK-ASM-AND-OBJ: c.nop 8
 # CHECK-ASM: encoding: [0x21,0x00]
 c.nop 8
 
-# CHECK-ASM: c.addi zero, 7
+# CHECK-ASM-AND-OBJ: c.nop 7
 # CHECK-ASM: encoding: [0x1d,0x00]
-# CHECK-OBJ: c.nop 7
 c.addi x0, 7
 
 # CHECK-ASM-AND-OBJ: c.addi a0, 0

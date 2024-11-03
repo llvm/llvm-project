@@ -15,7 +15,7 @@ define arm_aapcs_vfpcc void @vstrw32() {
 ; CHECK-NEXT:    add sp, #16
 ; CHECK-NEXT:    pop {r7, pc}
 entry:
-  %d = alloca [4 x i32], align 2
+  %d = alloca [4 x i32], align 4
   %g = getelementptr inbounds [4 x i32], ptr %d, i32 0, i32 2
   store <4 x i32> zeroinitializer, ptr %g, align 2
   call arm_aapcs_vfpcc void @func(ptr %d)
@@ -57,7 +57,7 @@ define arm_aapcs_vfpcc void @vstrb8() {
 ; CHECK-NEXT:    add sp, #16
 ; CHECK-NEXT:    pop {r7, pc}
 entry:
-  %d = alloca [16 x i8], align 2
+  %d = alloca [16 x i8], align 4
   %g = getelementptr inbounds [16 x i8], ptr %d, i32 0, i32 2
   store <16 x i8> zeroinitializer, ptr %g, align 2
   call arm_aapcs_vfpcc void @func(ptr %d)
@@ -78,7 +78,7 @@ define arm_aapcs_vfpcc void @vstrh32() {
 ; CHECK-NEXT:    add sp, #8
 ; CHECK-NEXT:    pop {r7, pc}
 entry:
-  %d = alloca [4 x i16], align 2
+  %d = alloca [4 x i16], align 4
   %g = getelementptr inbounds [4 x i16], ptr %d, i32 0, i32 2
   store <4 x i16> <i16 6, i16 6, i16 6, i16 6>, ptr %g, align 2
   call arm_aapcs_vfpcc void @func(ptr %d)
@@ -99,7 +99,7 @@ define arm_aapcs_vfpcc void @vstrb32() {
 ; CHECK-NEXT:    add sp, #8
 ; CHECK-NEXT:    pop {r7, pc}
 entry:
-  %d = alloca [4 x i8], align 2
+  %d = alloca [4 x i8], align 4
   %g = getelementptr inbounds [4 x i8], ptr %d, i32 0, i32 2
   store <4 x i8> <i8 6, i8 6, i8 6, i8 6>, ptr %g, align 2
   call arm_aapcs_vfpcc void @func(ptr %d)
@@ -120,7 +120,7 @@ define arm_aapcs_vfpcc void @vstrb16() {
 ; CHECK-NEXT:    add sp, #8
 ; CHECK-NEXT:    pop {r7, pc}
 entry:
-  %d = alloca [8 x i8], align 2
+  %d = alloca [8 x i8], align 4
   %g = getelementptr inbounds [8 x i8], ptr %d, i32 0, i32 2
   store <8 x i8> zeroinitializer, ptr %g, align 2
   call arm_aapcs_vfpcc void @func(ptr %d)
@@ -141,7 +141,7 @@ define arm_aapcs_vfpcc <4 x i32> @vldrw32() {
 ; CHECK-NEXT:    add sp, #16
 ; CHECK-NEXT:    pop {r7, pc}
 entry:
-  %d = alloca [4 x i32], align 2
+  %d = alloca [4 x i32], align 4
   call arm_aapcs_vfpcc void @func(ptr %d)
   %g = getelementptr inbounds [4 x i32], ptr %d, i32 0, i32 2
   %l = load <4 x i32>, ptr %g, align 2
@@ -181,7 +181,7 @@ define arm_aapcs_vfpcc <16 x i8> @vldrb8() {
 ; CHECK-NEXT:    add sp, #16
 ; CHECK-NEXT:    pop {r7, pc}
 entry:
-  %d = alloca [16 x i8], align 2
+  %d = alloca [16 x i8], align 4
   call arm_aapcs_vfpcc void @func(ptr %d)
   %g = getelementptr inbounds [16 x i8], ptr %d, i32 0, i32 2
   %l = load <16 x i8>, ptr %g, align 2
@@ -202,7 +202,7 @@ define arm_aapcs_vfpcc <4 x i16> @vldrh32() {
 ; CHECK-NEXT:    add sp, #8
 ; CHECK-NEXT:    pop {r4, pc}
 entry:
-  %d = alloca [4 x i16], align 2
+  %d = alloca [4 x i16], align 4
   call arm_aapcs_vfpcc void @func(ptr %d)
   %g = getelementptr inbounds [4 x i16], ptr %d, i32 0, i32 2
   %l = load <4 x i16>, ptr %g, align 2
@@ -223,7 +223,7 @@ define arm_aapcs_vfpcc <4 x i8> @vldrb32() {
 ; CHECK-NEXT:    add sp, #8
 ; CHECK-NEXT:    pop {r4, pc}
 entry:
-  %d = alloca [4 x i8], align 2
+  %d = alloca [4 x i8], align 4
   call arm_aapcs_vfpcc void @func(ptr %d)
   %g = getelementptr inbounds [4 x i8], ptr %d, i32 0, i32 2
   %l = load <4 x i8>, ptr %g, align 2
@@ -244,7 +244,7 @@ define arm_aapcs_vfpcc <8 x i8> @vldrb16() {
 ; CHECK-NEXT:    add sp, #8
 ; CHECK-NEXT:    pop {r4, pc}
 entry:
-  %d = alloca [8 x i8], align 2
+  %d = alloca [8 x i8], align 4
   call arm_aapcs_vfpcc void @func(ptr %d)
   %g = getelementptr inbounds [8 x i8], ptr %d, i32 0, i32 2
   %l = load <8 x i8>, ptr %g, align 2

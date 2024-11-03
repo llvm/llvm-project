@@ -30,6 +30,7 @@
 #include "string_literal.h"
 #include "test_format_string.h"
 #include "assert_macros.h"
+#include "concat_macros.h"
 
 auto test =
     []<class CharT, class... Args>(
@@ -37,7 +38,7 @@ auto test =
       std::basic_string<CharT> out = std::format(fmt, std::forward<Args>(args)...);
       TEST_REQUIRE(
           out == expected,
-          test_concat_message(
+          TEST_WRITE_CONCATENATED(
               "\nFormat string   ", fmt.get(), "\nExpected output ", expected, "\nActual output   ", out, '\n'));
     };
 

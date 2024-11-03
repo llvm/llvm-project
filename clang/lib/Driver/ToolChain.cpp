@@ -25,7 +25,6 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/ADT/Triple.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/MC/MCTargetOptions.h"
@@ -38,9 +37,10 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/FileUtilities.h"
 #include "llvm/Support/Path.h"
-#include "llvm/Support/TargetParser.h"
 #include "llvm/Support/VersionTuple.h"
 #include "llvm/Support/VirtualFileSystem.h"
+#include "llvm/TargetParser/TargetParser.h"
+#include "llvm/TargetParser/Triple.h"
 #include <cassert>
 #include <cstddef>
 #include <cstring>
@@ -419,6 +419,7 @@ Tool *ToolChain::getTool(Action::ActionClass AC) const {
   case Action::LipoJobClass:
   case Action::DsymutilJobClass:
   case Action::VerifyDebugInfoJobClass:
+  case Action::BinaryAnalyzeJobClass:
     llvm_unreachable("Invalid tool kind.");
 
   case Action::CompileJobClass:
@@ -577,6 +578,27 @@ ToolChain::path_list ToolChain::getRuntimePaths() const {
   };
 
   addPathForTriple(getTriple());
+
+  // When building with per target runtime directories, various ways of naming
+  // the Arm architecture may have been normalised to simply "arm".
+  // For example "armv8l" (Armv8 AArch32 little endian) is replaced with "arm".
+  // Since an armv8l system can use libraries built for earlier architecture
+  // versions assuming endian and float ABI match.
+  //
+  // Original triple: armv8l-unknown-linux-gnueabihf
+  //  Runtime triple: arm-unknown-linux-gnueabihf
+  //
+  // We do not do this for armeb (big endian) because doing so could make us
+  // select little endian libraries. In addition, all known armeb triples only
+  // use the "armeb" architecture name.
+  //
+  // M profile Arm is bare metal and we know they will not be using the per
+  // target runtime directory layout.
+  if (getTriple().getArch() == Triple::arm && !getTriple().isArmMClass()) {
+    llvm::Triple ArmTriple = getTriple();
+    ArmTriple.setArch(Triple::arm);
+    addPathForTriple(ArmTriple);
+  }
 
   // Android targets may include an API level at the end. We still want to fall
   // back on a path without the API level.

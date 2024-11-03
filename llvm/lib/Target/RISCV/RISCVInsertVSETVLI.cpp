@@ -1188,27 +1188,40 @@ void RISCVInsertVSETVLI::doPRE(MachineBasicBlock &MBB) {
   if (!hasFixedResult(AvailableInfo, ST))
     return;
 
-  // Does it actually let us remove an implicit transition in MBB?
-  bool Found = false;
-  for (auto &MI : MBB) {
-    if (isVectorConfigInstr(MI))
-      return;
-
-    const uint64_t TSFlags = MI.getDesc().TSFlags;
-    if (RISCVII::hasSEWOp(TSFlags)) {
-      if (AvailableInfo != computeInfoForInstr(MI, TSFlags, MRI))
-        return;
-      Found = true;
+  // Model the effect of changing the input state of the block MBB to
+  // AvailableInfo.  We're looking for two issues here; one legality,
+  // one profitability.
+  // 1) If the block doesn't use some of the fields from VL or VTYPE, we
+  //    may hit the end of the block with a different end state.  We can
+  //    not make this change without reflowing later blocks as well.
+  // 2) If we don't actually remove a transition, inserting a vsetvli
+  //    into the predecessor block would be correct, but unprofitable.
+  VSETVLIInfo OldInfo = BlockInfo[MBB.getNumber()].Pred;
+  VSETVLIInfo CurInfo = AvailableInfo;
+  int TransitionsRemoved = 0;
+  for (const MachineInstr &MI : MBB) {
+    const VSETVLIInfo LastInfo = CurInfo;
+    const VSETVLIInfo LastOldInfo = OldInfo;
+    transferBefore(CurInfo, MI);
+    transferBefore(OldInfo, MI);
+    if (CurInfo == LastInfo)
+      TransitionsRemoved++;
+    if (LastOldInfo == OldInfo)
+      TransitionsRemoved--;
+    transferAfter(CurInfo, MI);
+    transferAfter(OldInfo, MI);
+    if (CurInfo == OldInfo)
+      // Convergence.  All transitions after this must match by construction.
       break;
-    }
   }
-  if (!Found)
+  if (CurInfo != OldInfo || TransitionsRemoved <= 0)
+    // Issues 1 and 2 above
     return;
 
   // Finally, update both data flow state and insert the actual vsetvli.
   // Doing both keeps the code in sync with the dataflow results, which
   // is critical for correctness of phase 3.
-  auto OldInfo = BlockInfo[UnavailablePred->getNumber()].Exit;
+  auto OldExit = BlockInfo[UnavailablePred->getNumber()].Exit;
   LLVM_DEBUG(dbgs() << "PRE VSETVLI from " << MBB.getName() << " to "
                     << UnavailablePred->getName() << " with state "
                     << AvailableInfo << "\n");
@@ -1220,7 +1233,7 @@ void RISCVInsertVSETVLI::doPRE(MachineBasicBlock &MBB) {
   auto InsertPt = UnavailablePred->getFirstInstrTerminator();
   insertVSETVLI(*UnavailablePred, InsertPt,
                 UnavailablePred->findDebugLoc(InsertPt),
-                AvailableInfo, OldInfo);
+                AvailableInfo, OldExit);
 }
 
 static void doUnion(DemandedFields &A, DemandedFields B) {

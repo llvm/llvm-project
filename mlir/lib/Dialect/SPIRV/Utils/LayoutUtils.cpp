@@ -95,6 +95,10 @@ Type VulkanLayoutUtils::decorateType(Type type, VulkanLayoutUtils::Size &size,
     size = std::numeric_limits<Size>().max();
     return decorateType(arrayType, alignment);
   }
+  if (type.isa<spirv::PointerType>()) {
+    // TODO: Add support for `PhysicalStorageBufferAddresses`.
+    return nullptr;
+  }
   llvm_unreachable("unhandled SPIR-V type");
 }
 

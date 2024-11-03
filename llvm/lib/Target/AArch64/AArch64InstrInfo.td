@@ -101,8 +101,6 @@ def HasFPARMv8       : Predicate<"Subtarget->hasFPARMv8()">,
                                AssemblerPredicateWithAll<(all_of FeatureFPARMv8), "fp-armv8">;
 def HasNEON          : Predicate<"Subtarget->hasNEON()">,
                                  AssemblerPredicateWithAll<(all_of FeatureNEON), "neon">;
-def HasCrypto        : Predicate<"Subtarget->hasCrypto()">,
-                                 AssemblerPredicateWithAll<(all_of FeatureCrypto), "crypto">;
 def HasSM4           : Predicate<"Subtarget->hasSM4()">,
                                  AssemblerPredicateWithAll<(all_of FeatureSM4), "sm4">;
 def HasSHA3          : Predicate<"Subtarget->hasSHA3()">,
@@ -362,8 +360,10 @@ def SDT_AArch64TLSDescCall : SDTypeProfile<0, -2, [SDTCisPtrTy<0>,
 def SDT_AArch64uaddlp : SDTypeProfile<1, 1, [SDTCisVec<0>, SDTCisVec<1>]>;
 
 def SDT_AArch64ldp : SDTypeProfile<2, 1, [SDTCisVT<0, i64>, SDTCisSameAs<0, 1>, SDTCisPtrTy<2>]>;
+def SDT_AArch64ldiapp : SDTypeProfile<2, 1, [SDTCisVT<0, i64>, SDTCisSameAs<0, 1>, SDTCisPtrTy<2>]>;
 def SDT_AArch64ldnp : SDTypeProfile<2, 1, [SDTCisVT<0, v4i32>, SDTCisSameAs<0, 1>, SDTCisPtrTy<2>]>;
 def SDT_AArch64stp : SDTypeProfile<0, 3, [SDTCisVT<0, i64>, SDTCisSameAs<0, 1>, SDTCisPtrTy<2>]>;
+def SDT_AArch64stilp : SDTypeProfile<0, 3, [SDTCisVT<0, i64>, SDTCisSameAs<0, 1>, SDTCisPtrTy<2>]>;
 def SDT_AArch64stnp : SDTypeProfile<0, 3, [SDTCisVT<0, v4i32>, SDTCisSameAs<0, 1>, SDTCisPtrTy<2>]>;
 
 // Generates the general dynamic sequences, i.e.
@@ -786,8 +786,10 @@ def AArch64uunpkhi : SDNode<"AArch64ISD::UUNPKHI", SDT_AArch64unpk>;
 def AArch64uunpklo : SDNode<"AArch64ISD::UUNPKLO", SDT_AArch64unpk>;
 
 def AArch64ldp : SDNode<"AArch64ISD::LDP", SDT_AArch64ldp, [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
+def AArch64ldiapp : SDNode<"AArch64ISD::LDIAPP", SDT_AArch64ldiapp, [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
 def AArch64ldnp : SDNode<"AArch64ISD::LDNP", SDT_AArch64ldnp, [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
 def AArch64stp : SDNode<"AArch64ISD::STP", SDT_AArch64stp, [SDNPHasChain, SDNPMayStore, SDNPMemOperand]>;
+def AArch64stilp : SDNode<"AArch64ISD::STILP", SDT_AArch64stilp, [SDNPHasChain, SDNPMayStore, SDNPMemOperand]>;
 def AArch64stnp : SDNode<"AArch64ISD::STNP", SDT_AArch64stnp, [SDNPHasChain, SDNPMayStore, SDNPMemOperand]>;
 
 def AArch64tbl : SDNode<"AArch64ISD::TBL", SDT_AArch64TBL>;
@@ -2576,6 +2578,9 @@ def : Pat<(AArch64call_rvmarker (i64 tglobaladdr:$rvfunc), GPR64:$Rn),
 def : Pat<(AArch64call_bti GPR64:$Rn),
           (BLR_BTI GPR64:$Rn)>,
       Requires<[NoSLSBLRMitigation]>;
+def : Pat<(AArch64call_bti GPR64noip:$Rn),
+          (BLR_BTI GPR64noip:$Rn)>,
+      Requires<[SLSBLRMitigation]>;
 
 let isBranch = 1, isTerminator = 1, isBarrier = 1, isIndirectBranch = 1 in {
 def BR  : BranchReg<0b0000, "br", [(brind GPR64:$Rn)]>;
@@ -2610,7 +2615,7 @@ def EMITMTETAGGED : Pseudo<(outs), (ins), []>, Sched<[]> {}
 // FIXME: maybe the scratch register used shouldn't be fixed to X1?
 // FIXME: can "hasSideEffects be dropped?
 // This gets lowered to an instruction sequence which takes 16 bytes
-let isCall = 1, Defs = [LR, X0, X1], hasSideEffects = 1, Size = 16,
+let isCall = 1, Defs = [NZCV, LR, X0, X1], hasSideEffects = 1, Size = 16,
     isCodeGenOnly = 1 in
 def TLSDESC_CALLSEQ
     : Pseudo<(outs), (ins i64imm:$sym),
@@ -3408,7 +3413,7 @@ def STPSpre : StorePairPreIdx<0b00, 1, FPR32Op, simm7s4, "stp">;
 def STPDpre : StorePairPreIdx<0b01, 1, FPR64Op, simm7s8, "stp">;
 def STPQpre : StorePairPreIdx<0b10, 1, FPR128Op, simm7s16, "stp">;
 
-// Pair (pre-indexed)
+// Pair (post-indexed)
 def STPWpost : StorePairPostIdx<0b00, 0, GPR32z, simm7s4, "stp">;
 def STPXpost : StorePairPostIdx<0b10, 0, GPR64z, simm7s8, "stp">;
 def STPSpost : StorePairPostIdx<0b00, 1, FPR32Op, simm7s4, "stp">;
@@ -4199,7 +4204,7 @@ defm FMOV : UnscaledConversion<"fmov">;
 // Add pseudo ops for FMOV 0 so we can mark them as isReMaterializable
 let isReMaterializable = 1, isCodeGenOnly = 1, isAsCheapAsAMove = 1 in {
 def FMOVH0 : Pseudo<(outs FPR16:$Rd), (ins), [(set f16:$Rd, (fpimm0))]>,
-    Sched<[WriteF]>, Requires<[HasFullFP16]>;
+    Sched<[WriteF]>;
 def FMOVS0 : Pseudo<(outs FPR32:$Rd), (ins), [(set f32:$Rd, (fpimm0))]>,
     Sched<[WriteF]>;
 def FMOVD0 : Pseudo<(outs FPR64:$Rd), (ins), [(set f64:$Rd, (fpimm0))]>,
@@ -8683,6 +8688,9 @@ let Predicates = [HasRCPC3] in {
   def LDIAPPXpre: BaseLRCPC3IntegerLoadStorePair<0b11, 0b01, 0b0000, (outs GPR64sp:$wback, GPR64:$Rt, GPR64:$Rt2), (ins GPR64sp:$Rn), "ldiapp", "\t$Rt, $Rt2, [$Rn], #16", "$Rn = $wback">;
   def LDIAPPW:    BaseLRCPC3IntegerLoadStorePair<0b10, 0b01, 0b0001, (outs GPR32:$Rt, GPR32:$Rt2), (ins GPR64sp0:$Rn), "ldiapp", "\t$Rt, $Rt2, [$Rn]", "">;
   def LDIAPPX:    BaseLRCPC3IntegerLoadStorePair<0b11, 0b01, 0b0001, (outs GPR64:$Rt, GPR64:$Rt2), (ins GPR64sp0:$Rn), "ldiapp", "\t$Rt, $Rt2, [$Rn]", "">;
+
+  def : Pat<(AArch64ldiapp GPR64sp:$Rn), (LDIAPPX GPR64sp:$Rn)>;
+  def : Pat<(AArch64stilp GPR64:$Rt, GPR64:$Rt2, GPR64sp:$Rn), (STILPX GPR64:$Rt, GPR64:$Rt2, GPR64sp:$Rn)>;
 
   // Aliases for when offset=0
   def : InstAlias<"stilp\t$Rt, $Rt2, [$Rn, #0]", (STILPW GPR32: $Rt, GPR32: $Rt2, GPR64sp:$Rn)>;

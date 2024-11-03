@@ -28,7 +28,7 @@
 
 using namespace llvm;
 
-namespace llvm {
+namespace {
 
 void writeTitle(StringRef Str, raw_ostream &OS, char Kind = '-') {
   OS << std::string(Str.size(), Kind) << "\n" << Str << "\n"
@@ -54,6 +54,10 @@ std::string escapeForRST(StringRef Str) {
   }
   return Result;
 }
+
+} // namespace
+
+namespace llvm {
 
 void EmitInstrDocs(RecordKeeper &RK, raw_ostream &OS) {
   CodeGenDAGPatterns CDP(RK);

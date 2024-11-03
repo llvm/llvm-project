@@ -10,6 +10,7 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Type.h"
+#include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/TypeSize.h"
 #include "llvm/Support/WithColor.h"
@@ -176,6 +177,13 @@ std::string EVT::getEVTString() const {
   }
 }
 
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+void EVT::dump() const {
+  print(dbgs());
+  dbgs() << "\n";
+}
+#endif
+
 /// getTypeForEVT - This method returns an LLVM type corresponding to the
 /// specified EVT.  For integer types, this returns an unsigned type.  Note
 /// that this will abort for types that cannot be represented.
@@ -204,12 +212,8 @@ Type *EVT::getTypeForEVT(LLVMContext &Context) const {
   case MVT::x86mmx:  return Type::getX86_MMXTy(Context);
   case MVT::x86amx:  return Type::getX86_AMXTy(Context);
   case MVT::i64x8:   return IntegerType::get(Context, 512);
-  case MVT::externref:
-    // pointer to opaque struct in addrspace(10)
-    return PointerType::get(StructType::create(Context), 10);
-  case MVT::funcref:
-    // pointer to i8 addrspace(20)
-    return PointerType::get(Type::getInt8Ty(Context), 20);
+  case MVT::externref: return Type::getWasm_ExternrefTy(Context);
+  case MVT::funcref: return Type::getWasm_FuncrefTy(Context);
   case MVT::v1i1:
     return FixedVectorType::get(Type::getInt1Ty(Context), 1);
   case MVT::v2i1:
@@ -607,3 +611,15 @@ EVT EVT::getEVT(Type *Ty, bool HandleUnknown){
   }
   }
 }
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+void MVT::dump() const {
+  print(dbgs());
+  dbgs() << "\n";
+}
+#endif
+
+void MVT::print(raw_ostream &OS) const {
+  OS << EVT(*this).getEVTString();
+}
+

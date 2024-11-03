@@ -212,6 +212,32 @@ func.func @store_i1(%dst: memref<4xi1, #spirv.storage_class<CrossWorkgroup>>, %i
 
 // -----
 
+// Check address space casts
+
+module attributes {
+  spirv.target_env = #spirv.target_env<
+    #spirv.vce<v1.0,
+      [
+        Kernel, Addresses, GenericPointer], []>, #spirv.resource_limits<>>
+} {
+
+// CHECK-LABEL: func.func @memory_space_cast
+func.func @memory_space_cast(%arg: memref<4xf32, #spirv.storage_class<CrossWorkgroup>>)
+    -> memref<4xf32, #spirv.storage_class<Function>> {
+  // CHECK: %[[ARG_CAST:.+]] = builtin.unrealized_conversion_cast {{.*}} to !spirv.ptr<!spirv.array<4 x f32>, CrossWorkgroup>
+  // CHECK: %[[TO_GENERIC:.+]] = spirv.PtrCastToGeneric %[[ARG_CAST]] : !spirv.ptr<!spirv.array<4 x f32>, CrossWorkgroup> to !spirv.ptr<!spirv.array<4 x f32>, Generic>
+  // CHECK: %[[TO_PRIVATE:.+]] = spirv.GenericCastToPtr %[[TO_GENERIC]] : !spirv.ptr<!spirv.array<4 x f32>, Generic> to !spirv.ptr<!spirv.array<4 x f32>, Function>
+  // CHECK: %[[RET:.+]] = builtin.unrealized_conversion_cast %[[TO_PRIVATE]]
+  // CHECK: return %[[RET]]
+  %ret = memref.memory_space_cast %arg : memref<4xf32, #spirv.storage_class<CrossWorkgroup>>
+    to memref<4xf32, #spirv.storage_class<Function>>
+  return %ret : memref<4xf32, #spirv.storage_class<Function>>
+}
+
+} // end module
+
+// -----
+
 // Check that access chain indices are properly adjusted if non-32-bit types are
 // emulated via 32-bit types.
 // TODO: Test i64 types.

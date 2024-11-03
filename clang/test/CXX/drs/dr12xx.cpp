@@ -68,6 +68,8 @@ namespace dr1265 { // dr1265: 5
 #endif
 }
 
+// dr1291: na
+
 namespace dr1295 { // dr1295: 4
   struct X {
     unsigned bitfield : 4;

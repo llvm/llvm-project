@@ -11,7 +11,6 @@
 #include "llvm/Config/llvm-config.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
-#include <map>
 
 using namespace llvm;
 

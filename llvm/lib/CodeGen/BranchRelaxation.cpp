@@ -132,6 +132,19 @@ void BranchRelaxation::verify() {
     assert(BlockInfo[Num].Size == computeBlockSize(MBB));
     PrevNum = Num;
   }
+
+  for (MachineBasicBlock &MBB : *MF) {
+    for (MachineBasicBlock::iterator J = MBB.getFirstTerminator();
+         J != MBB.end(); J = std::next(J)) {
+      MachineInstr &MI = *J;
+      if (!MI.isConditionalBranch() && !MI.isUnconditionalBranch())
+        continue;
+      if (MI.getOpcode() == TargetOpcode::FAULTING_OP)
+        continue;
+      MachineBasicBlock *DestBB = TII->getBranchDestBlock(MI);
+      assert(isBlockInRange(MI, *DestBB));
+    }
+  }
 #endif
 }
 

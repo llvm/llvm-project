@@ -554,12 +554,12 @@ def lto_debug_pass_manager: FF<"lto-debug-pass-manager">,
   HelpText<"Debug new pass manager">;
 def lto_emit_asm: FF<"lto-emit-asm">,
   HelpText<"Emit assembly code">;
-def no_lto_legacy_pass_manager: FF<"no-lto-legacy-pass-manager">,
-  HelpText<"Use the new pass manager in LLVM">;
 def lto_newpm_passes: JJ<"lto-newpm-passes=">,
   HelpText<"Passes to run during LTO">;
 def lto_O: JJ<"lto-O">, MetaVarName<"<opt-level>">,
   HelpText<"Optimization level for LTO">;
+def lto_CGO: JJ<"lto-CGO">, MetaVarName<"<cgopt-level>">,
+  HelpText<"Codegen optimization level for LTO">;
 def lto_partitions: JJ<"lto-partitions=">,
   HelpText<"Number of LTO codegen partitions">;
 def lto_cs_profile_generate: FF<"lto-cs-profile-generate">,
@@ -567,7 +567,7 @@ def lto_cs_profile_generate: FF<"lto-cs-profile-generate">,
 def lto_cs_profile_file: JJ<"lto-cs-profile-file=">,
   HelpText<"Context sensitive profile file path">;
 defm lto_pgo_warn_mismatch: BB<"lto-pgo-warn-mismatch",
-  "turn on warnings about profile cfg mismatch (default)>",
+  "turn on warnings about profile cfg mismatch (default)",
   "turn off warnings about profile cfg mismatch">;
 def lto_obj_path_eq: JJ<"lto-obj-path=">;
 def lto_sample_profile: JJ<"lto-sample-profile=">,
@@ -627,8 +627,6 @@ def plugin_opt_emit_llvm: F<"plugin-opt=emit-llvm">;
 def: J<"plugin-opt=jobs=">, Alias<thinlto_jobs_eq>, HelpText<"Alias for --thinlto-jobs=">;
 def: J<"plugin-opt=lto-partitions=">, Alias<lto_partitions>, HelpText<"Alias for --lto-partitions">;
 def plugin_opt_mcpu_eq: J<"plugin-opt=mcpu=">;
-def: F<"plugin-opt=new-pass-manager">,
-  Alias<no_lto_legacy_pass_manager>, HelpText<"Alias for --no-lto-legacy-pass-manager">;
 def: F<"plugin-opt=cs-profile-generate">,
   Alias<lto_cs_profile_generate>, HelpText<"Alias for --lto-cs-profile-generate">;
 def: J<"plugin-opt=cs-profile-path=">,
@@ -638,8 +636,6 @@ def: J<"plugin-opt=obj-path=">,
   HelpText<"Alias for --lto-obj-path=">;
 def plugin_opt_opaque_pointers: F<"plugin-opt=opaque-pointers">,
   HelpText<"Use opaque pointers in IR during LTO (default)">;
-def plugin_opt_no_opaque_pointers: F<"plugin-opt=no-opaque-pointers">,
-  HelpText<"Use typed pointers in IR during LTO">;
 def: J<"plugin-opt=opt-remarks-filename=">,
   Alias<opt_remarks_filename>,
   HelpText<"Alias for --opt-remarks-filename">;

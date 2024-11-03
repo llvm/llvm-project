@@ -68,13 +68,12 @@ class MachORewriteInstance {
 public:
   // This constructor has complex initialization that can fail during
   // construction. Constructors can’t return errors, so clients must test \p Err
-  // after the object is constructed. Use createMachORewriteInstance instead.
+  // after the object is constructed. Use `create` method instead.
   MachORewriteInstance(object::MachOObjectFile *InputFile, StringRef ToolPath,
                        Error &Err);
 
   static Expected<std::unique_ptr<MachORewriteInstance>>
-  createMachORewriteInstance(object::MachOObjectFile *InputFile,
-                             StringRef ToolPath);
+  create(object::MachOObjectFile *InputFile, StringRef ToolPath);
   ~MachORewriteInstance();
 
   Error setProfile(StringRef FileName);

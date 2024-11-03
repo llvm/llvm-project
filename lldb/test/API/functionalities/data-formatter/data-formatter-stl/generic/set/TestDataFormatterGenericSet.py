@@ -101,7 +101,7 @@ class GenericSetDataFormatterTestCase(TestBase):
                      '[2] = "b"',
                      '[3] = "c"'])
         self.expect(
-            "p ss",
+            "expression ss",
             substrs=["size=4",
                      '[0] = "a"',
                      '[1] = "a very long string is right here"',

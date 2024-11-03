@@ -963,7 +963,7 @@ static Address castToBase(CodeGenFunction &CGF, QualType BaseTy, QualType ElTy,
 
   Addr = CGF.Builder.CreatePointerBitCastOrAddrSpaceCast(
       Addr, OriginalBaseAddress.getType());
-  return OriginalBaseAddress.withPointer(Addr);
+  return OriginalBaseAddress.withPointer(Addr, NotKnownNonNull);
 }
 
 static const VarDecl *getBaseDecl(const Expr *Ref, const DeclRefExpr *&DE) {
@@ -4670,7 +4670,7 @@ void CGOpenMPRuntime::emitUpdateClause(CodeGenFunction &CGF, LValue DepobjLVal,
   llvm::PHINode *ElementPHI =
       CGF.Builder.CreatePHI(Begin.getType(), 2, "omp.elementPast");
   ElementPHI->addIncoming(Begin.getPointer(), EntryBB);
-  Begin = Begin.withPointer(ElementPHI);
+  Begin = Begin.withPointer(ElementPHI, KnownNonNull);
   Base = CGF.MakeAddrLValue(Begin, KmpDependInfoTy, Base.getBaseInfo(),
                             Base.getTBAAInfo());
   // deps[i].flags = NewDepKind;

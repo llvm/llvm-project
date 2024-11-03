@@ -575,7 +575,7 @@ public:
     _LIBCPP_INLINE_VISIBILITY
     size_t operator()(const _Key& __x) const
         {return static_cast<const _Hash&>(*this)(__x);}
-#if _LIBCPP_STD_VER > 17
+#if _LIBCPP_STD_VER >= 20
     template <typename _K2>
     _LIBCPP_INLINE_VISIBILITY
     size_t operator()(const _K2& __x) const
@@ -611,7 +611,7 @@ public:
     _LIBCPP_INLINE_VISIBILITY
     size_t operator()(const _Key& __x) const
         {return __hash_(__x);}
-#if _LIBCPP_STD_VER > 17
+#if _LIBCPP_STD_VER >= 20
     template <typename _K2>
     _LIBCPP_INLINE_VISIBILITY
     size_t operator()(const _K2& __x) const
@@ -661,7 +661,7 @@ public:
     _LIBCPP_INLINE_VISIBILITY
     bool operator()(const _Key& __x, const _Cp& __y) const
         {return static_cast<const _Pred&>(*this)(__x, __y.__get_value().first);}
-#if _LIBCPP_STD_VER > 17
+#if _LIBCPP_STD_VER >= 20
     template <typename _K2>
     _LIBCPP_INLINE_VISIBILITY
     bool operator()(const _Cp& __x, const _K2& __y) const
@@ -712,7 +712,7 @@ public:
     _LIBCPP_INLINE_VISIBILITY
     bool operator()(const _Key& __x, const _Cp& __y) const
         {return __pred_(__x, __y.__get_value().first);}
-#if _LIBCPP_STD_VER > 17
+#if _LIBCPP_STD_VER >= 20
     template <typename _K2>
     _LIBCPP_INLINE_VISIBILITY
     bool operator()(const _Cp& __x, const _K2& __y) const
@@ -825,7 +825,7 @@ public:
     _LIBCPP_INLINE_VISIBILITY
     value_type& __get_value()
     {
-#if _LIBCPP_STD_VER > 14
+#if _LIBCPP_STD_VER >= 17
         return *_VSTD::launder(_VSTD::addressof(__cc_));
 #else
         return __cc_;
@@ -835,7 +835,7 @@ public:
     _LIBCPP_INLINE_VISIBILITY
     const value_type& __get_value() const
     {
-#if _LIBCPP_STD_VER > 14
+#if _LIBCPP_STD_VER >= 17
         return *_VSTD::launder(_VSTD::addressof(__cc_));
 #else
         return __cc_;
@@ -1075,7 +1075,7 @@ public:
     typedef __hash_map_iterator<typename __table::local_iterator> local_iterator;
     typedef __hash_map_const_iterator<typename __table::const_local_iterator> const_local_iterator;
 
-#if _LIBCPP_STD_VER > 14
+#if _LIBCPP_STD_VER >= 17
     typedef __map_node_handle<__node, allocator_type> node_type;
     typedef __insert_return_type<iterator, node_type> insert_return_type;
 #endif
@@ -1123,7 +1123,7 @@ public:
                   const hasher& __hf, const key_equal& __eql,
                   const allocator_type& __a);
 #endif // _LIBCPP_CXX03_LANG
-#if _LIBCPP_STD_VER > 11
+#if _LIBCPP_STD_VER >= 14
     _LIBCPP_INLINE_VISIBILITY
     unordered_map(size_type __n, const allocator_type& __a)
       : unordered_map(__n, hasher(), key_equal(), __a) {}
@@ -1270,7 +1270,7 @@ public:
 
 #endif // _LIBCPP_CXX03_LANG
 
-#if _LIBCPP_STD_VER > 14
+#if _LIBCPP_STD_VER >= 17
     template <class... _Args>
         _LIBCPP_INLINE_VISIBILITY
         pair<iterator, bool> try_emplace(const key_type& __k, _Args&&... __args)
@@ -1350,7 +1350,7 @@ public:
         // FIXME: Add debug mode checking for the iterator input
         return insert_or_assign(_VSTD::move(__k), _VSTD::forward<_Vp>(__v)).first;
      }
-#endif // _LIBCPP_STD_VER > 14
+#endif // _LIBCPP_STD_VER >= 17
 
     _LIBCPP_INLINE_VISIBILITY
     iterator erase(const_iterator __p) {return __table_.erase(__p.__i_);}
@@ -1364,7 +1364,7 @@ public:
     _LIBCPP_INLINE_VISIBILITY
         void clear() _NOEXCEPT {__table_.clear();}
 
-#if _LIBCPP_STD_VER > 14
+#if _LIBCPP_STD_VER >= 17
     _LIBCPP_INLINE_VISIBILITY
     insert_return_type insert(node_type&& __nh)
     {
@@ -1443,31 +1443,31 @@ public:
     iterator       find(const key_type& __k)       {return __table_.find(__k);}
     _LIBCPP_INLINE_VISIBILITY
     const_iterator find(const key_type& __k) const {return __table_.find(__k);}
-#if _LIBCPP_STD_VER > 17
+#if _LIBCPP_STD_VER >= 20
     template <class _K2, enable_if_t<__is_transparent<hasher, _K2>::value && __is_transparent<key_equal, _K2>::value>* = nullptr>
     _LIBCPP_INLINE_VISIBILITY
     iterator       find(const _K2& __k)            {return __table_.find(__k);}
     template <class _K2, enable_if_t<__is_transparent<hasher, _K2>::value && __is_transparent<key_equal, _K2>::value>* = nullptr>
     _LIBCPP_INLINE_VISIBILITY
     const_iterator find(const _K2& __k) const      {return __table_.find(__k);}
-#endif // _LIBCPP_STD_VER > 17
+#endif // _LIBCPP_STD_VER >= 20
 
     _LIBCPP_INLINE_VISIBILITY
     size_type count(const key_type& __k) const {return __table_.__count_unique(__k);}
-#if _LIBCPP_STD_VER > 17
+#if _LIBCPP_STD_VER >= 20
     template <class _K2, enable_if_t<__is_transparent<hasher, _K2>::value && __is_transparent<key_equal, _K2>::value>* = nullptr>
     _LIBCPP_INLINE_VISIBILITY
     size_type count(const _K2& __k) const      {return __table_.__count_unique(__k);}
-#endif // _LIBCPP_STD_VER > 17
+#endif // _LIBCPP_STD_VER >= 20
 
-#if _LIBCPP_STD_VER > 17
+#if _LIBCPP_STD_VER >= 20
     _LIBCPP_INLINE_VISIBILITY
     bool contains(const key_type& __k) const {return find(__k) != end();}
 
     template <class _K2, enable_if_t<__is_transparent<hasher, _K2>::value && __is_transparent<key_equal, _K2>::value>* = nullptr>
     _LIBCPP_INLINE_VISIBILITY
     bool contains(const _K2& __k) const      {return find(__k) != end();}
-#endif // _LIBCPP_STD_VER > 17
+#endif // _LIBCPP_STD_VER >= 20
 
     _LIBCPP_INLINE_VISIBILITY
     pair<iterator, iterator>             equal_range(const key_type& __k)
@@ -1475,7 +1475,7 @@ public:
     _LIBCPP_INLINE_VISIBILITY
     pair<const_iterator, const_iterator> equal_range(const key_type& __k) const
         {return __table_.__equal_range_unique(__k);}
-#if _LIBCPP_STD_VER > 17
+#if _LIBCPP_STD_VER >= 20
     template <class _K2, enable_if_t<__is_transparent<hasher, _K2>::value && __is_transparent<key_equal, _K2>::value>* = nullptr>
     _LIBCPP_INLINE_VISIBILITY
     pair<iterator, iterator>             equal_range(const _K2& __k)
@@ -1484,7 +1484,7 @@ public:
     _LIBCPP_INLINE_VISIBILITY
     pair<const_iterator, const_iterator> equal_range(const _K2& __k) const
         {return __table_.__equal_range_unique(__k);}
-#endif // _LIBCPP_STD_VER > 17
+#endif // _LIBCPP_STD_VER >= 20
 
     mapped_type& operator[](const key_type& __k);
 #ifndef _LIBCPP_CXX03_LANG
@@ -1874,7 +1874,7 @@ swap(unordered_map<_Key, _Tp, _Hash, _Pred, _Alloc>& __x,
     __x.swap(__y);
 }
 
-#if _LIBCPP_STD_VER > 17
+#if _LIBCPP_STD_VER >= 20
 template <class _Key, class _Tp, class _Hash, class _Pred, class _Alloc,
           class _Predicate>
 inline _LIBCPP_INLINE_VISIBILITY
@@ -1967,7 +1967,7 @@ private:
     typedef __hash_map_iterator<typename __table::local_iterator> local_iterator;
     typedef __hash_map_const_iterator<typename __table::const_local_iterator> const_local_iterator;
 
-#if _LIBCPP_STD_VER > 14
+#if _LIBCPP_STD_VER >= 17
     typedef __map_node_handle<__node, allocator_type> node_type;
 #endif
 
@@ -2015,7 +2015,7 @@ private:
                        const hasher& __hf, const key_equal& __eql,
                        const allocator_type& __a);
 #endif // _LIBCPP_CXX03_LANG
-#if _LIBCPP_STD_VER > 11
+#if _LIBCPP_STD_VER >= 14
     _LIBCPP_INLINE_VISIBILITY
     unordered_multimap(size_type __n, const allocator_type& __a)
       : unordered_multimap(__n, hasher(), key_equal(), __a) {}
@@ -2151,7 +2151,7 @@ private:
     _LIBCPP_INLINE_VISIBILITY
     void clear() _NOEXCEPT {__table_.clear();}
 
-#if _LIBCPP_STD_VER > 14
+#if _LIBCPP_STD_VER >= 17
     _LIBCPP_INLINE_VISIBILITY
     iterator insert(node_type&& __nh)
     {
@@ -2230,31 +2230,31 @@ private:
     iterator       find(const key_type& __k)       {return __table_.find(__k);}
     _LIBCPP_INLINE_VISIBILITY
     const_iterator find(const key_type& __k) const {return __table_.find(__k);}
-#if _LIBCPP_STD_VER > 17
+#if _LIBCPP_STD_VER >= 20
     template <class _K2, enable_if_t<__is_transparent<hasher, _K2>::value && __is_transparent<key_equal, _K2>::value>* = nullptr>
     _LIBCPP_INLINE_VISIBILITY
     iterator       find(const _K2& __k)            {return __table_.find(__k);}
     template <class _K2, enable_if_t<__is_transparent<hasher, _K2>::value && __is_transparent<key_equal, _K2>::value>* = nullptr>
     _LIBCPP_INLINE_VISIBILITY
     const_iterator find(const _K2& __k) const      {return __table_.find(__k);}
-#endif // _LIBCPP_STD_VER > 17
+#endif // _LIBCPP_STD_VER >= 20
 
     _LIBCPP_INLINE_VISIBILITY
     size_type count(const key_type& __k) const {return __table_.__count_multi(__k);}
-#if _LIBCPP_STD_VER > 17
+#if _LIBCPP_STD_VER >= 20
     template <class _K2, enable_if_t<__is_transparent<hasher, _K2>::value && __is_transparent<key_equal, _K2>::value>* = nullptr>
     _LIBCPP_INLINE_VISIBILITY
     size_type count(const _K2& __k) const      {return __table_.__count_multi(__k);}
-#endif // _LIBCPP_STD_VER > 17
+#endif // _LIBCPP_STD_VER >= 20
 
-#if _LIBCPP_STD_VER > 17
+#if _LIBCPP_STD_VER >= 20
     _LIBCPP_INLINE_VISIBILITY
     bool contains(const key_type& __k) const {return find(__k) != end();}
 
     template <class _K2, enable_if_t<__is_transparent<hasher, _K2>::value && __is_transparent<key_equal, _K2>::value>* = nullptr>
     _LIBCPP_INLINE_VISIBILITY
     bool contains(const _K2& __k) const      {return find(__k) != end();}
-#endif // _LIBCPP_STD_VER > 17
+#endif // _LIBCPP_STD_VER >= 20
 
     _LIBCPP_INLINE_VISIBILITY
     pair<iterator, iterator>             equal_range(const key_type& __k)
@@ -2262,7 +2262,7 @@ private:
     _LIBCPP_INLINE_VISIBILITY
     pair<const_iterator, const_iterator> equal_range(const key_type& __k) const
         {return __table_.__equal_range_multi(__k);}
-#if _LIBCPP_STD_VER > 17
+#if _LIBCPP_STD_VER >= 20
     template <class _K2, enable_if_t<__is_transparent<hasher, _K2>::value && __is_transparent<key_equal, _K2>::value>* = nullptr>
     _LIBCPP_INLINE_VISIBILITY
     pair<iterator, iterator>             equal_range(const _K2& __k)
@@ -2271,7 +2271,7 @@ private:
     _LIBCPP_INLINE_VISIBILITY
     pair<const_iterator, const_iterator> equal_range(const _K2& __k) const
         {return __table_.__equal_range_multi(__k);}
-#endif // _LIBCPP_STD_VER > 17
+#endif // _LIBCPP_STD_VER >= 20
 
     _LIBCPP_INLINE_VISIBILITY
     size_type bucket_count() const _NOEXCEPT {return __table_.bucket_count();}
@@ -2584,7 +2584,7 @@ swap(unordered_multimap<_Key, _Tp, _Hash, _Pred, _Alloc>& __x,
     __x.swap(__y);
 }
 
-#if _LIBCPP_STD_VER > 17
+#if _LIBCPP_STD_VER >= 20
 template <class _Key, class _Tp, class _Hash, class _Pred, class _Alloc,
           class _Predicate>
 inline _LIBCPP_INLINE_VISIBILITY
@@ -2629,7 +2629,7 @@ operator!=(const unordered_multimap<_Key, _Tp, _Hash, _Pred, _Alloc>& __x,
 
 _LIBCPP_END_NAMESPACE_STD
 
-#if _LIBCPP_STD_VER > 14
+#if _LIBCPP_STD_VER >= 17
 _LIBCPP_BEGIN_NAMESPACE_STD
 namespace pmr {
 template <class _KeyT, class _ValueT, class _HashT = std::hash<_KeyT>, class _PredT = std::equal_to<_KeyT>>

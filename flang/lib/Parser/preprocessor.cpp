@@ -599,7 +599,7 @@ void Preprocessor::Directive(const TokenSequence &dir, Prescanner &prescanner) {
             "#include: expected '>' at end of included file"_port_en_US);
       }
       TokenSequence braced{dir, j + 1, k - j - 1};
-      include = ReplaceMacros(braced, prescanner).ToString();
+      include = braced.ToString();
       j = k;
     } else if ((include = dir.TokenAt(j).ToString()).substr(0, 1) == "\"" &&
         include.substr(include.size() - 1, 1) == "\"") { // #include "foo"

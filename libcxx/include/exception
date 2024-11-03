@@ -221,7 +221,7 @@ template<class _Ep>
 _LIBCPP_INLINE_VISIBILITY exception_ptr
 make_exception_ptr(_Ep __e) _NOEXCEPT
 {
-#ifndef _LIBCPP_NO_EXCEPTIONS
+#ifndef _LIBCPP_HAS_NO_EXCEPTIONS
     try
     {
         throw __e;
@@ -304,7 +304,7 @@ struct __nested
     _LIBCPP_INLINE_VISIBILITY explicit __nested(const _Tp& __t) : _Tp(__t) {}
 };
 
-#ifndef _LIBCPP_NO_EXCEPTIONS
+#ifndef _LIBCPP_HAS_NO_EXCEPTIONS
 template <class _Tp, class _Up, bool>
 struct __throw_with_nested;
 
@@ -336,7 +336,7 @@ _LIBCPP_NORETURN _LIBCPP_HIDE_FROM_ABI
 void
 throw_with_nested(_Tp&& __t)
 {
-#ifndef _LIBCPP_NO_EXCEPTIONS
+#ifndef _LIBCPP_HAS_NO_EXCEPTIONS
     typedef typename decay<_Tp>::type _Up;
     static_assert( is_copy_constructible<_Up>::value, "type thrown must be CopyConstructible");
     __throw_with_nested<_Tp, _Up,

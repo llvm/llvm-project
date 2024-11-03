@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/string/strncasecmp.h"
-#include "utils/UnitTest/Test.h"
+#include "test/UnitTest/Test.h"
 
 TEST(LlvmLibcStrNCaseCmpTest,
      EmptyStringsShouldReturnZeroWithSufficientLength) {

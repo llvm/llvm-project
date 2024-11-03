@@ -50,8 +50,8 @@
 ; Function Attrs: uwtable
 define void @_Z3barii(i32 %param1, i32 %param2) #0 !dbg !24 {
 entry:
-  %var1 = alloca %struct.AAA3, align 1
-  %var2 = alloca %struct.AAA3, align 1
+  %var1 = alloca %struct.AAA3, align 8
+  %var2 = alloca %struct.AAA3, align 8
   tail call void @llvm.dbg.value(metadata i32 %param1, i64 0, metadata !29, metadata !46), !dbg !47
   tail call void @llvm.dbg.value(metadata i32 %param2, i64 0, metadata !30, metadata !46), !dbg !48
   tail call void @llvm.dbg.value(metadata ptr null, i64 0, metadata !31, metadata !46), !dbg !49

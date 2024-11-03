@@ -44,6 +44,35 @@ struct LinalgTilingOptions;
 //===----------------------------------------------------------------------===//
 using LinalgLoops = SmallVector<Operation *, 4>;
 
+/// Materialize a buffer allocation for the given tensor.pad op and lower the
+/// op to linalg.fill/linalg.generic + memref.tensor_store. E.g.:
+///
+/// %0 = tensor.pad low[%l] high[%h] %t ...
+///
+/// is lowered to:
+///
+/// %alloc = memref.alloc
+/// linalg.fill ... outs(%alloc)
+/// %subview = memref.subview %alloc [%l] [...] [1]
+/// memref.tensor_store %t, %subview
+/// %0 = bufferization.to_tensor %alloc restrict writable
+///
+/// In addition to rewriting the IR as shown above, the result of the
+/// bufferization.to_tensor op is returned.
+Value bufferizeToAllocation(RewriterBase &rewriter, tensor::PadOp padOp,
+                            Attribute memorySpace = {});
+
+/// Materialize a buffer allocation for the given tensor value. E.g.:
+///
+/// %alloc = memref.alloc
+/// memref.tensor_store %value, %alloc
+/// %0 = bufferization.to_tensor %alloc restrict writable
+///
+/// In case `value` is a tensor.pad result, the corresponding overload is used
+/// internally to produce a better bufferization.
+Value bufferizeToAllocation(RewriterBase &rewriter, Value value,
+                            Attribute memorySpace = {});
+
 void populatePadTensorTilingPatterns(RewritePatternSet &patterns,
                                      const LinalgTilingOptions &options);
 
@@ -162,8 +191,12 @@ bool areElementwiseOpsFusable(OpOperand *fusedOperand);
 /// Fuse two `linalg.generic` operations that have a producer-consumer
 /// relationship captured through `fusedOperand`. The method expects
 /// that `areElementwiseOpsFusable` returns true for the given `fusedOperand`.
-FailureOr<Operation *> fuseElementwiseOps(RewriterBase &rewriter,
-                                          OpOperand *fusedOperand);
+struct ElementwiseOpFusionResult {
+  Operation *fusedOp;
+  llvm::DenseMap<Value, Value> replacements;
+};
+FailureOr<ElementwiseOpFusionResult>
+fuseElementwiseOps(RewriterBase &rewriter, OpOperand *fusedOperand);
 
 /// Split the given `op` into two parts along the given iteration space
 /// `dimension` at the specified `splitPoint`, and return the two parts.
@@ -474,40 +507,40 @@ FailureOr<StaticMultiSizeSpecification>
 computeStaticMultiTileSizes(LinalgOp op, unsigned dimension, int64_t targetSize,
                             int64_t divisor);
 
-/// Rewrite a TilingInterface `op` to a tiled `scf.foreach_thread`, applying
+/// Rewrite a TilingInterface `op` to a tiled `scf.forall`, applying
 /// tiling by `numThreads`.
 /// If non-empty, the `mapping` is added as an attribute to the
-/// resulting `scf.foreach_thread`.
+/// resulting `scf.forall`.
 /// Zero tile sizes indicate that the dimension is not tiled, and can be
 /// thought of as tiling by the full size of data. It is the user's
 /// responsibility to ensure that `numThreads` is a valid tiling specification
 /// (i.e. that only tiles parallel dimensions, e.g. in the Linalg case).
-struct ForeachThreadTilingResult {
+struct ForallTilingResult {
   Operation *tileOp;
   Operation *tiledOp;
 };
-FailureOr<ForeachThreadTilingResult>
-tileToForeachThreadOp(RewriterBase &builder, TilingInterface op,
-                      ArrayRef<OpFoldResult> numThreads,
-                      std::optional<ArrayAttr> mapping);
+FailureOr<ForallTilingResult> tileToForallOp(RewriterBase &builder,
+                                             TilingInterface op,
+                                             ArrayRef<OpFoldResult> numThreads,
+                                             std::optional<ArrayAttr> mapping);
 
-/// Same as `tileToForeachThreadOp`, but calculate the number of threads
+/// Same as `tileToForallOp`, but calculate the number of threads
 /// required using the given tileSizes.
-FailureOr<ForeachThreadTilingResult>
-tileToForeachThreadOpUsingTileSizes(RewriterBase &builder, TilingInterface op,
-                                    ArrayRef<OpFoldResult> tileSizes,
-                                    std::optional<ArrayAttr> mapping);
+FailureOr<ForallTilingResult>
+tileToForallOpUsingTileSizes(RewriterBase &builder, TilingInterface op,
+                             ArrayRef<OpFoldResult> tileSizes,
+                             std::optional<ArrayAttr> mapping);
 
 /// Transformation information returned after reduction tiling.
-struct ForeachThreadReductionTilingResult {
+struct ForallReductionTilingResult {
   /// The partial reduction tiled op generated.
   Operation *parallelTiledOp;
   /// The final reduction operation merging all the partial reductions.
   Operation *mergeOp;
   /// The op initializing the tensor used for partial reductions.
   Operation *initialOp;
-  /// The `scf.foreach_thread` operation that iterate over the tiles.
-  scf::ForeachThreadOp loops;
+  /// The `scf.forall` operation that iterate over the tiles.
+  scf::ForallOp loops;
 };
 
 /// Method to tile a reduction to parallel iterations computing partial
@@ -523,7 +556,7 @@ struct ForeachThreadReductionTilingResult {
 ///
 /// ```mlir
 /// %0 = linalg.fill ... : tensor<7x4xf32>
-/// %1 = scf.foreach_thread (%iv) in (%c4) shared_outs(%arg0 = %0)
+/// %1 = scf.forall (%iv) in (%c4) shared_outs(%arg0 = %0)
 ///   -> (tensor<7x4xf32>) {
 ///   %2 = tensor.extract_slice %arg3 : tensor<7x4xf32> to tensor<7xf32>
 ///   %3 = tensor.extract_slice %in : tensor<7x9xf32> -> tensor<7x?xf32>
@@ -534,10 +567,11 @@ struct ForeachThreadReductionTilingResult {
 /// %6 = linalg.generic %1 ["parallel", "reduction"]
 ///   : tensor<7x4xf32> -> tensor<7xf32>
 /// ```
-FailureOr<ForeachThreadReductionTilingResult> tileReductionUsingForeachThread(
-    RewriterBase &b, PartialReductionOpInterface op,
-    ArrayRef<OpFoldResult> numThreads, ArrayRef<OpFoldResult> tileSizes = {},
-    std::optional<ArrayAttr> mapping = std::nullopt);
+FailureOr<ForallReductionTilingResult>
+tileReductionUsingForall(RewriterBase &b, PartialReductionOpInterface op,
+                         ArrayRef<OpFoldResult> numThreads,
+                         ArrayRef<OpFoldResult> tileSizes = {},
+                         std::optional<ArrayAttr> mapping = std::nullopt);
 
 /// All indices returned by IndexOp should be invariant with respect to
 /// tiling. Therefore, if an operation is tiled, we have to transform the
@@ -1142,12 +1176,17 @@ FailureOr<SmallVector<Value>> collapseGenericOpIterationDims(
     GenericOp genericOp, ArrayRef<ReassociationIndices> foldedIterationDims,
     RewriterBase &rewriter);
 
+/// Struct to hold the result of a `pack` call.
+struct PackResult {
+  SmallVector<tensor::PackOp> packOps;
+  linalg::LinalgOp packedLinalgOp;
+  SmallVector<tensor::UnPackOp> unPackOps;
+};
 /// Implement packing of a single LinalgOp by `packedSizes`.
 /// There must be one packedSizes entry per `linalgOp` iterator.
 /// Return the packed Linalg op on success, failure otherwise.
-FailureOr<linalg::LinalgOp> pack(RewriterBase &rewriter,
-                                 linalg::LinalgOp linalgOp,
-                                 ArrayRef<OpFoldResult> packedSizes);
+FailureOr<PackResult> pack(RewriterBase &rewriter, linalg::LinalgOp linalgOp,
+                           ArrayRef<OpFoldResult> packedSizes);
 
 /// Struct to hold the result of a `packTranspose` call.
 struct PackTransposeResult {
@@ -1167,6 +1206,20 @@ FailureOr<PackTransposeResult>
 packTranspose(RewriterBase &rewriter, tensor::PackOp packOp,
               linalg::LinalgOp linalgOp, tensor::UnPackOp maybeUnPackOp,
               ArrayRef<int64_t> outerPerm, ArrayRef<int64_t> innerPerm);
+
+/// Rewrite tensor.from_elements to linalg.generic.
+FailureOr<Operation *>
+rewriteInDestinationPassingStyle(RewriterBase &rewriter,
+                                 tensor::FromElementsOp fromElementsOp);
+
+/// Rewrite tensor.generate to linalg.generic.
+FailureOr<Operation *>
+rewriteInDestinationPassingStyle(RewriterBase &rewriter,
+                                 tensor::GenerateOp generateOp);
+
+/// Rewrite tensor.pad to linalg.generic + tensor.insert_slice.
+FailureOr<Operation *> rewriteInDestinationPassingStyle(RewriterBase &rewriter,
+                                                        tensor::PadOp padOp);
 
 } // namespace linalg
 } // namespace mlir

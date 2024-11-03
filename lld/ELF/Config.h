@@ -235,7 +235,6 @@ struct Config {
   bool nostdlib;
   bool oFormatBinary;
   bool omagic;
-  bool opaquePointers;
   bool optEB = false;
   bool optEL = false;
   bool optimizeBBJumps;
@@ -318,6 +317,7 @@ struct Config {
   uint64_t zStackSize;
   unsigned ltoPartitions;
   unsigned ltoo;
+  llvm::CodeGenOpt::Level ltoCgo;
   unsigned optimize;
   StringRef thinLTOJobs;
   unsigned timeTraceGranularity;

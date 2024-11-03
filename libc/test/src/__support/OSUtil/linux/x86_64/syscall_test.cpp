@@ -8,7 +8,7 @@
 
 #include "src/__support/CPP/functional.h"
 #include "src/__support/OSUtil/syscall.h"
-#include "utils/UnitTest/Test.h"
+#include "test/UnitTest/Test.h"
 
 TEST(LlvmLibcX86_64_SyscallTest, APITest) {
   // We only do a signature test here. Actual functionality tests are

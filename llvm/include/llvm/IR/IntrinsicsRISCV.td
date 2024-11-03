@@ -132,31 +132,15 @@ let TargetPrefix = "riscv" in {
                            /* AVL */  [LLVMMatchType<0>,
                            /* VSEW */  LLVMMatchType<0>,
                            /* VLMUL */ LLVMMatchType<0>],
-                                      [IntrNoMem, IntrHasSideEffects,
+                                      [IntrNoMem,
                                        ImmArg<ArgIndex<1>>,
                                        ImmArg<ArgIndex<2>>]>;
   def int_riscv_vsetvlimax : Intrinsic<[llvm_anyint_ty],
                             /* VSEW */ [LLVMMatchType<0>,
                             /* VLMUL */ LLVMMatchType<0>],
-                                      [IntrNoMem, IntrHasSideEffects,
+                                      [IntrNoMem,
                                        ImmArg<ArgIndex<0>>,
                                        ImmArg<ArgIndex<1>>]>;
-
-  // Versions without side effects: better optimizable and usable if only the
-  // returned vector length is important.
-  def int_riscv_vsetvli_opt   : Intrinsic<[llvm_anyint_ty],
-                               /* AVL */  [LLVMMatchType<0>,
-                               /* VSEW */  LLVMMatchType<0>,
-                               /* VLMUL */ LLVMMatchType<0>],
-                                          [IntrNoMem,
-                                           ImmArg<ArgIndex<1>>,
-                                           ImmArg<ArgIndex<2>>]>;
-  def int_riscv_vsetvlimax_opt : Intrinsic<[llvm_anyint_ty],
-                                /* VSEW */ [LLVMMatchType<0>,
-                                /* VLMUL */ LLVMMatchType<0>],
-                                          [IntrNoMem,
-                                           ImmArg<ArgIndex<0>>,
-                                           ImmArg<ArgIndex<1>>]>;
 
   // For unit stride mask load
   // Input: (pointer, vl)

@@ -18,7 +18,6 @@
 #include "X86MacroFusion.h"
 #include "X86RegisterBankInfo.h"
 #include "X86TargetMachine.h"
-#include "llvm/ADT/Triple.h"
 #include "llvm/CodeGen/GlobalISel/CallLowering.h"
 #include "llvm/CodeGen/GlobalISel/InstructionSelect.h"
 #include "llvm/CodeGen/GlobalISel/InstructionSelector.h"
@@ -34,6 +33,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
+#include "llvm/TargetParser/Triple.h"
 
 #if defined(_MSC_VER)
 #include <intrin.h>

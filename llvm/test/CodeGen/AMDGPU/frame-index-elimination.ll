@@ -289,7 +289,7 @@ bb5:
 
 ; GCN: ds_write_b32 v{{[0-9]+}}, [[PTR]]
 define void @alloca_ptr_nonentry_block(i32 %arg0) #0 {
-  %alloca0 = alloca { i8, i32 }, align 4, addrspace(5)
+  %alloca0 = alloca { i8, i32 }, align 8, addrspace(5)
   %cmp = icmp eq i32 %arg0, 0
   br i1 %cmp, label %bb, label %ret
 

@@ -23,4 +23,4 @@ int main() {
   fprintf(stderr, "Test alloc: %p.\n", q);
   return 0;
 }
-// CHECK: SUMMARY: {{(Leak|Address)}}Sanitizer: 1337 byte(s) leaked in 1 allocation(s)
+// CHECK: SUMMARY: {{.*}}Sanitizer: 1337 byte(s) leaked in 1 allocation(s)

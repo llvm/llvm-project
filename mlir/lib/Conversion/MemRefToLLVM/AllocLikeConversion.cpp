@@ -23,9 +23,11 @@ LLVM::LLVMFuncOp getNotalignedAllocFn(LLVMTypeConverter *typeConverter,
   bool useGenericFn = typeConverter->getOptions().useGenericFunctions;
 
   if (useGenericFn)
-    return LLVM::lookupOrCreateGenericAllocFn(module, indexType);
+    return LLVM::lookupOrCreateGenericAllocFn(
+        module, indexType, typeConverter->useOpaquePointers());
 
-  return LLVM::lookupOrCreateMallocFn(module, indexType);
+  return LLVM::lookupOrCreateMallocFn(module, indexType,
+                                      typeConverter->useOpaquePointers());
 }
 
 LLVM::LLVMFuncOp getAlignedAllocFn(LLVMTypeConverter *typeConverter,
@@ -33,9 +35,11 @@ LLVM::LLVMFuncOp getAlignedAllocFn(LLVMTypeConverter *typeConverter,
   bool useGenericFn = typeConverter->getOptions().useGenericFunctions;
 
   if (useGenericFn)
-    return LLVM::lookupOrCreateGenericAlignedAllocFn(module, indexType);
+    return LLVM::lookupOrCreateGenericAlignedAllocFn(
+        module, indexType, typeConverter->useOpaquePointers());
 
-  return LLVM::lookupOrCreateAlignedAllocFn(module, indexType);
+  return LLVM::lookupOrCreateAlignedAllocFn(module, indexType,
+                                            typeConverter->useOpaquePointers());
 }
 
 } // end namespace
@@ -48,6 +52,25 @@ Value AllocationOpLLVMLowering::createAligned(
   Value bumped = rewriter.create<LLVM::AddOp>(loc, input, bump);
   Value mod = rewriter.create<LLVM::URemOp>(loc, bumped, alignment);
   return rewriter.create<LLVM::SubOp>(loc, bumped, mod);
+}
+
+static Value castAllocFuncResult(ConversionPatternRewriter &rewriter,
+                                 Location loc, Value allocatedPtr,
+                                 MemRefType memRefType, Type elementPtrType,
+                                 LLVMTypeConverter &typeConverter) {
+  auto allocatedPtrTy = allocatedPtr.getType().cast<LLVM::LLVMPointerType>();
+  unsigned memrefAddrSpace = *typeConverter.getMemRefAddressSpace(memRefType);
+  if (allocatedPtrTy.getAddressSpace() != memrefAddrSpace)
+    allocatedPtr = rewriter.create<LLVM::AddrSpaceCastOp>(
+        loc,
+        typeConverter.getPointerType(allocatedPtrTy.getElementType(),
+                                     memrefAddrSpace),
+        allocatedPtr);
+
+  if (!typeConverter.useOpaquePointers())
+    allocatedPtr =
+        rewriter.create<LLVM::BitcastOp>(loc, elementPtrType, allocatedPtr);
+  return allocatedPtr;
 }
 
 std::tuple<Value, Value> AllocationOpLLVMLowering::allocateBufferManuallyAlign(
@@ -64,8 +87,10 @@ std::tuple<Value, Value> AllocationOpLLVMLowering::allocateBufferManuallyAlign(
   LLVM::LLVMFuncOp allocFuncOp = getNotalignedAllocFn(
       getTypeConverter(), op->getParentOfType<ModuleOp>(), getIndexType());
   auto results = rewriter.create<LLVM::CallOp>(loc, allocFuncOp, sizeBytes);
-  Value allocatedPtr = rewriter.create<LLVM::BitcastOp>(loc, elementPtrType,
-                                                        results.getResult());
+
+  Value allocatedPtr =
+      castAllocFuncResult(rewriter, loc, results.getResult(), memRefType,
+                          elementPtrType, *getTypeConverter());
 
   Value alignedPtr = allocatedPtr;
   if (alignment) {
@@ -126,10 +151,9 @@ Value AllocationOpLLVMLowering::allocateBufferAutoAlign(
       getTypeConverter(), op->getParentOfType<ModuleOp>(), getIndexType());
   auto results = rewriter.create<LLVM::CallOp>(
       loc, allocFuncOp, ValueRange({allocAlignment, sizeBytes}));
-  Value allocatedPtr = rewriter.create<LLVM::BitcastOp>(loc, elementPtrType,
-                                                        results.getResult());
 
-  return allocatedPtr;
+  return castAllocFuncResult(rewriter, loc, results.getResult(), memRefType,
+                             elementPtrType, *getTypeConverter());
 }
 
 LogicalResult AllocLikeOpLLVMLowering::matchAndRewrite(

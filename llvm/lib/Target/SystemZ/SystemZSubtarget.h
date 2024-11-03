@@ -18,9 +18,9 @@
 #include "SystemZInstrInfo.h"
 #include "SystemZRegisterInfo.h"
 #include "SystemZSelectionDAGInfo.h"
-#include "llvm/ADT/Triple.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/DataLayout.h"
+#include "llvm/TargetParser/Triple.h"
 #include <string>
 
 #define GET_SUBTARGETINFO_HEADER

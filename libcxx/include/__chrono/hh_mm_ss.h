@@ -20,7 +20,7 @@
 #  pragma GCC system_header
 #endif
 
-#if _LIBCPP_STD_VER > 17
+#if _LIBCPP_STD_VER >= 20
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
@@ -85,6 +85,7 @@ private:
     chrono::seconds __s_;
     precision       __f_;
 };
+_LIBCPP_CTAD_SUPPORTED_FOR_TYPE(hh_mm_ss);
 
 _LIBCPP_HIDE_FROM_ABI constexpr bool is_am(const hours& __h) noexcept { return __h >= hours( 0) && __h < hours(12); }
 _LIBCPP_HIDE_FROM_ABI constexpr bool is_pm(const hours& __h) noexcept { return __h >= hours(12) && __h < hours(24); }
@@ -107,6 +108,6 @@ _LIBCPP_HIDE_FROM_ABI constexpr hours make24(const hours& __h, bool __is_pm) noe
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP_STD_VER > 17
+#endif // _LIBCPP_STD_VER >= 20
 
 #endif // _LIBCPP___CHRONO_HH_MM_SS_H

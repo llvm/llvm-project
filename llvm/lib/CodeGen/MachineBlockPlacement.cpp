@@ -213,10 +213,9 @@ static cl::opt<bool> RenumberBlocksBeforeView(
         "into a dot graph. Only used when a function is being printed."),
     cl::init(false), cl::Hidden);
 
+namespace llvm {
 extern cl::opt<bool> EnableExtTspBlockPlacement;
 extern cl::opt<bool> ApplyExtTspWithoutProfile;
-
-namespace llvm {
 extern cl::opt<unsigned> StaticLikelyProb;
 extern cl::opt<unsigned> ProfileLikelyProb;
 

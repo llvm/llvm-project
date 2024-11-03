@@ -29,9 +29,9 @@ class _LIBCPP_TEMPLATE_VIS result_of<_Fp(_Args...)>
 {
 };
 
-#if _LIBCPP_STD_VER > 11
+#if _LIBCPP_STD_VER >= 14
 template <class _Tp> using result_of_t _LIBCPP_DEPRECATED_IN_CXX17 = typename result_of<_Tp>::type;
-#endif // _LIBCPP_STD_VER > 11
+#endif // _LIBCPP_STD_VER >= 14
 #endif // _LIBCPP_STD_VER <= 17 || defined(_LIBCPP_ENABLE_CXX20_REMOVED_TYPE_TRAITS)
 
 _LIBCPP_END_NAMESPACE_STD

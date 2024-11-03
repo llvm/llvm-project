@@ -13,6 +13,7 @@ add_tablegen(llvm-tblgen LLVM
   CodeEmitterGen.cpp
   CodeGenDAGPatterns.cpp
   CodeGenHwModes.cpp
+  CodeGenInstAlias.cpp
   CodeGenInstruction.cpp
   CodeGenMapTable.cpp
   CodeGenRegisters.cpp

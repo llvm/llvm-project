@@ -1414,9 +1414,9 @@ HexagonTargetLowering::insertHvxSubvectorReg(SDValue VecV, SDValue SubV,
   // would be by HwLen-Idx, but if two words are inserted, it will need to be
   // by (HwLen-4)-Idx.
   unsigned RolBase = HwLen;
-  if (VecTy.getSizeInBits() == 32) {
+  if (SubTy.getSizeInBits() == 32) {
     SDValue V = DAG.getBitcast(MVT::i32, SubV);
-    SingleV = DAG.getNode(HexagonISD::VINSERTW0, dl, SingleTy, V);
+    SingleV = DAG.getNode(HexagonISD::VINSERTW0, dl, SingleTy, SingleV, V);
   } else {
     SDValue V = DAG.getBitcast(MVT::i64, SubV);
     SDValue R0 = LoHalf(V, DAG);

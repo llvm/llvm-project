@@ -1111,7 +1111,7 @@ template <class ELFT> void Writer<ELFT>::setReservedSymbolSections() {
 static int getRankProximity(OutputSection *a, SectionCommand *b) {
   auto *osd = dyn_cast<OutputDesc>(b);
   return (osd && osd->osec.hasInputSections)
-             ? countLeadingZeros(a->sortRank ^ osd->osec.sortRank)
+             ? llvm::countl_zero(a->sortRank ^ osd->osec.sortRank)
              : -1;
 }
 

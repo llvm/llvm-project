@@ -1,5 +1,5 @@
-; RUN: llc -mtriple=amdgcn-amd-amdhsa --amdhsa-code-object-version=2 -mcpu=gfx900 -filetype=obj -o - < %s | llvm-readelf --notes - | FileCheck --check-prefix=CHECK %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa --amdhsa-code-object-version=2 -mcpu=gfx900 -amdgpu-dump-hsa-metadata -amdgpu-verify-hsa-metadata -filetype=obj -o - < %s 2>&1 | FileCheck --check-prefix=PARSER %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -filetype=obj -o - < %s | llvm-readelf --notes - | FileCheck --check-prefix=CHECK %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -amdgpu-dump-hsa-metadata -amdgpu-verify-hsa-metadata -filetype=obj -o - < %s 2>&1 | FileCheck --check-prefix=PARSER %s
 
 ; CHECK: ---
 ; CHECK:  Version: [ 1, 0 ]
@@ -77,6 +77,9 @@ define amdgpu_kernel void @test_enqueue_kernel_caller(i8 %a) #1
 
 attributes #0 = { optnone noinline "amdgpu-no-default-queue" "amdgpu-no-completion-action" "amdgpu-implicitarg-num-bytes"="48" }
 attributes #1 = { optnone noinline "amdgpu-implicitarg-num-bytes"="48" "calls-enqueue-kernel" }
+
+!llvm.module.flags = !{!0}
+!0 = !{i32 1, !"amdgpu_code_object_version", i32 200}
 
 !1 = !{i32 0}
 !2 = !{!"none"}

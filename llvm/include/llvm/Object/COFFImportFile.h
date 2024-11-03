@@ -56,6 +56,8 @@ public:
     return BasicSymbolRef(Symb, this);
   }
 
+  bool is64Bit() const override { return false; }
+
   const coff_import_header *getCOFFImportHeader() const {
     return reinterpret_cast<const object::coff_import_header *>(
         Data.getBufferStart());

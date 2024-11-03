@@ -1,0 +1,21 @@
+add_entrypoint_object(
+  htonl
+  SRCS
+    htonl.cpp
+  HDRS
+    htonl.h
+  DEPENDS
+    libc.include.arpa_inet
+    libc.src.__support.common
+)
+
+add_entrypoint_object(
+  htons
+  SRCS
+    htons.cpp
+  HDRS
+    htons.h
+  DEPENDS
+    libc.include.arpa_inet
+    libc.src.__support.common
+)

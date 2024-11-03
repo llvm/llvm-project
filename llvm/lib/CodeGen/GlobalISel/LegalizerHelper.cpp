@@ -21,6 +21,7 @@
 #include "llvm/CodeGen/GlobalISel/MIPatternMatch.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 #include "llvm/CodeGen/GlobalISel/Utils.h"
+#include "llvm/CodeGen/MachineConstantPool.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/TargetFrameLowering.h"
@@ -2631,6 +2632,32 @@ static void getUnmergePieces(SmallVectorImpl<Register> &Pieces,
 }
 
 LegalizerHelper::LegalizeResult
+LegalizerHelper::lowerFConstant(MachineInstr &MI) {
+  Register Dst = MI.getOperand(0).getReg();
+
+  MachineFunction &MF = MIRBuilder.getMF();
+  const DataLayout &DL = MIRBuilder.getDataLayout();
+
+  unsigned AddrSpace = DL.getDefaultGlobalsAddressSpace();
+  LLT AddrPtrTy = LLT::pointer(AddrSpace, DL.getPointerSizeInBits(AddrSpace));
+  Align Alignment = Align(DL.getABITypeAlign(
+      getFloatTypeForLLT(MF.getFunction().getContext(), MRI.getType(Dst))));
+
+  auto Addr = MIRBuilder.buildConstantPool(
+      AddrPtrTy, MF.getConstantPool()->getConstantPoolIndex(
+                     MI.getOperand(1).getFPImm(), Alignment));
+
+  MachineMemOperand *MMO = MF.getMachineMemOperand(
+      MachinePointerInfo::getConstantPool(MF), MachineMemOperand::MOLoad,
+      MRI.getType(Dst), Alignment);
+
+  MIRBuilder.buildLoadInstr(TargetOpcode::G_LOAD, Dst, Addr, *MMO);
+  MI.eraseFromParent();
+
+  return Legalized;
+}
+
+LegalizerHelper::LegalizeResult
 LegalizerHelper::lowerBitcast(MachineInstr &MI) {
   Register Dst = MI.getOperand(0).getReg();
   Register Src = MI.getOperand(1).getReg();
@@ -3004,7 +3031,7 @@ LegalizerHelper::LegalizeResult LegalizerHelper::lowerLoad(GAnyLoad &LoadMI) {
 
   if (!isPowerOf2_32(MemSizeInBits)) {
     // This load needs splitting into power of 2 sized loads.
-    LargeSplitSize = PowerOf2Floor(MemSizeInBits);
+    LargeSplitSize = llvm::bit_floor(MemSizeInBits);
     SmallSplitSize = MemSizeInBits - LargeSplitSize;
   } else {
     // This is already a power of 2, but we still need to split this in half.
@@ -3122,7 +3149,7 @@ LegalizerHelper::LegalizeResult LegalizerHelper::lowerStore(GStore &StoreMI) {
   uint64_t LargeSplitSize, SmallSplitSize;
 
   if (!isPowerOf2_32(MemSizeInBits)) {
-    LargeSplitSize = PowerOf2Floor(MemTy.getSizeInBits());
+    LargeSplitSize = llvm::bit_floor<uint64_t>(MemTy.getSizeInBits());
     SmallSplitSize = MemTy.getSizeInBits() - LargeSplitSize;
   } else {
     auto &Ctx = MF.getFunction().getContext();
@@ -3250,6 +3277,8 @@ LegalizerHelper::lower(MachineInstr &MI, unsigned TypeIdx, LLT LowerHintTy) {
   switch(MI.getOpcode()) {
   default:
     return UnableToLegalize;
+  case TargetOpcode::G_FCONSTANT:
+    return lowerFConstant(MI);
   case TargetOpcode::G_BITCAST:
     return lowerBitcast(MI);
   case TargetOpcode::G_SREM:
@@ -7345,7 +7374,7 @@ LegalizerHelper::lowerISFPCLASS(MachineInstr &MI) {
   APInt AllOneMantissa = APFloat::getLargest(Semantics).bitcastToAPInt() & ~Inf;
   APInt QNaNBitMask =
       APInt::getOneBitSet(BitSize, AllOneMantissa.getActiveBits() - 1);
-  APInt InvertionMask = APInt::getAllOnesValue(DstTy.getScalarSizeInBits());
+  APInt InvertionMask = APInt::getAllOnes(DstTy.getScalarSizeInBits());
 
   auto SignBitC = MIRBuilder.buildConstant(IntTy, SignBit);
   auto ValueMaskC = MIRBuilder.buildConstant(IntTy, ValueMask);
@@ -7638,7 +7667,7 @@ static bool findGISelOptimalMemOpLowering(std::vector<LLT> &MemOps,
       // SDAGisms map cleanly to GISel concepts.
       if (NewTy.isVector())
         NewTy = NewTy.getSizeInBits() > 64 ? LLT::scalar(64) : LLT::scalar(32);
-      NewTy = LLT::scalar(PowerOf2Floor(NewTy.getSizeInBits() - 1));
+      NewTy = LLT::scalar(llvm::bit_floor(NewTy.getSizeInBits() - 1));
       unsigned NewTySize = NewTy.getSizeInBytes();
       assert(NewTySize > 0 && "Could not find appropriate type");
 

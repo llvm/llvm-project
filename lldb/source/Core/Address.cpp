@@ -37,8 +37,8 @@
 #include "lldb/Utility/StreamString.h"
 
 #include "llvm/ADT/StringRef.h"
-#include "llvm/ADT/Triple.h"
 #include "llvm/Support/Compiler.h"
+#include "llvm/TargetParser/Triple.h"
 
 #include <cstdint>
 #include <memory>

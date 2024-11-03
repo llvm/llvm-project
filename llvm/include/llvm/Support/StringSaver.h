@@ -55,5 +55,5 @@ public:
   StringRef save(const std::string &S) { return save(StringRef(S)); }
 };
 
-}
+} // namespace llvm
 #endif

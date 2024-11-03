@@ -157,7 +157,7 @@ std::optional<Expr<SubscriptInteger>> DynamicType::MeasureSizeInBytes(
     }
     break;
   case TypeCategory::Derived:
-    if (derived_ && derived_->scope()) {
+    if (!IsPolymorphic() && derived_ && derived_->scope()) {
       auto size{derived_->scope()->size()};
       auto align{aligned ? derived_->scope()->alignment().value_or(0) : 0};
       auto alignedSize{align > 0 ? ((size + align - 1) / align) * align : size};
@@ -215,10 +215,11 @@ static const semantics::Symbol *FindParentComponent(
   }
   if (scope) {
     const auto &dtDetails{typeSymbol.get<semantics::DerivedTypeDetails>()};
+    // TODO: Combine with semantics::DerivedTypeDetails::GetParentComponent
     if (auto extends{dtDetails.GetParentComponentName()}) {
       if (auto iter{scope->find(*extends)}; iter != scope->cend()) {
-        if (const Symbol & symbol{*iter->second};
-            symbol.test(Symbol::Flag::ParentComp)) {
+        if (const semantics::Symbol & symbol{*iter->second};
+            symbol.test(semantics::Symbol::Flag::ParentComp)) {
           return &symbol;
         }
       }
@@ -570,6 +571,23 @@ std::optional<DynamicType> ComparisonType(
     }
   default:
     return std::nullopt;
+  }
+}
+
+bool IsInteroperableIntrinsicType(const DynamicType &type) {
+  switch (type.category()) {
+  case TypeCategory::Integer:
+    return true;
+  case TypeCategory::Real:
+  case TypeCategory::Complex:
+    return type.kind() >= 4; // no short or half floats
+  case TypeCategory::Logical:
+    return type.kind() == 1; // C_BOOL
+  case TypeCategory::Character:
+    return type.kind() == 1 /* C_CHAR */ && type.knownLength().value_or(0) == 1;
+  default:
+    // Derived types are tested in Semantics/check-declarations.cpp
+    return false;
   }
 }
 

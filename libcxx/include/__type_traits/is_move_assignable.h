@@ -26,7 +26,7 @@ struct _LIBCPP_TEMPLATE_VIS is_move_assignable
           bool,
           __is_assignable(__add_lvalue_reference_t<_Tp>, __add_rvalue_reference_t<_Tp>)> {};
 
-#if _LIBCPP_STD_VER > 14
+#if _LIBCPP_STD_VER >= 17
 template <class _Tp>
 inline constexpr bool is_move_assignable_v = is_move_assignable<_Tp>::value;
 #endif

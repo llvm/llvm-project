@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/__support/endian.h"
-#include "utils/UnitTest/Test.h"
+#include "test/UnitTest/Test.h"
 
 namespace __llvm_libc {
 

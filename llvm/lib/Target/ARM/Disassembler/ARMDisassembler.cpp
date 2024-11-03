@@ -71,7 +71,7 @@ namespace {
       // is in the MCOperand format in which 1 means 'else' and 0 'then'.
       void setITState(char Firstcond, char Mask) {
         // (3 - the number of trailing zeros) is the number of then / else.
-        unsigned NumTZ = countTrailingZeros<uint8_t>(Mask);
+        unsigned NumTZ = llvm::countr_zero<uint8_t>(Mask);
         unsigned char CCBits = static_cast<unsigned char>(Firstcond & 0xf);
         assert(NumTZ <= 3 && "Invalid IT mask!");
         // push condition codes onto the stack the correct order for the pops
@@ -110,7 +110,7 @@ namespace {
 
       void setVPTState(char Mask) {
         // (3 - the number of trailing zeros) is the number of then / else.
-        unsigned NumTZ = countTrailingZeros<uint8_t>(Mask);
+        unsigned NumTZ = llvm::countr_zero<uint8_t>(Mask);
         assert(NumTZ <= 3 && "Invalid VPT mask!");
         // push predicates onto the stack the correct order for the pops
         for (unsigned Pos = NumTZ+1; Pos <= 3; ++Pos) {
@@ -135,7 +135,7 @@ public:
   ARMDisassembler(const MCSubtargetInfo &STI, MCContext &Ctx,
                   const MCInstrInfo *MCII)
       : MCDisassembler(STI, Ctx), MCII(MCII) {
-    InstructionEndianness = STI.getFeatureBits()[ARM::ModeBigEndianInstructions]
+    InstructionEndianness = STI.hasFeature(ARM::ModeBigEndianInstructions)
                                 ? llvm::support::big
                                 : llvm::support::little;
   }
@@ -746,7 +746,7 @@ uint64_t ARMDisassembler::suggestBytesToSkip(ArrayRef<uint8_t> Bytes,
   // In Arm state, instructions are always 4 bytes wide, so there's no
   // point in skipping any smaller number of bytes if an instruction
   // can't be decoded.
-  if (!STI.getFeatureBits()[ARM::ModeThumb])
+  if (!STI.hasFeature(ARM::ModeThumb))
     return 4;
 
   // In a Thumb instruction stream, a halfword is a standalone 2-byte
@@ -773,7 +773,7 @@ DecodeStatus ARMDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
                                              ArrayRef<uint8_t> Bytes,
                                              uint64_t Address,
                                              raw_ostream &CS) const {
-  if (STI.getFeatureBits()[ARM::ModeThumb])
+  if (STI.hasFeature(ARM::ModeThumb))
     return getThumbInstruction(MI, Size, Bytes, Address, CS);
   return getARMInstruction(MI, Size, Bytes, Address, CS);
 }
@@ -784,7 +784,7 @@ DecodeStatus ARMDisassembler::getARMInstruction(MCInst &MI, uint64_t &Size,
                                                 raw_ostream &CS) const {
   CommentStream = &CS;
 
-  assert(!STI.getFeatureBits()[ARM::ModeThumb] &&
+  assert(!STI.hasFeature(ARM::ModeThumb) &&
          "Asked to disassemble an ARM instruction but Subtarget is in Thumb "
          "mode!");
 
@@ -1070,7 +1070,7 @@ DecodeStatus ARMDisassembler::getThumbInstruction(MCInst &MI, uint64_t &Size,
                                                   raw_ostream &CS) const {
   CommentStream = &CS;
 
-  assert(STI.getFeatureBits()[ARM::ModeThumb] &&
+  assert(STI.hasFeature(ARM::ModeThumb) &&
          "Asked to disassemble in Thumb mode but Subtarget is in ARM mode!");
 
   // We want to read exactly 2 bytes of data.
@@ -4910,7 +4910,7 @@ static DecodeStatus DecodeT2SOImm(MCInst &Inst, unsigned Val, uint64_t Address,
   } else {
     unsigned unrot = fieldFromInstruction(Val, 0, 7) | 0x80;
     unsigned rot = fieldFromInstruction(Val, 7, 5);
-    unsigned imm = (unrot >> rot) | (unrot << ((32-rot)&31));
+    unsigned imm = llvm::rotr<uint32_t>(unrot, rot);
     Inst.addOperand(MCOperand::createImm(imm));
   }
 

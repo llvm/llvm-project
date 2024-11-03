@@ -1,8 +1,8 @@
 // REQUIRES: arm-registered-target
-// RUN: %clang_cc1 -no-opaque-pointers -triple i386-pc-linux-gnu -emit-llvm -o - %s | FileCheck -check-prefix=CHECKBASIC %s
-// RUN: %clang_cc1 -no-opaque-pointers -triple armv7a-eabi -mfloat-abi hard -emit-llvm -o - %s | FileCheck -check-prefix=CHECKCC %s
-// RUN: %clang_cc1 -no-opaque-pointers -triple armv7a-eabi -mfloat-abi hard -S -o - %s | FileCheck -check-prefix=CHECKASM %s
-// RUN: %clang_cc1 -no-opaque-pointers -triple aarch64-linux-gnu -emit-llvm -o - %s | FileCheck -check-prefix=CHECKGLOBALS %s
+// RUN: %clang_cc1 -triple i386-pc-linux-gnu -emit-llvm -o - %s | FileCheck -check-prefix=CHECKBASIC %s
+// RUN: %clang_cc1 -triple armv7a-eabi -mfloat-abi hard -emit-llvm -o - %s | FileCheck -check-prefix=CHECKCC %s
+// RUN: %clang_cc1 -triple armv7a-eabi -mfloat-abi hard -S -o - %s | FileCheck -check-prefix=CHECKASM %s
+// RUN: %clang_cc1 -triple aarch64-linux-gnu -emit-llvm -o - %s | FileCheck -check-prefix=CHECKGLOBALS %s
 
 int g0;
 // CHECKBASIC-DAG: @g0 ={{.*}} global i32 0
@@ -27,20 +27,20 @@ const int wacom_usb_ids[] = {1, 1, 2, 3, 5, 8, 13, 0};
 // CHECKASM-DAG: .globl wacom_usb_ids
 // CHECKASM-DAG: .size wacom_usb_ids, 32
 extern const int __mod_usb_device_table __attribute__ ((alias("wacom_usb_ids")));
-// CHECKBASIC-DAG: @__mod_usb_device_table ={{.*}} alias i32, getelementptr inbounds ([8 x i32], [8 x i32]* @wacom_usb_ids, i32 0, i32 0)
+// CHECKBASIC-DAG: @__mod_usb_device_table ={{.*}} alias i32, ptr @wacom_usb_ids
 // CHECKASM-DAG: .globl __mod_usb_device_table
 // CHECKASM-DAG: .set __mod_usb_device_table, wacom_usb_ids
 // CHECKASM-NOT: .size __mod_usb_device_table
 
 extern int g1;
 extern int g1 __attribute((alias("g0")));
-// CHECKBASIC-DAG: @g1 ={{.*}} alias i32, i32* @g0
+// CHECKBASIC-DAG: @g1 ={{.*}} alias i32, ptr @g0
 // CHECKASM-DAG: .globl g1
 // CHECKASM-DAG: .set g1, g0
 // CHECKASM-NOT: .size g1
 
 extern __thread int __libc_errno __attribute__ ((alias ("TL_WITH_ALIAS")));
-// CHECKBASIC-DAG: @__libc_errno ={{.*}} thread_local alias i32, i32* @TL_WITH_ALIAS
+// CHECKBASIC-DAG: @__libc_errno ={{.*}} thread_local alias i32, ptr @TL_WITH_ALIAS
 // CHECKASM-DAG: .globl __libc_errno
 // CHECKASM-DAG: .set __libc_errno, TL_WITH_ALIAS
 // CHECKASM-NOT: .size __libc_errno
@@ -48,10 +48,10 @@ extern __thread int __libc_errno __attribute__ ((alias ("TL_WITH_ALIAS")));
 void f0(void) { }
 extern void f1(void);
 extern void f1(void) __attribute((alias("f0")));
-// CHECKBASIC-DAG: @f1 ={{.*}} alias void (), void ()* @f0
-// CHECKBASIC-DAG: @test8_foo = weak{{.*}} alias void (...), bitcast (void ()* @test8_bar to void (...)*)
-// CHECKBASIC-DAG: @test8_zed ={{.*}} alias void (...), bitcast (void ()* @test8_bar to void (...)*)
-// CHECKBASIC-DAG: @test9_zed ={{.*}} alias void (), void ()* @test9_bar
+// CHECKBASIC-DAG: @f1 ={{.*}} alias void (), ptr @f0
+// CHECKBASIC-DAG: @test8_foo = weak{{.*}} alias void (...), ptr @test8_bar
+// CHECKBASIC-DAG: @test8_zed ={{.*}} alias void (...), ptr @test8_bar
+// CHECKBASIC-DAG: @test9_zed ={{.*}} alias void (), ptr @test9_bar
 // CHECKBASIC: define{{.*}} void @f0() [[NUW:#[0-9]+]] {
 
 // Make sure that aliases cause referenced values to be emitted.
@@ -71,7 +71,7 @@ static int inner(int a) { return 0; }
 static int inner_weak(int a) { return 0; }
 extern __typeof(inner) inner_a __attribute__((alias("inner")));
 static __typeof(inner_weak) inner_weak_a __attribute__((weakref, alias("inner_weak")));
-// CHECKCC: @inner_a ={{.*}} alias i32 (i32), i32 (i32)* @inner
+// CHECKCC: @inner_a ={{.*}} alias i32 (i32), ptr @inner
 // CHECKCC: define internal arm_aapcs_vfpcc i32 @inner(i32 noundef %a) [[NUW:#[0-9]+]] {
 
 int outer(int a) { return inner(a); }
@@ -106,12 +106,12 @@ void test11(void) {}
 static void test11_foo(void) __attribute__((alias("test11")));
 
 // Test that gnu_inline+alias work.
-// CHECKGLOBALS: @test12_alias ={{.*}} alias void (), void ()* @test12
+// CHECKGLOBALS: @test12_alias ={{.*}} alias void (), ptr @test12
 void test12(void) {}
 inline void test12_alias(void) __attribute__((gnu_inline, alias("test12")));
 
 // Test that a non visible (-Wvisibility) type doesn't assert.
-// CHECKGLOBALS: @test13_alias ={{.*}} alias {}, bitcast (void (i32)* @test13 to {}*)
+// CHECKGLOBALS: @test13_alias ={{.*}} alias {}, ptr @test13
 enum a_type { test13_a };
 void test13(enum a_type y) {}
 void test13_alias(enum undeclared_type y) __attribute__((alias ("test13")));

@@ -1681,7 +1681,7 @@ public:
   bool requiresAlignedAddress(const MCInst &Inst) const override {
     const MCInstrDesc &Desc = Info->get(Inst.getOpcode());
     for (unsigned int I = 0; I < Desc.getNumOperands(); ++I) {
-      const MCOperandInfo &Op = Desc.OpInfo[I];
+      const MCOperandInfo &Op = Desc.operands()[I];
       if (Op.OperandType != MCOI::OPERAND_REGISTER)
         continue;
       if (Op.RegClass == X86::VR128RegClassID)

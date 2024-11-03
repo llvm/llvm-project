@@ -745,6 +745,7 @@ Instruction *InstCombinerImpl::foldPHIArgLoadIntoPHI(PHINode &PN) {
     LLVMContext::MD_dereferenceable,
     LLVMContext::MD_dereferenceable_or_null,
     LLVMContext::MD_access_group,
+    LLVMContext::MD_noundef,
   };
 
   for (unsigned ID : KnownIDs)

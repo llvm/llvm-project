@@ -12,10 +12,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "AsmWriterInst.h"
+#include "CodeGenInstAlias.h"
 #include "CodeGenInstruction.h"
 #include "CodeGenRegisters.h"
 #include "CodeGenTarget.h"
 #include "SequenceToOffsetTable.h"
+#include "TableGenBackends.h"
 #include "Types.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"

@@ -93,7 +93,10 @@ function(llvm_ExternalProject_Add name source_dir)
       if(_cmake_system_name STREQUAL Darwin)
         list(APPEND ARG_TOOLCHAIN_TOOLS llvm-libtool-darwin llvm-lipo)
       elseif(is_msvc_target)
-        list(APPEND ARG_TOOLCHAIN_TOOLS llvm-lib)
+        list(APPEND ARG_TOOLCHAIN_TOOLS llvm-lib llvm-rc)
+        if (LLVM_ENABLE_LIBXML2)
+          list(APPEND ARG_TOOLCHAIN_TOOLS llvm-mt)
+        endif()
       else()
         # TODO: These tools don't fully support Mach-O format yet.
         list(APPEND ARG_TOOLCHAIN_TOOLS llvm-objcopy llvm-strip llvm-readelf)
@@ -212,6 +215,12 @@ function(llvm_ExternalProject_Add name source_dir)
     if(llvm-readelf IN_LIST TOOLCHAIN_TOOLS)
       list(APPEND compiler_args -DCMAKE_READELF=${LLVM_RUNTIME_OUTPUT_INTDIR}/llvm-readelf${CMAKE_EXECUTABLE_SUFFIX})
     endif()
+    if(llvm-mt IN_LIST TOOLCHAIN_TOOLS AND is_msvc_target)
+      list(APPEND compiler_args -DCMAKE_MT=${LLVM_RUNTIME_OUTPUT_INTDIR}/llvm-mt${CMAKE_EXECUTABLE_SUFFIX})
+    endif()
+    if(llvm-rc IN_LIST TOOLCHAIN_TOOLS AND is_msvc_target)
+      list(APPEND compiler_args -DCMAKE_RC_COMPILER=${LLVM_RUNTIME_OUTPUT_INTDIR}/llvm-rc${CMAKE_EXECUTABLE_SUFFIX})
+    endif()
     list(APPEND ARG_DEPENDS ${TOOLCHAIN_TOOLS})
   endif()
 
@@ -239,7 +248,7 @@ function(llvm_ExternalProject_Add name source_dir)
     set(sysroot_arg -DCMAKE_SYSROOT=${CMAKE_SYSROOT})
   endif()
 
-  if(CMAKE_CROSSCOMPILING)
+  if(CMAKE_CROSSCOMPILING OR _cmake_system_name STREQUAL AIX)
     set(compiler_args -DCMAKE_ASM_COMPILER=${CMAKE_ASM_COMPILER}
                       -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}
                       -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}
@@ -251,6 +260,8 @@ function(llvm_ExternalProject_Add name source_dir)
                       -DCMAKE_OBJDUMP=${CMAKE_OBJDUMP}
                       -DCMAKE_STRIP=${CMAKE_STRIP}
                       -DCMAKE_READELF=${CMAKE_READELF})
+  endif()
+  if(CMAKE_CROSSCOMPILING)
     set(llvm_config_path ${LLVM_CONFIG_PATH})
 
     if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
@@ -300,6 +311,7 @@ function(llvm_ExternalProject_Add name source_dir)
     BINARY_DIR ${BINARY_DIR}
     ${exclude}
     CMAKE_ARGS ${${nameCanon}_CMAKE_ARGS}
+               --no-warn-unused-cli
                ${compiler_args}
                -DCMAKE_INSTALL_PREFIX=${CMAKE_INSTALL_PREFIX}
                ${sysroot_arg}

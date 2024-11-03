@@ -11,6 +11,7 @@ static_library("Utils") {
     "ASanStackFrameLayout.cpp",
     "AddDiscriminators.cpp",
     "AssumeBundleBuilder.cpp",
+    "CountVisits.cpp",
     "BasicBlockUtils.cpp",
     "BreakCriticalEdges.cpp",
     "BuildLibCalls.cpp",

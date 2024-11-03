@@ -22,7 +22,6 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Analysis/ConstantFolding.h"
-#include "llvm/Analysis/EHPersonalities.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineConstantPool.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
@@ -45,6 +44,7 @@
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/EHPersonalities.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/Instruction.h"
@@ -1086,8 +1086,7 @@ auto MachineFunction::salvageCopySSAImpl(MachineInstr &MI)
     for (auto &MO : Inst->operands()) {
       if (!MO.isReg() || !MO.isDef() || MO.getReg() != State.first)
         continue;
-      return ApplySubregisters(
-          {Inst->getDebugInstrNum(), Inst->getOperandNo(&MO)});
+      return ApplySubregisters({Inst->getDebugInstrNum(), MO.getOperandNo()});
     }
 
     llvm_unreachable("Vreg def with no corresponding operand?");
@@ -1109,7 +1108,7 @@ auto MachineFunction::salvageCopySSAImpl(MachineInstr &MI)
         continue;
 
       return ApplySubregisters(
-          {ToExamine.getDebugInstrNum(), ToExamine.getOperandNo(&MO)});
+          {ToExamine.getDebugInstrNum(), MO.getOperandNo()});
     }
   }
 

@@ -75,7 +75,7 @@ public:
         return *this;
     }
 
-#if _LIBCPP_STD_VER > 20
+#if _LIBCPP_STD_VER >= 23
     _LIBCPP_HIDE_FROM_ABI constexpr const __bit_reference& operator=(bool __x) const noexcept {
         if (__x)
             *__seg_ |= __mask_;
@@ -1135,7 +1135,7 @@ private:
 
 public:
     _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX20 __bit_iterator() _NOEXCEPT
-#if _LIBCPP_STD_VER > 11
+#if _LIBCPP_STD_VER >= 14
     : __seg_(nullptr), __ctz_(0)
 #endif
     {}

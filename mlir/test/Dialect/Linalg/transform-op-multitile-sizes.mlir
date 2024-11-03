@@ -4,7 +4,7 @@
 
 transform.sequence failures(propagate) {
   ^bb0(%arg1: !pdl.operation):
-    %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1
+    %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!pdl.operation) -> !pdl.operation
     transform.structured.multitile_sizes %0 { target_size = 3, dimension = 0 } : (!pdl.operation) -> !pdl.operation
 }
 
@@ -28,7 +28,7 @@ func.func @multitile_sizes_static(
 
 transform.sequence failures(propagate) {
   ^bb0(%arg1: !pdl.operation):
-    %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1
+    %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!pdl.operation) -> !pdl.operation
     %low_tile, %high_tile, %split_point =
       transform.structured.multitile_sizes %0 { target_size = 3, dimension = 0 }
       : (!pdl.operation) -> !transform.param<i64>
@@ -55,7 +55,7 @@ func.func @multitile_sizes_static_gen(
 
 transform.sequence failures(propagate) {
   ^bb0(%arg1: !pdl.operation):
-    %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1
+    %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!pdl.operation) -> !pdl.operation
     transform.structured.multitile_sizes %0 { target_size = 3, divisor = 2, dimension = 0 } : (!pdl.operation) -> !pdl.operation
 }
 
@@ -96,7 +96,7 @@ func.func @multitile_sizes_dynamic(
 
 transform.sequence failures(propagate) {
   ^bb0(%arg1: !pdl.operation):
-    %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1
+    %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!pdl.operation) -> !pdl.operation
     // expected-error @below {{cannot compute parametric tile sizes for dynamically shaped payload op}}
     transform.structured.multitile_sizes %0 { target_size = 3, divisor = 2, dimension = 0 }
       : (!pdl.operation) -> !transform.param<i64>

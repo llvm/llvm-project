@@ -1828,7 +1828,7 @@ public:
 
   /// This method looks up the specified field and returns its value as a
   /// string, throwing an exception if the value is not a string and
-  /// llvm::Optional() if the field does not exist.
+  /// std::nullopt if the field does not exist.
   std::optional<StringRef> getValueAsOptionalString(StringRef FieldName) const;
 
   /// This method looks up the specified field and returns its value as a

@@ -50,7 +50,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
   size_t i;
 
   for (i = 0; i < size; ++i) {
-#ifdef LLVM_LIBC_FUZZ_ATOI_CLEANER_INPUT
+#ifdef LIBC_COPT_FUZZ_ATOI_CLEANER_INPUT
     container[i] = VALID_CHARS[data[i] % sizeof(VALID_CHARS)];
 #else
     container[i] = data[i];

@@ -6,7 +6,7 @@
 ; RUN: sed -e "s/RETTYPE/i32/;s/RETVAL/undef/" %s | llc -mtriple=x86_64-apple-darwin -mcpu=corei7-avx | FileCheck --check-prefixes=ALL,AVX,INT %s
 ; RUN: sed -e "s/RETTYPE/\{i64\,i64\}/;s/RETVAL/undef/" %s | llc -mtriple=x86_64-apple-darwin -mcpu=corei7-avx | FileCheck --check-prefixes=ALL,AVX,INT128 %s
 
-define preserve_allcc RETTYPE @preserve_allcc1() nounwind {
+define preserve_allcc RETTYPE @preserve_allcc1(i64, i64, double, double) nounwind {
 entry:
 ;ALL-LABEL:   preserve_allcc1
 ;ALL:         pushq %r10

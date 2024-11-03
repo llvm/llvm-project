@@ -30,7 +30,6 @@
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSet.h"
-#include "llvm/ADT/Triple.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/DebugInfo/Symbolize/SymbolizableModule.h"
@@ -74,7 +73,6 @@
 #include "llvm/Support/Format.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/GraphWriter.h"
-#include "llvm/Support/Host.h"
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/SourceMgr.h"
@@ -82,6 +80,8 @@
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/WithColor.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/TargetParser/Host.h"
+#include "llvm/TargetParser/Triple.h"
 #include <algorithm>
 #include <cctype>
 #include <cstring>
@@ -3198,9 +3198,7 @@ int main(int argc, char **argv) {
 
   // Initialize debuginfod.
   const bool ShouldUseDebuginfodByDefault =
-      InputArgs.hasArg(OBJDUMP_build_id) ||
-      (HTTPClient::isAvailable() &&
-       !ExitOnErr(getDefaultDebuginfodUrls()).empty());
+      InputArgs.hasArg(OBJDUMP_build_id) || canUseDebuginfod();
   std::vector<std::string> DebugFileDirectories =
       InputArgs.getAllArgValues(OBJDUMP_debug_file_directory);
   if (InputArgs.hasFlag(OBJDUMP_debuginfod, OBJDUMP_no_debuginfod,

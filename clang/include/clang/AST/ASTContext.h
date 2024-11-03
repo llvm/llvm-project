@@ -447,8 +447,9 @@ class ASTContext : public RefCountedBase<ASTContext> {
   };
   llvm::DenseMap<Module*, PerModuleInitializers*> ModuleInitializers;
 
-  /// For module code-gen cases, this is the top-level module we are building.
-  Module *TopLevelModule = nullptr;
+  /// For module code-gen cases, this is the top-level (C++20) Named module
+  /// we are building.
+  Module *TopLevelCXXNamedModule = nullptr;
 
   static constexpr unsigned ConstantArrayTypesLog2InitSize = 8;
   static constexpr unsigned GeneralTypesLog2InitSize = 9;
@@ -1051,10 +1052,10 @@ public:
   ArrayRef<Decl*> getModuleInitializers(Module *M);
 
   /// Set the (C++20) module we are building.
-  void setModuleForCodeGen(Module *M) { TopLevelModule = M; }
+  void setNamedModuleForCodeGen(Module *M) { TopLevelCXXNamedModule = M; }
 
   /// Get module under construction, nullptr if this is not a C++20 module.
-  Module *getModuleForCodeGen() const { return TopLevelModule; }
+  Module *getNamedModuleForCodeGen() const { return TopLevelCXXNamedModule; }
 
   TranslationUnitDecl *getTranslationUnitDecl() const {
     return TUDecl->getMostRecentDecl();
@@ -1126,6 +1127,8 @@ public:
 #define RVV_TYPE(Name, Id, SingletonId) \
   CanQualType SingletonId;
 #include "clang/Basic/RISCVVTypes.def"
+#define WASM_TYPE(Name, Id, SingletonId) CanQualType SingletonId;
+#include "clang/Basic/WebAssemblyReferenceTypes.def"
 
   // Types for deductions in C++0x [stmt.ranged]'s desugaring. Built on demand.
   mutable QualType AutoDeductTy;     // Deduction against 'auto'.
@@ -1473,6 +1476,9 @@ public:
   ///
   /// \pre \p EltTy must be a built-in type.
   QualType getScalableVectorType(QualType EltTy, unsigned NumElts) const;
+
+  /// Return a WebAssembly externref type.
+  QualType getWebAssemblyExternrefType() const;
 
   /// Return the unique reference to a vector type of the specified
   /// element type and size.
@@ -3042,7 +3048,7 @@ public:
   }
 
   GVALinkage GetGVALinkageForFunction(const FunctionDecl *FD) const;
-  GVALinkage GetGVALinkageForVariable(const VarDecl *VD);
+  GVALinkage GetGVALinkageForVariable(const VarDecl *VD) const;
 
   /// Determines if the decl can be CodeGen'ed or deserialized from PCH
   /// lazily, only when used; this is only relevant for function or file scoped

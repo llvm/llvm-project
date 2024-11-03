@@ -76,23 +76,11 @@ void LLVMAddJumpThreadingPass(LLVMPassManagerRef PM);
 /** See llvm::createLICMPass function. */
 void LLVMAddLICMPass(LLVMPassManagerRef PM);
 
-/** See llvm::createLoopDeletionPass function. */
-void LLVMAddLoopDeletionPass(LLVMPassManagerRef PM);
-
-/** See llvm::createLoopIdiomPass function */
-void LLVMAddLoopIdiomPass(LLVMPassManagerRef PM);
-
 /** See llvm::createLoopRotatePass function. */
 void LLVMAddLoopRotatePass(LLVMPassManagerRef PM);
 
-/** See llvm::createLoopRerollPass function. */
-void LLVMAddLoopRerollPass(LLVMPassManagerRef PM);
-
 /** See llvm::createLoopUnrollPass function. */
 void LLVMAddLoopUnrollPass(LLVMPassManagerRef PM);
-
-/** See llvm::createLoopUnrollAndJamPass function. */
-void LLVMAddLoopUnrollAndJamPass(LLVMPassManagerRef PM);
 
 /** See llvm::createLowerAtomicPass function. */
 void LLVMAddLowerAtomicPass(LLVMPassManagerRef PM);

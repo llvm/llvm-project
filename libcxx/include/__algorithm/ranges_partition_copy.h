@@ -20,13 +20,12 @@
 #include <__ranges/concepts.h>
 #include <__ranges/dangling.h>
 #include <__utility/move.h>
-#include <type_traits>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
 #endif
 
-#if _LIBCPP_STD_VER > 17
+#if _LIBCPP_STD_VER >= 20
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
@@ -93,6 +92,6 @@ inline namespace __cpo {
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP_STD_VER > 17
+#endif // _LIBCPP_STD_VER >= 20
 
 #endif // _LIBCPP___ALGORITHM_RANGES_PARTITION_COPY_H

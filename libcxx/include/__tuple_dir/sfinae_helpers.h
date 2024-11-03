@@ -134,7 +134,7 @@ struct _LIBCPP_TYPE_VIS __check_tuple_constructor_fail {
 };
 #endif // !defined(_LIBCPP_CXX03_LANG)
 
-#if _LIBCPP_STD_VER > 14
+#if _LIBCPP_STD_VER >= 17
 
 template <bool _CanCopy, bool _CanMove>
 struct __sfinae_ctor_base {};
@@ -189,7 +189,7 @@ struct __sfinae_assign_base<false, true> {
   __sfinae_assign_base& operator=(__sfinae_assign_base const&) = delete;
   __sfinae_assign_base& operator=(__sfinae_assign_base&&) = default;
 };
-#endif // _LIBCPP_STD_VER > 14
+#endif // _LIBCPP_STD_VER >= 17
 
 _LIBCPP_END_NAMESPACE_STD
 

@@ -10,6 +10,7 @@
 
 #include <concepts>
 #include <format>
+#include <tuple>
 
 #include "format.functions.common.h"
 

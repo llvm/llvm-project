@@ -60,7 +60,7 @@ private:
   bool hardenReturnsAndBRs(MachineBasicBlock &MBB) const;
   bool hardenBLRs(MachineBasicBlock &MBB) const;
   MachineBasicBlock &ConvertBLRToBL(MachineBasicBlock &MBB,
-                                    MachineBasicBlock::iterator) const;
+                                    MachineBasicBlock::instr_iterator) const;
 };
 
 } // end anonymous namespace
@@ -245,9 +245,8 @@ void SLSBLRThunkInserter::populateThunk(MachineFunction &MF) {
                            Entry->end(), DebugLoc(), true /*AlwaysUseISBDSB*/);
 }
 
-MachineBasicBlock &
-AArch64SLSHardening::ConvertBLRToBL(MachineBasicBlock &MBB,
-                                    MachineBasicBlock::iterator MBBI) const {
+MachineBasicBlock &AArch64SLSHardening::ConvertBLRToBL(
+    MachineBasicBlock &MBB, MachineBasicBlock::instr_iterator MBBI) const {
   // Transform a BLR to a BL as follows:
   // Before:
   //   |-----------------------------|
@@ -382,8 +381,9 @@ bool AArch64SLSHardening::hardenBLRs(MachineBasicBlock &MBB) const {
   if (!ST->hardenSlsBlr())
     return false;
   bool Modified = false;
-  MachineBasicBlock::iterator MBBI = MBB.begin(), E = MBB.end();
-  MachineBasicBlock::iterator NextMBBI;
+  MachineBasicBlock::instr_iterator MBBI = MBB.instr_begin(),
+                                    E = MBB.instr_end();
+  MachineBasicBlock::instr_iterator NextMBBI;
   for (; MBBI != E; MBBI = NextMBBI) {
     MachineInstr &MI = *MBBI;
     NextMBBI = std::next(MBBI);

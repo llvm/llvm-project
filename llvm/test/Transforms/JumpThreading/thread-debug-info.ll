@@ -3,7 +3,7 @@
 @a = global i32 0, align 4
 ; Test that the llvm.dbg.value calls in a threaded block are correctly updated to
 ; target the locals in their threaded block, and not the unthreaded one.
-define void @test2(i32 %cond1, i32 %cond2) {
+define void @test1(i32 %cond1, i32 %cond2) {
 ; CHECK: [[globalptr:@.*]] = global i32 0, align 4
 ; CHECK: bb.cond2:
 ; CHECK: call void @llvm.dbg.value(metadata ptr null, metadata ![[DBG1ptr:[0-9]+]], metadata !DIExpression()), !dbg ![[DBG2ptr:[0-9]+]]
@@ -44,6 +44,48 @@ bb.f3:                                            ; preds = %bb.file
 bb.f4:                                            ; preds = %bb.file
   call void @f4(), !dbg !27
   br label %exit, !dbg !28
+
+exit:                                             ; preds = %bb.f4, %bb.f3, %bb.f2
+  ret void, !dbg !29
+}
+
+; This is testing for debug value instrinsics outside of the threaded block pointing to a value
+; inside to correctly take any new definitions.
+define void @test2(i32 %cond1, i32 %cond2) !dbg !5 {
+; CHECK: bb.f3
+; CHECK: call void @llvm.dbg.value(metadata ptr @a, metadata !{{[0-9]+}}, metadata !DIExpression()), !dbg !{{[0-9]+}}
+; CHECK: bb.f4
+; CHECK-NEXT: [[PTR3:%.*]] = phi ptr [ null, %bb.cond2 ]
+; CHECK-NEXT: call void @llvm.dbg.value(metadata ptr [[PTR3]], metadata !{{[0-9]+}}, metadata !DIExpression()), !dbg !{{[0-9]+}}
+entry:
+  %tobool = icmp eq i32 %cond1, 0, !dbg !15
+  br i1 %tobool, label %bb.cond2, label %bb.f1, !dbg !16
+
+bb.f1:                                            ; preds = %entry
+  call void @f1(), !dbg !17
+  br label %bb.cond2, !dbg !18
+
+bb.cond2:                                         ; preds = %bb.f1, %entry
+  %ptr = phi ptr [ null, %bb.f1 ], [ @a, %entry ], !dbg !19
+  %tobool1 = icmp eq i32 %cond2, 0, !dbg !20
+  br i1 %tobool1, label %bb.file, label %bb.f2, !dbg !21
+
+bb.f2:                                            ; preds = %bb.cond2
+  call void @f2(), !dbg !22
+  br label %exit, !dbg !23
+
+bb.file:                                          ; preds = %bb.cond2
+  %cmp = icmp eq ptr %ptr, null, !dbg !24
+  call void @llvm.dbg.value(metadata ptr %ptr, metadata !14, metadata !DIExpression()), !dbg !21
+  br i1 %cmp, label %bb.f4, label %bb.f3, !dbg !25
+
+bb.f3:                                            ; preds = %bb.file
+  call void @f3(), !dbg !26
+  br label %exit, !dbg !27
+
+bb.f4:                                            ; preds = %bb.file
+  call void @f4(), !dbg !28
+  br label %exit, !dbg !29
 
 exit:                                             ; preds = %bb.f4, %bb.f3, %bb.f2
   ret void, !dbg !29

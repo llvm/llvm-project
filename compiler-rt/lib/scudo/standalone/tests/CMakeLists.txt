@@ -31,6 +31,9 @@ if (COMPILER_RT_HAS_GWP_ASAN)
        -mno-omit-leaf-frame-pointer)
 endif()
 
+append_list_if(COMPILER_RT_HAS_WTHREAD_SAFETY_FLAG -Werror=thread-safety
+  SCUDO_UNITTEST_CFLAGS)
+
 set(SCUDO_TEST_ARCH ${SCUDO_STANDALONE_SUPPORTED_ARCH})
 
 # gtests requires c++
@@ -127,3 +130,11 @@ set(SCUDO_CXX_UNIT_TEST_SOURCES
 add_scudo_unittest(ScudoCxxUnitTest
   SOURCES ${SCUDO_CXX_UNIT_TEST_SOURCES}
   ADDITIONAL_RTOBJECTS RTScudoStandaloneCWrappers RTScudoStandaloneCxxWrappers)
+
+set(SCUDO_HOOKS_UNIT_TEST_SOURCES
+  scudo_hooks_test.cpp
+  scudo_unit_test_main.cpp
+  )
+
+add_scudo_unittest(ScudoHooksUnitTest
+  SOURCES ${SCUDO_HOOKS_UNIT_TEST_SOURCES})

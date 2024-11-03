@@ -279,10 +279,10 @@ declare <vscale x 1 x float> @llvm.vp.floor.nxv1f32(<vscale x 1 x float>, <vscal
 define <vscale x 1 x float> @vp_floor_nxv1f32(<vscale x 1 x float> %va, <vscale x 1 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vp_floor_nxv1f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    lui a1, %hi(.LCPI12_0)
-; CHECK-NEXT:    flw ft0, %lo(.LCPI12_0)(a1)
 ; CHECK-NEXT:    vsetvli zero, a0, e32, mf2, ta, ma
 ; CHECK-NEXT:    vfabs.v v9, v8, v0.t
+; CHECK-NEXT:    lui a0, 307200
+; CHECK-NEXT:    fmv.w.x ft0, a0
 ; CHECK-NEXT:    vsetvli zero, zero, e32, mf2, ta, mu
 ; CHECK-NEXT:    vmflt.vf v0, v9, ft0, v0.t
 ; CHECK-NEXT:    fsrmi a0, 2
@@ -300,10 +300,10 @@ define <vscale x 1 x float> @vp_floor_nxv1f32(<vscale x 1 x float> %va, <vscale 
 define <vscale x 1 x float> @vp_floor_nxv1f32_unmasked(<vscale x 1 x float> %va, i32 zeroext %evl) {
 ; CHECK-LABEL: vp_floor_nxv1f32_unmasked:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    lui a1, %hi(.LCPI13_0)
-; CHECK-NEXT:    flw ft0, %lo(.LCPI13_0)(a1)
 ; CHECK-NEXT:    vsetvli zero, a0, e32, mf2, ta, ma
 ; CHECK-NEXT:    vfabs.v v9, v8
+; CHECK-NEXT:    lui a0, 307200
+; CHECK-NEXT:    fmv.w.x ft0, a0
 ; CHECK-NEXT:    vmflt.vf v0, v9, ft0
 ; CHECK-NEXT:    fsrmi a0, 2
 ; CHECK-NEXT:    vfcvt.x.f.v v9, v8, v0.t
@@ -323,10 +323,10 @@ declare <vscale x 2 x float> @llvm.vp.floor.nxv2f32(<vscale x 2 x float>, <vscal
 define <vscale x 2 x float> @vp_floor_nxv2f32(<vscale x 2 x float> %va, <vscale x 2 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vp_floor_nxv2f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    lui a1, %hi(.LCPI14_0)
-; CHECK-NEXT:    flw ft0, %lo(.LCPI14_0)(a1)
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, ma
 ; CHECK-NEXT:    vfabs.v v9, v8, v0.t
+; CHECK-NEXT:    lui a0, 307200
+; CHECK-NEXT:    fmv.w.x ft0, a0
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m1, ta, mu
 ; CHECK-NEXT:    vmflt.vf v0, v9, ft0, v0.t
 ; CHECK-NEXT:    fsrmi a0, 2
@@ -344,10 +344,10 @@ define <vscale x 2 x float> @vp_floor_nxv2f32(<vscale x 2 x float> %va, <vscale 
 define <vscale x 2 x float> @vp_floor_nxv2f32_unmasked(<vscale x 2 x float> %va, i32 zeroext %evl) {
 ; CHECK-LABEL: vp_floor_nxv2f32_unmasked:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    lui a1, %hi(.LCPI15_0)
-; CHECK-NEXT:    flw ft0, %lo(.LCPI15_0)(a1)
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, ma
 ; CHECK-NEXT:    vfabs.v v9, v8
+; CHECK-NEXT:    lui a0, 307200
+; CHECK-NEXT:    fmv.w.x ft0, a0
 ; CHECK-NEXT:    vmflt.vf v0, v9, ft0
 ; CHECK-NEXT:    fsrmi a0, 2
 ; CHECK-NEXT:    vfcvt.x.f.v v9, v8, v0.t
@@ -368,10 +368,10 @@ define <vscale x 4 x float> @vp_floor_nxv4f32(<vscale x 4 x float> %va, <vscale 
 ; CHECK-LABEL: vp_floor_nxv4f32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmv1r.v v10, v0
-; CHECK-NEXT:    lui a1, %hi(.LCPI16_0)
-; CHECK-NEXT:    flw ft0, %lo(.LCPI16_0)(a1)
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
 ; CHECK-NEXT:    vfabs.v v12, v8, v0.t
+; CHECK-NEXT:    lui a0, 307200
+; CHECK-NEXT:    fmv.w.x ft0, a0
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m2, ta, mu
 ; CHECK-NEXT:    vmflt.vf v10, v12, ft0, v0.t
 ; CHECK-NEXT:    fsrmi a0, 2
@@ -390,10 +390,10 @@ define <vscale x 4 x float> @vp_floor_nxv4f32(<vscale x 4 x float> %va, <vscale 
 define <vscale x 4 x float> @vp_floor_nxv4f32_unmasked(<vscale x 4 x float> %va, i32 zeroext %evl) {
 ; CHECK-LABEL: vp_floor_nxv4f32_unmasked:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    lui a1, %hi(.LCPI17_0)
-; CHECK-NEXT:    flw ft0, %lo(.LCPI17_0)(a1)
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
 ; CHECK-NEXT:    vfabs.v v10, v8
+; CHECK-NEXT:    lui a0, 307200
+; CHECK-NEXT:    fmv.w.x ft0, a0
 ; CHECK-NEXT:    vmflt.vf v0, v10, ft0
 ; CHECK-NEXT:    fsrmi a0, 2
 ; CHECK-NEXT:    vfcvt.x.f.v v10, v8, v0.t
@@ -414,10 +414,10 @@ define <vscale x 8 x float> @vp_floor_nxv8f32(<vscale x 8 x float> %va, <vscale 
 ; CHECK-LABEL: vp_floor_nxv8f32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmv1r.v v12, v0
-; CHECK-NEXT:    lui a1, %hi(.LCPI18_0)
-; CHECK-NEXT:    flw ft0, %lo(.LCPI18_0)(a1)
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m4, ta, ma
 ; CHECK-NEXT:    vfabs.v v16, v8, v0.t
+; CHECK-NEXT:    lui a0, 307200
+; CHECK-NEXT:    fmv.w.x ft0, a0
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m4, ta, mu
 ; CHECK-NEXT:    vmflt.vf v12, v16, ft0, v0.t
 ; CHECK-NEXT:    fsrmi a0, 2
@@ -436,10 +436,10 @@ define <vscale x 8 x float> @vp_floor_nxv8f32(<vscale x 8 x float> %va, <vscale 
 define <vscale x 8 x float> @vp_floor_nxv8f32_unmasked(<vscale x 8 x float> %va, i32 zeroext %evl) {
 ; CHECK-LABEL: vp_floor_nxv8f32_unmasked:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    lui a1, %hi(.LCPI19_0)
-; CHECK-NEXT:    flw ft0, %lo(.LCPI19_0)(a1)
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m4, ta, ma
 ; CHECK-NEXT:    vfabs.v v12, v8
+; CHECK-NEXT:    lui a0, 307200
+; CHECK-NEXT:    fmv.w.x ft0, a0
 ; CHECK-NEXT:    vmflt.vf v0, v12, ft0
 ; CHECK-NEXT:    fsrmi a0, 2
 ; CHECK-NEXT:    vfcvt.x.f.v v12, v8, v0.t
@@ -460,10 +460,10 @@ define <vscale x 16 x float> @vp_floor_nxv16f32(<vscale x 16 x float> %va, <vsca
 ; CHECK-LABEL: vp_floor_nxv16f32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmv1r.v v16, v0
-; CHECK-NEXT:    lui a1, %hi(.LCPI20_0)
-; CHECK-NEXT:    flw ft0, %lo(.LCPI20_0)(a1)
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m8, ta, ma
 ; CHECK-NEXT:    vfabs.v v24, v8, v0.t
+; CHECK-NEXT:    lui a0, 307200
+; CHECK-NEXT:    fmv.w.x ft0, a0
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m8, ta, mu
 ; CHECK-NEXT:    vmflt.vf v16, v24, ft0, v0.t
 ; CHECK-NEXT:    fsrmi a0, 2
@@ -482,10 +482,10 @@ define <vscale x 16 x float> @vp_floor_nxv16f32(<vscale x 16 x float> %va, <vsca
 define <vscale x 16 x float> @vp_floor_nxv16f32_unmasked(<vscale x 16 x float> %va, i32 zeroext %evl) {
 ; CHECK-LABEL: vp_floor_nxv16f32_unmasked:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    lui a1, %hi(.LCPI21_0)
-; CHECK-NEXT:    flw ft0, %lo(.LCPI21_0)(a1)
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m8, ta, ma
 ; CHECK-NEXT:    vfabs.v v16, v8
+; CHECK-NEXT:    lui a0, 307200
+; CHECK-NEXT:    fmv.w.x ft0, a0
 ; CHECK-NEXT:    vmflt.vf v0, v16, ft0
 ; CHECK-NEXT:    fsrmi a0, 2
 ; CHECK-NEXT:    vfcvt.x.f.v v16, v8, v0.t

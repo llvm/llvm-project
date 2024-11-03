@@ -49,7 +49,10 @@ namespace IntegralCasts {
   static_assert(!nu, "");
 };
 
-
+constexpr int UninitI; // expected-error {{must be initialized by a constant expression}} \
+                       // ref-error {{must be initialized by a constant expression}}
+constexpr int *UninitPtr; // expected-error {{must be initialized by a constant expression}} \
+                          // ref-error {{must be initialized by a constant expression}}
 
 constexpr bool getTrue() { return true; }
 constexpr bool getFalse() { return false; }
@@ -347,6 +350,46 @@ namespace strings {
 #endif
 
 #pragma clang diagnostic pop
+
+  constexpr char foo[12] = "abc";
+  static_assert(foo[0] == 'a', "");
+  static_assert(foo[1] == 'b', "");
+  static_assert(foo[2] == 'c', "");
+  static_assert(foo[3] == 0, "");
+  static_assert(foo[11] == 0, "");
+
+  constexpr char foo2[] = "abc\0def";
+  static_assert(foo2[0] == 'a', "");
+  static_assert(foo2[3] == '\0', "");
+  static_assert(foo2[6] == 'f', "");
+  static_assert(foo2[7] == '\0', "");
+  static_assert(foo2[8] == '\0', ""); // expected-error {{not an integral constant expression}} \
+                                      // expected-note {{read of dereferenced one-past-the-end pointer}} \
+                                      // ref-error {{not an integral constant expression}} \
+                                      // ref-note {{read of dereferenced one-past-the-end pointer}}
+
+  constexpr char foo3[4] = "abc";
+  static_assert(foo3[3] == '\0', "");
+  static_assert(foo3[4] == '\0', ""); // expected-error {{not an integral constant expression}} \
+                                      // expected-note {{read of dereferenced one-past-the-end pointer}} \
+                                      // ref-error {{not an integral constant expression}} \
+                                      // ref-note {{read of dereferenced one-past-the-end pointer}}
+
+  constexpr char foo4[2] = "abcd"; // expected-error {{initializer-string for char array is too long}} \
+                                   // ref-error {{initializer-string for char array is too long}}
+  static_assert(foo4[0] == 'a', "");
+  static_assert(foo4[1] == 'b', "");
+  static_assert(foo4[2] == '\0', ""); // expected-error {{not an integral constant expression}} \
+                                      // expected-note {{read of dereferenced one-past-the-end pointer}} \
+                                      // ref-error {{not an integral constant expression}} \
+                                      // ref-note {{read of dereferenced one-past-the-end pointer}}
+
+constexpr char foo5[12] = "abc\xff";
+#if defined(__CHAR_UNSIGNED__) || __CHAR_BIT__ > 8
+static_assert(foo5[3] == 255, "");
+#else
+static_assert(foo5[3] == -1, "");
+#endif
 };
 
 #if __cplusplus > 201402L
@@ -409,10 +452,11 @@ namespace IncDec {
   static_assert(uninit(), ""); // ref-error {{not an integral constant expression}} \
                                // ref-note {{in call to 'uninit()'}}
 
-  constexpr int OverFlow() { // ref-error {{never produces a constant expression}}
+  constexpr int OverFlow() { // ref-error {{never produces a constant expression}} \
+                             // expected-error {{never produces a constant expression}}
     int a = INT_MAX;
     ++a; // ref-note 2{{is outside the range}} \
-         // expected-note {{is outside the range}}
+         // expected-note 2{{is outside the range}}
     return -1;
   }
   static_assert(OverFlow() == -1, "");  // expected-error {{not an integral constant expression}} \
@@ -421,10 +465,11 @@ namespace IncDec {
                                         // ref-note {{in call to 'OverFlow()'}}
 
 
-  constexpr int UnderFlow() { // ref-error {{never produces a constant expression}}
+  constexpr int UnderFlow() { // ref-error {{never produces a constant expression}} \
+                              // expected-error {{never produces a constant expression}}
     int a = INT_MIN;
     --a; // ref-note 2{{is outside the range}} \
-         // expected-note {{is outside the range}}
+         // expected-note 2{{is outside the range}}
     return -1;
   }
   static_assert(UnderFlow() == -1, "");  // expected-error {{not an integral constant expression}} \
@@ -469,5 +514,197 @@ namespace IncDec {
     return (a -= a);
   }
   static_assert(subAll(213) == 0, "");
+
+  constexpr bool BoolOr(bool b1, bool b2) {
+    bool a;
+    a = b1;
+    a |= b2;
+    return a;
+  }
+  static_assert(BoolOr(true, true), "");
+  static_assert(BoolOr(true, false), "");
+  static_assert(BoolOr(false, true), "");
+  static_assert(!BoolOr(false, false), "");
+
+  constexpr int IntOr(unsigned a, unsigned b) {
+    unsigned r;
+    r = a;
+    r |= b;
+    return r;
+  }
+  static_assert(IntOr(10, 1) == 11, "");
+  static_assert(IntOr(1337, -1) == -1, "");
+  static_assert(IntOr(0, 12) == 12, "");
+
+  constexpr bool BoolAnd(bool b1, bool b2) {
+    bool a;
+    a = b1;
+    a &= b2;
+    return a;
+  }
+  static_assert(BoolAnd(true, true), "");
+  static_assert(!BoolAnd(true, false), "");
+  static_assert(!BoolAnd(false, true), "");
+  static_assert(!BoolAnd(false, false), "");
+
+  constexpr int IntAnd(unsigned a, unsigned b) {
+    unsigned r;
+    r = a;
+    r &= b;
+    return r;
+  }
+  static_assert(IntAnd(10, 1) == 0, "");
+  static_assert(IntAnd(1337, -1) == 1337, "");
+  static_assert(IntAnd(0, 12) == 0, "");
+
+  constexpr bool BoolXor(bool b1, bool b2) {
+    bool a;
+    a = b1;
+    a ^= b2;
+    return a;
+  }
+  static_assert(!BoolXor(true, true), "");
+  static_assert(BoolXor(true, false), "");
+  static_assert(BoolXor(false, true), "");
+  static_assert(!BoolXor(false, false), "");
+
+  constexpr int IntXor(unsigned a, unsigned b) {
+    unsigned r;
+    r = a;
+    r ^= b;
+    return r;
+  }
+  static_assert(IntXor(10, 1) == 11, "");
+  static_assert(IntXor(10, 10) == 0, "");
+  static_assert(IntXor(12, true) == 13, "");
+
+  constexpr bool BoolRem(bool b1, bool b2) {
+    bool a;
+    a = b1;
+    a %= b2;
+    return a;
+  }
+  static_assert(!BoolRem(true, true), "");
+  static_assert(!BoolRem(false, true), "");
+
+  constexpr int IntRem(int a, int b) {
+    int r;
+    r = a;
+    r %= b; // expected-note {{division by zero}} \
+            // ref-note {{division by zero}} \
+            // expected-note {{outside the range of representable values}} \
+            // ref-note {{outside the range of representable values}}
+    return r;
+  }
+  static_assert(IntRem(2, 2) == 0, "");
+  static_assert(IntRem(2, 1) == 0, "");
+  static_assert(IntRem(9, 7) == 2, "");
+  static_assert(IntRem(5, 0) == 0, ""); // expected-error {{not an integral constant expression}} \
+                                        // expected-note {{in call to 'IntRem(5, 0)'}} \
+                                        // ref-error {{not an integral constant expression}} \
+                                        // ref-note {{in call to 'IntRem(5, 0)'}}
+
+  static_assert(IntRem(INT_MIN, -1) == 0, ""); // expected-error {{not an integral constant expression}} \
+                                               // expected-note {{in call to 'IntRem}} \
+                                               // ref-error {{not an integral constant expression}} \
+                                               // ref-note {{in call to 'IntRem}}
+
+
+
+  constexpr bool BoolDiv(bool b1, bool b2) {
+    bool a;
+    a = b1;
+    a /= b2;
+    return a;
+  }
+  static_assert(BoolDiv(true, true), "");
+  static_assert(!BoolDiv(false, true), "");
+
+  constexpr int IntDiv(int a, int b) {
+    int r;
+    r = a;
+    r /= b; // expected-note {{division by zero}} \
+            // ref-note {{division by zero}} \
+            // expected-note {{outside the range of representable values}} \
+            // ref-note {{outside the range of representable values}}
+    return r;
+  }
+  static_assert(IntDiv(2, 2) == 1, "");
+  static_assert(IntDiv(12, 20) == 0, "");
+  static_assert(IntDiv(2, 1) == 2, "");
+  static_assert(IntDiv(9, 7) == 1, "");
+  static_assert(IntDiv(5, 0) == 0, ""); // expected-error {{not an integral constant expression}} \
+                                        // expected-note {{in call to 'IntDiv(5, 0)'}} \
+                                        // ref-error {{not an integral constant expression}} \
+                                        // ref-note {{in call to 'IntDiv(5, 0)'}}
+
+  static_assert(IntDiv(INT_MIN, -1) == 0, ""); // expected-error {{not an integral constant expression}} \
+                                               // expected-note {{in call to 'IntDiv}} \
+                                               // ref-error {{not an integral constant expression}} \
+                                               // ref-note {{in call to 'IntDiv}}
+
+  constexpr bool BoolMul(bool b1, bool b2) {
+    bool a;
+    a = b1;
+    a *= b2;
+    return a;
+  }
+  static_assert(BoolMul(true, true), "");
+  static_assert(!BoolMul(true, false), "");
+  static_assert(!BoolMul(false, true), "");
+  static_assert(!BoolMul(false, false), "");
+
+  constexpr int IntMul(int a, int b) {
+    int r;
+    r = a;
+    r *= b; // expected-note {{is outside the range of representable values of type 'int'}} \
+            // ref-note {{is outside the range of representable values of type 'int'}}
+    return r;
+  }
+  static_assert(IntMul(2, 2) == 4, "");
+  static_assert(IntMul(12, 20) == 240, "");
+  static_assert(IntMul(2, 1) == 2, "");
+  static_assert(IntMul(9, 7) == 63, "");
+  static_assert(IntMul(INT_MAX, 2) == 0, ""); // expected-error {{not an integral constant expression}} \
+                                              // expected-note {{in call to 'IntMul}} \
+                                              // ref-error {{not an integral constant expression}} \
+                                              // ref-note {{in call to 'IntMul}}
+  constexpr int arr[] = {1,2,3};
+  constexpr int ptrInc1() {
+    const int *p = arr;
+    p += 2;
+    return *p;
+  }
+  static_assert(ptrInc1() == 3, "");
+
+  constexpr int ptrInc2() {
+    const int *p = arr;
+    return *(p += 1);
+  }
+  static_assert(ptrInc2() == 2, "");
+
+  constexpr int ptrInc3() { // expected-error {{never produces a constant expression}} \
+                            // ref-error {{never produces a constant expression}}
+    const int *p = arr;
+    p += 12; // expected-note {{cannot refer to element 12 of array of 3 elements}} \
+             // ref-note {{cannot refer to element 12 of array of 3 elements}}
+    return *p;
+  }
+
+  constexpr int ptrIncDec1() {
+    const int *p = arr;
+    p += 2;
+    p -= 1;
+    return *p;
+  }
+  static_assert(ptrIncDec1() == 2, "");
+
+  constexpr int ptrDec1() { // expected-error {{never produces a constant expression}} \
+                        // ref-error {{never produces a constant expression}}
+    const int *p = arr;
+    p -= 1;  // expected-note {{cannot refer to element -1 of array of 3 elements}} \
+             // ref-note {{cannot refer to element -1 of array of 3 elements}}
+    return *p;
+  }
 };
 #endif

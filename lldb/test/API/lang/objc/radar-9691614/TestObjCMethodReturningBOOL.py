@@ -43,4 +43,4 @@ class MethodReturningBOOLTestCase(TestBase):
             ])
 
         # rdar://problem/9691614
-        self.runCmd('p (int)[my isValid]')
+        self.runCmd('expression (int)[my isValid]')

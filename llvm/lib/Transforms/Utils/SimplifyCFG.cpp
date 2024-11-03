@@ -1086,7 +1086,7 @@ static void GetBranchWeights(Instruction *TI,
 static void FitWeights(MutableArrayRef<uint64_t> Weights) {
   uint64_t Max = *std::max_element(Weights.begin(), Weights.end());
   if (Max > UINT_MAX) {
-    unsigned Offset = 32 - countLeadingZeros(Max);
+    unsigned Offset = 32 - llvm::countl_zero(Max);
     for (uint64_t &I : Weights)
       I >>= Offset;
   }
@@ -5453,7 +5453,7 @@ static bool eliminateDeadSwitchCases(SwitchInst *SI, DomTreeUpdater *DTU,
     }
     const APInt &CaseVal = Case.getCaseValue()->getValue();
     if (Known.Zero.intersects(CaseVal) || !Known.One.isSubsetOf(CaseVal) ||
-        (CaseVal.getMinSignedBits() > MaxSignificantBitsInCond)) {
+        (CaseVal.getSignificantBits() > MaxSignificantBitsInCond)) {
       DeadCases.push_back(Case.getCaseValue());
       if (DTU)
         --NumPerSuccessorCases[Successor];
@@ -5469,7 +5469,7 @@ static bool eliminateDeadSwitchCases(SwitchInst *SI, DomTreeUpdater *DTU,
   bool HasDefault =
       !isa<UnreachableInst>(SI->getDefaultDest()->getFirstNonPHIOrDbg());
   const unsigned NumUnknownBits =
-      Known.getBitWidth() - (Known.Zero | Known.One).countPopulation();
+      Known.getBitWidth() - (Known.Zero | Known.One).popcount();
   assert(NumUnknownBits <= Known.getBitWidth());
   if (HasDefault && DeadCases.empty() &&
       NumUnknownBits < 64 /* avoid overflow */ &&
@@ -5860,7 +5860,7 @@ static Value *foldSwitchToSelect(const SwitchCaseResultVectorTy &ResultVector,
 
       // Check if cases with the same result can cover all number
       // in touched bits.
-      if (BitMask.countPopulation() == Log2_32(CaseCount)) {
+      if (BitMask.popcount() == Log2_32(CaseCount)) {
         if (!MinCaseVal->isNullValue())
           Condition = Builder.CreateSub(Condition, MinCaseVal);
         Value *And = Builder.CreateAnd(Condition, ~BitMask, "switch.and");
@@ -6694,7 +6694,7 @@ static bool ReduceSwitchRange(SwitchInst *SI, IRBuilder<> &Builder,
   // less than 64.
   unsigned Shift = 64;
   for (auto &V : Values)
-    Shift = std::min(Shift, countTrailingZeros((uint64_t)V));
+    Shift = std::min(Shift, (unsigned)llvm::countr_zero((uint64_t)V));
   assert(Shift < 64);
   if (Shift > 0)
     for (auto &V : Values)

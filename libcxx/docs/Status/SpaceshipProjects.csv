@@ -11,7 +11,7 @@ Section,Description,Dependencies,Assignee,Complete
 | `strong_order_fallback <https://reviews.llvm.org/D111514>`_
 | `weak_order_fallback <https://reviews.llvm.org/D111514>`_
 | `partial_order_fallback <https://reviews.llvm.org/D111514>`_",None,Arthur O'Dwyer,|Complete| [#note-strongorder]_
-| `[alg.three.way] <https://wg21.link/alg.three.way>`_,| `lexicographical_compare_three_way <https://reviews.llvm.org/D131395>`_,[comparisons.three.way],Adrian Vogelsgesang,|In Progress|
+| `[alg.three.way] <https://wg21.link/alg.three.way>`_,| `lexicographical_compare_three_way <https://reviews.llvm.org/D131395>`_,[comparisons.three.way],Adrian Vogelsgesang,|Complete|
 | `[type.info] <https://wg21.link/type.info>`_,| `typeinfo <https://reviews.llvm.org/D130853>`_,None,Adrian Vogelsgesang,|Complete|
 | `[coroutine.handle.compare] <https://wg21.link/coroutine.handle.compare>`_,| `coroutine_handle <https://reviews.llvm.org/D109433>`_,[comparisons.three.way],Chuanqi Xu,|Complete|
 | `[pairs.spec] <https://wg21.link/pairs.spec>`_,| `pair <https://reviews.llvm.org/D107721>`_,[expos.only.func],Kent Ross,|Complete|

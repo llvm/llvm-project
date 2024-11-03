@@ -16,6 +16,7 @@
 
 #include "CoroInternal.h"
 #include "llvm/ADT/BitVector.h"
+#include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/Analysis/PtrUseVisitor.h"
@@ -37,6 +38,7 @@
 #include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/PromoteMemToReg.h"
 #include <algorithm>
+#include <deque>
 #include <optional>
 
 using namespace llvm;
@@ -108,8 +110,10 @@ struct SuspendCrossingInfo {
     return Block[Mapping.blockToIndex(BB)];
   }
 
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   void dump() const;
   void dump(StringRef Label, BitVector const &BV) const;
+#endif
 
   SuspendCrossingInfo(Function &F, coro::Shape &Shape);
 
@@ -314,6 +318,116 @@ SuspendCrossingInfo::SuspendCrossingInfo(Function &F, coro::Shape &Shape)
   LLVM_DEBUG(dump());
 }
 
+namespace {
+
+// RematGraph is used to construct a DAG for rematerializable instructions
+// When the constructor is invoked with a candidate instruction (which is
+// materializable) it builds a DAG of materializable instructions from that
+// point.
+// Typically, for each instruction identified as re-materializable across a
+// suspend point, a RematGraph will be created.
+struct RematGraph {
+  // Each RematNode in the graph contains the edges to instructions providing
+  // operands in the current node.
+  struct RematNode {
+    Instruction *Node;
+    SmallVector<RematNode *> Operands;
+    RematNode() = default;
+    RematNode(Instruction *V) : Node(V) {}
+  };
+
+  RematNode *EntryNode;
+  using RematNodeMap =
+      SmallMapVector<Instruction *, std::unique_ptr<RematNode>, 8>;
+  RematNodeMap Remats;
+  const std::function<bool(Instruction &)> &MaterializableCallback;
+  SuspendCrossingInfo &Checker;
+
+  RematGraph(const std::function<bool(Instruction &)> &MaterializableCallback,
+             Instruction *I, SuspendCrossingInfo &Checker)
+      : MaterializableCallback(MaterializableCallback), Checker(Checker) {
+    std::unique_ptr<RematNode> FirstNode = std::make_unique<RematNode>(I);
+    EntryNode = FirstNode.get();
+    std::deque<std::unique_ptr<RematNode>> WorkList;
+    addNode(std::move(FirstNode), WorkList, cast<User>(I));
+    while (WorkList.size()) {
+      std::unique_ptr<RematNode> N = std::move(WorkList.front());
+      WorkList.pop_front();
+      addNode(std::move(N), WorkList, cast<User>(I));
+    }
+  }
+
+  void addNode(std::unique_ptr<RematNode> NUPtr,
+               std::deque<std::unique_ptr<RematNode>> &WorkList,
+               User *FirstUse) {
+    RematNode *N = NUPtr.get();
+    if (Remats.count(N->Node))
+      return;
+
+    // We haven't see this node yet - add to the list
+    Remats[N->Node] = std::move(NUPtr);
+    for (auto &Def : N->Node->operands()) {
+      Instruction *D = dyn_cast<Instruction>(Def.get());
+      if (!D || !MaterializableCallback(*D) ||
+          !Checker.isDefinitionAcrossSuspend(*D, FirstUse))
+        continue;
+
+      if (Remats.count(D)) {
+        // Already have this in the graph
+        N->Operands.push_back(Remats[D].get());
+        continue;
+      }
+
+      bool NoMatch = true;
+      for (auto &I : WorkList) {
+        if (I->Node == D) {
+          NoMatch = false;
+          N->Operands.push_back(I.get());
+          break;
+        }
+      }
+      if (NoMatch) {
+        // Create a new node
+        std::unique_ptr<RematNode> ChildNode = std::make_unique<RematNode>(D);
+        N->Operands.push_back(ChildNode.get());
+        WorkList.push_back(std::move(ChildNode));
+      }
+    }
+  }
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  void dump() const {
+    dbgs() << "Entry (";
+    if (EntryNode->Node->getParent()->hasName())
+      dbgs() << EntryNode->Node->getParent()->getName();
+    else
+      EntryNode->Node->getParent()->printAsOperand(dbgs(), false);
+    dbgs() << ") : " << *EntryNode->Node << "\n";
+    for (auto &E : Remats) {
+      dbgs() << *(E.first) << "\n";
+      for (RematNode *U : E.second->Operands)
+        dbgs() << "  " << *U->Node << "\n";
+    }
+  }
+#endif
+};
+} // end anonymous namespace
+
+namespace llvm {
+
+template <> struct GraphTraits<RematGraph *> {
+  using NodeRef = RematGraph::RematNode *;
+  using ChildIteratorType = RematGraph::RematNode **;
+
+  static NodeRef getEntryNode(RematGraph *G) { return G->EntryNode; }
+  static ChildIteratorType child_begin(NodeRef N) {
+    return N->Operands.begin();
+  }
+  static ChildIteratorType child_end(NodeRef N) { return N->Operands.end(); }
+};
+
+} // end namespace llvm
+
 #undef DEBUG_TYPE // "coro-suspend-crossing"
 #define DEBUG_TYPE "coro-frame"
 
@@ -423,6 +537,15 @@ static void dumpSpills(StringRef Title, const SpillInfo &Spills) {
     dbgs() << "   user: ";
     for (auto *I : E.second)
       I->dump();
+  }
+}
+static void dumpRemats(
+    StringRef Title,
+    const SmallMapVector<Instruction *, std::unique_ptr<RematGraph>, 8> &RM) {
+  dbgs() << "------------- " << Title << "--------------\n";
+  for (const auto &E : RM) {
+    E.second->dump();
+    dbgs() << "--\n";
   }
 }
 
@@ -637,10 +760,10 @@ void FrameTypeBuilder::addFieldForAllocas(const Function &F,
     return;
   }
 
-  // Because there are pathes from the lifetime.start to coro.end
+  // Because there are paths from the lifetime.start to coro.end
   // for each alloca, the liferanges for every alloca is overlaped
   // in the blocks who contain coro.end and the successor blocks.
-  // So we choose to skip there blocks when we calculates the liferange
+  // So we choose to skip there blocks when we calculate the liferange
   // for each alloca. It should be reasonable since there shouldn't be uses
   // in these blocks and the coroutine frame shouldn't be used outside the
   // coroutine body.
@@ -1282,7 +1405,7 @@ static StructType *buildFrameType(Function &F, coro::Shape &Shape,
 // function call or any of the memory intrinsics, we check whether this
 // instruction is prior to CoroBegin. To answer question 3, we track the offsets
 // of all aliases created for the alloca prior to CoroBegin but used after
-// CoroBegin. llvm::Optional is used to be able to represent the case when the
+// CoroBegin. std::optional is used to be able to represent the case when the
 // offset is unknown (e.g. when you have a PHINode that takes in different
 // offset values). We cannot handle unknown offsets and will assert. This is the
 // potential issue left out. An ideal solution would likely require a
@@ -2089,11 +2212,12 @@ static void rewritePHIs(Function &F) {
     rewritePHIs(*BB);
 }
 
+/// Default materializable callback
 // Check for instructions that we can recreate on resume as opposed to spill
 // the result into a coroutine frame.
-static bool materializable(Instruction &V) {
-  return isa<CastInst>(&V) || isa<GetElementPtrInst>(&V) ||
-         isa<BinaryOperator>(&V) || isa<CmpInst>(&V) || isa<SelectInst>(&V);
+bool coro::defaultMaterializable(Instruction &V) {
+  return (isa<CastInst>(&V) || isa<GetElementPtrInst>(&V) ||
+          isa<BinaryOperator>(&V) || isa<CmpInst>(&V) || isa<SelectInst>(&V));
 }
 
 // Check for structural coroutine intrinsics that should not be spilled into
@@ -2103,41 +2227,82 @@ static bool isCoroutineStructureIntrinsic(Instruction &I) {
          isa<CoroSuspendInst>(&I);
 }
 
-// For every use of the value that is across suspend point, recreate that value
-// after a suspend point.
-static void rewriteMaterializableInstructions(IRBuilder<> &IRB,
-                                              const SpillInfo &Spills) {
-  for (const auto &E : Spills) {
-    Value *Def = E.first;
-    BasicBlock *CurrentBlock = nullptr;
-    Instruction *CurrentMaterialization = nullptr;
-    for (Instruction *U : E.second) {
-      // If we have not seen this block, materialize the value.
-      if (CurrentBlock != U->getParent()) {
+// For each instruction identified as materializable across the suspend point,
+// and its associated DAG of other rematerializable instructions,
+// recreate the DAG of instructions after the suspend point.
+static void rewriteMaterializableInstructions(
+    const SmallMapVector<Instruction *, std::unique_ptr<RematGraph>, 8>
+        &AllRemats) {
+  // This has to be done in 2 phases
+  // Do the remats and record the required defs to be replaced in the
+  // original use instructions
+  // Once all the remats are complete, replace the uses in the final
+  // instructions with the new defs
+  typedef struct {
+    Instruction *Use;
+    Instruction *Def;
+    Instruction *Remat;
+  } ProcessNode;
 
-        bool IsInCoroSuspendBlock = isa<AnyCoroSuspendInst>(U);
-        CurrentBlock = U->getParent();
-        auto *InsertBlock = IsInCoroSuspendBlock
-                                ? CurrentBlock->getSinglePredecessor()
-                                : CurrentBlock;
-        CurrentMaterialization = cast<Instruction>(Def)->clone();
-        CurrentMaterialization->setName(Def->getName());
-        CurrentMaterialization->insertBefore(
-            IsInCoroSuspendBlock ? InsertBlock->getTerminator()
-                                 : &*InsertBlock->getFirstInsertionPt());
-      }
-      if (auto *PN = dyn_cast<PHINode>(U)) {
-        assert(PN->getNumIncomingValues() == 1 &&
-               "unexpected number of incoming "
-               "values in the PHINode");
-        PN->replaceAllUsesWith(CurrentMaterialization);
-        PN->eraseFromParent();
-        continue;
-      }
-      // Replace all uses of Def in the current instruction with the
-      // CurrentMaterialization for the block.
-      U->replaceUsesOfWith(Def, CurrentMaterialization);
+  SmallVector<ProcessNode> FinalInstructionsToProcess;
+
+  for (const auto &E : AllRemats) {
+    Instruction *Use = E.first;
+    Instruction *CurrentMaterialization = nullptr;
+    RematGraph *RG = E.second.get();
+    ReversePostOrderTraversal<RematGraph *> RPOT(RG);
+    SmallVector<Instruction *> InstructionsToProcess;
+
+    // If the target use is actually a suspend instruction then we have to
+    // insert the remats into the end of the predecessor (there should only be
+    // one). This is so that suspend blocks always have the suspend instruction
+    // as the first instruction.
+    auto InsertPoint = &*Use->getParent()->getFirstInsertionPt();
+    if (isa<AnyCoroSuspendInst>(Use)) {
+      BasicBlock *SuspendPredecessorBlock =
+          Use->getParent()->getSinglePredecessor();
+      assert(SuspendPredecessorBlock && "malformed coro suspend instruction");
+      InsertPoint = SuspendPredecessorBlock->getTerminator();
     }
+
+    // Note: skip the first instruction as this is the actual use that we're
+    // rematerializing everything for.
+    auto I = RPOT.begin();
+    ++I;
+    for (; I != RPOT.end(); ++I) {
+      Instruction *D = (*I)->Node;
+      CurrentMaterialization = D->clone();
+      CurrentMaterialization->setName(D->getName());
+      CurrentMaterialization->insertBefore(InsertPoint);
+      InsertPoint = CurrentMaterialization;
+
+      // Replace all uses of Def in the instructions being added as part of this
+      // rematerialization group
+      for (auto &I : InstructionsToProcess)
+        I->replaceUsesOfWith(D, CurrentMaterialization);
+
+      // Don't replace the final use at this point as this can cause problems
+      // for other materializations. Instead, for any final use that uses a
+      // define that's being rematerialized, record the replace values
+      for (unsigned i = 0, E = Use->getNumOperands(); i != E; ++i)
+        if (Use->getOperand(i) == D) // Is this operand pointing to oldval?
+          FinalInstructionsToProcess.push_back(
+              {Use, D, CurrentMaterialization});
+
+      InstructionsToProcess.push_back(CurrentMaterialization);
+    }
+  }
+
+  // Finally, replace the uses with the defines that we've just rematerialized
+  for (auto &R : FinalInstructionsToProcess) {
+    if (auto *PN = dyn_cast<PHINode>(R.Use)) {
+      assert(PN->getNumIncomingValues() == 1 && "unexpected number of incoming "
+                                                "values in the PHINode");
+      PN->replaceAllUsesWith(R.Remat);
+      PN->eraseFromParent();
+      continue;
+    }
+    R.Use->replaceUsesOfWith(R.Def, R.Remat);
   }
 }
 
@@ -2523,6 +2688,9 @@ static void sinkSpillUsesAfterCoroBegin(Function &F,
 /// hence minimizing the amount of data we end up putting on the frame.
 static void sinkLifetimeStartMarkers(Function &F, coro::Shape &Shape,
                                      SuspendCrossingInfo &Checker) {
+  if (F.hasOptNone())
+    return;
+
   DominatorTree DT(F);
 
   // Collect all possible basic blocks which may dominate all uses of allocas.
@@ -2724,7 +2892,71 @@ void coro::salvageDebugInfo(
   }
 }
 
-void coro::buildCoroutineFrame(Function &F, Shape &Shape) {
+static void doRematerializations(
+    Function &F, SuspendCrossingInfo &Checker,
+    const std::function<bool(Instruction &)> &MaterializableCallback) {
+  if (F.hasOptNone())
+    return;
+
+  SpillInfo Spills;
+
+  // See if there are materializable instructions across suspend points
+  // We record these as the starting point to also identify materializable
+  // defs of uses in these operations
+  for (Instruction &I : instructions(F)) {
+    if (!MaterializableCallback(I))
+      continue;
+    for (User *U : I.users())
+      if (Checker.isDefinitionAcrossSuspend(I, U))
+        Spills[&I].push_back(cast<Instruction>(U));
+  }
+
+  // Process each of the identified rematerializable instructions
+  // and add predecessor instructions that can also be rematerialized.
+  // This is actually a graph of instructions since we could potentially
+  // have multiple uses of a def in the set of predecessor instructions.
+  // The approach here is to maintain a graph of instructions for each bottom
+  // level instruction - where we have a unique set of instructions (nodes)
+  // and edges between them. We then walk the graph in reverse post-dominator
+  // order to insert them past the suspend point, but ensure that ordering is
+  // correct. We also rely on CSE removing duplicate defs for remats of
+  // different instructions with a def in common (rather than maintaining more
+  // complex graphs for each suspend point)
+
+  // We can do this by adding new nodes to the list for each suspend
+  // point. Then using standard GraphTraits to give a reverse post-order
+  // traversal when we insert the nodes after the suspend
+  SmallMapVector<Instruction *, std::unique_ptr<RematGraph>, 8> AllRemats;
+  for (auto &E : Spills) {
+    for (Instruction *U : E.second) {
+      // Don't process a user twice (this can happen if the instruction uses
+      // more than one rematerializable def)
+      if (AllRemats.count(U))
+        continue;
+
+      // Constructor creates the whole RematGraph for the given Use
+      auto RematUPtr =
+          std::make_unique<RematGraph>(MaterializableCallback, U, Checker);
+
+      LLVM_DEBUG(dbgs() << "***** Next remat group *****\n";
+                 ReversePostOrderTraversal<RematGraph *> RPOT(RematUPtr.get());
+                 for (auto I = RPOT.begin(); I != RPOT.end();
+                      ++I) { (*I)->Node->dump(); } dbgs()
+                 << "\n";);
+
+      AllRemats[U] = std::move(RematUPtr);
+    }
+  }
+
+  // Rewrite materializable instructions to be materialized at the use
+  // point.
+  LLVM_DEBUG(dumpRemats("Materializations", AllRemats));
+  rewriteMaterializableInstructions(AllRemats);
+}
+
+void coro::buildCoroutineFrame(
+    Function &F, Shape &Shape,
+    const std::function<bool(Instruction &)> &MaterializableCallback) {
   // Don't eliminate swifterror in async functions that won't be split.
   if (Shape.ABI != coro::ABI::Async || !Shape.CoroSuspends.empty())
     eliminateSwiftError(F, Shape);
@@ -2775,35 +3007,11 @@ void coro::buildCoroutineFrame(Function &F, Shape &Shape) {
   // Build suspend crossing info.
   SuspendCrossingInfo Checker(F, Shape);
 
-  IRBuilder<> Builder(F.getContext());
+  doRematerializations(F, Checker, MaterializableCallback);
+
   FrameDataInfo FrameData;
   SmallVector<CoroAllocaAllocInst*, 4> LocalAllocas;
   SmallVector<Instruction*, 4> DeadInstructions;
-
-  {
-    SpillInfo Spills;
-    for (int Repeat = 0; Repeat < 4; ++Repeat) {
-      // See if there are materializable instructions across suspend points.
-      // FIXME: We can use a worklist to track the possible materialize
-      // instructions instead of iterating the whole function again and again.
-      for (Instruction &I : instructions(F))
-        if (materializable(I)) {
-          for (User *U : I.users())
-            if (Checker.isDefinitionAcrossSuspend(I, U))
-              Spills[&I].push_back(cast<Instruction>(U));
-        }
-
-      if (Spills.empty())
-        break;
-
-      // Rewrite materializable instructions to be materialized at the use
-      // point.
-      LLVM_DEBUG(dumpSpills("Materializations", Spills));
-      rewriteMaterializableInstructions(Builder, Spills);
-      Spills.clear();
-    }
-  }
-
   if (Shape.ABI != coro::ABI::Async && Shape.ABI != coro::ABI::Retcon &&
       Shape.ABI != coro::ABI::RetconOnce)
     sinkLifetimeStartMarkers(F, Shape, Checker);

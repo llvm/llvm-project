@@ -20,16 +20,14 @@
 namespace __llvm_libc {
 namespace testutils {
 
-bool ProcessStatus::exited_normally() const {
-  return WIFEXITED(platform_defined);
-}
+bool ProcessStatus::exited_normally() { return WIFEXITED(platform_defined); }
 
-int ProcessStatus::get_exit_code() const {
+int ProcessStatus::get_exit_code() {
   assert(exited_normally() && "Abnormal termination, no exit code");
   return WEXITSTATUS(platform_defined);
 }
 
-int ProcessStatus::get_fatal_signal() const {
+int ProcessStatus::get_fatal_signal() {
   if (exited_normally())
     return 0;
   return WTERMSIG(platform_defined);

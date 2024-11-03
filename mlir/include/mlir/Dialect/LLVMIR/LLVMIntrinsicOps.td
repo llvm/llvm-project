@@ -291,9 +291,13 @@ class LLVM_DbgIntrOp<string name, string argName> : LLVM_IntrOp<name, [], [], []
     // argument variable would not work here, since the builder variables are
     // converted before entering the builder, which would result in an error
     // when attempting to convert an argument list.
-    FailureOr<Value> argOperand = moduleImport.convertValue(llvmOperands[0]);
+
+    FailureOr<Value> argOperand = moduleImport.convertMetadataValue(llvmOperands[0]);
+    // Drop the intrinsic when its operand could not be converted. This can
+    // happen for use before definition cases that are allowed for debug
+    // intrinsics.
     if (failed(argOperand))
-      return failure();
+      return success();
     $_op = $_builder.create<$_qualCppClassName>($_location,
         *argOperand, $_var_attr($varInfo));
   }];
@@ -825,7 +829,8 @@ def LLVM_VPFRemOp : LLVM_VPBinaryF<"frem">;
 def LLVM_VPFNegOp : LLVM_VPUnaryF<"fneg">;
 
 // Float Ternary
-def LLVM_VPFmaOp  : LLVM_VPTernaryF<"fma">;
+def LLVM_VPFMulAddOp  : LLVM_VPTernaryF<"fmuladd">;
+def LLVM_VPFmaOp      : LLVM_VPTernaryF<"fma">;
 
 // Integer Reduction
 def LLVM_VPReduceAddOp  : LLVM_VPReductionI<"add">;

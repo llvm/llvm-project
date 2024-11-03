@@ -58,11 +58,14 @@ public:
   // Expression visitors - result returned on interp stack.
   bool VisitCastExpr(const CastExpr *E);
   bool VisitIntegerLiteral(const IntegerLiteral *E);
+  bool VisitFloatingLiteral(const FloatingLiteral *E);
   bool VisitParenExpr(const ParenExpr *E);
   bool VisitBinaryOperator(const BinaryOperator *E);
+  bool VisitLogicalBinOp(const BinaryOperator *E);
   bool VisitPointerArithBinOp(const BinaryOperator *E);
   bool VisitCXXDefaultArgExpr(const CXXDefaultArgExpr *E);
   bool VisitCallExpr(const CallExpr *E);
+  bool VisitBuiltinCallExpr(const CallExpr *E);
   bool VisitCXXMemberCallExpr(const CXXMemberCallExpr *E);
   bool VisitCXXDefaultInitExpr(const CXXDefaultInitExpr *E);
   bool VisitCXXBoolLiteralExpr(const CXXBoolLiteralExpr *E);
@@ -83,6 +86,10 @@ public:
   bool VisitStringLiteral(const StringLiteral *E);
   bool VisitCharacterLiteral(const CharacterLiteral *E);
   bool VisitCompoundAssignOperator(const CompoundAssignOperator *E);
+  bool VisitFloatCompoundAssignOperator(const CompoundAssignOperator *E);
+  bool VisitPointerCompoundAssignOperator(const CompoundAssignOperator *E);
+  bool VisitExprWithCleanups(const ExprWithCleanups *E);
+  bool VisitMaterializeTemporaryExpr(const MaterializeTemporaryExpr *E);
 
 protected:
   bool visitExpr(const Expr *E) override;
@@ -233,6 +240,15 @@ private:
     return VD->hasGlobalStorage() || VD->isConstexpr();
   }
 
+  llvm::RoundingMode getRoundingMode(const Expr *E) const {
+    FPOptions FPO = E->getFPFeaturesInEffect(Ctx.getLangOpts());
+
+    if (FPO.getRoundingMode() == llvm::RoundingMode::Dynamic)
+      return llvm::RoundingMode::NearestTiesToEven;
+
+    return FPO.getRoundingMode();
+  }
+
 protected:
   /// Variable to storage mapping.
   llvm::DenseMap<const ValueDecl *, Scope::Local> Locals;
@@ -282,7 +298,7 @@ public:
 
   virtual void emitDestruction() {}
 
-  VariableScope *getParent() { return Parent; }
+  VariableScope *getParent() const { return Parent; }
 
 protected:
   /// ByteCodeExprGen instance.

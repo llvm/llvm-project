@@ -31,7 +31,7 @@ struct IntegerTypeStorage : public TypeStorage {
       : width(width), signedness(signedness) {}
 
   /// The hash key used for uniquing.
-  using KeyTy = std::pair<unsigned, IntegerType::SignednessSemantics>;
+  using KeyTy = std::tuple<unsigned, IntegerType::SignednessSemantics>;
 
   static llvm::hash_code hashKey(const KeyTy &key) {
     return llvm::hash_value(key);
@@ -44,7 +44,7 @@ struct IntegerTypeStorage : public TypeStorage {
   static IntegerTypeStorage *construct(TypeStorageAllocator &allocator,
                                        KeyTy key) {
     return new (allocator.allocate<IntegerTypeStorage>())
-        IntegerTypeStorage(key.first, key.second);
+        IntegerTypeStorage(std::get<0>(key), std::get<1>(key));
   }
 
   KeyTy getAsKey() const { return KeyTy(width, signedness); }

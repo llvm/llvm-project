@@ -1033,8 +1033,8 @@ define amdgpu_kernel void @v_cttz_zero_undef_i64_with_select(ptr addrspace(1) no
 ; GFX9-GISEL-NEXT:    global_load_ubyte v4, v1, s[2:3] offset:3
 ; GFX9-GISEL-NEXT:    global_load_ubyte v5, v1, s[2:3] offset:4
 ; GFX9-GISEL-NEXT:    global_load_ubyte v6, v1, s[2:3] offset:5
-; GFX9-GISEL-NEXT:    global_load_ubyte v7, v1, s[2:3] offset:7
-; GFX9-GISEL-NEXT:    global_load_ubyte v8, v1, s[2:3] offset:6
+; GFX9-GISEL-NEXT:    global_load_ubyte v7, v1, s[2:3] offset:6
+; GFX9-GISEL-NEXT:    global_load_ubyte v8, v1, s[2:3] offset:7
 ; GFX9-GISEL-NEXT:    s_waitcnt vmcnt(6)
 ; GFX9-GISEL-NEXT:    v_lshl_or_b32 v0, v2, 8, v0
 ; GFX9-GISEL-NEXT:    s_waitcnt vmcnt(5)
@@ -1045,10 +1045,10 @@ define amdgpu_kernel void @v_cttz_zero_undef_i64_with_select(ptr addrspace(1) no
 ; GFX9-GISEL-NEXT:    s_waitcnt vmcnt(2)
 ; GFX9-GISEL-NEXT:    v_lshl_or_b32 v4, v6, 8, v5
 ; GFX9-GISEL-NEXT:    s_waitcnt vmcnt(1)
-; GFX9-GISEL-NEXT:    v_lshlrev_b32_e32 v5, 24, v7
+; GFX9-GISEL-NEXT:    v_lshlrev_b32_e32 v5, 16, v7
 ; GFX9-GISEL-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-GISEL-NEXT:    v_lshlrev_b32_e32 v6, 16, v8
-; GFX9-GISEL-NEXT:    v_or3_b32 v3, v5, v6, v4
+; GFX9-GISEL-NEXT:    v_lshl_or_b32 v0, v8, 24, v5
+; GFX9-GISEL-NEXT:    v_or3_b32 v3, v0, v4, 0
 ; GFX9-GISEL-NEXT:    v_ffbl_b32_e32 v4, v3
 ; GFX9-GISEL-NEXT:    v_ffbl_b32_e32 v0, v2
 ; GFX9-GISEL-NEXT:    v_add_u32_e32 v4, 32, v4

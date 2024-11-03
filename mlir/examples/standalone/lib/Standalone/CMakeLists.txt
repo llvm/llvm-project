@@ -1,4 +1,5 @@
 add_mlir_dialect_library(MLIRStandalone
+        StandaloneTypes.cpp
         StandaloneDialect.cpp
         StandaloneOps.cpp
 

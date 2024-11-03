@@ -32,7 +32,7 @@ static cl::opt<uint64_t> ProfileSymbolListCutOff(
     cl::desc("Cutoff value about how many symbols in profile symbol list "
              "will be used. This is very useful for performance debugging"));
 
-cl::opt<bool> GenerateMergedBaseProfiles(
+static cl::opt<bool> GenerateMergedBaseProfiles(
     "generate-merged-base-profiles",
     cl::desc("When generating nested context-sensitive profiles, always "
              "generate extra base profile for function with all its context "

@@ -33,7 +33,7 @@ template <class _Tp>
 using __remove_const_t = typename remove_const<_Tp>::type;
 #endif // __has_builtin(__remove_const)
 
-#if _LIBCPP_STD_VER > 11
+#if _LIBCPP_STD_VER >= 14
 template <class _Tp> using remove_const_t = __remove_const_t<_Tp>;
 #endif
 

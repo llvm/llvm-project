@@ -77,6 +77,30 @@ struct FormatSection {
   }
 };
 
+enum PrimaryType : uint8_t { Integer = 0, Float = 1, Pointer = 2 };
+
+// TypeDesc stores the information about a type that is relevant to printf in
+// a relatively compact manner.
+struct TypeDesc {
+  uint8_t size;
+  PrimaryType primary_type;
+  LIBC_INLINE constexpr bool operator==(const TypeDesc &other) const {
+    return (size == other.size) && (primary_type == other.primary_type);
+  }
+};
+
+template <typename T> LIBC_INLINE constexpr TypeDesc type_desc_from_type() {
+  if constexpr (cpp::is_same_v<T, void>) {
+    return TypeDesc{0, PrimaryType::Integer};
+  } else {
+    constexpr bool isPointer = cpp::is_pointer_v<T>;
+    constexpr bool isFloat = cpp::is_floating_point_v<T>;
+    return TypeDesc{sizeof(T), isPointer ? PrimaryType::Pointer
+                               : isFloat ? PrimaryType::Float
+                                         : PrimaryType::Integer};
+  }
+}
+
 // This is the value to be returned by conversions when no error has occurred.
 constexpr int WRITE_OK = 0;
 // These are the printf return values for when an error has occurred. They are

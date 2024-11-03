@@ -6,10 +6,9 @@ define i32 @func_f(i32 %X) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    incl %eax
-; CHECK-NEXT:    jns .LBB0_2
+; CHECK-NEXT:    jns baz@PLT # TAILCALL
 ; CHECK-NEXT:  # %bb.1: # %cond_true
 ; CHECK-NEXT:    calll bar@PLT
-; CHECK-NEXT:  .LBB0_2: # %cond_next
 ; CHECK-NEXT:    jmp baz@PLT # TAILCALL
 entry:
 	%tmp1 = add i32 %X, 1

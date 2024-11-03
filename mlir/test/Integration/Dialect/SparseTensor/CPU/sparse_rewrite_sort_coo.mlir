@@ -1,15 +1,26 @@
 // DEFINE: %{option} = enable-runtime-library=false
-// DEFINE: %{command} = mlir-opt %s --sparse-compiler=%{option} | \
-// DEFINE: mlir-cpu-runner \
+// DEFINE: %{compile} = mlir-opt %s --sparse-compiler=%{option}
+// DEFINE: %{run} = mlir-cpu-runner \
 // DEFINE:  -e entry -entry-point-result=void  \
-// DEFINE:  -shared-libs=%mlir_lib_dir/libmlir_c_runner_utils%shlibext | \
+// DEFINE:  -shared-libs=%mlir_c_runner_utils | \
 // DEFINE: FileCheck %s
 //
-// RUN: %{command}
+// RUN: %{compile} | %{run}
 //
 // Do the same run, but now with vectorization.
 // REDEFINE: %{option} = "enable-runtime-library=false vl=2 reassociate-fp-reductions=true enable-index-optimizations=true"
-// RUN: %{command}
+// RUN: %{compile} | %{run}
+
+// Do the same run, but now with direct IR generation and, if available, VLA
+// vectorization.
+// REDEFINE: %{option} = "enable-runtime-library=false vl=4 enable-arm-sve=%ENABLE_VLA"
+// REDEFINE: %{run} = %lli \
+// REDEFINE:   --entry-function=entry_lli \
+// REDEFINE:   --extra-module=%S/Inputs/main_for_lli.ll \
+// REDEFINE:   %VLA_ARCH_ATTR_OPTIONS \
+// REDEFINE:   --dlopen=%mlir_native_utils_lib_dir/libmlir_c_runner_utils%shlibext | \
+// REDEFINE: FileCheck %s
+// RUN: %{compile} | mlir-translate -mlir-to-llvmir | %{run}
 
 module {
   // Stores 5 values to the memref buffer.
@@ -80,8 +91,8 @@ module {
     // CHECK: ( 1, 1, 2, 5, 10 )
     // CHECK: ( 3, 3, 1, 10, 1 )
     // CHECK: ( 9, 9, 4, 7, 2 )
-    // CHECK: ( 8, 7, 10, 9, 6 )
-    // CHECK: ( 4, 7, 7, 9, 5 )
+    // CHECK: ( 7, 8, 10, 9, 6 )
+    // CHECK: ( 7, 4, 7, 9, 5 )
     call @storeValuesToStrided(%x0, %c10, %c2, %c1, %c5, %c1)
       : (memref<?xi32, strided<[4], offset: ?>>, i32, i32, i32, i32, i32) -> ()
     call @storeValuesToStrided(%x1, %c1, %c1, %c3, %c10, %c3)
@@ -92,7 +103,7 @@ module {
       : (memref<?xi32, strided<[4], offset: ?>>, i32, i32, i32, i32, i32) -> ()
     call @storeValuesTo(%y1, %c5, %c7, %c4, %c9, %c7)
       : (memref<?xi32>, i32, i32, i32, i32, i32) -> ()
-    sparse_tensor.sort_coo %i5, %xy jointly %y1 {nx = 3 : index, ny = 1 : index}
+    sparse_tensor.sort_coo quick_sort %i5, %xy jointly %y1 {nx = 3 : index, ny = 1 : index}
       : memref<?xi32> jointly memref<?xi32>
     %x0v = vector.transfer_read %x0[%i0], %c100: memref<?xi32, strided<[4], offset: ?>>, vector<5xi32>
     vector.print %x0v : vector<5xi32>
@@ -120,7 +131,7 @@ module {
       : (memref<?xi32, strided<[4], offset: ?>>, i32, i32, i32, i32, i32) -> ()
     call @storeValuesTo(%y1, %c5, %c7, %c4, %c9, %c7)
       : (memref<?xi32>, i32, i32, i32, i32, i32) -> ()
-    sparse_tensor.sort_coo stable %i5, %xy jointly %y1 {nx = 3 : index, ny = 1 : index}
+    sparse_tensor.sort_coo insertion_sort_stable %i5, %xy jointly %y1 {nx = 3 : index, ny = 1 : index}
       : memref<?xi32> jointly memref<?xi32>
     %x0v2 = vector.transfer_read %x0[%i0], %c100: memref<?xi32, strided<[4], offset: ?>>, vector<5xi32>
     vector.print %x0v2 : vector<5xi32>
@@ -132,6 +143,34 @@ module {
     vector.print %y0v2 : vector<5xi32>
     %y1v2 = vector.transfer_read %y1[%i0], %c100: memref<?xi32>, vector<5xi32>
     vector.print %y1v2 : vector<5xi32>
+    // Heap sort.
+    // CHECK: ( 1, 1, 2, 5, 10 )
+    // CHECK: ( 3, 3, 1, 10, 1 )
+    // CHECK: ( 9, 9, 4, 7, 2 )
+    // CHECK: ( 7, 8, 10, 9, 6 )
+    // CHECK: ( 7, 4, 7, 9, 5 )
+    call @storeValuesToStrided(%x0, %c10, %c2, %c1, %c5, %c1)
+      : (memref<?xi32, strided<[4], offset: ?>>, i32, i32, i32, i32, i32) -> ()
+    call @storeValuesToStrided(%x1, %c1, %c1, %c3, %c10, %c3)
+      : (memref<?xi32, strided<[4], offset: ?>>, i32, i32, i32, i32, i32) -> ()
+    call @storeValuesToStrided(%x2, %c2, %c4, %c9, %c7, %c9)
+      : (memref<?xi32, strided<[4], offset: ?>>, i32, i32, i32, i32, i32) -> ()
+    call @storeValuesToStrided(%y0, %c6, %c10, %c8, %c9, %c7)
+      : (memref<?xi32, strided<[4], offset: ?>>, i32, i32, i32, i32, i32) -> ()
+    call @storeValuesTo(%y1, %c5, %c7, %c4, %c9, %c7)
+      : (memref<?xi32>, i32, i32, i32, i32, i32) -> ()
+    sparse_tensor.sort_coo heap_sort %i5, %xy jointly %y1 {nx = 3 : index, ny = 1 : index}
+      : memref<?xi32> jointly memref<?xi32>
+    %x0v3 = vector.transfer_read %x0[%i0], %c100: memref<?xi32, strided<[4], offset: ?>>, vector<5xi32>
+    vector.print %x0v3 : vector<5xi32>
+    %x1v3 = vector.transfer_read %x1[%i0], %c100: memref<?xi32, strided<[4], offset: ?>>, vector<5xi32>
+    vector.print %x1v3 : vector<5xi32>
+    %x2v3 = vector.transfer_read %x2[%i0], %c100: memref<?xi32, strided<[4], offset: ?>>, vector<5xi32>
+    vector.print %x2v3 : vector<5xi32>
+    %y0v3 = vector.transfer_read %y0[%i0], %c100: memref<?xi32, strided<[4], offset: ?>>, vector<5xi32>
+    vector.print %y0v3 : vector<5xi32>
+    %y1v3 = vector.transfer_read %y1[%i0], %c100: memref<?xi32>, vector<5xi32>
+    vector.print %y1v3 : vector<5xi32>
 
     // Release the buffers.
     memref.dealloc %xy : memref<?xi32>

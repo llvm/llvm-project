@@ -88,7 +88,7 @@ mlir::Value getAssumedCharAllocatableOrPointerLen(
 
 /// Retrieve the address of a type descriptor from its derived type spec.
 mlir::Value
-getTypeDescAddr(fir::FirOpBuilder &builder, mlir::Location loc,
+getTypeDescAddr(AbstractConverter &converter, mlir::Location loc,
                 const Fortran::semantics::DerivedTypeSpec &typeSpec);
 
 } // namespace lower

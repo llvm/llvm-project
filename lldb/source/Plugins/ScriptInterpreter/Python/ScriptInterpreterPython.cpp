@@ -412,8 +412,6 @@ ScriptInterpreterPythonImpl::ScriptInterpreterPythonImpl(Debugger &debugger)
       m_active_io_handler(eIOHandlerNone), m_session_is_active(false),
       m_pty_secondary_is_open(false), m_valid_session(true), m_lock_count(0),
       m_command_thread_state(nullptr) {
-  m_scripted_process_interface_up =
-      std::make_unique<ScriptedProcessPythonInterface>(*this);
   m_scripted_platform_interface_up =
       std::make_unique<ScriptedPlatformPythonInterface>(*this);
 
@@ -443,7 +441,7 @@ ScriptInterpreterPythonImpl::ScriptInterpreterPythonImpl(Debugger &debugger)
   // do their task
   run_string.Clear();
   run_string.Printf(
-      "run_one_line (%s, 'import lldb.formatters, lldb.formatters.cpp, pydoc')",
+      "run_one_line (%s, 'import lldb.formatters, lldb.formatters.cpp')",
       m_dictionary_name.c_str());
   PyRun_SimpleString(run_string.GetData());
   run_string.Clear();
@@ -456,7 +454,7 @@ ScriptInterpreterPythonImpl::ScriptInterpreterPythonImpl(Debugger &debugger)
   run_string.Clear();
 
   run_string.Printf("run_one_line (%s, 'lldb.debugger_unique_id = %" PRIu64
-                    "; pydoc.pager = pydoc.plainpager')",
+                    "')",
                     m_dictionary_name.c_str(), m_debugger.GetID());
   PyRun_SimpleString(run_string.GetData());
 }
@@ -1484,6 +1482,11 @@ lldb::ValueObjectListSP ScriptInterpreterPythonImpl::GetRecognizedArguments(
   return ValueObjectListSP();
 }
 
+ScriptedProcessInterfaceUP
+ScriptInterpreterPythonImpl::CreateScriptedProcessInterface() {
+  return std::make_unique<ScriptedProcessPythonInterface>(*this);
+}
+
 StructuredData::GenericSP
 ScriptInterpreterPythonImpl::OSPlugin_CreatePluginObject(
     const char *class_name, lldb::ProcessSP process_sp) {
@@ -1946,8 +1949,11 @@ ScriptInterpreterPythonImpl::CreateScriptCommandObject(const char *class_name) {
   PythonObject ret_val = LLDBSwigPythonCreateCommandObject(
       class_name, m_dictionary_name.c_str(), debugger_sp);
 
-  return StructuredData::GenericSP(
-      new StructuredPythonObject(std::move(ret_val)));
+  if (ret_val.IsValid())
+    return StructuredData::GenericSP(
+        new StructuredPythonObject(std::move(ret_val)));
+  else
+    return {};
 }
 
 bool ScriptInterpreterPythonImpl::GenerateTypeScriptFunction(

@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/string/strnlen.h"
-#include "utils/UnitTest/Test.h"
+#include "test/UnitTest/Test.h"
 #include <stddef.h>
 
 TEST(LlvmLibcStrNLenTest, EmptyString) {

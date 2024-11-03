@@ -19,20 +19,6 @@
 #include "llvm/ADT/StringRef.h"
 #include <string>
 
-namespace fir {
-
-/// Returns a name suitable to define mlir functions for Fortran intrinsic
-/// Procedure. These names are guaranteed to not conflict with user defined
-/// procedures. This is needed to implement Fortran generic intrinsics as
-/// several mlir functions specialized for the argument types.
-/// The result is guaranteed to be distinct for different mlir::FunctionType
-/// arguments. The mangling pattern is:
-///    fir.<generic name>.<result type>.<arg type>...
-/// e.g ACOS(COMPLEX(4)) is mangled as fir.acos.z4.z4
-std::string mangleIntrinsicProcedure(llvm::StringRef genericName,
-                                     mlir::FunctionType);
-} // namespace fir
-
 namespace Fortran {
 namespace common {
 template <typename>

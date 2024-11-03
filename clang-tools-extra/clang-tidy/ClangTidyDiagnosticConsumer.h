@@ -11,6 +11,7 @@
 
 #include "ClangTidyOptions.h"
 #include "ClangTidyProfiling.h"
+#include "FileExtensionsSet.h"
 #include "NoLintDirectiveHandler.h"
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Tooling/Core/Diagnostic.h"
@@ -160,6 +161,14 @@ public:
   /// \c CurrentFile.
   ClangTidyOptions getOptionsForFile(StringRef File) const;
 
+  const FileExtensionsSet &getHeaderFileExtensions() const {
+    return HeaderFileExtensions;
+  }
+
+  const FileExtensionsSet &getImplementationFileExtensions() const {
+    return ImplementationFileExtensions;
+  }
+
   /// Returns \c ClangTidyStats containing issued and ignored diagnostic
   /// counters.
   const ClangTidyStats &getStats() const { return Stats; }
@@ -220,6 +229,9 @@ private:
 
   std::unique_ptr<CachedGlobList> CheckFilter;
   std::unique_ptr<CachedGlobList> WarningAsErrorFilter;
+
+  FileExtensionsSet HeaderFileExtensions;
+  FileExtensionsSet ImplementationFileExtensions;
 
   LangOptions LangOpts;
 

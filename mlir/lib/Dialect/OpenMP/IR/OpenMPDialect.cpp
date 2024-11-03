@@ -24,6 +24,7 @@
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Frontend/OpenMP/OMPConstants.h"
 #include <cstddef>
+#include <optional>
 
 #include "mlir/Dialect/OpenMP/OpenMPOpsDialect.cpp.inc"
 #include "mlir/Dialect/OpenMP/OpenMPOpsEnums.cpp.inc"
@@ -446,7 +447,7 @@ static LogicalResult verifyReductionVarList(Operation *op,
     if (!accumulators.insert(accum).second)
       return op->emitOpError() << "accumulator variable used more than once";
 
-    Type varType = accum.getType().cast<PointerLikeType>();
+    Type varType = accum.getType();
     auto symbolRef = std::get<1>(args).cast<SymbolRefAttr>();
     auto decl =
         SymbolTable::lookupNearestSymbolFrom<ReductionDeclareOp>(op, symbolRef);
@@ -459,6 +460,69 @@ static LogicalResult verifyReductionVarList(Operation *op,
              << "expected accumulator (" << varType
              << ") to be the same type as reduction declaration ("
              << decl.getAccumulatorType() << ")";
+  }
+
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// Parser, printer and verifier for DependVarList
+//===----------------------------------------------------------------------===//
+
+/// depend-entry-list ::= depend-entry
+///                     | depend-entry-list `,` depend-entry
+/// depend-entry ::= depend-kind `->` ssa-id `:` type
+static ParseResult
+parseDependVarList(OpAsmParser &parser,
+                   SmallVectorImpl<OpAsmParser::UnresolvedOperand> &operands,
+                   SmallVectorImpl<Type> &types, ArrayAttr &dependsArray) {
+  SmallVector<ClauseTaskDependAttr> dependVec;
+  if (failed(parser.parseCommaSeparatedList([&]() {
+        StringRef keyword;
+        if (parser.parseKeyword(&keyword) || parser.parseArrow() ||
+            parser.parseOperand(operands.emplace_back()) ||
+            parser.parseColonType(types.emplace_back()))
+          return failure();
+        if (std::optional<ClauseTaskDepend> keywordDepend =
+                (symbolizeClauseTaskDepend(keyword)))
+          dependVec.emplace_back(
+              ClauseTaskDependAttr::get(parser.getContext(), *keywordDepend));
+        else
+          return failure();
+        return success();
+      })))
+    return failure();
+  SmallVector<Attribute> depends(dependVec.begin(), dependVec.end());
+  dependsArray = ArrayAttr::get(parser.getContext(), depends);
+  return success();
+}
+
+/// Print Depend clause
+static void printDependVarList(OpAsmPrinter &p, Operation *op,
+                               OperandRange dependVars, TypeRange dependTypes,
+                               std::optional<ArrayAttr> depends) {
+
+  for (unsigned i = 0, e = depends->size(); i < e; ++i) {
+    if (i != 0)
+      p << ", ";
+    p << stringifyClauseTaskDepend(
+             (*depends)[i].cast<mlir::omp::ClauseTaskDependAttr>().getValue())
+      << " -> " << dependVars[i] << " : " << dependTypes[i];
+  }
+}
+
+/// Verifies Depend clause
+static LogicalResult verifyDependVarList(Operation *op,
+                                         std::optional<ArrayAttr> depends,
+                                         OperandRange dependVars) {
+  if (!dependVars.empty()) {
+    if (!depends || depends->size() != dependVars.size())
+      return op->emitOpError() << "expected as many depend values"
+                                  " as depend variables";
+  } else {
+    if (depends)
+      return op->emitOpError() << "unexpected depend values";
+    return success();
   }
 
   return success();
@@ -932,7 +996,8 @@ LogicalResult ReductionDeclareOp::verifyRegions() {
                             "arguments of the same type";
   auto ptrType = atomicReductionEntryBlock.getArgumentTypes()[0]
                      .dyn_cast<PointerLikeType>();
-  if (!ptrType || ptrType.getElementType() != getType())
+  if (!ptrType ||
+      (ptrType.getElementType() && ptrType.getElementType() != getType()))
     return emitOpError() << "expects atomic reduction region arguments to "
                             "be accumulators containing the reduction type";
   return success();
@@ -957,7 +1022,12 @@ LogicalResult ReductionOp::verify() {
 // TaskOp
 //===----------------------------------------------------------------------===//
 LogicalResult TaskOp::verify() {
-  return verifyReductionVarList(*this, getInReductions(), getInReductionVars());
+  LogicalResult verifyDependVars =
+      verifyDependVarList(*this, getDepends(), getDependVars());
+  return failed(verifyDependVars)
+             ? verifyDependVars
+             : verifyReductionVarList(*this, getInReductions(),
+                                      getInReductionVars());
 }
 
 //===----------------------------------------------------------------------===//
@@ -1115,8 +1185,9 @@ LogicalResult AtomicWriteOp::verify() {
           "memory-order must not be acq_rel or acquire for atomic writes");
     }
   }
-  if (getAddress().getType().cast<PointerLikeType>().getElementType() !=
-      getValue().getType())
+  Type elementType =
+      getAddress().getType().cast<PointerLikeType>().getElementType();
+  if (elementType && elementType != getValue().getType())
     return emitError("address must dereference to value type");
   return verifySynchronizationHint(*this, getHintVal());
 }
@@ -1166,8 +1237,8 @@ LogicalResult AtomicUpdateOp::verify() {
   if (getRegion().getNumArguments() != 1)
     return emitError("the region must accept exactly one argument");
 
-  if (getX().getType().cast<PointerLikeType>().getElementType() !=
-      getRegion().getArgument(0).getType()) {
+  Type elementType = getX().getType().cast<PointerLikeType>().getElementType();
+  if (elementType && elementType != getRegion().getArgument(0).getType()) {
     return emitError("the type of the operand must be a pointer type whose "
                      "element type is the same as that of the region argument");
   }

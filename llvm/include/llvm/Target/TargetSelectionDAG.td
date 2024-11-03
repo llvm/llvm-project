@@ -890,6 +890,12 @@ class PatFrags<dag ops, list<dag> frags, code pred = [{}],
   ValueType ScalarMemoryVT = ?;
 }
 
+// Patterns and PatFrags can also subclass GISelFlags to set flags that affect
+// how GlobalISel behaves when matching them.
+class GISelFlags {
+  bit GIIgnoreCopies = ?;
+}
+
 // PatFrag - A version of PatFrags matching only a single fragment.
 class PatFrag<dag ops, dag frag, code pred = [{}],
               SDNodeXForm xform = NOOP_SDNodeXForm>

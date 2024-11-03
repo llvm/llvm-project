@@ -559,7 +559,7 @@ Status GDBRemoteCommunicationServerPlatform::LaunchProcess() {
 }
 
 void GDBRemoteCommunicationServerPlatform::SetPortMap(PortMap &&port_map) {
-  m_port_map = port_map;
+  m_port_map = std::move(port_map);
 }
 
 const FileSpec &GDBRemoteCommunicationServerPlatform::GetDomainSocketDir() {

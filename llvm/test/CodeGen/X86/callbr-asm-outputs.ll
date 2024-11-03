@@ -38,35 +38,45 @@ define i32 @test2(i32 %out1, i32 %out2) nounwind {
 ; CHECK-NEXT:    pushl %esi
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %edi
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; CHECK-NEXT:    movl $-1, %eax
 ; CHECK-NEXT:    cmpl %edi, %esi
-; CHECK-NEXT:    jge .LBB1_2
+; CHECK-NEXT:    jge .LBB1_3
 ; CHECK-NEXT:  # %bb.1: # %if.then
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    testl %esi, %esi
 ; CHECK-NEXT:    testl %edi, %esi
-; CHECK-NEXT:    jne .LBB1_4
+; CHECK-NEXT:    jne .LBB1_2
 ; CHECK-NEXT:    #NO_APP
-; CHECK-NEXT:    jmp .LBB1_3
-; CHECK-NEXT:  .LBB1_2: # %if.else
+; CHECK-NEXT:    jmp .LBB1_4
+; CHECK-NEXT:  .LBB1_2: # Block address taken
+; CHECK-NEXT:    # %if.then.label_true_crit_edge
+; CHECK-NEXT:    # Label of block must be emitted
+; CHECK-NEXT:    jmp .LBB1_8
+; CHECK-NEXT:  .LBB1_3: # %if.else
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    testl %esi, %edi
 ; CHECK-NEXT:    testl %esi, %edi
-; CHECK-NEXT:    jne .LBB1_5
+; CHECK-NEXT:    jne .LBB1_9
 ; CHECK-NEXT:    #NO_APP
-; CHECK-NEXT:  .LBB1_3:
+; CHECK-NEXT:  .LBB1_4:
 ; CHECK-NEXT:    movl %esi, %eax
 ; CHECK-NEXT:    addl %edi, %eax
-; CHECK-NEXT:  .LBB1_5: # Block address taken
-; CHECK-NEXT:    # %return
-; CHECK-NEXT:    # Label of block must be emitted
+; CHECK-NEXT:  .LBB1_5: # %return
 ; CHECK-NEXT:    popl %esi
 ; CHECK-NEXT:    popl %edi
 ; CHECK-NEXT:    retl
-; CHECK-NEXT:  .LBB1_4: # Block address taken
-; CHECK-NEXT:    # %label_true
+; CHECK-NEXT:  .LBB1_7: # Block address taken
+; CHECK-NEXT:    # %if.else.label_true_crit_edge
 ; CHECK-NEXT:    # Label of block must be emitted
+; CHECK-NEXT:  .LBB1_8: # %label_true
 ; CHECK-NEXT:    movl $-2, %eax
+; CHECK-NEXT:    jmp .LBB1_5
+; CHECK-NEXT:  .LBB1_9: # Block address taken
+; CHECK-NEXT:    # %if.else.return_crit_edge
+; CHECK-NEXT:    # Label of block must be emitted
+; CHECK-NEXT:  .LBB1_6: # Block address taken
+; CHECK-NEXT:    # %if.then.return_crit_edge
+; CHECK-NEXT:    # Label of block must be emitted
+; CHECK-NEXT:    movl $-1, %eax
 ; CHECK-NEXT:    jmp .LBB1_5
 entry:
   %cmp = icmp slt i32 %out1, %out2
@@ -109,23 +119,25 @@ define i32 @test3(i1 %cmp) nounwind {
 ; CHECK-NEXT:    #NO_APP
 ; CHECK-NEXT:  # %bb.2:
 ; CHECK-NEXT:    movl %edi, %eax
-; CHECK-NEXT:    jmp .LBB2_5
+; CHECK-NEXT:    jmp .LBB2_4
 ; CHECK-NEXT:  .LBB2_3: # %false
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    .short %eax
 ; CHECK-NEXT:    .short %edx
 ; CHECK-NEXT:    #NO_APP
-; CHECK-NEXT:  # %bb.4:
 ; CHECK-NEXT:    movl %edx, %eax
-; CHECK-NEXT:  .LBB2_5: # %asm.fallthrough
+; CHECK-NEXT:  .LBB2_4: # %asm.fallthrough
 ; CHECK-NEXT:    popl %esi
 ; CHECK-NEXT:    popl %edi
 ; CHECK-NEXT:    retl
+; CHECK-NEXT:  .LBB2_5: # Block address taken
+; CHECK-NEXT:    # %true.indirect_crit_edge
+; CHECK-NEXT:    # Label of block must be emitted
 ; CHECK-NEXT:  .LBB2_6: # Block address taken
-; CHECK-NEXT:    # %indirect
+; CHECK-NEXT:    # %false.indirect_crit_edge
 ; CHECK-NEXT:    # Label of block must be emitted
 ; CHECK-NEXT:    movl $42, %eax
-; CHECK-NEXT:    jmp .LBB2_5
+; CHECK-NEXT:    jmp .LBB2_4
 entry:
   br i1 %cmp, label %true, label %false
 
@@ -148,31 +160,37 @@ indirect:
 define i32 @test4(i32 %out1, i32 %out2) {
 ; CHECK-LABEL: test4:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    movl $-1, %eax
-; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    #APP
-; CHECK-NEXT:    testl %ecx, %ecx
-; CHECK-NEXT:    testl %edx, %ecx
+; CHECK-NEXT:    testl %eax, %eax
+; CHECK-NEXT:    testl %ecx, %eax
 ; CHECK-NEXT:    jne .LBB3_3
 ; CHECK-NEXT:    #NO_APP
 ; CHECK-NEXT:  # %bb.1: # %asm.fallthrough
 ; CHECK-NEXT:    #APP
-; CHECK-NEXT:    testl %ecx, %edx
-; CHECK-NEXT:    testl %ecx, %edx
-; CHECK-NEXT:    jne .LBB3_4
+; CHECK-NEXT:    testl %eax, %ecx
+; CHECK-NEXT:    testl %eax, %ecx
+; CHECK-NEXT:    jne .LBB3_5
 ; CHECK-NEXT:    #NO_APP
 ; CHECK-NEXT:  # %bb.2: # %asm.fallthrough2
-; CHECK-NEXT:    addl %edx, %ecx
-; CHECK-NEXT:    movl %ecx, %eax
-; CHECK-NEXT:  .LBB3_4: # Block address taken
-; CHECK-NEXT:    # %return
-; CHECK-NEXT:    # Label of block must be emitted
+; CHECK-NEXT:    addl %ecx, %eax
 ; CHECK-NEXT:    retl
+; CHECK-NEXT:  .LBB3_4: # Block address taken
+; CHECK-NEXT:    # %entry.return_crit_edge
+; CHECK-NEXT:    # Label of block must be emitted
+; CHECK-NEXT:  .LBB3_5: # Block address taken
+; CHECK-NEXT:    # %asm.fallthrough.return_crit_edge
+; CHECK-NEXT:    # Label of block must be emitted
+; CHECK-NEXT:    movl $-1, %eax
+; CHECK-NEXT:    retl
+; CHECK-NEXT:  .LBB3_6: # Block address taken
+; CHECK-NEXT:    # %asm.fallthrough.label_true_crit_edge
+; CHECK-NEXT:    # Label of block must be emitted
 ; CHECK-NEXT:  .LBB3_3: # Block address taken
-; CHECK-NEXT:    # %label_true
+; CHECK-NEXT:    # %entry.label_true_crit_edge
 ; CHECK-NEXT:    # Label of block must be emitted
 ; CHECK-NEXT:    movl $-2, %eax
-; CHECK-NEXT:    jmp .LBB3_4
+; CHECK-NEXT:    retl
 entry:
   %0 = callbr { i32, i32 } asm sideeffect "testl $0, $0; testl $1, $2; jne ${3:l}", "=r,=r,r,!i,!i"(i32 %out1)
           to label %asm.fallthrough [label %label_true, label %return]
@@ -206,7 +224,10 @@ define dso_local void @test5() {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    #NO_APP
-; CHECK-NEXT:  .LBB4_1: # Block address taken
+; CHECK-NEXT:  # %bb.1:
+; CHECK-NEXT:    retl
+; CHECK-NEXT:  .LBB4_2: # Block address taken
+; CHECK-NEXT:    # %._crit_edge
 ; CHECK-NEXT:    # Label of block must be emitted
 ; CHECK-NEXT:    retl
   %1 = call i32 @llvm.read_register.i32(metadata !3)

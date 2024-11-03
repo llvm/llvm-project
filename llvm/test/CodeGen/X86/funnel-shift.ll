@@ -1017,10 +1017,8 @@ define void @PR45265(i32 %0, %struct.S* nocapture readonly %1) nounwind {
 ; X64-AVX2-NEXT:    movq (%rsi,%rcx,4), %rcx
 ; X64-AVX2-NEXT:    shrdq $40, %rdi, %rcx
 ; X64-AVX2-NEXT:    cmpq %rax, %rcx
-; X64-AVX2-NEXT:    jne .LBB46_1
-; X64-AVX2-NEXT:  # %bb.2:
-; X64-AVX2-NEXT:    jmp _Z3foov # TAILCALL
-; X64-AVX2-NEXT:  .LBB46_1:
+; X64-AVX2-NEXT:    je _Z3foov # TAILCALL
+; X64-AVX2-NEXT:  # %bb.1:
 ; X64-AVX2-NEXT:    retq
   %3 = sext i32 %0 to i64
   %4 = getelementptr inbounds %struct.S, %struct.S* %1, i64 %3

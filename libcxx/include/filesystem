@@ -159,6 +159,9 @@
     void swap(path& lhs, path& rhs) noexcept;
     size_t hash_value(const path& p) noexcept;
 
+    // [fs.path.hash], hash support
+    template<> struct hash<filesystem::path>;
+
     template <class Source>
       path u8path(const Source& source);
     template <class InputIterator>

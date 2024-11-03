@@ -75,7 +75,6 @@ llvm::Error loadHSA() {
 #elif __has_include("hsa.h")
 #include "hsa.h"
 #endif
-#include "hsa/hsa.h"
 #endif
 
 llvm::Error loadHSA() { return llvm::Error::success(); }

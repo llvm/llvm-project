@@ -108,9 +108,15 @@ function(add_gen_header target_name)
   set(ENTRYPOINT_NAME_LIST_ARG ${TARGET_ENTRYPOINT_NAME_LIST})
   list(TRANSFORM ENTRYPOINT_NAME_LIST_ARG PREPEND "--e=")
 
+  if(LIBC_HDRGEN_EXE)
+    set(hdrgen_exe ${LIBC_HDRGEN_EXE})
+  else()
+    set(hdrgen_exe ${LIBC_TABLEGEN_EXE})
+    set(hdrgen_deps "${LIBC_TABLEGEN_EXE};${LIBC_TABLEGEN_TARGET}")
+  endif()
   add_custom_command(
     OUTPUT ${out_file}
-    COMMAND ${LIBC_TABLEGEN_EXE} -o ${out_file} --header ${ADD_GEN_HDR_GEN_HDR}
+    COMMAND ${hdrgen_exe} -o ${out_file} --header ${ADD_GEN_HDR_GEN_HDR}
             --def ${in_file} ${replacement_params} -I ${LIBC_SOURCE_DIR}
            ${ENTRYPOINT_NAME_LIST_ARG}
            ${LIBC_SOURCE_DIR}/config/${LIBC_TARGET_OS}/api.td
@@ -118,7 +124,7 @@ function(add_gen_header target_name)
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
     DEPENDS ${in_file} ${fq_data_files} ${td_includes}
             ${LIBC_SOURCE_DIR}/config/${LIBC_TARGET_OS}/api.td
-            ${LIBC_TABLEGEN_EXE} ${LIBC_TABLEGEN_TARGET}
+            ${hdrgen_deps}
   )
 
   if(ADD_GEN_HDR_DEPENDS)

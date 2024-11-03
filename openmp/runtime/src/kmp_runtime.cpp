@@ -5445,21 +5445,10 @@ __kmp_allocate_team(kmp_root_t *root, int new_nproc, int max_nproc,
         __kmp_initialize_info(team->t.t_threads[f], team, f,
                               __kmp_gtid_from_tid(f, team));
 
-      if (level) { // set th_task_state for new threads in nested hot team
-        // __kmp_initialize_info() no longer zeroes th_task_state, so we should
-        // only need to set the th_task_state for the new threads. th_task_state
-        // for primary thread will not be accurate until after this in
-        // __kmp_fork_call(), so we look to the primary thread's memo_stack to
-        // get the correct value.
-        for (f = old_nproc; f < team->t.t_nproc; ++f)
-          team->t.t_threads[f]->th.th_task_state =
-              team->t.t_threads[0]->th.th_task_state_memo_stack[level];
-      } else { // set th_task_state for new threads in non-nested hot team
-        // copy primary thread's state
-        kmp_uint8 old_state = team->t.t_threads[0]->th.th_task_state;
-        for (f = old_nproc; f < team->t.t_nproc; ++f)
-          team->t.t_threads[f]->th.th_task_state = old_state;
-      }
+      // set th_task_state for new threads in hot team with older thread's state
+      kmp_uint8 old_state = team->t.t_threads[old_nproc - 1]->th.th_task_state;
+      for (f = old_nproc; f < team->t.t_nproc; ++f)
+        team->t.t_threads[f]->th.th_task_state = old_state;
 
 #ifdef KMP_DEBUG
       for (f = 0; f < team->t.t_nproc; ++f) {

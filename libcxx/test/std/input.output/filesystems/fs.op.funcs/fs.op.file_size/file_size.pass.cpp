@@ -21,15 +21,13 @@
 #include <type_traits>
 #include <cassert>
 
+#include "assert_macros.h"
 #include "test_macros.h"
-#include "rapid-cxx-test.h"
 #include "filesystem_test_helper.h"
 
 using namespace fs;
 
-TEST_SUITE(file_size_test_suite)
-
-TEST_CASE(signature_test)
+static void signature_test()
 {
     const path p; ((void)p);
     std::error_code ec; ((void)ec);
@@ -39,33 +37,33 @@ TEST_CASE(signature_test)
     ASSERT_NOEXCEPT(file_size(p, ec));
 }
 
-TEST_CASE(file_size_empty_test)
+static void file_size_empty_test()
 {
     static_test_env static_env;
     const path p = static_env.EmptyFile;
-    TEST_CHECK(file_size(p) == 0);
+    assert(file_size(p) == 0);
     std::error_code ec;
-    TEST_CHECK(file_size(p, ec) == 0);
+    assert(file_size(p, ec) == 0);
 }
 
-TEST_CASE(file_size_non_empty)
+static void file_size_non_empty()
 {
     scoped_test_env env;
     const path p = env.create_file("file", 42);
-    TEST_CHECK(file_size(p) == 42);
+    assert(file_size(p) == 42);
     std::error_code ec;
-    TEST_CHECK(file_size(p, ec) == 42);
+    assert(file_size(p, ec) == 42);
 }
 
-TEST_CASE(symlink_test_case)
+static void symlink_test_case()
 {
     static_test_env static_env;
     const path p = static_env.File;
     const path p2 = static_env.SymlinkToFile;
-    TEST_CHECK(file_size(p) == file_size(p2));
+    assert(file_size(p) == file_size(p2));
 }
 
-TEST_CASE(file_size_error_cases)
+static void file_size_error_cases()
 {
   static_test_env static_env;
   struct {
@@ -80,12 +78,19 @@ TEST_CASE(file_size_error_cases)
     const uintmax_t expect = static_cast<uintmax_t>(-1);
     for (auto& TC : TestCases) {
       std::error_code ec = GetTestEC();
-      TEST_CHECK(file_size(TC.p, ec) == expect);
-      TEST_CHECK(ErrorIs(ec, TC.expected_err));
+      assert(file_size(TC.p, ec) == expect);
+      assert(ErrorIs(ec, TC.expected_err));
 
       ExceptionChecker Checker(TC.p, TC.expected_err, "file_size");
-      TEST_CHECK_THROW_RESULT(filesystem_error, Checker, file_size(TC.p));
+      TEST_VALIDATE_EXCEPTION(filesystem_error, Checker, file_size(TC.p));
     }
 }
 
-TEST_SUITE_END()
+int main(int, char**) {
+    signature_test();
+    file_size_empty_test();
+    file_size_non_empty();
+    symlink_test_case();
+    file_size_error_cases();
+    return 0;
+}

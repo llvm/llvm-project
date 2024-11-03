@@ -9,7 +9,7 @@
 #include "src/__support/CPP/optional.h"
 #include "src/__support/UInt.h"
 
-#include "utils/UnitTest/Test.h"
+#include "test/UnitTest/Test.h"
 
 // We want to test __llvm_libc::cpp::UInt<128> explicitly. So, for convenience,
 // we use a sugar which does not conflict with the UInt128 type which can

@@ -226,16 +226,23 @@ bool SIOptimizeExecMaskingPreRA::optimizeVcndVcmpPair(MachineBasicBlock &MBB) {
       auto DefSegment = SelLI->FindSegmentContaining(SelIdx.getRegSlot());
       assert(DefSegment != SelLI->end() &&
              "No live interval segment covering definition?");
-      for (auto I = DefSegment; I != SelLI->end() && I->start <= AndIdx; ++I) {
+      for (auto I = DefSegment; I != SelLI->end(); ++I) {
         SlotIndex Start = I->start < SelIdx.getRegSlot() ?
                           SelIdx.getRegSlot() : I->start;
         SlotIndex End = I->end < AndIdx.getRegSlot() || I->end.isBlock() ?
                         I->end : AndIdx.getRegSlot();
-        Dst.addSegment(LiveRange::Segment(Start, End, VNI));
+        if (Start < End)
+          Dst.addSegment(LiveRange::Segment(Start, End, VNI));
       }
-      // If SelLI does not cover AndIdx (because Cmp killed Sel) then extend.
       if (!SelLI->getSegmentContaining(AndIdx.getRegSlot()))
-        Dst.addSegment(LiveRange::Segment(CmpIdx.getRegSlot(), AndIdx.getRegSlot(), VNI));
+        // If SelLI does not cover AndIdx (because Cmp killed Sel) then extend.
+        Dst.addSegment(
+            LiveRange::Segment(CmpIdx.getRegSlot(), AndIdx.getRegSlot(), VNI));
+      else if (!Dst.liveAt(AndIdx))
+        // This is live-in, so extend segment to the beginning of the block.
+        Dst.addSegment(LiveRange::Segment(
+            LIS->getSlotIndexes()->getMBBStartIdx(Andn2->getParent()),
+            AndIdx.getRegSlot(), VNI));
     };
 
     LiveInterval &CCLI = LIS->getInterval(CCReg);

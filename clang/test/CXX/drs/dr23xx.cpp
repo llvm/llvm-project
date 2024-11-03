@@ -169,6 +169,8 @@ void g() {
 } //namespace dr2303
 #endif
 
+// dr2385: na
+
 namespace dr2394 { // dr2394: 15
 
 struct A {};
@@ -178,4 +180,20 @@ const A a;
 struct B { const A a; };
 B b;
 
+}
+
+namespace dr2396 { // dr2396: no
+  struct A {
+    struct B;
+    operator B B::*();
+  };
+  struct B;
+
+  // FIXME: per P1787 "Calling a conversion function" example, all of the
+  // examples below are well-formed, with B resolving to A::B, but currently
+  // it's been resolved to dr2396::B. 
+
+  // void f(A a) { a.operator B B::*(); }            
+  // void g(A a) { a.operator decltype(B()) B::*(); }
+  // void g2(A a) { a.operator B decltype(B())::*(); }
 }

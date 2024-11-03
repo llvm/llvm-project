@@ -108,7 +108,8 @@ static BoolValue &unpackValue(BoolValue &V, Environment &Env) {
 }
 
 // Unpacks the value (if any) associated with `E` and updates `E` to the new
-// value, if any unpacking occured.
+// value, if any unpacking occured. Also, does the lvalue-to-rvalue conversion,
+// by skipping past the reference.
 static Value *maybeUnpackLValueExpr(const Expr &E, Environment &Env) {
   // FIXME: this is too flexible: it _allows_ a reference, while it should
   // _require_ one, since lvalues should always be wrapped in `ReferenceValue`.
@@ -146,7 +147,9 @@ public:
       if (LHSLoc == nullptr)
         break;
 
-      auto *RHSVal = Env.getValue(*RHS, SkipPast::Reference);
+      // No skipping should be necessary, because any lvalues should have
+      // already been stripped off in evaluating the LValueToRValue cast.
+      auto *RHSVal = Env.getValue(*RHS, SkipPast::None);
       if (RHSVal == nullptr)
         break;
 
@@ -196,9 +199,17 @@ public:
     if (DeclLoc == nullptr)
       return;
 
-    if (VD->getType()->isReferenceType()) {
-      assert(isa_and_nonnull<ReferenceValue>(Env.getValue((*DeclLoc))) &&
-             "reference-typed declarations map to `ReferenceValue`s");
+    // If the value is already an lvalue, don't double-wrap it.
+    if (isa_and_nonnull<ReferenceValue>(Env.getValue(*DeclLoc))) {
+      // We only expect to encounter a `ReferenceValue` for a reference type
+      // (always) or for `BindingDecl` (sometimes). For the latter, we can't
+      // rely on type, because their type does not indicate whether they are a
+      // reference type. The assert is not strictly necessary, since we don't
+      // depend on its truth to proceed. But, it verifies our assumptions,
+      // which, if violated, probably indicate a problem elsewhere.
+      assert((VD->getType()->isReferenceType() || isa<BindingDecl>(VD)) &&
+             "Only reference-typed declarations or `BindingDecl`s should map "
+             "to `ReferenceValue`s");
       Env.setStorageLocation(*S, *DeclLoc);
     } else {
       auto &Loc = Env.createStorageLocation(*S);
@@ -238,6 +249,7 @@ public:
     if (D.getType()->isReferenceType()) {
       // Initializing a reference variable - do not create a reference to
       // reference.
+      // FIXME: reuse the ReferenceValue instead of creating a new one.
       if (auto *InitExprLoc =
               Env.getStorageLocation(*InitExpr, SkipPast::Reference)) {
         auto &Val =
@@ -264,6 +276,9 @@ public:
         Env.setValue(Loc, *Val);
     }
 
+    // `DecompositionDecl` must be handled after we've interpreted the loc
+    // itself, because the binding expression refers back to the
+    // `DecompositionDecl` (even though it has no written name).
     if (const auto *Decomp = dyn_cast<DecompositionDecl>(&D)) {
       // If VarDecl is a DecompositionDecl, evaluate each of its bindings. This
       // needs to be evaluated after initializing the values in the storage for
@@ -288,7 +303,8 @@ public:
           // types. The holding var declarations appear *after* this statement,
           // so we have to create a location for them here to share with `B`. We
           // don't visit the binding, because we know it will be a DeclRefExpr
-          // to `VD`.
+          // to `VD`. Note that, by construction of the AST, `VD` will always be
+          // a reference -- either lvalue or rvalue.
           auto &VDLoc = Env.createStorageLocation(*VD);
           Env.setStorageLocation(*VD, VDLoc);
           Env.setStorageLocation(*B, VDLoc);
@@ -320,7 +336,8 @@ public:
 
     case CK_LValueToRValue: {
       // When an L-value is used as an R-value, it may result in sharing, so we
-      // need to unpack any nested `Top`s.
+      // need to unpack any nested `Top`s. We also need to strip off the
+      // `ReferenceValue` associated with the lvalue.
       auto *SubExprVal = maybeUnpackLValueExpr(*SubExpr, Env);
       if (SubExprVal == nullptr)
         break;

@@ -370,3 +370,152 @@ define <64 x float> @interleave_v32f32(<32 x float> %x, <32 x float> %y) {
   %a = shufflevector <32 x float> %x, <32 x float> %y, <64 x i32> <i32 0, i32 32, i32 1, i32 33, i32 2, i32 34, i32 3, i32 35, i32 4, i32 36, i32 5, i32 37, i32 6, i32 38, i32 7, i32 39, i32 8, i32 40, i32 9, i32 41, i32 10, i32 42, i32 11, i32 43, i32 12, i32 44, i32 13, i32 45, i32 14, i32 46, i32 15, i32 47, i32 16, i32 48, i32 17, i32 49, i32 18, i32 50, i32 19, i32 51, i32 20, i32 52, i32 21, i32 53, i32 22, i32 54, i32 23, i32 55, i32 24, i32 56, i32 25, i32 57, i32 26, i32 58, i32 27, i32 59, i32 28, i32 60, i32 29, i32 61, i32 30, i32 62, i32 31, i32 63>
   ret <64 x float> %a
 }
+
+define <4 x half> @unary_interleave_v4f16(<4 x half> %x) {
+; V128-LABEL: unary_interleave_v4f16:
+; V128:       # %bb.0:
+; V128-NEXT:    vsetivli zero, 2, e16, mf2, ta, ma
+; V128-NEXT:    vslidedown.vi v10, v8, 2
+; V128-NEXT:    vsetivli zero, 4, e16, mf4, ta, ma
+; V128-NEXT:    vwaddu.vv v9, v8, v10
+; V128-NEXT:    li a0, -1
+; V128-NEXT:    vwmaccu.vx v9, a0, v10
+; V128-NEXT:    vmv1r.v v8, v9
+; V128-NEXT:    ret
+;
+; V512-LABEL: unary_interleave_v4f16:
+; V512:       # %bb.0:
+; V512-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
+; V512-NEXT:    vslidedown.vi v10, v8, 2
+; V512-NEXT:    vsetivli zero, 4, e16, mf4, ta, ma
+; V512-NEXT:    vwaddu.vv v9, v8, v10
+; V512-NEXT:    li a0, -1
+; V512-NEXT:    vwmaccu.vx v9, a0, v10
+; V512-NEXT:    vmv1r.v v8, v9
+; V512-NEXT:    ret
+  %a = shufflevector <4 x half> %x, <4 x half> poison, <4 x i32> <i32 0, i32 2, i32 1, i32 3>
+  ret <4 x half> %a
+}
+
+define <4 x float> @unary_interleave_v4f32(<4 x float> %x) {
+; V128-LABEL: unary_interleave_v4f32:
+; V128:       # %bb.0:
+; V128-NEXT:    vsetivli zero, 2, e32, m1, ta, ma
+; V128-NEXT:    vslidedown.vi v10, v8, 2
+; V128-NEXT:    vsetivli zero, 4, e32, mf2, ta, ma
+; V128-NEXT:    vwaddu.vv v9, v8, v10
+; V128-NEXT:    li a0, -1
+; V128-NEXT:    vwmaccu.vx v9, a0, v10
+; V128-NEXT:    vmv1r.v v8, v9
+; V128-NEXT:    ret
+;
+; V512-LABEL: unary_interleave_v4f32:
+; V512:       # %bb.0:
+; V512-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
+; V512-NEXT:    vslidedown.vi v10, v8, 2
+; V512-NEXT:    vsetivli zero, 4, e32, mf2, ta, ma
+; V512-NEXT:    vwaddu.vv v9, v8, v10
+; V512-NEXT:    li a0, -1
+; V512-NEXT:    vwmaccu.vx v9, a0, v10
+; V512-NEXT:    vmv1r.v v8, v9
+; V512-NEXT:    ret
+  %a = shufflevector <4 x float> %x, <4 x float> poison, <4 x i32> <i32 0, i32 2, i32 1, i32 3>
+  ret <4 x float> %a
+}
+
+; FIXME: Is there better codegen we can do here?
+define <4 x double> @unary_interleave_v4f64(<4 x double> %x) {
+; RV32-V128-LABEL: unary_interleave_v4f64:
+; RV32-V128:       # %bb.0:
+; RV32-V128-NEXT:    lui a0, %hi(.LCPI13_0)
+; RV32-V128-NEXT:    addi a0, a0, %lo(.LCPI13_0)
+; RV32-V128-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
+; RV32-V128-NEXT:    vle16.v v12, (a0)
+; RV32-V128-NEXT:    vrgatherei16.vv v10, v8, v12
+; RV32-V128-NEXT:    vmv.v.v v8, v10
+; RV32-V128-NEXT:    ret
+;
+; RV64-V128-LABEL: unary_interleave_v4f64:
+; RV64-V128:       # %bb.0:
+; RV64-V128-NEXT:    lui a0, %hi(.LCPI13_0)
+; RV64-V128-NEXT:    addi a0, a0, %lo(.LCPI13_0)
+; RV64-V128-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
+; RV64-V128-NEXT:    vle64.v v12, (a0)
+; RV64-V128-NEXT:    vrgather.vv v10, v8, v12
+; RV64-V128-NEXT:    vmv.v.v v8, v10
+; RV64-V128-NEXT:    ret
+;
+; RV32-V512-LABEL: unary_interleave_v4f64:
+; RV32-V512:       # %bb.0:
+; RV32-V512-NEXT:    lui a0, %hi(.LCPI13_0)
+; RV32-V512-NEXT:    addi a0, a0, %lo(.LCPI13_0)
+; RV32-V512-NEXT:    vsetivli zero, 4, e64, m1, ta, ma
+; RV32-V512-NEXT:    vle16.v v10, (a0)
+; RV32-V512-NEXT:    vrgatherei16.vv v9, v8, v10
+; RV32-V512-NEXT:    vmv.v.v v8, v9
+; RV32-V512-NEXT:    ret
+;
+; RV64-V512-LABEL: unary_interleave_v4f64:
+; RV64-V512:       # %bb.0:
+; RV64-V512-NEXT:    lui a0, %hi(.LCPI13_0)
+; RV64-V512-NEXT:    addi a0, a0, %lo(.LCPI13_0)
+; RV64-V512-NEXT:    vsetivli zero, 4, e64, m1, ta, ma
+; RV64-V512-NEXT:    vle64.v v10, (a0)
+; RV64-V512-NEXT:    vrgather.vv v9, v8, v10
+; RV64-V512-NEXT:    vmv.v.v v8, v9
+; RV64-V512-NEXT:    ret
+  %a = shufflevector <4 x double> %x, <4 x double> poison, <4 x i32> <i32 0, i32 2, i32 1, i32 3>
+  ret <4 x double> %a
+}
+
+define <8 x half> @unary_interleave_v8f16(<8 x half> %x) {
+; V128-LABEL: unary_interleave_v8f16:
+; V128:       # %bb.0:
+; V128-NEXT:    vsetivli zero, 4, e16, m1, ta, ma
+; V128-NEXT:    vslidedown.vi v10, v8, 4
+; V128-NEXT:    vsetivli zero, 8, e16, mf2, ta, ma
+; V128-NEXT:    vwaddu.vv v9, v8, v10
+; V128-NEXT:    li a0, -1
+; V128-NEXT:    vwmaccu.vx v9, a0, v10
+; V128-NEXT:    vmv1r.v v8, v9
+; V128-NEXT:    ret
+;
+; V512-LABEL: unary_interleave_v8f16:
+; V512:       # %bb.0:
+; V512-NEXT:    vsetivli zero, 4, e16, mf4, ta, ma
+; V512-NEXT:    vslidedown.vi v10, v8, 4
+; V512-NEXT:    vsetivli zero, 8, e16, mf4, ta, ma
+; V512-NEXT:    vwaddu.vv v9, v8, v10
+; V512-NEXT:    li a0, -1
+; V512-NEXT:    vwmaccu.vx v9, a0, v10
+; V512-NEXT:    vmv1r.v v8, v9
+; V512-NEXT:    ret
+  %a = shufflevector <8 x half> %x, <8 x half> poison, <8 x i32> <i32 0, i32 4, i32 undef, i32 5, i32 2, i32 undef, i32 3, i32 7>
+  ret <8 x half> %a
+}
+
+define <8 x float> @unary_interleave_v8f32(<8 x float> %x) {
+; V128-LABEL: unary_interleave_v8f32:
+; V128:       # %bb.0:
+; V128-NEXT:    vsetivli zero, 4, e32, m2, ta, ma
+; V128-NEXT:    vslidedown.vi v12, v8, 4
+; V128-NEXT:    vsetivli zero, 8, e32, m1, ta, ma
+; V128-NEXT:    vwaddu.vv v10, v12, v8
+; V128-NEXT:    li a0, -1
+; V128-NEXT:    vwmaccu.vx v10, a0, v8
+; V128-NEXT:    vmv2r.v v8, v10
+; V128-NEXT:    ret
+;
+; V512-LABEL: unary_interleave_v8f32:
+; V512:       # %bb.0:
+; V512-NEXT:    vsetivli zero, 4, e32, mf2, ta, ma
+; V512-NEXT:    vslidedown.vi v10, v8, 4
+; V512-NEXT:    vsetivli zero, 8, e32, mf2, ta, ma
+; V512-NEXT:    vwaddu.vv v9, v10, v8
+; V512-NEXT:    li a0, -1
+; V512-NEXT:    vwmaccu.vx v9, a0, v8
+; V512-NEXT:    vmv1r.v v8, v9
+; V512-NEXT:    ret
+  %a = shufflevector <8 x float> %x, <8 x float> poison, <8 x i32> <i32 4, i32 0, i32 undef, i32 1, i32 6, i32 undef, i32 7, i32 3>
+  ret <8 x float> %a
+}

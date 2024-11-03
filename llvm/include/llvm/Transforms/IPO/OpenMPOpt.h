@@ -37,13 +37,25 @@ KernelSet getDeviceKernels(Module &M);
 /// OpenMP optimizations pass.
 class OpenMPOptPass : public PassInfoMixin<OpenMPOptPass> {
 public:
+  OpenMPOptPass() : LTOPhase(ThinOrFullLTOPhase::None) {}
+  OpenMPOptPass(ThinOrFullLTOPhase LTOPhase) : LTOPhase(LTOPhase) {}
+
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
+
+private:
+  const ThinOrFullLTOPhase LTOPhase = ThinOrFullLTOPhase::None;
 };
 
 class OpenMPOptCGSCCPass : public PassInfoMixin<OpenMPOptCGSCCPass> {
 public:
+  OpenMPOptCGSCCPass() : LTOPhase(ThinOrFullLTOPhase::None) {}
+  OpenMPOptCGSCCPass(ThinOrFullLTOPhase LTOPhase) : LTOPhase(LTOPhase) {}
+
   PreservedAnalyses run(LazyCallGraph::SCC &C, CGSCCAnalysisManager &AM,
                         LazyCallGraph &CG, CGSCCUpdateResult &UR);
+
+private:
+  const ThinOrFullLTOPhase LTOPhase = ThinOrFullLTOPhase::None;
 };
 
 } // end namespace llvm

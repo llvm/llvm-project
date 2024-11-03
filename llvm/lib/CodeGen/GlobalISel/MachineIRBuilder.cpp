@@ -164,6 +164,15 @@ MachineInstrBuilder MachineIRBuilder::buildGlobalValue(const DstOp &Res,
   return MIB;
 }
 
+MachineInstrBuilder MachineIRBuilder::buildConstantPool(const DstOp &Res,
+                                                        unsigned Idx) {
+  assert(Res.getLLTTy(*getMRI()).isPointer() && "invalid operand type");
+  auto MIB = buildInstr(TargetOpcode::G_CONSTANT_POOL);
+  Res.addDefToMIB(*getMRI(), MIB);
+  MIB.addConstantPoolIndex(Idx);
+  return MIB;
+}
+
 MachineInstrBuilder MachineIRBuilder::buildJumpTable(const LLT PtrTy,
                                                      unsigned JTI) {
   return buildInstr(TargetOpcode::G_JUMP_TABLE, {PtrTy}, {})

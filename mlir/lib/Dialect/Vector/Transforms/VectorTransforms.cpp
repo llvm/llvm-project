@@ -12,6 +12,7 @@
 
 #include "mlir/Dialect/Vector/Transforms/VectorTransforms.h"
 
+#include <optional>
 #include <type_traits>
 
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
@@ -147,13 +148,14 @@ static SmallVector<IntType> extractVector(ArrayAttr arrayAttr) {
 }
 
 /// Helper to create arithmetic operation associated with a kind of contraction.
-static std::optional<Value> createContractArithOp(Location loc, Value x,
-                                                  Value y, Value acc,
-                                                  vector::CombiningKind kind,
-                                                  PatternRewriter &rewriter,
-                                                  bool isInt) {
+static std::optional<Value>
+createContractArithOp(Location loc, Value x, Value y, Value acc,
+                      vector::CombiningKind kind, PatternRewriter &rewriter,
+                      bool isInt,
+                      std::optional<Value> maybeMask = std::nullopt) {
   using vector::CombiningKind;
   Value mul;
+
   if (isInt) {
     if (kind == CombiningKind::MINF || kind == CombiningKind::MAXF)
       // Only valid for floating point types.
@@ -169,11 +171,17 @@ static std::optional<Value> createContractArithOp(Location loc, Value x,
       return std::nullopt;
     // Special case for fused multiply-add.
     if (acc && acc.getType().isa<VectorType>() && kind == CombiningKind::ADD) {
-      return std::optional<Value>(
-          rewriter.create<vector::FMAOp>(loc, x, y, acc));
+      Operation *fmaOp = rewriter.create<vector::FMAOp>(loc, x, y, acc);
+      if (maybeMask.has_value() && maybeMask.value())
+        fmaOp = maskOperation(rewriter, fmaOp, maybeMask.value());
+      return fmaOp->getResult(0);
     }
     mul = rewriter.create<arith::MulFOp>(loc, x, y);
   }
+
+  assert((!maybeMask.has_value() || !maybeMask.value()) &&
+         "Unsupported masked case");
+
   if (!acc)
     return std::optional<Value>(mul);
   return makeArithReduction(rewriter, loc, kind, mul, acc);
@@ -258,7 +266,7 @@ public:
   LogicalResult matchAndRewrite(vector::BroadcastOp op,
                                 PatternRewriter &rewriter) const override {
     auto loc = op.getLoc();
-    VectorType dstType = op.getVectorType();
+    VectorType dstType = op.getResultVectorType();
     VectorType srcType = op.getSourceType().dyn_cast<VectorType>();
     Type eltType = dstType.getElementType();
 
@@ -396,8 +404,8 @@ public:
     auto loc = op.getLoc();
 
     Value input = op.getVector();
-    VectorType inputType = op.getVectorType();
-    VectorType resType = op.getResultType();
+    VectorType inputType = op.getSourceVectorType();
+    VectorType resType = op.getResultVectorType();
 
     // Set up convenience transposition table.
     SmallVector<int64_t> transp;
@@ -484,7 +492,7 @@ public:
                                 PatternRewriter &rewriter) const override {
     auto loc = op.getLoc();
 
-    VectorType srcType = op.getVectorType();
+    VectorType srcType = op.getSourceVectorType();
     if (srcType.getRank() != 2)
       return rewriter.notifyMatchFailure(op, "Not a 2D transpose");
 
@@ -510,8 +518,8 @@ public:
 
     Value shuffled =
         rewriter.create<vector::ShuffleOp>(loc, casted, casted, mask);
-    rewriter.replaceOpWithNewOp<vector::ShapeCastOp>(op, op.getResultType(),
-                                                     shuffled);
+    rewriter.replaceOpWithNewOp<vector::ShapeCastOp>(
+        op, op.getResultVectorType(), shuffled);
 
     return success();
   }
@@ -544,20 +552,33 @@ public:
 
     VectorType lhsType = op.getOperandVectorTypeLHS();
     VectorType rhsType = op.getOperandTypeRHS().dyn_cast<VectorType>();
-    VectorType resType = op.getVectorType();
+    VectorType resType = op.getResultVectorType();
     Type eltType = resType.getElementType();
     bool isInt = eltType.isa<IntegerType, IndexType>();
     Value acc = (op.getAcc().empty()) ? nullptr : op.getAcc()[0];
     vector::CombiningKind kind = op.getKind();
 
+    // Vector mask setup.
+    OpBuilder::InsertionGuard guard(rewriter);
+    auto maskableOp = cast<vector::MaskableOpInterface>(op.getOperation());
+    Operation *rootOp;
+    Value mask;
+    if (maskableOp.isMasked()) {
+      rewriter.setInsertionPoint(maskableOp.getMaskingOp());
+      rootOp = maskableOp.getMaskingOp();
+      mask = maskableOp.getMaskingOp().getMask();
+    } else {
+      rootOp = op;
+    }
+
     if (!rhsType) {
       // Special case: AXPY operation.
       Value b = rewriter.create<vector::BroadcastOp>(loc, lhsType, op.getRhs());
       std::optional<Value> mult = createContractArithOp(
-          loc, op.getLhs(), b, acc, kind, rewriter, isInt);
+          loc, op.getLhs(), b, acc, kind, rewriter, isInt, mask);
       if (!mult.has_value())
         return failure();
-      rewriter.replaceOp(op, *mult);
+      rewriter.replaceOp(rootOp, *mult);
       return success();
     }
 
@@ -571,13 +592,14 @@ public:
       Value r = nullptr;
       if (acc)
         r = rewriter.create<vector::ExtractOp>(loc, rhsType, acc, pos);
-      std::optional<Value> m =
-          createContractArithOp(loc, a, op.getRhs(), r, kind, rewriter, isInt);
+      std::optional<Value> m = createContractArithOp(
+          loc, a, op.getRhs(), r, kind, rewriter, isInt, mask);
       if (!m.has_value())
         return failure();
       result = rewriter.create<vector::InsertOp>(loc, resType, *m, result, pos);
     }
-    rewriter.replaceOp(op, result);
+
+    rewriter.replaceOp(rootOp, result);
     return success();
   }
 };
@@ -601,7 +623,12 @@ struct ContractOpToElementwise
 
   LogicalResult matchAndRewrite(vector::ContractionOp contractOp,
                                 PatternRewriter &rewriter) const override {
-    // TODO: implement masks
+    // TODO: Support vector.mask.
+    auto maskableOp = cast<MaskableOpInterface>(contractOp.getOperation());
+    if (maskableOp.isMasked())
+      return failure();
+
+    // TODO: Remove native masks from contraction op?
     if (!contractOp.getMasks().empty())
       return failure();
 
@@ -1181,15 +1208,16 @@ struct CombineContractBroadcast
         continue;
       // contractionOp can only take vector as operands.
       auto srcType = broadcast.getSourceType().dyn_cast<VectorType>();
-      if (!srcType || srcType.getRank() == broadcast.getVectorType().getRank())
+      if (!srcType ||
+          srcType.getRank() == broadcast.getResultVectorType().getRank())
         continue;
       int64_t rankDiff =
-          broadcast.getVectorType().getRank() - srcType.getRank();
+          broadcast.getResultVectorType().getRank() - srcType.getRank();
       bool innerDimBroadcast = false;
       SmallVector<AffineExpr> originalDims;
       for (const auto &dim : llvm::enumerate(srcType.getShape())) {
-        if (dim.value() !=
-            broadcast.getVectorType().getDimSize(rankDiff + dim.index())) {
+        if (dim.value() != broadcast.getResultVectorType().getDimSize(
+                               rankDiff + dim.index())) {
           innerDimBroadcast = true;
           break;
         }
@@ -1205,7 +1233,7 @@ struct CombineContractBroadcast
       // of non-unit size.
       bool nonUnitDimReductionBroadcast = false;
       for (int64_t i = 0; i < rankDiff; ++i) {
-        if (broadcast.getVectorType().getDimSize(i) != 1 &&
+        if (broadcast.getResultVectorType().getDimSize(i) != 1 &&
             isReductionIterator(contractOp.getIteratorTypes()
                                     .getValue()[map.getDimPosition(i)])) {
           nonUnitDimReductionBroadcast = true;
@@ -1216,8 +1244,8 @@ struct CombineContractBroadcast
         continue;
 
       AffineMap broadcastMap =
-          AffineMap::get(broadcast.getVectorType().getRank(), 0, originalDims,
-                         contractOp.getContext());
+          AffineMap::get(broadcast.getResultVectorType().getRank(), 0,
+                         originalDims, contractOp.getContext());
       map = broadcastMap.compose(map);
       *operand = broadcast.getSource();
       changed = true;
@@ -1336,7 +1364,7 @@ struct ReorderElementwiseOpsOnTranspose final
       auto transposeOp = operand.getDefiningOp<vector::TransposeOp>();
       if (transposeOp) {
         transposeMaps.push_back(transposeOp.getTransp());
-        srcType = transposeOp.getVectorType();
+        srcType = transposeOp.getSourceVectorType();
       } else if (!matchPattern(operand, m_Constant())) {
         return failure();
       }
@@ -1429,7 +1457,12 @@ namespace mlir {
 LogicalResult
 ContractionOpToMatmulOpLowering::matchAndRewrite(vector::ContractionOp op,
                                                  PatternRewriter &rew) const {
-  // TODO: implement masks
+  // TODO: Support vector.mask.
+  auto maskableOp = cast<MaskableOpInterface>(op.getOperation());
+  if (maskableOp.isMasked())
+    return failure();
+
+  // TODO: Remove native masks from contraction op?
   if (!op.getMasks().empty())
     return failure();
   if (vectorTransformOptions.vectorContractLowering !=
@@ -1525,10 +1558,16 @@ struct UnrolledOuterProductGenerator
   UnrolledOuterProductGenerator(RewriterBase &b, vector::ContractionOp op)
       : StructuredGenerator<vector::ContractionOp, vector::IteratorType>(b, op),
         kind(op.getKind()), lhs(op.getLhs()), rhs(op.getRhs()),
-        res(op.getAcc()), lhsType(op.getLhsType()) {}
+        res(op.getAcc()), lhsType(op.getLhsType()) {
+    auto maskableOp = cast<MaskableOpInterface>(op.getOperation());
+    if (maskableOp.isMasked())
+      mask = maskableOp.getMaskingOp().getMask();
+  }
 
   Value t(Value v) {
     static constexpr std::array<int64_t, 2> perm = {1, 0};
+    if (!v)
+      return v;
     return rewriter.create<vector::TransposeOp>(loc, v, perm);
   }
 
@@ -1547,16 +1586,27 @@ struct UnrolledOuterProductGenerator
     return rewriter.create<arith::ExtSIOp>(loc, promotedType, v);
   }
 
-  Value outerProd(Value lhs, Value rhs, Value res, int reductionSize) {
+  FailureOr<Value> outerProd(Value lhs, Value rhs, Value res, int reductionSize,
+                             std::optional<Value> maybeMask = std::nullopt) {
     assert(reductionSize > 0);
+    // Incremental support for masking.
+    if (mask && !maybeMask.has_value())
+      return failure();
+
     Type resElementType = res.getType().cast<VectorType>().getElementType();
     for (int64_t k = 0; k < reductionSize; ++k) {
       Value extractA = rewriter.create<vector::ExtractOp>(loc, lhs, k);
       Value extractB = rewriter.create<vector::ExtractOp>(loc, rhs, k);
       extractA = promote(extractA, resElementType);
       extractB = promote(extractB, resElementType);
-      res = rewriter.create<vector::OuterProductOp>(loc, res.getType(), extractA,
-                                             extractB, res, kind);
+      Value extractMask;
+      if (maybeMask.has_value() && maybeMask.value())
+        extractMask =
+            rewriter.create<vector::ExtractOp>(loc, maybeMask.value(), k);
+
+      Operation *outerProdOp = rewriter.create<vector::OuterProductOp>(
+          loc, res.getType(), extractA, extractB, res, kind);
+      res = maskOperation(rewriter, outerProdOp, extractMask)->getResult(0);
     }
     return res;
   }
@@ -1607,7 +1657,7 @@ struct UnrolledOuterProductGenerator
 
     // Case mat-vec: transpose.
     if (layout({{m, k}, {k}, {m}}))
-      return outerProd(t(lhs), rhs, res, lhsType.getDimSize(1));
+      return outerProd(t(lhs), rhs, res, lhsType.getDimSize(1), t(mask));
     // Case mat-trans-vec: ready to go.
     if (layout({{k, m}, {k}, {m}}))
       return outerProd(lhs, rhs, res, lhsType.getDimSize(0));
@@ -1646,7 +1696,7 @@ struct UnrolledOuterProductGenerator
 
 private:
   vector::CombiningKind kind;
-  Value lhs, rhs, res;
+  Value lhs, rhs, res, mask;
   VectorType lhsType;
 };
 } // namespace
@@ -1668,7 +1718,7 @@ private:
 /// otherwise supports any layout permutation of the matrix-multiply.
 LogicalResult ContractionOpToOuterProductOpLowering::matchAndRewrite(
     vector::ContractionOp op, PatternRewriter &rewriter) const {
-  // TODO: implement masks
+  // TODO: Remove native masks from contraction op?
   if (!op.getMasks().empty())
     return failure();
 
@@ -1679,20 +1729,31 @@ LogicalResult ContractionOpToOuterProductOpLowering::matchAndRewrite(
   if (failed(filter(op)))
     return failure();
 
+  // Vector mask setup.
+  OpBuilder::InsertionGuard guard(rewriter);
+  auto maskableOp = cast<vector::MaskableOpInterface>(op.getOperation());
+  Operation *rootOp;
+  if (maskableOp.isMasked()) {
+    rewriter.setInsertionPoint(maskableOp.getMaskingOp());
+    rootOp = maskableOp.getMaskingOp();
+  } else {
+    rootOp = op;
+  }
+
   UnrolledOuterProductGenerator e(rewriter, op);
   FailureOr<Value> matmatRes = e.matmat();
   if (succeeded(matmatRes)) {
-    rewriter.replaceOp(op, *matmatRes);
+    rewriter.replaceOp(rootOp, *matmatRes);
     return success();
   }
   FailureOr<Value> matvecRes = e.matvec();
   if (succeeded(matvecRes)) {
-    rewriter.replaceOp(op, *matvecRes);
+    rewriter.replaceOp(rootOp, *matvecRes);
     return success();
   }
   FailureOr<Value> tmatvecRes = e.tmatvec();
   if (succeeded(tmatvecRes)) {
-    rewriter.replaceOp(op, *tmatvecRes);
+    rewriter.replaceOp(rootOp, *tmatvecRes);
     return success();
   }
 
@@ -1702,7 +1763,12 @@ LogicalResult ContractionOpToOuterProductOpLowering::matchAndRewrite(
 LogicalResult
 ContractionOpToDotLowering::matchAndRewrite(vector::ContractionOp op,
                                             PatternRewriter &rewriter) const {
-  // TODO: implement masks
+  // TODO: Support vector.mask.
+  auto maskableOp = cast<MaskableOpInterface>(op.getOperation());
+  if (maskableOp.isMasked())
+    return failure();
+
+  // TODO: Remove native masks from contraction op?
   if (!op.getMasks().empty())
     return failure();
 
@@ -1834,7 +1900,12 @@ ContractionOpToDotLowering::matchAndRewrite(vector::ContractionOp op,
 LogicalResult
 ContractionOpLowering::matchAndRewrite(vector::ContractionOp op,
                                        PatternRewriter &rewriter) const {
-  // TODO: implement masks.
+  // TODO: Support vector.mask.
+  auto maskableOp = cast<MaskableOpInterface>(op.getOperation());
+  if (maskableOp.isMasked())
+    return failure();
+
+  // TODO: Remove native masks from contraction op?
   if (!op.getMasks().empty())
     return failure();
 
@@ -2306,7 +2377,7 @@ struct BubbleDownVectorBitCastForExtract
   LogicalResult matchAndRewrite(vector::ExtractOp extractOp,
                                 PatternRewriter &rewriter) const override {
     // Only support extracting scalars for now.
-    if (extractOp.getVectorType().getRank() != 1)
+    if (extractOp.getSourceVectorType().getRank() != 1)
       return failure();
 
     auto castOp = extractOp.getVector().getDefiningOp<vector::BitCastOp>();
@@ -2395,10 +2466,10 @@ struct BubbleDownBitCastForStridedSliceExtract
 
     // Only accept all one strides for now.
     if (llvm::any_of(extractOp.getStrides().getAsValueRange<IntegerAttr>(),
-                     [](const APInt &val) { return !val.isOneValue(); }))
+                     [](const APInt &val) { return !val.isOne(); }))
       return failure();
 
-    unsigned rank = extractOp.getVectorType().getRank();
+    unsigned rank = extractOp.getSourceVectorType().getRank();
     assert(castDstLastDim % castSrcLastDim == 0);
     int64_t expandRatio = castDstLastDim / castSrcLastDim;
 
@@ -2462,6 +2533,9 @@ struct BubbleUpBitCastForStridedSliceInsert
     VectorType castSrcType = bitcastOp.getSourceVectorType();
     VectorType castDstType = bitcastOp.getResultVectorType();
     assert(castSrcType.getRank() == castDstType.getRank());
+    // Skip 0-D vector which will not from InsertStridedSliceOp.
+    if (castSrcType.getRank() == 0)
+      return failure();
 
     int64_t castSrcLastDim = castSrcType.getShape().back();
     int64_t castDstLastDim = castDstType.getShape().back();
@@ -2479,7 +2553,7 @@ struct BubbleUpBitCastForStridedSliceInsert
 
     // Only accept all one strides for now.
     if (llvm::any_of(insertOp.getStrides().getAsValueRange<IntegerAttr>(),
-                     [](const APInt &val) { return !val.isOneValue(); }))
+                     [](const APInt &val) { return !val.isOne(); }))
       return failure();
 
     unsigned rank = insertOp.getSourceVectorType().getRank();

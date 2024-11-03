@@ -537,6 +537,7 @@ public:
       LocalityShared, // named in SHARED locality-spec
       InDataStmt, // initialized in a DATA statement, =>object, or /init/
       InNamelist, // in a Namelist group
+      EntryDummyArgument,
       CompilerCreated, // A compiler created symbol
       // For compiler created symbols that are constant but cannot legally have
       // the PARAMETER attribute.

@@ -137,6 +137,7 @@ Clang-Tidy Checks
    `bugprone-undelegated-constructor <bugprone/undelegated-constructor.html>`_,
    `bugprone-unhandled-exception-at-new <bugprone/unhandled-exception-at-new.html>`_,
    `bugprone-unhandled-self-assignment <bugprone/unhandled-self-assignment.html>`_,
+   `bugprone-unsafe-functions <bugprone/unsafe-functions.html>`_,
    `bugprone-unused-raii <bugprone/unused-raii.html>`_, "Yes"
    `bugprone-unused-return-value <bugprone/unused-return-value.html>`_,
    `bugprone-use-after-move <bugprone/use-after-move.html>`_,
@@ -178,6 +179,7 @@ Clang-Tidy Checks
    `clang-analyzer-valist.Unterminated <clang-analyzer/valist.Unterminated.html>`_,
    `concurrency-mt-unsafe <concurrency/mt-unsafe.html>`_,
    `concurrency-thread-canceltype-asynchronous <concurrency/thread-canceltype-asynchronous.html>`_,
+   `cppcoreguidelines-avoid-capture-default-when-capturing-this <cppcoreguidelines/avoid-capture-default-when-capturing-this.html>`_,
    `cppcoreguidelines-avoid-const-or-ref-data-members <cppcoreguidelines/avoid-const-or-ref-data-members.html>`_,
    `cppcoreguidelines-avoid-do-while <cppcoreguidelines/avoid-do-while.html>`_,
    `cppcoreguidelines-avoid-goto <cppcoreguidelines/avoid-goto.html>`_,
@@ -242,6 +244,7 @@ Clang-Tidy Checks
    `llvm-twine-local <llvm/twine-local.html>`_, "Yes"
    `llvmlibc-callee-namespace <llvmlibc/callee-namespace.html>`_,
    `llvmlibc-implementation-in-namespace <llvmlibc/implementation-in-namespace.html>`_,
+   `llvmlibc-inline-function-decl <llvmlibc/inline-function-decl.html>`_,
    `llvmlibc-restrict-system-libc-headers <llvmlibc/restrict-system-libc-headers.html>`_, "Yes"
    `misc-confusable-identifiers <misc/confusable-identifiers.html>`_,
    `misc-const-correctness <misc/const-correctness.html>`_, "Yes"
@@ -387,8 +390,10 @@ Clang-Tidy Checks
    `cert-exp42-c <cert/exp42-c.html>`_, `bugprone-suspicious-memory-comparison <bugprone/suspicious-memory-comparison.html>`_,
    `cert-fio38-c <cert/fio38-c.html>`_, `misc-non-copyable-objects <misc/non-copyable-objects.html>`_,
    `cert-flp37-c <cert/flp37-c.html>`_, `bugprone-suspicious-memory-comparison <bugprone/suspicious-memory-comparison.html>`_,
+   `cert-msc24-c <cert/msc24-c.html>`_, `bugprone-unsafe-functions <bugprone/unsafe-functions.html>`_,
    `cert-msc30-c <cert/msc30-c.html>`_, `cert-msc50-cpp <cert/msc50-cpp.html>`_,
    `cert-msc32-c <cert/msc32-c.html>`_, `cert-msc51-cpp <cert/msc51-cpp.html>`_,
+   `cert-msc33-c <cert/msc33-c.html>`_, `bugprone-unsafe-functions <bugprone/unsafe-functions.html>`_,
    `cert-msc54-cpp <cert/msc54-cpp.html>`_, `bugprone-signal-handler <bugprone/signal-handler.html>`_,
    `cert-oop11-cpp <cert/oop11-cpp.html>`_, `performance-move-constructor-init <performance/move-constructor-init.html>`_,
    `cert-oop54-cpp <cert/oop54-cpp.html>`_, `bugprone-unhandled-self-assignment <bugprone/unhandled-self-assignment.html>`_,

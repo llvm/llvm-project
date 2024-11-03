@@ -123,7 +123,6 @@ bool IsDestructible(const Symbol &, const Symbol *derivedType = nullptr);
 bool HasIntrinsicTypeName(const Symbol &);
 bool IsSeparateModuleProcedureInterface(const Symbol *);
 bool HasAlternateReturns(const Symbol &);
-bool InCommonBlock(const Symbol &);
 
 // Return an ultimate component of type that matches predicate, or nullptr.
 const Symbol *FindUltimateComponent(const DerivedTypeSpec &type,
@@ -186,6 +185,7 @@ bool IsModuleProcedure(const Symbol &);
 bool HasCoarray(const parser::Expr &);
 bool IsAssumedType(const Symbol &);
 bool IsPolymorphic(const Symbol &);
+bool IsUnlimitedPolymorphic(const Symbol &);
 bool IsPolymorphicAllocatable(const Symbol &);
 
 // Return an error if a symbol is not accessible from a scope

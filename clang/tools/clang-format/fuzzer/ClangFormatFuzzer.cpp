@@ -23,6 +23,7 @@ extern "C" int LLVMFuzzerTestOneInput(uint8_t *data, size_t size) {
   auto Result = applyAllReplacements(s, Replaces);
 
   // Output must be checked, as otherwise we crash.
-  if (!Result) {}
+  if (!Result) {
+  }
   return 0;
 }

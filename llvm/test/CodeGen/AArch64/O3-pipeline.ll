@@ -70,6 +70,7 @@
 ; CHECK-NEXT:       Lazy Block Frequency Analysis
 ; CHECK-NEXT:       Optimization Remark Emitter
 ; CHECK-NEXT:       Optimize selects
+; CHECK-NEXT:     AArch64 Globals Tagging
 ; CHECK-NEXT:     Stack Safety Analysis
 ; CHECK-NEXT:       FunctionPass Manager
 ; CHECK-NEXT:         Dominator Tree Construction
@@ -99,6 +100,7 @@
 ; CHECK-NEXT:         Dominator Tree Construction
 ; CHECK-NEXT:     FunctionPass Manager
 ; CHECK-NEXT:       Merge internal globals
+; CHECK-NEXT:       Prepare callbr
 ; CHECK-NEXT:       Safe Stack instrumentation pass
 ; CHECK-NEXT:       Insert stack protectors
 ; CHECK-NEXT:       Module Verifier

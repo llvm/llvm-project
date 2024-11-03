@@ -396,7 +396,7 @@ void fillFunctionTypeAndParams(HoverInfo &HI, const Decl *D,
 // -2^32 => 0xfffffffeffffffff
 static llvm::FormattedNumber printHex(const llvm::APSInt &V) {
   uint64_t Bits = V.getExtValue();
-  if (V.isNegative() && V.getMinSignedBits() <= 32)
+  if (V.isNegative() && V.getSignificantBits() <= 32)
     return llvm::format_hex(uint32_t(Bits), 0);
   return llvm::format_hex(Bits, 0);
 }
@@ -430,7 +430,7 @@ std::optional<std::string> printExprValue(const Expr *E,
 
   // Show enums symbolically, not numerically like APValue::printPretty().
   if (T->isEnumeralType() && Constant.Val.isInt() &&
-      Constant.Val.getInt().getMinSignedBits() <= 64) {
+      Constant.Val.getInt().getSignificantBits() <= 64) {
     // Compare to int64_t to avoid bit-width match requirements.
     int64_t Val = Constant.Val.getInt().getExtValue();
     for (const EnumConstantDecl *ECD :
@@ -442,7 +442,7 @@ std::optional<std::string> printExprValue(const Expr *E,
   }
   // Show hex value of integers if they're at least 10 (or negative!)
   if (T->isIntegralOrEnumerationType() && Constant.Val.isInt() &&
-      Constant.Val.getInt().getMinSignedBits() <= 64 &&
+      Constant.Val.getInt().getSignificantBits() <= 64 &&
       Constant.Val.getInt().uge(10))
     return llvm::formatv("{0} ({1})", Constant.Val.getAsString(Ctx, T),
                          printHex(Constant.Val.getInt()))
@@ -952,6 +952,15 @@ void addLayoutInfo(const NamedDecl &ND, HoverInfo &HI) {
   }
 }
 
+HoverInfo::PassType::PassMode getPassMode(QualType ParmType) {
+  if (ParmType->isReferenceType()) {
+    if (ParmType->getPointeeType().isConstQualified())
+      return HoverInfo::PassType::ConstRef;
+    return HoverInfo::PassType::Ref;
+  }
+  return HoverInfo::PassType::Value;
+}
+
 // If N is passed as argument to a function, fill HI.CalleeArgInfo with
 // information about that argument.
 void maybeAddCalleeArgInfo(const SelectionTree::Node *N, HoverInfo &HI,
@@ -972,14 +981,19 @@ void maybeAddCalleeArgInfo(const SelectionTree::Node *N, HoverInfo &HI,
   if (!FD || FD->isOverloadedOperator() || FD->isVariadic())
     return;
 
+  HoverInfo::PassType PassType;
+
   // Find argument index for N.
   for (unsigned I = 0; I < CE->getNumArgs() && I < FD->getNumParams(); ++I) {
     if (CE->getArg(I) != OuterNode.ASTNode.get<Expr>())
       continue;
 
     // Extract matching argument from function declaration.
-    if (const ParmVarDecl *PVD = FD->getParamDecl(I))
+    if (const ParmVarDecl *PVD = FD->getParamDecl(I)) {
       HI.CalleeArgInfo.emplace(toHoverInfoParam(PVD, PP));
+      if (N == &OuterNode)
+        PassType.PassBy = getPassMode(PVD->getType());
+    }
     break;
   }
   if (!HI.CalleeArgInfo)
@@ -988,14 +1002,9 @@ void maybeAddCalleeArgInfo(const SelectionTree::Node *N, HoverInfo &HI,
   // If we found a matching argument, also figure out if it's a
   // [const-]reference. For this we need to walk up the AST from the arg itself
   // to CallExpr and check all implicit casts, constructor calls, etc.
-  HoverInfo::PassType PassType;
   if (const auto *E = N->ASTNode.get<Expr>()) {
     if (E->getType().isConstQualified())
       PassType.PassBy = HoverInfo::PassType::ConstRef;
-
-    // No implicit node, literal passed by value
-    if (isLiteral(E) && N->Parent == OuterNode.Parent)
-      PassType.PassBy = HoverInfo::PassType::Value;
   }
 
   for (auto *CastNode = N->Parent;
@@ -1033,8 +1042,7 @@ void maybeAddCalleeArgInfo(const SelectionTree::Node *N, HoverInfo &HI,
         PassType.PassBy = HoverInfo::PassType::Value;
       else
         PassType.Converted = true;
-    } else if (const auto *MTE =
-                   CastNode->ASTNode.get<MaterializeTemporaryExpr>()) {
+    } else if (CastNode->ASTNode.get<MaterializeTemporaryExpr>()) {
       // Can't bind a non-const-ref to a temporary, so has to be const-ref
       PassType.PassBy = HoverInfo::PassType::ConstRef;
     } else { // Unknown implicit node, assume type conversion.
@@ -1068,9 +1076,8 @@ const NamedDecl *pickDeclToUse(llvm::ArrayRef<const NamedDecl *> Candidates) {
   //     template <typename T> void bar() { fo^o(T{}); }
   // we actually want to show the using declaration,
   // it's not clear which declaration to pick otherwise.
-  auto BaseDecls = llvm::make_filter_range(Candidates, [](const NamedDecl *D) {
-    return llvm::isa<UsingDecl>(D);
-  });
+  auto BaseDecls = llvm::make_filter_range(
+      Candidates, [](const NamedDecl *D) { return llvm::isa<UsingDecl>(D); });
   if (std::distance(BaseDecls.begin(), BaseDecls.end()) == 1)
     return *BaseDecls.begin();
 

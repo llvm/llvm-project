@@ -14,17 +14,371 @@
 //===----------------------------------------------------------------------===//
 //
 #include "mlir/Dialect/Arith/IR/Arith.h"
+#include "mlir/Dialect/Bufferization/IR/BufferizableOpInterface.h"
+#include "mlir/Dialect/Bufferization/IR/Bufferization.h"
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/Dialect/Linalg/Transforms/Transforms.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
+#include "mlir/Dialect/Utils/StaticValueUtils.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/IR/PatternMatch.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/Debug.h"
 
 using namespace mlir;
 using namespace mlir::tensor;
 
+// Implements backtracking to traverse indices of the output buffer while
+// iterating over op.elements().
+static Value createInserts(RewriterBase &rewriter, Location loc, int dim,
+                           Value destination, ArrayRef<int64_t> shape,
+                           ArrayRef<Value> constants,
+                           OperandRange::iterator &elementIt,
+                           SmallVectorImpl<Value> &indices) {
+  if (dim == static_cast<int>(shape.size()) - 1) {
+    for (int i = 0; i < shape.back(); ++i) {
+      indices.back() = constants[i];
+      destination = rewriter.create<tensor::InsertOp>(loc, *elementIt,
+                                                      destination, indices);
+      ++elementIt;
+    }
+    return destination;
+  }
+  for (int i = 0; i < shape[dim]; ++i) {
+    indices[dim] = constants[i];
+    destination = createInserts(rewriter, loc, dim + 1, destination, shape,
+                                constants, elementIt, indices);
+  }
+  return destination;
+}
+
+static Operation *movePaddingToFillOrGenericOp(RewriterBase &rewriter,
+                                               Location loc, PadOp padOp,
+                                               Value dest) {
+  OpBuilder::InsertionGuard g(rewriter);
+  RankedTensorType resultType = padOp.getResultType();
+
+  // Examine the yielded value to decide if a linalg.generic is neede or a
+  // linalg.fill is sufficient.
+  Value yieldedValue =
+      cast<tensor::YieldOp>(padOp.getBody()->getTerminator()).getValue();
+  Attribute constYieldedValue;
+  // Is the yielded value a bbArg defined outside of the PadOp?
+  bool outsideBbArg =
+      yieldedValue.isa<BlockArgument>() &&
+      yieldedValue.cast<BlockArgument>().getOwner()->getParentOp() !=
+          padOp.getOperation();
+  // Is the yielded value an OpResult defined outside of the PadOp?
+  bool outsideOpResult =
+      yieldedValue.isa<OpResult>() &&
+      yieldedValue.getDefiningOp()->getParentOp() != padOp.getOperation();
+  bool invariantYieldedValue = outsideBbArg || outsideOpResult;
+  if (matchPattern(yieldedValue, m_Constant(&constYieldedValue))) {
+    // Padding with a constant: Create linalg.fill.
+    Dialect *arithDialect =
+        rewriter.getContext()->getLoadedDialect<arith::ArithDialect>();
+    Value fillValue =
+        arithDialect
+            ->materializeConstant(rewriter, constYieldedValue,
+                                  yieldedValue.getType(), yieldedValue.getLoc())
+            ->getResult(0);
+    auto fillOp = rewriter.create<linalg::FillOp>(loc, ValueRange(fillValue),
+                                                  ValueRange(dest));
+    return fillOp;
+  }
+
+  if (invariantYieldedValue) {
+    // Padding with an invariant value.
+    auto fillOp = rewriter.create<linalg::FillOp>(loc, ValueRange(yieldedValue),
+                                                  ValueRange(dest));
+    return fillOp;
+  }
+
+  // Create linalg.generic.
+  SmallVector<utils::IteratorType> iteratorTypes(resultType.getRank(),
+                                                 utils::IteratorType::parallel);
+  SmallVector<AffineMap> indexingMaps(
+      1, rewriter.getMultiDimIdentityMap(resultType.getRank()));
+  auto genericOp = rewriter.create<linalg::GenericOp>(
+      loc, resultType, /*inputs=*/ValueRange(),
+      /*outputs=*/ValueRange{dest}, /*indexingMaps=*/
+      indexingMaps, iteratorTypes);
+  Block *body = rewriter.createBlock(&genericOp->getRegion(0), {},
+                                     resultType.getElementType(), loc);
+  rewriter.setInsertionPointToStart(body);
+  SmallVector<Value> bbArgReplacements;
+  for (int64_t i = 0; i < resultType.getRank(); ++i)
+    bbArgReplacements.push_back(rewriter.create<linalg::IndexOp>(loc, i));
+  rewriter.mergeBlocks(padOp.getBody(), body, bbArgReplacements);
+
+  // Update terminator.
+  auto yieldOp = cast<tensor::YieldOp>(body->getTerminator());
+  rewriter.replaceOpWithNewOp<linalg::YieldOp>(yieldOp, yieldOp.getValue());
+  return genericOp;
+}
+
+static SmallVector<Value> reifyOrComputeDynamicSizes(OpBuilder &b,
+                                                     Value value) {
+  auto tensorType = value.getType().cast<RankedTensorType>();
+  if (tensorType.hasStaticShape())
+    return {};
+
+  // Try to reify dynamic sizes.
+  if (auto reifiableOp =
+          value.getDefiningOp<ReifyRankedShapedTypeOpInterface>()) {
+    ReifiedRankedShapedTypeDims reifiedShape;
+    if (succeeded(reifiableOp.reifyResultShapes(b, reifiedShape))) {
+      SmallVector<Value> dynSizes;
+      for (int64_t i = 0; i < tensorType.getRank(); ++i) {
+        if (tensorType.isDynamicDim(i))
+          dynSizes.push_back(
+              reifiedShape[value.cast<OpResult>().getResultNumber()][i]);
+      }
+      return dynSizes;
+    }
+  }
+
+  // Create tensor.dim ops.
+  SmallVector<Value> dynSizes;
+  for (int64_t i = 0; i < tensorType.getRank(); ++i) {
+    if (tensorType.isDynamicDim(i))
+      dynSizes.push_back(
+          b.create<DimOp>(value.getLoc(), value,
+                          b.create<arith::ConstantIndexOp>(value.getLoc(), i)));
+  }
+  return dynSizes;
+}
+
+static Value createAllocationForTensor(RewriterBase &rewriter, Location loc,
+                                       Value value,
+                                       Attribute memorySpace = {}) {
+  OpBuilder::InsertionGuard g(rewriter);
+  auto tensorType = value.getType().cast<RankedTensorType>();
+
+  // Create buffer allocation.
+  auto memrefType = bufferization::getMemRefTypeWithStaticIdentityLayout(
+                        tensorType, memorySpace)
+                        .cast<MemRefType>();
+  SmallVector<Value> dynamicSizes = reifyOrComputeDynamicSizes(rewriter, value);
+  Value alloc = rewriter.create<memref::AllocOp>(loc, memrefType, dynamicSizes);
+
+  // Place deallocation at the end of the block.
+  rewriter.setInsertionPoint(rewriter.getInsertionBlock()->getTerminator());
+  rewriter.create<memref::DeallocOp>(loc, alloc);
+
+  return alloc;
+}
+
+Value linalg::bufferizeToAllocation(RewriterBase &rewriter, PadOp padOp,
+                                    Attribute memorySpace) {
+  OpBuilder::InsertionGuard g(rewriter);
+  rewriter.setInsertionPoint(padOp);
+  Location loc = padOp.getLoc();
+
+  // Create buffer allocation.
+  Value alloc =
+      createAllocationForTensor(rewriter, loc, padOp.getResult(), memorySpace);
+  rewriter.setInsertionPointAfter(alloc.getDefiningOp());
+
+  // Create linalg.fill or linalg.generic.
+  Operation *fillOp = movePaddingToFillOrGenericOp(rewriter, loc, padOp, alloc);
+  rewriter.setInsertionPointAfter(fillOp);
+
+  // Create memref.tensor_store.
+  SmallVector<OpFoldResult> sizes =
+      getMixedSizes(rewriter, loc, padOp.getSource());
+  SmallVector<OpFoldResult> strides(padOp.getResultType().getRank(),
+                                    rewriter.getIndexAttr(1));
+  Value subview = rewriter.create<memref::SubViewOp>(
+      loc, alloc, /*offsets=*/padOp.getMixedLowPad(), sizes, strides);
+  rewriter.create<memref::TensorStoreOp>(loc, padOp.getSource(), subview);
+
+  // Create bufferization.to_tensor with "restrict" and "writable". The returned
+  // tensor is a new buffer allocation, so it does not alias with any buffer.
+  Value toTensorOp = rewriter.create<bufferization::ToTensorOp>(
+      loc, alloc, /*restrict=*/true, /*writable=*/true);
+  rewriter.replaceOp(padOp, toTensorOp);
+  return toTensorOp;
+}
+
+/// Lower tensor.from_elements to a sequence of chained tensor.insert.
+FailureOr<Operation *> mlir::linalg::rewriteInDestinationPassingStyle(
+    RewriterBase &rewriter, tensor::FromElementsOp fromElementsOp) {
+  Location loc = fromElementsOp.getLoc();
+  RankedTensorType tensorType =
+      fromElementsOp.getType().cast<RankedTensorType>();
+  auto shape = tensorType.getShape();
+
+  // Create tensor.empty.
+  auto emptyOp = rewriter.create<EmptyOp>(loc, tensorType, ValueRange());
+
+  // Case: tensor<elem_type>.
+  if (shape.empty()) {
+    Operation *res = rewriter.replaceOpWithNewOp<tensor::InsertOp>(
+        fromElementsOp, fromElementsOp.getElements().front(),
+        emptyOp.getResult(), ValueRange());
+    return res;
+  }
+
+  // Create constants for the range of possible indices [0, max{shape_i}).
+  auto maxDim = *std::max_element(shape.begin(), shape.end());
+  SmallVector<Value, 2> constants;
+  constants.reserve(maxDim);
+  for (int i = 0; i < maxDim; ++i)
+    constants.push_back(rewriter.create<arith::ConstantIndexOp>(loc, i));
+
+  // Traverse all elements and create tensor.insert ops.
+  auto elementIt = fromElementsOp.getElements().begin();
+  SmallVector<Value, 2> indices(tensorType.getRank(), constants[0]);
+  Value result = createInserts(rewriter, loc, /*dim=*/0, emptyOp.getResult(),
+                               shape, constants, elementIt, indices);
+
+  // Replace tensor.from_elements.
+  rewriter.replaceOp(fromElementsOp, result);
+  return result.getDefiningOp();
+}
+
+/// Lower tensor.generate to linalg.generic.
+FailureOr<Operation *>
+mlir::linalg::rewriteInDestinationPassingStyle(RewriterBase &rewriter,
+                                               tensor::GenerateOp generateOp) {
+  // Only ops with exactly one block are supported.
+  if (!generateOp.getBody().hasOneBlock())
+    return failure();
+
+  Location loc = generateOp.getLoc();
+  RankedTensorType tensorType = generateOp.getType().cast<RankedTensorType>();
+
+  // Create tensor.empty.
+  auto emptyOp =
+      rewriter.create<EmptyOp>(loc, tensorType, generateOp.getDynamicExtents());
+
+  // Create linalg.generic.
+  SmallVector<utils::IteratorType> iteratorTypes(tensorType.getRank(),
+                                                 utils::IteratorType::parallel);
+  SmallVector<AffineMap> indexingMaps(
+      1, rewriter.getMultiDimIdentityMap(tensorType.getRank()));
+  auto genericOp = rewriter.create<linalg::GenericOp>(
+      loc, tensorType, /*inputs=*/ValueRange(),
+      /*outputs=*/ValueRange{emptyOp.getResult()}, /*indexingMaps=*/
+      indexingMaps, iteratorTypes);
+  Block *body = rewriter.createBlock(&genericOp->getRegion(0), {},
+                                     tensorType.getElementType(), loc);
+  rewriter.setInsertionPointToStart(body);
+  SmallVector<Value> bbArgReplacements;
+  for (int64_t i = 0; i < tensorType.getRank(); ++i)
+    bbArgReplacements.push_back(rewriter.create<linalg::IndexOp>(loc, i));
+  rewriter.mergeBlocks(&generateOp.getBody().front(), body, bbArgReplacements);
+
+  // Update terminator.
+  auto yieldOp = cast<tensor::YieldOp>(body->getTerminator());
+  rewriter.replaceOpWithNewOp<linalg::YieldOp>(yieldOp, yieldOp.getValue());
+
+  // Replace tensor.generate.
+  rewriter.replaceOp(generateOp, genericOp->getResult(0));
+  return genericOp.getOperation();
+}
+
+/// Lower tensor.pad to linalg.generic + tensor.insert_slice.
+FailureOr<Operation *>
+mlir::linalg::rewriteInDestinationPassingStyle(RewriterBase &rewriter,
+                                               tensor::PadOp padOp) {
+  // Only ops with exactly one block are supported.
+  if (!padOp.getBodyRegion().hasOneBlock())
+    return failure();
+
+  // Create tensor.empty.
+  Location loc = padOp.getLoc();
+  RankedTensorType resultType = padOp.getResultType();
+  ReifiedRankedShapedTypeDims reifiedShape;
+  if (failed(cast<ReifyRankedShapedTypeOpInterface>(padOp.getOperation())
+                 .reifyResultShapes(rewriter, reifiedShape)))
+    return rewriter.notifyMatchFailure(
+        padOp, "failed to reify tensor.pad op result shape");
+  SmallVector<Value> dynamicSizes;
+  for (int64_t i = 0; i < resultType.getRank(); ++i)
+    if (resultType.isDynamicDim(i))
+      dynamicSizes.push_back(reifiedShape[0][i]);
+
+  // If the `padOp` has a nofold attribute and all paddings are known to be 0,
+  // explicitly insert a `linalg.copy`.
+  if (padOp.getNofoldAttr() &&
+      llvm::all_of(padOp.getMixedLowPad(), isZeroIndex) &&
+      llvm::all_of(padOp.getMixedHighPad(), isZeroIndex)) {
+    using bufferization::AllocTensorOp;
+    Value allocated =
+        rewriter.create<AllocTensorOp>(loc, resultType, dynamicSizes);
+    auto copyOp = rewriter.replaceOpWithNewOp<linalg::CopyOp>(
+        padOp, padOp.getSource(), allocated);
+    return copyOp.getOperation();
+  }
+
+  Value empty = rewriter.create<EmptyOp>(loc, resultType, dynamicSizes);
+  // Create linalg.fill or linalg.generic.
+  Operation *fillOp = movePaddingToFillOrGenericOp(rewriter, loc, padOp, empty);
+  rewriter.setInsertionPointAfter(fillOp);
+
+  // Create tensor::InsertSliceOp.
+  SmallVector<OpFoldResult> sliceSizes =
+      getMixedSizes(rewriter, loc, padOp.getSource());
+  SmallVector<OpFoldResult> sliceStrides(resultType.getRank(),
+                                         rewriter.getIndexAttr(1));
+  auto insertSliceOp = rewriter.replaceOpWithNewOp<tensor::InsertSliceOp>(
+      padOp, padOp.getSource(), fillOp->getResult(0),
+      /*offsets=*/padOp.getMixedLowPad(), sliceSizes, sliceStrides);
+  return insertSliceOp.getOperation();
+}
+
+Value linalg::bufferizeToAllocation(RewriterBase &rewriter, Value value,
+                                    Attribute memorySpace) {
+  // Call specialized overload for certain ops.
+  if (auto padOp = value.getDefiningOp<PadOp>())
+    return bufferizeToAllocation(rewriter, padOp, memorySpace);
+
+  // Collect all uses.
+  SmallVector<OpOperand *> uses = llvm::to_vector(
+      llvm::map_range(value.getUses(), [](OpOperand &use) { return &use; }));
+
+  OpBuilder::InsertionGuard g(rewriter);
+  if (auto bbArg = value.dyn_cast<BlockArgument>()) {
+    rewriter.setInsertionPointToStart(bbArg.getOwner());
+  } else {
+    rewriter.setInsertionPointAfter(value.getDefiningOp());
+  }
+  Location loc = value.getLoc();
+
+  // Create buffer allocation.
+  Value alloc = createAllocationForTensor(rewriter, loc, value, memorySpace);
+
+  // Create memref.tensor_store.
+  rewriter.setInsertionPointAfter(alloc.getDefiningOp());
+  rewriter.create<memref::TensorStoreOp>(loc, value, alloc);
+
+  // Create bufferization.to_tensor with "restrict" and "writable". The returned
+  // tensor is a new buffer allocation, so it does not alias with any buffer.
+  Value toTensorOp = rewriter.create<bufferization::ToTensorOp>(
+      loc, alloc, /*restrict=*/true, /*writable=*/true);
+  for (OpOperand *use : uses) {
+    rewriter.updateRootInPlace(use->getOwner(),
+                               [&]() { use->set(toTensorOp); });
+  }
+
+  return toTensorOp;
+}
+
 namespace {
+/// Lower tensor.from_elements to a sequence of chained tensor.insert.
+struct FromElementsOpConverter : public OpRewritePattern<FromElementsOp> {
+  using OpRewritePattern<FromElementsOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(FromElementsOp fromElementsOp,
+                                PatternRewriter &rewriter) const override {
+    if (failed(
+            linalg::rewriteInDestinationPassingStyle(rewriter, fromElementsOp)))
+      return failure();
+    return success();
+  }
+};
 
 /// Lower tensor.generate to linalg.generic.
 struct GenerateOpConverter : public OpRewritePattern<GenerateOp> {
@@ -32,41 +386,8 @@ struct GenerateOpConverter : public OpRewritePattern<GenerateOp> {
 
   LogicalResult matchAndRewrite(GenerateOp generateOp,
                                 PatternRewriter &rewriter) const override {
-    // Only ops with exactly one block are supported.
-    if (!generateOp.getBody().hasOneBlock())
+    if (failed(linalg::rewriteInDestinationPassingStyle(rewriter, generateOp)))
       return failure();
-
-    Location loc = generateOp.getLoc();
-    RankedTensorType tensorType = generateOp.getType().cast<RankedTensorType>();
-
-    // Create tensor.empty.
-    auto emptyOp = rewriter.create<EmptyOp>(loc, tensorType,
-                                            generateOp.getDynamicExtents());
-
-    // Create linalg.generic.
-    SmallVector<utils::IteratorType> iteratorTypes(
-        tensorType.getRank(), utils::IteratorType::parallel);
-    SmallVector<AffineMap> indexingMaps(
-        1, rewriter.getMultiDimIdentityMap(tensorType.getRank()));
-    auto genericOp = rewriter.create<linalg::GenericOp>(
-        loc, tensorType, /*inputs=*/ValueRange(),
-        /*outputs=*/ValueRange{emptyOp.getResult()}, /*indexingMaps=*/
-        indexingMaps, iteratorTypes);
-    Block *body = rewriter.createBlock(&genericOp->getRegion(0), {},
-                                       tensorType.getElementType(), loc);
-    rewriter.setInsertionPointToStart(body);
-    SmallVector<Value> bbArgReplacements;
-    for (int64_t i = 0; i < tensorType.getRank(); ++i)
-      bbArgReplacements.push_back(rewriter.create<linalg::IndexOp>(loc, i));
-    rewriter.mergeBlocks(&generateOp.getBody().front(), body,
-                         bbArgReplacements);
-
-    // Update terminator.
-    auto yieldOp = cast<tensor::YieldOp>(body->getTerminator());
-    rewriter.replaceOpWithNewOp<linalg::YieldOp>(yieldOp, yieldOp.getValue());
-
-    // Replace tensor.generate.
-    rewriter.replaceOp(generateOp, genericOp->getResult(0));
     return success();
   }
 };
@@ -77,100 +398,15 @@ struct PadOpConverter : public OpRewritePattern<PadOp> {
 
   LogicalResult matchAndRewrite(PadOp padOp,
                                 PatternRewriter &rewriter) const override {
-    // Only ops with exactly one block are supported.
-    if (!padOp.getBodyRegion().hasOneBlock())
+    if (failed(linalg::rewriteInDestinationPassingStyle(rewriter, padOp)))
       return failure();
-
-    // Create tensor.empty.
-    Location loc = padOp.getLoc();
-    RankedTensorType resultType = padOp.getResultType();
-    ReifiedRankedShapedTypeDims reifiedShape;
-    if (failed(cast<ReifyRankedShapedTypeOpInterface>(padOp.getOperation())
-                   .reifyResultShapes(rewriter, reifiedShape)))
-      return rewriter.notifyMatchFailure(
-          padOp, "failed to reify tensor.pad op result shape");
-    SmallVector<Value> dynamicSizes;
-    for (int64_t i = 0; i < resultType.getRank(); ++i)
-      if (resultType.isDynamicDim(i))
-        dynamicSizes.push_back(reifiedShape[0][i]);
-    auto emptyOp = rewriter.create<EmptyOp>(loc, resultType, dynamicSizes);
-
-    // Examine the yielded value to decide if a linalg.generic is neede or a
-    // linalg.fill is sufficient.
-    Value filled;
-    Value yieldedValue =
-        cast<tensor::YieldOp>(padOp.getBody()->getTerminator()).getValue();
-    Attribute constYieldedValue;
-    // Is the yielded value a bbArg defined outside of the PadOp?
-    bool outsideBbArg =
-        yieldedValue.isa<BlockArgument>() &&
-        yieldedValue.cast<BlockArgument>().getOwner()->getParentOp() !=
-            padOp.getOperation();
-    // Is the yielded value an OpResult defined outside of the PadOp?
-    bool outsideOpResult =
-        yieldedValue.isa<OpResult>() &&
-        yieldedValue.getDefiningOp()->getParentOp() != padOp.getOperation();
-    bool invariantYieldedValue = outsideBbArg || outsideOpResult;
-    if (matchPattern(yieldedValue, m_Constant(&constYieldedValue))) {
-      // Padding with a constant: Create linalg.fill.
-      Dialect *arithDialect =
-          rewriter.getContext()->getLoadedDialect<arith::ArithDialect>();
-      Value fillValue = arithDialect
-                            ->materializeConstant(rewriter, constYieldedValue,
-                                                  yieldedValue.getType(),
-                                                  yieldedValue.getLoc())
-                            ->getResult(0);
-      auto fillOp = rewriter.create<linalg::FillOp>(
-          loc, ValueRange(fillValue), ValueRange(emptyOp.getResult()));
-      rewriter.setInsertionPointAfter(fillOp);
-      filled = fillOp.getResult(0);
-    } else if (invariantYieldedValue) {
-      // Padding with an invariant value.
-      auto fillOp = rewriter.create<linalg::FillOp>(
-          loc, ValueRange(yieldedValue), ValueRange(emptyOp.getResult()));
-      rewriter.setInsertionPointAfter(fillOp);
-      filled = fillOp.getResult(0);
-    } else {
-      // Create linalg.generic.
-      SmallVector<utils::IteratorType> iteratorTypes(
-          resultType.getRank(), utils::IteratorType::parallel);
-      SmallVector<AffineMap> indexingMaps(
-          1, rewriter.getMultiDimIdentityMap(resultType.getRank()));
-      auto genericOp = rewriter.create<linalg::GenericOp>(
-          loc, resultType, /*inputs=*/ValueRange(),
-          /*outputs=*/ValueRange{emptyOp.getResult()}, /*indexingMaps=*/
-          indexingMaps, iteratorTypes);
-      Block *body = rewriter.createBlock(&genericOp->getRegion(0), {},
-                                         resultType.getElementType(), loc);
-      rewriter.setInsertionPointToStart(body);
-      SmallVector<Value> bbArgReplacements;
-      for (int64_t i = 0; i < resultType.getRank(); ++i)
-        bbArgReplacements.push_back(rewriter.create<linalg::IndexOp>(loc, i));
-      rewriter.mergeBlocks(padOp.getBody(), body, bbArgReplacements);
-
-      // Update terminator.
-      auto yieldOp = cast<tensor::YieldOp>(body->getTerminator());
-      rewriter.replaceOpWithNewOp<linalg::YieldOp>(yieldOp, yieldOp.getValue());
-      rewriter.setInsertionPointAfter(genericOp);
-      filled = genericOp->getResult(0);
-    }
-
-    // Create tensor::InsertSliceOp.
-    SmallVector<OpFoldResult> sliceSizes =
-        getMixedSizes(rewriter, loc, padOp.getSource());
-    SmallVector<OpFoldResult> sliceStrides(resultType.getRank(),
-                                           rewriter.getIndexAttr(1));
-    rewriter.replaceOpWithNewOp<tensor::InsertSliceOp>(
-        padOp, padOp.getSource(), filled,
-        /*offsets=*/padOp.getMixedLowPad(), sliceSizes, sliceStrides);
-
     return success();
   }
 };
-
 } // namespace
 
 void linalg::populateConvertToDestinationStylePatterns(
     RewritePatternSet &patterns) {
-  patterns.insert<GenerateOpConverter, PadOpConverter>(patterns.getContext());
+  patterns.insert<FromElementsOpConverter, GenerateOpConverter, PadOpConverter>(
+      patterns.getContext());
 }

@@ -6,14 +6,13 @@ define <8 x i16> @pr25080(<8 x i32> %a) {
 ; LE-LABEL: pr25080:
 ; LE:       # %bb.0: # %entry
 ; LE-NEXT:    addis 3, 2, .LCPI0_0@toc@ha
-; LE-NEXT:    xxlxor 37, 37, 37
+; LE-NEXT:    xxlxor 36, 36, 36
 ; LE-NEXT:    addi 3, 3, .LCPI0_0@toc@l
 ; LE-NEXT:    lxvd2x 0, 0, 3
-; LE-NEXT:    xxswapd 36, 0
-; LE-NEXT:    xxland 34, 34, 36
-; LE-NEXT:    xxland 35, 35, 36
-; LE-NEXT:    vcmpequw 2, 2, 5
-; LE-NEXT:    vcmpequw 3, 3, 5
+; LE-NEXT:    xxland 34, 34, 0
+; LE-NEXT:    xxland 35, 35, 0
+; LE-NEXT:    vcmpequw 2, 2, 4
+; LE-NEXT:    vcmpequw 3, 3, 4
 ; LE-NEXT:    xxswapd 0, 34
 ; LE-NEXT:    mfvsrwz 3, 34
 ; LE-NEXT:    xxsldwi 1, 34, 34, 1

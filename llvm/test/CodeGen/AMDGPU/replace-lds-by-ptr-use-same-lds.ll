@@ -1,4 +1,4 @@
-; RUN: opt -opaque-pointers=0 -S -mtriple=amdgcn--  -amdgpu-replace-lds-use-with-pointer -amdgpu-enable-lds-replace-with-pointer=true < %s | FileCheck %s
+; RUN: opt -S -mtriple=amdgcn--  -amdgpu-replace-lds-use-with-pointer -amdgpu-enable-lds-replace-with-pointer=true < %s | FileCheck %s
 
 ; DESCRIPTION:
 ;
@@ -18,17 +18,16 @@
 ; Pointer replacement code should be added.
 define internal void @function() {
 ; CHECK-LABEL: entry:
-; CHECK:   %0 = load i16, i16 addrspace(3)* @lds1.ptr, align 2
-; CHECK:   %1 = getelementptr i8, i8 addrspace(3)* null, i16 %0
-; CHECK:   %2 = bitcast i8 addrspace(3)* %1 to [1 x i32] addrspace(3)*
-; CHECK:   %gep1 = getelementptr inbounds [1 x i32], [1 x i32] addrspace(3)* %2, i32 0, i32 0
-; CHECK:   %gep2 = getelementptr inbounds [1 x i32], [1 x i32] addrspace(3)* %2, i32 0, i32 0
-; CHECK:   %gep3 = getelementptr inbounds [1 x i32], [1 x i32] addrspace(3)* %2, i32 0, i32 0
+; CHECK:   %0 = load i16, ptr addrspace(3) @lds1.ptr, align 2
+; CHECK:   %1 = getelementptr i8, ptr addrspace(3) null, i16 %0
+; CHECK:   %gep1 = getelementptr inbounds [1 x i32], ptr addrspace(3) %1, i32 0, i32 0
+; CHECK:   %gep2 = getelementptr inbounds [1 x i32], ptr addrspace(3) %1, i32 0, i32 0
+; CHECK:   %gep3 = getelementptr inbounds [1 x i32], ptr addrspace(3) %1, i32 0, i32 0
 ; CHECK:   ret void
 entry:
-  %gep1 = getelementptr inbounds [1 x i32], [1 x i32] addrspace(3)* @lds1, i32 0, i32 0
-  %gep2 = getelementptr inbounds [1 x i32], [1 x i32] addrspace(3)* @lds1, i32 0, i32 0
-  %gep3 = getelementptr inbounds [1 x i32], [1 x i32] addrspace(3)* @lds1, i32 0, i32 0
+  %gep1 = getelementptr inbounds [1 x i32], ptr addrspace(3) @lds1, i32 0, i32 0
+  %gep2 = getelementptr inbounds [1 x i32], ptr addrspace(3) @lds1, i32 0, i32 0
+  %gep3 = getelementptr inbounds [1 x i32], ptr addrspace(3) @lds1, i32 0, i32 0
   ret void
 }
 
@@ -40,7 +39,7 @@ define protected amdgpu_kernel void @kernel() {
 ; CHECK:   br i1 %1, label %2, label %3
 ;
 ; CHECK-LABEL: 2:
-; CHECK:   store i16 ptrtoint ([1 x i32] addrspace(3)* @lds1 to i16), i16 addrspace(3)* @lds1.ptr, align 2
+; CHECK:   store i16 ptrtoint (ptr addrspace(3) @lds1 to i16), ptr addrspace(3) @lds1.ptr, align 2
 ; CHECK:   br label %3
 ;
 ; CHECK-LABEL: 3:

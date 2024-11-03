@@ -297,27 +297,14 @@ void LVBinaryReader::addSectionRange(LVSectionIndex SectionIndex,
 }
 
 LVRange *LVBinaryReader::getSectionRanges(LVSectionIndex SectionIndex) {
-  LVRange *Range = nullptr;
   // Check if we already have a mapping for this section index.
   LVSectionRanges::iterator IterSection = SectionRanges.find(SectionIndex);
-  if (IterSection == SectionRanges.end()) {
-    Range = new LVRange();
-    SectionRanges.emplace(SectionIndex, Range);
-  } else {
-    Range = IterSection->second;
-  }
+  if (IterSection == SectionRanges.end())
+    IterSection =
+        SectionRanges.emplace(SectionIndex, std::make_unique<LVRange>()).first;
+  LVRange *Range = IterSection->second.get();
   assert(Range && "Range is null.");
   return Range;
-}
-
-LVBinaryReader::~LVBinaryReader() {
-  // Delete the lines created by 'createInstructions'.
-  std::vector<LVLines *> AllInstructionLines = ScopeInstructions.find();
-  for (LVLines *Entry : AllInstructionLines)
-    delete Entry;
-  // Delete the ranges created by 'getSectionRanges'.
-  for (LVSectionRanges::reference Entry : SectionRanges)
-    delete Entry.second;
 }
 
 Error LVBinaryReader::createInstructions(LVScope *Scope,
@@ -380,7 +367,9 @@ Error LVBinaryReader::createInstructions(LVScope *Scope,
 
   // Address for first instruction line.
   LVAddress FirstAddress = Address;
-  LVLines *Instructions = new LVLines();
+  auto InstructionsSP = std::make_unique<LVLines>();
+  LVLines &Instructions = *InstructionsSP;
+  DiscoveredLines.emplace_back(std::move(InstructionsSP));
 
   while (Begin < End) {
     MCInst Instruction;
@@ -422,10 +411,10 @@ Error LVBinaryReader::createInstructions(LVScope *Scope,
       // the 'processLines()' function will move each created logical line
       // to its enclosing logical scope, using the debug ranges information
       // and they will be released when its scope parent is deleted.
-      LVLineAssembler *Line = new LVLineAssembler();
+      LVLineAssembler *Line = createLineAssembler();
       Line->setAddress(Address);
       Line->setName(StringRef(Stream.str()).trim());
-      Instructions->push_back(Line);
+      Instructions.push_back(Line);
       break;
     }
     }
@@ -439,15 +428,15 @@ Error LVBinaryReader::createInstructions(LVScope *Scope,
            << " Scope DIE: " << hexValue(Scope->getOffset()) << "\n"
            << "Address: " << hexValue(FirstAddress)
            << format(" - Collected instructions lines: %d\n",
-                     Instructions->size());
-    for (const LVLine *Line : *Instructions)
+                     Instructions.size());
+    for (const LVLine *Line : Instructions)
       dbgs() << format_decimal(++Index, 5) << ": "
              << hexValue(Line->getOffset()) << ", (" << Line->getName()
              << ")\n";
   });
 
   // The scope in the assembler names is linked to its own instructions.
-  ScopeInstructions.add(SectionIndex, Scope, Instructions);
+  ScopeInstructions.add(SectionIndex, Scope, &Instructions);
   AssemblerMappings.add(SectionIndex, FirstAddress, Scope);
 
   return Error::success();

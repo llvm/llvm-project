@@ -1243,6 +1243,32 @@ struct PragmaDebugHandler : public PragmaHandler {
 #endif
 };
 
+struct PragmaUnsafeBufferUsageHandler : public PragmaHandler {
+  PragmaUnsafeBufferUsageHandler() : PragmaHandler("unsafe_buffer_usage") {}
+  void HandlePragma(Preprocessor &PP, PragmaIntroducer Introducer,
+                    Token &FirstToken) override {
+    Token Tok;
+
+    PP.LexUnexpandedToken(Tok);
+    if (Tok.isNot(tok::identifier)) {
+      PP.Diag(Tok, diag::err_pp_pragma_unsafe_buffer_usage_syntax);
+      return;
+    }
+
+    IdentifierInfo *II = Tok.getIdentifierInfo();
+    SourceLocation Loc = Tok.getLocation();
+
+    if (II->isStr("begin")) {
+      if (PP.enterOrExitSafeBufferOptOutRegion(true, Loc))
+        PP.Diag(Loc, diag::err_pp_double_begin_pragma_unsafe_buffer_usage);
+    } else if (II->isStr("end")) {
+      if (PP.enterOrExitSafeBufferOptOutRegion(false, Loc))
+        PP.Diag(Loc, diag::err_pp_unmatched_end_begin_pragma_unsafe_buffer_usage);
+    } else
+      PP.Diag(Tok, diag::err_pp_pragma_unsafe_buffer_usage_syntax);
+  }
+};
+
 /// PragmaDiagnosticHandler - e.g. '\#pragma GCC diagnostic ignored "-Wformat"'
 struct PragmaDiagnosticHandler : public PragmaHandler {
 private:
@@ -2127,6 +2153,9 @@ void Preprocessor::RegisterBuiltinPragmas() {
   ModuleHandler->AddPragma(new PragmaModuleEndHandler());
   ModuleHandler->AddPragma(new PragmaModuleBuildHandler());
   ModuleHandler->AddPragma(new PragmaModuleLoadHandler());
+
+  // Safe Buffers pragmas
+  AddPragmaHandler("clang", new PragmaUnsafeBufferUsageHandler);
 
   // Add region pragmas.
   AddPragmaHandler(new PragmaRegionHandler("region"));

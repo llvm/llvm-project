@@ -961,6 +961,13 @@ bool IsPolymorphic(const Symbol &symbol) {
   return false;
 }
 
+bool IsUnlimitedPolymorphic(const Symbol &symbol) {
+  if (const DeclTypeSpec * type{symbol.GetType()}) {
+    return type->IsUnlimitedPolymorphic();
+  }
+  return false;
+}
+
 bool IsPolymorphicAllocatable(const Symbol &symbol) {
   return IsAllocatable(symbol) && IsPolymorphic(symbol);
 }
@@ -1035,14 +1042,12 @@ ProcedureDefinitionClass ClassifyProcedure(const Symbol &symbol) { // 15.2.2
     return ProcedureDefinitionClass::None;
   } else if (ultimate.attrs().test(Attr::INTRINSIC)) {
     return ProcedureDefinitionClass::Intrinsic;
+  } else if (IsDummy(ultimate)) {
+    return ProcedureDefinitionClass::Dummy;
+  } else if (IsProcedurePointer(symbol)) {
+    return ProcedureDefinitionClass::Pointer;
   } else if (ultimate.attrs().test(Attr::EXTERNAL)) {
     return ProcedureDefinitionClass::External;
-  } else if (const auto *procDetails{ultimate.detailsIf<ProcEntityDetails>()}) {
-    if (procDetails->isDummy()) {
-      return ProcedureDefinitionClass::Dummy;
-    } else if (IsPointer(ultimate)) {
-      return ProcedureDefinitionClass::Pointer;
-    }
   } else if (const auto *nameDetails{
                  ultimate.detailsIf<SubprogramNameDetails>()}) {
     switch (nameDetails->kind()) {
@@ -1409,11 +1414,6 @@ bool HasAlternateReturns(const Symbol &subprogram) {
     }
   }
   return false;
-}
-
-bool InCommonBlock(const Symbol &symbol) {
-  const auto *details{symbol.detailsIf<ObjectEntityDetails>()};
-  return details && details->commonBlock();
 }
 
 const std::optional<parser::Name> &MaybeGetNodeName(

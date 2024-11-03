@@ -90,7 +90,7 @@ _LIBCPP_BEGIN_NAMESPACE_LFTS
 #  define _LIBCPP_DEPRECATED_BOYER_MOORE_HORSPOOL_SEARCHER _LIBCPP_DEPRECATED_("std::experimental::boyer_moore_horspool_searcher will be removed in LLVM 17. Use std::boyer_moore_horspool_searcher instead")
 #endif
 
-#if _LIBCPP_STD_VER > 11
+#if _LIBCPP_STD_VER >= 14
 // default searcher
 template<class _ForwardIterator, class _BinaryPredicate = equal_to<>>
 class _LIBCPP_DEPRECATED_DEFAULT_SEARCHER _LIBCPP_TEMPLATE_VIS default_searcher {
@@ -427,7 +427,7 @@ make_boyer_moore_horspool_searcher( _RandomAccessIterator __f, _RandomAccessIter
     return boyer_moore_horspool_searcher<_RandomAccessIterator, _Hash, _BinaryPredicate>(__f, __l, __hf, __p);
 }
 
-#endif // _LIBCPP_STD_VER > 11
+#endif // _LIBCPP_STD_VER >= 14
 
 _LIBCPP_END_NAMESPACE_LFTS
 

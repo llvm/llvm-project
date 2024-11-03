@@ -106,6 +106,12 @@ def G_GLOBAL_VALUE : GenericInstruction {
   let hasSideEffects = false;
 }
 
+def G_CONSTANT_POOL : GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins unknown:$src);
+  let hasSideEffects = false;
+}
+
 def G_INTTOPTR : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type1:$src);

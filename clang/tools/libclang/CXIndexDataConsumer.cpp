@@ -434,7 +434,6 @@ bool CXIndexDataConsumer::isFunctionLocalDecl(const Decl *D) {
     case InternalLinkage:
       return true;
     case VisibleNoLinkage:
-    case ModuleInternalLinkage:
     case UniqueExternalLinkage:
       llvm_unreachable("Not a sema linkage");
     case ModuleLinkage:

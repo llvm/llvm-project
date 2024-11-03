@@ -3055,6 +3055,36 @@ static_assert(__is_trivially_relocatable(TrivialAbiNontrivialMoveCtor[]), "");
 
 } // namespace is_trivially_relocatable
 
+namespace can_pass_in_regs {
+
+struct A { };
+
+struct B {
+  ~B();
+};
+
+struct C; // expected-note {{forward declaration}}
+
+union D {
+  int x;
+};
+
+static_assert(__can_pass_in_regs(A), "");
+static_assert(__can_pass_in_regs(A), "");
+static_assert(!__can_pass_in_regs(B), "");
+static_assert(__can_pass_in_regs(D), "");
+
+void test_errors() {
+  (void)__can_pass_in_regs(const A); // expected-error {{not an unqualified class type}}
+  (void)__can_pass_in_regs(A&); // expected-error {{not an unqualified class type}}
+  (void)__can_pass_in_regs(A&&); // expected-error {{not an unqualified class type}}
+  (void)__can_pass_in_regs(const A&); // expected-error {{not an unqualified class type}}
+  (void)__can_pass_in_regs(C); // expected-error {{incomplete type}}
+  (void)__can_pass_in_regs(int); // expected-error {{not an unqualified class type}}
+  (void)__can_pass_in_regs(int&); // expected-error {{not an unqualified class type}}
+}
+}
+
 struct S {};
 template <class T> using remove_const_t = __remove_const(T);
 

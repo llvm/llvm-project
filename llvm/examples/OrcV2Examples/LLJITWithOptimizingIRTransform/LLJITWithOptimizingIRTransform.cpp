@@ -74,7 +74,6 @@ class MyOptimizationTransform {
 public:
   MyOptimizationTransform() : PM(std::make_unique<legacy::PassManager>()) {
     PM->add(createTailCallEliminationPass());
-    PM->add(createFunctionInliningPass());
     PM->add(createIndVarSimplifyPass());
     PM->add(createCFGSimplificationPass());
   }

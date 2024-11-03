@@ -789,6 +789,9 @@ public:
   ///   (X ^ Y) != X -> Y != 0
   bool matchRedundantBinOpInEquality(MachineInstr &MI, BuildFnTy &MatchInfo);
 
+  /// Match shifts greater or equal to the bitwidth of the operation.
+  bool matchShiftsTooBig(MachineInstr &MI);
+
 private:
   /// Given a non-indexed load or store instruction \p MI, find an offset that
   /// can be usefully and legally folded into it as a post-indexing operation.

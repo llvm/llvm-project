@@ -16,7 +16,7 @@ end
 function _T:TestLegacyFileOut()
     local f = io.open(self.output, 'w')
     self.debugger:SetOutputFile(f)
-    self:handle_command('p/x 3735928559', false)
+    self:handle_command('expression/x 3735928559', false)
     f:close()
 
     f = io.open(self.output, 'r')

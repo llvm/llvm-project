@@ -481,8 +481,8 @@ unsigned ConstantRange::getMinSignedBits() const {
   if (isEmptySet())
     return 0;
 
-  return std::max(getSignedMin().getMinSignedBits(),
-                  getSignedMax().getMinSignedBits());
+  return std::max(getSignedMin().getSignificantBits(),
+                  getSignedMax().getSignificantBits());
 }
 
 ConstantRange ConstantRange::subtract(const APInt &Val) const {
@@ -816,8 +816,7 @@ ConstantRange ConstantRange::truncate(uint32_t DstTySize) const {
   if (isUpperWrapped()) {
     // If Upper is greater than or equal to MaxValue(DstTy), it covers the whole
     // truncated range.
-    if (Upper.getActiveBits() > DstTySize ||
-        Upper.countTrailingOnes() == DstTySize)
+    if (Upper.getActiveBits() > DstTySize || Upper.countr_one() == DstTySize)
       return getFull(DstTySize);
 
     Union = ConstantRange(APInt::getMaxValue(DstTySize),Upper.trunc(DstTySize));
@@ -945,6 +944,7 @@ bool ConstantRange::isIntrinsicSupported(Intrinsic::ID IntrinsicID) {
   case Intrinsic::smin:
   case Intrinsic::smax:
   case Intrinsic::abs:
+  case Intrinsic::ctlz:
     return true;
   default:
     return false;
@@ -975,6 +975,12 @@ ConstantRange ConstantRange::intrinsic(Intrinsic::ID IntrinsicID,
     assert(IntMinIsPoison && "Must be known (immarg)");
     assert(IntMinIsPoison->getBitWidth() == 1 && "Must be boolean");
     return Ops[0].abs(IntMinIsPoison->getBoolValue());
+  }
+  case Intrinsic::ctlz: {
+    const APInt *ZeroIsPoison = Ops[1].getSingleElement();
+    assert(ZeroIsPoison && "Must be known (immarg)");
+    assert(ZeroIsPoison->getBitWidth() == 1 && "Must be boolean");
+    return Ops[0].ctlz(ZeroIsPoison->getBoolValue());
   }
   default:
     assert(!isIntrinsicSupported(IntrinsicID) && "Shouldn't be supported");
@@ -1448,7 +1454,7 @@ ConstantRange::shl(const ConstantRange &Other) const {
     if (RHS->uge(BW))
       return getEmpty();
 
-    unsigned EqualLeadingBits = (Min ^ Max).countLeadingZeros();
+    unsigned EqualLeadingBits = (Min ^ Max).countl_zero();
     if (RHS->ule(EqualLeadingBits))
       return getNonEmpty(Min << *RHS, (Max << *RHS) + 1);
 
@@ -1459,7 +1465,7 @@ ConstantRange::shl(const ConstantRange &Other) const {
   APInt OtherMax = Other.getUnsignedMax();
 
   // There's overflow!
-  if (OtherMax.ugt(Max.countLeadingZeros()))
+  if (OtherMax.ugt(Max.countl_zero()))
     return getFull();
 
   // FIXME: implement the other tricky cases
@@ -1665,6 +1671,44 @@ ConstantRange ConstantRange::abs(bool IntMinIsPoison) const {
   // Range crosses zero.
   return ConstantRange::getNonEmpty(APInt::getZero(getBitWidth()),
                                     APIntOps::umax(-SMin, SMax) + 1);
+}
+
+ConstantRange ConstantRange::ctlz(bool ZeroIsPoison) const {
+  if (isEmptySet())
+    return getEmpty();
+
+  APInt Zero = APInt::getZero(getBitWidth());
+  if (ZeroIsPoison && contains(Zero)) {
+    // ZeroIsPoison is set, and zero is contained. We discern three cases, in
+    // which a zero can appear:
+    // 1) Lower is zero, handling cases of kind [0, 1), [0, 2), etc.
+    // 2) Upper is zero, wrapped set, handling cases of kind [3, 0], etc.
+    // 3) Zero contained in a wrapped set, e.g., [3, 2), [3, 1), etc.
+
+    if (getLower().isZero()) {
+      if ((getUpper() - 1).isZero()) {
+        // We have in input interval of kind [0, 1). In this case we cannot
+        // really help but return empty-set.
+        return getEmpty();
+      }
+
+      // Compute the resulting range by excluding zero from Lower.
+      return ConstantRange(
+          APInt(getBitWidth(), (getUpper() - 1).countl_zero()),
+          APInt(getBitWidth(), (getLower() + 1).countl_zero() + 1));
+    } else if ((getUpper() - 1).isZero()) {
+      // Compute the resulting range by excluding zero from Upper.
+      return ConstantRange(Zero,
+                           APInt(getBitWidth(), getLower().countl_zero() + 1));
+    } else {
+      return ConstantRange(Zero, APInt(getBitWidth(), getBitWidth()));
+    }
+  }
+
+  // Zero is either safe or not in the range. The output range is composed by
+  // the result of countLeadingZero of the two extremes.
+  return getNonEmpty(APInt(getBitWidth(), getUnsignedMax().countl_zero()),
+                     APInt(getBitWidth(), getUnsignedMin().countl_zero() + 1));
 }
 
 ConstantRange::OverflowResult ConstantRange::unsignedAddMayOverflow(

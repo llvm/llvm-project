@@ -96,7 +96,7 @@ public:
 
   /// Applies the analysis transfer function for a given control flow graph
   /// element and type-erased lattice element.
-  virtual void transferTypeErased(const CFGElement *, TypeErasedLattice &,
+  virtual void transferTypeErased(const CFGElement &, TypeErasedLattice &,
                                   Environment &) = 0;
 
   /// Applies the analysis transfer function for a given edge from a CFG block
@@ -104,6 +104,7 @@ public:
   /// @param Stmt The condition which is responsible for the split in the CFG.
   /// @param Branch True if the edge goes to the basic block where the
   /// condition is true.
+  // FIXME: Change `Stmt` argument to a reference.
   virtual void transferBranchTypeErased(bool Branch, const Stmt *,
                                         TypeErasedLattice &, Environment &) = 0;
 

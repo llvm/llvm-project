@@ -39,5 +39,5 @@ class ObjCModulesAutoImportTestCase(TestBase):
 
         self.runCmd("settings set target.auto-import-clang-modules true")
 
-        self.expect("p getpid()", VARIABLES_DISPLAYED_CORRECTLY,
+        self.expect("expression getpid()", VARIABLES_DISPLAYED_CORRECTLY,
                     substrs=["pid_t"])

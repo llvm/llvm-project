@@ -28,6 +28,7 @@ static_library("LLVMNVPTXCodeGen") {
   ]
   include_dirs = [ "." ]
   sources = [
+    "NVPTXAliasAnalysis.cpp",
     "NVPTXAllocaHoisting.cpp",
     "NVPTXAsmPrinter.cpp",
     "NVPTXAssignValidGlobalNames.cpp",

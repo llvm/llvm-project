@@ -27,8 +27,12 @@
 #include "omptarget.h"
 #include "omptargetplugin.h"
 
+#ifndef TARGET_NAME
 #define TARGET_NAME CUDA
+#endif
+#ifndef DEBUG_PREFIX
 #define DEBUG_PREFIX "Target " GETNAME(TARGET_NAME) " RTL"
+#endif
 
 #include "MemoryManager.h"
 
@@ -1899,6 +1903,21 @@ int32_t __tgt_rtl_init_device_info(int32_t DeviceId,
     return OFFLOAD_FAIL;
 
   return DeviceRTL.initDeviceInfo(DeviceId, DeviceInfoPtr, ErrStr);
+}
+
+int32_t __tgt_rtl_launch_kernel(int32_t DeviceId, void *TgtEntryPtr,
+                                void **TgtArgs, ptrdiff_t *TgtOffsets,
+                                KernelArgsTy *KernelArgs,
+                                __tgt_async_info *AsyncInfo) {
+  assert(DeviceRTL.isValidDeviceId(DeviceId) && "device_id is invalid");
+
+  if (DeviceRTL.setContext(DeviceId) != OFFLOAD_SUCCESS)
+    return OFFLOAD_FAIL;
+
+  return DeviceRTL.runTargetTeamRegion(
+      DeviceId, TgtEntryPtr, TgtArgs, TgtOffsets, KernelArgs->NumArgs,
+      KernelArgs->NumTeams[0], KernelArgs->ThreadLimit[0],
+      KernelArgs->Tripcount, AsyncInfo);
 }
 
 #ifdef __cplusplus

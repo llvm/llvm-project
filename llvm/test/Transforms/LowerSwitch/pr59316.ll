@@ -62,3 +62,32 @@ BB:
 BB1:                                              ; preds = %BB
   unreachable
 }
+
+define void @f_i1() {
+entry:
+  switch i1 false, label %sw.bb [
+    i1 false, label %sw.bb12
+  ]
+
+sw.bb:                                            ; preds = %entry
+  unreachable
+
+sw.bb12:                                          ; preds = %entry
+  unreachable
+}
+
+define void @f_i2(i2 %cond) {
+entry:
+  switch i2 %cond, label %sw.bb [
+    i2 0, label %sw.bb12
+    i2 1, label %sw.bb12
+    i2 2, label %sw.bb12
+    i2 3, label %sw.bb12
+  ]
+
+sw.bb:                                            ; preds = %entry
+  unreachable
+
+sw.bb12:                                          ; preds = %entry
+  unreachable
+}

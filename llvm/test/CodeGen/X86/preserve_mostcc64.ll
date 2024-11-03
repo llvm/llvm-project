@@ -3,7 +3,7 @@
 ; RUN: sed -e "s/RETTYPE/\{i64\,i64\}/;s/RETVAL/undef/" %s | llc -mtriple=x86_64-apple-darwin -mcpu=corei7 | FileCheck --check-prefixes=ALL,INT128 %s
 
 ; Every GPR should be saved - except r11 and return registers
-define preserve_mostcc RETTYPE @preserve_mostcc1() nounwind {
+define preserve_mostcc RETTYPE @preserve_mostcc1(i64, i64, double, double) nounwind {
 entry:
 ;ALL-LABEL:   preserve_mostcc1
 ;ALL:         pushq %r10

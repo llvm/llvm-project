@@ -246,7 +246,7 @@ define <3 x i1> @test_urem_vec(<3 x i11> %X) nounwind {
 ; AVX512VL-NEXT:    vpand %xmm2, %xmm0, %xmm0
 ; AVX512VL-NEXT:    vpsrlvd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; AVX512VL-NEXT:    vpternlogd $200, %xmm1, %xmm2, %xmm0
-; AVX512VL-NEXT:    vpcmpnleud {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %k0
+; AVX512VL-NEXT:    vpcmpgtd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %k0
 ; AVX512VL-NEXT:    kshiftrw $1, %k0, %k1
 ; AVX512VL-NEXT:    kmovw %k1, %edx
 ; AVX512VL-NEXT:    kshiftrw $2, %k0, %k1

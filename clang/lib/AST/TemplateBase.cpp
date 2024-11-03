@@ -161,8 +161,9 @@ static bool needsAmpersandOnTemplateArg(QualType paramType, QualType argType) {
 //===----------------------------------------------------------------------===//
 
 TemplateArgument::TemplateArgument(ASTContext &Ctx, const llvm::APSInt &Value,
-                                   QualType Type) {
+                                   QualType Type, bool IsDefaulted) {
   Integer.Kind = Integral;
+  Integer.IsDefaulted = IsDefaulted;
   // Copy the APSInt value into our decomposed form.
   Integer.BitWidth = Value.getBitWidth();
   Integer.IsUnsigned = Value.isUnsigned();

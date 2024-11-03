@@ -192,22 +192,6 @@ void RISCVTargetELFStreamer::emitDirectiveVariantCC(MCSymbol &Symbol) {
   cast<MCSymbolELF>(Symbol).setOther(ELF::STO_RISCV_VARIANT_CC);
 }
 
-std::pair<unsigned, unsigned>
-RISCVELFStreamer::getRelocPairForSize(unsigned Size) {
-  switch (Size) {
-  default:
-    llvm_unreachable("unsupported fixup size");
-  case 1:
-    return std::make_pair(RISCV::fixup_riscv_add_8, RISCV::fixup_riscv_sub_8);
-  case 2:
-    return std::make_pair(RISCV::fixup_riscv_add_16, RISCV::fixup_riscv_sub_16);
-  case 4:
-    return std::make_pair(RISCV::fixup_riscv_add_32, RISCV::fixup_riscv_sub_32);
-  case 8:
-    return std::make_pair(RISCV::fixup_riscv_add_64, RISCV::fixup_riscv_sub_64);
-  }
-}
-
 bool RISCVELFStreamer::requiresFixups(MCContext &C, const MCExpr *Value,
                                       const MCExpr *&LHS, const MCExpr *&RHS) {
   const auto *MBE = dyn_cast<MCBinaryExpr>(Value);
@@ -261,13 +245,13 @@ void RISCVELFStreamer::emitValueImpl(const MCExpr *Value, unsigned Size,
   flushPendingLabels(DF, DF->getContents().size());
   MCDwarfLineEntry::make(this, getCurrentSectionOnly());
 
-  unsigned Add, Sub;
-  std::tie(Add, Sub) = getRelocPairForSize(Size);
+  MCFixupKind Add, Sub;
+  std::tie(Add, Sub) = RISCV::getRelocPairForSize(Size);
 
-  DF->getFixups().push_back(MCFixup::create(
-      DF->getContents().size(), A, static_cast<MCFixupKind>(Add), Loc));
-  DF->getFixups().push_back(MCFixup::create(
-      DF->getContents().size(), B, static_cast<MCFixupKind>(Sub), Loc));
+  DF->getFixups().push_back(
+      MCFixup::create(DF->getContents().size(), A, Add, Loc));
+  DF->getFixups().push_back(
+      MCFixup::create(DF->getContents().size(), B, Sub, Loc));
 
   DF->getContents().resize(DF->getContents().size() + Size, 0);
 }

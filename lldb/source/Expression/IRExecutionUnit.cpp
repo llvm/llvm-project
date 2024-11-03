@@ -406,11 +406,11 @@ void IRExecutionUnit::GetRunnableInfo(Status &error, lldb::addr_t &func_addr,
     }
   };
 
-  for (llvm::GlobalVariable &global_var : m_module->getGlobalList()) {
+  for (llvm::GlobalVariable &global_var : m_module->globals()) {
     RegisterOneValue(global_var);
   }
 
-  for (llvm::GlobalAlias &global_alias : m_module->getAliasList()) {
+  for (llvm::GlobalAlias &global_alias : m_module->aliases()) {
     RegisterOneValue(global_alias);
   }
 

@@ -5,13 +5,13 @@
 ; x + y = [110, 221)
 define internal i1 @f.add(i32 %x, i32 %y) {
 ; CHECK-LABEL: @f.add(
-; CHECK-NEXT:    [[A_1:%.*]] = add nuw i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[A_1:%.*]] = add nuw nsw i32 [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    [[C_2:%.*]] = icmp sgt i32 [[A_1]], 219
 ; CHECK-NEXT:    [[C_4:%.*]] = icmp slt i32 [[A_1]], 111
 ; CHECK-NEXT:    [[C_5:%.*]] = icmp eq i32 [[A_1]], 150
 ; CHECK-NEXT:    [[C_6:%.*]] = icmp slt i32 [[A_1]], 150
-; CHECK-NEXT:    [[RES_1:%.*]] = add nuw i1 false, [[C_2]]
-; CHECK-NEXT:    [[RES_2:%.*]] = add nuw i1 [[RES_1]], false
+; CHECK-NEXT:    [[RES_1:%.*]] = add nuw nsw i1 false, [[C_2]]
+; CHECK-NEXT:    [[RES_2:%.*]] = add nuw nsw i1 [[RES_1]], false
 ; CHECK-NEXT:    [[RES_3:%.*]] = add i1 [[RES_2]], [[C_4]]
 ; CHECK-NEXT:    [[RES_4:%.*]] = add i1 [[RES_3]], [[C_5]]
 ; CHECK-NEXT:    [[RES_5:%.*]] = add i1 [[RES_4]], [[C_6]]
@@ -50,13 +50,13 @@ define i1 @caller.add() {
 ; x - y = [-190, -79)
 define internal i1 @f.sub(i32 %x, i32 %y) {
 ; CHECK-LABEL: @f.sub(
-; CHECK-NEXT:    [[A_1:%.*]] = sub i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[A_1:%.*]] = sub nsw i32 [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    [[C_2:%.*]] = icmp sgt i32 [[A_1]], -81
 ; CHECK-NEXT:    [[C_4:%.*]] = icmp slt i32 [[A_1]], -189
 ; CHECK-NEXT:    [[C_5:%.*]] = icmp eq i32 [[A_1]], -150
 ; CHECK-NEXT:    [[C_6:%.*]] = icmp slt i32 [[A_1]], -150
-; CHECK-NEXT:    [[RES_1:%.*]] = add nuw i1 false, [[C_2]]
-; CHECK-NEXT:    [[RES_2:%.*]] = add nuw i1 [[RES_1]], false
+; CHECK-NEXT:    [[RES_1:%.*]] = add nuw nsw i1 false, [[C_2]]
+; CHECK-NEXT:    [[RES_2:%.*]] = add nuw nsw i1 [[RES_1]], false
 ; CHECK-NEXT:    [[RES_3:%.*]] = add i1 [[RES_2]], [[C_4]]
 ; CHECK-NEXT:    [[RES_4:%.*]] = add i1 [[RES_3]], [[C_5]]
 ; CHECK-NEXT:    [[RES_5:%.*]] = add i1 [[RES_4]], [[C_6]]
@@ -94,13 +94,13 @@ define i1 @caller.sub() {
 ; x * y = [1000, 4001)
 define internal i1 @f.mul(i32 %x, i32 %y) {
 ; CHECK-LABEL: @f.mul(
-; CHECK-NEXT:    [[A_1:%.*]] = mul i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[A_1:%.*]] = mul nuw nsw i32 [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    [[C_2:%.*]] = icmp sgt i32 [[A_1]], 3999
 ; CHECK-NEXT:    [[C_4:%.*]] = icmp slt i32 [[A_1]], 1001
 ; CHECK-NEXT:    [[C_5:%.*]] = icmp eq i32 [[A_1]], 1500
 ; CHECK-NEXT:    [[C_6:%.*]] = icmp slt i32 [[A_1]], 1500
-; CHECK-NEXT:    [[RES_1:%.*]] = add nuw i1 false, [[C_2]]
-; CHECK-NEXT:    [[RES_2:%.*]] = add nuw i1 [[RES_1]], false
+; CHECK-NEXT:    [[RES_1:%.*]] = add nuw nsw i1 false, [[C_2]]
+; CHECK-NEXT:    [[RES_2:%.*]] = add nuw nsw i1 [[RES_1]], false
 ; CHECK-NEXT:    [[RES_3:%.*]] = add i1 [[RES_2]], [[C_4]]
 ; CHECK-NEXT:    [[RES_4:%.*]] = add i1 [[RES_3]], [[C_5]]
 ; CHECK-NEXT:    [[RES_5:%.*]] = add i1 [[RES_4]], [[C_6]]

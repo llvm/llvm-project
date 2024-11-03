@@ -880,7 +880,7 @@ protected:
     Status error;
     auto name = command[0].ref();
     m_regex_cmd_up = std::make_unique<CommandObjectRegexCommand>(
-        m_interpreter, name, m_options.GetHelp(), m_options.GetSyntax(), 10, 0,
+        m_interpreter, name, m_options.GetHelp(), m_options.GetSyntax(), 0,
         true);
 
     if (argc == 1) {
@@ -1600,7 +1600,8 @@ protected:
       auto cmd_obj_sp = interpreter->CreateScriptCommandObject(
           m_options.m_class_name.c_str());
       if (!cmd_obj_sp) {
-        result.AppendError("cannot create helper object");
+        result.AppendErrorWithFormatv("cannot create helper object for: "
+                                      "'{0}'", m_options.m_class_name);
         return false;
       }
 

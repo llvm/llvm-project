@@ -100,14 +100,13 @@ define void @buildvec_dominant0_v4f32(<4 x float>* %x) {
 ; CHECK-LABEL: buildvec_dominant0_v4f32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; CHECK-NEXT:    lui a1, %hi(.LCPI4_0)
-; CHECK-NEXT:    addi a1, a1, %lo(.LCPI4_0)
-; CHECK-NEXT:    vlse32.v v8, (a1), zero
-; CHECK-NEXT:    vmv.s.x v9, zero
+; CHECK-NEXT:    vmv.s.x v8, zero
+; CHECK-NEXT:    lui a1, 262144
+; CHECK-NEXT:    vmv.v.x v9, a1
 ; CHECK-NEXT:    vsetivli zero, 3, e32, m1, tu, ma
-; CHECK-NEXT:    vslideup.vi v8, v9, 2
+; CHECK-NEXT:    vslideup.vi v9, v8, 2
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; CHECK-NEXT:    vse32.v v8, (a0)
+; CHECK-NEXT:    vse32.v v9, (a0)
 ; CHECK-NEXT:    ret
   store <4 x float> <float 2.0, float 2.0, float 0.0, float 2.0>, <4 x float>* %x
   ret void
@@ -135,10 +134,9 @@ define void @buildvec_dominant1_v4f32(<4 x float>* %x, float %f) {
 define void @buildvec_dominant2_v4f32(<4 x float>* %x, float %f) {
 ; CHECK-LABEL: buildvec_dominant2_v4f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    lui a1, %hi(.LCPI6_0)
-; CHECK-NEXT:    flw ft0, %lo(.LCPI6_0)(a1)
+; CHECK-NEXT:    lui a1, 262144
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; CHECK-NEXT:    vfmv.s.f v8, ft0
+; CHECK-NEXT:    vmv.s.x v8, a1
 ; CHECK-NEXT:    vfmv.v.f v9, fa0
 ; CHECK-NEXT:    vsetivli zero, 2, e32, m1, tu, ma
 ; CHECK-NEXT:    vslideup.vi v9, v8, 1
@@ -154,31 +152,17 @@ define void @buildvec_dominant2_v4f32(<4 x float>* %x, float %f) {
 }
 
 define void @buildvec_merge0_v4f32(<4 x float>* %x, float %f) {
-; RV32-LABEL: buildvec_merge0_v4f32:
-; RV32:       # %bb.0:
-; RV32-NEXT:    li a1, 6
-; RV32-NEXT:    vsetivli zero, 1, e8, mf8, ta, ma
-; RV32-NEXT:    lui a2, %hi(.LCPI7_0)
-; RV32-NEXT:    flw ft0, %lo(.LCPI7_0)(a2)
-; RV32-NEXT:    vmv.s.x v0, a1
-; RV32-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; RV32-NEXT:    vfmv.v.f v8, fa0
-; RV32-NEXT:    vfmerge.vfm v8, v8, ft0, v0
-; RV32-NEXT:    vse32.v v8, (a0)
-; RV32-NEXT:    ret
-;
-; RV64-LABEL: buildvec_merge0_v4f32:
-; RV64:       # %bb.0:
-; RV64-NEXT:    lui a1, %hi(.LCPI7_0)
-; RV64-NEXT:    flw ft0, %lo(.LCPI7_0)(a1)
-; RV64-NEXT:    li a1, 6
-; RV64-NEXT:    vsetivli zero, 1, e8, mf8, ta, ma
-; RV64-NEXT:    vmv.s.x v0, a1
-; RV64-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; RV64-NEXT:    vfmv.v.f v8, fa0
-; RV64-NEXT:    vfmerge.vfm v8, v8, ft0, v0
-; RV64-NEXT:    vse32.v v8, (a0)
-; RV64-NEXT:    ret
+; CHECK-LABEL: buildvec_merge0_v4f32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    li a1, 6
+; CHECK-NEXT:    vsetivli zero, 1, e8, mf8, ta, ma
+; CHECK-NEXT:    vmv.s.x v0, a1
+; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; CHECK-NEXT:    vfmv.v.f v8, fa0
+; CHECK-NEXT:    lui a1, 262144
+; CHECK-NEXT:    vmerge.vxm v8, v8, a1, v0
+; CHECK-NEXT:    vse32.v v8, (a0)
+; CHECK-NEXT:    ret
   %v0 = insertelement <4 x float> poison, float %f, i32 0
   %v1 = insertelement <4 x float> %v0, float 2.0, i32 1
   %v2 = insertelement <4 x float> %v1, float 2.0, i32 2
@@ -267,11 +251,10 @@ define <8 x float> @splat_idx_v8f32(<8 x float> %v, i64 %idx) {
 define dso_local void @splat_load_licm(float* %0) {
 ; RV32-LABEL: splat_load_licm:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    lui a1, %hi(.LCPI12_0)
-; RV32-NEXT:    addi a1, a1, %lo(.LCPI12_0)
-; RV32-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; RV32-NEXT:    vlse32.v v8, (a1), zero
 ; RV32-NEXT:    li a1, 1024
+; RV32-NEXT:    lui a2, 263168
+; RV32-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; RV32-NEXT:    vmv.v.x v8, a2
 ; RV32-NEXT:  .LBB12_1: # =>This Inner Loop Header: Depth=1
 ; RV32-NEXT:    vse32.v v8, (a0)
 ; RV32-NEXT:    addi a1, a1, -4
@@ -282,11 +265,10 @@ define dso_local void @splat_load_licm(float* %0) {
 ;
 ; RV64-LABEL: splat_load_licm:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    lui a1, %hi(.LCPI12_0)
-; RV64-NEXT:    addi a1, a1, %lo(.LCPI12_0)
-; RV64-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; RV64-NEXT:    vlse32.v v8, (a1), zero
 ; RV64-NEXT:    li a1, 1024
+; RV64-NEXT:    lui a2, 263168
+; RV64-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; RV64-NEXT:    vmv.v.x v8, a2
 ; RV64-NEXT:  .LBB12_1: # =>This Inner Loop Header: Depth=1
 ; RV64-NEXT:    vse32.v v8, (a0)
 ; RV64-NEXT:    addiw a1, a1, -4

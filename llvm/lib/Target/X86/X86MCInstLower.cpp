@@ -1608,6 +1608,7 @@ void X86AsmPrinter::LowerPATCHABLE_EVENT_CALL(const MachineInstr &MI,
     if (auto Op = MCIL.LowerMachineOperand(&MI, MI.getOperand(I))) {
       assert(Op->isReg() && "Only support arguments in registers");
       SrcRegs[I] = getX86SubSuperRegister(Op->getReg(), 64);
+      assert(SrcRegs[I].isValid() && "Invalid operand");
       if (SrcRegs[I] != DestRegs[I]) {
         UsedMask[I] = true;
         EmitAndCountInstruction(
@@ -1706,6 +1707,7 @@ void X86AsmPrinter::LowerPATCHABLE_TYPED_EVENT_CALL(const MachineInstr &MI,
       // TODO: Is register only support adequate?
       assert(Op->isReg() && "Only supports arguments in registers");
       SrcRegs[I] = getX86SubSuperRegister(Op->getReg(), 64);
+      assert(SrcRegs[I].isValid() && "Invalid operand");
       if (SrcRegs[I] != DestRegs[I]) {
         UsedMask[I] = true;
         EmitAndCountInstruction(
@@ -2712,9 +2714,10 @@ void X86AsmPrinter::emitInstruction(const MachineInstr *MI) {
     for (MBBI = PrevCrossBBInst(MBBI);
          MBBI != MachineBasicBlock::const_iterator();
          MBBI = PrevCrossBBInst(MBBI)) {
-      // Conservatively assume that pseudo instructions don't emit code and keep
-      // looking for a call. We may emit an unnecessary nop in some cases.
-      if (!MBBI->isPseudo()) {
+      // Pseudo instructions that aren't a call are assumed to not emit any
+      // code. If they do, we worst case generate unnecessary noops after a
+      // call.
+      if (MBBI->isCall() || !MBBI->isPseudo()) {
         if (MBBI->isCall())
           EmitAndCountInstruction(MCInstBuilder(X86::NOOP));
         break;

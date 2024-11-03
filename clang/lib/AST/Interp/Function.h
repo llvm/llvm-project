@@ -138,6 +138,8 @@ public:
   // Checks if the funtion already has a body attached.
   bool hasBody() const { return HasBody; }
 
+  unsigned getBuiltinID() const { return F->getBuiltinID(); }
+
   unsigned getNumParams() const { return ParamTypes.size(); }
 
 private:

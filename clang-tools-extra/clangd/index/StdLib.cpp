@@ -22,6 +22,7 @@
 #include "clang/Basic/LangOptions.h"
 #include "clang/Frontend/CompilerInvocation.h"
 #include "clang/Lex/PreprocessorOptions.h"
+#include "clang/Tooling/Inclusions/StandardLibrary.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/MemoryBuffer.h"
@@ -67,7 +68,7 @@ LangStandard::Kind standardFromOpts(const LangOptions &LO) {
 }
 
 std::string buildUmbrella(llvm::StringLiteral Mandatory,
-                          std::vector<llvm::StringLiteral> Headers) {
+                          llvm::ArrayRef<tooling::stdlib::Header> Headers) {
   std::string Result;
   llvm::raw_string_ostream OS(Result);
 
@@ -80,13 +81,11 @@ std::string buildUmbrella(llvm::StringLiteral Mandatory,
       "#endif\n",
       Mandatory);
 
-  llvm::sort(Headers);
-  auto Last = std::unique(Headers.begin(), Headers.end());
-  for (auto Header = Headers.begin(); Header != Last; ++Header) {
+  for (auto Header : Headers) {
     OS << llvm::formatv("#if __has_include({0})\n"
                         "#include {0}\n"
                         "#endif\n",
-                        *Header);
+                        Header);
   }
   OS.flush();
   return Result;
@@ -102,20 +101,14 @@ llvm::StringRef getStdlibUmbrellaHeader(const LangOptions &LO) {
   Lang L = langFromOpts(LO);
   switch (L) {
   case CXX:
-    static std::string *UmbrellaCXX =
-        new std::string(buildUmbrella(mandatoryHeader(L), {
-#define SYMBOL(Name, NameSpace, Header) #Header,
-#include "clang/Tooling/Inclusions/StdSymbolMap.inc"
-#undef SYMBOL
-                                                          }));
+    static std::string *UmbrellaCXX = new std::string(buildUmbrella(
+        mandatoryHeader(L),
+        tooling::stdlib::Header::all(tooling::stdlib::Lang::CXX)));
     return *UmbrellaCXX;
   case C:
-    static std::string *UmbrellaC =
-        new std::string(buildUmbrella(mandatoryHeader(L), {
-#define SYMBOL(Name, NameSpace, Header) #Header,
-#include "clang/Tooling/Inclusions/CSymbolMap.inc"
-#undef SYMBOL
-                                                          }));
+    static std::string *UmbrellaC = new std::string(
+        buildUmbrella(mandatoryHeader(L),
+                      tooling::stdlib::Header::all(tooling::stdlib::Lang::C)));
     return *UmbrellaC;
   }
   llvm_unreachable("invalid Lang in langFromOpts");
@@ -141,13 +134,10 @@ SymbolSlab filter(SymbolSlab Slab, const StdLibLocation &Loc) {
 
   static auto &StandardHeaders = *[] {
     auto *Set = new llvm::DenseSet<llvm::StringRef>();
-    for (llvm::StringRef Header : {
-#define SYMBOL(Name, NameSpace, Header) #Header,
-#include "clang/Tooling/Inclusions/CSymbolMap.inc"
-#include "clang/Tooling/Inclusions/StdSymbolMap.inc"
-#undef SYMBOL
-         })
-      Set->insert(Header);
+    for (auto Header : tooling::stdlib::Header::all(tooling::stdlib::Lang::CXX))
+      Set->insert(Header.name());
+    for (auto Header : tooling::stdlib::Header::all(tooling::stdlib::Lang::C))
+      Set->insert(Header.name());
     return Set;
   }();
 

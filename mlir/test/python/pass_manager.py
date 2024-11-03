@@ -59,6 +59,18 @@ def testParseSuccess():
     log("Roundtrip: ", pm)
 run(testParseSuccess)
 
+# Verify successful round-trip.
+# CHECK-LABEL: TEST: testParseSpacedPipeline
+def testParseSpacedPipeline():
+  with Context():
+    # A registered pass should parse successfully even if has extras spaces for readability
+    pm = PassManager.parse("""builtin.module(
+        func.func( print-op-stats{ json=false } )
+    )""")
+    # CHECK: Roundtrip: builtin.module(func.func(print-op-stats{json=false}))
+    log("Roundtrip: ", pm)
+run(testParseSpacedPipeline)
+
 # Verify failure on unregistered pass.
 # CHECK-LABEL: TEST: testParseFail
 def testParseFail():

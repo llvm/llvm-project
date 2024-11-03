@@ -404,6 +404,45 @@ static std::optional<StringRef> mfmaOpToIntrinsic(MFMAOp mfma,
     if (m == 4 && n == 4 && k == 4 && b == 4)
       return ROCDL::mfma_f64_4x4x4f64::getOperationName();
   }
+
+  if (sourceElem.isFloat8E5M2FNUZ() && destElem.isF32() &&
+      chipset.minorVersion >= 0x40) {
+    // Known to be correct because there are no scalar f8 instructions and
+    // because a length mismatch will have been caught by the verifier.
+    Type sourceBElem =
+        mfma.getSourceB().getType().cast<VectorType>().getElementType();
+    if (m == 16 && n == 16 && k == 32 && b == 1) {
+      if (sourceBElem.isFloat8E5M2FNUZ())
+        return ROCDL::mfma_f32_16x16x32_bf8_bf8::getOperationName();
+      if (sourceBElem.isFloat8E4M3FNUZ())
+        return ROCDL::mfma_f32_16x16x32_bf8_fp8::getOperationName();
+    }
+    if (m == 32 && n == 32 && k == 16 && b == 1) {
+      if (sourceBElem.isFloat8E5M2FNUZ())
+        return ROCDL::mfma_f32_32x32x16_bf8_bf8::getOperationName();
+      if (sourceBElem.isFloat8E4M3FNUZ())
+        return ROCDL::mfma_f32_32x32x16_bf8_fp8::getOperationName();
+    }
+  }
+
+  if (sourceElem.isFloat8E4M3FNUZ() && destElem.isF32() &&
+      chipset.minorVersion >= 0x40) {
+    Type sourceBElem =
+        mfma.getSourceB().getType().cast<VectorType>().getElementType();
+    if (m == 16 && n == 16 && k == 32 && b == 1) {
+      if (sourceBElem.isFloat8E5M2FNUZ())
+        return ROCDL::mfma_f32_16x16x32_fp8_bf8::getOperationName();
+      if (sourceBElem.isFloat8E4M3FNUZ())
+        return ROCDL::mfma_f32_16x16x32_fp8_fp8::getOperationName();
+    }
+    if (m == 32 && n == 32 && k == 16 && b == 1) {
+      if (sourceBElem.isFloat8E5M2FNUZ())
+        return ROCDL::mfma_f32_32x32x16_fp8_bf8::getOperationName();
+      if (sourceBElem.isFloat8E4M3FNUZ())
+        return ROCDL::mfma_f32_32x32x16_fp8_fp8::getOperationName();
+    }
+  }
+
   return std::nullopt;
 }
 
@@ -475,6 +514,14 @@ struct ConvertAMDGPUToROCDLPass
 void mlir::populateAMDGPUToROCDLConversionPatterns(LLVMTypeConverter &converter,
                                                    RewritePatternSet &patterns,
                                                    Chipset chipset) {
+  // ROCDL supports fp8 types in some contexts, but there is no LLVM-level f8
+  // type. Therefore, for this target, declare f8 to be equal to i8.
+  converter.addConversion([](FloatType type) -> std::optional<Type> {
+    if (type.isFloat8E5M2FNUZ() || type.isFloat8E4M3FNUZ())
+      return IntegerType::get(type.getContext(), 8);
+    return std::nullopt;
+  });
+
   patterns.add<LDSBarrierOpLowering>(converter);
   patterns.add<
       RawBufferOpLowering<RawBufferLoadOp, ROCDL::RawBufferLoadOp>,

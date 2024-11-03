@@ -22,8 +22,7 @@ define void @call_printf(i32 %n, i32 %m) {
 ; GCN-NEXT:    [[PRINTBUFFIDCAST:%.*]] = bitcast ptr addrspace(1) [[PRINTBUFFID]] to ptr addrspace(1)
 ; GCN-NEXT:    store i32 3, ptr addrspace(1) [[PRINTBUFFIDCAST]], align 4
 ; GCN-NEXT:    [[PRINTBUFFGEP:%.*]] = getelementptr i8, ptr addrspace(1) [[PRINTF_ALLOC_FN]], i32 4
-; GCN-NEXT:    [[PRINTBUFFPTRCAST:%.*]] = bitcast ptr addrspace(1) [[PRINTBUFFGEP]] to ptr addrspace(1)
-; GCN-NEXT:    store i32 [[N:%.*]], ptr addrspace(1) [[PRINTBUFFPTRCAST]], align 4
+; GCN-NEXT:    store i32 [[N:%.*]], ptr addrspace(1) [[PRINTBUFFGEP]], align 4
 ; GCN-NEXT:    br label [[TMP3]]
 ; GCN:       3:
 ; GCN-NEXT:    [[PRINTF_ALLOC_FN1:%.*]] = call ptr addrspace(1) @__printf_alloc(i32 8)
@@ -36,8 +35,7 @@ define void @call_printf(i32 %n, i32 %m) {
 ; GCN-NEXT:    [[PRINTBUFFIDCAST4:%.*]] = bitcast ptr addrspace(1) [[PRINTBUFFID3]] to ptr addrspace(1)
 ; GCN-NEXT:    store i32 4, ptr addrspace(1) [[PRINTBUFFIDCAST4]], align 4
 ; GCN-NEXT:    [[PRINTBUFFGEP5:%.*]] = getelementptr i8, ptr addrspace(1) [[PRINTF_ALLOC_FN1]], i32 4
-; GCN-NEXT:    [[PRINTBUFFPTRCAST6:%.*]] = bitcast ptr addrspace(1) [[PRINTBUFFGEP5]] to ptr addrspace(1)
-; GCN-NEXT:    store i32 [[M:%.*]], ptr addrspace(1) [[PRINTBUFFPTRCAST6]], align 4
+; GCN-NEXT:    store i32 [[M:%.*]], ptr addrspace(1) [[PRINTBUFFGEP5]], align 4
 ; GCN-NEXT:    br label [[TMP6]]
 ; GCN:       6:
 ; GCN-NEXT:    ret void

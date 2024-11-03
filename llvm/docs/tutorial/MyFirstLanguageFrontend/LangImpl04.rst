@@ -138,8 +138,8 @@ for us:
 .. code-block:: c++
 
     void InitializeModuleAndPassManager(void) {
-      // Open a new module.
-      TheModule = std::make_unique<Module>("my cool jit", TheContext);
+      // Open a new context and module.
+      TheModule = std::make_unique<Module>("my cool jit", *TheContext);
 
       // Create a new pass manager attached to it.
       TheFPM = std::make_unique<legacy::FunctionPassManager>(TheModule.get());
@@ -270,9 +270,13 @@ We also need to setup the data layout for the JIT:
 .. code-block:: c++
 
     void InitializeModuleAndPassManager(void) {
-      // Open a new module.
+      // Open a new context and module.
+      TheContext = std::make_unique<LLVMContext>();
       TheModule = std::make_unique<Module>("my cool jit", TheContext);
-      TheModule->setDataLayout(TheJIT->getTargetMachine().createDataLayout());
+      TheModule->setDataLayout(TheJIT->getDataLayout());
+
+      // Create a new builder for the module.
+      Builder = std::make_unique<IRBuilder<>>(*TheContext);
 
       // Create a new pass manager attached to it.
       TheFPM = std::make_unique<legacy::FunctionPassManager>(TheModule.get());
@@ -280,31 +284,35 @@ We also need to setup the data layout for the JIT:
 
 The KaleidoscopeJIT class is a simple JIT built specifically for these
 tutorials, available inside the LLVM source code
-at llvm-src/examples/Kaleidoscope/include/KaleidoscopeJIT.h.
+at `llvm-src/examples/Kaleidoscope/include/KaleidoscopeJIT.h
+<https://github.com/llvm/llvm-project/blob/main/llvm/examples/Kaleidoscope/include/KaleidoscopeJIT.h>`_.
 In later chapters we will look at how it works and extend it with
 new features, but for now we will take it as given. Its API is very simple:
 ``addModule`` adds an LLVM IR module to the JIT, making its functions
-available for execution; ``removeModule`` removes a module, freeing any
-memory associated with the code in that module; and ``findSymbol`` allows us
-to look up pointers to the compiled code.
+available for execution (with its memory managed by a ``ResourceTracker``); and
+``lookup`` allows us to look up pointers to the compiled code.
 
 We can take this simple API and change our code that parses top-level expressions to
 look like this:
 
 .. code-block:: c++
 
+    static ExitOnError ExitOnErr;
+    ...
     static void HandleTopLevelExpression() {
       // Evaluate a top-level expression into an anonymous function.
       if (auto FnAST = ParseTopLevelExpr()) {
         if (FnAST->codegen()) {
+          // Create a ResourceTracker to track JIT'd memory allocated to our
+          // anonymous expression -- that way we can free it after executing.
+          auto RT = TheJIT->getMainJITDylib().createResourceTracker();
 
-          // JIT the module containing the anonymous expression, keeping a handle so
-          // we can free it later.
-          auto H = TheJIT->addModule(std::move(TheModule));
+          auto TSM = ThreadSafeModule(std::move(TheModule), std::move(TheContext));
+          ExitOnErr(TheJIT->addModule(std::move(TSM), RT));
           InitializeModuleAndPassManager();
 
           // Search the JIT for the __anon_expr symbol.
-          auto ExprSymbol = TheJIT->findSymbol("__anon_expr");
+          auto ExprSymbol = ExitOnErr(TheJIT->lookup("__anon_expr"));
           assert(ExprSymbol && "Function not found");
 
           // Get the symbol's address and cast it to the right type (takes no
@@ -313,20 +321,20 @@ look like this:
           fprintf(stderr, "Evaluated to %f\n", FP());
 
           // Delete the anonymous expression module from the JIT.
-          TheJIT->removeModule(H);
+          ExitOnErr(RT->remove());
         }
 
 If parsing and codegen succeed, the next step is to add the module containing
 the top-level expression to the JIT. We do this by calling addModule, which
-triggers code generation for all the functions in the module, and returns a
-handle that can be used to remove the module from the JIT later. Once the module
+triggers code generation for all the functions in the module, and accepts a
+``ResourceTracker`` which can be used to remove the module from the JIT later. Once the module
 has been added to the JIT it can no longer be modified, so we also open a new
 module to hold subsequent code by calling ``InitializeModuleAndPassManager()``.
 
 Once we've added the module to the JIT we need to get a pointer to the final
-generated code. We do this by calling the JIT's findSymbol method, and passing
+generated code. We do this by calling the JIT's ``lookup`` method, and passing
 the name of the top-level expression function: ``__anon_expr``. Since we just
-added this function, we assert that findSymbol returned a result.
+added this function, we assert that ``lookup`` returned a result.
 
 Next, we get the in-memory address of the ``__anon_expr`` function by calling
 ``getAddress()`` on the symbol. Recall that we compile top-level expressions
@@ -495,7 +503,8 @@ We also need to update HandleDefinition and HandleExtern:
           fprintf(stderr, "Read function definition:");
           FnIR->print(errs());
           fprintf(stderr, "\n");
-          TheJIT->addModule(std::move(TheModule));
+          ExitOnErr(TheJIT->addModule(
+              ThreadSafeModule(std::move(TheModule), std::move(TheContext))));
           InitializeModuleAndPassManager();
         }
       } else {
@@ -623,7 +632,7 @@ if we add:
     }
 
 Note, that for Windows we need to actually export the functions because
-the dynamic symbol loader will use GetProcAddress to find the symbols.
+the dynamic symbol loader will use ``GetProcAddress`` to find the symbols.
 
 Now we can produce simple output to the console by using things like:
 "``extern putchard(x); putchard(120);``", which prints a lowercase 'x'

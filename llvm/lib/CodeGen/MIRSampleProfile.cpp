@@ -26,6 +26,7 @@
 #include "llvm/InitializePasses.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Utils/SampleProfileLoaderBaseImpl.h"
 #include "llvm/Transforms/Utils/SampleProfileLoaderBaseUtil.h"
@@ -72,10 +73,11 @@ INITIALIZE_PASS_END(MIRProfileLoaderPass, DEBUG_TYPE, "Load MIR Sample Profile",
 
 char &llvm::MIRProfileLoaderPassID = MIRProfileLoaderPass::ID;
 
-FunctionPass *llvm::createMIRProfileLoaderPass(std::string File,
-                                               std::string RemappingFile,
-                                               FSDiscriminatorPass P) {
-  return new MIRProfileLoaderPass(File, RemappingFile, P);
+FunctionPass *
+llvm::createMIRProfileLoaderPass(std::string File, std::string RemappingFile,
+                                 FSDiscriminatorPass P,
+                                 IntrusiveRefCntPtr<vfs::FileSystem> FS) {
+  return new MIRProfileLoaderPass(File, RemappingFile, P, std::move(FS));
 }
 
 namespace llvm {
@@ -136,9 +138,10 @@ public:
     assert(LowBit < HighBit && "HighBit needs to be greater than Lowbit");
   }
 
-  MIRProfileLoader(StringRef Name, StringRef RemapName)
-      : SampleProfileLoaderBaseImpl(std::string(Name), std::string(RemapName)) {
-  }
+  MIRProfileLoader(StringRef Name, StringRef RemapName,
+                   IntrusiveRefCntPtr<vfs::FileSystem> FS)
+      : SampleProfileLoaderBaseImpl(std::string(Name), std::string(RemapName),
+                                    std::move(FS)) {}
 
   void setBranchProbs(MachineFunction &F);
   bool runOnFunction(MachineFunction &F);
@@ -254,8 +257,8 @@ void MIRProfileLoader::setBranchProbs(MachineFunction &F) {
 bool MIRProfileLoader::doInitialization(Module &M) {
   auto &Ctx = M.getContext();
 
-  auto ReaderOrErr = sampleprof::SampleProfileReader::create(Filename, Ctx, P,
-                                                             RemappingFilename);
+  auto ReaderOrErr = sampleprof::SampleProfileReader::create(
+      Filename, Ctx, *FS, P, RemappingFilename);
   if (std::error_code EC = ReaderOrErr.getError()) {
     std::string Msg = "Could not open profile: " + EC.message();
     Ctx.diagnose(DiagnosticInfoSampleProfile(Filename, Msg));
@@ -291,14 +294,16 @@ bool MIRProfileLoader::runOnFunction(MachineFunction &MF) {
 
 } // namespace llvm
 
-MIRProfileLoaderPass::MIRProfileLoaderPass(std::string FileName,
-                                           std::string RemappingFileName,
-                                           FSDiscriminatorPass P)
-    : MachineFunctionPass(ID), ProfileFileName(FileName), P(P),
-      MIRSampleLoader(
-          std::make_unique<MIRProfileLoader>(FileName, RemappingFileName)) {
+MIRProfileLoaderPass::MIRProfileLoaderPass(
+    std::string FileName, std::string RemappingFileName, FSDiscriminatorPass P,
+    IntrusiveRefCntPtr<vfs::FileSystem> FS)
+    : MachineFunctionPass(ID), ProfileFileName(FileName), P(P) {
   LowBit = getFSPassBitBegin(P);
   HighBit = getFSPassBitEnd(P);
+
+  auto VFS = FS ? std::move(FS) : vfs::getRealFileSystem();
+  MIRSampleLoader = std::make_unique<MIRProfileLoader>(
+      FileName, RemappingFileName, std::move(VFS));
   assert(LowBit < HighBit && "HighBit needs to be greater than Lowbit");
 }
 

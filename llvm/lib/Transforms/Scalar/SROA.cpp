@@ -118,13 +118,65 @@ STATISTIC(NumVectorized, "Number of vectorized aggregates");
 /// GEPs.
 static cl::opt<bool> SROAStrictInbounds("sroa-strict-inbounds", cl::init(false),
                                         cl::Hidden);
+/// Disable running mem2reg during SROA in order to test or debug SROA.
+static cl::opt<bool> SROASkipMem2Reg("sroa-skip-mem2reg", cl::init(false),
+                                     cl::Hidden);
 namespace {
+
+/// Calculate the fragment of a variable to use when slicing a store
+/// based on the slice dimensions, existing fragment, and base storage
+/// fragment.
+/// Note that a returned value of std::nullopt indicates that there is
+/// no appropriate fragment available (rather than meaning use the whole
+/// variable, which is a common usage). Because the store is being sliced
+/// we always expect a fragment - there's never a case where the whole
+/// variable should be used.
+static std::optional<DIExpression::FragmentInfo>
+calculateFragment(uint64_t NewStorageSliceOffsetInBits,
+                  uint64_t NewStorageSliceSizeInBits,
+                  std::optional<DIExpression::FragmentInfo> StorageFragment,
+                  std::optional<DIExpression::FragmentInfo> CurrentFragment) {
+  DIExpression::FragmentInfo Target;
+  // If the base storage describes part of the variable apply the offset and
+  // the size constraint.
+  if (StorageFragment) {
+    Target.SizeInBits =
+        std::min(NewStorageSliceSizeInBits, StorageFragment->SizeInBits);
+    Target.OffsetInBits =
+        NewStorageSliceOffsetInBits + StorageFragment->OffsetInBits;
+  } else {
+    Target.SizeInBits = NewStorageSliceSizeInBits;
+    Target.OffsetInBits = NewStorageSliceOffsetInBits;
+  }
+
+  // No additional work to do if there isn't a fragment already, or there is
+  // but it already exactly describes the new assignment.
+  if (!CurrentFragment || *CurrentFragment == Target)
+    return Target;
+
+  // Reject the target fragment if it doesn't fit wholly within the current
+  // fragment. TODO: We could instead chop up the target to fit in the case of
+  // a partial overlap.
+  if (Target.startInBits() < CurrentFragment->startInBits() ||
+      Target.endInBits() > CurrentFragment->endInBits())
+    return std::nullopt;
+
+  // Target fits within the current fragment, return it.
+  return Target;
+}
+
+static DebugVariable getAggregateVariable(DbgVariableIntrinsic *DVI) {
+  return DebugVariable(DVI->getVariable(), std::nullopt,
+                       DVI->getDebugLoc().getInlinedAt());
+}
+
 /// Find linked dbg.assign and generate a new one with the correct
 /// FragmentInfo. Link Inst to the new dbg.assign.  If Value is nullptr the
 /// value component is copied from the old dbg.assign to the new.
 /// \param OldAlloca             Alloca for the variable before splitting.
-/// \param RelativeOffsetInBits  Offset into \p OldAlloca relative to the
-///                              offset prior to splitting (change in offset).
+/// \param IsSplit               True if the store (not necessarily alloca)
+///                              is being split.
+/// \param OldAllocaOffsetInBits Offset of the slice taken from OldAlloca.
 /// \param SliceSizeInBits       New number of bits being written to.
 /// \param OldInst               Instruction that is being split.
 /// \param Inst                  New instruction performing this part of the
@@ -132,8 +184,8 @@ namespace {
 /// \param Dest                  Store destination.
 /// \param Value                 Stored value.
 /// \param DL                    Datalayout.
-static void migrateDebugInfo(AllocaInst *OldAlloca,
-                             uint64_t RelativeOffsetInBits,
+static void migrateDebugInfo(AllocaInst *OldAlloca, bool IsSplit,
+                             uint64_t OldAllocaOffsetInBits,
                              uint64_t SliceSizeInBits, Instruction *OldInst,
                              Instruction *Inst, Value *Dest, Value *Value,
                              const DataLayout &DL) {
@@ -144,7 +196,9 @@ static void migrateDebugInfo(AllocaInst *OldAlloca,
 
   LLVM_DEBUG(dbgs() << "  migrateDebugInfo\n");
   LLVM_DEBUG(dbgs() << "    OldAlloca: " << *OldAlloca << "\n");
-  LLVM_DEBUG(dbgs() << "    RelativeOffset: " << RelativeOffsetInBits << "\n");
+  LLVM_DEBUG(dbgs() << "    IsSplit: " << IsSplit << "\n");
+  LLVM_DEBUG(dbgs() << "    OldAllocaOffsetInBits: " << OldAllocaOffsetInBits
+                    << "\n");
   LLVM_DEBUG(dbgs() << "    SliceSizeInBits: " << SliceSizeInBits << "\n");
   LLVM_DEBUG(dbgs() << "    OldInst: " << *OldInst << "\n");
   LLVM_DEBUG(dbgs() << "    Inst: " << *Inst << "\n");
@@ -152,13 +206,19 @@ static void migrateDebugInfo(AllocaInst *OldAlloca,
   if (Value)
     LLVM_DEBUG(dbgs() << "    Value: " << *Value << "\n");
 
+  /// Map of aggregate variables to their fragment associated with OldAlloca.
+  DenseMap<DebugVariable, std::optional<DIExpression::FragmentInfo>>
+      BaseFragments;
+  for (auto *DAI : at::getAssignmentMarkers(OldAlloca))
+    BaseFragments[getAggregateVariable(DAI)] =
+        DAI->getExpression()->getFragmentInfo();
+
   // The new inst needs a DIAssignID unique metadata tag (if OldInst has
   // one). It shouldn't already have one: assert this assumption.
   assert(!Inst->getMetadata(LLVMContext::MD_DIAssignID));
   DIAssignID *NewID = nullptr;
   auto &Ctx = Inst->getContext();
   DIBuilder DIB(*OldInst->getModule(), /*AllowUnresolved*/ false);
-  uint64_t AllocaSizeInBits = *OldAlloca->getAllocationSizeInBits(DL);
   assert(OldAlloca->isStaticAlloca());
 
   for (DbgAssignIntrinsic *DbgAssign : MarkerRange) {
@@ -166,30 +226,38 @@ static void migrateDebugInfo(AllocaInst *OldAlloca,
                       << "\n");
     auto *Expr = DbgAssign->getExpression();
 
-    // Check if the dbg.assign already describes a fragment.
-    auto GetCurrentFragSize = [AllocaSizeInBits, DbgAssign,
-                               Expr]() -> uint64_t {
-      if (auto FI = Expr->getFragmentInfo())
-        return FI->SizeInBits;
-      if (auto VarSize = DbgAssign->getVariable()->getSizeInBits())
-        return *VarSize;
-      // The variable type has an unspecified size. This can happen in the
-      // case of DW_TAG_unspecified_type types, e.g.  std::nullptr_t. Because
-      // there is no fragment and we do not know the size of the variable type,
-      // we'll guess by looking at the alloca.
-      return AllocaSizeInBits;
-    };
-    uint64_t CurrentFragSize = GetCurrentFragSize();
-    bool MakeNewFragment = CurrentFragSize != SliceSizeInBits;
-    assert(MakeNewFragment || RelativeOffsetInBits == 0);
+    if (IsSplit) {
+      std::optional<DIExpression::FragmentInfo> BaseFragment = std::nullopt;
+      {
+        auto R = BaseFragments.find(getAggregateVariable(DbgAssign));
+        if (R == BaseFragments.end())
+          continue;
+        BaseFragment = R->second;
+      }
+      std::optional<DIExpression::FragmentInfo> CurrentFragment =
+          Expr->getFragmentInfo();
+      std::optional<DIExpression::FragmentInfo> NewFragment =
+          calculateFragment(OldAllocaOffsetInBits, SliceSizeInBits,
+                            BaseFragment, CurrentFragment);
+      // Note that std::nullopt here means "skip this fragment" rather than
+      // "there is no fragment / use the whole variable".
+      if (!NewFragment)
+        continue;
 
-    assert(SliceSizeInBits <= AllocaSizeInBits);
-    if (MakeNewFragment) {
-      assert(RelativeOffsetInBits + SliceSizeInBits <= CurrentFragSize);
-      auto E = DIExpression::createFragmentExpression(
-          Expr, RelativeOffsetInBits, SliceSizeInBits);
-      assert(E && "Failed to create fragment expr!");
-      Expr = *E;
+      if (!(NewFragment == CurrentFragment)) {
+        if (CurrentFragment) {
+          // Rewrite NewFragment to be relative to the existing one (this is
+          // what createFragmentExpression wants).  CalculateFragment has
+          // already resolved the size for us. FIXME: Should it return the
+          // relative fragment too?
+          NewFragment->OffsetInBits -= CurrentFragment->OffsetInBits;
+        }
+
+        auto E = DIExpression::createFragmentExpression(
+            Expr, NewFragment->OffsetInBits, NewFragment->SizeInBits);
+        assert(E && "Failed to create fragment expr!");
+        Expr = *E;
+      }
     }
 
     // If we haven't created a DIAssignID ID do that now and attach it to Inst.
@@ -888,11 +956,12 @@ private:
     if (!IsOffsetKnown)
       return PI.setAborted(&LI);
 
-    if (isa<ScalableVectorType>(LI.getType()))
+    TypeSize Size = DL.getTypeStoreSize(LI.getType());
+    if (Size.isScalable())
       return PI.setAborted(&LI);
 
-    uint64_t Size = DL.getTypeStoreSize(LI.getType()).getFixedValue();
-    return handleLoadOrStore(LI.getType(), LI, Offset, Size, LI.isVolatile());
+    return handleLoadOrStore(LI.getType(), LI, Offset, Size.getFixedValue(),
+                             LI.isVolatile());
   }
 
   void visitStoreInst(StoreInst &SI) {
@@ -902,10 +971,11 @@ private:
     if (!IsOffsetKnown)
       return PI.setAborted(&SI);
 
-    if (isa<ScalableVectorType>(ValOp->getType()))
+    TypeSize StoreSize = DL.getTypeStoreSize(ValOp->getType());
+    if (StoreSize.isScalable())
       return PI.setAborted(&SI);
 
-    uint64_t Size = DL.getTypeStoreSize(ValOp->getType()).getFixedValue();
+    uint64_t Size = StoreSize.getFixedValue();
 
     // If this memory access can be shown to *statically* extend outside the
     // bounds of the allocation, it's behavior is undefined, so simply
@@ -1654,238 +1724,18 @@ static bool rewriteSelectInstMemOps(SelectInst &SI,
   return CFGChanged;
 }
 
-/// Build a GEP out of a base pointer and indices.
-///
-/// This will return the BasePtr if that is valid, or build a new GEP
-/// instruction using the IRBuilder if GEP-ing is needed.
-static Value *buildGEP(IRBuilderTy &IRB, Value *BasePtr,
-                       SmallVectorImpl<Value *> &Indices,
-                       const Twine &NamePrefix) {
-  if (Indices.empty())
-    return BasePtr;
-
-  // A single zero index is a no-op, so check for this and avoid building a GEP
-  // in that case.
-  if (Indices.size() == 1 && cast<ConstantInt>(Indices.back())->isZero())
-    return BasePtr;
-
-  // buildGEP() is only called for non-opaque pointers.
-  return IRB.CreateInBoundsGEP(
-      BasePtr->getType()->getNonOpaquePointerElementType(), BasePtr, Indices,
-      NamePrefix + "sroa_idx");
-}
-
-/// Get a natural GEP off of the BasePtr walking through Ty toward
-/// TargetTy without changing the offset of the pointer.
-///
-/// This routine assumes we've already established a properly offset GEP with
-/// Indices, and arrived at the Ty type. The goal is to continue to GEP with
-/// zero-indices down through type layers until we find one the same as
-/// TargetTy. If we can't find one with the same type, we at least try to use
-/// one with the same size. If none of that works, we just produce the GEP as
-/// indicated by Indices to have the correct offset.
-static Value *getNaturalGEPWithType(IRBuilderTy &IRB, const DataLayout &DL,
-                                    Value *BasePtr, Type *Ty, Type *TargetTy,
-                                    SmallVectorImpl<Value *> &Indices,
-                                    const Twine &NamePrefix) {
-  if (Ty == TargetTy)
-    return buildGEP(IRB, BasePtr, Indices, NamePrefix);
-
-  // Offset size to use for the indices.
-  unsigned OffsetSize = DL.getIndexTypeSizeInBits(BasePtr->getType());
-
-  // See if we can descend into a struct and locate a field with the correct
-  // type.
-  unsigned NumLayers = 0;
-  Type *ElementTy = Ty;
-  do {
-    if (ElementTy->isPointerTy())
-      break;
-
-    if (ArrayType *ArrayTy = dyn_cast<ArrayType>(ElementTy)) {
-      ElementTy = ArrayTy->getElementType();
-      Indices.push_back(IRB.getIntN(OffsetSize, 0));
-    } else if (VectorType *VectorTy = dyn_cast<VectorType>(ElementTy)) {
-      ElementTy = VectorTy->getElementType();
-      Indices.push_back(IRB.getInt32(0));
-    } else if (StructType *STy = dyn_cast<StructType>(ElementTy)) {
-      if (STy->element_begin() == STy->element_end())
-        break; // Nothing left to descend into.
-      ElementTy = *STy->element_begin();
-      Indices.push_back(IRB.getInt32(0));
-    } else {
-      break;
-    }
-    ++NumLayers;
-  } while (ElementTy != TargetTy);
-  if (ElementTy != TargetTy)
-    Indices.erase(Indices.end() - NumLayers, Indices.end());
-
-  return buildGEP(IRB, BasePtr, Indices, NamePrefix);
-}
-
-/// Get a natural GEP from a base pointer to a particular offset and
-/// resulting in a particular type.
-///
-/// The goal is to produce a "natural" looking GEP that works with the existing
-/// composite types to arrive at the appropriate offset and element type for
-/// a pointer. TargetTy is the element type the returned GEP should point-to if
-/// possible. We recurse by decreasing Offset, adding the appropriate index to
-/// Indices, and setting Ty to the result subtype.
-///
-/// If no natural GEP can be constructed, this function returns null.
-static Value *getNaturalGEPWithOffset(IRBuilderTy &IRB, const DataLayout &DL,
-                                      Value *Ptr, APInt Offset, Type *TargetTy,
-                                      SmallVectorImpl<Value *> &Indices,
-                                      const Twine &NamePrefix) {
-  PointerType *Ty = cast<PointerType>(Ptr->getType());
-
-  // Don't consider any GEPs through an i8* as natural unless the TargetTy is
-  // an i8.
-  if (Ty == IRB.getInt8PtrTy(Ty->getAddressSpace()) && TargetTy->isIntegerTy(8))
-    return nullptr;
-
-  Type *ElementTy = Ty->getNonOpaquePointerElementType();
-  if (!ElementTy->isSized())
-    return nullptr; // We can't GEP through an unsized element.
-
-  SmallVector<APInt> IntIndices = DL.getGEPIndicesForOffset(ElementTy, Offset);
-  if (Offset != 0)
-    return nullptr;
-
-  for (const APInt &Index : IntIndices)
-    Indices.push_back(IRB.getInt(Index));
-  return getNaturalGEPWithType(IRB, DL, Ptr, ElementTy, TargetTy, Indices,
-                               NamePrefix);
-}
-
 /// Compute an adjusted pointer from Ptr by Offset bytes where the
 /// resulting pointer has PointerTy.
-///
-/// This tries very hard to compute a "natural" GEP which arrives at the offset
-/// and produces the pointer type desired. Where it cannot, it will try to use
-/// the natural GEP to arrive at the offset and bitcast to the type. Where that
-/// fails, it will try to use an existing i8* and GEP to the byte offset and
-/// bitcast to the type.
-///
-/// The strategy for finding the more natural GEPs is to peel off layers of the
-/// pointer, walking back through bit casts and GEPs, searching for a base
-/// pointer from which we can compute a natural GEP with the desired
-/// properties. The algorithm tries to fold as many constant indices into
-/// a single GEP as possible, thus making each GEP more independent of the
-/// surrounding code.
 static Value *getAdjustedPtr(IRBuilderTy &IRB, const DataLayout &DL, Value *Ptr,
                              APInt Offset, Type *PointerTy,
                              const Twine &NamePrefix) {
-  // Create i8 GEP for opaque pointers.
-  if (Ptr->getType()->isOpaquePointerTy()) {
-    if (Offset != 0)
-      Ptr = IRB.CreateInBoundsGEP(IRB.getInt8Ty(), Ptr, IRB.getInt(Offset),
-                                  NamePrefix + "sroa_idx");
-    return IRB.CreatePointerBitCastOrAddrSpaceCast(Ptr, PointerTy,
-                                                   NamePrefix + "sroa_cast");
-  }
-
-  // Even though we don't look through PHI nodes, we could be called on an
-  // instruction in an unreachable block, which may be on a cycle.
-  SmallPtrSet<Value *, 4> Visited;
-  Visited.insert(Ptr);
-  SmallVector<Value *, 4> Indices;
-
-  // We may end up computing an offset pointer that has the wrong type. If we
-  // never are able to compute one directly that has the correct type, we'll
-  // fall back to it, so keep it and the base it was computed from around here.
-  Value *OffsetPtr = nullptr;
-  Value *OffsetBasePtr;
-
-  // Remember any i8 pointer we come across to re-use if we need to do a raw
-  // byte offset.
-  Value *Int8Ptr = nullptr;
-  APInt Int8PtrOffset(Offset.getBitWidth(), 0);
-
-  PointerType *TargetPtrTy = cast<PointerType>(PointerTy);
-  Type *TargetTy = TargetPtrTy->getNonOpaquePointerElementType();
-
-  // As `addrspacecast` is , `Ptr` (the storage pointer) may have different
-  // address space from the expected `PointerTy` (the pointer to be used).
-  // Adjust the pointer type based the original storage pointer.
-  auto AS = cast<PointerType>(Ptr->getType())->getAddressSpace();
-  PointerTy = TargetTy->getPointerTo(AS);
-
-  do {
-    // First fold any existing GEPs into the offset.
-    while (GEPOperator *GEP = dyn_cast<GEPOperator>(Ptr)) {
-      APInt GEPOffset(Offset.getBitWidth(), 0);
-      if (!GEP->accumulateConstantOffset(DL, GEPOffset))
-        break;
-      Offset += GEPOffset;
-      Ptr = GEP->getPointerOperand();
-      if (!Visited.insert(Ptr).second)
-        break;
-    }
-
-    // See if we can perform a natural GEP here.
-    Indices.clear();
-    if (Value *P = getNaturalGEPWithOffset(IRB, DL, Ptr, Offset, TargetTy,
-                                           Indices, NamePrefix)) {
-      // If we have a new natural pointer at the offset, clear out any old
-      // offset pointer we computed. Unless it is the base pointer or
-      // a non-instruction, we built a GEP we don't need. Zap it.
-      if (OffsetPtr && OffsetPtr != OffsetBasePtr)
-        if (Instruction *I = dyn_cast<Instruction>(OffsetPtr)) {
-          assert(I->use_empty() && "Built a GEP with uses some how!");
-          I->eraseFromParent();
-        }
-      OffsetPtr = P;
-      OffsetBasePtr = Ptr;
-      // If we also found a pointer of the right type, we're done.
-      if (P->getType() == PointerTy)
-        break;
-    }
-
-    // Stash this pointer if we've found an i8*.
-    if (Ptr->getType()->isIntegerTy(8)) {
-      Int8Ptr = Ptr;
-      Int8PtrOffset = Offset;
-    }
-
-    // Peel off a layer of the pointer and update the offset appropriately.
-    if (Operator::getOpcode(Ptr) == Instruction::BitCast) {
-      Ptr = cast<Operator>(Ptr)->getOperand(0);
-    } else if (GlobalAlias *GA = dyn_cast<GlobalAlias>(Ptr)) {
-      if (GA->isInterposable())
-        break;
-      Ptr = GA->getAliasee();
-    } else {
-      break;
-    }
-    assert(Ptr->getType()->isPointerTy() && "Unexpected operand type!");
-  } while (Visited.insert(Ptr).second);
-
-  if (!OffsetPtr) {
-    if (!Int8Ptr) {
-      Int8Ptr = IRB.CreateBitCast(
-          Ptr, IRB.getInt8PtrTy(PointerTy->getPointerAddressSpace()),
-          NamePrefix + "sroa_raw_cast");
-      Int8PtrOffset = Offset;
-    }
-
-    OffsetPtr = Int8PtrOffset == 0
-                    ? Int8Ptr
-                    : IRB.CreateInBoundsGEP(IRB.getInt8Ty(), Int8Ptr,
-                                            IRB.getInt(Int8PtrOffset),
-                                            NamePrefix + "sroa_raw_idx");
-  }
-  Ptr = OffsetPtr;
-
-  // On the off chance we were targeting i8*, guard the bitcast here.
-  if (cast<PointerType>(Ptr->getType()) != TargetPtrTy) {
-    Ptr = IRB.CreatePointerBitCastOrAddrSpaceCast(Ptr,
-                                                  TargetPtrTy,
-                                                  NamePrefix + "sroa_cast");
-  }
-
-  return Ptr;
+  assert(Ptr->getType()->isOpaquePointerTy() &&
+         "Only opaque pointers supported");
+  if (Offset != 0)
+    Ptr = IRB.CreateInBoundsGEP(IRB.getInt8Ty(), Ptr, IRB.getInt(Offset),
+                                NamePrefix + "sroa_idx");
+  return IRB.CreatePointerBitCastOrAddrSpaceCast(Ptr, PointerTy,
+                                                 NamePrefix + "sroa_cast");
 }
 
 /// Compute the adjusted alignment for a load or store from an offset.
@@ -2554,7 +2404,6 @@ class llvm::sroa::AllocaSliceRewriter
   // original alloca.
   uint64_t NewBeginOffset = 0, NewEndOffset = 0;
 
-  uint64_t RelativeOffset = 0;
   uint64_t SliceSize = 0;
   bool IsSplittable = false;
   bool IsSplit = false;
@@ -2628,14 +2477,13 @@ public:
     NewBeginOffset = std::max(BeginOffset, NewAllocaBeginOffset);
     NewEndOffset = std::min(EndOffset, NewAllocaEndOffset);
 
-    RelativeOffset = NewBeginOffset - BeginOffset;
     SliceSize = NewEndOffset - NewBeginOffset;
     LLVM_DEBUG(dbgs() << "   Begin:(" << BeginOffset << ", " << EndOffset
                       << ") NewBegin:(" << NewBeginOffset << ", "
                       << NewEndOffset << ") NewAllocaBegin:("
                       << NewAllocaBeginOffset << ", " << NewAllocaEndOffset
                       << ")\n");
-    assert(IsSplit || RelativeOffset == 0);
+    assert(IsSplit || NewBeginOffset == BeginOffset);
     OldUse = I->getUse();
     OldPtr = cast<Instruction>(OldUse->get());
 
@@ -2898,8 +2746,8 @@ private:
     Pass.DeadInsts.push_back(&SI);
 
     // NOTE: Careful to use OrigV rather than V.
-    migrateDebugInfo(&OldAI, RelativeOffset * 8, SliceSize * 8, &SI, Store,
-                     Store->getPointerOperand(), OrigV, DL);
+    migrateDebugInfo(&OldAI, IsSplit, NewBeginOffset * 8, SliceSize * 8, &SI,
+                     Store, Store->getPointerOperand(), OrigV, DL);
     LLVM_DEBUG(dbgs() << "          to: " << *Store << "\n");
     return true;
   }
@@ -2923,8 +2771,9 @@ private:
     if (AATags)
       Store->setAAMetadata(AATags.shift(NewBeginOffset - BeginOffset));
 
-    migrateDebugInfo(&OldAI, RelativeOffset * 8, SliceSize * 8, &SI, Store,
-                     Store->getPointerOperand(), Store->getValueOperand(), DL);
+    migrateDebugInfo(&OldAI, IsSplit, NewBeginOffset * 8, SliceSize * 8, &SI,
+                     Store, Store->getPointerOperand(),
+                     Store->getValueOperand(), DL);
 
     Pass.DeadInsts.push_back(&SI);
     LLVM_DEBUG(dbgs() << "          to: " << *Store << "\n");
@@ -3002,8 +2851,9 @@ private:
     if (NewSI->isAtomic())
       NewSI->setAlignment(SI.getAlign());
 
-    migrateDebugInfo(&OldAI, RelativeOffset * 8, SliceSize * 8, &SI, NewSI,
-                     NewSI->getPointerOperand(), NewSI->getValueOperand(), DL);
+    migrateDebugInfo(&OldAI, IsSplit, NewBeginOffset * 8, SliceSize * 8, &SI,
+                     NewSI, NewSI->getPointerOperand(),
+                     NewSI->getValueOperand(), DL);
 
     Pass.DeadInsts.push_back(&SI);
     deleteIfTriviallyDead(OldOp);
@@ -3103,8 +2953,8 @@ private:
       if (AATags)
         New->setAAMetadata(AATags.shift(NewBeginOffset - BeginOffset));
 
-      migrateDebugInfo(&OldAI, RelativeOffset * 8, SliceSize * 8, &II, New,
-                       New->getRawDest(), nullptr, DL);
+      migrateDebugInfo(&OldAI, IsSplit, NewBeginOffset * 8, SliceSize * 8, &II,
+                       New, New->getRawDest(), nullptr, DL);
 
       LLVM_DEBUG(dbgs() << "          to: " << *New << "\n");
       return false;
@@ -3179,8 +3029,8 @@ private:
     if (AATags)
       New->setAAMetadata(AATags.shift(NewBeginOffset - BeginOffset));
 
-    migrateDebugInfo(&OldAI, RelativeOffset * 8, SliceSize * 8, &II, New,
-                     New->getPointerOperand(), V, DL);
+    migrateDebugInfo(&OldAI, IsSplit, NewBeginOffset * 8, SliceSize * 8, &II,
+                     New, New->getPointerOperand(), V, DL);
 
     LLVM_DEBUG(dbgs() << "          to: " << *New << "\n");
     return !II.isVolatile();
@@ -3308,8 +3158,16 @@ private:
       if (AATags)
         New->setAAMetadata(AATags.shift(NewBeginOffset - BeginOffset));
 
-      migrateDebugInfo(&OldAI, RelativeOffset * 8, SliceSize * 8, &II, New,
-                       DestPtr, nullptr, DL);
+      APInt Offset(DL.getIndexTypeSizeInBits(DestPtr->getType()), 0);
+      if (IsDest) {
+        migrateDebugInfo(&OldAI, IsSplit, NewBeginOffset * 8, SliceSize * 8,
+                         &II, New, DestPtr, nullptr, DL);
+      } else if (AllocaInst *Base = dyn_cast<AllocaInst>(
+                     DestPtr->stripAndAccumulateConstantOffsets(
+                         DL, Offset, /*AllowNonInbounds*/ true))) {
+        migrateDebugInfo(Base, IsSplit, Offset.getZExtValue() * 8,
+                         SliceSize * 8, &II, New, DestPtr, nullptr, DL);
+      }
       LLVM_DEBUG(dbgs() << "          to: " << *New << "\n");
       return false;
     }
@@ -3397,8 +3255,18 @@ private:
     if (AATags)
       Store->setAAMetadata(AATags.shift(NewBeginOffset - BeginOffset));
 
-    migrateDebugInfo(&OldAI, RelativeOffset * 8, SliceSize * 8, &II, Store,
-                     DstPtr, Src, DL);
+    APInt Offset(DL.getIndexTypeSizeInBits(DstPtr->getType()), 0);
+    if (IsDest) {
+
+      migrateDebugInfo(&OldAI, IsSplit, NewBeginOffset * 8, SliceSize * 8, &II,
+                       Store, DstPtr, Src, DL);
+    } else if (AllocaInst *Base = dyn_cast<AllocaInst>(
+                   DstPtr->stripAndAccumulateConstantOffsets(
+                       DL, Offset, /*AllowNonInbounds*/ true))) {
+      migrateDebugInfo(Base, IsSplit, Offset.getZExtValue() * 8, SliceSize * 8,
+                       &II, Store, DstPtr, Src, DL);
+    }
+
     LLVM_DEBUG(dbgs() << "          to: " << *Store << "\n");
     return !II.isVolatile();
   }
@@ -3760,23 +3628,22 @@ private:
 
       APInt Offset(
           DL.getIndexSizeInBits(Ptr->getType()->getPointerAddressSpace()), 0);
-      if (AATags &&
-          GEPOperator::accumulateConstantOffset(BaseTy, GEPIndices, DL, Offset))
+      GEPOperator::accumulateConstantOffset(BaseTy, GEPIndices, DL, Offset);
+      if (AATags)
         Store->setAAMetadata(AATags.shift(Offset.getZExtValue()));
 
       // migrateDebugInfo requires the base Alloca. Walk to it from this gep.
       // If we cannot (because there's an intervening non-const or unbounded
       // gep) then we wouldn't expect to see dbg.assign intrinsics linked to
       // this instruction.
-      APInt OffsetInBytes(DL.getTypeSizeInBits(Ptr->getType()), false);
-      Value *Base = InBoundsGEP->stripAndAccumulateInBoundsConstantOffsets(
-          DL, OffsetInBytes);
+      Value *Base = AggStore->getPointerOperand()->stripInBoundsOffsets();
       if (auto *OldAI = dyn_cast<AllocaInst>(Base)) {
         uint64_t SizeInBits =
             DL.getTypeSizeInBits(Store->getValueOperand()->getType());
-        migrateDebugInfo(OldAI, OffsetInBytes.getZExtValue() * 8, SizeInBits,
-                         AggStore, Store, Store->getPointerOperand(),
-                         Store->getValueOperand(), DL);
+        migrateDebugInfo(OldAI, /*IsSplit*/ true, Offset.getZExtValue() * 8,
+                         SizeInBits, AggStore, Store,
+                         Store->getPointerOperand(), Store->getValueOperand(),
+                         DL);
       } else {
         assert(at::getAssignmentMarkers(Store).empty() &&
                "AT: unexpected debug.assign linked to store through "
@@ -3799,6 +3666,9 @@ private:
                              getAdjustedAlignment(&SI, 0), DL, IRB);
     Splitter.emitSplitOps(V->getType(), V, V->getName() + ".fca");
     Visited.erase(&SI);
+    // The stores replacing SI each have markers describing fragments of the
+    // assignment so delete the assignment markers linked to SI.
+    at::deleteAssignmentMarkers(&SI);
     SI.eraseFromParent();
     return true;
   }
@@ -4996,8 +4866,9 @@ SROAPass::runOnAlloca(AllocaInst &AI) {
 
   // Skip alloca forms that this analysis can't handle.
   auto *AT = AI.getAllocatedType();
-  if (AI.isArrayAllocation() || !AT->isSized() || isa<ScalableVectorType>(AT) ||
-      DL.getTypeAllocSize(AT).getFixedValue() == 0)
+  TypeSize Size = DL.getTypeAllocSize(AT);
+  if (AI.isArrayAllocation() || !AT->isSized() || Size.isScalable() ||
+      Size.getFixedValue() == 0)
     return {Changed, CFGChanged};
 
   // First, split any FCA loads and stores touching this alloca to promote
@@ -5107,8 +4978,13 @@ bool SROAPass::promoteAllocas(Function &F) {
 
   NumPromoted += PromotableAllocas.size();
 
-  LLVM_DEBUG(dbgs() << "Promoting allocas with mem2reg...\n");
-  PromoteMemToReg(PromotableAllocas, DTU->getDomTree(), AC);
+  if (SROASkipMem2Reg) {
+    LLVM_DEBUG(dbgs() << "Not promoting allocas with mem2reg!\n");
+  } else {
+    LLVM_DEBUG(dbgs() << "Promoting allocas with mem2reg...\n");
+    PromoteMemToReg(PromotableAllocas, DTU->getDomTree(), AC);
+  }
+
   PromotableAllocas.clear();
   return true;
 }
@@ -5120,16 +4996,16 @@ PreservedAnalyses SROAPass::runImpl(Function &F, DomTreeUpdater &RunDTU,
   DTU = &RunDTU;
   AC = &RunAC;
 
+  const DataLayout &DL = F.getParent()->getDataLayout();
   BasicBlock &EntryBB = F.getEntryBlock();
   for (BasicBlock::iterator I = EntryBB.begin(), E = std::prev(EntryBB.end());
        I != E; ++I) {
     if (AllocaInst *AI = dyn_cast<AllocaInst>(I)) {
-      if (isa<ScalableVectorType>(AI->getAllocatedType())) {
-        if (isAllocaPromotable(AI))
-          PromotableAllocas.push_back(AI);
-      } else {
+      if (DL.getTypeAllocSize(AI->getAllocatedType()).isScalable() &&
+          isAllocaPromotable(AI))
+        PromotableAllocas.push_back(AI);
+      else
         Worklist.insert(AI);
-      }
     }
   }
 

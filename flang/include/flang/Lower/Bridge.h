@@ -17,6 +17,7 @@
 #include "flang/Lower/AbstractConverter.h"
 #include "flang/Lower/EnvironmentDefault.h"
 #include "flang/Lower/LoweringOptions.h"
+#include "flang/Lower/StatementContext.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Support/KindMapping.h"
 #include "mlir/IR/BuiltinOps.h"
@@ -105,6 +106,8 @@ public:
     return semanticsContext;
   }
 
+  Fortran::lower::StatementContext &fctCtx() { return functionContext; }
+
   bool validModule() { return getModule(); }
 
   //===--------------------------------------------------------------------===//
@@ -134,6 +137,7 @@ private:
   LoweringBridge(const LoweringBridge &) = delete;
 
   Fortran::semantics::SemanticsContext &semanticsContext;
+  Fortran::lower::StatementContext functionContext;
   const Fortran::common::IntrinsicTypeDefaultKinds &defaultKinds;
   const Fortran::evaluate::IntrinsicProcTable &intrinsics;
   const Fortran::evaluate::TargetCharacteristics &targetCharacteristics;

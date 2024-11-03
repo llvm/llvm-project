@@ -24,7 +24,7 @@ entry:
 ; 64:  daddu   $[[R1]], $sp, $[[R1]]
 ; 64:  sd      $ra, 24($[[R1]])
 
-  %agg.tmp = alloca %struct.S1, align 1
+  %agg.tmp = alloca %struct.S1, align 8
   call void @llvm.memcpy.p0.p0.i32(ptr align 1 %agg.tmp, ptr align 1 @s1, i32 65536, i1 false)
   call void @f2(ptr byval(%struct.S1) %agg.tmp) nounwind
   ret void

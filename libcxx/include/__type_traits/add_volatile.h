@@ -21,7 +21,7 @@ template <class _Tp> struct _LIBCPP_TEMPLATE_VIS add_volatile {
   typedef _LIBCPP_NODEBUG volatile _Tp type;
 };
 
-#if _LIBCPP_STD_VER > 11
+#if _LIBCPP_STD_VER >= 14
 template <class _Tp> using add_volatile_t = typename add_volatile<_Tp>::type;
 #endif
 

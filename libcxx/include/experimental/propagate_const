@@ -120,7 +120,7 @@
 #  pragma GCC system_header
 #endif
 
-#if _LIBCPP_STD_VER > 11
+#if _LIBCPP_STD_VER >= 14
 
 _LIBCPP_BEGIN_NAMESPACE_LFTS_V2
 
@@ -577,5 +577,5 @@ struct greater_equal<experimental::fundamentals_v2::propagate_const<_Tp>>
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP_STD_VER > 11
+#endif // _LIBCPP_STD_VER >= 14
 #endif // _LIBCPP_EXPERIMENTAL_PROPAGATE_CONST

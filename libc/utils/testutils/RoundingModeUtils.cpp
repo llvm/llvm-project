@@ -27,6 +27,8 @@ int get_fe_rounding(RoundingMode mode) {
   case RoundingMode::Nearest:
     return FE_TONEAREST;
     break;
+  default:
+    __builtin_unreachable();
   }
 }
 

@@ -16,7 +16,7 @@ namespace {
 TEST_F(AArch64GISelMITest, TestCSE) {
   setUp();
   if (!TM)
-    return;
+    GTEST_SKIP();
 
   LLT s16{LLT::scalar(16)};
   LLT s32{LLT::scalar(32)};
@@ -139,7 +139,7 @@ TEST_F(AArch64GISelMITest, TestCSE) {
 TEST_F(AArch64GISelMITest, TestCSEConstantConfig) {
   setUp();
   if (!TM)
-    return;
+    GTEST_SKIP();
 
   LLT s16{LLT::scalar(16)};
   auto MIBInput = B.buildInstr(TargetOpcode::G_TRUNC, {s16}, {Copies[0]});
@@ -169,7 +169,7 @@ TEST_F(AArch64GISelMITest, TestCSEConstantConfig) {
 TEST_F(AArch64GISelMITest, TestCSEImmediateNextCSE) {
   setUp();
   if (!TM)
-    return;
+    GTEST_SKIP();
 
   LLT s32{LLT::scalar(32)};
   // We want to check that when the CSE hit is on the next instruction, i.e. at
@@ -194,7 +194,7 @@ TEST_F(AArch64GISelMITest, TestCSEImmediateNextCSE) {
 TEST_F(AArch64GISelMITest, TestConstantFoldCTL) {
   setUp();
   if (!TM)
-    return;
+    GTEST_SKIP();
 
   LLT s32 = LLT::scalar(32);
 

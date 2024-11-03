@@ -14,6 +14,7 @@
 #define LLVM_CLANG_AST_INTERP_INTERP_H
 
 #include "Boolean.h"
+#include "Floating.h"
 #include "Function.h"
 #include "InterpFrame.h"
 #include "InterpStack.h"
@@ -137,8 +138,64 @@ bool CheckDivRem(InterpState &S, CodePtr OpPC, const T &LHS, const T &RHS) {
   return true;
 }
 
+/// Checks if the result is a floating-point operation is valid
+/// in the current context.
+bool CheckFloatResult(InterpState &S, CodePtr OpPC, APFloat::opStatus Status);
+
 /// Interpreter entry point.
 bool Interpret(InterpState &S, APValue &Result);
+
+/// Interpret a builtin function.
+bool InterpretBuiltin(InterpState &S, CodePtr &PC, unsigned BuiltinID);
+
+enum class ArithOp { Add, Sub };
+
+//===----------------------------------------------------------------------===//
+// Returning values
+//===----------------------------------------------------------------------===//
+
+template <PrimType Name, bool Builtin = false,
+          class T = typename PrimConv<Name>::T>
+bool Ret(InterpState &S, CodePtr &PC, APValue &Result) {
+  S.CallStackDepth--;
+  const T &Ret = S.Stk.pop<T>();
+
+  assert(S.Current->getFrameOffset() == S.Stk.size() && "Invalid frame");
+  if (Builtin || !S.checkingPotentialConstantExpression())
+    S.Current->popArgs();
+
+  if (InterpFrame *Caller = S.Current->Caller) {
+    PC = S.Current->getRetPC();
+    delete S.Current;
+    S.Current = Caller;
+    S.Stk.push<T>(Ret);
+  } else {
+    delete S.Current;
+    S.Current = nullptr;
+    if (!ReturnValue<T>(Ret, Result))
+      return false;
+  }
+  return true;
+}
+
+template <bool Builtin = false>
+inline bool RetVoid(InterpState &S, CodePtr &PC, APValue &Result) {
+  S.CallStackDepth--;
+
+  assert(S.Current->getFrameOffset() == S.Stk.size() && "Invalid frame");
+  if (Builtin || !S.checkingPotentialConstantExpression())
+    S.Current->popArgs();
+
+  if (InterpFrame *Caller = S.Current->Caller) {
+    PC = S.Current->getRetPC();
+    delete S.Current;
+    S.Current = Caller;
+  } else {
+    delete S.Current;
+    S.Current = nullptr;
+  }
+  return true;
+}
 
 //===----------------------------------------------------------------------===//
 // Add, Sub, Mul
@@ -184,12 +241,32 @@ bool Add(InterpState &S, CodePtr OpPC) {
   return AddSubMulHelper<T, T::add, std::plus>(S, OpPC, Bits, LHS, RHS);
 }
 
+inline bool Addf(InterpState &S, CodePtr OpPC, llvm::RoundingMode RM) {
+  const Floating &RHS = S.Stk.pop<Floating>();
+  const Floating &LHS = S.Stk.pop<Floating>();
+
+  Floating Result;
+  auto Status = Floating::add(LHS, RHS, RM, &Result);
+  S.Stk.push<Floating>(Result);
+  return CheckFloatResult(S, OpPC, Status);
+}
+
 template <PrimType Name, class T = typename PrimConv<Name>::T>
 bool Sub(InterpState &S, CodePtr OpPC) {
   const T &RHS = S.Stk.pop<T>();
   const T &LHS = S.Stk.pop<T>();
   const unsigned Bits = RHS.bitWidth() + 1;
   return AddSubMulHelper<T, T::sub, std::minus>(S, OpPC, Bits, LHS, RHS);
+}
+
+inline bool Subf(InterpState &S, CodePtr OpPC, llvm::RoundingMode RM) {
+  const Floating &RHS = S.Stk.pop<Floating>();
+  const Floating &LHS = S.Stk.pop<Floating>();
+
+  Floating Result;
+  auto Status = Floating::sub(LHS, RHS, RM, &Result);
+  S.Stk.push<Floating>(Result);
+  return CheckFloatResult(S, OpPC, Status);
 }
 
 template <PrimType Name, class T = typename PrimConv<Name>::T>
@@ -200,6 +277,15 @@ bool Mul(InterpState &S, CodePtr OpPC) {
   return AddSubMulHelper<T, T::mul, std::multiplies>(S, OpPC, Bits, LHS, RHS);
 }
 
+inline bool Mulf(InterpState &S, CodePtr OpPC, llvm::RoundingMode RM) {
+  const Floating &RHS = S.Stk.pop<Floating>();
+  const Floating &LHS = S.Stk.pop<Floating>();
+
+  Floating Result;
+  auto Status = Floating::mul(LHS, RHS, RM, &Result);
+  S.Stk.push<Floating>(Result);
+  return CheckFloatResult(S, OpPC, Status);
+}
 /// 1) Pops the RHS from the stack.
 /// 2) Pops the LHS from the stack.
 /// 3) Pushes 'LHS & RHS' on the stack
@@ -289,6 +375,19 @@ bool Div(InterpState &S, CodePtr OpPC) {
     return true;
   }
   return false;
+}
+
+inline bool Divf(InterpState &S, CodePtr OpPC, llvm::RoundingMode RM) {
+  const Floating &RHS = S.Stk.pop<Floating>();
+  const Floating &LHS = S.Stk.pop<Floating>();
+
+  if (!CheckDivRem(S, OpPC, LHS, RHS))
+    return false;
+
+  Floating Result;
+  auto Status = Floating::div(LHS, RHS, RM, &Result);
+  S.Stk.push<Floating>(Result);
+  return CheckFloatResult(S, OpPC, Status);
 }
 
 //===----------------------------------------------------------------------===//
@@ -719,6 +818,22 @@ bool InitGlobal(InterpState &S, CodePtr OpPC, uint32_t I) {
   return true;
 }
 
+/// 1) Converts the value on top of the stack to an APValue
+/// 2) Sets that APValue on \Temp
+/// 3) Initialized global with index \I with that
+template <PrimType Name, class T = typename PrimConv<Name>::T>
+bool InitGlobalTemp(InterpState &S, CodePtr OpPC, uint32_t I,
+                    const LifetimeExtendedTemporaryDecl *Temp) {
+  assert(Temp);
+  const T Value = S.Stk.peek<T>();
+  APValue APV = Value.toAPValue();
+  APValue *Cached = Temp->getOrCreateValue(true);
+  *Cached = APV;
+
+  S.P.getGlobal(I)->deref<T>() = S.Stk.pop<T>();
+  return true;
+}
+
 template <PrimType Name, class T = typename PrimConv<Name>::T>
 bool InitThisField(InterpState &S, CodePtr OpPC, uint32_t I) {
   if (S.checkingPotentialConstantExpression())
@@ -867,6 +982,14 @@ inline bool GetPtrActiveThisField(InterpState &S, CodePtr OpPC, uint32_t Off) {
 }
 
 inline bool GetPtrBase(InterpState &S, CodePtr OpPC, uint32_t Off) {
+  const Pointer &Ptr = S.Stk.peek<Pointer>();
+  if (!CheckNull(S, OpPC, Ptr, CSK_Base))
+    return false;
+  S.Stk.push<Pointer>(Ptr.atField(Off));
+  return true;
+}
+
+inline bool GetPtrBasePop(InterpState &S, CodePtr OpPC, uint32_t Off) {
   const Pointer &Ptr = S.Stk.pop<Pointer>();
   if (!CheckNull(S, OpPC, Ptr, CSK_Base))
     return false;
@@ -1031,11 +1154,9 @@ bool InitElemPop(InterpState &S, CodePtr OpPC, uint32_t Idx) {
 // AddOffset, SubOffset
 //===----------------------------------------------------------------------===//
 
-template <class T, bool Add> bool OffsetHelper(InterpState &S, CodePtr OpPC) {
-  // Fetch the pointer and the offset.
-  const T &Offset = S.Stk.pop<T>();
-  const Pointer &Ptr = S.Stk.pop<Pointer>();
-
+template <class T, ArithOp Op>
+bool OffsetHelper(InterpState &S, CodePtr OpPC, const T &Offset,
+                  const Pointer &Ptr) {
   if (!CheckRange(S, OpPC, Ptr, CSK_ArrayToPointer))
     return false;
 
@@ -1062,7 +1183,8 @@ template <class T, bool Add> bool OffsetHelper(InterpState &S, CodePtr OpPC) {
     const unsigned Bits = Offset.bitWidth();
     APSInt APOffset(Offset.toAPSInt().extend(Bits + 2), false);
     APSInt APIndex(Index.toAPSInt().extend(Bits + 2), false);
-    APSInt NewIndex = Add ? (APIndex + APOffset) : (APIndex - APOffset);
+    APSInt NewIndex =
+        (Op == ArithOp::Add) ? (APIndex + APOffset) : (APIndex - APOffset);
     S.CCEDiag(S.Current->getSource(OpPC), diag::note_constexpr_array_index)
         << NewIndex
         << /*array*/ static_cast<int>(!Ptr.inArray())
@@ -1071,7 +1193,7 @@ template <class T, bool Add> bool OffsetHelper(InterpState &S, CodePtr OpPC) {
   };
 
   unsigned MaxOffset = MaxIndex - Ptr.getIndex();
-  if constexpr (Add) {
+  if constexpr (Op == ArithOp::Add) {
     // If the new offset would be negative, bail out.
     if (Offset.isNegative() && (Offset.isMin() || -Offset > Index))
       return InvalidOffset();
@@ -1093,7 +1215,7 @@ template <class T, bool Add> bool OffsetHelper(InterpState &S, CodePtr OpPC) {
   int64_t WideIndex = static_cast<int64_t>(Index);
   int64_t WideOffset = static_cast<int64_t>(Offset);
   int64_t Result;
-  if constexpr (Add)
+  if constexpr (Op == ArithOp::Add)
     Result = WideIndex + WideOffset;
   else
     Result = WideIndex - WideOffset;
@@ -1104,12 +1226,43 @@ template <class T, bool Add> bool OffsetHelper(InterpState &S, CodePtr OpPC) {
 
 template <PrimType Name, class T = typename PrimConv<Name>::T>
 bool AddOffset(InterpState &S, CodePtr OpPC) {
-  return OffsetHelper<T, true>(S, OpPC);
+  const T &Offset = S.Stk.pop<T>();
+  const Pointer &Ptr = S.Stk.pop<Pointer>();
+  return OffsetHelper<T, ArithOp::Add>(S, OpPC, Offset, Ptr);
 }
 
 template <PrimType Name, class T = typename PrimConv<Name>::T>
 bool SubOffset(InterpState &S, CodePtr OpPC) {
-  return OffsetHelper<T, false>(S, OpPC);
+  const T &Offset = S.Stk.pop<T>();
+  const Pointer &Ptr = S.Stk.pop<Pointer>();
+  return OffsetHelper<T, ArithOp::Sub>(S, OpPC, Offset, Ptr);
+}
+
+template <ArithOp Op>
+static inline bool IncDecPtrHelper(InterpState &S, CodePtr OpPC) {
+  using OneT = Integral<8, false>;
+  const Pointer &Ptr = S.Stk.pop<Pointer>();
+
+  // Get the current value on the stack.
+  S.Stk.push<Pointer>(Ptr.deref<Pointer>());
+
+  // Now the current Ptr again and a constant 1.
+  Pointer P = Ptr.deref<Pointer>();
+  OneT One = OneT::from(1);
+  if (!OffsetHelper<OneT, Op>(S, OpPC, One, P))
+    return false;
+
+  // Store the new value.
+  Ptr.deref<Pointer>() = S.Stk.pop<Pointer>();
+  return true;
+}
+
+static inline bool IncPtr(InterpState &S, CodePtr OpPC) {
+  return IncDecPtrHelper<ArithOp::Add>(S, OpPC);
+}
+
+static inline bool DecPtr(InterpState &S, CodePtr OpPC) {
+  return IncDecPtrHelper<ArithOp::Sub>(S, OpPC);
 }
 
 /// 1) Pops a Pointer from the stack.
@@ -1150,6 +1303,52 @@ template <PrimType TIn, PrimType TOut> bool Cast(InterpState &S, CodePtr OpPC) {
   return true;
 }
 
+/// 1) Pops a Floating from the stack.
+/// 2) Pushes a new floating on the stack that uses the given semantics.
+/// Not templated, so implemented in Interp.cpp.
+bool CastFP(InterpState &S, CodePtr OpPC, const llvm::fltSemantics *Sem,
+            llvm::RoundingMode RM);
+
+template <PrimType Name, class T = typename PrimConv<Name>::T>
+bool CastIntegralFloating(InterpState &S, CodePtr OpPC,
+                          const llvm::fltSemantics *Sem,
+                          llvm::RoundingMode RM) {
+  const T &From = S.Stk.pop<T>();
+  APSInt FromAP = From.toAPSInt();
+  Floating Result;
+
+  auto Status = Floating::fromIntegral(FromAP, *Sem, RM, Result);
+  S.Stk.push<Floating>(Result);
+
+  return CheckFloatResult(S, OpPC, Status);
+}
+
+template <PrimType Name, class T = typename PrimConv<Name>::T>
+bool CastFloatingIntegral(InterpState &S, CodePtr OpPC) {
+  const Floating &F = S.Stk.pop<Floating>();
+
+  if constexpr (std::is_same_v<T, Boolean>) {
+    S.Stk.push<T>(T(F.isNonZero()));
+    return true;
+  } else {
+    APSInt Result(std::max(8u, T::bitWidth() + 1),
+                  /*IsUnsigned=*/!T::isSigned());
+    auto Status = F.convertToInteger(Result);
+
+    // Float-to-Integral overflow check.
+    if ((Status & APFloat::opStatus::opInvalidOp) && F.isFinite()) {
+      const Expr *E = S.Current->getExpr(OpPC);
+      QualType Type = E->getType();
+
+      S.CCEDiag(E, diag::note_constexpr_overflow) << F.getAPFloat() << Type;
+      return S.noteUndefinedBehavior();
+    }
+
+    S.Stk.push<T>(T(Result));
+    return CheckFloatResult(S, OpPC, Status);
+  }
+}
+
 //===----------------------------------------------------------------------===//
 // Zero, Nullptr
 //===----------------------------------------------------------------------===//
@@ -1186,6 +1385,8 @@ inline bool This(InterpState &S, CodePtr OpPC) {
 
 inline bool RVOPtr(InterpState &S, CodePtr OpPC) {
   assert(S.Current->getFunction()->hasRVO());
+  if (S.checkingPotentialConstantExpression())
+    return false;
   S.Stk.push<Pointer>(S.Current->getRVOPtr());
   return true;
 }
@@ -1205,8 +1406,9 @@ inline bool Shr(InterpState &S, CodePtr OpPC) {
   if (!CheckShift<RT>(S, OpPC, RHS, Bits))
     return false;
 
-  unsigned URHS = static_cast<unsigned>(RHS);
-  S.Stk.push<LT>(LT::from(static_cast<unsigned>(LHS) >> URHS, LHS.bitWidth()));
+  Integral<LT::bitWidth(), false> R;
+  Integral<LT::bitWidth(), false>::shiftRight(LHS.toUnsigned(), RHS, Bits, &R);
+  S.Stk.push<LT>(R);
   return true;
 }
 
@@ -1221,9 +1423,9 @@ inline bool Shl(InterpState &S, CodePtr OpPC) {
   if (!CheckShift<RT>(S, OpPC, RHS, Bits))
     return false;
 
-  unsigned URHS = static_cast<unsigned>(RHS);
-  S.Stk.push<LT>(LT::from(static_cast<unsigned>(LHS) << URHS, LHS.bitWidth()));
-
+  Integral<LT::bitWidth(), false> R;
+  Integral<LT::bitWidth(), false>::shiftLeft(LHS.toUnsigned(), RHS, Bits, &R);
+  S.Stk.push<LT>(R);
   return true;
 }
 
@@ -1258,9 +1460,11 @@ inline bool Call(InterpState &S, CodePtr &PC, const Function *Func) {
   Pointer ThisPtr;
   if (Func->hasThisPointer()) {
     ThisPtr = NewFrame->getThis();
-    if (!CheckInvoke(S, PC, ThisPtr)) {
+    if (!CheckInvoke(S, PC, ThisPtr))
       return false;
-    }
+
+    if (S.checkingPotentialConstantExpression())
+      return false;
   }
 
   if (!CheckCallable(S, PC, Func))
@@ -1286,6 +1490,20 @@ inline bool Call(InterpState &S, CodePtr &PC, const Function *Func) {
 
   // Interpreting the function failed somehow. Reset to
   // previous state.
+  S.Current = FrameBefore;
+  return false;
+}
+
+inline bool CallBI(InterpState &S, CodePtr &PC, const Function *Func) {
+  auto NewFrame = std::make_unique<InterpFrame>(S, Func, PC);
+
+  InterpFrame *FrameBefore = S.Current;
+  S.Current = NewFrame.get();
+
+  if (InterpretBuiltin(S, PC, Func->getBuiltinID())) {
+    NewFrame.release();
+    return true;
+  }
   S.Current = FrameBefore;
   return false;
 }

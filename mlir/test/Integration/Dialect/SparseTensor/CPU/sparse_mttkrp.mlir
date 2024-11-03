@@ -3,7 +3,7 @@
 // DEFINE: %{run} = TENSOR0="%mlir_src_dir/test/Integration/data/mttkrp_b.tns"  \
 // DEFINE: mlir-cpu-runner \
 // DEFINE:  -e entry -entry-point-result=void  \
-// DEFINE:  -shared-libs=%mlir_lib_dir/libmlir_c_runner_utils%shlibext,%mlir_lib_dir/libmlir_runner_utils%shlibext | \
+// DEFINE:  -shared-libs=%mlir_c_runner_utils,%mlir_runner_utils | \
 // DEFINE: FileCheck %s
 //
 // RUN: %{compile} | %{run}
@@ -16,7 +16,7 @@
 // REDEFINE: %{option} = "enable-runtime-library=false vl=2 reassociate-fp-reductions=true enable-index-optimizations=true"
 // RUN: %{compile} | %{run}
 
-// If SVE is available, do the same run, but now with direct IR generation and VLA
+// Do the same run, but now with direct IR generation and, if available, VLA
 // vectorization.
 // REDEFINE: %{option} = "enable-runtime-library=false vl=4  enable-arm-sve=%ENABLE_VLA"
 // REDEFINE: %{run} = TENSOR0="%mlir_src_dir/test/Integration/data/mttkrp_b.tns" \
@@ -24,7 +24,7 @@
 // REDEFINE:   --entry-function=entry_lli \
 // REDEFINE:   --extra-module=%S/Inputs/main_for_lli.ll \
 // REDEFINE:   %VLA_ARCH_ATTR_OPTIONS \
-// REDEFINE:   --dlopen=%mlir_native_utils_lib_dir/libmlir_c_runner_utils%shlibext -dlopen=%mlir_lib_dir/libmlir_runner_utils%shlibext| \
+// REDEFINE:   --dlopen=%mlir_native_utils_lib_dir/libmlir_c_runner_utils%shlibext -dlopen=%mlir_runner_utils| \
 // REDEFINE: FileCheck %s
 // RUN: %{compile} | mlir-translate -mlir-to-llvmir | %{run}
 

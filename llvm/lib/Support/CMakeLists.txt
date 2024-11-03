@@ -117,7 +117,6 @@ endif()
 add_subdirectory(BLAKE3)
 
 add_llvm_component_library(LLVMSupport
-  AddressRanges.cpp
   ABIBreak.cpp
   AMDGPUMetadata.cpp
   APFixedPoint.cpp
@@ -176,7 +175,6 @@ add_llvm_component_library(LLVMSupport
   InstructionCost.cpp
   IntEqClasses.cpp
   IntervalMap.cpp
-  ItaniumManglingCanonicalizer.cpp
   JSON.cpp
   KnownBits.cpp
   LEB128.cpp
@@ -195,6 +193,7 @@ add_llvm_component_library(LLVMSupport
   NativeFormatting.cpp
   OptimizedStructLayout.cpp
   Optional.cpp
+  PGOOptions.cpp
   Parallel.cpp
   PluginLoader.cpp
   PrettyStackTrace.cpp
@@ -218,7 +217,6 @@ add_llvm_component_library(LLVMSupport
   StringSaver.cpp
   StringRef.cpp
   SuffixTree.cpp
-  SymbolRemappingReader.cpp
   SystemUtils.cpp
   TarWriter.cpp
   ThreadPool.cpp

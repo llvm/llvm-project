@@ -56,9 +56,7 @@ define <4 x float> @add_mul(<4 x float> %a, <4 x float> %b, <4 x float> %c) {
 ; CHECK-NEXT:    fneg v4.2s, v5.2s
 ; CHECK-NEXT:    fmla v3.2s, v0.2s, v2.2s
 ; CHECK-NEXT:    fmla v4.2s, v1.2s, v2.2s
-; CHECK-NEXT:    zip2 v1.2s, v4.2s, v3.2s
-; CHECK-NEXT:    zip1 v0.2s, v4.2s, v3.2s
-; CHECK-NEXT:    mov v0.d[1], v1.d[0]
+; CHECK-NEXT:    zip1 v0.4s, v4.4s, v3.4s
 ; CHECK-NEXT:    ret
 entry:
   %0 = fsub fast <4 x float> %b, %c
@@ -100,9 +98,7 @@ define <4 x float> @mul_mul270_mul(<4 x float> %a, <4 x float> %b, <4 x float> %
 ; CHECK-NEXT:    fneg v3.2s, v3.2s
 ; CHECK-NEXT:    fmla v2.2s, v7.2s, v1.2s
 ; CHECK-NEXT:    fmla v3.2s, v0.2s, v1.2s
-; CHECK-NEXT:    zip2 v1.2s, v3.2s, v2.2s
-; CHECK-NEXT:    zip1 v0.2s, v3.2s, v2.2s
-; CHECK-NEXT:    mov v0.d[1], v1.d[0]
+; CHECK-NEXT:    zip1 v0.4s, v3.4s, v2.4s
 ; CHECK-NEXT:    ret
 entry:
   %strided.vec = shufflevector <4 x float> %c, <4 x float> poison, <2 x i32> <i32 0, i32 2>
@@ -281,9 +277,7 @@ define <4 x float> @mul_triangle_addmul(<4 x float> %a, <4 x float> %b, <4 x flo
 ; CHECK-NEXT:    fmla v16.2s, v0.2s, v5.2s
 ; CHECK-NEXT:    fsub v0.2s, v7.2s, v16.2s
 ; CHECK-NEXT:    fadd v1.2s, v6.2s, v3.2s
-; CHECK-NEXT:    zip2 v2.2s, v0.2s, v1.2s
-; CHECK-NEXT:    zip1 v0.2s, v0.2s, v1.2s
-; CHECK-NEXT:    mov v0.d[1], v2.d[0]
+; CHECK-NEXT:    zip1 v0.4s, v0.4s, v1.4s
 ; CHECK-NEXT:    ret
 entry:
   %ar = shufflevector <4 x float> %a, <4 x float> poison, <2 x i32> <i32 0, i32 2>
@@ -334,10 +328,8 @@ define <4 x float> @mul_triangle_multiuses(<4 x float> %a, <4 x float> %b, ptr %
 ; CHECK-NEXT:    fmla v5.2s, v4.2s, v1.2s
 ; CHECK-NEXT:    fmla v3.2s, v0.2s, v1.2s
 ; CHECK-NEXT:    mov v1.d[1], v2.d[0]
-; CHECK-NEXT:    zip2 v4.2s, v3.2s, v5.2s
-; CHECK-NEXT:    zip1 v0.2s, v3.2s, v5.2s
+; CHECK-NEXT:    zip1 v0.4s, v3.4s, v5.4s
 ; CHECK-NEXT:    str q1, [x0]
-; CHECK-NEXT:    mov v0.d[1], v4.d[0]
 ; CHECK-NEXT:    ret
 entry:
   %strided.vec = shufflevector <4 x float> %a, <4 x float> poison, <2 x i32> <i32 0, i32 2>

@@ -20,7 +20,9 @@ public:
   /// Default constructor for an invalid Trace object.
   SBTrace();
 
+#ifndef SWIG
   SBTrace(const lldb::TraceSP &trace_sp);
+#endif
 
   /// See SBDebugger::LoadTraceFromFile.
   static SBTrace LoadTraceFromFile(SBError &error, SBDebugger &debugger,

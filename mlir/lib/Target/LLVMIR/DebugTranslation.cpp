@@ -88,10 +88,11 @@ void DebugTranslation::translate(LLVMFuncOp func, llvm::Function &llvmFunc) {
 // Attributes
 //===----------------------------------------------------------------------===//
 
-llvm::DIType *DebugTranslation::translateImpl(DIVoidResultTypeAttr attr) {
-  // A DIVoidResultTypeAttr at the beginning of the subroutine types list models
-  // a void result type. Translate the explicit DIVoidResultTypeAttr to a
-  // nullptr since LLVM IR metadata does not have an explicit void result type
+llvm::DIType *DebugTranslation::translateImpl(DINullTypeAttr attr) {
+  // A DINullTypeAttr at the beginning of the subroutine types list models
+  // a void result type. If it is at the end, it models a variadic function.
+  // Translate the explicit DINullTypeAttr to a nullptr since LLVM IR metadata
+  // does not have an explicit void result type nor a variadic type
   // representation.
   return nullptr;
 }
@@ -197,6 +198,11 @@ llvm::DISubprogram *DebugTranslation::translateImpl(DISubprogramAttr attr) {
       translate(attr.getCompileUnit()));
 }
 
+llvm::DINamespace *DebugTranslation::translateImpl(DINamespaceAttr attr) {
+  return llvm::DINamespace::get(llvmCtx, translate(attr.getScope()),
+                                attr.getName(), attr.getExportSymbols());
+}
+
 llvm::DISubrange *DebugTranslation::translateImpl(DISubrangeAttr attr) {
   auto getMetadataOrNull = [&](IntegerAttr attr) -> llvm::Metadata * {
     if (!attr)
@@ -234,10 +240,11 @@ llvm::DINode *DebugTranslation::translate(DINodeAttr attr) {
 
   llvm::DINode *node =
       TypeSwitch<DINodeAttr, llvm::DINode *>(attr)
-          .Case<DIVoidResultTypeAttr, DIBasicTypeAttr, DICompileUnitAttr,
-                DICompositeTypeAttr, DIDerivedTypeAttr, DIFileAttr,
-                DILexicalBlockAttr, DILexicalBlockFileAttr, DILocalVariableAttr,
-                DISubprogramAttr, DISubrangeAttr, DISubroutineTypeAttr>(
+          .Case<DIBasicTypeAttr, DICompileUnitAttr, DICompositeTypeAttr,
+                DIDerivedTypeAttr, DIFileAttr, DILexicalBlockAttr,
+                DILexicalBlockFileAttr, DILocalVariableAttr, DINamespaceAttr,
+                DINullTypeAttr, DISubprogramAttr, DISubrangeAttr,
+                DISubroutineTypeAttr>(
               [&](auto attr) { return translateImpl(attr); });
   attrToNode.insert({attr, node});
   return node;

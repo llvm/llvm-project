@@ -767,3 +767,21 @@ define <2 x half> @test_u33tofp2(<2 x i33> %arg0) {
   %res = uitofp <2 x i33> %arg0 to <2 x half>
   ret <2 x half> %res
 }
+
+define <16 x i16> @test_s16tof16(<16 x half> %a) {
+; CHECK-LABEL: test_s16tof16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vcvttph2w %ymm0, %ymm0
+; CHECK-NEXT:    retq
+  %res = fptosi <16 x half> %a to <16 x i16>
+  ret <16 x i16> %res
+}
+
+define <16 x i16> @test_u16tof16(<16 x half> %a) {
+; CHECK-LABEL: test_u16tof16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vcvttph2uw %ymm0, %ymm0
+; CHECK-NEXT:    retq
+  %res = fptoui <16 x half> %a to <16 x i16>
+  ret <16 x i16> %res
+}

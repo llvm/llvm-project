@@ -65,7 +65,7 @@ void JITLinkerBase::linkPhase2(std::unique_ptr<JITLinkerBase> Self,
   if (AR)
     Alloc = std::move(*AR);
   else
-    return Ctx->notifyFailed(AR.takeError());
+    return abandonAllocAndBailOut(std::move(Self), AR.takeError());
 
   LLVM_DEBUG({
     dbgs() << "Link graph \"" << G->getName()
@@ -75,13 +75,13 @@ void JITLinkerBase::linkPhase2(std::unique_ptr<JITLinkerBase> Self,
 
   // Run post-allocation passes.
   if (auto Err = runPasses(Passes.PostAllocationPasses))
-    return Ctx->notifyFailed(std::move(Err));
+    return abandonAllocAndBailOut(std::move(Self), std::move(Err));
 
   // Notify client that the defined symbols have been assigned addresses.
   LLVM_DEBUG(dbgs() << "Resolving symbols defined in " << G->getName() << "\n");
 
   if (auto Err = Ctx->notifyResolved(*G))
-    return Ctx->notifyFailed(std::move(Err));
+    return abandonAllocAndBailOut(std::move(Self), std::move(Err));
 
   auto ExternalSymbols = getExternalSymbolNames();
 

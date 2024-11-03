@@ -35,7 +35,7 @@ template <class _Tp> struct _LIBCPP_TEMPLATE_VIS is_trivially_destructible
 
 #endif // __has_builtin(__is_trivially_destructible)
 
-#if _LIBCPP_STD_VER > 14
+#if _LIBCPP_STD_VER >= 17
 template <class _Tp>
 inline constexpr bool is_trivially_destructible_v = is_trivially_destructible<_Tp>::value;
 #endif

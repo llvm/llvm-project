@@ -103,9 +103,35 @@ func.func @atomic_write(%a: !llvm.ptr<i32>) -> () {
 // CHECK: (%[[ARG0:.*]]: !llvm.ptr<i32>, %[[ARG1:.*]]: !llvm.ptr<i32>)
 // CHECK: omp.atomic.read %[[ARG1]] = %[[ARG0]] memory_order(acquire) hint(contended) : !llvm.ptr<i32>
 func.func @atomic_read(%a: !llvm.ptr<i32>, %b: !llvm.ptr<i32>) -> () {
-  omp.atomic.read %b = %a memory_order(acquire) hint(contended) : !llvm.ptr<i32>
+  omp.atomic.read %b = %a memory_order(acquire) hint(contended) : !llvm.ptr<i32>, i32
   return
 }
+
+// -----
+
+func.func @atomic_update() {
+  %0 = llvm.mlir.addressof @_QFsEc : !llvm.ptr<i32>
+  omp.atomic.update   %0 : !llvm.ptr<i32> {
+  ^bb0(%arg0: i32):
+    %1 = arith.constant 1 : i32
+    %2 = arith.addi %arg0, %1  : i32
+    omp.yield(%2 : i32)
+  }
+  return
+}
+llvm.mlir.global internal @_QFsEc() : i32 {
+  %0 = arith.constant 10 : i32
+  llvm.return %0 : i32
+}
+
+// CHECK-LABEL: @atomic_update
+// CHECK: %[[GLOBAL_VAR:.*]] = llvm.mlir.addressof @_QFsEc : !llvm.ptr<i32>
+// CHECK: omp.atomic.update   %[[GLOBAL_VAR]] : !llvm.ptr<i32> {
+// CHECK: ^bb0(%[[IN_VAL:.*]]: i32):
+// CHECK:   %[[CONST_1:.*]] = llvm.mlir.constant(1 : i32) : i32
+// CHECK:   %[[OUT_VAL:.*]] = llvm.add %[[IN_VAL]], %[[CONST_1]]  : i32
+// CHECK:   omp.yield(%[[OUT_VAL]] : i32)
+// CHECK: }
 
 // -----
 
@@ -144,4 +170,35 @@ func.func @simdloop_block_arg(%val : i32, %ub : i32, %i : index) {
     omp.yield
   }
   return
+}
+
+// -----
+
+// CHECK-LABEL: @task_depend
+// CHECK:  (%[[ARG0:.*]]: !llvm.ptr<i32>) {
+// CHECK:  omp.task depend(taskdependin -> %[[ARG0]] : !llvm.ptr<i32>) {
+// CHECK:    omp.terminator
+// CHECK:  }
+// CHECK:   llvm.return
+// CHECK: }
+
+func.func @task_depend(%arg0: !llvm.ptr<i32>) {
+  omp.task depend(taskdependin -> %arg0 : !llvm.ptr<i32>) {
+    omp.terminator
+  }
+  return
+}
+
+// -----
+
+// CHECK-LABEL: @_QPomp_target_data
+// CHECK: (%[[ARG0:.*]]: !llvm.ptr<i32>, %[[ARG1:.*]]: !llvm.ptr<i32>, %[[ARG2:.*]]: !llvm.ptr<i32>, %[[ARG3:.*]]: !llvm.ptr<i32>)
+// CHECK:         omp.target_enter_data   map((to -> %[[ARG0]] : !llvm.ptr<i32>), (to -> %[[ARG1]] : !llvm.ptr<i32>), (always, alloc -> %[[ARG2]] : !llvm.ptr<i32>))
+// CHECK:         omp.target_exit_data   map((from -> %[[ARG0]] : !llvm.ptr<i32>), (from -> %[[ARG1]] : !llvm.ptr<i32>), (release -> %[[ARG2]] : !llvm.ptr<i32>), (always, delete -> %[[ARG3]] : !llvm.ptr<i32>))
+// CHECK:         llvm.return
+
+llvm.func @_QPomp_target_data(%a : !llvm.ptr<i32>, %b : !llvm.ptr<i32>, %c : !llvm.ptr<i32>, %d : !llvm.ptr<i32>) {
+  omp.target_enter_data   map((to -> %a : !llvm.ptr<i32>), (to -> %b : !llvm.ptr<i32>), (always, alloc -> %c : !llvm.ptr<i32>))
+  omp.target_exit_data   map((from -> %a : !llvm.ptr<i32>), (from -> %b : !llvm.ptr<i32>), (release -> %c : !llvm.ptr<i32>), (always, delete -> %d : !llvm.ptr<i32>))
+  llvm.return
 }

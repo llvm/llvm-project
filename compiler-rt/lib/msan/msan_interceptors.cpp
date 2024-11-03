@@ -93,8 +93,7 @@ struct DlsymAlloc : public DlSymAllocator<DlsymAlloc> {
     if (__msan::IsInSymbolizerOrUnwider())                        \
       break;                                                      \
     if (__offset >= 0 && __msan::flags()->report_umrs) {          \
-      GET_CALLER_PC_BP_SP;                                        \
-      (void)sp;                                                   \
+      GET_CALLER_PC_BP;                                           \
       ReportUMRInsideAddressRange(__func__, x, n, __offset);      \
       __msan::PrintWarningWithOrigin(                             \
           pc, bp, __msan_get_origin((const char *)x + __offset)); \

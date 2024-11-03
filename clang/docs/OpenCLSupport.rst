@@ -113,7 +113,7 @@ To enable modules for OpenCL:
 
    .. code-block:: console
 
-     $ clang -target spir-unknown-unknown -c -emit-llvm -Xclang -finclude-default-header -fmodules -fimplicit-module-maps -fmodules-cache-path=<path to the generated module> test.cl
+     $ clang --target=spir-unknown-unknown -c -emit-llvm -Xclang -finclude-default-header -fmodules -fimplicit-module-maps -fmodules-cache-path=<path to the generated module> test.cl
 
 Another way to circumvent long parsing latency for the OpenCL builtin
 declarations is to use mechanism enabled by :ref:`-fdeclare-opencl-builtins

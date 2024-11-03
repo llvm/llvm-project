@@ -987,6 +987,14 @@ func.func @print_no_result(%arg0 : f32) -> i32 {
 
 // -----
 
+func.func private @print_needs_vector(%arg0: tensor<8xf32>) {
+  // expected-error@+1 {{op operand #0 must be , but got 'tensor<8xf32>'}}
+  vector.print %arg0 : tensor<8xf32>
+  return
+}
+
+// -----
+
 func.func @reshape_bad_input_shape(%arg0 : vector<3x2x4xf32>) {
   %c2 = arith.constant 2 : index
   %c3 = arith.constant 3 : index
@@ -1651,4 +1659,15 @@ func.func @vector_scalable_insert_unaligned(%subv: vector<4xi32>, %vec: vector<[
 func.func @vector_scalable_extract_unaligned(%vec: vector<[16]xf32>) {
   // expected-error@+1 {{op failed to verify that position is a multiple of the result length.}}
   %0 = vector.scalable.extract %vec[5] : vector<4xf32> from vector<[16]xf32>
+}
+
+// -----
+
+func.func @integer_vector_contract(%arg0: vector<16x32xsi8>, %arg1: vector<32x16xsi8>, %arg2: vector<16x16xsi32>) -> vector<16x16xsi32> {
+  // expected-error@+1 {{op only supports signless integer types}}
+  %0 = vector.contract {
+    indexing_maps = [affine_map<(d0, d1, d2) -> (d0, d2)>, affine_map<(d0, d1, d2) -> (d2, d1)>, affine_map<(d0, d1, d2) -> (d0, d1)>],
+    iterator_types = ["parallel", "parallel", "reduction"], kind = #vector.kind<add>
+  } %arg0, %arg1, %arg2 : vector<16x32xsi8>, vector<32x16xsi8> into vector<16x16xsi32>
+  return %0: vector<16x16xsi32>
 }

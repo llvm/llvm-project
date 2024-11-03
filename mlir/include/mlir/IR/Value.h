@@ -427,21 +427,13 @@ inline unsigned OpResultImpl::getResultNumber() const {
 /// TypedValue can be null/empty
 template <typename Ty>
 struct TypedValue : Value {
+  using Value::Value;
+
+  static bool classof(Value value) { return llvm::isa<Ty>(value.getType()); }
+
   /// Return the known Type
   Ty getType() { return Value::getType().template cast<Ty>(); }
-  void setType(mlir::Type ty) {
-    assert(ty.template isa<Ty>());
-    Value::setType(ty);
-  }
-
-  TypedValue(Value val) : Value(val) {
-    assert(!val || val.getType().template isa<Ty>());
-  }
-  TypedValue &operator=(const Value &other) {
-    assert(!other || other.getType().template isa<Ty>());
-    Value::operator=(other);
-    return *this;
-  }
+  void setType(Ty ty) { Value::setType(ty); }
 };
 
 } // namespace detail
@@ -583,8 +575,12 @@ struct CastInfo<
   static inline bool isPossible(mlir::Value ty) {
     /// Return a constant true instead of a dynamic true when casting to self or
     /// up the hierarchy.
-    return std::is_same_v<To, std::remove_const_t<From>> ||
-           std::is_base_of_v<To, From> || To::classof(ty);
+    if constexpr (std::is_base_of_v<To, From>) {
+      (void)ty;
+      return true;
+    } else {
+      return To::classof(ty);
+    }
   }
   static inline To doCast(mlir::Value value) { return To(value.getImpl()); }
 };

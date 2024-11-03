@@ -44,6 +44,8 @@ void Thread::Init(uptr stack_buffer_start, uptr stack_buffer_size,
 
   static atomic_uint64_t unique_id;
   unique_id_ = atomic_fetch_add(&unique_id, 1, memory_order_relaxed);
+  if (!IsMainThread())
+    os_id_ = GetTid();
 
   if (auto sz = flags()->heap_history_size)
     heap_allocations_ = HeapAllocationsRingBuffer::New(sz);
@@ -149,6 +151,12 @@ tag_t Thread::GenerateRandomTag(uptr num_bits) {
   return tag;
 }
 
+void EnsureMainThreadIDIsCorrect() {
+  auto *t = __hwasan::GetCurrentThread();
+  if (t && (t->IsMainThread()))
+    t->set_os_id(GetTid());
+}
+
 } // namespace __hwasan
 
 // --- Implementation of LSan-specific functions --- {{{1
@@ -169,11 +177,7 @@ void LockThreadRegistry() { __hwasan::hwasanThreadList().Lock(); }
 
 void UnlockThreadRegistry() { __hwasan::hwasanThreadList().Unlock(); }
 
-void EnsureMainThreadIDIsCorrect() {
-  auto *t = __hwasan::GetCurrentThread();
-  if (t && (t->IsMainThread()))
-    t->set_os_id(GetTid());
-}
+void EnsureMainThreadIDIsCorrect() { __hwasan::EnsureMainThreadIDIsCorrect(); }
 
 bool GetThreadRangesLocked(tid_t os_id, uptr *stack_begin, uptr *stack_end,
                            uptr *tls_begin, uptr *tls_end, uptr *cache_begin,

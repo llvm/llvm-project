@@ -15,7 +15,7 @@
 #include "src/stdio/fread_unlocked.h"
 #include "src/stdio/funlockfile.h"
 #include "src/stdio/fwrite_unlocked.h"
-#include "utils/UnitTest/Test.h"
+#include "test/UnitTest/Test.h"
 
 #include <errno.h>
 #include <stdio.h>

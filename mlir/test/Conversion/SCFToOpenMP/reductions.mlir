@@ -1,4 +1,4 @@
-// RUN: mlir-opt -convert-scf-to-openmp -split-input-file %s | FileCheck %s
+// RUN: mlir-opt -convert-scf-to-openmp='use-opaque-pointers=1' -split-input-file %s | FileCheck %s
 
 // CHECK: omp.reduction.declare @[[$REDF:.*]] : f32
 
@@ -12,8 +12,8 @@
 // CHECK: omp.yield(%[[RES]] : f32)
 
 // CHECK: atomic
-// CHECK: ^{{.*}}(%[[ARG0:.*]]: !llvm.ptr<f32>, %[[ARG1:.*]]: !llvm.ptr<f32>):
-// CHECK: %[[RHS:.*]] = llvm.load %[[ARG1]]
+// CHECK: ^{{.*}}(%[[ARG0:.*]]: !llvm.ptr, %[[ARG1:.*]]: !llvm.ptr):
+// CHECK: %[[RHS:.*]] = llvm.load %[[ARG1]] : !llvm.ptr -> f32
 // CHECK: llvm.atomicrmw fadd %[[ARG0]], %[[RHS]] monotonic
 
 // CHECK-LABEL: @reduction1
@@ -143,8 +143,8 @@ func.func @reduction3(%arg0 : index, %arg1 : index, %arg2 : index,
 // CHECK: omp.yield(%[[RES]] : i64)
 
 // CHECK: atomic
-// CHECK: ^{{.*}}(%[[ARG0:.*]]: !llvm.ptr<i64>, %[[ARG1:.*]]: !llvm.ptr<i64>):
-// CHECK: %[[RHS:.*]] = llvm.load %[[ARG1]]
+// CHECK: ^{{.*}}(%[[ARG0:.*]]: !llvm.ptr, %[[ARG1:.*]]: !llvm.ptr):
+// CHECK: %[[RHS:.*]] = llvm.load %[[ARG1]] : !llvm.ptr -> i64
 // CHECK: llvm.atomicrmw max %[[ARG0]], %[[RHS]] monotonic
 
 // CHECK-LABEL: @reduction4
@@ -187,8 +187,8 @@ func.func @reduction4(%arg0 : index, %arg1 : index, %arg2 : index,
     // CHECK: omp.yield
   }
   // CHECK: omp.terminator
-  // CHECK: %[[RES1:.*]] = llvm.load %[[BUF1]]
-  // CHECK: %[[RES2:.*]] = llvm.load %[[BUF2]]
+  // CHECK: %[[RES1:.*]] = llvm.load %[[BUF1]] : !llvm.ptr -> f32
+  // CHECK: %[[RES2:.*]] = llvm.load %[[BUF2]] : !llvm.ptr -> i64
   // CHECK: return %[[RES1]], %[[RES2]]
   return %res#0, %res#1 : f32, i64
 }

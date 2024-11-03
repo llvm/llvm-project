@@ -506,12 +506,14 @@ public:
   }
 
   void initialize(AllocInfo &AI, OnInitializedFunction OnInitialized) override {
-    // Slide mapping based on delta and make all segments read-writable.
-    auto FixedAI = AI;
+    // Slide mapping based on delta, make all segments read-writable, and
+    // discard allocation actions.
+    auto FixedAI = std::move(AI);
     FixedAI.MappingBase -= DeltaAddr;
     for (auto &Seg : FixedAI.Segments)
       Seg.AG = AllocGroup(MemProt::Read | MemProt::Write,
                           Seg.AG.getMemDeallocPolicy());
+    FixedAI.Actions.clear();
     InProcessMemoryMapper::initialize(
         FixedAI, [this, OnInitialized = std::move(OnInitialized)](
                      Expected<ExecutorAddr> Result) mutable {

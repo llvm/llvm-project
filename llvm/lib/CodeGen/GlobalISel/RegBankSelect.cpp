@@ -69,8 +69,8 @@ INITIALIZE_PASS_END(RegBankSelect, DEBUG_TYPE,
                     "Assign register bank of generic virtual registers", false,
                     false)
 
-RegBankSelect::RegBankSelect(Mode RunningMode)
-    : MachineFunctionPass(ID), OptMode(RunningMode) {
+RegBankSelect::RegBankSelect(char &PassID, Mode RunningMode)
+    : MachineFunctionPass(PassID), OptMode(RunningMode) {
   if (RegBankSelectMode.getNumOccurrences() != 0) {
     OptMode = RegBankSelectMode;
     if (RegBankSelectMode != RunningMode)
@@ -162,8 +162,10 @@ bool RegBankSelect::repairReg(
     MI = MIRBuilder.buildInstrNoInsert(TargetOpcode::COPY)
       .addDef(Dst)
       .addUse(Src);
-    LLVM_DEBUG(dbgs() << "Copy: " << printReg(Src) << " to: " << printReg(Dst)
-               << '\n');
+    LLVM_DEBUG(dbgs() << "Copy: " << printReg(Src) << ':'
+                      << printRegClassOrBank(Src, *MRI, TRI)
+                      << " to: " << printReg(Dst) << ':'
+                      << printRegClassOrBank(Dst, *MRI, TRI) << '\n');
   } else {
     // TODO: Support with G_IMPLICIT_DEF + G_INSERT sequence or G_EXTRACT
     // sequence.

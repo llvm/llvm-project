@@ -6,7 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/ADT/Triple.h"
 #include "llvm/Analysis/CGSCCPassManager.h"
 #include "llvm/Analysis/LoopAnalysisManager.h"
 #include "llvm/AsmParser/Parser.h"
@@ -17,10 +16,11 @@
 #include "llvm/IR/Module.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Passes/PassBuilder.h"
-#include "llvm/Support/Host.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Target/TargetMachine.h"
+#include "llvm/TargetParser/Host.h"
+#include "llvm/TargetParser/Triple.h"
 #include "gtest/gtest.h"
 
 using namespace llvm;

@@ -31,7 +31,7 @@ Pre-commit check list
 Before committing or creating a review, please go through this check-list to make
 sure you don't forget anything:
 
-- Do you have tests for every public class and/or function you're adding or modifying?
+- Do you have :ref:`tests <testing>` for every public class and/or function you're adding or modifying?
 - Did you update the synopsis of the relevant headers?
 - Did you update the relevant files to track implementation status (in ``docs/Status/``)?
 - Did you mark all functions and type declarations with the :ref:`proper visibility macro <visibility-macros>`?

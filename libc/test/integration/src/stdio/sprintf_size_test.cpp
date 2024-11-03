@@ -12,7 +12,7 @@
 #include "src/stdio/sprintf.h"
 #endif
 
-#include "utils/IntegrationTest/test.h"
+#include "test/IntegrationTest/test.h"
 
 static bool my_streq(const char *lhs, const char *rhs) {
   if (lhs == rhs)

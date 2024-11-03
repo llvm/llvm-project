@@ -322,15 +322,20 @@ dropRedundantMaskingOfLeftShiftInput(BinaryOperator *OuterShift,
   return BinaryOperator::Create(Instruction::And, NewShift, NewMask);
 }
 
-/// If we have a shift-by-constant of a bitwise logic op that itself has a
-/// shift-by-constant operand with identical opcode, we may be able to convert
-/// that into 2 independent shifts followed by the logic op. This eliminates a
-/// a use of an intermediate value (reduces dependency chain).
-static Instruction *foldShiftOfShiftedLogic(BinaryOperator &I,
+/// If we have a shift-by-constant of a bin op (bitwise logic op or add/sub w/
+/// shl) that itself has a shift-by-constant operand with identical opcode, we
+/// may be able to convert that into 2 independent shifts followed by the logic
+/// op. This eliminates a use of an intermediate value (reduces dependency
+/// chain).
+static Instruction *foldShiftOfShiftedBinOp(BinaryOperator &I,
                                             InstCombiner::BuilderTy &Builder) {
   assert(I.isShift() && "Expected a shift as input");
-  auto *LogicInst = dyn_cast<BinaryOperator>(I.getOperand(0));
-  if (!LogicInst || !LogicInst->isBitwiseLogicOp() || !LogicInst->hasOneUse())
+  auto *BinInst = dyn_cast<BinaryOperator>(I.getOperand(0));
+  if (!BinInst ||
+      (!BinInst->isBitwiseLogicOp() &&
+       BinInst->getOpcode() != Instruction::Add &&
+       BinInst->getOpcode() != Instruction::Sub) ||
+      !BinInst->hasOneUse())
     return nullptr;
 
   Constant *C0, *C1;
@@ -338,6 +343,12 @@ static Instruction *foldShiftOfShiftedLogic(BinaryOperator &I,
     return nullptr;
 
   Instruction::BinaryOps ShiftOpcode = I.getOpcode();
+  // Transform for add/sub only works with shl.
+  if ((BinInst->getOpcode() == Instruction::Add ||
+       BinInst->getOpcode() == Instruction::Sub) &&
+      ShiftOpcode != Instruction::Shl)
+    return nullptr;
+
   Type *Ty = I.getType();
 
   // Find a matching one-use shift by constant. The fold is not valid if the sum
@@ -352,19 +363,25 @@ static Instruction *foldShiftOfShiftedLogic(BinaryOperator &I,
                  m_SpecificInt_ICMP(ICmpInst::ICMP_ULT, Threshold));
   };
 
-  // Logic ops are commutative, so check each operand for a match.
-  if (matchFirstShift(LogicInst->getOperand(0)))
-    Y = LogicInst->getOperand(1);
-  else if (matchFirstShift(LogicInst->getOperand(1)))
-    Y = LogicInst->getOperand(0);
-  else
+  // Logic ops and Add are commutative, so check each operand for a match. Sub
+  // is not so we cannot reoder if we match operand(1) and need to keep the
+  // operands in their original positions.
+  bool FirstShiftIsOp1 = false;
+  if (matchFirstShift(BinInst->getOperand(0)))
+    Y = BinInst->getOperand(1);
+  else if (matchFirstShift(BinInst->getOperand(1))) {
+    Y = BinInst->getOperand(0);
+    FirstShiftIsOp1 = BinInst->getOpcode() == Instruction::Sub;
+  } else
     return nullptr;
 
-  // shift (logic (shift X, C0), Y), C1 -> logic (shift X, C0+C1), (shift Y, C1)
+  // shift (binop (shift X, C0), Y), C1 -> binop (shift X, C0+C1), (shift Y, C1)
   Constant *ShiftSumC = ConstantExpr::getAdd(C0, C1);
   Value *NewShift1 = Builder.CreateBinOp(ShiftOpcode, X, ShiftSumC);
   Value *NewShift2 = Builder.CreateBinOp(ShiftOpcode, Y, C1);
-  return BinaryOperator::Create(LogicInst->getOpcode(), NewShift1, NewShift2);
+  Value *Op1 = FirstShiftIsOp1 ? NewShift2 : NewShift1;
+  Value *Op2 = FirstShiftIsOp1 ? NewShift1 : NewShift2;
+  return BinaryOperator::Create(BinInst->getOpcode(), Op1, Op2);
 }
 
 Instruction *InstCombinerImpl::commonShiftTransforms(BinaryOperator &I) {
@@ -463,7 +480,7 @@ Instruction *InstCombinerImpl::commonShiftTransforms(BinaryOperator &I) {
     return replaceOperand(I, 1, Rem);
   }
 
-  if (Instruction *Logic = foldShiftOfShiftedLogic(I, Builder))
+  if (Instruction *Logic = foldShiftOfShiftedBinOp(I, Builder))
     return Logic;
 
   return nullptr;
@@ -570,8 +587,7 @@ static bool canEvaluateShifted(Value *V, unsigned NumBits, bool IsLeftShift,
     const APInt *MulConst;
     // We can fold (shr (mul X, -(1 << C)), C) -> (and (neg X), C`)
     return !IsLeftShift && match(I->getOperand(1), m_APInt(MulConst)) &&
-           MulConst->isNegatedPowerOf2() &&
-           MulConst->countTrailingZeros() == NumBits;
+           MulConst->isNegatedPowerOf2() && MulConst->countr_zero() == NumBits;
   }
   }
 }
@@ -1132,6 +1148,14 @@ Instruction *InstCombinerImpl::visitShl(BinaryOperator &I) {
     if (match(Op1, m_Sub(m_SpecificInt(BitWidth - 1), m_Value(X))))
       return BinaryOperator::CreateLShr(
           ConstantInt::get(Ty, APInt::getSignMask(BitWidth)), X);
+
+    // Canonicalize "extract lowest set bit" using cttz to and-with-negate:
+    // 1 << (cttz X) --> -X & X
+    if (match(Op1,
+              m_OneUse(m_Intrinsic<Intrinsic::cttz>(m_Value(X), m_Value())))) {
+      Value *NegX = Builder.CreateNeg(X, "neg");
+      return BinaryOperator::CreateAnd(NegX, X);
+    }
 
     // The only way to shift out the 1 is with an over-shift, so that would
     // be poison with or without "nuw". Undef is excluded because (undef << X)

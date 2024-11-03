@@ -13,7 +13,7 @@
 
 set -e
 
-projects="llvm clang cmake compiler-rt libcxx libcxxabi libclc clang-tools-extra polly lldb lld openmp libunwind mlir flang third-party"
+projects="llvm bolt clang cmake compiler-rt libcxx libcxxabi libclc clang-tools-extra polly lldb lld openmp libunwind mlir flang third-party"
 
 release=""
 rc=""

@@ -43,7 +43,7 @@ def OpD : NS_Op<"mix_variadic_and_normal_inputs_op", [SameVariadicOperandSize]> 
 // CHECK-NEXT: return getODSOperands(0);
 
 // CHECK-LABEL: ::mlir::TypedValue<::mlir::TensorType> OpD::getInput2
-// CHECK-NEXT: return *getODSOperands(1).begin();
+// CHECK-NEXT: return ::llvm::cast<::mlir::TypedValue<::mlir::TensorType>>(*getODSOperands(1).begin());
 
 // CHECK-LABEL: OpD::build
 // CHECK-NEXT: odsState.addOperands(input1);

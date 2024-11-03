@@ -48,7 +48,7 @@
 #include <functional>
 
 namespace mlir {
-#define GEN_PASS_DEF_CONVERTFUNCTOLLVM
+#define GEN_PASS_DEF_CONVERTFUNCTOLLVMPASS
 #include "mlir/Conversion/Passes.h.inc"
 } // namespace mlir
 
@@ -78,54 +78,26 @@ static void filterFuncAttributes(func::FuncOp func, bool filterArgAndResAttrs,
   }
 }
 
-/// Helper function for wrapping all attributes into a single DictionaryAttr
-static auto wrapAsStructAttrs(OpBuilder &b, ArrayAttr attrs) {
-  return DictionaryAttr::get(
-      b.getContext(),
-      b.getNamedAttr(LLVM::LLVMDialect::getStructAttrsAttrName(), attrs));
-}
-
-/// Combines all result attributes into a single DictionaryAttr
-/// and prepends to argument attrs.
-/// This is intended to be used to format the attributes for a C wrapper
-/// function when the result(s) is converted to the first function argument
-/// (in the multiple return case, all returns get wrapped into a single
-/// argument). The total number of argument attributes should be equal to
-/// (number of function arguments) + 1.
-static void
-prependResAttrsToArgAttrs(OpBuilder &builder,
-                          SmallVectorImpl<NamedAttribute> &attributes,
-                          func::FuncOp func) {
-  size_t numArguments = func.getNumArguments();
-  auto allAttrs = SmallVector<Attribute>(
-      numArguments + 1, DictionaryAttr::get(builder.getContext()));
-  NamedAttribute *argAttrs = nullptr;
-  for (auto *it = attributes.begin(); it != attributes.end();) {
-    if (it->getName() == func.getArgAttrsAttrName()) {
-      auto arrayAttrs = it->getValue().cast<ArrayAttr>();
-      assert(arrayAttrs.size() == numArguments &&
-             "Number of arg attrs and args should match");
-      std::copy(arrayAttrs.begin(), arrayAttrs.end(), allAttrs.begin() + 1);
-      argAttrs = it;
-    } else if (it->getName() == func.getResAttrsAttrName()) {
-      auto arrayAttrs = it->getValue().cast<ArrayAttr>();
-      assert(!arrayAttrs.empty() && "expected array to be non-empty");
-      allAttrs[0] = (arrayAttrs.size() == 1)
-                        ? arrayAttrs[0]
-                        : wrapAsStructAttrs(builder, arrayAttrs);
-      it = attributes.erase(it);
-      continue;
-    }
-    it++;
-  }
-
-  auto newArgAttrs = builder.getNamedAttr(func.getArgAttrsAttrName(),
-                                          builder.getArrayAttr(allAttrs));
-  if (!argAttrs) {
-    attributes.emplace_back(newArgAttrs);
+/// Adds a an empty set of argument attributes for the newly added argument in
+/// front of the existing ones.
+static void prependEmptyArgAttr(OpBuilder &builder,
+                                SmallVectorImpl<NamedAttribute> &newFuncAttrs,
+                                func::FuncOp func) {
+  auto argAttrs = func.getArgAttrs();
+  // Nothing to do when there were no arg attrs beforehand.
+  if (!argAttrs)
     return;
-  }
-  *argAttrs = newArgAttrs;
+
+  size_t numArguments = func.getNumArguments();
+  SmallVector<Attribute> newArgAttrs;
+  newArgAttrs.reserve(numArguments + 1);
+  // Insert empty dictionary for the new argument.
+  newArgAttrs.push_back(builder.getDictionaryAttr({}));
+
+  llvm::append_range(newArgAttrs, *argAttrs);
+  auto newNamedAttr = builder.getNamedAttr(func.getArgAttrsAttrName(),
+                                           builder.getArrayAttr(newArgAttrs));
+  newFuncAttrs.push_back(newNamedAttr);
 }
 
 /// Creates an auxiliary function with pointer-to-memref-descriptor-struct
@@ -141,12 +113,17 @@ static void wrapForExternalCallers(OpBuilder &rewriter, Location loc,
                                    func::FuncOp funcOp,
                                    LLVM::LLVMFuncOp newFuncOp) {
   auto type = funcOp.getFunctionType();
-  SmallVector<NamedAttribute, 4> attributes;
-  filterFuncAttributes(funcOp, /*filterArgAndResAttrs=*/false, attributes);
-  auto [wrapperFuncType, resultIsNowArg] =
+  auto [wrapperFuncType, resultStructType] =
       typeConverter.convertFunctionTypeCWrapper(type);
-  if (resultIsNowArg)
-    prependResAttrsToArgAttrs(rewriter, attributes, funcOp);
+
+  SmallVector<NamedAttribute, 4> attributes;
+  // Only modify the argument and result attributes when the result is now an
+  // argument.
+  if (resultStructType)
+    prependEmptyArgAttr(rewriter, attributes, funcOp);
+  filterFuncAttributes(
+      funcOp, /*filterArgAndResAttrs=*/static_cast<bool>(resultStructType),
+      attributes);
   auto wrapperFuncOp = rewriter.create<LLVM::LLVMFuncOp>(
       loc, llvm::formatv("_mlir_ciface_{0}", funcOp.getName()).str(),
       wrapperFuncType, LLVM::Linkage::External, /*dsoLocal*/ false,
@@ -156,16 +133,18 @@ static void wrapForExternalCallers(OpBuilder &rewriter, Location loc,
   rewriter.setInsertionPointToStart(wrapperFuncOp.addEntryBlock());
 
   SmallVector<Value, 8> args;
-  size_t argOffset = resultIsNowArg ? 1 : 0;
-  for (auto &en : llvm::enumerate(type.getInputs())) {
-    Value arg = wrapperFuncOp.getArgument(en.index() + argOffset);
-    if (auto memrefType = en.value().dyn_cast<MemRefType>()) {
-      Value loaded = rewriter.create<LLVM::LoadOp>(loc, arg);
+  size_t argOffset = resultStructType ? 1 : 0;
+  for (auto &[index, argType] : llvm::enumerate(type.getInputs())) {
+    Value arg = wrapperFuncOp.getArgument(index + argOffset);
+    if (auto memrefType = argType.dyn_cast<MemRefType>()) {
+      Value loaded = rewriter.create<LLVM::LoadOp>(
+          loc, typeConverter.convertType(memrefType), arg);
       MemRefDescriptor::unpack(rewriter, loc, loaded, memrefType, args);
       continue;
     }
-    if (en.value().isa<UnrankedMemRefType>()) {
-      Value loaded = rewriter.create<LLVM::LoadOp>(loc, arg);
+    if (argType.isa<UnrankedMemRefType>()) {
+      Value loaded = rewriter.create<LLVM::LoadOp>(
+          loc, typeConverter.convertType(argType), arg);
       UnrankedMemRefDescriptor::unpack(rewriter, loc, loaded, args);
       continue;
     }
@@ -175,7 +154,7 @@ static void wrapForExternalCallers(OpBuilder &rewriter, Location loc,
 
   auto call = rewriter.create<LLVM::CallOp>(loc, newFuncOp, args);
 
-  if (resultIsNowArg) {
+  if (resultStructType) {
     rewriter.create<LLVM::StoreOp>(loc, call.getResult(),
                                    wrapperFuncOp.getArgument(0));
     rewriter.create<LLVM::ReturnOp>(loc, ValueRange{});
@@ -199,7 +178,7 @@ static void wrapExternalFunction(OpBuilder &builder, Location loc,
                                  LLVM::LLVMFuncOp newFuncOp) {
   OpBuilder::InsertionGuard guard(builder);
 
-  auto [wrapperType, resultIsNowArg] =
+  auto [wrapperType, resultStructType] =
       typeConverter.convertFunctionTypeCWrapper(funcOp.getFunctionType());
   // This conversion can only fail if it could not convert one of the argument
   // types. But since it has been applied to a non-wrapper function before, it
@@ -207,10 +186,14 @@ static void wrapExternalFunction(OpBuilder &builder, Location loc,
   assert(wrapperType && "unexpected type conversion failure");
 
   SmallVector<NamedAttribute, 4> attributes;
-  filterFuncAttributes(funcOp, /*filterArgAndResAttrs=*/false, attributes);
+  // Only modify the argument and result attributes when the result is now an
+  // argument.
+  if (resultStructType)
+    prependEmptyArgAttr(builder, attributes, funcOp);
+  filterFuncAttributes(
+      funcOp, /*filterArgAndResAttrs=*/static_cast<bool>(resultStructType),
+      attributes);
 
-  if (resultIsNowArg)
-    prependResAttrsToArgAttrs(builder, attributes, funcOp);
   // Create the auxiliary function.
   auto wrapperFunc = builder.create<LLVM::LLVMFuncOp>(
       loc, llvm::formatv("_mlir_ciface_{0}", funcOp.getName()).str(),
@@ -225,14 +208,15 @@ static void wrapExternalFunction(OpBuilder &builder, Location loc,
   args.reserve(type.getNumInputs());
   ValueRange wrapperArgsRange(newFuncOp.getArguments());
 
-  if (resultIsNowArg) {
+  if (resultStructType) {
     // Allocate the struct on the stack and pass the pointer.
     Type resultType =
         wrapperType.cast<LLVM::LLVMFunctionType>().getParamType(0);
     Value one = builder.create<LLVM::ConstantOp>(
         loc, typeConverter.convertType(builder.getIndexType()),
         builder.getIntegerAttr(builder.getIndexType(), 1));
-    Value result = builder.create<LLVM::AllocaOp>(loc, resultType, one);
+    Value result =
+        builder.create<LLVM::AllocaOp>(loc, resultType, resultStructType, one);
     args.push_back(result);
   }
 
@@ -255,12 +239,12 @@ static void wrapExternalFunction(OpBuilder &builder, Location loc,
                     builder, loc, typeConverter, unrankedMemRefType,
                     wrapperArgsRange.take_front(numToDrop));
 
-      auto ptrTy = LLVM::LLVMPointerType::get(packed.getType());
+      auto ptrTy = typeConverter.getPointerType(packed.getType());
       Value one = builder.create<LLVM::ConstantOp>(
           loc, typeConverter.convertType(builder.getIndexType()),
           builder.getIntegerAttr(builder.getIndexType(), 1));
-      Value allocated =
-          builder.create<LLVM::AllocaOp>(loc, ptrTy, one, /*alignment=*/0);
+      Value allocated = builder.create<LLVM::AllocaOp>(
+          loc, ptrTy, packed.getType(), one, /*alignment=*/0);
       builder.create<LLVM::StoreOp>(loc, packed, allocated);
       arg = allocated;
     } else {
@@ -274,8 +258,9 @@ static void wrapExternalFunction(OpBuilder &builder, Location loc,
 
   auto call = builder.create<LLVM::CallOp>(loc, wrapperFunc, args);
 
-  if (resultIsNowArg) {
-    Value result = builder.create<LLVM::LoadOp>(loc, args.front());
+  if (resultStructType) {
+    Value result =
+        builder.create<LLVM::LoadOp>(loc, resultStructType, args.front());
     builder.create<LLVM::ReturnOp>(loc, result);
   } else {
     builder.create<LLVM::ReturnOp>(loc, call.getResults());
@@ -312,8 +297,7 @@ protected:
       auto newResAttrDicts =
           (funcOp.getNumResults() == 1)
               ? resAttrDicts
-              : rewriter.getArrayAttr(
-                    {wrapAsStructAttrs(rewriter, resAttrDicts)});
+              : rewriter.getArrayAttr(rewriter.getDictionaryAttr({}));
       attributes.push_back(
           rewriter.getNamedAttr(funcOp.getResAttrsAttrName(), newResAttrDicts));
     }
@@ -727,15 +711,8 @@ void mlir::populateFuncToLLVMConversionPatterns(LLVMTypeConverter &converter,
 namespace {
 /// A pass converting Func operations into the LLVM IR dialect.
 struct ConvertFuncToLLVMPass
-    : public impl::ConvertFuncToLLVMBase<ConvertFuncToLLVMPass> {
-  ConvertFuncToLLVMPass() = default;
-  ConvertFuncToLLVMPass(bool useBarePtrCallConv, unsigned indexBitwidth,
-                        bool useAlignedAlloc,
-                        const llvm::DataLayout &dataLayout) {
-    this->useBarePtrCallConv = useBarePtrCallConv;
-    this->indexBitwidth = indexBitwidth;
-    this->dataLayout = dataLayout.getStringRepresentation();
-  }
+    : public impl::ConvertFuncToLLVMPassBase<ConvertFuncToLLVMPass> {
+  using Base::Base;
 
   /// Run the dialect converter on the module.
   void runOnOperation() override {
@@ -756,6 +733,7 @@ struct ConvertFuncToLLVMPass
     if (indexBitwidth != kDeriveIndexBitwidthFromDataLayout)
       options.overrideIndexBitwidth(indexBitwidth);
     options.dataLayout = llvm::DataLayout(this->dataLayout);
+    options.useOpaquePointers = useOpaquePointers;
 
     LLVMTypeConverter typeConverter(&getContext(), options,
                                     &dataLayoutAnalysis);
@@ -776,21 +754,3 @@ struct ConvertFuncToLLVMPass
   }
 };
 } // namespace
-
-std::unique_ptr<OperationPass<ModuleOp>> mlir::createConvertFuncToLLVMPass() {
-  return std::make_unique<ConvertFuncToLLVMPass>();
-}
-
-std::unique_ptr<OperationPass<ModuleOp>>
-mlir::createConvertFuncToLLVMPass(const LowerToLLVMOptions &options) {
-  auto allocLowering = options.allocLowering;
-  // There is no way to provide additional patterns for pass, so
-  // AllocLowering::None will always fail.
-  assert(allocLowering != LowerToLLVMOptions::AllocLowering::None &&
-         "ConvertFuncToLLVMPass doesn't support AllocLowering::None");
-  bool useAlignedAlloc =
-      (allocLowering == LowerToLLVMOptions::AllocLowering::AlignedAlloc);
-  return std::make_unique<ConvertFuncToLLVMPass>(
-      options.useBarePtrCallConv, options.getIndexBitwidth(), useAlignedAlloc,
-      options.dataLayout);
-}

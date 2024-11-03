@@ -41,6 +41,15 @@ MLIR_DEFINE_EXPLICIT_TYPE_ID(mlir::bufferization::AnalysisState)
 using namespace mlir;
 using namespace bufferization;
 
+static bool isRepetitiveRegion(Region *region,
+                               const BufferizationOptions &options) {
+  Operation *op = region->getParentOp();
+  if (auto bufferizableOp = options.dynCastBufferizableOp(op))
+    if (bufferizableOp.isRepetitiveRegion(region->getRegionNumber()))
+      return true;
+  return false;
+}
+
 Region *bufferization::getEnclosingRepetitiveRegion(
     Operation *op, const BufferizationOptions &options) {
   if (!op->getBlock())
@@ -52,11 +61,9 @@ Region *bufferization::getEnclosingRepetitiveRegion(
     Value value, const BufferizationOptions &options) {
   Region *region = value.getParentRegion();
   while (region) {
-    Operation *op = region->getParentOp();
-    if (auto bufferizableOp = options.dynCastBufferizableOp(op))
-      if (bufferizableOp.isRepetitiveRegion(region->getRegionNumber()))
-        return region;
-    region = op->getParentRegion();
+    if (isRepetitiveRegion(region, options))
+      return region;
+    region = region->getParentRegion();
   }
   return nullptr;
 }
@@ -67,11 +74,20 @@ Region *bufferization::getEnclosingRepetitiveRegion(
   Operation *op = nullptr;
   do {
     op = region->getParentOp();
-    if (auto bufferizableOp = options.dynCastBufferizableOp(op))
-      if (bufferizableOp.isRepetitiveRegion(region->getRegionNumber()))
-        return region;
+    if (isRepetitiveRegion(region, options))
+      return region;
   } while ((region = op->getParentRegion()));
   return nullptr;
+}
+
+Region *bufferization::getNextEnclosingRepetitiveRegion(
+    Region *region, const BufferizationOptions &options) {
+  assert(isRepetitiveRegion(region, options) && "expected repetitive region");
+  while ((region = region->getParentRegion())) {
+    if (isRepetitiveRegion(region, options))
+      break;
+  }
+  return region;
 }
 
 Operation *bufferization::getOwnerOfValue(Value value) {
@@ -107,6 +123,10 @@ FailureOr<Value> bufferization::allocateTensorForShapedValue(
     tensor = shapedValue;
   } else if (shapedValue.getType().isa<MemRefType>()) {
     tensor = b.create<ToTensorOp>(loc, shapedValue);
+  } else if (shapedValue.getType().isa<UnrankedTensorType>() ||
+             shapedValue.getType().isa<UnrankedMemRefType>()) {
+    return getOwnerOfValue(shapedValue)
+        ->emitError("copying of unranked tensors is not implemented");
   } else {
     llvm_unreachable("expected RankedTensorType or MemRefType");
   }
@@ -175,30 +195,37 @@ LogicalResult BufferizableOpInterface::resolveTensorOpOperandConflicts(
     if (state.isInPlace(opOperand))
       continue;
     if (operandType.isa<UnrankedTensorType>())
-      return op->emitError("copies of unranked tensors are not supported");
+      return op->emitError("copying of unranked tensors is not implemented");
 
-    SmallVector<OpResult> aliasingOpResults =
-        state.getAliasingOpResult(opOperand);
+    AliasingOpResultList aliasingOpResults =
+        state.getAliasingOpResults(opOperand);
     // Is the result yielded from a block? Or are deallocations turned off
     // entirely? In either case, mark the allocation as "escaping", so that it
     // will not be deallocated.
     bool escape = !state.getOptions().createDeallocs ||
-                  llvm::any_of(aliasingOpResults, [&](Value v) {
-                    return state.isTensorYielded(v);
+                  llvm::any_of(aliasingOpResults, [&](AliasingOpResult a) {
+                    return state.isTensorYielded(a.opResult);
                   });
 
-    if (aliasingOpResults.size() == 1 &&
+    if (aliasingOpResults.getNumAliases() == 1 &&
         !state.bufferizesToMemoryWrite(opOperand) &&
-        state.getAliasingOpOperand(aliasingOpResults.front()).size() == 1) {
+        state.getAliasingOpOperands(aliasingOpResults.getAliases()[0].opResult)
+                .getNumAliases() == 1 &&
+        !aliasingOpResults.getAliases()[0]
+             .opResult.getType()
+             .isa<UnrankedTensorType>()) {
       // The op itself does not write but may create exactly one alias. Instead
       // of copying the OpOperand, copy the OpResult. The OpResult can sometimes
       // be smaller than the OpOperand (e.g., in the case of an extract_slice,
-      // where the result is usually a smaller part of the source).
-      outOfPlaceOpResults.push_back(aliasingOpResults.front());
+      // where the result is usually a smaller part of the source). Do not apply
+      // this optimization if the OpResult is an unranked tensor (because those
+      // cannot be copied at the moment).
+      OpResult opResult = aliasingOpResults.getAliases()[0].opResult;
+      outOfPlaceOpResults.push_back(opResult);
       if (!state.canOmitTensorCopy(opOperand))
-        copiedOpResults.insert(aliasingOpResults.front());
+        copiedOpResults.insert(opResult);
       if (escape)
-        escapingOpResultCopies.insert(aliasingOpResults.front());
+        escapingOpResultCopies.insert(opResult);
     } else {
       // In all other cases, make a copy of the OpOperand.
       outOfPlaceOpOperands.push_back(&opOperand);
@@ -349,24 +376,29 @@ static void setInsertionPointAfter(OpBuilder &b, Value value) {
   }
 }
 
-/// Determine which OpOperand* will alias with `result` if the op is bufferized
-/// in place. Return an empty vector if the op is not bufferizable.
-SmallVector<OpOperand *>
-AnalysisState::getAliasingOpOperand(OpResult result) const {
-  if (Operation *op = result.getDefiningOp())
+/// Determine which OpOperand* will alias with `opResult` if the op is
+/// bufferized in place. Return all tensor OpOperand* if the op is not
+/// bufferizable.
+AliasingOpOperandList
+AnalysisState::getAliasingOpOperands(OpResult opResult) const {
+  if (Operation *op = opResult.getDefiningOp())
     if (auto bufferizableOp = getOptions().dynCastBufferizableOp(op))
-      return bufferizableOp.getAliasingOpOperand(result, *this);
-  return {};
+      return bufferizableOp.getAliasingOpOperands(opResult, *this);
+
+  // The op is not bufferizable.
+  return detail::unknownGetAliasingOpOperands(opResult);
 }
 
 /// Determine which OpResult will alias with `opOperand` if the op is bufferized
-/// in place. Return an empty vector if the op is not bufferizable.
-SmallVector<OpResult>
-AnalysisState::getAliasingOpResult(OpOperand &opOperand) const {
+/// in place. Return all tensor OpResults if the op is not bufferizable.
+AliasingOpResultList
+AnalysisState::getAliasingOpResults(OpOperand &opOperand) const {
   if (auto bufferizableOp =
           getOptions().dynCastBufferizableOp(opOperand.getOwner()))
-    return bufferizableOp.getAliasingOpResult(opOperand, *this);
-  return {};
+    return bufferizableOp.getAliasingOpResults(opOperand, *this);
+
+  // The op is not bufferizable.
+  return detail::unknownGetAliasingOpResults(opOperand);
 }
 
 /// Return true if `opOperand` bufferizes to a memory read. Return `true` if the
@@ -405,6 +437,16 @@ bool AnalysisState::bufferizesToAliasOnly(OpOperand &opOperand) const {
   return false;
 }
 
+bool AnalysisState::bufferizesToMemoryWrite(Value value) const {
+  auto opResult = value.dyn_cast<OpResult>();
+  if (!opResult)
+    return true;
+  auto bufferizableOp = getOptions().dynCastBufferizableOp(value);
+  if (!bufferizableOp)
+    return true;
+  return bufferizableOp.resultBufferizesToMemoryWrite(opResult, *this);
+}
+
 /// Return true if the given value is read by an op that bufferizes to a memory
 /// read. Also takes into account ops that create an alias but do not read by
 /// themselves (e.g., ExtractSliceOp).
@@ -418,8 +460,8 @@ bool AnalysisState::isValueRead(Value value) const {
     OpOperand *uMaybeReading = workingSet.pop_back_val();
     // Skip over all ops that neither read nor write (but create an alias).
     if (bufferizesToAliasOnly(*uMaybeReading))
-      for (OpResult opResult : getAliasingOpResult(*uMaybeReading))
-        for (OpOperand &use : opResult.getUses())
+      for (AliasingOpResult alias : getAliasingOpResults(*uMaybeReading))
+        for (OpOperand &use : alias.opResult.getUses())
           workingSet.push_back(&use);
     if (bufferizesToMemoryRead(*uMaybeReading))
       return true;
@@ -434,7 +476,7 @@ bool AnalysisState::isValueRead(Value value) const {
 // further.
 llvm::SetVector<Value> AnalysisState::findValueInReverseUseDefChain(
     Value value, llvm::function_ref<bool(Value)> condition,
-    bool followEquivalentOnly) const {
+    bool followEquivalentOnly, bool alwaysIncludeLeaves) const {
   llvm::SetVector<Value> result, workingSet;
   workingSet.insert(value);
 
@@ -448,40 +490,37 @@ llvm::SetVector<Value> AnalysisState::findValueInReverseUseDefChain(
     OpResult opResult = value.cast<OpResult>();
     BufferizableOpInterface bufferizableOp =
         options.dynCastBufferizableOp(opResult.getDefiningOp());
-    SmallVector<OpOperand *> opOperands = getAliasingOpOperand(opResult);
+    AliasingOpOperandList aliases = getAliasingOpOperands(opResult);
 
     // Stop iterating in either one of these cases:
     // * The current op is not bufferizable or excluded in the filter.
     // * There are no OpOperands to follow.
-    // * There is an OpOperand, but it is not an equivalent tensor (only if
-    //   `followEquivalentOnly` is set).
-    if (!bufferizableOp || opOperands.empty() ||
-        (followEquivalentOnly &&
-         bufferizableOp.bufferRelation(opResult, *this) !=
-             BufferRelation::Equivalent)) {
-      result.insert(value);
+    if (!bufferizableOp || aliases.getNumAliases() == 0) {
+      if (alwaysIncludeLeaves)
+        result.insert(value);
       continue;
     }
 
-    for (OpOperand *o : opOperands)
-      workingSet.insert(o->get());
+    for (AliasingOpOperand a : aliases) {
+      if (followEquivalentOnly && a.relation != BufferRelation::Equivalent) {
+        // Stop iterating if `followEquivalentOnly` is set but the alias is not
+        // equivalent.
+        if (alwaysIncludeLeaves)
+          result.insert(value);
+      } else {
+        workingSet.insert(a.opOperand->get());
+      }
+    }
   }
 
   return result;
 }
 
-// Find the Values of the last preceding write of a given Value.
-llvm::SetVector<Value>
-AnalysisState::findLastPrecedingWrite(Value value) const {
-  return findValueInReverseUseDefChain(value, [&](Value value) {
-    Operation *op = value.getDefiningOp();
-    if (!op)
-      return true;
-    auto bufferizableOp = options.dynCastBufferizableOp(op);
-    if (!bufferizableOp)
-      return true;
-    return bufferizableOp.isMemoryWrite(value.cast<OpResult>(), *this);
-  });
+// Find the values that define the contents of the given value.
+llvm::SetVector<Value> AnalysisState::findDefinitions(Value value) const {
+  return findValueInReverseUseDefChain(
+      value, [&](Value v) { return this->bufferizesToMemoryWrite(v); },
+      /*followEquivalentOnly=*/false, /*alwaysIncludeLeaves=*/false);
 }
 
 AnalysisState::AnalysisState(const BufferizationOptions &options)
@@ -505,10 +544,10 @@ bool AnalysisState::canOmitTensorCopy(OpOperand &opOperand) const {
     return true;
 
   // Do not copy if the tensor is never read.
-  SmallVector<OpResult> aliasingOpResults = getAliasingOpResult(opOperand);
+  AliasingOpResultList aliases = getAliasingOpResults(opOperand);
   if (!bufferizesToMemoryRead(opOperand) &&
-      llvm::none_of(aliasingOpResults,
-                    [&](OpResult opResult) { return isValueRead(opResult); }))
+      llvm::none_of(
+          aliases, [&](AliasingOpResult a) { return isValueRead(a.opResult); }))
     return true;
 
   // Default: Cannot omit the copy.
@@ -576,8 +615,8 @@ bool AnalysisState::isTensorYielded(Value tensor) const {
     // Note: In the absence of detailed analysis information (e.g., there may be
     // no function call analysis information), this `getAliasingOpResult` is
     // conservative and may report additional OpResults as potentially aliasing.
-    for (OpResult opResult : getAliasingOpResult(*operand))
-      for (OpOperand &use : opResult.getUses())
+    for (AliasingOpResult alias : getAliasingOpResults(*operand))
+      for (OpOperand &use : alias.opResult.getUses())
         worklist.push_back(&use);
   }
 
@@ -616,39 +655,6 @@ FailureOr<Value> bufferization::getBuffer(RewriterBase &rewriter, Value value,
   return rewriter
       .create<bufferization::ToMemrefOp>(value.getLoc(), *memrefType, value)
       .getResult();
-}
-
-FailureOr<BaseMemRefType> bufferization::detail::defaultGetBufferType(
-    Value value, const BufferizationOptions &options,
-    const DenseMap<Value, BaseMemRefType> &fixedTypes) {
-  assert(value.getType().isa<TensorType>() && "expected tensor type");
-
-  // No further analysis is possible for a block argument.
-  if (value.isa<BlockArgument>())
-    return bufferization::getMemRefType(value, options);
-
-  // Value is an OpResult.
-  Operation *op = getOwnerOfValue(value);
-  auto opResult = value.cast<OpResult>();
-  auto bufferizableOp = cast<BufferizableOpInterface>(op);
-  AnalysisState state(options);
-  auto aliasingOperands = bufferizableOp.getAliasingOpOperand(opResult, state);
-  if (!aliasingOperands.empty() &&
-      bufferizableOp.bufferRelation(opResult, state) ==
-          BufferRelation::Equivalent) {
-    // If the OpResult has an equivalent OpOperand, both OpResult and
-    // OpOperand bufferize to the exact same buffer type.
-    Value equivalentOperand = aliasingOperands.front()->get();
-    return getBufferType(equivalentOperand, options, fixedTypes);
-  }
-
-  // If we do not know the memory space and there is no default memory space,
-  // report a failure.
-  if (!options.defaultMemorySpace.has_value())
-    return op->emitError("could not infer memory space");
-
-  return getMemRefType(value, options, /*layout=*/{},
-                       *options.defaultMemorySpace);
 }
 
 /// Return the buffer type for a given Value (tensor) after bufferization.
@@ -830,6 +836,124 @@ bufferization::getMemRefTypeWithStaticIdentityLayout(TensorType tensorType,
                          memorySpace);
 }
 
+//===----------------------------------------------------------------------===//
+// Default implementations of interface methods
+//===----------------------------------------------------------------------===//
+
+bool bufferization::detail::defaultResultBufferizesToMemoryWrite(
+    OpResult opResult, const AnalysisState &state) {
+  auto bufferizableOp = cast<BufferizableOpInterface>(opResult.getDefiningOp());
+  AliasingOpOperandList opOperands =
+      bufferizableOp.getAliasingOpOperands(opResult, state);
+
+  // Case 1: OpResults that have no aliasing OpOperand usually bufferize to
+  // memory writes.
+  if (opOperands.getAliases().empty())
+    return true;
+
+  // Case 2: If an aliasing OpOperand bufferizes to a memory write, the OpResult
+  // may bufferize to a memory write.
+  if (llvm::any_of(opOperands, [&](AliasingOpOperand alias) {
+        return state.bufferizesToMemoryWrite(*alias.opOperand);
+      }))
+    return true;
+
+  // Case 3: Check if a nested aliasing OpOperand value bufferizes to a memory
+  // write. (Or: The reverse SSA use-def chain ends inside the reigon.) In that
+  // case, the OpResult bufferizes to a memory write. E.g.:
+  //
+  // %0 = "some_writing_op" : tensor<?xf32>
+  // %r = scf.if ... -> tensor<?xf32> {
+  //   scf.yield %0 : tensor<?xf32>
+  // } else {
+  //   %1 = "another_writing_op"(%0) : tensor<?xf32>
+  //   scf.yield %1 : tensor<?xf32>
+  // }
+  // "some_reading_op"(%r)
+  //
+  // %r bufferizes to a memory write because an aliasing OpOperand value (%1)
+  // bufferizes to a memory write and the defining op is inside the scf.if.
+  //
+  // Note: This treatment of surrouding ops is useful for ops that have a
+  // region but no OpOperand such as scf.if or scf.execute_region. It simplifies
+  // the analysis considerably.
+  //
+  // "another_writing_op" in the above example should be able to bufferize
+  // inplace in the absence of another read of %0. However, if the scf.if op
+  // would not be considered a "write", the analysis would detect the
+  // following conflict:
+  //
+  // * read = some_reading_op
+  // * lastWrite = %0  (Note: The last write of %r would be a set: {%0, %1}.)
+  // * conflictingWrite = %1
+  //
+  auto isMemoryWriteInsideOp = [&](Value v) {
+    Operation *op = getOwnerOfValue(v);
+    if (!opResult.getDefiningOp()->isAncestor(op))
+      return false;
+    return state.bufferizesToMemoryWrite(v);
+  };
+  for (AliasingOpOperand alias : opOperands) {
+    if (!state
+             .findValueInReverseUseDefChain(alias.opOperand->get(),
+                                            isMemoryWriteInsideOp,
+                                            /*followEquivalentOnly=*/false,
+                                            /*alwaysIncludeLeaves=*/false)
+             .empty())
+      return true;
+  }
+  return false;
+}
+
+// Compute the AliasingOpOperandList for a given OpResult based on
+// getAliasingOpResults.
+AliasingOpOperandList bufferization::detail::defaultGetAliasingOpOperands(
+    OpResult opResult, const AnalysisState &state) {
+  Operation *op = opResult.getDefiningOp();
+  SmallVector<AliasingOpOperand> result;
+  for (OpOperand &opOperand : op->getOpOperands()) {
+    if (!opOperand.get().getType().isa<TensorType>())
+      continue;
+    AliasingOpResultList aliasingOpResults =
+        state.getAliasingOpResults(opOperand);
+    for (const auto &it : aliasingOpResults)
+      if (it.opResult == opResult)
+        result.emplace_back(&opOperand, it.relation, it.isDefinite);
+  }
+  return AliasingOpOperandList(std::move(result));
+}
+
+FailureOr<BaseMemRefType> bufferization::detail::defaultGetBufferType(
+    Value value, const BufferizationOptions &options,
+    const DenseMap<Value, BaseMemRefType> &fixedTypes) {
+  assert(value.getType().isa<TensorType>() && "expected tensor type");
+
+  // No further analysis is possible for a block argument.
+  if (value.isa<BlockArgument>())
+    return bufferization::getMemRefType(value, options);
+
+  // Value is an OpResult.
+  Operation *op = getOwnerOfValue(value);
+  auto opResult = value.cast<OpResult>();
+  AnalysisState state(options);
+  AliasingOpOperandList aliases = state.getAliasingOpOperands(opResult);
+  if (aliases.getNumAliases() > 0 &&
+      aliases.getAliases()[0].relation == BufferRelation::Equivalent) {
+    // If the OpResult has an equivalent OpOperand, both OpResult and
+    // OpOperand bufferize to the exact same buffer type.
+    Value equivalentOperand = aliases.getAliases().front().opOperand->get();
+    return getBufferType(equivalentOperand, options, fixedTypes);
+  }
+
+  // If we do not know the memory space and there is no default memory space,
+  // report a failure.
+  if (!options.defaultMemorySpace.has_value())
+    return op->emitError("could not infer memory space");
+
+  return getMemRefType(value, options, /*layout=*/{},
+                       *options.defaultMemorySpace);
+}
+
 bool bufferization::detail::defaultIsRepetitiveRegion(
     BufferizableOpInterface bufferizableOp, unsigned index) {
   assert(index < bufferizableOp->getNumRegions() && "invalid region index");
@@ -838,4 +962,24 @@ bool bufferization::detail::defaultIsRepetitiveRegion(
   if (!regionInterface)
     return false;
   return regionInterface.isRepetitiveRegion(index);
+}
+
+AliasingOpOperandList
+bufferization::detail::unknownGetAliasingOpOperands(OpResult opResult) {
+  // Conservatively assume that everything may be aliasing.
+  AliasingOpOperandList r;
+  for (OpOperand &operand : opResult.getDefiningOp()->getOpOperands())
+    if (operand.get().getType().isa<TensorType>())
+      r.addAlias({&operand, BufferRelation::Unknown, /*isDefinite=*/false});
+  return r;
+}
+
+AliasingOpResultList
+bufferization::detail::unknownGetAliasingOpResults(OpOperand &opOperand) {
+  // Conservatively assume that everything may be aliasing.
+  AliasingOpResultList r;
+  for (OpResult result : opOperand.getOwner()->getOpResults())
+    if (result.getType().isa<TensorType>())
+      r.addAlias({result, BufferRelation::Unknown, /*isDefinite=*/false});
+  return r;
 }

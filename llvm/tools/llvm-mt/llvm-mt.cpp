@@ -17,6 +17,7 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileOutputBuffer.h"
 #include "llvm/Support/InitLLVM.h"
+#include "llvm/Support/LLVMDriver.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/PrettyStackTrace.h"
@@ -82,7 +83,7 @@ static void error(Error EC) {
     });
 }
 
-int llvm_mt_main(int Argc, char **Argv) {
+int llvm_mt_main(int Argc, char **Argv, const llvm::ToolContext &) {
   InitLLVM X(Argc, Argv);
 
   CvtResOptTable T;

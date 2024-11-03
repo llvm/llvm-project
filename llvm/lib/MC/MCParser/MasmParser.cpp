@@ -151,14 +151,14 @@ struct IntFieldInfo {
 
   IntFieldInfo() = default;
   IntFieldInfo(const SmallVector<const MCExpr *, 1> &V) { Values = V; }
-  IntFieldInfo(SmallVector<const MCExpr *, 1> &&V) { Values = V; }
+  IntFieldInfo(SmallVector<const MCExpr *, 1> &&V) { Values = std::move(V); }
 };
 struct RealFieldInfo {
   SmallVector<APInt, 1> AsIntValues;
 
   RealFieldInfo() = default;
   RealFieldInfo(const SmallVector<APInt, 1> &V) { AsIntValues = V; }
-  RealFieldInfo(SmallVector<APInt, 1> &&V) { AsIntValues = V; }
+  RealFieldInfo(SmallVector<APInt, 1> &&V) { AsIntValues = std::move(V); }
 };
 struct StructFieldInfo {
   std::vector<StructInitializer> Initializers;
@@ -269,12 +269,12 @@ FieldInitializer::FieldInitializer(FieldType FT) : FT(FT) {
 
 FieldInitializer::FieldInitializer(SmallVector<const MCExpr *, 1> &&Values)
     : FT(FT_INTEGRAL) {
-  new (&IntInfo) IntFieldInfo(Values);
+  new (&IntInfo) IntFieldInfo(std::move(Values));
 }
 
 FieldInitializer::FieldInitializer(SmallVector<APInt, 1> &&AsIntValues)
     : FT(FT_REAL) {
-  new (&RealInfo) RealFieldInfo(AsIntValues);
+  new (&RealInfo) RealFieldInfo(std::move(AsIntValues));
 }
 
 FieldInitializer::FieldInitializer(
@@ -2125,20 +2125,6 @@ bool MasmParser::parseStatement(ParseStatementInfo &Info,
     // Treat '.' as a valid identifier in this context.
     Lex();
     IDVal = ".";
-  } else if (Lexer.is(AsmToken::LCurly)) {
-    // Treat '{' as a valid identifier in this context.
-    Lex();
-    IDVal = "{";
-
-  } else if (Lexer.is(AsmToken::RCurly)) {
-    // Treat '}' as a valid identifier in this context.
-    Lex();
-    IDVal = "}";
-  } else if (Lexer.is(AsmToken::Star) &&
-             getTargetParser().starIsStartOfStatement()) {
-    // Accept '*' as a valid start of statement.
-    Lex();
-    IDVal = "*";
   } else if (Lexer.is(AsmToken::Real)) {
     // Treat ".<number>" as a valid identifier in this context.
     IDVal = getTok().getString();

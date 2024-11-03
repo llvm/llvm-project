@@ -80,6 +80,8 @@ class CGDebugInfo {
 #define EXT_OPAQUE_TYPE(ExtType, Id, Ext) \
   llvm::DIType *Id##Ty = nullptr;
 #include "clang/Basic/OpenCLExtensionTypes.def"
+#define WASM_TYPE(Name, Id, SingletonId) llvm::DIType *SingletonId = nullptr;
+#include "clang/Basic/WebAssemblyReferenceTypes.def"
 
   /// Cache of previously constructed Types.
   llvm::DenseMap<const void *, llvm::TrackingMDRef> TypeCache;
@@ -487,10 +489,9 @@ public:
 
   /// Emit call to \c llvm.dbg.declare for an argument variable
   /// declaration.
-  llvm::DILocalVariable *EmitDeclareOfArgVariable(const VarDecl *Decl,
-                                                  llvm::Value *AI,
-                                                  unsigned ArgNo,
-                                                  CGBuilderTy &Builder);
+  llvm::DILocalVariable *
+  EmitDeclareOfArgVariable(const VarDecl *Decl, llvm::Value *AI, unsigned ArgNo,
+                           CGBuilderTy &Builder, bool UsePointerValue = false);
 
   /// Emit call to \c llvm.dbg.declare for the block-literal argument
   /// to a block invocation function.

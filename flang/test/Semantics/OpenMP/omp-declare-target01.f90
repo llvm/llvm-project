@@ -51,6 +51,8 @@ module declare_target01
 
   !$omp declare target to (my_var)
 
+  !$omp declare target to (my_var) device_type(host)
+
   !ERROR: A variable that is part of another variable (as an array or structure element) cannot appear on the DECLARE TARGET directive
   !$omp declare target to (my_var%t_i)
 
@@ -64,6 +66,8 @@ module declare_target01
   !$omp declare target to (my_var%len_param)
 
   !$omp declare target to (arr)
+
+  !$omp declare target to (arr) device_type(nohost)
 
   !ERROR: A variable that is part of another variable (as an array or structure element) cannot appear on the DECLARE TARGET directive
   !$omp declare target to (arr(1))
@@ -81,6 +85,8 @@ module declare_target01
   !$omp declare target to (y%KIND)
 
   !$omp declare target link (my_var2)
+
+  !$omp declare target link (my_var2) device_type(any)
 
   !ERROR: A variable that is part of another variable (as an array or structure element) cannot appear on the DECLARE TARGET directive
   !$omp declare target link (my_var2%t_i)

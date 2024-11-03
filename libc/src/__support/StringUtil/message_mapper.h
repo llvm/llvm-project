@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_SUPPORT_STRING_UTIL_MESSAGE_MAPPER
-#define LLVM_LIBC_SRC_SUPPORT_STRING_UTIL_MESSAGE_MAPPER
+#ifndef LLVM_LIBC_SRC_SUPPORT_STRING_UTIL_MESSAGE_MAPPER_H
+#define LLVM_LIBC_SRC_SUPPORT_STRING_UTIL_MESSAGE_MAPPER_H
 
 #include "src/__support/CPP/optional.h"
 #include "src/__support/CPP/string_view.h"
@@ -74,4 +74,4 @@ public:
 } // namespace internal
 } // namespace __llvm_libc
 
-#endif // LLVM_LIBC_SRC_SUPPORT_STRING_UTIL_MESSAGE_MAPPER
+#endif // LLVM_LIBC_SRC_SUPPORT_STRING_UTIL_MESSAGE_MAPPER_H

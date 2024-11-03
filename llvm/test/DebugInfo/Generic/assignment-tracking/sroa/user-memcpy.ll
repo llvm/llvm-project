@@ -36,11 +36,11 @@
 ;;     local.other.y = global.other.y
 ;;     local.other.z = global.other.z
 ; CHECK-NEXT: %other.sroa.0.0.copyload = load i64, ptr @__const._Z3funv.other
-; CHECK-NEXT: %other.sroa.4.0.copyload = load i64, ptr getelementptr inbounds (i8, ptr @__const._Z3funv.other, i64 8)
-; CHECK-NEXT: %other.sroa.5.0.copyload = load i64, ptr getelementptr inbounds (i8, ptr @__const._Z3funv.other, i64 16)
+; CHECK-NEXT: %other.sroa.2.0.copyload = load i64, ptr getelementptr inbounds (i8, ptr @__const._Z3funv.other, i64 8)
+; CHECK-NEXT: %other.sroa.3.0.copyload = load i64, ptr getelementptr inbounds (i8, ptr @__const._Z3funv.other, i64 16)
 ; CHECK-NEXT: call void @llvm.dbg.assign(metadata i64 %other.sroa.0.0.copyload, metadata ![[other:[0-9]+]], metadata !DIExpression(DW_OP_LLVM_fragment, 0, 64), metadata !{{.+}}, metadata ptr undef, metadata !DIExpression()), !dbg
-; CHECK-NEXT: call void @llvm.dbg.assign(metadata i64 %other.sroa.4.0.copyload, metadata ![[other]], metadata !DIExpression(DW_OP_LLVM_fragment, 64, 64), metadata !{{.+}}, metadata ptr undef, metadata !DIExpression()), !dbg
-; CHECK-NEXT: call void @llvm.dbg.assign(metadata i64 %other.sroa.5.0.copyload, metadata ![[other]], metadata !DIExpression(DW_OP_LLVM_fragment, 128, 64), metadata !{{.+}}, metadata ptr undef, metadata !DIExpression()), !dbg
+; CHECK-NEXT: call void @llvm.dbg.assign(metadata i64 %other.sroa.2.0.copyload, metadata ![[other]], metadata !DIExpression(DW_OP_LLVM_fragment, 64, 64), metadata !{{.+}}, metadata ptr undef, metadata !DIExpression()), !dbg
+; CHECK-NEXT: call void @llvm.dbg.assign(metadata i64 %other.sroa.3.0.copyload, metadata ![[other]], metadata !DIExpression(DW_OP_LLVM_fragment, 128, 64), metadata !{{.+}}, metadata ptr undef, metadata !DIExpression()), !dbg
 
 ;; | std::memcpy(&point.y, &other.x, sizeof(long) * 2);
 ;;   other is now 3 scalars:
@@ -48,7 +48,7 @@
 ; CHECK-NEXT: call void @llvm.dbg.assign(metadata i64 %other.sroa.0.0.copyload, metadata ![[point]], metadata !DIExpression(DW_OP_LLVM_fragment, 64, 64), metadata !{{.+}}, metadata ptr undef, metadata !DIExpression()), !dbg
 ;;
 ;;     point.z = other.y
-; CHECK-NEXT: call void @llvm.dbg.assign(metadata i64 %other.sroa.4.0.copyload, metadata ![[point]], metadata !DIExpression(DW_OP_LLVM_fragment, 128, 64), metadata !{{.+}}, metadata ptr undef, metadata !DIExpression()), !dbg
+; CHECK-NEXT: call void @llvm.dbg.assign(metadata i64 %other.sroa.2.0.copyload, metadata ![[point]], metadata !DIExpression(DW_OP_LLVM_fragment, 128, 64), metadata !{{.+}}, metadata ptr undef, metadata !DIExpression()), !dbg
 
 ; CHECK: ![[point]] = !DILocalVariable(name: "point",
 ; CHECK: ![[other]] = !DILocalVariable(name: "other",
@@ -69,7 +69,6 @@ entry:
   %other = alloca %struct.V3i, align 8, !DIAssignID !114
   call void @llvm.dbg.assign(metadata i1 undef, metadata !111, metadata !DIExpression(), metadata !114, metadata ptr %other, metadata !DIExpression()), !dbg !113
   %0 = bitcast ptr %point to ptr, !dbg !115
-  call void @llvm.lifetime.start.p0i8(i64 24, ptr %0), !dbg !115
   %1 = bitcast ptr %point to ptr, !dbg !116
   call void @llvm.memset.p0i8.i64(ptr align 8 %1, i8 0, i64 24, i1 false), !dbg !116, !DIAssignID !117
   call void @llvm.dbg.assign(metadata i8 0, metadata !104, metadata !DIExpression(), metadata !117, metadata ptr %1, metadata !DIExpression()), !dbg !116
@@ -77,7 +76,6 @@ entry:
   store i64 5000, ptr %z, align 8, !dbg !119, !DIAssignID !125
   call void @llvm.dbg.assign(metadata i64 5000, metadata !104, metadata !DIExpression(DW_OP_LLVM_fragment, 128, 64), metadata !125, metadata ptr %z, metadata !DIExpression()), !dbg !119
   %2 = bitcast ptr %other to ptr, !dbg !126
-  call void @llvm.lifetime.start.p0i8(i64 24, ptr %2), !dbg !126
   %3 = bitcast ptr %other to ptr, !dbg !127
   call void @llvm.memcpy.p0i8.p0i8.i64(ptr align 8 %3, ptr align 8 bitcast (ptr @__const._Z3funv.other to ptr), i64 24, i1 false), !dbg !127, !DIAssignID !128
   call void @llvm.dbg.assign(metadata i1 undef, metadata !111, metadata !DIExpression(), metadata !128, metadata ptr %3, metadata !DIExpression()), !dbg !127
@@ -88,16 +86,12 @@ entry:
   call void @llvm.memcpy.p0i8.p0i8.i64(ptr align 8 %4, ptr align 8 %5, i64 16, i1 false), !dbg !130, !DIAssignID !132
   call void @llvm.dbg.assign(metadata i1 undef, metadata !104, metadata !DIExpression(DW_OP_LLVM_fragment, 64, 128), metadata !132, metadata ptr %4, metadata !DIExpression()), !dbg !130
   %6 = bitcast ptr %other to ptr, !dbg !133
-  call void @llvm.lifetime.end.p0i8(i64 24, ptr %6), !dbg !133
   %7 = bitcast ptr %point to ptr, !dbg !133
-  call void @llvm.lifetime.end.p0i8(i64 24, ptr %7), !dbg !133
   ret void, !dbg !133
 }
 
-declare void @llvm.lifetime.start.p0i8(i64 immarg, ptr nocapture)
 declare void @llvm.memset.p0i8.i64(ptr nocapture writeonly, i8, i64, i1 immarg)
 declare void @llvm.memcpy.p0i8.p0i8.i64(ptr noalias nocapture writeonly, ptr noalias nocapture readonly, i64, i1 immarg)
-declare void @llvm.lifetime.end.p0i8(i64 immarg, ptr nocapture)
 declare void @llvm.dbg.assign(metadata, metadata, metadata, metadata, metadata, metadata)
 
 !llvm.dbg.cu = !{!0}

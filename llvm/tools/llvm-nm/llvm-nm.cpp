@@ -16,7 +16,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ADT/StringSwitch.h"
-#include "llvm/ADT/Triple.h"
 #include "llvm/BinaryFormat/COFF.h"
 #include "llvm/BinaryFormat/XCOFF.h"
 #include "llvm/Demangle/Demangle.h"
@@ -40,14 +39,16 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Format.h"
-#include "llvm/Support/Host.h"
 #include "llvm/Support/InitLLVM.h"
+#include "llvm/Support/LLVMDriver.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Program.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/WithColor.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/TargetParser/Host.h"
+#include "llvm/TargetParser/Triple.h"
 #include <vector>
 
 using namespace llvm;
@@ -292,22 +293,6 @@ bool operator==(const NMSymbol &A, const NMSymbol &B) {
   return !(A < B) && !(B < A);
 }
 } // anonymous namespace
-
-static char isSymbolList64Bit(SymbolicFile &Obj) {
-  if (auto *IRObj = dyn_cast<IRObjectFile>(&Obj))
-    return Triple(IRObj->getTargetTriple()).isArch64Bit();
-  if (isa<COFFObjectFile>(Obj) || isa<COFFImportFile>(Obj))
-    return false;
-  if (XCOFFObjectFile *XCOFFObj = dyn_cast<XCOFFObjectFile>(&Obj))
-    return XCOFFObj->is64Bit();
-  if (isa<WasmObjectFile>(Obj))
-    return false;
-  if (TapiFile *Tapi = dyn_cast<TapiFile>(&Obj))
-    return Tapi->is64Bit();
-  if (MachOObjectFile *MachO = dyn_cast<MachOObjectFile>(&Obj))
-    return MachO->is64Bit();
-  return cast<ELFObjectFileBase>(Obj).getBytesInAddress() == 8;
-}
 
 static StringRef CurrentFilename;
 
@@ -722,7 +707,7 @@ static void printSymbolList(SymbolicFile &Obj,
       outs() << '\n' << CurrentFilename << ":\n";
     } else if (OutputFormat == sysv) {
       outs() << "\n\nSymbols from " << CurrentFilename << ":\n\n";
-      if (isSymbolList64Bit(Obj))
+      if (Obj.is64Bit())
         outs() << "Name                  Value           Class        Type"
                << "         Size             Line  Section\n";
       else
@@ -732,7 +717,7 @@ static void printSymbolList(SymbolicFile &Obj,
   }
 
   const char *printBlanks, *printDashes, *printFormat;
-  if (isSymbolList64Bit(Obj)) {
+  if (Obj.is64Bit()) {
     printBlanks = "                ";
     printDashes = "----------------";
     switch (AddressRadix) {
@@ -1671,8 +1656,8 @@ static bool shouldDump(SymbolicFile &Obj) {
       !isa<IRObjectFile>(Obj))
     return true;
 
-  return isSymbolList64Bit(Obj) ? BitMode != BitModeTy::Bit32
-                                : BitMode != BitModeTy::Bit64;
+  return Obj.is64Bit() ? BitMode != BitModeTy::Bit32
+                       : BitMode != BitModeTy::Bit64;
 }
 
 static void getXCOFFExports(XCOFFObjectFile *XCOFFObj,
@@ -2302,7 +2287,7 @@ exportSymbolNamesFromFiles(const std::vector<std::string> &InputFilenames) {
   printExportSymbolList(SymbolList);
 }
 
-int llvm_nm_main(int argc, char **argv) {
+int llvm_nm_main(int argc, char **argv, const llvm::ToolContext &) {
   InitLLVM X(argc, argv);
   BumpPtrAllocator A;
   StringSaver Saver(A);

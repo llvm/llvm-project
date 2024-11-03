@@ -593,6 +593,9 @@ llvm.func @vector_predication_intrinsics(%A: vector<8xi32>, %B: vector<8xi32>,
   // CHECK: call <8 x float> @llvm.vp.fma.v8f32
   "llvm.intr.vp.fma" (%C, %D, %D, %mask, %evl) :
          (vector<8xf32>, vector<8xf32>, vector<8xf32>, vector<8xi1>, i32) -> vector<8xf32>
+  // CHECK: call <8 x float> @llvm.vp.fmuladd.v8f32
+  "llvm.intr.vp.fmuladd" (%C, %D, %D, %mask, %evl) :
+         (vector<8xf32>, vector<8xf32>, vector<8xf32>, vector<8xi1>, i32) -> vector<8xf32>
 
   // CHECK: call i32 @llvm.vp.reduce.add.v8i32
   "llvm.intr.vp.reduce.add" (%i, %A, %mask, %evl) :

@@ -49,6 +49,10 @@
 ; INSTRREF: %2:gr64 = nsw ADD64ri8 %1, 2, implicit-def dead $eflags, debug-instr-number 1
 ; INSTRREF-NEXT: DBG_INSTR_REF ![[VAR]], !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_fragment, 64, 64), dbg-instr-ref(1, 0), debug-location
 
+;; Bits [0, 64) are still stack homed. FIXME, this particular reinstatement is
+;; unnecessary.
+; CHECK-NEXT: DBG_VALUE %stack.0.X, $noreg, ![[VAR]], !DIExpression(DW_OP_deref, DW_OP_LLVM_fragment, 0, 64)
+
 source_filename = "test.cpp"
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"

@@ -300,3 +300,43 @@ if.end:
 while.end:
   ret void
 }
+
+; Load from arrayidx2 is partially redundant, check that address translation can
+; fold sext + trunc across phi node together.
+define i32 @test7(ptr noalias %ptr1, ptr noalias %ptr2, i32 %i, i1 %cond) {
+; CHECK-LABEL: @test7(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[COND:%.*]], label [[IF_THEN:%.*]], label [[ENTRY_IF_END_CRIT_EDGE:%.*]]
+; CHECK:       entry.if.end_crit_edge:
+; CHECK-NEXT:    [[RES_PRE:%.*]] = load i32, ptr [[PTR1:%.*]], align 4
+; CHECK-NEXT:    br label [[IF_END:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[PTR1]], i32 [[I:%.*]]
+; CHECK-NEXT:    [[TMP:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
+; CHECK-NEXT:    store i32 [[TMP]], ptr [[PTR2:%.*]], align 4
+; CHECK-NEXT:    [[IDX_EXT:%.*]] = sext i32 [[I]] to i64
+; CHECK-NEXT:    br label [[IF_END]]
+; CHECK:       if.end:
+; CHECK-NEXT:    [[RES:%.*]] = phi i32 [ [[RES_PRE]], [[ENTRY_IF_END_CRIT_EDGE]] ], [ [[TMP]], [[IF_THEN]] ]
+; CHECK-NEXT:    [[IDX:%.*]] = phi i64 [ 0, [[ENTRY_IF_END_CRIT_EDGE]] ], [ [[IDX_EXT]], [[IF_THEN]] ]
+; CHECK-NEXT:    [[IDX_TRUNC:%.*]] = trunc i64 [[IDX]] to i32
+; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds i32, ptr [[PTR1]], i32 [[IDX_TRUNC]]
+; CHECK-NEXT:    ret i32 [[RES]]
+;
+entry:
+  br i1 %cond, label %if.then, label %if.end
+
+if.then:
+  %arrayidx = getelementptr inbounds i32, ptr %ptr1, i32 %i
+  %tmp = load i32, ptr %arrayidx, align 4
+  store i32 %tmp, ptr %ptr2, align 4
+  %idx.ext = sext i32 %i to i64
+  br label %if.end
+
+if.end:
+  %idx = phi i64 [ 0, %entry ], [ %idx.ext, %if.then ]
+  %idx.trunc = trunc i64 %idx to i32
+  %arrayidx2 = getelementptr inbounds i32, ptr %ptr1, i32 %idx.trunc
+  %res = load i32, ptr %arrayidx2, align 4
+  ret i32 %res
+}

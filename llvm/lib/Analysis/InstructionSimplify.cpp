@@ -1163,9 +1163,9 @@ static Value *simplifyDiv(Instruction::BinaryOps Opcode, Value *Op0, Value *Op1,
   // at least as many trailing zeros as the divisor to divide evenly. If it has
   // less trailing zeros, then the result must be poison.
   const APInt *DivC;
-  if (IsExact && match(Op1, m_APInt(DivC)) && DivC->countTrailingZeros()) {
+  if (IsExact && match(Op1, m_APInt(DivC)) && DivC->countr_zero()) {
     KnownBits KnownOp0 = computeKnownBits(Op0, Q.DL, 0, Q.AC, Q.CxtI, Q.DT);
-    if (KnownOp0.countMaxTrailingZeros() < DivC->countTrailingZeros())
+    if (KnownOp0.countMaxTrailingZeros() < DivC->countr_zero())
       return PoisonValue::get(Op0->getType());
   }
 
@@ -3394,8 +3394,26 @@ static Value *simplifyICmpWithBinOp(CmpInst::Predicate Pred, Value *LHS,
       return ConstantInt::getTrue(getCompareTy(RHS));
   }
 
-  if (MaxRecurse && LBO && RBO && LBO->getOpcode() == RBO->getOpcode() &&
-      LBO->getOperand(1) == RBO->getOperand(1)) {
+  if (!MaxRecurse || !LBO || !RBO || LBO->getOpcode() != RBO->getOpcode())
+    return nullptr;
+
+  if (LBO->getOperand(0) == RBO->getOperand(0)) {
+    switch (LBO->getOpcode()) {
+    default:
+      break;
+    case Instruction::Shl:
+      bool NUW = Q.IIQ.hasNoUnsignedWrap(LBO) && Q.IIQ.hasNoUnsignedWrap(RBO);
+      bool NSW = Q.IIQ.hasNoSignedWrap(LBO) && Q.IIQ.hasNoSignedWrap(RBO);
+      if (!NUW || (ICmpInst::isSigned(Pred) && !NSW) ||
+          !isKnownNonZero(LBO->getOperand(0), Q.DL))
+        break;
+      if (Value *V = simplifyICmpInst(Pred, LBO->getOperand(1),
+                                      RBO->getOperand(1), Q, MaxRecurse - 1))
+        return V;
+    }
+  }
+
+  if (LBO->getOperand(1) == RBO->getOperand(1)) {
     switch (LBO->getOpcode()) {
     default:
       break;
@@ -4598,6 +4616,9 @@ static Value *simplifySelectInst(Value *Cond, Value *TrueVal, Value *FalseVal,
       // !(X || Y) && X --> false (commuted 2 ways)
       if (match(Cond, m_Not(m_c_LogicalOr(m_Specific(TrueVal), m_Value()))))
         return ConstantInt::getFalse(Cond->getType());
+      // X && !(X || Y) --> false (commuted 2 ways)
+      if (match(TrueVal, m_Not(m_c_LogicalOr(m_Specific(Cond), m_Value()))))
+        return ConstantInt::getFalse(Cond->getType());
 
       // (X || Y) && Y --> Y (commuted 2 ways)
       if (match(Cond, m_c_LogicalOr(m_Specific(TrueVal), m_Value())))
@@ -4618,6 +4639,13 @@ static Value *simplifySelectInst(Value *Cond, Value *TrueVal, Value *FalseVal,
 
     // Match patterns that end in logical-or.
     if (match(TrueVal, m_One())) {
+      // !(X && Y) || X --> true (commuted 2 ways)
+      if (match(Cond, m_Not(m_c_LogicalAnd(m_Specific(FalseVal), m_Value()))))
+        return ConstantInt::getTrue(Cond->getType());
+      // X || !(X && Y) --> true (commuted 2 ways)
+      if (match(FalseVal, m_Not(m_c_LogicalAnd(m_Specific(Cond), m_Value()))))
+        return ConstantInt::getTrue(Cond->getType());
+
       // (X && Y) || Y --> Y (commuted 2 ways)
       if (match(Cond, m_c_LogicalAnd(m_Specific(FalseVal), m_Value())))
         return FalseVal;
@@ -4882,8 +4910,11 @@ static Value *simplifyInsertValueInst(Value *Agg, Value *Val,
   if (ExtractValueInst *EV = dyn_cast<ExtractValueInst>(Val))
     if (EV->getAggregateOperand()->getType() == Agg->getType() &&
         EV->getIndices() == Idxs) {
-      // insertvalue undef, (extractvalue y, n), n -> y
-      if (Q.isUndefValue(Agg))
+      // insertvalue poison, (extractvalue y, n), n -> y
+      // insertvalue undef, (extractvalue y, n), n -> y if y cannot be poison
+      if (isa<PoisonValue>(Agg) ||
+          (Q.isUndefValue(Agg) &&
+           isGuaranteedNotToBePoison(EV->getAggregateOperand())))
         return EV->getAggregateOperand();
 
       // insertvalue y, (extractvalue y, n), n -> y
@@ -5299,28 +5330,33 @@ Value *llvm::simplifyFNegInst(Value *Op, FastMathFlags FMF,
 /// Try to propagate existing NaN values when possible. If not, replace the
 /// constant or elements in the constant with a canonical NaN.
 static Constant *propagateNaN(Constant *In) {
-  if (auto *VecTy = dyn_cast<FixedVectorType>(In->getType())) {
+  Type *Ty = In->getType();
+  if (auto *VecTy = dyn_cast<FixedVectorType>(Ty)) {
     unsigned NumElts = VecTy->getNumElements();
     SmallVector<Constant *, 32> NewC(NumElts);
     for (unsigned i = 0; i != NumElts; ++i) {
       Constant *EltC = In->getAggregateElement(i);
-      // Poison and existing NaN elements propagate.
+      // Poison elements propagate. NaN propagates except signaling is quieted.
       // Replace unknown or undef elements with canonical NaN.
-      if (EltC && (isa<PoisonValue>(EltC) || EltC->isNaN()))
+      if (EltC && isa<PoisonValue>(EltC))
         NewC[i] = EltC;
+      else if (EltC && EltC->isNaN())
+        NewC[i] = ConstantFP::get(
+            EltC->getType(), cast<ConstantFP>(EltC)->getValue().makeQuiet());
       else
-        NewC[i] = (ConstantFP::getNaN(VecTy->getElementType()));
+        NewC[i] = ConstantFP::getNaN(VecTy->getElementType());
     }
     return ConstantVector::get(NewC);
   }
 
-  // It is not a fixed vector, but not a simple NaN either?
+  // If it is not a fixed vector, but not a simple NaN either, return a
+  // canonical NaN.
   if (!In->isNaN())
-    return ConstantFP::getNaN(In->getType());
+    return ConstantFP::getNaN(Ty);
 
-  // Propagate the existing NaN constant when possible.
-  // TODO: Should we quiet a signaling NaN?
-  return In;
+  // Propagate an existing QNaN constant. If it is an SNaN, make it quiet, but
+  // preserve the sign/payload.
+  return ConstantFP::get(Ty, cast<ConstantFP>(In)->getValue().makeQuiet());
 }
 
 /// Perform folds that are common to any floating-point operation. This implies
@@ -6554,27 +6590,38 @@ Value *llvm::simplifyFreezeInst(Value *Op0, const SimplifyQuery &Q) {
   return ::simplifyFreezeInst(Op0, Q);
 }
 
-static Value *simplifyLoadInst(LoadInst *LI, Value *PtrOp,
-                               const SimplifyQuery &Q) {
+Value *llvm::simplifyLoadInst(LoadInst *LI, Value *PtrOp,
+                              const SimplifyQuery &Q) {
   if (LI->isVolatile())
     return nullptr;
 
-  APInt Offset(Q.DL.getIndexTypeSizeInBits(PtrOp->getType()), 0);
-  auto *PtrOpC = dyn_cast<Constant>(PtrOp);
+  if (auto *PtrOpC = dyn_cast<Constant>(PtrOp))
+    return ConstantFoldLoadFromConstPtr(PtrOpC, LI->getType(), Q.DL);
+
+  // We can only fold the load if it is from a constant global with definitive
+  // initializer. Skip expensive logic if this is not the case.
+  auto *GV = dyn_cast<GlobalVariable>(getUnderlyingObject(PtrOp));
+  if (!GV || !GV->isConstant() || !GV->hasDefinitiveInitializer())
+    return nullptr;
+
+  // If GlobalVariable's initializer is uniform, then return the constant
+  // regardless of its offset.
+  if (Constant *C =
+          ConstantFoldLoadFromUniformValue(GV->getInitializer(), LI->getType()))
+    return C;
+
   // Try to convert operand into a constant by stripping offsets while looking
-  // through invariant.group intrinsics. Don't bother if the underlying object
-  // is not constant, as calculating GEP offsets is expensive.
-  if (!PtrOpC && isa<Constant>(getUnderlyingObject(PtrOp))) {
-    PtrOp = PtrOp->stripAndAccumulateConstantOffsets(
-        Q.DL, Offset, /* AllowNonInbounts */ true,
-        /* AllowInvariantGroup */ true);
+  // through invariant.group intrinsics.
+  APInt Offset(Q.DL.getIndexTypeSizeInBits(PtrOp->getType()), 0);
+  PtrOp = PtrOp->stripAndAccumulateConstantOffsets(
+      Q.DL, Offset, /* AllowNonInbounts */ true,
+      /* AllowInvariantGroup */ true);
+  if (PtrOp == GV) {
     // Index size may have changed due to address space casts.
     Offset = Offset.sextOrTrunc(Q.DL.getIndexTypeSizeInBits(PtrOp->getType()));
-    PtrOpC = dyn_cast<Constant>(PtrOp);
+    return ConstantFoldLoadFromConstPtr(GV, LI->getType(), Offset, Q.DL);
   }
 
-  if (PtrOpC)
-    return ConstantFoldLoadFromConstPtr(PtrOpC, LI->getType(), Offset, Q.DL);
   return nullptr;
 }
 

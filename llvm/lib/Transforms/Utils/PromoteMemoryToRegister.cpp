@@ -121,10 +121,8 @@ public:
   void updateForDeletedStore(StoreInst *ToDelete, DIBuilder &DIB) const {
     // There's nothing to do if the alloca doesn't have any variables using
     // assignment tracking.
-    if (DbgAssigns.empty()) {
-      assert(at::getAssignmentMarkers(ToDelete).empty());
+    if (DbgAssigns.empty())
       return;
-    }
 
     // Just leave dbg.assign intrinsics in place and remember that we've seen
     // one for each variable fragment.

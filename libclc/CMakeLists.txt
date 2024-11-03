@@ -2,6 +2,8 @@ cmake_minimum_required(VERSION 3.13.4)
 
 project( libclc VERSION 0.2.0 LANGUAGES CXX C)
 
+set(CMAKE_CXX_STANDARD 17)
+
 include( GNUInstallDirs )
 set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS
   amdgcn-amdhsa/lib/SOURCES;
@@ -103,7 +105,10 @@ endif()
 
 enable_language( CLC LLAsm )
 # This needs to be set before any target that needs it
-include_directories( ${LLVM_INCLUDE_DIR} )
+# We need to use LLVM_INCLUDE_DIRS here, because if we are linking to an
+# llvm build directory, this includes $src/llvm/include which is where all the
+# headers are not $build/include/ which is what LLVM_INCLUDE_DIR is set to.
+include_directories( ${LLVM_INCLUDE_DIRS} )
 
 # Setup prepare_builtins tools
 set(LLVM_LINK_COMPONENTS
@@ -213,11 +218,11 @@ foreach( t ${LIBCLC_TARGETS_TO_BUILD} )
 
 	# Add the generated convert.cl here to prevent adding
 	# the one listed in SOURCES
-	if( NOT ${ARCH} STREQUAL "spirv" AND NOT ${ARCH} STREQUAL "spirv64" AND
-			NOT ${ARCH} STREQUAL "clspv" AND NOT ${ARCH} STREQUAL "clspv64" )
+	if( NOT ${ARCH} STREQUAL "spirv" AND NOT ${ARCH} STREQUAL "spirv64" )
 		set( rel_files convert.cl )
 		set( objects convert.cl )
-		if( NOT ENABLE_RUNTIME_SUBNORMAL )
+		if( NOT ENABLE_RUNTIME_SUBNORMAL AND NOT ${ARCH} STREQUAL "clspv" AND
+		    NOT ${ARCH} STREQUAL "clspv64" )
 			list( APPEND rel_files generic/lib/subnormal_use_default.ll )
 		endif()
 	else()

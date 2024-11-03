@@ -23,7 +23,6 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: ${{ startsWith(github.ref, 'refs/pull/') }}
 
-
 jobs:
   abi-dump-setup:
     if: github.repository_owner == 'llvm'
@@ -57,27 +56,26 @@ jobs:
             baseline_ref="llvmorg-$major_version.0.0"
 
             # If there is a minor release, we want to use that as the base line.
-            minor_ref=`git ls-remote --refs -t $remote_repo llvmorg-$major_version.[1-9].[0-9] | tail -n1 | grep -o 'llvmorg-.\+' || true`
+            minor_ref=$(git ls-remote --refs -t $remote_repo llvmorg-$major_version.[1-9].[0-9] | tail -n1 | grep -o 'llvmorg-.\+' || true)
             if [ -n "$minor_ref" ]; then
                baseline_ref=$minor_ref
             else
               # Check if we have a release candidate
-              rc_ref=`git ls-remote --refs -t $remote_repo llvmorg-$major_version.[1-9].[0-9]-rc* | tail -n1 | grep -o 'llvmorg-.\+' || true`
+              rc_ref=$(git ls-remote --refs -t $remote_repo llvmorg-$major_version.[1-9].[0-9]-rc* | tail -n1 | grep -o 'llvmorg-.\+' || true)
               if [ -n "$rc_ref" ]; then
                 baseline_ref=$rc_ref
               fi
             fi
-            echo ::set-output name=BASELINE_VERSION_MAJOR::$major_version
-            echo ::set-output name=BASELINE_REF::$baseline_ref
-            echo ::set-output name=ABI_HEADERS::clang-c
-            echo ::set-output name=ABI_LIBS::libclang.so
+            echo "BASELINE_VERSION_MAJOR=$major_version" >> $GITHUB_OUTPUT
+            echo "BASELINE_REF=$baseline_ref" >> $GITHUB_OUTPUT
+            echo "ABI_HEADERS=clang-c" >> $GITHUB_OUTPUT
+            echo "ABI_LIBS=libclang.so" >> $GITHUB_OUTPUT
           else
-            echo ::set-output name=BASELINE_VERSION_MAJOR::${{ steps.version.outputs.LLVM_VERSION_MAJOR }}
-            echo ::set-output name=BASELINE_REF::llvmorg-${{ steps.version.outputs.LLVM_VERSION_MAJOR }}.0.0
-            echo ::set-output name=ABI_HEADERS::.
-            echo ::set-output name=ABI_LIBS::libclang.so libclang-cpp.so
+            echo "BASELINE_VERSION_MAJOR=${{ steps.version.outputs.LLVM_VERSION_MAJOR }}" >> $GITHUB_OUTPUT
+            echo "BASELINE_REF=llvmorg-${{ steps.version.outputs.LLVM_VERSION_MAJOR }}.0.0" >> $GITHUB_OUTPUT
+            echo "ABI_HEADERS=." >> $GITHUB_OUTPUT
+            echo "ABI_LIBS=libclang.so libclang-cpp.so" >> $GITHUB_OUTPUT
           fi
-
 
   abi-dump:
     if: github.repository_owner == 'llvm'
@@ -98,41 +96,41 @@ jobs:
             ref: ${{ github.sha }}
             repo: ${{ github.repository }}
     steps:
-    - name: Install Ninja
-      uses: llvm/actions/install-ninja@main
-    - name: Install abi-compliance-checker
-      run: |
-        sudo apt-get install abi-dumper autoconf pkg-config
-    - name: Install universal-ctags
-      run: |
-        git clone https://github.com/universal-ctags/ctags.git
-        cd ctags
-        ./autogen.sh
-        ./configure
-        sudo make install
-    - name: Download source code
-      uses: llvm/actions/get-llvm-project-src@main
-      with:
-        ref: ${{ matrix.ref }}
-        repo: ${{ matrix.repo }}
-    - name: Configure
-      run: |
-        mkdir install
-        cmake -B build -S llvm -G Ninja -DLLVM_ENABLE_PROJECTS=clang -DCMAKE_BUILD_TYPE=Debug -DLLVM_TARGETS_TO_BUILD="" -DLLVM_BUILD_LLVM_DYLIB=ON -DLLVM_LINK_LLVM_DYLIB=ON -DCMAKE_C_FLAGS_DEBUG="-g1 -Og" -DCMAKE_CXX_FLAGS_DEBUG="-g1 -Og" -DCMAKE_INSTALL_PREFIX=`pwd`/install llvm
-    - name: Build
-      run: ninja -C build/ ${{ needs.abi-dump-setup.outputs.ABI_LIBS }} install-clang-headers
-    - name: Dump ABI
-      run: |
-        parallel abi-dumper -lver ${{ matrix.ref }} -skip-cxx -public-headers ./install/include/${{ needs.abi-dump-setup.outputs.ABI_HEADERS }} -o {}-${{ matrix.ref }}.abi ./build/lib/{} ::: ${{ needs.abi-dump-setup.outputs.ABI_LIBS }}
-        for lib in ${{ needs.abi-dump-setup.outputs.ABI_LIBS }}; do
-          # Remove symbol versioning from dumps, so we can compare across major versions.
-          sed -i 's/LLVM_[0-9]\+/LLVM_NOVERSION/' $lib-${{ matrix.ref }}.abi
-        done
-    - name: Upload ABI file
-      uses: actions/upload-artifact@v2
-      with:
-        name: ${{ matrix.name }}
-        path: "*${{ matrix.ref }}.abi"
+      - name: Install Ninja
+        uses: llvm/actions/install-ninja@main
+      - name: Install abi-compliance-checker
+        run: |
+          sudo apt-get install abi-dumper autoconf pkg-config
+      - name: Install universal-ctags
+        run: |
+          git clone https://github.com/universal-ctags/ctags.git
+          cd ctags
+          ./autogen.sh
+          ./configure
+          sudo make install
+      - name: Download source code
+        uses: llvm/actions/get-llvm-project-src@main
+        with:
+          ref: ${{ matrix.ref }}
+          repo: ${{ matrix.repo }}
+      - name: Configure
+        run: |
+          mkdir install
+          cmake -B build -S llvm -G Ninja -DLLVM_ENABLE_PROJECTS=clang -DCMAKE_BUILD_TYPE=Debug -DLLVM_TARGETS_TO_BUILD="" -DLLVM_BUILD_LLVM_DYLIB=ON -DLLVM_LINK_LLVM_DYLIB=ON -DCMAKE_C_FLAGS_DEBUG="-g1 -Og" -DCMAKE_CXX_FLAGS_DEBUG="-g1 -Og" -DCMAKE_INSTALL_PREFIX=$(pwd)/install llvm
+      - name: Build
+        run: ninja -C build/ ${{ needs.abi-dump-setup.outputs.ABI_LIBS }} install-clang-headers
+      - name: Dump ABI
+        run: |
+          parallel abi-dumper -lver ${{ matrix.ref }} -skip-cxx -public-headers ./install/include/${{ needs.abi-dump-setup.outputs.ABI_HEADERS }} -o {}-${{ matrix.ref }}.abi ./build/lib/{} ::: ${{ needs.abi-dump-setup.outputs.ABI_LIBS }}
+          for lib in ${{ needs.abi-dump-setup.outputs.ABI_LIBS }}; do
+            # Remove symbol versioning from dumps, so we can compare across major versions.
+            sed -i 's/LLVM_[0-9]\+/LLVM_NOVERSION/' $lib-${{ matrix.ref }}.abi
+          done
+      - name: Upload ABI file
+        uses: actions/upload-artifact@v3
+        with:
+          name: ${{ matrix.name }}
+          path: '*${{ matrix.ref }}.abi'
 
   abi-compare:
     if: github.repository_owner == 'llvm'
@@ -142,11 +140,11 @@ jobs:
       - abi-dump
     steps:
       - name: Download baseline
-        uses: actions/download-artifact@v1
+        uses: actions/download-artifact@v3
         with:
           name: build-baseline
       - name: Download latest
-        uses: actions/download-artifact@v1
+        uses: actions/download-artifact@v3
         with:
           name: build-latest
 
@@ -159,8 +157,7 @@ jobs:
           done
       - name: Upload ABI Comparison
         if: always()
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: compat-report-${{ github.sha }}
           path: compat_reports/
-

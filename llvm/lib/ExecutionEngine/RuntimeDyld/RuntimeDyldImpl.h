@@ -15,7 +15,6 @@
 
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
-#include "llvm/ADT/Triple.h"
 #include "llvm/ExecutionEngine/RTDyldMemoryManager.h"
 #include "llvm/ExecutionEngine/RuntimeDyld.h"
 #include "llvm/ExecutionEngine/RuntimeDyldChecker.h"
@@ -23,9 +22,10 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Format.h"
-#include "llvm/Support/Host.h"
 #include "llvm/Support/Mutex.h"
 #include "llvm/Support/SwapByteOrder.h"
+#include "llvm/TargetParser/Host.h"
+#include "llvm/TargetParser/Triple.h"
 #include <deque>
 #include <map>
 #include <system_error>

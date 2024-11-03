@@ -44,6 +44,7 @@ MODULE_PASS("always-inline", AlwaysInlinerPass())
 MODULE_PASS("attributor", AttributorPass())
 MODULE_PASS("annotation2metadata", Annotation2MetadataPass())
 MODULE_PASS("openmp-opt", OpenMPOptPass())
+MODULE_PASS("openmp-opt-postlink", OpenMPOptPass(ThinOrFullLTOPhase::FullLTOPostLink))
 MODULE_PASS("called-value-propagation", CalledValuePropagationPass())
 MODULE_PASS("canonicalize-aliases", CanonicalizeAliasesPass())
 MODULE_PASS("cg-profile", CGProfilePass())
@@ -272,6 +273,7 @@ FUNCTION_PASS("bounds-checking", BoundsCheckingPass())
 FUNCTION_PASS("break-crit-edges", BreakCriticalEdgesPass())
 FUNCTION_PASS("callsite-splitting", CallSiteSplittingPass())
 FUNCTION_PASS("consthoist", ConstantHoistingPass())
+FUNCTION_PASS("count-visits", CountVisitsPass())
 FUNCTION_PASS("constraint-elimination", ConstraintEliminationPass())
 FUNCTION_PASS("chr", ControlHeightReductionPass())
 FUNCTION_PASS("coro-elide", CoroElidePass())
@@ -340,6 +342,7 @@ FUNCTION_PASS("objc-arc-contract", ObjCARCContractPass())
 FUNCTION_PASS("objc-arc-expand", ObjCARCExpandPass())
 FUNCTION_PASS("pa-eval", PAEvalPass())
 FUNCTION_PASS("pgo-memop-opt", PGOMemOPSizeOpt())
+FUNCTION_PASS("place-safepoints", PlaceSafepointsPass())
 FUNCTION_PASS("print", PrintFunctionPass(dbgs()))
 FUNCTION_PASS("print<assumptions>", AssumptionPrinterPass(dbgs()))
 FUNCTION_PASS("print<block-freq>", BlockFrequencyPrinterPass(dbgs()))
@@ -422,6 +425,18 @@ FUNCTION_PASS_WITH_PARAMS("ee-instrument",
                            },
                           parseEntryExitInstrumenterPassOptions,
                           "post-inline")
+FUNCTION_PASS_WITH_PARAMS("hardware-loops",
+                          "HardwareLoopsPass",
+                          [](HardwareLoopOptions Opts) {
+                              return HardwareLoopsPass(Opts);
+                          },
+                          parseHardwareLoopOptions,
+                          "force-hardware-loops;"
+                          "force-hardware-loop-phi;"
+                          "force-nested-hardware-loop;"
+                          "force-hardware-loop-guard;"
+                          "hardware-loop-decrement=N;"
+                          "hardware-loop-counter-bitwidth=N")
 FUNCTION_PASS_WITH_PARAMS("lower-matrix-intrinsics",
                           "LowerMatrixIntrinsicsPass",
                            [](bool Minimal) {
@@ -463,6 +478,15 @@ FUNCTION_PASS_WITH_PARAMS("loop-vectorize",
                           parseLoopVectorizeOptions,
                           "no-interleave-forced-only;interleave-forced-only;"
                           "no-vectorize-forced-only;vectorize-forced-only")
+FUNCTION_PASS_WITH_PARAMS("instcombine",
+                          "InstCombinePass",
+                           [](InstCombineOptions Opts) {
+                             return InstCombinePass(Opts);
+                           },
+                          parseInstCombineOptions,
+                          "no-use-loop-info;use-loop-info;"
+                          "max-iterations=N"
+                          )
 FUNCTION_PASS_WITH_PARAMS("mldst-motion",
                           "MergedLoadStoreMotionPass",
                            [](MergedLoadStoreMotionOptions Opts) {
@@ -501,6 +525,13 @@ FUNCTION_PASS_WITH_PARAMS("print<da>",
                            },
                           parseDependenceAnalysisPrinterOptions,
                           "normalized-results")
+FUNCTION_PASS_WITH_PARAMS("separate-const-offset-from-gep",
+                          "SeparateConstOffsetFromGEPPass",
+                           [](bool LowerGEP) {
+                             return SeparateConstOffsetFromGEPPass(LowerGEP);
+                           },
+                          parseSeparateConstOffsetFromGEPPassOptions,
+                          "lower-gep")
 #undef FUNCTION_PASS_WITH_PARAMS
 
 #ifndef LOOPNEST_PASS

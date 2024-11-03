@@ -152,7 +152,7 @@ implementation (which is very often glibc).
 
 - Build the whole `libc`:
 ```
-  $ ninja llvmlibc
+  $ ninja libc
 ```
 
 - Run all unit tests:

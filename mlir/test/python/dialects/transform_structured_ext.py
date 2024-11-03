@@ -188,7 +188,7 @@ def testTileExplicitLoopTypeAll():
                                   [], transform.AnyOpType.get())
   types = [
       transform.OperationType.get(x)
-      for x in ["scf.for", "scf.parallel", "scf.foreach_thread"]
+      for x in ["scf.for", "scf.parallel", "scf.forall"]
   ]
   with InsertionPoint(sequence.body):
     structured.TileOp(types, sequence.bodyTarget, sizes=[2, 3, 4])
@@ -196,7 +196,7 @@ def testTileExplicitLoopTypeAll():
   # CHECK-LABEL: TEST: testTileExplicitLoopTypeAll
   # CHECK: = transform.structured.tile
   # CHECK-SAME : (!transform.any_op) -> (!transform.any_op, !transform.op<"scf.for">,
-  # CHECK-SAME: !transform.op<"scf.parallel">, !transform.op<"scf.foreach_thread">
+  # CHECK-SAME: !transform.op<"scf.parallel">, !transform.op<"scf.forall">
 
 @run
 def testVectorize():

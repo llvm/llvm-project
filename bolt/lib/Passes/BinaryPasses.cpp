@@ -26,9 +26,7 @@
 using namespace llvm;
 using namespace bolt;
 
-namespace {
-
-const char *dynoStatsOptName(const bolt::DynoStats::Category C) {
+static const char *dynoStatsOptName(const bolt::DynoStats::Category C) {
   assert(C > bolt::DynoStats::FIRST_DYNO_STAT &&
          C < DynoStats::LAST_DYNO_STAT && "Unexpected dyno stat category.");
 
@@ -39,7 +37,6 @@ const char *dynoStatsOptName(const bolt::DynoStats::Category C) {
   std::replace(OptNames[C].begin(), OptNames[C].end(), ' ', '-');
 
   return OptNames[C].c_str();
-}
 }
 
 namespace opts {
@@ -629,8 +626,6 @@ void LowerAnnotations::runOnFunctions(BinaryContext &BC) {
     BC.MIB->setOffset(*Item.first, Item.second);
 }
 
-namespace {
-
 // This peephole fixes jump instructions that jump to another basic
 // block with a single jump instruction, e.g.
 //
@@ -644,7 +639,7 @@ namespace {
 // B0: ...
 //     jmp  B2   (or jcc B2)
 //
-uint64_t fixDoubleJumps(BinaryFunction &Function, bool MarkInvalid) {
+static uint64_t fixDoubleJumps(BinaryFunction &Function, bool MarkInvalid) {
   uint64_t NumDoubleJumps = 0;
 
   MCContext *Ctx = Function.getBinaryContext().Ctx.get();
@@ -742,7 +737,6 @@ uint64_t fixDoubleJumps(BinaryFunction &Function, bool MarkInvalid) {
 
   return NumDoubleJumps;
 }
-} // namespace
 
 bool SimplifyConditionalTailCalls::shouldRewriteBranch(
     const BinaryBasicBlock *PredBB, const MCInst &CondBranch,

@@ -38,9 +38,9 @@
 ; CHECK: call void @_ZN1h1iEv(ptr nonnull sret(%class.B) align 4 %m,
 
 ; CHECK: store <2 x float> %agg.tmp.sroa.0.0.copyload.i, ptr %4, align 4,{{.+}}!DIAssignID ![[id1:[0-9]+]]
-; CHECK: store <2 x float> %agg.tmp.sroa.2.0.copyload.i, ptr %n.sroa.4.4..sroa_idx, align 4,{{.+}}!DIAssignID ![[id2:[0-9]+]]
+; CHECK: store <2 x float> %agg.tmp.sroa.2.0.copyload.i, ptr %n.sroa.2.4..sroa_idx, align 4,{{.+}}!DIAssignID ![[id2:[0-9]+]]
 ; CHECK-NEXT: call void @llvm.dbg.assign(metadata <2 x float> %agg.tmp.sroa.0.0.copyload.i, metadata ![[var:[0-9]+]], metadata !DIExpression(DW_OP_LLVM_fragment, 0, 64), metadata ![[id1]], metadata ptr %4, metadata !DIExpression()), !dbg
-; CHECK-NEXT: call void @llvm.dbg.assign(metadata <2 x float> %agg.tmp.sroa.2.0.copyload.i, metadata ![[var]], metadata !DIExpression(DW_OP_LLVM_fragment, 64, 64), metadata ![[id2]], metadata ptr %n.sroa.4.4..sroa_idx, metadata !DIExpression()), !dbg
+; CHECK-NEXT: call void @llvm.dbg.assign(metadata <2 x float> %agg.tmp.sroa.2.0.copyload.i, metadata ![[var]], metadata !DIExpression(DW_OP_LLVM_fragment, 64, 64), metadata ![[id2]], metadata ptr %n.sroa.2.4..sroa_idx, metadata !DIExpression()), !dbg
 
 ; CHECK: ret
 
@@ -104,17 +104,12 @@ entry:
   %o = alloca %class.a, align 4, !DIAssignID !79
   call void @llvm.dbg.assign(metadata i1 undef, metadata !72, metadata !DIExpression(), metadata !79, metadata ptr %o, metadata !DIExpression()), !dbg !74
   %0 = getelementptr inbounds %class.h, ptr %convexbody, i64 0, i32 0, !dbg !80
-  call void @llvm.lifetime.start.p0i8(i64 1, ptr nonnull %0) #7, !dbg !80
   %1 = getelementptr inbounds %class.h, ptr %k, i64 0, i32 0, !dbg !80
-  call void @llvm.lifetime.start.p0i8(i64 1, ptr nonnull %1) #7, !dbg !80
   %2 = bitcast ptr %l to ptr, !dbg !81
-  call void @llvm.lifetime.start.p0i8(i64 20, ptr nonnull %2) #7, !dbg !81
   call void @_ZN1h1iEv(ptr nonnull sret(%class.B) align 4 %l, ptr nonnull %k), !dbg !82
   %3 = bitcast ptr %m to ptr, !dbg !81
-  call void @llvm.lifetime.start.p0i8(i64 20, ptr nonnull %3) #7, !dbg !81
   call void @_ZN1h1iEv(ptr nonnull sret(%class.B) align 4 %m, ptr nonnull %convexbody), !dbg !83
   %4 = bitcast ptr %n to ptr, !dbg !81
-  call void @llvm.lifetime.start.p0i8(i64 20, ptr nonnull %4) #7, !dbg !81
   %agg.tmp.sroa.0.0..sroa_idx.i = getelementptr inbounds %class.B, ptr %l, i64 0, i32 1, !dbg !84
   %agg.tmp.sroa.0.0..sroa_cast.i = bitcast ptr %agg.tmp.sroa.0.0..sroa_idx.i to ptr, !dbg !84
   %agg.tmp.sroa.0.0.copyload.i = load <2 x float>, ptr %agg.tmp.sroa.0.0..sroa_cast.i, align 4, !dbg !84
@@ -128,22 +123,14 @@ entry:
   %d.sroa.2.0..sroa_cast.i.i = bitcast ptr %d.sroa.2.0..sroa_idx2.i.i to ptr, !dbg !89
   store <2 x float> %agg.tmp.sroa.2.0.copyload.i, ptr %d.sroa.2.0..sroa_cast.i.i, align 4, !dbg !89
   %5 = bitcast ptr %o to ptr, !dbg !91
-  call void @llvm.lifetime.start.p0i8(i64 16, ptr nonnull %5) #7, !dbg !91
   %e.i = getelementptr inbounds %class.B, ptr %n, i64 0, i32 1, !dbg !92
   %6 = bitcast ptr %e.i to ptr, !dbg !97
   call void @llvm.memcpy.p0i8.p0i8.i64(ptr nonnull align 4 dereferenceable(16) %5, ptr nonnull align 4 dereferenceable(16) %6, i64 16, i1 false), !dbg !97, !DIAssignID !98
   call void @llvm.dbg.assign(metadata i1 undef, metadata !72, metadata !DIExpression(), metadata !98, metadata ptr %5, metadata !DIExpression()), !dbg !74
   call void @_ZN1a1cEv(ptr nonnull %o), !dbg !99
-  call void @llvm.lifetime.end.p0i8(i64 16, ptr nonnull %5) #7, !dbg !100
-  call void @llvm.lifetime.end.p0i8(i64 20, ptr nonnull %4) #7, !dbg !100
-  call void @llvm.lifetime.end.p0i8(i64 20, ptr nonnull %3) #7, !dbg !100
-  call void @llvm.lifetime.end.p0i8(i64 20, ptr nonnull %2) #7, !dbg !100
-  call void @llvm.lifetime.end.p0i8(i64 1, ptr nonnull %1) #7, !dbg !100
-  call void @llvm.lifetime.end.p0i8(i64 1, ptr nonnull %0) #7, !dbg !100
   ret void, !dbg !100
 }
 
-declare void @llvm.lifetime.start.p0i8(i64 immarg, ptr nocapture) #1
 declare dso_local void @_ZN1h1iEv(ptr sret(%class.B) align 4, ptr) local_unnamed_addr #5
 
 ; Function Attrs: nounwind uwtable
@@ -154,9 +141,6 @@ entry:
 }
 
 declare dso_local void @_ZN1a1cEv(ptr) local_unnamed_addr #5
-
-; Function Attrs: argmemonly nofree nosync nounwind willreturn
-declare void @llvm.lifetime.end.p0i8(i64 immarg, ptr nocapture) #1
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!3, !4, !5, !1000}

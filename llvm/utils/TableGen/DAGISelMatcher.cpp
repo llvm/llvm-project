@@ -8,6 +8,7 @@
 
 #include "DAGISelMatcher.h"
 #include "CodeGenDAGPatterns.h"
+#include "CodeGenRegisters.h"
 #include "CodeGenTarget.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TableGen/Record.h"

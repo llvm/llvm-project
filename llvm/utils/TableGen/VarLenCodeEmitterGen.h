@@ -22,6 +22,7 @@ struct EncodingSegment {
   unsigned BitWidth;
   const Init *Value;
   StringRef CustomEncoder = "";
+  StringRef CustomDecoder = "";
 };
 
 class VarLenInst {
@@ -34,14 +35,6 @@ class VarLenInst {
   SmallVector<EncodingSegment, 4> Segments;
 
   void buildRec(const DagInit *DI);
-
-  StringRef getCustomEncoderName(const Init *EI) const {
-    if (const auto *DI = dyn_cast<DagInit>(EI)) {
-      if (DI->getNumArgs() && isa<StringInit>(DI->getArg(0)))
-        return cast<StringInit>(DI->getArg(0))->getValue();
-    }
-    return "";
-  }
 
 public:
   VarLenInst() : TheDef(nullptr), NumBits(0U), HasDynamicSegment(false) {}

@@ -148,6 +148,6 @@ class StepScriptedTestCase(TestBase):
         result = lldb.SBCommandReturnObject()
 
         interp.HandleCommand("settings set target.process.run-all-threads true", result)
-        self.assertTrue(result.Succeeded, "setting run-all-threads works.")
+        self.assertTrue(result.Succeeded(), "setting run-all-threads works.")
 
         self.run_step(False, None, thread_id)

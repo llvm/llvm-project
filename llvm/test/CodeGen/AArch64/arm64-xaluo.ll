@@ -2618,6 +2618,35 @@ continue:
   ret i1 true
 }
 
+define i8 @pr60530() {
+; SDAG-LABEL: pr60530:
+; SDAG:       // %bb.0:
+; SDAG-NEXT:    mov w0, #-1
+; SDAG-NEXT:    ret
+;
+; FAST-LABEL: pr60530:
+; FAST:       // %bb.0:
+; FAST-NEXT:    mov w0, #-1
+; FAST-NEXT:    ret
+;
+; GISEL-LABEL: pr60530:
+; GISEL:       // %bb.0:
+; GISEL-NEXT:    mov w8, #1
+; GISEL-NEXT:    sbfx w0, w8, #0, #1
+; GISEL-NEXT:    ret
+  %1 = call { i8, i1 } @llvm.uadd.with.overflow.i8(i8 0, i8 1)
+  %2 = extractvalue { i8, i1 } %1, 1
+  %3 = zext i1 %2 to i8
+  %4 = shl i8 -1, %3
+  %5 = lshr i8 1, %4
+  %6 = icmp uge i8 %5, 1
+  %7 = sext i1 %6 to i8
+  %8 = zext i1 %2 to i8
+  %9 = icmp uge i8 %7, %8
+  %10 = sext i1 %9 to i8
+  ret i8 %10
+}
+
 declare {i8, i1} @llvm.sadd.with.overflow.i8(i8, i8) nounwind readnone
 declare {i16, i1} @llvm.sadd.with.overflow.i16(i16, i16) nounwind readnone
 declare {i32, i1} @llvm.sadd.with.overflow.i32(i32, i32) nounwind readnone

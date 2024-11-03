@@ -12,6 +12,7 @@ add_mlir_dialect_library(MLIRMemRefTransformOps
   MLIRArithDialect
   MLIRIR
   MLIRPDLDialect
+  MLIRLoopLikeInterface
   MLIRMemRefDialect
   MLIRMemRefTransforms
   MLIRTransformDialect

@@ -477,6 +477,43 @@ std::optional<Expr<SomeType>> NonPointerInitializationExpr(const Symbol &symbol,
   return std::nullopt;
 }
 
+static bool IsNonLocal(const semantics::Symbol &symbol) {
+  return semantics::IsDummy(symbol) || symbol.has<semantics::UseDetails>() ||
+      symbol.owner().kind() == semantics::Scope::Kind::Module ||
+      semantics::FindCommonBlockContaining(symbol) ||
+      symbol.has<semantics::HostAssocDetails>();
+}
+
+static bool IsPermissibleInquiry(const semantics::Symbol &firstSymbol,
+    const semantics::Symbol &lastSymbol, DescriptorInquiry::Field field,
+    const semantics::Scope &localScope) {
+  if (IsNonLocal(firstSymbol)) {
+    return true;
+  }
+  if (&localScope != &firstSymbol.owner()) {
+    return true;
+  }
+  // Inquiries on local objects may not access a deferred bound or length.
+  // (This code used to be a switch, but it proved impossible to write it
+  // thus without running afoul of bogus warnings from different C++
+  // compilers.)
+  if (field == DescriptorInquiry::Field::Rank) {
+    return true; // always known
+  }
+  const auto *object{lastSymbol.detailsIf<semantics::ObjectEntityDetails>()};
+  if (field == DescriptorInquiry::Field::LowerBound ||
+      field == DescriptorInquiry::Field::Extent ||
+      field == DescriptorInquiry::Field::Stride) {
+    return object && !object->shape().CanBeDeferredShape();
+  }
+  if (field == DescriptorInquiry::Field::Len) {
+    return object && object->type() &&
+        object->type()->category() == semantics::DeclTypeSpec::Character &&
+        !object->type()->characterTypeSpec().length().isDeferred();
+  }
+  return false;
+}
+
 // Specification expression validation (10.1.11(2), C1010)
 class CheckSpecificationExprHelper
     : public AnyTraverse<CheckSpecificationExprHelper,
@@ -561,8 +598,16 @@ public:
     // Many uses of SIZE(), LBOUND(), &c. that are valid in specification
     // expressions will have been converted to expressions over descriptor
     // inquiries by Fold().
-    auto restorer{common::ScopedSet(inInquiry_, true)};
-    return (*this)(x.base());
+    // Catch REAL, ALLOCATABLE :: X(:); REAL :: Y(SIZE(X))
+    if (IsPermissibleInquiry(x.base().GetFirstSymbol(),
+            x.base().GetLastSymbol(), x.field(), scope_)) {
+      auto restorer{common::ScopedSet(inInquiry_, true)};
+      return (*this)(x.base());
+    } else if (IsConstantExpr(x)) {
+      return std::nullopt;
+    } else {
+      return "non-constant descriptor inquiry not allowed for local object";
+    }
   }
 
   Result operator()(const TypeParamInquiry &inq) const {
@@ -606,7 +651,7 @@ public:
       }
       // References to internal functions are caught in expression semantics.
       // TODO: other checks for standard module procedures
-    } else {
+    } else { // intrinsic
       const SpecificIntrinsic &intrin{DEREF(x.proc().GetSpecificIntrinsic())};
       inInquiry = context_.intrinsics().GetIntrinsicClass(intrin.name) ==
           IntrinsicClass::inquiryFunction;
@@ -625,13 +670,44 @@ public:
               " parameter values";
         }
       }
-      if (intrin.name == "present") {
-        // don't bother looking at argument
+      // Type-determined inquiries (DIGITS, HUGE, &c.) will have already been
+      // folded and won't arrive here.  Inquiries that are represented with
+      // DescriptorInquiry operations (LBOUND) are checked elsewhere.  If a
+      // call that makes it to here satisfies the requirements of a constant
+      // expression (as Fortran defines it), it's fine.
+      if (IsConstantExpr(x)) {
         return std::nullopt;
       }
-      if (IsConstantExpr(x)) {
-        // inquiry functions may not need to check argument(s)
-        return std::nullopt;
+      if (intrin.name == "present") {
+        return std::nullopt; // always ok
+      }
+      // Catch CHARACTER(:), ALLOCATABLE :: X; CHARACTER(LEN(X)) :: Y
+      if (inInquiry && x.arguments().size() >= 1) {
+        if (const auto &arg{x.arguments().at(0)}) {
+          if (auto dataRef{ExtractDataRef(*arg, true, true)}) {
+            if (intrin.name == "allocated" || intrin.name == "associated" ||
+                intrin.name == "is_contiguous") { // ok
+            } else if (intrin.name == "len" &&
+                IsPermissibleInquiry(dataRef->GetFirstSymbol(),
+                    dataRef->GetLastSymbol(), DescriptorInquiry::Field::Len,
+                    scope_)) { // ok
+            } else if (intrin.name == "lbound" &&
+                IsPermissibleInquiry(dataRef->GetFirstSymbol(),
+                    dataRef->GetLastSymbol(),
+                    DescriptorInquiry::Field::LowerBound, scope_)) { // ok
+            } else if ((intrin.name == "shape" || intrin.name == "size" ||
+                           intrin.name == "sizeof" ||
+                           intrin.name == "storage_size" ||
+                           intrin.name == "ubound") &&
+                IsPermissibleInquiry(dataRef->GetFirstSymbol(),
+                    dataRef->GetLastSymbol(), DescriptorInquiry::Field::Extent,
+                    scope_)) { // ok
+            } else {
+              return "non-constant inquiry function '"s + intrin.name +
+                  "' not allowed for local object";
+            }
+          }
+        }
       }
     }
     auto restorer{common::ScopedSet(inInquiry_, inInquiry)};

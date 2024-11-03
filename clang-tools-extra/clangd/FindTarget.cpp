@@ -285,8 +285,7 @@ public:
         Outer.add(CCE->getConstructor(), Flags);
       }
       void VisitDesignatedInitExpr(const DesignatedInitExpr *DIE) {
-        for (const DesignatedInitExpr::Designator &D :
-             llvm::reverse(DIE->designators()))
+        for (const Designator &D : llvm::reverse(DIE->designators()))
           if (D.isFieldDesignator()) {
             Outer.add(D.getField(), Flags);
             // We don't know which designator was intended, we assume the outer.
@@ -801,7 +800,7 @@ llvm::SmallVector<ReferenceLoc> refInStmt(const Stmt *S,
     }
 
     void VisitDesignatedInitExpr(const DesignatedInitExpr *DIE) {
-      for (const DesignatedInitExpr::Designator &D : DIE->designators()) {
+      for (const Designator &D : DIE->designators()) {
         if (!D.isFieldDesignator())
           continue;
 
@@ -1042,6 +1041,17 @@ public:
   bool TraverseConstructorInitializer(CXXCtorInitializer *Init) {
     visitNode(DynTypedNode::create(*Init));
     return RecursiveASTVisitor::TraverseConstructorInitializer(Init);
+  }
+
+  bool TraverseTypeConstraint(const TypeConstraint *TC) {
+    // We want to handle all ConceptReferences but RAV is missing a
+    // polymorphic Visit or Traverse method for it, so we handle
+    // TypeConstraints specially here.
+    Out(ReferenceLoc{TC->getNestedNameSpecifierLoc(),
+                     TC->getConceptNameLoc(),
+                     /*IsDecl=*/false,
+                     {TC->getNamedConcept()}});
+    return RecursiveASTVisitor::TraverseTypeConstraint(TC);
   }
 
 private:

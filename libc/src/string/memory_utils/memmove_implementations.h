@@ -10,6 +10,7 @@
 #define LLVM_LIBC_SRC_STRING_MEMORY_UTILS_MEMMOVE_IMPLEMENTATIONS_H
 
 #include "src/__support/common.h"
+#include "src/__support/macros/optimization.h"
 #include "src/string/memory_utils/op_aarch64.h"
 #include "src/string/memory_utils/op_builtin.h"
 #include "src/string/memory_utils/op_generic.h"
@@ -23,11 +24,11 @@ inline_memmove_embedded_tiny(Ptr dst, CPtr src, size_t count) {
   if ((count == 0) || (dst == src))
     return;
   if (dst < src) {
-    LLVM_LIBC_LOOP_NOUNROLL
+    LIBC_LOOP_NOUNROLL
     for (size_t offset = 0; offset < count; ++offset)
       builtin::Memcpy<1>::block(dst + offset, src + offset);
   } else {
-    LLVM_LIBC_LOOP_NOUNROLL
+    LIBC_LOOP_NOUNROLL
     for (ptrdiff_t offset = count - 1; offset >= 0; --offset)
       builtin::Memcpy<1>::block(dst + offset, src + offset);
   }
@@ -66,13 +67,13 @@ template <size_t MaxSize>
 }
 
 LIBC_INLINE void inline_memmove(Ptr dst, CPtr src, size_t count) {
-#if defined(LLVM_LIBC_ARCH_X86) || defined(LLVM_LIBC_ARCH_AARCH64)
-#if defined(LLVM_LIBC_ARCH_X86)
+#if defined(LIBC_TARGET_ARCH_IS_X86) || defined(LIBC_TARGET_ARCH_IS_AARCH64)
+#if defined(LIBC_TARGET_ARCH_IS_X86)
   static constexpr size_t kMaxSize = x86::kAvx512F ? 64
                                      : x86::kAvx   ? 32
                                      : x86::kSse2  ? 16
                                                    : 8;
-#elif defined(LLVM_LIBC_ARCH_AARCH64)
+#elif defined(LIBC_TARGET_ARCH_IS_AARCH64)
   static constexpr size_t kMaxSize = aarch64::kNeon ? 16 : 8;
 #endif
   // return inline_memmove_generic<kMaxSize>(dst, src, count);
@@ -101,9 +102,9 @@ LIBC_INLINE void inline_memmove(Ptr dst, CPtr src, size_t count) {
     return generic::Memmove<64, kMaxSize>::loop_and_tail_backward(dst, src,
                                                                   count);
   }
-#elif defined(LLVM_LIBC_ARCH_ARM)
+#elif defined(LIBC_TARGET_ARCH_IS_ARM)
   return inline_memmove_embedded_tiny(dst, src, count);
-#elif defined(LLVM_LIBC_ARCH_GPU)
+#elif defined(LIBC_TARGET_ARCH_IS_GPU)
   return inline_memmove_embedded_tiny(dst, src, count);
 #else
 #error "Unsupported platform"

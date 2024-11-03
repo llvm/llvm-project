@@ -15,7 +15,6 @@
 #include "LanaiMCAsmInfo.h"
 #include "TargetInfo/LanaiTargetInfo.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/ADT/Triple.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCInstrAnalysis.h"
 #include "llvm/MC/MCInstrInfo.h"
@@ -24,6 +23,7 @@
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/TargetParser/Triple.h"
 #include <cstdint>
 #include <string>
 

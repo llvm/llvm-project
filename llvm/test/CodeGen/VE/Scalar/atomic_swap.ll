@@ -723,7 +723,7 @@ define zeroext i1 @_Z26atomic_swap_relaxed_stk_i1b(i1 zeroext %0) {
 ; CHECK-NEXT:    and %s0, 1, %s0
 ; CHECK-NEXT:    adds.l %s11, 16, %s11
 ; CHECK-NEXT:    b.l.t (, %s10)
-  %2 = alloca %"struct.std::__1::atomic", align 1
+  %2 = alloca %"struct.std::__1::atomic", align 8
   call void @llvm.lifetime.start.p0(i64 1, ptr nonnull %2)
   %3 = zext i1 %0 to i8
   %4 = atomicrmw volatile xchg ptr %2, i8 %3 monotonic
@@ -751,7 +751,7 @@ define signext i8 @_Z26atomic_swap_relaxed_stk_i8c(i8 signext %0) {
 ; CHECK-NEXT:    sra.l %s0, %s0, 56
 ; CHECK-NEXT:    adds.l %s11, 16, %s11
 ; CHECK-NEXT:    b.l.t (, %s10)
-  %2 = alloca %"struct.std::__1::atomic.0", align 1
+  %2 = alloca %"struct.std::__1::atomic.0", align 8
   call void @llvm.lifetime.start.p0(i64 1, ptr nonnull %2)
   %3 = atomicrmw volatile xchg ptr %2, i8 %0 monotonic
   call void @llvm.lifetime.end.p0(i64 1, ptr nonnull %2)
@@ -769,7 +769,7 @@ define zeroext i8 @_Z26atomic_swap_relaxed_stk_u8h(i8 zeroext %0) {
 ; CHECK-NEXT:    and %s0, %s0, (56)0
 ; CHECK-NEXT:    adds.l %s11, 16, %s11
 ; CHECK-NEXT:    b.l.t (, %s10)
-  %2 = alloca %"struct.std::__1::atomic.5", align 1
+  %2 = alloca %"struct.std::__1::atomic.5", align 8
   call void @llvm.lifetime.start.p0(i64 1, ptr nonnull %2)
   %3 = atomicrmw volatile xchg ptr %2, i8 %0 monotonic
   call void @llvm.lifetime.end.p0(i64 1, ptr nonnull %2)
@@ -788,7 +788,7 @@ define signext i16 @_Z27atomic_swap_relaxed_stk_i16s(i16 signext %0) {
 ; CHECK-NEXT:    sra.l %s0, %s0, 48
 ; CHECK-NEXT:    adds.l %s11, 16, %s11
 ; CHECK-NEXT:    b.l.t (, %s10)
-  %2 = alloca %"struct.std::__1::atomic.10", align 2
+  %2 = alloca %"struct.std::__1::atomic.10", align 8
   call void @llvm.lifetime.start.p0(i64 2, ptr nonnull %2)
   %3 = atomicrmw volatile xchg ptr %2, i16 %0 monotonic
   call void @llvm.lifetime.end.p0(i64 2, ptr nonnull %2)
@@ -806,7 +806,7 @@ define zeroext i16 @_Z27atomic_swap_relaxed_stk_u16t(i16 zeroext %0) {
 ; CHECK-NEXT:    and %s0, %s0, (48)0
 ; CHECK-NEXT:    adds.l %s11, 16, %s11
 ; CHECK-NEXT:    b.l.t (, %s10)
-  %2 = alloca %"struct.std::__1::atomic.15", align 2
+  %2 = alloca %"struct.std::__1::atomic.15", align 8
   call void @llvm.lifetime.start.p0(i64 2, ptr nonnull %2)
   %3 = atomicrmw volatile xchg ptr %2, i16 %0 monotonic
   call void @llvm.lifetime.end.p0(i64 2, ptr nonnull %2)
@@ -821,7 +821,7 @@ define signext i32 @_Z27atomic_swap_relaxed_stk_i32i(i32 signext %0) {
 ; CHECK-NEXT:    adds.w.sx %s0, %s0, (0)1
 ; CHECK-NEXT:    adds.l %s11, 16, %s11
 ; CHECK-NEXT:    b.l.t (, %s10)
-  %2 = alloca %"struct.std::__1::atomic.20", align 4
+  %2 = alloca %"struct.std::__1::atomic.20", align 8
   call void @llvm.lifetime.start.p0(i64 4, ptr nonnull %2)
   %3 = atomicrmw volatile xchg ptr %2, i32 %0 monotonic
   call void @llvm.lifetime.end.p0(i64 4, ptr nonnull %2)
@@ -836,7 +836,7 @@ define zeroext i32 @_Z27atomic_swap_relaxed_stk_u32j(i32 zeroext %0) {
 ; CHECK-NEXT:    adds.w.zx %s0, %s0, (0)1
 ; CHECK-NEXT:    adds.l %s11, 16, %s11
 ; CHECK-NEXT:    b.l.t (, %s10)
-  %2 = alloca %"struct.std::__1::atomic.25", align 4
+  %2 = alloca %"struct.std::__1::atomic.25", align 8
   call void @llvm.lifetime.start.p0(i64 4, ptr nonnull %2)
   %3 = atomicrmw volatile xchg ptr %2, i32 %0 monotonic
   call void @llvm.lifetime.end.p0(i64 4, ptr nonnull %2)

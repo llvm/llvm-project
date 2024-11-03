@@ -16,6 +16,7 @@
   { include: [ "<__tree>", "private", "<map>", "public" ] },
   { include: [ "<__tree>", "private", "<set>", "public" ] },
   { include: [ "@<__algorithm/.*>", "private", "<algorithm>", "public" ] },
+  { include: [ "@<__atomic/.*>", "private", "<atomic>", "public" ] },
   { include: [ "@<__bit/.*>", "private", "<bit>", "public" ] },
   { include: [ "@<__charconv/.*>", "private", "<charconv>", "public" ] },
   { include: [ "@<__chrono/.*>", "private", "<chrono>", "public" ] },

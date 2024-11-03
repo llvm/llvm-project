@@ -60,7 +60,7 @@ class ObjCModulesTestCase(TestBase):
                     substrs=["NSUInteger", "3"])
 
         self.expect(
-            "p *[NSURL URLWithString:@\"http://lldb.llvm.org\"]",
+            "expression *[NSURL URLWithString:@\"http://lldb.llvm.org\"]",
             VARIABLES_DISPLAYED_CORRECTLY,
             substrs=[
                 "NSURL",
@@ -68,7 +68,7 @@ class ObjCModulesTestCase(TestBase):
                 "_urlString"])
 
         self.expect(
-            "p [NSURL URLWithString:@\"http://lldb.llvm.org\"].scheme",
+            "expression [NSURL URLWithString:@\"http://lldb.llvm.org\"].scheme",
             VARIABLES_DISPLAYED_CORRECTLY,
             substrs=["http"])
         # Test that the NULL macro still works with a loaded module.

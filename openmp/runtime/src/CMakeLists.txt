@@ -250,10 +250,6 @@ if(WIN32)
   set_source_files_properties(thirdparty/ittnotify/ittnotify_static.cpp PROPERTIES COMPILE_DEFINITIONS "UNICODE")
 
   # Create Windows import library
-  # the import library is "re-linked" to include kmp_import.cpp which prevents
-  # linking of both Visual Studio OpenMP and newly built OpenMP
-  set_source_files_properties(kmp_import.cpp PROPERTIES COMPILE_FLAGS "${LIBOMP_CONFIGURED_CXXFLAGS}")
-
   # On debug LIBOMP_IMP_LIB_FILE should be LIBOMP_IMP_LIB_FILE_DBG = ${LIBOMP_DEFAULT_LIB_NAME_DBG}${CMAKE_STATIC_LIBRARY_SUFFIX}
   # 									${LIBOMP_DEFAULT_LIB_NAME}d${CMAKE_STATIC_LIBRARY_SUFFIX}
   # and the ARCHIVE_OUTPUT_NAME of ompdbg should be ${LIBOMP_DEFAULT_LIB_NAME_DBG}${LIBOMP_LIBRARY_SUFFIX}${CMAKE_STATIC_LIBRARY_SUFFIX}
@@ -277,35 +273,53 @@ if(WIN32)
   )
 
   if(MSVC)
-    # Get generated import library from creating omp
-    get_target_property(LIBOMP_IMPORT_LIB_DIRECTORY omp ARCHIVE_OUTPUT_DIRECTORY)
-    if(LIBOMP_IMPORT_LIB_DIRECTORY)
-      set(LIBOMP_GENERATED_IMP_LIB ${LIBOMP_IMPORT_LIB_DIRECTORY}/${LIBOMP_GENERATED_IMP_LIB_FILENAME})
-    else()
-      set(LIBOMP_GENERATED_IMP_LIB ${CMAKE_CURRENT_BINARY_DIR}/${LIBOMP_GENERATED_IMP_LIB_FILENAME})
-    endif()
-    set_source_files_properties(${LIBOMP_GENERATED_IMP_LIB} PROPERTIES GENERATED TRUE EXTERNAL_OBJECT TRUE)
-    # Create new import library that is just the previously created one + kmp_import.cpp
-    add_library(ompimp STATIC ${LIBOMP_GENERATED_IMP_LIB} kmp_import.cpp)
-    set_target_properties(ompimp PROPERTIES
-      PREFIX "" SUFFIX "" OUTPUT_NAME "${LIBOMP_IMP_LIB_FILE}"
-      LINKER_LANGUAGE C
-    )
-    add_dependencies(ompimp omp) # ensure generated import library is created first
     set(LIBOMP_IMP_LIB_TARGET ompimp)
   else()
     set(LIBOMP_IMP_LIB_TARGET omp)
   endif()
 
-  # Create def file to designate exported functions
+  # Create def files to designate exported functions
   libomp_get_gdflags(LIBOMP_GDFLAGS) # generate-def.pl flags (Windows only)
   libomp_string_to_list("${LIBOMP_GDFLAGS}" LIBOMP_GDFLAGS)
+  set(LIBOMP_GENERATED_DEF_FILE ${LIBOMP_LIB_NAME}.def)
+  set(LIBOMPIMP_GENERATED_DEF_FILE_IMP ${LIBOMP_LIB_NAME}.imp.def)
   add_custom_command(
     OUTPUT  ${LIBOMP_LIB_NAME}.def
-    COMMAND ${PERL_EXECUTABLE} ${LIBOMP_TOOLS_DIR}/generate-def.pl ${LIBOMP_GDFLAGS}
-      -o ${LIBOMP_LIB_NAME}.def ${CMAKE_CURRENT_SOURCE_DIR}/dllexports
+    # one with ordinals to use for building the runtime dll to maintain backwads compatible exports order
+    COMMAND ${PERL_EXECUTABLE} ${LIBOMP_TOOLS_DIR}/generate-def.pl ${LIBOMP_GDFLAGS} -D NAME=${LIBOMP_LIB_FILE}
+            -o ${LIBOMP_GENERATED_DEF_FILE} ${CMAKE_CURRENT_SOURCE_DIR}/dllexports
+    DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/dllexports ${LIBOMP_TOOLS_DIR}/generate-def.pl
+    # one without ordinals to use for building the import library to remove ordinal dependency going forward
+    COMMAND ${PERL_EXECUTABLE} ${LIBOMP_TOOLS_DIR}/generate-def.pl ${LIBOMP_GDFLAGS} -D NAME=${LIBOMP_LIB_FILE} -D NOORDINALS
+            -o ${LIBOMPIMP_GENERATED_DEF_FILE_IMP} ${CMAKE_CURRENT_SOURCE_DIR}/dllexports
     DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/dllexports ${LIBOMP_TOOLS_DIR}/generate-def.pl
   )
+
+  if (MSVC)
+    # Regenerate the import library to import by name, not ordinal.
+    #
+    # For mingw, we can't regenerate an import library by passing
+    # CMAKE_LINK_DEF_FILE_FLAG to the static library archiver; that just
+    # ends up creating a regular static library that contains the def file.
+    # For mingw, we would have to call the suitable dlltool for regenerating
+    # an import library. However, neither GNU nor LLVM based mingw tools
+    # generate import libraries that actually link by ordinal, so this step
+    # isn't strictly necessary.
+    #
+    # Also, in mingw builds, LIBOMP_GENERATED_IMP_LIB_FILENAME and
+    # LIBOMP_IMP_LIB_FILE currently end up equal, while they need to differ
+    # for this second step to work.
+    add_library(ompimp STATIC ${LIBOMP_SOURCE_FILES})
+      set_target_properties(ompimp PROPERTIES
+        PREFIX "" SUFFIX "" OUTPUT_NAME "${LIBOMP_IMP_LIB_FILE}"
+      LINKER_LANGUAGE C
+    )
+    set_target_properties(ompimp PROPERTIES STATIC_LIBRARY_OPTIONS
+        "${CMAKE_LINK_DEF_FILE_FLAG}${CMAKE_CURRENT_BINARY_DIR}/${LIBOMPIMP_GENERATED_DEF_FILE_IMP}"
+    )
+    add_dependencies(ompimp libomp-needed-headers)
+  endif()
+
 endif()
 
 # Building the Fortran module files

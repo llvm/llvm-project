@@ -129,7 +129,7 @@ void CCState::AnalyzeCallOperands(const SmallVectorImpl<ISD::OutputArg> &Outs,
     if (Fn(i, ArgVT, ArgVT, CCValAssign::Full, ArgFlags, *this)) {
 #ifndef NDEBUG
       dbgs() << "Call operand #" << i << " has unhandled type "
-             << EVT(ArgVT).getEVTString() << '\n';
+             << ArgVT << '\n';
 #endif
       llvm_unreachable(nullptr);
     }
@@ -147,7 +147,7 @@ void CCState::AnalyzeCallOperands(SmallVectorImpl<MVT> &ArgVTs,
     if (Fn(i, ArgVT, ArgVT, CCValAssign::Full, ArgFlags, *this)) {
 #ifndef NDEBUG
       dbgs() << "Call operand #" << i << " has unhandled type "
-             << EVT(ArgVT).getEVTString() << '\n';
+             << ArgVT << '\n';
 #endif
       llvm_unreachable(nullptr);
     }
@@ -164,7 +164,7 @@ void CCState::AnalyzeCallResult(const SmallVectorImpl<ISD::InputArg> &Ins,
     if (Fn(i, VT, VT, CCValAssign::Full, Flags, *this)) {
 #ifndef NDEBUG
       dbgs() << "Call result #" << i << " has unhandled type "
-             << EVT(VT).getEVTString() << '\n';
+             << VT << '\n';
 #endif
       llvm_unreachable(nullptr);
     }
@@ -176,7 +176,7 @@ void CCState::AnalyzeCallResult(MVT VT, CCAssignFn Fn) {
   if (Fn(0, VT, VT, CCValAssign::Full, ISD::ArgFlagsTy(), *this)) {
 #ifndef NDEBUG
     dbgs() << "Call result has unhandled type "
-           << EVT(VT).getEVTString() << '\n';
+           << VT << '\n';
 #endif
     llvm_unreachable(nullptr);
   }
@@ -212,7 +212,7 @@ void CCState::getRemainingRegParmsForType(SmallVectorImpl<MCPhysReg> &Regs,
   do {
     if (Fn(0, VT, VT, CCValAssign::Full, Flags, *this)) {
 #ifndef NDEBUG
-      dbgs() << "Call has unhandled type " << EVT(VT).getEVTString()
+      dbgs() << "Call has unhandled type " << VT
              << " while computing remaining regparms\n";
 #endif
       llvm_unreachable(nullptr);

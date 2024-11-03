@@ -390,12 +390,14 @@ define void @assume_2b_nr(i1 %arg, i1 %cond) norecurse {
 ; CHECK: Function Attrs: nofree norecurse nosync nounwind willreturn memory(inaccessiblemem: readwrite)
 ; CHECK-LABEL: define {{[^@]+}}@assume_2b_nr
 ; CHECK-SAME: (i1 [[ARG:%.*]], i1 noundef [[COND:%.*]]) #[[ATTR3]] {
+; CHECK-NEXT:    [[STACK:%.*]] = alloca i1, align 1
 ; CHECK-NEXT:    br i1 [[COND]], label [[T:%.*]], label [[F:%.*]]
 ; CHECK:       t:
 ; CHECK-NEXT:    br label [[M:%.*]]
 ; CHECK:       f:
 ; CHECK-NEXT:    br label [[M]]
 ; CHECK:       m:
+; CHECK-NEXT:    [[L:%.*]] = load i1, ptr [[STACK]], align 1
 ; CHECK-NEXT:    ret void
 ;
   %stack = alloca i1
@@ -1005,12 +1007,14 @@ define void @assume_2b(i1 %arg, i1 %cond) {
 ; CHECK: Function Attrs: nofree norecurse nosync nounwind willreturn memory(inaccessiblemem: readwrite)
 ; CHECK-LABEL: define {{[^@]+}}@assume_2b
 ; CHECK-SAME: (i1 [[ARG:%.*]], i1 noundef [[COND:%.*]]) #[[ATTR3]] {
+; CHECK-NEXT:    [[STACK:%.*]] = alloca i1, align 1
 ; CHECK-NEXT:    br i1 [[COND]], label [[T:%.*]], label [[F:%.*]]
 ; CHECK:       t:
 ; CHECK-NEXT:    br label [[M:%.*]]
 ; CHECK:       f:
 ; CHECK-NEXT:    br label [[M]]
 ; CHECK:       m:
+; CHECK-NEXT:    [[L:%.*]] = load i1, ptr [[STACK]], align 1
 ; CHECK-NEXT:    ret void
 ;
   %stack = alloca i1

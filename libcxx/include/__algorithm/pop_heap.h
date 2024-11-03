@@ -17,8 +17,9 @@
 #include <__assert>
 #include <__config>
 #include <__iterator/iterator_traits.h>
+#include <__type_traits/is_copy_assignable.h>
+#include <__type_traits/is_copy_constructible.h>
 #include <__utility/move.h>
-#include <type_traits>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

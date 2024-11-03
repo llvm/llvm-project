@@ -26,7 +26,7 @@
 _LIBCPP_PUSH_MACROS
 #include <__undef_macros>
 
-#if _LIBCPP_STD_VER > 14
+#if _LIBCPP_STD_VER >= 17
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
@@ -98,7 +98,7 @@ public:
   template <class _Type, class... _CtorArgs>
   [[nodiscard]] _Type* new_object(_CtorArgs&&... __ctor_args) {
     _Type* __ptr = allocate_object<_Type>();
-    __exception_guard __guard([&] { deallocate_object(__ptr); });
+    auto __guard = std::__make_exception_guard([&] { deallocate_object(__ptr); });
     construct(__ptr, std::forward<_CtorArgs>(__ctor_args)...);
     __guard.__complete();
     return __ptr;
@@ -217,7 +217,7 @@ operator!=(const polymorphic_allocator<_Tp>& __lhs, const polymorphic_allocator<
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP_STD_VER > 14
+#endif // _LIBCPP_STD_VER >= 17
 
 _LIBCPP_POP_MACROS
 
