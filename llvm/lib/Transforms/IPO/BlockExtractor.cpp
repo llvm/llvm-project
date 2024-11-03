@@ -43,7 +43,7 @@ static cl::opt<bool>
 namespace {
 class BlockExtractor {
 public:
-  BlockExtractor(bool EraseFunctions, bool KeepOldBlocks = false)
+  BlockExtractor(bool EraseFunctions, bool KeepOldBlocks)
       : EraseFunctions(EraseFunctions), KeepOldBlocks(KeepOldBlocks) {}
   bool runOnModule(Module &M);
   void
@@ -183,7 +183,8 @@ bool BlockExtractor::runOnModule(Module &M) {
                                 /* AllowVarArgs */ false,
                                 /* AllowAlloca */ false,
                                 /* AllocationBlock */ nullptr,
-                                /* Suffix */ "", KeepOldBlocks)
+                                /* Suffix */ "",
+                                /* KeepOldBlocks */ KeepOldBlocks)
                       .extractCodeRegion(CEAC);
     if (F)
       LLVM_DEBUG(dbgs() << "Extracted group '" << (*BBs.begin())->getName()
@@ -211,12 +212,13 @@ bool BlockExtractor::runOnModule(Module &M) {
 
 BlockExtractorPass::BlockExtractorPass(
     std::vector<std::vector<BasicBlock *>> &&GroupsOfBlocks,
-    bool EraseFunctions)
-    : GroupsOfBlocks(GroupsOfBlocks), EraseFunctions(EraseFunctions) {}
+    bool EraseFunctions, bool KeepOldBlocks)
+    : GroupsOfBlocks(GroupsOfBlocks), EraseFunctions(EraseFunctions),
+      KeepOldBlocks(KeepOldBlocks) {}
 
 PreservedAnalyses BlockExtractorPass::run(Module &M,
                                           ModuleAnalysisManager &AM) {
-  BlockExtractor BE(EraseFunctions);
+  BlockExtractor BE(EraseFunctions, KeepOldBlocks);
   BE.init(GroupsOfBlocks);
   return BE.runOnModule(M) ? PreservedAnalyses::none()
                            : PreservedAnalyses::all();

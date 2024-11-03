@@ -24,12 +24,13 @@ class BasicBlock;
 
 struct BlockExtractorPass : PassInfoMixin<BlockExtractorPass> {
   BlockExtractorPass(std::vector<std::vector<BasicBlock *>> &&GroupsOfBlocks,
-                     bool EraseFunctions);
+                     bool EraseFunctions, bool KeepOldBlocks);
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 
 private:
   std::vector<std::vector<BasicBlock *>> GroupsOfBlocks;
   bool EraseFunctions;
+  bool KeepOldBlocks;
 };
 } // namespace llvm
 

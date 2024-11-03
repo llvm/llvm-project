@@ -392,7 +392,9 @@ int main(int argc, char **argv) {
     PB.crossRegisterProxies(LAM, FAM, CGAM, MAM);
 
     ModulePassManager PM;
-    PM.addPass(BlockExtractorPass(std::move(GroupOfBBs), true));
+    PM.addPass(BlockExtractorPass(std::move(GroupOfBBs),
+                                  /*EraseFunction=*/!ReplaceWithCall,
+                                  /*KeepOldBlocks=*/ReplaceWithCall));
     PM.run(*M, MAM);
   }
 
