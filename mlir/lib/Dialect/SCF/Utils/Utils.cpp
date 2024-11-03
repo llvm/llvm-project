@@ -373,15 +373,15 @@ static void generateUnrolledLoop(
 }
 
 /// Unrolls 'forOp' by 'unrollFactor', returns the unrolled main loop and the
-/// eplilog loop, if the loop is unrolled. Otherwise return null.
-UnrolledLoopInfo mlir::loopUnrollByFactor(
+/// eplilog loop, if the loop is unrolled.
+FailureOr<UnrolledLoopInfo> mlir::loopUnrollByFactor(
     scf::ForOp forOp, uint64_t unrollFactor,
     function_ref<void(unsigned, Operation *, OpBuilder)> annotateFn) {
   assert(unrollFactor > 0 && "expected positive unroll factor");
 
   // Return if the loop body is empty.
   if (llvm::hasSingleElement(forOp.getBody()->getOperations()))
-    return {forOp, nullptr};
+    return UnrolledLoopInfo{forOp, nullptr};
 
   // Compute tripCount = ceilDiv((upperBound - lowerBound), step) and populate
   // 'upperBoundUnrolled' and 'stepUnrolled' for static and dynamic cases.
@@ -402,8 +402,8 @@ UnrolledLoopInfo mlir::loopUnrollByFactor(
     if (unrollFactor == 1) {
       if (*constTripCount == 1 &&
           failed(forOp.promoteIfSingleIteration(rewriter)))
-        return {nullptr, nullptr};
-      return {forOp, nullptr};
+        return failure();
+      return UnrolledLoopInfo{forOp, nullptr};
     }
 
     int64_t tripCountEvenMultiple =
@@ -470,8 +470,8 @@ UnrolledLoopInfo mlir::loopUnrollByFactor(
     }
     epilogueForOp->setOperands(epilogueForOp.getNumControlOperands(),
                                epilogueForOp.getInitArgs().size(), results);
-    (void)epilogueForOp.promoteIfSingleIteration(rewriter);
-    resultLoops.epilogueLoopOp = epilogueForOp;
+    if (epilogueForOp.promoteIfSingleIteration(rewriter).failed())
+      resultLoops.epilogueLoopOp = epilogueForOp;
   }
 
   // Create unrolled loop.
@@ -493,8 +493,8 @@ UnrolledLoopInfo mlir::loopUnrollByFactor(
       },
       annotateFn, iterArgs, yieldedValues);
   // Promote the loop body up if this has turned into a single iteration loop.
-  (void)forOp.promoteIfSingleIteration(rewriter);
-  resultLoops.mainLoopOp = forOp;
+  if (forOp.promoteIfSingleIteration(rewriter).failed())
+    resultLoops.mainLoopOp = forOp;
   return resultLoops;
 }
 

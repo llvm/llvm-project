@@ -353,10 +353,9 @@ transform::LoopUnrollOp::applyToOne(transform::TransformRewriter &rewriter,
                                     transform::ApplyToEachResultList &results,
                                     transform::TransformState &state) {
   LogicalResult result(failure());
-  if (scf::ForOp scfFor = dyn_cast<scf::ForOp>(op)) {
-    auto resultLoops = loopUnrollByFactor(scfFor, getFactor());
-    result = resultLoops.mainLoopOp ? success() : failure();
-  } else if (AffineForOp affineFor = dyn_cast<AffineForOp>(op))
+  if (scf::ForOp scfFor = dyn_cast<scf::ForOp>(op))
+    result = loopUnrollByFactor(scfFor, getFactor());
+  else if (AffineForOp affineFor = dyn_cast<AffineForOp>(op))
     result = loopUnrollByFactor(affineFor, getFactor());
   else
     return emitSilenceableError()
