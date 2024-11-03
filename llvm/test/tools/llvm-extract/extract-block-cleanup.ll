@@ -1,23 +1,23 @@
 ; RUN: llvm-extract -S -bb "foo:region_start;extractonly;cleanup;fallback;region_end" --replace-with-call %s | FileCheck %s
 
 
-; CHECK-LABEL: define void @foo(i32* %arg, i1 %c) {
+; CHECK-LABEL: define void @foo(ptr %arg, i1 %c) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 %c, label %codeRepl, label %outsideonly
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  outsideonly:
-; CHECK-NEXT:    store i32 0, i32* %arg, align 4
+; CHECK-NEXT:    store i32 0, ptr %arg, align 4
 ; CHECK-NEXT:    br label %cleanup
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  codeRepl:
-; CHECK-NEXT:    %targetBlock = call i1 @foo.region_start(i32* %arg)
+; CHECK-NEXT:    %targetBlock = call i1 @foo.region_start(ptr %arg)
 ; CHECK-NEXT:    br i1 %targetBlock, label %cleanup.return_crit_edge, label %region_end.split
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  region_start:
 ; CHECK-NEXT:    br label %extractonly
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  extractonly:
-; CHECK-NEXT:    store i32 1, i32* %arg, align 4
+; CHECK-NEXT:    store i32 1, ptr %arg, align 4
 ; CHECK-NEXT:    br label %cleanup
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  cleanup:
@@ -47,7 +47,7 @@
 ; CHECK-NEXT:  }
 
 
-; CHECK-LABEL: define internal i1 @foo.region_start(i32* %arg) {
+; CHECK-LABEL: define internal i1 @foo.region_start(ptr %arg) {
 ; CHECK-NEXT:  newFuncRoot:
 ; CHECK-NEXT:    br label %region_start
 ; CHECK-EMPTY:
@@ -55,7 +55,7 @@
 ; CHECK-NEXT:    br label %extractonly
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  extractonly:
-; CHECK-NEXT:    store i32 1, i32* %arg, align 4
+; CHECK-NEXT:    store i32 1, ptr %arg, align 4
 ; CHECK-NEXT:    br label %cleanup
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  cleanup:
@@ -80,19 +80,19 @@
 
 
 
-define void @foo(i32* %arg, i1 %c) {
+define void @foo(ptr %arg, i1 %c) {
 entry:
   br i1 %c, label %region_start, label %outsideonly
 
 outsideonly:
-  store i32 0, i32* %arg, align 4
+  store i32 0, ptr %arg, align 4
   br label %cleanup
 
 region_start:
   br label %extractonly
 
 extractonly:
-  store i32 1, i32* %arg, align 4
+  store i32 1, ptr %arg, align 4
   br label %cleanup
 
 cleanup:
