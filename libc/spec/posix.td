@@ -1618,6 +1618,17 @@ def POSIX : StandardSpec<"POSIX"> {
                 ArgSpec<VoidPtr>
             ]
         >,
+        FunctionSpec<
+            "lfind",
+            RetValSpec<VoidPtr>,
+            [
+                ArgSpec<VoidPtr>,
+                ArgSpec<VoidPtr>,
+                ArgSpec<SizeTPtr>,
+                ArgSpec<SizeTType>,
+                // TODO: Unsure how to specify int(*compar)(void *, void *)
+            ]
+        >
     ]
   >;
 

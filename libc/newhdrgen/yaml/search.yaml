@@ -57,3 +57,13 @@ functions:
     return_type: void
     arguments:
       - type: void *
+  - name: lfind
+    standards:
+      - POSIX
+    return_type: void *
+    arguments:
+      - type: void *
+      - type: void *
+      - type: size_t *
+      - type: size_t
+      - type: int(*compar)(const void *, const void *)

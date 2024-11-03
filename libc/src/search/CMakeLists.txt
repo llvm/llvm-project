@@ -98,3 +98,14 @@ add_entrypoint_object(
     libc.include.search
     libc.src.__support.intrusive_list
 )
+
+add_entrypoint_object(
+  lfind
+  SRCS
+    lfind.cpp
+  HDRS
+    lfind.h
+  DEPENDS
+    libc.include.search
+    libc.src.__support.CPP.cstddef
+)
