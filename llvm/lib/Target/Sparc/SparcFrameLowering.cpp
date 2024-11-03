@@ -35,7 +35,8 @@ DisableLeafProc("disable-sparc-leaf-proc",
 SparcFrameLowering::SparcFrameLowering(const SparcSubtarget &ST)
     : TargetFrameLowering(TargetFrameLowering::StackGrowsDown,
                           ST.is64Bit() ? Align(16) : Align(8), 0,
-                          ST.is64Bit() ? Align(16) : Align(8)) {}
+                          ST.is64Bit() ? Align(16) : Align(8),
+                          /*StackRealignable=*/false) {}
 
 void SparcFrameLowering::emitSPAdjustment(MachineFunction &MF,
                                           MachineBasicBlock &MBB,
@@ -97,12 +98,6 @@ void SparcFrameLowering::emitPrologue(MachineFunction &MF,
   // Debug location must be unknown since the first debug location is used
   // to determine the end of the prologue.
   DebugLoc dl;
-  bool NeedsStackRealignment = RegInfo.shouldRealignStack(MF);
-
-  if (NeedsStackRealignment && !RegInfo.canRealignStack(MF))
-    report_fatal_error("Function \"" + Twine(MF.getName()) + "\" required "
-                       "stack re-alignment, but LLVM couldn't handle it "
-                       "(probably because it has a dynamic alloca).");
 
   // Get the number of bytes to allocate from the FrameInfo
   int NumBytes = (int) MFI.getStackSize();
@@ -168,31 +163,6 @@ void SparcFrameLowering::emitPrologue(MachineFunction &MF,
       MCCFIInstruction::createRegister(nullptr, regOutRA, regInRA));
   BuildMI(MBB, MBBI, dl, TII.get(TargetOpcode::CFI_INSTRUCTION))
       .addCFIIndex(CFIIndex);
-
-  if (NeedsStackRealignment) {
-    int64_t Bias = Subtarget.getStackPointerBias();
-    unsigned regUnbiased;
-    if (Bias) {
-      // This clobbers G1 which we always know is available here.
-      regUnbiased = SP::G1;
-      // add %o6, BIAS, %g1
-      BuildMI(MBB, MBBI, dl, TII.get(SP::ADDri), regUnbiased)
-        .addReg(SP::O6).addImm(Bias);
-    } else
-      regUnbiased = SP::O6;
-
-    // andn %regUnbiased, MaxAlign-1, %regUnbiased
-    Align MaxAlign = MFI.getMaxAlign();
-    BuildMI(MBB, MBBI, dl, TII.get(SP::ANDNri), regUnbiased)
-        .addReg(regUnbiased)
-        .addImm(MaxAlign.value() - 1U);
-
-    if (Bias) {
-      // add %g1, -BIAS, %o6
-      BuildMI(MBB, MBBI, dl, TII.get(SP::ADDri), SP::O6)
-        .addReg(regUnbiased).addImm(-Bias);
-    }
-  }
 }
 
 MachineBasicBlock::iterator SparcFrameLowering::
@@ -257,8 +227,7 @@ bool SparcFrameLowering::hasFPImpl(const MachineFunction &MF) const {
 
   const MachineFrameInfo &MFI = MF.getFrameInfo();
   return MF.getTarget().Options.DisableFramePointerElim(MF) ||
-         RegInfo->hasStackRealignment(MF) || MFI.hasVarSizedObjects() ||
-         MFI.isFrameAddressTaken();
+         MFI.hasVarSizedObjects() || MFI.isFrameAddressTaken();
 }
 
 StackOffset
@@ -284,11 +253,6 @@ SparcFrameLowering::getFrameIndexReference(const MachineFunction &MF, int FI,
   } else if (isFixed) {
     // Otherwise, argument access should always use %fp.
     UseFP = true;
-  } else if (RegInfo->hasStackRealignment(MF)) {
-    // If there is dynamic stack realignment, all local object
-    // references need to be via %sp, to take account of the
-    // re-alignment.
-    UseFP = false;
   } else {
     // Finally, default to using %fp.
     UseFP = true;
