@@ -2632,8 +2632,11 @@ static Constant *ConstantFoldLibCall2(StringRef Name, Type *Ty,
   case LibFunc_scalbln:
   case LibFunc_scalblnf:
   case LibFunc_scalblnl:
-    if (TLI->has(Func))
-      return ConstantFoldBinaryFP(ldexp, Op1V, Op2V, Ty);
+    if (TLI->has(Func)) {
+      APFloat V = Op1->getValueAPF();
+      if (APFloat::opStatus::opOK == V.ldexp(Op2->getValueAPF()))
+        return ConstantFP::get(Ty->getContext(), V);
+    }
     break;
   case LibFunc_pow:
   case LibFunc_powf:
