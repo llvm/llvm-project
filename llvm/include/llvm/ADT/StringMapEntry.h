@@ -150,19 +150,19 @@ public:
 
 template <std::size_t Index, typename ValueTy>
 decltype(auto) get(StringMapEntry<ValueTy> &E) {
-  static_assert(Index == 0 || Index == 1);
+  static_assert(Index < 2);
   if constexpr (Index == 0)
     return E.getKey();
-  if constexpr (Index == 1)
+  else
     return E.getValue();
 }
 
 template <std::size_t Index, typename ValueTy>
 decltype(auto) get(const StringMapEntry<ValueTy> &E) {
-  static_assert(Index == 0 || Index == 1);
+  static_assert(Index < 2);
   if constexpr (Index == 0)
     return E.getKey();
-  if constexpr (Index == 1)
+  else
     return E.getValue();
 }
 
