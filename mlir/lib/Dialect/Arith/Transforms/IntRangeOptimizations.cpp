@@ -381,10 +381,8 @@ private:
 };
 
 struct NarrowCmpI final : OpRewritePattern<arith::CmpIOp> {
-  NarrowCmpI(MLIRContext *context, PatternBenefit benefit, DataFlowSolver &s,
-             ArrayRef<unsigned> target)
-      : OpRewritePattern(context, benefit), solver(s), targetBitwidths(target) {
-  }
+  NarrowCmpI(MLIRContext *context, DataFlowSolver &s, ArrayRef<unsigned> target)
+      : OpRewritePattern(context), solver(s), targetBitwidths(target) {}
 
   LogicalResult matchAndRewrite(arith::CmpIOp op,
                                 PatternRewriter &rewriter) const override {
@@ -492,13 +490,8 @@ void mlir::arith::populateIntRangeOptimizationsPatterns(
 void mlir::arith::populateIntRangeNarrowingPatterns(
     RewritePatternSet &patterns, DataFlowSolver &solver,
     ArrayRef<unsigned> bitwidthsSupported) {
-  // CmpI uses args ranges instead of results, run it with higher benefit,
-  // as its argumens can be potentially replaced.
-  patterns.add<NarrowCmpI>(patterns.getContext(), /*benefit*/ 10, solver,
-                           bitwidthsSupported);
-
-  patterns.add<NarrowElementwise>(patterns.getContext(), solver,
-                                  bitwidthsSupported);
+  patterns.add<NarrowElementwise, NarrowCmpI>(patterns.getContext(), solver,
+                                              bitwidthsSupported);
 }
 
 std::unique_ptr<Pass> mlir::arith::createIntRangeOptimizationsPass() {
