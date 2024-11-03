@@ -6,14 +6,14 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "hdr/free.h"
+#include "hdr/malloc.h"
+#include "hdr/realloc.h"
 #include "src/__support/arg_list.h"
 #include "src/stdio/printf.h"
 #include "src/stdio/printf_core/core_structs.h"
 #include "src/stdio/printf_core/printf_main.h"
 #include "src/stdio/printf_core/writer.h"
-#include "hdr/free.h"
-#include "hdr/malloc.h"
-#include "hdr/realloc.h"
 
 namespace LIBC_NAMESPACE_DECL {
 namespace printf_core {

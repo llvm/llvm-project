@@ -9,15 +9,15 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_CPP_STRING_H
 #define LLVM_LIBC_SRC___SUPPORT_CPP_STRING_H
 
+#include "hdr/free.h"
+#include "hdr/malloc.h"
+#include "hdr/realloc.h"
 #include "src/__support/CPP/string_view.h"
 #include "src/__support/integer_to_string.h" // IntegerToString
 #include "src/__support/macros/config.h"
 #include "src/string/memory_utils/inline_memcpy.h"
 #include "src/string/memory_utils/inline_memset.h"
 #include "src/string/string_utils.h" // string_length
-#include "hdr/free.h"
-#include "hdr/malloc.h"
-#include "hdr/realloc.h"
 
 #include <stddef.h> // size_t
 

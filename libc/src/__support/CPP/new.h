@@ -9,12 +9,12 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_CPP_NEW_H
 #define LLVM_LIBC_SRC___SUPPORT_CPP_NEW_H
 
-#include "src/__support/common.h"
-#include "src/__support/macros/config.h"
-#include "src/__support/macros/properties/os.h"
 #include "hdr/aligned_alloc.h"
 #include "hdr/free.h"
 #include "hdr/malloc.h"
+#include "src/__support/common.h"
+#include "src/__support/macros/config.h"
+#include "src/__support/macros/properties/os.h"
 
 #include <stddef.h> // For size_t
 
