@@ -27,11 +27,14 @@ public:
     void testSpecialNumbers(FxbitsFunc func) {
         EXPECT_EQ(zero, func(0));
         EXPECT_EQ(half, func((XType) (0b1 << (FXRep::FRACTION_LEN - 1)))); // 0.1000...b
+        EXPECT_EQ(min, func((XType) 0x1));
+        EXPECT_EQ(one, func(1));
+        EXPECT_EQ(neg_one, func(-1));
     }
 };
 
 
 #define LIST_FXBITS_TEST(T, XType, func)                                        \
-    using LlvmLibcFxbitsTest = FxbitsTest<T, XType>;                            \  
-    TEST_F(LlvmLibcFxbitsTest, SpecialNumbers) { testSpecialNumbers(&func); }   \ 
+    using LlvmLibcFxbitsTest = FxbitsTest<T, XType>;                            \
+    TEST_F(LlvmLibcFxbitsTest, SpecialNumbers) { testSpecialNumbers(&func); }   \
     static_assert(true, "Require semicolon.")
