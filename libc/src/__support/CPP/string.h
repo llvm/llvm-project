@@ -17,7 +17,9 @@
 #include "src/string/string_utils.h" // string_length
 
 #include <stddef.h> // size_t
-#include <stdlib.h> // malloc, free
+#include "hdr/malloc.h"
+#include "hdr/free.h"
+#include "hdr/realloc.h"
 
 namespace LIBC_NAMESPACE_DECL {
 namespace cpp {

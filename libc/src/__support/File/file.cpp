@@ -14,6 +14,7 @@
 #include "src/__support/CPP/span.h"
 #include "src/__support/macros/config.h"
 #include "src/errno/libc_errno.h" // For error macros
+#include "hdr/realloc.h"
 
 namespace LIBC_NAMESPACE_DECL {
 

@@ -13,7 +13,10 @@
 #include "src/__support/macros/config.h"
 
 #include <stddef.h> // size_t
-#include <stdlib.h> // malloc, realloc, free
+
+#include "hdr/malloc.h"
+#include "hdr/free.h"
+#include "hdr/realloc.h"
 
 namespace LIBC_NAMESPACE_DECL {
 

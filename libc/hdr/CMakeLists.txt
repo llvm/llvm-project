@@ -24,6 +24,16 @@ function(add_proxy_header_library target_name)
 endfunction()
 
 add_proxy_header_library(
+  aligned_alloc
+  HDRS
+    aligned_alloc.h
+  DEPENDS
+    .stdlib_overlay.h
+  FULL_BUILD_DEPENDS
+    libc.include.stdlib
+)
+
+add_proxy_header_library(
   math_macros
   HDRS
     math_macros.h
@@ -153,6 +163,16 @@ add_proxy_header_library(
 )
 
 add_proxy_header_library(
+  free
+  HDRS
+    free.h
+  DEPENDS
+    .stdlib_overlay.h
+  FULL_BUILD_DEPENDS
+    libc.include.stdlib
+)
+
+add_proxy_header_library(
   limits_macros
   HDRS
     limits_macros.h
@@ -168,6 +188,26 @@ add_proxy_header_library(
   FULL_BUILD_DEPENDS
     libc.include.llvm-libc-macros.link_macros
     libc.include.link
+)
+
+add_proxy_header_library(
+  malloc
+  HDRS
+    malloc.h
+  DEPENDS
+    .stdlib_overlay.h
+  FULL_BUILD_DEPENDS
+    libc.include.stdlib
+)
+
+add_proxy_header_library(
+  realloc
+  HDRS
+    realloc.h
+  DEPENDS
+    .stdlib_overlay.h
+  FULL_BUILD_DEPENDS
+    libc.include.stdlib
 )
 
 add_proxy_header_library(

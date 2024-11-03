@@ -236,6 +236,9 @@ add_header_library(
   HDRS
     char_vector.h
   DEPENDS
+    libc.hdr.free
+    libc.hdr.malloc
+    libc.hdr.realloc
     libc.src.__support.common
 )
 

@@ -80,7 +80,9 @@ add_header_library(
   HDRS
     string.h
   DEPENDS
-    libc.include.stdlib
+    libc.hdr.free
+    libc.hdr.malloc
+    libc.hdr.realloc 
     .string_view
     libc.src.__support.common
     libc.src.__support.integer_to_string
@@ -199,7 +201,9 @@ add_object_library(
   HDRS
     new.h
   DEPENDS
-    libc.include.stdlib
+    libc.hdr.free
+    libc.hdr.malloc
+    libc.hdr.aligned_alloc 
     libc.src.__support.common
     libc.src.__support.macros.properties.os
 )
