@@ -26,19 +26,95 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/MemoryBuffer.h"
 
-#include <cstddef>
+#include <functional>
 
 namespace llvm {
 namespace memprof {
+// A class for memprof profile data populated directly from external
+// sources.
+// TODO: Rename this file to MemProfReader.h to better reflect the contents.
+class MemProfReader {
+public:
+  // The MemProfReader only holds memory profile information.
+  InstrProfKind getProfileKind() const { return InstrProfKind::MemProf; }
+
+  using GuidMemProfRecordPair = std::pair<GlobalValue::GUID, MemProfRecord>;
+  using Iterator = InstrProfIterator<GuidMemProfRecordPair, MemProfReader>;
+  Iterator end() { return Iterator(); }
+  Iterator begin() {
+    Iter = FunctionProfileData.begin();
+    return Iterator(this);
+  }
+
+  // Return a const reference to the internal Id to Frame mappings.
+  const llvm::DenseMap<FrameId, Frame> &getFrameMapping() const {
+    return IdToFrame;
+  }
+
+  // Return a const reference to the internal function profile data.
+  const llvm::MapVector<GlobalValue::GUID, IndexedMemProfRecord> &
+  getProfileData() const {
+    return FunctionProfileData;
+  }
+
+  virtual Error
+  readNextRecord(GuidMemProfRecordPair &GuidRecord,
+                 std::function<const Frame(const FrameId)> Callback = nullptr) {
+    if (FunctionProfileData.empty())
+      return make_error<InstrProfError>(instrprof_error::empty_raw_profile);
+
+    if (Iter == FunctionProfileData.end())
+      return make_error<InstrProfError>(instrprof_error::eof);
+
+    if (Callback == nullptr)
+      Callback =
+          std::bind(&MemProfReader::idToFrame, this, std::placeholders::_1);
+
+    const IndexedMemProfRecord &IndexedRecord = Iter->second;
+    GuidRecord = {Iter->first, MemProfRecord(IndexedRecord, Callback)};
+    Iter++;
+    return Error::success();
+  }
+
+  // Allow default construction for derived classes which can populate the
+  // contents after construction.
+  MemProfReader() = default;
+  virtual ~MemProfReader() = default;
+
+  // Initialize the MemProfReader with the frame mappings and profile contents.
+  MemProfReader(
+      llvm::DenseMap<FrameId, Frame> FrameIdMap,
+      llvm::MapVector<GlobalValue::GUID, IndexedMemProfRecord> ProfData)
+      : IdToFrame(std::move(FrameIdMap)),
+        FunctionProfileData(std::move(ProfData)) {}
+
+protected:
+  // A helper method to extract the frame from the IdToFrame map.
+  const Frame &idToFrame(const FrameId Id) const {
+    auto It = IdToFrame.find(Id);
+    assert(It != IdToFrame.end() && "Id not found in map.");
+    return It->getSecond();
+  }
+  // A mapping from FrameId (a hash of the contents) to the frame.
+  llvm::DenseMap<FrameId, Frame> IdToFrame;
+  // A mapping from function GUID, hash of the canonical function symbol to the
+  // memprof profile data for that function, i.e allocation and callsite info.
+  llvm::MapVector<GlobalValue::GUID, IndexedMemProfRecord> FunctionProfileData;
+  // An iterator to the internal function profile data structure.
+  llvm::MapVector<GlobalValue::GUID, IndexedMemProfRecord>::iterator Iter;
+};
 
 // Map from id (recorded from sanitizer stack depot) to virtual addresses for
 // each program counter address in the callstack.
 using CallStackMap = llvm::DenseMap<uint64_t, llvm::SmallVector<uint64_t>>;
 
-class RawMemProfReader {
+// Specializes the MemProfReader class to populate the contents from raw binary
+// memprof profiles from instrumentation based profiling.
+class RawMemProfReader final : public MemProfReader {
 public:
   RawMemProfReader(const RawMemProfReader &) = delete;
   RawMemProfReader &operator=(const RawMemProfReader &) = delete;
+  virtual ~RawMemProfReader() override = default;
 
   // Prints the contents of the profile in YAML format.
   void printYAML(raw_ostream &OS);
@@ -51,24 +127,20 @@ public:
   static bool hasFormat(const StringRef Path);
 
   // Create a RawMemProfReader after sanity checking the contents of the file at
-  // \p Path. The binary from which the profile has been collected is specified
-  // via a path in \p ProfiledBinary.
+  // \p Path or the \p Buffer. The binary from which the profile has been
+  // collected is specified via a path in \p ProfiledBinary.
   static Expected<std::unique_ptr<RawMemProfReader>>
-  create(const Twine &Path, const StringRef ProfiledBinary,
+  create(const Twine &Path, StringRef ProfiledBinary, bool KeepName = false);
+  static Expected<std::unique_ptr<RawMemProfReader>>
+  create(std::unique_ptr<MemoryBuffer> Buffer, StringRef ProfiledBinary,
          bool KeepName = false);
 
-  using GuidMemProfRecordPair = std::pair<GlobalValue::GUID, MemProfRecord>;
-  using Iterator = InstrProfIterator<GuidMemProfRecordPair, RawMemProfReader>;
-  Iterator end() { return Iterator(); }
-  Iterator begin() {
-    Iter = FunctionProfileData.begin();
-    return Iterator(this);
-  }
+  // Returns a list of build ids recorded in the segment information.
+  static std::vector<std::string> peekBuildIds(MemoryBuffer *DataBuffer);
 
-  Error readNextRecord(GuidMemProfRecordPair &GuidRecord);
-
-  // The RawMemProfReader only holds memory profile information.
-  InstrProfKind getProfileKind() const { return InstrProfKind::MemProf; }
+  virtual Error
+  readNextRecord(GuidMemProfRecordPair &GuidRecord,
+                 std::function<const Frame(const FrameId)> Callback) override;
 
   // Constructor for unittests only.
   RawMemProfReader(std::unique_ptr<llvm::symbolize::SymbolizableModule> Sym,
@@ -88,17 +160,6 @@ public:
       report_fatal_error(std::move(E));
   }
 
-  // Return a const reference to the internal Id to Frame mappings.
-  const llvm::DenseMap<FrameId, Frame> &getFrameMapping() const {
-    return IdToFrame;
-  }
-
-  // Return a const reference to the internal function profile data.
-  const llvm::MapVector<GlobalValue::GUID, IndexedMemProfRecord> &
-  getProfileData() const {
-    return FunctionProfileData;
-  }
-
 private:
   RawMemProfReader(object::OwningBinary<object::Binary> &&Bin, bool KeepName)
       : Binary(std::move(Bin)), KeepSymbolName(KeepName) {}
@@ -106,6 +167,8 @@ private:
   Error initialize(std::unique_ptr<MemoryBuffer> DataBuffer);
   // Read and parse the contents of the `DataBuffer` as a binary format profile.
   Error readRawProfile(std::unique_ptr<MemoryBuffer> DataBuffer);
+  // Initialize the segment mapping information for symbolization.
+  Error setupForSymbolization();
   // Symbolize and cache all the virtual addresses we encounter in the
   // callstacks from the raw profile. Also prune callstack frames which we can't
   // symbolize or those that belong to the runtime. For profile entries where
@@ -116,20 +179,23 @@ private:
   // callsite data or both.
   Error mapRawProfileToRecords();
 
-  // A helper method to extract the frame from the IdToFrame map.
-  const Frame &idToFrame(const FrameId Id) const {
-    auto It = IdToFrame.find(Id);
-    assert(It != IdToFrame.end() && "Id not found in map.");
-    return It->getSecond();
-  }
-
   object::SectionedAddress getModuleOffset(uint64_t VirtualAddress);
 
+  // The profiled binary.
   object::OwningBinary<object::Binary> Binary;
+  // A symbolizer to translate virtual addresses to code locations.
   std::unique_ptr<llvm::symbolize::SymbolizableModule> Symbolizer;
+  // The preferred load address of the executable segment.
+  uint64_t PreferredTextSegmentAddress = 0;
+  // The base address of the text segment in the process during profiling.
+  uint64_t ProfiledTextSegmentStart = 0;
+  // The limit address of the text segment in the process during profiling.
+  uint64_t ProfiledTextSegmentEnd = 0;
 
-  // The contents of the raw profile.
-  llvm::SmallVector<SegmentEntry, 16> SegmentInfo;
+  // The memory mapped segment information for all executable segments in the
+  // profiled binary (filtered from the raw profile using the build id).
+  llvm::SmallVector<SegmentEntry, 2> SegmentInfo;
+
   // A map from callstack id (same as key in CallStackMap below) to the heap
   // information recorded for that allocation context.
   llvm::MapVector<uint64_t, MemInfoBlock> CallstackProfileData;
@@ -137,10 +203,6 @@ private:
 
   // Cached symbolization from PC to Frame.
   llvm::DenseMap<uint64_t, llvm::SmallVector<FrameId>> SymbolizedFrame;
-  llvm::DenseMap<FrameId, Frame> IdToFrame;
-
-  llvm::MapVector<GlobalValue::GUID, IndexedMemProfRecord> FunctionProfileData;
-  llvm::MapVector<GlobalValue::GUID, IndexedMemProfRecord>::iterator Iter;
 
   // Whether to keep the symbol name for each frame after hashing.
   bool KeepSymbolName = false;

@@ -15,7 +15,7 @@ define ptr @test_struct(ptr %f) {
 define ptr @test_array1(ptr %a, i64 %i) {
 ; CHECK-LABEL: test_array1:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    mov x8, #4
+; CHECK-NEXT:    mov x8, #4 ; =0x4
 ; CHECK-NEXT:    madd x0, x1, x8, x0
 ; CHECK-NEXT:    ret
   %1 = getelementptr inbounds i32, ptr %a, i64 %i
@@ -43,7 +43,7 @@ define ptr @test_array3(ptr %a) {
 define ptr @test_array4(ptr %a) {
 ; CHECK-LABEL: test_array4:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    mov x8, #4104
+; CHECK-NEXT:    mov x8, #4104 ; =0x1008
 ; CHECK-NEXT:    add x0, x0, x8
 ; CHECK-NEXT:    ret
   %1 = getelementptr inbounds i32, ptr %a, i64 1026
@@ -54,9 +54,9 @@ define ptr @test_array5(ptr %a, i32 %i) {
 ; CHECK-LABEL: test_array5:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    ; kill: def $w1 killed $w1 def $x1
-; CHECK-NEXT:    mov x8, #4
-; CHECK-NEXT:    sxtw x9, w1
-; CHECK-NEXT:    madd x0, x9, x8, x0
+; CHECK-NEXT:    sxtw x8, w1
+; CHECK-NEXT:    mov x9, #4 ; =0x4
+; CHECK-NEXT:    madd x0, x8, x9, x0
 ; CHECK-NEXT:    ret
   %1 = getelementptr inbounds i32, ptr %a, i32 %i
   ret ptr %1

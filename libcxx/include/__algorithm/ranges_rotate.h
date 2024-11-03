@@ -33,34 +33,29 @@ namespace ranges {
 namespace __rotate {
 
 struct __fn {
-
   template <class _Iter, class _Sent>
-  _LIBCPP_HIDE_FROM_ABI constexpr
-  static subrange<_Iter> __rotate_fn_impl(_Iter __first, _Iter __middle, _Sent __last) {
-    auto __ret = std::__rotate<_RangeAlgPolicy>(
-      std::move(__first), std::move(__middle), std::move(__last));
+  _LIBCPP_HIDE_FROM_ABI constexpr static subrange<_Iter> __rotate_fn_impl(_Iter __first, _Iter __middle, _Sent __last) {
+    auto __ret = std::__rotate<_RangeAlgPolicy>(std::move(__first), std::move(__middle), std::move(__last));
     return {std::move(__ret.first), std::move(__ret.second)};
   }
 
   template <permutable _Iter, sentinel_for<_Iter> _Sent>
-  _LIBCPP_HIDE_FROM_ABI constexpr
-  subrange<_Iter> operator()(_Iter __first, _Iter __middle, _Sent __last) const {
+  _LIBCPP_HIDE_FROM_ABI constexpr subrange<_Iter> operator()(_Iter __first, _Iter __middle, _Sent __last) const {
     return __rotate_fn_impl(std::move(__first), std::move(__middle), std::move(__last));
   }
 
   template <forward_range _Range>
-  requires permutable<iterator_t<_Range>>
-  _LIBCPP_HIDE_FROM_ABI constexpr
-  borrowed_subrange_t<_Range> operator()(_Range&& __range, iterator_t<_Range> __middle) const {
+    requires permutable<iterator_t<_Range>>
+  _LIBCPP_HIDE_FROM_ABI constexpr borrowed_subrange_t<_Range>
+  operator()(_Range&& __range, iterator_t<_Range> __middle) const {
     return __rotate_fn_impl(ranges::begin(__range), std::move(__middle), ranges::end(__range));
   }
-
 };
 
 } // namespace __rotate
 
 inline namespace __cpo {
-  inline constexpr auto rotate = __rotate::__fn{};
+inline constexpr auto rotate = __rotate::__fn{};
 } // namespace __cpo
 } // namespace ranges
 

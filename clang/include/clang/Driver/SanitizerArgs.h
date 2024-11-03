@@ -42,6 +42,7 @@ class SanitizerArgs {
   bool CfiCanonicalJumpTables = false;
   int AsanFieldPadding = 0;
   bool SharedRuntime = false;
+  bool StableABI = false;
   bool AsanUseAfterScope = true;
   bool AsanPoisonCustomArrayCookie = false;
   bool AsanGlobalsDeadStripping = false;
@@ -75,6 +76,7 @@ public:
                 bool DiagnoseErrors = true);
 
   bool needsSharedRt() const { return SharedRuntime; }
+  bool needsStableAbi() const { return StableABI; }
 
   bool needsMemProfRt() const { return NeedsMemProfRt; }
   bool needsAsanRt() const { return Sanitizers.has(SanitizerKind::Address); }
@@ -117,6 +119,10 @@ public:
   const std::string &getMemtagMode() const {
     assert(!MemtagMode.empty());
     return MemtagMode;
+  }
+
+  bool hasShadowCallStack() const {
+    return Sanitizers.has(SanitizerKind::ShadowCallStack);
   }
 
   bool requiresPIE() const;

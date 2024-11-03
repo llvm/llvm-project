@@ -8,6 +8,7 @@ unittest("ProfileDataTests") {
     "//llvm/lib/Testing/Support",
   ]
   sources = [
+    "BPFunctionNodeTest.cpp",
     "CoverageMappingTest.cpp",
     "InstrProfDataTest.cpp",
     "InstrProfTest.cpp",

@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/string/strndup.h"
-#include "src/string/memory_utils/memcpy_implementations.h"
+#include "src/string/memory_utils/inline_memcpy.h"
 #include "src/string/string_utils.h"
 
 #include "src/__support/CPP/new.h"

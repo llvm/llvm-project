@@ -23,5 +23,4 @@ int LocalVar;
 // TOP: inclusion directive=targeted-nested1.h ({{.*[/\\]}}test{{[/\\]}}Index{{[/\\]}}targeted-nested1.h) =[5:1 - 5:2]
 // TOP: inclusion directive=targeted-fields.h ({{.*[/\\]}}test{{[/\\]}}Index{{[/\\]}}targeted-fields.h) =[16:1 - 16:2]
 
-// rdar://13803893
 // RUN: c-index-test -file-includes-in=%S/Inputs/empty.h %S/Inputs/empty.h

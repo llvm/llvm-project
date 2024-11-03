@@ -120,7 +120,8 @@ Error registerELFGraphInfo(Session &S, LinkGraph &G) {
         if (Sym->getSize() != 0) {
           if (auto TS = getELFGOTTarget(G, Sym->getBlock()))
             FileInfo.GOTEntryInfos[TS->getName()] = {
-                Sym->getSymbolContent(), Sym->getAddress().getValue()};
+                Sym->getSymbolContent(), Sym->getAddress().getValue(),
+                Sym->getTargetFlags()};
           else
             return TS.takeError();
         }
@@ -132,7 +133,8 @@ Error registerELFGraphInfo(Session &S, LinkGraph &G) {
 
         if (auto TS = getELFStubTarget(G, Sym->getBlock()))
           FileInfo.StubInfos[TS->getName()] = {Sym->getSymbolContent(),
-                                               Sym->getAddress().getValue()};
+                                               Sym->getAddress().getValue(),
+                                               Sym->getTargetFlags()};
         else
           return TS.takeError();
         SectionContainsContent = true;
@@ -145,11 +147,17 @@ Error registerELFGraphInfo(Session &S, LinkGraph &G) {
           SectionContainsZeroFill = true;
         } else {
           S.SymbolInfos[Sym->getName()] = {Sym->getSymbolContent(),
-                                           Sym->getAddress().getValue()};
+                                           Sym->getAddress().getValue(),
+                                           Sym->getTargetFlags()};
           SectionContainsContent = true;
         }
       }
     }
+
+    // Add symbol info for absolute symbols.
+    for (auto *Sym : G.absolute_symbols())
+      S.SymbolInfos[Sym->getName()] = {Sym->getSize(),
+                                       Sym->getAddress().getValue()};
 
     auto SecAddr = FirstSym->getAddress();
     auto SecSize =
@@ -165,7 +173,7 @@ Error registerELFGraphInfo(Session &S, LinkGraph &G) {
     else
       FileInfo.SectionInfos[Sec.getName()] = {
           ArrayRef<char>(FirstSym->getBlock().getContent().data(), SecSize),
-          SecAddr.getValue()};
+          SecAddr.getValue(), FirstSym->getTargetFlags()};
   }
 
   return Error::success();

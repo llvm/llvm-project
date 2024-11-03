@@ -7,7 +7,15 @@ This check implements the type-based semantics of ``gsl::owner<T*>``, which allo
 static analysis on code, that uses raw pointers to handle resources like
 dynamic memory, but won't introduce RAII concepts.
 
-The relevant sections in the `C++ Core Guidelines <https://github.com/isocpp/CppCoreGuidelines/blob/master/CppCoreGuidelines.md>`_ are I.11, C.33, R.3 and GSL.Views
+This check implements `I.11
+<https://isocpp.github.io/CppCoreGuidelines/CppCoreGuidelines#i11-never-transfer-ownership-by-a-raw-pointer-t-or-reference-t>`_,
+`C.33
+<https://isocpp.github.io/CppCoreGuidelines/CppCoreGuidelines#c33-if-a-class-has-an-owning-pointer-member-define-a-destructor>`_,
+`R.3
+<https://isocpp.github.io/CppCoreGuidelines/CppCoreGuidelines#r3-a-raw-pointer-a-t-is-non-owning>`_
+and `GSL.Views
+<https://isocpp.github.io/CppCoreGuidelines/CppCoreGuidelines#SS-views>`_
+from the C++ Core Guidelines.
 The definition of a ``gsl::owner<T*>`` is straight forward
 
 .. code-block:: c++
@@ -15,7 +23,7 @@ The definition of a ``gsl::owner<T*>`` is straight forward
   namespace gsl { template <typename T> owner = T; }
 
 It is therefore simple to introduce the owner even without using an implementation of
-the `Guideline Support Library <https://github.com/isocpp/CppCoreGuidelines/blob/master/CppCoreGuidelines.md#gsl-guideline-support-library>`_.
+the `Guideline Support Library <https://isocpp.github.io/CppCoreGuidelines/CppCoreGuidelines#S-gsl>`_.
 
 All checks are purely type based and not (yet) flow sensitive.
 

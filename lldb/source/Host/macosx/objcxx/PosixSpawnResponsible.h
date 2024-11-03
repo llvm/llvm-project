@@ -31,9 +31,7 @@ static inline int setup_posix_spawn_responsible_flag(posix_spawnattr_t *attr) {
     static dispatch_once_t pred;
     dispatch_once(&pred, ^{
       responsibility_spawnattrs_setdisclaim_ptr =
-#ifdef __cplusplus
           reinterpret_cast<__typeof__(&responsibility_spawnattrs_setdisclaim)>
-#endif
           (dlsym(RTLD_DEFAULT, "responsibility_spawnattrs_setdisclaim"));
     });
     if (responsibility_spawnattrs_setdisclaim_ptr)

@@ -12,7 +12,6 @@
 #include "src/__support/OSUtil/syscall.h" // For internal syscall function.
 #include "src/__support/common.h"
 
-#include <errno.h>
 #include <stdint.h>
 #include <sys/stat.h>
 #include <sys/syscall.h> // For syscall numbers.
@@ -74,12 +73,10 @@ LIBC_INLINE int statx(int dirfd, const char *__restrict path, int flags,
                       struct stat *__restrict statbuf) {
   // We make a statx syscall and copy out the result into the |statbuf|.
   ::statx_buf xbuf;
-  long ret = __llvm_libc::syscall_impl(SYS_statx, dirfd, path, flags,
-                                       ::STATX_BASIC_STATS_MASK, &xbuf);
-  if (ret < 0) {
-    errno = -ret;
-    return -1;
-  }
+  int ret = __llvm_libc::syscall_impl<int>(SYS_statx, dirfd, path, flags,
+                                           ::STATX_BASIC_STATS_MASK, &xbuf);
+  if (ret < 0)
+    return -ret;
 
   statbuf->st_dev = MKDEV(xbuf.stx_dev_major, xbuf.stx_dev_minor);
   statbuf->st_ino = xbuf.stx_ino;

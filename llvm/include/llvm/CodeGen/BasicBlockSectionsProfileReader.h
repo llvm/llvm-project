@@ -16,15 +16,16 @@
 #define LLVM_CODEGEN_BASICBLOCKSECTIONSPROFILEREADER_H
 
 #include "llvm/ADT/SmallSet.h"
+#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/IR/Module.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/LineIterator.h"
 #include "llvm/Support/MemoryBuffer.h"
-
 using namespace llvm;
 
 namespace llvm {
@@ -73,8 +74,9 @@ public:
   std::pair<bool, SmallVector<BBClusterInfo>>
   getBBClusterInfoForFunction(StringRef FuncName) const;
 
-  /// Read profiles of basic blocks if available here.
-  void initializePass() override;
+  // Initializes the FunctionNameToDIFilename map for the current module and
+  // then reads the profile for matching functions.
+  bool doInitialization(Module &M) override;
 
 private:
   StringRef getAliasName(StringRef FuncName) const {
@@ -82,8 +84,15 @@ private:
     return R == FuncAliasMap.end() ? FuncName : R->second;
   }
 
+  // Reads the basic block sections profile for functions in this module.
+  Error ReadProfile();
+
   // This contains the basic-block-sections profile.
   const MemoryBuffer *MBuf = nullptr;
+
+  // Map from every function name in the module to its debug info filename or
+  // empty string if no debug info is available.
+  StringMap<SmallString<128>> FunctionNameToDIFilename;
 
   // This encapsulates the BB cluster information for the whole program.
   //

@@ -9,9 +9,10 @@
 #ifndef LLDB_SOURCE_PLUGINS_SCRIPTED_PROCESS_H
 #define LLDB_SOURCE_PLUGINS_SCRIPTED_PROCESS_H
 
-#include "lldb/Interpreter/ScriptedMetadata.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Utility/ConstString.h"
+#include "lldb/Utility/ScriptedMetadata.h"
+#include "lldb/Utility/State.h"
 #include "lldb/Utility/Status.h"
 
 #include "ScriptedThread.h"
@@ -49,7 +50,18 @@ public:
 
   void DidLaunch() override;
 
+  void DidResume() override;
+
   Status DoResume() override;
+
+  Status DoAttachToProcessWithID(lldb::pid_t pid,
+                                 const ProcessAttachInfo &attach_info) override;
+
+  Status
+  DoAttachToProcessWithName(const char *process_name,
+                            const ProcessAttachInfo &attach_info) override;
+
+  void DidAttach(ArchSpec &process_arch) override;
 
   Status DoDestroy() override;
 
@@ -59,6 +71,11 @@ public:
 
   size_t DoReadMemory(lldb::addr_t addr, void *buf, size_t size,
                       Status &error) override;
+
+  size_t DoWriteMemory(lldb::addr_t vm_addr, const void *buf, size_t size,
+                       Status &error) override;
+
+  Status EnableBreakpointSite(BreakpointSite *bp_site) override;
 
   ArchSpec GetArchitecture();
 
@@ -76,11 +93,18 @@ public:
 
   void *GetImplementation() override;
 
+  void ForceScriptedState(lldb::StateType state) override {
+    // If we're about to stop, we should fetch the loaded dynamic libraries
+    // dictionary before emitting the private stop event to avoid having the
+    // module loading happen while the process state is changing.
+    if (StateIsStoppedState(state, true))
+      GetLoadedDynamicLibrariesInfos();
+    SetPrivateState(state);
+  }
+
 protected:
   ScriptedProcess(lldb::TargetSP target_sp, lldb::ListenerSP listener_sp,
                   const ScriptedMetadata &scripted_metadata, Status &error);
-
-  Status DoStop();
 
   void Clear();
 
@@ -89,6 +113,8 @@ protected:
 
   Status DoGetMemoryRegionInfo(lldb::addr_t load_addr,
                                MemoryRegionInfo &range_info) override;
+
+  Status DoAttach(const ProcessAttachInfo &attach_info);
 
 private:
   friend class ScriptedThread;

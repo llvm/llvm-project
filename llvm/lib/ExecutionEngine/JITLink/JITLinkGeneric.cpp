@@ -65,7 +65,7 @@ void JITLinkerBase::linkPhase2(std::unique_ptr<JITLinkerBase> Self,
   if (AR)
     Alloc = std::move(*AR);
   else
-    return abandonAllocAndBailOut(std::move(Self), AR.takeError());
+    return Ctx->notifyFailed(AR.takeError());
 
   LLVM_DEBUG({
     dbgs() << "Link graph \"" << G->getName()
@@ -218,8 +218,7 @@ void JITLinkerBase::applyLookupResult(AsyncLookupResult Result) {
     assert(!Sym->isDefined() && "Symbol being resolved is already defined");
     auto ResultI = Result.find(Sym->getName());
     if (ResultI != Result.end()) {
-      Sym->getAddressable().setAddress(
-          orc::ExecutorAddr(ResultI->second.getAddress()));
+      Sym->getAddressable().setAddress(ResultI->second.getAddress());
       Sym->setLinkage(ResultI->second.getFlags().isWeak() ? Linkage::Weak
                                                           : Linkage::Strong);
       Sym->setScope(ResultI->second.getFlags().isExported() ? Scope::Default

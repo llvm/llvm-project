@@ -19,7 +19,7 @@ Test *getTest(void);
 
 @implementation Test
 - (void)foo __attribute__((nomerge)) {
-  // expected-error@-1 {{'nomerge' attribute only applies to functions and statements}}
+  // expected-error@-1 {{'nomerge' attribute only applies to functions, statements and variables}}
 }
 
 - (void)bar {

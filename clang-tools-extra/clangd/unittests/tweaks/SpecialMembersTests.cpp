@@ -7,8 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "TweakTesting.h"
-#include "gmock/gmock-matchers.h"
-#include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
 namespace clang {
@@ -27,17 +25,17 @@ TEST_F(SpecialMembersTest, Test) {
                      "S &operator=(S&&); S &operator=(const S&);"
                      "};");
 
-  const char *Output = R"cpp(struct S{S(const S &) = default;
-  S(S &&) = default;
-  S &operator=(const S &) = default;
-  S &operator=(S &&) = default;
+  const char *Output = R"cpp(struct S{S(const S&) = default;
+S(S&&) = default;
+S &operator=(const S&) = default;
+S &operator=(S&&) = default;
 };)cpp";
   EXPECT_EQ(apply("struct ^S{};"), Output);
 
-  Output = R"cpp(struct S{S(const S &) = default;
-S(S &&) = default;
-S &operator=(const S &) = delete;
-S &operator=(S &&) = delete;
+  Output = R"cpp(struct S{S(const S&) = default;
+S(S&&) = default;
+S &operator=(const S&) = delete;
+S &operator=(S&&) = delete;
 int& ref;};)cpp";
   EXPECT_EQ(apply("struct ^S{int& ref;};"), Output);
 }

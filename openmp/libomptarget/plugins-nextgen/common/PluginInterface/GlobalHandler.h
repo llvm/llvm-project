@@ -158,8 +158,7 @@ public:
   /// Copy the memory associated with a global from the host to its counterpart
   /// on the device. The name, size, and origin are defined by \p HostGlobal.
   /// The destination is defined by \p DeviceGlobal.
-  Error writeGlobalToDevice(GenericDeviceTy &Device, DeviceImageTy &Image,
-                            const GlobalTy &HostGlobal,
+  Error writeGlobalToDevice(GenericDeviceTy &Device, const GlobalTy &HostGlobal,
                             const GlobalTy &DeviceGlobal) {
     return moveGlobalBetweenDeviceAndHost(Device, HostGlobal, DeviceGlobal,
                                           /* D2H */ false);

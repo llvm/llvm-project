@@ -1,5 +1,4 @@
 // RUN: %clang_cc1 -triple x86_64-apple-darwin11 -fsyntax-only -fobjc-arc -verify %s
-// rdar://9659270
 
 @interface NSObject
 - (id)copy; // expected-note {{method 'copy' declared here}}

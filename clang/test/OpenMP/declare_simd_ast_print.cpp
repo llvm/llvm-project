@@ -60,11 +60,11 @@ void h(int *hp, int *hp2, int *hq, int *lin)
 
 class VV {
   // CHECK: #pragma omp declare simd uniform(this, a) linear(val(b): a)
-  // CHECK-NEXT: int add(int a, int b) __attribute__((cold))    {
+  // CHECK-NEXT:  __attribute__((cold)) int add(int a, int b)     {
   // CHECK-NEXT: return a + b;
   // CHECK-NEXT: }
   #pragma omp declare simd uniform(this, a) linear(val(b): a)
-  int add(int a, int b) __attribute__((cold)) { return a + b; }
+  __attribute__((cold)) int add(int a, int b) { return a + b; }
 
   // CHECK: #pragma omp declare simd aligned(b: 4) aligned(a) linear(ref(b): 4) linear(val(this)) linear(val(a))
   // CHECK-NEXT: float taddpf(float *a, float *&b)     {

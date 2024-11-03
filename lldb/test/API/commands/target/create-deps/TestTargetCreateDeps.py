@@ -9,9 +9,9 @@ from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
-@skipIfWindows # Windows deals differently with shared libs.
-class TargetDependentsTestCase(TestBase):
 
+@skipIfWindows  # Windows deals differently with shared libs.
+class TargetDependentsTestCase(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
     def setUp(self):
@@ -22,24 +22,27 @@ class TargetDependentsTestCase(TestBase):
         self.expect(
             "image list",
             "image list should contain at least one image",
-            substrs=['[  0]'])
+            substrs=["[  0]"],
+        )
         should_match = not matching
-        self.expect(
-            "image list", msg, matching=should_match, substrs=['[  1]'])
+        self.expect("image list", msg, matching=should_match, substrs=["[  1]"])
 
-
-    @expectedFailureAll(oslist=["freebsd", "linux", "netbsd"],
-                        bugnumber='llvm.org/pr48372',
-                        triple=no_match(".*-android"))
+    @expectedFailureAll(
+        oslist=["freebsd", "linux", "netbsd"],
+        bugnumber="llvm.org/pr48372",
+        triple=no_match(".*-android"),
+    )
     def test_dependents_implicit_default_exe(self):
         """Test default behavior"""
         exe = self.getBuildArtifact("a.out")
         self.runCmd("target create  " + exe, CURRENT_EXECUTABLE_SET)
         self.has_exactly_one_image(False)
 
-    @expectedFailureAll(oslist=["freebsd", "linux", "netbsd"],
-                        bugnumber='llvm.org/pr48372',
-                        triple=no_match(".*-android"))
+    @expectedFailureAll(
+        oslist=["freebsd", "linux", "netbsd"],
+        bugnumber="llvm.org/pr48372",
+        triple=no_match(".*-android"),
+    )
     def test_dependents_explicit_default_exe(self):
         """Test default behavior"""
         exe = self.getBuildArtifact("a.out")
@@ -52,9 +55,11 @@ class TargetDependentsTestCase(TestBase):
         self.runCmd("target create -dtrue " + exe, CURRENT_EXECUTABLE_SET)
         self.has_exactly_one_image(True)
 
-    @expectedFailureAll(oslist=["freebsd", "linux", "netbsd"],
-                        bugnumber='llvm.org/pr48372',
-                        triple=no_match(".*-android"))
+    @expectedFailureAll(
+        oslist=["freebsd", "linux", "netbsd"],
+        bugnumber="llvm.org/pr48372",
+        triple=no_match(".*-android"),
+    )
     def test_dependents_explicit_false_exe(self):
         """Test default behavior"""
         exe = self.getBuildArtifact("a.out")
@@ -67,41 +72,43 @@ class TargetDependentsTestCase(TestBase):
         self.runCmd("target create  -d " + exe, CURRENT_EXECUTABLE_SET)
         self.has_exactly_one_image(True)
 
-    @expectedFailureAndroid # android will return mutiple images
+    @expectedFailureAndroid  # android will return mutiple images
     def test_dependents_implicit_default_lib(self):
         ctx = self.platformContext
-        dylibName = ctx.shlib_prefix + 'load_a.' + ctx.shlib_extension
+        dylibName = ctx.shlib_prefix + "load_a." + ctx.shlib_extension
         lib = self.getBuildArtifact(dylibName)
         self.runCmd("target create " + lib, CURRENT_EXECUTABLE_SET)
         self.has_exactly_one_image(True)
 
     def test_dependents_explicit_default_lib(self):
         ctx = self.platformContext
-        dylibName = ctx.shlib_prefix + 'load_a.' + ctx.shlib_extension
+        dylibName = ctx.shlib_prefix + "load_a." + ctx.shlib_extension
         lib = self.getBuildArtifact(dylibName)
         self.runCmd("target create -ddefault " + lib, CURRENT_EXECUTABLE_SET)
         self.has_exactly_one_image(True)
 
     def test_dependents_explicit_true_lib(self):
         ctx = self.platformContext
-        dylibName = ctx.shlib_prefix + 'load_a.' + ctx.shlib_extension
+        dylibName = ctx.shlib_prefix + "load_a." + ctx.shlib_extension
         lib = self.getBuildArtifact(dylibName)
         self.runCmd("target create -dtrue " + lib, CURRENT_EXECUTABLE_SET)
         self.has_exactly_one_image(True)
 
-    @expectedFailureAll(oslist=["freebsd", "linux", "netbsd"],
-                        bugnumber='llvm.org/pr48372',
-                        triple=no_match(".*-android"))
+    @expectedFailureAll(
+        oslist=["freebsd", "linux", "netbsd"],
+        bugnumber="llvm.org/pr48372",
+        triple=no_match(".*-android"),
+    )
     def test_dependents_explicit_false_lib(self):
         ctx = self.platformContext
-        dylibName = ctx.shlib_prefix + 'load_a.' + ctx.shlib_extension
+        dylibName = ctx.shlib_prefix + "load_a." + ctx.shlib_extension
         lib = self.getBuildArtifact(dylibName)
         self.runCmd("target create -dfalse " + lib, CURRENT_EXECUTABLE_SET)
         self.has_exactly_one_image(False)
 
     def test_dependents_implicit_false_lib(self):
         ctx = self.platformContext
-        dylibName = ctx.shlib_prefix + 'load_a.' + ctx.shlib_extension
+        dylibName = ctx.shlib_prefix + "load_a." + ctx.shlib_extension
         lib = self.getBuildArtifact(dylibName)
         self.runCmd("target create -d " + lib, CURRENT_EXECUTABLE_SET)
         self.has_exactly_one_image(True)

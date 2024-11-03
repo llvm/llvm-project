@@ -213,7 +213,7 @@ def PseudoConstI: IntImmLeaf<i32, [{ return Imm.getBitWidth() <= 32; }], imm_to_
 def PseudoConstF: FPImmLeaf<f32, [{  return true; }], fimm_to_i32>;
 def ConstPseudoTrue: IntImmLeaf<i32, [{ return Imm.getBitWidth() == 1 && Imm.getZExtValue() == 1; }]>;
 def ConstPseudoFalse: IntImmLeaf<i32, [{ return Imm.getBitWidth() == 1 && Imm.getZExtValue() == 0; }]>;
-def ConstPseudoNull: IntImmLeaf<i64, [{ return Imm.isNullValue(); }]>;
+def ConstPseudoNull: IntImmLeaf<i64, [{ return Imm.isZero(); }]>;
 
 multiclass IntFPImm<bits<16> opCode, string name> {
   def I: Op<opCode, (outs ID:$dst), (ins TYPE:$type, ID:$src, variable_ops),

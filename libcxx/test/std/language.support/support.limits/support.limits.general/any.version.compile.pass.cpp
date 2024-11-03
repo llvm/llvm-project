@@ -52,14 +52,23 @@
 #   error "__cpp_lib_any should have the value 201606L in c++20"
 # endif
 
-#elif TEST_STD_VER > 20
+#elif TEST_STD_VER == 23
 
 # ifndef __cpp_lib_any
-#   error "__cpp_lib_any should be defined in c++2b"
+#   error "__cpp_lib_any should be defined in c++23"
 # endif
 # if __cpp_lib_any != 201606L
-#   error "__cpp_lib_any should have the value 201606L in c++2b"
+#   error "__cpp_lib_any should have the value 201606L in c++23"
 # endif
 
-#endif // TEST_STD_VER > 20
+#elif TEST_STD_VER > 23
+
+# ifndef __cpp_lib_any
+#   error "__cpp_lib_any should be defined in c++26"
+# endif
+# if __cpp_lib_any != 201606L
+#   error "__cpp_lib_any should have the value 201606L in c++26"
+# endif
+
+#endif // TEST_STD_VER > 23
 

@@ -9,10 +9,6 @@
 // RUN: %clang -target powerpc-ibm-aix %s -mdefault-visibility-export-mapping=all -fvisibility=hidden -S -emit-llvm -o - | \
 // RUN:   FileCheck -check-prefixes=UNSPECIFIED-HID,EXPLICIT-EXP %s
 
-// RUN: not %clang -mdefault-visibility-export-mapping=explicit -target powerpc-unknown-linux %s 2>&1 | \
-// RUN: FileCheck -check-prefix=ERROR %s
-// ERROR: unsupported option '-mdefault-visibility-export-mapping=explicit' for target 'powerpc-unknown-linux'
-
 // UNSPECIFIED-DEF: define void @func()
 // UNSPECIFIED-HID: define hidden void @func()
 // UNSPECIFIED-EXP: define dllexport void @func()

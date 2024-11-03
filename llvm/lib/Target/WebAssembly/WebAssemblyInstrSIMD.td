@@ -376,7 +376,7 @@ multiclass SIMDStoreLane<Vec vec, bits<32> simdop> {
            [], name#"\t${off}(${addr})$p2align, $vec, $idx",
            name#"\t$off$p2align, $idx", simdop>;
   defm STORE_LANE_#vec#_A64 :
-    SIMD_I<(outs V128:$dst),
+    SIMD_I<(outs),
            (ins P2Align:$p2align, offset64_op:$off, vec_i8imm_op:$idx,
                 I64:$addr, V128:$vec),
            (outs), (ins P2Align:$p2align, offset64_op:$off, vec_i8imm_op:$idx),
@@ -529,6 +529,22 @@ defm SHUFFLE :
 def wasm_shuffle_t : SDTypeProfile<1, 18, []>;
 def wasm_shuffle : SDNode<"WebAssemblyISD::SHUFFLE", wasm_shuffle_t>;
 foreach vec = AllVecs in {
+// The @llvm.wasm.shuffle intrinsic has immediate arguments that become TargetConstants.
+def : Pat<(vec.vt (wasm_shuffle (vec.vt V128:$x), (vec.vt V128:$y),
+            (i32 timm:$m0), (i32 timm:$m1),
+            (i32 timm:$m2), (i32 timm:$m3),
+            (i32 timm:$m4), (i32 timm:$m5),
+            (i32 timm:$m6), (i32 timm:$m7),
+            (i32 timm:$m8), (i32 timm:$m9),
+            (i32 timm:$mA), (i32 timm:$mB),
+            (i32 timm:$mC), (i32 timm:$mD),
+            (i32 timm:$mE), (i32 timm:$mF))),
+          (SHUFFLE $x, $y,
+            imm:$m0, imm:$m1, imm:$m2, imm:$m3,
+            imm:$m4, imm:$m5, imm:$m6, imm:$m7,
+            imm:$m8, imm:$m9, imm:$mA, imm:$mB,
+            imm:$mC, imm:$mD, imm:$mE, imm:$mF)>;
+// Normal shufflevector instructions may have normal constant arguemnts.
 def : Pat<(vec.vt (wasm_shuffle (vec.vt V128:$x), (vec.vt V128:$y),
             (i32 LaneIdx32:$m0), (i32 LaneIdx32:$m1),
             (i32 LaneIdx32:$m2), (i32 LaneIdx32:$m3),
@@ -1141,6 +1157,14 @@ defm CEIL : SIMDUnary<F64x2, fceil, "ceil", 0x74>;
 defm FLOOR : SIMDUnary<F64x2, ffloor, "floor", 0x75>;
 defm TRUNC: SIMDUnary<F64x2, ftrunc, "trunc", 0x7a>;
 defm NEAREST: SIMDUnary<F64x2, fnearbyint, "nearest", 0x94>;
+
+// WebAssembly doesn't expose inexact exceptions, so map frint to fnearbyint.
+def : Pat<(v4f32 (frint (v4f32 V128:$src))), (NEAREST_F32x4 V128:$src)>;
+def : Pat<(v2f64 (frint (v2f64 V128:$src))), (NEAREST_F64x2 V128:$src)>;
+
+// WebAssembly always rounds ties-to-even, so map froundeven to fnearbyint.
+def : Pat<(v4f32 (froundeven (v4f32 V128:$src))), (NEAREST_F32x4 V128:$src)>;
+def : Pat<(v2f64 (froundeven (v2f64 V128:$src))), (NEAREST_F64x2 V128:$src)>;
 
 //===----------------------------------------------------------------------===//
 // Floating-point binary arithmetic

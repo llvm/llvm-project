@@ -33,7 +33,7 @@ class year {
 private:
     short __y_;
 public:
-    _LIBCPP_HIDE_FROM_ABI year() = default;
+    year() = default;
     _LIBCPP_HIDE_FROM_ABI explicit inline constexpr year(int __val) noexcept : __y_(static_cast<short>(__val)) {}
 
     _LIBCPP_HIDE_FROM_ABI inline constexpr year& operator++()    noexcept { ++__y_; return *this; }

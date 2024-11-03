@@ -24,11 +24,12 @@ JITLinkMemoryManager::InFlightAlloc::~InFlightAlloc() = default;
 BasicLayout::BasicLayout(LinkGraph &G) : G(G) {
 
   for (auto &Sec : G.sections()) {
-    // Skip empty sections.
-    if (Sec.blocks().empty())
+    // Skip empty sections, and sections with NoAlloc lifetime policies.
+    if (Sec.blocks().empty() ||
+        Sec.getMemLifetimePolicy() == orc::MemLifetimePolicy::NoAlloc)
       continue;
 
-    auto &Seg = Segments[{Sec.getMemProt(), Sec.getMemDeallocPolicy()}];
+    auto &Seg = Segments[{Sec.getMemProt(), Sec.getMemLifetimePolicy()}];
     for (auto *B : Sec.blocks())
       if (LLVM_LIKELY(!B->isZeroFill()))
         Seg.ContentBlocks.push_back(B);
@@ -89,7 +90,7 @@ BasicLayout::getContiguousPageBasedLayoutSizes(uint64_t PageSize) {
                                      inconvertibleErrorCode());
 
     uint64_t SegSize = alignTo(Seg.ContentSize + Seg.ZeroFillSize, PageSize);
-    if (AG.getMemDeallocPolicy() == orc::MemDeallocPolicy::Standard)
+    if (AG.getMemLifetimePolicy() == orc::MemLifetimePolicy::Standard)
       SegsSizes.StandardSegs += SegSize;
     else
       SegsSizes.FinalizeSegs += SegSize;
@@ -146,7 +147,7 @@ void SimpleSegmentAlloc::Create(JITLinkMemoryManager &MemMgr,
                                 const JITLinkDylib *JD, SegmentMap Segments,
                                 OnCreatedFunction OnCreated) {
 
-  static_assert(orc::AllocGroup::NumGroups == 16,
+  static_assert(orc::AllocGroup::NumGroups == 32,
                 "AllocGroup has changed. Section names below must be updated");
   StringRef AGSectionNames[] = {
       "__---.standard", "__R--.standard", "__-W-.standard", "__RW-.standard",
@@ -163,12 +164,15 @@ void SimpleSegmentAlloc::Create(JITLinkMemoryManager &MemMgr,
     auto &AG = KV.first;
     auto &Seg = KV.second;
 
+    assert(AG.getMemLifetimePolicy() != orc::MemLifetimePolicy::NoAlloc &&
+           "NoAlloc segments are not supported by SimpleSegmentAlloc");
+
     auto AGSectionName =
         AGSectionNames[static_cast<unsigned>(AG.getMemProt()) |
-                       static_cast<bool>(AG.getMemDeallocPolicy()) << 3];
+                       static_cast<bool>(AG.getMemLifetimePolicy()) << 3];
 
     auto &Sec = G->createSection(AGSectionName, AG.getMemProt());
-    Sec.setMemDeallocPolicy(AG.getMemDeallocPolicy());
+    Sec.setMemLifetimePolicy(AG.getMemLifetimePolicy());
 
     if (Seg.ContentSize != 0) {
       NextAddr =
@@ -416,7 +420,7 @@ void InProcessMemoryManager::allocate(const JITLinkDylib *JD, LinkGraph &G,
     auto &Seg = KV.second;
 
     auto &SegAddr =
-        (AG.getMemDeallocPolicy() == orc::MemDeallocPolicy::Standard)
+        (AG.getMemLifetimePolicy() == orc::MemLifetimePolicy::Standard)
             ? NextStandardSegAddr
             : NextFinalizeSegAddr;
 

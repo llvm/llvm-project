@@ -178,3 +178,85 @@ body:             |
     S_BRANCH %bb.3
 
 ...
+
+# Check we don't get "Block should not be in AliveBlocks" for
+# registers defined before si_end_cf
+---
+name:            live_variables_update_block_split_split_killed_def_before_si_end_cf
+tracksRegLiveness: true
+body:             |
+  ; CHECK-LABEL: name: live_variables_update_block_split_split_killed_def_before_si_end_cf
+  ; CHECK: bb.0:
+  ; CHECK-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
+  ; CHECK-NEXT:   liveins: $vgpr0
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:vgpr_32 = COPY killed $vgpr0
+  ; CHECK-NEXT:   [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
+  ; CHECK-NEXT:   [[V_CMP_EQ_U32_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U32_e64 0, killed [[COPY]], implicit $exec
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32 = COPY [[V_MOV_B32_e32_]]
+  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32 = COPY killed [[V_MOV_B32_e32_]]
+  ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:sreg_64 = COPY $exec, implicit-def $exec
+  ; CHECK-NEXT:   [[S_AND_B64_:%[0-9]+]]:sreg_64 = S_AND_B64 [[COPY3]], [[V_CMP_EQ_U32_e64_]], implicit-def dead $scc
+  ; CHECK-NEXT:   [[S_XOR_B64_:%[0-9]+]]:sreg_64_xexec = S_XOR_B64 [[S_AND_B64_]], [[COPY3]], implicit-def dead $scc
+  ; CHECK-NEXT:   $exec = S_MOV_B64_term killed [[S_AND_B64_]]
+  ; CHECK-NEXT:   [[S_MOV_B64_term:%[0-9]+]]:sreg_64_xexec = S_MOV_B64_term killed [[S_XOR_B64_]], implicit $exec
+  ; CHECK-NEXT:   S_CBRANCH_EXECZ %bb.1, implicit $exec
+  ; CHECK-NEXT:   S_BRANCH %bb.2
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1:
+  ; CHECK-NEXT:   successors: %bb.3(0x80000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:sreg_64_xexec = COPY killed [[S_MOV_B64_term]]
+  ; CHECK-NEXT:   [[S_MOV_B64_:%[0-9]+]]:sreg_64 = S_MOV_B64 1
+  ; CHECK-NEXT:   $exec = S_OR_B64_term $exec, killed [[COPY4]], implicit-def $scc
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.3:
+  ; CHECK-NEXT:   successors: %bb.2(0x80000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   S_NOP 0, implicit killed [[S_MOV_B64_]]
+  ; CHECK-NEXT:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY killed [[COPY1]]
+  ; CHECK-NEXT:   [[V_ADD_U32_e32_:%[0-9]+]]:vgpr_32 = nsw V_ADD_U32_e32 1, killed [[COPY5]], implicit $exec
+  ; CHECK-NEXT:   [[COPY6:%[0-9]+]]:vgpr_32 = COPY killed [[V_ADD_U32_e32_]]
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.2:
+  ; CHECK-NEXT:   successors: %bb.2(0x40000000), %bb.1(0x40000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[COPY66:%[0-9]+]]:vgpr_32 = COPY killed [[COPY6]]
+  ; CHECK-NEXT:   GLOBAL_STORE_DWORD undef %11:vreg_64, [[COPY66]], 0, 0, implicit $exec :: (volatile store (s32), addrspace 1)
+  ; CHECK-NEXT:   [[COPY7:%[0-9]+]]:vgpr_32 = COPY killed [[COPY66]]
+  ; CHECK-NEXT:   [[COPY8:%[0-9]+]]:vgpr_32 = COPY [[COPY7]]
+  ; CHECK-NEXT:   [[COPY8:%[0-9]+]]:vgpr_32 = COPY killed [[COPY7]]
+  ; CHECK-NEXT:   [[COPY8:%[0-9]+]]:sreg_64 = COPY $exec, implicit-def $exec
+  ; CHECK-NEXT:   [[S_AND_B64_1:%[0-9]+]]:sreg_64 = S_AND_B64 [[COPY8]], [[V_CMP_EQ_U32_e64_]], implicit-def dead $scc
+  ; CHECK-NEXT:   [[S_XOR_B64_1:%[0-9]+]]:sreg_64_xexec = S_XOR_B64 [[S_AND_B64_1]], [[COPY8]], implicit-def dead $scc
+  ; CHECK-NEXT:   $exec = S_MOV_B64_term killed [[S_AND_B64_1]]
+  ; CHECK-NEXT:   [[S_MOV_B64_term1:%[0-9]+]]:sreg_64_xexec = S_MOV_B64_term killed [[S_XOR_B64_1]], implicit $exec
+  ; CHECK-NEXT:   S_CBRANCH_EXECZ %bb.1, implicit $exec
+  ; CHECK-NEXT:   S_BRANCH %bb.2
+  bb.0:
+    liveins: $vgpr0
+
+    %0:vgpr_32 = COPY killed $vgpr0
+    %1:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
+    %2:sreg_64_xexec = V_CMP_EQ_U32_e64 0, killed %0, implicit $exec
+    %3:sreg_64_xexec = SI_IF %2, %bb.1, implicit-def $exec, implicit-def dead $scc, implicit $exec
+    S_BRANCH %bb.2
+
+  bb.1:
+    %4:sreg_64_xexec = PHI %5, %bb.2, %3, %bb.0
+    %6:vgpr_32 = PHI %7, %bb.2, %1, %bb.0
+    %8:sreg_64 = S_MOV_B64 1
+    SI_END_CF killed %4, implicit-def $exec, implicit-def dead $scc, implicit $exec
+    S_NOP 0, implicit killed %8
+    %9:vgpr_32 = nsw V_ADD_U32_e32 1, killed %6, implicit $exec
+
+  bb.2:
+    successors: %bb.2(0x40000000), %bb.1(0x40000000)
+
+    %10:vgpr_32 = PHI %9, %bb.1, %7, %bb.2, %1, %bb.0
+    GLOBAL_STORE_DWORD undef %11:vreg_64, %10, 0, 0, implicit $exec :: (volatile store (s32), addrspace 1)
+    %7:vgpr_32 = COPY killed %10
+    %5:sreg_64_xexec = SI_IF %2, %bb.1, implicit-def $exec, implicit-def dead $scc, implicit $exec
+    S_BRANCH %bb.2
+
+...

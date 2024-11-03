@@ -94,6 +94,7 @@ public:
   explicit operator unsigned() const { return V; }
   explicit operator int64_t() const { return V; }
   explicit operator uint64_t() const { return V; }
+  explicit operator int32_t() const { return V; }
 
   APSInt toAPSInt() const {
     return APSInt(APInt(Bits, static_cast<uint64_t>(V), Signed), !Signed);
@@ -127,7 +128,11 @@ public:
     return Compare(V, RHS.V);
   }
 
-  unsigned countLeadingZeros() const { return llvm::countl_zero<ReprT>(V); }
+  unsigned countLeadingZeros() const {
+    if constexpr (!Signed)
+      return llvm::countl_zero<ReprT>(V);
+    llvm_unreachable("Don't call countLeadingZeros() on signed types.");
+  }
 
   Integral truncate(unsigned TruncBits) const {
     if (TruncBits >= Bits)
@@ -158,13 +163,6 @@ public:
   static std::enable_if_t<SrcBits != 0, Integral>
   from(Integral<SrcBits, SrcSign> Value) {
     return Integral(Value.V);
-  }
-
-  template <bool SrcSign> static Integral from(Integral<0, SrcSign> Value) {
-    if constexpr (SrcSign)
-      return Integral(Value.V.getSExtValue());
-    else
-      return Integral(Value.V.getZExtValue());
   }
 
   static Integral zero() { return from(0); }
@@ -223,6 +221,9 @@ public:
   }
 
   static bool neg(Integral A, Integral *R) {
+    if (Signed && A.isMin())
+      return true;
+
     *R = -A;
     return false;
   }

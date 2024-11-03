@@ -9,6 +9,7 @@
 #include "llvm/DebugInfo/DWARF/DWARFFormValue.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/DebugInfo/DWARF/DWARFDataExtractor.h"
 #include "llvm/Support/FormatVariadic.h"
@@ -30,6 +31,10 @@ TEST(DWARFFormValue, FormClass) {
   EXPECT_FALSE(isFormClass(DW_FORM_data8, DWARFFormValue::FC_Address));
   EXPECT_TRUE(isFormClass(DW_FORM_data8, DWARFFormValue::FC_Constant));
   EXPECT_TRUE(isFormClass(DW_FORM_data8, DWARFFormValue::FC_SectionOffset));
+  EXPECT_TRUE(doesFormBelongToClass(DW_FORM_data8,
+                                    DWARFFormValue::FC_SectionOffset, 3));
+  EXPECT_FALSE(doesFormBelongToClass(DW_FORM_data8,
+                                     DWARFFormValue::FC_SectionOffset, 5));
   EXPECT_TRUE(
       isFormClass(DW_FORM_sec_offset, DWARFFormValue::FC_SectionOffset));
   EXPECT_TRUE(isFormClass(DW_FORM_GNU_str_index, DWARFFormValue::FC_String));

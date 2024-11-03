@@ -291,6 +291,7 @@ ProgramStateRef PthreadLockChecker::resolvePossiblyDestroyedMutex(
   // Existence in DestroyRetVal ensures existence in LockMap.
   // Existence in Destroyed also ensures that the lock state for lockR is either
   // UntouchedAndPossiblyDestroyed or UnlockedAndPossiblyDestroyed.
+  assert(lstate);
   assert(lstate->isUntouchedAndPossiblyDestroyed() ||
          lstate->isUnlockedAndPossiblyDestroyed());
 

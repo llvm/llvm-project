@@ -1,7 +1,7 @@
 # RUN: llc %s -o - -mtriple=x86_64-unknown-unknown \
 # RUN:    -experimental-debug-variable-locations \
 # RUN:    -start-before=phi-node-elimination \
-# RUN:    -stop-after=simple-register-coalescing \
+# RUN:    -stop-after=register-coalescer \
 # RUN:    | FileCheck %s --check-prefix=DOESCOALESCE
 # RUN: llc %s -o - -mtriple=x86_64-unknown-unknown \
 # RUN:    -experimental-debug-variable-locations \

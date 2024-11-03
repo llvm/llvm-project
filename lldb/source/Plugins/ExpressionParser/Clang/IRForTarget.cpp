@@ -476,8 +476,7 @@ bool IRForTarget::RewriteObjCConstString(llvm::GlobalVariable *ns_str,
     string_array = dyn_cast<ConstantDataSequential>(cstr->getInitializer());
 
   Constant *alloc_arg = Constant::getNullValue(i8_ptr_ty);
-  Constant *bytes_arg = cstr ? ConstantExpr::getBitCast(cstr, i8_ptr_ty)
-                             : Constant::getNullValue(i8_ptr_ty);
+  Constant *bytes_arg = cstr ? cstr : Constant::getNullValue(i8_ptr_ty);
   Constant *numBytes_arg = ConstantInt::get(
       m_intptr_ty, cstr ? (string_array->getNumElements() - 1) * string_array->getElementByteSize() : 0, false);
  int encoding_flags = 0;
@@ -743,8 +742,8 @@ bool IRForTarget::RewriteObjCSelector(Instruction *selector_load) {
   // where %obj is the object pointer and %sel is the selector.
   //
   // @"OBJC_SELECTOR_REFERENCES_" is a pointer to a character array called
-  // @"\01L_OBJC_llvm_moduleETH_VAR_NAllvm_moduleE_".
-  // @"\01L_OBJC_llvm_moduleETH_VAR_NAllvm_moduleE_" contains the string.
+  // @"\01L_OBJC_METH_VAR_NAME_".
+  // @"\01L_OBJC_METH_VAR_NAME_" contains the string.
 
   // Find the pointer's initializer and get the string from its target.
 
@@ -821,17 +820,9 @@ bool IRForTarget::RewriteObjCSelector(Instruction *selector_load) {
                           ConstantExpr::getIntToPtr(srN_addr_int, srN_ptr_ty)};
   }
 
-  Value *argument_array[1];
-
-  Constant *omvn_pointer = ConstantExpr::getBitCast(
-      _objc_meth_var_name_, Type::getInt8PtrTy(m_module->getContext()));
-
-  argument_array[0] = omvn_pointer;
-
-  ArrayRef<Value *> srN_arguments(argument_array, 1);
-
-  CallInst *srN_call = CallInst::Create(m_sel_registerName, srN_arguments,
-                                        "sel_registerName", selector_load);
+  CallInst *srN_call =
+      CallInst::Create(m_sel_registerName, _objc_meth_var_name_,
+                       "sel_registerName", selector_load);
 
   // Replace the load with the call in all users
 
@@ -860,156 +851,6 @@ bool IRForTarget::RewriteObjCSelectors(BasicBlock &basic_block) {
                             "dynamic reference\n");
 
       LLDB_LOG(log, "Couldn't rewrite a reference to an Objective-C selector");
-
-      return false;
-    }
-  }
-
-  return true;
-}
-
-static bool IsObjCClassReference(Value *value) {
-  GlobalVariable *global_variable = dyn_cast<GlobalVariable>(value);
-
-  return !(!global_variable || !global_variable->hasName() ||
-           !global_variable->getName().startswith("OBJC_CLASS_REFERENCES_"));
-}
-
-// This function does not report errors; its callers are responsible.
-bool IRForTarget::RewriteObjCClassReference(Instruction *class_load) {
-  lldb_private::Log *log(GetLog(LLDBLog::Expressions));
-
-  LoadInst *load = dyn_cast<LoadInst>(class_load);
-
-  if (!load)
-    return false;
-
-  // Unpack the class name from the reference.  In LLVM IR, a reference to an
-  // Objective-C class gets represented as
-  //
-  // %tmp     = load %struct._objc_class*,
-  //            %struct._objc_class** @OBJC_CLASS_REFERENCES_, align 4
-  //
-  // @"OBJC_CLASS_REFERENCES_ is a bitcast of a character array called
-  // @OBJC_CLASS_NAME_. @OBJC_CLASS_NAME contains the string.
-
-  // Find the pointer's initializer (a ConstantExpr with opcode BitCast) and
-  // get the string from its target
-
-  GlobalVariable *_objc_class_references_ =
-      dyn_cast<GlobalVariable>(load->getPointerOperand());
-
-  if (!_objc_class_references_ ||
-      !_objc_class_references_->hasInitializer())
-    return false;
-
-  Constant *ocr_initializer = _objc_class_references_->getInitializer();
-
-  ConstantExpr *ocr_initializer_expr = dyn_cast<ConstantExpr>(ocr_initializer);
-
-  if (!ocr_initializer_expr ||
-      ocr_initializer_expr->getOpcode() != Instruction::BitCast)
-    return false;
-
-  Value *ocr_initializer_base = ocr_initializer_expr->getOperand(0);
-
-  if (!ocr_initializer_base)
-    return false;
-
-  // Find the string's initializer (a ConstantArray) and get the string from it
-
-  GlobalVariable *_objc_class_name_ =
-      dyn_cast<GlobalVariable>(ocr_initializer_base);
-
-  if (!_objc_class_name_ || !_objc_class_name_->hasInitializer())
-    return false;
-
-  Constant *ocn_initializer = _objc_class_name_->getInitializer();
-
-  ConstantDataArray *ocn_initializer_array =
-      dyn_cast<ConstantDataArray>(ocn_initializer);
-
-  if (!ocn_initializer_array->isString())
-    return false;
-
-  std::string ocn_initializer_string =
-      std::string(ocn_initializer_array->getAsString());
-
-  LLDB_LOG(log, "Found Objective-C class reference \"{0}\"",
-           ocn_initializer_string);
-
-  // Construct a call to objc_getClass
-
-  if (!m_objc_getClass) {
-    lldb::addr_t objc_getClass_addr;
-
-    bool missing_weak = false;
-    static lldb_private::ConstString g_objc_getClass_str("objc_getClass");
-    objc_getClass_addr = m_execution_unit.FindSymbol(g_objc_getClass_str,
-                                                     missing_weak);
-    if (objc_getClass_addr == LLDB_INVALID_ADDRESS || missing_weak)
-      return false;
-
-    LLDB_LOG(log, "Found objc_getClass at {0}", objc_getClass_addr);
-
-    // Build the function type: %struct._objc_class *objc_getClass(i8*)
-
-    Type *class_type = load->getType();
-    Type *type_array[1];
-    type_array[0] = llvm::Type::getInt8PtrTy(m_module->getContext());
-
-    ArrayRef<Type *> ogC_arg_types(type_array, 1);
-
-    llvm::FunctionType *ogC_type =
-        FunctionType::get(class_type, ogC_arg_types, false);
-
-    // Build the constant containing the pointer to the function
-    PointerType *ogC_ptr_ty = PointerType::getUnqual(ogC_type);
-    Constant *ogC_addr_int =
-        ConstantInt::get(m_intptr_ty, objc_getClass_addr, false);
-    m_objc_getClass = {ogC_type,
-                       ConstantExpr::getIntToPtr(ogC_addr_int, ogC_ptr_ty)};
-  }
-
-  Value *argument_array[1];
-
-  Constant *ocn_pointer = ConstantExpr::getBitCast(
-      _objc_class_name_, Type::getInt8PtrTy(m_module->getContext()));
-
-  argument_array[0] = ocn_pointer;
-
-  ArrayRef<Value *> ogC_arguments(argument_array, 1);
-
-  CallInst *ogC_call = CallInst::Create(m_objc_getClass, ogC_arguments,
-                                        "objc_getClass", class_load);
-
-  // Replace the load with the call in all users
-
-  class_load->replaceAllUsesWith(ogC_call);
-
-  class_load->eraseFromParent();
-
-  return true;
-}
-
-bool IRForTarget::RewriteObjCClassReferences(BasicBlock &basic_block) {
-  lldb_private::Log *log(GetLog(LLDBLog::Expressions));
-
-  InstrList class_loads;
-
-  for (Instruction &inst : basic_block) {
-    if (LoadInst *load = dyn_cast<LoadInst>(&inst))
-      if (IsObjCClassReference(load->getPointerOperand()))
-        class_loads.push_back(&inst);
-  }
-
-  for (Instruction *inst : class_loads) {
-    if (!RewriteObjCClassReference(inst)) {
-      m_error_stream.Printf("Internal error [IRForTarget]: Couldn't change a "
-                            "static reference to an Objective-C class to a "
-                            "dynamic reference\n");
-
-      LLDB_LOG(log, "Couldn't rewrite a reference to an Objective-C class");
 
       return false;
     }
@@ -1419,19 +1260,7 @@ bool IRForTarget::ResolveExternals(Function &llvm_function) {
 }
 
 static bool isGuardVariableRef(Value *V) {
-  Constant *Old = dyn_cast<Constant>(V);
-
-  if (!Old)
-    return false;
-
-  if (auto CE = dyn_cast<ConstantExpr>(V)) {
-    if (CE->getOpcode() != Instruction::BitCast)
-      return false;
-
-    Old = CE->getOperand(0);
-  }
-
-  GlobalVariable *GV = dyn_cast<GlobalVariable>(Old);
+  GlobalVariable *GV = dyn_cast<GlobalVariable>(V);
 
   if (!GV || !GV->hasName() || !isGuardVariableSymbol(GV->getName()))
     return false;
@@ -1732,19 +1561,12 @@ bool IRForTarget::ReplaceVariables(Function &llvm_function) {
                 int8Ty, argument, offset_int, "", entry_instruction);
 
             if (name == m_result_name && !m_result_is_pointer) {
-              BitCastInst *bit_cast = new BitCastInst(
-                  get_element_ptr, value->getType()->getPointerTo(), "",
-                  entry_instruction);
-
-              LoadInst *load = new LoadInst(value->getType(), bit_cast, "",
-                                            entry_instruction);
+              LoadInst *load = new LoadInst(value->getType(), get_element_ptr,
+                                            "", entry_instruction);
 
               return load;
             } else {
-              BitCastInst *bit_cast = new BitCastInst(
-                  get_element_ptr, value->getType(), "", entry_instruction);
-
-              return bit_cast;
+              return get_element_ptr;
             }
           });
 
@@ -1900,14 +1722,6 @@ bool IRForTarget::runOnModule(Module &llvm_module) {
 
         // RewriteObjCSelectors() reports its own errors, so we don't do so
         // here
-
-        return false;
-      }
-
-      if (!RewriteObjCClassReferences(bb)) {
-        LLDB_LOG(log, "RewriteObjCClassReferences() failed");
-
-        // RewriteObjCClasses() reports its own errors, so we don't do so here
 
         return false;
       }

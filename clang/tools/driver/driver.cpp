@@ -79,9 +79,9 @@ static const char *GetStableCStr(std::set<std::string> &SavedStrings,
   return SavedStrings.insert(std::string(S)).first->c_str();
 }
 
-/// ApplyQAOverride - Apply a list of edits to the input argument lists.
+/// ApplyOneQAOverride - Apply a list of edits to the input argument lists.
 ///
-/// The input string is a space separate list of edits to perform,
+/// The input string is a space separated list of edits to perform,
 /// they are applied in order to the input argument lists. Edits
 /// should be one of the following forms:
 ///
@@ -177,7 +177,7 @@ static void ApplyOneQAOverride(raw_ostream &OS,
   }
 }
 
-/// ApplyQAOverride - Apply a comma separate list of edits to the
+/// ApplyQAOverride - Apply a space separated list of edits to the
 /// input argument lists. See ApplyOneQAOverride.
 static void ApplyQAOverride(SmallVectorImpl<const char*> &Args,
                             const char *OverrideStr,
@@ -307,6 +307,9 @@ static bool SetBackdoorDriverOutputsFromEnvVars(Driver &TheDriver) {
   TheDriver.CCPrintProcessStats =
       checkEnvVar<bool>("CC_PRINT_PROC_STAT", "CC_PRINT_PROC_STAT_FILE",
                         TheDriver.CCPrintStatReportFilename);
+  TheDriver.CCPrintInternalStats =
+      checkEnvVar<bool>("CC_PRINT_INTERNAL_STAT", "CC_PRINT_INTERNAL_STAT_FILE",
+                        TheDriver.CCPrintInternalStatReportFilename);
 
   return true;
 }
@@ -391,55 +394,17 @@ int clang_main(int Argc, char **Argv, const llvm::ToolContext &ToolContext) {
   const char *ProgName =
       ToolContext.NeedsPrependArg ? ToolContext.PrependArg : ToolContext.Path;
 
-  // Parse response files using the GNU syntax, unless we're in CL mode. There
-  // are two ways to put clang in CL compatibility mode: ProgName is either
-  // clang-cl or cl, or --driver-mode=cl is on the command line. The normal
-  // command line parsing can't happen until after response file parsing, so we
-  // have to manually search for a --driver-mode=cl argument the hard way.
-  // Finally, our -cc1 tools don't care which tokenization mode we use because
-  // response files written by clang will tokenize the same way in either mode.
   bool ClangCLMode =
       IsClangCL(getDriverMode(ProgName, llvm::ArrayRef(Args).slice(1)));
-  enum { Default, POSIX, Windows } RSPQuoting = Default;
-  for (const char *F : Args) {
-    if (strcmp(F, "--rsp-quoting=posix") == 0)
-      RSPQuoting = POSIX;
-    else if (strcmp(F, "--rsp-quoting=windows") == 0)
-      RSPQuoting = Windows;
-  }
 
-  // Determines whether we want nullptr markers in Args to indicate response
-  // files end-of-lines. We only use this for the /LINK driver argument with
-  // clang-cl.exe on Windows.
-  bool MarkEOLs = ClangCLMode;
-
-  llvm::cl::TokenizerCallback Tokenizer;
-  if (RSPQuoting == Windows || (RSPQuoting == Default && ClangCLMode))
-    Tokenizer = &llvm::cl::TokenizeWindowsCommandLine;
-  else
-    Tokenizer = &llvm::cl::TokenizeGNUCommandLine;
-
-  if (MarkEOLs && Args.size() > 1 && StringRef(Args[1]).startswith("-cc1"))
-    MarkEOLs = false;
-  llvm::cl::ExpansionContext ECtx(A, Tokenizer);
-  ECtx.setMarkEOLs(MarkEOLs);
-  if (llvm::Error Err = ECtx.expandResponseFiles(Args)) {
+  if (llvm::Error Err = expandResponseFiles(Args, ClangCLMode, A)) {
     llvm::errs() << toString(std::move(Err)) << '\n';
     return 1;
   }
 
-  // Handle -cc1 integrated tools, even if -cc1 was expanded from a response
-  // file.
-  auto FirstArg = llvm::find_if(llvm::drop_begin(Args),
-                                [](const char *A) { return A != nullptr; });
-  if (FirstArg != Args.end() && StringRef(*FirstArg).startswith("-cc1")) {
-    // If -cc1 came from a response file, remove the EOL sentinels.
-    if (MarkEOLs) {
-      auto newEnd = std::remove(Args.begin(), Args.end(), nullptr);
-      Args.resize(newEnd - Args.begin());
-    }
+  // Handle -cc1 integrated tools.
+  if (Args.size() >= 2 && StringRef(Args[1]).startswith("-cc1"))
     return ExecuteCC1Tool(Args, ToolContext);
-  }
 
   // Handle options that need handling before the real command line parsing in
   // Driver::BuildCompilation()

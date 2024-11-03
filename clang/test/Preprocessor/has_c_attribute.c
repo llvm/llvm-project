@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fdouble-square-bracket-attributes -std=c11 -E -P %s -o - | FileCheck %s
+// RUN: %clang_cc1 -std=c11 -E -P %s -o - | FileCheck %s
 // RUN: %clang_cc1 -std=c2x -E -P %s -o - | FileCheck %s
 
 #define C2x(x) x: __has_c_attribute(x)

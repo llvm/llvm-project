@@ -21,4 +21,4 @@ int main() {}
 // Check that we get the right error when writing to an invalid path:
 
 // RUN: not llvm-cov show %S/Inputs/double_dots.covmapping -instr-profile=%t.profdata -o /dev/null 2>&1 | FileCheck %s -check-prefix=ERROR-MESSAGE
-// ERROR-MESSAGE: error: {{.*}}: Could not create index file!
+// ERROR-MESSAGE: error: {{.*}}: could not create index file!

@@ -9,12 +9,12 @@
 #ifndef LLVM_LIBC_SRC_SIGNAL_LINUX_SIGNAL_UTILS_H
 #define LLVM_LIBC_SRC_SIGNAL_LINUX_SIGNAL_UTILS_H
 
-#include "include/sys/syscall.h"          // For syscall numbers.
 #include "src/__support/OSUtil/syscall.h" // For internal syscall function.
 #include "src/__support/common.h"
 
 #include <signal.h>
 #include <stddef.h>
+#include <sys/syscall.h>          // For syscall numbers.
 
 namespace __llvm_libc {
 
@@ -44,7 +44,7 @@ struct KernelSigaction {
 
   LIBC_INLINE operator struct sigaction() const {
     struct sigaction sa;
-    sa.sa_flags = sa_flags;
+    sa.sa_flags = static_cast<int>(sa_flags);
     sa.sa_mask = sa_mask;
     sa.sa_restorer = sa_restorer;
     if (sa_flags & SA_SIGINFO)
@@ -96,13 +96,13 @@ LIBC_INLINE constexpr bool delete_signal(sigset_t &set, int signal) {
 
 LIBC_INLINE int block_all_signals(sigset_t &set) {
   sigset_t full = full_set();
-  return __llvm_libc::syscall_impl(SYS_rt_sigprocmask, SIG_BLOCK, &full, &set,
-                                   sizeof(sigset_t));
+  return __llvm_libc::syscall_impl<int>(SYS_rt_sigprocmask, SIG_BLOCK, &full,
+                                        &set, sizeof(sigset_t));
 }
 
 LIBC_INLINE int restore_signals(const sigset_t &set) {
-  return __llvm_libc::syscall_impl(SYS_rt_sigprocmask, SIG_SETMASK, &set,
-                                   nullptr, sizeof(sigset_t));
+  return __llvm_libc::syscall_impl<int>(SYS_rt_sigprocmask, SIG_SETMASK, &set,
+                                        nullptr, sizeof(sigset_t));
 }
 
 } // namespace __llvm_libc

@@ -6,12 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// On Solaris, we need to define something to make the C99 parts of localeconv
-// visible.
-#ifdef __sun__
-#define _LCONV_C99
-#endif
-
 #include <__utility/unreachable.h>
 #include <algorithm>
 #include <clocale>
@@ -100,7 +94,7 @@ T& make(Args ...args)
 
 template <typename T, size_t N>
 inline
-_LIBCPP_CONSTEXPR
+constexpr
 size_t
 countof(const T (&)[N])
 {
@@ -109,23 +103,25 @@ countof(const T (&)[N])
 
 template <typename T>
 inline
-_LIBCPP_CONSTEXPR
+constexpr
 size_t
 countof(const T * const begin, const T * const end)
 {
     return static_cast<size_t>(end - begin);
 }
 
-_LIBCPP_NORETURN static void __throw_runtime_error(const string &msg)
-{
-#ifndef _LIBCPP_HAS_NO_EXCEPTIONS
-    throw runtime_error(msg);
-#else
-    (void)msg;
-    _VSTD::abort();
-#endif
 }
 
+string
+build_name(const string& other, const string& one, locale::category c) {
+    if (other == "*" || one == "*")
+        return "*";
+    if (c == locale::none || other == one)
+        return other;
+
+    // FIXME: Handle the more complicated cases, such as when the locale has
+    // different names for different categories.
+    return "*";
 }
 
 const locale::category locale::none;
@@ -309,8 +305,7 @@ locale::__imp::__imp(const __imp& other)
 }
 
 locale::__imp::__imp(const __imp& other, const string& name, locale::category c)
-    : facets_(N),
-      name_("*")
+    : facets_(N), name_(build_name(other.name_, name, c))
 {
     facets_ = other.facets_;
     for (unsigned i = 0; i < facets_.size(); ++i)
@@ -402,8 +397,7 @@ locale::__imp::install_from(const locale::__imp& one)
 }
 
 locale::__imp::__imp(const __imp& other, const __imp& one, locale::category c)
-    : facets_(N),
-      name_("*")
+    : facets_(N), name_(build_name(other.name_, one.name_, c))
 {
     facets_ = other.facets_;
     for (unsigned i = 0; i < facets_.size(); ++i)
@@ -735,8 +729,8 @@ collate_byname<char>::collate_byname(const char* n, size_t refs)
       __l_(newlocale(LC_ALL_MASK, n, 0))
 {
     if (__l_ == 0)
-        __throw_runtime_error("collate_byname<char>::collate_byname"
-                            " failed to construct for " + string(n));
+        __throw_runtime_error(("collate_byname<char>::collate_byname"
+                               " failed to construct for " + string(n)).c_str());
 }
 
 collate_byname<char>::collate_byname(const string& name, size_t refs)
@@ -744,8 +738,8 @@ collate_byname<char>::collate_byname(const string& name, size_t refs)
       __l_(newlocale(LC_ALL_MASK, name.c_str(), 0))
 {
     if (__l_ == 0)
-        __throw_runtime_error("collate_byname<char>::collate_byname"
-                            " failed to construct for " + name);
+        __throw_runtime_error(("collate_byname<char>::collate_byname"
+                               " failed to construct for " + name).c_str());
 }
 
 collate_byname<char>::~collate_byname()
@@ -784,8 +778,8 @@ collate_byname<wchar_t>::collate_byname(const char* n, size_t refs)
       __l_(newlocale(LC_ALL_MASK, n, 0))
 {
     if (__l_ == 0)
-        __throw_runtime_error("collate_byname<wchar_t>::collate_byname(size_t refs)"
-                            " failed to construct for " + string(n));
+        __throw_runtime_error(("collate_byname<wchar_t>::collate_byname(size_t refs)"
+                               " failed to construct for " + string(n)).c_str());
 }
 
 collate_byname<wchar_t>::collate_byname(const string& name, size_t refs)
@@ -793,8 +787,8 @@ collate_byname<wchar_t>::collate_byname(const string& name, size_t refs)
       __l_(newlocale(LC_ALL_MASK, name.c_str(), 0))
 {
     if (__l_ == 0)
-        __throw_runtime_error("collate_byname<wchar_t>::collate_byname(size_t refs)"
-                            " failed to construct for " + name);
+        __throw_runtime_error(("collate_byname<wchar_t>::collate_byname(size_t refs)"
+                               " failed to construct for " + name).c_str());
 }
 
 collate_byname<wchar_t>::~collate_byname()
@@ -1103,7 +1097,7 @@ extern "C" const int ** __ctype_toupper_loc();
 const ctype<char>::mask*
 ctype<char>::classic_table() noexcept
 {
-    static _LIBCPP_CONSTEXPR const ctype<char>::mask builtin_table[table_size] = {
+    static constexpr const ctype<char>::mask builtin_table[table_size] = {
         cntrl,                          cntrl,
         cntrl,                          cntrl,
         cntrl,                          cntrl,
@@ -1189,8 +1183,6 @@ ctype<char>::classic_table() noexcept
     return _C_ctype_tab_ + 1;
 #elif defined(__GLIBC__)
     return _LIBCPP_GET_C_LOCALE->__ctype_b;
-#elif defined(__sun__)
-    return __ctype_mask;
 #elif defined(_LIBCPP_MSVCRT) || defined(__MINGW32__)
     return __pctype_func();
 #elif defined(__EMSCRIPTEN__)
@@ -1282,8 +1274,8 @@ ctype_byname<char>::ctype_byname(const char* name, size_t refs)
       __l_(newlocale(LC_ALL_MASK, name, 0))
 {
     if (__l_ == 0)
-        __throw_runtime_error("ctype_byname<char>::ctype_byname"
-                            " failed to construct for " + string(name));
+        __throw_runtime_error(("ctype_byname<char>::ctype_byname"
+                               " failed to construct for " + string(name)).c_str());
 }
 
 ctype_byname<char>::ctype_byname(const string& name, size_t refs)
@@ -1291,8 +1283,8 @@ ctype_byname<char>::ctype_byname(const string& name, size_t refs)
       __l_(newlocale(LC_ALL_MASK, name.c_str(), 0))
 {
     if (__l_ == 0)
-        __throw_runtime_error("ctype_byname<char>::ctype_byname"
-                            " failed to construct for " + name);
+        __throw_runtime_error(("ctype_byname<char>::ctype_byname"
+                               " failed to construct for " + name).c_str());
 }
 
 ctype_byname<char>::~ctype_byname()
@@ -1336,8 +1328,8 @@ ctype_byname<wchar_t>::ctype_byname(const char* name, size_t refs)
       __l_(newlocale(LC_ALL_MASK, name, 0))
 {
     if (__l_ == 0)
-        __throw_runtime_error("ctype_byname<wchar_t>::ctype_byname"
-                            " failed to construct for " + string(name));
+        __throw_runtime_error(("ctype_byname<wchar_t>::ctype_byname"
+                               " failed to construct for " + string(name)).c_str());
 }
 
 ctype_byname<wchar_t>::ctype_byname(const string& name, size_t refs)
@@ -1345,8 +1337,8 @@ ctype_byname<wchar_t>::ctype_byname(const string& name, size_t refs)
       __l_(newlocale(LC_ALL_MASK, name.c_str(), 0))
 {
     if (__l_ == 0)
-        __throw_runtime_error("ctype_byname<wchar_t>::ctype_byname"
-                            " failed to construct for " + name);
+        __throw_runtime_error(("ctype_byname<wchar_t>::ctype_byname"
+                               " failed to construct for " + name).c_str());
 }
 
 ctype_byname<wchar_t>::~ctype_byname()
@@ -1411,10 +1403,8 @@ ctype_byname<wchar_t>::do_is(const char_type* low, const char_type* high, mask* 
             if (iswxdigit_l(ch, __l_))
                 *vec |= xdigit;
 #endif
-#if !defined(__sun__)
             if (iswblank_l(ch, __l_))
                 *vec |= blank;
-#endif
         }
     }
     return low;
@@ -1609,8 +1599,8 @@ codecvt<wchar_t, char, mbstate_t>::codecvt(const char* nm, size_t refs)
       __l_(newlocale(LC_ALL_MASK, nm, 0))
 {
     if (__l_ == 0)
-        __throw_runtime_error("codecvt_byname<wchar_t, char, mbstate_t>::codecvt_byname"
-                            " failed to construct for " + string(nm));
+        __throw_runtime_error(("codecvt_byname<wchar_t, char, mbstate_t>::codecvt_byname"
+                               " failed to construct for " + string(nm)).c_str());
 }
 
 codecvt<wchar_t, char, mbstate_t>::~codecvt()
@@ -4720,8 +4710,8 @@ numpunct_byname<char>::__init(const char* nm)
     {
         __libcpp_unique_locale loc(nm);
         if (!loc)
-            __throw_runtime_error("numpunct_byname<char>::numpunct_byname"
-                                " failed to construct for " + string(nm));
+            __throw_runtime_error(("numpunct_byname<char>::numpunct_byname"
+                                   " failed to construct for " + string(nm)).c_str());
 
         lconv* lc = __libcpp_localeconv_l(loc.get());
         if (!checked_string_to_char_convert(__decimal_point_, lc->decimal_point,
@@ -4761,8 +4751,8 @@ numpunct_byname<wchar_t>::__init(const char* nm)
     {
         __libcpp_unique_locale loc(nm);
         if (!loc)
-            __throw_runtime_error("numpunct_byname<wchar_t>::numpunct_byname"
-                                " failed to construct for " + string(nm));
+            __throw_runtime_error(("numpunct_byname<wchar_t>::numpunct_byname"
+                                   " failed to construct for " + string(nm)).c_str());
 
         lconv* lc = __libcpp_localeconv_l(loc.get());
         checked_string_to_wchar_convert(__decimal_point_, lc->decimal_point,
@@ -5193,16 +5183,14 @@ __time_get::__time_get(const char* nm)
     : __loc_(newlocale(LC_ALL_MASK, nm, 0))
 {
     if (__loc_ == 0)
-        __throw_runtime_error("time_get_byname"
-                            " failed to construct for " + string(nm));
+        __throw_runtime_error(("time_get_byname failed to construct for " + string(nm)).c_str());
 }
 
 __time_get::__time_get(const string& nm)
     : __loc_(newlocale(LC_ALL_MASK, nm.c_str(), 0))
 {
     if (__loc_ == 0)
-        __throw_runtime_error("time_get_byname"
-                            " failed to construct for " + nm);
+        __throw_runtime_error(("time_get_byname failed to construct for " + nm).c_str());
 }
 
 __time_get::~__time_get()
@@ -5851,16 +5839,14 @@ __time_put::__time_put(const char* nm)
     : __loc_(newlocale(LC_ALL_MASK, nm, 0))
 {
     if (__loc_ == 0)
-        __throw_runtime_error("time_put_byname"
-                            " failed to construct for " + string(nm));
+        __throw_runtime_error(("time_put_byname failed to construct for " + string(nm)).c_str());
 }
 
 __time_put::__time_put(const string& nm)
     : __loc_(newlocale(LC_ALL_MASK, nm.c_str(), 0))
 {
     if (__loc_ == 0)
-        __throw_runtime_error("time_put_byname"
-                            " failed to construct for " + nm);
+        __throw_runtime_error(("time_put_byname failed to construct for " + nm).c_str());
 }
 
 __time_put::~__time_put()
@@ -6278,8 +6264,7 @@ moneypunct_byname<char, false>::init(const char* nm)
     typedef moneypunct<char, false> base;
     __libcpp_unique_locale loc(nm);
     if (!loc)
-        __throw_runtime_error("moneypunct_byname"
-                            " failed to construct for " + string(nm));
+        __throw_runtime_error(("moneypunct_byname failed to construct for " + string(nm)).c_str());
 
     lconv* lc = __libcpp_localeconv_l(loc.get());
     if (!checked_string_to_char_convert(__decimal_point_,
@@ -6322,8 +6307,7 @@ moneypunct_byname<char, true>::init(const char* nm)
     typedef moneypunct<char, true> base;
     __libcpp_unique_locale loc(nm);
     if (!loc)
-        __throw_runtime_error("moneypunct_byname"
-                            " failed to construct for " + string(nm));
+        __throw_runtime_error(("moneypunct_byname failed to construct for " + string(nm)).c_str());
 
     lconv* lc = __libcpp_localeconv_l(loc.get());
     if (!checked_string_to_char_convert(__decimal_point_,
@@ -6383,8 +6367,7 @@ moneypunct_byname<wchar_t, false>::init(const char* nm)
     typedef moneypunct<wchar_t, false> base;
     __libcpp_unique_locale loc(nm);
     if (!loc)
-        __throw_runtime_error("moneypunct_byname"
-                            " failed to construct for " + string(nm));
+        __throw_runtime_error(("moneypunct_byname failed to construct for " + string(nm)).c_str());
     lconv* lc = __libcpp_localeconv_l(loc.get());
     if (!checked_string_to_wchar_convert(__decimal_point_,
                                          lc->mon_decimal_point,
@@ -6448,8 +6431,7 @@ moneypunct_byname<wchar_t, true>::init(const char* nm)
     typedef moneypunct<wchar_t, true> base;
     __libcpp_unique_locale loc(nm);
     if (!loc)
-        __throw_runtime_error("moneypunct_byname"
-                            " failed to construct for " + string(nm));
+        __throw_runtime_error(("moneypunct_byname failed to construct for " + string(nm)).c_str());
 
     lconv* lc = __libcpp_localeconv_l(loc.get());
     if (!checked_string_to_wchar_convert(__decimal_point_,
@@ -6526,16 +6508,6 @@ moneypunct_byname<wchar_t, true>::init(const char* nm)
 #endif // _LIBCPP_HAS_NO_WIDE_CHARACTERS
 
 void __do_nothing(void*) {}
-
-void __throw_runtime_error(const char* msg)
-{
-#ifndef _LIBCPP_HAS_NO_EXCEPTIONS
-    throw runtime_error(msg);
-#else
-    (void)msg;
-    _VSTD::abort();
-#endif
-}
 
                            template class _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS collate<char>;
 _LIBCPP_IF_WIDE_CHARACTERS(template class _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS collate<wchar_t>;)

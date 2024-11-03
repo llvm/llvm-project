@@ -18,39 +18,39 @@ define void @logical_32bit() minsize {
 ; CHECK-NEXT:    ldr w9, [x9]
 ; CHECK-NEXT:    and w11, w10, w9
 ; CHECK-NEXT:    bic w12, w10, w9
-; CHECK-NEXT:    orr w13, w10, w9
 ; CHECK-NEXT:    str w11, [x8]
-; CHECK-NEXT:    orn w11, w10, w9
+; CHECK-NEXT:    orr w11, w10, w9
 ; CHECK-NEXT:    str w12, [x8]
-; CHECK-NEXT:    eor w12, w10, w9
-; CHECK-NEXT:    str w13, [x8]
-; CHECK-NEXT:    eon w13, w9, w10
+; CHECK-NEXT:    orn w12, w10, w9
+; CHECK-NEXT:    str w11, [x8]
+; CHECK-NEXT:    eor w11, w10, w9
+; CHECK-NEXT:    str w12, [x8]
+; CHECK-NEXT:    eon w12, w9, w10
 ; CHECK-NEXT:    str w11, [x8]
 ; CHECK-NEXT:    and w11, w10, w9, lsl #31
 ; CHECK-NEXT:    str w12, [x8]
 ; CHECK-NEXT:    bic w12, w10, w9, lsl #31
-; CHECK-NEXT:    str w13, [x8]
-; CHECK-NEXT:    orr w13, w10, w9, lsl #31
 ; CHECK-NEXT:    str w11, [x8]
-; CHECK-NEXT:    orn w11, w10, w9, lsl #31
+; CHECK-NEXT:    orr w11, w10, w9, lsl #31
 ; CHECK-NEXT:    str w12, [x8]
-; CHECK-NEXT:    eor w12, w10, w9, lsl #31
-; CHECK-NEXT:    str w13, [x8]
-; CHECK-NEXT:    eon w13, w10, w9, lsl #31
+; CHECK-NEXT:    orn w12, w10, w9, lsl #31
+; CHECK-NEXT:    str w11, [x8]
+; CHECK-NEXT:    eor w11, w10, w9, lsl #31
+; CHECK-NEXT:    str w12, [x8]
+; CHECK-NEXT:    eon w12, w10, w9, lsl #31
 ; CHECK-NEXT:    str w11, [x8]
 ; CHECK-NEXT:    bic w11, w10, w9, asr #10
 ; CHECK-NEXT:    str w12, [x8]
 ; CHECK-NEXT:    eor w12, w10, w9, asr #10
-; CHECK-NEXT:    str w13, [x8]
-; CHECK-NEXT:    orn w13, w10, w9, lsr #1
 ; CHECK-NEXT:    str w11, [x8]
-; CHECK-NEXT:    eor w11, w10, w9, lsr #1
+; CHECK-NEXT:    orn w11, w10, w9, lsr #1
 ; CHECK-NEXT:    str w12, [x8]
-; CHECK-NEXT:    eon w12, w10, w9, ror #20
+; CHECK-NEXT:    eor w12, w10, w9, lsr #1
+; CHECK-NEXT:    str w11, [x8]
+; CHECK-NEXT:    eon w11, w10, w9, ror #20
 ; CHECK-NEXT:    and w9, w10, w9, ror #20
-; CHECK-NEXT:    str w13, [x8]
-; CHECK-NEXT:    str w11, [x8]
 ; CHECK-NEXT:    str w12, [x8]
+; CHECK-NEXT:    str w11, [x8]
 ; CHECK-NEXT:    str w9, [x8]
 ; CHECK-NEXT:    ret
   %val1 = load i32, ptr @var1_32
@@ -134,39 +134,39 @@ define void @logical_64bit() minsize {
 ; CHECK-NEXT:    ldr x9, [x9]
 ; CHECK-NEXT:    and x11, x10, x9
 ; CHECK-NEXT:    bic x12, x10, x9
-; CHECK-NEXT:    orr x13, x10, x9
 ; CHECK-NEXT:    str x11, [x8]
-; CHECK-NEXT:    orn x11, x10, x9
+; CHECK-NEXT:    orr x11, x10, x9
 ; CHECK-NEXT:    str x12, [x8]
-; CHECK-NEXT:    eor x12, x10, x9
-; CHECK-NEXT:    str x13, [x8]
-; CHECK-NEXT:    eon x13, x9, x10
+; CHECK-NEXT:    orn x12, x10, x9
+; CHECK-NEXT:    str x11, [x8]
+; CHECK-NEXT:    eor x11, x10, x9
+; CHECK-NEXT:    str x12, [x8]
+; CHECK-NEXT:    eon x12, x9, x10
 ; CHECK-NEXT:    str x11, [x8]
 ; CHECK-NEXT:    and x11, x10, x9, lsl #63
 ; CHECK-NEXT:    str x12, [x8]
 ; CHECK-NEXT:    bic x12, x10, x9, lsl #63
-; CHECK-NEXT:    str x13, [x8]
-; CHECK-NEXT:    orr x13, x10, x9, lsl #63
 ; CHECK-NEXT:    str x11, [x8]
-; CHECK-NEXT:    orn x11, x10, x9, lsl #63
+; CHECK-NEXT:    orr x11, x10, x9, lsl #63
 ; CHECK-NEXT:    str x12, [x8]
-; CHECK-NEXT:    eor x12, x10, x9, lsl #63
-; CHECK-NEXT:    str x13, [x8]
-; CHECK-NEXT:    eon x13, x10, x9, lsl #63
+; CHECK-NEXT:    orn x12, x10, x9, lsl #63
+; CHECK-NEXT:    str x11, [x8]
+; CHECK-NEXT:    eor x11, x10, x9, lsl #63
+; CHECK-NEXT:    str x12, [x8]
+; CHECK-NEXT:    eon x12, x10, x9, lsl #63
 ; CHECK-NEXT:    str x11, [x8]
 ; CHECK-NEXT:    bic x11, x10, x9, asr #10
 ; CHECK-NEXT:    str x12, [x8]
 ; CHECK-NEXT:    eor x12, x10, x9, asr #10
-; CHECK-NEXT:    str x13, [x8]
-; CHECK-NEXT:    orn x13, x10, x9, lsr #1
 ; CHECK-NEXT:    str x11, [x8]
-; CHECK-NEXT:    eor x11, x10, x9, lsr #1
+; CHECK-NEXT:    orn x11, x10, x9, lsr #1
 ; CHECK-NEXT:    str x12, [x8]
-; CHECK-NEXT:    eon x12, x10, x9, ror #20
+; CHECK-NEXT:    eor x12, x10, x9, lsr #1
+; CHECK-NEXT:    str x11, [x8]
+; CHECK-NEXT:    eon x11, x10, x9, ror #20
 ; CHECK-NEXT:    and x9, x10, x9, ror #20
-; CHECK-NEXT:    str x13, [x8]
-; CHECK-NEXT:    str x11, [x8]
 ; CHECK-NEXT:    str x12, [x8]
+; CHECK-NEXT:    str x11, [x8]
 ; CHECK-NEXT:    str x9, [x8]
 ; CHECK-NEXT:    ret
   %val1 = load i64, ptr @var1_64
@@ -252,16 +252,17 @@ define void @flag_setting() {
 ; CHECK-NEXT:    ldr x9, [x8]
 ; CHECK-NEXT:    ldr x10, [x10]
 ; CHECK-NEXT:    tst x9, x10
-; CHECK-NEXT:    b.gt .LBB2_2
+; CHECK-NEXT:    b.gt .LBB2_4
 ; CHECK-NEXT:  // %bb.1: // %test2
 ; CHECK-NEXT:    tst x9, x10, lsl #63
+; CHECK-NEXT:    b.lt .LBB2_4
+; CHECK-NEXT:  // %bb.2: // %test3
 ; CHECK-NEXT:    and x10, x9, x10, asr #12
-; CHECK-NEXT:    ccmp x10, #1, #0, ge
-; CHECK-NEXT:    b.lt .LBB2_3
-; CHECK-NEXT:  .LBB2_2: // %common.ret
-; CHECK-NEXT:    ret
-; CHECK-NEXT:  .LBB2_3: // %other_exit
+; CHECK-NEXT:    cmp x10, #1
+; CHECK-NEXT:    b.ge .LBB2_4
+; CHECK-NEXT:  // %bb.3: // %other_exit
 ; CHECK-NEXT:    str x9, [x8]
+; CHECK-NEXT:  .LBB2_4: // %common.ret
 ; CHECK-NEXT:    ret
   %val1 = load i64, ptr @var1_64
   %val2 = load i64, ptr @var2_64

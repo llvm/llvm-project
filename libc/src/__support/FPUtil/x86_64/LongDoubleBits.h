@@ -28,10 +28,14 @@ namespace fputil {
 template <unsigned Width> struct Padding;
 
 // i386 padding.
-template <> struct Padding<4> { static constexpr unsigned VALUE = 16; };
+template <> struct Padding<4> {
+  static constexpr unsigned VALUE = 16;
+};
 
 // x86_64 padding.
-template <> struct Padding<8> { static constexpr unsigned VALUE = 48; };
+template <> struct Padding<8> {
+  static constexpr unsigned VALUE = 48;
+};
 
 template <> struct FPBits<long double> {
   using UIntType = UInt128;
@@ -45,8 +49,7 @@ template <> struct FPBits<long double> {
   static constexpr UIntType MIN_NORMAL =
       (UIntType(3) << MantissaWidth<long double>::VALUE);
   static constexpr UIntType MAX_NORMAL =
-      ((UIntType(MAX_EXPONENT) - 1)
-       << (MantissaWidth<long double>::VALUE + 1)) |
+      (UIntType(MAX_EXPONENT - 1) << (MantissaWidth<long double>::VALUE + 1)) |
       (UIntType(1) << MantissaWidth<long double>::VALUE) | MAX_SUBNORMAL;
 
   using FloatProp = FloatProperties<long double>;
@@ -86,8 +89,8 @@ template <> struct FPBits<long double> {
   }
 
   LIBC_INLINE bool get_implicit_bit() const {
-    return ((bits & (UIntType(1) << FloatProp::MANTISSA_WIDTH)) >>
-            FloatProp::MANTISSA_WIDTH);
+    return bool((bits & (UIntType(1) << FloatProp::MANTISSA_WIDTH)) >>
+                FloatProp::MANTISSA_WIDTH);
   }
 
   LIBC_INLINE void set_sign(bool signVal) {
@@ -97,7 +100,7 @@ template <> struct FPBits<long double> {
   }
 
   LIBC_INLINE bool get_sign() const {
-    return ((bits & FloatProp::SIGN_MASK) >> (FloatProp::BIT_WIDTH - 1));
+    return bool((bits & FloatProp::SIGN_MASK) >> (FloatProp::BIT_WIDTH - 1));
   }
 
   FPBits() : bits(0) {}
@@ -127,10 +130,29 @@ template <> struct FPBits<long double> {
     return bits & MASK;
   }
 
+  LIBC_INLINE long double get_val() const {
+    return cpp::bit_cast<long double>(bits);
+  }
+
   LIBC_INLINE int get_exponent() const {
-    if (get_unbiased_exponent() == 0)
-      return int(1) - EXPONENT_BIAS;
     return int(get_unbiased_exponent()) - EXPONENT_BIAS;
+  }
+
+  // If the number is subnormal, the exponent is treated as if it were the
+  // minimum exponent for a normal number. This is to keep continuity between
+  // the normal and subnormal ranges, but it causes problems for functions where
+  // values are calculated from the exponent, since just subtracting the bias
+  // will give a slightly incorrect result. Additionally, zero has an exponent
+  // of zero, and that should actually be treated as zero.
+  LIBC_INLINE int get_explicit_exponent() const {
+    const int unbiased_exp = int(get_unbiased_exponent());
+    if (is_zero()) {
+      return 0;
+    } else if (unbiased_exp == 0) {
+      return 1 - EXPONENT_BIAS;
+    } else {
+      return unbiased_exp - EXPONENT_BIAS;
+    }
   }
 
   LIBC_INLINE bool is_zero() const {

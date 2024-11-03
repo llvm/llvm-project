@@ -79,3 +79,36 @@ func.func @_QPtest_ui1(%arg0: !fir.ref<!fir.logical<4>> {fir.bindc_name = "x"}) 
   return
 }
 func.func private @_SomeFunc_ui1(ui1) -> ui1 attributes {fir.runtime}
+
+// -----
+
+// subroutine test(x, y)
+//   use iso_c_binding
+//   interface
+//      integer(c_int8_t) function cfun8(x) bind(C)
+//        integer(c_int8_t),value :: x
+//      end function cfun8
+//      integer(c_int16_t) function cfun16(x) bind(C)
+//        integer(c_int16_t),value :: x
+//      end function cfun16
+//   end interface
+//   integer(c_int8_t) :: x
+//   integer(c_int16_t) :: y
+//   x = cfun8(x)
+//   y = cfun16(y)
+// end subroutine test
+
+// ALL-LABEL: @_QPtest_bindc
+// ALL: func.func private @cfun8(i8 {llvm.signext}) -> (i8 {llvm.signext}) attributes {fir.bindc_name = "cfun8"}
+// ALL: func.func private @cfun16(i16 {llvm.signext}) -> (i16 {llvm.signext}) attributes {fir.bindc_name = "cfun16"}
+func.func @_QPtest_bindc(%arg0: !fir.ref<i8> {fir.bindc_name = "x"}, %arg1: !fir.ref<i16> {fir.bindc_name = "y"}) {
+  %0 = fir.load %arg0 : !fir.ref<i8>
+  %1 = fir.call @cfun8(%0) fastmath<contract> : (i8) -> i8
+  fir.store %1 to %arg0 : !fir.ref<i8>
+  %2 = fir.load %arg1 : !fir.ref<i16>
+  %3 = fir.call @cfun16(%2) fastmath<contract> : (i16) -> i16
+  fir.store %3 to %arg1 : !fir.ref<i16>
+  return
+}
+func.func private @cfun8(i8) -> i8 attributes {fir.bindc_name = "cfun8"}
+func.func private @cfun16(i16) -> i16 attributes {fir.bindc_name = "cfun16"}

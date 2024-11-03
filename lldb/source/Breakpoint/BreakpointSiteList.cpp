@@ -48,15 +48,8 @@ bool BreakpointSiteList::ShouldStop(StoppointCallbackContext *context,
   return true;
 }
 lldb::break_id_t BreakpointSiteList::FindIDByAddress(lldb::addr_t addr) {
-  BreakpointSiteSP bp = FindByAddress(addr);
-  if (bp) {
-    // DBLogIf(PD_LOG_BREAKPOINTS, "BreakpointSiteList::%s ( addr = 0x%8.8"
-    // PRIx64 " ) => %u", __FUNCTION__, (uint64_t)addr, bp->GetID());
+  if (BreakpointSiteSP bp = FindByAddress(addr))
     return bp.get()->GetID();
-  }
-  // DBLogIf(PD_LOG_BREAKPOINTS, "BreakpointSiteList::%s ( addr = 0x%8.8"
-  // PRIx64
-  // " ) => NONE", __FUNCTION__, (uint64_t)addr);
   return LLDB_INVALID_BREAK_ID;
 }
 

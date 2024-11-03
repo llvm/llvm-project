@@ -69,6 +69,9 @@ private:
   // recursing through their implicitly declared capabilities too.
   void pruneCapabilities(const CapabilityList &ToPrune);
 
+  void initAvailableCapabilitiesForOpenCL(const SPIRVSubtarget &ST);
+  void initAvailableCapabilitiesForVulkan(const SPIRVSubtarget &ST);
+
 public:
   RequirementHandler() : MinVersion(0), MaxVersion(0) {}
   void clear() {
@@ -136,9 +139,6 @@ struct ModuleAnalysisInfo {
   // The set contains machine instructions which are necessary
   // for correct MIR but will not be emitted in function bodies.
   DenseSet<MachineInstr *> InstrsToDelete;
-  // The set contains machine basic blocks which are necessary
-  // for correct MIR but will not be emitted.
-  DenseSet<MachineBasicBlock *> MBBsToSkip;
   // The table contains global aliases of local registers for each machine
   // function. The aliases are used to substitute local registers during
   // code emission.

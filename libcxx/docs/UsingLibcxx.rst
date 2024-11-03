@@ -127,64 +127,43 @@ provide pretty-printers itself. Those can be used as:
 include-what-you-use (IWYU)
 ===========================
 
-libc++ provides an IWYU `mapping file <https://github.com/include-what-you-use/include-what-you-use/blob/master/docs/IWYUMappings.md>`,
+libc++ provides an IWYU `mapping file <https://github.com/include-what-you-use/include-what-you-use/blob/master/docs/IWYUMappings.md>`_,
 which drastically improves the accuracy of the tool when using libc++. To use the mapping file with
 IWYU, you should run the tool like so:
 
 .. code-block:: bash
 
-  $ include-what-you-use -Xiwyu /path/to/libcxx/include/libcxx.imp file.cpp
+  $ include-what-you-use -Xiwyu --mapping_file=/path/to/libcxx/include/libcxx.imp file.cpp
 
-If you would prefer to not use that flag, then you can replace ``/path/to/include-what-you-use/share/libcxx.imp```
+If you would prefer to not use that flag, then you can replace ``/path/to/include-what-you-use/share/libcxx.imp``
 file with the libc++-provided ``libcxx.imp`` file.
 
-.. _assertions-mode:
+.. _termination-handler:
 
-Enabling the "safe libc++" mode
-===============================
+Overriding the default termination handler
+==========================================
 
-Libc++ contains a number of assertions whose goal is to catch undefined behavior in the
-library, usually caused by precondition violations. Those assertions do not aim to be
-exhaustive -- instead they aim to provide a good balance between safety and performance.
-In particular, these assertions do not change the complexity of algorithms. However, they
-might, in some cases, interfere with compiler optimizations.
+When the library wants to terminate due to an unforeseen condition (such as a hardening assertion
+failure), the program is aborted through a special verbose termination function. The library provides
+a default function that prints an error message and calls ``std::abort()``. Note that this function is
+provided by the static or shared library, so it is only available when deploying to a platform where
+the compiled library is sufficiently recent. On older platforms, the program will terminate in an
+unspecified unsuccessful manner, but the quality of diagnostics won't be great.
 
-By default, these assertions are turned off. Vendors can decide to turn them on while building
-the compiled library by defining ``LIBCXX_ENABLE_ASSERTIONS=ON`` at CMake configuration time.
-When ``LIBCXX_ENABLE_ASSERTIONS`` is used, the compiled library will be built with assertions
-enabled, **and** user code will be built with assertions enabled by default. If
-``LIBCXX_ENABLE_ASSERTIONS=OFF`` at CMake configure time, the compiled library will not contain
-assertions and the default when building user code will be to have assertions disabled.
-As a user, you can consult your vendor to know whether assertions are enabled by default.
-
-Furthermore, independently of any vendor-selected default, users can always control whether
-assertions are enabled in their code by defining ``_LIBCPP_ENABLE_ASSERTIONS=0|1`` before
-including any libc++ header (we recommend passing ``-D_LIBCPP_ENABLE_ASSERTIONS=X`` to the
-compiler). Note that if the compiled library was built by the vendor without assertions,
-functions compiled inside the static or shared library won't have assertions enabled even
-if the user defines ``_LIBCPP_ENABLE_ASSERTIONS=1`` (the same is true for the inverse case
-where the static or shared library was compiled **with** assertions but the user tries to
-disable them). However, most of the code in libc++ is in the headers, so the user-selected
-value for ``_LIBCPP_ENABLE_ASSERTIONS`` (if any) will usually be respected.
-
-When an assertion fails, the program is aborted through a special verbose termination function. The
-library provides a default function that prints an error message and calls ``std::abort()``. Note
-that this function is provided by the static or shared library, so it is only available when deploying
-to a platform where the compiled library is sufficiently recent. On older platforms, the program will
-terminate in an unspecified unsuccessful manner, but the quality of diagnostics won't be great.
 However, users can also override that mechanism at two different levels. First, the mechanism can be
-overriden at compile-time by defining the ``_LIBCPP_VERBOSE_ABORT(format, args...)`` variadic macro.
+overridden at compile time by defining the ``_LIBCPP_VERBOSE_ABORT(format, args...)`` variadic macro.
 When that macro is defined, it will be called with a format string as the first argument, followed by
 a series of arguments to format using printf-style formatting. Compile-time customization may be
-interesting to get precise control over code generation, however it is also inconvenient to use in
+useful to get precise control over code generation, however it is also inconvenient to use in
 some cases. Indeed, compile-time customization of the verbose termination function requires that all
 translation units be compiled with a consistent definition for ``_LIBCPP_VERBOSE_ABORT`` to avoid ODR
 violations, which can add complexity in the build system of users.
 
 Otherwise, if compile-time customization is not necessary, link-time customization of the handler is also
 possible, similarly to how replacing ``operator new`` works. This mechanism trades off fine-grained control
-over the call site where the termination is initiated in exchange for more ergonomics. Link-time customization
-is done by simply defining the following function in exactly one translation unit of your program:
+over the call site where the termination is initiated in exchange for better ergonomics. Link-time
+customization is done by simply defining the following function in exactly one translation unit of your
+program:
 
 .. code-block:: cpp
 
@@ -212,7 +191,7 @@ and ``operator delete``. For example:
 
   int main() {
     std::vector<int> v;
-    int& x = v[0]; // Your termination function will be called here if _LIBCPP_ENABLE_ASSERTIONS=1
+    int& x = v[0]; // Your termination function will be called here if hardening is enabled.
   }
 
 Also note that the verbose termination function should never return. Since assertions in libc++
@@ -227,13 +206,19 @@ Libc++ Configuration Macros
 ===========================
 
 Libc++ provides a number of configuration macros which can be used to enable
-or disable extended libc++ behavior, including enabling "debug mode" or
-thread safety annotations.
+or disable extended libc++ behavior, including enabling hardening or thread
+safety annotations.
 
 **_LIBCPP_ENABLE_THREAD_SAFETY_ANNOTATIONS**:
   This macro is used to enable -Wthread-safety annotations on libc++'s
   ``std::mutex`` and ``std::lock_guard``. By default, these annotations are
   disabled and must be manually enabled by the user.
+
+**_LIBCPP_ENABLE_HARDENED_MODE**:
+  This macro is used to enable the :ref:`hardened mode <using-hardened-mode>`.
+
+**_LIBCPP_ENABLE_DEBUG_MODE**:
+  This macro is used to enable the :ref:`debug mode <using-hardened-mode>`.
 
 **_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS**:
   This macro is used to disable all visibility annotations inside libc++.
@@ -306,11 +291,6 @@ C++17 Specific Configuration Macros
 
 C++20 Specific Configuration Macros
 -----------------------------------
-**_LIBCPP_DISABLE_NODISCARD_AFTER_CXX17**:
-  This macro can be used to disable diagnostics emitted from functions marked
-  ``[[nodiscard]]`` in dialects after C++17.  See :ref:`Extended Applications of [[nodiscard]] <nodiscard extension>`
-  for more information.
-
 **_LIBCPP_ENABLE_CXX20_REMOVED_FEATURES**:
   This macro is used to re-enable all the features removed in C++20. The effect
   is equivalent to manually defining each macro listed below.
@@ -380,18 +360,46 @@ which no dialect declares as such (See the second form described above).
 * ``adjacent_find``
 * ``all_of``
 * ``any_of``
+* ``as_const``
 * ``binary_search``
+* ``bit_cast``
+* ``bit_ceil``
+* ``bit_floor``
+* ``bit_width``
+* ``byteswap``
+* ``cbrt``
+* ``ceil``
+* ``chrono::tzdb_list::begin``
+* ``chrono::tzdb_list::cbegin``
+* ``chrono::tzdb_list::cend``
+* ``chrono::tzdb_list::end``
+* ``chrono::get_tzdb_list``
+* ``chrono::get_tzdb``
+* ``chrono::remote_version``
 * ``clamp``
+* ``copysign``
 * ``count_if``
 * ``count``
+* ``countl_zero``
+* ``countl_one``
+* ``countr_zero``
+* ``countr_one``
 * ``equal_range``
 * ``equal``
+* ``fabs``
 * ``find_end``
 * ``find_first_of``
 * ``find_if_not``
 * ``find_if``
 * ``find``
+* ``floor``
+* ``fmax``
+* ``fmin``
+* ``forward``
+* ``fpclassify``
 * ``get_temporary_buffer``
+* ``has_single_bit``
+* ``identity::operator()``
 * ``includes``
 * ``is_heap_until``
 * ``is_heap``
@@ -399,8 +407,21 @@ which no dialect declares as such (See the second form described above).
 * ``is_permutation``
 * ``is_sorted_until``
 * ``is_sorted``
+* ``isfinite``
+* ``isgreater``
+* ``isgreaterequal``
+* ``isinf``
+* ``isless``
+* ``islessequal``
+* ``islessgreater``
+* ``isnan``
+* ``isnormal``
+* ``isunordered``
 * ``lexicographical_compare``
+* ``lock_guard``'s constructors
 * ``lower_bound``
+* ``make_format_args``
+* ``make_wformat_args``
 * ``max_element``
 * ``max``
 * ``min_element``
@@ -408,13 +429,11 @@ which no dialect declares as such (See the second form described above).
 * ``minmax_element``
 * ``minmax``
 * ``mismatch``
+* ``move_if_noexcept``
+* ``move``
+* ``nearbyint``
 * ``none_of``
-* ``remove_if``
-* ``remove``
-* ``search_n``
-* ``search``
-* ``unique``
-* ``upper_bound``
+* ``popcount``
 * ``ranges::adjacent_find``
 * ``ranges::all_of``
 * ``ranges::any_of``
@@ -453,38 +472,19 @@ which no dialect declares as such (See the second form described above).
 * ``ranges::search``
 * ``ranges::unique``
 * ``ranges::upper_bound``
-* ``lock_guard``'s constructors
-* ``as_const``
-* ``bit_cast``
-* ``forward``
-* ``move``
-* ``move_if_noexcept``
-* ``identity::operator()``
-* ``to_integer``
-* ``to_underlying``
-* ``signbit``
-* ``fpclassify``
-* ``isfinite``
-* ``isinf``
-* ``isnan``
-* ``isnormal``
-* ``isgreater``
-* ``isgreaterequal``
-* ``isless``
-* ``islessequal``
-* ``islessgreater``
-* ``isunordered``
-* ``ceil``
-* ``fabs``
-* ``floor``
-* ``cbrt``
-* ``copysign``
-* ``fmax``
-* ``fmin``
-* ``nearbyint``
+* ``remove_if``
+* ``remove``
 * ``rint``
 * ``round``
+* ``search_n``
+* ``search``
+* ``signbit``
+* ``to_integer``
+* ``to_underlying``
 * ``trunc``
+* ``unique``
+* ``upper_bound``
+* ``vformat``
 
 Extended integral type support
 ------------------------------
@@ -517,3 +517,72 @@ The exposition only type ``basic-format-string`` and its typedefs
 ``format-string`` and ``wformat-string`` became ``basic_format_string``,
 ``format_string``, and ``wformat_string`` in C++23. Libc++ makes these types
 available in C++20 as an extension.
+
+For padding Unicode strings the ``format`` library relies on the Unicode
+Standard. Libc++ retroactively updates the Unicode Standard in older C++
+versions. This allows the library to have better estimates for newly introduced
+Unicode code points, without requiring the user to use the latest C++ version
+in their code base.
+
+In C++26 formatting pointers gained a type ``P`` and allows to use
+zero-padding. These options have been retroactively applied to C++20.
+
+Extensions to the C++23 modules ``std`` and ``std.compat``
+----------------------------------------------------------
+
+Like other major implementations, libc++ provides C++23 modules ``std`` and
+``std.compat`` in C++20 as an extension"
+
+.. _turning-off-asan:
+
+Turning off ASan annotation in containers
+-----------------------------------------
+
+``__asan_annotate_container_with_allocator`` is a customization point to allow users to disable
+`Address Sanitizer annotations for containers <https://github.com/google/sanitizers/wiki/AddressSanitizerContainerOverflow>`_ for specific allocators. This may be necessary for allocators that access allocated memory.
+This customization point exists only when ``_LIBCPP_HAS_ASAN_CONTAINER_ANNOTATIONS_FOR_ALL_ALLOCATORS`` Feature Test Macro is defined.
+
+For allocators not running destructors, it is also possible to `bulk-unpoison memory <https://github.com/google/sanitizers/wiki/AddressSanitizerManualPoisoning>`_ instead of disabling annotations altogether.
+
+The struct may be specialized for user-defined allocators. It is a `Cpp17UnaryTypeTrait <http://eel.is/c++draft/type.traits#meta.rqmts>`_ with a base characteristic of ``true_type`` if the container is allowed to use annotations and ``false_type`` otherwise.
+
+The annotations for a ``user_allocator`` can be disabled like this:
+
+.. code-block:: cpp
+
+  #ifdef _LIBCPP_HAS_ASAN_CONTAINER_ANNOTATIONS_FOR_ALL_ALLOCATORS
+  template <class T>
+  struct std::__asan_annotate_container_with_allocator<user_allocator<T>> : std::false_type {};
+  #endif
+
+Why may I want to turn it off?
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+There are a few reasons why you may want to turn off annotations for an allocator.
+Unpoisoning may not be an option, if (for example) you are not maintaining the allocator.
+
+* You are using allocator, which does not call destructor during deallocation.
+* You are aware that memory allocated with an allocator may be accessed, even when unused by container.
+
+Platform specific behavior
+==========================
+
+Windows
+-------
+
+The ``stdout``, ``stderr``, and ``stdin`` file streams can be placed in
+Unicode mode by a suitable call to ``_setmode()``. When in this mode,
+the sequence of bytes read from, or written to, these streams is interpreted
+as a sequence of little-endian ``wchar_t`` elements. Thus, use of
+``std::cout``, ``std::cerr``, or ``std::cin`` with streams in Unicode mode
+will not behave as they usually do since bytes read or written won't be
+interpreted as individual ``char`` elements. However, ``std::wcout``,
+``std::wcerr``, and ``std::wcin`` will behave as expected.
+
+Wide character stream such as ``std::wcin`` or ``std::wcout`` imbued with a
+locale behave differently than they otherwise do. By default, wide character
+streams don't convert wide characters but input/output them as is. If a
+specific locale is imbued, the IO with the underlying stream happens with
+regular ``char`` elements, which are converted to/from wide characters
+according to the locale. Note that this doesn't behave as expected if the
+stream has been set in Unicode mode.

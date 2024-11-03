@@ -39,7 +39,7 @@ class year_month_weekday {
     chrono::month           __m_;
     chrono::weekday_indexed __wdi_;
 public:
-    _LIBCPP_HIDE_FROM_ABI year_month_weekday() = default;
+    year_month_weekday() = default;
     _LIBCPP_HIDE_FROM_ABI constexpr year_month_weekday(const chrono::year& __yval, const chrono::month& __mval,
                                const chrono::weekday_indexed& __wdival) noexcept
         : __y_{__yval}, __m_{__mval}, __wdi_{__wdival} {}
@@ -97,10 +97,6 @@ days year_month_weekday::__to_days() const noexcept
 _LIBCPP_HIDE_FROM_ABI inline constexpr
 bool operator==(const year_month_weekday& __lhs, const year_month_weekday& __rhs) noexcept
 { return __lhs.year() == __rhs.year() && __lhs.month() == __rhs.month() && __lhs.weekday_indexed() == __rhs.weekday_indexed(); }
-
-_LIBCPP_HIDE_FROM_ABI inline constexpr
-bool operator!=(const year_month_weekday& __lhs, const year_month_weekday& __rhs) noexcept
-{ return !(__lhs == __rhs); }
 
 _LIBCPP_HIDE_FROM_ABI inline constexpr
 year_month_weekday operator/(const year_month& __lhs, const weekday_indexed& __rhs) noexcept
@@ -190,11 +186,6 @@ days year_month_weekday_last::__to_days() const noexcept
 _LIBCPP_HIDE_FROM_ABI inline constexpr
 bool operator==(const year_month_weekday_last& __lhs, const year_month_weekday_last& __rhs) noexcept
 { return __lhs.year() == __rhs.year() && __lhs.month() == __rhs.month() && __lhs.weekday_last() == __rhs.weekday_last(); }
-
-_LIBCPP_HIDE_FROM_ABI inline constexpr
-bool operator!=(const year_month_weekday_last& __lhs, const year_month_weekday_last& __rhs) noexcept
-{ return !(__lhs == __rhs); }
-
 
 _LIBCPP_HIDE_FROM_ABI inline constexpr
 year_month_weekday_last operator/(const year_month& __lhs, const weekday_last& __rhs) noexcept

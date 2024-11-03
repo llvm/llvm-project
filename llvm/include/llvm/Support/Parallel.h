@@ -30,6 +30,14 @@ namespace parallel {
 extern ThreadPoolStrategy strategy;
 
 #if LLVM_ENABLE_THREADS
+#define GET_THREAD_INDEX_IMPL                                                  \
+  if (parallel::strategy.ThreadsRequested == 1)                                \
+    return 0;                                                                  \
+  assert((threadIndex != UINT_MAX) &&                                          \
+         "getThreadIndex() must be called from a thread created by "           \
+         "ThreadPoolExecutor");                                                \
+  return threadIndex;
+
 #ifdef _WIN32
 // Direct access to thread_local variables from a different DLL isn't
 // possible with Windows Native TLS.
@@ -38,10 +46,13 @@ unsigned getThreadIndex();
 // Don't access this directly, use the getThreadIndex wrapper.
 extern thread_local unsigned threadIndex;
 
-inline unsigned getThreadIndex() { return threadIndex; }
+inline unsigned getThreadIndex() { GET_THREAD_INDEX_IMPL; }
 #endif
+
+size_t getThreadCount();
 #else
 inline unsigned getThreadIndex() { return 0; }
+inline size_t getThreadCount() { return 1; }
 #endif
 
 namespace detail {
@@ -84,26 +95,15 @@ public:
   ~TaskGroup();
 
   // Spawn a task, but does not wait for it to finish.
-  void spawn(std::function<void()> f);
-
-  // Similar to spawn, but execute the task immediately when ThreadsRequested ==
-  // 1. The difference is to give the following pattern a more intuitive order
-  // when single threading is requested.
-  //
-  // for (size_t begin = 0, i = 0, taskSize = 0;;) {
-  //   taskSize += ...
-  //   bool done = ++i == end;
-  //   if (done || taskSize >= taskSizeLimit) {
-  //     tg.execute([=] { fn(begin, i); });
-  //     if (done)
-  //       break;
-  //     begin = i;
-  //     taskSize = 0;
-  //   }
-  // }
-  void execute(std::function<void()> f);
+  // Tasks marked with \p Sequential will be executed
+  // exactly in the order which they were spawned.
+  // Note: Sequential tasks may be executed on different
+  // threads, but strictly in sequential order.
+  void spawn(std::function<void()> f, bool Sequential = false);
 
   void sync() const { L.sync(); }
+
+  bool isParallel() const { return Parallel; }
 };
 
 namespace detail {

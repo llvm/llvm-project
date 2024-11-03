@@ -163,6 +163,8 @@
         wr %i0, %tbr
         ! CHECK: wr %g0, 5, %tbr                  ! encoding: [0x81,0x98,0x20,0x05]
         wr 5, %tbr
+        ! CHECK: or %g2, 4, %g2                   ! encoding: [0x84,0x10,0xa0,0x04]
+        or 4, %g2, %g2
 
 ! The following tests exercise 'set' in such a way that its output differs
 ! depending on whether targeting V8 or V9.

@@ -9,6 +9,7 @@
 #include "Gnu.h"
 #include "Arch/ARM.h"
 #include "Arch/CSKY.h"
+#include "Arch/LoongArch.h"
 #include "Arch/Mips.h"
 #include "Arch/PPC.h"
 #include "Arch/RISCV.h"
@@ -219,30 +220,6 @@ void tools::gcc::Linker::RenderExtraToolArgs(const JobAction &JA,
   // The types are (hopefully) good enough.
 }
 
-// On Arm the endianness of the output file is determined by the target and
-// can be overridden by the pseudo-target flags '-mlittle-endian'/'-EL' and
-// '-mbig-endian'/'-EB'. Unlike other targets the flag does not result in a
-// normalized triple so we must handle the flag here.
-static bool isArmBigEndian(const llvm::Triple &Triple,
-                           const ArgList &Args) {
-  bool IsBigEndian = false;
-  switch (Triple.getArch()) {
-  case llvm::Triple::armeb:
-  case llvm::Triple::thumbeb:
-    IsBigEndian = true;
-    [[fallthrough]];
-  case llvm::Triple::arm:
-  case llvm::Triple::thumb:
-    if (Arg *A = Args.getLastArg(options::OPT_mlittle_endian,
-                               options::OPT_mbig_endian))
-      IsBigEndian = !A->getOption().matches(options::OPT_mlittle_endian);
-    break;
-  default:
-    break;
-  }
-  return IsBigEndian;
-}
-
 static const char *getLDMOption(const llvm::Triple &T, const ArgList &Args) {
   switch (T.getArch()) {
   case llvm::Triple::x86:
@@ -257,7 +234,8 @@ static const char *getLDMOption(const llvm::Triple &T, const ArgList &Args) {
   case llvm::Triple::thumb:
   case llvm::Triple::armeb:
   case llvm::Triple::thumbeb:
-    return isArmBigEndian(T, Args) ? "armelfb_linux_eabi" : "armelf_linux_eabi";
+    return tools::arm::isARMBigEndian(T, Args) ? "armelfb_linux_eabi"
+                                               : "armelf_linux_eabi";
   case llvm::Triple::m68k:
     return "m68kelf";
   case llvm::Triple::ppc:
@@ -405,6 +383,7 @@ void tools::gnutools::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   const llvm::Triple &Triple = getToolChain().getEffectiveTriple();
 
   const llvm::Triple::ArchType Arch = ToolChain.getArch();
+  const bool isOHOSFamily = ToolChain.getTriple().isOHOSFamily();
   const bool isAndroid = ToolChain.getTriple().isAndroid();
   const bool IsIAMCU = ToolChain.getTriple().isOSIAMCU();
   const bool IsVE = ToolChain.getTriple().isVE();
@@ -445,17 +424,18 @@ void tools::gnutools::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   if (Args.hasArg(options::OPT_s))
     CmdArgs.push_back("-s");
 
-  if (Triple.isARM() || Triple.isThumb() || Triple.isAArch64()) {
-    bool IsBigEndian = isArmBigEndian(Triple, Args);
+  if (Triple.isARM() || Triple.isThumb()) {
+    bool IsBigEndian = arm::isARMBigEndian(Triple, Args);
     if (IsBigEndian)
       arm::appendBE8LinkFlag(Args, CmdArgs, Triple);
-    IsBigEndian = IsBigEndian || Arch == llvm::Triple::aarch64_be;
     CmdArgs.push_back(IsBigEndian ? "-EB" : "-EL");
+  } else if (Triple.isAArch64()) {
+    CmdArgs.push_back(Arch == llvm::Triple::aarch64_be ? "-EB" : "-EL");
   }
 
   // Most Android ARM64 targets should enable the linker fix for erratum
   // 843419. Only non-Cortex-A53 devices are allowed to skip this flag.
-  if (Arch == llvm::Triple::aarch64 && isAndroid) {
+  if (Arch == llvm::Triple::aarch64 && (isAndroid || isOHOSFamily)) {
     std::string CPU = getCPUName(D, Args, Triple);
     if (CPU.empty() || CPU == "generic" || CPU == "cortex-a53")
       CmdArgs.push_back("--fix-cortex-a53-843419");
@@ -569,7 +549,7 @@ void tools::gnutools::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   addLinkerCompressDebugSectionsOption(ToolChain, Args, CmdArgs);
   AddLinkerInputs(ToolChain, Inputs, Args, CmdArgs, JA);
 
-  addHIPRuntimeLibArgs(ToolChain, Args, CmdArgs);
+  addHIPRuntimeLibArgs(ToolChain, C, Args, CmdArgs);
 
   // The profile runtime also needs access to system libraries.
   getToolChain().addProfileRTLibs(Args, CmdArgs);
@@ -608,10 +588,10 @@ void tools::gnutools::Linker::ConstructJob(Compilation &C, const JobAction &JA,
         CmdArgs.push_back("--start-group");
 
       if (NeedsSanitizerDeps)
-        linkSanitizerRuntimeDeps(ToolChain, CmdArgs);
+        linkSanitizerRuntimeDeps(ToolChain, Args, CmdArgs);
 
       if (NeedsXRayDeps)
-        linkXRayRuntimeDeps(ToolChain, CmdArgs);
+        linkXRayRuntimeDeps(ToolChain, Args, CmdArgs);
 
       bool WantPthread = Args.hasArg(options::OPT_pthread) ||
                          Args.hasArg(options::OPT_pthreads);
@@ -641,7 +621,9 @@ void tools::gnutools::Linker::ConstructJob(Compilation &C, const JobAction &JA,
         CmdArgs.push_back("--pop-state");
       }
 
-      if (WantPthread && !isAndroid)
+      // We don't need libpthread neither for bionic (Android) nor for musl,
+      // (used by OHOS as runtime library).
+      if (WantPthread && !isAndroid && !isOHOSFamily)
         CmdArgs.push_back("-lpthread");
 
       if (Args.hasArg(options::OPT_fsplit_stack))
@@ -718,6 +700,10 @@ void tools::gnutools::Assembler::ConstructJob(Compilation &C,
   unsigned PICLevel;
   bool IsPIE;
   const char *DefaultAssembler = "as";
+  // Enforce GNU as on Solaris; the native assembler's input syntax isn't fully
+  // compatible.
+  if (getToolChain().getTriple().isOSSolaris())
+    DefaultAssembler = "gas";
   std::tie(RelocationModel, PICLevel, IsPIE) =
       ParsePICArgs(getToolChain(), Args);
 
@@ -816,7 +802,7 @@ void tools::gnutools::Assembler::ConstructJob(Compilation &C,
   case llvm::Triple::thumb:
   case llvm::Triple::thumbeb: {
     const llvm::Triple &Triple2 = getToolChain().getTriple();
-    CmdArgs.push_back(isArmBigEndian(Triple2, Args) ? "-EB" : "-EL");
+    CmdArgs.push_back(arm::isARMBigEndian(Triple2, Args) ? "-EB" : "-EL");
     switch (Triple2.getSubArch()) {
     case llvm::Triple::ARMSubArch_v7:
       CmdArgs.push_back("-mfpu=neon");
@@ -845,6 +831,11 @@ void tools::gnutools::Assembler::ConstructJob(Compilation &C,
     normalizeCPUNamesForAssembler(Args, CmdArgs);
 
     Args.AddLastArg(CmdArgs, options::OPT_mfpu_EQ);
+    // The integrated assembler doesn't implement e_flags setting behavior for
+    // -meabi=gnu (gcc -mabi={apcs-gnu,atpcs} passes -meabi=gnu to gas). For
+    // compatibility we accept but warn.
+    if (Arg *A = Args.getLastArgNoClaim(options::OPT_mabi_EQ))
+      A->ignoreTargetSpecific();
     break;
   }
   case llvm::Triple::aarch64:
@@ -854,6 +845,13 @@ void tools::gnutools::Assembler::ConstructJob(Compilation &C,
     Args.AddLastArg(CmdArgs, options::OPT_march_EQ);
     normalizeCPUNamesForAssembler(Args, CmdArgs);
 
+    break;
+  }
+  // TODO: handle loongarch32.
+  case llvm::Triple::loongarch64: {
+    StringRef ABIName =
+        loongarch::getLoongArchABI(D, Args, getToolChain().getTriple());
+    CmdArgs.push_back(Args.MakeArgString("-mabi=" + ABIName));
     break;
   }
   case llvm::Triple::mips:
@@ -1052,33 +1050,38 @@ static bool findMipsCsMultilibs(const Multilib::flags_list &Flags,
   // Check for Code Sourcery toolchain multilibs
   MultilibSet CSMipsMultilibs;
   {
-    auto MArchMips16 = MultilibBuilder("/mips16").flag("+m32").flag("+mips16");
+    auto MArchMips16 = MultilibBuilder("/mips16").flag("-m32").flag("-mips16");
 
     auto MArchMicroMips =
-        MultilibBuilder("/micromips").flag("+m32").flag("+mmicromips");
+        MultilibBuilder("/micromips").flag("-m32").flag("-mmicromips");
 
-    auto MArchDefault = MultilibBuilder("").flag("-mips16").flag("-mmicromips");
+    auto MArchDefault = MultilibBuilder("")
+                            .flag("-mips16", /*Disallow=*/true)
+                            .flag("-mmicromips", /*Disallow=*/true);
 
-    auto UCLibc = MultilibBuilder("/uclibc").flag("+muclibc");
+    auto UCLibc = MultilibBuilder("/uclibc").flag("-muclibc");
 
-    auto SoftFloat = MultilibBuilder("/soft-float").flag("+msoft-float");
+    auto SoftFloat = MultilibBuilder("/soft-float").flag("-msoft-float");
 
-    auto Nan2008 = MultilibBuilder("/nan2008").flag("+mnan=2008");
+    auto Nan2008 = MultilibBuilder("/nan2008").flag("-mnan=2008");
 
-    auto DefaultFloat =
-        MultilibBuilder("").flag("-msoft-float").flag("-mnan=2008");
+    auto DefaultFloat = MultilibBuilder("")
+                            .flag("-msoft-float", /*Disallow=*/true)
+                            .flag("-mnan=2008", /*Disallow=*/true);
 
-    auto BigEndian = MultilibBuilder("").flag("+EB").flag("-EL");
+    auto BigEndian =
+        MultilibBuilder("").flag("-EB").flag("-EL", /*Disallow=*/true);
 
-    auto LittleEndian = MultilibBuilder("/el").flag("+EL").flag("-EB");
+    auto LittleEndian =
+        MultilibBuilder("/el").flag("-EL").flag("-EB", /*Disallow=*/true);
 
     // Note that this one's osSuffix is ""
     auto MAbi64 = MultilibBuilder("")
                       .gccSuffix("/64")
                       .includeSuffix("/64")
-                      .flag("+mabi=n64")
-                      .flag("-mabi=n32")
-                      .flag("-m32");
+                      .flag("-mabi=n64")
+                      .flag("-mabi=n32", /*Disallow=*/true)
+                      .flag("-m32", /*Disallow=*/true);
 
     CSMipsMultilibs =
         MultilibSetBuilder()
@@ -1108,18 +1111,20 @@ static bool findMipsCsMultilibs(const Multilib::flags_list &Flags,
   {
     MultilibBuilder MAbiN32 =
         MultilibBuilder().gccSuffix("/n32").includeSuffix("/n32").flag(
-            "+mabi=n32");
+            "-mabi=n32");
 
     MultilibBuilder M64 = MultilibBuilder()
                               .gccSuffix("/64")
                               .includeSuffix("/64")
-                              .flag("+m64")
-                              .flag("-m32")
-                              .flag("-mabi=n32");
+                              .flag("-m64")
+                              .flag("-m32", /*Disallow=*/true)
+                              .flag("-mabi=n32", /*Disallow=*/true);
 
-    MultilibBuilder M32 =
-        MultilibBuilder().gccSuffix("/32").flag("-m64").flag("+m32").flag(
-            "-mabi=n32");
+    MultilibBuilder M32 = MultilibBuilder()
+                              .gccSuffix("/32")
+                              .flag("-m64", /*Disallow=*/true)
+                              .flag("-m32")
+                              .flag("-mabi=n32", /*Disallow=*/true);
 
     DebianMipsMultilibs = MultilibSetBuilder()
                               .Either(M32, M64, MAbiN32)
@@ -1133,7 +1138,7 @@ static bool findMipsCsMultilibs(const Multilib::flags_list &Flags,
   if (CSMipsMultilibs.size() < DebianMipsMultilibs.size())
     std::iter_swap(Candidates, Candidates + 1);
   for (const MultilibSet *Candidate : Candidates) {
-    if (Candidate->select(Flags, Result.SelectedMultilib)) {
+    if (Candidate->select(Flags, Result.SelectedMultilibs)) {
       if (Candidate == &DebianMipsMultilibs)
         Result.BiarchSibling = Multilib();
       Result.Multilibs = *Candidate;
@@ -1150,30 +1155,30 @@ static bool findMipsAndroidMultilibs(llvm::vfs::FileSystem &VFS, StringRef Path,
 
   MultilibSet AndroidMipsMultilibs =
       MultilibSetBuilder()
-          .Maybe(MultilibBuilder("/mips-r2", {}, {}).flag("+march=mips32r2"))
-          .Maybe(MultilibBuilder("/mips-r6", {}, {}).flag("+march=mips32r6"))
+          .Maybe(MultilibBuilder("/mips-r2", {}, {}).flag("-march=mips32r2"))
+          .Maybe(MultilibBuilder("/mips-r6", {}, {}).flag("-march=mips32r6"))
           .makeMultilibSet()
           .FilterOut(NonExistent);
 
   MultilibSet AndroidMipselMultilibs =
       MultilibSetBuilder()
-          .Either(MultilibBuilder().flag("+march=mips32"),
+          .Either(MultilibBuilder().flag("-march=mips32"),
                   MultilibBuilder("/mips-r2", "", "/mips-r2")
-                      .flag("+march=mips32r2"),
+                      .flag("-march=mips32r2"),
                   MultilibBuilder("/mips-r6", "", "/mips-r6")
-                      .flag("+march=mips32r6"))
+                      .flag("-march=mips32r6"))
           .makeMultilibSet()
           .FilterOut(NonExistent);
 
   MultilibSet AndroidMips64elMultilibs =
       MultilibSetBuilder()
-          .Either(MultilibBuilder().flag("+march=mips64r6"),
+          .Either(MultilibBuilder().flag("-march=mips64r6"),
                   MultilibBuilder("/32/mips-r1", "", "/mips-r1")
-                      .flag("+march=mips32"),
+                      .flag("-march=mips32"),
                   MultilibBuilder("/32/mips-r2", "", "/mips-r2")
-                      .flag("+march=mips32r2"),
+                      .flag("-march=mips32r2"),
                   MultilibBuilder("/32/mips-r6", "", "/mips-r6")
-                      .flag("+march=mips32r6"))
+                      .flag("-march=mips32r6"))
           .makeMultilibSet()
           .FilterOut(NonExistent);
 
@@ -1182,7 +1187,7 @@ static bool findMipsAndroidMultilibs(llvm::vfs::FileSystem &VFS, StringRef Path,
     MS = &AndroidMipselMultilibs;
   else if (VFS.exists(Path + "/32"))
     MS = &AndroidMips64elMultilibs;
-  if (MS->select(Flags, Result.SelectedMultilib)) {
+  if (MS->select(Flags, Result.SelectedMultilibs)) {
     Result.Multilibs = *MS;
     return true;
   }
@@ -1197,14 +1202,14 @@ static bool findMipsMuslMultilibs(const Multilib::flags_list &Flags,
   {
     auto MArchMipsR2 = MultilibBuilder("")
                            .osSuffix("/mips-r2-hard-musl")
-                           .flag("+EB")
-                           .flag("-EL")
-                           .flag("+march=mips32r2");
+                           .flag("-EB")
+                           .flag("-EL", /*Disallow=*/true)
+                           .flag("-march=mips32r2");
 
     auto MArchMipselR2 = MultilibBuilder("/mipsel-r2-hard-musl")
-                             .flag("-EB")
-                             .flag("+EL")
-                             .flag("+march=mips32r2");
+                             .flag("-EB", /*Disallow=*/true)
+                             .flag("-EL")
+                             .flag("-march=mips32r2");
 
     MuslMipsMultilibs = MultilibSetBuilder()
                             .Either(MArchMipsR2, MArchMipselR2)
@@ -1216,7 +1221,7 @@ static bool findMipsMuslMultilibs(const Multilib::flags_list &Flags,
           {"/../sysroot" + M.osSuffix() + "/usr/include"});
     });
   }
-  if (MuslMipsMultilibs.select(Flags, Result.SelectedMultilib)) {
+  if (MuslMipsMultilibs.select(Flags, Result.SelectedMultilibs)) {
     Result.Multilibs = MuslMipsMultilibs;
     return true;
   }
@@ -1230,45 +1235,50 @@ static bool findMipsMtiMultilibs(const Multilib::flags_list &Flags,
   MultilibSet MtiMipsMultilibsV1;
   {
     auto MArchMips32 = MultilibBuilder("/mips32")
-                           .flag("+m32")
-                           .flag("-m64")
-                           .flag("-mmicromips")
-                           .flag("+march=mips32");
+                           .flag("-m32")
+                           .flag("-m64", /*Disallow=*/true)
+                           .flag("-mmicromips", /*Disallow=*/true)
+                           .flag("-march=mips32");
 
     auto MArchMicroMips = MultilibBuilder("/micromips")
-                              .flag("+m32")
-                              .flag("-m64")
-                              .flag("+mmicromips");
+                              .flag("-m32")
+                              .flag("-m64", /*Disallow=*/true)
+                              .flag("-mmicromips");
 
     auto MArchMips64r2 = MultilibBuilder("/mips64r2")
-                             .flag("-m32")
-                             .flag("+m64")
-                             .flag("+march=mips64r2");
+                             .flag("-m32", /*Disallow=*/true)
+                             .flag("-m64")
+                             .flag("-march=mips64r2");
 
-    auto MArchMips64 =
-        MultilibBuilder("/mips64").flag("-m32").flag("+m64").flag(
-            "-march=mips64r2");
+    auto MArchMips64 = MultilibBuilder("/mips64")
+                           .flag("-m32", /*Disallow=*/true)
+                           .flag("-m64")
+                           .flag("-march=mips64r2", /*Disallow=*/true);
 
     auto MArchDefault = MultilibBuilder("")
-                            .flag("+m32")
-                            .flag("-m64")
-                            .flag("-mmicromips")
-                            .flag("+march=mips32r2");
+                            .flag("-m32")
+                            .flag("-m64", /*Disallow=*/true)
+                            .flag("-mmicromips", /*Disallow=*/true)
+                            .flag("-march=mips32r2");
 
-    auto Mips16 = MultilibBuilder("/mips16").flag("+mips16");
+    auto Mips16 = MultilibBuilder("/mips16").flag("-mips16");
 
-    auto UCLibc = MultilibBuilder("/uclibc").flag("+muclibc");
+    auto UCLibc = MultilibBuilder("/uclibc").flag("-muclibc");
 
-    auto MAbi64 =
-        MultilibBuilder("/64").flag("+mabi=n64").flag("-mabi=n32").flag("-m32");
+    auto MAbi64 = MultilibBuilder("/64")
+                      .flag("-mabi=n64")
+                      .flag("-mabi=n32", /*Disallow=*/true)
+                      .flag("-m32", /*Disallow=*/true);
 
-    auto BigEndian = MultilibBuilder("").flag("+EB").flag("-EL");
+    auto BigEndian =
+        MultilibBuilder("").flag("-EB").flag("-EL", /*Disallow=*/true);
 
-    auto LittleEndian = MultilibBuilder("/el").flag("+EL").flag("-EB");
+    auto LittleEndian =
+        MultilibBuilder("/el").flag("-EL").flag("-EB", /*Disallow=*/true);
 
-    auto SoftFloat = MultilibBuilder("/sof").flag("+msoft-float");
+    auto SoftFloat = MultilibBuilder("/sof").flag("-msoft-float");
 
-    auto Nan2008 = MultilibBuilder("/nan2008").flag("+mnan=2008");
+    auto Nan2008 = MultilibBuilder("/nan2008").flag("-mnan=2008");
 
     MtiMipsMultilibsV1 =
         MultilibSetBuilder()
@@ -1304,78 +1314,78 @@ static bool findMipsMtiMultilibs(const Multilib::flags_list &Flags,
   MultilibSet MtiMipsMultilibsV2;
   {
     auto BeHard = MultilibBuilder("/mips-r2-hard")
-                      .flag("+EB")
-                      .flag("-msoft-float")
-                      .flag("-mnan=2008")
-                      .flag("-muclibc");
+                      .flag("-EB")
+                      .flag("-msoft-float", /*Disallow=*/true)
+                      .flag("-mnan=2008", /*Disallow=*/true)
+                      .flag("-muclibc", /*Disallow=*/true);
     auto BeSoft = MultilibBuilder("/mips-r2-soft")
-                      .flag("+EB")
-                      .flag("+msoft-float")
-                      .flag("-mnan=2008");
-    auto ElHard = MultilibBuilder("/mipsel-r2-hard")
-                      .flag("+EL")
+                      .flag("-EB")
                       .flag("-msoft-float")
-                      .flag("-mnan=2008")
-                      .flag("-muclibc");
+                      .flag("-mnan=2008", /*Disallow=*/true);
+    auto ElHard = MultilibBuilder("/mipsel-r2-hard")
+                      .flag("-EL")
+                      .flag("-msoft-float", /*Disallow=*/true)
+                      .flag("-mnan=2008", /*Disallow=*/true)
+                      .flag("-muclibc", /*Disallow=*/true);
     auto ElSoft = MultilibBuilder("/mipsel-r2-soft")
-                      .flag("+EL")
-                      .flag("+msoft-float")
-                      .flag("-mnan=2008")
-                      .flag("-mmicromips");
+                      .flag("-EL")
+                      .flag("-msoft-float")
+                      .flag("-mnan=2008", /*Disallow=*/true)
+                      .flag("-mmicromips", /*Disallow=*/true);
     auto BeHardNan = MultilibBuilder("/mips-r2-hard-nan2008")
-                         .flag("+EB")
-                         .flag("-msoft-float")
-                         .flag("+mnan=2008")
-                         .flag("-muclibc");
+                         .flag("-EB")
+                         .flag("-msoft-float", /*Disallow=*/true)
+                         .flag("-mnan=2008")
+                         .flag("-muclibc", /*Disallow=*/true);
     auto ElHardNan = MultilibBuilder("/mipsel-r2-hard-nan2008")
-                         .flag("+EL")
-                         .flag("-msoft-float")
-                         .flag("+mnan=2008")
-                         .flag("-muclibc")
-                         .flag("-mmicromips");
+                         .flag("-EL")
+                         .flag("-msoft-float", /*Disallow=*/true)
+                         .flag("-mnan=2008")
+                         .flag("-muclibc", /*Disallow=*/true)
+                         .flag("-mmicromips", /*Disallow=*/true);
     auto BeHardNanUclibc = MultilibBuilder("/mips-r2-hard-nan2008-uclibc")
-                               .flag("+EB")
-                               .flag("-msoft-float")
-                               .flag("+mnan=2008")
-                               .flag("+muclibc");
+                               .flag("-EB")
+                               .flag("-msoft-float", /*Disallow=*/true)
+                               .flag("-mnan=2008")
+                               .flag("-muclibc");
     auto ElHardNanUclibc = MultilibBuilder("/mipsel-r2-hard-nan2008-uclibc")
-                               .flag("+EL")
-                               .flag("-msoft-float")
-                               .flag("+mnan=2008")
-                               .flag("+muclibc");
+                               .flag("-EL")
+                               .flag("-msoft-float", /*Disallow=*/true)
+                               .flag("-mnan=2008")
+                               .flag("-muclibc");
     auto BeHardUclibc = MultilibBuilder("/mips-r2-hard-uclibc")
-                            .flag("+EB")
-                            .flag("-msoft-float")
-                            .flag("-mnan=2008")
-                            .flag("+muclibc");
+                            .flag("-EB")
+                            .flag("-msoft-float", /*Disallow=*/true)
+                            .flag("-mnan=2008", /*Disallow=*/true)
+                            .flag("-muclibc");
     auto ElHardUclibc = MultilibBuilder("/mipsel-r2-hard-uclibc")
-                            .flag("+EL")
-                            .flag("-msoft-float")
-                            .flag("-mnan=2008")
-                            .flag("+muclibc");
+                            .flag("-EL")
+                            .flag("-msoft-float", /*Disallow=*/true)
+                            .flag("-mnan=2008", /*Disallow=*/true)
+                            .flag("-muclibc");
     auto ElMicroHardNan = MultilibBuilder("/micromipsel-r2-hard-nan2008")
-                              .flag("+EL")
-                              .flag("-msoft-float")
-                              .flag("+mnan=2008")
-                              .flag("+mmicromips");
+                              .flag("-EL")
+                              .flag("-msoft-float", /*Disallow=*/true)
+                              .flag("-mnan=2008")
+                              .flag("-mmicromips");
     auto ElMicroSoft = MultilibBuilder("/micromipsel-r2-soft")
-                           .flag("+EL")
-                           .flag("+msoft-float")
-                           .flag("-mnan=2008")
-                           .flag("+mmicromips");
+                           .flag("-EL")
+                           .flag("-msoft-float")
+                           .flag("-mnan=2008", /*Disallow=*/true)
+                           .flag("-mmicromips");
 
     auto O32 = MultilibBuilder("/lib")
                    .osSuffix("")
-                   .flag("-mabi=n32")
-                   .flag("-mabi=n64");
+                   .flag("-mabi=n32", /*Disallow=*/true)
+                   .flag("-mabi=n64", /*Disallow=*/true);
     auto N32 = MultilibBuilder("/lib32")
                    .osSuffix("")
-                   .flag("+mabi=n32")
-                   .flag("-mabi=n64");
+                   .flag("-mabi=n32")
+                   .flag("-mabi=n64", /*Disallow=*/true);
     auto N64 = MultilibBuilder("/lib64")
                    .osSuffix("")
-                   .flag("-mabi=n32")
-                   .flag("+mabi=n64");
+                   .flag("-mabi=n32", /*Disallow=*/true)
+                   .flag("-mabi=n64");
 
     MtiMipsMultilibsV2 =
         MultilibSetBuilder()
@@ -1396,7 +1406,7 @@ static bool findMipsMtiMultilibs(const Multilib::flags_list &Flags,
             });
   }
   for (auto *Candidate : {&MtiMipsMultilibsV1, &MtiMipsMultilibsV2}) {
-    if (Candidate->select(Flags, Result.SelectedMultilib)) {
+    if (Candidate->select(Flags, Result.SelectedMultilibs)) {
       Result.Multilibs = *Candidate;
       return true;
     }
@@ -1410,12 +1420,17 @@ static bool findMipsImgMultilibs(const Multilib::flags_list &Flags,
   // CodeScape IMG toolchain v1.2 and early.
   MultilibSet ImgMultilibsV1;
   {
-    auto Mips64r6 = MultilibBuilder("/mips64r6").flag("+m64").flag("-m32");
+    auto Mips64r6 = MultilibBuilder("/mips64r6")
+                        .flag("-m64")
+                        .flag("-m32", /*Disallow=*/true);
 
-    auto LittleEndian = MultilibBuilder("/el").flag("+EL").flag("-EB");
+    auto LittleEndian =
+        MultilibBuilder("/el").flag("-EL").flag("-EB", /*Disallow=*/true);
 
-    auto MAbi64 =
-        MultilibBuilder("/64").flag("+mabi=n64").flag("-mabi=n32").flag("-m32");
+    auto MAbi64 = MultilibBuilder("/64")
+                      .flag("-mabi=n64")
+                      .flag("-mabi=n32", /*Disallow=*/true)
+                      .flag("-m32", /*Disallow=*/true);
 
     ImgMultilibsV1 =
         MultilibSetBuilder()
@@ -1434,50 +1449,50 @@ static bool findMipsImgMultilibs(const Multilib::flags_list &Flags,
   MultilibSet ImgMultilibsV2;
   {
     auto BeHard = MultilibBuilder("/mips-r6-hard")
-                      .flag("+EB")
-                      .flag("-msoft-float")
-                      .flag("-mmicromips");
+                      .flag("-EB")
+                      .flag("-msoft-float", /*Disallow=*/true)
+                      .flag("-mmicromips", /*Disallow=*/true);
     auto BeSoft = MultilibBuilder("/mips-r6-soft")
-                      .flag("+EB")
-                      .flag("+msoft-float")
-                      .flag("-mmicromips");
-    auto ElHard = MultilibBuilder("/mipsel-r6-hard")
-                      .flag("+EL")
+                      .flag("-EB")
                       .flag("-msoft-float")
-                      .flag("-mmicromips");
+                      .flag("-mmicromips", /*Disallow=*/true);
+    auto ElHard = MultilibBuilder("/mipsel-r6-hard")
+                      .flag("-EL")
+                      .flag("-msoft-float", /*Disallow=*/true)
+                      .flag("-mmicromips", /*Disallow=*/true);
     auto ElSoft = MultilibBuilder("/mipsel-r6-soft")
-                      .flag("+EL")
-                      .flag("+msoft-float")
-                      .flag("-mmicromips");
+                      .flag("-EL")
+                      .flag("-msoft-float")
+                      .flag("-mmicromips", /*Disallow=*/true);
     auto BeMicroHard = MultilibBuilder("/micromips-r6-hard")
-                           .flag("+EB")
-                           .flag("-msoft-float")
-                           .flag("+mmicromips");
+                           .flag("-EB")
+                           .flag("-msoft-float", /*Disallow=*/true)
+                           .flag("-mmicromips");
     auto BeMicroSoft = MultilibBuilder("/micromips-r6-soft")
-                           .flag("+EB")
-                           .flag("+msoft-float")
-                           .flag("+mmicromips");
-    auto ElMicroHard = MultilibBuilder("/micromipsel-r6-hard")
-                           .flag("+EL")
+                           .flag("-EB")
                            .flag("-msoft-float")
-                           .flag("+mmicromips");
+                           .flag("-mmicromips");
+    auto ElMicroHard = MultilibBuilder("/micromipsel-r6-hard")
+                           .flag("-EL")
+                           .flag("-msoft-float", /*Disallow=*/true)
+                           .flag("-mmicromips");
     auto ElMicroSoft = MultilibBuilder("/micromipsel-r6-soft")
-                           .flag("+EL")
-                           .flag("+msoft-float")
-                           .flag("+mmicromips");
+                           .flag("-EL")
+                           .flag("-msoft-float")
+                           .flag("-mmicromips");
 
     auto O32 = MultilibBuilder("/lib")
                    .osSuffix("")
-                   .flag("-mabi=n32")
-                   .flag("-mabi=n64");
+                   .flag("-mabi=n32", /*Disallow=*/true)
+                   .flag("-mabi=n64", /*Disallow=*/true);
     auto N32 = MultilibBuilder("/lib32")
                    .osSuffix("")
-                   .flag("+mabi=n32")
-                   .flag("-mabi=n64");
+                   .flag("-mabi=n32")
+                   .flag("-mabi=n64", /*Disallow=*/true);
     auto N64 = MultilibBuilder("/lib64")
                    .osSuffix("")
-                   .flag("-mabi=n32")
-                   .flag("+mabi=n64");
+                   .flag("-mabi=n32", /*Disallow=*/true)
+                   .flag("-mabi=n64");
 
     ImgMultilibsV2 =
         MultilibSetBuilder()
@@ -1497,7 +1512,7 @@ static bool findMipsImgMultilibs(const Multilib::flags_list &Flags,
             });
   }
   for (auto *Candidate : {&ImgMultilibsV1, &ImgMultilibsV2}) {
-    if (Candidate->select(Flags, Result.SelectedMultilib)) {
+    if (Candidate->select(Flags, Result.SelectedMultilibs)) {
       Result.Multilibs = *Candidate;
       return true;
     }
@@ -1518,30 +1533,30 @@ bool clang::driver::findMIPSMultilibs(const Driver &D,
   llvm::Triple::ArchType TargetArch = TargetTriple.getArch();
 
   Multilib::flags_list Flags;
-  addMultilibFlag(TargetTriple.isMIPS32(), "m32", Flags);
-  addMultilibFlag(TargetTriple.isMIPS64(), "m64", Flags);
-  addMultilibFlag(isMips16(Args), "mips16", Flags);
-  addMultilibFlag(CPUName == "mips32", "march=mips32", Flags);
+  addMultilibFlag(TargetTriple.isMIPS32(), "-m32", Flags);
+  addMultilibFlag(TargetTriple.isMIPS64(), "-m64", Flags);
+  addMultilibFlag(isMips16(Args), "-mips16", Flags);
+  addMultilibFlag(CPUName == "mips32", "-march=mips32", Flags);
   addMultilibFlag(CPUName == "mips32r2" || CPUName == "mips32r3" ||
                       CPUName == "mips32r5" || CPUName == "p5600",
-                  "march=mips32r2", Flags);
-  addMultilibFlag(CPUName == "mips32r6", "march=mips32r6", Flags);
-  addMultilibFlag(CPUName == "mips64", "march=mips64", Flags);
+                  "-march=mips32r2", Flags);
+  addMultilibFlag(CPUName == "mips32r6", "-march=mips32r6", Flags);
+  addMultilibFlag(CPUName == "mips64", "-march=mips64", Flags);
   addMultilibFlag(CPUName == "mips64r2" || CPUName == "mips64r3" ||
                       CPUName == "mips64r5" || CPUName == "octeon" ||
                       CPUName == "octeon+",
-                  "march=mips64r2", Flags);
-  addMultilibFlag(CPUName == "mips64r6", "march=mips64r6", Flags);
-  addMultilibFlag(isMicroMips(Args), "mmicromips", Flags);
-  addMultilibFlag(tools::mips::isUCLibc(Args), "muclibc", Flags);
-  addMultilibFlag(tools::mips::isNaN2008(D, Args, TargetTriple), "mnan=2008",
+                  "-march=mips64r2", Flags);
+  addMultilibFlag(CPUName == "mips64r6", "-march=mips64r6", Flags);
+  addMultilibFlag(isMicroMips(Args), "-mmicromips", Flags);
+  addMultilibFlag(tools::mips::isUCLibc(Args), "-muclibc", Flags);
+  addMultilibFlag(tools::mips::isNaN2008(D, Args, TargetTriple), "-mnan=2008",
                   Flags);
-  addMultilibFlag(ABIName == "n32", "mabi=n32", Flags);
-  addMultilibFlag(ABIName == "n64", "mabi=n64", Flags);
-  addMultilibFlag(isSoftFloatABI(Args), "msoft-float", Flags);
-  addMultilibFlag(!isSoftFloatABI(Args), "mhard-float", Flags);
-  addMultilibFlag(isMipsEL(TargetArch), "EL", Flags);
-  addMultilibFlag(!isMipsEL(TargetArch), "EB", Flags);
+  addMultilibFlag(ABIName == "n32", "-mabi=n32", Flags);
+  addMultilibFlag(ABIName == "n64", "-mabi=n64", Flags);
+  addMultilibFlag(isSoftFloatABI(Args), "-msoft-float", Flags);
+  addMultilibFlag(!isSoftFloatABI(Args), "-mhard-float", Flags);
+  addMultilibFlag(isMipsEL(TargetArch), "-EL", Flags);
+  addMultilibFlag(!isMipsEL(TargetArch), "-EB", Flags);
 
   if (TargetTriple.isAndroid())
     return findMipsAndroidMultilibs(D.getVFS(), Path, Flags, NonExistent,
@@ -1570,7 +1585,7 @@ bool clang::driver::findMIPSMultilibs(const Driver &D,
   Result.Multilibs.push_back(Default);
   Result.Multilibs.FilterOut(NonExistent);
 
-  if (Result.Multilibs.select(Flags, Result.SelectedMultilib)) {
+  if (Result.Multilibs.select(Flags, Result.SelectedMultilibs)) {
     Result.BiarchSibling = Multilib();
     return true;
   }
@@ -1584,14 +1599,18 @@ static void findAndroidArmMultilibs(const Driver &D,
                                     DetectedMultilibs &Result) {
   // Find multilibs with subdirectories like armv7-a, thumb, armv7-a/thumb.
   FilterNonExistent NonExistent(Path, "/crtbegin.o", D.getVFS());
-  MultilibBuilder ArmV7Multilib =
-      MultilibBuilder("/armv7-a").flag("+march=armv7-a").flag("-mthumb");
-  MultilibBuilder ThumbMultilib =
-      MultilibBuilder("/thumb").flag("-march=armv7-a").flag("+mthumb");
+  MultilibBuilder ArmV7Multilib = MultilibBuilder("/armv7-a")
+                                      .flag("-march=armv7-a")
+                                      .flag("-mthumb", /*Disallow=*/true);
+  MultilibBuilder ThumbMultilib = MultilibBuilder("/thumb")
+                                      .flag("-march=armv7-a", /*Disallow=*/true)
+                                      .flag("-mthumb");
   MultilibBuilder ArmV7ThumbMultilib =
-      MultilibBuilder("/armv7-a/thumb").flag("+march=armv7-a").flag("+mthumb");
+      MultilibBuilder("/armv7-a/thumb").flag("-march=armv7-a").flag("-mthumb");
   MultilibBuilder DefaultMultilib =
-      MultilibBuilder("").flag("-march=armv7-a").flag("-mthumb");
+      MultilibBuilder("")
+          .flag("-march=armv7-a", /*Disallow=*/true)
+          .flag("-mthumb", /*Disallow=*/true);
   MultilibSet AndroidArmMultilibs =
       MultilibSetBuilder()
           .Either(ThumbMultilib, ArmV7Multilib, ArmV7ThumbMultilib,
@@ -1610,10 +1629,10 @@ static void findAndroidArmMultilibs(const Driver &D,
   bool IsArmV7Mode = (IsArmArch || IsThumbArch) &&
       (llvm::ARM::parseArchVersion(Arch) == 7 ||
        (IsArmArch && Arch == "" && IsV7SubArch));
-  addMultilibFlag(IsArmV7Mode, "march=armv7-a", Flags);
-  addMultilibFlag(IsThumbMode, "mthumb", Flags);
+  addMultilibFlag(IsArmV7Mode, "-march=armv7-a", Flags);
+  addMultilibFlag(IsThumbMode, "-mthumb", Flags);
 
-  if (AndroidArmMultilibs.select(Flags, Result.SelectedMultilib))
+  if (AndroidArmMultilibs.select(Flags, Result.SelectedMultilibs))
     Result.Multilibs = AndroidArmMultilibs;
 }
 
@@ -1623,9 +1642,9 @@ static bool findMSP430Multilibs(const Driver &D,
                                 DetectedMultilibs &Result) {
   FilterNonExistent NonExistent(Path, "/crtbegin.o", D.getVFS());
   MultilibBuilder WithoutExceptions =
-      MultilibBuilder("/430").flag("-exceptions");
+      MultilibBuilder("/430").flag("-exceptions", /*Disallow=*/true);
   MultilibBuilder WithExceptions =
-      MultilibBuilder("/430/exceptions").flag("+exceptions");
+      MultilibBuilder("/430/exceptions").flag("-exceptions");
 
   // FIXME: when clang starts to support msp430x ISA additional logic
   // to select between multilib must be implemented
@@ -1638,8 +1657,8 @@ static bool findMSP430Multilibs(const Driver &D,
   Multilib::flags_list Flags;
   addMultilibFlag(Args.hasFlag(options::OPT_fexceptions,
                                options::OPT_fno_exceptions, false),
-                  "exceptions", Flags);
-  if (Result.Multilibs.select(Flags, Result.SelectedMultilib))
+                  "-exceptions", Flags);
+  if (Result.Multilibs.select(Flags, Result.SelectedMultilibs))
     return true;
 
   return false;
@@ -1659,42 +1678,43 @@ static void findCSKYMultilibs(const Driver &D, const llvm::Triple &TargetTriple,
   auto ARCHName = *Res;
 
   Multilib::flags_list Flags;
-  addMultilibFlag(TheFloatABI == tools::csky::FloatABI::Hard, "hard-fp", Flags);
-  addMultilibFlag(TheFloatABI == tools::csky::FloatABI::SoftFP, "soft-fp",
+  addMultilibFlag(TheFloatABI == tools::csky::FloatABI::Hard, "-hard-fp",
                   Flags);
-  addMultilibFlag(TheFloatABI == tools::csky::FloatABI::Soft, "soft", Flags);
-  addMultilibFlag(ARCHName == "ck801", "march=ck801", Flags);
-  addMultilibFlag(ARCHName == "ck802", "march=ck802", Flags);
-  addMultilibFlag(ARCHName == "ck803", "march=ck803", Flags);
-  addMultilibFlag(ARCHName == "ck804", "march=ck804", Flags);
-  addMultilibFlag(ARCHName == "ck805", "march=ck805", Flags);
-  addMultilibFlag(ARCHName == "ck807", "march=ck807", Flags);
-  addMultilibFlag(ARCHName == "ck810", "march=ck810", Flags);
-  addMultilibFlag(ARCHName == "ck810v", "march=ck810v", Flags);
-  addMultilibFlag(ARCHName == "ck860", "march=ck860", Flags);
-  addMultilibFlag(ARCHName == "ck860v", "march=ck860v", Flags);
+  addMultilibFlag(TheFloatABI == tools::csky::FloatABI::SoftFP, "-soft-fp",
+                  Flags);
+  addMultilibFlag(TheFloatABI == tools::csky::FloatABI::Soft, "-soft", Flags);
+  addMultilibFlag(ARCHName == "ck801", "-march=ck801", Flags);
+  addMultilibFlag(ARCHName == "ck802", "-march=ck802", Flags);
+  addMultilibFlag(ARCHName == "ck803", "-march=ck803", Flags);
+  addMultilibFlag(ARCHName == "ck804", "-march=ck804", Flags);
+  addMultilibFlag(ARCHName == "ck805", "-march=ck805", Flags);
+  addMultilibFlag(ARCHName == "ck807", "-march=ck807", Flags);
+  addMultilibFlag(ARCHName == "ck810", "-march=ck810", Flags);
+  addMultilibFlag(ARCHName == "ck810v", "-march=ck810v", Flags);
+  addMultilibFlag(ARCHName == "ck860", "-march=ck860", Flags);
+  addMultilibFlag(ARCHName == "ck860v", "-march=ck860v", Flags);
 
   bool isBigEndian = false;
   if (Arg *A = Args.getLastArg(options::OPT_mlittle_endian,
                                options::OPT_mbig_endian))
     isBigEndian = !A->getOption().matches(options::OPT_mlittle_endian);
-  addMultilibFlag(isBigEndian, "EB", Flags);
+  addMultilibFlag(isBigEndian, "-EB", Flags);
 
-  auto HardFloat = MultilibBuilder("/hard-fp").flag("+hard-fp");
-  auto SoftFpFloat = MultilibBuilder("/soft-fp").flag("+soft-fp");
-  auto SoftFloat = MultilibBuilder("").flag("+soft");
-  auto Arch801 = MultilibBuilder("/ck801").flag("+march=ck801");
-  auto Arch802 = MultilibBuilder("/ck802").flag("+march=ck802");
-  auto Arch803 = MultilibBuilder("/ck803").flag("+march=ck803");
+  auto HardFloat = MultilibBuilder("/hard-fp").flag("-hard-fp");
+  auto SoftFpFloat = MultilibBuilder("/soft-fp").flag("-soft-fp");
+  auto SoftFloat = MultilibBuilder("").flag("-soft");
+  auto Arch801 = MultilibBuilder("/ck801").flag("-march=ck801");
+  auto Arch802 = MultilibBuilder("/ck802").flag("-march=ck802");
+  auto Arch803 = MultilibBuilder("/ck803").flag("-march=ck803");
   // CK804 use the same library as CK803
-  auto Arch804 = MultilibBuilder("/ck803").flag("+march=ck804");
-  auto Arch805 = MultilibBuilder("/ck805").flag("+march=ck805");
-  auto Arch807 = MultilibBuilder("/ck807").flag("+march=ck807");
-  auto Arch810 = MultilibBuilder("").flag("+march=ck810");
-  auto Arch810v = MultilibBuilder("/ck810v").flag("+march=ck810v");
-  auto Arch860 = MultilibBuilder("/ck860").flag("+march=ck860");
-  auto Arch860v = MultilibBuilder("/ck860v").flag("+march=ck860v");
-  auto BigEndian = MultilibBuilder("/big").flag("+EB");
+  auto Arch804 = MultilibBuilder("/ck803").flag("-march=ck804");
+  auto Arch805 = MultilibBuilder("/ck805").flag("-march=ck805");
+  auto Arch807 = MultilibBuilder("/ck807").flag("-march=ck807");
+  auto Arch810 = MultilibBuilder("").flag("-march=ck810");
+  auto Arch810v = MultilibBuilder("/ck810v").flag("-march=ck810v");
+  auto Arch860 = MultilibBuilder("/ck860").flag("-march=ck860");
+  auto Arch860v = MultilibBuilder("/ck860v").flag("-march=ck860v");
+  auto BigEndian = MultilibBuilder("/big").flag("-EB");
 
   MultilibSet CSKYMultilibs =
       MultilibSetBuilder()
@@ -1705,7 +1725,7 @@ static void findCSKYMultilibs(const Driver &D, const llvm::Triple &TargetTriple,
           .makeMultilibSet()
           .FilterOut(NonExistent);
 
-  if (CSKYMultilibs.select(Flags, Result.SelectedMultilib))
+  if (CSKYMultilibs.select(Flags, Result.SelectedMultilibs))
     Result.Multilibs = CSKYMultilibs;
 }
 
@@ -1731,8 +1751,8 @@ static void findRISCVBareMetalMultilibs(const Driver &D,
     Ms.emplace_back(
         MultilibBuilder(
             (Twine(Element.march) + "/" + Twine(Element.mabi)).str())
-            .flag(Twine("+march=", Element.march).str())
-            .flag(Twine("+mabi=", Element.mabi).str()));
+            .flag(Twine("-march=", Element.march).str())
+            .flag(Twine("-mabi=", Element.mabi).str()));
   }
   MultilibSet RISCVMultilibs =
       MultilibSetBuilder()
@@ -1752,15 +1772,15 @@ static void findRISCVBareMetalMultilibs(const Driver &D,
   StringRef MArch = tools::riscv::getRISCVArch(Args, TargetTriple);
   for (auto Element : RISCVMultilibSet) {
     addMultilibFlag(MArch == Element.march,
-                    Twine("march=", Element.march).str().c_str(), Flags);
+                    Twine("-march=", Element.march).str().c_str(), Flags);
     if (!Added_ABIs.count(Element.mabi)) {
       Added_ABIs.insert(Element.mabi);
       addMultilibFlag(ABIName == Element.mabi,
-                      Twine("mabi=", Element.mabi).str().c_str(), Flags);
+                      Twine("-mabi=", Element.mabi).str().c_str(), Flags);
     }
   }
 
-  if (RISCVMultilibs.select(Flags, Result.SelectedMultilib))
+  if (RISCVMultilibs.select(Flags, Result.SelectedMultilibs))
     Result.Multilibs = RISCVMultilibs;
 }
 
@@ -1772,17 +1792,17 @@ static void findRISCVMultilibs(const Driver &D,
 
   FilterNonExistent NonExistent(Path, "/crtbegin.o", D.getVFS());
   MultilibBuilder Ilp32 =
-      MultilibBuilder("lib32/ilp32").flag("+m32").flag("+mabi=ilp32");
+      MultilibBuilder("lib32/ilp32").flag("-m32").flag("-mabi=ilp32");
   MultilibBuilder Ilp32f =
-      MultilibBuilder("lib32/ilp32f").flag("+m32").flag("+mabi=ilp32f");
+      MultilibBuilder("lib32/ilp32f").flag("-m32").flag("-mabi=ilp32f");
   MultilibBuilder Ilp32d =
-      MultilibBuilder("lib32/ilp32d").flag("+m32").flag("+mabi=ilp32d");
+      MultilibBuilder("lib32/ilp32d").flag("-m32").flag("-mabi=ilp32d");
   MultilibBuilder Lp64 =
-      MultilibBuilder("lib64/lp64").flag("+m64").flag("+mabi=lp64");
+      MultilibBuilder("lib64/lp64").flag("-m64").flag("-mabi=lp64");
   MultilibBuilder Lp64f =
-      MultilibBuilder("lib64/lp64f").flag("+m64").flag("+mabi=lp64f");
+      MultilibBuilder("lib64/lp64f").flag("-m64").flag("-mabi=lp64f");
   MultilibBuilder Lp64d =
-      MultilibBuilder("lib64/lp64d").flag("+m64").flag("+mabi=lp64d");
+      MultilibBuilder("lib64/lp64d").flag("-m64").flag("-mabi=lp64d");
   MultilibSet RISCVMultilibs =
       MultilibSetBuilder()
           .Either({Ilp32, Ilp32f, Ilp32d, Lp64, Lp64f, Lp64d})
@@ -1793,16 +1813,16 @@ static void findRISCVMultilibs(const Driver &D,
   bool IsRV64 = TargetTriple.getArch() == llvm::Triple::riscv64;
   StringRef ABIName = tools::riscv::getRISCVABI(Args, TargetTriple);
 
-  addMultilibFlag(!IsRV64, "m32", Flags);
-  addMultilibFlag(IsRV64, "m64", Flags);
-  addMultilibFlag(ABIName == "ilp32", "mabi=ilp32", Flags);
-  addMultilibFlag(ABIName == "ilp32f", "mabi=ilp32f", Flags);
-  addMultilibFlag(ABIName == "ilp32d", "mabi=ilp32d", Flags);
-  addMultilibFlag(ABIName == "lp64", "mabi=lp64", Flags);
-  addMultilibFlag(ABIName == "lp64f", "mabi=lp64f", Flags);
-  addMultilibFlag(ABIName == "lp64d", "mabi=lp64d", Flags);
+  addMultilibFlag(!IsRV64, "-m32", Flags);
+  addMultilibFlag(IsRV64, "-m64", Flags);
+  addMultilibFlag(ABIName == "ilp32", "-mabi=ilp32", Flags);
+  addMultilibFlag(ABIName == "ilp32f", "-mabi=ilp32f", Flags);
+  addMultilibFlag(ABIName == "ilp32d", "-mabi=ilp32d", Flags);
+  addMultilibFlag(ABIName == "lp64", "-mabi=lp64", Flags);
+  addMultilibFlag(ABIName == "lp64f", "-mabi=lp64f", Flags);
+  addMultilibFlag(ABIName == "lp64d", "-mabi=lp64d", Flags);
 
-  if (RISCVMultilibs.select(Flags, Result.SelectedMultilib))
+  if (RISCVMultilibs.select(Flags, Result.SelectedMultilibs))
     Result.Multilibs = RISCVMultilibs;
 }
 
@@ -1822,7 +1842,7 @@ static bool findBiarchMultilibs(const Driver &D,
 
   StringRef Suff64 = "/64";
   // Solaris uses platform-specific suffixes instead of /64.
-  if (TargetTriple.getOS() == llvm::Triple::Solaris) {
+  if (TargetTriple.isOSSolaris()) {
     switch (TargetTriple.getArch()) {
     case llvm::Triple::x86:
     case llvm::Triple::x86_64:
@@ -1840,24 +1860,30 @@ static bool findBiarchMultilibs(const Driver &D,
   Multilib Alt64 = MultilibBuilder()
                        .gccSuffix(Suff64)
                        .includeSuffix(Suff64)
-                       .flag("-m32")
-                       .flag("+m64")
-                       .flag("-mx32")
+                       .flag("-m32", /*Disallow=*/true)
+                       .flag("-m64")
+                       .flag("-mx32", /*Disallow=*/true)
                        .makeMultilib();
   Multilib Alt32 = MultilibBuilder()
                        .gccSuffix("/32")
                        .includeSuffix("/32")
-                       .flag("+m32")
-                       .flag("-m64")
-                       .flag("-mx32")
+                       .flag("-m32")
+                       .flag("-m64", /*Disallow=*/true)
+                       .flag("-mx32", /*Disallow=*/true)
                        .makeMultilib();
   Multilib Altx32 = MultilibBuilder()
                         .gccSuffix("/x32")
                         .includeSuffix("/x32")
-                        .flag("-m32")
-                        .flag("-m64")
-                        .flag("+mx32")
+                        .flag("-m32", /*Disallow=*/true)
+                        .flag("-m64", /*Disallow=*/true)
+                        .flag("-mx32")
                         .makeMultilib();
+  Multilib Alt32sparc = MultilibBuilder()
+                            .gccSuffix("/sparcv8plus")
+                            .includeSuffix("/sparcv8plus")
+                            .flag("-m32")
+                            .flag("-m64", /*Disallow=*/true)
+                            .makeMultilib();
 
   // GCC toolchain for IAMCU doesn't have crtbegin.o, so look for libgcc.a.
   FilterNonExistent NonExistent(
@@ -1869,10 +1895,14 @@ static bool findBiarchMultilibs(const Driver &D,
   const bool IsX32 = TargetTriple.isX32();
   if (TargetTriple.isArch32Bit() && !NonExistent(Alt32))
     Want = WANT64;
+  if (TargetTriple.isArch32Bit() && !NonExistent(Alt32sparc))
+    Want = WANT64;
   else if (TargetTriple.isArch64Bit() && IsX32 && !NonExistent(Altx32))
     Want = WANT64;
   else if (TargetTriple.isArch64Bit() && !IsX32 && !NonExistent(Alt64))
     Want = WANT32;
+  else if (TargetTriple.isArch64Bit() && !NonExistent(Alt32sparc))
+    Want = WANT64;
   else {
     if (TargetTriple.isArch32Bit())
       Want = NeedsBiarchSuffix ? WANT64 : WANT32;
@@ -1883,11 +1913,17 @@ static bool findBiarchMultilibs(const Driver &D,
   }
 
   if (Want == WANT32)
-    DefaultBuilder.flag("+m32").flag("-m64").flag("-mx32");
+    DefaultBuilder.flag("-m32")
+        .flag("-m64", /*Disallow=*/true)
+        .flag("-mx32", /*Disallow=*/true);
   else if (Want == WANT64)
-    DefaultBuilder.flag("-m32").flag("+m64").flag("-mx32");
+    DefaultBuilder.flag("-m32", /*Disallow=*/true)
+        .flag("-m64")
+        .flag("-mx32", /*Disallow=*/true);
   else if (Want == WANTX32)
-    DefaultBuilder.flag("-m32").flag("-m64").flag("+mx32");
+    DefaultBuilder.flag("-m32", /*Disallow=*/true)
+        .flag("-m64", /*Disallow=*/true)
+        .flag("-mx32");
   else
     return false;
 
@@ -1897,19 +1933,22 @@ static bool findBiarchMultilibs(const Driver &D,
   Result.Multilibs.push_back(Alt64);
   Result.Multilibs.push_back(Alt32);
   Result.Multilibs.push_back(Altx32);
+  Result.Multilibs.push_back(Alt32sparc);
 
   Result.Multilibs.FilterOut(NonExistent);
 
   Multilib::flags_list Flags;
-  addMultilibFlag(TargetTriple.isArch64Bit() && !IsX32, "m64", Flags);
-  addMultilibFlag(TargetTriple.isArch32Bit(), "m32", Flags);
-  addMultilibFlag(TargetTriple.isArch64Bit() && IsX32, "mx32", Flags);
+  addMultilibFlag(TargetTriple.isArch64Bit() && !IsX32, "-m64", Flags);
+  addMultilibFlag(TargetTriple.isArch32Bit(), "-m32", Flags);
+  addMultilibFlag(TargetTriple.isArch64Bit() && IsX32, "-mx32", Flags);
 
-  if (!Result.Multilibs.select(Flags, Result.SelectedMultilib))
+  if (!Result.Multilibs.select(Flags, Result.SelectedMultilibs))
     return false;
 
-  if (Result.SelectedMultilib == Alt64 || Result.SelectedMultilib == Alt32 ||
-      Result.SelectedMultilib == Altx32)
+  if (Result.SelectedMultilibs.back() == Alt64 ||
+      Result.SelectedMultilibs.back() == Alt32 ||
+      Result.SelectedMultilibs.back() == Altx32 ||
+      Result.SelectedMultilibs.back() == Alt32sparc)
     Result.BiarchSibling = Default;
 
   return true;
@@ -2036,8 +2075,7 @@ static llvm::StringRef getGCCToolchainDir(const ArgList &Args,
 /// necessary because the driver doesn't store the final version of the target
 /// triple.
 void Generic_GCC::GCCInstallationDetector::init(
-    const llvm::Triple &TargetTriple, const ArgList &Args,
-    ArrayRef<std::string> ExtraTripleAliases) {
+    const llvm::Triple &TargetTriple, const ArgList &Args) {
   llvm::Triple BiarchVariantTriple = TargetTriple.isArch32Bit()
                                          ? TargetTriple.get64BitArchVariant()
                                          : TargetTriple.get32BitArchVariant();
@@ -2049,6 +2087,10 @@ void Generic_GCC::GCCInstallationDetector::init(
   CollectLibDirsAndTriples(TargetTriple, BiarchVariantTriple, CandidateLibDirs,
                            CandidateTripleAliases, CandidateBiarchLibDirs,
                            CandidateBiarchTripleAliases);
+
+  TripleNoVendor = TargetTriple.getArchName().str() + "-" +
+                   TargetTriple.getOSAndEnvironmentName().str();
+  StringRef TripleNoVendorRef(TripleNoVendor);
 
   // If --gcc-install-dir= is specified, skip filesystem detection.
   if (const Arg *A =
@@ -2107,9 +2149,6 @@ void Generic_GCC::GCCInstallationDetector::init(
     // may pick the libraries for x86_64-pc-linux-gnu even when exact matching
     // triple x86_64-gentoo-linux-gnu is present.
     GentooTestTriples.push_back(TargetTriple.str());
-    // Check rest of triples.
-    GentooTestTriples.append(ExtraTripleAliases.begin(),
-                             ExtraTripleAliases.end());
     GentooTestTriples.append(CandidateTripleAliases.begin(),
                              CandidateTripleAliases.end());
     if (ScanGentooConfigs(TargetTriple, Args, GentooTestTriples,
@@ -2135,10 +2174,10 @@ void Generic_GCC::GCCInstallationDetector::init(
       // Try to match the exact target triple first.
       ScanLibDirForGCCTriple(TargetTriple, Args, LibDir, TargetTriple.str(),
                              false, GCCDirExists, GCCCrossDirExists);
-      // Try rest of possible triples.
-      for (StringRef Candidate : ExtraTripleAliases) // Try these first.
-        ScanLibDirForGCCTriple(TargetTriple, Args, LibDir, Candidate, false,
-                               GCCDirExists, GCCCrossDirExists);
+      // If vendor is unknown, let's try triple without vendor.
+      if (TargetTriple.getVendor() == llvm::Triple::UnknownVendor)
+        ScanLibDirForGCCTriple(TargetTriple, Args, LibDir, TripleNoVendorRef,
+                               false, GCCDirExists, GCCCrossDirExists);
       for (StringRef Candidate : CandidateTripleAliases)
         ScanLibDirForGCCTriple(TargetTriple, Args, LibDir, Candidate, false,
                                GCCDirExists, GCCCrossDirExists);
@@ -2185,13 +2224,14 @@ bool Generic_GCC::GCCInstallationDetector::getBiarchSibling(Multilib &M) const {
 void Generic_GCC::GCCInstallationDetector::AddDefaultGCCPrefixes(
     const llvm::Triple &TargetTriple, SmallVectorImpl<std::string> &Prefixes,
     StringRef SysRoot) {
-  if (TargetTriple.getOS() == llvm::Triple::Solaris) {
+  if (TargetTriple.isOSSolaris()) {
     // Solaris is a special case.
     // The GCC installation is under
     //   /usr/gcc/<major>.<minor>/lib/gcc/<triple>/<major>.<minor>.<patch>/
     // so we need to find those /usr/gcc/*/lib/gcc libdirs and go with
     // /usr/gcc/<version> as a prefix.
 
+    SmallVector<std::pair<GCCVersion, std::string>, 8> SolarisPrefixes;
     std::string PrefixDir = concat(SysRoot, "/usr/gcc");
     std::error_code EC;
     for (llvm::vfs::directory_iterator LI = D.getVFS().dir_begin(PrefixDir, EC),
@@ -2209,8 +2249,13 @@ void Generic_GCC::GCCInstallationDetector::AddDefaultGCCPrefixes(
       if (!D.getVFS().exists(CandidateLibPath))
         continue;
 
-      Prefixes.push_back(CandidatePrefix);
+      SolarisPrefixes.emplace_back(
+          std::make_pair(CandidateVersion, CandidatePrefix));
     }
+    // Sort in reverse order so GCCInstallationDetector::init picks the latest.
+    std::sort(SolarisPrefixes.rbegin(), SolarisPrefixes.rend());
+    for (auto p : SolarisPrefixes)
+      Prefixes.emplace_back(p.second);
     return;
   }
 
@@ -2381,16 +2426,14 @@ void Generic_GCC::GCCInstallationDetector::AddDefaultGCCPrefixes(
   using std::begin;
   using std::end;
 
-  if (TargetTriple.getOS() == llvm::Triple::Solaris) {
+  if (TargetTriple.isOSSolaris()) {
     static const char *const SolarisLibDirs[] = {"/lib"};
     static const char *const SolarisSparcV8Triples[] = {
-        "sparc-sun-solaris2.11", "sparc-sun-solaris2.12"};
+        "sparc-sun-solaris2.11"};
     static const char *const SolarisSparcV9Triples[] = {
-        "sparcv9-sun-solaris2.11", "sparcv9-sun-solaris2.12"};
-    static const char *const SolarisX86Triples[] = {"i386-pc-solaris2.11",
-                                                    "i386-pc-solaris2.12"};
-    static const char *const SolarisX86_64Triples[] = {"x86_64-pc-solaris2.11",
-                                                       "x86_64-pc-solaris2.12"};
+        "sparcv9-sun-solaris2.11"};
+    static const char *const SolarisX86Triples[] = {"i386-pc-solaris2.11"};
+    static const char *const SolarisX86_64Triples[] = {"x86_64-pc-solaris2.11"};
     LibDirs.append(begin(SolarisLibDirs), end(SolarisLibDirs));
     BiarchLibDirs.append(begin(SolarisLibDirs), end(SolarisLibDirs));
     switch (TargetTriple.getArch()) {
@@ -2428,9 +2471,6 @@ void Generic_GCC::GCCInstallationDetector::AddDefaultGCCPrefixes(
     static const char *const AArch64AndroidTriples[] = {
         "aarch64-linux-android"};
     static const char *const ARMAndroidTriples[] = {"arm-linux-androideabi"};
-    static const char *const MIPSELAndroidTriples[] = {"mipsel-linux-android"};
-    static const char *const MIPS64ELAndroidTriples[] = {
-        "mips64el-linux-android"};
     static const char *const X86AndroidTriples[] = {"i686-linux-android"};
     static const char *const X86_64AndroidTriples[] = {"x86_64-linux-android"};
 
@@ -2444,22 +2484,6 @@ void Generic_GCC::GCCInstallationDetector::AddDefaultGCCPrefixes(
     case llvm::Triple::thumb:
       LibDirs.append(begin(ARMLibDirs), end(ARMLibDirs));
       TripleAliases.append(begin(ARMAndroidTriples), end(ARMAndroidTriples));
-      break;
-    case llvm::Triple::mipsel:
-      LibDirs.append(begin(MIPSELLibDirs), end(MIPSELLibDirs));
-      TripleAliases.append(begin(MIPSELAndroidTriples),
-                           end(MIPSELAndroidTriples));
-      BiarchLibDirs.append(begin(MIPS64ELLibDirs), end(MIPS64ELLibDirs));
-      BiarchTripleAliases.append(begin(MIPS64ELAndroidTriples),
-                                 end(MIPS64ELAndroidTriples));
-      break;
-    case llvm::Triple::mips64el:
-      LibDirs.append(begin(MIPS64ELLibDirs), end(MIPS64ELLibDirs));
-      TripleAliases.append(begin(MIPS64ELAndroidTriples),
-                           end(MIPS64ELAndroidTriples));
-      BiarchLibDirs.append(begin(MIPSELLibDirs), end(MIPSELLibDirs));
-      BiarchTripleAliases.append(begin(MIPSELAndroidTriples),
-                                 end(MIPSELAndroidTriples));
       break;
     case llvm::Triple::x86_64:
       LibDirs.append(begin(X86_64LibDirs), end(X86_64LibDirs));
@@ -2655,10 +2679,6 @@ void Generic_GCC::GCCInstallationDetector::AddDefaultGCCPrefixes(
     break;
   }
 
-  // Always append the drivers target triple to the end, in case it doesn't
-  // match any of our aliases.
-  TripleAliases.push_back(TargetTriple.str());
-
   // Also include the multiarch variant if it's different.
   if (TargetTriple.str() != BiarchTriple.str())
     BiarchTripleAliases.push_back(BiarchTriple.str());
@@ -2693,7 +2713,9 @@ bool Generic_GCC::GCCInstallationDetector::ScanGCCForMultilibs(
   }
 
   Multilibs = Detected.Multilibs;
-  SelectedMultilib = Detected.SelectedMultilib;
+  SelectedMultilib = Detected.SelectedMultilibs.empty()
+                         ? Multilib()
+                         : Detected.SelectedMultilibs.back();
   BiarchSibling = Detected.BiarchSibling;
 
   return true;
@@ -2900,6 +2922,8 @@ Generic_GCC::getDefaultUnwindTableLevel(const ArgList &Args) const {
   case llvm::Triple::ppcle:
   case llvm::Triple::ppc64:
   case llvm::Triple::ppc64le:
+  case llvm::Triple::riscv32:
+  case llvm::Triple::riscv64:
   case llvm::Triple::x86:
   case llvm::Triple::x86_64:
     return UnwindTableLevel::Asynchronous;
@@ -2930,44 +2954,12 @@ bool Generic_GCC::isPICDefaultForced() const {
 
 bool Generic_GCC::IsIntegratedAssemblerDefault() const {
   switch (getTriple().getArch()) {
-  case llvm::Triple::aarch64:
-  case llvm::Triple::aarch64_be:
-  case llvm::Triple::amdgcn:
-  case llvm::Triple::arm:
-  case llvm::Triple::armeb:
-  case llvm::Triple::avr:
-  case llvm::Triple::bpfel:
-  case llvm::Triple::bpfeb:
-  case llvm::Triple::csky:
-  case llvm::Triple::hexagon:
-  case llvm::Triple::lanai:
-  case llvm::Triple::loongarch32:
-  case llvm::Triple::loongarch64:
-  case llvm::Triple::m68k:
-  case llvm::Triple::mips:
-  case llvm::Triple::mipsel:
-  case llvm::Triple::mips64:
-  case llvm::Triple::mips64el:
-  case llvm::Triple::msp430:
-  case llvm::Triple::ppc:
-  case llvm::Triple::ppcle:
-  case llvm::Triple::ppc64:
-  case llvm::Triple::ppc64le:
-  case llvm::Triple::r600:
-  case llvm::Triple::riscv32:
-  case llvm::Triple::riscv64:
-  case llvm::Triple::sparc:
-  case llvm::Triple::sparcel:
-  case llvm::Triple::sparcv9:
-  case llvm::Triple::systemz:
-  case llvm::Triple::thumb:
-  case llvm::Triple::thumbeb:
-  case llvm::Triple::ve:
-  case llvm::Triple::x86:
-  case llvm::Triple::x86_64:
-    return true;
-  default:
+  case llvm::Triple::nvptx:
+  case llvm::Triple::nvptx64:
+  case llvm::Triple::xcore:
     return false;
+  default:
+    return true;
   }
 }
 
@@ -2993,6 +2985,7 @@ void Generic_GCC::AddMultilibPaths(const Driver &D,
                                    path_list &Paths) {
   // Add the multilib suffixed paths where they are available.
   if (GCCInstallation.isValid()) {
+    assert(!SelectedMultilibs.empty());
     const llvm::Triple &GCCTriple = GCCInstallation.getTriple();
     const std::string &LibPath =
         std::string(GCCInstallation.getParentLibPath());
@@ -3000,13 +2993,14 @@ void Generic_GCC::AddMultilibPaths(const Driver &D,
     // Sourcery CodeBench MIPS toolchain holds some libraries under
     // a biarch-like suffix of the GCC installation.
     if (const auto &PathsCallback = Multilibs.filePathsCallback())
-      for (const auto &Path : PathsCallback(SelectedMultilib))
+      for (const auto &Path : PathsCallback(SelectedMultilibs.back()))
         addPathIfExists(D, GCCInstallation.getInstallPath() + Path, Paths);
 
     // Add lib/gcc/$triple/$version, with an optional /multilib suffix.
-    addPathIfExists(
-        D, GCCInstallation.getInstallPath() + SelectedMultilib.gccSuffix(),
-        Paths);
+    addPathIfExists(D,
+                    GCCInstallation.getInstallPath() +
+                        SelectedMultilibs.back().gccSuffix(),
+                    Paths);
 
     // Add lib/gcc/$triple/$libdir
     // For GCC built with --enable-version-specific-runtime-libs.
@@ -3033,7 +3027,7 @@ void Generic_GCC::AddMultilibPaths(const Driver &D,
     // Clang diverges from GCC's behavior.
     addPathIfExists(D,
                     LibPath + "/../" + GCCTriple.str() + "/lib/../" + OSLibDir +
-                        SelectedMultilib.osSuffix(),
+                        SelectedMultilibs.back().osSuffix(),
                     Paths);
 
     // If the GCC installation we found is inside of the sysroot, we want to

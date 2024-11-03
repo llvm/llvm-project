@@ -316,7 +316,7 @@ Instruction *InstCombinerImpl::foldPHIArgIntToPtrToPHI(PHINode &PN) {
   for (unsigned OpNum = 0; OpNum != PN.getNumIncomingValues(); ++OpNum) {
     if (auto *NewOp =
             simplifyIntToPtrRoundTripCast(PN.getIncomingValue(OpNum))) {
-      PN.setIncomingValue(OpNum, NewOp);
+      replaceOperand(PN, OpNum, NewOp);
       OperandWithRoundTripCast = true;
     }
   }
@@ -1389,11 +1389,10 @@ Instruction *InstCombinerImpl::visitPHINode(PHINode &PN) {
 
   // If all PHI operands are the same operation, pull them through the PHI,
   // reducing code size.
-  if (isa<Instruction>(PN.getIncomingValue(0)) &&
-      isa<Instruction>(PN.getIncomingValue(1)) &&
-      cast<Instruction>(PN.getIncomingValue(0))->getOpcode() ==
-          cast<Instruction>(PN.getIncomingValue(1))->getOpcode() &&
-      PN.getIncomingValue(0)->hasOneUser())
+  auto *Inst0 = dyn_cast<Instruction>(PN.getIncomingValue(0));
+  auto *Inst1 = dyn_cast<Instruction>(PN.getIncomingValue(1));
+  if (Inst0 && Inst1 && Inst0->getOpcode() == Inst1->getOpcode() &&
+      Inst0->hasOneUser())
     if (Instruction *Result = foldPHIArgOpIntoPHI(PN))
       return Result;
 

@@ -25,7 +25,6 @@ int has_has_attribute();
 int has_something_we_dont_have();
 #endif
 
-// rdar://10253857
 #if __has_attribute(__const)
  int fn3() __attribute__ ((__const));
 #endif

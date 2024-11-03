@@ -27,6 +27,7 @@
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/IR/Argument.h"
+#include "llvm/IR/AttributeMask.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/CallingConv.h"
@@ -53,15 +54,12 @@
 #include "llvm/IR/User.h"
 #include "llvm/IR/Value.h"
 #include "llvm/IR/ValueHandle.h"
-#include "llvm/InitializePasses.h"
-#include "llvm/Pass.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/PromoteMemToReg.h"
@@ -163,76 +161,6 @@ PreservedAnalyses RewriteStatepointsForGC::run(Module &M,
   PA.preserve<TargetLibraryAnalysis>();
   return PA;
 }
-
-namespace {
-
-class RewriteStatepointsForGCLegacyPass : public ModulePass {
-  RewriteStatepointsForGC Impl;
-
-public:
-  static char ID; // Pass identification, replacement for typeid
-
-  RewriteStatepointsForGCLegacyPass() : ModulePass(ID), Impl() {
-    initializeRewriteStatepointsForGCLegacyPassPass(
-        *PassRegistry::getPassRegistry());
-  }
-
-  bool runOnModule(Module &M) override {
-    bool Changed = false;
-    for (Function &F : M) {
-      // Nothing to do for declarations.
-      if (F.isDeclaration() || F.empty())
-        continue;
-
-      // Policy choice says not to rewrite - the most common reason is that
-      // we're compiling code without a GCStrategy.
-      if (!shouldRewriteStatepointsIn(F))
-        continue;
-
-      TargetTransformInfo &TTI =
-          getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F);
-      const TargetLibraryInfo &TLI =
-          getAnalysis<TargetLibraryInfoWrapperPass>().getTLI(F);
-      auto &DT = getAnalysis<DominatorTreeWrapperPass>(F).getDomTree();
-
-      Changed |= Impl.runOnFunction(F, DT, TTI, TLI);
-    }
-
-    if (!Changed)
-      return false;
-
-    // stripNonValidData asserts that shouldRewriteStatepointsIn
-    // returns true for at least one function in the module.  Since at least
-    // one function changed, we know that the precondition is satisfied.
-    stripNonValidData(M);
-    return true;
-  }
-
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    // We add and rewrite a bunch of instructions, but don't really do much
-    // else.  We could in theory preserve a lot more analyses here.
-    AU.addRequired<DominatorTreeWrapperPass>();
-    AU.addRequired<TargetTransformInfoWrapperPass>();
-    AU.addRequired<TargetLibraryInfoWrapperPass>();
-  }
-};
-
-} // end anonymous namespace
-
-char RewriteStatepointsForGCLegacyPass::ID = 0;
-
-ModulePass *llvm::createRewriteStatepointsForGCLegacyPass() {
-  return new RewriteStatepointsForGCLegacyPass();
-}
-
-INITIALIZE_PASS_BEGIN(RewriteStatepointsForGCLegacyPass,
-                      "rewrite-statepoints-for-gc",
-                      "Make relocations explicit at statepoints", false, false)
-INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(TargetTransformInfoWrapperPass)
-INITIALIZE_PASS_END(RewriteStatepointsForGCLegacyPass,
-                    "rewrite-statepoints-for-gc",
-                    "Make relocations explicit at statepoints", false, false)
 
 namespace {
 
@@ -695,7 +623,7 @@ static Value *findBaseDefiningValue(Value *I, DefiningValueMapTy &Cache,
 /// Returns the base defining value for this value.
 static Value *findBaseDefiningValueCached(Value *I, DefiningValueMapTy &Cache,
                                           IsKnownBaseMapTy &KnownBases) {
-  if (Cache.find(I) == Cache.end()) {
+  if (!Cache.contains(I)) {
     auto *BDV = findBaseDefiningValue(I, Cache, KnownBases);
     Cache[I] = BDV;
     LLVM_DEBUG(dbgs() << "fBDV-cached: " << I->getName() << " -> "
@@ -703,7 +631,7 @@ static Value *findBaseDefiningValueCached(Value *I, DefiningValueMapTy &Cache,
                       << KnownBases[I] << "\n");
   }
   assert(Cache[I] != nullptr);
-  assert(KnownBases.find(Cache[I]) != KnownBases.end() &&
+  assert(KnownBases.contains(Cache[I]) &&
          "Cached value must be present in known bases map");
   return Cache[I];
 }
@@ -1292,9 +1220,9 @@ static Value *findBasePointer(Value *I, DefiningValueMapTy &Cache,
       if (!BdvSV->isZeroEltSplat())
         UpdateOperand(1); // vector operand
       else {
-        // Never read, so just use undef
+        // Never read, so just use poison
         Value *InVal = BdvSV->getOperand(1);
-        BaseSV->setOperand(1, UndefValue::get(InVal->getType()));
+        BaseSV->setOperand(1, PoisonValue::get(InVal->getType()));
       }
     }
   }
@@ -2874,9 +2802,7 @@ static bool insertParsePoints(Function &F, DominatorTree &DT,
 
   // Do all the fixups of the original live variables to their relocated selves
   SmallVector<Value *, 128> Live;
-  for (size_t i = 0; i < Records.size(); i++) {
-    PartiallyConstructedSafepointRecord &Info = Records[i];
-
+  for (const PartiallyConstructedSafepointRecord &Info : Records) {
     // We can't simply save the live set from the original insertion.  One of
     // the live values might be the result of a call which needs a safepoint.
     // That Value* no longer exists and we need to use the new gc_result.
@@ -3027,9 +2953,9 @@ static void stripNonValidDataFromBody(Function &F) {
     }
   }
 
-  // Delete the invariant.start instructions and RAUW undef.
+  // Delete the invariant.start instructions and RAUW poison.
   for (auto *II : InvariantStartInstructions) {
-    II->replaceAllUsesWith(UndefValue::get(II->getType()));
+    II->replaceAllUsesWith(PoisonValue::get(II->getType()));
     II->eraseFromParent();
   }
 }

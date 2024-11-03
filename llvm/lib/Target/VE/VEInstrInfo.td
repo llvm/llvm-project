@@ -441,7 +441,7 @@ def call          : SDNode<"VEISD::CALL", SDT_SPCall,
                            [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue,
                             SDNPVariadic]>;
 
-def retflag       : SDNode<"VEISD::RET_FLAG", SDTNone,
+def retglue       : SDNode<"VEISD::RET_GLUE", SDTNone,
                            [SDNPHasChain, SDNPOptInGlue, SDNPVariadic]>;
 
 def getGOT        : Operand<iPTR>;
@@ -1466,7 +1466,7 @@ def : Pat<(brind tblockaddress:$imm), (BCFLazi_t 0, $imm)>;
 let Uses = [SX10], bpf = 3 /* TAKEN */, cond = 15 /* AT */, cy = 0, sy = 0,
     sz = 10 /* SX10 */, imm32 = 0, isReturn = 1, isTerminator = 1,
     isBarrier = 1, isCodeGenOnly = 1, hasSideEffects = 0 in
-def RET : CF<0x19, (outs), (ins), "b.l.t (, %s10)", [(retflag)]>;
+def RET : CF<0x19, (outs), (ins), "b.l.t (, %s10)", [(retglue)]>;
 
 // Section 8.8.2 - BCS (Branch on Condition Single)
 defm BCFW : BCm<"b${cond}.w", "b.w", "baf.w", 0x1B, I32, simm7>;
@@ -1864,10 +1864,10 @@ defm : ZXATMLD32m<atomic_load_32, LDLZXrri, LDLZXrii, LDLZXzri, LDLZXzii>;
 multiclass ATMSTm<SDPatternOperator from, ValueType ty,
                   RM torri, RM torii,
                   RM tozri, RM tozii> {
-  def : Pat<(from ADDRrri:$addr, ty:$src), (torri MEMrri:$addr, $src)>;
-  def : Pat<(from ADDRrii:$addr, ty:$src), (torii MEMrii:$addr, $src)>;
-  def : Pat<(from ADDRzri:$addr, ty:$src), (tozri MEMzri:$addr, $src)>;
-  def : Pat<(from ADDRzii:$addr, ty:$src), (tozii MEMzii:$addr, $src)>;
+  def : Pat<(from ty:$src, ADDRrri:$addr), (torri MEMrri:$addr, $src)>;
+  def : Pat<(from ty:$src, ADDRrii:$addr), (torii MEMrii:$addr, $src)>;
+  def : Pat<(from ty:$src, ADDRzri:$addr), (tozri MEMzri:$addr, $src)>;
+  def : Pat<(from ty:$src, ADDRzii:$addr), (tozii MEMzii:$addr, $src)>;
 }
 defm : ATMSTm<atomic_store_8, i32, ST1Brri, ST1Brii, ST1Bzri, ST1Bzii>;
 defm : ATMSTm<atomic_store_16, i32, ST2Brri, ST2Brii, ST2Bzri, ST2Bzii>;
@@ -1880,14 +1880,14 @@ multiclass TRATMSTm<SDPatternOperator from,
                   RM torii,
                   RM tozri,
                   RM tozii> {
-  def : Pat<(from ADDRrri:$addr, (i32 (trunc i64:$src))),
-            (torri MEMrri:$addr, (l2i $src))>;
-  def : Pat<(from ADDRrii:$addr, (i32 (trunc i64:$src))),
-            (torii MEMrii:$addr, (l2i $src))>;
-  def : Pat<(from ADDRzri:$addr, (i32 (trunc i64:$src))),
-            (tozri MEMzri:$addr, (l2i $src))>;
-  def : Pat<(from ADDRzii:$addr, (i32 (trunc i64:$src))),
-            (tozii MEMzii:$addr, (l2i $src))>;
+  def : Pat<(from (i32 (trunc i64:$src)), ADDRrri:$addr),
+            (torri MEMrri:$addr, (EXTRACT_SUBREG $src, sub_i32))>;
+  def : Pat<(from (i32 (trunc i64:$src)), ADDRrii:$addr),
+            (torii MEMrii:$addr, (EXTRACT_SUBREG $src, sub_i32))>;
+  def : Pat<(from (i32 (trunc i64:$src)), ADDRzri:$addr),
+            (tozri MEMzri:$addr, (EXTRACT_SUBREG $src, sub_i32))>;
+  def : Pat<(from (i32 (trunc i64:$src)), ADDRzii:$addr),
+            (tozii MEMzii:$addr, (EXTRACT_SUBREG $src, sub_i32))>;
 }
 defm : TRATMSTm<atomic_store_8, ST1Brri, ST1Brii, ST1Bzri, ST1Bzii>;
 defm : TRATMSTm<atomic_store_16, ST2Brri, ST2Brii, ST2Bzri, ST2Bzii>;

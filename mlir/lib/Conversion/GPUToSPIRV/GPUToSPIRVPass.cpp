@@ -85,7 +85,9 @@ void GPUToSPIRVPass::runOnOperation() {
     std::unique_ptr<ConversionTarget> target =
         SPIRVConversionTarget::get(targetAttr);
 
-    SPIRVTypeConverter typeConverter(targetAttr);
+    SPIRVConversionOptions options;
+    options.use64bitIndex = this->use64bitIndex;
+    SPIRVTypeConverter typeConverter(targetAttr, options);
     typeConverter.addConversion([&](gpu::MMAMatrixType type) -> Type {
       return convertMMAToSPIRVType(type);
     });

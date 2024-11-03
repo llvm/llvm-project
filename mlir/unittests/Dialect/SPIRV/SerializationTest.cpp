@@ -76,6 +76,27 @@ protected:
         builder.getStringAttr(name), nullptr);
   }
 
+  // Inserts an Integer or a Vector of Integers constant of value 'val'.
+  spirv::ConstantOp AddConstInt(Type type, APInt val) {
+    OpBuilder builder(module->getRegion());
+    auto loc = UnknownLoc::get(&context);
+
+    if (auto intType = dyn_cast<IntegerType>(type)) {
+      return builder.create<spirv::ConstantOp>(
+          loc, type, builder.getIntegerAttr(type, val));
+    }
+    if (auto vectorType = dyn_cast<VectorType>(type)) {
+      Type elemType = vectorType.getElementType();
+      if (auto intType = dyn_cast<IntegerType>(elemType)) {
+        return builder.create<spirv::ConstantOp>(
+            loc, type,
+            DenseElementsAttr::get(vectorType,
+                                   IntegerAttr::get(elemType, val).getValue()));
+      }
+    }
+    llvm_unreachable("unimplemented types for AddConstInt()");
+  }
+
   /// Handles a SPIR-V instruction with the given `opcode` and `operand`.
   /// Returns true to interrupt.
   using HandleFn = llvm::function_ref<bool(spirv::Opcode opcode,
@@ -147,6 +168,34 @@ TEST_F(SerializationTest, ContainsNoDuplicatedBlockDecoration) {
   };
   ASSERT_FALSE(scanInstruction(countBlockDecoration));
   EXPECT_EQ(count, 1u);
+}
+
+TEST_F(SerializationTest, SignlessVsSignedIntegerConstantBitExtension) {
+
+  auto signlessInt16Type =
+      IntegerType::get(&context, 16, IntegerType::Signless);
+  auto signedInt16Type = IntegerType::get(&context, 16, IntegerType::Signed);
+  // Check the bit extension of same value under different signedness semantics.
+  APInt signlessIntConstVal(signlessInt16Type.getWidth(), -1,
+                            signlessInt16Type.getSignedness());
+  APInt signedIntConstVal(signedInt16Type.getWidth(), -1,
+                          signedInt16Type.getSignedness());
+
+  AddConstInt(signlessInt16Type, signlessIntConstVal);
+  AddConstInt(signedInt16Type, signedIntConstVal);
+  ASSERT_TRUE(succeeded(spirv::serialize(module.get(), binary)));
+
+  auto hasSignlessVal = [&](spirv::Opcode opcode, ArrayRef<uint32_t> operands) {
+    return opcode == spirv::Opcode::OpConstant && operands.size() == 3 &&
+           operands[2] == 65535;
+  };
+  EXPECT_TRUE(scanInstruction(hasSignlessVal));
+
+  auto hasSignedVal = [&](spirv::Opcode opcode, ArrayRef<uint32_t> operands) {
+    return opcode == spirv::Opcode::OpConstant && operands.size() == 3 &&
+           operands[2] == 4294967295;
+  };
+  EXPECT_TRUE(scanInstruction(hasSignedVal));
 }
 
 TEST_F(SerializationTest, ContainsSymbolName) {

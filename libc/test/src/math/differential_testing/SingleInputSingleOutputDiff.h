@@ -7,8 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/__support/FPUtil/FPBits.h"
-#include "utils/testutils/StreamWrapper.h"
-#include "utils/testutils/Timer.h"
+#include "test/src/math/differential_testing/Timer.h"
+
+#include <fstream>
 
 namespace __llvm_libc {
 namespace testing {
@@ -24,7 +25,7 @@ public:
 
   static void runDiff(Func myFunc, Func otherFunc, const char *logFile) {
     UIntType diffCount = 0;
-    testutils::OutputFileStream log(logFile);
+    std::ofstream log(logFile);
     log << "Starting diff for values from 0 to " << UIntMax << '\n'
         << "Only differing results will be logged.\n\n";
     for (UIntType bits = 0;; ++bits) {
@@ -47,8 +48,7 @@ public:
   }
 
   static void runPerfInRange(Func myFunc, Func otherFunc, UIntType startingBit,
-                             UIntType endingBit,
-                             testutils::OutputFileStream &log) {
+                             UIntType endingBit, std::ofstream &log) {
     auto runner = [=](Func func) {
       volatile T result;
       for (UIntType bits = startingBit;; ++bits) {
@@ -89,7 +89,7 @@ public:
   }
 
   static void runPerf(Func myFunc, Func otherFunc, const char *logFile) {
-    testutils::OutputFileStream log(logFile);
+    std::ofstream log(logFile);
     log << " Performance tests with inputs in denormal range:\n";
     runPerfInRange(myFunc, otherFunc, /* startingBit= */ UIntType(0),
                    /* endingBit= */ FPBits::MAX_SUBNORMAL, log);

@@ -13,6 +13,7 @@ entry:
 }
 
 ;; Perform tail call optimization for external symbol.
+;; Bytes copied should be large enough, otherwise the memcpy call would be optimized to multiple ld/st insns.
 @dest = global [2 x i8] zeroinitializer
 declare void @llvm.memcpy.p0i8.p0i8.i32(ptr, ptr, i32, i1)
 define void @caller_extern(ptr %src) optsize {
@@ -21,10 +22,10 @@ define void @caller_extern(ptr %src) optsize {
 ; CHECK-NEXT:    move $a1, $a0
 ; CHECK-NEXT:    pcalau12i $a0, %got_pc_hi20(dest)
 ; CHECK-NEXT:    ld.d $a0, $a0, %got_pc_lo12(dest)
-; CHECK-NEXT:    ori $a2, $zero, 7
+; CHECK-NEXT:    ori $a2, $zero, 33
 ; CHECK-NEXT:    b %plt(memcpy)
 entry:
-  tail call void @llvm.memcpy.p0i8.p0i8.i32(ptr getelementptr inbounds ([2 x i8], ptr @dest, i32 0, i32 0), ptr %src, i32 7, i1 false)
+  tail call void @llvm.memcpy.p0i8.p0i8.i32(ptr getelementptr inbounds ([2 x i8], ptr @dest, i32 0, i32 0), ptr %src, i32 33, i1 false)
   ret void
 }
 
@@ -34,7 +35,7 @@ declare void @callee_indirect2()
 define void @caller_indirect_tail(i32 %a) nounwind {
 ; CHECK-LABEL: caller_indirect_tail:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    bstrpick.d $a0, $a0, 31, 0
+; CHECK-NEXT:    addi.w $a0, $a0, 0
 ; CHECK-NEXT:    sltui $a0, $a0, 1
 ; CHECK-NEXT:    pcalau12i $a1, %got_pc_hi20(callee_indirect2)
 ; CHECK-NEXT:    ld.d $a1, $a1, %got_pc_lo12(callee_indirect2)

@@ -7,8 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Driver/ToolChain.h"
+#include "ToolChains/Arch/AArch64.h"
 #include "ToolChains/Arch/ARM.h"
 #include "ToolChains/Clang.h"
+#include "ToolChains/CommonArgs.h"
 #include "ToolChains/Flang.h"
 #include "ToolChains/InterfaceStubs.h"
 #include "clang/Basic/ObjCRuntime.h"
@@ -24,6 +26,7 @@
 #include "clang/Driver/XRayArgs.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Config/llvm-config.h"
@@ -39,6 +42,7 @@
 #include "llvm/Support/Path.h"
 #include "llvm/Support/VersionTuple.h"
 #include "llvm/Support/VirtualFileSystem.h"
+#include "llvm/TargetParser/AArch64TargetParser.h"
 #include "llvm/TargetParser/TargetParser.h"
 #include "llvm/TargetParser/Triple.h"
 #include <cassert>
@@ -82,11 +86,12 @@ ToolChain::ToolChain(const Driver &D, const llvm::Triple &T,
       List.push_back(Path);
   };
 
-  for (const auto &Path : getRuntimePaths())
-    addIfExists(getLibraryPaths(), Path);
+  if (std::optional<std::string> Path = getRuntimePath())
+    getLibraryPaths().push_back(*Path);
   for (const auto &Path : getStdlibPaths())
     addIfExists(getFilePaths(), Path);
-  addIfExists(getFilePaths(), getArchSpecificLibPath());
+  for (const auto &Path : getArchSpecificLibPaths())
+    addIfExists(getFilePaths(), Path);
 }
 
 llvm::Expected<std::unique_ptr<llvm::MemoryBuffer>>
@@ -168,6 +173,101 @@ bool ToolChain::useRelaxRelocations() const {
 
 bool ToolChain::defaultToIEEELongDouble() const {
   return PPC_LINUX_DEFAULT_IEEELONGDOUBLE && getTriple().isOSLinux();
+}
+
+static void getAArch64MultilibFlags(const Driver &D,
+                                          const llvm::Triple &Triple,
+                                          const llvm::opt::ArgList &Args,
+                                          Multilib::flags_list &Result) {
+  std::vector<StringRef> Features;
+  tools::aarch64::getAArch64TargetFeatures(D, Triple, Args, Features, false);
+  const auto UnifiedFeatures = tools::unifyTargetFeatures(Features);
+  llvm::DenseSet<StringRef> FeatureSet(UnifiedFeatures.begin(),
+                                       UnifiedFeatures.end());
+  std::vector<std::string> MArch;
+  for (const auto &Ext : AArch64::Extensions)
+    if (FeatureSet.contains(Ext.Feature))
+      MArch.push_back(Ext.Name.str());
+  for (const auto &Ext : AArch64::Extensions)
+    if (FeatureSet.contains(Ext.NegFeature))
+      MArch.push_back(("no" + Ext.Name).str());
+  MArch.insert(MArch.begin(), ("-march=" + Triple.getArchName()).str());
+  Result.push_back(llvm::join(MArch, "+"));
+}
+
+static void getARMMultilibFlags(const Driver &D,
+                                      const llvm::Triple &Triple,
+                                      const llvm::opt::ArgList &Args,
+                                      Multilib::flags_list &Result) {
+  std::vector<StringRef> Features;
+  llvm::ARM::FPUKind FPUKind = tools::arm::getARMTargetFeatures(
+      D, Triple, Args, Features, false /*ForAs*/, true /*ForMultilib*/);
+  const auto UnifiedFeatures = tools::unifyTargetFeatures(Features);
+  llvm::DenseSet<StringRef> FeatureSet(UnifiedFeatures.begin(),
+                                       UnifiedFeatures.end());
+  std::vector<std::string> MArch;
+  for (const auto &Ext : ARM::ARCHExtNames)
+    if (FeatureSet.contains(Ext.Feature))
+      MArch.push_back(Ext.Name.str());
+  for (const auto &Ext : ARM::ARCHExtNames)
+    if (FeatureSet.contains(Ext.NegFeature))
+      MArch.push_back(("no" + Ext.Name).str());
+  MArch.insert(MArch.begin(), ("-march=" + Triple.getArchName()).str());
+  Result.push_back(llvm::join(MArch, "+"));
+
+  switch (FPUKind) {
+#define ARM_FPU(NAME, KIND, VERSION, NEON_SUPPORT, RESTRICTION)                \
+  case llvm::ARM::KIND:                                                        \
+    Result.push_back("-mfpu=" NAME);                                           \
+    break;
+#include "llvm/TargetParser/ARMTargetParser.def"
+  default:
+    llvm_unreachable("Invalid FPUKind");
+  }
+
+  switch (arm::getARMFloatABI(D, Triple, Args)) {
+  case arm::FloatABI::Soft:
+    Result.push_back("-mfloat-abi=soft");
+    break;
+  case arm::FloatABI::SoftFP:
+    Result.push_back("-mfloat-abi=softfp");
+    break;
+  case arm::FloatABI::Hard:
+    Result.push_back("-mfloat-abi=hard");
+    break;
+  case arm::FloatABI::Invalid:
+    llvm_unreachable("Invalid float ABI");
+  }
+}
+
+Multilib::flags_list
+ToolChain::getMultilibFlags(const llvm::opt::ArgList &Args) const {
+  using namespace clang::driver::options;
+
+  std::vector<std::string> Result;
+  const llvm::Triple Triple(ComputeEffectiveClangTriple(Args));
+  Result.push_back("--target=" + Triple.str());
+
+  switch (Triple.getArch()) {
+  case llvm::Triple::aarch64:
+  case llvm::Triple::aarch64_32:
+  case llvm::Triple::aarch64_be:
+    getAArch64MultilibFlags(D, Triple, Args, Result);
+    break;
+  case llvm::Triple::arm:
+  case llvm::Triple::armeb:
+  case llvm::Triple::thumb:
+  case llvm::Triple::thumbeb:
+    getARMMultilibFlags(D, Triple, Args, Result);
+    break;
+  default:
+    break;
+  }
+
+  // Sort and remove duplicates.
+  std::sort(Result.begin(), Result.end());
+  Result.erase(std::unique(Result.begin(), Result.end()), Result.end());
+  return Result;
 }
 
 SanitizerArgs
@@ -325,6 +425,12 @@ std::string ToolChain::getInputFilename(const InputInfo &Input) const {
 ToolChain::UnwindTableLevel
 ToolChain::getDefaultUnwindTableLevel(const ArgList &Args) const {
   return UnwindTableLevel::None;
+}
+
+unsigned ToolChain::GetDefaultDwarfVersion() const {
+  // TODO: Remove the RISC-V special case when R_RISCV_SET_ULEB128 linker
+  // support becomes more widely available.
+  return getTriple().isRISCV() ? 4 : 5;
 }
 
 Tool *ToolChain::getClang() const {
@@ -492,7 +598,9 @@ std::string ToolChain::getCompilerRTPath() const {
   SmallString<128> Path(getDriver().ResourceDir);
   if (isBareMetal()) {
     llvm::sys::path::append(Path, "lib", getOSLibName());
-    Path += SelectedMultilib.gccSuffix();
+    if (!SelectedMultilibs.empty()) {
+      Path += SelectedMultilibs.back().gccSuffix();
+    }
   } else if (Triple.isOSUnknown()) {
     llvm::sys::path::append(Path, "lib");
   } else {
@@ -569,15 +677,18 @@ const char *ToolChain::getCompilerRTArgString(const llvm::opt::ArgList &Args,
   return Args.MakeArgString(getCompilerRT(Args, Component, Type));
 }
 
-ToolChain::path_list ToolChain::getRuntimePaths() const {
-  path_list Paths;
-  auto addPathForTriple = [this, &Paths](const llvm::Triple &Triple) {
+std::optional<std::string> ToolChain::getRuntimePath() const {
+  auto getPathForTriple =
+      [this](const llvm::Triple &Triple) -> std::optional<std::string> {
     SmallString<128> P(D.ResourceDir);
     llvm::sys::path::append(P, "lib", Triple.str());
-    Paths.push_back(std::string(P.str()));
+    if (getVFS().exists(P))
+      return std::string(P);
+    return {};
   };
 
-  addPathForTriple(getTriple());
+  if (auto Path = getPathForTriple(getTriple()))
+    return *Path;
 
   // When building with per target runtime directories, various ways of naming
   // the Arm architecture may have been normalised to simply "arm".
@@ -597,7 +708,8 @@ ToolChain::path_list ToolChain::getRuntimePaths() const {
   if (getTriple().getArch() == Triple::arm && !getTriple().isArmMClass()) {
     llvm::Triple ArmTriple = getTriple();
     ArmTriple.setArch(Triple::arm);
-    addPathForTriple(ArmTriple);
+    if (auto Path = getPathForTriple(ArmTriple))
+      return *Path;
   }
 
   // Android targets may include an API level at the end. We still want to fall
@@ -606,10 +718,11 @@ ToolChain::path_list ToolChain::getRuntimePaths() const {
       getTriple().getEnvironmentName() != "android") {
     llvm::Triple TripleWithoutLevel = getTriple();
     TripleWithoutLevel.setEnvironmentName("android");
-    addPathForTriple(TripleWithoutLevel);
+    if (auto Path = getPathForTriple(TripleWithoutLevel))
+      return *Path;
   }
 
-  return Paths;
+  return {};
 }
 
 ToolChain::path_list ToolChain::getStdlibPaths() const {
@@ -621,11 +734,20 @@ ToolChain::path_list ToolChain::getStdlibPaths() const {
   return Paths;
 }
 
-std::string ToolChain::getArchSpecificLibPath() const {
-  SmallString<128> Path(getDriver().ResourceDir);
-  llvm::sys::path::append(Path, "lib", getOSLibName(),
-                          llvm::Triple::getArchTypeName(getArch()));
-  return std::string(Path.str());
+ToolChain::path_list ToolChain::getArchSpecificLibPaths() const {
+  path_list Paths;
+
+  auto AddPath = [&](const ArrayRef<StringRef> &SS) {
+    SmallString<128> Path(getDriver().ResourceDir);
+    llvm::sys::path::append(Path, "lib");
+    for (auto &S : SS)
+      llvm::sys::path::append(Path, S);
+    Paths.push_back(std::string(Path.str()));
+  };
+
+  AddPath({getTriple().str()});
+  AddPath({getOSLibName(), llvm::Triple::getArchTypeName(getArch())});
+  return Paths;
 }
 
 bool ToolChain::needsProfileRT(const ArgList &Args) {
@@ -652,7 +774,8 @@ Tool *ToolChain::SelectTool(const JobAction &JA) const {
   if (D.IsFlangMode() && getDriver().ShouldUseFlangCompiler(JA)) return getFlang();
   if (getDriver().ShouldUseClangCompiler(JA)) return getClang();
   Action::ActionClass AC = JA.getKind();
-  if (AC == Action::AssembleJobClass && useIntegratedAs())
+  if (AC == Action::AssembleJobClass && useIntegratedAs() &&
+      !getTriple().isOSAIX())
     return getClangAs();
   return getTool(AC);
 }
@@ -1146,8 +1269,7 @@ SanitizerMask ToolChain::getSupportedSanitizers() const {
   // platform dependent.
 
   SanitizerMask Res =
-      (SanitizerKind::Undefined & ~SanitizerKind::Vptr &
-       ~SanitizerKind::Function) |
+      (SanitizerKind::Undefined & ~SanitizerKind::Vptr) |
       (SanitizerKind::CFI & ~SanitizerKind::CFIICall) |
       SanitizerKind::CFICastStrict | SanitizerKind::FloatDivideByZero |
       SanitizerKind::KCFI | SanitizerKind::UnsignedIntegerOverflow |
@@ -1248,7 +1370,10 @@ llvm::opt::DerivedArgList *ToolChain::TranslateOpenMPTargetArgs(
     // matches the current toolchain triple. If it is not present
     // at all, target and host share a toolchain.
     if (A->getOption().matches(options::OPT_m_Group)) {
-      if (SameTripleAsHost)
+      // Pass code object version to device toolchain
+      // to correctly set metadata in intermediate files.
+      if (SameTripleAsHost ||
+          A->getOption().matches(options::OPT_mcode_object_version_EQ))
         DAL->append(A);
       else
         Modified = true;

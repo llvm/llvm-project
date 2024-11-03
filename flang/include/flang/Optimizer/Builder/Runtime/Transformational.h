@@ -55,6 +55,10 @@ void genMatmul(fir::FirOpBuilder &builder, mlir::Location loc,
                mlir::Value matrixABox, mlir::Value matrixBBox,
                mlir::Value resultBox);
 
+void genMatmulTranspose(fir::FirOpBuilder &builder, mlir::Location loc,
+                        mlir::Value matrixABox, mlir::Value matrixBBox,
+                        mlir::Value resultBox);
+
 void genPack(fir::FirOpBuilder &builder, mlir::Location loc,
              mlir::Value resultBox, mlir::Value arrayBox, mlir::Value maskBox,
              mlir::Value vectorBox);

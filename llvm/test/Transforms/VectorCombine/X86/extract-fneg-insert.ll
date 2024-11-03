@@ -8,9 +8,8 @@ declare void @use(float)
 
 define <4 x float> @ext0_v4f32(<4 x float> %x, <4 x float> %y) {
 ; CHECK-LABEL: @ext0_v4f32(
-; CHECK-NEXT:    [[E:%.*]] = extractelement <4 x float> [[X:%.*]], i32 0
-; CHECK-NEXT:    [[N:%.*]] = fneg float [[E]]
-; CHECK-NEXT:    [[R:%.*]] = insertelement <4 x float> [[Y:%.*]], float [[N]], i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = fneg <4 x float> [[X:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = shufflevector <4 x float> [[Y:%.*]], <4 x float> [[TMP1]], <4 x i32> <i32 4, i32 1, i32 2, i32 3>
 ; CHECK-NEXT:    ret <4 x float> [[R]]
 ;
   %e = extractelement <4 x float> %x, i32 0

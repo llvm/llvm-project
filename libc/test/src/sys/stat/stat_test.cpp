@@ -6,15 +6,14 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "src/errno/libc_errno.h"
 #include "src/fcntl/open.h"
 #include "src/sys/stat/stat.h"
 #include "src/unistd/close.h"
 #include "src/unistd/unlink.h"
-#include "test/ErrnoSetterMatcher.h"
+#include "test/UnitTest/ErrnoSetterMatcher.h"
 #include "test/UnitTest/Test.h"
-#include "utils/testutils/FDReader.h"
 
-#include <errno.h>
 #include <fcntl.h>
 #include <sys/stat.h>
 
@@ -27,11 +26,11 @@ TEST(LlvmLibcStatTest, CreatAndReadMode) {
   // make it readonly using chmod. We test that chmod actually succeeded by
   // trying to open the file for writing and failing.
   constexpr const char *TEST_FILE = "testdata/stat.test";
-  errno = 0;
+  libc_errno = 0;
 
   int fd = __llvm_libc::open(TEST_FILE, O_CREAT | O_WRONLY, S_IRWXU);
   ASSERT_GT(fd, 0);
-  ASSERT_EQ(errno, 0);
+  ASSERT_EQ(libc_errno, 0);
   ASSERT_THAT(__llvm_libc::close(fd), Succeeds(0));
 
   struct stat statbuf;
@@ -43,9 +42,9 @@ TEST(LlvmLibcStatTest, CreatAndReadMode) {
 }
 
 TEST(LlvmLibcStatTest, NonExistentFile) {
-  errno = 0;
+  libc_errno = 0;
   using __llvm_libc::testing::ErrnoSetterMatcher::Fails;
   struct stat statbuf;
   ASSERT_THAT(__llvm_libc::stat("non-existent-file", &statbuf), Fails(ENOENT));
-  errno = 0;
+  libc_errno = 0;
 }

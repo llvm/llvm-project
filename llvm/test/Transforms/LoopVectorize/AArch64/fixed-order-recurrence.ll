@@ -49,7 +49,6 @@ define void @firstorderrec(ptr nocapture noundef readonly %x, ptr noalias nocapt
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP0]], [[N_VEC]]
 ; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT:%.*]] = extractelement <16 x i8> [[WIDE_LOAD1]], i32 15
-; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT_FOR_PHI:%.*]] = extractelement <16 x i8> [[WIDE_LOAD1]], i32 14
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[FOR_COND_CLEANUP_LOOPEXIT:%.*]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
 ; CHECK-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi i8 [ [[DOTPRE]], [[FOR_BODY_PREHEADER]] ], [ [[VECTOR_RECUR_EXTRACT]], [[MIDDLE_BLOCK]] ]
@@ -69,7 +68,7 @@ define void @firstorderrec(ptr nocapture noundef readonly %x, ptr noalias nocapt
 ; CHECK-NEXT:    store i8 [[ADD7]], ptr [[ARRAYIDX10]], align 1
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
 ; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], [[WIDE_TRIP_COUNT]]
-; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_COND_CLEANUP_LOOPEXIT]], label [[FOR_BODY]], !llvm.loop [[LOOP2:![0-9]+]]
+; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_COND_CLEANUP_LOOPEXIT]], label [[FOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
 ;
 entry:
   %cmp18 = icmp sgt i32 %n, 1
@@ -157,15 +156,12 @@ define void @thirdorderrec(ptr nocapture noundef readonly %x, ptr noalias nocapt
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP0]], [[N_VEC]]
 ; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT:%.*]] = extractelement <16 x i8> [[WIDE_LOAD5]], i32 15
-; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT_FOR_PHI:%.*]] = extractelement <16 x i8> [[WIDE_LOAD5]], i32 14
 ; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT6:%.*]] = extractelement <16 x i8> [[TMP8]], i32 15
-; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT_FOR_PHI7:%.*]] = extractelement <16 x i8> [[TMP8]], i32 14
-; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT10:%.*]] = extractelement <16 x i8> [[TMP10]], i32 15
-; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT_FOR_PHI11:%.*]] = extractelement <16 x i8> [[TMP10]], i32 14
+; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT9:%.*]] = extractelement <16 x i8> [[TMP10]], i32 15
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[FOR_COND_CLEANUP_LOOPEXIT:%.*]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
-; CHECK-NEXT:    [[SCALAR_RECUR_INIT12:%.*]] = phi i8 [ [[DOTPRE]], [[FOR_BODY_PREHEADER]] ], [ [[VECTOR_RECUR_EXTRACT10]], [[MIDDLE_BLOCK]] ]
-; CHECK-NEXT:    [[SCALAR_RECUR_INIT8:%.*]] = phi i8 [ [[DOTPRE44]], [[FOR_BODY_PREHEADER]] ], [ [[VECTOR_RECUR_EXTRACT6]], [[MIDDLE_BLOCK]] ]
+; CHECK-NEXT:    [[SCALAR_RECUR_INIT10:%.*]] = phi i8 [ [[DOTPRE]], [[FOR_BODY_PREHEADER]] ], [ [[VECTOR_RECUR_EXTRACT9]], [[MIDDLE_BLOCK]] ]
+; CHECK-NEXT:    [[SCALAR_RECUR_INIT7:%.*]] = phi i8 [ [[DOTPRE44]], [[FOR_BODY_PREHEADER]] ], [ [[VECTOR_RECUR_EXTRACT6]], [[MIDDLE_BLOCK]] ]
 ; CHECK-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi i8 [ [[DOTPRE45]], [[FOR_BODY_PREHEADER]] ], [ [[VECTOR_RECUR_EXTRACT]], [[MIDDLE_BLOCK]] ]
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[IND_END]], [[MIDDLE_BLOCK]] ], [ 3, [[FOR_BODY_PREHEADER]] ]
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
@@ -175,10 +171,10 @@ define void @thirdorderrec(ptr nocapture noundef readonly %x, ptr noalias nocapt
 ; CHECK-NEXT:    ret void
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[SCALAR_RECUR:%.*]] = phi i8 [ [[SCALAR_RECUR_INIT]], [[SCALAR_PH]] ], [ [[TMP24:%.*]], [[FOR_BODY]] ]
-; CHECK-NEXT:    [[SCALAR_RECUR9:%.*]] = phi i8 [ [[SCALAR_RECUR_INIT8]], [[SCALAR_PH]] ], [ [[SCALAR_RECUR]], [[FOR_BODY]] ]
-; CHECK-NEXT:    [[SCALAR_RECUR13:%.*]] = phi i8 [ [[SCALAR_RECUR_INIT12]], [[SCALAR_PH]] ], [ [[SCALAR_RECUR9]], [[FOR_BODY]] ]
+; CHECK-NEXT:    [[SCALAR_RECUR8:%.*]] = phi i8 [ [[SCALAR_RECUR_INIT7]], [[SCALAR_PH]] ], [ [[SCALAR_RECUR]], [[FOR_BODY]] ]
+; CHECK-NEXT:    [[SCALAR_RECUR11:%.*]] = phi i8 [ [[SCALAR_RECUR_INIT10]], [[SCALAR_PH]] ], [ [[SCALAR_RECUR8]], [[FOR_BODY]] ]
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ]
-; CHECK-NEXT:    [[ADD8:%.*]] = add i8 [[SCALAR_RECUR9]], [[SCALAR_RECUR13]]
+; CHECK-NEXT:    [[ADD8:%.*]] = add i8 [[SCALAR_RECUR8]], [[SCALAR_RECUR11]]
 ; CHECK-NEXT:    [[ADD15:%.*]] = add i8 [[ADD8]], [[SCALAR_RECUR]]
 ; CHECK-NEXT:    [[ARRAYIDX18:%.*]] = getelementptr inbounds i8, ptr [[X]], i64 [[INDVARS_IV]]
 ; CHECK-NEXT:    [[TMP24]] = load i8, ptr [[ARRAYIDX18]], align 1

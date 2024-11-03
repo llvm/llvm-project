@@ -14,6 +14,7 @@
 //===----------------------------------------------------------------------===//
 //
 #include "mlir/Dialect/Arith/IR/Arith.h"
+#include "mlir/Dialect/Arith/Utils/Utils.h"
 #include "mlir/Dialect/Bufferization/IR/BufferizableOpInterface.h"
 #include "mlir/Dialect/Bufferization/IR/Bufferization.h"
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
@@ -52,6 +53,42 @@ static Value createInserts(RewriterBase &rewriter, Location loc, int dim,
   return destination;
 }
 
+/// Create a memcpy from the given source tensor to the given destination
+/// memref. The copy op type can be specified in the `options`.
+static void createMemcpy(OpBuilder &b, Location loc, Value tensorSource,
+                         Value memrefDest,
+                         const linalg::BufferizeToAllocationOptions &options) {
+  auto tensorType = dyn_cast<RankedTensorType>(tensorSource.getType());
+  assert(tensorType && "expected ranked tensor");
+  assert(memrefDest.getType().isa<MemRefType>() && "expected ranked memref");
+
+  switch (options.memcpyOp) {
+  case linalg::BufferizeToAllocationOptions::MemcpyOp::MemrefTensorStore:
+    // Note: This is the preferred way of memcpy'ing because no layout map
+    // and/or memory space must be specified for the source.
+    b.create<memref::TensorStoreOp>(loc, tensorSource, memrefDest);
+    break;
+  case linalg::BufferizeToAllocationOptions::MemcpyOp::MemrefCopy: {
+    // TODO: Support custom memory space on source.
+    // We do not know the layout map of the source yet, so use a fully dynamic
+    // layout for best compatibility.
+    Value toMemref = b.create<bufferization::ToMemrefOp>(
+        loc, bufferization::getMemRefTypeWithFullyDynamicLayout(tensorType),
+        tensorSource, /*readOnly=*/true);
+    b.create<memref::CopyOp>(loc, toMemref, memrefDest);
+  } break;
+  case linalg::BufferizeToAllocationOptions::MemcpyOp::LinalgCopy: {
+    // TODO: Support custom memory space on source.
+    // We do not know the layout map of the source yet, so use a fully dynamic
+    // layout for best compatibility.
+    Value toMemref = b.create<bufferization::ToMemrefOp>(
+        loc, bufferization::getMemRefTypeWithFullyDynamicLayout(tensorType),
+        tensorSource, /*readOnly=*/true);
+    b.create<linalg::CopyOp>(loc, toMemref, memrefDest);
+  } break;
+  };
+}
+
 static Operation *movePaddingToFillOrGenericOp(RewriterBase &rewriter,
                                                Location loc, PadOp padOp,
                                                Value dest) {
@@ -65,12 +102,12 @@ static Operation *movePaddingToFillOrGenericOp(RewriterBase &rewriter,
   Attribute constYieldedValue;
   // Is the yielded value a bbArg defined outside of the PadOp?
   bool outsideBbArg =
-      yieldedValue.isa<BlockArgument>() &&
-      yieldedValue.cast<BlockArgument>().getOwner()->getParentOp() !=
+      isa<BlockArgument>(yieldedValue) &&
+      cast<BlockArgument>(yieldedValue).getOwner()->getParentOp() !=
           padOp.getOperation();
   // Is the yielded value an OpResult defined outside of the PadOp?
   bool outsideOpResult =
-      yieldedValue.isa<OpResult>() &&
+      isa<OpResult>(yieldedValue) &&
       yieldedValue.getDefiningOp()->getParentOp() != padOp.getOperation();
   bool invariantYieldedValue = outsideBbArg || outsideOpResult;
   if (matchPattern(yieldedValue, m_Constant(&constYieldedValue))) {
@@ -119,23 +156,22 @@ static Operation *movePaddingToFillOrGenericOp(RewriterBase &rewriter,
 
 static SmallVector<Value> reifyOrComputeDynamicSizes(OpBuilder &b,
                                                      Value value) {
-  auto tensorType = value.getType().cast<RankedTensorType>();
+  auto tensorType = cast<RankedTensorType>(value.getType());
   if (tensorType.hasStaticShape())
     return {};
 
   // Try to reify dynamic sizes.
-  if (auto reifiableOp =
-          value.getDefiningOp<ReifyRankedShapedTypeOpInterface>()) {
-    ReifiedRankedShapedTypeDims reifiedShape;
-    if (succeeded(reifiableOp.reifyResultShapes(b, reifiedShape))) {
-      SmallVector<Value> dynSizes;
-      for (int64_t i = 0; i < tensorType.getRank(); ++i) {
-        if (tensorType.isDynamicDim(i))
-          dynSizes.push_back(
-              reifiedShape[value.cast<OpResult>().getResultNumber()][i]);
-      }
-      return dynSizes;
+  ReifiedRankedShapedTypeDims reifiedShape;
+  if (isa<OpResult>(value) &&
+      succeeded(reifyResultShapes(b, value.getDefiningOp(), reifiedShape))) {
+    SmallVector<Value> dynSizes;
+    for (int64_t i = 0; i < tensorType.getRank(); ++i) {
+      if (tensorType.isDynamicDim(i))
+        dynSizes.push_back(
+            reifiedShape[cast<OpResult>(value).getResultNumber()][i]
+                .get<Value>());
     }
+    return dynSizes;
   }
 
   // Create tensor.dim ops.
@@ -149,40 +185,58 @@ static SmallVector<Value> reifyOrComputeDynamicSizes(OpBuilder &b,
   return dynSizes;
 }
 
-static Value createAllocationForTensor(RewriterBase &rewriter, Location loc,
-                                       Value value,
-                                       Attribute memorySpace = {}) {
+static Value
+createAllocationForTensor(RewriterBase &rewriter, Location loc, Value value,
+                          const linalg::BufferizeToAllocationOptions &options,
+                          Attribute memorySpace = {}) {
   OpBuilder::InsertionGuard g(rewriter);
-  auto tensorType = value.getType().cast<RankedTensorType>();
+  auto tensorType = cast<RankedTensorType>(value.getType());
 
   // Create buffer allocation.
-  auto memrefType = bufferization::getMemRefTypeWithStaticIdentityLayout(
-                        tensorType, memorySpace)
-                        .cast<MemRefType>();
+  auto memrefType =
+      cast<MemRefType>(bufferization::getMemRefTypeWithStaticIdentityLayout(
+          tensorType, memorySpace));
   SmallVector<Value> dynamicSizes = reifyOrComputeDynamicSizes(rewriter, value);
-  Value alloc = rewriter.create<memref::AllocOp>(loc, memrefType, dynamicSizes);
 
-  // Place deallocation at the end of the block.
-  rewriter.setInsertionPoint(rewriter.getInsertionBlock()->getTerminator());
-  rewriter.create<memref::DeallocOp>(loc, alloc);
+  Value alloc;
+  if (options.allocOp ==
+      linalg::BufferizeToAllocationOptions::AllocOp::MemrefAlloc) {
+    alloc = rewriter.create<memref::AllocOp>(loc, memrefType, dynamicSizes);
+    if (options.emitDealloc) {
+      // Place deallocation at the end of the block.
+      rewriter.setInsertionPoint(rewriter.getInsertionBlock()->getTerminator());
+      rewriter.create<memref::DeallocOp>(loc, alloc);
+    }
+  } else if (options.allocOp ==
+             linalg::BufferizeToAllocationOptions::AllocOp::MemrefAlloca) {
+    alloc = rewriter.create<memref::AllocaOp>(loc, memrefType, dynamicSizes);
+    // No dealloc is needed.
+  }
 
   return alloc;
 }
 
-Value linalg::bufferizeToAllocation(RewriterBase &rewriter, PadOp padOp,
-                                    Attribute memorySpace) {
+Value linalg::bufferizeToAllocation(
+    RewriterBase &rewriter, const linalg::BufferizeToAllocationOptions &options,
+    PadOp padOp, Attribute memorySpace, Operation *insertionPoint) {
+  // tensor.pad does not have a destination operand.
+  assert(!options.bufferizeDestinationOnly && "invalid options");
+
   OpBuilder::InsertionGuard g(rewriter);
-  rewriter.setInsertionPoint(padOp);
+  rewriter.setInsertionPoint(insertionPoint ? insertionPoint : padOp);
   Location loc = padOp.getLoc();
 
   // Create buffer allocation.
-  Value alloc =
-      createAllocationForTensor(rewriter, loc, padOp.getResult(), memorySpace);
-  rewriter.setInsertionPointAfter(alloc.getDefiningOp());
+  Value alloc = createAllocationForTensor(rewriter, loc, padOp.getResult(),
+                                          options, memorySpace);
+  rewriter.setInsertionPoint(padOp);
 
-  // Create linalg.fill or linalg.generic.
-  Operation *fillOp = movePaddingToFillOrGenericOp(rewriter, loc, padOp, alloc);
-  rewriter.setInsertionPointAfter(fillOp);
+  if (!padOp.hasZeroLowPad() || !padOp.hasZeroHighPad()) {
+    // Create linalg.fill or linalg.generic. Not needed if there is no padding.
+    Operation *fillOp =
+        movePaddingToFillOrGenericOp(rewriter, loc, padOp, alloc);
+    rewriter.setInsertionPointAfter(fillOp);
+  }
 
   // Create memref.tensor_store.
   SmallVector<OpFoldResult> sizes =
@@ -191,14 +245,76 @@ Value linalg::bufferizeToAllocation(RewriterBase &rewriter, PadOp padOp,
                                     rewriter.getIndexAttr(1));
   Value subview = rewriter.create<memref::SubViewOp>(
       loc, alloc, /*offsets=*/padOp.getMixedLowPad(), sizes, strides);
-  rewriter.create<memref::TensorStoreOp>(loc, padOp.getSource(), subview);
+  createMemcpy(rewriter, loc, padOp.getSource(), subview, options);
 
   // Create bufferization.to_tensor with "restrict" and "writable". The returned
   // tensor is a new buffer allocation, so it does not alias with any buffer.
   Value toTensorOp = rewriter.create<bufferization::ToTensorOp>(
       loc, alloc, /*restrict=*/true, /*writable=*/true);
   rewriter.replaceOp(padOp, toTensorOp);
-  return toTensorOp;
+  return alloc;
+}
+
+Value linalg::bufferizeToAllocation(
+    RewriterBase &rewriter, const linalg::BufferizeToAllocationOptions &options,
+    vector::MaskOp maskOp, Attribute memorySpace, Operation *insertionPoint) {
+  assert(llvm::range_size(maskOp.getMaskBlock()->without_terminator()) == 1 &&
+         "expected single masked op");
+  OpBuilder::InsertionGuard g(rewriter);
+  bufferization::BufferizationOptions bufferizationOptions;
+  Operation *yieldOp = maskOp.getMaskRegion().front().getTerminator();
+  assert(isa<vector::YieldOp>(yieldOp) && "expected yield op terminator");
+
+  // Bufferize maskable op. By default, place the buffer allocation right before
+  // the mask op.
+  Value alloc = bufferizeToAllocation(
+      rewriter, options, maskOp.getMaskableOp(), memorySpace,
+      /*insertionPoint=*/insertionPoint ? insertionPoint : maskOp);
+
+  if (options.bufferizeDestinationOnly)
+    return alloc;
+
+  // Bufferize terminator.
+  rewriter.setInsertionPoint(yieldOp);
+  if (failed(cast<bufferization::BufferizableOpInterface>(yieldOp).bufferize(
+          rewriter, bufferizationOptions)))
+    return nullptr;
+
+  // Erase dead to_tensor ops inside of the mask op. This is necessary because
+  // there only be one op (apart from the terminator) inside the mask op.
+  // TODO: Remove dead to_tensor ops more aggressively during bufferization.
+  SmallVector<Operation *> toTensorOps;
+  maskOp.walk([&](bufferization::ToTensorOp toTensorOp) {
+    if (toTensorOp->getUses().empty())
+      toTensorOps.push_back(toTensorOp.getOperation());
+  });
+  for (Operation *op : toTensorOps)
+    rewriter.eraseOp(op);
+
+  // Bufferize mask op.
+  SmallVector<OpOperand *> resultUses;
+  for (Value result : maskOp.getResults())
+    if (isa<TensorType>(result.getType()))
+      for (OpOperand &use : result.getUses())
+        resultUses.push_back(&use);
+  rewriter.setInsertionPoint(maskOp);
+  if (failed(cast<bufferization::BufferizableOpInterface>(maskOp.getOperation())
+                 .bufferize(rewriter, bufferizationOptions)))
+    return nullptr;
+
+  // Set "restrict" attribute, indicating that no other tensor aliases with
+  // this tensor. That is because we just allocated a new buffer for the tensor.
+  for (OpOperand *resultUse : resultUses) {
+    auto toTensorOp =
+        resultUse->get().getDefiningOp<bufferization::ToTensorOp>();
+    assert(toTensorOp && "expected to_tensor op");
+    rewriter.updateRootInPlace(toTensorOp, [&]() {
+      toTensorOp.setRestrict(true);
+      toTensorOp.setWritable(true);
+    });
+  }
+
+  return alloc;
 }
 
 /// Lower tensor.from_elements to a sequence of chained tensor.insert.
@@ -206,7 +322,7 @@ FailureOr<Operation *> mlir::linalg::rewriteInDestinationPassingStyle(
     RewriterBase &rewriter, tensor::FromElementsOp fromElementsOp) {
   Location loc = fromElementsOp.getLoc();
   RankedTensorType tensorType =
-      fromElementsOp.getType().cast<RankedTensorType>();
+      cast<RankedTensorType>(fromElementsOp.getType());
   auto shape = tensorType.getShape();
 
   // Create tensor.empty.
@@ -247,7 +363,7 @@ mlir::linalg::rewriteInDestinationPassingStyle(RewriterBase &rewriter,
     return failure();
 
   Location loc = generateOp.getLoc();
-  RankedTensorType tensorType = generateOp.getType().cast<RankedTensorType>();
+  RankedTensorType tensorType = cast<RankedTensorType>(generateOp.getType());
 
   // Create tensor.empty.
   auto emptyOp =
@@ -291,14 +407,13 @@ mlir::linalg::rewriteInDestinationPassingStyle(RewriterBase &rewriter,
   Location loc = padOp.getLoc();
   RankedTensorType resultType = padOp.getResultType();
   ReifiedRankedShapedTypeDims reifiedShape;
-  if (failed(cast<ReifyRankedShapedTypeOpInterface>(padOp.getOperation())
-                 .reifyResultShapes(rewriter, reifiedShape)))
+  if (failed(reifyResultShapes(rewriter, padOp, reifiedShape)))
     return rewriter.notifyMatchFailure(
         padOp, "failed to reify tensor.pad op result shape");
   SmallVector<Value> dynamicSizes;
   for (int64_t i = 0; i < resultType.getRank(); ++i)
     if (resultType.isDynamicDim(i))
-      dynamicSizes.push_back(reifiedShape[0][i]);
+      dynamicSizes.push_back(reifiedShape[0][i].get<Value>());
 
   // If the `padOp` has a nofold attribute and all paddings are known to be 0,
   // explicitly insert a `linalg.copy`.
@@ -329,84 +444,141 @@ mlir::linalg::rewriteInDestinationPassingStyle(RewriterBase &rewriter,
   return insertSliceOp.getOperation();
 }
 
-Value linalg::bufferizeToAllocation(RewriterBase &rewriter, Value value,
-                                    Attribute memorySpace) {
+Value linalg::bufferizeToAllocation(
+    RewriterBase &rewriter, const linalg::BufferizeToAllocationOptions &options,
+    Operation *op, Attribute memorySpace, Operation *insertionPoint) {
+  using namespace bufferization;
+
   // Call specialized overload for certain ops.
-  if (auto padOp = value.getDefiningOp<PadOp>())
-    return bufferizeToAllocation(rewriter, padOp, memorySpace);
+  if (auto padOp = dyn_cast<tensor::PadOp>(op))
+    return bufferizeToAllocation(rewriter, options, padOp, memorySpace);
+  if (auto maskOp = dyn_cast<vector::MaskOp>(op))
+    return bufferizeToAllocation(rewriter, options, maskOp, memorySpace);
 
-  // Collect all uses.
-  SmallVector<OpOperand *> uses = llvm::to_vector(
-      llvm::map_range(value.getUses(), [](OpOperand &use) { return &use; }));
+  // Only bufferizable ops are supported.
+  auto bufferizableOp = dyn_cast<BufferizableOpInterface>(op);
+  if (!bufferizableOp)
+    return nullptr;
+  BufferizationOptions bufferizationOptions;
+  AnalysisState state(bufferizationOptions);
 
+#ifndef NDEBUG
+  if (!options.bufferizeDestinationOnly) {
+    // Ops with nested tensor ops are not supported yet. At the moment, this
+    // function just bufferizes the given op itself, but not its body.
+    op->walk([&](Operation *nestedOp) {
+      if (op == nestedOp)
+        return;
+      if (llvm::any_of(nestedOp->getOperands(),
+                       [](Value v) { return v.getType().isa<TensorType>(); }))
+        llvm_unreachable("ops with nested tensor ops are not supported yet");
+      if (llvm::any_of(nestedOp->getResults(),
+                       [](Value v) { return v.getType().isa<TensorType>(); }))
+        llvm_unreachable("ops with nested tensor ops are not supported yet");
+    });
+  }
+#endif // NDEBUG
+
+  // Gather tensor results.
+  SmallVector<OpResult> tensorResults;
+  for (OpResult result : op->getResults()) {
+    if (!result.getType().isa<TensorType>())
+      continue;
+    // Unranked tensors are not supported
+    if (!isa<RankedTensorType>(result.getType()))
+      return nullptr;
+    // Ops that bufferize to an allocation are not supported.
+    if (bufferizableOp.bufferizesToAllocation(result))
+      return nullptr;
+    tensorResults.push_back(result);
+  }
+
+  // Gather all operands that should bufferize to a new allocation. I.e.,
+  // bufferize out-of-place.
+  SmallVector<OpOperand *> outOfPlaceOperands, resultUses;
+  auto addOutOfPlaceOperand = [&](OpOperand *operand) {
+    if (llvm::find(outOfPlaceOperands, operand) == outOfPlaceOperands.end())
+      outOfPlaceOperands.push_back(operand);
+  };
+  for (OpResult result : tensorResults) {
+    AliasingOpOperandList aliasingOperands =
+        state.getAliasingOpOperands(result);
+    for (const AliasingOpOperand &operand : aliasingOperands) {
+      addOutOfPlaceOperand(operand.opOperand);
+      for (OpOperand &resultUse : result.getUses())
+        resultUses.push_back(&resultUse);
+    }
+  }
+  for (OpOperand &operand : op->getOpOperands()) {
+    if (!state.bufferizesToMemoryWrite(operand))
+      continue;
+    if (!isa<RankedTensorType>(operand.get().getType()))
+      continue;
+    addOutOfPlaceOperand(&operand);
+  }
+  // TODO: Support multiple buffers.
+  if (outOfPlaceOperands.size() != 1)
+    return nullptr;
+
+  // Allocate buffers.
   OpBuilder::InsertionGuard g(rewriter);
-  if (auto bbArg = value.dyn_cast<BlockArgument>()) {
-    rewriter.setInsertionPointToStart(bbArg.getOwner());
-  } else {
-    rewriter.setInsertionPointAfter(value.getDefiningOp());
+  rewriter.setInsertionPoint(insertionPoint ? insertionPoint : op);
+  SmallVector<Value> allocs;
+  for (OpOperand *operand : outOfPlaceOperands) {
+    Value alloc = createAllocationForTensor(
+        rewriter, op->getLoc(), operand->get(), options, memorySpace);
+    allocs.push_back(alloc);
+    if (!state.findDefinitions(operand->get()).empty()) {
+      // Initialize buffer with a copy of the operand data. Not needed if the
+      // tensor is uninitialized.
+      createMemcpy(rewriter, op->getLoc(), operand->get(), alloc, options);
+    }
+    rewriter.updateRootInPlace(op, [&]() {
+      auto toTensorOp = rewriter.create<ToTensorOp>(op->getLoc(), alloc);
+      operand->set(toTensorOp);
+      if (options.bufferizeDestinationOnly) {
+        rewriter.updateRootInPlace(toTensorOp, [&]() {
+          toTensorOp.setRestrict(true);
+          toTensorOp.setWritable(true);
+        });
+      }
+    });
   }
-  Location loc = value.getLoc();
 
-  // Create buffer allocation.
-  Value alloc = createAllocationForTensor(rewriter, loc, value, memorySpace);
+  if (options.bufferizeDestinationOnly)
+    return allocs.front();
 
-  // Create memref.tensor_store.
-  rewriter.setInsertionPointAfter(alloc.getDefiningOp());
-  rewriter.create<memref::TensorStoreOp>(loc, value, alloc);
+  // Bufferize the op.
+  rewriter.setInsertionPoint(op);
+  if (failed(bufferizableOp.bufferize(rewriter, bufferizationOptions)))
+    return nullptr;
 
-  // Create bufferization.to_tensor with "restrict" and "writable". The returned
-  // tensor is a new buffer allocation, so it does not alias with any buffer.
-  Value toTensorOp = rewriter.create<bufferization::ToTensorOp>(
-      loc, alloc, /*restrict=*/true, /*writable=*/true);
-  for (OpOperand *use : uses) {
-    rewriter.updateRootInPlace(use->getOwner(),
-                               [&]() { use->set(toTensorOp); });
+  // Set "restrict" attribute, indicating that no other tensor aliases with
+  // this tensor. That is because we just allocated a new buffer for the tensor.
+  for (OpOperand *resultUse : resultUses) {
+    auto toTensorOp = resultUse->get().getDefiningOp<ToTensorOp>();
+    assert(toTensorOp && "expected to_tensor op");
+    rewriter.updateRootInPlace(toTensorOp, [&]() {
+      toTensorOp.setRestrict(true);
+      toTensorOp.setWritable(true);
+    });
   }
-
-  return toTensorOp;
+  return allocs.front();
 }
 
 namespace {
-/// Lower tensor.from_elements to a sequence of chained tensor.insert.
-struct FromElementsOpConverter : public OpRewritePattern<FromElementsOp> {
-  using OpRewritePattern<FromElementsOp>::OpRewritePattern;
 
-  LogicalResult matchAndRewrite(FromElementsOp fromElementsOp,
-                                PatternRewriter &rewriter) const override {
-    if (failed(
-            linalg::rewriteInDestinationPassingStyle(rewriter, fromElementsOp)))
-      return failure();
-    return success();
-  }
-};
+template <typename OpTy>
+LogicalResult rewriteOpInDestinationPassingStyle(OpTy op,
+                                                 PatternRewriter &rewriter) {
+  return linalg::rewriteInDestinationPassingStyle(rewriter, op);
+}
 
-/// Lower tensor.generate to linalg.generic.
-struct GenerateOpConverter : public OpRewritePattern<GenerateOp> {
-  using OpRewritePattern<GenerateOp>::OpRewritePattern;
-
-  LogicalResult matchAndRewrite(GenerateOp generateOp,
-                                PatternRewriter &rewriter) const override {
-    if (failed(linalg::rewriteInDestinationPassingStyle(rewriter, generateOp)))
-      return failure();
-    return success();
-  }
-};
-
-/// Lower tensor.pad to linalg.generic + tensor.insert_slice.
-struct PadOpConverter : public OpRewritePattern<PadOp> {
-  using OpRewritePattern<PadOp>::OpRewritePattern;
-
-  LogicalResult matchAndRewrite(PadOp padOp,
-                                PatternRewriter &rewriter) const override {
-    if (failed(linalg::rewriteInDestinationPassingStyle(rewriter, padOp)))
-      return failure();
-    return success();
-  }
-};
 } // namespace
 
 void linalg::populateConvertToDestinationStylePatterns(
     RewritePatternSet &patterns) {
-  patterns.insert<FromElementsOpConverter, GenerateOpConverter, PadOpConverter>(
-      patterns.getContext());
+  patterns.add(rewriteOpInDestinationPassingStyle<tensor::FromElementsOp>);
+  patterns.add(rewriteOpInDestinationPassingStyle<tensor::GenerateOp>);
+  patterns.add(rewriteOpInDestinationPassingStyle<tensor::PadOp>);
 }

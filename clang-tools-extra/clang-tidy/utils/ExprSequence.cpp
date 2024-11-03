@@ -8,6 +8,7 @@
 
 #include "ExprSequence.h"
 #include "clang/AST/ParentMapContext.h"
+#include "llvm/ADT/SmallVector.h"
 #include <optional>
 
 namespace clang::tidy::utils {
@@ -49,6 +50,7 @@ static SmallVector<const Stmt *, 1> getParentStmts(const Stmt *S,
 }
 
 namespace {
+
 bool isDescendantOrEqual(const Stmt *Descendant, const Stmt *Ancestor,
                          ASTContext *Context) {
   if (Descendant == Ancestor)
@@ -60,6 +62,17 @@ bool isDescendantOrEqual(const Stmt *Descendant, const Stmt *Ancestor,
 
   return false;
 }
+
+llvm::SmallVector<const InitListExpr *>
+getAllInitListForms(const InitListExpr *InitList) {
+  llvm::SmallVector<const InitListExpr *> result = {InitList};
+  if (const InitListExpr *AltForm = InitList->getSyntacticForm())
+    result.push_back(AltForm);
+  if (const InitListExpr *AltForm = InitList->getSemanticForm())
+    result.push_back(AltForm);
+  return result;
+}
+
 } // namespace
 
 ExprSequence::ExprSequence(const CFG *TheCFG, const Stmt *Root,
@@ -111,9 +124,22 @@ const Stmt *ExprSequence::getSequenceSuccessor(const Stmt *S) const {
     } else if (const auto *InitList = dyn_cast<InitListExpr>(Parent)) {
       // Initializer list: Each initializer clause is sequenced after the
       // clauses that precede it.
-      for (unsigned I = 1; I < InitList->getNumInits(); ++I) {
-        if (InitList->getInit(I - 1) == S)
-          return InitList->getInit(I);
+      for (const InitListExpr *Form : getAllInitListForms(InitList)) {
+        for (unsigned I = 1; I < Form->getNumInits(); ++I) {
+          if (Form->getInit(I - 1) == S) {
+            return Form->getInit(I);
+          }
+        }
+      }
+    } else if (const auto *ConstructExpr = dyn_cast<CXXConstructExpr>(Parent)) {
+      // Constructor arguments are sequenced if the constructor call is written
+      // as list-initialization.
+      if (ConstructExpr->isListInitialization()) {
+        for (unsigned I = 1; I < ConstructExpr->getNumArgs(); ++I) {
+          if (ConstructExpr->getArg(I - 1) == S) {
+            return ConstructExpr->getArg(I);
+          }
+        }
       }
     } else if (const auto *Compound = dyn_cast<CompoundStmt>(Parent)) {
       // Compound statement: Each sub-statement is sequenced after the

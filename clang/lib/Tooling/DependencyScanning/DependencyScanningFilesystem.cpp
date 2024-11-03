@@ -181,7 +181,11 @@ static bool shouldCacheStatFailures(StringRef Filename) {
   StringRef Ext = llvm::sys::path::extension(Filename);
   if (Ext.empty())
     return false; // This may be the module cache directory.
-  // Only cache stat failures on source files.
+  // Only cache stat failures on files that are not expected to change during
+  // the build.
+  StringRef FName = llvm::sys::path::filename(Filename);
+  if (FName == "module.modulemap" || FName == "module.map")
+    return true;
   return shouldScanForDirectivesBasedOnExtension(Filename);
 }
 
@@ -258,6 +262,9 @@ DependencyScanningWorkerFilesystem::status(const Twine &Path) {
   SmallString<256> OwnedFilename;
   StringRef Filename = Path.toStringRef(OwnedFilename);
 
+  if (Filename.endswith(".pcm"))
+    return getUnderlyingFS().status(Path);
+
   llvm::ErrorOr<EntryRef> Result = getOrCreateFileSystemEntry(Filename);
   if (!Result)
     return Result.getError();
@@ -314,6 +321,9 @@ llvm::ErrorOr<std::unique_ptr<llvm::vfs::File>>
 DependencyScanningWorkerFilesystem::openFileForRead(const Twine &Path) {
   SmallString<256> OwnedFilename;
   StringRef Filename = Path.toStringRef(OwnedFilename);
+
+  if (Filename.endswith(".pcm"))
+    return getUnderlyingFS().openFileForRead(Path);
 
   llvm::ErrorOr<EntryRef> Result = getOrCreateFileSystemEntry(Filename);
   if (!Result)

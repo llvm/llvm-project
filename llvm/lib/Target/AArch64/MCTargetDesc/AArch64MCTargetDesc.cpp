@@ -300,6 +300,13 @@ void AArch64_MC::initLLVMToCVRegMapping(MCRegisterInfo *MRI) {
     MRI->mapLLVMRegToCVReg(I.Reg, static_cast<int>(I.CVReg));
 }
 
+bool AArch64_MC::isHForm(const MCInst &MI, const MCInstrInfo *MCII) {
+  const auto &FPR16 = AArch64MCRegisterClasses[AArch64::FPR16RegClassID];
+  return llvm::any_of(MI, [&](const MCOperand &Op) {
+    return Op.isReg() && FPR16.contains(Op.getReg());
+  });
+}
+
 bool AArch64_MC::isQForm(const MCInst &MI, const MCInstrInfo *MCII) {
   const auto &FPR128 = AArch64MCRegisterClasses[AArch64::FPR128RegClassID];
   return llvm::any_of(MI, [&](const MCOperand &Op) {
@@ -427,7 +434,6 @@ public:
 
   std::vector<std::pair<uint64_t, uint64_t>>
   findPltEntries(uint64_t PltSectionVA, ArrayRef<uint8_t> PltContents,
-                 uint64_t GotPltSectionVA,
                  const Triple &TargetTriple) const override {
     // Do a lightweight parsing of PLT entries.
     std::vector<std::pair<uint64_t, uint64_t>> Result;

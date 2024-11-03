@@ -8,16 +8,17 @@
 #ifndef MLIR_DIALECT_MLPROGRAM_IR_MLPROGRAM_H_
 #define MLIR_DIALECT_MLPROGRAM_IR_MLPROGRAM_H_
 
+#include "mlir/Bytecode/BytecodeOpInterface.h"
 #include "mlir/Dialect/MLProgram/IR/MLProgramAttributes.h"
 #include "mlir/Dialect/MLProgram/IR/MLProgramTypes.h"
 #include "mlir/IR/Dialect.h"
-#include "mlir/IR/FunctionInterfaces.h"
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/RegionKindInterface.h"
 #include "mlir/IR/SymbolTable.h"
 #include "mlir/Interfaces/CallInterfaces.h"
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
+#include "mlir/Interfaces/FunctionInterfaces.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 
 //===----------------------------------------------------------------------===//

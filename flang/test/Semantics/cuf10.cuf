@@ -1,0 +1,17 @@
+! RUN: %python %S/test_errors.py %s %flang_fc1
+module m
+  real, device :: a(4,8)
+  real, managed, allocatable :: b(:,:)
+ contains
+  attributes(global) subroutine kernel(a,b,c,n,m)
+    integer, value :: n
+    integer, intent(in) :: m
+    real a(n,m), c(n,m)
+    real, managed :: b(n,m)
+  end
+  subroutine test
+    allocate(b(4,8))
+    !ERROR: dummy argument 'm=' has ATTRIBUTES(DEVICE) but its associated actual argument has no CUDA data attribute
+    call kernel<<<1,32>>>(a,b,b,4,8)
+  end
+end

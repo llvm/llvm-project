@@ -14,10 +14,10 @@
 #include "clang/Driver/Options.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/MC/MCSubtargetInfo.h"
-#include "llvm/MC/SubtargetFeature.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
+#include "llvm/TargetParser/SubtargetFeature.h"
 
 using namespace clang::driver;
 using namespace clang::driver::toolchains;
@@ -498,11 +498,18 @@ void AVR::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   }
 
   if (SectionAddressData) {
-    CmdArgs.push_back(Args.MakeArgString(
-        "-Tdata=0x" + Twine::utohexstr(*SectionAddressData)));
+    CmdArgs.push_back(
+        Args.MakeArgString("--defsym=__DATA_REGION_ORIGIN__=0x" +
+                           Twine::utohexstr(*SectionAddressData)));
   } else {
     // We do not have an entry for this CPU in the address mapping table yet.
     D.Diag(diag::warn_drv_avr_linker_section_addresses_not_implemented) << CPU;
+  }
+
+  if (D.isUsingLTO()) {
+    assert(!Inputs.empty() && "Must have at least one input.");
+    addLTOOptions(getToolChain(), Args, CmdArgs, Output, Inputs[0],
+                  D.getLTOMode() == LTOK_Thin);
   }
 
   // If the family name is known, we can link with the device-specific libgcc.

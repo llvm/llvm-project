@@ -3,8 +3,8 @@
 ; RUN: diff %t1 %t2
 ; RUN: FileCheck -input-file=%t1 %s
 
-; CHECK:  OVERVIEW: Resource Converter
-; CHECK-DAG:  USAGE: rc [options] file...
+; CHECK:  OVERVIEW: LLVM Resource Converter
+; CHECK-DAG:  USAGE: llvm-rc [options] file...
 ; CHECK-DAG:  OPTIONS:
 ; CHECK-NEXT:    /?          Display this help and exit.
 ; CHECK-NEXT:    /C <value>  Set the codepage used for input strings.

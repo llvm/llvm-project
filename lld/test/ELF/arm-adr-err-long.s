@@ -49,7 +49,7 @@ _start:
  .inst 0xe1c000d0 // ldrd r0, r1, [r0, #0]
  .reloc 32, R_ARM_ALU_PC_G0_NC, dat2
  .reloc 36, R_ARM_ALU_PC_G1_NC, dat2
-// CHECK: {{.*}}.s.tmp.o:(.text.1+0x28): relocation R_ARM_LDRS_PC_G2 out of range: 4056 is not in [0, 255]; references dat2
+// CHECK: {{.*}}.s.tmp.o:(.text.1+0x28): relocation R_ARM_LDRS_PC_G2 out of range: 4056 is not in [0, 255]; references 'dat2'
  .reloc 40, R_ARM_LDRS_PC_G2, dat2
 
  .section .text.2, "ax", %progbits

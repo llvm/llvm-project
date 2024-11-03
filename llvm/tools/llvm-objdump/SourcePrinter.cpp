@@ -26,10 +26,6 @@
 namespace llvm {
 namespace objdump {
 
-unsigned getInstStartColumn(const MCSubtargetInfo &STI) {
-  return !ShowRawInsn ? 16 : STI.getTargetTriple().isX86() ? 40 : 24;
-}
-
 bool LiveVariable::liveAtAddress(object::SectionedAddress Addr) {
   if (LocExpr.Range == std::nullopt)
     return false;
@@ -452,6 +448,34 @@ void SourcePrinter::printLines(formatted_raw_ostream &OS,
   }
 }
 
+// Get the source line text for LineInfo:
+// - use LineInfo::LineSource if available;
+// - use LineCache if LineInfo::Source otherwise.
+StringRef SourcePrinter::getLine(const DILineInfo &LineInfo,
+                                 StringRef ObjectFilename) {
+  if (LineInfo.LineSource)
+    return LineInfo.LineSource.value();
+
+  if (SourceCache.find(LineInfo.FileName) == SourceCache.end())
+    if (!cacheSource(LineInfo))
+      return {};
+
+  auto LineBuffer = LineCache.find(LineInfo.FileName);
+  if (LineBuffer == LineCache.end())
+    return {};
+
+  if (LineInfo.Line > LineBuffer->second.size()) {
+    reportWarning(
+        formatv("debug info line number {0} exceeds the number of lines in {1}",
+                LineInfo.Line, LineInfo.FileName),
+        ObjectFilename);
+    return {};
+  }
+
+  // Vector begins at 0, line numbers are non-zero
+  return LineBuffer->second[LineInfo.Line - 1];
+}
+
 void SourcePrinter::printSources(formatted_raw_ostream &OS,
                                  const DILineInfo &LineInfo,
                                  StringRef ObjectFilename, StringRef Delimiter,
@@ -461,21 +485,9 @@ void SourcePrinter::printSources(formatted_raw_ostream &OS,
        OldLineInfo.FileName == LineInfo.FileName))
     return;
 
-  if (SourceCache.find(LineInfo.FileName) == SourceCache.end())
-    if (!cacheSource(LineInfo))
-      return;
-  auto LineBuffer = LineCache.find(LineInfo.FileName);
-  if (LineBuffer != LineCache.end()) {
-    if (LineInfo.Line > LineBuffer->second.size()) {
-      reportWarning(
-          formatv(
-              "debug info line number {0} exceeds the number of lines in {1}",
-              LineInfo.Line, LineInfo.FileName),
-          ObjectFilename);
-      return;
-    }
-    // Vector begins at 0, line numbers are non-zero
-    OS << Delimiter << LineBuffer->second[LineInfo.Line - 1];
+  StringRef Line = getLine(LineInfo, ObjectFilename);
+  if (!Line.empty()) {
+    OS << Delimiter << Line;
     LVP.printBetweenInsts(OS, true);
   }
 }

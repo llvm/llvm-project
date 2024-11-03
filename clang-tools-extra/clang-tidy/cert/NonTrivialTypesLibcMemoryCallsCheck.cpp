@@ -72,8 +72,8 @@ void NonTrivialTypesLibcMemoryCallsCheck::registerMatchers(
     return expr(unaryOperator(
         hasOperatorName("&"),
         hasUnaryOperand(declRefExpr(
-            allOf(hasType(cxxRecordDecl(Constraint)),
-                  hasType(Bind ? qualType().bind("Record") : qualType()))))));
+            hasType(cxxRecordDecl(Constraint)),
+            hasType(Bind ? qualType().bind("Record") : qualType())))));
   };
   auto IsRecordSizeOf =
       expr(sizeOfExpr(hasArgumentOfType(equalsBoundNode("Record"))));

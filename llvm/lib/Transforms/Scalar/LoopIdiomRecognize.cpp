@@ -84,14 +84,11 @@
 #include "llvm/IR/User.h"
 #include "llvm/IR/Value.h"
 #include "llvm/IR/ValueHandle.h"
-#include "llvm/InitializePasses.h"
-#include "llvm/Pass.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/InstructionCost.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Utils/BuildLibCalls.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/LoopUtils.h"
@@ -986,33 +983,6 @@ static const SCEV *getStartForNegStride(const SCEV *Start, const SCEV *BECount,
   return SE->getMinusSCEV(Start, Index);
 }
 
-/// Compute trip count from the backedge taken count.
-static const SCEV *getTripCount(const SCEV *BECount, Type *IntPtr,
-                                Loop *CurLoop, const DataLayout *DL,
-                                ScalarEvolution *SE) {
-  const SCEV *TripCountS = nullptr;
-  // The # stored bytes is (BECount+1).  Expand the trip count out to
-  // pointer size if it isn't already.
-  //
-  // If we're going to need to zero extend the BE count, check if we can add
-  // one to it prior to zero extending without overflow. Provided this is safe,
-  // it allows better simplification of the +1.
-  if (DL->getTypeSizeInBits(BECount->getType()) <
-          DL->getTypeSizeInBits(IntPtr) &&
-      SE->isLoopEntryGuardedByCond(
-          CurLoop, ICmpInst::ICMP_NE, BECount,
-          SE->getNegativeSCEV(SE->getOne(BECount->getType())))) {
-    TripCountS = SE->getZeroExtendExpr(
-        SE->getAddExpr(BECount, SE->getOne(BECount->getType()), SCEV::FlagNUW),
-        IntPtr);
-  } else {
-    TripCountS = SE->getAddExpr(SE->getTruncateOrZeroExtend(BECount, IntPtr),
-                                SE->getOne(IntPtr), SCEV::FlagNUW);
-  }
-
-  return TripCountS;
-}
-
 /// Compute the number of bytes as a SCEV from the backedge taken count.
 ///
 /// This also maps the SCEV into the provided type and tries to handle the
@@ -1020,8 +990,8 @@ static const SCEV *getTripCount(const SCEV *BECount, Type *IntPtr,
 static const SCEV *getNumBytes(const SCEV *BECount, Type *IntPtr,
                                const SCEV *StoreSizeSCEV, Loop *CurLoop,
                                const DataLayout *DL, ScalarEvolution *SE) {
-  const SCEV *TripCountSCEV = getTripCount(BECount, IntPtr, CurLoop, DL, SE);
-
+  const SCEV *TripCountSCEV =
+      SE->getTripCountFromExitCount(BECount, IntPtr, CurLoop);
   return SE->getMulExpr(TripCountSCEV,
                         SE->getTruncateOrZeroExtend(StoreSizeSCEV, IntPtr),
                         SCEV::FlagNUW);
@@ -1104,20 +1074,24 @@ bool LoopIdiomRecognize::processLoopStridedStore(
   Value *NumBytes =
       Expander.expandCodeFor(NumBytesS, IntIdxTy, Preheader->getTerminator());
 
+  if (!SplatValue && !isLibFuncEmittable(M, TLI, LibFunc_memset_pattern16))
+    return Changed;
+
+  AAMDNodes AATags = TheStore->getAAMetadata();
+  for (Instruction *Store : Stores)
+    AATags = AATags.merge(Store->getAAMetadata());
+  if (auto CI = dyn_cast<ConstantInt>(NumBytes))
+    AATags = AATags.extendTo(CI->getZExtValue());
+  else
+    AATags = AATags.extendTo(-1);
+
   CallInst *NewCall;
   if (SplatValue) {
-    AAMDNodes AATags = TheStore->getAAMetadata();
-    for (Instruction *Store : Stores)
-      AATags = AATags.merge(Store->getAAMetadata());
-    if (auto CI = dyn_cast<ConstantInt>(NumBytes))
-      AATags = AATags.extendTo(CI->getZExtValue());
-    else
-      AATags = AATags.extendTo(-1);
-
     NewCall = Builder.CreateMemSet(
         BasePtr, SplatValue, NumBytes, MaybeAlign(StoreAlignment),
         /*isVolatile=*/false, AATags.TBAA, AATags.Scope, AATags.NoAlias);
-  } else if (isLibFuncEmittable(M, TLI, LibFunc_memset_pattern16)) {
+  } else {
+    assert (isLibFuncEmittable(M, TLI, LibFunc_memset_pattern16));
     // Everything is emitted in default address space
     Type *Int8PtrTy = DestInt8PtrTy;
 
@@ -1135,8 +1109,17 @@ bool LoopIdiomRecognize::processLoopStridedStore(
     GV->setAlignment(Align(16));
     Value *PatternPtr = ConstantExpr::getBitCast(GV, Int8PtrTy);
     NewCall = Builder.CreateCall(MSP, {BasePtr, PatternPtr, NumBytes});
-  } else
-    return Changed;
+    
+    // Set the TBAA info if present.
+    if (AATags.TBAA)
+      NewCall->setMetadata(LLVMContext::MD_tbaa, AATags.TBAA);
+
+    if (AATags.Scope)
+      NewCall->setMetadata(LLVMContext::MD_alias_scope, AATags.Scope);
+
+    if (AATags.NoAlias)
+      NewCall->setMetadata(LLVMContext::MD_noalias, AATags.NoAlias);
+  } 
 
   NewCall->setDebugLoc(TheStore->getDebugLoc());
 
@@ -2407,7 +2390,7 @@ bool LoopIdiomRecognize::recognizeShiftUntilBitTest() {
   // intrinsic/shift we'll use are not cheap. Note that we are okay with *just*
   // making the loop countable, even if nothing else changes.
   IntrinsicCostAttributes Attrs(
-      IntrID, Ty, {UndefValue::get(Ty), /*is_zero_undef=*/Builder.getTrue()});
+      IntrID, Ty, {PoisonValue::get(Ty), /*is_zero_poison=*/Builder.getTrue()});
   InstructionCost Cost = TTI->getIntrinsicInstrCost(Attrs, CostKind);
   if (Cost > TargetTransformInfo::TCC_Basic) {
     LLVM_DEBUG(dbgs() << DEBUG_TYPE
@@ -2423,6 +2406,24 @@ bool LoopIdiomRecognize::recognizeShiftUntilBitTest() {
   // Ok, transform appears worthwhile.
   MadeChange = true;
 
+  if (!isGuaranteedNotToBeUndefOrPoison(BitPos)) {
+    // BitMask may be computed from BitPos, Freeze BitPos so we can increase
+    // it's use count.
+    Instruction *InsertPt = nullptr;
+    if (auto *BitPosI = dyn_cast<Instruction>(BitPos))
+      InsertPt = BitPosI->getInsertionPointAfterDef();
+    else
+      InsertPt = &*DT->getRoot()->getFirstNonPHIOrDbgOrAlloca();
+    if (!InsertPt)
+      return false;
+    FreezeInst *BitPosFrozen =
+        new FreezeInst(BitPos, BitPos->getName() + ".fr", InsertPt);
+    BitPos->replaceUsesWithIf(BitPosFrozen, [BitPosFrozen](Use &U) {
+      return U.getUser() != BitPosFrozen;
+    });
+    BitPos = BitPosFrozen;
+  }
+
   // Step 1: Compute the loop trip count.
 
   Value *LowBitMask = Builder.CreateAdd(BitMask, Constant::getAllOnesValue(Ty),
@@ -2431,7 +2432,7 @@ bool LoopIdiomRecognize::recognizeShiftUntilBitTest() {
       Builder.CreateOr(LowBitMask, BitMask, BitPos->getName() + ".mask");
   Value *XMasked = Builder.CreateAnd(X, Mask, X->getName() + ".masked");
   CallInst *XMaskedNumLeadingZeros = Builder.CreateIntrinsic(
-      IntrID, Ty, {XMasked, /*is_zero_undef=*/Builder.getTrue()},
+      IntrID, Ty, {XMasked, /*is_zero_poison=*/Builder.getTrue()},
       /*FMFSource=*/nullptr, XMasked->getName() + ".numleadingzeros");
   Value *XMaskedNumActiveBits = Builder.CreateSub(
       ConstantInt::get(Ty, Ty->getScalarSizeInBits()), XMaskedNumLeadingZeros,
@@ -2761,7 +2762,7 @@ bool LoopIdiomRecognize::recognizeShiftUntilZero() {
   // intrinsic we'll use are not cheap. Note that we are okay with *just*
   // making the loop countable, even if nothing else changes.
   IntrinsicCostAttributes Attrs(
-      IntrID, Ty, {UndefValue::get(Ty), /*is_zero_undef=*/Builder.getFalse()});
+      IntrID, Ty, {PoisonValue::get(Ty), /*is_zero_poison=*/Builder.getFalse()});
   InstructionCost Cost = TTI->getIntrinsicInstrCost(Attrs, CostKind);
   if (Cost > TargetTransformInfo::TCC_Basic) {
     LLVM_DEBUG(dbgs() << DEBUG_TYPE
@@ -2779,7 +2780,7 @@ bool LoopIdiomRecognize::recognizeShiftUntilZero() {
   // Step 1: Compute the loop's final IV value / trip count.
 
   CallInst *ValNumLeadingZeros = Builder.CreateIntrinsic(
-      IntrID, Ty, {Val, /*is_zero_undef=*/Builder.getFalse()},
+      IntrID, Ty, {Val, /*is_zero_poison=*/Builder.getFalse()},
       /*FMFSource=*/nullptr, Val->getName() + ".numleadingzeros");
   Value *ValNumActiveBits = Builder.CreateSub(
       ConstantInt::get(Ty, Ty->getScalarSizeInBits()), ValNumLeadingZeros,

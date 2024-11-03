@@ -43,7 +43,6 @@
 #include "llvm/Linker/Linker.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCContext.h"
-#include "llvm/MC/SubtargetFeature.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Remarks/HotnessThresholdParser.h"
 #include "llvm/Support/CommandLine.h"
@@ -57,6 +56,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetOptions.h"
 #include "llvm/TargetParser/Host.h"
+#include "llvm/TargetParser/SubtargetFeature.h"
 #include "llvm/Transforms/IPO.h"
 #include "llvm/Transforms/IPO/Internalize.h"
 #include "llvm/Transforms/IPO/WholeProgramDevirt.h"
@@ -244,7 +244,7 @@ bool LTOCodeGenerator::writeMergedModules(StringRef Path) {
 
 bool LTOCodeGenerator::useAIXSystemAssembler() {
   const auto &Triple = TargetMach->getTargetTriple();
-  return Triple.isOSAIX();
+  return Triple.isOSAIX() && Config.Options.DisableIntegratedAS;
 }
 
 bool LTOCodeGenerator::runAIXSystemAssembler(SmallString<128> &AssemblyFile) {
@@ -616,9 +616,6 @@ bool LTOCodeGenerator::optimize() {
 
   // Mark which symbols can not be internalized
   this->applyScopeRestrictions();
-
-  // Write LTOPostLink flag for passes that require all the modules.
-  MergedModule->addModuleFlag(Module::Error, "LTOPostLink", 1);
 
   // Add an appropriate DataLayout instance for this module...
   MergedModule->setDataLayout(TargetMach->createDataLayout());

@@ -121,12 +121,12 @@
 // CHECK228-NOT: "-ffp-contract=fast"
 // CHECK228: {{hexagon-link|ld}}
 
-// RUN: %clang -### -target hexagon-unknown-elf \
+// RUN: not %clang -### --target=hexagon-unknown-elf \
 // RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/Tools/bin \
 // RUN:   -mcpu=hexagonv65 -march=hexagon\
 // RUN:   %s 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHECK229 %s
-// RUN: %clang -### -target hexagon-unknown-elf \
+// RUN: not %clang -### --target=hexagon-unknown-elf \
 // RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/Tools/bin \
 // RUN:   -mv65 -march=hexagon\
 // RUN:   %s 2>&1 \
@@ -134,7 +134,7 @@
 // CHECK229: "-cc1" {{.*}} "-target-cpu" "hexagonv65"
 // CHECK229: {{hexagon-link|ld}}{{.*}}/Inputs/hexagon_tree/Tools/bin/../target/hexagon/lib/v65/crt0
 
-// RUN: %clang -### -target hexagon-unknown-elf \
+// RUN: not %clang -### --target=hexagon-unknown-elf \
 // RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/Tools/bin \
 // RUN:   -mcpu=hexagonv67 -fuse-ld=hexagon-link\
 // RUN:   %s 2>&1 \
@@ -142,7 +142,7 @@
 // CHECK22A: "-cc1" {{.*}} "-target-cpu" "hexagonv67"
 // CHECK22A: hexagon-link{{.*}}/Inputs/hexagon_tree/Tools/bin/../target/hexagon/lib/v67/crt0
 
-// RUN: %clang -### -target hexagon-unknown-elf \
+// RUN: not %clang -### --target=hexagon-unknown-elf \
 // RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/Tools/bin \
 // RUN:   -mcpu=hexagonv67t \
 // RUN:   -fuse-ld=fake-value-to-ignore-CLANG_DEFAULT_LINKER \
@@ -151,7 +151,7 @@
 // CHECK22B: "-cc1" {{.*}} "-target-cpu" "hexagonv67t"
 // CHECK22B: hexagon-link{{.*}}/Inputs/hexagon_tree/Tools/bin/../target/hexagon/lib/v67t/crt0
 
-// RUN: %clang -### -target hexagon-unknown-elf \
+// RUN: not %clang -### --target=hexagon-unknown-elf \
 // RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/Tools/bin \
 // RUN:   -mcpu=hexagonv68 -fuse-ld=hexagon-link\
 // RUN:   %s 2>&1 \
@@ -159,7 +159,7 @@
 // CHECK22C: "-cc1" {{.*}} "-target-cpu" "hexagonv68"
 // CHECK22C: hexagon-link{{.*}}/Inputs/hexagon_tree/Tools/bin/../target/hexagon/lib/v68/crt0
 
-// RUN: %clang -### -target hexagon-unknown-elf \
+// RUN: not %clang -### --target=hexagon-unknown-elf \
 // RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/Tools/bin \
 // RUN:   -mcpu=hexagonv69 -fuse-ld=hexagon-link\
 // RUN:   %s 2>&1 \
@@ -167,7 +167,7 @@
 // CHECK22D: "-cc1" {{.*}} "-target-cpu" "hexagonv69"
 // CHECK22D: hexagon-link{{.*}}/Inputs/hexagon_tree/Tools/bin/../target/hexagon/lib/v69/crt0
 
-// RUN: %clang -### -target hexagon-unknown-elf \
+// RUN: not %clang -### --target=hexagon-unknown-elf \
 // RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/Tools/bin \
 // RUN:   -mcpu=hexagonv71 -fuse-ld=hexagon-link\
 // RUN:   %s 2>&1 \
@@ -175,7 +175,7 @@
 // CHECK22E: "-cc1" {{.*}} "-target-cpu" "hexagonv71"
 // CHECK22E: hexagon-link{{.*}}/Inputs/hexagon_tree/Tools/bin/../target/hexagon/lib/v71/crt0
 
-// RUN: %clang -### -target hexagon-unknown-elf \
+// RUN: not %clang -### --target=hexagon-unknown-elf \
 // RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/Tools/bin \
 // RUN:   -mcpu=hexagonv71t -fuse-ld=hexagon-link\
 // RUN:   %s 2>&1 \
@@ -183,7 +183,7 @@
 // CHECK22F: "-cc1" {{.*}} "-target-cpu" "hexagonv71t"
 // CHECK22F: hexagon-link{{.*}}/Inputs/hexagon_tree/Tools/bin/../target/hexagon/lib/v71t/crt0
 
-// RUN: %clang -### -target hexagon-unknown-elf \
+// RUN: not %clang -### --target=hexagon-unknown-elf \
 // RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/Tools/bin \
 // RUN:   -mcpu=hexagonv73 -fuse-ld=hexagon-link\
 // RUN:   %s 2>&1 \
@@ -605,7 +605,7 @@
 // -----------------------------------------------------------------------------
 // Default, hexagon-link is used
 // -----------------------------------------------------------------------------
-// RUN: %clang -### -target hexagon-unknown-elf \
+// RUN: not %clang -### --target=hexagon-unknown-elf \
 // RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/Tools/bin \
 // RUN:   -mcpu=hexagonv60 \
 // RUN:   -fuse-ld=fake-value-to-ignore-CLANG_DEFAULT_LINKER \

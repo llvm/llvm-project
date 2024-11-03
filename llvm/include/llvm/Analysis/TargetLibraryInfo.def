@@ -256,20 +256,45 @@ TLI_DEFINE_ENUM_INTERNAL(Znam)
 TLI_DEFINE_STRING_INTERNAL("_Znam")
 TLI_DEFINE_SIG_INTERNAL(Ptr, Long)
 
+/// void *operator new[](unsigned long, __hot_cold_t)
+/// Currently this and other operator new interfaces that take a __hot_cold_t
+/// hint are supported by the open source version of tcmalloc, see:
+/// https://github.com/google/tcmalloc/blob/master/tcmalloc/new_extension.h
+/// and for the definition of the __hot_cold_t parameter see:
+/// https://github.com/google/tcmalloc/blob/master/tcmalloc/malloc_extension.h
+TLI_DEFINE_ENUM_INTERNAL(Znam12__hot_cold_t)
+TLI_DEFINE_STRING_INTERNAL("_Znam12__hot_cold_t")
+TLI_DEFINE_SIG_INTERNAL(Ptr, Long, Bool)
+
 /// void *operator new[](unsigned long, const std::nothrow_t&);
 TLI_DEFINE_ENUM_INTERNAL(ZnamRKSt9nothrow_t)
 TLI_DEFINE_STRING_INTERNAL("_ZnamRKSt9nothrow_t")
 TLI_DEFINE_SIG_INTERNAL(Ptr, Long, Ptr)
+
+/// void *operator new[](unsigned long, const std::nothrow_t&, __hot_cold_t)
+TLI_DEFINE_ENUM_INTERNAL(ZnamRKSt9nothrow_t12__hot_cold_t)
+TLI_DEFINE_STRING_INTERNAL("_ZnamRKSt9nothrow_t12__hot_cold_t")
+TLI_DEFINE_SIG_INTERNAL(Ptr, Long, Ptr, Bool)
 
 /// void *operator new[](unsigned long, std::align_val_t)
 TLI_DEFINE_ENUM_INTERNAL(ZnamSt11align_val_t)
 TLI_DEFINE_STRING_INTERNAL("_ZnamSt11align_val_t")
 TLI_DEFINE_SIG_INTERNAL(Ptr, Long, Long)
 
+/// void *operator new[](unsigned long, std::align_val_t, __hot_cold_t)
+TLI_DEFINE_ENUM_INTERNAL(ZnamSt11align_val_t12__hot_cold_t)
+TLI_DEFINE_STRING_INTERNAL("_ZnamSt11align_val_t12__hot_cold_t")
+TLI_DEFINE_SIG_INTERNAL(Ptr, Long, Long, Bool)
+
 /// void *operator new[](unsigned long, std::align_val_t, const std::nothrow_t&)
 TLI_DEFINE_ENUM_INTERNAL(ZnamSt11align_val_tRKSt9nothrow_t)
 TLI_DEFINE_STRING_INTERNAL("_ZnamSt11align_val_tRKSt9nothrow_t")
 TLI_DEFINE_SIG_INTERNAL(Ptr, Long, Long, Ptr)
+
+/// void *operator new[](unsigned long, std::align_val_t, const std::nothrow_t&, __hot_cold_t)
+TLI_DEFINE_ENUM_INTERNAL(ZnamSt11align_val_tRKSt9nothrow_t12__hot_cold_t)
+TLI_DEFINE_STRING_INTERNAL("_ZnamSt11align_val_tRKSt9nothrow_t12__hot_cold_t")
+TLI_DEFINE_SIG_INTERNAL(Ptr, Long, Long, Ptr, Bool)
 
 /// void *operator new(unsigned int);
 TLI_DEFINE_ENUM_INTERNAL(Znwj)
@@ -296,20 +321,40 @@ TLI_DEFINE_ENUM_INTERNAL(Znwm)
 TLI_DEFINE_STRING_INTERNAL("_Znwm")
 TLI_DEFINE_SIG_INTERNAL(Ptr, Long)
 
+/// void *operator new(unsigned long, __hot_cold_t)
+TLI_DEFINE_ENUM_INTERNAL(Znwm12__hot_cold_t)
+TLI_DEFINE_STRING_INTERNAL("_Znwm12__hot_cold_t")
+TLI_DEFINE_SIG_INTERNAL(Ptr, Long, Bool)
+
 /// void *operator new(unsigned long, const std::nothrow_t&);
 TLI_DEFINE_ENUM_INTERNAL(ZnwmRKSt9nothrow_t)
 TLI_DEFINE_STRING_INTERNAL("_ZnwmRKSt9nothrow_t")
 TLI_DEFINE_SIG_INTERNAL(Ptr, Long, Ptr)
+
+/// void *operator new(unsigned long, const std::nothrow_t&, __hot_cold_t)
+TLI_DEFINE_ENUM_INTERNAL(ZnwmRKSt9nothrow_t12__hot_cold_t)
+TLI_DEFINE_STRING_INTERNAL("_ZnwmRKSt9nothrow_t12__hot_cold_t")
+TLI_DEFINE_SIG_INTERNAL(Ptr, Long, Ptr, Bool)
 
 /// void *operator new(unsigned long, std::align_val_t)
 TLI_DEFINE_ENUM_INTERNAL(ZnwmSt11align_val_t)
 TLI_DEFINE_STRING_INTERNAL("_ZnwmSt11align_val_t")
 TLI_DEFINE_SIG_INTERNAL(Ptr, Long, Long)
 
+/// void *operator new(unsigned long, std::align_val_t, __hot_cold_t)
+TLI_DEFINE_ENUM_INTERNAL(ZnwmSt11align_val_t12__hot_cold_t)
+TLI_DEFINE_STRING_INTERNAL("_ZnwmSt11align_val_t12__hot_cold_t")
+TLI_DEFINE_SIG_INTERNAL(Ptr, Long, Long, Bool)
+
 /// void *operator new(unsigned long, std::align_val_t, const std::nothrow_t&)
 TLI_DEFINE_ENUM_INTERNAL(ZnwmSt11align_val_tRKSt9nothrow_t)
 TLI_DEFINE_STRING_INTERNAL("_ZnwmSt11align_val_tRKSt9nothrow_t")
 TLI_DEFINE_SIG_INTERNAL(Ptr, Long, Long, Ptr)
+
+/// void *operator new(unsigned long, std::align_val_t, const std::nothrow_t&, __hot_cold_t)
+TLI_DEFINE_ENUM_INTERNAL(ZnwmSt11align_val_tRKSt9nothrow_t12__hot_cold_t)
+TLI_DEFINE_STRING_INTERNAL("_ZnwmSt11align_val_tRKSt9nothrow_t12__hot_cold_t")
+TLI_DEFINE_SIG_INTERNAL(Ptr, Long, Long, Ptr, Bool)
 
 /// double __acos_finite(double x);
 TLI_DEFINE_ENUM_INTERNAL(acos_finite)

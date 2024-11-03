@@ -34,7 +34,7 @@ Quick start
 We use here the command-line, non-interactive CMake interface.
 
 #. `Download <http://www.cmake.org/cmake/resources/software.html>`_ and install
-   CMake. Version 3.13.4 is the minimum required.
+   CMake. Version 3.20.0 is the minimum required.
 
 #. Open a shell. Your development tools must be reachable from this shell
    through the PATH environment variable.
@@ -191,9 +191,6 @@ used variables that control features of LLVM and enabled subprojects.
 
 **CMAKE_BUILD_TYPE**:STRING
   This configures the optimization level for ``make`` or ``ninja`` builds.
-  The default ``CMAKE_BUILD_TYPE`` is set to ``Debug`` but you should
-  carefully read the list below to figure out what configuration matches
-  your use case the best.
 
   Possible values:
 
@@ -378,6 +375,12 @@ enabled sub-projects. Nearly all of these variable names begin with
   will limit code coverage summaries to just the listed directories. If unset,
   coverage reports will include all sources identified by the tooling.
 
+ **LLVM_INDIVIDUAL_TEST_COVERAGE**: BOOL
+  Enable individual test case coverage. When set to ON, code coverage data for
+  each test case will be generated and stored in a separate directory under the
+  config.test_exec_root path. This feature allows code coverage analysis of each
+  individual test case. Defaults to OFF.
+
 **LLVM_BUILD_LLVM_DYLIB**:BOOL
   If enabled, the target for building the libLLVM shared library is added.
   This library contains all of LLVM's components in a single shared library.
@@ -492,6 +495,11 @@ enabled sub-projects. Nearly all of these variable names begin with
 **LLVM_ENABLE_EXPENSIVE_CHECKS**:BOOL
   Enable additional time/memory expensive checking. Defaults to OFF.
 
+**LLVM_ENABLE_HTTPLIB**:BOOL
+  Enables the optional cpp-httplib dependency which is used by llvm-debuginfod
+  to serve debug info over HTTP. `cpp-httplib <https://github.com/yhirose/cpp-httplib>`_
+  must be installed, or `httplib_ROOT` must be set. Defaults to OFF.
+
 **LLVM_ENABLE_FFI**:BOOL
   Indicates whether the LLVM Interpreter will be linked with the Foreign Function
   Interface library (libffi) in order to enable calling external functions.
@@ -511,6 +519,11 @@ enabled sub-projects. Nearly all of these variable names begin with
   If the host compiler and linker supports the stdlib flag, -stdlib=libc++ is
   passed to invocations of both so that the project is built using libc++
   instead of stdlibc++. Defaults to OFF.
+
+**LLVM_ENABLE_LLVM_LIBC**: BOOL
+  If the LLVM libc overlay is installed in a location where the host linker
+  can access it, all built executables will be linked against the LLVM libc
+  overlay before linking against the system libc. Defaults to OFF.
 
 **LLVM_ENABLE_LIBPFM**:BOOL
   Enable building with libpfm to support hardware counter measurements in LLVM
@@ -587,9 +600,15 @@ enabled sub-projects. Nearly all of these variable names begin with
   If enabled, the Z3 constraint solver is activated for the Clang static analyzer.
   A recent version of the z3 library needs to be available on the system.
 
-**LLVM_ENABLE_ZLIB**:BOOL
-  Enable building with zlib to support compression/uncompression in LLVM tools.
-  Defaults to ON.
+**LLVM_ENABLE_ZLIB**:STRING
+  Used to decide if LLVM tools should support compression/decompression with
+  zlib. Allowed values are ``OFF``, ``ON`` (default, enable if zlib is found),
+  and ``FORCE_ON`` (error if zlib is not found).
+
+**LLVM_ENABLE_ZSTD**:STRING
+  Used to decide if LLVM tools should support compression/decompression with
+  zstd. Allowed values are ``OFF``, ``ON`` (default, enable if zstd is found),
+  and ``FORCE_ON`` (error if zstd is not found).
 
 **LLVM_EXPERIMENTAL_TARGETS_TO_BUILD**:STRING
   Semicolon-separated list of experimental targets to build and linked into
@@ -673,7 +692,7 @@ enabled sub-projects. Nearly all of these variable names begin with
     $ D:\llvm-project> cmake ... -DLLVM_INTEGRATED_CRT_ALLOC=D:\git\rpmalloc
 
   This flag needs to be used along with the static CRT, ie. if building the
-  Release target, add -DLLVM_USE_CRT_RELEASE=MT.
+  Release target, add -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded.
 
 **LLVM_INSTALL_DOXYGEN_HTML_DIR**:STRING
   The path to install Doxygen-generated HTML documentation to. This path can
@@ -746,8 +765,8 @@ enabled sub-projects. Nearly all of these variable names begin with
   Semicolon-separated list of targets to build, or *all* for building all
   targets. Case-sensitive. Defaults to *all*. Example:
   ``-DLLVM_TARGETS_TO_BUILD="X86;PowerPC"``.
-  The full list, as of October 2022, is:
-  ``AArch64;AMDGPU;ARM;AVR;BPF;Hexagon;Lanai;Mips;MSP430;NVPTX;PowerPC;RISCV;Sparc;SystemZ;VE;WebAssembly;X86;XCore``
+  The full list, as of March 2023, is:
+  ``AArch64;AMDGPU;ARM;AVR;BPF;Hexagon;Lanai;LoongArch;Mips;MSP430;NVPTX;PowerPC;RISCV;Sparc;SystemZ;VE;WebAssembly;X86;XCore``
 
 **LLVM_TEMPORARILY_ALLOW_OLD_TOOLCHAIN**:BOOL
   If enabled, the compiler version check will only warn when using a toolchain
@@ -761,7 +780,8 @@ enabled sub-projects. Nearly all of these variable names begin with
 **LLVM_USE_CRT_{target}**:STRING
   On Windows, tells which version of the C runtime library (CRT) should be used.
   For example, -DLLVM_USE_CRT_RELEASE=MT would statically link the CRT into the
-  LLVM tools and library.
+  LLVM tools and library. This is deprecated; use ``CMAKE_MSVC_RUNTIME_LIBRARY``
+  instead.
 
 **LLVM_USE_INTEL_JITEVENTS**:BOOL
   Enable building support for Intel JIT Events API. Defaults to OFF.
@@ -914,7 +934,7 @@ and uses them to build a simple application ``simple-tool``.
 
 .. code-block:: cmake
 
-  cmake_minimum_required(VERSION 3.13.4)
+  cmake_minimum_required(VERSION 3.20.0)
   project(SimpleProject)
 
   find_package(LLVM REQUIRED CONFIG)

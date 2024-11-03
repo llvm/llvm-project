@@ -9,7 +9,7 @@
 #ifndef LLDB_SOURCE_PLUGINS_EXPRESSIONPARSER_CLANG_CPPMODULECONFIGURATION_H
 #define LLDB_SOURCE_PLUGINS_EXPRESSIONPARSER_CLANG_CPPMODULECONFIGURATION_H
 
-#include <lldb/Core/FileSpecList.h>
+#include <lldb/Utility/FileSpecList.h>
 #include <llvm/Support/Regex.h>
 
 namespace lldb_private {

@@ -116,16 +116,18 @@ void OutputSection::commitSection(InputSection *isec) {
     if (hasInputSections || typeIsSet) {
       if (typeIsSet || !canMergeToProgbits(type) ||
           !canMergeToProgbits(isec->type)) {
-        // Changing the type of a (NOLOAD) section is fishy, but some projects
-        // (e.g. https://github.com/ClangBuiltLinux/linux/issues/1597)
-        // traditionally rely on the behavior. Issue a warning to not break
-        // them. Other types get an error.
-        auto diagnose = type == SHT_NOBITS ? warn : errorOrWarn;
-        diagnose("section type mismatch for " + isec->name + "\n>>> " +
-                 toString(isec) + ": " +
-                 getELFSectionTypeName(config->emachine, isec->type) +
-                 "\n>>> output section " + name + ": " +
-                 getELFSectionTypeName(config->emachine, type));
+        // The (NOLOAD) changes the section type to SHT_NOBITS, the intention is
+        // that the contents at that address is provided by some other means.
+        // Some projects (e.g.
+        // https://github.com/ClangBuiltLinux/linux/issues/1597) rely on the
+        // behavior. Other types get an error.
+        if (type != SHT_NOBITS) {
+          errorOrWarn("section type mismatch for " + isec->name + "\n>>> " +
+                      toString(isec) + ": " +
+                      getELFSectionTypeName(config->emachine, isec->type) +
+                      "\n>>> output section " + name + ": " +
+                      getELFSectionTypeName(config->emachine, type));
+        }
       }
       if (!typeIsSet)
         type = SHT_PROGBITS;
@@ -217,7 +219,7 @@ void OutputSection::finalizeInputSections() {
       });
       if (i == mergeSections.end()) {
         MergeSyntheticSection *syn =
-            createMergeSynthetic(name, ms->type, ms->flags, ms->addralign);
+            createMergeSynthetic(s->name, ms->type, ms->flags, ms->addralign);
         mergeSections.push_back(syn);
         i = std::prev(mergeSections.end());
         syn->entsize = ms->entsize;
@@ -329,7 +331,7 @@ template <class ELFT> void OutputSection::maybeCompress() {
 
   // Compress only DWARF debug sections.
   if (config->compressDebugSections == DebugCompressionType::None ||
-      (flags & SHF_ALLOC) || !name.startswith(".debug_") || size == 0)
+      (flags & SHF_ALLOC) || !name.starts_with(".debug_") || size == 0)
     return;
 
   llvm::TimeTraceScope timeScope("Compress debug sections");
@@ -494,6 +496,12 @@ void OutputSection::writeTo(uint8_t *buf, parallel::TaskGroup &tg) {
       else
         isec->writeTo<ELFT>(buf + isec->outSecOff);
 
+      // When in Arm BE8 mode, the linker has to convert the big-endian
+      // instructions to little-endian, leaving the data big-endian.
+      if (config->emachine == EM_ARM && !config->isLE && config->armBe8 &&
+          (flags & SHF_EXECINSTR))
+        convertArmInstructionstoBE8(isec, buf + isec->outSecOff);
+
       // Fill gaps between sections.
       if (nonZeroFiller) {
         uint8_t *start = buf + isec->outSecOff + isec->getSize();
@@ -534,7 +542,7 @@ void OutputSection::writeTo(uint8_t *buf, parallel::TaskGroup &tg) {
     taskSize += sections[i]->getSize();
     bool done = ++i == numSections;
     if (done || taskSize >= taskSizeLimit) {
-      tg.execute([=] { fn(begin, i); });
+      tg.spawn([=] { fn(begin, i); });
       if (done)
         break;
       begin = i;
@@ -667,7 +675,7 @@ int elf::getPriority(StringRef s) {
     return 65536;
   int v = 65536;
   if (to_integer(s.substr(pos + 1), v, 10) &&
-      (pos == 6 && (s.startswith(".ctors") || s.startswith(".dtors"))))
+      (pos == 6 && (s.starts_with(".ctors") || s.starts_with(".dtors"))))
     v = 65535 - v;
   return v;
 }

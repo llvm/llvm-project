@@ -84,7 +84,7 @@ static MCInstPrinter *createMCInstPrinter(const Triple & /*T*/,
 
 static MCCodeEmitter *createCodeEmitter(const MCInstrInfo &MCII,
                                         MCContext &Ctx) {
-  return createWebAssemblyMCCodeEmitter(MCII);
+  return createWebAssemblyMCCodeEmitter(MCII, Ctx);
 }
 
 static MCAsmBackend *createAsmBackend(const Target & /*T*/,

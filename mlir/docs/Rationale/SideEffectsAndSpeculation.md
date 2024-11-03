@@ -7,7 +7,7 @@ This rationale only applies to operations used in
 [CFG regions](../LangRef.md#control-flow-and-ssacfg-regions). Side effect
 modeling in [graph regions](../LangRef.md#graph-regions) is TBD.
 
-\[TOC\]
+[TOC]
 
 ## Overview
 

@@ -223,18 +223,12 @@ else:
 
 declare i1 @test_dummy(ptr %p) #0
 ; CHECK-ALL-LABEL: test_phi:
-; CHECK-FP16: vcvtb.f32.f16
-; CHECK-FP16: [[LOOP:.LBB[1-9_]+]]:
-; CHECK-FP16: vcvtb.f32.f16
+; CHECK-FP16: [[LOOP:.LBB[0-9_]+]]:
 ; CHECK-FP16: bl      test_dummy
 ; CHECK-FP16: bne     [[LOOP]]
-; CHECK-FP16: vcvtb.f16.f32
-; CHECK-LIBCALL-VFP: bl __aeabi_h2f
-; CHECK-LIBCALL: [[LOOP:.LBB[1-9_]+]]:
-; CHECK-LIBCALL-VFP: bl __aeabi_h2f
+; CHECK-LIBCALL: [[LOOP:.LBB[0-9_]+]]:
 ; CHECK-LIBCALL: bl test_dummy
 ; CHECK-LIBCALL: bne     [[LOOP]]
-; CHECK-LIBCALL-VFP: bl __aeabi_f2h
 define void @test_phi(ptr %p) #0 {
 entry:
   %a = load half, ptr %p
@@ -871,8 +865,14 @@ define void @test_fmuladd(ptr %p, ptr %q, ptr %r) #0 {
 ; CHECK-VFP:	ldrh	
 ; CHECK-VFP:	stm	
 ; CHECK-VFP:	strh	
-; CHECK-VFP:	ldm	
-; CHECK-VFP:	stm	
+; CHECK-VFP:	ldrh	
+; CHECK-VFP:	ldrh	
+; CHECK-VFP:	ldrh
+; CHECK-VFP:	ldrh
+; CHECK-VFP:	strh
+; CHECK-VFP:	strh
+; CHECK-VFP:	strh
+; CHECK-VFP:	strh	
 
 ; CHECK-NOVFP: ldrh
 ; CHECK-NOVFP: ldrh
@@ -899,7 +899,7 @@ define void @test_insertelement(ptr %p, ptr %q, i32 %i) #0 {
   %a = load half, ptr %p, align 2
   %b = load <4 x half>, ptr %q, align 8
   %c = insertelement <4 x half> %b, half %a, i32 %i
-  store <4 x half> %c, ptr %q
+  store volatile <4 x half> %c, ptr %q
   ret void
 }
 

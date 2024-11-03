@@ -13,6 +13,7 @@
 #ifndef LLVM_LIB_TARGET_NVPTX_NVPTXUTILITIES_H
 #define LLVM_LIB_TARGET_NVPTX_NVPTXUTILITIES_H
 
+#include "llvm/CodeGen/ValueTypes.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/IntrinsicInst.h"
@@ -74,6 +75,8 @@ inline unsigned promoteScalarArgumentSize(unsigned size) {
 }
 
 bool shouldEmitPTXNoReturn(const Value *V, const TargetMachine &TM);
+
+bool Isv2x16VT(EVT VT);
 }
 
 #endif

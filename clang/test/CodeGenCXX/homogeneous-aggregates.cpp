@@ -47,7 +47,7 @@ D1 CC func_D1(D1 x) { return x; }
 
 // PPC: define{{.*}} [3 x double] @_Z7func_D22D2([3 x double] %x.coerce)
 // ARM32: define{{.*}} arm_aapcs_vfpcc %struct.D2 @_Z7func_D22D2(%struct.D2 %x.coerce)
-// ARM64: define{{.*}} %struct.D2 @_Z7func_D22D2([3 x double] %x.coerce)
+// ARM64: define{{.*}} %struct.D2 @_Z7func_D22D2([3 x double] alignstack(8) %x.coerce)
 // X64: define dso_local x86_vectorcallcc %struct.D2 @"\01_Z7func_D22D2@@24"(%struct.D2 inreg %x.coerce)
 D2 CC func_D2(D2 x) { return x; }
 
@@ -58,7 +58,7 @@ D3 CC func_D3(D3 x) { return x; }
 
 // PPC: define{{.*}} [4 x double] @_Z7func_D42D4([4 x double] %x.coerce)
 // ARM32: define{{.*}} arm_aapcs_vfpcc %struct.D4 @_Z7func_D42D4(%struct.D4 %x.coerce)
-// ARM64: define{{.*}} %struct.D4 @_Z7func_D42D4([4 x double] %x.coerce)
+// ARM64: define{{.*}} %struct.D4 @_Z7func_D42D4([4 x double] alignstack(8) %x.coerce)
 D4 CC func_D4(D4 x) { return x; }
 
 D5 CC func_D5(D5 x) { return x; }
@@ -68,7 +68,7 @@ D5 CC func_D5(D5 x) { return x; }
 // The C++ multiple inheritance expansion case is a little more complicated, so
 // do some extra checking.
 //
-// ARM64-LABEL: define{{.*}} %struct.D5 @_Z7func_D52D5([3 x double] %x.coerce)
+// ARM64-LABEL: define{{.*}} %struct.D5 @_Z7func_D52D5([3 x double] alignstack(8) %x.coerce)
 // ARM64: store [3 x double] %x.coerce, ptr
 
 void call_D5(D5 *p) {
@@ -79,7 +79,7 @@ void call_D5(D5 *p) {
 //
 // ARM64-LABEL: define{{.*}} void @_Z7call_D5P2D5(ptr noundef %p)
 // ARM64: load [3 x double], ptr
-// ARM64: call %struct.D5 @_Z7func_D52D5([3 x double] %{{.*}})
+// ARM64: call %struct.D5 @_Z7func_D52D5([3 x double] alignstack(8) %{{.*}})
 
 struct Empty { };
 struct Float1 { float x; };
@@ -87,7 +87,7 @@ struct Float2 { float y; };
 struct HVAWithEmptyBase : Float1, Empty, Float2 { float z; };
 
 // PPC: define{{.*}} void @_Z15with_empty_base16HVAWithEmptyBase([3 x float] %a.coerce)
-// ARM64: define{{.*}} void @_Z15with_empty_base16HVAWithEmptyBase([3 x float] %a.coerce)
+// ARM64: define{{.*}} void @_Z15with_empty_base16HVAWithEmptyBase([3 x float] alignstack(8) %a.coerce)
 // ARM32: define{{.*}} arm_aapcs_vfpcc void @_Z15with_empty_base16HVAWithEmptyBase(%struct.HVAWithEmptyBase %a.coerce)
 void CC with_empty_base(HVAWithEmptyBase a) {}
 
@@ -100,7 +100,7 @@ struct HVAWithEmptyBitField : Float1, Float2 {
 };
 
 // PPC: define{{.*}} void @_Z19with_empty_bitfield20HVAWithEmptyBitField([3 x float] %a.coerce)
-// ARM64: define{{.*}} void @_Z19with_empty_bitfield20HVAWithEmptyBitField([3 x float] %a.coerce)
+// ARM64: define{{.*}} void @_Z19with_empty_bitfield20HVAWithEmptyBitField([3 x float] alignstack(8) %a.coerce)
 // ARM32: define{{.*}} arm_aapcs_vfpcc void @_Z19with_empty_bitfield20HVAWithEmptyBitField(%struct.HVAWithEmptyBitField %a.coerce)
 // X64: define dso_local x86_vectorcallcc void @"\01_Z19with_empty_bitfield20HVAWithEmptyBitField@@16"(%struct.HVAWithEmptyBitField inreg %a.coerce)
 void CC with_empty_bitfield(HVAWithEmptyBitField a) {}
@@ -284,4 +284,21 @@ struct HFA {
 };
 double foo(HFA v) { return v.x + v.y; }
 // WOA64: define dso_local noundef double @"?foo@non_empty_field@@YANUHFA@1@@Z"([4 x double] %{{.*}})
+}
+
+namespace pr62223 {
+// HVAs don't follow the normal rules for return values. That means they can
+// have base classes, user-defined ctors, and protected/private members.
+// (The same restrictions that apply to HVA arguments still apply.)
+typedef double V __attribute((ext_vector_type(2)));
+struct base { V v; };
+struct test : base { test(double); protected: V v2;};
+test f(test *x) { return *x; }
+// WOA64: define dso_local %"struct.pr62223::test" @"?f@pr62223@@YA?AUtest@1@PEAU21@@Z"(ptr noundef %{{.*}})
+
+// The above rule only apples to HVAs, not HFAs.
+struct base2 { double v; };
+struct test2 : base2 { test2(double); protected: double v2;};
+test2 f(test2 *x) { return *x; }
+// WOA64: define dso_local void @"?f@pr62223@@YA?AUtest2@1@PEAU21@@Z"(ptr inreg noalias sret(%"struct.pr62223::test2") align 8 %{{.*}}, ptr noundef %{{.*}})
 }

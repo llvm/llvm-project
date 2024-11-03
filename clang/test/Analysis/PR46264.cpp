@@ -1,7 +1,5 @@
 // RUN: %clang_analyze_cc1 -analyzer-checker=core -verify %s
 
-// rdar://problem/64202361
-
 struct A {
   int a;
   struct {

@@ -132,7 +132,7 @@ program openacc_data_validity
   !ERROR: At least one of COPYOUT, DELETE, DETACH clause must appear on the EXIT DATA directive
   !$acc exit data
 
-  !ERROR: At least one of ATTACH, COPY, COPYIN, COPYOUT, CREATE, DEFAULT, DEVICEPTR, NO_CREATE, PRESENT clause must appear on the DATA directive
+  !PORTABILITY: At least one of ATTACH, COPY, COPYIN, COPYOUT, CREATE, DEFAULT, DEVICEPTR, NO_CREATE, PRESENT clause should appear on the DATA directive
   !$acc data
   !$acc end data
 
@@ -177,5 +177,14 @@ program openacc_data_validity
   !$acc data copyin(i)
   !ERROR: Unmatched PARALLEL directive
   !$acc end parallel
+
+  !$acc data copy(aa) async
+  !$acc end data
+
+  !$acc data copy(aa) wait
+  !$acc end data
+
+  !$acc data copy(aa) device_type(1) wait
+  !$acc end data
 
 end program openacc_data_validity

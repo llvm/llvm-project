@@ -99,7 +99,7 @@ public:
   }
 
   FormatToken *getPreviousToken() override {
-    assert(Position <= 0 || !Tokens[Position - 1]->is(tok::eof));
+    assert(Position <= 0 || Tokens[Position - 1]->isNot(tok::eof));
     return Position > 0 ? Tokens[Position - 1] : nullptr;
   }
 
@@ -162,7 +162,7 @@ private:
     auto it = Jumps.find(Next);
     if (it != Jumps.end()) {
       Next = it->second;
-      assert(Jumps.find(Next) == Jumps.end());
+      assert(!Jumps.contains(Next));
     }
     return Next;
   }

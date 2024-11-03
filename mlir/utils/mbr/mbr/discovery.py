@@ -16,21 +16,17 @@ def discover_benchmark_modules(top_level_path):
     defaults to "benchmark_"
     """
     config = configparser.ConfigParser()
-    config.read(
-        os.path.join(os.path.dirname(os.path.realpath(__file__)), "config.ini")
-    )
+    config.read(os.path.join(os.path.dirname(os.path.realpath(__file__)), "config.ini"))
     if "discovery" in config.sections():
         filename_prefix = config["discovery"]["filename_prefix"]
     else:
         filename_prefix = "benchmark_"
-    if re.search(fr"{filename_prefix}.*.py$", top_level_path):
+    if re.search(rf"{filename_prefix}.*.py$", top_level_path):
         # A specific python file so just include that.
         benchmark_files = [top_level_path]
     else:
         # A directory so recursively search for all python files.
-        benchmark_files = pathlib.Path(
-            top_level_path
-        ).rglob(f"{filename_prefix}*.py")
+        benchmark_files = pathlib.Path(top_level_path).rglob(f"{filename_prefix}*.py")
     for benchmark_filename in benchmark_files:
         benchmark_abs_dir = os.path.abspath(os.path.dirname(benchmark_filename))
         sys.path.append(benchmark_abs_dir)
@@ -46,9 +42,7 @@ def get_benchmark_functions(module, benchmark_function_name=None):
     a specific prefix, which defaults to "benchmark_".
     """
     config = configparser.ConfigParser()
-    config.read(
-        os.path.join(os.path.dirname(os.path.realpath(__file__)), "config.ini")
-    )
+    config.read(os.path.join(os.path.dirname(os.path.realpath(__file__)), "config.ini"))
     if "discovery" in config.sections():
         function_prefix = config["discovery"].get("function_prefix")
     else:
@@ -57,9 +51,8 @@ def get_benchmark_functions(module, benchmark_function_name=None):
     module_functions = []
     for attribute_name in dir(module):
         attribute = getattr(module, attribute_name)
-        if (
-            isinstance(attribute, types.FunctionType)
-            and attribute_name.startswith(function_prefix)
+        if isinstance(attribute, types.FunctionType) and attribute_name.startswith(
+            function_prefix
         ):
             module_functions.append(attribute)
 

@@ -24,15 +24,15 @@ LLVM_LIBC_FUNCTION(float, atanhf, (float x)) {
     if (xbits.is_nan()) {
       return x;
     }
-    // |x| == 0
+    // |x| == 1.0
     if (x_abs == 0x3F80'0000U) {
-      fputil::set_except(FE_DIVBYZERO);
-      return with_errno(FPBits::inf(sign).get_val(), ERANGE);
+      fputil::set_errno_if_required(ERANGE);
+      fputil::raise_except_if_required(FE_DIVBYZERO);
+      return FPBits::inf(sign).get_val();
     } else {
-      fputil::set_except(FE_INVALID);
-      return with_errno(
-          FPBits::build_nan(1 << (fputil::MantissaWidth<float>::VALUE - 1)),
-          EDOM);
+      fputil::set_errno_if_required(EDOM);
+      fputil::raise_except_if_required(FE_INVALID);
+      return FPBits::build_quiet_nan(0);
     }
   }
 
@@ -40,8 +40,9 @@ LLVM_LIBC_FUNCTION(float, atanhf, (float x)) {
   if (LIBC_UNLIKELY(x_abs <= 0x3dcc'0000U)) {
     // |x| <= 2^-26
     if (LIBC_UNLIKELY(x_abs <= 0x3280'0000U)) {
-      return LIBC_UNLIKELY(x_abs == 0) ? x
-                                       : (x + 0x1.5555555555555p-2 * x * x * x);
+      return static_cast<float>(LIBC_UNLIKELY(x_abs == 0)
+                                    ? x
+                                    : (x + 0x1.5555555555555p-2 * x * x * x));
     }
 
     double xdbl = x;
@@ -50,10 +51,10 @@ LLVM_LIBC_FUNCTION(float, atanhf, (float x)) {
     double pe = fputil::polyeval(x2, 0.0, 0x1.5555555555555p-2,
                                  0x1.999999999999ap-3, 0x1.2492492492492p-3,
                                  0x1.c71c71c71c71cp-4, 0x1.745d1745d1746p-4);
-    return fputil::multiply_add(xdbl, pe, xdbl);
+    return static_cast<float>(fputil::multiply_add(xdbl, pe, xdbl));
   }
   double xdbl = x;
-  return 0.5 * log_eval((xdbl + 1.0) / (xdbl - 1.0));
+  return static_cast<float>(0.5 * log_eval((xdbl + 1.0) / (xdbl - 1.0)));
 }
 
 } // namespace __llvm_libc

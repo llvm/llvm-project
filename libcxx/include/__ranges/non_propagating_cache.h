@@ -16,7 +16,6 @@
 #include <__memory/addressof.h>
 #include <__utility/forward.h>
 #include <optional>
-#include <type_traits>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -44,10 +43,11 @@ namespace ranges {
     // This helper class is needed to perform copy and move elision when
     // constructing the contained type from an iterator.
     struct __wrapper {
-      template<class ..._Args>
-      constexpr explicit __wrapper(__forward_tag, _Args&& ...__args) : __t_(std::forward<_Args>(__args)...) { }
-      template<class _Fn>
-      constexpr explicit __wrapper(__from_tag, _Fn const& __f) : __t_(__f()) { }
+      template <class... _Args>
+      _LIBCPP_HIDE_FROM_ABI constexpr explicit __wrapper(__forward_tag, _Args&&... __args)
+          : __t_(std::forward<_Args>(__args)...) {}
+      template <class _Fn>
+      _LIBCPP_HIDE_FROM_ABI constexpr explicit __wrapper(__from_tag, _Fn const& __f) : __t_(__f()) {}
       _Tp __t_;
     };
 

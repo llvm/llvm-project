@@ -118,7 +118,7 @@ constexpr bool test() {
   test_range<cpp20_input_iterator<int*>, sentinel_wrapper<cpp20_input_iterator<int*>>, false>();
   test_range<cpp20_input_iterator<int*>, sized_sentinel<cpp20_input_iterator<int*>>, false>();
 
-  meta::for_each(meta::forward_iterator_list<int*>{}, []<class Iter> {
+  types::for_each(types::forward_iterator_list<int*>{}, []<class Iter> {
     test_range<Iter, Iter, true>();
     test_range<Iter, sentinel_wrapper<Iter>, false>();
     test_range<Iter, sized_sentinel<Iter>, false>();

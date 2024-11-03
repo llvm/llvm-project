@@ -1,5 +1,5 @@
-! RUN: bbc -polymorphic-type -emit-fir %s -o - | FileCheck %s
-! RUN: bbc -polymorphic-type -emit-fir %s -o - | tco | FileCheck %s --check-prefix=LLVM
+! RUN: bbc --use-desc-for-alloc=false -polymorphic-type -emit-fir %s -o - | FileCheck %s
+! RUN: bbc --use-desc-for-alloc=false -polymorphic-type -emit-fir %s -o - | tco | FileCheck %s --check-prefix=LLVM
 
 module poly
   type p1
@@ -103,8 +103,8 @@ contains
 ! CHECK: %{{.*}} = fir.call @_FortranAPointerAllocate(%[[P_DESC_CAST]], %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}) {{.*}}: (!fir.ref<!fir.box<none>>, i1, !fir.box<none>, !fir.ref<i8>, i32) -> i32
 
 ! call p%proc1()
-! CHECK: %[[P_CAST:.*]] = fir.convert %[[P_DESC:.*]] : (!fir.ref<!fir.class<!fir.ptr<!fir.type<_QMpolyTp1{a:i32,b:i32}>>>>) -> !fir.class<!fir.ptr<!fir.type<_QMpolyTp1{a:i32,b:i32}>>>
-! CHECK: fir.dispatch "proc1"(%[[P_CAST]] : !fir.class<!fir.ptr<!fir.type<_QMpolyTp1{a:i32,b:i32}>>>)
+! CHECK: %[[P_LOAD:.*]] = fir.load %[[P_DESC:.*]] : !fir.ref<!fir.class<!fir.ptr<!fir.type<_QMpolyTp1{a:i32,b:i32}>>>>
+! CHECK: fir.dispatch "proc1"(%[[P_LOAD]] : !fir.class<!fir.ptr<!fir.type<_QMpolyTp1{a:i32,b:i32}>>>)
 
 ! CHECK: %[[TYPE_DESC_P1:.*]] = fir.type_desc !fir.type<_QMpolyTp1{a:i32,b:i32}>
 ! CHECK: %[[C1_DESC_CAST:.*]] = fir.convert %[[C1_DESC:.*]] : (!fir.ref<!fir.class<!fir.ptr<!fir.type<_QMpolyTp1{a:i32,b:i32}>>>>) -> !fir.ref<!fir.box<none>>
@@ -125,12 +125,12 @@ contains
 ! CHECK: %{{.*}} = fir.call @_FortranAPointerAllocate(%[[C2_DESC_CAST]], %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}) {{.*}}: (!fir.ref<!fir.box<none>>, i1, !fir.box<none>, !fir.ref<i8>, i32) -> i32
 
 ! call c1%proc1()
-! CHECK: %[[C1_DESC_CAST:.*]] = fir.convert %[[C1_DESC]] : (!fir.ref<!fir.class<!fir.ptr<!fir.type<_QMpolyTp1{a:i32,b:i32}>>>>) -> !fir.class<!fir.ptr<!fir.type<_QMpolyTp1{a:i32,b:i32}>>>
-! CHECK: fir.dispatch "proc1"(%[[C1_DESC_CAST]] : !fir.class<!fir.ptr<!fir.type<_QMpolyTp1{a:i32,b:i32}>>>)
+! CHECK: %[[C1_DESC_LOAD:.*]] = fir.load %[[C1_DESC]] : !fir.ref<!fir.class<!fir.ptr<!fir.type<_QMpolyTp1{a:i32,b:i32}>>>>
+! CHECK: fir.dispatch "proc1"(%[[C1_DESC_LOAD]] : !fir.class<!fir.ptr<!fir.type<_QMpolyTp1{a:i32,b:i32}>>>)
 
 ! call c2%proc1()
-! CHECK: %[[C2_DESC_CAST:.*]] = fir.convert %[[C2_DESC]] : (!fir.ref<!fir.class<!fir.ptr<!fir.type<_QMpolyTp1{a:i32,b:i32}>>>>) -> !fir.class<!fir.ptr<!fir.type<_QMpolyTp1{a:i32,b:i32}>>>
-! CHECK: fir.dispatch "proc1"(%[[C2_DESC_CAST]] : !fir.class<!fir.ptr<!fir.type<_QMpolyTp1{a:i32,b:i32}>>>)
+! CHECK: %[[C2_DESC_LOAD:.*]] = fir.load %[[C2_DESC]] : !fir.ref<!fir.class<!fir.ptr<!fir.type<_QMpolyTp1{a:i32,b:i32}>>>>
+! CHECK: fir.dispatch "proc1"(%[[C2_DESC_LOAD]] : !fir.class<!fir.ptr<!fir.type<_QMpolyTp1{a:i32,b:i32}>>>)
 
 ! call c1%proc2()
 ! CHECK: %[[C1_LOAD:.*]] = fir.load %[[C1_DESC]] : !fir.ref<!fir.class<!fir.ptr<!fir.type<_QMpolyTp1{a:i32,b:i32}>>>>
@@ -258,7 +258,7 @@ contains
 ! CHECK: %[[TYPE_DESC_P1_CAST:.*]] = fir.convert %[[TYPE_DESC_P1]] : (!fir.tdesc<!fir.type<_QMpolyTp1{a:i32,b:i32}>>) -> !fir.ref<none>
 ! CHECK: %[[RANK:.*]] = arith.constant 0 : i32
 ! CHECK: %[[C0:.*]] = arith.constant 0 : i32
-! CHECK: fir.call @_FortranAAllocatableInitDerived(%[[P_CAST]], %[[TYPE_DESC_P1_CAST]], %[[RANK]], %[[C0]]) {{.*}}: (!fir.ref<!fir.box<none>>, !fir.ref<none>, i32, i32) -> none
+! CHECK: fir.call @_FortranAAllocatableInitDerivedForAllocate(%[[P_CAST]], %[[TYPE_DESC_P1_CAST]], %[[RANK]], %[[C0]]) {{.*}}: (!fir.ref<!fir.box<none>>, !fir.ref<none>, i32, i32) -> none
 ! CHECK: %[[P_CAST:.*]] = fir.convert %[[P]] : (!fir.ref<!fir.class<!fir.heap<!fir.type<_QMpolyTp1{a:i32,b:i32}>>>>) -> !fir.ref<!fir.box<none>>
 ! CHECK: %{{.*}} = fir.call @_FortranAAllocatableAllocate(%[[P_CAST]], %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}) {{.*}}: (!fir.ref<!fir.box<none>>, i1, !fir.box<none>, !fir.ref<i8>, i32) -> i32
 
@@ -267,7 +267,7 @@ contains
 ! CHECK: %[[TYPE_DESC_P1_CAST:.*]] = fir.convert %[[TYPE_DESC_P1]] : (!fir.tdesc<!fir.type<_QMpolyTp1{a:i32,b:i32}>>) -> !fir.ref<none>
 ! CHECK: %[[RANK:.*]] = arith.constant 0 : i32
 ! CHECK: %[[C0:.*]] = arith.constant 0 : i32
-! CHECK: fir.call @_FortranAAllocatableInitDerived(%[[C1_CAST]], %[[TYPE_DESC_P1_CAST]], %[[RANK]], %[[C0]]) {{.*}}: (!fir.ref<!fir.box<none>>, !fir.ref<none>, i32, i32) -> none
+! CHECK: fir.call @_FortranAAllocatableInitDerivedForAllocate(%[[C1_CAST]], %[[TYPE_DESC_P1_CAST]], %[[RANK]], %[[C0]]) {{.*}}: (!fir.ref<!fir.box<none>>, !fir.ref<none>, i32, i32) -> none
 ! CHECK: %[[C1_CAST:.*]] = fir.convert %[[C1]] : (!fir.ref<!fir.class<!fir.heap<!fir.type<_QMpolyTp1{a:i32,b:i32}>>>>) -> !fir.ref<!fir.box<none>>
 ! CHECK: %{{.*}} = fir.call @_FortranAAllocatableAllocate(%[[C1_CAST]], %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}) {{.*}}: (!fir.ref<!fir.box<none>>, i1, !fir.box<none>, !fir.ref<i8>, i32) -> i32
 
@@ -276,7 +276,7 @@ contains
 ! CHECK: %[[TYPE_DESC_P2_CAST:.*]] = fir.convert %[[TYPE_DESC_P2]] : (!fir.tdesc<!fir.type<_QMpolyTp2{a:i32,b:i32,c:i32}>>) -> !fir.ref<none>
 ! CHECK: %[[RANK:.*]] = arith.constant 0 : i32
 ! CHECK: %[[C0:.*]] = arith.constant 0 : i32
-! CHECK: fir.call @_FortranAAllocatableInitDerived(%[[C2_CAST]], %[[TYPE_DESC_P2_CAST]], %[[RANK]], %[[C0]]) {{.*}}: (!fir.ref<!fir.box<none>>, !fir.ref<none>, i32, i32) -> none
+! CHECK: fir.call @_FortranAAllocatableInitDerivedForAllocate(%[[C2_CAST]], %[[TYPE_DESC_P2_CAST]], %[[RANK]], %[[C0]]) {{.*}}: (!fir.ref<!fir.box<none>>, !fir.ref<none>, i32, i32) -> none
 ! CHECK: %[[C2_CAST:.*]] = fir.convert %[[C2]] : (!fir.ref<!fir.class<!fir.heap<!fir.type<_QMpolyTp1{a:i32,b:i32}>>>>) -> !fir.ref<!fir.box<none>>
 ! CHECK: %{{.*}} = fir.call @_FortranAAllocatableAllocate(%[[C2_CAST]], %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}) {{.*}}: (!fir.ref<!fir.box<none>>, i1, !fir.box<none>, !fir.ref<i8>, i32) -> i32
 
@@ -285,7 +285,7 @@ contains
 ! CHECK: %[[TYPE_DESC_P1_CAST:.*]] = fir.convert %[[TYPE_DESC_P1]] : (!fir.tdesc<!fir.type<_QMpolyTp1{a:i32,b:i32}>>) -> !fir.ref<none>
 ! CHECK: %[[RANK:.*]] = arith.constant 1 : i32
 ! CHECK: %[[C0:.*]] = arith.constant 0 : i32
-! CHECK: fir.call @_FortranAAllocatableInitDerived(%[[C3_CAST]], %[[TYPE_DESC_P1_CAST]], %[[RANK]], %[[C0]]) {{.*}}: (!fir.ref<!fir.box<none>>, !fir.ref<none>, i32, i32) -> none
+! CHECK: fir.call @_FortranAAllocatableInitDerivedForAllocate(%[[C3_CAST]], %[[TYPE_DESC_P1_CAST]], %[[RANK]], %[[C0]]) {{.*}}: (!fir.ref<!fir.box<none>>, !fir.ref<none>, i32, i32) -> none
 ! CHECK: %[[C10:.*]] = arith.constant 10 : i32
 ! CHECK: %[[C0:.*]] = arith.constant 0 : i32
 ! CHECK: %[[C3_CAST:.*]] = fir.convert %[[C3]] : (!fir.ref<!fir.class<!fir.heap<!fir.array<?x!fir.type<_QMpolyTp1{a:i32,b:i32}>>>>>) -> !fir.ref<!fir.box<none>>
@@ -300,7 +300,7 @@ contains
 ! CHECK: %[[TYPE_DESC_P2_CAST:.*]] = fir.convert %[[TYPE_DESC_P2]] : (!fir.tdesc<!fir.type<_QMpolyTp2{a:i32,b:i32,c:i32}>>) -> !fir.ref<none>
 ! CHECK: %[[RANK:.*]] = arith.constant 1 : i32
 ! CHECK: %[[C0:.*]] = arith.constant 0 : i32
-! CHECK: fir.call @_FortranAAllocatableInitDerived(%[[C4_CAST]], %[[TYPE_DESC_P2_CAST]], %[[RANK]], %[[C0]]) {{.*}}: (!fir.ref<!fir.box<none>>, !fir.ref<none>, i32, i32) -> none
+! CHECK: fir.call @_FortranAAllocatableInitDerivedForAllocate(%[[C4_CAST]], %[[TYPE_DESC_P2_CAST]], %[[RANK]], %[[C0]]) {{.*}}: (!fir.ref<!fir.box<none>>, !fir.ref<none>, i32, i32) -> none
 ! CHECK: %[[CST1:.*]] = arith.constant 1 : index
 ! CHECK: %[[C20:.*]] = arith.constant 20 : i32
 ! CHECK: %[[C0:.*]] = arith.constant 0 : i32
@@ -311,18 +311,18 @@ contains
 ! CHECK: %[[C4_CAST:.*]] = fir.convert %[[C4]] : (!fir.ref<!fir.class<!fir.heap<!fir.array<?x!fir.type<_QMpolyTp1{a:i32,b:i32}>>>>>) -> !fir.ref<!fir.box<none>>
 ! CHECK: %{{.*}} = fir.call @_FortranAAllocatableAllocate(%[[C4_CAST]], %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}) {{.*}}: (!fir.ref<!fir.box<none>>, i1, !fir.box<none>, !fir.ref<i8>, i32) -> i32
 
-! CHECK: %[[C1_CAST:.*]] = fir.convert %[[C1_DESC]] : (!fir.ref<!fir.class<!fir.heap<!fir.type<_QMpolyTp1{a:i32,b:i32}>>>>) -> !fir.class<!fir.heap<!fir.type<_QMpolyTp1{a:i32,b:i32}>>>
-! CHECK: fir.dispatch "proc1"(%[[C1_CAST]] : !fir.class<!fir.heap<!fir.type<_QMpolyTp1{a:i32,b:i32}>>>)
+! CHECK: %[[C1_LOAD1:.*]] = fir.load %[[C1_DESC]] : !fir.ref<!fir.class<!fir.heap<!fir.type<_QMpolyTp1{a:i32,b:i32}>>>>
+! CHECK: fir.dispatch "proc1"(%[[C1_LOAD1]] : !fir.class<!fir.heap<!fir.type<_QMpolyTp1{a:i32,b:i32}>>>)
 
-! CHECK: %[[C2_CAST:.*]] = fir.convert %[[C2_DESC]] : (!fir.ref<!fir.class<!fir.heap<!fir.type<_QMpolyTp1{a:i32,b:i32}>>>>) -> !fir.class<!fir.heap<!fir.type<_QMpolyTp1{a:i32,b:i32}>>>
-! CHECK: fir.dispatch "proc1"(%[[C2_CAST]] : !fir.class<!fir.heap<!fir.type<_QMpolyTp1{a:i32,b:i32}>>>)
+! CHECK: %[[C2_LOAD1:.*]] = fir.load %[[C2_DESC]] : !fir.ref<!fir.class<!fir.heap<!fir.type<_QMpolyTp1{a:i32,b:i32}>>>>
+! CHECK: fir.dispatch "proc1"(%[[C2_LOAD1]] : !fir.class<!fir.heap<!fir.type<_QMpolyTp1{a:i32,b:i32}>>>)
 
-! CHECK: %[[C1_LOAD:.*]] = fir.load %[[C1_DESC]] : !fir.ref<!fir.class<!fir.heap<!fir.type<_QMpolyTp1{a:i32,b:i32}>>>>
-! CHECK: %[[C1_REBOX:.*]] = fir.rebox %[[C1_LOAD]] : (!fir.class<!fir.heap<!fir.type<_QMpolyTp1{a:i32,b:i32}>>>) -> !fir.class<!fir.type<_QMpolyTp1{a:i32,b:i32}>>
+! CHECK: %[[C1_LOAD2:.*]] = fir.load %[[C1_DESC]] : !fir.ref<!fir.class<!fir.heap<!fir.type<_QMpolyTp1{a:i32,b:i32}>>>>
+! CHECK: %[[C1_REBOX:.*]] = fir.rebox %[[C1_LOAD2]] : (!fir.class<!fir.heap<!fir.type<_QMpolyTp1{a:i32,b:i32}>>>) -> !fir.class<!fir.type<_QMpolyTp1{a:i32,b:i32}>>
 ! CHECK: fir.dispatch "proc2"(%[[C1_REBOX]] : !fir.class<!fir.type<_QMpolyTp1{a:i32,b:i32}>>) (%[[C1_REBOX]] : !fir.class<!fir.type<_QMpolyTp1{a:i32,b:i32}>>) {pass_arg_pos = 0 : i32}
 
-! CHECK: %[[C2_LOAD:.*]] = fir.load %[[C2_DESC]] : !fir.ref<!fir.class<!fir.heap<!fir.type<_QMpolyTp1{a:i32,b:i32}>>>>
-! CHECK: %[[C2_REBOX:.*]] = fir.rebox %[[C2_LOAD]] : (!fir.class<!fir.heap<!fir.type<_QMpolyTp1{a:i32,b:i32}>>>) -> !fir.class<!fir.type<_QMpolyTp1{a:i32,b:i32}>>
+! CHECK: %[[C2_LOAD2:.*]] = fir.load %[[C2_DESC]] : !fir.ref<!fir.class<!fir.heap<!fir.type<_QMpolyTp1{a:i32,b:i32}>>>>
+! CHECK: %[[C2_REBOX:.*]] = fir.rebox %[[C2_LOAD2]] : (!fir.class<!fir.heap<!fir.type<_QMpolyTp1{a:i32,b:i32}>>>) -> !fir.class<!fir.type<_QMpolyTp1{a:i32,b:i32}>>
 ! CHECK: fir.dispatch "proc2"(%[[C2_REBOX]] : !fir.class<!fir.type<_QMpolyTp1{a:i32,b:i32}>>) (%[[C2_REBOX]] : !fir.class<!fir.type<_QMpolyTp1{a:i32,b:i32}>>) {pass_arg_pos = 0 : i32}
 
 ! CHECK-LABEL: %{{.*}} = fir.do_loop
@@ -381,7 +381,7 @@ contains
 ! CHECK: %[[KIND:.*]] = arith.constant 4 : i32
 ! CHECK: %[[RANK:.*]] = arith.constant 0 : i32
 ! CHECK: %[[CORANK:.*]] = arith.constant 0 : i32
-! CHECK: %{{.*}} = fir.call @_FortranAAllocatableInitIntrinsic(%[[BOX_NONE]], %[[CAT]], %[[KIND]], %[[RANK]], %[[CORANK]]) {{.*}} : (!fir.ref<!fir.box<none>>, i32, i32, i32, i32) -> none
+! CHECK: %{{.*}} = fir.call @_FortranAAllocatableInitIntrinsicForAllocate(%[[BOX_NONE]], %[[CAT]], %[[KIND]], %[[RANK]], %[[CORANK]]) {{.*}} : (!fir.ref<!fir.box<none>>, i32, i32, i32, i32) -> none
 ! CHECK: %[[BOX_NONE:.*]] = fir.convert %[[P]] : (!fir.ref<!fir.class<!fir.heap<none>>>) -> !fir.ref<!fir.box<none>>
 ! CHECK: %{{.*}} = fir.call @_FortranAAllocatableAllocate(%[[BOX_NONE]], %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}) {{.*}} : (!fir.ref<!fir.box<none>>, i1, !fir.box<none>, !fir.ref<i8>, i32) -> i32
 
@@ -548,7 +548,7 @@ contains
 ! CHECK: %[[KIND:.*]] = arith.constant 1 : i32
 ! CHECK: %[[RANK:.*]] = arith.constant 0 : i32
 ! CHECK: %[[CORANK:.*]] = arith.constant 0 : i32
-! CHECK: %{{.*}} = fir.call @_FortranAAllocatableInitCharacter(%[[A_NONE]], %[[LEN]], %[[KIND]], %[[RANK]], %[[CORANK]]) {{.*}} : (!fir.ref<!fir.box<none>>, i64, i32, i32, i32) -> none
+! CHECK: %{{.*}} = fir.call @_FortranAAllocatableInitCharacterForAllocate(%[[A_NONE]], %[[LEN]], %[[KIND]], %[[RANK]], %[[CORANK]]) {{.*}} : (!fir.ref<!fir.box<none>>, i64, i32, i32, i32) -> none
 ! CHECK: %[[A_NONE:.*]] = fir.convert %[[A:.*]] : (!fir.ref<!fir.class<!fir.heap<none>>>) -> !fir.ref<!fir.box<none>>
 ! CHECK: %{{.*}} = fir.call @_FortranAAllocatableAllocate(%[[A_NONE]], %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}) {{.*}} : (!fir.ref<!fir.box<none>>, i1, !fir.box<none>, !fir.ref<i8>, i32) -> i32
 
@@ -568,16 +568,16 @@ end
 
 ! LLVM-LABEL: define void @_QMpolyPtest_allocatable()
 
-! LLVM: %{{.*}} = call {} @_FortranAAllocatableInitDerived(ptr %{{.*}}, ptr @_QMpolyE.dt.p1, i32 0, i32 0)
+! LLVM: %{{.*}} = call {} @_FortranAAllocatableInitDerivedForAllocate(ptr %{{.*}}, ptr @_QMpolyE.dt.p1, i32 0, i32 0)
 ! LLVM: %{{.*}} = call i32 @_FortranAAllocatableAllocate(ptr %{{.*}}, i1 false, ptr null, ptr @_QQcl.{{.*}}, i32 {{.*}})
-! LLVM: %{{.*}} = call {} @_FortranAAllocatableInitDerived(ptr %{{.*}}, ptr @_QMpolyE.dt.p1, i32 0, i32 0)
+! LLVM: %{{.*}} = call {} @_FortranAAllocatableInitDerivedForAllocate(ptr %{{.*}}, ptr @_QMpolyE.dt.p1, i32 0, i32 0)
 ! LLVM: %{{.*}} = call i32 @_FortranAAllocatableAllocate(ptr %{{.*}}, i1 false, ptr null, ptr @_QQcl.{{.*}}, i32 {{.*}})
-! LLVM: %{{.*}} = call {} @_FortranAAllocatableInitDerived(ptr %{{.*}}, ptr @_QMpolyE.dt.p2, i32 0, i32 0)
+! LLVM: %{{.*}} = call {} @_FortranAAllocatableInitDerivedForAllocate(ptr %{{.*}}, ptr @_QMpolyE.dt.p2, i32 0, i32 0)
 ! LLVM: %{{.*}} = call i32 @_FortranAAllocatableAllocate(ptr %{{.*}}, i1 false, ptr null, ptr @_QQcl.{{.*}}, i32 {{.*}})
-! LLVM: %{{.*}} = call {} @_FortranAAllocatableInitDerived(ptr %{{.*}}, ptr @_QMpolyE.dt.p1, i32 1, i32 0)
+! LLVM: %{{.*}} = call {} @_FortranAAllocatableInitDerivedForAllocate(ptr %{{.*}}, ptr @_QMpolyE.dt.p1, i32 1, i32 0)
 ! LLVM: %{{.*}} = call {} @_FortranAAllocatableSetBounds(ptr %{{.*}}, i32 0, i64 1, i64 10)
 ! LLVM: %{{.*}} = call i32 @_FortranAAllocatableAllocate(ptr %{{.*}}, i1 false, ptr null, ptr @_QQcl.{{.*}}, i32 {{.*}})
-! LLVM: %{{.*}} = call {} @_FortranAAllocatableInitDerived(ptr %{{.*}}, ptr @_QMpolyE.dt.p2, i32 1, i32 0)
+! LLVM: %{{.*}} = call {} @_FortranAAllocatableInitDerivedForAllocate(ptr %{{.*}}, ptr @_QMpolyE.dt.p2, i32 1, i32 0)
 ! LLVM: %{{.*}} = call {} @_FortranAAllocatableSetBounds(ptr %{{.*}}, i32 0, i64 1, i64 20)
 ! LLVM: %{{.*}} = call i32 @_FortranAAllocatableAllocate(ptr %{{.*}}, i1 false, ptr null, ptr @_QQcl.{{.*}}, i32 {{.*}})
 ! LLVM-COUNT-2:  call void %{{.*}}()
@@ -586,9 +586,9 @@ end
 ! LLVM: store { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] } %[[C1_LOAD]], ptr %{{.*}}
 ! LLVM: %[[GEP_TDESC_C1:.*]] = getelementptr { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] }, ptr %{{.*}}, i32 0, i32 7
 ! LLVM: %[[TDESC_C1:.*]] = load ptr, ptr %[[GEP_TDESC_C1]]
-! LLVM: %[[ELEM_SIZE_GEP:.*]] = getelementptr { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] }, ptr %{{.}}, i32 0, i32 1
+! LLVM: %[[ELEM_SIZE_GEP:.*]] = getelementptr { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] }, ptr %{{.*}}, i32 0, i32 1
 ! LLVM: %[[ELEM_SIZE:.*]] = load i64, ptr %[[ELEM_SIZE_GEP]]
-! LLVM: %[[TYPE_CODE_GEP:.*]] = getelementptr { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] }, ptr %{{.}}, i32 0, i32 4
+! LLVM: %[[TYPE_CODE_GEP:.*]] = getelementptr { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] }, ptr %{{.*}}, i32 0, i32 4
 ! LLVM: %[[TYPE_CODE:.*]] = load i32, ptr %[[TYPE_CODE_GEP]]
 ! LLVM: %{{.*}} = insertvalue { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] } undef, i64 %[[ELEM_SIZE]], 1
 ! LLVM: %[[TRUNC_TYPE_CODE:.*]] = trunc i32 %[[TYPE_CODE]] to i8 
@@ -600,9 +600,9 @@ end
 ! LLVM: store { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] } %[[LOAD_C2]], ptr %{{.*}}
 ! LLVM: %[[GEP_TDESC_C2:.*]] = getelementptr { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] }, ptr %{{.*}}, i32 0, i32 7
 ! LLVM: %[[TDESC_C2:.*]] = load ptr, ptr %[[GEP_TDESC_C2]]
-! LLVM: %[[ELEM_SIZE_GEP:.*]] = getelementptr { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] }, ptr %{{.}}, i32 0, i32 1
+! LLVM: %[[ELEM_SIZE_GEP:.*]] = getelementptr { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] }, ptr %{{.*}}, i32 0, i32 1
 ! LLVM: %[[ELEM_SIZE:.*]] = load i64, ptr %[[ELEM_SIZE_GEP]]
-! LLVM: %[[TYPE_CODE_GEP:.*]] = getelementptr { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] }, ptr %{{.}}, i32 0, i32 4
+! LLVM: %[[TYPE_CODE_GEP:.*]] = getelementptr { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] }, ptr %{{.*}}, i32 0, i32 4
 ! LLVM: %[[TYPE_CODE:.*]] = load i32, ptr %[[TYPE_CODE_GEP]]
 ! LLVM: %{{.*}} = insertvalue { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] } undef, i64 %[[ELEM_SIZE]], 1
 ! LLVM: %[[TRUNC_TYPE_CODE:.*]] = trunc i32 %[[TYPE_CODE]] to i8 
@@ -661,6 +661,6 @@ end
 ! LLVM: store { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] } { ptr null, i64 ptrtoint (ptr getelementptr (%_QMpolyTp1, ptr null, i32 1) to i64), i32 20180515, i8 0, i8 42, i8 2, i8 1, ptr @_QMpolyE.dt.p1, [1 x i64] undef }, ptr %[[ALLOCA1]]
 ! LLVM: %[[LOAD:.*]] = load { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] }, ptr %[[ALLOCA1]]
 ! LLVM: store { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] } %[[LOAD]], ptr %[[ALLOCA2]]
-! LLVM: %{{.*}} = call {} @_FortranAAllocatableInitDerived(ptr %[[ALLOCA2]], ptr @_QMpolyE.dt.p1, i32 0, i32 0)
+! LLVM: %{{.*}} = call {} @_FortranAAllocatableInitDerivedForAllocate(ptr %[[ALLOCA2]], ptr @_QMpolyE.dt.p1, i32 0, i32 0)
 ! LLVM: %{{.*}} = call i32 @_FortranAAllocatableAllocate(ptr %[[ALLOCA2]], i1 false, ptr null, ptr @_QQcl.{{.*}}, i32 {{.*}})
 ! LLVM: %{{.*}} = call i32 @_FortranAAllocatableDeallocatePolymorphic(ptr %[[ALLOCA2]], ptr {{.*}}, i1 false, ptr null, ptr @_QQcl.{{.*}}, i32 {{.*}})

@@ -13,6 +13,7 @@
 #ifndef LLVM_LIB_TARGET_AMDGPU_AMDGPUINSTRUCTIONSELECTOR_H
 #define LLVM_LIB_TARGET_AMDGPU_AMDGPUINSTRUCTIONSELECTOR_H
 
+#include "SIDefines.h"
 #include "llvm/CodeGen/GlobalISel/InstructionSelector.h"
 #include "llvm/IR/InstrTypes.h"
 
@@ -58,7 +59,7 @@ public:
   static const char *getName();
 
   void setupMF(MachineFunction &MF, GISelKnownBits *KB,
-               CodeGenCoverage &CoverageInfo, ProfileSummaryInfo *PSI,
+               CodeGenCoverage *CoverageInfo, ProfileSummaryInfo *PSI,
                BlockFrequencyInfo *BFI) override;
 
 private:
@@ -111,6 +112,7 @@ private:
   bool selectDivScale(MachineInstr &MI) const;
   bool selectIntrinsicCmp(MachineInstr &MI) const;
   bool selectBallot(MachineInstr &I) const;
+  bool selectInverseBallot(MachineInstr &I) const;
   bool selectRelocConstant(MachineInstr &I) const;
   bool selectGroupStaticSize(MachineInstr &I) const;
   bool selectReturnAddress(MachineInstr &I) const;
@@ -145,10 +147,12 @@ private:
   bool selectBVHIntrinsic(MachineInstr &I) const;
   bool selectSMFMACIntrin(MachineInstr &I) const;
   bool selectWaveAddress(MachineInstr &I) const;
+  bool selectStackRestore(MachineInstr &MI) const;
 
-  std::pair<Register, unsigned>
-  selectVOP3ModsImpl(MachineOperand &Root, bool AllowAbs = true,
-                     bool OpSel = false) const;
+  std::pair<Register, unsigned> selectVOP3ModsImpl(MachineOperand &Root,
+                                                   bool IsCanonicalizing = true,
+                                                   bool AllowAbs = true,
+                                                   bool OpSel = false) const;
 
   Register copyToVGPRIfSrcFolded(Register Src, unsigned Mods,
                                  MachineOperand Root, MachineInstr *InsertPt,
@@ -168,6 +172,8 @@ private:
   selectVOP3OMods(MachineOperand &Root) const;
   InstructionSelector::ComplexRendererFns
   selectVOP3Mods(MachineOperand &Root) const;
+  InstructionSelector::ComplexRendererFns
+  selectVOP3ModsNonCanonicalizing(MachineOperand &Root) const;
   InstructionSelector::ComplexRendererFns
   selectVOP3BMods(MachineOperand &Root) const;
 
@@ -236,6 +242,8 @@ private:
   bool isDSOffsetLegal(Register Base, int64_t Offset) const;
   bool isDSOffset2Legal(Register Base, int64_t Offset0, int64_t Offset1,
                         unsigned Size) const;
+  bool isFlatScratchBaseLegal(
+      Register Base, uint64_t FlatVariant = SIInstrFlags::FlatScratch) const;
 
   std::pair<Register, unsigned>
   selectDS1Addr1OffsetImpl(MachineOperand &Root) const;
@@ -285,12 +293,6 @@ private:
   InstructionSelector::ComplexRendererFns
   selectMUBUFOffset(MachineOperand &Root) const;
 
-  InstructionSelector::ComplexRendererFns
-  selectMUBUFOffsetAtomic(MachineOperand &Root) const;
-
-  InstructionSelector::ComplexRendererFns
-  selectMUBUFAddr64Atomic(MachineOperand &Root) const;
-
   ComplexRendererFns selectSMRDBufferImm(MachineOperand &Root) const;
   ComplexRendererFns selectSMRDBufferImm32(MachineOperand &Root) const;
   ComplexRendererFns selectSMRDBufferSgprImm(MachineOperand &Root) const;
@@ -326,6 +328,9 @@ private:
 
   void renderFrameIndex(MachineInstrBuilder &MIB, const MachineInstr &MI,
                         int OpIdx) const;
+
+  void renderFPPow2ToExponent(MachineInstrBuilder &MIB, const MachineInstr &MI,
+                              int OpIdx) const;
 
   bool isInlineImmediate16(int64_t Imm) const;
   bool isInlineImmediate32(int64_t Imm) const;

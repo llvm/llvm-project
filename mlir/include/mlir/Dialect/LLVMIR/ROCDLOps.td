@@ -13,6 +13,7 @@
 #ifndef ROCDLIR_OPS
 #define ROCDLIR_OPS
 
+include "mlir/Dialect/GPU/IR/CompilationAttrInterfaces.td"
 include "mlir/Dialect/LLVMIR/LLVMOpBase.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 
@@ -44,7 +45,19 @@ def ROCDL_Dialect : Dialect {
     /// The address space value that represents private memory.
     static constexpr unsigned kPrivateMemoryAddressSpace = 5;
   }];
+
+  let useDefaultAttributePrinterParser = 1;
 }
+
+//===----------------------------------------------------------------------===//
+// ROCDL attribute definitions
+//===----------------------------------------------------------------------===//
+
+class ROCDL_Attr<string attrName, string attrMnemonic, list<Trait> traits = []>
+    : AttrDef<ROCDL_Dialect, attrName, traits> {
+  let mnemonic = attrMnemonic;
+}
+
 
 //===----------------------------------------------------------------------===//
 // ROCDL op definitions
@@ -53,6 +66,10 @@ def ROCDL_Dialect : Dialect {
 class ROCDL_Op<string mnemonic, list<Trait> traits = []> :
   LLVM_OpBase<ROCDL_Dialect, mnemonic, traits> {
 }
+
+class ROCDL_IntrPure1Op<string mnemonic> :
+  LLVM_IntrOpBase<ROCDL_Dialect, mnemonic,
+  "amdgcn_" # !subst(".", "_", mnemonic), [], [], [Pure], 1>;
 
 //===----------------------------------------------------------------------===//
 // ROCDL special register op definitions
@@ -78,6 +95,49 @@ class ROCDL_DeviceFunctionOp<string mnemonic, string device_function,
 }
 
 //===----------------------------------------------------------------------===//
+// Wave-level primitives
+
+class ROCDL_MbcntOp<string mnemonic> :
+    ROCDL_IntrPure1Op<"mbcnt." # mnemonic>,
+  Arguments<(ins I32:$in0, I32:$in1)> {
+  let assemblyFormat = [{
+    $in0 `,` $in1  attr-dict `:` `(` type($in0) `,` type($in1) `)` `->` type($res)
+   }];
+}
+
+def ROCDL_MbcntLoOp : ROCDL_MbcntOp<"lo">;
+def ROCDL_MbcntHiOp : ROCDL_MbcntOp<"hi">;
+
+def ROCDL_DsSwizzleOp : 
+ROCDL_Op<"ds_swizzle">,
+Results<(outs I32:$res)>,
+Arguments<(ins I32:$src,
+               I32:$offset)>
+{
+  string llvmBuilder = [{
+    $res = createIntrinsicCall(builder, llvm::Intrinsic::amdgcn_ds_swizzle, {$src, $offset});
+  }];
+  let assemblyFormat = [{
+    $src `,` $offset  attr-dict `:` `(` type($src) `,` type($offset) `)` `->` type($res)
+   }];
+}
+
+def ROCDL_DsBpermuteOp : 
+ROCDL_Op<"ds_bpermute">,
+Results<(outs I32:$res)>,
+Arguments<(ins I32:$index,
+               I32:$src)>
+{
+  string llvmBuilder = [{
+    $res = createIntrinsicCall(builder, llvm::Intrinsic::amdgcn_ds_bpermute, {$index, $src});
+  }];
+  let assemblyFormat = [{
+    $index `,` $src  attr-dict `:` `(` type($index) `,` type($src) `)` `->` type($res)
+   }];
+}
+
+
+//===----------------------------------------------------------------------===//
 // Thread index and Block index
 
 def ROCDL_ThreadIdXOp : ROCDL_SpecialRegisterOp<"workitem.id.x">;
@@ -101,13 +161,13 @@ def ROCDL_BlockDimZOp : ROCDL_DeviceFunctionOp<"workgroup.dim.z",
                                                "__ockl_get_local_size", 2>;
 
 def ROCDL_GridDimXOp : ROCDL_DeviceFunctionOp<"grid.dim.x",
-                                               "__ockl_get_global_size", 0>;
+                                               "__ockl_get_num_groups", 0>;
 
 def ROCDL_GridDimYOp : ROCDL_DeviceFunctionOp<"grid.dim.y",
-                                               "__ockl_get_global_size", 1>;
+                                               "__ockl_get_num_groups", 1>;
 
 def ROCDL_GridDimZOp : ROCDL_DeviceFunctionOp<"grid.dim.z",
-                                               "__ockl_get_global_size", 2>;
+                                               "__ockl_get_num_groups", 2>;
 
 //===----------------------------------------------------------------------===//
 // Synchronization primitives
@@ -123,6 +183,7 @@ def ROCDL_BarrierOp : ROCDL_Op<"barrier"> {
   }];
   let assemblyFormat = "attr-dict";
 }
+
 
 //===---------------------------------------------------------------------===//
 // Xdlops intrinsics
@@ -181,6 +242,26 @@ def ROCDL_mfma_f32_32x32x16_bf8_bf8 : ROCDL_Mfma_IntrOp<"mfma.f32.32x32x16.bf8.b
 def ROCDL_mfma_f32_32x32x16_bf8_fp8 : ROCDL_Mfma_IntrOp<"mfma.f32.32x32x16.bf8.fp8">;
 def ROCDL_mfma_f32_32x32x16_fp8_bf8 : ROCDL_Mfma_IntrOp<"mfma.f32.32x32x16.fp8.bf8">;
 def ROCDL_mfma_f32_32x32x16_fp8_fp8 : ROCDL_Mfma_IntrOp<"mfma.f32.32x32x16.fp8.fp8">;
+
+//===---------------------------------------------------------------------===//
+// WMMA intrinsics
+class ROCDL_Wmma_IntrOp<string mnemonic, list<Trait> traits = []> :
+  LLVM_IntrOpBase<ROCDL_Dialect, mnemonic,
+                  "amdgcn_" # !subst(".","_", mnemonic),
+                  [0], [], traits, 1>,
+  Arguments<(ins Variadic<LLVM_Type>:$args)> {
+  let assemblyFormat =
+    "$args attr-dict `:` functional-type($args, $res)";
+}
+
+// Available on RDNA3
+def ROCDL_wmma_f32_16x16x16_f16 : ROCDL_Wmma_IntrOp<"wmma.f32.16x16x16.f16">;
+def ROCDL_wmma_f32_16x16x16_bf16 : ROCDL_Wmma_IntrOp<"wmma.f32.16x16x16.bf16">;
+def ROCDL_wmma_f16_16x16x16_f16 : ROCDL_Wmma_IntrOp<"wmma.f16.16x16x16.f16">;
+def ROCDL_wmma_bf16_16x16x16_bf16 : ROCDL_Wmma_IntrOp<"wmma.bf16.16x16x16.bf16">;
+def ROCDL_wmma_i32_16x16x16_iu8 : ROCDL_Wmma_IntrOp<"wmma.i32.16x16x16.iu8">;
+def ROCDL_wmma_i32_16x16x16_iu4 : ROCDL_Wmma_IntrOp<"wmma.i32.16x16x16.iu4">;
+
 
 //===---------------------------------------------------------------------===//
 // Vector buffer load/store intrinsics
@@ -252,6 +333,25 @@ def ROCDL_RawBufferStoreOp :
   let hasCustomAssemblyFormat = 1;
 }
 
+def ROCDL_RawBufferAtomicCmpSwap :
+  ROCDL_Op<"raw.buffer.atomic.cmpswap", [AllTypesMatch<["res", "src", "cmp"]>]>,
+  Results<(outs LLVM_Type:$res)>,
+  Arguments<(ins LLVM_Type:$src,
+                 LLVM_Type:$cmp,
+                 LLVM_Type:$rsrc,
+                 I32:$offset,
+                 I32:$soffset,
+                 I32:$aux)>{
+  string llvmBuilder = [{
+      $res = createIntrinsicCall(builder,
+          llvm::Intrinsic::amdgcn_raw_buffer_atomic_cmpswap, {$src, $cmp, $rsrc,
+            $offset, $soffset, $aux}, {$_resultType});
+  }];
+  let assemblyFormat = [{
+    attr-dict `(` operands `)` `:` type($res) `,` type($rsrc)
+  }];
+}
+
 //===---------------------------------------------------------------------===//
 // MI-100 and MI-200 buffer atomic floating point add intrinsic
 
@@ -269,6 +369,151 @@ def ROCDL_RawBufferAtomicFAddOp :
             $offset, $soffset, $aux}, {vdataType});
   }];
   let hasCustomAssemblyFormat = 1;
+}
+
+//===---------------------------------------------------------------------===//
+// Buffer atomic floating point max intrinsic. GFX9 does not support fp32.
+
+def ROCDL_RawBufferAtomicFMaxOp :
+  ROCDL_Op<"raw.buffer.atomic.fmax">,
+  Arguments<(ins LLVM_Type:$vdata,
+                 LLVM_Type:$rsrc,
+                 LLVM_Type:$offset,
+                 LLVM_Type:$soffset,
+                 LLVM_Type:$aux)>{
+  string llvmBuilder = [{
+      auto vdataType = moduleTranslation.convertType(op.getVdata().getType());
+      createIntrinsicCall(builder,
+          llvm::Intrinsic::amdgcn_raw_buffer_atomic_fmax, {$vdata, $rsrc,
+            $offset, $soffset, $aux}, {vdataType});
+  }];
+  let hasCustomAssemblyFormat = 1;
+}
+
+//===---------------------------------------------------------------------===//
+// Buffer atomic signed integer max intrinsic.
+
+def ROCDL_RawBufferAtomicSMaxOp :
+  ROCDL_Op<"raw.buffer.atomic.smax">,
+  Arguments<(ins LLVM_Type:$vdata,
+                 LLVM_Type:$rsrc,
+                 LLVM_Type:$offset,
+                 LLVM_Type:$soffset,
+                 LLVM_Type:$aux)>{
+  string llvmBuilder = [{
+      auto vdataType = moduleTranslation.convertType(op.getVdata().getType());
+      createIntrinsicCall(builder,
+          llvm::Intrinsic::amdgcn_raw_buffer_atomic_smax, {$vdata, $rsrc,
+            $offset, $soffset, $aux}, {vdataType});
+  }];
+  let hasCustomAssemblyFormat = 1;
+}
+
+//===---------------------------------------------------------------------===//
+// Buffer atomic unsigned integer min intrinsic.
+
+def ROCDL_RawBufferAtomicUMinOp :
+  ROCDL_Op<"raw.buffer.atomic.umin">,
+  Arguments<(ins LLVM_Type:$vdata,
+                 LLVM_Type:$rsrc,
+                 LLVM_Type:$offset,
+                 LLVM_Type:$soffset,
+                 LLVM_Type:$aux)>{
+  string llvmBuilder = [{
+      auto vdataType = moduleTranslation.convertType(op.getVdata().getType());
+      createIntrinsicCall(builder,
+          llvm::Intrinsic::amdgcn_raw_buffer_atomic_umin, {$vdata, $rsrc,
+            $offset, $soffset, $aux}, {vdataType});
+  }];
+  let hasCustomAssemblyFormat = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// ROCDL target attribute.
+//===----------------------------------------------------------------------===//
+
+def ROCDL_TargettAttr :
+    ROCDL_Attr<"ROCDLTarget", "target"> {
+  let description = [{
+    ROCDL target attribute for controlling compilation of AMDGPU targets. All
+    parameters decay into default values if not present.
+
+    Examples:
+
+    1. Target with default values.
+    ```
+      gpu.module @mymodule [#rocdl.target] attributes {...} {
+        ...
+      }
+    ```
+
+    2. Target with `gfx90a` chip and fast math.
+    ```
+      gpu.module @mymodule [#rocdl.target<chip = "gfx90a", flags = {fast, no_wave64}>] {
+        ...
+      }
+    ```
+  }];
+  let parameters = (ins
+    DefaultValuedParameter<"int", "2", "Optimization level to apply.">:$O,
+    StringRefParameter<"Target triple.", "\"amdgcn-amd-amdhsa\"">:$triple,
+    StringRefParameter<"Target chip.", "\"gfx900\"">:$chip,
+    StringRefParameter<"Target chip features.", "\"\"">:$features,
+    StringRefParameter<"ABI version.", "\"400\"">:$abi,
+    OptionalParameter<"DictionaryAttr", "Target specific flags.">:$flags,
+    OptionalParameter<"ArrayAttr", "Files to link to the LLVM module.">:$link
+  );
+  let assemblyFormat = [{
+    (`<` struct($O, $triple, $chip, $features, $abi, $flags, $link)^ `>`)?
+  }];
+  let builders = [
+    AttrBuilder<(ins CArg<"int", "2">:$optLevel,
+                     CArg<"StringRef", "\"amdgcn-amd-amdhsa\"">:$triple,
+                     CArg<"StringRef", "\"gfx900\"">:$chip,
+                     CArg<"StringRef", "\"\"">:$features,
+                     CArg<"StringRef", "\"400\"">:$abiVersion,
+                     CArg<"DictionaryAttr", "nullptr">:$targetFlags,
+                     CArg<"ArrayAttr", "nullptr">:$linkFiles), [{
+      return Base::get($_ctxt, optLevel, triple, chip, features, abiVersion,
+                       targetFlags, linkFiles);
+    }]>
+  ];
+  let skipDefaultBuilders = 1;
+  let genVerifyDecl = 1;
+  let extraClassDeclaration = [{
+    bool hasFlag(StringRef flag) const;
+    bool hasWave64() const;
+    bool hasFastMath() const;
+    bool hasDaz() const;
+    bool hasFiniteOnly() const;
+    bool hasUnsafeMath() const;
+    bool hasCorrectSqrt() const;
+  }];
+  let extraClassDefinition = [{
+    bool $cppClass::hasFlag(StringRef flag) const {
+      if (DictionaryAttr flags = getFlags())
+        return flags.get(flag) != nullptr;
+      return false;
+    }
+    bool $cppClass::hasWave64() const {
+      return hasFlag("wave64") || !hasFlag("no_wave64");
+    }
+    bool $cppClass::hasFastMath() const {
+      return hasFlag("fast");
+    }
+    bool $cppClass::hasDaz() const {
+      return hasFlag("daz");
+    }
+    bool $cppClass::hasFiniteOnly() const {
+      return hasFlag("finite_only");
+    }
+    bool $cppClass::hasUnsafeMath() const {
+      return hasFlag("unsafe_math");
+    }
+    bool $cppClass::hasCorrectSqrt() const {
+      return !hasFlag("unsafe_sqrt");
+    }
+  }];
 }
 
 #endif // ROCDLIR_OPS

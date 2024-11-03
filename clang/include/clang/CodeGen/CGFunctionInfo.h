@@ -567,6 +567,10 @@ class CGFunctionInfo final
   /// Whether this is a chain call.
   unsigned ChainCall : 1;
 
+  /// Whether this function is called by forwarding arguments.
+  /// This doesn't support inalloca or varargs.
+  unsigned DelegateCall : 1;
+
   /// Whether this function is a CMSE nonsecure call
   unsigned CmseNSCall : 1;
 
@@ -616,14 +620,11 @@ class CGFunctionInfo final
   CGFunctionInfo() : Required(RequiredArgs::All) {}
 
 public:
-  static CGFunctionInfo *create(unsigned llvmCC,
-                                bool instanceMethod,
-                                bool chainCall,
-                                const FunctionType::ExtInfo &extInfo,
-                                ArrayRef<ExtParameterInfo> paramInfos,
-                                CanQualType resultType,
-                                ArrayRef<CanQualType> argTypes,
-                                RequiredArgs required);
+  static CGFunctionInfo *
+  create(unsigned llvmCC, bool instanceMethod, bool chainCall,
+         bool delegateCall, const FunctionType::ExtInfo &extInfo,
+         ArrayRef<ExtParameterInfo> paramInfos, CanQualType resultType,
+         ArrayRef<CanQualType> argTypes, RequiredArgs required);
   void operator delete(void *p) { ::operator delete(p); }
 
   // Friending class TrailingObjects is apparently not good enough for MSVC,
@@ -662,6 +663,8 @@ public:
   bool isInstanceMethod() const { return InstanceMethod; }
 
   bool isChainCall() const { return ChainCall; }
+
+  bool isDelegateCall() const { return DelegateCall; }
 
   bool isCmseNSCall() const { return CmseNSCall; }
 
@@ -749,6 +752,7 @@ public:
     ID.AddInteger(getASTCallingConvention());
     ID.AddBoolean(InstanceMethod);
     ID.AddBoolean(ChainCall);
+    ID.AddBoolean(DelegateCall);
     ID.AddBoolean(NoReturn);
     ID.AddBoolean(ReturnsRetained);
     ID.AddBoolean(NoCallerSavedRegs);
@@ -766,17 +770,16 @@ public:
     for (const auto &I : arguments())
       I.type.Profile(ID);
   }
-  static void Profile(llvm::FoldingSetNodeID &ID,
-                      bool InstanceMethod,
-                      bool ChainCall,
+  static void Profile(llvm::FoldingSetNodeID &ID, bool InstanceMethod,
+                      bool ChainCall, bool IsDelegateCall,
                       const FunctionType::ExtInfo &info,
                       ArrayRef<ExtParameterInfo> paramInfos,
-                      RequiredArgs required,
-                      CanQualType resultType,
+                      RequiredArgs required, CanQualType resultType,
                       ArrayRef<CanQualType> argTypes) {
     ID.AddInteger(info.getCC());
     ID.AddBoolean(InstanceMethod);
     ID.AddBoolean(ChainCall);
+    ID.AddBoolean(IsDelegateCall);
     ID.AddBoolean(info.getNoReturn());
     ID.AddBoolean(info.getProducesResult());
     ID.AddBoolean(info.getNoCallerSavedRegs());

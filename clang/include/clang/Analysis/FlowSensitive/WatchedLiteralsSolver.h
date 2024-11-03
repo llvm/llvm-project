@@ -14,9 +14,10 @@
 #ifndef LLVM_CLANG_ANALYSIS_FLOWSENSITIVE_WATCHEDLITERALSSOLVER_H
 #define LLVM_CLANG_ANALYSIS_FLOWSENSITIVE_WATCHEDLITERALSSOLVER_H
 
+#include "clang/Analysis/FlowSensitive/Formula.h"
 #include "clang/Analysis/FlowSensitive/Solver.h"
-#include "clang/Analysis/FlowSensitive/Value.h"
-#include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/ArrayRef.h"
+#include <limits>
 
 namespace clang {
 namespace dataflow {
@@ -27,8 +28,28 @@ namespace dataflow {
 /// single "watched" literal per clause, and uses a set of "active" variables
 /// for unit propagation.
 class WatchedLiteralsSolver : public Solver {
+  // Count of the iterations of the main loop of the solver. This spans *all*
+  // calls to the underlying solver across the life of this object. It is
+  // reduced with every (non-trivial) call to the solver.
+  //
+  // We give control over the abstract count of iterations instead of concrete
+  // measurements like CPU cycles or time to ensure deterministic results.
+  std::int64_t MaxIterations = std::numeric_limits<std::int64_t>::max();
+
 public:
-  Result solve(llvm::DenseSet<BoolValue *> Vals) override;
+  WatchedLiteralsSolver() = default;
+
+  // `Work` specifies a computational limit on the solver. Units of "work"
+  // roughly correspond to attempts to assign a value to a single
+  // variable. Since the algorithm is exponential in the number of variables,
+  // this is the most direct (abstract) unit to target.
+  explicit WatchedLiteralsSolver(std::int64_t WorkLimit)
+      : MaxIterations(WorkLimit) {}
+
+  Result solve(llvm::ArrayRef<const Formula *> Vals) override;
+
+  // The solver reached its maximum number of iterations.
+  bool reachedLimit() const { return MaxIterations == 0; }
 };
 
 } // namespace dataflow

@@ -15,6 +15,7 @@
 #define FORTRAN_DIALECT_HLFIR_OP_BASE
 
 include "mlir/IR/AttrTypeBase.td"
+include "mlir/IR/EnumAttr.td"
 include "mlir/IR/OpBase.td"
 include "flang/Optimizer/Dialect/FIRTypes.td"
 
@@ -38,6 +39,7 @@ def hlfir_Dialect : Dialect {
   }];
 
   let useDefaultTypePrinterParser = 1;
+  let usePropertiesForAttributes = 1;
   let cppNamespace = "hlfir";
   let dependentDialects = ["fir::FIROpsDialect"];
 }
@@ -108,6 +110,16 @@ def IsFortranScalarCharacterExprPred
 def AnyScalarCharacterExpr : Type<IsFortranScalarCharacterExprPred,
     "any character scalar expression type">;
 
+def isFortranArrayCharacterExprTypePred
+        : CPred<"::hlfir::isFortranArrayCharacterExprType($_self)">;
+def AnyArrayCharacterExpr : Type<isFortranArrayCharacterExprTypePred,
+    "any character array expression type">;
+
+def AnyScalarOrArrayCharacterExpr :
+    Type<Or<[AnyScalarCharacterExpr.predicate,
+             AnyArrayCharacterExpr.predicate]>,
+    "any character scalar or array expression type">;
+
 def IsFortranNumericalArrayObjectPred
         : CPred<"::hlfir::isFortranNumericalArrayObject($_self)">;
 def AnyFortranNumericalArrayObject : Type<IsFortranNumericalArrayObjectPred,
@@ -117,6 +129,11 @@ def IsFortranNumericalOrLogicalArrayObjectPred
         : CPred<"::hlfir::isFortranNumericalOrLogicalArrayObject($_self)">;
 def AnyFortranNumericalOrLogicalArrayObject : Type<IsFortranNumericalOrLogicalArrayObjectPred,
     "any array-like object containing a numerical or logical type">;
+
+def IsFortranArrayObjectPred
+        : CPred<"::hlfir::isFortranArrayObject($_self)">;
+def AnyFortranArrayObject : Type<IsFortranArrayObjectPred,
+    "any array-like object">;
 
 def IsPassByRefOrIntegerTypePred
         : CPred<"::hlfir::isPassByRefOrIntegerType($_self)">;
@@ -128,4 +145,22 @@ def IsMaskArgumentPred
 def AnyFortranLogicalOrI1ArrayObject : Type<IsMaskArgumentPred,
     "A scalar i1 or logical or an array-like object containing logicals">;
 
+def IsFortranLogicalArrayPred
+        : CPred<"::hlfir::isFortranLogicalArrayObject($_self)">;
+def AnyFortranLogicalArrayObject : Type<IsFortranLogicalArrayPred,
+    "any array-like object containing logicals">;
+
+def IsPolymorphicObjectPred
+        : CPred<"::hlfir::isPolymorphicObject($_self)">;
+def AnyPolymorphicObject : Type<IsPolymorphicObjectPred,
+    "any polymorphic object">;
+
+def hlfir_CharExtremumPredicateAttr : I32EnumAttr<
+    "CharExtremumPredicate", "",
+    [
+      I32EnumAttrCase<"min", 0>,
+      I32EnumAttrCase<"max", 1>
+    ]> {
+  let cppNamespace = "hlfir";
+}
 #endif // FORTRAN_DIALECT_HLFIR_OP_BASE

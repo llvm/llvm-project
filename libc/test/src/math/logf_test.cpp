@@ -13,7 +13,6 @@
 #include "utils/MPFRWrapper/MPFRUtils.h"
 #include <math.h>
 
-#include <errno.h>
 #include <stdint.h>
 
 namespace mpfr = __llvm_libc::testing::mpfr;
@@ -27,7 +26,7 @@ TEST(LlvmLibcLogfTest, SpecialNumbers) {
   EXPECT_FP_EQ_WITH_EXCEPTION(neg_inf, __llvm_libc::logf(0.0f), FE_DIVBYZERO);
   EXPECT_FP_EQ_WITH_EXCEPTION(neg_inf, __llvm_libc::logf(-0.0f), FE_DIVBYZERO);
   EXPECT_FP_IS_NAN_WITH_EXCEPTION(__llvm_libc::logf(-1.0f), FE_INVALID);
-  EXPECT_FP_EQ(zero, __llvm_libc::logf(1.0f));
+  EXPECT_FP_EQ_ALL_ROUNDING(zero, __llvm_libc::logf(1.0f));
 }
 
 TEST(LlvmLibcLogfTest, TrickyInputs) {
@@ -77,7 +76,7 @@ TEST(LlvmLibcLogfTest, TrickyInputs) {
 }
 
 TEST(LlvmLibcLogfTest, InFloatRange) {
-  constexpr uint32_t COUNT = 1000000;
+  constexpr uint32_t COUNT = 100'000;
   constexpr uint32_t STEP = UINT32_MAX / COUNT;
   for (uint32_t i = 0, v = 0; i <= COUNT; ++i, v += STEP) {
     float x = float(FPBits(v));

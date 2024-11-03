@@ -103,11 +103,63 @@ define i8 @urem_without_assume(i8 %arg, i8 %arg2) {
   ret i8 %out
 }
 
-; TODO: https://alive2.llvm.org/ce/z/eHkgRa
+; https://alive2.llvm.org/ce/z/eHkgRa
 define i8 @urem_with_dominating_condition(i8 %x, i8 %n) {
 ; CHECK-LABEL: @urem_with_dominating_condition(
-; CHECK-NEXT:    [[COND:%.*]] = icmp ult i8 [[X:%.*]], [[N:%.*]]
+; CHECK-NEXT:  start:
+; CHECK-NEXT:    [[X_FR:%.*]] = freeze i8 [[X:%.*]]
+; CHECK-NEXT:    [[COND:%.*]] = icmp ult i8 [[X_FR]], [[N:%.*]]
 ; CHECK-NEXT:    br i1 [[COND]], label [[DOTBB0:%.*]], label [[DOTBB1:%.*]]
+; CHECK:       .bb0:
+; CHECK-NEXT:    [[ADD:%.*]] = add i8 [[X_FR]], 1
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp eq i8 [[ADD]], [[N]]
+; CHECK-NEXT:    [[OUT:%.*]] = select i1 [[TMP0]], i8 0, i8 [[ADD]]
+; CHECK-NEXT:    ret i8 [[OUT]]
+; CHECK:       .bb1:
+; CHECK-NEXT:    ret i8 0
+;
+start:
+  %cond = icmp ult i8 %x, %n
+  br i1 %cond, label %.bb0, label %.bb1 ; Should also works for a dominating condition
+.bb0:
+  %add = add i8 %x, 1
+  %out = urem i8 %add, %n
+  ret i8 %out
+.bb1:
+  ret i8 0
+}
+
+; Revert the dominating condition and target branch at the same time.
+define i8 @urem_with_dominating_condition_false(i8 %x, i8 %n) {
+; CHECK-LABEL: @urem_with_dominating_condition_false(
+; CHECK-NEXT:  start:
+; CHECK-NEXT:    [[X_FR:%.*]] = freeze i8 [[X:%.*]]
+; CHECK-NEXT:    [[COND_NOT:%.*]] = icmp ult i8 [[X_FR]], [[N:%.*]]
+; CHECK-NEXT:    br i1 [[COND_NOT]], label [[DOTBB0:%.*]], label [[DOTBB1:%.*]]
+; CHECK:       .bb0:
+; CHECK-NEXT:    [[ADD:%.*]] = add i8 [[X_FR]], 1
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp eq i8 [[ADD]], [[N]]
+; CHECK-NEXT:    [[OUT:%.*]] = select i1 [[TMP0]], i8 0, i8 [[ADD]]
+; CHECK-NEXT:    ret i8 [[OUT]]
+; CHECK:       .bb1:
+; CHECK-NEXT:    ret i8 0
+;
+start:
+  %cond = icmp uge i8 %x, %n
+  br i1 %cond, label %.bb1, label %.bb0 ; Swap the branch targets
+.bb0:
+  %add = add i8 %x, 1
+  %out = urem i8 %add, %n
+  ret i8 %out
+.bb1:
+  ret i8 0
+}
+
+; Negative test
+define noundef i8 @urem_with_opposite_condition(i8 %x, i8 %n) {
+; CHECK-LABEL: @urem_with_opposite_condition(
+; CHECK-NEXT:    [[COND:%.*]] = icmp ult i8 [[X:%.*]], [[N:%.*]]
+; CHECK-NEXT:    br i1 [[COND]], label [[DOTBB1:%.*]], label [[DOTBB0:%.*]]
 ; CHECK:       .bb0:
 ; CHECK-NEXT:    [[ADD:%.*]] = add i8 [[X]], 1
 ; CHECK-NEXT:    [[OUT:%.*]] = urem i8 [[ADD]], [[N]]
@@ -116,7 +168,7 @@ define i8 @urem_with_dominating_condition(i8 %x, i8 %n) {
 ; CHECK-NEXT:    ret i8 0
 ;
   %cond = icmp ult i8 %x, %n
-  br i1 %cond, label %.bb0, label %.bb1 ; Should also works for a dominating condition
+  br i1 %cond, label %.bb1, label %.bb0 ; Revert the condition
 .bb0:
   %add = add i8 %x, 1
   %out = urem i8 %add, %n

@@ -8,9 +8,9 @@ define dso_local void @_Z4loopi(i32 %width) local_unnamed_addr #0 {
 ; CHECK-LABEL: '_Z4loopi'
 ; CHECK-NEXT:  Classifying expressions for: @_Z4loopi
 ; CHECK-NEXT:    %storage = alloca [2 x i32], align 4
-; CHECK-NEXT:    --> %storage U: [0,-3) S: [-9223372036854775808,9223372036854775805)
+; CHECK-NEXT:    --> %storage U: [4,-11) S: [-9223372036854775808,9223372036854775805)
 ; CHECK-NEXT:    %0 = bitcast ptr %storage to ptr
-; CHECK-NEXT:    --> %storage U: [0,-3) S: [-9223372036854775808,9223372036854775805)
+; CHECK-NEXT:    --> %storage U: [4,-11) S: [-9223372036854775808,9223372036854775805)
 ; CHECK-NEXT:    %i.0 = phi i32 [ 0, %entry ], [ %inc, %for.body ]
 ; CHECK-NEXT:    --> {0,+,1}<nuw><nsw><%for.cond> U: [0,-2147483648) S: [0,-2147483648) Exits: %width LoopDispositions: { %for.cond: Computable }
 ; CHECK-NEXT:    %rem = srem i32 %i.0, 2
@@ -18,7 +18,7 @@ define dso_local void @_Z4loopi(i32 %width) local_unnamed_addr #0 {
 ; CHECK-NEXT:    %idxprom = sext i32 %rem to i64
 ; CHECK-NEXT:    --> (zext i1 {false,+,true}<%for.cond> to i64) U: [0,2) S: [0,2) Exits: (zext i1 (trunc i32 %width to i1) to i64) LoopDispositions: { %for.cond: Computable }
 ; CHECK-NEXT:    %arrayidx = getelementptr inbounds [2 x i32], ptr %storage, i64 0, i64 %idxprom
-; CHECK-NEXT:    --> ((4 * (zext i1 {false,+,true}<%for.cond> to i64))<nuw><nsw> + %storage) U: [0,-3) S: [-9223372036854775808,9223372036854775805) Exits: ((4 * (zext i1 (trunc i32 %width to i1) to i64))<nuw><nsw> + %storage) LoopDispositions: { %for.cond: Computable }
+; CHECK-NEXT:    --> ((4 * (zext i1 {false,+,true}<%for.cond> to i64))<nuw><nsw> + %storage) U: [4,-7) S: [-9223372036854775808,9223372036854775805) Exits: ((4 * (zext i1 (trunc i32 %width to i1) to i64))<nuw><nsw> + %storage) LoopDispositions: { %for.cond: Computable }
 ; CHECK-NEXT:    %1 = load i32, ptr %arrayidx, align 4
 ; CHECK-NEXT:    --> %1 U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %for.cond: Variant }
 ; CHECK-NEXT:    %call = call i32 @_Z3adji(i32 %1)

@@ -18,14 +18,12 @@
 #include "min_allocator.h"
 
 template <class S>
-TEST_CONSTEXPR_CXX20 void
-test(S s1)
-{
-    S s2 = s1;
-    LIBCPP_ASSERT(s2.__invariants());
-    assert(s2 == s1);
-    assert(s2.capacity() >= s2.size());
-    assert(s2.get_allocator() == s1.get_allocator());
+TEST_CONSTEXPR_CXX20 void test(S s1) {
+  S s2 = s1;
+  LIBCPP_ASSERT(s2.__invariants());
+  assert(s2 == s1);
+  assert(s2.capacity() >= s2.size());
+  assert(s2.get_allocator() == s1.get_allocator());
 }
 
 TEST_CONSTEXPR_CXX20 bool test() {
@@ -49,8 +47,7 @@ TEST_CONSTEXPR_CXX20 bool test() {
   return true;
 }
 
-int main(int, char**)
-{
+int main(int, char**) {
   test();
 #if TEST_STD_VER > 17
   static_assert(test());

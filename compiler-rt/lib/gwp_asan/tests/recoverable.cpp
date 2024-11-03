@@ -17,16 +17,6 @@
 #include "gwp_asan/crash_handler.h"
 #include "gwp_asan/tests/harness.h"
 
-void CheckOnlyOneGwpAsanCrash(const std::string &OutputBuffer) {
-  const char *kGwpAsanErrorString = "GWP-ASan detected a memory error";
-  size_t FirstIndex = OutputBuffer.find(kGwpAsanErrorString);
-  ASSERT_NE(FirstIndex, std::string::npos) << "Didn't detect a GWP-ASan crash";
-  ASSERT_EQ(OutputBuffer.find(kGwpAsanErrorString, FirstIndex + 1),
-            std::string::npos)
-      << "Detected more than one GWP-ASan crash:\n"
-      << OutputBuffer;
-}
-
 TEST_P(BacktraceGuardedPoolAllocator, MultipleDoubleFreeOnlyOneOutput) {
   SCOPED_TRACE("");
   void *Ptr = AllocateMemory(GPA);
@@ -202,6 +192,3 @@ TEST_P(BacktraceGuardedPoolAllocator, InterThreadThrashingSingleAlloc) {
   runInterThreadThrashingSingleAlloc(kNumIterations, &GPA);
   CheckOnlyOneGwpAsanCrash(GetOutputBuffer());
 }
-
-INSTANTIATE_TEST_SUITE_P(RecoverableTests, BacktraceGuardedPoolAllocator,
-                         /* Recoverable */ testing::Values(true));

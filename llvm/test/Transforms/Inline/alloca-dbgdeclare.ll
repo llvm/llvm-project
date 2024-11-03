@@ -1,5 +1,5 @@
-; RUN: opt -opaque-pointers=0 -passes=inline -S < %s | FileCheck %s
-; RUN: opt -opaque-pointers=0 -passes='cgscc(inline)' -S < %s | FileCheck %s
+; RUN: opt -passes=inline -S < %s | FileCheck %s
+; RUN: opt -passes='cgscc(inline)' -S < %s | FileCheck %s
 ; struct A {
 ;   int arg0;
 ;   double arg1[2];
@@ -27,13 +27,13 @@ target triple = "aarch64-apple-darwin"
 @b = global %struct.A zeroinitializer, align 8, !dbg !12
 
 ; Function Attrs: nounwind
-declare void @_Z3fn31A(%struct.A* nocapture readonly) #0
+declare void @_Z3fn31A(ptr nocapture readonly) #0
 
 ; Function Attrs: nounwind readnone
 declare void @llvm.dbg.declare(metadata, metadata, metadata) #1
 
 ; Function Attrs: argmemonly nounwind
-declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture writeonly, i8* nocapture readonly, i64, i1) #2
+declare void @llvm.memcpy.p0.p0.i64(ptr nocapture writeonly, ptr nocapture readonly, i64, i1) #2
 
 ; Function Attrs: nounwind
 define void @_Z3fn4v() #0 !dbg !22 {
@@ -44,22 +44,20 @@ entry:
 ; CHECK-NEXT:   %agg.tmp.sroa.3.i = alloca [20 x i8], align 4
 ; CHECK-NEXT:   br label %while.body
 ; CHECK:      while.body:
-; CHECK-NEXT:   bitcast
 ; CHECK-NEXT:   llvm.lifetime.start
-; CHECK-NEXT:   call void @llvm.dbg.declare(metadata [20 x i8]* %agg.tmp.sroa.3.i,
+; CHECK-NEXT:   call void @llvm.dbg.declare(metadata ptr %agg.tmp.sroa.3.i,
   %agg.tmp.sroa.3 = alloca [20 x i8], align 4
-  tail call void @llvm.dbg.declare(metadata [20 x i8]* %agg.tmp.sroa.3, metadata !25, metadata !30), !dbg !31
-  %agg.tmp.sroa.0.0.copyload = load i32, i32* getelementptr inbounds (%struct.A, %struct.A* @b, i64 0, i32 0), align 8, !dbg !33
+  tail call void @llvm.dbg.declare(metadata ptr %agg.tmp.sroa.3, metadata !25, metadata !30), !dbg !31
+  %agg.tmp.sroa.0.0.copyload = load i32, ptr @b, align 8, !dbg !33
   tail call void @llvm.dbg.value(metadata i32 %agg.tmp.sroa.0.0.copyload, metadata !25, metadata !34), !dbg !31
-  %agg.tmp.sroa.3.0..sroa_idx = getelementptr inbounds [20 x i8], [20 x i8]* %agg.tmp.sroa.3, i64 0, i64 0, !dbg !33
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 4 %agg.tmp.sroa.3.0..sroa_idx, i8* align 4 getelementptr (i8, i8* bitcast (%struct.A* @b to i8*), i64 4), i64 20, i1 false), !dbg !33
-  tail call void @llvm.dbg.declare(metadata %struct.A* undef, metadata !25, metadata !35) #0, !dbg !31
+  call void @llvm.memcpy.p0.p0.i64(ptr align 4 %agg.tmp.sroa.3, ptr align 4 getelementptr (i8, ptr @b, i64 4), i64 20, i1 false), !dbg !33
+  tail call void @llvm.dbg.declare(metadata ptr undef, metadata !25, metadata !35) #0, !dbg !31
   %tobool.i = icmp eq i32 %agg.tmp.sroa.0.0.copyload, 0, !dbg !36
   br i1 %tobool.i, label %_Z3fn31A.exit, label %if.then.i, !dbg !38
 
 if.then.i:                                        ; preds = %entry
-  store i32 %agg.tmp.sroa.0.0.copyload, i32* getelementptr inbounds (%struct.A, %struct.A* @a, i64 0, i32 0), align 8, !dbg !39
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 4 getelementptr (i8, i8* bitcast (%struct.A* @a to i8*), i64 4), i8* align 4 %agg.tmp.sroa.3.0..sroa_idx, i64 20, i1 false), !dbg !39
+  store i32 %agg.tmp.sroa.0.0.copyload, ptr @a, align 8, !dbg !39
+  call void @llvm.memcpy.p0.p0.i64(ptr align 4 getelementptr (i8, ptr @a, i64 4), ptr align 4 %agg.tmp.sroa.3, i64 20, i1 false), !dbg !39
   br label %_Z3fn31A.exit, !dbg !39
 
 _Z3fn31A.exit:                                    ; preds = %if.then.i, %entry

@@ -21,9 +21,7 @@
 
 _LIBCPP_BEGIN_NAMESPACE_FILESYSTEM
 
-_LIBCPP_AVAILABILITY_FILESYSTEM_PUSH
-
-enum class _LIBCPP_ENUM_VIS directory_options : unsigned char {
+enum class directory_options : unsigned char {
   none = 0,
   follow_directory_symlink = 1,
   skip_permission_denied = 2
@@ -72,8 +70,6 @@ inline directory_options& operator^=(directory_options& __lhs,
                                      directory_options __rhs) {
   return __lhs = __lhs ^ __rhs;
 }
-
-_LIBCPP_AVAILABILITY_FILESYSTEM_POP
 
 _LIBCPP_END_NAMESPACE_FILESYSTEM
 

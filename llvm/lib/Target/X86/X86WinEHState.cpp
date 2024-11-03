@@ -212,7 +212,8 @@ Type *WinEHStatePass::getEHLinkRegistrationType() {
   LLVMContext &Context = TheModule->getContext();
   EHLinkRegistrationTy = StructType::create(Context, "EHRegistrationNode");
   Type *FieldTys[] = {
-      EHLinkRegistrationTy->getPointerTo(0), // EHRegistrationNode *Next
+      PointerType::getUnqual(
+          EHLinkRegistrationTy->getContext()), // EHRegistrationNode *Next
       Type::getInt8PtrTy(Context) // EXCEPTION_DISPOSITION (*Handler)(...)
   };
   EHLinkRegistrationTy->setBody(FieldTys, false);
@@ -282,8 +283,7 @@ void WinEHStatePass::emitExceptionRegistrationRecord(Function *F) {
     RegNodeTy = getCXXEHRegistrationType();
     RegNode = Builder.CreateAlloca(RegNodeTy);
     // SavedESP = llvm.stacksave()
-    Value *SP = Builder.CreateCall(
-        Intrinsic::getDeclaration(TheModule, Intrinsic::stacksave), {});
+    Value *SP = Builder.CreateStackSave();
     Builder.CreateStore(SP, Builder.CreateStructGEP(RegNodeTy, RegNode, 0));
     // TryLevel = -1
     StateFieldIndex = 2;
@@ -312,8 +312,7 @@ void WinEHStatePass::emitExceptionRegistrationRecord(Function *F) {
       EHGuardNode = Builder.CreateAlloca(Int32Ty);
 
     // SavedESP = llvm.stacksave()
-    Value *SP = Builder.CreateCall(
-        Intrinsic::getDeclaration(TheModule, Intrinsic::stacksave), {});
+    Value *SP = Builder.CreateStackSave();
     Builder.CreateStore(SP, Builder.CreateStructGEP(RegNodeTy, RegNode, 0));
     // TryLevel = -2 / -1
     StateFieldIndex = 4;
@@ -404,11 +403,9 @@ Function *WinEHStatePass::generateLSDAInEAXThunk(Function *ParentFunc) {
   BasicBlock *EntryBB = BasicBlock::Create(Context, "entry", Trampoline);
   IRBuilder<> Builder(EntryBB);
   Value *LSDA = emitEHLSDA(Builder, ParentFunc);
-  Value *CastPersonality =
-      Builder.CreateBitCast(PersonalityFn, TargetFuncTy->getPointerTo());
   auto AI = Trampoline->arg_begin();
   Value *Args[5] = {LSDA, &*AI++, &*AI++, &*AI++, &*AI++};
-  CallInst *Call = Builder.CreateCall(TargetFuncTy, CastPersonality, Args);
+  CallInst *Call = Builder.CreateCall(TargetFuncTy, PersonalityFn, Args);
   // Can't use musttail due to prototype mismatch, but we can use tail.
   Call->setTailCall(true);
   // Set inreg so we pass it in EAX.

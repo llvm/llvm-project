@@ -13,7 +13,9 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/StringSet.h"
 #include "llvm/Support/Compiler.h"
+#include "llvm/Support/SourceMgr.h"
 #include <cassert>
 #include <functional>
 #include <string>
@@ -36,14 +38,13 @@ private:
   std::string OSSuffix;
   std::string IncludeSuffix;
   flags_list Flags;
-  int Priority;
 
 public:
   /// GCCSuffix, OSSuffix & IncludeSuffix will be appended directly to the
   /// sysroot string so they must either be empty or begin with a '/' character.
   /// This is enforced with an assert in the constructor.
   Multilib(StringRef GCCSuffix = {}, StringRef OSSuffix = {},
-           StringRef IncludeSuffix = {}, int Priority = 0,
+           StringRef IncludeSuffix = {},
            const flags_list &Flags = flags_list());
 
   /// Get the detected GCC installation path suffix for the multi-arch
@@ -59,12 +60,8 @@ public:
   const std::string &includeSuffix() const { return IncludeSuffix; }
 
   /// Get the flags that indicate or contraindicate this multilib's use
-  /// All elements begin with either '+' or '-'
+  /// All elements begin with either '-' or '!'
   const flags_list &flags() const { return Flags; }
-
-  /// Returns the multilib priority. When more than one multilib matches flags,
-  /// the one with the highest priority is selected, with 0 being the default.
-  int priority() const { return Priority; }
 
   LLVM_DUMP_METHOD void dump() const;
   /// print summary of the Multilib
@@ -88,14 +85,25 @@ public:
       std::function<std::vector<std::string>(const Multilib &M)>;
   using FilterCallback = llvm::function_ref<bool(const Multilib &)>;
 
+  /// Uses regular expressions to simplify flags used for multilib selection.
+  /// For example, we may wish both -mfloat-abi=soft and -mfloat-abi=softfp to
+  /// be treated as -mfloat-abi=soft.
+  struct FlagMatcher {
+    std::string Match;
+    std::vector<std::string> Flags;
+  };
+
 private:
   multilib_list Multilibs;
+  std::vector<FlagMatcher> FlagMatchers;
   IncludeDirsFunc IncludeCallback;
   IncludeDirsFunc FilePathsCallback;
 
 public:
   MultilibSet() = default;
-  MultilibSet(multilib_list &&Multilibs) : Multilibs(Multilibs) {}
+  MultilibSet(multilib_list &&Multilibs,
+              std::vector<FlagMatcher> &&FlagMatchers = {})
+      : Multilibs(Multilibs), FlagMatchers(FlagMatchers) {}
 
   const multilib_list &getMultilibs() { return Multilibs; }
 
@@ -108,10 +116,16 @@ public:
   const_iterator begin() const { return Multilibs.begin(); }
   const_iterator end() const { return Multilibs.end(); }
 
-  /// Pick the best multilib in the set, \returns false if none are compatible
-  bool select(const Multilib::flags_list &Flags, Multilib &M) const;
+  /// Select compatible variants, \returns false if none are compatible
+  bool select(const Multilib::flags_list &Flags,
+              llvm::SmallVector<Multilib> &) const;
 
   unsigned size() const { return Multilibs.size(); }
+
+  /// Get the given flags plus flags found by matching them against the
+  /// FlagMatchers and choosing the Flags of each accordingly. The select method
+  /// calls this method so in most cases it's not necessary to call it directly.
+  llvm::StringSet<> expandFlags(const Multilib::flags_list &) const;
 
   LLVM_DUMP_METHOD void dump() const;
   void print(raw_ostream &OS) const;
@@ -130,12 +144,9 @@ public:
 
   const IncludeDirsFunc &filePathsCallback() const { return FilePathsCallback; }
 
-private:
-  /// Apply the filter to Multilibs and return the subset that remains
-  static multilib_list filterCopy(FilterCallback F, const multilib_list &Ms);
-
-  /// Apply the filter to the multilib_list, removing those that don't match
-  static void filterInPlace(FilterCallback F, multilib_list &Ms);
+  static llvm::ErrorOr<MultilibSet>
+  parseYaml(llvm::MemoryBufferRef, llvm::SourceMgr::DiagHandlerTy = nullptr,
+            void *DiagHandlerCtxt = nullptr);
 };
 
 raw_ostream &operator<<(raw_ostream &OS, const MultilibSet &MS);

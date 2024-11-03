@@ -13,15 +13,15 @@
 define <16 x i8> @elt0_v16i8(i8 %x) {
 ; X86-SSE2-LABEL: elt0_v16i8:
 ; X86-SSE2:       # %bb.0:
-; X86-SSE2-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; X86-SSE2-NEXT:    andps {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
-; X86-SSE2-NEXT:    orps {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
+; X86-SSE2-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X86-SSE2-NEXT:    movd %eax, %xmm0
+; X86-SSE2-NEXT:    por {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-SSE2-NEXT:    retl
 ;
 ; X64-SSE2-LABEL: elt0_v16i8:
 ; X64-SSE2:       # %bb.0:
-; X64-SSE2-NEXT:    movd %edi, %xmm0
-; X64-SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; X64-SSE2-NEXT:    movzbl %dil, %eax
+; X64-SSE2-NEXT:    movd %eax, %xmm0
 ; X64-SSE2-NEXT:    por {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; X64-SSE2-NEXT:    retq
 ;
@@ -150,11 +150,24 @@ define <2 x i64> @elt0_v2i64(i64 %x) {
 ; X86-AVX-NEXT:    vunpcklpd {{.*#+}} xmm0 = xmm0[0],mem[0]
 ; X86-AVX-NEXT:    retl
 ;
-; X64-AVX-LABEL: elt0_v2i64:
-; X64-AVX:       # %bb.0:
-; X64-AVX-NEXT:    vmovdqa {{.*#+}} xmm0 = <u,1>
-; X64-AVX-NEXT:    vpinsrq $0, %rdi, %xmm0, %xmm0
-; X64-AVX-NEXT:    retq
+; X64-AVX1-LABEL: elt0_v2i64:
+; X64-AVX1:       # %bb.0:
+; X64-AVX1-NEXT:    vmovddup {{.*#+}} xmm0 = [1,1]
+; X64-AVX1-NEXT:    # xmm0 = mem[0,0]
+; X64-AVX1-NEXT:    vpinsrq $0, %rdi, %xmm0, %xmm0
+; X64-AVX1-NEXT:    retq
+;
+; X64-AVX2-LABEL: elt0_v2i64:
+; X64-AVX2:       # %bb.0:
+; X64-AVX2-NEXT:    vpbroadcastq {{.*#+}} xmm0 = [1,1]
+; X64-AVX2-NEXT:    vpinsrq $0, %rdi, %xmm0, %xmm0
+; X64-AVX2-NEXT:    retq
+;
+; X64-AVX512F-LABEL: elt0_v2i64:
+; X64-AVX512F:       # %bb.0:
+; X64-AVX512F-NEXT:    vpbroadcastq {{.*#+}} xmm0 = [1,1]
+; X64-AVX512F-NEXT:    vpinsrq $0, %rdi, %xmm0, %xmm0
+; X64-AVX512F-NEXT:    retq
    %ins = insertelement <2 x i64> <i64 42, i64 1>, i64 %x, i32 0
    ret <2 x i64> %ins
 }
@@ -219,13 +232,15 @@ define <2 x double> @elt1_v2f64(double %x) {
 ;
 ; X86-AVX-LABEL: elt1_v2f64:
 ; X86-AVX:       # %bb.0:
-; X86-AVX-NEXT:    vmovaps {{.*#+}} xmm0 = <4.2E+1,u>
+; X86-AVX-NEXT:    vmovddup {{.*#+}} xmm0 = [4.2E+1,4.2E+1]
+; X86-AVX-NEXT:    # xmm0 = mem[0,0]
 ; X86-AVX-NEXT:    vmovhps {{.*#+}} xmm0 = xmm0[0,1],mem[0,1]
 ; X86-AVX-NEXT:    retl
 ;
 ; X64-AVX-LABEL: elt1_v2f64:
 ; X64-AVX:       # %bb.0:
-; X64-AVX-NEXT:    vmovaps {{.*#+}} xmm1 = <4.2E+1,u>
+; X64-AVX-NEXT:    vmovddup {{.*#+}} xmm1 = [4.2E+1,4.2E+1]
+; X64-AVX-NEXT:    # xmm1 = mem[0,0]
 ; X64-AVX-NEXT:    vmovlhps {{.*#+}} xmm0 = xmm1[0],xmm0[0]
 ; X64-AVX-NEXT:    retq
    %ins = insertelement <2 x double> <double 42.0, double 1.0>, double %x, i32 1

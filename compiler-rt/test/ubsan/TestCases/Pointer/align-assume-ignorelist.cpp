@@ -1,9 +1,9 @@
-// RUN: %clang -fsanitize=alignment -fno-sanitize-recover=alignment                           -O0 %s -o %t && not %run %t 2>&1 | FileCheck %s --implicit-check-not=" assumption "
+// RUN: %clangxx -fsanitize=alignment -fno-sanitize-recover=alignment                           -O0 %s -o %t && not %run %t 2>&1 | FileCheck %s --implicit-check-not=" assumption "
 
 // RUN: rm -f %tmp
 // RUN: echo "[alignment]" >> %tmp
 // RUN: echo "fun:main" >> %tmp
-// RUN: %clang -fsanitize=alignment -fno-sanitize-recover=alignment -fsanitize-ignorelist=%tmp -O0 %s -o %t && %run %t 2>&1
+// RUN: %clangxx -fsanitize=alignment -fno-sanitize-recover=alignment -fsanitize-ignorelist=%tmp -O0 %s -o %t && %run %t 2>&1
 
 #include <stdlib.h>
 

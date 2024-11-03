@@ -53,8 +53,8 @@ define <2 x i1> @and_cmp_is_trunc_even_with_undef_elts(<2 x i64> %a) {
 define <2 x i64> @test2(<2 x i64> %a) {
 ; CHECK-LABEL: @test2(
 ; CHECK-NEXT:    [[B:%.*]] = lshr <2 x i64> [[A:%.*]], <i64 1, i64 1>
-; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i64> [[B]], <i64 32767, i64 32767>
-; CHECK-NEXT:    ret <2 x i64> [[TMP1]]
+; CHECK-NEXT:    [[T:%.*]] = and <2 x i64> [[B]], <i64 32767, i64 32767>
+; CHECK-NEXT:    ret <2 x i64> [[T]]
 ;
   %b = and <2 x i64> %a, <i64 65535, i64 65535>
   %t = ashr <2 x i64> %b, <i64 1, i64 1>
@@ -63,8 +63,8 @@ define <2 x i64> @test2(<2 x i64> %a) {
 
 define <2 x i64> @test3(<4 x float> %a, <4 x float> %b) {
 ; CHECK-LABEL: @test3(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp ord <4 x float> [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[AND:%.*]] = sext <4 x i1> [[TMP1]] to <4 x i32>
+; CHECK-NEXT:    [[AND1:%.*]] = fcmp ord <4 x float> [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[AND:%.*]] = sext <4 x i1> [[AND1]] to <4 x i32>
 ; CHECK-NEXT:    [[CONV:%.*]] = bitcast <4 x i32> [[AND]] to <2 x i64>
 ; CHECK-NEXT:    ret <2 x i64> [[CONV]]
 ;
@@ -79,8 +79,8 @@ define <2 x i64> @test3(<4 x float> %a, <4 x float> %b) {
 
 define <2 x i64> @test4(<4 x float> %a, <4 x float> %b) {
 ; CHECK-LABEL: @test4(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp uno <4 x float> [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[OR:%.*]] = sext <4 x i1> [[TMP1]] to <4 x i32>
+; CHECK-NEXT:    [[OR1:%.*]] = fcmp uno <4 x float> [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[OR:%.*]] = sext <4 x i1> [[OR1]] to <4 x i32>
 ; CHECK-NEXT:    [[CONV:%.*]] = bitcast <4 x i32> [[OR]] to <2 x i64>
 ; CHECK-NEXT:    ret <2 x i64> [[CONV]]
 ;

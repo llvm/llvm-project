@@ -107,8 +107,9 @@ public:
 /// funky memory allocation and hashing things to make it extremely efficient,
 /// storing the string data *after* the value in the map.
 template <typename ValueTy, typename AllocatorTy = MallocAllocator>
-class StringMap : public StringMapImpl,
-                  private detail::AllocatorHolder<AllocatorTy> {
+class LLVM_ALLOCATORHOLDER_EMPTYBASE StringMap
+    : public StringMapImpl,
+      private detail::AllocatorHolder<AllocatorTy> {
   using AllocTy = detail::AllocatorHolder<AllocatorTy>;
 
 public:
@@ -249,8 +250,11 @@ public:
   /// if the key is not in the map.
   ValueTy &operator[](StringRef Key) { return try_emplace(Key).first->second; }
 
+  /// contains - Return true if the element is in the map, false otherwise.
+  bool contains(StringRef Key) const { return find(Key) != end(); }
+
   /// count - Return 1 if the element is in the map, 0 otherwise.
-  size_type count(StringRef Key) const { return find(Key) == end() ? 0 : 1; }
+  size_type count(StringRef Key) const { return contains(Key) ? 1 : 0; }
 
   template <typename InputTy>
   size_type count(const StringMapEntry<InputTy> &MapEntry) const {

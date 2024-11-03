@@ -10,7 +10,6 @@ from lldbsuite.test import lldbutil
 
 
 class TestBreakpointOnOverload(TestBase):
-
     def check_breakpoint(self, name):
         bkpt = self.target.BreakpointCreateByName(name)
         self.assertEqual(bkpt.num_locations, 1, "Got one location")
@@ -22,7 +21,7 @@ class TestBreakpointOnOverload(TestBase):
         # So just look for the name we used for the breakpoint in the
         # function name, rather than doing an equality check.
         self.assertIn(name, addr.function.name, "Got the right name")
-        
+
     def test_break_on_overload(self):
         self.build()
         self.target = lldbutil.run_to_breakpoint_make_target(self)
@@ -30,6 +29,3 @@ class TestBreakpointOnOverload(TestBase):
         self.check_breakpoint("a_function(double)")
         self.check_breakpoint("a_function(int, double)")
         self.check_breakpoint("a_function(double, int)")
-        
-        
-        

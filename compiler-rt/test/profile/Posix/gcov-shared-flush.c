@@ -3,12 +3,12 @@
 
 // RUN: mkdir -p %t.d && cd %t.d
 
-// RUN: %clang -E -DSHARED %s -o shared.c
-// RUN: %clang --coverage -fPIC -shared shared.c -o libfunc.so
+// RUN: %clang -E -DSHARED %s -o shared.c -dumpdir ./
+// RUN: %clang --coverage -fPIC -shared shared.c -o libfunc.so -dumpdir ./
 // RUN: test -f shared.gcno
 
 /// Test the case where we exit abruptly after calling __gcov_dump, which means we don't write out the counters at exit.
-// RUN: %clang -DEXIT_ABRUPTLY -DSHARED_CALL_BEFORE_FLUSH -DSHARED_CALL_AFTER_FLUSH --coverage %s -L%t.d -rpath %t.d -lfunc -o %t
+// RUN: %clang -DEXIT_ABRUPTLY -DSHARED_CALL_BEFORE_FLUSH -DSHARED_CALL_AFTER_FLUSH --coverage %s -L%t.d -rpath %t.d -lfunc -o %t -dumpdir ./
 // RUN: test -f gcov-shared-flush.gcno
 
 // RUN: rm -f gcov-shared-flush.gcda shared.gcda
@@ -22,7 +22,7 @@
 // SHARED: 1: {{[[0-9]+}}:void foo(int n)
 
 /// Test the case where we exit normally and we have a call to the shared library function before __gcov_dump.
-// RUN: %clang -DSHARED_CALL_BEFORE_FLUSH --coverage %s -L%t.d -rpath %t.d -lfunc -o %t
+// RUN: %clang -DSHARED_CALL_BEFORE_FLUSH --coverage %s -L%t.d -rpath %t.d -lfunc -o %t -dumpdir ./
 // RUN: test -f gcov-shared-flush.gcno
 
 // RUN: rm -f gcov-shared-flush.gcda shared.gcda
@@ -41,7 +41,7 @@
 // SHARED_ONCE: 1: {{[0-9]+}}:void foo(int n)
 
 // # Test the case where we exit normally and we have a call to the shared library function after __gcov_dump.
-// RUN: %clang -DSHARED_CALL_AFTER_FLUSH --coverage %s -L%t.d -rpath %t.d -lfunc -o %t
+// RUN: %clang -DSHARED_CALL_AFTER_FLUSH --coverage %s -L%t.d -rpath %t.d -lfunc -o %t -dumpdir ./
 // RUN: test -f gcov-shared-flush.gcno
 
 // RUN: rm -f gcov-shared-flush.gcda shared.gcda
@@ -58,7 +58,7 @@
 // AFTER:      1: {{[0-9]+}}:  bar(5);
 
 // # Test the case where we exit normally and we have calls to the shared library function before and after __gcov_dump.
-// RUN: %clang -DSHARED_CALL_BEFORE_FLUSH -DSHARED_CALL_AFTER_FLUSH --coverage %s -L%t.d -rpath %t.d -lfunc -o %t
+// RUN: %clang -DSHARED_CALL_BEFORE_FLUSH -DSHARED_CALL_AFTER_FLUSH --coverage %s -L%t.d -rpath %t.d -lfunc -o %t -dumpdir ./
 // RUN: test -f gcov-shared-flush.gcno
 
 // RUN: rm -f gcov-shared-flush.gcda shared.gcda

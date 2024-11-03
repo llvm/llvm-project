@@ -17,14 +17,16 @@ using namespace llvm;
 using llvm::itanium_demangle::ForwardTemplateReference;
 using llvm::itanium_demangle::Node;
 using llvm::itanium_demangle::NodeKind;
-using llvm::itanium_demangle::StringView;
 
 namespace {
 struct FoldingSetNodeIDBuilder {
   llvm::FoldingSetNodeID &ID;
   void operator()(const Node *P) { ID.AddPointer(P); }
-  void operator()(StringView Str) {
-    ID.AddString(llvm::StringRef(Str.begin(), Str.size()));
+  void operator()(std::string_view Str) {
+    if (Str.empty())
+      ID.AddString({});
+    else
+      ID.AddString(llvm::StringRef(&*Str.begin(), Str.size()));
   }
   template <typename T>
   std::enable_if_t<std::is_integral_v<T> || std::is_enum_v<T>> operator()(T V) {
@@ -147,7 +149,7 @@ class CanonicalizerAllocator : public FoldingNodeAllocator {
       // Node is pre-existing; check if it's in our remapping table.
       if (auto *N = Remappings.lookup(Result.first)) {
         Result.first = N;
-        assert(Remappings.find(Result.first) == Remappings.end() &&
+        assert(!Remappings.contains(Result.first) &&
                "should never need multiple remap steps");
       }
       if (Result.first == TrackedNode)
@@ -292,7 +294,7 @@ parseMaybeMangledName(CanonicalizingDemangler &Demangler, StringRef Mangling,
     N = Demangler.parse();
   else
     N = Demangler.make<itanium_demangle::NameType>(
-        StringView(Mangling.data(), Mangling.size()));
+        std::string_view(Mangling.data(), Mangling.size()));
   return reinterpret_cast<ItaniumManglingCanonicalizer::Key>(N);
 }
 

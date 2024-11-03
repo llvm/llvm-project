@@ -227,7 +227,7 @@ private:
     if (auto blockArg = value.dyn_cast<mlir::BlockArgument>()) {
       affineArgs.push_back(value);
       if (isa<fir::DoLoopOp>(blockArg.getOwner()->getParentOp()) ||
-          isa<mlir::AffineForOp>(blockArg.getOwner()->getParentOp()))
+          isa<mlir::affine::AffineForOp>(blockArg.getOwner()->getParentOp()))
         return {mlir::getAffineDimExpr(dimCount++, value.getContext())};
       return {mlir::getAffineSymbolExpr(symCount++, value.getContext())};
     }
@@ -397,7 +397,7 @@ static void populateIndexArgs(fir::ArrayCoorOp acoOp,
 }
 
 /// Returns affine.apply and fir.convert from array_coor and gendims
-static std::pair<mlir::AffineApplyOp, fir::ConvertOp>
+static std::pair<affine::AffineApplyOp, fir::ConvertOp>
 createAffineOps(mlir::Value arrayRef, mlir::PatternRewriter &rewriter) {
   auto acoOp = arrayRef.getDefiningOp<ArrayCoorOp>();
   auto affineMap =
@@ -407,8 +407,8 @@ createAffineOps(mlir::Value arrayRef, mlir::PatternRewriter &rewriter) {
 
   populateIndexArgs(acoOp, indexArgs, rewriter);
 
-  auto affineApply = rewriter.create<mlir::AffineApplyOp>(acoOp.getLoc(),
-                                                          affineMap, indexArgs);
+  auto affineApply = rewriter.create<affine::AffineApplyOp>(
+      acoOp.getLoc(), affineMap, indexArgs);
   auto arrayElementType = coordinateArrayElement(acoOp);
   auto newType =
       mlir::MemRefType::get({mlir::ShapedType::kDynamic}, arrayElementType);
@@ -420,7 +420,7 @@ createAffineOps(mlir::Value arrayRef, mlir::PatternRewriter &rewriter) {
 static void rewriteLoad(fir::LoadOp loadOp, mlir::PatternRewriter &rewriter) {
   rewriter.setInsertionPoint(loadOp);
   auto affineOps = createAffineOps(loadOp.getMemref(), rewriter);
-  rewriter.replaceOpWithNewOp<mlir::AffineLoadOp>(
+  rewriter.replaceOpWithNewOp<affine::AffineLoadOp>(
       loadOp, affineOps.second.getResult(), affineOps.first.getResult());
 }
 
@@ -428,9 +428,9 @@ static void rewriteStore(fir::StoreOp storeOp,
                          mlir::PatternRewriter &rewriter) {
   rewriter.setInsertionPoint(storeOp);
   auto affineOps = createAffineOps(storeOp.getMemref(), rewriter);
-  rewriter.replaceOpWithNewOp<mlir::AffineStoreOp>(storeOp, storeOp.getValue(),
-                                                   affineOps.second.getResult(),
-                                                   affineOps.first.getResult());
+  rewriter.replaceOpWithNewOp<affine::AffineStoreOp>(
+      storeOp, storeOp.getValue(), affineOps.second.getResult(),
+      affineOps.first.getResult());
 }
 
 static void rewriteMemoryOps(Block *block, mlir::PatternRewriter &rewriter) {
@@ -483,7 +483,7 @@ public:
   }
 
 private:
-  std::pair<mlir::AffineForOp, mlir::Value>
+  std::pair<affine::AffineForOp, mlir::Value>
   createAffineFor(fir::DoLoopOp op, mlir::PatternRewriter &rewriter) const {
     if (auto constantStep = constantIntegerLike(op.getStep()))
       if (*constantStep > 0)
@@ -492,10 +492,10 @@ private:
   }
 
   // when step for the loop is positive compile time constant
-  std::pair<mlir::AffineForOp, mlir::Value>
+  std::pair<affine::AffineForOp, mlir::Value>
   positiveConstantStep(fir::DoLoopOp op, int64_t step,
                        mlir::PatternRewriter &rewriter) const {
-    auto affineFor = rewriter.create<mlir::AffineForOp>(
+    auto affineFor = rewriter.create<affine::AffineForOp>(
         op.getLoc(), ValueRange(op.getLowerBound()),
         mlir::AffineMap::get(0, 1,
                              mlir::getAffineSymbolExpr(0, op.getContext())),
@@ -506,14 +506,14 @@ private:
     return std::make_pair(affineFor, affineFor.getInductionVar());
   }
 
-  std::pair<mlir::AffineForOp, mlir::Value>
+  std::pair<affine::AffineForOp, mlir::Value>
   genericBounds(fir::DoLoopOp op, mlir::PatternRewriter &rewriter) const {
     auto lowerBound = mlir::getAffineSymbolExpr(0, op.getContext());
     auto upperBound = mlir::getAffineSymbolExpr(1, op.getContext());
     auto step = mlir::getAffineSymbolExpr(2, op.getContext());
     mlir::AffineMap upperBoundMap = mlir::AffineMap::get(
         0, 3, (upperBound - lowerBound + step).floorDiv(step));
-    auto genericUpperBound = rewriter.create<mlir::AffineApplyOp>(
+    auto genericUpperBound = rewriter.create<affine::AffineApplyOp>(
         op.getLoc(), upperBoundMap,
         ValueRange({op.getLowerBound(), op.getUpperBound(), op.getStep()}));
     auto actualIndexMap = mlir::AffineMap::get(
@@ -521,7 +521,7 @@ private:
         (lowerBound + mlir::getAffineDimExpr(0, op.getContext())) *
             mlir::getAffineSymbolExpr(1, op.getContext()));
 
-    auto affineFor = rewriter.create<mlir::AffineForOp>(
+    auto affineFor = rewriter.create<affine::AffineForOp>(
         op.getLoc(), ValueRange(),
         AffineMap::getConstantMap(0, op.getContext()),
         genericUpperBound.getResult(),
@@ -529,7 +529,7 @@ private:
                              1 + mlir::getAffineSymbolExpr(0, op.getContext())),
         1);
     rewriter.setInsertionPointToStart(affineFor.getBody());
-    auto actualIndex = rewriter.create<mlir::AffineApplyOp>(
+    auto actualIndex = rewriter.create<affine::AffineApplyOp>(
         op.getLoc(), actualIndexMap,
         ValueRange(
             {affineFor.getInductionVar(), op.getLowerBound(), op.getStep()}));
@@ -558,7 +558,7 @@ public:
               << "AffineIfConversion: couldn't calculate affine condition\n";);
       return failure();
     }
-    auto affineIf = rewriter.create<mlir::AffineIfOp>(
+    auto affineIf = rewriter.create<affine::AffineIfOp>(
         op.getLoc(), affineCondition.getIntegerSet(),
         affineCondition.getAffineArgs(), !op.getElseRegion().empty());
     rewriter.startRootUpdate(affineIf);
@@ -596,7 +596,7 @@ public:
     patterns.insert<AffineIfConversion>(context, functionAnalysis);
     patterns.insert<AffineLoopConversion>(context, functionAnalysis);
     mlir::ConversionTarget target = *context;
-    target.addLegalDialect<mlir::AffineDialect, FIROpsDialect,
+    target.addLegalDialect<mlir::affine::AffineDialect, FIROpsDialect,
                            mlir::scf::SCFDialect, mlir::arith::ArithDialect,
                            mlir::func::FuncDialect>();
     target.addDynamicallyLegalOp<IfOp>([&functionAnalysis](fir::IfOp op) {

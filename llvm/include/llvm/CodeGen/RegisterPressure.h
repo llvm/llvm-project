@@ -201,6 +201,8 @@ class PressureDiffs {
 
 public:
   PressureDiffs() = default;
+  PressureDiffs &operator=(const PressureDiffs &other) = delete;
+  PressureDiffs(const PressureDiffs &other) = delete;
   ~PressureDiffs() { free(PDiffArray); }
 
   void clear() { Size = 0; }
@@ -272,7 +274,7 @@ private:
 
   using RegSet = SparseSet<IndexMaskPair>;
   RegSet Regs;
-  unsigned NumRegUnits;
+  unsigned NumRegUnits = 0u;
 
   unsigned getSparseIndexFromReg(Register Reg) const {
     if (Reg.isVirtual())

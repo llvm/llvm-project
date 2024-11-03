@@ -5,8 +5,8 @@
 define i32 @foo(i32 %a, i32 %b, i32 %c, i32 %d) {
 ; CHECK-LABEL: @foo(
 ; CHECK-NEXT:    [[E:%.*]] = icmp slt i32 [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[E]], i32 [[C:%.*]], i32 [[D:%.*]]
-; CHECK-NEXT:    ret i32 [[TMP1]]
+; CHECK-NEXT:    [[J:%.*]] = select i1 [[E]], i32 [[C:%.*]], i32 [[D:%.*]]
+; CHECK-NEXT:    ret i32 [[J]]
 ;
   %e = icmp slt i32 %a, %b
   %f = sext i1 %e to i32
@@ -20,8 +20,8 @@ define i32 @foo(i32 %a, i32 %b, i32 %c, i32 %d) {
 define i32 @bar(i32 %a, i32 %b, i32 %c, i32 %d) {
 ; CHECK-LABEL: @bar(
 ; CHECK-NEXT:    [[E:%.*]] = icmp slt i32 [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[E]], i32 [[C:%.*]], i32 [[D:%.*]]
-; CHECK-NEXT:    ret i32 [[TMP1]]
+; CHECK-NEXT:    [[J:%.*]] = select i1 [[E]], i32 [[C:%.*]], i32 [[D:%.*]]
+; CHECK-NEXT:    ret i32 [[J]]
 ;
   %e = icmp slt i32 %a, %b
   %f = sext i1 %e to i32
@@ -35,8 +35,8 @@ define i32 @bar(i32 %a, i32 %b, i32 %c, i32 %d) {
 define i32 @goo(i32 %a, i32 %b, i32 %c, i32 %d) {
 ; CHECK-LABEL: @goo(
 ; CHECK-NEXT:    [[T0:%.*]] = icmp slt i32 [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[T0]], i32 [[C:%.*]], i32 [[D:%.*]]
-; CHECK-NEXT:    ret i32 [[TMP1]]
+; CHECK-NEXT:    [[T3:%.*]] = select i1 [[T0]], i32 [[C:%.*]], i32 [[D:%.*]]
+; CHECK-NEXT:    ret i32 [[T3]]
 ;
   %t0 = icmp slt i32 %a, %b
   %iftmp.0.0 = select i1 %t0, i32 -1, i32 0
@@ -49,8 +49,8 @@ define i32 @goo(i32 %a, i32 %b, i32 %c, i32 %d) {
 
 define i32 @poo(i32 %a, i32 %b, i32 %c, i32 %d) {
 ; CHECK-LABEL: @poo(
-; CHECK-NEXT:    [[T0:%.*]] = icmp slt i32 [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[T3:%.*]] = select i1 [[T0]], i32 [[C:%.*]], i32 [[D:%.*]]
+; CHECK-NEXT:    [[T0_NOT:%.*]] = icmp slt i32 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[T3:%.*]] = select i1 [[T0_NOT]], i32 [[C:%.*]], i32 [[D:%.*]]
 ; CHECK-NEXT:    ret i32 [[T3]]
 ;
   %t0 = icmp slt i32 %a, %b
@@ -142,8 +142,8 @@ define <2 x i32> @fold_inverted_icmp_vector_preds(<2 x i32> %a, <2 x i32> %b, <2
 define i32 @par(i32 %a, i32 %b, i32 %c, i32 %d) {
 ; CHECK-LABEL: @par(
 ; CHECK-NEXT:    [[T0:%.*]] = icmp slt i32 [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[T0]], i32 [[C:%.*]], i32 [[D:%.*]]
-; CHECK-NEXT:    ret i32 [[TMP1]]
+; CHECK-NEXT:    [[T3:%.*]] = select i1 [[T0]], i32 [[C:%.*]], i32 [[D:%.*]]
+; CHECK-NEXT:    ret i32 [[T3]]
 ;
   %t0 = icmp slt i32 %a, %b
   %iftmp.1.0 = select i1 %t0, i32 -1, i32 0
@@ -170,8 +170,8 @@ define <2 x i64> @bitcast_select_swap0(<4 x i1> %cmp, <2 x double> %a, <2 x doub
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <2 x i64> [[SIA]] to <4 x i32>
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <2 x i64> [[SIB]] to <4 x i32>
 ; CHECK-NEXT:    [[TMP3:%.*]] = select <4 x i1> [[CMP:%.*]], <4 x i32> [[TMP1]], <4 x i32> [[TMP2]]
-; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <4 x i32> [[TMP3]] to <2 x i64>
-; CHECK-NEXT:    ret <2 x i64> [[TMP4]]
+; CHECK-NEXT:    [[OR:%.*]] = bitcast <4 x i32> [[TMP3]] to <2 x i64>
+; CHECK-NEXT:    ret <2 x i64> [[OR]]
 ;
   %sia = fptosi <2 x double> %a to <2 x i64>
   %sib = fptosi <2 x double> %b to <2 x i64>
@@ -192,8 +192,8 @@ define <2 x i64> @bitcast_select_swap1(<4 x i1> %cmp, <2 x double> %a, <2 x doub
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <2 x i64> [[SIA]] to <4 x i32>
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <2 x i64> [[SIB]] to <4 x i32>
 ; CHECK-NEXT:    [[TMP3:%.*]] = select <4 x i1> [[CMP:%.*]], <4 x i32> [[TMP1]], <4 x i32> [[TMP2]]
-; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <4 x i32> [[TMP3]] to <2 x i64>
-; CHECK-NEXT:    ret <2 x i64> [[TMP4]]
+; CHECK-NEXT:    [[OR:%.*]] = bitcast <4 x i32> [[TMP3]] to <2 x i64>
+; CHECK-NEXT:    ret <2 x i64> [[OR]]
 ;
   %sia = fptosi <2 x double> %a to <2 x i64>
   %sib = fptosi <2 x double> %b to <2 x i64>
@@ -214,8 +214,8 @@ define <2 x i64> @bitcast_select_swap2(<4 x i1> %cmp, <2 x double> %a, <2 x doub
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <2 x i64> [[SIA]] to <4 x i32>
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <2 x i64> [[SIB]] to <4 x i32>
 ; CHECK-NEXT:    [[TMP3:%.*]] = select <4 x i1> [[CMP:%.*]], <4 x i32> [[TMP1]], <4 x i32> [[TMP2]]
-; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <4 x i32> [[TMP3]] to <2 x i64>
-; CHECK-NEXT:    ret <2 x i64> [[TMP4]]
+; CHECK-NEXT:    [[OR:%.*]] = bitcast <4 x i32> [[TMP3]] to <2 x i64>
+; CHECK-NEXT:    ret <2 x i64> [[OR]]
 ;
   %sia = fptosi <2 x double> %a to <2 x i64>
   %sib = fptosi <2 x double> %b to <2 x i64>
@@ -236,8 +236,8 @@ define <2 x i64> @bitcast_select_swap3(<4 x i1> %cmp, <2 x double> %a, <2 x doub
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <2 x i64> [[SIA]] to <4 x i32>
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <2 x i64> [[SIB]] to <4 x i32>
 ; CHECK-NEXT:    [[TMP3:%.*]] = select <4 x i1> [[CMP:%.*]], <4 x i32> [[TMP1]], <4 x i32> [[TMP2]]
-; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <4 x i32> [[TMP3]] to <2 x i64>
-; CHECK-NEXT:    ret <2 x i64> [[TMP4]]
+; CHECK-NEXT:    [[OR:%.*]] = bitcast <4 x i32> [[TMP3]] to <2 x i64>
+; CHECK-NEXT:    ret <2 x i64> [[OR]]
 ;
   %sia = fptosi <2 x double> %a to <2 x i64>
   %sib = fptosi <2 x double> %b to <2 x i64>
@@ -258,8 +258,8 @@ define <2 x i64> @bitcast_select_swap4(<4 x i1> %cmp, <2 x double> %a, <2 x doub
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <2 x i64> [[SIA]] to <4 x i32>
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <2 x i64> [[SIB]] to <4 x i32>
 ; CHECK-NEXT:    [[TMP3:%.*]] = select <4 x i1> [[CMP:%.*]], <4 x i32> [[TMP1]], <4 x i32> [[TMP2]]
-; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <4 x i32> [[TMP3]] to <2 x i64>
-; CHECK-NEXT:    ret <2 x i64> [[TMP4]]
+; CHECK-NEXT:    [[OR:%.*]] = bitcast <4 x i32> [[TMP3]] to <2 x i64>
+; CHECK-NEXT:    ret <2 x i64> [[OR]]
 ;
   %sia = fptosi <2 x double> %a to <2 x i64>
   %sib = fptosi <2 x double> %b to <2 x i64>
@@ -280,8 +280,8 @@ define <2 x i64> @bitcast_select_swap5(<4 x i1> %cmp, <2 x double> %a, <2 x doub
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <2 x i64> [[SIA]] to <4 x i32>
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <2 x i64> [[SIB]] to <4 x i32>
 ; CHECK-NEXT:    [[TMP3:%.*]] = select <4 x i1> [[CMP:%.*]], <4 x i32> [[TMP1]], <4 x i32> [[TMP2]]
-; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <4 x i32> [[TMP3]] to <2 x i64>
-; CHECK-NEXT:    ret <2 x i64> [[TMP4]]
+; CHECK-NEXT:    [[OR:%.*]] = bitcast <4 x i32> [[TMP3]] to <2 x i64>
+; CHECK-NEXT:    ret <2 x i64> [[OR]]
 ;
   %sia = fptosi <2 x double> %a to <2 x i64>
   %sib = fptosi <2 x double> %b to <2 x i64>
@@ -302,8 +302,8 @@ define <2 x i64> @bitcast_select_swap6(<4 x i1> %cmp, <2 x double> %a, <2 x doub
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <2 x i64> [[SIA]] to <4 x i32>
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <2 x i64> [[SIB]] to <4 x i32>
 ; CHECK-NEXT:    [[TMP3:%.*]] = select <4 x i1> [[CMP:%.*]], <4 x i32> [[TMP1]], <4 x i32> [[TMP2]]
-; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <4 x i32> [[TMP3]] to <2 x i64>
-; CHECK-NEXT:    ret <2 x i64> [[TMP4]]
+; CHECK-NEXT:    [[OR:%.*]] = bitcast <4 x i32> [[TMP3]] to <2 x i64>
+; CHECK-NEXT:    ret <2 x i64> [[OR]]
 ;
   %sia = fptosi <2 x double> %a to <2 x i64>
   %sib = fptosi <2 x double> %b to <2 x i64>
@@ -324,8 +324,8 @@ define <2 x i64> @bitcast_select_swap7(<4 x i1> %cmp, <2 x double> %a, <2 x doub
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <2 x i64> [[SIA]] to <4 x i32>
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <2 x i64> [[SIB]] to <4 x i32>
 ; CHECK-NEXT:    [[TMP3:%.*]] = select <4 x i1> [[CMP:%.*]], <4 x i32> [[TMP1]], <4 x i32> [[TMP2]]
-; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <4 x i32> [[TMP3]] to <2 x i64>
-; CHECK-NEXT:    ret <2 x i64> [[TMP4]]
+; CHECK-NEXT:    [[OR:%.*]] = bitcast <4 x i32> [[TMP3]] to <2 x i64>
+; CHECK-NEXT:    ret <2 x i64> [[OR]]
 ;
   %sia = fptosi <2 x double> %a to <2 x i64>
   %sib = fptosi <2 x double> %b to <2 x i64>
@@ -366,8 +366,8 @@ define <2 x i64> @bitcast_select_multi_uses(<4 x i1> %cmp, <2 x i64> %a, <2 x i6
 
 define i1 @bools(i1 %a, i1 %b, i1 %c) {
 ; CHECK-LABEL: @bools(
-; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[C:%.*]], i1 [[B:%.*]], i1 [[A:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[OR:%.*]] = select i1 [[C:%.*]], i1 [[B:%.*]], i1 [[A:%.*]]
+; CHECK-NEXT:    ret i1 [[OR]]
 ;
   %not = xor i1 %c, -1
   %and1 = and i1 %not, %a
@@ -394,8 +394,8 @@ define i1 @bools_multi_uses1(i1 %a, i1 %b, i1 %c) {
 ; CHECK-LABEL: @bools_multi_uses1(
 ; CHECK-NEXT:    [[NOT:%.*]] = xor i1 [[C:%.*]], true
 ; CHECK-NEXT:    [[AND1:%.*]] = and i1 [[NOT]], [[A:%.*]]
-; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[C]], i1 [[B:%.*]], i1 [[A]]
-; CHECK-NEXT:    [[XOR:%.*]] = xor i1 [[TMP1]], [[AND1]]
+; CHECK-NEXT:    [[OR:%.*]] = select i1 [[C]], i1 [[B:%.*]], i1 [[A]]
+; CHECK-NEXT:    [[XOR:%.*]] = xor i1 [[OR]], [[AND1]]
 ; CHECK-NEXT:    ret i1 [[XOR]]
 ;
   %not = xor i1 %c, -1
@@ -427,8 +427,8 @@ define i1 @bools_multi_uses1_logical(i1 %a, i1 %b, i1 %c) {
 
 define i1 @bools_multi_uses2(i1 %a, i1 %b, i1 %c) {
 ; CHECK-LABEL: @bools_multi_uses2(
-; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[C:%.*]], i1 [[B:%.*]], i1 [[A:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[OR:%.*]] = select i1 [[C:%.*]], i1 [[B:%.*]], i1 [[A:%.*]]
+; CHECK-NEXT:    ret i1 [[OR]]
 ;
   %not = xor i1 %c, -1
   %and1 = and i1 %not, %a
@@ -460,8 +460,8 @@ define i1 @bools_multi_uses2_logical(i1 %a, i1 %b, i1 %c) {
 
 define <4 x i1> @vec_of_bools(<4 x i1> %a, <4 x i1> %b, <4 x i1> %c) {
 ; CHECK-LABEL: @vec_of_bools(
-; CHECK-NEXT:    [[TMP1:%.*]] = select <4 x i1> [[C:%.*]], <4 x i1> [[B:%.*]], <4 x i1> [[A:%.*]]
-; CHECK-NEXT:    ret <4 x i1> [[TMP1]]
+; CHECK-NEXT:    [[OR:%.*]] = select <4 x i1> [[C:%.*]], <4 x i1> [[B:%.*]], <4 x i1> [[A:%.*]]
+; CHECK-NEXT:    ret <4 x i1> [[OR]]
 ;
   %not = xor <4 x i1> %c, <i1 true, i1 true, i1 true, i1 true>
   %and1 = and <4 x i1> %not, %a
@@ -475,8 +475,8 @@ define i4 @vec_of_casted_bools(i4 %a, i4 %b, <4 x i1> %c) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i4 [[B:%.*]] to <4 x i1>
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i4 [[A:%.*]] to <4 x i1>
 ; CHECK-NEXT:    [[TMP3:%.*]] = select <4 x i1> [[C:%.*]], <4 x i1> [[TMP1]], <4 x i1> [[TMP2]]
-; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <4 x i1> [[TMP3]] to i4
-; CHECK-NEXT:    ret i4 [[TMP4]]
+; CHECK-NEXT:    [[OR:%.*]] = bitcast <4 x i1> [[TMP3]] to i4
+; CHECK-NEXT:    ret i4 [[OR]]
 ;
   %not = xor <4 x i1> %c, <i1 true, i1 true, i1 true, i1 true>
   %bc1 = bitcast <4 x i1> %not to i4
@@ -491,8 +491,8 @@ define i4 @vec_of_casted_bools(i4 %a, i4 %b, <4 x i1> %c) {
 
 define <4 x i32> @vec_sel_consts(<4 x i32> %a, <4 x i32> %b) {
 ; CHECK-LABEL: @vec_sel_consts(
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x i32> [[A:%.*]], <4 x i32> [[B:%.*]], <4 x i32> <i32 0, i32 5, i32 6, i32 3>
-; CHECK-NEXT:    ret <4 x i32> [[TMP1]]
+; CHECK-NEXT:    [[OR:%.*]] = shufflevector <4 x i32> [[A:%.*]], <4 x i32> [[B:%.*]], <4 x i32> <i32 0, i32 5, i32 6, i32 3>
+; CHECK-NEXT:    ret <4 x i32> [[OR]]
 ;
   %and1 = and <4 x i32> %a, <i32 -1, i32 0, i32 0, i32 -1>
   %and2 = and <4 x i32> %b, <i32 0, i32 -1, i32 -1, i32 0>
@@ -502,8 +502,8 @@ define <4 x i32> @vec_sel_consts(<4 x i32> %a, <4 x i32> %b) {
 
 define <3 x i129> @vec_sel_consts_weird(<3 x i129> %a, <3 x i129> %b) {
 ; CHECK-LABEL: @vec_sel_consts_weird(
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <3 x i129> [[A:%.*]], <3 x i129> [[B:%.*]], <3 x i32> <i32 0, i32 4, i32 2>
-; CHECK-NEXT:    ret <3 x i129> [[TMP1]]
+; CHECK-NEXT:    [[OR:%.*]] = shufflevector <3 x i129> [[A:%.*]], <3 x i129> [[B:%.*]], <3 x i32> <i32 0, i32 4, i32 2>
+; CHECK-NEXT:    ret <3 x i129> [[OR]]
 ;
   %and1 = and <3 x i129> %a, <i129 -1, i129 0, i129 -1>
   %and2 = and <3 x i129> %b, <i129 0, i129 -1, i129 0>
@@ -544,8 +544,8 @@ define <4 x i32> @vec_not_sel_consts_undef_elts(<4 x i32> %a, <4 x i32> %b) {
 define <4 x i32> @vec_sel_xor(<4 x i32> %a, <4 x i32> %b, <4 x i1> %c) {
 ; CHECK-LABEL: @vec_sel_xor(
 ; CHECK-NEXT:    [[TMP1:%.*]] = xor <4 x i1> [[C:%.*]], <i1 false, i1 true, i1 true, i1 true>
-; CHECK-NEXT:    [[TMP2:%.*]] = select <4 x i1> [[TMP1]], <4 x i32> [[A:%.*]], <4 x i32> [[B:%.*]]
-; CHECK-NEXT:    ret <4 x i32> [[TMP2]]
+; CHECK-NEXT:    [[OR:%.*]] = select <4 x i1> [[TMP1]], <4 x i32> [[A:%.*]], <4 x i32> [[B:%.*]]
+; CHECK-NEXT:    ret <4 x i32> [[OR]]
 ;
   %mask = sext <4 x i1> %c to <4 x i32>
   %mask_flip1 = xor <4 x i32> %mask, <i32 -1, i32 0, i32 0, i32 0>
@@ -564,8 +564,8 @@ define <4 x i32> @vec_sel_xor_multi_use(<4 x i32> %a, <4 x i32> %b, <4 x i1> %c)
 ; CHECK-NEXT:    [[TMP1:%.*]] = xor <4 x i1> [[C:%.*]], <i1 true, i1 false, i1 false, i1 false>
 ; CHECK-NEXT:    [[MASK_FLIP1:%.*]] = sext <4 x i1> [[TMP1]] to <4 x i32>
 ; CHECK-NEXT:    [[TMP2:%.*]] = xor <4 x i1> [[C]], <i1 false, i1 true, i1 true, i1 true>
-; CHECK-NEXT:    [[TMP3:%.*]] = select <4 x i1> [[TMP2]], <4 x i32> [[A:%.*]], <4 x i32> [[B:%.*]]
-; CHECK-NEXT:    [[ADD:%.*]] = add <4 x i32> [[TMP3]], [[MASK_FLIP1]]
+; CHECK-NEXT:    [[OR:%.*]] = select <4 x i1> [[TMP2]], <4 x i32> [[A:%.*]], <4 x i32> [[B:%.*]]
+; CHECK-NEXT:    [[ADD:%.*]] = add <4 x i32> [[OR]], [[MASK_FLIP1]]
 ; CHECK-NEXT:    ret <4 x i32> [[ADD]]
 ;
   %mask = sext <4 x i1> %c to <4 x i32>
@@ -648,9 +648,9 @@ define <4 x i32> @computesignbits_through_shuffles(<4 x float> %x, <4 x float> %
 ; CHECK-NEXT:    [[S4:%.*]] = shufflevector <4 x i32> [[SHUF_OR1]], <4 x i32> poison, <4 x i32> <i32 2, i32 2, i32 3, i32 3>
 ; CHECK-NEXT:    [[SHUF_OR2:%.*]] = or <4 x i32> [[S3]], [[S4]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = trunc <4 x i32> [[SHUF_OR2]] to <4 x i1>
-; CHECK-NEXT:    [[DOTV:%.*]] = select <4 x i1> [[TMP1]], <4 x float> [[Z:%.*]], <4 x float> [[X]]
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <4 x float> [[DOTV]] to <4 x i32>
-; CHECK-NEXT:    ret <4 x i32> [[TMP2]]
+; CHECK-NEXT:    [[SEL_V:%.*]] = select <4 x i1> [[TMP1]], <4 x float> [[Z:%.*]], <4 x float> [[X]]
+; CHECK-NEXT:    [[SEL:%.*]] = bitcast <4 x float> [[SEL_V]] to <4 x i32>
+; CHECK-NEXT:    ret <4 x i32> [[SEL]]
 ;
   %cmp = fcmp ole <4 x float> %x, %y
   %sext = sext <4 x i1> %cmp to <4 x i32>
@@ -675,8 +675,8 @@ define <4 x i32> @computesignbits_through_two_input_shuffle(<4 x i32> %x, <4 x i
 ; CHECK-NEXT:    [[SEXT2:%.*]] = sext <4 x i1> [[COND2:%.*]] to <4 x i32>
 ; CHECK-NEXT:    [[COND:%.*]] = shufflevector <4 x i32> [[SEXT1]], <4 x i32> [[SEXT2]], <4 x i32> <i32 0, i32 2, i32 4, i32 6>
 ; CHECK-NEXT:    [[TMP1:%.*]] = trunc <4 x i32> [[COND]] to <4 x i1>
-; CHECK-NEXT:    [[TMP2:%.*]] = select <4 x i1> [[TMP1]], <4 x i32> [[Y:%.*]], <4 x i32> [[X:%.*]]
-; CHECK-NEXT:    ret <4 x i32> [[TMP2]]
+; CHECK-NEXT:    [[SEL:%.*]] = select <4 x i1> [[TMP1]], <4 x i32> [[Y:%.*]], <4 x i32> [[X:%.*]]
+; CHECK-NEXT:    ret <4 x i32> [[SEL]]
 ;
   %sext1 = sext <4 x i1> %cond1 to <4 x i32>
   %sext2 = sext <4 x i1> %cond2 to <4 x i32>

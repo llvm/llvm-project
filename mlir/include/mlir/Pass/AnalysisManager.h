@@ -254,7 +254,7 @@ struct NestedAnalysisMap {
   /// Returns the parent analysis map for this analysis map, or null if this is
   /// the top-level map.
   const NestedAnalysisMap *getParent() const {
-    return parentOrInstrumentor.dyn_cast<NestedAnalysisMap *>();
+    return llvm::dyn_cast_if_present<NestedAnalysisMap *>(parentOrInstrumentor);
   }
 
   /// Returns a pass instrumentation object for the current operation. This

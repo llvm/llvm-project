@@ -181,3 +181,8 @@ int __attribute__((__overloadable__)) __attribute__((cpu_specific(ivybridge))) g
 // expected-error@+1 {{attribute 'cpu_specific' multiversioning cannot be combined with attribute 'overloadable'}}
 int __attribute__((__overloadable__)) __attribute__((cpu_specific(atom))) good_overload7(void);
 int __attribute__((cpu_specific(ivybridge))) good_overload7(int);
+
+// expected-error@+1 {{invalid option 'x86_64'}}
+int __attribute__((cpu_specific(x86_64))) baseline(void);
+// expected-error@+1 {{invalid option 'x86_64_v2'}}
+int __attribute__((cpu_specific(x86_64_v2))) baseline(void);

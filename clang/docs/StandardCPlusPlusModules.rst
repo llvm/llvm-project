@@ -105,7 +105,7 @@ Built Module Interface file
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 A ``Built Module Interface file`` stands for the precompiled result of an importable module unit.
-It is also called the acronym ``BMI`` genrally.
+It is also called the acronym ``BMI`` generally.
 
 Global module fragment
 ~~~~~~~~~~~~~~~~~~~~~~
@@ -200,7 +200,7 @@ Then we are able to compile the example by the following command:
   $ clang++ -std=c++20 interface_part.cppm --precompile -o M-interface_part.pcm
   $ clang++ -std=c++20 impl_part.cppm --precompile -fprebuilt-module-path=. -o M-impl_part.pcm
   $ clang++ -std=c++20 M.cppm --precompile -fprebuilt-module-path=. -o M.pcm
-  $ clang++ -std=c++20 Impl.cpp -fmodule-file=M.pcm -c -o Impl.o
+  $ clang++ -std=c++20 Impl.cpp -fmodule-file=M=M.pcm -c -o Impl.o
 
   # Compiling the user
   $ clang++ -std=c++20 User.cpp -fprebuilt-module-path=. -c -o User.o
@@ -227,7 +227,7 @@ We can generate a BMI for an importable module unit by either ``--precompile``
 or ``-fmodule-output`` flags.
 
 The ``--precompile`` option generates the BMI as the output of the compilation and the output path
-can be specified using the ``-o`` option. 
+can be specified using the ``-o`` option.
 
 The ``-fmodule-output`` option generates the BMI as a by-product of the compilation.
 If ``-fmodule-output=`` is specified, the BMI will be emitted the specified location. Then if
@@ -313,26 +313,16 @@ So all of the following name is not valid by default:
     __test
     // and so on ...
 
-If you still want to use the reserved module names for any reason, currently you can add a special line marker
-in the front of the module declaration like:
-
-.. code-block:: c++
-
-  # __LINE_NUMBER__ __FILE__ 1 3
-  export module std;
-
-Here the `__LINE_NUMBER__` is the actual line number of the corresponding line. The `__FILE__` means the filename
-of the translation unit. The `1` means the following is a new file. And `3` means this is a system header/file so
-the certain warnings should be suppressed. You could find more details at:
-https://gcc.gnu.org/onlinedocs/gcc-3.0.2/cpp_9.html.
+If you still want to use the reserved module names for any reason, use
+``-Wno-reserved-module-identifier`` to suppress the warning.
 
 How to specify the dependent BMIs
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 There are 3 methods to specify the dependent BMIs:
 
-* (1) ``-fprebuilt-module-path=<path/to/direcotry>``.
-* (2) ``-fmodule-file=<path/to/BMI>``.
+* (1) ``-fprebuilt-module-path=<path/to/directory>``.
+* (2) ``-fmodule-file=<path/to/BMI>`` (Deprecated).
 * (3) ``-fmodule-file=<module-name>=<path/to/BMI>``.
 
 The option ``-fprebuilt-module-path`` tells the compiler the path where to search for dependent BMIs.
@@ -348,9 +338,10 @@ The option ``-fmodule-file=<module-name>=<path/to/BMI>`` tells the compiler to l
 for the module specified by ``<module-name>`` when necessary. The main difference is that
 ``-fmodule-file=<path/to/BMI>`` will load the BMI eagerly, whereas
 ``-fmodule-file=<module-name>=<path/to/BMI>`` will only load the BMI lazily, which is similar
-with ``-fprebuilt-module-path``.
+with ``-fprebuilt-module-path``. The option ``-fmodule-file=<path/to/BMI>`` for named modules is deprecated
+and is planning to be removed in future versions.
 
-In case all ``-fprebuilt-module-path=<path/to/direcotry>``, ``-fmodule-file=<path/to/BMI>`` and
+In case all ``-fprebuilt-module-path=<path/to/directory>``, ``-fmodule-file=<path/to/BMI>`` and
 ``-fmodule-file=<module-name>=<path/to/BMI>`` exist, the ``-fmodule-file=<path/to/BMI>`` option
 takes highest precedence and ``-fmodule-file=<module-name>=<path/to/BMI>`` will take the second
 highest precedence.
@@ -365,14 +356,13 @@ the primary module interface unit.
   A module-declaration that contains neither an export-keyword nor a module-partition implicitly
   imports the primary module interface unit of the module as if by a module-import-declaration.
 
-All of the 3 options ``-fprebuilt-module-path=<path/to/direcotry>``, ``-fmodule-file=<path/to/BMI>``
+All of the 3 options ``-fprebuilt-module-path=<path/to/directory>``, ``-fmodule-file=<path/to/BMI>``
 and ``-fmodule-file=<module-name>=<path/to/BMI>`` may occur multiple times.
 For example, the command line to compile ``M.cppm`` in
 the above example could be rewritten into:
 
 .. code-block:: console
 
-  $ clang++ -std=c++20 M.cppm --precompile -fmodule-file=M-interface_part.pcm -fmodule-file=M-impl_part.pcm -o M.pcm
   $ clang++ -std=c++20 M.cppm --precompile -fmodule-file=M:interface_part=M-interface_part.pcm -fmodule-file=M:impl_part=M-impl_part.pcm -o M.pcm
 
 ``-fprebuilt-module-path`` is more convenient and ``-fmodule-file`` is faster since
@@ -390,7 +380,7 @@ For example, the traditional compilation processes for headers are like:
 
 .. code-block:: text
 
-  src1.cpp -+> clang++ src1.cpp --> src1.o ---, 
+  src1.cpp -+> clang++ src1.cpp --> src1.o ---,
   hdr1.h  --'                                 +-> clang++ src1.o src2.o ->  executable
   hdr2.h  --,                                 |
   src2.cpp -+> clang++ src2.cpp --> src2.o ---'
@@ -399,7 +389,7 @@ And the compilation process for module units are like:
 
 .. code-block:: text
 
-                src1.cpp ----------------------------------------+> clang++ src1.cpp -------> src1.o -, 
+                src1.cpp ----------------------------------------+> clang++ src1.cpp -------> src1.o -,
   (header unit) hdr1.h    -> clang++ hdr1.h ...    -> hdr1.pcm --'                                    +-> clang++ src1.o mod1.o src2.o ->  executable
                 mod1.cppm -> clang++ mod1.cppm ... -> mod1.pcm --,--> clang++ mod1.pcm ... -> mod1.o -+
                 src2.cpp ----------------------------------------+> clang++ src2.cpp -------> src2.o -'
@@ -427,14 +417,14 @@ The following example is not allowed:
 
   // M.cppm
   export module M;
-  
+
   // Use.cpp
   import M;
 
 .. code-block:: console
 
   $ clang++ -std=c++20 M.cppm --precompile -o M.pcm
-  $ clang++ -std=c++2b Use.cpp -fprebuilt-module-path=.
+  $ clang++ -std=c++23 Use.cpp -fprebuilt-module-path=.
 
 The compiler would reject the example due to the inconsistent language options.
 Not all options are language options.
@@ -446,7 +436,7 @@ For example, the following example is allowed:
   # Inconsistent optimization level.
   $ clang++ -std=c++20 -O3 Use.cpp -fprebuilt-module-path=.
   # Inconsistent debugging level.
-  $ clang++ -std=c++20 -g Use.cpp -fprebuilt-module-path=. 
+  $ clang++ -std=c++20 -g Use.cpp -fprebuilt-module-path=.
 
 Although the two examples have inconsistent optimization and debugging level, both of them are accepted.
 
@@ -460,109 +450,6 @@ Note that **currently** the compiler doesn't consider inconsistent macro definit
 
 Currently Clang would accept the above example. But it may produce surprising results if the
 debugging code depends on consistent use of ``NDEBUG`` also in other translation units.
-
-Source content consistency
-^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-When the compiler reads a BMI, the compiler will check the consistency of the corresponding
-source files. For example:
-
-.. code-block:: c++
-
-  // M.cppm
-  export module M;
-  export template <class T>
-  T foo(T t) {
-    return t;
-  }
-
-  // Use.cpp
-  import M;
-  void bar() {
-    foo(5);
-  }
-
-.. code-block:: console
-
-  $ clang++ -std=c++20 M.cppm --precompile -o M.pcm
-  $ rm M.cppm
-  $ clang++ -std=c++20 Use.cpp -fmodule-file=M.pcm
-
-The compiler would reject the example since the compiler failed to find the source file to check the consistency.
-So the following example would be rejected too.
-
-.. code-block:: console
-
-  $ clang++ -std=c++20 M.cppm --precompile -o M.pcm
-  $ echo "int i=0;" >> M.cppm
-  $ clang++ -std=c++20 Use.cpp -fmodule-file=M.pcm
-
-The compiler would reject it too since the compiler detected the file was changed.
-
-But it is OK to move the BMI as long as the source files remain:
-
-.. code-block:: console
-
-  $ clang++ -std=c++20 M.cppm --precompile -o M.pcm
-  $ mkdir -p tmp
-  $ mv M.pcm tmp/M.pcm
-  $ clang++ -std=c++20 Use.cpp -fmodule-file=tmp/M.pcm
-
-The above example would be accepted.
-
-If the user doesn't want to follow the consistency requirement due to some reasons (e.g., distributing BMI),
-the user could try to use ``-Xclang -fmodules-embed-all-files`` when producing BMI. For example:
-
-.. code-block:: console
-
-  $ clang++ -std=c++20 M.cppm --precompile -Xclang -fmodules-embed-all-files -o M.pcm
-  $ rm M.cppm
-  $ clang++ -std=c++20 Use.cpp -fmodule-file=M.pcm
-
-Now the compiler would accept the above example.
-Important note: Xclang options are intended to be used by compiler internally and its semantics
-are not guaranteed to be preserved in future versions.
-
-Also the compiler will record the path to the header files included in the global module fragment and compare the
-headers when imported. For example,
-
-.. code-block:: c++
-
-  // foo.h
-  #include <iostream>
-  void Hello() {
-    std::cout << "Hello World.\n";
-  }
-
-  // foo.cppm
-  module;
-  #include "foo.h"
-  export module foo;
-  export using ::Hello;
-
-  // Use.cpp
-  import foo;
-  int main() {
-    Hello();
-  }
-
-Then it is problematic if we remove ``foo.h`` before import `foo` module.
-
-.. code-block:: console
-
-  $ clang++ -std=c++20 foo.cppm --precompile  -o foo.pcm
-  $ mv foo.h foo.orig.h
-  # The following one is rejected
-  $ clang++ -std=c++20 Use.cpp -fmodule-file=foo.pcm -c
-
-The above case will rejected. And we're still able to workaround it by ``-Xclang -fmodules-embed-all-files`` option:
-
-.. code-block:: console
-
-  $ clang++ -std=c++20 foo.cppm --precompile  -Xclang -fmodules-embed-all-files -o foo.pcm
-  $ mv foo.h foo.orig.h
-  $ clang++ -std=c++20 Use.cpp -fmodule-file=foo.pcm -c -o Use.o
-  $ clang++ Use.o foo.pcm
 
 ABI Impacts
 -----------
@@ -591,6 +478,109 @@ The result would be ``NS::foo@M()``, which reads as ``NS::foo()`` in module ``M`
 The ABI implies that we can't declare something in a module unit and define it in a non-module unit (or vice-versa),
 as this would result in linking errors.
 
+If we still want to implement declarations within the compatible ABI in module unit,
+we can use the language-linkage specifier. Since the declarations in the language-linkage specifier
+is attached to the global module fragments. For example:
+
+.. code-block:: c++
+
+  export module M;
+  namespace NS {
+    export extern "C++" int foo();
+  }
+
+Now the linkage name of ``NS::foo()`` will be ``_ZN2NS3fooEv``.
+
+Performance Tips
+----------------
+
+Reduce duplications
+~~~~~~~~~~~~~~~~~~~
+
+While it is legal to have duplicated declarations in the global module fragments
+of different module units, it is not free for clang to deal with the duplicated
+declarations. In other word, for a translation unit, it will compile slower if the
+translation unit itself and its importing module units contains a lot duplicated
+declarations.
+
+For example,
+
+.. code-block:: c++
+
+  // M-partA.cppm
+  module;
+  #include "big.header.h"
+  export module M:partA;
+  ...
+
+  // M-partB.cppm
+  module;
+  #include "big.header.h"
+  export module M:partB;
+  ...
+
+  // other partitions
+  ...
+
+  // M-partZ.cppm
+  module;
+  #include "big.header.h"
+  export module M:partZ;
+  ...
+
+  // M.cppm
+  export module M;
+  export import :partA;
+  export import :partB;
+  ...
+  export import :partZ;
+
+  // use.cpp
+  import M;
+  ... // use declarations from module M.
+
+When ``big.header.h`` is big enough and there are a lot of partitions,
+the compilation of ``use.cpp`` may be slower than
+the following style significantly:
+
+.. code-block:: c++
+
+  module;
+  #include "big.header.h"
+  export module m:big.header.wrapper;
+  export ... // export the needed declarations
+
+  // M-partA.cppm
+  export module M:partA;
+  import :big.header.wrapper;
+  ...
+
+  // M-partB.cppm
+  export module M:partB;
+  import :big.header.wrapper;
+  ...
+
+  // other partitions
+  ...
+
+  // M-partZ.cppm
+  export module M:partZ;
+  import :big.header.wrapper;
+  ...
+
+  // M.cppm
+  export module M;
+  export import :partA;
+  export import :partB;
+  ...
+  export import :partZ;
+
+  // use.cpp
+  import M;
+  ... // use declarations from module M.
+
+The key part of the tip is to reduce the duplications from the text includes.
+
 Known Problems
 --------------
 
@@ -598,30 +588,54 @@ The following describes issues in the current implementation of modules.
 Please see https://github.com/llvm/llvm-project/labels/clang%3Amodules for more issues
 or file a new issue if you don't find an existing one.
 If you're going to create a new issue for standard C++ modules,
-please start the title with ``[C++20] [Modules]`` (or ``[C++2b] [Modules]``, etc)
+please start the title with ``[C++20] [Modules]`` (or ``[C++23] [Modules]``, etc)
 and add the label ``clang:modules`` (if you have permissions for that).
 
 For higher level support for proposals, you could visit https://clang.llvm.org/cxx_status.html.
 
-Ambiguous deduction guide
-~~~~~~~~~~~~~~~~~~~~~~~~~
+Including headers after import is problematic
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Currently, when we call deduction guides in global module fragment,
-we may get incorrect diagnosing message like: `ambiguous deduction`.
-
-So if we're using deduction guide from global module fragment, we probably need to write:
+For example, the following example can be accept:
 
 .. code-block:: c++
 
-  std::lock_guard<std::mutex> lk(mutex);
+  #include <iostream>
+  import foo; // assume module 'foo' contain the declarations from `<iostream>`
 
-instead of
+  int main(int argc, char *argv[])
+  {
+      std::cout << "Test\n";
+      return 0;
+  }
+
+but it will get rejected if we reverse the order of ``#include <iostream>`` and
+``import foo;``:
 
 .. code-block:: c++
 
-  std::lock_guard lk(mutex);
+  import foo; // assume module 'foo' contain the declarations from `<iostream>`
+  #include <iostream>
 
-This is tracked in: https://github.com/llvm/llvm-project/issues/56916
+  int main(int argc, char *argv[])
+  {
+      std::cout << "Test\n";
+      return 0;
+  }
+
+Both of the above examples should be accepted.
+
+This is a limitation in the implementation. In the first example,
+the compiler will see and parse <iostream> first then the compiler will see the import.
+So the ODR Checking and declarations merging will happen in the deserializer.
+In the second example, the compiler will see the import first and the include second.
+As a result, the ODR Checking and declarations merging will happen in the semantic analyzer.
+
+So there is divergence in the implementation path. It might be understandable that why
+the orders matter here in the case.
+(Note that "understandable" is different from "makes sense").
+
+This is tracked in: https://github.com/llvm/llvm-project/issues/61465
 
 Ignored PreferredName Attribute
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -664,11 +678,26 @@ Currently, clang requires the file name of an ``importable module unit`` should 
 
 This is tracked in: https://github.com/llvm/llvm-project/issues/57416
 
+clang-cl is not compatible with the standard C++ modules
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Now we can't use the `/clang:-fmodule-file` or `/clang:-fprebuilt-module-path` to specify
+the BMI within ``clang-cl.exe``.
+
+This is tracked in: https://github.com/llvm/llvm-project/issues/64118
+
 Header Units
 ============
 
 How to build projects using header unit
 ---------------------------------------
+
+.. warning::
+
+   The user interfaces of header units is highly experimental. There are still
+   many unanswered question about how tools should interact with header units.
+   The user interfaces described here may change after we have progress on how
+   tools should support for header units.
 
 Quick Start
 ~~~~~~~~~~~
@@ -825,7 +854,7 @@ It would be simpler if we are using libcxx:
 
 .. code-block:: console
 
-  $ clang++ -std=c++20 main.cpp -fimplicit-modules -fimplicit-module-maps 
+  $ clang++ -std=c++20 main.cpp -fimplicit-modules -fimplicit-module-maps
 
 Since there is already one
 `module map <https://github.com/llvm/llvm-project/blob/main/libcxx/include/module.modulemap.in>`_
@@ -850,7 +879,7 @@ Discover Dependencies
 =====================
 
 Prior to modules, all the translation units can be compiled parallelly.
-But it is not true for the module units. The presense of module units requires
+But it is not true for the module units. The presence of module units requires
 us to compile the translation units in a (topological) order.
 
 The clang-scan-deps scanner implemented
@@ -1064,10 +1093,10 @@ Then clang-scan-deps will extract the necessary information from the options.
 Note that we need to specify the path to the compiler executable instead of saying
 ``clang++`` simply.
 
-The users may want the scanner to get the tranditional dependency information for headers.
+The users may want the scanner to get the transitional dependency information for headers.
 Otherwise, the users have to scan twice for the project, once for headers and once for modules.
 To address the requirement, clang-scan-deps will recognize the specified preprocessor options
-in the given command line and generate the corresponding dependency informaiton. For example,
+in the given command line and generate the corresponding dependency information. For example,
 
 .. code-block:: console
 
@@ -1087,7 +1116,33 @@ We will get:
     ...
 
 When clang-scan-deps detects ``-MF`` option, clang-scan-deps will try to write the
-dependency informaiton for headers to the file specified by ``-MF``.
+dependency information for headers to the file specified by ``-MF``.
+
+Possible Issues: Failed to find system headers
+----------------------------------------------
+
+In case the users encounter errors like ``fatal error: 'stddef.h' file not found``,
+probably the specified ``<path-to-compiler-executable>/clang++`` refers to a symlink
+instead a real binary. There are 4 potential solutions to the problem:
+
+* (1) End users can resolve the issue by pointing the specified compiler executable to
+  the real binary instead of the symlink.
+* (2) End users can invoke ``<path-to-compiler-executable>/clang++ -print-resource-dir``
+  to get the corresponding resource directory for your compiler and add that directory
+  to the include search paths manually in the build scripts.
+* (3) Build systems that use a compilation database as the input for clang-scan-deps
+  scanner, the build system can add the flag ``--resource-dir-recipe invoke-compiler`` to
+  the clang-scan-deps scanner to calculate the resources directory dynamically.
+  The calculation happens only once for a unique ``<path-to-compiler-executable>/clang++``.
+* (4) For build systems that invokes the clang-scan-deps scanner per file, repeatedly
+  calculating the resource directory may be inefficient. In such cases, the build
+  system can cache the resource directory by itself and pass ``-resource-dir <resource-dir>``
+  explicitly in the command line options:
+
+.. code-block:: console
+
+  $ clang-scan-deps -format=p1689 -- <path-to-compiler-executable>/clang++ -std=c++20 -resource-dir <resource-dir> mod.cppm -c -o mod.o
+
 
 Possible Questions
 ==================
@@ -1138,14 +1193,14 @@ So we could get a big win for the compilation time in O0.
 
 But with optimizations, things are different:
 
-(we omit ``code generation`` part for each end due to the limited space) 
+(we omit ``code generation`` part for each end due to the limited space)
 
 .. code-block:: none
 
   ├-------- frontend ---------┼--------------- middle end --------------------┼------ backend ----┤
   │                           │                                               │                   │
   └--- parsing ---- sema -----┴--- optimizations --- IPO ---- optimizations---┴--- optimizations -┘
-                                                                                                            
+
   ┌-----------------------------------------------------------------------------------------------┐
   │                                                                                               │
   │                                         source file                                           │
@@ -1173,7 +1228,7 @@ But we could still save the time for optimizations after IPO and the whole backe
 Overall, at ``O0`` the implementations of functions defined in a module will not impact module users,
 but at higher optimization levels the definitions of such functions are provided to user compilations for the
 purposes of optimization (but definitions of these functions are still not included in the use's object file)-
-this means the build speedup at higher optimization levels may be lower than expected given ``O0`` experience, 
+this means the build speedup at higher optimization levels may be lower than expected given ``O0`` experience,
 but does provide by more optimization opportunities.
 
 Interoperability with Clang Modules

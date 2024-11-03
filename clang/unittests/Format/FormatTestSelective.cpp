@@ -528,6 +528,26 @@ TEST_F(FormatTestSelective, ReformatRegionAdjustsIndent) {
             format("  int a;\n"
                    "void ffffff() {}",
                    11, 0));
+
+  // https://github.com/llvm/llvm-project/issues/59178
+  Style = getMozillaStyle();
+  EXPECT_EQ("int a()\n"
+            "{\n"
+            "return 0;\n"
+            "}\n"
+            "int b()\n"
+            "{\n"
+            "  return 42;\n"
+            "}",
+            format("int a()\n"
+                   "{\n"
+                   "return 0;\n"
+                   "}\n"
+                   "int b()\n"
+                   "{\n"
+                   "return 42;\n" // Format this line only
+                   "}",
+                   32, 0));
 }
 
 TEST_F(FormatTestSelective, UnderstandsTabs) {
@@ -617,6 +637,61 @@ TEST_F(FormatTestSelective, DontAssert) {
          "namespace ns1 { namespace ns2 {\n"
          "}}";
   EXPECT_EQ(Code, format(Code, 0, 0));
+
+  // https://reviews.llvm.org/D151047#4369742
+  Style = getLLVMStyle();
+  Style.FixNamespaceComments = false;
+  Code = "namespace ns {\n"
+         "#define REF(alias) alias alias_var;\n"
+         "}"; // Format this line only
+  EXPECT_EQ(Code, format(Code, 51, 0));
+}
+
+TEST_F(FormatTestSelective, FormatMacroRegardlessOfPreviousIndent) {
+  // clang-format currently does not (or should not) take into account the
+  // indent of previous unformatted lines when formatting a PP directive.
+  // Technically speaking, LevelIndentTracker::IndentForLevel is only for non-PP
+  // lines. So these tests here check that the indent of previous non-PP lines
+  // do not affect the formatting. If this requirement changes, the tests here
+  // need to be adapted.
+  Style = getLLVMStyle();
+
+  const StringRef Code{"      class Foo {\n"
+                       "            void test() {\n"
+                       "    #ifdef 1\n"
+                       "                #define some\n" // format this line
+                       "         #endif\n"
+                       "    }};"};
+
+  EXPECT_EQ(Style.IndentPPDirectives,
+            FormatStyle::PPDirectiveIndentStyle::PPDIS_None);
+  EXPECT_EQ("      class Foo {\n"
+            "            void test() {\n"
+            "    #ifdef 1\n"
+            "#define some\n" // Formatted line
+            "#endif\n"       // That this line is also formatted might be a bug.
+            "            }};", // Ditto: Bug?
+            format(Code, 57, 0));
+
+  Style.IndentPPDirectives =
+      FormatStyle::PPDirectiveIndentStyle::PPDIS_BeforeHash;
+  EXPECT_EQ("      class Foo {\n"
+            "            void test() {\n"
+            "    #ifdef 1\n"
+            "  #define some\n" // Formatted line
+            "         #endif\n"
+            "    }};",
+            format(Code, 57, 0));
+
+  Style.IndentPPDirectives =
+      FormatStyle::PPDirectiveIndentStyle::PPDIS_AfterHash;
+  EXPECT_EQ("      class Foo {\n"
+            "            void test() {\n"
+            "    #ifdef 1\n"
+            "#  define some\n" // Formatted line
+            "#endif\n" // That this line is also formatted might be a bug.
+            "    }};",
+            format(Code, 57, 0));
 }
 
 } // end namespace

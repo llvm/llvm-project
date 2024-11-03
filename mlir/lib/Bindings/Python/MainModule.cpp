@@ -16,6 +16,7 @@
 
 namespace py = pybind11;
 using namespace mlir;
+using namespace py::literals;
 using namespace mlir::python;
 
 // -----------------------------------------------------------------------------
@@ -35,13 +36,12 @@ PYBIND11_MODULE(_mlir, m) {
             self.getDialectSearchPrefixes().push_back(std::move(moduleName));
             self.clearImportCache();
           },
-          py::arg("module_name"))
+          "module_name"_a)
       .def("_register_dialect_impl", &PyGlobals::registerDialectImpl,
-           py::arg("dialect_namespace"), py::arg("dialect_class"),
+           "dialect_namespace"_a, "dialect_class"_a,
            "Testing hook for directly registering a dialect")
       .def("_register_operation_impl", &PyGlobals::registerOperationImpl,
-           py::arg("operation_name"), py::arg("operation_class"),
-           py::arg("raw_opview_class"),
+           "operation_name"_a, "operation_class"_a,
            "Testing hook for directly registering an operation");
 
   // Aside from making the globals accessible to python, having python manage
@@ -59,33 +59,34 @@ PYBIND11_MODULE(_mlir, m) {
         PyGlobals::get().registerDialectImpl(dialectNamespace, pyClass);
         return pyClass;
       },
-      py::arg("dialect_class"),
+      "dialect_class"_a,
       "Class decorator for registering a custom Dialect wrapper");
   m.def(
       "register_operation",
-      [](py::object dialectClass) -> py::cpp_function {
+      [](const py::object &dialectClass) -> py::cpp_function {
         return py::cpp_function(
             [dialectClass](py::object opClass) -> py::object {
               std::string operationName =
                   opClass.attr("OPERATION_NAME").cast<std::string>();
-              auto rawSubclass = PyOpView::createRawSubclass(opClass);
-              PyGlobals::get().registerOperationImpl(operationName, opClass,
-                                                     rawSubclass);
+              PyGlobals::get().registerOperationImpl(operationName, opClass);
 
               // Dict-stuff the new opClass by name onto the dialect class.
               py::object opClassName = opClass.attr("__name__");
               dialectClass.attr(opClassName) = opClass;
-
-              // Now create a special "Raw" subclass that passes through
-              // construction to the OpView parent (bypasses the intermediate
-              // child's __init__).
-              opClass.attr("_Raw") = rawSubclass;
               return opClass;
             });
       },
-      py::arg("dialect_class"),
+      "dialect_class"_a,
       "Produce a class decorator for registering an Operation class as part of "
       "a dialect");
+  m.def(
+      MLIR_PYTHON_CAPI_TYPE_CASTER_REGISTER_ATTR,
+      [](MlirTypeID mlirTypeID, py::function typeCaster, bool replace) {
+        PyGlobals::get().registerTypeCaster(mlirTypeID, std::move(typeCaster),
+                                            replace);
+      },
+      "typeid"_a, "type_caster"_a, "replace"_a = false,
+      "Register a type caster for casting MLIR types to custom user types.");
 
   // Define and populate IR submodule.
   auto irModule = m.def_submodule("ir", "MLIR IR Bindings");

@@ -992,8 +992,7 @@ public:
     if (OverriddenFilesInfo) {
       if (OverriddenFilesInfo->OverriddenFilesWithBuffer.count(File))
         return true;
-      if (OverriddenFilesInfo->OverriddenFiles.find(File) !=
-          OverriddenFilesInfo->OverriddenFiles.end())
+      if (OverriddenFilesInfo->OverriddenFiles.contains(File))
         return true;
     }
     return false;
@@ -1686,7 +1685,7 @@ public:
   fileinfo_iterator fileinfo_begin() const { return FileInfos.begin(); }
   fileinfo_iterator fileinfo_end() const { return FileInfos.end(); }
   bool hasFileInfo(const FileEntry *File) const {
-    return FileInfos.find(File) != FileInfos.end();
+    return FileInfos.contains(File);
   }
 
   /// Print statistics to stderr.

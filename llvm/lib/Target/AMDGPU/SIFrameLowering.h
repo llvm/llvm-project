@@ -34,8 +34,8 @@ public:
                             RegScavenger *RS = nullptr) const override;
   void determineCalleeSavesSGPR(MachineFunction &MF, BitVector &SavedRegs,
                                 RegScavenger *RS = nullptr) const;
-  void determinePrologEpilogSGPRSaves(MachineFunction &MF,
-                                      BitVector &SavedRegs) const;
+  void determinePrologEpilogSGPRSaves(MachineFunction &MF, BitVector &SavedRegs,
+                                      bool NeedExecCopyReservedReg) const;
   void emitCSRSpillStores(MachineFunction &MF, MachineBasicBlock &MBB,
                           MachineBasicBlock::iterator MBBI, DebugLoc &DL,
                           LivePhysRegs &LiveRegs, Register FrameReg,

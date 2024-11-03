@@ -33,6 +33,10 @@ let TargetPrefix = "ppc" in {  // All intrinsics start with "llvm.ppc.".
   def int_ppc_readflm : ClangBuiltin<"__builtin_readflm">,
                         DefaultAttrsIntrinsic<[llvm_double_ty], [],
                                               [IntrNoMerge, IntrHasSideEffects]>;
+  def int_ppc_mffsl : ClangBuiltin<"__builtin_ppc_mffsl">,
+                      DefaultAttrsIntrinsic<[llvm_double_ty], [],
+                                            [IntrNoMerge, IntrHasSideEffects]>;
+
   // Set FPSCR register, and return previous content
   def int_ppc_setflm : ClangBuiltin<"__builtin_setflm">,
                        DefaultAttrsIntrinsic<[llvm_double_ty], [llvm_double_ty],

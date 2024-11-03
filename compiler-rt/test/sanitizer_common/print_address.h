@@ -1,6 +1,9 @@
 #include <stdio.h>
 #include <stdarg.h>
 
+#ifndef __SANITIZER_COMMON_PRINT_ADDRESS_H__
+#  define __SANITIZER_COMMON_PRINT_ADDRESS_H__
+
 void print_address(const char *str, int n, ...) {
   fprintf(stderr, "%s", str);
   va_list ap;
@@ -21,3 +24,5 @@ void print_address(const char *str, int n, ...) {
   }
   fprintf(stderr, "\n");
 }
+
+#endif // __SANITIZER_COMMON_PRINT_ADDRESS_H__

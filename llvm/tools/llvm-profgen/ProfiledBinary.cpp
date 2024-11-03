@@ -163,12 +163,13 @@ void BinarySizeContextTracker::trackInlineesOptimizedAway(
 }
 
 ProfiledBinary::ProfiledBinary(const StringRef ExeBinPath,
-                             const StringRef DebugBinPath)
-    : Path(ExeBinPath), DebugBinaryPath(DebugBinPath), ProEpilogTracker(this),
+                               const StringRef DebugBinPath)
+    : Path(ExeBinPath), DebugBinaryPath(DebugBinPath),
+      SymbolizerOpts(getSymbolizerOpts()), ProEpilogTracker(this),
+      Symbolizer(std::make_unique<symbolize::LLVMSymbolizer>(SymbolizerOpts)),
       TrackFuncContextSize(EnableCSPreInliner && UseContextCostForPreInliner) {
   // Point to executable binary if debug info binary is not specified.
   SymbolizerPath = DebugBinPath.empty() ? ExeBinPath : DebugBinPath;
-  setupSymbolizer();
   if (InferMissingFrames)
     MissingContextInferrer = std::make_unique<MissingFrameInferrer>(this);
   load();
@@ -214,9 +215,7 @@ void ProfiledBinary::load() {
     exitWithError("not a valid Elf image", Path);
 
   TheTriple = Obj->makeTriple();
-  // Current only support X86
-  if (!TheTriple.isX86())
-    exitWithError("unsupported target", TheTriple.getTriple());
+
   LLVM_DEBUG(dbgs() << "Loading " << Path << "\n");
 
   // Find the preferred load address for text sections.
@@ -813,7 +812,7 @@ void ProfiledBinary::loadSymbolsFromDWARF(ObjectFile &Obj) {
   // Handles DWO sections that can either be in .o, .dwo or .dwp files.
   for (const auto &CompilationUnit : DebugContext->compile_units()) {
     DWARFUnit *const DwarfUnit = CompilationUnit.get();
-    if (std::optional<uint64_t> DWOId = DwarfUnit->getDWOId()) {
+    if (DwarfUnit->getDWOId()) {
       DWARFUnit *DWOCU = DwarfUnit->getNonSkeletonUnitDIE(false).getDwarfUnit();
       if (!DWOCU->isDWOUnit()) {
         std::string DWOName = dwarf::toString(
@@ -840,7 +839,7 @@ void ProfiledBinary::populateSymbolListFromDWARF(
     SymbolList.add(I.second.getFuncName());
 }
 
-void ProfiledBinary::setupSymbolizer() {
+symbolize::LLVMSymbolizer::Options ProfiledBinary::getSymbolizerOpts() const {
   symbolize::LLVMSymbolizer::Options SymbolizerOpts;
   SymbolizerOpts.PrintFunctions =
       DILineInfoSpecifier::FunctionNameKind::LinkageName;
@@ -849,7 +848,7 @@ void ProfiledBinary::setupSymbolizer() {
   SymbolizerOpts.UseSymbolTable = false;
   SymbolizerOpts.RelativeAddresses = false;
   SymbolizerOpts.DWPName = DWPPath;
-  Symbolizer = std::make_unique<symbolize::LLVMSymbolizer>(SymbolizerOpts);
+  return SymbolizerOpts;
 }
 
 SampleContextFrameVector ProfiledBinary::symbolize(const InstructionPointer &IP,

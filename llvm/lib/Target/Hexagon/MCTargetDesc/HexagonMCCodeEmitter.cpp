@@ -364,7 +364,8 @@ uint32_t HexagonMCCodeEmitter::parseBits(size_t Last, MCInst const &MCB,
 }
 
 /// Emit the bundle.
-void HexagonMCCodeEmitter::encodeInstruction(const MCInst &MI, raw_ostream &OS,
+void HexagonMCCodeEmitter::encodeInstruction(const MCInst &MI,
+                                             SmallVectorImpl<char> &CB,
                                              SmallVectorImpl<MCFixup> &Fixups,
                                              const MCSubtargetInfo &STI) const {
   MCInst &HMB = const_cast<MCInst &>(MI);
@@ -380,7 +381,7 @@ void HexagonMCCodeEmitter::encodeInstruction(const MCInst &MI, raw_ostream &OS,
   for (auto &I : HexagonMCInstrInfo::bundleInstructions(HMB)) {
     MCInst &HMI = const_cast<MCInst &>(*I.getInst());
 
-    EncodeSingleInstruction(HMI, OS, Fixups, STI, parseBits(Last, HMB, HMI));
+    encodeSingleInstruction(HMI, CB, Fixups, STI, parseBits(Last, HMB, HMI));
     State.Extended = HexagonMCInstrInfo::isImmext(HMI);
     State.Addend += HEXAGON_INSTR_SIZE;
     ++State.Index;
@@ -394,10 +395,10 @@ static bool RegisterMatches(unsigned Consumer, unsigned Producer,
                                                              Consumer);
 }
 
-/// EncodeSingleInstruction - Emit a single
-void HexagonMCCodeEmitter::EncodeSingleInstruction(const MCInst &MI,
-      raw_ostream &OS, SmallVectorImpl<MCFixup> &Fixups,
-      const MCSubtargetInfo &STI, uint32_t Parse) const {
+void HexagonMCCodeEmitter::encodeSingleInstruction(
+    const MCInst &MI, SmallVectorImpl<char> &CB,
+    SmallVectorImpl<MCFixup> &Fixups, const MCSubtargetInfo &STI,
+    uint32_t Parse) const {
   assert(!HexagonMCInstrInfo::isBundle(MI));
   uint64_t Binary;
 
@@ -442,7 +443,7 @@ void HexagonMCCodeEmitter::EncodeSingleInstruction(const MCInst &MI,
 
     Binary |= SubBits0 | (SubBits1 << 16);
   }
-  support::endian::write<uint32_t>(OS, Binary, support::little);
+  support::endian::write<uint32_t>(CB, Binary, support::little);
   ++MCNumEmitted;
 }
 

@@ -207,4 +207,22 @@ contains
 ! CHECK: %[[SELECT:.*]] = arith.select %[[CMPI]], %[[ARG0]], %[[ARG1]] : !fir.class<!fir.type<_QMpoly_tmpTp1{a:i32}>>
 ! CHECK: fir.call @_QMpoly_tmpPcheck_scalar(%[[SELECT]]) {{.*}} : (!fir.class<!fir.type<_QMpoly_tmpTp1{a:i32}>>) -> ()
 
+  subroutine test_merge_intrinsic2(a, b, i)
+    class(p1), allocatable, intent(in) :: a
+    type(p1), allocatable :: b
+    integer, intent(in) :: i
+
+    call check_scalar(merge(a, b, i==1))
+  end subroutine
+
+! CHECK-LABEL: func.func @_QMpoly_tmpPtest_merge_intrinsic2(
+! CHECK-SAME: %[[A:.*]]: !fir.ref<!fir.class<!fir.heap<!fir.type<_QMpoly_tmpTp1{a:i32}>>>> {fir.bindc_name = "a"}, %[[B:.*]]: !fir.ref<!fir.box<!fir.heap<!fir.type<_QMpoly_tmpTp1{a:i32}>>>> {fir.bindc_name = "b"}, %[[I:.*]]: !fir.ref<i32> {fir.bindc_name = "i"}) {
+! CHECK: %[[LOAD_A:.*]] = fir.load %[[A]] : !fir.ref<!fir.class<!fir.heap<!fir.type<_QMpoly_tmpTp1{a:i32}>>>>
+! CHECK: %[[LOAD_B:.*]] = fir.load %[[B]] : !fir.ref<!fir.box<!fir.heap<!fir.type<_QMpoly_tmpTp1{a:i32}>>>>
+! CHECK: %[[LOAD_I:.*]] = fir.load %[[I]] : !fir.ref<i32>
+! CHECK: %[[C1:.*]] = arith.constant 1 : i32
+! CHECK: %[[CMPI:.*]] = arith.cmpi eq, %[[LOAD_I]], %[[C1]] : i32
+! CHECK: %[[A_REBOX:.*]] = fir.rebox %[[LOAD_A]] : (!fir.class<!fir.heap<!fir.type<_QMpoly_tmpTp1{a:i32}>>>) -> !fir.box<!fir.heap<!fir.type<_QMpoly_tmpTp1{a:i32}>>> 
+! CHECK: %{{.*}} = arith.select %[[CMPI]], %[[A_REBOX]], %[[LOAD_B]] : !fir.box<!fir.heap<!fir.type<_QMpoly_tmpTp1{a:i32}>>>
+
 end module

@@ -12,8 +12,6 @@ struct Type {
   int Type;
 };
 
-// rdar://8365458
-// rdar://9132143
 typedef char bool; // expected-error {{redeclaration of C++ built-in type 'bool'}}
 
 // PR4451 - We should recover well from the typo of '::' as ':' in a2.
@@ -123,7 +121,6 @@ class Class2 {
 
 typedef Class1<Class2> Type1;
 
-// rdar : // 8307865
 struct CodeCompleteConsumer {
 };
 
@@ -196,12 +193,9 @@ namespace PR15017 {
 }
 
 // Ensure we produce at least some diagnostic for attributes in C++98.
-[[]] struct S;
-#if __cplusplus <= 199711L
-// expected-error@-2 {{expected expression}}
-// expected-error@-3 {{expected unqualified-id}}
-#else
-// expected-error@-5 {{misplaced attributes}}
+[[]] struct S; // expected-error {{misplaced attributes}}
+#if __cplusplus < 201103L
+// expected-error@-2 {{[[]] attributes are a C++11 extension}}
 #endif
 
 namespace test7 {

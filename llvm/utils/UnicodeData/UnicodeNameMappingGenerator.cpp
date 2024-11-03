@@ -95,8 +95,23 @@ public:
   // Once all  characters are inserted, the tree is compacted
   void insert(llvm::StringRef Name, char32_t Codepoint) {
     Node *N = Root.get();
-    for (auto Ch : Name) {
+    bool IsBeforeMedial = false;
+    for (auto ChIt = Name.begin(); ChIt != Name.end();
+         ChIt += (IsBeforeMedial ? 3 : 1)) {
+      char Ch = *ChIt;
+      assert(Letters.contains(Ch) && "Unexpected symbol in Unicode name");
+
       std::string Label(1, Ch);
+
+      // We need to ensure a node never ends or starts by
+      // a medial hyphen as this would break the
+      // loose matching algorithm.
+      IsBeforeMedial = llvm::isAlnum(Ch) && ChIt + 1 != Name.end() &&
+                       *(ChIt + 1) == '-' && ChIt + 2 != Name.end() &&
+                       llvm::isAlnum(*(ChIt + 2));
+      if (IsBeforeMedial)
+        Label.assign(ChIt, ChIt + 3);
+
       auto It = llvm::find_if(N->Children,
                               [&](const auto &C) { return C->Name == Label; });
       if (It == N->Children.end()) {
@@ -361,9 +376,8 @@ int main(int argc, char **argv) {
     char32_t Codepoint = Entry.first;
     const std::string &Name = Entry.second;
     // Ignore names which are not valid.
-    if (Name.empty() || !llvm::all_of(Name, [](char C) {
-          return llvm::is_contained(Letters, C);
-        })) {
+    if (Name.empty() ||
+        !llvm::all_of(Name, [](char C) { return Letters.contains(C); })) {
       continue;
     }
     printf("%06x: %s\n", static_cast<unsigned int>(Codepoint), Name.c_str());

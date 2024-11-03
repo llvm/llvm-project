@@ -15,6 +15,7 @@
 
 #include <algorithm>
 #include <cassert>
+#include <iostream>
 #include <set>
 #include <string>
 #include <string_view>

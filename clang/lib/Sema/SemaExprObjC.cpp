@@ -2438,6 +2438,9 @@ ExprResult Sema::BuildClassMessageImplicit(QualType ReceiverType,
   if (!ReceiverType.isNull())
     receiverTypeInfo = Context.getTrivialTypeSourceInfo(ReceiverType);
 
+  assert(((isSuperReceiver && Loc.isValid()) || receiverTypeInfo) &&
+         "Either the super receiver location needs to be valid or the receiver "
+         "needs valid type source information");
   return BuildClassMessage(receiverTypeInfo, ReceiverType,
                           /*SuperLoc=*/isSuperReceiver ? Loc : SourceLocation(),
                            Sel, Method, Loc, Loc, Loc, Args,
@@ -4551,6 +4554,7 @@ Expr *Sema::stripARCUnbridgedCast(Expr *e) {
                                  CurFPFeatureOverrides());
   } else if (GenericSelectionExpr *gse = dyn_cast<GenericSelectionExpr>(e)) {
     assert(!gse->isResultDependent());
+    assert(!gse->isTypePredicate());
 
     unsigned n = gse->getNumAssocs();
     SmallVector<Expr *, 4> subExprs;

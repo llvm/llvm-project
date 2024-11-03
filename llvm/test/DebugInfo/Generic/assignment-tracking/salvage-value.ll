@@ -14,9 +14,8 @@ entry:
 
  %add1 = add nsw i32 %x, %y, !dbg !29
  call void @llvm.dbg.assign(metadata i32 %add1, metadata !32, metadata !DIExpression(), metadata !31, metadata ptr %p, metadata !DIExpression()), !dbg !16
-;; %add1 is not salvaged as it requires two values and DIArgList is
-;; not (yet) supported for dbg.assigns.
-; CHECK-NEXT: call void @llvm.dbg.assign(metadata i32 poison,{{.+}}, metadata !DIExpression(),{{.+}}, metadata ptr %p, metadata !DIExpression())
+;; %add1 is salvaged using a variadic expression.
+; CHECK-NEXT: call void @llvm.dbg.assign(metadata !DIArgList(i32 %x, i32 %y), metadata ![[#]], metadata !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_plus, DW_OP_stack_value), metadata ![[#]], metadata ptr %p, metadata !DIExpression())
 
   %arrayidx0 = getelementptr inbounds i32, ptr %p, i32 0
   call void @llvm.dbg.assign(metadata i32 %x, metadata !14, metadata !DIExpression(), metadata !17, metadata ptr %arrayidx0, metadata !DIExpression()), !dbg !16

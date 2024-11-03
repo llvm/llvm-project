@@ -7,7 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/DWARFLinker/DWARFLinkerCompileUnit.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/DWARFLinker/DWARFLinkerDeclContext.h"
+#include "llvm/DebugInfo/DWARF/DWARFContext.h"
+#include "llvm/DebugInfo/DWARF/DWARFExpression.h"
 #include "llvm/Support/FormatVariadic.h"
 
 namespace llvm {
@@ -63,6 +66,7 @@ void CompileUnit::markEverythingAsKept() {
     // Mark everything that wasn't explicit marked for pruning.
     I.Keep = !I.Prune;
     auto DIE = OrigUnit.getDIEAtIndex(Idx++);
+    DWARFUnit *U = DIE.getDwarfUnit();
 
     // Try to guess which DIEs must go to the accelerator tables. We do that
     // just for variables, because functions will be handled depending on
@@ -78,10 +82,41 @@ void CompileUnit::markEverythingAsKept() {
         I.InDebugMap = true;
       continue;
     }
-    if (auto Block = Value->getAsBlock()) {
-      if (Block->size() > OrigUnit.getAddressByteSize() &&
-          (*Block)[0] == dwarf::DW_OP_addr)
-        I.InDebugMap = true;
+
+    if (auto ExprLockBlock = Value->getAsBlock()) {
+      // Parse 'exprloc' expression.
+      DataExtractor Data(toStringRef(*ExprLockBlock),
+                         U->getContext().isLittleEndian(),
+                         U->getAddressByteSize());
+      DWARFExpression Expression(Data, U->getAddressByteSize(),
+                                 U->getFormParams().Format);
+
+      for (DWARFExpression::iterator It = Expression.begin();
+           (It != Expression.end()) && !I.InDebugMap; ++It) {
+        DWARFExpression::iterator NextIt = It;
+        ++NextIt;
+
+        switch (It->getCode()) {
+        case dwarf::DW_OP_const2u:
+        case dwarf::DW_OP_const4u:
+        case dwarf::DW_OP_const8u:
+        case dwarf::DW_OP_const2s:
+        case dwarf::DW_OP_const4s:
+        case dwarf::DW_OP_const8s:
+          if (NextIt == Expression.end() ||
+              NextIt->getCode() != dwarf::DW_OP_form_tls_address)
+            break;
+          [[fallthrough]];
+        case dwarf::DW_OP_constx:
+        case dwarf::DW_OP_addr:
+        case dwarf::DW_OP_addrx:
+          I.InDebugMap = true;
+          break;
+        default:
+          // Nothing to do.
+          break;
+        }
+      }
     }
   }
 }
@@ -135,14 +170,16 @@ void CompileUnit::addFunctionRange(uint64_t FuncLowPc, uint64_t FuncHighPc,
 }
 
 void CompileUnit::noteRangeAttribute(const DIE &Die, PatchLocation Attr) {
-  if (Die.getTag() != dwarf::DW_TAG_compile_unit)
-    RangeAttributes.push_back(Attr);
-  else
+  if (Die.getTag() == dwarf::DW_TAG_compile_unit) {
     UnitRangeAttribute = Attr;
+    return;
+  }
+
+  RangeAttributes.emplace_back(Attr);
 }
 
-void CompileUnit::noteLocationAttribute(PatchLocation Attr, int64_t PcOffset) {
-  LocationAttributes.emplace_back(Attr, PcOffset);
+void CompileUnit::noteLocationAttribute(PatchLocation Attr) {
+  LocationAttributes.emplace_back(Attr);
 }
 
 void CompileUnit::addNamespaceAccelerator(const DIE *Die,

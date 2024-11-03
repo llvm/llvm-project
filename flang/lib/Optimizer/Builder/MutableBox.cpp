@@ -366,9 +366,9 @@ mlir::Value fir::factory::createUnallocatedBox(
 
 fir::MutableBoxValue fir::factory::createTempMutableBox(
     fir::FirOpBuilder &builder, mlir::Location loc, mlir::Type type,
-    llvm::StringRef name, mlir::Value typeSourceBox) {
+    llvm::StringRef name, mlir::Value typeSourceBox, bool isPolymorphic) {
   mlir::Type boxType;
-  if (typeSourceBox)
+  if (typeSourceBox || isPolymorphic)
     boxType = fir::ClassType::get(fir::HeapType::get(type));
   else
     boxType = fir::BoxType::get(fir::HeapType::get(type));
@@ -674,10 +674,11 @@ void fir::factory::disassociateMutableBox(fir::FirOpBuilder &builder,
     auto boxTy = box.getBoxTy().dyn_cast<fir::BaseBoxType>();
     auto eleTy = fir::dyn_cast_ptrOrBoxEleTy(boxTy.getEleTy());
     mlir::Type derivedType = fir::getDerivedType(eleTy);
-    if (auto recTy = derivedType.dyn_cast<fir::RecordType>())
+    if (auto recTy = derivedType.dyn_cast<fir::RecordType>()) {
       fir::runtime::genNullifyDerivedType(builder, loc, box.getAddr(), recTy,
                                           box.rank());
-    return;
+      return;
+    }
   }
   MutablePropertyWriter{builder, loc, box}.setUnallocatedStatus();
 }
@@ -752,12 +753,14 @@ void fir::factory::genInlinedAllocation(
                 fir::MustBeHeapAttr::get(builder.getContext(), mustBeHeap));
 }
 
-void fir::factory::genInlinedDeallocate(fir::FirOpBuilder &builder,
-                                        mlir::Location loc,
-                                        const fir::MutableBoxValue &box) {
+mlir::Value
+fir::factory::genInlinedDeallocate(fir::FirOpBuilder &builder,
+                                   mlir::Location loc,
+                                   const fir::MutableBoxValue &box) {
   auto addr = MutablePropertyReader(builder, loc, box).readBaseAddress();
   genFinalizeAndFree(builder, loc, addr);
   MutablePropertyWriter{builder, loc, box}.setUnallocatedStatus();
+  return addr;
 }
 
 fir::factory::MutableBoxReallocation fir::factory::genReallocIfNeeded(
@@ -932,4 +935,14 @@ void fir::factory::syncMutableBoxFromIRBox(fir::FirOpBuilder &builder,
                                            mlir::Location loc,
                                            const fir::MutableBoxValue &box) {
   MutablePropertyWriter{builder, loc, box}.syncMutablePropertiesFromIRBox();
+}
+
+mlir::Value fir::factory::genNullBoxStorage(fir::FirOpBuilder &builder,
+                                            mlir::Location loc,
+                                            mlir::Type boxTy) {
+  mlir::Value boxStorage = builder.createTemporary(loc, boxTy);
+  mlir::Value nullBox = fir::factory::createUnallocatedBox(
+      builder, loc, boxTy, /*nonDeferredParams=*/{});
+  builder.create<fir::StoreOp>(loc, nullBox, boxStorage);
+  return boxStorage;
 }

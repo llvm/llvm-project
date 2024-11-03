@@ -1,6 +1,6 @@
 // RUN: mlir-opt %s -linalg-bufferize \
 // RUN: -arith-bufferize -tensor-bufferize -func-bufferize \
-// RUN: -finalizing-bufferize -buffer-deallocation -convert-linalg-to-llvm \
+// RUN: -finalizing-bufferize -buffer-deallocation  \
 // RUN: -expand-strided-metadata -lower-affine \
 // RUN: -finalize-memref-to-llvm -convert-func-to-llvm -reconcile-unrealized-casts | \
 // RUN: mlir-cpu-runner -e main -entry-point-result=void \

@@ -73,7 +73,6 @@ struct Inclusion {
   int HashLine = 0;        // Line number containing the directive, 0-indexed.
   SrcMgr::CharacteristicKind FileKind = SrcMgr::C_User;
   std::optional<unsigned> HeaderID;
-  bool BehindPragmaKeep = false; // Has IWYU pragma: keep right after.
 };
 llvm::raw_ostream &operator<<(llvm::raw_ostream &, const Inclusion &);
 bool operator==(const Inclusion &LHS, const Inclusion &RHS);
@@ -151,12 +150,6 @@ public:
     return RealPathNames[static_cast<unsigned>(ID)];
   }
 
-  bool isSelfContained(HeaderID ID) const {
-    return !NonSelfContained.contains(ID);
-  }
-
-  bool hasIWYUExport(HeaderID ID) const { return HasIWYUExport.contains(ID); }
-
   // Return all transitively reachable files.
   llvm::ArrayRef<std::string> allHeaders() const { return RealPathNames; }
 
@@ -180,6 +173,11 @@ public:
 
   std::vector<Inclusion> MainFileIncludes;
 
+  // The entries of the header search path. (HeaderSearch::search_dir_range())
+  // Only includes the plain-directory entries (not header maps or frameworks).
+  // All paths are canonical (FileManager::getCanonicalPath()).
+  std::vector<std::string> SearchPathsCanonical;
+
   // We reserve HeaderID(0) for the main file and will manually check for that
   // in getID and getOrCreateID because the UniqueID is not stable when the
   // content of the main file changes.
@@ -199,12 +197,6 @@ private:
   // and RealPathName and UniqueID are not preserved in
   // the preamble.
   llvm::DenseMap<llvm::sys::fs::UniqueID, HeaderID> UIDToIndex;
-  // Contains HeaderIDs of all non self-contained entries in the
-  // IncludeStructure.
-  llvm::DenseSet<HeaderID> NonSelfContained;
-  // Contains a set of headers that have either "IWYU pragma: export" or "IWYU
-  // pragma: begin_exports".
-  llvm::DenseSet<HeaderID> HasIWYUExport;
 
   // Maps written includes to indices in MainFileInclude for easier lookup by
   // spelling.

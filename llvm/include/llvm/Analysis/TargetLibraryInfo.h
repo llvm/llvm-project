@@ -31,6 +31,7 @@ struct VecDesc {
   StringRef ScalarFnName;
   StringRef VectorFnName;
   ElementCount VectorizationFactor;
+  bool Masked;
 };
 
   enum LibFunc : unsigned {
@@ -95,7 +96,8 @@ public:
     LIBMVEC_X86,      // GLIBC Vector Math library.
     MASSV,            // IBM MASS vector library.
     SVML,             // Intel short vector math library.
-    SLEEFGNUABI       // SLEEF - SIMD Library for Evaluating Elementary Functions.
+    SLEEFGNUABI, // SLEEF - SIMD Library for Evaluating Elementary Functions.
+    ArmPL        // Arm Performance Libraries.
   };
 
   TargetLibraryInfoImpl();
@@ -138,7 +140,7 @@ public:
     if (StandardNames[F] != Name) {
       setState(F, CustomName);
       CustomNames[F] = std::string(Name);
-      assert(CustomNames.find(F) != CustomNames.end());
+      assert(CustomNames.contains(F));
     } else {
       setState(F, StandardName);
     }
@@ -161,7 +163,8 @@ public:
   /// Return true if the function F has a vector equivalent with vectorization
   /// factor VF.
   bool isFunctionVectorizable(StringRef F, const ElementCount &VF) const {
-    return !getVectorizedFunction(F, VF).empty();
+    return !(getVectorizedFunction(F, VF, false).empty() &&
+             getVectorizedFunction(F, VF, true).empty());
   }
 
   /// Return true if the function F has a vector equivalent with any
@@ -170,7 +173,8 @@ public:
 
   /// Return the name of the equivalent of F, vectorized with factor VF. If no
   /// such mapping exists, return the empty string.
-  StringRef getVectorizedFunction(StringRef F, const ElementCount &VF) const;
+  StringRef getVectorizedFunction(StringRef F, const ElementCount &VF,
+                                  bool Masked) const;
 
   /// Set to true iff i32 parameters to library functions should have signext
   /// or zeroext attributes if they correspond to C-level int or unsigned int,
@@ -346,8 +350,9 @@ public:
   bool isFunctionVectorizable(StringRef F) const {
     return Impl->isFunctionVectorizable(F);
   }
-  StringRef getVectorizedFunction(StringRef F, const ElementCount &VF) const {
-    return Impl->getVectorizedFunction(F, VF);
+  StringRef getVectorizedFunction(StringRef F, const ElementCount &VF,
+                                  bool Masked = false) const {
+    return Impl->getVectorizedFunction(F, VF, Masked);
   }
 
   /// Tests if the function is both available and a candidate for optimized code
@@ -374,6 +379,7 @@ public:
     case LibFunc_trunc:        case LibFunc_truncf:     case LibFunc_truncl:
     case LibFunc_log2:         case LibFunc_log2f:      case LibFunc_log2l:
     case LibFunc_exp2:         case LibFunc_exp2f:      case LibFunc_exp2l:
+    case LibFunc_ldexp:        case LibFunc_ldexpf:     case LibFunc_ldexpl:
     case LibFunc_memcpy:       case LibFunc_memset:     case LibFunc_memmove:
     case LibFunc_memcmp:       case LibFunc_bcmp:       case LibFunc_strcmp:
     case LibFunc_strcpy:       case LibFunc_stpcpy:     case LibFunc_strlen:
@@ -408,14 +414,14 @@ public:
       ShouldExtI32Param = true;
       ShouldExtI32Return = true;
     }
-    // Mips and riscv64, on the other hand, needs signext on i32 parameters
-    // corresponding to both signed and unsigned ints.
-    if (T.isMIPS() || T.isRISCV64()) {
+    // LoongArch, Mips, and riscv64, on the other hand, need signext on i32
+    // parameters corresponding to both signed and unsigned ints.
+    if (T.isLoongArch() || T.isMIPS() || T.isRISCV64()) {
       ShouldSignExtI32Param = true;
     }
-    // riscv64 needs signext on i32 returns corresponding to both signed and
-    // unsigned ints.
-    if (T.isRISCV64()) {
+    // LoongArch and riscv64 need signext on i32 returns corresponding to both
+    // signed and unsigned ints.
+    if (T.isLoongArch() || T.isRISCV64()) {
       ShouldSignExtI32Return = true;
     }
   }

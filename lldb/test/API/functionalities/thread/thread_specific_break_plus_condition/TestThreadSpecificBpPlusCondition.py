@@ -4,7 +4,6 @@ conditioned breakpoints simultaneously
 """
 
 
-
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
@@ -12,13 +11,12 @@ from lldbsuite.test import lldbutil
 
 
 class ThreadSpecificBreakPlusConditionTestCase(TestBase):
-
     # test frequently times out or hangs
     @skipIfDarwin
     # hits break in another thread in testrun
-    @add_test_categories(['pyapi'])
+    @add_test_categories(["pyapi"])
     @expectedFlakeyNetBSD
-    @skipIfWindows # This test is flaky on Windows
+    @skipIfWindows  # This test is flaky on Windows
     def test_python(self):
         """Test that we obey thread conditioned breakpoints."""
         self.build()
@@ -32,18 +30,18 @@ class ThreadSpecificBreakPlusConditionTestCase(TestBase):
         # Set a breakpoint in the thread body, and make it active for only the
         # first thread.
         break_thread_body = target.BreakpointCreateBySourceRegex(
-            "Break here in thread body.", main_source_spec)
+            "Break here in thread body.", main_source_spec
+        )
         self.assertTrue(
             break_thread_body.IsValid() and break_thread_body.GetNumLocations() > 0,
-            "Failed to set thread body breakpoint.")
+            "Failed to set thread body breakpoint.",
+        )
 
-        process = target.LaunchSimple(
-            None, None, self.get_process_working_directory())
+        process = target.LaunchSimple(None, None, self.get_process_working_directory())
 
         self.assertTrue(process, PROCESS_IS_VALID)
 
-        threads = lldbutil.get_threads_stopped_at_breakpoint(
-            process, break_thread_body)
+        threads = lldbutil.get_threads_stopped_at_breakpoint(process, break_thread_body)
 
         victim_thread = threads[0]
 
@@ -56,8 +54,8 @@ class ThreadSpecificBreakPlusConditionTestCase(TestBase):
         frame = victim_thread.GetFrameAtIndex(0)
         value = frame.FindVariable("my_value").GetValueAsSigned(0)
         self.assertTrue(
-            value > 0 and value < 11,
-            "Got a reasonable value for my_value.")
+            value > 0 and value < 11, "Got a reasonable value for my_value."
+        )
 
         cond_string = "my_value != %d" % (value)
 
@@ -68,5 +66,7 @@ class ThreadSpecificBreakPlusConditionTestCase(TestBase):
 
         next_stop_state = process.GetState()
         self.assertEqual(
-            next_stop_state, lldb.eStateExited,
-            "We should have not hit the breakpoint again.")
+            next_stop_state,
+            lldb.eStateExited,
+            "We should have not hit the breakpoint again.",
+        )

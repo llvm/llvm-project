@@ -158,9 +158,11 @@ bb18:                                             ; preds = %bb4
 ; EG: BFE_INT {{[* ]*}}T{{[0-9]\.[XYZW]}}, PV.[[MAD_CHAN]], 0.0, literal.x
 ; EG: 8
 ; SI: v_mad_u32_u24 [[MAD:v[0-9]]], {{[sv][0-9], [sv][0-9]}}
+; SI: v_bfe_i32 [[EXT:v[0-9]]], [[MAD]], 0, 16
+; SI: v_med3_i32 v{{[0-9]}}, [[EXT]],
 ; VI: v_mad_u16 [[MAD:v[0-9]]], {{[sv][0-9], [sv][0-9]}}
-; GCN: v_bfe_i32 [[EXT:v[0-9]]], [[MAD]], 0, 16
-; GCN: v_med3_i32 v{{[0-9]}}, [[EXT]],
+; VI: v_max_i16_e32 [[MAX:v[0-9]]], 0xff80, [[MAD]]
+; VI: v_min_i16_e32 {{v[0-9]}}, 0x7f, [[MAX]]
 define amdgpu_kernel void @i8_mad_sat_16(ptr addrspace(1) %out, ptr addrspace(1) %in0, ptr addrspace(1) %in1, ptr addrspace(1) %in2, ptr addrspace(5) %idx) {
 entry:
   %retval.0.i = load i64, ptr addrspace(5) %idx

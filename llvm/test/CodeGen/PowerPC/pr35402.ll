@@ -7,15 +7,15 @@ define void @test(ptr %p, i64 %data) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    rotldi 5, 4, 16
 ; CHECK-NEXT:    rldicl 6, 4, 8, 56
-; CHECK-NEXT:    rotldi 7, 4, 24
 ; CHECK-NEXT:    rldimi 6, 5, 8, 48
-; CHECK-NEXT:    rldimi 6, 7, 16, 40
+; CHECK-NEXT:    rotldi 5, 4, 24
+; CHECK-NEXT:    rldimi 6, 5, 16, 40
 ; CHECK-NEXT:    rotldi 5, 4, 32
-; CHECK-NEXT:    rlwinm 7, 4, 8, 24, 31
 ; CHECK-NEXT:    rldimi 6, 5, 24, 32
-; CHECK-NEXT:    rlwimi 7, 4, 24, 16, 23
-; CHECK-NEXT:    sth 7, 4(3)
+; CHECK-NEXT:    rlwinm 5, 4, 8, 24, 31
+; CHECK-NEXT:    rlwimi 5, 4, 24, 16, 23
 ; CHECK-NEXT:    stw 6, 0(3)
+; CHECK-NEXT:    sth 5, 4(3)
 ; CHECK-NEXT:    blr
 entry:
   %0 = tail call i64 @llvm.bswap.i64(i64 %data)

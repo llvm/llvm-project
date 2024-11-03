@@ -261,8 +261,3 @@ void test()
     test_true     <std::weak_ptr<int>>();
 
 }
-
-// Required for MSVC internal test runner compatibility.
-int main(int, char**) {
-    return 0;
-}

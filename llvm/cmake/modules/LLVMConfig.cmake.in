@@ -58,6 +58,11 @@ endif()
 
 set(LLVM_ENABLE_RTTI @LLVM_ENABLE_RTTI@)
 
+set(LLVM_ENABLE_LIBEDIT @HAVE_LIBEDIT@)
+if(LLVM_ENABLE_LIBEDIT)
+  find_package(LibEdit)
+endif()
+
 set(LLVM_ENABLE_TERMINFO @LLVM_ENABLE_TERMINFO@)
 if(LLVM_ENABLE_TERMINFO)
   find_package(Terminfo)

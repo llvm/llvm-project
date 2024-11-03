@@ -12,7 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/TargetParser/AArch64TargetParser.h"
-#include "llvm/ADT/StringSwitch.h"
+#include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/ARMTargetParserCommon.h"
 #include "llvm/TargetParser/Triple.h"
 #include <cctype>
@@ -97,7 +97,7 @@ void AArch64::fillValidCPUArchList(SmallVectorImpl<StringRef> &Values) {
 
 bool AArch64::isX18ReservedByDefault(const Triple &TT) {
   return TT.isAndroid() || TT.isOSDarwin() || TT.isOSFuchsia() ||
-         TT.isOSWindows();
+         TT.isOSWindows() || TT.isOHOSFamily();
 }
 
 // Allows partial match, ex. "v8a" matches "armv8a".
@@ -132,4 +132,13 @@ std::optional<AArch64::CpuInfo> AArch64::parseCpu(StringRef Name) {
       return C;
 
   return {};
+}
+
+void AArch64::PrintSupportedExtensions() {
+  outs() << "All available -march extensions for AArch64\n\n";
+  for (const auto &Ext : Extensions) {
+    // Extensions without a feature cannot be used with -march.
+    if (!Ext.Feature.empty())
+      outs() << '\t' << Ext.Name << "\n";
+  }
 }

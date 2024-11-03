@@ -50,6 +50,14 @@ CheckOptions:
     value: lower_case
   - key:   readability-identifier-naming.LocalVariablePrefix
     value: __
+  - key:   readability-identifier-naming.TemplateParameterCase
+    value: CamelCase
+  - key:   readability-identifier-naming.TemplateParameterPrefix
+    value: _
+  - key:   readability-identifier-naming.TemplateParameterIgnoredRegexp
+    value: (.*\:auto|expr-type) # This is https://llvm.org/PR56464
+  - key:   readability-identifier-naming.ValueTemplateParameterIgnoredRegexp # TODO: enforce naming of variable parameters
+    value: .*
 
 # TODO: investigate these checks
 # bugprone-branch-clone,

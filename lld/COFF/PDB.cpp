@@ -31,6 +31,7 @@
 #include "llvm/DebugInfo/CodeView/TypeIndexDiscovery.h"
 #include "llvm/DebugInfo/MSF/MSFBuilder.h"
 #include "llvm/DebugInfo/MSF/MSFCommon.h"
+#include "llvm/DebugInfo/MSF/MSFError.h"
 #include "llvm/DebugInfo/PDB/GenericError.h"
 #include "llvm/DebugInfo/PDB/Native/DbiModuleDescriptorBuilder.h"
 #include "llvm/DebugInfo/PDB/Native/DbiStream.h"
@@ -949,7 +950,7 @@ void DebugSHandler::finish() {
   // must also be rewritten to use the PDB string table.
   for (const UnrelocatedFpoData &subsec : frameDataSubsecs) {
     // Relocate the first four bytes of the subection and reinterpret them as a
-    // 32 bit integer.
+    // 32 bit little-endian integer.
     SectionChunk *debugChunk = subsec.debugChunk;
     ArrayRef<uint8_t> subsecData = subsec.subsecData;
     uint32_t relocIndex = subsec.relocIndex;
@@ -958,8 +959,9 @@ void DebugSHandler::finish() {
     debugChunk->writeAndRelocateSubsection(debugChunk->getContents(),
                                            unrelocatedRvaStart, relocIndex,
                                            &relocatedRvaStart[0]);
-    uint32_t rvaStart;
-    memcpy(&rvaStart, &relocatedRvaStart[0], sizeof(uint32_t));
+    // Use of memcpy here avoids violating type-based aliasing rules.
+    support::ulittle32_t rvaStart;
+    memcpy(&rvaStart, &relocatedRvaStart[0], sizeof(support::ulittle32_t));
 
     // Copy each frame data record, add in rvaStart, translate string table
     // indices, and add the record to the PDB.
@@ -1211,8 +1213,8 @@ void PDBLinker::addPublicsToPDB() {
         // Drop the '_' prefix for x86.
         if (ctx.config.machine == I386)
           name = name.drop_front(1);
-        if (name.startswith("__profd_") || name.startswith("__profc_") ||
-            name.startswith("__covrec_")) {
+        if (name.starts_with("__profd_") || name.starts_with("__profc_") ||
+            name.starts_with("__covrec_")) {
           return;
         }
       }
@@ -1467,7 +1469,7 @@ static void addLinkerModuleCoffGroup(PartialSection *sec,
   // Somehow .idata sections & sections groups in the debug symbol stream have
   // the "write" flag set. However the section header for the corresponding
   // .idata section doesn't have it.
-  if (cgs.Name.startswith(".idata"))
+  if (cgs.Name.starts_with(".idata"))
     cgs.Characteristics |= llvm::COFF::IMAGE_SCN_MEM_WRITE;
 
   mod.addSymbol(codeview::SymbolSerializer::writeOneSymbol(
@@ -1687,6 +1689,12 @@ void PDBLinker::commit(codeview::GUID *guid) {
   // the user can see the output of /time and /summary, which is very helpful
   // when trying to figure out why a PDB file is too large.
   if (Error e = builder.commit(ctx.config.pdbPath, guid)) {
+    e = handleErrors(std::move(e),
+        [](const llvm::msf::MSFError &me) {
+          error(me.message());
+          if (me.isPageOverflow())
+            error("try setting a larger /pdbpagesize");
+        });
     checkError(std::move(e));
     error("failed to write PDB file " + Twine(ctx.config.pdbPath));
   }

@@ -91,7 +91,8 @@ protected:
                              const MCSubtargetInfo &STI, raw_ostream &O);
   void printArithExtend(const MCInst *MI, unsigned OpNum,
                         const MCSubtargetInfo &STI, raw_ostream &O);
-
+  void printMemExtendImpl(bool SignExtend, bool DoShift, unsigned Width,
+                          char SrcRegKind, raw_ostream &O);
   void printMemExtend(const MCInst *MI, unsigned OpNum, raw_ostream &O,
                       char SrcRegKind, unsigned Width);
   template <char SrcRegKind, unsigned Width>

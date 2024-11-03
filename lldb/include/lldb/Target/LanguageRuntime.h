@@ -67,6 +67,12 @@ public:
 
   virtual lldb::LanguageType GetLanguageType() const = 0;
 
+  /// Return the preferred language runtime instance, which in most cases will
+  /// be the current instance.
+  virtual LanguageRuntime *GetPreferredLanguageRuntime(ValueObject &in_value) {
+    return nullptr;
+  }
+
   virtual bool GetObjectDescription(Stream &str, ValueObject &object) = 0;
 
   virtual bool GetObjectDescription(Stream &str, Value &value,

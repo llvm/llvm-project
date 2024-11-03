@@ -487,8 +487,16 @@ public:
   void printPipeline(raw_ostream &OS,
                      function_ref<StringRef(StringRef)> MapClassName2PassName) {
     OS << "function";
-    if (EagerlyInvalidate)
-      OS << "<eager-inv>";
+    if (EagerlyInvalidate || NoRerun) {
+      OS << "<";
+      if (EagerlyInvalidate)
+        OS << "eager-inv";
+      if (EagerlyInvalidate && NoRerun)
+        OS << ";";
+      if (NoRerun)
+        OS << "no-rerun";
+      OS << ">";
+    }
     OS << '(';
     Pass->printPipeline(OS, MapClassName2PassName);
     OS << ')';

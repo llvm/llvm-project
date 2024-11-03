@@ -16,19 +16,17 @@ struct PushHeap {
   size_t Quantity;
 
   void run(benchmark::State& state) const {
-    runOpOnCopies<ValueType>(
-        state, Quantity, Order(), BatchSize::CountElements, [](auto& Copy) {
-          for (auto I = Copy.begin(), E = Copy.end(); I != E; ++I) {
-            std::push_heap(Copy.begin(), I + 1);
-          }
-        });
+    runOpOnCopies<ValueType>(state, Quantity, Order(), BatchSize::CountElements, [](auto& Copy) {
+      for (auto I = Copy.begin(), E = Copy.end(); I != E; ++I) {
+        std::push_heap(Copy.begin(), I + 1);
+      }
+    });
   }
 
   bool skip() const { return Order() == ::Order::Heap; }
 
   std::string name() const {
-    return "BM_PushHeap" + ValueType::name() + Order::name() + "_" +
-           std::to_string(Quantity);
+    return "BM_PushHeap" + ValueType::name() + Order::name() + "_" + std::to_string(Quantity);
   };
 };
 } // namespace

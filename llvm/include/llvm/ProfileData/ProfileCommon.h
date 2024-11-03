@@ -34,9 +34,6 @@ class FunctionSamples;
 
 } // end namespace sampleprof
 
-inline const char *getHotSectionPrefix() { return "hot"; }
-inline const char *getUnlikelySectionPrefix() { return "unlikely"; }
-
 class ProfileSummaryBuilder {
 private:
   /// We keep track of the number of times a count (block count or samples)

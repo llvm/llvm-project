@@ -94,6 +94,24 @@ unsigned getVmcntBitWidthHi(unsigned VersionMajor) {
   return (VersionMajor == 9 || VersionMajor == 10) ? 2 : 0;
 }
 
+/// \returns VmVsrc bit width
+inline unsigned getVmVsrcBitWidth() { return 3; }
+
+/// \returns VmVsrc bit shift
+inline unsigned getVmVsrcBitShift() { return 2; }
+
+/// \returns VaVdst bit width
+inline unsigned getVaVdstBitWidth() { return 4; }
+
+/// \returns VaVdst bit shift
+inline unsigned getVaVdstBitShift() { return 12; }
+
+/// \returns SaSdst bit width
+inline unsigned getSaSdstBitWidth() { return 1; }
+
+/// \returns SaSdst bit shift
+inline unsigned getSaSdstBitShift() { return 0; }
+
 } // end namespace anonymous
 
 namespace llvm {
@@ -494,6 +512,28 @@ bool isPermlane16(unsigned Opc) {
          Opc == AMDGPU::V_PERMLANEX16_B32_e64_gfx11;
 }
 
+bool isGenericAtomic(unsigned Opc) {
+  return Opc == AMDGPU::G_AMDGPU_ATOMIC_FMIN ||
+         Opc == AMDGPU::G_AMDGPU_ATOMIC_FMAX ||
+         Opc == AMDGPU::G_AMDGPU_BUFFER_ATOMIC_SWAP ||
+         Opc == AMDGPU::G_AMDGPU_BUFFER_ATOMIC_ADD ||
+         Opc == AMDGPU::G_AMDGPU_BUFFER_ATOMIC_SUB ||
+         Opc == AMDGPU::G_AMDGPU_BUFFER_ATOMIC_SMIN ||
+         Opc == AMDGPU::G_AMDGPU_BUFFER_ATOMIC_UMIN ||
+         Opc == AMDGPU::G_AMDGPU_BUFFER_ATOMIC_SMAX ||
+         Opc == AMDGPU::G_AMDGPU_BUFFER_ATOMIC_UMAX ||
+         Opc == AMDGPU::G_AMDGPU_BUFFER_ATOMIC_AND ||
+         Opc == AMDGPU::G_AMDGPU_BUFFER_ATOMIC_OR ||
+         Opc == AMDGPU::G_AMDGPU_BUFFER_ATOMIC_XOR ||
+         Opc == AMDGPU::G_AMDGPU_BUFFER_ATOMIC_INC ||
+         Opc == AMDGPU::G_AMDGPU_BUFFER_ATOMIC_DEC ||
+         Opc == AMDGPU::G_AMDGPU_BUFFER_ATOMIC_FADD ||
+         Opc == AMDGPU::G_AMDGPU_BUFFER_ATOMIC_FMIN ||
+         Opc == AMDGPU::G_AMDGPU_BUFFER_ATOMIC_FMAX ||
+         Opc == AMDGPU::G_AMDGPU_BUFFER_ATOMIC_CMPSWAP ||
+         Opc == AMDGPU::G_AMDGPU_ATOMIC_CMPXCHG;
+}
+
 bool isTrue16Inst(unsigned Opc) {
   const VOPTrue16Info *Info = getTrue16OpcodeHelper(Opc);
   return Info ? Info->IsTrue16 : false;
@@ -576,9 +616,10 @@ std::optional<unsigned> InstInfo::getInvalidCompOperandIndex(
 
   unsigned CompOprIdx;
   for (CompOprIdx = 0; CompOprIdx < Component::MAX_OPR_NUM; ++CompOprIdx) {
-    unsigned BanksNum = BANKS_NUM[CompOprIdx];
+    unsigned BanksMasks = VOPD_VGPR_BANK_MASKS[CompOprIdx];
     if (OpXRegs[CompOprIdx] && OpYRegs[CompOprIdx] &&
-        (OpXRegs[CompOprIdx] % BanksNum == OpYRegs[CompOprIdx] % BanksNum))
+        ((OpXRegs[CompOprIdx] & BanksMasks) ==
+         (OpYRegs[CompOprIdx] & BanksMasks)))
       return CompOprIdx;
   }
 
@@ -1213,16 +1254,16 @@ bool shouldEmitConstantsToTextSection(const Triple &TT) {
   return TT.getArch() == Triple::r600;
 }
 
-std::pair<int, int> getIntegerPairAttribute(const Function &F,
-                                            StringRef Name,
-                                            std::pair<int, int> Default,
-                                            bool OnlyFirstRequired) {
+std::pair<unsigned, unsigned>
+getIntegerPairAttribute(const Function &F, StringRef Name,
+                        std::pair<unsigned, unsigned> Default,
+                        bool OnlyFirstRequired) {
   Attribute A = F.getFnAttribute(Name);
   if (!A.isStringAttribute())
     return Default;
 
   LLVMContext &Ctx = F.getContext();
-  std::pair<int, int> Ints = Default;
+  std::pair<unsigned, unsigned> Ints = Default;
   std::pair<StringRef, StringRef> Strs = A.getValueAsString().split(',');
   if (Strs.first.trim().getAsInteger(0, Ints.first)) {
     Ctx.emitError("can't parse first integer attribute " + Name);
@@ -1497,6 +1538,42 @@ int encodeDepCtr(const StringRef Name, int64_t Val, unsigned &UsedOprMask,
                  const MCSubtargetInfo &STI) {
   return encodeCustomOperand(DepCtrInfo, DEP_CTR_SIZE, Name, Val, UsedOprMask,
                              STI);
+}
+
+unsigned decodeFieldVmVsrc(unsigned Encoded) {
+  return unpackBits(Encoded, getVmVsrcBitShift(), getVmVsrcBitWidth());
+}
+
+unsigned decodeFieldVaVdst(unsigned Encoded) {
+  return unpackBits(Encoded, getVaVdstBitShift(), getVaVdstBitWidth());
+}
+
+unsigned decodeFieldSaSdst(unsigned Encoded) {
+  return unpackBits(Encoded, getSaSdstBitShift(), getSaSdstBitWidth());
+}
+
+unsigned encodeFieldVmVsrc(unsigned Encoded, unsigned VmVsrc) {
+  return packBits(VmVsrc, Encoded, getVmVsrcBitShift(), getVmVsrcBitWidth());
+}
+
+unsigned encodeFieldVmVsrc(unsigned VmVsrc) {
+  return encodeFieldVmVsrc(0xffff, VmVsrc);
+}
+
+unsigned encodeFieldVaVdst(unsigned Encoded, unsigned VaVdst) {
+  return packBits(VaVdst, Encoded, getVaVdstBitShift(), getVaVdstBitWidth());
+}
+
+unsigned encodeFieldVaVdst(unsigned VaVdst) {
+  return encodeFieldVaVdst(0xffff, VaVdst);
+}
+
+unsigned encodeFieldSaSdst(unsigned Encoded, unsigned SaSdst) {
+  return packBits(SaSdst, Encoded, getSaSdstBitShift(), getSaSdstBitWidth());
+}
+
+unsigned encodeFieldSaSdst(unsigned SaSdst) {
+  return encodeFieldSaSdst(0xffff, SaSdst);
 }
 
 } // namespace DepCtr
@@ -1875,6 +1952,8 @@ bool isShader(CallingConv::ID cc) {
     case CallingConv::AMDGPU_ES:
     case CallingConv::AMDGPU_GS:
     case CallingConv::AMDGPU_PS:
+    case CallingConv::AMDGPU_CS_Chain:
+    case CallingConv::AMDGPU_CS_ChainPreserve:
     case CallingConv::AMDGPU_CS:
       return true;
     default:
@@ -1916,6 +1995,16 @@ bool isModuleEntryFunctionCC(CallingConv::ID CC) {
   }
 }
 
+bool isChainCC(CallingConv::ID CC) {
+  switch (CC) {
+  case CallingConv::AMDGPU_CS_Chain:
+  case CallingConv::AMDGPU_CS_ChainPreserve:
+    return true;
+  default:
+    return false;
+  }
+}
+
 bool isKernelCC(const Function *Func) {
   return AMDGPU::isModuleEntryFunctionCC(Func->getCallingConv());
 }
@@ -1943,6 +2032,10 @@ bool hasG16(const MCSubtargetInfo &STI) {
 bool hasPackedD16(const MCSubtargetInfo &STI) {
   return !STI.hasFeature(AMDGPU::FeatureUnpackedD16VMem) && !isCI(STI) &&
          !isSI(STI);
+}
+
+bool hasGDS(const MCSubtargetInfo &STI) {
+  return STI.hasFeature(AMDGPU::FeatureGDS);
 }
 
 unsigned getNSAMaxSize(const MCSubtargetInfo &STI) {
@@ -2371,7 +2464,7 @@ unsigned getRegOperandSize(const MCRegisterInfo *MRI, const MCInstrDesc &Desc,
                            unsigned OpNo) {
   assert(OpNo < Desc.NumOperands);
   unsigned RCID = Desc.operands()[OpNo].RegClass;
-  return getRegBitWidth(MRI->getRegClass(RCID)) / 8;
+  return getRegBitWidth(RCID) / 8;
 }
 
 bool isInlinableLiteral64(int64_t Literal, bool HasInv2Pi) {
@@ -2645,6 +2738,25 @@ const GcnBufferFormatInfo *getGcnBufferFormatInfo(uint8_t Format,
   return isGFX11Plus(STI) ? getGfx11PlusBufferFormatInfo(Format)
                           : isGFX10(STI) ? getGfx10BufferFormatInfo(Format)
                                          : getGfx9BufferFormatInfo(Format);
+}
+
+bool hasAny64BitVGPROperands(const MCInstrDesc &OpDesc) {
+  for (auto OpName : { OpName::vdst, OpName::src0, OpName::src1,
+                       OpName::src2 }) {
+    int Idx = getNamedOperandIdx(OpDesc.getOpcode(), OpName);
+    if (Idx == -1)
+      continue;
+
+    if (OpDesc.operands()[Idx].RegClass == AMDGPU::VReg_64RegClassID ||
+        OpDesc.operands()[Idx].RegClass == AMDGPU::VReg_64_Align2RegClassID)
+      return true;
+  }
+
+  return false;
+}
+
+bool isDPALU_DPP(const MCInstrDesc &OpDesc) {
+  return hasAny64BitVGPROperands(OpDesc);
 }
 
 } // namespace AMDGPU

@@ -298,7 +298,8 @@ void MCPlusBuilder::stripAnnotations(MCInst &Inst, bool KeepTC) {
   // Preserve TailCall annotation.
   auto IsTC = hasAnnotation(Inst, MCAnnotation::kTailCall);
 
-  Inst.erase(std::prev(Inst.end()));
+  removeAnnotationInst(Inst);
+
   if (KeepTC && IsTC)
     setTailCall(Inst);
 }
@@ -331,8 +332,7 @@ void MCPlusBuilder::getClobberedRegs(const MCInst &Inst,
   for (MCPhysReg ImplicitDef : InstInfo.implicit_defs())
     Regs |= getAliases(ImplicitDef, /*OnlySmaller=*/false);
 
-  for (unsigned I = 0, E = InstInfo.getNumDefs(); I != E; ++I) {
-    const MCOperand &Operand = Inst.getOperand(I);
+  for (const MCOperand &Operand : defOperands(Inst)) {
     assert(Operand.isReg());
     Regs |= getAliases(Operand.getReg(), /*OnlySmaller=*/false);
   }
@@ -365,8 +365,7 @@ void MCPlusBuilder::getWrittenRegs(const MCInst &Inst, BitVector &Regs) const {
   for (MCPhysReg ImplicitDef : InstInfo.implicit_defs())
     Regs |= getAliases(ImplicitDef, /*OnlySmaller=*/true);
 
-  for (unsigned I = 0, E = InstInfo.getNumDefs(); I != E; ++I) {
-    const MCOperand &Operand = Inst.getOperand(I);
+  for (const MCOperand &Operand : defOperands(Inst)) {
     assert(Operand.isReg());
     Regs |= getAliases(Operand.getReg(), /*OnlySmaller=*/true);
   }
@@ -413,12 +412,9 @@ void MCPlusBuilder::getSrcRegs(const MCInst &Inst, BitVector &Regs) const {
   for (MCPhysReg ImplicitUse : InstInfo.implicit_uses())
     Regs |= getAliases(ImplicitUse, /*OnlySmaller=*/true);
 
-  for (unsigned I = InstInfo.getNumDefs(), E = InstInfo.getNumOperands();
-       I != E; ++I) {
-    if (!Inst.getOperand(I).isReg())
-      continue;
-    Regs |= getAliases(Inst.getOperand(I).getReg(), /*OnlySmaller=*/true);
-  }
+  for (const MCOperand &Operand : useOperands(Inst))
+    if (Operand.isReg())
+      Regs |= getAliases(Operand.getReg(), /*OnlySmaller=*/true);
 }
 
 bool MCPlusBuilder::hasDefOfPhysReg(const MCInst &MI, unsigned Reg) const {
@@ -429,7 +425,7 @@ bool MCPlusBuilder::hasDefOfPhysReg(const MCInst &MI, unsigned Reg) const {
 bool MCPlusBuilder::hasUseOfPhysReg(const MCInst &MI, unsigned Reg) const {
   const MCInstrDesc &InstInfo = Info->get(MI.getOpcode());
   for (int I = InstInfo.NumDefs; I < InstInfo.NumOperands; ++I)
-    if (MI.getOperand(I).isReg() &&
+    if (MI.getOperand(I).isReg() && MI.getOperand(I).getReg() &&
         RegInfo->isSubRegisterEq(Reg, MI.getOperand(I).getReg()))
       return true;
   for (MCPhysReg ImplicitUse : InstInfo.implicit_uses()) {
@@ -463,17 +459,9 @@ void MCPlusBuilder::initAliases() {
   }
 
   // Propagate smaller alias info upwards. Skip reg 0 (mapped to NoRegister)
-  std::queue<MCPhysReg> Worklist;
   for (MCPhysReg I = 1, E = RegInfo->getNumRegs(); I < E; ++I)
-    Worklist.push(I);
-  while (!Worklist.empty()) {
-    MCPhysReg I = Worklist.front();
-    Worklist.pop();
     for (MCSubRegIterator SI(I, RegInfo); SI.isValid(); ++SI)
       SmallerAliasMap[I] |= SmallerAliasMap[*SI];
-    for (MCSuperRegIterator SI(I, RegInfo); SI.isValid(); ++SI)
-      Worklist.push(*SI);
-  }
 
   LLVM_DEBUG({
     dbgs() << "Dumping reg alias table:\n";
@@ -490,22 +478,12 @@ void MCPlusBuilder::initAliases() {
   });
 }
 
-uint8_t MCPlusBuilder::getRegSize(MCPhysReg Reg) const {
-  // SizeMap caches a mapping of registers to their sizes
-  static std::vector<uint8_t> SizeMap;
-
-  if (SizeMap.size() > 0) {
-    return SizeMap[Reg];
-  }
-  SizeMap = std::vector<uint8_t>(RegInfo->getNumRegs());
+void MCPlusBuilder::initSizeMap() {
+  SizeMap.resize(RegInfo->getNumRegs());
   // Build size map
-  for (auto I = RegInfo->regclass_begin(), E = RegInfo->regclass_end(); I != E;
-       ++I) {
-    for (MCPhysReg Reg : *I)
-      SizeMap[Reg] = I->getSizeInBits() / 8;
-  }
-
-  return SizeMap[Reg];
+  for (auto RC : RegInfo->regclasses())
+    for (MCPhysReg Reg : RC)
+      SizeMap[Reg] = RC.getSizeInBits() / 8;
 }
 
 bool MCPlusBuilder::setOperandToSymbolRef(MCInst &Inst, int OpNum,

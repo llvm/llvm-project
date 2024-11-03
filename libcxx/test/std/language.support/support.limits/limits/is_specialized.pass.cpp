@@ -44,7 +44,7 @@ struct Test {
 
 int main(int, char**)
 {
-  meta::for_each(meta::arithmetic_types(), Test());
+  types::for_each(types::arithmetic_types(), Test());
 
   static_assert(!std::numeric_limits<std::complex<double> >::is_specialized,
                 "!std::numeric_limits<std::complex<double> >::is_specialized");

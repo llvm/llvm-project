@@ -299,8 +299,131 @@ the `getCanonicalizationPatterns` method on the dialect, which has the form:
 void MyDialect::getCanonicalizationPatterns(RewritePatternSet &results) const;
 ```
 
-See the documentation for [Canonicalization in MLIR](../Canonicalization.md) for a much more 
-detailed description about canonicalization patterns.
+See the documentation for [Canonicalization in MLIR](../Canonicalization.md) for
+a more detailed description about canonicalization patterns.
+
+### Defining bytecode format for dialect attributes and types
+
+By default bytecode serialization of dialect attributes and types uses the
+regular textual format. Dialects can define a more compact bytecode format for
+the attributes and types in dialect by defining & attaching
+`BytecodeDialectInterface` to the dialect. Basic support for generating
+readers/writers for the bytecode dialect interface can be generated using ODS's
+`-gen-bytecode`. The rest of the section will show an example.
+
+One can define the printing and parsing for a type in dialect `Foo` as follow:
+
+```td
+include "mlir/IR/BytecodeBase.td"
+
+let cType = "MemRefType" in {
+// Written in pseudo code showing the lowered encoding:
+//   ///   MemRefType {
+//   ///     shape: svarint[],
+//   ///     elementType: Type,
+//   ///     layout: Attribute
+//   ///   }
+//   ///
+// and the enum value:
+//   kMemRefType = 1,
+//
+// The corresponding definition in the ODS generator:
+def MemRefType : DialectType<(type
+  Array<SignedVarInt>:$shape,
+  Type:$elementType,
+  MemRefLayout:$layout
+)> {
+  let printerPredicate = "!$_val.getMemorySpace()";
+}
+
+//   ///   MemRefTypeWithMemSpace {
+//   ///     memorySpace: Attribute,
+//   ///     shape: svarint[],
+//   ///     elementType: Type,
+//   ///     layout: Attribute
+//   ///   }
+//   /// Variant of MemRefType with non-default memory space.
+//   kMemRefTypeWithMemSpace = 2,
+def MemRefTypeWithMemSpace : DialectType<(type
+  Attribute:$memorySpace,
+  Array<SignedVarInt>:$shape,
+  Type:$elementType,
+  MemRefLayout:$layout
+)> {
+  let printerPredicate = "!!$_val.getMemorySpace()";
+  // Note: order of serialization does not match order of builder.
+  let cBuilder = "get<$_resultType>(context, shape, elementType, layout, memorySpace)";
+}
+}
+
+def FooDialectTypes : DialectTypes<"Foo"> {
+  let elems = [
+    ReservedOrDead,         // assigned index 0
+    MemRefType,             // assigned index 1
+    MemRefTypeWithMemSpace, // assigned index 2
+    ...
+  ];
+}
+...
+```
+
+Here we have:
+
+*   An outer most `cType` as we are representing encoding one C++ type using two
+    different variants.
+*   The different `DialectType` instances are differentiated in printing by the
+    printer predicate while parsing the different variant is already encoded and
+    different builder functions invoked.
+*   Custom `cBuilder` is specified as the way its laid out on disk in the
+    bytecode doesn't match the order of arguments to the build methods of the
+    type.
+*   Many of the common dialect bytecode reading and writing atoms (such as
+    `VarInt`, `SVarInt`, `Blob`) are defined in `BytecodeBase` while one can
+    also define custom forms or combine via `CompositeBytecode` instances.
+*   `ReservedOrDead` is a special keyword to indicate a skipped enum instance
+    for which no read/write or dispatch code is generated.
+*   `Array` is a helper method for which during printing a list is serialized
+    (e.g., a varint of number of items followed by said number of items) or
+    parsed.
+
+The generated code consists of a four standalone methods with which the
+following interface can define the bytecode dialect interface:
+
+```c++
+#include "mlir/Dialect/Foo/FooDialectBytecode.cpp.inc"
+
+struct FooDialectBytecodeInterface : public BytecodeDialectInterface {
+  FooDialectBytecodeInterface(Dialect *dialect)
+      : BytecodeDialectInterface(dialect) {}
+
+  //===--------------------------------------------------------------------===//
+  // Attributes
+
+  Attribute readAttribute(DialectBytecodeReader &reader) const override {
+    return ::readAttribute(getContext(), reader);
+  }
+
+  LogicalResult writeAttribute(Attribute attr,
+                               DialectBytecodeWriter &writer) const override {
+    return ::writeAttribute(attr, writer);
+  }
+
+  //===--------------------------------------------------------------------===//
+  // Types
+
+  Type readType(DialectBytecodeReader &reader) const override {
+    return ::readType(getContext(), reader);
+  }
+
+  LogicalResult writeType(Type type,
+                          DialectBytecodeWriter &writer) const override {
+    return ::writeType(type, writer);
+  }
+};
+```
+
+along with defining the corresponding build rules to invoke generator
+(`-gen-bytecode -bytecode-dialect="Quant"`).
 
 ## Defining an Extensible dialect
 
@@ -451,7 +574,6 @@ OperationState state(location, "my_dialect.my_dynamic_op",
 
 rewriter.createOperation(state);
 ```
-
 
 ### Defining a type at runtime
 

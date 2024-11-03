@@ -1,6 +1,6 @@
 // RUN: mlir-opt %s -sparse-storage-specifier-to-llvm --cse --canonicalize | FileCheck %s
 
-#CSR = #sparse_tensor.encoding<{dimLevelType = ["dense", "compressed"]}>
+#CSR = #sparse_tensor.encoding<{lvlTypes = ["dense", "compressed"]}>
 
 // CHECK-LABEL:   func.func @sparse_metadata_init() -> !llvm.struct<(array<2 x i64>, array<3 x i64>)> {
 // CHECK:           %[[VAL_0:.*]] = arith.constant 0 : i64
@@ -21,7 +21,7 @@ func.func @sparse_metadata_init() -> !sparse_tensor.storage_specifier<#CSR> {
 // CHECK:           %[[CAST:.*]] = arith.index_cast %[[VAL_1]] : i64 to index
 // CHECK:           return %[[CAST]] : index
 func.func @sparse_get_md(%arg0: !sparse_tensor.storage_specifier<#CSR>) -> index {
-  %0 = sparse_tensor.storage_specifier.get %arg0 dim_sz at 0
+  %0 = sparse_tensor.storage_specifier.get %arg0 lvl_sz at 0
        : !sparse_tensor.storage_specifier<#CSR>
   return %0 : index
 }
@@ -34,7 +34,7 @@ func.func @sparse_get_md(%arg0: !sparse_tensor.storage_specifier<#CSR>) -> index
 // CHECK:           return %[[VAL_2]] : !llvm.struct<(array<2 x i64>, array<3 x i64>)>
 func.func @sparse_set_md(%arg0: !sparse_tensor.storage_specifier<#CSR>, %arg1: index)
           -> !sparse_tensor.storage_specifier<#CSR> {
-  %0 = sparse_tensor.storage_specifier.set %arg0 dim_sz at 0 with %arg1
+  %0 = sparse_tensor.storage_specifier.set %arg0 lvl_sz at 0 with %arg1
        : !sparse_tensor.storage_specifier<#CSR>
   return %0 : !sparse_tensor.storage_specifier<#CSR>
 }

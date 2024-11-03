@@ -27,6 +27,8 @@ class LoongArchInstrInfo : public LoongArchGenInstrInfo {
 public:
   explicit LoongArchInstrInfo(LoongArchSubtarget &STI);
 
+  MCInst getNop() const override;
+
   void copyPhysReg(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
                    const DebugLoc &DL, MCRegister DstReg, MCRegister SrcReg,
                    bool KillSrc) const override;

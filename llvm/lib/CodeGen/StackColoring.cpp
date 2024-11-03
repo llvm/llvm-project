@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 //
 // This pass implements the stack-coloring optimization that looks for
-// lifetime markers machine instructions (LIFESTART_BEGIN and LIFESTART_END),
+// lifetime markers machine instructions (LIFETIME_START and LIFETIME_END),
 // which represent the possible lifetime of stack slots. It attempts to
 // merge disjoint stack slots and reduce the used stack space.
 // NOTE: This pass is not StackSlotColoring, which optimizes spill slots.
@@ -407,8 +407,8 @@ namespace {
 /// StackColoring - A machine pass for merging disjoint stack allocations,
 /// marked by the LIFETIME_START and LIFETIME_END pseudo instructions.
 class StackColoring : public MachineFunctionPass {
-  MachineFrameInfo *MFI;
-  MachineFunction *MF;
+  MachineFrameInfo *MFI = nullptr;
+  MachineFunction *MF = nullptr;
 
   /// A class representing liveness information for a single basic block.
   /// Each bit in the BitVector represents the liveness property
@@ -448,7 +448,7 @@ class StackColoring : public MachineFunctionPass {
   VNInfo::Allocator VNInfoAllocator;
 
   /// SlotIndex analysis object.
-  SlotIndexes *Indexes;
+  SlotIndexes *Indexes = nullptr;
 
   /// The list of lifetime markers found. These markers are to be removed
   /// once the coloring is done.
@@ -935,12 +935,13 @@ void StackColoring::remapInstructions(DenseMap<int, int> &SlotRemap) {
 
   // Remap debug information that refers to stack slots.
   for (auto &VI : MF->getVariableDbgInfo()) {
-    if (!VI.Var)
+    if (!VI.Var || !VI.inStackSlot())
       continue;
-    if (SlotRemap.count(VI.Slot)) {
+    int Slot = VI.getStackSlot();
+    if (SlotRemap.count(Slot)) {
       LLVM_DEBUG(dbgs() << "Remapping debug info for ["
                         << cast<DILocalVariable>(VI.Var)->getName() << "].\n");
-      VI.Slot = SlotRemap[VI.Slot];
+      VI.updateStackSlot(SlotRemap[Slot]);
       FixedDbg++;
     }
   }

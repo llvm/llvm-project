@@ -4,6 +4,9 @@ add_mlir_dialect_library(MLIRLLVMDialect
   IR/FunctionCallUtils.cpp
   IR/LLVMAttrs.cpp
   IR/LLVMDialect.cpp
+  IR/LLVMInlining.cpp
+  IR/LLVMInterfaces.cpp
+  IR/LLVMMemorySlot.cpp
   IR/LLVMTypes.cpp
   IR/LLVMTypeSyntax.cpp
 
@@ -14,7 +17,7 @@ add_mlir_dialect_library(MLIRLLVMDialect
   MLIRLLVMOpsIncGen
   MLIRLLVMTypesIncGen
   MLIRLLVMIntrinsicOpsIncGen
-  MLIRLLVMOpsInterfacesIncGen
+  MLIRLLVMInterfacesIncGen
   MLIROpenMPOpsIncGen
   intrinsics_gen
 
@@ -29,8 +32,10 @@ add_mlir_dialect_library(MLIRLLVMDialect
   MLIRCallInterfaces
   MLIRControlFlowInterfaces
   MLIRDataLayoutInterfaces
+  MLIRFunctionInterfaces
   MLIRInferTypeOpInterface
   MLIRIR
+  MLIRMemorySlotInterfaces
   MLIRSideEffectInterfaces
   MLIRSupport
   )

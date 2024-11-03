@@ -47,8 +47,8 @@ llvm::StringLiteral mandatoryHeader(Lang L) {
 
 LangStandard::Kind standardFromOpts(const LangOptions &LO) {
   if (LO.CPlusPlus) {
-    if (LO.CPlusPlus2b)
-      return LangStandard::lang_cxx2b;
+    if (LO.CPlusPlus23)
+      return LangStandard::lang_cxx23;
     if (LO.CPlusPlus20)
       return LangStandard::lang_cxx20;
     if (LO.CPlusPlus17)
@@ -59,8 +59,8 @@ LangStandard::Kind standardFromOpts(const LangOptions &LO) {
       return LangStandard::lang_cxx11;
     return LangStandard::lang_cxx98;
   }
-  if (LO.C2x)
-    return LangStandard::lang_c2x;
+  if (LO.C23)
+    return LangStandard::lang_c23;
   // C17 has no new features, so treat {C11,C17} as C17.
   if (LO.C11)
     return LangStandard::lang_c17;
@@ -207,7 +207,7 @@ SymbolSlab indexStandardLibrary(llvm::StringRef HeaderSources,
   }
   const FrontendInputFile &Input = CI->getFrontendOpts().Inputs.front();
   trace::Span Tracer("StandardLibraryIndex");
-  LangStandard::Kind LangStd = standardFromOpts(*CI->getLangOpts());
+  LangStandard::Kind LangStd = standardFromOpts(CI->getLangOpts());
   log("Indexing {0} standard library in the context of {1}",
       LangStandard::getLangStandardForKind(LangStd).getName(), Input.getFile());
 
@@ -267,7 +267,7 @@ SymbolSlab indexStandardLibrary(llvm::StringRef HeaderSources,
 SymbolSlab indexStandardLibrary(std::unique_ptr<CompilerInvocation> Invocation,
                                 const StdLibLocation &Loc,
                                 const ThreadsafeFS &TFS) {
-  llvm::StringRef Header = getStdlibUmbrellaHeader(*Invocation->getLangOpts());
+  llvm::StringRef Header = getStdlibUmbrellaHeader(Invocation->getLangOpts());
   return indexStandardLibrary(Header, std::move(Invocation), Loc, TFS);
 }
 
@@ -314,7 +314,7 @@ std::optional<StdLibLocation> StdLibSet::add(const LangOptions &LO,
        llvm::make_range(HS.search_dir_begin(), HS.search_dir_end())) {
     switch (DL.getLookupType()) {
     case DirectoryLookup::LT_NormalDir: {
-      Path = DL.getDir()->getName();
+      Path = DL.getDirRef()->getName();
       llvm::sys::path::append(Path, ProbeHeader);
       llvm::vfs::Status Stat;
       if (!HS.getFileMgr().getNoncachedStatValue(Path, Stat) &&

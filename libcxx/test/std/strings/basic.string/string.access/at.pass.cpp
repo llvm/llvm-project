@@ -22,37 +22,27 @@
 #include "type_algorithms.h"
 
 template <class S>
-TEST_CONSTEXPR_CXX20 void
-test(S s, typename S::size_type pos)
-{
-    const S& cs = s;
-    if (pos < s.size())
-    {
-        assert(s.at(pos) == s[pos]);
-        assert(cs.at(pos) == cs[pos]);
-    }
+TEST_CONSTEXPR_CXX20 void test(S s, typename S::size_type pos) {
+  const S& cs = s;
+  if (pos < s.size()) {
+    assert(s.at(pos) == s[pos]);
+    assert(cs.at(pos) == cs[pos]);
+  }
 #ifndef TEST_HAS_NO_EXCEPTIONS
-    else if (!TEST_IS_CONSTANT_EVALUATED)
-    {
-        try
-        {
-            TEST_IGNORE_NODISCARD s.at(pos);
-            assert(false);
-        }
-        catch (std::out_of_range&)
-        {
-            assert(pos >= s.size());
-        }
-        try
-        {
-            TEST_IGNORE_NODISCARD cs.at(pos);
-            assert(false);
-        }
-        catch (std::out_of_range&)
-        {
-            assert(pos >= s.size());
-        }
+  else if (!TEST_IS_CONSTANT_EVALUATED) {
+    try {
+      TEST_IGNORE_NODISCARD s.at(pos);
+      assert(false);
+    } catch (std::out_of_range&) {
+      assert(pos >= s.size());
     }
+    try {
+      TEST_IGNORE_NODISCARD cs.at(pos);
+      assert(false);
+    } catch (std::out_of_range&) {
+      assert(pos >= s.size());
+    }
+  }
 #endif
 }
 
@@ -68,21 +58,20 @@ TEST_CONSTEXPR_CXX20 void test_string() {
 struct TestCaller {
   template <class T>
   TEST_CONSTEXPR_CXX20 void operator()() {
-        test_string<std::basic_string<T> >();
+    test_string<std::basic_string<T> >();
 #if TEST_STD_VER >= 11
-        test_string<std::basic_string<T, std::char_traits<T>, min_allocator<T> > >();
+    test_string<std::basic_string<T, std::char_traits<T>, min_allocator<T> > >();
 #endif
   }
 };
 
 TEST_CONSTEXPR_CXX20 bool test() {
-  meta::for_each(meta::character_types(), TestCaller());
+  types::for_each(types::character_types(), TestCaller());
 
   return true;
 }
 
-int main(int, char**)
-{
+int main(int, char**) {
   test();
 #if TEST_STD_VER > 17
   static_assert(test());

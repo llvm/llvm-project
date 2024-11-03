@@ -1,7 +1,7 @@
 ! Test lowering to HLFIR of the intrinsic lowering framework
 ! "asInquired" option.
 
-! RUN: bbc -emit-fir -hlfir -o - %s | FileCheck %s
+! RUN: bbc -emit-hlfir -o - %s | FileCheck %s
 
 subroutine test_isAllocated(x, l)
   logical :: l
@@ -16,7 +16,8 @@ end subroutine
 ! CHECK:  %[[VAL_6:.*]] = fir.convert %[[VAL_5]] : (!fir.heap<!fir.array<?xf32>>) -> i64
 ! CHECK:  %[[VAL_7:.*]] = arith.constant 0 : i64
 ! CHECK:  %[[VAL_8:.*]] = arith.cmpi ne, %[[VAL_6]], %[[VAL_7]] : i64
-! CHECK:  hlfir.assign %[[VAL_8]] to %[[VAL_2]]#0 : i1, !fir.ref<!fir.logical<4>>
+! CHECK:  %[[VAL_9:.*]] = fir.convert %[[VAL_8]] : (i1) -> !fir.logical<4>
+! CHECK:  hlfir.assign %[[VAL_9]] to %[[VAL_2]]#0 : !fir.logical<4>, !fir.ref<!fir.logical<4>>
 ! CHECK:  return
 ! CHECK:  }
 
@@ -32,7 +33,7 @@ end subroutine
 ! CHECK:  %[[VAL_7:.*]] = arith.constant 3 : i64
 ! CHECK:  %[[VAL_8:.*]] = fir.convert %[[VAL_7]] : (i64) -> index
 ! CHECK:  %[[VAL_10:.*]]:2 = hlfir.declare %{{.*}}(%{{.*}})  {{.*}}Ex
-! CHECK:  %[[VAL_11:.*]] = fir.load %[[VAL_4]]#1 : !fir.ref<i32>
+! CHECK:  %[[VAL_11:.*]] = fir.load %[[VAL_4]]#0 : !fir.ref<i32>
 ! CHECK:  %[[VAL_12:.*]] = fir.shift %[[VAL_6]], %[[VAL_8]] : (index, index) -> !fir.shift<2>
 ! CHECK:  %[[VAL_13:.*]] = fir.rebox %[[VAL_10]]#1(%[[VAL_12]]) : (!fir.box<!fir.array<?x?xf32>>, !fir.shift<2>) -> !fir.box<!fir.array<?x?xf32>>
 ! CHECK:  %[[VAL_16:.*]] = fir.convert %[[VAL_13]] : (!fir.box<!fir.array<?x?xf32>>) -> !fir.box<none>

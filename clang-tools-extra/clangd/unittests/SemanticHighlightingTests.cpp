@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "Annotations.h"
+#include "Config.h"
 #include "Protocol.h"
 #include "SemanticHighlighting.h"
 #include "SourceCode.h"
@@ -89,7 +90,8 @@ void checkHighlightings(llvm::StringRef Code,
   for (auto File : AdditionalFiles)
     TU.AdditionalFiles.insert({File.first, std::string(File.second)});
   auto AST = TU.build();
-  auto Actual = getSemanticHighlightings(AST);
+  auto Actual =
+      getSemanticHighlightings(AST, /*IncludeInactiveRegionTokens=*/true);
   for (auto &Token : Actual)
     Token.Modifiers &= ModifierMask;
 
@@ -399,7 +401,7 @@ TEST(SemanticHighlighting, GetsCorrectTokens) {
       #define $Macro_decl[[MACRO_CONCAT]](X, V, T) T foo##X = V
       #define $Macro_decl[[DEF_VAR]](X, V) int X = V
       #define $Macro_decl[[DEF_VAR_T]](T, X, V) T X = V
-      #define $Macro_decl[[DEF_VAR_REV]](V, X) DEF_VAR(X, V)
+      #define $Macro_decl[[DEF_VAR_REV]](V, X) $Macro[[DEF_VAR]](X, V)
       #define $Macro_decl[[CPY]](X) X
       #define $Macro_decl[[DEF_VAR_TYPE]](X, Y) X Y
       #define $Macro_decl[[SOME_NAME]] variable
@@ -431,7 +433,7 @@ TEST(SemanticHighlighting, GetsCorrectTokens) {
     )cpp",
       R"cpp(
       #define $Macro_decl[[fail]](expr) expr
-      #define $Macro_decl[[assert]](COND) if (!(COND)) { fail("assertion failed" #COND); }
+      #define $Macro_decl[[assert]](COND) if (!(COND)) { $Macro[[fail]]("assertion failed" #COND); }
       // Preamble ends.
       int $Variable_def[[x]];
       int $Variable_def[[y]];
@@ -449,11 +451,11 @@ TEST(SemanticHighlighting, GetsCorrectTokens) {
 
       #define $Macro_decl[[test]]
       #undef $Macro[[test]]
-$InactiveCode[[#ifdef test]]
-$InactiveCode[[#endif]]
+      #ifdef $Macro[[test]]
+      #endif
 
-$InactiveCode[[#if defined(test)]]
-$InactiveCode[[#endif]]
+      #if defined($Macro[[test]])
+      #endif
     )cpp",
       R"cpp(
       struct $Class_def[[S]] {
@@ -560,8 +562,9 @@ $InactiveCode[[#endif]]
       R"cpp(
       // Code in the preamble.
       // Inactive lines get an empty InactiveCode token at the beginning.
-$InactiveCode[[#ifdef test]]
-$InactiveCode[[#endif]]
+      #ifdef $Macro[[test]]
+$InactiveCode[[int Inactive1;]]
+      #endif
 
       // A declaration to cause the preamble to end.
       int $Variable_def[[EndPreamble]];
@@ -570,21 +573,21 @@ $InactiveCode[[#endif]]
       // Code inside inactive blocks does not get regular highlightings
       // because it's not part of the AST.
       #define $Macro_decl[[test2]]
-$InactiveCode[[#if defined(test)]]
+      #if defined($Macro[[test]])
 $InactiveCode[[int Inactive2;]]
-$InactiveCode[[#elif defined(test2)]]
+      #elif defined($Macro[[test2]])
       int $Variable_def[[Active1]];
-$InactiveCode[[#else]]
+      #else
 $InactiveCode[[int Inactive3;]]
-$InactiveCode[[#endif]]
+      #endif
 
       #ifndef $Macro[[test]]
       int $Variable_def[[Active2]];
       #endif
 
-$InactiveCode[[#ifdef test]]
+      #ifdef $Macro[[test]]
 $InactiveCode[[int Inactive4;]]
-$InactiveCode[[#else]]
+      #else
       int $Variable_def[[Active3]];
       #endif
     )cpp",
@@ -645,6 +648,16 @@ sizeof...($TemplateParameter[[Elements]]);
       void $Function_def[[bar]]($TemplateParameter[[T]] $Parameter_def[[F]]) {
         $Parameter[[F]].$Unknown_dependentName[[foo]]();
       }
+
+      struct $Class_def[[F]] {
+        void $Method_def[[foo]]() {};
+      };
+      $Concept[[Fooable]] $Class_deduced[[auto]] $Variable_def[[f]] = $Class[[F]]();
+
+      void $Function_def[[Bar]]($Concept[[Fooable]] $TemplateParameter[[auto]] $Parameter_def[[x]]) {}
+
+      template$Bracket[[<]]$Concept[[Fooable]] auto $TemplateParameter_def_readonly[[x]]$Bracket[[>]] void $Function_def[[Boo]]() {}
+      bool $Variable_def[[b]] = $Concept[[Fooable]]$Bracket[[<]]int$Bracket[[>]];
     )cpp",
       // Dependent template name
       R"cpp(
@@ -874,10 +887,10 @@ sizeof...($TemplateParameter[[Elements]]);
       // Issue 1222: readonly modifier for generic parameter
       R"cpp(
         template $Bracket[[<]]typename $TemplateParameter_def[[T]]$Bracket[[>]]
-        auto $Function_def[[foo]](const $TemplateParameter[[T]] $Parameter_def_readonly[[template_type]], 
-                                  const $TemplateParameter[[auto]] $Parameter_def_readonly[[auto_type]], 
+        auto $Function_def[[foo]](const $TemplateParameter[[T]] $Parameter_def_readonly[[template_type]],
+                                  const $TemplateParameter[[auto]] $Parameter_def_readonly[[auto_type]],
                                   const int $Parameter_def_readonly[[explicit_type]]) {
-            return $Parameter_readonly[[template_type]] 
+            return $Parameter_readonly[[template_type]]
                  $Operator_userDefined[[+]] $Parameter_readonly[[auto_type]]
                  $Operator_userDefined[[+]] $Parameter_readonly[[explicit_type]];
         }
@@ -892,7 +905,7 @@ sizeof...($TemplateParameter[[Elements]]);
 
         template $Bracket[[<]]typename $TemplateParameter_def[[T]]$Bracket[[>]]
         $TemplateParameter[[T]] $Variable_def[[x]] = {};
-        template <>
+        template $Bracket[[<]]$Bracket[[>]]
         int $Variable_def[[x]]$Bracket[[<]]int$Bracket[[>]] = (int)sizeof($Class[[Base]]);
       )cpp",
       // operator calls in template
@@ -977,7 +990,7 @@ $Bracket[[>]]$Bracket[[>]] $LocalVariable_def[[s6]];
         }
         template $Bracket[[<]]typename $TemplateParameter_def[[T]]$Bracket[[>]] constexpr int $Variable_def_readonly[[V]] = 42;
         constexpr int $Variable_def_readonly[[Y]] = $Variable_readonly[[V]]$Bracket[[<]]char$Bracket[[>]];
-        template <>
+        template $Bracket[[<]]$Bracket[[>]]
         constexpr int $Variable_def_readonly[[V]]$Bracket[[<]]int$Bracket[[>]] = 5;
         template $Bracket[[<]]typename $TemplateParameter_def[[T]]$Bracket[[>]]
         constexpr int $Variable_def_readonly[[V]]$Bracket[[<]]$TemplateParameter[[T]]*$Bracket[[>]] = 6;
@@ -990,7 +1003,7 @@ $Bracket[[>]]$Bracket[[>]] $LocalVariable_def[[s6]];
         template $Bracket[[<]]class $TemplateParameter_def[[T]]$Bracket[[>]]
         class $Class_def[[B]] {
           template $Bracket[[<]]class $TemplateParameter_def[[U]]$Bracket[[>]] void $Method_def[[foo]]($TemplateParameter[[U]]) { }
-          template$Bracket[[<]]$Bracket[[>]] void $Method_def[[foo]]$Bracket[[<]]int$Bracket[[>]](int) { } 
+          template$Bracket[[<]]$Bracket[[>]] void $Method_def[[foo]]$Bracket[[<]]int$Bracket[[>]](int) { }
           friend void $Function_decl[[foo]]$Bracket[[<]]$Bracket[[>]]($TemplateParameter[[T]]);
         };
       )cpp",
@@ -1025,6 +1038,16 @@ $Bracket[[>]]$Bracket[[>]] $LocalVariable_def[[s6]];
         template $Bracket[[<]]$Concept[[C2]]$Bracket[[<]]int$Bracket[[>]] $TemplateParameter_def[[A]]$Bracket[[>]]
         class $Class_def[[B]] {};
       )cpp",
+      // Labels
+      R"cpp(
+        bool $Function_def[[funcWithGoto]](bool $Parameter_def[[b]]) {
+          if ($Parameter[[b]])
+            goto $Label[[return_true]];
+          return false;
+          $Label_decl[[return_true]]:
+            return true;
+        }
+      )cpp",
       // no crash
       R"cpp(
         struct $Class_def[[Foo]] {
@@ -1045,7 +1068,15 @@ $Bracket[[>]]$Bracket[[>]] $LocalVariable_def[[s6]];
           auto $LocalVariable_def[[s]] = $Operator[[new]] $Class[[Foo]]$Bracket[[<]]$TemplateParameter[[T]]$Bracket[[>]]();
           $Operator[[delete]] $LocalVariable[[s]];
         }
-      )cpp"};
+      )cpp",
+      // Recursive UsingValueDecl
+      R"cpp(
+        template $Bracket[[<]]int$Bracket[[>]] class $Class_def[[X]] {
+          template $Bracket[[<]]int$Bracket[[>]] class $Class_def[[Y]] {
+            using $Class[[Y]]$Bracket[[<]]0$Bracket[[>]]::$Unknown_dependentName[[xxx]];
+          };
+        };
+    )cpp"};
   for (const auto &TestCase : TestCases)
     // Mask off scope modifiers to keep the tests manageable.
     // They're tested separately.
@@ -1250,6 +1281,17 @@ o]] [[bar]])cpp";
   EXPECT_EQ(Toks[3].deltaLine, 0u);
   EXPECT_EQ(Toks[3].deltaStart, 2u);
   EXPECT_EQ(Toks[3].length, 3u);
+}
+
+TEST(SemanticHighlighting, WithHighlightingFilter) {
+  llvm::StringRef AnnotatedCode = R"cpp(
+int *$Variable[[x]] = new int;
+)cpp";
+  Config Cfg;
+  Cfg.SemanticTokens.DisabledKinds = {"Operator"};
+  Cfg.SemanticTokens.DisabledModifiers = {"Declaration", "Definition"};
+  WithContextValue WithCfg(Config::Key, std::move(Cfg));
+  checkHighlightings(AnnotatedCode, {}, ~ScopeModifierMask);
 }
 } // namespace
 } // namespace clangd

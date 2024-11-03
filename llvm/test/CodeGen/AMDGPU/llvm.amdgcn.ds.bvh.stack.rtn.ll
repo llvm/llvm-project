@@ -11,6 +11,7 @@ define amdgpu_gs void @test_ds_bvh_stack(i32 %addr, i32 %data0, <4 x i32> %data1
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    v_add_nc_u32_e32 v0, v1, v0
 ; CHECK-NEXT:    global_store_b32 v[6:7], v0, off
+; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; CHECK-NEXT:    s_endpgm
   %pair = call { i32, i32 } @llvm.amdgcn.ds.bvh.stack.rtn(i32 %addr, i32 %data0, <4 x i32> %data1, i32 0)
@@ -28,6 +29,7 @@ define amdgpu_gs void @test_ds_bvh_stack_1(i32 %addr, i32 %data0, <4 x i32> %dat
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    v_add_nc_u32_e32 v0, v1, v0
 ; CHECK-NEXT:    global_store_b32 v[6:7], v0, off
+; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; CHECK-NEXT:    s_endpgm
   %pair = call { i32, i32 } @llvm.amdgcn.ds.bvh.stack.rtn(i32 %addr, i32 %data0, <4 x i32> %data1, i32 1)

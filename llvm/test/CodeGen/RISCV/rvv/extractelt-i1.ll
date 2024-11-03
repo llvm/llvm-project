@@ -10,7 +10,6 @@ define i1 @extractelt_nxv1i1(<vscale x 1 x i8>* %x, i64 %idx) nounwind {
 ; CHECK-NEXT:    vmseq.vi v0, v8, 0
 ; CHECK-NEXT:    vmv.v.i v8, 0
 ; CHECK-NEXT:    vmerge.vim v8, v8, 1, v0
-; CHECK-NEXT:    vsetivli zero, 1, e8, mf8, ta, ma
 ; CHECK-NEXT:    vslidedown.vx v8, v8, a1
 ; CHECK-NEXT:    vmv.x.s a0, v8
 ; CHECK-NEXT:    ret
@@ -28,7 +27,6 @@ define i1 @extractelt_nxv2i1(<vscale x 2 x i8>* %x, i64 %idx) nounwind {
 ; CHECK-NEXT:    vmseq.vi v0, v8, 0
 ; CHECK-NEXT:    vmv.v.i v8, 0
 ; CHECK-NEXT:    vmerge.vim v8, v8, 1, v0
-; CHECK-NEXT:    vsetivli zero, 1, e8, mf4, ta, ma
 ; CHECK-NEXT:    vslidedown.vx v8, v8, a1
 ; CHECK-NEXT:    vmv.x.s a0, v8
 ; CHECK-NEXT:    ret
@@ -46,7 +44,6 @@ define i1 @extractelt_nxv4i1(<vscale x 4 x i8>* %x, i64 %idx) nounwind {
 ; CHECK-NEXT:    vmseq.vi v0, v8, 0
 ; CHECK-NEXT:    vmv.v.i v8, 0
 ; CHECK-NEXT:    vmerge.vim v8, v8, 1, v0
-; CHECK-NEXT:    vsetivli zero, 1, e8, mf2, ta, ma
 ; CHECK-NEXT:    vslidedown.vx v8, v8, a1
 ; CHECK-NEXT:    vmv.x.s a0, v8
 ; CHECK-NEXT:    ret
@@ -64,7 +61,6 @@ define i1 @extractelt_nxv8i1(<vscale x 8 x i8>* %x, i64 %idx) nounwind {
 ; CHECK-NEXT:    vmseq.vi v0, v8, 0
 ; CHECK-NEXT:    vmv.v.i v8, 0
 ; CHECK-NEXT:    vmerge.vim v8, v8, 1, v0
-; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
 ; CHECK-NEXT:    vslidedown.vx v8, v8, a1
 ; CHECK-NEXT:    vmv.x.s a0, v8
 ; CHECK-NEXT:    ret
@@ -162,7 +158,7 @@ define i1 @extractelt_nxv128i1(<vscale x 128 x i8>* %x, i64 %idx) nounwind {
 ; RV32-NEXT:    vmv1r.v v0, v8
 ; RV32-NEXT:    vmerge.vim v8, v16, 1, v0
 ; RV32-NEXT:    vs8r.v v8, (a2)
-; RV32-NEXT:    lb a0, 0(a1)
+; RV32-NEXT:    lbu a0, 0(a1)
 ; RV32-NEXT:    addi sp, s0, -80
 ; RV32-NEXT:    lw ra, 76(sp) # 4-byte Folded Reload
 ; RV32-NEXT:    lw s0, 72(sp) # 4-byte Folded Reload
@@ -202,7 +198,7 @@ define i1 @extractelt_nxv128i1(<vscale x 128 x i8>* %x, i64 %idx) nounwind {
 ; RV64-NEXT:    vmv1r.v v0, v8
 ; RV64-NEXT:    vmerge.vim v8, v16, 1, v0
 ; RV64-NEXT:    vs8r.v v8, (a2)
-; RV64-NEXT:    lb a0, 0(a1)
+; RV64-NEXT:    lbu a0, 0(a1)
 ; RV64-NEXT:    addi sp, s0, -80
 ; RV64-NEXT:    ld ra, 72(sp) # 8-byte Folded Reload
 ; RV64-NEXT:    ld s0, 64(sp) # 8-byte Folded Reload

@@ -40,6 +40,10 @@ fir::ExtendedValue genCallOpAndResult(
 mlir::Value argumentHostAssocs(Fortran::lower::AbstractConverter &converter,
                                mlir::Value arg);
 
+/// Is \p procRef an intrinsic module procedure that should be lowered as
+/// intrinsic procedures (with Optimizer/Builder/IntrinsicCall.h)?
+bool isIntrinsicModuleProcRef(const Fortran::evaluate::ProcedureRef &procRef);
+
 /// Lower a ProcedureRef to HLFIR. If this is a function call, return the
 /// lowered result value. Return nothing otherwise.
 std::optional<hlfir::EntityWithAttributes> convertCallToHLFIR(
@@ -47,5 +51,9 @@ std::optional<hlfir::EntityWithAttributes> convertCallToHLFIR(
     const evaluate::ProcedureRef &procRef, std::optional<mlir::Type> resultType,
     Fortran::lower::SymMap &symMap, Fortran::lower::StatementContext &stmtCtx);
 
+void convertUserDefinedAssignmentToHLFIR(
+    mlir::Location loc, Fortran::lower::AbstractConverter &converter,
+    const evaluate::ProcedureRef &procRef, hlfir::Entity lhs, hlfir::Entity rhs,
+    Fortran::lower::SymMap &symMap);
 } // namespace Fortran::lower
 #endif // FORTRAN_LOWER_CONVERTCALL_H

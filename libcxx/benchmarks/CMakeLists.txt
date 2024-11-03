@@ -1,8 +1,3 @@
-if (CMAKE_VERSION VERSION_LESS 3.17)
-  message(WARNING "The libc++ benchmarks won't be available because the version of CMake is too old to support them.")
-  return()
-endif()
-
 include(ExternalProject)
 include(CheckCXXCompilerFlag)
 
@@ -81,7 +76,16 @@ set(BENCHMARK_LIBCXX_INSTALL ${CMAKE_CURRENT_BINARY_DIR}/benchmark-libcxx)
 set(BENCHMARK_NATIVE_INSTALL ${CMAKE_CURRENT_BINARY_DIR}/benchmark-native)
 
 add_library(               cxx-benchmarks-flags INTERFACE)
-target_compile_features(   cxx-benchmarks-flags INTERFACE cxx_std_20)
+#TODO(cmake): remove the `add_compile_options`. Currently we have to explicitly
+# pass the `std:c++latest` flag on Windows to work around an issue where
+# requesting `cxx_std_23` results in an error -- somehow CMake fails to
+# translate the `c++23` flag into `c++latest`, and the highest numbered C++
+# version that MSVC flags support is C++20.
+if (MSVC)
+  add_compile_options(/std:c++latest)
+else()
+  target_compile_features( cxx-benchmarks-flags INTERFACE cxx_std_23)
+endif()
 target_compile_options(    cxx-benchmarks-flags INTERFACE -fsized-deallocation -nostdinc++)
 target_include_directories(cxx-benchmarks-flags INTERFACE "${LIBCXX_GENERATED_INCLUDE_DIR}"
                                                 INTERFACE "${BENCHMARK_LIBCXX_INSTALL}/include"
@@ -159,11 +163,14 @@ endfunction()
 set(BENCHMARK_TESTS
     algorithms.partition_point.bench.cpp
     algorithms/equal.bench.cpp
+    algorithms/find.bench.cpp
     algorithms/lower_bound.bench.cpp
     algorithms/make_heap.bench.cpp
     algorithms/make_heap_then_sort_heap.bench.cpp
+    algorithms/min.bench.cpp
     algorithms/min_max_element.bench.cpp
     algorithms/pop_heap.bench.cpp
+    algorithms/pstl.stable_sort.bench.cpp
     algorithms/push_heap.bench.cpp
     algorithms/ranges_make_heap.bench.cpp
     algorithms/ranges_make_heap_then_sort_heap.bench.cpp
@@ -175,6 +182,8 @@ set(BENCHMARK_TESTS
     algorithms/sort.bench.cpp
     algorithms/sort_heap.bench.cpp
     algorithms/stable_sort.bench.cpp
+    libcxxabi/dynamic_cast.bench.cpp
+    libcxxabi/dynamic_cast_old_stress.bench.cpp
     allocation.bench.cpp
     deque.bench.cpp
     deque_iterator.bench.cpp
@@ -194,6 +203,7 @@ set(BENCHMARK_TESTS
     std_format_spec_string_unicode.bench.cpp
     string.bench.cpp
     stringstream.bench.cpp
+    system_error.bench.cpp
     to_chars.bench.cpp
     unordered_set_operations.bench.cpp
     util_smartptr.bench.cpp

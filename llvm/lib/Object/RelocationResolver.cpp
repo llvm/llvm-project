@@ -252,6 +252,19 @@ static uint64_t resolveSparc64(uint64_t Type, uint64_t Offset, uint64_t S,
   }
 }
 
+/// Returns true if \c Obj is an AMDGPU code object based solely on the value
+/// of e_machine.
+///
+/// AMDGPU code objects with an e_machine of EF_AMDGPU_MACH_NONE do not
+/// identify their arch as either r600 or amdgcn, but we can still handle
+/// their relocations. When we identify an ELF object with an UnknownArch,
+/// we use isAMDGPU to check for this case.
+static bool isAMDGPU(const ObjectFile &Obj) {
+  if (const auto *ELFObj = dyn_cast<ELFObjectFileBase>(&Obj))
+    return ELFObj->getEMachine() == ELF::EM_AMDGPU;
+  return false;
+}
+
 static bool supportsAmdgpu(uint64_t Type) {
   switch (Type) {
   case ELF::R_AMDGPU_ABS32:
@@ -789,6 +802,8 @@ getRelocationResolver(const ObjectFile &Obj) {
       case Triple::riscv64:
         return {supportsRISCV, resolveRISCV};
       default:
+        if (isAMDGPU(Obj))
+          return {supportsAmdgpu, resolveAmdgpu};
         return {nullptr, nullptr};
       }
     }
@@ -821,11 +836,15 @@ getRelocationResolver(const ObjectFile &Obj) {
       return {supportsSparc32, resolveSparc32};
     case Triple::hexagon:
       return {supportsHexagon, resolveHexagon};
+    case Triple::r600:
+      return {supportsAmdgpu, resolveAmdgpu};
     case Triple::riscv32:
       return {supportsRISCV, resolveRISCV};
     case Triple::csky:
       return {supportsCSKY, resolveCSKY};
     default:
+      if (isAMDGPU(Obj))
+        return {supportsAmdgpu, resolveAmdgpu};
       return {nullptr, nullptr};
     }
   } else if (Obj.isMachO()) {

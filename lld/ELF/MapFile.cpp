@@ -263,7 +263,7 @@ void elf::writeMapAndCref() {
   // Open a map file for writing.
   std::error_code ec;
   StringRef mapFile = config->mapFile.empty() ? "-" : config->mapFile;
-  raw_fd_ostream os(mapFile, ec, sys::fs::OF_None);
+  raw_fd_ostream os = ctx.openAuxiliaryFile(mapFile, ec);
   if (ec) {
     error("cannot open " + mapFile + ": " + ec.message());
     return;

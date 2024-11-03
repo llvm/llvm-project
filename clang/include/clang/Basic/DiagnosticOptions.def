@@ -90,10 +90,14 @@ VALUE_DIAGOPT(ConstexprBacktraceLimit, 32, DefaultConstexprBacktraceLimit)
 VALUE_DIAGOPT(SpellCheckingLimit, 32, DefaultSpellCheckingLimit)
 /// Limit number of lines shown in a snippet.
 VALUE_DIAGOPT(SnippetLineLimit, 32, DefaultSnippetLineLimit)
+/// Show line number column on the left of snippets.
+VALUE_DIAGOPT(ShowLineNumbers, 1, DefaultShowLineNumbers)
 
 VALUE_DIAGOPT(TabStop, 32, DefaultTabStop) /// The distance between tab stops.
 /// Column limit for formatting message diagnostics, or 0 if unused.
 VALUE_DIAGOPT(MessageLength, 32, 0)
+
+DIAGOPT(ShowSafeBufferUsageSuggestions, 1, 0)
 
 #undef DIAGOPT
 #undef ENUM_DIAGOPT

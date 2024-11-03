@@ -66,6 +66,7 @@ public:
   void emitEndOfAsmFile(Module &M) override;
   void EmitProducerInfo(Module &M);
   void EmitTargetFeatures(Module &M);
+  void EmitFunctionAttributes(Module &M);
   void emitSymbolType(const MCSymbolWasm *Sym);
   void emitGlobalVariable(const GlobalVariable *GV) override;
   void emitJumpTableInfo() override;

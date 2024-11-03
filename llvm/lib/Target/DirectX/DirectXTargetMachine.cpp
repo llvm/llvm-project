@@ -42,6 +42,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeDirectXTarget() {
   initializeDXILPrepareModulePass(*PR);
   initializeEmbedDXILPassPass(*PR);
   initializeWriteDXILPassPass(*PR);
+  initializeDXContainerGlobalsPass(*PR);
   initializeDXILOpLoweringLegacyPass(*PR);
   initializeDXILTranslateMetadataPass(*PR);
   initializeDXILResourceWrapperPass(*PR);
@@ -127,12 +128,6 @@ bool DirectXTargetMachine::addPassesToEmitFile(
   TargetPassConfig *PassConfig = createPassConfig(PM);
   PassConfig->addCodeGenPrepare();
 
-  if (TargetPassConfig::willCompleteCodeGenPipeline()) {
-    PM.add(createDXILEmbedderPass());
-    // We embed the other DXContainer globals after embedding DXIL so that the
-    // globals don't pollute the DXIL.
-    PM.add(createDXContainerGlobalsPass());
-  }
   switch (FileType) {
   case CGFT_AssemblyFile:
     PM.add(createDXILPrettyPrinterPass(Out));
@@ -140,6 +135,11 @@ bool DirectXTargetMachine::addPassesToEmitFile(
     break;
   case CGFT_ObjectFile:
     if (TargetPassConfig::willCompleteCodeGenPipeline()) {
+      PM.add(createDXILEmbedderPass());
+      // We embed the other DXContainer globals after embedding DXIL so that the
+      // globals don't pollute the DXIL.
+      PM.add(createDXContainerGlobalsPass());
+
       if (!MMIWP)
         MMIWP = new MachineModuleInfoWrapperPass(this);
       PM.add(MMIWP);

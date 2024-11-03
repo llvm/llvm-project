@@ -20,7 +20,7 @@
 ; GFX11: s_waitcnt expcnt(0)
 ; GFX11: buffer_store_b32
 ; GFX11: buffer_store_b32
-define amdgpu_ps void @lds_param_load(<4 x i32> inreg %buf, i32 inreg %arg) #0 {
+define amdgpu_ps void @lds_param_load(ptr addrspace(8) inreg %buf, i32 inreg %arg) #0 {
 main_body:
   %p0 = call float @llvm.amdgcn.lds.param.load(i32 0, i32 0, i32 %arg)
   ; Ensure memory clustering is occuring for lds_param_load
@@ -29,17 +29,17 @@ main_body:
   %p2 = call float @llvm.amdgcn.lds.param.load(i32 2, i32 0, i32 %arg)
   %p3 = call float @llvm.amdgcn.lds.param.load(i32 3, i32 0, i32 %arg)
   %p4 = call float @llvm.amdgcn.lds.param.load(i32 0, i32 1, i32 %arg)
-  call void @llvm.amdgcn.raw.buffer.store.f32(float %p5, <4 x i32> %buf, i32 4, i32 0, i32 0)
-  call void @llvm.amdgcn.raw.buffer.store.f32(float %p1, <4 x i32> %buf, i32 4, i32 1, i32 0)
-  call void @llvm.amdgcn.raw.buffer.store.f32(float %p2, <4 x i32> %buf, i32 4, i32 2, i32 0)
-  call void @llvm.amdgcn.raw.buffer.store.f32(float %p3, <4 x i32> %buf, i32 4, i32 3, i32 0)
-  call void @llvm.amdgcn.raw.buffer.store.f32(float %p4, <4 x i32> %buf, i32 4, i32 4, i32 0)
-  call void @llvm.amdgcn.raw.buffer.store.f32(float %p0, <4 x i32> %buf, i32 4, i32 5, i32 0)
+  call void @llvm.amdgcn.raw.ptr.buffer.store.f32(float %p5, ptr addrspace(8) %buf, i32 4, i32 0, i32 0)
+  call void @llvm.amdgcn.raw.ptr.buffer.store.f32(float %p1, ptr addrspace(8) %buf, i32 4, i32 1, i32 0)
+  call void @llvm.amdgcn.raw.ptr.buffer.store.f32(float %p2, ptr addrspace(8) %buf, i32 4, i32 2, i32 0)
+  call void @llvm.amdgcn.raw.ptr.buffer.store.f32(float %p3, ptr addrspace(8) %buf, i32 4, i32 3, i32 0)
+  call void @llvm.amdgcn.raw.ptr.buffer.store.f32(float %p4, ptr addrspace(8) %buf, i32 4, i32 4, i32 0)
+  call void @llvm.amdgcn.raw.ptr.buffer.store.f32(float %p0, ptr addrspace(8) %buf, i32 4, i32 5, i32 0)
   ret void
 }
 
 declare float @llvm.amdgcn.lds.param.load(i32, i32, i32) #1
-declare void @llvm.amdgcn.raw.buffer.store.f32(float, <4 x i32>, i32, i32, i32)
+declare void @llvm.amdgcn.raw.ptr.buffer.store.f32(float, ptr addrspace(8), i32, i32, i32)
 
 attributes #0 = { nounwind }
 attributes #1 = { nounwind readnone }

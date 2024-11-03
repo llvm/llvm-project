@@ -461,6 +461,12 @@ class XForm_tlb<bits<10> xo, dag OOL, dag IOL, string asmstr,
   let RST = 0;
 }
 
+class XForm_tlbilx<bits<10> xo, dag OOL, dag IOL, string asmstr,
+      InstrItinClass itin> : XForm_base_r3xo<31, xo, OOL, IOL, asmstr, itin, []> {
+  bits<5> T;
+  let RST = T;
+}
+
 class XForm_attn<bits<6> opcode, bits<10> xo, dag OOL, dag IOL, string asmstr,
                  InstrItinClass itin>
   : I<opcode, OOL, IOL, asmstr, itin> {
@@ -1219,6 +1225,61 @@ class XForm_XD6_RA5_RB5<bits<6> opcode, bits<10> xo, dag OOL, dag IOL,
   let Inst{16-20} = RB;
   let Inst{21-30} = xo;
   let Inst{31}    = D{5};    // DX
+}
+
+class XForm_BF3_UIM6_FRB5<bits<6> opcode, bits<10> xo, dag OOL, dag IOL,
+                          string asmstr, InstrItinClass itin, list<dag> pattern>
+  : I<opcode, OOL, IOL, asmstr, itin> {
+  bits<3> BF;
+  bits<6> UIM;
+  bits<5> FRB;
+
+  let Pattern = pattern;
+
+  let Inst{6-8}   = BF;
+  let Inst{9}     = 0;
+  let Inst{10-15} = UIM;
+  let Inst{16-20} = FRB;
+  let Inst{21-30} = xo;
+  let Inst{31}    = 0;
+}
+
+class XForm_SP2_FRTB5<bits<6> opcode, bits<10> xo, dag OOL, dag IOL, string asmstr,
+                  list<dag> pattern, InstrItinClass itin>
+    : I<opcode, OOL, IOL, asmstr, itin> {
+  bits<2> SP;
+  bits<5> FRT;
+  bits<5> FRB;
+
+  let Pattern = pattern;
+
+  bit RC = 0; // set by isRecordForm
+
+  let Inst{6 - 10} = FRT;
+  let Inst{11 - 12} = SP;
+  let Inst{13 - 15} = 0;
+  let Inst{16 - 20} = FRB;
+  let Inst{21 - 30} = xo;
+  let Inst{31} = RC;
+}
+
+class XForm_S1_FRTB5<bits<6> opcode, bits<10> xo, dag OOL, dag IOL,
+                 string asmstr, list<dag> pattern, InstrItinClass itin>
+    : I<opcode, OOL, IOL, asmstr, itin> {
+  bit S;
+  bits<5> FRT;
+  bits<5> FRB;
+
+  let Pattern = pattern;
+
+  bit RC = 0; // set by isRecordForm
+
+  let Inst{6 - 10} = FRT;
+  let Inst{11} = S;
+  let Inst{12 - 15} = 0;
+  let Inst{16 - 20} = FRB;
+  let Inst{21 - 30} = xo;
+  let Inst{31} = RC;
 }
 
 class XX3Form<bits<6> opcode, bits<8> xo, dag OOL, dag IOL, string asmstr, 
@@ -2132,6 +2193,43 @@ class VX_RD5_RSp5_PS1_XO9<bits<9> xo, dag OOL, dag IOL, string asmstr,
   let Inst{23-31} = xo;
 }
 
+class Z22Form_BF3_FRA5_DCM6<bits<6> opcode, bits<9> xo, dag OOL, dag IOL,
+                            string asmstr, InstrItinClass itin,
+                            list<dag> pattern>
+  : I<opcode, OOL, IOL, asmstr, itin> {
+  bits<3> BF;
+  bits<5> FRA;
+  bits<6> DCM;
+
+  let Pattern = pattern;
+
+  let Inst{6-8}   = BF;
+  let Inst{9-10}  = 0;
+  let Inst{11-15} = FRA;
+  let Inst{16-21} = DCM;
+  let Inst{22-30} = xo;
+  let Inst{31}    = 0;
+}
+
+class Z22Form_FRTA5_SH6<bits<6> opcode, bits<9> xo, dag OOL, dag IOL,
+              string asmstr, list<dag> pattern, InstrItinClass itin>
+    : I<opcode, OOL, IOL, asmstr, itin> {
+
+  bits<5> FRT;
+  bits<5> FRA;
+  bits<6> SH;
+
+  let Pattern = pattern;
+
+  bit RC = 0; // set by isRecordForm
+
+  let Inst{6 - 10} = FRT;
+  let Inst{11 - 15} = FRA;
+  let Inst{16 - 21} = SH;
+  let Inst{22 - 30} = xo;
+  let Inst{31} = RC;
+}
+
 class Z23Form_8<bits<6> opcode, bits<8> xo, dag OOL, dag IOL, string asmstr,
               InstrItinClass itin, list<dag> pattern>
          : I<opcode, OOL, IOL, asmstr, itin> {
@@ -2169,6 +2267,54 @@ class Z23Form_RTAB5_CY2<bits<6> opcode, bits<8> xo, dag OOL, dag IOL,
   let Inst{21-22} = CY;
   let Inst{23-30} = xo;
   let Inst{31} = 0;
+}
+
+class Z23Form_FRTAB5_RMC2<bits<6> opcode, bits<8> xo, dag OOL, dag IOL,
+                          string asmstr, list<dag> pattern>
+    : I<opcode, OOL, IOL, asmstr, NoItinerary> {
+  bits<5> FRT;
+  bits<5> FRA;
+  bits<5> FRB;
+  bits<2> RMC;
+
+  let Pattern = pattern;
+
+  bit RC = 0; // set by isRecordForm
+
+  let Inst{6 - 10} = FRT;
+  let Inst{11 - 15} = FRA;
+  let Inst{16 - 20} = FRB;
+  let Inst{21 - 22} = RMC;
+  let Inst{23 - 30} = xo;
+  let Inst{31} = RC;
+}
+
+class Z23Form_TE5_FRTB5_RMC2<bits<6> opcode, bits<8> xo, dag OOL, dag IOL,
+                             string asmstr, list<dag> pattern>
+    : Z23Form_FRTAB5_RMC2<opcode, xo, OOL, IOL, asmstr, pattern> {
+  bits<5> TE;
+  let FRA = TE;
+}
+
+class Z23Form_FRTB5_R1_RMC2<bits<6> opcode, bits<8> xo, dag OOL, dag IOL,
+                            string asmstr, list<dag> pattern>
+    : I<opcode, OOL, IOL, asmstr, NoItinerary> {
+  bits<5> FRT;
+  bits<1> R;
+  bits<5> FRB;
+  bits<2> RMC;
+
+  let Pattern = pattern;
+
+  bit RC = 0; // set by isRecordForm
+
+  let Inst{6 - 10} = FRT;
+  let Inst{11 - 14} = 0;
+  let Inst{15} = R;
+  let Inst{16 - 20} = FRB;
+  let Inst{21 - 22} = RMC;
+  let Inst{23 - 30} = xo;
+  let Inst{31} = RC;
 }
 
 //===----------------------------------------------------------------------===//

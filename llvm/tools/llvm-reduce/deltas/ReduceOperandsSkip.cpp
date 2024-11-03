@@ -149,19 +149,25 @@ opportunities(Function &F,
 
       // Regardless whether referenced, add the function arguments as
       // replacement possibility with the goal of reducing the number of (used)
-      // function arguments, possibly created by the the operands-to-args.
+      // function arguments, possibly created by the operands-to-args.
       for (Argument &Arg : F.args())
         ReferencedVals.insert(&Arg);
 
       // After all candidates have been added, it doesn't need to be a set
       // anymore.
-      std::vector<Value *> Candidates = ReferencedVals.takeVector();
+      auto Candidates = ReferencedVals.takeVector();
 
       // Remove ineligible candidates.
       llvm::erase_if(Candidates, [&, OpVal](Value *V) {
         // Candidate value must have the same type.
         if (OpVal->getType() != V->getType())
           return true;
+
+        // Do not introduce address captures of intrinsics.
+        if (Function *F = dyn_cast<Function>(V)) {
+          if (F->isIntrinsic())
+            return true;
+        }
 
         // Only consider candidates that are "more reduced" than the original
         // value. This explicitly also rules out candidates with the same
@@ -179,7 +185,7 @@ opportunities(Function &F,
       std::reverse(Candidates.begin(), Candidates.end());
 
       // Independency of collectReferencedValues's idea of reductive power,
-      // ensure the the partial order of IsMoreReduced is enforced.
+      // ensure the partial order of IsMoreReduced is enforced.
       llvm::stable_sort(Candidates, IsMoreReduced);
 
       Callback(Op, Candidates);

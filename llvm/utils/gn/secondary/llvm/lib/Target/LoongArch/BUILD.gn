@@ -44,6 +44,7 @@ static_library("LLVMLoongArchCodeGen") {
     "LoongArchRegisterInfo.cpp",
     "LoongArchSubtarget.cpp",
     "LoongArchTargetMachine.cpp",
+    "LoongArchTargetTransformInfo.cpp",
   ]
 }
 

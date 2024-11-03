@@ -6,13 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "src/errno/libc_errno.h"
 #include "src/sys/mman/mmap.h"
 #include "src/sys/mman/munmap.h"
 #include "src/sys/mman/posix_madvise.h"
-#include "test/ErrnoSetterMatcher.h"
+#include "test/UnitTest/ErrnoSetterMatcher.h"
 #include "test/UnitTest/Test.h"
 
-#include <errno.h>
 #include <sys/mman.h>
 
 using __llvm_libc::testing::ErrnoSetterMatcher::Fails;
@@ -20,10 +20,10 @@ using __llvm_libc::testing::ErrnoSetterMatcher::Succeeds;
 
 TEST(LlvmLibcPosixMadviseTest, NoError) {
   size_t alloc_size = 128;
-  errno = 0;
+  libc_errno = 0;
   void *addr = __llvm_libc::mmap(nullptr, alloc_size, PROT_READ,
                                  MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
-  EXPECT_EQ(0, errno);
+  EXPECT_EQ(0, libc_errno);
   EXPECT_NE(addr, MAP_FAILED);
 
   EXPECT_EQ(__llvm_libc::posix_madvise(addr, alloc_size, POSIX_MADV_RANDOM), 0);
@@ -37,7 +37,7 @@ TEST(LlvmLibcPosixMadviseTest, NoError) {
 }
 
 TEST(LlvmLibcPosixMadviseTest, Error_BadPtr) {
-  errno = 0;
+  libc_errno = 0;
   // posix_madvise is a no-op on DONTNEED, so it shouldn't fail even with the
   // nullptr.
   EXPECT_EQ(__llvm_libc::posix_madvise(nullptr, 8, POSIX_MADV_DONTNEED), 0);

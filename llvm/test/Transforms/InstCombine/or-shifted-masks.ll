@@ -3,221 +3,220 @@
 
 define i32 @or_and_shifts1(i32 %x) {
 ; CHECK-LABEL: @or_and_shifts1(
-; CHECK-NEXT:    [[TMP1:%.*]] = shl i32 [[X:%.*]], 3
-; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[TMP1]], 8
-; CHECK-NEXT:    [[TMP3:%.*]] = shl i32 [[X]], 5
-; CHECK-NEXT:    [[TMP4:%.*]] = and i32 [[TMP3]], 32
-; CHECK-NEXT:    [[TMP5:%.*]] = or i32 [[TMP2]], [[TMP4]]
-; CHECK-NEXT:    ret i32 [[TMP5]]
+; CHECK-NEXT:    [[I:%.*]] = shl i32 [[X:%.*]], 3
+; CHECK-NEXT:    [[I1:%.*]] = and i32 [[I]], 8
+; CHECK-NEXT:    [[I2:%.*]] = shl i32 [[X]], 5
+; CHECK-NEXT:    [[I3:%.*]] = and i32 [[I2]], 32
+; CHECK-NEXT:    [[I4:%.*]] = or i32 [[I1]], [[I3]]
+; CHECK-NEXT:    ret i32 [[I4]]
 ;
-  %1 = shl i32 %x, 3
-  %2 = and i32 %1, 15
-  %3 = shl i32 %x, 5
-  %4 = and i32 %3, 60
-  %5 = or i32 %2, %4
-  ret i32 %5
+  %i = shl i32 %x, 3
+  %i1 = and i32 %i, 15
+  %i2 = shl i32 %x, 5
+  %i3 = and i32 %i2, 60
+  %i4 = or i32 %i1, %i3
+  ret i32 %i4
 }
 
 define i32 @or_and_shifts2(i32 %x) {
 ; CHECK-LABEL: @or_and_shifts2(
-; CHECK-NEXT:    [[TMP1:%.*]] = shl i32 [[X:%.*]], 3
-; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[TMP1]], 896
-; CHECK-NEXT:    [[TMP3:%.*]] = lshr i32 [[X]], 4
-; CHECK-NEXT:    [[TMP4:%.*]] = and i32 [[TMP3]], 7
-; CHECK-NEXT:    [[TMP5:%.*]] = or i32 [[TMP2]], [[TMP4]]
-; CHECK-NEXT:    ret i32 [[TMP5]]
+; CHECK-NEXT:    [[I:%.*]] = shl i32 [[X:%.*]], 3
+; CHECK-NEXT:    [[I1:%.*]] = and i32 [[I]], 896
+; CHECK-NEXT:    [[I2:%.*]] = lshr i32 [[X]], 4
+; CHECK-NEXT:    [[I3:%.*]] = and i32 [[I2]], 7
+; CHECK-NEXT:    [[I4:%.*]] = or i32 [[I1]], [[I3]]
+; CHECK-NEXT:    ret i32 [[I4]]
 ;
-  %1 = shl i32 %x, 3
-  %2 = and i32 %1, 896
-  %3 = lshr i32 %x, 4
-  %4 = and i32 %3, 7
-  %5 = or i32 %2, %4
-  ret i32 %5
+  %i = shl i32 %x, 3
+  %i1 = and i32 %i, 896
+  %i2 = lshr i32 %x, 4
+  %i3 = and i32 %i2, 7
+  %i4 = or i32 %i1, %i3
+  ret i32 %i4
 }
 
 define i32 @or_and_shift_shift_and(i32 %x) {
 ; CHECK-LABEL: @or_and_shift_shift_and(
-; CHECK-NEXT:    [[TMP1:%.*]] = shl i32 [[X:%.*]], 3
-; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[TMP1]], 56
-; CHECK-NEXT:    [[TMP3:%.*]] = shl i32 [[X]], 2
-; CHECK-NEXT:    [[TMP4:%.*]] = and i32 [[TMP3]], 28
-; CHECK-NEXT:    [[TMP5:%.*]] = or i32 [[TMP2]], [[TMP4]]
-; CHECK-NEXT:    ret i32 [[TMP5]]
+; CHECK-NEXT:    [[I:%.*]] = shl i32 [[X:%.*]], 3
+; CHECK-NEXT:    [[I1:%.*]] = and i32 [[I]], 56
+; CHECK-NEXT:    [[I2:%.*]] = shl i32 [[X]], 2
+; CHECK-NEXT:    [[I3:%.*]] = and i32 [[I2]], 28
+; CHECK-NEXT:    [[I4:%.*]] = or i32 [[I1]], [[I3]]
+; CHECK-NEXT:    ret i32 [[I4]]
 ;
-  %1 = and i32 %x, 7
-  %2 = shl i32 %1, 3
-  %3 = shl i32 %x, 2
-  %4 = and i32 %3, 28
-  %5 = or i32 %2, %4
-  ret i32 %5
+  %i = and i32 %x, 7
+  %i1 = shl i32 %i, 3
+  %i2 = shl i32 %x, 2
+  %i3 = and i32 %i2, 28
+  %i4 = or i32 %i1, %i3
+  ret i32 %i4
 }
 
 define i32 @multiuse1(i32 %x) {
 ; CHECK-LABEL: @multiuse1(
-; CHECK-NEXT:    [[TMP1:%.*]] = shl i32 [[X:%.*]], 6
-; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[TMP1]], 384
-; CHECK-NEXT:    [[TMP3:%.*]] = lshr i32 [[X]], 1
-; CHECK-NEXT:    [[TMP4:%.*]] = and i32 [[TMP3]], 3
-; CHECK-NEXT:    [[TMP5:%.*]] = or i32 [[TMP4]], [[TMP2]]
-; CHECK-NEXT:    ret i32 [[TMP5]]
+; CHECK-NEXT:    [[I:%.*]] = lshr i32 [[X:%.*]], 1
+; CHECK-NEXT:    [[I3:%.*]] = and i32 [[I]], 1
+; CHECK-NEXT:    [[I1:%.*]] = lshr i32 [[X]], 1
+; CHECK-NEXT:    [[I5:%.*]] = and i32 [[I1]], 2
+; CHECK-NEXT:    [[I21:%.*]] = shl i32 [[X]], 6
+; CHECK-NEXT:    [[I6:%.*]] = and i32 [[I21]], 384
+; CHECK-NEXT:    [[I7:%.*]] = or i32 [[I3]], [[I5]]
+; CHECK-NEXT:    [[I8:%.*]] = or i32 [[I7]], [[I6]]
+; CHECK-NEXT:    ret i32 [[I8]]
 ;
-  %1 = and i32 %x, 2
-  %2 = and i32 %x, 4
-  %3 = shl nuw nsw i32 %1, 6
-  %4 = lshr exact i32 %1, 1
-  %5 = shl nuw nsw i32 %2, 6
-  %6 = lshr exact i32 %2, 1
-  %7 = or i32 %3, %5
-  %8 = or i32 %4, %6
-  %9 = or i32 %8, %7
-  ret i32 %9
+  %i = and i32 %x, 2
+  %i1 = and i32 %x, 4
+  %i2 = shl nuw nsw i32 %i, 6
+  %i3 = lshr exact i32 %i, 1
+  %i4 = shl nuw nsw i32 %i1, 6
+  %i5 = lshr exact i32 %i1, 1
+  %i6 = or i32 %i2, %i4
+  %i7 = or i32 %i3, %i5
+  %i8 = or i32 %i7, %i6
+  ret i32 %i8
 }
 
 define i32 @multiuse2(i32 %x) {
 ; CHECK-LABEL: @multiuse2(
-; CHECK-NEXT:    [[TMP1:%.*]] = shl i32 [[X:%.*]], 1
-; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[TMP1]], 12
-; CHECK-NEXT:    [[TMP3:%.*]] = shl i32 [[X]], 8
-; CHECK-NEXT:    [[TMP4:%.*]] = and i32 [[TMP3]], 24576
-; CHECK-NEXT:    [[TMP5:%.*]] = shl i32 [[X]], 8
-; CHECK-NEXT:    [[TMP6:%.*]] = and i32 [[TMP5]], 7680
-; CHECK-NEXT:    [[TMP7:%.*]] = or i32 [[TMP4]], [[TMP6]]
-; CHECK-NEXT:    [[TMP8:%.*]] = shl i32 [[X]], 1
-; CHECK-NEXT:    [[TMP9:%.*]] = and i32 [[TMP8]], 240
-; CHECK-NEXT:    [[TMP10:%.*]] = or i32 [[TMP2]], [[TMP9]]
-; CHECK-NEXT:    [[TMP11:%.*]] = or i32 [[TMP7]], [[TMP10]]
-; CHECK-NEXT:    ret i32 [[TMP11]]
+; CHECK-NEXT:    [[I:%.*]] = shl i32 [[X:%.*]], 1
+; CHECK-NEXT:    [[I2:%.*]] = and i32 [[I]], 12
+; CHECK-NEXT:    [[I3:%.*]] = shl i32 [[X]], 1
+; CHECK-NEXT:    [[I5:%.*]] = and i32 [[I3]], 48
+; CHECK-NEXT:    [[I6:%.*]] = shl i32 [[X]], 1
+; CHECK-NEXT:    [[I8:%.*]] = and i32 [[I6]], 192
+; CHECK-NEXT:    [[TMP1:%.*]] = shl i32 [[X]], 8
+; CHECK-NEXT:    [[I10:%.*]] = and i32 [[TMP1]], 32256
+; CHECK-NEXT:    [[I11:%.*]] = or i32 [[I8]], [[I5]]
+; CHECK-NEXT:    [[I12:%.*]] = or i32 [[I2]], [[I11]]
+; CHECK-NEXT:    [[I13:%.*]] = or i32 [[I10]], [[I12]]
+; CHECK-NEXT:    ret i32 [[I13]]
 ;
-  %1 = and i32 %x, 6
-  %2 = shl nuw nsw i32 %1, 8
-  %3 = shl nuw nsw i32 %1, 1
-  %4 = and i32 %x, 24
-  %5 = shl nuw nsw i32 %4, 8
-  %6 = shl nuw nsw i32 %4, 1
-  %7 = and i32 %x, 96
-  %8 = shl nuw nsw i32 %7, 8
-  %9 = shl nuw nsw i32 %7, 1
-  %10 = or i32 %2, %5
-  %11 = or i32 %8, %10
-  %12 = or i32 %9, %6
-  %13 = or i32 %3, %12
-  %14 = or i32 %11, %13
-  ret i32 %14
+  %i = and i32 %x, 6
+  %i1 = shl nuw nsw i32 %i, 8
+  %i2 = shl nuw nsw i32 %i, 1
+  %i3 = and i32 %x, 24
+  %i4 = shl nuw nsw i32 %i3, 8
+  %i5 = shl nuw nsw i32 %i3, 1
+  %i6 = and i32 %x, 96
+  %i7 = shl nuw nsw i32 %i6, 8
+  %i8 = shl nuw nsw i32 %i6, 1
+  %i9 = or i32 %i1, %i4
+  %i10 = or i32 %i7, %i9
+  %i11 = or i32 %i8, %i5
+  %i12 = or i32 %i2, %i11
+  %i13 = or i32 %i10, %i12
+  ret i32 %i13
 }
 
 define i32 @multiuse3(i32 %x) {
 ; CHECK-LABEL: @multiuse3(
-; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[X:%.*]], 96
-; CHECK-NEXT:    [[TMP2:%.*]] = shl nuw nsw i32 [[TMP1]], 6
-; CHECK-NEXT:    [[TMP3:%.*]] = lshr exact i32 [[TMP1]], 1
-; CHECK-NEXT:    [[TMP4:%.*]] = shl i32 [[X]], 6
-; CHECK-NEXT:    [[TMP5:%.*]] = and i32 [[TMP4]], 1920
-; CHECK-NEXT:    [[TMP6:%.*]] = or i32 [[TMP2]], [[TMP5]]
-; CHECK-NEXT:    [[TMP7:%.*]] = lshr i32 [[X]], 1
-; CHECK-NEXT:    [[TMP8:%.*]] = and i32 [[TMP7]], 15
-; CHECK-NEXT:    [[TMP9:%.*]] = or i32 [[TMP3]], [[TMP8]]
-; CHECK-NEXT:    [[TMP10:%.*]] = or i32 [[TMP9]], [[TMP6]]
-; CHECK-NEXT:    ret i32 [[TMP10]]
+; CHECK-NEXT:    [[I:%.*]] = lshr i32 [[X:%.*]], 1
+; CHECK-NEXT:    [[I2:%.*]] = and i32 [[I]], 48
+; CHECK-NEXT:    [[TMP1:%.*]] = shl i32 [[X]], 6
+; CHECK-NEXT:    [[I5:%.*]] = and i32 [[TMP1]], 8064
+; CHECK-NEXT:    [[I6:%.*]] = lshr i32 [[X]], 1
+; CHECK-NEXT:    [[I7:%.*]] = and i32 [[I6]], 15
+; CHECK-NEXT:    [[I8:%.*]] = or i32 [[I2]], [[I7]]
+; CHECK-NEXT:    [[I9:%.*]] = or i32 [[I8]], [[I5]]
+; CHECK-NEXT:    ret i32 [[I9]]
 ;
-  %1 = and i32 %x, 96
-  %2 = shl nuw nsw i32 %1, 6
-  %3 = lshr exact i32 %1, 1
-  %4 = shl i32 %x, 6
-  %5 = and i32 %4, 1920
-  %6 = or i32 %2, %5
-  %7 = lshr i32 %x, 1
-  %8 = and i32 %7, 15
-  %9 = or i32 %3, %8
-  %10 = or i32 %9, %6
-  ret i32 %10
+  %i = and i32 %x, 96
+  %i1 = shl nuw nsw i32 %i, 6
+  %i2 = lshr exact i32 %i, 1
+  %i3 = shl i32 %x, 6
+  %i4 = and i32 %i3, 1920
+  %i5 = or i32 %i1, %i4
+  %i6 = lshr i32 %x, 1
+  %i7 = and i32 %i6, 15
+  %i8 = or i32 %i2, %i7
+  %i9 = or i32 %i8, %i5
+  ret i32 %i9
 }
 
-define i32 @multiuse4(i32 %x) local_unnamed_addr #0 {
+define i32 @multiuse4(i32 %x) local_unnamed_addr {
 ; CHECK-LABEL: @multiuse4(
-; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[X:%.*]], 100663296
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp sgt i32 [[X]], -1
-; CHECK-NEXT:    br i1 [[TMP2]], label [[IF:%.*]], label [[ELSE:%.*]]
+; CHECK-NEXT:    [[I1:%.*]] = icmp sgt i32 [[X:%.*]], -1
+; CHECK-NEXT:    br i1 [[I1]], label [[IF:%.*]], label [[ELSE:%.*]]
 ; CHECK:       if:
-; CHECK-NEXT:    [[TMP3:%.*]] = lshr exact i32 [[TMP1]], 22
-; CHECK-NEXT:    [[TMP4:%.*]] = lshr i32 [[X]], 22
-; CHECK-NEXT:    [[TMP5:%.*]] = and i32 [[TMP4]], 480
-; CHECK-NEXT:    [[TMP6:%.*]] = or i32 [[TMP5]], [[TMP3]]
+; CHECK-NEXT:    [[I:%.*]] = lshr i32 [[X]], 22
+; CHECK-NEXT:    [[I2:%.*]] = and i32 [[I]], 24
+; CHECK-NEXT:    [[I3:%.*]] = lshr i32 [[X]], 22
+; CHECK-NEXT:    [[I4:%.*]] = and i32 [[I3]], 480
+; CHECK-NEXT:    [[I5:%.*]] = or i32 [[I4]], [[I2]]
 ; CHECK-NEXT:    br label [[END:%.*]]
 ; CHECK:       else:
-; CHECK-NEXT:    [[TMP7:%.*]] = lshr exact i32 [[TMP1]], 17
-; CHECK-NEXT:    [[TMP8:%.*]] = lshr i32 [[X]], 17
-; CHECK-NEXT:    [[TMP9:%.*]] = and i32 [[TMP8]], 15360
-; CHECK-NEXT:    [[TMP10:%.*]] = or i32 [[TMP9]], [[TMP7]]
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr i32 [[X]], 17
+; CHECK-NEXT:    [[I9:%.*]] = and i32 [[TMP1]], 16128
 ; CHECK-NEXT:    br label [[END]]
 ; CHECK:       end:
-; CHECK-NEXT:    [[TMP11:%.*]] = phi i32 [ [[TMP6]], [[IF]] ], [ [[TMP10]], [[ELSE]] ]
-; CHECK-NEXT:    ret i32 [[TMP11]]
+; CHECK-NEXT:    [[I10:%.*]] = phi i32 [ [[I5]], [[IF]] ], [ [[I9]], [[ELSE]] ]
+; CHECK-NEXT:    ret i32 [[I10]]
 ;
-  %1 = and i32 %x, 100663296
-  %2 = icmp sgt i32 %x, -1
-  br i1 %2, label %if, label %else
+  %i = and i32 %x, 100663296
+  %i1 = icmp sgt i32 %x, -1
+  br i1 %i1, label %if, label %else
 
 if:
-  %3 = lshr exact i32 %1, 22
-  %4 = lshr i32 %x, 22
-  %5 = and i32 %4, 480
-  %6 = or i32 %5, %3
+  %i2 = lshr exact i32 %i, 22
+  %i3 = lshr i32 %x, 22
+  %i4 = and i32 %i3, 480
+  %i5 = or i32 %i4, %i2
   br label %end
 
 else:
-  %7 = lshr exact i32 %1, 17
-  %8 = lshr i32 %x, 17
-  %9 = and i32 %8, 15360
-  %10 = or i32 %9, %7
+  %i6 = lshr exact i32 %i, 17
+  %i7 = lshr i32 %x, 17
+  %i8 = and i32 %i7, 15360
+  %i9 = or i32 %i8, %i6
   br label %end
 
 end:
-  %11 = phi i32 [ %6, %if ], [ %10, %else ]
-  ret i32 %11
+  %i10 = phi i32 [ %i5, %if ], [ %i9, %else ]
+  ret i32 %i10
 }
 
-define i32 @multiuse5(i32 %x) local_unnamed_addr #0 {
+define i32 @multiuse5(i32 %x) local_unnamed_addr {
 ; CHECK-LABEL: @multiuse5(
-; CHECK-NEXT:    [[TMP1:%.*]] = shl i32 [[X:%.*]], 5
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp sgt i32 [[X]], -1
-; CHECK-NEXT:    br i1 [[TMP2]], label [[IF:%.*]], label [[ELSE:%.*]]
+; CHECK-NEXT:    [[I:%.*]] = shl i32 [[X:%.*]], 5
+; CHECK-NEXT:    [[I1:%.*]] = icmp sgt i32 [[X]], -1
+; CHECK-NEXT:    br i1 [[I1]], label [[IF:%.*]], label [[ELSE:%.*]]
 ; CHECK:       if:
-; CHECK-NEXT:    [[TMP3:%.*]] = and i32 [[TMP1]], 21760
-; CHECK-NEXT:    [[TMP4:%.*]] = shl i32 [[X]], 5
-; CHECK-NEXT:    [[TMP5:%.*]] = and i32 [[TMP4]], 43520
-; CHECK-NEXT:    [[TMP6:%.*]] = or i32 [[TMP5]], [[TMP3]]
+; CHECK-NEXT:    [[I2:%.*]] = and i32 [[I]], 21760
+; CHECK-NEXT:    [[I3:%.*]] = shl i32 [[X]], 5
+; CHECK-NEXT:    [[I4:%.*]] = and i32 [[I3]], 43520
+; CHECK-NEXT:    [[I5:%.*]] = or i32 [[I4]], [[I2]]
 ; CHECK-NEXT:    br label [[END:%.*]]
 ; CHECK:       else:
-; CHECK-NEXT:    [[TMP7:%.*]] = and i32 [[TMP1]], 5570560
-; CHECK-NEXT:    [[TMP8:%.*]] = shl i32 [[X]], 5
-; CHECK-NEXT:    [[TMP9:%.*]] = and i32 [[TMP8]], 11141120
-; CHECK-NEXT:    [[TMP10:%.*]] = or i32 [[TMP9]], [[TMP7]]
+; CHECK-NEXT:    [[I6:%.*]] = and i32 [[I]], 5570560
+; CHECK-NEXT:    [[I7:%.*]] = shl i32 [[X]], 5
+; CHECK-NEXT:    [[I8:%.*]] = and i32 [[I7]], 11141120
+; CHECK-NEXT:    [[I9:%.*]] = or i32 [[I8]], [[I6]]
 ; CHECK-NEXT:    br label [[END]]
 ; CHECK:       end:
-; CHECK-NEXT:    [[TMP11:%.*]] = phi i32 [ [[TMP6]], [[IF]] ], [ [[TMP10]], [[ELSE]] ]
-; CHECK-NEXT:    ret i32 [[TMP11]]
+; CHECK-NEXT:    [[I10:%.*]] = phi i32 [ [[I5]], [[IF]] ], [ [[I9]], [[ELSE]] ]
+; CHECK-NEXT:    ret i32 [[I10]]
 ;
-  %1 = shl i32 %x, 5
-  %2 = icmp sgt i32 %x, -1
-  br i1 %2, label %if, label %else
+  %i = shl i32 %x, 5
+  %i1 = icmp sgt i32 %x, -1
+  br i1 %i1, label %if, label %else
 
 if:
-  %3 = and i32 %1, 21760
-  %4 = and i32 %x, 1360
-  %5 = shl nuw nsw i32 %4, 5
-  %6 = or i32 %5, %3
+  %i2 = and i32 %i, 21760
+  %i3 = and i32 %x, 1360
+  %i4 = shl nuw nsw i32 %i3, 5
+  %i5 = or i32 %i4, %i2
   br label %end
 
 else:
-  %7 = and i32 %1, 5570560
-  %8 = and i32 %x, 348160
-  %9 = shl nuw nsw i32 %8, 5
-  %10 = or i32 %9, %7
+  %i6 = and i32 %i, 5570560
+  %i7 = and i32 %x, 348160
+  %i8 = shl nuw nsw i32 %i7, 5
+  %i9 = or i32 %i8, %i6
   br label %end
 
 end:
-  %11 = phi i32 [ %6, %if ], [ %10, %else ]
-  ret i32 %11
+  %i10 = phi i32 [ %i5, %if ], [ %i9, %else ]
+  ret i32 %i10
 }
 
 define i32 @shl_mask(i32 %x) {
@@ -269,7 +268,7 @@ define i32 @shl_mask_extra_use(i32 %x, ptr %p) {
 ;
   %z = and i32 %x, 255
   %s = shl i32 %z, 8
-  store i32 %s, ptr %p
+  store i32 %s, ptr %p, align 4
   %r = or i32 %z, %s
   ret i32 %r
 }

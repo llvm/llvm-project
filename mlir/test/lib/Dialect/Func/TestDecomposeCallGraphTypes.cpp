@@ -27,7 +27,7 @@ static LogicalResult buildDecomposeTuple(OpBuilder &builder, Location loc,
     Type elementType = resultType.getType(i);
     Value element = builder.create<test::GetTupleElementOp>(
         loc, elementType, value, builder.getI32IntegerAttr(i));
-    if (auto nestedTupleType = elementType.dyn_cast<TupleType>()) {
+    if (auto nestedTupleType = dyn_cast<TupleType>(elementType)) {
       // Recurse if the current element is also a tuple.
       if (failed(buildDecomposeTuple(builder, loc, nestedTupleType, element,
                                      values)))
@@ -50,7 +50,7 @@ static std::optional<Value> buildMakeTupleOp(OpBuilder &builder,
   elements.reserve(resultType.getTypes().size());
   ValueRange::iterator inputIt = inputs.begin();
   for (Type elementType : resultType.getTypes()) {
-    if (auto nestedTupleType = elementType.dyn_cast<TupleType>()) {
+    if (auto nestedTupleType = dyn_cast<TupleType>(elementType)) {
       // Determine how many input values are needed for the nested elements of
       // the nested TupleType and advance inputIt by that number.
       // TODO: We only need the *number* of nested types, not the types itself.

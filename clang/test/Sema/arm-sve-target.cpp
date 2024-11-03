@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -verify -DNONEON -std=c++11 -triple aarch64-arm-none-eabi %s
+// RUN: %clang_cc1 -fsyntax-only -verify -DNONEON -std=c++11 -triple aarch64 %s
 
 // A target without sve should not be able to use sve types.
 

@@ -18,6 +18,8 @@
 ; aarch64-windows-gnu needs explicit -emulated-tls
 ; RUN: llc < %s -mtriple=aarch64-apple-darwin -O3 \
 ; RUN:     | FileCheck -check-prefix=NoEMU %s
+; RUN: llc < %s -mtriple=aarch64-linux-android29 -O3 \
+; RUN:     | FileCheck -check-prefix=NoEMU %s
 
 ; NoEMU-NOT: __emutls
 

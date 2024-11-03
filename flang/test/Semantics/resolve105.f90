@@ -43,6 +43,7 @@ contains
   end subroutine testGoodDefault
 
   subroutine testStar(arg)
+    !ERROR: Value of KIND type parameter 'kindparam' must be constant
     type(dtype(*)),intent(inout) :: arg
     if (associated(arg%field)) stop 'fail'
   end subroutine testStar

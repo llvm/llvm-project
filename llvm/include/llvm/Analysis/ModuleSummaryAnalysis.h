@@ -99,6 +99,10 @@ public:
 ImmutablePass *
 createImmutableModuleSummaryIndexWrapperPass(const ModuleSummaryIndex *Index);
 
+/// Returns true if the instruction could have memprof metadata, used to ensure
+/// consistency between summary analysis and the ThinLTO backend processing.
+bool mayHaveMemprofSummary(const CallBase *CB);
+
 } // end namespace llvm
 
 #endif // LLVM_ANALYSIS_MODULESUMMARYANALYSIS_H

@@ -362,50 +362,6 @@ static Value ceilDivPositive(OpBuilder &builder, Location loc, Value dividend,
   return builder.create<arith::DivUIOp>(loc, sum, divisor);
 }
 
-/// Helper to replace uses of loop carried values (iter_args) and loop
-/// yield values while promoting single iteration scf.for ops.
-static void replaceIterArgsAndYieldResults(scf::ForOp forOp) {
-  // Replace uses of iter arguments with iter operands (initial values).
-  auto iterOperands = forOp.getIterOperands();
-  auto iterArgs = forOp.getRegionIterArgs();
-  for (auto e : llvm::zip(iterOperands, iterArgs))
-    std::get<1>(e).replaceAllUsesWith(std::get<0>(e));
-
-  // Replace uses of loop results with the values yielded by the loop.
-  auto outerResults = forOp.getResults();
-  auto innerResults = forOp.getBody()->getTerminator()->getOperands();
-  for (auto e : llvm::zip(outerResults, innerResults))
-    std::get<0>(e).replaceAllUsesWith(std::get<1>(e));
-}
-
-/// Promotes the loop body of a forOp to its containing block if the forOp
-/// it can be determined that the loop has a single iteration.
-LogicalResult mlir::promoteIfSingleIteration(scf::ForOp forOp) {
-  auto lbCstOp = forOp.getLowerBound().getDefiningOp<arith::ConstantIndexOp>();
-  auto ubCstOp = forOp.getUpperBound().getDefiningOp<arith::ConstantIndexOp>();
-  auto stepCstOp = forOp.getStep().getDefiningOp<arith::ConstantIndexOp>();
-  if (!lbCstOp || !ubCstOp || !stepCstOp || lbCstOp.value() < 0 ||
-      ubCstOp.value() < 0 || stepCstOp.value() < 0)
-    return failure();
-  int64_t tripCount =
-      mlir::ceilDiv(ubCstOp.value() - lbCstOp.value(), stepCstOp.value());
-  if (tripCount != 1)
-    return failure();
-  auto iv = forOp.getInductionVar();
-  iv.replaceAllUsesWith(lbCstOp);
-
-  replaceIterArgsAndYieldResults(forOp);
-
-  // Move the loop body operations, except for its terminator, to the loop's
-  // containing block.
-  auto *parentBlock = forOp->getBlock();
-  forOp.getBody()->getTerminator()->erase();
-  parentBlock->getOperations().splice(Block::iterator(forOp),
-                                      forOp.getBody()->getOperations());
-  forOp.erase();
-  return success();
-}
-
 /// Generates unrolled copies of scf::ForOp 'loopBodyBlock', with
 /// associated 'forOpIV' by 'unrollFactor', calling 'ivRemapFn' to remap
 /// 'forOpIV' for each unrolled body. If specified, annotates the Ops in each
@@ -475,15 +431,16 @@ LogicalResult mlir::loopUnrollByFactor(
   // Compute tripCount = ceilDiv((upperBound - lowerBound), step) and populate
   // 'upperBoundUnrolled' and 'stepUnrolled' for static and dynamic cases.
   OpBuilder boundsBuilder(forOp);
+  IRRewriter rewriter(forOp.getContext());
   auto loc = forOp.getLoc();
   Value step = forOp.getStep();
   Value upperBoundUnrolled;
   Value stepUnrolled;
   bool generateEpilogueLoop = true;
 
-  auto lbCstOp = forOp.getLowerBound().getDefiningOp<arith::ConstantIndexOp>();
-  auto ubCstOp = forOp.getUpperBound().getDefiningOp<arith::ConstantIndexOp>();
-  auto stepCstOp = forOp.getStep().getDefiningOp<arith::ConstantIndexOp>();
+  std::optional<int64_t> lbCstOp = getConstantIntValue(forOp.getLowerBound());
+  std::optional<int64_t> ubCstOp = getConstantIntValue(forOp.getUpperBound());
+  std::optional<int64_t> stepCstOp = getConstantIntValue(forOp.getStep());
   if (lbCstOp && ubCstOp && stepCstOp) {
     // Constant loop bounds computation.
     int64_t lbCst = lbCstOp.value();
@@ -494,7 +451,7 @@ LogicalResult mlir::loopUnrollByFactor(
     int64_t tripCount = mlir::ceilDiv(ubCst - lbCst, stepCst);
 
     if (unrollFactor == 1) {
-      if (tripCount == 1 && failed(promoteIfSingleIteration(forOp)))
+      if (tripCount == 1 && failed(forOp.promoteIfSingleIteration(rewriter)))
         return failure();
       return success();
     }
@@ -510,7 +467,7 @@ LogicalResult mlir::loopUnrollByFactor(
       upperBoundUnrolled = boundsBuilder.create<arith::ConstantIndexOp>(
           loc, upperBoundUnrolledCst);
     else
-      upperBoundUnrolled = ubCstOp;
+      upperBoundUnrolled = forOp.getUpperBound();
 
     // Create constant for 'stepUnrolled'.
     stepUnrolled = stepCst == stepUnrolledCst
@@ -559,7 +516,7 @@ LogicalResult mlir::loopUnrollByFactor(
     }
     epilogueForOp->setOperands(epilogueForOp.getNumControlOperands(),
                                epilogueForOp.getNumIterOperands(), results);
-    (void)promoteIfSingleIteration(epilogueForOp);
+    (void)epilogueForOp.promoteIfSingleIteration(rewriter);
   }
 
   // Create unrolled loop.
@@ -579,7 +536,7 @@ LogicalResult mlir::loopUnrollByFactor(
       },
       annotateFn, iterArgs, yieldedValues);
   // Promote the loop body up if this has turned into a single iteration loop.
-  (void)promoteIfSingleIteration(forOp);
+  (void)forOp.promoteIfSingleIteration(rewriter);
   return success();
 }
 
@@ -593,11 +550,11 @@ static LoopParams normalizeLoop(OpBuilder &boundsBuilder,
   // Check if the loop is already known to have a constant zero lower bound or
   // a constant one step.
   bool isZeroBased = false;
-  if (auto ubCst = lowerBound.getDefiningOp<arith::ConstantIndexOp>())
+  if (auto ubCst = getConstantIntValue(lowerBound))
     isZeroBased = ubCst.value() == 0;
 
   bool isStepOne = false;
-  if (auto stepCst = step.getDefiningOp<arith::ConstantIndexOp>())
+  if (auto stepCst = getConstantIntValue(step))
     isStepOne = stepCst.value() == 1;
 
   // Compute the number of iterations the loop executes: ceildiv(ub - lb, step)
@@ -803,9 +760,11 @@ void mlir::collapseParallelLoops(
 // Return failure when any op fails to hoist.
 static LogicalResult hoistOpsBetween(scf::ForOp outer, scf::ForOp inner) {
   SetVector<Operation *> forwardSlice;
-  getForwardSlice(
-      outer.getInductionVar(), &forwardSlice,
-      [&inner](Operation *op) { return op != inner.getOperation(); });
+  ForwardSliceOptions options;
+  options.filter = [&inner](Operation *op) {
+    return op != inner.getOperation();
+  };
+  getForwardSlice(outer.getInductionVar(), &forwardSlice, options);
   LogicalResult status = success();
   SmallVector<Operation *, 8> toHoist;
   for (auto &op : outer.getBody()->without_terminator()) {
@@ -1010,4 +969,69 @@ TileLoops mlir::extractFixedOuterLoops(scf::ForOp rootForOp,
   (void)tryIsolateBands(tileLoops);
 
   return tileLoops;
+}
+
+scf::ForallOp mlir::fuseIndependentSiblingForallLoops(scf::ForallOp target,
+                                                      scf::ForallOp source,
+                                                      RewriterBase &rewriter) {
+  unsigned numTargetOuts = target.getNumResults();
+  unsigned numSourceOuts = source.getNumResults();
+
+  OperandRange targetOuts = target.getOutputs();
+  OperandRange sourceOuts = source.getOutputs();
+
+  // Create fused shared_outs.
+  SmallVector<Value> fusedOuts;
+  fusedOuts.reserve(numTargetOuts + numSourceOuts);
+  fusedOuts.append(targetOuts.begin(), targetOuts.end());
+  fusedOuts.append(sourceOuts.begin(), sourceOuts.end());
+
+  // Create a new scf::forall op after the source loop.
+  rewriter.setInsertionPointAfter(source);
+  scf::ForallOp fusedLoop = rewriter.create<scf::ForallOp>(
+      source.getLoc(), source.getMixedLowerBound(), source.getMixedUpperBound(),
+      source.getMixedStep(), fusedOuts, source.getMapping());
+
+  // Map control operands.
+  IRMapping fusedMapping;
+  fusedMapping.map(target.getInductionVars(), fusedLoop.getInductionVars());
+  fusedMapping.map(source.getInductionVars(), fusedLoop.getInductionVars());
+
+  // Map shared outs.
+  fusedMapping.map(target.getOutputBlockArguments(),
+                   fusedLoop.getOutputBlockArguments().slice(0, numTargetOuts));
+  fusedMapping.map(
+      source.getOutputBlockArguments(),
+      fusedLoop.getOutputBlockArguments().slice(numTargetOuts, numSourceOuts));
+
+  // Append everything except the terminator into the fused operation.
+  rewriter.setInsertionPointToStart(fusedLoop.getBody());
+  for (Operation &op : target.getLoopBody().begin()->without_terminator())
+    rewriter.clone(op, fusedMapping);
+  for (Operation &op : source.getLoopBody().begin()->without_terminator())
+    rewriter.clone(op, fusedMapping);
+
+  // Fuse the old terminator in_parallel ops into the new one.
+  scf::InParallelOp targetTerm = target.getTerminator();
+  scf::InParallelOp sourceTerm = source.getTerminator();
+  scf::InParallelOp fusedTerm = fusedLoop.getTerminator();
+
+  rewriter.setInsertionPointToStart(fusedTerm.getBody());
+  for (Operation &op : targetTerm.getYieldingOps())
+    rewriter.clone(op, fusedMapping);
+  for (Operation &op : sourceTerm.getYieldingOps())
+    rewriter.clone(op, fusedMapping);
+
+  // Replace all uses of the old loops with the fused loop.
+  rewriter.replaceAllUsesWith(target.getResults(),
+                              fusedLoop.getResults().slice(0, numTargetOuts));
+  rewriter.replaceAllUsesWith(
+      source.getResults(),
+      fusedLoop.getResults().slice(numTargetOuts, numSourceOuts));
+
+  // Erase the old loops.
+  rewriter.eraseOp(target);
+  rewriter.eraseOp(source);
+
+  return fusedLoop;
 }

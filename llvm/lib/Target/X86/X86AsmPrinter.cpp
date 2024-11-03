@@ -23,6 +23,7 @@
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/CodeGen/MachineConstantPool.h"
 #include "llvm/CodeGen/MachineModuleInfoImpls.h"
+#include "llvm/CodeGen/MachineValueType.h"
 #include "llvm/CodeGen/TargetLoweringObjectFileImpl.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/InlineAsm.h"
@@ -42,7 +43,6 @@
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/MachineValueType.h"
 #include "llvm/Target/TargetMachine.h"
 
 using namespace llvm;
@@ -510,7 +510,9 @@ void X86AsmPrinter::PrintIntelMemReference(const MachineInstr *MI,
 
   if (!DispSpec.isImm()) {
     if (NeedPlus) O << " + ";
-    PrintOperand(MI, OpNo + X86::AddrDisp, O);
+    // Do not add `offset` operator. Matches the behaviour of
+    // X86IntelInstPrinter::printMemReference.
+    PrintSymbolOperand(DispSpec, O);
   } else {
     int64_t DispVal = DispSpec.getImm();
     if (DispVal || (!IndexReg.getReg() && !HasBaseReg)) {
@@ -767,6 +769,7 @@ void X86AsmPrinter::emitStartOfAsmFile(Module &M) {
       if (!TT.isArch32Bit() && !TT.isArch64Bit())
         llvm_unreachable("CFProtection used on invalid architecture!");
       MCSection *Cur = OutStreamer->getCurrentSectionOnly();
+      assert(MMI && "MMI can not be nullptr!");
       MCSection *Nt = MMI->getContext().getELFSection(
           ".note.gnu.property", ELF::SHT_NOTE, ELF::SHF_ALLOC);
       OutStreamer->switchSection(Nt);

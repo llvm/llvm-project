@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -triple x86_64-apple-darwin10.0.0 -fsyntax-only -std=c++11 -verify %s -Winvalid-offsetof
+// RUN: %clang_cc1 -triple x86_64-apple-darwin10.0.0 -fsyntax-only -std=c++11 -verify %s -Winvalid-offsetof -fexperimental-new-constant-interpreter
 
 struct NonPOD {
   virtual void f();

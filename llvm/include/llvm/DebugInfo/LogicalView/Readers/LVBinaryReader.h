@@ -24,6 +24,7 @@
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/TargetRegistry.h"
+#include "llvm/Object/COFF.h"
 #include "llvm/Object/ObjectFile.h"
 
 namespace llvm {
@@ -68,6 +69,12 @@ public:
 class LVBinaryReader : public LVReader {
   // Function names extracted from the object symbol table.
   LVSymbolTable SymbolTable;
+
+  // It contains the LVLineDebug elements representing the inlined logical
+  // lines for the current compile unit, created by parsing the CodeView
+  // S_INLINESITE symbol annotation data.
+  using LVInlineeLine = std::map<LVScope *, std::unique_ptr<LVLines>>;
+  LVInlineeLine CUInlineeLines;
 
   // Instruction lines for a logical scope. These instructions are fetched
   // during its merge with the debug lines.
@@ -135,6 +142,8 @@ protected:
                        LVAddress LowerAddress, LVAddress UpperAddress);
   LVRange *getSectionRanges(LVSectionIndex SectionIndex);
 
+  void includeInlineeLines(LVSectionIndex SectionIndex, LVScope *Function);
+
   Error createInstructions();
   Error createInstructions(LVScope *Function, LVSectionIndex SectionIndex);
   Error createInstructions(LVScope *Function, LVSectionIndex SectionIndex,
@@ -152,6 +161,16 @@ public:
   LVBinaryReader(const LVBinaryReader &) = delete;
   LVBinaryReader &operator=(const LVBinaryReader &) = delete;
   virtual ~LVBinaryReader() = default;
+
+  void addInlineeLines(LVScope *Scope, LVLines &Lines) {
+    CUInlineeLines.emplace(Scope, std::make_unique<LVLines>(std::move(Lines)));
+  }
+
+  // Convert Segment::Offset pair to absolute address.
+  LVAddress linearAddress(uint16_t Segment, uint32_t Offset,
+                          LVAddress Addendum = 0) {
+    return ImageBaseAddress + (Segment * VirtualAddress) + Offset + Addendum;
+  }
 
   void addToSymbolTable(StringRef Name, LVScope *Function,
                         LVSectionIndex SectionIndex = 0);

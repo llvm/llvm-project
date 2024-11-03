@@ -71,7 +71,6 @@ struct atomic_flag
     _LIBCPP_HIDE_FROM_ABI constexpr
     atomic_flag() _NOEXCEPT : __a_(false) {}
 #else
-    _LIBCPP_HIDE_FROM_ABI
     atomic_flag() _NOEXCEPT = default;
 #endif
 

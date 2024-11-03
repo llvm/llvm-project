@@ -1,13 +1,6 @@
 # See docs/CMake.html for instructions about how to build LLVM with CMake.
 
-cmake_minimum_required(VERSION 3.13.4)
-if ("${CMAKE_VERSION}" VERSION_LESS "3.20.0")
-  message(WARNING
-    "Your CMake version is ${CMAKE_VERSION}. Starting with LLVM 17.0.0, the "
-    "minimum version of CMake required to build LLVM will become 3.20.0, and "
-    "using an older CMake will become an error. Please upgrade your CMake to "
-    "at least 3.20.0 now to avoid issues in the future!")
-endif()
+cmake_minimum_required(VERSION 3.20.0)
 
 set(LLVM_COMMON_CMAKE_UTILS ${CMAKE_CURRENT_SOURCE_DIR}/../cmake)
 include(${LLVM_COMMON_CMAKE_UTILS}/Modules/CMakePolicy.cmake
@@ -16,7 +9,7 @@ include(${LLVM_COMMON_CMAKE_UTILS}/Modules/CMakePolicy.cmake
 set(CMAKE_BUILD_WITH_INSTALL_NAME_DIR ON)
 
 if(NOT DEFINED LLVM_VERSION_MAJOR)
-  set(LLVM_VERSION_MAJOR 17)
+  set(LLVM_VERSION_MAJOR 18)
 endif()
 if(NOT DEFINED LLVM_VERSION_MINOR)
   set(LLVM_VERSION_MINOR 0)
@@ -388,7 +381,7 @@ string(TOUPPER "${CMAKE_BUILD_TYPE}" uppercase_CMAKE_BUILD_TYPE)
 
 if (CMAKE_BUILD_TYPE AND
     NOT uppercase_CMAKE_BUILD_TYPE MATCHES "^(DEBUG|RELEASE|RELWITHDEBINFO|MINSIZEREL)$")
-  message(FATAL_ERROR "Invalid value for CMAKE_BUILD_TYPE: ${CMAKE_BUILD_TYPE}")
+  message(WARNING "Unknown value for CMAKE_BUILD_TYPE: ${CMAKE_BUILD_TYPE}")
 endif()
 
 # LLVM_INSTALL_PACKAGE_DIR needs to be declared prior to adding the tools
@@ -455,6 +448,15 @@ set(LLVM_ALL_TARGETS
   XCore
   )
 
+set(LLVM_ALL_EXPERIMENTAL_TARGETS
+  ARC
+  CSKY
+  DirectX
+  M68k
+  SPIRV
+  Xtensa
+)
+
 # List of targets with JIT support:
 set(LLVM_TARGETS_WITH_JIT X86 PowerPC AArch64 ARM Mips SystemZ)
 
@@ -462,7 +464,7 @@ set(LLVM_TARGETS_TO_BUILD "all"
     CACHE STRING "Semicolon-separated list of targets to build, or \"all\".")
 
 set(LLVM_EXPERIMENTAL_TARGETS_TO_BUILD ""
-    CACHE STRING "Semicolon-separated list of experimental targets to build.")
+    CACHE STRING "Semicolon-separated list of experimental targets to build, or \"all\".")
 
 option(BUILD_SHARED_LIBS
   "Build all libraries as shared libraries instead of static" OFF)
@@ -551,6 +553,10 @@ if( LLVM_TARGETS_TO_BUILD STREQUAL "all" )
   set( LLVM_TARGETS_TO_BUILD ${LLVM_ALL_TARGETS} )
 endif()
 
+if(LLVM_EXPERIMENTAL_TARGETS_TO_BUILD STREQUAL "all")
+  set(LLVM_EXPERIMENTAL_TARGETS_TO_BUILD ${LLVM_ALL_EXPERIMENTAL_TARGETS})
+endif()
+
 set(LLVM_TARGETS_TO_BUILD
    ${LLVM_TARGETS_TO_BUILD}
    ${LLVM_EXPERIMENTAL_TARGETS_TO_BUILD})
@@ -565,6 +571,7 @@ else()
 endif()
 option(LLVM_ENABLE_LOCAL_SUBMODULE_VISIBILITY "Compile with -fmodules-local-submodule-visibility." ON)
 option(LLVM_ENABLE_LIBCXX "Use libc++ if available." OFF)
+option(LLVM_ENABLE_LLVM_LIBC "Set to on to link all LLVM executables against LLVM libc, assuming it is accessible by the host compiler." OFF)
 option(LLVM_STATIC_LINK_CXX_STDLIB "Statically link the standard library." OFF)
 option(LLVM_ENABLE_LLD "Use lld as C and C++ linker." OFF)
 option(LLVM_ENABLE_PEDANTIC "Compile with pedantic enabled." ON)
@@ -669,6 +676,9 @@ set(LIT_ARGS_DEFAULT "-sv")
 if (MSVC_IDE OR XCODE)
   set(LIT_ARGS_DEFAULT "${LIT_ARGS_DEFAULT} --no-progress-bar")
 endif()
+if(LLVM_INDIVIDUAL_TEST_COVERAGE)
+   set(LIT_ARGS_DEFAULT "${LIT_ARGS_DEFAULT} --per-test-coverage")
+endif()
 set(LLVM_LIT_ARGS "${LIT_ARGS_DEFAULT}" CACHE STRING "Default options for lit")
 
 # On Win32 hosts, provide an option to specify the path to the GnuWin32 tools.
@@ -677,7 +687,7 @@ if( WIN32 AND NOT CYGWIN )
 endif()
 set(LLVM_NATIVE_TOOL_DIR "" CACHE PATH "Path to a directory containing prebuilt matching native tools (such as llvm-tblgen)")
 
-set(LLVM_INTEGRATED_CRT_ALLOC "" CACHE PATH "Replace the Windows CRT allocator with any of {rpmalloc|mimalloc|snmalloc}. Only works with /MT enabled.")
+set(LLVM_INTEGRATED_CRT_ALLOC "" CACHE PATH "Replace the Windows CRT allocator with any of {rpmalloc|mimalloc|snmalloc}. Only works with CMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded.")
 if(LLVM_INTEGRATED_CRT_ALLOC)
   if(NOT WIN32)
     message(FATAL_ERROR "LLVM_INTEGRATED_CRT_ALLOC is only supported on Windows.")
@@ -719,6 +729,10 @@ endif(LLVM_BUILD_EXAMPLES)
 option(LLVM_BUILD_TESTS
   "Build LLVM unit tests. If OFF, just generate build targets." OFF)
 option(LLVM_INCLUDE_TESTS "Generate build targets for the LLVM unit tests." ON)
+
+option(LLVM_INSTALL_GTEST
+  "Install the llvm gtest library.  This should be on if you want to do
+   stand-alone builds of the other projects and run their unit tests." OFF)
 
 option(LLVM_BUILD_BENCHMARKS "Add LLVM benchmark targets to the list of default
 targets. If OFF, benchmarks still could be built using Benchmarks target." OFF)
@@ -786,24 +800,25 @@ if (MSVC_IDE)
   option(LLVM_ADD_NATIVE_VISUALIZERS_TO_SOLUTION "Configure project to use Visual Studio native visualizers" TRUE)
 endif()
 
-if (LLVM_BUILD_INSTRUMENTED OR LLVM_BUILD_INSTRUMENTED_COVERAGE OR
-    LLVM_ENABLE_IR_PGO)
-  if(NOT LLVM_PROFILE_MERGE_POOL_SIZE)
-    # A pool size of 1-2 is probably sufficient on a SSD. 3-4 should be fine
-    # for spining disks. Anything higher may only help on slower mediums.
-    set(LLVM_PROFILE_MERGE_POOL_SIZE "4")
-  endif()
-  if(NOT LLVM_PROFILE_FILE_PATTERN)
-    if(NOT LLVM_PROFILE_DATA_DIR)
-      file(TO_NATIVE_PATH "${LLVM_BINARY_DIR}/profiles" LLVM_PROFILE_DATA_DIR)
+if(NOT LLVM_INDIVIDUAL_TEST_COVERAGE)
+  if(LLVM_BUILD_INSTRUMENTED OR LLVM_BUILD_INSTRUMENTED_COVERAGE OR LLVM_ENABLE_IR_PGO)
+    if(NOT LLVM_PROFILE_MERGE_POOL_SIZE)
+      # A pool size of 1-2 is probably sufficient on an SSD. 3-4 should be fine
+      # for spinning disks. Anything higher may only help on slower mediums.
+      set(LLVM_PROFILE_MERGE_POOL_SIZE "4")
     endif()
-    file(TO_NATIVE_PATH "${LLVM_PROFILE_DATA_DIR}/%${LLVM_PROFILE_MERGE_POOL_SIZE}m.profraw" LLVM_PROFILE_FILE_PATTERN)
-  endif()
-  if(NOT LLVM_CSPROFILE_FILE_PATTERN)
-    if(NOT LLVM_CSPROFILE_DATA_DIR)
-      file(TO_NATIVE_PATH "${LLVM_BINARY_DIR}/csprofiles" LLVM_CSPROFILE_DATA_DIR)
+    if(NOT LLVM_PROFILE_FILE_PATTERN)
+      if(NOT LLVM_PROFILE_DATA_DIR)
+        file(TO_NATIVE_PATH "${LLVM_BINARY_DIR}/profiles" LLVM_PROFILE_DATA_DIR)
+      endif()
+      file(TO_NATIVE_PATH "${LLVM_PROFILE_DATA_DIR}/%${LLVM_PROFILE_MERGE_POOL_SIZE}m.profraw" LLVM_PROFILE_FILE_PATTERN)
     endif()
-    file(TO_NATIVE_PATH "${LLVM_CSPROFILE_DATA_DIR}/%${LLVM_PROFILE_MERGE_POOL_SIZE}m.profraw" LLVM_CSPROFILE_FILE_PATTERN)
+    if(NOT LLVM_CSPROFILE_FILE_PATTERN)
+      if(NOT LLVM_CSPROFILE_DATA_DIR)
+        file(TO_NATIVE_PATH "${LLVM_BINARY_DIR}/csprofiles" LLVM_CSPROFILE_DATA_DIR)
+      endif()
+      file(TO_NATIVE_PATH "${LLVM_CSPROFILE_DATA_DIR}/%${LLVM_PROFILE_MERGE_POOL_SIZE}m.profraw" LLVM_CSPROFILE_FILE_PATTERN)
+    endif()
   endif()
 endif()
 
@@ -904,15 +919,21 @@ set(LLVM_ENUM_EXEGESIS "")
 foreach(t ${LLVM_TARGETS_TO_BUILD})
   set( td ${LLVM_MAIN_SRC_DIR}/lib/Target/${t} )
 
-  list(FIND LLVM_ALL_TARGETS ${t} idx)
-  list(FIND LLVM_EXPERIMENTAL_TARGETS_TO_BUILD ${t} idy)
-  # At this point, LLVMBUILDTOOL already checked all the targets passed in
-  # LLVM_TARGETS_TO_BUILD and LLVM_EXPERIMENTAL_TARGETS_TO_BUILD, so
-  # this test just makes sure that any experimental targets were passed via
+  # Make sure that any experimental targets were passed via
   # LLVM_EXPERIMENTAL_TARGETS_TO_BUILD, not LLVM_TARGETS_TO_BUILD.
-  if( idx LESS 0 AND idy LESS 0 )
-    message(FATAL_ERROR "The target `${t}' is experimental and must be passed "
-      "via LLVM_EXPERIMENTAL_TARGETS_TO_BUILD.")
+  # We allow experimental targets that are not in LLVM_ALL_EXPERIMENTAL_TARGETS,
+  # as long as they are passed via LLVM_EXPERIMENTAL_TARGETS_TO_BUILD.
+  if ( NOT ${t} IN_LIST LLVM_ALL_TARGETS AND NOT ${t} IN_LIST LLVM_EXPERIMENTAL_TARGETS_TO_BUILD )
+    if( ${t} IN_LIST LLVM_ALL_EXPERIMENTAL_TARGETS )
+      message(FATAL_ERROR "The target `${t}' is experimental and must be passed "
+        "via LLVM_EXPERIMENTAL_TARGETS_TO_BUILD.")
+    else()
+      message(FATAL_ERROR "The target `${t}' is not a core tier target. It may be "
+        "experimental, if so it must be passed via "
+        "LLVM_EXPERIMENTAL_TARGETS_TO_BUILD.\n"
+        "Core tier targets: ${LLVM_ALL_TARGETS}\n"
+        "Known experimental targets: ${LLVM_ALL_EXPERIMENTAL_TARGETS}")
+    endif()
   else()
     set(LLVM_ENUM_TARGETS "${LLVM_ENUM_TARGETS}LLVM_TARGET(${t})\n")
   endif()
@@ -1066,29 +1087,6 @@ if (UNIX AND ${CMAKE_SYSTEM_NAME} MATCHES "AIX")
           add_compile_definitions(_XOPEN_SOURCE=700)
           add_compile_definitions(_LARGE_FILE_API)
 
-  # CMake versions less than 3.16 set default linker flags to include -brtl, as
-  # well as setting -G when building libraries, so clear them out. Note we only
-  # try to clear the form that CMake will set as part of its initial
-  # configuration, it is still possible the user may force it as part of a
-  # compound option.
-  if(CMAKE_VERSION VERSION_LESS 3.16)
-    string(REGEX REPLACE "(^|[ \t]+)-Wl,-brtl([ \t]+|$)" " " CMAKE_EXE_LINKER_FLAGS  "${CMAKE_EXE_LINKER_FLAGS}")
-    string(REGEX REPLACE "(^|[ \t]+)-Wl,-brtl([ \t]+|$)" " " CMAKE_SHARED_LINKER_FLAGS  "${CMAKE_SHARED_LINKER_FLAGS}")
-    string(REGEX REPLACE "(^|[ \t]+)-Wl,-brtl([ \t]+|$)" " " CMAKE_MODULE_LINKER_FLAGS "${CMAKE_MODULE_LINKER_FLAGS}")
-    string(REGEX REPLACE "(^|[ \t]+)(-Wl,)?-G([ \t]+|$)" " " CMAKE_SHARED_LIBRARY_CREATE_C_FLAGS
-      "${CMAKE_SHARED_LIBRARY_CREATE_C_FLAGS}")
-    string(REGEX REPLACE "(^|[ \t]+)(-Wl,)?-G([ \t]+|$)" " " CMAKE_SHARED_LIBRARY_CREATE_CXX_FLAGS
-      "${CMAKE_SHARED_LIBRARY_CREATE_CXX_FLAGS}")
-    string(REGEX REPLACE "(^|[ \t]+)(-Wl,)?-G([ \t]+|$)" " " CMAKE_SHARED_LIBRARY_CREATE_ASM_FLAGS
-      "${CMAKE_SHARED_LIBRARY_CREATE_ASM_FLAGS}")
-    string(REGEX REPLACE "(^|[ \t]+)-Wl,-G," " -Wl," CMAKE_SHARED_LIBRARY_CREATE_C_FLAGS
-      "${CMAKE_SHARED_LIBRARY_CREATE_C_FLAGS}")
-    string(REGEX REPLACE "(^|[ \t]+)-Wl,-G," " -Wl," CMAKE_SHARED_LIBRARY_CREATE_CXX_FLAGS
-      "${CMAKE_SHARED_LIBRARY_CREATE_CXX_FLAGS}")
-    string(REGEX REPLACE "(^|[ \t]+)-Wl,-G," " -Wl," CMAKE_SHARED_LIBRARY_CREATE_ASM_FLAGS
-      "${CMAKE_SHARED_LIBRARY_CREATE_ASM_FLAGS}")
-  endif()
-
   # Modules should be built with -shared -Wl,-G, so we can use runtime linking
   # with plugins.
   string(APPEND CMAKE_MODULE_LINKER_FLAGS " -shared -Wl,-G")
@@ -1132,11 +1130,6 @@ endif( ${CMAKE_SYSTEM_NAME} MATCHES SunOS )
 # use export_executable_symbols(target).
 set(CMAKE_SHARED_LIBRARY_LINK_CXX_FLAGS "")
 
-set(LLVM_EXTRACT_SYMBOLS_FLAGS ""
-  CACHE STRING "Additional options to pass to llvm/utils/extract_symbols.py.
-  These cannot override the options set by cmake, but can add extra options
-  such as --tools.")
-
 include(AddLLVM)
 include(TableGen)
 
@@ -1159,7 +1152,7 @@ add_subdirectory(lib/TableGen)
 
 add_subdirectory(utils/TableGen)
 
-add_subdirectory(include/llvm)
+add_subdirectory(include)
 
 add_subdirectory(lib)
 
@@ -1271,14 +1264,14 @@ if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY)
     )
 
   if (LLVM_INSTALL_MODULEMAPS)
-    install(DIRECTORY include/llvm include/llvm-c
+    install(DIRECTORY include
             DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}"
             COMPONENT llvm-headers
             FILES_MATCHING
             PATTERN "module.modulemap"
             )
-    install(FILES include/llvm/module.install.modulemap
-            DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/llvm"
+    install(FILES include/module.install.modulemap
+            DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}"
             COMPONENT llvm-headers
             RENAME "module.extern.modulemap"
             )

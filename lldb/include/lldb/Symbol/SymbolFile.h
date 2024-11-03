@@ -25,10 +25,12 @@
 #include "lldb/Utility/XcodeSDK.h"
 #include "lldb/lldb-private.h"
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/SmallSet.h"
 #include "llvm/Support/Errc.h"
 
 #include <mutex>
 #include <optional>
+#include <unordered_map>
 
 #if defined(LLDB_CONFIGURATION_DEBUG)
 #define ASSERT_MODULE_LOCK(expr) (expr->AssertModuleLock())
@@ -146,6 +148,17 @@ public:
   virtual lldb::LanguageType ParseLanguage(CompileUnit &comp_unit) = 0;
   /// Return the Xcode SDK comp_unit was compiled against.
   virtual XcodeSDK ParseXcodeSDK(CompileUnit &comp_unit) { return {}; }
+
+  /// This function exists because SymbolFileDWARFDebugMap may extra compile
+  /// units which aren't exposed as "real" compile units. In every other
+  /// case this function should behave identically as ParseLanguage.
+  virtual llvm::SmallSet<lldb::LanguageType, 4>
+  ParseAllLanguages(CompileUnit &comp_unit) {
+    llvm::SmallSet<lldb::LanguageType, 4> langs;
+    langs.insert(ParseLanguage(comp_unit));
+    return langs;
+  }
+
   virtual size_t ParseFunctions(CompileUnit &comp_unit) = 0;
   virtual bool ParseLineTable(CompileUnit &comp_unit) = 0;
   virtual bool ParseDebugMacros(CompileUnit &comp_unit) = 0;
@@ -314,8 +327,17 @@ public:
   virtual llvm::Expected<lldb::TypeSystemSP>
   GetTypeSystemForLanguage(lldb::LanguageType language) = 0;
 
+  /// Finds a namespace of name \ref name and whose parent
+  /// context is \ref parent_decl_ctx.
+  ///
+  /// If \code{.cpp} !parent_decl_ctx.IsValid() \endcode
+  /// then this function will consider all namespaces that
+  /// match the name. If \ref only_root_namespaces is
+  /// true, only consider in the search those DIEs that
+  /// represent top-level namespaces.
   virtual CompilerDeclContext
-  FindNamespace(ConstString name, const CompilerDeclContext &parent_decl_ctx) {
+  FindNamespace(ConstString name, const CompilerDeclContext &parent_decl_ctx,
+                bool only_root_namespaces = false) {
     return CompilerDeclContext();
   }
 
@@ -423,8 +445,19 @@ public:
 
   virtual lldb::TypeSP CopyType(const lldb::TypeSP &other_type) = 0;
 
+  /// Returns a map of compilation unit to the compile option arguments
+  /// associated with that compilation unit.
+  std::unordered_map<lldb::CompUnitSP, Args> GetCompileOptions() {
+    std::unordered_map<lldb::CompUnitSP, Args> args;
+    GetCompileOptions(args);
+    return args;
+  }
+
 protected:
   void AssertModuleLock();
+
+  virtual void GetCompileOptions(
+      std::unordered_map<lldb::CompUnitSP, lldb_private::Args> &args) {}
 
 private:
   SymbolFile(const SymbolFile &) = delete;

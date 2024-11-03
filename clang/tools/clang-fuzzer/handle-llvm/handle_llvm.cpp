@@ -103,11 +103,7 @@ static void RunOptimizationPasses(raw_ostream &OS, Module &M,
   PB.registerLoopAnalyses(LAM);
   PB.crossRegisterProxies(LAM, FAM, CGAM, MAM);
 
-  ModulePassManager MPM;
-  if (OL == OptimizationLevel::O0)
-    MPM = PB.buildO0DefaultPipeline(OL);
-  else
-    MPM = PB.buildPerModuleDefaultPipeline(OL);
+  ModulePassManager MPM = PB.buildPerModuleDefaultPipeline(OL);
   MPM.addPass(PrintModulePass(OS));
 
   MPM.run(M, MAM);

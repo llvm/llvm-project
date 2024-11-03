@@ -1,18 +1,19 @@
-// RUN: %clang_cc1 -std=c++2a %s -verify -pedantic-errors
+// RUN: %clang_cc1 -std=c++20 %s -verify -pedantic-errors
 
+// As amended by P2615R1 applied as a DR against C++20.
 export module p3;
 
 namespace A { int ns_mem; } // expected-note 2{{target}}
 
 // An exported declaration shall declare at least one name.
-export; // expected-error {{empty declaration cannot be exported}}
-export static_assert(true); // expected-error {{static_assert declaration cannot be exported}}
-export using namespace A;   // expected-error {{ISO C++20 does not permit using directive to be exported}}
+export; // No diagnostic after P2615R1 DR
+export static_assert(true); // No diagnostic after P2615R1 DR
+export using namespace A;   // No diagnostic after P2615R1 DR
 
-export { // expected-note 3{{export block begins here}}
-  ; // expected-error {{ISO C++20 does not permit an empty declaration to appear in an export block}}
-  static_assert(true); // expected-error {{ISO C++20 does not permit a static_assert declaration to appear in an export block}}
-  using namespace A;   // expected-error {{ISO C++20 does not permit using directive to be exported}}
+export { // No diagnostic after P2615R1 DR
+  ; // No diagnostic after P2615R1 DR
+  static_assert(true); // No diagnostic after P2615R1 DR
+  using namespace A;   // No diagnostic after P2615R1 DR
 }
 
 export struct {}; // expected-error {{must be class member}} expected-error {{GNU extension}} expected-error {{does not declare anything}}
@@ -24,27 +25,28 @@ export enum {} enum_;
 export enum E : int;
 export typedef int; // expected-error {{typedef requires a name}}
 export static union {}; // expected-error {{does not declare anything}}
-export asm(""); // expected-error {{asm declaration cannot be exported}}
+export asm(""); // No diagnostic after P2615R1 DR
 export namespace B = A;
 export using A::ns_mem; // expected-error {{using declaration referring to 'ns_mem' with module linkage cannot be exported}}
 namespace A {
   export using A::ns_mem; // expected-error {{using declaration referring to 'ns_mem' with module linkage cannot be exported}}
 }
 export using Int = int;
-export extern "C++" {} // expected-error {{ISO C++20 does not permit a declaration that does not introduce any names to be exported}}
-export extern "C++" { extern "C" {} } // expected-error {{ISO C++20 does not permit a declaration that does not introduce any names to be exported}}
+export extern "C++" {} // No diagnostic after P2615R1 DR
+export extern "C++" { extern "C" {} } // No diagnostic after P2615R1 DR
 export extern "C++" { extern "C" int extern_c; }
-export { // expected-note {{export block}}
+export { // No diagnostic after P2615R1 DR
   extern "C++" int extern_cxx;
-  extern "C++" {} // expected-error {{ISO C++20 does not permit a declaration that does not introduce any names to be exported}}
+  extern "C++" {} // No diagnostic after P2615R1 DR
 }
-export [[]]; // FIXME (bad diagnostic text): expected-error {{empty declaration cannot be exported}}
-export [[example::attr]]; // FIXME: expected-error {{empty declaration cannot be exported}} expected-warning {{unknown attribute 'attr'}}
+export [[]]; // No diagnostic after P2615R1 DR
+export [[example::attr]]; // expected-warning {{unknown attribute 'attr'}}
 
 // [...] shall not declare a name with internal linkage
 export static int a; // expected-error {{declaration of 'a' with internal linkage cannot be exported}}
 export static int b(); // expected-error {{declaration of 'b' with internal linkage cannot be exported}}
-export namespace { int c; } // expected-error {{declaration of 'c' with internal linkage cannot be exported}}
+export namespace { } // expected-error {{anonymous namespaces cannot be exported}}
+export namespace { int c; } // expected-error {{anonymous namespaces cannot be exported}}
 namespace { // expected-note {{here}}
   export int d; // expected-error {{export declaration appears within anonymous namespace}}
 }

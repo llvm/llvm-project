@@ -132,8 +132,8 @@ namespace toolchains {
 class LLVM_LIBRARY_VISIBILITY NVPTXToolChain : public ToolChain {
 public:
   NVPTXToolChain(const Driver &D, const llvm::Triple &Triple,
-                 const llvm::Triple &HostTriple,
-                 const llvm::opt::ArgList &Args);
+                 const llvm::Triple &HostTriple, const llvm::opt::ArgList &Args,
+                 bool Freestanding);
 
   NVPTXToolChain(const Driver &D, const llvm::Triple &Triple,
                  const llvm::opt::ArgList &Args);
@@ -141,6 +141,11 @@ public:
   llvm::opt::DerivedArgList *
   TranslateArgs(const llvm::opt::DerivedArgList &Args, StringRef BoundArch,
                 Action::OffloadKind DeviceOffloadKind) const override;
+
+  void
+  addClangTargetOptions(const llvm::opt::ArgList &DriverArgs,
+                        llvm::opt::ArgStringList &CC1Args,
+                        Action::OffloadKind DeviceOffloadKind) const override;
 
   // Never try to use the integrated assembler with CUDA; always fork out to
   // ptxas.
@@ -156,7 +161,7 @@ public:
   bool IsMathErrnoDefault() const override { return false; }
 
   bool supportsDebugInfoOption(const llvm::opt::Arg *A) const override;
-  void adjustDebugInfoKind(codegenoptions::DebugInfoKind &DebugInfoKind,
+  void adjustDebugInfoKind(llvm::codegenoptions::DebugInfoKind &DebugInfoKind,
                            const llvm::opt::ArgList &Args) const override;
 
   // NVPTX supports only DWARF2.
@@ -168,6 +173,9 @@ public:
 protected:
   Tool *buildAssembler() const override; // ptxas.
   Tool *buildLinker() const override;    // nvlink.
+
+private:
+  bool Freestanding = false;
 };
 
 class LLVM_LIBRARY_VISIBILITY CudaToolChain : public NVPTXToolChain {

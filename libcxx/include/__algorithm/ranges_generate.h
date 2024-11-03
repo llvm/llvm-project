@@ -32,10 +32,8 @@ namespace ranges {
 namespace __generate {
 
 struct __fn {
-
   template <class _OutIter, class _Sent, class _Func>
-  _LIBCPP_HIDE_FROM_ABI constexpr
-  static _OutIter __generate_fn_impl(_OutIter __first, _Sent __last, _Func& __gen) {
+  _LIBCPP_HIDE_FROM_ABI constexpr static _OutIter __generate_fn_impl(_OutIter __first, _Sent __last, _Func& __gen) {
     for (; __first != __last; ++__first) {
       *__first = __gen();
     }
@@ -44,25 +42,22 @@ struct __fn {
   }
 
   template <input_or_output_iterator _OutIter, sentinel_for<_OutIter> _Sent, copy_constructible _Func>
-  requires invocable<_Func&> && indirectly_writable<_OutIter, invoke_result_t<_Func&>>
-  _LIBCPP_HIDE_FROM_ABI constexpr
-  _OutIter operator()(_OutIter __first, _Sent __last, _Func __gen) const {
+    requires invocable<_Func&> && indirectly_writable<_OutIter, invoke_result_t<_Func&>>
+  _LIBCPP_HIDE_FROM_ABI constexpr _OutIter operator()(_OutIter __first, _Sent __last, _Func __gen) const {
     return __generate_fn_impl(std::move(__first), std::move(__last), __gen);
   }
 
   template <class _Range, copy_constructible _Func>
-  requires invocable<_Func&> && output_range<_Range, invoke_result_t<_Func&>>
-  _LIBCPP_HIDE_FROM_ABI constexpr
-  borrowed_iterator_t<_Range> operator()(_Range&& __range, _Func __gen) const {
+    requires invocable<_Func&> && output_range<_Range, invoke_result_t<_Func&>>
+  _LIBCPP_HIDE_FROM_ABI constexpr borrowed_iterator_t<_Range> operator()(_Range&& __range, _Func __gen) const {
     return __generate_fn_impl(ranges::begin(__range), ranges::end(__range), __gen);
   }
-
 };
 
 } // namespace __generate
 
 inline namespace __cpo {
-  inline constexpr auto generate = __generate::__fn{};
+inline constexpr auto generate = __generate::__fn{};
 } // namespace __cpo
 } // namespace ranges
 

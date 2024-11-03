@@ -12,6 +12,7 @@
 
 #include <memory>
 #include <vector>
+#include <type_traits>
 
 #include "test_macros.h"
 
@@ -42,7 +43,9 @@ void
 test()
 {
     static_assert((std::uses_allocator<T, A>::value == Expected), "");
+    static_assert(std::is_base_of<std::integral_constant<bool, Expected>, std::uses_allocator<T, A> >::value, "");
 #if TEST_STD_VER > 14
+    ASSERT_SAME_TYPE(decltype(std::uses_allocator_v<T, A>), const bool);
     static_assert((std::uses_allocator_v<T, A> == Expected), "");
 #endif
 }

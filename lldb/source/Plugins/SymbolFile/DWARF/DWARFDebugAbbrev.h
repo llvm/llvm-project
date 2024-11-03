@@ -9,50 +9,16 @@
 #ifndef LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_DWARFDEBUGABBREV_H
 #define LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_DWARFDEBUGABBREV_H
 
-#include <list>
-#include <map>
-
+#include "DWARFDefines.h"
 #include "lldb/lldb-private.h"
 
-#include "DWARFAbbreviationDeclaration.h"
-#include "DWARFDefines.h"
+#include "llvm/DebugInfo/DWARF/DWARFAbbreviationDeclaration.h"
+#include "llvm/DebugInfo/DWARF/DWARFDebugAbbrev.h"
 
-typedef std::vector<DWARFAbbreviationDeclaration>
-    DWARFAbbreviationDeclarationColl;
-typedef DWARFAbbreviationDeclarationColl::iterator
-    DWARFAbbreviationDeclarationCollIter;
-typedef DWARFAbbreviationDeclarationColl::const_iterator
-    DWARFAbbreviationDeclarationCollConstIter;
+#include <map>
 
-class DWARFAbbreviationDeclarationSet {
-public:
-  DWARFAbbreviationDeclarationSet() : m_offset(DW_INVALID_OFFSET), m_decls() {}
-
-  DWARFAbbreviationDeclarationSet(dw_offset_t offset, uint32_t idx_offset)
-      : m_offset(offset), m_idx_offset(idx_offset), m_decls() {}
-
-  void Clear();
-  dw_offset_t GetOffset() const { return m_offset; }
-
-  /// Extract all abbrev decls in a set.  Returns llvm::ErrorSuccess() on
-  /// success, and an appropriate llvm::Error object otherwise.
-  llvm::Error extract(const lldb_private::DWARFDataExtractor &data,
-                      lldb::offset_t *offset_ptr);
-  // void Encode(BinaryStreamBuf& debug_abbrev_buf) const;
-  void GetUnsupportedForms(std::set<dw_form_t> &invalid_forms) const;
-
-  const DWARFAbbreviationDeclaration *
-  GetAbbreviationDeclaration(dw_uleb128_t abbrCode) const;
-
-  /// Unit test accessor functions.
-  /// @{
-  uint32_t GetIndexOffset() const { return m_idx_offset; }
-  /// @}
-private:
-  dw_offset_t m_offset;
-  uint32_t m_idx_offset = 0;
-  std::vector<DWARFAbbreviationDeclaration> m_decls;
-};
+using DWARFAbbreviationDeclaration = llvm::DWARFAbbreviationDeclaration;
+using DWARFAbbreviationDeclarationSet = llvm::DWARFAbbreviationDeclarationSet;
 
 typedef std::map<dw_offset_t, DWARFAbbreviationDeclarationSet>
     DWARFAbbreviationDeclarationCollMap;

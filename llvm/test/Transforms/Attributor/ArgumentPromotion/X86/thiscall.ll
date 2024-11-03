@@ -4,7 +4,7 @@
 ; we don't do that anymore. It also verifies that the combination of
 ; globalopt and argpromotion is able to optimize the call safely.
 ;
-; RUN: opt -aa-pipeline=basic-aa -passes=attributor -attributor-manifest-internal  -attributor-max-iterations-verify -attributor-annotate-decl-cs -attributor-max-iterations=2 -S < %s | FileCheck %s --check-prefixes=CHECK,TUNIT
+; RUN: opt -aa-pipeline=basic-aa -passes=attributor -attributor-manifest-internal  -attributor-annotate-decl-cs  -S < %s | FileCheck %s --check-prefixes=CHECK,TUNIT
 ; RUN: opt -aa-pipeline=basic-aa -passes=attributor-cgscc -attributor-manifest-internal  -attributor-annotate-decl-cs -S < %s | FileCheck %s --check-prefixes=CHECK,CGSCC
 
 target datalayout = "e-m:x-p:32:32-i64:64-f80:32-n8:16:32-a:0:32-S32"
@@ -32,18 +32,18 @@ entry:
 define void @exportedfun(ptr %a) {
 ; TUNIT-LABEL: define {{[^@]+}}@exportedfun
 ; TUNIT-SAME: (ptr nocapture nofree readnone [[A:%.*]]) {
-; TUNIT-NEXT:    [[INALLOCA_SAVE:%.*]] = tail call ptr @llvm.stacksave() #[[ATTR1:[0-9]+]]
+; TUNIT-NEXT:    [[INALLOCA_SAVE:%.*]] = tail call ptr @llvm.stacksave.p0() #[[ATTR1:[0-9]+]]
 ; TUNIT-NEXT:    [[ARGMEM:%.*]] = alloca inalloca <{ [[STRUCT_A:%.*]] }>, align 4
 ; TUNIT-NEXT:    call x86_thiscallcc void @internalfun(ptr noalias nocapture nofree readnone undef, ptr noundef nonnull inalloca(<{ [[STRUCT_A]] }>) align 4 dereferenceable(1) [[ARGMEM]])
-; TUNIT-NEXT:    call void @llvm.stackrestore(ptr nofree [[INALLOCA_SAVE]])
+; TUNIT-NEXT:    call void @llvm.stackrestore.p0(ptr nofree [[INALLOCA_SAVE]])
 ; TUNIT-NEXT:    ret void
 ;
 ; CGSCC-LABEL: define {{[^@]+}}@exportedfun
 ; CGSCC-SAME: (ptr nocapture nofree readnone [[A:%.*]]) {
-; CGSCC-NEXT:    [[INALLOCA_SAVE:%.*]] = tail call ptr @llvm.stacksave() #[[ATTR1:[0-9]+]]
+; CGSCC-NEXT:    [[INALLOCA_SAVE:%.*]] = tail call ptr @llvm.stacksave.p0() #[[ATTR1:[0-9]+]]
 ; CGSCC-NEXT:    [[ARGMEM:%.*]] = alloca inalloca <{ [[STRUCT_A:%.*]] }>, align 4
 ; CGSCC-NEXT:    call x86_thiscallcc void @internalfun(ptr noalias nocapture nofree readnone [[A]], ptr noundef nonnull inalloca(<{ [[STRUCT_A]] }>) align 4 dereferenceable(1) [[ARGMEM]])
-; CGSCC-NEXT:    call void @llvm.stackrestore(ptr nofree [[INALLOCA_SAVE]])
+; CGSCC-NEXT:    call void @llvm.stackrestore.p0(ptr nofree [[INALLOCA_SAVE]])
 ; CGSCC-NEXT:    ret void
 ;
   %inalloca.save = tail call ptr @llvm.stacksave()
@@ -59,5 +59,5 @@ declare ptr @llvm.stacksave()
 declare void @llvm.stackrestore(ptr)
 ;.
 ; CHECK: attributes #[[ATTR0:[0-9]+]] = { nocallback nofree nosync nounwind willreturn }
-; CHECK: attributes #[[ATTR1:[0-9]+]] = { willreturn }
+; CHECK: attributes #[[ATTR1:[0-9]+]] = { nofree willreturn }
 ;.

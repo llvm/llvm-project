@@ -258,7 +258,7 @@ def fir_FreeMemOp : fir_Op<"freemem", [MemoryEffects<[MemFree]>]> {
   let assemblyFormat = "$heapref attr-dict `:` qualified(type($heapref))";
 }
 
-def fir_LoadOp : fir_OneResultOp<"load", [MemoryEffects<[MemRead]>]> {
+def fir_LoadOp : fir_OneResultOp<"load", []> {
   let summary = "load a value from a memory reference";
   let description = [{
     Load a value from a memory reference into an ssa-value (virtual register).
@@ -285,7 +285,7 @@ def fir_LoadOp : fir_OneResultOp<"load", [MemoryEffects<[MemRead]>]> {
   }];
 }
 
-def fir_StoreOp : fir_Op<"store", [MemoryEffects<[MemWrite]>]> {
+def fir_StoreOp : fir_Op<"store", []> {
   let summary = "store an SSA-value to a memory location";
 
   let description = [{
@@ -693,7 +693,7 @@ def fir_UnreachableOp : fir_Op<"unreachable", [Terminator]> {
 
 }
 
-def fir_FirEndOp : fir_Op<"end", [Terminator]> {
+def fir_FirEndOp : fir_Op<"end", [Terminator, NoMemoryEffect]> {
   let summary = "the end instruction";
 
   let description = [{
@@ -2146,7 +2146,9 @@ def fir_DoLoopOp : region_Op<"do_loop",
   }];
 }
 
-def fir_IfOp : region_Op<"if", [NoRegionArguments]> {
+def fir_IfOp : region_Op<"if", [DeclareOpInterfaceMethods<RegionBranchOpInterface, [
+    "getRegionInvocationBounds", "getEntrySuccessorRegions"]>, RecursiveMemoryEffects,
+    NoRegionArguments]> {
   let summary = "if-then-else conditional operation";
   let description = [{
     Used to conditionally execute operations. This operation is the FIR
@@ -2168,7 +2170,7 @@ def fir_IfOp : region_Op<"if", [NoRegionArguments]> {
 
   let regions = (region
     SizedRegion<1>:$thenRegion,
-    AnyRegion:$elseRegion
+    MaxSizedRegion<1>:$elseRegion
   );
 
   let skipDefaultBuilders = 1;
@@ -2345,6 +2347,12 @@ def fir_CallOp : fir_Op<"call",
       return {arg_operand_begin() + 1, arg_operand_end()};
     }
 
+    mlir::MutableOperandRange getArgOperandsMutable() {
+      if ((*this)->getAttrOfType<mlir::SymbolRefAttr>(getCalleeAttrName()))
+        return getArgsMutable();
+      return mlir::MutableOperandRange(*this, 1, getArgs().size() - 1);
+    }
+
     operand_iterator arg_operand_begin() { return operand_begin(); }
     operand_iterator arg_operand_end() { return operand_end(); }
 
@@ -2354,6 +2362,14 @@ def fir_CallOp : fir_Op<"call",
           (*this)->getAttrOfType<mlir::SymbolRefAttr>(getCalleeAttrName()))
         return calling;
       return getOperand(0);
+    }
+
+    /// Set the callee for this operation.
+    void setCalleeFromCallable(mlir::CallInterfaceCallable callee) {
+      if (auto calling =
+          (*this)->getAttrOfType<mlir::SymbolRefAttr>(getCalleeAttrName()))
+        (*this)->setAttr(getCalleeAttrName(), callee.get<mlir::SymbolRefAttr>());
+      setOperand(0, callee.get<mlir::Value>());
     }
   }];
 }
@@ -2596,10 +2612,12 @@ def fir_ConvertOp : fir_OneResultOp<"convert", [NoMemoryEffect]> {
   let hasVerifier = 1;
 
   let extraClassDeclaration = [{
+    static bool isInteger(mlir::Type ty);
     static bool isIntegerCompatible(mlir::Type ty);
     static bool isFloatCompatible(mlir::Type ty);
     static bool isPointerCompatible(mlir::Type ty);
     static bool canBeConverted(mlir::Type inType, mlir::Type outType);
+    static bool areVectorsCompatible(mlir::Type inTy, mlir::Type outTy);
   }];
   let hasCanonicalizer = 1;
 }
@@ -2901,7 +2919,13 @@ def fir_IsPresentOp : fir_SimpleOp<"is_present", [NoMemoryEffect]> {
   let results = (outs BoolLike);
 }
 
+// fir.declare leads to no codegen so the side effects implementation should be
+// Pure. However, this would allow dead code elimination to remove these
+// operations if the values are unused. fir.declare may be used to generate
+// debug information so we would like to keep this around even if the value
+// is not used.
 def fir_DeclareOp : fir_Op<"declare", [AttrSizedOperandSegments,
+    MemoryEffects<[MemWrite<DebuggingResource>]>,
     DeclareOpInterfaceMethods<fir_FortranVariableOpInterface>]> {
   let summary = "declare a variable";
 

@@ -19,7 +19,7 @@
 ; CHECK-NEXT: [[NO7]] = MemoryPhi({lbl2,[[NO8]]},{for.end,2})
 
 ; CHECK: cleanup:
-; CHECK-NEXT: MemoryUse([[NO7]])
+; CHECK-NEXT: MemoryUse([[NO2]])
 ; CHECK-NEXT:  %cleanup.dest = load i32, ptr undef, align 1
 
 ; CHECK: lbl1.backedge:

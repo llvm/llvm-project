@@ -376,9 +376,9 @@ struct ComputeRegionCounts : public ConstStmtVisitor<ComputeRegionCounts> {
 
   /// BreakContinueStack - Keep counts of breaks and continues inside loops.
   struct BreakContinue {
-    uint64_t BreakCount;
-    uint64_t ContinueCount;
-    BreakContinue() : BreakCount(0), ContinueCount(0) {}
+    uint64_t BreakCount = 0;
+    uint64_t ContinueCount = 0;
+    BreakContinue() = default;
   };
   SmallVector<BreakContinue, 8> BreakContinueStack;
 
@@ -1036,7 +1036,7 @@ void CodeGenPGO::loadRegionCounts(llvm::IndexedInstrProfReader *PGOReader,
   llvm::Expected<llvm::InstrProfRecord> RecordExpected =
       PGOReader->getInstrProfRecord(FuncName, FunctionHash);
   if (auto E = RecordExpected.takeError()) {
-    auto IPE = llvm::InstrProfError::take(std::move(E));
+    auto IPE = std::get<0>(llvm::InstrProfError::take(std::move(E)));
     if (IPE == llvm::instrprof_error::unknown_function)
       CGM.getPGOStats().addMissing(IsInMainFile);
     else if (IPE == llvm::instrprof_error::hash_mismatch)

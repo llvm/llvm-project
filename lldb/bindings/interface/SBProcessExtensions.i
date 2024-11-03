@@ -2,6 +2,18 @@ STRING_EXTENSION_OUTSIDE(SBProcess)
 %extend lldb::SBProcess {
 #ifdef SWIGPYTHON
     %pythoncode %{
+        def WriteMemoryAsCString(self, addr, str, error):
+            '''
+              WriteMemoryAsCString(self, addr, str, error):
+                This functions the same as `WriteMemory` except a null-terminator is appended
+                to the end of the buffer if it is not there already.
+            '''
+            if not str or len(str) == 0:
+                return 0
+            if not str[-1] == '\0':
+                str += '\0'
+            return self.WriteMemory(addr, str, error)
+
         def __get_is_alive__(self):
             '''Returns "True" if the process is currently alive, "False" otherwise'''
             s = self.GetState()
@@ -67,6 +79,8 @@ STRING_EXTENSION_OUTSIDE(SBProcess)
             '''Return the number of threads in a lldb.SBProcess object.'''
             return self.GetNumThreads()
 
+        def __int__(self):
+            return self.GetProcessID()
 
         threads = property(get_process_thread_list, None, doc='''A read only property that returns a list() of lldb.SBThread objects for this process.''')
         thread = property(get_threads_access_object, None, doc='''A read only property that returns an object that can access threads by thread index (thread = lldb.process.thread[12]).''')

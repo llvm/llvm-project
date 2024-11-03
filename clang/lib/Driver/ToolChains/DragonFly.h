@@ -55,6 +55,13 @@ public:
 
   bool IsMathErrnoDefault() const override { return false; }
 
+  void
+  AddClangSystemIncludeArgs(const llvm::opt::ArgList &DriverArgs,
+                            llvm::opt::ArgStringList &CC1Args) const override;
+  void addLibStdCxxIncludePaths(
+      const llvm::opt::ArgList &DriverArgs,
+      llvm::opt::ArgStringList &CC1Args) const override;
+
 protected:
   Tool *buildAssembler() const override;
   Tool *buildLinker() const override;

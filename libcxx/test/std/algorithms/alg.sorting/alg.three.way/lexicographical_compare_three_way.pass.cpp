@@ -19,6 +19,7 @@
 #include <cassert>
 #include <compare>
 #include <concepts>
+#include <vector>
 
 #include "test_macros.h"
 #include "test_comparisons.h"
@@ -107,9 +108,17 @@ constexpr void test_comparison_categories() {
       std::partial_ordering::unordered);
 }
 
+// Check that it works with proxy iterators
+constexpr void test_proxy_iterators() {
+    std::vector<bool> vec(10, true);
+    auto result = std::lexicographical_compare_three_way(vec.begin(), vec.end(), vec.begin(), vec.end());
+    assert(result == std::strong_ordering::equal);
+}
+
 constexpr bool test() {
   test_iterator_types();
   test_comparison_categories();
+  test_proxy_iterators();
 
   return true;
 }

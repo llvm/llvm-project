@@ -65,11 +65,8 @@
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PatternMatch.h"
-#include "llvm/InitializePasses.h"
-#include "llvm/Pass.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Scalar/LoopPassManager.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/LoopUtils.h"
@@ -318,12 +315,12 @@ static bool verifyTripCount(Value *RHS, Loop *L,
     return false;
   }
 
-  // The Extend=false flag is used for getTripCountFromExitCount as we want
-  // to verify and match it with the pattern matched tripcount. Please note
-  // that overflow checks are performed in checkOverflow, but are first tried
-  // to avoid by widening the IV.
+  // Evaluating in the trip count's type can not overflow here as the overflow
+  // checks are performed in checkOverflow, but are first tried to avoid by
+  // widening the IV.
   const SCEV *SCEVTripCount =
-      SE->getTripCountFromExitCount(BackedgeTakenCount, /*Extend=*/false);
+    SE->getTripCountFromExitCount(BackedgeTakenCount,
+                                  BackedgeTakenCount->getType(), L);
 
   const SCEV *SCEVRHS = SE->getSCEV(RHS);
   if (SCEVRHS == SCEVTripCount)
@@ -336,7 +333,8 @@ static bool verifyTripCount(Value *RHS, Loop *L,
       // Find the extended backedge taken count and extended trip count using
       // SCEV. One of these should now match the RHS of the compare.
       BackedgeTCExt = SE->getZeroExtendExpr(BackedgeTakenCount, RHS->getType());
-      SCEVTripCountExt = SE->getTripCountFromExitCount(BackedgeTCExt, false);
+      SCEVTripCountExt = SE->getTripCountFromExitCount(BackedgeTCExt,
+                                                       RHS->getType(), L);
       if (SCEVRHS != BackedgeTCExt && SCEVRHS != SCEVTripCountExt) {
         LLVM_DEBUG(dbgs() << "Could not find valid trip count\n");
         return false;

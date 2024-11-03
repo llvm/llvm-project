@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Driver/MultilibBuilder.h"
+#include "ToolChains/CommonArgs.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/Support/Path.h"
@@ -41,9 +42,8 @@ static void normalizePathSegment(std::string &Segment) {
   }
 }
 
-MultilibBuilder::MultilibBuilder(StringRef GCC, StringRef OS, StringRef Include,
-                                 int Priority)
-    : GCCSuffix(GCC), OSSuffix(OS), IncludeSuffix(Include), Priority(Priority) {
+MultilibBuilder::MultilibBuilder(StringRef GCC, StringRef OS, StringRef Include)
+    : GCCSuffix(GCC), OSSuffix(OS), IncludeSuffix(Include) {
   normalizePathSegment(GCCSuffix);
   normalizePathSegment(OSSuffix);
   normalizePathSegment(IncludeSuffix);
@@ -76,7 +76,7 @@ bool MultilibBuilder::isValid() const {
     StringRef Flag(Flags[I]);
     llvm::StringMap<int>::iterator SI = FlagSet.find(Flag.substr(1));
 
-    assert(StringRef(Flag).front() == '+' || StringRef(Flag).front() == '-');
+    assert(StringRef(Flag).front() == '-' || StringRef(Flag).front() == '!');
 
     if (SI == FlagSet.end())
       FlagSet[Flag.substr(1)] = I;
@@ -86,16 +86,21 @@ bool MultilibBuilder::isValid() const {
   return true;
 }
 
+MultilibBuilder &MultilibBuilder::flag(StringRef Flag, bool Disallow) {
+  tools::addMultilibFlag(!Disallow, Flag, Flags);
+  return *this;
+}
+
 Multilib MultilibBuilder::makeMultilib() const {
-  return Multilib(GCCSuffix, OSSuffix, IncludeSuffix, Priority, Flags);
+  return Multilib(GCCSuffix, OSSuffix, IncludeSuffix, Flags);
 }
 
 MultilibSetBuilder &MultilibSetBuilder::Maybe(const MultilibBuilder &M) {
   MultilibBuilder Opposite;
-  // Negate any '+' flags
+  // Negate positive flags
   for (StringRef Flag : M.flags()) {
-    if (Flag.front() == '+')
-      Opposite.flags().push_back(("-" + Flag.substr(1)).str());
+    if (Flag.front() == '-')
+      Opposite.flag(Flag, /*Disallow=*/true);
   }
   return Either(M, Opposite);
 }

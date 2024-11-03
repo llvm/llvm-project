@@ -55,7 +55,7 @@ define <4 x float> @PR16739_byref(ptr nocapture readonly dereferenceable(16) %x)
 ; AVX2-NEXT:    [[GEP2:%.*]] = getelementptr inbounds <4 x float>, ptr [[X:%.*]], i64 0, i64 2
 ; AVX2-NEXT:    [[TMP1:%.*]] = load <2 x float>, ptr [[X]], align 4
 ; AVX2-NEXT:    [[X2:%.*]] = load float, ptr [[GEP2]], align 4
-; AVX2-NEXT:    [[TMP2:%.*]] = shufflevector <2 x float> [[TMP1]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
+; AVX2-NEXT:    [[TMP2:%.*]] = shufflevector <2 x float> [[TMP1]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
 ; AVX2-NEXT:    [[I2:%.*]] = insertelement <4 x float> [[TMP2]], float [[X2]], i32 2
 ; AVX2-NEXT:    [[I3:%.*]] = insertelement <4 x float> [[I2]], float [[X2]], i32 3
 ; AVX2-NEXT:    ret <4 x float> [[I3]]
@@ -65,8 +65,8 @@ define <4 x float> @PR16739_byref(ptr nocapture readonly dereferenceable(16) %x)
 ; AVX512-NEXT:    [[X0:%.*]] = load float, ptr [[X]], align 4
 ; AVX512-NEXT:    [[TMP1:%.*]] = load <2 x float>, ptr [[GEP1]], align 4
 ; AVX512-NEXT:    [[I0:%.*]] = insertelement <4 x float> poison, float [[X0]], i32 0
-; AVX512-NEXT:    [[TMP2:%.*]] = shufflevector <2 x float> [[TMP1]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
-; AVX512-NEXT:    [[I21:%.*]] = shufflevector <4 x float> [[I0]], <4 x float> [[TMP2]], <4 x i32> <i32 0, i32 4, i32 5, i32 undef>
+; AVX512-NEXT:    [[TMP2:%.*]] = shufflevector <2 x float> [[TMP1]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; AVX512-NEXT:    [[I21:%.*]] = shufflevector <4 x float> [[I0]], <4 x float> [[TMP2]], <4 x i32> <i32 0, i32 4, i32 5, i32 poison>
 ; AVX512-NEXT:    [[TMP3:%.*]] = shufflevector <4 x float> [[I21]], <4 x float> [[TMP2]], <4 x i32> <i32 0, i32 1, i32 2, i32 5>
 ; AVX512-NEXT:    ret <4 x float> [[TMP3]]
 ;
@@ -134,49 +134,24 @@ define <4 x float> @PR16739_byval(ptr nocapture readonly dereferenceable(16) %x)
 }
 
 define void @PR43578_prefer128(ptr %r, ptr %p, ptr %q) #0 {
-; AVX2-LABEL: @PR43578_prefer128(
-; AVX2-NEXT:    [[P1:%.*]] = getelementptr inbounds i64, ptr [[P:%.*]], i64 1
-; AVX2-NEXT:    [[P2:%.*]] = getelementptr inbounds i64, ptr [[P]], i64 2
-; AVX2-NEXT:    [[P3:%.*]] = getelementptr inbounds i64, ptr [[P]], i64 3
-; AVX2-NEXT:    [[Q1:%.*]] = getelementptr inbounds i64, ptr [[Q:%.*]], i64 1
-; AVX2-NEXT:    [[Q2:%.*]] = getelementptr inbounds i64, ptr [[Q]], i64 2
-; AVX2-NEXT:    [[Q3:%.*]] = getelementptr inbounds i64, ptr [[Q]], i64 3
-; AVX2-NEXT:    [[X0:%.*]] = load i64, ptr [[P]], align 2
-; AVX2-NEXT:    [[X1:%.*]] = load i64, ptr [[P1]], align 2
-; AVX2-NEXT:    [[X2:%.*]] = load i64, ptr [[P2]], align 2
-; AVX2-NEXT:    [[X3:%.*]] = load i64, ptr [[P3]], align 2
-; AVX2-NEXT:    [[Y0:%.*]] = load i64, ptr [[Q]], align 2
-; AVX2-NEXT:    [[Y1:%.*]] = load i64, ptr [[Q1]], align 2
-; AVX2-NEXT:    [[Y2:%.*]] = load i64, ptr [[Q2]], align 2
-; AVX2-NEXT:    [[Y3:%.*]] = load i64, ptr [[Q3]], align 2
-; AVX2-NEXT:    [[SUB0:%.*]] = sub nsw i64 [[X0]], [[Y0]]
-; AVX2-NEXT:    [[SUB1:%.*]] = sub nsw i64 [[X1]], [[Y1]]
-; AVX2-NEXT:    [[SUB2:%.*]] = sub nsw i64 [[X2]], [[Y2]]
-; AVX2-NEXT:    [[SUB3:%.*]] = sub nsw i64 [[X3]], [[Y3]]
-; AVX2-NEXT:    [[G0:%.*]] = getelementptr inbounds i32, ptr [[R:%.*]], i64 [[SUB0]]
-; AVX2-NEXT:    [[G1:%.*]] = getelementptr inbounds i32, ptr [[R]], i64 [[SUB1]]
-; AVX2-NEXT:    [[G2:%.*]] = getelementptr inbounds i32, ptr [[R]], i64 [[SUB2]]
-; AVX2-NEXT:    [[G3:%.*]] = getelementptr inbounds i32, ptr [[R]], i64 [[SUB3]]
-; AVX2-NEXT:    ret void
-;
-; AVX512-LABEL: @PR43578_prefer128(
-; AVX512-NEXT:    [[P2:%.*]] = getelementptr inbounds i64, ptr [[P:%.*]], i64 2
-; AVX512-NEXT:    [[Q2:%.*]] = getelementptr inbounds i64, ptr [[Q:%.*]], i64 2
-; AVX512-NEXT:    [[TMP1:%.*]] = load <2 x i64>, ptr [[P]], align 2
-; AVX512-NEXT:    [[TMP2:%.*]] = load <2 x i64>, ptr [[Q]], align 2
-; AVX512-NEXT:    [[TMP3:%.*]] = sub nsw <2 x i64> [[TMP1]], [[TMP2]]
-; AVX512-NEXT:    [[TMP4:%.*]] = load <2 x i64>, ptr [[P2]], align 2
-; AVX512-NEXT:    [[TMP5:%.*]] = load <2 x i64>, ptr [[Q2]], align 2
-; AVX512-NEXT:    [[TMP6:%.*]] = sub nsw <2 x i64> [[TMP4]], [[TMP5]]
-; AVX512-NEXT:    [[TMP7:%.*]] = extractelement <2 x i64> [[TMP3]], i32 0
-; AVX512-NEXT:    [[G0:%.*]] = getelementptr inbounds i32, ptr [[R:%.*]], i64 [[TMP7]]
-; AVX512-NEXT:    [[TMP8:%.*]] = extractelement <2 x i64> [[TMP3]], i32 1
-; AVX512-NEXT:    [[G1:%.*]] = getelementptr inbounds i32, ptr [[R]], i64 [[TMP8]]
-; AVX512-NEXT:    [[TMP9:%.*]] = extractelement <2 x i64> [[TMP6]], i32 0
-; AVX512-NEXT:    [[G2:%.*]] = getelementptr inbounds i32, ptr [[R]], i64 [[TMP9]]
-; AVX512-NEXT:    [[TMP10:%.*]] = extractelement <2 x i64> [[TMP6]], i32 1
-; AVX512-NEXT:    [[G3:%.*]] = getelementptr inbounds i32, ptr [[R]], i64 [[TMP10]]
-; AVX512-NEXT:    ret void
+; CHECK-LABEL: @PR43578_prefer128(
+; CHECK-NEXT:    [[P2:%.*]] = getelementptr inbounds i64, ptr [[P:%.*]], i64 2
+; CHECK-NEXT:    [[Q2:%.*]] = getelementptr inbounds i64, ptr [[Q:%.*]], i64 2
+; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i64>, ptr [[P]], align 2
+; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x i64>, ptr [[Q]], align 2
+; CHECK-NEXT:    [[TMP3:%.*]] = sub nsw <2 x i64> [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = load <2 x i64>, ptr [[P2]], align 2
+; CHECK-NEXT:    [[TMP5:%.*]] = load <2 x i64>, ptr [[Q2]], align 2
+; CHECK-NEXT:    [[TMP6:%.*]] = sub nsw <2 x i64> [[TMP4]], [[TMP5]]
+; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <2 x i64> [[TMP3]], i32 0
+; CHECK-NEXT:    [[G0:%.*]] = getelementptr inbounds i32, ptr [[R:%.*]], i64 [[TMP7]]
+; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <2 x i64> [[TMP3]], i32 1
+; CHECK-NEXT:    [[G1:%.*]] = getelementptr inbounds i32, ptr [[R]], i64 [[TMP8]]
+; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <2 x i64> [[TMP6]], i32 0
+; CHECK-NEXT:    [[G2:%.*]] = getelementptr inbounds i32, ptr [[R]], i64 [[TMP9]]
+; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <2 x i64> [[TMP6]], i32 1
+; CHECK-NEXT:    [[G3:%.*]] = getelementptr inbounds i32, ptr [[R]], i64 [[TMP10]]
+; CHECK-NEXT:    ret void
 ;
   %p1 = getelementptr inbounds i64, ptr %p, i64 1
   %p2 = getelementptr inbounds i64, ptr %p, i64 2

@@ -1,0 +1,49 @@
+*** Dumping AST Record Layout
+Type: struct E1
+
+Layout: <ASTRecordLayout
+  Size:8
+  Alignment:8
+  BaseOffsets: []>
+  VBaseOffsets: []>
+  FieldOffsets: []>
+
+*** Dumping AST Record Layout
+Type: struct Mid
+
+Layout: <ASTRecordLayout
+  Size:64
+  Alignment:64
+  BaseOffsets: []>
+  VBaseOffsets: []>
+  FieldOffsets: [0]>
+
+*** Dumping AST Record Layout
+Type: struct E2
+
+Layout: <ASTRecordLayout
+  Size:8
+  Alignment:8
+  BaseOffsets: []>
+  VBaseOffsets: []>
+  FieldOffsets: []>
+
+*** Dumping AST Record Layout
+Type: struct Combine
+
+Layout: <ASTRecordLayout
+  Size:64
+  Alignment:64
+  BaseOffsets: [0, 0, 0]>
+  VBaseOffsets: []>
+  FieldOffsets: []>
+
+*** Dumping AST Record Layout
+Type: struct Combine2
+
+Layout: <ASTRecordLayout
+  Size:128
+  Alignment:64
+  BaseOffsets: [0, 8]>
+  VBaseOffsets: []>
+  FieldOffsets: []>

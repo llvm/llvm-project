@@ -9,9 +9,11 @@ static_library("Rewrite") {
     "//bolt/lib/Profile",
     "//bolt/lib/RuntimeLibs",
     "//bolt/lib/Utils",
+    "//llvm/lib/CodeGen/AsmPrinter",
+    "//llvm/lib/DWARFLinker",
     "//llvm/lib/DWP",
     "//llvm/lib/DebugInfo/DWARF",
-    "//llvm/lib/ExecutionEngine",
+    "//llvm/lib/ExecutionEngine/JITLink",
     "//llvm/lib/MC",
     "//llvm/lib/Object",
     "//llvm/lib/Support",
@@ -23,8 +25,13 @@ static_library("Rewrite") {
     "BoltDiff.cpp",
     "DWARFRewriter.cpp",
     "ExecutableFileMemoryManager.cpp",
+    "JITLinkLinker.cpp",
+    "LinuxKernelRewriter.cpp",
     "MachORewriteInstance.cpp",
+    "MetadataManager.cpp",
+    "PseudoProbeRewriter.cpp",
     "RewriteInstance.cpp",
+    "SDTRewriter.cpp",
   ]
 
   defines = []

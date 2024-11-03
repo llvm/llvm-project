@@ -8,8 +8,9 @@ This check flags all array subscript expressions on static arrays and
 are out of bounds (for ``std::array``). For out-of-bounds checking of static
 arrays, see the `-Warray-bounds` Clang diagnostic.
 
-This rule is part of the "Bounds safety" profile of the C++ Core Guidelines, see
-https://github.com/isocpp/CppCoreGuidelines/blob/master/CppCoreGuidelines.md#Pro-bounds-arrayindex.
+This rule is part of the `Bounds safety (Bounds 2)
+<https://isocpp.github.io/CppCoreGuidelines/CppCoreGuidelines#Pro-bounds-arrayindex>`_
+profile from the C++ Core Guidelines.
 
 Optionally, this check can generate fixes using ``gsl::at`` for indexing.
 

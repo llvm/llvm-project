@@ -1,5 +1,5 @@
-; RUN: not llc -march=amdgcn < %s 2>&1 | FileCheck -check-prefix=ERROR %s
-; RUN: not llc -march=amdgcn < %s | FileCheck -check-prefix=GCN %s
+; RUN: not llc -mtriple=amdgcn-- < %s 2>&1 | FileCheck -check-prefix=ERROR %s
+; RUN: not llc -mtriple=amdgcn-- < %s | FileCheck -check-prefix=GCN %s
 
 declare void @llvm.memset.p5.i32(ptr addrspace(5) nocapture, i8, i32, i32, i1) #1
 

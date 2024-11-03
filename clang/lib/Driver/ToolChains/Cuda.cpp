@@ -74,6 +74,10 @@ CudaVersion getCudaVersion(uint32_t raw_version) {
     return CudaVersion::CUDA_117;
   if (raw_version < 11090)
     return CudaVersion::CUDA_118;
+  if (raw_version < 12010)
+    return CudaVersion::CUDA_120;
+  if (raw_version < 12020)
+    return CudaVersion::CUDA_121;
   return CudaVersion::NEW;
 }
 
@@ -625,8 +629,7 @@ void NVPTX::Linker::ConstructJob(Compilation &C, const JobAction &JA,
         const char *CubinF =
             Args.MakeArgString(getToolChain().getDriver().GetTemporaryPath(
                 llvm::sys::path::stem(InputFile), "cubin"));
-        if (std::error_code EC =
-                llvm::sys::fs::copy_file(InputFile, C.addTempFile(CubinF)))
+        if (llvm::sys::fs::copy_file(InputFile, C.addTempFile(CubinF)))
           continue;
 
         CmdArgs.push_back(CubinF);
@@ -668,6 +671,8 @@ void NVPTX::getNVPTXTargetFeatures(const Driver &D, const llvm::Triple &Triple,
   case CudaVersion::CUDA_##CUDA_VER:                                           \
     PtxFeature = "+ptx" #PTX_VER;                                              \
     break;
+    CASE_CUDA_VERSION(121, 81);
+    CASE_CUDA_VERSION(120, 80);
     CASE_CUDA_VERSION(118, 78);
     CASE_CUDA_VERSION(117, 77);
     CASE_CUDA_VERSION(116, 76);
@@ -695,12 +700,11 @@ void NVPTX::getNVPTXTargetFeatures(const Driver &D, const llvm::Triple &Triple,
 /// toolchain.
 NVPTXToolChain::NVPTXToolChain(const Driver &D, const llvm::Triple &Triple,
                                const llvm::Triple &HostTriple,
-                               const ArgList &Args)
-    : ToolChain(D, Triple, Args), CudaInstallation(D, HostTriple, Args) {
-  if (CudaInstallation.isValid()) {
-    CudaInstallation.WarnIfUnsupportedVersion();
+                               const ArgList &Args, bool Freestanding = false)
+    : ToolChain(D, Triple, Args), CudaInstallation(D, HostTriple, Args),
+      Freestanding(Freestanding) {
+  if (CudaInstallation.isValid())
     getProgramPaths().push_back(std::string(CudaInstallation.getBinPath()));
-  }
   // Lookup binaries into the driver directory, this is used to
   // discover the 'nvptx-arch' executable.
   getProgramPaths().push_back(getDriver().Dir);
@@ -710,8 +714,8 @@ NVPTXToolChain::NVPTXToolChain(const Driver &D, const llvm::Triple &Triple,
 /// system's default triple if not provided.
 NVPTXToolChain::NVPTXToolChain(const Driver &D, const llvm::Triple &Triple,
                                const ArgList &Args)
-    : NVPTXToolChain(D, Triple,
-                     llvm::Triple(llvm::sys::getDefaultTargetTriple()), Args) {}
+    : NVPTXToolChain(D, Triple, llvm::Triple(LLVM_HOST_TRIPLE), Args,
+                     /*Freestanding=*/true) {}
 
 llvm::opt::DerivedArgList *
 NVPTXToolChain::TranslateArgs(const llvm::opt::DerivedArgList &Args,
@@ -735,6 +739,16 @@ NVPTXToolChain::TranslateArgs(const llvm::opt::DerivedArgList &Args,
   return DAL;
 }
 
+void NVPTXToolChain::addClangTargetOptions(
+    const llvm::opt::ArgList &DriverArgs, llvm::opt::ArgStringList &CC1Args,
+    Action::OffloadKind DeviceOffloadingKind) const {
+  // If we are compiling with a standalone NVPTX toolchain we want to try to
+  // mimic a standard environment as much as possible. So we enable lowering
+  // ctor / dtor functions to global symbols that can be registered.
+  if (Freestanding)
+    CC1Args.append({"-mllvm", "--nvptx-lower-global-ctor-dtor"});
+}
+
 bool NVPTXToolChain::supportsDebugInfoOption(const llvm::opt::Arg *A) const {
   const Option &O = A->getOption();
   return (O.matches(options::OPT_gN_Group) &&
@@ -748,13 +762,14 @@ bool NVPTXToolChain::supportsDebugInfoOption(const llvm::opt::Arg *A) const {
 }
 
 void NVPTXToolChain::adjustDebugInfoKind(
-    codegenoptions::DebugInfoKind &DebugInfoKind, const ArgList &Args) const {
+    llvm::codegenoptions::DebugInfoKind &DebugInfoKind,
+    const ArgList &Args) const {
   switch (mustEmitDebugInfo(Args)) {
   case DisableDebugInfo:
-    DebugInfoKind = codegenoptions::NoDebugInfo;
+    DebugInfoKind = llvm::codegenoptions::NoDebugInfo;
     break;
   case DebugDirectivesOnly:
-    DebugInfoKind = codegenoptions::DebugDirectivesOnly;
+    DebugInfoKind = llvm::codegenoptions::DebugDirectivesOnly;
     break;
   case EmitSameDebugInfoAsHost:
     // Use same debug info level as the host.
@@ -785,9 +800,12 @@ void CudaToolChain::addClangTargetOptions(
     CC1Args.append(
         {"-fcuda-is-device", "-mllvm", "-enable-memcpyopt-without-libcalls"});
 
-    if (DriverArgs.hasFlag(options::OPT_fcuda_approx_transcendentals,
-                           options::OPT_fno_cuda_approx_transcendentals, false))
-      CC1Args.push_back("-fcuda-approx-transcendentals");
+    // Unsized function arguments used for variadics were introduced in CUDA-9.0
+    // We still do not support generating code that actually uses variadic
+    // arguments yet, but we do need to allow parsing them as recent CUDA
+    // headers rely on that. https://github.com/llvm/llvm-project/issues/58410
+    if (CudaInstallation.version() >= CudaVersion::CUDA_90)
+      CC1Args.push_back("-fcuda-allow-variadic-functions");
   }
 
   if (DriverArgs.hasArg(options::OPT_nogpulib))

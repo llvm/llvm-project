@@ -126,7 +126,7 @@ program test_co_broadcast
   !ERROR: 'errmsg=' argument has unacceptable rank 1
   call co_broadcast(d, errmsg=character_array, source_image=1)
 
-  !ERROR: too many actual arguments for intrinsic 'co_broadcast'
+  !ERROR: actual argument #5 without a keyword may not follow an actual argument with a keyword
   call co_broadcast(r, source_image=1, stat=status, errmsg=message, 3.4)
 
   !ERROR: unknown keyword argument to intrinsic 'co_broadcast'

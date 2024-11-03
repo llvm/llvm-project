@@ -16,6 +16,7 @@
 #include <__format/format_fwd.h>
 #include <__format/format_parse_context.h>
 #include <__type_traits/is_specialization.h>
+#include <__type_traits/remove_const.h>
 #include <__utility/pair.h>
 #include <tuple>
 
@@ -43,17 +44,21 @@ concept __fmt_char_type =
 template <class _CharT>
 using __fmt_iter_for = _CharT*;
 
+template <class _Tp, class _Context, class _Formatter = typename _Context::template formatter_type<remove_const_t<_Tp>>>
+concept __formattable_with =
+    semiregular<_Formatter> &&
+    requires(_Formatter& __f,
+             const _Formatter& __cf,
+             _Tp&& __t,
+             _Context __fc,
+             basic_format_parse_context<typename _Context::char_type> __pc) {
+      { __f.parse(__pc) } -> same_as<typename decltype(__pc)::iterator>;
+      { __cf.format(__t, __fc) } -> same_as<typename _Context::iterator>;
+    };
+
 template <class _Tp, class _CharT>
 concept __formattable =
-    (semiregular<formatter<remove_cvref_t<_Tp>, _CharT>>) &&
-    requires(formatter<remove_cvref_t<_Tp>, _CharT> __f,
-             const formatter<remove_cvref_t<_Tp>, _CharT> __cf,
-             _Tp __t,
-             basic_format_context<__fmt_iter_for<_CharT>, _CharT> __fc,
-             basic_format_parse_context<_CharT> __pc) {
-      { __f.parse(__pc) } -> same_as<typename basic_format_parse_context<_CharT>::iterator>;
-      { __cf.format(__t, __fc) } -> same_as<__fmt_iter_for<_CharT>>;
-    };
+    __formattable_with<remove_reference_t<_Tp>, basic_format_context<__fmt_iter_for<_CharT>, _CharT>>;
 
 #  if _LIBCPP_STD_VER >= 23
 template <class _Tp, class _CharT>
@@ -65,9 +70,8 @@ concept formattable = __formattable<_Tp, _CharT>;
 // TODO FMT Add a test to validate we fail when using that concept after P2165
 // has been implemented.
 template <class _Tp>
-concept __fmt_pair_like = __is_specialization_v<_Tp, pair> ||
-                          // Use a requires since tuple_size_v may fail to instantiate,
-                          (__is_specialization_v<_Tp, tuple> && requires { tuple_size_v<_Tp> == 2; });
+concept __fmt_pair_like =
+    __is_specialization_v<_Tp, pair> || (__is_specialization_v<_Tp, tuple> && tuple_size_v<_Tp> == 2);
 
 #  endif //_LIBCPP_STD_VER >= 23
 #endif //_LIBCPP_STD_VER >= 20

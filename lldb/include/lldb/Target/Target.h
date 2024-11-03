@@ -204,6 +204,12 @@ public:
 
   uint64_t GetExprErrorLimit() const;
 
+  uint64_t GetExprAllocAddress() const;
+
+  uint64_t GetExprAllocSize() const;
+
+  uint64_t GetExprAllocAlign() const;
+
   bool GetUseHexImmediates() const;
 
   bool GetUseFastStepping() const;
@@ -506,9 +512,9 @@ public:
 
     ~TargetEventData() override;
 
-    static ConstString GetFlavorString();
+    static llvm::StringRef GetFlavorString();
 
-    ConstString GetFlavor() const override {
+    llvm::StringRef GetFlavor() const override {
       return TargetEventData::GetFlavorString();
     }
 
@@ -547,6 +553,17 @@ public:
   static void SetDefaultArchitecture(const ArchSpec &arch);
 
   bool IsDummyTarget() const { return m_is_dummy_target; }
+
+  const std::string &GetLabel() const { return m_label; }
+
+  /// Set a label for a target.
+  ///
+  /// The label cannot be used by another target or be only integral.
+  ///
+  /// \return
+  ///     The label for this target or an error if the label didn't match the
+  ///     requirements.
+  llvm::Error SetLabel(llvm::StringRef label);
 
   /// Find a binary on the system and return its Module,
   /// or return an existing Module that is already in the Target.
@@ -922,7 +939,7 @@ public:
       LoadDependentFiles load_dependent_files = eLoadDependentsDefault);
 
   bool LoadScriptingResources(std::list<Status> &errors,
-                              Stream *feedback_stream = nullptr,
+                              Stream &feedback_stream,
                               bool continue_on_error = true) {
     return m_images.LoadScriptingResourcesInTarget(
         this, errors, feedback_stream, continue_on_error);
@@ -1243,6 +1260,10 @@ public:
   ///     if none can be found.
   llvm::Expected<lldb_private::Address> GetEntryPointAddress();
 
+  CompilerType GetRegisterType(const std::string &name,
+                               const lldb_private::RegisterFlags &flags,
+                               uint32_t byte_size);
+
   // Target Stop Hooks
   class StopHook : public UserID {
   public:
@@ -1289,8 +1310,8 @@ public:
 
     bool GetAutoContinue() const { return m_auto_continue; }
 
-    void GetDescription(Stream *s, lldb::DescriptionLevel level) const;
-    virtual void GetSubclassDescription(Stream *s,
+    void GetDescription(Stream &s, lldb::DescriptionLevel level) const;
+    virtual void GetSubclassDescription(Stream &s,
                                         lldb::DescriptionLevel level) const = 0;
 
   protected:
@@ -1313,7 +1334,7 @@ public:
 
     StopHookResult HandleStop(ExecutionContext &exc_ctx,
                               lldb::StreamSP output_sp) override;
-    void GetSubclassDescription(Stream *s,
+    void GetSubclassDescription(Stream &s,
                                 lldb::DescriptionLevel level) const override;
 
   private:
@@ -1335,7 +1356,7 @@ public:
     Status SetScriptCallback(std::string class_name,
                              StructuredData::ObjectSP extra_args_sp);
 
-    void GetSubclassDescription(Stream *s,
+    void GetSubclassDescription(Stream &s,
                                 lldb::DescriptionLevel level) const override;
 
   private:
@@ -1430,6 +1451,8 @@ public:
     return *m_frame_recognizer_manager_up;
   }
 
+  void SaveScriptedLaunchInfo(lldb_private::ProcessInfo &process_info);
+
   /// Add a signal for the target.  This will get copied over to the process
   /// if the signal exists on that target.  Only the values with Yes and No are
   /// set, Calculate values will be ignored.
@@ -1508,6 +1531,7 @@ protected:
   /// detect that code is running on the private state thread.
   std::recursive_mutex m_private_mutex;
   Arch m_arch;
+  std::string m_label;
   ModuleList m_images; ///< The list of images for this process (shared
                        /// libraries and anything dynamically loaded).
   SectionLoadHistory m_section_load_history;

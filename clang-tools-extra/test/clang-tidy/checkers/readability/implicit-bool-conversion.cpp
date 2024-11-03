@@ -471,3 +471,10 @@ bool f(S& s) {
 }
 
 } // namespace ignore_1bit_bitfields
+
+namespace PR47000 {
+  int to_int(bool x) { return int{x}; }
+
+  using IntType = int;
+  int to_int2(bool x) { return IntType{x}; }
+}

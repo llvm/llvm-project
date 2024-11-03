@@ -11,5 +11,11 @@ objects:
   - filename: 1.o
     symbols:
       - { sym: _bar, objAddr: 0x0, binAddr: 0x10000, size: 0x10 }
+  - filename: 2.o
+    symbols:
+      - { sym: __Z3foov, objAddr: 0x0, binAddr: 0x20000, size: 0x10 }
+  - filename: 3.o
+    symbols:
+      - { sym: __Z3foov, objAddr: 0x0, binAddr: 0x30000, size: 0x10 }
 ...
 

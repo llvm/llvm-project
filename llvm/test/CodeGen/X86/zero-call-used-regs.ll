@@ -241,6 +241,20 @@ entry:
   ret i32 %x
 }
 
+define dso_local void @tailcall(ptr %p) local_unnamed_addr #0 "zero-call-used-regs"="used-gpr" {
+; I386-LABEL: tailcall:
+; I386:       # %bb.0:
+; I386-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; I386-NEXT:    jmpl *(%eax) # TAILCALL
+;
+; X86-64-LABEL: tailcall:
+; X86-64:       # %bb.0:
+; X86-64-NEXT:    jmpq *(%rdi) # TAILCALL
+  %c = load ptr, ptr %p
+  tail call void %c()
+  ret void
+}
+
 ; Don't emit zeroing registers in "main" function.
 define dso_local i32 @main() local_unnamed_addr #1 {
 ; I386-LABEL: main:

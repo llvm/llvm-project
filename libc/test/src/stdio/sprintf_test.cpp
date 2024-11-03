@@ -10,8 +10,10 @@
 
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/PlatformDefs.h"
+#include "test/UnitTest/RoundingModeUtils.h"
 #include "test/UnitTest/Test.h"
-#include "utils/testutils/RoundingModeUtils.h"
+
+// TODO: Add a comment here explaining the printf format string.
 
 // #include <stdio.h>
 // namespace __llvm_libc {
@@ -23,6 +25,9 @@ protected:
   char buff[1000];
   int written;
 };
+
+using __llvm_libc::fputil::testing::ForceRoundingMode;
+using __llvm_libc::fputil::testing::RoundingMode;
 
 // Subtract 1 from sizeof(expected_str) to account for the null byte.
 #define ASSERT_STREQ_LEN(actual_written, actual_str, expected_str)             \
@@ -93,6 +98,12 @@ TEST(LlvmLibcSPrintfTest, StringConv) {
                                  "isn't", 12, 10, "important. Ever.");
   EXPECT_EQ(written, 26);
   ASSERT_STREQ(buff, " beginning is   important.");
+
+#ifndef LIBC_COPT_PRINTF_NO_NULLPTR_CHECKS
+  written = __llvm_libc::sprintf(buff, "%s", nullptr);
+  EXPECT_EQ(written, 4);
+  ASSERT_STREQ(buff, "null");
+#endif // LIBC_COPT_PRINTF_NO_NULLPTR_CHECKS
 }
 
 TEST(LlvmLibcSPrintfTest, IntConv) {
@@ -119,13 +130,19 @@ TEST(LlvmLibcSPrintfTest, IntConv) {
   EXPECT_EQ(written, 20);
   ASSERT_STREQ(buff, "18446744073709551615"); // ull max
 
+  written = __llvm_libc::sprintf(buff, "%u", ~0);
+  if (sizeof(int) == 4) {
+    EXPECT_EQ(written, 10);
+    ASSERT_STREQ(buff, "4294967295");
+  }
+
   written = __llvm_libc::sprintf(buff, "%tu", ~ptrdiff_t(0));
   if (sizeof(ptrdiff_t) == 8) {
     EXPECT_EQ(written, 20);
     ASSERT_STREQ(buff, "18446744073709551615");
   } else if (sizeof(ptrdiff_t) == 4) {
     EXPECT_EQ(written, 10);
-    ASSERT_STREQ(buff, "4294967296");
+    ASSERT_STREQ(buff, "4294967295");
   }
 
   written = __llvm_libc::sprintf(buff, "%lld", -9223372036854775807ll - 1ll);
@@ -377,8 +394,54 @@ TEST(LlvmLibcSPrintfTest, PointerConv) {
   EXPECT_EQ(written, 10);
   ASSERT_STREQ(buff, "0x1a2b3c4d");
 
+  if constexpr (sizeof(void *) > 4) {
+    written = __llvm_libc::sprintf(buff, "%p", 0x1a2b3c4d5e6f7081);
+    EXPECT_EQ(written, 18);
+    ASSERT_STREQ(buff, "0x1a2b3c4d5e6f7081");
+  }
+
   written = __llvm_libc::sprintf(buff, "%p", buff);
   EXPECT_GT(written, 0);
+
+  // Width tests:
+
+  written = __llvm_libc::sprintf(buff, "%20p", nullptr);
+  EXPECT_EQ(written, 20);
+  ASSERT_STREQ(buff, "           (nullptr)");
+
+  written = __llvm_libc::sprintf(buff, "%20p", 0x1a2b3c4d);
+  EXPECT_EQ(written, 20);
+  ASSERT_STREQ(buff, "          0x1a2b3c4d");
+
+  // Flag tests:
+
+  written = __llvm_libc::sprintf(buff, "%-20p", nullptr);
+  EXPECT_EQ(written, 20);
+  ASSERT_STREQ(buff, "(nullptr)           ");
+
+  written = __llvm_libc::sprintf(buff, "%-20p", 0x1a2b3c4d);
+  EXPECT_EQ(written, 20);
+  ASSERT_STREQ(buff, "0x1a2b3c4d          ");
+
+  // Using the 0 flag is technically undefined, but here we're following the
+  // convention of matching the behavior of %#x.
+  written = __llvm_libc::sprintf(buff, "%020p", 0x1a2b3c4d);
+  EXPECT_EQ(written, 20);
+  ASSERT_STREQ(buff, "0x00000000001a2b3c4d");
+
+  // Precision tests:
+  // These are all undefined behavior. The precision option is undefined for %p.
+
+  // Precision specifies the number of characters for a string conversion.
+  written = __llvm_libc::sprintf(buff, "%.5p", nullptr);
+  EXPECT_EQ(written, 5);
+  ASSERT_STREQ(buff, "(null");
+
+  // Precision specifies the number of digits to be written for %x conversions,
+  // and the "0x" doesn't count as part of the digits.
+  written = __llvm_libc::sprintf(buff, "%.20p", 0x1a2b3c4d);
+  EXPECT_EQ(written, 22);
+  ASSERT_STREQ(buff, "0x0000000000001a2b3c4d");
 }
 
 TEST(LlvmLibcSPrintfTest, OctConv) {
@@ -505,8 +568,7 @@ TEST(LlvmLibcSPrintfTest, OctConv) {
 #ifndef LIBC_COPT_PRINTF_DISABLE_FLOAT
 
 TEST_F(LlvmLibcSPrintfTest, FloatHexExpConv) {
-  __llvm_libc::testutils::ForceRoundingMode r(
-      __llvm_libc::testutils::RoundingMode::Nearest);
+  ForceRoundingMode r(RoundingMode::Nearest);
   double inf = __llvm_libc::fputil::FPBits<double>::inf().get_val();
   double nan = __llvm_libc::fputil::FPBits<double>::build_nan(1);
 
@@ -705,10 +767,7 @@ TEST_F(LlvmLibcSPrintfTest, FloatHexExpConv) {
 
   // Rounding Mode Tests.
 
-  {
-    __llvm_libc::testutils::ForceRoundingMode r(
-        __llvm_libc::testutils::RoundingMode::Nearest);
-
+  if (ForceRoundingMode r(RoundingMode::Nearest); r.success) {
     written = __llvm_libc::sprintf(buff, "%.1a", 0x1.08p0);
     ASSERT_STREQ_LEN(written, buff, "0x1.0p+0");
 
@@ -734,10 +793,7 @@ TEST_F(LlvmLibcSPrintfTest, FloatHexExpConv) {
     ASSERT_STREQ_LEN(written, buff, "-0x1.1p+0");
   }
 
-  {
-    __llvm_libc::testutils::ForceRoundingMode r(
-        __llvm_libc::testutils::RoundingMode::Upward);
-
+  if (ForceRoundingMode r(RoundingMode::Upward); r.success) {
     written = __llvm_libc::sprintf(buff, "%.1a", 0x1.08p0);
     ASSERT_STREQ_LEN(written, buff, "0x1.1p+0");
 
@@ -763,10 +819,7 @@ TEST_F(LlvmLibcSPrintfTest, FloatHexExpConv) {
     ASSERT_STREQ_LEN(written, buff, "-0x1.1p+0");
   }
 
-  {
-    __llvm_libc::testutils::ForceRoundingMode r(
-        __llvm_libc::testutils::RoundingMode::Downward);
-
+  if (ForceRoundingMode r(RoundingMode::Downward); r.success) {
     written = __llvm_libc::sprintf(buff, "%.1a", 0x1.08p0);
     ASSERT_STREQ_LEN(written, buff, "0x1.0p+0");
 
@@ -792,10 +845,7 @@ TEST_F(LlvmLibcSPrintfTest, FloatHexExpConv) {
     ASSERT_STREQ_LEN(written, buff, "-0x1.2p+0");
   }
 
-  {
-    __llvm_libc::testutils::ForceRoundingMode r(
-        __llvm_libc::testutils::RoundingMode::TowardZero);
-
+  if (ForceRoundingMode r(RoundingMode::TowardZero); r.success) {
     written = __llvm_libc::sprintf(buff, "%.1a", 0x1.08p0);
     ASSERT_STREQ_LEN(written, buff, "0x1.0p+0");
 
@@ -863,13 +913,29 @@ TEST_F(LlvmLibcSPrintfTest, FloatHexExpConv) {
 
   written = __llvm_libc::sprintf(buff, "%+-#12.3a % 012.3a", 0.1256, 1256.0);
   ASSERT_STREQ_LEN(written, buff, "+0x1.014p-3   0x1.3a0p+10");
+
+  // These tests check that the padding is properly calculated based on the
+  // min_width field. Specifically, they check that the extra zeroes added by
+  // the high precision are accounted for correctly.
+  written = __llvm_libc::sprintf(buff, "%50.50a", 0x1.0p0);
+  ASSERT_STREQ_LEN(written, buff,
+                   "0x1.00000000000000000000000000000000000000000000000000p+0");
+
+  // The difference with this test is that the formatted number is exactly 57
+  // characters, so padding to 58 adds a space.
+  written = __llvm_libc::sprintf(buff, "%58.50a", 0x1.0p0);
+  ASSERT_STREQ_LEN(
+      written, buff,
+      " 0x1.00000000000000000000000000000000000000000000000000p+0");
 }
 
 TEST_F(LlvmLibcSPrintfTest, FloatDecimalConv) {
-  __llvm_libc::testutils::ForceRoundingMode r(
-      __llvm_libc::testutils::RoundingMode::Nearest);
+  ForceRoundingMode r(RoundingMode::Nearest);
   double inf = __llvm_libc::fputil::FPBits<double>::inf().get_val();
   double nan = __llvm_libc::fputil::FPBits<double>::build_nan(1);
+
+  char big_buff[10000]; // Used for long doubles and other extremely wide
+                        // numbers.
 
   written = __llvm_libc::sprintf(buff, "%f", 1.0);
   ASSERT_STREQ_LEN(written, buff, "1.000000");
@@ -928,18 +994,21 @@ TEST_F(LlvmLibcSPrintfTest, FloatDecimalConv) {
 
   // Length Modifier Tests.
 
-  // TODO: Fix long doubles (needs bigger table or alternate algorithm.)
-  // Currently the table values are generated, which is very slow.
-  /*
+  // TODO(michaelrj): Add tests for LONG_DOUBLE_IS_DOUBLE and 128 bit long
+  // double systems.
+  // TODO(michaelrj): Fix the tests to only depend on the digits the long double
+  // is accurate for.
+
+  written = __llvm_libc::sprintf(buff, "%Lf", 1.0L);
+  ASSERT_STREQ_LEN(written, buff, "1.000000");
+
+#if defined(SPECIAL_X86_LONG_DOUBLE)
+
   written = __llvm_libc::sprintf(buff, "%Lf", 1e100L);
   ASSERT_STREQ_LEN(written, buff,
                    "99999999999999999996693535322073426194986990198284960792713"
                    "91541752018669482644324418977840117055488.000000");
 
-  written = __llvm_libc::sprintf(buff, "%Lf", 1.0L);
-  ASSERT_STREQ_LEN(written, buff, "1.000000");
-
-  char big_buff[10000];
   written = __llvm_libc::sprintf(big_buff, "%Lf", 1e1000L);
   ASSERT_STREQ_LEN(
       written, big_buff,
@@ -1031,7 +1100,121 @@ TEST_F(LlvmLibcSPrintfTest, FloatDecimalConv) {
       "739074789794941408428328217107759915202650066155868439585510978709442590"
       "231934194956788626761834746430104077432547436359522462253411168467463134"
       "24896.000000");
-*/
+
+  written = __llvm_libc::sprintf(big_buff, "%.10Lf", 1e-10L);
+  ASSERT_STREQ_LEN(written, big_buff, "0.0000000001");
+
+  written = __llvm_libc::sprintf(big_buff, "%.7500Lf", 1e-4900L);
+  ASSERT_STREQ_LEN(
+      written, big_buff,
+      "0."
+      "000000000000000000000000000000000000000000000000000000000000000000000000"
+      "000000000000000000000000000000000000000000000000000000000000000000000000"
+      "000000000000000000000000000000000000000000000000000000000000000000000000"
+      "000000000000000000000000000000000000000000000000000000000000000000000000"
+      "000000000000000000000000000000000000000000000000000000000000000000000000"
+      "000000000000000000000000000000000000000000000000000000000000000000000000"
+      "000000000000000000000000000000000000000000000000000000000000000000000000"
+      "000000000000000000000000000000000000000000000000000000000000000000000000"
+      "000000000000000000000000000000000000000000000000000000000000000000000000"
+      "000000000000000000000000000000000000000000000000000000000000000000000000"
+      "000000000000000000000000000000000000000000000000000000000000000000000000"
+      "000000000000000000000000000000000000000000000000000000000000000000000000"
+      "000000000000000000000000000000000000000000000000000000000000000000000000"
+      "000000000000000000000000000000000000000000000000000000000000000000000000"
+      "000000000000000000000000000000000000000000000000000000000000000000000000"
+      "000000000000000000000000000000000000000000000000000000000000000000000000"
+      "000000000000000000000000000000000000000000000000000000000000000000000000"
+      "000000000000000000000000000000000000000000000000000000000000000000000000"
+      "000000000000000000000000000000000000000000000000000000000000000000000000"
+      "000000000000000000000000000000000000000000000000000000000000000000000000"
+      "000000000000000000000000000000000000000000000000000000000000000000000000"
+      "000000000000000000000000000000000000000000000000000000000000000000000000"
+      "000000000000000000000000000000000000000000000000000000000000000000000000"
+      "000000000000000000000000000000000000000000000000000000000000000000000000"
+      "000000000000000000000000000000000000000000000000000000000000000000000000"
+      "000000000000000000000000000000000000000000000000000000000000000000000000"
+      "000000000000000000000000000000000000000000000000000000000000000000000000"
+      "000000000000000000000000000000000000000000000000000000000000000000000000"
+      "000000000000000000000000000000000000000000000000000000000000000000000000"
+      "000000000000000000000000000000000000000000000000000000000000000000000000"
+      "000000000000000000000000000000000000000000000000000000000000000000000000"
+      "000000000000000000000000000000000000000000000000000000000000000000000000"
+      "000000000000000000000000000000000000000000000000000000000000000000000000"
+      "000000000000000000000000000000000000000000000000000000000000000000000000"
+      "000000000000000000000000000000000000000000000000000000000000000000000000"
+      "000000000000000000000000000000000000000000000000000000000000000000000000"
+      "000000000000000000000000000000000000000000000000000000000000000000000000"
+      "000000000000000000000000000000000000000000000000000000000000000000000000"
+      "000000000000000000000000000000000000000000000000000000000000000000000000"
+      "000000000000000000000000000000000000000000000000000000000000000000000000"
+      "000000000000000000000000000000000000000000000000000000000000000000000000"
+      "000000000000000000000000000000000000000000000000000000000000000000000000"
+      "000000000000000000000000000000000000000000000000000000000000000000000000"
+      "000000000000000000000000000000000000000000000000000000000000000000000000"
+      "000000000000000000000000000000000000000000000000000000000000000000000000"
+      "000000000000000000000000000000000000000000000000000000000000000000000000"
+      "000000000000000000000000000000000000000000000000000000000000000000000000"
+      "000000000000000000000000000000000000000000000000000000000000000000000000"
+      "000000000000000000000000000000000000000000000000000000000000000000000000"
+      "000000000000000000000000000000000000000000000000000000000000000000000000"
+      "000000000000000000000000000000000000000000000000000000000000000000000000"
+      "000000000000000000000000000000000000000000000000000000000000000000000000"
+      "000000000000000000000000000000000000000000000000000000000000000000000000"
+      "000000000000000000000000000000000000000000000000000000000000000000000000"
+      "000000000000000000000000000000000000000000000000000000000000000000000000"
+      "000000000000000000000000000000000000000000000000000000000000000000000000"
+      "000000000000000000000000000000000000000000000000000000000000000000000000"
+      "000000000000000000000000000000000000000000000000000000000000000000000000"
+      "000000000000000000000000000000000000000000000000000000000000000000000000"
+      "000000000000000000000000000000000000000000000000000000000000000000000000"
+      "000000000000000000000000000000000000000000000000000000000000000000000000"
+      "000000000000000000000000000000000000000000000000000000000000000000000000"
+      "000000000000000000000000000000000000000000000000000000000000000000000000"
+      "000000000000000000000000000000000000000000000000000000000000000000000000"
+      "000000000000000000000000000000000000000000000000000000000000000000000000"
+      "000000000000000000000000000000000000000000000000000000000000000000000000"
+      "000000000000000000000000000000000000000000000000000000000000000000000000"
+      "000000000000000000000000000000000000000000000000000000000000000000000000"
+      "000099999999999999999996962764452956071352139203248614920751610856665084"
+      "549214352477698417183862158583009348897567779527408501588132175167211539"
+      "462139941448204886585901454195352527238724272760638086779284030512649793"
+      "039219351187928723378036480041948464946018272171365770411701020666925613"
+      "422460317465324758217878522666789603627480490870456508256359180089236338"
+      "765625231186929290294207420828927406735690318849109129700396907705735097"
+      "663944722727287361650042373203763784830198232253311807069225650324196304"
+      "532045014970637489181357566354288111205943347410488298480279857453705249"
+      "232862728556860184412369114663536200895729846877559808001004454634804626"
+      "541455540260282018142615835686583304903486353937549394736905011798466731"
+      "536563240053860118551127061960208467764243724656897127545613968909523389"
+      "577188368809623987105800147797280462974804046545425080530020901531407223"
+      "191237123282274818236437397994019915368657474589800678444589412286037789"
+      "891525464936023205313685584525510094270344601331453730179416773626565262"
+      "480345858564672442896904520146956686863172737711483866766404977719744767"
+      "834324844875237277613991088218774564658513875732403456058414595576806383"
+      "115554713240005982141397577420073082470139244845624915873825746771661332"
+      "098677966580506186966978746832443976821987300902957597498388211921362869"
+      "017846215557612829071692275292036211064515305528052919611691470945774714"
+      "135516559501572279732350629089770249554808690411603894492333360300589658"
+      "470898965370892774715815089075170720164713889237058574941489766701880158"
+      "060081295483989540170337129032188818293132770882381428397119039835946745"
+      "549356649433406617266370644136291924838857814675939156677910783740103207"
+      "523299367093130816446415259371931925208362367989095199399211644084543790"
+      "110432339056231037520216864358899218874658268610955002763260912337688947"
+      "822453100821038299301092582962825965939081817836419126254832772002214908"
+      "085575905761843610944187009818156363893015929300295112598059949496854566"
+      "638748010633726861510500653821408135845840123073754133549077708843800674"
+      "328440913743105608636458354618912183716456158809545183074062249922212944"
+      "249667793845728355381309084891765979111348980470647082269921872595470473"
+      "719354467594516320911964549508538492057120740224559944452120552719041944"
+      "961475548547884309626382512432626380881023756568143060204097921571153170"
+      "723817845809196253498326358439807445210362177680590181657555380795450462"
+      "223805222580359379367452693270553602179122419370586308101820559214330382"
+      "570449525088342437216896462077260223998756027453411520977536701491759878"
+      "422771447006016890777855573925295187921971811871399320142563330377888532"
+      "179817332113");
+#endif // SPECIAL_X86_LONG_DOUBLE
+
   /*
     written = __llvm_libc::sprintf(buff, "%La", 0.1L);
   #if defined(SPECIAL_X86_LONG_DOUBLE)
@@ -1140,6 +1323,62 @@ TEST_F(LlvmLibcSPrintfTest, FloatDecimalConv) {
   written = __llvm_libc::sprintf(buff, "%.5f", 1.008e3);
   ASSERT_STREQ_LEN(written, buff, "1008.00000");
 
+  // Found with the help of Fred Tydeman's tbin2dec test.
+  written = __llvm_libc::sprintf(buff, "%.1f", 0x1.1000000000006p+3);
+  ASSERT_STREQ_LEN(written, buff, "8.5");
+
+  written = __llvm_libc::sprintf(buff, "%.0f", 0x1.1000000000006p+3);
+  ASSERT_STREQ_LEN(written, buff, "9");
+
+  // Most of these tests are checking rounding behavior when the precision is
+  // set. As an example, %.9f has a precision of 9, meaning it should be rounded
+  // to 9 digits after the decimal point. In this case, that means that it
+  // should be rounded up. Many of these tests have precisions divisible by 9
+  // since when printing the floating point numbers are broken up into "blocks"
+  // of 9 digits. They often also have a 5 after the end of what's printed,
+  // since in round to nearest mode, that requires checking additional digits.
+  written = __llvm_libc::sprintf(buff, "%.9f", 1.9999999999999514);
+  ASSERT_STREQ_LEN(written, buff, "2.000000000");
+
+  // The number continues after the literal because floating point numbers can't
+  // represent every value. The printed value is the closest value a double can
+  // represent, rounded to the requested precision.
+  written = __llvm_libc::sprintf(buff, "%.238f", 1.131959884853339E-72);
+  ASSERT_STREQ_LEN(
+      written, buff,
+      "0."
+      "000000000000000000000000000000000000000000000000000000000000000000000001"
+      "131959884853339045938639911360973972585316399767392273697826861241937664"
+      "824105639342441431495119762431744054912109728706985341609159156917030486"
+      "5110665559768676757812");
+
+  written = __llvm_libc::sprintf(buff, "%.36f", 9.9e-77);
+  ASSERT_STREQ_LEN(written, buff, "0.000000000000000000000000000000000000");
+
+  written = __llvm_libc::sprintf(big_buff, "%.1071f", 2.0226568751604562E-314);
+  ASSERT_STREQ_LEN(
+      written, big_buff,
+      "0."
+      "000000000000000000000000000000000000000000000000000000000000000000000000"
+      "000000000000000000000000000000000000000000000000000000000000000000000000"
+      "000000000000000000000000000000000000000000000000000000000000000000000000"
+      "000000000000000000000000000000000000000000000000000000000000000000000000"
+      "000000000000000000000000020226568751604561683387695750739190248658016786"
+      "876938365740768295004457513021760887468117675879956193821375945376632621"
+      "367998639317487303530427946024002091961988296562516210434394107910027236"
+      "308233439098296717697919471698168200340836487924061502604112643734560622"
+      "258525943451473162532620033398739382796482175564084902819878893430369431"
+      "907237673154867595954110791891883281880339550955455702452422857027182100"
+      "606009588295886640782228837851739241290179512817803196347460636150182981"
+      "085084829941917048152725177119574542042352896161225179181967347829576272"
+      "242480201291872969114441104973910102402751449901108484914924879541248714"
+      "939096548775588293353689592872854495101242645279589976452453829724479805"
+      "750016448075109469332839157162950982637994457036256790161132812");
+
+  // If no precision is specified it defaults to 6 for %f.
+  written = __llvm_libc::sprintf(buff, "%f", 2325885.4901960781);
+  ASSERT_STREQ_LEN(written, buff, "2325885.490196");
+
   // Subnormal Precision Tests
 
   written = __llvm_libc::sprintf(buff, "%.310f", 0x1.0p-1022);
@@ -1214,10 +1453,7 @@ TEST_F(LlvmLibcSPrintfTest, FloatDecimalConv) {
 
   // Rounding Mode Tests.
 
-  {
-    __llvm_libc::testutils::ForceRoundingMode r(
-        __llvm_libc::testutils::RoundingMode::Nearest);
-
+  if (ForceRoundingMode r(RoundingMode::Nearest); r.success) {
     written = __llvm_libc::sprintf(buff, "%.1f", 1.75);
     ASSERT_STREQ_LEN(written, buff, "1.8");
 
@@ -1255,10 +1491,7 @@ TEST_F(LlvmLibcSPrintfTest, FloatDecimalConv) {
     ASSERT_STREQ_LEN(written, buff, "-1.9");
   }
 
-  {
-    __llvm_libc::testutils::ForceRoundingMode r(
-        __llvm_libc::testutils::RoundingMode::Upward);
-
+  if (ForceRoundingMode r(RoundingMode::Upward); r.success) {
     written = __llvm_libc::sprintf(buff, "%.1f", 1.75);
     ASSERT_STREQ_LEN(written, buff, "1.8");
 
@@ -1296,10 +1529,7 @@ TEST_F(LlvmLibcSPrintfTest, FloatDecimalConv) {
     ASSERT_STREQ_LEN(written, buff, "-1.8");
   }
 
-  {
-    __llvm_libc::testutils::ForceRoundingMode r(
-        __llvm_libc::testutils::RoundingMode::Downward);
-
+  if (ForceRoundingMode r(RoundingMode::Downward); r.success) {
     written = __llvm_libc::sprintf(buff, "%.1f", 1.75);
     ASSERT_STREQ_LEN(written, buff, "1.7");
 
@@ -1337,10 +1567,7 @@ TEST_F(LlvmLibcSPrintfTest, FloatDecimalConv) {
     ASSERT_STREQ_LEN(written, buff, "-1.9");
   }
 
-  {
-    __llvm_libc::testutils::ForceRoundingMode r(
-        __llvm_libc::testutils::RoundingMode::TowardZero);
-
+  if (ForceRoundingMode r(RoundingMode::TowardZero); r.success) {
     written = __llvm_libc::sprintf(buff, "%.1f", 1.75);
     ASSERT_STREQ_LEN(written, buff, "1.7");
 
@@ -1446,8 +1673,7 @@ TEST_F(LlvmLibcSPrintfTest, FloatDecimalConv) {
 }
 
 TEST_F(LlvmLibcSPrintfTest, FloatExponentConv) {
-  __llvm_libc::testutils::ForceRoundingMode r(
-      __llvm_libc::testutils::RoundingMode::Nearest);
+  ForceRoundingMode r(RoundingMode::Nearest);
   double inf = __llvm_libc::fputil::FPBits<double>::inf().get_val();
   double nan = __llvm_libc::fputil::FPBits<double>::build_nan(1);
 
@@ -1516,6 +1742,14 @@ TEST_F(LlvmLibcSPrintfTest, FloatExponentConv) {
   ASSERT_STREQ_LEN(written, buff, "-NAN");
 
   // Length Modifier Tests.
+
+#if defined(SPECIAL_X86_LONG_DOUBLE)
+  written = __llvm_libc::sprintf(buff, "%.9Le", 1000000000500000000.1L);
+  ASSERT_STREQ_LEN(written, buff, "1.000000001e+18");
+
+  written = __llvm_libc::sprintf(buff, "%.9Le", 1000000000500000000.0L);
+  ASSERT_STREQ_LEN(written, buff, "1.000000000e+18");
+#endif
 
   // TODO: Fix long doubles (needs bigger table or alternate algorithm.)
   // Currently the table values are generated, which is very slow.
@@ -1729,6 +1963,45 @@ TEST_F(LlvmLibcSPrintfTest, FloatExponentConv) {
   written = __llvm_libc::sprintf(buff, "%.5e", 1.008e3);
   ASSERT_STREQ_LEN(written, buff, "1.00800e+03");
 
+  // These tests also focus on rounding. Almost all of them have a 5 right after
+  // the printed string (e.g. 9.5 with precision 0 prints 0 digits after the
+  // decimal point). This is again because rounding a number with a 5 after the
+  // printed section means that more digits have to be checked to determine if
+  // this should be rounded up (if there are non-zero digits after the 5) or to
+  // even (if the 5 is the last non-zero digit). Additionally, the algorithm for
+  // checking if a number is all 0s after the decimal point may not work since
+  // the decimal point moves in this representation.
+  written = __llvm_libc::sprintf(buff, "%.0e", 2.5812229360061737E+200);
+  ASSERT_STREQ_LEN(written, buff, "3e+200");
+
+  written = __llvm_libc::sprintf(buff, "%.1e", 9.059E+200);
+  ASSERT_STREQ_LEN(written, buff, "9.1e+200");
+
+  written = __llvm_libc::sprintf(buff, "%.0e", 9.059E+200);
+  ASSERT_STREQ_LEN(written, buff, "9e+200");
+
+  written = __llvm_libc::sprintf(buff, "%.166e", 1.131959884853339E-72);
+  ASSERT_STREQ_LEN(written, buff,
+                   "1."
+                   "13195988485333904593863991136097397258531639976739227369782"
+                   "68612419376648241056393424414314951197624317440549121097287"
+                   "069853416091591569170304865110665559768676757812e-72");
+
+  written = __llvm_libc::sprintf(buff, "%.0e", 9.5);
+  ASSERT_STREQ_LEN(written, buff, "1e+01");
+
+  written = __llvm_libc::sprintf(buff, "%.10e", 1.9999999999890936);
+  ASSERT_STREQ_LEN(written, buff, "2.0000000000e+00");
+
+  written = __llvm_libc::sprintf(buff, "%.1e", 745362143563.03894);
+  ASSERT_STREQ_LEN(written, buff, "7.5e+11");
+
+  written = __llvm_libc::sprintf(buff, "%.0e", 45181042688.0);
+  ASSERT_STREQ_LEN(written, buff, "5e+10");
+
+  written = __llvm_libc::sprintf(buff, "%.35e", 1.3752441369139243);
+  ASSERT_STREQ_LEN(written, buff, "1.37524413691392433101157166674965993e+00");
+
   // Subnormal Precision Tests
 
   written = __llvm_libc::sprintf(buff, "%.310e", 0x1.0p-1022);
@@ -1800,10 +2073,7 @@ TEST_F(LlvmLibcSPrintfTest, FloatExponentConv) {
 
   // Rounding Mode Tests.
 
-  {
-    __llvm_libc::testutils::ForceRoundingMode r(
-        __llvm_libc::testutils::RoundingMode::Nearest);
-
+  if (ForceRoundingMode r(RoundingMode::Nearest); r.success) {
     written = __llvm_libc::sprintf(buff, "%.1e", 1.75);
     ASSERT_STREQ_LEN(written, buff, "1.8e+00");
 
@@ -1841,10 +2111,7 @@ TEST_F(LlvmLibcSPrintfTest, FloatExponentConv) {
     ASSERT_STREQ_LEN(written, buff, "-1.9e+00");
   }
 
-  {
-    __llvm_libc::testutils::ForceRoundingMode r(
-        __llvm_libc::testutils::RoundingMode::Upward);
-
+  if (ForceRoundingMode r(RoundingMode::Upward); r.success) {
     written = __llvm_libc::sprintf(buff, "%.1e", 1.75);
     ASSERT_STREQ_LEN(written, buff, "1.8e+00");
 
@@ -1882,10 +2149,7 @@ TEST_F(LlvmLibcSPrintfTest, FloatExponentConv) {
     ASSERT_STREQ_LEN(written, buff, "-1.8e+00");
   }
 
-  {
-    __llvm_libc::testutils::ForceRoundingMode r(
-        __llvm_libc::testutils::RoundingMode::Downward);
-
+  if (ForceRoundingMode r(RoundingMode::Downward); r.success) {
     written = __llvm_libc::sprintf(buff, "%.1e", 1.75);
     ASSERT_STREQ_LEN(written, buff, "1.7e+00");
 
@@ -1923,10 +2187,7 @@ TEST_F(LlvmLibcSPrintfTest, FloatExponentConv) {
     ASSERT_STREQ_LEN(written, buff, "-1.9e+00");
   }
 
-  {
-    __llvm_libc::testutils::ForceRoundingMode r(
-        __llvm_libc::testutils::RoundingMode::TowardZero);
-
+  if (ForceRoundingMode r(RoundingMode::TowardZero); r.success) {
     written = __llvm_libc::sprintf(buff, "%.1e", 1.75);
     ASSERT_STREQ_LEN(written, buff, "1.7e+00");
 
@@ -2041,8 +2302,7 @@ TEST_F(LlvmLibcSPrintfTest, FloatExponentConv) {
 }
 
 TEST_F(LlvmLibcSPrintfTest, FloatAutoConv) {
-  __llvm_libc::testutils::ForceRoundingMode r(
-      __llvm_libc::testutils::RoundingMode::Nearest);
+  ForceRoundingMode r(RoundingMode::Nearest);
   double inf = __llvm_libc::fputil::FPBits<double>::inf().get_val();
   double nan = __llvm_libc::fputil::FPBits<double>::build_nan(1);
 
@@ -2342,8 +2602,29 @@ TEST_F(LlvmLibcSPrintfTest, FloatAutoConv) {
   written = __llvm_libc::sprintf(buff, "%.3g", 1256.0);
   ASSERT_STREQ_LEN(written, buff, "1.26e+03");
 
-  // Subnormal Precision Tests
+  // Found through large scale testing.
+  written = __llvm_libc::sprintf(buff, "%.15g", 22.25);
+  ASSERT_STREQ_LEN(written, buff, "22.25");
 
+  // These tests also focus on rounding, but only in how it relates to the base
+  // 10 exponent. The %g conversion selects between being a %f or %e conversion
+  // based on what the exponent would be if it was %e. If we call the precision
+  // P (equal to 6 if the precision is not set, 0 if the provided precision is
+  // 0, and provided precision - 1 otherwise) and the exponent X, then the style
+  // is %f with an effective precision of P - X + 1 if P > X >= -4, else the
+  // style is %e with effective precision P - 1. Additionally, it attempts to
+  // trim zeros that would be displayed after the decimal point.
+  written = __llvm_libc::sprintf(buff, "%.1g", 9.059E+200);
+  ASSERT_STREQ_LEN(written, buff, "9e+200");
+
+  written = __llvm_libc::sprintf(buff, "%.2g", 9.059E+200);
+  ASSERT_STREQ_LEN(written, buff, "9.1e+200");
+
+  // For this test, P = 0 and X = 1, so P > X >= -4 is false, giving a %e style.
+  written = __llvm_libc::sprintf(buff, "%.0g", 9.5);
+  ASSERT_STREQ_LEN(written, buff, "1e+01");
+
+  // Subnormal Precision Tests
   written = __llvm_libc::sprintf(buff, "%.310g", 0x1.0p-1022);
   ASSERT_STREQ_LEN(
       written, buff,
@@ -2419,10 +2700,7 @@ TEST_F(LlvmLibcSPrintfTest, FloatAutoConv) {
 
   // Rounding Mode Tests.
 
-  {
-    __llvm_libc::testutils::ForceRoundingMode r(
-        __llvm_libc::testutils::RoundingMode::Nearest);
-
+  if (ForceRoundingMode r(RoundingMode::Nearest); r.success) {
     written = __llvm_libc::sprintf(buff, "%.2g", 1.75);
     ASSERT_STREQ_LEN(written, buff, "1.8");
 
@@ -2460,10 +2738,7 @@ TEST_F(LlvmLibcSPrintfTest, FloatAutoConv) {
     ASSERT_STREQ_LEN(written, buff, "-1.9");
   }
 
-  {
-    __llvm_libc::testutils::ForceRoundingMode r(
-        __llvm_libc::testutils::RoundingMode::Upward);
-
+  if (ForceRoundingMode r(RoundingMode::Upward); r.success) {
     written = __llvm_libc::sprintf(buff, "%.2g", 1.75);
     ASSERT_STREQ_LEN(written, buff, "1.8");
 
@@ -2501,10 +2776,7 @@ TEST_F(LlvmLibcSPrintfTest, FloatAutoConv) {
     ASSERT_STREQ_LEN(written, buff, "-1.8");
   }
 
-  {
-    __llvm_libc::testutils::ForceRoundingMode r(
-        __llvm_libc::testutils::RoundingMode::Downward);
-
+  if (ForceRoundingMode r(RoundingMode::Downward); r.success) {
     written = __llvm_libc::sprintf(buff, "%.2g", 1.75);
     ASSERT_STREQ_LEN(written, buff, "1.7");
 
@@ -2542,10 +2814,7 @@ TEST_F(LlvmLibcSPrintfTest, FloatAutoConv) {
     ASSERT_STREQ_LEN(written, buff, "-1.9");
   }
 
-  {
-    __llvm_libc::testutils::ForceRoundingMode r(
-        __llvm_libc::testutils::RoundingMode::TowardZero);
-
+  if (ForceRoundingMode r(RoundingMode::TowardZero); r.success) {
     written = __llvm_libc::sprintf(buff, "%.2g", 1.75);
     ASSERT_STREQ_LEN(written, buff, "1.7");
 
@@ -2694,8 +2963,10 @@ TEST(LlvmLibcSPrintfTest, WriteIntConv) {
   EXPECT_EQ(test_val, 8);
   ASSERT_STREQ(buff, "87654321");
 
+#ifndef LIBC_COPT_PRINTF_NO_NULLPTR_CHECKS
   written = __llvm_libc::sprintf(buff, "abc123%n", nullptr);
   EXPECT_LT(written, 0);
+#endif // LIBC_COPT_PRINTF_NO_NULLPTR_CHECKS
 }
 #endif // LIBC_COPT_PRINTF_DISABLE_WRITE_INT
 

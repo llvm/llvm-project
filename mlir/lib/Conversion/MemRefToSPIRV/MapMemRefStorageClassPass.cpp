@@ -20,7 +20,7 @@
 #include "mlir/Dialect/SPIRV/IR/TargetAndABI.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinTypes.h"
-#include "mlir/IR/FunctionInterfaces.h"
+#include "mlir/Interfaces/FunctionInterfaces.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/Debug.h"
@@ -64,7 +64,7 @@ spirv::mapMemorySpaceToVulkanStorageClass(Attribute memorySpaceAttr) {
 
   // Unknown dialect custom attributes are not supported by default.
   // Downstream callers should plug in more specialized ones.
-  auto intAttr = memorySpaceAttr.dyn_cast<IntegerAttr>();
+  auto intAttr = dyn_cast<IntegerAttr>(memorySpaceAttr);
   if (!intAttr)
     return std::nullopt;
   unsigned memorySpace = intAttr.getInt();
@@ -118,7 +118,7 @@ spirv::mapMemorySpaceToOpenCLStorageClass(Attribute memorySpaceAttr) {
 
   // Unknown dialect custom attributes are not supported by default.
   // Downstream callers should plug in more specialized ones.
-  auto intAttr = memorySpaceAttr.dyn_cast<IntegerAttr>();
+  auto intAttr = dyn_cast<IntegerAttr>(memorySpaceAttr);
   if (!intAttr)
     return std::nullopt;
   unsigned memorySpace = intAttr.getInt();
@@ -177,7 +177,7 @@ spirv::MemorySpaceToStorageClassConverter::MemorySpaceToStorageClassConverter(
 
     auto storageAttr =
         spirv::StorageClassAttr::get(memRefType.getContext(), *storage);
-    if (auto rankedType = memRefType.dyn_cast<MemRefType>()) {
+    if (auto rankedType = dyn_cast<MemRefType>(memRefType)) {
       return MemRefType::get(memRefType.getShape(), memRefType.getElementType(),
                              rankedType.getLayout(), storageAttr);
     }
@@ -203,9 +203,9 @@ spirv::MemorySpaceToStorageClassConverter::MemorySpaceToStorageClassConverter(
 /// Returns true if the given `type` is considered as legal for SPIR-V
 /// conversion.
 static bool isLegalType(Type type) {
-  if (auto memRefType = type.dyn_cast<BaseMemRefType>()) {
+  if (auto memRefType = dyn_cast<BaseMemRefType>(type)) {
     Attribute spaceAttr = memRefType.getMemorySpace();
-    return spaceAttr && spaceAttr.isa<spirv::StorageClassAttr>();
+    return spaceAttr && isa<spirv::StorageClassAttr>(spaceAttr);
   }
   return true;
 }
@@ -213,7 +213,7 @@ static bool isLegalType(Type type) {
 /// Returns true if the given `attr` is considered as legal for SPIR-V
 /// conversion.
 static bool isLegalAttr(Attribute attr) {
-  if (auto typeAttr = attr.dyn_cast<TypeAttr>())
+  if (auto typeAttr = dyn_cast<TypeAttr>(attr))
     return isLegalType(typeAttr.getValue());
   return true;
 }
@@ -266,7 +266,7 @@ LogicalResult MapMemRefStoragePattern::matchAndRewrite(
   llvm::SmallVector<NamedAttribute, 4> newAttrs;
   newAttrs.reserve(op->getAttrs().size());
   for (auto attr : op->getAttrs()) {
-    if (auto typeAttr = attr.getValue().dyn_cast<TypeAttr>()) {
+    if (auto typeAttr = dyn_cast<TypeAttr>(attr.getValue())) {
       auto newAttr = getTypeConverter()->convertType(typeAttr.getValue());
       newAttrs.emplace_back(attr.getName(), TypeAttr::get(newAttr));
     } else {

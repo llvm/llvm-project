@@ -26,6 +26,11 @@ Non-comprehensive list of changes in this release
 ELF Improvements
 ----------------
 
+* ``--fat-lto-objects`` option is added to support LLVM FatLTO.
+  Without ``--fat-lto-objects``, LLD will link LLVM FatLTO objects using the
+  relocatable object file. (`D146778 <https://reviews.llvm.org/D146778>`_)
+
+
 Breaking changes
 ----------------
 
@@ -41,3 +46,5 @@ MachO Improvements
 WebAssembly Improvements
 ------------------------
 
+Fixes
+#####

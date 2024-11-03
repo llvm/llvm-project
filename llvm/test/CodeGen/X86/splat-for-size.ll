@@ -274,7 +274,7 @@ define <16 x i16> @splat_v16i16(<16 x i16> %x) #0 {
 ; AVX-LABEL: splat_v16i16:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vextractf128 $1, %ymm0, %xmm1
-; AVX-NEXT:    vmovdqa {{.*#+}} xmm2 = [2,2,2,2,2,2,2,2]
+; AVX-NEXT:    vbroadcastss {{.*#+}} xmm2 = [2,2,2,2,2,2,2,2]
 ; AVX-NEXT:    vpaddw %xmm2, %xmm1, %xmm1
 ; AVX-NEXT:    vpaddw %xmm2, %xmm0, %xmm0
 ; AVX-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
@@ -293,7 +293,7 @@ define <16 x i16> @splat_v16i16_pgso(<16 x i16> %x) !prof !14 {
 ; AVX-LABEL: splat_v16i16_pgso:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vextractf128 $1, %ymm0, %xmm1
-; AVX-NEXT:    vmovdqa {{.*#+}} xmm2 = [2,2,2,2,2,2,2,2]
+; AVX-NEXT:    vbroadcastss {{.*#+}} xmm2 = [2,2,2,2,2,2,2,2]
 ; AVX-NEXT:    vpaddw %xmm2, %xmm1, %xmm1
 ; AVX-NEXT:    vpaddw %xmm2, %xmm0, %xmm0
 ; AVX-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
@@ -344,7 +344,7 @@ define <32 x i8> @splat_v32i8(<32 x i8> %x) #0 {
 ; AVX-LABEL: splat_v32i8:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vextractf128 $1, %ymm0, %xmm1
-; AVX-NEXT:    vmovdqa {{.*#+}} xmm2 = [2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2]
+; AVX-NEXT:    vbroadcastss {{.*#+}} xmm2 = [2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2]
 ; AVX-NEXT:    vpaddb %xmm2, %xmm1, %xmm1
 ; AVX-NEXT:    vpaddb %xmm2, %xmm0, %xmm0
 ; AVX-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
@@ -363,7 +363,7 @@ define <32 x i8> @splat_v32i8_pgso(<32 x i8> %x) !prof !14 {
 ; AVX-LABEL: splat_v32i8_pgso:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vextractf128 $1, %ymm0, %xmm1
-; AVX-NEXT:    vmovdqa {{.*#+}} xmm2 = [2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2]
+; AVX-NEXT:    vbroadcastss {{.*#+}} xmm2 = [2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2]
 ; AVX-NEXT:    vpaddb %xmm2, %xmm1, %xmm1
 ; AVX-NEXT:    vpaddb %xmm2, %xmm0, %xmm0
 ; AVX-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0

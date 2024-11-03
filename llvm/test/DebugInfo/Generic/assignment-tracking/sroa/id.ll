@@ -28,13 +28,13 @@
 
 ; CHECK: if.then:
 ; CHECK-NEXT: %1 = load float
-; CHECK-NEXT: call void @llvm.dbg.assign(metadata float %storemerge, metadata ![[var:[0-9]+]], metadata !DIExpression(), metadata ![[id:[0-9]+]], metadata ptr undef, metadata !DIExpression()), !dbg ![[dbg:[0-9]+]]
+; CHECK-NEXT: call void @llvm.dbg.value(metadata float %storemerge, metadata ![[var:[0-9]+]], metadata !DIExpression())
 
 ; CHECK: if.else:
 ; CHECK-NEXT: %2 = load float
 ; CHECK-NEXT: %3 = load float
 ; CHECK-NEXT: %div = fdiv float
-; CHECK: call void @llvm.dbg.assign(metadata float %storemerge, metadata ![[var]], metadata !DIExpression(), metadata ![[id]], metadata ptr undef, metadata !DIExpression()), !dbg ![[dbg]]
+; CHECK: call void @llvm.dbg.value(metadata float %storemerge, metadata ![[var]], metadata !DIExpression())
 
 %class.a = type { i8 }
 

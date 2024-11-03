@@ -979,7 +979,7 @@ private:
 
   class TimeBucketRegion {
   public:
-    TimeBucketRegion() : Bucket(nullptr) {}
+    TimeBucketRegion() = default;
     ~TimeBucketRegion() { setBucket(nullptr); }
 
     /// Start timing for \p NewBucket.
@@ -1002,7 +1002,7 @@ private:
     }
 
   private:
-    llvm::TimeRecord *Bucket;
+    llvm::TimeRecord *Bucket = nullptr;
   };
 
   /// Runs all the \p Matchers on \p Node.

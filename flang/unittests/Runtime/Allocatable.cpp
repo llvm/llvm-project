@@ -32,13 +32,13 @@ TEST(AllocatableTest, MoveAlloc) {
   EXPECT_FALSE(b->IsAllocated());
 
   // Simple move_alloc
-  RTNAME(MoveAlloc)(*b, *a, false, nullptr, __FILE__, __LINE__);
+  RTNAME(MoveAlloc)(*b, *a, nullptr, false, nullptr, __FILE__, __LINE__);
   EXPECT_FALSE(a->IsAllocated());
   EXPECT_TRUE(b->IsAllocated());
 
   // move_alloc with stat
   std::int32_t stat{
-      RTNAME(MoveAlloc)(*a, *b, true, nullptr, __FILE__, __LINE__)};
+      RTNAME(MoveAlloc)(*a, *b, nullptr, true, nullptr, __FILE__, __LINE__)};
   EXPECT_TRUE(a->IsAllocated());
   EXPECT_FALSE(b->IsAllocated());
   EXPECT_EQ(stat, 0);
@@ -47,23 +47,26 @@ TEST(AllocatableTest, MoveAlloc) {
   auto errMsg{Descriptor::Create(
       sizeof(char), 64, nullptr, 0, nullptr, CFI_attribute_allocatable)};
   errMsg->Allocate();
-  RTNAME(MoveAlloc)(*b, *a, false, errMsg.get(), __FILE__, __LINE__);
+  RTNAME(MoveAlloc)(*b, *a, nullptr, false, errMsg.get(), __FILE__, __LINE__);
   EXPECT_FALSE(a->IsAllocated());
   EXPECT_TRUE(b->IsAllocated());
 
   // move_alloc with stat and errMsg
-  stat = RTNAME(MoveAlloc)(*a, *b, true, errMsg.get(), __FILE__, __LINE__);
+  stat = RTNAME(MoveAlloc)(
+      *a, *b, nullptr, true, errMsg.get(), __FILE__, __LINE__);
   EXPECT_TRUE(a->IsAllocated());
   EXPECT_FALSE(b->IsAllocated());
   EXPECT_EQ(stat, 0);
 
   // move_alloc with the same deallocated array
-  stat = RTNAME(MoveAlloc)(*b, *b, true, errMsg.get(), __FILE__, __LINE__);
+  stat = RTNAME(MoveAlloc)(
+      *b, *b, nullptr, true, errMsg.get(), __FILE__, __LINE__);
   EXPECT_FALSE(b->IsAllocated());
   EXPECT_EQ(stat, 0);
 
   // move_alloc with the same allocated array should fail
-  stat = RTNAME(MoveAlloc)(*a, *a, true, errMsg.get(), __FILE__, __LINE__);
+  stat = RTNAME(MoveAlloc)(
+      *a, *a, nullptr, true, errMsg.get(), __FILE__, __LINE__);
   EXPECT_EQ(stat, 109);
   std::string_view errStr{errMsg->OffsetElement(), errMsg->ElementBytes()};
   auto trim_pos = errStr.find_last_not_of(' ');
@@ -90,4 +93,21 @@ TEST(AllocatableTest, AllocateFromScalarSource) {
   EXPECT_EQ(a->GetDimension(0).UpperBound(), 11);
   EXPECT_EQ(*a->OffsetElement<float>(), 3.4F);
   a->Destroy();
+}
+
+TEST(AllocatableTest, DoubleAllocation) {
+  // CLASS(*), ALLOCATABLE :: r
+  // ALLOCATE(REAL::r)
+  auto r{createAllocatable(TypeCategory::Real, 4, 0)};
+  EXPECT_FALSE(r->IsAllocated());
+  EXPECT_TRUE(r->IsAllocatable());
+  RTNAME(AllocatableAllocate)(*r);
+  EXPECT_TRUE(r->IsAllocated());
+
+  // Make sure AllocatableInitIntrinsicForAllocate doesn't reset the decsriptor
+  // if it is allocated.
+  // ALLOCATE(INTEGER::r)
+  RTNAME(AllocatableInitIntrinsicForAllocate)
+  (*r, Fortran::common::TypeCategory::Integer, 4);
+  EXPECT_TRUE(r->IsAllocated());
 }

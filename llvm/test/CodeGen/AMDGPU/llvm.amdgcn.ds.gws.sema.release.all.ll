@@ -13,7 +13,7 @@
 ; RUN: llc -global-isel=1 -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx1100 -o - -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,NOLOOP %s
 
 ; GFX6ERR-SDAG: LLVM ERROR: Cannot select: intrinsic %llvm.amdgcn.ds.gws.sema.release.all
-; GFX6ERR-GISEL: LLVM ERROR: cannot select: G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.ds.gws.sema.release.all), %{{[0-9]+}}:sgpr(s32) :: (store (s32) into custom "GWSResource") (in function: gws_sema_release_all_offset0)
+; GFX6ERR-GISEL: LLVM ERROR: cannot select: G_INTRINSIC_CONVERGENT_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.ds.gws.sema.release.all), %{{[0-9]+}}:sgpr(s32) :: (store (s32) into custom "GWSResource") (in function: gws_sema_release_all_offset0)
 
 ; GCN-LABEL: {{^}}gws_sema_release_all_offset0:
 ; NOLOOP-DAG: s_mov_b32 m0, 0{{$}}

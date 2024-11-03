@@ -166,20 +166,20 @@ private:
       SmallVector<std::pair<const LiveInterval *, MCRegister>, 8>;
 
   // context
-  MachineFunction *MF;
+  MachineFunction *MF = nullptr;
 
   // Shortcuts to some useful interface.
-  const TargetInstrInfo *TII;
+  const TargetInstrInfo *TII = nullptr;
 
   // analyses
-  SlotIndexes *Indexes;
-  MachineBlockFrequencyInfo *MBFI;
-  MachineDominatorTree *DomTree;
-  MachineLoopInfo *Loops;
-  MachineOptimizationRemarkEmitter *ORE;
-  EdgeBundles *Bundles;
-  SpillPlacement *SpillPlacer;
-  LiveDebugVariables *DebugVars;
+  SlotIndexes *Indexes = nullptr;
+  MachineBlockFrequencyInfo *MBFI = nullptr;
+  MachineDominatorTree *DomTree = nullptr;
+  MachineLoopInfo *Loops = nullptr;
+  MachineOptimizationRemarkEmitter *ORE = nullptr;
+  EdgeBundles *Bundles = nullptr;
+  SpillPlacement *SpillPlacer = nullptr;
+  LiveDebugVariables *DebugVars = nullptr;
 
   // state
   std::unique_ptr<Spiller> SpillerInstance;
@@ -204,7 +204,7 @@ private:
     CO_Interf = 2
   };
 
-  uint8_t CutOffInfo;
+  uint8_t CutOffInfo = CutOffStage::CO_None;
 
 #ifndef NDEBUG
   static const char *const StageName[];
@@ -278,9 +278,9 @@ private:
 
   /// Flags for the live range priority calculation, determined once per
   /// machine function.
-  bool RegClassPriorityTrumpsGlobalness;
+  bool RegClassPriorityTrumpsGlobalness = false;
 
-  bool ReverseLocalAssignment;
+  bool ReverseLocalAssignment = false;
 
 public:
   RAGreedy(const RegClassFilterFunc F = allocateAllRegClasses);

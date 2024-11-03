@@ -31,7 +31,7 @@ class TestCase(TestBase):
         self.expect("expression i", substrs=["(int) $0 = 30"])
         self.expect("expression $0", substrs=["(int) $0 = 30"])
 
-    def test_p_persists_result(self):
-        """Test `p` does persist a result variable."""
-        self.expect("p i", substrs=["(int) $0 = 30"])
-        self.expect("p $0", substrs=["(int) $0 = 30"])
+    def test_p_does_not_persist_results(self):
+        """Test `p` does not persist a result variable."""
+        self.expect("p i", startstr="(int) 30")
+        self.expect("p $0", error=True)

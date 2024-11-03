@@ -1,6 +1,5 @@
 // RUN: %clang_cc1 -x objective-c++ -fms-extensions -rewrite-objc -fobjc-runtime=macosx-fragile-10.5 %s -o %t-rw.cpp
 // RUN: FileCheck -check-prefix CHECK-LP --input-file=%t-rw.cpp %s
-// radar 7630636
 
 @class Y, Z;
 

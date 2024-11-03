@@ -14,13 +14,17 @@
 #include "clang-include-cleaner/Record.h"
 #include "clang-include-cleaner/Types.h"
 #include "clang/Format/Format.h"
+#include "clang/Lex/HeaderSearch.h"
+#include "clang/Lex/Preprocessor.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
-#include "llvm/Support/MemoryBufferRef.h"
-#include <variant>
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringRef.h"
+#include <string>
 
 namespace clang {
 class SourceLocation;
+class SourceManager;
 class Decl;
 class FileEntry;
 class HeaderSearch;
@@ -53,7 +57,8 @@ using UsedSymbolCB = llvm::function_ref<void(const SymbolReference &SymRef,
 ///    the headers for any referenced symbol
 void walkUsed(llvm::ArrayRef<Decl *> ASTRoots,
               llvm::ArrayRef<SymbolReference> MacroRefs,
-              const PragmaIncludes *PI, const SourceManager &, UsedSymbolCB CB);
+              const PragmaIncludes *PI, const Preprocessor &PP,
+              UsedSymbolCB CB);
 
 struct AnalysisResults {
   std::vector<const Include *> Unused;
@@ -62,17 +67,29 @@ struct AnalysisResults {
 
 /// Determine which headers should be inserted or removed from the main file.
 /// This exposes conclusions but not reasons: use lower-level walkUsed for that.
-AnalysisResults analyze(llvm::ArrayRef<Decl *> ASTRoots,
-                        llvm::ArrayRef<SymbolReference> MacroRefs,
-                        const Includes &I, const PragmaIncludes *PI,
-                        const SourceManager &SM, HeaderSearch &HS);
+///
+/// The HeaderFilter is a predicate that receives absolute path or spelling
+/// without quotes/brackets, when a phyiscal file doesn't exist.
+/// No analysis will be performed for headers that satisfy the predicate.
+AnalysisResults
+analyze(llvm::ArrayRef<Decl *> ASTRoots,
+        llvm::ArrayRef<SymbolReference> MacroRefs, const Includes &I,
+        const PragmaIncludes *PI, const Preprocessor &PP,
+        llvm::function_ref<bool(llvm::StringRef)> HeaderFilter = nullptr);
 
 /// Removes unused includes and inserts missing ones in the main file.
 /// Returns the modified main-file code.
 /// The FormatStyle must be C++ or ObjC (to support include ordering).
-std::string fixIncludes(const AnalysisResults &Results, llvm::StringRef Code,
+std::string fixIncludes(const AnalysisResults &Results,
+                        llvm::StringRef FileName, llvm::StringRef Code,
                         const format::FormatStyle &IncludeStyle);
 
+/// Gets all the providers for a symbol by traversing each location.
+/// Returned headers are sorted by relevance, first element is the most
+/// likely provider for the symbol.
+llvm::SmallVector<Header> headersForSymbol(const Symbol &S,
+                                           const SourceManager &SM,
+                                           const PragmaIncludes *PI);
 } // namespace include_cleaner
 } // namespace clang
 

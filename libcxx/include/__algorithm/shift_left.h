@@ -32,7 +32,7 @@ shift_left(_ForwardIterator __first, _ForwardIterator __last,
     }
 
     _ForwardIterator __m = __first;
-    if constexpr (__is_cpp17_random_access_iterator<_ForwardIterator>::value) {
+    if constexpr (__has_random_access_iterator_category<_ForwardIterator>::value) {
         if (__n >= __last - __first) {
             return __first;
         }

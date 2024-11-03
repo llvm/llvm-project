@@ -41,12 +41,13 @@ with tempfile.TemporaryDirectory() as tmpdir:
 
         prev_files = set(os.listdir(tmpdir))
         cmd = [flang_fc1, *flang_fc_args, flang_fc1_options, str(src)]
-        proc = subprocess.check_output(cmd, stderr=subprocess.PIPE,
-                                       universal_newlines=True, cwd=tmpdir)
+        proc = subprocess.check_output(
+            cmd, stderr=subprocess.PIPE, universal_newlines=True, cwd=tmpdir
+        )
         actual_files = set(os.listdir(tmpdir)).difference(prev_files)
 
         # The first 3 bytes of the files are an UTF-8 BOM
-        with open(src, 'r', encoding="utf-8", errors="strict") as f:
+        with open(src, "r", encoding="utf-8", errors="strict") as f:
             for line in f:
                 m = re.search(r"^!Expect: (.*)", line)
                 if m:
@@ -62,13 +63,13 @@ with tempfile.TemporaryDirectory() as tmpdir:
             if not mod.is_file():
                 print(f"Compilation did not produce expected mod file: {mod}")
                 sys.exit(1)
-            with open(mod, 'r', encoding="utf-8", errors="strict") as f:
+            with open(mod, "r", encoding="utf-8", errors="strict") as f:
                 for line in f:
                     if "!mod$" in line:
                         continue
                     actual += line
 
-            with open(src, 'r', encoding="utf-8", errors="strict") as f:
+            with open(src, "r", encoding="utf-8", errors="strict") as f:
                 for line in f:
                     if f"!Expect: {mod.name}" in line:
                         for line in f:
@@ -77,9 +78,15 @@ with tempfile.TemporaryDirectory() as tmpdir:
                             m = re.sub(r"^!", "", line.lstrip())
                             expect += m
 
-            diffs = "\n".join(unified_diff(actual.replace(" ", "").split("\n"),
-                                           expect.replace(" ", "").split("\n"),
-                                           fromfile=mod.name, tofile="Expect", n=999999))
+            diffs = "\n".join(
+                unified_diff(
+                    actual.replace(" ", "").split("\n"),
+                    expect.replace(" ", "").split("\n"),
+                    fromfile=mod.name,
+                    tofile="Expect",
+                    n=999999,
+                )
+            )
 
             if diffs != "":
                 print(diffs)
@@ -89,4 +96,3 @@ with tempfile.TemporaryDirectory() as tmpdir:
 
 print()
 print("PASS")
-

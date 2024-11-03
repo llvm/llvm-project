@@ -1,5 +1,5 @@
-; RUN: opt < %s  -opaque-pointers -cache-line-size=32 -passes='print<loop-cache-cost>' -disable-output 2>&1 | FileCheck -check-prefix=SMALLER-CACHELINE %s
-; RUN: opt < %s  -opaque-pointers -cache-line-size=256 -passes='print<loop-cache-cost>' -disable-output 2>&1 | FileCheck -check-prefix=LARGER-CACHELINE %s
+; RUN: opt < %s  -cache-line-size=32 -passes='print<loop-cache-cost>' -disable-output 2>&1 | FileCheck -check-prefix=SMALLER-CACHELINE %s
+; RUN: opt < %s  -cache-line-size=256 -passes='print<loop-cache-cost>' -disable-output 2>&1 | FileCheck -check-prefix=LARGER-CACHELINE %s
 
 ;; This test is similar to test/Analysis/LoopCacheAnalysis/PowerPC/compute-cost.ll,
 ;; with differences that it tests the scenarios where an option for cache line size is

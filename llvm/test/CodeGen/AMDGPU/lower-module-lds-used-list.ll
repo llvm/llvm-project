@@ -12,11 +12,11 @@
 ; @ignored still in list, @tolower removed
 ; CHECK: @llvm.used = appending global [1 x ptr] [ptr addrspacecast (ptr addrspace(1) @ignored to ptr)], section "llvm.metadata"
 
-; CHECK: @llvm.amdgcn.module.lds = internal addrspace(3) global %llvm.amdgcn.module.lds.t undef, align 8
+; CHECK: @llvm.amdgcn.module.lds = internal addrspace(3) global %llvm.amdgcn.module.lds.t poison, align 8
 
 ; CHECK-NOT: @tolower
 
-@tolower = addrspace(3) global float undef, align 8
+@tolower = addrspace(3) global float poison, align 8
 
 ; A variable that is unchanged by pass
 @ignored = addrspace(1) global i64 0

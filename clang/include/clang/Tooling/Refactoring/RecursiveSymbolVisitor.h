@@ -123,11 +123,12 @@ public:
   }
 
   bool VisitDesignatedInitExpr(const DesignatedInitExpr *E) {
-    for (const Designator &D : E->designators()) {
-      if (D.isFieldDesignator() && D.getField()) {
-        const FieldDecl *Decl = D.getField();
-        if (!visit(Decl, D.getFieldLoc(), D.getFieldLoc()))
-          return false;
+    for (const DesignatedInitExpr::Designator &D : E->designators()) {
+      if (D.isFieldDesignator()) {
+        if (const FieldDecl *Decl = D.getFieldDecl()) {
+          if (!visit(Decl, D.getFieldLoc(), D.getFieldLoc()))
+            return false;
+        }
       }
     }
     return true;

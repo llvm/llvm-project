@@ -98,12 +98,6 @@ static const char *ReportTypeString(ReportType typ, uptr tag) {
   UNREACHABLE("missing case");
 }
 
-#if SANITIZER_APPLE
-static const char *const kInterposedFunctionPrefix = "wrap_";
-#else
-static const char *const kInterposedFunctionPrefix = "__interceptor_";
-#endif
-
 void PrintStack(const ReportStack *ent) {
   if (ent == 0 || ent->frames == 0) {
     Printf("    [failed to restore the stack]\n\n");
@@ -115,7 +109,7 @@ void PrintStack(const ReportStack *ent) {
     RenderFrame(&res, common_flags()->stack_trace_format, i,
                 frame->info.address, &frame->info,
                 common_flags()->symbolize_vs_style,
-                common_flags()->strip_path_prefix, kInterposedFunctionPrefix);
+                common_flags()->strip_path_prefix);
     Printf("%s\n", res.data());
   }
   Printf("\n");
@@ -284,6 +278,7 @@ static bool FrameIsInternal(const SymbolizedStack *frame) {
   const char *module = frame->info.module;
   if (file != 0 &&
       (internal_strstr(file, "tsan_interceptors_posix.cpp") ||
+       internal_strstr(file, "tsan_interceptors_memintrinsics.cpp") ||
        internal_strstr(file, "sanitizer_common_interceptors.inc") ||
        internal_strstr(file, "tsan_interface_")))
     return true;

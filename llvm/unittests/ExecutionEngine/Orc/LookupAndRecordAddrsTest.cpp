@@ -24,27 +24,27 @@ namespace {
 TEST_F(LookupAndRecordAddrsTest, AsyncRequiredSuccess) {
   cantFail(JD.define(absoluteSymbols({{Foo, FooSym}, {Bar, BarSym}})));
 
-  ExecutorAddr FooAddress, BarAddress;
+  ExecutorAddr ReturnedFooAddr, ReturnedBarAddr;
   std::promise<MSVCPError> ErrP;
 
   lookupAndRecordAddrs([&](Error Err) { ErrP.set_value(std::move(Err)); }, ES,
                        LookupKind::Static, makeJITDylibSearchOrder(&JD),
-                       {{Foo, &FooAddress}, {Bar, &BarAddress}});
+                       {{Foo, &ReturnedFooAddr}, {Bar, &ReturnedBarAddr}});
 
   Error Err = ErrP.get_future().get();
 
   EXPECT_THAT_ERROR(std::move(Err), Succeeded());
-  EXPECT_EQ(FooAddress.getValue(), FooAddr);
-  EXPECT_EQ(BarAddress.getValue(), BarAddr);
+  EXPECT_EQ(ReturnedFooAddr, FooAddr);
+  EXPECT_EQ(ReturnedBarAddr, BarAddr);
 }
 
 TEST_F(LookupAndRecordAddrsTest, AsyncRequiredFailure) {
-  ExecutorAddr FooAddress, BarAddress;
+  ExecutorAddr RecordedFooAddr, RecordedBarAddr;
   std::promise<MSVCPError> ErrP;
 
   lookupAndRecordAddrs([&](Error Err) { ErrP.set_value(std::move(Err)); }, ES,
                        LookupKind::Static, makeJITDylibSearchOrder(&JD),
-                       {{Foo, &FooAddress}, {Bar, &BarAddress}});
+                       {{Foo, &RecordedFooAddr}, {Bar, &RecordedBarAddr}});
 
   Error Err = ErrP.get_future().get();
 
@@ -54,39 +54,39 @@ TEST_F(LookupAndRecordAddrsTest, AsyncRequiredFailure) {
 TEST_F(LookupAndRecordAddrsTest, AsyncWeakReference) {
   cantFail(JD.define(absoluteSymbols({{Foo, FooSym}})));
 
-  ExecutorAddr FooAddress, BarAddress;
+  ExecutorAddr RecordedFooAddr, RecordedBarAddr;
   std::promise<MSVCPError> ErrP;
 
   lookupAndRecordAddrs([&](Error Err) { ErrP.set_value(std::move(Err)); }, ES,
                        LookupKind::Static, makeJITDylibSearchOrder(&JD),
-                       {{Foo, &FooAddress}, {Bar, &BarAddress}},
+                       {{Foo, &RecordedFooAddr}, {Bar, &RecordedBarAddr}},
                        SymbolLookupFlags::WeaklyReferencedSymbol);
 
   Error Err = ErrP.get_future().get();
 
   EXPECT_THAT_ERROR(std::move(Err), Succeeded());
-  EXPECT_EQ(FooAddress.getValue(), FooAddr);
-  EXPECT_EQ(BarAddress.getValue(), 0U);
+  EXPECT_EQ(RecordedFooAddr, FooAddr);
+  EXPECT_EQ(RecordedBarAddr, ExecutorAddr());
 }
 
 TEST_F(LookupAndRecordAddrsTest, BlockingRequiredSuccess) {
   cantFail(JD.define(absoluteSymbols({{Foo, FooSym}, {Bar, BarSym}})));
 
-  ExecutorAddr FooAddress, BarAddress;
+  ExecutorAddr RecordedFooAddr, RecordedBarAddr;
   auto Err =
       lookupAndRecordAddrs(ES, LookupKind::Static, makeJITDylibSearchOrder(&JD),
-                           {{Foo, &FooAddress}, {Bar, &BarAddress}});
+                           {{Foo, &RecordedFooAddr}, {Bar, &RecordedBarAddr}});
 
   EXPECT_THAT_ERROR(std::move(Err), Succeeded());
-  EXPECT_EQ(FooAddress.getValue(), FooAddr);
-  EXPECT_EQ(BarAddress.getValue(), BarAddr);
+  EXPECT_EQ(RecordedFooAddr, FooAddr);
+  EXPECT_EQ(RecordedBarAddr, BarAddr);
 }
 
 TEST_F(LookupAndRecordAddrsTest, BlockingRequiredFailure) {
-  ExecutorAddr FooAddress, BarAddress;
+  ExecutorAddr RecordedFooAddr, RecordedBarAddr;
   auto Err =
       lookupAndRecordAddrs(ES, LookupKind::Static, makeJITDylibSearchOrder(&JD),
-                           {{Foo, &FooAddress}, {Bar, &BarAddress}});
+                           {{Foo, &RecordedFooAddr}, {Bar, &RecordedBarAddr}});
 
   EXPECT_THAT_ERROR(std::move(Err), Failed());
 }
@@ -94,15 +94,15 @@ TEST_F(LookupAndRecordAddrsTest, BlockingRequiredFailure) {
 TEST_F(LookupAndRecordAddrsTest, BlockingWeakReference) {
   cantFail(JD.define(absoluteSymbols({{Foo, FooSym}})));
 
-  ExecutorAddr FooAddress, BarAddress;
+  ExecutorAddr RecordedFooAddr, RecordedBarAddr;
   auto Err =
       lookupAndRecordAddrs(ES, LookupKind::Static, makeJITDylibSearchOrder(&JD),
-                           {{Foo, &FooAddress}, {Bar, &BarAddress}},
+                           {{Foo, &RecordedFooAddr}, {Bar, &RecordedBarAddr}},
                            SymbolLookupFlags::WeaklyReferencedSymbol);
 
   EXPECT_THAT_ERROR(std::move(Err), Succeeded());
-  EXPECT_EQ(FooAddress.getValue(), FooAddr);
-  EXPECT_EQ(BarAddress.getValue(), 0U);
+  EXPECT_EQ(RecordedFooAddr, FooAddr);
+  EXPECT_EQ(RecordedBarAddr, ExecutorAddr());
 }
 
 } // namespace

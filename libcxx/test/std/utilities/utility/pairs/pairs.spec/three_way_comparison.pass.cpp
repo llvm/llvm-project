@@ -10,7 +10,9 @@
 
 // template <class T1, class T2> struct pair
 
-// template <class T1, class T2> bool operator<=>(const pair<T1,T2>&, const pair<T1,T2>&);
+// template <class T1, class T2, class U1, class U2>
+//   constexpr common_comparison_category_t<synth-three-way-result<T1, U1>,synth-three-way-result<T2, U2>>
+//     operator<=>(const pair<T1,T2>&, const pair<U1,U2>&);
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 
@@ -19,14 +21,37 @@
 #include <limits>
 #include <type_traits> // std::is_constant_evaluated
 #include <utility>
+#include <string>
 
 #include "test_macros.h"
 
-template<class T> concept HasEqual = requires(T t) { t == t; };
-template<class T> concept HasLess = requires(T t) { t < t; };
-template<class T> concept HasSpaceship = requires(T t) { t <=> t; };
+template <class T>
+concept HasEqual = requires(T t) { t == t; };
+template <class T>
+concept HasLess = requires(T t) { t < t; };
+template <class T, class U = T>
+concept HasSpaceship = requires(T t, U u) { t <=> u; };
 
 constexpr bool test() {
+  {
+    // Pairs of different types should compare with strong ordering.
+    using P1 = std::pair<int, int>;
+    using P2 = std::pair<long long, long long>;
+    ASSERT_SAME_TYPE(decltype(P1() <=> P2()), std::strong_ordering);
+    assert((P1(1, 1) <=> P2(1, 2)) == std::strong_ordering::less);
+    assert((P1(2, 1) <=> P2(1, 2)) == std::strong_ordering::greater);
+    assert((P1(0, 0) <=> P2(0, 0)) == std::strong_ordering::equal);
+  }
+  {
+    // Pairs of different types should compare with partial ordering.
+    using P1 = std::pair<int, int>;
+    using P2 = std::pair<double, double>;
+    ASSERT_SAME_TYPE(decltype(P1() <=> P2()), std::partial_ordering);
+    assert((P1(1, 1) <=> P2(1.0, 2.0)) == std::partial_ordering::less);
+    assert((P1(2, 1) <=> P2(1.0, 2.0)) == std::partial_ordering::greater);
+    assert((P1(0, 0) <=> P2(0.0, 0.0)) == std::partial_ordering::equivalent);
+  }
+  { static_assert(!HasSpaceship<std::pair<int, int>, std::pair<std::string, int>>); }
   {
     // Pairs of types that both have strong ordering should compare with strong ordering.
     using P = std::pair<int, int>;
@@ -50,7 +75,7 @@ constexpr bool test() {
   }
   {
     // Pairs of int (strongly ordered) and double (partially ordered) should compare with partial ordering.
-    using P = std::pair<int, double>;
+    using P              = std::pair<int, double>;
     constexpr double nan = std::numeric_limits<double>::quiet_NaN();
     ASSERT_SAME_TYPE(decltype(P() <=> P()), std::partial_ordering);
     assert((P(1, 1.0) <=> P(1, 2.0)) == std::partial_ordering::less);
@@ -62,7 +87,7 @@ constexpr bool test() {
     assert((P(1, nan) <=> P(1, nan)) == std::partial_ordering::unordered);
   }
   {
-    using P = std::pair<double, int>;
+    using P              = std::pair<double, int>;
     constexpr double nan = std::numeric_limits<double>::quiet_NaN();
     ASSERT_SAME_TYPE(decltype(P() <=> P()), std::partial_ordering);
     assert((P(2.0, 1) <=> P(1.0, 2)) == std::partial_ordering::greater);
@@ -93,12 +118,12 @@ constexpr bool test() {
 #endif
   {
     {
-      using P = std::pair<int, double>;
+      using P              = std::pair<int, double>;
       constexpr double nan = std::numeric_limits<double>::quiet_NaN();
       assert((P(1, 2.0) <=> P(1, nan)) == std::partial_ordering::unordered);
     }
     {
-      using P = std::pair<double, int>;
+      using P              = std::pair<double, int>;
       constexpr double nan = std::numeric_limits<double>::quiet_NaN();
       assert((P(1.0, 1) <=> P(nan, 2)) == std::partial_ordering::unordered);
     }

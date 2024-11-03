@@ -44,7 +44,7 @@ declare void @print(i32)
 ; CHECK-NEXT:    store ptr [[PTR:%.*]], ptr [[TMP0]], align 8
 ; CHECK-NEXT:    [[OLDVALUE:%.*]] = load i32, ptr [[PTR]], align 4
 ; CHECK-NEXT:    store i32 [[OLDVALUE]], ptr [[TEMP]], align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = insertvalue { ptr, ptr } { ptr @f.resume.0, ptr undef }, ptr [[TEMP]], 1
+; CHECK-NEXT:    [[TMP2:%.*]] = insertvalue { ptr, ptr } { ptr @f.resume.0, ptr poison }, ptr [[TEMP]], 1
 ; CHECK-NEXT:    ret { ptr, ptr } [[TMP2]]
 ;
 ;

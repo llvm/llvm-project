@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=fiji -O0 -amdgpu-ir-lower-kernel-arguments=0 -stop-after=irtranslator -global-isel %s -o - | FileCheck -check-prefix=HSA %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=fiji -amdgpu-ir-lower-kernel-arguments=0 -stop-after=irtranslator -global-isel %s -o - | FileCheck -check-prefix=HSA %s
 
 ; HSA-LABEL: name: default_kernel
 ; HSA: liveins:

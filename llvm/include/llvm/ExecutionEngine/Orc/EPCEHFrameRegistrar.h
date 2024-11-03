@@ -27,30 +27,29 @@ class EPCEHFrameRegistrar : public jitlink::EHFrameRegistrar {
 public:
   /// Create from a ExecutorProcessControl instance alone. This will use
   /// the EPC's lookupSymbols method to find the registration/deregistration
-  /// funciton addresses by name.
+  /// function addresses by name.
   ///
   /// If RegistrationFunctionsDylib is non-None then it will be searched to
   /// find the registration functions. If it is None then the process dylib
   /// will be loaded to find the registration functions.
   static Expected<std::unique_ptr<EPCEHFrameRegistrar>>
-  Create(ExecutionSession &ES,
-         std::optional<ExecutorAddr> RegistrationFunctionsDylib = std::nullopt);
+  Create(ExecutionSession &ES);
 
   /// Create a EPCEHFrameRegistrar with the given ExecutorProcessControl
   /// object and registration/deregistration function addresses.
   EPCEHFrameRegistrar(ExecutionSession &ES,
-                      ExecutorAddr RegisterEHFrameWrapperFnAddr,
-                      ExecutorAddr DeregisterEHFRameWrapperFnAddr)
-      : ES(ES), RegisterEHFrameWrapperFnAddr(RegisterEHFrameWrapperFnAddr),
-        DeregisterEHFrameWrapperFnAddr(DeregisterEHFRameWrapperFnAddr) {}
+                      ExecutorAddr RegisterEHFrameSectionWrapper,
+                      ExecutorAddr DeregisterEHFRameSectionWrapper)
+      : ES(ES), RegisterEHFrameSectionWrapper(RegisterEHFrameSectionWrapper),
+        DeregisterEHFrameSectionWrapper(DeregisterEHFRameSectionWrapper) {}
 
   Error registerEHFrames(ExecutorAddrRange EHFrameSection) override;
   Error deregisterEHFrames(ExecutorAddrRange EHFrameSection) override;
 
 private:
   ExecutionSession &ES;
-  ExecutorAddr RegisterEHFrameWrapperFnAddr;
-  ExecutorAddr DeregisterEHFrameWrapperFnAddr;
+  ExecutorAddr RegisterEHFrameSectionWrapper;
+  ExecutorAddr DeregisterEHFrameSectionWrapper;
 };
 
 } // end namespace orc

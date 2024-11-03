@@ -6,7 +6,7 @@
 // RUN: echo -e "export module B;\nimport C;" >> %t/B.cppm
 // RUN: %clang_cc1 -std=c++20 -emit-module-interface %t/subdir/C.cppm -o %t/subdir/C.pcm
 // RUN: %clang_cc1 -std=c++20 -emit-module-interface -fprebuilt-module-path=%t/subdir %t/B.cppm -o %t/B.pcm
-// RUN: %clang_cc1 -std=c++20 -fprebuilt-module-path=%t %s -fsyntax-only -verify
+// RUN: %clang_cc1 -std=c++20 -fprebuilt-module-path=%t %s -fsyntax-only -verify -Wno-read-modules-implicitly
 
 import B;
 import C; // expected-error {{module 'C' is needed but has not been provided, and implicit use of module files is disabled}}

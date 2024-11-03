@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, windows
+// UNSUPPORTED: availability-filesystem-missing
 
 // MS STL and libstdc++ use the native windows file timestamp resolution,
 // with 100 ns resolution.

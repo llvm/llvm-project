@@ -31,5 +31,11 @@ ENUM_LOWERINGOPT(PolymorphicTypeImpl, unsigned, 1, 0)
 /// Off by default until fully ready.
 ENUM_LOWERINGOPT(LowerToHighLevelFIR, unsigned, 1, 0)
 
+/// If true, reverse PowerPC native vector element order.
+ENUM_LOWERINGOPT(NoPPCNativeVecElemOrder, unsigned, 1, 0)
+
+/// If true, assume external names will be suffixed with an underscore. On by default.
+ENUM_LOWERINGOPT(Underscoring, unsigned, 1, 1)
+
 #undef LOWERINGOPT
 #undef ENUM_LOWERINGOPT

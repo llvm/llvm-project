@@ -3,7 +3,6 @@ Test basics of mach core file debugging.
 """
 
 
-
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
@@ -29,10 +28,10 @@ class MachCoreTestCase(TestBase):
         target = self.dbg.CreateTarget("")
 
         # Load OS plugin.
-        python_os_plugin_path = os.path.join(self.getSourceDir(),
-                                             'operating_system.py')
+        python_os_plugin_path = os.path.join(self.getSourceDir(), "operating_system.py")
         command = "settings set target.process.python-os-plugin-path '{}'".format(
-            python_os_plugin_path)
+            python_os_plugin_path
+        )
         self.dbg.HandleCommand(command)
 
         # Load core.
@@ -42,17 +41,20 @@ class MachCoreTestCase(TestBase):
 
         # Verify our OS plug-in threads showed up
         thread = process.GetThreadByID(0x111111111)
-        self.assertTrue(thread.IsValid(
-        ), "Make sure there is a thread 0x111111111 after we load the python OS plug-in"
-                        )
+        self.assertTrue(
+            thread.IsValid(),
+            "Make sure there is a thread 0x111111111 after we load the python OS plug-in",
+        )
         thread = process.GetThreadByID(0x222222222)
-        self.assertTrue(thread.IsValid(
-        ), "Make sure there is a thread 0x222222222 after we load the python OS plug-in"
-                        )
+        self.assertTrue(
+            thread.IsValid(),
+            "Make sure there is a thread 0x222222222 after we load the python OS plug-in",
+        )
         thread = process.GetThreadByID(0x333333333)
-        self.assertTrue(thread.IsValid(
-        ), "Make sure there is a thread 0x333333333 after we load the python OS plug-in"
-                        )
+        self.assertTrue(
+            thread.IsValid(),
+            "Make sure there is a thread 0x333333333 after we load the python OS plug-in",
+        )
 
         # Verify that the correct thread is selected
         thread = process.GetSelectedThread()

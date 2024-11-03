@@ -18,11 +18,13 @@
 #include "llvm/CodeGen/MachineBlockFrequencyInfo.h"
 #include "llvm/CodeGen/MachineBranchProbabilityInfo.h"
 #include "llvm/CodeGen/MachineDominators.h"
+#include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
 #include "llvm/CodeGen/MachineOptimizationRemarkEmitter.h"
 #include "llvm/CodeGen/MachinePostDominators.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/PseudoProbe.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
@@ -30,6 +32,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Utils/SampleProfileLoaderBaseImpl.h"
 #include "llvm/Transforms/Utils/SampleProfileLoaderBaseUtil.h"
+#include <optional>
 
 using namespace llvm;
 using namespace sampleprof;
@@ -58,6 +61,7 @@ static cl::opt<bool> ViewBFIAfter("fs-viewbfi-after", cl::Hidden,
                                   cl::init(false),
                                   cl::desc("View BFI after MIR loader"));
 
+extern cl::opt<bool> ImprovedFSDiscriminator;
 char MIRProfileLoaderPass::ID = 0;
 
 INITIALIZE_PASS_BEGIN(MIRProfileLoaderPass, DEBUG_TYPE,
@@ -91,6 +95,22 @@ extern cl::opt<GVDAGType> ViewBlockLayoutWithBFI;
 // Defined in Analysis/BlockFrequencyInfo.cpp:  -view-bfi-func-name=
 extern cl::opt<std::string> ViewBlockFreqFuncName;
 
+std::optional<PseudoProbe> extractProbe(const MachineInstr &MI) {
+  if (MI.isPseudoProbe()) {
+    PseudoProbe Probe;
+    Probe.Id = MI.getOperand(1).getImm();
+    Probe.Type = MI.getOperand(2).getImm();
+    Probe.Attr = MI.getOperand(3).getImm();
+    Probe.Factor = 1;
+    DILocation *DebugLoc = MI.getDebugLoc();
+    Probe.Discriminator = DebugLoc ? DebugLoc->getDiscriminator() : 0;
+    return Probe;
+  }
+
+  // Ignore callsite probes since they do not have FS discriminators.
+  return std::nullopt;
+}
+
 namespace afdo_detail {
 template <> struct IRTraits<MachineBasicBlock> {
   using InstructionT = MachineInstr;
@@ -120,7 +140,7 @@ template <> struct IRTraits<MachineBasicBlock> {
 } // namespace afdo_detail
 
 class MIRProfileLoader final
-    : public SampleProfileLoaderBaseImpl<MachineBasicBlock> {
+    : public SampleProfileLoaderBaseImpl<MachineFunction> {
 public:
   void setInitVals(MachineDominatorTree *MDT, MachinePostDominatorTree *MPDT,
                    MachineLoopInfo *MLI, MachineBlockFrequencyInfo *MBFI,
@@ -165,11 +185,18 @@ protected:
   unsigned HighBit;
 
   bool ProfileIsValid = true;
+  ErrorOr<uint64_t> getInstWeight(const MachineInstr &MI) override {
+    if (FunctionSamples::ProfileIsProbeBased)
+      return getProbeWeight(MI);
+    if (ImprovedFSDiscriminator && MI.isMetaInstruction())
+      return std::error_code();
+    return getInstWeightImpl(MI);
+  }
 };
 
 template <>
-void SampleProfileLoaderBaseImpl<
-    MachineBasicBlock>::computeDominanceAndLoopInfo(MachineFunction &F) {}
+void SampleProfileLoaderBaseImpl<MachineFunction>::computeDominanceAndLoopInfo(
+    MachineFunction &F) {}
 
 void MIRProfileLoader::setBranchProbs(MachineFunction &F) {
   LLVM_DEBUG(dbgs() << "\nPropagation complete. Setting branch probs\n");
@@ -268,20 +295,41 @@ bool MIRProfileLoader::doInitialization(Module &M) {
   Reader = std::move(ReaderOrErr.get());
   Reader->setModule(&M);
   ProfileIsValid = (Reader->read() == sampleprof_error::success);
-  Reader->getSummary();
+
+  // Load pseudo probe descriptors for probe-based function samples.
+  if (Reader->profileIsProbeBased()) {
+    ProbeManager = std::make_unique<PseudoProbeManager>(M);
+    if (!ProbeManager->moduleIsProbed(M)) {
+      return false;
+    }
+  }
 
   return true;
 }
 
 bool MIRProfileLoader::runOnFunction(MachineFunction &MF) {
+  // Do not load non-FS profiles. A line or probe can get a zero-valued
+  // discriminator at certain pass which could result in accidentally loading
+  // the corresponding base counter in the non-FS profile, while a non-zero
+  // discriminator would end up getting zero samples. This could in turn undo
+  // the sample distribution effort done by previous BFI maintenance and the
+  // probe distribution factor work for pseudo probes.
+  if (!Reader->profileIsFS())
+    return false;
+
   Function &Func = MF.getFunction();
   clearFunctionData(false);
   Samples = Reader->getSamplesFor(Func);
   if (!Samples || Samples->empty())
     return false;
 
-  if (getFunctionLoc(MF) == 0)
-    return false;
+  if (FunctionSamples::ProfileIsProbeBased) {
+    if (!ProbeManager->profileIsValid(MF.getFunction(), *Samples))
+      return false;
+  } else {
+    if (getFunctionLoc(MF) == 0)
+      return false;
+  }
 
   DenseSet<GlobalValue::GUID> InlinedGUIDs;
   bool Changed = computeAndPropagateWeights(MF, InlinedGUIDs);

@@ -21,8 +21,8 @@
 // This test enables an exception and verifies that raising that exception
 // triggers SIGFPE.
 TEST(LlvmLibcExceptionStatusTest, RaiseAndCrash) {
-#if defined(LIBC_TARGET_ARCH_IS_AARCH64)
-  // Few aarch64 HW implementations do not trap exceptions. We skip this test
+#if defined(LIBC_TARGET_ARCH_IS_ANY_ARM) || defined(LIBC_TARGET_ARCH_IS_RISCV64)
+  // Few Arm HW implementations do not trap exceptions. We skip this test
   // completely on such HW.
   //
   // Whether HW supports trapping exceptions or not is deduced by enabling an
@@ -33,7 +33,7 @@ TEST(LlvmLibcExceptionStatusTest, RaiseAndCrash) {
   __llvm_libc::fputil::enable_except(FE_DIVBYZERO);
   if (__llvm_libc::fputil::get_except() == 0)
     return;
-#endif // defined(LIBC_TARGET_ARCH_IS_AARCH64)
+#endif // Architectures where exception trapping is not supported
 
   // TODO: Install a floating point exception handler and verify that the
   // the expected exception was raised. One will have to longjmp back from

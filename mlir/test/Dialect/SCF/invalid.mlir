@@ -1,7 +1,7 @@
 // RUN: mlir-opt -allow-unregistered-dialect %s -split-input-file -verify-diagnostics
 
 func.func @loop_for_lb(%arg0: f32, %arg1: index) {
-  // expected-error@+1 {{operand #0 must be index}}
+  // expected-error@+1 {{operand #0 must be signless integer or index}}
   "scf.for"(%arg0, %arg1, %arg1) ({}) : (f32, index, index) -> ()
   return
 }
@@ -9,7 +9,7 @@ func.func @loop_for_lb(%arg0: f32, %arg1: index) {
 // -----
 
 func.func @loop_for_ub(%arg0: f32, %arg1: index) {
-  // expected-error@+1 {{operand #1 must be index}}
+  // expected-error@+1 {{operand #1 must be signless integer or index}}
   "scf.for"(%arg1, %arg0, %arg1) ({}) : (index, f32, index) -> ()
   return
 }
@@ -17,8 +17,16 @@ func.func @loop_for_ub(%arg0: f32, %arg1: index) {
 // -----
 
 func.func @loop_for_step(%arg0: f32, %arg1: index) {
-  // expected-error@+1 {{operand #2 must be index}}
+  // expected-error@+1 {{operand #2 must be signless integer or index}}
   "scf.for"(%arg1, %arg1, %arg0) ({}) : (index, index, f32) -> ()
+  return
+}
+
+// -----
+
+func.func @loop_for_mismatch(%arg0: i32, %arg1: index) {
+  // expected-error@+1 {{all of {lowerBound, upperBound, step} have same type}}
+  "scf.for"(%arg1, %arg0, %arg1) ({}) : (index, i32, index) -> ()
   return
 }
 
@@ -63,7 +71,7 @@ func.func @loop_for_single_block(%arg0: index) {
 // -----
 
 func.func @loop_for_single_index_argument(%arg0: index) {
-  // expected-error@+1 {{op expected body first argument to be an index argument for the induction variable}}
+  // expected-error@+1 {{expected induction variable to be same type as bounds}}
   "scf.for"(%arg0, %arg0, %arg0) (
     {
     ^bb0(%i0 : f32):
@@ -131,7 +139,7 @@ func.func @parallel_body_arguments_wrong_type(
   "scf.parallel"(%arg0, %arg1, %arg2) ({
     ^bb0(%i0: f32):
       scf.yield
-  }) {operand_segment_sizes = array<i32: 1, 1, 1, 0>}: (index, index, index) -> ()
+  }) {operandSegmentSizes = array<i32: 1, 1, 1, 0>}: (index, index, index) -> ()
   return
 }
 
@@ -143,7 +151,7 @@ func.func @parallel_body_wrong_number_of_arguments(
   "scf.parallel"(%arg0, %arg1, %arg2) ({
     ^bb0(%i0: index, %i1: index):
       scf.yield
-  }) {operand_segment_sizes = array<i32: 1, 1, 1, 0>}: (index, index, index) -> ()
+  }) {operandSegmentSizes = array<i32: 1, 1, 1, 0>}: (index, index, index) -> ()
   return
 }
 
@@ -470,11 +478,25 @@ func.func @while_empty_region() {
 // -----
 
 func.func @while_empty_block() {
-  // expected-error@+1 {{expects the 'before' region to terminate with 'scf.condition'}}
+  // expected-error @below {{expects a non-empty block}}
   scf.while : () -> () {
-   ^bb0:
+  ^bb0:
   } do {
-   ^bb0:
+  ^bb0:
+  }
+}
+
+// -----
+
+func.func @while_invalid_terminator() {
+  // expected-error @below {{expects the 'before' region to terminate with 'scf.condition'}}
+  scf.while : () -> () {
+  ^bb0:
+    // expected-note @below{{terminator here}}
+    "test.foo"() : () -> ()
+  } do {
+  ^bb0:
+    "test.bar"() : () -> ()
   }
 }
 
@@ -681,7 +703,7 @@ func.func @parallel_missing_terminator(%0 : index) {
   ^bb0(%arg1: index):
     // expected-note @below {{terminator here}}
     %2 = "arith.constant"() {value = 1.000000e+00 : f32} : () -> f32
-  }) {operand_segment_sizes = array<i32: 1, 1, 1, 0>} : (index, index, index) -> ()
+  }) {operandSegmentSizes = array<i32: 1, 1, 1, 0>} : (index, index, index) -> ()
   return
 }
 

@@ -25,7 +25,7 @@ using namespace mlir::intrange;
 
 void arith::ConstantOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
                                           SetIntRangeFn setResultRange) {
-  auto constAttr = getValue().dyn_cast_or_null<IntegerAttr>();
+  auto constAttr = llvm::dyn_cast_or_null<IntegerAttr>(getValue());
   if (constAttr) {
     const APInt &value = constAttr.getValue();
     setResultRange(getResult(), ConstantIntRanges::constant(value));

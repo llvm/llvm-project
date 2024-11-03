@@ -1,0 +1,13 @@
+// RUN: cp %s %t.cpp
+// RUN: not clangd -check=%t.cpp 2>&1 | FileCheck -strict-whitespace %s
+
+// CHECK: [template_recursion_depth_exceeded]
+
+template <typename... T>
+constexpr int f(T... args) {
+  return f(0, args...);
+}
+
+int main() {
+  auto i = f();
+}

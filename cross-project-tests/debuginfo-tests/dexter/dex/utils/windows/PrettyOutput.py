@@ -16,16 +16,17 @@ from ..PrettyOutputBase import PrettyOutputBase, Stream, _lock, _null_lock
 
 class _CONSOLE_SCREEN_BUFFER_INFO(ctypes.Structure):
     # pylint: disable=protected-access
-    _fields_ = [('dwSize', ctypes.wintypes._COORD), ('dwCursorPosition',
-                                                     ctypes.wintypes._COORD),
-                ('wAttributes',
-                 ctypes.c_ushort), ('srWindow', ctypes.wintypes._SMALL_RECT),
-                ('dwMaximumWindowSize', ctypes.wintypes._COORD)]
+    _fields_ = [
+        ("dwSize", ctypes.wintypes._COORD),
+        ("dwCursorPosition", ctypes.wintypes._COORD),
+        ("wAttributes", ctypes.c_ushort),
+        ("srWindow", ctypes.wintypes._SMALL_RECT),
+        ("dwMaximumWindowSize", ctypes.wintypes._COORD),
+    ]
     # pylint: enable=protected-access
 
 
 class PrettyOutput(PrettyOutputBase):
-
     stdout = Stream(sys.stdout, ctypes.windll.kernel32.GetStdHandle(-11))
     stderr = Stream(sys.stderr, ctypes.windll.kernel32.GetStdHandle(-12))
 
@@ -33,8 +34,7 @@ class PrettyOutput(PrettyOutputBase):
         info = _CONSOLE_SCREEN_BUFFER_INFO()
 
         for s in (PrettyOutput.stdout, PrettyOutput.stderr):
-            ctypes.windll.kernel32.GetConsoleScreenBufferInfo(
-                s.os, ctypes.byref(info))
+            ctypes.windll.kernel32.GetConsoleScreenBufferInfo(s.os, ctypes.byref(info))
             s.orig_color = info.wAttributes
 
         return self
@@ -52,15 +52,15 @@ class PrettyOutput(PrettyOutputBase):
             self.flush(stream)
             if stream.orig_color:
                 ctypes.windll.kernel32.SetConsoleTextAttribute(
-                    stream.os, stream.orig_color)
+                    stream.os, stream.orig_color
+                )
 
     def _color(self, text, color, stream, lock=_lock):
         stream = self._set_valid_stream(stream)
         with lock:
             try:
                 if stream.color_enabled:
-                    ctypes.windll.kernel32.SetConsoleTextAttribute(
-                        stream.os, color)
+                    ctypes.windll.kernel32.SetConsoleTextAttribute(stream.os, color)
                 self._write(text, stream)
             finally:
                 if stream.color_enabled:

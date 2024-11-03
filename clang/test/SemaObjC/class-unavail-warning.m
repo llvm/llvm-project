@@ -1,5 +1,4 @@
 // RUN: %clang_cc1  -fsyntax-only -fblocks -triple x86_64-apple-darwin10 -verify %s
-// rdar://9092208
 
 __attribute__((unavailable("not available")))
 @interface MyClass { // expected-note 7 {{'MyClass' has been explicitly marked unavailable here}}
@@ -41,7 +40,6 @@ int main(void) {
  return 0;
 }
 
-// rdar://16681279
 @interface NSObject @end
 
 __attribute__((visibility("default"))) __attribute__((availability(macosx,unavailable)))

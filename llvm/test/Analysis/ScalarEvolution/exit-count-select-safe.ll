@@ -426,9 +426,9 @@ define i32 @logical_and_2ops_and_constant(i32 %n, i32 %m, i32 %k) {
 ; CHECK-LABEL: 'logical_and_2ops_and_constant'
 ; CHECK-NEXT:  Classifying expressions for: @logical_and_2ops_and_constant
 ; CHECK-NEXT:    %i = phi i32 [ 0, %entry ], [ %i.next, %loop ]
-; CHECK-NEXT:    --> {0,+,1}<%loop> U: [0,43) S: [0,43) Exits: (42 umin %n) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {0,+,1}<nuw><nsw><%loop> U: [0,43) S: [0,43) Exits: (42 umin %n) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %i.next = add i32 %i, 1
-; CHECK-NEXT:    --> {1,+,1}<%loop> U: [1,44) S: [1,44) Exits: (1 + (42 umin %n))<nuw><nsw> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {1,+,1}<nuw><nsw><%loop> U: [1,44) S: [1,44) Exits: (1 + (42 umin %n))<nuw><nsw> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %umin = call i32 @llvm.umin.i32(i32 %n, i32 42)
 ; CHECK-NEXT:    --> (42 umin %n) U: [0,43) S: [0,43) Exits: (42 umin %n) LoopDispositions: { %loop: Invariant }
 ; CHECK-NEXT:    %cond = select i1 %cond_p1, i1 true, i1 %cond_p0
@@ -469,9 +469,9 @@ define i32 @computeSCEVAtScope(i32 %d.0) {
 ; CHECK-NEXT:    %inc3 = add nsw i32 %e.1, 1
 ; CHECK-NEXT:    --> {(1 + %d.0),+,1}<nw><%for.cond> U: full-set S: full-set Exits: 1 LoopDispositions: { %for.cond: Computable, %while.cond: Variant }
 ; CHECK-NEXT:    %f.1 = phi i32 [ %inc8, %for.body5 ], [ 0, %for.cond4.preheader ]
-; CHECK-NEXT:    --> {0,+,1}<%for.cond4> U: [0,1) S: [0,1) Exits: 0 LoopDispositions: { %for.cond4: Computable, %while.cond: Variant }
+; CHECK-NEXT:    --> {0,+,1}<nuw><nsw><%for.cond4> U: [0,1) S: [0,1) Exits: 0 LoopDispositions: { %for.cond4: Computable, %while.cond: Variant }
 ; CHECK-NEXT:    %inc8 = add i32 %f.1, 1
-; CHECK-NEXT:    --> {1,+,1}<%for.cond4> U: [1,2) S: [1,2) Exits: 1 LoopDispositions: { %for.cond4: Computable, %while.cond: Variant }
+; CHECK-NEXT:    --> {1,+,1}<nuw><nsw><%for.cond4> U: [1,2) S: [1,2) Exits: 1 LoopDispositions: { %for.cond4: Computable, %while.cond: Variant }
 ; CHECK-NEXT:  Determining loop execution counts for: @computeSCEVAtScope
 ; CHECK-NEXT:  Loop %for.cond: backedge-taken count is (-1 * %d.0)
 ; CHECK-NEXT:  Loop %for.cond: constant max backedge-taken count is -1
@@ -983,9 +983,9 @@ define i32 @logical_and_not_zero(i16 %n, i32 %m) {
 ; CHECK-NEXT:    %n1 = add i32 %n.ext, 1
 ; CHECK-NEXT:    --> (1 + (zext i16 %n to i32))<nuw><nsw> U: [1,65537) S: [1,65537)
 ; CHECK-NEXT:    %i = phi i32 [ 0, %entry ], [ %i.next, %loop ]
-; CHECK-NEXT:    --> {0,+,1}<%loop> U: [0,65537) S: [0,65537) Exits: ((1 + (zext i16 %n to i32))<nuw><nsw> umin %m) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {0,+,1}<nuw><nsw><%loop> U: [0,65537) S: [0,65537) Exits: ((1 + (zext i16 %n to i32))<nuw><nsw> umin %m) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %i.next = add i32 %i, 1
-; CHECK-NEXT:    --> {1,+,1}<%loop> U: [1,65538) S: [1,65538) Exits: (1 + ((1 + (zext i16 %n to i32))<nuw><nsw> umin %m))<nuw><nsw> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {1,+,1}<nuw><nsw><%loop> U: [1,65538) S: [1,65538) Exits: (1 + ((1 + (zext i16 %n to i32))<nuw><nsw> umin %m))<nuw><nsw> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %cond = select i1 %cond_p0, i1 %cond_p1, i1 false
 ; CHECK-NEXT:    --> (%cond_p0 umin_seq %cond_p1) U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
 ; CHECK-NEXT:  Determining loop execution counts for: @logical_and_not_zero
@@ -1019,9 +1019,9 @@ define i32 @logical_and_not_zero_wrong_order(i16 %n, i32 %m) {
 ; CHECK-NEXT:    %n1 = add i32 %n.ext, 1
 ; CHECK-NEXT:    --> (1 + (zext i16 %n to i32))<nuw><nsw> U: [1,65537) S: [1,65537)
 ; CHECK-NEXT:    %i = phi i32 [ 0, %entry ], [ %i.next, %loop ]
-; CHECK-NEXT:    --> {0,+,1}<%loop> U: [0,65537) S: [0,65537) Exits: (%m umin_seq (1 + (zext i16 %n to i32))<nuw><nsw>) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {0,+,1}<nuw><nsw><%loop> U: [0,65537) S: [0,65537) Exits: (%m umin_seq (1 + (zext i16 %n to i32))<nuw><nsw>) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %i.next = add i32 %i, 1
-; CHECK-NEXT:    --> {1,+,1}<%loop> U: [1,65538) S: [1,65538) Exits: (1 + (%m umin_seq (1 + (zext i16 %n to i32))<nuw><nsw>))<nuw><nsw> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {1,+,1}<nuw><nsw><%loop> U: [1,65538) S: [1,65538) Exits: (1 + (%m umin_seq (1 + (zext i16 %n to i32))<nuw><nsw>))<nuw><nsw> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %cond = select i1 %cond_p0, i1 %cond_p1, i1 false
 ; CHECK-NEXT:    --> (%cond_p0 umin_seq %cond_p1) U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
 ; CHECK-NEXT:  Determining loop execution counts for: @logical_and_not_zero_wrong_order
@@ -1090,9 +1090,9 @@ define i32 @logical_and_known_smaller(i16 %n, i16 %m) {
 ; CHECK-NEXT:    %m.add = add i32 %m.ext, 65536
 ; CHECK-NEXT:    --> (65536 + (zext i16 %m to i32))<nuw><nsw> U: [65536,131072) S: [65536,131072)
 ; CHECK-NEXT:    %i = phi i32 [ 0, %entry ], [ %i.next, %loop ]
-; CHECK-NEXT:    --> {0,+,1}<%loop> U: [0,65536) S: [0,65536) Exits: (zext i16 %n to i32) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {0,+,1}<nuw><nsw><%loop> U: [0,65536) S: [0,65536) Exits: (zext i16 %n to i32) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %i.next = add i32 %i, 1
-; CHECK-NEXT:    --> {1,+,1}<%loop> U: [1,65537) S: [1,65537) Exits: (1 + (zext i16 %n to i32))<nuw><nsw> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {1,+,1}<nuw><nsw><%loop> U: [1,65537) S: [1,65537) Exits: (1 + (zext i16 %n to i32))<nuw><nsw> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %cond = select i1 %cond_p0, i1 %cond_p1, i1 false
 ; CHECK-NEXT:    --> (%cond_p0 umin_seq %cond_p1) U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
 ; CHECK-NEXT:  Determining loop execution counts for: @logical_and_known_smaller
@@ -1129,9 +1129,9 @@ define i32 @logical_and_known_smaller_equal(i16 %n, i16 %m) {
 ; CHECK-NEXT:    %m.add = add i32 %m.ext, 65535
 ; CHECK-NEXT:    --> (65535 + (zext i16 %m to i32))<nuw><nsw> U: [65535,131071) S: [65535,131071)
 ; CHECK-NEXT:    %i = phi i32 [ 0, %entry ], [ %i.next, %loop ]
-; CHECK-NEXT:    --> {0,+,1}<%loop> U: [0,65536) S: [0,65536) Exits: (zext i16 %n to i32) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {0,+,1}<nuw><nsw><%loop> U: [0,65536) S: [0,65536) Exits: (zext i16 %n to i32) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %i.next = add i32 %i, 1
-; CHECK-NEXT:    --> {1,+,1}<%loop> U: [1,65537) S: [1,65537) Exits: (1 + (zext i16 %n to i32))<nuw><nsw> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {1,+,1}<nuw><nsw><%loop> U: [1,65537) S: [1,65537) Exits: (1 + (zext i16 %n to i32))<nuw><nsw> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %cond = select i1 %cond_p0, i1 %cond_p1, i1 false
 ; CHECK-NEXT:    --> (%cond_p0 umin_seq %cond_p1) U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
 ; CHECK-NEXT:  Determining loop execution counts for: @logical_and_known_smaller_equal
@@ -1168,9 +1168,9 @@ define i32 @logical_and_not_known_smaller_equal(i16 %n, i16 %m) {
 ; CHECK-NEXT:    %m.add = add i32 %m.ext, 65534
 ; CHECK-NEXT:    --> (65534 + (zext i16 %m to i32))<nuw><nsw> U: [65534,131070) S: [65534,131070)
 ; CHECK-NEXT:    %i = phi i32 [ 0, %entry ], [ %i.next, %loop ]
-; CHECK-NEXT:    --> {0,+,1}<%loop> U: [0,65536) S: [0,65536) Exits: ((zext i16 %n to i32) umin_seq (65534 + (zext i16 %m to i32))<nuw><nsw>) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {0,+,1}<nuw><nsw><%loop> U: [0,65536) S: [0,65536) Exits: ((zext i16 %n to i32) umin_seq (65534 + (zext i16 %m to i32))<nuw><nsw>) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %i.next = add i32 %i, 1
-; CHECK-NEXT:    --> {1,+,1}<%loop> U: [1,65537) S: [1,65537) Exits: (1 + ((zext i16 %n to i32) umin_seq (65534 + (zext i16 %m to i32))<nuw><nsw>))<nuw><nsw> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {1,+,1}<nuw><nsw><%loop> U: [1,65537) S: [1,65537) Exits: (1 + ((zext i16 %n to i32) umin_seq (65534 + (zext i16 %m to i32))<nuw><nsw>))<nuw><nsw> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %cond = select i1 %cond_p0, i1 %cond_p1, i1 false
 ; CHECK-NEXT:    --> (%cond_p0 umin_seq %cond_p1) U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
 ; CHECK-NEXT:  Determining loop execution counts for: @logical_and_not_known_smaller_equal
@@ -1207,9 +1207,9 @@ define i32 @logical_and_known_greater(i16 %n, i16 %m) {
 ; CHECK-NEXT:    %m.add = add i32 %m.ext, 65536
 ; CHECK-NEXT:    --> (65536 + (zext i16 %m to i32))<nuw><nsw> U: [65536,131072) S: [65536,131072)
 ; CHECK-NEXT:    %i = phi i32 [ 0, %entry ], [ %i.next, %loop ]
-; CHECK-NEXT:    --> {0,+,1}<%loop> U: [0,65536) S: [0,65536) Exits: (zext i16 %n to i32) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {0,+,1}<nuw><nsw><%loop> U: [0,65536) S: [0,65536) Exits: (zext i16 %n to i32) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %i.next = add i32 %i, 1
-; CHECK-NEXT:    --> {1,+,1}<%loop> U: [1,65537) S: [1,65537) Exits: (1 + (zext i16 %n to i32))<nuw><nsw> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {1,+,1}<nuw><nsw><%loop> U: [1,65537) S: [1,65537) Exits: (1 + (zext i16 %n to i32))<nuw><nsw> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %cond = select i1 %cond_p0, i1 %cond_p1, i1 false
 ; CHECK-NEXT:    --> (%cond_p0 umin_seq %cond_p1) U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
 ; CHECK-NEXT:  Determining loop execution counts for: @logical_and_known_greater
@@ -1246,9 +1246,9 @@ define i32 @logical_and_known_greater_equal(i16 %n, i16 %m) {
 ; CHECK-NEXT:    %m.add = add i32 %m.ext, 65535
 ; CHECK-NEXT:    --> (65535 + (zext i16 %m to i32))<nuw><nsw> U: [65535,131071) S: [65535,131071)
 ; CHECK-NEXT:    %i = phi i32 [ 0, %entry ], [ %i.next, %loop ]
-; CHECK-NEXT:    --> {0,+,1}<%loop> U: [0,65536) S: [0,65536) Exits: (zext i16 %n to i32) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {0,+,1}<nuw><nsw><%loop> U: [0,65536) S: [0,65536) Exits: (zext i16 %n to i32) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %i.next = add i32 %i, 1
-; CHECK-NEXT:    --> {1,+,1}<%loop> U: [1,65537) S: [1,65537) Exits: (1 + (zext i16 %n to i32))<nuw><nsw> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {1,+,1}<nuw><nsw><%loop> U: [1,65537) S: [1,65537) Exits: (1 + (zext i16 %n to i32))<nuw><nsw> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %cond = select i1 %cond_p0, i1 %cond_p1, i1 false
 ; CHECK-NEXT:    --> (%cond_p0 umin_seq %cond_p1) U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
 ; CHECK-NEXT:  Determining loop execution counts for: @logical_and_known_greater_equal
@@ -1285,9 +1285,9 @@ define i32 @logical_and_not_known_greater_equal(i16 %n, i16 %m) {
 ; CHECK-NEXT:    %m.add = add i32 %m.ext, 65534
 ; CHECK-NEXT:    --> (65534 + (zext i16 %m to i32))<nuw><nsw> U: [65534,131070) S: [65534,131070)
 ; CHECK-NEXT:    %i = phi i32 [ 0, %entry ], [ %i.next, %loop ]
-; CHECK-NEXT:    --> {0,+,1}<%loop> U: [0,65536) S: [0,65536) Exits: ((zext i16 %n to i32) umin (65534 + (zext i16 %m to i32))<nuw><nsw>) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {0,+,1}<nuw><nsw><%loop> U: [0,65536) S: [0,65536) Exits: ((zext i16 %n to i32) umin (65534 + (zext i16 %m to i32))<nuw><nsw>) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %i.next = add i32 %i, 1
-; CHECK-NEXT:    --> {1,+,1}<%loop> U: [1,65537) S: [1,65537) Exits: (1 + ((zext i16 %n to i32) umin (65534 + (zext i16 %m to i32))<nuw><nsw>))<nuw><nsw> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {1,+,1}<nuw><nsw><%loop> U: [1,65537) S: [1,65537) Exits: (1 + ((zext i16 %n to i32) umin (65534 + (zext i16 %m to i32))<nuw><nsw>))<nuw><nsw> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %cond = select i1 %cond_p0, i1 %cond_p1, i1 false
 ; CHECK-NEXT:    --> (%cond_p0 umin_seq %cond_p1) U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
 ; CHECK-NEXT:  Determining loop execution counts for: @logical_and_not_known_greater_equal
@@ -1318,9 +1318,9 @@ define i32 @logical_and_zero_arg1(i32 %n) {
 ; CHECK-LABEL: 'logical_and_zero_arg1'
 ; CHECK-NEXT:  Classifying expressions for: @logical_and_zero_arg1
 ; CHECK-NEXT:    %i = phi i32 [ 0, %entry ], [ %i.next, %loop ]
-; CHECK-NEXT:    --> {0,+,1}<%loop> U: [0,1) S: [0,1) Exits: 0 LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {0,+,1}<nuw><nsw><%loop> U: [0,1) S: [0,1) Exits: 0 LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %i.next = add i32 %i, 1
-; CHECK-NEXT:    --> {1,+,1}<%loop> U: [1,2) S: [1,2) Exits: 1 LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {1,+,1}<nuw><nsw><%loop> U: [1,2) S: [1,2) Exits: 1 LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %cond = select i1 %cond_p0, i1 %cond_p1, i1 false
 ; CHECK-NEXT:    --> (%cond_p0 umin_seq %cond_p1) U: full-set S: full-set Exits: false LoopDispositions: { %loop: Variant }
 ; CHECK-NEXT:  Determining loop execution counts for: @logical_and_zero_arg1
@@ -1348,9 +1348,9 @@ define i32 @logical_and_zero_arg2(i32 %n) {
 ; CHECK-LABEL: 'logical_and_zero_arg2'
 ; CHECK-NEXT:  Classifying expressions for: @logical_and_zero_arg2
 ; CHECK-NEXT:    %i = phi i32 [ 0, %entry ], [ %i.next, %loop ]
-; CHECK-NEXT:    --> {0,+,1}<%loop> U: [0,1) S: [0,1) Exits: 0 LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {0,+,1}<nuw><nsw><%loop> U: [0,1) S: [0,1) Exits: 0 LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %i.next = add i32 %i, 1
-; CHECK-NEXT:    --> {1,+,1}<%loop> U: [1,2) S: [1,2) Exits: 1 LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {1,+,1}<nuw><nsw><%loop> U: [1,2) S: [1,2) Exits: 1 LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %cond = select i1 %cond_p0, i1 %cond_p1, i1 false
 ; CHECK-NEXT:    --> (%cond_p1 umin %cond_p0) U: full-set S: full-set Exits: false LoopDispositions: { %loop: Variant }
 ; CHECK-NEXT:  Determining loop execution counts for: @logical_and_zero_arg2

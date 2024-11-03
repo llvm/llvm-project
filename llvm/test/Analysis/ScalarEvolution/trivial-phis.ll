@@ -24,7 +24,7 @@ do.end:                                           ; preds = %do.body
 
 ; CHECK-LABEL: @test2
 ; CHECK:      %tmp24 = phi i64 [ %tmp14, %bb22 ], [ %tmp14, %bb13 ]
-; CHECK-NEXT: -->  %tmp24 U: full-set S: full-set       Exits: <<Unknown>>      LoopDispositions: { %bb13: Variant, %bb8: Variant, %bb17: Invariant, %bb27: Invariant }
+; CHECK-NEXT: -->  {1,+,1}<nuw><nsw><%bb13> U: [1,9223372036854775807) S: [1,9223372036854775807) Exits: (-2 + %arg)
 
 define void @test2(i64 %arg, ptr noalias %arg1) {
 bb:
@@ -117,21 +117,21 @@ bb48:                                             ; preds = %bb47, %bb
 ; CHECK-LABEL: @test3
 
 ; CHECK:      %tmp14 = phi i64 [ %tmp40, %bb39 ], [ 1, %bb8 ]
-; CHECK-NEXT: -->  {1,+,1}<%bb13> U: [1,9223372036854775807) S: [1,9223372036854775807)
+; CHECK-NEXT: --> {1,+,1}<nuw><nsw><%bb13> U: [1,9223372036854775807) S: [1,9223372036854775807)
 ; CHECK-SAME:      Exits: (-2 + %arg)       LoopDispositions: { %bb13: Computable, %bb8: Variant, %bb17_a: Invariant, %bb27: Invariant }
 ; CHECK:      %tmp18 = phi i64 [ %tmp20, %bb17 ], [ 0, %bb13 ]
 ; CHECK-NEXT: -->  {0,+,1}<nuw><nsw><%bb17_a> U: [0,9223372036854775807) S: [0,9223372036854775807)
 ; CHECK-SAME:      Exits: (-1 + %arg)       LoopDispositions: { %bb17_a: Computable, %bb13: Variant, %bb8: Variant }
 
 ; CHECK:      %tmp24 = phi i64 [ %tmp14, %bb13 ], [ %tmp14, %bb17 ]
-; CHECK-NEXT: -->  {1,+,1}<%bb13> U: [1,9223372036854775807) S: [1,9223372036854775807)
+; CHECK-NEXT: -->  {1,+,1}<nuw><nsw><%bb13> U: [1,9223372036854775807) S: [1,9223372036854775807)
 ; CHECK-SAME:      Exits: (-2 + %arg)       LoopDispositions: { %bb13: Computable, %bb8: Variant, %bb17_a: Invariant, %bb27: Invariant }
 ; CHECK:       %tmp28 = phi i64 [ %tmp34, %bb27 ], [ 0, %bb23 ]
 ; CHECK-NEXT:  -->  {0,+,1}<nuw><nsw><%bb27> U: [0,9223372036854775807) S: [0,9223372036854775807)
 ; CHECK-SAME:       Exits: (-1 + %arg)      LoopDispositions: { %bb27: Computable, %bb13: Variant, %bb8: Variant }
 
 ; CHECK:      %tmp38 = phi i64 [ %tmp24, %bb23 ], [ %tmp24, %bb27 ]
-; CHECK-NEXT: -->  {1,+,1}<%bb13> U: [1,9223372036854775807) S: [1,9223372036854775807)
+; CHECK-NEXT: --> {1,+,1}<nuw><nsw><%bb13> U: [1,9223372036854775807) S: [1,9223372036854775807)
 ; CHECK-SAME:      Exits: (-2 + %arg)       LoopDispositions: { %bb13: Computable, %bb8: Variant, %bb17_a: Invariant, %bb27: Invariant }
 
 define void @test3(i64 %arg, ptr %arg1) {

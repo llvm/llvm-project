@@ -26,5 +26,5 @@ static_assert(alignof(std::max_align_t) >= alignof(long double), "");
 static_assert(alignof(std::max_align_t) >= alignof(void*), "");
 #if TEST_STD_VER > 14
 static_assert(alignof(std::max_align_t) <= __STDCPP_DEFAULT_NEW_ALIGNMENT__,
-              "max_align_t alignment should be no larger than operator new's alignment");
+              "std::max_align_t alignment should be no larger than operator new's alignment");
 #endif

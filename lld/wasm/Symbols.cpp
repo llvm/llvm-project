@@ -35,7 +35,7 @@ std::string maybeDemangleSymbol(StringRef name) {
   if (name == "__main_argc_argv")
     return "main";
   if (wasm::config->demangle)
-    return demangle(name.str());
+    return demangle(name);
   return name.str();
 }
 
@@ -219,6 +219,10 @@ void Symbol::setHidden(bool isHidden) {
     flags |= WASM_SYMBOL_VISIBILITY_HIDDEN;
   else
     flags |= WASM_SYMBOL_VISIBILITY_DEFAULT;
+}
+
+bool Symbol::isImported() const {
+  return isUndefined() && (importName.has_value() || forceImport);
 }
 
 bool Symbol::isExported() const {

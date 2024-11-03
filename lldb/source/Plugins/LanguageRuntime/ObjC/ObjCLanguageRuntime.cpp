@@ -10,7 +10,6 @@
 #include "ObjCLanguageRuntime.h"
 
 #include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
-#include "lldb/Core/MappedHash.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/ValueObject.h"
@@ -233,6 +232,22 @@ ObjCLanguageRuntime::GetDescriptorIteratorPair(bool update_if_needed) {
   return std::pair<ObjCLanguageRuntime::ISAToDescriptorIterator,
                    ObjCLanguageRuntime::ISAToDescriptorIterator>(
       m_isa_to_descriptor.begin(), m_isa_to_descriptor.end());
+}
+
+void ObjCLanguageRuntime::ReadObjCLibraryIfNeeded(
+    const ModuleList &module_list) {
+  if (!HasReadObjCLibrary()) {
+    std::lock_guard<std::recursive_mutex> guard(module_list.GetMutex());
+
+    size_t num_modules = module_list.GetSize();
+    for (size_t i = 0; i < num_modules; i++) {
+      auto mod = module_list.GetModuleAtIndex(i);
+      if (IsModuleObjCLibrary(mod)) {
+        ReadObjCLibrary(mod);
+        break;
+      }
+    }
+  }
 }
 
 ObjCLanguageRuntime::ObjCISA

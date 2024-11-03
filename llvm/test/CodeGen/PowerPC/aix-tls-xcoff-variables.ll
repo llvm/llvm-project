@@ -19,7 +19,7 @@
 ; SECTION-NEXT: Sections [
 ; SECTION-NEXT:   Section {
 ; SECTION-NEXT:     Index: 1
-; SECTION-NEXT:     Name: .text
+; SECTION-NEXT:     Name:
 ; SECTION-NEXT:     PhysicalAddress: 0x0
 ; SECTION-NEXT:     VirtualAddress: 0x0
 ; SECTION-NEXT:     Size: 0x4
@@ -69,8 +69,8 @@
 ; SYMS-NEXT:     Name: <stdin>
 ; SYMS-NEXT:     Value (SymbolTableIndex): 0x0
 ; SYMS-NEXT:     Section: N_DEBUG
-; SYMS-NEXT:     Source Language ID: TB_C (0x0)
-; SYMS-NEXT:     CPU Version ID: 0x0
+; SYMS-NEXT:     Source Language ID: TB_CPLUSPLUS (0x9)
+; SYMS-NEXT:     CPU Version ID: TCPU_COM (0x3)
 ; SYMS-NEXT:     StorageClass: C_FILE (0x67)
 ; SYMS-NEXT:     NumberOfAuxEntries: 0
 ; SYMS-NEXT:   }
@@ -117,7 +117,7 @@
 
 ; SYMS-NEXT:   Symbol {
 ; SYMS-NEXT:     Index: [[#INDX+4]]
-; SYMS-NEXT:     Name: .text
+; SYMS-NEXT:     Name:
 ; SYMS-NEXT:     Value (RelocatableAddress): 0x0
 ; SYMS-NEXT:     Section: .text
 ; SYMS-NEXT:     Type: 0x0

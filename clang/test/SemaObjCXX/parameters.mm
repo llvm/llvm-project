@@ -11,9 +11,9 @@ struct X0 {
 X0<A> x0a; // expected-note{{instantiation}}
 
 
-struct test2 { virtual void foo() = 0; }; // expected-note {{unimplemented}}
+struct test2 { virtual void foo() = 0; };
 @interface Test2
-- (void) foo: (test2) foo; // expected-error {{parameter type 'test2' is an abstract class}}
+- (void) foo: (test2) foo ;
 @end
 
 template<typename T> void r1(__restrict T);

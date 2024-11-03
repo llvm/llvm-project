@@ -8,9 +8,9 @@
 
 #include "mlir/Analysis/AliasAnalysis/LocalAliasAnalysis.h"
 
-#include "mlir/IR/FunctionInterfaces.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
+#include "mlir/Interfaces/FunctionInterfaces.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Interfaces/ViewLikeInterface.h"
 #include <optional>
@@ -45,9 +45,9 @@ static void collectUnderlyingAddressValues(RegionBranchOpInterface branch,
   // this region predecessor that correspond to the input values of `region`. If
   // an index could not be found, std::nullopt is returned instead.
   auto getOperandIndexIfPred =
-      [&](std::optional<unsigned> predIndex) -> std::optional<unsigned> {
+      [&](RegionBranchPoint pred) -> std::optional<unsigned> {
     SmallVector<RegionSuccessor, 2> successors;
-    branch.getSuccessorRegions(predIndex, successors);
+    branch.getSuccessorRegions(pred, successors);
     for (RegionSuccessor &successor : successors) {
       if (successor.getSuccessor() != region)
         continue;
@@ -59,11 +59,11 @@ static void collectUnderlyingAddressValues(RegionBranchOpInterface branch,
       }
       unsigned firstInputIndex, lastInputIndex;
       if (region) {
-        firstInputIndex = inputs[0].cast<BlockArgument>().getArgNumber();
-        lastInputIndex = inputs.back().cast<BlockArgument>().getArgNumber();
+        firstInputIndex = cast<BlockArgument>(inputs[0]).getArgNumber();
+        lastInputIndex = cast<BlockArgument>(inputs.back()).getArgNumber();
       } else {
-        firstInputIndex = inputs[0].cast<OpResult>().getResultNumber();
-        lastInputIndex = inputs.back().cast<OpResult>().getResultNumber();
+        firstInputIndex = cast<OpResult>(inputs[0]).getResultNumber();
+        lastInputIndex = cast<OpResult>(inputs.back()).getResultNumber();
       }
       if (firstInputIndex > inputIndex || lastInputIndex < inputIndex) {
         output.push_back(inputValue);
@@ -75,31 +75,29 @@ static void collectUnderlyingAddressValues(RegionBranchOpInterface branch,
   };
 
   // Check branches from the parent operation.
-  std::optional<unsigned> regionIndex;
-  if (region) {
-    // Determine the actual region number from the passed region.
-    regionIndex = region->getRegionNumber();
-  }
+  auto branchPoint = RegionBranchPoint::parent();
+  if (region)
+    branchPoint = region;
+
   if (std::optional<unsigned> operandIndex =
-          getOperandIndexIfPred(/*predIndex=*/std::nullopt)) {
+          getOperandIndexIfPred(/*predIndex=*/RegionBranchPoint::parent())) {
     collectUnderlyingAddressValues(
-        branch.getSuccessorEntryOperands(regionIndex)[*operandIndex], maxDepth,
+        branch.getEntrySuccessorOperands(branchPoint)[*operandIndex], maxDepth,
         visited, output);
   }
   // Check branches from each child region.
   Operation *op = branch.getOperation();
-  for (int i = 0, e = op->getNumRegions(); i != e; ++i) {
-    if (std::optional<unsigned> operandIndex = getOperandIndexIfPred(i)) {
-      for (Block &block : op->getRegion(i)) {
-        Operation *term = block.getTerminator();
+  for (Region &region : op->getRegions()) {
+    if (std::optional<unsigned> operandIndex = getOperandIndexIfPred(region)) {
+      for (Block &block : region) {
         // Try to determine possible region-branch successor operands for the
         // current region.
-        auto successorOperands =
-            getRegionBranchSuccessorOperands(term, regionIndex);
-        if (successorOperands) {
-          collectUnderlyingAddressValues((*successorOperands)[*operandIndex],
-                                         maxDepth, visited, output);
-        } else if (term->getNumSuccessors()) {
+        if (auto term = dyn_cast<RegionBranchTerminatorOpInterface>(
+                block.getTerminator())) {
+          collectUnderlyingAddressValues(
+              term.getSuccessorOperands(branchPoint)[*operandIndex], maxDepth,
+              visited, output);
+        } else if (block.getNumSuccessors()) {
           // Otherwise, if this terminator may exit the region we can't make
           // any assumptions about which values get passed.
           output.push_back(inputValue);
@@ -186,9 +184,9 @@ static void collectUnderlyingAddressValues(Value value, unsigned maxDepth,
   }
   --maxDepth;
 
-  if (BlockArgument arg = value.dyn_cast<BlockArgument>())
+  if (BlockArgument arg = dyn_cast<BlockArgument>(value))
     return collectUnderlyingAddressValues(arg, maxDepth, visited, output);
-  collectUnderlyingAddressValues(value.cast<OpResult>(), maxDepth, visited,
+  collectUnderlyingAddressValues(cast<OpResult>(value), maxDepth, visited,
                                  output);
 }
 
@@ -216,10 +214,10 @@ getAllocEffectFor(Value value,
                   Operation *&allocScopeOp) {
   // Try to get a memory effect interface for the parent operation.
   Operation *op;
-  if (BlockArgument arg = value.dyn_cast<BlockArgument>())
+  if (BlockArgument arg = dyn_cast<BlockArgument>(value))
     op = arg.getOwner()->getParentOp();
   else
-    op = value.cast<OpResult>().getOwner();
+    op = cast<OpResult>(value).getOwner();
   MemoryEffectOpInterface interface = dyn_cast<MemoryEffectOpInterface>(op);
   if (!interface)
     return failure();
@@ -305,7 +303,7 @@ AliasResult LocalAliasAnalysis::aliasImpl(Value lhs, Value rhs) {
     if (rhsParentOp->isProperAncestor(lhsAllocScope))
       return AliasResult::NoAlias;
     if (rhsParentOp == lhsAllocScope) {
-      BlockArgument rhsArg = rhs.dyn_cast<BlockArgument>();
+      BlockArgument rhsArg = dyn_cast<BlockArgument>(rhs);
       if (rhsArg && rhs.getParentBlock()->isEntryBlock())
         return AliasResult::NoAlias;
     }

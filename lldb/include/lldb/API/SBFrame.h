@@ -12,6 +12,15 @@
 #include "lldb/API/SBDefines.h"
 #include "lldb/API/SBValueList.h"
 
+namespace lldb_private {
+namespace python {
+class SWIGBridge;
+}
+namespace lua {
+class SWIGBridge;
+}
+} // namespace lldb_private
+
 namespace lldb {
 
 class LLDB_API SBFrame {
@@ -184,16 +193,17 @@ public:
 
   bool GetDescription(lldb::SBStream &description);
 
-#ifndef SWIG
-  SBFrame(const lldb::StackFrameSP &lldb_object_sp);
-#endif
-
 protected:
   friend class SBBlock;
   friend class SBExecutionContext;
   friend class SBInstruction;
   friend class SBThread;
   friend class SBValue;
+
+  friend class lldb_private::python::SWIGBridge;
+  friend class lldb_private::lua::SWIGBridge;
+
+  SBFrame(const lldb::StackFrameSP &lldb_object_sp);
 
   lldb::StackFrameSP GetFrameSP() const;
 

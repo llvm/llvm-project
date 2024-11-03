@@ -19,7 +19,7 @@ class raw_ostream;
 /// Typically used in DW_AT_location attributes to describe the location of
 /// objects.
 struct DWARFLocationExpression {
-  /// The address range in which this expression is valid. None denotes a
+  /// The address range in which this expression is valid. std::nullopt denotes a
   /// default entry which is valid in addresses not covered by other location
   /// expressions, or everywhere if there are no other expressions.
   std::optional<DWARFAddressRange> Range;

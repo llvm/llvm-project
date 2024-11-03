@@ -103,7 +103,7 @@ define <12 x i32> @transpose_i32_3x4(<12 x i32> %a) {
 ; CHECK-NEXT:    [[TMP22:%.*]] = extractelement <3 x i32> [[SPLIT3]], i64 2
 ; CHECK-NEXT:    [[TMP23:%.*]] = insertelement <4 x i32> [[TMP21]], i32 [[TMP22]], i64 3
 ; CHECK-NEXT:    [[TMP24:%.*]] = shufflevector <4 x i32> [[TMP7]], <4 x i32> [[TMP15]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-; CHECK-NEXT:    [[TMP25:%.*]] = shufflevector <4 x i32> [[TMP23]], <4 x i32> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef>
+; CHECK-NEXT:    [[TMP25:%.*]] = shufflevector <4 x i32> [[TMP23]], <4 x i32> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[TMP26:%.*]] = shufflevector <8 x i32> [[TMP24]], <8 x i32> [[TMP25]], <12 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11>
 ; CHECK-NEXT:    ret <12 x i32> [[TMP26]]
 ;

@@ -1,4 +1,4 @@
-//===-- Unittests for strtof ---------------------------------------------===//
+//===-- Unittests for strtof ----------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -7,17 +7,18 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/__support/FPUtil/FPBits.h"
+#include "src/errno/libc_errno.h"
 #include "src/stdlib/strtof.h"
 
+#include "test/UnitTest/FPMatcher.h"
+#include "test/UnitTest/RoundingModeUtils.h"
 #include "test/UnitTest/Test.h"
-#include "utils/testutils/RoundingModeUtils.h"
 
-#include <errno.h>
 #include <limits.h>
 #include <stddef.h>
 
-using __llvm_libc::testutils::ForceRoundingModeTest;
-using __llvm_libc::testutils::RoundingMode;
+using __llvm_libc::fputil::testing::ForceRoundingModeTest;
+using __llvm_libc::fputil::testing::RoundingMode;
 
 class LlvmLibcStrToFTest : public __llvm_libc::testing::Test,
                            ForceRoundingModeTest<RoundingMode::Nearest> {
@@ -43,19 +44,12 @@ public:
     __llvm_libc::fputil::FPBits<float> expected_fp =
         __llvm_libc::fputil::FPBits<float>(expectedRawData);
 
-    errno = 0;
+    libc_errno = 0;
     float result = __llvm_libc::strtof(inputString, &str_end);
 
-    __llvm_libc::fputil::FPBits<float> actual_fp =
-        __llvm_libc::fputil::FPBits<float>(result);
-
     EXPECT_EQ(str_end - inputString, expectedStrLen);
-
-    EXPECT_EQ(actual_fp.bits, expected_fp.bits);
-    EXPECT_EQ(actual_fp.get_sign(), expected_fp.get_sign());
-    EXPECT_EQ(actual_fp.get_exponent(), expected_fp.get_exponent());
-    EXPECT_EQ(actual_fp.get_mantissa(), expected_fp.get_mantissa());
-    EXPECT_EQ(errno, expectedErrno);
+    EXPECT_FP_EQ(result, static_cast<float>(expected_fp));
+    EXPECT_EQ(libc_errno, expectedErrno);
   }
 };
 
@@ -207,4 +201,8 @@ TEST_F(LlvmLibcStrToFTest, NaNWithParenthesesValidSequenceInvalidNumberTests) {
   run_test("NaN(1a)", 7, 0x7fc00000);
   run_test("NaN(asdf)", 9, 0x7fc00000);
   run_test("NaN(1A1)", 8, 0x7fc00000);
+  run_test("NaN(why_does_this_work)", 23, 0x7fc00000);
+  run_test(
+      "NaN(1234567890qwertyuiopasdfghjklzxcvbnmQWERTYUIOPASDFGHJKLZXCVBNM_)",
+      68, 0x7fc00000);
 }

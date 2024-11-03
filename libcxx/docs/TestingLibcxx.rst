@@ -39,17 +39,28 @@ whether the required libraries have been built, you can use the
   $ <build>/bin/llvm-lit -sv libcxx/test/std/depr/depr.c.headers/stdlib_h.pass.cpp # Run a single test
   $ <build>/bin/llvm-lit -sv libcxx/test/std/atomics libcxx/test/std/threads # Test std::thread and std::atomic
 
+If you used **ninja** as your build system, running ``ninja -C <build> check-cxx`` will run
+all the tests in the libc++ testsuite.
+
 .. note::
   If you used the Bootstrapping build instead of the default runtimes build, the
   ``cxx-test-depends`` target is instead named ``runtimes-test-depends``, and
   you will need to prefix ``<build>/runtimes/runtimes-<target>-bins/`` to the
-  paths of all tests.
+  paths of all tests. For example, to run all the libcxx tests you can do
+  ``<build>/bin/llvm-lit -sv <build>/runtimes/runtimes-bins/libcxx/test``.
 
 In the default configuration, the tests are built against headers that form a
 fake installation root of libc++. This installation root has to be updated when
 changes are made to the headers, so you should re-run the ``cxx-test-depends``
 target before running the tests manually with ``lit`` when you make any sort of
-change, including to the headers.
+change, including to the headers. We recommend using the provided ``libcxx/utils/libcxx-lit``
+script to automate this so you don't have to think about building test dependencies
+every time:
+
+.. code-block:: bash
+
+  $ cd <monorepo-root>
+  $ libcxx/utils/libcxx-lit <build> -sv libcxx/test/std/re # Build testing dependencies and run all of the std::regex tests
 
 Sometimes you'll want to change the way LIT is running the tests. Custom options
 can be specified using the ``--param <name>=<val>`` flag. The most common option
@@ -59,8 +70,8 @@ that. However, you can manually specify the option like so if you want:
 
 .. code-block:: bash
 
-  $ <build>/bin/llvm-lit -sv libcxx/test/std/containers # Run the tests with the newest -std
-  $ <build>/bin/llvm-lit -sv libcxx/test/std/containers --param std=c++03 # Run the tests in C++03
+  $ libcxx/utils/libcxx-lit <build> -sv libcxx/test/std/containers # Run the tests with the newest -std
+  $ libcxx/utils/libcxx-lit <build> -sv libcxx/test/std/containers --param std=c++03 # Run the tests in C++03
 
 Other parameters are supported by the test suite. Those are defined in ``libcxx/utils/libcxx/test/params.py``.
 If you want to customize how to run the libc++ test suite beyond what is available
@@ -81,9 +92,9 @@ the current CMake configuration. It does so by generating a ``lit.site.cfg``
 file in the build directory from one of the configuration file templates in
 ``libcxx/test/configs/``, and pointing ``llvm-lit`` (which is a wrapper around
 ``llvm/utils/lit/lit.py``) to that file. So when you're running
-``<build>/bin/llvm-lit``, the generated ``lit.site.cfg`` file is always loaded
-instead of ``libcxx/test/lit.cfg.py``. If you want to use a custom site
-configuration, simply point the CMake build to it using
+``<build>/bin/llvm-lit`` either directly or indirectly, the generated ``lit.site.cfg``
+file is always loaded instead of ``libcxx/test/lit.cfg.py``. If you want to use a
+custom site configuration, simply point the CMake build to it using
 ``-DLIBCXX_TEST_CONFIG=<path-to-site-config>``, and that site configuration
 will be used instead. That file can use CMake variables inside it to make
 configuration easier.
@@ -91,8 +102,7 @@ configuration easier.
    .. code-block:: bash
 
      $ cmake <options> -DLIBCXX_TEST_CONFIG=<path-to-site-config>
-     $ make -C <build> cxx-test-depends
-     $ <build>/bin/llvm-lit -sv libcxx/test # will use your custom config file
+     $ libcxx/utils/libcxx-lit <build> -sv libcxx/test # will use your custom config file
 
 Additional tools
 ----------------
@@ -309,7 +319,7 @@ concatenate its arguments to a ``std::string`` and write it to ``stderr``. When
 the output can't be concatenated a default message will be written to
 ``stderr``. This is useful for tests where the arguments use different
 character types like ``char`` and ``wchar_t``, the latter can't simply be
-written to ``stderrr``.
+written to ``stderr``.
 
 This macro is in a different header as ``assert_macros.h`` since it pulls in
 additional headers.

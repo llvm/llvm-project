@@ -322,7 +322,8 @@ void SharedMemoryMapper::initialize(MemoryMapper::AllocInfo &AI,
     std::memset(Base + Segment.ContentSize, 0, Segment.ZeroFillSize);
 
     tpctypes::SharedMemorySegFinalizeRequest SegReq;
-    SegReq.AG = Segment.AG;
+    SegReq.RAG = {Segment.AG.getMemProt(), Segment.AG.getMemLifetimePolicy() ==
+                                               MemLifetimePolicy::Finalize};
     SegReq.Addr = AI.MappingBase + Segment.Offset;
     SegReq.Size = Segment.ContentSize + Segment.ZeroFillSize;
 

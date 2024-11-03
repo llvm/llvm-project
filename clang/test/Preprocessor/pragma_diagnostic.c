@@ -1,6 +1,5 @@
 // RUN: %clang_cc1 -fsyntax-only -verify -Wno-undef %s
 // RUN: %clang_cc1 -fsyntax-only -verify -Wno-undef -Wno-unknown-warning-option -DAVOID_UNKNOWN_WARNING %s
-// rdar://2362963
 
 #if FOO    // ok.
 #endif
@@ -33,6 +32,11 @@
 #ifndef AVOID_UNKNOWN_WARNING
 // expected-warning@-2 {{unknown warning group '-Winvalid-name', ignored}}
 #endif
+
+// From GH13920
+#pragma clang diagnostic push ignored "-Wdeprecated-declarations" // expected-warning {{unexpected token in pragma diagnostic}}
+#pragma clang diagnostic pop ignored "-Wdeprecated-declarations"  // expected-warning {{unexpected token in pragma diagnostic}}
+
 
 // Testing pragma clang diagnostic with -Weverything
 void ppo(void){} // First test that we do not diagnose on this.

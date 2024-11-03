@@ -57,24 +57,27 @@ compiled application or the operating system. Integrating the runtime into
 the operating system should be preferred since otherwise all thread creation
 and destruction would need to be intercepted by the application.
 
-The instrumentation makes use of the platform register ``x18``.  On some
-platforms, ``x18`` is reserved, and on others, it is designated as a scratch
-register.  This generally means that any code that may run on the same thread
-as code compiled with ShadowCallStack must either target one of the platforms
-whose ABI reserves ``x18`` (currently Android, Darwin, Fuchsia and Windows)
-or be compiled with the flag ``-ffixed-x18``. If absolutely necessary, code
-compiled without ``-ffixed-x18`` may be run on the same thread as code that
-uses ShadowCallStack by saving the register value temporarily on the stack
-(`example in Android`_) but this should be done with care since it risks
-leaking the shadow call stack address.
+The instrumentation makes use of the platform register ``x18`` on AArch64 and
+``x3`` (``gp``) on RISC-V. For simplicity we will refer to this as the
+``SCSReg``. On some platforms, ``SCSReg`` is reserved, and on others, it is
+designated as a scratch register.  This generally means that any code that may
+run on the same thread as code compiled with ShadowCallStack must either target
+one of the platforms whose ABI reserves ``SCSReg`` (currently Android, Darwin,
+Fuchsia and Windows) or be compiled with a flag to reserve that register (e.g.,
+``-ffixed-x18``). If absolutely necessary, code compiled without reserving the
+register may be run on the same thread as code that uses ShadowCallStack by
+saving the register value temporarily on the stack (`example in Android`_) but
+this should be done with care since it risks leaking the shadow call stack
+address.
 
 .. _`example in Android`: https://android-review.googlesource.com/c/platform/frameworks/base/+/803717
 
-Because of the use of register ``x18``, the ShadowCallStack feature is
-incompatible with any other feature that may use ``x18``. However, there
-is no inherent reason why ShadowCallStack needs to use register ``x18``
-specifically; in principle, a platform could choose to reserve and use another
-register for ShadowCallStack, but this would be incompatible with the AAPCS64.
+Because it requires a dedicated register, the ShadowCallStack feature is
+incompatible with any other feature that may use ``SCSReg``. However, there is
+no inherent reason why ShadowCallStack needs to use a specific register; in
+principle, a platform could choose to reserve and use another register for
+ShadowCallStack, but this would be incompatible with the ABI standards
+published in AAPCS64 and the RISC-V psABI.
 
 Special unwind information is required on functions that are compiled
 with ShadowCallStack and that may be unwound, i.e. functions compiled with
@@ -91,7 +94,7 @@ ShadowCallStack is intended to be a stronger alternative to
 ``-fstack-protector``. It protects from non-linear overflows and arbitrary
 memory writes to the return address slot.
 
-The instrumentation makes use of the ``x18`` register to reference the shadow
+The instrumentation makes use of the ``SCSReg`` register to reference the shadow
 call stack, meaning that references to the shadow call stack do not have
 to be stored in memory. This makes it possible to implement a runtime that
 avoids exposing the address of the shadow call stack to attackers that can
@@ -120,11 +123,11 @@ guard regions that can be allocated.
 
 The runtime will need the address of the shadow call stack in order to
 deallocate it when destroying the thread. If the entire program is compiled
-with ``-ffixed-x18``, this is trivial: the address can be derived from the
-value stored in ``x18`` (e.g. by masking out the lower bits). If a guard
+with ``SCSReg`` reserved, this is trivial: the address can be derived from the
+value stored in ``SCSReg`` (e.g. by masking out the lower bits). If a guard
 region is used, the address of the start of the guard region could then be
 stored at the start of the shadow call stack itself. But if it is possible
-for code compiled without ``-ffixed-x18`` to run on a thread managed by the
+for code compiled without reserving ``SCSReg`` to run on a thread managed by the
 runtime, which is the case on Android for example, the address must be stored
 somewhere else instead. On Android we store the address of the start of the
 guard region in TLS and deallocate the entire guard region including the
@@ -133,7 +136,7 @@ the address of the start of the guard region is already somewhat guessable.
 
 One way in which the address of the shadow call stack could leak is in the
 ``jmp_buf`` data structure used by ``setjmp`` and ``longjmp``. The Android
-runtime `avoids this`_ by only storing the low bits of ``x18`` in the
+runtime `avoids this`_ by only storing the low bits of ``SCSReg`` in the
 ``jmp_buf``, which requires the address of the shadow call stack to be
 aligned to its size.
 
@@ -146,9 +149,11 @@ protected from return address overwrites even without ShadowCallStack.
 Usage
 =====
 
-To enable ShadowCallStack, just pass the ``-fsanitize=shadow-call-stack``
-flag to both compile and link command lines. On aarch64, you also need to pass
-``-ffixed-x18`` unless your target already reserves ``x18``.
+To enable ShadowCallStack, just pass the ``-fsanitize=shadow-call-stack`` flag
+to both compile and link command lines. On aarch64, you also need to pass
+``-ffixed-x18`` unless your target already reserves ``x18``. On RISC-V, ``x3``
+(``gp``) is always reserved. It is, however, important to disable GP relaxation
+in the linker. This can be done with the ``--no-relax-gp`` flag in GNU ld.
 
 Low-level API
 -------------

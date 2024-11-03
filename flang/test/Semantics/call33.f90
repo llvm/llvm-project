@@ -1,4 +1,4 @@
-! RUN: %python %S/test_errors.py %s %flang_fc1 -Werror
+! RUN: %python %S/test_errors.py %s %flang_fc1 -pedantic
 module m
  contains
   subroutine s1(x)
@@ -31,7 +31,7 @@ program test
   character(4), pointer :: longptr
   !WARNING: Actual argument variable length '2' is less than expected length '3'
   call s1(short)
-  !WARNING: Actual argument variable length '2' is less than expected length '3'
+  !ERROR: Actual argument array has fewer characters (2) than dummy argument 'x=' array (3)
   call s2(shortarr)
   !ERROR: Actual argument variable length '2' does not match the expected length '3'
   call s3(shortarr)
@@ -40,6 +40,7 @@ program test
   !ERROR: Actual argument variable length '2' does not match the expected length '3'
   call s5(shortalloc)
   !ERROR: Actual argument variable length '2' does not match the expected length '3'
+  !ERROR: Target type CHARACTER(KIND=1,LEN=2_8) is not compatible with pointer type CHARACTER(KIND=1,LEN=3_8)
   call s6(shortptr)
   call s1(long) ! ok
   call s2(longarr) ! ok
@@ -50,5 +51,6 @@ program test
   !ERROR: Actual argument variable length '4' does not match the expected length '3'
   call s5(longalloc)
   !ERROR: Actual argument variable length '4' does not match the expected length '3'
+  !ERROR: Target type CHARACTER(KIND=1,LEN=4_8) is not compatible with pointer type CHARACTER(KIND=1,LEN=3_8)
   call s6(longptr)
 end

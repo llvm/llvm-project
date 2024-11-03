@@ -24,7 +24,7 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#if _LIBCPP_STD_VER >= 20 && !defined(_LIBCPP_HAS_NO_INCOMPLETE_FORMAT)
+#if _LIBCPP_STD_VER >= 20
 
 namespace __format_spec {
 
@@ -140,11 +140,11 @@ class _LIBCPP_TEMPLATE_VIS __parser_chrono {
   using _ConstIterator = typename basic_format_parse_context<_CharT>::const_iterator;
 
 public:
-  _LIBCPP_HIDE_FROM_ABI constexpr auto
-  __parse(basic_format_parse_context<_CharT>& __parse_ctx, __fields __fields, __flags __flags)
-      -> decltype(__parse_ctx.begin()) {
-    _ConstIterator __begin = __parser_.__parse(__parse_ctx, __fields);
-    _ConstIterator __end   = __parse_ctx.end();
+  template <class _ParseContext>
+  _LIBCPP_HIDE_FROM_ABI constexpr typename _ParseContext::iterator
+  __parse(_ParseContext& __ctx, __fields __fields, __flags __flags) {
+    _ConstIterator __begin = __parser_.__parse(__ctx, __fields);
+    _ConstIterator __end   = __ctx.end();
     if (__begin == __end)
       return __begin;
 
@@ -160,17 +160,18 @@ public:
 private:
   _LIBCPP_HIDE_FROM_ABI constexpr _ConstIterator
   __parse_chrono_specs(_ConstIterator __begin, _ConstIterator __end, __flags __flags) {
-    _LIBCPP_ASSERT(__begin != __end,
-                   "When called with an empty input the function will cause "
-                   "undefined behavior by evaluating data not in the input");
+    _LIBCPP_ASSERT_UNCATEGORIZED(
+        __begin != __end,
+        "When called with an empty input the function will cause "
+        "undefined behavior by evaluating data not in the input");
 
     if (*__begin != _CharT('%') && *__begin != _CharT('}'))
-      std::__throw_format_error("Expected '%' or '}' in the chrono format-string");
+      std::__throw_format_error("The format specifier expects a '%' or a '}'");
 
     do {
       switch (*__begin) {
       case _CharT('{'):
-        std::__throw_format_error("The chrono-specs contains a '{'");
+        std::__throw_format_error("The chrono specifiers contain a '{'");
 
       case _CharT('}'):
         return __begin;
@@ -195,7 +196,7 @@ private:
   __parse_conversion_spec(_ConstIterator& __begin, _ConstIterator __end, __flags __flags) {
     ++__begin;
     if (__begin == __end)
-      std::__throw_format_error("End of input while parsing the modifier chrono conversion-spec");
+      std::__throw_format_error("End of input while parsing a conversion specifier");
 
     switch (*__begin) {
     case _CharT('n'):
@@ -409,7 +410,7 @@ private:
 
 } // namespace __format_spec
 
-#endif //_LIBCPP_STD_VER >= 20 && !defined(_LIBCPP_HAS_NO_INCOMPLETE_FORMAT)
+#endif //_LIBCPP_STD_VER >= 20
 
 _LIBCPP_END_NAMESPACE_STD
 

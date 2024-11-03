@@ -16,9 +16,7 @@ def has_enough_measurements(measurements):
     If 1. is true, 2. doesn't need to be true.
     """
     config = configparser.ConfigParser()
-    config.read(
-        os.path.join(os.path.dirname(os.path.realpath(__file__)), "config.cfg")
-    )
+    config.read(os.path.join(os.path.dirname(os.path.realpath(__file__)), "config.cfg"))
     if "stats" in config:
         stats_dict = {
             "max_number_of_measurements": int(
@@ -34,6 +32,6 @@ def has_enough_measurements(measurements):
             "max_time_for_a_benchmark_ns": 1e9,
         }
     return (
-        np.sum(measurements) >= stats_dict["max_time_for_a_benchmark_ns"] or
-        np.size(measurements) >= stats_dict["max_number_of_measurements"]
+        np.sum(measurements) >= stats_dict["max_time_for_a_benchmark_ns"]
+        or np.size(measurements) >= stats_dict["max_number_of_measurements"]
     )

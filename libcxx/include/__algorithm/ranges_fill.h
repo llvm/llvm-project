@@ -28,9 +28,8 @@ namespace ranges {
 namespace __fill {
 struct __fn {
   template <class _Type, output_iterator<const _Type&> _Iter, sentinel_for<_Iter> _Sent>
-  _LIBCPP_HIDE_FROM_ABI constexpr
-  _Iter operator()(_Iter __first, _Sent __last, const _Type& __value) const {
-    if constexpr(random_access_iterator<_Iter> && sized_sentinel_for<_Sent, _Iter>) {
+  _LIBCPP_HIDE_FROM_ABI constexpr _Iter operator()(_Iter __first, _Sent __last, const _Type& __value) const {
+    if constexpr (random_access_iterator<_Iter> && sized_sentinel_for<_Sent, _Iter>) {
       return ranges::fill_n(__first, __last - __first, __value);
     } else {
       for (; __first != __last; ++__first)
@@ -40,15 +39,14 @@ struct __fn {
   }
 
   template <class _Type, output_range<const _Type&> _Range>
-  _LIBCPP_HIDE_FROM_ABI constexpr
-  borrowed_iterator_t<_Range> operator()(_Range&& __range, const _Type& __value) const {
+  _LIBCPP_HIDE_FROM_ABI constexpr borrowed_iterator_t<_Range> operator()(_Range&& __range, const _Type& __value) const {
     return (*this)(ranges::begin(__range), ranges::end(__range), __value);
   }
 };
 } // namespace __fill
 
 inline namespace __cpo {
-  inline constexpr auto fill = __fill::__fn{};
+inline constexpr auto fill = __fill::__fn{};
 } // namespace __cpo
 } // namespace ranges
 

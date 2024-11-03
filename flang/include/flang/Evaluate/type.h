@@ -22,6 +22,7 @@
 #include "integer.h"
 #include "logical.h"
 #include "real.h"
+#include "flang/Common/Fortran-features.h"
 #include "flang/Common/Fortran.h"
 #include "flang/Common/idioms.h"
 #include "flang/Common/real.h"
@@ -37,7 +38,12 @@ class DeclTypeSpec;
 class DerivedTypeSpec;
 class ParamValue;
 class Symbol;
+// IsDescriptor() is true when an object requires the use of a descriptor
+// in memory when "at rest".  IsPassedViaDescriptor() is sometimes false
+// when IsDescriptor() is true, including the cases of CHARACTER dummy
+// arguments and explicit & assumed-size dummy arrays.
 bool IsDescriptor(const Symbol &);
+bool IsPassedViaDescriptor(const Symbol &);
 } // namespace Fortran::semantics
 
 namespace Fortran::evaluate {
@@ -157,8 +163,9 @@ public:
   std::optional<Expr<SubscriptInteger>> GetCharLength() const;
 
   std::size_t GetAlignment(const TargetCharacteristics &) const;
-  std::optional<Expr<SubscriptInteger>> MeasureSizeInBytes(
-      FoldingContext &, bool aligned) const;
+  std::optional<Expr<SubscriptInteger>> MeasureSizeInBytes(FoldingContext &,
+      bool aligned,
+      std::optional<std::int64_t> charLength = std::nullopt) const;
 
   std::string AsFortran() const;
   std::string AsFortran(std::string &&charLenExpr) const;
@@ -189,6 +196,7 @@ public:
   // relation.  Kind type parameters must match, but CHARACTER lengths
   // need not do so.
   bool IsTkCompatibleWith(const DynamicType &) const;
+  bool IsTkCompatibleWith(const DynamicType &, common::IgnoreTKRSet) const;
 
   // A stronger compatibility check that does not allow distinct known
   // values for CHARACTER lengths for e.g. MOVE_ALLOC().
@@ -465,7 +473,15 @@ int SelectedCharKind(const std::string &, int defaultKind);
 std::optional<DynamicType> ComparisonType(
     const DynamicType &, const DynamicType &);
 
-bool IsInteroperableIntrinsicType(const DynamicType &);
+bool IsInteroperableIntrinsicType(const DynamicType &,
+    const common::LanguageFeatureControl * = nullptr,
+    bool checkCharLength = true);
+bool IsCUDAIntrinsicType(const DynamicType &);
+
+// Determine whether two derived type specs are sufficiently identical
+// to be considered the "same" type even if declared separately.
+bool AreSameDerivedType(
+    const semantics::DerivedTypeSpec &x, const semantics::DerivedTypeSpec &y);
 
 // For generating "[extern] template class", &c. boilerplate
 #define EXPAND_FOR_EACH_INTEGER_KIND(M, P, S) \

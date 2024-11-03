@@ -1,9 +1,9 @@
 
 // RUN: fir-opt --add-debug-foundation --mlir-print-debuginfo %s | FileCheck %s
-// REQUIRES: linux
+// REQUIRES: system-linux
 
 // Test that there are no changes to a function with existed fused loc debug
-module {
+module attributes {} {
   func.func @_QPs1() {
     return loc(#loc1)
   } loc(#loc2)
@@ -17,11 +17,6 @@ module {
 #di_subprogram = #llvm.di_subprogram<compileUnit = #di_compile_unit, scope = #di_file, name = "_QPs1", linkageName = "_QPs1", file = #di_file, line = 1, scopeLine = 1, subprogramFlags = Definition, type = #di_subroutine_type>
 #loc2 = loc(fused<#di_subprogram>[#loc1])
 
-module {
-  func.func @_QPs1() {
-    return loc(#loc1)
-  } loc(#loc2)
-} loc(#loc)
 // CHECK: #loc = loc("/home/user01/llvm-project/build_release/simple.f90":0:0)
 // CHECK: #loc1 = loc("/home/user01/llvm-project/build_release/simple.f90":1:1)
 // CHECK: #di_subprogram = #llvm.di_subprogram<compileUnit = #di_compile_unit, scope = #di_file, name = "_QPs1", linkageName = "_QPs1", file = #di_file, line = 1, scopeLine = 1, subprogramFlags = Definition, type = #di_subroutine_type>

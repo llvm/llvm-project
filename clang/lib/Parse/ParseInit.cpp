@@ -10,11 +10,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/AST/Designator.h"
 #include "clang/Basic/TokenKinds.h"
 #include "clang/Parse/ParseDiagnostic.h"
 #include "clang/Parse/Parser.h"
 #include "clang/Parse/RAIIObjectsForParser.h"
+#include "clang/Sema/Designator.h"
+#include "clang/Sema/EnterExpressionEvaluationContext.h"
 #include "clang/Sema/Ownership.h"
 #include "clang/Sema/Scope.h"
 #include "llvm/ADT/STLExtras.h"
@@ -361,8 +362,8 @@ ExprResult Parser::ParseInitializerWithPotentialDesignator(
 
     // If this is a normal array designator, remember it.
     if (Tok.isNot(tok::ellipsis)) {
-      Desig.AddDesignator(
-          Designator::CreateArrayDesignator(Idx.get(), StartLoc));
+      Desig.AddDesignator(Designator::CreateArrayDesignator(Idx.get(),
+                                                            StartLoc));
     } else {
       // Handle the gnu array range extension.
       Diag(Tok, diag::ext_gnu_array_range);
@@ -430,7 +431,7 @@ ExprResult Parser::ParseInitializerWithPotentialDesignator(
 ///       initializer: [C99 6.7.8]
 ///         '{' initializer-list '}'
 ///         '{' initializer-list ',' '}'
-/// [GNU]   '{' '}'
+/// [C23]   '{' '}'
 ///
 ///       initializer-list:
 ///         designation[opt] initializer ...[opt]
@@ -448,9 +449,12 @@ ExprResult Parser::ParseBraceInitializer() {
   ExprVector InitExprs;
 
   if (Tok.is(tok::r_brace)) {
-    // Empty initializers are a C++ feature and a GNU extension to C.
-    if (!getLangOpts().CPlusPlus)
-      Diag(LBraceLoc, diag::ext_gnu_empty_initializer);
+    // Empty initializers are a C++ feature and a GNU extension to C before C23.
+    if (!getLangOpts().CPlusPlus) {
+      Diag(LBraceLoc, getLangOpts().C23
+                          ? diag::warn_c23_compat_empty_initializer
+                          : diag::ext_c_empty_initializer);
+    }
     // Match the '}'.
     return Actions.ActOnInitList(LBraceLoc, std::nullopt, ConsumeBrace());
   }

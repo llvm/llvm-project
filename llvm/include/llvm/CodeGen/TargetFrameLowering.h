@@ -54,15 +54,18 @@ public:
   };
 
   struct DwarfFrameBase {
-    // The frame base may be either a register (the default), the CFA,
-    // or a WebAssembly-specific location description.
+    // The frame base may be either a register (the default), the CFA with an
+    // offset, or a WebAssembly-specific location description.
     enum FrameBaseKind { Register, CFA, WasmFrameBase } Kind;
     struct WasmFrameBase {
       unsigned Kind; // Wasm local, global, or value stack
       unsigned Index;
     };
     union {
+      // Used with FrameBaseKind::Register.
       unsigned Reg;
+      // Used with FrameBaseKind::CFA.
+      int Offset;
       struct WasmFrameBase WasmLoc;
     } Location;
   };
@@ -98,6 +101,10 @@ public:
   /// is the largest alignment for any data object in the target.
   ///
   Align getStackAlign() const { return StackAlignment; }
+
+  /// getStackThreshold - Return the maximum stack size
+  ///
+  virtual uint64_t getStackThreshold() const { return UINT_MAX; }
 
   /// alignSPAdjust - This method aligns the stack adjustment to the correct
   /// alignment.

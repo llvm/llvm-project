@@ -40,7 +40,7 @@ AMDGPUMCAsmInfo::AMDGPUMCAsmInfo(const Triple &TT,
   HasNoDeadStrip = true;
   //===--- Dwarf Emission Directives -----------------------------------===//
   SupportsDebugInformation = true;
-  UsesCFIForDebug = true;
+  UsesCFIWithoutEH = true;
   DwarfRegNumForCFI = true;
 
   UseIntegratedAssembler = false;

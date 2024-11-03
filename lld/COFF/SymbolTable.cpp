@@ -34,6 +34,21 @@ StringRef ltrim1(StringRef s, const char *chars) {
   return s;
 }
 
+static bool compatibleMachineType(COFFLinkerContext &ctx, MachineTypes mt) {
+  if (mt == IMAGE_FILE_MACHINE_UNKNOWN)
+    return true;
+  switch (ctx.config.machine) {
+  case ARM64:
+    return mt == ARM64 || mt == ARM64X;
+  case ARM64EC:
+    return COFF::isArm64EC(mt) || mt == AMD64;
+  case ARM64X:
+    return COFF::isAnyArm64(mt) || mt == AMD64;
+  default:
+    return ctx.config.machine == mt;
+  }
+}
+
 void SymbolTable::addFile(InputFile *file) {
   log("Reading " + toString(file));
   if (file->lazy) {
@@ -56,7 +71,7 @@ void SymbolTable::addFile(InputFile *file) {
   if (ctx.config.machine == IMAGE_FILE_MACHINE_UNKNOWN) {
     ctx.config.machine = mt;
     ctx.driver.addWinSysRootLibSearchPaths();
-  } else if (mt != IMAGE_FILE_MACHINE_UNKNOWN && ctx.config.machine != mt) {
+  } else if (!compatibleMachineType(ctx, mt)) {
     error(toString(file) + ": machine type " + machineToStr(mt) +
           " conflicts with " + machineToStr(ctx.config.machine));
     return;
@@ -302,7 +317,7 @@ void SymbolTable::loadMinGWSymbols() {
     }
 
     if (ctx.config.autoImport) {
-      if (name.startswith("__imp_"))
+      if (name.starts_with("__imp_"))
         continue;
       // If we have an undefined symbol, but we have a lazy symbol we could
       // load, load it.
@@ -318,7 +333,7 @@ void SymbolTable::loadMinGWSymbols() {
 }
 
 Defined *SymbolTable::impSymbol(StringRef name) {
-  if (name.startswith("__imp_"))
+  if (name.starts_with("__imp_"))
     return nullptr;
   return dyn_cast_or_null<Defined>(find(("__imp_" + name).str()));
 }
@@ -441,7 +456,7 @@ void SymbolTable::reportUnresolvable() {
     if (undef->getWeakAlias())
       continue;
     StringRef name = undef->getName();
-    if (name.startswith("__imp_")) {
+    if (name.starts_with("__imp_")) {
       Symbol *imp = find(name.substr(strlen("__imp_")));
       if (imp && isa<Defined>(imp))
         continue;
@@ -489,7 +504,7 @@ void SymbolTable::resolveRemainingUndefines() {
 
     // If we can resolve a symbol by removing __imp_ prefix, do that.
     // This odd rule is for compatibility with MSVC linker.
-    if (name.startswith("__imp_")) {
+    if (name.starts_with("__imp_")) {
       Symbol *imp = find(name.substr(strlen("__imp_")));
       if (imp && isa<Defined>(imp)) {
         auto *d = cast<Defined>(imp);
@@ -801,9 +816,9 @@ std::vector<Symbol *> SymbolTable::getSymsWithPrefix(StringRef prefix) {
   std::vector<Symbol *> syms;
   for (auto pair : symMap) {
     StringRef name = pair.first.val();
-    if (name.startswith(prefix) || name.startswith(prefix.drop_front()) ||
-        name.drop_front().startswith(prefix) ||
-        name.drop_front().startswith(prefix.drop_front())) {
+    if (name.starts_with(prefix) || name.starts_with(prefix.drop_front()) ||
+        name.drop_front().starts_with(prefix) ||
+        name.drop_front().starts_with(prefix.drop_front())) {
       syms.push_back(pair.second);
     }
   }
@@ -831,7 +846,7 @@ Symbol *SymbolTable::findMangle(StringRef name) {
   auto findByPrefix = [&syms](const Twine &t) -> Symbol * {
     std::string prefix = t.str();
     for (auto *s : syms)
-      if (s->getName().startswith(prefix))
+      if (s->getName().starts_with(prefix))
         return s;
     return nullptr;
   };
@@ -840,7 +855,7 @@ Symbol *SymbolTable::findMangle(StringRef name) {
   if (ctx.config.machine != I386)
     return findByPrefix("?" + name + "@@Y");
 
-  if (!name.startswith("_"))
+  if (!name.starts_with("_"))
     return nullptr;
   // Search for x86 stdcall function.
   if (Symbol *s = findByPrefix(name + "@"))

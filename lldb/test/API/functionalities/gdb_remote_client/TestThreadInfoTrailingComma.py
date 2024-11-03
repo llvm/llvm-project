@@ -4,8 +4,8 @@ from lldbsuite.test.decorators import *
 from lldbsuite.test.gdbclientutils import *
 from lldbsuite.test.lldbgdbclient import GDBRemoteTestBase
 
-class TestThreadInfoTrailingComma(GDBRemoteTestBase):
 
+class TestThreadInfoTrailingComma(GDBRemoteTestBase):
     def test(self):
         class MyResponder(MockGDBServerResponder):
             def haltReason(self):
@@ -15,11 +15,10 @@ class TestThreadInfoTrailingComma(GDBRemoteTestBase):
                 return "m1,2,3,4,"
 
         self.server.responder = MyResponder()
-        target = self.dbg.CreateTarget('')
+        target = self.dbg.CreateTarget("")
         if self.TraceOn():
-          self.runCmd("log enable gdb-remote packets")
-          self.addTearDownHook(
-                lambda: self.runCmd("log disable gdb-remote packets"))
+            self.runCmd("log enable gdb-remote packets")
+            self.addTearDownHook(lambda: self.runCmd("log disable gdb-remote packets"))
         process = self.connect(target)
         self.assertEqual(process.GetThreadAtIndex(0).GetThreadID(), 1)
         self.assertEqual(process.GetThreadAtIndex(1).GetThreadID(), 2)

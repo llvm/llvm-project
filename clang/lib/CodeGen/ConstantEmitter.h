@@ -42,7 +42,7 @@ private:
 
   /// The AST address space where this (non-abstract) initializer is going.
   /// Used for generating appropriate placeholders.
-  LangAS DestAddressSpace;
+  LangAS DestAddressSpace = LangAS::Default;
 
   llvm::SmallVector<std::pair<llvm::Constant *, llvm::GlobalVariable*>, 4>
     PlaceholderAddresses;

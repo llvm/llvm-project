@@ -13,7 +13,7 @@ char3 f1(char4 x) {
 }
 
 //CHECK: define{{.*}} spir_func <4 x i8> @f2(<3 x i8> noundef %[[x:.*]])
-//CHECK: %[[astype:.*]] = shufflevector <3 x i8> %[[x]], <3 x i8> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 undef>
+//CHECK: %[[astype:.*]] = shufflevector <3 x i8> %[[x]], <3 x i8> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 poison>
 //CHECK: ret <4 x i8> %[[astype]]
 char4 f2(char3 x) {
   return __builtin_astype(x, char4);
@@ -36,7 +36,7 @@ char4 f4(int x) {
 }
 
 //CHECK: define{{.*}} spir_func i32 @f5(<3 x i8> noundef %[[x:.*]])
-//CHECK: %[[shuffle:.*]] = shufflevector <3 x i8> %[[x]], <3 x i8> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 undef>
+//CHECK: %[[shuffle:.*]] = shufflevector <3 x i8> %[[x]], <3 x i8> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 poison>
 //CHECK: %[[astype:.*]] = bitcast <4 x i8> %[[shuffle]] to i32
 //CHECK: ret i32 %[[astype]]
 int f5(char3 x) {
@@ -98,7 +98,7 @@ char3 ptr_to_char3(int *x) {
 }
 
 //CHECK: define{{.*}} spir_func ptr @char3_to_ptr(<3 x i8> noundef %[[x:.*]])
-//CHECK: %[[astype:.*]] = shufflevector <3 x i8> %[[x]], <3 x i8> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 undef>
+//CHECK: %[[astype:.*]] = shufflevector <3 x i8> %[[x]], <3 x i8> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 poison>
 //CHECK: %[[cast1:.*]] = bitcast <4 x i8> %[[astype]] to i32
 //CHECK: %[[cast2:.*]] = inttoptr i32 %[[cast1]] to ptr
 //CHECK: ret ptr %[[cast2]]

@@ -1,11 +1,11 @@
-; RUN: opt -opaque-pointers=0 %loadPolly -polly-codegen -S < %s | FileCheck %s
+; RUN: opt %loadPolly -polly-codegen -S < %s | FileCheck %s
 ;
 ; llvm.org/PR48422
 ; Use of ScalarEvolution in Codegen not possible because DominatorTree is not updated.
 ;
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 
-define dso_local void @func(i1 %b, i1 %p3, [14 x i32]* %d) local_unnamed_addr {
+define dso_local void @func(i1 %b, i1 %p3, ptr %d) local_unnamed_addr {
 entry:
   %conv = zext i1 %b to i16
   %add = select i1 %p3, i32 21, i32 20
@@ -17,13 +17,13 @@ for.body.us.us:
   br i1 %b, label %omp.inner.for.body.us.us.us.preheader, label %omp.inner.for.body.us63.us.preheader
 
 omp.inner.for.body.us63.us.preheader:
-  %arrayidx25.us.le71.us = getelementptr inbounds [14 x i32], [14 x i32]* %d, i64 %idxprom.us.us, i64 0
-  %0 = load i32, i32* %arrayidx25.us.le71.us, align 4
+  %arrayidx25.us.le71.us = getelementptr inbounds [14 x i32], ptr %d, i64 %idxprom.us.us, i64 0
+  %0 = load i32, ptr %arrayidx25.us.le71.us, align 4
   br label %omp.inner.for.cond.simd.if.end.loopexit_crit_edge.us.us
 
 omp.inner.for.body.us.us.us.preheader:
-  %arrayidx25.us.le.us.us = getelementptr inbounds [14 x i32], [14 x i32]* %d, i64 %idxprom.us.us, i64 0
-  %1 = load i32, i32* %arrayidx25.us.le.us.us, align 4
+  %arrayidx25.us.le.us.us = getelementptr inbounds [14 x i32], ptr %d, i64 %idxprom.us.us, i64 0
+  %1 = load i32, ptr %arrayidx25.us.le.us.us, align 4
   %conv27.us.le.us.us = select i1 undef, i16 0, i16 undef
   br label %omp.inner.for.cond.simd.if.end.loopexit_crit_edge.us.us
 
@@ -41,7 +41,7 @@ for.cond.cleanup.loopexit:
 
 ; CHECK-LABEL: @func(
 ; CHECK:         polly.stmt.omp.inner.for.body.us.us.us.preheader:
-; CHECK:         load i32, i32* %scevgep, align 4, !alias.scope !0, !noalias !3
+; CHECK:         load i32, ptr %scevgep, align 4, !alias.scope !0, !noalias !3
 
 ; CHECK:       !0 = !{!1}
 ; CHECK:       !1 = distinct !{!1, !2, !"polly.alias.scope.MemRef_d"}

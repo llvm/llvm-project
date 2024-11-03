@@ -21,6 +21,10 @@
 // RUN:   | FileCheck %s -check-prefix=RV64-S2G4
 // RUN: %clang -target riscv64-unknown-elf %s -S -emit-llvm -msmall-data-threshold=16 -o - \
 // RUN:   | FileCheck %s -check-prefix=RV64-T16
+// RUN: %clang -target riscv64-linux-android %s -S -emit-llvm -o - \
+// RUN:   | FileCheck %s -check-prefix=RV64-ANDROID
+// RUN: %clang -target riscv64-linux-android %s -S -emit-llvm -msmall-data-limit=8 -o - \
+// RUN:   | FileCheck %s -check-prefix=RV64-ANDROID
 // RUN: %clang -target riscv64-unknown-elf %s -S -emit-llvm -fpic -o - \
 // RUN:   | FileCheck %s -check-prefix=RV64-PIC
 // RUN: %clang -target riscv64-unknown-elf %s -S -emit-llvm -mcmodel=large -o - \
@@ -46,3 +50,6 @@ void test(void) {}
 // The value will be passed by module flag instead of target feature.
 // RV32-S0-NOT: +small-data-limit=
 // RV64-S0-NOT: +small-data-limit=
+
+// RV64-ANDROID-NOT: small-data-limit
+// RV64-ANDROID:   !{i32 8, !"SmallDataLimit", i32 0}

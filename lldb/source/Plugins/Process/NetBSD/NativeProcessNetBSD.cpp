@@ -56,9 +56,8 @@ static Status EnsureFDFlags(int fd, int flags) {
 // Public Static Methods
 
 llvm::Expected<std::unique_ptr<NativeProcessProtocol>>
-NativeProcessNetBSD::Factory::Launch(ProcessLaunchInfo &launch_info,
-                                     NativeDelegate &native_delegate,
-                                     MainLoop &mainloop) const {
+NativeProcessNetBSD::Manager::Launch(ProcessLaunchInfo &launch_info,
+                                     NativeDelegate &native_delegate) {
   Log *log = GetLog(POSIXLog::Process);
 
   Status status;
@@ -96,7 +95,7 @@ NativeProcessNetBSD::Factory::Launch(ProcessLaunchInfo &launch_info,
 
   std::unique_ptr<NativeProcessNetBSD> process_up(new NativeProcessNetBSD(
       pid, launch_info.GetPTY().ReleasePrimaryFileDescriptor(), native_delegate,
-      Info.GetArchitecture(), mainloop));
+      Info.GetArchitecture(), m_mainloop));
 
   status = process_up->SetupTrace();
   if (status.Fail())
@@ -110,9 +109,8 @@ NativeProcessNetBSD::Factory::Launch(ProcessLaunchInfo &launch_info,
 }
 
 llvm::Expected<std::unique_ptr<NativeProcessProtocol>>
-NativeProcessNetBSD::Factory::Attach(
-    lldb::pid_t pid, NativeProcessProtocol::NativeDelegate &native_delegate,
-    MainLoop &mainloop) const {
+NativeProcessNetBSD::Manager::Attach(
+    lldb::pid_t pid, NativeProcessProtocol::NativeDelegate &native_delegate) {
   Log *log = GetLog(POSIXLog::Process);
   LLDB_LOG(log, "pid = {0:x}", pid);
 
@@ -124,7 +122,7 @@ NativeProcessNetBSD::Factory::Attach(
   }
 
   std::unique_ptr<NativeProcessNetBSD> process_up(new NativeProcessNetBSD(
-      pid, -1, native_delegate, Info.GetArchitecture(), mainloop));
+      pid, -1, native_delegate, Info.GetArchitecture(), m_mainloop));
 
   Status status = process_up->Attach();
   if (!status.Success())
@@ -134,7 +132,7 @@ NativeProcessNetBSD::Factory::Attach(
 }
 
 NativeProcessNetBSD::Extension
-NativeProcessNetBSD::Factory::GetSupportedExtensions() const {
+NativeProcessNetBSD::Manager::GetSupportedExtensions() const {
   return Extension::multiprocess | Extension::fork | Extension::vfork |
          Extension::pass_signals | Extension::auxv | Extension::libraries_svr4 |
          Extension::savecore;

@@ -42,6 +42,11 @@ def Bdynamic: F<"Bdynamic">, HelpText<"Link against shared libraries (default)">
 
 def Bstatic: F<"Bstatic">, HelpText<"Do not link against shared libraries">;
 
+def build_id: F<"build-id">, HelpText<"Alias for --build-id=fast">;
+
+def build_id_eq: J<"build-id=">, HelpText<"Generate build ID note">,
+  MetaVarName<"[fast,sha1,uuid,0x<hexstring>]">;
+
 defm color_diagnostics: B<"color-diagnostics",
   "Alias for --color-diagnostics=always",
   "Alias for --color-diagnostics=never">;
@@ -186,7 +191,7 @@ def growable_table: FF<"growable-table">,
   HelpText<"Remove maximum size from function table, allowing table to grow">;
 
 def global_base: JJ<"global-base=">,
-  HelpText<"Where to start to place global data">;
+  HelpText<"Memory offset at which to place global data (Defaults to 1024)">;
 
 def import_memory: FF<"import-memory">,
   HelpText<"Import the module's memory from the default module of \"env\" with the name \"memory\".">;
@@ -201,6 +206,8 @@ def export_memory_with_name: JJ<"export-memory=">,
 
 def shared_memory: FF<"shared-memory">,
   HelpText<"Use shared linear memory">;
+
+defm soname: Eq<"soname", "Set the module name in the generated name section">;
 
 def import_table: FF<"import-table">,
   HelpText<"Import function table from the environment">;
@@ -217,9 +224,14 @@ def no_entry: FF<"no-entry">,
 def stack_first: FF<"stack-first">,
   HelpText<"Place stack at start of linear memory rather than after data">;
 
+def table_base: JJ<"table-base=">,
+  HelpText<"Table offset at which to place address taken functions (Defaults to 1)">;
+
 defm whole_archive: B<"whole-archive",
     "Force load of all members in a static library",
     "Do not force load of all members in a static library (default)">;
+
+def why_extract: JJ<"why-extract=">, HelpText<"Print to a file about why archive members are extracted">;
 
 defm check_features: BB<"check-features",
     "Check feature compatibility of linked objects (default)",

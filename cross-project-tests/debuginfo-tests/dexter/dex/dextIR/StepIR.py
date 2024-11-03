@@ -43,13 +43,15 @@ class StepIR:
         watches (OrderedDict): { expression (str), result (ValueIR) }
     """
 
-    def __init__(self,
-                 step_index: int,
-                 stop_reason: StopReason,
-                 frames: List[FrameIR],
-                 step_kind: StepKind = None,
-                 watches: OrderedDict = None,
-                 program_state: ProgramState = None):
+    def __init__(
+        self,
+        step_index: int,
+        stop_reason: StopReason,
+        frames: List[FrameIR],
+        step_kind: StepKind = None,
+        watches: OrderedDict = None,
+        program_state: ProgramState = None,
+    ):
         self.step_index = step_index
         self.step_kind = step_kind
         self.stop_reason = stop_reason
@@ -66,17 +68,22 @@ class StepIR:
     def __str__(self):
         try:
             frame = self.current_frame
-            frame_info = (frame.function, frame.loc.path, frame.loc.lineno,
-                          frame.loc.column)
+            frame_info = (
+                frame.function,
+                frame.loc.path,
+                frame.loc.lineno,
+                frame.loc.column,
+            )
         except AttributeError:
             frame_info = (None, None, None, None)
 
-        step_info = (self.step_index, ) + frame_info + (
-            str(self.stop_reason), str(self.step_kind),
-                                    [w for w in self.watches])
+        step_info = (
+            (self.step_index,)
+            + frame_info
+            + (str(self.stop_reason), str(self.step_kind), [w for w in self.watches])
+        )
 
-        return '{}{}'.format('.   ' * (self.num_frames - 1),
-                             json.dumps(step_info))
+        return "{}{}".format(".   " * (self.num_frames - 1), json.dumps(step_info))
 
     @property
     def num_frames(self):

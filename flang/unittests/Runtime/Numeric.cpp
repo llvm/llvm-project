@@ -8,6 +8,7 @@
 
 #include "flang/Runtime/numeric.h"
 #include "gtest/gtest.h"
+#include "flang/Common/float128.h"
 #include <cmath>
 #include <limits>
 

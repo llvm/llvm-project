@@ -8,9 +8,9 @@
 // RUN: %clang_cc1 -std=c++20 %t/b.cpp -fmodule-file=a=%t/a.pcm -verify -fsyntax-only
 // RUN: %clang_cc1 -std=c++20 %t/c.cppm -I%t -emit-module-interface -o %t/c.pcm
 // RUN: %clang_cc1 -std=c++20 %t/d.cppm -emit-module-interface -fmodule-file=c=%t/c.pcm -o %t/d.pcm
-// RUN: %clang_cc1 -std=c++20 %t/e.cpp -fmodule-file=d=%t/d.pcm -verify -fsyntax-only
+// RUN: %clang_cc1 -std=c++20 %t/e.cpp -fmodule-file=d=%t/d.pcm -fmodule-file=c=%t/c.pcm -verify -fsyntax-only
 // RUN: %clang_cc1 -std=c++20 %t/f.cppm -emit-module-interface -fmodule-file=c=%t/c.pcm -o %t/f.pcm
-// RUN: %clang_cc1 -std=c++20 %t/g.cpp -fmodule-file=f=%t/f.pcm -verify -fsyntax-only
+// RUN: %clang_cc1 -std=c++20 %t/g.cpp -fmodule-file=f=%t/f.pcm -fmodule-file=c=%t/c.pcm  -verify -fsyntax-only
 
 //--- initializer_list.h
 namespace std {

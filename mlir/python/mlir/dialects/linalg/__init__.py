@@ -9,6 +9,7 @@ from ..._mlir_libs._mlirDialectsLinalg import *
 # definitions following these steps:
 #   DSL -> YAML -> tblgen -> pytblgen -> build/.../_linalg_ops_gen.py.
 from .._linalg_ops_gen import *
+from .._linalg_enum_gen import *
 
 # These are the ground truth functions defined as:
 # ```

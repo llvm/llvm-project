@@ -7,12 +7,13 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11
+// UNSUPPORTED: availability-filesystem-missing
 
 // <filesystem>
 
 // typedef TrivialClock file_time_type;
 
-// ADDITIONAL_COMPILE_FLAGS: -I %S/../../../../src/filesystem -Wno-macro-redefined
+// ADDITIONAL_COMPILE_FLAGS: -I %S/../../../../src -Wno-macro-redefined
 
 #include <cassert>
 #include <chrono>
@@ -22,7 +23,7 @@
 #include <string>
 #include <type_traits>
 
-#include "filesystem_common.h"
+#include "filesystem/time_utils.h"
 
 #ifndef __SIZEOF_INT128__
 #define TEST_HAS_NO_INT128_T
@@ -280,12 +281,12 @@ using TestFileTimeT = time_point<TestClock<duration<IntType, Period> > >;
 int main(int, char**) {
   { assert((test_case<file_time_type, time_t, struct timespec>::test())); }
   {
-    assert((test_case<TestFileTimeT<int64_t>, int64_t,
-                      TestTimeSpec<int64_t, long> >::test()));
+    assert((test_case<TestFileTimeT<std::int64_t>, std::int64_t,
+                      TestTimeSpec<std::int64_t, long> >::test()));
   }
   {
-    assert((test_case<TestFileTimeT<long long>, int32_t,
-                      TestTimeSpec<int32_t, int32_t> >::test()));
+    assert((test_case<TestFileTimeT<long long>, std::int32_t,
+                      TestTimeSpec<std::int32_t, std::int32_t> >::test()));
   }
   {
     // Test that insane platforms like ppc64 linux, which use long double as time_t,
@@ -295,12 +296,12 @@ int main(int, char**) {
   }
 #ifndef TEST_HAS_NO_INT128_T
   {
-    assert((test_case<TestFileTimeT<__int128_t, std::nano>, int64_t,
-                      TestTimeSpec<int64_t, long> >::test()));
+    assert((test_case<TestFileTimeT<__int128_t, std::nano>, std::int64_t,
+                      TestTimeSpec<std::int64_t, long> >::test()));
   }
   {
-    assert((test_case<TestFileTimeT<__int128_t, std::nano>, int32_t,
-                      TestTimeSpec<int32_t, int32_t> >::test()));
+    assert((test_case<TestFileTimeT<__int128_t, std::nano>, std::int32_t,
+                      TestTimeSpec<std::int32_t, std::int32_t> >::test()));
   }
 #endif
 

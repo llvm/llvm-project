@@ -63,7 +63,7 @@ __kernel void test_qual() {
 
   [&] __private {} (); // expected-error{{no matching function for call to object of type '(lambda at}} expected-note{{candidate function not viable: 'this' object is in default address space, but method expects object in address space '__private'}}
 #if __cplusplus <= 202002L
-// expected-warning@-2{{lambda without a parameter clause is a C++2b extension}}
+// expected-warning@-2{{lambda without a parameter clause is a C++23 extension}}
 #endif
 
   [&] () mutable __private {} ();

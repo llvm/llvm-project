@@ -201,8 +201,8 @@ bool DefaultEvictionAdvisor::canEvictInterferenceBasedOnCost(
   unsigned Cascade = RA.getExtraInfo().getCascadeOrCurrentNext(VirtReg.reg());
 
   EvictionCost Cost;
-  for (MCRegUnitIterator Units(PhysReg, TRI); Units.isValid(); ++Units) {
-    LiveIntervalUnion::Query &Q = Matrix->query(VirtReg, *Units);
+  for (MCRegUnit Unit : TRI->regunits(PhysReg)) {
+    LiveIntervalUnion::Query &Q = Matrix->query(VirtReg, Unit);
     // If there is 10 or more interferences, chances are one is heavier.
     const auto &Interferences = Q.interferingVRegs(EvictInterferenceCutoff);
     if (Interferences.size() >= EvictInterferenceCutoff)

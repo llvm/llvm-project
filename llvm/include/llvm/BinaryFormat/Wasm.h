@@ -348,6 +348,7 @@ enum : uint8_t {
 
 // Kind codes used in the custom "name" section
 enum : unsigned {
+  WASM_NAMES_MODULE = 0,
   WASM_NAMES_FUNCTION = 1,
   WASM_NAMES_LOCAL = 2,
   WASM_NAMES_GLOBAL = 7,

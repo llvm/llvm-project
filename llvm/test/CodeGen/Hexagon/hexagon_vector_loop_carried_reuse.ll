@@ -1,4 +1,4 @@
-; RUN: opt < %s -hexagon-vlcr -adce -S | FileCheck %s
+; RUN: opt < %s -hexagon-vlcr | opt -passes=adce -S | FileCheck %s
 
 ; CHECK: %.hexagon.vlcr = tail call <32 x i32> @llvm.hexagon.V6.vmaxub.128B
 ; ModuleID = 'hexagon_vector_loop_carried_reuse.c'

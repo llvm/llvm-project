@@ -1,7 +1,7 @@
 ! Test lowering of transformational intrinsic to HLFIR what matters here
 ! is not to test each transformational, but to check how their
 ! lowering interfaces with the rest of lowering.
-! RUN: bbc -emit-fir -hlfir -o - %s | FileCheck %s
+! RUN: bbc -emit-hlfir -o - %s | FileCheck %s
 
 subroutine test_transformational_implemented_with_runtime_allocation(x)
   real :: x(10, 10)

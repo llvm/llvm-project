@@ -1,7 +1,7 @@
 ; RUN: opt -S -aarch64-stack-tagging %s -o - | FileCheck %s
 
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
-target triple = "aarch64-arm-unknown-eabi"
+target triple = "aarch64"
 
 define  void @f() local_unnamed_addr #0 personality ptr @__gxx_personality_v0 {
 start:

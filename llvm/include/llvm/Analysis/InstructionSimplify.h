@@ -19,12 +19,8 @@
 // values. This will prevent other code from seeing the same undef uses and
 // resolving them to different values.
 //
-// These routines are designed to tolerate moderately incomplete IR, such as
-// instructions that are not connected to basic blocks yet. However, they do
-// require that all the IR that they encounter be valid. In particular, they
-// require that all non-constant values be defined in the same function, and the
-// same call context of that function (and not split between caller and callee
-// contexts of a directly recursive call, for example).
+// They require that all the IR that they encounter be valid and inserted into a
+// parent function.
 //
 // Additionally, these routines can't simplify to the instructions that are not
 // def-reachable, meaning we can't just scan the basic block for instructions
@@ -50,7 +46,6 @@ class Function;
 class Instruction;
 struct LoopStandardAnalysisResults;
 class MDNode;
-class OptimizationRemarkEmitter;
 class Pass;
 template <class T, unsigned n> class SmallSetVector;
 class TargetLibraryInfo;
@@ -86,6 +81,12 @@ struct InstrInfoQuery {
   bool isExact(const BinaryOperator *Op) const {
     if (UseInstrInfo && isa<PossiblyExactOperator>(Op))
       return cast<PossiblyExactOperator>(Op)->isExact();
+    return false;
+  }
+
+  template <class InstT> bool hasNoSignedZeros(const InstT *Op) const {
+    if (UseInstrInfo)
+      return Op->hasNoSignedZeros();
     return false;
   }
 };
@@ -302,8 +303,9 @@ Value *simplifyBinOp(unsigned Opcode, Value *LHS, Value *RHS,
 Value *simplifyBinOp(unsigned Opcode, Value *LHS, Value *RHS, FastMathFlags FMF,
                      const SimplifyQuery &Q);
 
-/// Given a callsite, fold the result or return null.
-Value *simplifyCall(CallBase *Call, const SimplifyQuery &Q);
+/// Given a callsite, callee, and arguments, fold the result or return null.
+Value *simplifyCall(CallBase *Call, Value *Callee, ArrayRef<Value *> Args,
+                    const SimplifyQuery &Q);
 
 /// Given a constrained FP intrinsic call, tries to compute its simplified
 /// version. Returns a simplified result or null.
@@ -324,20 +326,19 @@ Value *simplifyLoadInst(LoadInst *LI, Value *PtrOp, const SimplifyQuery &Q);
 
 /// See if we can compute a simplified version of this instruction. If not,
 /// return null.
-Value *simplifyInstruction(Instruction *I, const SimplifyQuery &Q,
-                           OptimizationRemarkEmitter *ORE = nullptr);
+Value *simplifyInstruction(Instruction *I, const SimplifyQuery &Q);
 
 /// Like \p simplifyInstruction but the operands of \p I are replaced with
 /// \p NewOps. Returns a simplified value, or null if none was found.
 Value *
 simplifyInstructionWithOperands(Instruction *I, ArrayRef<Value *> NewOps,
-                                const SimplifyQuery &Q,
-                                OptimizationRemarkEmitter *ORE = nullptr);
+                                const SimplifyQuery &Q);
 
 /// See if V simplifies when its operand Op is replaced with RepOp. If not,
 /// return null.
 /// AllowRefinement specifies whether the simplification can be a refinement
 /// (e.g. 0 instead of poison), or whether it needs to be strictly identical.
+/// Op and RepOp can be assumed to not be poison when determining refinement.
 Value *simplifyWithOpReplaced(Value *V, Value *Op, Value *RepOp,
                               const SimplifyQuery &Q, bool AllowRefinement);
 

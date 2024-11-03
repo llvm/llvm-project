@@ -1,4 +1,4 @@
-add_lldb_library(lldbBreakpoint
+add_lldb_library(lldbBreakpoint NO_PLUGIN_DEPENDENCIES
   Breakpoint.cpp
   BreakpointID.cpp
   BreakpointIDList.cpp

@@ -15,6 +15,7 @@
 #include "bolt/Core/BinaryFunction.h"
 #include "bolt/Core/FunctionLayout.h"
 #include "bolt/Core/ParallelUtilities.h"
+#include "bolt/Utils/CommandLineOpts.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/SmallVector.h"
@@ -410,10 +411,11 @@ void SplitFunctions::splitFunction(BinaryFunction &BF, SplitStrategy &S) {
                       << ", 0x" << Twine::utohexstr(ColdSize) << ">\n");
     if (alignTo(OriginalHotSize, opts::SplitAlignThreshold) <=
         alignTo(HotSize, opts::SplitAlignThreshold) + opts::SplitThreshold) {
-      LLVM_DEBUG(dbgs() << "Reversing splitting of function " << BF << ":\n  0x"
-                        << Twine::utohexstr(HotSize) << ", 0x"
-                        << Twine::utohexstr(ColdSize) << " -> 0x"
-                        << Twine::utohexstr(OriginalHotSize) << '\n');
+      if (opts::Verbosity >= 2) {
+        outs() << "BOLT-INFO: Reversing splitting of function "
+               << formatv("{0}:\n  {1:x}, {2:x} -> {3:x}\n", BF, HotSize,
+                          ColdSize, OriginalHotSize);
+      }
 
       // Reverse the action of createEHTrampolines(). The trampolines will be
       // placed immediately before the matching destination resulting in no

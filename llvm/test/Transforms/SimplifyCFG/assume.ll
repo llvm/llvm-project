@@ -130,5 +130,69 @@ join:
   ret i32 %phi
 }
 
+define void @empty_block_with_assume(i1 %c, i32 %x) {
+; CHECK-LABEL: @empty_block_with_assume(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[IF:%.*]], label [[ELSE:%.*]]
+; CHECK:       if:
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[X:%.*]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
+; CHECK-NEXT:    br label [[JOIN:%.*]]
+; CHECK:       else:
+; CHECK-NEXT:    call void @dummy()
+; CHECK-NEXT:    br label [[JOIN]]
+; CHECK:       join:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br i1 %c, label %if, label %else
+
+if:
+  %cmp = icmp ne i32 %x, 0
+  call void @llvm.assume(i1 %cmp)
+  br label %join
+
+else:
+  call void @dummy()
+  br label %join
+
+join:
+  ret void
+}
+
+define void @not_empty_block_with_assume(i1 %c) {
+; CHECK-LABEL: @not_empty_block_with_assume(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[IF:%.*]], label [[ELSE:%.*]]
+; CHECK:       if:
+; CHECK-NEXT:    [[X:%.*]] = call i32 @may_have_side_effect()
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[X]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
+; CHECK-NEXT:    br label [[JOIN:%.*]]
+; CHECK:       else:
+; CHECK-NEXT:    call void @dummy()
+; CHECK-NEXT:    br label [[JOIN]]
+; CHECK:       join:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br i1 %c, label %if, label %else
+
+if:
+  %x = call i32 @may_have_side_effect()
+  %cmp = icmp ne i32 %x, 0
+  call void @llvm.assume(i1 %cmp)
+  br label %join
+
+else:
+  call void @dummy()
+  br label %join
+
+join:
+  ret void
+}
+
+declare void @dummy()
+declare i32 @may_have_side_effect()
 declare void @llvm.assume(i1) nounwind
 

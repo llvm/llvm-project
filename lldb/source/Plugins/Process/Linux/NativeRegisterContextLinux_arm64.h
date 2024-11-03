@@ -86,6 +86,8 @@ private:
 
   bool m_sve_header_is_valid;
   bool m_pac_mask_is_valid;
+  bool m_tls_is_valid;
+  size_t m_tls_size;
 
   struct user_pt_regs m_gpr_arm64; // 64-bit general purpose registers.
 
@@ -107,6 +109,14 @@ private:
 
   uint64_t m_mte_ctrl_reg;
 
+  struct tls_regs {
+    uint64_t tpidr_reg;
+    // Only valid when SME is present.
+    uint64_t tpidr2_reg;
+  };
+
+  struct tls_regs m_tls_regs;
+
   bool IsGPR(unsigned reg) const;
 
   bool IsFPR(unsigned reg) const;
@@ -125,9 +135,14 @@ private:
 
   Status WriteMTEControl();
 
+  Status ReadTLS();
+
+  Status WriteTLS();
+
   bool IsSVE(unsigned reg) const;
   bool IsPAuth(unsigned reg) const;
   bool IsMTE(unsigned reg) const;
+  bool IsTLS(unsigned reg) const;
 
   uint64_t GetSVERegVG() { return m_sve_header.vl / 8; }
 
@@ -139,7 +154,9 @@ private:
 
   void *GetMTEControl() { return &m_mte_ctrl_reg; }
 
-  void *GetSVEBuffer() { return m_sve_ptrace_payload.data(); };
+  void *GetTLSBuffer() { return &m_tls_regs; }
+
+  void *GetSVEBuffer() { return m_sve_ptrace_payload.data(); }
 
   size_t GetSVEHeaderSize() { return sizeof(m_sve_header); }
 
@@ -147,7 +164,11 @@ private:
 
   size_t GetSVEBufferSize() { return m_sve_ptrace_payload.size(); }
 
+  unsigned GetSVERegSet();
+
   size_t GetMTEControlSize() { return sizeof(m_mte_ctrl_reg); }
+
+  size_t GetTLSBufferSize() { return m_tls_size; }
 
   llvm::Error ReadHardwareDebugInfo() override;
 
@@ -160,6 +181,8 @@ private:
   void ConfigureRegisterContext();
 
   uint32_t CalculateSVEOffset(const RegisterInfo *reg_info) const;
+
+  Status CacheAllRegisters(uint32_t &cached_size);
 };
 
 } // namespace process_linux

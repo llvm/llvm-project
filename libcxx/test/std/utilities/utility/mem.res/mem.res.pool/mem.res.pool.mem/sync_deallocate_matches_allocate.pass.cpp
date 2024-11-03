@@ -8,8 +8,8 @@
 
 // UNSUPPORTED: no-exceptions
 // UNSUPPORTED: c++03, c++11, c++14
-// XFAIL: use_system_cxx_lib && target={{.+}}-apple-macosx10.{{9|10|11|12|13|14|15}}
-// XFAIL: use_system_cxx_lib && target={{.+}}-apple-macosx{{11.0|12.0}}
+// TODO: Change to XFAIL once https://github.com/llvm/llvm-project/issues/40340 is fixed
+// UNSUPPORTED: availability-pmr-missing
 
 // <memory_resource>
 
@@ -22,9 +22,9 @@
 #include <vector>
 
 struct allocation_record {
-  size_t bytes;
-  size_t align;
-  explicit allocation_record(size_t b, size_t a) : bytes(b), align(a) {}
+  std::size_t bytes;
+  std::size_t align;
+  explicit allocation_record(std::size_t b, size_t a) : bytes(b), align(a) {}
   bool operator==(const allocation_record& rhs) const { return (bytes == rhs.bytes) && (align == rhs.align); }
   bool operator<(const allocation_record& rhs) const {
     if (bytes != rhs.bytes)
@@ -34,12 +34,12 @@ struct allocation_record {
 };
 
 class test_resource : public std::pmr::memory_resource {
-  void* do_allocate(size_t bytes, size_t align) override {
+  void* do_allocate(std::size_t bytes, size_t align) override {
     void* result = std::pmr::new_delete_resource()->allocate(bytes, align);
     successful_allocations.emplace_back(bytes, align);
     return result;
   }
-  void do_deallocate(void* p, size_t bytes, size_t align) override {
+  void do_deallocate(void* p, std::size_t bytes, size_t align) override {
     deallocations.emplace_back(bytes, align);
     return std::pmr::new_delete_resource()->deallocate(p, bytes, align);
   }
@@ -70,7 +70,7 @@ void test_allocation_pattern(F do_pattern) {
       tr.deallocations.end()));
 }
 
-template <size_t Bytes, size_t Align>
+template <std::size_t Bytes, size_t Align>
 auto foo() {
   return [=](auto& mr) {
     void* p = mr.allocate(Bytes, Align);

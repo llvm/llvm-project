@@ -5,9 +5,9 @@
 // REQUIRES: x86-registered-target
 // REQUIRES: nvptx-registered-target
 
-// RUN: %clang -### --target=x86_64-linux-gnu -c \
+// RUN: not %clang -### --target=x86_64-linux-gnu -c \
 // RUN: -march=haswell %s 2>&1 | FileCheck %s
-// RUN: %clang -### --target=x86_64-linux-gnu -c \
+// RUN: not %clang -### --target=x86_64-linux-gnu -c \
 // RUN: -march=haswell --cuda-gpu-arch=sm_35 %s 2>&1 | FileCheck %s
 
 // CHECK: "-cc1"{{.*}} "-triple" "nvptx

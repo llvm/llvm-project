@@ -38,8 +38,8 @@ template <class T>
 void supported_simd128_ctor(...) = delete;
 
 struct identity {
-  template <size_t value>
-  int operator()(std::integral_constant<size_t, value>) const {
+  template <std::size_t value>
+  int operator()(std::integral_constant<std::size_t, value>) const {
     return value;
   }
 };
@@ -47,21 +47,21 @@ struct identity {
 void compile_generator() {
   supported_simd128_ctor<int>(identity());
   not_supported_simd128_ctor<int>([](int i) { return float(i); });
-  not_supported_simd128_ctor<int>([](intptr_t i) { return (int*)(i); });
+  not_supported_simd128_ctor<int>([](std::intptr_t i) { return (int*)(i); });
   not_supported_simd128_ctor<int>([](int* i) { return i; });
 }
 
 struct limited_identity {
-  template <size_t value>
-  typename std::conditional<value <= 2, int32_t, int64_t>::type
-  operator()(std::integral_constant<size_t, value>) const {
+  template <std::size_t value>
+  typename std::conditional<value <= 2, std::int32_t, std::int64_t>::type
+  operator()(std::integral_constant<std::size_t, value>) const {
     return value;
   }
 };
 
 void compile_limited_identity() {
-  supported_simd128_ctor<int64_t>(limited_identity());
-  not_supported_simd128_ctor<int32_t>(limited_identity());
+  supported_simd128_ctor<std::int64_t>(limited_identity());
+  not_supported_simd128_ctor<std::int32_t>(limited_identity());
 }
 
 template <typename SimdType>
@@ -84,9 +84,9 @@ void test_generator() {
 
 int main(int, char**) {
   // TODO: adjust the tests when this assertion fails.
-  assert(ex::native_simd<int32_t>::size() >= 4);
-  test_generator<ex::native_simd<int32_t>>();
-  test_generator<ex::fixed_size_simd<int32_t, 4>>();
+  assert(ex::native_simd<std::int32_t>::size() >= 4);
+  test_generator<ex::native_simd<std::int32_t>>();
+  test_generator<ex::fixed_size_simd<std::int32_t, 4>>();
 
   return 0;
 }

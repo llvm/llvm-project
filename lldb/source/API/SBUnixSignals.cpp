@@ -66,7 +66,7 @@ const char *SBUnixSignals::GetSignalAsCString(int32_t signo) const {
   LLDB_INSTRUMENT_VA(this, signo);
 
   if (auto signals_sp = GetSP())
-    return signals_sp->GetSignalAsCString(signo);
+    return ConstString(signals_sp->GetSignalAsStringRef(signo)).GetCString();
 
   return nullptr;
 }

@@ -59,10 +59,10 @@ contains
     x = acos(f5)
   end function
   ! Sanity test: f18 handles C1560 violation by ignoring RESULT
-  !WARNING: The function name should not appear in RESULT, references to 'f6' inside the function will be considered as references to the result only
+  !WARNING: The function name should not appear in RESULT; references to 'f6' inside the function will be considered as references to the result only
   function f6() result(f6)
   end function
-  !WARNING: The function name should not appear in RESULT, references to 'f7' inside the function will be considered as references to the result only
+  !WARNING: The function name should not appear in RESULT; references to 'f7' inside the function will be considered as references to the result only
   function f7() result(f7)
     real :: x, f7
     !ERROR: Recursive call to 'f7' requires a distinct RESULT in its declaration
@@ -114,6 +114,7 @@ contains
   end function
   function f5(x) result(r)
     real :: x
+    !PORTABILITY: Procedure pointer 'r' should not have an ELEMENTAL intrinsic as its interface
     procedure(acos), pointer :: r
     r => acos
     !ERROR: Actual argument for 'x=' may not be a procedure

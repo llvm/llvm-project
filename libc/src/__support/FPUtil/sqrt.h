@@ -15,6 +15,8 @@
 #include "x86_64/sqrt.h"
 #elif defined(LIBC_TARGET_ARCH_IS_AARCH64)
 #include "aarch64/sqrt.h"
+#elif defined(LIBC_TARGET_ARCH_IS_RISCV64)
+#include "riscv64/sqrt.h"
 #else
 #include "generic/sqrt.h"
 

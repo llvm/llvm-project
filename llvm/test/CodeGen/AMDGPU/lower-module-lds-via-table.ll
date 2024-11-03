@@ -4,26 +4,26 @@
 ; Opt checks from utils/update_test_checks.py, llc checks from utils/update_llc_test_checks.py, both modified.
 
 ; Define four variables and four non-kernel functions which access exactly one variable each
-@v0 = addrspace(3) global float undef
-@v1 = addrspace(3) global i16 undef, align 16
-@v2 = addrspace(3) global i64 undef
-@v3 = addrspace(3) global i8 undef
-@unused = addrspace(3) global i16 undef
+@v0 = addrspace(3) global float poison
+@v1 = addrspace(3) global i16 poison, align 16
+@v2 = addrspace(3) global i64 poison
+@v3 = addrspace(3) global i8 poison
+@unused = addrspace(3) global i16 poison
 
 ; OPT: %llvm.amdgcn.kernel.kernel_no_table.lds.t = type { i64 }
 ; OPT: %llvm.amdgcn.kernel.k01.lds.t = type { i16, [2 x i8], float }
 ; OPT: %llvm.amdgcn.kernel.k23.lds.t = type { i64, i8 }
 ; OPT: %llvm.amdgcn.kernel.k123.lds.t = type { i16, i8, [5 x i8], i64 }
 
-; OPT: @llvm.amdgcn.kernel.kernel_no_table.lds = internal addrspace(3) global %llvm.amdgcn.kernel.kernel_no_table.lds.t undef, align 8
-; OPT: @llvm.amdgcn.kernel.k01.lds = internal addrspace(3) global %llvm.amdgcn.kernel.k01.lds.t undef, align 16
-; OPT: @llvm.amdgcn.kernel.k23.lds = internal addrspace(3) global %llvm.amdgcn.kernel.k23.lds.t undef, align 8
-; OPT: @llvm.amdgcn.kernel.k123.lds = internal addrspace(3) global %llvm.amdgcn.kernel.k123.lds.t undef, align 16
+; OPT: @llvm.amdgcn.kernel.kernel_no_table.lds = internal addrspace(3) global %llvm.amdgcn.kernel.kernel_no_table.lds.t poison, align 8, !absolute_symbol !0
+; OPT: @llvm.amdgcn.kernel.k01.lds = internal addrspace(3) global %llvm.amdgcn.kernel.k01.lds.t poison, align 16, !absolute_symbol !0
+; OPT: @llvm.amdgcn.kernel.k23.lds = internal addrspace(3) global %llvm.amdgcn.kernel.k23.lds.t poison, align 8, !absolute_symbol !0
+; OPT: @llvm.amdgcn.kernel.k123.lds = internal addrspace(3) global %llvm.amdgcn.kernel.k123.lds.t poison, align 16, !absolute_symbol !0
 
 ; Salient parts of the IR lookup table check:
 ; It has (top level) size 3 as there are 3 kernels that call functions which use lds
 ; The next level down has type [4 x i16] as there are 4 variables accessed by functions which use lds
-; The kernel naming pattern and the structs being named after the functions helps verify placement of undef
+; The kernel naming pattern and the structs being named after the functions helps verify placement of poison
 ; The remainder are constant expressions into the variable instances checked above
 
 ; OPT{LITERAL}: @llvm.amdgcn.lds.offset.table = internal addrspace(4) constant [3 x [4 x i32]] [[4 x i32] [i32 ptrtoint (ptr addrspace(3) getelementptr inbounds (%llvm.amdgcn.kernel.k01.lds.t, ptr addrspace(3) @llvm.amdgcn.kernel.k01.lds, i32 0, i32 2) to i32), i32 ptrtoint (ptr addrspace(3) @llvm.amdgcn.kernel.k01.lds to i32), i32 poison, i32 poison], [4 x i32] [i32 poison, i32 ptrtoint (ptr addrspace(3) @llvm.amdgcn.kernel.k123.lds to i32), i32 ptrtoint (ptr addrspace(3) getelementptr inbounds (%llvm.amdgcn.kernel.k123.lds.t, ptr addrspace(3) @llvm.amdgcn.kernel.k123.lds, i32 0, i32 3) to i32), i32 ptrtoint (ptr addrspace(3) getelementptr inbounds (%llvm.amdgcn.kernel.k123.lds.t, ptr addrspace(3) @llvm.amdgcn.kernel.k123.lds, i32 0, i32 1) to i32)], [4 x i32] [i32 poison, i32 poison, i32 ptrtoint (ptr addrspace(3) @llvm.amdgcn.kernel.k23.lds to i32), i32 ptrtoint (ptr addrspace(3) getelementptr inbounds (%llvm.amdgcn.kernel.k23.lds.t, ptr addrspace(3) @llvm.amdgcn.kernel.k23.lds, i32 0, i32 1) to i32)]]
@@ -195,7 +195,7 @@ define void @f3() {
 
 ; Doesn't access any via a function, won't be in the lookup table
 define amdgpu_kernel void @kernel_no_table() {
-; OPT-LABEL: @kernel_no_table() {
+; OPT-LABEL: @kernel_no_table() #0 {
 ; OPT-NEXT:    [[LD:%.*]] = load i64, ptr addrspace(3) @llvm.amdgcn.kernel.kernel_no_table.lds, align 8
 ; OPT-NEXT:    [[MUL:%.*]] = mul i64 [[LD]], 8
 ; OPT-NEXT:    store i64 [[MUL]], ptr addrspace(3) @llvm.amdgcn.kernel.kernel_no_table.lds, align 8
@@ -218,7 +218,7 @@ define amdgpu_kernel void @kernel_no_table() {
 
 ; Access two variables, will allocate those two
 define amdgpu_kernel void @k01() {
-; OPT-LABEL: @k01() !llvm.amdgcn.lds.kernel.id !0 {
+; OPT-LABEL: @k01() #0 !llvm.amdgcn.lds.kernel.id !1 {
 ; OPT-NEXT:    call void @llvm.donothing() [ "ExplicitUse"(ptr addrspace(3) @llvm.amdgcn.kernel.k01.lds) ]
 ; OPT-NEXT:    call void @f0()
 ; OPT-NEXT:    call void @f1()
@@ -256,7 +256,7 @@ define amdgpu_kernel void @k01() {
 }
 
 define amdgpu_kernel void @k23() {
-; OPT-LABEL: @k23() !llvm.amdgcn.lds.kernel.id !1 {
+; OPT-LABEL: @k23() #1 !llvm.amdgcn.lds.kernel.id !7 {
 ; OPT-NEXT:    call void @llvm.donothing() [ "ExplicitUse"(ptr addrspace(3) @llvm.amdgcn.kernel.k23.lds) ]
 ; OPT-NEXT:    call void @f2()
 ; OPT-NEXT:    call void @f3()
@@ -295,12 +295,12 @@ define amdgpu_kernel void @k23() {
 
 ; Access and allocate three variables
 define amdgpu_kernel void @k123() {
-; OPT-LABEL: @k123() !llvm.amdgcn.lds.kernel.id !2 {
+; OPT-LABEL: @k123() #2 !llvm.amdgcn.lds.kernel.id !13 {
 ; OPT-NEXT:    call void @llvm.donothing() [ "ExplicitUse"(ptr addrspace(3) @llvm.amdgcn.kernel.k123.lds) ]
 ; OPT-NEXT:    call void @f1()
-; OPT-NEXT:    [[LD:%.*]] = load i8, ptr addrspace(3) getelementptr inbounds ([[LLVM_AMDGCN_KERNEL_K123_LDS_T:%.*]], ptr addrspace(3) @llvm.amdgcn.kernel.k123.lds, i32 0, i32 1), align 2, !alias.scope !3, !noalias !6
+; OPT-NEXT:    [[LD:%.*]] = load i8, ptr addrspace(3) getelementptr inbounds ([[LLVM_AMDGCN_KERNEL_K123_LDS_T:%.*]], ptr addrspace(3) @llvm.amdgcn.kernel.k123.lds, i32 0, i32 1), align 2, !alias.scope !20, !noalias !21
 ; OPT-NEXT:    [[MUL:%.*]] = mul i8 [[LD]], 8
-; OPT-NEXT:    store i8 [[MUL]], ptr addrspace(3) getelementptr inbounds ([[LLVM_AMDGCN_KERNEL_K123_LDS_T]], ptr addrspace(3) @llvm.amdgcn.kernel.k123.lds, i32 0, i32 1), align 2, !alias.scope !3, !noalias !6
+; OPT-NEXT:    store i8 [[MUL]], ptr addrspace(3) getelementptr inbounds ([[LLVM_AMDGCN_KERNEL_K123_LDS_T]], ptr addrspace(3) @llvm.amdgcn.kernel.k123.lds, i32 0, i32 1), align 2, !alias.scope !20, !noalias !21
 ; OPT-NEXT:    call void @f2()
 ; OPT-NEXT:    ret void
 ;
@@ -346,9 +346,14 @@ define amdgpu_kernel void @k123() {
 
 ; OPT: declare i32 @llvm.amdgcn.lds.kernel.id()
 
-!0 = !{i32 0}
-!1 = !{i32 2}
-!2 = !{i32 1}
+; OPT: attributes #0 = { "amdgpu-lds-size"="8" }
+; OPT: attributes #1 = { "amdgpu-lds-size"="12" }
+; OPT: attributes #2 = { "amdgpu-lds-size"="16" }
+
+!0 = !{i64 0, i64 1}
+!1 = !{i32 0}
+!2 = !{i32 2}
+!3 = !{i32 1}
 
 
 ; Table size length number-kernels * number-variables * sizeof(uint16_t)

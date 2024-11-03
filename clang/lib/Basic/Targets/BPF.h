@@ -60,7 +60,7 @@ public:
 
   ArrayRef<Builtin::Info> getTargetBuiltins() const override;
 
-  const char *getClobbers() const override { return ""; }
+  std::string_view getClobbers() const override { return ""; }
 
   BuiltinVaListKind getBuiltinVaListKind() const override {
     return TargetInfo::VoidPtrBuiltinVaList;
@@ -106,7 +106,7 @@ public:
   void fillValidCPUList(SmallVectorImpl<StringRef> &Values) const override;
 
   bool setCPU(const std::string &Name) override {
-    if (Name == "v3") {
+    if (Name == "v3" || Name == "v4") {
       HasAlu32 = true;
     }
 

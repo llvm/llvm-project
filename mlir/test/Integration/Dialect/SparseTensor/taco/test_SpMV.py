@@ -47,10 +47,10 @@ y[i] = A[i, j] * x[j] + z[i]
 
 # Perform the SpMV computation and write the result to file
 with tempfile.TemporaryDirectory() as test_dir:
-  golden_file = os.path.join(_SCRIPT_PATH, "data/gold_y.tns")
-  out_file = os.path.join(test_dir, "y.tns")
-  pt.write(out_file, y)
-  #
-  # CHECK: Compare result True
-  #
-  print(f"Compare result {utils.compare_sparse_tns(golden_file, out_file)}")
+    golden_file = os.path.join(_SCRIPT_PATH, "data/gold_y.tns")
+    out_file = os.path.join(test_dir, "y.tns")
+    pt.write(out_file, y)
+    #
+    # CHECK: Compare result True
+    #
+    print(f"Compare result {utils.compare_sparse_tns(golden_file, out_file)}")

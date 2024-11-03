@@ -249,3 +249,10 @@ void glob_array_parentheses1() {
   clang_analyzer_eval(glob_arr9[1][2] == 7); // expected-warning{{TRUE}}
   clang_analyzer_eval(glob_arr9[1][3] == 0); // expected-warning{{TRUE}}
 }
+
+enum class E {};
+const E glob[] = {{}};
+void initlistWithinInitlist() {
+  // no-crash
+  clang_analyzer_dump(glob[0]); // expected-warning-re {{reg_${{[0-9]+}}<enum E Element{glob,0 S64b,enum E}>}}
+}

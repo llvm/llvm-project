@@ -23,9 +23,9 @@ LLVM_LIBC_FUNCTION(int, posix_madvise, (void *addr, size_t size, int advice)) {
   if (advice == POSIX_MADV_DONTNEED) {
     return 0;
   }
-  long ret_val = __llvm_libc::syscall_impl(
+  int ret = __llvm_libc::syscall_impl<int>(
       SYS_madvise, reinterpret_cast<long>(addr), size, advice);
-  return ret_val < 0 ? -ret_val : 0;
+  return ret < 0 ? -ret : 0;
 }
 
 } // namespace __llvm_libc

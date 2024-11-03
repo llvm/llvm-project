@@ -142,11 +142,11 @@ static cl::opt<size_t>
                        cl::desc("Do not inline functions with a stack size "
                                 "that exceeds the specified limit"));
 
-static cl::opt<size_t>
-    RecurStackSizeThreshold("recursive-inline-max-stacksize", cl::Hidden,
-                       cl::init(InlineConstants::TotalAllocaSizeRecursiveCaller),
-                       cl::desc("Do not inline recursive functions with a stack "
-                                "size that exceeds the specified limit"));
+static cl::opt<size_t> RecurStackSizeThreshold(
+    "recursive-inline-max-stacksize", cl::Hidden,
+    cl::init(InlineConstants::TotalAllocaSizeRecursiveCaller),
+    cl::desc("Do not inline recursive functions with a stack "
+             "size that exceeds the specified limit"));
 
 static cl::opt<bool> OptComputeFullInlineCost(
     "inline-cost-full", cl::Hidden,
@@ -493,7 +493,7 @@ public:
   InlineResult analyze();
 
   std::optional<Constant *> getSimplifiedValue(Instruction *I) {
-    if (SimplifiedValues.find(I) != SimplifiedValues.end())
+    if (SimplifiedValues.contains(I))
       return SimplifiedValues[I];
     return std::nullopt;
   }
@@ -717,7 +717,9 @@ class InlineCostCallAnalyzer final : public CallAnalyzer {
   void onInitializeSROAArg(AllocaInst *Arg) override {
     assert(Arg != nullptr &&
            "Should not initialize SROA costs for null value.");
-    SROAArgCosts[Arg] = 0;
+    auto SROAArgCost = TTI.getCallerAllocaCost(&CandidateCall, Arg);
+    SROACostSavings += SROAArgCost;
+    SROAArgCosts[Arg] = SROAArgCost;
   }
 
   void onAggregateSROAUse(AllocaInst *SROAArg) override {
@@ -815,7 +817,7 @@ class InlineCostCallAnalyzer final : public CallAnalyzer {
 
   // Determine whether we should inline the given call site, taking into account
   // both the size cost and the cycle savings.  Return std::nullopt if we don't
-  // have suficient profiling information to determine.
+  // have sufficient profiling information to determine.
   std::optional<bool> costBenefitAnalysis() {
     if (!CostBenefitAnalysisEnabled)
       return std::nullopt;
@@ -1054,7 +1056,7 @@ public:
   void print(raw_ostream &OS);
 
   std::optional<InstructionCostDetail> getCostDetails(const Instruction *I) {
-    if (InstructionCostDetailMap.find(I) != InstructionCostDetailMap.end())
+    if (InstructionCostDetailMap.contains(I))
       return InstructionCostDetailMap[I];
     return std::nullopt;
   }
@@ -1108,31 +1110,31 @@ private:
     if (CostIt == SROACosts.end())
       return;
 
-    increment(InlineCostFeatureIndex::SROALosses, CostIt->second);
+    increment(InlineCostFeatureIndex::sroa_losses, CostIt->second);
     SROACostSavingOpportunities -= CostIt->second;
     SROACosts.erase(CostIt);
   }
 
   void onDisableLoadElimination() override {
-    set(InlineCostFeatureIndex::LoadElimination, 1);
+    set(InlineCostFeatureIndex::load_elimination, 1);
   }
 
   void onCallPenalty() override {
-    increment(InlineCostFeatureIndex::CallPenalty, CallPenalty);
+    increment(InlineCostFeatureIndex::call_penalty, CallPenalty);
   }
 
   void onCallArgumentSetup(const CallBase &Call) override {
-    increment(InlineCostFeatureIndex::CallArgumentSetup,
+    increment(InlineCostFeatureIndex::call_argument_setup,
               Call.arg_size() * InstrCost);
   }
 
   void onLoadRelativeIntrinsic() override {
-    increment(InlineCostFeatureIndex::LoadRelativeIntrinsic, 3 * InstrCost);
+    increment(InlineCostFeatureIndex::load_relative_intrinsic, 3 * InstrCost);
   }
 
   void onLoweredCall(Function *F, CallBase &Call,
                      bool IsIndirectCall) override {
-    increment(InlineCostFeatureIndex::LoweredCallArgSetup,
+    increment(InlineCostFeatureIndex::lowered_call_arg_setup,
               Call.arg_size() * InstrCost);
 
     if (IsIndirectCall) {
@@ -1153,9 +1155,9 @@ private:
                                 GetAssumptionCache, GetBFI, PSI, ORE, false,
                                 true);
       if (CA.analyze().isSuccess()) {
-        increment(InlineCostFeatureIndex::NestedInlineCostEstimate,
+        increment(InlineCostFeatureIndex::nested_inline_cost_estimate,
                   CA.getCost());
-        increment(InlineCostFeatureIndex::NestedInlines, 1);
+        increment(InlineCostFeatureIndex::nested_inlines, 1);
       }
     } else {
       onCallPenalty();
@@ -1168,12 +1170,12 @@ private:
     if (JumpTableSize) {
       int64_t JTCost = static_cast<int64_t>(JumpTableSize) * InstrCost +
                        JTCostMultiplier * InstrCost;
-      increment(InlineCostFeatureIndex::JumpTablePenalty, JTCost);
+      increment(InlineCostFeatureIndex::jump_table_penalty, JTCost);
       return;
     }
 
     if (NumCaseCluster <= 3) {
-      increment(InlineCostFeatureIndex::CaseClusterPenalty,
+      increment(InlineCostFeatureIndex::case_cluster_penalty,
                 NumCaseCluster * CaseClusterCostMultiplier * InstrCost);
       return;
     }
@@ -1183,15 +1185,20 @@ private:
 
     int64_t SwitchCost =
         ExpectedNumberOfCompare * SwitchCostMultiplier * InstrCost;
-    increment(InlineCostFeatureIndex::SwitchPenalty, SwitchCost);
+    increment(InlineCostFeatureIndex::switch_penalty, SwitchCost);
   }
 
   void onMissedSimplification() override {
-    increment(InlineCostFeatureIndex::UnsimplifiedCommonInstructions,
+    increment(InlineCostFeatureIndex::unsimplified_common_instructions,
               InstrCost);
   }
 
-  void onInitializeSROAArg(AllocaInst *Arg) override { SROACosts[Arg] = 0; }
+  void onInitializeSROAArg(AllocaInst *Arg) override {
+    auto SROAArgCost = TTI.getCallerAllocaCost(&CandidateCall, Arg);
+    SROACosts[Arg] = SROAArgCost;
+    SROACostSavingOpportunities += SROAArgCost;
+  }
+
   void onAggregateSROAUse(AllocaInst *Arg) override {
     SROACosts.find(Arg)->second += InstrCost;
     SROACostSavingOpportunities += InstrCost;
@@ -1199,7 +1206,7 @@ private:
 
   void onBlockAnalyzed(const BasicBlock *BB) override {
     if (BB->getTerminator()->getNumSuccessors() > 1)
-      set(InlineCostFeatureIndex::IsMultipleBlocks, 1);
+      set(InlineCostFeatureIndex::is_multiple_blocks, 1);
     Threshold -= SingleBBBonus;
   }
 
@@ -1212,24 +1219,24 @@ private:
         // Ignore loops that will not be executed
         if (DeadBlocks.count(L->getHeader()))
           continue;
-        increment(InlineCostFeatureIndex::NumLoops,
+        increment(InlineCostFeatureIndex::num_loops,
                   InlineConstants::LoopPenalty);
       }
     }
-    set(InlineCostFeatureIndex::DeadBlocks, DeadBlocks.size());
-    set(InlineCostFeatureIndex::SimplifiedInstructions,
+    set(InlineCostFeatureIndex::dead_blocks, DeadBlocks.size());
+    set(InlineCostFeatureIndex::simplified_instructions,
         NumInstructionsSimplified);
-    set(InlineCostFeatureIndex::ConstantArgs, NumConstantArgs);
-    set(InlineCostFeatureIndex::ConstantOffsetPtrArgs,
+    set(InlineCostFeatureIndex::constant_args, NumConstantArgs);
+    set(InlineCostFeatureIndex::constant_offset_ptr_args,
         NumConstantOffsetPtrArgs);
-    set(InlineCostFeatureIndex::SROASavings, SROACostSavingOpportunities);
+    set(InlineCostFeatureIndex::sroa_savings, SROACostSavingOpportunities);
 
     if (NumVectorInstructions <= NumInstructions / 10)
       Threshold -= VectorBonus;
     else if (NumVectorInstructions <= NumInstructions / 2)
       Threshold -= VectorBonus / 2;
 
-    set(InlineCostFeatureIndex::Threshold, Threshold);
+    set(InlineCostFeatureIndex::threshold, Threshold);
 
     return InlineResult::success();
   }
@@ -1237,17 +1244,17 @@ private:
   bool shouldStop() override { return false; }
 
   void onLoadEliminationOpportunity() override {
-    increment(InlineCostFeatureIndex::LoadElimination, 1);
+    increment(InlineCostFeatureIndex::load_elimination, 1);
   }
 
   InlineResult onAnalysisStart() override {
-    increment(InlineCostFeatureIndex::CallSiteCost,
+    increment(InlineCostFeatureIndex::callsite_cost,
               -1 * getCallsiteCost(this->CandidateCall, DL));
 
-    set(InlineCostFeatureIndex::ColdCcPenalty,
+    set(InlineCostFeatureIndex::cold_cc_penalty,
         (F.getCallingConv() == CallingConv::Cold));
 
-    set(InlineCostFeatureIndex::LastCallToStaticBonus,
+    set(InlineCostFeatureIndex::last_call_to_static_bonus,
         isSoleCallToLocalFunction(CandidateCall, F));
 
     // FIXME: we shouldn't repeat this logic in both the Features and Cost
@@ -1607,7 +1614,7 @@ bool CallAnalyzer::simplifyIntrinsicCallIsConstant(CallBase &CB) {
 bool CallAnalyzer::simplifyIntrinsicCallObjectSize(CallBase &CB) {
   // As per the langref, "The fourth argument to llvm.objectsize determines if
   // the value should be evaluated at runtime."
-  if(cast<ConstantInt>(CB.getArgOperand(3))->isOne())
+  if (cast<ConstantInt>(CB.getArgOperand(3))->isOne())
     return false;
 
   Value *V = lowerObjectSizeCall(&cast<IntrinsicInst>(CB), DL, nullptr,
@@ -1976,14 +1983,27 @@ bool CallAnalyzer::visitCmpInst(CmpInst &I) {
     }
   }
 
+  auto isImplicitNullCheckCmp = [](const CmpInst &I) {
+    for (auto *User : I.users())
+      if (auto *Instr = dyn_cast<Instruction>(User))
+        if (!Instr->getMetadata(LLVMContext::MD_make_implicit))
+          return false;
+    return true;
+  };
+
   // If the comparison is an equality comparison with null, we can simplify it
   // if we know the value (argument) can't be null
-  if (I.isEquality() && isa<ConstantPointerNull>(I.getOperand(1)) &&
-      isKnownNonNullInCallee(I.getOperand(0))) {
-    bool IsNotEqual = I.getPredicate() == CmpInst::ICMP_NE;
-    SimplifiedValues[&I] = IsNotEqual ? ConstantInt::getTrue(I.getType())
-                                      : ConstantInt::getFalse(I.getType());
-    return true;
+  if (I.isEquality() && isa<ConstantPointerNull>(I.getOperand(1))) {
+    if (isKnownNonNullInCallee(I.getOperand(0))) {
+      bool IsNotEqual = I.getPredicate() == CmpInst::ICMP_NE;
+      SimplifiedValues[&I] = IsNotEqual ? ConstantInt::getTrue(I.getType())
+                                        : ConstantInt::getFalse(I.getType());
+      return true;
+    }
+    // Implicit null checks act as unconditional branches and their comparisons
+    // should be treated as simplified and free of cost.
+    if (isImplicitNullCheckCmp(I))
+      return true;
   }
   return handleSROA(I.getOperand(0), isa<ConstantPointerNull>(I.getOperand(1)));
 }
@@ -2265,6 +2285,7 @@ bool CallAnalyzer::visitBranchInst(BranchInst &BI) {
   // inliner more regular and predictable. Interestingly, conditional branches
   // which will fold away are also free.
   return BI.isUnconditional() || isa<ConstantInt>(BI.getCondition()) ||
+         BI.getMetadata(LLVMContext::MD_make_implicit) ||
          isa_and_nonnull<ConstantInt>(
              SimplifiedValues.lookup(BI.getCondition()));
 }
@@ -2314,10 +2335,10 @@ bool CallAnalyzer::visitSelectInst(SelectInst &SI) {
                                               : nullptr;
   if (!SelectedV) {
     // Condition is a vector constant that is not all 1s or all 0s.  If all
-    // operands are constants, ConstantExpr::getSelect() can handle the cases
-    // such as select vectors.
+    // operands are constants, ConstantFoldSelectInstruction() can handle the
+    // cases such as select vectors.
     if (TrueC && FalseC) {
-      if (auto *C = ConstantExpr::getSelect(CondC, TrueC, FalseC)) {
+      if (auto *C = ConstantFoldSelectInstruction(CondC, TrueC, FalseC)) {
         SimplifiedValues[&SI] = C;
         return true;
       }
@@ -2666,9 +2687,7 @@ InlineResult CallAnalyzer::analyze() {
   // basic blocks in a breadth-first order as we insert live successors. To
   // accomplish this, prioritizing for small iterations because we exit after
   // crossing our threshold, we use a small-size optimized SetVector.
-  typedef SetVector<BasicBlock *, SmallVector<BasicBlock *, 16>,
-                    SmallPtrSet<BasicBlock *, 16>>
-      BBSetVector;
+  typedef SmallSetVector<BasicBlock *, 16> BBSetVector;
   BBSetVector BBWorklist;
   BBWorklist.insert(&F.getEntryBlock());
 
@@ -2787,16 +2806,14 @@ LLVM_DUMP_METHOD void InlineCostCallAnalyzer::dump() { print(dbgs()); }
 /// Test that there are no attribute conflicts between Caller and Callee
 ///        that prevent inlining.
 static bool functionsHaveCompatibleAttributes(
-    Function *Caller, Function *Callee, TargetTransformInfo &TTI,
+    Function *Caller, Function *Callee,
     function_ref<const TargetLibraryInfo &(Function &)> &GetTLI) {
   // Note that CalleeTLI must be a copy not a reference. The legacy pass manager
   // caches the most recently created TLI in the TargetLibraryInfoWrapperPass
   // object, and always returns the same object (which is overwritten on each
   // GetTLI call). Therefore we copy the first result.
   auto CalleeTLI = GetTLI(*Callee);
-  return (IgnoreTTIInlineCompatible ||
-          TTI.areInlineCompatible(Caller, Callee)) &&
-         GetTLI(*Caller).areInlineCompatible(CalleeTLI,
+  return GetTLI(*Caller).areInlineCompatible(CalleeTLI,
                                              InlineCallerSupersetNoBuiltin) &&
          AttributeFuncs::areInlineCompatible(*Caller, *Callee);
 }
@@ -2912,6 +2929,12 @@ std::optional<InlineResult> llvm::getAttributeBasedInliningDecision(
                                      " address space");
     }
 
+  // Never inline functions with conflicting target attributes.
+  Function *Caller = Call.getCaller();
+  if (!IgnoreTTIInlineCompatible &&
+      !CalleeTTI.areInlineCompatible(Caller, Callee))
+    return InlineResult::failure("conflicting target attributes");
+
   // Calls to functions with always-inline attributes should be inlined
   // whenever possible.
   if (Call.hasFnAttr(Attribute::AlwaysInline)) {
@@ -2926,8 +2949,12 @@ std::optional<InlineResult> llvm::getAttributeBasedInliningDecision(
 
   // Never inline functions with conflicting attributes (unless callee has
   // always-inline attribute).
-  Function *Caller = Call.getCaller();
-  if (!functionsHaveCompatibleAttributes(Caller, Callee, CalleeTTI, GetTLI))
+  // FIXME: functionsHaveCompatibleAttributes below checks for compatibilities
+  // of different kinds of function attributes -- sanitizer-related ones,
+  // checkDenormMode, no-builtin-memcpy, etc.  It's unclear if we really want
+  // the always-inline attribute to take precedence over these different types
+  // of function attributes.
+  if (!functionsHaveCompatibleAttributes(Caller, Callee, GetTLI))
     return InlineResult::failure("conflicting attributes");
 
   // Don't inline this call if the caller has the optnone attribute.

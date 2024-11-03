@@ -31,7 +31,7 @@ static bool printLoc(llvm::raw_ostream &OS, SourceLocation Loc,
   }
   Loc = SM.getExpansionLoc(Loc);
   const std::pair<FileID, unsigned> &Decomposed = SM.getDecomposedLoc(Loc);
-  const FileEntry *FE = SM.getFileEntryForID(Decomposed.first);
+  OptionalFileEntryRef FE = SM.getFileEntryRefForID(Decomposed.first);
   if (FE) {
     OS << llvm::sys::path::filename(FE->getName());
   } else {
@@ -225,6 +225,11 @@ void USRGenerator::VisitFieldDecl(const FieldDecl *D) {
 void USRGenerator::VisitFunctionDecl(const FunctionDecl *D) {
   if (ShouldGenerateLocation(D) && GenLoc(D, /*IncludeOffset=*/isLocal(D)))
     return;
+
+  if (D->getType().isNull()) {
+    IgnoreResults = true;
+    return;
+  }
 
   const unsigned StartSize = Buf.size();
   VisitDeclContext(D->getDeclContext());

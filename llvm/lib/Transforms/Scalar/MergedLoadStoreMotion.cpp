@@ -78,6 +78,7 @@
 #include "llvm/Transforms/Scalar/MergedLoadStoreMotion.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/GlobalsModRef.h"
+#include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Support/Debug.h"
@@ -191,11 +192,16 @@ StoreInst *MergedLoadStoreMotion::canSinkFromBlock(BasicBlock *BB1,
 
     MemoryLocation Loc0 = MemoryLocation::get(Store0);
     MemoryLocation Loc1 = MemoryLocation::get(Store1);
-    if (AA->isMustAlias(Loc0, Loc1) && Store0->isSameOperationAs(Store1) &&
+
+    if (AA->isMustAlias(Loc0, Loc1) &&
         !isStoreSinkBarrierInRange(*Store1->getNextNode(), BB1->back(), Loc1) &&
-        !isStoreSinkBarrierInRange(*Store0->getNextNode(), BB0->back(), Loc0)) {
+        !isStoreSinkBarrierInRange(*Store0->getNextNode(), BB0->back(), Loc0) &&
+        Store0->hasSameSpecialState(Store1) &&
+        CastInst::isBitOrNoopPointerCastable(
+            Store0->getValueOperand()->getType(),
+            Store1->getValueOperand()->getType(),
+            Store0->getModule()->getDataLayout()))
       return Store1;
-    }
   }
   return nullptr;
 }
@@ -253,6 +259,13 @@ void MergedLoadStoreMotion::sinkStoresAndGEPs(BasicBlock *BB, StoreInst *S0,
   S0->dropUnknownNonDebugMetadata();
   S0->applyMergedLocation(S0->getDebugLoc(), S1->getDebugLoc());
   S0->mergeDIAssignID(S1);
+
+  // Insert bitcast for conflicting typed stores (or just use original value if
+  // same type).
+  IRBuilder<> Builder(S0);
+  auto Cast = Builder.CreateBitOrPointerCast(S0->getValueOperand(),
+                                             S1->getValueOperand()->getType());
+  S0->setOperand(0, Cast);
 
   // Create the new store to be inserted at the join point.
   StoreInst *SNew = cast<StoreInst>(S0->clone());

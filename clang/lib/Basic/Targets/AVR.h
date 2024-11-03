@@ -69,7 +69,7 @@ public:
     return TargetInfo::VoidPtrBuiltinVaList;
   }
 
-  const char *getClobbers() const override { return ""; }
+  std::string_view getClobbers() const override { return ""; }
 
   ArrayRef<const char *> getGCCRegNames() const override {
     static const char *const GCCRegNames[] = {
@@ -170,6 +170,7 @@ public:
   bool isValidCPUName(StringRef Name) const override;
   void fillValidCPUList(SmallVectorImpl<StringRef> &Values) const override;
   bool setCPU(const std::string &Name) override;
+  std::optional<std::string> handleAsmEscapedChar(char EscChar) const override;
   StringRef getABI() const override { return ABI; }
 
 protected:

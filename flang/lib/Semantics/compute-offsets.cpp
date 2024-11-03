@@ -321,11 +321,12 @@ auto ComputeOffsetsHelper::GetSizeAndAlignment(
     const Symbol &symbol, bool entire) -> SizeAndAlignment {
   auto &targetCharacteristics{context_.targetCharacteristics()};
   if (IsDescriptor(symbol)) {
-    const auto *derived{
-        evaluate::GetDerivedTypeSpec(evaluate::DynamicType::From(symbol))};
+    auto dyType{evaluate::DynamicType::From(symbol)};
+    const auto *derived{evaluate::GetDerivedTypeSpec(dyType)};
     int lenParams{derived ? CountLenParameters(*derived) : 0};
+    bool needAddendum{derived || (dyType && dyType->IsUnlimitedPolymorphic())};
     std::size_t size{runtime::Descriptor::SizeInBytes(
-        symbol.Rank(), derived != nullptr, lenParams)};
+        symbol.Rank(), needAddendum, lenParams)};
     return {size, targetCharacteristics.descriptorAlignment()};
   }
   if (IsProcedurePointer(symbol)) {

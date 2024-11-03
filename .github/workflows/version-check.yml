@@ -8,6 +8,9 @@ on:
     branches:
       - 'release/**'
 
+permissions:
+  contents: read
+
 jobs:
   version_check:
     if: github.repository_owner == 'llvm'

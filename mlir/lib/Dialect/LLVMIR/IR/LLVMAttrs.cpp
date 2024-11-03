@@ -43,8 +43,9 @@ void LLVMDialect::registerAttributes() {
 
 bool DINodeAttr::classof(Attribute attr) {
   return llvm::isa<DIBasicTypeAttr, DICompileUnitAttr, DICompositeTypeAttr,
-                   DIDerivedTypeAttr, DIFileAttr, DILexicalBlockAttr,
-                   DILexicalBlockFileAttr, DILocalVariableAttr, DINamespaceAttr,
+                   DIDerivedTypeAttr, DIFileAttr, DILabelAttr,
+                   DILexicalBlockAttr, DILexicalBlockFileAttr,
+                   DILocalVariableAttr, DIModuleAttr, DINamespaceAttr,
                    DINullTypeAttr, DISubprogramAttr, DISubrangeAttr,
                    DISubroutineTypeAttr>(attr);
 }
@@ -55,7 +56,7 @@ bool DINodeAttr::classof(Attribute attr) {
 
 bool DIScopeAttr::classof(Attribute attr) {
   return llvm::isa<DICompileUnitAttr, DICompositeTypeAttr, DIFileAttr,
-                   DILexicalBlockFileAttr, DILocalScopeAttr>(attr);
+                   DILocalScopeAttr, DIModuleAttr, DINamespaceAttr>(attr);
 }
 
 //===----------------------------------------------------------------------===//
@@ -63,7 +64,8 @@ bool DIScopeAttr::classof(Attribute attr) {
 //===----------------------------------------------------------------------===//
 
 bool DILocalScopeAttr::classof(Attribute attr) {
-  return llvm::isa<DILexicalBlockAttr, DINamespaceAttr, DISubprogramAttr>(attr);
+  return llvm::isa<DILexicalBlockAttr, DILexicalBlockFileAttr,
+                   DISubprogramAttr>(attr);
 }
 
 //===----------------------------------------------------------------------===//
@@ -73,6 +75,14 @@ bool DILocalScopeAttr::classof(Attribute attr) {
 bool DITypeAttr::classof(Attribute attr) {
   return llvm::isa<DINullTypeAttr, DIBasicTypeAttr, DICompositeTypeAttr,
                    DIDerivedTypeAttr, DISubroutineTypeAttr>(attr);
+}
+
+//===----------------------------------------------------------------------===//
+// TBAANodeAttr
+//===----------------------------------------------------------------------===//
+
+bool TBAANodeAttr::classof(Attribute attr) {
+  return llvm::isa<TBAATypeDescriptorAttr, TBAARootAttr>(attr);
 }
 
 //===----------------------------------------------------------------------===//

@@ -8,8 +8,7 @@
 
 // UNSUPPORTED: c++03, c++11, c++14
 
-// Throwing bad_any_cast is supported starting in macosx10.13
-// UNSUPPORTED: use_system_cxx_lib && target={{.+}}-apple-macosx10.{{9|10|11|12}}
+// UNSUPPORTED: availability-bad_any_cast-missing
 
 // <any>
 
@@ -33,20 +32,19 @@
 
 #include <any>
 
-struct no_copy
-{
+struct no_copy {
     no_copy() {}
     no_copy(no_copy &&) {}
     no_copy(no_copy const &) = delete;
 };
 
 struct no_move {
-  no_move() {}
-  no_move(no_move&&) = delete;
-  no_move(no_move const&) {}
+    no_move() {}
+    no_move(no_move&&) = delete;
+    no_move(no_move const&) {}
 };
 
-int main(int, char**) {
+void f() {
     std::any a;
     // expected-error-re@any:* {{{{(static_assert|static assertion)}} failed{{.*}}ValueType is required to be an lvalue reference or a CopyConstructible type}}
     std::any_cast<no_copy>(static_cast<std::any&>(a)); // expected-note {{requested here}}
@@ -58,6 +56,4 @@ int main(int, char**) {
 
     // expected-error-re@any:* {{{{(static_assert|static assertion)}} failed{{.*}}ValueType is required to be an rvalue reference or a CopyConstructible type}}
     std::any_cast<no_move>(static_cast<std::any &&>(a));
-
-  return 0;
 }

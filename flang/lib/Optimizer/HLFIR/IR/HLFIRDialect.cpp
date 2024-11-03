@@ -11,13 +11,16 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Optimizer/HLFIR/HLFIRDialect.h"
+#include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
+#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/DialectImplementation.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/IR/OpImplementation.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/TypeSwitch.h"
 
 #include "flang/Optimizer/HLFIR/HLFIRDialect.cpp.inc"
@@ -101,6 +104,14 @@ bool hlfir::isFortranScalarCharacterExprType(mlir::Type type) {
   return false;
 }
 
+bool hlfir::isFortranArrayCharacterExprType(mlir::Type type) {
+  if (auto exprType = mlir::dyn_cast<hlfir::ExprType>(type))
+    return exprType.isArray() &&
+           mlir::isa<fir::CharacterType>(exprType.getElementType());
+
+  return false;
+}
+
 bool hlfir::isFortranScalarNumericalType(mlir::Type type) {
   return fir::isa_integer(type) || fir::isa_real(type) ||
          fir::isa_complex(type);
@@ -127,6 +138,12 @@ bool hlfir::isFortranNumericalOrLogicalArrayObject(mlir::Type type) {
   return false;
 }
 
+bool hlfir::isFortranArrayObject(mlir::Type type) {
+  if (isBoxAddressType(type))
+    return false;
+  return !!getFortranElementOrSequenceType(type).dyn_cast<fir::SequenceType>();
+}
+
 bool hlfir::isPassByRefOrIntegerType(mlir::Type type) {
   mlir::Type unwrappedType = fir::unwrapPassByRefType(type);
   return fir::isa_integer(unwrappedType);
@@ -136,6 +153,17 @@ bool hlfir::isI1Type(mlir::Type type) {
   if (mlir::IntegerType integer = type.dyn_cast<mlir::IntegerType>())
     if (integer.getWidth() == 1)
       return true;
+  return false;
+}
+
+bool hlfir::isFortranLogicalArrayObject(mlir::Type type) {
+  if (isBoxAddressType(type))
+    return false;
+  if (auto arrayTy =
+          getFortranElementOrSequenceType(type).dyn_cast<fir::SequenceType>()) {
+    mlir::Type eleTy = arrayTy.getEleTy();
+    return mlir::isa<fir::LogicalType>(eleTy);
+  }
   return false;
 }
 
@@ -151,4 +179,31 @@ bool hlfir::isMaskArgument(mlir::Type type) {
 
   // input is a scalar, so allow i1 too
   return mlir::isa<fir::LogicalType>(elementType) || isI1Type(elementType);
+}
+
+bool hlfir::isPolymorphicObject(mlir::Type type) {
+  if (auto exprType = mlir::dyn_cast<hlfir::ExprType>(type))
+    return exprType.isPolymorphic();
+
+  return fir::isPolymorphicType(type);
+}
+
+mlir::Value hlfir::genExprShape(mlir::OpBuilder &builder,
+                                const mlir::Location &loc,
+                                const hlfir::ExprType &expr) {
+  mlir::IndexType indexTy = builder.getIndexType();
+  llvm::SmallVector<mlir::Value> extents;
+  extents.reserve(expr.getRank());
+
+  for (std::int64_t extent : expr.getShape()) {
+    if (extent == hlfir::ExprType::getUnknownExtent())
+      return {};
+    extents.emplace_back(builder.create<mlir::arith::ConstantOp>(
+        loc, indexTy, builder.getIntegerAttr(indexTy, extent)));
+  }
+
+  fir::ShapeType shapeTy =
+      fir::ShapeType::get(builder.getContext(), expr.getRank());
+  fir::ShapeOp shape = builder.create<fir::ShapeOp>(loc, shapeTy, extents);
+  return shape.getResult();
 }

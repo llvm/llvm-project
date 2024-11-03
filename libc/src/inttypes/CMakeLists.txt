@@ -6,6 +6,7 @@ add_entrypoint_object(
     strtoimax.h
   DEPENDS
     libc.src.__support.str_to_integer
+    libc.src.errno.errno
 )
 
 add_entrypoint_object(
@@ -16,6 +17,7 @@ add_entrypoint_object(
     strtoumax.h
   DEPENDS
     libc.src.__support.str_to_integer
+    libc.src.errno.errno
 )
 
 add_entrypoint_object(

@@ -412,3 +412,12 @@ define i8 @load_i8_from_i1() {
   %v = load i8, ptr @g_i1
   ret i8 %v
 }
+
+@global128 = internal constant i128 1125899906842625
+define i128 @load-128bit(){
+; CHECK-LABEL: @load-128bit(
+; CHECK-NEXT:    ret i128 1125899906842625
+;
+  %1 = load i128, ptr @global128, align 4
+  ret i128 %1
+}

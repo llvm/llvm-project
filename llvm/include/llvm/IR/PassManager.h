@@ -516,13 +516,13 @@ public:
 
       PreservedAnalyses PassPA = Pass->run(IR, AM, ExtraArgs...);
 
-      // Call onto PassInstrumentation's AfterPass callbacks immediately after
-      // running the pass.
-      PI.runAfterPass<IRUnitT>(*Pass, IR, PassPA);
-
       // Update the analysis manager as each pass runs and potentially
       // invalidates analyses.
       AM.invalidate(IR, PassPA);
+
+      // Call onto PassInstrumentation's AfterPass callbacks immediately after
+      // running the pass.
+      PI.runAfterPass<IRUnitT>(*Pass, IR, PassPA);
 
       // Finally, intersect the preserved analyses to compute the aggregate
       // preserved set for this pass manager.

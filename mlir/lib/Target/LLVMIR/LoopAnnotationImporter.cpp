@@ -23,7 +23,8 @@ struct LoopMetadataConversion {
   /// Converts this structs loop metadata node into a LoopAnnotationAttr.
   LoopAnnotationAttr convert();
 
-  LogicalResult initPropertyMap();
+  /// Initializes the shared state for the conversion member functions.
+  LogicalResult initConversionState();
 
   /// Helper function to get and erase a property.
   const llvm::MDNode *lookupAndEraseProperty(StringRef name);
@@ -52,8 +53,11 @@ struct LoopMetadataConversion {
   FailureOr<LoopPipelineAttr> convertPipelineAttr();
   FailureOr<LoopPeeledAttr> convertPeeledAttr();
   FailureOr<LoopUnswitchAttr> convertUnswitchAttr();
-  FailureOr<SmallVector<SymbolRefAttr>> convertParallelAccesses();
+  FailureOr<SmallVector<AccessGroupAttr>> convertParallelAccesses();
+  FusedLoc convertStartLoc();
+  FailureOr<FusedLoc> convertEndLoc();
 
+  llvm::SmallVector<llvm::DILocation *, 2> locations;
   llvm::StringMap<const llvm::MDNode *> propertyMap;
   const llvm::MDNode *node;
   Location loc;
@@ -62,16 +66,17 @@ struct LoopMetadataConversion {
 };
 } // namespace
 
-LogicalResult LoopMetadataConversion::initPropertyMap() {
+LogicalResult LoopMetadataConversion::initConversionState() {
   // Check if it's a valid node.
   if (node->getNumOperands() == 0 ||
       dyn_cast<llvm::MDNode>(node->getOperand(0)) != node)
     return emitWarning(loc) << "invalid loop node";
 
   for (const llvm::MDOperand &operand : llvm::drop_begin(node->operands())) {
-    // Skip over DILocations.
-    if (isa<llvm::DILocation>(operand))
+    if (auto *diLoc = dyn_cast<llvm::DILocation>(operand)) {
+      locations.push_back(diLoc);
       continue;
+    }
 
     auto *property = dyn_cast<llvm::MDNode>(operand);
     if (!property)
@@ -386,25 +391,44 @@ FailureOr<LoopUnswitchAttr> LoopMetadataConversion::convertUnswitchAttr() {
   return createIfNonNull<LoopUnswitchAttr>(ctx, partialDisable);
 }
 
-FailureOr<SmallVector<SymbolRefAttr>>
+FailureOr<SmallVector<AccessGroupAttr>>
 LoopMetadataConversion::convertParallelAccesses() {
   FailureOr<SmallVector<llvm::MDNode *>> nodes =
       lookupMDNodes("llvm.loop.parallel_accesses");
   if (failed(nodes))
     return failure();
-  SmallVector<SymbolRefAttr> refs;
+  SmallVector<AccessGroupAttr> refs;
   for (llvm::MDNode *node : *nodes) {
-    FailureOr<SmallVector<SymbolRefAttr>> accessGroups =
+    FailureOr<SmallVector<AccessGroupAttr>> accessGroups =
         loopAnnotationImporter.lookupAccessGroupAttrs(node);
-    if (failed(accessGroups))
-      return emitWarning(loc) << "could not lookup access group";
+    if (failed(accessGroups)) {
+      emitWarning(loc) << "could not lookup access group";
+      continue;
+    }
     llvm::append_range(refs, *accessGroups);
   }
   return refs;
 }
 
+FusedLoc LoopMetadataConversion::convertStartLoc() {
+  if (locations.empty())
+    return {};
+  return dyn_cast<FusedLoc>(
+      loopAnnotationImporter.moduleImport.translateLoc(locations[0]));
+}
+
+FailureOr<FusedLoc> LoopMetadataConversion::convertEndLoc() {
+  if (locations.size() < 2)
+    return FusedLoc();
+  if (locations.size() > 2)
+    return emitError(loc)
+           << "expected loop metadata to have at most two DILocations";
+  return dyn_cast<FusedLoc>(
+      loopAnnotationImporter.moduleImport.translateLoc(locations[1]));
+}
+
 LoopAnnotationAttr LoopMetadataConversion::convert() {
-  if (failed(initPropertyMap()))
+  if (failed(initConversionState()))
     return {};
 
   FailureOr<BoolAttr> disableNonForced =
@@ -421,7 +445,7 @@ LoopAnnotationAttr LoopMetadataConversion::convert() {
   FailureOr<BoolAttr> mustProgress = lookupUnitNode("llvm.loop.mustprogress");
   FailureOr<BoolAttr> isVectorized =
       lookupIntNodeAsBoolAttr("llvm.loop.isvectorized");
-  FailureOr<SmallVector<SymbolRefAttr>> parallelAccesses =
+  FailureOr<SmallVector<AccessGroupAttr>> parallelAccesses =
       convertParallelAccesses();
 
   // Drop the metadata if there are parts that cannot be imported.
@@ -431,10 +455,14 @@ LoopAnnotationAttr LoopMetadataConversion::convert() {
     return {};
   }
 
+  FailureOr<FusedLoc> startLoc = convertStartLoc();
+  FailureOr<FusedLoc> endLoc = convertEndLoc();
+
   return createIfNonNull<LoopAnnotationAttr>(
       ctx, disableNonForced, vecAttr, interleaveAttr, unrollAttr,
       unrollAndJamAttr, licmAttr, distributeAttr, pipelineAttr, peeledAttr,
-      unswitchAttr, mustProgress, isVectorized, parallelAccesses);
+      unswitchAttr, mustProgress, isVectorized, parallelAccesses, startLoc,
+      endLoc);
 }
 
 LoopAnnotationAttr
@@ -455,8 +483,9 @@ LoopAnnotationImporter::translateLoopAnnotation(const llvm::MDNode *node,
   return attr;
 }
 
-LogicalResult LoopAnnotationImporter::translateAccessGroup(
-    const llvm::MDNode *node, Location loc, MetadataOp metadataOp) {
+LogicalResult
+LoopAnnotationImporter::translateAccessGroup(const llvm::MDNode *node,
+                                             Location loc) {
   SmallVector<const llvm::MDNode *> accessGroups;
   if (!node->getNumOperands())
     accessGroups.push_back(node);
@@ -476,24 +505,17 @@ LogicalResult LoopAnnotationImporter::translateAccessGroup(
       return emitWarning(loc)
              << "expected an access group node to be empty and distinct";
 
-    OpBuilder::InsertionGuard guard(builder);
-    builder.setInsertionPointToEnd(&metadataOp.getBody().back());
-    auto groupOp = builder.create<AccessGroupMetadataOp>(
-        loc, llvm::formatv("group_{0}", accessGroupMapping.size()).str());
-    // Add a mapping from the access group node to the symbol reference pointing
-    // to the newly created operation.
-    accessGroupMapping[accessGroup] = SymbolRefAttr::get(
-        builder.getContext(), metadataOp.getSymName(),
-        FlatSymbolRefAttr::get(builder.getContext(), groupOp.getSymName()));
+    // Add a mapping from the access group node to the newly created attribute.
+    accessGroupMapping[accessGroup] = builder.getAttr<AccessGroupAttr>();
   }
   return success();
 }
 
-FailureOr<SmallVector<SymbolRefAttr>>
+FailureOr<SmallVector<AccessGroupAttr>>
 LoopAnnotationImporter::lookupAccessGroupAttrs(const llvm::MDNode *node) const {
   // An access group node is either a single access group or an access group
   // list.
-  SmallVector<SymbolRefAttr> accessGroups;
+  SmallVector<AccessGroupAttr> accessGroups;
   if (!node->getNumOperands())
     accessGroups.push_back(accessGroupMapping.lookup(node));
   for (const llvm::MDOperand &operand : node->operands()) {

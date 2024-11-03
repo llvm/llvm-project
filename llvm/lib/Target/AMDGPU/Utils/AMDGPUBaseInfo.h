@@ -354,6 +354,7 @@ struct MIMGBaseOpcodeInfo {
   bool HasD16;
   bool MSAA;
   bool BVH;
+  bool A16;
 };
 
 LLVM_READONLY
@@ -546,6 +547,9 @@ bool isMAC(unsigned Opc);
 LLVM_READNONE
 bool isPermlane16(unsigned Opc);
 
+LLVM_READNONE
+bool isGenericAtomic(unsigned Opc);
+
 namespace VOPD {
 
 enum Component : unsigned {
@@ -559,8 +563,9 @@ enum Component : unsigned {
   MAX_OPR_NUM = DST_NUM + MAX_SRC_NUM
 };
 
-// Number of VGPR banks per VOPD component operand.
-constexpr unsigned BANKS_NUM[] = {2, 4, 4, 2};
+// LSB mask for VGPR banks per VOPD component operand.
+// 4 banks result in a mask 3, setting 2 lower bits.
+constexpr unsigned VOPD_VGPR_BANK_MASKS[] = {1, 3, 3, 1};
 
 enum ComponentIndex : unsigned { X = 0, Y = 1 };
 constexpr unsigned COMPONENTS[] = {ComponentIndex::X, ComponentIndex::Y};
@@ -570,7 +575,7 @@ constexpr unsigned COMPONENTS_NUM = 2;
 class ComponentProps {
 private:
   unsigned SrcOperandsNum = 0;
-  std::optional<unsigned> MandatoryLiteralIdx;
+  unsigned MandatoryLiteralIdx = ~0u;
   bool HasSrc2Acc = false;
 
 public:
@@ -586,13 +591,13 @@ public:
   }
 
   // Return true iif this component has a mandatory literal.
-  bool hasMandatoryLiteral() const { return MandatoryLiteralIdx.has_value(); }
+  bool hasMandatoryLiteral() const { return MandatoryLiteralIdx != ~0u; }
 
   // If this component has a mandatory literal, return component operand
   // index of this literal (i.e. either Component::SRC1 or Component::SRC2).
   unsigned getMandatoryLiteralCompOperandIndex() const {
     assert(hasMandatoryLiteral());
-    return *MandatoryLiteralIdx;
+    return MandatoryLiteralIdx;
   }
 
   // Return true iif this component has operand
@@ -608,8 +613,7 @@ public:
 private:
   bool hasMandatoryLiteralAt(unsigned CompSrcIdx) const {
     assert(CompSrcIdx < Component::MAX_SRC_NUM);
-    return hasMandatoryLiteral() &&
-           *MandatoryLiteralIdx == Component::DST_NUM + CompSrcIdx;
+    return MandatoryLiteralIdx == Component::DST_NUM + CompSrcIdx;
   }
 };
 
@@ -826,10 +830,10 @@ int getIntegerAttribute(const Function &F, StringRef Name, int Default);
 /// \returns \p Default and emits error if one of the requested values cannot be
 /// converted to integer, or \p OnlyFirstRequired is false and "second" value is
 /// not present.
-std::pair<int, int> getIntegerPairAttribute(const Function &F,
-                                            StringRef Name,
-                                            std::pair<int, int> Default,
-                                            bool OnlyFirstRequired = false);
+std::pair<unsigned, unsigned>
+getIntegerPairAttribute(const Function &F, StringRef Name,
+                        std::pair<unsigned, unsigned> Default,
+                        bool OnlyFirstRequired = false);
 
 /// Represents the counter values to wait for in an s_waitcnt instruction.
 ///
@@ -860,11 +864,6 @@ struct Waitcnt {
 
   bool hasWaitVsCnt() const {
     return VsCnt != ~0u;
-  }
-
-  bool dominates(const Waitcnt &Other) const {
-    return VmCnt <= Other.VmCnt && ExpCnt <= Other.ExpCnt &&
-           LgkmCnt <= Other.LgkmCnt && VsCnt <= Other.VsCnt;
   }
 
   Waitcnt combined(const Waitcnt &Other) const {
@@ -979,6 +978,33 @@ bool isSymbolicDepCtrEncoding(unsigned Code, bool &HasNonDefaultVal,
                               const MCSubtargetInfo &STI);
 bool decodeDepCtr(unsigned Code, int &Id, StringRef &Name, unsigned &Val,
                   bool &IsDefault, const MCSubtargetInfo &STI);
+
+/// \returns Decoded VaVdst from given immediate \p Encoded.
+unsigned decodeFieldVaVdst(unsigned Encoded);
+
+/// \returns Decoded VmVsrc from given immediate \p Encoded.
+unsigned decodeFieldVmVsrc(unsigned Encoded);
+
+/// \returns Decoded SaSdst from given immediate \p Encoded.
+unsigned decodeFieldSaSdst(unsigned Encoded);
+
+/// \returns \p VmVsrc as an encoded Depctr immediate.
+unsigned encodeFieldVmVsrc(unsigned VmVsrc);
+
+/// \returns \p Encoded combined with encoded \p VmVsrc.
+unsigned encodeFieldVmVsrc(unsigned Encoded, unsigned VmVsrc);
+
+/// \returns \p VaVdst as an encoded Depctr immediate.
+unsigned encodeFieldVaVdst(unsigned VaVdst);
+
+/// \returns \p Encoded combined with encoded \p VaVdst.
+unsigned encodeFieldVaVdst(unsigned Encoded, unsigned VaVdst);
+
+/// \returns \p SaSdst as an encoded Depctr immediate.
+unsigned encodeFieldSaSdst(unsigned SaSdst);
+
+/// \returns \p Encoded combined with encoded \p SaSdst.
+unsigned encodeFieldSaSdst(unsigned Encoded, unsigned SaSdst);
 
 } // namespace DepCtr
 
@@ -1097,6 +1123,9 @@ bool isEntryFunctionCC(CallingConv::ID CC);
 LLVM_READNONE
 bool isModuleEntryFunctionCC(CallingConv::ID CC);
 
+LLVM_READNONE
+bool isChainCC(CallingConv::ID CC);
+
 bool isKernelCC(const Function *Func);
 
 // FIXME: Remove this when calling conventions cleaned up
@@ -1117,6 +1146,7 @@ bool hasMIMG_R128(const MCSubtargetInfo &STI);
 bool hasA16(const MCSubtargetInfo &STI);
 bool hasG16(const MCSubtargetInfo &STI);
 bool hasPackedD16(const MCSubtargetInfo &STI);
+bool hasGDS(const MCSubtargetInfo &STI);
 unsigned getNSAMaxSize(const MCSubtargetInfo &STI);
 
 bool isSI(const MCSubtargetInfo &STI);
@@ -1301,9 +1331,15 @@ unsigned getNumFlatOffsetBits(const MCSubtargetInfo &ST);
 bool isLegalSMRDImmOffset(const MCSubtargetInfo &ST, int64_t ByteOffset);
 
 LLVM_READNONE
-inline bool isLegal64BitDPPControl(unsigned DC) {
+inline bool isLegalDPALU_DPPControl(unsigned DC) {
   return DC >= DPP::ROW_NEWBCAST_FIRST && DC <= DPP::ROW_NEWBCAST_LAST;
 }
+
+/// \returns true if an instruction may have a 64-bit VGPR operand.
+bool hasAny64BitVGPROperands(const MCInstrDesc &OpDesc);
+
+/// \returns true if an instruction is a DP ALU DPP.
+bool isDPALU_DPP(const MCInstrDesc &OpDesc);
 
 /// \returns true if the intrinsic is divergent
 bool isIntrinsicSourceOfDivergence(unsigned IntrID);

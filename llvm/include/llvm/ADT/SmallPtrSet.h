@@ -264,8 +264,9 @@ protected:
 
 /// SmallPtrSetIterator - This implements a const_iterator for SmallPtrSet.
 template <typename PtrTy>
-class SmallPtrSetIterator : public SmallPtrSetIteratorImpl,
-                            DebugEpochBase::HandleBase {
+class LLVM_DEBUGEPOCHBASE_HANDLEBASE_EMPTYBASE SmallPtrSetIterator
+    : public SmallPtrSetIteratorImpl,
+      DebugEpochBase::HandleBase {
   using PtrTraits = PointerLikeTypeTraits<PtrTy>;
 
 public:

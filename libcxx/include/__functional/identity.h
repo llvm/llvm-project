@@ -25,7 +25,7 @@ struct __is_identity : false_type {};
 
 struct __identity {
   template <class _Tp>
-  _LIBCPP_NODISCARD _LIBCPP_CONSTEXPR _Tp&& operator()(_Tp&& __t) const _NOEXCEPT {
+  _LIBCPP_NODISCARD _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR _Tp&& operator()(_Tp&& __t) const _NOEXCEPT {
     return std::forward<_Tp>(__t);
   }
 
@@ -39,7 +39,7 @@ struct __is_identity<__identity> : true_type {};
 
 struct identity {
     template<class _Tp>
-    _LIBCPP_NODISCARD_EXT constexpr _Tp&& operator()(_Tp&& __t) const noexcept
+    _LIBCPP_NODISCARD_EXT _LIBCPP_HIDE_FROM_ABI constexpr _Tp&& operator()(_Tp&& __t) const noexcept
     {
         return _VSTD::forward<_Tp>(__t);
     }

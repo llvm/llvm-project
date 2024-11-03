@@ -310,6 +310,26 @@ TEST_F(FileManagerTest, getFileRefReturnsCorrectNameForDifferentStatPath) {
   EXPECT_EQ(&F2->getFileEntry(), &F2Alias2->getFileEntry());
 }
 
+TEST_F(FileManagerTest, getFileRefReturnsCorrectDirNameForDifferentStatPath) {
+  // Inject files with the same inode into distinct directories (name & inode).
+  auto StatCache = std::make_unique<FakeStatCache>();
+  StatCache->InjectDirectory("dir1", 40);
+  StatCache->InjectDirectory("dir2", 41);
+  StatCache->InjectFile("dir1/f.cpp", 42);
+  StatCache->InjectFile("dir2/f.cpp", 42, "dir1/f.cpp");
+
+  manager.setStatCache(std::move(StatCache));
+  auto Dir1F = manager.getFileRef("dir1/f.cpp");
+  auto Dir2F = manager.getFileRef("dir2/f.cpp");
+
+  ASSERT_FALSE(!Dir1F);
+  ASSERT_FALSE(!Dir2F);
+  EXPECT_EQ("dir1", Dir1F->getDir().getName());
+  EXPECT_EQ("dir2", Dir2F->getDir().getName());
+  EXPECT_EQ("dir1/f.cpp", Dir1F->getNameAsRequested());
+  EXPECT_EQ("dir2/f.cpp", Dir2F->getNameAsRequested());
+}
+
 // getFile() returns the same FileEntry for virtual files that have
 // corresponding real files that are aliases.
 TEST_F(FileManagerTest, getFileReturnsSameFileEntryForAliasedVirtualFiles) {

@@ -21,11 +21,11 @@ func.func @matmul_mk_kn_mn(%A : !A_mk, %B : !B_kn, %C : !C_mn) -> !C_mn {
 }
 
 transform.sequence failures(propagate) {
-^bb1(%module_op: !pdl.operation):
+^bb1(%module_op: !transform.any_op):
   %matmul = transform.structured.match ops{["linalg.matmul"]} in %module_op 
-    : (!pdl.operation) -> !transform.op<"linalg.matmul">
+    : (!transform.any_op) -> !transform.op<"linalg.matmul">
   transform.structured.pack_greedily %matmul 
-      gemm_packed_sizes = [8, 16, 32] gemm_inner_dims_order = [1, 2, 0]
+      matmul_packed_sizes = [8, 16, 32] matmul_inner_dims_order = [1, 2, 0]
     : (!transform.op<"linalg.matmul">) -> !transform.op<"linalg.generic">
 }
 
@@ -67,10 +67,10 @@ func.func @matmul_mk_nk_nm(%A : !A_mk, %B : !B_nk, %C : !C_nm) -> !C_nm {
 }
 
 transform.sequence failures(propagate) {
-^bb1(%module_op: !pdl.operation):
-  %generic = transform.structured.match ops{["linalg.generic"]} in %module_op : (!pdl.operation) -> !transform.op<"linalg.generic">
+^bb1(%module_op: !transform.any_op):
+  %generic = transform.structured.match ops{["linalg.generic"]} in %module_op : (!transform.any_op) -> !transform.op<"linalg.generic">
   transform.structured.pack_greedily %generic
-      gemm_packed_sizes = [8, 16, 32] gemm_inner_dims_order = [1, 2, 0]
+      matmul_packed_sizes = [8, 16, 32] matmul_inner_dims_order = [1, 2, 0]
     : (!transform.op<"linalg.generic">) -> !transform.op<"linalg.generic">
 }
 
@@ -112,10 +112,10 @@ func.func @matmul_mk_nk_nm_transposed(%A : !A_mk, %B : !B_nk, %C : !C_nm) -> !C_
 }
 
 transform.sequence failures(propagate) {
-^bb1(%module_op: !pdl.operation):
-  %generic = transform.structured.match ops{["linalg.generic"]} in %module_op : (!pdl.operation) -> !transform.op<"linalg.generic">
+^bb1(%module_op: !transform.any_op):
+  %generic = transform.structured.match ops{["linalg.generic"]} in %module_op : (!transform.any_op) -> !transform.op<"linalg.generic">
   transform.structured.pack_greedily %generic
-      gemm_packed_sizes = [8, 16, 32] gemm_inner_dims_order = [1, 2, 0]
+      matmul_packed_sizes = [8, 16, 32] matmul_inner_dims_order = [1, 2, 0]
     : (!transform.op<"linalg.generic">) -> !transform.op<"linalg.generic">
 }
 
@@ -157,10 +157,10 @@ func.func @contraction_bmkm2_nkb_nbm(%A : !A_bmkm2, %B : !B_nkb, %C : !C_nbm) ->
 }
 
 transform.sequence failures(propagate) {
-^bb1(%module_op: !pdl.operation):
-  %generic = transform.structured.match ops{["linalg.generic"]} in %module_op : (!pdl.operation) -> !transform.op<"linalg.generic">
+^bb1(%module_op: !transform.any_op):
+  %generic = transform.structured.match ops{["linalg.generic"]} in %module_op : (!transform.any_op) -> !transform.op<"linalg.generic">
   transform.structured.pack_greedily %generic
-      gemm_packed_sizes = [8, 16, 32] gemm_inner_dims_order = [1, 2, 0]
+      matmul_packed_sizes = [8, 16, 32] matmul_inner_dims_order = [1, 2, 0]
     : (!transform.op<"linalg.generic">) -> !transform.op<"linalg.generic">
 }
 
@@ -191,11 +191,11 @@ func.func @conv_2d_nchw_fchw(%arg0: tensor<?x47x16x16xf32>, %arg2: tensor<?x16x1
 }
 
 transform.sequence failures(propagate) {
-^bb1(%module_op: !pdl.operation):
+^bb1(%module_op: !transform.any_op):
   %conv = transform.structured.match ops{["linalg.conv_2d_nchw_fchw"]} in %module_op 
-    : (!pdl.operation) -> !transform.op<"linalg.conv_2d_nchw_fchw">
+    : (!transform.any_op) -> !transform.op<"linalg.conv_2d_nchw_fchw">
   transform.structured.pack_greedily %conv
-      gemm_packed_sizes = [8, 16, 32] gemm_inner_dims_order = [1, 2, 0]
+      matmul_packed_sizes = [8, 16, 32] matmul_inner_dims_order = [1, 2, 0]
     : (!transform.op<"linalg.conv_2d_nchw_fchw">) -> !transform.op<"linalg.generic">
 }
 
@@ -220,9 +220,165 @@ func.func @reduce_and_map(%arg0: tensor<10x100xf32>,
 }
 
 transform.sequence failures(propagate) {
-^bb1(%module_op: !pdl.operation):
-  %generic = transform.structured.match ops{["linalg.generic"]} in %module_op : (!pdl.operation) -> !transform.op<"linalg.generic">
+^bb1(%module_op: !transform.any_op):
+  %generic = transform.structured.match ops{["linalg.generic"]} in %module_op : (!transform.any_op) -> !transform.op<"linalg.generic">
   transform.structured.pack_greedily %generic
-      gemm_packed_sizes = [8, 16, 32] gemm_inner_dims_order = [1, 2, 0]
+      matmul_packed_sizes = [8, 16, 32] matmul_inner_dims_order = [1, 2, 0]
     : (!transform.op<"linalg.generic">) -> !transform.op<"linalg.generic">
+}
+
+// -----
+
+!A_mk = tensor<1023x255xf32>
+!B_nk = tensor<127x255xf32>
+!C_nm = tensor<127x1023xf32>
+
+#mkn_accesses = [
+  affine_map<(m, n, k) -> (m, k)>,
+  affine_map<(m, n, k) -> (n, k)>,
+  affine_map<(m, n, k) -> (n, m)>
+]
+#mkn_trait = {
+  indexing_maps = #mkn_accesses,
+  iterator_types = ["parallel", "parallel", "reduction"]
+}
+
+// Normalized dims are:                     ( k,  m,  n)(kk, mm, nn)
+// CHECK-DAG: #[[$km_kkmm:.*]] = affine_map<(d0, d1, d2, d3, d4, d5) -> (d1, d0, d3, d4)>
+// CHECK-DAG: #[[$kn_kknn:.*]] = affine_map<(d0, d1, d2, d3, d4, d5) -> (d2, d0, d3, d5)>
+// CHECK-DAG: #[[$mn_mmnn:.*]] = affine_map<(d0, d1, d2, d3, d4, d5) -> (d2, d1, d4, d5)>
+
+// CHECK-LABEL: @matmul_mk_nk_nm(
+func.func @matmul_mk_nk_nm(%A : !A_mk, %B : !B_nk, %C : !C_nm) -> !C_nm {
+  //      CHECK: linalg.generic
+  // CHECK-SAME: indexing_maps = [#[[$mk_kkmm]], #[[$kn_kknn]], #[[$mn_mmnn]]]
+  // CHECK-SAME:   ["reduction", "parallel", "parallel", "reduction", "parallel", "parallel"]} 
+  // CHECK-SAME:   ins(%{{.*}} : tensor<128x8x32x8xf32>, tensor<1x8x32x130xf32>)
+  // CHECK-SAME:  outs(%{{.*}} : tensor<1x128x8x130xf32>)
+  %0 = linalg.generic #mkn_trait ins(%A, %B : !A_mk, !B_nk) outs(%C : !C_nm) {
+    ^bb0(%a: f32, %b: f32, %c: f32):
+      %d = arith.mulf %a, %b : f32
+      %e = arith.addf %c, %d : f32
+      linalg.yield %e : f32
+  } -> !C_nm
+  return %0 : !C_nm
+}
+
+transform.sequence failures(propagate) {
+^bb1(%module_op: !transform.any_op):
+  %generic = transform.structured.match ops{["linalg.generic"]} in %module_op : (!transform.any_op) -> !transform.op<"linalg.generic">
+  transform.structured.pack_greedily %generic
+      // In this spec, the "k" dimension is not packed but rather padded to the
+      // next multiple of 10 (i.e. 130).
+      matmul_packed_sizes = [8, 0, 32] 
+      matmul_padded_sizes_next_multiple_of = [0, 10, 0] 
+      matmul_inner_dims_order = [1, 2, 0]
+    : (!transform.op<"linalg.generic">) -> !transform.op<"linalg.generic">
+}
+
+
+// -----
+
+!A_mk = tensor<1023x255xf32>
+!B_nk = tensor<127x255xf32>
+!C_nm = tensor<127x1023xf32>
+
+#mkn_accesses = [
+  affine_map<(m, n, k) -> (m, k)>,
+  affine_map<(m, n, k) -> (n, k)>,
+  affine_map<(m, n, k) -> (n, m)>
+]
+#mkn_trait = {
+  indexing_maps = #mkn_accesses,
+  iterator_types = ["parallel", "parallel", "reduction"]
+}
+
+// Normalized dims are:                     ( k,  m,  n)(kk, mm)
+// CHECK-DAG: #[[$km_kkmm:.*]] = affine_map<(d0, d1, d2, d3, d4) -> (d1, d0, d3)>
+// CHECK-DAG: #[[$kn_kknn:.*]] = affine_map<(d0, d1, d2, d3, d4) -> (d2, d0, d3, d4)>
+// CHECK-DAG: #[[$mn_mmnn:.*]] = affine_map<(d0, d1, d2, d3, d4) -> (d2, d1, d4)>
+
+// CHECK-LABEL: @matmul_mk_nk_nm(
+func.func @matmul_mk_nk_nm(%A : !A_mk, %B : !B_nk, %C : !C_nm) -> !C_nm {
+  //      CHECK: linalg.generic
+  // CHECK-SAME: indexing_maps = [#[[$mk_kkmm]], #[[$kn_kknn]], #[[$mn_mmnn]]]
+  // CHECK-SAME:   ["reduction", "parallel", "parallel", "reduction", "parallel"]} 
+  // CHECK-SAME:   ins(%{{.*}} : tensor<1023x8x32xf32>, tensor<1x8x32x130xf32>)
+  // CHECK-SAME:  outs(%{{.*}} : tensor<1x1023x130xf32>)
+  %0 = linalg.generic #mkn_trait ins(%A, %B : !A_mk, !B_nk) outs(%C : !C_nm) {
+    ^bb0(%a: f32, %b: f32, %c: f32):
+      %d = arith.mulf %a, %b : f32
+      %e = arith.addf %c, %d : f32
+      linalg.yield %e : f32
+  } -> !C_nm
+  return %0 : !C_nm
+}
+
+transform.sequence failures(propagate) {
+^bb1(%module_op: !transform.any_op):
+  %generic = transform.structured.match ops{["linalg.generic"]} in %module_op : (!transform.any_op) -> !transform.op<"linalg.generic">
+  transform.structured.pack_greedily %generic
+      // In this spec, the "n" dimension is neither packed not unpacked.
+      // We don't end up with an innermost matmul after packing but only with an
+      // innermost matvec.
+      matmul_packed_sizes = [0, 0, 32] 
+      matmul_padded_sizes_next_multiple_of = [0, 10, 0] 
+      matmul_inner_dims_order = [1, 2, 0]
+    : (!transform.op<"linalg.generic">) -> !transform.op<"linalg.generic">
+}
+
+// -----
+
+!A = tensor<1023x255xf32>
+!X = tensor<255xf32>
+!Y = tensor<1023xf32>
+
+// CHECK-LABEL: @matvec_fail(
+func.func @matvec_fail(%A : !A, %x : !X, %y : !Y) -> !Y {
+  //      CHECK: linalg.matvec
+  %0 = linalg.matvec ins(%A, %x : !A, !X) outs(%y : !Y) -> !Y
+  return %0 : !Y
+}
+
+transform.sequence failures(propagate) {
+^bb1(%module_op: !transform.any_op):
+  %matmul = transform.structured.match ops{["linalg.matvec"]} in %module_op 
+    : (!transform.any_op) -> !transform.op<"linalg.matvec">
+  transform.structured.pack_greedily %matmul 
+      matmul_packed_sizes = [8, 16, 32] matmul_inner_dims_order = [1, 2, 0]
+    : (!transform.op<"linalg.matvec">) -> !transform.any_op
+}
+
+// -----
+
+func.func @no_padding_on_packs(%A: tensor<32x32xf32>, %B: tensor<32x32xf32>, %C: tensor<32x32xf32>)
+    -> tensor<32x32xf32> {
+  %0 = linalg.matmul  ins(%A, %B: tensor<32x32xf32>, tensor<32x32xf32>)
+                     outs(%C: tensor<32x32xf32>)
+    -> tensor<32x32xf32>
+  return %0 : tensor<32x32xf32>
+}
+
+// CHECK-LABEL: no_padding_on_packs
+// CHECK: tensor.pack %{{.+}} inner_dims_pos = [0, 1] inner_tiles = [8, 4] 
+// CHECK-SAME:  into %{{.+}} : tensor<32x32xf32> -> tensor<4x8x8x4xf32>
+// CHECK: tensor.pack %{{.+}} outer_dims_perm = [1, 0] 
+// CHECK-SAME:  inner_dims_pos = [0, 1] inner_tiles = [4, 16] into %{{.+}} : tensor<32x32xf32> -> tensor<2x8x4x16xf32>
+// CHECK: tensor.pack %{{.+}} inner_dims_pos = [0, 1] inner_tiles = [8, 16] 
+// CHECK-SAME:  into %{{.+}} : tensor<32x32xf32> -> tensor<4x2x8x16xf32>
+
+transform.sequence failures(propagate) {
+  ^bb0(%arg1: !transform.any_op):
+    %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1
+      : (!transform.any_op) -> !transform.op<"linalg.matmul">
+    %1 = transform.structured.pack_greedily %0
+        matmul_packed_sizes = [8, 16, 4] matmul_inner_dims_order = [0, 1, 2]
+      : (!transform.op<"linalg.matmul">) -> !transform.op<"linalg.generic">
+    %pack = transform.get_producer_of_operand %1[1]
+    : (!transform.op<"linalg.generic">) -> (!transform.op<"tensor.pack">)
+    %2, %pack_2, %empty_unpack_2 =
+    transform.structured.pack_transpose %pack with_compute_op(%1)
+    outer_perm = [1, 0] inner_perm = [1, 0]
+     : (!transform.op<"tensor.pack">, !transform.op<"linalg.generic">)
+    -> (!transform.op<"linalg.generic">, !transform.op<"tensor.pack">, !transform.any_op)
 }

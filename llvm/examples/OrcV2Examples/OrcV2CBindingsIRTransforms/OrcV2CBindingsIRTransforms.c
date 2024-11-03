@@ -17,11 +17,10 @@
 
 #include "llvm-c/Core.h"
 #include "llvm-c/Error.h"
-#include "llvm-c/Initialization.h"
 #include "llvm-c/LLJIT.h"
 #include "llvm-c/Support.h"
 #include "llvm-c/Target.h"
-#include "llvm-c/Transforms/Scalar.h"
+#include "llvm-c/Transforms/PassBuilder.h"
 
 #include <stdio.h>
 
@@ -54,11 +53,10 @@ LLVMOrcThreadSafeModuleRef createDemoModule(void) {
 }
 
 LLVMErrorRef myModuleTransform(void *Ctx, LLVMModuleRef Mod) {
-  LLVMPassManagerRef PM = LLVMCreatePassManager();
-  LLVMAddInstructionCombiningPass(PM);
-  LLVMRunPassManager(PM, Mod);
-  LLVMDisposePassManager(PM);
-  return LLVMErrorSuccess;
+  LLVMPassBuilderOptionsRef Options = LLVMCreatePassBuilderOptions();
+  LLVMErrorRef E = LLVMRunPasses(Mod, "instcombine", NULL, Options);
+  LLVMDisposePassBuilderOptions(Options);
+  return E;
 }
 
 LLVMErrorRef transform(void *Ctx, LLVMOrcThreadSafeModuleRef *ModInOut,
@@ -66,12 +64,11 @@ LLVMErrorRef transform(void *Ctx, LLVMOrcThreadSafeModuleRef *ModInOut,
   return LLVMOrcThreadSafeModuleWithModuleDo(*ModInOut, myModuleTransform, Ctx);
 }
 
-int main(int argc, char *argv[]) {
+int main(int argc, const char *argv[]) {
 
   int MainResult = 0;
 
-  LLVMParseCommandLineOptions(argc, (const char **)argv, "");
-  LLVMInitializeCore(LLVMGetGlobalPassRegistry());
+  LLVMParseCommandLineOptions(argc, argv, "");
 
   LLVMInitializeNativeTarget();
   LLVMInitializeNativeAsmPrinter();

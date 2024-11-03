@@ -66,7 +66,7 @@ public:
   /// FIXME: Currently the external path is exposed by replacing the virtual
   /// path in this Status object. Instead, we should leave the path in the
   /// Status intact (matching the requested virtual path) - see
-  /// FileManager::getFileRef for how how we plan to fix this.
+  /// FileManager::getFileRef for how we plan to fix this.
   bool ExposesExternalVFSPath = false;
 
   Status() = default;
@@ -872,6 +872,9 @@ public:
 
   /// Represents the result of a path lookup into the RedirectingFileSystem.
   struct LookupResult {
+    /// Chain of parent directory entries for \c E.
+    llvm::SmallVector<Entry *, 32> Parents;
+
     /// The entry the looked-up path corresponds to.
     Entry *E;
 
@@ -885,7 +888,7 @@ public:
     LookupResult(Entry *E, sys::path::const_iterator Start,
                  sys::path::const_iterator End);
 
-    /// If the found Entry maps the the input path to a path in the external
+    /// If the found Entry maps the input path to a path in the external
     /// file system (i.e. it is a FileEntry or DirectoryRemapEntry), returns
     /// that path.
     std::optional<StringRef> getExternalRedirect() const {
@@ -895,6 +898,10 @@ public:
         return FE->getExternalContentsPath();
       return std::nullopt;
     }
+
+    /// Get the (canonical) path of the found entry. This uses the as-written
+    /// path components from the VFS specification.
+    void getPath(llvm::SmallVectorImpl<char> &Path) const;
   };
 
 private:
@@ -984,9 +991,10 @@ private:
   /// into the contents of \p From if it is a directory. Returns a LookupResult
   /// giving the matched entry and, if that entry is a FileEntry or
   /// DirectoryRemapEntry, the path it redirects to in the external file system.
-  ErrorOr<LookupResult> lookupPathImpl(llvm::sys::path::const_iterator Start,
-                                       llvm::sys::path::const_iterator End,
-                                       Entry *From) const;
+  ErrorOr<LookupResult>
+  lookupPathImpl(llvm::sys::path::const_iterator Start,
+                 llvm::sys::path::const_iterator End, Entry *From,
+                 llvm::SmallVectorImpl<Entry *> &Entries) const;
 
   /// Get the status for a path with the provided \c LookupResult.
   ErrorOr<Status> status(const Twine &CanonicalPath, const Twine &OriginalPath,

@@ -16,10 +16,10 @@ char c = u8'\u0080'; // expected-error {{character too large for enclosing chara
 char d = u8'\u1234'; // expected-error {{character too large for enclosing character literal type}}
 char e = u8'ሴ'; // expected-error {{character too large for enclosing character literal type}}
 char f = u8'ab'; // expected-error {{Unicode character literals may not contain multiple characters}}
-#elif __STDC_VERSION__ >= 202000L
+#elif __STDC_VERSION__ >= 202311L
 char a = u8'ñ';      // expected-error {{character too large for enclosing character literal type}}
 char b = u8'\x80';   // ok
-char c = u8'\u0080'; // expected-error {{universal character name refers to a control character}}
+char c = u8'\u0000'; // ok
 char d = u8'\u1234'; // expected-error {{character too large for enclosing character literal type}}
 char e = u8'ሴ';      // expected-error {{character too large for enclosing character literal type}}
 char f = u8'ab';     // expected-error {{Unicode character literals may not contain multiple characters}}
@@ -49,8 +49,8 @@ _Static_assert(
 #  endif
 #endif
 
-/// In C2x, u8 char literals are always unsigned.
-#if __STDC_VERSION__ >= 202000L
+/// In C23, u8 char literals are always unsigned.
+#if __STDC_VERSION__ >= 202311L
 #  if u8'\xff' == '\xff'// expected-warning {{right side of operator converted from negative value to unsigned}}
 #    error u8 char literal is not unsigned
 #  endif

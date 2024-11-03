@@ -639,16 +639,32 @@ NamedEntity CoarrayRef::GetBase() const { return AsNamedEntity(base_); }
 
 // For the purposes of comparing type parameter expressions while
 // testing the compatibility of procedure characteristics, two
-// object dummy arguments with the same name are considered equal.
+// dummy arguments with the same position are considered equal.
+static std::optional<int> GetDummyArgPosition(const Symbol &original) {
+  const Symbol &symbol(original.GetUltimate());
+  if (IsDummy(symbol)) {
+    if (const Symbol * proc{symbol.owner().symbol()}) {
+      if (const auto *subp{proc->detailsIf<semantics::SubprogramDetails>()}) {
+        int j{0};
+        for (const Symbol *arg : subp->dummyArgs()) {
+          if (arg == &symbol) {
+            return j;
+          }
+          ++j;
+        }
+      }
+    }
+  }
+  return std::nullopt;
+}
+
 static bool AreSameSymbol(const Symbol &x, const Symbol &y) {
   if (&x == &y) {
     return true;
   }
-  if (x.name() == y.name()) {
-    if (const auto *xObject{x.detailsIf<semantics::ObjectEntityDetails>()}) {
-      if (const auto *yObject{y.detailsIf<semantics::ObjectEntityDetails>()}) {
-        return xObject->isDummy() && yObject->isDummy();
-      }
+  if (auto xPos{GetDummyArgPosition(x)}) {
+    if (auto yPos{GetDummyArgPosition(y)}) {
+      return *xPos == *yPos;
     }
   }
   return false;

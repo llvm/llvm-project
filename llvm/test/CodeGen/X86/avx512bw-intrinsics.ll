@@ -1412,18 +1412,20 @@ define <32 x i16>@test_int_x86_avx512_maskz_psrav32_hi(<32 x i16> %x0, <32 x i16
 define <32 x i16>@test_int_x86_avx512_mask_psrav32_hi_const(<32 x i16> %x0, <32 x i16> %x1, <32 x i16> %x2, i32 %x3) {
 ; X86-LABEL: test_int_x86_avx512_mask_psrav32_hi_const:
 ; X86:       # %bb.0:
-; X86-NEXT:    vmovdqa64 {{.*#+}} zmm0 = [2,9,65524,23,65510,37,65496,51,2,9,65524,23,65510,37,65496,51,2,9,65524,23,65510,37,65496,51,2,9,65524,23,65510,37,65496,51]
-; X86-NEXT:    # encoding: [0x62,0xf1,0xfd,0x48,0x6f,0x05,A,A,A,A]
+; X86-NEXT:    vbroadcasti32x4 {{.*#+}} zmm0 = [2,9,65524,23,65510,37,65496,51,2,9,65524,23,65510,37,65496,51,2,9,65524,23,65510,37,65496,51,2,9,65524,23,65510,37,65496,51]
+; X86-NEXT:    # encoding: [0x62,0xf2,0x7d,0x48,0x5a,0x05,A,A,A,A]
 ; X86-NEXT:    # fixup A - offset: 6, value: {{\.?LCPI[0-9]+_[0-9]+}}, kind: FK_Data_4
+; X86-NEXT:    # zmm0 = mem[0,1,2,3,0,1,2,3,0,1,2,3,0,1,2,3]
 ; X86-NEXT:    vpsravw {{\.?LCPI[0-9]+_[0-9]+}}, %zmm0, %zmm0 # encoding: [0x62,0xf2,0xfd,0x48,0x11,0x05,A,A,A,A]
 ; X86-NEXT:    # fixup A - offset: 6, value: {{\.?LCPI[0-9]+_[0-9]+}}, kind: FK_Data_4
 ; X86-NEXT:    retl # encoding: [0xc3]
 ;
 ; X64-LABEL: test_int_x86_avx512_mask_psrav32_hi_const:
 ; X64:       # %bb.0:
-; X64-NEXT:    vmovdqa64 {{.*#+}} zmm0 = [2,9,65524,23,65510,37,65496,51,2,9,65524,23,65510,37,65496,51,2,9,65524,23,65510,37,65496,51,2,9,65524,23,65510,37,65496,51]
-; X64-NEXT:    # encoding: [0x62,0xf1,0xfd,0x48,0x6f,0x05,A,A,A,A]
+; X64-NEXT:    vbroadcasti32x4 {{.*#+}} zmm0 = [2,9,65524,23,65510,37,65496,51,2,9,65524,23,65510,37,65496,51,2,9,65524,23,65510,37,65496,51,2,9,65524,23,65510,37,65496,51]
+; X64-NEXT:    # encoding: [0x62,0xf2,0x7d,0x48,0x5a,0x05,A,A,A,A]
 ; X64-NEXT:    # fixup A - offset: 6, value: {{\.?LCPI[0-9]+_[0-9]+}}-4, kind: reloc_riprel_4byte
+; X64-NEXT:    # zmm0 = mem[0,1,2,3,0,1,2,3,0,1,2,3,0,1,2,3]
 ; X64-NEXT:    vpsravw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm0, %zmm0 # encoding: [0x62,0xf2,0xfd,0x48,0x11,0x05,A,A,A,A]
 ; X64-NEXT:    # fixup A - offset: 6, value: {{\.?LCPI[0-9]+_[0-9]+}}-4, kind: reloc_riprel_4byte
 ; X64-NEXT:    retq # encoding: [0xc3]

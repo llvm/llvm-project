@@ -30,13 +30,17 @@
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/TypeFinder.h"
 #include "llvm/IR/ValueSymbolTable.h"
-#include "llvm/InitializePasses.h"
-#include "llvm/Pass.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Transforms/IPO.h"
 #include "llvm/Transforms/IPO/StripSymbols.h"
 #include "llvm/Transforms/Utils/Local.h"
 
 using namespace llvm;
+
+static cl::opt<bool>
+    StripGlobalConstants("strip-global-constants", cl::init(false), cl::Hidden,
+                         cl::desc("Removes debug compile units which reference "
+                                  "to non-existing global constants"));
 
 /// OnlyUsedBy - Return true if V is only used by Usr.
 static bool OnlyUsedBy(Value *V, Value *Usr) {
@@ -176,44 +180,6 @@ static bool stripDebugDeclareImpl(Module &M) {
   return true;
 }
 
-/// Collects compilation units referenced by functions or lexical scopes.
-/// Accepts any DIScope and uses recursive bottom-up approach to reach either
-/// DISubprogram or DILexicalBlockBase.
-static void
-collectCUsWithScope(const DIScope *Scope, std::set<DICompileUnit *> &LiveCUs,
-                    SmallPtrSet<const DIScope *, 8> &VisitedScopes) {
-  if (!Scope)
-    return;
-
-  auto InS = VisitedScopes.insert(Scope);
-  if (!InS.second)
-    return;
-
-  if (const auto *SP = dyn_cast<DISubprogram>(Scope)) {
-    if (SP->getUnit())
-      LiveCUs.insert(SP->getUnit());
-    return;
-  }
-  if (const auto *LB = dyn_cast<DILexicalBlockBase>(Scope)) {
-    const DISubprogram *SP = LB->getSubprogram();
-    if (SP && SP->getUnit())
-      LiveCUs.insert(SP->getUnit());
-    return;
-  }
-
-  collectCUsWithScope(Scope->getScope(), LiveCUs, VisitedScopes);
-}
-
-static void
-collectCUsForInlinedFuncs(const DILocation *Loc,
-                          std::set<DICompileUnit *> &LiveCUs,
-                          SmallPtrSet<const DIScope *, 8> &VisitedScopes) {
-  if (!Loc || !Loc->getInlinedAt())
-    return;
-  collectCUsWithScope(Loc->getScope(), LiveCUs, VisitedScopes);
-  collectCUsForInlinedFuncs(Loc->getInlinedAt(), LiveCUs, VisitedScopes);
-}
-
 static bool stripDeadDebugInfoImpl(Module &M) {
   bool Changed = false;
 
@@ -241,26 +207,23 @@ static bool stripDeadDebugInfoImpl(Module &M) {
   }
 
   std::set<DICompileUnit *> LiveCUs;
-  SmallPtrSet<const DIScope *, 8> VisitedScopes;
-  // Any CU is live if is referenced from a subprogram metadata that is attached
-  // to a function defined or inlined in the module.
-  for (const Function &Fn : M.functions()) {
-    collectCUsWithScope(Fn.getSubprogram(), LiveCUs, VisitedScopes);
-    for (const_inst_iterator I = inst_begin(&Fn), E = inst_end(&Fn); I != E;
-         ++I) {
-      if (!I->getDebugLoc())
-        continue;
-      const DILocation *DILoc = I->getDebugLoc().get();
-      collectCUsForInlinedFuncs(DILoc, LiveCUs, VisitedScopes);
-    }
+  DebugInfoFinder LiveCUFinder;
+  for (const Function &F : M.functions()) {
+    if (auto *SP = cast_or_null<DISubprogram>(F.getSubprogram()))
+      LiveCUFinder.processSubprogram(SP);
+    for (const Instruction &I : instructions(F))
+      LiveCUFinder.processInstruction(M, I);
   }
+  auto FoundCUs = LiveCUFinder.compile_units();
+  LiveCUs.insert(FoundCUs.begin(), FoundCUs.end());
 
   bool HasDeadCUs = false;
   for (DICompileUnit *DIC : F.compile_units()) {
     // Create our live global variable list.
     bool GlobalVariableChange = false;
     for (auto *DIG : DIC->getGlobalVariables()) {
-      if (DIG->getExpression() && DIG->getExpression()->isConstant())
+      if (DIG->getExpression() && DIG->getExpression()->isConstant() &&
+          !StripGlobalConstants)
         LiveGVs.insert(DIG);
 
       // Make sure we only visit each global variable only once.
@@ -307,23 +270,31 @@ static bool stripDeadDebugInfoImpl(Module &M) {
 PreservedAnalyses StripSymbolsPass::run(Module &M, ModuleAnalysisManager &AM) {
   StripDebugInfo(M);
   StripSymbolNames(M, false);
-  return PreservedAnalyses::all();
+  PreservedAnalyses PA;
+  PA.preserveSet<CFGAnalyses>();
+  return PA;
 }
 
 PreservedAnalyses StripNonDebugSymbolsPass::run(Module &M,
                                                 ModuleAnalysisManager &AM) {
   StripSymbolNames(M, true);
-  return PreservedAnalyses::all();
+  PreservedAnalyses PA;
+  PA.preserveSet<CFGAnalyses>();
+  return PA;
 }
 
 PreservedAnalyses StripDebugDeclarePass::run(Module &M,
                                              ModuleAnalysisManager &AM) {
   stripDebugDeclareImpl(M);
-  return PreservedAnalyses::all();
+  PreservedAnalyses PA;
+  PA.preserveSet<CFGAnalyses>();
+  return PA;
 }
 
 PreservedAnalyses StripDeadDebugInfoPass::run(Module &M,
                                               ModuleAnalysisManager &AM) {
   stripDeadDebugInfoImpl(M);
-  return PreservedAnalyses::all();
+  PreservedAnalyses PA;
+  PA.preserveSet<CFGAnalyses>();
+  return PA;
 }

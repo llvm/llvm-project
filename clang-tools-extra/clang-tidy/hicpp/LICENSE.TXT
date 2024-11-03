@@ -8,5 +8,6 @@ Any file referencing a High-Integrity C++ Coding guideline:
 
 HIC++ Coding Standard as created by PRQA.
 
-Please see http://www.codingstandard.com/section/conditions-of-use/ for more
-information.
+Please see
+https://www.perforce.com/resources/qac/high-integrity-cpp-coding-standard/conditions-of-use
+for more information.

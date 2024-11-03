@@ -1,5 +1,5 @@
-; RUN: llc < %s -march=nvptx -mcpu=sm_32 | FileCheck %s
-; RUN: %if ptxas %{ llc < %s -march=nvptx -mcpu=sm_32 | %ptxas-verify %}
+; RUN: llc < %s -march=nvptx64 -mcpu=sm_32 | FileCheck %s
+; RUN: %if ptxas %{ llc < %s -march=nvptx64 -mcpu=sm_32 | %ptxas-verify %}
 
 
 ; CHECK-LABEL: atom0

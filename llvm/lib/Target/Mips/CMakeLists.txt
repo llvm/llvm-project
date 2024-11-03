@@ -10,7 +10,7 @@ tablegen(LLVM MipsGenDisassemblerTables.inc -gen-disassembler)
 tablegen(LLVM MipsGenFastISel.inc -gen-fast-isel)
 tablegen(LLVM MipsGenGlobalISel.inc -gen-global-isel)
 tablegen(LLVM MipsGenPostLegalizeGICombiner.inc -gen-global-isel-combiner
-              -combiners="MipsPostLegalizerCombinerHelper")
+              -combiners="MipsPostLegalizerCombiner")
 tablegen(LLVM MipsGenInstrInfo.inc -gen-instr-info)
 tablegen(LLVM MipsGenMCCodeEmitter.inc -gen-emitter)
 tablegen(LLVM MipsGenMCPseudoLowering.inc -gen-pseudo-lowering)
@@ -69,7 +69,9 @@ add_llvm_target(MipsCodeGen
   Analysis
   AsmPrinter
   CodeGen
+  CodeGenTypes
   Core
+  GlobalISel
   MC
   MipsDesc
   MipsInfo
@@ -77,7 +79,6 @@ add_llvm_target(MipsCodeGen
   Support
   Target
   TargetParser
-  GlobalISel
 
   ADD_TO_COMPONENT
   Mips

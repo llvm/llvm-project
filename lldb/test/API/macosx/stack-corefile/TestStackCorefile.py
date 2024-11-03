@@ -9,18 +9,18 @@ from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
-class TestStackCorefile(TestBase):
 
+class TestStackCorefile(TestBase):
     @skipIfOutOfTreeDebugserver  # newer debugserver required for these qMemoryRegionInfo types
     @no_debug_info_test
     @skipUnlessDarwin
     @skipIfRemote
     def test(self):
-
         corefile = self.getBuildArtifact("process.core")
         self.build()
         (target, process, thread, bkpt) = lldbutil.run_to_source_breakpoint(
-            self, "// break here", lldb.SBFileSpec("main.c"))
+            self, "// break here", lldb.SBFileSpec("main.c")
+        )
 
         frame = thread.GetFrameAtIndex(0)
         stack_int = frame.GetValueForVariablePath("stack_int")
@@ -37,7 +37,7 @@ class TestStackCorefile(TestBase):
         self.dbg.DeleteTarget(target)
 
         # Now load the corefile
-        target = self.dbg.CreateTarget('')
+        target = self.dbg.CreateTarget("")
         process = target.LoadCore(corefile)
         thread = process.GetSelectedThread()
         self.assertTrue(process.IsValid())
@@ -48,7 +48,7 @@ class TestStackCorefile(TestBase):
             self.runCmd("fr v")
         num_modules = target.GetNumModules()
         #  We should only have the a.out binary and possibly
-        # the libdyld.dylib.  Extra libraries loaded means 
+        # the libdyld.dylib.  Extra libraries loaded means
         # extra LC_NOTE and unnecessarily large corefile.
         self.assertTrue(num_modules == 1 or num_modules == 2)
 

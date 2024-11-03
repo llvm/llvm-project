@@ -34,8 +34,6 @@ static constexpr uint64_t loIdx = 0;
 static constexpr uint64_t hiIdx = 1;
 static constexpr uint64_t xStartIdx = 2;
 
-static constexpr const char kLessThanFuncNamePrefix[] = "_sparse_less_than_";
-static constexpr const char kCompareEqFuncNamePrefix[] = "_sparse_compare_eq_";
 static constexpr const char kPartitionFuncNamePrefix[] = "_sparse_partition_";
 static constexpr const char kBinarySearchFuncNamePrefix[] =
     "_sparse_binary_search_";
@@ -181,27 +179,24 @@ static void createSwap(OpBuilder &builder, Location loc, ValueRange args,
   forEachIJPairInAllBuffers(builder, loc, args, nx, ny, isCoo, swapOnePair);
 }
 
-/// Creates a function to compare all the (xs[i], xs[j]) pairs. The method to
-/// compare each pair is create via `compareBuilder`.
-static void createCompareFuncImplementation(
-    OpBuilder &builder, ModuleOp unused, func::FuncOp func, uint64_t nx,
-    uint64_t ny, bool isCoo,
-    function_ref<scf::IfOp(OpBuilder &, Location, Value, Value, Value, bool)>
+/// Creates code to compare all the (xs[i], xs[j]) pairs. The method to compare
+/// each pair is create via `compareBuilder`.
+static Value createInlinedCompareImplementation(
+    OpBuilder &builder, Location loc, ValueRange args, uint64_t nx, uint64_t ny,
+    bool isCoo,
+    function_ref<Value(OpBuilder &, Location, Value, Value, Value, bool, bool)>
         compareBuilder) {
-  OpBuilder::InsertionGuard insertionGuard(builder);
-
-  Block *entryBlock = func.addEntryBlock();
-  builder.setInsertionPointToStart(entryBlock);
-  Location loc = func.getLoc();
-  ValueRange args = entryBlock->getArguments();
-
-  scf::IfOp topIfOp;
+  Value result;
   auto bodyBuilder = [&](uint64_t k, Value i, Value j, Value buffer) {
-    scf::IfOp ifOp = compareBuilder(builder, loc, i, j, buffer, (k == nx - 1));
-    if (k == 0) {
-      topIfOp = ifOp;
-    } else {
+    bool isFirstDim = (k == 0);
+    bool isLastDim = (k == nx - 1);
+    Value val =
+        compareBuilder(builder, loc, i, j, buffer, isFirstDim, isLastDim);
+    if (isFirstDim) {
+      result = val;
+    } else if (!isLastDim) {
       OpBuilder::InsertionGuard insertionGuard(builder);
+      auto ifOp = cast<scf::IfOp>(val.getDefiningOp());
       builder.setInsertionPointAfter(ifOp);
       builder.create<scf::YieldOp>(loc, ifOp.getResult(0));
     }
@@ -209,38 +204,44 @@ static void createCompareFuncImplementation(
 
   forEachIJPairInXs(builder, loc, args, nx, ny, isCoo, bodyBuilder);
 
-  builder.setInsertionPointAfter(topIfOp);
-  builder.create<func::ReturnOp>(loc, topIfOp.getResult(0));
+  builder.setInsertionPointAfterValue(result);
+  return result;
 }
 
-/// Generates an if-statement to compare whether x[i] is equal to x[j].
-static scf::IfOp createEqCompare(OpBuilder &builder, Location loc, Value i,
-                                 Value j, Value x, bool isLastDim) {
-  Value f = constantI1(builder, loc, false);
-  Value t = constantI1(builder, loc, true);
+/// Generates code to compare whether x[i] is equal to x[j] and returns the
+/// result of the comparison.
+static Value createEqCompare(OpBuilder &builder, Location loc, Value i, Value j,
+                             Value x, bool isFirstDim, bool isLastDim) {
   Value vi = builder.create<memref::LoadOp>(loc, x, i);
   Value vj = builder.create<memref::LoadOp>(loc, x, j);
 
-  Value cond =
-      builder.create<arith::CmpIOp>(loc, arith::CmpIPredicate::eq, vi, vj);
-  scf::IfOp ifOp =
-      builder.create<scf::IfOp>(loc, f.getType(), cond, /*else=*/true);
+  Value res;
+  if (isLastDim) {
+    res = builder.create<arith::CmpIOp>(loc, arith::CmpIPredicate::eq, vi, vj);
+    // For 1D, we create a compare without any control flow. Otherwise, we
+    // create YieldOp to return the result in the nested if-stmt.
+    if (!isFirstDim)
+      builder.create<scf::YieldOp>(loc, res);
+  } else {
+    Value ne =
+        builder.create<arith::CmpIOp>(loc, arith::CmpIPredicate::ne, vi, vj);
+    scf::IfOp ifOp = builder.create<scf::IfOp>(loc, builder.getIntegerType(1),
+                                               ne, /*else=*/true);
+    // If (x[i] != x[j]).
+    builder.setInsertionPointToStart(&ifOp.getThenRegion().front());
+    Value f = constantI1(builder, loc, false);
+    builder.create<scf::YieldOp>(loc, f);
 
-  // x[1] != x[j]:
-  builder.setInsertionPointToStart(&ifOp.getElseRegion().front());
-  builder.create<scf::YieldOp>(loc, f);
-
-  // x[i] == x[j]:
-  builder.setInsertionPointToStart(&ifOp.getThenRegion().front());
-  if (isLastDim == 1) {
-    // Finish checking all dimensions.
-    builder.create<scf::YieldOp>(loc, t);
+    // If (x[i] == x[j]). Set up the insertion point for the nested if-stmt that
+    // checks the remaining dimensions.
+    builder.setInsertionPointToStart(&ifOp.getElseRegion().front());
+    res = ifOp.getResult(0);
   }
 
-  return ifOp;
+  return res;
 }
 
-/// Creates a function to compare whether xs[i] is equal to xs[j].
+/// Creates code to compare whether xs[i] is equal to xs[j].
 //
 // The generate IR corresponds to this C like algorithm:
 //   if (x0[i] != x0[j])
@@ -250,77 +251,68 @@ static scf::IfOp createEqCompare(OpBuilder &builder, Location loc, Value i,
 //       return false;
 //     else if (x2[2] != x2[j]))
 //       and so on ...
-static void createEqCompareFunc(OpBuilder &builder, ModuleOp unused,
-                                func::FuncOp func, uint64_t nx, uint64_t ny,
-                                bool isCoo, uint32_t nTrailingP = 0) {
+static Value createInlinedEqCompare(OpBuilder &builder, Location loc,
+                                    ValueRange args, uint64_t nx, uint64_t ny,
+                                    bool isCoo, uint32_t nTrailingP = 0) {
   // Compare functions don't use trailing parameters.
   (void)nTrailingP;
   assert(nTrailingP == 0);
-  createCompareFuncImplementation(builder, unused, func, nx, ny, isCoo,
-                                  createEqCompare);
+  return createInlinedCompareImplementation(builder, loc, args, nx, ny, isCoo,
+                                            createEqCompare);
 }
 
-/// Generates an if-statement to compare whether x[i] is less than x[j].
-static scf::IfOp createLessThanCompare(OpBuilder &builder, Location loc,
-                                       Value i, Value j, Value x,
-                                       bool isLastDim) {
-  Value f = constantI1(builder, loc, false);
-  Value t = constantI1(builder, loc, true);
+/// Generates code to compare whether x[i] is less than x[j] and returns the
+/// result of the comparison.
+static Value createLessThanCompare(OpBuilder &builder, Location loc, Value i,
+                                   Value j, Value x, bool isFirstDim,
+                                   bool isLastDim) {
   Value vi = builder.create<memref::LoadOp>(loc, x, i);
   Value vj = builder.create<memref::LoadOp>(loc, x, j);
 
-  Value cond =
-      builder.create<arith::CmpIOp>(loc, arith::CmpIPredicate::ult, vi, vj);
-  scf::IfOp ifOp =
-      builder.create<scf::IfOp>(loc, f.getType(), cond, /*else=*/true);
-  // If (x[i] < x[j]).
-  builder.setInsertionPointToStart(&ifOp.getThenRegion().front());
-  builder.create<scf::YieldOp>(loc, t);
-
-  builder.setInsertionPointToStart(&ifOp.getElseRegion().front());
-  if (isLastDim == 1) {
-    // Finish checking all dimensions.
-    builder.create<scf::YieldOp>(loc, f);
+  Value res;
+  if (isLastDim) {
+    res = builder.create<arith::CmpIOp>(loc, arith::CmpIPredicate::ult, vi, vj);
+    // For 1D, we create a compare without any control flow. Otherwise, we
+    // create YieldOp to return the result in the nested if-stmt.
+    if (!isFirstDim)
+      builder.create<scf::YieldOp>(loc, res);
   } else {
-    cond =
-        builder.create<arith::CmpIOp>(loc, arith::CmpIPredicate::ult, vj, vi);
-    scf::IfOp ifOp2 =
-        builder.create<scf::IfOp>(loc, f.getType(), cond, /*else=*/true);
-    // Otherwise if (x[j] < x[i]).
-    builder.setInsertionPointToStart(&ifOp2.getThenRegion().front());
-    builder.create<scf::YieldOp>(loc, f);
+    Value ne =
+        builder.create<arith::CmpIOp>(loc, arith::CmpIPredicate::ne, vi, vj);
+    scf::IfOp ifOp = builder.create<scf::IfOp>(loc, builder.getIntegerType(1),
+                                               ne, /*else=*/true);
+    // If (x[i] != x[j]).
+    builder.setInsertionPointToStart(&ifOp.getThenRegion().front());
+    Value lt =
+        builder.create<arith::CmpIOp>(loc, arith::CmpIPredicate::ult, vi, vj);
+    builder.create<scf::YieldOp>(loc, lt);
 
-    // Otherwise check the remaining dimensions.
-    builder.setInsertionPointAfter(ifOp2);
-    builder.create<scf::YieldOp>(loc, ifOp2.getResult(0));
-    // Set up the insertion point for the nested if-stmt that checks the
-    // remaining dimensions.
-    builder.setInsertionPointToStart(&ifOp2.getElseRegion().front());
+    // If (x[i] == x[j]). Set up the insertion point for the nested if-stmt that
+    // checks the remaining dimensions.
+    builder.setInsertionPointToStart(&ifOp.getElseRegion().front());
+    res = ifOp.getResult(0);
   }
 
-  return ifOp;
+  return res;
 }
 
-/// Creates a function to compare whether xs[i] is less than xs[j].
+/// Creates code to compare whether xs[i] is less than xs[j].
 //
 // The generate IR corresponds to this C like algorithm:
-//   if (x0[i] < x0[j])
-//     return true;
-//   else if (x0[j] < x0[i])
-//     return false;
+//   if (x0[i] != x0[j])
+//     return x0[i] < x0[j];
+//   else if (x1[j] != x1[i])
+//     return x1[i] < x1[j];
 //   else
-//     if (x1[i] < x1[j])
-//       return true;
-//     else if (x1[j] < x1[i]))
 //       and so on ...
-static void createLessThanFunc(OpBuilder &builder, ModuleOp unused,
-                               func::FuncOp func, uint64_t nx, uint64_t ny,
-                               bool isCoo, uint32_t nTrailingP = 0) {
+static Value createInlinedLessThan(OpBuilder &builder, Location loc,
+                                   ValueRange args, uint64_t nx, uint64_t ny,
+                                   bool isCoo, uint32_t nTrailingP = 0) {
   // Compare functions don't use trailing parameters.
   (void)nTrailingP;
   assert(nTrailingP == 0);
-  createCompareFuncImplementation(builder, unused, func, nx, ny, isCoo,
-                                  createLessThanCompare);
+  return createInlinedCompareImplementation(builder, loc, args, nx, ny, isCoo,
+                                            createLessThanCompare);
 }
 
 /// Creates a function to use a binary search to find the insertion point for
@@ -379,15 +371,8 @@ static void createBinarySearchFunc(OpBuilder &builder, ModuleOp module,
   uint64_t numXBuffers = isCoo ? 1 : nx;
   compareOperands.append(args.begin() + xStartIdx,
                          args.begin() + xStartIdx + numXBuffers);
-  Type i1Type = IntegerType::get(module.getContext(), 1, IntegerType::Signless);
-  FlatSymbolRefAttr lessThanFunc = getMangledSortHelperFunc(
-      builder, func, {i1Type}, kLessThanFuncNamePrefix, nx, ny, isCoo,
-      compareOperands, createLessThanFunc, nTrailingP);
-  Value cond2 = builder
-                    .create<func::CallOp>(loc, lessThanFunc, TypeRange{i1Type},
-                                          compareOperands)
-                    .getResult(0);
-
+  Value cond2 =
+      createInlinedLessThan(builder, loc, compareOperands, nx, ny, isCoo);
   // Update lo and hi for the WhileOp as follows:
   //   if (xs[p] < xs[mid]))
   //     hi = mid;
@@ -428,15 +413,8 @@ createScanLoop(OpBuilder &builder, ModuleOp module, func::FuncOp func,
     compareOperands.push_back(before->getArgument(0));
   }
   compareOperands.append(xs.begin(), xs.end());
-  MLIRContext *context = module.getContext();
-  Type i1Type = IntegerType::get(context, 1, IntegerType::Signless);
-  FlatSymbolRefAttr lessThanFunc = getMangledSortHelperFunc(
-      builder, func, {i1Type}, kLessThanFuncNamePrefix, nx, ny, isCoo,
-      compareOperands, createLessThanFunc);
-  Value cond = builder
-                   .create<func::CallOp>(loc, lessThanFunc, TypeRange{i1Type},
-                                         compareOperands)
-                   .getResult(0);
+  Value cond =
+      createInlinedLessThan(builder, loc, compareOperands, nx, ny, isCoo);
   builder.create<scf::ConditionOp>(loc, cond, before->getArguments());
 
   Block *after =
@@ -450,31 +428,94 @@ createScanLoop(OpBuilder &builder, ModuleOp module, func::FuncOp func,
   builder.setInsertionPointAfter(whileOp);
   compareOperands[0] = i;
   compareOperands[1] = p;
-  FlatSymbolRefAttr compareEqFunc = getMangledSortHelperFunc(
-      builder, func, {i1Type}, kCompareEqFuncNamePrefix, nx, ny, isCoo,
-      compareOperands, createEqCompareFunc);
   Value compareEq =
-      builder
-          .create<func::CallOp>(loc, compareEqFunc, TypeRange{i1Type},
-                                compareOperands)
-          .getResult(0);
+      createInlinedEqCompare(builder, loc, compareOperands, nx, ny, isCoo);
 
   return std::make_pair(whileOp.getResult(0), compareEq);
 }
 
-/// Creates a code block to swap the values so that data[mi] is the median among
-/// data[lo], data[hi], and data[mi].
-//  The generated code corresponds to this C-like algorithm:
-//  median = mi
-//  if (data[mi] < data[lo]).                               (if1)
-//    if (data[hi] < data[lo])                              (if2)
-//       median = data[hi] < data[mi] ? mi : hi
-//    else
-//       median = lo
-//  else
-//    if data[hi] < data[mi]                                (if3)
-//      median = data[hi] < data[lo] ? lo : hi
-//  if median != mi swap data[median] with data[mi]
+/// Creates and returns an IfOp to compare two elements and swap the elements
+/// if compareFunc(data[b], data[a]) returns true. The new insertion point is
+/// right after the swap instructions.
+static scf::IfOp createCompareThenSwap(OpBuilder &builder, Location loc,
+                                       uint64_t nx, uint64_t ny, bool isCoo,
+                                       SmallVectorImpl<Value> &swapOperands,
+                                       SmallVectorImpl<Value> &compareOperands,
+                                       Value a, Value b) {
+  // Compare(data[b], data[a]).
+  compareOperands[0] = b;
+  compareOperands[1] = a;
+  Value cond =
+      createInlinedLessThan(builder, loc, compareOperands, nx, ny, isCoo);
+  scf::IfOp ifOp = builder.create<scf::IfOp>(loc, cond, /*else=*/false);
+  builder.setInsertionPointToStart(&ifOp.getThenRegion().front());
+  swapOperands[0] = b;
+  swapOperands[1] = a;
+  createSwap(builder, loc, swapOperands, nx, ny, isCoo);
+  return ifOp;
+}
+
+/// Creates code to insert the 3rd element to a list of two sorted elements.
+static void createInsert3rd(OpBuilder &builder, Location loc, uint64_t nx,
+                            uint64_t ny, bool isCoo,
+                            SmallVectorImpl<Value> &swapOperands,
+                            SmallVectorImpl<Value> &compareOperands, Value v0,
+                            Value v1, Value v2) {
+  scf::IfOp ifOp = createCompareThenSwap(builder, loc, nx, ny, isCoo,
+                                         swapOperands, compareOperands, v1, v2);
+  createCompareThenSwap(builder, loc, nx, ny, isCoo, swapOperands,
+                        compareOperands, v0, v1);
+  builder.setInsertionPointAfter(ifOp);
+}
+
+/// Creates code to sort 3 elements.
+static void createSort3(OpBuilder &builder, Location loc, uint64_t nx,
+                        uint64_t ny, bool isCoo,
+                        SmallVectorImpl<Value> &swapOperands,
+                        SmallVectorImpl<Value> &compareOperands, Value v0,
+                        Value v1, Value v2) {
+  // Sort the first 2 elements.
+  scf::IfOp ifOp1 = createCompareThenSwap(
+      builder, loc, nx, ny, isCoo, swapOperands, compareOperands, v0, v1);
+  builder.setInsertionPointAfter(ifOp1);
+
+  // Insert the 3th element.
+  createInsert3rd(builder, loc, nx, ny, isCoo, swapOperands, compareOperands,
+                  v0, v1, v2);
+}
+
+/// Creates code to sort 5 elements.
+static void createSort5(OpBuilder &builder, Location loc, uint64_t nx,
+                        uint64_t ny, bool isCoo,
+                        SmallVectorImpl<Value> &swapOperands,
+                        SmallVectorImpl<Value> &compareOperands, Value v0,
+                        Value v1, Value v2, Value v3, Value v4) {
+  // Sort the first 3 elements.
+  createSort3(builder, loc, nx, ny, isCoo, swapOperands, compareOperands, v0,
+              v1, v2);
+
+  auto insert4th = [&]() {
+    scf::IfOp ifOp = createCompareThenSwap(
+        builder, loc, nx, ny, isCoo, swapOperands, compareOperands, v2, v3);
+    createInsert3rd(builder, loc, nx, ny, isCoo, swapOperands, compareOperands,
+                    v0, v1, v2);
+    builder.setInsertionPointAfter(ifOp);
+  };
+
+  // Insert the 4th element.
+  insert4th();
+
+  // Insert the 5th element.
+  scf::IfOp ifOp = createCompareThenSwap(builder, loc, nx, ny, isCoo,
+                                         swapOperands, compareOperands, v3, v4);
+  insert4th();
+  builder.setInsertionPointAfter(ifOp);
+}
+
+/// Creates a code block to swap the values in indices lo, mi, and hi so that
+/// data[lo], data[mi] and data[hi] are sorted in non-decreasing values. When
+/// the number of values in range [lo, hi) is more than a threshold, we also
+/// include the middle of [lo, mi) and [mi, hi) and sort a total of five values.
 static void createChoosePivot(OpBuilder &builder, ModuleOp module,
                               func::FuncOp func, uint64_t nx, uint64_t ny,
                               bool isCoo, Value lo, Value hi, Value mi,
@@ -483,70 +524,35 @@ static void createChoosePivot(OpBuilder &builder, ModuleOp module,
   uint64_t numXBuffers = isCoo ? 1 : nx;
   compareOperands.append(args.begin() + xStartIdx,
                          args.begin() + xStartIdx + numXBuffers);
-  Type i1Type = IntegerType::get(module.getContext(), 1, IntegerType::Signless);
-  SmallVector<Type, 1> cmpTypes{i1Type};
-  FlatSymbolRefAttr lessThanFunc = getMangledSortHelperFunc(
-      builder, func, cmpTypes, kLessThanFuncNamePrefix, nx, ny, isCoo,
-      compareOperands, createLessThanFunc);
-  Location loc = func.getLoc();
-  // Compare data[mi] < data[lo].
-  Value cond1 =
-      builder.create<func::CallOp>(loc, lessThanFunc, cmpTypes, compareOperands)
-          .getResult(0);
-  SmallVector<Type, 1> ifTypes{lo.getType()};
-  scf::IfOp ifOp1 =
-      builder.create<scf::IfOp>(loc, ifTypes, cond1, /*else=*/true);
-
-  // Generate an if-stmt to find the median value, assuming we already know that
-  // data[b] < data[a] and we haven't compare data[c] yet.
-  auto createFindMedian = [&](Value a, Value b, Value c) -> scf::IfOp {
-    compareOperands[0] = c;
-    compareOperands[1] = a;
-    // Compare data[c]] < data[a].
-    Value cond2 =
-        builder
-            .create<func::CallOp>(loc, lessThanFunc, cmpTypes, compareOperands)
-            .getResult(0);
-    scf::IfOp ifOp2 =
-        builder.create<scf::IfOp>(loc, ifTypes, cond2, /*else=*/true);
-    builder.setInsertionPointToStart(&ifOp2.getThenRegion().front());
-    compareOperands[0] = c;
-    compareOperands[1] = b;
-    // Compare data[c] < data[b].
-    Value cond3 =
-        builder
-            .create<func::CallOp>(loc, lessThanFunc, cmpTypes, compareOperands)
-            .getResult(0);
-    builder.create<scf::YieldOp>(
-        loc, ValueRange{builder.create<arith::SelectOp>(loc, cond3, b, c)});
-    builder.setInsertionPointToStart(&ifOp2.getElseRegion().front());
-    builder.create<scf::YieldOp>(loc, ValueRange{a});
-    return ifOp2;
-  };
-
-  builder.setInsertionPointToStart(&ifOp1.getThenRegion().front());
-  scf::IfOp ifOp2 = createFindMedian(lo, mi, hi);
-  builder.setInsertionPointAfter(ifOp2);
-  builder.create<scf::YieldOp>(loc, ValueRange{ifOp2.getResult(0)});
-
-  builder.setInsertionPointToStart(&ifOp1.getElseRegion().front());
-  scf::IfOp ifOp3 = createFindMedian(mi, lo, hi);
-
-  builder.setInsertionPointAfter(ifOp3);
-  builder.create<scf::YieldOp>(loc, ValueRange{ifOp3.getResult(0)});
-
-  builder.setInsertionPointAfter(ifOp1);
-  Value median = ifOp1.getResult(0);
-  Value cond =
-      builder.create<arith::CmpIOp>(loc, arith::CmpIPredicate::ne, mi, median);
-  scf::IfOp ifOp =
-      builder.create<scf::IfOp>(loc, TypeRange(), cond, /*else=*/false);
-
-  SmallVector<Value> swapOperands{median, mi};
+  SmallVector<Value> swapOperands{mi, lo};
   swapOperands.append(args.begin() + xStartIdx, args.end());
-  builder.setInsertionPointToStart(&ifOp.getThenRegion().front());
-  createSwap(builder, loc, swapOperands, nx, ny, isCoo);
-  builder.setInsertionPointAfter(ifOp);
+  Location loc = func.getLoc();
+  Value c1 = constantIndex(builder, loc, 1);
+  Value hiP1 = builder.create<arith::AddIOp>(loc, hi, c1);
+  Value len = builder.create<arith::SubIOp>(loc, hiP1, lo);
+  Value lenThreshold = constantIndex(builder, loc, 1000);
+  Value lenCond = builder.create<arith::CmpIOp>(loc, arith::CmpIPredicate::ult,
+                                                len, lenThreshold);
+  scf::IfOp lenIf = builder.create<scf::IfOp>(loc, lenCond, /*else=*/true);
+
+  // When len < 1000, choose pivot from median of 3 values.
+  builder.setInsertionPointToStart(&lenIf.getThenRegion().front());
+  createSort3(builder, loc, nx, ny, isCoo, swapOperands, compareOperands, lo,
+              mi, hi);
+
+  // When len >= 1000, choose pivot from median of 5 values.
+  builder.setInsertionPointToStart(&lenIf.getElseRegion().front());
+  Value miP1 = builder.create<arith::AddIOp>(loc, hi, c1);
+  Value a = builder.create<arith::AddIOp>(loc, lo, miP1);
+  // Value a is the middle between [loc, mi].
+  a = builder.create<arith::ShRUIOp>(loc, a, c1);
+  Value b = builder.create<arith::AddIOp>(loc, mi, hiP1);
+  // Value b is the middle between [mi, hi].
+  b = builder.create<arith::ShRUIOp>(loc, b, c1);
+  createSort5(builder, loc, nx, ny, isCoo, swapOperands, compareOperands, lo, a,
+              mi, b, hi);
+
+  builder.setInsertionPointAfter(lenIf);
 }
 
 /// Creates a function to perform quick sort partition on the values in the
@@ -758,10 +764,6 @@ static void createShiftDownFunc(OpBuilder &builder, ModuleOp module,
   uint64_t numXBuffers = isCoo ? 1 : nx;
   compareOperands.append(args.begin() + xStartIdx,
                          args.begin() + xStartIdx + numXBuffers);
-  Type i1Type = IntegerType::get(module.getContext(), 1, IntegerType::Signless);
-  FlatSymbolRefAttr lessThanFunc = getMangledSortHelperFunc(
-      builder, func, {i1Type}, kLessThanFuncNamePrefix, nx, ny, isCoo,
-      compareOperands, createLessThanFunc);
 
   // Generate code to inspect the children of 'r' and return the larger child
   // as follows:
@@ -784,10 +786,8 @@ static void createShiftDownFunc(OpBuilder &builder, ModuleOp module,
     // Compare data[left] < data[right].
     compareOperands[0] = lChildIdx;
     compareOperands[1] = rChildIdx;
-    Value cond2 = builder
-                      .create<func::CallOp>(loc, lessThanFunc,
-                                            TypeRange{i1Type}, compareOperands)
-                      .getResult(0);
+    Value cond2 =
+        createInlinedLessThan(builder, loc, compareOperands, nx, ny, isCoo);
     scf::IfOp if2 =
         builder.create<scf::IfOp>(loc, ifTypes, cond2, /*else=*/true);
     builder.setInsertionPointToStart(&if2.getThenRegion().front());
@@ -818,10 +818,8 @@ static void createShiftDownFunc(OpBuilder &builder, ModuleOp module,
   childIdx = before->getArgument(2);
   compareOperands[0] = start;
   compareOperands[1] = childIdx;
-  Value cond = builder
-                   .create<func::CallOp>(loc, lessThanFunc, TypeRange{i1Type},
-                                         compareOperands)
-                   .getResult(0);
+  Value cond =
+      createInlinedLessThan(builder, loc, compareOperands, nx, ny, isCoo);
   builder.create<scf::ConditionOp>(loc, cond, before->getArguments());
 
   // The after-region of the WhileOp.
@@ -918,9 +916,13 @@ static void createHeapSortFunc(OpBuilder &builder, ModuleOp module,
   builder.create<func::ReturnOp>(loc);
 }
 
-static void createQuickSort(OpBuilder &builder, ModuleOp module,
-                            func::FuncOp func, ValueRange args, uint64_t nx,
-                            uint64_t ny, bool isCoo, uint32_t nTrailingP) {
+/// A helper for generating code to perform quick sort. It partitions [lo, hi),
+/// recursively calls quick sort to process the smaller partition and returns
+/// the bigger partition to be processed by the enclosed while-loop.
+static std::pair<Value, Value>
+createQuickSort(OpBuilder &builder, ModuleOp module, func::FuncOp func,
+                ValueRange args, uint64_t nx, uint64_t ny, bool isCoo,
+                uint32_t nTrailingP) {
   MLIRContext *context = module.getContext();
   Location loc = func.getLoc();
   Value lo = args[loIdx];
@@ -928,20 +930,45 @@ static void createQuickSort(OpBuilder &builder, ModuleOp module,
   FlatSymbolRefAttr partitionFunc = getMangledSortHelperFunc(
       builder, func, {IndexType::get(context)}, kPartitionFuncNamePrefix, nx,
       ny, isCoo, args.drop_back(nTrailingP), createPartitionFunc);
-  auto p = builder.create<func::CallOp>(loc, partitionFunc,
-                                        TypeRange{IndexType::get(context)},
-                                        args.drop_back(nTrailingP));
+  Value p = builder
+                .create<func::CallOp>(loc, partitionFunc,
+                                      TypeRange{IndexType::get(context)},
+                                      args.drop_back(nTrailingP))
+                .getResult(0);
+  Value pP1 =
+      builder.create<arith::AddIOp>(loc, p, constantIndex(builder, loc, 1));
+  Value lenLow = builder.create<arith::SubIOp>(loc, p, lo);
+  Value lenHigh = builder.create<arith::SubIOp>(loc, hi, p);
+  Value cond = builder.create<arith::CmpIOp>(loc, arith::CmpIPredicate::ule,
+                                             lenLow, lenHigh);
 
-  SmallVector<Value> lowOperands{lo, p.getResult(0)};
-  lowOperands.append(args.begin() + xStartIdx, args.end());
-  builder.create<func::CallOp>(loc, func, lowOperands);
+  SmallVector<Type, 2> types(2, lo.getType()); // Only two types.
+  scf::IfOp ifOp = builder.create<scf::IfOp>(loc, types, cond, /*else=*/true);
 
-  SmallVector<Value> highOperands{
-      builder.create<arith::AddIOp>(loc, p.getResult(0),
-                                    constantIndex(builder, loc, 1)),
-      hi};
-  highOperands.append(args.begin() + xStartIdx, args.end());
-  builder.create<func::CallOp>(loc, func, highOperands);
+  Value c0 = constantIndex(builder, loc, 0);
+  auto mayRecursion = [&](Value low, Value high, Value len) {
+    Value cond =
+        builder.create<arith::CmpIOp>(loc, arith::CmpIPredicate::ne, len, c0);
+    scf::IfOp ifOp = builder.create<scf::IfOp>(loc, cond, /*else=*/false);
+    builder.setInsertionPointToStart(&ifOp.getThenRegion().front());
+    SmallVector<Value> operands{low, high};
+    operands.append(args.begin() + xStartIdx, args.end());
+    builder.create<func::CallOp>(loc, func, operands);
+    builder.setInsertionPointAfter(ifOp);
+  };
+
+  // Recursively call quickSort to process the smaller partition and return
+  // the bigger partition to be processed by the enclosed while-loop.
+  builder.setInsertionPointToStart(&ifOp.getThenRegion().front());
+  mayRecursion(lo, p, lenLow);
+  builder.create<scf::YieldOp>(loc, ValueRange{pP1, hi});
+
+  builder.setInsertionPointToStart(&ifOp.getElseRegion().front());
+  mayRecursion(pP1, hi, lenHigh);
+  builder.create<scf::YieldOp>(loc, ValueRange{lo, p});
+
+  builder.setInsertionPointAfter(ifOp);
+  return std::make_pair(ifOp.getResult(0), ifOp.getResult(1));
 }
 
 /// Creates a function to perform insertion sort on the values in the range of
@@ -1036,16 +1063,21 @@ static void createSortStableFunc(OpBuilder &builder, ModuleOp module,
 //
 // When nTrailingP == 0, the generated IR corresponds to this C like algorithm:
 // void quickSort(lo, hi, data) {
-//   if (lo + 1 < hi) {
+//   while (lo + 1 < hi) {
 //        p = partition(low, high, data);
-//        quickSort(lo, p, data);
-//        quickSort(p + 1, hi, data);
+//        if (len(lo, p) < len(p+1, hi)) {
+//          quickSort(lo, p, data);
+//          lo = p+1;
+//        } else {
+//          quickSort(p + 1, hi, data);
+//          hi = p;
+//        }
 //   }
 // }
 //
 // When nTrailingP == 1, the generated IR corresponds to this C like algorithm:
 // void hybridQuickSort(lo, hi, data, depthLimit) {
-//   if (lo + 1 < hi) {
+//   while (lo + 1 < hi) {
 //     len = hi - lo;
 //     if (len <= limit) {
 //       insertionSort(lo, hi, data);
@@ -1055,10 +1087,14 @@ static void createSortStableFunc(OpBuilder &builder, ModuleOp module,
 //         heapSort(lo, hi, data);
 //       } else {
 //          p = partition(low, high, data);
-//          quickSort(lo, p, data);
-//          quickSort(p + 1, hi, data);
+//          if (len(lo, p) < len(p+1, hi)) {
+//            quickSort(lo, p, data, depthLimit);
+//            lo = p+1;
+//          } else {
+//            quickSort(p + 1, hi, data, depthLimit);
+//            hi = p;
+//          }
 //       }
-//       depthLimit ++;
 //     }
 //   }
 // }
@@ -1073,70 +1109,98 @@ static void createQuickSortFunc(OpBuilder &builder, ModuleOp module,
   builder.setInsertionPointToStart(entryBlock);
 
   Location loc = func.getLoc();
-  ValueRange args = entryBlock->getArguments();
+  SmallVector<Value> args;
+  args.append(entryBlock->getArguments().begin(),
+              entryBlock->getArguments().end());
   Value lo = args[loIdx];
   Value hi = args[hiIdx];
-  Value loCmp =
-      builder.create<arith::AddIOp>(loc, lo, constantIndex(builder, loc, 1));
-  Value cond =
-      builder.create<arith::CmpIOp>(loc, arith::CmpIPredicate::ult, loCmp, hi);
-  scf::IfOp ifOp = builder.create<scf::IfOp>(loc, cond, /*else=*/false);
+  SmallVector<Type, 2> types(2, lo.getType()); // Only two types.
+  scf::WhileOp whileOp =
+      builder.create<scf::WhileOp>(loc, types, SmallVector<Value, 2>{lo, hi});
 
-  // The if-stmt true branch.
-  builder.setInsertionPointToStart(&ifOp.getThenRegion().front());
-  Value pDepthLimit;
-  Value savedDepthLimit;
-  scf::IfOp depthIf;
+  // The before-region of the WhileOp.
+  Block *before =
+      builder.createBlock(&whileOp.getBefore(), {}, types, {loc, loc});
+  builder.setInsertionPointToEnd(before);
+  lo = before->getArgument(0);
+  hi = before->getArgument(1);
+  Value loP1 =
+      builder.create<arith::AddIOp>(loc, lo, constantIndex(builder, loc, 1));
+  Value needSort =
+      builder.create<arith::CmpIOp>(loc, arith::CmpIPredicate::ult, loP1, hi);
+  builder.create<scf::ConditionOp>(loc, needSort, before->getArguments());
+
+  // The after-region of the WhileOp.
+  Block *after =
+      builder.createBlock(&whileOp.getAfter(), {}, types, {loc, loc});
+  builder.setInsertionPointToEnd(after);
+  lo = after->getArgument(0);
+  hi = after->getArgument(1);
+  args[0] = lo;
+  args[1] = hi;
 
   if (isHybrid) {
     Value len = builder.create<arith::SubIOp>(loc, hi, lo);
     Value lenLimit = constantIndex(builder, loc, 30);
     Value lenCond = builder.create<arith::CmpIOp>(
         loc, arith::CmpIPredicate::ule, len, lenLimit);
-    scf::IfOp lenIf = builder.create<scf::IfOp>(loc, lenCond, /*else=*/true);
+    scf::IfOp lenIf =
+        builder.create<scf::IfOp>(loc, types, lenCond, /*else=*/true);
 
     // When len <= limit.
     builder.setInsertionPointToStart(&lenIf.getThenRegion().front());
     FlatSymbolRefAttr insertionSortFunc = getMangledSortHelperFunc(
         builder, func, TypeRange(), kSortStableFuncNamePrefix, nx, ny, isCoo,
-        args.drop_back(nTrailingP), createSortStableFunc);
+        ValueRange(args).drop_back(nTrailingP), createSortStableFunc);
     builder.create<func::CallOp>(loc, insertionSortFunc, TypeRange(),
-                                 ValueRange(args.drop_back(nTrailingP)));
+                                 ValueRange(args).drop_back(nTrailingP));
+    builder.create<scf::YieldOp>(loc, ValueRange{lo, lo});
 
     // When len > limit.
     builder.setInsertionPointToStart(&lenIf.getElseRegion().front());
-    pDepthLimit = args.back();
-    savedDepthLimit = builder.create<memref::LoadOp>(loc, pDepthLimit);
-    Value depthLimit = builder.create<arith::SubIOp>(
-        loc, savedDepthLimit, constantI64(builder, loc, 1));
-    builder.create<memref::StoreOp>(loc, depthLimit, pDepthLimit);
+    Value depthLimit = args.back();
+    depthLimit = builder.create<arith::SubIOp>(loc, depthLimit,
+                                               constantI64(builder, loc, 1));
     Value depthCond =
         builder.create<arith::CmpIOp>(loc, arith::CmpIPredicate::ule,
                                       depthLimit, constantI64(builder, loc, 0));
-    depthIf = builder.create<scf::IfOp>(loc, depthCond, /*else=*/true);
+    scf::IfOp depthIf =
+        builder.create<scf::IfOp>(loc, types, depthCond, /*else=*/true);
 
     // When depth exceeds limit.
     builder.setInsertionPointToStart(&depthIf.getThenRegion().front());
     FlatSymbolRefAttr heapSortFunc = getMangledSortHelperFunc(
         builder, func, TypeRange(), kHeapSortFuncNamePrefix, nx, ny, isCoo,
-        args.drop_back(nTrailingP), createHeapSortFunc);
+        ValueRange(args).drop_back(nTrailingP), createHeapSortFunc);
     builder.create<func::CallOp>(loc, heapSortFunc, TypeRange(),
-                                 ValueRange(args.drop_back(nTrailingP)));
+                                 ValueRange(args).drop_back(nTrailingP));
+    builder.create<scf::YieldOp>(loc, ValueRange{lo, lo});
 
     // When depth doesn't exceed limit.
     builder.setInsertionPointToStart(&depthIf.getElseRegion().front());
-  }
+    args.back() = depthLimit;
+    std::tie(lo, hi) =
+        createQuickSort(builder, module, func, args, nx, ny, isCoo, nTrailingP);
+    builder.create<scf::YieldOp>(loc, ValueRange{lo, hi});
 
-  createQuickSort(builder, module, func, args, nx, ny, isCoo, nTrailingP);
-
-  if (isHybrid) {
-    // Restore depthLimit.
     builder.setInsertionPointAfter(depthIf);
-    builder.create<memref::StoreOp>(loc, savedDepthLimit, pDepthLimit);
+    lo = depthIf.getResult(0);
+    hi = depthIf.getResult(1);
+    builder.create<scf::YieldOp>(loc, ValueRange{lo, hi});
+
+    builder.setInsertionPointAfter(lenIf);
+    lo = lenIf.getResult(0);
+    hi = lenIf.getResult(1);
+  } else {
+    std::tie(lo, hi) =
+        createQuickSort(builder, module, func, args, nx, ny, isCoo, nTrailingP);
   }
 
-  // After the if-stmt.
-  builder.setInsertionPointAfter(ifOp);
+  // New [lo, hi) for the next while-loop iteration.
+  builder.create<scf::YieldOp>(loc, ValueRange{lo, hi});
+
+  // After the while-loop.
+  builder.setInsertionPointAfter(whileOp);
   builder.create<func::ReturnOp>(loc);
 }
 
@@ -1160,6 +1224,9 @@ LogicalResult matchAndRewriteSortOp(OpTy op, ValueRange xys, uint64_t nx,
   }
 
   auto insertPoint = op->template getParentOfType<func::FuncOp>();
+  if (!insertPoint)
+    return failure();
+
   SmallString<32> funcName;
   FuncGeneratorType funcGenerator;
   uint32_t nTrailingP = 0;
@@ -1168,9 +1235,6 @@ LogicalResult matchAndRewriteSortOp(OpTy op, ValueRange xys, uint64_t nx,
     funcName = kHybridQuickSortFuncNamePrefix;
     funcGenerator = createQuickSortFunc;
     nTrailingP = 1;
-    Value pDepthLimit = rewriter.create<memref::AllocaOp>(
-        loc, MemRefType::get({}, rewriter.getI64Type()));
-    operands.push_back(pDepthLimit);
     // As a heuristics, set depthLimit = 2 * log2(n).
     Value lo = operands[loIdx];
     Value hi = operands[hiIdx];
@@ -1180,9 +1244,7 @@ LogicalResult matchAndRewriteSortOp(OpTy op, ValueRange xys, uint64_t nx,
     Value depthLimit = rewriter.create<arith::SubIOp>(
         loc, constantI64(rewriter, loc, 64),
         rewriter.create<math::CountLeadingZerosOp>(loc, len));
-    depthLimit = rewriter.create<arith::ShLIOp>(loc, depthLimit,
-                                                constantI64(rewriter, loc, 1));
-    rewriter.create<memref::StoreOp>(loc, depthLimit, pDepthLimit);
+    operands.push_back(depthLimit);
     break;
   }
   case SparseTensorSortKind::QuickSort:

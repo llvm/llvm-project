@@ -10,7 +10,8 @@
 .byte 4
         .section        __DWARF,__debug_abbrev,regular,debug
 .byte 1    # Abbrev code
-.byte 0x11 # TAG_compile_unit
-.byte 0    # no children
-.byte 0    # no attributes
-.byte 0
+.byte 0x11 # DW_TAG_compile_unit
+.byte 0    # DW_CHILDREN_no
+.byte 0    # Terminating attribute
+.byte 0    # Terminating form
+.byte 0    # Terminating abbrev code

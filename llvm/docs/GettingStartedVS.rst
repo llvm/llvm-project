@@ -58,7 +58,7 @@ If you would like to run the LLVM tests you will need `Python
 <http://www.python.org/>`_. Version 3.6 and newer are known to work. You can
 install Python with Visual Studio 2019, from the Microsoft store or from
 the `Python web site <http://www.python.org/>`_. We recommend the latter since it
-allows you to to adjust installation options.
+allows you to adjust installation options.
 
 You will need `Git for Windows <https://git-scm.com/>`_ with bash tools, too.
 Git for Windows is also bundled with Visual Studio 2019.
@@ -164,7 +164,7 @@ These instruction were tested with Visual Studio 2019 and Python 3.9.6:
    **RelWithDebInfo** which is also several time larger than Release.
    Another technique is to build all of LLVM in Release mode and change
    compiler flags, disabling optimization and enabling debug information, only
-   for specific librares or source files you actually need to debug.
+   for specific libraries or source files you actually need to debug.
 
 14. Test LLVM in Visual Studio:
 

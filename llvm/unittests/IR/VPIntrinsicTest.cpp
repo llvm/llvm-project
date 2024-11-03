@@ -115,6 +115,8 @@ protected:
            "i32>, i32)";
     Str << " declare <8 x i32> @llvm.vp.select.v8i32(<8 x i1>, <8 x i32>, <8 x "
            "i32>, i32)";
+    Str << " declare <8 x i1> @llvm.vp.is.fpclass.v8f32(<8 x float>, i32, <8 x "
+           "i1>, i32)";
     Str << " declare <8 x i32> @llvm.experimental.vp.splice.v8i32(<8 x "
            "i32>, <8 x i32>, i32, <8 x i1>, i32, i32) ";
 

@@ -31,7 +31,7 @@ def Symbol : OpInterface<"SymbolOpInterface"> {
 
   let methods = [
     InterfaceMethod<"Returns the name of this symbol.",
-      "StringAttr", "getNameAttr", (ins), [{
+      "::mlir::StringAttr", "getNameAttr", (ins), [{
         // Don't rely on the trait implementation as optional symbol operations
         // may override this.
         return mlir::SymbolTable::getSymbolName($_op);
@@ -178,13 +178,13 @@ def Symbol : OpInterface<"SymbolOpInterface"> {
     using Visibility = mlir::SymbolTable::Visibility;
 
     /// Convenience version of `getNameAttr` that returns a StringRef.
-    StringRef getName() {
+    ::mlir::StringRef getName() {
       return getNameAttr().getValue();
     }
 
     /// Convenience version of `setName` that take a StringRef.
-    void setName(StringRef name) {
-      setName(StringAttr::get($_op->getContext(), name));
+    void setName(::mlir::StringRef name) {
+      setName(::mlir::StringAttr::get($_op->getContext(), name));
     }
   }];
 

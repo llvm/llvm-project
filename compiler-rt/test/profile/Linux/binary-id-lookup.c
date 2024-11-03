@@ -8,12 +8,20 @@
 // RUN: cp %t/libfoo.so %t/.build-id/12/345678.debug
 // RUN: cp %t.main %t/.build-id/ab/cd1234.debug
 // RUN: llvm-profdata merge -o %t.profdata %t.profdir/default_*.profraw
+
 // RUN: llvm-cov show -instr-profile %t.profdata -debug-file-directory %t | FileCheck %s
 // RUN: llvm-cov show -instr-profile %t.profdata %t/libfoo.so -sources %t/foo.c -object %t.main | FileCheck %s --check-prefix=FOO-ONLY
 // RUN: llvm-cov show -instr-profile %t.profdata -debug-file-directory %t -sources %t/foo.c | FileCheck %s --check-prefix=FOO-ONLY
 // RUN: llvm-cov show -instr-profile %t.profdata -debug-file-directory %t %t/libfoo.so -sources %t/foo.c | FileCheck %s --check-prefix=FOO-ONLY
+
+// RUN: rm %t/.build-id/ab/cd1234.debug
+// RUN: llvm-cov show -instr-profile %t.profdata -debug-file-directory %t %t.main | FileCheck %s
+// RUN: llvm-cov show -instr-profile %t.profdata -debug-file-directory %t | FileCheck %s --check-prefix=FOO-ONLY
+// RUN: not llvm-cov show -instr-profile %t.profdata -debug-file-directory %t --check-binary-ids 2>&1 | FileCheck %s --check-prefix=MISSING-BINARY-ID -DFILENAME=%t.profdata
+
 // RUN: echo "bad" > %t/.build-id/ab/cd1234.debug
 // RUN: llvm-cov show -instr-profile %t.profdata -debug-file-directory %t %t.main | FileCheck %s
+
 // RUN: not llvm-cov show -instr-profile %t.profdata -debug-file-directory %t/empty 2>&1 | FileCheck %s --check-prefix=NODATA
 
 // CHECK: 1| 1|void foo(void) {}
@@ -21,7 +29,8 @@
 // CHECK: 3| 1|int main() {
 
 // FOO-ONLY: 1| 1|void foo(void) {}
-// NODATA: error: Failed to load coverage: '': No coverage data found
+// MISSING-BINARY-ID: error: failed to load coverage: '[[FILENAME]]': Missing binary ID: abcd1234
+// NODATA: error: failed to load coverage: '': no coverage data found
 
 //--- foo.c
 void foo(void) {}

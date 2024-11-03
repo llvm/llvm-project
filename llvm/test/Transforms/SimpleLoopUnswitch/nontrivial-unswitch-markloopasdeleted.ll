@@ -1,4 +1,4 @@
-; RUN: opt < %s -enable-loop-distribute -passes='loop-distribute,loop-mssa(simple-loop-unswitch<nontrivial>),loop-distribute' -o /dev/null -S -verify-cfg-preserved -debug-pass-manager=verbose 2>&1 | FileCheck %s
+; RUN: opt < %s -enable-loop-distribute -passes='loop-distribute,loop-mssa(simple-loop-unswitch<nontrivial>),loop-distribute' -o /dev/null -S -verify-analysis-invalidation=0 -debug-pass-manager=verbose 2>&1 | FileCheck %s
 
 
 ; Running loop-distribute will result in LoopAccessAnalysis being required and
@@ -29,7 +29,6 @@
 ;
 ; CHECK: Invalidating analysis: LoopAccessAnalysis on test6
 ; CHECK-NEXT: Running pass: LoopDistributePass on test6
-; CHECK-NEXT: Running analysis: PreservedCFGCheckerAnalysis on test6
 ; CHECK-NEXT: Running analysis: LoopAccessAnalysis on test6
 
 

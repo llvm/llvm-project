@@ -12,6 +12,10 @@ N: Saleem Abdulrasool
 E: compnerd@compnerd.org
 D: builtins library
 
+N: Andrew Browne
+E: browneee@google.com
+D: DataFlowSanitizer
+
 N: Vitaly Buka
 E: vitalybuka@google.com
 D: Sanitizers
@@ -31,6 +35,10 @@ D: CRT, CMake build
 N: Teresa Johnson
 E: tejohnson@google.com
 D: MemProf
+
+N: Kostya Kortchinsky
+E: kostya.kortchinsky@gmail.com
+D: SCUDO
 
 N: Mitch Phillips
 E: mitchp@google.com

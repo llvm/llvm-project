@@ -109,7 +109,7 @@ Linking the static archive to other LLVM binaries
 
 Since the libc and other LLVM binaries are developed in the same source tree,
 linking ``libllvmlibc.a`` to those LLVM binaries does not require any special
-install step or explicity passing any special linker flags/options. One can
+install step or explicitly passing any special linker flags/options. One can
 simply add ``llvmlibc`` as a link library to that binary's target. For example,
 if you want to link ``libllvmlibc.a`` to ``llvm-objcopy``, all you have to do
 is to add a CMake command as follows:

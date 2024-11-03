@@ -23,6 +23,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Config/llvm-config.h"
+#include "llvm/IR/AttributeMask.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Type.h"
@@ -266,16 +267,6 @@ bool Attribute::isExistingAttribute(StringRef Name) {
       .Default(false);
 }
 
-/// Returns true if this is a type legal for the 'nofpclass' attribute. This
-/// follows the same type rules as FPMathOperator.
-///
-/// TODO: Consider relaxing to any FP type struct fields.
-static bool isNoFPClassCompatibleType(Type *Ty) {
-  while (ArrayType *ArrTy = dyn_cast<ArrayType>(Ty))
-    Ty = ArrTy->getElementType();
-  return Ty->isFPOrFPVectorTy();
-}
-
 //===----------------------------------------------------------------------===//
 // Attribute Accessor Methods
 //===----------------------------------------------------------------------===//
@@ -431,56 +422,6 @@ static const char *getModRefStr(ModRefInfo MR) {
   llvm_unreachable("Invalid ModRefInfo");
 }
 
-// Every bitfield has a unique name and one or more aliasing names that cover
-// multiple bits. Names should be listed in order of preference, with higher
-// popcounts listed first.
-//
-// Bits are consumed as printed. Each field should only be represented in one
-// printed field.
-static constexpr std::pair<unsigned, StringLiteral> NoFPClassName[] = {
-  {fcAllFlags, "all"},
-  {fcNan, "nan"},
-  {fcSNan, "snan"},
-  {fcQNan, "qnan"},
-  {fcInf, "inf"},
-  {fcNegInf, "ninf"},
-  {fcPosInf, "pinf"},
-  {fcZero, "zero"},
-  {fcNegZero, "nzero"},
-  {fcPosZero, "pzero"},
-  {fcSubnormal, "sub"},
-  {fcNegSubnormal, "nsub"},
-  {fcPosSubnormal, "psub"},
-  {fcNormal, "norm"},
-  {fcNegNormal, "nnorm"},
-  {fcPosNormal, "pnorm"}
-};
-
-static std::string getNoFPClassAttrAsString(unsigned Mask) {
-  std::string Result("nofpclass(");
-  raw_string_ostream OS(Result);
-
-  if (Mask == 0) {
-    OS << "none)";
-    return Result;
-  }
-
-  ListSeparator LS(" ");
-  for (auto [BitTest, Name] : NoFPClassName) {
-    if ((Mask & BitTest) == BitTest) {
-      OS << LS << Name;
-
-      // Clear the bits so we don't print any aliased names later.
-      Mask &= ~BitTest;
-    }
-  }
-
-  assert(Mask == 0 && "didn't print some mask bits");
-
-  OS << ')';
-  return Result;
-}
-
 std::string Attribute::getAsString(bool InAttrGrp) const {
   if (!pImpl) return {};
 
@@ -582,7 +523,7 @@ std::string Attribute::getAsString(bool InAttrGrp) const {
 
     // Print access kind for "other" as the default access kind. This way it
     // will apply to any new location kinds that get split out of "other".
-    ModRefInfo OtherMR = ME.getModRef(MemoryEffects::Other);
+    ModRefInfo OtherMR = ME.getModRef(IRMemLocation::Other);
     if (OtherMR != ModRefInfo::NoModRef || ME.getModRef() == OtherMR) {
       First = false;
       OS << getModRefStr(OtherMR);
@@ -598,13 +539,13 @@ std::string Attribute::getAsString(bool InAttrGrp) const {
       First = false;
 
       switch (Loc) {
-      case MemoryEffects::ArgMem:
+      case IRMemLocation::ArgMem:
         OS << "argmem: ";
         break;
-      case MemoryEffects::InaccessibleMem:
+      case IRMemLocation::InaccessibleMem:
         OS << "inaccessiblemem: ";
         break;
-      case MemoryEffects::Other:
+      case IRMemLocation::Other:
         llvm_unreachable("This is represented as the default access kind");
       }
       OS << getModRefStr(MR);
@@ -614,8 +555,12 @@ std::string Attribute::getAsString(bool InAttrGrp) const {
     return Result;
   }
 
-  if (hasAttribute(Attribute::NoFPClass))
-    return getNoFPClassAttrAsString(getValueAsInt());
+  if (hasAttribute(Attribute::NoFPClass)) {
+    std::string Result = "nofpclass";
+    raw_string_ostream OS(Result);
+    OS << getNoFPClass();
+    return Result;
+  }
 
   // Convert target-dependent attributes to strings of the form:
   //
@@ -1896,6 +1841,9 @@ AttrBuilder &AttrBuilder::addMemoryAttr(MemoryEffects ME) {
 }
 
 AttrBuilder &AttrBuilder::addNoFPClassAttr(FPClassTest Mask) {
+  if (Mask == fcNone)
+    return *this;
+
   return addRawIntAttr(Attribute::NoFPClass, Mask);
 }
 
@@ -1981,6 +1929,16 @@ bool AttrBuilder::operator==(const AttrBuilder &B) const {
 // AttributeFuncs Function Defintions
 //===----------------------------------------------------------------------===//
 
+/// Returns true if this is a type legal for the 'nofpclass' attribute. This
+/// follows the same type rules as FPMathOperator.
+///
+/// TODO: Consider relaxing to any FP type struct fields.
+bool AttributeFuncs::isNoFPClassCompatibleType(Type *Ty) {
+  while (ArrayType *ArrTy = dyn_cast<ArrayType>(Ty))
+    Ty = ArrTy->getElementType();
+  return Ty->isFPOrFPVectorTy();
+}
+
 /// Which attributes cannot be applied to a type.
 AttributeMask AttributeFuncs::typeIncompatible(Type *Ty,
                                                AttributeSafetyKind ASK) {
@@ -2042,6 +2000,41 @@ AttributeMask AttributeFuncs::getUBImplyingAttributes() {
   AM.addAttribute(Attribute::Dereferenceable);
   AM.addAttribute(Attribute::DereferenceableOrNull);
   return AM;
+}
+
+/// Callees with dynamic denormal modes are compatible with any caller mode.
+static bool denormModeCompatible(DenormalMode CallerMode,
+                                 DenormalMode CalleeMode) {
+  if (CallerMode == CalleeMode || CalleeMode == DenormalMode::getDynamic())
+    return true;
+
+  // If they don't exactly match, it's OK if the mismatched component is
+  // dynamic.
+  if (CalleeMode.Input == CallerMode.Input &&
+      CalleeMode.Output == DenormalMode::Dynamic)
+    return true;
+
+  if (CalleeMode.Output == CallerMode.Output &&
+      CalleeMode.Input == DenormalMode::Dynamic)
+    return true;
+  return false;
+}
+
+static bool checkDenormMode(const Function &Caller, const Function &Callee) {
+  DenormalMode CallerMode = Caller.getDenormalModeRaw();
+  DenormalMode CalleeMode = Callee.getDenormalModeRaw();
+
+  if (denormModeCompatible(CallerMode, CalleeMode)) {
+    DenormalMode CallerModeF32 = Caller.getDenormalModeF32Raw();
+    DenormalMode CalleeModeF32 = Callee.getDenormalModeF32Raw();
+    if (CallerModeF32 == DenormalMode::getInvalid())
+      CallerModeF32 = CallerMode;
+    if (CalleeModeF32 == DenormalMode::getInvalid())
+      CalleeModeF32 = CalleeMode;
+    return denormModeCompatible(CallerModeF32, CalleeModeF32);
+  }
+
+  return false;
 }
 
 template<typename AttrClass>

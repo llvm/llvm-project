@@ -216,6 +216,13 @@ void SetShadow(const void *ptr, uptr size, u8 value) {
       }
       if (!MmapFixedSuperNoReserve(page_beg, page_end - page_beg))
         Die();
+
+      if (__msan_get_track_origins()) {
+        // No need to set origin for zero shadow, but we can release pages.
+        uptr origin_beg = RoundUpTo(MEM_TO_ORIGIN(ptr), PageSize);
+        if (!MmapFixedSuperNoReserve(origin_beg, page_end - page_beg))
+          Die();
+      }
     }
   }
 }

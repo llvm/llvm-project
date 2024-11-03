@@ -76,7 +76,7 @@ struct llvm::pdb::SymbolDenseMapInfo {
     return Tombstone;
   }
   static unsigned getHashValue(const CVSymbol &Val) {
-    return xxHash64(Val.RecordData);
+    return xxh3_64bits(Val.RecordData);
   }
   static bool isEqual(const CVSymbol &LHS, const CVSymbol &RHS) {
     return LHS.RecordData == RHS.RecordData;

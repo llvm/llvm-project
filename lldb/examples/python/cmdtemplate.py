@@ -17,31 +17,36 @@ import sys
 
 
 class FrameStatCommand:
-    program = 'framestats'
+    program = "framestats"
 
     @classmethod
     def register_lldb_command(cls, debugger, module_name):
         parser = cls.create_options()
         cls.__doc__ = parser.format_help()
         # Add any commands contained in this module to LLDB
-        command = 'command script add -o -c %s.%s %s' % (module_name,
-                                                      cls.__name__,
-                                                      cls.program)
+        command = "command script add -o -c %s.%s %s" % (
+            module_name,
+            cls.__name__,
+            cls.program,
+        )
         debugger.HandleCommand(command)
-        print('The "{0}" command has been installed, type "help {0}" or "{0} '
-              '--help" for detailed help.'.format(cls.program))
+        print(
+            'The "{0}" command has been installed, type "help {0}" or "{0} '
+            '--help" for detailed help.'.format(cls.program)
+        )
 
     @classmethod
     def create_options(cls):
-
         usage = "usage: %prog [options]"
-        description = ('This command is meant to be an example of how to make '
-                       'an LLDB command that does something useful, follows '
-                       'best practices, and exploits the SB API. '
-                       'Specifically, this command computes the aggregate '
-                       'and average size of the variables in the current '
-                       'frame and allows you to tweak exactly which variables '
-                       'are to be accounted in the computation.')
+        description = (
+            "This command is meant to be an example of how to make "
+            "an LLDB command that does something useful, follows "
+            "best practices, and exploits the SB API. "
+            "Specifically, this command computes the aggregate "
+            "and average size of the variables in the current "
+            "frame and allows you to tweak exactly which variables "
+            "are to be accounted in the computation."
+        )
 
         # Pass add_help_option = False, since this keeps the command in line
         #  with lldb commands, and we wire up "help command" to work by
@@ -50,39 +55,44 @@ class FrameStatCommand:
             description=description,
             prog=cls.program,
             usage=usage,
-            add_help_option=False)
+            add_help_option=False,
+        )
 
         parser.add_option(
-            '-i',
-            '--in-scope',
-            action='store_true',
-            dest='inscope',
-            help='in_scope_only = True',
-            default=True)
+            "-i",
+            "--in-scope",
+            action="store_true",
+            dest="inscope",
+            help="in_scope_only = True",
+            default=True,
+        )
 
         parser.add_option(
-            '-a',
-            '--arguments',
-            action='store_true',
-            dest='arguments',
-            help='arguments = True',
-            default=True)
+            "-a",
+            "--arguments",
+            action="store_true",
+            dest="arguments",
+            help="arguments = True",
+            default=True,
+        )
 
         parser.add_option(
-            '-l',
-            '--locals',
-            action='store_true',
-            dest='locals',
-            help='locals = True',
-            default=True)
+            "-l",
+            "--locals",
+            action="store_true",
+            dest="locals",
+            help="locals = True",
+            default=True,
+        )
 
         parser.add_option(
-            '-s',
-            '--statics',
-            action='store_true',
-            dest='statics',
-            help='statics = True',
-            default=True)
+            "-s",
+            "--statics",
+            action="store_true",
+            dest="statics",
+            help="statics = True",
+            default=True,
+        )
 
         return parser
 
@@ -118,10 +128,8 @@ class FrameStatCommand:
             return
 
         variables_list = frame.GetVariables(
-            options.arguments,
-            options.locals,
-            options.statics,
-            options.inscope)
+            options.arguments, options.locals, options.statics, options.inscope
+        )
         variables_count = variables_list.GetSize()
         if variables_count == 0:
             print("no variables here", file=result)
@@ -132,16 +140,19 @@ class FrameStatCommand:
             variable_type = variable.GetType()
             total_size = total_size + variable_type.GetByteSize()
             average_size = float(total_size) / variables_count
-            print("Your frame has %d variables. Their total size "
-                             "is %d bytes. The average size is %f bytes" % (
-                                    variables_count, total_size, average_size), file=result)
+            print(
+                "Your frame has %d variables. Their total size "
+                "is %d bytes. The average size is %f bytes"
+                % (variables_count, total_size, average_size),
+                file=result,
+            )
         # not returning anything is akin to returning success
 
 
 def __lldb_init_module(debugger, dict):
     # Register all classes that have a register_lldb_command method
     for _name, cls in inspect.getmembers(sys.modules[__name__]):
-        if inspect.isclass(cls) and callable(getattr(cls,
-                                                     "register_lldb_command",
-                                                     None)):
+        if inspect.isclass(cls) and callable(
+            getattr(cls, "register_lldb_command", None)
+        ):
             cls.register_lldb_command(debugger, __name__)

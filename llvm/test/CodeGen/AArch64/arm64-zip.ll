@@ -250,8 +250,8 @@ define <8 x i16> @combine_v8i16_undef(<4 x i16> %0, <4 x i16> %1) {
 define <16 x i8> @combine_v8i16_8first(<8 x i8> %0, <8 x i8> %1) {
 ; CHECK-LABEL: combine_v8i16_8first:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    adrp x8, .LCPI17_0
 ; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1_q2
+; CHECK-NEXT:    adrp x8, .LCPI17_0
 ; CHECK-NEXT:    fmov d2, d0
 ; CHECK-NEXT:    ldr q3, [x8, :lo12:.LCPI17_0]
 ; CHECK-NEXT:    tbl.16b v0, { v1, v2 }, v3
@@ -265,12 +265,76 @@ define <16 x i8> @combine_v8i16_8first(<8 x i8> %0, <8 x i8> %1) {
 define <16 x i8> @combine_v8i16_8firstundef(<8 x i8> %0, <8 x i8> %1) {
 ; CHECK-LABEL: combine_v8i16_8firstundef:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    adrp x8, .LCPI18_0
 ; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1_q2
+; CHECK-NEXT:    adrp x8, .LCPI18_0
 ; CHECK-NEXT:    fmov d2, d0
 ; CHECK-NEXT:    ldr q3, [x8, :lo12:.LCPI18_0]
 ; CHECK-NEXT:    tbl.16b v0, { v1, v2 }, v3
 ; CHECK-NEXT:    ret
   %3 = shufflevector <8 x i8> %1, <8 x i8> %0, <16 x i32> <i32 8, i32 0, i32 9, i32 1, i32 10, i32 2, i32 11, i32 3, i32 12, i32 4, i32 13, i32 5, i32 14, i32 6, i32 15, i32 undef>
   ret <16 x i8> %3
+}
+
+define <4 x float> @shuffle_zip1(<4 x float> %arg) {
+; CHECK-LABEL: shuffle_zip1:
+; CHECK:       // %bb.0: // %bb
+; CHECK-NEXT:    movi.2d v1, #0000000000000000
+; CHECK-NEXT:    fcmgt.4s v0, v0, v1
+; CHECK-NEXT:    uzp1.8h v1, v0, v0
+; CHECK-NEXT:    xtn.4h v0, v0
+; CHECK-NEXT:    xtn.4h v1, v1
+; CHECK-NEXT:    zip2.4h v0, v0, v1
+; CHECK-NEXT:    fmov.4s v1, #1.00000000
+; CHECK-NEXT:    zip1.4h v0, v0, v0
+; CHECK-NEXT:    sshll.4s v0, v0, #0
+; CHECK-NEXT:    and.16b v0, v1, v0
+; CHECK-NEXT:    ret
+bb:
+  %inst = fcmp olt <4 x float> zeroinitializer, %arg
+  %inst1 = shufflevector <4 x i1> %inst, <4 x i1> zeroinitializer, <2 x i32> <i32 2, i32 0>
+  %inst2 = shufflevector <2 x i1> %inst1, <2 x i1> zeroinitializer, <4 x i32> <i32 0, i32 0, i32 1, i32 1>
+  %inst3 = select <4 x i1> %inst2, <4 x float> <float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00>, <4 x float> zeroinitializer
+  ret <4 x float> %inst3
+}
+
+define <4 x i32> @shuffle_zip2(<4 x i32> %arg) {
+; CHECK-LABEL: shuffle_zip2:
+; CHECK:       // %bb.0: // %bb
+; CHECK-NEXT:    cmtst.4s v0, v0, v0
+; CHECK-NEXT:    uzp1.8h v1, v0, v0
+; CHECK-NEXT:    xtn.4h v0, v0
+; CHECK-NEXT:    xtn.4h v1, v1
+; CHECK-NEXT:    zip2.4h v0, v0, v1
+; CHECK-NEXT:    movi.4s v1, #1
+; CHECK-NEXT:    zip1.4h v0, v0, v0
+; CHECK-NEXT:    ushll.4s v0, v0, #0
+; CHECK-NEXT:    and.16b v0, v0, v1
+; CHECK-NEXT:    ret
+bb:
+  %inst = icmp ult <4 x i32> zeroinitializer, %arg
+  %inst1 = shufflevector <4 x i1> %inst, <4 x i1> zeroinitializer, <2 x i32> <i32 2, i32 0>
+  %inst2 = shufflevector <2 x i1> %inst1, <2 x i1> zeroinitializer, <4 x i32> <i32 0, i32 0, i32 1, i32 1>
+  %inst3 = select <4 x i1> %inst2, <4 x i32> <i32 1, i32 1, i32 1, i32 1>, <4 x i32> zeroinitializer
+  ret <4 x i32> %inst3
+}
+
+define <4 x i32> @shuffle_zip3(<4 x i32> %arg) {
+; CHECK-LABEL: shuffle_zip3:
+; CHECK:       // %bb.0: // %bb
+; CHECK-NEXT:    cmgt.4s v0, v0, #0
+; CHECK-NEXT:    uzp1.8h v1, v0, v0
+; CHECK-NEXT:    xtn.4h v0, v0
+; CHECK-NEXT:    xtn.4h v1, v1
+; CHECK-NEXT:    zip2.4h v0, v0, v1
+; CHECK-NEXT:    movi.4s v1, #1
+; CHECK-NEXT:    zip1.4h v0, v0, v0
+; CHECK-NEXT:    ushll.4s v0, v0, #0
+; CHECK-NEXT:    and.16b v0, v0, v1
+; CHECK-NEXT:    ret
+bb:
+  %inst = icmp slt <4 x i32> zeroinitializer, %arg
+  %inst1 = shufflevector <4 x i1> %inst, <4 x i1> zeroinitializer, <2 x i32> <i32 2, i32 0>
+  %inst2 = shufflevector <2 x i1> %inst1, <2 x i1> zeroinitializer, <4 x i32> <i32 0, i32 0, i32 1, i32 1>
+  %inst3 = select <4 x i1> %inst2, <4 x i32> <i32 1, i32 1, i32 1, i32 1>, <4 x i32> zeroinitializer
+  ret <4 x i32> %inst3
 }

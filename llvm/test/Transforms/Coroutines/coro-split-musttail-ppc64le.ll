@@ -3,7 +3,12 @@
 ; RUN:     -mtriple=powerpc64le-unknown-linux-gnu -mcpu=pwr9 | FileCheck %s
 ; RUN: opt < %s -passes='cgscc(coro-split),simplifycfg,early-cse' -S \
 ; RUN:     -mtriple=powerpc64le-unknown-linux-gnu -mcpu=pwr10 --code-model=medium \
-; RUN:     | FileCheck %s --check-prefix=CHECK-PCREL
+; RUN:     | FileCheck %s
+; RUN: opt < %s -passes='cgscc(coro-split),simplifycfg,early-cse' -S \
+; RUN:     -mtriple=powerpc64le-unknown-linux-gnu -mcpu=pwr10 --code-model=medium -mattr=+longcall \
+; RUN:     | FileCheck %s
+; RUN: opt < %s -passes='cgscc(coro-split),simplifycfg,early-cse' -S \
+; RUN:     -mtriple=ppc32-- | FileCheck %s
 
 define void @f() #0 {
 entry:
@@ -44,12 +49,6 @@ exit:
 ; CHECK-LABEL: @f.resume(
 ; CHECK: %[[addr2:.+]] = call ptr @llvm.coro.subfn.addr(ptr null, i8 0)
 ; CHECK-NEXT: call fastcc void %[[addr2]](ptr null)
-
-; Verify that ppc target using PC-Relative addressing in the resume part resume call is marked with musttail.
-; CHECK-PCREL-LABEL: @f.resume(
-; CHECK-PCREL: %[[addr2:.+]] = call ptr @llvm.coro.subfn.addr(ptr null, i8 0)
-; CHECK-PCREL-NEXT: musttail call fastcc void %[[addr2]](ptr null)
-; CHECK-PCREL-NEXT: ret void
 
 declare token @llvm.coro.id(i32, ptr readnone, ptr nocapture readonly, ptr) #1
 declare i1 @llvm.coro.alloc(token) #2

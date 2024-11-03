@@ -538,7 +538,6 @@ int main() {
   return 0;
 }
 
-// rdar://19065361
 class XXX {
   XXX();
   ~XXX();

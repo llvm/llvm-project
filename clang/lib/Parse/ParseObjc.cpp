@@ -65,10 +65,10 @@ Parser::ParseObjCAtDirectives(ParsedAttributes &DeclAttrs,
   case tok::objc_implementation:
     break;
   default:
-    llvm::for_each(DeclAttrs, [this](const auto &Attr) {
+    for (const auto &Attr : DeclAttrs) {
       if (Attr.isGNUAttribute())
         Diag(Tok.getLocation(), diag::err_objc_unexpected_attr);
-    });
+    }
   }
 
   Decl *SingleDecl = nullptr;
@@ -153,6 +153,11 @@ Parser::ParseObjCAtClassDeclaration(SourceLocation atLoc) {
 
   while (true) {
     MaybeSkipAttributes(tok::objc_class);
+    if (Tok.is(tok::code_completion)) {
+      cutOffParsing();
+      Actions.CodeCompleteObjCClassForwardDecl(getCurScope());
+      return Actions.ConvertDeclToDeclGroup(nullptr);
+    }
     if (expectIdentifier()) {
       SkipUntil(tok::semi);
       return Actions.ConvertDeclToDeclGroup(nullptr);
@@ -408,7 +413,7 @@ static void addContextSensitiveTypeNullability(Parser &P,
   auto getNullabilityAttr = [&](AttributePool &Pool) -> ParsedAttr * {
     return Pool.create(P.getNullabilityKeyword(nullability),
                        SourceRange(nullabilityLoc), nullptr, SourceLocation(),
-                       nullptr, 0, ParsedAttr::AS_ContextSensitiveKeyword);
+                       nullptr, 0, ParsedAttr::Form::ContextSensitiveKeyword());
   };
 
   if (D.getNumTypeObjects() > 0) {
@@ -608,6 +613,19 @@ ObjCTypeParamList *Parser::parseObjCTypeParamList() {
                                               /*mayBeProtocolList=*/false);
 }
 
+static bool isTopLevelObjCKeyword(tok::ObjCKeywordKind DirectiveKind) {
+  switch (DirectiveKind) {
+  case tok::objc_class:
+  case tok::objc_compatibility_alias:
+  case tok::objc_interface:
+  case tok::objc_implementation:
+  case tok::objc_protocol:
+    return true;
+  default:
+    return false;
+  }
+}
+
 ///   objc-interface-decl-list:
 ///     empty
 ///     objc-interface-decl-list objc-property-decl [OBJC2]
@@ -700,27 +718,34 @@ void Parser::ParseObjCInterfaceDeclList(tok::ObjCKeywordKind contextKey,
       continue;
     }
 
-    // Otherwise, we have an @ directive, eat the @.
-    SourceLocation AtLoc = ConsumeToken(); // the "@"
-    if (Tok.is(tok::code_completion)) {
+    // Otherwise, we have an @ directive, peak at the next token
+    SourceLocation AtLoc = Tok.getLocation();
+    const auto &NextTok = NextToken();
+    if (NextTok.is(tok::code_completion)) {
       cutOffParsing();
       Actions.CodeCompleteObjCAtDirective(getCurScope());
       return;
     }
 
-    tok::ObjCKeywordKind DirectiveKind = Tok.getObjCKeywordID();
-
+    tok::ObjCKeywordKind DirectiveKind = NextTok.getObjCKeywordID();
     if (DirectiveKind == tok::objc_end) { // @end -> terminate list
+      ConsumeToken();                     // the "@"
       AtEnd.setBegin(AtLoc);
       AtEnd.setEnd(Tok.getLocation());
       break;
     } else if (DirectiveKind == tok::objc_not_keyword) {
-      Diag(Tok, diag::err_objc_unknown_at);
+      Diag(NextTok, diag::err_objc_unknown_at);
       SkipUntil(tok::semi);
       continue;
     }
 
-    // Eat the identifier.
+    // If we see something like '@interface' that's only allowed at the top
+    // level, bail out as if we saw an '@end'. We'll diagnose this below.
+    if (isTopLevelObjCKeyword(DirectiveKind))
+      break;
+
+    // Otherwise parse it as part of the current declaration. Eat "@identifier".
+    ConsumeToken();
     ConsumeToken();
 
     switch (DirectiveKind) {
@@ -732,15 +757,6 @@ void Parser::ParseObjCInterfaceDeclList(tok::ObjCKeywordKind contextKey,
       Diag(AtLoc, diag::err_objc_illegal_interface_qual);
       // Skip until we see an '@' or '}' or ';'.
       SkipUntil(tok::r_brace, tok::at, StopAtSemi);
-      break;
-
-    case tok::objc_implementation:
-    case tok::objc_interface:
-      Diag(AtLoc, diag::err_objc_missing_end)
-          << FixItHint::CreateInsertion(AtLoc, "@end\n");
-      Diag(CDecl->getBeginLoc(), diag::note_objc_container_start)
-          << (int)Actions.getObjCContainerKind();
-      ConsumeToken();
       break;
 
     case tok::objc_required:
@@ -811,13 +827,10 @@ void Parser::ParseObjCInterfaceDeclList(tok::ObjCKeywordKind contextKey,
     }
   }
 
-  // We break out of the big loop in two cases: when we see @end or when we see
-  // EOF.  In the former case, eat the @end.  In the later case, emit an error.
-  if (Tok.is(tok::code_completion)) {
-    cutOffParsing();
-    Actions.CodeCompleteObjCAtDirective(getCurScope());
-    return;
-  } else if (Tok.isObjCAtKeyword(tok::objc_end)) {
+  // We break out of the big loop in 3 cases: when we see @end or when we see
+  // top-level ObjC keyword or EOF. In the former case, eat the @end. In the
+  // later cases, emit an error.
+  if (Tok.isObjCAtKeyword(tok::objc_end)) {
     ConsumeToken(); // the "end" identifier
   } else {
     Diag(Tok, diag::err_objc_missing_end)
@@ -3751,6 +3764,8 @@ void Parser::ParseLexedObjCMethodDefs(LexedMethod &LM, bool parseMethod) {
       while (Tok.getLocation() != OrigLoc && Tok.isNot(tok::eof))
         ConsumeAnyToken();
   }
-  // Clean up the remaining EOF token.
-  ConsumeAnyToken();
+  // Clean up the remaining EOF token, only if it's inserted by us. Otherwise
+  // this might be code-completion token, which must be propagated to callers.
+  if (Tok.is(tok::eof) && Tok.getEofData() == MCDecl)
+    ConsumeAnyToken();
 }

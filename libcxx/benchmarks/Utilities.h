@@ -16,18 +16,22 @@
 #include "benchmark/benchmark.h"
 
 namespace UtilitiesInternal {
-  template <class Container>
-  auto HaveDataImpl(int) -> decltype((std::declval<Container&>().data(), std::true_type{}));
-  template <class Container>
-  auto HaveDataImpl(long) -> std::false_type;
-  template <class T>
-  using HasData = decltype(HaveDataImpl<T>(0));
+template <class Container>
+auto HaveDataImpl(int) -> decltype((std::declval<Container&>().data(), std::true_type{}));
+template <class Container>
+auto HaveDataImpl(long) -> std::false_type;
+template <class T>
+using HasData = decltype(HaveDataImpl<T>(0));
 } // namespace UtilitiesInternal
 
 template <class Container, std::enable_if_t<UtilitiesInternal::HasData<Container>::value>* = nullptr>
-void DoNotOptimizeData(Container &c) { benchmark::DoNotOptimize(c.data()); }
-template <class Container, std::enable_if_t<!UtilitiesInternal::HasData<Container>::value>* = nullptr>
-void DoNotOptimizeData(Container &c) { benchmark::DoNotOptimize(&c); }
+void DoNotOptimizeData(Container& c) {
+  benchmark::DoNotOptimize(c.data());
+}
 
+template <class Container, std::enable_if_t<!UtilitiesInternal::HasData<Container>::value>* = nullptr>
+void DoNotOptimizeData(Container& c) {
+  benchmark::DoNotOptimize(&c);
+}
 
 #endif // BENCHMARK_UTILITIES_H

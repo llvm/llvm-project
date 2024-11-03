@@ -1,4 +1,5 @@
 // RUN: mlir-opt %s -test-scalar-vector-transfer-lowering -split-input-file | FileCheck %s
+// RUN: mlir-opt %s -test-scalar-vector-transfer-lowering=allow-multiple-uses -split-input-file | FileCheck %s --check-prefix=MULTIUSE
 
 // CHECK-LABEL: func @transfer_read_0d(
 //  CHECK-SAME:     %[[m:.*]]: memref<?x?x?xf32>, %[[idx:.*]]: index
@@ -108,3 +109,47 @@ func.func @transfer_write_arith_constant(%m: memref<?x?x?xf32>, %idx: index) {
   vector.transfer_write %cst, %m[%idx, %idx, %idx] : vector<1x1xf32>, memref<?x?x?xf32>
   return
 }
+
+// -----
+
+// CHECK-LABEL: func @transfer_read_multi_use(
+//  CHECK-SAME:   %[[m:.*]]: memref<?xf32>, %[[idx:.*]]: index
+//   CHECK-NOT:   memref.load
+//       CHECK:   %[[r:.*]] = vector.transfer_read %[[m]][%[[idx]]]
+//       CHECK:   %[[e0:.*]] = vector.extract %[[r]][0]
+//       CHECK:   %[[e1:.*]] = vector.extract %[[r]][1]
+//       CHECK:   return %[[e0]], %[[e1]]
+
+// MULTIUSE-LABEL: func @transfer_read_multi_use(
+//  MULTIUSE-SAME:   %[[m:.*]]: memref<?xf32>, %[[idx0:.*]]: index
+//   MULTIUSE-NOT:   vector.transfer_read
+//       MULTIUSE:   %[[r0:.*]] = memref.load %[[m]][%[[idx0]]
+//       MULTIUSE:   %[[idx1:.*]] = affine.apply
+//       MULTIUSE:   %[[r1:.*]] = memref.load %[[m]][%[[idx1]]
+//       MULTIUSE:   return %[[r0]], %[[r1]]
+
+func.func @transfer_read_multi_use(%m: memref<?xf32>, %idx: index) -> (f32, f32) {
+  %cst = arith.constant 0.0 : f32
+  %0 = vector.transfer_read %m[%idx], %cst {in_bounds = [true]} : memref<?xf32>, vector<16xf32>
+  %1 = vector.extract %0[0] : vector<16xf32>
+  %2 = vector.extract %0[1] : vector<16xf32>
+  return %1, %2 : f32, f32
+}
+
+// -----
+
+// Check that patterns don't trigger for an sub-vector (not scalar) extraction.
+// CHECK-LABEL: func @subvector_extract(
+//  CHECK-SAME:   %[[m:.*]]: memref<?x?xf32>, %[[idx:.*]]: index
+//   CHECK-NOT:   memref.load
+//       CHECK:   %[[r:.*]] = vector.transfer_read %[[m]][%[[idx]], %[[idx]]]
+//       CHECK:   %[[e0:.*]] = vector.extract %[[r]][0]
+//       CHECK:   return %[[e0]]
+
+func.func @subvector_extract(%m: memref<?x?xf32>, %idx: index) -> vector<16xf32> {
+  %cst = arith.constant 0.0 : f32
+  %0 = vector.transfer_read %m[%idx, %idx], %cst {in_bounds = [true, true]} : memref<?x?xf32>, vector<8x16xf32>
+  %1 = vector.extract %0[0] : vector<8x16xf32>
+  return %1 : vector<16xf32>
+}
+

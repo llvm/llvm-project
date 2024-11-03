@@ -26,7 +26,7 @@ struct Iter {
   int* it_;
 
   using value_type       = int;
-  using difference_type  = intptr_t;
+  using difference_type  = std::intptr_t;
   using iterator_concept = std::input_iterator_tag;
 
   constexpr decltype(auto) operator*() const { return *it_; }

@@ -34,6 +34,16 @@ struct HTTPResponse;
 struct StreamingHTTPResponse;
 class HTTPServer;
 
+class HTTPServerError : public ErrorInfo<HTTPServerError, ECError> {
+public:
+  static char ID;
+  HTTPServerError(const Twine &Msg);
+  void log(raw_ostream &OS) const override;
+
+private:
+  std::string Msg;
+};
+
 class HTTPServerRequest {
   friend HTTPServer;
 

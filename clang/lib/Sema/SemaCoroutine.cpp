@@ -78,7 +78,7 @@ static QualType lookupPromiseType(Sema &S, const FunctionDecl *FD,
       //      ref-qualifier or with the & ref-qualifier
       //  -- "rvalue reference to cv X" for functions declared with the &&
       //      ref-qualifier
-      QualType T = MD->getThisType()->castAs<PointerType>()->getPointeeType();
+      QualType T = MD->getThisObjectType();
       T = FnType->getRefQualifier() == RQ_RValue
               ? S.Context.getRValueReferenceType(T)
               : S.Context.getLValueReferenceType(T, /*SpelledAsLValue*/ true);
@@ -318,7 +318,8 @@ static ExprResult buildMemberCall(Sema &S, Expr *Base, SourceLocation Loc,
     return ExprError();
   }
 
-  return S.BuildCallExpr(nullptr, Result.get(), Loc, Args, Loc, nullptr);
+  auto EndLoc = Args.empty() ? Loc : Args.back()->getEndLoc();
+  return S.BuildCallExpr(nullptr, Result.get(), Loc, Args, EndLoc, nullptr);
 }
 
 // See if return type is coroutine-handle and if so, invoke builtin coro-resume
@@ -343,6 +344,28 @@ static Expr *maybeTailCall(Sema &S, QualType RetType, Expr *E,
 
   Expr *JustAddress = AddressExpr.get();
 
+  // FIXME: Without optimizations, the temporary result from `await_suspend()`
+  // may be put on the coroutine frame since the coroutine frame constructor
+  // will think the temporary variable will escape from the
+  // `coroutine_handle<>::address()` call. This is problematic since the
+  // coroutine should be considered to be suspended after it enters
+  // `await_suspend` so it shouldn't access/update the coroutine frame after
+  // that.
+  //
+  // See https://github.com/llvm/llvm-project/issues/65054 for the report.
+  //
+  // The long term solution may wrap the whole logic about `await-suspend`
+  // into a standalone function. This is similar to the proposed solution
+  // in tryMarkAwaitSuspendNoInline. See the comments there for details.
+  //
+  // The short term solution here is to mark `coroutine_handle<>::address()`
+  // function as always-inline so that the coroutine frame constructor won't
+  // think the temporary result is escaped incorrectly.
+  if (auto *FD = cast<CallExpr>(JustAddress)->getDirectCallee())
+    if (!FD->hasAttr<AlwaysInlineAttr>() && !FD->hasAttr<NoInlineAttr>())
+      FD->addAttr(AlwaysInlineAttr::CreateImplicit(S.getASTContext(),
+                                                   FD->getLocation()));
+
   // Check that the type of AddressExpr is void*
   if (!JustAddress->getType().getTypePtr()->isVoidPointerType())
     S.Diag(cast<CallExpr>(JustAddress)->getCalleeDecl()->getLocation(),
@@ -357,6 +380,63 @@ static Expr *maybeTailCall(Sema &S, QualType RetType, Expr *E,
   JustAddress = S.MaybeCreateExprWithCleanups(JustAddress);
   return S.BuildBuiltinCallExpr(Loc, Builtin::BI__builtin_coro_resume,
                                 JustAddress);
+}
+
+/// The await_suspend call performed by co_await is essentially asynchronous
+/// to the execution of the coroutine. Inlining it normally into an unsplit
+/// coroutine can cause miscompilation because the coroutine CFG misrepresents
+/// the true control flow of the program: things that happen in the
+/// await_suspend are not guaranteed to happen prior to the resumption of the
+/// coroutine, and things that happen after the resumption of the coroutine
+/// (including its exit and the potential deallocation of the coroutine frame)
+/// are not guaranteed to happen only after the end of await_suspend.
+///
+/// See https://github.com/llvm/llvm-project/issues/56301 and
+/// https://reviews.llvm.org/D157070 for the example and the full discussion.
+///
+/// The short-term solution to this problem is to mark the call as uninlinable.
+/// But we don't want to do this if the call is known to be trivial, which is
+/// very common.
+///
+/// The long-term solution may introduce patterns like:
+///
+///  call @llvm.coro.await_suspend(ptr %awaiter, ptr %handle,
+///                                ptr @awaitSuspendFn)
+///
+/// Then it is much easier to perform the safety analysis in the middle end.
+/// If it is safe to inline the call to awaitSuspend, we can replace it in the
+/// CoroEarly pass. Otherwise we could replace it in the CoroSplit pass.
+static void tryMarkAwaitSuspendNoInline(Sema &S, OpaqueValueExpr *Awaiter,
+                                        CallExpr *AwaitSuspend) {
+  // The method here to extract the awaiter decl is not precise.
+  // This is intentional. Since it is hard to perform the analysis in the
+  // frontend due to the complexity of C++'s type systems.
+  // And we prefer to perform such analysis in the middle end since it is
+  // easier to implement and more powerful.
+  CXXRecordDecl *AwaiterDecl =
+      Awaiter->getType().getNonReferenceType()->getAsCXXRecordDecl();
+
+  if (AwaiterDecl && AwaiterDecl->field_empty())
+    return;
+
+  FunctionDecl *FD = AwaitSuspend->getDirectCallee();
+
+  assert(FD);
+
+  // If the `await_suspend()` function is marked as `always_inline` explicitly,
+  // we should give the user the right to control the codegen.
+  if (FD->hasAttr<NoInlineAttr>() || FD->hasAttr<AlwaysInlineAttr>())
+    return;
+
+  // This is problematic if the user calls the await_suspend standalone. But on
+  // the on hand, it is not incorrect semantically since inlining is not part
+  // of the standard. On the other hand, it is relatively rare to call
+  // the await_suspend function standalone.
+  //
+  // And given we've already had the long-term plan, the current workaround
+  // looks relatively tolerant.
+  FD->addAttr(
+      NoInlineAttr::CreateImplicit(S.getASTContext(), FD->getLocation()));
 }
 
 /// Build calls to await_ready, await_suspend, and await_resume for a co_await
@@ -430,6 +510,10 @@ static ReadySuspendResumeResult buildCoawaitCalls(Sema &S, VarDecl *CoroPromise,
     //     type Z.
     QualType RetType = AwaitSuspend->getCallReturnType(S.Context);
 
+    // We need to mark await_suspend as noinline temporarily. See the comment
+    // of tryMarkAwaitSuspendNoInline for details.
+    tryMarkAwaitSuspendNoInline(S, Operand, AwaitSuspend);
+
     // Support for coroutine_handle returning await_suspend.
     if (Expr *TailCallSuspend =
             maybeTailCall(S, RetType, AwaitSuspend, Loc))
@@ -481,7 +565,7 @@ VarDecl *Sema::buildCoroutinePromise(SourceLocation Loc) {
   auto *FD = cast<FunctionDecl>(CurContext);
   bool IsThisDependentType = [&] {
     if (auto *MD = dyn_cast_or_null<CXXMethodDecl>(FD))
-      return MD->isInstance() && MD->getThisType()->isDependentType();
+      return MD->isInstance() && MD->getThisObjectType()->isDependentType();
     else
       return false;
   }();
@@ -1137,6 +1221,18 @@ void Sema::CheckCompletedCoroutineBody(FunctionDecl *FD, Stmt *&Body) {
   Body = CoroutineBodyStmt::Create(Context, Builder);
 }
 
+static CompoundStmt *buildCoroutineBody(Stmt *Body, ASTContext &Context) {
+  if (auto *CS = dyn_cast<CompoundStmt>(Body))
+    return CS;
+
+  // The body of the coroutine may be a try statement if it is in
+  // 'function-try-block' syntax. Here we wrap it into a compound
+  // statement for consistency.
+  assert(isa<CXXTryStmt>(Body) && "Unimaged coroutine body type");
+  return CompoundStmt::Create(Context, {Body}, FPOptionsOverride(),
+                              SourceLocation(), SourceLocation());
+}
+
 CoroutineStmtBuilder::CoroutineStmtBuilder(Sema &S, FunctionDecl &FD,
                                            sema::FunctionScopeInfo &Fn,
                                            Stmt *Body)
@@ -1144,7 +1240,7 @@ CoroutineStmtBuilder::CoroutineStmtBuilder(Sema &S, FunctionDecl &FD,
       IsPromiseDependentType(
           !Fn.CoroutinePromise ||
           Fn.CoroutinePromise->getType()->isDependentType()) {
-  this->Body = Body;
+  this->Body = buildCoroutineBody(Body, S.getASTContext());
 
   for (auto KV : Fn.CoroutineParameterMoves)
     this->ParamMovesVector.push_back(KV.second);
@@ -1730,12 +1826,22 @@ bool CoroutineStmtBuilder::makeGroDeclAndReturnStmt() {
   assert(!FnRetType->isDependentType() &&
          "get_return_object type must no longer be dependent");
 
+  // The call to get_­return_­object is sequenced before the call to
+  // initial_­suspend and is invoked at most once, but there are caveats
+  // regarding on whether the prvalue result object may be initialized
+  // directly/eager or delayed, depending on the types involved.
+  //
+  // More info at https://github.com/cplusplus/papers/issues/1414
+  bool GroMatchesRetType = S.getASTContext().hasSameType(GroType, FnRetType);
+
   if (FnRetType->isVoidType()) {
     ExprResult Res =
         S.ActOnFinishFullExpr(this->ReturnValue, Loc, /*DiscardedValue*/ false);
     if (Res.isInvalid())
       return false;
 
+    if (!GroMatchesRetType)
+      this->ResultDecl = Res.get();
     return true;
   }
 
@@ -1748,11 +1854,60 @@ bool CoroutineStmtBuilder::makeGroDeclAndReturnStmt() {
     return false;
   }
 
-  StmtResult ReturnStmt = S.BuildReturnStmt(Loc, ReturnValue);
+  StmtResult ReturnStmt;
+  clang::VarDecl *GroDecl = nullptr;
+  if (GroMatchesRetType) {
+    ReturnStmt = S.BuildReturnStmt(Loc, ReturnValue);
+  } else {
+    GroDecl = VarDecl::Create(
+        S.Context, &FD, FD.getLocation(), FD.getLocation(),
+        &S.PP.getIdentifierTable().get("__coro_gro"), GroType,
+        S.Context.getTrivialTypeSourceInfo(GroType, Loc), SC_None);
+    GroDecl->setImplicit();
+
+    S.CheckVariableDeclarationType(GroDecl);
+    if (GroDecl->isInvalidDecl())
+      return false;
+
+    InitializedEntity Entity = InitializedEntity::InitializeVariable(GroDecl);
+    ExprResult Res =
+        S.PerformCopyInitialization(Entity, SourceLocation(), ReturnValue);
+    if (Res.isInvalid())
+      return false;
+
+    Res = S.ActOnFinishFullExpr(Res.get(), /*DiscardedValue*/ false);
+    if (Res.isInvalid())
+      return false;
+
+    S.AddInitializerToDecl(GroDecl, Res.get(),
+                           /*DirectInit=*/false);
+
+    S.FinalizeDeclaration(GroDecl);
+
+    // Form a declaration statement for the return declaration, so that AST
+    // visitors can more easily find it.
+    StmtResult GroDeclStmt =
+        S.ActOnDeclStmt(S.ConvertDeclToDeclGroup(GroDecl), Loc, Loc);
+    if (GroDeclStmt.isInvalid())
+      return false;
+
+    this->ResultDecl = GroDeclStmt.get();
+
+    ExprResult declRef = S.BuildDeclRefExpr(GroDecl, GroType, VK_LValue, Loc);
+    if (declRef.isInvalid())
+      return false;
+
+    ReturnStmt = S.BuildReturnStmt(Loc, declRef.get());
+  }
+
   if (ReturnStmt.isInvalid()) {
     noteMemberDeclaredHere(S, ReturnValue, Fn);
     return false;
   }
+
+  if (!GroMatchesRetType &&
+      cast<clang::ReturnStmt>(ReturnStmt.get())->getNRVOCandidate() == GroDecl)
+    GroDecl->setNRVOVariable(true);
 
   this->ReturnStmt = ReturnStmt.get();
   return true;

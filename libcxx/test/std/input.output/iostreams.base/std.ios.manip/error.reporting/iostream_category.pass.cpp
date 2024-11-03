@@ -16,11 +16,29 @@
 
 #include "test_macros.h"
 
+// See https://llvm.org/D65667
+struct StaticInit {
+    const std::error_category* ec;
+    ~StaticInit() {
+        std::string str = ec->name();
+        assert(str == "iostream") ;
+    }
+};
+static StaticInit foo;
+
 int main(int, char**)
 {
-    const std::error_category& e_cat1 = std::iostream_category();
-    std::string m1 = e_cat1.name();
-    assert(m1 == "iostream");
+    {
+        const std::error_category& e_cat1 = std::iostream_category();
+        std::string m1 = e_cat1.name();
+        assert(m1 == "iostream");
+    }
 
-  return 0;
+    {
+        foo.ec = &std::iostream_category();
+        std::string m2 = foo.ec->name();
+        assert(m2 == "iostream");
+    }
+
+    return 0;
 }

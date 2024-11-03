@@ -1,5 +1,5 @@
 ! Test lowering of pointer assignments
-! RUN: bbc -emit-fir %s -o - | FileCheck %s
+! RUN: bbc --use-desc-for-alloc=false -emit-fir %s -o - | FileCheck %s
 
 
 ! Note that p => NULL() are tested in pointer-disassociate.f90
@@ -364,7 +364,7 @@ subroutine issue1180(x)
   integer, target :: x
   integer, pointer :: p
   common /some_common/ p
-  ! CHECK: %[[VAL_1:.*]] = fir.address_of(@_QBsome_common) : !fir.ref<!fir.array<24xi8>>
+  ! CHECK: %[[VAL_1:.*]] = fir.address_of(@some_common_) : !fir.ref<!fir.array<24xi8>>
   ! CHECK: %[[VAL_2:.*]] = fir.convert %[[VAL_1]] : (!fir.ref<!fir.array<24xi8>>) -> !fir.ref<!fir.array<?xi8>>
   ! CHECK: %[[VAL_3:.*]] = arith.constant 0 : index
   ! CHECK: %[[VAL_4:.*]] = fir.coordinate_of %[[VAL_2]], %[[VAL_3]] : (!fir.ref<!fir.array<?xi8>>, index) -> !fir.ref<i8>

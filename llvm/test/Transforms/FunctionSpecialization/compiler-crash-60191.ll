@@ -1,4 +1,4 @@
-; RUN: opt -S --passes="ipsccp<func-spec>" -force-function-specialization < %s | FileCheck %s
+; RUN: opt -S --passes="ipsccp<func-spec>" -force-specialization < %s | FileCheck %s
 
 @A = private constant [6 x i32] [i32 1, i32 2, i32 0, i32 0, i32 0, i32 0], align 16
 @B = external global ptr, align 8

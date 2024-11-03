@@ -320,9 +320,6 @@ bool DataInitializationCompiler<DSV>::InitElement(
   bool isPointer{lastSymbol && IsPointer(*lastSymbol)};
   bool isProcPointer{lastSymbol && IsProcedurePointer(*lastSymbol)};
   evaluate::FoldingContext &context{exprAnalyzer_.GetFoldingContext()};
-  auto &messages{context.messages()};
-  auto restorer{
-      messages.SetLocation(values_.LocateSource().value_or(messages.at()))};
 
   const auto DescribeElement{[&]() {
     if (auto badDesignator{
@@ -365,6 +362,9 @@ bool DataInitializationCompiler<DSV>::InitElement(
     return false;
   }
 
+  auto &messages{context.messages()};
+  auto restorer{
+      messages.SetLocation(values_.LocateSource().value_or(messages.at()))};
   const SomeExpr *expr{*values_};
   if (!expr) {
     CHECK(exprAnalyzer_.context().AnyFatalError());
@@ -384,7 +384,8 @@ bool DataInitializationCompiler<DSV>::InitElement(
       return true;
     } else if (isProcPointer) {
       if (evaluate::IsProcedure(*expr)) {
-        if (CheckPointerAssignment(context, designator, *expr, DEREF(scope_))) {
+        if (CheckPointerAssignment(
+                exprAnalyzer_.context(), designator, *expr, DEREF(scope_))) {
           if (lastSymbol->has<ProcEntityDetails>()) {
             GetImage().AddPointer(offsetSymbol.offset(), *expr);
             return true;
@@ -405,7 +406,8 @@ bool DataInitializationCompiler<DSV>::InitElement(
       exprAnalyzer_.Say(
           "Procedure '%s' may not be used to initialize '%s', which is not a procedure pointer"_err_en_US,
           expr->AsFortran(), DescribeElement());
-    } else if (CheckInitialTarget(context, designator, *expr, DEREF(scope_))) {
+    } else if (CheckInitialDataPointerTarget(
+                   exprAnalyzer_.context(), designator, *expr, DEREF(scope_))) {
       GetImage().AddPointer(offsetSymbol.offset(), *expr);
       return true;
     }
@@ -569,7 +571,8 @@ static void PopulateWithComponentDefaults(SymbolDataInitialization &init,
               if (auto extents{evaluate::GetConstantExtents(
                       foldingContext, component)}) {
                 if (auto extant{init.image.AsConstant(foldingContext, *dyType,
-                        *extents, false /*don't pad*/, componentOffset)}) {
+                        std::nullopt, *extents, false /*don't pad*/,
+                        componentOffset)}) {
                   initialized = !(*extant == *object->init());
                 }
               }
@@ -905,8 +908,8 @@ void ConstructInitializer(const Symbol &symbol,
       }
     } else if (auto symbolType{evaluate::DynamicType::From(symbol)}) {
       if (auto extents{evaluate::GetConstantExtents(context, symbol)}) {
-        mutableObject.set_init(
-            initialization.image.AsConstant(context, *symbolType, *extents));
+        mutableObject.set_init(initialization.image.AsConstant(
+            context, *symbolType, std::nullopt, *extents));
       } else {
         exprAnalyzer.Say(symbol.name(),
             "internal: unknown shape for '%s' while constructing initializer from DATA"_err_en_US,

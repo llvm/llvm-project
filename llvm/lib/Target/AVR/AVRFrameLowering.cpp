@@ -260,6 +260,16 @@ bool AVRFrameLowering::spillCalleeSavedRegisters(
     Register Reg = I.getReg();
     bool IsNotLiveIn = !MBB.isLiveIn(Reg);
 
+    // Check if Reg is a sub register of a 16-bit livein register, and then
+    // add it to the livein list.
+    if (IsNotLiveIn)
+      for (const auto &LiveIn : MBB.liveins())
+        if (STI.getRegisterInfo()->isSubRegister(LiveIn.PhysReg, Reg)) {
+          IsNotLiveIn = false;
+          MBB.addLiveIn(Reg);
+          break;
+        }
+
     assert(TRI->getRegSizeInBits(*TRI->getMinimalPhysRegClass(Reg)) == 8 &&
            "Invalid register size");
 

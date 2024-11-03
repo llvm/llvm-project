@@ -38,7 +38,8 @@ public:
 
           LookupResult Result;
           for (auto &KV : *InternedResult)
-            Result[*KV.first] = std::move(KV.second);
+            Result[*KV.first] = {KV.second.getAddress().getValue(),
+                                 KV.second.getFlags()};
           OnResolved(Result);
         };
 
@@ -232,7 +233,7 @@ Error RTDyldObjectLinkingLayer::onObjLoad(
   if (auto *COFFObj = dyn_cast<object::COFFObjectFile>(&Obj)) {
     auto &ES = getExecutionSession();
 
-    // For all resolved symbols that are not already in the responsibilty set:
+    // For all resolved symbols that are not already in the responsibility set:
     // check whether the symbol is in a comdat section and if so mark it as
     // weak.
     for (auto &Sym : COFFObj->symbols()) {
@@ -326,7 +327,7 @@ Error RTDyldObjectLinkingLayer::onObjLoad(
     } else if (AutoClaimObjectSymbols)
       ExtraSymbolsToClaim[InternedName] = Flags;
 
-    Symbols[InternedName] = JITEvaluatedSymbol(KV.second.getAddress(), Flags);
+    Symbols[InternedName] = {ExecutorAddr(KV.second.getAddress()), Flags};
   }
 
   if (!ExtraSymbolsToClaim.empty()) {

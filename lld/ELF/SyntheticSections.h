@@ -22,8 +22,10 @@
 
 #include "Config.h"
 #include "InputSection.h"
+#include "Symbols.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/MapVector.h"
+#include "llvm/BinaryFormat/ELF.h"
 #include "llvm/MC/StringTableBuilder.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Endian.h"
@@ -1143,6 +1145,31 @@ private:
   size_t size = 0;
 };
 
+// Cortex-M Security Extensions. Prefix for functions that should be exported
+// for the non-secure world.
+const char ACLESESYM_PREFIX[] = "__acle_se_";
+const int ACLESESYM_SIZE = 8;
+
+class ArmCmseSGVeneer;
+
+class ArmCmseSGSection final : public SyntheticSection {
+public:
+  ArmCmseSGSection();
+  bool isNeeded() const override { return !entries.empty(); }
+  size_t getSize() const override;
+  void writeTo(uint8_t *buf) override;
+  void addSGVeneer(Symbol *sym, Symbol *ext_sym);
+  void addMappingSymbol();
+  void finalizeContents() override;
+  void exportEntries(SymbolTableBaseSection *symTab);
+  uint64_t impLibMaxAddr = 0;
+
+private:
+  SmallVector<std::pair<Symbol *, Symbol *>, 0> entries;
+  SmallVector<ArmCmseSGVeneer *, 0> sgVeneers;
+  uint64_t newEntries = 0;
+};
+
 // Used to compute outSecOff of .got2 in each object file. This is needed to
 // synthesize PLT entries for PPC32 Secure PLT ABI.
 class PPC32Got2Section final : public SyntheticSection {
@@ -1220,6 +1247,32 @@ public:
   size_t getSize() const override;
 };
 
+class MemtagDescriptors final : public SyntheticSection {
+public:
+  MemtagDescriptors()
+      : SyntheticSection(llvm::ELF::SHF_ALLOC,
+                         llvm::ELF::SHT_AARCH64_MEMTAG_GLOBALS_DYNAMIC,
+                         /*alignment=*/4, ".memtag.globals.dynamic") {}
+  void writeTo(uint8_t *buf) override;
+  // The size of the section is non-computable until all addresses are
+  // synthetized, because the section's contents contain a sorted
+  // varint-compressed list of pointers to global variables. We only know the
+  // final size after `finalizeAddressDependentContent()`.
+  size_t getSize() const override;
+  bool updateAllocSize() override;
+
+  void addSymbol(const Symbol &sym) {
+    symbols.push_back(&sym);
+  }
+
+  bool isNeeded() const override {
+    return !symbols.empty();
+  }
+
+private:
+  SmallVector<const Symbol *, 0> symbols;
+};
+
 InputSection *createInterpSection();
 MergeInputSection *createCommentSection();
 template <class ELFT> void splitSections();
@@ -1252,6 +1305,7 @@ struct Partition {
   std::unique_ptr<GnuHashTableSection> gnuHashTab;
   std::unique_ptr<HashTableSection> hashTab;
   std::unique_ptr<MemtagAndroidNote> memtagAndroidNote;
+  std::unique_ptr<MemtagDescriptors> memtagDescriptors;
   std::unique_ptr<PackageMetadataNote> packageMetadataNote;
   std::unique_ptr<RelocationBaseSection> relaDyn;
   std::unique_ptr<RelrBaseSection> relrDyn;
@@ -1279,6 +1333,7 @@ struct InStruct {
   std::unique_ptr<GotSection> got;
   std::unique_ptr<GotPltSection> gotPlt;
   std::unique_ptr<IgotPltSection> igotPlt;
+  std::unique_ptr<SyntheticSection> armCmseSGSection;
   std::unique_ptr<PPC64LongBranchTargetSection> ppc64LongBranchTarget;
   std::unique_ptr<SyntheticSection> mipsAbiFlags;
   std::unique_ptr<MipsGotSection> mipsGot;

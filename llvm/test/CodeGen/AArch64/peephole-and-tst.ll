@@ -8,11 +8,10 @@
 define i32 @test_func_i32_two_uses(i32 %in, i32 %bit, i32 %mask) {
 ; CHECK-LABEL: test_func_i32_two_uses:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    adrp x9, :got:ptr_wrapper
-; CHECK-NEXT:    mov w8, w0
-; CHECK-NEXT:    mov w0, wzr
-; CHECK-NEXT:    ldr x9, [x9, :got_lo12:ptr_wrapper]
-; CHECK-NEXT:    ldr x9, [x9]
+; CHECK-NEXT:    adrp x8, :got:ptr_wrapper
+; CHECK-NEXT:    ldr x8, [x8, :got_lo12:ptr_wrapper]
+; CHECK-NEXT:    ldr x9, [x8]
+; CHECK-NEXT:    mov w8, wzr
 ; CHECK-NEXT:    b .LBB0_3
 ; CHECK-NEXT:  .LBB0_1: // in Loop: Header=BB0_3 Depth=1
 ; CHECK-NEXT:    str xzr, [x9, #8]
@@ -21,9 +20,9 @@ define i32 @test_func_i32_two_uses(i32 %in, i32 %bit, i32 %mask) {
 ; CHECK-NEXT:    cbz w1, .LBB0_6
 ; CHECK-NEXT:  .LBB0_3: // %do.body
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    ands w10, w1, w8
-; CHECK-NEXT:    and w11, w2, w8
-; CHECK-NEXT:    cinc w0, w0, ne
+; CHECK-NEXT:    ands w10, w1, w0
+; CHECK-NEXT:    and w11, w2, w0
+; CHECK-NEXT:    cinc w8, w8, ne
 ; CHECK-NEXT:    cmp w10, w11
 ; CHECK-NEXT:    b.eq .LBB0_1
 ; CHECK-NEXT:  // %bb.4: // %do.body
@@ -34,6 +33,7 @@ define i32 @test_func_i32_two_uses(i32 %in, i32 %bit, i32 %mask) {
 ; CHECK-NEXT:    cbz w10, .LBB0_2
 ; CHECK-NEXT:    b .LBB0_1
 ; CHECK-NEXT:  .LBB0_6: // %do.end
+; CHECK-NEXT:    mov w0, w8
 ; CHECK-NEXT:    ret
 entry:
   %0 = load ptr, ptr @ptr_wrapper, align 8
@@ -72,25 +72,25 @@ do.end:                                           ; preds = %4
 define i32 @test_func_i64_one_use(i64 %in, i64 %bit, i64 %mask) {
 ; CHECK-LABEL: test_func_i64_one_use:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    adrp x9, :got:ptr_wrapper
-; CHECK-NEXT:    mov x8, x0
-; CHECK-NEXT:    mov w0, wzr
-; CHECK-NEXT:    ldr x9, [x9, :got_lo12:ptr_wrapper]
-; CHECK-NEXT:    ldr x9, [x9]
+; CHECK-NEXT:    adrp x8, :got:ptr_wrapper
+; CHECK-NEXT:    ldr x8, [x8, :got_lo12:ptr_wrapper]
+; CHECK-NEXT:    ldr x9, [x8]
+; CHECK-NEXT:    mov w8, wzr
 ; CHECK-NEXT:    b .LBB1_2
 ; CHECK-NEXT:  .LBB1_1: // in Loop: Header=BB1_2 Depth=1
 ; CHECK-NEXT:    lsl x1, x1, #1
 ; CHECK-NEXT:    cbz x1, .LBB1_4
 ; CHECK-NEXT:  .LBB1_2: // %do.body
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    ands x10, x1, x8
+; CHECK-NEXT:    ands x10, x1, x0
 ; CHECK-NEXT:    orr x10, x2, x10
-; CHECK-NEXT:    cinc w0, w0, ne
+; CHECK-NEXT:    cinc w8, w8, ne
 ; CHECK-NEXT:    cbz x10, .LBB1_1
 ; CHECK-NEXT:  // %bb.3: // in Loop: Header=BB1_2 Depth=1
 ; CHECK-NEXT:    str xzr, [x9, #8]
 ; CHECK-NEXT:    b .LBB1_1
 ; CHECK-NEXT:  .LBB1_4: // %do.end
+; CHECK-NEXT:    mov w0, w8
 ; CHECK-NEXT:    ret
 entry:
   %0 = load ptr, ptr @ptr_wrapper, align 8
@@ -151,8 +151,8 @@ define i64 @test_and3(i64 %x, i64 %y) {
 ; CHECK-LABEL: test_and3:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    str x30, [sp, #-32]! // 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-NEXT:    stp x20, x19, [sp, #16] // 16-byte Folded Spill
+; CHECK-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-NEXT:    .cfi_offset w19, -8
 ; CHECK-NEXT:    .cfi_offset w20, -16
 ; CHECK-NEXT:    .cfi_offset w30, -32

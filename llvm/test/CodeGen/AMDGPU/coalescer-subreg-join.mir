@@ -1,4 +1,4 @@
-# RUN: llc -march=amdgcn -run-pass simple-register-coalescing -o - %s | FileCheck %s
+# RUN: llc -march=amdgcn -run-pass register-coalescer -o - %s | FileCheck %s
 # Check that %11 and %20 have been coalesced.
 # CHECK: IMAGE_SAMPLE_C_D_O_V1_V11 %[[REG:[0-9]+]]
 # CHECK: IMAGE_SAMPLE_C_D_O_V1_V11 %[[REG]]

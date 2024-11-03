@@ -1,25 +1,5 @@
-// RUN: %check_clang_tidy %s readability-string-compare %t
-
-namespace std {
-template <typename T>
-class allocator {};
-template <typename T>
-class char_traits {};
-template <typename C, typename T = std::char_traits<C>, typename A = std::allocator<C>>
-class basic_string {
-public:
-  basic_string();
-  basic_string(const C *, unsigned int size);
-  int compare(const basic_string<char> &str) const;
-  int compare(const C *) const;
-  int compare(int, int, const basic_string<char> &str) const;
-  bool empty();
-};
-bool operator==(const basic_string<char> &lhs, const basic_string<char> &rhs);
-bool operator!=(const basic_string<char> &lhs, const basic_string<char> &rhs);
-bool operator==(const basic_string<char> &lhs, const char *&rhs);
-typedef basic_string<char> string;
-}
+// RUN: %check_clang_tidy %s readability-string-compare %t -- -- -isystem %clang_tidy_headers
+#include <string>
 
 void func(bool b);
 

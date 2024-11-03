@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -allow-unregistered-dialect -one-shot-bufferize="allow-return-allocs bufferize-function-boundaries" -drop-equivalent-buffer-results -buffer-deallocation -split-input-file | FileCheck %s
+// RUN: mlir-opt %s -allow-unregistered-dialect -one-shot-bufferize="allow-return-allocs bufferize-function-boundaries" -cse -canonicalize -drop-equivalent-buffer-results -buffer-deallocation -split-input-file | FileCheck %s
 // RUN: mlir-opt %s -allow-unregistered-dialect -one-shot-bufferize="allow-return-allocs bufferize-function-boundaries" -drop-equivalent-buffer-results -split-input-file | FileCheck %s --check-prefix=CHECK-NO-DEALLOC-PASS
 
 // Run fuzzer with different seeds.
@@ -101,19 +101,18 @@ func.func @scf_for_with_tensor.insert_slice(
   //     CHECK:   %[[ALLOC_FOR_A:.*]] = memref.alloc
   //     CHECK:   memref.copy %[[A]], %[[ALLOC_FOR_A]]
 
-  //     CHECK: %[[svA:.*]] = memref.subview %[[ALLOC_FOR_A]][0] [4] [1]
-  //     CHECK: %[[svB:.*]] = memref.subview %[[B]][0] [4] [1]
-
   //     CHECK:   scf.for {{.*}}
   // CHECK-NOT: iter_args
   %r0:2 = scf.for %i = %lb to %ub step %step iter_args(%tA = %A, %tB = %B)
       -> (tensor<?xf32>, tensor<?xf32>)
   {
     // %ttA bufferizes to direct copy of %BUFFER_CAST_C into %svA
+    //     CHECK: %[[svA:.*]] = memref.subview %[[ALLOC_FOR_A]][0] [4] [1]
     //     CHECK: memref.copy %[[C]], %[[svA]]
     %ttA = tensor.insert_slice %C into %tA[0][4][1] : tensor<4xf32> into tensor<?xf32>
 
     // %ttB bufferizes to direct copy of %BUFFER_CAST_C into %BUFFER_CAST_B
+    //     CHECK: %[[svB:.*]] = memref.subview %[[B]][0] [4] [1]
     //     CHECK:   memref.copy %[[C]], %[[svB]]
     %ttB = tensor.insert_slice %C into %tB[0][4][1] : tensor<4xf32> into tensor<?xf32>
 
@@ -518,6 +517,8 @@ func.func @scf_while_iter_arg_result_mismatch(%arg0: tensor<5xi1>,
                                               %arg2: index) {
   scf.while (%arg3 = %arg1) : (tensor<5xi1>) -> () {
     %0 = tensor.extract %arg0[%arg2] : tensor<5xi1>
+    %1 = tensor.extract %arg3[%arg2] : tensor<5xi1>
+    "dummy.use"(%1) : (i1) -> ()
     scf.condition(%0)
   } do {
     %0 = "dummy.some_op"() : () -> index
@@ -549,8 +550,7 @@ func.func @parallel_insert_slice_no_conflict(
       %6 = tensor.extract_slice %o[5] [%idx] [%c1] : tensor<?xf32> to tensor<?xf32>
       // CHECK: linalg.fill ins(%{{.*}}) outs(%[[subview]] : memref<?xf32
       %8 = linalg.fill ins(%cst : f32) outs(%6 : tensor<?xf32>) -> tensor<?xf32>
-      // Self-copy will DCE away later.
-      // CHECK: memref.copy %[[subview]], %[[subview]]
+      // CHECK-NOT: memref.copy
 
       // Empty terminator is elided from pretty-printing.
       // CHECK-NOT: scf.forall.in_parallel
@@ -596,9 +596,7 @@ func.func @parallel_insert_slice_with_conflict(
 
       // CHECK: linalg.fill ins(%{{.*}}) outs(%[[subview1]] : memref<?xf32
       %8 = linalg.fill ins(%cst : f32) outs(%6 : tensor<?xf32>) -> tensor<?xf32>
-
-      // Now the copy of the actual insert_slice. (It will fold away.)
-      // CHECK: memref.copy %[[subview1]], %[[subview1]]
+      // CHECK-NOT: memref.copy
 
       // Empty terminator is elided from pretty-printing.
       // CHECK-NOT: scf.forall.in_parallel

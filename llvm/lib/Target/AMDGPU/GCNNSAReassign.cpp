@@ -237,7 +237,7 @@ GCNNSAReassign::CheckNSA(const MachineInstr &MI, bool Fast) const {
 
 bool GCNNSAReassign::runOnMachineFunction(MachineFunction &MF) {
   ST = &MF.getSubtarget<GCNSubtarget>();
-  if (ST->getGeneration() < GCNSubtarget::GFX10)
+  if (!ST->hasNSAEncoding())
     return false;
 
   MRI = &MF.getRegInfo();

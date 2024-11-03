@@ -480,8 +480,6 @@ static std::string getContextKeyStr(ContextKey *K,
 }
 
 void HybridPerfReader::unwindSamples() {
-  if (Binary->useFSDiscriminator())
-    exitWithError("FS discriminator is not supported in CS profile.");
   VirtualUnwinder Unwinder(&SampleCounters, Binary);
   for (const auto &Item : AggregatedSamples) {
     const PerfSample *Sample = Item.first.getPtr();

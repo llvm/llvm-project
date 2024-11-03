@@ -13,21 +13,21 @@ target triple = "x86_64-unknown-linux-gnu"
 
 define double @root_selection(double %a, double %b, double %c, double %d) local_unnamed_addr #0 {
 ; CHECK-LABEL: @root_selection(
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x double> poison, double [[A:%.*]], i32 0
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x double> [[TMP1]], double [[B:%.*]], i32 1
-; CHECK-NEXT:    [[TMP3:%.*]] = fdiv fast <2 x double> [[TMP2]], <double 7.000000e+00, double 5.000000e+00>
-; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x double> [[TMP3]], i32 1
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x double> poison, double [[B:%.*]], i32 0
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x double> [[TMP1]], double [[A:%.*]], i32 1
+; CHECK-NEXT:    [[TMP3:%.*]] = fdiv fast <2 x double> [[TMP2]], <double 5.000000e+00, double 7.000000e+00>
+; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x double> [[TMP3]], i32 0
 ; CHECK-NEXT:    [[I09:%.*]] = fmul fast double [[TMP4]], undef
 ; CHECK-NEXT:    [[I10:%.*]] = fsub fast double undef, [[I09]]
-; CHECK-NEXT:    [[TMP5:%.*]] = fmul fast <2 x double> [[TMP3]], <double 3.000000e+00, double undef>
-; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <2 x double> <double undef, double poison>, double [[I10]], i32 1
+; CHECK-NEXT:    [[TMP5:%.*]] = fmul fast <2 x double> [[TMP3]], <double undef, double 3.000000e+00>
+; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <2 x double> <double poison, double undef>, double [[I10]], i32 0
 ; CHECK-NEXT:    [[TMP7:%.*]] = fmul fast <2 x double> [[TMP6]], [[TMP5]]
-; CHECK-NEXT:    [[TMP8:%.*]] = fsub fast <2 x double> [[TMP7]], <double undef, double 1.100000e+01>
-; CHECK-NEXT:    [[TMP9:%.*]] = fmul fast <2 x double> [[TMP8]], <double 4.000000e+00, double 1.200000e+01>
+; CHECK-NEXT:    [[TMP8:%.*]] = fsub fast <2 x double> [[TMP7]], <double 1.100000e+01, double undef>
+; CHECK-NEXT:    [[TMP9:%.*]] = fmul fast <2 x double> [[TMP8]], <double 1.200000e+01, double 4.000000e+00>
 ; CHECK-NEXT:    [[TMP10:%.*]] = fdiv fast <2 x double> [[TMP9]], <double 1.400000e+00, double 1.400000e+00>
-; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <2 x double> [[TMP10]], i32 0
+; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <2 x double> [[TMP10]], i32 1
 ; CHECK-NEXT:    [[I07:%.*]] = fadd fast double undef, [[TMP11]]
-; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <2 x double> [[TMP10]], i32 1
+; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <2 x double> [[TMP10]], i32 0
 ; CHECK-NEXT:    [[I16:%.*]] = fadd fast double [[I07]], [[TMP12]]
 ; CHECK-NEXT:    [[I17:%.*]] = fadd fast double [[I16]], [[C:%.*]]
 ; CHECK-NEXT:    [[I18:%.*]] = fadd fast double [[I17]], [[D:%.*]]

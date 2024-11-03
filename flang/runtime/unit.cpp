@@ -9,6 +9,7 @@
 #include "unit.h"
 #include "io-error.h"
 #include "lock.h"
+#include "tools.h"
 #include "unit-map.h"
 #include <cstdio>
 #include <limits>
@@ -417,8 +418,7 @@ bool ExternalFileUnit::SetVariableFormattedRecordLength() {
   } else if (FrameLength() > recordOffsetInFrame_) {
     const char *record{Frame() + recordOffsetInFrame_};
     std::size_t bytes{FrameLength() - recordOffsetInFrame_};
-    if (const char *nl{
-            reinterpret_cast<const char *>(std::memchr(record, '\n', bytes))}) {
+    if (const char *nl{FindCharacter(record, '\n', bytes)}) {
       recordLength = nl - record;
       if (*recordLength > 0 && record[*recordLength - 1] == '\r') {
         --*recordLength;
@@ -621,6 +621,7 @@ void ExternalFileUnit::FlushOutput(IoErrorHandler &handler) {
       // needs to advance frameOffsetInFile_ to prevent attempts at
       // impossible seeks
       CommitWrites();
+      leftTabLimit.reset();
     }
   }
   Flush(handler);
@@ -842,7 +843,7 @@ void ExternalFileUnit::BackspaceVariableUnformattedRecord(
 // There's no portable memrchr(), unfortunately, and strrchr() would
 // fail on a record with a NUL, so we have to do it the hard way.
 static const char *FindLastNewline(const char *str, std::size_t length) {
-  for (const char *p{str + length}; p-- > str;) {
+  for (const char *p{str + length}; p >= str; p--) {
     if (*p == '\n') {
       return p;
     }
@@ -892,6 +893,12 @@ void ExternalFileUnit::BackspaceVariableFormattedRecord(
 }
 
 void ExternalFileUnit::DoImpliedEndfile(IoErrorHandler &handler) {
+  if (!impliedEndfile_ && direction_ == Direction::Output && IsRecordFile() &&
+      access != Access::Direct && leftTabLimit) {
+    // Complete partial record after non-advancing write before
+    // positioning or closing the unit.  Usually sets impliedEndfile_.
+    AdvanceRecord(handler);
+  }
   if (impliedEndfile_) {
     impliedEndfile_ = false;
     if (access != Access::Direct && IsRecordFile() && mayPosition()) {
@@ -904,7 +911,7 @@ void ExternalFileUnit::DoEndfile(IoErrorHandler &handler) {
   if (IsRecordFile() && access != Access::Direct) {
     furthestPositionInRecord =
         std::max(positionInRecord, furthestPositionInRecord);
-    if (furthestPositionInRecord > 0) {
+    if (leftTabLimit) {
       // Last read/write was non-advancing, so AdvanceRecord() was not called.
       leftTabLimit.reset();
       ++currentRecordNumber;

@@ -11,6 +11,8 @@
 #ifndef FORTRAN_RUNTIME_NAMELIST_H_
 #define FORTRAN_RUNTIME_NAMELIST_H_
 
+#include "non-tbp-dio.h"
+
 #include <cstddef>
 
 namespace Fortran::runtime {
@@ -30,9 +32,15 @@ public:
     const char *name; // NUL-terminated lower-case
     const Descriptor &descriptor;
   };
-  const char *groupName; // NUL-terminated lower-case
-  std::size_t items;
-  const Item *item; // in original declaration order
+  const char *groupName{nullptr}; // NUL-terminated lower-case
+  std::size_t items{0};
+  const Item *item{nullptr}; // in original declaration order
+
+  // When the uses of a namelist group appear in scopes with distinct sets
+  // of non-type-bound defined formatted I/O interfaces, they require the
+  // use of distinct NamelistGroups pointing to distinct NonTbpDefinedIoTables.
+  // Multiple NamelistGroup instances may share a NonTbpDefinedIoTable..
+  const NonTbpDefinedIoTable *nonTbpDefinedIo{nullptr};
 };
 
 // Look ahead on input for a '/' or an identifier followed by a '=', '(', or '%'

@@ -17,18 +17,14 @@
 #include "min_allocator.h"
 
 template <class S>
-TEST_CONSTEXPR_CXX20 void
-test(const S& s)
-{
-    typedef typename S::traits_type T;
-    const typename S::value_type* str = s.c_str();
-    if (s.size() > 0)
-    {
-        assert(T::compare(str, &s[0], s.size()) == 0);
-        assert(T::eq(str[s.size()], typename S::value_type()));
-    }
-    else
-        assert(T::eq(str[0], typename S::value_type()));
+TEST_CONSTEXPR_CXX20 void test(const S& s) {
+  typedef typename S::traits_type T;
+  const typename S::value_type* str = s.c_str();
+  if (s.size() > 0) {
+    assert(T::compare(str, &s[0], s.size()) == 0);
+    assert(T::eq(str[s.size()], typename S::value_type()));
+  } else
+    assert(T::eq(str[0], typename S::value_type()));
 }
 
 TEST_CONSTEXPR_CXX20 bool test() {
@@ -52,8 +48,7 @@ TEST_CONSTEXPR_CXX20 bool test() {
   return true;
 }
 
-int main(int, char**)
-{
+int main(int, char**) {
   test();
 #if TEST_STD_VER > 17
   static_assert(test());

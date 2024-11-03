@@ -11,15 +11,21 @@
 #define _LIBCPP___FUNCTIONAL_PERFECT_FORWARD_H
 
 #include <__config>
+#include <__type_traits/enable_if.h>
+#include <__type_traits/invoke.h>
+#include <__type_traits/is_constructible.h>
 #include <__utility/declval.h>
 #include <__utility/forward.h>
+#include <__utility/integer_sequence.h>
 #include <__utility/move.h>
 #include <tuple>
-#include <type_traits>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
 #endif
+
+_LIBCPP_PUSH_MACROS
+#include <__undef_macros>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
@@ -37,14 +43,14 @@ public:
   template <class... _Args, class = enable_if_t<
     is_constructible_v<tuple<_BoundArgs...>, _Args&&...>
   >>
-  explicit constexpr __perfect_forward_impl(_Args&&... __bound_args)
+  _LIBCPP_HIDE_FROM_ABI explicit constexpr __perfect_forward_impl(_Args&&... __bound_args)
     : __bound_args_(_VSTD::forward<_Args>(__bound_args)...) {}
 
-  __perfect_forward_impl(__perfect_forward_impl const&) = default;
-  __perfect_forward_impl(__perfect_forward_impl&&) = default;
+  _LIBCPP_HIDE_FROM_ABI __perfect_forward_impl(__perfect_forward_impl const&) = default;
+  _LIBCPP_HIDE_FROM_ABI __perfect_forward_impl(__perfect_forward_impl&&) = default;
 
-  __perfect_forward_impl& operator=(__perfect_forward_impl const&) = default;
-  __perfect_forward_impl& operator=(__perfect_forward_impl&&) = default;
+  _LIBCPP_HIDE_FROM_ABI __perfect_forward_impl& operator=(__perfect_forward_impl const&) = default;
+  _LIBCPP_HIDE_FROM_ABI __perfect_forward_impl& operator=(__perfect_forward_impl&&) = default;
 
   template <class... _Args, class = enable_if_t<is_invocable_v<_Op, _BoundArgs&..., _Args...>>>
   _LIBCPP_HIDE_FROM_ABI constexpr auto operator()(_Args&&... __args) &
@@ -90,5 +96,7 @@ using __perfect_forward = __perfect_forward_impl<_Op, index_sequence_for<_Args..
 #endif // _LIBCPP_STD_VER >= 17
 
 _LIBCPP_END_NAMESPACE_STD
+
+_LIBCPP_POP_MACROS
 
 #endif // _LIBCPP___FUNCTIONAL_PERFECT_FORWARD_H

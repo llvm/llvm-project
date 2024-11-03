@@ -36,7 +36,7 @@ int main(int argc, char **argv) {
 }
 
 /*
-REQUIRES: system-linux && lit-max-individual-test-time
+REQUIRES: system-linux,bolt-runtime,lit-max-individual-test-time
 
 RUN: %clang %cflags %s -o %t.exe -Wl,-q -pie -fpie
 

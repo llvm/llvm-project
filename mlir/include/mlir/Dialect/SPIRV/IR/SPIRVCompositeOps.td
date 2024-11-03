@@ -179,7 +179,7 @@ def SPIRV_VectorExtractDynamicOp : SPIRV_Op<"VectorExtractDynamic", [
     Pure,
     TypesMatchWith<"type of 'result' matches element type of 'vector'",
                    "vector", "result",
-                   "$_self.cast<mlir::VectorType>().getElementType()">]> {
+                   "::llvm::cast<mlir::VectorType>($_self).getElementType()">]> {
   let summary = [{
     Extract a single, dynamically selected, component of a vector.
   }];
@@ -228,7 +228,7 @@ def SPIRV_VectorInsertDynamicOp : SPIRV_Op<"VectorInsertDynamic", [
     TypesMatchWith<
       "type of 'component' matches element type of 'vector'",
       "vector", "component",
-      "$_self.cast<mlir::VectorType>().getElementType()">,
+      "::llvm::cast<mlir::VectorType>($_self).getElementType()">,
     AllTypesMatch<["vector", "result"]>]> {
   let summary = [{
     Make a copy of a vector, with a single, variably selected, component

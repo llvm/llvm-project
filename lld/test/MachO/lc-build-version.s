@@ -11,7 +11,7 @@
 # MACOS-10-14-NEXT: sdk 10.15
 # MACOS-10-14-NEXT: minos 10.14
 # MACOS-10-14-NEXT: ntools 1
-# MACOS-10-14-NEXT: tool ld
+# MACOS-10-14-NEXT: tool lld
 # MACOS-10-14-NEXT: version {{[0-9\.]+}}
 
 # RUN: %lld -platform_version macos 10.13 10.15 -o %t.macos-10-13 %t.o

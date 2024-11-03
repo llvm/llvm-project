@@ -114,11 +114,11 @@ _Static_assert(sizeof(dr315.a + dr315.b) == sizeof(unsigned long long), ""); /* 
  */
 _Static_assert(sizeof(dr315.c + dr315.d) == sizeof(int), "");
 
-#if __STDC_VERSION__ < 202000L
+#if __STDC_VERSION__ < 202311L
 /* WG14 DR316: yes
  * Unprototyped function types
  */
-void dr316_1(a) int a; {}  /* expected-warning {{a function definition without a prototype is deprecated in all versions of C and is not supported in C2x}} */
+void dr316_1(a) int a; {}  /* expected-warning {{a function definition without a prototype is deprecated in all versions of C and is not supported in C23}} */
 void (*dr316_1_ptr)(int, int, int) = dr316_1;
 
 /* WG14 DR317: yes
@@ -134,10 +134,10 @@ void dr317_1() {}  /* expected-warning {{a function declaration without a protot
 void dr317_2(void) {
   if (0)
     dr317_1(1); /* expected-warning {{too many arguments in call to 'dr317_1'}}
-                   expected-warning {{passing arguments to 'dr317_1' without a prototype is deprecated in all versions of C and is not supported in C2x}}
+                   expected-warning {{passing arguments to 'dr317_1' without a prototype is deprecated in all versions of C and is not supported in C23}}
                  */
 }
-#endif /* __STDC_VERSION__ < 202000L */
+#endif /* __STDC_VERSION__ < 202311L */
 
 /* WG14 DR320: yes
  * Scope of variably modified type
@@ -243,7 +243,7 @@ void *dr339 = &(int (*)[dr339_v]){ 0 }; /* c89only-warning {{variable length arr
  * unclear whether the Clang behavior is intentional, but because the code is
  * UB, any behavior is acceptable.
  */
-#if __STDC_VERSION__ < 202000L
+#if __STDC_VERSION__ < 202311L
 void dr340(int x, int y) {
   typedef void (*T1)(int);
   typedef void (*T2)(); /* expected-warning {{a function declaration without a prototype is deprecated in all versions of C}} */
@@ -254,7 +254,7 @@ void dr340(int x, int y) {
                          */
   (y ? a : b)[0][0]();
 }
-#endif /* __STDC_VERSION__ < 202000L */
+#endif /* __STDC_VERSION__ < 202311L */
 
 /* WG14 DR341: yes
  * [*] in abstract declarators

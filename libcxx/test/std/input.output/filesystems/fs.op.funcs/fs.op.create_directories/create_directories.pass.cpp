@@ -7,9 +7,11 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03
+// UNSUPPORTED: no-filesystem
+// UNSUPPORTED: availability-filesystem-missing
 
 // This test requires the dylib support introduced in D92769.
-// XFAIL: use_system_cxx_lib && target={{.+}}-apple-macosx{{10.15|11.0}}
+// XFAIL: stdlib=apple-libc++ && target={{.+}}-apple-macosx{{10.15|11.0}}
 
 // <filesystem>
 

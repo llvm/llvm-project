@@ -11,7 +11,8 @@
 #define _LIBCPP___FUNCTIONAL_IS_TRANSPARENT
 
 #include <__config>
-#include <type_traits>
+#include <__type_traits/integral_constant.h>
+#include <__type_traits/void_t.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

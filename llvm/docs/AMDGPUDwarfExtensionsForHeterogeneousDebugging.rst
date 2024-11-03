@@ -707,6 +707,26 @@ spaces in defining source language pointer and reference types (see
 :ref:`amdgpu-dwarf-type-modifier-entries`) and data object allocation (see
 :ref:`amdgpu-dwarf-data-object-entries`).
 
+2.22 Expression Operation Vendor Extensibility Opcode
+-----------------------------------------------------
+
+The vendor extension encoding space for DWARF expression operations
+accommodates only 32 unique operations. In practice, the lack of a central
+registry and a desire for backwards compatibility means vendor extensions are
+never retired, even when standard versions are accepted into DWARF proper. This
+has produced a situation where the effective encoding space available for new
+vendor extensions is miniscule today.
+
+To expand this encoding space a new DWARF operation ``DW_OP_LLVM_user`` is
+added which acts as a "prefix" for vendor extensions. It is followed by a
+ULEB128 encoded vendor extension opcode, which is then followed by the operands
+of the corresponding vendor extension operation.
+
+This approach allows all remaining operations defined in these extensions to be
+encoded without conflicting with existing vendor extensions.
+
+See ``DW_OP_LLVM_user`` in :ref:`amdgpu-dwarf-vendor-extensions-operations`.
+
 .. _amdgpu-dwarf-changes-relative-to-dwarf-version-5:
 
 A. Changes Relative to DWARF Version 5
@@ -724,8 +744,11 @@ A. Changes Relative to DWARF Version 5
   spaces and multiple places.
 
   The names for the new operations, attributes, and constants include "\
-  ``LLVM``\ " and are encoded with vendor specific codes so these extensions can
-  be implemented as an LLVM vendor extension to DWARF Version 5.
+  ``LLVM``\ " and are encoded with vendor specific codes so these extensions
+  can be implemented as an LLVM vendor extension to DWARF Version 5. New
+  operations other than ``DW_OP_LLVM_user`` are "prefixed" by
+  ``DW_OP_LLVM_user`` to make enough encoding space available for their
+  implementation.
 
   .. note::
 
@@ -1318,6 +1341,22 @@ specifies the byte count. It can be used:
 
 * and in location list entries (see
   :ref:`amdgpu-dwarf-location-list-expressions`).
+
+.. _amdgpu-dwarf-vendor-extensions-operations:
+
+A.2.5.4.0 Vendor Extension Operations
+#####################################
+
+1.  ``DW_OP_LLVM_user``
+
+  ``DW_OP_LLVM_user`` encodes a vendor extension operation. It has at least one
+  operand: a ULEB128 constant identifying a vendor extension operation. The
+  remaining operands are defined by the vendor extension. The vendor extension
+  opcode 0 is reserved and cannot be used by any vendor extension.
+
+  *The DW_OP_user encoding space can be understood to supplement the space
+  defined by DW_OP_lo_user and DW_OP_hi_user that is allocated by the standard
+  for the same purpose.*
 
 .. _amdgpu-dwarf-stack-operations:
 
@@ -4771,42 +4810,58 @@ A.7.7.1 Operation Expressions
   Rename DWARF Version 5 section 7.7.1 and delete section 7.7.2 to reflect the
   unification of location descriptions into DWARF expressions.
 
-  This augments DWARF Version 5 section 7.7.1 and Table 7.9.
+  This augments DWARF Version 5 section 7.7.1 and Table 7.9, and adds a new
+  table describing vendor extension operations for ``DW_OP_LLVM_user``.
 
 A DWARF operation expression is stored in a block of contiguous bytes. The bytes
 form a sequence of operations. Each operation is a 1-byte code that identifies
-that operation, followed by zero or more bytes of additional data. The encodings
-for the operations are described in
-:ref:`amdgpu-dwarf-operation-encodings-table`.
+that operation, followed by zero or more bytes of additional data. The encoding
+for the operation ``DW_OP_LLVM_user`` is described in
+:ref:`amdgpu-dwarf-operation-encodings-table`, and the encoding of all
+``DW_OP_LLVM_user`` vendor extensions operations are described in
+:ref:`amdgpu-dwarf-dw-op-llvm-user-vendor-extension-operation-encodings-table`.
 
 .. table:: DWARF Operation Encodings
    :name: amdgpu-dwarf-operation-encodings-table
 
-   ====================================== ===== ======== ===============================
+   ====================================== ===== ======== =========================================================================================
    Operation                              Code  Number   Notes
                                                 of
                                                 Operands
-   ====================================== ===== ======== ===============================
-   ``DW_OP_LLVM_form_aspace_address``     0xe1     0
-   ``DW_OP_LLVM_push_lane``               0xe2     0
-   ``DW_OP_LLVM_offset``                  0xe3     0
-   ``DW_OP_LLVM_offset_uconst``           0xe4     1     ULEB128 byte displacement
-   ``DW_OP_LLVM_bit_offset``              0xe5     0
-   ``DW_OP_LLVM_call_frame_entry_reg``    0xe6     1     ULEB128 register number
-   ``DW_OP_LLVM_undefined``               0xe7     0
-   ``DW_OP_LLVM_aspace_bregx``            0xe8     2     ULEB128 register number,
-                                                         ULEB128 byte displacement
-   ``DW_OP_LLVM_aspace_implicit_pointer`` 0xe9     2     4-byte or 8-byte offset of DIE,
-                                                         SLEB128 byte displacement
-   ``DW_OP_LLVM_piece_end``               0xea     0
-   ``DW_OP_LLVM_extend``                  0xeb     2     ULEB128 bit size,
-                                                         ULEB128 count
-   ``DW_OP_LLVM_select_bit_piece``        0xec     2     ULEB128 bit size,
-                                                         ULEB128 count
-   ``DW_OP_LLVM_push_iteration``          TBA      0
-   ``DW_OP_LLVM_overlay``                 TBA      0
-   ``DW_OP_LLVM_bit_overlay``             TBA      0
-   ====================================== ===== ======== ===============================
+   ====================================== ===== ======== =========================================================================================
+   ``DW_OP_LLVM_user``                    0xe9     1+    ULEB128 vendor extension opcode, followed by vendor extension operands
+                                                         defined in :ref:`amdgpu-dwarf-dw-op-llvm-user-vendor-extension-operation-encodings-table`
+   ====================================== ===== ======== =========================================================================================
+
+.. table:: DWARF DW_OP_LLVM_user Vendor Extension Operation Encodings
+   :name: amdgpu-dwarf-dw-op-llvm-user-vendor-extension-operation-encodings-table
+
+   ====================================== ========= ========== ===============================
+   Operation                              Vendor    Number     Notes
+                                          Extension of
+                                          Opcode    Additional
+                                                    Operands
+   ====================================== ========= ========== ===============================
+   ``DW_OP_LLVM_form_aspace_address``     0x02          0
+   ``DW_OP_LLVM_push_lane``               0x03          0
+   ``DW_OP_LLVM_offset``                  0x04          0
+   ``DW_OP_LLVM_offset_uconst``           0x05          1      ULEB128 byte displacement
+   ``DW_OP_LLVM_bit_offset``              0x06          0
+   ``DW_OP_LLVM_call_frame_entry_reg``    0x07          1      ULEB128 register number
+   ``DW_OP_LLVM_undefined``               0x08          0
+   ``DW_OP_LLVM_aspace_bregx``            0x09          2      ULEB128 register number,
+                                                               SLEB128 byte displacement
+   ``DW_OP_LLVM_piece_end``               0x0a          0
+   ``DW_OP_LLVM_extend``                  0x0b          2      ULEB128 bit size,
+                                                               ULEB128 count
+   ``DW_OP_LLVM_select_bit_piece``        0x0c          2      ULEB128 bit size,
+                                                               ULEB128 count
+   ``DW_OP_LLVM_aspace_implicit_pointer`` TBA           2      4-byte or 8-byte offset of DIE,
+                                                               SLEB128 byte displacement
+   ``DW_OP_LLVM_push_iteration``          TBA           0
+   ``DW_OP_LLVM_overlay``                 TBA           0
+   ``DW_OP_LLVM_bit_overlay``             TBA           0
+   ====================================== ========= ========== ===============================
 
 A.7.7.3 Location List Expressions
 +++++++++++++++++++++++++++++++++
@@ -4918,7 +4973,7 @@ A.7.32 Type Signature Computation
 
 .. note::
 
-  This augments (in alphebetical order) DWARF Version 5 section 7.32, Table
+  This augments (in alphabetical order) DWARF Version 5 section 7.32, Table
   7.32.
 
 .. table:: Attributes used in type signature computation

@@ -1,8 +1,6 @@
 // REQUIRES: x86-registered-target
 // RUN: %clang_cc1 -x c++ %s -triple i386-apple-darwin10 -fasm-blocks -emit-llvm -o - -std=c++11 | FileCheck %s
 
-// rdar://13645930
-
 struct Foo {
   static int *ptr;
   static int a, b;
@@ -109,7 +107,7 @@ void test5() {
   __asm mov x, eax
   // CHECK: call void asm sideeffect inteldialect
   // CHECK-SAME: push $0
-  // CHECK-SAME: call dword ptr ${2:P}
+  // CHECK-SAME: call ${2:P}
   // CHECK-SAME: mov $1, eax
   // CHECK-SAME: "=*m,=*m,*m,~{esp},~{dirflag},~{fpsr},~{flags}"(ptr elementtype(i32) %y, ptr elementtype(i32) %x, ptr elementtype(i32 (float)) @_ZN2T5IiE6createIfEEiT_)
 }

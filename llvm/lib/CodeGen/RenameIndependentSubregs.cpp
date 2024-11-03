@@ -101,9 +101,9 @@ private:
                        const SmallVectorImpl<LiveInterval*> &Intervals) const;
 
 
-  LiveIntervals *LIS;
-  MachineRegisterInfo *MRI;
-  const TargetInstrInfo *TII;
+  LiveIntervals *LIS = nullptr;
+  MachineRegisterInfo *MRI = nullptr;
+  const TargetInstrInfo *TII = nullptr;
 };
 
 } // end anonymous namespace

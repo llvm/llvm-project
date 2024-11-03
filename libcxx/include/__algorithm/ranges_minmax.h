@@ -23,6 +23,8 @@
 #include <__iterator/projected.h>
 #include <__ranges/access.h>
 #include <__ranges/concepts.h>
+#include <__type_traits/is_reference.h>
+#include <__type_traits/remove_cvref.h>
 #include <__utility/forward.h>
 #include <__utility/move.h>
 #include <__utility/pair.h>
@@ -35,7 +37,7 @@
 #if _LIBCPP_STD_VER >= 20
 
 _LIBCPP_PUSH_MACROS
-#include <__undef_macros>
+#  include <__undef_macros>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
@@ -45,7 +47,8 @@ using minmax_result = min_max_result<_T1>;
 
 namespace __minmax {
 struct __fn {
-  template <class _Type, class _Proj = identity,
+  template <class _Type,
+            class _Proj                                                      = identity,
             indirect_strict_weak_order<projected<const _Type*, _Proj>> _Comp = ranges::less>
   _LIBCPP_NODISCARD_EXT _LIBCPP_HIDE_FROM_ABI constexpr ranges::minmax_result<const _Type&>
   operator()(_LIBCPP_LIFETIMEBOUND const _Type& __a,
@@ -57,25 +60,27 @@ struct __fn {
     return {__a, __b};
   }
 
-  template <copyable _Type, class _Proj = identity,
+  template <copyable _Type,
+            class _Proj                                                      = identity,
             indirect_strict_weak_order<projected<const _Type*, _Proj>> _Comp = ranges::less>
-  _LIBCPP_NODISCARD_EXT _LIBCPP_HIDE_FROM_ABI constexpr
-  ranges::minmax_result<_Type> operator()(initializer_list<_Type> __il, _Comp __comp = {}, _Proj __proj = {}) const {
-    _LIBCPP_ASSERT(__il.begin() != __il.end(), "initializer_list has to contain at least one element");
+  _LIBCPP_NODISCARD_EXT _LIBCPP_HIDE_FROM_ABI constexpr ranges::minmax_result<_Type>
+  operator()(initializer_list<_Type> __il, _Comp __comp = {}, _Proj __proj = {}) const {
+    _LIBCPP_ASSERT_UNCATEGORIZED(__il.begin() != __il.end(), "initializer_list has to contain at least one element");
     auto __iters = std::__minmax_element_impl(__il.begin(), __il.end(), __comp, __proj);
-    return ranges::minmax_result<_Type> { *__iters.first, *__iters.second };
+    return ranges::minmax_result<_Type>{*__iters.first, *__iters.second};
   }
 
-  template <input_range _Range, class _Proj = identity,
+  template <input_range _Range,
+            class _Proj                                                            = identity,
             indirect_strict_weak_order<projected<iterator_t<_Range>, _Proj>> _Comp = ranges::less>
     requires indirectly_copyable_storable<iterator_t<_Range>, range_value_t<_Range>*>
-  _LIBCPP_NODISCARD_EXT _LIBCPP_HIDE_FROM_ABI constexpr
-  ranges::minmax_result<range_value_t<_Range>> operator()(_Range&& __r, _Comp __comp = {}, _Proj __proj = {}) const {
-    auto __first = ranges::begin(__r);
-    auto __last = ranges::end(__r);
+  _LIBCPP_NODISCARD_EXT _LIBCPP_HIDE_FROM_ABI constexpr ranges::minmax_result<range_value_t<_Range>>
+  operator()(_Range&& __r, _Comp __comp = {}, _Proj __proj = {}) const {
+    auto __first  = ranges::begin(__r);
+    auto __last   = ranges::end(__r);
     using _ValueT = range_value_t<_Range>;
 
-    _LIBCPP_ASSERT(__first != __last, "range has to contain at least one element");
+    _LIBCPP_ASSERT_UNCATEGORIZED(__first != __last, "range has to contain at least one element");
 
     if constexpr (forward_range<_Range>) {
       // Special-case the one element case. Avoid repeatedly initializing objects from the result of an iterator
@@ -96,8 +101,9 @@ struct __fn {
       // input_iterators can't be copied, so the implementation for input_iterators has to store
       // the values instead of a pointer to the correct values
       auto __less = [&](auto&& __a, auto&& __b) -> bool {
-        return std::invoke(__comp, std::invoke(__proj, std::forward<decltype(__a)>(__a)),
-                                   std::invoke(__proj, std::forward<decltype(__b)>(__b)));
+        return std::invoke(__comp,
+                           std::invoke(__proj, std::forward<decltype(__a)>(__a)),
+                           std::invoke(__proj, std::forward<decltype(__b)>(__b)));
       };
 
       // During initialization, members are allowed to refer to already initialized members
@@ -140,7 +146,7 @@ struct __fn {
 } // namespace __minmax
 
 inline namespace __cpo {
-  inline constexpr auto minmax = __minmax::__fn{};
+inline constexpr auto minmax = __minmax::__fn{};
 } // namespace __cpo
 } // namespace ranges
 

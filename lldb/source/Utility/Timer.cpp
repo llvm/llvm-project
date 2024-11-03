@@ -135,7 +135,7 @@ void Timer::ResetCategoryTimes() {
   }
 }
 
-void Timer::DumpCategoryTimes(Stream *s) {
+void Timer::DumpCategoryTimes(Stream &s) {
   std::vector<Stats> sorted;
   for (Category *i = g_categories; i; i = i->m_next) {
     uint64_t nanos = i->m_nanos.load(std::memory_order_acquire);
@@ -153,9 +153,9 @@ void Timer::DumpCategoryTimes(Stream *s) {
   llvm::sort(sorted, CategoryMapIteratorSortCriterion);
 
   for (const auto &stats : sorted)
-    s->Printf("%.9f sec (total: %.3fs; child: %.3fs; count: %" PRIu64
-              ") for %s\n",
-              stats.nanos / 1000000000., stats.nanos_total / 1000000000.,
-              (stats.nanos_total - stats.nanos) / 1000000000., stats.count,
-              stats.name);
+    s.Printf("%.9f sec (total: %.3fs; child: %.3fs; count: %" PRIu64
+             ") for %s\n",
+             stats.nanos / 1000000000., stats.nanos_total / 1000000000.,
+             (stats.nanos_total - stats.nanos) / 1000000000., stats.count,
+             stats.name);
 }

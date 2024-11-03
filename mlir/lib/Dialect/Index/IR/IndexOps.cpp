@@ -10,9 +10,12 @@
 #include "mlir/Dialect/Index/IR/IndexAttrs.h"
 #include "mlir/Dialect/Index/IR/IndexDialect.h"
 #include "mlir/IR/Builders.h"
+#include "mlir/IR/Matchers.h"
 #include "mlir/IR/OpImplementation.h"
+#include "mlir/IR/PatternMatch.h"
+#include "mlir/Interfaces/Utils/InferIntRangeCommon.h"
 #include "llvm/ADT/SmallString.h"
-#include <optional>
+#include "llvm/ADT/TypeSwitch.h"
 
 using namespace mlir;
 using namespace mlir::index;
@@ -39,7 +42,8 @@ Operation *IndexDialect::materializeConstant(OpBuilder &b, Attribute value,
 
   // Materialize integer attributes as `index`.
   if (auto indexValue = dyn_cast<IntegerAttr>(value)) {
-    if (!indexValue.getType().isa<IndexType>() || !type.isa<IndexType>())
+    if (!llvm::isa<IndexType>(indexValue.getType()) ||
+        !llvm::isa<IndexType>(type))
       return nullptr;
     assert(indexValue.getValue().getBitWidth() ==
            IndexType::kInternalStorageBitWidth);
@@ -119,9 +123,18 @@ static OpFoldResult foldBinaryOpChecked(
 //===----------------------------------------------------------------------===//
 
 OpFoldResult AddOp::fold(FoldAdaptor adaptor) {
-  return foldBinaryOpUnchecked(
-      adaptor.getOperands(),
-      [](const APInt &lhs, const APInt &rhs) { return lhs + rhs; });
+  if (OpFoldResult result = foldBinaryOpUnchecked(
+          adaptor.getOperands(),
+          [](const APInt &lhs, const APInt &rhs) { return lhs + rhs; }))
+    return result;
+
+  if (auto rhs = dyn_cast_or_null<IntegerAttr>(adaptor.getRhs())) {
+    // Fold `add(x, 0) -> x`.
+    if (rhs.getValue().isZero())
+      return getLhs();
+  }
+
+  return {};
 }
 
 //===----------------------------------------------------------------------===//
@@ -129,9 +142,18 @@ OpFoldResult AddOp::fold(FoldAdaptor adaptor) {
 //===----------------------------------------------------------------------===//
 
 OpFoldResult SubOp::fold(FoldAdaptor adaptor) {
-  return foldBinaryOpUnchecked(
-      adaptor.getOperands(),
-      [](const APInt &lhs, const APInt &rhs) { return lhs - rhs; });
+  if (OpFoldResult result = foldBinaryOpUnchecked(
+          adaptor.getOperands(),
+          [](const APInt &lhs, const APInt &rhs) { return lhs - rhs; }))
+    return result;
+
+  if (auto rhs = dyn_cast_or_null<IntegerAttr>(adaptor.getRhs())) {
+    // Fold `sub(x, 0) -> x`.
+    if (rhs.getValue().isZero())
+      return getLhs();
+  }
+
+  return {};
 }
 
 //===----------------------------------------------------------------------===//
@@ -139,9 +161,21 @@ OpFoldResult SubOp::fold(FoldAdaptor adaptor) {
 //===----------------------------------------------------------------------===//
 
 OpFoldResult MulOp::fold(FoldAdaptor adaptor) {
-  return foldBinaryOpUnchecked(
-      adaptor.getOperands(),
-      [](const APInt &lhs, const APInt &rhs) { return lhs * rhs; });
+  if (OpFoldResult result = foldBinaryOpUnchecked(
+          adaptor.getOperands(),
+          [](const APInt &lhs, const APInt &rhs) { return lhs * rhs; }))
+    return result;
+
+  if (auto rhs = dyn_cast_or_null<IntegerAttr>(adaptor.getRhs())) {
+    // Fold `mul(x, 1) -> x`.
+    if (rhs.getValue().isOne())
+      return getLhs();
+    // Fold `mul(x, 0) -> 0`.
+    if (rhs.getValue().isZero())
+      return rhs;
+  }
+
+  return {};
 }
 
 //===----------------------------------------------------------------------===//
@@ -262,7 +296,12 @@ OpFoldResult FloorDivSOp::fold(FoldAdaptor adaptor) {
 OpFoldResult RemSOp::fold(FoldAdaptor adaptor) {
   return foldBinaryOpChecked(
       adaptor.getOperands(),
-      [](const APInt &lhs, const APInt &rhs) { return lhs.srem(rhs); });
+      [](const APInt &lhs, const APInt &rhs) -> std::optional<APInt> {
+        // Don't fold division by zero.
+        if (rhs.isZero())
+          return std::nullopt;
+        return lhs.srem(rhs);
+      });
 }
 
 //===----------------------------------------------------------------------===//
@@ -272,7 +311,12 @@ OpFoldResult RemSOp::fold(FoldAdaptor adaptor) {
 OpFoldResult RemUOp::fold(FoldAdaptor adaptor) {
   return foldBinaryOpChecked(
       adaptor.getOperands(),
-      [](const APInt &lhs, const APInt &rhs) { return lhs.urem(rhs); });
+      [](const APInt &lhs, const APInt &rhs) -> std::optional<APInt> {
+        // Don't fold division by zero.
+        if (rhs.isZero())
+          return std::nullopt;
+        return lhs.urem(rhs);
+      });
 }
 
 //===----------------------------------------------------------------------===//
@@ -302,9 +346,10 @@ OpFoldResult MaxUOp::fold(FoldAdaptor adaptor) {
 //===----------------------------------------------------------------------===//
 
 OpFoldResult MinSOp::fold(FoldAdaptor adaptor) {
-  return foldBinaryOpChecked(adaptor.getOperands(), [](const APInt &lhs, const APInt &rhs) {
-    return lhs.slt(rhs) ? lhs : rhs;
-  });
+  return foldBinaryOpChecked(adaptor.getOperands(),
+                             [](const APInt &lhs, const APInt &rhs) {
+                               return lhs.slt(rhs) ? lhs : rhs;
+                             });
 }
 
 //===----------------------------------------------------------------------===//
@@ -312,9 +357,10 @@ OpFoldResult MinSOp::fold(FoldAdaptor adaptor) {
 //===----------------------------------------------------------------------===//
 
 OpFoldResult MinUOp::fold(FoldAdaptor adaptor) {
-  return foldBinaryOpChecked(adaptor.getOperands(), [](const APInt &lhs, const APInt &rhs) {
-    return lhs.ult(rhs) ? lhs : rhs;
-  });
+  return foldBinaryOpChecked(adaptor.getOperands(),
+                             [](const APInt &lhs, const APInt &rhs) {
+                               return lhs.ult(rhs) ? lhs : rhs;
+                             });
 }
 
 //===----------------------------------------------------------------------===//
@@ -399,7 +445,8 @@ OpFoldResult XOrOp::fold(FoldAdaptor adaptor) {
 //===----------------------------------------------------------------------===//
 
 bool CastSOp::areCastCompatible(TypeRange lhsTypes, TypeRange rhsTypes) {
-  return lhsTypes.front().isa<IndexType>() != rhsTypes.front().isa<IndexType>();
+  return llvm::isa<IndexType>(lhsTypes.front()) !=
+         llvm::isa<IndexType>(rhsTypes.front());
 }
 
 //===----------------------------------------------------------------------===//
@@ -407,7 +454,8 @@ bool CastSOp::areCastCompatible(TypeRange lhsTypes, TypeRange rhsTypes) {
 //===----------------------------------------------------------------------===//
 
 bool CastUOp::areCastCompatible(TypeRange lhsTypes, TypeRange rhsTypes) {
-  return lhsTypes.front().isa<IndexType>() != rhsTypes.front().isa<IndexType>();
+  return llvm::isa<IndexType>(lhsTypes.front()) !=
+         llvm::isa<IndexType>(rhsTypes.front());
 }
 
 //===----------------------------------------------------------------------===//
@@ -442,19 +490,95 @@ bool compareIndices(const APInt &lhs, const APInt &rhs,
   llvm_unreachable("unhandled IndexCmpPredicate predicate");
 }
 
+/// `cmp(max/min(x, cstA), cstB)` can be folded to a constant depending on the
+/// values of `cstA` and `cstB`, the max or min operation, and the comparison
+/// predicate. Check whether the value folds in both 32-bit and 64-bit
+/// arithmetic and to the same value.
+static std::optional<bool> foldCmpOfMaxOrMin(Operation *lhsOp,
+                                             const APInt &cstA,
+                                             const APInt &cstB, unsigned width,
+                                             IndexCmpPredicate pred) {
+  ConstantIntRanges lhsRange = TypeSwitch<Operation *, ConstantIntRanges>(lhsOp)
+                                   .Case([&](MinSOp op) {
+                                     return ConstantIntRanges::fromSigned(
+                                         APInt::getSignedMinValue(width), cstA);
+                                   })
+                                   .Case([&](MinUOp op) {
+                                     return ConstantIntRanges::fromUnsigned(
+                                         APInt::getMinValue(width), cstA);
+                                   })
+                                   .Case([&](MaxSOp op) {
+                                     return ConstantIntRanges::fromSigned(
+                                         cstA, APInt::getSignedMaxValue(width));
+                                   })
+                                   .Case([&](MaxUOp op) {
+                                     return ConstantIntRanges::fromUnsigned(
+                                         cstA, APInt::getMaxValue(width));
+                                   });
+  return intrange::evaluatePred(static_cast<intrange::CmpPredicate>(pred),
+                                lhsRange, ConstantIntRanges::constant(cstB));
+}
+
 OpFoldResult CmpOp::fold(FoldAdaptor adaptor) {
+  // Attempt to fold if both inputs are constant.
   auto lhs = dyn_cast_if_present<IntegerAttr>(adaptor.getLhs());
   auto rhs = dyn_cast_if_present<IntegerAttr>(adaptor.getRhs());
-  if (!lhs || !rhs)
-    return {};
+  if (lhs && rhs) {
+    // Perform the comparison in 64-bit and 32-bit.
+    bool result64 = compareIndices(lhs.getValue(), rhs.getValue(), getPred());
+    bool result32 = compareIndices(lhs.getValue().trunc(32),
+                                   rhs.getValue().trunc(32), getPred());
+    if (result64 == result32)
+      return BoolAttr::get(getContext(), result64);
+  }
 
-  // Perform the comparison in 64-bit and 32-bit.
-  bool result64 = compareIndices(lhs.getValue(), rhs.getValue(), getPred());
-  bool result32 = compareIndices(lhs.getValue().trunc(32),
-                                 rhs.getValue().trunc(32), getPred());
-  if (result64 != result32)
-    return {};
-  return BoolAttr::get(getContext(), result64);
+  // Fold `cmp(max/min(x, cstA), cstB)`.
+  Operation *lhsOp = getLhs().getDefiningOp();
+  IntegerAttr cstA;
+  if (isa_and_nonnull<MinSOp, MinUOp, MaxSOp, MaxUOp>(lhsOp) &&
+      matchPattern(lhsOp->getOperand(1), m_Constant(&cstA)) && rhs) {
+    std::optional<bool> result64 = foldCmpOfMaxOrMin(
+        lhsOp, cstA.getValue(), rhs.getValue(), 64, getPred());
+    std::optional<bool> result32 =
+        foldCmpOfMaxOrMin(lhsOp, cstA.getValue().trunc(32),
+                          rhs.getValue().trunc(32), 32, getPred());
+    // Fold if the 32-bit and 64-bit results are the same.
+    if (result64 && result32 && *result64 == *result32)
+      return BoolAttr::get(getContext(), *result64);
+  }
+
+  return {};
+}
+
+/// Canonicalize
+/// `x - y cmp 0` to `x cmp y`. or `x - y cmp 0` to `x cmp y`.
+/// `0 cmp x - y` to `y cmp x`. or `0 cmp x - y` to `y cmp x`.
+LogicalResult CmpOp::canonicalize(CmpOp op, PatternRewriter &rewriter) {
+  IntegerAttr cmpRhs;
+  IntegerAttr cmpLhs;
+
+  bool rhsIsZero = matchPattern(op.getRhs(), m_Constant(&cmpRhs)) &&
+                   cmpRhs.getValue().isZero();
+  bool lhsIsZero = matchPattern(op.getLhs(), m_Constant(&cmpLhs)) &&
+                   cmpLhs.getValue().isZero();
+  if (!rhsIsZero && !lhsIsZero)
+    return rewriter.notifyMatchFailure(op.getLoc(),
+                                       "cmp is not comparing something with 0");
+  SubOp subOp = rhsIsZero ? op.getLhs().getDefiningOp<index::SubOp>()
+                          : op.getRhs().getDefiningOp<index::SubOp>();
+  if (!subOp)
+    return rewriter.notifyMatchFailure(
+        op.getLoc(), "non-zero operand is not a result of subtraction");
+
+  index::CmpOp newCmp;
+  if (rhsIsZero)
+    newCmp = rewriter.create<index::CmpOp>(op.getLoc(), op.getPred(),
+                                           subOp.getLhs(), subOp.getRhs());
+  else
+    newCmp = rewriter.create<index::CmpOp>(op.getLoc(), op.getPred(),
+                                           subOp.getRhs(), subOp.getLhs());
+  rewriter.replaceOp(op, newCmp);
+  return success();
 }
 
 //===----------------------------------------------------------------------===//

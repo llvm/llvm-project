@@ -11,27 +11,21 @@
 
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
+#include "src/__support/FPUtil/fpbits_str.h"
+#include "test/UnitTest/RoundingModeUtils.h"
+#include "test/UnitTest/StringUtils.h"
 #include "test/UnitTest/Test.h"
-#include "utils/testutils/RoundingModeUtils.h"
 
-#include <errno.h>
 #include <math.h>
 
 namespace __llvm_libc {
-namespace fputil {
 namespace testing {
 
-template <typename ValType, typename StreamType>
-cpp::enable_if_t<cpp::is_floating_point_v<ValType>, void>
-describeValue(const char *label, ValType value, StreamType &stream);
-
-template <typename T, __llvm_libc::testing::TestCondition Condition>
-class FPMatcher : public __llvm_libc::testing::Matcher<T> {
-  static_assert(__llvm_libc::cpp::is_floating_point_v<T>,
+template <typename T, TestCond Condition> class FPMatcher : public Matcher<T> {
+  static_assert(cpp::is_floating_point_v<T>,
                 "FPMatcher can only be used with floating point values.");
-  static_assert(Condition == __llvm_libc::testing::Cond_EQ ||
-                    Condition == __llvm_libc::testing::Cond_NE,
-                "Unsupported FPMathcer test condition.");
+  static_assert(Condition == TestCond::EQ || Condition == TestCond::NE,
+                "Unsupported FPMatcher test condition.");
 
   T expected;
   T actual;
@@ -42,30 +36,30 @@ public:
   bool match(T actualValue) {
     actual = actualValue;
     fputil::FPBits<T> actualBits(actual), expectedBits(expected);
-    if (Condition == __llvm_libc::testing::Cond_EQ)
+    if (Condition == TestCond::EQ)
       return (actualBits.is_nan() && expectedBits.is_nan()) ||
              (actualBits.uintval() == expectedBits.uintval());
 
-    // If condition == Cond_NE.
+    // If condition == TestCond::NE.
     if (actualBits.is_nan())
       return !expectedBits.is_nan();
     return expectedBits.is_nan() ||
            (actualBits.uintval() != expectedBits.uintval());
   }
 
-  void explainError(testutils::StreamWrapper &stream) override {
-    describeValue("Expected floating point value: ", expected, stream);
-    describeValue("  Actual floating point value: ", actual, stream);
+  void explainError() override {
+    tlog << "Expected floating point value: "
+         << str(fputil::FPBits<T>(expected)) << '\n';
+    tlog << "Actual floating point value: " << str(fputil::FPBits<T>(actual))
+         << '\n';
   }
 };
 
-template <__llvm_libc::testing::TestCondition C, typename T>
-FPMatcher<T, C> getMatcher(T expectedValue) {
+template <TestCond C, typename T> FPMatcher<T, C> getMatcher(T expectedValue) {
   return FPMatcher<T, C>(expectedValue);
 }
 
 } // namespace testing
-} // namespace fputil
 } // namespace __llvm_libc
 
 #define DECLARE_SPECIAL_CONSTANTS(T)                                           \
@@ -80,34 +74,39 @@ FPMatcher<T, C> getMatcher(T expectedValue) {
 #define EXPECT_FP_EQ(expected, actual)                                         \
   EXPECT_THAT(                                                                 \
       actual,                                                                  \
-      __llvm_libc::fputil::testing::getMatcher<__llvm_libc::testing::Cond_EQ>( \
+      __llvm_libc::testing::getMatcher<__llvm_libc::testing::TestCond::EQ>(    \
           expected))
+
+#define TEST_FP_EQ(expected, actual)                                           \
+  __llvm_libc::testing::getMatcher<__llvm_libc::testing::TestCond::EQ>(        \
+      expected)                                                                \
+      .match(actual)
 
 #define EXPECT_FP_IS_NAN(actual) EXPECT_TRUE((actual) != (actual))
 
 #define ASSERT_FP_EQ(expected, actual)                                         \
   ASSERT_THAT(                                                                 \
       actual,                                                                  \
-      __llvm_libc::fputil::testing::getMatcher<__llvm_libc::testing::Cond_EQ>( \
+      __llvm_libc::testing::getMatcher<__llvm_libc::testing::TestCond::EQ>(    \
           expected))
 
 #define EXPECT_FP_NE(expected, actual)                                         \
   EXPECT_THAT(                                                                 \
       actual,                                                                  \
-      __llvm_libc::fputil::testing::getMatcher<__llvm_libc::testing::Cond_NE>( \
+      __llvm_libc::testing::getMatcher<__llvm_libc::testing::TestCond::NE>(    \
           expected))
 
 #define ASSERT_FP_NE(expected, actual)                                         \
   ASSERT_THAT(                                                                 \
       actual,                                                                  \
-      __llvm_libc::fputil::testing::getMatcher<__llvm_libc::testing::Cond_NE>( \
+      __llvm_libc::testing::getMatcher<__llvm_libc::testing::TestCond::NE>(    \
           expected))
 
 #define EXPECT_MATH_ERRNO(expected)                                            \
   do {                                                                         \
     if (math_errhandling & MATH_ERRNO) {                                       \
-      int actual = errno;                                                      \
-      errno = 0;                                                               \
+      int actual = libc_errno;                                                 \
+      libc_errno = 0;                                                          \
       EXPECT_EQ(actual, expected);                                             \
     }                                                                          \
   } while (0)
@@ -115,8 +114,8 @@ FPMatcher<T, C> getMatcher(T expectedValue) {
 #define ASSERT_MATH_ERRNO(expected)                                            \
   do {                                                                         \
     if (math_errhandling & MATH_ERRNO) {                                       \
-      int actual = errno;                                                      \
-      errno = 0;                                                               \
+      int actual = libc_errno;                                                 \
+      libc_errno = 0;                                                          \
       ASSERT_EQ(actual, expected);                                             \
     }                                                                          \
   } while (0)
@@ -124,14 +123,16 @@ FPMatcher<T, C> getMatcher(T expectedValue) {
 #define EXPECT_FP_EXCEPTION(expected)                                          \
   do {                                                                         \
     if (math_errhandling & MATH_ERREXCEPT) {                                   \
-      EXPECT_EQ(__llvm_libc::fputil::test_except(FE_ALL_EXCEPT), expected);    \
+      EXPECT_GE(__llvm_libc::fputil::test_except(FE_ALL_EXCEPT) & expected,    \
+                expected);                                                     \
     }                                                                          \
   } while (0)
 
 #define ASSERT_FP_EXCEPTION(expected)                                          \
   do {                                                                         \
     if (math_errhandling & MATH_ERREXCEPT) {                                   \
-      ASSERT_EQ(__llvm_libc::fputil::test_except(FE_ALL_EXCEPT), expected);    \
+      ASSERT_GE(__llvm_libc::fputil::test_except(FE_ALL_EXCEPT) & expected,    \
+                expected);                                                     \
     }                                                                          \
   } while (0)
 
@@ -140,7 +141,8 @@ FPMatcher<T, C> getMatcher(T expectedValue) {
     __llvm_libc::fputil::clear_except(FE_ALL_EXCEPT);                          \
     EXPECT_FP_EQ(expected_val, actual_val);                                    \
     if (math_errhandling & MATH_ERREXCEPT) {                                   \
-      EXPECT_EQ(__llvm_libc::fputil::test_except(FE_ALL_EXCEPT),               \
+      EXPECT_GE(__llvm_libc::fputil::test_except(FE_ALL_EXCEPT) &              \
+                    expected_except,                                           \
                 expected_except);                                              \
       __llvm_libc::fputil::clear_except(FE_ALL_EXCEPT);                        \
     }                                                                          \
@@ -151,7 +153,8 @@ FPMatcher<T, C> getMatcher(T expectedValue) {
     __llvm_libc::fputil::clear_except(FE_ALL_EXCEPT);                          \
     EXPECT_FP_IS_NAN(actual_val);                                              \
     if (math_errhandling & MATH_ERREXCEPT) {                                   \
-      EXPECT_EQ(__llvm_libc::fputil::test_except(FE_ALL_EXCEPT),               \
+      EXPECT_GE(__llvm_libc::fputil::test_except(FE_ALL_EXCEPT) &              \
+                    expected_except,                                           \
                 expected_except);                                              \
       __llvm_libc::fputil::clear_except(FE_ALL_EXCEPT);                        \
     }                                                                          \
@@ -159,15 +162,19 @@ FPMatcher<T, C> getMatcher(T expectedValue) {
 
 #define EXPECT_FP_EQ_ALL_ROUNDING(expected, actual)                            \
   do {                                                                         \
-    using namespace __llvm_libc::testutils;                                    \
+    using namespace __llvm_libc::fputil::testing;                              \
     ForceRoundingMode __r1(RoundingMode::Nearest);                             \
-    EXPECT_FP_EQ((expected), (actual));                                        \
+    if (__r1.success)                                                          \
+      EXPECT_FP_EQ((expected), (actual));                                      \
     ForceRoundingMode __r2(RoundingMode::Upward);                              \
-    EXPECT_FP_EQ((expected), (actual));                                        \
+    if (__r2.success)                                                          \
+      EXPECT_FP_EQ((expected), (actual));                                      \
     ForceRoundingMode __r3(RoundingMode::Downward);                            \
-    EXPECT_FP_EQ((expected), (actual));                                        \
+    if (__r3.success)                                                          \
+      EXPECT_FP_EQ((expected), (actual));                                      \
     ForceRoundingMode __r4(RoundingMode::TowardZero);                          \
-    EXPECT_FP_EQ((expected), (actual));                                        \
+    if (__r4.success)                                                          \
+      EXPECT_FP_EQ((expected), (actual));                                      \
   } while (0)
 
 #endif // LLVM_LIBC_UTILS_UNITTEST_FPMATCHER_H

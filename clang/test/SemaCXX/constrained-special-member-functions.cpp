@@ -299,3 +299,16 @@ static_assert(__is_trivial(S<int>));
 static_assert(!__is_trivial(S<D>));
 
 }
+
+namespace GH62555 {
+
+template <bool B>
+struct ExplicitTemplateArgs {
+    ExplicitTemplateArgs(ExplicitTemplateArgs&&) = default;
+    ExplicitTemplateArgs(ExplicitTemplateArgs<false>&&) requires B {};
+};
+
+static_assert(__is_trivially_copyable(ExplicitTemplateArgs<false>));
+static_assert(__is_trivially_copyable(ExplicitTemplateArgs<true>));
+
+}

@@ -53,7 +53,7 @@ define amdgpu_kernel void @s_set_midbit(ptr addrspace(1) %out, i32 %in) {
 ; Make sure there's no verifier error with an undef source.
 ; SI-LABEL: {{^}}bitset_verifier_error:
 ; SI-NOT:   %bb.1:
-; SI:       s_bitset0_b32 s{{[0-9]+}}, 31
+; SI:       s_and_b32 s{{[0-9]+}}, s{{[0-9]+}}, 0x7fffffff
 define void @bitset_verifier_error() local_unnamed_addr #0 {
 bb:
   %i = call float @llvm.fabs.f32(float undef) #0

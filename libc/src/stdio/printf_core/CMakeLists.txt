@@ -20,6 +20,7 @@ add_object_library(
     libc.src.__support.ctype_utils
     libc.src.__support.str_to_integer
     libc.src.__support.CPP.bit
+    libc.src.__support.CPP.optional
     libc.src.__support.CPP.string_view
     libc.src.__support.CPP.type_traits
     libc.src.__support.common
@@ -37,6 +38,7 @@ add_object_library(
     libc.src.__support.ctype_utils
     libc.src.__support.str_to_integer
     libc.src.__support.CPP.bit
+    libc.src.__support.CPP.optional
     libc.src.__support.CPP.string_view
     libc.src.__support.CPP.type_traits
     libc.src.__support.common
@@ -45,24 +47,17 @@ add_object_library(
 )
 
 add_object_library(
-  string_writer
-  SRCS
-    string_writer.cpp
-  HDRS
-    string_writer.h
-  DEPENDS
-    libc.src.__support.CPP.string_view
-    libc.src.string.memory_utils.memcpy_implementation
-    libc.src.string.memory_utils.memset_implementation
-    .core_structs
-)
-
-add_object_library(
   writer
   SRCS
     writer.cpp
   HDRS
     writer.h
+  DEPENDS
+    libc.src.__support.CPP.string_view
+    libc.src.__support.macros.optimization
+    libc.src.string.memory_utils.inline_memcpy
+    libc.src.string.memory_utils.inline_memset
+    .core_structs
 )
 
 add_object_library(
@@ -89,12 +84,16 @@ add_object_library(
     libc.src.__support.CPP.string_view
     libc.src.__support.FPUtil.fp_bits
     libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.rounding_mode
     libc.src.__support.common
     libc.src.__support.libc_assert
     libc.src.__support.uint
     libc.src.__support.uint128
     libc.src.__support.integer_to_string
     libc.src.__support.float_to_string
+  COMPILE_OPTIONS
+    -DLIBC_COPT_FLOAT_TO_STR_USE_MEGA_LONG_DOUBLE_TABLE
+    ${printf_copts}
 )
 
 
@@ -112,37 +111,20 @@ add_object_library(
     libc.src.__support.arg_list
 )
 
-if(NOT (TARGET libc.src.__support.File.file))
-  # Not all platforms have a file implementation. If file is unvailable,
-  # then we must skip all file based printf sections.
+if(NOT (TARGET libc.src.__support.File.file) AND LLVM_LIBC_FULL_BUILD)
+  # Not all platforms have a file implementation. If file is unvailable, and a 
+  # full build is requested, then we must skip all file based printf sections.
   return()
 endif()
 
-add_object_library(
-  file_writer
-  SRCS
-    file_writer.cpp
-  HDRS
-    file_writer.h
-  DEPENDS
-    libc.src.__support.File.file
-    libc.src.__support.CPP.string_view
-    libc.src.string.memory_utils.memset_implementation
-    .core_structs
-)
-
-add_object_library(
+add_header_library(
   vfprintf_internal
-  SRCS
-    vfprintf_internal.cpp
   HDRS
     vfprintf_internal.h
   DEPENDS
     libc.include.stdio
     libc.src.__support.File.file
-    libc.src.__support.File.platform_file
     libc.src.__support.arg_list
     libc.src.stdio.printf_core.printf_main
-    libc.src.stdio.printf_core.file_writer
     libc.src.stdio.printf_core.writer
 )

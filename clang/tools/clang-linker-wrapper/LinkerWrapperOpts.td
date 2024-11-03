@@ -25,9 +25,16 @@ def opt_level : Joined<["--"], "opt-level=">,
 def bitcode_library_EQ : Joined<["--"], "bitcode-library=">,
   Flags<[WrapperOnlyOption]>, MetaVarName<"<kind>-<triple>-<arch>=<path>">,
   HelpText<"Extra bitcode library to link">;
+def builtin_bitcode_EQ : Joined<["--"], "builtin-bitcode=">,
+  Flags<[WrapperOnlyOption]>, MetaVarName<"<triple>=<path>">,
+  HelpText<"Perform a special internalizing link on the bitcode file. "
+           "This is necessary for some vendor libraries to be linked correctly">;
 def device_linker_args_EQ : Joined<["--"], "device-linker=">,
   Flags<[WrapperOnlyOption]>, MetaVarName<"<value> or <triple>=<value>">,
   HelpText<"Arguments to pass to the device linker invocation">;
+def clang_backend : Flag<["--"], "clang-backend">,
+  Flags<[WrapperOnlyOption]>,
+  HelpText<"Run the backend using clang rather than the LTO backend">;
 def dry_run : Flag<["--"], "dry-run">,
   Flags<[WrapperOnlyOption]>,
   HelpText<"Print program arguments without running">;

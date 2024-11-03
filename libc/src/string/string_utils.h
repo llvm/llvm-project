@@ -16,14 +16,14 @@
 
 #include "src/__support/CPP/bitset.h"
 #include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
-#include "src/string/memory_utils/bzero_implementations.h"
-#include "src/string/memory_utils/memcpy_implementations.h"
+#include "src/string/memory_utils/inline_bzero.h"
+#include "src/string/memory_utils/inline_memcpy.h"
 #include <stddef.h> // For size_t
 
 namespace __llvm_libc {
 namespace internal {
 
-template <typename Word> constexpr Word repeat_byte(Word byte) {
+template <typename Word> LIBC_INLINE constexpr Word repeat_byte(Word byte) {
   constexpr size_t BITS_IN_BYTE = 8;
   constexpr size_t BYTE_MASK = 0xff;
   Word result = 0;
@@ -49,7 +49,7 @@ template <typename Word> constexpr Word repeat_byte(Word byte) {
 // with the inverse of the original byte. This means that any byte that had the
 // high bit set will no longer have it set, narrowing the list of bytes which
 // result in non-zero values to just the zero byte.
-template <typename Word> constexpr bool has_zeroes(Word block) {
+template <typename Word> LIBC_INLINE constexpr bool has_zeroes(Word block) {
   constexpr Word LOW_BITS = repeat_byte<Word>(0x01);
   constexpr Word HIGH_BITS = repeat_byte<Word>(0x80);
   Word subtracted = block - LOW_BITS;
@@ -166,8 +166,9 @@ LIBC_INLINE size_t complementary_span(const char *src, const char *segment) {
   cpp::bitset<256> bitset;
 
   for (; *segment; ++segment)
-    bitset.set(*segment);
-  for (; *src && !bitset.test(*src); ++src)
+    bitset.set(*reinterpret_cast<const unsigned char *>(segment));
+  for (; *src && !bitset.test(*reinterpret_cast<const unsigned char *>(src));
+       ++src)
     ;
   return src - initial;
 }
@@ -181,6 +182,7 @@ LIBC_INLINE size_t complementary_span(const char *src, const char *segment) {
 // is found is then stored within 'context' for subsequent calls. Subsequent
 // calls will use 'context' when a nullptr is passed in for 'src'. Once the null
 // terminating character is reached, returns a nullptr.
+template <bool SkipDelim = true>
 LIBC_INLINE char *string_token(char *__restrict src,
                                const char *__restrict delimiter_string,
                                char **__restrict saveptr) {
@@ -192,8 +194,9 @@ LIBC_INLINE char *string_token(char *__restrict src,
   for (; *delimiter_string != '\0'; ++delimiter_string)
     delimiter_set.set(*delimiter_string);
 
-  for (; *src != '\0' && delimiter_set.test(*src); ++src)
-    ;
+  if constexpr (SkipDelim)
+    for (; *src != '\0' && delimiter_set.test(*src); ++src)
+      ;
   if (*src == '\0') {
     *saveptr = src;
     return nullptr;
@@ -219,6 +222,27 @@ LIBC_INLINE size_t strlcpy(char *__restrict dst, const char *__restrict src,
   inline_memcpy(dst, src, n);
   inline_bzero(dst + n, size - n);
   return len;
+}
+
+template <bool ReturnNull = true>
+LIBC_INLINE constexpr static char *strchr_implementation(const char *src,
+                                                         int c) {
+  char ch = static_cast<char>(c);
+  for (; *src && *src != ch; ++src)
+    ;
+  char *ret = ReturnNull ? nullptr : const_cast<char *>(src);
+  return *src == ch ? const_cast<char *>(src) : ret;
+}
+
+LIBC_INLINE constexpr static char *strrchr_implementation(const char *src,
+                                                          int c) {
+  char ch = static_cast<char>(c);
+  char *last_occurrence = nullptr;
+  for (; *src; ++src) {
+    if (*src == ch)
+      last_occurrence = const_cast<char *>(src);
+  }
+  return last_occurrence;
 }
 
 } // namespace internal

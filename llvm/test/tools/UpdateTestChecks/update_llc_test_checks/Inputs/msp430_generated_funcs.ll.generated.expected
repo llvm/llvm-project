@@ -65,9 +65,13 @@ define dso_local i32 @main() #0 {
 
 attributes #0 = { noredzone nounwind ssp uwtable "frame-pointer"="all" }
 ; CHECK-LABEL: check_boundaries:
-; CHECK:       ; %bb.0:
+; CHECK:         .cfi_startproc
+; CHECK-NEXT:  ; %bb.0:
 ; CHECK-NEXT:    push r4
+; CHECK-NEXT:    .cfi_def_cfa_offset 4
+; CHECK-NEXT:    .cfi_offset r4, -4
 ; CHECK-NEXT:    mov r1, r4
+; CHECK-NEXT:    .cfi_def_cfa_register r4
 ; CHECK-NEXT:    sub #20, r1
 ; CHECK-NEXT:    clr -6(r4)
 ; CHECK-NEXT:    clr -8(r4)
@@ -112,12 +116,17 @@ attributes #0 = { noredzone nounwind ssp uwtable "frame-pointer"="all" }
 ; CHECK-NEXT:    clr r13
 ; CHECK-NEXT:    add #20, r1
 ; CHECK-NEXT:    pop r4
+; CHECK-NEXT:    .cfi_def_cfa r1, 2
 ; CHECK-NEXT:    ret
 ;
 ; CHECK-LABEL: main:
-; CHECK:       ; %bb.0:
+; CHECK:         .cfi_startproc
+; CHECK-NEXT:  ; %bb.0:
 ; CHECK-NEXT:    push r4
+; CHECK-NEXT:    .cfi_def_cfa_offset 4
+; CHECK-NEXT:    .cfi_offset r4, -4
 ; CHECK-NEXT:    mov r1, r4
+; CHECK-NEXT:    .cfi_def_cfa_register r4
 ; CHECK-NEXT:    sub #20, r1
 ; CHECK-NEXT:    clr &x+2
 ; CHECK-NEXT:    mov #1, &x
@@ -145,4 +154,5 @@ attributes #0 = { noredzone nounwind ssp uwtable "frame-pointer"="all" }
 ; CHECK-NEXT:    clr r13
 ; CHECK-NEXT:    add #20, r1
 ; CHECK-NEXT:    pop r4
+; CHECK-NEXT:    .cfi_def_cfa r1, 2
 ; CHECK-NEXT:    ret

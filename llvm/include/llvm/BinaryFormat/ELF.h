@@ -773,15 +773,20 @@ enum : unsigned {
   EF_AMDGPU_MACH_AMDGCN_GFX940        = 0x040,
   EF_AMDGPU_MACH_AMDGCN_GFX1100       = 0x041,
   EF_AMDGPU_MACH_AMDGCN_GFX1013       = 0x042,
-  EF_AMDGPU_MACH_AMDGCN_RESERVED_0X43 = 0x043,
+  EF_AMDGPU_MACH_AMDGCN_GFX1150       = 0x043,
   EF_AMDGPU_MACH_AMDGCN_GFX1103       = 0x044,
   EF_AMDGPU_MACH_AMDGCN_GFX1036       = 0x045,
   EF_AMDGPU_MACH_AMDGCN_GFX1101       = 0x046,
   EF_AMDGPU_MACH_AMDGCN_GFX1102       = 0x047,
+  EF_AMDGPU_MACH_AMDGCN_RESERVED_0X48 = 0x048,
+  EF_AMDGPU_MACH_AMDGCN_RESERVED_0X49 = 0x049,
+  EF_AMDGPU_MACH_AMDGCN_GFX1151       = 0x04a,
+  EF_AMDGPU_MACH_AMDGCN_GFX941        = 0x04b,
+  EF_AMDGPU_MACH_AMDGCN_GFX942        = 0x04c,
 
   // First/last AMDGCN-based processors.
   EF_AMDGPU_MACH_AMDGCN_FIRST = EF_AMDGPU_MACH_AMDGCN_GFX600,
-  EF_AMDGPU_MACH_AMDGCN_LAST = EF_AMDGPU_MACH_AMDGCN_GFX1102,
+  EF_AMDGPU_MACH_AMDGCN_LAST = EF_AMDGPU_MACH_AMDGCN_GFX942,
 
   // Indicates if the "xnack" target feature is enabled for all code contained
   // in the object.
@@ -1031,6 +1036,7 @@ enum : unsigned {
   SHT_LLVM_CALL_GRAPH_PROFILE = 0x6fff4c09, // LLVM Call Graph Profile.
   SHT_LLVM_BB_ADDR_MAP = 0x6fff4c0a,        // LLVM Basic Block Address Map.
   SHT_LLVM_OFFLOADING = 0x6fff4c0b,         // LLVM device offloading data.
+  SHT_LLVM_LTO = 0x6fff4c0c,                // .llvm.lto for fat LTO.
   // Android's experimental support for SHT_RELR sections.
   // https://android.googlesource.com/platform/bionic/+/b7feec74547f84559a1467aca02708ff61346d2a/libc/include/elf.h#512
   SHT_ANDROID_RELR = 0x6fffff00,   // Relocation entries; only offsets.
@@ -1404,6 +1410,7 @@ enum {
   PT_OPENBSD_MUTABLE = 0x65a3dbe5,   // Like bss, but not immutable.
   PT_OPENBSD_RANDOMIZE = 0x65a3dbe6, // Fill with random data.
   PT_OPENBSD_WXNEEDED = 0x65a3dbe7,  // Program does W^X violations.
+  PT_OPENBSD_NOBTCFI = 0x65a3dbe8,   // Do not enforce branch target CFI.
   PT_OPENBSD_BOOTDATA = 0x65a41be6,  // Section for boot arguments.
 
   // ARM program header types.
@@ -1604,6 +1611,9 @@ enum : unsigned {
   NT_ARM_HW_WATCH = 0x403,
   NT_ARM_SVE = 0x405,
   NT_ARM_PAC_MASK = 0x406,
+  NT_ARM_SSVE = 0x40b,
+  NT_ARM_ZA = 0x40c,
+  NT_ARM_ZT = 0x40d,
 
   NT_FILE = 0x46494c45,
   NT_PRXFPREG = 0x46e62b7f,

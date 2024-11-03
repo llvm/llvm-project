@@ -29,11 +29,11 @@ class month {
 private:
     unsigned char __m_;
 public:
-    _LIBCPP_HIDE_FROM_ABI month() = default;
+    month() = default;
     _LIBCPP_HIDE_FROM_ABI explicit inline constexpr month(unsigned __val) noexcept : __m_(static_cast<unsigned char>(__val)) {}
-    _LIBCPP_HIDE_FROM_ABI inline constexpr month& operator++()    noexcept { ++__m_; return *this; }
+    _LIBCPP_HIDE_FROM_ABI inline constexpr month& operator++()    noexcept { *this += months{1}; return *this; }
     _LIBCPP_HIDE_FROM_ABI inline constexpr month  operator++(int) noexcept { month __tmp = *this; ++(*this); return __tmp; }
-    _LIBCPP_HIDE_FROM_ABI inline constexpr month& operator--()    noexcept { --__m_; return *this; }
+    _LIBCPP_HIDE_FROM_ABI inline constexpr month& operator--()    noexcept { *this -= months{1}; return *this; }
     _LIBCPP_HIDE_FROM_ABI inline constexpr month  operator--(int) noexcept { month __tmp = *this; --(*this); return __tmp; }
     _LIBCPP_HIDE_FROM_ABI        constexpr month& operator+=(const months& __m1) noexcept;
     _LIBCPP_HIDE_FROM_ABI        constexpr month& operator-=(const months& __m1) noexcept;

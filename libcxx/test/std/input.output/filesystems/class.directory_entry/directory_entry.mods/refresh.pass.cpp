@@ -10,7 +10,7 @@
 
 // The string reported on errors changed, which makes those tests fail when run
 // against already-released libc++'s.
-// XFAIL: use_system_cxx_lib && target={{.+}}-apple-macosx{{10.15|11.0}}
+// XFAIL: stdlib=apple-libc++ && target={{.+}}-apple-macosx{{10.15|11.0}}
 
 // <filesystem>
 
@@ -251,7 +251,7 @@ static void refresh_doesnt_throw_on_dne_but_reports_it() {
     TEST_DOES_NOT_THROW(ent.refresh());
 
     ec = GetTestEC();
-    assert(ent.file_size(ec) == uintmax_t(-1));
+    assert(ent.file_size(ec) == std::uintmax_t(-1));
     assert(ErrorIs(ec, std::errc::no_such_file_or_directory));
 
     // doesn't throw!
@@ -274,7 +274,7 @@ static void refresh_doesnt_throw_on_dne_but_reports_it() {
     assert(!ec);
 
     ec = GetTestEC();
-    assert(ent.file_size(ec) == uintmax_t(-1));
+    assert(ent.file_size(ec) == std::uintmax_t(-1));
     assert(ErrorIs(ec, std::errc::no_such_file_or_directory));
 
     TEST_THROWS_TYPE(filesystem_error, ent.file_size());
@@ -316,7 +316,7 @@ static void access_cache_after_refresh_fails() {
     CHECK_ACCESS(exists, false);
     CHECK_ACCESS(is_symlink, false);
     CHECK_ACCESS(last_write_time, file_time_type::min());
-    CHECK_ACCESS(hard_link_count, uintmax_t(-1));
+    CHECK_ACCESS(hard_link_count, std::uintmax_t(-1));
   }
   permissions(dir, old_perms);
   {
@@ -333,7 +333,7 @@ static void access_cache_after_refresh_fails() {
     CHECK_ACCESS(exists, false);
     CHECK_ACCESS(is_symlink, false);
     CHECK_ACCESS(last_write_time, file_time_type::min());
-    CHECK_ACCESS(hard_link_count, uintmax_t(-1));
+    CHECK_ACCESS(hard_link_count, std::uintmax_t(-1));
   }
   permissions(dir, old_perms);
   {
@@ -351,7 +351,7 @@ static void access_cache_after_refresh_fails() {
     CHECK_ACCESS(exists, false);
     CHECK_ACCESS(is_regular_file, false);
     CHECK_ACCESS(last_write_time, file_time_type::min());
-    CHECK_ACCESS(hard_link_count, uintmax_t(-1));
+    CHECK_ACCESS(hard_link_count, std::uintmax_t(-1));
   }
 #undef CHECK_ACCESS
 }

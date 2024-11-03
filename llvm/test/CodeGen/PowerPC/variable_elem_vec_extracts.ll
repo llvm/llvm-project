@@ -15,8 +15,8 @@ define zeroext i32 @geti(<4 x i32> %a, i32 zeroext %b) {
 ; CHECK-NEXT:    lvsl 3, 0, 3
 ; CHECK-NEXT:    li 3, 1
 ; CHECK-NEXT:    and 3, 3, 5
-; CHECK-NEXT:    vperm 2, 2, 2, 3
 ; CHECK-NEXT:    sldi 3, 3, 5
+; CHECK-NEXT:    vperm 2, 2, 2, 3
 ; CHECK-NEXT:    mfvsrd 4, 34
 ; CHECK-NEXT:    srd 3, 4, 3
 ; CHECK-NEXT:    clrldi 3, 3, 32
@@ -24,11 +24,11 @@ define zeroext i32 @geti(<4 x i32> %a, i32 zeroext %b) {
 ;
 ; CHECK-BE-LABEL: geti:
 ; CHECK-BE:       # %bb.0: # %entry
-; CHECK-BE-NEXT:    andi. 4, 5, 2
+; CHECK-BE-NEXT:    andi. 3, 5, 2
+; CHECK-BE-NEXT:    sldi 3, 3, 2
+; CHECK-BE-NEXT:    lvsl 3, 0, 3
 ; CHECK-BE-NEXT:    li 3, 1
-; CHECK-BE-NEXT:    sldi 4, 4, 2
 ; CHECK-BE-NEXT:    andc 3, 3, 5
-; CHECK-BE-NEXT:    lvsl 3, 0, 4
 ; CHECK-BE-NEXT:    sldi 3, 3, 5
 ; CHECK-BE-NEXT:    vperm 2, 2, 2, 3
 ; CHECK-BE-NEXT:    mfvsrd 4, 34

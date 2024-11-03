@@ -67,14 +67,6 @@ static void findLoadCallsAtConstantOffset(
         findLoadCallsAtConstantOffset(M, DevirtCalls, User, Offset + GEPOffset,
                                       CI, DT);
       }
-    } else if (auto *Call = dyn_cast<CallInst>(User)) {
-      if (Call->getIntrinsicID() == llvm::Intrinsic::load_relative) {
-        if (auto *LoadOffset = dyn_cast<ConstantInt>(Call->getOperand(1))) {
-          findCallsAtConstantOffset(DevirtCalls, nullptr, User,
-                                    Offset + LoadOffset->getSExtValue(), CI,
-                                    DT);
-        }
-      }
     }
   }
 }
@@ -107,7 +99,9 @@ void llvm::findDevirtualizableCallsForTypeCheckedLoad(
     SmallVectorImpl<Instruction *> &Preds, bool &HasNonCallUses,
     const CallInst *CI, DominatorTree &DT) {
   assert(CI->getCalledFunction()->getIntrinsicID() ==
-         Intrinsic::type_checked_load);
+             Intrinsic::type_checked_load ||
+         CI->getCalledFunction()->getIntrinsicID() ==
+             Intrinsic::type_checked_load_relative);
 
   auto *Offset = dyn_cast<ConstantInt>(CI->getArgOperand(1));
   if (!Offset) {
@@ -137,12 +131,6 @@ void llvm::findDevirtualizableCallsForTypeCheckedLoad(
 
 Constant *llvm::getPointerAtOffset(Constant *I, uint64_t Offset, Module &M,
                                    Constant *TopLevelGlobal) {
-  // TODO: Ideally it would be the caller who knows if it's appropriate to strip
-  // the DSOLocalEquicalent. More generally, it would feel more appropriate to
-  // have two functions that handle absolute and relative pointers separately.
-  if (auto *Equiv = dyn_cast<DSOLocalEquivalent>(I))
-    I = Equiv->getGlobalValue();
-
   if (I->getType()->isPointerTy()) {
     if (Offset == 0)
       return I;
@@ -173,9 +161,9 @@ Constant *llvm::getPointerAtOffset(Constant *I, uint64_t Offset, Module &M,
                               Offset % ElemSize, M, TopLevelGlobal);
   }
 
-  // Relative-pointer support starts here.
+  // (Swift-specific) relative-pointer support starts here.
   if (auto *CI = dyn_cast<ConstantInt>(I)) {
-    if (Offset == 0 && CI->getZExtValue() == 0) {
+    if (Offset == 0 && CI->isZero()) {
       return I;
     }
   }
@@ -213,26 +201,19 @@ Constant *llvm::getPointerAtOffset(Constant *I, uint64_t Offset, Module &M,
   return nullptr;
 }
 
-static void replaceRelativePointerUserWithZero(User *U) {
-  auto *PtrExpr = dyn_cast<ConstantExpr>(U);
-  if (!PtrExpr || PtrExpr->getOpcode() != Instruction::PtrToInt)
-    return;
+void llvm::replaceRelativePointerUsersWithZero(Function *F) {
+  for (auto *U : F->users()) {
+    auto *PtrExpr = dyn_cast<ConstantExpr>(U);
+    if (!PtrExpr || PtrExpr->getOpcode() != Instruction::PtrToInt)
+      continue;
 
-  for (auto *PtrToIntUser : PtrExpr->users()) {
-    auto *SubExpr = dyn_cast<ConstantExpr>(PtrToIntUser);
-    if (!SubExpr || SubExpr->getOpcode() != Instruction::Sub)
-      return;
+    for (auto *PtrToIntUser : PtrExpr->users()) {
+      auto *SubExpr = dyn_cast<ConstantExpr>(PtrToIntUser);
+      if (!SubExpr || SubExpr->getOpcode() != Instruction::Sub)
+        continue;
 
-    SubExpr->replaceNonMetadataUsesWith(
-        ConstantInt::get(SubExpr->getType(), 0));
-  }
-}
-
-void llvm::replaceRelativePointerUsersWithZero(Constant *C) {
-  for (auto *U : C->users()) {
-    if (auto *Equiv = dyn_cast<DSOLocalEquivalent>(U))
-      replaceRelativePointerUsersWithZero(Equiv);
-    else
-      replaceRelativePointerUserWithZero(U);
+      SubExpr->replaceNonMetadataUsesWith(
+          ConstantInt::get(SubExpr->getType(), 0));
+    }
   }
 }

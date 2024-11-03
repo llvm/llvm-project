@@ -14,6 +14,10 @@
 #include "lldb/API/SBDebugger.h"
 #include "lldb/API/SBDefines.h"
 
+namespace lldb_private {
+class CommandPluginInterfaceImplementation;
+}
+
 namespace lldb {
 
 class SBCommandInterpreter {
@@ -26,6 +30,7 @@ public:
     eBroadcastBitAsynchronousErrorData = (1 << 4)
   };
 
+  SBCommandInterpreter();
   SBCommandInterpreter(const lldb::SBCommandInterpreter &rhs);
 
   ~SBCommandInterpreter();
@@ -45,8 +50,34 @@ public:
 
   bool IsValid() const;
 
+  /// Return whether a built-in command with the passed in
+  /// name or command path exists.
+  ///
+  /// \param[in] cmd
+  ///   The command or command path to search for.
+  ///
+  /// \return
+  ///   \b true if the command exists, \b false otherwise.
   bool CommandExists(const char *cmd);
 
+  /// Return whether a user defined command with the passed in
+  /// name or command path exists.
+  ///
+  /// \param[in] cmd
+  ///   The command or command path to search for.
+  ///
+  /// \return
+  ///   \b true if the command exists, \b false otherwise.
+  bool UserCommandExists(const char *cmd);
+
+  /// Return whether the passed in name or command path
+  /// exists and is an alias to some other command.
+  ///
+  /// \param[in] cmd
+  ///   The command or command path to search for.
+  ///
+  /// \return
+  ///   \b true if the command exists, \b false otherwise.
   bool AliasExists(const char *cmd);
 
   lldb::SBBroadcaster GetBroadcaster();
@@ -215,7 +246,20 @@ public:
                                        lldb::SBStringList &matches,
                                        lldb::SBStringList &descriptions);
 
+  /// Returns whether an interrupt flag was raised either by the SBDebugger - 
+  /// when the function is not running on the RunCommandInterpreter thread, or
+  /// by SBCommandInterpreter::InterruptCommand if it is.  If your code is doing
+  /// interruptible work, check this API periodically, and interrupt if it 
+  /// returns true.
   bool WasInterrupted() const;
+  
+  /// Interrupts the command currently executing in the RunCommandInterpreter
+  /// thread.
+  ///
+  /// \return
+  ///   \b true if there was a command in progress to recieve the interrupt.
+  ///   \b false if there's no command currently in flight.
+  bool InterruptCommand();
 
   // Catch commands before they execute by registering a callback that will get
   // called when the command gets executed. This allows GUI or command line
@@ -224,9 +268,6 @@ public:
   bool SetCommandOverrideCallback(const char *command_name,
                                   lldb::CommandOverrideCallback callback,
                                   void *baton);
-  SBCommandInterpreter(
-      lldb_private::CommandInterpreter *interpreter_ptr =
-          nullptr); // Access using SBDebugger::GetCommandInterpreter();
 #endif
 
   /// Return true if the command interpreter is the active IO handler.
@@ -275,6 +316,10 @@ public:
   void ResolveCommand(const char *command_line, SBCommandReturnObject &result);
 
 protected:
+  friend class lldb_private::CommandPluginInterfaceImplementation;
+
+  /// Access using SBDebugger::GetCommandInterpreter();
+  SBCommandInterpreter(lldb_private::CommandInterpreter *interpreter_ptr);
   lldb_private::CommandInterpreter &ref();
 
   lldb_private::CommandInterpreter *get();

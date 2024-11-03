@@ -73,6 +73,3 @@ void test() {
   test<int>();
   test<double>();
 }
-
-// Required for MSVC internal test runner compatibility.
-int main(int, char**) { return 0; }

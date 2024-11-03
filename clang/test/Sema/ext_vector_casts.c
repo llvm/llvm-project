@@ -80,7 +80,6 @@ stride4 RDar15091442_get_stride4(int4 x, PixelByteStride pixelByteStride)
     return stride;
 }
 
-// rdar://16196902
 typedef __attribute__((ext_vector_type(4))) float float32x4_t;
 
 typedef float C3DVector3 __attribute__((ext_vector_type(3)));
@@ -91,7 +90,6 @@ C3DVector3 Func(const C3DVector3 a) {
     return (C3DVector3)vabsq_f32((float32x4_t)a); // expected-error {{invalid conversion between ext-vector type 'float32x4_t' (vector of 4 'float' values) and 'C3DVector3' (vector of 3 'float' values)}}
 }
 
-// rdar://16350802
 typedef double double2 __attribute__ ((ext_vector_type(2)));
 
 static void splats(int i, long l, __uint128_t t, float f, double d) {

@@ -92,6 +92,11 @@ E: stl@microsoft.com
 E: stl@nuwen.net
 D: Implemented floating-point to_chars.
 
+N: Damien Lebrun-Grandie
+E: dalg24@gmail.com
+E: lebrungrandt@ornl.gov
+D: Implementation of mdspan.
+
 N: Microsoft Corporation
 D: Contributed floating-point to_chars.
 
@@ -148,6 +153,10 @@ D: NetBSD port.
 N: Stephan Tolksdorf
 E: st@quanttec.com
 D: Minor <atomic> fix
+
+N: Christian Trott
+E: crtrott@sandia.gov
+D: Implementation of mdspan.
 
 N: Ruben Van Boxem
 E: vanboxem dot ruben at gmail dot com

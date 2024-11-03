@@ -19,6 +19,7 @@
 #include <__ranges/concepts.h>
 #include <__type_traits/is_reference.h>
 #include <__type_traits/remove_cvref.h>
+#include <__type_traits/remove_reference.h> // TODO(modules): This should not be required
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

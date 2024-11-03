@@ -67,6 +67,8 @@ void *BackgroundThread(void *arg) {
       } else if (soft_rss_limit_mb >= current_rss_mb &&
                  reached_soft_rss_limit) {
         reached_soft_rss_limit = false;
+        Report("%s: soft rss limit unexhausted (%zdMb vs %zdMb)\n",
+               SanitizerToolName, soft_rss_limit_mb, current_rss_mb);
         SetRssLimitExceeded(false);
       }
     }

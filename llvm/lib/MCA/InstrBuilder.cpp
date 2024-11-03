@@ -69,7 +69,7 @@ static void initializeUsedResources(InstrDesc &ID,
   for (unsigned I = 0, E = SCDesc.NumWriteProcResEntries; I < E; ++I) {
     const MCWriteProcResEntry *PRE = STI.getWriteProcResBegin(&SCDesc) + I;
     const MCProcResourceDesc &PR = *SM.getProcResource(PRE->ProcResourceIdx);
-    if (!PRE->Cycles) {
+    if (!PRE->ReleaseAtCycle) {
 #ifndef NDEBUG
       WithColor::warning()
           << "Ignoring invalid write of zero cycles on processor resource "
@@ -89,11 +89,11 @@ static void initializeUsedResources(InstrDesc &ID,
       AllInOrderResources &= (PR.BufferSize <= 1);
     }
 
-    CycleSegment RCy(0, PRE->Cycles, false);
+    CycleSegment RCy(0, PRE->ReleaseAtCycle, false);
     Worklist.emplace_back(ResourcePlusCycles(Mask, ResourceUsage(RCy)));
     if (PR.SuperIdx) {
       uint64_t Super = ProcResourceMasks[PR.SuperIdx];
-      SuperResources[Super] += PRE->Cycles;
+      SuperResources[Super] += PRE->ReleaseAtCycle;
     }
   }
 
@@ -156,7 +156,7 @@ static void initializeUsedResources(InstrDesc &ID,
   // is reserved. For example (on target x86; cpu Haswell):
   //
   //  SchedWriteRes<[HWPort0, HWPort1, HWPort01]> {
-  //    let ResourceCycles = [2, 2, 3];
+  //    let ReleaseAtCycles = [2, 2, 3];
   //  }
   //
   // This means:
@@ -511,7 +511,7 @@ Error InstrBuilder::verifyInstrDesc(const InstrDesc &ID,
 
 Expected<const InstrDesc &>
 InstrBuilder::createInstrDescImpl(const MCInst &MCI,
-                                  const SmallVector<SharedInstrument> &IVec) {
+                                  const SmallVector<Instrument *> &IVec) {
   assert(STI.getSchedModel().hasInstrSchedModel() &&
          "Itineraries are not yet supported!");
 
@@ -601,7 +601,7 @@ InstrBuilder::createInstrDescImpl(const MCInst &MCI,
 
 Expected<const InstrDesc &>
 InstrBuilder::getOrCreateInstrDesc(const MCInst &MCI,
-                                   const SmallVector<SharedInstrument> &IVec) {
+                                   const SmallVector<Instrument *> &IVec) {
   // Cache lookup using SchedClassID from Instrumentation
   unsigned SchedClassID = IM.getSchedClassID(MCII, MCI, IVec);
 
@@ -612,7 +612,7 @@ InstrBuilder::getOrCreateInstrDesc(const MCInst &MCI,
   unsigned CPUID = STI.getSchedModel().getProcessorID();
   SchedClassID = STI.resolveVariantSchedClass(SchedClassID, &MCI, &MCII, CPUID);
   auto VDKey = std::make_pair(&MCI, SchedClassID);
-  if (VariantDescriptors.find(VDKey) != VariantDescriptors.end())
+  if (VariantDescriptors.contains(VDKey))
     return *VariantDescriptors[VDKey];
 
   return createInstrDescImpl(MCI, IVec);
@@ -622,7 +622,7 @@ STATISTIC(NumVariantInst, "Number of MCInsts that doesn't have static Desc");
 
 Expected<std::unique_ptr<Instruction>>
 InstrBuilder::createInstruction(const MCInst &MCI,
-                                const SmallVector<SharedInstrument> &IVec) {
+                                const SmallVector<Instrument *> &IVec) {
   Expected<const InstrDesc &> DescOrErr = getOrCreateInstrDesc(MCI, IVec);
   if (!DescOrErr)
     return DescOrErr.takeError();

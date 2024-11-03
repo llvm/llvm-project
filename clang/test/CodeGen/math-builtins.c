@@ -12,6 +12,30 @@ void foo(double *d, float f, float *fp, long double *l, int *i, const char *c) {
 // NO__ERRNO: frem float
 // NO__ERRNO: frem x86_fp80
 // NO__ERRNO: frem fp128
+
+// NO__ERRNO: [[FREXP_F64:%.+]] = call { double, i32 } @llvm.frexp.f64.i32(double %{{.+}})
+// NO__ERRNO-NEXT: [[FREXP_F64_1:%.+]] = extractvalue { double, i32 } [[FREXP_F64]], 1
+// NO__ERRNO-NEXT: store i32 [[FREXP_F64_1]], ptr %{{.+}}, align 4
+// NO__ERRNO-NEXT: [[FREXP_F64_0:%.+]] = extractvalue { double, i32 } [[FREXP_F64]], 0
+
+// NO__ERRNO: [[FREXP_F32:%.+]] = call { float, i32 } @llvm.frexp.f32.i32(float %{{.+}})
+// NO__ERRNO-NEXT: [[FREXP_F32_1:%.+]] = extractvalue { float, i32 } [[FREXP_F32]], 1
+// NO__ERRNO-NEXT: store i32 [[FREXP_F32_1]], ptr %{{.+}}, align 4
+// NO__ERRNO-NEXT: [[FREXP_F32_0:%.+]] = extractvalue { float, i32 } [[FREXP_F32]], 0
+
+
+// NO__ERRNO: [[FREXP_F80:%.+]] = call { x86_fp80, i32 } @llvm.frexp.f80.i32(x86_fp80 %{{.+}})
+// NO__ERRNO-NEXT: [[FREXP_F80_1:%.+]] = extractvalue { x86_fp80, i32 } [[FREXP_F80]], 1
+// NO__ERRNO-NEXT: store i32 [[FREXP_F80_1]], ptr %{{.+}}, align 4
+// NO__ERRNO-NEXT: [[FREXP_F80_0:%.+]] = extractvalue { x86_fp80, i32 } [[FREXP_F80]], 0
+
+
+// NO__ERRNO: [[FREXP_F128:%.+]] = call { fp128, i32 } @llvm.frexp.f128.i32(fp128 %{{.+}})
+// NO__ERRNO-NEXT: [[FREXP_F128_1:%.+]] = extractvalue { fp128, i32 } [[FREXP_F128]], 1
+// NO__ERRNO-NEXT: store i32 [[FREXP_F128_1]], ptr %{{.+}}, align 4
+// NO__ERRNO-NEXT: [[FREXP_F128_0:%.+]] = extractvalue { fp128, i32 } [[FREXP_F128]], 0
+
+
 // HAS_ERRNO: declare double @fmod(double noundef, double noundef) [[NOT_READNONE:#[0-9]+]]
 // HAS_ERRNO: declare float @fmodf(float noundef, float noundef) [[NOT_READNONE]]
 // HAS_ERRNO: declare x86_fp80 @fmodl(x86_fp80 noundef, x86_fp80 noundef) [[NOT_READNONE]]
@@ -52,14 +76,14 @@ void foo(double *d, float f, float *fp, long double *l, int *i, const char *c) {
 
   __builtin_frexp(f,i);    __builtin_frexpf(f,i);   __builtin_frexpl(f,i); __builtin_frexpf128(f,i);
 
-// NO__ERRNO: declare double @frexp(double noundef, ptr noundef) [[NOT_READNONE:#[0-9]+]]
-// NO__ERRNO: declare float @frexpf(float noundef, ptr noundef) [[NOT_READNONE]]
-// NO__ERRNO: declare x86_fp80 @frexpl(x86_fp80 noundef, ptr noundef) [[NOT_READNONE]]
-// NO__ERRNO: declare fp128 @frexpf128(fp128 noundef, ptr noundef) [[NOT_READNONE]]
-// HAS_ERRNO: declare double @frexp(double noundef, ptr noundef) [[NOT_READNONE]]
-// HAS_ERRNO: declare float @frexpf(float noundef, ptr noundef) [[NOT_READNONE]]
-// HAS_ERRNO: declare x86_fp80 @frexpl(x86_fp80 noundef, ptr noundef) [[NOT_READNONE]]
-// HAS_ERRNO: declare fp128 @frexpf128(fp128 noundef, ptr noundef) [[NOT_READNONE]]
+// NO__ERRNO: declare { double, i32 } @llvm.frexp.f64.i32(double) [[READNONE_INTRINSIC]]
+// NO__ERRNO: declare { float, i32 } @llvm.frexp.f32.i32(float) [[READNONE_INTRINSIC]]
+// NO__ERRNO: declare { x86_fp80, i32 } @llvm.frexp.f80.i32(x86_fp80) [[READNONE_INTRINSIC]]
+// NO__ERRNO: declare { fp128, i32 } @llvm.frexp.f128.i32(fp128) [[READNONE_INTRINSIC]]
+// HAS_ERRNO: declare { double, i32 } @llvm.frexp.f64.i32(double) [[READNONE_INTRINSIC]]
+// HAS_ERRNO: declare { float, i32 } @llvm.frexp.f32.i32(float) [[READNONE_INTRINSIC]]
+// HAS_ERRNO: declare { x86_fp80, i32 } @llvm.frexp.f80.i32(x86_fp80) [[READNONE_INTRINSIC]]
+// HAS_ERRNO: declare { fp128, i32 } @llvm.frexp.f128.i32(fp128) [[READNONE_INTRINSIC]]
 
   __builtin_huge_val();    __builtin_huge_valf();   __builtin_huge_vall(); __builtin_huge_valf128();
 
@@ -77,10 +101,10 @@ void foo(double *d, float f, float *fp, long double *l, int *i, const char *c) {
 
   __builtin_ldexp(f,f);    __builtin_ldexpf(f,f);   __builtin_ldexpl(f,f);  __builtin_ldexpf128(f,f);
 
-// NO__ERRNO: declare double @ldexp(double noundef, i32 noundef) [[READNONE]]
-// NO__ERRNO: declare float @ldexpf(float noundef, i32 noundef) [[READNONE]]
-// NO__ERRNO: declare x86_fp80 @ldexpl(x86_fp80 noundef, i32 noundef) [[READNONE]]
-// NO__ERRNO: declare fp128 @ldexpf128(fp128 noundef, i32 noundef) [[READNONE]]
+// NO__ERRNO: declare double @llvm.ldexp.f64.i32(double, i32) [[READNONE_INTRINSIC]]
+// NO__ERRNO: declare float @llvm.ldexp.f32.i32(float, i32) [[READNONE_INTRINSIC]]
+// NO__ERRNO: declare x86_fp80 @llvm.ldexp.f80.i32(x86_fp80, i32) [[READNONE_INTRINSIC]]
+// NO__ERRNO: declare fp128 @llvm.ldexp.f128.i32(fp128, i32) [[READNONE_INTRINSIC]]
 // HAS_ERRNO: declare double @ldexp(double noundef, i32 noundef) [[NOT_READNONE]]
 // HAS_ERRNO: declare float @ldexpf(float noundef, i32 noundef) [[NOT_READNONE]]
 // HAS_ERRNO: declare x86_fp80 @ldexpl(x86_fp80 noundef, i32 noundef) [[NOT_READNONE]]
@@ -88,7 +112,7 @@ void foo(double *d, float f, float *fp, long double *l, int *i, const char *c) {
 
   __builtin_modf(f,d);       __builtin_modff(f,fp);      __builtin_modfl(f,l); __builtin_modff128(f,l);
 
-// NO__ERRNO: declare double @modf(double noundef, ptr noundef) [[NOT_READNONE]]
+// NO__ERRNO: declare double @modf(double noundef, ptr noundef) [[NOT_READNONE:#[0-9]+]]
 // NO__ERRNO: declare float @modff(float noundef, ptr noundef) [[NOT_READNONE]]
 // NO__ERRNO: declare x86_fp80 @modfl(x86_fp80 noundef, ptr noundef) [[NOT_READNONE]]
 // NO__ERRNO: declare fp128 @modff128(fp128 noundef, ptr noundef) [[NOT_READNONE]]
@@ -293,6 +317,17 @@ __builtin_exp2(f);       __builtin_exp2f(f);      __builtin_exp2l(f); __builtin_
 // HAS_ERRNO: declare float @exp2f(float noundef) [[NOT_READNONE]]
 // HAS_ERRNO: declare x86_fp80 @exp2l(x86_fp80 noundef) [[NOT_READNONE]]
 // HAS_ERRNO: declare fp128 @exp2f128(fp128 noundef) [[NOT_READNONE]]
+
+__builtin_exp10(f);       __builtin_exp10f(f);      __builtin_exp10l(f); __builtin_exp10f128(f);
+
+// NO__ERRNO: declare double @llvm.exp10.f64(double) [[READNONE_INTRINSIC]]
+// NO__ERRNO: declare float @llvm.exp10.f32(float) [[READNONE_INTRINSIC]]
+// NO__ERRNO: declare x86_fp80 @llvm.exp10.f80(x86_fp80) [[READNONE_INTRINSIC]]
+// NO__ERRNO: declare fp128 @llvm.exp10.f128(fp128) [[READNONE_INTRINSIC]]
+// HAS_ERRNO: declare double @exp10(double noundef) [[NOT_READNONE]]
+// HAS_ERRNO: declare float @exp10f(float noundef) [[NOT_READNONE]]
+// HAS_ERRNO: declare x86_fp80 @exp10l(x86_fp80 noundef) [[NOT_READNONE]]
+// HAS_ERRNO: declare fp128 @exp10f128(fp128 noundef) [[NOT_READNONE]]
 
 __builtin_expm1(f);      __builtin_expm1f(f);     __builtin_expm1l(f); __builtin_expm1f128(f);
 

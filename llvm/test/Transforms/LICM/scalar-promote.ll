@@ -41,15 +41,17 @@ Out:
 define void @test2(i32 %i) {
 ; CHECK-LABEL: @test2(
 ; CHECK-NEXT:  Entry:
-; CHECK-NEXT:    [[DOTPROMOTED:%.*]] = load i32, ptr getelementptr inbounds (i32, ptr @X, i64 1), align 4
+; CHECK-NEXT:    [[X1:%.*]] = getelementptr i32, ptr @X, i64 1
+; CHECK-NEXT:    [[X2:%.*]] = getelementptr i32, ptr @X, i64 1
+; CHECK-NEXT:    [[X1_PROMOTED:%.*]] = load i32, ptr [[X1]], align 4
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       Loop:
-; CHECK-NEXT:    [[V1:%.*]] = phi i32 [ [[V:%.*]], [[LOOP]] ], [ [[DOTPROMOTED]], [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[V]] = add i32 [[V1]], 1
+; CHECK-NEXT:    [[A1:%.*]] = phi i32 [ [[V:%.*]], [[LOOP]] ], [ [[X1_PROMOTED]], [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[V]] = add i32 [[A1]], 1
 ; CHECK-NEXT:    br i1 false, label [[LOOP]], label [[EXIT:%.*]]
 ; CHECK:       Exit:
 ; CHECK-NEXT:    [[V_LCSSA:%.*]] = phi i32 [ [[V]], [[LOOP]] ]
-; CHECK-NEXT:    store i32 [[V_LCSSA]], ptr getelementptr inbounds (i32, ptr @X, i64 1), align 4
+; CHECK-NEXT:    store i32 [[V_LCSSA]], ptr [[X1]], align 4
 ; CHECK-NEXT:    ret void
 ;
 Entry:

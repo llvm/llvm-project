@@ -46,9 +46,8 @@ static std::unique_ptr<raw_fd_ostream> openFile(StringRef file) {
 }
 
 static std::string getThinLTOOutputFile(StringRef modulePath) {
-  return lto::getThinLTOOutputFile(
-      std::string(modulePath), std::string(config->thinLTOPrefixReplace.first),
-      std::string(config->thinLTOPrefixReplace.second));
+  return lto::getThinLTOOutputFile(modulePath, config->thinLTOPrefixReplaceOld,
+                                   config->thinLTOPrefixReplaceNew);
 }
 
 static lto::Config createConfig() {
@@ -69,6 +68,9 @@ static lto::Config createConfig() {
 
   c.TimeTraceEnabled = config->timeTraceEnabled;
   c.TimeTraceGranularity = config->timeTraceGranularity;
+  c.DebugPassManager = config->ltoDebugPassManager;
+  c.CSIRProfile = std::string(config->csProfilePath);
+  c.RunCSIRInstr = config->csProfileGenerate;
   c.OptLevel = config->ltoo;
   c.CGOptLevel = config->ltoCgo;
   if (config->saveTemps)
@@ -99,8 +101,9 @@ BitcodeCompiler::BitcodeCompiler() {
   auto onIndexWrite = [&](StringRef S) { thinIndices.erase(S); };
   if (config->thinLTOIndexOnly) {
     backend = lto::createWriteIndexesThinBackend(
-        std::string(config->thinLTOPrefixReplace.first),
-        std::string(config->thinLTOPrefixReplace.second),
+        std::string(config->thinLTOPrefixReplaceOld),
+        std::string(config->thinLTOPrefixReplaceNew),
+        std::string(config->thinLTOPrefixReplaceNativeObject),
         config->thinLTOEmitImportsFiles, indexFile.get(), onIndexWrite);
   } else {
     backend = lto::createInProcessThinBackend(
@@ -160,6 +163,7 @@ void BitcodeCompiler::add(BitcodeFile &f) {
     // TODO: set the other resolution configs properly
   }
   checkError(ltoObj->add(std::move(f.obj), resols));
+  hasFiles = true;
 }
 
 // If LazyObjFile has not been added to link, emit empty index files.
@@ -211,12 +215,13 @@ std::vector<ObjFile *> BitcodeCompiler::compile() {
                                files[task] = std::move(mb);
                              }));
 
-  checkError(ltoObj->run(
-      [&](size_t task, const Twine &moduleName) {
-        return std::make_unique<CachedFileStream>(
-            std::make_unique<raw_svector_ostream>(buf[task]));
-      },
-      cache));
+  if (hasFiles)
+    checkError(ltoObj->run(
+        [&](size_t task, const Twine &moduleName) {
+          return std::make_unique<CachedFileStream>(
+              std::make_unique<raw_svector_ostream>(buf[task]));
+        },
+        cache));
 
   // Emit empty index files for non-indexed files
   for (StringRef s : thinIndices) {
@@ -300,7 +305,9 @@ std::vector<ObjFile *> BitcodeCompiler::compile() {
       modTime = getModTime(filePath);
     }
     ret.push_back(make<ObjFile>(
-        MemoryBufferRef(objBuf, saver().save(filePath.str())), modTime, ""));
+        MemoryBufferRef(objBuf, saver().save(filePath.str())), modTime,
+        /*archiveName=*/"", /*lazy=*/false,
+        /*forceHidden=*/false, /*compatArch=*/true, /*builtFromBitcode=*/true));
   }
 
   return ret;

@@ -37,6 +37,8 @@ namespace format {
   TYPE(BitFieldColon)                                                          \
   TYPE(BlockComment)                                                           \
   TYPE(BracedListLBrace)                                                       \
+  /* The colon at the end of a case label. */                                  \
+  TYPE(CaseLabelColon)                                                         \
   TYPE(CastRParen)                                                             \
   TYPE(ClassLBrace)                                                            \
   TYPE(CompoundRequirementLBrace)                                              \
@@ -73,8 +75,7 @@ namespace format {
   TYPE(FunctionTypeLParen)                                                     \
   /* The colons as part of a C11 _Generic selection */                         \
   TYPE(GenericSelectionColon)                                                  \
-  /* The colon at the end of a goto label or a case label. Currently only used \
-   * for Verilog. */                                                           \
+  /* The colon at the end of a goto label. */                                  \
   TYPE(GotoLabelColon)                                                         \
   TYPE(IfMacro)                                                                \
   TYPE(ImplicitStringLiteral)                                                  \
@@ -101,7 +102,9 @@ namespace format {
   TYPE(MacroBlockBegin)                                                        \
   TYPE(MacroBlockEnd)                                                          \
   TYPE(ModulePartitionColon)                                                   \
+  TYPE(NamespaceLBrace)                                                        \
   TYPE(NamespaceMacro)                                                         \
+  TYPE(NamespaceRBrace)                                                        \
   TYPE(NonNullAssertion)                                                       \
   TYPE(NullCoalescingEqual)                                                    \
   TYPE(NullCoalescingOperator)                                                 \
@@ -131,6 +134,11 @@ namespace format {
   TYPE(StartOfName)                                                            \
   TYPE(StatementAttributeLikeMacro)                                            \
   TYPE(StatementMacro)                                                         \
+  /* A string that is part of a string concatenation. For C#, JavaScript, and  \
+   * Java, it is used for marking whether a string needs parentheses around it \
+   * if it is to be split into parts joined by `+`. For Verilog, whether       \
+   * braces need to be added to split it. Not used for other languages. */     \
+  TYPE(StringInConcatenation)                                                  \
   TYPE(StructLBrace)                                                           \
   TYPE(StructuredBindingLSquare)                                               \
   TYPE(TemplateCloser)                                                         \
@@ -140,16 +148,25 @@ namespace format {
   TYPE(TrailingReturnArrow)                                                    \
   TYPE(TrailingUnaryOperator)                                                  \
   TYPE(TypeDeclarationParen)                                                   \
+  TYPE(TypeName)                                                               \
   TYPE(TypenameMacro)                                                          \
   TYPE(UnaryOperator)                                                          \
   TYPE(UnionLBrace)                                                            \
   TYPE(UntouchableMacroFunc)                                                   \
+  /* Like in 'assign x = 0, y = 1;' . */                                       \
+  TYPE(VerilogAssignComma)                                                     \
   /* like in begin : block */                                                  \
   TYPE(VerilogBlockLabelColon)                                                 \
   /* The square bracket for the dimension part of the type name.               \
    * In 'logic [1:0] x[1:0]', only the first '['. This way we can have space   \
    * before the first bracket but not the second. */                           \
   TYPE(VerilogDimensionedTypeName)                                             \
+  /* list of port connections or parameters in a module instantiation */       \
+  TYPE(VerilogInstancePortComma)                                               \
+  TYPE(VerilogInstancePortLParen)                                              \
+  /* A parenthesized list within which line breaks are inserted by the         \
+   * formatter, for example the list of ports in a module header. */           \
+  TYPE(VerilogMultiLineListLParen)                                             \
   /* for the base in a number literal, not including the quote */              \
   TYPE(VerilogNumberBase)                                                      \
   /* like `(strong1, pull0)` */                                                \
@@ -377,6 +394,11 @@ public:
   /// binary operator.
   TokenType getType() const { return Type; }
   void setType(TokenType T) {
+    // If this token is a macro argument while formatting an unexpanded macro
+    // call, we do not change its type any more - the type was deduced from
+    // formatting the expanded macro stream already.
+    if (MacroCtx && MacroCtx->Role == MR_UnexpandedArg)
+      return;
     assert((!TypeIsFinalized || T == Type) &&
            "Please use overwriteFixedType to change a fixed type.");
     Type = T;
@@ -403,6 +425,12 @@ public:
   /// This can be used to determine what the user wrote in the original code
   /// and thereby e.g. leave an empty line between two function definitions.
   unsigned NewlinesBefore = 0;
+
+  /// The number of newlines immediately before the \c Token after formatting.
+  ///
+  /// This is used to avoid overlapping whitespace replacements when \c Newlines
+  /// is recomputed for a finalized preprocessor branching directive.
+  int Newlines = -1;
 
   /// The offset just past the last '\n' in this token's leading
   /// whitespace (relative to \c WhiteSpaceStart). 0 if there is no '\n'.
@@ -607,7 +635,7 @@ public:
     return isOneOf(tok::kw_const, tok::kw_restrict, tok::kw_volatile,
                    tok::kw___attribute, tok::kw__Nonnull, tok::kw__Nullable,
                    tok::kw__Null_unspecified, tok::kw___ptr32, tok::kw___ptr64,
-                   TT_AttributeMacro);
+                   tok::kw___funcref, TT_AttributeMacro);
   }
 
   /// Determine whether the token is a simple-type-specifier.
@@ -704,7 +732,7 @@ public:
   /// Returns \c true if this is a string literal that's like a label,
   /// e.g. ends with "=" or ":".
   bool isLabelString() const {
-    if (!is(tok::string_literal))
+    if (isNot(tok::string_literal))
       return false;
     StringRef Content = TokenText;
     if (Content.startswith("\"") || Content.startswith("'"))
@@ -753,6 +781,9 @@ public:
       Tok = Tok->Next;
     return Tok;
   }
+
+  /// Returns \c true if this token ends a block indented initializer list.
+  [[nodiscard]] bool isBlockIndentedInitRBrace(const FormatStyle &Style) const;
 
   /// Returns \c true if this tokens starts a block-type list, i.e. a
   /// list that should be indented with a block indent.
@@ -939,6 +970,7 @@ struct AdditionalKeywords {
     kw_CF_OPTIONS = &IdentTable.get("CF_OPTIONS");
     kw_NS_CLOSED_ENUM = &IdentTable.get("NS_CLOSED_ENUM");
     kw_NS_ENUM = &IdentTable.get("NS_ENUM");
+    kw_NS_ERROR_ENUM = &IdentTable.get("NS_ERROR_ENUM");
     kw_NS_OPTIONS = &IdentTable.get("NS_OPTIONS");
 
     kw_as = &IdentTable.get("as");
@@ -1056,6 +1088,7 @@ struct AdditionalKeywords {
     kw_delay_mode_zero = &IdentTable.get("delay_mode_zero");
     kw_disable = &IdentTable.get("disable");
     kw_dist = &IdentTable.get("dist");
+    kw_edge = &IdentTable.get("edge");
     kw_elsif = &IdentTable.get("elsif");
     kw_end = &IdentTable.get("end");
     kw_end_keywords = &IdentTable.get("end_keywords");
@@ -1101,10 +1134,12 @@ struct AdditionalKeywords {
     kw_macromodule = &IdentTable.get("macromodule");
     kw_matches = &IdentTable.get("matches");
     kw_medium = &IdentTable.get("medium");
+    kw_negedge = &IdentTable.get("negedge");
     kw_nounconnected_drive = &IdentTable.get("nounconnected_drive");
     kw_output = &IdentTable.get("output");
     kw_packed = &IdentTable.get("packed");
     kw_parameter = &IdentTable.get("parameter");
+    kw_posedge = &IdentTable.get("posedge");
     kw_primitive = &IdentTable.get("primitive");
     kw_priority = &IdentTable.get("priority");
     kw_program = &IdentTable.get("program");
@@ -1186,132 +1221,71 @@ struct AdditionalKeywords {
     // Some keywords are not included here because they don't need special
     // treatment like `showcancelled` or they should be treated as identifiers
     // like `int` and `logic`.
-    VerilogExtraKeywords =
-        std::unordered_set<IdentifierInfo *>({kw_always,
-                                              kw_always_comb,
-                                              kw_always_ff,
-                                              kw_always_latch,
-                                              kw_assert,
-                                              kw_assign,
-                                              kw_assume,
-                                              kw_automatic,
-                                              kw_before,
-                                              kw_begin,
-                                              kw_bins,
-                                              kw_binsof,
-                                              kw_casex,
-                                              kw_casez,
-                                              kw_celldefine,
-                                              kw_checker,
-                                              kw_clocking,
-                                              kw_constraint,
-                                              kw_cover,
-                                              kw_covergroup,
-                                              kw_coverpoint,
-                                              kw_disable,
-                                              kw_dist,
-                                              kw_end,
-                                              kw_endcase,
-                                              kw_endchecker,
-                                              kw_endclass,
-                                              kw_endclocking,
-                                              kw_endfunction,
-                                              kw_endgenerate,
-                                              kw_endgroup,
-                                              kw_endinterface,
-                                              kw_endmodule,
-                                              kw_endpackage,
-                                              kw_endprimitive,
-                                              kw_endprogram,
-                                              kw_endproperty,
-                                              kw_endsequence,
-                                              kw_endspecify,
-                                              kw_endtable,
-                                              kw_endtask,
-                                              kw_extends,
-                                              kw_final,
-                                              kw_foreach,
-                                              kw_forever,
-                                              kw_fork,
-                                              kw_function,
-                                              kw_generate,
-                                              kw_highz0,
-                                              kw_highz1,
-                                              kw_iff,
-                                              kw_ifnone,
-                                              kw_ignore_bins,
-                                              kw_illegal_bins,
-                                              kw_implements,
-                                              kw_import,
-                                              kw_initial,
-                                              kw_inout,
-                                              kw_input,
-                                              kw_inside,
-                                              kw_interconnect,
-                                              kw_interface,
-                                              kw_intersect,
-                                              kw_join,
-                                              kw_join_any,
-                                              kw_join_none,
-                                              kw_large,
-                                              kw_let,
-                                              kw_local,
-                                              kw_localparam,
-                                              kw_macromodule,
-                                              kw_matches,
-                                              kw_medium,
-                                              kw_output,
-                                              kw_package,
-                                              kw_packed,
-                                              kw_parameter,
-                                              kw_primitive,
-                                              kw_priority,
-                                              kw_program,
-                                              kw_property,
-                                              kw_pull0,
-                                              kw_pull1,
-                                              kw_pure,
-                                              kw_rand,
-                                              kw_randc,
-                                              kw_randcase,
-                                              kw_randsequence,
-                                              kw_ref,
-                                              kw_repeat,
-                                              kw_sample,
-                                              kw_scalared,
-                                              kw_sequence,
-                                              kw_small,
-                                              kw_soft,
-                                              kw_solve,
-                                              kw_specify,
-                                              kw_specparam,
-                                              kw_strong0,
-                                              kw_strong1,
-                                              kw_supply0,
-                                              kw_supply1,
-                                              kw_table,
-                                              kw_tagged,
-                                              kw_task,
-                                              kw_tri,
-                                              kw_tri0,
-                                              kw_tri1,
-                                              kw_triand,
-                                              kw_trior,
-                                              kw_trireg,
-                                              kw_unique,
-                                              kw_unique0,
-                                              kw_uwire,
-                                              kw_var,
-                                              kw_vectored,
-                                              kw_wand,
-                                              kw_weak0,
-                                              kw_weak1,
-                                              kw_wildcard,
-                                              kw_wire,
-                                              kw_with,
-                                              kw_wor,
-                                              kw_verilogHash,
-                                              kw_verilogHashHash});
+    VerilogExtraKeywords = std::unordered_set<IdentifierInfo *>(
+        {kw_always,       kw_always_comb,
+         kw_always_ff,    kw_always_latch,
+         kw_assert,       kw_assign,
+         kw_assume,       kw_automatic,
+         kw_before,       kw_begin,
+         kw_bins,         kw_binsof,
+         kw_casex,        kw_casez,
+         kw_celldefine,   kw_checker,
+         kw_clocking,     kw_constraint,
+         kw_cover,        kw_covergroup,
+         kw_coverpoint,   kw_disable,
+         kw_dist,         kw_edge,
+         kw_end,          kw_endcase,
+         kw_endchecker,   kw_endclass,
+         kw_endclocking,  kw_endfunction,
+         kw_endgenerate,  kw_endgroup,
+         kw_endinterface, kw_endmodule,
+         kw_endpackage,   kw_endprimitive,
+         kw_endprogram,   kw_endproperty,
+         kw_endsequence,  kw_endspecify,
+         kw_endtable,     kw_endtask,
+         kw_extends,      kw_final,
+         kw_foreach,      kw_forever,
+         kw_fork,         kw_function,
+         kw_generate,     kw_highz0,
+         kw_highz1,       kw_iff,
+         kw_ifnone,       kw_ignore_bins,
+         kw_illegal_bins, kw_implements,
+         kw_import,       kw_initial,
+         kw_inout,        kw_input,
+         kw_inside,       kw_interconnect,
+         kw_interface,    kw_intersect,
+         kw_join,         kw_join_any,
+         kw_join_none,    kw_large,
+         kw_let,          kw_local,
+         kw_localparam,   kw_macromodule,
+         kw_matches,      kw_medium,
+         kw_negedge,      kw_output,
+         kw_package,      kw_packed,
+         kw_parameter,    kw_posedge,
+         kw_primitive,    kw_priority,
+         kw_program,      kw_property,
+         kw_pull0,        kw_pull1,
+         kw_pure,         kw_rand,
+         kw_randc,        kw_randcase,
+         kw_randsequence, kw_ref,
+         kw_repeat,       kw_sample,
+         kw_scalared,     kw_sequence,
+         kw_small,        kw_soft,
+         kw_solve,        kw_specify,
+         kw_specparam,    kw_strong0,
+         kw_strong1,      kw_supply0,
+         kw_supply1,      kw_table,
+         kw_tagged,       kw_task,
+         kw_tri,          kw_tri0,
+         kw_tri1,         kw_triand,
+         kw_trior,        kw_trireg,
+         kw_unique,       kw_unique0,
+         kw_uwire,        kw_var,
+         kw_vectored,     kw_wand,
+         kw_weak0,        kw_weak1,
+         kw_wildcard,     kw_wire,
+         kw_with,         kw_wor,
+         kw_verilogHash,  kw_verilogHashHash});
   }
 
   // Context sensitive keywords.
@@ -1324,6 +1298,7 @@ struct AdditionalKeywords {
   IdentifierInfo *kw_CF_OPTIONS;
   IdentifierInfo *kw_NS_CLOSED_ENUM;
   IdentifierInfo *kw_NS_ENUM;
+  IdentifierInfo *kw_NS_ERROR_ENUM;
   IdentifierInfo *kw_NS_OPTIONS;
   IdentifierInfo *kw___except;
   IdentifierInfo *kw___has_include;
@@ -1449,6 +1424,7 @@ struct AdditionalKeywords {
   IdentifierInfo *kw_disable;
   IdentifierInfo *kw_dist;
   IdentifierInfo *kw_elsif;
+  IdentifierInfo *kw_edge;
   IdentifierInfo *kw_end;
   IdentifierInfo *kw_end_keywords;
   IdentifierInfo *kw_endcase;
@@ -1493,10 +1469,12 @@ struct AdditionalKeywords {
   IdentifierInfo *kw_macromodule;
   IdentifierInfo *kw_matches;
   IdentifierInfo *kw_medium;
+  IdentifierInfo *kw_negedge;
   IdentifierInfo *kw_nounconnected_drive;
   IdentifierInfo *kw_output;
   IdentifierInfo *kw_packed;
   IdentifierInfo *kw_parameter;
+  IdentifierInfo *kw_posedge;
   IdentifierInfo *kw_primitive;
   IdentifierInfo *kw_priority;
   IdentifierInfo *kw_program;
@@ -1715,8 +1693,9 @@ struct AdditionalKeywords {
     case tok::kw_while:
       return false;
     case tok::identifier:
-      return VerilogExtraKeywords.find(Tok.Tok.getIdentifierInfo()) ==
-             VerilogExtraKeywords.end();
+      return isWordLike(Tok) &&
+             VerilogExtraKeywords.find(Tok.Tok.getIdentifierInfo()) ==
+                 VerilogExtraKeywords.end();
     default:
       // getIdentifierInfo returns non-null for both identifiers and keywords.
       return Tok.Tok.getIdentifierInfo();
@@ -1790,10 +1769,17 @@ struct AdditionalKeywords {
   bool isVerilogEndOfLabel(const FormatToken &Tok) const {
     const FormatToken *Next = Tok.getNextNonComment();
     // In Verilog the colon in a default label is optional.
-    return Tok.is(TT_GotoLabelColon) ||
+    return Tok.is(TT_CaseLabelColon) ||
            (Tok.is(tok::kw_default) &&
             !(Next && Next->isOneOf(tok::colon, tok::semi, kw_clocking, kw_iff,
                                     kw_input, kw_output, kw_sequence)));
+  }
+
+  /// Returns whether \p Tok is a Verilog keyword that starts a
+  /// structured procedure like 'always'.
+  bool isVerilogStructuredProcedure(const FormatToken &Tok) const {
+    return Tok.isOneOf(kw_always, kw_always_comb, kw_always_ff, kw_always_latch,
+                       kw_final, kw_forever, kw_initial);
   }
 
   bool isVerilogQualifier(const FormatToken &Tok) const {

@@ -214,7 +214,8 @@ struct CompletionCandidate {
   // Returns a token identifying the overload set this is part of.
   // 0 indicates it's not part of any overload set.
   size_t overloadSet(const CodeCompleteOptions &Opts, llvm::StringRef FileName,
-                     IncludeInserter *Inserter) const {
+                     IncludeInserter *Inserter,
+                     CodeCompletionContext::Kind CCContextKind) const {
     if (!Opts.BundleOverloads.value_or(false))
       return 0;
 
@@ -223,7 +224,7 @@ struct CompletionCandidate {
     // bundle those, so we must resolve the header to be included here.
     std::string HeaderForHash;
     if (Inserter) {
-      if (auto Header = headerToInsertIfAllowed(Opts)) {
+      if (auto Header = headerToInsertIfAllowed(Opts, CCContextKind)) {
         if (auto HeaderFile = toHeaderFile(*Header, FileName)) {
           if (auto Spelled =
                   Inserter->calculateIncludePath(*HeaderFile, FileName))
@@ -271,11 +272,21 @@ struct CompletionCandidate {
     return 0;
   }
 
+  bool contextAllowsHeaderInsertion(CodeCompletionContext::Kind Kind) const {
+    // Explicitly disable insertions for forward declarations since they don't
+    // reference the declaration.
+    if (Kind == CodeCompletionContext::CCC_ObjCClassForwardDecl)
+      return false;
+    return true;
+  }
+
   // The best header to include if include insertion is allowed.
   std::optional<llvm::StringRef>
-  headerToInsertIfAllowed(const CodeCompleteOptions &Opts) const {
+  headerToInsertIfAllowed(const CodeCompleteOptions &Opts,
+                          CodeCompletionContext::Kind ContextKind) const {
     if (Opts.InsertIncludes == CodeCompleteOptions::NeverInsert ||
-        RankedIncludeHeaders.empty())
+        RankedIncludeHeaders.empty() ||
+        !contextAllowsHeaderInsertion(ContextKind))
       return std::nullopt;
     if (SemaResult && SemaResult->Declaration) {
       // Avoid inserting new #include if the declaration is found in the current
@@ -305,6 +316,15 @@ struct ScoredBundleGreater {
   }
 };
 
+// Remove the first template argument from Signature.
+// If Signature only contains a single argument an empty string is returned.
+std::string removeFirstTemplateArg(llvm::StringRef Signature) {
+  auto Rest = Signature.split(",").second;
+  if (Rest.empty())
+    return "";
+  return ("<" + Rest.ltrim()).str();
+}
+
 // Assembles a code completion out of a bundle of >=1 completion candidates.
 // Many of the expensive strings are only computed at this point, once we know
 // the candidate bundle is going to be returned.
@@ -325,7 +345,7 @@ struct CodeCompletionBuilder {
         EnableFunctionArgSnippets(Opts.EnableFunctionArgSnippets),
         IsUsingDeclaration(IsUsingDeclaration), NextTokenKind(NextTokenKind) {
     Completion.Deprecated = true; // cleared by any non-deprecated overload.
-    add(C, SemaCCS);
+    add(C, SemaCCS, ContextKind);
     if (C.SemaResult) {
       assert(ASTCtx);
       Completion.Origin |= SymbolOrigin::AST;
@@ -401,7 +421,8 @@ struct CodeCompletionBuilder {
           std::move(*Spelled),
           Includes.shouldInsertInclude(*ResolvedDeclaring, *ResolvedInserted));
     };
-    bool ShouldInsert = C.headerToInsertIfAllowed(Opts).has_value();
+    bool ShouldInsert =
+        C.headerToInsertIfAllowed(Opts, ContextKind).has_value();
     Symbol::IncludeDirective Directive = insertionDirective(Opts);
     // Calculate include paths and edits for all possible headers.
     for (const auto &Inc : C.RankedIncludeHeaders) {
@@ -431,22 +452,40 @@ struct CodeCompletionBuilder {
                           });
   }
 
-  void add(const CompletionCandidate &C, CodeCompletionString *SemaCCS) {
+  void add(const CompletionCandidate &C, CodeCompletionString *SemaCCS,
+           CodeCompletionContext::Kind ContextKind) {
     assert(bool(C.SemaResult) == bool(SemaCCS));
     Bundled.emplace_back();
     BundledEntry &S = Bundled.back();
+    bool IsConcept = false;
     if (C.SemaResult) {
-      bool IsPattern = C.SemaResult->Kind == CodeCompletionResult::RK_Pattern;
-      getSignature(*SemaCCS, &S.Signature, &S.SnippetSuffix,
-                   &Completion.RequiredQualifier, IsPattern);
+      getSignature(*SemaCCS, &S.Signature, &S.SnippetSuffix, C.SemaResult->Kind,
+                   C.SemaResult->CursorKind, &Completion.RequiredQualifier);
       if (!C.SemaResult->FunctionCanBeCall)
         S.SnippetSuffix.clear();
       S.ReturnType = getReturnType(*SemaCCS);
+      if (C.SemaResult->Kind == CodeCompletionResult::RK_Declaration)
+        if (const auto *D = C.SemaResult->getDeclaration())
+          if (isa<ConceptDecl>(D))
+            IsConcept = true;
     } else if (C.IndexResult) {
       S.Signature = std::string(C.IndexResult->Signature);
       S.SnippetSuffix = std::string(C.IndexResult->CompletionSnippetSuffix);
       S.ReturnType = std::string(C.IndexResult->ReturnType);
+      if (C.IndexResult->SymInfo.Kind == index::SymbolKind::Concept)
+        IsConcept = true;
     }
+
+    /// When a concept is used as a type-constraint (e.g. `Iterator auto x`),
+    /// and in some other contexts, its first type argument is not written.
+    /// Drop the parameter from the signature.
+    if (IsConcept && ContextKind == CodeCompletionContext::CCC_TopLevel) {
+      S.Signature = removeFirstTemplateArg(S.Signature);
+      // Dropping the first placeholder from the suffix will leave a $2
+      // with no $1.
+      S.SnippetSuffix = removeFirstTemplateArg(S.SnippetSuffix);
+    }
+
     if (!Completion.Documentation) {
       auto SetDoc = [&](llvm::StringRef Doc) {
         if (!Doc.empty()) {
@@ -781,6 +820,8 @@ bool contextAllowsIndex(enum CodeCompletionContext::Kind K) {
   case CodeCompletionContext::CCC_ObjCInterfaceName:
   case CodeCompletionContext::CCC_Symbol:
   case CodeCompletionContext::CCC_SymbolOrNewName:
+  case CodeCompletionContext::CCC_ObjCClassForwardDecl:
+  case CodeCompletionContext::CCC_TopLevelOrExpression:
     return true;
   case CodeCompletionContext::CCC_OtherWithMacros:
   case CodeCompletionContext::CCC_DotMemberAccess:
@@ -1315,11 +1356,11 @@ bool semaCodeComplete(std::unique_ptr<CodeCompleteConsumer> Consumer,
   auto &FrontendOpts = CI->getFrontendOpts();
   FrontendOpts.SkipFunctionBodies = true;
   // Disable typo correction in Sema.
-  CI->getLangOpts()->SpellChecking = false;
+  CI->getLangOpts().SpellChecking = false;
   // Code completion won't trigger in delayed template bodies.
   // This is on-by-default in windows to allow parsing SDK headers; we're only
   // disabling it for the main-file (not preamble).
-  CI->getLangOpts()->DelayedTemplateParsing = false;
+  CI->getLangOpts().DelayedTemplateParsing = false;
   // Setup code completion.
   FrontendOpts.CodeCompleteOpts = Options;
   FrontendOpts.CodeCompletionAt.FileName = std::string(Input.FileName);
@@ -1339,7 +1380,7 @@ bool semaCodeComplete(std::unique_ptr<CodeCompleteConsumer> Consumer,
   // overriding the preamble will break sema completion. Fortunately we can just
   // skip all includes in this case; these completions are really simple.
   PreambleBounds PreambleRegion =
-      ComputePreambleBounds(*CI->getLangOpts(), *ContentsBuffer, 0);
+      ComputePreambleBounds(CI->getLangOpts(), *ContentsBuffer, 0);
   bool CompletingInPreamble = Input.Offset < PreambleRegion.Size ||
                               (!PreambleRegion.PreambleEndsAtStartOfLine &&
                                Input.Offset == PreambleRegion.Size);
@@ -1423,6 +1464,10 @@ bool includeSymbolFromIndex(CodeCompletionContext::Kind Kind,
   else if (Kind == CodeCompletionContext::CCC_ObjCProtocolName)
     // Don't show anything else in ObjC protocol completions.
     return false;
+
+  if (Kind == CodeCompletionContext::CCC_ObjCClassForwardDecl)
+    return Sym.SymInfo.Kind == index::SymbolKind::Class &&
+           Sym.SymInfo.Lang == index::SymbolLanguage::ObjC;
   return true;
 }
 
@@ -1833,8 +1878,8 @@ private:
         assert(IdentifierResult);
         C.Name = IdentifierResult->Name;
       }
-      if (auto OverloadSet =
-              C.overloadSet(Opts, FileName, Inserter ? &*Inserter : nullptr)) {
+      if (auto OverloadSet = C.overloadSet(
+              Opts, FileName, Inserter ? &*Inserter : nullptr, CCContextKind)) {
         auto Ret = BundleLookup.try_emplace(OverloadSet, Bundles.size());
         if (Ret.second)
           Bundles.emplace_back();
@@ -1885,7 +1930,7 @@ private:
           C.SemaResult->Kind == CodeCompletionResult::RK_Macro) ||
          (C.IndexResult &&
           C.IndexResult->SymInfo.Kind == index::SymbolKind::Macro)) &&
-        !C.Name.startswith_insensitive(Filter->pattern()))
+        !C.Name.starts_with_insensitive(Filter->pattern()))
       return std::nullopt;
     return Filter->match(C.Name);
   }
@@ -2004,7 +2049,7 @@ private:
                         Item, SemaCCS, AccessibleScopes, *Inserter, FileName,
                         CCContextKind, Opts, IsUsingDeclaration, NextTokenKind);
       else
-        Builder->add(Item, SemaCCS);
+        Builder->add(Item, SemaCCS, CCContextKind);
     }
     return Builder->build();
   }
@@ -2220,11 +2265,15 @@ bool isIndexedForCodeCompletion(const NamedDecl &ND, ASTContext &ASTCtx) {
 CompletionItem CodeCompletion::render(const CodeCompleteOptions &Opts) const {
   CompletionItem LSP;
   const auto *InsertInclude = Includes.empty() ? nullptr : &Includes[0];
+  // We could move our indicators from label into labelDetails->description.
+  // In VSCode there are rendering issues that prevent these being aligned.
   LSP.label = ((InsertInclude && InsertInclude->Insertion)
                    ? Opts.IncludeIndicator.Insert
                    : Opts.IncludeIndicator.NoInsert) +
               (Opts.ShowOrigins ? "[" + llvm::to_string(Origin) + "]" : "") +
-              RequiredQualifier + Name + Signature;
+              RequiredQualifier + Name;
+  LSP.labelDetails.emplace();
+  LSP.labelDetails->detail = Signature;
 
   LSP.kind = Kind;
   LSP.detail = BundleSize > 1
@@ -2243,7 +2292,7 @@ CompletionItem CodeCompletion::render(const CodeCompleteOptions &Opts) const {
   }
   LSP.sortText = sortText(Score.Total, FilterText);
   LSP.filterText = FilterText;
-  LSP.textEdit = {CompletionTokenRange, RequiredQualifier + Name};
+  LSP.textEdit = {CompletionTokenRange, RequiredQualifier + Name, ""};
   // Merge continuous additionalTextEdits into main edit. The main motivation
   // behind this is to help LSP clients, it seems most of them are confused when
   // they are provided with additionalTextEdits that are consecutive to main

@@ -17,8 +17,9 @@
 
 // https://developer.arm.com/documentation/dui0491/i/C-and-C---Implementation-Details/Basic-data-types
 // https://developer.apple.com/documentation/xcode/writing-arm64-code-for-apple-platforms
-#if defined(_WIN32) || defined(__arm__) ||                                     \
-    (defined(__APPLE__) && defined(__aarch64__))
+// https://docs.amd.com/bundle/HIP-Programming-Guide-v5.1/page/Programming_with_HIP.html
+#if defined(_WIN32) || defined(__arm__) || defined(__NVPTX__) ||               \
+    defined(__AMDGPU__) || (defined(__APPLE__) && defined(__aarch64__))
 #define LONG_DOUBLE_IS_DOUBLE
 #endif
 

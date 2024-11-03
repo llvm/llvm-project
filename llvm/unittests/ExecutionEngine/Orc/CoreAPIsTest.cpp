@@ -13,6 +13,7 @@
 #include "llvm/ExecutionEngine/Orc/Shared/OrcError.h"
 #include "llvm/Testing/Support/Error.h"
 
+#include <deque>
 #include <set>
 #include <thread>
 
@@ -22,6 +23,29 @@ using namespace llvm::orc;
 class CoreAPIsStandardTest : public CoreAPIsBasedStandardTest {};
 
 namespace {
+
+TEST_F(CoreAPIsStandardTest, JITDylibAddToLinkOrder) {
+  // Check that the JITDylib::addToLinkOrder methods behave as expected.
+  auto &JD2 = ES.createBareJITDylib("JD2");
+  auto &JD3 = ES.createBareJITDylib("JD3");
+
+  JD.addToLinkOrder(JD2);
+  JD.withLinkOrderDo([&](const JITDylibSearchOrder &SO) {
+    EXPECT_EQ(SO.size(), 2U);
+    EXPECT_EQ(SO[0].first, &JD);
+    EXPECT_EQ(SO[1].first, &JD2);
+  });
+
+  JD.addToLinkOrder(makeJITDylibSearchOrder({&JD2, &JD3}));
+  JD.withLinkOrderDo([&](const JITDylibSearchOrder &SO) {
+    // JD2 was already in the search order, so we expect just one extra item
+    // here.
+    EXPECT_EQ(SO.size(), 3U);
+    EXPECT_EQ(SO[0].first, &JD);
+    EXPECT_EQ(SO[1].first, &JD2);
+    EXPECT_EQ(SO[2].first, &JD3);
+  });
+}
 
 TEST_F(CoreAPIsStandardTest, BasicSuccessfulLookup) {
   bool OnCompletionRun = false;
@@ -260,7 +284,7 @@ TEST_F(CoreAPIsStandardTest, DiscardInitSymbol) {
 
 TEST_F(CoreAPIsStandardTest, LookupWithHiddenSymbols) {
   auto BarHiddenFlags = BarSym.getFlags() & ~JITSymbolFlags::Exported;
-  auto BarHiddenSym = JITEvaluatedSymbol(BarSym.getAddress(), BarHiddenFlags);
+  auto BarHiddenSym = ExecutorSymbolDef(BarSym.getAddress(), BarHiddenFlags);
 
   cantFail(JD.define(absoluteSymbols({{Foo, FooSym}, {Bar, BarHiddenSym}})));
 
@@ -1084,8 +1108,8 @@ TEST_F(CoreAPIsStandardTest, DefineMaterializingSymbol) {
 }
 
 TEST_F(CoreAPIsStandardTest, GeneratorTest) {
-  JITEvaluatedSymbol BazHiddenSym(
-      BazSym.getAddress(), BazSym.getFlags() & ~JITSymbolFlags::Exported);
+  ExecutorSymbolDef BazHiddenSym(BazSym.getAddress(),
+                                 BazSym.getFlags() & ~JITSymbolFlags::Exported);
   cantFail(JD.define(absoluteSymbols({{Foo, FooSym}, {Baz, BazHiddenSym}})));
 
   class TestGenerator : public DefinitionGenerator {
@@ -1123,23 +1147,43 @@ TEST_F(CoreAPIsStandardTest, GeneratorTest) {
       << "Expected fallback def for Bar to be equal to BarSym";
 }
 
-TEST_F(CoreAPIsStandardTest, AsynchronousGeneratorTest) {
-  class TestGenerator : public DefinitionGenerator {
-  public:
-    TestGenerator(LookupState &TLS) : TLS(TLS) {}
-    Error tryToGenerate(LookupState &LS, LookupKind K, JITDylib &JD,
-                        JITDylibLookupFlags JDLookupFlags,
-                        const SymbolLookupSet &Name) override {
-      TLS = std::move(LS);
-      return Error::success();
-    }
-
-  private:
-    LookupState &TLS;
+/// By default appends LookupStates to a queue.
+/// Behavior can be overridden by setting TryToGenerateOverride.
+class SimpleAsyncGenerator : public DefinitionGenerator {
+public:
+  struct SuspendedLookupInfo {
+    LookupState LS;
+    LookupKind K;
+    JITDylibSP JD;
+    JITDylibLookupFlags JDLookupFlags;
+    SymbolLookupSet Names;
   };
 
-  LookupState LS;
-  JD.addGenerator(std::make_unique<TestGenerator>(LS));
+  unique_function<Error(LookupState &, LookupKind, JITDylib &,
+                        JITDylibLookupFlags, const SymbolLookupSet &)>
+      TryToGenerateOverride;
+
+  Error tryToGenerate(LookupState &LS, LookupKind K, JITDylib &JD,
+                      JITDylibLookupFlags JDLookupFlags,
+                      const SymbolLookupSet &Names) override {
+    if (TryToGenerateOverride)
+      return TryToGenerateOverride(LS, K, JD, JDLookupFlags, Names);
+    Lookup = SuspendedLookupInfo{std::move(LS), K, &JD, JDLookupFlags, Names};
+    return Error::success();
+  }
+
+  SuspendedLookupInfo takeLookup() {
+    std::optional<SuspendedLookupInfo> Tmp;
+    std::swap(Tmp, Lookup);
+    return std::move(*Tmp);
+  }
+
+  std::optional<SuspendedLookupInfo> Lookup;
+};
+
+TEST_F(CoreAPIsStandardTest, SimpleAsynchronousGeneratorTest) {
+
+  auto &G = JD.addGenerator(std::make_unique<SimpleAsyncGenerator>());
 
   bool LookupCompleted = false;
 
@@ -1148,26 +1192,135 @@ TEST_F(CoreAPIsStandardTest, AsynchronousGeneratorTest) {
       SymbolState::Ready,
       [&](Expected<SymbolMap> Result) {
         LookupCompleted = true;
-        if (!Result) {
-          ADD_FAILURE() << "Lookup failed unexpected";
-          logAllUnhandledErrors(Result.takeError(), errs(), "");
-          return;
-        }
-
-        EXPECT_EQ(Result->size(), 1U) << "Unexpected number of results";
-        EXPECT_EQ(Result->count(Foo), 1U) << "Expected result for Foo";
-        EXPECT_EQ((*Result)[Foo].getAddress(), FooSym.getAddress())
-            << "Bad result for Foo";
+        EXPECT_THAT_EXPECTED(Result, Succeeded());
+        if (Result)
+          EXPECT_EQ(*Result, SymbolMap({{Foo, FooSym}}));
       },
       NoDependenciesToRegister);
 
   EXPECT_FALSE(LookupCompleted);
 
   cantFail(JD.define(absoluteSymbols({{Foo, FooSym}})));
-
-  LS.continueLookup(Error::success());
+  G.takeLookup().LS.continueLookup(Error::success());
 
   EXPECT_TRUE(LookupCompleted);
+}
+
+TEST_F(CoreAPIsStandardTest, BlockedGeneratorAutoSuspensionTest) {
+  // Test that repeated lookups while a generator is in use cause automatic
+  // lookup suspension / resumption.
+
+  auto &G = JD.addGenerator(std::make_unique<SimpleAsyncGenerator>());
+
+  bool Lookup1Completed = false;
+  bool Lookup2Completed = false;
+  bool Lookup3Completed = false;
+  bool Lookup4Completed = false;
+
+  // Add lookup 1.
+  //
+  // Tests that tryToGenerate-suspended lookups resume auto-suspended lookups
+  // when the tryToGenerate-suspended lookup continues (i.e. the call to
+  // OL_resumeLookupAfterGeneration at the top of OL_applyQueryPhase1).
+  ES.lookup(
+      LookupKind::Static, makeJITDylibSearchOrder(&JD), SymbolLookupSet(Foo),
+      SymbolState::Ready,
+      [&](Expected<SymbolMap> Result) {
+        Lookup1Completed = true;
+        EXPECT_THAT_EXPECTED(Result, Succeeded());
+        if (Result)
+          EXPECT_EQ(*Result, SymbolMap({{Foo, FooSym}}));
+      },
+      NoDependenciesToRegister);
+
+  // The generator should immediately see the first lookup.
+  EXPECT_NE(G.Lookup, std::nullopt);
+
+  // Add lookup 2.
+  //
+  // Tests that lookups that pass through tryToGenerate without being captured
+  // resume auto-suspended lookups. We set a one-shot TryToGenerateOverride to
+  // prevent capture of lookup 2 by tryToGenerate. This tests the call to
+  // OL_resumeLookupAfterGeneration inside the generator loop.
+  G.TryToGenerateOverride = [&](LookupState &LS, LookupKind K, JITDylib &JD,
+                                JITDylibLookupFlags JDLookupFlags,
+                                const SymbolLookupSet &Names) -> Error {
+    cantFail(JD.define(absoluteSymbols({{Bar, BarSym}})));
+    G.TryToGenerateOverride = nullptr;
+    return Error::success();
+  };
+
+  ES.lookup(
+      LookupKind::Static, makeJITDylibSearchOrder(&JD), SymbolLookupSet(Bar),
+      SymbolState::Ready,
+      [&](Expected<SymbolMap> Result) {
+        Lookup2Completed = true;
+        EXPECT_THAT_EXPECTED(Result, Succeeded());
+        if (Result)
+          EXPECT_EQ(*Result, SymbolMap({{Bar, BarSym}}));
+      },
+      NoDependenciesToRegister);
+
+  // Add lookup 3.
+  //
+  // Test that if a lookup's symbols have already been generated (and it
+  // consequently skips the generator loop entirely) it still resumes the next
+  // suspended lookup. This tests the call to OL_resumeLookupAfterGeneration
+  // just above the generator loop.
+  ES.lookup(
+      LookupKind::Static, makeJITDylibSearchOrder(&JD), SymbolLookupSet(Bar),
+      SymbolState::Ready,
+      [&](Expected<SymbolMap> Result) {
+        Lookup3Completed = true;
+        EXPECT_THAT_EXPECTED(Result, Succeeded());
+        if (Result)
+          EXPECT_EQ(*Result, SymbolMap({{Bar, BarSym}}));
+      },
+      NoDependenciesToRegister);
+
+  // Add lookup 4.
+  //
+  // This is just used to verify that lookup 3 triggered resumption of the next
+  // lookup as expected.
+  ES.lookup(
+      LookupKind::Static, makeJITDylibSearchOrder(&JD), SymbolLookupSet(Baz),
+      SymbolState::Ready,
+      [&](Expected<SymbolMap> Result) {
+        Lookup4Completed = true;
+        EXPECT_THAT_EXPECTED(Result, Succeeded());
+        if (Result)
+          EXPECT_EQ(*Result, SymbolMap({{Baz, BazSym}}));
+      },
+      NoDependenciesToRegister);
+
+  // All lookups have been started, but none should have been completed yet.
+  EXPECT_FALSE(Lookup1Completed);
+  EXPECT_FALSE(Lookup2Completed);
+  EXPECT_FALSE(Lookup3Completed);
+  EXPECT_FALSE(Lookup4Completed);
+
+  // Start continuing lookups.
+
+  // First Define foo and continue lookup 1. We expect this to complete lookups
+  // 1, 2 and 3: the TryToGenerateOverride set above will define bar, which will
+  // allow both 2 and 3 to complete.
+  cantFail(JD.define(absoluteSymbols({{Foo, FooSym}})));
+  G.takeLookup().LS.continueLookup(Error::success());
+
+  EXPECT_TRUE(Lookup1Completed);
+  EXPECT_TRUE(Lookup2Completed);
+  EXPECT_TRUE(Lookup3Completed);
+  EXPECT_FALSE(Lookup4Completed);
+  EXPECT_NE(G.Lookup, std::nullopt);
+
+  // Check that the most recently captured lookup is lookup 4 (for baz).
+  if (G.Lookup)
+    EXPECT_EQ(G.Lookup->Names.begin()->first, Baz);
+
+  cantFail(JD.define(absoluteSymbols({{Baz, BazSym}})));
+  G.takeLookup().LS.continueLookup(Error::success());
+
+  EXPECT_TRUE(Lookup4Completed);
 }
 
 TEST_F(CoreAPIsStandardTest, FailResolution) {
@@ -1263,6 +1416,40 @@ TEST_F(CoreAPIsStandardTest, FailAfterPartialResolution) {
       },
       NoDependenciesToRegister);
   EXPECT_TRUE(QueryHandlerRun) << "Query handler never ran";
+}
+
+TEST_F(CoreAPIsStandardTest, FailDefineMaterializingDueToDefunctTracker) {
+  // Check that a defunct resource tracker causes defineMaterializing to error
+  // immediately.
+
+  std::unique_ptr<MaterializationResponsibility> FooMR;
+  auto MU = std::make_unique<SimpleMaterializationUnit>(
+      SymbolFlagsMap({{Foo, FooSym.getFlags()}}),
+      [&](std::unique_ptr<MaterializationResponsibility> R) {
+        FooMR = std::move(R);
+      });
+
+  auto RT = JD.createResourceTracker();
+  cantFail(JD.define(std::move(MU), RT));
+
+  bool OnCompletionRan = false;
+  auto OnCompletion = [&](Expected<SymbolMap> Result) {
+    EXPECT_THAT_EXPECTED(Result, Failed());
+    OnCompletionRan = true;
+  };
+
+  ES.lookup(LookupKind::Static, makeJITDylibSearchOrder(&JD),
+            SymbolLookupSet(Foo), SymbolState::Ready, OnCompletion,
+            NoDependenciesToRegister);
+
+  cantFail(RT->remove());
+
+  EXPECT_THAT_ERROR(FooMR->defineMaterializing(SymbolFlagsMap()), Failed())
+      << "defineMaterializing should have failed due to a defunct tracker";
+
+  FooMR->failMaterialization();
+
+  EXPECT_TRUE(OnCompletionRan) << "OnCompletion handler did not run.";
 }
 
 TEST_F(CoreAPIsStandardTest, TestLookupWithUnthreadedMaterialization) {

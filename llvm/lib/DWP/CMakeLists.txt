@@ -13,5 +13,4 @@ add_llvm_component_library(LLVMDWP
   MC
   Object
   Support
-  Target
-)
+  )

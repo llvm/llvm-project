@@ -1,4 +1,4 @@
-//===--- RISCV.h - RISCV-specific Tool Helpers ------------------*- C++ -*-===//
+//===--- RISCV.h - RISC-V-specific Tool Helpers -----------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.

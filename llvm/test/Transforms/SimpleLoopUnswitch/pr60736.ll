@@ -7,10 +7,11 @@ define void @test() {
 ; CHECK-NEXT:    [[TMP:%.*]] = call i1 @llvm.experimental.widenable.condition()
 ; CHECK-NEXT:    [[TMP1:%.*]] = load atomic i32, ptr addrspace(1) poison unordered, align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load atomic i32, ptr addrspace(1) poison unordered, align 8
+; CHECK-NEXT:    br i1 [[TMP]], label [[BB_SPLIT:%.*]], label [[BB3_SPLIT_US:%.*]]
+; CHECK:       bb.split:
 ; CHECK-NEXT:    br label [[BB3:%.*]]
 ; CHECK:       bb3:
-; CHECK-NEXT:    [[TMP_FR:%.*]] = freeze i1 [[TMP]]
-; CHECK-NEXT:    br i1 [[TMP_FR]], label [[BB3_SPLIT:%.*]], label [[BB3_SPLIT_US:%.*]]
+; CHECK-NEXT:    br label [[BB3_SPLIT:%.*]]
 ; CHECK:       bb3.split.us:
 ; CHECK-NEXT:    br label [[BB4_US:%.*]]
 ; CHECK:       bb4.us:

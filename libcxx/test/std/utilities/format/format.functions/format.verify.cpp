@@ -6,7 +6,9 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
-// UNSUPPORTED: libcpp-has-no-incomplete-format
+
+// TODO FMT This test should not require std::to_chars(floating-point)
+// XFAIL: availability-fp_to_chars-missing
 
 // Basic test to validate ill-formed code is properly detected.
 
@@ -24,65 +26,65 @@
 // clang-format off
 
 void f() {
-  std::format("{"); // expected-error-re{{call to consteval function '{{.*}}' is not a constant expression}}
+  TEST_IGNORE_NODISCARD std::format("{"); // expected-error-re{{call to consteval function '{{.*}}' is not a constant expression}}
   // expected-note@*:* {{non-constexpr function '__throw_format_error' cannot be used in a constant expression}}
 
-  std::format("}"); // expected-error-re{{call to consteval function '{{.*}}' is not a constant expression}}
+  TEST_IGNORE_NODISCARD std::format("}"); // expected-error-re{{call to consteval function '{{.*}}' is not a constant expression}}
   // expected-note@*:* {{non-constexpr function '__throw_format_error' cannot be used in a constant expression}}
 
-  std::format("{}"); // expected-error-re{{call to consteval function '{{.*}}' is not a constant expression}}
+  TEST_IGNORE_NODISCARD std::format("{}"); // expected-error-re{{call to consteval function '{{.*}}' is not a constant expression}}
   // expected-note@*:* {{non-constexpr function '__throw_format_error' cannot be used in a constant expression}}
 
-  std::format("{0}"); // expected-error-re{{call to consteval function '{{.*}}' is not a constant expression}}
+  TEST_IGNORE_NODISCARD std::format("{0}"); // expected-error-re{{call to consteval function '{{.*}}' is not a constant expression}}
   // expected-note@*:* {{non-constexpr function '__throw_format_error' cannot be used in a constant expression}}
 
-  std::format("{:-}", "Forty-two"); // expected-error-re{{call to consteval function '{{.*}}' is not a constant expression}}
+  TEST_IGNORE_NODISCARD std::format("{:-}", "Forty-two"); // expected-error-re{{call to consteval function '{{.*}}' is not a constant expression}}
   // expected-note@*:* {{non-constexpr function '__throw_format_error' cannot be used in a constant expression}}
 
-  std::format("{:#}", "Forty-two"); // expected-error-re{{call to consteval function '{{.*}}' is not a constant expression}}
+  TEST_IGNORE_NODISCARD std::format("{:#}", "Forty-two"); // expected-error-re{{call to consteval function '{{.*}}' is not a constant expression}}
   // expected-note@*:* {{non-constexpr function '__throw_format_error' cannot be used in a constant expression}}
 
-  std::format("{:L}", "Forty-two"); // expected-error-re{{call to consteval function '{{.*}}' is not a constant expression}}
+  TEST_IGNORE_NODISCARD std::format("{:L}", "Forty-two"); // expected-error-re{{call to consteval function '{{.*}}' is not a constant expression}}
   // expected-note@*:* {{non-constexpr function '__throw_format_error' cannot be used in a constant expression}}
 
-  std::format("{0:{0}}", "Forty-two"); // expected-error-re{{call to consteval function '{{.*}}' is not a constant expression}}
+  TEST_IGNORE_NODISCARD std::format("{0:{0}}", "Forty-two"); // expected-error-re{{call to consteval function '{{.*}}' is not a constant expression}}
   // expected-note@*:* {{non-constexpr function '__throw_format_error' cannot be used in a constant expression}}
 
-  std::format("{:.42d}", "Forty-two"); // expected-error-re{{call to consteval function '{{.*}}' is not a constant expression}}
+  TEST_IGNORE_NODISCARD std::format("{:.42d}", "Forty-two"); // expected-error-re{{call to consteval function '{{.*}}' is not a constant expression}}
   // expected-note@*:* {{non-constexpr function '__throw_format_error' cannot be used in a constant expression}}
 
-  std::format("{:d}", "Forty-two"); // expected-error-re{{call to consteval function '{{.*}}' is not a constant expression}}
+  TEST_IGNORE_NODISCARD std::format("{:d}", "Forty-two"); // expected-error-re{{call to consteval function '{{.*}}' is not a constant expression}}
   // expected-note@*:* {{non-constexpr function '__throw_format_error' cannot be used in a constant expression}}
 
 #ifndef TEST_HAS_NO_WIDE_CHARACTERS
-  std::format(L"{"); // expected-error-re{{call to consteval function '{{.*}}' is not a constant expression}}
+  TEST_IGNORE_NODISCARD std::format(L"{"); // expected-error-re{{call to consteval function '{{.*}}' is not a constant expression}}
   // expected-note@*:* {{non-constexpr function '__throw_format_error' cannot be used in a constant expression}}
 
-  std::format(L"}"); // expected-error-re{{call to consteval function '{{.*}}' is not a constant expression}}
+  TEST_IGNORE_NODISCARD std::format(L"}"); // expected-error-re{{call to consteval function '{{.*}}' is not a constant expression}}
   // expected-note@*:* {{non-constexpr function '__throw_format_error' cannot be used in a constant expression}}
 
-  std::format(L"{}"); // expected-error-re{{call to consteval function '{{.*}}' is not a constant expression}}
+  TEST_IGNORE_NODISCARD std::format(L"{}"); // expected-error-re{{call to consteval function '{{.*}}' is not a constant expression}}
   // expected-note@*:* {{non-constexpr function '__throw_format_error' cannot be used in a constant expression}}
 
-  std::format(L"{0}"); // expected-error-re{{call to consteval function '{{.*}}' is not a constant expression}}
+  TEST_IGNORE_NODISCARD std::format(L"{0}"); // expected-error-re{{call to consteval function '{{.*}}' is not a constant expression}}
   // expected-note@*:* {{non-constexpr function '__throw_format_error' cannot be used in a constant expression}}
 
-  std::format(L"{:-}", L"Forty-two"); // expected-error-re{{call to consteval function '{{.*}}' is not a constant expression}}
+  TEST_IGNORE_NODISCARD std::format(L"{:-}", L"Forty-two"); // expected-error-re{{call to consteval function '{{.*}}' is not a constant expression}}
   // expected-note@*:* {{non-constexpr function '__throw_format_error' cannot be used in a constant expression}}
 
-  std::format(L"{:#}", L"Forty-two"); // expected-error-re{{call to consteval function '{{.*}}' is not a constant expression}}
+  TEST_IGNORE_NODISCARD std::format(L"{:#}", L"Forty-two"); // expected-error-re{{call to consteval function '{{.*}}' is not a constant expression}}
   // expected-note@*:* {{non-constexpr function '__throw_format_error' cannot be used in a constant expression}}
 
-  std::format(L"{:L}", L"Forty-two"); // expected-error-re{{call to consteval function '{{.*}}' is not a constant expression}}
+  TEST_IGNORE_NODISCARD std::format(L"{:L}", L"Forty-two"); // expected-error-re{{call to consteval function '{{.*}}' is not a constant expression}}
   // expected-note@*:* {{non-constexpr function '__throw_format_error' cannot be used in a constant expression}}
 
-  std::format(L"{0:{0}}", L"Forty-two"); // expected-error-re{{call to consteval function '{{.*}}' is not a constant expression}}
+  TEST_IGNORE_NODISCARD std::format(L"{0:{0}}", L"Forty-two"); // expected-error-re{{call to consteval function '{{.*}}' is not a constant expression}}
   // expected-note@*:* {{non-constexpr function '__throw_format_error' cannot be used in a constant expression}}
 
-  std::format(L"{:.42d}", L"Forty-two"); // expected-error-re{{call to consteval function '{{.*}}' is not a constant expression}}
+  TEST_IGNORE_NODISCARD std::format(L"{:.42d}", L"Forty-two"); // expected-error-re{{call to consteval function '{{.*}}' is not a constant expression}}
   // expected-note@*:* {{non-constexpr function '__throw_format_error' cannot be used in a constant expression}}
 
-  std::format(L"{:d}", L"Forty-two"); // expected-error-re{{call to consteval function '{{.*}}' is not a constant expression}}
+  TEST_IGNORE_NODISCARD std::format(L"{:d}", L"Forty-two"); // expected-error-re{{call to consteval function '{{.*}}' is not a constant expression}}
   // expected-note@*:* {{non-constexpr function '__throw_format_error' cannot be used in a constant expression}}
 #endif
 }
@@ -94,9 +96,9 @@ struct tiny {
 void P2418()
 {
   auto t = tiny{};
-  std::format("{}", t.bit); // expected-error{{non-const reference cannot bind to bit-field 'bit'}}
+  TEST_IGNORE_NODISCARD std::format("{}", t.bit); // expected-error{{non-const reference cannot bind to bit-field 'bit'}}
 
 #ifndef TEST_HAS_NO_WIDE_CHARACTERS
-  std::format(L"{}", t.bit); // expected-error{{non-const reference cannot bind to bit-field 'bit'}}
+  TEST_IGNORE_NODISCARD std::format(L"{}", t.bit); // expected-error{{non-const reference cannot bind to bit-field 'bit'}}
 #endif
 }

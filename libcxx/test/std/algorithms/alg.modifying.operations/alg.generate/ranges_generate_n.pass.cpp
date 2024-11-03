@@ -66,8 +66,8 @@ static_assert(!HasGenerateNIter<int*, UninvocableGen>);
 // !indirectly_writable<O, invoke_result_t<F&>>
 static_assert(!HasGenerateNIter<int*, IntPtrGen>);
 
-template <class Iter, size_t N, class Gen>
-constexpr void test_one(std::array<int, N> in, size_t n, Gen gen, std::array<int, N> expected) {
+template <class Iter, std::size_t N, class Gen>
+constexpr void test_one(std::array<int, N> in, std::size_t n, Gen gen, std::array<int, N> expected) {
   assert(n <= N);
 
   auto begin = Iter(in.data());
@@ -120,8 +120,8 @@ constexpr bool test() {
 
     int gen_invocations = 0;
     auto gen = [&gen_invocations] { ++gen_invocations; return AssignedOnce(); };
-    constexpr size_t N1 = 10;
-    constexpr size_t N2 = N1 / 2;
+    constexpr std::size_t N1 = 10;
+    constexpr std::size_t N2 = N1 / 2;
     std::array<AssignedOnce, N1> in;
 
     auto result = std::ranges::generate_n(in.begin(), N2, gen);

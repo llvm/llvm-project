@@ -33,7 +33,9 @@ void RTNAME(Destroy)(const Descriptor &descriptor) {
   if (const DescriptorAddendum * addendum{descriptor.Addendum()}) {
     if (const auto *derived{addendum->derivedType()}) {
       if (!derived->noDestructionNeeded()) {
-        Destroy(descriptor, true, *derived);
+        // TODO: Pass source file & line information to the API
+        // so that a good Terminator can be passed
+        Destroy(descriptor, true, *derived, nullptr);
       }
     }
   }
@@ -87,11 +89,19 @@ static const typeInfo::DerivedType *GetDerivedType(const Descriptor &desc) {
 }
 
 bool RTNAME(SameTypeAs)(const Descriptor &a, const Descriptor &b) {
+  // Unlimited polymorphic with intrinsic dynamic type.
+  if (a.raw().type != CFI_type_struct && a.raw().type != CFI_type_other &&
+      b.raw().type != CFI_type_struct && b.raw().type != CFI_type_other)
+    return a.raw().type == b.raw().type;
+
   const typeInfo::DerivedType *derivedTypeA{GetDerivedType(a)};
   const typeInfo::DerivedType *derivedTypeB{GetDerivedType(b)};
+
+  // No dynamic type in one or both descriptor.
   if (derivedTypeA == nullptr || derivedTypeB == nullptr) {
     return false;
   }
+
   // Exact match of derived type.
   if (derivedTypeA == derivedTypeB) {
     return true;
@@ -102,6 +112,10 @@ bool RTNAME(SameTypeAs)(const Descriptor &a, const Descriptor &b) {
 }
 
 bool RTNAME(ExtendsTypeOf)(const Descriptor &a, const Descriptor &mold) {
+  if (a.raw().type != CFI_type_struct && a.raw().type != CFI_type_other &&
+      mold.raw().type != CFI_type_struct && mold.raw().type != CFI_type_other)
+    return a.raw().type == mold.raw().type;
+
   const typeInfo::DerivedType *derivedTypeA{GetDerivedType(a)};
   const typeInfo::DerivedType *derivedTypeMold{GetDerivedType(mold)};
 
@@ -142,6 +156,16 @@ bool RTNAME(ExtendsTypeOf)(const Descriptor &a, const Descriptor &mold) {
     parent = parent->GetParentType();
   }
   return false;
+}
+
+void RTNAME(DestroyWithoutFinalization)(const Descriptor &descriptor) {
+  if (const DescriptorAddendum * addendum{descriptor.Addendum()}) {
+    if (const auto *derived{addendum->derivedType()}) {
+      if (!derived->noDestructionNeeded()) {
+        Destroy(descriptor, /*finalize=*/false, *derived, nullptr);
+      }
+    }
+  }
 }
 
 } // extern "C"

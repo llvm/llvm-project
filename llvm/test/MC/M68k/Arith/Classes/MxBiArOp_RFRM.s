@@ -67,3 +67,6 @@ add.w	(%a2), %d0
 ; CHECK:      adda.l  (%a1), %a3
 ; CHECK-SAME: encoding: [0xd7,0xd1]
 adda.l	(%a1), %a3
+; CHECK: adda.l dst, %a0
+; CHECK-SAME: encoding: [0xd1,0xf9,A,A,A,A]
+adda.l dst,%a0

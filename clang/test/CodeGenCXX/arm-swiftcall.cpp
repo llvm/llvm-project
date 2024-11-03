@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -no-opaque-pointers -triple armv7-apple-darwin9 -emit-llvm -o - %s -Wno-return-type-c-linkage -std=c++03 | FileCheck %s -check-prefixes=CHECK
+// RUN: %clang_cc1 -triple armv7-apple-darwin9 -emit-llvm -o - %s -Wno-return-type-c-linkage -std=c++03 | FileCheck %s -check-prefixes=CHECK
 
 // This isn't really testing anything ARM-specific; it's just a convenient
 // 32-bit platform.
@@ -49,15 +49,14 @@ TEST(struct_1);
 // CHECK-LABEL: define {{.*}} @return_struct_1()
 // CHECK:   [[RET:%.*]] = alloca [[REC:%.*]], align 4
 // CHECK:   @llvm.memset
-// CHECK:   [[CAST_TMP:%.*]] = bitcast [[REC]]* [[RET]] to [[AGG:{ i32, \[2 x i8\], i8, \[1 x i8\], float, float }]]*
-// CHECK:   [[T0:%.*]] = getelementptr inbounds [[AGG]], [[AGG]]* [[CAST_TMP]], i32 0, i32 0
-// CHECK:   [[FIRST:%.*]] = load i32, i32* [[T0]], align 4
-// CHECK:   [[T0:%.*]] = getelementptr inbounds [[AGG]], [[AGG]]* [[CAST_TMP]], i32 0, i32 2
-// CHECK:   [[SECOND:%.*]] = load i8, i8* [[T0]], align 2
-// CHECK:   [[T0:%.*]] = getelementptr inbounds [[AGG]], [[AGG]]* [[CAST_TMP]], i32 0, i32 4
-// CHECK:   [[THIRD:%.*]] = load float, float* [[T0]], align 4
-// CHECK:   [[T0:%.*]] = getelementptr inbounds [[AGG]], [[AGG]]* [[CAST_TMP]], i32 0, i32 5
-// CHECK:   [[FOURTH:%.*]] = load float, float* [[T0]], align 4
+// CHECK:   [[T0:%.*]] = getelementptr inbounds [[AGG:{ i32, \[2 x i8\], i8, \[1 x i8\], float, float }]], ptr [[RET]], i32 0, i32 0
+// CHECK:   [[FIRST:%.*]] = load i32, ptr [[T0]], align 4
+// CHECK:   [[T0:%.*]] = getelementptr inbounds [[AGG]], ptr [[RET]], i32 0, i32 2
+// CHECK:   [[SECOND:%.*]] = load i8, ptr [[T0]], align 2
+// CHECK:   [[T0:%.*]] = getelementptr inbounds [[AGG]], ptr [[RET]], i32 0, i32 4
+// CHECK:   [[THIRD:%.*]] = load float, ptr [[T0]], align 4
+// CHECK:   [[T0:%.*]] = getelementptr inbounds [[AGG]], ptr [[RET]], i32 0, i32 5
+// CHECK:   [[FOURTH:%.*]] = load float, ptr [[T0]], align 4
 // CHECK:   [[T0:%.*]] = insertvalue [[UAGG:{ i32, i8, float, float }]] poison, i32 [[FIRST]], 0
 // CHECK:   [[T1:%.*]] = insertvalue [[UAGG]] [[T0]], i8 [[SECOND]], 1
 // CHECK:   [[T2:%.*]] = insertvalue [[UAGG]] [[T1]], float [[THIRD]], 2
@@ -65,41 +64,38 @@ TEST(struct_1);
 // CHECK:   ret [[UAGG]] [[T3]]
 // CHECK-LABEL: define {{.*}} @take_struct_1(i32 %0, i8 %1, float %2, float %3)
 // CHECK:   [[V:%.*]] = alloca [[REC]], align 4
-// CHECK:   [[CAST_TMP:%.*]] = bitcast [[REC]]* [[V]] to [[AGG]]*
-// CHECK:   [[T0:%.*]] = getelementptr inbounds [[AGG]], [[AGG]]* [[CAST_TMP]], i32 0, i32 0
-// CHECK:   store i32 %0, i32* [[T0]], align 4
-// CHECK:   [[T0:%.*]] = getelementptr inbounds [[AGG]], [[AGG]]* [[CAST_TMP]], i32 0, i32 2
-// CHECK:   store i8 %1, i8* [[T0]], align 2
-// CHECK:   [[T0:%.*]] = getelementptr inbounds [[AGG]], [[AGG]]* [[CAST_TMP]], i32 0, i32 4
-// CHECK:   store float %2, float* [[T0]], align 4
-// CHECK:   [[T0:%.*]] = getelementptr inbounds [[AGG]], [[AGG]]* [[CAST_TMP]], i32 0, i32 5
-// CHECK:   store float %3, float* [[T0]], align 4
+// CHECK:   [[T0:%.*]] = getelementptr inbounds [[AGG]], ptr [[V]], i32 0, i32 0
+// CHECK:   store i32 %0, ptr [[T0]], align 4
+// CHECK:   [[T0:%.*]] = getelementptr inbounds [[AGG]], ptr [[V]], i32 0, i32 2
+// CHECK:   store i8 %1, ptr [[T0]], align 2
+// CHECK:   [[T0:%.*]] = getelementptr inbounds [[AGG]], ptr [[V]], i32 0, i32 4
+// CHECK:   store float %2, ptr [[T0]], align 4
+// CHECK:   [[T0:%.*]] = getelementptr inbounds [[AGG]], ptr [[V]], i32 0, i32 5
+// CHECK:   store float %3, ptr [[T0]], align 4
 // CHECK:   ret void
 // CHECK-LABEL: define{{.*}} void @test_struct_1()
 // CHECK:   [[TMP:%.*]] = alloca [[REC]], align 4
 // CHECK:   [[CALL:%.*]] = call [[SWIFTCC:swiftcc]] [[UAGG]] @return_struct_1()
-// CHECK:   [[CAST_TMP:%.*]] = bitcast [[REC]]* [[TMP]] to [[AGG]]*
-// CHECK:   [[T0:%.*]] = getelementptr inbounds [[AGG]], [[AGG]]* [[CAST_TMP]], i32 0, i32 0
+// CHECK:   [[T0:%.*]] = getelementptr inbounds [[AGG]], ptr [[TMP]], i32 0, i32 0
 // CHECK:   [[T1:%.*]] = extractvalue [[UAGG]] [[CALL]], 0
-// CHECK:   store i32 [[T1]], i32* [[T0]], align 4
-// CHECK:   [[T0:%.*]] = getelementptr inbounds [[AGG]], [[AGG]]* [[CAST_TMP]], i32 0, i32 2
+// CHECK:   store i32 [[T1]], ptr [[T0]], align 4
+// CHECK:   [[T0:%.*]] = getelementptr inbounds [[AGG]], ptr [[TMP]], i32 0, i32 2
 // CHECK:   [[T1:%.*]] = extractvalue [[UAGG]] [[CALL]], 1
-// CHECK:   store i8 [[T1]], i8* [[T0]], align 2
-// CHECK:   [[T0:%.*]] = getelementptr inbounds [[AGG]], [[AGG]]* [[CAST_TMP]], i32 0, i32 4
+// CHECK:   store i8 [[T1]], ptr [[T0]], align 2
+// CHECK:   [[T0:%.*]] = getelementptr inbounds [[AGG]], ptr [[TMP]], i32 0, i32 4
 // CHECK:   [[T1:%.*]] = extractvalue [[UAGG]] [[CALL]], 2
-// CHECK:   store float [[T1]], float* [[T0]], align 4
-// CHECK:   [[T0:%.*]] = getelementptr inbounds [[AGG]], [[AGG]]* [[CAST_TMP]], i32 0, i32 5
+// CHECK:   store float [[T1]], ptr [[T0]], align 4
+// CHECK:   [[T0:%.*]] = getelementptr inbounds [[AGG]], ptr [[TMP]], i32 0, i32 5
 // CHECK:   [[T1:%.*]] = extractvalue [[UAGG]] [[CALL]], 3
-// CHECK:   store float [[T1]], float* [[T0]], align 4
-// CHECK:   [[CAST_TMP:%.*]] = bitcast [[REC]]* [[TMP]] to [[AGG]]*
-// CHECK:   [[T0:%.*]] = getelementptr inbounds [[AGG]], [[AGG]]* [[CAST_TMP]], i32 0, i32 0
-// CHECK:   [[FIRST:%.*]] = load i32, i32* [[T0]], align 4
-// CHECK:   [[T0:%.*]] = getelementptr inbounds [[AGG]], [[AGG]]* [[CAST_TMP]], i32 0, i32 2
-// CHECK:   [[SECOND:%.*]] = load i8, i8* [[T0]], align 2
-// CHECK:   [[T0:%.*]] = getelementptr inbounds [[AGG]], [[AGG]]* [[CAST_TMP]], i32 0, i32 4
-// CHECK:   [[THIRD:%.*]] = load float, float* [[T0]], align 4
-// CHECK:   [[T0:%.*]] = getelementptr inbounds [[AGG]], [[AGG]]* [[CAST_TMP]], i32 0, i32 5
-// CHECK:   [[FOURTH:%.*]] = load float, float* [[T0]], align 4
+// CHECK:   store float [[T1]], ptr [[T0]], align 4
+// CHECK:   [[T0:%.*]] = getelementptr inbounds [[AGG]], ptr [[TMP]], i32 0, i32 0
+// CHECK:   [[FIRST:%.*]] = load i32, ptr [[T0]], align 4
+// CHECK:   [[T0:%.*]] = getelementptr inbounds [[AGG]], ptr [[TMP]], i32 0, i32 2
+// CHECK:   [[SECOND:%.*]] = load i8, ptr [[T0]], align 2
+// CHECK:   [[T0:%.*]] = getelementptr inbounds [[AGG]], ptr [[TMP]], i32 0, i32 4
+// CHECK:   [[THIRD:%.*]] = load float, ptr [[T0]], align 4
+// CHECK:   [[T0:%.*]] = getelementptr inbounds [[AGG]], ptr [[TMP]], i32 0, i32 5
+// CHECK:   [[FOURTH:%.*]] = load float, ptr [[T0]], align 4
 // CHECK:   call [[SWIFTCC]] void @take_struct_1(i32 [[FIRST]], i8 [[SECOND]], float [[THIRD]], float [[FOURTH]])
 // CHECK:   ret void
 
@@ -112,7 +108,7 @@ TEST(struct_indirect_1)
 // CHECK-LABEL: define {{.*}} void @return_struct_indirect_1({{.*}} noalias sret
 
 // Should not be byval.
-// CHECK-LABEL: define {{.*}} void @take_struct_indirect_1({{.*}}* noundef{{( %.*)?}})
+// CHECK-LABEL: define {{.*}} void @take_struct_indirect_1(ptr noundef{{( %.*)?}})
 
 // Do a simple standalone test here of a function definition to ensure that
 // we don't have problems due to failure to eagerly synthesize a copy

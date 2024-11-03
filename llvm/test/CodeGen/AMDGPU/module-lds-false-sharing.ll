@@ -150,7 +150,6 @@ define void @nonkernel() {
 ; GFX10-LABEL: nonkernel:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX10-NEXT:    v_mov_b32_e32 v1, v0
 ; GFX10-NEXT:    ds_write_b32 v0, v0 offset:8
@@ -173,7 +172,6 @@ define void @nonkernel() {
 ; G_GFX10-LABEL: nonkernel:
 ; G_GFX10:       ; %bb.0:
 ; G_GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; G_GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; G_GFX10-NEXT:    v_mov_b32_e32 v2, 0
 ; G_GFX10-NEXT:    v_mov_b32_e32 v3, 8
 ; G_GFX10-NEXT:    v_mov_b32_e32 v0, 0

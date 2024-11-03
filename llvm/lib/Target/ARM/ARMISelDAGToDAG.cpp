@@ -1130,8 +1130,7 @@ static bool shouldUseZeroOffsetLdSt(SDValue N) {
 bool ARMDAGToDAGISel::SelectThumbAddrModeRRSext(SDValue N, SDValue &Base,
                                                 SDValue &Offset) {
   if (N.getOpcode() != ISD::ADD && !CurDAG->isBaseWithConstantOffset(N)) {
-    ConstantSDNode *NC = dyn_cast<ConstantSDNode>(N);
-    if (!NC || !NC->isZero())
+    if (!isNullConstant(N))
       return false;
 
     Base = Offset = N;
@@ -2720,10 +2719,7 @@ void ARMDAGToDAGISel::SelectBaseMVE_VMLLDAV(SDNode *N, bool Predicated,
   }
 
   auto OpIsZero = [N](size_t OpNo) {
-    if (ConstantSDNode *OpConst = dyn_cast<ConstantSDNode>(N->getOperand(OpNo)))
-      if (OpConst->getZExtValue() == 0)
-        return true;
-    return false;
+    return isNullConstant(N->getOperand(OpNo));
   };
 
   // If the input accumulator value is not zero, select an instruction with
@@ -3562,8 +3558,7 @@ void ARMDAGToDAGISel::SelectCMPZ(SDNode *N, bool &SwitchEQNEToPLMI) {
     return;
 
   SDValue Zero = N->getOperand(1);
-  if (!isa<ConstantSDNode>(Zero) || !cast<ConstantSDNode>(Zero)->isZero() ||
-      And->getOpcode() != ISD::AND)
+  if (!isNullConstant(Zero) || And->getOpcode() != ISD::AND)
     return;
   SDValue X = And.getOperand(0);
   auto C = dyn_cast<ConstantSDNode>(And.getOperand(1));
@@ -3704,7 +3699,8 @@ void ARMDAGToDAGISel::Select(SDNode *N) {
   case ISD::Constant: {
     unsigned Val = cast<ConstantSDNode>(N)->getZExtValue();
     // If we can't materialize the constant we need to use a literal pool
-    if (ConstantMaterializationCost(Val, Subtarget) > 2) {
+    if (ConstantMaterializationCost(Val, Subtarget) > 2 &&
+        !Subtarget->genExecuteOnly()) {
       SDValue CPIdx = CurDAG->getTargetConstantPool(
           ConstantInt::get(Type::getInt32Ty(*CurDAG->getContext()), Val),
           TLI->getPointerTy(CurDAG->getDataLayout()));
@@ -3990,10 +3986,9 @@ void ARMDAGToDAGISel::Select(SDNode *N) {
 
     SDValue SmulLoHi = N->getOperand(1);
     SDValue Subc = N->getOperand(2);
-    auto *Zero = dyn_cast<ConstantSDNode>(Subc.getOperand(0));
+    SDValue Zero = Subc.getOperand(0);
 
-    if (!Zero || Zero->getZExtValue() != 0 ||
-        Subc.getOperand(1) != SmulLoHi.getValue(0) ||
+    if (!isNullConstant(Zero) || Subc.getOperand(1) != SmulLoHi.getValue(0) ||
         N->getOperand(1) != SmulLoHi.getValue(1) ||
         N->getOperand(2) != Subc.getValue(1))
       break;
@@ -4132,16 +4127,16 @@ void ARMDAGToDAGISel::Select(SDNode *N) {
     SDValue N1 = N->getOperand(1);
     SDValue N2 = N->getOperand(2);
     SDValue N3 = N->getOperand(3);
-    SDValue InFlag = N->getOperand(4);
+    SDValue InGlue = N->getOperand(4);
     assert(N1.getOpcode() == ISD::BasicBlock);
     assert(N2.getOpcode() == ISD::Constant);
     assert(N3.getOpcode() == ISD::Register);
 
     unsigned CC = (unsigned) cast<ConstantSDNode>(N2)->getZExtValue();
 
-    if (InFlag.getOpcode() == ARMISD::CMPZ) {
-      if (InFlag.getOperand(0).getOpcode() == ISD::INTRINSIC_W_CHAIN) {
-        SDValue Int = InFlag.getOperand(0);
+    if (InGlue.getOpcode() == ARMISD::CMPZ) {
+      if (InGlue.getOperand(0).getOpcode() == ISD::INTRINSIC_W_CHAIN) {
+        SDValue Int = InGlue.getOperand(0);
         uint64_t ID = cast<ConstantSDNode>(Int->getOperand(1))->getZExtValue();
 
         // Handle low-overhead loops.
@@ -4164,15 +4159,15 @@ void ARMDAGToDAGISel::Select(SDNode *N) {
 
           ReplaceUses(N, LoopEnd);
           CurDAG->RemoveDeadNode(N);
-          CurDAG->RemoveDeadNode(InFlag.getNode());
+          CurDAG->RemoveDeadNode(InGlue.getNode());
           CurDAG->RemoveDeadNode(Int.getNode());
           return;
         }
       }
 
       bool SwitchEQNEToPLMI;
-      SelectCMPZ(InFlag.getNode(), SwitchEQNEToPLMI);
-      InFlag = N->getOperand(4);
+      SelectCMPZ(InGlue.getNode(), SwitchEQNEToPLMI);
+      InGlue = N->getOperand(4);
 
       if (SwitchEQNEToPLMI) {
         switch ((ARMCC::CondCodes)CC) {
@@ -4188,13 +4183,13 @@ void ARMDAGToDAGISel::Select(SDNode *N) {
     }
 
     SDValue Tmp2 = CurDAG->getTargetConstant(CC, dl, MVT::i32);
-    SDValue Ops[] = { N1, Tmp2, N3, Chain, InFlag };
+    SDValue Ops[] = { N1, Tmp2, N3, Chain, InGlue };
     SDNode *ResNode = CurDAG->getMachineNode(Opc, dl, MVT::Other,
                                              MVT::Glue, Ops);
     Chain = SDValue(ResNode, 0);
     if (N->getNumValues() == 2) {
-      InFlag = SDValue(ResNode, 1);
-      ReplaceUses(SDValue(N, 1), InFlag);
+      InGlue = SDValue(ResNode, 1);
+      ReplaceUses(SDValue(N, 1), InGlue);
     }
     ReplaceUses(SDValue(N, 0),
                 SDValue(Chain.getNode(), Chain.getResNo()));
@@ -4241,11 +4236,11 @@ void ARMDAGToDAGISel::Select(SDNode *N) {
   }
 
   case ARMISD::CMOV: {
-    SDValue InFlag = N->getOperand(4);
+    SDValue InGlue = N->getOperand(4);
 
-    if (InFlag.getOpcode() == ARMISD::CMPZ) {
+    if (InGlue.getOpcode() == ARMISD::CMPZ) {
       bool SwitchEQNEToPLMI;
-      SelectCMPZ(InFlag.getNode(), SwitchEQNEToPLMI);
+      SelectCMPZ(InGlue.getNode(), SwitchEQNEToPLMI);
 
       if (SwitchEQNEToPLMI) {
         SDValue ARMcc = N->getOperand(2);
@@ -5712,7 +5707,8 @@ bool ARMDAGToDAGISel::tryWriteRegister(SDNode *N){
 
 bool ARMDAGToDAGISel::tryInlineAsm(SDNode *N){
   std::vector<SDValue> AsmNodeOperands;
-  unsigned Flag, Kind;
+  unsigned Flag;
+  InlineAsm::Kind Kind;
   bool Changed = false;
   unsigned NumOps = N->getNumOperands();
 
@@ -5744,10 +5740,10 @@ bool ARMDAGToDAGISel::tryInlineAsm(SDNode *N){
       continue;
 
     // Immediate operands to inline asm in the SelectionDAG are modeled with
-    // two operands. The first is a constant of value InlineAsm::Kind_Imm, and
+    // two operands. The first is a constant of value InlineAsm::Kind::Imm, and
     // the second is a constant with the value of the immediate. If we get here
-    // and we have a Kind_Imm, skip the next operand, and continue.
-    if (Kind == InlineAsm::Kind_Imm) {
+    // and we have a Kind::Imm, skip the next operand, and continue.
+    if (Kind == InlineAsm::Kind::Imm) {
       SDValue op = N->getOperand(++i);
       AsmNodeOperands.push_back(op);
       continue;
@@ -5765,18 +5761,18 @@ bool ARMDAGToDAGISel::tryInlineAsm(SDNode *N){
       IsTiedToChangedOp = OpChanged[DefIdx];
 
     // Memory operands to inline asm in the SelectionDAG are modeled with two
-    // operands: a constant of value InlineAsm::Kind_Mem followed by the input
-    // operand. If we get here and we have a Kind_Mem, skip the next operand (so
-    // it doesn't get misinterpreted), and continue. We do this here because
+    // operands: a constant of value InlineAsm::Kind::Mem followed by the input
+    // operand. If we get here and we have a Kind::Mem, skip the next operand
+    // (so it doesn't get misinterpreted), and continue. We do this here because
     // it's important to update the OpChanged array correctly before moving on.
-    if (Kind == InlineAsm::Kind_Mem) {
+    if (Kind == InlineAsm::Kind::Mem) {
       SDValue op = N->getOperand(++i);
       AsmNodeOperands.push_back(op);
       continue;
     }
 
-    if (Kind != InlineAsm::Kind_RegUse && Kind != InlineAsm::Kind_RegDef
-        && Kind != InlineAsm::Kind_RegDefEarlyClobber)
+    if (Kind != InlineAsm::Kind::RegUse && Kind != InlineAsm::Kind::RegDef &&
+        Kind != InlineAsm::Kind::RegDefEarlyClobber)
       continue;
 
     unsigned RC;
@@ -5793,8 +5789,8 @@ bool ARMDAGToDAGISel::tryInlineAsm(SDNode *N){
     SDValue PairedReg;
     MachineRegisterInfo &MRI = MF->getRegInfo();
 
-    if (Kind == InlineAsm::Kind_RegDef ||
-        Kind == InlineAsm::Kind_RegDefEarlyClobber) {
+    if (Kind == InlineAsm::Kind::RegDef ||
+        Kind == InlineAsm::Kind::RegDefEarlyClobber) {
       // Replace the two GPRs with 1 GPRPair and copy values from GPRPair to
       // the original GPRs.
 
@@ -5819,9 +5815,8 @@ bool ARMDAGToDAGISel::tryInlineAsm(SDNode *N){
       std::vector<SDValue> Ops(GU->op_begin(), GU->op_end()-1);
       Ops.push_back(T1.getValue(1));
       CurDAG->UpdateNodeOperands(GU, Ops);
-    }
-    else {
-      // For Kind  == InlineAsm::Kind_RegUse, we first copy two GPRs into a
+    } else {
+      // For Kind  == InlineAsm::Kind::RegUse, we first copy two GPRs into a
       // GPRPair and then pass the GPRPair to the inline asm.
       SDValue Chain = AsmNodeOperands[InlineAsm::Op_InputChain];
 

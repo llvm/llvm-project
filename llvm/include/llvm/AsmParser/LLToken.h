@@ -170,6 +170,8 @@ enum Kind {
   kw_amdgpu_gs,
   kw_amdgpu_ps,
   kw_amdgpu_cs,
+  kw_amdgpu_cs_chain,
+  kw_amdgpu_cs_chain_preserve,
   kw_amdgpu_kernel,
   kw_amdgpu_gfx,
   kw_tailcc,
@@ -434,7 +436,6 @@ enum Kind {
   kw_versions,
   kw_memProf,
   kw_notcold,
-  kw_notcoldandcold,
 
   // GV's with __attribute__((no_sanitize("address"))), or things in
   // -fsanitize-ignorelist when built with ASan.

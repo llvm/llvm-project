@@ -141,6 +141,7 @@ cc_test(
         "//llvm:AsmParser",
         "//llvm:BinaryFormat",
         "//llvm:CodeGen",
+        "//llvm:CodeGenTypes",
         "//llvm:Core",
         "//llvm:MC",
         "//llvm:Passes",
@@ -169,6 +170,7 @@ cc_test(
         "//llvm:AllTargetsAsmParsers",
         "//llvm:AllTargetsCodeGens",
         "//llvm:CodeGen",
+        "//llvm:CodeGenTypes",
         "//llvm:Core",
         "//llvm:FileCheckLib",
         "//llvm:MC",
@@ -202,7 +204,7 @@ cc_test(
         "//llvm:AllTargetsAsmParsers",
         "//llvm:AllTargetsCodeGens",
         "//llvm:BinaryFormat",
-        "//llvm:CodeGen",
+        "//llvm:CodeGenTypes",
         "//llvm:Core",
         "//llvm:DebugInfo",
         "//llvm:DebugInfoDWARF",
@@ -292,7 +294,10 @@ cc_test(
         ],
         allow_empty = False,
     ),
-    args = ["--gtest_filter=-ObjectLinkingLayerTest.TestSetProcessAllSections"],
+    args = [
+        # keep one-per-line
+        "--gtest_filter=-ObjectLinkingLayerTest.TestSetProcessAllSections",
+    ],
     deps = [
         "//llvm:AllTargetsAsmParsers",
         "//llvm:AllTargetsCodeGens",
@@ -394,6 +399,7 @@ cc_test(
         "//llvm:Support",
         "//llvm:TargetParser",
         "//llvm:TransformUtils",
+        "//third-party/unittest:gmock",
         "//third-party/unittest:gtest",
         "//third-party/unittest:gtest_main",
     ],
@@ -444,10 +450,12 @@ cc_test(
         ["MI/*.cpp"],
         allow_empty = False,
     ),
+    features = ["-layering_check"],  # #include "../lib/CodeGen/RegisterCoalescer.h"
     deps = [
         "//llvm:AllTargetsAsmParsers",
         "//llvm:AllTargetsCodeGens",
         "//llvm:CodeGen",
+        "//llvm:CodeGenTypes",
         "//llvm:Core",
         "//llvm:MC",
         "//llvm:Support",
@@ -622,7 +630,10 @@ cc_test(
             "Support/ParallelTest.cpp",
         ],
     ),
-    args = ["--gtest_filter=-ProgramTest.CreateProcessTrailingSlash"],
+    args = [
+        # keep one-per-line
+        "--gtest_filter=-ProgramTest.CreateProcessTrailingSlash",
+    ],
     copts = [
         "$(STACK_FRAME_UNLIMITED)",
     ],
@@ -634,6 +645,7 @@ cc_test(
         "//llvm:AllTargetsCodeGens",
         "//llvm:BinaryFormat",
         "//llvm:Core",
+        "//llvm:ProfileData",
         "//llvm:Support",
         "//llvm:TargetParser",
         "//llvm:TestingSupport",
@@ -675,7 +687,7 @@ cc_test(
         ":automata_tables_gen",
         "//llvm:Support",
         "//llvm:TableGen",
-        "//llvm:tblgen",
+        "//llvm:TableGenGlobalISel",
         "//third-party/unittest:gmock",
         "//third-party/unittest:gtest",
         "//third-party/unittest:gtest_main",
@@ -692,14 +704,17 @@ cc_test(
     copts = [
         "$(STACK_FRAME_UNLIMITED)",
     ],
+    features = ["-layering_check"],  # #include "AArch64GenInstrInfo.inc"
     deps = [
         "//llvm:AArch64CodeGen",
         "//llvm:AArch64UtilsAndDesc",
         "//llvm:AsmParser",
         "//llvm:CodeGen",
+        "//llvm:CodeGenTypes",
         "//llvm:Core",
         "//llvm:MC",
         "//llvm:Support",
+        "//llvm:Target",
         "//third-party/unittest:gtest",
         "//third-party/unittest:gtest_main",
     ],
@@ -762,10 +777,12 @@ cc_test(
     ) + [
         "tools/llvm-exegesis/Common/AssemblerUtils.h",
     ],
+    includes = ["tools/llvm-exegesis"],
     deps = [
         "//llvm:AllTargetsCodeGens",
         "//llvm:AllTargetsDisassemblers",
         "//llvm:CodeGen",
+        "//llvm:CodeGenTypes",
         "//llvm:Exegesis",
         "//llvm:MC",
         "//llvm:MCDisassembler",

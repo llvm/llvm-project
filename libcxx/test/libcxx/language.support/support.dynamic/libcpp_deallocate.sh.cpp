@@ -9,12 +9,11 @@
 // test libc++'s implementation of align_val_t, and the relevant new/delete
 // overloads in all dialects when -faligned-allocation is present.
 
-// The dylibs shipped before macosx10.13 do not contain the aligned allocation
-// functions, so trying to force using those with -faligned-allocation results
-// in a link error.
-// XFAIL: use_system_cxx_lib && target={{.+}}-apple-macosx10.{{9|10|11|12}}
+// Some dylibs do not contain the aligned allocation functions, so trying to force
+// using those with -faligned-allocation results in a link error.
+// XFAIL: availability-aligned_allocation-missing
 
-// Libcxx when built for z/OS doesn't contain the aligned allocation functions,
+// Libc++ when built for z/OS doesn't contain the aligned allocation functions,
 // nor does the dynamic library shipped with z/OS.
 // UNSUPPORTED: target={{.+}}-zos{{.*}}
 
@@ -107,7 +106,7 @@ void operator delete(void* p)TEST_NOEXCEPT {
 }
 
 #ifndef NO_SIZE
-void operator delete(void* p, size_t n)TEST_NOEXCEPT {
+void operator delete(void* p, std::size_t n)TEST_NOEXCEPT {
   ::free(p);
   stats.sized_called++;
   stats.last_size = n;
@@ -123,7 +122,7 @@ void operator delete(void* p, std::align_val_t a)TEST_NOEXCEPT {
   stats.last_size = -1;
 }
 
-void operator delete(void* p, size_t n, std::align_val_t a)TEST_NOEXCEPT {
+void operator delete(void* p, std::size_t n, std::align_val_t a)TEST_NOEXCEPT {
   std::__libcpp_aligned_free(p);
   stats.aligned_sized_called++;
   stats.last_align = static_cast<int>(a);
@@ -134,12 +133,12 @@ void operator delete(void* p, size_t n, std::align_val_t a)TEST_NOEXCEPT {
 void test_libcpp_dealloc() {
   void* p = nullptr;
 #ifdef __STDCPP_DEFAULT_NEW_ALIGNMENT__
-  size_t over_align_val = __STDCPP_DEFAULT_NEW_ALIGNMENT__ * 2;
+  std::size_t over_align_val = __STDCPP_DEFAULT_NEW_ALIGNMENT__ * 2;
 #else
-  size_t over_align_val = TEST_ALIGNOF(std::max_align_t) * 2;
+  std::size_t over_align_val = TEST_ALIGNOF(std::max_align_t) * 2;
 #endif
-  size_t under_align_val = TEST_ALIGNOF(int);
-  size_t with_size_val = 2;
+  std::size_t under_align_val = TEST_ALIGNOF(int);
+  std::size_t with_size_val = 2;
 
   {
     std::__libcpp_deallocate_unsized(p, under_align_val);

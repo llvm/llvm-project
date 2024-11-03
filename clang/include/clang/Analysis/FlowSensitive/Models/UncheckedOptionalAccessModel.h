@@ -74,8 +74,11 @@ public:
   UncheckedOptionalAccessDiagnoser(
       UncheckedOptionalAccessModelOptions Options = {});
 
-  std::vector<SourceLocation> diagnose(ASTContext &Ctx, const CFGElement *Elt,
-                                       const Environment &Env);
+  std::vector<SourceLocation>
+  operator()(const CFGElement &Elt, ASTContext &Ctx,
+             const TransferStateForDiagnostics<NoopLattice> &State) {
+    return DiagnoseMatchSwitch(Elt, Ctx, State.Env);
+  }
 
 private:
   CFGMatchSwitch<const Environment, std::vector<SourceLocation>>

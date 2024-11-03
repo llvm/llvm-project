@@ -7,8 +7,8 @@ import io
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test_event import build_exception
 
-class TestBuildMethod(Base):
 
+class TestBuildMethod(Base):
     def setUp(self):
         super().setUp()
         self._traces = []

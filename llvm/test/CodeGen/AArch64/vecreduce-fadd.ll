@@ -172,8 +172,8 @@ define half @add_2H(<16 x half> %bin.rdx)  {
 ; CHECKNOFP16-NEXT:    mov h5, v0.h[6]
 ; CHECKNOFP16-NEXT:    mov h0, v0.h[7]
 ; CHECKNOFP16-NEXT:    fadd s2, s2, s3
-; CHECKNOFP16-NEXT:    mov h3, v1.h[6]
-; CHECKNOFP16-NEXT:    fcvt h4, s4
+; CHECKNOFP16-NEXT:    fcvt h3, s4
+; CHECKNOFP16-NEXT:    mov h4, v1.h[6]
 ; CHECKNOFP16-NEXT:    fcvt s5, h5
 ; CHECKNOFP16-NEXT:    mov h1, v1.h[7]
 ; CHECKNOFP16-NEXT:    fcvt s0, h0
@@ -182,15 +182,15 @@ define half @add_2H(<16 x half> %bin.rdx)  {
 ; CHECKNOFP16-NEXT:    fcvt s4, h4
 ; CHECKNOFP16-NEXT:    fcvt s1, h1
 ; CHECKNOFP16-NEXT:    fcvt s2, h2
-; CHECKNOFP16-NEXT:    fadd s3, s5, s3
 ; CHECKNOFP16-NEXT:    fadd s0, s0, s1
-; CHECKNOFP16-NEXT:    fadd s2, s2, s4
-; CHECKNOFP16-NEXT:    fcvt h3, s3
+; CHECKNOFP16-NEXT:    fadd s2, s2, s3
+; CHECKNOFP16-NEXT:    fadd s3, s5, s4
 ; CHECKNOFP16-NEXT:    fcvt h0, s0
 ; CHECKNOFP16-NEXT:    fcvt h2, s2
-; CHECKNOFP16-NEXT:    fcvt s3, h3
+; CHECKNOFP16-NEXT:    fcvt h3, s3
 ; CHECKNOFP16-NEXT:    fcvt s0, h0
 ; CHECKNOFP16-NEXT:    fcvt s2, h2
+; CHECKNOFP16-NEXT:    fcvt s3, h3
 ; CHECKNOFP16-NEXT:    fadd s2, s2, s3
 ; CHECKNOFP16-NEXT:    fcvt h1, s2
 ; CHECKNOFP16-NEXT:    fcvt s1, h1
@@ -227,7 +227,7 @@ define float @add_S_init_42(<4 x float> %bin.rdx)  {
 ; CHECK-LABEL: add_S_init_42:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    faddp v0.4s, v0.4s, v0.4s
-; CHECK-NEXT:    mov w8, #1109917696
+; CHECK-NEXT:    mov w8, #1109917696 // =0x42280000
 ; CHECK-NEXT:    fmov s1, w8
 ; CHECK-NEXT:    faddp s0, v0.2s
 ; CHECK-NEXT:    fadd s0, s0, s1
@@ -236,7 +236,7 @@ define float @add_S_init_42(<4 x float> %bin.rdx)  {
   ret float %r
 }
 
-; FIXME: The faddp.4s in the loop should not use v0.4s as second operand,
+; The faddp.4s in the loop should not use v0.4s as second operand,
 ; because this introduces an unnecessary cross-iteration dependency.
 define float @fadd_reduction_v4f32_in_loop(ptr %ptr.start) {
 ; CHECK-LABEL: fadd_reduction_v4f32_in_loop:
@@ -273,7 +273,7 @@ exit:
   ret float %red.next
 }
 
-; FIXME: The faddp.4h in the loop should not use v0.4h as second operand,
+; The faddp.4h in the loop should not use v0.4h as second operand,
 ; because this introduces an unnecessary cross-iteration dependency.
 define half @fadd_reduction_v4f16_in_loop(ptr %ptr.start) {
 ; FULLFP16-LABEL: fadd_reduction_v4f16_in_loop:
@@ -342,7 +342,7 @@ exit:
   ret half %red.next
 }
 
-; FIXME: The faddp.8h in the loop should not use v0.8h as second operand,
+; The faddp.8h in the loop should not use v0.8h as second operand,
 ; because this introduces an unnecessary cross-iteration dependency.
 define half @fadd_reduction_v8f16_in_loop(ptr %ptr.start) {
 ; FULLFP16-LABEL: fadd_reduction_v8f16_in_loop:
@@ -494,8 +494,8 @@ define half @fadd_reduct_reassoc_v8f16(<8 x half> %a, <8 x half> %b) {
 ; CHECKNOFP16-NEXT:    fadd s3, s3, s5
 ; CHECKNOFP16-NEXT:    mov h4, v0.h[6]
 ; CHECKNOFP16-NEXT:    mov h5, v1.h[6]
-; CHECKNOFP16-NEXT:    mov h0, v0.h[7]
 ; CHECKNOFP16-NEXT:    mov h1, v1.h[7]
+; CHECKNOFP16-NEXT:    mov h0, v0.h[7]
 ; CHECKNOFP16-NEXT:    fcvt h2, s2
 ; CHECKNOFP16-NEXT:    fcvt h3, s3
 ; CHECKNOFP16-NEXT:    fcvt s4, h4

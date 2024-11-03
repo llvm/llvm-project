@@ -101,9 +101,9 @@ static StringRef getOutputSectionName(const InputSectionBase *s) {
   }
 
   for (StringRef v :
-       {".data.rel.ro", ".data", ".rodata", ".bss.rel.ro", ".bss",
-        ".gcc_except_table", ".init_array", ".fini_array", ".tbss", ".tdata",
-        ".ARM.exidx", ".ARM.extab", ".ctors", ".dtors"})
+       {".data.rel.ro", ".data", ".rodata", ".bss.rel.ro", ".bss", ".ldata",
+        ".lrodata", ".lbss", ".gcc_except_table", ".init_array", ".fini_array",
+        ".tbss", ".tdata", ".ARM.exidx", ".ARM.extab", ".ctors", ".dtors"})
     if (isSectionPrefix(v, s->name))
       return v;
 
@@ -157,12 +157,6 @@ OutputDesc *LinkerScript::getOrCreateOutputSection(StringRef name) {
 static void expandMemoryRegion(MemoryRegion *memRegion, uint64_t size,
                                StringRef secName) {
   memRegion->curPos += size;
-  uint64_t newSize = memRegion->curPos - (memRegion->origin)().getValue();
-  uint64_t length = (memRegion->length)().getValue();
-  if (newSize > length)
-    error("section '" + secName + "' will not fit in region '" +
-          memRegion->name + "': overflowed by " + Twine(newSize - length) +
-          " bytes");
 }
 
 void LinkerScript::expandMemoryRegions(uint64_t size) {
@@ -457,6 +451,8 @@ static void sortSections(MutableArrayRef<InputSectionBase *> vec,
     return llvm::stable_sort(vec, nameComparator);
   case SortSectionPolicy::Priority:
     return llvm::stable_sort(vec, priorityComparator);
+  case SortSectionPolicy::Reverse:
+    return std::reverse(vec.begin(), vec.end());
   }
 }
 
@@ -900,6 +896,15 @@ void LinkerScript::diagnoseOrphanHandling() const {
   }
 }
 
+void LinkerScript::diagnoseMissingSGSectionAddress() const {
+  if (!config->cmseImplib || !in.armCmseSGSection->isNeeded())
+    return;
+
+  OutputSection *sec = findByName(sectionCommands, ".gnu.sgstubs");
+  if (sec && !sec->addrExpr && !config->sectionStartMap.count(".gnu.sgstubs"))
+    error("no address assigned to the veneers output section " + sec->name);
+}
+
 // This function searches for a memory region to place the given output
 // section in. If found, a pointer to the appropriate memory region is
 // returned in the first member of the pair. Otherwise, a nullptr is returned.
@@ -909,7 +914,12 @@ std::pair<MemoryRegion *, MemoryRegion *>
 LinkerScript::findMemoryRegion(OutputSection *sec, MemoryRegion *hint) {
   // Non-allocatable sections are not part of the process image.
   if (!(sec->flags & SHF_ALLOC)) {
-    if (!sec->memoryRegionName.empty())
+    bool hasInputOrByteCommand =
+        sec->hasInputSections ||
+        llvm::any_of(sec->commands, [](SectionCommand *comm) {
+          return ByteCommand::classof(comm);
+        });
+    if (!sec->memoryRegionName.empty() && hasInputOrByteCommand)
       warn("ignoring memory region assignment for non-allocatable section '" +
            sec->name + "'");
     return {nullptr, nullptr};
@@ -1426,4 +1436,51 @@ SmallVector<size_t, 0> LinkerScript::getPhdrIndices(OutputSection *cmd) {
             "' is not listed in PHDRS");
   }
   return ret;
+}
+
+void LinkerScript::printMemoryUsage(raw_ostream& os) {
+  auto printSize = [&](uint64_t size) {
+    if ((size & 0x3fffffff) == 0)
+      os << format_decimal(size >> 30, 10) << " GB";
+    else if ((size & 0xfffff) == 0)
+      os << format_decimal(size >> 20, 10) << " MB";
+    else if ((size & 0x3ff) == 0)
+      os << format_decimal(size >> 10, 10) << " KB";
+    else
+      os << " " << format_decimal(size, 10) << " B";
+  };
+  os << "Memory region         Used Size  Region Size  %age Used\n";
+  for (auto &pair : memoryRegions) {
+    MemoryRegion *m = pair.second;
+    uint64_t usedLength = m->curPos - m->getOrigin();
+    os << right_justify(m->name, 16) << ": ";
+    printSize(usedLength);
+    uint64_t length = m->getLength();
+    if (length != 0) {
+      printSize(length);
+      double percent = usedLength * 100.0 / length;
+      os << "    " << format("%6.2f%%", percent);
+    }
+    os << '\n';
+  }
+}
+
+static void checkMemoryRegion(const MemoryRegion *region,
+                              const OutputSection *osec, uint64_t addr) {
+  uint64_t osecEnd = addr + osec->size;
+  uint64_t regionEnd = region->getOrigin() + region->getLength();
+  if (osecEnd > regionEnd) {
+    error("section '" + osec->name + "' will not fit in region '" +
+          region->name + "': overflowed by " + Twine(osecEnd - regionEnd) +
+          " bytes");
+  }
+}
+
+void LinkerScript::checkMemoryRegions() const {
+  for (const OutputSection *sec : outputSections) {
+    if (const MemoryRegion *memoryRegion = sec->memRegion)
+      checkMemoryRegion(memoryRegion, sec, sec->addr);
+    if (const MemoryRegion *lmaRegion = sec->lmaRegion)
+      checkMemoryRegion(lmaRegion, sec, sec->getLMA());
+  }
 }

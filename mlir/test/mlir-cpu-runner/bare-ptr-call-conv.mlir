@@ -26,8 +26,6 @@ func.func @simple_add1_add2_test(%arg0: memref<2xf32>, %arg1: memref<2xf32>) {
 }
 
 // External declarations.
-llvm.func @malloc(i64) -> !llvm.ptr<i8>
-llvm.func @free(!llvm.ptr<i8>)
 func.func private @printF32(%arg0: f32)
 func.func private @printComma()
 func.func private @printNewline()

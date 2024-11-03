@@ -12,7 +12,6 @@
 #include "clang/Basic/CharInfo.h"
 #include "clang/Basic/CodeGenOptions.h"
 #include "clang/Basic/CommentOptions.h"
-#include "clang/Basic/DebugInfoOptions.h"
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/DiagnosticDriver.h"
 #include "clang/Basic/DiagnosticOptions.h"
@@ -59,6 +58,7 @@
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Config/llvm-config.h"
+#include "llvm/Frontend/Debug/Options.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/Linker/Linker.h"
 #include "llvm/MC/MCTargetOptions.h"
@@ -126,44 +126,139 @@ static Expected<std::optional<uint32_t>> parseToleranceOption(StringRef Arg) {
 // Initialization.
 //===----------------------------------------------------------------------===//
 
-CompilerInvocationRefBase::CompilerInvocationRefBase()
-    : LangOpts(new LangOptions()), TargetOpts(new TargetOptions()),
-      DiagnosticOpts(new DiagnosticOptions()),
-      HeaderSearchOpts(new HeaderSearchOptions()),
-      PreprocessorOpts(new PreprocessorOptions()),
-      AnalyzerOpts(new AnalyzerOptions()) {}
+namespace {
+template <class T> std::shared_ptr<T> make_shared_copy(const T &X) {
+  return std::make_shared<T>(X);
+}
 
-CompilerInvocationRefBase::CompilerInvocationRefBase(
-    const CompilerInvocationRefBase &X)
-    : LangOpts(new LangOptions(*X.getLangOpts())),
-      TargetOpts(new TargetOptions(X.getTargetOpts())),
-      DiagnosticOpts(new DiagnosticOptions(X.getDiagnosticOpts())),
-      HeaderSearchOpts(new HeaderSearchOptions(X.getHeaderSearchOpts())),
-      PreprocessorOpts(new PreprocessorOptions(X.getPreprocessorOpts())),
-      AnalyzerOpts(new AnalyzerOptions(*X.getAnalyzerOpts())) {}
+template <class T>
+llvm::IntrusiveRefCntPtr<T> makeIntrusiveRefCntCopy(const T &X) {
+  return llvm::makeIntrusiveRefCnt<T>(X);
+}
+} // namespace
 
-CompilerInvocationRefBase::CompilerInvocationRefBase(
-    CompilerInvocationRefBase &&X) = default;
+CompilerInvocationBase::CompilerInvocationBase()
+    : LangOpts(std::make_shared<LangOptions>()),
+      TargetOpts(std::make_shared<TargetOptions>()),
+      DiagnosticOpts(llvm::makeIntrusiveRefCnt<DiagnosticOptions>()),
+      HSOpts(std::make_shared<HeaderSearchOptions>()),
+      PPOpts(std::make_shared<PreprocessorOptions>()),
+      AnalyzerOpts(llvm::makeIntrusiveRefCnt<AnalyzerOptions>()),
+      MigratorOpts(std::make_shared<MigratorOptions>()),
+      CodeGenOpts(std::make_shared<CodeGenOptions>()),
+      FSOpts(std::make_shared<FileSystemOptions>()),
+      FrontendOpts(std::make_shared<FrontendOptions>()),
+      DependencyOutputOpts(std::make_shared<DependencyOutputOptions>()),
+      PreprocessorOutputOpts(std::make_shared<PreprocessorOutputOptions>()) {}
 
-CompilerInvocationRefBase &
-CompilerInvocationRefBase::operator=(CompilerInvocationRefBase X) {
-  LangOpts.swap(X.LangOpts);
-  TargetOpts.swap(X.TargetOpts);
-  DiagnosticOpts.swap(X.DiagnosticOpts);
-  HeaderSearchOpts.swap(X.HeaderSearchOpts);
-  PreprocessorOpts.swap(X.PreprocessorOpts);
-  AnalyzerOpts.swap(X.AnalyzerOpts);
+CompilerInvocationBase &
+CompilerInvocationBase::deep_copy_assign(const CompilerInvocationBase &X) {
+  if (this != &X) {
+    LangOpts = make_shared_copy(X.getLangOpts());
+    TargetOpts = make_shared_copy(X.getTargetOpts());
+    DiagnosticOpts = makeIntrusiveRefCntCopy(X.getDiagnosticOpts());
+    HSOpts = make_shared_copy(X.getHeaderSearchOpts());
+    PPOpts = make_shared_copy(X.getPreprocessorOpts());
+    AnalyzerOpts = makeIntrusiveRefCntCopy(X.getAnalyzerOpts());
+    MigratorOpts = make_shared_copy(X.getMigratorOpts());
+    CodeGenOpts = make_shared_copy(X.getCodeGenOpts());
+    FSOpts = make_shared_copy(X.getFileSystemOpts());
+    FrontendOpts = make_shared_copy(X.getFrontendOpts());
+    DependencyOutputOpts = make_shared_copy(X.getDependencyOutputOpts());
+    PreprocessorOutputOpts = make_shared_copy(X.getPreprocessorOutputOpts());
+  }
   return *this;
 }
 
-CompilerInvocationRefBase &
-CompilerInvocationRefBase::operator=(CompilerInvocationRefBase &&X) = default;
+CompilerInvocationBase &
+CompilerInvocationBase::shallow_copy_assign(const CompilerInvocationBase &X) {
+  if (this != &X) {
+    LangOpts = X.LangOpts;
+    TargetOpts = X.TargetOpts;
+    DiagnosticOpts = X.DiagnosticOpts;
+    HSOpts = X.HSOpts;
+    PPOpts = X.PPOpts;
+    AnalyzerOpts = X.AnalyzerOpts;
+    MigratorOpts = X.MigratorOpts;
+    CodeGenOpts = X.CodeGenOpts;
+    FSOpts = X.FSOpts;
+    FrontendOpts = X.FrontendOpts;
+    DependencyOutputOpts = X.DependencyOutputOpts;
+    PreprocessorOutputOpts = X.PreprocessorOutputOpts;
+  }
+  return *this;
+}
 
-CompilerInvocationRefBase::~CompilerInvocationRefBase() = default;
+namespace {
+template <typename T>
+T &ensureOwned(std::shared_ptr<T> &Storage) {
+  if (Storage.use_count() > 1)
+    Storage = std::make_shared<T>(*Storage);
+  return *Storage;
+}
+
+template <typename T>
+T &ensureOwned(llvm::IntrusiveRefCntPtr<T> &Storage) {
+  if (Storage.useCount() > 1)
+    Storage = llvm::makeIntrusiveRefCnt<T>(*Storage);
+  return *Storage;
+}
+} // namespace
+
+LangOptions &CowCompilerInvocation::getMutLangOpts() {
+  return ensureOwned(LangOpts);
+}
+
+TargetOptions &CowCompilerInvocation::getMutTargetOpts() {
+  return ensureOwned(TargetOpts);
+}
+
+DiagnosticOptions &CowCompilerInvocation::getMutDiagnosticOpts() {
+  return ensureOwned(DiagnosticOpts);
+}
+
+HeaderSearchOptions &CowCompilerInvocation::getMutHeaderSearchOpts() {
+  return ensureOwned(HSOpts);
+}
+
+PreprocessorOptions &CowCompilerInvocation::getMutPreprocessorOpts() {
+  return ensureOwned(PPOpts);
+}
+
+AnalyzerOptions &CowCompilerInvocation::getMutAnalyzerOpts() {
+  return ensureOwned(AnalyzerOpts);
+}
+
+MigratorOptions &CowCompilerInvocation::getMutMigratorOpts() {
+  return ensureOwned(MigratorOpts);
+}
+
+CodeGenOptions &CowCompilerInvocation::getMutCodeGenOpts() {
+  return ensureOwned(CodeGenOpts);
+}
+
+FileSystemOptions &CowCompilerInvocation::getMutFileSystemOpts() {
+  return ensureOwned(FSOpts);
+}
+
+FrontendOptions &CowCompilerInvocation::getMutFrontendOpts() {
+  return ensureOwned(FrontendOpts);
+}
+
+DependencyOutputOptions &CowCompilerInvocation::getMutDependencyOutputOpts() {
+  return ensureOwned(DependencyOutputOpts);
+}
+
+PreprocessorOutputOptions &
+CowCompilerInvocation::getMutPreprocessorOutputOpts() {
+  return ensureOwned(PreprocessorOutputOpts);
+}
 
 //===----------------------------------------------------------------------===//
 // Normalizers
 //===----------------------------------------------------------------------===//
+
+using ArgumentConsumer = CompilerInvocation::ArgumentConsumer;
 
 #define SIMPLE_ENUM_VALUE_TABLE
 #include "clang/Driver/Options.inc"
@@ -191,11 +286,10 @@ static std::optional<bool> normalizeSimpleNegativeFlag(OptSpecifier Opt,
 /// denormalizeSimpleFlags never looks at it. Avoid bloating compile-time with
 /// unnecessary template instantiations and just ignore it with a variadic
 /// argument.
-static void denormalizeSimpleFlag(SmallVectorImpl<const char *> &Args,
-                                  const char *Spelling,
-                                  CompilerInvocation::StringAllocator,
-                                  Option::OptionClass, unsigned, /*T*/...) {
-  Args.push_back(Spelling);
+static void denormalizeSimpleFlag(ArgumentConsumer Consumer,
+                                  const Twine &Spelling, Option::OptionClass,
+                                  unsigned, /*T*/...) {
+  Consumer(Spelling);
 }
 
 template <typename T> static constexpr bool is_uint64_t_convertible() {
@@ -232,29 +326,27 @@ static auto makeBooleanOptionNormalizer(bool Value, bool OtherValue,
 }
 
 static auto makeBooleanOptionDenormalizer(bool Value) {
-  return [Value](SmallVectorImpl<const char *> &Args, const char *Spelling,
-                 CompilerInvocation::StringAllocator, Option::OptionClass,
-                 unsigned, bool KeyPath) {
+  return [Value](ArgumentConsumer Consumer, const Twine &Spelling,
+                 Option::OptionClass, unsigned, bool KeyPath) {
     if (KeyPath == Value)
-      Args.push_back(Spelling);
+      Consumer(Spelling);
   };
 }
 
-static void denormalizeStringImpl(SmallVectorImpl<const char *> &Args,
-                                  const char *Spelling,
-                                  CompilerInvocation::StringAllocator SA,
+static void denormalizeStringImpl(ArgumentConsumer Consumer,
+                                  const Twine &Spelling,
                                   Option::OptionClass OptClass, unsigned,
                                   const Twine &Value) {
   switch (OptClass) {
   case Option::SeparateClass:
   case Option::JoinedOrSeparateClass:
   case Option::JoinedAndSeparateClass:
-    Args.push_back(Spelling);
-    Args.push_back(SA(Value));
+    Consumer(Spelling);
+    Consumer(Value);
     break;
   case Option::JoinedClass:
   case Option::CommaJoinedClass:
-    Args.push_back(SA(Twine(Spelling) + Value));
+    Consumer(Spelling + Value);
     break;
   default:
     llvm_unreachable("Cannot denormalize an option with option class "
@@ -263,11 +355,10 @@ static void denormalizeStringImpl(SmallVectorImpl<const char *> &Args,
 }
 
 template <typename T>
-static void
-denormalizeString(SmallVectorImpl<const char *> &Args, const char *Spelling,
-                  CompilerInvocation::StringAllocator SA,
-                  Option::OptionClass OptClass, unsigned TableIndex, T Value) {
-  denormalizeStringImpl(Args, Spelling, SA, OptClass, TableIndex, Twine(Value));
+static void denormalizeString(ArgumentConsumer Consumer, const Twine &Spelling,
+                              Option::OptionClass OptClass, unsigned TableIndex,
+                              T Value) {
+  denormalizeStringImpl(Consumer, Spelling, OptClass, TableIndex, Twine(Value));
 }
 
 static std::optional<SimpleEnumValue>
@@ -308,15 +399,14 @@ static std::optional<unsigned> normalizeSimpleEnum(OptSpecifier Opt,
   return std::nullopt;
 }
 
-static void denormalizeSimpleEnumImpl(SmallVectorImpl<const char *> &Args,
-                                      const char *Spelling,
-                                      CompilerInvocation::StringAllocator SA,
+static void denormalizeSimpleEnumImpl(ArgumentConsumer Consumer,
+                                      const Twine &Spelling,
                                       Option::OptionClass OptClass,
                                       unsigned TableIndex, unsigned Value) {
   assert(TableIndex < SimpleEnumValueTablesSize);
   const SimpleEnumValueTable &Table = SimpleEnumValueTables[TableIndex];
   if (auto MaybeEnumVal = findValueTableByValue(Table, Value)) {
-    denormalizeString(Args, Spelling, SA, OptClass, TableIndex,
+    denormalizeString(Consumer, Spelling, OptClass, TableIndex,
                       MaybeEnumVal->Name);
   } else {
     llvm_unreachable("The simple enum value was not correctly defined in "
@@ -325,12 +415,11 @@ static void denormalizeSimpleEnumImpl(SmallVectorImpl<const char *> &Args,
 }
 
 template <typename T>
-static void denormalizeSimpleEnum(SmallVectorImpl<const char *> &Args,
-                                  const char *Spelling,
-                                  CompilerInvocation::StringAllocator SA,
+static void denormalizeSimpleEnum(ArgumentConsumer Consumer,
+                                  const Twine &Spelling,
                                   Option::OptionClass OptClass,
                                   unsigned TableIndex, T Value) {
-  return denormalizeSimpleEnumImpl(Args, Spelling, SA, OptClass, TableIndex,
+  return denormalizeSimpleEnumImpl(Consumer, Spelling, OptClass, TableIndex,
                                    static_cast<unsigned>(Value));
 }
 
@@ -366,9 +455,8 @@ normalizeStringVector(OptSpecifier Opt, int, const ArgList &Args,
   return Args.getAllArgValues(Opt);
 }
 
-static void denormalizeStringVector(SmallVectorImpl<const char *> &Args,
-                                    const char *Spelling,
-                                    CompilerInvocation::StringAllocator SA,
+static void denormalizeStringVector(ArgumentConsumer Consumer,
+                                    const Twine &Spelling,
                                     Option::OptionClass OptClass,
                                     unsigned TableIndex,
                                     const std::vector<std::string> &Values) {
@@ -382,7 +470,7 @@ static void denormalizeStringVector(SmallVectorImpl<const char *> &Args,
         CommaJoinedValue.append(Value);
       }
     }
-    denormalizeString(Args, Spelling, SA, Option::OptionClass::JoinedClass,
+    denormalizeString(Consumer, Spelling, Option::OptionClass::JoinedClass,
                       TableIndex, CommaJoinedValue);
     break;
   }
@@ -390,7 +478,7 @@ static void denormalizeStringVector(SmallVectorImpl<const char *> &Args,
   case Option::SeparateClass:
   case Option::JoinedOrSeparateClass:
     for (const std::string &Value : Values)
-      denormalizeString(Args, Spelling, SA, OptClass, TableIndex, Value);
+      denormalizeString(Consumer, Spelling, OptClass, TableIndex, Value);
     break;
   default:
     llvm_unreachable("Cannot denormalize an option with option class "
@@ -427,11 +515,11 @@ static T extractMaskValue(T KeyPath) {
 }
 
 #define PARSE_OPTION_WITH_MARSHALLING(                                         \
-    ARGS, DIAGS, PREFIX_TYPE, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS,  \
-    PARAM, HELPTEXT, METAVAR, VALUES, SPELLING, SHOULD_PARSE, ALWAYS_EMIT,     \
-    KEYPATH, DEFAULT_VALUE, IMPLIED_CHECK, IMPLIED_VALUE, NORMALIZER,          \
-    DENORMALIZER, MERGER, EXTRACTOR, TABLE_INDEX)                              \
-  if ((FLAGS)&options::CC1Option) {                                            \
+    ARGS, DIAGS, PREFIX_TYPE, SPELLING, ID, KIND, GROUP, ALIAS, ALIASARGS,     \
+    FLAGS, VISIBILITY, PARAM, HELPTEXT, METAVAR, VALUES, SHOULD_PARSE,         \
+    ALWAYS_EMIT, KEYPATH, DEFAULT_VALUE, IMPLIED_CHECK, IMPLIED_VALUE,         \
+    NORMALIZER, DENORMALIZER, MERGER, EXTRACTOR, TABLE_INDEX)                  \
+  if ((VISIBILITY)&options::CC1Option) {                                       \
     KEYPATH = MERGER(KEYPATH, DEFAULT_VALUE);                                  \
     if (IMPLIED_CHECK)                                                         \
       KEYPATH = MERGER(KEYPATH, IMPLIED_VALUE);                                \
@@ -444,18 +532,18 @@ static T extractMaskValue(T KeyPath) {
 // Capture the extracted value as a lambda argument to avoid potential issues
 // with lifetime extension of the reference.
 #define GENERATE_OPTION_WITH_MARSHALLING(                                      \
-    ARGS, STRING_ALLOCATOR, PREFIX_TYPE, NAME, ID, KIND, GROUP, ALIAS,         \
-    ALIASARGS, FLAGS, PARAM, HELPTEXT, METAVAR, VALUES, SPELLING,              \
-    SHOULD_PARSE, ALWAYS_EMIT, KEYPATH, DEFAULT_VALUE, IMPLIED_CHECK,          \
-    IMPLIED_VALUE, NORMALIZER, DENORMALIZER, MERGER, EXTRACTOR, TABLE_INDEX)   \
-  if ((FLAGS)&options::CC1Option) {                                            \
+    CONSUMER, PREFIX_TYPE, SPELLING, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS, \
+    VISIBILITY, PARAM, HELPTEXT, METAVAR, VALUES, SHOULD_PARSE, ALWAYS_EMIT,   \
+    KEYPATH, DEFAULT_VALUE, IMPLIED_CHECK, IMPLIED_VALUE, NORMALIZER,          \
+    DENORMALIZER, MERGER, EXTRACTOR, TABLE_INDEX)                              \
+  if ((VISIBILITY)&options::CC1Option) {                                       \
     [&](const auto &Extracted) {                                               \
       if (ALWAYS_EMIT ||                                                       \
           (Extracted !=                                                        \
            static_cast<decltype(KEYPATH)>((IMPLIED_CHECK) ? (IMPLIED_VALUE)    \
                                                           : (DEFAULT_VALUE)))) \
-        DENORMALIZER(ARGS, SPELLING, STRING_ALLOCATOR, Option::KIND##Class,    \
-                     TABLE_INDEX, Extracted);                                  \
+        DENORMALIZER(CONSUMER, SPELLING, Option::KIND##Class, TABLE_INDEX,     \
+                     Extracted);                                               \
     }(EXTRACTOR(KEYPATH));                                                     \
   }
 
@@ -466,7 +554,7 @@ static bool FixupInvocation(CompilerInvocation &Invocation,
                             InputKind IK) {
   unsigned NumErrorsBefore = Diags.getNumErrors();
 
-  LangOptions &LangOpts = *Invocation.getLangOpts();
+  LangOptions &LangOpts = Invocation.getLangOpts();
   CodeGenOptions &CodeGenOpts = Invocation.getCodeGenOpts();
   TargetOptions &TargetOpts = Invocation.getTargetOpts();
   FrontendOptions &FrontendOpts = Invocation.getFrontendOpts();
@@ -617,21 +705,18 @@ static unsigned getOptimizationLevelSize(ArgList &Args) {
   return 0;
 }
 
-static void GenerateArg(SmallVectorImpl<const char *> &Args,
-                        llvm::opt::OptSpecifier OptSpecifier,
-                        CompilerInvocation::StringAllocator SA) {
+static void GenerateArg(ArgumentConsumer Consumer,
+                        llvm::opt::OptSpecifier OptSpecifier) {
   Option Opt = getDriverOptTable().getOption(OptSpecifier);
-  denormalizeSimpleFlag(Args, SA(Opt.getPrefix() + Opt.getName()), SA,
+  denormalizeSimpleFlag(Consumer, Opt.getPrefixedName(),
                         Option::OptionClass::FlagClass, 0);
 }
 
-static void GenerateArg(SmallVectorImpl<const char *> &Args,
+static void GenerateArg(ArgumentConsumer Consumer,
                         llvm::opt::OptSpecifier OptSpecifier,
-                        const Twine &Value,
-                        CompilerInvocation::StringAllocator SA) {
+                        const Twine &Value) {
   Option Opt = getDriverOptTable().getOption(OptSpecifier);
-  denormalizeString(Args, SA(Opt.getPrefix() + Opt.getName()), SA,
-                    Opt.getKind(), 0, Value);
+  denormalizeString(Consumer, Opt.getPrefixedName(), Opt.getKind(), 0, Value);
 }
 
 // Parse command line arguments into CompilerInvocation.
@@ -846,13 +931,12 @@ static void getAllNoBuiltinFuncValues(ArgList &Args,
   Funcs.insert(Funcs.end(), Values.begin(), BuiltinEnd);
 }
 
-static void GenerateAnalyzerArgs(AnalyzerOptions &Opts,
-                                 SmallVectorImpl<const char *> &Args,
-                                 CompilerInvocation::StringAllocator SA) {
+static void GenerateAnalyzerArgs(const AnalyzerOptions &Opts,
+                                 ArgumentConsumer Consumer) {
   const AnalyzerOptions *AnalyzerOpts = &Opts;
 
 #define ANALYZER_OPTION_WITH_MARSHALLING(...)                                  \
-  GENERATE_OPTION_WITH_MARSHALLING(Args, SA, __VA_ARGS__)
+  GENERATE_OPTION_WITH_MARSHALLING(Consumer, __VA_ARGS__)
 #include "clang/Driver/Options.inc"
 #undef ANALYZER_OPTION_WITH_MARSHALLING
 
@@ -860,7 +944,7 @@ static void GenerateAnalyzerArgs(AnalyzerOptions &Opts,
     switch (Opts.AnalysisConstraintsOpt) {
 #define ANALYSIS_CONSTRAINTS(NAME, CMDFLAG, DESC, CREATFN)                     \
   case NAME##Model:                                                            \
-    GenerateArg(Args, OPT_analyzer_constraints, CMDFLAG, SA);                  \
+    GenerateArg(Consumer, OPT_analyzer_constraints, CMDFLAG);                  \
     break;
 #include "clang/StaticAnalyzer/Core/Analyses.def"
     default:
@@ -872,7 +956,7 @@ static void GenerateAnalyzerArgs(AnalyzerOptions &Opts,
     switch (Opts.AnalysisDiagOpt) {
 #define ANALYSIS_DIAGNOSTICS(NAME, CMDFLAG, DESC, CREATFN)                     \
   case PD_##NAME:                                                              \
-    GenerateArg(Args, OPT_analyzer_output, CMDFLAG, SA);                       \
+    GenerateArg(Consumer, OPT_analyzer_output, CMDFLAG);                       \
     break;
 #include "clang/StaticAnalyzer/Core/Analyses.def"
     default:
@@ -884,7 +968,7 @@ static void GenerateAnalyzerArgs(AnalyzerOptions &Opts,
     switch (Opts.AnalysisPurgeOpt) {
 #define ANALYSIS_PURGE(NAME, CMDFLAG, DESC)                                    \
   case NAME:                                                                   \
-    GenerateArg(Args, OPT_analyzer_purge, CMDFLAG, SA);                        \
+    GenerateArg(Consumer, OPT_analyzer_purge, CMDFLAG);                        \
     break;
 #include "clang/StaticAnalyzer/Core/Analyses.def"
     default:
@@ -896,7 +980,7 @@ static void GenerateAnalyzerArgs(AnalyzerOptions &Opts,
     switch (Opts.InliningMode) {
 #define ANALYSIS_INLINING_MODE(NAME, CMDFLAG, DESC)                            \
   case NAME:                                                                   \
-    GenerateArg(Args, OPT_analyzer_inlining_mode, CMDFLAG, SA);                \
+    GenerateArg(Consumer, OPT_analyzer_inlining_mode, CMDFLAG);                \
     break;
 #include "clang/StaticAnalyzer/Core/Analyses.def"
     default:
@@ -907,7 +991,7 @@ static void GenerateAnalyzerArgs(AnalyzerOptions &Opts,
   for (const auto &CP : Opts.CheckersAndPackages) {
     OptSpecifier Opt =
         CP.second ? OPT_analyzer_checker : OPT_analyzer_disable_checker;
-    GenerateArg(Args, Opt, CP.first, SA);
+    GenerateArg(Consumer, Opt, CP.first);
   }
 
   AnalyzerOptions ConfigOpts;
@@ -926,7 +1010,7 @@ static void GenerateAnalyzerArgs(AnalyzerOptions &Opts,
     if (Entry != ConfigOpts.Config.end() && Entry->getValue() == Value)
       continue;
 
-    GenerateArg(Args, OPT_analyzer_config, Key + "=" + Value, SA);
+    GenerateArg(Consumer, OPT_analyzer_config, Key + "=" + Value);
   }
 
   // Nothing to generate for FullCompilerInvocation.
@@ -1056,15 +1140,6 @@ static bool ParseAnalyzerArgs(AnalyzerOptions &Opts, ArgList &Args,
 
       A->claim();
       Opts.Config[key] = std::string(val);
-
-      // FIXME: Remove this hunk after clang-17 released.
-      constexpr auto SingleFAM =
-          "consider-single-element-arrays-as-flexible-array-members";
-      if (key == SingleFAM) {
-        Diags.Report(diag::warn_analyzer_deprecated_option_with_alternative)
-            << SingleFAM << "clang-17"
-            << "-fstrict-flex-arrays=<N>";
-      }
     }
   }
 
@@ -1201,16 +1276,15 @@ static void parseAnalyzerConfigs(AnalyzerOptions &AnOpts,
 
 /// Generate a remark argument. This is an inverse of `ParseOptimizationRemark`.
 static void
-GenerateOptimizationRemark(SmallVectorImpl<const char *> &Args,
-                           CompilerInvocation::StringAllocator SA,
-                           OptSpecifier OptEQ, StringRef Name,
+GenerateOptimizationRemark(ArgumentConsumer Consumer, OptSpecifier OptEQ,
+                           StringRef Name,
                            const CodeGenOptions::OptRemark &Remark) {
   if (Remark.hasValidPattern()) {
-    GenerateArg(Args, OptEQ, Remark.Pattern, SA);
+    GenerateArg(Consumer, OptEQ, Remark.Pattern);
   } else if (Remark.Kind == CodeGenOptions::RK_Enabled) {
-    GenerateArg(Args, OPT_R_Joined, Name, SA);
+    GenerateArg(Consumer, OPT_R_Joined, Name);
   } else if (Remark.Kind == CodeGenOptions::RK_Disabled) {
-    GenerateArg(Args, OPT_R_Joined, StringRef("no-") + Name, SA);
+    GenerateArg(Consumer, OPT_R_Joined, StringRef("no-") + Name);
   }
 }
 
@@ -1365,81 +1439,82 @@ static void setPGOUseInstrumentor(CodeGenOptions &Opts,
     Opts.setProfileUse(CodeGenOptions::ProfileClangInstr);
 }
 
-void CompilerInvocation::GenerateCodeGenArgs(
-    const CodeGenOptions &Opts, SmallVectorImpl<const char *> &Args,
-    StringAllocator SA, const llvm::Triple &T, const std::string &OutputFile,
-    const LangOptions *LangOpts) {
+void CompilerInvocationBase::GenerateCodeGenArgs(const CodeGenOptions &Opts,
+                                                 ArgumentConsumer Consumer,
+                                                 const llvm::Triple &T,
+                                                 const std::string &OutputFile,
+                                                 const LangOptions *LangOpts) {
   const CodeGenOptions &CodeGenOpts = Opts;
 
   if (Opts.OptimizationLevel == 0)
-    GenerateArg(Args, OPT_O0, SA);
+    GenerateArg(Consumer, OPT_O0);
   else
-    GenerateArg(Args, OPT_O, Twine(Opts.OptimizationLevel), SA);
+    GenerateArg(Consumer, OPT_O, Twine(Opts.OptimizationLevel));
 
 #define CODEGEN_OPTION_WITH_MARSHALLING(...)                                   \
-  GENERATE_OPTION_WITH_MARSHALLING(Args, SA, __VA_ARGS__)
+  GENERATE_OPTION_WITH_MARSHALLING(Consumer, __VA_ARGS__)
 #include "clang/Driver/Options.inc"
 #undef CODEGEN_OPTION_WITH_MARSHALLING
 
   if (Opts.OptimizationLevel > 0) {
     if (Opts.Inlining == CodeGenOptions::NormalInlining)
-      GenerateArg(Args, OPT_finline_functions, SA);
+      GenerateArg(Consumer, OPT_finline_functions);
     else if (Opts.Inlining == CodeGenOptions::OnlyHintInlining)
-      GenerateArg(Args, OPT_finline_hint_functions, SA);
+      GenerateArg(Consumer, OPT_finline_hint_functions);
     else if (Opts.Inlining == CodeGenOptions::OnlyAlwaysInlining)
-      GenerateArg(Args, OPT_fno_inline, SA);
+      GenerateArg(Consumer, OPT_fno_inline);
   }
 
   if (Opts.DirectAccessExternalData && LangOpts->PICLevel != 0)
-    GenerateArg(Args, OPT_fdirect_access_external_data, SA);
+    GenerateArg(Consumer, OPT_fdirect_access_external_data);
   else if (!Opts.DirectAccessExternalData && LangOpts->PICLevel == 0)
-    GenerateArg(Args, OPT_fno_direct_access_external_data, SA);
+    GenerateArg(Consumer, OPT_fno_direct_access_external_data);
 
   std::optional<StringRef> DebugInfoVal;
   switch (Opts.DebugInfo) {
-  case codegenoptions::DebugLineTablesOnly:
+  case llvm::codegenoptions::DebugLineTablesOnly:
     DebugInfoVal = "line-tables-only";
     break;
-  case codegenoptions::DebugDirectivesOnly:
+  case llvm::codegenoptions::DebugDirectivesOnly:
     DebugInfoVal = "line-directives-only";
     break;
-  case codegenoptions::DebugInfoConstructor:
+  case llvm::codegenoptions::DebugInfoConstructor:
     DebugInfoVal = "constructor";
     break;
-  case codegenoptions::LimitedDebugInfo:
+  case llvm::codegenoptions::LimitedDebugInfo:
     DebugInfoVal = "limited";
     break;
-  case codegenoptions::FullDebugInfo:
+  case llvm::codegenoptions::FullDebugInfo:
     DebugInfoVal = "standalone";
     break;
-  case codegenoptions::UnusedTypeInfo:
+  case llvm::codegenoptions::UnusedTypeInfo:
     DebugInfoVal = "unused-types";
     break;
-  case codegenoptions::NoDebugInfo: // default value
+  case llvm::codegenoptions::NoDebugInfo: // default value
     DebugInfoVal = std::nullopt;
     break;
-  case codegenoptions::LocTrackingOnly: // implied value
+  case llvm::codegenoptions::LocTrackingOnly: // implied value
     DebugInfoVal = std::nullopt;
     break;
   }
   if (DebugInfoVal)
-    GenerateArg(Args, OPT_debug_info_kind_EQ, *DebugInfoVal, SA);
+    GenerateArg(Consumer, OPT_debug_info_kind_EQ, *DebugInfoVal);
 
   for (const auto &Prefix : Opts.DebugPrefixMap)
-    GenerateArg(Args, OPT_fdebug_prefix_map_EQ,
-                Prefix.first + "=" + Prefix.second, SA);
+    GenerateArg(Consumer, OPT_fdebug_prefix_map_EQ,
+                Prefix.first + "=" + Prefix.second);
 
   for (const auto &Prefix : Opts.CoveragePrefixMap)
-    GenerateArg(Args, OPT_fcoverage_prefix_map_EQ,
-                Prefix.first + "=" + Prefix.second, SA);
+    GenerateArg(Consumer, OPT_fcoverage_prefix_map_EQ,
+                Prefix.first + "=" + Prefix.second);
 
   if (Opts.NewStructPathTBAA)
-    GenerateArg(Args, OPT_new_struct_path_tbaa, SA);
+    GenerateArg(Consumer, OPT_new_struct_path_tbaa);
 
   if (Opts.OptimizeSize == 1)
-    GenerateArg(Args, OPT_O, "s", SA);
+    GenerateArg(Consumer, OPT_O, "s");
   else if (Opts.OptimizeSize == 2)
-    GenerateArg(Args, OPT_O, "z", SA);
+    GenerateArg(Consumer, OPT_O, "z");
 
   // SimplifyLibCalls is set only in the absence of -fno-builtin and
   // -ffreestanding. We'll consider that when generating them.
@@ -1447,65 +1522,65 @@ void CompilerInvocation::GenerateCodeGenArgs(
   // NoBuiltinFuncs are generated by LangOptions.
 
   if (Opts.UnrollLoops && Opts.OptimizationLevel <= 1)
-    GenerateArg(Args, OPT_funroll_loops, SA);
+    GenerateArg(Consumer, OPT_funroll_loops);
   else if (!Opts.UnrollLoops && Opts.OptimizationLevel > 1)
-    GenerateArg(Args, OPT_fno_unroll_loops, SA);
+    GenerateArg(Consumer, OPT_fno_unroll_loops);
 
   if (!Opts.BinutilsVersion.empty())
-    GenerateArg(Args, OPT_fbinutils_version_EQ, Opts.BinutilsVersion, SA);
+    GenerateArg(Consumer, OPT_fbinutils_version_EQ, Opts.BinutilsVersion);
 
   if (Opts.DebugNameTable ==
       static_cast<unsigned>(llvm::DICompileUnit::DebugNameTableKind::GNU))
-    GenerateArg(Args, OPT_ggnu_pubnames, SA);
+    GenerateArg(Consumer, OPT_ggnu_pubnames);
   else if (Opts.DebugNameTable ==
            static_cast<unsigned>(
                llvm::DICompileUnit::DebugNameTableKind::Default))
-    GenerateArg(Args, OPT_gpubnames, SA);
+    GenerateArg(Consumer, OPT_gpubnames);
 
   auto TNK = Opts.getDebugSimpleTemplateNames();
-  if (TNK != codegenoptions::DebugTemplateNamesKind::Full) {
-    if (TNK == codegenoptions::DebugTemplateNamesKind::Simple)
-      GenerateArg(Args, OPT_gsimple_template_names_EQ, "simple", SA);
-    else if (TNK == codegenoptions::DebugTemplateNamesKind::Mangled)
-      GenerateArg(Args, OPT_gsimple_template_names_EQ, "mangled", SA);
+  if (TNK != llvm::codegenoptions::DebugTemplateNamesKind::Full) {
+    if (TNK == llvm::codegenoptions::DebugTemplateNamesKind::Simple)
+      GenerateArg(Consumer, OPT_gsimple_template_names_EQ, "simple");
+    else if (TNK == llvm::codegenoptions::DebugTemplateNamesKind::Mangled)
+      GenerateArg(Consumer, OPT_gsimple_template_names_EQ, "mangled");
   }
   // ProfileInstrumentUsePath is marshalled automatically, no need to generate
   // it or PGOUseInstrumentor.
 
   if (Opts.TimePasses) {
     if (Opts.TimePassesPerRun)
-      GenerateArg(Args, OPT_ftime_report_EQ, "per-pass-run", SA);
+      GenerateArg(Consumer, OPT_ftime_report_EQ, "per-pass-run");
     else
-      GenerateArg(Args, OPT_ftime_report, SA);
+      GenerateArg(Consumer, OPT_ftime_report);
   }
 
   if (Opts.PrepareForLTO && !Opts.PrepareForThinLTO)
-    GenerateArg(Args, OPT_flto_EQ, "full", SA);
+    GenerateArg(Consumer, OPT_flto_EQ, "full");
 
   if (Opts.PrepareForThinLTO)
-    GenerateArg(Args, OPT_flto_EQ, "thin", SA);
+    GenerateArg(Consumer, OPT_flto_EQ, "thin");
 
   if (!Opts.ThinLTOIndexFile.empty())
-    GenerateArg(Args, OPT_fthinlto_index_EQ, Opts.ThinLTOIndexFile, SA);
+    GenerateArg(Consumer, OPT_fthinlto_index_EQ, Opts.ThinLTOIndexFile);
 
   if (Opts.SaveTempsFilePrefix == OutputFile)
-    GenerateArg(Args, OPT_save_temps_EQ, "obj", SA);
+    GenerateArg(Consumer, OPT_save_temps_EQ, "obj");
 
   StringRef MemProfileBasename("memprof.profraw");
   if (!Opts.MemoryProfileOutput.empty()) {
     if (Opts.MemoryProfileOutput == MemProfileBasename) {
-      GenerateArg(Args, OPT_fmemory_profile, SA);
+      GenerateArg(Consumer, OPT_fmemory_profile);
     } else {
       size_t ArgLength =
           Opts.MemoryProfileOutput.size() - MemProfileBasename.size();
-      GenerateArg(Args, OPT_fmemory_profile_EQ,
-                  Opts.MemoryProfileOutput.substr(0, ArgLength), SA);
+      GenerateArg(Consumer, OPT_fmemory_profile_EQ,
+                  Opts.MemoryProfileOutput.substr(0, ArgLength));
     }
   }
 
   if (memcmp(Opts.CoverageVersion, "408*", 4) != 0)
-    GenerateArg(Args, OPT_coverage_version_EQ,
-                StringRef(Opts.CoverageVersion, 4), SA);
+    GenerateArg(Consumer, OPT_coverage_version_EQ,
+                StringRef(Opts.CoverageVersion, 4));
 
   // TODO: Check if we need to generate arguments stored in CmdArgs. (Namely
   //  '-fembed_bitcode', which does not map to any CompilerInvocation field and
@@ -1515,92 +1590,94 @@ void CompilerInvocation::GenerateCodeGenArgs(
     std::string InstrBundle =
         serializeXRayInstrumentationBundle(Opts.XRayInstrumentationBundle);
     if (!InstrBundle.empty())
-      GenerateArg(Args, OPT_fxray_instrumentation_bundle, InstrBundle, SA);
+      GenerateArg(Consumer, OPT_fxray_instrumentation_bundle, InstrBundle);
   }
 
   if (Opts.CFProtectionReturn && Opts.CFProtectionBranch)
-    GenerateArg(Args, OPT_fcf_protection_EQ, "full", SA);
+    GenerateArg(Consumer, OPT_fcf_protection_EQ, "full");
   else if (Opts.CFProtectionReturn)
-    GenerateArg(Args, OPT_fcf_protection_EQ, "return", SA);
+    GenerateArg(Consumer, OPT_fcf_protection_EQ, "return");
   else if (Opts.CFProtectionBranch)
-    GenerateArg(Args, OPT_fcf_protection_EQ, "branch", SA);
+    GenerateArg(Consumer, OPT_fcf_protection_EQ, "branch");
 
   if (Opts.FunctionReturnThunks)
-    GenerateArg(Args, OPT_mfunction_return_EQ, "thunk-extern", SA);
+    GenerateArg(Consumer, OPT_mfunction_return_EQ, "thunk-extern");
 
   for (const auto &F : Opts.LinkBitcodeFiles) {
     bool Builtint = F.LinkFlags == llvm::Linker::Flags::LinkOnlyNeeded &&
                     F.PropagateAttrs && F.Internalize;
-    GenerateArg(Args,
+    GenerateArg(Consumer,
                 Builtint ? OPT_mlink_builtin_bitcode : OPT_mlink_bitcode_file,
-                F.Filename, SA);
+                F.Filename);
   }
 
-  GenerateArg(
-      Args, Opts.EmulatedTLS ? OPT_femulated_tls : OPT_fno_emulated_tls, SA);
+  if (Opts.EmulatedTLS)
+    GenerateArg(Consumer, OPT_femulated_tls);
 
   if (Opts.FPDenormalMode != llvm::DenormalMode::getIEEE())
-    GenerateArg(Args, OPT_fdenormal_fp_math_EQ, Opts.FPDenormalMode.str(), SA);
+    GenerateArg(Consumer, OPT_fdenormal_fp_math_EQ, Opts.FPDenormalMode.str());
 
   if ((Opts.FPDenormalMode != Opts.FP32DenormalMode) ||
       (Opts.FP32DenormalMode != llvm::DenormalMode::getIEEE()))
-    GenerateArg(Args, OPT_fdenormal_fp_math_f32_EQ, Opts.FP32DenormalMode.str(),
-                SA);
+    GenerateArg(Consumer, OPT_fdenormal_fp_math_f32_EQ,
+                Opts.FP32DenormalMode.str());
 
   if (Opts.StructReturnConvention == CodeGenOptions::SRCK_OnStack) {
     OptSpecifier Opt =
         T.isPPC32() ? OPT_maix_struct_return : OPT_fpcc_struct_return;
-    GenerateArg(Args, Opt, SA);
+    GenerateArg(Consumer, Opt);
   } else if (Opts.StructReturnConvention == CodeGenOptions::SRCK_InRegs) {
     OptSpecifier Opt =
         T.isPPC32() ? OPT_msvr4_struct_return : OPT_freg_struct_return;
-    GenerateArg(Args, Opt, SA);
+    GenerateArg(Consumer, Opt);
   }
 
   if (Opts.EnableAIXExtendedAltivecABI)
-    GenerateArg(Args, OPT_mabi_EQ_vec_extabi, SA);
+    GenerateArg(Consumer, OPT_mabi_EQ_vec_extabi);
+
+  if (Opts.XCOFFReadOnlyPointers)
+    GenerateArg(Consumer, OPT_mxcoff_roptr);
 
   if (!Opts.OptRecordPasses.empty())
-    GenerateArg(Args, OPT_opt_record_passes, Opts.OptRecordPasses, SA);
+    GenerateArg(Consumer, OPT_opt_record_passes, Opts.OptRecordPasses);
 
   if (!Opts.OptRecordFormat.empty())
-    GenerateArg(Args, OPT_opt_record_format, Opts.OptRecordFormat, SA);
+    GenerateArg(Consumer, OPT_opt_record_format, Opts.OptRecordFormat);
 
-  GenerateOptimizationRemark(Args, SA, OPT_Rpass_EQ, "pass",
+  GenerateOptimizationRemark(Consumer, OPT_Rpass_EQ, "pass",
                              Opts.OptimizationRemark);
 
-  GenerateOptimizationRemark(Args, SA, OPT_Rpass_missed_EQ, "pass-missed",
+  GenerateOptimizationRemark(Consumer, OPT_Rpass_missed_EQ, "pass-missed",
                              Opts.OptimizationRemarkMissed);
 
-  GenerateOptimizationRemark(Args, SA, OPT_Rpass_analysis_EQ, "pass-analysis",
+  GenerateOptimizationRemark(Consumer, OPT_Rpass_analysis_EQ, "pass-analysis",
                              Opts.OptimizationRemarkAnalysis);
 
-  GenerateArg(Args, OPT_fdiagnostics_hotness_threshold_EQ,
+  GenerateArg(Consumer, OPT_fdiagnostics_hotness_threshold_EQ,
               Opts.DiagnosticsHotnessThreshold
                   ? Twine(*Opts.DiagnosticsHotnessThreshold)
-                  : "auto",
-              SA);
+                  : "auto");
 
-  GenerateArg(Args, OPT_fdiagnostics_misexpect_tolerance_EQ,
-              Twine(*Opts.DiagnosticsMisExpectTolerance), SA);
+  GenerateArg(Consumer, OPT_fdiagnostics_misexpect_tolerance_EQ,
+              Twine(*Opts.DiagnosticsMisExpectTolerance));
 
   for (StringRef Sanitizer : serializeSanitizerKinds(Opts.SanitizeRecover))
-    GenerateArg(Args, OPT_fsanitize_recover_EQ, Sanitizer, SA);
+    GenerateArg(Consumer, OPT_fsanitize_recover_EQ, Sanitizer);
 
   for (StringRef Sanitizer : serializeSanitizerKinds(Opts.SanitizeTrap))
-    GenerateArg(Args, OPT_fsanitize_trap_EQ, Sanitizer, SA);
+    GenerateArg(Consumer, OPT_fsanitize_trap_EQ, Sanitizer);
 
   if (!Opts.EmitVersionIdentMetadata)
-    GenerateArg(Args, OPT_Qn, SA);
+    GenerateArg(Consumer, OPT_Qn);
 
   switch (Opts.FiniteLoops) {
   case CodeGenOptions::FiniteLoopsKind::Language:
     break;
   case CodeGenOptions::FiniteLoopsKind::Always:
-    GenerateArg(Args, OPT_ffinite_loops, SA);
+    GenerateArg(Consumer, OPT_ffinite_loops);
     break;
   case CodeGenOptions::FiniteLoopsKind::Never:
-    GenerateArg(Args, OPT_fno_finite_loops, SA);
+    GenerateArg(Consumer, OPT_fno_finite_loops);
     break;
   }
 }
@@ -1667,18 +1744,19 @@ bool CompilerInvocation::ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args,
   if (Arg *A = Args.getLastArg(OPT_debug_info_kind_EQ)) {
     unsigned Val =
         llvm::StringSwitch<unsigned>(A->getValue())
-            .Case("line-tables-only", codegenoptions::DebugLineTablesOnly)
-            .Case("line-directives-only", codegenoptions::DebugDirectivesOnly)
-            .Case("constructor", codegenoptions::DebugInfoConstructor)
-            .Case("limited", codegenoptions::LimitedDebugInfo)
-            .Case("standalone", codegenoptions::FullDebugInfo)
-            .Case("unused-types", codegenoptions::UnusedTypeInfo)
+            .Case("line-tables-only", llvm::codegenoptions::DebugLineTablesOnly)
+            .Case("line-directives-only",
+                  llvm::codegenoptions::DebugDirectivesOnly)
+            .Case("constructor", llvm::codegenoptions::DebugInfoConstructor)
+            .Case("limited", llvm::codegenoptions::LimitedDebugInfo)
+            .Case("standalone", llvm::codegenoptions::FullDebugInfo)
+            .Case("unused-types", llvm::codegenoptions::UnusedTypeInfo)
             .Default(~0U);
     if (Val == ~0U)
       Diags.Report(diag::err_drv_invalid_value) << A->getAsString(Args)
                                                 << A->getValue();
     else
-      Opts.setDebugInfo(static_cast<codegenoptions::DebugInfoKind>(Val));
+      Opts.setDebugInfo(static_cast<llvm::codegenoptions::DebugInfoKind>(Val));
   }
 
   // If -fuse-ctor-homing is set and limited debug info is already on, then use
@@ -1686,23 +1764,21 @@ bool CompilerInvocation::ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args,
   if (const Arg *A =
           Args.getLastArg(OPT_fuse_ctor_homing, OPT_fno_use_ctor_homing)) {
     if (A->getOption().matches(OPT_fuse_ctor_homing) &&
-        Opts.getDebugInfo() == codegenoptions::LimitedDebugInfo)
-      Opts.setDebugInfo(codegenoptions::DebugInfoConstructor);
+        Opts.getDebugInfo() == llvm::codegenoptions::LimitedDebugInfo)
+      Opts.setDebugInfo(llvm::codegenoptions::DebugInfoConstructor);
     if (A->getOption().matches(OPT_fno_use_ctor_homing) &&
-        Opts.getDebugInfo() == codegenoptions::DebugInfoConstructor)
-      Opts.setDebugInfo(codegenoptions::LimitedDebugInfo);
+        Opts.getDebugInfo() == llvm::codegenoptions::DebugInfoConstructor)
+      Opts.setDebugInfo(llvm::codegenoptions::LimitedDebugInfo);
   }
 
   for (const auto &Arg : Args.getAllArgValues(OPT_fdebug_prefix_map_EQ)) {
     auto Split = StringRef(Arg).split('=');
-    Opts.DebugPrefixMap.insert(
-        {std::string(Split.first), std::string(Split.second)});
+    Opts.DebugPrefixMap.emplace_back(Split.first, Split.second);
   }
 
   for (const auto &Arg : Args.getAllArgValues(OPT_fcoverage_prefix_map_EQ)) {
     auto Split = StringRef(Arg).split('=');
-    Opts.CoveragePrefixMap.insert(
-        {std::string(Split.first), std::string(Split.second)});
+    Opts.CoveragePrefixMap.emplace_back(Split.first, Split.second);
   }
 
   const llvm::Triple::ArchType DebugEntryValueArchs[] = {
@@ -1745,8 +1821,8 @@ bool CompilerInvocation::ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args,
           << A->getSpelling() << A->getValue();
     Opts.setDebugSimpleTemplateNames(
         StringRef(A->getValue()) == "simple"
-            ? codegenoptions::DebugTemplateNamesKind::Simple
-            : codegenoptions::DebugTemplateNamesKind::Mangled);
+            ? llvm::codegenoptions::DebugTemplateNamesKind::Simple
+            : llvm::codegenoptions::DebugTemplateNamesKind::Mangled);
   }
 
   if (const Arg *A = Args.getLastArg(OPT_ftime_report, OPT_ftime_report_EQ)) {
@@ -1774,6 +1850,8 @@ bool CompilerInvocation::ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args,
       Opts.PrepareForThinLTO = true;
     else if (S != "full")
       Diags.Report(diag::err_drv_invalid_value) << A->getAsString(Args) << S;
+    if (Args.hasArg(OPT_funified_lto))
+      Opts.PrepareForThinLTO = true;
   }
   if (Arg *A = Args.getLastArg(OPT_fthinlto_index_EQ)) {
     if (IK.getLanguage() != Language::LLVM_IR)
@@ -1799,7 +1877,7 @@ bool CompilerInvocation::ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args,
     Opts.MemoryProfileOutput = MemProfileBasename;
 
   memcpy(Opts.CoverageVersion, "408*", 4);
-  if (Opts.EmitGcovArcs || Opts.EmitGcovNotes) {
+  if (Opts.CoverageNotesFile.size() || Opts.CoverageDataFile.size()) {
     if (Args.hasArg(OPT_coverage_version_EQ)) {
       StringRef CoverageVersion = Args.getLastArgValue(OPT_coverage_version_EQ);
       if (CoverageVersion.size() != 4) {
@@ -1889,15 +1967,10 @@ bool CompilerInvocation::ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args,
     Opts.LinkBitcodeFiles.push_back(F);
   }
 
-  if (!Args.getLastArg(OPT_femulated_tls) &&
-      !Args.getLastArg(OPT_fno_emulated_tls)) {
-    Opts.EmulatedTLS = T.hasDefaultEmulatedTLS();
-  }
-
   if (Arg *A = Args.getLastArg(OPT_ftlsmodel_EQ)) {
     if (T.isOSAIX()) {
       StringRef Name = A->getValue();
-      if (Name != "global-dynamic")
+      if (Name == "local-dynamic")
         Diags.Report(diag::err_aix_unsupported_tls_model) << Name;
     }
   }
@@ -1939,14 +2012,23 @@ bool CompilerInvocation::ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args,
     }
   }
 
-  if (Arg *A =
-          Args.getLastArg(OPT_mabi_EQ_vec_default, OPT_mabi_EQ_vec_extabi)) {
+  if (Arg *A = Args.getLastArg(OPT_mxcoff_roptr)) {
     if (!T.isOSAIX())
       Diags.Report(diag::err_drv_unsupported_opt_for_target)
           << A->getSpelling() << T.str();
 
-    const Option &O = A->getOption();
-    Opts.EnableAIXExtendedAltivecABI = O.matches(OPT_mabi_EQ_vec_extabi);
+    // Since the storage mapping class is specified per csect,
+    // without using data sections, it is less effective to use read-only
+    // pointers. Using read-only pointers may cause other RO variables in the
+    // same csect to become RW when the linker acts upon `-bforceimprw`;
+    // therefore, we require that separate data sections
+    // are used when `-mxcoff-roptr` is in effect. We respect the setting of
+    // data-sections since we have not found reasons to do otherwise that
+    // overcome the user surprise of not respecting the setting.
+    if (!Args.hasFlag(OPT_fdata_sections, OPT_fno_data_sections, false))
+      Diags.Report(diag::err_roptr_requires_data_sections);
+
+    Opts.XCOFFReadOnlyPointers = true;
   }
 
   if (Arg *A = Args.getLastArg(OPT_mabi_EQ_quadword_atomics)) {
@@ -2040,8 +2122,9 @@ bool CompilerInvocation::ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args,
 
   // If the user requested a flag that requires source locations available in
   // the backend, make sure that the backend tracks source location information.
-  if (NeedLocTracking && Opts.getDebugInfo() == codegenoptions::NoDebugInfo)
-    Opts.setDebugInfo(codegenoptions::LocTrackingOnly);
+  if (NeedLocTracking &&
+      Opts.getDebugInfo() == llvm::codegenoptions::NoDebugInfo)
+    Opts.setDebugInfo(llvm::codegenoptions::LocTrackingOnly);
 
   // Parse -fsanitize-recover= arguments.
   // FIXME: Report unrecoverable sanitizers incorrectly specified here.
@@ -2067,18 +2150,16 @@ bool CompilerInvocation::ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args,
   return Diags.getNumErrors() == NumErrorsBefore;
 }
 
-static void
-GenerateDependencyOutputArgs(const DependencyOutputOptions &Opts,
-                             SmallVectorImpl<const char *> &Args,
-                             CompilerInvocation::StringAllocator SA) {
+static void GenerateDependencyOutputArgs(const DependencyOutputOptions &Opts,
+                                         ArgumentConsumer Consumer) {
   const DependencyOutputOptions &DependencyOutputOpts = Opts;
 #define DEPENDENCY_OUTPUT_OPTION_WITH_MARSHALLING(...)                         \
-  GENERATE_OPTION_WITH_MARSHALLING(Args, SA, __VA_ARGS__)
+  GENERATE_OPTION_WITH_MARSHALLING(Consumer, __VA_ARGS__)
 #include "clang/Driver/Options.inc"
 #undef DEPENDENCY_OUTPUT_OPTION_WITH_MARSHALLING
 
   if (Opts.ShowIncludesDest != ShowIncludesDestination::None)
-    GenerateArg(Args, OPT_show_includes, SA);
+    GenerateArg(Consumer, OPT_show_includes);
 
   for (const auto &Dep : Opts.ExtraDeps) {
     switch (Dep.second) {
@@ -2094,7 +2175,7 @@ GenerateDependencyOutputArgs(const DependencyOutputOptions &Opts,
       // marshalling infrastructure.
       continue;
     case EDK_DepFileEntry:
-      GenerateArg(Args, OPT_fdepfile_entry, Dep.first, SA);
+      GenerateArg(Consumer, OPT_fdepfile_entry, Dep.first);
       break;
     }
   }
@@ -2220,12 +2301,11 @@ static bool checkVerifyPrefixes(const std::vector<std::string> &VerifyPrefixes,
 }
 
 static void GenerateFileSystemArgs(const FileSystemOptions &Opts,
-                                   SmallVectorImpl<const char *> &Args,
-                                   CompilerInvocation::StringAllocator SA) {
+                                   ArgumentConsumer Consumer) {
   const FileSystemOptions &FileSystemOpts = Opts;
 
 #define FILE_SYSTEM_OPTION_WITH_MARSHALLING(...)                               \
-  GENERATE_OPTION_WITH_MARSHALLING(Args, SA, __VA_ARGS__)
+  GENERATE_OPTION_WITH_MARSHALLING(Consumer, __VA_ARGS__)
 #include "clang/Driver/Options.inc"
 #undef FILE_SYSTEM_OPTION_WITH_MARSHALLING
 }
@@ -2245,11 +2325,10 @@ static bool ParseFileSystemArgs(FileSystemOptions &Opts, const ArgList &Args,
 }
 
 static void GenerateMigratorArgs(const MigratorOptions &Opts,
-                                 SmallVectorImpl<const char *> &Args,
-                                 CompilerInvocation::StringAllocator SA) {
+                                 ArgumentConsumer Consumer) {
   const MigratorOptions &MigratorOpts = Opts;
 #define MIGRATOR_OPTION_WITH_MARSHALLING(...)                                  \
-  GENERATE_OPTION_WITH_MARSHALLING(Args, SA, __VA_ARGS__)
+  GENERATE_OPTION_WITH_MARSHALLING(Consumer, __VA_ARGS__)
 #include "clang/Driver/Options.inc"
 #undef MIGRATOR_OPTION_WITH_MARSHALLING
 }
@@ -2268,51 +2347,51 @@ static bool ParseMigratorArgs(MigratorOptions &Opts, const ArgList &Args,
   return Diags.getNumErrors() == NumErrorsBefore;
 }
 
-void CompilerInvocation::GenerateDiagnosticArgs(
-    const DiagnosticOptions &Opts, SmallVectorImpl<const char *> &Args,
-    StringAllocator SA, bool DefaultDiagColor) {
+void CompilerInvocationBase::GenerateDiagnosticArgs(
+    const DiagnosticOptions &Opts, ArgumentConsumer Consumer,
+    bool DefaultDiagColor) {
   const DiagnosticOptions *DiagnosticOpts = &Opts;
 #define DIAG_OPTION_WITH_MARSHALLING(...)                                      \
-  GENERATE_OPTION_WITH_MARSHALLING(Args, SA, __VA_ARGS__)
+  GENERATE_OPTION_WITH_MARSHALLING(Consumer, __VA_ARGS__)
 #include "clang/Driver/Options.inc"
 #undef DIAG_OPTION_WITH_MARSHALLING
 
   if (!Opts.DiagnosticSerializationFile.empty())
-    GenerateArg(Args, OPT_diagnostic_serialized_file,
-                Opts.DiagnosticSerializationFile, SA);
+    GenerateArg(Consumer, OPT_diagnostic_serialized_file,
+                Opts.DiagnosticSerializationFile);
 
   if (Opts.ShowColors)
-    GenerateArg(Args, OPT_fcolor_diagnostics, SA);
+    GenerateArg(Consumer, OPT_fcolor_diagnostics);
 
   if (Opts.VerifyDiagnostics &&
       llvm::is_contained(Opts.VerifyPrefixes, "expected"))
-    GenerateArg(Args, OPT_verify, SA);
+    GenerateArg(Consumer, OPT_verify);
 
   for (const auto &Prefix : Opts.VerifyPrefixes)
     if (Prefix != "expected")
-      GenerateArg(Args, OPT_verify_EQ, Prefix, SA);
+      GenerateArg(Consumer, OPT_verify_EQ, Prefix);
 
   DiagnosticLevelMask VIU = Opts.getVerifyIgnoreUnexpected();
   if (VIU == DiagnosticLevelMask::None) {
     // This is the default, don't generate anything.
   } else if (VIU == DiagnosticLevelMask::All) {
-    GenerateArg(Args, OPT_verify_ignore_unexpected, SA);
+    GenerateArg(Consumer, OPT_verify_ignore_unexpected);
   } else {
     if (static_cast<unsigned>(VIU & DiagnosticLevelMask::Note) != 0)
-      GenerateArg(Args, OPT_verify_ignore_unexpected_EQ, "note", SA);
+      GenerateArg(Consumer, OPT_verify_ignore_unexpected_EQ, "note");
     if (static_cast<unsigned>(VIU & DiagnosticLevelMask::Remark) != 0)
-      GenerateArg(Args, OPT_verify_ignore_unexpected_EQ, "remark", SA);
+      GenerateArg(Consumer, OPT_verify_ignore_unexpected_EQ, "remark");
     if (static_cast<unsigned>(VIU & DiagnosticLevelMask::Warning) != 0)
-      GenerateArg(Args, OPT_verify_ignore_unexpected_EQ, "warning", SA);
+      GenerateArg(Consumer, OPT_verify_ignore_unexpected_EQ, "warning");
     if (static_cast<unsigned>(VIU & DiagnosticLevelMask::Error) != 0)
-      GenerateArg(Args, OPT_verify_ignore_unexpected_EQ, "error", SA);
+      GenerateArg(Consumer, OPT_verify_ignore_unexpected_EQ, "error");
   }
 
   for (const auto &Warning : Opts.Warnings) {
     // This option is automatically generated from UndefPrefixes.
     if (Warning == "undef-prefix")
       continue;
-    Args.push_back(SA(StringRef("-W") + Warning));
+    Consumer(StringRef("-W") + Warning);
   }
 
   for (const auto &Remark : Opts.Remarks) {
@@ -2324,7 +2403,7 @@ void CompilerInvocation::GenerateDiagnosticArgs(
     if (llvm::is_contained(IgnoredRemarks, Remark))
       continue;
 
-    Args.push_back(SA(StringRef("-R") + Remark));
+    Consumer(StringRef("-R") + Remark);
   }
 }
 
@@ -2334,10 +2413,20 @@ clang::CreateAndPopulateDiagOpts(ArrayRef<const char *> Argv) {
   unsigned MissingArgIndex, MissingArgCount;
   InputArgList Args = getDriverOptTable().ParseArgs(
       Argv.slice(1), MissingArgIndex, MissingArgCount);
+
+  bool ShowColors = true;
+  if (std::optional<std::string> NoColor =
+          llvm::sys::Process::GetEnv("NO_COLOR");
+      NoColor && !NoColor->empty()) {
+    // If the user set the NO_COLOR environment variable, we'll honor that
+    // unless the command line overrides it.
+    ShowColors = false;
+  }
+
   // We ignore MissingArgCount and the return value of ParseDiagnosticArgs.
   // Any errors that would be diagnosed here will also be diagnosed later,
   // when the DiagnosticsEngine actually exists.
-  (void)ParseDiagnosticArgs(*DiagOpts, Args);
+  (void)ParseDiagnosticArgs(*DiagOpts, Args, /*Diags=*/nullptr, ShowColors);
   return DiagOpts;
 }
 
@@ -2387,9 +2476,9 @@ bool clang::ParseDiagnosticArgs(DiagnosticOptions &Opts, ArgList &Args,
     DiagMask = DiagnosticLevelMask::All;
   Opts.setVerifyIgnoreUnexpected(DiagMask);
   if (Opts.TabStop == 0 || Opts.TabStop > DiagnosticOptions::MaxTabStop) {
-    Opts.TabStop = DiagnosticOptions::DefaultTabStop;
     Diags->Report(diag::warn_ignoring_ftabstop_value)
         << Opts.TabStop << DiagnosticOptions::DefaultTabStop;
+    Opts.TabStop = DiagnosticOptions::DefaultTabStop;
   }
 
   addDiagnosticArgs(Args, OPT_W_Group, OPT_W_value_Group, Opts.Warnings);
@@ -2500,12 +2589,10 @@ getProgramActionOpt(frontend::ActionKind ProgramAction) {
 }
 
 static void GenerateFrontendArgs(const FrontendOptions &Opts,
-                                 SmallVectorImpl<const char *> &Args,
-                                 CompilerInvocation::StringAllocator SA,
-                                 bool IsHeader) {
+                                 ArgumentConsumer Consumer, bool IsHeader) {
   const FrontendOptions &FrontendOpts = Opts;
 #define FRONTEND_OPTION_WITH_MARSHALLING(...)                                  \
-  GENERATE_OPTION_WITH_MARSHALLING(Args, SA, __VA_ARGS__)
+  GENERATE_OPTION_WITH_MARSHALLING(Consumer, __VA_ARGS__)
 #include "clang/Driver/Options.inc"
 #undef FRONTEND_OPTION_WITH_MARSHALLING
 
@@ -2514,7 +2601,7 @@ static void GenerateFrontendArgs(const FrontendOptions &Opts,
 
   // Generating a simple flag covers most frontend actions.
   std::function<void()> GenerateProgramAction = [&]() {
-    GenerateArg(Args, *ProgramActionOpt, SA);
+    GenerateArg(Consumer, *ProgramActionOpt);
   };
 
   if (!ProgramActionOpt) {
@@ -2522,7 +2609,7 @@ static void GenerateFrontendArgs(const FrontendOptions &Opts,
     assert(Opts.ProgramAction == frontend::PluginAction &&
            "Frontend action without option.");
     GenerateProgramAction = [&]() {
-      GenerateArg(Args, OPT_plugin, Opts.ActionName, SA);
+      GenerateArg(Consumer, OPT_plugin, Opts.ActionName);
     };
   }
 
@@ -2543,21 +2630,21 @@ static void GenerateFrontendArgs(const FrontendOptions &Opts,
         }
 
         if (Opts.ASTDumpAll)
-          GenerateArg(Args, OPT_ast_dump_all_EQ, Format, SA);
+          GenerateArg(Consumer, OPT_ast_dump_all_EQ, Format);
         if (Opts.ASTDumpDecls)
-          GenerateArg(Args, OPT_ast_dump_EQ, Format, SA);
+          GenerateArg(Consumer, OPT_ast_dump_EQ, Format);
       } else {
         if (Opts.ASTDumpAll)
-          GenerateArg(Args, OPT_ast_dump_all, SA);
+          GenerateArg(Consumer, OPT_ast_dump_all);
         if (Opts.ASTDumpDecls)
-          GenerateArg(Args, OPT_ast_dump, SA);
+          GenerateArg(Consumer, OPT_ast_dump);
       }
     };
   }
 
   if (Opts.ProgramAction == frontend::FixIt && !Opts.FixItSuffix.empty()) {
     GenerateProgramAction = [&]() {
-      GenerateArg(Args, OPT_fixit_EQ, Opts.FixItSuffix, SA);
+      GenerateArg(Consumer, OPT_fixit_EQ, Opts.FixItSuffix);
     };
   }
 
@@ -2565,34 +2652,34 @@ static void GenerateFrontendArgs(const FrontendOptions &Opts,
 
   for (const auto &PluginArgs : Opts.PluginArgs) {
     Option Opt = getDriverOptTable().getOption(OPT_plugin_arg);
-    const char *Spelling =
-        SA(Opt.getPrefix() + Opt.getName() + PluginArgs.first);
     for (const auto &PluginArg : PluginArgs.second)
-      denormalizeString(Args, Spelling, SA, Opt.getKind(), 0, PluginArg);
+      denormalizeString(Consumer,
+                        Opt.getPrefix() + Opt.getName() + PluginArgs.first,
+                        Opt.getKind(), 0, PluginArg);
   }
 
   for (const auto &Ext : Opts.ModuleFileExtensions)
     if (auto *TestExt = dyn_cast_or_null<TestModuleFileExtension>(Ext.get()))
-      GenerateArg(Args, OPT_ftest_module_file_extension_EQ, TestExt->str(), SA);
+      GenerateArg(Consumer, OPT_ftest_module_file_extension_EQ, TestExt->str());
 
   if (!Opts.CodeCompletionAt.FileName.empty())
-    GenerateArg(Args, OPT_code_completion_at, Opts.CodeCompletionAt.ToString(),
-                SA);
+    GenerateArg(Consumer, OPT_code_completion_at,
+                Opts.CodeCompletionAt.ToString());
 
   for (const auto &Plugin : Opts.Plugins)
-    GenerateArg(Args, OPT_load, Plugin, SA);
+    GenerateArg(Consumer, OPT_load, Plugin);
 
   // ASTDumpDecls and ASTDumpAll already handled with ProgramAction.
 
   for (const auto &ModuleFile : Opts.ModuleFiles)
-    GenerateArg(Args, OPT_fmodule_file, ModuleFile, SA);
+    GenerateArg(Consumer, OPT_fmodule_file, ModuleFile);
 
   if (Opts.AuxTargetCPU)
-    GenerateArg(Args, OPT_aux_target_cpu, *Opts.AuxTargetCPU, SA);
+    GenerateArg(Consumer, OPT_aux_target_cpu, *Opts.AuxTargetCPU);
 
   if (Opts.AuxTargetFeatures)
     for (const auto &Feature : *Opts.AuxTargetFeatures)
-      GenerateArg(Args, OPT_aux_target_feature, Feature, SA);
+      GenerateArg(Consumer, OPT_aux_target_feature, Feature);
 
   {
     StringRef Preprocessed = Opts.DashX.isPreprocessed() ? "-cpp-output" : "";
@@ -2659,13 +2746,13 @@ static void GenerateFrontendArgs(const FrontendOptions &Opts,
       break;
     }
 
-    GenerateArg(Args, OPT_x,
-                Lang + HeaderUnit + Header + ModuleMap + Preprocessed, SA);
+    GenerateArg(Consumer, OPT_x,
+                Lang + HeaderUnit + Header + ModuleMap + Preprocessed);
   }
 
   // OPT_INPUT has a unique class, generate it directly.
   for (const auto &Input : Opts.Inputs)
-    Args.push_back(SA(Input.getFile()));
+    Consumer(Input.getFile());
 }
 
 static bool ParseFrontendArgs(FrontendOptions &Opts, ArgList &Args,
@@ -2923,29 +3010,28 @@ std::string CompilerInvocation::GetResourcesPath(const char *Argv0,
   return Driver::GetResourcesPath(ClangExecutable, CLANG_RESOURCE_DIR);
 }
 
-static void GenerateHeaderSearchArgs(HeaderSearchOptions &Opts,
-                                     SmallVectorImpl<const char *> &Args,
-                                     CompilerInvocation::StringAllocator SA) {
+static void GenerateHeaderSearchArgs(const HeaderSearchOptions &Opts,
+                                     ArgumentConsumer Consumer) {
   const HeaderSearchOptions *HeaderSearchOpts = &Opts;
 #define HEADER_SEARCH_OPTION_WITH_MARSHALLING(...)                             \
-  GENERATE_OPTION_WITH_MARSHALLING(Args, SA, __VA_ARGS__)
+  GENERATE_OPTION_WITH_MARSHALLING(Consumer, __VA_ARGS__)
 #include "clang/Driver/Options.inc"
 #undef HEADER_SEARCH_OPTION_WITH_MARSHALLING
 
   if (Opts.UseLibcxx)
-    GenerateArg(Args, OPT_stdlib_EQ, "libc++", SA);
+    GenerateArg(Consumer, OPT_stdlib_EQ, "libc++");
 
   if (!Opts.ModuleCachePath.empty())
-    GenerateArg(Args, OPT_fmodules_cache_path, Opts.ModuleCachePath, SA);
+    GenerateArg(Consumer, OPT_fmodules_cache_path, Opts.ModuleCachePath);
 
   for (const auto &File : Opts.PrebuiltModuleFiles)
-    GenerateArg(Args, OPT_fmodule_file, File.first + "=" + File.second, SA);
+    GenerateArg(Consumer, OPT_fmodule_file, File.first + "=" + File.second);
 
   for (const auto &Path : Opts.PrebuiltModulePaths)
-    GenerateArg(Args, OPT_fprebuilt_module_path, Path, SA);
+    GenerateArg(Consumer, OPT_fprebuilt_module_path, Path);
 
   for (const auto &Macro : Opts.ModulesIgnoreMacros)
-    GenerateArg(Args, OPT_fmodules_ignore_macro, Macro.val(), SA);
+    GenerateArg(Consumer, OPT_fmodules_ignore_macro, Macro.val());
 
   auto Matches = [](const HeaderSearchOptions::Entry &Entry,
                     llvm::ArrayRef<frontend::IncludeDirGroup> Groups,
@@ -2976,8 +3062,8 @@ static void GenerateHeaderSearchArgs(HeaderSearchOptions &Opts,
     }();
 
     if (It->Group == frontend::IndexHeaderMap)
-      GenerateArg(Args, OPT_index_header_map, SA);
-    GenerateArg(Args, Opt, It->Path, SA);
+      GenerateArg(Consumer, OPT_index_header_map);
+    GenerateArg(Consumer, Opt, It->Path);
   };
 
   // Note: some paths that came from "[-iprefix=xx] -iwithprefixbefore=yy" may
@@ -2989,34 +3075,34 @@ static void GenerateHeaderSearchArgs(HeaderSearchOptions &Opts,
        ++It) {
     OptSpecifier Opt =
         It->Group == frontend::After ? OPT_iwithprefix : OPT_iwithprefixbefore;
-    GenerateArg(Args, Opt, It->Path, SA);
+    GenerateArg(Consumer, Opt, It->Path);
   }
 
   // Note: Some paths that came from "-idirafter=xxyy" may have already been
   // generated as "-iwithprefix=xxyy". If that's the case, their position on
   // command line was such that this has no semantic impact on include paths.
   for (; It < End && Matches(*It, {frontend::After}, false, true); ++It)
-    GenerateArg(Args, OPT_idirafter, It->Path, SA);
+    GenerateArg(Consumer, OPT_idirafter, It->Path);
   for (; It < End && Matches(*It, {frontend::Quoted}, false, true); ++It)
-    GenerateArg(Args, OPT_iquote, It->Path, SA);
+    GenerateArg(Consumer, OPT_iquote, It->Path);
   for (; It < End && Matches(*It, {frontend::System}, false, std::nullopt);
        ++It)
-    GenerateArg(Args, It->IgnoreSysRoot ? OPT_isystem : OPT_iwithsysroot,
-                It->Path, SA);
+    GenerateArg(Consumer, It->IgnoreSysRoot ? OPT_isystem : OPT_iwithsysroot,
+                It->Path);
   for (; It < End && Matches(*It, {frontend::System}, true, true); ++It)
-    GenerateArg(Args, OPT_iframework, It->Path, SA);
+    GenerateArg(Consumer, OPT_iframework, It->Path);
   for (; It < End && Matches(*It, {frontend::System}, true, false); ++It)
-    GenerateArg(Args, OPT_iframeworkwithsysroot, It->Path, SA);
+    GenerateArg(Consumer, OPT_iframeworkwithsysroot, It->Path);
 
   // Add the paths for the various language specific isystem flags.
   for (; It < End && Matches(*It, {frontend::CSystem}, false, true); ++It)
-    GenerateArg(Args, OPT_c_isystem, It->Path, SA);
+    GenerateArg(Consumer, OPT_c_isystem, It->Path);
   for (; It < End && Matches(*It, {frontend::CXXSystem}, false, true); ++It)
-    GenerateArg(Args, OPT_cxx_isystem, It->Path, SA);
+    GenerateArg(Consumer, OPT_cxx_isystem, It->Path);
   for (; It < End && Matches(*It, {frontend::ObjCSystem}, false, true); ++It)
-    GenerateArg(Args, OPT_objc_isystem, It->Path, SA);
+    GenerateArg(Consumer, OPT_objc_isystem, It->Path);
   for (; It < End && Matches(*It, {frontend::ObjCXXSystem}, false, true); ++It)
-    GenerateArg(Args, OPT_objcxx_isystem, It->Path, SA);
+    GenerateArg(Consumer, OPT_objcxx_isystem, It->Path);
 
   // Add the internal paths from a driver that detects standard include paths.
   // Note: Some paths that came from "-internal-isystem" arguments may have
@@ -3028,7 +3114,7 @@ static void GenerateHeaderSearchArgs(HeaderSearchOptions &Opts,
     OptSpecifier Opt = It->Group == frontend::System
                            ? OPT_internal_isystem
                            : OPT_internal_externc_isystem;
-    GenerateArg(Args, Opt, It->Path, SA);
+    GenerateArg(Consumer, Opt, It->Path);
   }
 
   assert(It == End && "Unhandled HeaderSearchOption::Entry.");
@@ -3037,11 +3123,11 @@ static void GenerateHeaderSearchArgs(HeaderSearchOptions &Opts,
   for (const auto &P : Opts.SystemHeaderPrefixes) {
     OptSpecifier Opt = P.IsSystemHeader ? OPT_system_header_prefix
                                         : OPT_no_system_header_prefix;
-    GenerateArg(Args, Opt, P.Prefix, SA);
+    GenerateArg(Consumer, Opt, P.Prefix);
   }
 
   for (const std::string &F : Opts.VFSOverlayFiles)
-    GenerateArg(Args, OPT_ivfsoverlay, F, SA);
+    GenerateArg(Consumer, OPT_ivfsoverlay, F);
 }
 
 static bool ParseHeaderSearchArgs(HeaderSearchOptions &Opts, ArgList &Args,
@@ -3254,20 +3340,20 @@ static StringRef GetInputKindName(InputKind IK) {
   llvm_unreachable("unknown input language");
 }
 
-void CompilerInvocation::GenerateLangArgs(const LangOptions &Opts,
-                                          SmallVectorImpl<const char *> &Args,
-                                          StringAllocator SA,
-                                          const llvm::Triple &T, InputKind IK) {
+void CompilerInvocationBase::GenerateLangArgs(const LangOptions &Opts,
+                                              ArgumentConsumer Consumer,
+                                              const llvm::Triple &T,
+                                              InputKind IK) {
   if (IK.getFormat() == InputKind::Precompiled ||
       IK.getLanguage() == Language::LLVM_IR) {
     if (Opts.ObjCAutoRefCount)
-      GenerateArg(Args, OPT_fobjc_arc, SA);
+      GenerateArg(Consumer, OPT_fobjc_arc);
     if (Opts.PICLevel != 0)
-      GenerateArg(Args, OPT_pic_level, Twine(Opts.PICLevel), SA);
+      GenerateArg(Consumer, OPT_pic_level, Twine(Opts.PICLevel));
     if (Opts.PIE)
-      GenerateArg(Args, OPT_pic_is_pie, SA);
+      GenerateArg(Consumer, OPT_pic_is_pie);
     for (StringRef Sanitizer : serializeSanitizerKinds(Opts.Sanitize))
-      GenerateArg(Args, OPT_fsanitize_EQ, Sanitizer, SA);
+      GenerateArg(Consumer, OPT_fsanitize_EQ, Sanitizer);
 
     return;
   }
@@ -3289,145 +3375,145 @@ void CompilerInvocation::GenerateLangArgs(const LangOptions &Opts,
   }
 
   auto LangStandard = LangStandard::getLangStandardForKind(Opts.LangStd);
-  GenerateArg(Args, StdOpt, LangStandard.getName(), SA);
+  GenerateArg(Consumer, StdOpt, LangStandard.getName());
 
   if (Opts.IncludeDefaultHeader)
-    GenerateArg(Args, OPT_finclude_default_header, SA);
+    GenerateArg(Consumer, OPT_finclude_default_header);
   if (Opts.DeclareOpenCLBuiltins)
-    GenerateArg(Args, OPT_fdeclare_opencl_builtins, SA);
+    GenerateArg(Consumer, OPT_fdeclare_opencl_builtins);
 
   const LangOptions *LangOpts = &Opts;
 
 #define LANG_OPTION_WITH_MARSHALLING(...)                                      \
-  GENERATE_OPTION_WITH_MARSHALLING(Args, SA, __VA_ARGS__)
+  GENERATE_OPTION_WITH_MARSHALLING(Consumer, __VA_ARGS__)
 #include "clang/Driver/Options.inc"
 #undef LANG_OPTION_WITH_MARSHALLING
 
   // The '-fcf-protection=' option is generated by CodeGenOpts generator.
 
   if (Opts.ObjC) {
-    GenerateArg(Args, OPT_fobjc_runtime_EQ, Opts.ObjCRuntime.getAsString(), SA);
+    GenerateArg(Consumer, OPT_fobjc_runtime_EQ, Opts.ObjCRuntime.getAsString());
 
     if (Opts.GC == LangOptions::GCOnly)
-      GenerateArg(Args, OPT_fobjc_gc_only, SA);
+      GenerateArg(Consumer, OPT_fobjc_gc_only);
     else if (Opts.GC == LangOptions::HybridGC)
-      GenerateArg(Args, OPT_fobjc_gc, SA);
+      GenerateArg(Consumer, OPT_fobjc_gc);
     else if (Opts.ObjCAutoRefCount == 1)
-      GenerateArg(Args, OPT_fobjc_arc, SA);
+      GenerateArg(Consumer, OPT_fobjc_arc);
 
     if (Opts.ObjCWeakRuntime)
-      GenerateArg(Args, OPT_fobjc_runtime_has_weak, SA);
+      GenerateArg(Consumer, OPT_fobjc_runtime_has_weak);
 
     if (Opts.ObjCWeak)
-      GenerateArg(Args, OPT_fobjc_weak, SA);
+      GenerateArg(Consumer, OPT_fobjc_weak);
 
     if (Opts.ObjCSubscriptingLegacyRuntime)
-      GenerateArg(Args, OPT_fobjc_subscripting_legacy_runtime, SA);
+      GenerateArg(Consumer, OPT_fobjc_subscripting_legacy_runtime);
   }
 
   if (Opts.GNUCVersion != 0) {
     unsigned Major = Opts.GNUCVersion / 100 / 100;
     unsigned Minor = (Opts.GNUCVersion / 100) % 100;
     unsigned Patch = Opts.GNUCVersion % 100;
-    GenerateArg(Args, OPT_fgnuc_version_EQ,
-                Twine(Major) + "." + Twine(Minor) + "." + Twine(Patch), SA);
+    GenerateArg(Consumer, OPT_fgnuc_version_EQ,
+                Twine(Major) + "." + Twine(Minor) + "." + Twine(Patch));
   }
 
   if (Opts.IgnoreXCOFFVisibility)
-    GenerateArg(Args, OPT_mignore_xcoff_visibility, SA);
+    GenerateArg(Consumer, OPT_mignore_xcoff_visibility);
 
   if (Opts.SignedOverflowBehavior == LangOptions::SOB_Trapping) {
-    GenerateArg(Args, OPT_ftrapv, SA);
-    GenerateArg(Args, OPT_ftrapv_handler, Opts.OverflowHandler, SA);
+    GenerateArg(Consumer, OPT_ftrapv);
+    GenerateArg(Consumer, OPT_ftrapv_handler, Opts.OverflowHandler);
   } else if (Opts.SignedOverflowBehavior == LangOptions::SOB_Defined) {
-    GenerateArg(Args, OPT_fwrapv, SA);
+    GenerateArg(Consumer, OPT_fwrapv);
   }
 
   if (Opts.MSCompatibilityVersion != 0) {
     unsigned Major = Opts.MSCompatibilityVersion / 10000000;
     unsigned Minor = (Opts.MSCompatibilityVersion / 100000) % 100;
     unsigned Subminor = Opts.MSCompatibilityVersion % 100000;
-    GenerateArg(Args, OPT_fms_compatibility_version,
-                Twine(Major) + "." + Twine(Minor) + "." + Twine(Subminor), SA);
+    GenerateArg(Consumer, OPT_fms_compatibility_version,
+                Twine(Major) + "." + Twine(Minor) + "." + Twine(Subminor));
   }
 
   if ((!Opts.GNUMode && !Opts.MSVCCompat && !Opts.CPlusPlus17) || T.isOSzOS()) {
     if (!Opts.Trigraphs)
-      GenerateArg(Args, OPT_fno_trigraphs, SA);
+      GenerateArg(Consumer, OPT_fno_trigraphs);
   } else {
     if (Opts.Trigraphs)
-      GenerateArg(Args, OPT_ftrigraphs, SA);
+      GenerateArg(Consumer, OPT_ftrigraphs);
   }
 
   if (Opts.Blocks && !(Opts.OpenCL && Opts.OpenCLVersion == 200))
-    GenerateArg(Args, OPT_fblocks, SA);
+    GenerateArg(Consumer, OPT_fblocks);
 
   if (Opts.ConvergentFunctions &&
       !(Opts.OpenCL || (Opts.CUDA && Opts.CUDAIsDevice) || Opts.SYCLIsDevice))
-    GenerateArg(Args, OPT_fconvergent_functions, SA);
+    GenerateArg(Consumer, OPT_fconvergent_functions);
 
   if (Opts.NoBuiltin && !Opts.Freestanding)
-    GenerateArg(Args, OPT_fno_builtin, SA);
+    GenerateArg(Consumer, OPT_fno_builtin);
 
   if (!Opts.NoBuiltin)
     for (const auto &Func : Opts.NoBuiltinFuncs)
-      GenerateArg(Args, OPT_fno_builtin_, Func, SA);
+      GenerateArg(Consumer, OPT_fno_builtin_, Func);
 
   if (Opts.LongDoubleSize == 128)
-    GenerateArg(Args, OPT_mlong_double_128, SA);
+    GenerateArg(Consumer, OPT_mlong_double_128);
   else if (Opts.LongDoubleSize == 64)
-    GenerateArg(Args, OPT_mlong_double_64, SA);
+    GenerateArg(Consumer, OPT_mlong_double_64);
   else if (Opts.LongDoubleSize == 80)
-    GenerateArg(Args, OPT_mlong_double_80, SA);
+    GenerateArg(Consumer, OPT_mlong_double_80);
 
   // Not generating '-mrtd', it's just an alias for '-fdefault-calling-conv='.
 
   // OpenMP was requested via '-fopenmp', not implied by '-fopenmp-simd' or
   // '-fopenmp-targets='.
   if (Opts.OpenMP && !Opts.OpenMPSimd) {
-    GenerateArg(Args, OPT_fopenmp, SA);
+    GenerateArg(Consumer, OPT_fopenmp);
 
-    if (Opts.OpenMP != 50)
-      GenerateArg(Args, OPT_fopenmp_version_EQ, Twine(Opts.OpenMP), SA);
+    if (Opts.OpenMP != 51)
+      GenerateArg(Consumer, OPT_fopenmp_version_EQ, Twine(Opts.OpenMP));
 
     if (!Opts.OpenMPUseTLS)
-      GenerateArg(Args, OPT_fnoopenmp_use_tls, SA);
+      GenerateArg(Consumer, OPT_fnoopenmp_use_tls);
 
-    if (Opts.OpenMPIsDevice)
-      GenerateArg(Args, OPT_fopenmp_is_device, SA);
+    if (Opts.OpenMPIsTargetDevice)
+      GenerateArg(Consumer, OPT_fopenmp_is_target_device);
 
     if (Opts.OpenMPIRBuilder)
-      GenerateArg(Args, OPT_fopenmp_enable_irbuilder, SA);
+      GenerateArg(Consumer, OPT_fopenmp_enable_irbuilder);
   }
 
   if (Opts.OpenMPSimd) {
-    GenerateArg(Args, OPT_fopenmp_simd, SA);
+    GenerateArg(Consumer, OPT_fopenmp_simd);
 
-    if (Opts.OpenMP != 50)
-      GenerateArg(Args, OPT_fopenmp_version_EQ, Twine(Opts.OpenMP), SA);
+    if (Opts.OpenMP != 51)
+      GenerateArg(Consumer, OPT_fopenmp_version_EQ, Twine(Opts.OpenMP));
   }
 
   if (Opts.OpenMPThreadSubscription)
-    GenerateArg(Args, OPT_fopenmp_assume_threads_oversubscription, SA);
+    GenerateArg(Consumer, OPT_fopenmp_assume_threads_oversubscription);
 
   if (Opts.OpenMPTeamSubscription)
-    GenerateArg(Args, OPT_fopenmp_assume_teams_oversubscription, SA);
+    GenerateArg(Consumer, OPT_fopenmp_assume_teams_oversubscription);
 
   if (Opts.OpenMPTargetDebug != 0)
-    GenerateArg(Args, OPT_fopenmp_target_debug_EQ,
-                Twine(Opts.OpenMPTargetDebug), SA);
+    GenerateArg(Consumer, OPT_fopenmp_target_debug_EQ,
+                Twine(Opts.OpenMPTargetDebug));
 
   if (Opts.OpenMPCUDANumSMs != 0)
-    GenerateArg(Args, OPT_fopenmp_cuda_number_of_sm_EQ,
-                Twine(Opts.OpenMPCUDANumSMs), SA);
+    GenerateArg(Consumer, OPT_fopenmp_cuda_number_of_sm_EQ,
+                Twine(Opts.OpenMPCUDANumSMs));
 
   if (Opts.OpenMPCUDABlocksPerSM != 0)
-    GenerateArg(Args, OPT_fopenmp_cuda_blocks_per_sm_EQ,
-                Twine(Opts.OpenMPCUDABlocksPerSM), SA);
+    GenerateArg(Consumer, OPT_fopenmp_cuda_blocks_per_sm_EQ,
+                Twine(Opts.OpenMPCUDABlocksPerSM));
 
   if (Opts.OpenMPCUDAReductionBufNum != 1024)
-    GenerateArg(Args, OPT_fopenmp_cuda_teams_reduction_recs_num_EQ,
-                Twine(Opts.OpenMPCUDAReductionBufNum), SA);
+    GenerateArg(Consumer, OPT_fopenmp_cuda_teams_reduction_recs_num_EQ,
+                Twine(Opts.OpenMPCUDAReductionBufNum));
 
   if (!Opts.OMPTargetTriples.empty()) {
     std::string Targets;
@@ -3435,83 +3521,83 @@ void CompilerInvocation::GenerateLangArgs(const LangOptions &Opts,
     llvm::interleave(
         Opts.OMPTargetTriples, OS,
         [&OS](const llvm::Triple &T) { OS << T.str(); }, ",");
-    GenerateArg(Args, OPT_fopenmp_targets_EQ, OS.str(), SA);
+    GenerateArg(Consumer, OPT_fopenmp_targets_EQ, OS.str());
   }
 
   if (!Opts.OMPHostIRFile.empty())
-    GenerateArg(Args, OPT_fopenmp_host_ir_file_path, Opts.OMPHostIRFile, SA);
+    GenerateArg(Consumer, OPT_fopenmp_host_ir_file_path, Opts.OMPHostIRFile);
 
   if (Opts.OpenMPCUDAMode)
-    GenerateArg(Args, OPT_fopenmp_cuda_mode, SA);
+    GenerateArg(Consumer, OPT_fopenmp_cuda_mode);
 
   // The arguments used to set Optimize, OptimizeSize and NoInlineDefine are
   // generated from CodeGenOptions.
 
   if (Opts.DefaultFPContractMode == LangOptions::FPM_Fast)
-    GenerateArg(Args, OPT_ffp_contract, "fast", SA);
+    GenerateArg(Consumer, OPT_ffp_contract, "fast");
   else if (Opts.DefaultFPContractMode == LangOptions::FPM_On)
-    GenerateArg(Args, OPT_ffp_contract, "on", SA);
+    GenerateArg(Consumer, OPT_ffp_contract, "on");
   else if (Opts.DefaultFPContractMode == LangOptions::FPM_Off)
-    GenerateArg(Args, OPT_ffp_contract, "off", SA);
+    GenerateArg(Consumer, OPT_ffp_contract, "off");
   else if (Opts.DefaultFPContractMode == LangOptions::FPM_FastHonorPragmas)
-    GenerateArg(Args, OPT_ffp_contract, "fast-honor-pragmas", SA);
+    GenerateArg(Consumer, OPT_ffp_contract, "fast-honor-pragmas");
 
   for (StringRef Sanitizer : serializeSanitizerKinds(Opts.Sanitize))
-    GenerateArg(Args, OPT_fsanitize_EQ, Sanitizer, SA);
+    GenerateArg(Consumer, OPT_fsanitize_EQ, Sanitizer);
 
   // Conflating '-fsanitize-system-ignorelist' and '-fsanitize-ignorelist'.
   for (const std::string &F : Opts.NoSanitizeFiles)
-    GenerateArg(Args, OPT_fsanitize_ignorelist_EQ, F, SA);
+    GenerateArg(Consumer, OPT_fsanitize_ignorelist_EQ, F);
 
   if (Opts.getClangABICompat() == LangOptions::ClangABI::Ver3_8)
-    GenerateArg(Args, OPT_fclang_abi_compat_EQ, "3.8", SA);
+    GenerateArg(Consumer, OPT_fclang_abi_compat_EQ, "3.8");
   else if (Opts.getClangABICompat() == LangOptions::ClangABI::Ver4)
-    GenerateArg(Args, OPT_fclang_abi_compat_EQ, "4.0", SA);
+    GenerateArg(Consumer, OPT_fclang_abi_compat_EQ, "4.0");
   else if (Opts.getClangABICompat() == LangOptions::ClangABI::Ver6)
-    GenerateArg(Args, OPT_fclang_abi_compat_EQ, "6.0", SA);
+    GenerateArg(Consumer, OPT_fclang_abi_compat_EQ, "6.0");
   else if (Opts.getClangABICompat() == LangOptions::ClangABI::Ver7)
-    GenerateArg(Args, OPT_fclang_abi_compat_EQ, "7.0", SA);
+    GenerateArg(Consumer, OPT_fclang_abi_compat_EQ, "7.0");
   else if (Opts.getClangABICompat() == LangOptions::ClangABI::Ver9)
-    GenerateArg(Args, OPT_fclang_abi_compat_EQ, "9.0", SA);
+    GenerateArg(Consumer, OPT_fclang_abi_compat_EQ, "9.0");
   else if (Opts.getClangABICompat() == LangOptions::ClangABI::Ver11)
-    GenerateArg(Args, OPT_fclang_abi_compat_EQ, "11.0", SA);
+    GenerateArg(Consumer, OPT_fclang_abi_compat_EQ, "11.0");
   else if (Opts.getClangABICompat() == LangOptions::ClangABI::Ver12)
-    GenerateArg(Args, OPT_fclang_abi_compat_EQ, "12.0", SA);
+    GenerateArg(Consumer, OPT_fclang_abi_compat_EQ, "12.0");
   else if (Opts.getClangABICompat() == LangOptions::ClangABI::Ver14)
-    GenerateArg(Args, OPT_fclang_abi_compat_EQ, "14.0", SA);
+    GenerateArg(Consumer, OPT_fclang_abi_compat_EQ, "14.0");
   else if (Opts.getClangABICompat() == LangOptions::ClangABI::Ver15)
-    GenerateArg(Args, OPT_fclang_abi_compat_EQ, "15.0", SA);
+    GenerateArg(Consumer, OPT_fclang_abi_compat_EQ, "15.0");
 
   if (Opts.getSignReturnAddressScope() ==
       LangOptions::SignReturnAddressScopeKind::All)
-    GenerateArg(Args, OPT_msign_return_address_EQ, "all", SA);
+    GenerateArg(Consumer, OPT_msign_return_address_EQ, "all");
   else if (Opts.getSignReturnAddressScope() ==
            LangOptions::SignReturnAddressScopeKind::NonLeaf)
-    GenerateArg(Args, OPT_msign_return_address_EQ, "non-leaf", SA);
+    GenerateArg(Consumer, OPT_msign_return_address_EQ, "non-leaf");
 
   if (Opts.getSignReturnAddressKey() ==
       LangOptions::SignReturnAddressKeyKind::BKey)
-    GenerateArg(Args, OPT_msign_return_address_key_EQ, "b_key", SA);
+    GenerateArg(Consumer, OPT_msign_return_address_key_EQ, "b_key");
 
   if (Opts.CXXABI)
-    GenerateArg(Args, OPT_fcxx_abi_EQ, TargetCXXABI::getSpelling(*Opts.CXXABI),
-                SA);
+    GenerateArg(Consumer, OPT_fcxx_abi_EQ,
+                TargetCXXABI::getSpelling(*Opts.CXXABI));
 
   if (Opts.RelativeCXXABIVTables)
-    GenerateArg(Args, OPT_fexperimental_relative_cxx_abi_vtables, SA);
+    GenerateArg(Consumer, OPT_fexperimental_relative_cxx_abi_vtables);
   else
-    GenerateArg(Args, OPT_fno_experimental_relative_cxx_abi_vtables, SA);
+    GenerateArg(Consumer, OPT_fno_experimental_relative_cxx_abi_vtables);
 
   if (Opts.UseTargetPathSeparator)
-    GenerateArg(Args, OPT_ffile_reproducible, SA);
+    GenerateArg(Consumer, OPT_ffile_reproducible);
   else
-    GenerateArg(Args, OPT_fno_file_reproducible, SA);
+    GenerateArg(Consumer, OPT_fno_file_reproducible);
 
   for (const auto &MP : Opts.MacroPrefixMap)
-    GenerateArg(Args, OPT_fmacro_prefix_map_EQ, MP.first + "=" + MP.second, SA);
+    GenerateArg(Consumer, OPT_fmacro_prefix_map_EQ, MP.first + "=" + MP.second);
 
   if (!Opts.RandstructSeed.empty())
-    GenerateArg(Args, OPT_frandomize_layout_seed_EQ, Opts.RandstructSeed, SA);
+    GenerateArg(Consumer, OPT_frandomize_layout_seed_EQ, Opts.RandstructSeed);
 }
 
 bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
@@ -3734,9 +3820,9 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
   Opts.Blocks = Args.hasArg(OPT_fblocks) || (Opts.OpenCL
     && Opts.OpenCLVersion == 200);
 
-  Opts.ConvergentFunctions = Opts.OpenCL || (Opts.CUDA && Opts.CUDAIsDevice) ||
-                             Opts.SYCLIsDevice ||
-                             Args.hasArg(OPT_fconvergent_functions);
+  Opts.ConvergentFunctions = Args.hasArg(OPT_fconvergent_functions) ||
+                             Opts.OpenCL || (Opts.CUDA && Opts.CUDAIsDevice) ||
+                             Opts.SYCLIsDevice;
 
   Opts.NoBuiltin = Args.hasArg(OPT_fno_builtin) || Opts.Freestanding;
   if (!Opts.NoBuiltin)
@@ -3771,7 +3857,7 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
   }
 
   // Check if -fopenmp is specified and set default version to 5.0.
-  Opts.OpenMP = Args.hasArg(OPT_fopenmp) ? 50 : 0;
+  Opts.OpenMP = Args.hasArg(OPT_fopenmp) ? 51 : 0;
   // Check if -fopenmp-simd is specified.
   bool IsSimdSpecified =
       Args.hasFlag(options::OPT_fopenmp_simd, options::OPT_fno_openmp_simd,
@@ -3779,23 +3865,24 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
   Opts.OpenMPSimd = !Opts.OpenMP && IsSimdSpecified;
   Opts.OpenMPUseTLS =
       Opts.OpenMP && !Args.hasArg(options::OPT_fnoopenmp_use_tls);
-  Opts.OpenMPIsDevice =
-      Opts.OpenMP && Args.hasArg(options::OPT_fopenmp_is_device);
+  Opts.OpenMPIsTargetDevice =
+      Opts.OpenMP && Args.hasArg(options::OPT_fopenmp_is_target_device);
   Opts.OpenMPIRBuilder =
       Opts.OpenMP && Args.hasArg(options::OPT_fopenmp_enable_irbuilder);
   bool IsTargetSpecified =
-      Opts.OpenMPIsDevice || Args.hasArg(options::OPT_fopenmp_targets_EQ);
+      Opts.OpenMPIsTargetDevice || Args.hasArg(options::OPT_fopenmp_targets_EQ);
 
-  Opts.ConvergentFunctions = Opts.ConvergentFunctions || Opts.OpenMPIsDevice;
+  Opts.ConvergentFunctions =
+      Opts.ConvergentFunctions || Opts.OpenMPIsTargetDevice;
 
   if (Opts.OpenMP || Opts.OpenMPSimd) {
     if (int Version = getLastArgIntValue(
             Args, OPT_fopenmp_version_EQ,
-            (IsSimdSpecified || IsTargetSpecified) ? 50 : Opts.OpenMP, Diags))
+            (IsSimdSpecified || IsTargetSpecified) ? 51 : Opts.OpenMP, Diags))
       Opts.OpenMP = Version;
     // Provide diagnostic when a given target is not expected to be an OpenMP
     // device or host.
-    if (!Opts.OpenMPIsDevice) {
+    if (!Opts.OpenMPIsTargetDevice) {
       switch (T.getArch()) {
       default:
         break;
@@ -3810,13 +3897,13 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
 
   // Set the flag to prevent the implementation from emitting device exception
   // handling code for those requiring so.
-  if ((Opts.OpenMPIsDevice && (T.isNVPTX() || T.isAMDGCN())) ||
+  if ((Opts.OpenMPIsTargetDevice && (T.isNVPTX() || T.isAMDGCN())) ||
       Opts.OpenCLCPlusPlus) {
 
     Opts.Exceptions = 0;
     Opts.CXXExceptions = 0;
   }
-  if (Opts.OpenMPIsDevice && T.isNVPTX()) {
+  if (Opts.OpenMPIsTargetDevice && T.isNVPTX()) {
     Opts.OpenMPCUDANumSMs =
         getLastArgIntValue(Args, options::OPT_fopenmp_cuda_number_of_sm_EQ,
                            Opts.OpenMPCUDANumSMs, Diags);
@@ -3830,15 +3917,15 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
 
   // Set the value of the debugging flag used in the new offloading device RTL.
   // Set either by a specific value or to a default if not specified.
-  if (Opts.OpenMPIsDevice && (Args.hasArg(OPT_fopenmp_target_debug) ||
-                              Args.hasArg(OPT_fopenmp_target_debug_EQ))) {
+  if (Opts.OpenMPIsTargetDevice && (Args.hasArg(OPT_fopenmp_target_debug) ||
+                                    Args.hasArg(OPT_fopenmp_target_debug_EQ))) {
     Opts.OpenMPTargetDebug = getLastArgIntValue(
         Args, OPT_fopenmp_target_debug_EQ, Opts.OpenMPTargetDebug, Diags);
     if (!Opts.OpenMPTargetDebug && Args.hasArg(OPT_fopenmp_target_debug))
       Opts.OpenMPTargetDebug = 1;
   }
 
-  if (Opts.OpenMPIsDevice) {
+  if (Opts.OpenMPIsTargetDevice) {
     if (Args.hasArg(OPT_fopenmp_assume_teams_oversubscription))
       Opts.OpenMPTeamSubscription = true;
     if (Args.hasArg(OPT_fopenmp_assume_threads_oversubscription))
@@ -3886,7 +3973,8 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
   }
 
   // Set CUDA mode for OpenMP target NVPTX/AMDGCN if specified in options
-  Opts.OpenMPCUDAMode = Opts.OpenMPIsDevice && (T.isNVPTX() || T.isAMDGCN()) &&
+  Opts.OpenMPCUDAMode = Opts.OpenMPIsTargetDevice &&
+                        (T.isNVPTX() || T.isAMDGCN()) &&
                         Args.hasArg(options::OPT_fopenmp_cuda_mode);
 
   // FIXME: Eliminate this dependency.
@@ -4055,7 +4143,8 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
 
   // Validate options for HLSL
   if (Opts.HLSL) {
-    bool SupportedTarget = T.getArch() == llvm::Triple::dxil &&
+    bool SupportedTarget = (T.getArch() == llvm::Triple::dxil ||
+                            T.getArch() == llvm::Triple::spirv) &&
                            T.getOS() == llvm::Triple::ShaderModel;
     if (!SupportedTarget)
       Diags.Report(diag::err_drv_hlsl_unsupported_target) << T.str();
@@ -4109,30 +4198,28 @@ static bool isStrictlyPreprocessorAction(frontend::ActionKind Action) {
   llvm_unreachable("invalid frontend action");
 }
 
-static void GeneratePreprocessorArgs(PreprocessorOptions &Opts,
-                                     SmallVectorImpl<const char *> &Args,
-                                     CompilerInvocation::StringAllocator SA,
+static void GeneratePreprocessorArgs(const PreprocessorOptions &Opts,
+                                     ArgumentConsumer Consumer,
                                      const LangOptions &LangOpts,
                                      const FrontendOptions &FrontendOpts,
                                      const CodeGenOptions &CodeGenOpts) {
-  PreprocessorOptions *PreprocessorOpts = &Opts;
+  const PreprocessorOptions *PreprocessorOpts = &Opts;
 
 #define PREPROCESSOR_OPTION_WITH_MARSHALLING(...)                              \
-  GENERATE_OPTION_WITH_MARSHALLING(Args, SA, __VA_ARGS__)
+  GENERATE_OPTION_WITH_MARSHALLING(Consumer, __VA_ARGS__)
 #include "clang/Driver/Options.inc"
 #undef PREPROCESSOR_OPTION_WITH_MARSHALLING
 
   if (Opts.PCHWithHdrStop && !Opts.PCHWithHdrStopCreate)
-    GenerateArg(Args, OPT_pch_through_hdrstop_use, SA);
+    GenerateArg(Consumer, OPT_pch_through_hdrstop_use);
 
   for (const auto &D : Opts.DeserializedPCHDeclsToErrorOn)
-    GenerateArg(Args, OPT_error_on_deserialized_pch_decl, D, SA);
+    GenerateArg(Consumer, OPT_error_on_deserialized_pch_decl, D);
 
   if (Opts.PrecompiledPreambleBytes != std::make_pair(0u, false))
-    GenerateArg(Args, OPT_preamble_bytes_EQ,
+    GenerateArg(Consumer, OPT_preamble_bytes_EQ,
                 Twine(Opts.PrecompiledPreambleBytes.first) + "," +
-                    (Opts.PrecompiledPreambleBytes.second ? "1" : "0"),
-                SA);
+                    (Opts.PrecompiledPreambleBytes.second ? "1" : "0"));
 
   for (const auto &M : Opts.Macros) {
     // Don't generate __CET__ macro definitions. They are implied by the
@@ -4147,7 +4234,7 @@ static void GeneratePreprocessorArgs(PreprocessorOptions &Opts,
         CodeGenOpts.CFProtectionBranch)
       continue;
 
-    GenerateArg(Args, M.second ? OPT_U : OPT_D, M.first, SA);
+    GenerateArg(Consumer, M.second ? OPT_U : OPT_D, M.first);
   }
 
   for (const auto &I : Opts.Includes) {
@@ -4162,17 +4249,17 @@ static void GeneratePreprocessorArgs(PreprocessorOptions &Opts,
     if (LangOpts.HLSL && I == "hlsl.h")
       continue;
 
-    GenerateArg(Args, OPT_include, I, SA);
+    GenerateArg(Consumer, OPT_include, I);
   }
 
   for (const auto &CI : Opts.ChainedIncludes)
-    GenerateArg(Args, OPT_chain_include, CI, SA);
+    GenerateArg(Consumer, OPT_chain_include, CI);
 
   for (const auto &RF : Opts.RemappedFiles)
-    GenerateArg(Args, OPT_remap_file, RF.first + ";" + RF.second, SA);
+    GenerateArg(Consumer, OPT_remap_file, RF.first + ";" + RF.second);
 
   if (Opts.SourceDateEpoch)
-    GenerateArg(Args, OPT_source_date_epoch, Twine(*Opts.SourceDateEpoch), SA);
+    GenerateArg(Consumer, OPT_source_date_epoch, Twine(*Opts.SourceDateEpoch));
 
   // Don't handle LexEditorPlaceholders. It is implied by the action that is
   // generated elsewhere.
@@ -4275,23 +4362,24 @@ static bool ParsePreprocessorArgs(PreprocessorOptions &Opts, ArgList &Args,
   return Diags.getNumErrors() == NumErrorsBefore;
 }
 
-static void GeneratePreprocessorOutputArgs(
-    const PreprocessorOutputOptions &Opts, SmallVectorImpl<const char *> &Args,
-    CompilerInvocation::StringAllocator SA, frontend::ActionKind Action) {
+static void
+GeneratePreprocessorOutputArgs(const PreprocessorOutputOptions &Opts,
+                               ArgumentConsumer Consumer,
+                               frontend::ActionKind Action) {
   const PreprocessorOutputOptions &PreprocessorOutputOpts = Opts;
 
 #define PREPROCESSOR_OUTPUT_OPTION_WITH_MARSHALLING(...)                       \
-  GENERATE_OPTION_WITH_MARSHALLING(Args, SA, __VA_ARGS__)
+  GENERATE_OPTION_WITH_MARSHALLING(Consumer, __VA_ARGS__)
 #include "clang/Driver/Options.inc"
 #undef PREPROCESSOR_OUTPUT_OPTION_WITH_MARSHALLING
 
   bool Generate_dM = isStrictlyPreprocessorAction(Action) && !Opts.ShowCPP;
   if (Generate_dM)
-    GenerateArg(Args, OPT_dM, SA);
+    GenerateArg(Consumer, OPT_dM);
   if (!Generate_dM && Opts.ShowMacros)
-    GenerateArg(Args, OPT_dD, SA);
+    GenerateArg(Consumer, OPT_dD);
   if (Opts.DirectivesOnly)
-    GenerateArg(Args, OPT_fdirectives_only, SA);
+    GenerateArg(Consumer, OPT_fdirectives_only);
 }
 
 static bool ParsePreprocessorOutputArgs(PreprocessorOutputOptions &Opts,
@@ -4314,20 +4402,19 @@ static bool ParsePreprocessorOutputArgs(PreprocessorOutputOptions &Opts,
 }
 
 static void GenerateTargetArgs(const TargetOptions &Opts,
-                               SmallVectorImpl<const char *> &Args,
-                               CompilerInvocation::StringAllocator SA) {
+                               ArgumentConsumer Consumer) {
   const TargetOptions *TargetOpts = &Opts;
 #define TARGET_OPTION_WITH_MARSHALLING(...)                                    \
-  GENERATE_OPTION_WITH_MARSHALLING(Args, SA, __VA_ARGS__)
+  GENERATE_OPTION_WITH_MARSHALLING(Consumer, __VA_ARGS__)
 #include "clang/Driver/Options.inc"
 #undef TARGET_OPTION_WITH_MARSHALLING
 
   if (!Opts.SDKVersion.empty())
-    GenerateArg(Args, OPT_target_sdk_version_EQ, Opts.SDKVersion.getAsString(),
-                SA);
+    GenerateArg(Consumer, OPT_target_sdk_version_EQ,
+                Opts.SDKVersion.getAsString());
   if (!Opts.DarwinTargetVariantSDKVersion.empty())
-    GenerateArg(Args, OPT_darwin_target_variant_sdk_version_EQ,
-                Opts.DarwinTargetVariantSDKVersion.getAsString(), SA);
+    GenerateArg(Consumer, OPT_darwin_target_variant_sdk_version_EQ,
+                Opts.DarwinTargetVariantSDKVersion.getAsString());
 }
 
 static bool ParseTargetArgs(TargetOptions &Opts, ArgList &Args,
@@ -4369,11 +4456,11 @@ bool CompilerInvocation::CreateFromArgsImpl(
 
   // Parse the arguments.
   const OptTable &Opts = getDriverOptTable();
-  const unsigned IncludedFlagsBitmask = options::CC1Option;
+  llvm::opt::Visibility VisibilityMask(options::CC1Option);
   unsigned MissingArgIndex, MissingArgCount;
   InputArgList Args = Opts.ParseArgs(CommandLineArgs, MissingArgIndex,
-                                     MissingArgCount, IncludedFlagsBitmask);
-  LangOptions &LangOpts = *Res.getLangOpts();
+                                     MissingArgCount, VisibilityMask);
+  LangOptions &LangOpts = Res.getLangOpts();
 
   // Check for missing argument error.
   if (MissingArgCount)
@@ -4384,7 +4471,7 @@ bool CompilerInvocation::CreateFromArgsImpl(
   for (const auto *A : Args.filtered(OPT_UNKNOWN)) {
     auto ArgString = A->getAsString(Args);
     std::string Nearest;
-    if (Opts.findNearest(ArgString, Nearest, IncludedFlagsBitmask) > 1)
+    if (Opts.findNearest(ArgString, Nearest, VisibilityMask) > 1)
       Diags.Report(diag::err_drv_unknown_argument) << ArgString;
     else
       Diags.Report(diag::err_drv_unknown_argument_with_suggestion)
@@ -4393,7 +4480,7 @@ bool CompilerInvocation::CreateFromArgsImpl(
 
   ParseFileSystemArgs(Res.getFileSystemOpts(), Args, Diags);
   ParseMigratorArgs(Res.getMigratorOpts(), Args, Diags);
-  ParseAnalyzerArgs(*Res.getAnalyzerOpts(), Args, Diags);
+  ParseAnalyzerArgs(Res.getAnalyzerOpts(), Args, Diags);
   ParseDiagnosticArgs(Res.getDiagnosticOpts(), Args, &Diags,
                       /*DefaultDiagColor=*/false);
   ParseFrontendArgs(Res.getFrontendOpts(), Args, Diags, LangOpts.IsHeaderFile);
@@ -4424,7 +4511,7 @@ bool CompilerInvocation::CreateFromArgsImpl(
   }
 
   // Set the triple of the host for OpenMP device compile.
-  if (LangOpts.OpenMPIsDevice)
+  if (LangOpts.OpenMPIsTargetDevice)
     Res.getTargetOpts().HostTriple = Res.getFrontendOpts().AuxTriple;
 
   ParseCodeGenArgs(Res.getCodeGenOpts(), Args, DashX, Diags, T,
@@ -4454,7 +4541,7 @@ bool CompilerInvocation::CreateFromArgsImpl(
 
   // If sanitizer is enabled, disable OPT_ffine_grained_bitfield_accesses.
   if (Res.getCodeGenOpts().FineGrainedBitfieldAccesses &&
-      !Res.getLangOpts()->Sanitize.empty()) {
+      !Res.getLangOpts().Sanitize.empty()) {
     Res.getCodeGenOpts().FineGrainedBitfieldAccesses = false;
     Diags.Report(diag::warn_drv_fine_grained_bitfield_accesses_ignored);
   }
@@ -4522,15 +4609,15 @@ std::string CompilerInvocation::getModuleHash() const {
 #define BENIGN_ENUM_LANGOPT(Name, Type, Bits, Default, Description)
 #include "clang/Basic/LangOptions.def"
 
-  HBuilder.addRange(LangOpts->ModuleFeatures);
+  HBuilder.addRange(getLangOpts().ModuleFeatures);
 
-  HBuilder.add(LangOpts->ObjCRuntime);
-  HBuilder.addRange(LangOpts->CommentOpts.BlockCommandNames);
+  HBuilder.add(getLangOpts().ObjCRuntime);
+  HBuilder.addRange(getLangOpts().CommentOpts.BlockCommandNames);
 
   // Extend the signature with the target options.
-  HBuilder.add(TargetOpts->Triple, TargetOpts->CPU, TargetOpts->TuneCPU,
-               TargetOpts->ABI);
-  HBuilder.addRange(TargetOpts->FeaturesAsWritten);
+  HBuilder.add(getTargetOpts().Triple, getTargetOpts().CPU,
+               getTargetOpts().TuneCPU, getTargetOpts().ABI);
+  HBuilder.addRange(getTargetOpts().FeaturesAsWritten);
 
   // Extend the signature with preprocessor options.
   const PreprocessorOptions &ppOpts = getPreprocessorOpts();
@@ -4585,7 +4672,7 @@ std::string CompilerInvocation::getModuleHash() const {
 
   // Extend the signature with the enabled sanitizers, if at least one is
   // enabled. Sanitizers which cannot affect AST generation aren't hashed.
-  SanitizerSet SanHash = LangOpts->Sanitize;
+  SanitizerSet SanHash = getLangOpts().Sanitize;
   SanHash.clear(getPPTransparentSanitizers());
   if (!SanHash.empty())
     HBuilder.add(SanHash.Mask);
@@ -4596,48 +4683,42 @@ std::string CompilerInvocation::getModuleHash() const {
   return toString(llvm::APInt(64, Hash), 36, /*Signed=*/false);
 }
 
-void CompilerInvocation::generateCC1CommandLine(
-    SmallVectorImpl<const char *> &Args, StringAllocator SA) const {
-  llvm::Triple T(TargetOpts->Triple);
+void CompilerInvocationBase::generateCC1CommandLine(
+    ArgumentConsumer Consumer) const {
+  llvm::Triple T(getTargetOpts().Triple);
 
-  GenerateFileSystemArgs(FileSystemOpts, Args, SA);
-  GenerateMigratorArgs(MigratorOpts, Args, SA);
-  GenerateAnalyzerArgs(*AnalyzerOpts, Args, SA);
-  GenerateDiagnosticArgs(*DiagnosticOpts, Args, SA, false);
-  GenerateFrontendArgs(FrontendOpts, Args, SA, LangOpts->IsHeaderFile);
-  GenerateTargetArgs(*TargetOpts, Args, SA);
-  GenerateHeaderSearchArgs(*HeaderSearchOpts, Args, SA);
-  GenerateLangArgs(*LangOpts, Args, SA, T, FrontendOpts.DashX);
-  GenerateCodeGenArgs(CodeGenOpts, Args, SA, T, FrontendOpts.OutputFile,
-                      &*LangOpts);
-  GeneratePreprocessorArgs(*PreprocessorOpts, Args, SA, *LangOpts, FrontendOpts,
-                           CodeGenOpts);
-  GeneratePreprocessorOutputArgs(PreprocessorOutputOpts, Args, SA,
-                                 FrontendOpts.ProgramAction);
-  GenerateDependencyOutputArgs(DependencyOutputOpts, Args, SA);
+  GenerateFileSystemArgs(getFileSystemOpts(), Consumer);
+  GenerateMigratorArgs(getMigratorOpts(), Consumer);
+  GenerateAnalyzerArgs(getAnalyzerOpts(), Consumer);
+  GenerateDiagnosticArgs(getDiagnosticOpts(), Consumer,
+                         /*DefaultDiagColor=*/false);
+  GenerateFrontendArgs(getFrontendOpts(), Consumer, getLangOpts().IsHeaderFile);
+  GenerateTargetArgs(getTargetOpts(), Consumer);
+  GenerateHeaderSearchArgs(getHeaderSearchOpts(), Consumer);
+  GenerateLangArgs(getLangOpts(), Consumer, T, getFrontendOpts().DashX);
+  GenerateCodeGenArgs(getCodeGenOpts(), Consumer, T,
+                      getFrontendOpts().OutputFile, &getLangOpts());
+  GeneratePreprocessorArgs(getPreprocessorOpts(), Consumer, getLangOpts(),
+                           getFrontendOpts(), getCodeGenOpts());
+  GeneratePreprocessorOutputArgs(getPreprocessorOutputOpts(), Consumer,
+                                 getFrontendOpts().ProgramAction);
+  GenerateDependencyOutputArgs(getDependencyOutputOpts(), Consumer);
 }
 
-std::vector<std::string> CompilerInvocation::getCC1CommandLine() const {
-  // Set up string allocator.
-  llvm::BumpPtrAllocator Alloc;
-  llvm::StringSaver Strings(Alloc);
-  auto SA = [&Strings](const Twine &Arg) { return Strings.save(Arg).data(); };
-
-  // Synthesize full command line from the CompilerInvocation, including "-cc1".
-  SmallVector<const char *, 32> Args{"-cc1"};
-  generateCC1CommandLine(Args, SA);
-
-  // Convert arguments to the return type.
-  return std::vector<std::string>{Args.begin(), Args.end()};
+std::vector<std::string> CompilerInvocationBase::getCC1CommandLine() const {
+  std::vector<std::string> Args{"-cc1"};
+  generateCC1CommandLine(
+      [&Args](const Twine &Arg) { Args.push_back(Arg.str()); });
+  return Args;
 }
 
 void CompilerInvocation::resetNonModularOptions() {
-  getLangOpts()->resetNonModularOptions();
+  getLangOpts().resetNonModularOptions();
   getPreprocessorOpts().resetNonModularOptions();
 }
 
 void CompilerInvocation::clearImplicitModuleBuildOptions() {
-  getLangOpts()->ImplicitModules = false;
+  getLangOpts().ImplicitModules = false;
   getHeaderSearchOpts().ImplicitModuleMaps = false;
   getHeaderSearchOpts().ModuleCachePath.clear();
   getHeaderSearchOpts().ModulesValidateOncePerBuildSession = false;

@@ -117,9 +117,7 @@ enum WrapperFlags {
 
 enum ID {
   OPT_INVALID = 0, // This is not an option ID.
-#define OPTION(PREFIX, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS, PARAM,  \
-               HELPTEXT, METAVAR, VALUES)                                      \
-  OPT_##ID,
+#define OPTION(...) LLVM_MAKE_OPT_ID(__VA_ARGS__),
 #include "LinkerWrapperOpts.inc"
   LastOption
 #undef OPTION
@@ -133,10 +131,7 @@ enum ID {
 #undef PREFIX
 
 static constexpr OptTable::Info InfoTable[] = {
-#define OPTION(PREFIX, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS, PARAM,  \
-               HELPTEXT, METAVAR, VALUES)                                      \
-  {PREFIX, NAME,  HELPTEXT,    METAVAR,     OPT_##ID,  Option::KIND##Class,    \
-   PARAM,  FLAGS, OPT_##GROUP, OPT_##ALIAS, ALIASARGS, VALUES},
+#define OPTION(...) LLVM_CONSTRUCT_OPT_INFO(__VA_ARGS__),
 #include "LinkerWrapperOpts.inc"
 #undef OPTION
 };
@@ -189,7 +184,8 @@ Expected<OffloadFile> getInputBitcodeLibrary(StringRef Input) {
   Image.StringData["arch"] = Arch;
   Image.Image = std::move(*ImageOrError);
 
-  std::unique_ptr<MemoryBuffer> Binary = OffloadBinary::write(Image);
+  std::unique_ptr<MemoryBuffer> Binary =
+      MemoryBuffer::getMemBufferCopy(OffloadBinary::write(Image));
   auto NewBinaryOrErr = OffloadBinary::create(*Binary);
   if (!NewBinaryOrErr)
     return NewBinaryOrErr.takeError();
@@ -408,6 +404,12 @@ Expected<StringRef> clang(ArrayRef<StringRef> InputFiles, const ArgList &Args) {
     llvm::copy(LinkerArgs, std::back_inserter(CmdArgs));
   }
 
+  // Pass on -mllvm options to the clang invocation.
+  for (const opt::Arg *Arg : Args.filtered(OPT_mllvm)) {
+    CmdArgs.push_back("-mllvm");
+    CmdArgs.push_back(Arg->getValue());
+  }
+
   if (Args.hasArg(OPT_debug))
     CmdArgs.push_back("-g");
 
@@ -426,6 +428,17 @@ Expected<StringRef> clang(ArrayRef<StringRef> InputFiles, const ArgList &Args) {
 
   for (StringRef Arg : Args.getAllArgValues(OPT_linker_arg_EQ))
     CmdArgs.push_back(Args.MakeArgString("-Wl," + Arg));
+
+  for (StringRef Arg : Args.getAllArgValues(OPT_builtin_bitcode_EQ)) {
+    if (llvm::Triple(Arg.split('=').first) == Triple)
+      CmdArgs.append({"-Xclang", "-mlink-builtin-bitcode", "-Xclang",
+                      Args.MakeArgString(Arg.split('=').second)});
+  }
+
+  // The OpenMPOpt pass can introduce new calls and is expensive, we do not want
+  // this when running CodeGen through clang.
+  if (Args.hasArg(OPT_clang_backend) || Args.hasArg(OPT_builtin_bitcode_EQ))
+    CmdArgs.append({"-mllvm", "-openmp-opt-disable"});
 
   if (Error Err = executeCommands(*ClangPath, CmdArgs))
     return std::move(Err);
@@ -629,7 +642,7 @@ Error linkBitcodeFiles(SmallVectorImpl<OffloadFile> &InputFiles,
   llvm::erase_if(InputFiles, [](OffloadFile &F) { return !F.getBinary(); });
 
   // LTO Module hook to output bitcode without running the backend.
-  SmallVector<StringRef, 4> BitcodeOutput;
+  SmallVector<StringRef> BitcodeOutput;
   auto OutputBitcode = [&](size_t, const Module &M) {
     auto TempFileOrErr = createOutputFile(sys::path::filename(ExecutableName) +
                                               "-jit-" + Triple.getTriple(),
@@ -648,7 +661,9 @@ Error linkBitcodeFiles(SmallVectorImpl<OffloadFile> &InputFiles,
 
   // We assume visibility of the whole program if every input file was bitcode.
   auto Features = getTargetFeatures(BitcodeInputFiles);
-  auto LTOBackend = Args.hasArg(OPT_embed_bitcode)
+  auto LTOBackend = Args.hasArg(OPT_embed_bitcode) ||
+                            Args.hasArg(OPT_builtin_bitcode_EQ) ||
+                            Args.hasArg(OPT_clang_backend)
                         ? createLTO(Args, Features, OutputBitcode)
                         : createLTO(Args, Features);
 
@@ -757,8 +772,12 @@ Error linkBitcodeFiles(SmallVectorImpl<OffloadFile> &InputFiles,
     return Error::success();
   }
 
-  // Append the new inputs to the device linker input.
-  for (StringRef File : Files)
+  // Append the new inputs to the device linker input. If the user requested an
+  // internalizing link we need to pass the bitcode to clang.
+  for (StringRef File :
+       Args.hasArg(OPT_clang_backend) || Args.hasArg(OPT_builtin_bitcode_EQ)
+           ? BitcodeOutput
+           : Files)
     OutputFiles.push_back(File);
 
   return Error::success();
@@ -891,7 +910,8 @@ Expected<SmallVector<std::unique_ptr<MemoryBuffer>>>
 bundleOpenMP(ArrayRef<OffloadingImage> Images) {
   SmallVector<std::unique_ptr<MemoryBuffer>> Buffers;
   for (const OffloadingImage &Image : Images)
-    Buffers.emplace_back(OffloadBinary::write(Image));
+    Buffers.emplace_back(
+        MemoryBuffer::getMemBufferCopy(OffloadBinary::write(Image)));
 
   return std::move(Buffers);
 }
@@ -1162,50 +1182,62 @@ enum Symbol : uint32_t {
 
 /// Scan the symbols from a BitcodeFile \p Buffer and record if we need to
 /// extract any symbols from it.
-Expected<bool> getSymbolsFromBitcode(MemoryBufferRef Buffer, StringSaver &Saver,
+Expected<bool> getSymbolsFromBitcode(MemoryBufferRef Buffer, OffloadKind Kind,
+                                     bool IsArchive, StringSaver &Saver,
                                      DenseMap<StringRef, Symbol> &Syms) {
   Expected<IRSymtabFile> IRSymtabOrErr = readIRSymtab(Buffer);
   if (!IRSymtabOrErr)
     return IRSymtabOrErr.takeError();
 
-  bool ShouldExtract = false;
+  bool ShouldExtract = !IsArchive;
+  DenseMap<StringRef, Symbol> TmpSyms;
   for (unsigned I = 0; I != IRSymtabOrErr->Mods.size(); ++I) {
     for (const auto &Sym : IRSymtabOrErr->TheReader.module_symbols(I)) {
       if (Sym.isFormatSpecific() || !Sym.isGlobal())
         continue;
 
       bool NewSymbol = Syms.count(Sym.getName()) == 0;
-      auto &OldSym = Syms[Saver.save(Sym.getName())];
+      auto OldSym = NewSymbol ? Sym_None : Syms[Sym.getName()];
 
       // We will extract if it defines a currenlty undefined non-weak symbol.
       bool ResolvesStrongReference =
           ((OldSym & Sym_Undefined && !(OldSym & Sym_Weak)) &&
            !Sym.isUndefined());
       // We will extract if it defines a new global symbol visible to the host.
+      // This is only necessary for code targeting an offloading language.
       bool NewGlobalSymbol =
           ((NewSymbol || (OldSym & Sym_Undefined)) && !Sym.isUndefined() &&
-           !Sym.canBeOmittedFromSymbolTable() &&
+           !Sym.canBeOmittedFromSymbolTable() && Kind != object::OFK_None &&
            (Sym.getVisibility() != GlobalValue::HiddenVisibility));
       ShouldExtract |= ResolvesStrongReference | NewGlobalSymbol;
 
       // Update this symbol in the "table" with the new information.
       if (OldSym & Sym_Undefined && !Sym.isUndefined())
-        OldSym = static_cast<Symbol>(OldSym & ~Sym_Undefined);
+        TmpSyms[Saver.save(Sym.getName())] =
+            static_cast<Symbol>(OldSym & ~Sym_Undefined);
       if (Sym.isUndefined() && NewSymbol)
-        OldSym = static_cast<Symbol>(OldSym | Sym_Undefined);
+        TmpSyms[Saver.save(Sym.getName())] =
+            static_cast<Symbol>(OldSym | Sym_Undefined);
       if (Sym.isWeak())
-        OldSym = static_cast<Symbol>(OldSym | Sym_Weak);
+        TmpSyms[Saver.save(Sym.getName())] =
+            static_cast<Symbol>(OldSym | Sym_Weak);
     }
   }
+
+  // If the file gets extracted we update the table with the new symbols.
+  if (ShouldExtract)
+    Syms.insert(std::begin(TmpSyms), std::end(TmpSyms));
 
   return ShouldExtract;
 }
 
 /// Scan the symbols from an ObjectFile \p Obj and record if we need to extract
 /// any symbols from it.
-Expected<bool> getSymbolsFromObject(const ObjectFile &Obj, StringSaver &Saver,
+Expected<bool> getSymbolsFromObject(const ObjectFile &Obj, OffloadKind Kind,
+                                    bool IsArchive, StringSaver &Saver,
                                     DenseMap<StringRef, Symbol> &Syms) {
-  bool ShouldExtract = false;
+  bool ShouldExtract = !IsArchive;
+  DenseMap<StringRef, Symbol> TmpSyms;
   for (SymbolRef Sym : Obj.symbols()) {
     auto FlagsOrErr = Sym.getFlags();
     if (!FlagsOrErr)
@@ -1220,7 +1252,7 @@ Expected<bool> getSymbolsFromObject(const ObjectFile &Obj, StringSaver &Saver,
       return NameOrErr.takeError();
 
     bool NewSymbol = Syms.count(*NameOrErr) == 0;
-    auto &OldSym = Syms[Saver.save(*NameOrErr)];
+    auto OldSym = NewSymbol ? Sym_None : Syms[*NameOrErr];
 
     // We will extract if it defines a currenlty undefined non-weak symbol.
     bool ResolvesStrongReference = (OldSym & Sym_Undefined) &&
@@ -1228,19 +1260,28 @@ Expected<bool> getSymbolsFromObject(const ObjectFile &Obj, StringSaver &Saver,
                                    !(*FlagsOrErr & SymbolRef::SF_Undefined);
 
     // We will extract if it defines a new global symbol visible to the host.
-    bool NewGlobalSymbol = ((NewSymbol || (OldSym & Sym_Undefined)) &&
-                            !(*FlagsOrErr & SymbolRef::SF_Undefined) &&
-                            !(*FlagsOrErr & SymbolRef::SF_Hidden));
+    // This is only necessary for code targeting an offloading language.
+    bool NewGlobalSymbol =
+        ((NewSymbol || (OldSym & Sym_Undefined)) &&
+         !(*FlagsOrErr & SymbolRef::SF_Undefined) && Kind != object::OFK_None &&
+         !(*FlagsOrErr & SymbolRef::SF_Hidden));
     ShouldExtract |= ResolvesStrongReference | NewGlobalSymbol;
 
     // Update this symbol in the "table" with the new information.
     if (OldSym & Sym_Undefined && !(*FlagsOrErr & SymbolRef::SF_Undefined))
-      OldSym = static_cast<Symbol>(OldSym & ~Sym_Undefined);
+      TmpSyms[Saver.save(*NameOrErr)] =
+          static_cast<Symbol>(OldSym & ~Sym_Undefined);
     if (*FlagsOrErr & SymbolRef::SF_Undefined && NewSymbol)
-      OldSym = static_cast<Symbol>(OldSym | Sym_Undefined);
+      TmpSyms[Saver.save(*NameOrErr)] =
+          static_cast<Symbol>(OldSym | Sym_Undefined);
     if (*FlagsOrErr & SymbolRef::SF_Weak)
-      OldSym = static_cast<Symbol>(OldSym | Sym_Weak);
+      TmpSyms[Saver.save(*NameOrErr)] = static_cast<Symbol>(OldSym | Sym_Weak);
   }
+
+  // If the file gets extracted we update the table with the new symbols.
+  if (ShouldExtract)
+    Syms.insert(std::begin(TmpSyms), std::end(TmpSyms));
+
   return ShouldExtract;
 }
 
@@ -1250,18 +1291,19 @@ Expected<bool> getSymbolsFromObject(const ObjectFile &Obj, StringSaver &Saver,
 ///   1) It defines an undefined symbol in a regular object filie.
 ///   2) It defines a global symbol without hidden visibility that has not
 ///      yet been defined.
-Expected<bool> getSymbols(StringRef Image, StringSaver &Saver,
+Expected<bool> getSymbols(StringRef Image, OffloadKind Kind, bool IsArchive,
+                          StringSaver &Saver,
                           DenseMap<StringRef, Symbol> &Syms) {
   MemoryBufferRef Buffer = MemoryBufferRef(Image, "");
   switch (identify_magic(Image)) {
   case file_magic::bitcode:
-    return getSymbolsFromBitcode(Buffer, Saver, Syms);
+    return getSymbolsFromBitcode(Buffer, Kind, IsArchive, Saver, Syms);
   case file_magic::elf_relocatable: {
     Expected<std::unique_ptr<ObjectFile>> ObjFile =
         ObjectFile::createObjectFile(Buffer);
     if (!ObjFile)
       return ObjFile.takeError();
-    return getSymbolsFromObject(**ObjFile, Saver, Syms);
+    return getSymbolsFromObject(**ObjFile, Kind, IsArchive, Saver, Syms);
   }
   default:
     return false;
@@ -1337,11 +1379,13 @@ Expected<SmallVector<OffloadFile>> getDeviceInput(const ArgList &Args) {
           continue;
 
         Expected<bool> ExtractOrErr =
-            getSymbols(Binary.getBinary()->getImage(), Saver, Syms[Binary]);
+            getSymbols(Binary.getBinary()->getImage(),
+                       Binary.getBinary()->getOffloadKind(), IsArchive, Saver,
+                       Syms[Binary]);
         if (!ExtractOrErr)
           return ExtractOrErr.takeError();
 
-        Extracted = IsArchive && !WholeArchive && *ExtractOrErr;
+        Extracted = !WholeArchive && *ExtractOrErr;
 
         if (!IsArchive || WholeArchive || Extracted)
           InputFiles.emplace_back(std::move(Binary));

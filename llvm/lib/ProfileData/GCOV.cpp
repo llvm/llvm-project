@@ -140,10 +140,7 @@ bool GCOVFile::readGCNO(GCOVBuffer &buf) {
         if (version >= GCOV::V900)
           fn->endColumn = buf.getWord();
       }
-      auto r = filenameToIdx.try_emplace(filename, filenameToIdx.size());
-      if (r.second)
-        filenames.emplace_back(filename);
-      fn->srcIdx = r.first->second;
+      fn->srcIdx = addNormalizedPathToMap(filename);
       identToFunction[fn->ident] = fn;
     } else if (tag == GCOV_TAG_BLOCKS && fn) {
       if (version < GCOV::V800) {
@@ -240,23 +237,14 @@ bool GCOVFile::readGCDA(GCOVBuffer &buf) {
     if (tag == GCOV_TAG_OBJECT_SUMMARY) {
       buf.readInt(runCount);
       buf.readInt(dummy);
-      // clang<11 uses a fake 4.2 format which sets length to 9.
-      if (length == 9)
-        buf.readInt(runCount);
     } else if (tag == GCOV_TAG_PROGRAM_SUMMARY) {
-      // clang<11 uses a fake 4.2 format which sets length to 0.
-      if (length > 0) {
-        buf.readInt(dummy);
-        buf.readInt(dummy);
-        buf.readInt(runCount);
-      }
+      buf.readInt(dummy);
+      buf.readInt(dummy);
+      buf.readInt(runCount);
       ++programCount;
     } else if (tag == GCOV_TAG_FUNCTION) {
       if (length == 0) // Placeholder
         continue;
-      // As of GCC 10, GCOV_TAG_FUNCTION_LENGTH has never been larger than 3.
-      // However, clang<11 uses a fake 4.2 format which may set length larger
-      // than 3.
       if (length < 2 || !buf.readInt(ident))
         return false;
       auto It = identToFunction.find(ident);
@@ -326,6 +314,19 @@ void GCOVFile::print(raw_ostream &OS) const {
 LLVM_DUMP_METHOD void GCOVFile::dump() const { print(dbgs()); }
 #endif
 
+unsigned GCOVFile::addNormalizedPathToMap(StringRef filename) {
+  // unify filename, as the same path can have different form
+  SmallString<256> P(filename);
+  sys::path::remove_dots(P, true);
+  filename = P.str();
+
+  auto r = filenameToIdx.try_emplace(filename, filenameToIdx.size());
+  if (r.second)
+    filenames.emplace_back(filename);
+
+  return r.first->second;
+}
+
 bool GCOVArc::onTree() const { return flags & GCOV_ARC_ON_TREE; }
 
 //===----------------------------------------------------------------------===//
@@ -337,10 +338,8 @@ StringRef GCOVFunction::getName(bool demangle) const {
   if (demangled.empty()) {
     do {
       if (Name.startswith("_Z")) {
-        int status = 0;
         // Name is guaranteed to be NUL-terminated.
-        char *res = itaniumDemangle(Name.data(), nullptr, nullptr, &status);
-        if (status == 0) {
+        if (char *res = itaniumDemangle(Name.data())) {
           demangled = res;
           free(res);
           break;

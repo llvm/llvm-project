@@ -450,10 +450,13 @@ let Class = PropertyTypeCase<APValue, "LValue"> in {
         lvalueBase ? lvalueBase.dyn_cast<const Expr *>() : nullptr;
     bool lvalueBaseIsExpr = (bool) expr;
     bool lvalueBaseIsTypeInfo = lvalueBase.is<TypeInfoLValue>();
+    bool lvalueBaseIsDynamicAlloc = lvalueBase.is<DynamicAllocLValue>();
     QualType elemTy;
     if (lvalueBase) {
       if (lvalueBaseIsTypeInfo) {
         elemTy = lvalueBase.getTypeInfoType();
+      } else if (lvalueBaseIsDynamicAlloc) {
+        elemTy = lvalueBase.getDynamicAllocType();
       } else if (lvalueBaseIsExpr) {
         elemTy = expr->getType();
       } else {
@@ -473,6 +476,9 @@ let Class = PropertyTypeCase<APValue, "LValue"> in {
   def : Property<"isTypeInfo", Bool> {
     let Read = [{ lvalueBaseIsTypeInfo }];
   }
+  def : Property<"isDynamicAlloc", Bool> {
+    let Read = [{ lvalueBaseIsDynamicAlloc }];
+  }
   def : Property<"hasBase", Bool> {
     let Read = [{ static_cast<bool>(lvalueBase) }];
   }
@@ -485,9 +491,17 @@ let Class = PropertyTypeCase<APValue, "LValue"> in {
       QualType(node.getLValueBase().get<TypeInfoLValue>().getType(), 0)
     }];
   }
+  def : Property<"dynamicAlloc", UInt32> {
+    let Conditional = [{ hasBase && isDynamicAlloc }];
+    let Read = [{ node.getLValueBase().get<DynamicAllocLValue>().getIndex() }];
+  }
   def : Property<"type", QualType> {
-    let Conditional = [{ hasBase && isTypeInfo }];
-    let Read = [{ node.getLValueBase().getTypeInfoType() }];
+    let Conditional = [{ hasBase && (isTypeInfo || isDynamicAlloc) }];
+    let Read = [{
+      isTypeInfo
+        ? node.getLValueBase().getTypeInfoType()
+        : node.getLValueBase().getDynamicAllocType()
+    }];
   }
   def : Property<"callIndex", UInt32> {
     let Conditional = [{ hasBase && !isTypeInfo }];
@@ -502,7 +516,7 @@ let Class = PropertyTypeCase<APValue, "LValue"> in {
     let Read = [{ const_cast<Expr *>(expr) }];
   }
   def : Property<"decl", DeclRef> {
-    let Conditional = [{ hasBase && !isTypeInfo && !isExpr }];
+    let Conditional = [{ hasBase && !isTypeInfo && !isDynamicAlloc && !isExpr }];
     let Read = [{ lvalueBase.get<const ValueDecl *>() }];
   }
   def : Property<"offsetQuantity", UInt32> {
@@ -521,6 +535,9 @@ let Class = PropertyTypeCase<APValue, "LValue"> in {
       if (isTypeInfo) {
         base = APValue::LValueBase::getTypeInfo(
             TypeInfoLValue(typeInfo->getTypePtr()), *type);
+      } else if (isDynamicAlloc) {
+        base = APValue::LValueBase::getDynamicAlloc(
+            DynamicAllocLValue(*dynamicAlloc), *type);
       } else if (isExpr) {
         base = APValue::LValueBase(cast<Expr>(*stmt),
                                    *callIndex, *version);

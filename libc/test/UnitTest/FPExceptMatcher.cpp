@@ -14,7 +14,6 @@
 #include <signal.h>
 
 namespace __llvm_libc {
-namespace fputil {
 namespace testing {
 
 #if defined(_WIN32)
@@ -48,5 +47,4 @@ FPExceptMatcher::FPExceptMatcher(FunctionCaller *func) {
 }
 
 } // namespace testing
-} // namespace fputil
 } // namespace __llvm_libc

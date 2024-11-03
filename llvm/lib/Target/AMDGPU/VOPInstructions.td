@@ -791,8 +791,8 @@ class VOP_DPP_Pseudo <string OpName, VOPProfile P, list<dag> pattern=[],
   string AsmOperands = asmOps;
 
   let AsmMatchConverter = !if(P.HasModifiers, "cvtDPP", "");
-  let SubtargetPredicate = !if(P.HasExt64BitDPP, Has64BitDPP, HasDPP);
-  let AssemblerPredicate = !if(P.HasExt64BitDPP, Has64BitDPP, HasDPP);
+  let SubtargetPredicate = !if(P.HasExt64BitDPP, HasDPALU_DPP, HasDPP);
+  let AssemblerPredicate = !if(P.HasExt64BitDPP, HasDPALU_DPP, HasDPP);
   let AsmVariantName = !if(P.HasExtDPP, AMDGPUAsmVariants.DPP,
                                         AMDGPUAsmVariants.Disable);
   let Constraints = !if(P.NumSrcArgs, P.TieRegDPP # " = $vdst", "");
@@ -862,8 +862,8 @@ class VOP_DPP_Base <string OpName, VOPProfile P,
   let Size = 8;
 
   let AsmMatchConverter = !if(P.HasModifiers, "cvtDPP", "");
-  let SubtargetPredicate = !if(P.HasExt64BitDPP, Has64BitDPP, HasDPP);
-  let AssemblerPredicate = !if(P.HasExt64BitDPP, Has64BitDPP, HasDPP);
+  let SubtargetPredicate = !if(P.HasExt64BitDPP, HasDPALU_DPP, HasDPP);
+  let AssemblerPredicate = !if(P.HasExt64BitDPP, HasDPALU_DPP, HasDPP);
   let AsmVariantName = !if(P.HasExtDPP, AMDGPUAsmVariants.DPP,
                                         AMDGPUAsmVariants.Disable);
   let Constraints = !if(P.NumSrcArgs, P.TieRegDPP # " = $vdst", "");
@@ -1268,7 +1268,7 @@ class VOP3InstBase<string OpName, VOPProfile P, SDPatternOperator node = null_fr
 multiclass VOP3Inst<string OpName, VOPProfile P, SDPatternOperator node = null_frag> {
   def _e64 : VOP3InstBase<OpName, P, node>;
   let SubtargetPredicate = isGFX11Plus in {
-    foreach _ = BoolToList<P.HasExtVOP3DPP>.ret in
+    if P.HasExtVOP3DPP then
       def _e64_dpp : VOP3_DPP_Pseudo <OpName, P>;
   } // end SubtargetPredicate = isGFX11Plus
 }
@@ -1329,11 +1329,11 @@ let AssemblerPredicate = isGFX11Only,
                                   bit isSingle = 0> {
     defvar ps = !cast<VOP_Pseudo>(opName#"_e64");
     let IsSingle = !or(isSingle, ps.Pfl.IsSingle) in {
-    foreach _ = BoolToList<ps.Pfl.HasOpSel>.ret in
+    if ps.Pfl.HasOpSel then
       def _e64_gfx11 :
         VOP3_Real<ps, SIEncodingFamily.GFX11>,
         VOP3OpSel_gfx11<op, ps.Pfl>;
-    foreach _ = BoolToList<!not(ps.Pfl.HasOpSel)>.ret in
+    if !not(ps.Pfl.HasOpSel) then
       def _e64_gfx11 :
         VOP3_Real<ps, SIEncodingFamily.GFX11>,
         VOP3e_gfx11<op, ps.Pfl>;
@@ -1353,11 +1353,11 @@ let AssemblerPredicate = isGFX11Only,
     defvar ps = !cast<VOP_Pseudo>(opName#"_e64");
     let AsmString = asmName # ps.AsmOperands,
         IsSingle = !or(isSingle, ps.Pfl.IsSingle) in {
-    foreach _ = BoolToList<ps.Pfl.HasOpSel>.ret in
+    if ps.Pfl.HasOpSel then
       def _e64_gfx11 :
         VOP3_Real<ps, SIEncodingFamily.GFX11>,
         VOP3OpSel_gfx11<op, ps.Pfl>;
-    foreach _ = BoolToList<!not(ps.Pfl.HasOpSel)>.ret in
+    if !not(ps.Pfl.HasOpSel) then
       def _e64_gfx11 :
         VOP3_Real<ps, SIEncodingFamily.GFX11>,
         VOP3e_gfx11<op, ps.Pfl>;
@@ -1487,7 +1487,7 @@ include "VOP3PInstructions.td"
 include "VOPDInstructions.td"
 
 class ClassPat<Instruction inst, ValueType vt> : GCNPat <
-  (is_fpclass (vt (VOP3Mods vt:$src0, i32:$src0_mods)), (i32 timm:$mask)),
+  (is_fpclass (vt (VOP3ModsNonCanonicalizing vt:$src0, i32:$src0_mods)), (i32 timm:$mask)),
   (inst i32:$src0_mods, vt:$src0, (V_MOV_B32_e32 timm:$mask))
 >;
 

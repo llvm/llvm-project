@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -std=c++2b -verify=expected,cxx20_2b,cxx2b    -triple %itanium_abi_triple %s -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++20 -verify=expected,cxx98_20,cxx20_2b -triple %itanium_abi_triple %s -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++23 -verify=expected,cxx20_23,cxx23    -triple %itanium_abi_triple %s -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++20 -verify=expected,cxx98_20,cxx20_23 -triple %itanium_abi_triple %s -fexceptions -fcxx-exceptions -pedantic-errors
 // RUN: %clang_cc1 -std=c++17 -verify=expected,cxx98_17,cxx98_20 -triple %itanium_abi_triple %s -fexceptions -fcxx-exceptions -pedantic-errors
 // RUN: %clang_cc1 -std=c++14 -verify=expected,cxx98_17,cxx98_20 -triple %itanium_abi_triple %s -fexceptions -fcxx-exceptions -pedantic-errors
 // RUN: %clang_cc1 -std=c++11 -verify=expected,cxx98_17,cxx98_20 -triple %itanium_abi_triple %s -fexceptions -fcxx-exceptions -pedantic-errors
@@ -20,8 +20,8 @@ namespace dr301 { // dr301: yes
   void f() {
     bool a = (void(*)(S, S))operator+<S> < // expected-warning {{ordered comparison of function pointers}}
              (void(*)(S, S))operator+<S>;
-    bool b = (void(*)(S, S))operator- < // cxx20_2b-note {{to match this '<'}} cxx98_17-warning {{ordered comparison of function pointers}}
-             (void(*)(S, S))operator-; // cxx20_2b-error {{expected '>'}}
+    bool b = (void(*)(S, S))operator- < // cxx20_23-note {{to match this '<'}} cxx98_17-warning {{ordered comparison of function pointers}}
+             (void(*)(S, S))operator-; // cxx20_23-error {{expected '>'}}
     bool c = (void(*)(S, S))operator+ < // expected-note {{to match this '<'}}
              (void(*)(S, S))operator-; // expected-error {{expected '>'}}
   }
@@ -161,6 +161,15 @@ namespace dr308 { // dr308: yes
   struct C : A {};
   struct D : B, C {};
   void f() {
+    // NB: the warning here is correct despite being the opposite of the
+    // comments in the catch handlers. The "unreachable" comment is correct
+    // because there is an ambiguous base path to A from the D that is thrown.
+    // The warnings generated are also correct because the handlers handle
+    // const B& and const A& and we don't check to see if other derived classes
+    // exist that would cause an ambiguous base path. We issue the diagnostic
+    // despite the potential for a false positive because users are not
+    // expected to have ambiguous base paths all that often, so the false
+    // positive rate should be acceptably low.
     try {
       throw D();
     } catch (const A&) { // expected-note {{for type 'const A &'}}
@@ -199,14 +208,20 @@ namespace dr313 { // dr313: dup 299 c++11
 #endif
 }
 
-namespace dr314 { // FIXME 314: dup 1710
-  template<typename T> struct A {
-    template<typename U> struct B {};
-  };
-  template<typename T> struct C : public A<T>::template B<T> {
-    C() : A<T>::template B<T>() {}
-  };
-}
+namespace dr314 { // dr314: no
+                  // NB: dup 1710
+template <typename T> struct A {
+  template <typename U> struct B {};
+};
+template <typename T> struct C : public A<T>::template B<T> {
+  C() : A<T>::template B<T>() {}
+};
+template <typename T> struct C2 : public A<T>::B<T> {
+  // expected-error@-1 {{use 'template' keyword to treat 'B' as a dependent template name}}
+  C2() : A<T>::B<T>() {}
+  // expected-error@-1 {{use 'template' keyword to treat 'B' as a dependent template name}}
+};
+} // namespace dr314
 
 // dr315: na
 // dr316: sup 1004
@@ -450,10 +465,10 @@ namespace dr331 { // dr331: yes
 
 namespace dr332 { // dr332: dup 577
   void f(volatile void); // expected-error {{'void' as parameter must not have type qualifiers}}
-  // cxx20_2b-warning@-1 {{volatile-qualified parameter type 'volatile void' is deprecated}}
+  // cxx20_23-warning@-1 {{volatile-qualified parameter type 'volatile void' is deprecated}}
   void g(const void); // expected-error {{'void' as parameter must not have type qualifiers}}
   void h(int n, volatile void); // expected-error {{'void' must be the first and only parameter}}
-  // cxx20_2b-warning@-1 {{volatile-qualified parameter type 'volatile void' is deprecated}}
+  // cxx20_23-warning@-1 {{volatile-qualified parameter type 'volatile void' is deprecated}}
 }
 
 namespace dr333 { // dr333: yes
@@ -582,7 +597,7 @@ namespace dr341 {
 
 // dr342: na
 
-namespace dr343 { // FIXME 343: no
+namespace dr343 { // dr343: no
   // FIXME: dup 1710
   template<typename T> struct A {
     template<typename U> struct B {};
@@ -638,7 +653,7 @@ namespace dr349 { // dr349: no
     template <class T> operator T ***() {
       int ***p = 0;
       return p; // cxx98_20-error {{cannot initialize return object of type 'const int ***' with an lvalue of type 'int ***'}}
-      // cxx2b-error@-1 {{cannot initialize return object of type 'const int ***' with an rvalue of type 'int ***'}}
+      // cxx23-error@-1 {{cannot initialize return object of type 'const int ***' with an rvalue of type 'int ***'}}
     }
   };
 
@@ -952,12 +967,12 @@ namespace dr368 { // dr368: yes
   template<typename T, T> struct S {}; // expected-note {{here}}
   template<typename T> int f(S<T, T()> *); // expected-error {{function type}}
   template<typename T> int g(S<T, (T())> *); // cxx98_17-note {{type 'X'}}
-  // cxx20_2b-note@-1 {{candidate function [with T = dr368::X]}}
+  // cxx20_23-note@-1 {{candidate function [with T = dr368::X]}}
   template<typename T> int g(S<T, true ? T() : T()> *); // cxx98_17-note {{type 'X'}}
-  // cxx20_2b-note@-1 {{candidate function [with T = dr368::X]}}
+  // cxx20_23-note@-1 {{candidate function [with T = dr368::X]}}
   struct X {};
   int n = g<X>(0); // cxx98_17-error {{no matching}}
-  // cxx20_2b-error@-1 {{call to 'g' is ambiguous}}
+  // cxx20_23-error@-1 {{call to 'g' is ambiguous}}
 }
 
 // dr370: na
@@ -1424,5 +1439,85 @@ namespace dr398 { // dr398: yes
       g<C>(0); // expected-error {{no matching function}}
       h<D>(0); // expected-error {{no matching function}}
     }
+  }
+}
+
+namespace dr399 { // dr399: 11
+                  // NB: reuse dr244 test 
+  struct B {}; // expected-note {{type 'dr399::B' found by destructor name lookup}}
+  struct D : B {};
+
+  D D_object;
+  typedef B B_alias;
+  B* B_ptr = &D_object;
+
+  void f() {
+    D_object.~B(); // expected-error {{does not match the type 'D' of the object being destroyed}}
+    D_object.B::~B();
+    D_object.D::~B(); // FIXME: Missing diagnostic for this.
+    B_ptr->~B();
+    B_ptr->~B_alias();
+    B_ptr->B_alias::~B();
+    B_ptr->B_alias::~B_alias();
+    B_ptr->dr399::~B(); // expected-error {{refers to a member in namespace}}
+    B_ptr->dr399::~B_alias(); // expected-error {{refers to a member in namespace}}
+  }
+
+  template<typename T, typename U>
+  void f(T *B_ptr, U D_object) {
+    D_object.~B(); // FIXME: Missing diagnostic for this.
+    D_object.B::~B();
+    D_object.D::~B(); // FIXME: Missing diagnostic for this.
+    B_ptr->~B();
+    B_ptr->~B_alias();
+    B_ptr->B_alias::~B();
+    B_ptr->B_alias::~B_alias();
+    B_ptr->dr399::~B(); // expected-error {{does not refer to a type name}}
+    B_ptr->dr399::~B_alias(); // expected-error {{does not refer to a type name}}
+  }
+  template void f<B, D>(B*, D);
+
+  namespace N {
+    template<typename T> struct E {};
+    typedef E<int> F;
+  }
+  void g(N::F f) {
+    typedef N::F G; // expected-note {{found by destructor name lookup}}
+    f.~G();
+    f.G::~E(); // expected-error {{ISO C++ requires the name after '::~' to be found in the same scope as the name before '::~'}}
+    f.G::~F(); // expected-error {{undeclared identifier 'F' in destructor name}}
+    f.G::~G();
+    // This is technically ill-formed; E is looked up in 'N::' and names the
+    // class template, not the injected-class-name of the class. But that's
+    // probably a bug in the standard.
+    f.N::F::~E(); // expected-error {{ISO C++ requires the name after '::~' to be found in the same scope as the name before '::~'}}
+    // This is valid; we look up the second F in the same scope in which we
+    // found the first one, that is, 'N::'.
+    f.N::F::~F();
+    // This is technically ill-formed; G is looked up in 'N::' and is not found.
+    // Rejecting this seems correct, but most compilers accept, so we do also.
+    f.N::F::~G(); // expected-error {{qualified destructor name only found in lexical scope; omit the qualifier to find this type name by unqualified lookup}}
+  }
+
+  // Bizarrely, compilers perform lookup in the scope for qualified destructor
+  // names, if the nested-name-specifier is non-dependent. Ensure we diagnose
+  // this.
+  namespace QualifiedLookupInScope {
+    namespace N {
+      template <typename> struct S { struct Inner {}; };
+    }
+    template <typename U> void f(typename N::S<U>::Inner *p) {
+      typedef typename N::S<U>::Inner T;
+      p->::dr399::QualifiedLookupInScope::N::S<U>::Inner::~T(); // expected-error {{no type named 'T' in}}
+    }
+    template void f<int>(N::S<int>::Inner *); // expected-note {{instantiation of}}
+
+    template <typename U> void g(U *p) {
+      typedef U T;
+      p->T::~T();
+      p->U::~T();
+      p->::dr399::QualifiedLookupInScope::N::S<int>::Inner::~T(); // expected-error {{'T' does not refer to a type name}}
+    }
+    template void g(N::S<int>::Inner *);
   }
 }

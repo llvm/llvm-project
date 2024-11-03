@@ -13,8 +13,12 @@
 #include <__config>
 #include <__functional/invoke.h>
 #include <__functional/perfect_forward.h>
+#include <__type_traits/conjunction.h>
+#include <__type_traits/decay.h>
+#include <__type_traits/enable_if.h>
+#include <__type_traits/is_constructible.h>
+#include <__type_traits/is_move_constructible.h>
 #include <__utility/forward.h>
-#include <type_traits>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

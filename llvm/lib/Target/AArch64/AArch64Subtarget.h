@@ -103,7 +103,7 @@ protected:
 #include "AArch64GenSubtargetInfo.inc"
 
   uint8_t MaxInterleaveFactor = 2;
-  uint8_t VectorInsertExtractBaseCost = 3;
+  uint8_t VectorInsertExtractBaseCost = 2;
   uint16_t CacheLineSize = 0;
   uint16_t PrefetchDistance = 0;
   uint16_t MinPrefetchStride = 1;
@@ -124,10 +124,12 @@ protected:
 
   bool IsLittle;
 
-  bool StreamingSVEModeDisabled;
+  bool StreamingSVEMode;
+  bool StreamingCompatibleSVEMode;
   unsigned MinSVEVectorSizeInBits;
   unsigned MaxSVEVectorSizeInBits;
   unsigned VScaleForTuning = 2;
+  TailFoldingOpts DefaultSVETFOpts = TailFoldingOpts::Disabled;
 
   /// TargetTriple - What processor and OS we're targeting.
   Triple TargetTriple;
@@ -162,7 +164,8 @@ public:
                    StringRef FS, const TargetMachine &TM, bool LittleEndian,
                    unsigned MinSVEVectorSizeInBitsOverride = 0,
                    unsigned MaxSVEVectorSizeInBitsOverride = 0,
-                   bool StreamingSVEModeDisabled = true);
+                   bool StreamingSVEMode = false,
+                   bool StreamingCompatibleSVEMode = false);
 
 // Getters for SubtargetFeatures defined in tablegen
 #define GET_SUBTARGETINFO_MACRO(ATTRIBUTE, DEFAULT, GETTER)                    \
@@ -201,9 +204,28 @@ public:
 
   bool isXRaySupported() const override { return true; }
 
+  /// Returns true if the function has a streaming body.
+  bool isStreaming() const { return StreamingSVEMode; }
+
+  /// Returns true if the function has a streaming-compatible body.
+  bool isStreamingCompatible() const;
+
+  /// Returns true if the target has NEON and the function at runtime is known
+  /// to have NEON enabled (e.g. the function is known not to be in streaming-SVE
+  /// mode, which disables NEON instructions).
+  bool isNeonAvailable() const;
+
+  /// Returns true if the target has SVE and can use the full range of SVE
+  /// instructions, for example because it knows the function is known not to be
+  /// in streaming-SVE mode or when the target has FEAT_FA64 enabled.
+  bool isSVEAvailable() const;
+
   unsigned getMinVectorRegisterBitWidth() const {
-    // Don't assume any minimum vector size when PSTATE.SM may not be 0.
-    if (!isStreamingSVEModeDisabled())
+    // Don't assume any minimum vector size when PSTATE.SM may not be 0, because
+    // we don't yet support streaming-compatible codegen support that we trust
+    // is safe for functions that may be executed in streaming-SVE mode.
+    // By returning '0' here, we disable vectorization.
+    if (!isSVEAvailable() && !isNeonAvailable())
       return 0;
     return MinVectorRegisterBitWidth;
   }
@@ -379,16 +401,25 @@ public:
   }
 
   bool useSVEForFixedLengthVectors() const {
-    if (forceStreamingCompatibleSVE())
-      return true;
+    if (!isNeonAvailable())
+      return hasSVE();
 
     // Prefer NEON unless larger SVE registers are available.
     return hasSVE() && getMinSVEVectorSizeInBits() >= 256;
   }
 
-  bool forceStreamingCompatibleSVE() const;
+  bool useSVEForFixedLengthVectors(EVT VT) const {
+    if (!useSVEForFixedLengthVectors() || !VT.isFixedLengthVector())
+      return false;
+    return VT.getFixedSizeInBits() > AArch64::SVEBitsPerBlock ||
+           !isNeonAvailable();
+  }
 
   unsigned getVScaleForTuning() const { return VScaleForTuning; }
+
+  TailFoldingOpts getSVETailFoldingDefaultOpts() const {
+    return DefaultSVETFOpts;
+  }
 
   const char* getChkStkName() const {
     if (isWindowsArm64EC())
@@ -401,8 +432,6 @@ public:
       return "__security_check_cookie_arm64ec";
     return "__security_check_cookie";
   }
-
-  bool isStreamingSVEModeDisabled() const { return StreamingSVEModeDisabled; }
 };
 } // End llvm namespace
 

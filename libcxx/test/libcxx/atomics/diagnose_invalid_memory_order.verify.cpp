@@ -18,7 +18,7 @@
 
 #include <atomic>
 
-int main(int, char**) {
+void f() {
     std::atomic<int> x(42);
     volatile std::atomic<int>& vx = x;
     int val1 = 1; ((void)val1);
@@ -123,6 +123,4 @@ int main(int, char**) {
         std::atomic_compare_exchange_strong_explicit(&x, &val1, val2, std::memory_order_seq_cst, std::memory_order_acquire);
         std::atomic_compare_exchange_strong_explicit(&x, &val1, val2, std::memory_order_seq_cst, std::memory_order_seq_cst);
     }
-
-  return 0;
 }

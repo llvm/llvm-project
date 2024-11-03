@@ -13,6 +13,7 @@
 #ifndef MLIR_DIALECT_SCF_SCF_H
 #define MLIR_DIALECT_SCF_SCF_H
 
+#include "mlir/Dialect/Arith/Utils/Utils.h"
 #include "mlir/Dialect/SCF/IR/DeviceMappingInterface.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinTypes.h"
@@ -60,6 +61,9 @@ ForallOp getForallOpThreadIndexOwner(Value val);
 /// regions/blocks of an IfOp.
 // TODO: Consider moving this functionality to RegionBranchOpInterface.
 bool insideMutuallyExclusiveBranches(Operation *a, Operation *b);
+
+/// Promotes the loop body of a scf::ForallOp to its containing block.
+void promote(RewriterBase &rewriter, scf::ForallOp forallOp);
 
 /// An owning vector of values, handy to return from functions.
 using ValueVector = SmallVector<Value>;

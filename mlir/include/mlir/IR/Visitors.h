@@ -64,19 +64,13 @@ enum class WalkOrder { PreOrder, PostOrder };
 
 /// This iterator enumerates the elements in "forward" order.
 struct ForwardIterator {
-  template <typename RangeT>
-  static constexpr RangeT &makeRange(RangeT &range) {
-    return range;
-  }
-};
+  /// Make operations iterable: return the list of regions.
+  static MutableArrayRef<Region> makeIterable(Operation &range);
 
-/// This iterator enumerates elements in "reverse" order. It is a wrapper around
-/// llvm::reverse.
-struct ReverseIterator {
-  template <typename RangeT>
-  static constexpr auto makeRange(RangeT &&range) {
-    // llvm::reverse uses RangeT::rbegin and RangeT::rend.
-    return llvm::reverse(std::forward<RangeT>(range));
+  /// Regions and block are already iterable.
+  template <typename T>
+  static constexpr T &makeIterable(T &range) {
+    return range;
   }
 };
 
@@ -141,12 +135,58 @@ using first_argument = decltype(first_argument_type(std::declval<T>()));
 /// pre-order erasure.
 template <typename Iterator>
 void walk(Operation *op, function_ref<void(Region *)> callback,
-          WalkOrder order);
+          WalkOrder order) {
+  // We don't use early increment for regions because they can't be erased from
+  // a callback.
+  for (auto &region : Iterator::makeIterable(*op)) {
+    if (order == WalkOrder::PreOrder)
+      callback(&region);
+    for (auto &block : Iterator::makeIterable(region)) {
+      for (auto &nestedOp : Iterator::makeIterable(block))
+        walk<Iterator>(&nestedOp, callback, order);
+    }
+    if (order == WalkOrder::PostOrder)
+      callback(&region);
+  }
+}
+
 template <typename Iterator>
-void walk(Operation *op, function_ref<void(Block *)> callback, WalkOrder order);
+void walk(Operation *op, function_ref<void(Block *)> callback,
+          WalkOrder order) {
+  for (auto &region : Iterator::makeIterable(*op)) {
+    // Early increment here in the case where the block is erased.
+    for (auto &block :
+         llvm::make_early_inc_range(Iterator::makeIterable(region))) {
+      if (order == WalkOrder::PreOrder)
+        callback(&block);
+      for (auto &nestedOp : Iterator::makeIterable(block))
+        walk<Iterator>(&nestedOp, callback, order);
+      if (order == WalkOrder::PostOrder)
+        callback(&block);
+    }
+  }
+}
+
 template <typename Iterator>
 void walk(Operation *op, function_ref<void(Operation *)> callback,
-          WalkOrder order);
+          WalkOrder order) {
+  if (order == WalkOrder::PreOrder)
+    callback(op);
+
+  // TODO: This walk should be iterative over the operations.
+  for (auto &region : Iterator::makeIterable(*op)) {
+    for (auto &block : Iterator::makeIterable(region)) {
+      // Early increment here in the case where the operation is erased.
+      for (auto &nestedOp :
+           llvm::make_early_inc_range(Iterator::makeIterable(block)))
+        walk<Iterator>(&nestedOp, callback, order);
+    }
+  }
+
+  if (order == WalkOrder::PostOrder)
+    callback(op);
+}
+
 /// Walk all of the regions, blocks, or operations nested under (and including)
 /// the given operation. The order in which regions, blocks and operations at
 /// the same nesting level are visited (e.g., lexicographical or reverse
@@ -159,13 +199,88 @@ void walk(Operation *op, function_ref<void(Operation *)> callback,
 ///   * the walk is in pre-order and the walk is skipped after the erasure.
 template <typename Iterator>
 WalkResult walk(Operation *op, function_ref<WalkResult(Region *)> callback,
-                WalkOrder order);
+                WalkOrder order) {
+  // We don't use early increment for regions because they can't be erased from
+  // a callback.
+  for (auto &region : Iterator::makeIterable(*op)) {
+    if (order == WalkOrder::PreOrder) {
+      WalkResult result = callback(&region);
+      if (result.wasSkipped())
+        continue;
+      if (result.wasInterrupted())
+        return WalkResult::interrupt();
+    }
+    for (auto &block : Iterator::makeIterable(region)) {
+      for (auto &nestedOp : Iterator::makeIterable(block))
+        if (walk<Iterator>(&nestedOp, callback, order).wasInterrupted())
+          return WalkResult::interrupt();
+    }
+    if (order == WalkOrder::PostOrder) {
+      if (callback(&region).wasInterrupted())
+        return WalkResult::interrupt();
+      // We don't check if this region was skipped because its walk already
+      // finished and the walk will continue with the next region.
+    }
+  }
+  return WalkResult::advance();
+}
+
 template <typename Iterator>
 WalkResult walk(Operation *op, function_ref<WalkResult(Block *)> callback,
-                WalkOrder order);
+                WalkOrder order) {
+  for (auto &region : Iterator::makeIterable(*op)) {
+    // Early increment here in the case where the block is erased.
+    for (auto &block :
+         llvm::make_early_inc_range(Iterator::makeIterable(region))) {
+      if (order == WalkOrder::PreOrder) {
+        WalkResult result = callback(&block);
+        if (result.wasSkipped())
+          continue;
+        if (result.wasInterrupted())
+          return WalkResult::interrupt();
+      }
+      for (auto &nestedOp : Iterator::makeIterable(block))
+        if (walk<Iterator>(&nestedOp, callback, order).wasInterrupted())
+          return WalkResult::interrupt();
+      if (order == WalkOrder::PostOrder) {
+        if (callback(&block).wasInterrupted())
+          return WalkResult::interrupt();
+        // We don't check if this block was skipped because its walk already
+        // finished and the walk will continue with the next block.
+      }
+    }
+  }
+  return WalkResult::advance();
+}
+
 template <typename Iterator>
 WalkResult walk(Operation *op, function_ref<WalkResult(Operation *)> callback,
-                WalkOrder order);
+                WalkOrder order) {
+  if (order == WalkOrder::PreOrder) {
+    WalkResult result = callback(op);
+    // If skipped, caller will continue the walk on the next operation.
+    if (result.wasSkipped())
+      return WalkResult::advance();
+    if (result.wasInterrupted())
+      return WalkResult::interrupt();
+  }
+
+  // TODO: This walk should be iterative over the operations.
+  for (auto &region : Iterator::makeIterable(*op)) {
+    for (auto &block : Iterator::makeIterable(region)) {
+      // Early increment here in the case where the operation is erased.
+      for (auto &nestedOp :
+           llvm::make_early_inc_range(Iterator::makeIterable(block))) {
+        if (walk<Iterator>(&nestedOp, callback, order).wasInterrupted())
+          return WalkResult::interrupt();
+      }
+    }
+  }
+
+  if (order == WalkOrder::PostOrder)
+    return callback(op);
+  return WalkResult::advance();
+}
 
 // Below are a set of functions to walk nested operations. Users should favor
 // the direct `walk` methods on the IR classes(Operation/Block/etc) over these

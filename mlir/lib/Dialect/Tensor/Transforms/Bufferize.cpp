@@ -53,6 +53,6 @@ struct TensorBufferizePass
 };
 } // namespace
 
-std::unique_ptr<Pass> mlir::createTensorBufferizePass() {
+std::unique_ptr<Pass> mlir::tensor::createTensorBufferizePass() {
   return std::make_unique<TensorBufferizePass>();
 }

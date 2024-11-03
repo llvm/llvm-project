@@ -79,7 +79,7 @@ int main(int argc, char** argv) {
 #ifdef baz
 #elifdef foo
 // expected-warning@-1{{macro 'foo' has been marked as deprecated}}
-// expected-warning@-2{{use of a '#elifdef' directive is a C2x extension}}
+// expected-warning@-2{{use of a '#elifdef' directive is a C23 extension}}
 #endif
 
 // Test that we diagnose on #elifndef.
@@ -87,7 +87,7 @@ int main(int argc, char** argv) {
 #elifndef foo
 #endif
 // expected-warning@-2{{macro 'foo' has been marked as deprecated}}
-// expected-warning@-3{{use of a '#elifndef' directive is a C2x extension}}
+// expected-warning@-3{{use of a '#elifndef' directive is a C23 extension}}
 
 // FIXME: These cases are currently not handled because clang doesn't expand
 // conditions on skipped #elif* blocks. See the FIXME notes in
@@ -95,13 +95,13 @@ int main(int argc, char** argv) {
 
 #ifdef frobble
 // not-expected-warning@+2{{macro 'foo' has been marked as deprecated}}
-// expected-warning@+1{{use of a '#elifndef' directive is a C2x extension}}
+// expected-warning@+1{{use of a '#elifndef' directive is a C23 extension}}
 #elifndef foo
 #endif
 
 #ifdef frobble
 // not-expected-warning@+2{{macro 'foo' has been marked as deprecated}}
-// expected-warning@+1{{use of a '#elifdef' directive is a C2x extension}}
+// expected-warning@+1{{use of a '#elifdef' directive is a C23 extension}}
 #elifdef foo
 #endif
 

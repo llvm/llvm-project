@@ -75,6 +75,7 @@ def note_module_file_conflict : Note<
 
 def remark_module_import : Remark<
   "importing module '%0'%select{| into '%3'}2 from '%1'">,
+  ShowInSystemHeader,
   InGroup<ModuleImport>;
 
 def err_imported_module_not_found : Error<
@@ -127,6 +128,11 @@ def warn_module_system_bit_conflict : Warning<
   "module file '%0' was validated as a system module and is now being imported "
   "as a non-system module; any difference in diagnostic options will be ignored">,
   InGroup<ModuleConflict>;
+
+def warn_reading_std_cxx_module_by_implicit_paths : Warning<
+  "it is deprecated to read module '%0' implicitly; it is going to be removed in clang 18; "
+  "consider to specify the dependencies explicitly">,
+  InGroup<DiagGroup<"read-modules-implicitly">>;
 } // let CategoryName
 
 let CategoryName = "AST Serialization Issue" in {

@@ -28,11 +28,10 @@ private:
   std::string OSSuffix;
   std::string IncludeSuffix;
   flags_list Flags;
-  int Priority;
 
 public:
   MultilibBuilder(StringRef GCCSuffix, StringRef OSSuffix,
-                  StringRef IncludeSuffix, int Priority = 0);
+                  StringRef IncludeSuffix);
 
   /// Initializes GCCSuffix, OSSuffix & IncludeSuffix to the same value.
   MultilibBuilder(StringRef Suffix = {});
@@ -71,27 +70,14 @@ public:
   MultilibBuilder &includeSuffix(StringRef S);
 
   /// Get the flags that indicate or contraindicate this multilib's use
-  /// All elements begin with either '+' or '-'
+  /// All elements begin with either '-' or '!'
   const flags_list &flags() const { return Flags; }
   flags_list &flags() { return Flags; }
 
-  /// Returns the multilib priority. When more than one multilib matches flags,
-  /// the one with the highest priority is selected, with 0 being the default.
-  int priority() const { return Priority; }
-
   /// Add a flag to the flags list
-  /// \p Flag must be a flag accepted by the driver with its leading '-'
-  /// removed,
-  ///     and replaced with either:
-  ///       '-' which contraindicates using this multilib with that flag
-  ///     or:
-  ///       '+' which promotes using this multilib in the presence of that flag
-  ///     otherwise '-print-multi-lib' will not emit them correctly.
-  MultilibBuilder &flag(StringRef F) {
-    assert(F.front() == '+' || F.front() == '-');
-    Flags.push_back(std::string(F));
-    return *this;
-  }
+  /// \p Flag must be a flag accepted by the driver.
+  /// \p Disallow defines whether the flag is negated and therefore disallowed.
+  MultilibBuilder &flag(StringRef Flag, bool Disallow = false);
 
   Multilib makeMultilib() const;
 

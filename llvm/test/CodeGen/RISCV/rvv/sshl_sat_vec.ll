@@ -10,7 +10,7 @@ define <2 x i64> @vec_v2i64(<2 x i64> %x, <2 x i64> %y) nounwind {
 ; CHECK-LABEL: vec_v2i64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
-; CHECK-NEXT:    vmslt.vx v0, v8, zero
+; CHECK-NEXT:    vmsle.vi v0, v8, -1
 ; CHECK-NEXT:    li a0, -1
 ; CHECK-NEXT:    srli a1, a0, 1
 ; CHECK-NEXT:    vsll.vv v10, v8, v9
@@ -30,7 +30,7 @@ define <4 x i32> @vec_v4i32(<4 x i32> %x, <4 x i32> %y) nounwind {
 ; CHECK-LABEL: vec_v4i32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; CHECK-NEXT:    vmslt.vx v0, v8, zero
+; CHECK-NEXT:    vmsle.vi v0, v8, -1
 ; CHECK-NEXT:    lui a0, 524288
 ; CHECK-NEXT:    addiw a0, a0, -1
 ; CHECK-NEXT:    vsll.vv v10, v8, v9
@@ -51,7 +51,7 @@ define <8 x i16> @vec_v8i16(<8 x i16> %x, <8 x i16> %y) nounwind {
 ; CHECK-LABEL: vec_v8i16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
-; CHECK-NEXT:    vmslt.vx v0, v8, zero
+; CHECK-NEXT:    vmsle.vi v0, v8, -1
 ; CHECK-NEXT:    lui a0, 8
 ; CHECK-NEXT:    addiw a1, a0, -1
 ; CHECK-NEXT:    vsll.vv v10, v8, v9
@@ -70,7 +70,7 @@ define <16 x i8> @vec_v16i8(<16 x i8> %x, <16 x i8> %y) nounwind {
 ; CHECK-LABEL: vec_v16i8:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
-; CHECK-NEXT:    vmslt.vx v0, v8, zero
+; CHECK-NEXT:    vmsle.vi v0, v8, -1
 ; CHECK-NEXT:    li a0, 127
 ; CHECK-NEXT:    vsll.vv v10, v8, v9
 ; CHECK-NEXT:    vsra.vv v9, v10, v9
@@ -94,7 +94,7 @@ define <vscale x 2 x i64> @vec_nxv2i64(<vscale x 2 x i64> %x, <vscale x 2 x i64>
 ; CHECK-LABEL: vec_nxv2i64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e64, m2, ta, ma
-; CHECK-NEXT:    vmslt.vx v0, v8, zero
+; CHECK-NEXT:    vmsle.vi v0, v8, -1
 ; CHECK-NEXT:    li a0, -1
 ; CHECK-NEXT:    srli a1, a0, 1
 ; CHECK-NEXT:    vsll.vv v12, v8, v10
@@ -114,7 +114,7 @@ define <vscale x 4 x i32> @vec_nxv4i32(<vscale x 4 x i32> %x, <vscale x 4 x i32>
 ; CHECK-LABEL: vec_nxv4i32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e32, m2, ta, ma
-; CHECK-NEXT:    vmslt.vx v0, v8, zero
+; CHECK-NEXT:    vmsle.vi v0, v8, -1
 ; CHECK-NEXT:    lui a0, 524288
 ; CHECK-NEXT:    addiw a0, a0, -1
 ; CHECK-NEXT:    vsll.vv v12, v8, v10
@@ -135,7 +135,7 @@ define <vscale x 8 x i16> @vec_nxv8i16(<vscale x 8 x i16> %x, <vscale x 8 x i16>
 ; CHECK-LABEL: vec_nxv8i16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
-; CHECK-NEXT:    vmslt.vx v0, v8, zero
+; CHECK-NEXT:    vmsle.vi v0, v8, -1
 ; CHECK-NEXT:    lui a0, 8
 ; CHECK-NEXT:    addiw a1, a0, -1
 ; CHECK-NEXT:    vsll.vv v12, v8, v10
@@ -154,7 +154,7 @@ define <vscale x 16 x i8> @vec_nxv16i8(<vscale x 16 x i8> %x, <vscale x 16 x i8>
 ; CHECK-LABEL: vec_nxv16i8:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e8, m2, ta, ma
-; CHECK-NEXT:    vmslt.vx v0, v8, zero
+; CHECK-NEXT:    vmsle.vi v0, v8, -1
 ; CHECK-NEXT:    li a0, 127
 ; CHECK-NEXT:    vsll.vv v12, v8, v10
 ; CHECK-NEXT:    vsra.vv v14, v12, v10

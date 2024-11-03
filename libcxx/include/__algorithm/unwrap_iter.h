@@ -21,24 +21,27 @@
 #  pragma GCC system_header
 #endif
 
+_LIBCPP_PUSH_MACROS
+#include <__undef_macros>
+
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 // TODO: Change the name of __unwrap_iter_impl to something more appropriate
 // The job of __unwrap_iter is to remove iterator wrappers (like reverse_iterator or __wrap_iter),
 // to reduce the number of template instantiations and to enable pointer-based optimizations e.g. in std::copy.
-// In debug mode, we don't do this.
 //
 // Some algorithms (e.g. std::copy, but not std::sort) need to convert an
 // "unwrapped" result back into the original iterator type. Doing that is the job of __rewrap_iter.
 
 // Default case - we can't unwrap anything
-template <class _Iter, bool = __is_cpp17_contiguous_iterator<_Iter>::value>
+template <class _Iter, bool = __libcpp_is_contiguous_iterator<_Iter>::value>
 struct __unwrap_iter_impl {
   static _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR _Iter __rewrap(_Iter, _Iter __iter) { return __iter; }
   static _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR _Iter __unwrap(_Iter __i) _NOEXCEPT { return __i; }
 };
 
-#ifndef _LIBCPP_ENABLE_DEBUG_MODE
+// TODO(hardening): make sure that the following unwrapping doesn't unexpectedly turn hardened iterators into raw
+// pointers.
 
 // It's a contiguous iterator, so we can use a raw pointer instead
 template <class _Iter>
@@ -53,8 +56,6 @@ struct __unwrap_iter_impl<_Iter, true> {
     return std::__to_address(__i);
   }
 };
-
-#endif // !_LIBCPP_ENABLE_DEBUG_MODE
 
 template<class _Iter,
          class _Impl = __unwrap_iter_impl<_Iter>,
@@ -78,5 +79,7 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR _OrigIter __rewrap_iter(_OrigIter __orig
 }
 
 _LIBCPP_END_NAMESPACE_STD
+
+_LIBCPP_PUSH_MACROS
 
 #endif // _LIBCPP___ALGORITHM_UNWRAP_ITER_H

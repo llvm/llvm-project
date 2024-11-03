@@ -57,8 +57,8 @@ public:
   /// contents.
   /// \param File The file itself.
   /// \param IsSystem Whether this is a module map from a system include path.
-  virtual void moduleMapFileRead(SourceLocation FileStart,
-                                 const FileEntry &File, bool IsSystem) {}
+  virtual void moduleMapFileRead(SourceLocation FileStart, FileEntryRef File,
+                                 bool IsSystem) {}
 
   /// Called when a header is added during module map parsing.
   ///
@@ -67,10 +67,8 @@ public:
 
   /// Called when an umbrella header is added during module map parsing.
   ///
-  /// \param FileMgr FileManager instance
   /// \param Header The umbrella header to collect.
-  virtual void moduleMapAddUmbrellaHeader(FileManager *FileMgr,
-                                          const FileEntry *Header) {}
+  virtual void moduleMapAddUmbrellaHeader(FileEntryRef Header) {}
 };
 
 class ModuleMap {
@@ -84,7 +82,7 @@ class ModuleMap {
 
   /// The directory used for Clang-supplied, builtin include headers,
   /// such as "stdint.h".
-  const DirectoryEntry *BuiltinIncludeDir = nullptr;
+  OptionalDirectoryEntryRefDegradesToDirectoryEntryPtr BuiltinIncludeDir;
 
   /// Language options used to parse the module map itself.
   ///
@@ -196,7 +194,7 @@ public:
     }
   };
 
-  using AdditionalModMapsSet = llvm::SmallPtrSet<const FileEntry *, 1>;
+  using AdditionalModMapsSet = llvm::SmallPtrSet<FileEntryRef, 1>;
 
 private:
   friend class ModuleMapParser;
@@ -366,22 +364,22 @@ private:
   ///
   /// \param IntermediateDirs On success, contains the set of directories
   /// searched before finding \p File.
-  KnownHeader findHeaderInUmbrellaDirs(const FileEntry *File,
-                    SmallVectorImpl<const DirectoryEntry *> &IntermediateDirs);
+  KnownHeader findHeaderInUmbrellaDirs(
+      FileEntryRef File, SmallVectorImpl<DirectoryEntryRef> &IntermediateDirs);
 
   /// Given that \p File is not in the Headers map, look it up within
   /// umbrella directories and find or create a module for it.
-  KnownHeader findOrCreateModuleForHeaderInUmbrellaDir(const FileEntry *File);
+  KnownHeader findOrCreateModuleForHeaderInUmbrellaDir(FileEntryRef File);
 
   /// A convenience method to determine if \p File is (possibly nested)
   /// in an umbrella directory.
-  bool isHeaderInUmbrellaDirs(const FileEntry *File) {
-    SmallVector<const DirectoryEntry *, 2> IntermediateDirs;
+  bool isHeaderInUmbrellaDirs(FileEntryRef File) {
+    SmallVector<DirectoryEntryRef, 2> IntermediateDirs;
     return static_cast<bool>(findHeaderInUmbrellaDirs(File, IntermediateDirs));
   }
 
-  Module *inferFrameworkModule(const DirectoryEntry *FrameworkDir,
-                               Attributes Attrs, Module *Parent);
+  Module *inferFrameworkModule(DirectoryEntryRef FrameworkDir, Attributes Attrs,
+                               Module *Parent);
 
 public:
   /// Construct a new module map.
@@ -407,7 +405,7 @@ public:
 
   /// Set the directory that contains Clang-supplied include
   /// files, such as our stdarg.h or tgmath.h.
-  void setBuiltinIncludeDir(const DirectoryEntry *Dir) {
+  void setBuiltinIncludeDir(DirectoryEntryRef Dir) {
     BuiltinIncludeDir = Dir;
   }
 
@@ -439,8 +437,7 @@ public:
   /// \returns The module KnownHeader, which provides the module that owns the
   /// given header file.  The KnownHeader is default constructed to indicate
   /// that no module owns this header file.
-  KnownHeader findModuleForHeader(const FileEntry *File,
-                                  bool AllowTextual = false,
+  KnownHeader findModuleForHeader(FileEntryRef File, bool AllowTextual = false,
                                   bool AllowExcluded = false);
 
   /// Retrieve all the modules that contain the given header file. Note that
@@ -450,7 +447,7 @@ public:
   ///
   /// Typically, \ref findModuleForHeader should be used instead, as it picks
   /// the preferred module for the header.
-  ArrayRef<KnownHeader> findAllModulesForHeader(const FileEntry *File);
+  ArrayRef<KnownHeader> findAllModulesForHeader(FileEntryRef File);
 
   /// Like \ref findAllModulesForHeader, but do not attempt to infer module
   /// ownership from umbrella headers if we've not already done so.
@@ -490,11 +487,11 @@ public:
 
   /// Determine whether the given header is part of a module
   /// marked 'unavailable'.
-  bool isHeaderInUnavailableModule(const FileEntry *Header) const;
+  bool isHeaderInUnavailableModule(FileEntryRef Header) const;
 
   /// Determine whether the given header is unavailable as part
   /// of the specified module.
-  bool isHeaderUnavailableInModule(const FileEntry *Header,
+  bool isHeaderUnavailableInModule(FileEntryRef Header,
                                    const Module *RequestingModule) const;
 
   /// Retrieve a module with the given name.
@@ -553,10 +550,17 @@ public:
   /// parent.
   Module *createGlobalModuleFragmentForModuleUnit(SourceLocation Loc,
                                                   Module *Parent = nullptr);
+  Module *createImplicitGlobalModuleFragmentForModuleUnit(
+      SourceLocation Loc, bool IsExported, Module *Parent = nullptr);
 
   /// Create a global module fragment for a C++ module interface unit.
   Module *createPrivateModuleFragmentForInterfaceUnit(Module *Parent,
                                                       SourceLocation Loc);
+
+  /// Create a new C++ module with the specified kind, and reparent any pending
+  /// global module fragment(s) to it.
+  Module *createModuleUnitWithKind(SourceLocation Loc, StringRef Name,
+                                   Module::ModuleKind Kind);
 
   /// Create a new module for a C++ module interface unit.
   /// The module must not already exist, and will be configured for the current
@@ -567,14 +571,21 @@ public:
   /// \returns The newly-created module.
   Module *createModuleForInterfaceUnit(SourceLocation Loc, StringRef Name);
 
+  /// Create a new module for a C++ module implementation unit.
+  /// The interface module for this implementation (implicitly imported) must
+  /// exist and be loaded and present in the modules map.
+  ///
+  /// \returns The newly-created module.
+  Module *createModuleForImplementationUnit(SourceLocation Loc, StringRef Name);
+
   /// Create a C++20 header unit.
   Module *createHeaderUnit(SourceLocation Loc, StringRef Name,
                            Module::Header H);
 
   /// Infer the contents of a framework module map from the given
   /// framework directory.
-  Module *inferFrameworkModule(const DirectoryEntry *FrameworkDir,
-                               bool IsSystem, Module *Parent);
+  Module *inferFrameworkModule(DirectoryEntryRef FrameworkDir, bool IsSystem,
+                               Module *Parent);
 
   /// Create a new top-level module that is shadowed by
   /// \p ShadowingModule.
@@ -642,7 +653,7 @@ public:
     return &I->second;
   }
 
-  void addAdditionalModuleMapFile(const Module *M, const FileEntry *ModuleMap);
+  void addAdditionalModuleMapFile(const Module *M, FileEntryRef ModuleMap);
 
   /// Resolve all of the unresolved exports in the given module.
   ///
@@ -674,17 +685,16 @@ public:
   /// false otherwise.
   bool resolveConflicts(Module *Mod, bool Complain);
 
-  /// Sets the umbrella header of the given module to the given
-  /// header.
-  void setUmbrellaHeader(Module *Mod, FileEntryRef UmbrellaHeader,
-                         const Twine &NameAsWritten,
-                         const Twine &PathRelativeToRootModuleDirectory);
+  /// Sets the umbrella header of the given module to the given header.
+  void
+  setUmbrellaHeaderAsWritten(Module *Mod, FileEntryRef UmbrellaHeader,
+                             const Twine &NameAsWritten,
+                             const Twine &PathRelativeToRootModuleDirectory);
 
-  /// Sets the umbrella directory of the given module to the given
-  /// directory.
-  void setUmbrellaDir(Module *Mod, const DirectoryEntry *UmbrellaDir,
-                      const Twine &NameAsWritten,
-                      const Twine &PathRelativeToRootModuleDirectory);
+  /// Sets the umbrella directory of the given module to the given directory.
+  void setUmbrellaDirAsWritten(Module *Mod, DirectoryEntryRef UmbrellaDir,
+                               const Twine &NameAsWritten,
+                               const Twine &PathRelativeToRootModuleDirectory);
 
   /// Adds this header to the given module.
   /// \param Role The role of the header wrt the module.
@@ -711,9 +721,9 @@ public:
   ///        that caused us to load this module map file, if any.
   ///
   /// \returns true if an error occurred, false otherwise.
-  bool parseModuleMapFile(const FileEntry *File, bool IsSystem,
-                          const DirectoryEntry *HomeDir,
-                          FileID ID = FileID(), unsigned *Offset = nullptr,
+  bool parseModuleMapFile(FileEntryRef File, bool IsSystem,
+                          DirectoryEntryRef HomeDir, FileID ID = FileID(),
+                          unsigned *Offset = nullptr,
                           SourceLocation ExternModuleLoc = SourceLocation());
 
   /// Dump the contents of the module map, for debugging purposes.

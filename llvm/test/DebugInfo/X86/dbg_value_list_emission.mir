@@ -40,6 +40,7 @@
   !28 = !DILocalVariable(name: "localf", scope: !7, file: !1, line: 6, type: !10)
   !29 = !DILocalVariable(name: "localg", scope: !7, file: !1, line: 6, type: !10)
   !30 = !DILocalVariable(name: "localh", scope: !7, file: !1, line: 6, type: !10)
+  !31 = !DILocalVariable(name: "locali", scope: !7, file: !1, line: 6, type: !10)
 
 ...
 ---
@@ -94,6 +95,13 @@ body:             |
     ; (8) Check that a single $noreg location invalidates the entire entry.
     DBG_VALUE_LIST !30, !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_plus, DW_OP_stack_value), $eax, $noreg, debug-location !15
     ; CHECK-NOT:   DW_AT_name ("localh")
+
+    ; (9) Check that relational operators work
+    DBG_VALUE_LIST !31, !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_eq, DW_OP_LLVM_arg, 0, DW_OP_ne, DW_OP_LLVM_arg, 1, DW_OP_gt, DW_OP_LLVM_arg, 0, DW_OP_lt, DW_OP_LLVM_arg, 1, DW_OP_le, DW_OP_stack_value), $eax, $edi, debug-location !15
+    ; CHECK:      DW_TAG_variable
+    ; CHECK-NEXT:   (DW_OP_breg0 RAX+0, DW_OP_constu 0xffffffff, DW_OP_and, DW_OP_breg5 RDI+0, DW_OP_constu 0xffffffff, DW_OP_and, DW_OP_eq, DW_OP_breg0 RAX+0, DW_OP_constu 0xffffffff, DW_OP_and, DW_OP_ne, DW_OP_breg5 RDI+0, DW_OP_constu 0xffffffff, DW_OP_and, DW_OP_gt, DW_OP_breg0 RAX+0, DW_OP_constu 0xffffffff, DW_OP_and, DW_OP_lt, DW_OP_breg5 RDI+0, DW_OP_constu 0xffffffff, DW_OP_and, DW_OP_le, DW_OP_stack_value)
+    ; CHECK-NEXT:   DW_AT_name ("locali")
+
 
     RET64 debug-location !15
 ...

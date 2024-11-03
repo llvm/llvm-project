@@ -485,9 +485,7 @@ public:
                              InstructionVerifier &Verifier);
 
   /// Returns true for reachable and live blocks.
-  bool isMapped(const BasicBlock *BB) const {
-    return BlockMap.find(BB) != BlockMap.end();
-  }
+  bool isMapped(const BasicBlock *BB) const { return BlockMap.contains(BB); }
 
 private:
   /// Returns true if the instruction may be safely skipped during verification.

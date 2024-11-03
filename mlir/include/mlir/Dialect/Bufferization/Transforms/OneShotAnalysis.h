@@ -32,6 +32,9 @@ struct OneShotBufferizationOptions : public BufferizationOptions {
   /// Otherwise, a pass failure is triggered.
   bool allowReturnAllocs = false;
 
+  /// Specifies whether the tensor IR should be annotated with alias sets.
+  bool dumpAliasSets = false;
+
   /// The heuristic controls the order in which ops are traversed during the
   /// analysis.
   AnalysisHeuristic analysisHeuristic = AnalysisHeuristic::BottomUp;
@@ -127,7 +130,7 @@ public:
   const SetVector<Value> &findDefinitionsCached(Value value);
 
   /// Reset cached data structures.
-  void resetCache();
+  void resetCache() override;
 
   /// Union the alias sets of `v1` and `v2`.
   void unionAliasSets(Value v1, Value v2);

@@ -36,11 +36,8 @@
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
-#include "llvm/InitializePasses.h"
-#include "llvm/Pass.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
-#include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include <cassert>
 #include <optional>
@@ -97,60 +94,33 @@ STATISTIC(NumMinMax, "Number of llvm.[us]{min,max} intrinsics removed");
 STATISTIC(NumUDivURemsNarrowedExpanded,
           "Number of bound udiv's/urem's expanded");
 
-namespace {
-
-  class CorrelatedValuePropagation : public FunctionPass {
-  public:
-    static char ID;
-
-    CorrelatedValuePropagation(): FunctionPass(ID) {
-     initializeCorrelatedValuePropagationPass(*PassRegistry::getPassRegistry());
-    }
-
-    bool runOnFunction(Function &F) override;
-
-    void getAnalysisUsage(AnalysisUsage &AU) const override {
-      AU.addRequired<DominatorTreeWrapperPass>();
-      AU.addRequired<LazyValueInfoWrapperPass>();
-      AU.addPreserved<GlobalsAAWrapperPass>();
-      AU.addPreserved<DominatorTreeWrapperPass>();
-      AU.addPreserved<LazyValueInfoWrapperPass>();
-    }
-  };
-
-} // end anonymous namespace
-
-char CorrelatedValuePropagation::ID = 0;
-
-INITIALIZE_PASS_BEGIN(CorrelatedValuePropagation, "correlated-propagation",
-                "Value Propagation", false, false)
-INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(LazyValueInfoWrapperPass)
-INITIALIZE_PASS_END(CorrelatedValuePropagation, "correlated-propagation",
-                "Value Propagation", false, false)
-
-// Public interface to the Value Propagation pass
-Pass *llvm::createCorrelatedValuePropagationPass() {
-  return new CorrelatedValuePropagation();
-}
-
 static bool processSelect(SelectInst *S, LazyValueInfo *LVI) {
-  if (S->getType()->isVectorTy()) return false;
-  if (isa<Constant>(S->getCondition())) return false;
+  if (S->getType()->isVectorTy() || isa<Constant>(S->getCondition()))
+    return false;
 
-  Constant *C = LVI->getConstant(S->getCondition(), S);
-  if (!C) return false;
+  bool Changed = false;
+  for (Use &U : make_early_inc_range(S->uses())) {
+    auto *I = cast<Instruction>(U.getUser());
+    Constant *C;
+    if (auto *PN = dyn_cast<PHINode>(I))
+      C = LVI->getConstantOnEdge(S->getCondition(), PN->getIncomingBlock(U),
+                                 I->getParent(), I);
+    else
+      C = LVI->getConstant(S->getCondition(), I);
 
-  ConstantInt *CI = dyn_cast<ConstantInt>(C);
-  if (!CI) return false;
+    auto *CI = dyn_cast_or_null<ConstantInt>(C);
+    if (!CI)
+      continue;
 
-  Value *ReplaceWith = CI->isOne() ? S->getTrueValue() : S->getFalseValue();
-  S->replaceAllUsesWith(ReplaceWith);
-  S->eraseFromParent();
+    U.set(CI->isOne() ? S->getTrueValue() : S->getFalseValue());
+    Changed = true;
+    ++NumSelects;
+  }
 
-  ++NumSelects;
+  if (Changed && S->use_empty())
+    S->eraseFromParent();
 
-  return true;
+  return Changed;
 }
 
 /// Try to simplify a phi with constant incoming values that match the edge
@@ -803,10 +773,18 @@ static bool expandUDivOrURem(BinaryOperator *Instr, const ConstantRange &XCR,
 
   IRBuilder<> B(Instr);
   Value *ExpandedOp;
-  if (IsRem) {
+  if (XCR.icmp(ICmpInst::ICMP_UGE, YCR)) {
+    // If X is between Y and 2*Y the result is known.
+    if (IsRem)
+      ExpandedOp = B.CreateNUWSub(X, Y);
+    else
+      ExpandedOp = ConstantInt::get(Instr->getType(), 1);
+  } else if (IsRem) {
     // NOTE: this transformation introduces two uses of X,
     //       but it may be undef so we must freeze it first.
-    Value *FrozenX = B.CreateFreeze(X, X->getName() + ".frozen");
+    Value *FrozenX = X;
+    if (!isGuaranteedNotToBeUndefOrPoison(X))
+      FrozenX = B.CreateFreeze(X, X->getName() + ".frozen");
     auto *AdjX = B.CreateNUWSub(FrozenX, Y, Instr->getName() + ".urem");
     auto *Cmp =
         B.CreateICmp(ICmpInst::ICMP_ULT, FrozenX, Y, Instr->getName() + ".cmp");
@@ -1007,7 +985,8 @@ static bool processAShr(BinaryOperator *SDI, LazyValueInfo *LVI) {
   if (SDI->getType()->isVectorTy())
     return false;
 
-  ConstantRange LRange = LVI->getConstantRangeAtUse(SDI->getOperandUse(0));
+  ConstantRange LRange =
+      LVI->getConstantRangeAtUse(SDI->getOperandUse(0), /*UndefAllowed*/ false);
   unsigned OrigWidth = SDI->getType()->getIntegerBitWidth();
   ConstantRange NegOneOrZero =
       ConstantRange(APInt(OrigWidth, (uint64_t)-1, true), APInt(OrigWidth, 1));
@@ -1039,7 +1018,8 @@ static bool processSExt(SExtInst *SDI, LazyValueInfo *LVI) {
     return false;
 
   const Use &Base = SDI->getOperandUse(0);
-  if (!LVI->getConstantRangeAtUse(Base).isAllNonNegative())
+  if (!LVI->getConstantRangeAtUse(Base, /*UndefAllowed*/ false)
+           .isAllNonNegative())
     return false;
 
   ++NumSExt;
@@ -1219,16 +1199,6 @@ static bool runImpl(Function &F, LazyValueInfo *LVI, DominatorTree *DT,
   }
 
   return FnChanged;
-}
-
-bool CorrelatedValuePropagation::runOnFunction(Function &F) {
-  if (skipFunction(F))
-    return false;
-
-  LazyValueInfo *LVI = &getAnalysis<LazyValueInfoWrapperPass>().getLVI();
-  DominatorTree *DT = &getAnalysis<DominatorTreeWrapperPass>().getDomTree();
-
-  return runImpl(F, LVI, DT, getBestSimplifyQuery(*this, F));
 }
 
 PreservedAnalyses

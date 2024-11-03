@@ -6,10 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/IR/Function.h"
-
 #ifndef LLVM_LIB_TARGET_AARCH64_UTILS_AARCH64SMEATTRIBUTES_H
 #define LLVM_LIB_TARGET_AARCH64_UTILS_AARCH64SMEATTRIBUTES_H
+
+#include "llvm/IR/Function.h"
+
 namespace llvm {
 
 class Function;
@@ -30,7 +31,7 @@ public:
     Normal = 0,
     SM_Enabled = 1 << 0,    // aarch64_pstate_sm_enabled
     SM_Compatible = 1 << 1, // aarch64_pstate_sm_compatible
-    SM_Body = 1 << 2,       // aarch64_pstate_sm_locally
+    SM_Body = 1 << 2,       // aarch64_pstate_sm_body
     ZA_Shared = 1 << 3,     // aarch64_pstate_sm_shared
     ZA_New = 1 << 4,        // aarch64_pstate_sm_new
     ZA_Preserved = 1 << 5,  // aarch64_pstate_sm_preserved
@@ -72,12 +73,12 @@ public:
                    bool BodyOverridesInterface = false) const;
 
   // Interfaces to query PSTATE.ZA
-  bool hasNewZAInterface() const { return Bitmask & ZA_New; }
+  bool hasNewZABody() const { return Bitmask & ZA_New; }
   bool hasSharedZAInterface() const { return Bitmask & ZA_Shared; }
   bool hasPrivateZAInterface() const { return !hasSharedZAInterface(); }
   bool preservesZA() const { return Bitmask & ZA_Preserved; }
   bool hasZAState() const {
-    return hasNewZAInterface() || hasSharedZAInterface();
+    return hasNewZABody() || hasSharedZAInterface();
   }
   bool requiresLazySave(const SMEAttrs &Callee) const {
     return hasZAState() && Callee.hasPrivateZAInterface() &&

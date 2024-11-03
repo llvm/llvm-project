@@ -24,12 +24,12 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-template <class _InputIter>
+template <class _InputIter, __enable_if_t<__has_input_iterator_category<_InputIter>::value, int> = 0>
 inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX17
-    typename enable_if<__is_cpp17_input_iterator<_InputIter>::value, _InputIter>::type
+    _InputIter
     next(_InputIter __x, typename iterator_traits<_InputIter>::difference_type __n = 1) {
-  _LIBCPP_ASSERT(__n >= 0 || __is_cpp17_bidirectional_iterator<_InputIter>::value,
-                 "Attempt to next(it, n) with negative n on a non-bidirectional iterator");
+  _LIBCPP_ASSERT_UNCATEGORIZED(__n >= 0 || __has_bidirectional_iterator_category<_InputIter>::value,
+                               "Attempt to next(it, n) with negative n on a non-bidirectional iterator");
 
   _VSTD::advance(__x, __n);
   return __x;

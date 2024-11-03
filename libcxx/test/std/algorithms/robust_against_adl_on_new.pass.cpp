@@ -19,7 +19,7 @@ struct A {
     static bool isEven(const A& a) { return a.i % 2 == 0; }
 };
 
-void *operator new(size_t, A*) = delete;
+void *operator new(std::size_t, A*) = delete;
 
 int main(int, char**)
 {

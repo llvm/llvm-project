@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s concurrency-mt-unsafe %t -- -config='{CheckOptions: [{key: "concurrency-mt-unsafe.FunctionSet", value: "glibc"}]}'
+// RUN: %check_clang_tidy %s concurrency-mt-unsafe %t -- -config='{CheckOptions: {concurrency-mt-unsafe.FunctionSet: "glibc"}}'
 
 extern unsigned int sleep (unsigned int __seconds);
 extern int *gmtime (const int *__timer);

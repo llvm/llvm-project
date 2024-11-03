@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Tools/lsp-server-support/SourceMgrUtils.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/Path.h"
 #include <optional>
 

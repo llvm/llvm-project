@@ -384,7 +384,7 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Value *V, APInt DemandedMask,
       return I;
 
     // Only known if known in both the LHS and RHS.
-    Known = KnownBits::commonBits(LHSKnown, RHSKnown);
+    Known = LHSKnown.intersectWith(RHSKnown);
     break;
   }
   case Instruction::Trunc: {
@@ -644,24 +644,10 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Value *V, APInt DemandedMask,
         return I;
       assert(!Known.hasConflict() && "Bits known to be one AND zero?");
 
-      bool SignBitZero = Known.Zero.isSignBitSet();
-      bool SignBitOne = Known.One.isSignBitSet();
-      Known.Zero <<= ShiftAmt;
-      Known.One  <<= ShiftAmt;
-      // low bits known zero.
-      if (ShiftAmt)
-        Known.Zero.setLowBits(ShiftAmt);
-
-      // If this shift has "nsw" keyword, then the result is either a poison
-      // value or has the same sign bit as the first operand.
-      if (IOp->hasNoSignedWrap()) {
-        if (SignBitZero)
-          Known.Zero.setSignBit();
-        else if (SignBitOne)
-          Known.One.setSignBit();
-        if (Known.hasConflict())
-          return UndefValue::get(VTy);
-      }
+      Known = KnownBits::shl(Known,
+                             KnownBits::makeConstant(APInt(BitWidth, ShiftAmt)),
+                             /* NUW */ IOp->hasNoUnsignedWrap(),
+                             /* NSW */ IOp->hasNoSignedWrap());
     } else {
       // This is a variable shift, so we can't shift the demand mask by a known
       // amount. But if we are not demanding high bits, then we are not
@@ -808,9 +794,8 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Value *V, APInt DemandedMask,
         return I;
       }
 
-      // Increase high zero bits from the input.
-      Known.Zero.setHighBits(
-          std::min(BitWidth, LHSKnown.Zero.countl_one() + RHSTrailingZeros));
+      Known = KnownBits::udiv(LHSKnown, KnownBits::makeConstant(*SA),
+                              cast<BinaryOperator>(I)->isExact());
     } else {
       computeKnownBits(I, Known, Depth, CxtI);
     }
@@ -852,25 +837,16 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Value *V, APInt DemandedMask,
       }
     }
 
-    // The sign bit is the LHS's sign bit, except when the result of the
-    // remainder is zero.
-    if (DemandedMask.isSignBitSet()) {
-      computeKnownBits(I->getOperand(0), LHSKnown, Depth + 1, CxtI);
-      // If it's known zero, our sign bit is also zero.
-      if (LHSKnown.isNonNegative())
-        Known.makeNonNegative();
-    }
+    computeKnownBits(I, Known, Depth, CxtI);
     break;
   }
   case Instruction::URem: {
-    KnownBits Known2(BitWidth);
     APInt AllOnes = APInt::getAllOnes(BitWidth);
-    if (SimplifyDemandedBits(I, 0, AllOnes, Known2, Depth + 1) ||
-        SimplifyDemandedBits(I, 1, AllOnes, Known2, Depth + 1))
+    if (SimplifyDemandedBits(I, 0, AllOnes, LHSKnown, Depth + 1) ||
+        SimplifyDemandedBits(I, 1, AllOnes, RHSKnown, Depth + 1))
       return I;
 
-    unsigned Leaders = Known2.countMinLeadingZeros();
-    Known.Zero = APInt::getHighBitsSet(BitWidth, Leaders) & DemandedMask;
+    Known = KnownBits::urem(LHSKnown, RHSKnown);
     break;
   }
   case Instruction::Call: {
@@ -936,9 +912,28 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Value *V, APInt DemandedMask,
 
         APInt DemandedMaskLHS(DemandedMask.lshr(ShiftAmt));
         APInt DemandedMaskRHS(DemandedMask.shl(BitWidth - ShiftAmt));
-        if (SimplifyDemandedBits(I, 0, DemandedMaskLHS, LHSKnown, Depth + 1) ||
-            SimplifyDemandedBits(I, 1, DemandedMaskRHS, RHSKnown, Depth + 1))
-          return I;
+        if (I->getOperand(0) != I->getOperand(1)) {
+          if (SimplifyDemandedBits(I, 0, DemandedMaskLHS, LHSKnown,
+                                   Depth + 1) ||
+              SimplifyDemandedBits(I, 1, DemandedMaskRHS, RHSKnown, Depth + 1))
+            return I;
+        } else { // fshl is a rotate
+          // Avoid converting rotate into funnel shift.
+          // Only simplify if one operand is constant.
+          LHSKnown = computeKnownBits(I->getOperand(0), Depth + 1, I);
+          if (DemandedMaskLHS.isSubsetOf(LHSKnown.Zero | LHSKnown.One) &&
+              !match(I->getOperand(0), m_SpecificInt(LHSKnown.One))) {
+            replaceOperand(*I, 0, Constant::getIntegerValue(VTy, LHSKnown.One));
+            return I;
+          }
+
+          RHSKnown = computeKnownBits(I->getOperand(1), Depth + 1, I);
+          if (DemandedMaskRHS.isSubsetOf(RHSKnown.Zero | RHSKnown.One) &&
+              !match(I->getOperand(1), m_SpecificInt(RHSKnown.One))) {
+            replaceOperand(*I, 1, Constant::getIntegerValue(VTy, RHSKnown.One));
+            return I;
+          }
+        }
 
         Known.Zero = LHSKnown.Zero.shl(ShiftAmt) |
                      RHSKnown.Zero.lshr(BitWidth - ShiftAmt);
@@ -1015,6 +1010,7 @@ Value *InstCombinerImpl::SimplifyMultipleUseDemandedBits(
     computeKnownBits(I->getOperand(1), RHSKnown, Depth + 1, CxtI);
     computeKnownBits(I->getOperand(0), LHSKnown, Depth + 1, CxtI);
     Known = LHSKnown & RHSKnown;
+    computeKnownBitsFromAssume(I, Known, Depth, SQ.getWithInstruction(CxtI));
 
     // If the client is only demanding bits that we know, return the known
     // constant.
@@ -1034,6 +1030,7 @@ Value *InstCombinerImpl::SimplifyMultipleUseDemandedBits(
     computeKnownBits(I->getOperand(1), RHSKnown, Depth + 1, CxtI);
     computeKnownBits(I->getOperand(0), LHSKnown, Depth + 1, CxtI);
     Known = LHSKnown | RHSKnown;
+    computeKnownBitsFromAssume(I, Known, Depth, SQ.getWithInstruction(CxtI));
 
     // If the client is only demanding bits that we know, return the known
     // constant.
@@ -1055,6 +1052,7 @@ Value *InstCombinerImpl::SimplifyMultipleUseDemandedBits(
     computeKnownBits(I->getOperand(1), RHSKnown, Depth + 1, CxtI);
     computeKnownBits(I->getOperand(0), LHSKnown, Depth + 1, CxtI);
     Known = LHSKnown ^ RHSKnown;
+    computeKnownBitsFromAssume(I, Known, Depth, SQ.getWithInstruction(CxtI));
 
     // If the client is only demanding bits that we know, return the known
     // constant.
@@ -1085,6 +1083,9 @@ Value *InstCombinerImpl::SimplifyMultipleUseDemandedBits(
     if (DemandedFromOps.isSubsetOf(LHSKnown.Zero))
       return I->getOperand(1);
 
+    bool NSW = cast<OverflowingBinaryOperator>(I)->hasNoSignedWrap();
+    Known = KnownBits::computeForAddSub(/*Add*/ true, NSW, LHSKnown, RHSKnown);
+    computeKnownBitsFromAssume(I, Known, Depth, SQ.getWithInstruction(CxtI));
     break;
   }
   case Instruction::Sub: {
@@ -1097,6 +1098,10 @@ Value *InstCombinerImpl::SimplifyMultipleUseDemandedBits(
     if (DemandedFromOps.isSubsetOf(RHSKnown.Zero))
       return I->getOperand(0);
 
+    bool NSW = cast<OverflowingBinaryOperator>(I)->hasNoSignedWrap();
+    computeKnownBits(I->getOperand(0), LHSKnown, Depth + 1, CxtI);
+    Known = KnownBits::computeForAddSub(/*Add*/ false, NSW, LHSKnown, RHSKnown);
+    computeKnownBitsFromAssume(I, Known, Depth, SQ.getWithInstruction(CxtI));
     break;
   }
   case Instruction::AShr: {
@@ -1542,7 +1547,7 @@ Value *InstCombinerImpl::SimplifyDemandedVectorElts(Value *V,
       // Found constant vector with single element - convert to insertelement.
       if (Op && Value) {
         Instruction *New = InsertElementInst::Create(
-            Op, Value, ConstantInt::get(Type::getInt32Ty(I->getContext()), Idx),
+            Op, Value, ConstantInt::get(Type::getInt64Ty(I->getContext()), Idx),
             Shuffle->getName());
         InsertNewInstWith(New, *Shuffle);
         return New;
@@ -1553,7 +1558,7 @@ Value *InstCombinerImpl::SimplifyDemandedVectorElts(Value *V,
       SmallVector<int, 16> Elts;
       for (unsigned i = 0; i < VWidth; ++i) {
         if (UndefElts[i])
-          Elts.push_back(UndefMaskElem);
+          Elts.push_back(PoisonMaskElem);
         else
           Elts.push_back(Shuffle->getMaskValue(i));
       }
@@ -1713,6 +1718,54 @@ Value *InstCombinerImpl::SimplifyDemandedVectorElts(Value *V,
   // UB/poison potential, but that should be refined.
   BinaryOperator *BO;
   if (match(I, m_BinOp(BO)) && !BO->isIntDivRem() && !BO->isShift()) {
+    Value *X = BO->getOperand(0);
+    Value *Y = BO->getOperand(1);
+
+    // Look for an equivalent binop except that one operand has been shuffled.
+    // If the demand for this binop only includes elements that are the same as
+    // the other binop, then we may be able to replace this binop with a use of
+    // the earlier one.
+    //
+    // Example:
+    // %other_bo = bo (shuf X, {0}), Y
+    // %this_extracted_bo = extelt (bo X, Y), 0
+    // -->
+    // %other_bo = bo (shuf X, {0}), Y
+    // %this_extracted_bo = extelt %other_bo, 0
+    //
+    // TODO: Handle demand of an arbitrary single element or more than one
+    //       element instead of just element 0.
+    // TODO: Unlike general demanded elements transforms, this should be safe
+    //       for any (div/rem/shift) opcode too.
+    if (DemandedElts == 1 && !X->hasOneUse() && !Y->hasOneUse() &&
+        BO->hasOneUse() ) {
+
+      auto findShufBO = [&](bool MatchShufAsOp0) -> User * {
+        // Try to use shuffle-of-operand in place of an operand:
+        // bo X, Y --> bo (shuf X), Y
+        // bo X, Y --> bo X, (shuf Y)
+        BinaryOperator::BinaryOps Opcode = BO->getOpcode();
+        Value *ShufOp = MatchShufAsOp0 ? X : Y;
+        Value *OtherOp = MatchShufAsOp0 ? Y : X;
+        for (User *U : OtherOp->users()) {
+          auto Shuf = m_Shuffle(m_Specific(ShufOp), m_Value(), m_ZeroMask());
+          if (BO->isCommutative()
+                  ? match(U, m_c_BinOp(Opcode, Shuf, m_Specific(OtherOp)))
+                  : MatchShufAsOp0
+                        ? match(U, m_BinOp(Opcode, Shuf, m_Specific(OtherOp)))
+                        : match(U, m_BinOp(Opcode, m_Specific(OtherOp), Shuf)))
+            if (DT.dominates(U, I))
+              return U;
+        }
+        return nullptr;
+      };
+
+      if (User *ShufBO = findShufBO(/* MatchShufAsOp0 */ true))
+        return ShufBO;
+      if (User *ShufBO = findShufBO(/* MatchShufAsOp0 */ false))
+        return ShufBO;
+    }
+
     simplifyAndSetOp(I, 0, DemandedElts, UndefElts);
     simplifyAndSetOp(I, 1, DemandedElts, UndefElts2);
 
@@ -1724,7 +1777,7 @@ Value *InstCombinerImpl::SimplifyDemandedVectorElts(Value *V,
   // If we've proven all of the lanes undef, return an undef value.
   // TODO: Intersect w/demanded lanes
   if (UndefElts.isAllOnes())
-    return UndefValue::get(I->getType());;
+    return UndefValue::get(I->getType());
 
   return MadeChange ? I : nullptr;
 }

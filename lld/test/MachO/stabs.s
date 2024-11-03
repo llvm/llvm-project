@@ -42,6 +42,11 @@
 # RUN: (llvm-objdump --section-headers %t/test; dsymutil -s %t/test) | \
 # RUN:   FileCheck %s -DDIR=%t -DFOO_PATH=%t/foo.a\(foo.o\) \
 # RUN:       -D#TEST_TIME=0 -D#FOO_TIME=0
+# RUN: env ZERO_AR_DATE=0 %lld -lSystem -reproducible %t/test.o %t/foo.o \
+# RUN:     %t/no-debug.o -o %t/test
+# RUN: (llvm-objdump --section-headers %t/test; dsymutil -s %t/test) | \
+# RUN:   FileCheck %s -DDIR=%t -DFOO_PATH=%t/foo.o \
+# RUN:       -D#TEST_TIME=0 -D#FOO_TIME=0
 
 ## Check that we emit absolute paths to the object files in our OSO entries
 ## even if our inputs are relative paths.
@@ -200,6 +205,8 @@ Lsection_abbrev:
   .byte  18                      ## DW_AT_high_pc
   .byte  6                       ## DW_FORM_data4
   .byte  0                       ## EOM(1)
+  .byte  0                       ## EOM(2)
+  .byte  0                       ## EOM(3)
 .section  __DWARF,__debug_info,regular,debug
 .set Lset0, Ldebug_info_end0-Ldebug_info_start0 ## Length of Unit
   .long  Lset0
@@ -249,6 +256,8 @@ Lsection_abbrev:
   .byte  18                      ## DW_AT_high_pc
   .byte  6                       ## DW_FORM_data4
   .byte  0                       ## EOM(1)
+  .byte  0                       ## EOM(2)
+  .byte  0                       ## EOM(3)
 .section  __DWARF,__debug_info,regular,debug
 .set Lset0, Ldebug_info_end0-Ldebug_info_start0 ## Length of Unit
   .long  Lset0

@@ -20,8 +20,7 @@ using namespace llvm;
 using namespace llvm::wasm;
 using namespace llvm::object;
 
-namespace lld {
-namespace wasm {
+namespace lld::wasm {
 SymbolTable *symtab;
 
 void SymbolTable::addFile(InputFile *file) {
@@ -36,6 +35,13 @@ void SymbolTable::addFile(InputFile *file) {
   // .so file
   if (auto *f = dyn_cast<SharedFile>(file)) {
     sharedFiles.push_back(f);
+    return;
+  }
+
+  // stub file
+  if (auto *f = dyn_cast<StubFile>(file)) {
+    f->parse();
+    stubFiles.push_back(f);
     return;
   }
 
@@ -524,6 +530,9 @@ Symbol *SymbolTable::addUndefinedFunction(StringRef name,
       lazy->signature = sig;
     } else {
       lazy->fetch();
+      if (!config->whyExtract.empty())
+        config->whyExtractRecords.emplace_back(toString(file), s->getFile(),
+                                               *s);
     }
   } else {
     auto existingFunction = dyn_cast<FunctionSymbol>(s);
@@ -548,6 +557,8 @@ Symbol *SymbolTable::addUndefinedFunction(StringRef name,
                           file);
       if (isCalledDirectly)
         existingUndefined->isCalledDirectly = true;
+      if (s->isWeak())
+        s->flags = flags;
     }
   }
 
@@ -574,6 +585,8 @@ Symbol *SymbolTable::addUndefinedData(StringRef name, uint32_t flags,
       lazy->fetch();
   } else if (s->isDefined()) {
     checkDataType(s, file);
+  } else if (s->isWeak()) {
+    s->flags = flags;
   }
   return s;
 }
@@ -599,6 +612,8 @@ Symbol *SymbolTable::addUndefinedGlobal(StringRef name,
     lazy->fetch();
   else if (s->isDefined())
     checkGlobalType(s, file, type);
+  else if (s->isWeak())
+    s->flags = flags;
   return s;
 }
 
@@ -623,6 +638,8 @@ Symbol *SymbolTable::addUndefinedTable(StringRef name,
     lazy->fetch();
   else if (s->isDefined())
     checkTableType(s, file, type);
+  else if (s->isWeak())
+    s->flags = flags;
   return s;
 }
 
@@ -647,6 +664,8 @@ Symbol *SymbolTable::addUndefinedTag(StringRef name,
     lazy->fetch();
   else if (s->isDefined())
     checkTagType(s, file, sig);
+  else if (s->isWeak())
+    s->flags = flags;
   return s;
 }
 
@@ -748,7 +767,10 @@ void SymbolTable::addLazy(ArchiveFile *file, const Archive::Symbol *sym) {
   }
 
   LLVM_DEBUG(dbgs() << "replacing existing undefined\n");
+  const InputFile *oldFile = s->getFile();
   file->addMember(sym);
+  if (!config->whyExtract.empty())
+    config->whyExtractRecords.emplace_back(toString(oldFile), s->getFile(), *s);
 }
 
 bool SymbolTable::addComdat(StringRef name) {
@@ -950,5 +972,4 @@ void SymbolTable::handleSymbolVariants() {
   }
 }
 
-} // namespace wasm
-} // namespace lld
+} // namespace wasm::lld

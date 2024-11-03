@@ -51,8 +51,7 @@ class HexagonAsmBackend : public MCAsmBackend {
                           MCInst &HMB) const {
     SmallVector<MCFixup, 4> Fixups;
     SmallString<256> Code;
-    raw_svector_ostream VecOS(Code);
-    E.encodeInstruction(HMB, VecOS, Fixups, *RF.getSubtargetInfo());
+    E.encodeInstruction(HMB, Code, Fixups, *RF.getSubtargetInfo());
 
     // Update the fragment.
     RF.setInst(HMB);

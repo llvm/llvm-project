@@ -953,10 +953,8 @@ SDValue R600TargetLowering::lowerADDRSPACECAST(SDValue Op,
   unsigned SrcAS = ASC->getSrcAddressSpace();
   unsigned DestAS = ASC->getDestAddressSpace();
 
-  if (auto *ConstSrc = dyn_cast<ConstantSDNode>(Op.getOperand(0))) {
-    if (SrcAS == AMDGPUAS::FLAT_ADDRESS && ConstSrc->isZero())
-      return DAG.getConstant(TM.getNullPointerValue(DestAS), SL, VT);
-  }
+  if (isNullConstant(Op.getOperand(0)) && SrcAS == AMDGPUAS::FLAT_ADDRESS)
+    return DAG.getConstant(TM.getNullPointerValue(DestAS), SL, VT);
 
   return Op;
 }
@@ -1656,7 +1654,7 @@ SDValue R600TargetLowering::OptimizeSwizzle(SDValue BuildVector, SDValue Swz[],
   BuildVector = CompactSwizzlableVector(DAG, BuildVector, SwizzleRemap);
   for (unsigned i = 0; i < 4; i++) {
     unsigned Idx = cast<ConstantSDNode>(Swz[i])->getZExtValue();
-    if (SwizzleRemap.find(Idx) != SwizzleRemap.end())
+    if (SwizzleRemap.contains(Idx))
       Swz[i] = DAG.getConstant(SwizzleRemap[Idx], DL, MVT::i32);
   }
 
@@ -1664,7 +1662,7 @@ SDValue R600TargetLowering::OptimizeSwizzle(SDValue BuildVector, SDValue Swz[],
   BuildVector = ReorganizeVector(DAG, BuildVector, SwizzleRemap);
   for (unsigned i = 0; i < 4; i++) {
     unsigned Idx = cast<ConstantSDNode>(Swz[i])->getZExtValue();
-    if (SwizzleRemap.find(Idx) != SwizzleRemap.end())
+    if (SwizzleRemap.contains(Idx))
       Swz[i] = DAG.getConstant(SwizzleRemap[Idx], DL, MVT::i32);
   }
 

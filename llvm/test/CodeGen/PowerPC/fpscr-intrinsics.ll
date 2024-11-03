@@ -65,9 +65,9 @@ define dso_local void @callmtfsf(i32 zeroext %a) local_unnamed_addr {
 ;
 ; CHECK-AIX32-LABEL: callmtfsf:
 ; CHECK-AIX32:       # %bb.0: # %entry
-; CHECK-AIX32-NEXT:    addi 4, 1, -4
 ; CHECK-AIX32-NEXT:    stw 3, -4(1)
-; CHECK-AIX32-NEXT:    lfiwzx 0, 0, 4
+; CHECK-AIX32-NEXT:    addi 3, 1, -4
+; CHECK-AIX32-NEXT:    lfiwzx 0, 0, 3
 ; CHECK-AIX32-NEXT:    xscvuxddp 0, 0
 ; CHECK-AIX32-NEXT:    mtfsf 7, 0
 ; CHECK-AIX32-NEXT:    blr

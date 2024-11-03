@@ -28,6 +28,7 @@
 #include "llvm/Support/DataTypes.h"
 #include <cassert>
 #include <cstdio>
+#include <optional>
 #include <tuple>
 #include <utility>
 
@@ -215,7 +216,8 @@ inline FormattedNumber format_decimal(int64_t N, unsigned Width) {
 class FormattedBytes {
   ArrayRef<uint8_t> Bytes;
 
-  // If not None, display offsets for each line relative to starting value.
+  // If not std::nullopt, display offsets for each line relative to starting
+  // value.
   std::optional<uint64_t> FirstByteOffset;
   uint32_t IndentLevel;  // Number of characters to indent each line.
   uint32_t NumPerLine;   // Number of bytes to show per line.

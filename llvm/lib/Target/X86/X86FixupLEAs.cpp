@@ -186,13 +186,9 @@ FixupLEAPass::postRAConvertToLEA(MachineBasicBlock &MBB,
     // Only convert instructions that we've verified are safe.
     return nullptr;
   case X86::ADD64ri32:
-  case X86::ADD64ri8:
   case X86::ADD64ri32_DB:
-  case X86::ADD64ri8_DB:
   case X86::ADD32ri:
-  case X86::ADD32ri8:
   case X86::ADD32ri_DB:
-  case X86::ADD32ri8_DB:
     if (!MI.getOperand(2).isImm()) {
       // convertToThreeAddress will call getImm()
       // which requires isImm() to be true
@@ -374,15 +370,14 @@ static inline unsigned getSUBrrFromLEA(unsigned LEAOpcode) {
 
 static inline unsigned getADDriFromLEA(unsigned LEAOpcode,
                                        const MachineOperand &Offset) {
-  bool IsInt8 = Offset.isImm() && isInt<8>(Offset.getImm());
   switch (LEAOpcode) {
   default:
     llvm_unreachable("Unexpected LEA instruction");
   case X86::LEA32r:
   case X86::LEA64_32r:
-    return IsInt8 ? X86::ADD32ri8 : X86::ADD32ri;
+    return X86::ADD32ri;
   case X86::LEA64r:
-    return IsInt8 ? X86::ADD64ri8 : X86::ADD64ri32;
+    return X86::ADD64ri32;
   }
 }
 
@@ -463,10 +458,8 @@ void FixupLEAPass::checkRegUsage(MachineBasicBlock::iterator &LeaI,
   Register IndexReg = LeaI->getOperand(1 + X86::AddrIndexReg).getReg();
   Register AluDestReg = AluI->getOperand(0).getReg();
 
-  MachineBasicBlock::iterator CurInst = std::next(LeaI);
-  while (CurInst != AluI) {
-    for (unsigned I = 0, E = CurInst->getNumOperands(); I != E; ++I) {
-      MachineOperand &Opnd = CurInst->getOperand(I);
+  for (MachineInstr &CurInst : llvm::make_range(std::next(LeaI), AluI)) {
+    for (MachineOperand &Opnd : CurInst.operands()) {
       if (!Opnd.isReg())
         continue;
       Register Reg = Opnd.getReg();
@@ -485,7 +478,6 @@ void FixupLEAPass::checkRegUsage(MachineBasicBlock::iterator &LeaI,
           *KilledIndex = &Opnd;
       }
     }
-    ++CurInst;
   }
 }
 

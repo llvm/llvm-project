@@ -19,12 +19,11 @@ namespace llvm {
 namespace exegesis {
 
 LatencyBenchmarkRunner::LatencyBenchmarkRunner(
-    const LLVMState &State, InstructionBenchmark::ModeE Mode,
+    const LLVMState &State, Benchmark::ModeE Mode,
     BenchmarkPhaseSelectorE BenchmarkPhaseSelector,
-    InstructionBenchmark::ResultAggregationModeE ResultAgg)
-    : BenchmarkRunner(State, Mode, BenchmarkPhaseSelector) {
-  assert((Mode == InstructionBenchmark::Latency ||
-          Mode == InstructionBenchmark::InverseThroughput) &&
+    Benchmark::ResultAggregationModeE ResultAgg, ExecutionModeE ExecutionMode)
+    : BenchmarkRunner(State, Mode, BenchmarkPhaseSelector, ExecutionMode) {
+  assert((Mode == Benchmark::Latency || Mode == Benchmark::InverseThroughput) &&
          "invalid mode");
   ResultAggMode = ResultAgg;
 }
@@ -94,10 +93,10 @@ Expected<std::vector<BenchmarkMeasure>> LatencyBenchmarkRunner::runMeasurements(
 
   std::string ModeName;
   switch (Mode) {
-  case InstructionBenchmark::Latency:
+  case Benchmark::Latency:
     ModeName = "latency";
     break;
-  case InstructionBenchmark::InverseThroughput:
+  case Benchmark::InverseThroughput:
     ModeName = "inverse_throughput";
     break;
   default:
@@ -105,7 +104,7 @@ Expected<std::vector<BenchmarkMeasure>> LatencyBenchmarkRunner::runMeasurements(
   }
 
   switch (ResultAggMode) {
-  case InstructionBenchmark::MinVariance: {
+  case Benchmark::MinVariance: {
     if (ValuesCount == 1)
       llvm::errs() << "Each sample only has one value. result-aggregation-mode "
                       "of min-variance is probably non-sensical\n";
@@ -115,19 +114,19 @@ Expected<std::vector<BenchmarkMeasure>> LatencyBenchmarkRunner::runMeasurements(
       Result.push_back(BenchmarkMeasure::Create(ModeName, Value));
     return std::move(Result);
   }
-  case InstructionBenchmark::Min: {
+  case Benchmark::Min: {
     std::vector<BenchmarkMeasure> Result;
     Result.push_back(
         BenchmarkMeasure::Create(ModeName, findMin(AccumulatedValues)));
     return std::move(Result);
   }
-  case InstructionBenchmark::Max: {
+  case Benchmark::Max: {
     std::vector<BenchmarkMeasure> Result;
     Result.push_back(
         BenchmarkMeasure::Create(ModeName, findMax(AccumulatedValues)));
     return std::move(Result);
   }
-  case InstructionBenchmark::Mean: {
+  case Benchmark::Mean: {
     std::vector<BenchmarkMeasure> Result;
     Result.push_back(
         BenchmarkMeasure::Create(ModeName, findMean(AccumulatedValues)));

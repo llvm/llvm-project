@@ -377,19 +377,6 @@ name: test_fadd_v3s16
 body: |
   bb.0:
     liveins: $vgpr0_vgpr1_vgpr2, $vgpr3_vgpr4_vgpr5
-    ; CHECK-LABEL: name: test_or_v3s16
-    ; CHECK: [[COPY:%[0-9]+]]:_(<6 x s16>) = COPY $vgpr0_vgpr1_vgpr2
-    ; CHECK: [[COPY1:%[0-9]+]]:_(<6 x s16>) = COPY $vgpr3_vgpr4_vgpr5
-    ; CHECK: [[UV:%[0-9]+]]:_(<3 x s16>), [[UV1:%[0-9]+]]:_(<3 x s16>) = G_UNMERGE_VALUES [[COPY]](<6 x s16>)
-    ; CHECK: [[UV2:%[0-9]+]]:_(<3 x s16>), [[UV3:%[0-9]+]]:_(<3 x s16>) = G_UNMERGE_VALUES [[COPY1]](<6 x s16>)
-    ; CHECK: [[DEF:%[0-9]+]]:_(<4 x s16>) = G_IMPLICIT_DEF
-    ; CHECK: [[INSERT:%[0-9]+]]:_(<4 x s16>) = G_INSERT [[DEF]], [[UV]](<3 x s16>), 0
-    ; CHECK: [[INSERT1:%[0-9]+]]:_(<4 x s16>) = G_INSERT [[DEF]], [[UV2]](<3 x s16>), 0
-    ; CHECK: [[OR:%[0-9]+]]:_(<4 x s16>) = G_OR [[INSERT]], [[INSERT1]]
-    ; CHECK: [[EXTRACT:%[0-9]+]]:_(<3 x s16>) = G_EXTRACT [[OR]](<4 x s16>), 0
-    ; CHECK: [[EXTRACT1:%[0-9]+]]:_(<3 x s16>) = G_EXTRACT [[DEF]](<4 x s16>), 0
-    ; CHECK: [[CONCAT_VECTORS:%[0-9]+]]:_(<6 x s16>) = G_CONCAT_VECTORS [[EXTRACT]](<3 x s16>), [[EXTRACT1]](<3 x s16>)
-    ; CHECK: $vgpr0_vgpr1_vgpr2 = COPY [[CONCAT_VECTORS]](<6 x s16>)
     ; SI-LABEL: name: test_fadd_v3s16
     ; SI: liveins: $vgpr0_vgpr1_vgpr2, $vgpr3_vgpr4_vgpr5
     ; SI-NEXT: {{  $}}

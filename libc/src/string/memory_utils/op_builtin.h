@@ -23,19 +23,24 @@ namespace __llvm_libc::builtin {
 // Memcpy
 template <size_t Size> struct Memcpy {
   static constexpr size_t SIZE = Size;
-  LIBC_INLINE static void block(Ptr __restrict dst, CPtr __restrict src) {
+  LIBC_INLINE static void block_offset(Ptr __restrict dst, CPtr __restrict src,
+                                       size_t offset) {
 #ifdef LLVM_LIBC_HAS_BUILTIN_MEMCPY_INLINE
-    return __builtin_memcpy_inline(dst, src, SIZE);
+    return __builtin_memcpy_inline(dst + offset, src + offset, SIZE);
 #else
     // The codegen may be suboptimal.
     for (size_t i = 0; i < Size; ++i)
-      dst[i] = src[i];
+      dst[i + offset] = src[i + offset];
 #endif
+  }
+
+  LIBC_INLINE static void block(Ptr __restrict dst, CPtr __restrict src) {
+    block_offset(dst, src, 0);
   }
 
   LIBC_INLINE static void tail(Ptr __restrict dst, CPtr __restrict src,
                                size_t count) {
-    block(dst + count - SIZE, src + count - SIZE);
+    block_offset(dst, src, count - SIZE);
   }
 
   LIBC_INLINE static void head_tail(Ptr __restrict dst, CPtr __restrict src,
@@ -44,15 +49,20 @@ template <size_t Size> struct Memcpy {
     tail(dst, src, count);
   }
 
-  LIBC_INLINE static void loop_and_tail(Ptr __restrict dst, CPtr __restrict src,
-                                        size_t count) {
+  LIBC_INLINE static void loop_and_tail_offset(Ptr __restrict dst,
+                                               CPtr __restrict src,
+                                               size_t count, size_t offset) {
     static_assert(Size > 1, "a loop of size 1 does not need tail");
-    size_t offset = 0;
     do {
-      block(dst + offset, src + offset);
+      block_offset(dst, src, offset);
       offset += SIZE;
     } while (offset < count - SIZE);
     tail(dst, src, count);
+  }
+
+  LIBC_INLINE static void loop_and_tail(Ptr __restrict dst, CPtr __restrict src,
+                                        size_t count) {
+    return loop_and_tail_offset(dst, src, count, 0);
   }
 };
 

@@ -11,6 +11,12 @@
 // Offset Handling
 //===----------------------------------------------------------------------===//
 
+// SP3 requires the immediate offset, but we allow to drop it for
+// compatibility reasons.
+s_load_dword s1, s[2:3]
+// GCN: s_load_dword s1, s[2:3], 0x0 ; encoding: [0x00,0x83,0x00,0xc0]
+// VI: s_load_dword s1, s[2:3], 0x0 ; encoding: [0x41,0x00,0x02,0xc0,0x00,0x00,0x00,0x00]
+
 s_load_dword s1, s[2:3], 0xfc
 // GCN: s_load_dword s1, s[2:3], 0xfc ; encoding: [0xfc,0x83,0x00,0xc0]
 // VI:	s_load_dword s1, s[2:3], 0xfc   ; encoding: [0x41,0x00,0x02,0xc0,0xfc,0x00,0x00,0x00]

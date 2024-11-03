@@ -24,6 +24,7 @@
 
 using namespace mlir;
 using namespace mlir::LLVM;
+using mlir::LLVM::detail::createIntrinsicCall;
 using mlir::LLVM::detail::getLLVMConstant;
 
 #include "mlir/Dialect/LLVMIR/LLVMConversionEnumsToLLVM.inc"
@@ -57,11 +58,19 @@ static SmallVector<unsigned> extractPosition(ArrayRef<int64_t> indices) {
   return position;
 }
 
+/// Convert an LLVM type to a string for printing in diagnostics.
+static std::string diagStr(const llvm::Type *type) {
+  std::string str;
+  llvm::raw_string_ostream os(str);
+  type->print(os);
+  return os.str();
+}
+
 /// Get the declaration of an overloaded llvm intrinsic. First we get the
 /// overloaded argument types and/or result type from the CallIntrinsicOp, and
 /// then use those to get the correct declaration of the overloaded intrinsic.
 static FailureOr<llvm::Function *>
-getOverloadedDeclaration(CallIntrinsicOp &op, llvm::Intrinsic::ID id,
+getOverloadedDeclaration(CallIntrinsicOp op, llvm::Intrinsic::ID id,
                          llvm::Module *module,
                          LLVM::ModuleTranslation &moduleTranslation) {
   SmallVector<llvm::Type *, 8> allArgTys;
@@ -85,7 +94,9 @@ getOverloadedDeclaration(CallIntrinsicOp &op, llvm::Intrinsic::ID id,
   if (llvm::Intrinsic::matchIntrinsicSignature(ft, tableRef,
                                                overloadedArgTys) !=
       llvm::Intrinsic::MatchIntrinsicTypesResult::MatchIntrinsicTypes_Match) {
-    return op.emitOpError("intrinsic type is not a match");
+    return mlir::emitError(op.getLoc(), "call intrinsic signature ")
+           << diagStr(ft) << " to overloaded intrinsic " << op.getIntrinAttr()
+           << " does not match any of the overloads";
   }
 
   ArrayRef<llvm::Type *> overloadedArgTysRef = overloadedArgTys;
@@ -94,14 +105,14 @@ getOverloadedDeclaration(CallIntrinsicOp &op, llvm::Intrinsic::ID id,
 
 /// Builder for LLVM_CallIntrinsicOp
 static LogicalResult
-convertCallLLVMIntrinsicOp(CallIntrinsicOp &op, llvm::IRBuilderBase &builder,
+convertCallLLVMIntrinsicOp(CallIntrinsicOp op, llvm::IRBuilderBase &builder,
                            LLVM::ModuleTranslation &moduleTranslation) {
   llvm::Module *module = builder.GetInsertBlock()->getModule();
   llvm::Intrinsic::ID id =
       llvm::Function::lookupIntrinsicID(op.getIntrinAttr());
   if (!id)
-    return op.emitOpError()
-           << "couldn't find intrinsic: " << op.getIntrinAttr();
+    return mlir::emitError(op.getLoc(), "could not find LLVM intrinsic: ")
+           << op.getIntrinAttr();
 
   llvm::Function *fn = nullptr;
   if (llvm::Intrinsic::isOverloaded(id)) {
@@ -114,26 +125,51 @@ convertCallLLVMIntrinsicOp(CallIntrinsicOp &op, llvm::IRBuilderBase &builder,
     fn = llvm::Intrinsic::getDeclaration(module, id, {});
   }
 
+  // Check the result type of the call.
+  const llvm::Type *intrinType =
+      op.getNumResults() == 0
+          ? llvm::Type::getVoidTy(module->getContext())
+          : moduleTranslation.convertType(op.getResultTypes().front());
+  if (intrinType != fn->getReturnType()) {
+    return mlir::emitError(op.getLoc(), "intrinsic call returns ")
+           << diagStr(intrinType) << " but " << op.getIntrinAttr()
+           << " actually returns " << diagStr(fn->getReturnType());
+  }
+
+  // Check the argument types of the call. If the function is variadic, check
+  // the subrange of required arguments.
+  if (!fn->getFunctionType()->isVarArg() &&
+      op.getNumOperands() != fn->arg_size()) {
+    return mlir::emitError(op.getLoc(), "intrinsic call has ")
+           << op.getNumOperands() << " operands but " << op.getIntrinAttr()
+           << " expects " << fn->arg_size();
+  }
+  if (fn->getFunctionType()->isVarArg() &&
+      op.getNumOperands() < fn->arg_size()) {
+    return mlir::emitError(op.getLoc(), "intrinsic call has ")
+           << op.getNumOperands() << " operands but variadic "
+           << op.getIntrinAttr() << " expects at least " << fn->arg_size();
+  }
+  // Check the arguments up to the number the function requires.
+  for (unsigned i = 0, e = fn->arg_size(); i != e; ++i) {
+    const llvm::Type *expected = fn->getArg(i)->getType();
+    const llvm::Type *actual =
+        moduleTranslation.convertType(op.getOperandTypes()[i]);
+    if (actual != expected) {
+      return mlir::emitError(op.getLoc(), "intrinsic call operand #")
+             << i << " has type " << diagStr(actual) << " but "
+             << op.getIntrinAttr() << " expects " << diagStr(expected);
+    }
+  }
+
+  FastmathFlagsInterface itf = op;
+  builder.setFastMathFlags(getFastmathFlags(itf));
+
   auto *inst =
       builder.CreateCall(fn, moduleTranslation.lookupValues(op.getOperands()));
   if (op.getNumResults() == 1)
     moduleTranslation.mapValue(op->getResults().front()) = inst;
   return success();
-}
-
-/// Constructs branch weights metadata if the provided `weights` hold a value,
-/// otherwise returns nullptr.
-static llvm::MDNode *
-convertBranchWeights(std::optional<ElementsAttr> weights,
-                     LLVM::ModuleTranslation &moduleTranslation) {
-  if (!weights)
-    return nullptr;
-  SmallVector<uint32_t> weightValues;
-  weightValues.reserve(weights->size());
-  for (APInt weight : weights->cast<DenseIntElementsAttr>())
-    weightValues.push_back(weight.getLimitedValue());
-  return llvm::MDBuilder(moduleTranslation.getLLVMContext())
-      .createBranchWeights(weightValues);
 }
 
 static LogicalResult
@@ -179,18 +215,18 @@ convertOperationImpl(Operation &opInst, llvm::IRBuilderBase &builder,
                                                       callOp.getArgOperands()),
                                 operandsRef.front(), operandsRef.drop_front());
     }
-    llvm::MDNode *branchWeights =
-        convertBranchWeights(callOp.getBranchWeights(), moduleTranslation);
-    if (branchWeights)
-      call->setMetadata(llvm::LLVMContext::MD_prof, branchWeights);
+    moduleTranslation.setAccessGroupsMetadata(callOp, call);
+    moduleTranslation.setAliasScopeMetadata(callOp, call);
+    moduleTranslation.setTBAAMetadata(callOp, call);
     // If the called function has a result, remap the corresponding value.  Note
     // that LLVM IR dialect CallOp has either 0 or 1 result.
-    if (opInst.getNumResults() != 0) {
+    if (opInst.getNumResults() != 0)
       moduleTranslation.mapValue(opInst.getResult(0), call);
-      return success();
-    }
     // Check that LLVM call returns void for 0-result functions.
-    return success(call->getType()->isVoidTy());
+    else if (!call->getType()->isVoidTy())
+      return failure();
+    moduleTranslation.mapCall(callOp, call);
+    return success();
   }
 
   if (auto inlineAsmOp = dyn_cast<LLVM::InlineAsmOp>(opInst)) {
@@ -231,9 +267,9 @@ convertOperationImpl(Operation &opInst, llvm::IRBuilderBase &builder,
         Attribute attr = it.value();
         if (!attr)
           continue;
-        DictionaryAttr dAttr = attr.cast<DictionaryAttr>();
+        DictionaryAttr dAttr = cast<DictionaryAttr>(attr);
         TypeAttr tAttr =
-            dAttr.get(InlineAsmOp::getElementTypeAttrName()).cast<TypeAttr>();
+            cast<TypeAttr>(dAttr.get(InlineAsmOp::getElementTypeAttrName()));
         llvm::AttrBuilder b(moduleTranslation.getLLVMContext());
         llvm::Type *ty = moduleTranslation.convertType(tAttr.getValue());
         b.addTypeAttr(llvm::Attribute::ElementType, ty);
@@ -268,10 +304,6 @@ convertOperationImpl(Operation &opInst, llvm::IRBuilderBase &builder,
           moduleTranslation.lookupBlock(invOp.getSuccessor(1)),
           operandsRef.drop_front());
     }
-    llvm::MDNode *branchWeights =
-        convertBranchWeights(invOp.getBranchWeights(), moduleTranslation);
-    if (branchWeights)
-      result->setMetadata(llvm::LLVMContext::MD_prof, branchWeights);
     moduleTranslation.mapBranch(invOp, result);
     // InvokeOp can only have 0 or 1 result
     if (invOp->getNumResults() != 0) {
@@ -308,28 +340,28 @@ convertOperationImpl(Operation &opInst, llvm::IRBuilderBase &builder,
     return success();
   }
   if (auto condbrOp = dyn_cast<LLVM::CondBrOp>(opInst)) {
-    llvm::MDNode *branchWeights =
-        convertBranchWeights(condbrOp.getBranchWeights(), moduleTranslation);
     llvm::BranchInst *branch = builder.CreateCondBr(
         moduleTranslation.lookupValue(condbrOp.getOperand(0)),
         moduleTranslation.lookupBlock(condbrOp.getSuccessor(0)),
-        moduleTranslation.lookupBlock(condbrOp.getSuccessor(1)), branchWeights);
+        moduleTranslation.lookupBlock(condbrOp.getSuccessor(1)));
     moduleTranslation.mapBranch(&opInst, branch);
     moduleTranslation.setLoopMetadata(&opInst, branch);
     return success();
   }
   if (auto switchOp = dyn_cast<LLVM::SwitchOp>(opInst)) {
-    llvm::MDNode *branchWeights =
-        convertBranchWeights(switchOp.getBranchWeights(), moduleTranslation);
     llvm::SwitchInst *switchInst = builder.CreateSwitch(
         moduleTranslation.lookupValue(switchOp.getValue()),
         moduleTranslation.lookupBlock(switchOp.getDefaultDestination()),
-        switchOp.getCaseDestinations().size(), branchWeights);
+        switchOp.getCaseDestinations().size());
+
+    // Handle switch with zero cases.
+    if (!switchOp.getCaseValues())
+      return success();
 
     auto *ty = llvm::cast<llvm::IntegerType>(
         moduleTranslation.convertType(switchOp.getValue().getType()));
     for (auto i :
-         llvm::zip(switchOp.getCaseValues()->cast<DenseIntElementsAttr>(),
+         llvm::zip(llvm::cast<DenseIntElementsAttr>(*switchOp.getCaseValues()),
                    switchOp.getCaseDestinations()))
       switchInst->addCase(
           llvm::ConstantInt::get(ty, std::get<0>(i).getLimitedValue()),

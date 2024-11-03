@@ -15,8 +15,8 @@
 #ifndef LLVM_CODEGEN_VALUETYPES_H
 #define LLVM_CODEGEN_VALUETYPES_H
 
+#include "llvm/CodeGen/MachineValueType.h"
 #include "llvm/Support/Compiler.h"
-#include "llvm/Support/MachineValueType.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/TypeSize.h"
 #include <cassert>
@@ -110,7 +110,7 @@ namespace llvm {
     /// Return the type converted to an equivalently sized integer or vector
     /// with integer element type. Similar to changeVectorElementTypeToInteger,
     /// but also handles scalars.
-    EVT changeTypeToInteger() {
+    EVT changeTypeToInteger() const {
       if (isVector())
         return changeVectorElementTypeToInteger();
 
@@ -122,7 +122,7 @@ namespace llvm {
     /// Test if the given EVT has zero size, this will fail if called on a
     /// scalable type
     bool isZeroSized() const {
-      return !isScalableVector() && getSizeInBits() == 0;
+      return getSizeInBits().isZero();
     }
 
     /// Test if the given EVT is simple (as opposed to being extended).
@@ -150,6 +150,12 @@ namespace llvm {
       return isSimple() ? V.isScalarInteger() : isExtendedScalarInteger();
     }
 
+    /// Return true if this is a vector type where the runtime
+    /// length is machine dependent
+    bool isScalableTargetExtVT() const {
+      return isSimple() && V.isScalableTargetExtVT();
+    }
+
     /// Return true if this is a vector value type.
     bool isVector() const {
       return isSimple() ? V.isVector() : isExtendedVector();
@@ -164,6 +170,11 @@ namespace llvm {
     bool isFixedLengthVector() const {
       return isSimple() ? V.isFixedLengthVector()
                         : isExtendedFixedLengthVector();
+    }
+
+    /// Return true if the type is a scalable type.
+    bool isScalableVT() const {
+      return isScalableVector() || isScalableTargetExtVT();
     }
 
     /// Return true if this is a 16-bit vector type.

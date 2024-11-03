@@ -5,7 +5,6 @@ define half @known_nnan_extract_vector_elt(float %a, float %b, i32 %idx, half %c
 ; CHECK-LABEL: known_nnan_extract_vector_elt:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_waitcnt_vscnt null, 0x0
 ; CHECK-NEXT:    v_cvt_pkrtz_f16_f32_e32 v0, v0, v1
 ; CHECK-NEXT:    v_lshlrev_b32_e32 v1, 4, v2
 ; CHECK-NEXT:    v_add_f16_e32 v2, 1.0, v3
@@ -27,7 +26,6 @@ define float @fma_not_fmaxnm_maybe_nan(i32 %i1, i32 %i2, i32 %i3) #0 {
 ; CHECK-LABEL: fma_not_fmaxnm_maybe_nan:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_waitcnt_vscnt null, 0x0
 ; CHECK-NEXT:    v_cvt_f32_u32_e32 v0, v0
 ; CHECK-NEXT:    v_cvt_f32_u32_e32 v1, v1
 ; CHECK-NEXT:    v_fmaak_f32 v0, v1, v0, 0xff800000

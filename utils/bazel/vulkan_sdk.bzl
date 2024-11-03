@@ -19,7 +19,7 @@ def _impl(repository_ctx):
 cc_library(
     name = "sdk",
     srcs = select({
-        "@bazel_tools//src/conditions:windows": [
+        "@platforms//os:windows": [
             "vulkan-sdk/Lib/vulkan-1.lib"
         ],
         "//conditions:default": [

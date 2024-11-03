@@ -406,13 +406,24 @@ public:
     virtual void notifyOperationModified(Operation *op) {}
 
     /// Notify the listener that the specified operation is about to be replaced
-    /// with the set of values potentially produced by new operations. This is
-    /// called before the uses of the operation have been changed.
+    /// with another operation. This is called before the uses of the old
+    /// operation have been changed.
+    ///
+    /// By default, this function calls the "operation replaced with values"
+    /// notification.
+    virtual void notifyOperationReplaced(Operation *op,
+                                         Operation *replacement) {
+      notifyOperationReplaced(op, replacement->getResults());
+    }
+
+    /// Notify the listener that the specified operation is about to be replaced
+    /// with the a range of values, potentially produced by other operations.
+    /// This is called before the uses of the operation have been changed.
     virtual void notifyOperationReplaced(Operation *op,
                                          ValueRange replacement) {}
 
-    /// This is called on an operation that a rewrite is removing, right before
-    /// the operation is deleted. At this point, the operation has zero uses.
+    /// Notify the listener that the specified operation is about to be erased.
+    /// At this point, the operation has zero uses.
     virtual void notifyOperationRemoved(Operation *op) {}
 
     /// Notify the listener that the pattern failed to match the given
@@ -427,6 +438,47 @@ public:
     }
 
     static bool classof(const OpBuilder::Listener *base);
+  };
+
+  /// A listener that forwards all notifications to another listener. This
+  /// struct can be used as a base to create listener chains, so that multiple
+  /// listeners can be notified of IR changes.
+  struct ForwardingListener : public RewriterBase::Listener {
+    ForwardingListener(OpBuilder::Listener *listener) : listener(listener) {}
+
+    void notifyOperationInserted(Operation *op) override {
+      listener->notifyOperationInserted(op);
+    }
+    void notifyBlockCreated(Block *block) override {
+      listener->notifyBlockCreated(block);
+    }
+    void notifyOperationModified(Operation *op) override {
+      if (auto *rewriteListener = dyn_cast<RewriterBase::Listener>(listener))
+        rewriteListener->notifyOperationModified(op);
+    }
+    void notifyOperationReplaced(Operation *op, Operation *newOp) override {
+      if (auto *rewriteListener = dyn_cast<RewriterBase::Listener>(listener))
+        rewriteListener->notifyOperationReplaced(op, newOp);
+    }
+    void notifyOperationReplaced(Operation *op,
+                                 ValueRange replacement) override {
+      if (auto *rewriteListener = dyn_cast<RewriterBase::Listener>(listener))
+        rewriteListener->notifyOperationReplaced(op, replacement);
+    }
+    void notifyOperationRemoved(Operation *op) override {
+      if (auto *rewriteListener = dyn_cast<RewriterBase::Listener>(listener))
+        rewriteListener->notifyOperationRemoved(op);
+    }
+    LogicalResult notifyMatchFailure(
+        Location loc,
+        function_ref<void(Diagnostic &)> reasonCallback) override {
+      if (auto *rewriteListener = dyn_cast<RewriterBase::Listener>(listener))
+        return rewriteListener->notifyMatchFailure(loc, reasonCallback);
+      return failure();
+    }
+
+  private:
+    OpBuilder::Listener *listener;
   };
 
   /// Move the blocks that belong to "region" before the given position in
@@ -473,15 +525,20 @@ public:
 
   /// This method replaces the results of the operation with the specified list
   /// of values. The number of provided values must match the number of results
-  /// of the operation.
+  /// of the operation. The replaced op is erased.
   virtual void replaceOp(Operation *op, ValueRange newValues);
+
+  /// This method replaces the results of the operation with the specified
+  /// new op (replacement). The number of results of the two operations must
+  /// match. The replaced op is erased.
+  virtual void replaceOp(Operation *op, Operation *newOp);
 
   /// Replaces the result op with a new op that is created without verification.
   /// The result values of the two ops must be the same types.
   template <typename OpTy, typename... Args>
   OpTy replaceOpWithNewOp(Operation *op, Args &&...args) {
     auto newOp = create<OpTy>(op->getLoc(), std::forward<Args>(args)...);
-    replaceOpWithResultsOfAnotherOp(op, newOp.getOperation());
+    replaceOp(op, newOp.getOperation());
     return newOp;
   }
 
@@ -491,17 +548,36 @@ public:
   /// This method erases all operations in a block.
   virtual void eraseBlock(Block *block);
 
-  /// Merge the operations of block 'source' into the end of block 'dest'.
-  /// 'source's predecessors must either be empty or only contain 'dest`.
-  /// 'argValues' is used to replace the block arguments of 'source' after
-  /// merging.
-  virtual void mergeBlocks(Block *source, Block *dest,
-                           ValueRange argValues = std::nullopt);
+  /// Inline the operations of block 'source' into block 'dest' before the given
+  /// position. The source block will be deleted and must have no uses.
+  /// 'argValues' is used to replace the block arguments of 'source'.
+  ///
+  /// If the source block is inserted at the end of the dest block, the dest
+  /// block must have no successors. Similarly, if the source block is inserted
+  /// somewhere in the middle (or beginning) of the dest block, the source block
+  /// must have no successors. Otherwise, the resulting IR would have
+  /// unreachable operations.
+  virtual void inlineBlockBefore(Block *source, Block *dest,
+                                 Block::iterator before,
+                                 ValueRange argValues = std::nullopt);
 
-  // Merge the operations of block 'source' before the operation 'op'. Source
-  // block should not have existing predecessors or successors.
-  void mergeBlockBefore(Block *source, Operation *op,
-                        ValueRange argValues = std::nullopt);
+  /// Inline the operations of block 'source' before the operation 'op'. The
+  /// source block will be deleted and must have no uses. 'argValues' is used to
+  /// replace the block arguments of 'source'
+  ///
+  /// The source block must have no successors. Otherwise, the resulting IR
+  /// would have unreachable operations.
+  void inlineBlockBefore(Block *source, Operation *op,
+                         ValueRange argValues = std::nullopt);
+
+  /// Inline the operations of block 'source' into the end of block 'dest'. The
+  /// source block will be deleted and must have no uses. 'argValues' is used to
+  /// replace the block arguments of 'source'
+  ///
+  /// The dest block must have no successors. Otherwise, the resulting IR would
+  /// have unreachable operation.
+  void mergeBlocks(Block *source, Block *dest,
+                   ValueRange argValues = std::nullopt);
 
   /// Split the operations starting at "before" (inclusive) out of the given
   /// block into a new block, and return it.
@@ -546,13 +622,23 @@ public:
       updateRootInPlace(op, [&]() { operand.set(to); });
     }
   }
+  void replaceAllUsesWith(ValueRange from, ValueRange to) {
+    assert(from.size() == to.size() && "incorrect number of replacements");
+    for (auto it : llvm::zip(from, to))
+      replaceAllUsesWith(std::get<0>(it), std::get<1>(it));
+  }
 
   /// Find uses of `from` and replace them with `to` if the `functor` returns
   /// true. It also marks every modified uses and notifies the rewriter that an
   /// in-place operation modification is about to happen.
-  void
-  replaceUsesWithIf(Value from, Value to,
-                    llvm::unique_function<bool(OpOperand &) const> functor);
+  void replaceUsesWithIf(Value from, Value to,
+                         function_ref<bool(OpOperand &)> functor);
+  void replaceUsesWithIf(ValueRange from, ValueRange to,
+                         function_ref<bool(OpOperand &)> functor) {
+    assert(from.size() == to.size() && "incorrect number of replacements");
+    for (auto it : llvm::zip(from, to))
+      replaceUsesWithIf(std::get<0>(it), std::get<1>(it), functor);
+  }
 
   /// Find uses of `from` and replace them with `to` except if the user is
   /// `exceptedUser`. It also marks every modified uses and notifies the
@@ -601,7 +687,9 @@ public:
 
 protected:
   /// Initialize the builder.
-  explicit RewriterBase(MLIRContext *ctx) : OpBuilder(ctx) {}
+  explicit RewriterBase(MLIRContext *ctx,
+                        OpBuilder::Listener *listener = nullptr)
+      : OpBuilder(ctx, listener) {}
   explicit RewriterBase(const OpBuilder &otherBuilder)
       : OpBuilder(otherBuilder) {}
   virtual ~RewriterBase();
@@ -609,10 +697,6 @@ protected:
 private:
   void operator=(const RewriterBase &) = delete;
   RewriterBase(const RewriterBase &) = delete;
-
-  /// 'op' and 'newOp' are known to have the same number of results, replace the
-  /// uses of op with uses of newOp.
-  void replaceOpWithResultsOfAnotherOp(Operation *op, Operation *newOp);
 };
 
 //===----------------------------------------------------------------------===//
@@ -625,7 +709,8 @@ private:
 /// such as a `PatternRewriter`, is not available.
 class IRRewriter : public RewriterBase {
 public:
-  explicit IRRewriter(MLIRContext *ctx) : RewriterBase(ctx) {}
+  explicit IRRewriter(MLIRContext *ctx, OpBuilder::Listener *listener = nullptr)
+      : RewriterBase(ctx, listener) {}
   explicit IRRewriter(const OpBuilder &builder) : RewriterBase(builder) {}
 };
 

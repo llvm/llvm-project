@@ -10,6 +10,7 @@
 #define TEST_STD_RANGES_RANGE_ADAPTORS_RANGE_LAZY_SPLIT_TYPES_H
 
 #include <concepts>
+#include <cstddef>
 #include <ranges>
 #include <string>
 #include <string_view>
@@ -174,7 +175,7 @@ struct ForwardTinyView : std::ranges::view_base {
   constexpr ForwardTinyView(char c) { *c_ = c; }
   constexpr forward_iterator<const char*> begin() const { return forward_iterator<const char*>(c_); }
   constexpr forward_iterator<const char*> end() const { return forward_iterator<const char*>(c_ + 1); }
-  constexpr static size_t size() { return 1; }
+  constexpr static std::size_t size() { return 1; }
 };
 static_assert(std::ranges::forward_range<ForwardTinyView>);
 static_assert(std::ranges::view<ForwardTinyView>);

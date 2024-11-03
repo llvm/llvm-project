@@ -52,7 +52,7 @@ public:
     public:
         typedef poisson_distribution distribution_type;
 
-        explicit param_type(double __mean = 1.0);
+        _LIBCPP_HIDE_FROM_ABI explicit param_type(double __mean = 1.0);
 
         _LIBCPP_INLINE_VISIBILITY
         double mean() const {return __mean_;}
@@ -93,7 +93,8 @@ public:
         _LIBCPP_INLINE_VISIBILITY
         result_type operator()(_URNG& __g)
         {return (*this)(__g, __p_);}
-    template<class _URNG> result_type operator()(_URNG& __g, const param_type& __p);
+    template<class _URNG>
+    _LIBCPP_HIDE_FROM_ABI result_type operator()(_URNG& __g, const param_type& __p);
 
     // property functions
     _LIBCPP_INLINE_VISIBILITY

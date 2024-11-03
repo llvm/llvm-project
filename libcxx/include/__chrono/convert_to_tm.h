@@ -10,9 +10,11 @@
 #ifndef _LIBCPP___CHRONO_CONVERT_TO_TM_H
 #define _LIBCPP___CHRONO_CONVERT_TO_TM_H
 
+#include <__chrono/calendar.h>
 #include <__chrono/concepts.h>
 #include <__chrono/day.h>
 #include <__chrono/duration.h>
+#include <__chrono/file_clock.h>
 #include <__chrono/hh_mm_ss.h>
 #include <__chrono/month.h>
 #include <__chrono/month_weekday.h>
@@ -29,6 +31,7 @@
 #include <__config>
 #include <__format/format_error.h>
 #include <__memory/addressof.h>
+#include <__type_traits/is_convertible.h>
 #include <cstdint>
 #include <ctime>
 #include <limits>
@@ -73,6 +76,24 @@ _LIBCPP_HIDE_FROM_ABI _Tm __convert_to_tm(const _Date& __date, chrono::weekday _
   return __result;
 }
 
+template <class _Tm, class _Duration>
+_LIBCPP_HIDE_FROM_ABI _Tm __convert_to_tm(const chrono::sys_time<_Duration> __tp) {
+  chrono::sys_days __days = chrono::floor<chrono::days>(__tp);
+  chrono::year_month_day __ymd{__days};
+
+  _Tm __result = std::__convert_to_tm<_Tm>(chrono::year_month_day{__ymd}, chrono::weekday{__days});
+
+  uint64_t __sec =
+      chrono::duration_cast<chrono::seconds>(__tp - chrono::time_point_cast<chrono::seconds>(__days)).count();
+  __sec %= 24 * 3600;
+  __result.tm_hour = __sec / 3600;
+  __sec %= 3600;
+  __result.tm_min = __sec / 60;
+  __result.tm_sec = __sec % 60;
+
+  return __result;
+}
+
 // Convert a chrono (calendar) time point, or dururation to the given _Tm type,
 // which must have the same properties as std::tm.
 template <class _Tm, class _ChronoT>
@@ -82,17 +103,37 @@ _LIBCPP_HIDE_FROM_ABI _Tm __convert_to_tm(const _ChronoT& __value) {
   __result.tm_zone = "UTC";
 #  endif
 
-  if constexpr (chrono::__is_duration<_ChronoT>::value) {
+  if constexpr (__is_time_point<_ChronoT>) {
+    if constexpr (same_as<typename _ChronoT::clock, chrono::system_clock>)
+      return std::__convert_to_tm<_Tm>(__value);
+    else if constexpr (same_as<typename _ChronoT::clock, chrono::file_clock>)
+      return std::__convert_to_tm<_Tm>(_ChronoT::clock::to_sys(__value));
+    else if constexpr (same_as<typename _ChronoT::clock, chrono::local_t>)
+      return std::__convert_to_tm<_Tm>(chrono::sys_time<typename _ChronoT::duration>{__value.time_since_epoch()});
+    else
+      static_assert(sizeof(_ChronoT) == 0, "TODO: Add the missing clock specialization");
+  } else if constexpr (chrono::__is_duration<_ChronoT>::value) {
     // [time.format]/6
     //   ...  However, if a flag refers to a "time of day" (e.g. %H, %I, %p,
     //   etc.), then a specialization of duration is interpreted as the time of
     //   day elapsed since midnight.
-    uint64_t __sec = chrono::duration_cast<chrono::seconds>(__value).count();
-    __sec %= 24 * 3600;
-    __result.tm_hour = __sec / 3600;
-    __sec %= 3600;
-    __result.tm_min = __sec / 60;
-    __result.tm_sec = __sec % 60;
+
+    // Not all values can be converted to hours, it may run into ratio
+    // conversion errors. In that case the conversion to seconds works.
+    if constexpr (is_convertible_v<_ChronoT, chrono::hours>) {
+      auto __hour      = chrono::floor<chrono::hours>(__value);
+      auto __sec       = chrono::duration_cast<chrono::seconds>(__value - __hour);
+      __result.tm_hour = __hour.count() % 24;
+      __result.tm_min  = __sec.count() / 60;
+      __result.tm_sec  = __sec.count() % 60;
+    } else {
+      uint64_t __sec = chrono::duration_cast<chrono::seconds>(__value).count();
+      __sec %= 24 * 3600;
+      __result.tm_hour = __sec / 3600;
+      __sec %= 3600;
+      __result.tm_min = __sec / 60;
+      __result.tm_sec = __sec % 60;
+    }
   } else if constexpr (same_as<_ChronoT, chrono::day>)
     __result.tm_mday = static_cast<unsigned>(__value);
   else if constexpr (same_as<_ChronoT, chrono::month>)
@@ -136,7 +177,7 @@ _LIBCPP_HIDE_FROM_ABI _Tm __convert_to_tm(const _ChronoT& __value) {
   return __result;
 }
 
-#endif //if _LIBCPP_STD_VER >= 20
+#endif // if _LIBCPP_STD_VER >= 20
 
 _LIBCPP_END_NAMESPACE_STD
 

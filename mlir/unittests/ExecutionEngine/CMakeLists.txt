@@ -8,7 +8,6 @@ target_link_libraries(MLIRExecutionEngineTests
   PRIVATE
   MLIRArithToLLVM
   MLIRExecutionEngine
-  MLIRLinalgToLLVM
   MLIRMemRefToLLVM
   MLIRReconcileUnrealizedCasts
   ${dialect_libs}

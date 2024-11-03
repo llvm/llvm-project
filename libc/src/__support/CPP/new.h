@@ -27,14 +27,16 @@ namespace __llvm_libc {
 
 class AllocChecker {
   bool success = false;
-  AllocChecker &operator=(bool status) {
+
+  LIBC_INLINE AllocChecker &operator=(bool status) {
     success = status;
     return *this;
   }
 
 public:
-  AllocChecker() = default;
-  operator bool() const { return success; }
+  LIBC_INLINE AllocChecker() = default;
+
+  LIBC_INLINE operator bool() const { return success; }
 
   LIBC_INLINE static void *alloc(size_t s, AllocChecker &ac) {
     void *mem = ::malloc(s);

@@ -41,8 +41,9 @@ template <typename T> using int_type_of_v = typename int_type_of<T>::type;
     auto temp = get_arg_value<arg_type>(index);                                \
     if (!temp.has_value()) {                                                   \
       section.has_conv = false;                                                \
+    } else {                                                                   \
+      dst = cpp::bit_cast<int_type_of_v<arg_type>>(temp.value());              \
     }                                                                          \
-    dst = cpp::bit_cast<int_type_of_v<arg_type>>(temp.value());                \
   }
 #else
 #define WRITE_ARG_VAL_SIMPLEST(dst, arg_type, _)                               \
@@ -106,6 +107,13 @@ FormatSection Parser::get_next_section() {
     section.conv_name = str[cur_pos];
     switch (str[cur_pos]) {
     case ('%'):
+      // Regardless of options, a % conversion is always safe. The standard says
+      // that "The complete conversion specification shall be %%" but it also
+      // says that "If a conversion specification is invalid, the behavior is
+      // undefined." Based on that we define that any conversion specification
+      // ending in '%' shall display as '%' regardless of any valid or invalid
+      // options.
+      section.has_conv = true;
       break;
     case ('c'):
       WRITE_ARG_VAL_SIMPLEST(section.conv_val_raw, int, conv_index);

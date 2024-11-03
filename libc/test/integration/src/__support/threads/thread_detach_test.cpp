@@ -35,7 +35,7 @@ void detach_simple_test() {
 void detach_cleanup_test() {
   mutex.lock();
   __llvm_libc::Thread th;
-  ASSERT_EQ(0, th.run(func, nullptr, nullptr, 0));
+  ASSERT_EQ(0, th.run(func, nullptr));
 
   // Since |mutex| is held by the current thread, we will release it
   // to let |th| run.

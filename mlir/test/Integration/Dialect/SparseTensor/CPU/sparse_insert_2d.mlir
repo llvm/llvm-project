@@ -1,45 +1,50 @@
-// DEFINE: %{option} = enable-runtime-library=false
-// DEFINE: %{compile} = mlir-opt %s --sparse-compiler=%{option}
-// DEFINE: %{run} = mlir-cpu-runner \
-// DEFINE:  -e entry -entry-point-result=void  \
-// DEFINE:  -shared-libs=%mlir_c_runner_utils | \
-// DEFINE: FileCheck %s
+//--------------------------------------------------------------------------------------------------
+// WHEN CREATING A NEW TEST, PLEASE JUST COPY & PASTE WITHOUT EDITS.
 //
-// RUN: %{compile} | %{run}
+// Set-up that's shared across all tests in this directory. In principle, this
+// config could be moved to lit.local.cfg. However, there are downstream users that
+//  do not use these LIT config files. Hence why this is kept inline.
+//
+// DEFINE: %{sparse_compiler_opts} = enable-runtime-library=true
+// DEFINE: %{sparse_compiler_opts_sve} = enable-arm-sve=true %{sparse_compiler_opts}
+// DEFINE: %{compile} = mlir-opt %s --sparse-compiler="%{sparse_compiler_opts}"
+// DEFINE: %{compile_sve} = mlir-opt %s --sparse-compiler="%{sparse_compiler_opts_sve}"
+// DEFINE: %{run_libs} = -shared-libs=%mlir_c_runner_utils,%mlir_runner_utils
+// DEFINE: %{run_opts} = -e entry -entry-point-result=void
+// DEFINE: %{run} = mlir-cpu-runner %{run_opts} %{run_libs}
+// DEFINE: %{run_sve} = %mcr_aarch64_cmd --march=aarch64 --mattr="+sve" %{run_opts} %{run_libs}
+//
+// DEFINE: %{env} =
+//--------------------------------------------------------------------------------------------------
+
+// REDEFINE: %{sparse_compiler_opts} = enable-runtime-library=false
+// RUN: %{compile} | %{run} | FileCheck %s
 //
 // Do the same run, but now with vectorization.
-// REDEFINE: %{option} = "enable-runtime-library=false vl=2 reassociate-fp-reductions=true enable-index-optimizations=true"
-// RUN: %{compile} | %{run}
-
-// Do the same run, but now with direct IR generation and, if available, VLA
-// vectorization.
-// REDEFINE: %{option} = "enable-runtime-library=false vl=4 enable-arm-sve=%ENABLE_VLA"
-// REDEFINE: %{run} = %lli \
-// REDEFINE:   --entry-function=entry_lli \
-// REDEFINE:   --extra-module=%S/Inputs/main_for_lli.ll \
-// REDEFINE:   %VLA_ARCH_ATTR_OPTIONS \
-// REDEFINE:   --dlopen=%mlir_native_utils_lib_dir/libmlir_c_runner_utils%shlibext | \
-// REDEFINE: FileCheck %s
-// RUN: %{compile} | mlir-translate -mlir-to-llvmir | %{run}
+// REDEFINE: %{sparse_compiler_opts} = enable-runtime-library=false vl=2 reassociate-fp-reductions=true enable-index-optimizations=true
+// RUN: %{compile} | %{run} | FileCheck %s
+//
+// Do the same run, but now VLA vectorization.
+// RUN: %if mlir_arm_sve_tests %{ %{compile_sve} | %{run_sve} | FileCheck %s %}
 
 #Dense = #sparse_tensor.encoding<{
-  dimLevelType = ["dense", "dense"]
+  lvlTypes = ["dense", "dense"]
 }>
 
 #SortedCOO = #sparse_tensor.encoding<{
-  dimLevelType = [ "compressed-nu", "singleton" ]
+  lvlTypes = [ "compressed_nu", "singleton" ]
 }>
 
 #CSR = #sparse_tensor.encoding<{
-  dimLevelType = [ "dense", "compressed" ]
+  lvlTypes = [ "dense", "compressed" ]
 }>
 
 #DCSR = #sparse_tensor.encoding<{
-  dimLevelType = [ "compressed", "compressed" ]
+  lvlTypes = [ "compressed", "compressed" ]
 }>
 
 #Row = #sparse_tensor.encoding<{
-  dimLevelType = [ "compressed", "dense" ]
+  lvlTypes = [ "compressed", "dense" ]
 }>
 
 module {
@@ -57,9 +62,9 @@ module {
     %c0 = arith.constant 0 : index
     %cu = arith.constant -1 : index
     %fu = arith.constant 99.0 : f64
-    %p0 = sparse_tensor.pointers %arg0 { dimension = 0 : index } : tensor<4x3xf64, #SortedCOO> to memref<?xindex>
-    %i0 = sparse_tensor.indices  %arg0 { dimension = 0 : index } : tensor<4x3xf64, #SortedCOO> to memref<?xindex, strided<[?], offset: ?>>
-    %i1 = sparse_tensor.indices  %arg0 { dimension = 1 : index } : tensor<4x3xf64, #SortedCOO> to memref<?xindex, strided<[?], offset: ?>>
+    %p0 = sparse_tensor.positions %arg0 { level = 0 : index } : tensor<4x3xf64, #SortedCOO> to memref<?xindex>
+    %i0 = sparse_tensor.coordinates  %arg0 { level = 0 : index } : tensor<4x3xf64, #SortedCOO> to memref<?xindex, strided<[?], offset: ?>>
+    %i1 = sparse_tensor.coordinates  %arg0 { level = 1 : index } : tensor<4x3xf64, #SortedCOO> to memref<?xindex, strided<[?], offset: ?>>
     %v = sparse_tensor.values %arg0 : tensor<4x3xf64, #SortedCOO> to memref<?xf64>
     %vp0 = vector.transfer_read %p0[%c0], %cu: memref<?xindex>, vector<2xindex>
     vector.print %vp0 : vector<2xindex>
@@ -76,8 +81,8 @@ module {
     %c0 = arith.constant 0 : index
     %cu = arith.constant -1 : index
     %fu = arith.constant 99.0 : f64
-    %p1 = sparse_tensor.pointers %arg0 { dimension = 1 : index } : tensor<4x3xf64, #CSR> to memref<?xindex>
-    %i1 = sparse_tensor.indices  %arg0 { dimension = 1 : index } : tensor<4x3xf64, #CSR> to memref<?xindex>
+    %p1 = sparse_tensor.positions %arg0 { level = 1 : index } : tensor<4x3xf64, #CSR> to memref<?xindex>
+    %i1 = sparse_tensor.coordinates  %arg0 { level = 1 : index } : tensor<4x3xf64, #CSR> to memref<?xindex>
     %v = sparse_tensor.values %arg0 : tensor<4x3xf64, #CSR> to memref<?xf64>
     %vp1 = vector.transfer_read %p1[%c0], %cu: memref<?xindex>, vector<5xindex>
     vector.print %vp1 : vector<5xindex>
@@ -92,10 +97,10 @@ module {
     %c0 = arith.constant 0 : index
     %cu = arith.constant -1 : index
     %fu = arith.constant 99.0 : f64
-    %p0 = sparse_tensor.pointers %arg0 { dimension = 0 : index } : tensor<4x3xf64, #DCSR> to memref<?xindex>
-    %i0 = sparse_tensor.indices  %arg0 { dimension = 0 : index } : tensor<4x3xf64, #DCSR> to memref<?xindex>
-    %p1 = sparse_tensor.pointers %arg0 { dimension = 1 : index } : tensor<4x3xf64, #DCSR> to memref<?xindex>
-    %i1 = sparse_tensor.indices  %arg0 { dimension = 1 : index } : tensor<4x3xf64, #DCSR> to memref<?xindex>
+    %p0 = sparse_tensor.positions %arg0 { level = 0 : index } : tensor<4x3xf64, #DCSR> to memref<?xindex>
+    %i0 = sparse_tensor.coordinates  %arg0 { level = 0 : index } : tensor<4x3xf64, #DCSR> to memref<?xindex>
+    %p1 = sparse_tensor.positions %arg0 { level = 1 : index } : tensor<4x3xf64, #DCSR> to memref<?xindex>
+    %i1 = sparse_tensor.coordinates  %arg0 { level = 1 : index } : tensor<4x3xf64, #DCSR> to memref<?xindex>
     %v = sparse_tensor.values %arg0 : tensor<4x3xf64, #DCSR> to memref<?xf64>
     %vp0 = vector.transfer_read %p0[%c0], %cu: memref<?xindex>, vector<2xindex>
     vector.print %vp0 : vector<2xindex>
@@ -114,8 +119,8 @@ module {
     %c0 = arith.constant 0 : index
     %cu = arith.constant -1 : index
     %fu = arith.constant 99.0 : f64
-    %p0 = sparse_tensor.pointers %arg0 { dimension = 0 : index } : tensor<4x3xf64, #Row> to memref<?xindex>
-    %i0 = sparse_tensor.indices  %arg0 { dimension = 0 : index } : tensor<4x3xf64, #Row> to memref<?xindex>
+    %p0 = sparse_tensor.positions %arg0 { level = 0 : index } : tensor<4x3xf64, #Row> to memref<?xindex>
+    %i0 = sparse_tensor.coordinates  %arg0 { level = 0 : index } : tensor<4x3xf64, #Row> to memref<?xindex>
     %v = sparse_tensor.values %arg0 : tensor<4x3xf64, #Row> to memref<?xf64>
     %vp0 = vector.transfer_read %p0[%c0], %cu: memref<?xindex>, vector<2xindex>
     vector.print %vp0 : vector<2xindex>

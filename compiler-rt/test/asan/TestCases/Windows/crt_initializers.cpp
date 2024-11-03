@@ -1,4 +1,4 @@
-// RUN: %clang_cl_asan -Od %s -Fe%t
+// RUN: %clang_cl_asan %Od %s %Fe%t
 // RUN: %run %t | FileCheck %s
 
 // This is a test for http://code.google.com/p/address-sanitizer/issues/detail?id=305

@@ -39,6 +39,12 @@ static constexpr Builtin::Info BuiltinInfo[] = {
 
 #define BUILTIN(ID, TYPE, ATTRS)                                               \
   {#ID, TYPE, ATTRS, nullptr, HeaderDesc::NO_HEADER, ALL_LANGUAGES},
+#define TARGET_BUILTIN(ID, TYPE, ATTRS, FEATURE)                               \
+  {#ID, TYPE, ATTRS, FEATURE, HeaderDesc::NO_HEADER, ALL_LANGUAGES},
+#include "clang/Basic/BuiltinsSME.def"
+
+#define BUILTIN(ID, TYPE, ATTRS)                                               \
+  {#ID, TYPE, ATTRS, nullptr, HeaderDesc::NO_HEADER, ALL_LANGUAGES},
 #define LANGBUILTIN(ID, TYPE, ATTRS, LANG)                                     \
   {#ID, TYPE, ATTRS, nullptr, HeaderDesc::NO_HEADER, LANG},
 #define TARGET_BUILTIN(ID, TYPE, ATTRS, FEATURE)                               \
@@ -238,8 +244,6 @@ void AArch64TargetInfo::fillValidCPUList(
 void AArch64TargetInfo::getTargetDefinesARMV81A(const LangOptions &Opts,
                                                 MacroBuilder &Builder) const {
   Builder.defineMacro("__ARM_FEATURE_QRDMX", "1");
-  Builder.defineMacro("__ARM_FEATURE_ATOMICS", "1");
-  Builder.defineMacro("__ARM_FEATURE_CRC32", "1");
 }
 
 void AArch64TargetInfo::getTargetDefinesARMV82A(const LangOptions &Opts,
@@ -332,17 +336,20 @@ void AArch64TargetInfo::getTargetDefinesARMV94A(const LangOptions &Opts,
 void AArch64TargetInfo::getTargetDefines(const LangOptions &Opts,
                                          MacroBuilder &Builder) const {
   // Target identification.
-  Builder.defineMacro("__aarch64__");
-  // For bare-metal.
-  if (getTriple().getOS() == llvm::Triple::UnknownOS &&
-      getTriple().isOSBinFormatELF())
-    Builder.defineMacro("__ELF__");
-
-  // Target properties.
-  if (!getTriple().isOSWindows() && getTriple().isArch64Bit()) {
-    Builder.defineMacro("_LP64");
-    Builder.defineMacro("__LP64__");
+  if (getTriple().isWindowsArm64EC()) {
+    // Define the same set of macros as would be defined on x86_64 to ensure that
+    // ARM64EC datatype layouts match those of x86_64 compiled code
+    Builder.defineMacro("__amd64__");
+    Builder.defineMacro("__amd64");
+    Builder.defineMacro("__x86_64");
+    Builder.defineMacro("__x86_64__");
+    Builder.defineMacro("__arm64ec__");
+  } else {
+    Builder.defineMacro("__aarch64__");
   }
+
+  // Inline assembly supports AArch64 flag outputs.
+  Builder.defineMacro("__GCC_ASM_FLAG_OUTPUTS__");
 
   std::string CodeModel = getTargetOpts().CodeModel;
   if (CodeModel == "default")
@@ -373,7 +380,8 @@ void AArch64TargetInfo::getTargetDefines(const LangOptions &Opts,
   Builder.defineMacro("__ARM_ALIGN_MAX_STACK_PWR", "4");
 
   // 0xe implies support for half, single and double precision operations.
-  Builder.defineMacro("__ARM_FP", "0xE");
+  if (FPU & FPUMode)
+    Builder.defineMacro("__ARM_FP", "0xE");
 
   // PCS specifies this for SysV variants, which is all we support. Other ABIs
   // may choose __ARM_FP16_FORMAT_ALTERNATIVE.
@@ -418,7 +426,9 @@ void AArch64TargetInfo::getTargetDefines(const LangOptions &Opts,
   if (HasCRC)
     Builder.defineMacro("__ARM_FEATURE_CRC32", "1");
 
-  if (HasRCPC)
+  if (HasRCPC3)
+    Builder.defineMacro("__ARM_FEATURE_RCPC", "3");
+  else if (HasRCPC)
     Builder.defineMacro("__ARM_FEATURE_RCPC", "1");
 
   if (HasFMV)
@@ -606,16 +616,18 @@ unsigned AArch64TargetInfo::multiVersionFeatureCost() const {
   return llvm::AArch64::ExtensionInfo::MaxFMVPriority;
 }
 
-bool AArch64TargetInfo::getFeatureDepOptions(StringRef Name,
-                                             std::string &FeatureVec) const {
-  FeatureVec = "";
-  for (const auto &E : llvm::AArch64::Extensions) {
-    if (Name == E.Name) {
-      FeatureVec = E.DependentFeatures;
-      break;
-    }
-  }
-  return FeatureVec != "";
+bool AArch64TargetInfo::doesFeatureAffectCodeGen(StringRef Name) const {
+  auto F = llvm::find_if(llvm::AArch64::Extensions, [&](const auto &E) {
+    return Name == E.Name && !E.DependentFeatures.empty();
+  });
+  return F != std::end(llvm::AArch64::Extensions);
+}
+
+StringRef AArch64TargetInfo::getFeatureDependencies(StringRef Name) const {
+  auto F = llvm::find_if(llvm::AArch64::Extensions,
+                         [&](const auto &E) { return Name == E.Name; });
+  return F != std::end(llvm::AArch64::Extensions) ? F->DependentFeatures
+                                                  : StringRef();
 }
 
 bool AArch64TargetInfo::validateCpuSupports(StringRef FeatureStr) const {
@@ -672,6 +684,7 @@ bool AArch64TargetInfo::hasFeature(StringRef Feature) const {
       .Case("bti", HasBTI)
       .Cases("ls64", "ls64_v", "ls64_accdata", HasLS64)
       .Case("wfxt", HasWFxT)
+      .Case("rcpc3", HasRCPC3)
       .Default(false);
 }
 
@@ -707,6 +720,8 @@ void AArch64TargetInfo::setFeatureEnabled(llvm::StringMap<bool> &Features,
 bool AArch64TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
                                              DiagnosticsEngine &Diags) {
   for (const auto &Feature : Features) {
+    if (Feature == "-fp-armv8")
+      HasNoFP = true;
     if (Feature == "-neon")
       HasNoNeon = true;
     if (Feature == "-sve")
@@ -777,16 +792,19 @@ bool AArch64TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
     if (Feature == "+sme") {
       HasSME = true;
       HasBFloat16 = true;
+      HasFullFP16 = true;
     }
     if (Feature == "+sme-f64f64") {
       HasSME = true;
       HasSMEF64F64 = true;
       HasBFloat16 = true;
+      HasFullFP16 = true;
     }
     if (Feature == "+sme-i16i64") {
       HasSME = true;
       HasSMEI16I64 = true;
       HasBFloat16 = true;
+      HasFullFP16 = true;
     }
     if (Feature == "+sb")
       HasSB = true;
@@ -922,6 +940,10 @@ bool AArch64TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       HasMOPS = true;
     if (Feature == "+d128")
       HasD128 = true;
+    if (Feature == "+gcs")
+      HasGCS = true;
+    if (Feature == "+rcpc3")
+      HasRCPC3 = true;
   }
 
   // Check features that are manually disabled by command line options.
@@ -935,6 +957,11 @@ bool AArch64TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
   setDataLayout();
   setArchFeatures();
 
+  if (HasNoFP) {
+    FPU &= ~FPUMode;
+    FPU &= ~NeonMode;
+    FPU &= ~SveMode;
+  }
   if (HasNoNeon) {
     FPU &= ~NeonMode;
     FPU &= ~SveMode;
@@ -962,18 +989,18 @@ bool AArch64TargetInfo::initFeatureMap(
   }
 
   // Process target and dependent features. This is done in two loops collecting
-  // them into UpdatedFeaturesVec: first to add dependent '+'features,
-  // second to add target '+/-'features that can later disable some of
-  // features added on the first loop.
+  // them into UpdatedFeaturesVec: first to add dependent '+'features, second to
+  // add target '+/-'features that can later disable some of features added on
+  // the first loop. Function Multi Versioning features begin with '?'.
   for (const auto &Feature : FeaturesVec)
-    if ((Feature[0] == '?' || Feature[0] == '+')) {
-      std::string Options;
-      if (AArch64TargetInfo::getFeatureDepOptions(Feature.substr(1), Options)) {
-        SmallVector<StringRef, 1> AttrFeatures;
-        StringRef(Options).split(AttrFeatures, ",");
-        for (auto F : AttrFeatures)
-          UpdatedFeaturesVec.push_back(F.str());
-      }
+    if (((Feature[0] == '?' || Feature[0] == '+')) &&
+        AArch64TargetInfo::doesFeatureAffectCodeGen(Feature.substr(1))) {
+      StringRef DepFeatures =
+          AArch64TargetInfo::getFeatureDependencies(Feature.substr(1));
+      SmallVector<StringRef, 1> AttrFeatures;
+      DepFeatures.split(AttrFeatures, ",");
+      for (auto F : AttrFeatures)
+        UpdatedFeaturesVec.push_back(F.str());
     }
   for (const auto &Feature : FeaturesVec)
     if (Feature[0] != '?') {
@@ -1148,7 +1175,11 @@ const char *const AArch64TargetInfo::GCCRegNames[] = {
 
     // SVE predicate registers
     "p0",  "p1",  "p2",  "p3",  "p4",  "p5",  "p6",  "p7",  "p8",  "p9",  "p10",
-    "p11", "p12", "p13", "p14", "p15"
+    "p11", "p12", "p13", "p14", "p15",
+
+    // SVE predicate-as-counter registers
+    "pn0",  "pn1",  "pn2",  "pn3",  "pn4",  "pn5",  "pn6",  "pn7",  "pn8",
+    "pn9",  "pn10", "pn11", "pn12", "pn13", "pn14", "pn15"
 };
 
 ArrayRef<const char *> AArch64TargetInfo::getGCCRegNames() const {
@@ -1198,6 +1229,52 @@ ArrayRef<TargetInfo::GCCRegAlias> AArch64TargetInfo::getGCCRegAliases() const {
   return llvm::ArrayRef(GCCRegAliases);
 }
 
+// Returns the length of cc constraint.
+static unsigned matchAsmCCConstraint(const char *Name) {
+  constexpr unsigned len = 5;
+  auto RV = llvm::StringSwitch<unsigned>(Name)
+                .Case("@cceq", len)
+                .Case("@ccne", len)
+                .Case("@cchs", len)
+                .Case("@cccs", len)
+                .Case("@cccc", len)
+                .Case("@cclo", len)
+                .Case("@ccmi", len)
+                .Case("@ccpl", len)
+                .Case("@ccvs", len)
+                .Case("@ccvc", len)
+                .Case("@cchi", len)
+                .Case("@ccls", len)
+                .Case("@ccge", len)
+                .Case("@cclt", len)
+                .Case("@ccgt", len)
+                .Case("@ccle", len)
+                .Default(0);
+  return RV;
+}
+
+std::string
+AArch64TargetInfo::convertConstraint(const char *&Constraint) const {
+  std::string R;
+  switch (*Constraint) {
+  case 'U': // Three-character constraint; add "@3" hint for later parsing.
+    R = std::string("@3") + std::string(Constraint, 3);
+    Constraint += 2;
+    break;
+  case '@':
+    if (const unsigned Len = matchAsmCCConstraint(Constraint)) {
+      std::string Converted = "{" + std::string(Constraint, Len) + "}";
+      Constraint += Len - 1;
+      return Converted;
+    }
+    return std::string(1, *Constraint);
+  default:
+    R = TargetInfo::convertConstraint(Constraint);
+    break;
+  }
+  return R;
+}
+
 bool AArch64TargetInfo::validateAsmConstraint(
     const char *&Name, TargetInfo::ConstraintInfo &Info) const {
   switch (*Name) {
@@ -1222,8 +1299,9 @@ bool AArch64TargetInfo::validateAsmConstraint(
     Info.setAllowsRegister();
     return true;
   case 'U':
-    if (Name[1] == 'p' && (Name[2] == 'l' || Name[2] == 'a')) {
-      // SVE predicate registers ("Upa"=P0-15, "Upl"=P0-P7)
+    if (Name[1] == 'p' &&
+        (Name[2] == 'l' || Name[2] == 'a' || Name[2] == 'h')) {
+      // SVE predicate registers ("Upa"=P0-15, "Upl"=P0-P7, "Uph"=P8-P15)
       Info.setAllowsRegister();
       Name += 2;
       return true;
@@ -1245,6 +1323,13 @@ bool AArch64TargetInfo::validateAsmConstraint(
   case 'y': // SVE registers (V0-V7)
     Info.setAllowsRegister();
     return true;
+  case '@':
+    // CC condition
+    if (const unsigned Len = matchAsmCCConstraint(Name)) {
+      Name += Len - 1;
+      Info.setAllowsRegister();
+      return true;
+    }
   }
   return false;
 }
@@ -1283,7 +1368,7 @@ bool AArch64TargetInfo::validateConstraintModifier(
   }
 }
 
-const char *AArch64TargetInfo::getClobbers() const { return ""; }
+std::string_view AArch64TargetInfo::getClobbers() const { return ""; }
 
 int AArch64TargetInfo::getEHDataRegisterNumber(unsigned RegNo) const {
   if (RegNo == 0)
@@ -1392,7 +1477,13 @@ MicrosoftARM64TargetInfo::MicrosoftARM64TargetInfo(const llvm::Triple &Triple,
 void MicrosoftARM64TargetInfo::getTargetDefines(const LangOptions &Opts,
                                                 MacroBuilder &Builder) const {
   WindowsARM64TargetInfo::getTargetDefines(Opts, Builder);
-  Builder.defineMacro("_M_ARM64", "1");
+  if (getTriple().isWindowsArm64EC()) {
+    Builder.defineMacro("_M_X64", "100");
+    Builder.defineMacro("_M_AMD64", "100");
+    Builder.defineMacro("_M_ARM64EC", "1");
+  } else {
+    Builder.defineMacro("_M_ARM64", "1");
+  }
 }
 
 TargetInfo::CallingConvKind
@@ -1456,7 +1547,6 @@ void DarwinAArch64TargetInfo::getOSDefines(const LangOptions &Opts,
   else
     Builder.defineMacro("__ARM64_ARCH_8__");
   Builder.defineMacro("__ARM_NEON__");
-  Builder.defineMacro("__LITTLE_ENDIAN__");
   Builder.defineMacro("__REGISTER_PREFIX__", "");
   Builder.defineMacro("__arm64", "1");
   Builder.defineMacro("__arm64__", "1");

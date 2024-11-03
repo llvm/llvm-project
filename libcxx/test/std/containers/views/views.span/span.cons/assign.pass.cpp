@@ -241,8 +241,8 @@ int main(int, char**)
             {arr + 1, arr + 3} // same size as s2
             };
 
-        for (size_t i = 0; i < std::size(spans); ++i)
-            for (size_t j = i; j < std::size(spans); ++j)
+        for (std::size_t i = 0; i < std::size(spans); ++i)
+            for (std::size_t j = i; j < std::size(spans); ++j)
                 assert((doAssign(spans[i], spans[j])));
     }
 
@@ -255,8 +255,8 @@ int main(int, char**)
             spanType{arr + 2, arr + 4}
             };
 
-        for (size_t i = 0; i < std::size(spans); ++i)
-            for (size_t j = i; j < std::size(spans); ++j)
+        for (std::size_t i = 0; i < std::size(spans); ++i)
+            for (std::size_t j = i; j < std::size(spans); ++j)
                 assert((doAssign(spans[i], spans[j])));
     }
 
@@ -275,8 +275,8 @@ int main(int, char**)
             {strs + 3, strs + 3}
             };
 
-        for (size_t i = 0; i < std::size(spans); ++i)
-            for (size_t j = i; j < std::size(spans); ++j)
+        for (std::size_t i = 0; i < std::size(spans); ++i)
+            for (std::size_t j = i; j < std::size(spans); ++j)
                 assert((doAssign(spans[i], spans[j])));
     }
 
@@ -288,8 +288,8 @@ int main(int, char**)
             spanType{strs + 2, strs + 3}
             };
 
-        for (size_t i = 0; i < std::size(spans); ++i)
-            for (size_t j = i; j < std::size(spans); ++j)
+        for (std::size_t i = 0; i < std::size(spans); ++i)
+            for (std::size_t j = i; j < std::size(spans); ++j)
                 assert((doAssign(spans[i], spans[j])));
     }
 

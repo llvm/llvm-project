@@ -123,10 +123,16 @@ public:
 } // end anonymous namespace
 
 char BasicBlockSections::ID = 0;
-INITIALIZE_PASS(BasicBlockSections, "bbsections-prepare",
-                "Prepares for basic block sections, by splitting functions "
-                "into clusters of basic blocks.",
-                false, false)
+INITIALIZE_PASS_BEGIN(
+    BasicBlockSections, "bbsections-prepare",
+    "Prepares for basic block sections, by splitting functions "
+    "into clusters of basic blocks.",
+    false, false)
+INITIALIZE_PASS_DEPENDENCY(BasicBlockSectionsProfileReader)
+INITIALIZE_PASS_END(BasicBlockSections, "bbsections-prepare",
+                    "Prepares for basic block sections, by splitting functions "
+                    "into clusters of basic blocks.",
+                    false, false)
 
 // This function updates and optimizes the branching instructions of every basic
 // block in a given function to account for changes in the layout.
@@ -219,9 +225,7 @@ assignSections(MachineFunction &MF,
       // blocks are ordered canonically.
       MBB.setSectionID(MBB.getNumber());
     } else {
-      // TODO: Replace `getBBIDOrNumber` with `getBBID` once version 1 is
-      // deprecated.
-      auto I = FuncBBClusterInfo.find(MBB.getBBIDOrNumber());
+      auto I = FuncBBClusterInfo.find(*MBB.getBBID());
       if (I != FuncBBClusterInfo.end()) {
         MBB.setSectionID(I->second.ClusterID);
       } else {
@@ -254,7 +258,8 @@ void llvm::sortBasicBlocksAndUpdateBranches(
   [[maybe_unused]] const MachineBasicBlock *EntryBlock = &MF.front();
   SmallVector<MachineBasicBlock *> PreLayoutFallThroughs(MF.getNumBlockIDs());
   for (auto &MBB : MF)
-    PreLayoutFallThroughs[MBB.getNumber()] = MBB.getFallThrough();
+    PreLayoutFallThroughs[MBB.getNumber()] =
+        MBB.getFallThrough(/*JumpToFallThrough=*/false);
 
   MF.sort(MBBCmp);
   assert(&MF.front() == EntryBlock &&
@@ -279,9 +284,7 @@ void llvm::avoidZeroOffsetLandingPad(MachineFunction &MF) {
       MachineBasicBlock::iterator MI = MBB.begin();
       while (!MI->isEHLabel())
         ++MI;
-      MCInst Nop = MF.getSubtarget().getInstrInfo()->getNop();
-      BuildMI(MBB, MI, DebugLoc(),
-              MF.getSubtarget().getInstrInfo()->get(Nop.getOpcode()));
+      MF.getSubtarget().getInstrInfo()->insertNoop(MBB, MI);
     }
   }
 }
@@ -300,7 +303,7 @@ static bool hasInstrProfHashMismatch(MachineFunction &MF) {
   if (Existing) {
     MDTuple *Tuple = cast<MDTuple>(Existing);
     for (const auto &N : Tuple->operands())
-      if (cast<MDString>(N.get())->getString() == MetadataName)
+      if (N.equalsStr(MetadataName))
         return true;
   }
 
@@ -321,14 +324,8 @@ bool BasicBlockSections::runOnMachineFunction(MachineFunction &MF) {
   if (BBSectionsType == BasicBlockSection::List &&
       hasInstrProfHashMismatch(MF))
     return true;
-  // Renumber blocks before sorting them. This is useful during sorting,
-  // basic blocks in the same section will retain the default order.
-  // This renumbering should also be done for basic block labels to match the
-  // profiles with the correct blocks.
-  // For LLVM_BB_ADDR_MAP versions 2 and higher, this renumbering serves
-  // the different purpose of accessing the original layout positions and
-  // finding the original fallthroughs.
-  // TODO: Change the above comment accordingly when version 1 is deprecated.
+  // Renumber blocks before sorting them. This is useful for accessing the
+  // original layout positions and finding the original fallthroughs.
   MF.RenumberBlocks();
 
   if (BBSectionsType == BasicBlockSection::Labels) {
@@ -379,8 +376,8 @@ bool BasicBlockSections::runOnMachineFunction(MachineFunction &MF) {
     // If the two basic block are in the same section, the order is decided by
     // their position within the section.
     if (XSectionID.Type == MBBSectionID::SectionType::Default)
-      return FuncBBClusterInfo.lookup(X.getBBIDOrNumber()).PositionInCluster <
-             FuncBBClusterInfo.lookup(Y.getBBIDOrNumber()).PositionInCluster;
+      return FuncBBClusterInfo.lookup(*X.getBBID()).PositionInCluster <
+             FuncBBClusterInfo.lookup(*Y.getBBID()).PositionInCluster;
     return X.getNumber() < Y.getNumber();
   };
 

@@ -13,7 +13,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "CFGMST.h"
 #include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/STLExtras.h"
@@ -38,6 +37,7 @@
 #include "llvm/Support/Regex.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Instrumentation.h"
+#include "llvm/Transforms/Instrumentation/CFGMST.h"
 #include "llvm/Transforms/Instrumentation/GCOVProfiler.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
 #include <algorithm>
@@ -898,7 +898,9 @@ bool GCOVProfiler::emitProfileNotes(
 
           if (Line == Loc.getLine()) continue;
           Line = Loc.getLine();
-          if (SP != getDISubprogram(Loc.getScope()))
+          MDNode *Scope = Loc.getScope();
+          // TODO: Handle blocks from another file due to #line, #include, etc.
+          if (isa<DILexicalBlockFile>(Scope) || SP != getDISubprogram(Scope))
             continue;
 
           GCOVLines &Lines = Block.getFile(Filename);
@@ -919,15 +921,21 @@ bool GCOVProfiler::emitProfileNotes(
           IRBuilder<> Builder(E.Place, E.Place->getFirstInsertionPt());
           Value *V = Builder.CreateConstInBoundsGEP2_64(
               Counters->getValueType(), Counters, 0, I);
+          // Disable sanitizers to decrease size bloat. We don't expect
+          // sanitizers to catch interesting issues.
+          Instruction *Inst;
           if (Options.Atomic) {
-            Builder.CreateAtomicRMW(AtomicRMWInst::Add, V, Builder.getInt64(1),
-                                    MaybeAlign(), AtomicOrdering::Monotonic);
+            Inst = Builder.CreateAtomicRMW(AtomicRMWInst::Add, V,
+                                           Builder.getInt64(1), MaybeAlign(),
+                                           AtomicOrdering::Monotonic);
           } else {
-            Value *Count =
+            LoadInst *OldCount =
                 Builder.CreateLoad(Builder.getInt64Ty(), V, "gcov_ctr");
-            Count = Builder.CreateAdd(Count, Builder.getInt64(1));
-            Builder.CreateStore(Count, V);
+            OldCount->setNoSanitizeMetadata();
+            Value *NewCount = Builder.CreateAdd(OldCount, Builder.getInt64(1));
+            Inst = Builder.CreateStore(NewCount, V);
           }
+          Inst->setNoSanitizeMetadata();
         }
       }
     }
@@ -1045,8 +1053,8 @@ FunctionCallee GCOVProfiler::getEmitFunctionFunc(const TargetLibraryInfo *TLI) {
 
 FunctionCallee GCOVProfiler::getEmitArcsFunc(const TargetLibraryInfo *TLI) {
   Type *Args[] = {
-    Type::getInt32Ty(*Ctx),     // uint32_t num_counters
-    Type::getInt64PtrTy(*Ctx),  // uint64_t *counters
+      Type::getInt32Ty(*Ctx),       // uint32_t num_counters
+      PointerType::getUnqual(*Ctx), // uint64_t *counters
   };
   FunctionType *FTy = FunctionType::get(Type::getVoidTy(*Ctx), Args, false);
   return M->getOrInsertFunction("llvm_gcda_emit_arcs", FTy,

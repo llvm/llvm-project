@@ -46,11 +46,11 @@ template <
     class _Up,
     class _BinaryPredicate,
     __enable_if_t<__is_trivial_equality_predicate<_BinaryPredicate, _Tp, _Up>::value && !is_volatile<_Tp>::value &&
-                      !is_volatile<_Up>::value && __is_trivially_equality_comparable<_Tp, _Up>::value,
+                      !is_volatile<_Up>::value && __libcpp_is_trivially_equality_comparable<_Tp, _Up>::value,
                   int> = 0>
 _LIBCPP_NODISCARD inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 bool
 __equal_iter_impl(_Tp* __first1, _Tp* __last1, _Up* __first2, _BinaryPredicate&) {
-  return std::__constexpr_memcmp(__first1, __first2, (__last1 - __first1) * sizeof(_Tp)) == 0;
+  return std::__constexpr_memcmp_equal(__first1, __first2, __element_count(__last1 - __first1));
 }
 
 template <class _InputIterator1, class _InputIterator2, class _BinaryPredicate>
@@ -96,11 +96,11 @@ template <class _Tp,
           class _Proj2,
           __enable_if_t<__is_trivial_equality_predicate<_Pred, _Tp, _Up>::value && __is_identity<_Proj1>::value &&
                             __is_identity<_Proj2>::value && !is_volatile<_Tp>::value && !is_volatile<_Up>::value &&
-                            __is_trivially_equality_comparable<_Tp, _Up>::value,
+                            __libcpp_is_trivially_equality_comparable<_Tp, _Up>::value,
                         int> = 0>
 _LIBCPP_NODISCARD inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 bool __equal_impl(
     _Tp* __first1, _Tp* __last1, _Up* __first2, _Up*, _Pred&, _Proj1&, _Proj2&) {
-  return std::__constexpr_memcmp(__first1, __first2, (__last1 - __first1) * sizeof(_Tp)) == 0;
+  return std::__constexpr_memcmp_equal(__first1, __first2, __element_count(__last1 - __first1));
 }
 
 template <class _BinaryPredicate, class _RandomAccessIterator1, class _RandomAccessIterator2>

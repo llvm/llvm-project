@@ -806,7 +806,7 @@ static Stmt *createObjCPropertyGetter(ASTContext &Ctx,
 
   if (!IVar) {
     Prop = MD->findPropertyDecl();
-    IVar = findBackingIvar(Prop);
+    IVar = Prop ? findBackingIvar(Prop) : nullptr;
   }
 
   if (!IVar || !Prop)

@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -std=c++1y -fsyntax-only -verify %s -DMAX=1234 -fconstexpr-steps 1234
-// RUN: %clang_cc1 -std=c++1y -fsyntax-only -verify %s -DMAX=10 -fconstexpr-steps 10
+// RUN: %clang_cc1 -std=c++1y -fsyntax-only -verify %s -DMAX=1234 -fconstexpr-steps=1234
+// RUN: %clang_cc1 -std=c++1y -fsyntax-only -verify %s -DMAX=10 -fconstexpr-steps=10
 // RUN: %clang -std=c++1y -fsyntax-only -Xclang -verify %s -DMAX=12345 -fconstexpr-steps=12345
 
 // This takes a total of n + 4 steps according to our current rules:

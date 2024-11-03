@@ -380,7 +380,7 @@ _Float16 f(_Float16 a, _Float16 b, _Float16 c, _Float16 d) {
 //
 // CHECK-UNSAFE-LABEL: @getFEM(
 // CHECK-UNSAFE-NEXT:  entry:
-// CHECK-UNSAFE-NEXT:    ret i32 -1
+// CHECK-UNSAFE-NEXT:    ret i32 0
 //
 int getFEM() {
   return __FLT_EVAL_METHOD__;

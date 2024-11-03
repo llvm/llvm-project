@@ -23,9 +23,12 @@
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCTargetOptionsCommandFlags.h"
 #include "llvm/MC/TargetRegistry.h"
+#include "llvm/Option/ArgList.h"
+#include "llvm/Option/Option.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/InitLLVM.h"
+#include "llvm/Support/LLVMDriver.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/ToolOutputFile.h"
@@ -36,20 +39,39 @@ using namespace llvm::object;
 
 static mc::RegisterMCTargetOptionsFlags MCTargetOptionsFlags;
 
-cl::OptionCategory DwpCategory("Specific Options");
-static cl::list<std::string>
-    InputFiles(cl::Positional, cl::desc("<input files>"), cl::cat(DwpCategory));
+// Command-line option boilerplate.
+namespace {
+enum ID {
+  OPT_INVALID = 0, // This is not an option ID.
+#define OPTION(...) LLVM_MAKE_OPT_ID(__VA_ARGS__),
+#include "Opts.inc"
+#undef OPTION
+};
 
-static cl::list<std::string> ExecFilenames(
-    "e",
-    cl::desc(
-        "Specify the executable/library files to get the list of *.dwo from"),
-    cl::value_desc("filename"), cl::cat(DwpCategory));
+#define PREFIX(NAME, VALUE)                                                    \
+  static constexpr StringLiteral NAME##_init[] = VALUE;                        \
+  static constexpr ArrayRef<StringLiteral> NAME(NAME##_init,                   \
+                                                std::size(NAME##_init) - 1);
+#include "Opts.inc"
+#undef PREFIX
 
-static cl::opt<std::string> OutputFilename(cl::Required, "o",
-                                           cl::desc("Specify the output file."),
-                                           cl::value_desc("filename"),
-                                           cl::cat(DwpCategory));
+using namespace llvm::opt;
+static constexpr opt::OptTable::Info InfoTable[] = {
+#define OPTION(...) LLVM_CONSTRUCT_OPT_INFO(__VA_ARGS__),
+#include "Opts.inc"
+#undef OPTION
+};
+
+class DwpOptTable : public opt::GenericOptTable {
+public:
+  DwpOptTable() : GenericOptTable(InfoTable) {}
+};
+} // end anonymous namespace
+
+// Options
+static std::vector<std::string> ExecFilenames;
+static std::string OutputFilename;
+static bool ContinueOnCuIndexOverflow;
 
 static Expected<SmallVector<std::string, 16>>
 getDWOFilenames(StringRef ExecFilename) {
@@ -97,18 +119,44 @@ static Expected<Triple> readTargetTriple(StringRef FileName) {
   return ErrOrObj->getBinary()->makeTriple();
 }
 
-int main(int argc, char **argv) {
+int llvm_dwp_main(int argc, char **argv, const llvm::ToolContext &) {
   InitLLVM X(argc, argv);
 
-  cl::HideUnrelatedOptions({&DwpCategory, &getColorCategory()});
-  cl::ParseCommandLineOptions(argc, argv, "merge split dwarf (.dwo) files\n");
+  DwpOptTable Tbl;
+  llvm::BumpPtrAllocator A;
+  llvm::StringSaver Saver{A};
+  opt::InputArgList Args =
+      Tbl.parseArgs(argc, argv, OPT_UNKNOWN, Saver, [&](StringRef Msg) {
+        llvm::errs() << Msg << '\n';
+        std::exit(1);
+      });
+
+  if (Args.hasArg(OPT_help)) {
+    Tbl.printHelp(llvm::outs(), "llvm-dwp [options] <input files>",
+                  "merge split dwarf (.dwo) files");
+    std::exit(0);
+  }
+
+  if (Args.hasArg(OPT_version)) {
+    llvm::cl::PrintVersionMessage();
+    std::exit(0);
+  }
+
+  OutputFilename = Args.getLastArgValue(OPT_outputFileName, "");
+  ContinueOnCuIndexOverflow = Args.hasArg(OPT_continueOnCuIndexOverflow);
+
+  for (const llvm::opt::Arg *A : Args.filtered(OPT_execFileNames))
+    ExecFilenames.emplace_back(A->getValue());
+
+  std::vector<std::string> DWOFilenames;
+  for (const llvm::opt::Arg *A : Args.filtered(OPT_INPUT))
+    DWOFilenames.emplace_back(A->getValue());
 
   llvm::InitializeAllTargetInfos();
   llvm::InitializeAllTargetMCs();
   llvm::InitializeAllTargets();
   llvm::InitializeAllAsmPrinters();
 
-  std::vector<std::string> DWOFilenames = InputFiles;
   for (const auto &ExecFilename : ExecFilenames) {
     auto DWOs = getDWOFilenames(ExecFilename);
     if (!DWOs) {
@@ -207,7 +255,7 @@ int main(int argc, char **argv) {
   if (!MS)
     return error("no object streamer for target " + TripleName, Context);
 
-  if (auto Err = write(*MS, DWOFilenames)) {
+  if (auto Err = write(*MS, DWOFilenames, ContinueOnCuIndexOverflow)) {
     logAllUnhandledErrors(std::move(Err), WithColor::error());
     return 1;
   }

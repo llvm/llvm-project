@@ -13,6 +13,7 @@
 #define LLVM_TRANSFORMS_VECTORIZE_VPLANCFG_H
 
 #include "VPlan.h"
+#include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/GraphTraits.h"
 #include "llvm/ADT/SmallVector.h"
 

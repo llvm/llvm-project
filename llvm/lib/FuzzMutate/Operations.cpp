@@ -67,9 +67,18 @@ void llvm::describeFuzzerFloatOps(std::vector<fuzzerop::OpDescriptor> &Ops) {
   Ops.push_back(cmpOpDescriptor(1, Instruction::FCmp, CmpInst::FCMP_TRUE));
 }
 
+void llvm::describeFuzzerUnaryOperations(
+    std::vector<fuzzerop::OpDescriptor> &Ops) {
+  Ops.push_back(fnegDescriptor(1));
+}
+
 void llvm::describeFuzzerControlFlowOps(
     std::vector<fuzzerop::OpDescriptor> &Ops) {
   Ops.push_back(splitBlockDescriptor(1));
+}
+
+void llvm::describeFuzzerOtherOps(std::vector<fuzzerop::OpDescriptor> &Ops) {
+  Ops.push_back(selectDescriptor(1));
 }
 
 void llvm::describeFuzzerPointerOps(std::vector<fuzzerop::OpDescriptor> &Ops) {
@@ -86,6 +95,22 @@ void llvm::describeFuzzerVectorOps(std::vector<fuzzerop::OpDescriptor> &Ops) {
   Ops.push_back(extractElementDescriptor(1));
   Ops.push_back(insertElementDescriptor(1));
   Ops.push_back(shuffleVectorDescriptor(1));
+}
+
+OpDescriptor llvm::fuzzerop::selectDescriptor(unsigned Weight) {
+  auto buildOp = [](ArrayRef<Value *> Srcs, Instruction *Inst) {
+    return SelectInst::Create(Srcs[0], Srcs[1], Srcs[2], "S", Inst);
+  };
+  return {Weight,
+          {boolOrVecBoolType(), matchFirstLengthWAnyType(), matchSecondType()},
+          buildOp};
+}
+
+OpDescriptor llvm::fuzzerop::fnegDescriptor(unsigned Weight) {
+  auto buildOp = [](ArrayRef<Value *> Srcs, Instruction *Inst) {
+    return UnaryOperator::Create(Instruction::FNeg, Srcs[0], "F", Inst);
+  };
+  return {Weight, {anyFloatOrVecFloatType()}, buildOp};
 }
 
 OpDescriptor llvm::fuzzerop::binOpDescriptor(unsigned Weight,
@@ -107,13 +132,13 @@ OpDescriptor llvm::fuzzerop::binOpDescriptor(unsigned Weight,
   case Instruction::And:
   case Instruction::Or:
   case Instruction::Xor:
-    return {Weight, {anyIntType(), matchFirstType()}, buildOp};
+    return {Weight, {anyIntOrVecIntType(), matchFirstType()}, buildOp};
   case Instruction::FAdd:
   case Instruction::FSub:
   case Instruction::FMul:
   case Instruction::FDiv:
   case Instruction::FRem:
-    return {Weight, {anyFloatType(), matchFirstType()}, buildOp};
+    return {Weight, {anyFloatOrVecFloatType(), matchFirstType()}, buildOp};
   case Instruction::BinaryOpsEnd:
     llvm_unreachable("Value out of range of enum");
   }
@@ -129,9 +154,9 @@ OpDescriptor llvm::fuzzerop::cmpOpDescriptor(unsigned Weight,
 
   switch (CmpOp) {
   case Instruction::ICmp:
-    return {Weight, {anyIntType(), matchFirstType()}, buildOp};
+    return {Weight, {anyIntOrVecIntType(), matchFirstType()}, buildOp};
   case Instruction::FCmp:
-    return {Weight, {anyFloatType(), matchFirstType()}, buildOp};
+    return {Weight, {anyFloatOrVecFloatType(), matchFirstType()}, buildOp};
   default:
     llvm_unreachable("CmpOp must be ICmp or FCmp");
   }
@@ -171,9 +196,7 @@ OpDescriptor llvm::fuzzerop::gepDescriptor(unsigned Weight) {
   auto buildGEP = [](ArrayRef<Value *> Srcs, Instruction *Inst) {
     // TODO: It would be better to generate a random type here, rather than
     // generating a random value and picking its type.
-    Type *Ty = Srcs[0]->getType()->isOpaquePointerTy()
-                   ? Srcs[1]->getType()
-                   : Srcs[0]->getType()->getNonOpaquePointerElementType();
+    Type *Ty = Srcs[1]->getType();
     auto Indices = ArrayRef(Srcs).drop_front(2);
     return GetElementPtrInst::Create(Ty, Srcs[0], Indices, "G", Inst);
   };

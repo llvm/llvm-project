@@ -58,7 +58,7 @@ define i32 @test5(i1 %C) {
 
 define i32 @load_gep_null_inbounds(i64 %X) {
 ; CHECK-LABEL: @load_gep_null_inbounds(
-; CHECK-NEXT:    store i32 poison, ptr null, align 4294967296
+; CHECK-NEXT:    store i1 true, ptr poison, align 1
 ; CHECK-NEXT:    ret i32 poison
 ;
   %V = getelementptr inbounds i32, ptr null, i64 %X
@@ -68,7 +68,7 @@ define i32 @load_gep_null_inbounds(i64 %X) {
 
 define i32 @load_gep_null_not_inbounds(i64 %X) {
 ; CHECK-LABEL: @load_gep_null_not_inbounds(
-; CHECK-NEXT:    store i32 poison, ptr null, align 4294967296
+; CHECK-NEXT:    store i1 true, ptr poison, align 1
 ; CHECK-NEXT:    ret i32 poison
 ;
   %V = getelementptr i32, ptr null, i64 %X
@@ -412,4 +412,18 @@ define i32 @load_via_strip_invariant_group() {
   %b = getelementptr i8, ptr %a, i64 8
   %d = load i32, ptr %b
   ret i32 %d
+}
+
+; TODO: For non-byte-sized vectors, current implementation assumes there is
+; padding to the next byte boundary between elements.
+@foo = constant <2 x i4> <i4 u0x1, i4 u0x2>, align 8
+
+define i4 @test_vector_load_i4_non_byte_sized() {
+; CHECK-LABEL: @test_vector_load_i4_non_byte_sized(
+; CHECK-NEXT:    [[RES0:%.*]] = load i4, ptr @foo, align 8
+; CHECK-NEXT:    ret i4 [[RES0]]
+;
+  %ptr0 = getelementptr i8, ptr @foo, i64 0
+  %res0 = load i4, ptr %ptr0, align 1
+  ret i4 %res0
 }

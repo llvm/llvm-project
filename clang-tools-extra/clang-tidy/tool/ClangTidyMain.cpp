@@ -31,9 +31,7 @@
 using namespace clang::tooling;
 using namespace llvm;
 
-static cl::desc desc(StringRef description) {
-  return cl::desc(description.ltrim());
-}
+static cl::desc desc(StringRef description) { return {description.ltrim()}; }
 
 static cl::OptionCategory ClangTidyCategory("clang-tidy options");
 
@@ -52,7 +50,9 @@ Configuration files:
                                  options. Example:
                                    CheckOptions:
                                      some-check.SomeOption: 'some value'
-  Checks                       - Same as '--checks'.
+  Checks                       - Same as '--checks'. Additionally, the list of
+                                 globs can be specified as a list instead of a
+                                 string.
   ExtraArgs                    - Same as '--extra-args'.
   ExtraArgsBefore              - Same as '--extra-args-before'.
   FormatStyle                  - Same as '--format-style'.
@@ -132,10 +132,13 @@ option in .clang-tidy file, if any.
                                          cl::init(""),
                                          cl::cat(ClangTidyCategory));
 
-static cl::opt<bool>
-    SystemHeaders("system-headers",
-                  desc("Display the errors from system headers."),
-                  cl::init(false), cl::cat(ClangTidyCategory));
+static cl::opt<bool> SystemHeaders("system-headers", desc(R"(
+Display the errors from system headers.
+This option overrides the 'SystemHeaders' option
+in .clang-tidy file, if any.
+)"),
+                                   cl::init(false), cl::cat(ClangTidyCategory));
+
 static cl::opt<std::string> LineFilter("line-filter", desc(R"(
 List of files with line ranges to filter the
 warnings. Can be used together with
@@ -257,6 +260,17 @@ static cl::opt<bool>
     AllowEnablingAnalyzerAlphaCheckers("allow-enabling-analyzer-alpha-checkers",
                                        cl::init(false), cl::Hidden,
                                        cl::cat(ClangTidyCategory));
+
+static cl::opt<bool> EnableModuleHeadersParsing("enable-module-headers-parsing",
+                                                desc(R"(
+Enables preprocessor-level module header parsing
+for C++20 and above, empowering specific checks
+to detect macro definitions within modules. This
+feature may cause performance and parsing issues
+and is therefore considered experimental.
+)"),
+                                                cl::init(false),
+                                                cl::cat(ClangTidyCategory));
 
 static cl::opt<std::string> ExportFixes("export-fixes", desc(R"(
 YAML file to store suggested fixes in. The
@@ -654,7 +668,8 @@ int clangTidyMain(int argc, const char **argv) {
   llvm::InitializeAllAsmParsers();
 
   ClangTidyContext Context(std::move(OwningOptionsProvider),
-                           AllowEnablingAnalyzerAlphaCheckers);
+                           AllowEnablingAnalyzerAlphaCheckers,
+                           EnableModuleHeadersParsing);
   std::vector<ClangTidyError> Errors =
       runClangTidy(Context, OptionsParser->getCompilations(), PathList, BaseFS,
                    FixNotes, EnableCheckProfile, ProfilePrefix);

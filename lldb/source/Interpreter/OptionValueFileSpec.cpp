@@ -84,7 +84,7 @@ Status OptionValueFileSpec::SetValueFromString(llvm::StringRef value,
 
 void OptionValueFileSpec::AutoComplete(CommandInterpreter &interpreter,
                                        CompletionRequest &request) {
-  CommandCompletions::InvokeCommonCompletionCallbacks(
+  lldb_private::CommandCompletions::InvokeCommonCompletionCallbacks(
       interpreter, m_completion_mask, request, nullptr);
 }
 

@@ -33,10 +33,10 @@ define void @foo(i32 %M, i32 %N, i32 %K, ptr %A, ptr %B_rcr4, ptr %C, i32 %c_row
   ; CHECK-NEXT:   [[MOV32rm2:%[0-9]+]]:gr32 = MOV32rm %fixed-stack.3, 1, $noreg, 0, $noreg :: (load (s32) from %fixed-stack.3, align 16)
   ; CHECK-NEXT:   MOV8mr %stack.0, 1, $noreg, 49, $noreg, [[MOV32rm2]].sub_8bit :: (store (s512) into %stack.0 + 49, align 1, basealign 4)
   ; CHECK-NEXT:   MOV8mr %stack.0, 1, $noreg, 48, $noreg, [[MOV32rm2]].sub_8bit :: (store (s512) into %stack.0 + 48, align 4)
-  ; CHECK-NEXT:   [[AND32ri8_:%[0-9]+]]:gr32 = AND32ri8 [[AND32ri8_]], -64, implicit-def dead $eflags
+  ; CHECK-NEXT:   [[AND32ri_:%[0-9]+]]:gr32 = AND32ri [[AND32ri_]], -64, implicit-def dead $eflags
   ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:gr32 = COPY [[COPY83]].sub_32bit
   ; CHECK-NEXT:   MOV16mr %stack.0, 1, $noreg, 18, $noreg, [[COPY2]].sub_16bit :: (store (s512) into %stack.0 + 18, align 2, basealign 4)
-  ; CHECK-NEXT:   [[SUB32rr:%[0-9]+]]:gr32 = SUB32rr [[SUB32rr]], [[AND32ri8_]], implicit-def dead $eflags
+  ; CHECK-NEXT:   [[SUB32rr:%[0-9]+]]:gr32 = SUB32rr [[SUB32rr]], [[AND32ri_]], implicit-def dead $eflags
   ; CHECK-NEXT:   MOV16mr %stack.0, 1, $noreg, 18, $noreg, [[SUB32rr]].sub_16bit :: (store (s512) into %stack.0 + 18, align 2, basealign 4)
   ; CHECK-NEXT:   [[MOVZX32rr16_:%[0-9]+]]:gr32 = MOVZX32rr16 [[SUB32rr]].sub_16bit
   ; CHECK-NEXT:   MOV8mr %stack.0, 1, $noreg, 50, $noreg, [[MOVZX32rr16_]].sub_8bit :: (store (s512) into %stack.0 + 50, align 2, basealign 4)
@@ -47,7 +47,7 @@ define void @foo(i32 %M, i32 %N, i32 %K, ptr %A, ptr %B_rcr4, ptr %C, i32 %c_row
   ; CHECK-NEXT:   MOV16mr %stack.0, 1, $noreg, 20, $noreg, [[LEA64_32r]].sub_16bit :: (store (s512) into %stack.0 + 20, align 4)
   ; CHECK-NEXT:   PLDTILECFGV %stack.0, 1, $noreg, 0, $noreg, implicit-def dead $tmm0, implicit-def dead $tmm1, implicit-def dead $tmm2, implicit-def dead $tmm3, implicit-def dead $tmm4, implicit-def dead $tmm5, implicit-def dead $tmm6, implicit-def dead $tmm7 :: (load (s512) from %stack.0, align 4)
   ; CHECK-NEXT:   [[MOVSX64rr32_:%[0-9]+]]:gr64_nosp = MOVSX64rr32 [[COPY83]].sub_32bit
-  ; CHECK-NEXT:   [[COPY83]].sub_32bit:gr64_with_sub_8bit = nsw SUB32rr [[COPY83]].sub_32bit, [[SUB32rr]], implicit-def dead $eflags
+  ; CHECK-NEXT:   [[COPY83]].sub_32bit:gr64_with_sub_8bit = SUB32rr [[COPY83]].sub_32bit, [[SUB32rr]], implicit-def dead $eflags
   ; CHECK-NEXT:   undef %14.sub_32bit:gr64_with_sub_8bit = MOVZX32rr16 [[COPY83]].sub_16bit
   ; CHECK-NEXT:   ADD64mr %stack.1, 1, $noreg, 0, $noreg, %14, implicit-def dead $eflags :: (store (s64) into %stack.1)
   ; CHECK-NEXT:   undef %61.sub_32bit:gr64_with_sub_8bit = COPY %14.sub_32bit

@@ -54,12 +54,25 @@ private:
   /// A path to append before the external file path found in remark metadata.
   std::optional<std::string> PrependPath;
 
+  /// If true, keep all remarks, otherwise only keep remarks with valid debug
+  /// locations.
+  bool KeepAllRemarks = true;
+
   /// Keep this remark. If it's already in the set, discard it.
   Remark &keep(std::unique_ptr<Remark> Remark);
+
+  /// Returns true if \p R should be kept. If KeepAllRemarks is false, only
+  /// return true if \p R has a valid debug location.
+  bool shouldKeepRemark(const Remark &R) {
+    return KeepAllRemarks ? true : R.Loc.has_value();
+  }
 
 public:
   /// Set a path to prepend to the external file path.
   void setExternalFilePrependPath(StringRef PrependPath);
+
+  /// Set KeepAllRemarks to \p B.
+  void setKeepAllRemarks(bool B) { KeepAllRemarks = B; }
 
   /// Link the remarks found in \p Buffer.
   /// If \p RemarkFormat is not provided, try to deduce it from the metadata in

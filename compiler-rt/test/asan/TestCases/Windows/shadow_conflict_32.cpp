@@ -2,8 +2,12 @@
 // the process memory layout.
 // REQUIRES: asan-32-bits
 //
-// RUN: %clang_cl_asan -DBUILD_DLL -LD %s -Fe%t_dll.dll -link -base:0x30000000 -fixed -dynamicbase:no
-// RUN: %clang_cl_asan %s -Fe%t.exe -link %t_dll.lib
+// RUN: %clang_cl_asan -DBUILD_DLL %LD %s %Fe%t_dll.dll \
+// RUN:   %if target={{.*-windows-gnu}} %{ \
+// RUN:     -Wl,--image-base,0x30000000,--disable-reloc-section \
+// RUN:     -Wl,--disable-dynamicbase,--out-implib,%t_dll.lib \
+// RUN:   %} %else %{ -link -base:0x30000000 -fixed -dynamicbase:no %}
+// RUN: %clang_cl_asan %s %Fe%t.exe %t_dll.lib
 // RUN: not %run %t.exe 2>&1 | FileCheck %s
 
 #ifndef BUILD_DLL

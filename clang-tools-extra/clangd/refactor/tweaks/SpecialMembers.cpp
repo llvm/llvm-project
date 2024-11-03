@@ -8,10 +8,7 @@
 #include "ParsedAST.h"
 #include "refactor/InsertionPoint.h"
 #include "refactor/Tweak.h"
-#include "support/Logger.h"
 #include "clang/AST/DeclCXX.h"
-#include "clang/Basic/SourceLocation.h"
-#include "clang/Basic/SourceManager.h"
 #include "clang/Sema/Sema.h"
 #include "clang/Tooling/Core/Replacement.h"
 #include "llvm/ADT/StringRef.h"
@@ -84,7 +81,7 @@ std::string buildSpecialMemberDeclarations(const CXXRecordDecl &Class) {
 //  - to understand the implicit behavior
 //  - to avoid relying on the implicit behavior
 //  - as a baseline for explicit modification
-class DeclareCopyMove : public Tweak {
+class SpecialMembers : public Tweak {
 public:
   const char *id() const final;
   llvm::StringLiteral kind() const override {
@@ -103,7 +100,7 @@ public:
     // Trigger only on class definitions.
     if (auto *N = Inputs.ASTSelection.commonAncestor())
       Class = const_cast<CXXRecordDecl *>(N->ASTNode.get<CXXRecordDecl>());
-    if (!Class || !Class->isThisDeclarationADefinition())
+    if (!Class || !Class->isThisDeclarationADefinition() || Class->isUnion())
       return false;
 
     // Tweak is only available if some members are missing.
@@ -146,7 +143,7 @@ private:
   bool NeedCopy = false, NeedMove = false;
   CXXRecordDecl *Class = nullptr;
 };
-REGISTER_TWEAK(DeclareCopyMove)
+REGISTER_TWEAK(SpecialMembers)
 
 } // namespace
 } // namespace clangd

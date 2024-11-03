@@ -1646,18 +1646,20 @@ Decl *CXXRecordDecl::getLambdaContextDecl() const {
   return getLambdaData().ContextDecl.get(Source);
 }
 
-void CXXRecordDecl::setDeviceLambdaManglingNumber(unsigned Num) const {
+void CXXRecordDecl::setLambdaNumbering(LambdaNumbering Numbering) {
   assert(isLambda() && "Not a lambda closure type!");
-  if (Num)
-    getASTContext().DeviceLambdaManglingNumbers[this] = Num;
+  getLambdaData().ManglingNumber = Numbering.ManglingNumber;
+  if (Numbering.DeviceManglingNumber)
+    getASTContext().DeviceLambdaManglingNumbers[this] =
+        Numbering.DeviceManglingNumber;
+  getLambdaData().IndexInContext = Numbering.IndexInContext;
+  getLambdaData().ContextDecl = Numbering.ContextDecl;
+  getLambdaData().HasKnownInternalLinkage = Numbering.HasKnownInternalLinkage;
 }
 
 unsigned CXXRecordDecl::getDeviceLambdaManglingNumber() const {
   assert(isLambda() && "Not a lambda closure type!");
-  auto I = getASTContext().DeviceLambdaManglingNumbers.find(this);
-  if (I != getASTContext().DeviceLambdaManglingNumbers.end())
-    return I->second;
-  return 0;
+  return getASTContext().DeviceLambdaManglingNumbers.lookup(this);
 }
 
 static CanQualType GetConversionType(ASTContext &Context, NamedDecl *Conv) {
@@ -2110,21 +2112,21 @@ ExplicitSpecifier ExplicitSpecifier::getFromDecl(FunctionDecl *Function) {
   }
 }
 
-CXXDeductionGuideDecl *
-CXXDeductionGuideDecl::Create(ASTContext &C, DeclContext *DC,
-                              SourceLocation StartLoc, ExplicitSpecifier ES,
-                              const DeclarationNameInfo &NameInfo, QualType T,
-                              TypeSourceInfo *TInfo, SourceLocation EndLocation,
-                              CXXConstructorDecl *Ctor) {
+CXXDeductionGuideDecl *CXXDeductionGuideDecl::Create(
+    ASTContext &C, DeclContext *DC, SourceLocation StartLoc,
+    ExplicitSpecifier ES, const DeclarationNameInfo &NameInfo, QualType T,
+    TypeSourceInfo *TInfo, SourceLocation EndLocation, CXXConstructorDecl *Ctor,
+    DeductionCandidate Kind) {
   return new (C, DC) CXXDeductionGuideDecl(C, DC, StartLoc, ES, NameInfo, T,
-                                           TInfo, EndLocation, Ctor);
+                                           TInfo, EndLocation, Ctor, Kind);
 }
 
 CXXDeductionGuideDecl *CXXDeductionGuideDecl::CreateDeserialized(ASTContext &C,
                                                                  unsigned ID) {
   return new (C, ID) CXXDeductionGuideDecl(
       C, nullptr, SourceLocation(), ExplicitSpecifier(), DeclarationNameInfo(),
-      QualType(), nullptr, SourceLocation(), nullptr);
+      QualType(), nullptr, SourceLocation(), nullptr,
+      DeductionCandidate::Normal);
 }
 
 RequiresExprBodyDecl *RequiresExprBodyDecl::Create(
@@ -2490,7 +2492,8 @@ QualType CXXMethodDecl::getThisType(const FunctionProtoType *FPT,
                                     const CXXRecordDecl *Decl) {
   ASTContext &C = Decl->getASTContext();
   QualType ObjectTy = ::getThisObjectType(C, FPT, Decl);
-  return C.getPointerType(ObjectTy);
+  return C.getLangOpts().HLSL ? C.getLValueReferenceType(ObjectTy)
+                              : C.getPointerType(ObjectTy);
 }
 
 QualType CXXMethodDecl::getThisObjectType(const FunctionProtoType *FPT,
@@ -3235,8 +3238,7 @@ void StaticAssertDecl::anchor() {}
 
 StaticAssertDecl *StaticAssertDecl::Create(ASTContext &C, DeclContext *DC,
                                            SourceLocation StaticAssertLoc,
-                                           Expr *AssertExpr,
-                                           StringLiteral *Message,
+                                           Expr *AssertExpr, Expr *Message,
                                            SourceLocation RParenLoc,
                                            bool Failed) {
   return new (C, DC) StaticAssertDecl(DC, StaticAssertLoc, AssertExpr, Message,

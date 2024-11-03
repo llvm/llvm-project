@@ -59,6 +59,5 @@ val:
 // CODE-NEXT:   20118:       ldr     r0, [pc, r0]
 // CODE-NEXT:   2011c:       ldr     r0, [r0]
 // CODE-NEXT:   20120:       bx      lr
-// CODE: <$d.1>:
 // 0x11124 + 0x1008 + 8 = 0x12128 = .got
 // CODE-NEXT:   20124:       08 00 01 00

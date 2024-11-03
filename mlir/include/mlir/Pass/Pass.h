@@ -55,12 +55,9 @@ public:
   /// Returns the unique identifier that corresponds to this pass.
   TypeID getTypeID() const { return passID; }
 
-  /// Returns the pass info for the specified pass class or null if unknown.
-  static const PassInfo *lookupPassInfo(StringRef passArg);
-
   /// Returns the pass info for this pass, or null if unknown.
   const PassInfo *lookupPassInfo() const {
-    return lookupPassInfo(getArgument());
+    return PassInfo::lookup(getArgument());
   }
 
   /// Returns the derived pass name.
@@ -180,8 +177,10 @@ protected:
   /// should not rely on any state accessible during the execution of a pass.
   /// For example, `getContext`/`getOperation`/`getAnalysis`/etc. should not be
   /// invoked within this hook.
-  /// Returns a LogicalResult to indicate failure, in which case the pass
-  /// pipeline won't execute.
+  /// This method is invoked after all dependent dialects for the pipeline are
+  /// loaded, and is not allowed to load any further dialects (override the
+  /// `getDependentDialects()` for this purpose instead). Returns a LogicalResult
+  /// to indicate failure, in which case the pass pipeline won't execute.
   virtual LogicalResult initialize(MLIRContext *context) { return success(); }
 
   /// Indicate if the current pass can be scheduled on the given operation type.

@@ -539,17 +539,41 @@ def NoMergeDocs : Documentation {
   let Category = DocCatStmt;
   let Content = [{
 If a statement is marked ``nomerge`` and contains call expressions, those call
-expressions inside the statement will not be merged during optimization. This 
+expressions inside the statement will not be merged during optimization. This
 attribute can be used to prevent the optimizer from obscuring the source
 location of certain calls. For example, it will prevent tail merging otherwise
 identical code sequences that raise an exception or terminate the program. Tail
 merging normally reduces the precision of source location information, making
 stack traces less useful for debugging. This attribute gives the user control
-over the tradeoff between code size and debug information precision. 
+over the tradeoff between code size and debug information precision.
 
-``nomerge`` attribute can also be used as function attribute to prevent all 
-calls to the specified function from merging. It has no effect on indirect 
-calls.
+``nomerge`` attribute can also be used as function attribute to prevent all
+calls to the specified function from merging. It has no effect on indirect
+calls to such functions. For example:
+
+.. code-block:: c++
+
+  [[clang::nomerge]] void foo(int) {}
+
+  void bar(int x) {
+    auto *ptr = foo;
+    if (x) foo(1); else foo(2); // will not be merged
+    if (x) ptr(1); else ptr(2); // indirect call, can be merged
+  }
+
+``nomerge`` attribute can also be used for pointers to functions to
+prevent calls through such pointer from merging. In such case the
+effect applies only to a specific function pointer. For example:
+
+.. code-block:: c++
+
+  [[clang::nomerge]] void (*foo)(int);
+
+  void bar(int x) {
+    auto *ptr = foo;
+    if (x) foo(1); else foo(2); // will not be merged
+    if (x) ptr(1); else ptr(2); // 'ptr' has no 'nomerge' attribute, can be merged
+  }
   }];
 }
 
@@ -603,6 +627,9 @@ Any variables in scope, including all arguments to the function and the
 return value must be trivially destructible. The calling convention of the
 caller and callee must match, and they must not be variadic functions or have
 old style K&R C function declarations.
+
+``clang::musttail`` provides assurances that the tail call can be optimized on
+all targets, not just one.
   }];
 }
 
@@ -1581,7 +1608,7 @@ attributes are ignored. Supported platforms are:
 ``watchos``
   Apple's watchOS operating system. The minimum deployment target is specified by
   the ``-mwatchos-version-min=*version*`` command-line argument.
-  
+
 ``driverkit``
   Apple's DriverKit userspace kernel extensions. The minimum deployment target
   is specified as part of the triple.
@@ -1831,7 +1858,8 @@ The attribute may be applied to the declaration of a class, a typedef, a
 variable, a function or method, a function parameter, an enumeration, an
 enumerator, a non-static data member, or a label.
 
-.. code-block: c++
+.. code-block:: c++
+
   #include <cassert>
 
   [[maybe_unused]] void f([[maybe_unused]] bool thing1,
@@ -1860,7 +1888,8 @@ literal contents) are allowed. If there are redeclarations of the entity with
 differing string literals, it is unspecified which one will be used by Clang
 in any resulting diagnostics.
 
-.. code-block: c++
+.. code-block:: c++
+
   struct [[nodiscard]] error_info { /*...*/ };
   error_info enable_missile_safety_mode();
 
@@ -1877,7 +1906,8 @@ marked with ``[[nodiscard]]`` or a constructor of a type marked
 ``[[nodiscard]]`` will also diagnose. This also applies to type conversions that
 use the annotated ``[[nodiscard]]`` constructor or result in an annotated type.
 
-.. code-block: c++
+.. code-block:: c++
+
   struct [[nodiscard]] marked_type {/*..*/ };
   struct marked_ctor {
     [[nodiscard]] marked_ctor();
@@ -2293,7 +2323,7 @@ as ``-mlong-calls`` and ``-mno-long-calls``.
 
 def RISCVInterruptDocs : Documentation {
   let Category = DocCatFunction;
-  let Heading = "interrupt (RISCV)";
+  let Heading = "interrupt (RISC-V)";
   let Content = [{
 Clang supports the GNU style ``__attribute__((interrupt))`` attribute on RISCV
 targets. This attribute may be attached to a function definition and instructs
@@ -2312,6 +2342,40 @@ https://riscv.org/specifications/privileged-isa/
 The RISC-V Instruction Set Manual Volume II: Privileged Architecture
 Version 1.10.
   }];
+}
+
+def RISCVRVVVectorBitsDocs : Documentation {
+  let Category = DocCatType;
+  let Content = [{
+On RISC-V targets, the ``riscv_rvv_vector_bits(N)`` attribute is used to define
+fixed-length variants of sizeless types.
+
+For example:
+
+.. code-block:: c
+
+  #include <riscv_vector.h>
+
+  #if defined(__riscv_v_fixed_vlen)
+  typedef vint8m1_t fixed_vint8m1_t __attribute__((riscv_rvv_vector_bits(__riscv_v_fixed_vlen)));
+  #endif
+
+Creates a type ``fixed_vint8m1_t_t`` that is a fixed-length variant of
+``vint8m1_t`` that contains exactly 512 bits. Unlike ``vint8m1_t``, this type
+can be used in globals, structs, unions, and arrays, all of which are
+unsupported for sizeless types.
+
+The attribute can be attached to a single RVV vector (such as ``vint8m1_t``).
+The attribute will be rejected unless
+``N==(__riscv_v_fixed_vlen*LMUL)``, the implementation defined feature macro that
+is enabled under the ``-mrvv-vector-bits`` flag. ``__riscv_v_fixed_vlen`` can
+only be a power of 2 between 64 and 65536.
+
+For types where LMUL!=1, ``__riscv_v_fixed_vlen`` needs to be scaled by the LMUL
+of the type before passing to the attribute.
+
+``vbool*_t`` types are not supported at this time.
+}];
 }
 
 def AVRInterruptDocs : Documentation {
@@ -2713,7 +2777,7 @@ On x86 targets, this attribute changes the calling convention to
 as possible in registers. It also tries to utilize registers for the
 return value whenever it is possible.
 
-.. _`__regcall`: https://software.intel.com/en-us/node/693069
+.. _`__regcall`: https://www.intel.com/content/www/us/en/docs/dpcpp-cpp-compiler/developer-guide-reference/2023-2/c-c-sycl-calling-conventions.html
   }];
 }
 
@@ -3896,7 +3960,7 @@ Whether a particular pointer may be "null" is an important concern when working
 with pointers in the C family of languages. The various nullability attributes
 indicate whether a particular pointer can be null or not, which makes APIs more
 expressive and can help static analysis tools identify bugs involving null
-pointers. Clang supports several kinds of nullability attributes: the 
+pointers. Clang supports several kinds of nullability attributes: the
 ``nonnull`` and ``returns_nonnull`` attributes indicate which function or
 method parameters and result types can never be null, while nullability type
 qualifiers indicate which pointer types can be null (``_Nullable``) or cannot
@@ -4072,7 +4136,7 @@ memory is not available rather than returning a null pointer:
 The ``returns_nonnull`` attribute implies that returning a null pointer is
 undefined behavior, which the optimizer may take advantage of. The ``_Nonnull``
 type qualifier indicates that a pointer cannot be null in a more general manner
-(because it is part of the type system) and does not imply undefined behavior, 
+(because it is part of the type system) and does not imply undefined behavior,
 making it more widely applicable
 }];
 }
@@ -4751,6 +4815,10 @@ The user can call functions specified with the 'no_caller_saved_registers'
 attribute from an interrupt handler without saving and restoring all
 call-clobbered registers.
 
+Functions specified with the 'no_caller_saved_registers' attribute should only
+call other functions with the 'no_caller_saved_registers' attribute, or should be
+compiled with the '-mgeneral-regs-only' flag to avoid saving unused non-GPR registers.
+
 Note that 'no_caller_saved_registers' attribute is not a calling convention.
 In fact, it only overrides the decision of which registers should be saved by
 the caller, but not how the parameters are passed from the caller to the callee.
@@ -5179,6 +5247,9 @@ apply for values returned in callee-saved registers.
   R11. R11 can be used as a scratch register. Floating-point registers
   (XMMs/YMMs) are not preserved and need to be saved by the caller.
 
+- On AArch64 the callee preserve all general purpose registers, except X0-X8 and
+  X16-X18.
+
 The idea behind this convention is to support calls to runtime functions
 that have a hot path and a cold path. The hot path is usually a small piece
 of code that doesn't use many registers. The cold path might need to call out to
@@ -5218,6 +5289,10 @@ returned in callee-saved registers.
 - On X86-64 the callee preserves all general purpose registers, except for
   R11. R11 can be used as a scratch register. Furthermore it also preserves
   all floating-point registers (XMMs/YMMs).
+
+- On AArch64 the callee preserve all general purpose registers, except X0-X8 and
+  X16-X18. Furthermore it also preserves lower 128 bits of V8-V31 SIMD - floating
+  point registers.
 
 The idea behind this convention is to support calls to runtime functions
 that don't need to call out to any other functions.
@@ -5328,7 +5403,7 @@ takes precedence over the command line option ``-fpatchable-function-entry=N,M``
 ``M`` defaults to 0 if omitted.
 
 This attribute is only supported on
-aarch64/aarch64-be/riscv32/riscv64/i386/x86-64 targets.
+aarch64/aarch64-be/loongarch32/loongarch64/riscv32/riscv64/i386/x86-64 targets.
 }];
 }
 
@@ -5617,12 +5692,12 @@ accessed. The following are examples of valid expressions where may not be diagn
 ``noderef`` is currently only supported for pointers and arrays and not usable
 for references or Objective-C object pointers.
 
-.. code-block: c++
+.. code-block:: c++
 
   int x = 2;
   int __attribute__((noderef)) &y = x;  // warning: 'noderef' can only be used on an array or pointer type
 
-.. code-block: objc
+.. code-block:: objc
 
   id __attribute__((noderef)) obj = [NSObject new]; // warning: 'noderef' can only be used on an array or pointer type
 }];
@@ -6021,15 +6096,15 @@ def CFGuardDocs : Documentation {
   let Content = [{
 Code can indicate CFG checks are not wanted with the ``__declspec(guard(nocf))``
 attribute. This directs the compiler to not insert any CFG checks for the entire
-function. This approach is typically used only sparingly in specific situations 
-where the programmer has manually inserted "CFG-equivalent" protection. The 
-programmer knows that they are calling through some read-only function table 
-whose address is obtained through read-only memory references and for which the 
-index is masked to the function table limit. This approach may also be applied 
-to small wrapper functions that are not inlined and that do nothing more than 
-make a call through a function pointer. Since incorrect usage of this directive 
-can compromise the security of CFG, the programmer must be very careful using 
-the directive. Typically, this usage is limited to very small functions that 
+function. This approach is typically used only sparingly in specific situations
+where the programmer has manually inserted "CFG-equivalent" protection. The
+programmer knows that they are calling through some read-only function table
+whose address is obtained through read-only memory references and for which the
+index is masked to the function table limit. This approach may also be applied
+to small wrapper functions that are not inlined and that do nothing more than
+make a call through a function pointer. Since incorrect usage of this directive
+can compromise the security of CFG, the programmer must be very careful using
+the directive. Typically, this usage is limited to very small functions that
 only call one function.
 
 `Control Flow Guard documentation <https://docs.microsoft.com/en-us/windows/win32/secbp/pe-metadata>`
@@ -6510,6 +6585,150 @@ Requirements on Development Tools - Engineering Specification Documentation
   }];
 }
 
+def DocCatArmSmeAttributes : DocumentationCategory<"AArch64 SME Attributes"> {
+  let Content = [{
+Clang supports a number of AArch64-specific attributes to manage state
+added by the Scalable Matrix Extension (SME). This state includes the
+runtime mode that the processor is in (e.g. non-streaming or streaming)
+as well as the state of the ``ZA`` Matrix Storage.
+
+The attributes come in the form of type- and declaration attributes:
+
+* The SME declaration attributes can appear anywhere that a standard
+  ``[[...]]`` declaration attribute can appear.
+
+* The SME type attributes apply only to prototyped functions and can appear
+  anywhere that a standard ``[[...]]`` type attribute can appear. The SME
+  type attributes do not apply to functions having a K&R-style
+  unprototyped function type.
+
+See `Arm C Language Extensions <https://github.com/ARM-software/acle>`_
+for more details about the features related to the SME extension.
+
+See `Procedure Call Standard for the Arm® 64-bit Architecture (AArch64)
+<https://github.com/ARM-software/abi-aa>`_ for more details about
+streaming-interface functions and shared/private-ZA interface functions.
+  }];
+}
+
+def ArmSmeStreamingDocs : Documentation {
+  let Category = DocCatArmSmeAttributes;
+  let Content = [{
+The ``__arm_streaming`` keyword applies to prototyped function types and specifies
+that the function has a "streaming interface".  This means that:
+
+* the function requires that the processor implements the Scalable Matrix
+  Extension (SME).
+
+* the function must be entered in streaming mode (that is, with PSTATE.SM
+  set to 1)
+
+* the function must return in streaming mode
+
+Clang manages PSTATE.SM automatically; it is not the source code's
+responsibility to do this.  For example, if a non-streaming
+function calls an ``__arm_streaming`` function, Clang generates code
+that switches into streaming mode before calling the function and
+switches back to non-streaming mode on return.
+  }];
+}
+
+def ArmSmeStreamingCompatibleDocs : Documentation {
+  let Category = DocCatArmSmeAttributes;
+  let Content = [{
+The ``__arm_streaming_compatible`` keyword applies to prototyped function types and
+specifies that the function has a “streaming compatible interface”.  This
+means that:
+
+* the function may be entered in either non-streaming mode (PSTATE.SM=0) or
+  in streaming mode (PSTATE.SM=1).
+
+* the function must return in the same mode as it was entered.
+
+* the code executed in the function is compatible with either mode.
+
+Clang manages PSTATE.SM automatically; it is not the source code's
+responsibility to do this.  Clang will ensure that the generated code in
+streaming-compatible functions is valid in either mode (PSTATE.SM=0 or
+PSTATE.SM=1). For example, if an ``__arm_streaming_compatible`` function calls a
+non-streaming function, Clang generates code to temporarily switch out of streaming
+mode before calling the function and switch back to streaming-mode on return if
+``PSTATE.SM`` is ``1`` on entry of the caller. If ``PSTATE.SM`` is ``0`` on
+entry to the ``__arm_streaming_compatible`` function, the call will be executed
+without changing modes.
+  }];
+}
+
+def ArmSmeSharedZADocs : Documentation {
+  let Category = DocCatArmSmeAttributes;
+  let Content = [{
+The ``__arm_shared_za`` keyword applies to prototyped function types and specifies
+that the function shares SME's matrix storage (ZA) with its caller.  This
+means that:
+
+* the function requires that the processor implements the Scalable Matrix
+  Extension (SME).
+
+* the function enters with ZA in an active state.
+
+* the function returns with ZA in an active state.
+  }];
+}
+
+def ArmSmePreservesZADocs : Documentation {
+  let Category = DocCatArmSmeAttributes;
+  let Content = [{
+The ``__arm_preserves_za`` keyword applies to prototyped function types and
+specifies that the function does not modify ZA state.
+  }];
+}
+
+
+def ArmSmeLocallyStreamingDocs : Documentation {
+  let Category = DocCatArmSmeAttributes;
+  let Content = [{
+The ``__arm_locally_streaming`` keyword applies to function declarations
+and specifies that all the statements in the function are executed in
+streaming mode. This means that:
+
+* the function requires that the target processor implements the Scalable Matrix
+  Extension (SME).
+
+* the program automatically puts the machine into streaming mode before
+  executing the statements and automatically restores the previous mode
+  afterwards.
+
+Clang manages PSTATE.SM automatically; it is not the source code's
+responsibility to do this.  For example, Clang will emit code to enable
+streaming mode at the start of the function, and disable streaming mode
+at the end of the function.
+  }];
+}
+
+def ArmSmeNewZADocs : Documentation {
+  let Category = DocCatArmSmeAttributes;
+  let Content = [{
+The ``__arm_new_za`` keyword applies to function declarations and specifies
+that the function will be set up with a fresh ZA context.
+
+This means that:
+
+* the function requires that the target processor implements the Scalable Matrix
+  Extension (SME).
+
+* the function will commit any lazily saved ZA data.
+
+* the function will create a new ZA context and enable PSTATE.ZA.
+
+* the function will disable PSTATE.ZA (by setting it to 0) before returning.
+
+For ``__arm_new_za`` functions Clang will set up the ZA context automatically
+on entry to the function, and disable it before returning. For example, if ZA is
+in a dormant state Clang will generate the code to commit a lazy-save and set up
+a new ZA state before executing user code.
+  }];
+}
+
 def AlwaysInlineDocs : Documentation {
   let Category = DocCatFunction;
   let Content = [{
@@ -6937,4 +7156,40 @@ def ReadOnlyPlacementDocs : Documentation {
   5. A type ``Q`` inherits from type ``T`` and it does not have the
      ``enforce_read_only_placement`` attribute.
   }];
+}
+
+def WebAssemblyFuncrefDocs : Documentation {
+  let Category = DocCatType;
+  let Content = [{
+Clang supports the ``__funcref`` attribute for the WebAssembly target.
+This attribute may be attached to a function pointer type, where it modifies
+its underlying representation to be a WebAssembly ``funcref``.
+  }];
+}
+
+def CleanupDocs : Documentation {
+  let Category = DocCatType;
+  let Content = [{
+This attribute allows a function to be run when a local variable goes out of
+scope. The attribute takes the identifier of a function with a parameter type
+that is a pointer to the type with the attribute.
+
+.. code-block:: c
+
+  static void foo (int *) { ... }
+  static void bar (int *) { ... }
+  void baz (void) {
+    int x __attribute__((cleanup(foo)));
+    {
+      int y __attribute__((cleanup(bar)));
+    }
+  }
+
+The above example will result in a call to ``bar`` being passed the address of
+`y`` when ``y`` goes out of scope, then a call to ``foo`` being passed the
+address of ``x`` when ``x`` goes out of scope. If two or more variables share
+the same scope, their ``cleanup`` callbacks are invoked in the reverse order
+the variables were declared in. It is not possible to check the return value
+(if any) of these ``cleanup`` callback functions.
+}];
 }

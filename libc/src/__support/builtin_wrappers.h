@@ -12,8 +12,8 @@
 
 #include "named_pair.h"
 #include "src/__support/CPP/type_traits.h"
-#include "src/__support/macros/attributes.h"          // LIBC_INLINE
-#include "src/__support/macros/config.h"              // LIBC_HAS_BUILTIN
+#include "src/__support/macros/attributes.h" // LIBC_INLINE
+#include "src/__support/macros/config.h"     // LIBC_HAS_BUILTIN
 
 namespace __llvm_libc {
 
@@ -23,65 +23,79 @@ namespace __llvm_libc {
 // compiler match for us.
 namespace __internal {
 
-template <typename T> LIBC_INLINE int correct_zero(T val, int bits) {
+template <typename T> LIBC_INLINE int constexpr correct_zero(T val, int bits) {
   if (val == T(0))
     return sizeof(T(0)) * 8;
   else
     return bits;
 }
 
-template <typename T> LIBC_INLINE int clz(T val);
+template <typename T> LIBC_INLINE constexpr int clz(T val);
 template <> LIBC_INLINE int clz<unsigned int>(unsigned int val) {
   return __builtin_clz(val);
 }
-template <> LIBC_INLINE int clz<unsigned long int>(unsigned long int val) {
+template <>
+LIBC_INLINE constexpr int clz<unsigned long int>(unsigned long int val) {
   return __builtin_clzl(val);
 }
 template <>
-LIBC_INLINE int clz<unsigned long long int>(unsigned long long int val) {
+LIBC_INLINE constexpr int
+clz<unsigned long long int>(unsigned long long int val) {
   return __builtin_clzll(val);
 }
 
-template <typename T> LIBC_INLINE int ctz(T val);
+template <typename T> LIBC_INLINE constexpr int ctz(T val);
 template <> LIBC_INLINE int ctz<unsigned int>(unsigned int val) {
   return __builtin_ctz(val);
 }
-template <> LIBC_INLINE int ctz<unsigned long int>(unsigned long int val) {
+template <>
+LIBC_INLINE constexpr int ctz<unsigned long int>(unsigned long int val) {
   return __builtin_ctzl(val);
 }
 template <>
-LIBC_INLINE int ctz<unsigned long long int>(unsigned long long int val) {
+LIBC_INLINE constexpr int
+ctz<unsigned long long int>(unsigned long long int val) {
   return __builtin_ctzll(val);
 }
 } // namespace __internal
 
-template <typename T> LIBC_INLINE int safe_ctz(T val) {
+template <typename T> LIBC_INLINE constexpr int safe_ctz(T val) {
   return __internal::correct_zero(val, __internal::ctz(val));
 }
 
-template <typename T> LIBC_INLINE int unsafe_ctz(T val) {
+template <typename T> LIBC_INLINE constexpr int unsafe_ctz(T val) {
   return __internal::ctz(val);
 }
 
-template <typename T> LIBC_INLINE int safe_clz(T val) {
+template <typename T> LIBC_INLINE constexpr int safe_clz(T val) {
   return __internal::correct_zero(val, __internal::clz(val));
 }
 
-template <typename T> LIBC_INLINE int unsafe_clz(T val) {
+template <typename T> LIBC_INLINE constexpr int unsafe_clz(T val) {
   return __internal::clz(val);
 }
 
 // Add with carry
 DEFINE_NAMED_PAIR_TEMPLATE(SumCarry, sum, carry);
 
+// This version is always valid for constexpr.
 template <typename T>
 LIBC_INLINE constexpr cpp::enable_if_t<
     cpp::is_integral_v<T> && cpp::is_unsigned_v<T>, SumCarry<T>>
-add_with_carry(T a, T b, T carry_in) {
+add_with_carry_const(T a, T b, T carry_in) {
   T tmp = a + carry_in;
   T sum = b + tmp;
-  T carry_out = (sum < b) || (tmp < a);
+  T carry_out = (sum < b) + (tmp < a);
   return {sum, carry_out};
+}
+
+// This version is not always valid for constepxr because it's overriden below
+// if builtins are available.
+template <typename T>
+LIBC_INLINE cpp::enable_if_t<cpp::is_integral_v<T> && cpp::is_unsigned_v<T>,
+                             SumCarry<T>>
+add_with_carry(T a, T b, T carry_in) {
+  return add_with_carry_const<T>(a, b, carry_in);
 }
 
 #if LIBC_HAS_BUILTIN(__builtin_addc)
@@ -137,14 +151,24 @@ add_with_carry<unsigned long long>(unsigned long long a, unsigned long long b,
 // Subtract with borrow
 DEFINE_NAMED_PAIR_TEMPLATE(DiffBorrow, diff, borrow);
 
+// This version is always valid for constexpr.
 template <typename T>
 LIBC_INLINE constexpr cpp::enable_if_t<
     cpp::is_integral_v<T> && cpp::is_unsigned_v<T>, DiffBorrow<T>>
-sub_with_borrow(T a, T b, T borrow_in) {
+sub_with_borrow_const(T a, T b, T borrow_in) {
   T tmp = a - b;
   T diff = tmp - borrow_in;
-  T borrow_out = (diff > tmp) || (tmp > a);
+  T borrow_out = (diff > tmp) + (tmp > a);
   return {diff, borrow_out};
+}
+
+// This version is not always valid for constepxr because it's overriden below
+// if builtins are available.
+template <typename T>
+LIBC_INLINE cpp::enable_if_t<cpp::is_integral_v<T> && cpp::is_unsigned_v<T>,
+                             DiffBorrow<T>>
+sub_with_borrow(T a, T b, T borrow_in) {
+  return sub_with_borrow_const<T>(a, b, borrow_in);
 }
 
 #if LIBC_HAS_BUILTIN(__builtin_subc)

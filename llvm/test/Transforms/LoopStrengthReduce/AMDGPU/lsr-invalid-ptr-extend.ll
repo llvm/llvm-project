@@ -5,7 +5,7 @@
 ; Test that LSR does not attempt to extend a pointer type to an integer type,
 ; which causes a SCEV analysis assertion.
 
-target datalayout = "e-p:64:64-p1:64:64-p2:32:32-p3:32:32-p4:64:64-p5:32:32-p6:32:32-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-v1024:1024-v2048:2048-n32:64-S32-A5-G1-ni:7"
+target datalayout = "e-p:64:64-p1:64:64-p2:32:32-p3:32:32-p4:64:64-p5:32:32-p6:32:32-p7:160:256:256:32-p8:128:128-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-v1024:1024-v2048:2048-n32:64-S32-A5-G1-ni:7:8"
 
 target triple = "amdgcn-amd-amdhsa"
 
@@ -16,20 +16,22 @@ define amdgpu_kernel void @scaledregtest() local_unnamed_addr {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       loopexit:
+; CHECK-NEXT:    [[SCEVGEP13_LCSSA:%.*]] = phi ptr [ [[SCEVGEP13:%.*]], [[FOR_BODY]] ]
+; CHECK-NEXT:    [[SCEVGEP11_LCSSA:%.*]] = phi ptr addrspace(5) [ [[SCEVGEP11:%.*]], [[FOR_BODY]] ]
 ; CHECK-NEXT:    br label [[FOR_BODY_1:%.*]]
 ; CHECK:       for.body.1:
-; CHECK-NEXT:    [[LSR_IV5:%.*]] = phi ptr addrspace(5) [ [[UGLYGEP6:%.*]], [[FOR_BODY_1]] ], [ [[UGLYGEP11:%.*]], [[LOOPEXIT:%.*]] ]
-; CHECK-NEXT:    [[LSR_IV1:%.*]] = phi ptr [ [[UGLYGEP2:%.*]], [[FOR_BODY_1]] ], [ [[UGLYGEP13:%.*]], [[LOOPEXIT]] ]
+; CHECK-NEXT:    [[LSR_IV5:%.*]] = phi ptr addrspace(5) [ [[SCEVGEP6:%.*]], [[FOR_BODY_1]] ], [ [[SCEVGEP11_LCSSA]], [[LOOPEXIT:%.*]] ]
+; CHECK-NEXT:    [[LSR_IV1:%.*]] = phi ptr [ [[SCEVGEP2:%.*]], [[FOR_BODY_1]] ], [ [[SCEVGEP13_LCSSA]], [[LOOPEXIT]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr addrspace(5) [[LSR_IV5]], align 8
 ; CHECK-NEXT:    store ptr [[TMP0]], ptr [[LSR_IV1]], align 8
-; CHECK-NEXT:    [[UGLYGEP2]] = getelementptr i8, ptr [[LSR_IV1]], i64 8
-; CHECK-NEXT:    [[UGLYGEP6]] = getelementptr i8, ptr addrspace(5) [[LSR_IV5]], i32 8
+; CHECK-NEXT:    [[SCEVGEP2]] = getelementptr i8, ptr [[LSR_IV1]], i64 8
+; CHECK-NEXT:    [[SCEVGEP6]] = getelementptr i8, ptr addrspace(5) [[LSR_IV5]], i32 8
 ; CHECK-NEXT:    br label [[FOR_BODY_1]]
 ; CHECK:       for.body:
-; CHECK-NEXT:    [[LSR_IV12:%.*]] = phi ptr [ [[UGLYGEP13]], [[FOR_BODY]] ], [ null, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[LSR_IV10:%.*]] = phi ptr addrspace(5) [ [[UGLYGEP11]], [[FOR_BODY]] ], [ null, [[ENTRY]] ]
-; CHECK-NEXT:    [[UGLYGEP11]] = getelementptr i8, ptr addrspace(5) [[LSR_IV10]], i32 64
-; CHECK-NEXT:    [[UGLYGEP13]] = getelementptr i8, ptr [[LSR_IV12]], i64 64
+; CHECK-NEXT:    [[LSR_IV12:%.*]] = phi ptr [ [[SCEVGEP13]], [[FOR_BODY]] ], [ null, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[LSR_IV10:%.*]] = phi ptr addrspace(5) [ [[SCEVGEP11]], [[FOR_BODY]] ], [ null, [[ENTRY]] ]
+; CHECK-NEXT:    [[SCEVGEP11]] = getelementptr i8, ptr addrspace(5) [[LSR_IV10]], i32 64
+; CHECK-NEXT:    [[SCEVGEP13]] = getelementptr i8, ptr [[LSR_IV12]], i64 64
 ; CHECK-NEXT:    br i1 false, label [[LOOPEXIT]], label [[FOR_BODY]]
 ;
 entry:
@@ -64,21 +66,21 @@ define protected amdgpu_kernel void @baseregtest(i32 %n, i32 %lda) local_unnamed
 ; CHECK:       if.end:
 ; CHECK-NEXT:    [[TMP0:%.*]] = tail call i32 @foo()
 ; CHECK-NEXT:    [[TMP1:%.*]] = shl i32 [[TMP0]], 3
-; CHECK-NEXT:    [[UGLYGEP:%.*]] = getelementptr i8, ptr addrspace(3) @gVar, i32 [[TMP1]]
+; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr addrspace(3) @gVar, i32 [[TMP1]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = shl i32 [[N:%.*]], 3
 ; CHECK-NEXT:    [[TMP3:%.*]] = sext i32 [[TMP0]] to i64
 ; CHECK-NEXT:    [[TMP4:%.*]] = shl nsw i64 [[TMP3]], 3
-; CHECK-NEXT:    [[UGLYGEP2:%.*]] = getelementptr i8, ptr addrspace(1) null, i64 [[TMP4]]
+; CHECK-NEXT:    [[SCEVGEP2:%.*]] = getelementptr i8, ptr addrspace(1) null, i64 [[TMP4]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = sext i32 [[LDA:%.*]] to i64
 ; CHECK-NEXT:    [[TMP6:%.*]] = shl nsw i64 [[TMP5]], 3
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
-; CHECK-NEXT:    [[LSR_IV3:%.*]] = phi ptr addrspace(1) [ [[UGLYGEP4:%.*]], [[FOR_BODY]] ], [ [[UGLYGEP2]], [[IF_END]] ]
-; CHECK-NEXT:    [[LSR_IV:%.*]] = phi ptr addrspace(3) [ [[UGLYGEP1:%.*]], [[FOR_BODY]] ], [ [[UGLYGEP]], [[IF_END]] ]
+; CHECK-NEXT:    [[LSR_IV3:%.*]] = phi ptr addrspace(1) [ [[SCEVGEP4:%.*]], [[FOR_BODY]] ], [ [[SCEVGEP2]], [[IF_END]] ]
+; CHECK-NEXT:    [[LSR_IV:%.*]] = phi ptr addrspace(3) [ [[SCEVGEP1:%.*]], [[FOR_BODY]] ], [ [[SCEVGEP]], [[IF_END]] ]
 ; CHECK-NEXT:    [[TMP7:%.*]] = load double, ptr addrspace(1) [[LSR_IV3]], align 8
 ; CHECK-NEXT:    store double [[TMP7]], ptr addrspace(3) [[LSR_IV]], align 8
-; CHECK-NEXT:    [[UGLYGEP1]] = getelementptr i8, ptr addrspace(3) [[LSR_IV]], i32 [[TMP2]]
-; CHECK-NEXT:    [[UGLYGEP4]] = getelementptr i8, ptr addrspace(1) [[LSR_IV3]], i64 [[TMP6]]
+; CHECK-NEXT:    [[SCEVGEP1]] = getelementptr i8, ptr addrspace(3) [[LSR_IV]], i32 [[TMP2]]
+; CHECK-NEXT:    [[SCEVGEP4]] = getelementptr i8, ptr addrspace(1) [[LSR_IV3]], i64 [[TMP6]]
 ; CHECK-NEXT:    br label [[FOR_BODY]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void

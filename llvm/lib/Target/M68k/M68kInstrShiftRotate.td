@@ -41,7 +41,7 @@ defvar MxROOP_RO  = 0b11;
 ///  1  1  1  0 | REG/IMM | D | SIZE |R/I|  OP  |   REG
 /// ------------+---------+---+------+---+------+---------
 class MxSREncoding<bit kind, string src_opnd, string dst_opnd,
-                   bit direction, bits<2> ro_op, MxNewEncSize size> {
+                   bit direction, bits<2> ro_op, MxEncSize size> {
   dag Value = (descend 0b1110,
     // REG/IMM
     (operand "$"#src_opnd, 3),
@@ -57,7 +57,7 @@ class MxSR_DD<string MN, MxType TYPE, SDNode NODE, bit RODI, bits<2> ROOP>
              MN#"."#TYPE.Prefix#"\t$opd, $dst",
              [(set TYPE.VT:$dst, (NODE TYPE.VT:$src, TYPE.VT:$opd))]> {
   let Inst = MxSREncoding<MxROKind_R, "opd", "dst", RODI, ROOP,
-                          !cast<MxNewEncSize>("MxNewEncSize"#TYPE.Size)>.Value;
+                          !cast<MxEncSize>("MxEncSize"#TYPE.Size)>.Value;
 }
 
 // $reg <- $reg op $imm
@@ -69,7 +69,7 @@ class MxSR_DI<string MN, MxType TYPE, SDNode NODE, bit RODI, bits<2> ROOP>
                    (NODE TYPE.VT:$src,
                          !cast<ImmLeaf>("Mximm"#TYPE.Size#"_1to8"):$opd))]> {
   let Inst = MxSREncoding<MxROKind_I, "opd", "dst", RODI, ROOP,
-                          !cast<MxNewEncSize>("MxNewEncSize"#TYPE.Size)>.Value;
+                          !cast<MxEncSize>("MxEncSize"#TYPE.Size)>.Value;
 }
 
 multiclass MxSROp<string MN, SDNode NODE, bit RODI, bits<2> ROOP> {

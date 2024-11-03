@@ -16,6 +16,7 @@
 // - estimate temporal locality by looking at CFG?
 
 #include "bolt/Passes/ReorderData.h"
+#include "llvm/ADT/MapVector.h"
 #include <algorithm>
 
 #undef  DEBUG_TYPE
@@ -172,8 +173,8 @@ DataOrder ReorderData::baseOrder(BinaryContext &BC,
 
 void ReorderData::assignMemData(BinaryContext &BC) {
   // Map of sections (or heap/stack) to count/size.
-  StringMap<uint64_t> Counts;
-  StringMap<uint64_t> JumpTableCounts;
+  MapVector<StringRef, uint64_t> Counts;
+  MapVector<StringRef, uint64_t> JumpTableCounts;
   uint64_t TotalCount = 0;
   for (auto &BFI : BC.getBinaryFunctions()) {
     const BinaryFunction &BF = BFI.second;
@@ -208,9 +209,9 @@ void ReorderData::assignMemData(BinaryContext &BC) {
 
   if (!Counts.empty()) {
     outs() << "BOLT-INFO: Memory stats breakdown:\n";
-    for (StringMapEntry<uint64_t> &Entry : Counts) {
-      StringRef Section = Entry.first();
-      const uint64_t Count = Entry.second;
+    for (const auto &KV : Counts) {
+      StringRef Section = KV.first;
+      const uint64_t Count = KV.second;
       outs() << "BOLT-INFO:   " << Section << " = " << Count
              << format(" (%.1f%%)\n", 100.0 * Count / TotalCount);
       if (JumpTableCounts.count(Section) != 0) {
@@ -412,17 +413,17 @@ bool ReorderData::markUnmoveableSymbols(BinaryContext &BC,
   auto Range = BC.getBinaryDataForSection(Section);
   bool FoundUnmoveable = false;
   for (auto Itr = Range.begin(); Itr != Range.end(); ++Itr) {
+    BinaryData *Next =
+        std::next(Itr) != Range.end() ? std::next(Itr)->second : nullptr;
     if (Itr->second->getName().startswith("PG.")) {
       BinaryData *Prev =
           Itr != Range.begin() ? std::prev(Itr)->second : nullptr;
-      BinaryData *Next = Itr != Range.end() ? std::next(Itr)->second : nullptr;
       bool PrevIsPrivate = Prev && isPrivate(Prev);
       bool NextIsPrivate = Next && isPrivate(Next);
       if (isPrivate(Itr->second) && (PrevIsPrivate || NextIsPrivate))
         Itr->second->setIsMoveable(false);
     } else {
       // check for overlapping symbols.
-      BinaryData *Next = Itr != Range.end() ? std::next(Itr)->second : nullptr;
       if (Next && Itr->second->getEndAddress() != Next->getAddress() &&
           Next->containsAddress(Itr->second->getEndAddress())) {
         Itr->second->setIsMoveable(false);

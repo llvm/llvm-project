@@ -50,7 +50,7 @@ public:
   using value_type = typename GT::NodeRef;
   using difference_type = std::ptrdiff_t;
   using pointer = value_type *;
-  using reference = value_type &;
+  using reference = const value_type &;
 
 private:
   using NodeRef = typename GT::NodeRef;
@@ -123,7 +123,7 @@ public:
 
   bool operator!=(const bf_iterator &RHS) const { return !(*this == RHS); }
 
-  const NodeRef &operator*() const { return VisitQueue.front()->first; }
+  reference operator*() const { return VisitQueue.front()->first; }
 
   // This is a nonstandard operator-> that dereferences the pointer an extra
   // time so that you can actually call methods on the node, because the

@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s bugprone-sizeof-expression %t -- -config="{CheckOptions: [{key: bugprone-sizeof-expression.WarnOnSizeOfPointerToAggregate, value: false}]}" --
+// RUN: %check_clang_tidy %s bugprone-sizeof-expression %t -- -config="{CheckOptions: {bugprone-sizeof-expression.WarnOnSizeOfPointerToAggregate: false}}" --
 
 class C {
   int size() { return sizeof(this); }

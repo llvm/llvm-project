@@ -846,8 +846,8 @@ define i32 @test52(i32 %n, i32 %m) {
 
 define i32 @test53(i32 %x) {
 ; CHECK-LABEL: @test53(
-; CHECK-NEXT:    [[AND:%.*]] = and i32 [[X:%.*]], 2
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[AND]], [[X]]
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[X:%.*]], -3
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[TMP1]], 0
 ; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i32 2, i32 1
 ; CHECK-NEXT:    ret i32 [[SEL]]
 ;
@@ -960,7 +960,7 @@ define void @test64(i32 %p, i16 %b, i1 %c1) noreturn {
 ; CHECK:       lor.rhs:
 ; CHECK-NEXT:    br label [[LOR_END]]
 ; CHECK:       lor.end:
-; CHECK-NEXT:    br i1 true, label [[COND_END17:%.*]], label [[COND_FALSE16:%.*]]
+; CHECK-NEXT:    br i1 poison, label [[COND_END17:%.*]], label [[COND_FALSE16:%.*]]
 ; CHECK:       cond.false16:
 ; CHECK-NEXT:    br label [[COND_END17]]
 ; CHECK:       cond.end17:
@@ -2892,10 +2892,9 @@ define i32 @select_replacement_loop2(i32 %arg, i32 %arg2) {
   ret i32 %sel
 }
 
-; TODO: Dropping the inbounds flag should not be necessary for this fold.
 define ptr @select_replacement_gep_inbounds(ptr %base, i64 %offset) {
 ; CHECK-LABEL: @select_replacement_gep_inbounds(
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i8, ptr [[BASE:%.*]], i64 [[OFFSET:%.*]]
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i8, ptr [[BASE:%.*]], i64 [[OFFSET:%.*]]
 ; CHECK-NEXT:    ret ptr [[GEP]]
 ;
   %cmp = icmp eq i64 %offset, 0
@@ -3565,4 +3564,61 @@ define i8 @not_clamp_smax2(i8 %x) {
   %cmp = icmp eq i8 %x, 127
   %sel = select i1 %cmp, i8 125, i8 %x
   ret i8 %sel
+}
+
+; Used to infinite loop.
+define i32 @pr61361(i32 %arg) {
+; CHECK-LABEL: @pr61361(
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq i32 [[ARG:%.*]], 0
+; CHECK-NEXT:    [[SEL2:%.*]] = select i1 [[CMP2]], i32 16777215, i32 0
+; CHECK-NEXT:    ret i32 [[SEL2]]
+;
+  %cmp1 = icmp eq i32 %arg, 1
+  %sel1 = select i1 %cmp1, i32 0, i32 33554431
+  %cmp2 = icmp eq i32 %arg, 0
+  %sel2 = select i1 %cmp2, i32 %sel1, i32 0
+  %ashr = ashr i32 %sel2, 1
+  ret i32 %ashr
+}
+
+define i32 @pr62088() {
+; CHECK-LABEL: @pr62088(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[NOT2:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ -2, [[LOOP]] ]
+; CHECK-NEXT:    [[H_0:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ 1, [[LOOP]] ]
+; CHECK-NEXT:    [[XOR1:%.*]] = or i32 [[H_0]], [[NOT2]]
+; CHECK-NEXT:    [[SUB5:%.*]] = sub i32 -1824888657, [[XOR1]]
+; CHECK-NEXT:    [[XOR6:%.*]] = xor i32 [[SUB5]], -1260914025
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[XOR6]], 824855120
+; CHECK-NEXT:    br i1 [[CMP]], label [[LOOP]], label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret i32 [[H_0]]
+;
+entry:
+  br label %loop
+
+loop:
+  %not2 = phi i32 [ 0, %entry ], [ -2, %loop ]
+  %i.0 = phi i32 [ 0, %entry ], [ %shr, %loop ]
+  %h.0 = phi i32 [ 0, %entry ], [ 1, %loop ]
+  %i.0.fr = freeze i32 %i.0
+  %sext = shl i32 %i.0.fr, 16
+  %conv = ashr exact i32 %sext, 16
+  %not = xor i32 %conv, -1
+  %and = and i32 %h.0, 1
+  %rem.urem = sub nsw i32 %and, %conv
+  %rem.cmp = icmp ult i32 %and, %conv
+  %rem = select i1 %rem.cmp, i32 %not, i32 %rem.urem
+  %xor = xor i32 %rem, %not2
+  %sub = sub nsw i32 0, %xor
+  %sub5 = sub i32 -1824888657, %xor
+  %xor6 = xor i32 %sub5, -1260914025
+  %cmp = icmp slt i32 %xor6, 824855120
+  %shr = ashr i32 %xor6, 40
+  br i1 %cmp, label %loop, label %exit
+
+exit:
+  ret i32 %rem
 }

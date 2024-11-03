@@ -1,6 +1,6 @@
 ; RUN: llc < %s -march=nvptx -mcpu=sm_60 | FileCheck %s -check-prefixes=CHECK,CHECK32
 ; RUN: llc < %s -march=nvptx64 -mcpu=sm_60 | FileCheck %s
-; RUN: %if ptxas %{ llc < %s -march=nvptx -mcpu=sm_60 | %ptxas-verify -arch=sm_60 %}
+; RUN: %if ptxas && !ptxas-12.0 %{ llc < %s -march=nvptx -mcpu=sm_60 | %ptxas-verify -arch=sm_60 %}
 ; RUN: %if ptxas %{ llc < %s -march=nvptx64 -mcpu=sm_60 | %ptxas-verify -arch=sm_60 %}
 
 ; CHECK-LABEL: .func test_atomics_scope(

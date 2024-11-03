@@ -29,15 +29,15 @@ static const bool UsingAlignedNew = true;
 #endif
 
 #ifdef __STDCPP_DEFAULT_NEW_ALIGNMENT__
-static const size_t MaxAligned = __STDCPP_DEFAULT_NEW_ALIGNMENT__;
+static const std::size_t MaxAligned = __STDCPP_DEFAULT_NEW_ALIGNMENT__;
 #else
-static const size_t MaxAligned = std::alignment_of<std::max_align_t>::value;
+static const std::size_t MaxAligned = std::alignment_of<std::max_align_t>::value;
 #endif
 
-static const size_t OverAligned = MaxAligned * 2;
+static const std::size_t OverAligned = MaxAligned * 2;
 
 
-template <size_t Align>
+template <std::size_t Align>
 struct TEST_ALIGNAS(Align) AlignedType {
   char data;
   static int constructed;
@@ -45,11 +45,11 @@ struct TEST_ALIGNAS(Align) AlignedType {
   AlignedType(AlignedType const&) { ++constructed; }
   ~AlignedType() { --constructed; }
 };
-template <size_t Align>
+template <std::size_t Align>
 int AlignedType<Align>::constructed = 0;
 
 
-template <size_t Align>
+template <std::size_t Align>
 void test_aligned() {
   typedef AlignedType<Align> T;
   T::constructed = 0;

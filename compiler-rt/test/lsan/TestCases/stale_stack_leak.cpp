@@ -45,6 +45,7 @@ int main() {
 // Otherwise, we need a different method.
 __attribute__((destructor))
 __attribute__((no_sanitize_address))
+__attribute__((no_sanitize("hwaddress")))
 void ConfirmPointerHasSurvived() {
   print_address("Value after LSan: ", 1, *pp);
 }

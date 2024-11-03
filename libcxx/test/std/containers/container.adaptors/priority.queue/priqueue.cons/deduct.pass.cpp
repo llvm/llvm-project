@@ -6,8 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-// <queue>
 // UNSUPPORTED: c++03, c++11, c++14
+// UNSUPPORTED: GCC-ALWAYS_INLINE-FIXME
+
+// <queue>
 
 // template<class Compare, class Container>
 // priority_queue(Compare, Container)
@@ -22,14 +24,26 @@
 // template<class Compare, class Container, class Allocator>
 // priority_queue(Compare, Container, Allocator)
 //     -> priority_queue<typename Container::value_type, Container, Compare>;
+//
+// template<ranges::input_range R, class Compare = less<ranges::range_value_t<R>>>
+//   priority_queue(from_range_t, R&&, Compare = Compare())
+//     -> priority_queue<ranges::range_value_t<R>, vector<ranges::range_value_t<R>>, Compare>; // C++23
+//
+// template<ranges::input_range R, class Compare, class Allocator>
+//   priority_queue(from_range_t, R&&, Compare, Allocator)
+//     -> priority_queue<ranges::range_value_t<R>, vector<ranges::range_value_t<R>, Allocator>,
+//                         Compare>; // C++23
+//
+// template<ranges::input_range R, class Allocator>
+//   priority_queue(from_range_t, R&&, Allocator)
+//     -> priority_queue<ranges::range_value_t<R>, vector<ranges::range_value_t<R>, Allocator>>; // C++23
 
-
+#include <cassert>
+#include <climits> // INT_MAX
+#include <cstddef>
+#include <iterator>
 #include <queue>
 #include <vector>
-#include <iterator>
-#include <cassert>
-#include <cstddef>
-#include <climits> // INT_MAX
 
 #include "deduction_guides_sfinae_checks.h"
 #include "test_macros.h"
@@ -238,6 +252,28 @@ int main(int, char**)
         std::priority_queue pri(a, a+2, Comp(), std::move(cont), ConvertibleToAlloc(2));
         static_assert(std::is_same_v<decltype(pri), std::priority_queue<T, Cont, Comp>>);
         }
+
+#if TEST_STD_VER >= 23
+        { // (from_range, range)
+          std::priority_queue c(std::from_range, Cont());
+          static_assert(std::is_same_v<decltype(c), std::priority_queue<T>>);
+        }
+
+        { // (from_range, range, compare)
+          std::priority_queue c(std::from_range, Cont(), Comp());
+          static_assert(std::is_same_v<decltype(c), std::priority_queue<T, std::vector<T>, Comp>>);
+        }
+
+        { // (from_range, range, compare, alloc)
+          std::priority_queue c(std::from_range, Cont(), Comp(), Alloc(2));
+          static_assert(std::is_same_v<decltype(c), std::priority_queue<T, std::vector<T, Alloc>, Comp>>);
+        }
+
+        { // (from_range, range, alloc)
+          std::priority_queue c(std::from_range, Cont(), Alloc(2));
+          static_assert(std::is_same_v<decltype(c), std::priority_queue<T, std::vector<T, Alloc>>>);
+        }
+#endif // TEST_STD_VER >= 23
     }
 
     // Deduction guides should be SFINAE'd away when given:
@@ -354,6 +390,39 @@ int main(int, char**)
         static_assert(SFINAEs_away<std::priority_queue, AllocAsComp, Cont>);
         // Cannot deduce from (comp, ALLOC_as_cont)
         static_assert(SFINAEs_away<std::priority_queue, Comp, AllocAsCont>);
+
+#if TEST_STD_VER >= 23
+        using Range = RangeT<int>;
+        using BadRange = BadRangeT<int>;
+
+        // (from_range, range)
+        //
+        // Cannot deduce from (from_range, BAD_range)
+        static_assert(SFINAEs_away<std::priority_queue, BadRange>);
+
+        // (from_range, range, compare)
+        //
+        // Cannot deduce from (from_range, BAD_range, compare)
+        static_assert(SFINAEs_away<std::priority_queue, BadRange, Comp>);
+
+        // (from_range, range, compare, alloc)
+        //
+        // Cannot deduce from (from_range, BAD_range, compare, alloc)
+        static_assert(SFINAEs_away<std::priority_queue, BadRange, Comp, Alloc>);
+        // Cannot deduce from (from_range, range, compare, BAD_alloc)
+        static_assert(SFINAEs_away<std::priority_queue, Range, Comp, BadAlloc>);
+        // Cannot deduce from (from_range, range, compare, DIFFERENT_alloc)
+        static_assert(SFINAEs_away<std::priority_queue, Range, Comp, DiffAlloc>);
+
+        // (from_range, range, alloc)
+        //
+        // Cannot deduce from (from_range, BAD_range, alloc)
+        static_assert(SFINAEs_away<std::priority_queue, BadRange, Alloc>);
+        // Cannot deduce from (from_range, range, BAD_alloc)
+        static_assert(SFINAEs_away<std::priority_queue, Range, BadAlloc>);
+        // Cannot deduce from (from_range, range, DIFFERENT_alloc)
+        static_assert(SFINAEs_away<std::priority_queue, Range, DiffAlloc>);
+#endif // TEST_STD_VER >= 23
     }
 
     return 0;

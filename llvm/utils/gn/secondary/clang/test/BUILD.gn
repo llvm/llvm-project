@@ -1,5 +1,6 @@
 import("//clang/lib/ARCMigrate/enable.gni")
 import("//clang/lib/StaticAnalyzer/Frontend/enable.gni")
+import("//llvm/include/llvm/Config/config.gni")
 import("//llvm/lib/Target/targets.gni")
 import("//llvm/triples.gni")
 import("//llvm/utils/gn/build/libs/pthread/enable.gni")
@@ -122,6 +123,12 @@ write_lit_config("lit_site_cfg") {
     ]
   }
 
+  if (llvm_enable_reverse_iteration) {
+    extra_values += [ "LLVM_ENABLE_REVERSE_ITERATION=1" ]
+  } else {
+    extra_values += [ "LLVM_ENABLE_REVERSE_ITERATION=0" ]  # Must be 0.
+  }
+
   if (llvm_enable_threads) {
     extra_values += [ "LLVM_ENABLE_THREADS=1" ]
   } else {
@@ -176,6 +183,7 @@ group("test") {
     "//llvm/tools/llvm-nm:symlinks",
     "//llvm/tools/llvm-objcopy:symlinks",
     "//llvm/tools/llvm-objdump:symlinks",
+    "//llvm/tools/llvm-pdbutil",
     "//llvm/tools/llvm-profdata",
     "//llvm/tools/llvm-rc:symlinks",
     "//llvm/tools/llvm-readobj:symlinks",

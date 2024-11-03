@@ -9,7 +9,7 @@ import tempfile
 import traceback
 from ipykernel.kernelbase import Kernel
 
-__version__ = '0.0.1'
+__version__ = "0.0.1"
 
 
 def _get_executable():
@@ -19,7 +19,7 @@ def _get_executable():
         """Returns whether executable file."""
         return os.path.isfile(fpath) and os.access(fpath, os.X_OK)
 
-    program = os.environ.get('MLIR_OPT_EXECUTABLE', 'mlir-opt')
+    program = os.environ.get("MLIR_OPT_EXECUTABLE", "mlir-opt")
     path, name = os.path.split(program)
     # Attempt to get the executable
     if path:
@@ -30,7 +30,7 @@ def _get_executable():
             file = os.path.join(path, name)
             if is_exe(file):
                 return file
-    raise OSError('mlir-opt not found, please see README')
+    raise OSError("mlir-opt not found, please see README")
 
 
 class MlirOptKernel(Kernel):
@@ -51,19 +51,17 @@ class MlirOptKernel(Kernel):
     ```
     """
 
-    implementation = 'mlir'
+    implementation = "mlir"
     implementation_version = __version__
 
     language_version = __version__
     language = "mlir"
     language_info = {
         "name": "mlir",
-        "codemirror_mode": {
-            "name": "mlir"
-        },
+        "codemirror_mode": {"name": "mlir"},
         "mimetype": "text/x-mlir",
         "file_extension": ".mlir",
-        "pygments_lexer": "text"
+        "pygments_lexer": "text",
     }
 
     @property
@@ -88,31 +86,28 @@ class MlirOptKernel(Kernel):
         """Reports regular command output."""
         if not self.silent:
             # Send standard output
-            stream_content = {'name': 'stdout', 'text': output}
-            self.send_response(self.iopub_socket, 'stream', stream_content)
+            stream_content = {"name": "stdout", "text": output}
+            self.send_response(self.iopub_socket, "stream", stream_content)
 
     def process_error(self, output):
         """Reports error response."""
         if not self.silent:
             # Send standard error
-            stream_content = {'name': 'stderr', 'text': output}
-            self.send_response(self.iopub_socket, 'stream', stream_content)
+            stream_content = {"name": "stderr", "text": output}
+            self.send_response(self.iopub_socket, "stream", stream_content)
 
-    def do_execute(self,
-                   code,
-                   silent,
-                   store_history=True,
-                   user_expressions=None,
-                   allow_stdin=False):
+    def do_execute(
+        self, code, silent, store_history=True, user_expressions=None, allow_stdin=False
+    ):
         """Execute user code using mlir-opt binary."""
 
         def ok_status():
             """Returns OK status."""
             return {
-                'status': 'ok',
-                'execution_count': self.execution_count,
-                'payload': [],
-                'user_expressions': {}
+                "status": "ok",
+                "execution_count": self.execution_count,
+                "payload": [],
+                "user_expressions": {},
             }
 
         def run(code):
@@ -123,29 +118,27 @@ class MlirOptKernel(Kernel):
                     # Specify input and output file to error out if also
                     # set as arg.
                     self.get_executable(),
-                    '--color',
+                    "--color",
                     inputmlir.name,
-                    '-o',
-                    '-'
+                    "-o",
+                    "-",
                 ]
                 # Simple handling of repeating last line.
-                if code.endswith('\n_'):
+                if code.endswith("\n_"):
                     if not self._:
-                        raise NameError('No previous result set')
+                        raise NameError("No previous result set")
                     code = code[:-1] + self._
                 inputmlir.write(code.encode("utf-8"))
                 inputmlir.close()
-                pipe = Popen(command,
-                             stdout=subprocess.PIPE,
-                             stderr=subprocess.PIPE)
+                pipe = Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
                 output, errors = pipe.communicate()
                 exitcode = pipe.returncode
             finally:
                 os.unlink(inputmlir.name)
 
-# Replace temporary filename with placeholder. This takes the very
-# remote chance where the full input filename (generated above)
-# overlaps with something in the dump unrelated to the file.
+            # Replace temporary filename with placeholder. This takes the very
+            # remote chance where the full input filename (generated above)
+            # overlaps with something in the dump unrelated to the file.
             fname = inputmlir.name.encode("utf-8")
             output = output.replace(fname, b"<<input>>")
             errors = errors.replace(fname, b"<<input>>")
@@ -163,7 +156,7 @@ class MlirOptKernel(Kernel):
             else:
                 self._ = output.decode("utf-8")
         except KeyboardInterrupt:
-            return {'status': 'abort', 'execution_count': self.execution_count}
+            return {"status": "abort", "execution_count": self.execution_count}
         except Exception as error:
             # Print traceback for local debugging.
             traceback.print_exc()
@@ -172,24 +165,24 @@ class MlirOptKernel(Kernel):
             errors = repr(error).encode("utf-8")
 
         if exitcode:
-            content = {'ename': '', 'evalue': str(exitcode), 'traceback': []}
+            content = {"ename": "", "evalue": str(exitcode), "traceback": []}
 
-            self.send_response(self.iopub_socket, 'error', content)
+            self.send_response(self.iopub_socket, "error", content)
             self.process_error(errors.decode("utf-8"))
 
-            content['execution_count'] = self.execution_count
-            content['status'] = 'error'
+            content["execution_count"] = self.execution_count
+            content["status"] = "error"
             return content
 
         if not silent:
             data = {}
-            data['text/x-mlir'] = self._
+            data["text/x-mlir"] = self._
             content = {
-                'execution_count': self.execution_count,
-                'data': data,
-                'metadata': {}
+                "execution_count": self.execution_count,
+                "data": data,
+                "metadata": {},
             }
-            self.send_response(self.iopub_socket, 'execute_result', content)
+            self.send_response(self.iopub_socket, "execute_result", content)
             self.process_output(self._)
             self.process_error(errors.decode("utf-8"))
         return ok_status()

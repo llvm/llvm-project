@@ -18,17 +18,34 @@ def Transform_Dialect : Dialect {
   let name = "transform";
   let cppNamespace = "::mlir::transform";
 
-  let dependentDialects = [
-    "::mlir::pdl::PDLDialect",
-    "::mlir::pdl_interp::PDLInterpDialect",
-  ];
-
-
+  let hasOperationAttrVerify = 1;
   let extraClassDeclaration = [{
-      /// Returns the named PDL constraint functions available in the dialect
-      /// as a map from their name to the function.
-      const ::llvm::StringMap<::mlir::PDLConstraintFunction> &
-      getPDLConstraintHooks() const;
+      /// Name of the attribute attachable to the symbol table operation
+      /// containing named sequences. This is used to trigger verification.
+      constexpr const static ::llvm::StringLiteral
+          kWithNamedSequenceAttrName = "transform.with_named_sequence";
+
+      /// Name of the attribute attachable to an operation so it can be
+      /// identified as root by the default interpreter pass.
+      constexpr const static ::llvm::StringLiteral
+          kTargetTagAttrName = "transform.target_tag";
+
+      /// Name of the attribute attachable to an operation, indicating that
+      /// TrackingListener failures should be silenced.
+      constexpr const static ::llvm::StringLiteral
+          kSilenceTrackingFailuresAttrName = "transform.silence_tracking_failures";
+
+      /// Names of the attributes indicating whether an argument of an external
+      /// transform dialect symbol is consumed or only read.
+      constexpr const static ::llvm::StringLiteral
+          kArgConsumedAttrName = "transform.consumed";
+      constexpr const static ::llvm::StringLiteral
+          kArgReadOnlyAttrName = "transform.readonly";
+
+      template <typename DataTy>
+      const DataTy &getExtraData() const {
+        return *static_cast<const DataTy *>(extraData.at(::mlir::TypeID::get<DataTy>()).get());
+      }
 
       /// Parses a type registered by this dialect or one of its extensions.
       ::mlir::Type parseType(::mlir::DialectAsmParser &parser) const override;
@@ -73,23 +90,27 @@ def Transform_Dialect : Dialect {
       /// mnemonic.
       [[noreturn]] void reportDuplicateTypeRegistration(StringRef mnemonic);
 
+      /// Registers dialect types with the context.
       void initializeTypes();
 
+      // Give extensions access to injection functions.
       template <typename, typename...>
       friend class TransformDialectExtension;
 
-      /// Takes ownership of the named PDL constraint function from the given
-      /// map and makes them available for use by the operations in the dialect.
-      void mergeInPDLMatchHooks(
-          ::llvm::StringMap<::mlir::PDLConstraintFunction> &&constraintFns);
+      /// Gets a mutable reference to extra data of the kind specified as
+      /// template argument. Allocates the data on the first call.
+      template <typename DataTy>
+      DataTy &getOrCreateExtraData();
 
       //===----------------------------------------------------------------===//
       // Data fields
       //===----------------------------------------------------------------===//
 
-      /// A container for PDL constraint function that can be used by
-      /// operations in this dialect.
-      ::mlir::PDLPatternModule pdlMatchHooks;
+      /// Additional data associated with and owned by the dialect. Accessible
+      /// to extensions.
+      ::llvm::DenseMap<::mlir::TypeID, std::unique_ptr<
+            ::mlir::transform::detail::TransformDialectDataBase>>
+          extraData;
 
       /// A map from type mnemonic to its parsing function for the remainder of
       /// the syntax. The parser has access to the mnemonic, so it is used for
@@ -103,7 +124,7 @@ def Transform_Dialect : Dialect {
   }];
 }
 
-// Base class for ops that belong to the tranfsorm dialect. Ops defined in
+// Base class for ops that belong to the transform dialect. Ops defined in
 // extensions of this dialect may also use this.
 class TransformDialectOp<string mnemonic, list<Trait> traits = []>
     : Op<Transform_Dialect, mnemonic, traits>;

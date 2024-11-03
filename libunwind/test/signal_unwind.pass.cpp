@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 
 // Ensure that the unwinder can cope with the signal handler.
-// REQUIRES: linux && (target={{aarch64-.+}} || target={{s390x-.+}} || target={{x86_64-.+}})
+// REQUIRES: target={{(aarch64|riscv64|s390x|x86_64)-.+linux.*}}
 
 // TODO: Figure out why this fails with Memory Sanitizer.
 // XFAIL: msan

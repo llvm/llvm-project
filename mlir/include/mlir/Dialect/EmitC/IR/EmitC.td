@@ -27,6 +27,41 @@ include "mlir/Interfaces/SideEffectInterfaces.td"
 class EmitC_Op<string mnemonic, list<Trait> traits = []>
     : Op<EmitC_Dialect, mnemonic, traits>;
 
+// Base class for binary operations.
+class EmitC_BinaryOp<string mnemonic, list<Trait> traits = []> :
+    EmitC_Op<mnemonic, traits> {
+  let arguments = (ins AnyType:$lhs, AnyType:$rhs);
+  let results = (outs AnyType);
+  let assemblyFormat = "operands attr-dict `:` functional-type(operands, results)";
+}
+
+// Types only used in binary arithmetic operations.
+def IntegerIndexOrOpaqueType : AnyTypeOf<[AnyInteger, Index, EmitC_OpaqueType]>;
+def FloatIntegerIndexOrOpaqueType : AnyTypeOf<[AnyFloat, IntegerIndexOrOpaqueType]>;
+
+def EmitC_AddOp : EmitC_BinaryOp<"add", []> {
+  let summary = "Addition operation";
+  let description = [{
+    With the `add` operation the arithmetic operator + (addition) can
+    be applied.
+
+    Example:
+
+    ```mlir
+    // Custom form of the addition operation.
+    %0 = emitc.add %arg0, %arg1 : (i32, i32) -> i32
+    %1 = emitc.add %arg2, %arg3 : (!emitc.ptr<f32>, i32) -> !emitc.ptr<f32>
+    ```
+    ```c++
+    // Code emitted for the operations above.
+    int32_t v5 = v1 + v2;
+    float* v6 = v3 + v4;
+    ```
+  }];
+
+  let hasVerifier = 1;
+}
+
 def EmitC_ApplyOp : EmitC_Op<"apply", []> {
   let summary = "Apply operation";
   let description = [{
@@ -37,15 +72,14 @@ def EmitC_ApplyOp : EmitC_Op<"apply", []> {
 
     ```mlir
     // Custom form of applying the & operator.
-    %0 = emitc.apply "&"(%arg0) : (i32) -> !emitc.opaque<"int32_t*">
+    %0 = emitc.apply "&"(%arg0) : (i32) -> !emitc.ptr<i32>
 
     // Generic form of the same operation.
     %0 = "emitc.apply"(%arg0) {applicableOperator = "&"}
-        : (i32) -> !emitc.opaque<"int32_t*">
+        : (i32) -> !emitc.ptr<i32>
 
     ```
   }];
-  // TODO: Disallow to apply the operator & (address of) to emitc.constant operations.
   let arguments = (ins
     Arg<StrAttr, "the operator to apply">:$applicableOperator,
     AnyType:$operand
@@ -116,6 +150,47 @@ def EmitC_CastOp : EmitC_Op<"cast", [
   let assemblyFormat = "$source attr-dict `:` type($source) `to` type($dest)";
 }
 
+def EmitC_CmpOp : EmitC_BinaryOp<"cmp", []> {
+  let summary = "Comparison operation";
+  let description = [{
+    With the `cmp` operation the comparison operators ==, !=, <, <=, >, >=, <=> 
+    can be applied.
+
+    Its first argument is an attribute that defines the comparison operator:
+
+    - equal to (mnemonic: `"eq"`; integer value: `0`)
+    - not equal to (mnemonic: `"ne"`; integer value: `1`)
+    - less than (mnemonic: `"lt"`; integer value: `2`)
+    - less than or equal to (mnemonic: `"le"`; integer value: `3`)
+    - greater than (mnemonic: `"gt"`; integer value: `4`)
+    - greater than or equal to (mnemonic: `"ge"`; integer value: `5`)
+    - three-way-comparison (mnemonic: `"three_way"`; integer value: `6`)
+
+    Example:
+    ```mlir
+    // Custom form of the cmp operation.
+    %0 = emitc.cmp eq, %arg0, %arg1 : (i32, i32) -> i1
+    %1 = emitc.cmp lt, %arg2, %arg3 : 
+        (
+          !emitc.opaque<"std::valarray<float>">,
+          !emitc.opaque<"std::valarray<float>">
+        ) -> !emitc.opaque<"std::valarray<bool>">
+    ```
+    ```c++
+    // Code emitted for the operations above.
+    bool v5 = v1 == v2;
+    std::valarray<bool> v6 = v3 < v4;
+    ```
+  }];
+
+  let arguments = (ins EmitC_CmpPredicateAttr:$predicate,
+                       AnyType:$lhs,
+                       AnyType:$rhs);
+  let results = (outs AnyType);
+
+  let assemblyFormat = "$predicate `,` operands attr-dict `:` functional-type(operands, results)";
+}
+
 def EmitC_ConstantOp : EmitC_Op<"constant", [ConstantLike]> {
   let summary = "Constant operation";
   let description = [{
@@ -143,8 +218,31 @@ def EmitC_ConstantOp : EmitC_Op<"constant", [ConstantLike]> {
   let results = (outs AnyType);
 
   let hasFolder = 1;
-  // TODO: Disallow empty constants.
   let hasVerifier = 1;
+}
+
+def EmitC_DivOp : EmitC_BinaryOp<"div", []> {
+  let summary = "Division operation";
+  let description = [{
+    With the `div` operation the arithmetic operator / (division) can
+    be applied.
+
+    Example:
+
+    ```mlir
+    // Custom form of the division operation.
+    %0 = emitc.div %arg0, %arg1 : (i32, i32) -> i32
+    %1 = emitc.div %arg2, %arg3 : (f32, f32) -> f32
+    ```
+    ```c++
+    // Code emitted for the operations above.
+    int32_t v5 = v1 / v2;
+    float v6 = v3 / v4;
+    ```
+  }];
+
+  let arguments = (ins FloatIntegerIndexOrOpaqueType, FloatIntegerIndexOrOpaqueType);
+  let results = (outs FloatIntegerIndexOrOpaqueType);
 }
 
 def EmitC_IncludeOp
@@ -175,6 +273,92 @@ def EmitC_IncludeOp
     UnitAttr:$is_standard_include
   );
   let hasCustomAssemblyFormat = 1;
+}
+
+def EmitC_LiteralOp : EmitC_Op<"literal", [Pure]> {
+  let summary = "Literal operation";
+  let description = [{
+    The `literal` operation produces an SSA value equal to some constant
+    specified by an attribute.
+  }];
+
+  let arguments = (ins StrAttr:$value);
+  let results = (outs AnyType:$result);
+
+  let hasVerifier = 1;
+  let assemblyFormat = "$value attr-dict `:` type($result)";
+}
+
+def EmitC_MulOp : EmitC_BinaryOp<"mul", []> {
+  let summary = "Multiplication operation";
+  let description = [{
+    With the `mul` operation the arithmetic operator * (multiplication) can
+    be applied.
+
+    Example:
+
+    ```mlir
+    // Custom form of the multiplication operation.
+    %0 = emitc.mul %arg0, %arg1 : (i32, i32) -> i32
+    %1 = emitc.mul %arg2, %arg3 : (f32, f32) -> f32
+    ```
+    ```c++
+    // Code emitted for the operations above.
+    int32_t v5 = v1 * v2;
+    float v6 = v3 * v4;
+    ```
+  }];
+
+  let arguments = (ins FloatIntegerIndexOrOpaqueType, FloatIntegerIndexOrOpaqueType);
+  let results = (outs FloatIntegerIndexOrOpaqueType);
+}
+
+def EmitC_RemOp : EmitC_BinaryOp<"rem", []> {
+  let summary = "Remainder operation";
+  let description = [{
+    With the `rem` operation the arithmetic operator % (remainder) can
+    be applied.
+
+    Example:
+
+    ```mlir
+    // Custom form of the remainder operation.
+    %0 = emitc.rem %arg0, %arg1 : (i32, i32) -> i32
+    ```
+    ```c++
+    // Code emitted for the operation above.
+    int32_t v5 = v1 % v2;
+    ```
+  }];
+
+  let arguments = (ins IntegerIndexOrOpaqueType, IntegerIndexOrOpaqueType);
+  let results = (outs IntegerIndexOrOpaqueType);
+}
+
+def EmitC_SubOp : EmitC_BinaryOp<"sub", []> {
+  let summary = "Subtraction operation";
+  let description = [{
+    With the `sub` operation the arithmetic operator - (subtraction) can
+    be applied.
+
+    Example:
+
+    ```mlir
+    // Custom form of the substraction operation.
+    %0 = emitc.sub %arg0, %arg1 : (i32, i32) -> i32
+    %1 = emitc.sub %arg2, %arg3 : (!emitc.ptr<f32>, i32) -> !emitc.ptr<f32>
+    %2 = emitc.sub %arg4, %arg5 : (!emitc.ptr<i32>, !emitc.ptr<i32>)
+        -> !emitc.opaque<"ptrdiff_t">
+    ```
+    ```c++
+    // Code emitted for the operations above.
+    int32_t v7 = v1 - v2;
+    float* v8 = v3 - v4;
+    ptrdiff_t v9 = v5 - v6;
+    ```
+  }];
+
+  let hasVerifier = 1;
 }
 
 def EmitC_VariableOp : EmitC_Op<"variable", []> {

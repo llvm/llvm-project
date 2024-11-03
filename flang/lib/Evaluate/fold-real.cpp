@@ -149,10 +149,15 @@ Expr<Type<TypeCategory::Real, KIND>> FoldIntrinsicFunction(
   } else if (name == "dot_product") {
     return FoldDotProduct<T>(context, std::move(funcRef));
   } else if (name == "dprod") {
-    if (auto scalars{GetScalarConstantArguments<T, T>(context, args)}) {
-      return Fold(context,
-          Expr<T>{Multiply<T>{
-              Expr<T>{std::get<0>(*scalars)}, Expr<T>{std::get<1>(*scalars)}}});
+    // Rewrite DPROD(x,y) -> DBLE(x)*DBLE(y)
+    if (args.at(0) && args.at(1)) {
+      const auto *xExpr{args[0]->UnwrapExpr()};
+      const auto *yExpr{args[1]->UnwrapExpr()};
+      if (xExpr && yExpr) {
+        return Fold(context,
+            ToReal<T::kind>(context, common::Clone(*xExpr)) *
+                ToReal<T::kind>(context, common::Clone(*yExpr)));
+      }
     }
   } else if (name == "epsilon") {
     return Expr<T>{Scalar<T>::EPSILON()};
@@ -166,16 +171,19 @@ Expr<Type<TypeCategory::Real, KIND>> FoldIntrinsicFunction(
     CHECK(args.size() == 2);
     return FoldElementalIntrinsic<T, T, T>(context, std::move(funcRef),
         ScalarFunc<T, T, T>(
-            [](const Scalar<T> &x, const Scalar<T> &y) -> Scalar<T> {
-              return x.HYPOT(y).value;
+            [&](const Scalar<T> &x, const Scalar<T> &y) -> Scalar<T> {
+              ValueWithRealFlags<Scalar<T>> result{x.HYPOT(y)};
+              if (result.flags.test(RealFlag::Overflow)) {
+                context.messages().Say(
+                    "HYPOT intrinsic folding overflow"_warn_en_US);
+              }
+              return result.value;
             }));
   } else if (name == "max") {
     return FoldMINorMAX(context, std::move(funcRef), Ordering::Greater);
   } else if (name == "maxval") {
     return FoldMaxvalMinval<T>(context, std::move(funcRef),
         RelationalOperator::GT, T::Scalar::HUGE().Negate());
-  } else if (name == "merge") {
-    return FoldMerge<T>(context, std::move(funcRef));
   } else if (name == "min") {
     return FoldMINorMAX(context, std::move(funcRef), Ordering::Less);
   } else if (name == "minval") {
@@ -294,6 +302,8 @@ Expr<Type<TypeCategory::Real, KIND>> FoldIntrinsicFunction(
     return FoldSum<T>(context, std::move(funcRef));
   } else if (name == "tiny") {
     return Expr<T>{Scalar<T>::TINY()};
+  } else if (name == "__builtin_fma") {
+    CHECK(args.size() == 3);
   } else if (name == "__builtin_ieee_next_after") {
     if (const auto *yExpr{UnwrapExpr<Expr<SomeReal>>(args[1])}) {
       return common::visit(

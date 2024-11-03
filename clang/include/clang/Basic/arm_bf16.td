@@ -1,4 +1,4 @@
-//===--- arm_fp16.td - ARM BF16 compiler interface ------------------------===//
+//===--- arm_bf16.td - ARM BF16 compiler interface ------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.

@@ -1,7 +1,7 @@
-; RUN: llc < %s -march=nvptx -mcpu=sm_20 -verify-machineinstrs | FileCheck %s --check-prefix=SM20
-; RUN: llc < %s -march=nvptx -mcpu=sm_30 -verify-machineinstrs | FileCheck %s --check-prefix=SM30
-; RUN: %if ptxas %{ llc < %s -march=nvptx -mcpu=sm_20 -verify-machineinstrs | %ptxas-verify %}
-; RUN: %if ptxas %{ llc < %s -march=nvptx -mcpu=sm_30 -verify-machineinstrs | %ptxas-verify %}
+; RUN: llc < %s -march=nvptx64 -mcpu=sm_20 -verify-machineinstrs | FileCheck %s --check-prefix=SM20
+; RUN: llc < %s -march=nvptx64 -mcpu=sm_30 -verify-machineinstrs | FileCheck %s --check-prefix=SM30
+; RUN: %if ptxas %{ llc < %s -march=nvptx64 -mcpu=sm_20 -verify-machineinstrs | %ptxas-verify %}
+; RUN: %if ptxas %{ llc < %s -march=nvptx64 -mcpu=sm_30 -verify-machineinstrs | %ptxas-verify %}
 
 target triple = "nvptx-unknown-cuda"
 

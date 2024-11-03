@@ -1,8 +1,8 @@
 // RUN: rm -rf %t
 // RUN: %clang_cc1 -std=c++20 -emit-module-interface %s -o %t -DINTERFACE
-// RUN: %clang_cc1 -std=c++20 -fmodule-file=%t %s -verify -DIMPLEMENTATION
-// RUN: %clang_cc1 -std=c++20 -fmodule-file=%t %s -verify -DEARLY_IMPLEMENTATION
-// RUN: %clang_cc1 -std=c++20 -fmodule-file=%t %s -verify -DUSER
+// RUN: %clang_cc1 -std=c++20 -fmodule-file=Foo=%t %s -verify -DIMPLEMENTATION
+// RUN: %clang_cc1 -std=c++20 -fmodule-file=Foo=%t %s -verify -DEARLY_IMPLEMENTATION
+// RUN: %clang_cc1 -std=c++20 -fmodule-file=Foo=%t %s -verify -DUSER
 
 // expected-no-diagnostics
 

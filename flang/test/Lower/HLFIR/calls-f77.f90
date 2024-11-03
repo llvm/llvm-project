@@ -1,5 +1,5 @@
 ! Test lowering of F77 calls to HLFIR
-! RUN: bbc -emit-fir -hlfir -o - %s 2>&1 | FileCheck %s
+! RUN: bbc -emit-hlfir -o - %s 2>&1 | FileCheck %s
 
 ! -----------------------------------------------------------------------------
 !     Test lowering of F77 procedure reference arguments
@@ -157,7 +157,7 @@ end subroutine
 ! CHECK-LABEL: func.func @_QPreturn_char(
 ! CHECK:  %[[VAL_1:.*]]:2 = hlfir.declare {{.*}}n
 ! CHECK:  %[[VAL_2:.*]] = arith.constant -1 : i32
-! CHECK:  %[[VAL_7:.*]] = fir.load %[[VAL_1]]#1 : !fir.ref<i64>
+! CHECK:  %[[VAL_7:.*]] = fir.load %[[VAL_1]]#0 : !fir.ref<i64>
 ! CHECK:  %[[VAL_8:.*]] = fir.convert %[[VAL_7]] : (i64) -> index
 ! CHECK:  %[[VAL_9:.*]] = arith.constant 0 : index
 ! CHECK:  %[[VAL_10:.*]] = arith.cmpi sgt, %[[VAL_8]], %[[VAL_9]] : index

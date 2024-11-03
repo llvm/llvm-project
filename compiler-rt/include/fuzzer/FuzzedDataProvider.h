@@ -209,7 +209,7 @@ T FuzzedDataProvider::ConsumeIntegralInRange(T min, T max) {
     abort();
 
   // Use the biggest type possible to hold the range and the result.
-  uint64_t range = static_cast<uint64_t>(max) - min;
+  uint64_t range = static_cast<uint64_t>(max) - static_cast<uint64_t>(min);
   uint64_t result = 0;
   size_t offset = 0;
 
@@ -230,7 +230,7 @@ T FuzzedDataProvider::ConsumeIntegralInRange(T min, T max) {
   if (range != std::numeric_limits<decltype(range)>::max())
     result = result % (range + 1);
 
-  return static_cast<T>(min + result);
+  return static_cast<T>(static_cast<uint64_t>(min) + result);
 }
 
 // Returns a floating point value in the range [Type's lowest, Type's max] by

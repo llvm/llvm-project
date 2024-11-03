@@ -198,8 +198,12 @@ void MangleContext::mangleName(GlobalDecl GD, raw_ostream &Out) {
     Out << '_';
   else if (CC == CCM_Fast)
     Out << '@';
-  else if (CC == CCM_RegCall)
-    Out << "__regcall3__";
+  else if (CC == CCM_RegCall) {
+    if (getASTContext().getLangOpts().RegCall4)
+      Out << "__regcall4__";
+    else
+      Out << "__regcall3__";
+  }
 
   if (!MCXX)
     Out << D->getIdentifier()->getName();

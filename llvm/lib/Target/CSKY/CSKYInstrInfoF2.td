@@ -208,6 +208,16 @@ defm f2FNMULS : F2_XYZZ_T<0b010101, "fnmuls",
 defm f2FNMUL : F2_XYZ_T<0b010001, "fnmul",
   BinOpFrag<(fneg (fmul node:$LHS, node:$RHS))>>;
 
+// multiplication
+let Predicates = [HasFPUv3_SF] in {
+  def : Pat<(f32 (fmul (fneg FPR32Op:$vrx), FPR32Op:$vry)),
+            (f2FNMUL_S FPR32Op:$vrx, FPR32Op:$vry)>;
+}
+let Predicates = [HasFPUv3_DF] in {
+  def : Pat<(f64 (fmul (fneg FPR64Op:$vrx), FPR64Op:$vry)),
+            (f2FNMUL_D FPR64Op:$vrx, FPR64Op:$vry)>;
+}
+
 // fcvt
 def f2FFTOS32_S  : F2_XZ_P<0b01000, 0b011011, "fftoi.f32.s32", [], (outs FPR32Op:$vrz), (ins FPR32Op:$vrx)>;
 def f2FFTOU32_S  : F2_XZ_P<0b01000, 0b011010, "fftoi.f32.u32", [], (outs FPR32Op:$vrz), (ins FPR32Op:$vrx)>;
@@ -284,13 +294,19 @@ def : Pat<(f32 fpimm:$imm),(COPY_TO_REGCLASS (ORI32 (MOVIH32 (fpimm32_hi16 fpimm
         Requires<[HasFPUv3_SF]>;
 
 
-multiclass BRCond_Bin_F2<CondCode CC, string Instr, Instruction Br, Instruction MV, bit IsSelectSwap = 0> {
+multiclass BRCond_Bin_F2<CondCode CC, string Instr, Instruction Br0, Instruction Br1, Instruction MV, bit IsSelectSwap = 0> {
   let Predicates = [HasFPUv3_SF] in
   def : Pat<(brcond (i32 (setcc FPR32Op:$rs1, FPR32Op:$rs2, CC)), bb:$imm16),
-            (Br (!cast<Instruction>(Instr#_S) FPR32Op:$rs1, FPR32Op:$rs2), bb:$imm16)>;
+            (Br0 (!cast<Instruction>(Instr#_S) FPR32Op:$rs1, FPR32Op:$rs2), bb:$imm16)>;
+  let Predicates = [HasFPUv3_SF] in
+  def : Pat<(brcond (xor (i32 (setcc FPR32Op:$rs1, FPR32Op:$rs2, CC)), 1), bb:$imm16),
+            (Br1 (!cast<Instruction>(Instr#_S) FPR32Op:$rs1, FPR32Op:$rs2), bb:$imm16)>;
   let Predicates = [HasFPUv3_DF] in
   def : Pat<(brcond (i32 (setcc FPR64Op:$rs1, FPR64Op:$rs2, CC)), bb:$imm16),
-            (Br (!cast<Instruction>(Instr#_D) FPR64Op:$rs1, FPR64Op:$rs2), bb:$imm16)>;
+            (Br0 (!cast<Instruction>(Instr#_D) FPR64Op:$rs1, FPR64Op:$rs2), bb:$imm16)>;
+  let Predicates = [HasFPUv3_DF] in
+  def : Pat<(brcond (xor (i32 (setcc FPR64Op:$rs1, FPR64Op:$rs2, CC)), 1), bb:$imm16),
+            (Br1 (!cast<Instruction>(Instr#_D) FPR64Op:$rs1, FPR64Op:$rs2), bb:$imm16)>;
 
   let Predicates = [HasFPUv3_SF] in
   def : Pat<(i32 (setcc FPR32Op:$rs1, FPR32Op:$rs2, CC)),
@@ -317,13 +333,19 @@ multiclass BRCond_Bin_F2<CondCode CC, string Instr, Instruction Br, Instruction 
   }
 }
 
-multiclass BRCond_Bin_SWAP_F2<CondCode CC, string Instr, Instruction Br, Instruction MV, bit IsSelectSwap = 0> {
+multiclass BRCond_Bin_SWAP_F2<CondCode CC, string Instr, Instruction Br0, Instruction Br1, Instruction MV, bit IsSelectSwap = 0> {
   let Predicates = [HasFPUv3_SF] in
   def : Pat<(brcond (i32 (setcc FPR32Op:$rs1, FPR32Op:$rs2, CC)), bb:$imm16),
-            (Br (!cast<Instruction>(Instr#_S) FPR32Op:$rs2, FPR32Op:$rs1), bb:$imm16)>;
+            (Br0 (!cast<Instruction>(Instr#_S) FPR32Op:$rs2, FPR32Op:$rs1), bb:$imm16)>;
+  let Predicates = [HasFPUv3_SF] in
+  def : Pat<(brcond (xor (i32 (setcc FPR32Op:$rs1, FPR32Op:$rs2, CC)), 1), bb:$imm16),
+            (Br1 (!cast<Instruction>(Instr#_S) FPR32Op:$rs2, FPR32Op:$rs1), bb:$imm16)>;
   let Predicates = [HasFPUv3_DF] in
   def : Pat<(brcond (i32 (setcc FPR64Op:$rs1, FPR64Op:$rs2, CC)), bb:$imm16),
-            (Br (!cast<Instruction>(Instr#_D) FPR64Op:$rs2, FPR64Op:$rs1), bb:$imm16)>;
+            (Br0 (!cast<Instruction>(Instr#_D) FPR64Op:$rs2, FPR64Op:$rs1), bb:$imm16)>;
+  let Predicates = [HasFPUv3_DF] in
+  def : Pat<(brcond (xor (i32 (setcc FPR64Op:$rs1, FPR64Op:$rs2, CC)), 1), bb:$imm16),
+            (Br1 (!cast<Instruction>(Instr#_D) FPR64Op:$rs2, FPR64Op:$rs1), bb:$imm16)>;
 
   let Predicates = [HasFPUv3_SF] in
   def : Pat<(i32 (setcc FPR32Op:$rs1, FPR32Op:$rs2, CC)),
@@ -352,21 +374,21 @@ multiclass BRCond_Bin_SWAP_F2<CondCode CC, string Instr, Instruction Br, Instruc
 
 // inverse (order && compare) to (unorder || inverse(compare))
 
-defm : BRCond_Bin_F2<SETUNE, "f2FCMPNE", BT32, MVC32>;
-defm : BRCond_Bin_F2<SETOEQ, "f2FCMPNE", BF32, MVCV32, 1>;
-defm : BRCond_Bin_F2<SETOGE, "f2FCMPHS", BT32, MVC32>;
-defm : BRCond_Bin_F2<SETOLT, "f2FCMPLT", BT32, MVC32>;
-defm : BRCond_Bin_F2<SETUO, "f2FCMPUO", BT32, MVC32>;
-defm : BRCond_Bin_F2<SETO, "f2FCMPUO", BF32, MVCV32, 1>;
-defm : BRCond_Bin_SWAP_F2<SETOGT, "f2FCMPLT", BT32, MVC32>;
-defm : BRCond_Bin_SWAP_F2<SETOLE, "f2FCMPHS", BT32, MVC32>;
+defm : BRCond_Bin_F2<SETUNE, "f2FCMPNE", BT32, BF32, MVC32>;
+defm : BRCond_Bin_F2<SETOEQ, "f2FCMPNE", BF32, BT32, MVCV32, 1>;
+defm : BRCond_Bin_F2<SETOGE, "f2FCMPHS", BT32, BF32, MVC32>;
+defm : BRCond_Bin_F2<SETOLT, "f2FCMPLT", BT32, BF32, MVC32>;
+defm : BRCond_Bin_F2<SETUO, "f2FCMPUO", BT32, BF32, MVC32>;
+defm : BRCond_Bin_F2<SETO, "f2FCMPUO", BF32, BT32, MVCV32, 1>;
+defm : BRCond_Bin_SWAP_F2<SETOGT, "f2FCMPLT", BT32, BF32, MVC32>;
+defm : BRCond_Bin_SWAP_F2<SETOLE, "f2FCMPHS", BT32, BF32, MVC32>;
 
-defm : BRCond_Bin_F2<SETNE, "f2FCMPNE", BT32, MVC32>;
-defm : BRCond_Bin_F2<SETEQ, "f2FCMPNE", BF32, MVCV32, 1>;
-defm : BRCond_Bin_F2<SETGE, "f2FCMPHS", BT32, MVC32>;
-defm : BRCond_Bin_F2<SETLT, "f2FCMPLT", BT32, MVC32>;
-defm : BRCond_Bin_SWAP_F2<SETGT, "f2FCMPLT", BT32, MVC32>;
-defm : BRCond_Bin_SWAP_F2<SETLE, "f2FCMPHS", BT32, MVC32>;
+defm : BRCond_Bin_F2<SETNE, "f2FCMPNE", BT32, BF32, MVC32>;
+defm : BRCond_Bin_F2<SETEQ, "f2FCMPNE", BF32, BT32, MVCV32, 1>;
+defm : BRCond_Bin_F2<SETGE, "f2FCMPHS", BT32, BF32, MVC32>;
+defm : BRCond_Bin_F2<SETLT, "f2FCMPLT", BT32, BF32, MVC32>;
+defm : BRCond_Bin_SWAP_F2<SETGT, "f2FCMPLT", BT32, BF32, MVC32>;
+defm : BRCond_Bin_SWAP_F2<SETLE, "f2FCMPHS", BT32, BF32, MVC32>;
 
 // ------
 

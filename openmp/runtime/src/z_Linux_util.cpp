@@ -93,6 +93,7 @@ static kmp_cond_align_t __kmp_wait_cv;
 static kmp_mutex_align_t __kmp_wait_mx;
 
 kmp_uint64 __kmp_ticks_per_msec = 1000000;
+kmp_uint64 __kmp_ticks_per_usec = 1000;
 
 #ifdef DEBUG_SUSPEND
 static void __kmp_print_cond(char *buffer, kmp_cond_align_t *cond) {
@@ -485,7 +486,7 @@ static void *__kmp_launch_worker(void *thr) {
 #endif /* USE_ITT_BUILD */
 
 #if KMP_AFFINITY_SUPPORTED
-  __kmp_affinity_set_init_mask(gtid, FALSE);
+  __kmp_affinity_bind_init_mask(gtid);
 #endif
 
 #ifdef KMP_CANCEL_THREADS
@@ -1242,6 +1243,7 @@ static void __kmp_atfork_child(void) {
     *affinity = KMP_AFFINITY_INIT(affinity->env_var);
   __kmp_affin_fullMask = nullptr;
   __kmp_affin_origMask = nullptr;
+  __kmp_topology = nullptr;
 #endif // KMP_AFFINITY_SUPPORTED
 
 #if KMP_USE_MONITOR
@@ -1849,10 +1851,13 @@ int __kmp_read_from_file(char const *path, char const *format, ...) {
 
   va_start(args, format);
   FILE *f = fopen(path, "rb");
-  if (f == NULL)
+  if (f == NULL) {
+    va_end(args);
     return 0;
+  }
   result = vfscanf(f, format, args);
   fclose(f);
+  va_end(args);
 
   return result;
 }
@@ -1998,7 +2003,7 @@ kmp_uint64 __kmp_now_nsec() {
 /* Measure clock ticks per millisecond */
 void __kmp_initialize_system_tick() {
   kmp_uint64 now, nsec2, diff;
-  kmp_uint64 delay = 100000; // 50~100 usec on most machines.
+  kmp_uint64 delay = 1000000; // ~450 usec on most machines.
   kmp_uint64 nsec = __kmp_now_nsec();
   kmp_uint64 goal = __kmp_hardware_timestamp() + delay;
   while ((now = __kmp_hardware_timestamp()) < goal)
@@ -2006,9 +2011,11 @@ void __kmp_initialize_system_tick() {
   nsec2 = __kmp_now_nsec();
   diff = nsec2 - nsec;
   if (diff > 0) {
-    kmp_uint64 tpms = ((kmp_uint64)1e6 * (delay + (now - goal)) / diff);
-    if (tpms > 0)
-      __kmp_ticks_per_msec = tpms;
+    double tpus = 1000.0 * (double)(delay + (now - goal)) / (double)diff;
+    if (tpus > 0.0) {
+      __kmp_ticks_per_msec = (kmp_uint64)(tpus * 1000.0);
+      __kmp_ticks_per_usec = (kmp_uint64)tpus;
+    }
   }
 }
 #endif
@@ -2449,7 +2456,7 @@ finish: // Clean up and exit.
 #if !(KMP_ARCH_X86 || KMP_ARCH_X86_64 || KMP_MIC ||                            \
       ((KMP_OS_LINUX || KMP_OS_DARWIN) && KMP_ARCH_AARCH64) ||                 \
       KMP_ARCH_PPC64 || KMP_ARCH_RISCV64 || KMP_ARCH_LOONGARCH64 ||            \
-      KMP_ARCH_ARM)
+      KMP_ARCH_ARM || KMP_ARCH_VE)
 
 // we really only need the case with 1 argument, because CLANG always build
 // a struct of pointers to shared variables referenced in the outlined function

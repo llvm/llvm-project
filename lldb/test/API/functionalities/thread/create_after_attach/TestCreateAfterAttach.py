@@ -3,7 +3,6 @@ Test thread creation after process attach.
 """
 
 
-
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
@@ -11,14 +10,13 @@ from lldbsuite.test import lldbutil
 
 
 class CreateAfterAttachTestCase(TestBase):
-
     def setUp(self):
         # Call super's setUp().
         TestBase.setUp(self)
         # Find the line numbers for our breakpoints.
-        self.break_1 = line_number('main.cpp', '// Set first breakpoint here')
-        self.break_2 = line_number('main.cpp', '// Set second breakpoint here')
-        self.break_3 = line_number('main.cpp', '// Set third breakpoint here')
+        self.break_1 = line_number("main.cpp", "// Set first breakpoint here")
+        self.break_2 = line_number("main.cpp", "// Set second breakpoint here")
+        self.break_3 = line_number("main.cpp", "// Set third breakpoint here")
 
     # Occasionally hangs on Windows, may be same as other issues.
     @skipIfWindows
@@ -44,15 +42,18 @@ class CreateAfterAttachTestCase(TestBase):
 
         # This should create a breakpoint in the main thread.
         lldbutil.run_break_set_by_file_and_line(
-            self, "main.cpp", self.break_1, num_expected_locations=1)
+            self, "main.cpp", self.break_1, num_expected_locations=1
+        )
 
         # This should create a breakpoint in the second child thread.
         lldbutil.run_break_set_by_file_and_line(
-            self, "main.cpp", self.break_2, num_expected_locations=1)
+            self, "main.cpp", self.break_2, num_expected_locations=1
+        )
 
         # This should create a breakpoint in the first child thread.
         lldbutil.run_break_set_by_file_and_line(
-            self, "main.cpp", self.break_3, num_expected_locations=1)
+            self, "main.cpp", self.break_3, num_expected_locations=1
+        )
 
         # Note:  With std::thread, we cannot rely on particular thread numbers.  Using
         # std::thread may cause the program to spin up a thread pool (and it does on
@@ -62,11 +63,11 @@ class CreateAfterAttachTestCase(TestBase):
         self.runCmd("continue")
 
         # The stop reason of the thread should be breakpoint.
-        self.expect("thread list", STOPPED_DUE_TO_BREAKPOINT,
-                    substrs=['stopped',
-                             '* thread #',
-                             'main',
-                             'stop reason = breakpoint'])
+        self.expect(
+            "thread list",
+            STOPPED_DUE_TO_BREAKPOINT,
+            substrs=["stopped", "* thread #", "main", "stop reason = breakpoint"],
+        )
 
         # Change a variable to escape the loop
         self.runCmd("expression main_thread_continue = 1")
@@ -75,11 +76,16 @@ class CreateAfterAttachTestCase(TestBase):
         self.runCmd("continue")
 
         # The stop reason of the thread should be breakpoint.
-        self.expect("thread list", STOPPED_DUE_TO_BREAKPOINT,
-                    substrs=['stopped',
-                             '* thread #',
-                             'thread_2_func',
-                             'stop reason = breakpoint'])
+        self.expect(
+            "thread list",
+            STOPPED_DUE_TO_BREAKPOINT,
+            substrs=[
+                "stopped",
+                "* thread #",
+                "thread_2_func",
+                "stop reason = breakpoint",
+            ],
+        )
 
         # Change a variable to escape the loop
         self.runCmd("expression child_thread_continue = 1")
@@ -89,16 +95,19 @@ class CreateAfterAttachTestCase(TestBase):
 
         # The stop reason of the thread should be breakpoint.
         # Thread 3 may or may not have already exited.
-        self.expect("thread list", STOPPED_DUE_TO_BREAKPOINT,
-                    substrs=['stopped',
-                             '* thread #',
-                             'thread_1_func',
-                             'stop reason = breakpoint'])
+        self.expect(
+            "thread list",
+            STOPPED_DUE_TO_BREAKPOINT,
+            substrs=[
+                "stopped",
+                "* thread #",
+                "thread_1_func",
+                "stop reason = breakpoint",
+            ],
+        )
 
         # Run to completion
         self.runCmd("continue")
 
         # At this point, the inferior process should have exited.
-        self.assertEqual(
-            process.GetState(), lldb.eStateExited,
-            PROCESS_EXITED)
+        self.assertEqual(process.GetState(), lldb.eStateExited, PROCESS_EXITED)

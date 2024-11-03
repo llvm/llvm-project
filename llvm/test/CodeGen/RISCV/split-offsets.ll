@@ -61,7 +61,7 @@ define void @test2(ptr %sp, ptr %t, i32 %n) {
 ; RV32I-NEXT:    addi a4, a4, -1920
 ; RV32I-NEXT:    add a1, a1, a4
 ; RV32I-NEXT:    add a0, a0, a4
-; RV32I-NEXT:    bge a3, a2, .LBB1_2
+; RV32I-NEXT:    blez a2, .LBB1_2
 ; RV32I-NEXT:  .LBB1_1: # %while_body
 ; RV32I-NEXT:    # =>This Inner Loop Header: Depth=1
 ; RV32I-NEXT:    addi a4, a3, 1
@@ -70,7 +70,7 @@ define void @test2(ptr %sp, ptr %t, i32 %n) {
 ; RV32I-NEXT:    sw a4, 0(a1)
 ; RV32I-NEXT:    sw a3, 4(a1)
 ; RV32I-NEXT:    mv a3, a4
-; RV32I-NEXT:    blt a3, a2, .LBB1_1
+; RV32I-NEXT:    blt a4, a2, .LBB1_1
 ; RV32I-NEXT:  .LBB1_2: # %while_end
 ; RV32I-NEXT:    ret
 ;
@@ -83,7 +83,7 @@ define void @test2(ptr %sp, ptr %t, i32 %n) {
 ; RV64I-NEXT:    add a1, a1, a4
 ; RV64I-NEXT:    add a0, a0, a4
 ; RV64I-NEXT:    sext.w a2, a2
-; RV64I-NEXT:    bge a3, a2, .LBB1_2
+; RV64I-NEXT:    blez a2, .LBB1_2
 ; RV64I-NEXT:  .LBB1_1: # %while_body
 ; RV64I-NEXT:    # =>This Inner Loop Header: Depth=1
 ; RV64I-NEXT:    addiw a4, a3, 1
@@ -92,7 +92,7 @@ define void @test2(ptr %sp, ptr %t, i32 %n) {
 ; RV64I-NEXT:    sw a4, 0(a1)
 ; RV64I-NEXT:    sw a3, 4(a1)
 ; RV64I-NEXT:    mv a3, a4
-; RV64I-NEXT:    blt a3, a2, .LBB1_1
+; RV64I-NEXT:    blt a4, a2, .LBB1_1
 ; RV64I-NEXT:  .LBB1_2: # %while_end
 ; RV64I-NEXT:    ret
 entry:
@@ -149,5 +149,39 @@ entry:
   %1 = getelementptr i8, ptr %splitgep, i64 8
   store i32 2, ptr %0, align 4
   store i32 3, ptr %1, align 4
+  ret void
+}
+
+; Test from PR62734.
+define void @test4(ptr %dest) {
+; RV32I-LABEL: test4:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    addi a0, a0, 2047
+; RV32I-NEXT:    addi a1, a0, 1
+; RV32I-NEXT:    li a2, 1
+; RV32I-NEXT:    sb a2, 1(a0)
+; RV32I-NEXT:    sb a2, 1(a1)
+; RV32I-NEXT:    sb a2, 2(a1)
+; RV32I-NEXT:    sb a2, 3(a1)
+; RV32I-NEXT:    ret
+;
+; RV64I-LABEL: test4:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    addi a0, a0, 2047
+; RV64I-NEXT:    addi a1, a0, 1
+; RV64I-NEXT:    li a2, 1
+; RV64I-NEXT:    sb a2, 1(a0)
+; RV64I-NEXT:    sb a2, 1(a1)
+; RV64I-NEXT:    sb a2, 2(a1)
+; RV64I-NEXT:    sb a2, 3(a1)
+; RV64I-NEXT:    ret
+  %p1 = getelementptr i8, ptr %dest, i32 2048
+  store i8 1, ptr %p1
+  %p2 = getelementptr i8, ptr %dest, i32 2049
+  store i8 1, ptr %p2
+  %p3 = getelementptr i8, ptr %dest, i32 2050
+  store i8 1, ptr %p3
+  %p4 = getelementptr i8, ptr %dest, i32 2051
+  store i8 1, ptr %p4
   ret void
 }

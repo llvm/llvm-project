@@ -13,6 +13,7 @@
 #include "llvm/Support/Path.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/ScopeExit.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/Config/config.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/Support/Endian.h"
@@ -22,6 +23,7 @@
 #include "llvm/Support/Process.h"
 #include "llvm/Support/Signals.h"
 #include <cctype>
+#include <cerrno>
 
 #if !defined(_MSC_VER) && !defined(__MINGW32__)
 #include <unistd.h>

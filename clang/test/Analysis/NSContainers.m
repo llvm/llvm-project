@@ -1,4 +1,7 @@
-// RUN: %clang_analyze_cc1  -Wno-objc-literal-conversion -analyzer-checker=core,osx.cocoa.NonNilReturnValue,osx.cocoa.NilArg,osx.cocoa.Loops,debug.ExprInspection -verify -Wno-objc-root-class %s
+// RUN: %clang_analyze_cc1 -Wno-objc-literal-conversion -Wno-objc-root-class -fobjc-arc \
+// RUN:   -analyzer-checker=core,osx.cocoa,nullability \
+// RUN:   -analyzer-config eagerly-assume=false \
+// RUN:   -analyzer-checker=debug.ExprInspection -verify %s
 
 void clang_analyzer_eval(int);
 
@@ -31,13 +34,13 @@ typedef struct _NSZone NSZone;
 @end
 
 typedef struct {
-  unsigned long state;
-  id *itemsPtr;
-  unsigned long *mutationsPtr;
-  unsigned long extra[5];
+    unsigned long state;
+    id __unsafe_unretained _Nullable * _Nullable itemsPtr;
+    unsigned long * _Nullable mutationsPtr;
+    unsigned long extra[5];
 } NSFastEnumerationState;
 @protocol NSFastEnumeration
-- (NSUInteger)countByEnumeratingWithState:(NSFastEnumerationState *)state objects:(id [])buffer count:(NSUInteger)len;
+- (NSUInteger)countByEnumeratingWithState:(NSFastEnumerationState *)state objects:(id __unsafe_unretained _Nullable [_Nonnull])buffer count:(NSUInteger)len;
 @end
 
 @interface NSArray : NSObject <NSCopying, NSMutableCopying, NSSecureCoding, NSFastEnumeration>
@@ -322,4 +325,44 @@ void testInlinedDefensiveCheck(NSMutableDictionary *dict, id obj) {
   // The check in getStringFromString() is not a good indication
   // that 'obj' can be nil in this context.
   dict[obj] = getStringFromString(obj); // no-warning
+}
+
+Foo * getMightBeNullFoo();
+Foo * _Nonnull getNonnullFoo();
+Foo * _Nullable getNullableFoo();
+
+void testCreateDictionaryLiteralWithNullableArg() {
+  Foo *p1 = getMightBeNullFoo();
+  Foo *p2 = getNonnullFoo();
+  Foo *p3 = getNullableFoo();
+
+  clang_analyzer_eval(p1 == nil); // expected-warning {{UNKNOWN}}
+  clang_analyzer_eval(p2 == nil); // expected-warning {{UNKNOWN}}
+  clang_analyzer_eval(p3 == nil); // expected-warning {{UNKNOWN}}
+
+  (void)@{@"abc" : p1}; // no-warning
+  (void)@{@"abc" : p2}; // no-warning
+  (void)@{@"abc" : p3}; // expected-warning {{Nullable pointer is passed to a callee that requires a non-null}}
+
+  clang_analyzer_eval(p1 == nil); // expected-warning {{FALSE}}
+  clang_analyzer_eval(p2 == nil); // expected-warning {{FALSE}}
+  clang_analyzer_eval(p3 == nil); // expected-warning {{FALSE}}
+}
+
+void testCreateArrayLiteralWithNullableArg() {
+  Foo *p1 = getMightBeNullFoo();
+  Foo *p2 = getNonnullFoo();
+  Foo *p3 = getNullableFoo();
+
+  clang_analyzer_eval(p1 == nil); // expected-warning {{UNKNOWN}}
+  clang_analyzer_eval(p2 == nil); // expected-warning {{UNKNOWN}}
+  clang_analyzer_eval(p3 == nil); // expected-warning {{UNKNOWN}}
+
+  (void)@[p1]; // no-warning
+  (void)@[p2]; // no-warning
+  (void)@[p3]; // expected-warning {{Nullable pointer is passed to a callee that requires a non-null}}
+
+  clang_analyzer_eval(p1 == nil); // expected-warning {{FALSE}}
+  clang_analyzer_eval(p2 == nil); // expected-warning {{FALSE}}
+  clang_analyzer_eval(p3 == nil); // expected-warning {{FALSE}}
 }

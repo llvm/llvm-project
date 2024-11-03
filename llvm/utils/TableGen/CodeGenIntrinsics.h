@@ -15,7 +15,6 @@
 
 #include "SDNodeProperties.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/Support/MachineValueType.h"
 #include "llvm/Support/ModRef.h"
 #include <string>
 #include <tuple>
@@ -43,19 +42,13 @@ struct CodeGenIntrinsic {
     /// only populated when in the context of a target .td file. When building
     /// Intrinsics.td, this isn't available, because we don't know the target
     /// pointer size.
-    std::vector<MVT::SimpleValueType> RetVTs;
-
-    /// The records for each return type.
-    std::vector<Record *> RetTypeDefs;
+    std::vector<Record *> RetTys;
 
     /// The MVT::SimpleValueType for each parameter type. Note that this list is
     /// only populated when in the context of a target .td file.  When building
     /// Intrinsics.td, this isn't available, because we don't know the target
     /// pointer size.
-    std::vector<MVT::SimpleValueType> ParamVTs;
-
-    /// The records for each parameter type.
-    std::vector<Record *> ParamTypeDefs;
+    std::vector<Record *> ParamTys;
   };
 
   IntrinsicSignature IS;
@@ -110,6 +103,9 @@ struct CodeGenIntrinsic {
   // True if the intrinsic is marked as speculatable.
   bool isSpeculatable;
 
+  // True if the intrinsic is marked as strictfp.
+  bool isStrictFP;
+
   enum ArgAttrKind {
     NoCapture,
     NoAlias,
@@ -120,7 +116,8 @@ struct CodeGenIntrinsic {
     WriteOnly,
     ReadNone,
     ImmArg,
-    Alignment
+    Alignment,
+    Dereferenceable
   };
 
   struct ArgAttribute {

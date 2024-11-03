@@ -10,7 +10,6 @@ define i1 @gep_idx_implicit_truncate(ptr %dst, i64 %off) {
 ; CHECK-NEXT:    [[POS:%.*]] = icmp sge i64 [[OFF:%.*]], 0
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[POS]])
 ; CHECK-NEXT:    [[GEP_OFF:%.*]] = getelementptr inbounds i8, ptr [[DST:%.*]], i64 [[OFF]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ule ptr [[DST]], [[GEP_OFF]]
 ; CHECK-NEXT:    ret i1 true
 ;
   %pos = icmp sge i64 %off, 0

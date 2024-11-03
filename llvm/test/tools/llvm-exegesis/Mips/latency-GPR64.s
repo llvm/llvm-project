@@ -1,4 +1,5 @@
 # RUN: llvm-exegesis -mode=latency -opcode-name=AND64 | FileCheck %s
+# REQUIRES: exegesis-can-execute-mips, exegesis-can-measure-latency
 
 CHECK:      ---
 CHECK-NEXT: mode: latency

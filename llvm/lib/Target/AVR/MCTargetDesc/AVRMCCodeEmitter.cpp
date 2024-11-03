@@ -146,7 +146,8 @@ unsigned AVRMCCodeEmitter::encodeMemri(const MCInst &MI, unsigned OpNo,
 
   switch (RegOp.getReg()) {
   default:
-    llvm_unreachable("Expected either Y or Z register");
+    Ctx.reportError(MI.getLoc(), "Expected either Y or Z register");
+    return 0;
   case AVR::R31R30:
     RegBit = 0;
     break; // Z register
@@ -164,7 +165,7 @@ unsigned AVRMCCodeEmitter::encodeMemri(const MCInst &MI, unsigned OpNo,
     Fixups.push_back(MCFixup::create(0, OffsetOp.getExpr(),
                                      MCFixupKind(AVR::fixup_6), MI.getLoc()));
   } else {
-    llvm_unreachable("invalid value for offset");
+    llvm_unreachable("Invalid value for offset");
   }
 
   return (RegBit << 6) | OffsetBits;
@@ -269,18 +270,8 @@ unsigned AVRMCCodeEmitter::getMachineOpValue(const MCInst &MI,
   return getExprOpValue(MO.getExpr(), Fixups, STI);
 }
 
-void AVRMCCodeEmitter::emitInstruction(uint64_t Val, unsigned Size,
-                                       const MCSubtargetInfo &STI,
-                                       raw_ostream &OS) const {
-  size_t WordCount = Size / 2;
-
-  for (int64_t i = WordCount - 1; i >= 0; --i) {
-    uint16_t Word = (Val >> (i * 16)) & 0xFFFF;
-    support::endian::write(OS, Word, support::endianness::little);
-  }
-}
-
-void AVRMCCodeEmitter::encodeInstruction(const MCInst &MI, raw_ostream &OS,
+void AVRMCCodeEmitter::encodeInstruction(const MCInst &MI,
+                                         SmallVectorImpl<char> &CB,
                                          SmallVectorImpl<MCFixup> &Fixups,
                                          const MCSubtargetInfo &STI) const {
   const MCInstrDesc &Desc = MCII.get(MI.getOpcode());
@@ -291,7 +282,11 @@ void AVRMCCodeEmitter::encodeInstruction(const MCInst &MI, raw_ostream &OS,
   assert(Size > 0 && "Instruction size cannot be zero");
 
   uint64_t BinaryOpCode = getBinaryCodeForInstr(MI, Fixups, STI);
-  emitInstruction(BinaryOpCode, Size, STI, OS);
+
+  for (int64_t i = Size / 2 - 1; i >= 0; --i) {
+    uint16_t Word = (BinaryOpCode >> (i * 16)) & 0xFFFF;
+    support::endian::write(CB, Word, support::endianness::little);
+  }
 }
 
 MCCodeEmitter *createAVRMCCodeEmitter(const MCInstrInfo &MCII,

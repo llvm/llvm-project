@@ -64,8 +64,10 @@ public:
   FloatType getFloat8E4M3FNType();
   FloatType getFloat8E5M2FNUZType();
   FloatType getFloat8E4M3FNUZType();
+  FloatType getFloat8E4M3B11FNUZType();
   FloatType getBF16Type();
   FloatType getF16Type();
+  FloatType getTF32Type();
   FloatType getF32Type();
   FloatType getF64Type();
   FloatType getF80Type();
@@ -115,7 +117,7 @@ public:
   // Returns a 0-valued attribute of the given `type`. This function only
   // supports boolean, integer, and 16-/32-/64-bit float types, and vector or
   // ranked tensor of them. Returns null attribute otherwise.
-  Attribute getZeroAttr(Type type);
+  TypedAttr getZeroAttr(Type type);
 
   // Convenience methods for fixed types.
   FloatAttr getF16FloatAttr(float value);
@@ -137,6 +139,9 @@ public:
   DenseIntElementsAttr getI32VectorAttr(ArrayRef<int32_t> values);
   DenseIntElementsAttr getI64VectorAttr(ArrayRef<int64_t> values);
   DenseIntElementsAttr getIndexVectorAttr(ArrayRef<int64_t> values);
+
+  DenseFPElementsAttr getF32VectorAttr(ArrayRef<float> values);
+  DenseFPElementsAttr getF64VectorAttr(ArrayRef<double> values);
 
   /// Tensor-typed DenseIntElementsAttr getters. `values` can be empty.
   /// These are generally preferable for representing general lists of integers
@@ -402,7 +407,7 @@ public:
     if (Operation *op = val.getDefiningOp()) {
       setInsertionPointAfter(op);
     } else {
-      auto blockArg = val.cast<BlockArgument>();
+      auto blockArg = llvm::cast<BlockArgument>(val);
       setInsertionPointToStart(blockArg.getOwner());
     }
   }

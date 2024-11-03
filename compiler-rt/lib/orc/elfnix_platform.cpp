@@ -12,6 +12,7 @@
 
 #include "elfnix_platform.h"
 #include "common.h"
+#include "compiler.h"
 #include "error.h"
 #include "wrapper_function_utils.h"
 
@@ -33,8 +34,13 @@ ORC_RT_JIT_DISPATCH_TAG(__orc_rt_elfnix_symbol_lookup_tag)
 
 // eh-frame registration functions, made available via aliases
 // installed by the Platform
-extern "C" void __orc_rt_register_eh_frame_section(const void *);
-extern "C" void __orc_rt_deregister_eh_frame_section(const void *);
+extern "C" void __register_frame(const void *);
+extern "C" void __deregister_frame(const void *);
+
+extern "C" void
+__unw_add_dynamic_eh_frame_section(const void *) ORC_RT_WEAK_IMPORT;
+extern "C" void
+__unw_remove_dynamic_eh_frame_section(const void *) ORC_RT_WEAK_IMPORT;
 
 namespace {
 
@@ -96,8 +102,7 @@ public:
   static ELFNixPlatformRuntimeState &get();
   static void destroy();
 
-  ELFNixPlatformRuntimeState(void *DSOHandle)
-      : PlatformJDDSOHandle(DSOHandle) {}
+  ELFNixPlatformRuntimeState(void *DSOHandle);
 
   // Delete copy and move constructors.
   ELFNixPlatformRuntimeState(const ELFNixPlatformRuntimeState &) = delete;
@@ -143,6 +148,10 @@ private:
 
   void *PlatformJDDSOHandle;
 
+  // Frame registration functions:
+  void (*registerEHFrameSection)(const void *) = nullptr;
+  void (*deregisterEHFrameSection)(const void *) = nullptr;
+
   // FIXME: Move to thread-state.
   std::string DLFcnError;
 
@@ -171,11 +180,22 @@ void ELFNixPlatformRuntimeState::destroy() {
   delete MOPS;
 }
 
+ELFNixPlatformRuntimeState::ELFNixPlatformRuntimeState(void *DSOHandle)
+    : PlatformJDDSOHandle(DSOHandle) {
+  if (__unw_add_dynamic_eh_frame_section &&
+      __unw_remove_dynamic_eh_frame_section) {
+    registerEHFrameSection = __unw_add_dynamic_eh_frame_section;
+    deregisterEHFrameSection = __unw_remove_dynamic_eh_frame_section;
+  } else {
+    registerEHFrameSection = __register_frame;
+    deregisterEHFrameSection = __deregister_frame;
+  }
+}
+
 Error ELFNixPlatformRuntimeState::registerObjectSections(
     ELFNixPerObjectSectionsToRegister POSR) {
   if (POSR.EHFrameSection.Start)
-    __orc_rt_register_eh_frame_section(
-        POSR.EHFrameSection.Start.toPtr<const char *>());
+    registerEHFrameSection(POSR.EHFrameSection.Start.toPtr<const char *>());
 
   if (POSR.ThreadDataSection.Start) {
     if (auto Err = registerThreadDataSection(
@@ -189,8 +209,7 @@ Error ELFNixPlatformRuntimeState::registerObjectSections(
 Error ELFNixPlatformRuntimeState::deregisterObjectSections(
     ELFNixPerObjectSectionsToRegister POSR) {
   if (POSR.EHFrameSection.Start)
-    __orc_rt_deregister_eh_frame_section(
-        POSR.EHFrameSection.Start.toPtr<const char *>());
+    deregisterEHFrameSection(POSR.EHFrameSection.Start.toPtr<const char *>());
 
   return Error::success();
 }

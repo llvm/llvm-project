@@ -70,8 +70,18 @@ bool X86MCSymbolizer::tryAddingSymbolicOperand(
 
     const MCSymbol *TargetSymbol;
     uint64_t TargetOffset;
-    std::tie(TargetSymbol, TargetOffset) =
-        BC.handleAddressRef(Value, Function, /*IsPCRel=*/true);
+
+    if (!CreateNewSymbols) {
+      if (BinaryData *BD = BC.getBinaryDataContainingAddress(Value)) {
+        TargetSymbol = BD->getSymbol();
+        TargetOffset = Value - BD->getAddress();
+      } else {
+        return false;
+      }
+    } else {
+      std::tie(TargetSymbol, TargetOffset) =
+          BC.handleAddressRef(Value, Function, /*IsPCRel=*/true);
+    }
 
     addOperand(TargetSymbol, TargetOffset);
 
@@ -98,10 +108,15 @@ bool X86MCSymbolizer::tryAddingSymbolicOperand(
 
     // The linker converted the PC-relative address to an absolute one.
     // Symbolize this address.
-    BC.handleAddressRef(Value, Function, /*IsPCRel=*/false);
+    if (CreateNewSymbols)
+      BC.handleAddressRef(Value, Function, /*IsPCRel=*/false);
+
     const BinaryData *Target = BC.getBinaryDataAtAddress(Value);
-    assert(Target &&
-           "BinaryData should exist at converted GOTPCRELX destination");
+    if (!Target) {
+      assert(!CreateNewSymbols &&
+             "BinaryData should exist at converted GOTPCRELX destination");
+      return false;
+    }
 
     addOperand(Target->getSymbol(), /*Addend=*/0);
 
@@ -120,7 +135,8 @@ bool X86MCSymbolizer::tryAddingSymbolicOperand(
     SymbolValue += InstAddress + ImmOffset;
 
   // Process reference to the symbol.
-  BC.handleAddressRef(SymbolValue, Function, Relocation->isPCRelative());
+  if (CreateNewSymbols)
+    BC.handleAddressRef(SymbolValue, Function, Relocation->isPCRelative());
 
   uint64_t Addend = Relocation->Addend;
   // Real addend for pc-relative targets is adjusted with a delta from

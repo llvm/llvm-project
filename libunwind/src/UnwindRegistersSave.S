@@ -174,11 +174,13 @@ DEFINE_LIBUNWIND_FUNCTION(__unw_getcontext)
   sw    $31, (4 * 31)($4)
   # Store return address to pc
   sw    $31, (4 * 32)($4)
+#if __mips_isa_rev < 6
   # hi and lo
   mfhi  $8
   sw    $8,  (4 * 33)($4)
   mflo  $8
   sw    $8,  (4 * 34)($4)
+#endif
 #ifdef __mips_hard_float
 #if __mips_fpr != 64
   sdc1  $f0, (4 * 36 + 8 * 0)($4)
@@ -255,11 +257,13 @@ DEFINE_LIBUNWIND_FUNCTION(__unw_getcontext)
   .endr
   # Store return address to pc
   sd    $31, (8 * 32)($4)
+#if __mips_isa_rev < 6
   # hi and lo
   mfhi  $8
   sd    $8,  (8 * 33)($4)
   mflo  $8
   sd    $8,  (8 * 34)($4)
+#endif
 #ifdef __mips_hard_float
   .irp i,FROM_0_TO_31
     sdc1 $f\i, (280+8*\i)($4)

@@ -226,9 +226,29 @@ multiclass MadFmaMixPats<SDPatternOperator fma_like,
                                    DSTCLAMP.ENABLE,
                                    (i32 (IMPLICIT_DEF)))))
   >;
+
+  def : GCNPat <
+    (f16 (fpround (fmul (f32 (VOP3PMadMixMods f32:$src0, i32:$src0_modifiers)),
+                        (f32 (VOP3PMadMixMods f32:$src1, i32:$src1_modifiers))))),
+    (mixlo_inst $src0_modifiers, $src0,
+                $src1_modifiers, $src1,
+                (i32 0), (i32 0),
+                DSTCLAMP.NONE,
+                (i32 (IMPLICIT_DEF)))
+  >;
+
+  def : GCNPat <
+    (build_vector f16:$elt0, (fpround (fmul (f32 (VOP3PMadMixMods f32:$src0, i32:$src0_modifiers)),
+                                            (f32 (VOP3PMadMixMods f32:$src1, i32:$src1_modifiers))))),
+    (v2f16 (mixhi_inst $src0_modifiers, $src0,
+                       $src1_modifiers, $src1,
+                       (i32 0), (i32 0),
+                       DSTCLAMP.NONE,
+                       VGPR_32:$elt0))
+  >;
 }
 
-let SubtargetPredicate = HasMadMixInsts in {
+let SubtargetPredicate = HasMadMixInsts, OtherPredicates = [NoFP32Denormals] in {
 
 // These are VOP3a-like opcodes which accept no omod.
 // Size of src arguments (16/32) is controlled by op_sel.
@@ -248,7 +268,7 @@ defm V_MAD_MIXHI_F16 : VOP3_VOP3PInst<"v_mad_mixhi_f16", VOP3P_Mix_Profile<VOP_F
 }
 
 defm : MadFmaMixPats<fmad, V_MAD_MIX_F32, V_MAD_MIXLO_F16, V_MAD_MIXHI_F16>;
-} // End SubtargetPredicate = HasMadMixInsts
+} // End SubtargetPredicate = HasMadMixInsts, OtherPredicates = [NoFP32Denormals]
 
 
 // Essentially the same as the mad_mix versions
@@ -416,6 +436,20 @@ multiclass VOP3PDOTIUInst <string OpName, SDPatternOperator intrinsic_node> {
 let SubtargetPredicate = HasDot8Insts  in {
 defm V_DOT4_I32_IU8 : VOP3PDOTIUInst<"v_dot4_i32_iu8", int_amdgcn_sudot4>;
 defm V_DOT8_I32_IU4 : VOP3PDOTIUInst<"v_dot8_i32_iu4", int_amdgcn_sudot8>;
+
+def : GCNPat < (int_amdgcn_sdot8 i32:$src0,
+                                 i32:$src1,
+                                 i32:$src2, (i1 timm:$clamp)),
+               (V_DOT8_I32_IU4  (i32 9), i32:$src0,
+                                (i32 9), i32:$src1, (i32 8), i32:$src2, i1:$clamp)
+>;
+
+def : GCNPat < (int_amdgcn_sdot4 i32:$src0,
+                                 i32:$src1,
+                                 i32:$src2, (i1 timm:$clamp)),
+               (V_DOT4_I32_IU8  (i32 9), i32:$src0,
+                                (i32 9), i32:$src1, (i32 8), i32:$src2, i1:$clamp)
+>;
 } // End SubtargetPredicate = HasDot8Insts
 
 def : UDot2Pat<V_DOT2_U32_U16>;
@@ -607,7 +641,7 @@ multiclass MAIInst<string OpName, string P, SDPatternOperator node,
                         MFMATable<0, NAME # "_vgprcd_e64">;
     }
 
-    foreach _ = BoolToList<NoDstOverlap>.ret in {
+    if NoDstOverlap then {
       let Constraints = !if(NoDstOverlap, "$vdst = $src2", ""),
           isConvertibleToThreeAddress = NoDstOverlap,
           Mnemonic = OpName in {
@@ -717,12 +751,16 @@ def MAIInstInfoTable : GenericTable {
   let PrimaryKeyName = "getMAIInstInfoHelper";
 }
 
-let SubtargetPredicate = HasPackedFP32Ops, isCommutable = 1, isReMaterializable = 1 in {
-  defm V_PK_FMA_F32 : VOP3PInst<"v_pk_fma_f32", VOP3P_Profile<VOP_V2F32_V2F32_V2F32_V2F32, VOP3_PACKED>, any_fma>;
-  defm V_PK_MUL_F32 : VOP3PInst<"v_pk_mul_f32", VOP3P_Profile<VOP_V2F32_V2F32_V2F32, VOP3_PACKED>, any_fmul>;
-  defm V_PK_ADD_F32 : VOP3PInst<"v_pk_add_f32", VOP3P_Profile<VOP_V2F32_V2F32_V2F32, VOP3_PACKED>, any_fadd>;
+let isCommutable = 1, isReMaterializable = 1 in {
+  let SubtargetPredicate = HasPackedFP32Ops in {
+    defm V_PK_FMA_F32 : VOP3PInst<"v_pk_fma_f32", VOP3P_Profile<VOP_V2F32_V2F32_V2F32_V2F32, VOP3_PACKED>, any_fma>;
+    defm V_PK_MUL_F32 : VOP3PInst<"v_pk_mul_f32", VOP3P_Profile<VOP_V2F32_V2F32_V2F32, VOP3_PACKED>, any_fmul>;
+    defm V_PK_ADD_F32 : VOP3PInst<"v_pk_add_f32", VOP3P_Profile<VOP_V2F32_V2F32_V2F32, VOP3_PACKED>, any_fadd>;
+  } // End SubtargetPredicate = HasPackedFP32Ops
+
+  let SubtargetPredicate = HasPkMovB32 in
   defm V_PK_MOV_B32 : VOP3PInst<"v_pk_mov_b32", VOP3P_Profile<VOP_V2I32_V2I32_V2I32, VOP3_PACKED>>;
-} // End SubtargetPredicate = HasPackedFP32Ops, isCommutable = 1
+} // End isCommutable = 1, isReMaterializable = 1
 
 def : MnemonicAlias<"v_accvgpr_read",  "v_accvgpr_read_b32">;
 def : MnemonicAlias<"v_accvgpr_write", "v_accvgpr_write_b32">;
@@ -1015,7 +1053,7 @@ multiclass VOP3P_Real_MFMA_gfx940_aliases<string NameFrom, string NameTo, string
                                           VOPProfile Pfl_ACD = PS_ACD.Pfl,
                                           VOPProfile Pfl_VCD = PS_VCD.Pfl> {
   let Predicates = [isGFX940Plus] in {
-    foreach _ = BoolToList<!ne(NameFrom, NameTo)>.ret in {
+    if !ne(NameFrom, NameTo) then {
       def : InstAlias <NameTo # " " # PS_ACD.AsmOperands,
                        (!cast<VOP3P_Real>(Op # "_gfx940_acd") Pfl_ACD.DstRC:$vdst,
                            Pfl_ACD.Src0RC64:$src0, Pfl_ACD.Src1RC64:$src1, Pfl_ACD.Src2RC64:$src2,
@@ -1043,7 +1081,7 @@ multiclass VOP3P_Real_MFMA_gfx940<bits<7> op, string Name = !cast<VOP3_Pseudo>(N
 
   defm : VOP3P_Real_MFMA_gfx940_aliases<Name, PS_ACD.Mnemonic, NAME>;
 
-  foreach _ = BoolToList<!ne(!subst("_1k", "", PS_ACD.Mnemonic), PS_ACD.Mnemonic)>.ret in
+  if !ne(!subst("_1k", "", PS_ACD.Mnemonic), PS_ACD.Mnemonic) then
   defm : VOP3P_Real_MFMA_gfx940_aliases<Name, !subst("_1k", "", PS_ACD.Mnemonic), NAME>;
 }
 
@@ -1192,12 +1230,10 @@ defm V_SMFMAC_F32_32X32X32_BF8_FP8 : VOP3P_Real_SMFMAC <0x7d, "v_smfmac_f32_32x3
 defm V_SMFMAC_F32_32X32X32_FP8_BF8 : VOP3P_Real_SMFMAC <0x7e, "v_smfmac_f32_32x32x32fp8bf8">;
 defm V_SMFMAC_F32_32X32X32_FP8_FP8 : VOP3P_Real_SMFMAC <0x7f, "v_smfmac_f32_32x32x32fp8fp8">;
 
-let SubtargetPredicate = HasPackedFP32Ops in {
-  defm V_PK_FMA_F32 : VOP3P_Real_vi <0x30>;
-  defm V_PK_MUL_F32 : VOP3P_Real_vi <0x31>;
-  defm V_PK_ADD_F32 : VOP3P_Real_vi <0x32>;
-  defm V_PK_MOV_B32 : VOP3P_Real_vi <0x33>;
-} // End SubtargetPredicate = HasPackedFP32Ops
+defm V_PK_FMA_F32 : VOP3P_Real_vi <0x30>;
+defm V_PK_MUL_F32 : VOP3P_Real_vi <0x31>;
+defm V_PK_ADD_F32 : VOP3P_Real_vi <0x32>;
+defm V_PK_MOV_B32 : VOP3P_Real_vi <0x33>;
 
 //===----------------------------------------------------------------------===//
 // GFX10.

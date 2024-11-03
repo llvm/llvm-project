@@ -1786,6 +1786,7 @@ PathDiagnosticPieceRef StoreSiteFinder::VisitNode(const ExplodedNode *Succ,
 void TrackConstraintBRVisitor::Profile(llvm::FoldingSetNodeID &ID) const {
   static int tag = 0;
   ID.AddPointer(&tag);
+  ID.AddString(Message);
   ID.AddBoolean(Assumption);
   ID.Add(Constraint);
 }
@@ -1796,8 +1797,12 @@ const char *TrackConstraintBRVisitor::getTag() {
   return "TrackConstraintBRVisitor";
 }
 
+bool TrackConstraintBRVisitor::isZeroCheck() const {
+  return !Assumption && Constraint.getAs<Loc>();
+}
+
 bool TrackConstraintBRVisitor::isUnderconstrained(const ExplodedNode *N) const {
-  if (IsZeroCheck)
+  if (isZeroCheck())
     return N->getState()->isNull(Constraint).isUnderconstrained();
   return (bool)N->getState()->assume(Constraint, !Assumption);
 }
@@ -1827,19 +1832,6 @@ PathDiagnosticPieceRef TrackConstraintBRVisitor::VisitNode(
     // the transition point.
     assert(!isUnderconstrained(N));
 
-    // We found the transition point for the constraint.  We now need to
-    // pretty-print the constraint. (work-in-progress)
-    SmallString<64> sbuf;
-    llvm::raw_svector_ostream os(sbuf);
-
-    if (isa<Loc>(Constraint)) {
-      os << "Assuming pointer value is ";
-      os << (Assumption ? "non-null" : "null");
-    }
-
-    if (os.str().empty())
-      return nullptr;
-
     // Construct a new PathDiagnosticPiece.
     ProgramPoint P = N->getLocation();
 
@@ -1854,7 +1846,7 @@ PathDiagnosticPieceRef TrackConstraintBRVisitor::VisitNode(
     if (!L.isValid())
       return nullptr;
 
-    auto X = std::make_shared<PathDiagnosticEventPiece>(L, os.str());
+    auto X = std::make_shared<PathDiagnosticEventPiece>(L, Message);
     X->setTag(getTag());
     return std::move(X);
   }
@@ -2366,8 +2358,9 @@ public:
         // null.
         if (V.getAsLocSymbol(/*IncludeBaseRegions=*/true))
           if (LVState->isNull(V).isConstrainedTrue())
-            Report.addVisitor<TrackConstraintBRVisitor>(V.castAs<DefinedSVal>(),
-                                                        false);
+            Report.addVisitor<TrackConstraintBRVisitor>(
+                V.castAs<DefinedSVal>(),
+                /*Assumption=*/false, "Assuming pointer value is null");
 
         // Add visitor, which will suppress inline defensive checks.
         if (auto DV = V.getAs<DefinedSVal>())
@@ -2531,7 +2524,7 @@ public:
         Report.markInteresting(RegionRVal, Opts.Kind);
         Report.addVisitor<TrackConstraintBRVisitor>(
             loc::MemRegionVal(RegionRVal),
-            /*assumption=*/false);
+            /*Assumption=*/false, "Assuming pointer value is null");
         Result.FoundSomethingToTrack = true;
       }
     }

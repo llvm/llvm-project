@@ -244,15 +244,7 @@ static std::unique_ptr<tooling::CompilationDatabase>
 parseJSON(PathRef Path, llvm::StringRef Data, std::string &Error) {
   if (auto CDB = tooling::JSONCompilationDatabase::loadFromBuffer(
           Data, Error, tooling::JSONCommandLineSyntax::AutoDetect)) {
-    // FS used for expanding response files.
-    // FIXME: ExpandResponseFilesDatabase appears not to provide the usual
-    // thread-safety guarantees, as the access to FS is not locked!
-    // For now, use the real FS, which is known to be threadsafe (if we don't
-    // use/change working directory, which ExpandResponseFilesDatabase doesn't).
-    auto FS = llvm::vfs::getRealFileSystem();
-    return tooling::inferTargetAndDriverMode(
-        tooling::inferMissingCompileCommands(
-            expandResponseFiles(std::move(CDB), std::move(FS))));
+    return tooling::inferMissingCompileCommands(std::move(CDB));
   }
   return nullptr;
 }

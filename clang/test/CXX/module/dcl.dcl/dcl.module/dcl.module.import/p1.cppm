@@ -3,14 +3,14 @@
 // RUN: split-file %s %t
 //
 // RUN: %clang_cc1 -std=c++20 -emit-module-interface %t/x.cppm -o %t/x.pcm
-// RUN: %clang_cc1 -std=c++20 -emit-module-interface -fmodule-file=%t/x.pcm %t/x.y.cppm -o %t/x.y.pcm
+// RUN: %clang_cc1 -std=c++20 -emit-module-interface -fmodule-file=x=%t/x.pcm %t/x.y.cppm -o %t/x.y.pcm
 // RUN: %clang_cc1 -std=c++20 -emit-module-interface %t/a.b.cppm -o %t/a.b.pcm
 //
-// RUN: %clang_cc1 -std=c++20 -I%t -fmodule-file=%t/x.y.pcm -fmodule-file=%t/a.b.pcm -verify %t/test.cpp \
+// RUN: %clang_cc1 -std=c++20 -I%t -fmodule-file=x.y=%t/x.y.pcm -fmodule-file=x=%t/x.pcm -verify %t/test.cpp \
 // RUN:            -DMODULE_NAME=z -DINTERFACE
-// RUN: %clang_cc1 -std=c++20 -I%t -fmodule-file=%t/x.y.pcm -fmodule-file=%t/a.b.pcm -verify %t/test.cpp \
-// RUN:            -DMODULE_NAME=a.b
-// RUN: %clang_cc1 -std=c++20 -I%t -fmodule-file=%t/x.y.pcm -fmodule-file=%t/a.b.pcm -verify %t/test.x.cpp
+// RUN: %clang_cc1 -std=c++20 -I%t -fmodule-file=x.y=%t/x.y.pcm -fmodule-file=x=%t/x.pcm \
+// RUN:            -fmodule-file=a.b=%t/a.b.pcm -verify %t/test.cpp -DMODULE_NAME=a.b
+// RUN: %clang_cc1 -std=c++20 -I%t -fmodule-file=x.y=%t/x.y.pcm -fmodule-file=x=%t/x.pcm -verify %t/test.x.cpp
 
 //--- x.cppm
 export module x;
@@ -31,8 +31,7 @@ int use_1 = a; // ok
 int use_2 = b; // ok
 
 // There is no relation between module x and module x.y.
-int use_3 = c; // expected-error {{declaration of 'c' must be imported from module 'x.y'}}
-               // expected-note@x.y.cppm:2 {{not visible}}
+int use_3 = c; // expected-error {{use of undeclared identifier 'c'}}
 
 //--- test.cpp
 #ifdef INTERFACE

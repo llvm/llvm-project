@@ -37,6 +37,12 @@ public:
 
   Options *GetOptions() override;
 
+  bool WantsCompletion() override { return true; }
+
+  void
+  HandleArgumentCompletion(CompletionRequest &request,
+                           OptionElementVector &opt_element_vector) override;
+
 private:
   bool DoExecute(llvm::StringRef command, CommandReturnObject &result) override;
 

@@ -24,6 +24,7 @@
 #include "llvm/Analysis/MemoryLocation.h"
 #include "llvm/AsmParser/Parser.h"
 #include "llvm/AsmParser/SlotMapping.h"
+#include "llvm/CodeGen/LowLevelType.h"
 #include "llvm/CodeGen/MIRFormatter.h"
 #include "llvm/CodeGen/MIRPrinter.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
@@ -62,7 +63,6 @@
 #include "llvm/Support/BranchProbability.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/LowLevelTypeImpl.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/SMLoc.h"
 #include "llvm/Support/SourceMgr.h"
@@ -470,7 +470,7 @@ public:
   bool parseJumpTableIndexOperand(MachineOperand &Dest);
   bool parseExternalSymbolOperand(MachineOperand &Dest);
   bool parseMCSymbolOperand(MachineOperand &Dest);
-  bool parseMDNode(MDNode *&Node);
+  [[nodiscard]] bool parseMDNode(MDNode *&Node);
   bool parseDIExpression(MDNode *&Expr);
   bool parseDILocation(MDNode *&Expr);
   bool parseMetadataOperand(MachineOperand &Dest);
@@ -501,6 +501,7 @@ public:
   bool parseAddrspace(unsigned &Addrspace);
   bool parseSectionID(std::optional<MBBSectionID> &SID);
   bool parseBBID(std::optional<unsigned> &BBID);
+  bool parseCallFrameSize(unsigned &CallFrameSize);
   bool parseOperandsOffset(MachineOperand &Op);
   bool parseIRValue(const Value *&V);
   bool parseMemoryOperandFlag(MachineMemOperand::Flags &Flags);
@@ -676,6 +677,18 @@ bool MIParser::parseBBID(std::optional<unsigned> &BBID) {
   return false;
 }
 
+// Parse basic block call frame size.
+bool MIParser::parseCallFrameSize(unsigned &CallFrameSize) {
+  assert(Token.is(MIToken::kw_call_frame_size));
+  lex();
+  unsigned Value = 0;
+  if (getUnsigned(Value))
+    return error("Unknown call frame size");
+  CallFrameSize = Value;
+  lex();
+  return false;
+}
+
 bool MIParser::parseBasicBlockDefinition(
     DenseMap<unsigned, MachineBasicBlock *> &MBBSlots) {
   assert(Token.is(MIToken::MachineBasicBlockLabel));
@@ -693,6 +706,7 @@ bool MIParser::parseBasicBlockDefinition(
   std::optional<MBBSectionID> SectionID;
   uint64_t Alignment = 0;
   std::optional<unsigned> BBID;
+  unsigned CallFrameSize = 0;
   BasicBlock *BB = nullptr;
   if (consumeIfPresent(MIToken::lparen)) {
     do {
@@ -735,6 +749,10 @@ bool MIParser::parseBasicBlockDefinition(
         break;
       case MIToken::kw_bb_id:
         if (parseBBID(BBID))
+          return true;
+        break;
+      case MIToken::kw_call_frame_size:
+        if (parseCallFrameSize(CallFrameSize))
           return true;
         break;
       default:
@@ -781,6 +799,7 @@ bool MIParser::parseBasicBlockDefinition(
       MF.setBBSectionsType(BasicBlockSection::Labels);
     MBB->setBBID(BBID.value());
   }
+  MBB->setCallFrameSize(CallFrameSize);
   return false;
 }
 
@@ -1439,6 +1458,7 @@ bool MIParser::verifyImplicitOperands(ArrayRef<ParsedMachineOperand> Operands,
 
 bool MIParser::parseInstruction(unsigned &OpCode, unsigned &Flags) {
   // Allow frame and fast math flags for OPCODE
+  // clang-format off
   while (Token.is(MIToken::kw_frame_setup) ||
          Token.is(MIToken::kw_frame_destroy) ||
          Token.is(MIToken::kw_nnan) ||
@@ -1451,7 +1471,10 @@ bool MIParser::parseInstruction(unsigned &OpCode, unsigned &Flags) {
          Token.is(MIToken::kw_nuw) ||
          Token.is(MIToken::kw_nsw) ||
          Token.is(MIToken::kw_exact) ||
-         Token.is(MIToken::kw_nofpexcept)) {
+         Token.is(MIToken::kw_nofpexcept) ||
+         Token.is(MIToken::kw_noconvergent) ||
+         Token.is(MIToken::kw_unpredictable)) {
+    // clang-format on
     // Mine frame and fast math flags
     if (Token.is(MIToken::kw_frame_setup))
       Flags |= MachineInstr::FrameSetup;
@@ -1479,6 +1502,10 @@ bool MIParser::parseInstruction(unsigned &OpCode, unsigned &Flags) {
       Flags |= MachineInstr::IsExact;
     if (Token.is(MIToken::kw_nofpexcept))
       Flags |= MachineInstr::NoFPExcept;
+    if (Token.is(MIToken::kw_unpredictable))
+      Flags |= MachineInstr::Unpredictable;
+    if (Token.is(MIToken::kw_noconvergent))
+      Flags |= MachineInstr::NoConvergent;
 
     lex();
   }
@@ -2520,7 +2547,7 @@ bool MIParser::parseCFIOperand(MachineOperand &Dest) {
         parseCFIAddressSpace(AddressSpace))
       return true;
     CFIIndex = MF.addFrameInst(MCCFIInstruction::createLLVMDefAspaceCfa(
-        nullptr, Reg, Offset, AddressSpace));
+        nullptr, Reg, Offset, AddressSpace, SMLoc()));
     break;
   case MIToken::kw_cfi_remember_state:
     CFIIndex = MF.addFrameInst(MCCFIInstruction::createRememberState(nullptr));
@@ -3471,7 +3498,8 @@ bool MIParser::parseHeapAllocMarker(MDNode *&Node) {
   assert(Token.is(MIToken::kw_heap_alloc_marker) &&
          "Invalid token for a heap alloc marker!");
   lex();
-  parseMDNode(Node);
+  if (parseMDNode(Node))
+    return true;
   if (!Node)
     return error("expected a MDNode after 'heap-alloc-marker'");
   if (Token.isNewlineOrEOF() || Token.is(MIToken::coloncolon) ||
@@ -3487,7 +3515,8 @@ bool MIParser::parsePCSections(MDNode *&Node) {
   assert(Token.is(MIToken::kw_pcsections) &&
          "Invalid token for a PC sections!");
   lex();
-  parseMDNode(Node);
+  if (parseMDNode(Node))
+    return true;
   if (!Node)
     return error("expected a MDNode after 'pcsections'");
   if (Token.isNewlineOrEOF() || Token.is(MIToken::coloncolon) ||

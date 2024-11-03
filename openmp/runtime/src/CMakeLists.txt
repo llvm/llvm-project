@@ -12,6 +12,7 @@ include(ExtendPath)
 
 # Configure omp.h, kmp_config.h and omp-tools.h if necessary
 configure_file(${LIBOMP_INC_DIR}/omp.h.var omp.h @ONLY)
+configure_file(${LIBOMP_INC_DIR}/ompx.h.var ompx.h @ONLY)
 configure_file(kmp_config.h.cmake kmp_config.h @ONLY)
 if(${LIBOMP_OMPT_SUPPORT})
   configure_file(${LIBOMP_INC_DIR}/omp-tools.h.var omp-tools.h @ONLY)
@@ -88,6 +89,7 @@ else()
     kmp_dispatch.cpp
     kmp_lock.cpp
     kmp_sched.cpp
+    kmp_collapse.cpp
   )
   if(WIN32)
     # Windows specific files
@@ -132,8 +134,6 @@ libomp_get_asmflags(LIBOMP_CONFIGURED_ASMFLAGS)
 # Set the compiler flags for each type of source
 set_source_files_properties(${LIBOMP_CXXFILES} PROPERTIES COMPILE_FLAGS "${LIBOMP_CONFIGURED_CXXFLAGS}")
 set_source_files_properties(${LIBOMP_ASMFILES} ${LIBOMP_GNUASMFILES} PROPERTIES COMPILE_FLAGS "${LIBOMP_CONFIGURED_ASMFLAGS}")
-# Let the compiler handle the GNU assembly files
-set_source_files_properties(${LIBOMP_GNUASMFILES} PROPERTIES LANGUAGE C)
 
 # Remove any cmake-automatic linking of the standard C++ library.
 # We neither need (nor want) the standard C++ library dependency even though we compile c++ files.
@@ -235,10 +235,6 @@ add_dependencies(omp libomp-needed-headers)
 # Windows specific build rules
 if(WIN32)
   configure_file(libomp.rc.var libomp.rc @ONLY)
-
-  # Create .def and .rc file before compiling any sources
-  add_custom_target(libomp-needed-windows-files DEPENDS ${LIBOMP_LIB_NAME}.def)
-  add_dependencies(omp libomp-needed-windows-files)
   # z_Windows_NT-586_asm.asm requires definitions to be sent via command line
   # It only needs the architecture macro and OMPT_SUPPORT=0|1
   libomp_append(LIBOMP_MASM_DEFINITIONS "-D_M_IA32" IF_TRUE IA32)
@@ -272,54 +268,41 @@ if(WIN32)
     ARCHIVE_OUTPUT_NAME ${LIBOMP_GENERATED_IMP_LIB_FILENAME}
   )
 
-  if(MSVC)
-    set(LIBOMP_IMP_LIB_TARGET ompimp)
-  else()
-    set(LIBOMP_IMP_LIB_TARGET omp)
-  endif()
-
-  # Create def files to designate exported functions
-  libomp_get_gdflags(LIBOMP_GDFLAGS) # generate-def.pl flags (Windows only)
-  libomp_string_to_list("${LIBOMP_GDFLAGS}" LIBOMP_GDFLAGS)
+  set(LIBOMP_IMP_LIB_TARGET omp)
   set(LIBOMP_GENERATED_DEF_FILE ${LIBOMP_LIB_NAME}.def)
-  set(LIBOMPIMP_GENERATED_DEF_FILE_IMP ${LIBOMP_LIB_NAME}.imp.def)
+  add_custom_target(libomp-needed-def-file DEPENDS ${LIBOMP_GENERATED_DEF_FILE})
+  add_dependencies(omp libomp-needed-def-file)
+
+  # Create the main def file with ordinals to use for building the runtime dll to maintain backwards compatible exports order
+  libomp_get_gdflags(LIBOMP_GDFLAGS)
+  libomp_string_to_list("${LIBOMP_GDFLAGS}" LIBOMP_GDFLAGS)
   add_custom_command(
-    OUTPUT  ${LIBOMP_LIB_NAME}.def
-    # one with ordinals to use for building the runtime dll to maintain backwads compatible exports order
+    OUTPUT  ${LIBOMP_GENERATED_DEF_FILE}
     COMMAND ${PERL_EXECUTABLE} ${LIBOMP_TOOLS_DIR}/generate-def.pl ${LIBOMP_GDFLAGS} -D NAME=${LIBOMP_LIB_FILE}
             -o ${LIBOMP_GENERATED_DEF_FILE} ${CMAKE_CURRENT_SOURCE_DIR}/dllexports
     DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/dllexports ${LIBOMP_TOOLS_DIR}/generate-def.pl
-    # one without ordinals to use for building the import library to remove ordinal dependency going forward
-    COMMAND ${PERL_EXECUTABLE} ${LIBOMP_TOOLS_DIR}/generate-def.pl ${LIBOMP_GDFLAGS} -D NAME=${LIBOMP_LIB_FILE} -D NOORDINALS
-            -o ${LIBOMPIMP_GENERATED_DEF_FILE_IMP} ${CMAKE_CURRENT_SOURCE_DIR}/dllexports
-    DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/dllexports ${LIBOMP_TOOLS_DIR}/generate-def.pl
   )
 
-  if (MSVC)
-    # Regenerate the import library to import by name, not ordinal.
-    #
-    # For mingw, we can't regenerate an import library by passing
-    # CMAKE_LINK_DEF_FILE_FLAG to the static library archiver; that just
-    # ends up creating a regular static library that contains the def file.
-    # For mingw, we would have to call the suitable dlltool for regenerating
-    # an import library. However, neither GNU nor LLVM based mingw tools
-    # generate import libraries that actually link by ordinal, so this step
-    # isn't strictly necessary.
-    #
-    # Also, in mingw builds, LIBOMP_GENERATED_IMP_LIB_FILENAME and
-    # LIBOMP_IMP_LIB_FILE currently end up equal, while they need to differ
-    # for this second step to work.
-    add_library(ompimp STATIC ${LIBOMP_SOURCE_FILES})
-      set_target_properties(ompimp PROPERTIES
-        PREFIX "" SUFFIX "" OUTPUT_NAME "${LIBOMP_IMP_LIB_FILE}"
-      LINKER_LANGUAGE C
+  if(MSVC)
+    # For toolchains that generated the import library importing by ordinal, re-generate it to import by name
+    set(LIBOMP_IMP_LIB_TARGET ompimp)
+    # Create the auxiliary def file without ordinals to use for building the import library to import by name
+    set(LIBOMPIMP_GENERATED_DEF_FILE ${LIBOMP_LIB_NAME}.imp.def)
+    add_custom_target(libompimp-needed-def-file DEPENDS ${LIBOMPIMP_GENERATED_DEF_FILE})
+    add_custom_command(
+      OUTPUT  ${LIBOMPIMP_GENERATED_DEF_FILE}
+      COMMAND ${PERL_EXECUTABLE} ${LIBOMP_TOOLS_DIR}/generate-def.pl ${LIBOMP_GDFLAGS} -D NAME=${LIBOMP_LIB_FILE} -D NOORDINALS
+          -o ${LIBOMPIMP_GENERATED_DEF_FILE} ${CMAKE_CURRENT_SOURCE_DIR}/dllexports
+      DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/dllexports ${LIBOMP_TOOLS_DIR}/generate-def.pl
     )
-    set_target_properties(ompimp PROPERTIES STATIC_LIBRARY_OPTIONS
-        "${CMAKE_LINK_DEF_FILE_FLAG}${CMAKE_CURRENT_BINARY_DIR}/${LIBOMPIMP_GENERATED_DEF_FILE_IMP}"
-    )
-    add_dependencies(ompimp libomp-needed-headers)
+    # while this merely generates an import library off a def file, CMAKE still requires it to have a "source" so feed it a dummy one,
+    # making it a .txt which CMAKE will filter out from the librarian (a .cpp will make lib.exe punt trying to resolve the .def symbols)
+    add_library(${LIBOMP_IMP_LIB_TARGET} STATIC kmp_dummy.txt)
+    set_target_properties(${LIBOMP_IMP_LIB_TARGET} PROPERTIES
+        PREFIX "" SUFFIX "" OUTPUT_NAME "${LIBOMP_IMP_LIB_FILE}" LINKER_LANGUAGE ${LIBOMP_LINKER_LANGUAGE}
+        STATIC_LIBRARY_OPTIONS "${CMAKE_LINK_DEF_FILE_FLAG}${CMAKE_CURRENT_BINARY_DIR}/${LIBOMPIMP_GENERATED_DEF_FILE}")
+    add_dependencies(${LIBOMP_IMP_LIB_TARGET} libompimp-needed-def-file)
   endif()
-
 endif()
 
 # Building the Fortran module files
@@ -371,11 +354,18 @@ if(${MIC})
 endif()
 add_dependencies(libomp-micro-tests libomp-test-deps)
 
+# `omp` needs to be exported if in-tree build.
+set(export_to_llvmexports)
+if (NOT OPENMP_STANDALONE_BUILD)
+  get_target_export_arg(omp LLVM export_to_llvmexports)
+  set_property(GLOBAL APPEND PROPERTY LLVM_EXPORTS omp)
+endif()
+
 # Install rules
 # We want to install libomp in ${DESTDIR}/${CMAKE_INSTALL_FULL_LIBDIR}
 # We want to install headers in ${DESTDIR}/${CMAKE_INSTALL_FULL_INCLUDEDIR}
 if(WIN32)
-  install(TARGETS omp RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}")
+  install(TARGETS omp ${export_to_llvmexports} RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}")
   install(TARGETS ${LIBOMP_IMP_LIB_TARGET} ARCHIVE DESTINATION "${OPENMP_INSTALL_LIBDIR}")
   # Create aliases (regular copies) of the library for backwards compatibility
   set(LIBOMP_ALIASES "libiomp5md")
@@ -388,7 +378,7 @@ if(WIN32)
   endforeach()
 else()
 
-  install(TARGETS omp ${LIBOMP_INSTALL_KIND} DESTINATION "${OPENMP_INSTALL_LIBDIR}")
+  install(TARGETS omp ${export_to_llvmexports} ${LIBOMP_INSTALL_KIND} DESTINATION "${OPENMP_INSTALL_LIBDIR}")
 
   if(${LIBOMP_INSTALL_ALIASES})
     # Create aliases (symlinks) of the library for backwards compatibility
@@ -404,6 +394,7 @@ endif()
 install(
   FILES
   ${CMAKE_CURRENT_BINARY_DIR}/omp.h
+  ${CMAKE_CURRENT_BINARY_DIR}/ompx.h
   DESTINATION ${LIBOMP_HEADERS_INSTALL_PATH}
 )
 if(${LIBOMP_OMPT_SUPPORT})

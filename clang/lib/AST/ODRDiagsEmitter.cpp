@@ -994,40 +994,43 @@ bool ODRDiagsEmitter::diagnoseMismatch(
       return true;
     }
 
-    const StringLiteral *FirstStr = FirstSA->getMessage();
-    const StringLiteral *SecondStr = SecondSA->getMessage();
-    assert((FirstStr || SecondStr) && "Both messages cannot be empty");
-    if ((FirstStr && !SecondStr) || (!FirstStr && SecondStr)) {
+    const Expr *FirstMessage = FirstSA->getMessage();
+    const Expr *SecondMessage = SecondSA->getMessage();
+    assert((FirstMessage || SecondMessage) && "Both messages cannot be empty");
+    if ((FirstMessage && !SecondMessage) || (!FirstMessage && SecondMessage)) {
       SourceLocation FirstLoc, SecondLoc;
       SourceRange FirstRange, SecondRange;
-      if (FirstStr) {
-        FirstLoc = FirstStr->getBeginLoc();
-        FirstRange = FirstStr->getSourceRange();
+      if (FirstMessage) {
+        FirstLoc = FirstMessage->getBeginLoc();
+        FirstRange = FirstMessage->getSourceRange();
       } else {
         FirstLoc = FirstSA->getBeginLoc();
         FirstRange = FirstSA->getSourceRange();
       }
-      if (SecondStr) {
-        SecondLoc = SecondStr->getBeginLoc();
-        SecondRange = SecondStr->getSourceRange();
+      if (SecondMessage) {
+        SecondLoc = SecondMessage->getBeginLoc();
+        SecondRange = SecondMessage->getSourceRange();
       } else {
         SecondLoc = SecondSA->getBeginLoc();
         SecondRange = SecondSA->getSourceRange();
       }
       DiagError(FirstLoc, FirstRange, StaticAssertOnlyMessage)
-          << (FirstStr == nullptr);
+          << (FirstMessage == nullptr);
       DiagNote(SecondLoc, SecondRange, StaticAssertOnlyMessage)
-          << (SecondStr == nullptr);
+          << (SecondMessage == nullptr);
       return true;
     }
 
-    if (FirstStr && SecondStr &&
-        FirstStr->getString() != SecondStr->getString()) {
-      DiagError(FirstStr->getBeginLoc(), FirstStr->getSourceRange(),
-                StaticAssertMessage);
-      DiagNote(SecondStr->getBeginLoc(), SecondStr->getSourceRange(),
-               StaticAssertMessage);
-      return true;
+    if (FirstMessage && SecondMessage) {
+      unsigned FirstMessageODRHash = computeODRHash(FirstMessage);
+      unsigned SecondMessageODRHash = computeODRHash(SecondMessage);
+      if (FirstMessageODRHash != SecondMessageODRHash) {
+        DiagError(FirstMessage->getBeginLoc(), FirstMessage->getSourceRange(),
+                  StaticAssertMessage);
+        DiagNote(SecondMessage->getBeginLoc(), SecondMessage->getSourceRange(),
+                 StaticAssertMessage);
+        return true;
+      }
     }
     break;
   }
@@ -1742,6 +1745,7 @@ bool ODRDiagsEmitter::diagnoseMismatch(
       return true;
     }
 
+    // Note, these calls can trigger deserialization.
     const Expr *FirstInit = FirstParam->getInit();
     const Expr *SecondInit = SecondParam->getInit();
     if ((FirstInit == nullptr) != (SecondInit == nullptr)) {
@@ -2095,7 +2099,8 @@ bool ODRDiagsEmitter::diagnoseMismatch(
       << FirstDecl->getSourceRange();
   Diag(SecondDecl->getLocation(),
        diag::note_module_odr_violation_mismatch_decl_unknown)
-      << SecondModule << FirstDiffType << SecondDecl->getSourceRange();
+      << SecondModule.empty() << SecondModule << FirstDiffType
+      << SecondDecl->getSourceRange();
   return true;
 }
 

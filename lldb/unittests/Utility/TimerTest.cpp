@@ -21,7 +21,7 @@ TEST(TimerTest, CategoryTimes) {
     std::this_thread::sleep_for(std::chrono::milliseconds(10));
   }
   StreamString ss;
-  Timer::DumpCategoryTimes(&ss);
+  Timer::DumpCategoryTimes(ss);
   double seconds;
   ASSERT_EQ(1, sscanf(ss.GetData(), "%lf sec for CAT1", &seconds));
   EXPECT_LT(0.001, seconds);
@@ -39,7 +39,7 @@ TEST(TimerTest, CategoryTimesNested) {
     std::this_thread::sleep_for(std::chrono::milliseconds(10));
   }
   StreamString ss;
-  Timer::DumpCategoryTimes(&ss);
+  Timer::DumpCategoryTimes(ss);
   double seconds;
   // It should only appear once.
   ASSERT_EQ(ss.GetString().count("CAT1"), 1U);
@@ -59,7 +59,7 @@ TEST(TimerTest, CategoryTimes2) {
     std::this_thread::sleep_for(std::chrono::milliseconds(10));
   }
   StreamString ss;
-  Timer::DumpCategoryTimes(&ss);
+  Timer::DumpCategoryTimes(ss);
   double seconds1, seconds2;
   ASSERT_EQ(2, sscanf(ss.GetData(),
                       "%lf sec (total: %*fs; child: %*fs; count: %*d) for "
@@ -92,7 +92,7 @@ TEST(TimerTest, CategoryTimesStats) {
   // 0.105202764 sec (total: 0.132s; child: 0.027s; count: 1) for CAT1
   // 0.026772798 sec (total: 0.027s; child: 0.000s; count: 2) for CAT2
   StreamString ss;
-  Timer::DumpCategoryTimes(&ss);
+  Timer::DumpCategoryTimes(ss);
   double seconds1, total1, child1, seconds2;
   int count1, count2;
   ASSERT_EQ(

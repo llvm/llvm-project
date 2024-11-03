@@ -2,6 +2,8 @@
 ;
 ; RUN: opt < %s -passes=hwasan -hwasan-instrument-with-calls -S | FileCheck %s --check-prefixes=CHECK,ABORT
 ; RUN: opt < %s -passes=hwasan -hwasan-instrument-with-calls -hwasan-recover=1 -S | FileCheck %s --check-prefixes=CHECK,RECOVER
+; RUN: opt < %s -passes=hwasan -hwasan-instrument-with-calls -hwasan-match-all-tag=0 -S | FileCheck %s --check-prefixes=CHECK,MATCH-ALL-TAG-ABORT
+; RUN: opt < %s -passes=hwasan -hwasan-instrument-with-calls -hwasan-recover=1 -hwasan-match-all-tag=0 -S | FileCheck %s --check-prefixes=CHECK,MATCH-ALL-TAG-RECOVER
 
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 target triple = "aarch64--linux-android"
@@ -11,6 +13,8 @@ define i8 @test_load8(ptr %a) sanitize_hwaddress {
 ; CHECK: %[[A:[^ ]*]] = ptrtoint ptr %a to i64
 ; ABORT: call void @__hwasan_load1(i64 %[[A]])
 ; RECOVER: call void @__hwasan_load1_noabort(i64 %[[A]])
+; MATCH-ALL-TAG-ABORT: call void @__hwasan_load1_match_all(i64 %[[A]], i8 0)
+; MATCH-ALL-TAG-RECOVER: call void @__hwasan_load1_match_all_noabort(i64 %[[A]], i8 0)
 ; CHECK: %[[B:[^ ]*]] = load i8, ptr %a
 ; CHECK: ret i8 %[[B]]
 
@@ -24,6 +28,8 @@ define i16 @test_load16(ptr %a) sanitize_hwaddress {
 ; CHECK: %[[A:[^ ]*]] = ptrtoint ptr %a to i64
 ; ABORT: call void @__hwasan_load2(i64 %[[A]])
 ; RECOVER: call void @__hwasan_load2_noabort(i64 %[[A]])
+; MATCH-ALL-TAG-ABORT: call void @__hwasan_load2_match_all(i64 %[[A]], i8 0)
+; MATCH-ALL-TAG-RECOVER: call void @__hwasan_load2_match_all_noabort(i64 %[[A]], i8 0)
 ; CHECK: %[[B:[^ ]*]] = load i16, ptr %a
 ; CHECK: ret i16 %[[B]]
 
@@ -37,6 +43,8 @@ define i32 @test_load32(ptr %a) sanitize_hwaddress {
 ; CHECK: %[[A:[^ ]*]] = ptrtoint ptr %a to i64
 ; ABORT: call void @__hwasan_load4(i64 %[[A]])
 ; RECOVER: call void @__hwasan_load4_noabort(i64 %[[A]])
+; MATCH-ALL-TAG-ABORT: call void @__hwasan_load4_match_all(i64 %[[A]], i8 0)
+; MATCH-ALL-TAG-RECOVER: call void @__hwasan_load4_match_all_noabort(i64 %[[A]], i8 0)
 ; CHECK: %[[B:[^ ]*]] = load i32, ptr %a
 ; CHECK: ret i32 %[[B]]
 
@@ -50,6 +58,8 @@ define i64 @test_load64(ptr %a) sanitize_hwaddress {
 ; CHECK: %[[A:[^ ]*]] = ptrtoint ptr %a to i64
 ; ABORT: call void @__hwasan_load8(i64 %[[A]])
 ; RECOVER: call void @__hwasan_load8_noabort(i64 %[[A]])
+; MATCH-ALL-TAG-ABORT: call void @__hwasan_load8_match_all(i64 %[[A]], i8 0)
+; MATCH-ALL-TAG-RECOVER: call void @__hwasan_load8_match_all_noabort(i64 %[[A]], i8 0)
 ; CHECK: %[[B:[^ ]*]] = load i64, ptr %a
 ; CHECK: ret i64 %[[B]]
 
@@ -63,6 +73,8 @@ define i128 @test_load128(ptr %a) sanitize_hwaddress {
 ; CHECK: %[[A:[^ ]*]] = ptrtoint ptr %a to i64
 ; ABORT: call void @__hwasan_load16(i64 %[[A]])
 ; RECOVER: call void @__hwasan_load16_noabort(i64 %[[A]])
+; MATCH-ALL-TAG-ABORT: call void @__hwasan_load16_match_all(i64 %[[A]], i8 0)
+; MATCH-ALL-TAG-RECOVER: call void @__hwasan_load16_match_all_noabort(i64 %[[A]], i8 0)
 ; CHECK: %[[B:[^ ]*]] = load i128, ptr %a
 ; CHECK: ret i128 %[[B]]
 
@@ -76,6 +88,8 @@ define i40 @test_load40(ptr %a) sanitize_hwaddress {
 ; CHECK: %[[A:[^ ]*]] = ptrtoint ptr %a to i64
 ; ABORT: call void @__hwasan_loadN(i64 %[[A]], i64 5)
 ; RECOVER: call void @__hwasan_loadN_noabort(i64 %[[A]], i64 5)
+; MATCH-ALL-TAG-ABORT: call void @__hwasan_loadN_match_all(i64 %[[A]], i64 5, i8 0)
+; MATCH-ALL-TAG-RECOVER: call void @__hwasan_loadN_match_all_noabort(i64 %[[A]], i64 5, i8 0)
 ; CHECK: %[[B:[^ ]*]] = load i40, ptr %a
 ; CHECK: ret i40 %[[B]]
 
@@ -89,6 +103,8 @@ define void @test_store8(ptr %a, i8 %b) sanitize_hwaddress {
 ; CHECK: %[[A:[^ ]*]] = ptrtoint ptr %a to i64
 ; ABORT: call void @__hwasan_store1(i64 %[[A]])
 ; RECOVER: call void @__hwasan_store1_noabort(i64 %[[A]])
+; MATCH-ALL-TAG-ABORT: call void @__hwasan_store1_match_all(i64 %[[A]], i8 0)
+; MATCH-ALL-TAG-RECOVER: call void @__hwasan_store1_match_all_noabort(i64 %[[A]], i8 0)
 ; CHECK: store i8 %b, ptr %a
 ; CHECK: ret void
 
@@ -102,6 +118,8 @@ define void @test_store16(ptr %a, i16 %b) sanitize_hwaddress {
 ; CHECK: %[[A:[^ ]*]] = ptrtoint ptr %a to i64
 ; ABORT: call void @__hwasan_store2(i64 %[[A]])
 ; RECOVER: call void @__hwasan_store2_noabort(i64 %[[A]])
+; MATCH-ALL-TAG-ABORT: call void @__hwasan_store2_match_all(i64 %[[A]], i8 0)
+; MATCH-ALL-TAG-RECOVER: call void @__hwasan_store2_match_all_noabort(i64 %[[A]], i8 0)
 ; CHECK: store i16 %b, ptr %a
 ; CHECK: ret void
 
@@ -115,6 +133,8 @@ define void @test_store32(ptr %a, i32 %b) sanitize_hwaddress {
 ; CHECK: %[[A:[^ ]*]] = ptrtoint ptr %a to i64
 ; ABORT: call void @__hwasan_store4(i64 %[[A]])
 ; RECOVER: call void @__hwasan_store4_noabort(i64 %[[A]])
+; MATCH-ALL-TAG-ABORT: call void @__hwasan_store4_match_all(i64 %[[A]], i8 0)
+; MATCH-ALL-TAG-RECOVER: call void @__hwasan_store4_match_all_noabort(i64 %[[A]], i8 0)
 ; CHECK: store i32 %b, ptr %a
 ; CHECK: ret void
 
@@ -128,6 +148,8 @@ define void @test_store64(ptr %a, i64 %b) sanitize_hwaddress {
 ; CHECK: %[[A:[^ ]*]] = ptrtoint ptr %a to i64
 ; ABORT: call void @__hwasan_store8(i64 %[[A]])
 ; RECOVER: call void @__hwasan_store8_noabort(i64 %[[A]])
+; MATCH-ALL-TAG-ABORT: call void @__hwasan_store8_match_all(i64 %[[A]], i8 0)
+; MATCH-ALL-TAG-RECOVER: call void @__hwasan_store8_match_all_noabort(i64 %[[A]], i8 0)
 ; CHECK: store i64 %b, ptr %a
 ; CHECK: ret void
 
@@ -141,6 +163,8 @@ define void @test_store128(ptr %a, i128 %b) sanitize_hwaddress {
 ; CHECK: %[[A:[^ ]*]] = ptrtoint ptr %a to i64
 ; ABORT: call void @__hwasan_store16(i64 %[[A]])
 ; RECOVER: call void @__hwasan_store16_noabort(i64 %[[A]])
+; MATCH-ALL-TAG-ABORT: call void @__hwasan_store16_match_all(i64 %[[A]], i8 0)
+; MATCH-ALL-TAG-RECOVER: call void @__hwasan_store16_match_all_noabort(i64 %[[A]], i8 0)
 ; CHECK: store i128 %b, ptr %a
 ; CHECK: ret void
 
@@ -154,6 +178,8 @@ define void @test_store40(ptr %a, i40 %b) sanitize_hwaddress {
 ; CHECK: %[[A:[^ ]*]] = ptrtoint ptr %a to i64
 ; ABORT: call void @__hwasan_storeN(i64 %[[A]], i64 5)
 ; RECOVER: call void @__hwasan_storeN_noabort(i64 %[[A]], i64 5)
+; MATCH-ALL-TAG-ABORT: call void @__hwasan_storeN_match_all(i64 %[[A]], i64 5, i8 0)
+; MATCH-ALL-TAG-RECOVER: call void @__hwasan_storeN_match_all_noabort(i64 %[[A]], i64 5, i8 0)
 ; CHECK: store i40 %b, ptr %a
 ; CHECK: ret void
 

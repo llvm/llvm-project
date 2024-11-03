@@ -16,6 +16,12 @@
 #include "lldb/API/SBTarget.h"
 #include <cstdio>
 
+namespace lldb_private {
+namespace python {
+class SWIGBridge;
+}
+} // namespace lldb_private
+
 namespace lldb {
 
 class SBEvent;
@@ -36,17 +42,13 @@ public:
 
   const lldb::SBProcess &operator=(const lldb::SBProcess &rhs);
 
-#ifndef SWIG
-  SBProcess(const lldb::ProcessSP &process_sp);
-#endif
-
   ~SBProcess();
 
   static const char *GetBroadcasterClassName();
 
   const char *GetPluginName();
 
-  // DEPRECATED: use GetPluginName()
+  LLDB_DEPRECATED_FIXME("Use GetPluginName()", "GetPluginName()")
   const char *GetShortPluginName();
 
   void Clear();
@@ -115,7 +117,6 @@ public:
   // Queue related functions
   uint32_t GetNumQueues();
 
-  // TODO: This technically takes a uint32_t in the interface file.
   lldb::SBQueue GetQueueAtIndex(size_t index);
 
   // Stepping related functions
@@ -186,6 +187,14 @@ public:
   /// \return
   ///   The stop event corresponding to stop ID.
   lldb::SBEvent GetStopEventForStopID(uint32_t stop_id);
+
+  /// If the process is a scripted process, changes its state to the new state.
+  /// No-op otherwise.
+  ///
+  /// \param [in] new_state
+  ///   The new state that the scripted process should be set to.
+  ///
+  void ForceScriptedState(StateType new_state);
 
   size_t ReadMemory(addr_t addr, void *buf, size_t size, lldb::SBError &error);
 
@@ -428,11 +437,12 @@ public:
   ///
   lldb::SBError DeallocateMemory(lldb::addr_t ptr);
 
-  lldb::ScriptedObject GetScriptedImplementation();
+  lldb::SBScriptObject GetScriptedImplementation();
 
 protected:
   friend class SBAddress;
   friend class SBBreakpoint;
+  friend class SBBreakpointCallbackBaton;
   friend class SBBreakpointLocation;
   friend class SBCommandInterpreter;
   friend class SBDebugger;
@@ -443,6 +453,10 @@ protected:
   friend class SBThread;
   friend class SBValue;
   friend class lldb_private::QueueImpl;
+
+  friend class lldb_private::python::SWIGBridge;
+
+  SBProcess(const lldb::ProcessSP &process_sp);
 
   lldb::ProcessSP GetSP() const;
 

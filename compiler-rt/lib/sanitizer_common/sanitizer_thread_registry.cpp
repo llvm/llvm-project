@@ -335,7 +335,7 @@ void ThreadRegistry::QuarantinePush(ThreadContextBase *tctx) {
 
 ThreadContextBase *ThreadRegistry::QuarantinePop() {
   if (invalid_threads_.size() == 0)
-    return 0;
+    return nullptr;
   ThreadContextBase *tctx = invalid_threads_.front();
   invalid_threads_.pop_front();
   return tctx;

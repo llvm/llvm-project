@@ -161,6 +161,10 @@ TEST_F(MemoryBufferTest, copy) {
 
   // verify the two copies do not point to the same place
   EXPECT_NE(MBC1->getBufferStart(), MBC2->getBufferStart());
+
+  // check that copies from defaulted stringrefs don't trigger UB.
+  OwningBuffer MBC3(MemoryBuffer::getMemBufferCopy(StringRef{}));
+  EXPECT_NE(nullptr, MBC3.get());
 }
 
 #if LLVM_ENABLE_THREADS

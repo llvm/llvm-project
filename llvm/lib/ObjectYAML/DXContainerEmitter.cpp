@@ -201,9 +201,26 @@ void DXContainerWriter::writeParts(raw_ostream &OS) {
       memcpy(&PSV.BaseData, &P.Info->Info, sizeof(dxbc::PSV::v2::RuntimeInfo));
       PSV.Resources = P.Info->Resources;
 
-      if (sys::IsBigEndianHost)
-        PSV.swapBytes(static_cast<Triple::EnvironmentType>(
-            Triple::Pixel + P.Info->Info.ShaderStage));
+      for (auto El : P.Info->SigInputElements)
+        PSV.InputElements.push_back(mcdxbc::PSVSignatureElement{
+            El.Name, El.Indices, El.StartRow, El.Cols, El.StartCol,
+            El.Allocated, El.Kind, El.Type, El.Mode, El.DynamicMask,
+            El.Stream});
+
+      for (auto El : P.Info->SigOutputElements)
+        PSV.OutputElements.push_back(mcdxbc::PSVSignatureElement{
+            El.Name, El.Indices, El.StartRow, El.Cols, El.StartCol,
+            El.Allocated, El.Kind, El.Type, El.Mode, El.DynamicMask,
+            El.Stream});
+
+      for (auto El : P.Info->SigPatchOrPrimElements)
+        PSV.PatchOrPrimElements.push_back(mcdxbc::PSVSignatureElement{
+            El.Name, El.Indices, El.StartRow, El.Cols, El.StartCol,
+            El.Allocated, El.Kind, El.Type, El.Mode, El.DynamicMask,
+            El.Stream});
+
+      PSV.finalize(static_cast<Triple::EnvironmentType>(
+          Triple::Pixel + P.Info->Info.ShaderStage));
       PSV.write(OS, P.Info->Version);
       break;
     }

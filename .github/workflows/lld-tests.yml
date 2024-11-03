@@ -1,5 +1,8 @@
 name: LLD Tests
 
+permissions:
+  contents: read
+
 on:
   workflow_dispatch:
   push:

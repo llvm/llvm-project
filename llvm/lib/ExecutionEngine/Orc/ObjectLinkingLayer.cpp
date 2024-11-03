@@ -8,6 +8,7 @@
 
 #include "llvm/ExecutionEngine/Orc/ObjectLinkingLayer.h"
 #include "llvm/ExecutionEngine/JITLink/EHFrameSupport.h"
+#include "llvm/ExecutionEngine/JITLink/aarch32.h"
 #include "llvm/ExecutionEngine/Orc/DebugObjectManagerPlugin.h"
 #include "llvm/ExecutionEngine/Orc/ObjectFileInterface.h"
 #include "llvm/ExecutionEngine/Orc/Shared/ObjectFormats.h"
@@ -37,6 +38,24 @@ bool hasInitializerSection(jitlink::LinkGraph &G) {
   }
 
   return false;
+}
+
+ExecutorAddr getJITSymbolPtrForSymbol(Symbol &Sym, const Triple &TT) {
+  switch (TT.getArch()) {
+  case Triple::arm:
+  case Triple::armeb:
+  case Triple::thumb:
+  case Triple::thumbeb:
+    if (hasTargetFlags(Sym, aarch32::ThumbSymbol)) {
+      // Set LSB to indicate thumb target
+      assert(Sym.isCallable() && "Only callable symbols can have thumb flag");
+      assert((Sym.getAddress().getValue() & 0x01) == 0 && "LSB is clear");
+      return Sym.getAddress() + 0x01;
+    }
+    return Sym.getAddress();
+  default:
+    return Sym.getAddress();
+  }
 }
 
 JITSymbolFlags getJITSymbolFlagsForSymbol(Symbol &Sym) {
@@ -215,10 +234,9 @@ public:
     for (auto *Sym : G.defined_symbols())
       if (Sym->hasName() && Sym->getScope() != Scope::Local) {
         auto InternedName = ES.intern(Sym->getName());
+        auto Ptr = getJITSymbolPtrForSymbol(*Sym, G.getTargetTriple());
         auto Flags = getJITSymbolFlagsForSymbol(*Sym);
-
-        InternedResult[InternedName] =
-            JITEvaluatedSymbol(Sym->getAddress().getValue(), Flags);
+        InternedResult[InternedName] = {Ptr, Flags};
         if (AutoClaim && !MR->getSymbols().count(InternedName)) {
           assert(!ExtraSymbolsToClaim.count(InternedName) &&
                  "Duplicate symbol to claim?");
@@ -229,9 +247,9 @@ public:
     for (auto *Sym : G.absolute_symbols())
       if (Sym->hasName() && Sym->getScope() != Scope::Local) {
         auto InternedName = ES.intern(Sym->getName());
+        auto Ptr = getJITSymbolPtrForSymbol(*Sym, G.getTargetTriple());
         auto Flags = getJITSymbolFlagsForSymbol(*Sym);
-        InternedResult[InternedName] =
-            JITEvaluatedSymbol(Sym->getAddress().getValue(), Flags);
+        InternedResult[InternedName] = {Ptr, Flags};
         if (AutoClaim && !MR->getSymbols().count(InternedName)) {
           assert(!ExtraSymbolsToClaim.count(InternedName) &&
                  "Duplicate symbol to claim?");

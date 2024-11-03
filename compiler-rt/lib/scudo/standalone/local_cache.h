@@ -14,6 +14,7 @@
 #include "platform.h"
 #include "report.h"
 #include "stats.h"
+#include "string_utils.h"
 
 namespace scudo {
 
@@ -34,6 +35,15 @@ template <class SizeClassAllocator> struct SizeClassAllocatorLocalCache {
       // u16 will be promoted to int by arithmetic type conversion.
       Count = static_cast<u16>(Count + N);
     }
+    void appendFromTransferBatch(TransferBatch *B, u16 N) {
+      DCHECK_LE(N, MaxNumCached - Count);
+      DCHECK_GE(B->Count, N);
+      // Append from the back of `B`.
+      memcpy(Batch + Count, B->Batch + (B->Count - N), sizeof(Batch[0]) * N);
+      // u16 will be promoted to int by arithmetic type conversion.
+      Count = static_cast<u16>(Count + N);
+      B->Count = static_cast<u16>(B->Count - N);
+    }
     void clear() { Count = 0; }
     void add(CompactPtrT P) {
       DCHECK_LT(Count, MaxNumCached);
@@ -43,6 +53,7 @@ template <class SizeClassAllocator> struct SizeClassAllocatorLocalCache {
       memcpy(Array, Batch, sizeof(Batch[0]) * Count);
     }
     u16 getCount() const { return Count; }
+    bool isEmpty() const { return Count == 0U; }
     CompactPtrT get(u16 I) const {
       DCHECK_LE(I, Count);
       return Batch[I];
@@ -62,17 +73,16 @@ template <class SizeClassAllocator> struct SizeClassAllocatorLocalCache {
   struct BatchGroup {
     // `Next` is used by IntrusiveList.
     BatchGroup *Next;
-    // The identifier of each group
-    uptr GroupId;
+    // The compact base address of each group
+    uptr CompactPtrGroupBase;
     // Cache value of TransferBatch::getMaxCached()
     u16 MaxCachedPerBatch;
     // Number of blocks pushed into this group. This is an increment-only
     // counter.
     uptr PushedBlocks;
-    // This is used to track how many blocks are pushed since last time we
-    // checked `PushedBlocks`. It's useful for page releasing to determine the
-    // usage of a BatchGroup.
-    uptr PushedBlocksAtLastCheckpoint;
+    // This is used to track how many bytes are not in-use since last time we
+    // tried to release pages.
+    uptr BytesInBGAtLastCheckpoint;
     // Blocks are managed by TransferBatch in a list.
     SinglyLinkedList<TransferBatch> Batches;
   };
@@ -112,13 +122,16 @@ template <class SizeClassAllocator> struct SizeClassAllocatorLocalCache {
     return Allocator->decompactPtr(ClassId, CompactP);
   }
 
-  void deallocate(uptr ClassId, void *P) {
+  bool deallocate(uptr ClassId, void *P) {
     CHECK_LT(ClassId, NumClasses);
     PerClass *C = &PerClassArray[ClassId];
     // We still have to initialize the cache in the event that the first heap
     // operation in a thread is a deallocation.
     initCacheMaybe(C);
-    if (C->Count == C->MaxCount)
+
+    // If the cache is full, drain half of blocks back to the main allocator.
+    const bool NeedToDrainCache = C->Count == C->MaxCount;
+    if (NeedToDrainCache)
       drain(C, ClassId);
     // See comment in allocate() about memory accesses.
     const uptr ClassSize = C->ClassSize;
@@ -126,6 +139,8 @@ template <class SizeClassAllocator> struct SizeClassAllocatorLocalCache {
         Allocator->compactPtr(ClassId, reinterpret_cast<uptr>(P));
     Stats.sub(StatAllocated, ClassSize);
     Stats.add(StatFree, ClassSize);
+
+    return NeedToDrainCache;
   }
 
   bool isEmpty() const {
@@ -164,6 +179,29 @@ template <class SizeClassAllocator> struct SizeClassAllocatorLocalCache {
   }
 
   LocalStats &getStats() { return Stats; }
+
+  void getStats(ScopedString *Str) {
+    bool EmptyCache = true;
+    for (uptr I = 0; I < NumClasses; ++I) {
+      if (PerClassArray[I].Count == 0)
+        continue;
+
+      EmptyCache = false;
+      // The size of BatchClass is set to 0 intentionally. See the comment in
+      // initCache() for more details.
+      const uptr ClassSize = I == BatchClassId
+                                 ? SizeClassAllocator::getSizeByClassId(I)
+                                 : PerClassArray[I].ClassSize;
+      // Note that the string utils don't support printing u16 thus we cast it
+      // to a common use type uptr.
+      Str->append("    %02zu (%6zu): cached: %4zu max: %4zu\n", I, ClassSize,
+                  static_cast<uptr>(PerClassArray[I].Count),
+                  static_cast<uptr>(PerClassArray[I].MaxCount));
+    }
+
+    if (EmptyCache)
+      Str->append("    No block is cached.\n");
+  }
 
 private:
   static const uptr NumClasses = SizeClassMap::NumClasses;

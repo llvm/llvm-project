@@ -91,6 +91,8 @@ unsigned WebAssemblyWasmObjectWriter::getRelocType(
       return wasm::R_WASM_TYPE_INDEX_LEB;
     case MCSymbolRefExpr::VK_None:
       break;
+    case MCSymbolRefExpr::VK_WASM_FUNCINDEX:
+      return wasm::R_WASM_FUNCTION_INDEX_I32;
     default:
       report_fatal_error("unknown VariantKind");
       break;

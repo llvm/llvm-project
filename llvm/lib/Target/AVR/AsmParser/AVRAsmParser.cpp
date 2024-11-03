@@ -56,17 +56,16 @@ class AVRAsmParser : public MCTargetAsmParser {
                                uint64_t &ErrorInfo,
                                bool MatchingInlineAsm) override;
 
-  bool parseRegister(MCRegister &RegNo, SMLoc &StartLoc,
-                     SMLoc &EndLoc) override;
-  OperandMatchResultTy tryParseRegister(MCRegister &RegNo, SMLoc &StartLoc,
-                                        SMLoc &EndLoc) override;
+  bool parseRegister(MCRegister &Reg, SMLoc &StartLoc, SMLoc &EndLoc) override;
+  ParseStatus tryParseRegister(MCRegister &Reg, SMLoc &StartLoc,
+                               SMLoc &EndLoc) override;
 
   bool ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
                         SMLoc NameLoc, OperandVector &Operands) override;
 
-  bool ParseDirective(AsmToken DirectiveID) override;
+  ParseStatus parseDirective(AsmToken DirectiveID) override;
 
-  OperandMatchResultTy parseMemriOperand(OperandVector &Operands);
+  ParseStatus parseMemriOperand(OperandVector &Operands);
 
   bool parseOperand(OperandVector &Operands, bool maybeReg);
   int parseRegisterName(unsigned (*matchFn)(StringRef));
@@ -90,7 +89,7 @@ class AVRAsmParser : public MCTargetAsmParser {
                       uint64_t const &ErrorInfo);
   bool missingFeature(SMLoc const &Loc, uint64_t const &ErrorInfo);
 
-  bool parseLiteralValues(unsigned SizeInBytes, SMLoc L);
+  ParseStatus parseLiteralValues(unsigned SizeInBytes, SMLoc L);
 
 public:
   AVRAsmParser(const MCSubtargetInfo &STI, MCAsmParser &Parser,
@@ -559,7 +558,7 @@ bool AVRAsmParser::parseOperand(OperandVector &Operands, bool maybeReg) {
   return true;
 }
 
-OperandMatchResultTy AVRAsmParser::parseMemriOperand(OperandVector &Operands) {
+ParseStatus AVRAsmParser::parseMemriOperand(OperandVector &Operands) {
   LLVM_DEBUG(dbgs() << "parseMemriOperand()\n");
 
   SMLoc E, S;
@@ -571,7 +570,7 @@ OperandMatchResultTy AVRAsmParser::parseMemriOperand(OperandVector &Operands) {
     RegNo = parseRegister();
 
     if (RegNo == AVR::NoRegister)
-      return MatchOperand_ParseFail;
+      return ParseStatus::Failure;
 
     S = SMLoc::getFromPointer(Parser.getTok().getLoc().getPointer() - 1);
     Parser.Lex(); // Eat register token.
@@ -580,35 +579,34 @@ OperandMatchResultTy AVRAsmParser::parseMemriOperand(OperandVector &Operands) {
   // Parse immediate;
   {
     if (getParser().parseExpression(Expression))
-      return MatchOperand_ParseFail;
+      return ParseStatus::Failure;
 
     E = SMLoc::getFromPointer(Parser.getTok().getLoc().getPointer() - 1);
   }
 
   Operands.push_back(AVROperand::CreateMemri(RegNo, Expression, S, E));
 
-  return MatchOperand_Success;
+  return ParseStatus::Success;
 }
 
-bool AVRAsmParser::parseRegister(MCRegister &RegNo, SMLoc &StartLoc,
+bool AVRAsmParser::parseRegister(MCRegister &Reg, SMLoc &StartLoc,
                                  SMLoc &EndLoc) {
   StartLoc = Parser.getTok().getLoc();
-  RegNo = parseRegister(/*RestoreOnFailure=*/false);
+  Reg = parseRegister(/*RestoreOnFailure=*/false);
   EndLoc = Parser.getTok().getLoc();
 
-  return (RegNo == AVR::NoRegister);
+  return Reg == AVR::NoRegister;
 }
 
-OperandMatchResultTy AVRAsmParser::tryParseRegister(MCRegister &RegNo,
-                                                    SMLoc &StartLoc,
-                                                    SMLoc &EndLoc) {
+ParseStatus AVRAsmParser::tryParseRegister(MCRegister &Reg, SMLoc &StartLoc,
+                                           SMLoc &EndLoc) {
   StartLoc = Parser.getTok().getLoc();
-  RegNo = parseRegister(/*RestoreOnFailure=*/true);
+  Reg = parseRegister(/*RestoreOnFailure=*/true);
   EndLoc = Parser.getTok().getLoc();
 
-  if (RegNo == AVR::NoRegister)
-    return MatchOperand_NoMatch;
-  return MatchOperand_Success;
+  if (Reg == AVR::NoRegister)
+    return ParseStatus::NoMatch;
+  return ParseStatus::Success;
 }
 
 void AVRAsmParser::eatComma() {
@@ -630,13 +628,12 @@ bool AVRAsmParser::ParseInstruction(ParseInstructionInfo &Info,
     if (OperandNum > 0)
       eatComma();
 
-    auto MatchResult = MatchOperandParserImpl(Operands, Mnemonic);
+    ParseStatus ParseRes = MatchOperandParserImpl(Operands, Mnemonic);
 
-    if (MatchResult == MatchOperand_Success) {
+    if (ParseRes.isSuccess())
       continue;
-    }
 
-    if (MatchResult == MatchOperand_ParseFail) {
+    if (ParseRes.isFailure()) {
       SMLoc Loc = getLexer().getLoc();
       Parser.eatToEndOfStatement();
 
@@ -674,19 +671,18 @@ bool AVRAsmParser::ParseInstruction(ParseInstructionInfo &Info,
   return false;
 }
 
-bool AVRAsmParser::ParseDirective(llvm::AsmToken DirectiveID) {
+ParseStatus AVRAsmParser::parseDirective(llvm::AsmToken DirectiveID) {
   StringRef IDVal = DirectiveID.getIdentifier();
-  if (IDVal.lower() == ".long") {
-    parseLiteralValues(SIZE_LONG, DirectiveID.getLoc());
-  } else if (IDVal.lower() == ".word" || IDVal.lower() == ".short") {
-    parseLiteralValues(SIZE_WORD, DirectiveID.getLoc());
-  } else if (IDVal.lower() == ".byte") {
-    parseLiteralValues(1, DirectiveID.getLoc());
-  }
-  return true;
+  if (IDVal.lower() == ".long")
+    return parseLiteralValues(SIZE_LONG, DirectiveID.getLoc());
+  if (IDVal.lower() == ".word" || IDVal.lower() == ".short")
+    return parseLiteralValues(SIZE_WORD, DirectiveID.getLoc());
+  if (IDVal.lower() == ".byte")
+    return parseLiteralValues(1, DirectiveID.getLoc());
+  return ParseStatus::NoMatch;
 }
 
-bool AVRAsmParser::parseLiteralValues(unsigned SizeInBytes, SMLoc L) {
+ParseStatus AVRAsmParser::parseLiteralValues(unsigned SizeInBytes, SMLoc L) {
   MCAsmParser &Parser = getParser();
   AVRMCELFStreamer &AVRStreamer =
       static_cast<AVRMCELFStreamer &>(Parser.getStreamer());
@@ -698,7 +694,7 @@ bool AVRAsmParser::parseLiteralValues(unsigned SizeInBytes, SMLoc L) {
     MCSymbol *Symbol = getContext().getOrCreateSymbol(".text");
     AVRStreamer.emitValueForModiferKind(Symbol, SizeInBytes, L,
                                         AVRMCExpr::VK_AVR_None);
-    return false;
+    return ParseStatus::NoMatch;
   }
 
   if (Parser.getTok().getKind() == AsmToken::Identifier &&
@@ -715,7 +711,10 @@ bool AVRAsmParser::parseLiteralValues(unsigned SizeInBytes, SMLoc L) {
     MCSymbol *Symbol =
         getContext().getOrCreateSymbol(Parser.getTok().getString());
     AVRStreamer.emitValueForModiferKind(Symbol, SizeInBytes, L, ModifierKind);
-    return false;
+    Lex(); // Eat the symbol name.
+    if (parseToken(AsmToken::RParen))
+      return ParseStatus::Failure;
+    return parseEOL();
   }
 
   auto parseOne = [&]() -> bool {

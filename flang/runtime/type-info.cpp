@@ -112,7 +112,7 @@ void Component::EstablishDescriptor(Descriptor &descriptor,
   } else {
     descriptor.Establish(cat, kind_, nullptr, rank_, nullptr, attribute);
   }
-  if (rank_ && genre_ != Genre::Allocatable) {
+  if (rank_ && genre_ != Genre::Allocatable && genre_ != Genre::Pointer) {
     const typeInfo::Value *boundValues{bounds()};
     RUNTIME_CHECK(terminator, boundValues != nullptr);
     auto byteStride{static_cast<SubscriptValue>(descriptor.ElementBytes())};
@@ -313,6 +313,8 @@ FILE *SpecialBinding::Dump(FILE *f) const {
     break;
   }
   std::fprintf(f, "    isArgDescriptorSet: 0x%x\n", isArgDescriptorSet_);
+  std::fprintf(f, "    isTypeBound: 0x%x\n", isTypeBound_);
+  std::fprintf(f, "    isArgContiguousSet: 0x%x\n", isArgContiguousSet_);
   std::fprintf(f, "    proc: %p\n", reinterpret_cast<void *>(proc_));
   return f;
 }

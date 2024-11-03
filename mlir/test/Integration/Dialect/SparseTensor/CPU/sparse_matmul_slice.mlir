@@ -1,47 +1,94 @@
-// DEFINE: %{option} = enable-runtime-library=false
-// DEFINE: %{command} = mlir-opt %s --sparse-compiler=%{option} | \
-// DEFINE: mlir-cpu-runner \
-// DEFINE:  -e entry -entry-point-result=void  \
-// DEFINE:  -shared-libs=%mlir_lib_dir/libmlir_c_runner_utils%shlibext,%mlir_lib_dir/libmlir_runner_utils%shlibext | \
-// DEFINE: FileCheck %s
+//--------------------------------------------------------------------------------------------------
+// WHEN CREATING A NEW TEST, PLEASE JUST COPY & PASTE WITHOUT EDITS.
 //
-// RUN: %{command}
+// Set-up that's shared across all tests in this directory. In principle, this
+// config could be moved to lit.local.cfg. However, there are downstream users that
+//  do not use these LIT config files. Hence why this is kept inline.
 //
+// DEFINE: %{sparse_compiler_opts} = enable-runtime-library=true
+// DEFINE: %{sparse_compiler_opts_sve} = enable-arm-sve=true %{sparse_compiler_opts}
+// DEFINE: %{compile} = mlir-opt %s --sparse-compiler="%{sparse_compiler_opts}"
+// DEFINE: %{compile_sve} = mlir-opt %s --sparse-compiler="%{sparse_compiler_opts_sve}"
+// DEFINE: %{run_libs} = -shared-libs=%mlir_c_runner_utils,%mlir_runner_utils
+// DEFINE: %{run_opts} = -e entry -entry-point-result=void
+// DEFINE: %{run} = mlir-cpu-runner %{run_opts} %{run_libs}
+// DEFINE: %{run_sve} = %mcr_aarch64_cmd --march=aarch64 --mattr="+sve" %{run_opts} %{run_libs}
+//
+// DEFINE: %{env} =
+//--------------------------------------------------------------------------------------------------
+
+// REDEFINE: %{sparse_compiler_opts} = enable-runtime-library=false
+// RUN: %{compile} | %{run} | FileCheck %s
 
 // TODO: support lib path.
 
 #DCSR = #sparse_tensor.encoding<{
-  dimLevelType = [ "compressed", "compressed" ]
+  lvlTypes = [ "compressed", "compressed" ]
 }>
 
 #DCSR_SLICE = #sparse_tensor.encoding<{
-  dimLevelType = [ "compressed", "compressed" ],
-  slice = [ (0, 4, 1), (0, 8, 1) ]
+  lvlTypes = [ "compressed", "compressed" ],
+  dimSlices = [ (0, 4, 1), (0, 8, 1) ]
 }>
 
 #CSR = #sparse_tensor.encoding<{
-  dimLevelType = [ "dense", "compressed" ]
+  lvlTypes = [ "dense", "compressed" ]
 }>
 
 #CSR_SLICE = #sparse_tensor.encoding<{
-  dimLevelType = [ "dense", "compressed" ],
-  slice = [ (0, 4, 1), (0, 8, 1) ]
+  lvlTypes = [ "dense", "compressed" ],
+  dimSlices = [ (0, 4, 1), (0, 8, 1) ]
+}>
+
+#COO = #sparse_tensor.encoding<{
+  lvlTypes = [ "compressed_nu", "singleton" ]
 }>
 
 #CSR_SLICE_1 = #sparse_tensor.encoding<{
-  dimLevelType = [ "dense", "compressed" ],
-  slice = [ (0, 4, 2), (0, 4, 1) ]
+  lvlTypes = [ "dense", "compressed" ],
+  dimSlices = [ (0, 4, 2), (0, 4, 1) ]
 }>
 
 #DCSR_SLICE_1 = #sparse_tensor.encoding<{
-  dimLevelType = [ "compressed", "compressed" ],
-  slice = [ (0, 4, 2), (1, 4, 1) ]
+  lvlTypes = [ "compressed", "compressed" ],
+  dimSlices = [ (0, 4, 2), (1, 4, 1) ]
+}>
+
+#COO_SLICE_1 = #sparse_tensor.encoding<{
+  lvlTypes = [ "compressed_nu", "singleton" ],
+  dimSlices = [ (0, 4, 2), (0, 4, 1) ]
+}>
+
+#COO_SLICE_2 = #sparse_tensor.encoding<{
+  lvlTypes = [ "compressed_nu", "singleton" ],
+  dimSlices = [ (0, 4, 2), (1, 4, 1) ]
+}>
+
+#CSR_SLICE_dyn = #sparse_tensor.encoding<{
+  lvlTypes = [ "dense", "compressed" ],
+  dimSlices = [ (?, 4, ?), (?, 4, ?) ]
+}>
+
+#DCSR_SLICE_dyn = #sparse_tensor.encoding<{
+  lvlTypes = [ "compressed", "compressed" ],
+  dimSlices = [ (?, 4, ?), (?, 4, ?) ]
 }>
 
 module {
   func.func private @printMemrefF64(%ptr : tensor<*xf64>)
   func.func private @printMemref1dF64(%ptr : memref<?xf64>) attributes { llvm.emit_c_interface }
 
+  //
+  // Computes C = A x B with all matrices dynamic sparse slice (SpMSpM) in CSR and DCSR
+  //
+  func.func @matmul_dyn(%A: tensor<4x4xf64, #CSR_SLICE_dyn>,
+                        %B: tensor<4x4xf64, #DCSR_SLICE_dyn>) -> tensor<4x4xf64, #CSR> {
+    %C = bufferization.alloc_tensor() : tensor<4x4xf64, #CSR>
+    %D = linalg.matmul
+      ins(%A, %B: tensor<4x4xf64, #CSR_SLICE_dyn>, tensor<4x4xf64, #DCSR_SLICE_dyn>)
+         outs(%C: tensor<4x4xf64, #CSR>) -> tensor<4x4xf64, #CSR>
+    return %D: tensor<4x4xf64, #CSR>
+  }
 
   //
   // Computes C = A x B with one matrix CSR sparse slices and the other DSCR sparse slice.
@@ -80,10 +127,23 @@ module {
   }
 
   //
+  // Computes C = A x B with two COO slices.
+  //
+  func.func @matmul5(%A: tensor<4x4xf64, #COO_SLICE_1>,
+                     %B: tensor<4x4xf64, #COO_SLICE_2>) -> tensor<4x4xf64, #COO> {
+    %C = bufferization.alloc_tensor() : tensor<4x4xf64, #COO>
+    %D = linalg.matmul
+      ins(%A, %B: tensor<4x4xf64, #COO_SLICE_1>, tensor<4x4xf64, #COO_SLICE_2>)
+         outs(%C: tensor<4x4xf64, #COO>) -> tensor<4x4xf64, #COO>
+    return %D: tensor<4x4xf64, #COO>
+  }
+  //
   // Main driver.
   //
   func.func @entry() {
-    %c0 = arith.constant 0 : index
+    %c_0 = arith.constant 0 : index
+    %c_1 = arith.constant 1 : index
+    %c_2 = arith.constant 2 : index
     %f0 = arith.constant 0.0 : f64
 
     %sa = arith.constant dense<[
@@ -158,10 +218,42 @@ module {
     %4 = call @matmul1(%s2, %s1)
        : (tensor<4x4xf64, #CSR_SLICE_1>,
           tensor<4x4xf64, #DCSR_SLICE_1>) -> tensor<4x4xf64, #CSR>
-
     %c4 = sparse_tensor.convert %4 : tensor<4x4xf64, #CSR> to tensor<4x4xf64>
     %c4u = tensor.cast %c4 : tensor<4x4xf64> to tensor<*xf64>
     call @printMemrefF64(%c4u) : (tensor<*xf64>) -> ()
+
+    // slice coo x slice coo
+    //
+    // CHECK:      [2.3,   0,   0,   0],
+    // CHECK-NEXT: [6.9,   0,   0,   0],
+    // CHECK-NEXT: [0,   0,   0,   0],
+    // CHECK-NEXT: [12.6,   0,   0,   0]]
+    //
+    %t1_coo = sparse_tensor.convert %sa : tensor<8x8xf64> to tensor<8x8xf64, #COO>
+    %b1_coo = sparse_tensor.convert %sb : tensor<8x4xf64> to tensor<8x4xf64, #COO>
+    %s2_coo = tensor.extract_slice %b1_coo[0, 0][4, 4][2, 1] : tensor<8x4xf64, #COO> to tensor<4x4xf64, #COO_SLICE_1>
+    %s1_coo = tensor.extract_slice %t1_coo[0, 1][4, 4][2, 1] : tensor<8x8xf64, #COO> to tensor<4x4xf64, #COO_SLICE_2>
+    %o_coo = call @matmul5(%s2_coo, %s1_coo) : (tensor<4x4xf64, #COO_SLICE_1>, tensor<4x4xf64, #COO_SLICE_2>) -> tensor<4x4xf64, #COO>
+
+    %c4_coo = sparse_tensor.convert %o_coo : tensor<4x4xf64, #COO> to tensor<4x4xf64>
+    %c4u_coo = tensor.cast %c4_coo : tensor<4x4xf64> to tensor<*xf64>
+    call @printMemrefF64(%c4u_coo) : (tensor<*xf64>) -> ()
+
+    // slice x slice (same as above, but with dynamic stride information)
+    //
+    // CHECK:      [2.3,   0,   0,   0],
+    // CHECK-NEXT: [6.9,   0,   0,   0],
+    // CHECK-NEXT: [0,   0,   0,   0],
+    // CHECK-NEXT: [12.6,   0,   0,   0]]
+    //
+    %s1_dyn = tensor.extract_slice %tmp[%c_0, %c_1][4, 4][%c_2, %c_1] : tensor<8x8xf64, #DCSR> to tensor<4x4xf64, #DCSR_SLICE_dyn>
+    %s2_dyn = tensor.extract_slice %b1[%c_0, %c_0][4, 4][%c_2, %c_1] : tensor<8x4xf64, #CSR> to tensor<4x4xf64, #CSR_SLICE_dyn>
+    %dyn_4 = call @matmul_dyn(%s2_dyn, %s1_dyn)
+       : (tensor<4x4xf64, #CSR_SLICE_dyn>,
+          tensor<4x4xf64, #DCSR_SLICE_dyn>) -> tensor<4x4xf64, #CSR>
+    %c4_dyn = sparse_tensor.convert %dyn_4 : tensor<4x4xf64, #CSR> to tensor<4x4xf64>
+    %c4u_dyn = tensor.cast %c4_dyn : tensor<4x4xf64> to tensor<*xf64>
+    call @printMemrefF64(%c4u_dyn) : (tensor<*xf64>) -> ()
 
     // sparse slices should generate the same result as dense slices
     //
@@ -179,14 +271,18 @@ module {
     %du = tensor.cast %r : tensor<4x4xf64> to tensor<*xf64>
     call @printMemrefF64(%du) : (tensor<*xf64>) -> ()
 
-    // Releases resources.
+    // Releases resources (we do not need to deallocate slices).
     bufferization.dealloc_tensor %b1 : tensor<8x4xf64, #CSR>
     bufferization.dealloc_tensor %t1 : tensor<8x8xf64, #CSR>
+    bufferization.dealloc_tensor %b1_coo : tensor<8x4xf64, #COO>
+    bufferization.dealloc_tensor %t1_coo : tensor<8x8xf64, #COO>
+    bufferization.dealloc_tensor %o_coo : tensor<4x4xf64, #COO>
     bufferization.dealloc_tensor %b  : tensor<8x4xf64, #DCSR>
     bufferization.dealloc_tensor %tmp: tensor<8x8xf64, #DCSR>
     bufferization.dealloc_tensor %4  : tensor<4x4xf64, #CSR>
     bufferization.dealloc_tensor %3  : tensor<4x4xf64, #CSR>
     bufferization.dealloc_tensor %2  : tensor<4x4xf64, #DCSR>
+    bufferization.dealloc_tensor %dyn_4 : tensor<4x4xf64, #CSR>
 
     return
   }

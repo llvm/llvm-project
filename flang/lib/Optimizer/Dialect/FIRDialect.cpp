@@ -64,6 +64,7 @@ fir::FIROpsDialect::FIROpsDialect(mlir::MLIRContext *ctx)
 #define GET_OP_LIST
 #include "flang/Optimizer/Dialect/FIROps.cpp.inc"
       >();
+  registerOpExternalInterfaces();
   addInterfaces<FIRInlinerInterface>();
 }
 

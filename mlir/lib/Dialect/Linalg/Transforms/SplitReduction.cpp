@@ -28,7 +28,7 @@ using namespace mlir;
 using namespace mlir::linalg;
 
 FailureOr<SplitReductionResult> mlir::linalg::splitReduction(
-    PatternRewriter &b, LinalgOp op,
+    RewriterBase &b, LinalgOp op,
     const ControlSplitReductionFn &controlSplitReductionFn, bool useAlloc) {
   OpBuilder::InsertionGuard guard(b);
   b.setInsertionPoint(op);
@@ -66,7 +66,7 @@ FailureOr<SplitReductionResult> mlir::linalg::splitReduction(
     return b.notifyMatchFailure(op, "Cannot match the reduction pattern");
 
   Operation *reductionOp = combinerOps[0];
-  std::optional<Attribute> identity = getNeutralElement(reductionOp);
+  std::optional<TypedAttr> identity = arith::getNeutralElement(reductionOp);
   if (!identity.has_value())
     return b.notifyMatchFailure(op, "Unknown identity value for the reduction");
 
@@ -113,7 +113,7 @@ FailureOr<SplitReductionResult> mlir::linalg::splitReduction(
     }
     Type newType = RankedTensorType::get(
         newShape,
-        operand->get().getType().cast<RankedTensorType>().getElementType());
+        cast<RankedTensorType>(operand->get().getType()).getElementType());
     Value newInput = b.create<tensor::ExpandShapeOp>(
         loc, newType, operand->get(), reassociation);
     newInputs.push_back(newInput);
@@ -156,10 +156,11 @@ FailureOr<SplitReductionResult> mlir::linalg::splitReduction(
   newMaps.push_back(AffineMap::get(oldOutputMap.getNumDims() + 1, 0, outputExpr,
                                    op.getContext()));
   SmallVector<utils::IteratorType> newIteratorTypes;
-  for (auto &it : llvm::enumerate(op.getIteratorTypesArray())) {
-    if (insertSplitDimension == it.index())
+  for (auto [index, iteratorType] :
+       llvm::enumerate(op.getIteratorTypesArray())) {
+    if (insertSplitDimension == index)
       newIteratorTypes.push_back(utils::IteratorType::parallel);
-    newIteratorTypes.push_back(it.value());
+    newIteratorTypes.push_back(iteratorType);
   }
   if (insertSplitDimension == op.getIteratorTypesArray().size()) {
     newIteratorTypes.push_back(utils::IteratorType::parallel);
@@ -238,7 +239,7 @@ static AffineMap insertParallelDim(LinalgOp op, OpOperand &opOperand,
 
 /// Core rewrite implementation.
 FailureOr<SplitReductionResult> mlir::linalg::splitReductionByScaling(
-    PatternRewriter &b, LinalgOp op,
+    RewriterBase &b, LinalgOp op,
     const ControlSplitReductionFn &controlSplitReductionFn, bool useAlloc) {
   OpBuilder::InsertionGuard guard(b);
   b.setInsertionPoint(op);
@@ -271,9 +272,10 @@ FailureOr<SplitReductionResult> mlir::linalg::splitReductionByScaling(
   if (!matchReduction(op.getRegionOutputArgs(), 0, combinerOps))
     return b.notifyMatchFailure(op, "cannot match a reduction pattern");
 
-  SmallVector<Attribute> neutralElements;
+  SmallVector<TypedAttr> neutralElements;
   for (Operation *reductionOp : combinerOps) {
-    std::optional<Attribute> neutralElement = getNeutralElement(reductionOp);
+    std::optional<TypedAttr> neutralElement =
+        arith::getNeutralElement(reductionOp);
     if (!neutralElement.has_value())
       return b.notifyMatchFailure(op, "cannot find neutral element.");
     neutralElements.push_back(*neutralElement);
@@ -308,7 +310,7 @@ FailureOr<SplitReductionResult> mlir::linalg::splitReductionByScaling(
   fillOps.reserve(op.getNumDpsInits());
   for (auto it : llvm::zip(op.getDpsInitOperands(), neutralElements)) {
     Value rankedTensor = std::get<0>(it)->get();
-    auto t = rankedTensor.getType().cast<RankedTensorType>();
+    auto t = cast<RankedTensorType>(rankedTensor.getType());
     RankedTensorType newT = RankedTensorType::Builder(t).insertDim(
         reductionDimSize / splitFactor, insertSplitDimension);
     SmallVector<Value> dims =
@@ -382,7 +384,7 @@ FailureOr<SplitReductionResult> mlir::linalg::splitReductionByScaling(
                            combinerOps)) {
     Value reindexedOutput = std::get<0>(it);
     Value originalOutput = std::get<1>(it)->get();
-    auto originalOutputType = originalOutput.getType().cast<RankedTensorType>();
+    auto originalOutputType = cast<RankedTensorType>(originalOutput.getType());
     Operation *combinerOp = std::get<2>(it);
 
     AffineMap map = b.getMultiDimIdentityMap(originalOutputType.getRank() + 1);

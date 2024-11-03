@@ -46,10 +46,10 @@ A[i, j] = B[i, k, l] * D[l, j] * C[k, j]
 
 # Perform the MTTKRP computation and write the result to file.
 with tempfile.TemporaryDirectory() as test_dir:
-  golden_file = os.path.join(_SCRIPT_PATH, "data/gold_A.tns")
-  out_file = os.path.join(test_dir, "A.tns")
-  pt.write(out_file, A)
-  #
-  # CHECK: Compare result True
-  #
-  print(f"Compare result {utils.compare_sparse_tns(golden_file, out_file)}")
+    golden_file = os.path.join(_SCRIPT_PATH, "data/gold_A.tns")
+    out_file = os.path.join(test_dir, "A.tns")
+    pt.write(out_file, A)
+    #
+    # CHECK: Compare result True
+    #
+    print(f"Compare result {utils.compare_sparse_tns(golden_file, out_file)}")

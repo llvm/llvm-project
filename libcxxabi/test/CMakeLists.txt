@@ -8,17 +8,13 @@ macro(pythonize_bool var)
 endmacro()
 
 pythonize_bool(LIBCXXABI_USE_LLVM_UNWINDER)
-set(LIBCXXABI_EXECUTOR "${Python3_EXECUTABLE} ${LIBCXXABI_LIBCXX_PATH}/utils/run.py" CACHE STRING
+set(LIBCXXABI_EXECUTOR "\\\"${Python3_EXECUTABLE}\\\" ${LIBCXXABI_LIBCXX_PATH}/utils/run.py" CACHE STRING
     "Executor to use when running tests.")
 
 if (LIBCXXABI_ENABLE_SHARED)
   set(LIBCXXABI_TEST_DEPS cxxabi_shared)
 else()
   set(LIBCXXABI_TEST_DEPS cxxabi_static)
-endif()
-
-if (LIBCXXABI_BUILD_EXTERNAL_THREAD_LIBRARY)
-  list(APPEND LIBCXXABI_TEST_DEPS cxx_external_threads)
 endif()
 
 list(APPEND LIBCXXABI_TEST_DEPS cxx)

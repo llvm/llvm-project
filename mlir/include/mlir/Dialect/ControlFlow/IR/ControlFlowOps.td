@@ -28,7 +28,6 @@ def ControlFlow_Dialect : Dialect {
     constructs. These constructs generally represent control flow directly
     on SSA blocks of a control flow graph.
   }];
-
 }
 
 class CF_Op<string mnemonic, list<Trait> traits = []> :

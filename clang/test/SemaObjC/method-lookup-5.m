@@ -1,5 +1,4 @@
 // RUN: %clang_cc1 -fsyntax-only -verify %s
-// rdar://8592156
 
 typedef struct objc_class *Class;
 @interface A

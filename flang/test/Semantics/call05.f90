@@ -20,9 +20,9 @@ module m
   class(t2), allocatable :: pa2(:)
   class(*), pointer :: up(:)
   class(*), allocatable :: ua(:)
-  !ERROR: An assumed (*) type parameter may be used only for a (non-statement function) dummy argument, associate name, named constant, or external function result
+  !ERROR: An assumed (*) type parameter may be used only for a (non-statement function) dummy argument, associate name, character named constant, or external function result
   type(pdt(*)), pointer :: amp(:)
-  !ERROR: An assumed (*) type parameter may be used only for a (non-statement function) dummy argument, associate name, named constant, or external function result
+  !ERROR: An assumed (*) type parameter may be used only for a (non-statement function) dummy argument, associate name, character named constant, or external function result
   type(pdt(*)), allocatable :: ama(:)
   type(pdt(:)), pointer :: dmp(:)
   type(pdt(:)), allocatable :: dma(:)
@@ -86,6 +86,7 @@ module m
     !ERROR: If a POINTER or ALLOCATABLE dummy or actual argument is unlimited polymorphic, both must be so
     call sua(pa)
     !ERROR: Actual argument type 'CLASS(*)' is not compatible with dummy argument type 'CLASS(t)'
+    !ERROR: Pointer type must be unlimited polymorphic or non-extensible derived type when target is unlimited polymorphic
     call spp(up)
     !ERROR: Actual argument type 'CLASS(*)' is not compatible with dummy argument type 'CLASS(t)'
     call spa(ua)
@@ -94,6 +95,7 @@ module m
     !ERROR: POINTER or ALLOCATABLE dummy and actual arguments must have the same declared type and kind
     call spa(pa2)
     !ERROR: Rank of dummy argument is 1, but actual argument has rank 2
+    !ERROR: Pointer has rank 1 but target has rank 2
     call smp(mpmat)
     !ERROR: Rank of dummy argument is 1, but actual argument has rank 2
     call sma(mamat)
@@ -121,7 +123,9 @@ end module
 
 module m2
 
+  !ERROR: Procedure 't3' may not be ALLOCATABLE without an explicit interface
   character(len=10), allocatable :: t1, t2, t3, t4
+  !ERROR: Procedure 't6' may not be ALLOCATABLE without an explicit interface
   character(len=:), allocatable :: t5, t6, t7, t8(:)
 
   character(len=10), pointer :: p1

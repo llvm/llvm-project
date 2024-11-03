@@ -325,9 +325,6 @@ unsigned test_8(void) {
 /***/
 
 // This is another case where we narrow the access width immediately.
-//
-// <rdar://problem/7893760>
-
 struct __attribute__((packed)) s9 {
   unsigned f0 : 7;
   unsigned f1 : 7;

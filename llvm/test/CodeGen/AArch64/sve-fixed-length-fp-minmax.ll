@@ -48,8 +48,8 @@ define void @fmaxnm_v16f16(ptr %a, ptr %b) vscale_range(2,0) #0 {
 define void @fmaxnm_v32f16(ptr %a, ptr %b) #0 {
 ; VBITS_EQ_256-LABEL: fmaxnm_v32f16:
 ; VBITS_EQ_256:       // %bb.0:
-; VBITS_EQ_256-NEXT:    mov x8, #16
 ; VBITS_EQ_256-NEXT:    ptrue p0.h, vl16
+; VBITS_EQ_256-NEXT:    mov x8, #16 // =0x10
 ; VBITS_EQ_256-NEXT:    ld1h { z0.h }, p0/z, [x0, x8, lsl #1]
 ; VBITS_EQ_256-NEXT:    ld1h { z1.h }, p0/z, [x0]
 ; VBITS_EQ_256-NEXT:    ld1h { z2.h }, p0/z, [x1, x8, lsl #1]
@@ -146,8 +146,8 @@ define void @fmaxnm_v8f32(ptr %a, ptr %b) vscale_range(2,0) #0 {
 define void @fmaxnm_v16f32(ptr %a, ptr %b) #0 {
 ; VBITS_EQ_256-LABEL: fmaxnm_v16f32:
 ; VBITS_EQ_256:       // %bb.0:
-; VBITS_EQ_256-NEXT:    mov x8, #8
 ; VBITS_EQ_256-NEXT:    ptrue p0.s, vl8
+; VBITS_EQ_256-NEXT:    mov x8, #8 // =0x8
 ; VBITS_EQ_256-NEXT:    ld1w { z0.s }, p0/z, [x0, x8, lsl #2]
 ; VBITS_EQ_256-NEXT:    ld1w { z1.s }, p0/z, [x0]
 ; VBITS_EQ_256-NEXT:    ld1w { z2.s }, p0/z, [x1, x8, lsl #2]
@@ -244,8 +244,8 @@ define void @fmaxnm_v4f64(ptr %a, ptr %b) vscale_range(2,0) #0 {
 define void @fmaxnm_v8f64(ptr %a, ptr %b) #0 {
 ; VBITS_EQ_256-LABEL: fmaxnm_v8f64:
 ; VBITS_EQ_256:       // %bb.0:
-; VBITS_EQ_256-NEXT:    mov x8, #4
 ; VBITS_EQ_256-NEXT:    ptrue p0.d, vl4
+; VBITS_EQ_256-NEXT:    mov x8, #4 // =0x4
 ; VBITS_EQ_256-NEXT:    ld1d { z0.d }, p0/z, [x0, x8, lsl #3]
 ; VBITS_EQ_256-NEXT:    ld1d { z1.d }, p0/z, [x0]
 ; VBITS_EQ_256-NEXT:    ld1d { z2.d }, p0/z, [x1, x8, lsl #3]
@@ -346,8 +346,8 @@ define void @fminnm_v16f16(ptr %a, ptr %b) vscale_range(2,0) #0 {
 define void @fminnm_v32f16(ptr %a, ptr %b) #0 {
 ; VBITS_EQ_256-LABEL: fminnm_v32f16:
 ; VBITS_EQ_256:       // %bb.0:
-; VBITS_EQ_256-NEXT:    mov x8, #16
 ; VBITS_EQ_256-NEXT:    ptrue p0.h, vl16
+; VBITS_EQ_256-NEXT:    mov x8, #16 // =0x10
 ; VBITS_EQ_256-NEXT:    ld1h { z0.h }, p0/z, [x0, x8, lsl #1]
 ; VBITS_EQ_256-NEXT:    ld1h { z1.h }, p0/z, [x0]
 ; VBITS_EQ_256-NEXT:    ld1h { z2.h }, p0/z, [x1, x8, lsl #1]
@@ -444,8 +444,8 @@ define void @fminnm_v8f32(ptr %a, ptr %b) vscale_range(2,0) #0 {
 define void @fminnm_v16f32(ptr %a, ptr %b) #0 {
 ; VBITS_EQ_256-LABEL: fminnm_v16f32:
 ; VBITS_EQ_256:       // %bb.0:
-; VBITS_EQ_256-NEXT:    mov x8, #8
 ; VBITS_EQ_256-NEXT:    ptrue p0.s, vl8
+; VBITS_EQ_256-NEXT:    mov x8, #8 // =0x8
 ; VBITS_EQ_256-NEXT:    ld1w { z0.s }, p0/z, [x0, x8, lsl #2]
 ; VBITS_EQ_256-NEXT:    ld1w { z1.s }, p0/z, [x0]
 ; VBITS_EQ_256-NEXT:    ld1w { z2.s }, p0/z, [x1, x8, lsl #2]
@@ -542,8 +542,8 @@ define void @fminnm_v4f64(ptr %a, ptr %b) vscale_range(2,0) #0 {
 define void @fminnm_v8f64(ptr %a, ptr %b) #0 {
 ; VBITS_EQ_256-LABEL: fminnm_v8f64:
 ; VBITS_EQ_256:       // %bb.0:
-; VBITS_EQ_256-NEXT:    mov x8, #4
 ; VBITS_EQ_256-NEXT:    ptrue p0.d, vl4
+; VBITS_EQ_256-NEXT:    mov x8, #4 // =0x4
 ; VBITS_EQ_256-NEXT:    ld1d { z0.d }, p0/z, [x0, x8, lsl #3]
 ; VBITS_EQ_256-NEXT:    ld1d { z1.d }, p0/z, [x0]
 ; VBITS_EQ_256-NEXT:    ld1d { z2.d }, p0/z, [x1, x8, lsl #3]
@@ -644,8 +644,8 @@ define void @fmax_v16f16(ptr %a, ptr %b) vscale_range(2,0) #0 {
 define void @fmax_v32f16(ptr %a, ptr %b) #0 {
 ; VBITS_EQ_256-LABEL: fmax_v32f16:
 ; VBITS_EQ_256:       // %bb.0:
-; VBITS_EQ_256-NEXT:    mov x8, #16
 ; VBITS_EQ_256-NEXT:    ptrue p0.h, vl16
+; VBITS_EQ_256-NEXT:    mov x8, #16 // =0x10
 ; VBITS_EQ_256-NEXT:    ld1h { z0.h }, p0/z, [x0, x8, lsl #1]
 ; VBITS_EQ_256-NEXT:    ld1h { z1.h }, p0/z, [x0]
 ; VBITS_EQ_256-NEXT:    ld1h { z2.h }, p0/z, [x1, x8, lsl #1]
@@ -742,8 +742,8 @@ define void @fmax_v8f32(ptr %a, ptr %b) vscale_range(2,0) #0 {
 define void @fmax_v16f32(ptr %a, ptr %b) #0 {
 ; VBITS_EQ_256-LABEL: fmax_v16f32:
 ; VBITS_EQ_256:       // %bb.0:
-; VBITS_EQ_256-NEXT:    mov x8, #8
 ; VBITS_EQ_256-NEXT:    ptrue p0.s, vl8
+; VBITS_EQ_256-NEXT:    mov x8, #8 // =0x8
 ; VBITS_EQ_256-NEXT:    ld1w { z0.s }, p0/z, [x0, x8, lsl #2]
 ; VBITS_EQ_256-NEXT:    ld1w { z1.s }, p0/z, [x0]
 ; VBITS_EQ_256-NEXT:    ld1w { z2.s }, p0/z, [x1, x8, lsl #2]
@@ -840,8 +840,8 @@ define void @fmax_v4f64(ptr %a, ptr %b) vscale_range(2,0) #0 {
 define void @fmax_v8f64(ptr %a, ptr %b) #0 {
 ; VBITS_EQ_256-LABEL: fmax_v8f64:
 ; VBITS_EQ_256:       // %bb.0:
-; VBITS_EQ_256-NEXT:    mov x8, #4
 ; VBITS_EQ_256-NEXT:    ptrue p0.d, vl4
+; VBITS_EQ_256-NEXT:    mov x8, #4 // =0x4
 ; VBITS_EQ_256-NEXT:    ld1d { z0.d }, p0/z, [x0, x8, lsl #3]
 ; VBITS_EQ_256-NEXT:    ld1d { z1.d }, p0/z, [x0]
 ; VBITS_EQ_256-NEXT:    ld1d { z2.d }, p0/z, [x1, x8, lsl #3]
@@ -942,8 +942,8 @@ define void @fmin_v16f16(ptr %a, ptr %b) vscale_range(2,0) #0 {
 define void @fmin_v32f16(ptr %a, ptr %b) #0 {
 ; VBITS_EQ_256-LABEL: fmin_v32f16:
 ; VBITS_EQ_256:       // %bb.0:
-; VBITS_EQ_256-NEXT:    mov x8, #16
 ; VBITS_EQ_256-NEXT:    ptrue p0.h, vl16
+; VBITS_EQ_256-NEXT:    mov x8, #16 // =0x10
 ; VBITS_EQ_256-NEXT:    ld1h { z0.h }, p0/z, [x0, x8, lsl #1]
 ; VBITS_EQ_256-NEXT:    ld1h { z1.h }, p0/z, [x0]
 ; VBITS_EQ_256-NEXT:    ld1h { z2.h }, p0/z, [x1, x8, lsl #1]
@@ -1040,8 +1040,8 @@ define void @fmin_v8f32(ptr %a, ptr %b) vscale_range(2,0) #0 {
 define void @fmin_v16f32(ptr %a, ptr %b) #0 {
 ; VBITS_EQ_256-LABEL: fmin_v16f32:
 ; VBITS_EQ_256:       // %bb.0:
-; VBITS_EQ_256-NEXT:    mov x8, #8
 ; VBITS_EQ_256-NEXT:    ptrue p0.s, vl8
+; VBITS_EQ_256-NEXT:    mov x8, #8 // =0x8
 ; VBITS_EQ_256-NEXT:    ld1w { z0.s }, p0/z, [x0, x8, lsl #2]
 ; VBITS_EQ_256-NEXT:    ld1w { z1.s }, p0/z, [x0]
 ; VBITS_EQ_256-NEXT:    ld1w { z2.s }, p0/z, [x1, x8, lsl #2]
@@ -1138,8 +1138,8 @@ define void @fmin_v4f64(ptr %a, ptr %b) vscale_range(2,0) #0 {
 define void @fmin_v8f64(ptr %a, ptr %b) #0 {
 ; VBITS_EQ_256-LABEL: fmin_v8f64:
 ; VBITS_EQ_256:       // %bb.0:
-; VBITS_EQ_256-NEXT:    mov x8, #4
 ; VBITS_EQ_256-NEXT:    ptrue p0.d, vl4
+; VBITS_EQ_256-NEXT:    mov x8, #4 // =0x4
 ; VBITS_EQ_256-NEXT:    ld1d { z0.d }, p0/z, [x0, x8, lsl #3]
 ; VBITS_EQ_256-NEXT:    ld1d { z1.d }, p0/z, [x0]
 ; VBITS_EQ_256-NEXT:    ld1d { z2.d }, p0/z, [x1, x8, lsl #3]

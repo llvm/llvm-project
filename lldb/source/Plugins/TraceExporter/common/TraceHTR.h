@@ -215,7 +215,7 @@ public:
   ///
   /// \param[in] func_name
   ///     The name of the function the 'call' instruction is calling if it can
-  ///     be determined, None otherwise.
+  ///     be determined, std::nullopt otherwise.
   void AddCallInstructionMetadata(lldb::addr_t load_addr,
                                   std::optional<ConstString> func_name);
 

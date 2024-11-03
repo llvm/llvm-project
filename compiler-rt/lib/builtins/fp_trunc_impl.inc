@@ -75,6 +75,13 @@ static __inline dst_t __truncXfYf2__(src_t a) {
   const src_rep_t sign = aRep & srcSignMask;
   dst_rep_t absResult;
 
+  const int tailBits = srcBits - dstBits;
+  if (srcExpBits == dstExpBits && ((aRep >> tailBits) << tailBits) == aRep) {
+    // Same size exponents and a's significand tail is 0. Remove tail.
+    dst_rep_t result = aRep >> tailBits;
+    return dstFromRep(result);
+  }
+
   if (aAbs - underflow < aAbs - overflow) {
     // The exponent of a is within the range of normal numbers in the
     // destination format.  We can convert by simply right-shifting with

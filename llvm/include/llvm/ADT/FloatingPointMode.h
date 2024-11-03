@@ -80,7 +80,10 @@ struct DenormalMode {
     PreserveSign,
 
     /// Denormals are flushed to positive zero.
-    PositiveZero
+    PositiveZero,
+
+    /// Denormals have unknown treatment.
+    Dynamic
   };
 
   /// Denormal flushing mode for floating point instruction results in the
@@ -93,12 +96,19 @@ struct DenormalMode {
   DenormalModeKind Input = DenormalModeKind::Invalid;
 
   constexpr DenormalMode() = default;
+  constexpr DenormalMode(const DenormalMode &) = default;
   constexpr DenormalMode(DenormalModeKind Out, DenormalModeKind In) :
     Output(Out), Input(In) {}
 
+  DenormalMode &operator=(const DenormalMode &) = default;
 
   static constexpr DenormalMode getInvalid() {
     return DenormalMode(DenormalModeKind::Invalid, DenormalModeKind::Invalid);
+  }
+
+  /// Return the assumed default mode for a function without denormal-fp-math.
+  static constexpr DenormalMode getDefault() {
+    return getIEEE();
   }
 
   static constexpr DenormalMode getIEEE() {
@@ -113,6 +123,10 @@ struct DenormalMode {
   static constexpr DenormalMode getPositiveZero() {
     return DenormalMode(DenormalModeKind::PositiveZero,
                         DenormalModeKind::PositiveZero);
+  }
+
+  static constexpr DenormalMode getDynamic() {
+    return DenormalMode(DenormalModeKind::Dynamic, DenormalModeKind::Dynamic);
   }
 
   bool operator==(DenormalMode Other) const {
@@ -130,6 +144,30 @@ struct DenormalMode {
   bool isValid() const {
     return Output != DenormalModeKind::Invalid &&
            Input != DenormalModeKind::Invalid;
+  }
+
+  /// Return true if input denormals must be implicitly treated as 0.
+  constexpr bool inputsAreZero() const {
+    return Input == DenormalModeKind::PreserveSign ||
+           Input == DenormalModeKind::PositiveZero;
+  }
+
+  /// Return true if output denormals should be flushed to 0.
+  constexpr bool outputsAreZero() const {
+    return Output == DenormalModeKind::PreserveSign ||
+           Output == DenormalModeKind::PositiveZero;
+  }
+
+  /// Get the effective denormal mode if the mode if this caller calls into a
+  /// function with \p Callee. This promotes dynamic modes to the mode of the
+  /// caller.
+  DenormalMode mergeCalleeMode(DenormalMode Callee) const {
+    DenormalMode MergedMode = Callee;
+    if (Callee.Input == DenormalMode::Dynamic)
+      MergedMode.Input = Input;
+    if (Callee.Output == DenormalMode::Dynamic)
+      MergedMode.Output = Output;
+    return MergedMode;
   }
 
   inline void print(raw_ostream &OS) const;
@@ -152,13 +190,14 @@ inline DenormalMode::DenormalModeKind
 parseDenormalFPAttributeComponent(StringRef Str) {
   // Assume ieee on unspecified attribute.
   return StringSwitch<DenormalMode::DenormalModeKind>(Str)
-    .Cases("", "ieee", DenormalMode::IEEE)
-    .Case("preserve-sign", DenormalMode::PreserveSign)
-    .Case("positive-zero", DenormalMode::PositiveZero)
-    .Default(DenormalMode::Invalid);
+      .Cases("", "ieee", DenormalMode::IEEE)
+      .Case("preserve-sign", DenormalMode::PreserveSign)
+      .Case("positive-zero", DenormalMode::PositiveZero)
+      .Case("dynamic", DenormalMode::Dynamic)
+      .Default(DenormalMode::Invalid);
 }
 
-/// Return the name used for the denormal handling mode used by the the
+/// Return the name used for the denormal handling mode used by the
 /// expected names from the denormal-fp-math attribute.
 inline StringRef denormalModeKindName(DenormalMode::DenormalModeKind Mode) {
   switch (Mode) {
@@ -168,6 +207,8 @@ inline StringRef denormalModeKindName(DenormalMode::DenormalModeKind Mode) {
     return "preserve-sign";
   case DenormalMode::PositiveZero:
     return "positive-zero";
+  case DenormalMode::Dynamic:
+    return "dynamic";
   default:
     return "";
   }
@@ -181,7 +222,7 @@ inline DenormalMode parseDenormalFPAttribute(StringRef Str) {
   DenormalMode Mode;
   Mode.Output = parseDenormalFPAttributeComponent(OutputStr);
 
-  // Maintain compatability with old form of the attribute which only specified
+  // Maintain compatibility with old form of the attribute which only specified
   // one component.
   Mode.Input = InputStr.empty() ? Mode.Output  :
                parseDenormalFPAttributeComponent(InputStr);
@@ -217,10 +258,22 @@ enum FPClassTest : unsigned {
   fcPosFinite = fcPosNormal | fcPosSubnormal | fcPosZero,
   fcNegFinite = fcNegNormal | fcNegSubnormal | fcNegZero,
   fcFinite = fcPosFinite | fcNegFinite,
+  fcPositive = fcPosFinite | fcPosInf,
+  fcNegative = fcNegFinite | fcNegInf,
+
   fcAllFlags = fcNan | fcInf | fcFinite,
 };
 
 LLVM_DECLARE_ENUM_AS_BITMASK(FPClassTest, /* LargestValue */ fcPosInf);
+
+/// Return the test mask which returns true if the value's sign bit is flipped.
+FPClassTest fneg(FPClassTest Mask);
+
+/// Return the test mask which returns true if the value's sign bit is cleared.
+FPClassTest fabs(FPClassTest Mask);
+
+/// Write a human readable form of \p Mask to \p OS
+raw_ostream &operator<<(raw_ostream &OS, FPClassTest Mask);
 
 } // namespace llvm
 

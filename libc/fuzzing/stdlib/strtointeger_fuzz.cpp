@@ -65,6 +65,16 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
   if (str_ptr + container_size - 1 < out_ptr)
     __builtin_trap();
 
+  // If atoi is non-zero and the base is at least 10
+  if (atoi_output != 0 && base >= 10) {
+    // Then all of the other functions should output non-zero values as well.
+    // This is a trivial check meant to silence the "unused variable" warnings.
+    if (atol_output == 0 || atoll_output == 0 || strtol_output == 0 ||
+        strtoll_output == 0 || strtoul_output == 0 || strtoull_output == 0) {
+      __builtin_trap();
+    }
+  }
+
   delete[] container;
   return 0;
 }

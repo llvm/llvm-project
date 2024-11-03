@@ -12,6 +12,7 @@
 #include "Protocol.h"
 #include "support/Context.h"
 #include "support/Logger.h"
+#include "clang/Basic/FileEntry.h"
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
@@ -512,15 +513,12 @@ std::vector<TextEdit> replacementsToEdits(llvm::StringRef Code,
   return Edits;
 }
 
-std::optional<std::string> getCanonicalPath(const FileEntry *F,
-                                            const SourceManager &SourceMgr) {
-  if (!F)
-    return std::nullopt;
-
-  llvm::SmallString<128> FilePath = F->getName();
+std::optional<std::string> getCanonicalPath(const FileEntryRef F,
+                                            FileManager &FileMgr) {
+  llvm::SmallString<128> FilePath = F.getName();
   if (!llvm::sys::path::is_absolute(FilePath)) {
     if (auto EC =
-            SourceMgr.getFileManager().getVirtualFileSystem().makeAbsolute(
+            FileMgr.getVirtualFileSystem().makeAbsolute(
                 FilePath)) {
       elog("Could not turn relative path '{0}' to absolute: {1}", FilePath,
            EC.message());
@@ -539,10 +537,10 @@ std::optional<std::string> getCanonicalPath(const FileEntry *F,
   //
   //  The file path of Symbol is "/project/src/foo.h" instead of
   //  "/tmp/build/foo.h"
-  if (auto Dir = SourceMgr.getFileManager().getDirectory(
+  if (auto Dir = FileMgr.getOptionalDirectoryRef(
           llvm::sys::path::parent_path(FilePath))) {
     llvm::SmallString<128> RealPath;
-    llvm::StringRef DirName = SourceMgr.getFileManager().getCanonicalName(*Dir);
+    llvm::StringRef DirName = FileMgr.getCanonicalName(*Dir);
     llvm::sys::path::append(RealPath, DirName,
                             llvm::sys::path::filename(FilePath));
     return RealPath.str().str();
@@ -561,7 +559,7 @@ TextEdit toTextEdit(const FixItHint &FixIt, const SourceManager &M,
 }
 
 FileDigest digest(llvm::StringRef Content) {
-  uint64_t Hash{llvm::xxHash64(Content)};
+  uint64_t Hash{llvm::xxh3_64bits(Content)};
   FileDigest Result;
   for (unsigned I = 0; I < Result.size(); ++I) {
     Result[I] = uint8_t(Hash);
@@ -1243,6 +1241,18 @@ SourceLocation translatePreamblePatchLocation(SourceLocation Loc,
     }
   }
   return Loc;
+}
+
+clangd::Range rangeTillEOL(llvm::StringRef Code, unsigned HashOffset) {
+  clangd::Range Result;
+  Result.end = Result.start = offsetToPosition(Code, HashOffset);
+
+  // Span the warning until the EOL or EOF.
+  Result.end.character +=
+      lspLength(Code.drop_front(HashOffset).take_until([](char C) {
+        return C == '\n' || C == '\r';
+      }));
+  return Result;
 }
 } // namespace clangd
 } // namespace clang

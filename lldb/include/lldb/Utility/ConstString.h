@@ -14,6 +14,7 @@
 #include "llvm/Support/FormatVariadic.h"
 
 #include <cstddef>
+#include <string_view>
 
 namespace lldb_private {
 class Stream;
@@ -43,7 +44,7 @@ public:
   /// Initializes the string to an empty string.
   ConstString() = default;
 
-  explicit ConstString(const llvm::StringRef &s);
+  explicit ConstString(llvm::StringRef s);
 
   /// Construct with C String value
   ///
@@ -179,6 +180,11 @@ public:
   bool operator!=(const char *rhs) const { return !(*this == rhs); }
 
   bool operator<(ConstString rhs) const;
+
+  // Implicitly convert \class ConstString instances to \class StringRef.
+  operator llvm::StringRef() const { return GetStringRef(); }
+  // Implicitly convert \class ConstString instances to \calss std::string_view.
+  operator std::string_view() const { return std::string_view(m_string, GetLength()); }
 
   /// Get the string value as a C string.
   ///
@@ -322,7 +328,7 @@ public:
   ///     A NULL terminated C string to add to the string pool.
   void SetCString(const char *cstr);
 
-  void SetString(const llvm::StringRef &s);
+  void SetString(llvm::StringRef s);
 
   /// Set the C string value and its mangled counterpart.
   ///

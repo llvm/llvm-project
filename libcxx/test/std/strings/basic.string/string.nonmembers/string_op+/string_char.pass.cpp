@@ -52,9 +52,7 @@ TEST_CONSTEXPR_CXX20 bool test() {
     test1(S("abcdefghijklmnopqrst"), '1', S("abcdefghijklmnopqrst1"));
   }
   {
-    typedef std::basic_string<char, std::char_traits<char>,
-                              min_allocator<char> >
-        S;
+    typedef std::basic_string<char, std::char_traits<char>, min_allocator<char> > S;
     test0(S(""), '1', S("1"));
     test0(S("abcde"), '1', S("abcde1"));
     test0(S("abcdefghij"), '1', S("abcdefghij1"));

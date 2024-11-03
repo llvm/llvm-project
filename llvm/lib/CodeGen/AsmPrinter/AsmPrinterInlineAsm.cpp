@@ -12,6 +12,7 @@
 
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/CodeGen/AsmPrinter.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
@@ -379,7 +380,7 @@ void AsmPrinter::emitInlineAsm(const MachineInstr *MI) const {
     if (!MO.isImm())
       continue;
     unsigned Flags = MO.getImm();
-    if (InlineAsm::getKind(Flags) == InlineAsm::Kind_Clobber) {
+    if (InlineAsm::getKind(Flags) == InlineAsm::Kind::Clobber) {
       Register Reg = MI->getOperand(I + 1).getReg();
       if (!TRI->isAsmClobberable(*MF, Reg))
         RestrRegs.push_back(Reg);
@@ -399,6 +400,7 @@ void AsmPrinter::emitInlineAsm(const MachineInstr *MI) const {
         "Reserved registers on the clobber list may not be "
         "preserved across the asm statement, and clobbering them may "
         "lead to undefined behaviour.";
+    assert(MMI && "MMI can not be nullptr!");
     MMI->getModule()->getContext().diagnose(DiagnosticInfoInlineAsm(
         LocCookie, Msg, DiagnosticSeverity::DS_Warning));
     MMI->getModule()->getContext().diagnose(

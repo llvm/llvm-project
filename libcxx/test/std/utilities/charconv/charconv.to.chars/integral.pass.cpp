@@ -7,8 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14
-// TODO FMT Evaluate gcc-12 status
-// UNSUPPORTED: gcc-12
+// UNSUPPORTED: GCC-ALWAYS_INLINE-FIXME
 
 // ADDITIONAL_COMPILE_FLAGS(has-fconstexpr-steps): -fconstexpr-steps=12712420
 // ADDITIONAL_COMPILE_FLAGS(has-fconstexpr-ops-limit): -fconstexpr-ops-limit=50000000
@@ -23,26 +22,26 @@
 #include "charconv_test_helpers.h"
 
 #ifndef TEST_HAS_NO_INT128
-TEST_CONSTEXPR_CXX23 __uint128_t make_u128(__uint128_t a, uint64_t b) {
+TEST_CONSTEXPR_CXX23 __uint128_t make_u128(__uint128_t a, std::uint64_t b) {
   a *= 1000000000000000000UL;
   a *= 10;
   return a + b;
 }
 
-TEST_CONSTEXPR_CXX23 __uint128_t make_u128(__uint128_t a, uint64_t b, uint64_t c) {
+TEST_CONSTEXPR_CXX23 __uint128_t make_u128(__uint128_t a, std::uint64_t b, std::uint64_t c) {
   a *= 10000000000000ULL;
   a += b;
   a *= 10000000000000ULL;
   return a + c;
 }
 
-TEST_CONSTEXPR_CXX23 __int128_t make_i128(__int128_t a, int64_t b) {
+TEST_CONSTEXPR_CXX23 __int128_t make_i128(__int128_t a, std::int64_t b) {
   if (a < 0)
     return -make_u128(-a, b);
   return make_u128(a, b);
 }
 
-TEST_CONSTEXPR_CXX23 __int128_t make_i128(__int128_t a, __int128_t b, int64_t c) {
+TEST_CONSTEXPR_CXX23 __int128_t make_i128(__int128_t a, __int128_t b, std::int64_t c) {
   if (a < 0)
     return -make_u128(-a, b, c);
   return make_u128(a, b, c);

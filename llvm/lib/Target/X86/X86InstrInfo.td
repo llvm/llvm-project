@@ -173,7 +173,7 @@ def X86cas16 : SDNode<"X86ISD::LCMPXCHG16_DAG", SDTX86cas16pair,
                         [SDNPHasChain, SDNPInGlue, SDNPOutGlue, SDNPMayStore,
                          SDNPMayLoad, SDNPMemOperand]>;
 
-def X86retflag : SDNode<"X86ISD::RET_FLAG", SDTX86Ret,
+def X86retglue : SDNode<"X86ISD::RET_GLUE", SDTX86Ret,
                         [SDNPHasChain, SDNPOptInGlue, SDNPVariadic]>;
 def X86iret : SDNode<"X86ISD::IRET", SDTX86Ret,
                         [SDNPHasChain, SDNPOptInGlue]>;
@@ -380,6 +380,9 @@ let RenderMethod = "addMemOperands", SuperClasses = [X86MemAsmOperand] in {
   def X86Mem512_RC256XOperand : AsmOperandClass { let Name = "Mem512_RC256X"; }
   def X86Mem256_RC512Operand  : AsmOperandClass { let Name = "Mem256_RC512"; }
   def X86Mem512_RC512Operand  : AsmOperandClass { let Name = "Mem512_RC512"; }
+  def X86Mem512_GR16Operand : AsmOperandClass { let Name = "Mem512_GR16"; }
+  def X86Mem512_GR32Operand : AsmOperandClass { let Name = "Mem512_GR32"; }
+  def X86Mem512_GR64Operand : AsmOperandClass { let Name = "Mem512_GR64"; }
 
   def X86SibMemOperand : AsmOperandClass { let Name = "SibMem"; }
 }
@@ -431,6 +434,11 @@ def f80mem  : X86MemOperand<"printtbytemem",  X86Mem80AsmOperand, 80>;
 def f128mem : X86MemOperand<"printxmmwordmem", X86Mem128AsmOperand, 128>;
 def f256mem : X86MemOperand<"printymmwordmem", X86Mem256AsmOperand, 256>;
 def f512mem : X86MemOperand<"printzmmwordmem", X86Mem512AsmOperand, 512>;
+
+// 32/64 mode specific mem operands
+def i512mem_GR16 : X86MemOperand<"printzmmwordmem", X86Mem512_GR16Operand, 512>;
+def i512mem_GR32 : X86MemOperand<"printzmmwordmem", X86Mem512_GR32Operand, 512>;
+def i512mem_GR64 : X86MemOperand<"printzmmwordmem", X86Mem512_GR64Operand, 512>;
 
 // Gather mem operands
 def vx64mem  : X86VMemOperand<VR128,  "printqwordmem",  X86Mem64_RC128Operand, 64>;
@@ -895,6 +903,7 @@ def NoAVX        : Predicate<"!Subtarget->hasAVX()">;
 def HasAVX       : Predicate<"Subtarget->hasAVX()">;
 def HasAVX2      : Predicate<"Subtarget->hasAVX2()">;
 def HasAVX1Only  : Predicate<"Subtarget->hasAVX() && !Subtarget->hasAVX2()">;
+def HasEVEX512   : Predicate<"Subtarget->hasEVEX512()">;
 def HasAVX512    : Predicate<"Subtarget->hasAVX512()">;
 def UseAVX       : Predicate<"Subtarget->hasAVX() && !Subtarget->hasAVX512()">;
 def UseAVX2      : Predicate<"Subtarget->hasAVX2() && !Subtarget->hasAVX512()">;
@@ -916,6 +925,7 @@ def HasVNNI      : Predicate<"Subtarget->hasVNNI()">;
 def HasVP2INTERSECT : Predicate<"Subtarget->hasVP2INTERSECT()">;
 def HasBF16      : Predicate<"Subtarget->hasBF16()">;
 def HasFP16      : Predicate<"Subtarget->hasFP16()">;
+def HasAVXVNNIINT16 : Predicate<"Subtarget->hasAVXVNNIINT16()">;
 def HasAVXVNNIINT8 : Predicate<"Subtarget->hasAVXVNNIINT8()">;
 def HasAVXVNNI : Predicate <"Subtarget->hasAVXVNNI()">;
 def NoVLX_Or_NoVNNI : Predicate<"!Subtarget->hasVLX() || !Subtarget->hasVNNI()">;
@@ -959,7 +969,9 @@ def NoVLX_Or_NoIFMA : Predicate<"!Subtarget->hasVLX() || !Subtarget->hasIFMA()">
 def HasRTM       : Predicate<"Subtarget->hasRTM()">;
 def HasADX       : Predicate<"Subtarget->hasADX()">;
 def HasSHA       : Predicate<"Subtarget->hasSHA()">;
+def HasSHA512    : Predicate<"Subtarget->hasSHA512()">;
 def HasSGX       : Predicate<"Subtarget->hasSGX()">;
+def HasSM3       : Predicate<"Subtarget->hasSM3()">;
 def HasRDSEED    : Predicate<"Subtarget->hasRDSEED()">;
 def HasSSEPrefetch : Predicate<"Subtarget->hasSSEPrefetch()">;
 def NoSSEPrefetch : Predicate<"!Subtarget->hasSSEPrefetch()">;
@@ -978,6 +990,7 @@ def HasPTWRITE   : Predicate<"Subtarget->hasPTWRITE()">;
 def FPStackf32   : Predicate<"!Subtarget->hasSSE1()">;
 def FPStackf64   : Predicate<"!Subtarget->hasSSE2()">;
 def HasSHSTK     : Predicate<"Subtarget->hasSHSTK()">;
+def HasSM4       : Predicate<"Subtarget->hasSM4()">;
 def HasCLFLUSH   : Predicate<"Subtarget->hasCLFLUSH()">;
 def HasCLFLUSHOPT : Predicate<"Subtarget->hasCLFLUSHOPT()">;
 def HasCLWB      : Predicate<"Subtarget->hasCLWB()">;
@@ -1002,6 +1015,7 @@ def HasTSXLDTRK  : Predicate<"Subtarget->hasTSXLDTRK()">;
 def HasAMXTILE   : Predicate<"Subtarget->hasAMXTILE()">;
 def HasAMXBF16   : Predicate<"Subtarget->hasAMXBF16()">;
 def HasAMXINT8   : Predicate<"Subtarget->hasAMXINT8()">;
+def HasAMXCOMPLEX : Predicate<"Subtarget->hasAMXCOMPLEX()">;
 def HasUINTR     : Predicate<"Subtarget->hasUINTR()">;
 def HasCRC32     : Predicate<"Subtarget->hasCRC32()">;
 
@@ -1375,6 +1389,27 @@ def Xi32 : X86TypeInfo<i32, "l", GR32, loadi32, i32mem, Imm32, i32imm,
 def Xi64 : X86TypeInfo<i64, "q", GR64, loadi64, i64mem, Imm32S, i64i32imm, 
                       i64immSExt32_su, i64immSExt32, i64i8imm, i64immSExt8_su,
                       i64immSExt8, 1, OpSizeFixed, 1>;
+
+/// ITy - This instruction base class takes the type info for the instruction.
+/// Using this, it:
+/// 1. Concatenates together the instruction mnemonic with the appropriate
+///    suffix letter, a tab, and the arguments.
+/// 2. Infers whether the instruction should have a 0x66 prefix byte.
+/// 3. Infers whether the instruction should have a 0x40 REX_W prefix.
+/// 4. Infers whether the low bit of the opcode should be 0 (for i8 operations)
+///    or 1 (for i16,i32,i64 operations).
+class ITy<bits<8> opcode, Format f, X86TypeInfo typeinfo, dag outs, dag ins,
+          string mnemonic, string args, list<dag> pattern>
+  : I<{opcode{7}, opcode{6}, opcode{5}, opcode{4},
+       opcode{3}, opcode{2}, opcode{1}, typeinfo.HasOddOpcode },
+      f, outs, ins,
+      !strconcat(mnemonic, "{", typeinfo.InstrSuffix, "}\t", args), pattern> {
+
+  // Infer instruction prefixes from type info.
+  let OpSize = typeinfo.OpSize;
+  let hasREX_W  = typeinfo.HasREX_W;
+}
+
 //===----------------------------------------------------------------------===//
 // Subsystems.
 //===----------------------------------------------------------------------===//

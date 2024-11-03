@@ -195,6 +195,7 @@ entry:
 
 then:
   %c.2 = icmp ugt i32 0, 0
+  call void @use(i1 %c.2)
   br label %exit
 
 exit:
@@ -227,6 +228,7 @@ lpad:
 
 then:
   %c.2 = icmp eq i32 0, 0
+  call void @use(i1 %c.2)
   br label %exit
 
 exit:

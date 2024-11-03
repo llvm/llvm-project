@@ -8,7 +8,6 @@
 
 #include "src/stdio/printf_core/converter.h"
 #include "src/stdio/printf_core/core_structs.h"
-#include "src/stdio/printf_core/string_writer.h"
 #include "src/stdio/printf_core/writer.h"
 
 #include "test/UnitTest/Test.h"
@@ -19,13 +18,10 @@ protected:
   // void TearDown() override {}
 
   char str[60];
-  __llvm_libc::printf_core::StringWriter str_writer =
-      __llvm_libc::printf_core::StringWriter(str);
-  __llvm_libc::printf_core::Writer writer = __llvm_libc::printf_core::Writer(
-      reinterpret_cast<void *>(&str_writer),
-      __llvm_libc::printf_core::StringWriter::write_str,
-      __llvm_libc::printf_core::StringWriter::write_chars,
-      __llvm_libc::printf_core::StringWriter::write_char);
+  __llvm_libc::printf_core::WriteBuffer wb =
+      __llvm_libc::printf_core::WriteBuffer(str, sizeof(str) - 1);
+  __llvm_libc::printf_core::Writer writer =
+      __llvm_libc::printf_core::Writer(&wb);
 };
 
 TEST_F(LlvmLibcPrintfConverterTest, SimpleRawConversion) {
@@ -35,7 +31,7 @@ TEST_F(LlvmLibcPrintfConverterTest, SimpleRawConversion) {
 
   __llvm_libc::printf_core::convert(&writer, raw_section);
 
-  str_writer.terminate();
+  wb.buff[wb.buff_cur] = '\0';
 
   ASSERT_STREQ(str, "abc");
   ASSERT_EQ(writer.get_chars_written(), 3);
@@ -49,7 +45,7 @@ TEST_F(LlvmLibcPrintfConverterTest, PercentConversion) {
 
   __llvm_libc::printf_core::convert(&writer, simple_conv);
 
-  str[1] = '\0';
+  wb.buff[wb.buff_cur] = '\0';
 
   ASSERT_STREQ(str, "%");
   ASSERT_EQ(writer.get_chars_written(), 1);
@@ -67,7 +63,7 @@ TEST_F(LlvmLibcPrintfConverterTest, CharConversionSimple) {
 
   __llvm_libc::printf_core::convert(&writer, simple_conv);
 
-  str_writer.terminate();
+  wb.buff[wb.buff_cur] = '\0';
 
   ASSERT_STREQ(str, "D");
   ASSERT_EQ(writer.get_chars_written(), 1);
@@ -82,7 +78,7 @@ TEST_F(LlvmLibcPrintfConverterTest, CharConversionRightJustified) {
   right_justified_conv.conv_val_raw = 'E';
   __llvm_libc::printf_core::convert(&writer, right_justified_conv);
 
-  str_writer.terminate();
+  wb.buff[wb.buff_cur] = '\0';
 
   ASSERT_STREQ(str, "   E");
   ASSERT_EQ(writer.get_chars_written(), 4);
@@ -99,7 +95,7 @@ TEST_F(LlvmLibcPrintfConverterTest, CharConversionLeftJustified) {
   left_justified_conv.conv_val_raw = 'F';
   __llvm_libc::printf_core::convert(&writer, left_justified_conv);
 
-  str_writer.terminate();
+  wb.buff[wb.buff_cur] = '\0';
 
   ASSERT_STREQ(str, "F   ");
   ASSERT_EQ(writer.get_chars_written(), 4);
@@ -115,7 +111,7 @@ TEST_F(LlvmLibcPrintfConverterTest, StringConversionSimple) {
 
   __llvm_libc::printf_core::convert(&writer, simple_conv);
 
-  str_writer.terminate();
+  wb.buff[wb.buff_cur] = '\0';
 
   ASSERT_STREQ(str, "DEF");
   ASSERT_EQ(writer.get_chars_written(), 3);
@@ -130,7 +126,7 @@ TEST_F(LlvmLibcPrintfConverterTest, StringConversionPrecisionHigh) {
   high_precision_conv.conv_val_ptr = const_cast<char *>("456");
   __llvm_libc::printf_core::convert(&writer, high_precision_conv);
 
-  str_writer.terminate();
+  wb.buff[wb.buff_cur] = '\0';
 
   ASSERT_STREQ(str, "456");
   ASSERT_EQ(writer.get_chars_written(), 3);
@@ -145,7 +141,7 @@ TEST_F(LlvmLibcPrintfConverterTest, StringConversionPrecisionLow) {
   low_precision_conv.conv_val_ptr = const_cast<char *>("xyz");
   __llvm_libc::printf_core::convert(&writer, low_precision_conv);
 
-  str_writer.terminate();
+  wb.buff[wb.buff_cur] = '\0';
 
   ASSERT_STREQ(str, "xy");
   ASSERT_EQ(writer.get_chars_written(), 2);
@@ -160,7 +156,7 @@ TEST_F(LlvmLibcPrintfConverterTest, StringConversionRightJustified) {
   right_justified_conv.conv_val_ptr = const_cast<char *>("789");
   __llvm_libc::printf_core::convert(&writer, right_justified_conv);
 
-  str_writer.terminate();
+  wb.buff[wb.buff_cur] = '\0';
 
   ASSERT_STREQ(str, " 789");
   ASSERT_EQ(writer.get_chars_written(), 4);
@@ -177,7 +173,7 @@ TEST_F(LlvmLibcPrintfConverterTest, StringConversionLeftJustified) {
   left_justified_conv.conv_val_ptr = const_cast<char *>("ghi");
   __llvm_libc::printf_core::convert(&writer, left_justified_conv);
 
-  str_writer.terminate();
+  wb.buff[wb.buff_cur] = '\0';
 
   ASSERT_STREQ(str, "ghi ");
   ASSERT_EQ(writer.get_chars_written(), 4);
@@ -191,7 +187,7 @@ TEST_F(LlvmLibcPrintfConverterTest, IntConversionSimple) {
   section.conv_val_raw = 12345;
   __llvm_libc::printf_core::convert(&writer, section);
 
-  str_writer.terminate();
+  wb.buff[wb.buff_cur] = '\0';
 
   ASSERT_STREQ(str, "12345");
   ASSERT_EQ(writer.get_chars_written(), 5);
@@ -209,7 +205,7 @@ TEST_F(LlvmLibcPrintfConverterTest, HexConversion) {
   section.conv_val_raw = 0x123456ab;
   __llvm_libc::printf_core::convert(&writer, section);
 
-  str_writer.terminate();
+  wb.buff[wb.buff_cur] = '\0';
   ASSERT_STREQ(str, "0x00000000123456ab");
   ASSERT_EQ(writer.get_chars_written(), 18);
 }
@@ -223,7 +219,7 @@ TEST_F(LlvmLibcPrintfConverterTest, PointerConversion) {
   section.conv_val_ptr = (void *)(0x123456ab);
   __llvm_libc::printf_core::convert(&writer, section);
 
-  str_writer.terminate();
+  wb.buff[wb.buff_cur] = '\0';
   ASSERT_STREQ(str, "0x123456ab");
   ASSERT_EQ(writer.get_chars_written(), 10);
 }
@@ -237,7 +233,7 @@ TEST_F(LlvmLibcPrintfConverterTest, OctConversion) {
   section.conv_val_raw = 01234;
   __llvm_libc::printf_core::convert(&writer, section);
 
-  str_writer.terminate();
+  wb.buff[wb.buff_cur] = '\0';
   ASSERT_STREQ(str, "1234");
   ASSERT_EQ(writer.get_chars_written(), 4);
 }

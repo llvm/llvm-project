@@ -208,14 +208,21 @@ public:
   /// that the name actually belongs to this language.
   virtual bool SymbolNameFitsToLanguage(Mangled name) const { return false; }
 
-  // if an individual data formatter can apply to several types and cross a
-  // language boundary it makes sense for individual languages to want to
-  // customize the printing of values of that type by appending proper
-  // prefix/suffix information in language-specific ways
-  virtual bool GetFormatterPrefixSuffix(ValueObject &valobj,
-                                        ConstString type_hint,
-                                        std::string &prefix,
-                                        std::string &suffix);
+  /// An individual data formatter may apply to several types and cross language
+  /// boundaries. Each of those languages may want to customize the display of
+  /// values of said types by appending proper prefix/suffix information in
+  /// language-specific ways. This function returns that prefix and suffix.
+  ///
+  /// \param[in] type_hint
+  ///   A StringRef used to determine what the prefix and suffix should be. It
+  ///   is called a hint because some types may have multiple variants for which
+  ///   the prefix and/or suffix may vary.
+  ///
+  /// \return
+  ///   A std::pair<StringRef, StringRef>, the first being the prefix and the
+  ///   second being the suffix. They may be empty.
+  virtual std::pair<llvm::StringRef, llvm::StringRef>
+  GetFormatterPrefixSuffix(llvm::StringRef type_hint);
 
   // When looking up functions, we take a user provided string which may be a
   // partial match to the full demangled name and compare it to the actual
@@ -325,6 +332,8 @@ public:
                                        const SymbolContext &sym_ctx) const {
     return ConstString();
   }
+
+  virtual llvm::StringRef GetInstanceVariableName() { return {}; }
 
 protected:
   // Classes that inherit from Language can see and modify these

@@ -153,8 +153,7 @@ protected:
   bool canModifyFile(StringRef Path) {
     if (AllowListFilenames.empty())
       return true;
-    return AllowListFilenames.find(llvm::sys::path::filename(Path)) !=
-           AllowListFilenames.end();
+    return AllowListFilenames.contains(llvm::sys::path::filename(Path));
   }
   bool canModifyFile(OptionalFileEntryRef FE) {
     if (!FE)
@@ -1786,7 +1785,7 @@ private:
       std::tie(FID, Offset) = SourceMgr.getDecomposedLoc(Loc);
       assert(FID.isValid());
       SmallString<200> Path =
-          StringRef(SourceMgr.getFileEntryForID(FID)->getName());
+          StringRef(SourceMgr.getFileEntryRefForID(FID)->getName());
       llvm::sys::fs::make_absolute(Path);
       OS << "  \"file\": \"";
       OS.write_escaped(Path.str()) << "\",\n";

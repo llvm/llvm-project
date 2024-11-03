@@ -8,7 +8,7 @@
 
 // UNSUPPORTED: c++03
 
-// ADDITIONAL_COMPILE_FLAGS: -fno-exceptions -D_LIBCPP_ENABLE_ASSERTIONS
+// ADDITIONAL_COMPILE_FLAGS: -fno-exceptions
 
 #include <utility>
 

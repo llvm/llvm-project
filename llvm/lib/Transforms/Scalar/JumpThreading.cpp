@@ -58,15 +58,12 @@
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Use.h"
 #include "llvm/IR/Value.h"
-#include "llvm/InitializePasses.h"
-#include "llvm/Pass.h"
 #include "llvm/Support/BlockFrequency.h"
 #include "llvm/Support/BranchProbability.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/Cloning.h"
 #include "llvm/Transforms/Utils/Local.h"
@@ -114,64 +111,6 @@ static cl::opt<bool> ThreadAcrossLoopHeaders(
     "jump-threading-across-loop-headers",
     cl::desc("Allow JumpThreading to thread across loop headers, for testing"),
     cl::init(false), cl::Hidden);
-
-
-namespace {
-
-  /// This pass performs 'jump threading', which looks at blocks that have
-  /// multiple predecessors and multiple successors.  If one or more of the
-  /// predecessors of the block can be proven to always jump to one of the
-  /// successors, we forward the edge from the predecessor to the successor by
-  /// duplicating the contents of this block.
-  ///
-  /// An example of when this can occur is code like this:
-  ///
-  ///   if () { ...
-  ///     X = 4;
-  ///   }
-  ///   if (X < 3) {
-  ///
-  /// In this case, the unconditional branch at the end of the first if can be
-  /// revectored to the false side of the second if.
-  class JumpThreading : public FunctionPass {
-  public:
-    static char ID; // Pass identification
-
-    JumpThreading(int T = -1) : FunctionPass(ID) {
-      initializeJumpThreadingPass(*PassRegistry::getPassRegistry());
-    }
-
-    bool runOnFunction(Function &F) override;
-
-    void getAnalysisUsage(AnalysisUsage &AU) const override {
-      AU.addRequired<DominatorTreeWrapperPass>();
-      AU.addPreserved<DominatorTreeWrapperPass>();
-      AU.addRequired<AAResultsWrapperPass>();
-      AU.addRequired<LazyValueInfoWrapperPass>();
-      AU.addPreserved<LazyValueInfoWrapperPass>();
-      AU.addPreserved<GlobalsAAWrapperPass>();
-      AU.addRequired<TargetLibraryInfoWrapperPass>();
-      AU.addRequired<TargetTransformInfoWrapperPass>();
-    }
-  };
-
-} // end anonymous namespace
-
-char JumpThreading::ID = 0;
-
-INITIALIZE_PASS_BEGIN(JumpThreading, "jump-threading",
-                "Jump Threading", false, false)
-INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(LazyValueInfoWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(TargetLibraryInfoWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(AAResultsWrapperPass)
-INITIALIZE_PASS_END(JumpThreading, "jump-threading",
-                "Jump Threading", false, false)
-
-// Public interface to the Jump Threading pass
-FunctionPass *llvm::createJumpThreadingPass(int Threshold) {
-  return new JumpThreading(Threshold);
-}
 
 JumpThreadingPass::JumpThreadingPass(int T) {
   DefaultBBDupThreshold = (T == -1) ? BBDuplicateThreshold : unsigned(T);
@@ -303,40 +242,11 @@ static void updatePredecessorProfileMetadata(PHINode *PN, BasicBlock *BB) {
   }
 }
 
-/// runOnFunction - Toplevel algorithm.
-bool JumpThreading::runOnFunction(Function &F) {
-  if (skipFunction(F))
-    return false;
-  auto TTI = &getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F);
-  // Jump Threading has no sense for the targets with divergent CF
-  if (TTI->hasBranchDivergence())
-    return false;
-  auto TLI = &getAnalysis<TargetLibraryInfoWrapperPass>().getTLI(F);
-  auto DT = &getAnalysis<DominatorTreeWrapperPass>().getDomTree();
-  auto LVI = &getAnalysis<LazyValueInfoWrapperPass>().getLVI();
-  auto AA = &getAnalysis<AAResultsWrapperPass>().getAAResults();
-
-  LoopInfo LI{*DT};
-  auto BPI = std::make_unique<BranchProbabilityInfo>(F, LI, TLI);
-  auto BFI = std::make_unique<BlockFrequencyInfo>(F, *BPI, LI);
-
-  JumpThreadingPass Impl;
-  bool Changed = Impl.runImpl(F, nullptr, TLI, TTI, LVI, AA,
-                              std::make_unique<DomTreeUpdater>(
-                                  DT, DomTreeUpdater::UpdateStrategy::Lazy),
-                              BFI.get(), BPI.get());
-  if (PrintLVIAfterJumpThreading) {
-    dbgs() << "LVI for function '" << F.getName() << "':\n";
-    LVI->printLVI(F, Impl.getDomTreeUpdater()->getDomTree(), dbgs());
-  }
-  return Changed;
-}
-
 PreservedAnalyses JumpThreadingPass::run(Function &F,
                                          FunctionAnalysisManager &AM) {
   auto &TTI = AM.getResult<TargetIRAnalysis>(F);
   // Jump Threading has no sense for the targets with divergent CF
-  if (TTI.hasBranchDivergence())
+  if (TTI.hasBranchDivergence(&F))
     return PreservedAnalyses::all();
   auto &TLI = AM.getResult<TargetLibraryAnalysis>(F);
   auto &LVI = AM.getResult<LazyValueAnalysis>(F);
@@ -1359,6 +1269,7 @@ bool JumpThreadingPass::simplifyPartiallyRedundantLoad(LoadInst *LoadI) {
     if (IsLoadCSE) {
       LoadInst *NLoadI = cast<LoadInst>(AvailableVal);
       combineMetadataForCSE(NLoadI, LoadI, false);
+      LVI->forgetValue(NLoadI);
     };
 
     // If the returned value is the load itself, replace with poison. This can
@@ -1551,6 +1462,7 @@ bool JumpThreadingPass::simplifyPartiallyRedundantLoad(LoadInst *LoadI) {
 
   for (LoadInst *PredLoadI : CSELoads) {
     combineMetadataForCSE(PredLoadI, LoadI, true);
+    LVI->forgetValue(PredLoadI);
   }
 
   LoadI->replaceAllUsesWith(PN);
@@ -1989,7 +1901,7 @@ bool JumpThreadingPass::maybeMergeBasicBlockIntoOnlyPred(BasicBlock *BB) {
     return false;
 
   const Instruction *TI = SinglePred->getTerminator();
-  if (TI->isExceptionalTerminator() || TI->getNumSuccessors() != 1 ||
+  if (TI->isSpecialTerminator() || TI->getNumSuccessors() != 1 ||
       SinglePred == BB || hasAddressTakenAndUsed(BB))
     return false;
 
@@ -2733,6 +2645,7 @@ bool JumpThreadingPass::duplicateCondBranchOnPHIIntoPred(
   // mapping and using it to remap operands in the cloned instructions.
   for (; BI != BB->end(); ++BI) {
     Instruction *New = BI->clone();
+    New->insertInto(PredBB, OldPredBranch->getIterator());
 
     // Remap operands to patch up intra-block references.
     for (unsigned i = 0, e = New->getNumOperands(); i != e; ++i)
@@ -2750,7 +2663,7 @@ bool JumpThreadingPass::duplicateCondBranchOnPHIIntoPred(
             {BB->getModule()->getDataLayout(), TLI, nullptr, nullptr, New})) {
       ValueMapping[&*BI] = IV;
       if (!New->mayHaveSideEffects()) {
-        New->deleteValue();
+        New->eraseFromParent();
         New = nullptr;
       }
     } else {
@@ -2759,7 +2672,6 @@ bool JumpThreadingPass::duplicateCondBranchOnPHIIntoPred(
     if (New) {
       // Otherwise, insert the new instruction into the block.
       New->setName(BI->getName());
-      New->insertInto(PredBB, OldPredBranch->getIterator());
       // Update Dominance from simplified New instruction operands.
       for (unsigned i = 0, e = New->getNumOperands(); i != e; ++i)
         if (BasicBlock *SuccBB = dyn_cast<BasicBlock>(New->getOperand(i)))

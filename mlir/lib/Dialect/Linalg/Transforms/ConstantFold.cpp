@@ -64,20 +64,20 @@ public:
     if (genericOp.getNumDpsInits() != 1)
       return failure();
 
-    auto outputType = genericOp.getResultTypes().front().dyn_cast<ShapedType>();
+    auto outputType = dyn_cast<ShapedType>(genericOp.getResultTypes().front());
     // Require the output types to be static given that we are generating
     // constants.
     if (!outputType || !outputType.hasStaticShape())
       return failure();
 
     if (!llvm::all_of(genericOp.getInputs(), [](Value input) {
-          return input.getType().isa<ShapedType>();
+          return isa<ShapedType>(input.getType());
         }))
       return failure();
 
     // Make sure all element types are the same.
     auto getOperandElementType = [](Value value) {
-      return value.getType().cast<ShapedType>().getElementType();
+      return cast<ShapedType>(value.getType()).getElementType();
     };
     if (!llvm::all_equal(
             llvm::map_range(genericOp->getOperands(), getOperandElementType)))
@@ -138,7 +138,7 @@ public:
     // unify the following cases but they have lifetime as the MLIRContext.
     SmallVector<APInt> intOutputValues;
     SmallVector<APFloat> fpOutputValues;
-    if (elementType.template isa<FloatType>())
+    if (isa<FloatType>(elementType))
       fpOutputValues.resize(numElements, APFloat(0.f));
     else
       intOutputValues.resize(numElements);
@@ -174,7 +174,7 @@ public:
 
     auto inputShapes = llvm::to_vector<4>(
         llvm::map_range(genericOp.getInputs(), [](Value value) {
-          return value.getType().cast<ShapedType>().getShape();
+          return cast<ShapedType>(value.getType()).getShape();
         }));
 
     // Given a `linearIndex`, remap it to a linear index to access linalg op
@@ -205,7 +205,7 @@ public:
       }
     };
 
-    bool isFloat = elementType.isa<FloatType>();
+    bool isFloat = isa<FloatType>(elementType);
     if (isFloat) {
       SmallVector<DenseElementsAttr::iterator_range<APFloat>> inFpRanges;
       for (int i = 0; i < numInputs; ++i)
@@ -282,7 +282,7 @@ struct FoldConstantTranspose : public FoldConstantBase<FoldConstantTranspose> {
 
     // The yield op should return the block argument corresponds to the input.
     for (Value yieldVal : yieldOp.getValues()) {
-      auto yieldArg = yieldVal.dyn_cast<BlockArgument>();
+      auto yieldArg = dyn_cast<BlockArgument>(yieldVal);
       if (!yieldArg || yieldArg.getOwner() != &body)
         return nullptr;
       if (yieldArg.getArgNumber() != 0)

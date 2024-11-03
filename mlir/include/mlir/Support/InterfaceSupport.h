@@ -91,7 +91,7 @@ public:
   };
 
   /// Construct an interface from an instance of the value type.
-  Interface(ValueT t = ValueT())
+  explicit Interface(ValueT t = ValueT())
       : BaseType(t),
         conceptImpl(t ? ConcreteType::getInterfaceFor(t) : nullptr) {
     assert((!t || conceptImpl) &&

@@ -9,9 +9,11 @@
 #ifndef LLVM_LIBC_SRC_STDLIB_RAND_UTIL_H
 #define LLVM_LIBC_SRC_STDLIB_RAND_UTIL_H
 
+#include "src/__support/macros/attributes.h"
+
 namespace __llvm_libc {
 
-extern thread_local unsigned long rand_next;
+extern LIBC_THREAD_LOCAL unsigned long rand_next;
 
 } // namespace __llvm_libc
 

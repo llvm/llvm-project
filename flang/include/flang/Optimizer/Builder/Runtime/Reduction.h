@@ -136,7 +136,7 @@ mlir::Value genMinval(fir::FirOpBuilder &builder, mlir::Location loc,
                       mlir::Value arrayBox, mlir::Value maskBox);
 
 /// Generate call to `MinvalCharacter` intrinsic runtime routine. This is the
-/// version that that handles 1 dimensional character arrays with no DIM
+/// version that handles 1 dimensional character arrays with no DIM
 /// argument.
 void genMinvalChar(fir::FirOpBuilder &builder, mlir::Location loc,
                    mlir::Value resultBox, mlir::Value arrayBox,

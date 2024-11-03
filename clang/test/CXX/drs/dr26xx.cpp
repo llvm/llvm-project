@@ -14,7 +14,8 @@ using enum E; // expected-error {{unknown type name E}}
 }
 }
 
-namespace dr2628 { // dr2628: no, this was reverted for the 16.x release
+namespace dr2628 { // dr2628: no open
+                   // this was reverted for the 16.x release
                    // due to regressions, see the issue for more details:
                    // https://github.com/llvm/llvm-project/issues/60777
 
@@ -33,6 +34,22 @@ void f() {
   // FIXME-expected-note@#DR2628_CTOR {{marked deleted here}}
 }
 
+}
+
+namespace dr2631 { // dr2631: 16
+  constexpr int g();
+  consteval int f() {
+    return g();
+  }
+  int k(int x = f()) {
+    return x;
+  }
+  constexpr int g() {
+    return 42;
+  }
+  int test() {
+    return k();
+  }
 }
 
 namespace dr2635 { // dr2635: 16
@@ -110,18 +127,47 @@ void f() {
 }
 }
 
-namespace dr2631 { // dr2631: 16
-  constexpr int g();
-  consteval int f() {
-    return g();
-  }
-  int k(int x = f()) {
-    return x;
-  }
-  constexpr int g() {
-    return 42;
-  }
-  int test() {
-    return k();
-  }
+namespace dr2681 { // dr2681: 17
+using size_t = decltype(sizeof(int));
+
+template<class T, size_t N>
+struct H {
+  T array[N];
+};
+template<class T, size_t N>
+struct I {
+  volatile T array[N];
+};
+template<size_t N>
+struct J {  // expected-note 3{{candidate}}
+  unsigned char array[N];
+};
+
+H h = { "abc" };
+I i = { "def" };
+static_assert(__is_same(decltype(h), H<char, 4>));  // Not H<const char, 4>
+static_assert(__is_same(decltype(i), I<char, 4>));
+
+J j = { "ghi" };  // expected-error {{no viable constructor or deduction guide}}
+}
+
+namespace dr2672 { // dr2672: 18 open
+template <class T>
+void f(T) requires requires { []() { T::invalid; } (); }; // expected-error{{type 'int' cannot be used prior to '::'}}
+                                                          // expected-note@-1{{while substituting into a lambda expression here}}
+                                                          // expected-note@-2{{in instantiation of requirement here}}
+                                                          // expected-note@-3{{while substituting template arguments into constraint expression here}}
+void f(...);
+
+template <class T>
+void bar(T) requires requires {
+   decltype([]() -> T {})::foo();
+};
+void bar(...);
+
+void m() {
+  f(0); // expected-note {{while checking constraint satisfaction for template 'f<int>' required here}}
+        // expected-note@-1 {{in instantiation of function template specialization}}
+  bar(0);
+}
 }
