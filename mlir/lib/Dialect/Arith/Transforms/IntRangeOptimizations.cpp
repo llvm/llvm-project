@@ -421,6 +421,35 @@ private:
   SmallVector<unsigned, 4> targetBitwidths;
 };
 
+/// Fold index_cast(index_cast(%arg: i8, index), i8) -> %arg
+/// This pattern assumes all passed `targetBitwidths` are not wider than index
+/// type.
+struct FoldIndexCastChain final : OpRewritePattern<arith::IndexCastUIOp> {
+  FoldIndexCastChain(MLIRContext *context, ArrayRef<unsigned> target)
+      : OpRewritePattern(context), targetBitwidths(target) {}
+
+  LogicalResult matchAndRewrite(arith::IndexCastUIOp op,
+                                PatternRewriter &rewriter) const override {
+    auto srcOp = op.getIn().getDefiningOp<arith::IndexCastUIOp>();
+    if (!srcOp)
+      return failure();
+
+    Value src = srcOp.getIn();
+    if (src.getType() != op.getType())
+      return failure();
+
+    auto intType = dyn_cast<IntegerType>(op.getType());
+    if (!intType || !llvm::is_contained(targetBitwidths, intType.getWidth()))
+      return failure();
+
+    rewriter.replaceOp(op, src);
+    return success();
+  }
+
+private:
+  SmallVector<unsigned, 4> targetBitwidths;
+};
+
 struct IntRangeOptimizationsPass final
     : arith::impl::ArithIntRangeOptsBase<IntRangeOptimizationsPass> {
 
@@ -487,6 +516,7 @@ void mlir::arith::populateIntRangeNarrowingPatterns(
     ArrayRef<unsigned> bitwidthsSupported) {
   patterns.add<NarrowElementwise, NarrowCmpI>(patterns.getContext(), solver,
                                               bitwidthsSupported);
+  patterns.add<FoldIndexCastChain>(patterns.getContext(), bitwidthsSupported);
 }
 
 std::unique_ptr<Pass> mlir::arith::createIntRangeOptimizationsPass() {
