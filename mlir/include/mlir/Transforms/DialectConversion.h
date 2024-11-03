@@ -230,14 +230,15 @@ public:
   ///
   /// The conversion functions take a non-null Type or subclass of Type and a
   /// non-null Attribute (or subclass of Attribute), and returns a
-  /// `AttributeConversionResult`. This result can either contan an `Attribute`,
-  /// which may be `nullptr`, representing the conversion's success,
-  /// `AttributeConversionResult::na()` (the default empty value), indicating
-  /// that the conversion function did not apply and that further conversion
-  /// functions should be checked, or `AttributeConversionResult::abort()`
-  /// indicating that the conversion process should be aborted.
+  /// `AttributeConversionResult`. This result can either contain an
+  /// `Attribute`, which may be `nullptr`, representing the conversion's
+  /// success, `AttributeConversionResult::na()` (the default empty value),
+  /// indicating that the conversion function did not apply and that further
+  /// conversion functions should be checked, or
+  /// `AttributeConversionResult::abort()` indicating that the conversion
+  /// process should be aborted.
   ///
-  /// Registered conversion functions are callled in the reverse of the order in
+  /// Registered conversion functions are called in the reverse of the order in
   /// which they were registered.
   template <
       typename FnT,
@@ -743,7 +744,7 @@ public:
   /// If no block argument types are changing, the original block will be
   /// left in place and returned.
   ///
-  /// A signature converison must be provided. (Type converters can construct
+  /// A signature conversion must be provided. (Type converters can construct
   /// a signature conversion with `convertBlockSignature`.)
   ///
   /// Optionally, a type converter can be provided to build materializations.

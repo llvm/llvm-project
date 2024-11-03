@@ -15,7 +15,7 @@
 // unrealized casts by user-provided materializations. For this to work, the
 // main function requires a special `TypeConverter`, a special
 // `PatternRewriter`, and special RewritePattern`s, which extend their
-// respective base classes for 1:N type converions.
+// respective base classes for 1:N type conversions.
 //
 // Note that this is much more simple-minded than the "real" dialect conversion,
 // which checks for legality before applying patterns and does probably many
@@ -137,7 +137,7 @@ public:
 };
 
 /// Base class for patterns with 1:N type conversions. Derived classes have to
-/// overwrite the `matchAndRewrite` overlaod that provides additional
+/// overwrite the `matchAndRewrite` overload that provides additional
 /// information for 1:N type conversions.
 class OneToNConversionPattern : public RewritePatternWithConverter {
 public:

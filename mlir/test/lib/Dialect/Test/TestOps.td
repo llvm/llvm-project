@@ -1344,7 +1344,7 @@ def TestInvolutionTraitFailingOperationFolderOp
 }
 
 def TestInvolutionTraitSuccesfulOperationFolderOp
- : TEST_Op<"op_involution_trait_succesful_operation_fold",
+ : TEST_Op<"op_involution_trait_successful_operation_fold",
            [SameOperandsAndResultType, NoMemoryEffect, Involution]> {
   let arguments = (ins I32:$op1);
   let results = (outs I32);

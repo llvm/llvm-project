@@ -21,7 +21,7 @@
 namespace mlir {
 namespace tracing {
 
-/// This breakpoing intends to match a FileLineColLocation, that is a tuple of
+/// This breakpoint intends to match a FileLineColLocation, that is a tuple of
 /// file name, line number, and column number. Using -1 for  the column and the
 /// line number will match any column and line number respectively.
 class FileLineColLocBreakpoint

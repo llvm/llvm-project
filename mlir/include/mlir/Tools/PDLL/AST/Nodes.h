@@ -107,7 +107,7 @@ private:
 /// nodes.
 class Node {
 public:
-  /// This CRTP class provides several utilies when defining new AST nodes.
+  /// This CRTP class provides several utilities when defining new AST nodes.
   template <typename T, typename BaseT>
   class NodeBase : public BaseT {
   public:
@@ -1312,7 +1312,7 @@ private:
 };
 
 //===----------------------------------------------------------------------===//
-// Defered Method Definitions
+// Deferred Method Definitions
 //===----------------------------------------------------------------------===//
 
 inline bool Decl::classof(const Node *node) {

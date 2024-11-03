@@ -258,8 +258,8 @@ def main():
     parser.add_argument(
         "--source",
         type=str,
-        help="Print each CHECK chunk before each delimeter line in the source"
-        "file, respectively. The delimeter lines are identified by "
+        help="Print each CHECK chunk before each delimiter line in the source"
+        "file, respectively. The delimiter lines are identified by "
         "--source_delim_regex.",
     )
     parser.add_argument("--source_delim_regex", type=str, default="func @")

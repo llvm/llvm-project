@@ -1057,10 +1057,10 @@ public:
     Value replace;
     if (bitEnumContainsAll(op.getFastmath(), arith::FastMathFlags::nnan)) {
       if (op.getPredicate() == arith::CmpFPredicate::ORD) {
-        // Ordered comparsion checks if neither operand is NaN.
+        // Ordered comparison checks if neither operand is NaN.
         replace = spirv::ConstantOp::getOne(op.getType(), loc, rewriter);
       } else {
-        // Unordered comparsion checks if either operand is NaN.
+        // Unordered comparison checks if either operand is NaN.
         replace = spirv::ConstantOp::getZero(op.getType(), loc, rewriter);
       }
     } else {

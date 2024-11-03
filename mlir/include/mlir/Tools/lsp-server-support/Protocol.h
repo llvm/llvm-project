@@ -957,7 +957,7 @@ struct ParameterInformation {
   /// The label of this parameter. Ignored when labelOffsets is set.
   std::string labelString;
 
-  /// Inclusive start and exclusive end offsets withing the containing signature
+  /// Inclusive start and exclusive end offsets within the containing signature
   /// label.
   std::optional<std::pair<unsigned, unsigned>> labelOffsets;
 

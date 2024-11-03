@@ -317,7 +317,7 @@ TEST(IntegerPolyhedronTest, FindSampleTest) {
   checkPermutationsSample(
       true /* not empty */, 5,
       {
-          // Tetrahedron contraints:
+          // Tetrahedron constraints:
           {0, 1, 0, 0, 0, 0},  // y >= 0
           {0, -1, 1, 0, 0, 0}, // z >= y
                                // -300000x + 299998y + 100000 + z <= 0.
@@ -338,7 +338,7 @@ TEST(IntegerPolyhedronTest, FindSampleTest) {
   checkPermutationsSample(
       false /* empty */, 5,
       {
-          // Tetrahedron contraints:
+          // Tetrahedron constraints:
           {0, 1, 0, 0, 0, 0},  // y >= 0
           {0, -1, 1, 0, 0, 0}, // z >= y
                                // -300000x + 299998y + 100000 + z <= 0.
@@ -360,7 +360,7 @@ TEST(IntegerPolyhedronTest, FindSampleTest) {
   checkPermutationsSample(
       false /* empty */, 5,
       {
-          // Tetrahedron contraints:
+          // Tetrahedron constraints:
           {0, 1, 0, 0, 0, 0, 0},  // y >= 0
           {0, -1, 1, 0, 0, 0, 0}, // z >= y
                                   // -300000x + 299998y + 100000 + z <= 0.
@@ -386,7 +386,7 @@ TEST(IntegerPolyhedronTest, FindSampleTest) {
   // Since the tetrahedron is empty, the Cartesian product is too.
   checkPermutationsSample(false /* empty */, 5,
                           {
-                              // Tetrahedron contraints:
+                              // Tetrahedron constraints:
                               {0, 1, 0, 0, 0, 0},
                               {0, -300, 299, 0, 0, 0},
                               {300 * 299, -89400, -299, 0, 0, -100 * 299},
@@ -404,7 +404,7 @@ TEST(IntegerPolyhedronTest, FindSampleTest) {
   // {(p, q) : 1/3 <= p <= 2/3}.
   checkPermutationsSample(false /* empty */, 5,
                           {
-                              // Tetrahedron contraints:
+                              // Tetrahedron constraints:
                               {0, 1, 0, 0, 0, 0},
                               {0, -300, 299, 0, 0, 0},
                               {300 * 299, -89400, -299, 0, 0, -100 * 299},
@@ -622,7 +622,7 @@ TEST(IntegerPolyhedronTest, addConstantLowerBound) {
 
 /// Check if the expected division representation of local variables matches the
 /// computed representation. The expected division representation is given as
-/// a vector of expressions set in `expectedDividends` and the corressponding
+/// a vector of expressions set in `expectedDividends` and the corresponding
 /// denominator in `expectedDenominators`. The `denominators` and `dividends`
 /// obtained through `getLocalRepr` function is verified against the
 /// `expectedDenominators` and `expectedDividends` respectively.

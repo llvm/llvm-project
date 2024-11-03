@@ -584,7 +584,7 @@ class ExpansionInfo {
 public:
   // Computes the mapping from original dimensions of the op to the dimensions
   // of the expanded op given the `indexingMap` of the fused operand/result of
-  // the generic op, the `reassocationMaps` of the reshape op and the shape of
+  // the generic op, the `reassociationMaps` of the reshape op and the shape of
   // the expanded op.
   LogicalResult compute(LinalgOp linalgOp, OpOperand *fusableOpOperand,
                         ArrayRef<AffineMap> reassociationMaps,

@@ -24,7 +24,7 @@
   "eq"
   "ne"
   "oeq"
-  "olt"
+  "old"
   "ole"
   "ogt"
   "oge"
@@ -331,7 +331,7 @@
 [
   ":"
   ","
-] @punctuation.delimeter
+] @punctuation.delimiter
 
 [
   "="

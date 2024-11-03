@@ -16,7 +16,7 @@
 // (A) Removes function arguments that are not live,
 // (B) Removes function return values that are not live across all callers of
 // the function,
-// (C) Removes unneccesary operands, results, region arguments, and region
+// (C) Removes unnecessary operands, results, region arguments, and region
 // terminator operands of region branch ops, and,
 // (D) Removes simple and region branch ops that have all non-live results and
 // don't affect memory in any way,
@@ -282,7 +282,7 @@ static void cleanFuncOp(FunctionOpInterface funcOp, Operation *module,
 ///   (2') Erasing it
 /// if it has no memory effects and none of its results are live, AND
 ///   (1) Erasing its unnecessary operands (operands that are forwarded to
-///   unneccesary results and arguments),
+///   unnecessary results and arguments),
 ///   (2) Cleaning each of its regions,
 ///   (3) Dropping the uses of its unnecessary results (results that are
 ///   forwarded from unnecessary operands and terminator operands), AND
@@ -290,10 +290,10 @@ static void cleanFuncOp(FunctionOpInterface funcOp, Operation *module,
 /// otherwise.
 /// Note that here, cleaning a region means:
 ///   (2.a) Dropping the uses of its unnecessary arguments (arguments that are
-///   forwarded from unneccesary operands and terminator operands),
+///   forwarded from unnecessary operands and terminator operands),
 ///   (2.b) Erasing these arguments, AND
 ///   (2.c) Erasing its unnecessary terminator operands (terminator operands
-///   that are forwarded to unneccesary results and arguments).
+///   that are forwarded to unnecessary results and arguments).
 /// It is important to note that values in this op flow from operands and
 /// terminator operands (successor operands) to arguments and results (successor
 /// inputs).

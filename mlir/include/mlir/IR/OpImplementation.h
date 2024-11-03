@@ -798,7 +798,7 @@ public:
   /// least one element will be parsed.
   ///
   /// contextMessage is an optional message appended to "expected '('" sorts of
-  /// diagnostics when parsing the delimeters.
+  /// diagnostics when parsing the delimiters.
   virtual ParseResult
   parseCommaSeparatedList(Delimiter delimiter,
                           function_ref<ParseResult()> parseElementFn,

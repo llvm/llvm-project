@@ -2126,7 +2126,7 @@ LogicalResult ExpandShapeOp::reifyResultShapes(
 /// result and operand. Layout maps are verified separately.
 ///
 /// If `allowMultipleDynamicDimsPerGroup`, multiple dynamic dimensions are
-/// allowed in a reassocation group.
+/// allowed in a reassociation group.
 static LogicalResult
 verifyCollapsedShape(Operation *op, ArrayRef<int64_t> collapsedShape,
                      ArrayRef<int64_t> expandedShape,

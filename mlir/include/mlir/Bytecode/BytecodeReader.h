@@ -57,7 +57,7 @@ public:
   /// The lazyOps call back is invoked for every ops that can be lazy-loaded.
   /// This let the client decide if the op should be materialized immediately or
   /// delayed.
-  /// !! Using this materialize withing an IR walk() can be confusing: make sure
+  /// !! Using this materialize within an IR walk() can be confusing: make sure
   /// to use a PreOrder traversal !!
   LogicalResult materialize(
       Operation *op, llvm::function_ref<bool(Operation *)> lazyOpsCallback =

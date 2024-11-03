@@ -141,13 +141,13 @@ TEST_F(CyclicAttrTypeReplacerChainRecursionPruningTest, testPruneSpecific1) {
 }
 
 //===----------------------------------------------------------------------===//
-// CyclicAttrTypeReplacerTest: BranchingRecusion
+// CyclicAttrTypeReplacerTest: BranchingRecursion
 //===----------------------------------------------------------------------===//
 
-class CyclicAttrTypeReplacerBranchingRecusionPruningTest
+class CyclicAttrTypeReplacerBranchingRecursionPruningTest
     : public ::testing::Test {
 public:
-  CyclicAttrTypeReplacerBranchingRecusionPruningTest() : b(&ctx) {
+  CyclicAttrTypeReplacerBranchingRecursionPruningTest() : b(&ctx) {
     // IntegerType<width = N>
     // ==> FunctionType<
     //       IntegerType< width = (N+1) % 3> =>
@@ -181,7 +181,8 @@ public:
   int invokeCount = 0;
 };
 
-TEST_F(CyclicAttrTypeReplacerBranchingRecusionPruningTest, testPruneAnywhere0) {
+TEST_F(CyclicAttrTypeReplacerBranchingRecursionPruningTest,
+       testPruneAnywhere0) {
   setBaseCase(std::nullopt);
 
   // No recursion case.
@@ -203,7 +204,8 @@ TEST_F(CyclicAttrTypeReplacerBranchingRecusionPruningTest, testPruneAnywhere0) {
   EXPECT_EQ(invokeCount, 2);
 }
 
-TEST_F(CyclicAttrTypeReplacerBranchingRecusionPruningTest, testPruneAnywhere1) {
+TEST_F(CyclicAttrTypeReplacerBranchingRecursionPruningTest,
+       testPruneAnywhere1) {
   setBaseCase(std::nullopt);
 
   // Starting at 1. Cycle length is 3.
@@ -212,7 +214,8 @@ TEST_F(CyclicAttrTypeReplacerBranchingRecusionPruningTest, testPruneAnywhere1) {
   EXPECT_EQ(invokeCount, 3);
 }
 
-TEST_F(CyclicAttrTypeReplacerBranchingRecusionPruningTest, testPruneSpecific0) {
+TEST_F(CyclicAttrTypeReplacerBranchingRecursionPruningTest,
+       testPruneSpecific0) {
   setBaseCase(0);
 
   // Starting at 0. Cycle length is 3.
@@ -221,7 +224,8 @@ TEST_F(CyclicAttrTypeReplacerBranchingRecusionPruningTest, testPruneSpecific0) {
   EXPECT_EQ(invokeCount, 3);
 }
 
-TEST_F(CyclicAttrTypeReplacerBranchingRecusionPruningTest, testPruneSpecific1) {
+TEST_F(CyclicAttrTypeReplacerBranchingRecursionPruningTest,
+       testPruneSpecific1) {
   setBaseCase(0);
 
   // Starting at 1. Cycle length is 5 (1 -> 2 -> 0 -> 1 -> 2 -> Prune).

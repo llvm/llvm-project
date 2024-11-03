@@ -22,7 +22,7 @@ using namespace mlir;
 
 namespace {
 constexpr static llvm::StringLiteral kAttrName = "dltest.layout";
-constexpr static llvm::StringLiteral kEndiannesKeyName = "dltest.endianness";
+constexpr static llvm::StringLiteral kEndiannessKeyName = "dltest.endianness";
 constexpr static llvm::StringLiteral kAllocaKeyName =
     "dltest.alloca_memory_space";
 constexpr static llvm::StringLiteral kProgramKeyName =
@@ -78,7 +78,7 @@ struct CustomDataLayoutSpec
   DataLayoutEntryListRef getEntries() const { return getImpl()->entries; }
   LogicalResult verifySpec(Location loc) { return success(); }
   StringAttr getEndiannessIdentifier(MLIRContext *context) const {
-    return Builder(context).getStringAttr(kEndiannesKeyName);
+    return Builder(context).getStringAttr(kEndiannessKeyName);
   }
   StringAttr getAllocaMemorySpaceIdentifier(MLIRContext *context) const {
     return Builder(context).getStringAttr(kAllocaKeyName);
@@ -651,7 +651,7 @@ TEST(DataLayout, Caching) {
   // The second call should hit the cache. If it does not, the function in
   // SingleQueryType will be called and will abort the process.
   sum += layout.getTypeSize(SingleQueryType::get(&ctx));
-  // Make sure the complier doesn't optimize away the query code.
+  // Make sure the compiler doesn't optimize away the query code.
   EXPECT_EQ(sum, 2u);
 
   // A fresh data layout has a new cache, so the call to it should be dispatched

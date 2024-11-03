@@ -968,7 +968,7 @@ func.func @simplify_collapse(%arg : memref<?x?x4x?x6x7xi32>)
 // Size 0 = origSize0 * origSize1
 //        = 3 * 1
 //        = 3
-// Stride 0 = min(origStride_i, for all i in reassocation group and dim_i != 1)
+// Stride 0 = min(origStride_i, for all i in reassociation group and dim_i != 1)
 //          = min(origStride0)
 //          = min(2)
 //          = 2

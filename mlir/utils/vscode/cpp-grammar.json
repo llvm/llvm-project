@@ -14,7 +14,7 @@
           "name": "punctuation.definition.string.begin.cpp"
         },
         "1": {
-          "name": "mlir.delimeter.raw.string.cpp"
+          "name": "mlir.delimiter.raw.string.cpp"
         }
       },
       "end": "\\)(?i:mlir)\"",
@@ -23,7 +23,7 @@
           "name": "punctuation.definition.string.end.cpp"
         },
         "1": {
-          "name": "mlir.delimeter.raw.string.cpp"
+          "name": "mlir.delimiter.raw.string.cpp"
         }
       },
       "name": "mlir.raw.string.cpp",

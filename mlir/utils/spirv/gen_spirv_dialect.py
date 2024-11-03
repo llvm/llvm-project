@@ -109,22 +109,22 @@ def split_list_into_sublists(items):
     Arguments:
       - items: a list of strings
     """
-    chuncks = []
+    chunks = []
     chunk = []
     chunk_len = 0
 
     for item in items:
         chunk_len += len(item) + 2
         if chunk_len > 80:
-            chuncks.append(chunk)
+            chunks.append(chunk)
             chunk = []
             chunk_len = len(item) + 2
         chunk.append(item)
 
     if len(chunk) != 0:
-        chuncks.append(chunk)
+        chunks.append(chunk)
 
-    return chuncks
+    return chunks
 
 
 def toposort(dag, sort_fn):
