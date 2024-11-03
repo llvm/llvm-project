@@ -146,7 +146,7 @@ is a zero-based file offset, assuming ‘utf-8-unix’ coding."
     (lambda (byte &optional _quality _coding-system)
       (byte-to-position (1+ byte)))))
 
-(defun clang-format--git-diffs-match-diff-line (line)
+(defun clang-format--vc-diff-match-diff-line (line)
   ;; Matching something like:
   ;; "@@ -80 +80 @@" or "@@ -80,2 +80,2 @@"
   ;; Return as "<LineStart>:<LineEnd>"
@@ -160,7 +160,7 @@ is a zero-based file offset, assuming ‘utf-8-unix’ coding."
                     (string-to-number (match-string 3 line)))))
       (concat (match-string 1 line) ":" (match-string 1 line)))))
 
-(defun clang-format--git-diffs-get-diff-lines (file-orig file-new)
+(defun clang-format--vc-diff-get-diff-lines (file-orig file-new)
   "Return all line regions that contain diffs between FILE-ORIG and
 FILE-NEW.  If there is no diff 'nil' is returned. Otherwise the
 return is a 'list' of lines in the format '--lines=<start>:<end>'
@@ -194,7 +194,7 @@ which can be passed directly to 'clang-format'"
         ;; lines in current buffer that have a diff.
         (goto-char (point-min))
         (while (not (eobp))
-          (let ((diff-line (clang-format--git-diffs-match-diff-line
+          (let ((diff-line (clang-format--vc-diff-match-diff-line
                             (buffer-substring-no-properties
                              (line-beginning-position)
                              (line-end-position)))))
@@ -208,14 +208,15 @@ which can be passed directly to 'clang-format'"
        (t
         (error "(diff returned unsuccessfully %s%s)" status stderr))))))
 
-(defun clang-format--git-diffs-get-git-head-file (tmpfile-git-head)
-  "Returns a temporary file with the content of 'buffer-file-name' at
-git revision HEAD. If the current buffer is either not a file or not
-in a git repo, this results in an error"
+(defun clang-format--vc-diff-get-vc-head-file (tmpfile-vc-head)
+  "Stores the contents of 'buffer-file-name' at vc revision HEAD into
+'tmpfile-vc-head'. If the current buffer is either not a file or not
+in a vc repo, this results in an error. Currently git is the only
+supported vc."
   ;; Needs current buffer to be a file
   (unless (buffer-file-name)
     (error "Buffer is not visiting a file"))
-  ;; Need version control to in fact be git
+  ;; Only version control currently supported is Git
   (unless (string-equal (vc-backend (buffer-file-name)) "Git")
     (error "Not using git"))
 
@@ -226,31 +227,31 @@ in a git repo, this results in an error"
 
 
     ;; Get filename relative to git root
-    (let ((git-file-name (substring
+    (let ((vc-file-name (substring
                           (expand-file-name (buffer-file-name))
                           (string-width (expand-file-name base-dir))
                           nil)))
       (let ((status (call-process
                      "git"
                      nil
-                     `(:file, tmpfile-git-head)
+                     `(:file, tmpfile-vc-head)
                      nil
-                     "show" (concat "HEAD:" git-file-name)))
+                     "show" (concat "HEAD:" vc-file-name)))
             (stderr (with-temp-buffer
-                      (unless (zerop (cadr (insert-file-contents tmpfile-git-head)))
+                      (unless (zerop (cadr (insert-file-contents tmpfile-vc-head)))
                         (insert ": "))
                       (buffer-substring-no-properties
                        (point-min) (line-end-position)))))
         (when (stringp status)
           (error "(git show HEAD:%s killed by signal %s%s)"
-                 git-file-name status stderr))
+                 vc-file-name status stderr))
         (unless (zerop status)
           (error "(git show HEAD:%s returned unsuccessfully %s%s)"
-                 git-file-name status stderr))))))
+                 vc-file-name status stderr))))))
 
 (defun clang-format--region-impl (start end &optional style assume-file-name lines)
   "Common implementation for 'clang-format-buffer',
-'clang-format-region', and 'clang-format-git-diffs'. START and END
+'clang-format-region', and 'clang-format-vc-diff'. START and END
 refer to the region to be formatter. STYLE and ASSUME-FILE-NAME are
 used for configuring the clang-format. And LINES is used to pass
 specific locations for reformatting (i.e diff locations)."
@@ -321,30 +322,30 @@ specific locations for reformatting (i.e diff locations)."
 
 
 ;;;###autoload
-(defun clang-format-git-diffs (&optional style assume-file-name)
-  "The same as 'clang-format-buffer' but only operates on the git
+(defun clang-format-vc-diff (&optional style assume-file-name)
+  "The same as 'clang-format-buffer' but only operates on the vc
 diffs from HEAD in the buffer. If no STYLE is given uses
 `clang-format-style'. Use ASSUME-FILE-NAME to locate a style config
 file. If no ASSUME-FILE-NAME is given uses the function
 `buffer-file-name'."
   (interactive)
-  (let ((tmpfile-git-head nil)
+  (let ((tmpfile-vc-head nil)
         (tmpfile-curbuf nil))
     (unwind-protect
         (progn
-          (setq tmpfile-git-head
-                (make-temp-file "clang-format-git-tmp-head-content"))
-          (clang-format--git-diffs-get-git-head-file tmpfile-git-head)
+          (setq tmpfile-vc-head
+                (make-temp-file "clang-format-vc-tmp-head-content"))
+          (clang-format--vc-diff-get-vc-head-file tmpfile-vc-head)
           ;; Move current buffer to a temporary file to take a
           ;; diff. Even if current-buffer is backed by a file, we
           ;; want to diff the buffer contents which might not be
           ;; saved.
-          (setq tmpfile-curbuf (make-temp-file "clang-format-git-tmp"))
+          (setq tmpfile-curbuf (make-temp-file "clang-format-vc-tmp"))
           (write-region nil nil tmpfile-curbuf nil 'nomessage)
-          ;; Git list of lines with a diff.
+          ;; Get list of lines with a diff.
           (let ((diff-lines
-                 (clang-format--git-diffs-get-diff-lines
-                  tmpfile-git-head tmpfile-curbuf)))
+                 (clang-format--vc-diff-get-diff-lines
+                  tmpfile-vc-head tmpfile-curbuf)))
             ;; If we have any diffs, format them.
             (when diff-lines
               (clang-format--region-impl
@@ -355,7 +356,7 @@ file. If no ASSUME-FILE-NAME is given uses the function
                diff-lines))))
       (progn
         ;; Cleanup temporary files
-        (when tmpfile-git-head (delete-file tmpfile-git-head))
+        (when tmpfile-vc-head (delete-file tmpfile-vc-head))
         (when tmpfile-curbuf (delete-file tmpfile-curbuf))))))
 
 
