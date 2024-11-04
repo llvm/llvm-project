@@ -14315,13 +14315,11 @@ void ASTContext::registerSYCLEntryPointFunction(FunctionDecl *FD) {
   // conflicting kernel names prior to calling this function.
   CanQualType KernelNameType = getCanonicalType(SKEPAttr->getKernelName());
   auto IT = SYCLKernels.find(KernelNameType);
-  if (IT != SYCLKernels.end()) {
-    assert(declaresSameEntity(FD, IT->second.getKernelEntryPointDecl()) &&
-           "SYCL kernel name conflict");
-  } else {
-    SYCLKernels.insert(std::make_pair(KernelNameType,
-                                      BuildSYCLKernelInfo(KernelNameType, FD)));
-  }
+  assert((IT == SYCLKernels.end() ||
+          declaresSameEntity(FD, IT->second.getKernelEntryPointDecl())) &&
+         "SYCL kernel name conflict");
+  SYCLKernels.insert(
+      std::make_pair(KernelNameType, BuildSYCLKernelInfo(KernelNameType, FD)));
 }
 
 OMPTraitInfo &ASTContext::getNewOMPTraitInfo() {
