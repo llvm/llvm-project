@@ -1982,9 +1982,6 @@ bool DAGTypeLegalizer::PromoteIntegerOperand(SDNode *N, unsigned OpNo) {
     break;
   case ISD::MSTORE:       Res = PromoteIntOp_MSTORE(cast<MaskedStoreSDNode>(N),
                                                     OpNo); break;
-  case ISD::VP_LOAD:
-    Res = PromoteIntOp_VP_LOAD(cast<VPLoadSDNode>(N), OpNo);
-    break;
   case ISD::MLOAD:        Res = PromoteIntOp_MLOAD(cast<MaskedLoadSDNode>(N),
                                                     OpNo); break;
   case ISD::MGATHER:  Res = PromoteIntOp_MGATHER(cast<MaskedGatherSDNode>(N),
@@ -2428,24 +2425,6 @@ SDValue DAGTypeLegalizer::PromoteIntOp_VP_STORE(VPStoreSDNode *N,
                              N->getMask(), N->getVectorLength(),
                              N->getMemoryVT(), N->getMemOperand(),
                              N->isCompressingStore());
-}
-
-SDValue DAGTypeLegalizer::PromoteIntOp_VP_LOAD(VPLoadSDNode *N, unsigned OpNo) {
-  assert(OpNo >= 3 && "Only know how to promote the mask or length!");
-  EVT DataVT = N->getValueType(0);
-  SDValue Operand = N->getOperand(OpNo);
-  SDValue PromotedOperand = OpNo == 3 ? PromoteTargetBoolean(Operand, DataVT)
-                                      : ZExtPromotedInteger(Operand);
-  SmallVector<SDValue, 5> NewOps(N->op_begin(), N->op_end());
-  NewOps[OpNo] = PromotedOperand;
-  SDNode *Res = DAG.UpdateNodeOperands(N, NewOps);
-  if (Res == N)
-    return SDValue(Res, 0);
-
-  // Update triggered CSE, do our own replacement since caller can't.
-  ReplaceValueWith(SDValue(N, 0), SDValue(Res, 0));
-  ReplaceValueWith(SDValue(N, 1), SDValue(Res, 1));
-  return SDValue();
 }
 
 SDValue DAGTypeLegalizer::PromoteIntOp_MSTORE(MaskedStoreSDNode *N,
