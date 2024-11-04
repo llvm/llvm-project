@@ -43,8 +43,7 @@ using namespace mlir::vector;
 struct VectorShape {
   ArrayRef<int64_t> sizes;
   ArrayRef<bool> scalableFlags;
-
-  bool empty() const { return sizes.empty(); }
+  bool scalar = true;
 };
 
 // Returns vector shape if the type is a vector. Returns an empty shape if it is
@@ -52,7 +51,8 @@ struct VectorShape {
 static VectorShape vectorShape(Type type) {
   auto vectorType = dyn_cast<VectorType>(type);
   return vectorType
-             ? VectorShape{vectorType.getShape(), vectorType.getScalableDims()}
+             ? VectorShape{vectorType.getShape(), vectorType.getScalableDims(),
+                           /*scalar=*/false}
              : VectorShape{};
 }
 
@@ -67,9 +67,8 @@ static VectorShape vectorShape(Value value) {
 // Broadcasts scalar type into vector type (iff shape is non-scalar).
 static Type broadcast(Type type, VectorShape shape) {
   assert(!isa<VectorType>(type) && "must be scalar type");
-  return !shape.empty()
-             ? VectorType::get(shape.sizes, type, shape.scalableFlags)
-             : type;
+  return shape.scalar ? type
+                      : VectorType::get(shape.sizes, type, shape.scalableFlags);
 }
 
 // Broadcasts scalar value into vector (iff shape is non-scalar).
@@ -77,7 +76,7 @@ static Value broadcast(ImplicitLocOpBuilder &builder, Value value,
                        VectorShape shape) {
   assert(!isa<VectorType>(value.getType()) && "must be scalar value");
   auto type = broadcast(value.getType(), shape);
-  return !shape.empty() ? builder.create<BroadcastOp>(type, value) : value;
+  return shape.scalar ? value : builder.create<BroadcastOp>(type, value);
 }
 
 //----------------------------------------------------------------------------//
@@ -1609,7 +1608,7 @@ RsqrtApproximation::matchAndRewrite(math::RsqrtOp op,
   VectorShape shape = vectorShape(op.getOperand());
 
   // Only support already-vectorized rsqrt's.
-  if (shape.empty() || shape.sizes.back() % 8 != 0)
+  if (shape.sizes.empty() || shape.sizes.back() % 8 != 0)
     return rewriter.notifyMatchFailure(op, "unsupported operand type");
 
   ImplicitLocOpBuilder builder(op->getLoc(), rewriter);
