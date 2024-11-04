@@ -1338,8 +1338,10 @@ of the project, even if there are violations in some headers.
   # This compilation won't emit any unused findings for sources under foo/
   # directory. But it'll still complain for all the other sources, e.g:
   $ cat foo/bar.cc
-  #include "dir/include.h" // clang flags unused declarations here.
+  #include "dir/include.h" // Clang flags unused declarations here.
   #include "foo/include.h" // but unused warnings under this source is omitted.
+  #include "next_to_bar_cc.h" // as are unused warnings from this header file.
+  // Further, unused warnings in the remainder of bar.cc are also omitted.
 
 
 See :doc:`WarningSuppressionMappings` for details about the file format and

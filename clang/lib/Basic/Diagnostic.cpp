@@ -487,6 +487,8 @@ void DiagnosticsEngine::setSeverityForAll(diag::Flavor Flavor,
 }
 
 namespace {
+// FIXME: We should isolate the parser from SpecialCaseList and just use it
+// here.
 class WarningsSpecialCaseList : public llvm::SpecialCaseList {
 public:
   static std::unique_ptr<WarningsSpecialCaseList>
