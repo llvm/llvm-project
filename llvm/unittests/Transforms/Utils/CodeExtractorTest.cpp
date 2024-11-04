@@ -625,6 +625,53 @@ TEST(CodeExtractor, AllocaBlock) {
   EXPECT_EQ(NumAllocas, 2);
 }
 
+/// Regression test to ensure we don't crash trying to set the name of the ptr
+/// argument
+TEST(CodeExtractor, PartialAggregateArgs2) {
+  LLVMContext Ctx;
+  SMDiagnostic Err;
+  std::unique_ptr<Module> M(parseAssemblyString(R"ir(
+    declare void @usei(i32)
+    declare void @usep(ptr)
+
+    define void @foo(i32 %a, i32 %b, ptr %p) {
+    entry:
+      br label %extract
+
+    extract:
+      call void @usei(i32 %a)
+      call void @usei(i32 %b)
+      call void @usep(ptr %p)
+      br label %exit
+
+    exit:
+      ret void
+    }
+  )ir",
+                                                Err, Ctx));
+
+  Function *Func = M->getFunction("foo");
+  SmallVector<BasicBlock *, 1> Blocks{getBlockByName(Func, "extract")};
+
+  // Create the CodeExtractor with arguments aggregation enabled.
+  CodeExtractor CE(Blocks, /* DominatorTree */ nullptr,
+                   /* AggregateArgs */ true);
+  EXPECT_TRUE(CE.isEligible());
+
+  CodeExtractorAnalysisCache CEAC(*Func);
+  SetVector<Value *> Inputs, Outputs, SinkingCands, HoistingCands;
+  BasicBlock *CommonExit = nullptr;
+  CE.findAllocas(CEAC, SinkingCands, HoistingCands, CommonExit);
+  CE.findInputsOutputs(Inputs, Outputs, SinkingCands);
+  // Exclude the last input from the argument aggregate.
+  CE.excludeArgFromAggregate(Inputs[2]);
+
+  Function *Outlined = CE.extractCodeRegion(CEAC, Inputs, Outputs);
+  EXPECT_TRUE(Outlined);
+  EXPECT_FALSE(verifyFunction(*Outlined));
+  EXPECT_FALSE(verifyFunction(*Func));
+}
+
 TEST(CodeExtractor, OpenMPAggregateArgs) {
   LLVMContext Ctx;
   SMDiagnostic Err;
