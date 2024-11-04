@@ -15742,8 +15742,7 @@ static SDValue getSToVPermuted(SDValue OrigSToV, SelectionDAG &DAG,
 static bool isShuffleMaskInRange(const SmallVectorImpl<int> &ShuffV,
                                  int HalfVec, int LHSLastElementDefined,
                                  int RHSLastElementDefined) {
-  for (int I : seq<int>(0, ShuffV.size())) {
-    int Index = ShuffV[I];
+  for (int Index : ShuffV) {
     if (Index < 0) // Skip explicitly undefined mask indices.
       continue;
     // Handle first input vector of the vector_shuffle.
@@ -15776,7 +15775,9 @@ static SDValue generateSToVPermutedForVecShuffle(
   // because elements 1 and higher of a scalar_to_vector are undefined.
   // It is also not 4 because the original scalar_to_vector is wider and
   // actually contains two i32 elements.
-  LastElt = ScalarSize / (ShuffleEltWidth + 1) + FirstElt;
+  LastElt = (uint64_t) ScalarSize > ShuffleEltWidth
+                ? ScalarSize / ShuffleEltWidth - 1 + FirstElt
+                : FirstElt;
   SDValue SToVPermuted = getSToVPermuted(SToVNode, DAG, Subtarget);
   if (SToVPermuted.getValueType() != VecShuffOperandType)
     SToVPermuted = DAG.getBitcast(VecShuffOperandType, SToVPermuted);
@@ -15856,22 +15857,26 @@ SDValue PPCTargetLowering::combineVectorShuffle(ShuffleVectorSDNode *SVN,
     // than 64 bits since for 64-bit elements, all instructions already put
     // the value into element zero. Since scalar size of LHS and RHS may differ
     // after isScalarToVec, this should be checked using their own sizes.
+    int LHSScalarSize = 0;
+    int RHSScalarSize = 0;
     if (SToVLHS) {
-      int LHSScalarSize = SToVLHS.getValueType().getScalarSizeInBits();
+      LHSScalarSize = SToVLHS.getValueType().getScalarSizeInBits();
       if (!IsLittleEndian && LHSScalarSize >= 64)
         return Res;
+    }
+    if (SToVRHS) {
+      RHSScalarSize = SToVRHS.getValueType().getScalarSizeInBits();
+      if (!IsLittleEndian && RHSScalarSize >= 64)
+        return Res;
+    }
+    if (LHSScalarSize != 0)
       LHS = generateSToVPermutedForVecShuffle(
           LHSScalarSize, ShuffleEltWidth, LHSNumValidElts, LHSFirstElt,
           LHSLastElt, LHS, SToVLHS, DAG, Subtarget);
-    }
-    if (SToVRHS) {
-      int RHSScalarSize = SToVRHS.getValueType().getScalarSizeInBits();
-      if (!IsLittleEndian && RHSScalarSize >= 64)
-        return Res;
+    if (RHSScalarSize != 0)
       RHS = generateSToVPermutedForVecShuffle(
           RHSScalarSize, ShuffleEltWidth, RHSNumValidElts, RHSFirstElt,
           RHSLastElt, RHS, SToVRHS, DAG, Subtarget);
-    }
 
     if (!isShuffleMaskInRange(ShuffV, HalfVec, LHSLastElt, RHSLastElt))
       return Res;
