@@ -2014,16 +2014,27 @@ void AsmPrinter::Impl::printLocationInternal(LocationAttr loc, bool pretty,
           os << loc.getFilename().getValue();
         else
           printEscapedString(loc.getFilename());
-        os << ':' << *loc.getStartLine();
-        if (loc.getStartColumn()) {
-          os << ':' << *loc.getStartColumn();
-          if (loc.getEndColumn().has_value() || loc.getEndLine().has_value())
-            os << " to ";
-          if (loc.getEndLine().has_value())
-            os << *loc.getEndLine();
-          if (loc.getEndColumn().has_value())
-            os << ':' << *loc.getEndColumn();
+        if (loc.getStartLine() == loc.getStartColumn() == loc.getEndLine() ==
+            loc.getEndColumn() == 0) {
+          return;
         }
+        if (loc.getStartColumn() == 0 &&
+            loc.getStartLine() == loc.getEndLine()) {
+          os << ':' << loc.getStartLine();
+          return;
+        }
+        if (loc.getEndColumn() == loc.getStartColumn() &&
+            loc.getStartLine() == loc.getEndLine()) {
+          os << ':' << loc.getStartLine() << ':' << loc.getStartColumn();
+          return;
+        }
+        if (loc.getStartLine() == loc.getEndLine()) {
+          os << ':' << loc.getStartLine() << ':' << loc.getStartColumn()
+             << " to :" << loc.getEndColumn();
+          return;
+        }
+        os << ':' << loc.getStartLine() << ':' << loc.getStartColumn() << " to "
+           << loc.getEndLine() << ':' << loc.getEndColumn();
       })
       .Case<NameLoc>([&](NameLoc loc) {
         printEscapedString(loc.getName());

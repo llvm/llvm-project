@@ -126,7 +126,7 @@ static void writeFileLineColRangeLocs(DialectBytecodeWriter &writer,
   }
   // The single file:line:col is handled by other writer, but checked here for
   // completeness.
-  if (range.endColumn() == range.startColumn() &&
+  if (range.getEndColumn() == range.getStartColumn() &&
       range.getStartLine() == range.getEndLine()) {
     writer.writeVarInt(2);
     writer.writeVarInt(range.getStartLine());

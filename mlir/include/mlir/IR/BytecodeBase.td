@@ -82,12 +82,6 @@ def VarInt :
   WithBuilder<"$_args",
   WithPrinter<"$_writer.writeVarInt($_getter)",
   WithType   <"uint64_t">>>>;
-// This is for optional ints which are guaranteed to be present.
-def PresentOptionalVarInt :
-  WithParser <"succeeded($_reader.readVarInt($_var))",
-  WithBuilder<"$_args",
-  WithPrinter<"$_writer.writeVarInt(*$_getter)",
-  WithType   <"uint64_t">>>>;
 def SignedVarInt :
   WithParser <"succeeded($_reader.readSignedVarInt($_var))",
   WithBuilder<"$_args",

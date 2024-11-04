@@ -143,10 +143,10 @@ def FileLineColRange : Builtin_LocationAttr<"FileLineColRange"> {
 
   let extraClassDeclaration = [{
     ::mlir::StringAttr getFilename() const;
-    std::optional<unsigned> getStartLine() const;
-    std::optional<unsigned> getStartColumn() const;
-    std::optional<unsigned> getEndColumn() const;
-    std::optional<unsigned> getEndLine() const;
+    unsigned getStartLine() const;
+    unsigned getStartColumn() const;
+    unsigned getEndColumn() const;
+    unsigned getEndLine() const;
   }];
   let skipDefaultBuilders = 1;
   let genAccessors = 0;

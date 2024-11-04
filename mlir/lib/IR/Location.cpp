@@ -173,9 +173,9 @@ StringAttr FileLineColLoc::getFilename() const {
   return FileLineColRange::getFilename();
 }
 
-unsigned FileLineColLoc::getLine() const { return *getStartLine(); }
+unsigned FileLineColLoc::getLine() const { return getStartLine(); }
 
-unsigned FileLineColLoc::getColumn() const { return *getStartColumn(); }
+unsigned FileLineColLoc::getColumn() const { return getStartColumn(); }
 
 bool FileLineColLoc::classof(Attribute attr) {
   // This could also have been for <= 2. But given this is matching previous

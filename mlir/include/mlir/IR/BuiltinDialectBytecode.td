@@ -100,7 +100,7 @@ def FileLineColRange : DialectAttribute<(attr
   StringAttr:$filename,
   WithBuilder<"$_args",
     WithType<"SmallVector<uint64_t>",
-    WithParser <"succeeded(readFileLineColRangeLocs($_reader, $_var))",
+    WithParser<"succeeded(readFileLineColRangeLocs($_reader, $_var))",
     WithPrinter<"writeFileLineColRangeLocs($_writer, $_name)">>>>:$rawLocData
 )> {
   let cBuilder = "getFileLineColRange(context, filename, rawLocData)";
@@ -109,8 +109,8 @@ def FileLineColRange : DialectAttribute<(attr
 
 def FileLineColLoc : DialectAttribute<(attr
   StringAttr:$filename,
-  PresentOptionalVarInt:$start_line,
-  PresentOptionalVarInt:$start_column
+  VarInt:$start_line,
+  VarInt:$start_column
 )> {
   let printerPredicate = "::llvm::isa<FileLineColLoc>($_val)";
 }
