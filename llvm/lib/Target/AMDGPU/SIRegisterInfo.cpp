@@ -2673,7 +2673,7 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
           MI->removeOperand(FIOperandNum);
 
           unsigned NumOps = MI->getNumOperands();
-          for (unsigned I = NumOps - 2; I >= 2; --I)
+          for (unsigned I = NumOps - 2; I >= NumDefs + 1; --I)
             MI->removeOperand(I);
 
           if (NumDefs == 2)
