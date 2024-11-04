@@ -82,19 +82,20 @@ struct FileLineColRangeAttrStorage final
     return getTrailingObjects<unsigned>()[index - 1];
   }
 
-  unsigned getStartLine() const {
-    return startLine;
-  }
+  unsigned getStartLine() const { return startLine; }
   unsigned getStartColumn() const {
-    if (size() <= 1) return 0;
+    if (size() <= 1)
+      return 0;
     return getLineCols(1);
   }
   unsigned getEndColumn() const {
-    if (size() <= 2) return getStartColumn();
+    if (size() <= 2)
+      return getStartColumn();
     return getLineCols(2);
   }
   unsigned getEndLine() const {
-    if (size() <= 3) return getStartLine();
+    if (size() <= 3)
+      return getStartLine();
     return getLineCols(3);
   }
 

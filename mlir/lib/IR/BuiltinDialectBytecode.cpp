@@ -104,8 +104,9 @@ static FileLineColRange getFileLineColRange(MLIRContext *context,
   }
 }
 
-static LogicalResult readFileLineColRangeLocs(DialectBytecodeReader &reader,
-                                       SmallVectorImpl<uint64_t> &lineCols) {
+static LogicalResult
+readFileLineColRangeLocs(DialectBytecodeReader &reader,
+                         SmallVectorImpl<uint64_t> &lineCols) {
   return reader.readList(
       lineCols, [&reader](uint64_t &val) { return reader.readVarInt(val); });
 }
