@@ -204,7 +204,7 @@ static void shardShape(const InShape &inShape, const MeshShape &meshShape,
         auto sz = shardedDimsOffsets[pos];
         bool same = !ShapedType::isDynamicShape(meshShape);
         if (same) {
-          // find sharded dims in shardedDimsOffsets with same static size on
+          // Find sharded dims in shardedDimsOffsets with same static size on
           // all devices. Use kDynamic for dimensions with dynamic or
           // non-uniform offs in shardedDimsOffsets.
           uint64_t numShards = 0;
