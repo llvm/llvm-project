@@ -2139,9 +2139,9 @@ public:
     Walk(std::get<std::optional<ScalarIntConstantExpr>>(x.t));
   }
   void Unparse(const OmpFromClause &x) {
-    auto &expect =
-        std::get<std::optional<std::list<OmpFromClause::Expectation>>>(x.t);
-    auto &iter = std::get<std::optional<std::list<OmpIteratorModifier>>>(x.t);
+    auto &expect{
+        std::get<std::optional<std::list<OmpFromClause::Expectation>>>(x.t)};
+    auto &iter{std::get<std::optional<std::list<OmpIteratorModifier>>>(x.t)};
     bool needComma{false};
     if (expect) {
       Walk(*expect);
@@ -2263,9 +2263,9 @@ public:
         std::get<std::optional<OmpDefaultmapClause::VariableCategory>>(x.t));
   }
   void Unparse(const OmpToClause &x) {
-    auto &expect =
-        std::get<std::optional<std::list<OmpToClause::Expectation>>>(x.t);
-    auto &iter = std::get<std::optional<std::list<OmpIteratorModifier>>>(x.t);
+    auto &expect{
+        std::get<std::optional<std::list<OmpToClause::Expectation>>>(x.t)};
+    auto &iter{std::get<std::optional<std::list<OmpIteratorModifier>>>(x.t)};
     bool needComma{false};
     if (expect) {
       Walk(*expect);

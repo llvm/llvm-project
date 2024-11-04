@@ -139,8 +139,8 @@ template <typename Separator> struct MotionModifiers {
   using resultType = typename ModParser::resultType;
 
   std::optional<resultType> Parse(ParseState &state) const {
-    auto mp = ModParser(sep_, ExpParser{}, IterParser{});
-    auto mods = mp.Parse(state);
+    auto mp{ModParser(sep_, ExpParser{}, IterParser{})};
+    auto mods{mp.Parse(state)};
     // The ModParser always "succeeds", i.e. even if the input is junk, it
     // will return a tuple filled with nullopts. If any of the components
     // is not a nullopt, expect a ":".
