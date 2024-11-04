@@ -36,6 +36,8 @@ class LLVMContext;
 class Module;
 class PHINode;
 class ValueSymbolTable;
+class DPValue;
+class DPMarker;
 
 /// LLVM Basic Block Representation
 ///
@@ -56,6 +58,9 @@ class BasicBlock final : public Value, // Basic blocks are data objects also
                          public ilist_node_with_parent<BasicBlock, Function> {
 public:
   using InstListType = SymbolTableList<Instruction, ilist_iterator_bits<true>>;
+  /// Flag recording whether or not this block stores debug-info in the form
+  /// of intrinsic instructions (false) or non-instruction records (true).
+  bool IsNewDbgInfoFormat;
 
 private:
   friend class BlockAddress;
@@ -64,6 +69,55 @@ private:
   InstListType InstList;
   Function *Parent;
 
+public:
+  /// Attach a DPMarker to the given instruction. Enables the storage of any
+  /// debug-info at this position in the program.
+  DPMarker *createMarker(Instruction *I);
+  DPMarker *createMarker(InstListType::iterator It);
+
+  /// Convert variable location debugging information stored in dbg.value
+  /// intrinsics into DPMarker / DPValue records. Deletes all dbg.values in
+  /// the process and sets IsNewDbgInfoFormat = true. Only takes effect if
+  /// the UseNewDbgInfoFormat LLVM command line option is given.
+  void convertToNewDbgValues();
+
+  /// Convert variable location debugging information stored in DPMarkers and
+  /// DPValues into the dbg.value intrinsic representation. Sets
+  /// IsNewDbgInfoFormat = false.
+  void convertFromNewDbgValues();
+
+  /// Ensure the block is in "old" dbg.value format (\p NewFlag == false) or
+  /// in the new format (\p NewFlag == true), converting to the desired format
+  /// if necessary.
+  void setIsNewDbgInfoFormat(bool NewFlag);
+
+  /// Validate any DPMarkers / DPValues attached to instructions in this block,
+  /// and block-level stored data too (TrailingDPValues).
+  /// \p Assert Should this method fire an assertion if a problem is found?
+  /// \p Msg Should this method print a message to errs() if a problem is found?
+  /// \p OS Output stream to write errors to.
+  /// \returns True if a problem is found.
+  bool validateDbgValues(bool Assert = true, bool Msg = false,
+                         raw_ostream *OS = nullptr);
+
+  /// Record that the collection of DPValues in \p M "trails" after the last
+  /// instruction of this block. These are equivalent to dbg.value intrinsics
+  /// that exist at the end of a basic block with no terminator (a transient
+  /// state that occurs regularly).
+  void setTrailingDPValues(DPMarker *M);
+
+  /// Fetch the collection of DPValues that "trail" after the last instruction
+  /// of this block, see \ref setTrailingDPValues. If there are none, returns
+  /// nullptr.
+  DPMarker *getTrailingDPValues();
+
+  /// Delete any trailing DPValues at the end of this block, see
+  /// \ref setTrailingDPValues.
+  void deleteTrailingDPValues();
+
+  void dumpDbgValues() const;
+
+private:
   void setParent(Function *parent);
 
   /// Constructor.

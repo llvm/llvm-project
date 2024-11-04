@@ -98,6 +98,17 @@ void PatchEntries::runOnFunctions(BinaryContext &BC) {
     });
 
     if (!Success) {
+      // We can't change output layout for AArch64 due to LongJmp pass
+      if (BC.isAArch64()) {
+        if (opts::ForcePatch) {
+          errs() << "BOLT-ERROR: unable to patch entries in " << Function
+                 << "\n";
+          exit(1);
+        }
+
+        continue;
+      }
+
       // If the original function entries cannot be patched, then we cannot
       // safely emit new function body.
       errs() << "BOLT-WARNING: failed to patch entries in " << Function

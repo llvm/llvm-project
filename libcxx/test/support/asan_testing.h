@@ -34,7 +34,7 @@ TEST_CONSTEXPR bool is_contiguous_container_asan_correct ( const std::vector<T, 
 }
 #endif // TEST_HAS_FEATURE(address_sanitizer)
 
-#if TEST_HAS_FEATURE(address_sanitizer) && _LIBCPP_CLANG_VER >= 1600
+#if TEST_HAS_FEATURE(address_sanitizer)
 extern "C" int __sanitizer_verify_double_ended_contiguous_container(
     const void* beg, const void* con_beg, const void* con_end, const void* end);
 extern "C" bool __sanitizer_is_annotable(const void* address, const unsigned long size);

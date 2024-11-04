@@ -962,6 +962,15 @@ StringRef GuardWideningImpl::scoreTypeToString(WideningScore WS) {
 
 PreservedAnalyses GuardWideningPass::run(Function &F,
                                          FunctionAnalysisManager &AM) {
+  // Avoid requesting analyses if there are no guards or widenable conditions.
+  auto *GuardDecl = F.getParent()->getFunction(
+      Intrinsic::getName(Intrinsic::experimental_guard));
+  bool HasIntrinsicGuards = GuardDecl && !GuardDecl->use_empty();
+  auto *WCDecl = F.getParent()->getFunction(
+      Intrinsic::getName(Intrinsic::experimental_widenable_condition));
+  bool HasWidenableConditions = WCDecl && !WCDecl->use_empty();
+  if (!HasIntrinsicGuards && !HasWidenableConditions)
+    return PreservedAnalyses::all();
   auto &DT = AM.getResult<DominatorTreeAnalysis>(F);
   auto &LI = AM.getResult<LoopAnalysis>(F);
   auto &PDT = AM.getResult<PostDominatorTreeAnalysis>(F);

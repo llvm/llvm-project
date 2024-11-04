@@ -1023,7 +1023,8 @@ feature_test_macros = [
             "name": "__cpp_lib_syncbuf",
             "values": {"c++20": 201803},
             "headers": ["syncstream"],
-            "unimplemented": True,
+            "test_suite_guard": "!defined(_LIBCPP_HAS_NO_EXPERIMENTAL_SYNCSTREAM)",
+            "libcxx_guard": "!defined(_LIBCPP_HAS_NO_EXPERIMENTAL_SYNCSTREAM)",
         },
         {
             "name": "__cpp_lib_text_encoding",
@@ -1180,6 +1181,7 @@ lit_markup = {
     "semaphore": ["UNSUPPORTED: no-threads"],
     "shared_mutex": ["UNSUPPORTED: no-threads"],
     "sstream": ["UNSUPPORTED: no-localization"],
+    "syncstream": ["UNSUPPORTED: no-localization"],
     "stdatomic.h": ["UNSUPPORTED: no-threads"],
     "stop_token": ["UNSUPPORTED: no-threads"],
     "thread": ["UNSUPPORTED: no-threads"],

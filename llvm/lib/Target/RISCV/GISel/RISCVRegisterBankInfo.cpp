@@ -205,12 +205,25 @@ RISCVRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   case TargetOpcode::G_FPEXT:
   case TargetOpcode::G_FPTRUNC: {
     LLT ToTy = MRI.getType(MI.getOperand(0).getReg());
-    (void)ToTy;
     LLT FromTy = MRI.getType(MI.getOperand(1).getReg());
-    (void)FromTy;
     OperandsMapping =
         getOperandsMapping({getFPValueMapping(ToTy.getSizeInBits()),
                             getFPValueMapping(FromTy.getSizeInBits())});
+    break;
+  }
+  case TargetOpcode::G_FPTOSI:
+  case TargetOpcode::G_FPTOUI: {
+    LLT Ty = MRI.getType(MI.getOperand(1).getReg());
+    OperandsMapping =
+        getOperandsMapping({GPRValueMapping,
+                            getFPValueMapping(Ty.getSizeInBits())});
+    break;
+  }
+  case TargetOpcode::G_SITOFP:
+  case TargetOpcode::G_UITOFP: {
+    LLT Ty = MRI.getType(MI.getOperand(0).getReg());
+    OperandsMapping = getOperandsMapping(
+        {getFPValueMapping(Ty.getSizeInBits()), GPRValueMapping});
     break;
   }
   case TargetOpcode::G_FCONSTANT: {

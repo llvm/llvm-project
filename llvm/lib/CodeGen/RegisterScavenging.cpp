@@ -65,30 +65,22 @@ void RegScavenger::init(MachineBasicBlock &MBB) {
     SI.Reg = 0;
     SI.Restore = nullptr;
   }
-
-  Tracking = false;
 }
 
 void RegScavenger::enterBasicBlock(MachineBasicBlock &MBB) {
   init(MBB);
   LiveUnits.addLiveIns(MBB);
+  MBBI = MBB.begin();
 }
 
 void RegScavenger::enterBasicBlockEnd(MachineBasicBlock &MBB) {
   init(MBB);
   LiveUnits.addLiveOuts(MBB);
-
-  // Move internal iterator at the last instruction of the block.
-  if (!MBB.empty()) {
-    MBBI = std::prev(MBB.end());
-    Tracking = true;
-  }
+  MBBI = MBB.end();
 }
 
 void RegScavenger::backward() {
-  assert(Tracking && "Must be tracking to determine kills and defs");
-
-  const MachineInstr &MI = *MBBI;
+  const MachineInstr &MI = *--MBBI;
   LiveUnits.stepBackward(MI);
 
   // Expire scavenge spill frameindex uses.
@@ -98,12 +90,6 @@ void RegScavenger::backward() {
       I.Restore = nullptr;
     }
   }
-
-  if (MBBI == MBB->begin()) {
-    MBBI = MachineBasicBlock::iterator(nullptr);
-    Tracking = false;
-  } else
-    --MBBI;
 }
 
 bool RegScavenger::isRegUsed(Register Reg, bool includeReserved) const {
@@ -317,9 +303,8 @@ Register RegScavenger::scavengeRegisterBackwards(const TargetRegisterClass &RC,
   // Find the register whose use is furthest away.
   MachineBasicBlock::iterator UseMI;
   ArrayRef<MCPhysReg> AllocationOrder = RC.getRawAllocationOrder(MF);
-  std::pair<MCPhysReg, MachineBasicBlock::iterator> P =
-      findSurvivorBackwards(*MRI, MBBI, To, LiveUnits, AllocationOrder,
-                            RestoreAfter);
+  std::pair<MCPhysReg, MachineBasicBlock::iterator> P = findSurvivorBackwards(
+      *MRI, std::prev(MBBI), To, LiveUnits, AllocationOrder, RestoreAfter);
   MCPhysReg Reg = P.first;
   MachineBasicBlock::iterator SpillBefore = P.second;
   // Found an available register?
@@ -334,9 +319,8 @@ Register RegScavenger::scavengeRegisterBackwards(const TargetRegisterClass &RC,
 
   assert(Reg != 0 && "No register left to scavenge!");
 
-  MachineBasicBlock::iterator ReloadAfter =
-    RestoreAfter ? std::next(MBBI) : MBBI;
-  MachineBasicBlock::iterator ReloadBefore = std::next(ReloadAfter);
+  MachineBasicBlock::iterator ReloadBefore =
+      RestoreAfter ? std::next(MBBI) : MBBI;
   if (ReloadBefore != MBB.end())
     LLVM_DEBUG(dbgs() << "Reload before: " << *ReloadBefore << '\n');
   ScavengedInfo &Scavenged = spill(Reg, RC, SPAdj, SpillBefore, ReloadBefore);
@@ -414,9 +398,9 @@ static bool scavengeFrameVirtualRegsInBlock(MachineRegisterInfo &MRI,
   unsigned InitialNumVirtRegs = MRI.getNumVirtRegs();
   bool NextInstructionReadsVReg = false;
   for (MachineBasicBlock::iterator I = MBB.end(); I != MBB.begin(); ) {
-    --I;
-    // Move RegScavenger to the position between *I and *std::next(I).
+    // Move RegScavenger to the position between *std::prev(I) and *I.
     RS.backward(I);
+    --I;
 
     // Look for unassigned vregs in the uses of *std::next(I).
     if (NextInstructionReadsVReg) {

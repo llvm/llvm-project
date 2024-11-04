@@ -1700,6 +1700,8 @@ template <class _Key, class _Tp, class _Compare, class _Allocator>
 _Tp&
 map<_Key, _Tp, _Compare, _Allocator>::operator[](key_type&& __k)
 {
+    // TODO investigate this clang-tidy warning.
+    // NOLINTNEXTLINE(bugprone-use-after-move)
     return __tree_.__emplace_unique_key_args(__k,
         _VSTD::piecewise_construct,
         _VSTD::forward_as_tuple(_VSTD::move(__k)),

@@ -9,6 +9,9 @@
 #include "RegisterContextPOSIXCore_arm64.h"
 #include "Plugins/Process/Utility/RegisterInfoPOSIX_arm64.h"
 
+#include "Plugins/Process/Utility/AuxVector.h"
+#include "Plugins/Process/Utility/RegisterFlagsLinux_arm64.h"
+#include "Plugins/Process/elf-core/ProcessElfCore.h"
 #include "Plugins/Process/elf-core/RegisterUtilities.h"
 #include "lldb/Target/Thread.h"
 #include "lldb/Utility/RegisterValue.h"
@@ -73,6 +76,21 @@ RegisterContextCorePOSIX_arm64::RegisterContextCorePOSIX_arm64(
     const DataExtractor &gpregset, llvm::ArrayRef<CoreNote> notes)
     : RegisterContextPOSIX_arm64(thread, std::move(register_info)) {
   ::memset(&m_sme_pseudo_regs, 0, sizeof(m_sme_pseudo_regs));
+
+  ProcessElfCore *process =
+      static_cast<ProcessElfCore *>(thread.GetProcess().get());
+  if (process->GetArchitecture().GetTriple().getOS() == llvm::Triple::Linux) {
+    AuxVector aux_vec(process->GetAuxvData());
+    std::optional<uint64_t> auxv_at_hwcap =
+        aux_vec.GetAuxValue(AuxVector::AUXV_AT_HWCAP);
+    std::optional<uint64_t> auxv_at_hwcap2 =
+        aux_vec.GetAuxValue(AuxVector::AUXV_AT_HWCAP2);
+
+    m_linux_register_flags.DetectFields(auxv_at_hwcap.value_or(0),
+                                        auxv_at_hwcap2.value_or(0));
+    m_linux_register_flags.UpdateRegisterInfo(GetRegisterInfo(),
+                                              GetRegisterCount());
+  }
 
   m_gpr_data.SetData(std::make_shared<DataBufferHeap>(gpregset.GetDataStart(),
                                                       gpregset.GetByteSize()));

@@ -441,20 +441,10 @@ static bool canRewriteGEPAsOffset(Type *ElemTy, Value *Start, Value *Base,
         continue;
       }
 
-      if (!isa<IntToPtrInst>(V) && !isa<PtrToIntInst>(V) &&
-          !isa<GetElementPtrInst>(V) && !isa<PHINode>(V))
+      if (!isa<GetElementPtrInst>(V) && !isa<PHINode>(V))
         // We've found some value that we can't explore which is different from
         // the base. Therefore we can't do this transformation.
         return false;
-
-      if (isa<IntToPtrInst>(V) || isa<PtrToIntInst>(V)) {
-        auto *CI = cast<CastInst>(V);
-        if (!CI->isNoopCast(DL))
-          return false;
-
-        if (!Explored.contains(CI->getOperand(0)))
-          WorkList.push_back(CI->getOperand(0));
-      }
 
       if (auto *GEP = dyn_cast<GEPOperator>(V)) {
         // We're limiting the GEP to having one index. This will preserve
@@ -573,13 +563,6 @@ static Value *rewriteGEPAsOffset(Type *ElemTy, Value *Start, Value *Base,
     if (NewInsts.contains(Val))
       continue;
 
-    if (auto *CI = dyn_cast<CastInst>(Val)) {
-      // Don't get rid of the intermediate variable here; the store can grow
-      // the map which will invalidate the reference to the input value.
-      Value *V = NewInsts[CI->getOperand(0)];
-      NewInsts[CI] = V;
-      continue;
-    }
     if (auto *GEP = dyn_cast<GEPOperator>(Val)) {
       Value *Index = NewInsts[GEP->getOperand(1)] ? NewInsts[GEP->getOperand(1)]
                                                   : GEP->getOperand(1);
@@ -652,41 +635,25 @@ static Value *rewriteGEPAsOffset(Type *ElemTy, Value *Start, Value *Base,
   return NewInsts[Start];
 }
 
-/// Looks through GEPs, IntToPtrInsts and PtrToIntInsts in order to express
-/// the input Value as a constant indexed GEP. Returns a pair containing
-/// the GEPs Pointer and Index.
+/// Looks through GEPs in order to express the input Value as a constant
+/// indexed GEP. Returns a pair containing the GEPs Pointer and Index.
 static std::pair<Value *, Value *>
 getAsConstantIndexedAddress(Type *ElemTy, Value *V, const DataLayout &DL) {
   Type *IndexType = IntegerType::get(V->getContext(),
                                      DL.getIndexTypeSizeInBits(V->getType()));
 
   Constant *Index = ConstantInt::getNullValue(IndexType);
-  while (true) {
-    if (GEPOperator *GEP = dyn_cast<GEPOperator>(V)) {
-      // We accept only inbouds GEPs here to exclude the possibility of
-      // overflow.
-      if (!GEP->isInBounds())
-        break;
-      if (GEP->hasAllConstantIndices() && GEP->getNumIndices() == 1 &&
-          GEP->getSourceElementType() == ElemTy &&
-          GEP->getOperand(1)->getType() == IndexType) {
-        V = GEP->getOperand(0);
-        Constant *GEPIndex = static_cast<Constant *>(GEP->getOperand(1));
-        Index = ConstantExpr::getAdd(Index, GEPIndex);
-        continue;
-      }
+  while (GEPOperator *GEP = dyn_cast<GEPOperator>(V)) {
+    // We accept only inbouds GEPs here to exclude the possibility of
+    // overflow.
+    if (!GEP->isInBounds())
       break;
-    }
-    if (auto *CI = dyn_cast<IntToPtrInst>(V)) {
-      if (!CI->isNoopCast(DL))
-        break;
-      V = CI->getOperand(0);
-      continue;
-    }
-    if (auto *CI = dyn_cast<PtrToIntInst>(V)) {
-      if (!CI->isNoopCast(DL))
-        break;
-      V = CI->getOperand(0);
+    if (GEP->hasAllConstantIndices() && GEP->getNumIndices() == 1 &&
+        GEP->getSourceElementType() == ElemTy &&
+        GEP->getOperand(1)->getType() == IndexType) {
+      V = GEP->getOperand(0);
+      Constant *GEPIndex = static_cast<Constant *>(GEP->getOperand(1));
+      Index = ConstantExpr::getAdd(Index, GEPIndex);
       continue;
     }
     break;

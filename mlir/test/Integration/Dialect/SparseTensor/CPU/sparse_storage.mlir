@@ -68,7 +68,7 @@
 module {
   //
   // Main driver that initializes a sparse tensor and inspects the sparse
-  // storage schemes in detail. Note that users of the MLIR sparse compiler
+  // storage schemes in detail. Note that users of the MLIR sparsifier
   // are typically not concerned with such details, but the test ensures
   // everything is working "under the hood".
   //

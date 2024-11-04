@@ -408,14 +408,7 @@ struct __is_cpp17_copy_insertable<_Alloc, __enable_if_t<
 
 #ifdef _LIBCPP_HAS_ASAN_CONTAINER_ANNOTATIONS_FOR_ALL_ALLOCATORS
 template <class _Alloc>
-struct __asan_annotate_container_with_allocator
-#   if defined(_LIBCPP_CLANG_VER) && _LIBCPP_CLANG_VER >= 1600
-      : true_type {};
-#   else
-      // TODO(LLVM-18): Remove the special-casing
-      : false_type {};
-#   endif
-
+struct __asan_annotate_container_with_allocator : true_type {};
 template <class _Tp>
 struct __asan_annotate_container_with_allocator<allocator<_Tp> > : true_type {};
 #endif

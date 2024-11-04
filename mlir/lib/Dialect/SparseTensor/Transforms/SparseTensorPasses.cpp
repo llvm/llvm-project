@@ -82,7 +82,6 @@ struct SparsificationPass
   SparsificationPass(const SparsificationPass &pass) = default;
   SparsificationPass(const SparsificationOptions &options) {
     parallelization = options.parallelizationStrategy;
-    gpuDataTransfer = options.gpuDataTransferStrategy;
     enableIndexReduction = options.enableIndexReduction;
     enableGPULibgen = options.enableGPULibgen;
     enableRuntimeLibrary = options.enableRuntimeLibrary;
@@ -91,18 +90,12 @@ struct SparsificationPass
   void runOnOperation() override {
     auto *ctx = &getContext();
     // Translate strategy flags to strategy options.
-    SparsificationOptions options(parallelization, gpuDataTransfer,
-                                  enableIndexReduction, enableGPULibgen,
-                                  enableRuntimeLibrary);
+    SparsificationOptions options(parallelization, enableIndexReduction,
+                                  enableGPULibgen, enableRuntimeLibrary);
     // Apply GPU libgen (if requested), sparsification, and cleanup rewriting.
     RewritePatternSet patterns(ctx);
-    if (enableGPULibgen) {
-      // TODO : Zero copy is disabled due to correctness bugs.Tracker #64316
-      assert(gpuDataTransfer != GPUDataTransferStrategy::kZeroCopy &&
-             "zero-copy transfer not supported with GPU libgen");
-      populateSparseGPULibgenPatterns(patterns, enableRuntimeLibrary,
-                                      gpuDataTransfer);
-    }
+    if (enableGPULibgen)
+      populateSparseGPULibgenPatterns(patterns, enableRuntimeLibrary);
     populateSparsificationPatterns(patterns, options);
     scf::ForOp::getCanonicalizationPatterns(patterns, ctx);
     (void)applyPatternsAndFoldGreedily(getOperation(), std::move(patterns));

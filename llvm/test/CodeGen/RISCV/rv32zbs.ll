@@ -2,7 +2,9 @@
 ; RUN: llc -mtriple=riscv32 -verify-machineinstrs < %s \
 ; RUN:   | FileCheck %s -check-prefixes=CHECK,RV32I
 ; RUN: llc -mtriple=riscv32 -mattr=+zbs -verify-machineinstrs < %s \
-; RUN:   | FileCheck %s -check-prefixes=CHECK,RV32ZBS
+; RUN:   | FileCheck %s -check-prefixes=CHECK,RV32ZBS,RV32ZBSNOZBB
+; RUN: llc -mtriple=riscv32 -mattr=+zbs,+zbb -verify-machineinstrs < %s \
+; RUN:   | FileCheck %s -check-prefixes=CHECK,RV32ZBS,RV32ZBSZBB
 
 define i32 @bclr_i32(i32 %a, i32 %b) nounwind {
 ; RV32I-LABEL: bclr_i32:
@@ -62,22 +64,37 @@ define i64 @bclr_i64(i64 %a, i64 %b) nounwind {
 ; RV32I-NEXT:    and a1, a2, a1
 ; RV32I-NEXT:    ret
 ;
-; RV32ZBS-LABEL: bclr_i64:
-; RV32ZBS:       # %bb.0:
-; RV32ZBS-NEXT:    andi a3, a2, 63
-; RV32ZBS-NEXT:    addi a4, a3, -32
-; RV32ZBS-NEXT:    slti a4, a4, 0
-; RV32ZBS-NEXT:    neg a5, a4
-; RV32ZBS-NEXT:    bset a2, zero, a2
-; RV32ZBS-NEXT:    and a2, a5, a2
-; RV32ZBS-NEXT:    bset a3, zero, a3
-; RV32ZBS-NEXT:    addi a4, a4, -1
-; RV32ZBS-NEXT:    and a3, a4, a3
-; RV32ZBS-NEXT:    not a3, a3
-; RV32ZBS-NEXT:    not a2, a2
-; RV32ZBS-NEXT:    and a0, a2, a0
-; RV32ZBS-NEXT:    and a1, a3, a1
-; RV32ZBS-NEXT:    ret
+; RV32ZBSNOZBB-LABEL: bclr_i64:
+; RV32ZBSNOZBB:       # %bb.0:
+; RV32ZBSNOZBB-NEXT:    andi a3, a2, 63
+; RV32ZBSNOZBB-NEXT:    addi a4, a3, -32
+; RV32ZBSNOZBB-NEXT:    slti a4, a4, 0
+; RV32ZBSNOZBB-NEXT:    neg a5, a4
+; RV32ZBSNOZBB-NEXT:    bset a2, zero, a2
+; RV32ZBSNOZBB-NEXT:    and a2, a5, a2
+; RV32ZBSNOZBB-NEXT:    bset a3, zero, a3
+; RV32ZBSNOZBB-NEXT:    addi a4, a4, -1
+; RV32ZBSNOZBB-NEXT:    and a3, a4, a3
+; RV32ZBSNOZBB-NEXT:    not a3, a3
+; RV32ZBSNOZBB-NEXT:    not a2, a2
+; RV32ZBSNOZBB-NEXT:    and a0, a2, a0
+; RV32ZBSNOZBB-NEXT:    and a1, a3, a1
+; RV32ZBSNOZBB-NEXT:    ret
+;
+; RV32ZBSZBB-LABEL: bclr_i64:
+; RV32ZBSZBB:       # %bb.0:
+; RV32ZBSZBB-NEXT:    andi a3, a2, 63
+; RV32ZBSZBB-NEXT:    bset a4, zero, a3
+; RV32ZBSZBB-NEXT:    addi a3, a3, -32
+; RV32ZBSZBB-NEXT:    slti a3, a3, 0
+; RV32ZBSZBB-NEXT:    addi a5, a3, -1
+; RV32ZBSZBB-NEXT:    and a4, a5, a4
+; RV32ZBSZBB-NEXT:    neg a3, a3
+; RV32ZBSZBB-NEXT:    bset a2, zero, a2
+; RV32ZBSZBB-NEXT:    and a2, a3, a2
+; RV32ZBSZBB-NEXT:    andn a0, a0, a2
+; RV32ZBSZBB-NEXT:    andn a1, a1, a4
+; RV32ZBSZBB-NEXT:    ret
   %and = and i64 %b, 63
   %shl = shl nuw i64 1, %and
   %neg = xor i64 %shl, -1

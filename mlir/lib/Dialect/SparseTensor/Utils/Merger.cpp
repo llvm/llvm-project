@@ -1219,7 +1219,7 @@ Type Merger::inferType(ExprId e, Value src) const {
   return dtp;
 }
 
-/// Ensures that sparse compiler can generate code for expression.
+/// Ensures that the sparsifier can generate code for expression.
 static bool isAdmissibleBranchExp(Operation *op, Block *block, Value v) {
   // Arguments are always admissible.
   if (isa<BlockArgument>(v))
@@ -1239,7 +1239,7 @@ static bool isAdmissibleBranchExp(Operation *op, Block *block, Value v) {
   return true;
 }
 
-/// Ensures that sparse compiler can generate code for branch.
+/// Ensures that the sparsifier can generate code for branch.
 static bool isAdmissibleBranch(Operation *op, Region &region) {
   if (region.empty())
     return true;

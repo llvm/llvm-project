@@ -761,7 +761,7 @@ private:
 
 /// Wrapper around an MlirAsmState.
 class PyAsmState {
- public:
+public:
   PyAsmState(MlirValue value, bool useLocalScope) {
     flags = mlirOpPrintingFlagsCreate();
     // The OpPrintingFlags are not exposed Python side, create locally and
@@ -780,16 +780,14 @@ class PyAsmState {
     state =
         mlirAsmStateCreateForOperation(operation.getOperation().get(), flags);
   }
-  ~PyAsmState() {
-    mlirOpPrintingFlagsDestroy(flags);
-  }
+  ~PyAsmState() { mlirOpPrintingFlagsDestroy(flags); }
   // Delete copy constructors.
   PyAsmState(PyAsmState &other) = delete;
   PyAsmState(const PyAsmState &other) = delete;
 
   MlirAsmState get() { return state; }
 
- private:
+private:
   MlirAsmState state;
   MlirOpPrintingFlags flags;
 };
@@ -1112,6 +1110,10 @@ public:
 /// bindings so such operation always exists).
 class PyValue {
 public:
+  // The virtual here is "load bearing" in that it enables RTTI
+  // for PyConcreteValue CRTP classes that support maybeDownCast.
+  // See PyValue::maybeDownCast.
+  virtual ~PyValue() = default;
   PyValue(PyOperationRef parentOperation, MlirValue value)
       : parentOperation(std::move(parentOperation)), value(value) {}
   operator MlirValue() const { return value; }
@@ -1123,6 +1125,8 @@ public:
 
   /// Gets a capsule wrapping the void* within the MlirValue.
   pybind11::object getCapsule();
+
+  pybind11::object maybeDownCast();
 
   /// Creates a PyValue from the MlirValue wrapped by a capsule. Ownership of
   /// the underlying MlirValue is still tied to the owning operation.

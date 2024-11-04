@@ -1123,7 +1123,8 @@ void AccAttributeVisitor::AllowOnlyVariable(const parser::AccObject &object) {
       common::visitors{
           [&](const parser::Designator &designator) {
             const auto &name{GetLastName(designator)};
-            if (name.symbol && !semantics::IsVariableName(*name.symbol)) {
+            if (name.symbol && !semantics::IsVariableName(*name.symbol) &&
+                !semantics::IsNamedConstant(*name.symbol)) {
               context_.Say(designator.source,
                   "Only variables are allowed in data clauses on the %s "
                   "directive"_err_en_US,
