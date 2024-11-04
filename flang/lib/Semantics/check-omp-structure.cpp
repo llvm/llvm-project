@@ -1721,8 +1721,7 @@ void OmpStructureChecker::CheckTargetUpdate() {
       auto fromSymbol{fromSymbols.find(symbol)};
       if (fromSymbol != fromSymbols.end()) {
         context_.Say(source,
-            "A list item ('%s') can only appear in a TO or FROM clause, "
-            "but not in both."_err_en_US,
+            "A list item ('%s') can only appear in a TO or FROM clause, but not in both."_err_en_US,
             symbol->name());
         context_.Say(source, "'%s' appears in the TO clause."_because_en_US,
             symbol->name());
