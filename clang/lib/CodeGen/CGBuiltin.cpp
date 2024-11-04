@@ -3711,13 +3711,10 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
               ME->getMemberDecl()->getType()->getAs<CountAttributedType>();
           CATy && CATy->getKind() == CountAttributedType::CountedBy) {
         const auto *FAMDecl = cast<FieldDecl>(ME->getMemberDecl());
-        if (const FieldDecl *CountFD = FAMDecl->findCountedByField()) {
+        if (const FieldDecl *CountFD = FAMDecl->findCountedByField())
           Result = GetCountedByFieldExprGEP(Arg, FAMDecl, CountFD);
-          cast<llvm::GetElementPtrInst>(Result)->setNoWrapFlags(
-              GEPNoWrapFlags::inBounds());
-        } else {
+        else
           llvm::report_fatal_error("Cannot find the counted_by 'count' field");
-        }
       }
     }
 
