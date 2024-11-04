@@ -1958,8 +1958,7 @@ def OpenACC_YieldOp : OpenACC_Op<"yield", [Pure, ReturnLike, Terminator,
 // 2.12 atomic construct
 //===----------------------------------------------------------------------===//
 
-def AtomicReadOp : OpenACC_Op<"atomic.read", [AllTypesMatch<["x", "v"]>,
-                                              AtomicReadOpInterface]> {
+def AtomicReadOp : OpenACC_Op<"atomic.read", [AtomicReadOpInterface]> {
 
   let summary = "performs an atomic read";
 
@@ -1975,7 +1974,7 @@ def AtomicReadOp : OpenACC_Op<"atomic.read", [AllTypesMatch<["x", "v"]>,
                        TypeAttr:$element_type);
   let assemblyFormat = [{
     $v `=` $x
-    `:` type($x) `,` $element_type attr-dict
+    `:` type($v) `,` type($x) `,` $element_type attr-dict
   }];
   let hasVerifier = 1;
 }
