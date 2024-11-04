@@ -2198,6 +2198,45 @@ static mlir::Value buildNeonShiftVector(CIRGenBuilderTy &builder,
   return builder.create<mlir::cir::ConstantOp>(loc, vecTy, constVecAttr);
 }
 
+/// Build ShiftOp of vector type whose shift amount is a vector built
+/// from a constant integer using `buildNeonShiftVector` function
+static mlir::Value buildCommonNeonShift(CIRGenBuilderTy &builder,
+                                        mlir::Location loc,
+                                        mlir::cir::VectorType resTy,
+                                        mlir::Value shifTgt,
+                                        mlir::Value shiftAmt, bool shiftLeft,
+                                        bool negAmt = false) {
+  shiftAmt = buildNeonShiftVector(builder, shiftAmt, resTy, loc, negAmt);
+  return builder.create<mlir::cir::ShiftOp>(
+      loc, resTy, builder.createBitcast(shifTgt, resTy), shiftAmt, shiftLeft);
+}
+
+/// Right-shift a vector by a constant.
+static mlir::Value buildNeonRShiftImm(CIRGenFunction &cgf, mlir::Value shiftVec,
+                                      mlir::Value shiftVal,
+                                      mlir::cir::VectorType vecTy, bool usgn,
+                                      mlir::Location loc) {
+  CIRGenBuilderTy &builder = cgf.getBuilder();
+  int64_t shiftAmt = getIntValueFromConstOp(shiftVal);
+  int eltSize = cgf.CGM.getDataLayout().getTypeSizeInBits(vecTy.getEltType());
+
+  shiftVec = builder.createBitcast(shiftVec, vecTy);
+  // lshr/ashr are undefined when the shift amount is equal to the vector
+  // element size.
+  if (shiftAmt == eltSize) {
+    if (usgn) {
+      // Right-shifting an unsigned value by its size yields 0.
+      return builder.getZero(loc, vecTy);
+    }
+    // Right-shifting a signed value by its size is equivalent
+    // to a shift of size-1.
+    --shiftAmt;
+    shiftVal = builder.getConstInt(loc, vecTy.getEltType(), shiftAmt);
+  }
+  return buildCommonNeonShift(builder, loc, vecTy, shiftVec, shiftVal,
+                              false /* right shift */);
+}
+
 mlir::Value buildNeonCall(CIRGenBuilderTy &builder,
                           llvm::SmallVector<mlir::Type> argTypes,
                           llvm::SmallVectorImpl<mlir::Value> &args,
@@ -2256,19 +2295,6 @@ buildCommonNeonCallPattern0(CIRGenFunction &cgf, llvm::StringRef intrincsName,
                     cgf.getLoc(e->getExprLoc()));
   mlir::Type resultType = cgf.ConvertType(e->getType());
   return builder.createBitcast(res, resultType);
-}
-
-/// Build ShiftOp of vector type whose shift amount is a vector built
-/// from a constant integer using `buildNeonShiftVector` function
-static mlir::Value buildCommonNeonShift(CIRGenBuilderTy &builder,
-                                        mlir::Location loc,
-                                        mlir::cir::VectorType resTy,
-                                        mlir::Value shifTgt,
-                                        mlir::Value shiftAmt, bool shiftLeft,
-                                        bool negAmt = false) {
-  shiftAmt = buildNeonShiftVector(builder, shiftAmt, resTy, loc, negAmt);
-  return builder.create<mlir::cir::ShiftOp>(
-      loc, resTy, builder.createBitcast(shifTgt, resTy), shiftAmt, shiftLeft);
 }
 
 mlir::Value CIRGenFunction::buildCommonNeonBuiltinExpr(
@@ -2402,6 +2428,10 @@ mlir::Value CIRGenFunction::buildCommonNeonBuiltinExpr(
     ops[0] = buildCommonNeonShift(builder, loc, srcTy, ops[0], ops[1], false);
     return builder.createIntCast(ops[0], vTy);
   }
+  case NEON::BI__builtin_neon_vshr_n_v:
+  case NEON::BI__builtin_neon_vshrq_n_v:
+    return buildNeonRShiftImm(*this, ops[0], ops[1], vTy, isUnsigned,
+                              getLoc(e->getExprLoc()));
   case NEON::BI__builtin_neon_vtst_v:
   case NEON::BI__builtin_neon_vtstq_v: {
     mlir::Location loc = getLoc(e->getExprLoc());
