@@ -472,16 +472,24 @@ Constant *InstCostVisitor::visitCastInst(CastInst &I) {
 Constant *InstCostVisitor::visitCmpInst(CmpInst &I) {
   assert(LastVisited != KnownConstants.end() && "Invalid iterator!");
 
-  bool Swap = I.getOperand(1) == LastVisited->first;
-  Value *V = Swap ? I.getOperand(0) : I.getOperand(1);
-  Constant *Other = findConstantFor(V, KnownConstants);
-  if (!Other)
-    return nullptr;
-
   Constant *Const = LastVisited->second;
-  return Swap ?
-        ConstantFoldCompareInstOperands(I.getPredicate(), Other, Const, DL)
-      : ConstantFoldCompareInstOperands(I.getPredicate(), Const, Other, DL);
+  bool ConstOnRHS = I.getOperand(1) == LastVisited->first;
+  Value *V = ConstOnRHS ? I.getOperand(0) : I.getOperand(1);
+  Constant *Other = findConstantFor(V, KnownConstants);
+
+  if (Other) {
+    if (ConstOnRHS)
+      std::swap(Const, Other);
+    return ConstantFoldCompareInstOperands(I.getPredicate(), Const, Other, DL);
+  }
+
+  // If we haven't found Other to be a specific constant value, we may still be
+  // able to constant fold using information from the lattice value.
+  const ValueLatticeElement &ConstLV = ValueLatticeElement::get(Const);
+  const ValueLatticeElement &OtherLV = Solver.getLatticeValueFor(V);
+  auto &V1State = ConstOnRHS ? OtherLV : ConstLV;
+  auto &V2State = ConstOnRHS ? ConstLV : OtherLV;
+  return V1State.getCompare(I.getPredicate(), I.getType(), V2State, DL);
 }
 
 Constant *InstCostVisitor::visitUnaryOperator(UnaryOperator &I) {
