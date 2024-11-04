@@ -206,6 +206,9 @@ public:
 
   // Remove the resource global associated with the handleFromBinding call
   // instruction and their uses as they aren't needed anymore.
+  // TODO: We should verify that all the globals get removed.
+  // It's expected we'll need a custom pass in the future that will eliminate
+  // the need for this here.
   void removeResourceGlobals(CallInst *CI) {
     for (User *User : make_early_inc_range(CI->users())) {
       if (StoreInst *Store = dyn_cast<StoreInst>(User)) {
