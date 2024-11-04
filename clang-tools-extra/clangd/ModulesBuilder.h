@@ -98,8 +98,8 @@ public:
   buildPrerequisiteModulesFor(PathRef File, const ThreadsafeFS &TFS);
 
 private:
-  class ModuleFileCache;
-  std::unique_ptr<ModuleFileCache> MFCache;
+  class ModulesBuilderImpl;
+  std::unique_ptr<ModulesBuilderImpl> Impl;
 };
 
 } // namespace clangd

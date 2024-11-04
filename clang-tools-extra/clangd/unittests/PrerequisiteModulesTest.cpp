@@ -516,6 +516,42 @@ export int B = 44 + M;
 
   // Check that we're reusing the module files.
   EXPECT_EQ(HSOptsA.PrebuiltModuleFiles, HSOptsB.PrebuiltModuleFiles);
+
+  // Update M.cppm to check if the modules builder can update correctly.
+  CDB.addFile("M.cppm", R"cpp(
+export module M;
+export constexpr int M = 43;
+  )cpp");
+
+  ParseInputs AUse = getInputs("A.cppm", CDB);
+  AUse.ModulesManager = &Builder;
+  std::unique_ptr<CompilerInvocation> AInvocation =
+      buildCompilerInvocation(AUse, DiagConsumer);
+  EXPECT_FALSE(AInfo->canReuse(*AInvocation, FS.view(TestDir)));
+
+  ParseInputs BUse = getInputs("B.cppm", CDB);
+  AUse.ModulesManager = &Builder;
+  std::unique_ptr<CompilerInvocation> BInvocation =
+      buildCompilerInvocation(BUse, DiagConsumer);
+  EXPECT_FALSE(BInfo->canReuse(*BInvocation, FS.view(TestDir)));
+
+  auto NewAInfo =
+      Builder.buildPrerequisiteModulesFor(getFullPath("A.cppm"), FS);
+  auto NewBInfo =
+      Builder.buildPrerequisiteModulesFor(getFullPath("B.cppm"), FS);
+  EXPECT_TRUE(NewAInfo);
+  EXPECT_TRUE(NewBInfo);
+  HeaderSearchOptions NewHSOptsA(TestDir);
+  HeaderSearchOptions NewHSOptsB(TestDir);
+  NewAInfo->adjustHeaderSearchOptions(NewHSOptsA);
+  NewBInfo->adjustHeaderSearchOptions(NewHSOptsB);
+
+  EXPECT_FALSE(NewHSOptsA.PrebuiltModuleFiles.empty());
+  EXPECT_FALSE(NewHSOptsB.PrebuiltModuleFiles.empty());
+
+  EXPECT_EQ(NewHSOptsA.PrebuiltModuleFiles, NewHSOptsB.PrebuiltModuleFiles);
+  // Check that we didn't reuse the old and stale module files.
+  EXPECT_NE(NewHSOptsA.PrebuiltModuleFiles, HSOptsA.PrebuiltModuleFiles);
 }
 
 } // namespace
