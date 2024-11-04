@@ -38,7 +38,6 @@ def ssub_hi : SubRegIndex< 32,  32>;
 def dsub    : SubRegIndex< 64,   0>;
 def dsub_hi : SubRegIndex< 64,  64>;
 def qsub    : SubRegIndex<128,   0>;
-def qsub_hi : SubRegIndex<128, 128>;
 
 def S0    : MyReg<"s0">;
 def S1    : MyReg<"s1">;
@@ -97,332 +96,124 @@ def DTuplesRC3 : MyClass<192, [untyped], (add DTuples3)>;
 def TestTarget : Target;
 
 // CHECK:      RegisterClass SRegs:
-// CHECK-NEXT: 	SpillSize: { Default:32 }
-// CHECK-NEXT: 	SpillAlignment: { Default:32 }
-// CHECK-NEXT: 	NumRegs: 3
-// CHECK-NEXT: 	LaneMask: 0000000000000001
-// CHECK-NEXT: 	HasDisjunctSubRegs: 0
-// CHECK-NEXT: 	CoveredBySubRegs: 0
-// CHECK-NEXT: 	Allocatable: 1
-// CHECK-NEXT: 	AllocationPriority: 0
-// CHECK-NEXT: 	BaseClassOrder: None
-// CHECK-NEXT: 	Regs: S0 S1 S2
-// CHECK-NEXT: 	SubClasses: SRegs
-// CHECK-NEXT: 	SuperClasses:
-// CHECK-NEXT: RegisterClass DRegs:
-// CHECK-NEXT: 	SpillSize: { Default:64 }
-// CHECK-NEXT: 	SpillAlignment: { Default:64 }
-// CHECK-NEXT: 	NumRegs: 3
-// CHECK-NEXT: 	LaneMask: 0000000000000008
-// CHECK-NEXT: 	HasDisjunctSubRegs: 1
-// CHECK-NEXT: 	CoveredBySubRegs: 1
-// CHECK-NEXT: 	Allocatable: 1
-// CHECK-NEXT: 	AllocationPriority: 0
-// CHECK-NEXT: 	BaseClassOrder: None
-// CHECK-NEXT: 	Regs: D0 D1 D2
-// CHECK-NEXT: 	SubClasses: DRegs
-// CHECK-NEXT: 	SuperClasses:
-// CHECK-NEXT: RegisterClass STuplesRC2:
-// CHECK-NEXT: 	SpillSize: { Default:64 }
-// CHECK-NEXT: 	SpillAlignment: { Default:64 }
-// CHECK-NEXT: 	NumRegs: 2
-// CHECK-NEXT: 	LaneMask: 0000000000000030
-// CHECK-NEXT: 	HasDisjunctSubRegs: 1
-// CHECK-NEXT: 	CoveredBySubRegs: 1
-// CHECK-NEXT: 	Allocatable: 1
-// CHECK-NEXT: 	AllocationPriority: 0
-// CHECK-NEXT: 	BaseClassOrder: None
-// CHECK-NEXT: 	Regs: S0_S1 S1_S2
-// CHECK-NEXT: 	SubClasses: STuplesRC2
-// CHECK-NEXT: 	SuperClasses:
-// CHECK-NEXT: RegisterClass STuplesRC3:
-// CHECK-NEXT: 	SpillSize: { Default:96 }
-// CHECK-NEXT: 	SpillAlignment: { Default:96 }
-// CHECK-NEXT: 	NumRegs: 1
-// CHECK-NEXT: 	LaneMask: 0000000000000070
-// CHECK-NEXT: 	HasDisjunctSubRegs: 1
-// CHECK-NEXT: 	CoveredBySubRegs: 1
-// CHECK-NEXT: 	Allocatable: 1
-// CHECK-NEXT: 	AllocationPriority: 0
-// CHECK-NEXT: 	BaseClassOrder: None
-// CHECK-NEXT: 	Regs: S0_S1_S2
-// CHECK-NEXT: 	SubClasses: STuplesRC3
-// CHECK-NEXT: 	SuperClasses:
-// CHECK-NEXT: RegisterClass QRegs:
-// CHECK-NEXT: 	SpillSize: { Default:128 }
-// CHECK-NEXT: 	SpillAlignment: { Default:128 }
-// CHECK-NEXT: 	NumRegs: 3
-// CHECK-NEXT: 	LaneMask: 0000000000000088
-// CHECK-NEXT: 	HasDisjunctSubRegs: 1
-// CHECK-NEXT: 	CoveredBySubRegs: 1
-// CHECK-NEXT: 	Allocatable: 1
-// CHECK-NEXT: 	AllocationPriority: 0
-// CHECK-NEXT: 	BaseClassOrder: None
-// CHECK-NEXT: 	Regs: Q0 Q1 Q2
-// CHECK-NEXT: 	SubClasses: QRegs
-// CHECK-NEXT: 	SuperClasses:
-// CHECK-NEXT: RegisterClass DTuplesRC2:
-// CHECK-NEXT: 	SpillSize: { Default:128 }
-// CHECK-NEXT: 	SpillAlignment: { Default:128 }
-// CHECK-NEXT: 	NumRegs: 2
-// CHECK-NEXT: 	LaneMask: 00000000000001A8
-// CHECK-NEXT: 	HasDisjunctSubRegs: 1
-// CHECK-NEXT: 	CoveredBySubRegs: 1
-// CHECK-NEXT: 	Allocatable: 1
-// CHECK-NEXT: 	AllocationPriority: 0
-// CHECK-NEXT: 	BaseClassOrder: None
-// CHECK-NEXT: 	Regs: D0_D1 D1_D2
-// CHECK-NEXT: 	SubClasses: DTuplesRC2
-// CHECK-NEXT: 	SuperClasses:
-// CHECK-NEXT: RegisterClass DTuplesRC3:
-// CHECK-NEXT: 	SpillSize: { Default:192 }
-// CHECK-NEXT: 	SpillAlignment: { Default:192 }
-// CHECK-NEXT: 	NumRegs: 1
-// CHECK-NEXT: 	LaneMask: 00000000000003E8
-// CHECK-NEXT: 	HasDisjunctSubRegs: 1
-// CHECK-NEXT: 	CoveredBySubRegs: 1
-// CHECK-NEXT: 	Allocatable: 1
-// CHECK-NEXT: 	AllocationPriority: 0
-// CHECK-NEXT: 	BaseClassOrder: None
-// CHECK-NEXT: 	Regs: D0_D1_D2
-// CHECK-NEXT: 	SubClasses: DTuplesRC3
-// CHECK-NEXT: 	SuperClasses:
-// CHECK-NEXT: SubRegIndex dsub:
-// CHECK-NEXT: 	LaneMask: 0000000000000088
-// CHECK-NEXT: 	AllSuperRegsCovered: 1
-// CHECK-NEXT: 	Offset: { Default:0 }
-// CHECK-NEXT: 	Size: { Default:64 }
-// CHECK-NEXT: SubRegIndex dsub0:
-// CHECK-NEXT: 	LaneMask: 0000000000000088
-// CHECK-NEXT: 	AllSuperRegsCovered: 1
-// CHECK-NEXT: 	Offset: { Default:0 }
-// CHECK-NEXT: 	Size: { Default:64 }
-// CHECK-NEXT: SubRegIndex dsub1:
+// CHECK:      	LaneMask: 0000000000000001
+// CHECK:      	HasDisjunctSubRegs: 0
+// CHECK:      	CoveredBySubRegs: 0
+// CHECK:      	Regs: S0 S1 S2
+// CHECK:      	SubClasses: SRegs
+// CHECK:      	SuperClasses:
+//
+// CHECK:      RegisterClass DRegs:
+// CHECK:      	LaneMask: 0000000000000004
+// CHECK:      	HasDisjunctSubRegs: 1
+// CHECK:      	CoveredBySubRegs: 1
+// CHECK:      	Regs: D0 D1 D2
+// CHECK:      	SubClasses: DRegs
+// CHECK:      	SuperClasses:
+//
+// CHECK:      RegisterClass QRegs:
+// CHECK:      	LaneMask: 0000000000000044
+// CHECK:      	HasDisjunctSubRegs: 1
+// CHECK:      	CoveredBySubRegs: 1
+// CHECK:      	Regs: Q0 Q1 Q2
+// CHECK:      	SubClasses: QRegs
+// CHECK:      	SuperClasses:
+//
+// CHECK:      SubRegIndex dsub:
+// CHECK-NEXT: 	LaneMask: 0000000000000044
+// CHECK:      SubRegIndex dsub0:
+// CHECK-NEXT: 	LaneMask: 0000000000000044
+// CHECK:      SubRegIndex dsub1:
+// CHECK-NEXT: 	LaneMask: 0000000000000090
+// CHECK:      SubRegIndex dsub2:
 // CHECK-NEXT: 	LaneMask: 0000000000000120
-// CHECK-NEXT: 	AllSuperRegsCovered: 1
-// CHECK-NEXT: 	Offset: { Default:0 }
-// CHECK-NEXT: 	Size: { Default:64 }
-// CHECK-NEXT: SubRegIndex dsub2:
-// CHECK-NEXT: 	LaneMask: 0000000000000240
-// CHECK-NEXT: 	AllSuperRegsCovered: 1
-// CHECK-NEXT: 	Offset: { Default:0 }
-// CHECK-NEXT: 	Size: { Default:64 }
-// CHECK-NEXT: SubRegIndex dsub_hi:
+// CHECK:      SubRegIndex dsub_hi:
 // CHECK-NEXT: 	LaneMask: 0000000000000001
-// CHECK-NEXT: 	AllSuperRegsCovered: 1
-// CHECK-NEXT: 	Offset: { Default:64 }
-// CHECK-NEXT: 	Size: { Default:64 }
-// CHECK-NEXT: SubRegIndex qsub:
-// CHECK-NEXT: 	LaneMask: 0000000000000002
-// CHECK-NEXT: 	AllSuperRegsCovered: 1
-// CHECK-NEXT: 	Offset: { Default:0 }
-// CHECK-NEXT: 	Size: { Default:128 }
-// CHECK-NEXT: SubRegIndex qsub_hi:
+// CHECK:      SubRegIndex ssub:
 // CHECK-NEXT: 	LaneMask: 0000000000000004
-// CHECK-NEXT: 	AllSuperRegsCovered: 1
-// CHECK-NEXT: 	Offset: { Default:128 }
-// CHECK-NEXT: 	Size: { Default:128 }
-// CHECK-NEXT: SubRegIndex ssub:
+// CHECK:      SubRegIndex ssub0:
 // CHECK-NEXT: 	LaneMask: 0000000000000008
-// CHECK-NEXT: 	AllSuperRegsCovered: 1
-// CHECK-NEXT: 	Offset: { Default:0 }
-// CHECK-NEXT: 	Size: { Default:32 }
-// CHECK-NEXT: SubRegIndex ssub0:
+// CHECK:      SubRegIndex ssub1:
 // CHECK-NEXT: 	LaneMask: 0000000000000010
-// CHECK-NEXT: 	AllSuperRegsCovered: 1
-// CHECK-NEXT: 	Offset: { Default:0 }
-// CHECK-NEXT: 	Size: { Default:32 }
-// CHECK-NEXT: SubRegIndex ssub1:
+// CHECK:      SubRegIndex ssub2:
 // CHECK-NEXT: 	LaneMask: 0000000000000020
-// CHECK-NEXT: 	AllSuperRegsCovered: 1
-// CHECK-NEXT: 	Offset: { Default:0 }
-// CHECK-NEXT: 	Size: { Default:32 }
-// CHECK-NEXT: SubRegIndex ssub2:
+// CHECK:      SubRegIndex ssub_hi:
 // CHECK-NEXT: 	LaneMask: 0000000000000040
-// CHECK-NEXT: 	AllSuperRegsCovered: 1
-// CHECK-NEXT: 	Offset: { Default:0 }
-// CHECK-NEXT: 	Size: { Default:32 }
-// CHECK-NEXT: SubRegIndex ssub_hi:
+// CHECK:      SubRegIndex dsub1_then_ssub_hi:
 // CHECK-NEXT: 	LaneMask: 0000000000000080
-// CHECK-NEXT: 	AllSuperRegsCovered: 1
-// CHECK-NEXT: 	Offset: { Default:32 }
-// CHECK-NEXT: 	Size: { Default:32 }
-// CHECK-NEXT: SubRegIndex dsub1_then_ssub_hi:
+// CHECK:      SubRegIndex dsub2_then_ssub_hi:
 // CHECK-NEXT: 	LaneMask: 0000000000000100
-// CHECK-NEXT: 	AllSuperRegsCovered: 1
-// CHECK-NEXT: 	Offset: { Default:32 }
-// CHECK-NEXT: 	Size: { Default:32 }
-// CHECK-NEXT: SubRegIndex dsub2_then_ssub_hi:
-// CHECK-NEXT: 	LaneMask: 0000000000000200
-// CHECK-NEXT: 	AllSuperRegsCovered: 1
-// CHECK-NEXT: 	Offset: { Default:32 }
-// CHECK-NEXT: 	Size: { Default:32 }
-// CHECK-NEXT: SubRegIndex ssub_ssub1:
-// CHECK-NEXT: 	LaneMask: 0000000000000028
-// CHECK-NEXT: 	AllSuperRegsCovered: 1
-// CHECK-NEXT: 	Offset: { Default:65535 }
-// CHECK-NEXT: 	Size: { Default:64 }
-// CHECK-NEXT: SubRegIndex dsub0_dsub1:
-// CHECK-NEXT: 	LaneMask: 00000000000001A8
-// CHECK-NEXT: 	AllSuperRegsCovered: 1
-// CHECK-NEXT: 	Offset: { Default:65535 }
-// CHECK-NEXT: 	Size: { Default:128 }
-// CHECK-NEXT: SubRegIndex dsub1_dsub2:
-// CHECK-NEXT: 	LaneMask: 0000000000000360
-// CHECK-NEXT: 	AllSuperRegsCovered: 1
-// CHECK-NEXT: 	Offset: { Default:65535 }
-// CHECK-NEXT: 	Size: { Default:128 }
-// CHECK-NEXT: SubRegIndex ssub_ssub1_ssub2:
-// CHECK-NEXT: 	LaneMask: 0000000000000068
-// CHECK-NEXT: 	AllSuperRegsCovered: 1
-// CHECK-NEXT: 	Offset: { Default:65535 }
-// CHECK-NEXT: 	Size: { Default:96 }
-// CHECK-NEXT: SubRegIndex ssub1_ssub2:
-// CHECK-NEXT: 	LaneMask: 0000000000000060
-// CHECK-NEXT: 	AllSuperRegsCovered: 1
-// CHECK-NEXT: 	Offset: { Default:65535 }
-// CHECK-NEXT: 	Size: { Default:64 }
-// CHECK-NEXT: SubRegIndex ssub0_ssub1:
+// CHECK:      SubRegIndex ssub_ssub1:
+// CHECK-NEXT: 	LaneMask: 0000000000000014
+// CHECK:      SubRegIndex dsub0_dsub1:
+// CHECK-NEXT: 	LaneMask: 00000000000000D4
+// CHECK:      SubRegIndex dsub1_dsub2:
+// CHECK-NEXT: 	LaneMask: 00000000000001B0
+// CHECK:      SubRegIndex ssub_ssub1_ssub2:
+// CHECK-NEXT: 	LaneMask: 0000000000000034
+// CHECK:      SubRegIndex ssub1_ssub2:
 // CHECK-NEXT: 	LaneMask: 0000000000000030
-// CHECK-NEXT: 	AllSuperRegsCovered: 1
-// CHECK-NEXT: 	Offset: { Default:65535 }
-// CHECK-NEXT: 	Size: { Default:64 }
-// CHECK-NEXT: Register D0:
-// CHECK-NEXT: 	CostPerUse: 0
-// CHECK-NEXT: 	CoveredBySubregs: 1
-// CHECK-NEXT: 	HasDisjunctSubRegs: 1
-// CHECK-NEXT: 	SubReg ssub = S0
-// CHECK-NEXT: 	SubReg ssub_hi = S0_HI
-// CHECK-NEXT: Register D1:
-// CHECK-NEXT: 	CostPerUse: 0
-// CHECK-NEXT: 	CoveredBySubregs: 1
-// CHECK-NEXT: 	HasDisjunctSubRegs: 1
-// CHECK-NEXT: 	SubReg ssub = S1
-// CHECK-NEXT: 	SubReg ssub_hi = S1_HI
-// CHECK-NEXT: Register D2:
-// CHECK-NEXT: 	CostPerUse: 0
-// CHECK-NEXT: 	CoveredBySubregs: 1
-// CHECK-NEXT: 	HasDisjunctSubRegs: 1
-// CHECK-NEXT: 	SubReg ssub = S2
-// CHECK-NEXT: 	SubReg ssub_hi = S2_HI
-// CHECK-NEXT: Register Q0:
-// CHECK-NEXT: 	CostPerUse: 0
-// CHECK-NEXT: 	CoveredBySubregs: 1
-// CHECK-NEXT: 	HasDisjunctSubRegs: 1
-// CHECK-NEXT: 	SubReg dsub = D0
-// CHECK-NEXT: 	SubReg dsub_hi = D0_HI
-// CHECK-NEXT: 	SubReg ssub = S0
-// CHECK-NEXT: 	SubReg ssub_hi = S0_HI
-// CHECK-NEXT: Register Q1:
-// CHECK-NEXT: 	CostPerUse: 0
-// CHECK-NEXT: 	CoveredBySubregs: 1
-// CHECK-NEXT: 	HasDisjunctSubRegs: 1
-// CHECK-NEXT: 	SubReg dsub = D1
-// CHECK-NEXT: 	SubReg dsub_hi = D1_HI
-// CHECK-NEXT: 	SubReg ssub = S1
-// CHECK-NEXT: 	SubReg ssub_hi = S1_HI
-// CHECK-NEXT: Register Q2:
-// CHECK-NEXT: 	CostPerUse: 0
-// CHECK-NEXT: 	CoveredBySubregs: 1
-// CHECK-NEXT: 	HasDisjunctSubRegs: 1
-// CHECK-NEXT: 	SubReg dsub = D2
-// CHECK-NEXT: 	SubReg dsub_hi = D2_HI
-// CHECK-NEXT: 	SubReg ssub = S2
-// CHECK-NEXT: 	SubReg ssub_hi = S2_HI
-// CHECK-NEXT: Register S0:
-// CHECK-NEXT: 	CostPerUse: 0
-// CHECK-NEXT: 	CoveredBySubregs: 0
-// CHECK-NEXT: 	HasDisjunctSubRegs: 0
-// CHECK-NEXT: Register S1:
-// CHECK-NEXT: 	CostPerUse: 0
-// CHECK-NEXT: 	CoveredBySubregs: 0
-// CHECK-NEXT: 	HasDisjunctSubRegs: 0
-// CHECK-NEXT: Register S2:
-// CHECK-NEXT: 	CostPerUse: 0
-// CHECK-NEXT: 	CoveredBySubregs: 0
-// CHECK-NEXT: 	HasDisjunctSubRegs: 0
-// CHECK-NEXT: Register D0_HI:
-// CHECK-NEXT: 	CostPerUse: 0
-// CHECK-NEXT: 	CoveredBySubregs: 0
-// CHECK-NEXT: 	HasDisjunctSubRegs: 0
-// CHECK-NEXT: Register D1_HI:
-// CHECK-NEXT: 	CostPerUse: 0
-// CHECK-NEXT: 	CoveredBySubregs: 0
-// CHECK-NEXT: 	HasDisjunctSubRegs: 0
-// CHECK-NEXT: Register D2_HI:
-// CHECK-NEXT: 	CostPerUse: 0
-// CHECK-NEXT: 	CoveredBySubregs: 0
-// CHECK-NEXT: 	HasDisjunctSubRegs: 0
-// CHECK-NEXT: Register S0_HI:
-// CHECK-NEXT: 	CostPerUse: 0
-// CHECK-NEXT: 	CoveredBySubregs: 0
-// CHECK-NEXT: 	HasDisjunctSubRegs: 0
-// CHECK-NEXT: Register S1_HI:
-// CHECK-NEXT: 	CostPerUse: 0
-// CHECK-NEXT: 	CoveredBySubregs: 0
-// CHECK-NEXT: 	HasDisjunctSubRegs: 0
-// CHECK-NEXT: Register S2_HI:
-// CHECK-NEXT: 	CostPerUse: 0
-// CHECK-NEXT: 	CoveredBySubregs: 0
-// CHECK-NEXT: 	HasDisjunctSubRegs: 0
-// CHECK-NEXT: Register D0_D1:
-// CHECK-NEXT: 	CostPerUse: 0
-// CHECK-NEXT: 	CoveredBySubregs: 1
-// CHECK-NEXT: 	HasDisjunctSubRegs: 1
-// CHECK-NEXT: 	SubReg dsub0 = D0
-// CHECK-NEXT: 	SubReg dsub1 = D1
-// CHECK-NEXT: 	SubReg ssub = S0
-// CHECK-NEXT: 	SubReg ssub1 = S1
-// CHECK-NEXT: 	SubReg ssub_hi = S0_HI
-// CHECK-NEXT: 	SubReg dsub1_then_ssub_hi = S1_HI
-// CHECK-NEXT: 	SubReg ssub_ssub1 = S0_S1
-// CHECK-NEXT: Register D1_D2:
-// CHECK-NEXT: 	CostPerUse: 0
-// CHECK-NEXT: 	CoveredBySubregs: 1
-// CHECK-NEXT: 	HasDisjunctSubRegs: 1
-// CHECK-NEXT: 	SubReg dsub0 = D1
-// CHECK-NEXT: 	SubReg dsub1 = D2
-// CHECK-NEXT: 	SubReg ssub = S1
-// CHECK-NEXT: 	SubReg ssub1 = S2
-// CHECK-NEXT: 	SubReg ssub_hi = S1_HI
-// CHECK-NEXT: 	SubReg dsub1_then_ssub_hi = S2_HI
-// CHECK-NEXT: 	SubReg ssub_ssub1 = S1_S2
-// CHECK-NEXT: Register D0_D1_D2:
-// CHECK-NEXT: 	CostPerUse: 0
-// CHECK-NEXT: 	CoveredBySubregs: 1
-// CHECK-NEXT: 	HasDisjunctSubRegs: 1
-// CHECK-NEXT: 	SubReg dsub0 = D0
-// CHECK-NEXT: 	SubReg dsub1 = D1
-// CHECK-NEXT: 	SubReg dsub2 = D2
-// CHECK-NEXT: 	SubReg ssub = S0
-// CHECK-NEXT: 	SubReg ssub1 = S1
-// CHECK-NEXT: 	SubReg ssub2 = S2
-// CHECK-NEXT: 	SubReg ssub_hi = S0_HI
-// CHECK-NEXT: 	SubReg dsub1_then_ssub_hi = S1_HI
-// CHECK-NEXT: 	SubReg dsub2_then_ssub_hi = S2_HI
-// CHECK-NEXT: 	SubReg ssub_ssub1 = S0_S1
-// CHECK-NEXT: 	SubReg dsub0_dsub1 = D0_D1
-// CHECK-NEXT: 	SubReg dsub1_dsub2 = D1_D2
-// CHECK-NEXT: 	SubReg ssub_ssub1_ssub2 = S0_S1_S2
-// CHECK-NEXT: 	SubReg ssub1_ssub2 = S1_S2
-// CHECK-NEXT: Register S0_S1:
-// CHECK-NEXT: 	CostPerUse: 0
-// CHECK-NEXT: 	CoveredBySubregs: 1
-// CHECK-NEXT: 	HasDisjunctSubRegs: 1
-// CHECK-NEXT: 	SubReg ssub0 = S0
-// CHECK-NEXT: 	SubReg ssub1 = S1
-// CHECK-NEXT: Register S1_S2:
-// CHECK-NEXT: 	CostPerUse: 0
-// CHECK-NEXT: 	CoveredBySubregs: 1
-// CHECK-NEXT: 	HasDisjunctSubRegs: 1
-// CHECK-NEXT: 	SubReg ssub0 = S1
-// CHECK-NEXT: 	SubReg ssub1 = S2
-// CHECK-NEXT: Register S0_S1_S2:
-// CHECK-NEXT: 	CostPerUse: 0
-// CHECK-NEXT: 	CoveredBySubregs: 1
-// CHECK-NEXT: 	HasDisjunctSubRegs: 1
-// CHECK-NEXT: 	SubReg ssub0 = S0
-// CHECK-NEXT: 	SubReg ssub1 = S1
-// CHECK-NEXT: 	SubReg ssub2 = S2
-// CHECK-NEXT: 	SubReg ssub1_ssub2 = S1_S2
-// CHECK-NEXT: 	SubReg ssub0_ssub1 = S0_S1
+// CHECK:      SubRegIndex ssub0_ssub1:
+// CHECK-NEXT: 	LaneMask: 0000000000000018
+
+// CHECK: Register D0:
+// CHECK: 	CoveredBySubregs: 1
+// CHECK: 	HasDisjunctSubRegs: 1
+// CHECK: 	SubReg ssub = S0
+// CHECK: 	SubReg ssub_hi = S0_HI
+//
+// CHECK: Register Q0:
+// CHECK: 	CoveredBySubregs: 1
+// CHECK: 	HasDisjunctSubRegs: 1
+// CHECK: 	SubReg dsub = D0
+// CHECK: 	SubReg dsub_hi = D0_HI
+// CHECK: 	SubReg ssub = S0
+// CHECK: 	SubReg ssub_hi = S0_HI
+//
+// CHECK: Register S0:
+// CHECK: 	CoveredBySubregs: 0
+// CHECK: 	HasDisjunctSubRegs: 0
+//
+// CHECK: Register D0_D1:
+// CHECK: 	CoveredBySubregs: 1
+// CHECK: 	HasDisjunctSubRegs: 1
+// CHECK: 	SubReg dsub0 = D0
+// CHECK: 	SubReg dsub1 = D1
+// CHECK: 	SubReg ssub = S0
+// CHECK: 	SubReg ssub1 = S1
+// CHECK: 	SubReg ssub_hi = S0_HI
+// CHECK: 	SubReg dsub1_then_ssub_hi = S1_HI
+// CHECK: 	SubReg ssub_ssub1 = S0_S1
+//
+// CHECK: Register D0_D1_D2:
+// CHECK: 	CoveredBySubregs: 1
+// CHECK: 	HasDisjunctSubRegs: 1
+// CHECK: 	SubReg dsub0 = D0
+// CHECK: 	SubReg dsub1 = D1
+// CHECK: 	SubReg dsub2 = D2
+// CHECK: 	SubReg ssub = S0
+// CHECK: 	SubReg ssub1 = S1
+// CHECK: 	SubReg ssub2 = S2
+// CHECK: 	SubReg ssub_hi = S0_HI
+// CHECK: 	SubReg dsub1_then_ssub_hi = S1_HI
+// CHECK: 	SubReg dsub2_then_ssub_hi = S2_HI
+// CHECK: 	SubReg ssub_ssub1 = S0_S1
+// CHECK: 	SubReg dsub0_dsub1 = D0_D1
+// CHECK: 	SubReg dsub1_dsub2 = D1_D2
+// CHECK: 	SubReg ssub_ssub1_ssub2 = S0_S1_S2
+// CHECK: 	SubReg ssub1_ssub2 = S1_S2
+//
+// CHECK: Register S0_S1:
+// CHECK: 	CoveredBySubregs: 1
+// CHECK: 	HasDisjunctSubRegs: 1
+// CHECK: 	SubReg ssub0 = S0
+// CHECK: 	SubReg ssub1 = S1
+//
+// CHECK: Register S0_S1_S2:
+// CHECK: 	CoveredBySubregs: 1
+// CHECK: 	HasDisjunctSubRegs: 1
+// CHECK: 	SubReg ssub0 = S0
+// CHECK: 	SubReg ssub1 = S1
+// CHECK: 	SubReg ssub2 = S2
+// CHECK: 	SubReg ssub1_ssub2 = S1_S2
+// CHECK: 	SubReg ssub0_ssub1 = S0_S1
