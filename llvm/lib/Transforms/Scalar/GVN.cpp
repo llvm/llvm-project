@@ -2514,8 +2514,7 @@ bool GVNPass::propagateEquality(Value *LHS, Value *RHS,
       // If "A == B" is known true, or "A != B" is known false, then replace
       // A with B everywhere in the scope.  For floating point operations, we
       // have to be careful since equality does not always imply equivalance.
-      if ((isKnownTrue && Cmp->isEquivalence()) ||
-          (isKnownFalse && Cmp->isEquivalence(/* Invert = */ true)))
+      if (Cmp->isEquivalence(isKnownFalse))
         Worklist.push_back(std::make_pair(Op0, Op1));
 
       // If "A >= B" is known true, replace "A < B" with false everywhere.
