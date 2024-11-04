@@ -21,12 +21,12 @@
  */
 
 #include <clc/clc.h>
+#include <clc/clcmacro.h>
 #include <clc/math/clc_fabs.h>
 
 #include "config.h"
 #include "math.h"
 #include "tables.h"
-#include "../clcmacro.h"
 
 /*
  compute pow using log and exp
