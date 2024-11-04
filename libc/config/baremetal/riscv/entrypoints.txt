@@ -389,6 +389,9 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.roundevenl
     libc.src.math.roundf
     libc.src.math.roundl
+    libc.src.math.scalbln
+    libc.src.math.scalblnf
+    libc.src.math.scalblnl
     libc.src.math.scalbn
     libc.src.math.scalbnf
     libc.src.math.scalbnl

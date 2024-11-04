@@ -77,6 +77,7 @@ public:
   GENERATE_HLSL_INTRINSIC_FUNCTION(Frac, frac)
   GENERATE_HLSL_INTRINSIC_FUNCTION(Length, length)
   GENERATE_HLSL_INTRINSIC_FUNCTION(Lerp, lerp)
+  GENERATE_HLSL_INTRINSIC_FUNCTION(Normalize, normalize)
   GENERATE_HLSL_INTRINSIC_FUNCTION(Rsqrt, rsqrt)
   GENERATE_HLSL_INTRINSIC_FUNCTION(ThreadId, thread_id)
 
@@ -124,7 +125,7 @@ public:
   void setHLSLEntryAttributes(const FunctionDecl *FD, llvm::Function *Fn);
 
   void emitEntryFunction(const FunctionDecl *FD, llvm::Function *Fn);
-  void setHLSLFunctionAttributes(llvm::Function *, const FunctionDecl *);
+  void setHLSLFunctionAttributes(const FunctionDecl *FD, llvm::Function *Fn);
 
 private:
   void addBufferResourceAnnotation(llvm::GlobalVariable *GV,

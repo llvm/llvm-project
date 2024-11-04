@@ -49,13 +49,6 @@ define i1 @select_exit_cond(ptr %start, ptr %end, i64 %N) {
 ; CHECK-NEXT:    [[TMP9:%.*]] = add i64 [[INDEX]], 12
 ; CHECK-NEXT:    [[TMP10:%.*]] = add i64 [[INDEX]], 14
 ; CHECK-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[START]], i64 [[TMP3]]
-; CHECK-NEXT:    [[NEXT_GEP18:%.*]] = getelementptr i8, ptr [[START]], i64 [[TMP4]]
-; CHECK-NEXT:    [[NEXT_GEP19:%.*]] = getelementptr i8, ptr [[START]], i64 [[TMP5]]
-; CHECK-NEXT:    [[NEXT_GEP20:%.*]] = getelementptr i8, ptr [[START]], i64 [[TMP6]]
-; CHECK-NEXT:    [[NEXT_GEP21:%.*]] = getelementptr i8, ptr [[START]], i64 [[TMP7]]
-; CHECK-NEXT:    [[NEXT_GEP22:%.*]] = getelementptr i8, ptr [[START]], i64 [[TMP8]]
-; CHECK-NEXT:    [[NEXT_GEP23:%.*]] = getelementptr i8, ptr [[START]], i64 [[TMP9]]
-; CHECK-NEXT:    [[NEXT_GEP24:%.*]] = getelementptr i8, ptr [[START]], i64 [[TMP10]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr i8, ptr [[NEXT_GEP]], i32 0
 ; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr i8, ptr [[NEXT_GEP]], i32 2
 ; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr i8, ptr [[NEXT_GEP]], i32 4

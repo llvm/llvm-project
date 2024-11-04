@@ -200,7 +200,7 @@ TEST_F(LlvmLibcStrToFTest, NaNWithParenthesesValidSequenceInvalidNumberTests) {
   run_test("NaN(1a)", 7, 0x7fc00000);
   run_test("NaN(asdf)", 9, 0x7fc00000);
   run_test("NaN(1A1)", 8, 0x7fc00000);
-  run_test("NaN(why_does_this_work)", 23, 0x7fc00000);
+  run_test("NaN(underscores_are_ok)", 23, 0x7fc00000);
   run_test(
       "NaN(1234567890qwertyuiopasdfghjklzxcvbnmQWERTYUIOPASDFGHJKLZXCVBNM_)",
       68, 0x7fc00000);

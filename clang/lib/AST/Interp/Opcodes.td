@@ -440,8 +440,6 @@ def SetThisField : AccessOpcode;
 // [Value] -> []
 def InitThisField : AccessOpcode;
 // [Value] -> []
-def InitThisFieldActive : AccessOpcode;
-// [Value] -> []
 def InitThisBitField : Opcode {
   let Types = [AluTypeClass];
   let Args = [ArgRecordField, ArgUint32];
@@ -451,8 +449,6 @@ def InitThisBitField : Opcode {
 def InitField : AccessOpcode;
 // [Pointer, Value] -> []
 def InitBitField : BitFieldOpcode;
-// [Pointer, Value] -> []
-def InitFieldActive : AccessOpcode;
 
 //===----------------------------------------------------------------------===//
 // Pointer access

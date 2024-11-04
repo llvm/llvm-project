@@ -40,6 +40,7 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/FileUtilities.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Support/Process.h"
 #include "llvm/Support/VersionTuple.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/TargetParser/AArch64TargetParser.h"
@@ -104,8 +105,7 @@ ToolChain::ToolChain(const Driver &D, const llvm::Triple &T,
 }
 
 llvm::Expected<std::unique_ptr<llvm::MemoryBuffer>>
-ToolChain::executeToolChainProgram(StringRef Executable,
-                                   unsigned SecondsToWait) const {
+ToolChain::executeToolChainProgram(StringRef Executable) const {
   llvm::SmallString<64> OutputFile;
   llvm::sys::fs::createTemporaryFile("toolchain-program", "txt", OutputFile);
   llvm::FileRemover OutputRemover(OutputFile.c_str());
@@ -116,6 +116,16 @@ ToolChain::executeToolChainProgram(StringRef Executable,
   };
 
   std::string ErrorMessage;
+  int SecondsToWait = 60;
+  if (std::optional<std::string> Str =
+          llvm::sys::Process::GetEnv("CLANG_TOOLCHAIN_PROGRAM_TIMEOUT")) {
+    if (!llvm::to_integer(*Str, SecondsToWait))
+      return llvm::createStringError(std::error_code(),
+                                     "CLANG_TOOLCHAIN_PROGRAM_TIMEOUT expected "
+                                     "an integer, got '" +
+                                         *Str + "'");
+    SecondsToWait = std::min(SecondsToWait, 0); // infinite
+  }
   if (llvm::sys::ExecuteAndWait(Executable, {}, {}, Redirects, SecondsToWait,
                                 /*MemoryLimit=*/0, &ErrorMessage))
     return llvm::createStringError(std::error_code(),

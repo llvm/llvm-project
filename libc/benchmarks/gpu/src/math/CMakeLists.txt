@@ -32,6 +32,7 @@ add_benchmark(
     sin_benchmark.cpp
   DEPENDS
     libc.src.math.sin
+    libc.src.math.sinf
     libc.src.stdlib.srand
     libc.src.stdlib.rand
     libc.src.__support.FPUtil.fp_bits

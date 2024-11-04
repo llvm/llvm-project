@@ -117,9 +117,9 @@ consteval Agg retAgg() {
 // EVAL-FN-NEXT:  entry:
 // EVAL-FN-NEXT:    [[B:%.*]] = alloca i64, align 8
 // EVAL-FN-NEXT:    [[REF_TMP:%.*]] = alloca [[STRUCT_AGG:%.*]], align 8
-// EVAL-FN-NEXT:    [[TMP0:%.*]] = getelementptr inbounds [[STRUCT_AGG]], ptr [[REF_TMP]], i32 0, i32 0
+// EVAL-FN-NEXT:    [[TMP0:%.*]] = getelementptr inbounds nuw [[STRUCT_AGG]], ptr [[REF_TMP]], i32 0, i32 0
 // EVAL-FN-NEXT:    store i32 13, ptr [[TMP0]], align 8
-// EVAL-FN-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [[STRUCT_AGG]], ptr [[REF_TMP]], i32 0, i32 1
+// EVAL-FN-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw [[STRUCT_AGG]], ptr [[REF_TMP]], i32 0, i32 1
 // EVAL-FN-NEXT:    store i64 17, ptr [[TMP1]], align 8
 // EVAL-FN-NEXT:    store i64 17, ptr [[B]], align 8
 // EVAL-FN-NEXT:    [[TMP2:%.*]] = load i64, ptr [[B]], align 8
@@ -144,9 +144,9 @@ consteval const Agg &retRefAgg() {
 // EVAL-FN-NEXT:  entry:
 // EVAL-FN-NEXT:    [[B:%.*]] = alloca i64, align 8
 // EVAL-FN-NEXT:    [[REF_TMP:%.*]] = alloca [[STRUCT_AGG:%.*]], align 8
-// EVAL-FN-NEXT:    [[TMP0:%.*]] = getelementptr inbounds [[STRUCT_AGG]], ptr [[REF_TMP]], i32 0, i32 0
+// EVAL-FN-NEXT:    [[TMP0:%.*]] = getelementptr inbounds nuw [[STRUCT_AGG]], ptr [[REF_TMP]], i32 0, i32 0
 // EVAL-FN-NEXT:    store i32 13, ptr [[TMP0]], align 8
-// EVAL-FN-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [[STRUCT_AGG]], ptr [[REF_TMP]], i32 0, i32 1
+// EVAL-FN-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw [[STRUCT_AGG]], ptr [[REF_TMP]], i32 0, i32 1
 // EVAL-FN-NEXT:    store i64 17, ptr [[TMP1]], align 8
 // EVAL-FN-NEXT:    store i64 17, ptr [[B]], align 8
 // EVAL-FN-NEXT:    [[TMP2:%.*]] = load i64, ptr [[B]], align 8
@@ -167,9 +167,9 @@ consteval Agg is_const() {
 // EVAL-FN-NEXT:  entry:
 // EVAL-FN-NEXT:    [[B:%.*]] = alloca i64, align 8
 // EVAL-FN-NEXT:    [[REF_TMP:%.*]] = alloca [[STRUCT_AGG:%.*]], align 8
-// EVAL-FN-NEXT:    [[TMP0:%.*]] = getelementptr inbounds [[STRUCT_AGG]], ptr [[REF_TMP]], i32 0, i32 0
+// EVAL-FN-NEXT:    [[TMP0:%.*]] = getelementptr inbounds nuw [[STRUCT_AGG]], ptr [[REF_TMP]], i32 0, i32 0
 // EVAL-FN-NEXT:    store i32 5, ptr [[TMP0]], align 8
-// EVAL-FN-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [[STRUCT_AGG]], ptr [[REF_TMP]], i32 0, i32 1
+// EVAL-FN-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw [[STRUCT_AGG]], ptr [[REF_TMP]], i32 0, i32 1
 // EVAL-FN-NEXT:    store i64 19, ptr [[TMP1]], align 8
 // EVAL-FN-NEXT:    store i64 19, ptr [[B]], align 8
 // EVAL-FN-NEXT:    [[TMP2:%.*]] = load i64, ptr [[B]], align 8
@@ -193,14 +193,14 @@ struct AggCtor {
 // EVAL-FN-NEXT:    [[I:%.*]] = alloca i32, align 4
 // EVAL-FN-NEXT:    [[C:%.*]] = alloca [[STRUCT_AGGCTOR:%.*]], align 8
 // EVAL-FN-NEXT:    store i32 2, ptr [[I]], align 4
-// EVAL-FN-NEXT:    [[TMP0:%.*]] = getelementptr inbounds [[STRUCT_AGGCTOR]], ptr [[C]], i32 0, i32 0
+// EVAL-FN-NEXT:    [[TMP0:%.*]] = getelementptr inbounds nuw [[STRUCT_AGGCTOR]], ptr [[C]], i32 0, i32 0
 // EVAL-FN-NEXT:    store i32 4, ptr [[TMP0]], align 8
-// EVAL-FN-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [[STRUCT_AGGCTOR]], ptr [[C]], i32 0, i32 1
+// EVAL-FN-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw [[STRUCT_AGGCTOR]], ptr [[C]], i32 0, i32 1
 // EVAL-FN-NEXT:    store i64 10, ptr [[TMP1]], align 8
-// EVAL-FN-NEXT:    [[A:%.*]] = getelementptr inbounds [[STRUCT_AGGCTOR]], ptr [[C]], i32 0, i32 0
+// EVAL-FN-NEXT:    [[A:%.*]] = getelementptr inbounds nuw [[STRUCT_AGGCTOR]], ptr [[C]], i32 0, i32 0
 // EVAL-FN-NEXT:    [[TMP2:%.*]] = load i32, ptr [[A]], align 8
 // EVAL-FN-NEXT:    [[CONV:%.*]] = sext i32 [[TMP2]] to i64
-// EVAL-FN-NEXT:    [[B:%.*]] = getelementptr inbounds [[STRUCT_AGGCTOR]], ptr [[C]], i32 0, i32 1
+// EVAL-FN-NEXT:    [[B:%.*]] = getelementptr inbounds nuw [[STRUCT_AGGCTOR]], ptr [[C]], i32 0, i32 1
 // EVAL-FN-NEXT:    [[TMP3:%.*]] = load i64, ptr [[B]], align 8
 // EVAL-FN-NEXT:    [[ADD:%.*]] = add nsw i64 [[CONV]], [[TMP3]]
 // EVAL-FN-NEXT:    ret i64 [[ADD]]

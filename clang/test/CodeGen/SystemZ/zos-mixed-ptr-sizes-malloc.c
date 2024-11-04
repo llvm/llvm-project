@@ -1,4 +1,4 @@
-// RUN: %clang -target s390x-ibm-zos -emit-llvm -S -O2 %s -o - | FileCheck %s --check-prefix=X64
+// RUN: %clang_cc1 -triple s390x-ibm-zos -O2 -emit-llvm %s -o - | FileCheck %s --check-prefix=X64
 #include <stddef.h>
 void *__malloc31(size_t);
 

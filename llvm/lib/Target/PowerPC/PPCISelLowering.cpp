@@ -105,6 +105,11 @@ using namespace llvm;
 
 #define DEBUG_TYPE "ppc-lowering"
 
+static cl::opt<bool> DisableP10StoreForward(
+    "disable-p10-store-forward",
+    cl::desc("disable P10 store forward-friendly conversion"), cl::Hidden,
+    cl::init(false));
+
 static cl::opt<bool> DisablePPCPreinc("disable-ppc-preinc",
 cl::desc("disable preincrement load/store generation on PPC"), cl::Hidden);
 
@@ -985,6 +990,14 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
 
     setOperationAction(ISD::SCALAR_TO_VECTOR, MVT::v4f32, Custom);
     setOperationAction(ISD::SCALAR_TO_VECTOR, MVT::v4i32, Custom);
+    // LE is P8+/64-bit so direct moves are supported and these operations
+    // are legal. The custom transformation requires 64-bit since we need a
+    // pair of stores that will cover a 128-bit load for P10.
+    if (!DisableP10StoreForward && isPPC64 && !Subtarget.isLittleEndian()) {
+      setOperationAction(ISD::SCALAR_TO_VECTOR, MVT::v2i64, Custom);
+      setOperationAction(ISD::SCALAR_TO_VECTOR, MVT::v8i16, Custom);
+      setOperationAction(ISD::SCALAR_TO_VECTOR, MVT::v16i8, Custom);
+    }
 
     setOperationAction(ISD::BUILD_VECTOR, MVT::v16i8, Custom);
     setOperationAction(ISD::BUILD_VECTOR, MVT::v8i16, Custom);
@@ -11483,9 +11496,33 @@ SDValue PPCTargetLowering::LowerSCALAR_TO_VECTOR(SDValue Op,
   EVT PtrVT = getPointerTy(DAG.getDataLayout());
   SDValue FIdx = DAG.getFrameIndex(FrameIdx, PtrVT);
 
+  SDValue Val = Op.getOperand(0);
+  EVT ValVT = Val.getValueType();
+  // P10 hardware store forwarding requires that a single store contains all
+  // the data for the load. P10 is able to merge a pair of adjacent stores. Try
+  // to avoid load hit store on P10 when running binaries compiled for older
+  // processors by generating two mergeable scalar stores to forward with the
+  // vector load.
+  if (!DisableP10StoreForward && Subtarget.isPPC64() &&
+      !Subtarget.isLittleEndian() && ValVT.isInteger() &&
+      ValVT.getSizeInBits() <= 64) {
+    Val = DAG.getNode(ISD::ANY_EXTEND, dl, MVT::i64, Val);
+    EVT ShiftAmountTy = getShiftAmountTy(MVT::i64, DAG.getDataLayout());
+    SDValue ShiftBy = DAG.getConstant(
+        64 - Op.getValueType().getScalarSizeInBits(), dl, ShiftAmountTy);
+    Val = DAG.getNode(ISD::SHL, dl, MVT::i64, Val, ShiftBy);
+    SDValue Plus8 =
+        DAG.getNode(ISD::ADD, dl, PtrVT, FIdx, DAG.getConstant(8, dl, PtrVT));
+    SDValue Store2 =
+        DAG.getStore(DAG.getEntryNode(), dl, Val, Plus8, MachinePointerInfo());
+    SDValue Store = DAG.getStore(Store2, dl, Val, FIdx, MachinePointerInfo());
+    return DAG.getLoad(Op.getValueType(), dl, Store, FIdx,
+                       MachinePointerInfo());
+  }
+
   // Store the input value into Value#0 of the stack slot.
-  SDValue Store = DAG.getStore(DAG.getEntryNode(), dl, Op.getOperand(0), FIdx,
-                               MachinePointerInfo());
+  SDValue Store =
+      DAG.getStore(DAG.getEntryNode(), dl, Val, FIdx, MachinePointerInfo());
   // Load it out.
   return DAG.getLoad(Op.getValueType(), dl, Store, FIdx, MachinePointerInfo());
 }
@@ -14344,8 +14381,7 @@ SDValue PPCTargetLowering::DAGCombineTruncBoolExt(SDNode *N,
       continue;
     }
 
-    SmallVector<SDValue, 3> Ops(PromOp.getNode()->op_begin(),
-                                PromOp.getNode()->op_end());
+    SmallVector<SDValue, 3> Ops(PromOp.getNode()->ops());
 
     // If there are any constant inputs, make sure they're replaced now.
     for (unsigned i = 0; i < 2; ++i)

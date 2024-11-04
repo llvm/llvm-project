@@ -82,6 +82,8 @@ void initializeCycleInfoWrapperPassPass(PassRegistry &);
 void initializeDAEPass(PassRegistry&);
 void initializeDAHPass(PassRegistry&);
 void initializeDCELegacyPassPass(PassRegistry&);
+void initializeDXILMetadataAnalysisWrapperPassPass(PassRegistry &);
+void initializeDXILMetadataAnalysisWrapperPrinterPass(PassRegistry &);
 void initializeDeadMachineInstructionElimPass(PassRegistry&);
 void initializeDebugifyMachineModulePass(PassRegistry &);
 void initializeDependenceAnalysisWrapperPassPass(PassRegistry&);

@@ -4458,6 +4458,16 @@ void X86FrameLowering::spillFPBP(MachineFunction &MF) const {
     FP = TRI->getFrameRegister(MF);
   if (TRI->hasBasePointer(MF))
     BP = TRI->getBaseRegister();
+
+  // Currently only inline asm and function call can clobbers fp/bp. So we can
+  // do some quick test and return early.
+  if (!MF.hasInlineAsm()) {
+    X86MachineFunctionInfo *X86FI = MF.getInfo<X86MachineFunctionInfo>();
+    if (!X86FI->getFPClobberedByCall())
+      FP = 0;
+    if (!X86FI->getBPClobberedByCall())
+      BP = 0;
+  }
   if (!FP && !BP)
     return;
 

@@ -2940,6 +2940,17 @@ inline VScaleVal_match m_VScale() {
   return VScaleVal_match();
 }
 
+template <typename Opnd0, typename Opnd1>
+inline typename m_Intrinsic_Ty<Opnd0, Opnd1>::Ty
+m_Interleave2(const Opnd0 &Op0, const Opnd1 &Op1) {
+  return m_Intrinsic<Intrinsic::vector_interleave2>(Op0, Op1);
+}
+
+template <typename Opnd>
+inline typename m_Intrinsic_Ty<Opnd>::Ty m_Deinterleave2(const Opnd &Op) {
+  return m_Intrinsic<Intrinsic::vector_deinterleave2>(Op);
+}
+
 template <typename LHS, typename RHS, unsigned Opcode, bool Commutable = false>
 struct LogicalOp_match {
   LHS L;

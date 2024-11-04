@@ -46,12 +46,8 @@
 #include <type_traits>
 #include <utility>
 
-namespace llvm {
-class DataLayout;
-class LLVMContext;
-} // namespace llvm
-
 using namespace llvm;
+using namespace llvm::PatternMatch;
 
 #define DEBUG_TYPE "instcombine"
 

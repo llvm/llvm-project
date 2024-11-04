@@ -388,8 +388,6 @@ public:
     return MVT::i32;
   }
 
-  AtomicExpansionKind shouldExpandAtomicRMWInIR(AtomicRMWInst *) const override;
-
   bool shouldSinkOperands(Instruction *I,
                           SmallVectorImpl<Use *> &Ops) const override;
 };

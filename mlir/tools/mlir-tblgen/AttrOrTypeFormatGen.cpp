@@ -323,7 +323,7 @@ void DefFormat::genParser(MethodBody &os) {
 
   // Generate call to the attribute or type builder. Use the checked getter
   // if one was generated.
-  if (def.genVerifyDecl()) {
+  if (def.genVerifyDecl() || def.genVerifyInvariantsImpl()) {
     os << tgfmt("return $_parser.getChecked<$0>($_loc, $_parser.getContext()",
                 &ctx, def.getCppClassName());
   } else {

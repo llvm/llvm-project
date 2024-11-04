@@ -11693,6 +11693,8 @@ def err_module_not_defined : Error<
 def err_module_redeclaration : Error<
   "translation unit contains multiple module declarations">;
 def note_prev_module_declaration : Note<"previous module declaration is here">;
+def err_module_declaration_missing : Error<
+  "missing 'export module' declaration in module interface unit">;
 def err_module_declaration_missing_after_global_module_introducer : Error<
   "missing 'module' declaration at end of global module fragment "
   "introduced here">;

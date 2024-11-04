@@ -6136,10 +6136,13 @@ let hasSideEffects = 0, mayLoad = 0, mayStore = 0, Defs = [VL, VTYPE] in {
 // be accidentally be made X0 by MachineIR optimizations. To satisfy the
 // verifier, we also need a GPRX0 instruction for the special encodings.
 def PseudoVSETVLI : Pseudo<(outs GPR:$rd), (ins GPRNoX0:$rs1, VTypeIOp11:$vtypei), []>,
+                    PseudoInstExpansion<(VSETVLI GPR:$rd, GPR:$rs1, VTypeIOp11:$vtypei)>,
                     Sched<[WriteVSETVLI, ReadVSETVLI]>;
 def PseudoVSETVLIX0 : Pseudo<(outs GPR:$rd), (ins GPRX0:$rs1, VTypeIOp11:$vtypei), []>,
+                      PseudoInstExpansion<(VSETVLI GPR:$rd, GPR:$rs1, VTypeIOp11:$vtypei)>,
                       Sched<[WriteVSETVLI, ReadVSETVLI]>;
 def PseudoVSETIVLI : Pseudo<(outs GPR:$rd), (ins uimm5:$rs1, VTypeIOp10:$vtypei), []>,
+                     PseudoInstExpansion<(VSETIVLI GPR:$rd, uimm5:$rs1, VTypeIOp10:$vtypei)>,
                      Sched<[WriteVSETIVLI]>;
 }
 

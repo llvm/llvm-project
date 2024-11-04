@@ -119,9 +119,11 @@ static uint64_t getSymVA(const Symbol &sym, int64_t addend) {
       // after sections are finalized. (e.g. Measuring the size of .rela.dyn
       // for Android relocation packing requires knowing TLS symbol addresses
       // during section finalization.)
-      if (!ctx.tlsPhdr || !ctx.tlsPhdr->firstSec)
-        fatal(toString(d.file) +
-              " has an STT_TLS symbol but doesn't have an SHF_TLS section");
+      if (!ctx.tlsPhdr || !ctx.tlsPhdr->firstSec) {
+        errorOrWarn(toString(d.file) +
+                    " has an STT_TLS symbol but doesn't have a PT_TLS segment");
+        return 0;
+      }
       return va - ctx.tlsPhdr->firstSec->addr;
     }
     return va;

@@ -126,12 +126,14 @@ void print_header() {
   LIBC_NAMESPACE::printf("Running Suite: %-10s\n",
                          benchmarks[0]->get_suite_name().data());
   LIBC_NAMESPACE::printf("%s", RESET);
-  LIBC_NAMESPACE::printf(
+  cpp::string titles =
       "Benchmark            |  Cycles |     Min |     Max | "
-      "Iterations | Time / Iteration |   Stddev |  Threads |\n");
-  LIBC_NAMESPACE::printf(
-      "---------------------------------------------------------------------"
-      "--------------------------------\n");
+      "Iterations | Time / Iteration |   Stddev |  Threads |\n";
+  LIBC_NAMESPACE::printf(titles.data());
+
+  cpp::string separator(titles.size(), '-');
+  separator[titles.size() - 1] = '\n';
+  LIBC_NAMESPACE::printf(separator.data());
 }
 
 void Benchmark::run_benchmarks() {

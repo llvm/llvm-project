@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_UTIL_TABLEGEN_SUBTARGETFEATUREINFO_H
-#define LLVM_UTIL_TABLEGEN_SUBTARGETFEATUREINFO_H
+#ifndef LLVM_UTIL_TABLEGEN_COMMON_SUBTARGETFEATUREINFO_H
+#define LLVM_UTIL_TABLEGEN_COMMON_SUBTARGETFEATUREINFO_H
 
 #include "llvm/ADT/StringRef.h"
 #include "llvm/TableGen/Record.h"
@@ -102,4 +102,4 @@ struct SubtargetFeatureInfo {
 };
 } // end namespace llvm
 
-#endif // LLVM_UTIL_TABLEGEN_SUBTARGETFEATUREINFO_H
+#endif // LLVM_UTIL_TABLEGEN_COMMON_SUBTARGETFEATUREINFO_H

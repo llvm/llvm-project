@@ -61,9 +61,9 @@ Clang Frontend Potentially Breaking Changes
 Clang Python Bindings Potentially Breaking Changes
 --------------------------------------------------
 - Parts of the interface returning string results will now return
-  the empty string `""` when no result is available, instead of `None`.
-- Calling a property on the `CompletionChunk` or `CompletionString` class
-  statically now leads to an error, instead of returning a `CachedProperty` object
+  the empty string ``""`` when no result is available, instead of ``None``.
+- Calling a property on the ``CompletionChunk`` or ``CompletionString`` class
+  statically now leads to an error, instead of returning a ``CachedProperty`` object
   that is used internally. Properties are only available on instances.
 
 What's New in Clang |release|?
@@ -75,8 +75,8 @@ sections with improvements to Clang's support for those languages.
 
 C++ Language Changes
 --------------------
-- Allow single element access of GCC vector/ext_vector_type object to be 
-  constant expression. Supports the `V.xyzw` syntax and other tidbits 
+- Allow single element access of GCC vector/ext_vector_type object to be
+  constant expression. Supports the `V.xyzw` syntax and other tidbits
   as seen in OpenCL. Selecting multiple elements is left as a future work.
 
 C++17 Feature Support
@@ -100,6 +100,21 @@ C++2c Feature Support
 
 Resolutions to C++ Defect Reports
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+- Allow calling initializer list constructors from initializer lists with
+  a single element of the same type instead of always copying.
+  (`CWG2137: List-initialization from object of same type <https://cplusplus.github.io/CWG/issues/2137.html>`)
+
+- Speculative resolution for CWG2311 implemented so that the implementation of CWG2137 doesn't remove
+  previous cases where guaranteed copy elision was done. Given a prvalue ``e`` of class type
+  ``T``, ``T{e}`` will try to resolve an initializer list constructor and will use it if successful.
+  Otherwise, if there is no initializer list constructor, the copy will be elided as if it was ``T(e)``.
+  (`CWG2311: Missed case for guaranteed copy elision <https://cplusplus.github.io/CWG/issues/2311.html>`)
+
+- Casts from a bit-field to an integral type is now not considered narrowing if the
+  width of the bit-field means that all potential values are in the range
+  of the target type, even if the type of the bit-field is larger.
+  (`CWG2627: Bit-fields and narrowing conversions <https://cplusplus.github.io/CWG/issues/2627.html>`_)
 
 C Language Changes
 ------------------
@@ -156,7 +171,6 @@ Improvements to Clang's diagnostics
 - Clang now diagnoses undefined behavior in constant expressions more consistently. This includes invalid shifts, and signed overflow in arithmetic.
 
 - -Wdangling-assignment-gsl is enabled by default.
-- Clang now does a better job preserving the template arguments as written when specializing concepts.
 - Clang now always preserves the template arguments as written used
   to specialize template type aliases.
 
@@ -188,6 +202,7 @@ Bug Fixes to C++ Support
 ^^^^^^^^^^^^^^^^^^^^^^^^
 
 - Fixed a crash when an expression with a dependent ``__typeof__`` type is used as the operand of a unary operator. (#GH97646)
+- Fixed incorrect pack expansion of init-capture references in requires expresssions.
 - Fixed a failed assertion when checking invalid delete operator declaration. (#GH96191)
 - Fix a crash when checking destructor reference with an invalid initializer. (#GH97230)
 - Clang now correctly parses potentially declarative nested-name-specifiers in pointer-to-member declarators.
@@ -202,6 +217,8 @@ Bug Fixes to C++ Support
 - Clang now preserves the unexpanded flag in a lambda transform used for pack expansion. (#GH56852), (#GH85667),
   (#GH99877).
 - Fixed a bug when diagnosing ambiguous explicit specializations of constrained member functions.
+- Fixed an assertion failure when selecting a function from an overload set that includes a 
+  specialization of a conversion function template.
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -301,6 +318,8 @@ AST Matchers
 clang-format
 ------------
 
+- Adds ``BreakBinaryOperations`` option.
+
 libclang
 --------
 
@@ -345,8 +364,9 @@ Improvements
 ^^^^^^^^^^^^
 - Improve the handling of mapping array-section for struct containing nested structs with user defined mappers
 
-- `num_teams` now accepts multiple expressions when it is used along in ``target teams ompx_bare`` construct.
-  This allows the target region to be launched with multi-dim grid on GPUs.
+- `num_teams` and `thead_limit` now accept multiple expressions when it is used
+  along in ``target teams ompx_bare`` construct. This allows the target region
+  to be launched with multi-dim grid on GPUs.
 
 Additional Information
 ======================

@@ -968,11 +968,11 @@ define i32 @wobble(i32 %arg, i32 %bar) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x i32> poison, i32 [[BAR:%.*]], i32 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <4 x i32> [[TMP2]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP4:%.*]] = xor <4 x i32> [[TMP1]], [[TMP3]]
-; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <4 x i32> [[TMP4]], i32 3
-; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq <4 x i32> [[TMP4]], zeroinitializer
-; CHECK-NEXT:    [[TMP7:%.*]] = sext <4 x i1> [[TMP6]] to <4 x i32>
-; CHECK-NEXT:    [[TMP8:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP7]])
-; CHECK-NEXT:    [[OP_RDX:%.*]] = add i32 [[TMP8]], [[TMP5]]
+; CHECK-NEXT:    [[X4:%.*]] = xor i32 [[ARG]], [[BAR]]
+; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq <4 x i32> [[TMP4]], zeroinitializer
+; CHECK-NEXT:    [[TMP6:%.*]] = sext <4 x i1> [[TMP5]] to <4 x i32>
+; CHECK-NEXT:    [[TMP7:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP6]])
+; CHECK-NEXT:    [[OP_RDX:%.*]] = add i32 [[TMP7]], [[X4]]
 ; CHECK-NEXT:    [[OP_RDX1:%.*]] = add i32 [[OP_RDX]], [[ARG]]
 ; CHECK-NEXT:    ret i32 [[OP_RDX1]]
 ;
@@ -983,11 +983,11 @@ define i32 @wobble(i32 %arg, i32 %bar) {
 ; THRESHOLD-NEXT:    [[TMP2:%.*]] = insertelement <4 x i32> poison, i32 [[BAR:%.*]], i32 0
 ; THRESHOLD-NEXT:    [[TMP3:%.*]] = shufflevector <4 x i32> [[TMP2]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; THRESHOLD-NEXT:    [[TMP4:%.*]] = xor <4 x i32> [[TMP1]], [[TMP3]]
-; THRESHOLD-NEXT:    [[TMP5:%.*]] = extractelement <4 x i32> [[TMP4]], i32 3
-; THRESHOLD-NEXT:    [[TMP6:%.*]] = icmp eq <4 x i32> [[TMP4]], zeroinitializer
-; THRESHOLD-NEXT:    [[TMP7:%.*]] = sext <4 x i1> [[TMP6]] to <4 x i32>
-; THRESHOLD-NEXT:    [[TMP8:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP7]])
-; THRESHOLD-NEXT:    [[OP_RDX:%.*]] = add i32 [[TMP8]], [[TMP5]]
+; THRESHOLD-NEXT:    [[X4:%.*]] = xor i32 [[ARG]], [[BAR]]
+; THRESHOLD-NEXT:    [[TMP5:%.*]] = icmp eq <4 x i32> [[TMP4]], zeroinitializer
+; THRESHOLD-NEXT:    [[TMP6:%.*]] = sext <4 x i1> [[TMP5]] to <4 x i32>
+; THRESHOLD-NEXT:    [[TMP7:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP6]])
+; THRESHOLD-NEXT:    [[OP_RDX:%.*]] = add i32 [[TMP7]], [[X4]]
 ; THRESHOLD-NEXT:    [[OP_RDX1:%.*]] = add i32 [[OP_RDX]], [[ARG]]
 ; THRESHOLD-NEXT:    ret i32 [[OP_RDX1]]
 ;

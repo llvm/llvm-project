@@ -2030,6 +2030,8 @@ def : GCNPat <
 >;
 
 foreach fp16vt = [f16, bf16] in {
+foreach p = [NotHasTrue16BitInsts, UseFakeTrue16Insts] in
+let SubtargetPredicate = p in {
 def : GCNPat <
   (fabs (fp16vt VGPR_32:$src)),
   (V_AND_B32_e64 (S_MOV_B32 (i32 0x00007fff)), VGPR_32:$src)
@@ -2044,6 +2046,24 @@ def : GCNPat <
   (fneg (fabs (fp16vt VGPR_32:$src))),
   (V_OR_B32_e64 (S_MOV_B32 (i32 0x00008000)), VGPR_32:$src) // Set sign bit
 >;
+}
+
+let SubtargetPredicate = UseRealTrue16Insts in {
+def : GCNPat <
+  (fabs (fp16vt VGPR_16:$src)),
+  (V_AND_B16_t16_e64 (i32 0), (i16 0x7fff), (i32 0), VGPR_16:$src)
+>;
+
+def : GCNPat <
+  (fneg (fp16vt VGPR_16:$src)),
+  (V_XOR_B16_t16_e64 (i32 0), (i16 0x8000), (i32 0), VGPR_16:$src)
+>;
+
+def : GCNPat <
+  (fneg (fabs (fp16vt VGPR_16:$src))),
+  (V_OR_B16_t16_e64 (i32 0), (i16 0x8000), (i32 0), VGPR_16:$src) // Set sign bit
+>;
+} // End SubtargetPredicate = UseRealTrue16Insts
 } // End foreach fp16vt = ...
 
 def : GCNPat <

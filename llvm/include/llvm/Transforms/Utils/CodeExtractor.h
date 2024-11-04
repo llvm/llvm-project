@@ -32,7 +32,6 @@ class CallInst;
 class DominatorTree;
 class Function;
 class Instruction;
-class Loop;
 class Module;
 class Type;
 class Value;
@@ -154,16 +153,6 @@ public:
                   BasicBlock *AllocationBlock = nullptr,
                   std::string Suffix = "", bool ArgsInZeroAddressSpace = false,
                   bool KeepOldBlocks = false);
-
-    /// Create a code extractor for a loop body.
-    ///
-    /// Behaves just like the generic code sequence constructor, but uses the
-    /// block sequence of the loop.
-    CodeExtractor(DominatorTree &DT, Loop &L, bool AggregateArgs = false,
-                  BlockFrequencyInfo *BFI = nullptr,
-                  BranchProbabilityInfo *BPI = nullptr,
-                  AssumptionCache *AC = nullptr,
-                  std::string Suffix = "");
 
     /// Perform the extraction, returning the new function.
     ///

@@ -251,16 +251,26 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.atanf
     libc.src.math.atanh
     libc.src.math.atanhf
+    libc.src.math.canonicalize
+    libc.src.math.canonicalizef
+    libc.src.math.canonicalizel
     libc.src.math.cbrt
     libc.src.math.cbrtf
     libc.src.math.ceil
     libc.src.math.ceilf
+    libc.src.math.ceill
     libc.src.math.copysign
     libc.src.math.copysignf
+    libc.src.math.copysignl
     libc.src.math.cos
     libc.src.math.cosf
     libc.src.math.cosh
     libc.src.math.coshf
+    libc.src.math.cospif
+    libc.src.math.ddivl
+    libc.src.math.dfmal
+    libc.src.math.dmull
+    libc.src.math.dsqrtl
     libc.src.math.erf
     libc.src.math.erff
     libc.src.math.exp
@@ -268,40 +278,101 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.exp10f
     libc.src.math.exp2
     libc.src.math.exp2f
+    libc.src.math.exp2m1f
     libc.src.math.expf
     libc.src.math.expm1
     libc.src.math.expm1f
     libc.src.math.fabs
     libc.src.math.fabsf
+    libc.src.math.fabsl
     libc.src.math.fadd
+    libc.src.math.faddl
     libc.src.math.fdim
     libc.src.math.fdimf
+    libc.src.math.fdiml
+    libc.src.math.fdiv
+    libc.src.math.fdivl
+    libc.src.math.ffma
+    libc.src.math.ffmal
     libc.src.math.floor
     libc.src.math.floorf
+    libc.src.math.floorl
     libc.src.math.fma
     libc.src.math.fmaf
     libc.src.math.fmax
     libc.src.math.fmaxf
+    libc.src.math.fmaximum
+    libc.src.math.fmaximumf
+    libc.src.math.fmaximuml
+    libc.src.math.fmaximum_mag
+    libc.src.math.fmaximum_magf
+    libc.src.math.fmaximum_magl
+    libc.src.math.fmaximum_mag_num
+    libc.src.math.fmaximum_mag_numf
+    libc.src.math.fmaximum_mag_numl
+    libc.src.math.fmaximum_num
+    libc.src.math.fmaximum_numf
+    libc.src.math.fmaximum_numl
+    libc.src.math.fmaxl
     libc.src.math.fmin
     libc.src.math.fminf
+    libc.src.math.fminimum
+    libc.src.math.fminimumf
+    libc.src.math.fminimuml
+    libc.src.math.fminimum_mag
+    libc.src.math.fminimum_magf
+    libc.src.math.fminimum_magl
+    libc.src.math.fminimum_mag_num
+    libc.src.math.fminimum_mag_numf
+    libc.src.math.fminimum_mag_numl
+    libc.src.math.fminimum_num
+    libc.src.math.fminimum_numf
+    libc.src.math.fminimum_numl
+    libc.src.math.fminl
     libc.src.math.fmod
     libc.src.math.fmodf
+    libc.src.math.fmodl
+    libc.src.math.fmul
+    libc.src.math.fmull
     libc.src.math.frexp
     libc.src.math.frexpf
+    libc.src.math.frexpl
+    # FIXME: Broken on NVPTX.
+    # libc.src.math.fromfp
+    # libc.src.math.fromfpf
+    # libc.src.math.fromfpl
+    # libc.src.math.fromfpx
+    # libc.src.math.fromfpxf
+    # libc.src.math.fromfpxl
+    libc.src.math.fsqrt
+    libc.src.math.fsqrtl
+    libc.src.math.fsub
+    libc.src.math.fsubl
     libc.src.math.getpayload
     libc.src.math.getpayloadf
+    libc.src.math.getpayloadl
     libc.src.math.hypot
     libc.src.math.hypotf
     libc.src.math.ilogb
     libc.src.math.ilogbf
+    libc.src.math.ilogbl
+    libc.src.math.isnan
+    libc.src.math.isnanf
+    libc.src.math.isnanl
     libc.src.math.ldexp
     libc.src.math.ldexpf
+    libc.src.math.ldexpl
+    libc.src.math.lgamma
+    libc.src.math.lgamma_r
     libc.src.math.llogb
     libc.src.math.llogbf
+    libc.src.math.llogbl
     libc.src.math.llrint
     libc.src.math.llrintf
+    libc.src.math.llrintl
     libc.src.math.llround
     libc.src.math.llroundf
+    libc.src.math.llroundl
     libc.src.math.log
     libc.src.math.log10
     libc.src.math.log10f
@@ -309,53 +380,97 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.log1pf
     libc.src.math.log2
     libc.src.math.log2f
+    libc.src.math.logb
+    libc.src.math.logbf
+    libc.src.math.logbl
     libc.src.math.logf
     libc.src.math.lrint
     libc.src.math.lrintf
+    libc.src.math.lrintl
     libc.src.math.lround
     libc.src.math.lroundf
+    libc.src.math.lroundl
     libc.src.math.modf
     libc.src.math.modff
+    libc.src.math.modfl
     libc.src.math.nan
     libc.src.math.nanf
+    libc.src.math.nanl
     libc.src.math.nearbyint
     libc.src.math.nearbyintf
+    libc.src.math.nearbyintl
     libc.src.math.nextafter
     libc.src.math.nextafterf
+    libc.src.math.nextafterl
+    libc.src.math.nextdown
+    libc.src.math.nextdownf
+    libc.src.math.nextdownl
     libc.src.math.nexttoward
     libc.src.math.nexttowardf
+    libc.src.math.nexttowardl
+    libc.src.math.nextup
+    libc.src.math.nextupf
+    libc.src.math.nextupl
     libc.src.math.pow
     libc.src.math.powf
     libc.src.math.powi
     libc.src.math.powif
     libc.src.math.remainder
     libc.src.math.remainderf
+    libc.src.math.remainderl
     libc.src.math.remquo
     libc.src.math.remquof
+    libc.src.math.remquol
     libc.src.math.rint
     libc.src.math.rintf
+    libc.src.math.rintl
     libc.src.math.round
+    libc.src.math.roundeven
+    libc.src.math.roundevenf
+    libc.src.math.roundevenl
     libc.src.math.roundf
+    libc.src.math.scalbln
+    libc.src.math.scalblnf
     libc.src.math.scalbn
     libc.src.math.scalbnf
+    libc.src.math.scalbnl
+    libc.src.math.setpayload
+    libc.src.math.setpayloadf
+    libc.src.math.setpayloadl
+    libc.src.math.setpayloadsig
+    libc.src.math.setpayloadsigf
+    libc.src.math.setpayloadsigl
     libc.src.math.sin
     libc.src.math.sincos
     libc.src.math.sincosf
     libc.src.math.sinf
     libc.src.math.sinh
     libc.src.math.sinhf
+    libc.src.math.sinpif
     libc.src.math.sqrt
     libc.src.math.sqrtf
+    libc.src.math.sqrtl
     libc.src.math.tan
     libc.src.math.tanf
     libc.src.math.tanh
     libc.src.math.tanhf
     libc.src.math.tgamma
     libc.src.math.tgammaf
-    libc.src.math.lgamma
-    libc.src.math.lgamma_r
+    libc.src.math.totalorder
+    libc.src.math.totalorderf
+    libc.src.math.totalordermag
+    libc.src.math.totalordermagf
+    libc.src.math.totalordermagl
     libc.src.math.trunc
     libc.src.math.truncf
+    libc.src.math.truncl
+    # FIXME: Broken on NVPTX.
+    # libc.src.math.ufromfp
+    # libc.src.math.ufromfpf
+    # libc.src.math.ufromfpl
+    # libc.src.math.ufromfpx
+    # libc.src.math.ufromfpxf
+    # libc.src.math.ufromfpxl
 )
 
 if(LIBC_TYPES_HAS_FLOAT16)
@@ -364,18 +479,27 @@ if(LIBC_TYPES_HAS_FLOAT16)
     libc.src.math.canonicalizef16
     libc.src.math.ceilf16
     libc.src.math.copysignf16
+    libc.src.math.exp10f16
+    libc.src.math.exp2f16
+    libc.src.math.expf16
     libc.src.math.f16add
     libc.src.math.f16addf
+    libc.src.math.f16addl
     libc.src.math.f16div
     libc.src.math.f16divf
+    libc.src.math.f16divl
     libc.src.math.f16fma
     libc.src.math.f16fmaf
+    libc.src.math.f16fmal
     libc.src.math.f16mul
     libc.src.math.f16mulf
+    libc.src.math.f16mull
     libc.src.math.f16sqrt
     libc.src.math.f16sqrtf
+    libc.src.math.f16sqrtl
     libc.src.math.f16sub
     libc.src.math.f16subf
+    libc.src.math.f16subl
     libc.src.math.fabsf16
     libc.src.math.fdimf16
     libc.src.math.floorf16

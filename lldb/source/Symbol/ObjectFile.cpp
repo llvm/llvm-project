@@ -454,9 +454,10 @@ AddressClass ObjectFile::GetAddressClass(addr_t file_addr) {
   return AddressClass::eUnknown;
 }
 
-DataBufferSP ObjectFile::ReadMemory(const ProcessSP &process_sp,
-                                    lldb::addr_t addr, size_t byte_size) {
-  DataBufferSP data_sp;
+WritableDataBufferSP ObjectFile::ReadMemory(const ProcessSP &process_sp,
+                                            lldb::addr_t addr,
+                                            size_t byte_size) {
+  WritableDataBufferSP data_sp;
   if (process_sp) {
     std::unique_ptr<DataBufferHeap> data_up(new DataBufferHeap(byte_size, 0));
     Status error;

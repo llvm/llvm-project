@@ -91,8 +91,10 @@ void ObjDumper::printAsStringList(StringRef StringContent,
 void ObjDumper::printFileSummary(StringRef FileStr, object::ObjectFile &Obj,
                                  ArrayRef<std::string> InputFilenames,
                                  const object::Archive *A) {
-  W.getOStream() << "\n";
-  W.printString("File", FileStr);
+  if (!FileStr.empty()) {
+    W.getOStream() << "\n";
+    W.printString("File", FileStr);
+  }
   W.printString("Format", Obj.getFileFormatName());
   W.printString("Arch", Triple::getArchTypeName(Obj.getArch()));
   W.printString("AddressSize",

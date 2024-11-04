@@ -605,6 +605,10 @@ static void ProcessAPINotes(Sema &S, TagDecl *D, const api_notes::TagInfo &Info,
     D->addAttr(
         SwiftAttrAttr::Create(S.Context, "release:" + ReleaseOp.value()));
 
+  if (auto ConformsTo = Info.SwiftConformance)
+    D->addAttr(
+        SwiftAttrAttr::Create(S.Context, "conforms_to:" + ConformsTo.value()));
+
   if (auto Copyable = Info.isSwiftCopyable()) {
     if (!*Copyable)
       D->addAttr(SwiftAttrAttr::Create(S.Context, "~Copyable"));

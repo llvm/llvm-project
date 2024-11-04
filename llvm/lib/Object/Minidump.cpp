@@ -99,8 +99,9 @@ template Expected<ArrayRef<Thread>>
 template Expected<ArrayRef<MemoryDescriptor>>
     MinidumpFile::getListStream(StreamType) const;
 
-Expected<ArrayRef<uint8_t>>
-MinidumpFile::getDataSlice(ArrayRef<uint8_t> Data, size_t Offset, size_t Size) {
+Expected<ArrayRef<uint8_t>> MinidumpFile::getDataSlice(ArrayRef<uint8_t> Data,
+                                                       uint64_t Offset,
+                                                       uint64_t Size) {
   // Check for overflow.
   if (Offset + Size < Offset || Offset + Size < Size ||
       Offset + Size > Data.size())
@@ -153,4 +154,44 @@ MinidumpFile::create(MemoryBufferRef Source) {
 
   return std::unique_ptr<MinidumpFile>(
       new MinidumpFile(Source, Hdr, *ExpectedStreams, std::move(StreamMap)));
+}
+
+iterator_range<MinidumpFile::FallibleMemory64Iterator>
+MinidumpFile::getMemory64List(Error &Err) const {
+  ErrorAsOutParameter ErrAsOutParam(&Err);
+  auto end = FallibleMemory64Iterator::end(Memory64Iterator::end());
+  Expected<minidump::Memory64ListHeader> ListHeader = getMemoryList64Header();
+  if (!ListHeader) {
+    Err = ListHeader.takeError();
+    return make_range(end, end);
+  }
+
+  std::optional<ArrayRef<uint8_t>> Stream =
+      getRawStream(StreamType::Memory64List);
+  if (!Stream) {
+    Err = createError("No such stream");
+    return make_range(end, end);
+  }
+
+  Expected<ArrayRef<minidump::MemoryDescriptor_64>> Descriptors =
+      getDataSliceAs<minidump::MemoryDescriptor_64>(
+          *Stream, sizeof(Memory64ListHeader),
+          ListHeader->NumberOfMemoryRanges);
+
+  if (!Descriptors) {
+    Err = Descriptors.takeError();
+    return make_range(end, end);
+  }
+
+  if (!Descriptors->empty() &&
+      ListHeader->BaseRVA + Descriptors->front().DataSize > getData().size()) {
+    Err = createError("Memory64List header RVA out of range");
+    return make_range(end, end);
+  }
+
+  return make_range(FallibleMemory64Iterator::itr(
+                        Memory64Iterator::begin(
+                            getData().slice(ListHeader->BaseRVA), *Descriptors),
+                        Err),
+                    FallibleMemory64Iterator::end(Memory64Iterator::end()));
 }

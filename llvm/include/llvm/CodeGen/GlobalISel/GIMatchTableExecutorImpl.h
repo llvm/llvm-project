@@ -320,7 +320,7 @@ bool GIMatchTableExecutor::executeMatchTable(
                              << "], Expected=" << Expected << ")\n");
       assert(State.MIs[InsnID] != nullptr && "Used insn before defined");
       const unsigned NumOps = State.MIs[InsnID]->getNumOperands();
-      if (IsLE ? (NumOps <= Expected) : (NumOps >= Expected)) {
+      if (IsLE ? (NumOps > Expected) : (NumOps < Expected)) {
         if (handleReject() == RejectAndGiveUp)
           return false;
       }

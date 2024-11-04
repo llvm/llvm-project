@@ -148,7 +148,7 @@ static std::optional<llvm::Triple>
 getHIPOffloadTargetTriple(const Driver &D, const ArgList &Args) {
   if (!Args.hasArg(options::OPT_offload_EQ)) {
     auto OffloadArchs = Args.getAllArgValues(options::OPT_offload_arch_EQ);
-    if (llvm::find(OffloadArchs, "amdgcnspirv") != OffloadArchs.cend()) {
+    if (llvm::is_contained(OffloadArchs, "amdgcnspirv")) {
       if (OffloadArchs.size() == 1)
         return llvm::Triple("spirv64-amd-amdhsa");
       // Mixing specific & SPIR-V compilation is not supported for now.
@@ -786,11 +786,13 @@ void Driver::CreateOffloadingDeviceToolChains(Compilation &C,
                    }) ||
       C.getInputArgs().hasArg(options::OPT_hip_link) ||
       C.getInputArgs().hasArg(options::OPT_hipstdpar);
+  bool UseLLVMOffload = C.getInputArgs().hasArg(
+      options::OPT_foffload_via_llvm, options::OPT_fno_offload_via_llvm, false);
   if (IsCuda && IsHIP) {
     Diag(clang::diag::err_drv_mix_cuda_hip);
     return;
   }
-  if (IsCuda) {
+  if (IsCuda && !UseLLVMOffload) {
     const ToolChain *HostTC = C.getSingleOffloadToolChain<Action::OFK_Host>();
     const llvm::Triple &HostTriple = HostTC->getTriple();
     auto OFK = Action::OFK_Cuda;
@@ -812,7 +814,7 @@ void Driver::CreateOffloadingDeviceToolChains(Compilation &C,
         CudaInstallation.WarnIfUnsupportedVersion();
     }
     C.addOffloadDeviceToolChain(CudaTC.get(), OFK);
-  } else if (IsHIP) {
+  } else if (IsHIP && !UseLLVMOffload) {
     if (auto *OMPTargetArg =
             C.getInputArgs().getLastArg(options::OPT_fopenmp_targets_EQ)) {
       Diag(clang::diag::err_drv_unsupported_opt_for_language_mode)
@@ -836,10 +838,11 @@ void Driver::CreateOffloadingDeviceToolChains(Compilation &C,
   // We need to generate an OpenMP toolchain if the user specified targets with
   // the -fopenmp-targets option or used --offload-arch with OpenMP enabled.
   bool IsOpenMPOffloading =
-      C.getInputArgs().hasFlag(options::OPT_fopenmp, options::OPT_fopenmp_EQ,
-                               options::OPT_fno_openmp, false) &&
-      (C.getInputArgs().hasArg(options::OPT_fopenmp_targets_EQ) ||
-       C.getInputArgs().hasArg(options::OPT_offload_arch_EQ));
+      ((IsCuda || IsHIP) && UseLLVMOffload) ||
+      (C.getInputArgs().hasFlag(options::OPT_fopenmp, options::OPT_fopenmp_EQ,
+                                options::OPT_fno_openmp, false) &&
+       (C.getInputArgs().hasArg(options::OPT_fopenmp_targets_EQ) ||
+        C.getInputArgs().hasArg(options::OPT_offload_arch_EQ)));
   if (IsOpenMPOffloading) {
     // We expect that -fopenmp-targets is always used in conjunction with the
     // option -fopenmp specifying a valid runtime with offloading support, i.e.
@@ -867,7 +870,7 @@ void Driver::CreateOffloadingDeviceToolChains(Compilation &C,
       for (StringRef T : OpenMPTargets->getValues())
         OpenMPTriples.insert(T);
     } else if (C.getInputArgs().hasArg(options::OPT_offload_arch_EQ) &&
-               !IsHIP && !IsCuda) {
+               ((!IsHIP && !IsCuda) || UseLLVMOffload)) {
       const ToolChain *HostTC = C.getSingleOffloadToolChain<Action::OFK_Host>();
       auto AMDTriple = getHIPOffloadTargetTriple(*this, C.getInputArgs());
       auto NVPTXTriple = getNVIDIAOffloadTargetTriple(*this, C.getInputArgs(),
@@ -4152,6 +4155,8 @@ void Driver::BuildActions(Compilation &C, DerivedArgList &Args,
 
   bool UseNewOffloadingDriver =
       C.isOffloadingHostKind(Action::OFK_OpenMP) ||
+      Args.hasFlag(options::OPT_foffload_via_llvm,
+                   options::OPT_fno_offload_via_llvm, false) ||
       Args.hasFlag(options::OPT_offload_new_driver,
                    options::OPT_no_offload_new_driver, false);
 

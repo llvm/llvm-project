@@ -8,9 +8,9 @@ void test_features(svbool_t pn, svbool_t pm,
                    svfloat16_t zn, svfloat16_t zm,
                    svbfloat16_t znb, svbfloat16_t zmb)
   __arm_streaming __arm_inout("za") {
-// expected-error@+1 {{'svmopa_za16_bf16_m' needs target feature sme2,b16b16}}
+// expected-error@+1 {{'svmopa_za16_bf16_m' needs target feature sme-b16b16}}
   svmopa_za16_bf16_m(0, pn, pm, znb, zmb);
-// expected-error@+1 {{'svmops_za16_bf16_m' needs target feature sme2,b16b16}}
+// expected-error@+1 {{'svmops_za16_bf16_m' needs target feature sme-b16b16}}
   svmops_za16_bf16_m(0, pn, pm, znb, zmb);
 // expected-error@+1 {{'svmopa_za16_f16_m' needs target feature sme-f16f16}}
   svmopa_za16_f16_m(0, pn, pm, zn, zm);

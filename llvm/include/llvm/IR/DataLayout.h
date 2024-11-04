@@ -45,7 +45,6 @@ namespace llvm {
 
 class GlobalVariable;
 class LLVMContext;
-class Module;
 class StructLayout;
 class Triple;
 class Value;
@@ -120,10 +119,10 @@ private:
   bool BigEndian;
 
   unsigned AllocaAddrSpace;
-  MaybeAlign StackNaturalAlign;
   unsigned ProgramAddrSpace;
   unsigned DefaultGlobalsAddrSpace;
 
+  MaybeAlign StackNaturalAlign;
   MaybeAlign FunctionPtrAlign;
   FunctionPtrAlignType TheFunctionPtrAlignType;
 
@@ -139,6 +138,7 @@ private:
   };
   ManglingModeT ManglingMode;
 
+  // FIXME: `unsigned char` truncates the value parsed by `parseSpecifier`.
   SmallVector<unsigned char, 8> LegalIntWidths;
 
   /// Primitive type alignment data. This is sorted by type and bit
@@ -185,50 +185,19 @@ private:
   /// if the string is malformed.
   Error parseSpecifier(StringRef Desc);
 
-  // Free all internal data structures.
-  void clear();
-
 public:
-  /// Constructs a DataLayout from a specification string. See reset().
-  explicit DataLayout(StringRef LayoutDescription) {
-    reset(LayoutDescription);
-  }
-
-  /// Initialize target data from properties stored in the module.
-  explicit DataLayout(const Module *M);
+  /// Constructs a DataLayout from a specification string.
+  /// WARNING: Aborts execution if the string is malformed. Use parse() instead.
+  explicit DataLayout(StringRef LayoutString);
 
   DataLayout(const DataLayout &DL) { *this = DL; }
 
   ~DataLayout(); // Not virtual, do not subclass this class
 
-  DataLayout &operator=(const DataLayout &DL) {
-    clear();
-    StringRepresentation = DL.StringRepresentation;
-    BigEndian = DL.isBigEndian();
-    AllocaAddrSpace = DL.AllocaAddrSpace;
-    StackNaturalAlign = DL.StackNaturalAlign;
-    FunctionPtrAlign = DL.FunctionPtrAlign;
-    TheFunctionPtrAlignType = DL.TheFunctionPtrAlignType;
-    ProgramAddrSpace = DL.ProgramAddrSpace;
-    DefaultGlobalsAddrSpace = DL.DefaultGlobalsAddrSpace;
-    ManglingMode = DL.ManglingMode;
-    LegalIntWidths = DL.LegalIntWidths;
-    IntAlignments = DL.IntAlignments;
-    FloatAlignments = DL.FloatAlignments;
-    VectorAlignments = DL.VectorAlignments;
-    StructAlignment = DL.StructAlignment;
-    Pointers = DL.Pointers;
-    NonIntegralAddressSpaces = DL.NonIntegralAddressSpaces;
-    return *this;
-  }
+  DataLayout &operator=(const DataLayout &Other);
 
   bool operator==(const DataLayout &Other) const;
   bool operator!=(const DataLayout &Other) const { return !(*this == Other); }
-
-  void init(const Module *M);
-
-  /// Parse a data layout string (with fallback to default values).
-  void reset(StringRef LayoutDescription);
 
   /// Parse a data layout string and return the layout. Return an error
   /// description on failure.

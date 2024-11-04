@@ -1264,7 +1264,7 @@ public:
                                        SourceLocation LParenLoc,
                                        SourceLocation EndLoc);
   /// Called on well-formed 'thread_limit' clause.
-  OMPClause *ActOnOpenMPThreadLimitClause(Expr *ThreadLimit,
+  OMPClause *ActOnOpenMPThreadLimitClause(ArrayRef<Expr *> VarList,
                                           SourceLocation StartLoc,
                                           SourceLocation LParenLoc,
                                           SourceLocation EndLoc);

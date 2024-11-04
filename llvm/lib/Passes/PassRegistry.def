@@ -21,6 +21,7 @@
 MODULE_ANALYSIS("callgraph", CallGraphAnalysis())
 MODULE_ANALYSIS("collector-metadata", CollectorMetadataAnalysis())
 MODULE_ANALYSIS("ctx-prof-analysis", CtxProfAnalysis(UseCtxProfile))
+MODULE_ANALYSIS("dxil-metadata", DXILMetadataAnalysis())
 MODULE_ANALYSIS("inline-advisor", InlineAdvisorAnalysis())
 MODULE_ANALYSIS("ir-similarity", IRSimilarityAnalysis())
 MODULE_ANALYSIS("lcg", LazyCallGraphAnalysis())
@@ -117,6 +118,7 @@ MODULE_PASS("print-must-be-executed-contexts",
             MustBeExecutedContextPrinterPass(dbgs()))
 MODULE_PASS("print-profile-summary", ProfileSummaryPrinterPass(dbgs()))
 MODULE_PASS("print-stack-safety", StackSafetyGlobalPrinterPass(dbgs()))
+MODULE_PASS("print<dxil-metadata>", DXILMetadataAnalysisPrinterPass(dbgs()))
 MODULE_PASS("print<inline-advisor>", InlineAdvisorAnalysisPrinterPass(dbgs()))
 MODULE_PASS("print<module-debuginfo>", ModuleDebugInfoPrinterPass(dbgs()))
 MODULE_PASS("pseudo-probe", SampleProfileProbePass(TM))
@@ -458,7 +460,6 @@ FUNCTION_PASS("slp-vectorizer", SLPVectorizerPass())
 FUNCTION_PASS("slsr", StraightLineStrengthReducePass())
 FUNCTION_PASS("stack-protector", StackProtectorPass(TM))
 FUNCTION_PASS("strip-gc-relocates", StripGCRelocates())
-FUNCTION_PASS("structurizecfg", StructurizeCFGPass())
 FUNCTION_PASS("tailcallelim", TailCallElimPass())
 FUNCTION_PASS("tlshoist", TLSVariableHoistPass())
 FUNCTION_PASS("transform-warning", WarnMissedTransformationsPass())
@@ -587,11 +588,21 @@ FUNCTION_PASS_WITH_PARAMS(
     [](SROAOptions PreserveCFG) { return SROAPass(PreserveCFG); },
     parseSROAOptions, "preserve-cfg;modify-cfg")
 FUNCTION_PASS_WITH_PARAMS(
+  "structurizecfg", "StructurizeCFG",
+  [](bool SkipUniformRegions) {
+    return StructurizeCFGPass(SkipUniformRegions);
+  },
+  parseStructurizeCFGPassOptions, "skip-uniform-regions")
+FUNCTION_PASS_WITH_PARAMS(
     "win-eh-prepare", "WinEHPreparePass",
     [](bool DemoteCatchSwitchPHIOnly) {
       return WinEHPreparePass(DemoteCatchSwitchPHIOnly);
     },
     parseWinEHPrepareOptions, "demote-catchswitch-only")
+FUNCTION_PASS_WITH_PARAMS(
+    "rtsan", "RealtimeSanitizerPass",
+    [](RealtimeSanitizerOptions Opts) { return RealtimeSanitizerPass(Opts); },
+    parseRtSanPassOptions, "")
 #undef FUNCTION_PASS_WITH_PARAMS
 
 #ifndef LOOPNEST_PASS

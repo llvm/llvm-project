@@ -410,3 +410,14 @@ define i8 @caller15_okay_intersect_ranges() {
   call void @use.val(i8 %r)
   ret i8 %r
 }
+
+define i8 @caller16_not_intersecting_ranges() {
+; CHECK-LABEL: define i8 @caller16_not_intersecting_ranges() {
+; CHECK-NEXT:    [[R_I:%.*]] = call range(i8 0, 0) i8 @val8()
+; CHECK-NEXT:    call void @use.val(i8 [[R_I]])
+; CHECK-NEXT:    ret i8 [[R_I]]
+;
+  %r = call range(i8 0, 5) i8 @callee15()
+  call void @use.val(i8 %r)
+  ret i8 %r
+}

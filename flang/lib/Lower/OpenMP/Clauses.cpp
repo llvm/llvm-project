@@ -935,8 +935,9 @@ NumTasks make(const parser::OmpClause::NumTasks &inp,
 NumTeams make(const parser::OmpClause::NumTeams &inp,
               semantics::SemanticsContext &semaCtx) {
   // inp.v -> parser::ScalarIntExpr
-  return NumTeams{{/*LowerBound=*/std::nullopt,
-                   /*UpperBound=*/makeExpr(inp.v, semaCtx)}};
+  List<NumTeams::Range> v{{{/*LowerBound=*/std::nullopt,
+                            /*UpperBound=*/makeExpr(inp.v, semaCtx)}}};
+  return NumTeams{/*List=*/v};
 }
 
 NumThreads make(const parser::OmpClause::NumThreads &inp,

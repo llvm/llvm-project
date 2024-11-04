@@ -2892,3 +2892,7 @@ void TextNodeDumper::VisitEmbedExpr(const EmbedExpr *S) {
   AddChild("begin", [=] { OS << S->getStartingElementPos(); });
   AddChild("number of elements", [=] { OS << S->getDataElementCount(); });
 }
+
+void TextNodeDumper::VisitAtomicExpr(const AtomicExpr *AE) {
+  OS << ' ' << AE->getOpAsString();
+}

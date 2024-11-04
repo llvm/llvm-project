@@ -14,12 +14,12 @@
 
 namespace llvm {
 
-class AMDGPUTargetMachine;
+class GCNTargetMachine;
 
 class AMDGPUCodeGenPassBuilder
-    : public CodeGenPassBuilder<AMDGPUCodeGenPassBuilder, AMDGPUTargetMachine> {
+    : public CodeGenPassBuilder<AMDGPUCodeGenPassBuilder, GCNTargetMachine> {
 public:
-  AMDGPUCodeGenPassBuilder(AMDGPUTargetMachine &TM,
+  AMDGPUCodeGenPassBuilder(GCNTargetMachine &TM,
                            const CGPassBuilderOption &Opts,
                            PassInstrumentationCallbacks *PIC);
 

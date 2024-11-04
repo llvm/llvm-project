@@ -169,21 +169,3 @@ s_load_b96 s[20:22], s[2:3], s0
 
 s_buffer_load_b96 s[20:22], s[4:7], s0
 // GFX11: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
-
-v_mov_b16 v0.l, s0.h
-// GFX11: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
-
-v_mov_b16 v0.l, ttmp0.h
-// GFX11: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
-
-v_mov_b16 v0.l, a0.h
-// GFX11: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
-
-v_mov_b16 v0.l, s0.h
-// GFX11: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
-
-v_mov_b16 v0.l, ttmp0.h
-// GFX11: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
-
-v_mov_b16 v0.l, a0.h
-// GFX11: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction

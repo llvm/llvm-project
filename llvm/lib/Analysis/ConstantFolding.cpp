@@ -3400,8 +3400,9 @@ ConstantFoldScalarFrexpCall(Constant *Op, Type *IntTy) {
 
   // The exponent is an "unspecified value" for inf/nan. We use zero to avoid
   // using undef.
-  Constant *Result1 = FrexpMant.isFinite() ? ConstantInt::get(IntTy, FrexpExp)
-                                           : ConstantInt::getNullValue(IntTy);
+  Constant *Result1 = FrexpMant.isFinite()
+                          ? ConstantInt::getSigned(IntTy, FrexpExp)
+                          : ConstantInt::getNullValue(IntTy);
   return {Result0, Result1};
 }
 

@@ -16,6 +16,12 @@ functions:
     return_type: int
     arguments:
       - type: int
+  - name: isascii
+    standards:
+      - POSIX
+    return_type: int
+    arguments:
+      - type: int
   - name: isblank
     standards:
       - stdc
@@ -76,6 +82,12 @@ functions:
     return_type: int
     arguments:
       - type: int
+  - name: toascii
+    standards:
+      - GNUExtensions
+    return_type: int
+    arguments:
+      - type: int
   - name: tolower
     standards:
       - stdc
@@ -88,16 +100,4 @@ functions:
     return_type: int
     arguments:
       - type: int
-    functions:
-  - name: isascii
-    standards:
-      - POSIX
-    return_type: int
-    arguments:
-      - type: int
-  - name: toascii
-    standards:
-      - GNUExtensions
-    return_type: int
-    arguments:
-      - type: int
+    functions: null

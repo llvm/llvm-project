@@ -23,10 +23,10 @@ public:
 };
 
 // CHECK-LABEL: define dso_local noundef i32 @{{.*}}func1{{.*}}(
-// CHECK:         [[A_ADDR:%.*]] = getelementptr inbounds %class.B, ptr {{%.*}}, i32 0, i32 0, !dbg [[DBG1:![0-9]+]]
+// CHECK:         [[A_ADDR:%.*]] = getelementptr inbounds nuw %class.B, ptr {{%.*}}, i32 0, i32 0, !dbg [[DBG1:![0-9]+]]
 // CHECK-NEXT:    [[A:%.*]] = load ptr, ptr [[A_ADDR]], align {{.*}}, !dbg [[DBG1]]
 // CHECK-NEXT:      #dbg_value(ptr [[A]], [[META1:![0-9]+]], !DIExpression(), [[DBG1]])
-// CHECK-NEXT:    {{%.*}} = getelementptr inbounds %class.A, ptr [[A]], i32 0, i32 0,
+// CHECK-NEXT:    {{%.*}} = getelementptr inbounds nuw %class.A, ptr [[A]], i32 0, i32 0,
 int func1(B *b) {
   return b->a->i;
 }
@@ -36,7 +36,7 @@ int func1(B *b) {
 // CHECK:           #dbg_declare(ptr [[B_ADDR:%.*]], [[META2:![0-9]+]], !DIExpression(),
 // CHECK-NEXT:    [[B:%.*]] = load ptr, ptr [[B_ADDR]],
 // CHECK-NEXT:      #dbg_value(ptr [[B]], [[META3:![0-9]+]], !DIExpression(),
-// CHECK-NEXT:    {{%.*}} = getelementptr inbounds %class.B, ptr [[B]], i32 0,
+// CHECK-NEXT:    {{%.*}} = getelementptr inbounds nuw %class.B, ptr [[B]], i32 0,
 A* func2(void *b) {
   return ((B*)b)->a;
 }
@@ -52,13 +52,13 @@ int func3(B *b) {
 }
 
 // CHECK-LABEL: define dso_local noundef signext i8 @{{.*}}func4{{.*}}(
-// CHECK:         [[A_ADDR:%.*]] = getelementptr inbounds %class.C, ptr {{%.*}}, i32 0, i32 1
+// CHECK:         [[A_ADDR:%.*]] = getelementptr inbounds nuw %class.C, ptr {{%.*}}, i32 0, i32 1
 // CHECK-NEXT:    [[A:%.*]] = load ptr, ptr [[A_ADDR]],
 // CHECK-NEXT:      #dbg_value(ptr [[A]], [[META6:![0-9]+]], !DIExpression(),
-// CHECK-NEXT:    {{%.*}} = getelementptr inbounds %class.A, ptr [[A]], i32 0, i32 0,
+// CHECK-NEXT:    {{%.*}} = getelementptr inbounds nuw %class.A, ptr [[A]], i32 0, i32 0,
 // CHECK:         [[CALL:%.*]] = call noundef ptr @{{.*}}foo{{.*}}(
 // CHECK-NEXT:      #dbg_value(ptr [[CALL]], [[META6]], !DIExpression(),
-// CHECK-NEXT:    [[I1:%.*]] = getelementptr inbounds %class.A, ptr [[CALL]], i32 0, i32 1
+// CHECK-NEXT:    [[I1:%.*]] = getelementptr inbounds nuw %class.A, ptr [[CALL]], i32 0, i32 1
 char func4(C *c) {
   extern A* foo(int x);
   return foo(c->a->i)->c;
@@ -69,7 +69,7 @@ char func4(C *c) {
 // CHECK:           #dbg_declare(ptr {{%.*}}, [[META8:![0-9]+]], !DIExpression(),
 // CHECK:         [[A_ADDR:%.*]] = getelementptr inbounds %class.A, ptr {{%.*}}, i64 {{%.*}},
 // CHECK-NEXT:      #dbg_value(ptr [[A_ADDR]], [[META9:![0-9]+]], !DIExpression(),
-// CHECK-NEXT:    {{%.*}} = getelementptr inbounds %class.A, ptr [[A_ADDR]], i32 0, i32 1,
+// CHECK-NEXT:    {{%.*}} = getelementptr inbounds nuw %class.A, ptr [[A_ADDR]], i32 0, i32 1,
 char func5(void *arr, int n) {
   return ((A*)arr)[n].c;
 }

@@ -1673,6 +1673,14 @@ public:
     return true;
   }
 
+  /// Returns true if the recipe only uses the first part of operand \p Op.
+  bool onlyFirstPartUsed(const VPValue *Op) const override {
+    assert(is_contained(operands(), Op) &&
+           "Op must be an operand of the recipe");
+    assert(getNumOperands() == 1 && "must have a single operand");
+    return true;
+  }
+
   VPVectorPointerRecipe *clone() override {
     return new VPVectorPointerRecipe(getOperand(0), IndexedTy, IsReverse,
                                      isInBounds(), getDebugLoc());

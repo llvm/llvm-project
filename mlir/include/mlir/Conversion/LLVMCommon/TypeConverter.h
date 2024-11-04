@@ -21,6 +21,7 @@
 namespace mlir {
 
 class DataLayoutAnalysis;
+class FunctionOpInterface;
 class LowerToLLVMOptions;
 
 namespace LLVM {
@@ -50,12 +51,24 @@ public:
   LLVMTypeConverter(MLIRContext *ctx, const LowerToLLVMOptions &options,
                     const DataLayoutAnalysis *analysis = nullptr);
 
-  /// Convert a function type.  The arguments and results are converted one by
+  /// Convert a function type. The arguments and results are converted one by
   /// one and results are packed into a wrapped LLVM IR structure type. `result`
   /// is populated with argument mapping.
   Type convertFunctionSignature(FunctionType funcTy, bool isVariadic,
                                 bool useBarePtrCallConv,
                                 SignatureConversion &result) const;
+
+  /// Convert a function type. The arguments and results are converted one by
+  /// one and results are packed into a wrapped LLVM IR structure type. `result`
+  /// is populated with argument mapping. Converted types of `llvm.byval` and
+  /// `llvm.byref` function arguments which are not LLVM pointers are overridden
+  /// with LLVM pointers. Overridden arguments are returned in
+  /// `byValRefNonPtrAttrs`.
+  Type convertFunctionSignature(FunctionOpInterface funcOp, bool isVariadic,
+                                bool useBarePtrCallConv,
+                                LLVMTypeConverter::SignatureConversion &result,
+                                SmallVectorImpl<std::optional<NamedAttribute>>
+                                    &byValRefNonPtrAttrs) const;
 
   /// Convert a non-empty list of types to be returned from a function into an
   /// LLVM-compatible type. In particular, if more than one value is returned,
@@ -159,11 +172,25 @@ protected:
   SmallVector<Type> &getCurrentThreadRecursiveStack();
 
 private:
-  /// Convert a function type.  The arguments and results are converted one by
-  /// one.  Additionally, if the function returns more than one value, pack the
+  /// Convert a function type. The arguments and results are converted one by
+  /// one. Additionally, if the function returns more than one value, pack the
   /// results into an LLVM IR structure type so that the converted function type
   /// returns at most one result.
   Type convertFunctionType(FunctionType type) const;
+
+  /// Common implementation for `convertFunctionSignature` methods. Convert a
+  /// function type. The arguments and results are converted one by one and
+  /// results are packed into a wrapped LLVM IR structure type. `result` is
+  /// populated with argument mapping. If `byValRefNonPtrAttrs` is provided,
+  /// converted types of `llvm.byval` and `llvm.byref` function arguments which
+  /// are not LLVM pointers are overridden with LLVM pointers. `llvm.byval` and
+  /// `llvm.byref` arguments that were already converted to LLVM pointer types
+  /// are removed from 'byValRefNonPtrAttrs`.
+  Type convertFunctionSignatureImpl(
+      FunctionType funcTy, bool isVariadic, bool useBarePtrCallConv,
+      LLVMTypeConverter::SignatureConversion &result,
+      SmallVectorImpl<std::optional<NamedAttribute>> *byValRefNonPtrAttrs)
+      const;
 
   /// Convert the index type.  Uses llvmModule data layout to create an integer
   /// of the pointer bitwidth.

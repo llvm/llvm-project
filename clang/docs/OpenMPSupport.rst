@@ -363,7 +363,8 @@ considered for standardization. Please post on the
 | device extension             | `'ompx_bare' clause on 'target teams' construct                                   | :good:`prototyped`       | #66844, #70612                                         |
 |                              | <https://www.osti.gov/servlets/purl/2205717>`_                                    |                          |                                                        |
 +------------------------------+-----------------------------------------------------------------------------------+--------------------------+--------------------------------------------------------+
-| device extension             | Multi-dim 'num_teams' clause on 'target teams ompx_bare' construct                | :good:`partial`          | #99732, #101407                                        |
+| device extension             | Multi-dim 'num_teams' and 'thread_limit' clause on 'target teams ompx_bare'       | :good:`partial`          | #99732, #101407, #102715                               |
+|                              | construct                                                                         |                          |                                                        |
 +------------------------------+-----------------------------------------------------------------------------------+--------------------------+--------------------------------------------------------+
 
 .. _Discourse forums (Runtimes - OpenMP category): https://discourse.llvm.org/c/runtimes/openmp/35

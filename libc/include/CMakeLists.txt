@@ -420,6 +420,23 @@ add_header_macro(
     .llvm-libc-types.posix_spawn_file_actions_t
 )
 
+add_gen_header(
+  link
+  DEF_FILE link.h.def
+  GEN_HDR link.h
+  DEPENDS
+    .llvm_libc_common_h
+    .llvm-libc-macros.link_macros
+)
+
+add_gen_header(
+  elf
+  DEF_FILE elf.h.def
+  GEN_HDR elf.h
+  DEPENDS
+    .llvm-libc-macros.elf_macros
+)
+
 # TODO: Not all platforms will have a include/sys directory. Add the sys
 # directory and the targets for sys/*.h files conditional to the OS requiring
 # them.

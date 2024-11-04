@@ -1713,6 +1713,7 @@ enum : unsigned {
   NT_ARM_SSVE = 0x40b,
   NT_ARM_ZA = 0x40c,
   NT_ARM_ZT = 0x40d,
+  NT_ARM_FPMR = 0x40e,
 
   NT_FILE = 0x46494c45,
   NT_PRXFPREG = 0x46e62b7f,

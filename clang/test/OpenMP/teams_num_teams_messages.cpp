@@ -60,6 +60,9 @@ T tmain(T argc) {
 #pragma omp target
 #pragma omp teams num_teams (1, 2, 3) // expected-error {{only one expression allowed in 'num_teams' clause}}
   foo();
+#pragma omp target
+#pragma omp teams thread_limit(1, 2, 3) // expected-error {{only one expression allowed in 'thread_limit' clause}}
+  foo();
 
   return 0;
 }
@@ -116,6 +119,10 @@ int main(int argc, char **argv) {
 
 #pragma omp target
 #pragma omp teams num_teams (1, 2, 3) // expected-error {{only one expression allowed in 'num_teams' clause}}
+  foo();
+
+#pragma omp target
+#pragma omp teams thread_limit(1, 2, 3) // expected-error {{only one expression allowed in 'thread_limit' clause}}
   foo();
 
   return tmain<int, 10>(argc); // expected-note {{in instantiation of function template specialization 'tmain<int, 10>' requested here}}

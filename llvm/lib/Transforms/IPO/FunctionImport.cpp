@@ -174,20 +174,7 @@ static cl::opt<std::string> WorkloadDefinitions(
              "}"),
     cl::Hidden);
 
-static cl::opt<bool> ImportAssumeUniqueLocal(
-    "import-assume-unique-local", cl::init(false),
-    cl::desc(
-        "By default, a local-linkage global variable won't be imported in the "
-        "edge mod1:func -> mod2:local-var (from value profiles) since compiler "
-        "cannot assume mod2 is compiled with full path which gives local-var a "
-        "program-wide unique GUID. Set this option to true will help cross "
-        "module import of such variables. This is only safe if the compiler "
-        "user specify the full module path."),
-    cl::Hidden);
-
-static cl::opt<std::string>
-    ContextualProfile("thinlto-pgo-ctx-prof",
-                      cl::desc("Path to a contextual profile."), cl::Hidden);
+extern cl::opt<std::string> UseCtxProfile;
 
 namespace llvm {
 extern cl::opt<bool> EnableMemProfContextDisambiguation;
@@ -214,9 +201,8 @@ static std::unique_ptr<Module> loadFile(const std::string &FileName,
 static bool shouldSkipLocalInAnotherModule(const GlobalValueSummary *RefSummary,
                                            size_t NumDefs,
                                            StringRef ImporterModule) {
-  // We can import a local from another module if all inputs are compiled
-  // with full paths or when there is one definition.
-  if (ImportAssumeUniqueLocal || NumDefs == 1)
+  // We can import a local when there is one definition.
+  if (NumDefs == 1)
     return false;
   // In other cases, make sure we import the copy in the caller's module if the
   // referenced value has local linkage. The only time a local variable can
@@ -683,7 +669,7 @@ class WorkloadImportsManager : public ModuleImportsManager {
 
   void loadFromCtxProf() {
     std::error_code EC;
-    auto BufferOrErr = MemoryBuffer::getFileOrSTDIN(ContextualProfile);
+    auto BufferOrErr = MemoryBuffer::getFileOrSTDIN(UseCtxProfile);
     if (std::error_code EC = BufferOrErr.getError()) {
       report_fatal_error("Failed to open contextual profile file");
       return;
@@ -734,12 +720,12 @@ public:
       const ModuleSummaryIndex &Index,
       DenseMap<StringRef, FunctionImporter::ExportSetTy> *ExportLists)
       : ModuleImportsManager(IsPrevailing, Index, ExportLists) {
-    if (ContextualProfile.empty() == WorkloadDefinitions.empty()) {
+    if (UseCtxProfile.empty() == WorkloadDefinitions.empty()) {
       report_fatal_error(
           "Pass only one of: -thinlto-pgo-ctx-prof or -thinlto-workload-def");
       return;
     }
-    if (!ContextualProfile.empty())
+    if (!UseCtxProfile.empty())
       loadFromCtxProf();
     else
       loadFromJson();
@@ -761,7 +747,7 @@ std::unique_ptr<ModuleImportsManager> ModuleImportsManager::create(
         IsPrevailing,
     const ModuleSummaryIndex &Index,
     DenseMap<StringRef, FunctionImporter::ExportSetTy> *ExportLists) {
-  if (WorkloadDefinitions.empty() && ContextualProfile.empty()) {
+  if (WorkloadDefinitions.empty() && UseCtxProfile.empty()) {
     LLVM_DEBUG(dbgs() << "[Workload] Using the regular imports manager.\n");
     return std::unique_ptr<ModuleImportsManager>(
         new ModuleImportsManager(IsPrevailing, Index, ExportLists));

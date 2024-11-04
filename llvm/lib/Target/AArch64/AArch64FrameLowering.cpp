@@ -1394,6 +1394,18 @@ bool requiresGetVGCall(MachineFunction &MF) {
          !MF.getSubtarget<AArch64Subtarget>().hasSVE();
 }
 
+static bool requiresSaveVG(MachineFunction &MF) {
+  AArch64FunctionInfo *AFI = MF.getInfo<AArch64FunctionInfo>();
+  // For Darwin platforms we don't save VG for non-SVE functions, even if SME
+  // is enabled with streaming mode changes.
+  if (!AFI->hasStreamingModeChanges())
+    return false;
+  auto &ST = MF.getSubtarget<AArch64Subtarget>();
+  if (ST.isTargetDarwin())
+    return ST.hasSVE();
+  return true;
+}
+
 bool isVGInstruction(MachineBasicBlock::iterator MBBI) {
   unsigned Opc = MBBI->getOpcode();
   if (Opc == AArch64::CNTD_XPiI || Opc == AArch64::RDSVLI_XI ||
@@ -1430,8 +1442,7 @@ static MachineBasicBlock::iterator convertCalleeSaveRestoreToSPPrePostIncDec(
   // functions, we need to do this for both the streaming and non-streaming
   // vector length. Move past these instructions if necessary.
   MachineFunction &MF = *MBB.getParent();
-  AArch64FunctionInfo *AFI = MF.getInfo<AArch64FunctionInfo>();
-  if (AFI->hasStreamingModeChanges())
+  if (requiresSaveVG(MF))
     while (isVGInstruction(MBBI))
       ++MBBI;
 
@@ -1938,7 +1949,7 @@ void AArch64FrameLowering::emitPrologue(MachineFunction &MF,
   while (MBBI != End && MBBI->getFlag(MachineInstr::FrameSetup) &&
          !IsSVECalleeSave(MBBI)) {
     // Move past instructions generated to calculate VG
-    if (AFI->hasStreamingModeChanges())
+    if (requiresSaveVG(MF))
       while (isVGInstruction(MBBI))
         ++MBBI;
 
@@ -3754,7 +3765,7 @@ void AArch64FrameLowering::determineCalleeSaves(MachineFunction &MF,
   // non-streaming VG value.
   const Function &F = MF.getFunction();
   SMEAttrs Attrs(F);
-  if (AFI->hasStreamingModeChanges()) {
+  if (requiresSaveVG(MF)) {
     if (Attrs.hasStreamingBody() && !Attrs.hasStreamingInterface())
       CSStackSize += 16;
     else
@@ -3907,7 +3918,7 @@ bool AArch64FrameLowering::assignCalleeSavedSpillSlots(
   }
 
   // Insert VG into the list of CSRs, immediately before LR if saved.
-  if (AFI->hasStreamingModeChanges()) {
+  if (requiresSaveVG(MF)) {
     std::vector<CalleeSavedInfo> VGSaves;
     SMEAttrs Attrs(MF.getFunction());
 
@@ -4636,10 +4647,9 @@ MachineBasicBlock::iterator emitVGSaveRestore(MachineBasicBlock::iterator II,
 
 void AArch64FrameLowering::processFunctionBeforeFrameIndicesReplaced(
     MachineFunction &MF, RegScavenger *RS = nullptr) const {
-  AArch64FunctionInfo *AFI = MF.getInfo<AArch64FunctionInfo>();
   for (auto &BB : MF)
     for (MachineBasicBlock::iterator II = BB.begin(); II != BB.end();) {
-      if (AFI->hasStreamingModeChanges())
+      if (requiresSaveVG(MF))
         II = emitVGSaveRestore(II, this);
       if (StackTaggingMergeSetTag)
         II = tryMergeAdjacentSTG(II, this, RS);

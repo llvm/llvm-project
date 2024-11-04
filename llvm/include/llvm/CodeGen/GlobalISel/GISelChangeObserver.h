@@ -79,6 +79,9 @@ public:
     if (It != Observers.end())
       Observers.erase(It);
   }
+  // Removes all observers
+  void clearObservers() { Observers.clear(); }
+
   // API for Observer.
   void erasingInstr(MachineInstr &MI) override {
     for (auto &O : Observers)

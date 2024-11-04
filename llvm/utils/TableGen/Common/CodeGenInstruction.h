@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_UTILS_TABLEGEN_CODEGENINSTRUCTION_H
-#define LLVM_UTILS_TABLEGEN_CODEGENINSTRUCTION_H
+#ifndef LLVM_UTILS_TABLEGEN_COMMON_CODEGENINSTRUCTION_H
+#define LLVM_UTILS_TABLEGEN_COMMON_CODEGENINSTRUCTION_H
 
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/StringMap.h"
@@ -344,4 +344,4 @@ private:
 };
 } // namespace llvm
 
-#endif
+#endif // LLVM_UTILS_TABLEGEN_COMMON_CODEGENINSTRUCTION_H

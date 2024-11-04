@@ -4707,8 +4707,7 @@ static bool SoleWriteToDeadLocal(Instruction *I, TargetLibraryInfo &TLI) {
   pushUsers(*AI);
   while (!AllocaUsers.empty()) {
     auto *UserI = cast<Instruction>(AllocaUsers.pop_back_val());
-    if (isa<BitCastInst>(UserI) || isa<GetElementPtrInst>(UserI) ||
-        isa<AddrSpaceCastInst>(UserI)) {
+    if (isa<GetElementPtrInst>(UserI) || isa<AddrSpaceCastInst>(UserI)) {
       pushUsers(*UserI);
       continue;
     }

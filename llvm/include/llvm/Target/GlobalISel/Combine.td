@@ -1107,7 +1107,9 @@ def reassocs : GICombineGroup<[reassoc_ptradd, reassoc_comm_binops]>;
 // Constant fold operations.
 def constant_fold_binop : GICombineRule<
   (defs root:$d, apint_matchinfo:$matchinfo),
-  (match (wip_match_opcode G_ADD, G_SUB, G_MUL, G_AND, G_OR, G_XOR, G_SHL, G_LSHR, G_ASHR):$d,
+  (match (wip_match_opcode G_ADD, G_PTR_ADD, G_AND, G_ASHR, G_LSHR, G_MUL, G_OR,
+                           G_SHL, G_SUB, G_XOR, G_UDIV, G_SDIV, G_UREM, G_SREM,
+                           G_SMIN, G_SMAX, G_UMIN, G_UMAX):$d,
    [{ return Helper.matchConstantFoldBinOp(*${d}, ${matchinfo}); }]),
   (apply [{ Helper.replaceInstWithConstant(*${d}, ${matchinfo}); }])>;
 
@@ -1747,6 +1749,56 @@ def APlusBMinusCPlusA : GICombineRule<
           (G_ADD $root, $A, $sub1)),
    (apply (G_SUB $root, $B, $C))>;
 
+// fold (A+C1)-C2 -> A+(C1-C2)
+def APlusC1MinusC2: GICombineRule<
+   (defs root:$root, build_fn_matchinfo:$matchinfo),
+   (match (G_CONSTANT $c2, $imm2),
+          (G_CONSTANT $c1, $imm1),
+          (G_ADD $add, $A, $c1),
+          (G_SUB $root, $add, $c2):$root,
+   [{ return Helper.matchFoldAPlusC1MinusC2(*${root}, ${matchinfo}); }]),
+   (apply [{ Helper.applyBuildFn(*${root}, ${matchinfo}); }])>;
+
+// fold C2-(A+C1) -> (C2-C1)-A
+def C2MinusAPlusC1: GICombineRule<
+   (defs root:$root, build_fn_matchinfo:$matchinfo),
+   (match (G_CONSTANT $c2, $imm2),
+          (G_CONSTANT $c1, $imm1),
+          (G_ADD $add, $A, $c1),
+          (G_SUB $root, $c2, $add):$root,
+   [{ return Helper.matchFoldC2MinusAPlusC1(*${root}, ${matchinfo}); }]),
+   (apply [{ Helper.applyBuildFn(*${root}, ${matchinfo}); }])>;
+
+// fold (A-C1)-C2 -> A-(C1+C2)
+def AMinusC1MinusC2: GICombineRule<
+   (defs root:$root, build_fn_matchinfo:$matchinfo),
+   (match (G_CONSTANT $c2, $imm2),
+          (G_CONSTANT $c1, $imm1),
+          (G_SUB $sub1, $A, $c1),
+          (G_SUB $root, $sub1, $c2):$root,
+   [{ return Helper.matchFoldAMinusC1MinusC2(*${root}, ${matchinfo}); }]),
+   (apply [{ Helper.applyBuildFn(*${root}, ${matchinfo}); }])>;
+
+// fold (C1-A)-C2 -> (C1-C2)-A
+def C1Minus2MinusC2: GICombineRule<
+   (defs root:$root, build_fn_matchinfo:$matchinfo),
+   (match (G_CONSTANT $c2, $imm2),
+          (G_CONSTANT $c1, $imm1),
+          (G_SUB $sub1, $c1, $A),
+          (G_SUB $root, $sub1, $c2):$root,
+   [{ return Helper.matchFoldC1Minus2MinusC2(*${root}, ${matchinfo}); }]),
+   (apply [{ Helper.applyBuildFn(*${root}, ${matchinfo}); }])>;
+
+// fold ((A-C1)+C2) -> (A+(C2-C1))
+def AMinusC1PlusC2: GICombineRule<
+   (defs root:$root, build_fn_matchinfo:$matchinfo),
+   (match (G_CONSTANT $c2, $imm2),
+          (G_CONSTANT $c1, $imm1),
+          (G_SUB $sub, $A, $c1),
+          (G_ADD $root, $sub, $c2):$root,
+   [{ return Helper.matchFoldAMinusC1PlusC2(*${root}, ${matchinfo}); }]),
+   (apply [{ Helper.applyBuildFn(*${root}, ${matchinfo}); }])>;
+
 def integer_reassoc_combines: GICombineGroup<[
   ZeroMinusAPlusB,
   APlusZeroMinusB,
@@ -1755,7 +1807,12 @@ def integer_reassoc_combines: GICombineGroup<[
   AMinusBPlusCMinusA,
   AMinusBPlusBMinusC,
   APlusBMinusAplusC,
-  APlusBMinusCPlusA
+  APlusBMinusCPlusA,
+  APlusC1MinusC2,
+  C2MinusAPlusC1,
+  AMinusC1MinusC2,
+  C1Minus2MinusC2,
+  AMinusC1PlusC2
 ]>;
 
 def freeze_of_non_undef_non_poison : GICombineRule<

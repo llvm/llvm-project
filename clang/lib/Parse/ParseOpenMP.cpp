@@ -3175,7 +3175,6 @@ OMPClause *Parser::ParseOpenMPClause(OpenMPDirectiveKind DKind,
   case OMPC_simdlen:
   case OMPC_collapse:
   case OMPC_ordered:
-  case OMPC_thread_limit:
   case OMPC_priority:
   case OMPC_grainsize:
   case OMPC_num_tasks:
@@ -3332,6 +3331,7 @@ OMPClause *Parser::ParseOpenMPClause(OpenMPDirectiveKind DKind,
                  : ParseOpenMPClause(CKind, WrongDirective);
     break;
   case OMPC_num_teams:
+  case OMPC_thread_limit:
     if (!FirstClause) {
       Diag(Tok, diag::err_omp_more_one_clause)
           << getOpenMPDirectiveName(DKind) << getOpenMPClauseName(CKind) << 0;

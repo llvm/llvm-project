@@ -414,6 +414,22 @@ llvm.func @struct_wrong_element_types() -> !llvm.struct<(!llvm.array<2 x f64>, !
 
 // -----
 
+llvm.func @const_wrong_number_of_elements() -> vector<5xf64> {
+  // expected-error @+1{{type and attribute have a different number of elements: 5 vs. 2}}
+  %0 = llvm.mlir.constant(dense<[1.0, 1.0]> : tensor<2xf64>) : vector<5xf64>
+  llvm.return %0 : vector<5xf64>
+}
+
+// -----
+
+llvm.func @scalable_vec_requires_splat() -> vector<[4]xf64> {
+  // expected-error @+1{{scalable vector type requires a splat attribute}}
+  %0 = llvm.mlir.constant(dense<[1.0, 1.0, 2.0, 2.0]> : tensor<4xf64>) : vector<[4]xf64>
+  llvm.return %0 : vector<[4]xf64>
+}
+
+// -----
+
 func.func @insertvalue_non_llvm_type(%a : i32, %b : i32) {
   // expected-error@+2 {{expected LLVM IR Dialect type}}
   llvm.insertvalue %a, %b[0] : tensor<*xi32>

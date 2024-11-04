@@ -98,8 +98,10 @@ def warn_drv_amdgpu_cov6: Warning<
   "code object v6 is still in development and not ready for production use yet;"
   " use at your own risk">;
 def err_drv_undetermined_gpu_arch : Error<
-  "cannot determine %0 architecture: %1; consider passing it via "
-  "'%2'">;
+  "cannot determine %0 architecture: %1; consider passing it via '%2'; "
+  "environment variable CLANG_TOOLCHAIN_PROGRAM_TIMEOUT specifies the tool "
+  "timeout (integer secs, <=0 is infinite)">;
+
 def warn_drv_multi_gpu_arch : Warning<
   "multiple %0 architectures are detected: %1; only the first one is used for "
   "'%2'">, InGroup<MultiGPU>;

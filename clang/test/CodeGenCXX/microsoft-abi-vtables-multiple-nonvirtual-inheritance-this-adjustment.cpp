@@ -188,7 +188,7 @@ void C::g(NonTrivial o) {
 }
 
 // BITCODE-LABEL: define dso_local void @"?g@C@pr30293@@UAAXUNonTrivial@2@@Z"(ptr inalloca(<{ ptr, %"struct.pr30293::NonTrivial" }>) %0)
-// BITCODE: %[[thisaddr:[^ ]*]] = getelementptr inbounds <{ ptr, %"struct.pr30293::NonTrivial" }>, ptr {{.*}}, i32 0, i32 0
+// BITCODE: %[[thisaddr:[^ ]*]] = getelementptr inbounds nuw <{ ptr, %"struct.pr30293::NonTrivial" }>, ptr {{.*}}, i32 0, i32 0
 // BITCODE: %[[this1:[^ ]*]] = load ptr, ptr %[[thisaddr]], align 4
 // BITCODE: %[[this3:[^ ]*]] = getelementptr inbounds i8, ptr %[[this1]], i32 -4
 // BITCODE: store ptr %[[this3]], ptr @"?whatsthis@pr30293@@3PAUC@1@A", align 4

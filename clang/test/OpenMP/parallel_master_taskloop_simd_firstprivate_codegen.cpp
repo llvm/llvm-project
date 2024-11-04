@@ -298,18 +298,18 @@ void array_func(int n, float a[n], St s[2]) {
 // CHECK-NEXT:    [[TMP6:%.*]] = icmp ne i32 [[TMP5]], 0
 // CHECK-NEXT:    br i1 [[TMP6]], label [[OMP_IF_THEN:%.*]], label [[OMP_IF_END:%.*]]
 // CHECK:       omp_if.then:
-// CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds [[STRUCT_ANON]], ptr [[AGG_CAPTURED]], i32 0, i32 0
+// CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds nuw [[STRUCT_ANON]], ptr [[AGG_CAPTURED]], i32 0, i32 0
 // CHECK-NEXT:    store ptr [[TMP1]], ptr [[TMP7]], align 8
-// CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds [[STRUCT_ANON]], ptr [[AGG_CAPTURED]], i32 0, i32 1
+// CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds nuw [[STRUCT_ANON]], ptr [[AGG_CAPTURED]], i32 0, i32 1
 // CHECK-NEXT:    store ptr [[TMP2]], ptr [[TMP8]], align 8
 // CHECK-NEXT:    call void @__kmpc_taskgroup(ptr @[[GLOB1]], i32 [[TMP4]])
 // CHECK-NEXT:    [[TMP9:%.*]] = call ptr @__kmpc_omp_task_alloc(ptr @[[GLOB1]], i32 [[TMP4]], i32 9, i64 120, i64 16, ptr @.omp_task_entry.)
-// CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_T_WITH_PRIVATES:%.*]], ptr [[TMP9]], i32 0, i32 0
-// CHECK-NEXT:    [[TMP11:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_T:%.*]], ptr [[TMP10]], i32 0, i32 0
+// CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds nuw [[STRUCT_KMP_TASK_T_WITH_PRIVATES:%.*]], ptr [[TMP9]], i32 0, i32 0
+// CHECK-NEXT:    [[TMP11:%.*]] = getelementptr inbounds nuw [[STRUCT_KMP_TASK_T:%.*]], ptr [[TMP10]], i32 0, i32 0
 // CHECK-NEXT:    [[TMP12:%.*]] = load ptr, ptr [[TMP11]], align 8
 // CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[TMP12]], ptr align 8 [[AGG_CAPTURED]], i64 16, i1 false)
-// CHECK-NEXT:    [[TMP13:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_T_WITH_PRIVATES]], ptr [[TMP9]], i32 0, i32 1
-// CHECK-NEXT:    [[TMP14:%.*]] = getelementptr inbounds [[STRUCT__KMP_PRIVATES_T:%.*]], ptr [[TMP13]], i32 0, i32 0
+// CHECK-NEXT:    [[TMP13:%.*]] = getelementptr inbounds nuw [[STRUCT_KMP_TASK_T_WITH_PRIVATES]], ptr [[TMP9]], i32 0, i32 1
+// CHECK-NEXT:    [[TMP14:%.*]] = getelementptr inbounds nuw [[STRUCT__KMP_PRIVATES_T:%.*]], ptr [[TMP13]], i32 0, i32 0
 // CHECK-NEXT:    [[ARRAY_BEGIN:%.*]] = getelementptr inbounds [2 x %struct.S], ptr [[TMP14]], i32 0, i32 0
 // CHECK-NEXT:    [[TMP15:%.*]] = getelementptr inbounds [[STRUCT_S:%.*]], ptr [[ARRAY_BEGIN]], i64 2
 // CHECK-NEXT:    [[OMP_ARRAYCPY_ISEMPTY:%.*]] = icmp eq ptr [[ARRAY_BEGIN]], [[TMP15]]
@@ -323,25 +323,25 @@ void array_func(int n, float a[n], St s[2]) {
 // CHECK-NEXT:    [[OMP_ARRAYCPY_DONE:%.*]] = icmp eq ptr [[OMP_ARRAYCPY_DEST_ELEMENT]], [[TMP15]]
 // CHECK-NEXT:    br i1 [[OMP_ARRAYCPY_DONE]], label [[OMP_ARRAYCPY_DONE1]], label [[OMP_ARRAYCPY_BODY]]
 // CHECK:       omp.arraycpy.done1:
-// CHECK-NEXT:    [[TMP16:%.*]] = getelementptr inbounds [[STRUCT__KMP_PRIVATES_T]], ptr [[TMP13]], i32 0, i32 1
+// CHECK-NEXT:    [[TMP16:%.*]] = getelementptr inbounds nuw [[STRUCT__KMP_PRIVATES_T]], ptr [[TMP13]], i32 0, i32 1
 // CHECK-NEXT:    call void @_ZN1SIdEC1ERKS0_d(ptr noundef nonnull align 8 dereferenceable(8) [[TMP16]], ptr noundef nonnull align 8 dereferenceable(8) [[TMP2]], double noundef 0.000000e+00)
-// CHECK-NEXT:    [[TMP17:%.*]] = getelementptr inbounds [[STRUCT__KMP_PRIVATES_T]], ptr [[TMP13]], i32 0, i32 2
+// CHECK-NEXT:    [[TMP17:%.*]] = getelementptr inbounds nuw [[STRUCT__KMP_PRIVATES_T]], ptr [[TMP13]], i32 0, i32 2
 // CHECK-NEXT:    [[TMP18:%.*]] = load i32, ptr [[T_VAR_ADDR]], align 4
 // CHECK-NEXT:    store i32 [[TMP18]], ptr [[TMP17]], align 8
-// CHECK-NEXT:    [[TMP19:%.*]] = getelementptr inbounds [[STRUCT__KMP_PRIVATES_T]], ptr [[TMP13]], i32 0, i32 3
+// CHECK-NEXT:    [[TMP19:%.*]] = getelementptr inbounds nuw [[STRUCT__KMP_PRIVATES_T]], ptr [[TMP13]], i32 0, i32 3
 // CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[TMP19]], ptr align 4 [[TMP0]], i64 8, i1 false)
-// CHECK-NEXT:    [[TMP20:%.*]] = getelementptr inbounds [[STRUCT__KMP_PRIVATES_T]], ptr [[TMP13]], i32 0, i32 4
+// CHECK-NEXT:    [[TMP20:%.*]] = getelementptr inbounds nuw [[STRUCT__KMP_PRIVATES_T]], ptr [[TMP13]], i32 0, i32 4
 // CHECK-NEXT:    [[TMP21:%.*]] = load i32, ptr @_ZZ4mainE5sivar, align 4
 // CHECK-NEXT:    store i32 [[TMP21]], ptr [[TMP20]], align 4
-// CHECK-NEXT:    [[TMP22:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_T]], ptr [[TMP10]], i32 0, i32 3
+// CHECK-NEXT:    [[TMP22:%.*]] = getelementptr inbounds nuw [[STRUCT_KMP_TASK_T]], ptr [[TMP10]], i32 0, i32 3
 // CHECK-NEXT:    store ptr @.omp_task_destructor., ptr [[TMP22]], align 8
-// CHECK-NEXT:    [[TMP23:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_T]], ptr [[TMP10]], i32 0, i32 5
+// CHECK-NEXT:    [[TMP23:%.*]] = getelementptr inbounds nuw [[STRUCT_KMP_TASK_T]], ptr [[TMP10]], i32 0, i32 5
 // CHECK-NEXT:    store i64 0, ptr [[TMP23]], align 8
-// CHECK-NEXT:    [[TMP24:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_T]], ptr [[TMP10]], i32 0, i32 6
+// CHECK-NEXT:    [[TMP24:%.*]] = getelementptr inbounds nuw [[STRUCT_KMP_TASK_T]], ptr [[TMP10]], i32 0, i32 6
 // CHECK-NEXT:    store i64 9, ptr [[TMP24]], align 8
-// CHECK-NEXT:    [[TMP25:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_T]], ptr [[TMP10]], i32 0, i32 7
+// CHECK-NEXT:    [[TMP25:%.*]] = getelementptr inbounds nuw [[STRUCT_KMP_TASK_T]], ptr [[TMP10]], i32 0, i32 7
 // CHECK-NEXT:    store i64 1, ptr [[TMP25]], align 8
-// CHECK-NEXT:    [[TMP26:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_T]], ptr [[TMP10]], i32 0, i32 9
+// CHECK-NEXT:    [[TMP26:%.*]] = getelementptr inbounds nuw [[STRUCT_KMP_TASK_T]], ptr [[TMP10]], i32 0, i32 9
 // CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 8 [[TMP26]], i8 0, i64 8, i1 false)
 // CHECK-NEXT:    [[TMP27:%.*]] = load i64, ptr [[TMP25]], align 8
 // CHECK-NEXT:    call void @__kmpc_taskloop(ptr @[[GLOB1]], i32 [[TMP4]], ptr [[TMP9]], i32 1, ptr [[TMP23]], ptr [[TMP24]], i64 [[TMP27]], i32 1, i32 0, i64 0, ptr @.omp_task_dup.)
@@ -368,19 +368,19 @@ void array_func(int n, float a[n], St s[2]) {
 // CHECK-NEXT:    store ptr [[TMP4]], ptr [[DOTADDR4]], align 8
 // CHECK-NEXT:    store ptr [[TMP5]], ptr [[DOTADDR5]], align 8
 // CHECK-NEXT:    [[TMP6:%.*]] = load ptr, ptr [[DOTADDR]], align 8
-// CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds [[STRUCT__KMP_PRIVATES_T:%.*]], ptr [[TMP6]], i32 0, i32 0
+// CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds nuw [[STRUCT__KMP_PRIVATES_T:%.*]], ptr [[TMP6]], i32 0, i32 0
 // CHECK-NEXT:    [[TMP8:%.*]] = load ptr, ptr [[DOTADDR3]], align 8
 // CHECK-NEXT:    store ptr [[TMP7]], ptr [[TMP8]], align 8
-// CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds [[STRUCT__KMP_PRIVATES_T]], ptr [[TMP6]], i32 0, i32 1
+// CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds nuw [[STRUCT__KMP_PRIVATES_T]], ptr [[TMP6]], i32 0, i32 1
 // CHECK-NEXT:    [[TMP10:%.*]] = load ptr, ptr [[DOTADDR1]], align 8
 // CHECK-NEXT:    store ptr [[TMP9]], ptr [[TMP10]], align 8
-// CHECK-NEXT:    [[TMP11:%.*]] = getelementptr inbounds [[STRUCT__KMP_PRIVATES_T]], ptr [[TMP6]], i32 0, i32 2
+// CHECK-NEXT:    [[TMP11:%.*]] = getelementptr inbounds nuw [[STRUCT__KMP_PRIVATES_T]], ptr [[TMP6]], i32 0, i32 2
 // CHECK-NEXT:    [[TMP12:%.*]] = load ptr, ptr [[DOTADDR2]], align 8
 // CHECK-NEXT:    store ptr [[TMP11]], ptr [[TMP12]], align 8
-// CHECK-NEXT:    [[TMP13:%.*]] = getelementptr inbounds [[STRUCT__KMP_PRIVATES_T]], ptr [[TMP6]], i32 0, i32 3
+// CHECK-NEXT:    [[TMP13:%.*]] = getelementptr inbounds nuw [[STRUCT__KMP_PRIVATES_T]], ptr [[TMP6]], i32 0, i32 3
 // CHECK-NEXT:    [[TMP14:%.*]] = load ptr, ptr [[DOTADDR4]], align 8
 // CHECK-NEXT:    store ptr [[TMP13]], ptr [[TMP14]], align 8
-// CHECK-NEXT:    [[TMP15:%.*]] = getelementptr inbounds [[STRUCT__KMP_PRIVATES_T]], ptr [[TMP6]], i32 0, i32 4
+// CHECK-NEXT:    [[TMP15:%.*]] = getelementptr inbounds nuw [[STRUCT__KMP_PRIVATES_T]], ptr [[TMP6]], i32 0, i32 4
 // CHECK-NEXT:    [[TMP16:%.*]] = load ptr, ptr [[DOTADDR5]], align 8
 // CHECK-NEXT:    store ptr [[TMP15]], ptr [[TMP16]], align 8
 // CHECK-NEXT:    ret void
@@ -413,20 +413,20 @@ void array_func(int n, float a[n], St s[2]) {
 // CHECK-NEXT:    store ptr [[TMP1]], ptr [[DOTADDR1]], align 8
 // CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[DOTADDR]], align 4
 // CHECK-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[DOTADDR1]], align 8
-// CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_T_WITH_PRIVATES:%.*]], ptr [[TMP3]], i32 0, i32 0
-// CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_T:%.*]], ptr [[TMP4]], i32 0, i32 2
-// CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_T]], ptr [[TMP4]], i32 0, i32 0
+// CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds nuw [[STRUCT_KMP_TASK_T_WITH_PRIVATES:%.*]], ptr [[TMP3]], i32 0, i32 0
+// CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds nuw [[STRUCT_KMP_TASK_T:%.*]], ptr [[TMP4]], i32 0, i32 2
+// CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds nuw [[STRUCT_KMP_TASK_T]], ptr [[TMP4]], i32 0, i32 0
 // CHECK-NEXT:    [[TMP7:%.*]] = load ptr, ptr [[TMP6]], align 8
-// CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_T_WITH_PRIVATES]], ptr [[TMP3]], i32 0, i32 1
-// CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_T]], ptr [[TMP4]], i32 0, i32 5
+// CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds nuw [[STRUCT_KMP_TASK_T_WITH_PRIVATES]], ptr [[TMP3]], i32 0, i32 1
+// CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds nuw [[STRUCT_KMP_TASK_T]], ptr [[TMP4]], i32 0, i32 5
 // CHECK-NEXT:    [[TMP10:%.*]] = load i64, ptr [[TMP9]], align 8
-// CHECK-NEXT:    [[TMP11:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_T]], ptr [[TMP4]], i32 0, i32 6
+// CHECK-NEXT:    [[TMP11:%.*]] = getelementptr inbounds nuw [[STRUCT_KMP_TASK_T]], ptr [[TMP4]], i32 0, i32 6
 // CHECK-NEXT:    [[TMP12:%.*]] = load i64, ptr [[TMP11]], align 8
-// CHECK-NEXT:    [[TMP13:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_T]], ptr [[TMP4]], i32 0, i32 7
+// CHECK-NEXT:    [[TMP13:%.*]] = getelementptr inbounds nuw [[STRUCT_KMP_TASK_T]], ptr [[TMP4]], i32 0, i32 7
 // CHECK-NEXT:    [[TMP14:%.*]] = load i64, ptr [[TMP13]], align 8
-// CHECK-NEXT:    [[TMP15:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_T]], ptr [[TMP4]], i32 0, i32 8
+// CHECK-NEXT:    [[TMP15:%.*]] = getelementptr inbounds nuw [[STRUCT_KMP_TASK_T]], ptr [[TMP4]], i32 0, i32 8
 // CHECK-NEXT:    [[TMP16:%.*]] = load i32, ptr [[TMP15]], align 8
-// CHECK-NEXT:    [[TMP17:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_T]], ptr [[TMP4]], i32 0, i32 9
+// CHECK-NEXT:    [[TMP17:%.*]] = getelementptr inbounds nuw [[STRUCT_KMP_TASK_T]], ptr [[TMP4]], i32 0, i32 9
 // CHECK-NEXT:    [[TMP18:%.*]] = load ptr, ptr [[TMP17]], align 8
 // CHECK-NEXT:    call void @llvm.experimental.noalias.scope.decl(metadata [[META3:![0-9]+]])
 // CHECK-NEXT:    call void @llvm.experimental.noalias.scope.decl(metadata [[META6:![0-9]+]])
@@ -489,12 +489,12 @@ void array_func(int n, float a[n], St s[2]) {
 // CHECK-NEXT:    store i32 [[TMP2]], ptr [[DOTADDR2]], align 4
 // CHECK-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[DOTADDR]], align 8
 // CHECK-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[DOTADDR1]], align 8
-// CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_T_WITH_PRIVATES:%.*]], ptr [[TMP4]], i32 0, i32 0
-// CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_T:%.*]], ptr [[TMP5]], i32 0, i32 0
+// CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds nuw [[STRUCT_KMP_TASK_T_WITH_PRIVATES:%.*]], ptr [[TMP4]], i32 0, i32 0
+// CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds nuw [[STRUCT_KMP_TASK_T:%.*]], ptr [[TMP5]], i32 0, i32 0
 // CHECK-NEXT:    [[TMP7:%.*]] = load ptr, ptr [[TMP6]], align 8
-// CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_T_WITH_PRIVATES]], ptr [[TMP3]], i32 0, i32 1
-// CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds [[STRUCT__KMP_PRIVATES_T:%.*]], ptr [[TMP8]], i32 0, i32 0
-// CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds [[STRUCT_ANON:%.*]], ptr [[TMP7]], i32 0, i32 0
+// CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds nuw [[STRUCT_KMP_TASK_T_WITH_PRIVATES]], ptr [[TMP3]], i32 0, i32 1
+// CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds nuw [[STRUCT__KMP_PRIVATES_T:%.*]], ptr [[TMP8]], i32 0, i32 0
+// CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds nuw [[STRUCT_ANON:%.*]], ptr [[TMP7]], i32 0, i32 0
 // CHECK-NEXT:    [[TMP11:%.*]] = load ptr, ptr [[TMP10]], align 8
 // CHECK-NEXT:    [[ARRAY_BEGIN:%.*]] = getelementptr inbounds [2 x %struct.S], ptr [[TMP9]], i32 0, i32 0
 // CHECK-NEXT:    [[TMP12:%.*]] = getelementptr inbounds [[STRUCT_S:%.*]], ptr [[ARRAY_BEGIN]], i64 2
@@ -509,8 +509,8 @@ void array_func(int n, float a[n], St s[2]) {
 // CHECK-NEXT:    [[OMP_ARRAYCPY_DONE:%.*]] = icmp eq ptr [[OMP_ARRAYCPY_DEST_ELEMENT]], [[TMP12]]
 // CHECK-NEXT:    br i1 [[OMP_ARRAYCPY_DONE]], label [[OMP_ARRAYCPY_DONE3]], label [[OMP_ARRAYCPY_BODY]]
 // CHECK:       omp.arraycpy.done3:
-// CHECK-NEXT:    [[TMP13:%.*]] = getelementptr inbounds [[STRUCT__KMP_PRIVATES_T]], ptr [[TMP8]], i32 0, i32 1
-// CHECK-NEXT:    [[TMP14:%.*]] = getelementptr inbounds [[STRUCT_ANON]], ptr [[TMP7]], i32 0, i32 1
+// CHECK-NEXT:    [[TMP13:%.*]] = getelementptr inbounds nuw [[STRUCT__KMP_PRIVATES_T]], ptr [[TMP8]], i32 0, i32 1
+// CHECK-NEXT:    [[TMP14:%.*]] = getelementptr inbounds nuw [[STRUCT_ANON]], ptr [[TMP7]], i32 0, i32 1
 // CHECK-NEXT:    [[TMP15:%.*]] = load ptr, ptr [[TMP14]], align 8
 // CHECK-NEXT:    call void @_ZN1SIdEC1ERKS0_d(ptr noundef nonnull align 8 dereferenceable(8) [[TMP13]], ptr noundef nonnull align 8 dereferenceable(8) [[TMP15]], double noundef 0.000000e+00)
 // CHECK-NEXT:    ret void
@@ -525,9 +525,9 @@ void array_func(int n, float a[n], St s[2]) {
 // CHECK-NEXT:    store i32 [[TMP0]], ptr [[DOTADDR]], align 4
 // CHECK-NEXT:    store ptr [[TMP1]], ptr [[DOTADDR1]], align 8
 // CHECK-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[DOTADDR1]], align 8
-// CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_T_WITH_PRIVATES:%.*]], ptr [[TMP2]], i32 0, i32 1
-// CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [[STRUCT__KMP_PRIVATES_T:%.*]], ptr [[TMP3]], i32 0, i32 0
-// CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds [[STRUCT__KMP_PRIVATES_T]], ptr [[TMP3]], i32 0, i32 1
+// CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds nuw [[STRUCT_KMP_TASK_T_WITH_PRIVATES:%.*]], ptr [[TMP2]], i32 0, i32 1
+// CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds nuw [[STRUCT__KMP_PRIVATES_T:%.*]], ptr [[TMP3]], i32 0, i32 0
+// CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds nuw [[STRUCT__KMP_PRIVATES_T]], ptr [[TMP3]], i32 0, i32 1
 // CHECK-NEXT:    call void @_ZN1SIdED1Ev(ptr noundef nonnull align 8 dereferenceable(8) [[TMP5]]) #[[ATTR4]]
 // CHECK-NEXT:    [[ARRAY_BEGIN:%.*]] = getelementptr inbounds [2 x %struct.S], ptr [[TMP4]], i32 0, i32 0
 // CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [[STRUCT_S:%.*]], ptr [[ARRAY_BEGIN]], i64 2
@@ -600,7 +600,7 @@ void array_func(int n, float a[n], St s[2]) {
 // CHECK-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 8
 // CHECK-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
-// CHECK-NEXT:    [[F:%.*]] = getelementptr inbounds [[STRUCT_S:%.*]], ptr [[THIS1]], i32 0, i32 0
+// CHECK-NEXT:    [[F:%.*]] = getelementptr inbounds nuw [[STRUCT_S:%.*]], ptr [[THIS1]], i32 0, i32 0
 // CHECK-NEXT:    store double 0.000000e+00, ptr [[F]], align 8
 // CHECK-NEXT:    ret void
 //
@@ -615,9 +615,9 @@ void array_func(int n, float a[n], St s[2]) {
 // CHECK-NEXT:    store ptr [[S]], ptr [[S_ADDR]], align 8
 // CHECK-NEXT:    store double [[T]], ptr [[T_ADDR]], align 8
 // CHECK-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
-// CHECK-NEXT:    [[F:%.*]] = getelementptr inbounds [[STRUCT_S:%.*]], ptr [[THIS1]], i32 0, i32 0
+// CHECK-NEXT:    [[F:%.*]] = getelementptr inbounds nuw [[STRUCT_S:%.*]], ptr [[THIS1]], i32 0, i32 0
 // CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[S_ADDR]], align 8
-// CHECK-NEXT:    [[F2:%.*]] = getelementptr inbounds [[STRUCT_S]], ptr [[TMP0]], i32 0, i32 0
+// CHECK-NEXT:    [[F2:%.*]] = getelementptr inbounds nuw [[STRUCT_S]], ptr [[TMP0]], i32 0, i32 0
 // CHECK-NEXT:    [[TMP1:%.*]] = load double, ptr [[F2]], align 8
 // CHECK-NEXT:    [[TMP2:%.*]] = load double, ptr [[T_ADDR]], align 8
 // CHECK-NEXT:    [[ADD:%.*]] = fadd double [[TMP1]], [[TMP2]]
@@ -633,7 +633,7 @@ void array_func(int n, float a[n], St s[2]) {
 // CHECK-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 8
 // CHECK-NEXT:    store double [[A]], ptr [[A_ADDR]], align 8
 // CHECK-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
-// CHECK-NEXT:    [[F:%.*]] = getelementptr inbounds [[STRUCT_S:%.*]], ptr [[THIS1]], i32 0, i32 0
+// CHECK-NEXT:    [[F:%.*]] = getelementptr inbounds nuw [[STRUCT_S:%.*]], ptr [[THIS1]], i32 0, i32 0
 // CHECK-NEXT:    [[TMP0:%.*]] = load double, ptr [[A_ADDR]], align 8
 // CHECK-NEXT:    store double [[TMP0]], ptr [[F]], align 8
 // CHECK-NEXT:    ret void
@@ -713,23 +713,23 @@ void array_func(int n, float a[n], St s[2]) {
 // CHECK-NEXT:    [[TMP6:%.*]] = icmp ne i32 [[TMP5]], 0
 // CHECK-NEXT:    br i1 [[TMP6]], label [[OMP_IF_THEN:%.*]], label [[OMP_IF_END:%.*]]
 // CHECK:       omp_if.then:
-// CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds [[STRUCT_ANON_1]], ptr [[AGG_CAPTURED]], i32 0, i32 0
+// CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds nuw [[STRUCT_ANON_1]], ptr [[AGG_CAPTURED]], i32 0, i32 0
 // CHECK-NEXT:    store ptr [[TMP1]], ptr [[TMP7]], align 8
-// CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds [[STRUCT_ANON_1]], ptr [[AGG_CAPTURED]], i32 0, i32 1
+// CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds nuw [[STRUCT_ANON_1]], ptr [[AGG_CAPTURED]], i32 0, i32 1
 // CHECK-NEXT:    store ptr [[TMP2]], ptr [[TMP8]], align 8
 // CHECK-NEXT:    call void @__kmpc_taskgroup(ptr @[[GLOB1]], i32 [[TMP4]])
 // CHECK-NEXT:    [[TMP9:%.*]] = call ptr @__kmpc_omp_task_alloc(ptr @[[GLOB1]], i32 [[TMP4]], i32 9, i64 256, i64 16, ptr @.omp_task_entry..3)
-// CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_T_WITH_PRIVATES_2:%.*]], ptr [[TMP9]], i32 0, i32 0
-// CHECK-NEXT:    [[TMP11:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_T:%.*]], ptr [[TMP10]], i32 0, i32 0
+// CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds nuw [[STRUCT_KMP_TASK_T_WITH_PRIVATES_2:%.*]], ptr [[TMP9]], i32 0, i32 0
+// CHECK-NEXT:    [[TMP11:%.*]] = getelementptr inbounds nuw [[STRUCT_KMP_TASK_T:%.*]], ptr [[TMP10]], i32 0, i32 0
 // CHECK-NEXT:    [[TMP12:%.*]] = load ptr, ptr [[TMP11]], align 128
 // CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[TMP12]], ptr align 8 [[AGG_CAPTURED]], i64 16, i1 false)
-// CHECK-NEXT:    [[TMP13:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_T_WITH_PRIVATES_2]], ptr [[TMP9]], i32 0, i32 2
-// CHECK-NEXT:    [[TMP14:%.*]] = getelementptr inbounds [[STRUCT__KMP_PRIVATES_T_3:%.*]], ptr [[TMP13]], i32 0, i32 0
+// CHECK-NEXT:    [[TMP13:%.*]] = getelementptr inbounds nuw [[STRUCT_KMP_TASK_T_WITH_PRIVATES_2]], ptr [[TMP9]], i32 0, i32 2
+// CHECK-NEXT:    [[TMP14:%.*]] = getelementptr inbounds nuw [[STRUCT__KMP_PRIVATES_T_3:%.*]], ptr [[TMP13]], i32 0, i32 0
 // CHECK-NEXT:    [[TMP15:%.*]] = load i32, ptr [[T_VAR_ADDR]], align 4
 // CHECK-NEXT:    store i32 [[TMP15]], ptr [[TMP14]], align 128
-// CHECK-NEXT:    [[TMP16:%.*]] = getelementptr inbounds [[STRUCT__KMP_PRIVATES_T_3]], ptr [[TMP13]], i32 0, i32 1
+// CHECK-NEXT:    [[TMP16:%.*]] = getelementptr inbounds nuw [[STRUCT__KMP_PRIVATES_T_3]], ptr [[TMP13]], i32 0, i32 1
 // CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[TMP16]], ptr align 4 [[TMP0]], i64 8, i1 false)
-// CHECK-NEXT:    [[TMP17:%.*]] = getelementptr inbounds [[STRUCT__KMP_PRIVATES_T_3]], ptr [[TMP13]], i32 0, i32 2
+// CHECK-NEXT:    [[TMP17:%.*]] = getelementptr inbounds nuw [[STRUCT__KMP_PRIVATES_T_3]], ptr [[TMP13]], i32 0, i32 2
 // CHECK-NEXT:    [[ARRAY_BEGIN:%.*]] = getelementptr inbounds [2 x %struct.S.0], ptr [[TMP17]], i32 0, i32 0
 // CHECK-NEXT:    [[TMP18:%.*]] = getelementptr inbounds [[STRUCT_S_0:%.*]], ptr [[ARRAY_BEGIN]], i64 2
 // CHECK-NEXT:    [[OMP_ARRAYCPY_ISEMPTY:%.*]] = icmp eq ptr [[ARRAY_BEGIN]], [[TMP18]]
@@ -743,17 +743,17 @@ void array_func(int n, float a[n], St s[2]) {
 // CHECK-NEXT:    [[OMP_ARRAYCPY_DONE:%.*]] = icmp eq ptr [[OMP_ARRAYCPY_DEST_ELEMENT]], [[TMP18]]
 // CHECK-NEXT:    br i1 [[OMP_ARRAYCPY_DONE]], label [[OMP_ARRAYCPY_DONE1]], label [[OMP_ARRAYCPY_BODY]]
 // CHECK:       omp.arraycpy.done1:
-// CHECK-NEXT:    [[TMP19:%.*]] = getelementptr inbounds [[STRUCT__KMP_PRIVATES_T_3]], ptr [[TMP13]], i32 0, i32 3
+// CHECK-NEXT:    [[TMP19:%.*]] = getelementptr inbounds nuw [[STRUCT__KMP_PRIVATES_T_3]], ptr [[TMP13]], i32 0, i32 3
 // CHECK-NEXT:    call void @_ZN1SIiEC1ERKS0_i(ptr noundef nonnull align 4 dereferenceable(4) [[TMP19]], ptr noundef nonnull align 4 dereferenceable(4) [[TMP2]], i32 noundef 0)
-// CHECK-NEXT:    [[TMP20:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_T]], ptr [[TMP10]], i32 0, i32 3
+// CHECK-NEXT:    [[TMP20:%.*]] = getelementptr inbounds nuw [[STRUCT_KMP_TASK_T]], ptr [[TMP10]], i32 0, i32 3
 // CHECK-NEXT:    store ptr @.omp_task_destructor..5, ptr [[TMP20]], align 8
-// CHECK-NEXT:    [[TMP21:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_T]], ptr [[TMP10]], i32 0, i32 5
+// CHECK-NEXT:    [[TMP21:%.*]] = getelementptr inbounds nuw [[STRUCT_KMP_TASK_T]], ptr [[TMP10]], i32 0, i32 5
 // CHECK-NEXT:    store i64 0, ptr [[TMP21]], align 8
-// CHECK-NEXT:    [[TMP22:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_T]], ptr [[TMP10]], i32 0, i32 6
+// CHECK-NEXT:    [[TMP22:%.*]] = getelementptr inbounds nuw [[STRUCT_KMP_TASK_T]], ptr [[TMP10]], i32 0, i32 6
 // CHECK-NEXT:    store i64 9, ptr [[TMP22]], align 16
-// CHECK-NEXT:    [[TMP23:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_T]], ptr [[TMP10]], i32 0, i32 7
+// CHECK-NEXT:    [[TMP23:%.*]] = getelementptr inbounds nuw [[STRUCT_KMP_TASK_T]], ptr [[TMP10]], i32 0, i32 7
 // CHECK-NEXT:    store i64 1, ptr [[TMP23]], align 8
-// CHECK-NEXT:    [[TMP24:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_T]], ptr [[TMP10]], i32 0, i32 9
+// CHECK-NEXT:    [[TMP24:%.*]] = getelementptr inbounds nuw [[STRUCT_KMP_TASK_T]], ptr [[TMP10]], i32 0, i32 9
 // CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 8 [[TMP24]], i8 0, i64 8, i1 false)
 // CHECK-NEXT:    [[TMP25:%.*]] = load i64, ptr [[TMP23]], align 8
 // CHECK-NEXT:    call void @__kmpc_taskloop(ptr @[[GLOB1]], i32 [[TMP4]], ptr [[TMP9]], i32 1, ptr [[TMP21]], ptr [[TMP22]], i64 [[TMP25]], i32 1, i32 0, i64 0, ptr @.omp_task_dup..4)
@@ -778,16 +778,16 @@ void array_func(int n, float a[n], St s[2]) {
 // CHECK-NEXT:    store ptr [[TMP3]], ptr [[DOTADDR3]], align 8
 // CHECK-NEXT:    store ptr [[TMP4]], ptr [[DOTADDR4]], align 8
 // CHECK-NEXT:    [[TMP5:%.*]] = load ptr, ptr [[DOTADDR]], align 8
-// CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [[STRUCT__KMP_PRIVATES_T_3:%.*]], ptr [[TMP5]], i32 0, i32 0
+// CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds nuw [[STRUCT__KMP_PRIVATES_T_3:%.*]], ptr [[TMP5]], i32 0, i32 0
 // CHECK-NEXT:    [[TMP7:%.*]] = load ptr, ptr [[DOTADDR1]], align 8
 // CHECK-NEXT:    store ptr [[TMP6]], ptr [[TMP7]], align 8
-// CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds [[STRUCT__KMP_PRIVATES_T_3]], ptr [[TMP5]], i32 0, i32 1
+// CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds nuw [[STRUCT__KMP_PRIVATES_T_3]], ptr [[TMP5]], i32 0, i32 1
 // CHECK-NEXT:    [[TMP9:%.*]] = load ptr, ptr [[DOTADDR2]], align 8
 // CHECK-NEXT:    store ptr [[TMP8]], ptr [[TMP9]], align 8
-// CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds [[STRUCT__KMP_PRIVATES_T_3]], ptr [[TMP5]], i32 0, i32 2
+// CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds nuw [[STRUCT__KMP_PRIVATES_T_3]], ptr [[TMP5]], i32 0, i32 2
 // CHECK-NEXT:    [[TMP11:%.*]] = load ptr, ptr [[DOTADDR3]], align 8
 // CHECK-NEXT:    store ptr [[TMP10]], ptr [[TMP11]], align 8
-// CHECK-NEXT:    [[TMP12:%.*]] = getelementptr inbounds [[STRUCT__KMP_PRIVATES_T_3]], ptr [[TMP5]], i32 0, i32 3
+// CHECK-NEXT:    [[TMP12:%.*]] = getelementptr inbounds nuw [[STRUCT__KMP_PRIVATES_T_3]], ptr [[TMP5]], i32 0, i32 3
 // CHECK-NEXT:    [[TMP13:%.*]] = load ptr, ptr [[DOTADDR4]], align 8
 // CHECK-NEXT:    store ptr [[TMP12]], ptr [[TMP13]], align 8
 // CHECK-NEXT:    ret void
@@ -819,20 +819,20 @@ void array_func(int n, float a[n], St s[2]) {
 // CHECK-NEXT:    store ptr [[TMP1]], ptr [[DOTADDR1]], align 8
 // CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[DOTADDR]], align 4
 // CHECK-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[DOTADDR1]], align 8
-// CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_T_WITH_PRIVATES_2:%.*]], ptr [[TMP3]], i32 0, i32 0
-// CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_T:%.*]], ptr [[TMP4]], i32 0, i32 2
-// CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_T]], ptr [[TMP4]], i32 0, i32 0
+// CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds nuw [[STRUCT_KMP_TASK_T_WITH_PRIVATES_2:%.*]], ptr [[TMP3]], i32 0, i32 0
+// CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds nuw [[STRUCT_KMP_TASK_T:%.*]], ptr [[TMP4]], i32 0, i32 2
+// CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds nuw [[STRUCT_KMP_TASK_T]], ptr [[TMP4]], i32 0, i32 0
 // CHECK-NEXT:    [[TMP7:%.*]] = load ptr, ptr [[TMP6]], align 128
-// CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_T_WITH_PRIVATES_2]], ptr [[TMP3]], i32 0, i32 2
-// CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_T]], ptr [[TMP4]], i32 0, i32 5
+// CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds nuw [[STRUCT_KMP_TASK_T_WITH_PRIVATES_2]], ptr [[TMP3]], i32 0, i32 2
+// CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds nuw [[STRUCT_KMP_TASK_T]], ptr [[TMP4]], i32 0, i32 5
 // CHECK-NEXT:    [[TMP10:%.*]] = load i64, ptr [[TMP9]], align 8
-// CHECK-NEXT:    [[TMP11:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_T]], ptr [[TMP4]], i32 0, i32 6
+// CHECK-NEXT:    [[TMP11:%.*]] = getelementptr inbounds nuw [[STRUCT_KMP_TASK_T]], ptr [[TMP4]], i32 0, i32 6
 // CHECK-NEXT:    [[TMP12:%.*]] = load i64, ptr [[TMP11]], align 16
-// CHECK-NEXT:    [[TMP13:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_T]], ptr [[TMP4]], i32 0, i32 7
+// CHECK-NEXT:    [[TMP13:%.*]] = getelementptr inbounds nuw [[STRUCT_KMP_TASK_T]], ptr [[TMP4]], i32 0, i32 7
 // CHECK-NEXT:    [[TMP14:%.*]] = load i64, ptr [[TMP13]], align 8
-// CHECK-NEXT:    [[TMP15:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_T]], ptr [[TMP4]], i32 0, i32 8
+// CHECK-NEXT:    [[TMP15:%.*]] = getelementptr inbounds nuw [[STRUCT_KMP_TASK_T]], ptr [[TMP4]], i32 0, i32 8
 // CHECK-NEXT:    [[TMP16:%.*]] = load i32, ptr [[TMP15]], align 64
-// CHECK-NEXT:    [[TMP17:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_T]], ptr [[TMP4]], i32 0, i32 9
+// CHECK-NEXT:    [[TMP17:%.*]] = getelementptr inbounds nuw [[STRUCT_KMP_TASK_T]], ptr [[TMP4]], i32 0, i32 9
 // CHECK-NEXT:    [[TMP18:%.*]] = load ptr, ptr [[TMP17]], align 8
 // CHECK-NEXT:    call void @llvm.experimental.noalias.scope.decl(metadata [[META21:![0-9]+]])
 // CHECK-NEXT:    call void @llvm.experimental.noalias.scope.decl(metadata [[META24:![0-9]+]])
@@ -893,12 +893,12 @@ void array_func(int n, float a[n], St s[2]) {
 // CHECK-NEXT:    store i32 [[TMP2]], ptr [[DOTADDR2]], align 4
 // CHECK-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[DOTADDR]], align 8
 // CHECK-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[DOTADDR1]], align 8
-// CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_T_WITH_PRIVATES_2:%.*]], ptr [[TMP4]], i32 0, i32 0
-// CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_T:%.*]], ptr [[TMP5]], i32 0, i32 0
+// CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds nuw [[STRUCT_KMP_TASK_T_WITH_PRIVATES_2:%.*]], ptr [[TMP4]], i32 0, i32 0
+// CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds nuw [[STRUCT_KMP_TASK_T:%.*]], ptr [[TMP5]], i32 0, i32 0
 // CHECK-NEXT:    [[TMP7:%.*]] = load ptr, ptr [[TMP6]], align 128
-// CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_T_WITH_PRIVATES_2]], ptr [[TMP3]], i32 0, i32 2
-// CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds [[STRUCT__KMP_PRIVATES_T_3:%.*]], ptr [[TMP8]], i32 0, i32 2
-// CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds [[STRUCT_ANON_1:%.*]], ptr [[TMP7]], i32 0, i32 0
+// CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds nuw [[STRUCT_KMP_TASK_T_WITH_PRIVATES_2]], ptr [[TMP3]], i32 0, i32 2
+// CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds nuw [[STRUCT__KMP_PRIVATES_T_3:%.*]], ptr [[TMP8]], i32 0, i32 2
+// CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds nuw [[STRUCT_ANON_1:%.*]], ptr [[TMP7]], i32 0, i32 0
 // CHECK-NEXT:    [[TMP11:%.*]] = load ptr, ptr [[TMP10]], align 8
 // CHECK-NEXT:    [[ARRAY_BEGIN:%.*]] = getelementptr inbounds [2 x %struct.S.0], ptr [[TMP9]], i32 0, i32 0
 // CHECK-NEXT:    [[TMP12:%.*]] = getelementptr inbounds [[STRUCT_S_0:%.*]], ptr [[ARRAY_BEGIN]], i64 2
@@ -913,8 +913,8 @@ void array_func(int n, float a[n], St s[2]) {
 // CHECK-NEXT:    [[OMP_ARRAYCPY_DONE:%.*]] = icmp eq ptr [[OMP_ARRAYCPY_DEST_ELEMENT]], [[TMP12]]
 // CHECK-NEXT:    br i1 [[OMP_ARRAYCPY_DONE]], label [[OMP_ARRAYCPY_DONE3]], label [[OMP_ARRAYCPY_BODY]]
 // CHECK:       omp.arraycpy.done3:
-// CHECK-NEXT:    [[TMP13:%.*]] = getelementptr inbounds [[STRUCT__KMP_PRIVATES_T_3]], ptr [[TMP8]], i32 0, i32 3
-// CHECK-NEXT:    [[TMP14:%.*]] = getelementptr inbounds [[STRUCT_ANON_1]], ptr [[TMP7]], i32 0, i32 1
+// CHECK-NEXT:    [[TMP13:%.*]] = getelementptr inbounds nuw [[STRUCT__KMP_PRIVATES_T_3]], ptr [[TMP8]], i32 0, i32 3
+// CHECK-NEXT:    [[TMP14:%.*]] = getelementptr inbounds nuw [[STRUCT_ANON_1]], ptr [[TMP7]], i32 0, i32 1
 // CHECK-NEXT:    [[TMP15:%.*]] = load ptr, ptr [[TMP14]], align 8
 // CHECK-NEXT:    call void @_ZN1SIiEC1ERKS0_i(ptr noundef nonnull align 4 dereferenceable(4) [[TMP13]], ptr noundef nonnull align 4 dereferenceable(4) [[TMP15]], i32 noundef 0)
 // CHECK-NEXT:    ret void
@@ -929,9 +929,9 @@ void array_func(int n, float a[n], St s[2]) {
 // CHECK-NEXT:    store i32 [[TMP0]], ptr [[DOTADDR]], align 4
 // CHECK-NEXT:    store ptr [[TMP1]], ptr [[DOTADDR1]], align 8
 // CHECK-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[DOTADDR1]], align 8
-// CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_T_WITH_PRIVATES_2:%.*]], ptr [[TMP2]], i32 0, i32 2
-// CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [[STRUCT__KMP_PRIVATES_T_3:%.*]], ptr [[TMP3]], i32 0, i32 2
-// CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds [[STRUCT__KMP_PRIVATES_T_3]], ptr [[TMP3]], i32 0, i32 3
+// CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds nuw [[STRUCT_KMP_TASK_T_WITH_PRIVATES_2:%.*]], ptr [[TMP2]], i32 0, i32 2
+// CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds nuw [[STRUCT__KMP_PRIVATES_T_3:%.*]], ptr [[TMP3]], i32 0, i32 2
+// CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds nuw [[STRUCT__KMP_PRIVATES_T_3]], ptr [[TMP3]], i32 0, i32 3
 // CHECK-NEXT:    call void @_ZN1SIiED1Ev(ptr noundef nonnull align 4 dereferenceable(4) [[TMP5]]) #[[ATTR4]]
 // CHECK-NEXT:    [[ARRAY_BEGIN:%.*]] = getelementptr inbounds [2 x %struct.S.0], ptr [[TMP4]], i32 0, i32 0
 // CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [[STRUCT_S_0:%.*]], ptr [[ARRAY_BEGIN]], i64 2
@@ -963,7 +963,7 @@ void array_func(int n, float a[n], St s[2]) {
 // CHECK-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 8
 // CHECK-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
-// CHECK-NEXT:    [[F:%.*]] = getelementptr inbounds [[STRUCT_S_0:%.*]], ptr [[THIS1]], i32 0, i32 0
+// CHECK-NEXT:    [[F:%.*]] = getelementptr inbounds nuw [[STRUCT_S_0:%.*]], ptr [[THIS1]], i32 0, i32 0
 // CHECK-NEXT:    store i32 0, ptr [[F]], align 4
 // CHECK-NEXT:    ret void
 //
@@ -978,9 +978,9 @@ void array_func(int n, float a[n], St s[2]) {
 // CHECK-NEXT:    store ptr [[S]], ptr [[S_ADDR]], align 8
 // CHECK-NEXT:    store i32 [[T]], ptr [[T_ADDR]], align 4
 // CHECK-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
-// CHECK-NEXT:    [[F:%.*]] = getelementptr inbounds [[STRUCT_S_0:%.*]], ptr [[THIS1]], i32 0, i32 0
+// CHECK-NEXT:    [[F:%.*]] = getelementptr inbounds nuw [[STRUCT_S_0:%.*]], ptr [[THIS1]], i32 0, i32 0
 // CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[S_ADDR]], align 8
-// CHECK-NEXT:    [[F2:%.*]] = getelementptr inbounds [[STRUCT_S_0]], ptr [[TMP0]], i32 0, i32 0
+// CHECK-NEXT:    [[F2:%.*]] = getelementptr inbounds nuw [[STRUCT_S_0]], ptr [[TMP0]], i32 0, i32 0
 // CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[F2]], align 4
 // CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[T_ADDR]], align 4
 // CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP1]], [[TMP2]]
@@ -996,7 +996,7 @@ void array_func(int n, float a[n], St s[2]) {
 // CHECK-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 8
 // CHECK-NEXT:    store i32 [[A]], ptr [[A_ADDR]], align 4
 // CHECK-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
-// CHECK-NEXT:    [[F:%.*]] = getelementptr inbounds [[STRUCT_S_0:%.*]], ptr [[THIS1]], i32 0, i32 0
+// CHECK-NEXT:    [[F:%.*]] = getelementptr inbounds nuw [[STRUCT_S_0:%.*]], ptr [[THIS1]], i32 0, i32 0
 // CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[A_ADDR]], align 4
 // CHECK-NEXT:    store i32 [[TMP0]], ptr [[F]], align 4
 // CHECK-NEXT:    ret void
@@ -1031,10 +1031,10 @@ void array_func(int n, float a[n], St s[2]) {
 // LAMBDA-NEXT:    store ptr [[TMP1]], ptr [[DOTADDR1]], align 8
 // LAMBDA-NEXT:    store ptr [[TMP2]], ptr [[DOTADDR2]], align 8
 // LAMBDA-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[DOTADDR]], align 8
-// LAMBDA-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [[STRUCT__KMP_PRIVATES_T:%.*]], ptr [[TMP3]], i32 0, i32 0
+// LAMBDA-NEXT:    [[TMP4:%.*]] = getelementptr inbounds nuw [[STRUCT__KMP_PRIVATES_T:%.*]], ptr [[TMP3]], i32 0, i32 0
 // LAMBDA-NEXT:    [[TMP5:%.*]] = load ptr, ptr [[DOTADDR1]], align 8
 // LAMBDA-NEXT:    store ptr [[TMP4]], ptr [[TMP5]], align 8
-// LAMBDA-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [[STRUCT__KMP_PRIVATES_T]], ptr [[TMP3]], i32 0, i32 1
+// LAMBDA-NEXT:    [[TMP6:%.*]] = getelementptr inbounds nuw [[STRUCT__KMP_PRIVATES_T]], ptr [[TMP3]], i32 0, i32 1
 // LAMBDA-NEXT:    [[TMP7:%.*]] = load ptr, ptr [[DOTADDR2]], align 8
 // LAMBDA-NEXT:    store ptr [[TMP6]], ptr [[TMP7]], align 8
 // LAMBDA-NEXT:    ret void
@@ -1065,20 +1065,20 @@ void array_func(int n, float a[n], St s[2]) {
 // LAMBDA-NEXT:    store ptr [[TMP1]], ptr [[DOTADDR1]], align 8
 // LAMBDA-NEXT:    [[TMP2:%.*]] = load i32, ptr [[DOTADDR]], align 4
 // LAMBDA-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[DOTADDR1]], align 8
-// LAMBDA-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_T_WITH_PRIVATES:%.*]], ptr [[TMP3]], i32 0, i32 0
-// LAMBDA-NEXT:    [[TMP5:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_T:%.*]], ptr [[TMP4]], i32 0, i32 2
-// LAMBDA-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_T]], ptr [[TMP4]], i32 0, i32 0
+// LAMBDA-NEXT:    [[TMP4:%.*]] = getelementptr inbounds nuw [[STRUCT_KMP_TASK_T_WITH_PRIVATES:%.*]], ptr [[TMP3]], i32 0, i32 0
+// LAMBDA-NEXT:    [[TMP5:%.*]] = getelementptr inbounds nuw [[STRUCT_KMP_TASK_T:%.*]], ptr [[TMP4]], i32 0, i32 2
+// LAMBDA-NEXT:    [[TMP6:%.*]] = getelementptr inbounds nuw [[STRUCT_KMP_TASK_T]], ptr [[TMP4]], i32 0, i32 0
 // LAMBDA-NEXT:    [[TMP7:%.*]] = load ptr, ptr [[TMP6]], align 8
-// LAMBDA-NEXT:    [[TMP8:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_T_WITH_PRIVATES]], ptr [[TMP3]], i32 0, i32 1
-// LAMBDA-NEXT:    [[TMP9:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_T]], ptr [[TMP4]], i32 0, i32 5
+// LAMBDA-NEXT:    [[TMP8:%.*]] = getelementptr inbounds nuw [[STRUCT_KMP_TASK_T_WITH_PRIVATES]], ptr [[TMP3]], i32 0, i32 1
+// LAMBDA-NEXT:    [[TMP9:%.*]] = getelementptr inbounds nuw [[STRUCT_KMP_TASK_T]], ptr [[TMP4]], i32 0, i32 5
 // LAMBDA-NEXT:    [[TMP10:%.*]] = load i64, ptr [[TMP9]], align 8
-// LAMBDA-NEXT:    [[TMP11:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_T]], ptr [[TMP4]], i32 0, i32 6
+// LAMBDA-NEXT:    [[TMP11:%.*]] = getelementptr inbounds nuw [[STRUCT_KMP_TASK_T]], ptr [[TMP4]], i32 0, i32 6
 // LAMBDA-NEXT:    [[TMP12:%.*]] = load i64, ptr [[TMP11]], align 8
-// LAMBDA-NEXT:    [[TMP13:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_T]], ptr [[TMP4]], i32 0, i32 7
+// LAMBDA-NEXT:    [[TMP13:%.*]] = getelementptr inbounds nuw [[STRUCT_KMP_TASK_T]], ptr [[TMP4]], i32 0, i32 7
 // LAMBDA-NEXT:    [[TMP14:%.*]] = load i64, ptr [[TMP13]], align 8
-// LAMBDA-NEXT:    [[TMP15:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_T]], ptr [[TMP4]], i32 0, i32 8
+// LAMBDA-NEXT:    [[TMP15:%.*]] = getelementptr inbounds nuw [[STRUCT_KMP_TASK_T]], ptr [[TMP4]], i32 0, i32 8
 // LAMBDA-NEXT:    [[TMP16:%.*]] = load i32, ptr [[TMP15]], align 8
-// LAMBDA-NEXT:    [[TMP17:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_T]], ptr [[TMP4]], i32 0, i32 9
+// LAMBDA-NEXT:    [[TMP17:%.*]] = getelementptr inbounds nuw [[STRUCT_KMP_TASK_T]], ptr [[TMP4]], i32 0, i32 9
 // LAMBDA-NEXT:    [[TMP18:%.*]] = load ptr, ptr [[TMP17]], align 8
 // LAMBDA-NEXT:    call void @llvm.experimental.noalias.scope.decl(metadata [[META3:![0-9]+]])
 // LAMBDA-NEXT:    call void @llvm.experimental.noalias.scope.decl(metadata [[META6:![0-9]+]])
@@ -1118,7 +1118,7 @@ void array_func(int n, float a[n], St s[2]) {
 // LAMBDA-NEXT:    store double 1.000000e+00, ptr [[TMP22]], align 8, !llvm.access.group [[ACC_GRP15]]
 // LAMBDA-NEXT:    store i32 11, ptr [[TMP23]], align 4, !llvm.access.group [[ACC_GRP15]]
 // LAMBDA-NEXT:    store ptr [[TMP22]], ptr [[REF_TMP_I]], align 8, !noalias [[META14]], !llvm.access.group [[ACC_GRP15]]
-// LAMBDA-NEXT:    [[TMP28:%.*]] = getelementptr inbounds [[CLASS_ANON_0]], ptr [[REF_TMP_I]], i32 0, i32 1
+// LAMBDA-NEXT:    [[TMP28:%.*]] = getelementptr inbounds nuw [[CLASS_ANON_0]], ptr [[REF_TMP_I]], i32 0, i32 1
 // LAMBDA-NEXT:    store ptr [[TMP23]], ptr [[TMP28]], align 8, !noalias [[META14]], !llvm.access.group [[ACC_GRP15]]
 // LAMBDA-NEXT:    call void @"_ZZZ4mainENK3$_0clEvENKUlvE_clEv"(ptr noundef nonnull align 8 dereferenceable(16) [[REF_TMP_I]]), !llvm.access.group [[ACC_GRP15]]
 // LAMBDA-NEXT:    [[TMP29:%.*]] = load i32, ptr [[DOTOMP_IV_I]], align 4, !noalias [[META14]], !llvm.access.group [[ACC_GRP15]]
@@ -1134,7 +1134,7 @@ void array_func(int n, float a[n], St s[2]) {
 // BLOCKS-NEXT:  entry:
 // BLOCKS-NEXT:    [[RETVAL:%.*]] = alloca i32, align 4
 // BLOCKS-NEXT:    store i32 0, ptr [[RETVAL]], align 4
-// BLOCKS-NEXT:    [[TMP0:%.*]] = load ptr, ptr getelementptr inbounds ([[STRUCT___BLOCK_LITERAL_GENERIC:%.*]], ptr @__block_literal_global, i32 0, i32 3), align 8
+// BLOCKS-NEXT:    [[TMP0:%.*]] = load ptr, ptr getelementptr inbounds nuw ([[STRUCT___BLOCK_LITERAL_GENERIC:%.*]], ptr @__block_literal_global, i32 0, i32 3), align 8
 // BLOCKS-NEXT:    call void [[TMP0]](ptr noundef @__block_literal_global)
 // BLOCKS-NEXT:    ret i32 0
 //
@@ -1167,21 +1167,21 @@ void array_func(int n, float a[n], St s[2]) {
 // BLOCKS:       omp_if.then:
 // BLOCKS-NEXT:    call void @__kmpc_taskgroup(ptr @[[GLOB1]], i32 [[TMP1]])
 // BLOCKS-NEXT:    [[TMP4:%.*]] = call ptr @__kmpc_omp_task_alloc(ptr @[[GLOB1]], i32 [[TMP1]], i32 1, i64 96, i64 1, ptr @.omp_task_entry.)
-// BLOCKS-NEXT:    [[TMP5:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_T_WITH_PRIVATES:%.*]], ptr [[TMP4]], i32 0, i32 0
-// BLOCKS-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_T_WITH_PRIVATES]], ptr [[TMP4]], i32 0, i32 1
-// BLOCKS-NEXT:    [[TMP7:%.*]] = getelementptr inbounds [[STRUCT__KMP_PRIVATES_T:%.*]], ptr [[TMP6]], i32 0, i32 0
+// BLOCKS-NEXT:    [[TMP5:%.*]] = getelementptr inbounds nuw [[STRUCT_KMP_TASK_T_WITH_PRIVATES:%.*]], ptr [[TMP4]], i32 0, i32 0
+// BLOCKS-NEXT:    [[TMP6:%.*]] = getelementptr inbounds nuw [[STRUCT_KMP_TASK_T_WITH_PRIVATES]], ptr [[TMP4]], i32 0, i32 1
+// BLOCKS-NEXT:    [[TMP7:%.*]] = getelementptr inbounds nuw [[STRUCT__KMP_PRIVATES_T:%.*]], ptr [[TMP6]], i32 0, i32 0
 // BLOCKS-NEXT:    [[TMP8:%.*]] = load volatile double, ptr @g, align 8
 // BLOCKS-NEXT:    store volatile double [[TMP8]], ptr [[TMP7]], align 8
-// BLOCKS-NEXT:    [[TMP9:%.*]] = getelementptr inbounds [[STRUCT__KMP_PRIVATES_T]], ptr [[TMP6]], i32 0, i32 1
+// BLOCKS-NEXT:    [[TMP9:%.*]] = getelementptr inbounds nuw [[STRUCT__KMP_PRIVATES_T]], ptr [[TMP6]], i32 0, i32 1
 // BLOCKS-NEXT:    [[TMP10:%.*]] = load i32, ptr @_ZZ4mainE5sivar, align 4
 // BLOCKS-NEXT:    store i32 [[TMP10]], ptr [[TMP9]], align 8
-// BLOCKS-NEXT:    [[TMP11:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_T:%.*]], ptr [[TMP5]], i32 0, i32 5
+// BLOCKS-NEXT:    [[TMP11:%.*]] = getelementptr inbounds nuw [[STRUCT_KMP_TASK_T:%.*]], ptr [[TMP5]], i32 0, i32 5
 // BLOCKS-NEXT:    store i64 0, ptr [[TMP11]], align 8
-// BLOCKS-NEXT:    [[TMP12:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_T]], ptr [[TMP5]], i32 0, i32 6
+// BLOCKS-NEXT:    [[TMP12:%.*]] = getelementptr inbounds nuw [[STRUCT_KMP_TASK_T]], ptr [[TMP5]], i32 0, i32 6
 // BLOCKS-NEXT:    store i64 9, ptr [[TMP12]], align 8
-// BLOCKS-NEXT:    [[TMP13:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_T]], ptr [[TMP5]], i32 0, i32 7
+// BLOCKS-NEXT:    [[TMP13:%.*]] = getelementptr inbounds nuw [[STRUCT_KMP_TASK_T]], ptr [[TMP5]], i32 0, i32 7
 // BLOCKS-NEXT:    store i64 1, ptr [[TMP13]], align 8
-// BLOCKS-NEXT:    [[TMP14:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_T]], ptr [[TMP5]], i32 0, i32 9
+// BLOCKS-NEXT:    [[TMP14:%.*]] = getelementptr inbounds nuw [[STRUCT_KMP_TASK_T]], ptr [[TMP5]], i32 0, i32 9
 // BLOCKS-NEXT:    call void @llvm.memset.p0.i64(ptr align 8 [[TMP14]], i8 0, i64 8, i1 false)
 // BLOCKS-NEXT:    [[TMP15:%.*]] = load i64, ptr [[TMP13]], align 8
 // BLOCKS-NEXT:    call void @__kmpc_taskloop(ptr @[[GLOB1]], i32 [[TMP1]], ptr [[TMP4]], i32 1, ptr [[TMP11]], ptr [[TMP12]], i64 [[TMP15]], i32 1, i32 0, i64 0, ptr null)
@@ -1199,9 +1199,9 @@ void array_func(int n, float a[n], St s[2]) {
 // BLOCKS-NEXT:    [[BLOCK_ADDR:%.*]] = alloca ptr, align 8
 // BLOCKS-NEXT:    store ptr [[DOTBLOCK_DESCRIPTOR]], ptr [[DOTBLOCK_DESCRIPTOR_ADDR]], align 8
 // BLOCKS-NEXT:    store ptr [[DOTBLOCK_DESCRIPTOR]], ptr [[BLOCK_ADDR]], align 8
-// BLOCKS-NEXT:    [[BLOCK_CAPTURE_ADDR:%.*]] = getelementptr inbounds <{ ptr, i32, i32, ptr, ptr, double, i32 }>, ptr [[DOTBLOCK_DESCRIPTOR]], i32 0, i32 5
+// BLOCKS-NEXT:    [[BLOCK_CAPTURE_ADDR:%.*]] = getelementptr inbounds nuw <{ ptr, i32, i32, ptr, ptr, double, i32 }>, ptr [[DOTBLOCK_DESCRIPTOR]], i32 0, i32 5
 // BLOCKS-NEXT:    store double 2.000000e+00, ptr [[BLOCK_CAPTURE_ADDR]], align 8
-// BLOCKS-NEXT:    [[BLOCK_CAPTURE_ADDR1:%.*]] = getelementptr inbounds <{ ptr, i32, i32, ptr, ptr, double, i32 }>, ptr [[DOTBLOCK_DESCRIPTOR]], i32 0, i32 6
+// BLOCKS-NEXT:    [[BLOCK_CAPTURE_ADDR1:%.*]] = getelementptr inbounds nuw <{ ptr, i32, i32, ptr, ptr, double, i32 }>, ptr [[DOTBLOCK_DESCRIPTOR]], i32 0, i32 6
 // BLOCKS-NEXT:    store i32 22, ptr [[BLOCK_CAPTURE_ADDR1]], align 8
 // BLOCKS-NEXT:    ret void
 //
@@ -1216,10 +1216,10 @@ void array_func(int n, float a[n], St s[2]) {
 // BLOCKS-NEXT:    store ptr [[TMP1]], ptr [[DOTADDR1]], align 8
 // BLOCKS-NEXT:    store ptr [[TMP2]], ptr [[DOTADDR2]], align 8
 // BLOCKS-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[DOTADDR]], align 8
-// BLOCKS-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [[STRUCT__KMP_PRIVATES_T:%.*]], ptr [[TMP3]], i32 0, i32 0
+// BLOCKS-NEXT:    [[TMP4:%.*]] = getelementptr inbounds nuw [[STRUCT__KMP_PRIVATES_T:%.*]], ptr [[TMP3]], i32 0, i32 0
 // BLOCKS-NEXT:    [[TMP5:%.*]] = load ptr, ptr [[DOTADDR1]], align 8
 // BLOCKS-NEXT:    store ptr [[TMP4]], ptr [[TMP5]], align 8
-// BLOCKS-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [[STRUCT__KMP_PRIVATES_T]], ptr [[TMP3]], i32 0, i32 1
+// BLOCKS-NEXT:    [[TMP6:%.*]] = getelementptr inbounds nuw [[STRUCT__KMP_PRIVATES_T]], ptr [[TMP3]], i32 0, i32 1
 // BLOCKS-NEXT:    [[TMP7:%.*]] = load ptr, ptr [[DOTADDR2]], align 8
 // BLOCKS-NEXT:    store ptr [[TMP6]], ptr [[TMP7]], align 8
 // BLOCKS-NEXT:    ret void
@@ -1250,20 +1250,20 @@ void array_func(int n, float a[n], St s[2]) {
 // BLOCKS-NEXT:    store ptr [[TMP1]], ptr [[DOTADDR1]], align 8
 // BLOCKS-NEXT:    [[TMP2:%.*]] = load i32, ptr [[DOTADDR]], align 4
 // BLOCKS-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[DOTADDR1]], align 8
-// BLOCKS-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_T_WITH_PRIVATES:%.*]], ptr [[TMP3]], i32 0, i32 0
-// BLOCKS-NEXT:    [[TMP5:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_T:%.*]], ptr [[TMP4]], i32 0, i32 2
-// BLOCKS-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_T]], ptr [[TMP4]], i32 0, i32 0
+// BLOCKS-NEXT:    [[TMP4:%.*]] = getelementptr inbounds nuw [[STRUCT_KMP_TASK_T_WITH_PRIVATES:%.*]], ptr [[TMP3]], i32 0, i32 0
+// BLOCKS-NEXT:    [[TMP5:%.*]] = getelementptr inbounds nuw [[STRUCT_KMP_TASK_T:%.*]], ptr [[TMP4]], i32 0, i32 2
+// BLOCKS-NEXT:    [[TMP6:%.*]] = getelementptr inbounds nuw [[STRUCT_KMP_TASK_T]], ptr [[TMP4]], i32 0, i32 0
 // BLOCKS-NEXT:    [[TMP7:%.*]] = load ptr, ptr [[TMP6]], align 8
-// BLOCKS-NEXT:    [[TMP8:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_T_WITH_PRIVATES]], ptr [[TMP3]], i32 0, i32 1
-// BLOCKS-NEXT:    [[TMP9:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_T]], ptr [[TMP4]], i32 0, i32 5
+// BLOCKS-NEXT:    [[TMP8:%.*]] = getelementptr inbounds nuw [[STRUCT_KMP_TASK_T_WITH_PRIVATES]], ptr [[TMP3]], i32 0, i32 1
+// BLOCKS-NEXT:    [[TMP9:%.*]] = getelementptr inbounds nuw [[STRUCT_KMP_TASK_T]], ptr [[TMP4]], i32 0, i32 5
 // BLOCKS-NEXT:    [[TMP10:%.*]] = load i64, ptr [[TMP9]], align 8
-// BLOCKS-NEXT:    [[TMP11:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_T]], ptr [[TMP4]], i32 0, i32 6
+// BLOCKS-NEXT:    [[TMP11:%.*]] = getelementptr inbounds nuw [[STRUCT_KMP_TASK_T]], ptr [[TMP4]], i32 0, i32 6
 // BLOCKS-NEXT:    [[TMP12:%.*]] = load i64, ptr [[TMP11]], align 8
-// BLOCKS-NEXT:    [[TMP13:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_T]], ptr [[TMP4]], i32 0, i32 7
+// BLOCKS-NEXT:    [[TMP13:%.*]] = getelementptr inbounds nuw [[STRUCT_KMP_TASK_T]], ptr [[TMP4]], i32 0, i32 7
 // BLOCKS-NEXT:    [[TMP14:%.*]] = load i64, ptr [[TMP13]], align 8
-// BLOCKS-NEXT:    [[TMP15:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_T]], ptr [[TMP4]], i32 0, i32 8
+// BLOCKS-NEXT:    [[TMP15:%.*]] = getelementptr inbounds nuw [[STRUCT_KMP_TASK_T]], ptr [[TMP4]], i32 0, i32 8
 // BLOCKS-NEXT:    [[TMP16:%.*]] = load i32, ptr [[TMP15]], align 8
-// BLOCKS-NEXT:    [[TMP17:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_T]], ptr [[TMP4]], i32 0, i32 9
+// BLOCKS-NEXT:    [[TMP17:%.*]] = getelementptr inbounds nuw [[STRUCT_KMP_TASK_T]], ptr [[TMP4]], i32 0, i32 9
 // BLOCKS-NEXT:    [[TMP18:%.*]] = load ptr, ptr [[TMP17]], align 8
 // BLOCKS-NEXT:    call void @llvm.experimental.noalias.scope.decl(metadata [[META3:![0-9]+]])
 // BLOCKS-NEXT:    call void @llvm.experimental.noalias.scope.decl(metadata [[META6:![0-9]+]])
@@ -1303,21 +1303,21 @@ void array_func(int n, float a[n], St s[2]) {
 // BLOCKS-NEXT:    store double 1.000000e+00, ptr [[TMP22]], align 8, !llvm.access.group [[ACC_GRP15]]
 // BLOCKS-NEXT:    store i32 11, ptr [[TMP23]], align 4, !llvm.access.group [[ACC_GRP15]]
 // BLOCKS-NEXT:    store ptr @_NSConcreteStackBlock, ptr [[BLOCK_I]], align 8, !noalias [[META14]], !llvm.access.group [[ACC_GRP15]]
-// BLOCKS-NEXT:    [[BLOCK_FLAGS_I:%.*]] = getelementptr inbounds <{ ptr, i32, i32, ptr, ptr, double, i32 }>, ptr [[BLOCK_I]], i32 0, i32 1
+// BLOCKS-NEXT:    [[BLOCK_FLAGS_I:%.*]] = getelementptr inbounds nuw <{ ptr, i32, i32, ptr, ptr, double, i32 }>, ptr [[BLOCK_I]], i32 0, i32 1
 // BLOCKS-NEXT:    store i32 1073741824, ptr [[BLOCK_FLAGS_I]], align 8, !noalias [[META14]], !llvm.access.group [[ACC_GRP15]]
-// BLOCKS-NEXT:    [[BLOCK_RESERVED_I:%.*]] = getelementptr inbounds <{ ptr, i32, i32, ptr, ptr, double, i32 }>, ptr [[BLOCK_I]], i32 0, i32 2
+// BLOCKS-NEXT:    [[BLOCK_RESERVED_I:%.*]] = getelementptr inbounds nuw <{ ptr, i32, i32, ptr, ptr, double, i32 }>, ptr [[BLOCK_I]], i32 0, i32 2
 // BLOCKS-NEXT:    store i32 0, ptr [[BLOCK_RESERVED_I]], align 4, !noalias [[META14]], !llvm.access.group [[ACC_GRP15]]
-// BLOCKS-NEXT:    [[BLOCK_INVOKE_I:%.*]] = getelementptr inbounds <{ ptr, i32, i32, ptr, ptr, double, i32 }>, ptr [[BLOCK_I]], i32 0, i32 3
+// BLOCKS-NEXT:    [[BLOCK_INVOKE_I:%.*]] = getelementptr inbounds nuw <{ ptr, i32, i32, ptr, ptr, double, i32 }>, ptr [[BLOCK_I]], i32 0, i32 3
 // BLOCKS-NEXT:    store ptr @_block_invoke, ptr [[BLOCK_INVOKE_I]], align 8, !noalias [[META14]], !llvm.access.group [[ACC_GRP15]]
-// BLOCKS-NEXT:    [[BLOCK_DESCRIPTOR_I:%.*]] = getelementptr inbounds <{ ptr, i32, i32, ptr, ptr, double, i32 }>, ptr [[BLOCK_I]], i32 0, i32 4
+// BLOCKS-NEXT:    [[BLOCK_DESCRIPTOR_I:%.*]] = getelementptr inbounds nuw <{ ptr, i32, i32, ptr, ptr, double, i32 }>, ptr [[BLOCK_I]], i32 0, i32 4
 // BLOCKS-NEXT:    store ptr @__block_descriptor_tmp.1, ptr [[BLOCK_DESCRIPTOR_I]], align 8, !noalias [[META14]], !llvm.access.group [[ACC_GRP15]]
-// BLOCKS-NEXT:    [[BLOCK_CAPTURED_I:%.*]] = getelementptr inbounds <{ ptr, i32, i32, ptr, ptr, double, i32 }>, ptr [[BLOCK_I]], i32 0, i32 5
+// BLOCKS-NEXT:    [[BLOCK_CAPTURED_I:%.*]] = getelementptr inbounds nuw <{ ptr, i32, i32, ptr, ptr, double, i32 }>, ptr [[BLOCK_I]], i32 0, i32 5
 // BLOCKS-NEXT:    [[TMP28:%.*]] = load volatile double, ptr [[TMP22]], align 8, !llvm.access.group [[ACC_GRP15]]
 // BLOCKS-NEXT:    store volatile double [[TMP28]], ptr [[BLOCK_CAPTURED_I]], align 8, !noalias [[META14]], !llvm.access.group [[ACC_GRP15]]
-// BLOCKS-NEXT:    [[BLOCK_CAPTURED3_I:%.*]] = getelementptr inbounds <{ ptr, i32, i32, ptr, ptr, double, i32 }>, ptr [[BLOCK_I]], i32 0, i32 6
+// BLOCKS-NEXT:    [[BLOCK_CAPTURED3_I:%.*]] = getelementptr inbounds nuw <{ ptr, i32, i32, ptr, ptr, double, i32 }>, ptr [[BLOCK_I]], i32 0, i32 6
 // BLOCKS-NEXT:    [[TMP29:%.*]] = load i32, ptr [[TMP23]], align 4, !llvm.access.group [[ACC_GRP15]]
 // BLOCKS-NEXT:    store i32 [[TMP29]], ptr [[BLOCK_CAPTURED3_I]], align 8, !noalias [[META14]], !llvm.access.group [[ACC_GRP15]]
-// BLOCKS-NEXT:    [[TMP30:%.*]] = getelementptr inbounds [[STRUCT___BLOCK_LITERAL_GENERIC:%.*]], ptr [[BLOCK_I]], i32 0, i32 3
+// BLOCKS-NEXT:    [[TMP30:%.*]] = getelementptr inbounds nuw [[STRUCT___BLOCK_LITERAL_GENERIC:%.*]], ptr [[BLOCK_I]], i32 0, i32 3
 // BLOCKS-NEXT:    [[TMP31:%.*]] = load ptr, ptr [[TMP30]], align 8, !noalias [[META14]], !llvm.access.group [[ACC_GRP15]]
 // BLOCKS-NEXT:    call void [[TMP31]](ptr noundef [[BLOCK_I]]) #[[ATTR4]], !llvm.access.group [[ACC_GRP15]]
 // BLOCKS-NEXT:    [[TMP32:%.*]] = load i32, ptr [[DOTOMP_IV_I]], align 4, !noalias [[META14]], !llvm.access.group [[ACC_GRP15]]
@@ -1367,28 +1367,28 @@ void array_func(int n, float a[n], St s[2]) {
 // ARRAY-NEXT:    [[TMP4:%.*]] = icmp ne i32 [[TMP3]], 0
 // ARRAY-NEXT:    br i1 [[TMP4]], label [[OMP_IF_THEN:%.*]], label [[OMP_IF_END:%.*]]
 // ARRAY:       omp_if.then:
-// ARRAY-NEXT:    [[TMP5:%.*]] = getelementptr inbounds [[STRUCT_ANON]], ptr [[AGG_CAPTURED]], i32 0, i32 0
+// ARRAY-NEXT:    [[TMP5:%.*]] = getelementptr inbounds nuw [[STRUCT_ANON]], ptr [[AGG_CAPTURED]], i32 0, i32 0
 // ARRAY-NEXT:    store i64 [[TMP0]], ptr [[TMP5]], align 8
 // ARRAY-NEXT:    call void @__kmpc_taskgroup(ptr @[[GLOB1]], i32 [[TMP2]])
 // ARRAY-NEXT:    [[TMP6:%.*]] = call ptr @__kmpc_omp_task_alloc(ptr @[[GLOB1]], i32 [[TMP2]], i32 1, i64 96, i64 8, ptr @.omp_task_entry.)
-// ARRAY-NEXT:    [[TMP7:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_T_WITH_PRIVATES:%.*]], ptr [[TMP6]], i32 0, i32 0
-// ARRAY-NEXT:    [[TMP8:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_T:%.*]], ptr [[TMP7]], i32 0, i32 0
+// ARRAY-NEXT:    [[TMP7:%.*]] = getelementptr inbounds nuw [[STRUCT_KMP_TASK_T_WITH_PRIVATES:%.*]], ptr [[TMP6]], i32 0, i32 0
+// ARRAY-NEXT:    [[TMP8:%.*]] = getelementptr inbounds nuw [[STRUCT_KMP_TASK_T:%.*]], ptr [[TMP7]], i32 0, i32 0
 // ARRAY-NEXT:    [[TMP9:%.*]] = load ptr, ptr [[TMP8]], align 8
 // ARRAY-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[TMP9]], ptr align 8 [[AGG_CAPTURED]], i64 8, i1 false)
-// ARRAY-NEXT:    [[TMP10:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_T_WITH_PRIVATES]], ptr [[TMP6]], i32 0, i32 1
-// ARRAY-NEXT:    [[TMP11:%.*]] = getelementptr inbounds [[STRUCT__KMP_PRIVATES_T:%.*]], ptr [[TMP10]], i32 0, i32 0
+// ARRAY-NEXT:    [[TMP10:%.*]] = getelementptr inbounds nuw [[STRUCT_KMP_TASK_T_WITH_PRIVATES]], ptr [[TMP6]], i32 0, i32 1
+// ARRAY-NEXT:    [[TMP11:%.*]] = getelementptr inbounds nuw [[STRUCT__KMP_PRIVATES_T:%.*]], ptr [[TMP10]], i32 0, i32 0
 // ARRAY-NEXT:    [[TMP12:%.*]] = load ptr, ptr [[A_ADDR]], align 8
 // ARRAY-NEXT:    store ptr [[TMP12]], ptr [[TMP11]], align 8
-// ARRAY-NEXT:    [[TMP13:%.*]] = getelementptr inbounds [[STRUCT__KMP_PRIVATES_T]], ptr [[TMP10]], i32 0, i32 1
+// ARRAY-NEXT:    [[TMP13:%.*]] = getelementptr inbounds nuw [[STRUCT__KMP_PRIVATES_T]], ptr [[TMP10]], i32 0, i32 1
 // ARRAY-NEXT:    [[TMP14:%.*]] = load ptr, ptr [[S_ADDR]], align 8
 // ARRAY-NEXT:    store ptr [[TMP14]], ptr [[TMP13]], align 8
-// ARRAY-NEXT:    [[TMP15:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_T]], ptr [[TMP7]], i32 0, i32 5
+// ARRAY-NEXT:    [[TMP15:%.*]] = getelementptr inbounds nuw [[STRUCT_KMP_TASK_T]], ptr [[TMP7]], i32 0, i32 5
 // ARRAY-NEXT:    store i64 0, ptr [[TMP15]], align 8
-// ARRAY-NEXT:    [[TMP16:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_T]], ptr [[TMP7]], i32 0, i32 6
+// ARRAY-NEXT:    [[TMP16:%.*]] = getelementptr inbounds nuw [[STRUCT_KMP_TASK_T]], ptr [[TMP7]], i32 0, i32 6
 // ARRAY-NEXT:    store i64 9, ptr [[TMP16]], align 8
-// ARRAY-NEXT:    [[TMP17:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_T]], ptr [[TMP7]], i32 0, i32 7
+// ARRAY-NEXT:    [[TMP17:%.*]] = getelementptr inbounds nuw [[STRUCT_KMP_TASK_T]], ptr [[TMP7]], i32 0, i32 7
 // ARRAY-NEXT:    store i64 1, ptr [[TMP17]], align 8
-// ARRAY-NEXT:    [[TMP18:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_T]], ptr [[TMP7]], i32 0, i32 9
+// ARRAY-NEXT:    [[TMP18:%.*]] = getelementptr inbounds nuw [[STRUCT_KMP_TASK_T]], ptr [[TMP7]], i32 0, i32 9
 // ARRAY-NEXT:    call void @llvm.memset.p0.i64(ptr align 8 [[TMP18]], i8 0, i64 8, i1 false)
 // ARRAY-NEXT:    [[TMP19:%.*]] = load i64, ptr [[TMP17]], align 8
 // ARRAY-NEXT:    call void @__kmpc_taskloop(ptr @[[GLOB1]], i32 [[TMP2]], ptr [[TMP6]], i32 1, ptr [[TMP15]], ptr [[TMP16]], i64 [[TMP19]], i32 1, i32 0, i64 0, ptr null)
@@ -1409,10 +1409,10 @@ void array_func(int n, float a[n], St s[2]) {
 // ARRAY-NEXT:    store ptr [[TMP1]], ptr [[DOTADDR1]], align 8
 // ARRAY-NEXT:    store ptr [[TMP2]], ptr [[DOTADDR2]], align 8
 // ARRAY-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[DOTADDR]], align 8
-// ARRAY-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [[STRUCT__KMP_PRIVATES_T:%.*]], ptr [[TMP3]], i32 0, i32 0
+// ARRAY-NEXT:    [[TMP4:%.*]] = getelementptr inbounds nuw [[STRUCT__KMP_PRIVATES_T:%.*]], ptr [[TMP3]], i32 0, i32 0
 // ARRAY-NEXT:    [[TMP5:%.*]] = load ptr, ptr [[DOTADDR1]], align 8
 // ARRAY-NEXT:    store ptr [[TMP4]], ptr [[TMP5]], align 8
-// ARRAY-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [[STRUCT__KMP_PRIVATES_T]], ptr [[TMP3]], i32 0, i32 1
+// ARRAY-NEXT:    [[TMP6:%.*]] = getelementptr inbounds nuw [[STRUCT__KMP_PRIVATES_T]], ptr [[TMP3]], i32 0, i32 1
 // ARRAY-NEXT:    [[TMP7:%.*]] = load ptr, ptr [[DOTADDR2]], align 8
 // ARRAY-NEXT:    store ptr [[TMP6]], ptr [[TMP7]], align 8
 // ARRAY-NEXT:    ret void
@@ -1442,20 +1442,20 @@ void array_func(int n, float a[n], St s[2]) {
 // ARRAY-NEXT:    store ptr [[TMP1]], ptr [[DOTADDR1]], align 8
 // ARRAY-NEXT:    [[TMP2:%.*]] = load i32, ptr [[DOTADDR]], align 4
 // ARRAY-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[DOTADDR1]], align 8
-// ARRAY-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_T_WITH_PRIVATES:%.*]], ptr [[TMP3]], i32 0, i32 0
-// ARRAY-NEXT:    [[TMP5:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_T:%.*]], ptr [[TMP4]], i32 0, i32 2
-// ARRAY-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_T]], ptr [[TMP4]], i32 0, i32 0
+// ARRAY-NEXT:    [[TMP4:%.*]] = getelementptr inbounds nuw [[STRUCT_KMP_TASK_T_WITH_PRIVATES:%.*]], ptr [[TMP3]], i32 0, i32 0
+// ARRAY-NEXT:    [[TMP5:%.*]] = getelementptr inbounds nuw [[STRUCT_KMP_TASK_T:%.*]], ptr [[TMP4]], i32 0, i32 2
+// ARRAY-NEXT:    [[TMP6:%.*]] = getelementptr inbounds nuw [[STRUCT_KMP_TASK_T]], ptr [[TMP4]], i32 0, i32 0
 // ARRAY-NEXT:    [[TMP7:%.*]] = load ptr, ptr [[TMP6]], align 8
-// ARRAY-NEXT:    [[TMP8:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_T_WITH_PRIVATES]], ptr [[TMP3]], i32 0, i32 1
-// ARRAY-NEXT:    [[TMP9:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_T]], ptr [[TMP4]], i32 0, i32 5
+// ARRAY-NEXT:    [[TMP8:%.*]] = getelementptr inbounds nuw [[STRUCT_KMP_TASK_T_WITH_PRIVATES]], ptr [[TMP3]], i32 0, i32 1
+// ARRAY-NEXT:    [[TMP9:%.*]] = getelementptr inbounds nuw [[STRUCT_KMP_TASK_T]], ptr [[TMP4]], i32 0, i32 5
 // ARRAY-NEXT:    [[TMP10:%.*]] = load i64, ptr [[TMP9]], align 8
-// ARRAY-NEXT:    [[TMP11:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_T]], ptr [[TMP4]], i32 0, i32 6
+// ARRAY-NEXT:    [[TMP11:%.*]] = getelementptr inbounds nuw [[STRUCT_KMP_TASK_T]], ptr [[TMP4]], i32 0, i32 6
 // ARRAY-NEXT:    [[TMP12:%.*]] = load i64, ptr [[TMP11]], align 8
-// ARRAY-NEXT:    [[TMP13:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_T]], ptr [[TMP4]], i32 0, i32 7
+// ARRAY-NEXT:    [[TMP13:%.*]] = getelementptr inbounds nuw [[STRUCT_KMP_TASK_T]], ptr [[TMP4]], i32 0, i32 7
 // ARRAY-NEXT:    [[TMP14:%.*]] = load i64, ptr [[TMP13]], align 8
-// ARRAY-NEXT:    [[TMP15:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_T]], ptr [[TMP4]], i32 0, i32 8
+// ARRAY-NEXT:    [[TMP15:%.*]] = getelementptr inbounds nuw [[STRUCT_KMP_TASK_T]], ptr [[TMP4]], i32 0, i32 8
 // ARRAY-NEXT:    [[TMP16:%.*]] = load i32, ptr [[TMP15]], align 8
-// ARRAY-NEXT:    [[TMP17:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_T]], ptr [[TMP4]], i32 0, i32 9
+// ARRAY-NEXT:    [[TMP17:%.*]] = getelementptr inbounds nuw [[STRUCT_KMP_TASK_T]], ptr [[TMP4]], i32 0, i32 9
 // ARRAY-NEXT:    [[TMP18:%.*]] = load ptr, ptr [[TMP17]], align 8
 // ARRAY-NEXT:    call void @llvm.experimental.noalias.scope.decl(metadata [[META3:![0-9]+]])
 // ARRAY-NEXT:    call void @llvm.experimental.noalias.scope.decl(metadata [[META6:![0-9]+]])
@@ -1705,7 +1705,7 @@ void array_func(int n, float a[n], St s[2]) {
 // SIMD-ONLY0-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // SIMD-ONLY0-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 8
 // SIMD-ONLY0-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
-// SIMD-ONLY0-NEXT:    [[F:%.*]] = getelementptr inbounds [[STRUCT_S:%.*]], ptr [[THIS1]], i32 0, i32 0
+// SIMD-ONLY0-NEXT:    [[F:%.*]] = getelementptr inbounds nuw [[STRUCT_S:%.*]], ptr [[THIS1]], i32 0, i32 0
 // SIMD-ONLY0-NEXT:    store double 0.000000e+00, ptr [[F]], align 8
 // SIMD-ONLY0-NEXT:    ret void
 //
@@ -1729,9 +1729,9 @@ void array_func(int n, float a[n], St s[2]) {
 // SIMD-ONLY0-NEXT:    store ptr [[S]], ptr [[S_ADDR]], align 8
 // SIMD-ONLY0-NEXT:    store double [[T]], ptr [[T_ADDR]], align 8
 // SIMD-ONLY0-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
-// SIMD-ONLY0-NEXT:    [[F:%.*]] = getelementptr inbounds [[STRUCT_S:%.*]], ptr [[THIS1]], i32 0, i32 0
+// SIMD-ONLY0-NEXT:    [[F:%.*]] = getelementptr inbounds nuw [[STRUCT_S:%.*]], ptr [[THIS1]], i32 0, i32 0
 // SIMD-ONLY0-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[S_ADDR]], align 8
-// SIMD-ONLY0-NEXT:    [[F2:%.*]] = getelementptr inbounds [[STRUCT_S]], ptr [[TMP0]], i32 0, i32 0
+// SIMD-ONLY0-NEXT:    [[F2:%.*]] = getelementptr inbounds nuw [[STRUCT_S]], ptr [[TMP0]], i32 0, i32 0
 // SIMD-ONLY0-NEXT:    [[TMP1:%.*]] = load double, ptr [[F2]], align 8
 // SIMD-ONLY0-NEXT:    [[TMP2:%.*]] = load double, ptr [[T_ADDR]], align 8
 // SIMD-ONLY0-NEXT:    [[ADD:%.*]] = fadd double [[TMP1]], [[TMP2]]
@@ -1747,7 +1747,7 @@ void array_func(int n, float a[n], St s[2]) {
 // SIMD-ONLY0-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 8
 // SIMD-ONLY0-NEXT:    store double [[A]], ptr [[A_ADDR]], align 8
 // SIMD-ONLY0-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
-// SIMD-ONLY0-NEXT:    [[F:%.*]] = getelementptr inbounds [[STRUCT_S:%.*]], ptr [[THIS1]], i32 0, i32 0
+// SIMD-ONLY0-NEXT:    [[F:%.*]] = getelementptr inbounds nuw [[STRUCT_S:%.*]], ptr [[THIS1]], i32 0, i32 0
 // SIMD-ONLY0-NEXT:    [[TMP0:%.*]] = load double, ptr [[A_ADDR]], align 8
 // SIMD-ONLY0-NEXT:    store double [[TMP0]], ptr [[F]], align 8
 // SIMD-ONLY0-NEXT:    ret void
@@ -1808,7 +1808,7 @@ void array_func(int n, float a[n], St s[2]) {
 // SIMD-ONLY0-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // SIMD-ONLY0-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 8
 // SIMD-ONLY0-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
-// SIMD-ONLY0-NEXT:    [[F:%.*]] = getelementptr inbounds [[STRUCT_S_0:%.*]], ptr [[THIS1]], i32 0, i32 0
+// SIMD-ONLY0-NEXT:    [[F:%.*]] = getelementptr inbounds nuw [[STRUCT_S_0:%.*]], ptr [[THIS1]], i32 0, i32 0
 // SIMD-ONLY0-NEXT:    store i32 0, ptr [[F]], align 4
 // SIMD-ONLY0-NEXT:    ret void
 //
@@ -1823,9 +1823,9 @@ void array_func(int n, float a[n], St s[2]) {
 // SIMD-ONLY0-NEXT:    store ptr [[S]], ptr [[S_ADDR]], align 8
 // SIMD-ONLY0-NEXT:    store i32 [[T]], ptr [[T_ADDR]], align 4
 // SIMD-ONLY0-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
-// SIMD-ONLY0-NEXT:    [[F:%.*]] = getelementptr inbounds [[STRUCT_S_0:%.*]], ptr [[THIS1]], i32 0, i32 0
+// SIMD-ONLY0-NEXT:    [[F:%.*]] = getelementptr inbounds nuw [[STRUCT_S_0:%.*]], ptr [[THIS1]], i32 0, i32 0
 // SIMD-ONLY0-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[S_ADDR]], align 8
-// SIMD-ONLY0-NEXT:    [[F2:%.*]] = getelementptr inbounds [[STRUCT_S_0]], ptr [[TMP0]], i32 0, i32 0
+// SIMD-ONLY0-NEXT:    [[F2:%.*]] = getelementptr inbounds nuw [[STRUCT_S_0]], ptr [[TMP0]], i32 0, i32 0
 // SIMD-ONLY0-NEXT:    [[TMP1:%.*]] = load i32, ptr [[F2]], align 4
 // SIMD-ONLY0-NEXT:    [[TMP2:%.*]] = load i32, ptr [[T_ADDR]], align 4
 // SIMD-ONLY0-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP1]], [[TMP2]]
@@ -1841,7 +1841,7 @@ void array_func(int n, float a[n], St s[2]) {
 // SIMD-ONLY0-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 8
 // SIMD-ONLY0-NEXT:    store i32 [[A]], ptr [[A_ADDR]], align 4
 // SIMD-ONLY0-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
-// SIMD-ONLY0-NEXT:    [[F:%.*]] = getelementptr inbounds [[STRUCT_S_0:%.*]], ptr [[THIS1]], i32 0, i32 0
+// SIMD-ONLY0-NEXT:    [[F:%.*]] = getelementptr inbounds nuw [[STRUCT_S_0:%.*]], ptr [[THIS1]], i32 0, i32 0
 // SIMD-ONLY0-NEXT:    [[TMP0:%.*]] = load i32, ptr [[A_ADDR]], align 4
 // SIMD-ONLY0-NEXT:    store i32 [[TMP0]], ptr [[F]], align 4
 // SIMD-ONLY0-NEXT:    ret void
@@ -2060,7 +2060,7 @@ void array_func(int n, float a[n], St s[2]) {
 // SIMD-ONLY1-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // SIMD-ONLY1-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 8
 // SIMD-ONLY1-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
-// SIMD-ONLY1-NEXT:    [[F:%.*]] = getelementptr inbounds [[STRUCT_S:%.*]], ptr [[THIS1]], i32 0, i32 0
+// SIMD-ONLY1-NEXT:    [[F:%.*]] = getelementptr inbounds nuw [[STRUCT_S:%.*]], ptr [[THIS1]], i32 0, i32 0
 // SIMD-ONLY1-NEXT:    store double 0.000000e+00, ptr [[F]], align 8
 // SIMD-ONLY1-NEXT:    ret void
 //
@@ -2084,9 +2084,9 @@ void array_func(int n, float a[n], St s[2]) {
 // SIMD-ONLY1-NEXT:    store ptr [[S]], ptr [[S_ADDR]], align 8
 // SIMD-ONLY1-NEXT:    store double [[T]], ptr [[T_ADDR]], align 8
 // SIMD-ONLY1-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
-// SIMD-ONLY1-NEXT:    [[F:%.*]] = getelementptr inbounds [[STRUCT_S:%.*]], ptr [[THIS1]], i32 0, i32 0
+// SIMD-ONLY1-NEXT:    [[F:%.*]] = getelementptr inbounds nuw [[STRUCT_S:%.*]], ptr [[THIS1]], i32 0, i32 0
 // SIMD-ONLY1-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[S_ADDR]], align 8
-// SIMD-ONLY1-NEXT:    [[F2:%.*]] = getelementptr inbounds [[STRUCT_S]], ptr [[TMP0]], i32 0, i32 0
+// SIMD-ONLY1-NEXT:    [[F2:%.*]] = getelementptr inbounds nuw [[STRUCT_S]], ptr [[TMP0]], i32 0, i32 0
 // SIMD-ONLY1-NEXT:    [[TMP1:%.*]] = load double, ptr [[F2]], align 8
 // SIMD-ONLY1-NEXT:    [[TMP2:%.*]] = load double, ptr [[T_ADDR]], align 8
 // SIMD-ONLY1-NEXT:    [[ADD:%.*]] = fadd double [[TMP1]], [[TMP2]]
@@ -2102,7 +2102,7 @@ void array_func(int n, float a[n], St s[2]) {
 // SIMD-ONLY1-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 8
 // SIMD-ONLY1-NEXT:    store double [[A]], ptr [[A_ADDR]], align 8
 // SIMD-ONLY1-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
-// SIMD-ONLY1-NEXT:    [[F:%.*]] = getelementptr inbounds [[STRUCT_S:%.*]], ptr [[THIS1]], i32 0, i32 0
+// SIMD-ONLY1-NEXT:    [[F:%.*]] = getelementptr inbounds nuw [[STRUCT_S:%.*]], ptr [[THIS1]], i32 0, i32 0
 // SIMD-ONLY1-NEXT:    [[TMP0:%.*]] = load double, ptr [[A_ADDR]], align 8
 // SIMD-ONLY1-NEXT:    store double [[TMP0]], ptr [[F]], align 8
 // SIMD-ONLY1-NEXT:    ret void
@@ -2163,7 +2163,7 @@ void array_func(int n, float a[n], St s[2]) {
 // SIMD-ONLY1-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // SIMD-ONLY1-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 8
 // SIMD-ONLY1-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
-// SIMD-ONLY1-NEXT:    [[F:%.*]] = getelementptr inbounds [[STRUCT_S_0:%.*]], ptr [[THIS1]], i32 0, i32 0
+// SIMD-ONLY1-NEXT:    [[F:%.*]] = getelementptr inbounds nuw [[STRUCT_S_0:%.*]], ptr [[THIS1]], i32 0, i32 0
 // SIMD-ONLY1-NEXT:    store i32 0, ptr [[F]], align 4
 // SIMD-ONLY1-NEXT:    ret void
 //
@@ -2178,9 +2178,9 @@ void array_func(int n, float a[n], St s[2]) {
 // SIMD-ONLY1-NEXT:    store ptr [[S]], ptr [[S_ADDR]], align 8
 // SIMD-ONLY1-NEXT:    store i32 [[T]], ptr [[T_ADDR]], align 4
 // SIMD-ONLY1-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
-// SIMD-ONLY1-NEXT:    [[F:%.*]] = getelementptr inbounds [[STRUCT_S_0:%.*]], ptr [[THIS1]], i32 0, i32 0
+// SIMD-ONLY1-NEXT:    [[F:%.*]] = getelementptr inbounds nuw [[STRUCT_S_0:%.*]], ptr [[THIS1]], i32 0, i32 0
 // SIMD-ONLY1-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[S_ADDR]], align 8
-// SIMD-ONLY1-NEXT:    [[F2:%.*]] = getelementptr inbounds [[STRUCT_S_0]], ptr [[TMP0]], i32 0, i32 0
+// SIMD-ONLY1-NEXT:    [[F2:%.*]] = getelementptr inbounds nuw [[STRUCT_S_0]], ptr [[TMP0]], i32 0, i32 0
 // SIMD-ONLY1-NEXT:    [[TMP1:%.*]] = load i32, ptr [[F2]], align 4
 // SIMD-ONLY1-NEXT:    [[TMP2:%.*]] = load i32, ptr [[T_ADDR]], align 4
 // SIMD-ONLY1-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP1]], [[TMP2]]
@@ -2196,7 +2196,7 @@ void array_func(int n, float a[n], St s[2]) {
 // SIMD-ONLY1-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 8
 // SIMD-ONLY1-NEXT:    store i32 [[A]], ptr [[A_ADDR]], align 4
 // SIMD-ONLY1-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
-// SIMD-ONLY1-NEXT:    [[F:%.*]] = getelementptr inbounds [[STRUCT_S_0:%.*]], ptr [[THIS1]], i32 0, i32 0
+// SIMD-ONLY1-NEXT:    [[F:%.*]] = getelementptr inbounds nuw [[STRUCT_S_0:%.*]], ptr [[THIS1]], i32 0, i32 0
 // SIMD-ONLY1-NEXT:    [[TMP0:%.*]] = load i32, ptr [[A_ADDR]], align 4
 // SIMD-ONLY1-NEXT:    store i32 [[TMP0]], ptr [[F]], align 4
 // SIMD-ONLY1-NEXT:    ret void
@@ -2226,7 +2226,7 @@ void array_func(int n, float a[n], St s[2]) {
 // SIMD-ONLY3-NEXT:  entry:
 // SIMD-ONLY3-NEXT:    [[RETVAL:%.*]] = alloca i32, align 4
 // SIMD-ONLY3-NEXT:    store i32 0, ptr [[RETVAL]], align 4
-// SIMD-ONLY3-NEXT:    [[TMP0:%.*]] = load ptr, ptr getelementptr inbounds ([[STRUCT___BLOCK_LITERAL_GENERIC:%.*]], ptr @__block_literal_global, i32 0, i32 3), align 8
+// SIMD-ONLY3-NEXT:    [[TMP0:%.*]] = load ptr, ptr getelementptr inbounds nuw ([[STRUCT___BLOCK_LITERAL_GENERIC:%.*]], ptr @__block_literal_global, i32 0, i32 3), align 8
 // SIMD-ONLY3-NEXT:    call void [[TMP0]](ptr noundef @__block_literal_global)
 // SIMD-ONLY3-NEXT:    ret i32 0
 //
@@ -2263,23 +2263,23 @@ void array_func(int n, float a[n], St s[2]) {
 // SIMD-ONLY3-NEXT:    store i32 [[ADD]], ptr [[I]], align 4, !llvm.access.group [[ACC_GRP2]]
 // SIMD-ONLY3-NEXT:    store double 1.000000e+00, ptr @g, align 8, !llvm.access.group [[ACC_GRP2]]
 // SIMD-ONLY3-NEXT:    store i32 11, ptr @_ZZ4mainE5sivar, align 4, !llvm.access.group [[ACC_GRP2]]
-// SIMD-ONLY3-NEXT:    [[BLOCK_ISA:%.*]] = getelementptr inbounds <{ ptr, i32, i32, ptr, ptr, double, i32 }>, ptr [[BLOCK]], i32 0, i32 0
+// SIMD-ONLY3-NEXT:    [[BLOCK_ISA:%.*]] = getelementptr inbounds nuw <{ ptr, i32, i32, ptr, ptr, double, i32 }>, ptr [[BLOCK]], i32 0, i32 0
 // SIMD-ONLY3-NEXT:    store ptr @_NSConcreteStackBlock, ptr [[BLOCK_ISA]], align 8, !llvm.access.group [[ACC_GRP2]]
-// SIMD-ONLY3-NEXT:    [[BLOCK_FLAGS:%.*]] = getelementptr inbounds <{ ptr, i32, i32, ptr, ptr, double, i32 }>, ptr [[BLOCK]], i32 0, i32 1
+// SIMD-ONLY3-NEXT:    [[BLOCK_FLAGS:%.*]] = getelementptr inbounds nuw <{ ptr, i32, i32, ptr, ptr, double, i32 }>, ptr [[BLOCK]], i32 0, i32 1
 // SIMD-ONLY3-NEXT:    store i32 1073741824, ptr [[BLOCK_FLAGS]], align 8, !llvm.access.group [[ACC_GRP2]]
-// SIMD-ONLY3-NEXT:    [[BLOCK_RESERVED:%.*]] = getelementptr inbounds <{ ptr, i32, i32, ptr, ptr, double, i32 }>, ptr [[BLOCK]], i32 0, i32 2
+// SIMD-ONLY3-NEXT:    [[BLOCK_RESERVED:%.*]] = getelementptr inbounds nuw <{ ptr, i32, i32, ptr, ptr, double, i32 }>, ptr [[BLOCK]], i32 0, i32 2
 // SIMD-ONLY3-NEXT:    store i32 0, ptr [[BLOCK_RESERVED]], align 4, !llvm.access.group [[ACC_GRP2]]
-// SIMD-ONLY3-NEXT:    [[BLOCK_INVOKE:%.*]] = getelementptr inbounds <{ ptr, i32, i32, ptr, ptr, double, i32 }>, ptr [[BLOCK]], i32 0, i32 3
+// SIMD-ONLY3-NEXT:    [[BLOCK_INVOKE:%.*]] = getelementptr inbounds nuw <{ ptr, i32, i32, ptr, ptr, double, i32 }>, ptr [[BLOCK]], i32 0, i32 3
 // SIMD-ONLY3-NEXT:    store ptr @__main_block_invoke_2, ptr [[BLOCK_INVOKE]], align 8, !llvm.access.group [[ACC_GRP2]]
-// SIMD-ONLY3-NEXT:    [[BLOCK_DESCRIPTOR:%.*]] = getelementptr inbounds <{ ptr, i32, i32, ptr, ptr, double, i32 }>, ptr [[BLOCK]], i32 0, i32 4
+// SIMD-ONLY3-NEXT:    [[BLOCK_DESCRIPTOR:%.*]] = getelementptr inbounds nuw <{ ptr, i32, i32, ptr, ptr, double, i32 }>, ptr [[BLOCK]], i32 0, i32 4
 // SIMD-ONLY3-NEXT:    store ptr @__block_descriptor_tmp.1, ptr [[BLOCK_DESCRIPTOR]], align 8, !llvm.access.group [[ACC_GRP2]]
-// SIMD-ONLY3-NEXT:    [[BLOCK_CAPTURED:%.*]] = getelementptr inbounds <{ ptr, i32, i32, ptr, ptr, double, i32 }>, ptr [[BLOCK]], i32 0, i32 5
+// SIMD-ONLY3-NEXT:    [[BLOCK_CAPTURED:%.*]] = getelementptr inbounds nuw <{ ptr, i32, i32, ptr, ptr, double, i32 }>, ptr [[BLOCK]], i32 0, i32 5
 // SIMD-ONLY3-NEXT:    [[TMP4:%.*]] = load volatile double, ptr @g, align 8, !llvm.access.group [[ACC_GRP2]]
 // SIMD-ONLY3-NEXT:    store volatile double [[TMP4]], ptr [[BLOCK_CAPTURED]], align 8, !llvm.access.group [[ACC_GRP2]]
-// SIMD-ONLY3-NEXT:    [[BLOCK_CAPTURED2:%.*]] = getelementptr inbounds <{ ptr, i32, i32, ptr, ptr, double, i32 }>, ptr [[BLOCK]], i32 0, i32 6
+// SIMD-ONLY3-NEXT:    [[BLOCK_CAPTURED2:%.*]] = getelementptr inbounds nuw <{ ptr, i32, i32, ptr, ptr, double, i32 }>, ptr [[BLOCK]], i32 0, i32 6
 // SIMD-ONLY3-NEXT:    [[TMP5:%.*]] = load i32, ptr @_ZZ4mainE5sivar, align 4, !llvm.access.group [[ACC_GRP2]]
 // SIMD-ONLY3-NEXT:    store i32 [[TMP5]], ptr [[BLOCK_CAPTURED2]], align 8, !llvm.access.group [[ACC_GRP2]]
-// SIMD-ONLY3-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [[STRUCT___BLOCK_LITERAL_GENERIC:%.*]], ptr [[BLOCK]], i32 0, i32 3
+// SIMD-ONLY3-NEXT:    [[TMP6:%.*]] = getelementptr inbounds nuw [[STRUCT___BLOCK_LITERAL_GENERIC:%.*]], ptr [[BLOCK]], i32 0, i32 3
 // SIMD-ONLY3-NEXT:    [[TMP7:%.*]] = load ptr, ptr [[TMP6]], align 8, !llvm.access.group [[ACC_GRP2]]
 // SIMD-ONLY3-NEXT:    call void [[TMP7]](ptr noundef [[BLOCK]]), !llvm.access.group [[ACC_GRP2]]
 // SIMD-ONLY3-NEXT:    br label [[OMP_BODY_CONTINUE:%.*]]
@@ -2302,9 +2302,9 @@ void array_func(int n, float a[n], St s[2]) {
 // SIMD-ONLY3-NEXT:    [[BLOCK_ADDR:%.*]] = alloca ptr, align 8
 // SIMD-ONLY3-NEXT:    store ptr [[DOTBLOCK_DESCRIPTOR]], ptr [[DOTBLOCK_DESCRIPTOR_ADDR]], align 8
 // SIMD-ONLY3-NEXT:    store ptr [[DOTBLOCK_DESCRIPTOR]], ptr [[BLOCK_ADDR]], align 8
-// SIMD-ONLY3-NEXT:    [[BLOCK_CAPTURE_ADDR:%.*]] = getelementptr inbounds <{ ptr, i32, i32, ptr, ptr, double, i32 }>, ptr [[DOTBLOCK_DESCRIPTOR]], i32 0, i32 5
+// SIMD-ONLY3-NEXT:    [[BLOCK_CAPTURE_ADDR:%.*]] = getelementptr inbounds nuw <{ ptr, i32, i32, ptr, ptr, double, i32 }>, ptr [[DOTBLOCK_DESCRIPTOR]], i32 0, i32 5
 // SIMD-ONLY3-NEXT:    store double 2.000000e+00, ptr [[BLOCK_CAPTURE_ADDR]], align 8
-// SIMD-ONLY3-NEXT:    [[BLOCK_CAPTURE_ADDR1:%.*]] = getelementptr inbounds <{ ptr, i32, i32, ptr, ptr, double, i32 }>, ptr [[DOTBLOCK_DESCRIPTOR]], i32 0, i32 6
+// SIMD-ONLY3-NEXT:    [[BLOCK_CAPTURE_ADDR1:%.*]] = getelementptr inbounds nuw <{ ptr, i32, i32, ptr, ptr, double, i32 }>, ptr [[DOTBLOCK_DESCRIPTOR]], i32 0, i32 6
 // SIMD-ONLY3-NEXT:    store i32 22, ptr [[BLOCK_CAPTURE_ADDR1]], align 8
 // SIMD-ONLY3-NEXT:    ret void
 //
