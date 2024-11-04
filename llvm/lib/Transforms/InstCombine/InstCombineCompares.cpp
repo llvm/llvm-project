@@ -12,7 +12,6 @@
 
 #include "InstCombineInternal.h"
 #include "llvm/ADT/APSInt.h"
-#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/CaptureTracking.h"

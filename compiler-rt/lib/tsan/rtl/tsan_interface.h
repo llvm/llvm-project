@@ -16,8 +16,8 @@
 #define TSAN_INTERFACE_H
 
 #include <sanitizer_common/sanitizer_internal_defs.h>
-using __sanitizer::uptr;
 using __sanitizer::tid_t;
+using __sanitizer::uptr;
 
 // This header should NOT include any other headers.
 // All functions in this header are extern "C" and start with __tsan_.
@@ -203,17 +203,18 @@ int __tsan_get_alloc_stack(uptr addr, uptr *trace, uptr size, int *thread_id,
 namespace __tsan {
 
 // These should match declarations from public tsan_interface_atomic.h header.
-typedef unsigned char      a8;
+typedef unsigned char a8;
 typedef unsigned short a16;
-typedef unsigned int       a32;
+typedef unsigned int a32;
 typedef unsigned long long a64;
-#if !SANITIZER_GO && (defined(__SIZEOF_INT128__) \
-    || (__clang_major__ * 100 + __clang_minor__ >= 302)) && \
+#if !SANITIZER_GO &&                                      \
+    (defined(__SIZEOF_INT128__) ||                        \
+     (__clang_major__ * 100 + __clang_minor__ >= 302)) && \
     !defined(__mips64) && !defined(__s390x__)
 __extension__ typedef __int128 a128;
-# define __TSAN_HAS_INT128 1
+#  define __TSAN_HAS_INT128 1
 #else
-# define __TSAN_HAS_INT128 0
+#  define __TSAN_HAS_INT128 0
 #endif
 
 // Part of ABI, do not change.
