@@ -96,7 +96,37 @@ define void @store_fcmp_zext_load(ptr %ptr) {
   ret void
 }
 
-; TODO: Test store_fadd_load once we implement scheduler callbacks and legality diamond check
+define void @store_fadd_load(ptr %ptr) {
+; CHECK-LABEL: define void @store_fadd_load(
+; CHECK-SAME: ptr [[PTR:%.*]]) {
+; CHECK-NEXT:    [[PTR0:%.*]] = getelementptr float, ptr [[PTR]], i32 0
+; CHECK-NEXT:    [[PTR1:%.*]] = getelementptr float, ptr [[PTR]], i32 1
+; CHECK-NEXT:    [[LDA0:%.*]] = load float, ptr [[PTR0]], align 4
+; CHECK-NEXT:    [[LDA1:%.*]] = load float, ptr [[PTR1]], align 4
+; CHECK-NEXT:    [[VECL:%.*]] = load <2 x float>, ptr [[PTR0]], align 4
+; CHECK-NEXT:    [[LDB0:%.*]] = load float, ptr [[PTR0]], align 4
+; CHECK-NEXT:    [[LDB1:%.*]] = load float, ptr [[PTR1]], align 4
+; CHECK-NEXT:    [[VECL1:%.*]] = load <2 x float>, ptr [[PTR0]], align 4
+; CHECK-NEXT:    [[FADD0:%.*]] = fadd float [[LDA0]], [[LDB0]]
+; CHECK-NEXT:    [[FADD1:%.*]] = fadd float [[LDA1]], [[LDB1]]
+; CHECK-NEXT:    [[VEC:%.*]] = fadd <2 x float> [[VECL]], [[VECL1]]
+; CHECK-NEXT:    store float [[FADD0]], ptr [[PTR0]], align 4
+; CHECK-NEXT:    store float [[FADD1]], ptr [[PTR1]], align 4
+; CHECK-NEXT:    store <2 x float> [[VEC]], ptr [[PTR0]], align 4
+; CHECK-NEXT:    ret void
+;
+  %ptr0 = getelementptr float, ptr %ptr, i32 0
+  %ptr1 = getelementptr float, ptr %ptr, i32 1
+  %ldA0 = load float, ptr %ptr0
+  %ldA1 = load float, ptr %ptr1
+  %ldB0 = load float, ptr %ptr0
+  %ldB1 = load float, ptr %ptr1
+  %fadd0 = fadd float %ldA0, %ldB0
+  %fadd1 = fadd float %ldA1, %ldB1
+  store float %fadd0, ptr %ptr0
+  store float %fadd1, ptr %ptr1
+  ret void
+}
 
 define void @store_fneg_load(ptr %ptr) {
 ; CHECK-LABEL: define void @store_fneg_load(
