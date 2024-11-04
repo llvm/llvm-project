@@ -1,5 +1,5 @@
-! RUN: bbc --use-desc-for-alloc=false -polymorphic-type -emit-fir %s -o - | FileCheck %s
-! RUN: bbc --use-desc-for-alloc=false -polymorphic-type -emit-fir %s -o - | tco | FileCheck %s --check-prefix=LLVM
+! RUN: bbc --use-desc-for-alloc=false -polymorphic-type -emit-fir -hlfir=false %s -o - | FileCheck %s
+! RUN: bbc --use-desc-for-alloc=false -polymorphic-type -emit-fir -hlfir=false %s -o - | tco | FileCheck %s --check-prefix=LLVM
 
 module poly
   type p1

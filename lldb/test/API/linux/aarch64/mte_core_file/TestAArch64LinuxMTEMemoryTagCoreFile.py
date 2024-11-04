@@ -235,4 +235,11 @@ class AArch64LinuxMTEMemoryTagCoreFileTestCase(TestBase):
         # * Allowed tags value of 0xFFFF, shifted up by 3 resulting in 0x7fff8.
         # * Bit 1 set to enable synchronous tag faults.
         # * Bit 0 set to enable the tagged address ABI.
-        self.expect("register read mte_ctrl", substrs=["mte_ctrl = 0x000000000007fffb"])
+        expected = ["mte_ctrl = 0x000000000007fffb"]
+
+        if self.hasXMLSupport():
+            expected.append(
+                "(TAGS = 65535, TCF_ASYNC = 0, TCF_SYNC = 1, TAGGED_ADDR_ENABLE = 1)"
+            )
+
+        self.expect("register read mte_ctrl", substrs=expected)

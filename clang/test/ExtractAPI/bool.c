@@ -75,8 +75,8 @@ bool IsFoo(bool Bar);
       },
       "location": {
         "position": {
-          "character": 6,
-          "line": 2
+          "character": 5,
+          "line": 1
         },
         "uri": "file://INPUT_DIR/input.h"
       },
@@ -176,8 +176,8 @@ bool IsFoo(bool Bar);
       },
       "location": {
         "position": {
-          "character": 6,
-          "line": 4
+          "character": 5,
+          "line": 3
         },
         "uri": "file://INPUT_DIR/input.h"
       },

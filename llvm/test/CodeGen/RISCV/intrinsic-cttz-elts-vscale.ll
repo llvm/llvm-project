@@ -75,9 +75,9 @@ define i64 @ctz_nxv8i1_no_range(<vscale x 8 x i16> %a) {
 ; RV32-NEXT:    li a1, 0
 ; RV32-NEXT:    li a3, 0
 ; RV32-NEXT:    call __muldi3@plt
-; RV32-NEXT:    sw a1, 24(sp)
-; RV32-NEXT:    sw a0, 20(sp)
-; RV32-NEXT:    addi a2, sp, 20
+; RV32-NEXT:    sw a1, 20(sp)
+; RV32-NEXT:    sw a0, 16(sp)
+; RV32-NEXT:    addi a2, sp, 16
 ; RV32-NEXT:    vsetvli a3, zero, e64, m8, ta, ma
 ; RV32-NEXT:    vlse64.v v16, (a2), zero
 ; RV32-NEXT:    vid.v v8

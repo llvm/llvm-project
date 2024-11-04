@@ -16,6 +16,7 @@
 #endif
 
 #include "src/__support/CPP/bit.h"
+#include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
 
 #include <stdint.h>
@@ -59,6 +60,8 @@ LIBC_INLINE long double nextafter(long double from, long double to) {
         // which is what is expected. Since NaNs are handling separately,
         // it will never overflow "beyond" infinity.
         from_bits.set_unbiased_exponent(from_bits.get_unbiased_exponent() + 1);
+        if (from_bits.is_inf())
+          raise_except_if_required(FE_OVERFLOW | FE_INEXACT);
         return from_bits;
       } else {
         ++int_val;
@@ -105,6 +108,8 @@ LIBC_INLINE long double nextafter(long double from, long double to) {
         // which is what is expected. Since NaNs are handling separately,
         // it will never overflow "beyond" infinity.
         from_bits.set_unbiased_exponent(from_bits.get_unbiased_exponent() + 1);
+        if (from_bits.is_inf())
+          raise_except_if_required(FE_OVERFLOW | FE_INEXACT);
         return from_bits;
       } else {
         ++int_val;
@@ -112,8 +117,12 @@ LIBC_INLINE long double nextafter(long double from, long double to) {
     }
   }
 
+  UIntType implicit_bit =
+      int_val & (UIntType(1) << MantissaWidth<long double>::VALUE);
+  if (implicit_bit == UIntType(0))
+    raise_except_if_required(FE_UNDERFLOW | FE_INEXACT);
+
   return cpp::bit_cast<long double>(int_val);
-  // TODO: Raise floating point exceptions as required by the standard.
 }
 
 } // namespace fputil

@@ -1,6 +1,6 @@
 ! Test passing pointer, allocatables, and optional assumed shapes to optional
 ! explicit shapes (see F2018 15.5.2.12).
-! RUN: bbc -emit-fir %s -o - | FileCheck %s
+! RUN: bbc -emit-fir -hlfir=false %s -o - | FileCheck %s
 module optional_tests
 implicit none
 interface

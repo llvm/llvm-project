@@ -77,7 +77,7 @@ public:
   ///   void PatcherCallback(uint64_t Value, uint64_t Offset, uint64_t Type);
   ///
   /// where Value is a value of the reference, Offset - is an offset into the
-  /// frame data at which the reference occured, and Type is a DWARF encoding
+  /// frame data at which the reference occurred, and Type is a DWARF encoding
   /// type of the reference.
   static Error parse(DWARFDataExtractor Data, uint64_t EHFrameAddress,
                      PatcherCallbackTy PatcherCallback);

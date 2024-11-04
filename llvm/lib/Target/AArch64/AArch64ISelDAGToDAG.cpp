@@ -1787,7 +1787,7 @@ void AArch64DAGToDAGISel::SelectDestructiveMultiIntrinsic(SDNode *N,
 void AArch64DAGToDAGISel::SelectPredicatedLoad(SDNode *N, unsigned NumVecs,
                                                unsigned Scale, unsigned Opc_ri,
                                                unsigned Opc_rr, bool IsIntr) {
-  assert(Scale < 4 && "Invalid scaling value.");
+  assert(Scale < 5 && "Invalid scaling value.");
   SDLoc DL(N);
   EVT VT = N->getValueType(0);
   SDValue Chain = N->getOperand(0);
@@ -4692,6 +4692,18 @@ void AArch64DAGToDAGISel::Select(SDNode *Node) {
     case Intrinsic::aarch64_ld64b:
       SelectLoad(Node, 8, AArch64::LD64B, AArch64::x8sub_0);
       return;
+    case Intrinsic::aarch64_sve_ld2q_sret: {
+      SelectPredicatedLoad(Node, 2, 4, AArch64::LD2Q_IMM, AArch64::LD2Q, true);
+      return;
+    }
+    case Intrinsic::aarch64_sve_ld3q_sret: {
+      SelectPredicatedLoad(Node, 3, 4, AArch64::LD3Q_IMM, AArch64::LD3Q, true);
+      return;
+    }
+    case Intrinsic::aarch64_sve_ld4q_sret: {
+      SelectPredicatedLoad(Node, 4, 4, AArch64::LD4Q_IMM, AArch64::LD4Q, true);
+      return;
+    }
     case Intrinsic::aarch64_sve_ld2_sret: {
       if (VT == MVT::nxv16i8) {
         SelectPredicatedLoad(Node, 2, 0, AArch64::LD2B_IMM, AArch64::LD2B,
@@ -5904,6 +5916,18 @@ void AArch64DAGToDAGISel::Select(SDNode *Node) {
       }
       break;
     }
+    case Intrinsic::aarch64_sve_st2q: {
+      SelectPredicatedStore(Node, 2, 4, AArch64::ST2Q, AArch64::ST2Q_IMM);
+      return;
+    }
+    case Intrinsic::aarch64_sve_st3q: {
+      SelectPredicatedStore(Node, 3, 4, AArch64::ST3Q, AArch64::ST3Q_IMM);
+      return;
+    }
+    case Intrinsic::aarch64_sve_st4q: {
+      SelectPredicatedStore(Node, 4, 4, AArch64::ST4Q, AArch64::ST4Q_IMM);
+      return;
+    }
     case Intrinsic::aarch64_sve_st2: {
       if (VT == MVT::nxv16i8) {
         SelectPredicatedStore(Node, 2, 0, AArch64::ST2B, AArch64::ST2B_IMM);
@@ -6685,14 +6709,32 @@ static EVT getMemVTFromNode(LLVMContext &Ctx, SDNode *Root) {
     return getPackedVectorTypeFromPredicateType(
         Ctx, Root->getOperand(2)->getValueType(0), /*NumVec=*/1);
   case Intrinsic::aarch64_sve_ld2_sret:
+  case Intrinsic::aarch64_sve_ld2q_sret:
     return getPackedVectorTypeFromPredicateType(
         Ctx, Root->getOperand(2)->getValueType(0), /*NumVec=*/2);
+  case Intrinsic::aarch64_sve_st2q:
+    return getPackedVectorTypeFromPredicateType(
+        Ctx, Root->getOperand(4)->getValueType(0), /*NumVec=*/2);
   case Intrinsic::aarch64_sve_ld3_sret:
+  case Intrinsic::aarch64_sve_ld3q_sret:
     return getPackedVectorTypeFromPredicateType(
         Ctx, Root->getOperand(2)->getValueType(0), /*NumVec=*/3);
+  case Intrinsic::aarch64_sve_st3q:
+    return getPackedVectorTypeFromPredicateType(
+        Ctx, Root->getOperand(5)->getValueType(0), /*NumVec=*/3);
   case Intrinsic::aarch64_sve_ld4_sret:
+  case Intrinsic::aarch64_sve_ld4q_sret:
     return getPackedVectorTypeFromPredicateType(
         Ctx, Root->getOperand(2)->getValueType(0), /*NumVec=*/4);
+  case Intrinsic::aarch64_sve_st4q:
+    return getPackedVectorTypeFromPredicateType(
+        Ctx, Root->getOperand(6)->getValueType(0), /*NumVec=*/4);
+  case Intrinsic::aarch64_sve_ld1udq:
+  case Intrinsic::aarch64_sve_st1udq:
+    return EVT(MVT::nxv1i64);
+  case Intrinsic::aarch64_sve_ld1uwq:
+  case Intrinsic::aarch64_sve_st1uwq:
+    return EVT(MVT::nxv1i32);
   }
 }
 

@@ -189,7 +189,7 @@ struct TransferWritePermutationLowering
     SmallVector<int64_t> indices;
     llvm::transform(permutationMap.getResults(), std::back_inserter(indices),
                     [](AffineExpr expr) {
-                      return expr.dyn_cast<AffineDimExpr>().getPosition();
+                      return dyn_cast<AffineDimExpr>(expr).getPosition();
                     });
 
     // Transpose in_bounds attribute.
@@ -248,7 +248,7 @@ struct TransferWriteNonPermutationLowering
     // dimension then deduce the missing inner dimensions.
     SmallVector<bool> foundDim(map.getNumDims(), false);
     for (AffineExpr exp : map.getResults())
-      foundDim[exp.cast<AffineDimExpr>().getPosition()] = true;
+      foundDim[cast<AffineDimExpr>(exp).getPosition()] = true;
     SmallVector<AffineExpr> exprs;
     bool foundFirstDim = false;
     SmallVector<int64_t> missingInnerDim;
@@ -308,7 +308,7 @@ struct TransferOpReduceRank : public OpRewritePattern<vector::TransferReadOp> {
     AffineMap map = op.getPermutationMap();
     unsigned numLeadingBroadcast = 0;
     for (auto expr : map.getResults()) {
-      auto dimExpr = expr.dyn_cast<AffineConstantExpr>();
+      auto dimExpr = dyn_cast<AffineConstantExpr>(expr);
       if (!dimExpr || dimExpr.getValue() != 0)
         break;
       numLeadingBroadcast++;

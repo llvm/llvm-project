@@ -447,9 +447,11 @@ std::array<Value *, 2> Negator::getSortedOperandsOfBinOp(Instruction *I) {
     // `xor` is negatible if one of its operands is invertible.
     // FIXME: InstCombineInverter? But how to connect Inverter and Negator?
     if (auto *C = dyn_cast<Constant>(Ops[1])) {
-      Value *Xor = Builder.CreateXor(Ops[0], ConstantExpr::getNot(C));
-      return Builder.CreateAdd(Xor, ConstantInt::get(Xor->getType(), 1),
-                               I->getName() + ".neg");
+      if (IsTrulyNegation) {
+        Value *Xor = Builder.CreateXor(Ops[0], ConstantExpr::getNot(C));
+        return Builder.CreateAdd(Xor, ConstantInt::get(Xor->getType(), 1),
+                                 I->getName() + ".neg");
+      }
     }
     return nullptr;
   }

@@ -30,10 +30,9 @@ Progress::~Progress() {
   // Make sure to always report progress completed when this object is
   // destructed so it indicates the progress dialog/activity should go away.
   std::lock_guard<std::mutex> guard(m_mutex);
-  if (!m_completed) {
+  if (!m_completed)
     m_completed = m_total;
-    ReportProgress();
-  }
+  ReportProgress();
 }
 
 void Progress::Increment(uint64_t amount, std::string update) {

@@ -54,7 +54,7 @@
 // CHECK-NEXT:     Function: func
 // CHECK-NEXT:     ExceptionRecord: .xdata
 // CHECK-NEXT:     ExceptionData {
-// CHECK-NEXT:       FunctionLength: 152
+// CHECK-NEXT:       FunctionLength: 156
 // CHECK:            Prologue [
 // CHECK-NEXT:         0xe76983            ; stp q9, q10, [sp, #-64]!
 // CHECK-NEXT:         0xe73d83            ; str q29, [sp, #-64]!
@@ -70,6 +70,7 @@
 // CHECK-NEXT:         0xe70008            ; str x0, [sp, #64]
 // CHECK-NEXT:         0xfc                ; pacibsp
 // CHECK-NEXT:         0xec                ; clear unwound to call
+// CHECK-NEXT:         0xeb                ; EC context
 // CHECK-NEXT:         0xea                ; context
 // CHECK-NEXT:         0xe9                ; machine frame
 // CHECK-NEXT:         0xe8                ; trap frame
@@ -95,8 +96,8 @@
 // CHECK-NEXT:       ]
 // CHECK-NEXT:       EpilogueScopes [
 // CHECK-NEXT:         EpilogueScope {
-// CHECK-NEXT:           StartOffset: 36
-// CHECK-NEXT:           EpilogueStartIndex: 68
+// CHECK-NEXT:           StartOffset: 37
+// CHECK-NEXT:           EpilogueStartIndex: 69
 // CHECK-NEXT:           Opcodes [
 // CHECK-NEXT:             0x01                ; add sp, #16
 // CHECK-NEXT:             0xe4                ; end
@@ -162,6 +163,8 @@ func:
     .seh_pushframe
     nop
     .seh_context
+    nop
+    .seh_ec_context
     nop
     .seh_clear_unwound_to_call
     pacibsp

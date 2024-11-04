@@ -53,12 +53,8 @@ define void @redundant_iv_cast(ptr %dst) {
 ; IC2-NEXT:  [[OFFSET_IDX:%.+]] = trunc i32 [[CAN_IV]] to i16
 ; IC2-NEXT:  [[P0:%.+]] = add i16 [[OFFSET_IDX]], 0
 ; IC2-NEXT:  [[P1:%.+]] = add i16 [[OFFSET_IDX]], 1
-; IC2-NEXT:  [[Z0:%.+]] = zext i16 [[P0]] to i32
-; IC2-NEXT:  [[Z1:%.+]] = zext i16 [[P1]] to i32
-; IC2-NEXT:  [[T0:%.+]] = trunc i32 [[Z0]] to i16
-; IC2-NEXT:  [[T1:%.+]] = trunc i32 [[Z1]] to i16
-; IC2:       store i16 [[T0]]
-; IC2-NEXT:  store i16 [[T1]]
+; IC2:       store i16 [[P0]]
+; IC2-NEXT:  store i16 [[P1]]
 ;
 entry:
   br label %loop

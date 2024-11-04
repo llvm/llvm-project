@@ -600,7 +600,7 @@ multiclass VPatVFNRCLIP<string intrinsic, string instruction> {
 }
 
 let Predicates = [HasVendorXSfvcp] in {
-  foreach vti = AllVectors in {
+  foreach vti = AllIntegerVectors in {
     defm : VPatVC_X<"x", "X", vti, XLenVT, GPR>;
     defm : VPatVC_X<"i", "I", vti, XLenVT, tsimm5>;
     defm : VPatVC_XV<"xv", "XV", vti, XLenVT, GPR>;
@@ -618,7 +618,7 @@ let Predicates = [HasVendorXSfvcp] in {
                         finfo.ScalarRegClass, payload1>;
     }
   }
-  foreach VtiToWti = !listconcat(AllWidenableIntVectors, AllWidenableFloatVectors) in {
+  foreach VtiToWti = AllWidenableIntVectors in {
     defvar vti = VtiToWti.Vti;
     defvar wti = VtiToWti.Wti;
     defvar iinfo = GetIntVTypeInfo<vti>.Vti;

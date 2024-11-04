@@ -24,7 +24,6 @@
 
 #include "LanaiAluCode.h"
 #include "LanaiTargetMachine.h"
-#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"

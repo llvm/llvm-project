@@ -3214,9 +3214,9 @@ HexagonTargetLowering::LowerUnalignedLoad(SDValue Op, SelectionDAG &DAG)
                     DAG.getConstant(NeedAlign, dl, MVT::i32))
       : BO.first;
   SDValue Base0 =
-      DAG.getMemBasePlusOffset(BaseNoOff, TypeSize::Fixed(BO.second), dl);
+      DAG.getMemBasePlusOffset(BaseNoOff, TypeSize::getFixed(BO.second), dl);
   SDValue Base1 = DAG.getMemBasePlusOffset(
-      BaseNoOff, TypeSize::Fixed(BO.second + LoadLen), dl);
+      BaseNoOff, TypeSize::getFixed(BO.second + LoadLen), dl);
 
   MachineMemOperand *WideMMO = nullptr;
   if (MachineMemOperand *MMO = LN->getMemOperand()) {

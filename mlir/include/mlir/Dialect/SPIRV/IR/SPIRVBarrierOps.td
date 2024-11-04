@@ -51,21 +51,10 @@ def SPIRV_ControlBarrierOp : SPIRV_Op<"ControlBarrier", []> {
     OpControlBarrier will be visible to any other invocation after return
     from that OpControlBarrier.
 
-    <!-- End of AutoGen section -->
-
-    ```
-    scope ::= `"CrossDevice"` | `"Device"` | `"Workgroup"` | ...
-
-    memory-semantics ::= `"None"` | `"Acquire"` | "Release"` | ...
-
-    control-barrier-op ::= `spirv.ControlBarrier` scope, scope, memory-semantics
-    ```
-
     #### Example:
 
     ```mlir
     spirv.ControlBarrier "Workgroup", "Device", "Acquire|UniformMemory"
-
     ```
   }];
 
@@ -102,21 +91,10 @@ def SPIRV_MemoryBarrierOp : SPIRV_Op<"MemoryBarrier", []> {
     To execute both a memory barrier and a control barrier, see
     OpControlBarrier.
 
-    <!-- End of AutoGen section -->
-
-    ```
-    scope ::= `"CrossDevice"` | `"Device"` | `"Workgroup"` | ...
-
-    memory-semantics ::= `"None"` | `"Acquire"` | `"Release"` | ...
-
-    memory-barrier-op ::= `spirv.MemoryBarrier` scope, memory-semantics
-    ```
-
     #### Example:
 
     ```mlir
     spirv.MemoryBarrier "Device", "Acquire|UniformMemory"
-
     ```
   }];
 

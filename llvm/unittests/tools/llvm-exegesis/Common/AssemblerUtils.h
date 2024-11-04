@@ -20,6 +20,7 @@
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/TargetParser/Host.h"
+#include "llvm/Testing/Support/Error.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
@@ -82,8 +83,13 @@ private:
     EXPECT_FALSE(assembleToStream(*ET, createTargetMachine(), /*LiveIns=*/{},
                                   RegisterInitialValues, Fill, AsmStream, Key,
                                   false));
-    return ExecutableFunction(createTargetMachine(),
-                              getObjectFromBuffer(AsmStream.str()));
+    Expected<ExecutableFunction> ExecFunc = ExecutableFunction::create(
+        createTargetMachine(), getObjectFromBuffer(AsmStream.str()));
+
+    // We can't use ASSERT_THAT_EXPECTED here as it doesn't work inside of
+    // non-void functions.
+    EXPECT_TRUE(detail::TakeExpected(ExecFunc).Success());
+    return std::move(*ExecFunc);
   }
 
   const std::string TT;

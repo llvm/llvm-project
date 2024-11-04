@@ -565,6 +565,73 @@ static MachineInstr *foldPatchpoint(MachineFunction &MF, MachineInstr &MI,
   return NewMI;
 }
 
+static void foldInlineAsmMemOperand(MachineInstr *MI, unsigned OpNo, int FI,
+                                    const TargetInstrInfo &TII) {
+  MachineOperand &MO = MI->getOperand(OpNo);
+  const VirtRegInfo &RI = AnalyzeVirtRegInBundle(*MI, MO.getReg());
+
+  // If the machine operand is tied, untie it first.
+  if (MO.isTied()) {
+    unsigned TiedTo = MI->findTiedOperandIdx(OpNo);
+    MI->untieRegOperand(OpNo);
+    // Intentional recursion!
+    foldInlineAsmMemOperand(MI, TiedTo, FI, TII);
+  }
+
+  SmallVector<MachineOperand, 5> NewOps;
+  TII.getFrameIndexOperands(NewOps, FI);
+  assert(!NewOps.empty() && "getFrameIndexOperands didn't create any operands");
+  MI->removeOperand(OpNo);
+  MI->insert(MI->operands_begin() + OpNo, NewOps);
+
+  // Change the previous operand to a MemKind InlineAsm::Flag. The second param
+  // is the per-target number of operands that represent the memory operand
+  // excluding this one (MD). This includes MO.
+  InlineAsm::Flag F(InlineAsm::Kind::Mem, NewOps.size());
+  F.setMemConstraint(InlineAsm::ConstraintCode::m);
+  MachineOperand &MD = MI->getOperand(OpNo - 1);
+  MD.setImm(F);
+
+  // Update mayload/maystore metadata, and memoperands.
+  MachineMemOperand::Flags Flags = MachineMemOperand::MONone;
+  MachineOperand &ExtraMO = MI->getOperand(InlineAsm::MIOp_ExtraInfo);
+  if (RI.Reads) {
+    ExtraMO.setImm(ExtraMO.getImm() | InlineAsm::Extra_MayLoad);
+    Flags |= MachineMemOperand::MOLoad;
+  }
+  if (RI.Writes) {
+    ExtraMO.setImm(ExtraMO.getImm() | InlineAsm::Extra_MayStore);
+    Flags |= MachineMemOperand::MOStore;
+  }
+  MachineFunction *MF = MI->getMF();
+  const MachineFrameInfo &MFI = MF->getFrameInfo();
+  MachineMemOperand *MMO = MF->getMachineMemOperand(
+      MachinePointerInfo::getFixedStack(*MF, FI), Flags, MFI.getObjectSize(FI),
+      MFI.getObjectAlign(FI));
+  MI->addMemOperand(*MF, MMO);
+}
+
+// Returns nullptr if not possible to fold.
+static MachineInstr *foldInlineAsmMemOperand(MachineInstr &MI,
+                                             ArrayRef<unsigned> Ops, int FI,
+                                             const TargetInstrInfo &TII) {
+  assert(MI.isInlineAsm() && "wrong opcode");
+  if (Ops.size() > 1)
+    return nullptr;
+  unsigned Op = Ops[0];
+  assert(Op && "should never be first operand");
+  assert(MI.getOperand(Op).isReg() && "shouldn't be folding non-reg operands");
+
+  if (!MI.mayFoldInlineAsmRegOp(Op))
+    return nullptr;
+
+  MachineInstr &NewMI = TII.duplicate(*MI.getParent(), MI.getIterator(), MI);
+
+  foldInlineAsmMemOperand(&NewMI, Op, FI, TII);
+
+  return &NewMI;
+}
+
 MachineInstr *TargetInstrInfo::foldMemoryOperand(MachineInstr &MI,
                                                  ArrayRef<unsigned> Ops, int FI,
                                                  LiveIntervals *LIS,
@@ -612,6 +679,8 @@ MachineInstr *TargetInstrInfo::foldMemoryOperand(MachineInstr &MI,
     NewMI = foldPatchpoint(MF, MI, Ops, FI, *this);
     if (NewMI)
       MBB->insert(MI, NewMI);
+  } else if (MI.isInlineAsm()) {
+    return foldInlineAsmMemOperand(MI, Ops, FI, *this);
   } else {
     // Ask the target to do the actual folding.
     NewMI = foldMemoryOperandImpl(MF, MI, Ops, MI, FI, LIS, VRM);
@@ -683,6 +752,8 @@ MachineInstr *TargetInstrInfo::foldMemoryOperand(MachineInstr &MI,
     NewMI = foldPatchpoint(MF, MI, Ops, FrameIndex, *this);
     if (NewMI)
       NewMI = &*MBB.insert(MI, NewMI);
+  } else if (MI.isInlineAsm() && isLoadFromStackSlot(LoadMI, FrameIndex)) {
+    return foldInlineAsmMemOperand(MI, Ops, FrameIndex, *this);
   } else {
     // Ask the target to do the actual folding.
     NewMI = foldMemoryOperandImpl(MF, MI, Ops, MI, LoadMI, LIS);
@@ -1060,8 +1131,7 @@ void TargetInstrInfo::reassociateOps(
   MachineInstrBuilder MIB1 =
       BuildMI(*MF, MIMetadata(Prev), TII->get(NewPrevOpc), NewVR)
           .addReg(RegX, getKillRegState(KillX))
-          .addReg(RegY, getKillRegState(KillY))
-          .setMIFlags(Prev.getFlags());
+          .addReg(RegY, getKillRegState(KillY));
 
   if (SwapRootOperands) {
     std::swap(RegA, NewVR);
@@ -1071,8 +1141,21 @@ void TargetInstrInfo::reassociateOps(
   MachineInstrBuilder MIB2 =
       BuildMI(*MF, MIMetadata(Root), TII->get(NewRootOpc), RegC)
           .addReg(RegA, getKillRegState(KillA))
-          .addReg(NewVR, getKillRegState(KillNewVR))
-          .setMIFlags(Root.getFlags());
+          .addReg(NewVR, getKillRegState(KillNewVR));
+
+  // Propagate FP flags from the original instructions.
+  // But clear poison-generating flags because those may not be valid now.
+  // TODO: There should be a helper function for copying only fast-math-flags.
+  uint32_t IntersectedFlags = Root.getFlags() & Prev.getFlags();
+  MIB1->setFlags(IntersectedFlags);
+  MIB1->clearFlag(MachineInstr::MIFlag::NoSWrap);
+  MIB1->clearFlag(MachineInstr::MIFlag::NoUWrap);
+  MIB1->clearFlag(MachineInstr::MIFlag::IsExact);
+
+  MIB2->setFlags(IntersectedFlags);
+  MIB2->clearFlag(MachineInstr::MIFlag::NoSWrap);
+  MIB2->clearFlag(MachineInstr::MIFlag::NoUWrap);
+  MIB2->clearFlag(MachineInstr::MIFlag::IsExact);
 
   setSpecialOperandAttr(Root, Prev, *MIB1, *MIB2);
 

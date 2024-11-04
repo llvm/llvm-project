@@ -93,7 +93,7 @@ constexpr void test_iterators() {
       auto pred = [&](int) { ++predicateCount; return false; };
       auto proj = [&](int i) { ++projectionCount; return i; };
       std::array a = {9, 7, 5, 3};
-      assert(!std::ranges::any_of(It(a.begin()), Sent(It(a.end())), pred, proj));
+      assert(!std::ranges::any_of(It(a.data()), Sent(It(a.data() + a.size())), pred, proj));
       assert(predicateCount == 4);
       assert(projectionCount == 4);
     }

@@ -1,0 +1,21 @@
+# This optional file is used to exclude entrypoints/headers for specific targets.
+
+# Check if sys/random.h is available. If it isn't that implies we're on an older
+# version of linux, so we probably also don't have the statx syscall.
+try_compile(
+  has_sys_random
+  ${CMAKE_CURRENT_BINARY_DIR}
+  SOURCES ${LIBC_SOURCE_DIR}/cmake/modules/system_features/check_sys_random.cpp
+)
+
+if(NOT has_sys_random)
+  list(APPEND TARGET_LLVMLIBC_REMOVED_ENTRYPOINTS 
+    libc.src.sys.stat.stat
+  )
+  # If we're doing a fullbuild we provide the random header ourselves.
+  if(NOT LLVM_LIBC_FULL_BUILD)
+    list(APPEND TARGET_LLVMLIBC_REMOVED_ENTRYPOINTS 
+      libc.src.sys.random.getrandom
+    )
+  endif()
+endif()

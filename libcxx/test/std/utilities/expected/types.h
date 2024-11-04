@@ -175,7 +175,7 @@ struct TailClobberer {
 
   friend constexpr bool operator==(const TailClobberer&, const TailClobberer&) = default;
 
-  friend constexpr void swap(TailClobberer&, TailClobberer&){};
+  friend constexpr void swap(TailClobberer&, TailClobberer&) {}
 
 private:
   alignas(2) bool b;

@@ -39,6 +39,10 @@ struct BytecodeWriterConfig::Impl {
   /// Note: This only differs from kVersion if a specific version is set.
   int64_t bytecodeVersion = bytecode::kVersion;
 
+  /// A flag specifying whether to elide emission of resources into the bytecode
+  /// file.
+  bool shouldElideResourceData = false;
+
   /// A map containing dialect version information for each dialect to emit.
   llvm::StringMap<std::unique_ptr<DialectVersion>> dialectVersionMap;
 
@@ -87,6 +91,11 @@ void BytecodeWriterConfig::attachTypeCallback(
 void BytecodeWriterConfig::attachResourcePrinter(
     std::unique_ptr<AsmResourcePrinter> printer) {
   impl->externalResourcePrinters.emplace_back(std::move(printer));
+}
+
+void BytecodeWriterConfig::setElideResourceDataFlag(
+    bool shouldElideResourceData) {
+  impl->shouldElideResourceData = shouldElideResourceData;
 }
 
 void BytecodeWriterConfig::setDesiredBytecodeVersion(int64_t bytecodeVersion) {
@@ -1170,22 +1179,25 @@ public:
   using PostProcessFn = function_ref<void(StringRef, AsmResourceEntryKind)>;
 
   ResourceBuilder(EncodingEmitter &emitter, StringSectionBuilder &stringSection,
-                  PostProcessFn postProcessFn)
+                  PostProcessFn postProcessFn, bool shouldElideData)
       : emitter(emitter), stringSection(stringSection),
-        postProcessFn(postProcessFn) {}
+        postProcessFn(postProcessFn), shouldElideData(shouldElideData) {}
   ~ResourceBuilder() override = default;
 
   void buildBlob(StringRef key, ArrayRef<char> data,
                  uint32_t dataAlignment) final {
-    emitter.emitOwnedBlobAndAlignment(data, dataAlignment);
+    if (!shouldElideData)
+      emitter.emitOwnedBlobAndAlignment(data, dataAlignment);
     postProcessFn(key, AsmResourceEntryKind::Blob);
   }
   void buildBool(StringRef key, bool data) final {
-    emitter.emitByte(data);
+    if (!shouldElideData)
+      emitter.emitByte(data);
     postProcessFn(key, AsmResourceEntryKind::Bool);
   }
   void buildString(StringRef key, StringRef data) final {
-    emitter.emitVarInt(stringSection.insert(data));
+    if (!shouldElideData)
+      emitter.emitVarInt(stringSection.insert(data));
     postProcessFn(key, AsmResourceEntryKind::String);
   }
 
@@ -1193,6 +1205,7 @@ private:
   EncodingEmitter &emitter;
   StringSectionBuilder &stringSection;
   PostProcessFn postProcessFn;
+  bool shouldElideData = false;
 };
 } // namespace
 
@@ -1225,7 +1238,8 @@ void BytecodeWriter::writeResourceSection(Operation *op,
 
   // Builder used to emit resources.
   ResourceBuilder entryBuilder(resourceEmitter, stringSection,
-                               appendResourceOffset);
+                               appendResourceOffset,
+                               config.shouldElideResourceData);
 
   // Emit the external resource entries.
   resourceOffsetEmitter.emitVarInt(config.externalResourcePrinters.size());

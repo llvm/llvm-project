@@ -1,6 +1,6 @@
 ! This test checks lowering of atomic and atomic update constructs
-! RUN: bbc --use-desc-for-alloc=false -fopenmp -emit-fir %s -o - | FileCheck %s
-! RUN: %flang_fc1 -mllvm --use-desc-for-alloc=false -emit-fir -fopenmp %s -o - | FileCheck %s
+! RUN: bbc --use-desc-for-alloc=false -fopenmp -emit-fir -hlfir=false %s -o - | FileCheck %s
+! RUN: %flang_fc1 -mllvm --use-desc-for-alloc=false -emit-fir -flang-deprecated-no-hlfir -fopenmp %s -o - | FileCheck %s
 
 program OmpAtomicUpdate
     use omp_lib
@@ -65,10 +65,10 @@ program OmpAtomicUpdate
 !CHECK:    %[[RESULT:.*]] = arith.subi %[[ARG]], {{.*}} : i32
 !CHECK:    omp.yield(%[[RESULT]] : i32)
 !CHECK:  }
+!CHECK:  %[[LOADED_X:.*]] = fir.load %[[X]] : !fir.ref<i32>
+!CHECK:  %[[LOADED_Z:.*]] = fir.load %[[Z]] : !fir.ref<i32>
 !CHECK:  omp.atomic.update   memory_order(relaxed) %[[Y]] : !fir.ref<i32> {
 !CHECK:  ^bb0(%[[ARG:.*]]: i32):
-!CHECK:    %[[LOADED_X:.*]] = fir.load %[[X]] : !fir.ref<i32>
-!CHECK:    %[[LOADED_Z:.*]] = fir.load %[[Z]] : !fir.ref<i32>
 !CHECK:    %{{.*}} = arith.cmpi sgt, %[[ARG]], %[[LOADED_X]] : i32
 !CHECK:    %{{.*}} = arith.select %{{.*}}, %[[ARG]], %[[LOADED_X]] : i32
 !CHECK:    %{{.*}} = arith.cmpi sgt, %{{.*}}, %[[LOADED_Z]] : i32

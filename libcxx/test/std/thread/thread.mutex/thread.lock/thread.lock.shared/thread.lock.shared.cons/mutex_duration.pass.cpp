@@ -46,9 +46,9 @@ std::atomic<unsigned> CountDown(Threads);
 void f1()
 {
   // Preemptive scheduling means that one cannot make assumptions about when
-  // code executes and therefore we cannot assume anthing about when the mutex
+  // code executes and therefore we cannot assume anything about when the mutex
   // starts waiting relative to code in the main thread. We can however prove
-  // that a timeout occured and that implies that this code is waiting.
+  // that a timeout occurred and that implies that this code is waiting.
   // See f2() below.
   //
   // Nevertheless, we should at least try to ensure that the mutex waits and

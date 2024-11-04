@@ -737,4 +737,14 @@ func.func @cannot_lower_transfer_read_with_leading_scalable(%arg0: memref<?x4xf3
 // CHECK-SAME:                                                                %[[MEMREF:.*]]: memref<?x4xf32>)
 // CHECK: %{{.*}} = vector.transfer_read %[[MEMREF]][%{{.*}}, %{{.*}}], %{{.*}}, %{{.*}} {in_bounds = [true, true]} : memref<?x4xf32>, vector<[4]x4xf32>
 
+//  -----
 
+// FULL-UNROLL-LABEL: @cannot_fully_unroll_transfer_write_of_nd_scalable_vector
+func.func @cannot_fully_unroll_transfer_write_of_nd_scalable_vector(%vec: vector<[4]x[4]xf32>, %memref: memref<?x?xf32>) {
+  // FULL-UNROLL-NOT: vector.extract
+  // FULL-UNROLL: vector.transfer_write {{.*}} : vector<[4]x[4]xf32>, memref<?x?xf32>
+  // FULL-UNROLL-NOT: vector.extract
+  %c0 = arith.constant 0 : index
+  vector.transfer_write %vec, %memref[%c0, %c0] {in_bounds = [true, true]} : vector<[4]x[4]xf32>, memref<?x?xf32>
+  return
+}

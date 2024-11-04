@@ -125,7 +125,6 @@ void Sema::HandleStartOfHeaderUnit() {
   ModuleScopes.push_back({}); // No GMF
   ModuleScopes.back().BeginLoc = StartOfTU;
   ModuleScopes.back().Module = Mod;
-  ModuleScopes.back().ModuleInterface = true;
   VisibleModules.setVisible(Mod, StartOfTU);
 
   // From now on, we have an owning module for all declarations we see.
@@ -375,7 +374,6 @@ Sema::ActOnModuleDecl(SourceLocation StartLoc, SourceLocation ModuleLoc,
   // Switch from the global module fragment (if any) to the named module.
   ModuleScopes.back().BeginLoc = StartLoc;
   ModuleScopes.back().Module = Mod;
-  ModuleScopes.back().ModuleInterface = MDK != ModuleDeclKind::Implementation;
   VisibleModules.setVisible(Mod, ModuleLoc);
 
   // From now on, we have an owning module for all declarations we see.
@@ -470,7 +468,6 @@ Sema::ActOnPrivateModuleFragmentDecl(SourceLocation ModuleLoc,
   ModuleScopes.push_back({});
   ModuleScopes.back().BeginLoc = ModuleLoc;
   ModuleScopes.back().Module = PrivateModuleFragment;
-  ModuleScopes.back().ModuleInterface = true;
   VisibleModules.setVisible(PrivateModuleFragment, ModuleLoc);
 
   // All declarations created from now on are scoped to the private module
@@ -523,7 +520,7 @@ DeclResult Sema::ActOnModuleImport(SourceLocation StartLoc,
   if (getLangOpts().CPlusPlusModules && isCurrentModulePurview() &&
       getCurrentModule()->Name == ModuleName) {
     Diag(ImportLoc, diag::err_module_self_import_cxx20)
-        << ModuleName << !ModuleScopes.back().ModuleInterface;
+        << ModuleName << currentModuleIsImplementation();
     return true;
   }
 
@@ -609,10 +606,7 @@ DeclResult Sema::ActOnModuleImport(SourceLocation StartLoc,
       Mod->Kind == Module::ModuleKind::ModulePartitionImplementation) {
     Diag(ExportLoc, diag::err_export_partition_impl)
         << SourceRange(ExportLoc, Path.back().second);
-  } else if (!ModuleScopes.empty() &&
-             (ModuleScopes.back().ModuleInterface ||
-              (getLangOpts().CPlusPlusModules &&
-               ModuleScopes.back().Module->isGlobalModule()))) {
+  } else if (!ModuleScopes.empty() && !currentModuleIsImplementation()) {
     // Re-export the module if the imported module is exported.
     // Note that we don't need to add re-exported module to Imports field
     // since `Exports` implies the module is imported already.
@@ -772,7 +766,7 @@ Decl *Sema::ActOnStartExportDecl(Scope *S, SourceLocation ExportLoc,
     Diag(ExportLoc, diag::err_export_not_in_module_interface) << 0;
     D->setInvalidDecl();
     return D;
-  } else if (!ModuleScopes.back().ModuleInterface) {
+  } else if (currentModuleIsImplementation()) {
     Diag(ExportLoc, diag::err_export_not_in_module_interface) << 1;
     Diag(ModuleScopes.back().BeginLoc,
          diag::note_not_module_interface_add_export)
@@ -932,7 +926,6 @@ Module *Sema::PushGlobalModuleFragment(SourceLocation BeginLoc) {
 
   // Enter the scope of the global module.
   ModuleScopes.push_back({BeginLoc, TheGlobalModuleFragment,
-                          /*ModuleInterface=*/false,
                           /*OuterVisibleModules=*/{}});
   VisibleModules.setVisible(TheGlobalModuleFragment, BeginLoc);
 
@@ -946,23 +939,20 @@ void Sema::PopGlobalModuleFragment() {
   ModuleScopes.pop_back();
 }
 
-Module *Sema::PushImplicitGlobalModuleFragment(SourceLocation BeginLoc,
-                                               bool IsExported) {
-  Module **M = IsExported ? &TheExportedImplicitGlobalModuleFragment
-                          : &TheImplicitGlobalModuleFragment;
-  if (!*M) {
+Module *Sema::PushImplicitGlobalModuleFragment(SourceLocation BeginLoc) {
+  if (!TheImplicitGlobalModuleFragment) {
     ModuleMap &Map = PP.getHeaderSearchInfo().getModuleMap();
-    *M = Map.createImplicitGlobalModuleFragmentForModuleUnit(
-        BeginLoc, IsExported, getCurrentModule());
+    TheImplicitGlobalModuleFragment =
+        Map.createImplicitGlobalModuleFragmentForModuleUnit(BeginLoc,
+                                                            getCurrentModule());
   }
-  assert(*M && "module creation should not fail");
+  assert(TheImplicitGlobalModuleFragment && "module creation should not fail");
 
   // Enter the scope of the global module.
-  ModuleScopes.push_back({BeginLoc, *M,
-                          /*ModuleInterface=*/false,
+  ModuleScopes.push_back({BeginLoc, TheImplicitGlobalModuleFragment,
                           /*OuterVisibleModules=*/{}});
-  VisibleModules.setVisible(*M, BeginLoc);
-  return *M;
+  VisibleModules.setVisible(TheImplicitGlobalModuleFragment, BeginLoc);
+  return TheImplicitGlobalModuleFragment;
 }
 
 void Sema::PopImplicitGlobalModuleFragment() {
@@ -970,4 +960,23 @@ void Sema::PopImplicitGlobalModuleFragment() {
          getCurrentModule()->isImplicitGlobalModule() &&
          "left the wrong module scope, which is not global module fragment");
   ModuleScopes.pop_back();
+}
+
+bool Sema::isCurrentModulePurview() const {
+  if (!getCurrentModule())
+    return false;
+
+  /// Does this Module scope describe part of the purview of a standard named
+  /// C++ module?
+  switch (getCurrentModule()->Kind) {
+  case Module::ModuleInterfaceUnit:
+  case Module::ModuleImplementationUnit:
+  case Module::ModulePartitionInterface:
+  case Module::ModulePartitionImplementation:
+  case Module::PrivateModuleFragment:
+  case Module::ImplicitGlobalModuleFragment:
+    return true;
+  default:
+    return false;
+  }
 }

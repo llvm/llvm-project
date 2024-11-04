@@ -1,6 +1,8 @@
 ; RUN: opt -passes=debugify -S < %s | FileCheck --check-prefixes=ALL,VALUE %s
 ; RUN: opt -passes=debugify -debugify-level=locations -S < %s | FileCheck --check-prefixes=ALL --implicit-check-not=dbg.value %s
 
+; RUN: opt -passes=debugify -S < %s --try-experimental-debuginfo-iterators | FileCheck --check-prefixes=ALL,VALUE %s
+
 ; ALL-LABEL: @test
 define void @test() {
   %add = add i32 1, 2

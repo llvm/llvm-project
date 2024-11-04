@@ -489,11 +489,11 @@ TypeSize
 PPCTTIImpl::getRegisterBitWidth(TargetTransformInfo::RegisterKind K) const {
   switch (K) {
   case TargetTransformInfo::RGK_Scalar:
-      return TypeSize::Fixed(ST->isPPC64() ? 64 : 32);
+    return TypeSize::getFixed(ST->isPPC64() ? 64 : 32);
   case TargetTransformInfo::RGK_FixedWidthVector:
-      return TypeSize::Fixed(ST->hasAltivec() ? 128 : 0);
+    return TypeSize::getFixed(ST->hasAltivec() ? 128 : 0);
   case TargetTransformInfo::RGK_ScalableVector:
-      return TypeSize::Scalable(0);
+    return TypeSize::getScalable(0);
   }
 
   llvm_unreachable("Unsupported register kind");

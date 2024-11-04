@@ -943,6 +943,11 @@ bool LoopVectorizationLegality::canVectorizeInstrs() {
           }
       }
 
+      // If we found a vectorized variant of a function, note that so LV can
+      // make better decisions about maximum VF.
+      if (CI && !VFDatabase::getMappings(*CI).empty())
+        VecCallVariantsFound = true;
+
       // Check that the instruction return type is vectorizable.
       // Also, we can't vectorize extractelement instructions.
       if ((!VectorType::isValidElementType(I.getType()) &&

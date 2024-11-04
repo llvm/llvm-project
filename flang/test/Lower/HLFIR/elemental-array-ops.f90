@@ -197,7 +197,7 @@ end subroutine char_return
 ! CHECK:           ^bb0(%[[VAL_33:.*]]: index):
 ! CHECK:             %[[VAL_34:.*]] = hlfir.designate %[[VAL_10]]#0 (%[[VAL_33]])  typeparams %[[VAL_9]] : (!fir.box<!fir.array<?x!fir.char<1,3>>>, index, index) -> !fir.ref<!fir.char<1,3>>
 ! CHECK:             %[[VAL_35:.*]] = hlfir.apply %[[VAL_36:.*]], %[[VAL_33]] typeparams %[[VAL_16]] : (!hlfir.expr<?x!fir.char<1,3>>, index, index) -> !hlfir.expr<!fir.char<1,3>>
-! CHECK:             %[[VAL_37:.*]]:3 = hlfir.associate %[[VAL_35]] typeparams %[[VAL_16]] {uniq_name = "adapt.valuebyref"} : (!hlfir.expr<!fir.char<1,3>>, index) -> (!fir.ref<!fir.char<1,3>>, !fir.ref<!fir.char<1,3>>, i1)
+! CHECK:             %[[VAL_37:.*]]:3 = hlfir.associate %[[VAL_35]] typeparams %[[VAL_16]] {adapt.valuebyref} : (!hlfir.expr<!fir.char<1,3>>, index) -> (!fir.ref<!fir.char<1,3>>, !fir.ref<!fir.char<1,3>>, i1)
 ! CHECK:             %[[VAL_38:.*]] = fir.convert %[[VAL_34]] : (!fir.ref<!fir.char<1,3>>) -> !fir.ref<i8>
 ! CHECK:             %[[VAL_39:.*]] = fir.convert %[[VAL_37]]#1 : (!fir.ref<!fir.char<1,3>>) -> !fir.ref<i8>
 ! CHECK:             %[[VAL_40:.*]] = fir.convert %[[VAL_9]] : (index) -> i64

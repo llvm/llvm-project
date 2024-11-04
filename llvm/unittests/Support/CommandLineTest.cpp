@@ -525,6 +525,59 @@ TEST(CommandLineTest, LookupFailsInWrongSubCommand) {
   EXPECT_FALSE(Errs.empty());
 }
 
+TEST(CommandLineTest, TopLevelOptInSubcommand) {
+  enum LiteralOptionEnum {
+    foo,
+    bar,
+    baz,
+  };
+
+  cl::ResetCommandLineParser();
+
+  // This is a top-level option and not associated with a subcommand.
+  // A command line using subcommand should parse both subcommand options and
+  // top-level options.  A valid use case is that users of llvm command line
+  // tools should be able to specify top-level options defined in any library.
+  StackOption<std::string> TopLevelOpt("str", cl::init("txt"),
+                                       cl::desc("A top-level option."));
+
+  StackSubCommand SC("sc", "Subcommand");
+  StackOption<std::string> PositionalOpt(
+      cl::Positional, cl::desc("positional argument test coverage"),
+      cl::sub(SC));
+  StackOption<LiteralOptionEnum> LiteralOpt(
+      cl::desc("literal argument test coverage"), cl::sub(SC), cl::init(bar),
+      cl::values(clEnumVal(foo, "foo"), clEnumVal(bar, "bar"),
+                 clEnumVal(baz, "baz")));
+  StackOption<bool> EnableOpt("enable", cl::sub(SC), cl::init(false));
+  StackOption<int> ThresholdOpt("threshold", cl::sub(SC), cl::init(1));
+
+  const char *PositionalOptVal = "input-file";
+  const char *args[] = {"prog",    "sc",        PositionalOptVal,
+                        "-enable", "--str=csv", "--threshold=2"};
+
+  // cl::ParseCommandLineOptions returns true on success. Otherwise, it will
+  // print the error message to stderr and exit in this setting (`Errs` ostream
+  // is not set).
+  ASSERT_TRUE(cl::ParseCommandLineOptions(sizeof(args) / sizeof(args[0]), args,
+                                          StringRef()));
+  EXPECT_STREQ(PositionalOpt.getValue().c_str(), PositionalOptVal);
+  EXPECT_TRUE(EnableOpt);
+  // Tests that the value of `str` option is `csv` as specified.
+  EXPECT_STREQ(TopLevelOpt.getValue().c_str(), "csv");
+  EXPECT_EQ(ThresholdOpt, 2);
+
+  for (auto &[LiteralOptVal, WantLiteralOpt] :
+       {std::pair{"--bar", bar}, {"--foo", foo}, {"--baz", baz}}) {
+    const char *args[] = {"prog", "sc", LiteralOptVal};
+    ASSERT_TRUE(cl::ParseCommandLineOptions(sizeof(args) / sizeof(args[0]),
+                                            args, StringRef()));
+
+    // Tests that literal options are parsed correctly.
+    EXPECT_EQ(LiteralOpt, WantLiteralOpt);
+  }
+}
+
 TEST(CommandLineTest, AddToAllSubCommands) {
   cl::ResetCommandLineParser();
 

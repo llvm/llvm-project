@@ -42,9 +42,8 @@ TargetMachine::~TargetMachine() = default;
 bool TargetMachine::isLargeData(const GlobalVariable *GV) const {
   if (getTargetTriple().getArch() != Triple::x86_64 || GV->isThreadLocal())
     return false;
-  // Large data under the large code model still needs to be thought about, so
-  // restrict this to medium.
-  if (getCodeModel() != CodeModel::Medium)
+
+  if (getCodeModel() != CodeModel::Medium && getCodeModel() != CodeModel::Large)
     return false;
 
   // Allowing large metadata sections in the presence of an explicit section is

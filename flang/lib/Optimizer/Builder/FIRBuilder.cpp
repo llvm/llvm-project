@@ -1516,3 +1516,14 @@ mlir::Value fir::factory::genCPtrOrCFunptrValue(fir::FirOpBuilder &builder,
       fir::factory::genCPtrOrCFunptrAddr(builder, loc, cPtr, cPtrTy);
   return builder.create<fir::LoadOp>(loc, cPtrAddr);
 }
+
+mlir::Value fir::factory::createNullBoxProc(fir::FirOpBuilder &builder,
+                                            mlir::Location loc,
+                                            mlir::Type boxType) {
+  auto boxTy{boxType.dyn_cast<fir::BoxProcType>()};
+  if (!boxTy)
+    fir::emitFatalError(loc, "Procedure pointer must be of BoxProcType");
+  auto boxEleTy{fir::unwrapRefType(boxTy.getEleTy())};
+  mlir::Value initVal{builder.create<fir::ZeroOp>(loc, boxEleTy)};
+  return builder.create<fir::EmboxProcOp>(loc, boxTy, initVal);
+}

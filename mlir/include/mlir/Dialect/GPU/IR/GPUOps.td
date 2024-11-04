@@ -53,6 +53,32 @@ class GPU_IndexOp<string mnemonic, list<Trait> traits = []> :
   let assemblyFormat = "$dimension attr-dict";
 }
 
+def GPU_ClusterDimOp : GPU_IndexOp<"cluster_dim"> {
+  let description = [{
+    Returns the number of thread blocks in the cluster along
+    the x, y, or z `dimension`.
+
+    Example:
+
+    ```mlir
+    %cDimX = gpu.cluster_dim x
+    ```
+  }];
+}
+
+def GPU_ClusterIdOp : GPU_IndexOp<"cluster_id"> {
+  let description = [{
+    Returns the cluster id, i.e. the index of the current cluster within the 
+    grid along the x, y, or z `dimension`.
+
+    Example:
+
+    ```mlir
+    %cIdY = gpu.cluster_id y
+    ```
+  }];
+}
+
 def GPU_BlockDimOp : GPU_IndexOp<"block_dim"> {
   let description = [{
     Returns the number of threads in the thread block (aka the block size) along
@@ -433,6 +459,32 @@ def GPU_GPUFuncOp : GPU_Op<"func", [
   let hasVerifier = 1;
 }
 
+def GPU_DynamicSharedMemoryOp : GPU_Op<"dynamic_shared_memory", [Pure]>
+{
+  let summary = "Get the memref for dynamic shared memory";
+  
+  let description = [{
+    This operation provides a memref pointer to the start of dynamic shared 
+    memory, often referred to as workgroup memory. It's important to note that
+    this dynamic shared memory needs to be allocated at kernel launch. One can 
+    conveniently utilize `the dynamic_shared_memory_size` parameter of 
+    `gpu.launch` for this purpose.
+   
+    Examples: 
+    ```mlir        
+    %0 = gpu.dynamic.shared.memory : memref<?xi8, #gpu.address_space<workgroup>>
+    %1 = memref.view %0[%c8192][] : memref<?xi8, #gpu.address_space<workgroup>> 
+                            to memref<32x64xf32, #gpu.address_space<workgroup>>
+    %2 = memref.view %0[%c16384][] : memref<?xi8, #gpu.address_space<workgroup>> 
+                            to memref<32x64xf32, #gpu.address_space<workgroup>>
+    ```
+  }];  
+  let arguments = (ins);
+  let results = (outs Arg<MemRefRankOf<[I8], [1]>>:$resultMemref);
+  let assemblyFormat = [{ attr-dict `:` type($resultMemref) }];
+  let hasVerifier = 1;
+}
+
 def LaunchIndx : AnyTypeOf<[Index, I32, I64]>;
 
 def GPU_LaunchFuncOp :GPU_Op<"launch_func", [
@@ -441,8 +493,15 @@ def GPU_LaunchFuncOp :GPU_Op<"launch_func", [
                      "blockSizeY", "blockSizeZ"]>]>,
     Arguments<(ins Variadic<GPU_AsyncToken>:$asyncDependencies,
                SymbolRefAttr:$kernel,
-               LaunchIndx:$gridSizeX, LaunchIndx:$gridSizeY, LaunchIndx:$gridSizeZ,
-               LaunchIndx:$blockSizeX, LaunchIndx:$blockSizeY, LaunchIndx:$blockSizeZ,
+               LaunchIndx:$gridSizeX, 
+               LaunchIndx:$gridSizeY, 
+               LaunchIndx:$gridSizeZ,
+               LaunchIndx:$blockSizeX, 
+               LaunchIndx:$blockSizeY, 
+               LaunchIndx:$blockSizeZ,
+               Optional<LaunchIndx>:$clusterSizeX,
+               Optional<LaunchIndx>:$clusterSizeY,
+               Optional<LaunchIndx>:$clusterSizeZ,
                Optional<I32>:$dynamicSharedMemorySize,
                Variadic<AnyType>:$kernelOperands,
                Optional<AnyType>:$asyncObject)>,
@@ -480,6 +539,12 @@ def GPU_LaunchFuncOp :GPU_Op<"launch_func", [
     The remaining operands if present are passed as arguments to the kernel
     function.
 
+    The `gpu.launch_func` also supports kernel launching with clusters if 
+    supported by the target architecture. The cluster size can be set by 
+    `clusterSizeX`, `clusterSizeY`, and `clusterSizeZ` arguments. When these 
+    arguments are present, the Op launches a kernel that clusters the given 
+    thread blocks. This feature is exclusive to certain architectures.
+
     Example:
 
     ```mlir
@@ -509,6 +574,15 @@ def GPU_LaunchFuncOp :GPU_Op<"launch_func", [
           %gDimY = gpu.grid_dim y
           %gDimZ = gpu.grid_dim z
 
+          // (Optional)  Cluster size only for support architectures
+          %cIdX = gpu.cluster_id x
+          %cIdY = gpu.cluster_id y
+          %cIdZ = gpu.cluster_id z
+
+          %cDimX = gpu.cluster_dim x
+          %cDimY = gpu.cluster_dim y
+          %cDimZ = gpu.cluster_dim z
+
           "some_op"(%bx, %tx) : (index, index) -> ()
           %42 = load %arg1[%bx] : memref<?xf32, 1>
         }
@@ -519,6 +593,7 @@ def GPU_LaunchFuncOp :GPU_Op<"launch_func", [
           async                           // (Optional) Don't block host, return token.
           [%t0]                           // (Optional) Execute only after %t0 has completed.
           @kernels::@kernel_1             // Kernel function.
+          clusters in (%cst, %cst, %cst)  // (Optional) Cluster size only for support architectures. 
           blocks in (%cst, %cst, %cst)    // Grid size.
           threads in (%cst, %cst, %cst)   // Block size.
           dynamic_shared_memory_size %s   // (Optional) Amount of dynamic shared
@@ -536,11 +611,13 @@ def GPU_LaunchFuncOp :GPU_Op<"launch_func", [
       "KernelDim3":$blockSize, "Value":$dynamicSharedMemorySize,
       "ValueRange":$kernelOperands,
       CArg<"Type", "nullptr">:$asyncTokenType,
-      CArg<"ValueRange", "{}">:$asyncDependencies)>,
+      CArg<"ValueRange", "{}">:$asyncDependencies,
+      CArg<"std::optional<KernelDim3>", "std::nullopt">:$clusterSize)>,
     OpBuilder<(ins "SymbolRefAttr":$kernel, "KernelDim3":$gridSize,
       "KernelDim3":$blockSize, "Value":$dynamicSharedMemorySize,
       "ValueRange":$kernelOperands,
-      CArg<"Value", "nullptr">:$asyncObject)>
+      CArg<"Value", "nullptr">:$asyncObject,
+      CArg<"std::optional<KernelDim3>", "std::nullopt">:$clusterSize)>
   ];
 
   let extraClassDeclaration = [{
@@ -550,11 +627,22 @@ def GPU_LaunchFuncOp :GPU_Op<"launch_func", [
     /// The name of the kernel.
     StringAttr getKernelName();
 
+    /// Returns true if cluster size is specified.
+    bool hasClusterSize() {
+      if (getClusterSizeX() && getClusterSizeY() && getClusterSizeZ())
+        return true;
+      return false;
+    }
+
     /// The number of operands passed to the kernel function.
     unsigned getNumKernelOperands();
 
     /// The i-th operand passed to the kernel function.
     Value getKernelOperand(unsigned i);
+
+    /// Get the SSA values passed as operands to specify the cluster size.
+    /// When the cluster sizes are not specified, it asserts.
+    KernelDim3 getClusterSizeOperandValues();
 
     /// Get the SSA values passed as operands to specify the grid size.
     KernelDim3 getGridSizeOperandValues();
@@ -571,10 +659,11 @@ def GPU_LaunchFuncOp :GPU_Op<"launch_func", [
   let assemblyFormat = [{
       custom<AsyncDependencies>(type($asyncToken), $asyncDependencies)
       (`<` $asyncObject^ `:` type($asyncObject) `>`)?
-      $kernel
+      $kernel      
+      ( `clusters` `in` ` ` `(` $clusterSizeX^ `,` $clusterSizeY `,` $clusterSizeZ `)` )?
       `blocks` `in` ` ` `(` $gridSizeX `,` $gridSizeY `,` $gridSizeZ `)`
       `threads` `in` ` ` `(` $blockSizeX `,` $blockSizeY `,` $blockSizeZ `)`
-      custom<LaunchDimType>(type($gridSizeX))
+      custom<LaunchDimType>(type($gridSizeX), ref($clusterSizeX), type($clusterSizeX), type($clusterSizeY), type($clusterSizeZ))
       (`dynamic_shared_memory_size` $dynamicSharedMemorySize^)?
       custom<LaunchFuncOperands>($kernelOperands, type($kernelOperands)) attr-dict
   }];
@@ -842,38 +931,53 @@ def GPU_YieldOp : GPU_Op<"yield", [Pure, Terminator]>,
   }];
 }
 
-// add, mul mirror the XLA ComparisonDirection enum.
+// These mirror the reduction combining kinds from the vector dialect.
 def GPU_AllReduceOpAdd : I32EnumAttrCase<"ADD", 0, "add">;
-def GPU_AllReduceOpAnd : I32EnumAttrCase<"AND", 1, "and">;
-def GPU_AllReduceOpMax : I32EnumAttrCase<"MAX", 2, "max">;
-def GPU_AllReduceOpMin : I32EnumAttrCase<"MIN", 3, "min">;
-def GPU_AllReduceOpMul : I32EnumAttrCase<"MUL", 4, "mul">;
-def GPU_AllReduceOpOr  : I32EnumAttrCase<"OR",  5, "or">;
-def GPU_AllReduceOpXor : I32EnumAttrCase<"XOR", 6, "xor">;
+def GPU_AllReduceOpMul : I32EnumAttrCase<"MUL", 1, "mul">;
+def GPU_AllReduceOpMinUI : I32EnumAttrCase<"MINUI", 2, "minui">;
+def GPU_AllReduceOpMinSI : I32EnumAttrCase<"MINSI", 3, "minsi">;
+// Follows the `arith.minnumf` semantics.
+def GPU_AllReduceOpMinF : I32EnumAttrCase<"MINF", 4, "minf">;
+def GPU_AllReduceOpMaxUI : I32EnumAttrCase<"MAXUI", 5, "maxui">;
+def GPU_AllReduceOpMaxSI : I32EnumAttrCase<"MAXSI", 6, "maxsi">;
+// Follows the `arith.maxnumf` semantics.
+def GPU_AllReduceOpMaxF : I32EnumAttrCase<"MAXF", 7, "maxf">;
+def GPU_AllReduceOpAnd : I32EnumAttrCase<"AND", 8, "and">;
+def GPU_AllReduceOpOr  : I32EnumAttrCase<"OR",  9, "or">;
+def GPU_AllReduceOpXor : I32EnumAttrCase<"XOR", 10, "xor">;
+// Follows the `arith.minimumf` semantics.
+def GPU_AllReduceOpMinimumF : I32EnumAttrCase<"MINIMUMF", 11, "minimumf">;
+// Follows the `arith.maximumf` semantics.
+def GPU_AllReduceOpMaximumF : I32EnumAttrCase<"MAXIMUMF", 12, "maximumf">;
 
 def GPU_AllReduceOperation : I32EnumAttr<"AllReduceOperation",
     "built-in reduction operations supported by gpu.allreduce.",
     [
       GPU_AllReduceOpAdd,
-      GPU_AllReduceOpAnd,
-      GPU_AllReduceOpMax,
-      GPU_AllReduceOpMin,
       GPU_AllReduceOpMul,
+      GPU_AllReduceOpMinUI,
+      GPU_AllReduceOpMinSI,
+      GPU_AllReduceOpMinF,
+      GPU_AllReduceOpMaxUI,
+      GPU_AllReduceOpMaxSI,
+      GPU_AllReduceOpMaxF,
+      GPU_AllReduceOpAnd,
       GPU_AllReduceOpOr,
-      GPU_AllReduceOpXor
+      GPU_AllReduceOpXor,
+      GPU_AllReduceOpMinimumF,
+      GPU_AllReduceOpMaximumF
     ]>{
   let genSpecializedAttr = 0;
   let cppNamespace = "::mlir::gpu";
 }
+
+def AnyIntegerOrFloat : AnyTypeOf<[AnySignlessInteger, AnyFloat], "Integer or Float">;
+
 def GPU_AllReduceOperationAttr : EnumAttr<GPU_Dialect, GPU_AllReduceOperation,
                                           "all_reduce_op">;
 
 def GPU_AllReduceOp : GPU_Op<"all_reduce",
-    [SameOperandsAndResultType, IsolatedFromAbove]>,
-    Arguments<(ins AnyType:$value,
-               OptionalAttr<GPU_AllReduceOperationAttr>:$op,
-               UnitAttr:$uniform)>,
-    Results<(outs AnyType)> {
+    [SameOperandsAndResultType, IsolatedFromAbove]> {
   let summary = "Reduce values among workgroup.";
   let description = [{
     The `all_reduce` op reduces the value of every work item across a local
@@ -892,12 +996,23 @@ def GPU_AllReduceOp : GPU_Op<"all_reduce",
 
     compute the sum of each work item's %0 value. The first version specifies
     the accumulation as operation, whereas the second version specifies the
-    accumulation as code region. The accumulation operation must be one of:
-    `add`, `and`, `max`, `min`, `mul`, `or`, `xor`.
+    accumulation as code region. The reduction operation must be one of:
+    *  Integer types: `add`, `mul`, `minui`, `minsi`, `maxui`, `maxsi`, `and`,
+       `or`, `xor`
+    *  Floating point types: `add`, `mul`, `minf`, `maxf`, `minimumf`,
+       `maximumf`
 
     If `uniform` flag is set either none or all work items of a workgroup
     need to execute this op in convergence.
   }];
+
+  let arguments = (ins
+    AnyIntegerOrFloat:$value,
+    OptionalAttr<GPU_AllReduceOperationAttr>:$op,
+    UnitAttr:$uniform
+  );
+  let results = (outs AnyIntegerOrFloat:$result);
+
   let regions = (region AnyRegion:$body);
   let assemblyFormat = [{ custom<AllReduceOperation>($op) $value
                           (`uniform` $uniform^)? $body attr-dict
@@ -907,12 +1022,7 @@ def GPU_AllReduceOp : GPU_Op<"all_reduce",
   let hasRegionVerifier = 1;
 }
 
-def GPU_SubgroupReduceOp : GPU_Op<"subgroup_reduce",
-    [SameOperandsAndResultType]>,
-    Arguments<(ins AnyType:$value,
-               GPU_AllReduceOperationAttr:$op,
-               UnitAttr:$uniform)>,
-    Results<(outs AnyType)> {
+def GPU_SubgroupReduceOp : GPU_Op<"subgroup_reduce", [SameOperandsAndResultType]> {
   let summary = "Reduce values among subgroup.";
   let description = [{
     The `subgroup_reduce` op reduces the value of every work item across a
@@ -925,8 +1035,21 @@ def GPU_SubgroupReduceOp : GPU_Op<"subgroup_reduce",
     ```
 
     If `uniform` flag is set either none or all work items of a subgroup
-    need to execute this op in convergence.
+    need to execute this op in convergence. The reduction operation must be one
+    of:
+    *  Integer types: `add`, `mul`, `minui`, `minsi`, `maxui`, `maxsi`, `and`,
+       `or`, `xor`
+    *  Floating point types: `add`, `mul`, `minf`, `maxf`, `minimumf`,
+       `maximumf`
   }];
+
+  let arguments = (ins
+    AnyIntegerOrFloat:$value,
+    GPU_AllReduceOperationAttr:$op,
+    UnitAttr:$uniform
+  );
+  let results = (outs AnyIntegerOrFloat:$result);
+
   let assemblyFormat = [{ custom<AllReduceOperation>($op) $value
                           (`uniform` $uniform^)? attr-dict
                           `:` functional-type(operands, results) }];
@@ -1010,6 +1133,7 @@ def GPU_BarrierOp : GPU_Op<"barrier"> {
     in convergence.
   }];
   let assemblyFormat = "attr-dict";
+  let hasCanonicalizer = 1;
 }
 
 def GPU_GPUModuleOp : GPU_Op<"module", [

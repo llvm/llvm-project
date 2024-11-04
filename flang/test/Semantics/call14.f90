@@ -7,7 +7,7 @@ module m
   end type
  contains
   !ERROR: VALUE attribute may apply only to a dummy data object
-  subroutine C863(notData,assumedSize,coarray,coarrayComponent)
+  subroutine C863(notData,assumedSize,coarray,coarrayComponent,assumedRank)
     external :: notData
     !ERROR: VALUE attribute may apply only to a dummy argument
     real, value :: notADummy
@@ -18,6 +18,8 @@ module m
     real, value :: coarray[*]
     !ERROR: VALUE attribute may not apply to a type with a coarray ultimate component
     type(hasCoarray), value :: coarrayComponent
+    !ERROR: VALUE attribute may not apply to an assumed-rank array
+    real, value :: assumedRank(..)
   end subroutine
   subroutine C864(allocatable, inout, out, pointer, volatile)
     !ERROR: VALUE attribute may not apply to an ALLOCATABLE

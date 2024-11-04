@@ -240,20 +240,10 @@ public:
     // Make sure current include is covered by the export pragma.
     if ((Top.Block && HashLine > Top.SeenAtLine) ||
         Top.SeenAtLine == HashLine) {
-      if (IncludedHeader) {
-        switch (IncludedHeader->kind()) {
-        case Header::Physical:
-          Out->IWYUExportBy[IncludedHeader->physical().getUniqueID()]
-              .push_back(Top.Path);
-          break;
-        case Header::Standard:
-          Out->StdIWYUExportBy[IncludedHeader->standard()].push_back(Top.Path);
-          break;
-        case Header::Verbatim:
-          assert(false && "unexpected Verbatim header");
-          break;
-        }
-      }
+      if (IncludedFile)
+        Out->IWYUExportBy[IncludedFile->getUniqueID()].push_back(Top.Path);
+      if (IncludedHeader && IncludedHeader->kind() == Header::Standard)
+        Out->StdIWYUExportBy[IncludedHeader->standard()].push_back(Top.Path);
       // main-file #include with export pragma should never be removed.
       if (Top.SeenAtFile == SM.getMainFileID() && IncludedFile)
         Out->ShouldKeep.insert(IncludedFile->getUniqueID());

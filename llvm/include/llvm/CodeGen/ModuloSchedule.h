@@ -65,6 +65,7 @@
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include <deque>
+#include <map>
 #include <vector>
 
 namespace llvm {

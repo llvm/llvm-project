@@ -1,4 +1,4 @@
-! RUN: bbc --use-desc-for-alloc=false -emit-fir %s -o - | FileCheck %s
+! RUN: bbc --use-desc-for-alloc=false -emit-fir -hlfir=false %s -o - | FileCheck %s
 
 ! CHECK-LABEL: func @_QPiparity_test_1(
 ! CHECK-SAME: %[[arg0:.*]]: !fir.box<!fir.array<?xi8>>{{.*}}) -> i8 {

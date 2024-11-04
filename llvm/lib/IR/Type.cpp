@@ -172,17 +172,26 @@ bool Type::isEmptyTy() const {
 
 TypeSize Type::getPrimitiveSizeInBits() const {
   switch (getTypeID()) {
-  case Type::HalfTyID: return TypeSize::Fixed(16);
-  case Type::BFloatTyID: return TypeSize::Fixed(16);
-  case Type::FloatTyID: return TypeSize::Fixed(32);
-  case Type::DoubleTyID: return TypeSize::Fixed(64);
-  case Type::X86_FP80TyID: return TypeSize::Fixed(80);
-  case Type::FP128TyID: return TypeSize::Fixed(128);
-  case Type::PPC_FP128TyID: return TypeSize::Fixed(128);
-  case Type::X86_MMXTyID: return TypeSize::Fixed(64);
-  case Type::X86_AMXTyID: return TypeSize::Fixed(8192);
+  case Type::HalfTyID:
+    return TypeSize::getFixed(16);
+  case Type::BFloatTyID:
+    return TypeSize::getFixed(16);
+  case Type::FloatTyID:
+    return TypeSize::getFixed(32);
+  case Type::DoubleTyID:
+    return TypeSize::getFixed(64);
+  case Type::X86_FP80TyID:
+    return TypeSize::getFixed(80);
+  case Type::FP128TyID:
+    return TypeSize::getFixed(128);
+  case Type::PPC_FP128TyID:
+    return TypeSize::getFixed(128);
+  case Type::X86_MMXTyID:
+    return TypeSize::getFixed(64);
+  case Type::X86_AMXTyID:
+    return TypeSize::getFixed(8192);
   case Type::IntegerTyID:
-    return TypeSize::Fixed(cast<IntegerType>(this)->getBitWidth());
+    return TypeSize::getFixed(cast<IntegerType>(this)->getBitWidth());
   case Type::FixedVectorTyID:
   case Type::ScalableVectorTyID: {
     const VectorType *VTy = cast<VectorType>(this);
@@ -191,7 +200,8 @@ TypeSize Type::getPrimitiveSizeInBits() const {
     assert(!ETS.isScalable() && "Vector type should have fixed-width elements");
     return {ETS.getFixedValue() * EC.getKnownMinValue(), EC.isScalable()};
   }
-  default: return TypeSize::Fixed(0);
+  default:
+    return TypeSize::getFixed(0);
   }
 }
 

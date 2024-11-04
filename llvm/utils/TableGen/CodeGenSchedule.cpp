@@ -91,10 +91,25 @@ struct InstRegexOp : public SetTheory::Operator {
         PrintFatalError(Loc, "instregex requires pattern string: " +
                                  Expr->getAsString());
       StringRef Original = SI->getValue();
+      // Drop an explicit ^ anchor to not interfere with prefix search.
+      bool HadAnchor = Original.consume_front("^");
 
       // Extract a prefix that we can binary search on.
       static const char RegexMetachars[] = "()^$|*+?.[]\\{}";
       auto FirstMeta = Original.find_first_of(RegexMetachars);
+      if (FirstMeta != StringRef::npos && FirstMeta > 0) {
+        // If we have a regex like ABC* we can only use AB as the prefix, as
+        // the * acts on C.
+        switch (Original[FirstMeta]) {
+        case '+':
+        case '*':
+        case '?':
+          --FirstMeta;
+          break;
+        default:
+          break;
+        }
+      }
 
       // Look for top-level | or ?. We cannot optimize them to binary search.
       if (removeParens(Original).find_first_of("|?") != std::string::npos)
@@ -106,7 +121,10 @@ struct InstRegexOp : public SetTheory::Operator {
       if (!PatStr.empty()) {
         // For the rest use a python-style prefix match.
         std::string pat = std::string(PatStr);
-        if (pat[0] != '^') {
+        // Add ^ anchor. If we had one originally, don't need the group.
+        if (HadAnchor) {
+          pat.insert(0, "^");
+        } else {
           pat.insert(0, "^(");
           pat.insert(pat.end(), ')');
         }

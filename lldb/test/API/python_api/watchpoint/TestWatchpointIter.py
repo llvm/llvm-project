@@ -83,20 +83,12 @@ class WatchpointIteratorTestCase(TestBase):
         self.assertTrue(thread, "The thread stopped due to watchpoint")
         self.DebugSBValue(value)
 
-        # We currently only support hardware watchpoint.  Verify that we have a
-        # meaningful hardware index at this point.  Exercise the printed repr of
-        # SBWatchpointLocation.
-        print(watchpoint)
-        if not self.affected_by_radar_34564183():
-            self.assertTrue(watchpoint.GetHardwareIndex() != -1)
-
         # SBWatchpoint.GetDescription() takes a description level arg.
         print(lldbutil.get_description(watchpoint, lldb.eDescriptionLevelFull))
 
         # Now disable the 'rw' watchpoint.  The program won't stop when it reads
         # 'global' next.
         watchpoint.SetEnabled(False)
-        self.assertEqual(watchpoint.GetHardwareIndex(), -1)
         self.assertFalse(watchpoint.IsEnabled())
 
         # Continue.  The program does not stop again when the variable is being

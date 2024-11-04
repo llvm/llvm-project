@@ -178,9 +178,11 @@ void Prescanner::Statement() {
   while (NextToken(tokens)) {
   }
   if (continuationLines_ > 255) {
-    Say(GetProvenance(statementStart),
-        "%d continuation lines is more than the Fortran standard allows"_port_en_US,
-        continuationLines_);
+    if (features_.ShouldWarn(common::LanguageFeature::MiscSourceExtensions)) {
+      Say(GetProvenance(statementStart),
+          "%d continuation lines is more than the Fortran standard allows"_port_en_US,
+          continuationLines_);
+    }
   }
 
   Provenance newlineProvenance{GetCurrentProvenance()};
@@ -334,8 +336,10 @@ void Prescanner::LabelField(TokenSequence &token) {
   token.CloseToken();
   SkipToNextSignificantCharacter();
   if (IsDecimalDigit(*at_)) {
-    Say(GetCurrentProvenance(),
-        "Label digit is not in fixed-form label field"_port_en_US);
+    if (features_.ShouldWarn(common::LanguageFeature::MiscSourceExtensions)) {
+      Say(GetCurrentProvenance(),
+          "Label digit is not in fixed-form label field"_port_en_US);
+    }
   }
 }
 
@@ -666,8 +670,11 @@ bool Prescanner::NextToken(TokenSequence &tokens) {
     } else if (ch == ';' && InFixedFormSource()) {
       SkipSpaces();
       if (IsDecimalDigit(*at_)) {
-        Say(GetProvenanceRange(at_, at_ + 1),
-            "Label should be in the label field"_port_en_US);
+        if (features_.ShouldWarn(
+                common::LanguageFeature::MiscSourceExtensions)) {
+          Say(GetProvenanceRange(at_, at_ + 1),
+              "Label should be in the label field"_port_en_US);
+        }
       }
     }
   }
@@ -743,8 +750,11 @@ void Prescanner::QuotedCharacterLiteral(
       }
       inCharLiteral_ = true;
       if (insertASpace_) {
-        Say(GetProvenanceRange(at_, end),
-            "Repeated quote mark in character literal continuation line should have been preceded by '&'"_port_en_US);
+        if (features_.ShouldWarn(
+                common::LanguageFeature::MiscSourceExtensions)) {
+          Say(GetProvenanceRange(at_, end),
+              "Repeated quote mark in character literal continuation line should have been preceded by '&'"_port_en_US);
+        }
         insertASpace_ = false;
       }
     }

@@ -244,7 +244,7 @@ public:
 
 #if _LIBCPP_STD_VER >= 17
     _LIBCPP_AVAILABILITY_FILESYSTEM_LIBRARY _LIBCPP_INLINE_VISIBILITY
-    basic_filebuf* open(const _VSTD_FS::path& __p, ios_base::openmode __mode) {
+    basic_filebuf* open(const filesystem::path& __p, ios_base::openmode __mode) {
       return open(__p.c_str(), __mode);
     }
 #endif
@@ -552,6 +552,18 @@ const char* basic_filebuf<_CharT, _Traits>::__make_mdstring(
   case ios_base::in | ios_base::out | ios_base::app | ios_base::binary:
   case ios_base::in | ios_base::app | ios_base::binary:
     return "a+b" _LIBCPP_FOPEN_CLOEXEC_MODE;
+#if _LIBCPP_STD_VER >= 23
+  case ios_base::out | ios_base::noreplace:
+  case ios_base::out | ios_base::trunc | ios_base::noreplace:
+    return "wx" _LIBCPP_FOPEN_CLOEXEC_MODE;
+  case ios_base::in | ios_base::out | ios_base::trunc | ios_base::noreplace:
+    return "w+x" _LIBCPP_FOPEN_CLOEXEC_MODE;
+  case ios_base::out | ios_base::binary | ios_base::noreplace:
+  case ios_base::out | ios_base::trunc | ios_base::binary | ios_base::noreplace:
+    return "wbx" _LIBCPP_FOPEN_CLOEXEC_MODE;
+  case ios_base::in | ios_base::out | ios_base::trunc | ios_base::binary | ios_base::noreplace:
+    return "w+bx" _LIBCPP_FOPEN_CLOEXEC_MODE;
+#endif // _LIBCPP_STD_VER >= 23
   default:
     return nullptr;
   }
@@ -665,6 +677,22 @@ basic_filebuf<_CharT, _Traits>::open(const wchar_t* __s, ios_base::openmode __mo
         case ios_base::in | ios_base::app | ios_base::binary:
             __mdstr = L"a+b";
             break;
+#  if _LIBCPP_STD_VER >= 23
+        case ios_base::out | ios_base::noreplace:
+        case ios_base::out | ios_base::trunc | ios_base::noreplace:
+          __mdstr = L"wx";
+          break;
+        case ios_base::in | ios_base::out | ios_base::trunc | ios_base::noreplace:
+          __mdstr = L"w+x";
+          break;
+        case ios_base::out | ios_base::binary | ios_base::noreplace:
+        case ios_base::out | ios_base::trunc | ios_base::binary | ios_base::noreplace:
+          __mdstr = L"wbx";
+          break;
+        case ios_base::in | ios_base::out | ios_base::trunc | ios_base::binary | ios_base::noreplace:
+          __mdstr = L"w+bx";
+          break;
+#  endif // _LIBCPP_STD_VER >= 23
         default:
             __rt = nullptr;
             break;
@@ -1734,7 +1762,7 @@ basic_fstream<_CharT, _Traits>::close()
         this->setstate(ios_base::failbit);
 }
 
-#ifndef _LIBCPP_AVAILABILITY_HAS_NO_ADDITIONAL_IOSTREAM_EXPLICIT_INSTANTIATIONS_1
+#if _LIBCPP_AVAILABILITY_HAS_ADDITIONAL_IOSTREAM_EXPLICIT_INSTANTIATIONS_1
 extern template class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS basic_ifstream<char>;
 extern template class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS basic_ofstream<char>;
 extern template class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS basic_filebuf<char>;

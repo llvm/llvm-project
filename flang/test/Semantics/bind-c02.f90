@@ -1,4 +1,4 @@
-! RUN: %python %S/test_errors.py %s %flang_fc1
+! RUN: %python %S/test_errors.py %s %flang_fc1 -pedantic
 ! Check for 8.6.4(1)
 ! The BIND statement specifies the BIND attribute for a list of variables and
 ! common blocks.

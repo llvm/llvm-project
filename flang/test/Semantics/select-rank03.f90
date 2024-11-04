@@ -130,4 +130,27 @@ program test
       p => t1
     end select
   end
+  subroutine undefinable(p)
+    real, pointer, intent(in) :: p(..)
+    real, target :: t
+    select rank(p)
+    rank (0)
+      !ERROR: The left-hand side of a pointer assignment is not definable
+      !BECAUSE: 'p' is an INTENT(IN) dummy argument
+      p => t
+      !ERROR: Name in DEALLOCATE statement is not definable
+      !BECAUSE: 'p' is an INTENT(IN) dummy argument
+      deallocate(p)
+    !ERROR: RANK (*) cannot be used when selector is POINTER or ALLOCATABLE
+    rank (*)
+      !ERROR: Whole assumed-size array 'p' may not appear here without subscripts
+      !ERROR: Name in DEALLOCATE statement is not definable
+      !BECAUSE: 'p' is an INTENT(IN) dummy argument
+      deallocate(p)
+    rank default
+      !ERROR: Name in DEALLOCATE statement is not definable
+      !BECAUSE: 'p' is an INTENT(IN) dummy argument
+      deallocate(p)
+    end select
+  end
 end

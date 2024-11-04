@@ -1,4 +1,4 @@
-; RUN: llc -verify-machineinstrs -o - %s -mtriple=arm64_32-apple-ios7.0 -aarch64-enable-atomic-cfg-tidy=0 | FileCheck %s
+; RUN: llc -verify-machineinstrs -o - %s -aarch64-min-jump-table-entries=4 -mtriple=arm64_32-apple-ios7.0 -aarch64-enable-atomic-cfg-tidy=0 | FileCheck %s
 
 define i32 @test_jumptable(i32 %in) {
 ; CHECK: test_jumptable

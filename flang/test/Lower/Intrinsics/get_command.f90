@@ -1,4 +1,4 @@
-! RUN: bbc -emit-fir %s -o - | FileCheck %s
+! RUN: bbc -emit-fir -hlfir=false %s -o - | FileCheck %s
 
 ! CHECK-LABEL: func.func @_QPcommand_only() {
 ! CHECK:         %[[VAL_0:.*]] = fir.alloca !fir.char<1,10> {bindc_name = "cmd", uniq_name = "_QFcommand_onlyEcmd"}

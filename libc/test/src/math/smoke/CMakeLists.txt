@@ -675,6 +675,22 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  copysignf128_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    copysignf128_test.cpp
+  HDRS
+    CopySignTest.h
+  DEPENDS
+    libc.include.math
+    libc.src.math.copysignf128
+    libc.src.__support.FPUtil.fp_bits
+  # FIXME: Currently fails on the GPU build.
+  UNIT_TEST_ONLY
+)
+
+add_fp_unittest(
   frexp_test
   SUITE
     libc-math-smoke-tests
@@ -1231,6 +1247,54 @@ add_fp_unittest(
   DEPENDS
     libc.include.math
     libc.src.math.nextafterl
+    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.FPUtil.fp_bits
+)
+
+# FIXME: These tests are currently spurious for the GPU.
+if(NOT LIBC_TARGET_ARCHITECTURE_IS_GPU)
+  add_fp_unittest(
+    nexttoward_test
+    SUITE
+      libc-math-smoke-tests
+    SRCS
+      nexttoward_test.cpp
+    HDRS
+      NextTowardTest.h
+    DEPENDS
+      libc.include.math
+      libc.src.math.nexttoward
+      libc.src.__support.FPUtil.basic_operations
+      libc.src.__support.FPUtil.fp_bits
+  )
+
+  add_fp_unittest(
+    nexttowardf_test
+    SUITE
+      libc-math-smoke-tests
+    SRCS
+      nexttowardf_test.cpp
+    HDRS
+      NextTowardTest.h
+    DEPENDS
+      libc.include.math
+      libc.src.math.nexttowardf
+      libc.src.__support.FPUtil.basic_operations
+      libc.src.__support.FPUtil.fp_bits
+  )
+endif()
+
+add_fp_unittest(
+  nexttowardl_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    nexttowardl_test.cpp
+  HDRS
+    NextTowardTest.h
+  DEPENDS
+    libc.include.math
+    libc.src.math.nexttowardl
     libc.src.__support.FPUtil.basic_operations
     libc.src.__support.FPUtil.fp_bits
 )

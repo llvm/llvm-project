@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++03, c++11
+// UNSUPPORTED: c++03, c++11, c++14
 // UNSUPPORTED: availability-filesystem-missing
 // UNSUPPORTED: no-filesystem
 // ADDITIONAL_COMPILE_FLAGS: -I %S/../../../../../../src
@@ -24,7 +24,7 @@
 
 // class directory_entry
 
-#include "filesystem_include.h"
+#include <filesystem>
 #include <type_traits>
 #include <cassert>
 
@@ -34,6 +34,7 @@
 
 #include "filesystem/time_utils.h"
 
+namespace fs = std::filesystem;
 using namespace fs::detail;
 
 static void last_write_time_not_representable_error() {

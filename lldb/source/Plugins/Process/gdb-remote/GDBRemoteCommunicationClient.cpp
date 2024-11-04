@@ -2649,10 +2649,12 @@ size_t GDBRemoteCommunicationClient::QueryGDBServer(
     return 0;
 
   for (size_t i = 0, count = array->GetSize(); i < count; ++i) {
-    StructuredData::Dictionary *element = nullptr;
-    if (!array->GetItemAtIndexAsDictionary(i, element))
+    std::optional<StructuredData::Dictionary *> maybe_element =
+        array->GetItemAtIndexAsDictionary(i);
+    if (!maybe_element)
       continue;
 
+    StructuredData::Dictionary *element = *maybe_element;
     uint16_t port = 0;
     if (StructuredData::ObjectSP port_osp =
             element->GetValueForKey(llvm::StringRef("port")))

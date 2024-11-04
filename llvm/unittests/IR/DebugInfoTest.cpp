@@ -234,6 +234,56 @@ TEST(DbgVariableIntrinsic, EmptyMDIsKillLocation) {
   EXPECT_TRUE(DbgDeclare->isKillLocation());
 }
 
+// Duplicate of above test, but in DPValue representation.
+TEST(MetadataTest, DeleteInstUsedByDPValue) {
+  LLVMContext C;
+  std::unique_ptr<Module> M = parseIR(C, R"(
+    define i16 @f(i16 %a) !dbg !6 {
+      %b = add i16 %a, 1, !dbg !11
+      call void @llvm.dbg.value(metadata i16 %b, metadata !9, metadata !DIExpression()), !dbg !11
+      call void @llvm.dbg.value(metadata !DIArgList(i16 %a, i16 %b), metadata !9, metadata !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_plus)), !dbg !11
+      ret i16 0, !dbg !11
+    }
+    declare void @llvm.dbg.value(metadata, metadata, metadata) #0
+    attributes #0 = { nounwind readnone speculatable willreturn }
+
+    !llvm.dbg.cu = !{!0}
+    !llvm.module.flags = !{!5}
+
+    !0 = distinct !DICompileUnit(language: DW_LANG_C, file: !1, producer: "debugify", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !2)
+    !1 = !DIFile(filename: "t.ll", directory: "/")
+    !2 = !{}
+    !5 = !{i32 2, !"Debug Info Version", i32 3}
+    !6 = distinct !DISubprogram(name: "foo", linkageName: "foo", scope: null, file: !1, line: 1, type: !7, scopeLine: 1, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !8)
+    !7 = !DISubroutineType(types: !2)
+    !8 = !{!9}
+    !9 = !DILocalVariable(name: "1", scope: !6, file: !1, line: 1, type: !10)
+    !10 = !DIBasicType(name: "ty16", size: 16, encoding: DW_ATE_unsigned)
+    !11 = !DILocation(line: 1, column: 1, scope: !6)
+)");
+
+  bool OldDbgValueMode = UseNewDbgInfoFormat;
+  UseNewDbgInfoFormat = true;
+  Instruction &I = *M->getFunction("f")->getEntryBlock().getFirstNonPHI();
+  M->convertToNewDbgValues();
+
+  // Find the DPValues using %b.
+  SmallVector<DbgValueInst *, 2> DVIs;
+  SmallVector<DPValue *, 2> DPVs;
+  findDbgValues(DVIs, &I, &DPVs);
+  ASSERT_EQ(DPVs.size(), 2u);
+
+  // Delete %b. The DPValue should now point to undef.
+  I.eraseFromParent();
+  EXPECT_EQ(DPVs[0]->getNumVariableLocationOps(), 1u);
+  EXPECT_TRUE(isa<UndefValue>(DPVs[0]->getVariableLocationOp(0)));
+  EXPECT_TRUE(DPVs[0]->isKillLocation());
+  EXPECT_EQ(DPVs[1]->getNumVariableLocationOps(), 2u);
+  EXPECT_TRUE(isa<UndefValue>(DPVs[1]->getVariableLocationOp(1)));
+  EXPECT_TRUE(DPVs[1]->isKillLocation());
+  UseNewDbgInfoFormat = OldDbgValueMode;
+}
+
 TEST(DIBuiler, CreateFile) {
   LLVMContext Ctx;
   std::unique_ptr<Module> M(new Module("MyModule", Ctx));

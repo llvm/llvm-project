@@ -21,7 +21,6 @@
 #include "AArch64MachineFunctionInfo.h"
 #include "AArch64Subtarget.h"
 #include "MCTargetDesc/AArch64AddressingModes.h"
-#include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringRef.h"
@@ -875,7 +874,7 @@ AArch64LoadStoreOpt::mergePairedInsns(MachineBasicBlock::iterator I,
   bool MergeForward = Flags.getMergeForward();
 
   std::optional<MCPhysReg> RenameReg = Flags.getRenameReg();
-  if (MergeForward && RenameReg) {
+  if (RenameReg) {
     MCRegister RegToRename = getLdStRegOp(*I).getReg();
     DefinedInBB.addReg(*RenameReg);
 
@@ -892,7 +891,8 @@ AArch64LoadStoreOpt::mergePairedInsns(MachineBasicBlock::iterator I,
     };
 
     std::function<bool(MachineInstr &, bool)> UpdateMIs =
-        [this, RegToRename, GetMatchingSubReg](MachineInstr &MI, bool IsDef) {
+        [this, RegToRename, GetMatchingSubReg, MergeForward](MachineInstr &MI,
+                                                             bool IsDef) {
           if (IsDef) {
             bool SeenDef = false;
             for (unsigned OpIdx = 0; OpIdx < MI.getNumOperands(); ++OpIdx) {
@@ -900,7 +900,8 @@ AArch64LoadStoreOpt::mergePairedInsns(MachineBasicBlock::iterator I,
               // Rename the first explicit definition and all implicit
               // definitions matching RegToRename.
               if (MOP.isReg() && !MOP.isDebug() && MOP.getReg() &&
-                  (!SeenDef || (MOP.isDef() && MOP.isImplicit())) &&
+                  (!MergeForward || !SeenDef ||
+                   (MOP.isDef() && MOP.isImplicit())) &&
                   TRI->regsOverlap(MOP.getReg(), RegToRename)) {
                 assert((MOP.isImplicit() ||
                         (MOP.isRenamable() && !MOP.isEarlyClobber())) &&
@@ -927,31 +928,46 @@ AArch64LoadStoreOpt::mergePairedInsns(MachineBasicBlock::iterator I,
                 assert((MOP.isImplicit() ||
                         (MOP.isRenamable() && !MOP.isEarlyClobber())) &&
                            "Need renamable operands");
-                const TargetRegisterClass *RC =
-                    MI.getRegClassConstraint(OpIdx, TII, TRI);
-                if (!RC)
-                  continue;
-                MOP.setReg(GetMatchingSubReg(RC));
+                Register MatchingReg;
+                if (const TargetRegisterClass *RC =
+                        MI.getRegClassConstraint(OpIdx, TII, TRI))
+                  MatchingReg = GetMatchingSubReg(RC);
+                else
+                  MatchingReg = GetMatchingSubReg(
+                      TRI->getMinimalPhysRegClass(MOP.getReg()));
+                assert(MatchingReg != AArch64::NoRegister &&
+                       "Cannot find matching regs for renaming");
+                MOP.setReg(MatchingReg);
               }
             }
           }
-          LLVM_DEBUG(dbgs() << "Renamed " << MI << "\n");
+          LLVM_DEBUG(dbgs() << "Renamed " << MI);
           return true;
         };
-    forAllMIsUntilDef(*I, RegToRename, TRI, LdStLimit, UpdateMIs);
+    forAllMIsUntilDef(MergeForward ? *I : *std::prev(Paired), RegToRename, TRI,
+                      UINT32_MAX, UpdateMIs);
 
 #if !defined(NDEBUG)
-    // Make sure the register used for renaming is not used between the paired
-    // instructions. That would trash the content before the new paired
-    // instruction.
+    // For forward merging store:
+    // Make sure the register used for renaming is not used between the
+    // paired instructions. That would trash the content before the new
+    // paired instruction.
+    MCPhysReg RegToCheck = *RenameReg;
+    // For backward merging load:
+    // Make sure the register being renamed is not used between the
+    // paired instructions. That would trash the content after the new
+    // paired instruction.
+    if (!MergeForward)
+      RegToCheck = RegToRename;
     for (auto &MI :
          iterator_range<MachineInstrBundleIterator<llvm::MachineInstr>>(
-             std::next(I), std::next(Paired)))
+             MergeForward ? std::next(I) : I,
+             MergeForward ? std::next(Paired) : Paired))
       assert(all_of(MI.operands(),
-                    [this, &RenameReg](const MachineOperand &MOP) {
+                    [this, RegToCheck](const MachineOperand &MOP) {
                       return !MOP.isReg() || MOP.isDebug() || !MOP.getReg() ||
                              MOP.isUndef() ||
-                             !TRI->regsOverlap(MOP.getReg(), *RenameReg);
+                             !TRI->regsOverlap(MOP.getReg(), RegToCheck);
                     }) &&
              "Rename register used between paired instruction, trashing the "
              "content");
@@ -1397,6 +1413,38 @@ static bool areCandidatesToMergeOrPair(MachineInstr &FirstMI, MachineInstr &MI,
   // FIXME: Can we also match a mixed sext/zext unscaled/scaled pair?
 }
 
+static bool canRenameMOP(const MachineOperand &MOP,
+                         const TargetRegisterInfo *TRI) {
+  if (MOP.isReg()) {
+    auto *RegClass = TRI->getMinimalPhysRegClass(MOP.getReg());
+    // Renaming registers with multiple disjunct sub-registers (e.g. the
+    // result of a LD3) means that all sub-registers are renamed, potentially
+    // impacting other instructions we did not check. Bail out.
+    // Note that this relies on the structure of the AArch64 register file. In
+    // particular, a subregister cannot be written without overwriting the
+    // whole register.
+    if (RegClass->HasDisjunctSubRegs) {
+      LLVM_DEBUG(
+          dbgs()
+          << "  Cannot rename operands with multiple disjunct subregisters ("
+          << MOP << ")\n");
+      return false;
+    }
+
+    // We cannot rename arbitrary implicit-defs, the specific rule to rewrite
+    // them must be known. For example, in ORRWrs the implicit-def
+    // corresponds to the result register.
+    if (MOP.isImplicit() && MOP.isDef()) {
+      if (!isRewritableImplicitDef(MOP.getParent()->getOpcode()))
+        return false;
+      return TRI->isSuperOrSubRegisterEq(
+          MOP.getParent()->getOperand(0).getReg(), MOP.getReg());
+    }
+  }
+  return MOP.isImplicit() ||
+         (MOP.isRenamable() && !MOP.isEarlyClobber() && !MOP.isTied());
+}
+
 static bool
 canRenameUpToDef(MachineInstr &FirstMI, LiveRegUnits &UsedInBetween,
                  SmallPtrSetImpl<const TargetRegisterClass *> &RequiredClasses,
@@ -1406,10 +1454,6 @@ canRenameUpToDef(MachineInstr &FirstMI, LiveRegUnits &UsedInBetween,
 
   // Check if we can find an unused register which we can use to rename
   // the register used by the first load/store.
-  auto *RegClass = TRI->getMinimalPhysRegClass(getLdStRegOp(FirstMI).getReg());
-  MachineFunction &MF = *FirstMI.getParent()->getParent();
-  if (!RegClass || !MF.getRegInfo().tracksLiveness())
-    return false;
 
   auto RegToRename = getLdStRegOp(FirstMI).getReg();
   // For now, we only rename if the store operand gets killed at the store.
@@ -1420,39 +1464,9 @@ canRenameUpToDef(MachineInstr &FirstMI, LiveRegUnits &UsedInBetween,
                        MOP.isImplicit() && MOP.isKill() &&
                        TRI->regsOverlap(RegToRename, MOP.getReg());
               })) {
-    LLVM_DEBUG(dbgs() << "  Operand not killed at " << FirstMI << "\n");
+    LLVM_DEBUG(dbgs() << "  Operand not killed at " << FirstMI);
     return false;
   }
-  auto canRenameMOP = [TRI](const MachineOperand &MOP) {
-    if (MOP.isReg()) {
-      auto *RegClass = TRI->getMinimalPhysRegClass(MOP.getReg());
-      // Renaming registers with multiple disjunct sub-registers (e.g. the
-      // result of a LD3) means that all sub-registers are renamed, potentially
-      // impacting other instructions we did not check. Bail out.
-      // Note that this relies on the structure of the AArch64 register file. In
-      // particular, a subregister cannot be written without overwriting the
-      // whole register.
-      if (RegClass->HasDisjunctSubRegs) {
-        LLVM_DEBUG(
-            dbgs()
-            << "  Cannot rename operands with multiple disjunct subregisters ("
-            << MOP << ")\n");
-        return false;
-      }
-
-      // We cannot rename arbitrary implicit-defs, the specific rule to rewrite
-      // them must be known. For example, in ORRWrs the implicit-def
-      // corresponds to the result register.
-      if (MOP.isImplicit() && MOP.isDef()) {
-        if (!isRewritableImplicitDef(MOP.getParent()->getOpcode()))
-          return false;
-        return TRI->isSuperOrSubRegisterEq(
-            MOP.getParent()->getOperand(0).getReg(), MOP.getReg());
-      }
-    }
-    return MOP.isImplicit() ||
-           (MOP.isRenamable() && !MOP.isEarlyClobber() && !MOP.isTied());
-  };
 
   bool FoundDef = false;
 
@@ -1462,11 +1476,11 @@ canRenameUpToDef(MachineInstr &FirstMI, LiveRegUnits &UsedInBetween,
   // * collect the registers used and required register classes for RegToRename.
   std::function<bool(MachineInstr &, bool)> CheckMIs = [&](MachineInstr &MI,
                                                            bool IsDef) {
-    LLVM_DEBUG(dbgs() << "Checking " << MI << "\n");
+    LLVM_DEBUG(dbgs() << "Checking " << MI);
     // Currently we do not try to rename across frame-setup instructions.
     if (MI.getFlag(MachineInstr::FrameSetup)) {
-      LLVM_DEBUG(dbgs() << "  Cannot rename framesetup instructions currently ("
-                        << MI << ")\n");
+      LLVM_DEBUG(dbgs() << "  Cannot rename framesetup instructions "
+                        << "currently\n");
       return false;
     }
 
@@ -1486,8 +1500,7 @@ canRenameUpToDef(MachineInstr &FirstMI, LiveRegUnits &UsedInBetween,
       //       1. Insert an extra copy, to materialize the def.
       //       2. Skip pseudo-defs until we find an non-pseudo def.
       if (MI.isPseudo()) {
-        LLVM_DEBUG(dbgs() << "  Cannot rename pseudo instruction " << MI
-                          << "\n");
+        LLVM_DEBUG(dbgs() << "  Cannot rename pseudo/bundle instruction\n");
         return false;
       }
 
@@ -1495,9 +1508,8 @@ canRenameUpToDef(MachineInstr &FirstMI, LiveRegUnits &UsedInBetween,
         if (!MOP.isReg() || !MOP.isDef() || MOP.isDebug() || !MOP.getReg() ||
             !TRI->regsOverlap(MOP.getReg(), RegToRename))
           continue;
-        if (!canRenameMOP(MOP)) {
-          LLVM_DEBUG(dbgs()
-                     << "  Cannot rename " << MOP << " in " << MI << "\n");
+        if (!canRenameMOP(MOP, TRI)) {
+          LLVM_DEBUG(dbgs() << "  Cannot rename " << MOP << " in " << MI);
           return false;
         }
         RequiredClasses.insert(TRI->getMinimalPhysRegClass(MOP.getReg()));
@@ -1509,9 +1521,8 @@ canRenameUpToDef(MachineInstr &FirstMI, LiveRegUnits &UsedInBetween,
             !TRI->regsOverlap(MOP.getReg(), RegToRename))
           continue;
 
-        if (!canRenameMOP(MOP)) {
-          LLVM_DEBUG(dbgs()
-                     << "  Cannot rename " << MOP << " in " << MI << "\n");
+        if (!canRenameMOP(MOP, TRI)) {
+          LLVM_DEBUG(dbgs() << "  Cannot rename " << MOP << " in " << MI);
           return false;
         }
         RequiredClasses.insert(TRI->getMinimalPhysRegClass(MOP.getReg()));
@@ -1528,6 +1539,52 @@ canRenameUpToDef(MachineInstr &FirstMI, LiveRegUnits &UsedInBetween,
     return false;
   }
   return true;
+}
+
+// We want to merge the second load into the first by rewriting the usages of
+// the same reg between first (incl.) and second (excl.). We don't need to care
+// about any insns before FirstLoad or after SecondLoad.
+// 1. The second load writes new value into the same reg.
+//    - The renaming is impossible to impact later use of the reg.
+//    - The second load always trash the value written by the first load which
+//      means the reg must be killed before the second load.
+// 2. The first load must be a def for the same reg so we don't need to look
+//    into anything before it.
+static bool canRenameUntilSecondLoad(
+    MachineInstr &FirstLoad, MachineInstr &SecondLoad,
+    LiveRegUnits &UsedInBetween,
+    SmallPtrSetImpl<const TargetRegisterClass *> &RequiredClasses,
+    const TargetRegisterInfo *TRI) {
+  if (FirstLoad.isPseudo())
+    return false;
+
+  UsedInBetween.accumulate(FirstLoad);
+  auto RegToRename = getLdStRegOp(FirstLoad).getReg();
+  bool Success = std::all_of(
+      FirstLoad.getIterator(), SecondLoad.getIterator(),
+      [&](MachineInstr &MI) {
+        LLVM_DEBUG(dbgs() << "Checking " << MI);
+        // Currently we do not try to rename across frame-setup instructions.
+        if (MI.getFlag(MachineInstr::FrameSetup)) {
+          LLVM_DEBUG(dbgs() << "  Cannot rename framesetup instructions "
+                            << "currently\n");
+          return false;
+        }
+
+        for (auto &MOP : MI.operands()) {
+          if (!MOP.isReg() || MOP.isDebug() || !MOP.getReg() ||
+              !TRI->regsOverlap(MOP.getReg(), RegToRename))
+            continue;
+          if (!canRenameMOP(MOP, TRI)) {
+            LLVM_DEBUG(dbgs() << "  Cannot rename " << MOP << " in " << MI);
+            return false;
+          }
+          RequiredClasses.insert(TRI->getMinimalPhysRegClass(MOP.getReg()));
+        }
+
+        return true;
+      });
+  return Success;
 }
 
 // Check if we can find a physical register for renaming \p Reg. This register
@@ -1576,6 +1633,41 @@ static std::optional<MCPhysReg> tryToFindRegisterToRename(
   LLVM_DEBUG(dbgs() << "No rename register found from "
                     << TRI->getRegClassName(RegClass) << "\n");
   return std::nullopt;
+}
+
+// For store pairs: returns a register from FirstMI to the beginning of the
+// block that can be renamed.
+// For load pairs: returns a register from FirstMI to MI that can be renamed.
+static std::optional<MCPhysReg> findRenameRegForSameLdStRegPair(
+    std::optional<bool> MaybeCanRename, MachineInstr &FirstMI, MachineInstr &MI,
+    Register Reg, LiveRegUnits &DefinedInBB, LiveRegUnits &UsedInBetween,
+    SmallPtrSetImpl<const TargetRegisterClass *> &RequiredClasses,
+    const TargetRegisterInfo *TRI) {
+  std::optional<MCPhysReg> RenameReg;
+  if (!DebugCounter::shouldExecute(RegRenamingCounter))
+    return RenameReg;
+
+  auto *RegClass = TRI->getMinimalPhysRegClass(getLdStRegOp(FirstMI).getReg());
+  MachineFunction &MF = *FirstMI.getParent()->getParent();
+  if (!RegClass || !MF.getRegInfo().tracksLiveness())
+    return RenameReg;
+
+  const bool IsLoad = FirstMI.mayLoad();
+
+  if (!MaybeCanRename) {
+    if (IsLoad)
+      MaybeCanRename = {canRenameUntilSecondLoad(FirstMI, MI, UsedInBetween,
+                                                 RequiredClasses, TRI)};
+    else
+      MaybeCanRename = {
+          canRenameUpToDef(FirstMI, UsedInBetween, RequiredClasses, TRI)};
+  }
+
+  if (*MaybeCanRename) {
+    RenameReg = tryToFindRegisterToRename(MF, Reg, DefinedInBB, UsedInBetween,
+                                          RequiredClasses, TRI);
+  }
+  return RenameReg;
 }
 
 /// Scan the instructions looking for a load/store that can be combined with the
@@ -1730,17 +1822,6 @@ AArch64LoadStoreOpt::findMatchingInsn(MachineBasicBlock::iterator I,
             continue;
           }
         }
-        // If the destination register of one load is the same register or a
-        // sub/super register of the other load, bail and keep looking. A
-        // load-pair instruction with both destination registers the same is
-        // UNPREDICTABLE and will result in an exception.
-        if (MayLoad &&
-            TRI->isSuperOrSubRegisterEq(Reg, getLdStRegOp(MI).getReg())) {
-          LiveRegUnits::accumulateUsedDefed(MI, ModifiedRegUnits, UsedRegUnits,
-                                            TRI);
-          MemInsns.push_back(&MI);
-          continue;
-        }
 
         // If the BaseReg has been modified, then we cannot do the optimization.
         // For example, in the following pattern
@@ -1751,17 +1832,37 @@ AArch64LoadStoreOpt::findMatchingInsn(MachineBasicBlock::iterator I,
         if (!ModifiedRegUnits.available(BaseReg))
           return E;
 
+        const bool SameLoadReg = MayLoad && TRI->isSuperOrSubRegisterEq(
+                                                Reg, getLdStRegOp(MI).getReg());
+
         // If the Rt of the second instruction was not modified or used between
         // the two instructions and none of the instructions between the second
         // and first alias with the second, we can combine the second into the
         // first.
         if (ModifiedRegUnits.available(getLdStRegOp(MI).getReg()) &&
-            !(MI.mayLoad() &&
+            !(MI.mayLoad() && !SameLoadReg &&
               !UsedRegUnits.available(getLdStRegOp(MI).getReg())) &&
             !mayAlias(MI, MemInsns, AA)) {
+          // For pairs loading into the same reg, try to find a renaming
+          // opportunity to allow the renaming of Reg between FirstMI and MI
+          // and combine MI into FirstMI; otherwise bail and keep looking.
+          if (SameLoadReg) {
+            std::optional<MCPhysReg> RenameReg =
+                findRenameRegForSameLdStRegPair(MaybeCanRename, FirstMI, MI,
+                                                Reg, DefinedInBB, UsedInBetween,
+                                                RequiredClasses, TRI);
+            if (!RenameReg) {
+              LiveRegUnits::accumulateUsedDefed(MI, ModifiedRegUnits,
+                                                UsedRegUnits, TRI);
+              MemInsns.push_back(&MI);
+              continue;
+            }
+            Flags.setRenameReg(*RenameReg);
+          }
 
           Flags.setMergeForward(false);
-          Flags.clearRenameReg();
+          if (!SameLoadReg)
+            Flags.clearRenameReg();
           return MBBI;
         }
 
@@ -1779,22 +1880,13 @@ AArch64LoadStoreOpt::findMatchingInsn(MachineBasicBlock::iterator I,
             return MBBI;
           }
 
-          if (DebugCounter::shouldExecute(RegRenamingCounter)) {
-            if (!MaybeCanRename)
-              MaybeCanRename = {canRenameUpToDef(FirstMI, UsedInBetween,
-                                                 RequiredClasses, TRI)};
-
-            if (*MaybeCanRename) {
-              std::optional<MCPhysReg> MaybeRenameReg =
-                  tryToFindRegisterToRename(*FirstMI.getParent()->getParent(),
-                                            Reg, DefinedInBB, UsedInBetween,
-                                            RequiredClasses, TRI);
-              if (MaybeRenameReg) {
-                Flags.setRenameReg(*MaybeRenameReg);
-                Flags.setMergeForward(true);
-                MBBIWithRenameReg = MBBI;
-              }
-            }
+          std::optional<MCPhysReg> RenameReg = findRenameRegForSameLdStRegPair(
+              MaybeCanRename, FirstMI, MI, Reg, DefinedInBB, UsedInBetween,
+              RequiredClasses, TRI);
+          if (RenameReg) {
+            Flags.setMergeForward(true);
+            Flags.setRenameReg(*RenameReg);
+            MBBIWithRenameReg = MBBI;
           }
         }
         // Unable to combine these instructions due to interference in between.

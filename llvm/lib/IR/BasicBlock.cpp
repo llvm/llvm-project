@@ -39,8 +39,8 @@ cl::opt<bool>
 DPMarker *BasicBlock::createMarker(Instruction *I) {
   assert(IsNewDbgInfoFormat &&
          "Tried to create a marker in a non new debug-info block!");
-  assert(I->DbgMarker == nullptr &&
-         "Tried to create marker for instuction that already has one!");
+  if (I->DbgMarker)
+    return I->DbgMarker;
   DPMarker *Marker = new DPMarker();
   Marker->MarkedInstr = I;
   I->DbgMarker = Marker;
@@ -178,6 +178,18 @@ bool BasicBlock::validateDbgValues(bool Assert, bool Msg, raw_ostream *OS) {
   TestFailure(!getTrailingDPValues(), "Trailing DPValues in block");
   return RetVal;
 }
+
+#ifndef NDEBUG
+void BasicBlock::dumpDbgValues() const {
+  for (auto &Inst : *this) {
+    if (!Inst.DbgMarker)
+      continue;
+
+    dbgs() << "@ " << Inst.DbgMarker << " ";
+    Inst.DbgMarker->dump();
+  };
+}
+#endif
 
 void BasicBlock::setIsNewDbgInfoFormat(bool NewFlag) {
   if (NewFlag && !IsNewDbgInfoFormat)
@@ -661,18 +673,6 @@ BasicBlock *BasicBlock::splitBasicBlockBefore(iterator I, const Twine &BBName) {
   return New;
 }
 
-void BasicBlock::splice(BasicBlock::iterator ToIt, BasicBlock *FromBB,
-                        BasicBlock::iterator FromBeginIt,
-                        BasicBlock::iterator FromEndIt) {
-#ifdef EXPENSIVE_CHECKS
-  // Check that FromBeginIt is befor FromEndIt.
-  auto FromBBEnd = FromBB->end();
-  for (auto It = FromBeginIt; It != FromEndIt; ++It)
-    assert(It != FromBBEnd && "FromBeginIt not before FromEndIt!");
-#endif // EXPENSIVE_CHECKS
-  getInstList().splice(ToIt, FromBB->getInstList(), FromBeginIt, FromEndIt);
-}
-
 BasicBlock::iterator BasicBlock::erase(BasicBlock::iterator FromIt,
                                        BasicBlock::iterator ToIt) {
   return InstList.erase(FromIt, ToIt);
@@ -742,6 +742,275 @@ void BasicBlock::renumberInstructions() {
   setBasicBlockBits(Bits);
 
   NumInstrRenumberings++;
+}
+
+void BasicBlock::flushTerminatorDbgValues() {
+  // If we erase the terminator in a block, any DPValues will sink and "fall
+  // off the end", existing after any terminator that gets inserted. With
+  // dbg.value intrinsics we would just insert the terminator at end() and
+  // the dbg.values would come before the terminator. With DPValues, we must
+  // do this manually.
+  // To get out of this unfortunate form, whenever we insert a terminator,
+  // check whether there's anything trailing at the end and move those DPValues
+  // in front of the terminator.
+
+  // Do nothing if we're not in new debug-info format.
+  if (!IsNewDbgInfoFormat)
+    return;
+
+  // If there's no terminator, there's nothing to do.
+  Instruction *Term = getTerminator();
+  if (!Term)
+    return;
+
+  // Are there any dangling DPValues?
+  DPMarker *TrailingDPValues = getTrailingDPValues();
+  if (!TrailingDPValues)
+    return;
+
+  // Transfer DPValues from the trailing position onto the terminator.
+  Term->DbgMarker->absorbDebugValues(*TrailingDPValues, false);
+  deleteTrailingDPValues();
+}
+
+void BasicBlock::spliceDebugInfoEmptyBlock(BasicBlock::iterator Dest,
+                                           BasicBlock *Src,
+                                           BasicBlock::iterator First,
+                                           BasicBlock::iterator Last) {
+  // Imagine the folowing:
+  //
+  //   bb1:
+  //     dbg.value(...
+  //     ret i32 0
+  //
+  // If an optimisation pass attempts to splice the contents of the block from
+  // BB1->begin() to BB1->getTerminator(), then the dbg.value will be
+  // transferred to the destination.
+  // However, in the "new" DPValue format for debug-info, that range is empty:
+  // begin() returns an iterator to the terminator, as there will only be a
+  // single instruction in the block. We must piece together from the bits set
+  // in the iterators whether there was the intention to transfer any debug
+  // info.
+
+  // If we're not in "new" debug-info format, do nothing.
+  if (!IsNewDbgInfoFormat)
+    return;
+
+  assert(First == Last);
+  bool InsertAtHead = Dest.getHeadBit();
+  bool ReadFromHead = First.getHeadBit();
+
+  // If the source block is completely empty, including no terminator, then
+  // transfer any trailing DPValues that are still hanging around. This can
+  // occur when a block is optimised away and the terminator has been moved
+  // somewhere else.
+  if (Src->empty()) {
+    assert(Dest != end() &&
+           "Transferring trailing DPValues to another trailing position");
+    DPMarker *SrcTrailingDPValues = Src->getTrailingDPValues();
+    if (!SrcTrailingDPValues)
+      return;
+
+    DPMarker *M = Dest->DbgMarker;
+    M->absorbDebugValues(*SrcTrailingDPValues, InsertAtHead);
+    Src->deleteTrailingDPValues();
+    return;
+  }
+
+  // There are instructions in this block; if the First iterator was
+  // with begin() / getFirstInsertionPt() then the caller intended debug-info
+  // at the start of the block to be transferred.
+  if (!Src->empty() && First == Src->begin() && ReadFromHead)
+    Dest->DbgMarker->absorbDebugValues(*First->DbgMarker, InsertAtHead);
+
+  return;
+}
+
+void BasicBlock::spliceDebugInfo(BasicBlock::iterator Dest, BasicBlock *Src,
+                                 BasicBlock::iterator First,
+                                 BasicBlock::iterator Last) {
+  // Find out where to _place_ these dbg.values; if InsertAtHead is specified,
+  // this will be at the start of Dest's debug value range, otherwise this is
+  // just Dest's marker.
+  bool InsertAtHead = Dest.getHeadBit();
+  bool ReadFromHead = First.getHeadBit();
+  // Use this flag to signal the abnormal case, where we don't want to copy the
+  // DPValues ahead of the "Last" position.
+  bool ReadFromTail = !Last.getTailBit();
+
+  /*
+    Here's an illustration of what we're about to do. We have two blocks, this
+    and Src, and two segments of list. Each instruction is marked by a capital
+    while potential DPValue debug-info is marked out by "-" characters and a few
+    other special characters (+:=) where I want to highlight what's going on.
+
+                                                 Dest
+                                                   |
+     this-block:    A----A----A                ====A----A----A----A---A---A
+      Src-block                ++++B---B---B---B:::C
+                                   |               |
+                                  First           Last
+
+    The splice method is going to take all the instructions from First up to
+    (but not including) Last and insert them in _front_ of Dest, forming one
+    long list. All the DPValues attached to instructions _between_ First and
+    Last need no maintenence. However, we have to do special things with the
+    DPValues marked with the +:= characters. We only have three positions:
+    should the "+" DPValues be transferred, and if so to where? Do we move the
+    ":" DPValues? Would they go in front of the "=" DPValues, or should the "="
+    DPValues go before "+" DPValues?
+
+    We're told which way it should be by the bits carried in the iterators. The
+    "Head" bit indicates whether the specified position is supposed to be at the
+    front of the attached DPValues (true) or not (false). The Tail bit is true
+    on the other end of a range: is the range intended to include DPValues up to
+    the end (false) or not (true).
+
+    FIXME: the tail bit doesn't need to be distinct from the head bit, we could
+    combine them.
+
+    Here are some examples of different configurations:
+
+      Dest.Head = true, First.Head = true, Last.Tail = false
+
+      this-block:    A----A----A++++B---B---B---B:::====A----A----A----A---A---A
+                                    |                   |
+                                  First                Dest
+
+    Wheras if we didn't want to read from the Src list,
+
+      Dest.Head = true, First.Head = false, Last.Tail = false
+
+      this-block:    A----A----AB---B---B---B:::====A----A----A----A---A---A
+                                |                   |
+                              First                Dest
+
+    Or if we didn't want to insert at the head of Dest:
+
+      Dest.Head = false, First.Head = false, Last.Tail = false
+
+      this-block:    A----A----A====B---B---B---B:::A----A----A----A---A---A
+                                    |               |
+                                  First            Dest
+
+    Tests for these various configurations can be found in the unit test file
+    BasicBlockDbgInfoTest.cpp.
+
+   */
+
+  // Detach the marker at Dest -- this lets us move the "====" DPValues around.
+  DPMarker *DestMarker = nullptr;
+  if (Dest != end()) {
+    DestMarker = getMarker(Dest);
+    DestMarker->removeFromParent();
+    createMarker(&*Dest);
+  }
+
+  // If we're moving the tail range of DPValues (":::"), absorb them into the
+  // front of the DPValues at Dest.
+  if (ReadFromTail && Src->getMarker(Last)) {
+    DPMarker *OntoDest = getMarker(Dest);
+    DPMarker *FromLast = Src->getMarker(Last);
+    OntoDest->absorbDebugValues(*FromLast, true);
+  }
+
+  // If we're _not_ reading from the head of First, i.e. the "++++" DPValues,
+  // move their markers onto Last. They remain in the Src block. No action
+  // needed.
+  if (!ReadFromHead) {
+    DPMarker *OntoLast = Src->createMarker(Last);
+    DPMarker *FromFirst = Src->createMarker(First);
+    OntoLast->absorbDebugValues(*FromFirst,
+                                true); // Always insert at head of it.
+  }
+
+  // Finally, do something with the "====" DPValues we detached.
+  if (DestMarker) {
+    if (InsertAtHead) {
+      // Insert them at the end of the DPValues at Dest. The "::::" DPValues
+      // might be in front of them.
+      DPMarker *NewDestMarker = getMarker(Dest);
+      NewDestMarker->absorbDebugValues(*DestMarker, false);
+    } else {
+      // Insert them right at the start of the range we moved, ahead of First
+      // and the "++++" DPValues.
+      DPMarker *FirstMarker = getMarker(First);
+      FirstMarker->absorbDebugValues(*DestMarker, true);
+    }
+    DestMarker->eraseFromParent();
+  } else if (Dest == end() && !InsertAtHead) {
+    // In the rare circumstance where we insert at end(), and we did not
+    // generate the iterator with begin() / getFirstInsertionPt(), it means
+    // any trailing debug-info at the end of the block would "normally" have
+    // been pushed in front of "First". Move it there now.
+    DPMarker *FirstMarker = getMarker(First);
+    DPMarker *TrailingDPValues = getTrailingDPValues();
+    if (TrailingDPValues) {
+      FirstMarker->absorbDebugValues(*TrailingDPValues, true);
+      deleteTrailingDPValues();
+    }
+  }
+}
+
+void BasicBlock::splice(iterator Dest, BasicBlock *Src, iterator First,
+                        iterator Last) {
+  assert(Src->IsNewDbgInfoFormat == IsNewDbgInfoFormat);
+
+#ifdef EXPENSIVE_CHECKS
+  // Check that First is before Last.
+  auto FromBBEnd = Src->end();
+  for (auto It = First; It != Last; ++It)
+    assert(It != FromBBEnd && "FromBeginIt not before FromEndIt!");
+#endif // EXPENSIVE_CHECKS
+
+  // Lots of horrible special casing for empty transfers: the dbg.values between
+  // two positions could be spliced in dbg.value mode.
+  if (First == Last) {
+    spliceDebugInfoEmptyBlock(Dest, Src, First, Last);
+    return;
+  }
+
+  // Handle non-instr debug-info specific juggling.
+  if (IsNewDbgInfoFormat)
+    spliceDebugInfo(Dest, Src, First, Last);
+
+  // And move the instructions.
+  getInstList().splice(Dest, Src->getInstList(), First, Last);
+
+  flushTerminatorDbgValues();
+}
+
+void BasicBlock::insertDPValueAfter(DPValue *DPV, Instruction *I) {
+  assert(IsNewDbgInfoFormat);
+  assert(I->getParent() == this);
+
+  iterator NextIt = std::next(I->getIterator());
+  DPMarker *NextMarker = getMarker(NextIt);
+  if (!NextMarker)
+    NextMarker = createMarker(NextIt);
+  NextMarker->insertDPValue(DPV, true);
+}
+
+void BasicBlock::insertDPValueBefore(DPValue *DPV,
+                                     InstListType::iterator Where) {
+  // We should never directly insert at the end of the block, new DPValues
+  // shouldn't be generated at times when there's no terminator.
+  assert(Where != end());
+  assert(Where->getParent() == this);
+  bool InsertAtHead = Where.getHeadBit();
+  Where->DbgMarker->insertDPValue(DPV, InsertAtHead);
+}
+
+DPMarker *BasicBlock::getNextMarker(Instruction *I) {
+  return getMarker(std::next(I->getIterator()));
+}
+
+DPMarker *BasicBlock::getMarker(InstListType::iterator It) {
+  if (It == end()) {
+    DPMarker *DPM = getTrailingDPValues();
+    return DPM;
+  }
+  return It->DbgMarker;
 }
 
 #ifndef NDEBUG

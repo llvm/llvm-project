@@ -160,9 +160,11 @@ void ComputeOffsetsHelper::DoCommonBlock(Symbol &commonBlock) {
     auto errorSite{
         commonBlock.name().empty() ? symbol.name() : commonBlock.name()};
     if (std::size_t padding{DoSymbol(symbol.GetUltimate())}) {
-      context_.Say(errorSite,
-          "COMMON block /%s/ requires %zd bytes of padding before '%s' for alignment"_port_en_US,
-          commonBlock.name(), padding, symbol.name());
+      if (context_.ShouldWarn(common::UsageWarning::CommonBlockPadding)) {
+        context_.Say(errorSite,
+            "COMMON block /%s/ requires %zd bytes of padding before '%s' for alignment"_port_en_US,
+            commonBlock.name(), padding, symbol.name());
+      }
     }
     previous.emplace(symbol);
     auto eqIter{equivalenceBlock_.end()};

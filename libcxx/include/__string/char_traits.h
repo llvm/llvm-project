@@ -20,6 +20,7 @@
 #include <__iterator/iterator_traits.h>
 #include <__string/constexpr_c_functions.h>
 #include <__type_traits/is_constant_evaluated.h>
+#include <__utility/is_pointer_in_range.h>
 #include <cstddef>
 #include <cstdint>
 #include <cstdio>
@@ -77,7 +78,7 @@ exposition-only to document what members a char_traits specialization should pro
 //
 #if !defined(_LIBCPP_CHAR_TRAITS_REMOVE_BASE_SPECIALIZATION)
 template <class _CharT>
-struct _LIBCPP_DEPRECATED_("char_traits<T> for T not equal to char, wchar_t, char8_t, char16_t or char32_t is non-standard and is provided for a temporary period. It will be removed in LLVM 18, so please migrate off of it.")
+struct _LIBCPP_DEPRECATED_("char_traits<T> for T not equal to char, wchar_t, char8_t, char16_t or char32_t is non-standard and is provided for a temporary period. It will be removed in LLVM 19, so please migrate off of it.")
     char_traits
 {
     using char_type  = _CharT;
@@ -142,14 +143,12 @@ struct _LIBCPP_DEPRECATED_("char_traits<T> for T not equal to char, wchar_t, cha
     _LIBCPP_INLINE_VISIBILITY
     static _LIBCPP_CONSTEXPR_SINCE_CXX20
     char_type*       copy(char_type* __s1, const char_type* __s2, size_t __n) {
-        if (!__libcpp_is_constant_evaluated()) {
-            _LIBCPP_ASSERT_NON_OVERLAPPING_RANGES(
-                __s2 < __s1 || __s2 >= __s1 + __n, "char_traits::copy overlapped range");
-        }
-        char_type* __r = __s1;
-        for (; __n; --__n, ++__s1, ++__s2)
-            assign(*__s1, *__s2);
-        return __r;
+      _LIBCPP_ASSERT_NON_OVERLAPPING_RANGES(!std::__is_pointer_in_range(__s1, __s1 + __n, __s2),
+                                            "char_traits::copy: source and destination ranges overlap");
+      char_type* __r = __s1;
+      for (; __n; --__n, ++__s1, ++__s2)
+        assign(*__s1, *__s2);
+      return __r;
     }
     _LIBCPP_INLINE_VISIBILITY
     static _LIBCPP_CONSTEXPR_SINCE_CXX20
@@ -238,11 +237,10 @@ struct _LIBCPP_TEMPLATE_VIS char_traits<char>
 
     static inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20
     char_type* copy(char_type* __s1, const char_type* __s2, size_t __n) _NOEXCEPT {
-        if (!__libcpp_is_constant_evaluated())
-            _LIBCPP_ASSERT_NON_OVERLAPPING_RANGES(
-                __s2 < __s1 || __s2 >= __s1 + __n, "char_traits::copy overlapped range");
-        std::copy_n(__s2, __n, __s1);
-        return __s1;
+      _LIBCPP_ASSERT_NON_OVERLAPPING_RANGES(!std::__is_pointer_in_range(__s1, __s1 + __n, __s2),
+                                            "char_traits::copy: source and destination ranges overlap");
+      std::copy_n(__s2, __n, __s1);
+      return __s1;
     }
 
     static inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20
@@ -310,11 +308,10 @@ struct _LIBCPP_TEMPLATE_VIS char_traits<wchar_t>
 
     static inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20
     char_type* copy(char_type* __s1, const char_type* __s2, size_t __n) _NOEXCEPT {
-        if (!__libcpp_is_constant_evaluated())
-            _LIBCPP_ASSERT_NON_OVERLAPPING_RANGES(
-                __s2 < __s1 || __s2 >= __s1 + __n, "char_traits::copy overlapped range");
-        std::copy_n(__s2, __n, __s1);
-        return __s1;
+      _LIBCPP_ASSERT_NON_OVERLAPPING_RANGES(!std::__is_pointer_in_range(__s1, __s1 + __n, __s2),
+                                            "char_traits::copy: source and destination ranges overlap");
+      std::copy_n(__s2, __n, __s1);
+      return __s1;
     }
 
     static inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20
@@ -375,11 +372,10 @@ struct _LIBCPP_TEMPLATE_VIS char_traits<char8_t>
 
     static _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20
     char_type*       copy(char_type* __s1, const char_type* __s2, size_t __n) _NOEXCEPT {
-        if (!__libcpp_is_constant_evaluated())
-            _LIBCPP_ASSERT_NON_OVERLAPPING_RANGES(
-                __s2 < __s1 || __s2 >= __s1+__n, "char_traits::copy overlapped range");
-        std::copy_n(__s2, __n, __s1);
-        return __s1;
+      _LIBCPP_ASSERT_NON_OVERLAPPING_RANGES(!std::__is_pointer_in_range(__s1, __s1 + __n, __s2),
+                                            "char_traits::copy: source and destination ranges overlap");
+      std::copy_n(__s2, __n, __s1);
+      return __s1;
     }
 
     static _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20
@@ -460,11 +456,10 @@ struct _LIBCPP_TEMPLATE_VIS char_traits<char16_t>
 
     _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX20
     static char_type*       copy(char_type* __s1, const char_type* __s2, size_t __n) _NOEXCEPT {
-        if (!__libcpp_is_constant_evaluated())
-            _LIBCPP_ASSERT_NON_OVERLAPPING_RANGES(
-                __s2 < __s1 || __s2 >= __s1+__n, "char_traits::copy overlapped range");
-        std::copy_n(__s2, __n, __s1);
-        return __s1;
+      _LIBCPP_ASSERT_NON_OVERLAPPING_RANGES(!std::__is_pointer_in_range(__s1, __s1 + __n, __s2),
+                                            "char_traits::copy: source and destination ranges overlap");
+      std::copy_n(__s2, __n, __s1);
+      return __s1;
     }
 
     _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX20

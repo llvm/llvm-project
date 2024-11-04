@@ -215,6 +215,15 @@ public:
                                                 const LocationContext *LCtx,
                                                 QualType type, unsigned Count);
 
+  /// Create an SVal representing the result of an alloca()-like call, that is,
+  /// an AllocaRegion on the stack.
+  ///
+  /// After calling this function, it's a good idea to set the extent of the
+  /// returned AllocaRegion.
+  loc::MemRegionVal getAllocaRegionVal(const Expr *E,
+                                       const LocationContext *LCtx,
+                                       unsigned Count);
+
   DefinedOrUnknownSVal getDerivedRegionValueSymbolVal(
       SymbolRef parentSymbol, const TypedValueRegion *region);
 

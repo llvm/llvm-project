@@ -1,4 +1,4 @@
-! RUN: bbc %s -o "-" -emit-fir | FileCheck %s
+! RUN: bbc %s -o "-" -emit-fir -hlfir=false | FileCheck %s
 
 program basic
   return

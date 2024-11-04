@@ -12,13 +12,12 @@
 //  Assumption: minValue <= lhs <= maxValue
 //  Assumption: minValue >= 0
 template <typename T, T minValue, T maxValue>
-T euclidian_addition(T rhs, T lhs)
-{
-    const T modulus = maxValue - minValue + 1;
-    T ret = rhs + lhs;
-    if (ret > maxValue)
-        ret -= modulus;
-    return ret;
+constexpr T euclidian_addition(T rhs, T lhs) {
+  const T modulus = maxValue - minValue + 1;
+  T ret           = rhs + lhs;
+  if (ret > maxValue)
+    ret -= modulus;
+  return ret;
 }
 
 //  Assumption: minValue < maxValue
@@ -26,13 +25,12 @@ T euclidian_addition(T rhs, T lhs)
 //  Assumption: minValue <= lhs <= maxValue
 //  Assumption: minValue >= 0
 template <typename T, T minValue, T maxValue>
-T euclidian_subtraction(T lhs, T rhs)
-{
-    const T modulus = maxValue - minValue + 1;
-    T ret = lhs - rhs;
-    if (ret < minValue)
-        ret += modulus;
-    if (ret > maxValue)     // this can happen if T is unsigned
-        ret += modulus;
-    return ret;
+constexpr T euclidian_subtraction(T lhs, T rhs) {
+  const T modulus = maxValue - minValue + 1;
+  T ret           = lhs - rhs;
+  if (ret < minValue)
+    ret += modulus;
+  if (ret > maxValue) // this can happen if T is unsigned
+    ret += modulus;
+  return ret;
 }

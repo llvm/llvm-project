@@ -90,6 +90,8 @@ define i32 @iops(i32 %a, i32 %b) {
   %21 = sdiv exact i32 %20, %2
   %22 = lshr exact i32 %21, %4
   %23 = ashr exact i32 %22, %14
+  %24 = zext i32 %23 to i64
+  %25 = zext nneg i32 %23 to i64
   ret i32 %23
 }
 

@@ -17,7 +17,7 @@
 #include "private.h"
 #include "rtl.h"
 
-#include "Utilities.h"
+#include "Shared/Utils.h"
 
 #include <cassert>
 #include <climits>
@@ -539,15 +539,10 @@ void DeviceTy::init() {
     // Enables saving the device memory kernel output post execution if set.
     llvm::omp::target::BoolEnvar OMPX_ReplaySaveOutput(
         "LIBOMPTARGET_RR_SAVE_OUTPUT", false);
-    // Sets the maximum to pre-allocate device memory.
-    llvm::omp::target::UInt64Envar OMPX_DeviceMemorySize(
-        "LIBOMPTARGET_RR_DEVMEM_SIZE", 16);
-    DP("Activating Record-Replay for Device %d with %lu GB memory\n",
-       RTLDeviceID, OMPX_DeviceMemorySize.get());
 
-    RTL->activate_record_replay(RTLDeviceID,
-                                OMPX_DeviceMemorySize * 1024 * 1024 * 1024,
-                                nullptr, true, OMPX_ReplaySaveOutput);
+    uint64_t ReqPtrArgOffset;
+    RTL->activate_record_replay(RTLDeviceID, 0, nullptr, true,
+                                OMPX_ReplaySaveOutput, ReqPtrArgOffset);
   }
 
   IsInit = true;
@@ -566,11 +561,6 @@ int32_t DeviceTy::initOnce() {
   if (IsInit)
     return OFFLOAD_SUCCESS;
   return OFFLOAD_FAIL;
-}
-
-void DeviceTy::deinit() {
-  if (RTL->deinit_device)
-    RTL->deinit_device(RTLDeviceID);
 }
 
 // Load binary to device.

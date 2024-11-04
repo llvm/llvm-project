@@ -244,20 +244,23 @@ INTERCEPTOR(uptr, malloc_usable_size, void *ptr) {
 #endif
 
 #if !SANITIZER_FREEBSD && !SANITIZER_NETBSD
-// This function actually returns a struct by value, but we can't unpoison a
-// temporary! The following is equivalent on all supported platforms but
-// aarch64 (which uses a different register for sret value).  We have a test
-// to confirm that.
-INTERCEPTOR(void, mallinfo, __sanitizer_struct_mallinfo *sret) {
-#ifdef __aarch64__
-  uptr r8;
-  asm volatile("mov %0,x8" : "=r" (r8));
-  sret = reinterpret_cast<__sanitizer_struct_mallinfo*>(r8);
-#endif
-  REAL(memset)(sret, 0, sizeof(*sret));
+
+template <class T>
+static NOINLINE void clear_mallinfo(T *sret) {
+  ENSURE_MSAN_INITED();
+  internal_memset(sret, 0, sizeof(*sret));
   __msan_unpoison(sret, sizeof(*sret));
 }
-#define MSAN_MAYBE_INTERCEPT_MALLINFO INTERCEPT_FUNCTION(mallinfo)
+
+// Interceptor relies on NRVO and assumes that sret will be pre-allocated in
+// caller frame.
+INTERCEPTOR(__sanitizer_struct_mallinfo, mallinfo) {
+  __sanitizer_struct_mallinfo sret;
+  clear_mallinfo(&sret);
+  return sret;
+}
+
+#  define MSAN_MAYBE_INTERCEPT_MALLINFO INTERCEPT_FUNCTION(mallinfo)
 #else
 #define MSAN_MAYBE_INTERCEPT_MALLINFO
 #endif

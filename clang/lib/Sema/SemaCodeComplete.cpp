@@ -4165,6 +4165,9 @@ CXCursorKind clang::getCursorKindForDecl(const Decl *D) {
   case Decl::Concept:
     return CXCursor_ConceptDecl;
 
+  case Decl::LinkageSpec:
+    return CXCursor_LinkageSpec;
+
   default:
     if (const auto *TD = dyn_cast<TagDecl>(D)) {
       switch (TD->getTagKind()) {

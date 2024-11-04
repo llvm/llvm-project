@@ -168,6 +168,9 @@ module;
 #include <version>
 
 // *** Headers not yet available ***
+#if __has_include(<debugging>)
+#  error "update the header information for <debugging> in libcxx/utils/generate_std_cppm_in.py"
+#endif //   __has_include(<debugging>)
 #if __has_include(<flat_map>)
 #  error "update the header information for <flat_map> in libcxx/utils/generate_std_cppm_in.py"
 #endif //   __has_include(<flat_map>)
@@ -180,6 +183,9 @@ module;
 #if __has_include(<hazard_pointer>)
 #  error "update the header information for <hazard_pointer> in libcxx/utils/generate_std_cppm_in.py"
 #endif //   __has_include(<hazard_pointer>)
+#if __has_include(<linalg>)
+#  error "update the header information for <linalg> in libcxx/utils/generate_std_cppm_in.py"
+#endif //   __has_include(<linalg>)
 #if __has_include(<rcu>)
 #  error "update the header information for <rcu> in libcxx/utils/generate_std_cppm_in.py"
 #endif //   __has_include(<rcu>)

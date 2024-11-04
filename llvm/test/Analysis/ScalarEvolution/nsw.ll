@@ -81,7 +81,7 @@ define void @test2(ptr %begin, ptr %end) ssp {
 ; CHECK-NEXT:  Loop %for.body.i.i: symbolic max backedge-taken count is ((-4 + (-1 * (ptrtoint ptr %begin to i64)) + (ptrtoint ptr %end to i64)) /u 4)
 ; CHECK-NEXT:  Loop %for.body.i.i: Predicated backedge-taken count is ((-4 + (-1 * (ptrtoint ptr %begin to i64)) + (ptrtoint ptr %end to i64)) /u 4)
 ; CHECK-NEXT:   Predicates:
-; CHECK:       Loop %for.body.i.i: Trip multiple is 1
+; CHECK-NEXT:  Loop %for.body.i.i: Trip multiple is 1
 ;
 entry:
   %cmp1.i.i = icmp eq ptr %begin, %end
@@ -122,7 +122,7 @@ define void @test3(ptr %begin, ptr %end) nounwind ssp {
 ; CHECK-NEXT:  Loop %for.body.i.i: symbolic max backedge-taken count is ((-4 + (-1 * (ptrtoint ptr %begin to i64)) + (ptrtoint ptr %end to i64)) /u 4)
 ; CHECK-NEXT:  Loop %for.body.i.i: Predicated backedge-taken count is ((-4 + (-1 * (ptrtoint ptr %begin to i64)) + (ptrtoint ptr %end to i64)) /u 4)
 ; CHECK-NEXT:   Predicates:
-; CHECK:       Loop %for.body.i.i: Trip multiple is 1
+; CHECK-NEXT:  Loop %for.body.i.i: Trip multiple is 1
 ;
 entry:
   %cmp7.i.i = icmp eq ptr %begin, %end
@@ -185,7 +185,7 @@ define i32 @PR12375(ptr readnone %arg) {
 ; CHECK-NEXT:  Loop %bb1: symbolic max backedge-taken count is 1
 ; CHECK-NEXT:  Loop %bb1: Predicated backedge-taken count is 1
 ; CHECK-NEXT:   Predicates:
-; CHECK:       Loop %bb1: Trip multiple is 2
+; CHECK-NEXT:  Loop %bb1: Trip multiple is 2
 ;
 bb:
   %tmp = getelementptr inbounds i32, ptr %arg, i64 2
@@ -216,7 +216,7 @@ define void @PR12376(ptr nocapture %arg, ptr nocapture %arg1)  {
 ; CHECK-NEXT:  Loop %bb2: symbolic max backedge-taken count is ((-1 + (-1 * (ptrtoint ptr %arg to i64)) + ((4 + (ptrtoint ptr %arg to i64))<nuw> umax (ptrtoint ptr %arg1 to i64))) /u 4)
 ; CHECK-NEXT:  Loop %bb2: Predicated backedge-taken count is ((-1 + (-1 * (ptrtoint ptr %arg to i64)) + ((4 + (ptrtoint ptr %arg to i64))<nuw> umax (ptrtoint ptr %arg1 to i64))) /u 4)
 ; CHECK-NEXT:   Predicates:
-; CHECK:       Loop %bb2: Trip multiple is 1
+; CHECK-NEXT:  Loop %bb2: Trip multiple is 1
 ;
 bb:
   br label %bb2
@@ -252,7 +252,7 @@ define void @nswnowrap(i32 %v, ptr %buf) {
 ; CHECK-NEXT:  Loop %for.body: symbolic max backedge-taken count is ((-1 * %v) + ((1 + %v)<nsw> smax %v)), actual taken count either this or zero.
 ; CHECK-NEXT:  Loop %for.body: Predicated backedge-taken count is ((-1 * %v) + ((1 + %v)<nsw> smax %v))
 ; CHECK-NEXT:   Predicates:
-; CHECK:       Loop %for.body: Trip multiple is 1
+; CHECK-NEXT:  Loop %for.body: Trip multiple is 1
 ;
 entry:
   %add = add nsw i32 %v, 1
@@ -295,7 +295,7 @@ define void @test4(i32 %arg) {
 ; CHECK-NEXT:  Loop %for.body: symbolic max backedge-taken count is (-1 + (-1 * %arg) + (10 smax (1 + %arg)<nsw>))
 ; CHECK-NEXT:  Loop %for.body: Predicated backedge-taken count is (-1 + (-1 * %arg) + (10 smax (1 + %arg)<nsw>))
 ; CHECK-NEXT:   Predicates:
-; CHECK:       Loop %for.body: Trip multiple is 1
+; CHECK-NEXT:  Loop %for.body: Trip multiple is 1
 ;
 entry:
   %array = alloca [10 x i32], align 4
@@ -329,7 +329,7 @@ define void @bad_postinc_nsw_a(i32 %n) {
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is ((((-1 * (1 umin %n))<nuw><nsw> + %n) /u 7) + (1 umin %n))
 ; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is ((((-1 * (1 umin %n))<nuw><nsw> + %n) /u 7) + (1 umin %n))
 ; CHECK-NEXT:   Predicates:
-; CHECK:       Loop %loop: Trip multiple is 1
+; CHECK-NEXT:  Loop %loop: Trip multiple is 1
 ;
 entry:
   br label %loop
@@ -390,7 +390,7 @@ define void @pr28012(i32 %n) {
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is ((-1 + (7 umax %n)) /u 7)
 ; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is ((-1 + (7 umax %n)) /u 7)
 ; CHECK-NEXT:   Predicates:
-; CHECK:       Loop %loop: Trip multiple is 1
+; CHECK-NEXT:  Loop %loop: Trip multiple is 1
 ;
 entry:
   br label %loop
@@ -455,7 +455,7 @@ define void @pr66066() {
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is 1
 ; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is 1
 ; CHECK-NEXT:   Predicates:
-; CHECK:       Loop %loop: Trip multiple is 2
+; CHECK-NEXT:  Loop %loop: Trip multiple is 2
 ;
 entry:
   br label %loop

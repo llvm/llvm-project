@@ -97,7 +97,7 @@ define <6 x i1> @load_v6i1(ptr %p) {
 ; RV32-NEXT:    srli a5, a5, 31
 ; RV32-NEXT:    andi a0, a0, 1
 ; RV32-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
-; RV32-NEXT:    vslide1down.vx v8, v8, a0
+; RV32-NEXT:    vmv.v.x v8, a0
 ; RV32-NEXT:    vslide1down.vx v8, v8, a5
 ; RV32-NEXT:    vslide1down.vx v8, v8, a4
 ; RV32-NEXT:    vslide1down.vx v8, v8, a3
@@ -122,7 +122,7 @@ define <6 x i1> @load_v6i1(ptr %p) {
 ; RV64-NEXT:    srli a5, a5, 63
 ; RV64-NEXT:    andi a0, a0, 1
 ; RV64-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
-; RV64-NEXT:    vslide1down.vx v8, v8, a0
+; RV64-NEXT:    vmv.v.x v8, a0
 ; RV64-NEXT:    vslide1down.vx v8, v8, a5
 ; RV64-NEXT:    vslide1down.vx v8, v8, a4
 ; RV64-NEXT:    vslide1down.vx v8, v8, a3

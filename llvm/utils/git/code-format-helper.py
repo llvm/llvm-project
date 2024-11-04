@@ -115,24 +115,17 @@ class ClangFormatHelper(FormatHelper):
     def instructions(self) -> str:
         return " ".join(self.cf_cmd)
 
-    @cached_property
-    def libcxx_excluded_files(self) -> list[str]:
-        with open("libcxx/utils/data/ignore_format.txt", "r") as ifd:
-            return [excl.strip() for excl in ifd.readlines()]
-
-    def should_be_excluded(self, path: str) -> bool:
-        if path in self.libcxx_excluded_files:
-            print(f"{self.name}: Excluding file {path}")
-            return True
-        return False
+    def should_include_extensionless_file(self, path: str) -> bool:
+        return path.startswith("libcxx/include")
 
     def filter_changed_files(self, changed_files: list[str]) -> list[str]:
         filtered_files = []
         for path in changed_files:
             _, ext = os.path.splitext(path)
-            if ext in (".cpp", ".c", ".h", ".hpp", ".hxx", ".cxx"):
-                if not self.should_be_excluded(path):
-                    filtered_files.append(path)
+            if ext in (".cpp", ".c", ".h", ".hpp", ".hxx", ".cxx", ".inc", ".cppm"):
+                filtered_files.append(path)
+            elif ext == "" and self.should_include_extensionless_file(path):
+                filtered_files.append(path)
         return filtered_files
 
     def format_run(
@@ -156,6 +149,8 @@ class ClangFormatHelper(FormatHelper):
         if proc.returncode != 0:
             # formatting needed, or the command otherwise failed
             print(f"error: {self.name} exited with code {proc.returncode}")
+            # Print the diff in the log so that it is viewable there
+            print(proc.stdout.decode("utf-8"))
             return proc.stdout.decode("utf-8")
         else:
             sys.stdout.write(proc.stdout.decode("utf-8"))
@@ -200,6 +195,8 @@ class DarkerFormatHelper(FormatHelper):
         if proc.returncode != 0:
             # formatting needed, or the command otherwise failed
             print(f"error: {self.name} exited with code {proc.returncode}")
+            # Print the diff in the log so that it is viewable there
+            print(proc.stdout.decode("utf-8"))
             return proc.stdout.decode("utf-8")
         else:
             sys.stdout.write(proc.stdout.decode("utf-8"))

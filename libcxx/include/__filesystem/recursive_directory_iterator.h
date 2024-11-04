@@ -28,7 +28,7 @@
 #  pragma GCC system_header
 #endif
 
-#if !defined(_LIBCPP_CXX03_LANG) && !defined(_LIBCPP_HAS_NO_FILESYSTEM)
+#if _LIBCPP_STD_VER >= 17 && !defined(_LIBCPP_HAS_NO_FILESYSTEM)
 
 _LIBCPP_BEGIN_NAMESPACE_FILESYSTEM
 
@@ -170,14 +170,14 @@ _LIBCPP_END_NAMESPACE_FILESYSTEM
 
 template <>
 _LIBCPP_AVAILABILITY_FILESYSTEM_LIBRARY
-inline constexpr bool _VSTD::ranges::enable_borrowed_range<_VSTD_FS::recursive_directory_iterator> = true;
+inline constexpr bool _VSTD::ranges::enable_borrowed_range<std::filesystem::recursive_directory_iterator> = true;
 
 template <>
 _LIBCPP_AVAILABILITY_FILESYSTEM_LIBRARY
-inline constexpr bool _VSTD::ranges::enable_view<_VSTD_FS::recursive_directory_iterator> = true;
+inline constexpr bool _VSTD::ranges::enable_view<std::filesystem::recursive_directory_iterator> = true;
 
 #endif // _LIBCPP_STD_VER >= 20
 
-#endif // !defined(_LIBCPP_CXX03_LANG) && !defined(_LIBCPP_HAS_NO_FILESYSTEM)
+#endif // _LIBCPP_STD_VER >= 17 && !defined(_LIBCPP_HAS_NO_FILESYSTEM)
 
 #endif // _LIBCPP___FILESYSTEM_RECURSIVE_DIRECTORY_ITERATOR_H

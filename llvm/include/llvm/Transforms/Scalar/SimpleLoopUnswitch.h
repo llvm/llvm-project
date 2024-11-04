@@ -79,11 +79,6 @@ public:
                      function_ref<StringRef(StringRef)> MapClassName2PassName);
 };
 
-/// Create the legacy pass object for the simple loop unswitcher.
-///
-/// See the documentaion for `SimpleLoopUnswitchPass` for details.
-Pass *createSimpleLoopUnswitchLegacyPass(bool NonTrivial = false);
-
 } // end namespace llvm
 
 #endif // LLVM_TRANSFORMS_SCALAR_SIMPLELOOPUNSWITCH_H
