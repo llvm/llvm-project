@@ -1183,28 +1183,23 @@ static AnalysisResult analyzePathForGSLPointer(const IndirectLocalPath &Path,
   // lifetimebound attribute returns a "owner" type.
   if (Path.back().Kind == IndirectLocalPathEntry::LifetimeBoundCall) {
     // The lifetimebound applies to the implicit object parameter of a method.
-    if (const auto *Method = llvm::dyn_cast<CXXMethodDecl>(Path.back().D)) {
-      if (Method->getReturnType()->isReferenceType() &&
-          isRecordWithAttr<OwnerAttr>(
-              Method->getReturnType()->getPointeeType()))
-        return Report;
-      return Abandon;
-    }
+    const FunctionDecl* FD = llvm::dyn_cast_or_null<FunctionDecl>(Path.back().D);
     // The lifetimebound applies to a function parameter.
-    const auto *PD = llvm::dyn_cast<ParmVarDecl>(Path.back().D);
-    if (const auto *FD = llvm::dyn_cast<FunctionDecl>(PD->getDeclContext())) {
-      if (isa<CXXConstructorDecl>(FD)) {
-        // Constructor case: the parameter is annotated with lifetimebound
-        //   e.g., GSLPointer(const S& s [[clang::lifetimebound]])
-        // We still respect this case even the type S is not an owner.
-        return Report;
-      }
-      // For regular functions, check if the return type has an Owner attribute.
-      //   e.g., const GSLOwner& func(const Foo& foo [[clang::lifetimebound]])
-      if (FD->getReturnType()->isReferenceType() &&
-          isRecordWithAttr<OwnerAttr>(FD->getReturnType()->getPointeeType()))
-        return Report;
+    if (const auto *PD = llvm::dyn_cast<ParmVarDecl>(Path.back().D))
+      FD = llvm::dyn_cast<FunctionDecl>(PD->getDeclContext());
+
+    if (isa_and_present<CXXConstructorDecl>(FD)) {
+      // Constructor case: the parameter is annotated with lifetimebound
+      //   e.g., GSLPointer(const S& s [[clang::lifetimebound]])
+      // We still respect this case even the type S is not an owner.
+      return Report;
     }
+    // Check if the return type has an Owner attribute.
+    //   e.g., const GSLOwner& func(const Foo& foo [[clang::lifetimebound]])
+    if (FD && FD->getReturnType()->isReferenceType() &&
+          isRecordWithAttr<OwnerAttr>(FD->getReturnType()->getPointeeType()))
+      return Report;
+
     return Abandon;
   }
 
@@ -1273,9 +1268,9 @@ checkExprLifetimeImpl(Sema &SemaRef, const InitializedEntity *InitEntity,
     bool IsGslPtrValueFromGslTempOwner = true;
     switch (analyzePathForGSLPointer(Path, L)) {
     case Abandon:
-       return false;
+      return false;
     case Skip:
-       return true;
+      return true;
     case NotGSLPointer:
       IsGslPtrValueFromGslTempOwner = false;
       LLVM_FALLTHROUGH;
