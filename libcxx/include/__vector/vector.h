@@ -1263,7 +1263,7 @@ vector<_Tp, _Allocator>::insert(const_iterator __position, const_reference __x) 
   } else {
     allocator_type& __a = this->__alloc();
     __split_buffer<value_type, allocator_type&> __v(__recommend(size() + 1), __p - this->__begin_, __a);
-    __v.push_back(__x);
+    __v.emplace_back(__x);
     __p = __swap_out_circular_buffer(__v, __p);
   }
   return __make_iter(__p);
@@ -1283,7 +1283,7 @@ vector<_Tp, _Allocator>::insert(const_iterator __position, value_type&& __x) {
   } else {
     allocator_type& __a = this->__alloc();
     __split_buffer<value_type, allocator_type&> __v(__recommend(size() + 1), __p - this->__begin_, __a);
-    __v.push_back(std::move(__x));
+    __v.emplace_back(std::move(__x));
     __p = __swap_out_circular_buffer(__v, __p);
   }
   return __make_iter(__p);
