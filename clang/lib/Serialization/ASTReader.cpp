@@ -64,6 +64,7 @@
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/SourceManagerInternals.h"
 #include "clang/Basic/Specifiers.h"
+#include "clang/Basic/Stack.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Basic/TargetOptions.h"
 #include "clang/Basic/TokenKinds.h"
@@ -4415,19 +4416,6 @@ bool ASTReader::isGlobalIndexUnavailable() const {
          !hasGlobalIndex() && TriedLoadingGlobalIndex;
 }
 
-static void updateModuleTimestamp(ModuleFile &MF) {
-  // Overwrite the timestamp file contents so that file's mtime changes.
-  std::string TimestampFilename = MF.getTimestampFilename();
-  std::error_code EC;
-  llvm::raw_fd_ostream OS(TimestampFilename, EC,
-                          llvm::sys::fs::OF_TextWithCRLF);
-  if (EC)
-    return;
-  OS << "Timestamp file\n";
-  OS.close();
-  OS.clear_error(); // Avoid triggering a fatal error.
-}
-
 /// Given a cursor at the start of an AST file, scan ahead and drop the
 /// cursor into the start of the given block ID, returning false on success and
 /// true on failure.
@@ -4706,7 +4694,7 @@ ASTReader::ASTReadResult ASTReader::ReadAST(StringRef FileName, ModuleKind Type,
       ImportedModule &M = Loaded[I];
       if (M.Mod->Kind == MK_ImplicitModule &&
           M.Mod->InputFilesValidationTimestamp < HSOpts.BuildSessionTimestamp)
-        updateModuleTimestamp(*M.Mod);
+        updateModuleTimestamp(M.Mod->FileName);
     }
   }
 
@@ -5333,7 +5321,9 @@ std::string ASTReader::getOriginalSourceFile(
     const PCHContainerReader &PCHContainerRdr, DiagnosticsEngine &Diags) {
   // Open the AST file.
   auto Buffer = FileMgr.getBufferForFile(ASTFileName, /*IsVolatile=*/false,
-                                         /*RequiresNullTerminator=*/false);
+                                         /*RequiresNullTerminator=*/false,
+                                         /*MaybeLimit=*/std::nullopt,
+                                         /*IsText=*/false);
   if (!Buffer) {
     Diags.Report(diag::err_fe_unable_to_read_pch_file)
         << ASTFileName << Buffer.getError().message();
@@ -9648,18 +9638,15 @@ DiagnosticBuilder ASTReader::Diag(SourceLocation Loc, unsigned DiagID) const {
   return Diags.Report(Loc, DiagID);
 }
 
-void ASTReader::warnStackExhausted(SourceLocation Loc) {
+void ASTReader::runWithSufficientStackSpace(SourceLocation Loc,
+                                            llvm::function_ref<void()> Fn) {
   // When Sema is available, avoid duplicate errors.
   if (SemaObj) {
-    SemaObj->warnStackExhausted(Loc);
+    SemaObj->runWithSufficientStackSpace(Loc, Fn);
     return;
   }
 
-  if (WarnedStackExhausted)
-    return;
-  WarnedStackExhausted = true;
-
-  Diag(Loc, diag::warn_stack_exhausted);
+  StackHandler.runWithSufficientStackSpace(Loc, Fn);
 }
 
 /// Retrieve the identifier table associated with the
@@ -10509,13 +10496,14 @@ ASTReader::ASTReader(Preprocessor &PP, InMemoryModuleCache &ModuleCache,
                      bool AllowConfigurationMismatch, bool ValidateSystemInputs,
                      bool ValidateASTInputFilesContent, bool UseGlobalIndex,
                      std::unique_ptr<llvm::Timer> ReadTimer)
-    : Listener(bool(DisableValidationKind &DisableValidationForModuleKind::PCH)
+    : Listener(bool(DisableValidationKind & DisableValidationForModuleKind::PCH)
                    ? cast<ASTReaderListener>(new SimpleASTReaderListener(PP))
                    : cast<ASTReaderListener>(new PCHValidator(PP, *this))),
       SourceMgr(PP.getSourceManager()), FileMgr(PP.getFileManager()),
-      PCHContainerRdr(PCHContainerRdr), Diags(PP.getDiagnostics()), PP(PP),
-      ContextObj(Context), ModuleMgr(PP.getFileManager(), ModuleCache,
-                                     PCHContainerRdr, PP.getHeaderSearchInfo()),
+      PCHContainerRdr(PCHContainerRdr), Diags(PP.getDiagnostics()),
+      StackHandler(Diags), PP(PP), ContextObj(Context),
+      ModuleMgr(PP.getFileManager(), ModuleCache, PCHContainerRdr,
+                PP.getHeaderSearchInfo()),
       DummyIdResolver(PP), ReadTimer(std::move(ReadTimer)), isysroot(isysroot),
       DisableValidationKind(DisableValidationKind),
       AllowASTWithCompilerErrors(AllowASTWithCompilerErrors),
@@ -12339,11 +12327,21 @@ OpenACCClause *ASTRecordReader::readOpenACCClause() {
     return OpenACCGangClause::Create(getContext(), BeginLoc, LParenLoc,
                                      GangKinds, Exprs, EndLoc);
   }
+  case OpenACCClauseKind::Worker: {
+    SourceLocation LParenLoc = readSourceLocation();
+    Expr *WorkerExpr = readBool() ? readSubExpr() : nullptr;
+    return OpenACCWorkerClause::Create(getContext(), BeginLoc, LParenLoc,
+                                       WorkerExpr, EndLoc);
+  }
+  case OpenACCClauseKind::Vector: {
+    SourceLocation LParenLoc = readSourceLocation();
+    Expr *VectorExpr = readBool() ? readSubExpr() : nullptr;
+    return OpenACCVectorClause::Create(getContext(), BeginLoc, LParenLoc,
+                                       VectorExpr, EndLoc);
+  }
 
   case OpenACCClauseKind::Finalize:
   case OpenACCClauseKind::IfPresent:
-  case OpenACCClauseKind::Worker:
-  case OpenACCClauseKind::Vector:
   case OpenACCClauseKind::NoHost:
   case OpenACCClauseKind::UseDevice:
   case OpenACCClauseKind::Delete:

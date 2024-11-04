@@ -57,9 +57,9 @@ static cl::opt<unsigned> MaxBlockPredecessors(
     "considered during the estimation of dead code"));
 
 static cl::opt<unsigned> MinFunctionSize(
-    "funcspec-min-function-size", cl::init(300), cl::Hidden, cl::desc(
-    "Don't specialize functions that have less than this number of "
-    "instructions"));
+    "funcspec-min-function-size", cl::init(500), cl::Hidden,
+    cl::desc("Don't specialize functions that have less than this number of "
+             "instructions"));
 
 static cl::opt<unsigned> MaxCodeSizeGrowth(
     "funcspec-max-codesize-growth", cl::init(3), cl::Hidden, cl::desc(
@@ -112,7 +112,7 @@ bool InstCostVisitor::canEliminateSuccessor(BasicBlock *BB, BasicBlock *Succ,
 Cost InstCostVisitor::estimateBasicBlocks(
                           SmallVectorImpl<BasicBlock *> &WorkList) {
   Cost CodeSize = 0;
-  // Accumulate the instruction cost of each basic block weighted by frequency.
+  // Accumulate the codesize savings of each basic block.
   while (!WorkList.empty()) {
     BasicBlock *BB = WorkList.pop_back_val();
 
@@ -154,37 +154,73 @@ static Constant *findConstantFor(Value *V, ConstMap &KnownConstants) {
   return KnownConstants.lookup(V);
 }
 
-Bonus InstCostVisitor::getBonusFromPendingPHIs() {
-  Bonus B;
+Cost InstCostVisitor::getCodeSizeSavingsFromPendingPHIs() {
+  Cost CodeSize;
   while (!PendingPHIs.empty()) {
     Instruction *Phi = PendingPHIs.pop_back_val();
     // The pending PHIs could have been proven dead by now.
     if (isBlockExecutable(Phi->getParent()))
-      B += getUserBonus(Phi);
+      CodeSize += getCodeSizeSavingsForUser(Phi);
   }
-  return B;
+  return CodeSize;
 }
 
-/// Compute a bonus for replacing argument \p A with constant \p C.
-Bonus InstCostVisitor::getSpecializationBonus(Argument *A, Constant *C) {
+/// Compute the codesize savings for replacing argument \p A with constant \p C.
+Cost InstCostVisitor::getCodeSizeSavingsForArg(Argument *A, Constant *C) {
   LLVM_DEBUG(dbgs() << "FnSpecialization: Analysing bonus for constant: "
                     << C->getNameOrAsOperand() << "\n");
-  Bonus B;
+  Cost CodeSize;
   for (auto *U : A->users())
     if (auto *UI = dyn_cast<Instruction>(U))
       if (isBlockExecutable(UI->getParent()))
-        B += getUserBonus(UI, A, C);
+        CodeSize += getCodeSizeSavingsForUser(UI, A, C);
 
   LLVM_DEBUG(dbgs() << "FnSpecialization:   Accumulated bonus {CodeSize = "
-                    << B.CodeSize << ", Latency = " << B.Latency
-                    << "} for argument " << *A << "\n");
-  return B;
+                    << CodeSize << "} for argument " << *A << "\n");
+  return CodeSize;
 }
 
-Bonus InstCostVisitor::getUserBonus(Instruction *User, Value *Use, Constant *C) {
+/// Compute the latency savings from replacing all arguments with constants for
+/// a specialization candidate. As this function computes the latency savings
+/// for all Instructions in KnownConstants at once, it should be called only
+/// after every instruction has been visited, i.e. after:
+///
+/// * getCodeSizeSavingsForArg has been run for every constant argument of a
+///   specialization candidate
+///
+/// * getCodeSizeSavingsFromPendingPHIs has been run
+///
+/// to ensure that the latency savings are calculated for all Instructions we
+/// have visited and found to be constant.
+Cost InstCostVisitor::getLatencySavingsForKnownConstants() {
+  auto &BFI = GetBFI(*F);
+  Cost TotalLatency = 0;
+
+  for (auto Pair : KnownConstants) {
+    Instruction *I = dyn_cast<Instruction>(Pair.first);
+    if (!I)
+      continue;
+
+    uint64_t Weight = BFI.getBlockFreq(I->getParent()).getFrequency() /
+                      BFI.getEntryFreq().getFrequency();
+
+    Cost Latency =
+        Weight * TTI.getInstructionCost(I, TargetTransformInfo::TCK_Latency);
+
+    LLVM_DEBUG(dbgs() << "FnSpecialization:     {Latency = " << Latency
+                      << "} for instruction " << *I << "\n");
+
+    TotalLatency += Latency;
+  }
+
+  return TotalLatency;
+}
+
+Cost InstCostVisitor::getCodeSizeSavingsForUser(Instruction *User, Value *Use,
+                                                Constant *C) {
   // We have already propagated a constant for this user.
   if (KnownConstants.contains(User))
-    return {0, 0};
+    return 0;
 
   // Cache the iterator before visiting.
   LastVisited = Use ? KnownConstants.insert({Use, C}).first
@@ -198,7 +234,7 @@ Bonus InstCostVisitor::getUserBonus(Instruction *User, Value *Use, Constant *C) 
   } else {
     C = visit(*User);
     if (!C)
-      return {0, 0};
+      return 0;
   }
 
   // Even though it doesn't make sense to bind switch and branch instructions
@@ -208,23 +244,15 @@ Bonus InstCostVisitor::getUserBonus(Instruction *User, Value *Use, Constant *C) 
 
   CodeSize += TTI.getInstructionCost(User, TargetTransformInfo::TCK_CodeSize);
 
-  uint64_t Weight = BFI.getBlockFreq(User->getParent()).getFrequency() /
-                    BFI.getEntryFreq().getFrequency();
-
-  Cost Latency = Weight *
-      TTI.getInstructionCost(User, TargetTransformInfo::TCK_Latency);
-
   LLVM_DEBUG(dbgs() << "FnSpecialization:     {CodeSize = " << CodeSize
-                    << ", Latency = " << Latency << "} for user "
-                    << *User << "\n");
+                    << "} for user " << *User << "\n");
 
-  Bonus B(CodeSize, Latency);
   for (auto *U : User->users())
     if (auto *UI = dyn_cast<Instruction>(U))
       if (UI != User && isBlockExecutable(UI->getParent()))
-        B += getUserBonus(UI, User, C);
+        CodeSize += getCodeSizeSavingsForUser(UI, User, C);
 
-  return B;
+  return CodeSize;
 }
 
 Cost InstCostVisitor::estimateSwitchInst(SwitchInst &I) {
@@ -641,12 +669,17 @@ bool FunctionSpecializer::run() {
         Metrics.analyzeBasicBlock(&BB, GetTTI(F), EphValues);
     }
 
+    // When specializing literal constants is enabled, always require functions
+    // to be larger than MinFunctionSize, to prevent excessive specialization.
+    const bool RequireMinSize =
+        !ForceSpecialization &&
+        (SpecializeLiteralConstant || !F.hasFnAttribute(Attribute::NoInline));
+
     // If the code metrics reveal that we shouldn't duplicate the function,
     // or if the code size implies that this function is easy to get inlined,
     // then we shouldn't specialize it.
     if (Metrics.notDuplicatable || !Metrics.NumInsts.isValid() ||
-        (!ForceSpecialization && !F.hasFnAttribute(Attribute::NoInline) &&
-         Metrics.NumInsts < MinFunctionSize))
+        (RequireMinSize && Metrics.NumInsts < MinFunctionSize))
       continue;
 
     // TODO: For now only consider recursive functions when running multiple
@@ -804,6 +837,18 @@ static Function *cloneCandidateFunction(Function *F, unsigned NSpecs) {
   return Clone;
 }
 
+/// Get the unsigned Value of given Cost object. Assumes the Cost is always
+/// non-negative, which is true for both TCK_CodeSize and TCK_Latency, and
+/// always Valid.
+static unsigned getCostValue(const Cost &C) {
+  int64_t Value = *C.getValue();
+
+  assert(Value >= 0 && "CodeSize and Latency cannot be negative");
+  // It is safe to down cast since we know the arguments cannot be negative and
+  // Cost is of type int64_t.
+  return static_cast<unsigned>(Value);
+}
+
 bool FunctionSpecializer::findSpecializations(Function *F, unsigned FuncSize,
                                               SmallVectorImpl<Spec> &AllSpecs,
                                               SpecMap &SM) {
@@ -870,48 +915,67 @@ bool FunctionSpecializer::findSpecializations(Function *F, unsigned FuncSize,
       AllSpecs[Index].CallSites.push_back(&CS);
     } else {
       // Calculate the specialisation gain.
-      Bonus B;
+      Cost CodeSize;
       unsigned Score = 0;
       InstCostVisitor Visitor = getInstCostVisitorFor(F);
       for (ArgInfo &A : S.Args) {
-        B += Visitor.getSpecializationBonus(A.Formal, A.Actual);
+        CodeSize += Visitor.getCodeSizeSavingsForArg(A.Formal, A.Actual);
         Score += getInliningBonus(A.Formal, A.Actual);
       }
-      B += Visitor.getBonusFromPendingPHIs();
+      CodeSize += Visitor.getCodeSizeSavingsFromPendingPHIs();
 
-
-      LLVM_DEBUG(dbgs() << "FnSpecialization: Specialization bonus {CodeSize = "
-                        << B.CodeSize << ", Latency = " << B.Latency
-                        << ", Inlining = " << Score << "}\n");
-
-      FunctionGrowth[F] += FuncSize - B.CodeSize;
-
-      auto IsProfitable = [](Bonus &B, unsigned Score, unsigned FuncSize,
-                             unsigned FuncGrowth) -> bool {
+      auto IsProfitable = [&]() -> bool {
         // No check required.
         if (ForceSpecialization)
           return true;
+
+        unsigned CodeSizeSavings = getCostValue(CodeSize);
+        // TODO: We should only accumulate codesize increase of specializations
+        // that are actually created.
+        FunctionGrowth[F] += FuncSize - CodeSizeSavings;
+
+        LLVM_DEBUG(
+            dbgs() << "FnSpecialization: Specialization bonus {Inlining = "
+                   << Score << " (" << (Score * 100 / FuncSize) << "%)}\n");
+
         // Minimum inlining bonus.
         if (Score > MinInliningBonus * FuncSize / 100)
           return true;
+
+        LLVM_DEBUG(
+            dbgs() << "FnSpecialization: Specialization bonus {CodeSize = "
+                   << CodeSizeSavings << " ("
+                   << (CodeSizeSavings * 100 / FuncSize) << "%)}\n");
+
         // Minimum codesize savings.
-        if (B.CodeSize < MinCodeSizeSavings * FuncSize / 100)
+        if (CodeSizeSavings < MinCodeSizeSavings * FuncSize / 100)
           return false;
+
+        // Lazily compute the Latency, to avoid unnecessarily computing BFI.
+        unsigned LatencySavings =
+            getCostValue(Visitor.getLatencySavingsForKnownConstants());
+
+        LLVM_DEBUG(
+            dbgs() << "FnSpecialization: Specialization bonus {Latency = "
+                   << LatencySavings << " ("
+                   << (LatencySavings * 100 / FuncSize) << "%)}\n");
+
         // Minimum latency savings.
-        if (B.Latency < MinLatencySavings * FuncSize / 100)
+        if (LatencySavings < MinLatencySavings * FuncSize / 100)
           return false;
         // Maximum codesize growth.
-        if (FuncGrowth / FuncSize > MaxCodeSizeGrowth)
+        if (FunctionGrowth[F] / FuncSize > MaxCodeSizeGrowth)
           return false;
+
+        Score += std::max(CodeSizeSavings, LatencySavings);
         return true;
       };
 
       // Discard unprofitable specialisations.
-      if (!IsProfitable(B, Score, FuncSize, FunctionGrowth[F]))
+      if (!IsProfitable())
         continue;
 
       // Create a new specialisation entry.
-      Score += std::max(B.CodeSize, B.Latency);
       auto &Spec = AllSpecs.emplace_back(F, S, Score);
       if (CS.getFunction() != F)
         Spec.CallSites.push_back(&CS);

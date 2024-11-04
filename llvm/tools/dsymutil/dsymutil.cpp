@@ -108,6 +108,7 @@ struct DsymutilOptions {
   bool Flat = false;
   bool InputIsYAMLDebugMap = false;
   bool ForceKeepFunctionForStatic = false;
+  bool NoObjectTimestamp = false;
   std::string OutputFile;
   std::string Toolchain;
   std::string ReproducerPath;
@@ -178,17 +179,6 @@ static Error verifyOptions(const DsymutilOptions &Options) {
   if (Options.InputFiles.empty()) {
     return make_error<StringError>("no input files specified",
                                    errc::invalid_argument);
-  }
-
-  if (Options.LinkOpts.Update && llvm::is_contained(Options.InputFiles, "-")) {
-    // FIXME: We cannot use stdin for an update because stdin will be
-    // consumed by the BinaryHolder during the debugmap parsing, and
-    // then we will want to consume it again in DwarfLinker. If we
-    // used a unique BinaryHolder object that could cache multiple
-    // binaries this restriction would go away.
-    return make_error<StringError>(
-        "standard input cannot be used as input for a dSYM update.",
-        errc::invalid_argument);
   }
 
   if (!Options.Flat && Options.OutputFile == "-")
@@ -303,6 +293,7 @@ static Expected<DsymutilOptions> getOptions(opt::InputArgList &Args) {
   Options.DumpStab = Args.hasArg(OPT_symtab);
   Options.Flat = Args.hasArg(OPT_flat);
   Options.InputIsYAMLDebugMap = Args.hasArg(OPT_yaml_input);
+  Options.NoObjectTimestamp = Args.hasArg(OPT_no_object_timestamp);
 
   if (Expected<DWARFVerify> Verify = getVerifyKind(Args)) {
     Options.Verify = *Verify;
@@ -674,9 +665,15 @@ int dsymutil_main(int argc, char **argv, const llvm::ToolContext &) {
     }
 
   for (auto &InputFile : Options.InputFiles) {
+    // Shared a single binary holder for all the link steps.
+    BinaryHolder::Options BinOpts;
+    BinOpts.Verbose = Options.LinkOpts.Verbose;
+    BinOpts.Warn = !Options.NoObjectTimestamp;
+    BinaryHolder BinHolder(Options.LinkOpts.VFS, BinOpts);
+
     // Dump the symbol table for each input file and requested arch
     if (Options.DumpStab) {
-      if (!dumpStab(Options.LinkOpts.VFS, InputFile, Options.Archs,
+      if (!dumpStab(BinHolder, InputFile, Options.Archs,
                     Options.LinkOpts.DSYMSearchPaths,
                     Options.LinkOpts.PrependPath,
                     Options.LinkOpts.BuildVariantSuffix))
@@ -685,10 +682,9 @@ int dsymutil_main(int argc, char **argv, const llvm::ToolContext &) {
     }
 
     auto DebugMapPtrsOrErr = parseDebugMap(
-        Options.LinkOpts.VFS, InputFile, Options.Archs,
-        Options.LinkOpts.DSYMSearchPaths, Options.LinkOpts.PrependPath,
-        Options.LinkOpts.BuildVariantSuffix, Options.LinkOpts.Verbose,
-        Options.InputIsYAMLDebugMap);
+        BinHolder, InputFile, Options.Archs, Options.LinkOpts.DSYMSearchPaths,
+        Options.LinkOpts.PrependPath, Options.LinkOpts.BuildVariantSuffix,
+        Options.LinkOpts.Verbose, Options.InputIsYAMLDebugMap);
 
     if (auto EC = DebugMapPtrsOrErr.getError()) {
       WithColor::error() << "cannot parse the debug map for '" << InputFile
@@ -713,9 +709,6 @@ int dsymutil_main(int argc, char **argv, const llvm::ToolContext &) {
       WithColor::error() << "no architecture to link\n";
       return EXIT_FAILURE;
     }
-
-    // Shared a single binary holder for all the link steps.
-    BinaryHolder BinHolder(Options.LinkOpts.VFS);
 
     // Compute the output location and update the resource directory.
     Expected<OutputLocation> OutputLocationOrErr =

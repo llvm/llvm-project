@@ -482,6 +482,29 @@ void SplitGraph::Node::visitAllDependencies(
   }
 }
 
+/// Checks if \p I has MD_callees and if it does, parse it and put the function
+/// in \p Callees.
+///
+/// \returns true if there was metadata and it was parsed correctly. false if
+/// there was no MD or if it contained unknown entries and parsing failed.
+/// If this returns false, \p Callees will contain incomplete information
+/// and must not be used.
+static bool handleCalleesMD(const Instruction &I,
+                            SetVector<Function *> &Callees) {
+  auto *MD = I.getMetadata(LLVMContext::MD_callees);
+  if (!MD)
+    return false;
+
+  for (const auto &Op : MD->operands()) {
+    Function *Callee = mdconst::extract_or_null<Function>(Op);
+    if (!Callee)
+      return false;
+    Callees.insert(Callee);
+  }
+
+  return true;
+}
+
 void SplitGraph::buildGraph(CallGraph &CG) {
   SplitModuleTimer SMT("buildGraph", "graph construction");
   LLVM_DEBUG(
@@ -519,28 +542,38 @@ void SplitGraph::buildGraph(CallGraph &CG) {
                  Fn.printAsOperand(dbgs());
                  dbgs() << " - analyzing function\n");
 
-      bool HasIndirectCall = false;
+      SetVector<Function *> KnownCallees;
+      bool HasUnknownIndirectCall = false;
       for (const auto &Inst : instructions(Fn)) {
         // look at all calls without a direct callee.
-        if (const auto *CB = dyn_cast<CallBase>(&Inst);
-            CB && !CB->getCalledFunction()) {
-          // inline assembly can be ignored, unless InlineAsmIsIndirectCall is
-          // true.
-          if (CB->isInlineAsm()) {
-            LLVM_DEBUG(dbgs() << "    found inline assembly\n");
-            continue;
-          }
+        const auto *CB = dyn_cast<CallBase>(&Inst);
+        if (!CB || CB->getCalledFunction())
+          continue;
 
-          // everything else is handled conservatively.
-          HasIndirectCall = true;
-          break;
+        // inline assembly can be ignored, unless InlineAsmIsIndirectCall is
+        // true.
+        if (CB->isInlineAsm()) {
+          LLVM_DEBUG(dbgs() << "    found inline assembly\n");
+          continue;
         }
+
+        if (handleCalleesMD(Inst, KnownCallees))
+          continue;
+        // If we failed to parse any !callees MD, or some was missing,
+        // the entire KnownCallees list is now unreliable.
+        KnownCallees.clear();
+
+        // Everything else is handled conservatively. If we fall into the
+        // conservative case don't bother analyzing further.
+        HasUnknownIndirectCall = true;
+        break;
       }
 
-      if (HasIndirectCall) {
+      if (HasUnknownIndirectCall) {
         LLVM_DEBUG(dbgs() << "    indirect call found\n");
         FnsWithIndirectCalls.push_back(&Fn);
-      }
+      } else if (!KnownCallees.empty())
+        DirectCallees.insert(KnownCallees.begin(), KnownCallees.end());
     }
 
     Node &N = getNode(Cache, Fn);

@@ -245,6 +245,8 @@ copy("Headers") {
     "mmintrin.h",
     "module.modulemap",
     "movdirintrin.h",
+    "movrs_avx10_2_512intrin.h",
+    "movrs_avx10_2intrin.h",
     "msa.h",
     "mwaitxintrin.h",
     "nmmintrin.h",

@@ -815,6 +815,14 @@ def MRET : Priv<"mret", 0b0011000>, Sched<[]> {
 }
 } // isBarrier = 1, isReturn = 1, isTerminator = 1
 
+let Predicates = [HasStdExtSmrnmi] in {
+def MNRET : Priv<"mnret", 0b0111000>, Sched<[]> {
+  let rd = 0;
+  let rs1 = 0;
+  let rs2 = 0b00010;
+}
+}// Predicates = [HasStdExtSmrnmi]
+
 def WFI : Priv<"wfi", 0b0001000>, Sched<[]> {
   let rd = 0;
   let rs1 = 0;

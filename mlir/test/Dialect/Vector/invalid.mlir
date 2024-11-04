@@ -1356,7 +1356,7 @@ func.func @maskedload_base_type_mismatch(%base: memref<?xf64>, %mask: vector<16x
 
 func.func @maskedload_dim_mask_mismatch(%base: memref<?xf32>, %mask: vector<15xi1>, %pass: vector<16xf32>) {
   %c0 = arith.constant 0 : index
-  // expected-error@+1 {{'vector.maskedload' op expected result dim to match mask dim}}
+  // expected-error@+1 {{'vector.maskedload' op expected result shape to match mask shape}}
   %0 = vector.maskedload %base[%c0], %mask, %pass : memref<?xf32>, vector<15xi1>, vector<16xf32> into vector<16xf32>
 }
 
@@ -1387,7 +1387,7 @@ func.func @maskedstore_base_type_mismatch(%base: memref<?xf64>, %mask: vector<16
 
 func.func @maskedstore_dim_mask_mismatch(%base: memref<?xf32>, %mask: vector<15xi1>, %value: vector<16xf32>) {
   %c0 = arith.constant 0 : index
-  // expected-error@+1 {{'vector.maskedstore' op expected valueToStore dim to match mask dim}}
+  // expected-error@+1 {{'vector.maskedstore' op expected valueToStore shape to match mask shape}}
   vector.maskedstore %base[%c0], %mask, %value : memref<?xf32>, vector<15xi1>, vector<16xf32>
 }
 

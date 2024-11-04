@@ -583,6 +583,7 @@ lltok::Kind LLLexer::LexIdentifier() {
   KEYWORD(disjoint);
   KEYWORD(inbounds);
   KEYWORD(nneg);
+  KEYWORD(samesign);
   KEYWORD(inrange);
   KEYWORD(addrspace);
   KEYWORD(section);

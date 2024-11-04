@@ -458,15 +458,15 @@ template <class ELFT> void OutputSection::maybeCompress(Ctx &ctx) {
   flags |= SHF_COMPRESSED;
 }
 
-static void writeInt(uint8_t *buf, uint64_t data, uint64_t size) {
+static void writeInt(Ctx &ctx, uint8_t *buf, uint64_t data, uint64_t size) {
   if (size == 1)
     *buf = data;
   else if (size == 2)
-    write16(buf, data);
+    write16(ctx, buf, data);
   else if (size == 4)
-    write32(buf, data);
+    write32(ctx, buf, data);
   else if (size == 8)
-    write64(buf, data);
+    write64(ctx, buf, data);
   else
     llvm_unreachable("unsupported Size argument");
 }
@@ -512,7 +512,7 @@ void OutputSection::writeTo(Ctx &ctx, uint8_t *buf, parallel::TaskGroup &tg) {
   // Write leading padding.
   ArrayRef<InputSection *> sections = getInputSections(*this, storage);
   std::array<uint8_t, 4> filler = getFiller(ctx);
-  bool nonZeroFiller = read32(filler.data()) != 0;
+  bool nonZeroFiller = read32(ctx, filler.data()) != 0;
   if (nonZeroFiller)
     fill(buf, sections.empty() ? size : sections[0]->outSecOff, filler);
 
@@ -563,7 +563,8 @@ void OutputSection::writeTo(Ctx &ctx, uint8_t *buf, parallel::TaskGroup &tg) {
     if (auto *data = dyn_cast<ByteCommand>(cmd)) {
       if (!std::exchange(written, true))
         fn(0, numSections);
-      writeInt(buf + data->offset, data->expression().getValue(), data->size);
+      writeInt(ctx, buf + data->offset, data->expression().getValue(),
+               data->size);
     }
   if (written || !numSections)
     return;
@@ -605,7 +606,7 @@ static void finalizeShtGroup(Ctx &ctx, OutputSection *os,
   DenseSet<uint32_t> seen;
   ArrayRef<InputSectionBase *> sections = section->file->getSections();
   for (const uint32_t &idx : section->getDataAs<uint32_t>().slice(1))
-    if (OutputSection *osec = sections[read32(&idx)]->getOutputSection())
+    if (OutputSection *osec = sections[read32(ctx, &idx)]->getOutputSection())
       seen.insert(osec->sectionIndex);
   os->size = (1 + seen.size()) * sizeof(uint32_t);
 }
@@ -623,7 +624,7 @@ encodeOneCrel(Ctx &ctx, raw_svector_ostream &os,
     if (d) {
       SectionBase *section = d->section;
       assert(section->isLive());
-      addend = sym.getVA(addend) - section->getOutputSection()->addr;
+      addend = sym.getVA(ctx, addend) - section->getOutputSection()->addr;
     } else {
       // Encode R_*_NONE(symidx=0).
       symidx = type = addend = 0;
@@ -881,7 +882,11 @@ void OutputSection::checkDynRelAddends(Ctx &ctx) {
     // for input .rel[a].<sec> sections which we simply pass through to the
     // output. We skip over those and only look at the synthetic relocation
     // sections created during linking.
-    const auto *sec = dyn_cast<RelocationBaseSection>(sections[i]);
+    if (!SyntheticSection::classof(sections[i]) ||
+        !is_contained({ELF::SHT_REL, ELF::SHT_RELA, ELF::SHT_RELR},
+                      sections[i]->type))
+      return;
+    const auto *sec = cast<RelocationBaseSection>(sections[i]);
     if (!sec)
       return;
     for (const DynamicReloc &rel : sec->relocs) {

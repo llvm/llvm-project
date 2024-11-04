@@ -97,6 +97,21 @@ namespace Intrinsic {
   /// the intrinsic.
   Function *getOrInsertDeclaration(Module *M, ID id, ArrayRef<Type *> Tys = {});
 
+  LLVM_DEPRECATED("Use getOrInsertDeclaration instead",
+                  "getOrInsertDeclaration")
+  inline Function *getDeclaration(Module *M, ID id, ArrayRef<Type *> Tys = {}) {
+    return getOrInsertDeclaration(M, id, Tys);
+  }
+
+  /// Look up the Function declaration of the intrinsic \p id in the Module
+  /// \p M and return it if it exists. Otherwise, return nullptr. This version
+  /// supports non-overloaded intrinsics.
+  Function *getDeclarationIfExists(const Module *M, ID id);
+
+  /// This version supports overloaded intrinsics.
+  Function *getDeclarationIfExists(Module *M, ID id, ArrayRef<Type *> Tys,
+                                   FunctionType *FT = nullptr);
+
   /// Looks up Name in NameTable via binary search. NameTable must be sorted
   /// and all entries must start with "llvm.".  If NameTable contains an exact
   /// match for Name or a prefix of Name followed by a dot, its index in

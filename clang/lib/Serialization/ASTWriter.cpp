@@ -2163,8 +2163,8 @@ void ASTWriter::WriteHeaderSearch(const HeaderSearch &HS) {
       continue; // We have no information on this being a header file.
     if (!HFI->isCompilingModuleHeader && HFI->isModuleHeader)
       continue; // Header file info is tracked by the owning module file.
-    if (!HFI->isCompilingModuleHeader && !PP->alreadyIncluded(*File))
-      continue; // Non-modular header not included is not needed.
+    if (!HFI->isCompilingModuleHeader && !HFI->IsLocallyIncluded)
+      continue; // Header file info is tracked by the including module file.
 
     // Massage the file path into an appropriate form.
     StringRef Filename = File->getName();
@@ -2176,7 +2176,7 @@ void ASTWriter::WriteHeaderSearch(const HeaderSearch &HS) {
       SavedStrings.push_back(Filename.data());
     }
 
-    bool Included = PP->alreadyIncluded(*File);
+    bool Included = HFI->IsLocallyIncluded || PP->alreadyIncluded(*File);
 
     HeaderFileInfoTrait::key_type Key = {
       Filename, File->getSize(), getTimestampForOutput(*File)
@@ -3070,9 +3070,9 @@ void ASTWriter::WriteSubmodules(Module *WritingModule) {
         Module::HK_PrivateTextual},
       {SUBMODULE_EXCLUDED_HEADER, ExcludedHeaderAbbrev, Module::HK_Excluded}
     };
-    for (auto &HL : HeaderLists) {
+    for (const auto &HL : HeaderLists) {
       RecordData::value_type Record[] = {HL.RecordKind};
-      for (auto &H : Mod->Headers[HL.HeaderKind])
+      for (const auto &H : Mod->getHeaders(HL.HeaderKind))
         Stream.EmitRecordWithBlob(HL.Abbrev, Record, H.NameAsWritten);
     }
 
@@ -4905,6 +4905,12 @@ ASTFileSignature ASTWriter::WriteAST(Sema &SemaRef, StringRef OutputFile,
   this->BaseDirectory.clear();
 
   WritingAST = false;
+
+  if (WritingModule && SemaRef.PP.getHeaderSearchInfo()
+                           .getHeaderSearchOpts()
+                           .ModulesValidateOncePerBuildSession)
+    updateModuleTimestamp(OutputFile);
+
   if (ShouldCacheASTInMemory) {
     // Construct MemoryBuffer and update buffer manager.
     ModuleCache.addBuiltPCM(OutputFile,
@@ -8192,11 +8198,25 @@ void ASTRecordWriter::writeOpenACCClause(const OpenACCClause *C) {
     }
     return;
   }
+  case OpenACCClauseKind::Worker: {
+    const auto *WC = cast<OpenACCWorkerClause>(C);
+    writeSourceLocation(WC->getLParenLoc());
+    writeBool(WC->hasIntExpr());
+    if (WC->hasIntExpr())
+      AddStmt(const_cast<Expr *>(WC->getIntExpr()));
+    return;
+  }
+  case OpenACCClauseKind::Vector: {
+    const auto *VC = cast<OpenACCVectorClause>(C);
+    writeSourceLocation(VC->getLParenLoc());
+    writeBool(VC->hasIntExpr());
+    if (VC->hasIntExpr())
+      AddStmt(const_cast<Expr *>(VC->getIntExpr()));
+    return;
+  }
 
   case OpenACCClauseKind::Finalize:
   case OpenACCClauseKind::IfPresent:
-  case OpenACCClauseKind::Worker:
-  case OpenACCClauseKind::Vector:
   case OpenACCClauseKind::NoHost:
   case OpenACCClauseKind::UseDevice:
   case OpenACCClauseKind::Delete:

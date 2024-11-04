@@ -235,6 +235,7 @@ set(files
   __bit/rotate.h
   __bit_reference
   __charconv/chars_format.h
+  __charconv/from_chars_floating_point.h
   __charconv/from_chars_integral.h
   __charconv/from_chars_result.h
   __charconv/tables.h
@@ -495,11 +496,10 @@ set(files
   __locale_dir/locale_base_api/bsd_locale_fallbacks.h
   __locale_dir/locale_base_api/fuchsia.h
   __locale_dir/locale_base_api/ibm.h
-  __locale_dir/locale_base_api/locale_guard.h
   __locale_dir/locale_base_api/musl.h
-  __locale_dir/locale_base_api/newlib.h
   __locale_dir/locale_base_api/openbsd.h
   __locale_dir/locale_base_api/win32.h
+  __locale_dir/locale_guard.h
   __math/abs.h
   __math/copysign.h
   __math/error_functions.h
@@ -747,6 +747,7 @@ set(files
   __type_traits/common_type.h
   __type_traits/conditional.h
   __type_traits/conjunction.h
+  __type_traits/container_traits.h
   __type_traits/copy_cv.h
   __type_traits/copy_cvref.h
   __type_traits/datasizeof.h
@@ -880,6 +881,14 @@ set(files
   __utility/to_underlying.h
   __utility/unreachable.h
   __variant/monostate.h
+  __vector/comparison.h
+  __vector/container_traits.h
+  __vector/erase.h
+  __vector/pmr.h
+  __vector/swap.h
+  __vector/vector.h
+  __vector/vector_bool.h
+  __vector/vector_bool_formatter.h
   __verbose_abort
   algorithm
   any
@@ -966,7 +975,6 @@ set(files
   limits
   list
   locale
-  locale.h
   map
   math.h
   mdspan
@@ -997,7 +1005,6 @@ set(files
   stdbool.h
   stddef.h
   stdexcept
-  stdint.h
   stdio.h
   stdlib.h
   stop_token

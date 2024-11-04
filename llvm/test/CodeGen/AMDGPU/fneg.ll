@@ -39,8 +39,6 @@ define amdgpu_kernel void @s_fneg_f32(ptr addrspace(1) %out, float %in) {
 ; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
 ; GFX11-NEXT:    global_store_b32 v0, v1, s[0:1]
-; GFX11-NEXT:    s_nop 0
-; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %fneg = fsub float -0.000000e+00, %in
   store float %fneg, ptr addrspace(1) %out
@@ -86,8 +84,6 @@ define amdgpu_kernel void @s_fneg_v2f32(ptr addrspace(1) nocapture %out, <2 x fl
 ; GFX11-NEXT:    v_dual_mov_b32 v2, 0 :: v_dual_mov_b32 v1, s3
 ; GFX11-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX11-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
-; GFX11-NEXT:    s_nop 0
-; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %fneg = fsub <2 x float> <float -0.000000e+00, float -0.000000e+00>, %in
   store <2 x float> %fneg, ptr addrspace(1) %out
@@ -146,8 +142,6 @@ define amdgpu_kernel void @s_fneg_v4f32(ptr addrspace(1) nocapture %out, <4 x fl
 ; GFX11-NEXT:    v_dual_mov_b32 v0, s4 :: v_dual_mov_b32 v3, s2
 ; GFX11-NEXT:    v_mov_b32_e32 v2, s3
 ; GFX11-NEXT:    global_store_b128 v4, v[0:3], s[0:1]
-; GFX11-NEXT:    s_nop 0
-; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %fneg = fsub <4 x float> <float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>, %in
   store <4 x float> %fneg, ptr addrspace(1) %out
@@ -186,8 +180,6 @@ define amdgpu_kernel void @fsub0_f32(ptr addrspace(1) %out, i32 %in) {
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    v_sub_f32_e64 v1, 0, s4
 ; GFX11-NEXT:    global_store_b32 v0, v1, s[0:1]
-; GFX11-NEXT:    s_nop 0
-; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %bc = bitcast i32 %in to float
   %fsub = fsub float 0.0, %bc
@@ -230,8 +222,6 @@ define amdgpu_kernel void @fneg_free_f32(ptr addrspace(1) %out, i32 %in) {
 ; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
 ; GFX11-NEXT:    global_store_b32 v0, v1, s[0:1]
-; GFX11-NEXT:    s_nop 0
-; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %bc = bitcast i32 %in to float
   %fsub = fsub float -0.0, %bc
@@ -271,8 +261,6 @@ define amdgpu_kernel void @fneg_fold_f32(ptr addrspace(1) %out, float %in) {
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    v_mul_f32_e64 v1, -s4, s4
 ; GFX11-NEXT:    global_store_b32 v0, v1, s[0:1]
-; GFX11-NEXT:    s_nop 0
-; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %fsub = fsub float -0.0, %in
   %fmul = fmul float %fsub, %in
@@ -313,8 +301,6 @@ define amdgpu_kernel void @bitpreserve_fneg_f32(ptr addrspace(1) %out, float %in
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    v_mul_f32_e64 v1, s4, -4.0
 ; GFX11-NEXT:    global_store_b32 v0, v1, s[0:1]
-; GFX11-NEXT:    s_nop 0
-; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %in.bc = bitcast float %in to i32
   %int.abs = xor i32 %in.bc, 2147483648
@@ -359,8 +345,6 @@ define amdgpu_kernel void @s_fneg_i32(ptr addrspace(1) %out, i32 %in) {
 ; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
 ; GFX11-NEXT:    global_store_b32 v0, v1, s[0:1]
-; GFX11-NEXT:    s_nop 0
-; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %fneg = xor i32 %in, -2147483648
   store i32 %fneg, ptr addrspace(1) %out
@@ -409,8 +393,6 @@ define amdgpu_kernel void @s_fneg_i32_fp_use(ptr addrspace(1) %out, i32 %in) {
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    v_sub_f32_e64 v1, 2.0, s4
 ; GFX11-NEXT:    global_store_b32 v0, v1, s[0:1]
-; GFX11-NEXT:    s_nop 0
-; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %fneg = xor i32 %in, -2147483648
   %bitcast = bitcast i32 %fneg to float
@@ -467,8 +449,6 @@ define amdgpu_kernel void @s_fneg_i64(ptr addrspace(1) %out, i64 %in) {
 ; GFX11-NEXT:    v_dual_mov_b32 v2, 0 :: v_dual_mov_b32 v1, s3
 ; GFX11-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX11-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
-; GFX11-NEXT:    s_nop 0
-; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %fneg = xor i64 %in, -9223372036854775808
   store i64 %fneg, ptr addrspace(1) %out
@@ -515,8 +495,6 @@ define amdgpu_kernel void @s_fneg_i64_fp_use(ptr addrspace(1) %out, i64 %in) {
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    v_add_f64 v[0:1], -s[2:3], 2.0
 ; GFX11-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
-; GFX11-NEXT:    s_nop 0
-; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %fneg = xor i64 %in, -9223372036854775808
   %bitcast = bitcast i64 %fneg to double
@@ -582,8 +560,6 @@ define amdgpu_kernel void @s_fneg_i16_fp_use(ptr addrspace(1) %out, i16 %in) {
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    v_sub_f16_e64 v1, 2.0, s4
 ; GFX11-NEXT:    global_store_b16 v0, v1, s[0:1]
-; GFX11-NEXT:    s_nop 0
-; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %fneg = xor i16 %in, -32768
   %bitcast = bitcast i16 %fneg to half
@@ -657,8 +633,6 @@ define amdgpu_kernel void @s_fneg_v2i16(ptr addrspace(1) %out, i32 %arg) {
 ; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
 ; GFX11-NEXT:    global_store_b32 v0, v1, s[0:1]
-; GFX11-NEXT:    s_nop 0
-; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %in = bitcast i32 %arg to <2 x i16>
   %fneg = xor <2 x i16> %in, <i16 -32768, i16 -32768>
@@ -741,8 +715,6 @@ define amdgpu_kernel void @s_fneg_v2i16_fp_use(ptr addrspace(1) %out, i32 %arg) 
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    v_pk_add_f16 v1, s4, 2.0 op_sel_hi:[1,0] neg_lo:[1,0] neg_hi:[1,0]
 ; GFX11-NEXT:    global_store_b32 v0, v1, s[0:1]
-; GFX11-NEXT:    s_nop 0
-; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %in = bitcast i32 %arg to <2 x i16>
   %fneg = xor <2 x i16> %in, <i16 -32768, i16 -32768>

@@ -4,6 +4,8 @@
 ! RUN: %flang_fc1 -flang-experimental-hlfir -emit-hlfir -fopenmp -fopenmp-version=50 %s -o - | FileCheck %s
 ! RUN: bbc -hlfir -emit-hlfir -fopenmp -fopenmp-version=50 %s -o - | FileCheck %s
 
+!CHECK: omp.declare_reduction @[[REDUCER:.*]] : i32
+
 !CHECK-LABEL: func @_QPsimd()
 subroutine simd
   integer :: i
@@ -267,10 +269,31 @@ subroutine lastprivate_with_simd
 !CHECK: }
 !CHECK: omp.yield
 !CHECK: }
-!CHECK: omp.terminator
 !CHECK: }
   !$omp simd lastprivate(sum)
   do i = 1, 100
     sum = i + 1
   end do
+end subroutine
+
+!CHECK-LABEL: func @_QPsimd_with_reduction_clause()
+subroutine simd_with_reduction_clause
+  integer :: i, x
+  x = 0
+  ! CHECK: %[[LB:.*]] = arith.constant 1 : i32
+  ! CHECK-NEXT: %[[UB:.*]] = arith.constant 9 : i32
+  ! CHECK-NEXT: %[[STEP:.*]] = arith.constant 1 : i32
+  ! CHECK-NEXT: omp.simd reduction(@[[REDUCER]] %[[X:.*]]#0 -> %[[X_RED:.*]] : !fir.ref<i32>) {
+  ! CHECK-NEXT: omp.loop_nest (%[[I:.*]]) : i32 = (%[[LB]]) to (%[[UB]]) inclusive step (%[[STEP]]) {
+  !$omp simd reduction(+:x)
+  do i=1, 9
+    ! CHECK: %[[X_DECL:.*]]:2 = hlfir.declare %[[X_RED]] {uniq_name = "_QFsimd_with_reduction_clauseEx"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+    ! CHECK: fir.store %[[I]] to %[[LOCAL:.*]]#1 : !fir.ref<i32>
+    ! CHECK: %[[X_LD:.*]] = fir.load %[[X_DECL]]#0 : !fir.ref<i32>
+    ! CHECK: %[[I_LD:.*]] = fir.load %[[LOCAL]]#0 : !fir.ref<i32>
+    ! CHECK: %[[SUM:.*]] = arith.addi %[[X_LD]], %[[I_LD]] : i32
+    ! CHECK: hlfir.assign %[[SUM]] to %[[X_DECL]]#0 : i32, !fir.ref<i32>
+    x = x+i
+  end do
+  !$OMP end simd
 end subroutine

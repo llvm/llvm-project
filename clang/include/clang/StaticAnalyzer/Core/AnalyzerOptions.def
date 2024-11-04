@@ -299,13 +299,12 @@ ANALYZER_OPTION(
 
 ANALYZER_OPTION(
     bool, ShouldEagerlyAssume, "eagerly-assume",
-    "Whether we should eagerly assume evaluations of conditionals, thus, "
-    "bifurcating the path. This indicates how the engine should handle "
-    "expressions such as: 'x = (y != 0)'. When this is true then the "
-    "subexpression 'y != 0' will be eagerly assumed to be true or false, thus "
-    "evaluating it to the integers 0 or 1 respectively. The upside is that "
-    "this can increase analysis precision until we have a better way to lazily "
-    "evaluate such logic. The downside is that it eagerly bifurcates paths.",
+    "If this is enabled (the default behavior), when the analyzer encounters "
+    "a comparison operator or logical negation, it immediately splits the "
+    "state to separate the case when the expression is true and the case when "
+    "it's false. The upside is that this can increase analysis precision until "
+    "we have a better way to lazily evaluate such logic; the downside is that "
+    "it eagerly bifurcates paths.",
     true)
 
 ANALYZER_OPTION(

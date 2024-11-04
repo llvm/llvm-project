@@ -235,10 +235,10 @@ LLVM_LIBC_FUNCTION(double, cbrt, (double x)) {
 
   // Lambda function to update the exponent of the result.
   auto update_exponent = [=](double r) -> double {
-    uint64_t r_m = FPBits(r).uintval() & 0x800F'FFFF'FFFF'FFFF;
+    uint64_t r_m = FPBits(r).uintval() - 0x3FF0'0000'0000'0000;
     // Adjust exponent and sign.
     uint64_t r_bits =
-        r_m | (static_cast<uint64_t>(out_e) << FPBits::FRACTION_LEN);
+        r_m + (static_cast<uint64_t>(out_e) << FPBits::FRACTION_LEN);
     return FPBits(r_bits).get_val();
   };
 

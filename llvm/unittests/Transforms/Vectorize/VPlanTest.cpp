@@ -1279,6 +1279,21 @@ TEST(VPRecipeTest, dumpRecipeInPlan) {
         },
         testing::ExitedWithCode(0), "WIDEN ir<%a> = add ir<1>, ir<2>");
 
+    VPDef *Def = WidenR;
+    EXPECT_EXIT(
+        {
+          Def->dump();
+          exit(0);
+        },
+        testing::ExitedWithCode(0), "WIDEN ir<%a> = add ir<1>, ir<2>");
+
+    EXPECT_EXIT(
+        {
+          WidenR->dump();
+          exit(0);
+        },
+        testing::ExitedWithCode(0), "WIDEN ir<%a> = add ir<1>, ir<2>");
+
     // Test VPRecipeBase::dump().
     VPRecipeBase *R = WidenR;
     EXPECT_EXIT(

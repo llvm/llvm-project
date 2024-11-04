@@ -342,7 +342,13 @@ static Value *copyFlags(const CallInst &Old, Value *New) {
 static Value *mergeAttributesAndFlags(CallInst *NewCI, const CallInst &Old) {
   NewCI->setAttributes(AttributeList::get(
       NewCI->getContext(), {NewCI->getAttributes(), Old.getAttributes()}));
-  NewCI->removeRetAttrs(AttributeFuncs::typeIncompatible(NewCI->getType()));
+  NewCI->removeRetAttrs(AttributeFuncs::typeIncompatible(
+      NewCI->getType(), NewCI->getRetAttributes()));
+  for (unsigned I = 0; I < NewCI->arg_size(); ++I)
+    NewCI->removeParamAttrs(
+        I, AttributeFuncs::typeIncompatible(NewCI->getArgOperand(I)->getType(),
+                                            NewCI->getParamAttributes(I)));
+
   return copyFlags(Old, NewCI);
 }
 
@@ -1958,10 +1964,9 @@ static Value *optimizeDoubleFP(CallInst *CI, IRBuilderBase &B,
   // g((double) float) -> (double) gf(float)
   Value *R;
   if (IsIntrinsic) {
-    Module *M = CI->getModule();
     Intrinsic::ID IID = CalleeFn->getIntrinsicID();
-    Function *Fn = Intrinsic::getOrInsertDeclaration(M, IID, B.getFloatTy());
-    R = isBinary ? B.CreateCall(Fn, V) : B.CreateCall(Fn, V[0]);
+    R = isBinary ? B.CreateIntrinsic(IID, B.getFloatTy(), V)
+                 : B.CreateIntrinsic(IID, B.getFloatTy(), V[0]);
   } else {
     AttributeList CalleeAttrs = CalleeFn->getAttributes();
     R = isBinary ? emitBinaryFloatFnCall(V[0], V[1], TLI, CalleeName, B,

@@ -6952,8 +6952,14 @@ int LLParser::parseInstruction(Instruction *&Inst, BasicBlock *BB,
   case lltok::kw_and:
   case lltok::kw_xor:
     return parseLogical(Inst, PFS, KeywordVal);
-  case lltok::kw_icmp:
-    return parseCompare(Inst, PFS, KeywordVal);
+  case lltok::kw_icmp: {
+    bool SameSign = EatIfPresent(lltok::kw_samesign);
+    if (parseCompare(Inst, PFS, KeywordVal))
+      return true;
+    if (SameSign)
+      cast<ICmpInst>(Inst)->setSameSign();
+    return false;
+  }
   case lltok::kw_fcmp: {
     FastMathFlags FMF = EatFastMathFlagsIfPresent();
     int Res = parseCompare(Inst, PFS, KeywordVal);
@@ -8519,7 +8525,7 @@ int LLParser::parseGetElementPtr(Instruction *&Inst, PerFunctionState &PFS) {
     return error(Loc, "base element of getelementptr must be sized");
 
   auto *STy = dyn_cast<StructType>(Ty);
-  if (STy && STy->containsScalableVectorType())
+  if (STy && STy->isScalableTy())
     return error(Loc, "getelementptr cannot target structure that contains "
                       "scalable vector type");
 

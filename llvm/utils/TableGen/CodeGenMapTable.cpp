@@ -128,7 +128,7 @@ public:
     // Ex: ValueCols = [['true'],['false']] -- it results two columns in the
     // table. First column requires all the instructions to have predSense
     // set to 'true' and second column requires it to be 'false'.
-    ListInit *ColValList = MapRec->getValueAsListInit("ValueCols");
+    const ListInit *ColValList = MapRec->getValueAsListInit("ValueCols");
 
     // Each instruction map must specify at least one column for it to be valid.
     if (ColValList->empty())
@@ -479,7 +479,7 @@ void MapTableEmitter::emitTablesWithFunc(raw_ostream &OS) {
   OS << "// " << InstrMapDesc.getName() << "\nLLVM_READONLY\n";
   OS << "int " << InstrMapDesc.getName() << "(uint16_t Opcode";
   if (ValueCols.size() > 1) {
-    for (Init *CF : ColFields->getValues()) {
+    for (const Init *CF : ColFields->getValues()) {
       std::string ColName = CF->getAsUnquotedString();
       OS << ", enum " << ColName << " in" << ColName;
     }

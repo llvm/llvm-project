@@ -429,7 +429,7 @@ void X86_64::writeGotPlt(uint8_t *buf, const Symbol &s) const {
 void X86_64::writeIgotPlt(uint8_t *buf, const Symbol &s) const {
   // An x86 entry is the address of the ifunc resolver function (for -z rel).
   if (ctx.arg.writeAddends)
-    write64le(buf, s.getVA());
+    write64le(buf, s.getVA(ctx));
 }
 
 void X86_64::writePltHeader(uint8_t *buf) const {
@@ -777,23 +777,23 @@ static void relaxGot(uint8_t *loc, const Relocation &rel, uint64_t val);
 void X86_64::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
   switch (rel.type) {
   case R_X86_64_8:
-    checkIntUInt(loc, val, 8, rel);
+    checkIntUInt(ctx, loc, val, 8, rel);
     *loc = val;
     break;
   case R_X86_64_PC8:
-    checkInt(loc, val, 8, rel);
+    checkInt(ctx, loc, val, 8, rel);
     *loc = val;
     break;
   case R_X86_64_16:
-    checkIntUInt(loc, val, 16, rel);
+    checkIntUInt(ctx, loc, val, 16, rel);
     write16le(loc, val);
     break;
   case R_X86_64_PC16:
-    checkInt(loc, val, 16, rel);
+    checkInt(ctx, loc, val, 16, rel);
     write16le(loc, val);
     break;
   case R_X86_64_32:
-    checkUInt(loc, val, 32, rel);
+    checkUInt(ctx, loc, val, 32, rel);
     write32le(loc, val);
     break;
   case R_X86_64_32S:
@@ -804,7 +804,7 @@ void X86_64::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
   case R_X86_64_PLT32:
   case R_X86_64_DTPOFF32:
   case R_X86_64_SIZE32:
-    checkInt(loc, val, 32, rel);
+    checkInt(ctx, loc, val, 32, rel);
     write32le(loc, val);
     break;
   case R_X86_64_64:
@@ -824,7 +824,7 @@ void X86_64::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
     if (rel.expr != R_GOT_PC) {
       relaxGot(loc, rel, val);
     } else {
-      checkInt(loc, val, 32, rel);
+      checkInt(ctx, loc, val, 32, rel);
       write32le(loc, val);
     }
     break;
@@ -836,7 +836,7 @@ void X86_64::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
     } else if (rel.expr == R_RELAX_TLS_GD_TO_IE) {
       relaxTlsGdToIe(loc, rel, val);
     } else {
-      checkInt(loc, val, 32, rel);
+      checkInt(ctx, loc, val, 32, rel);
       write32le(loc, val);
     }
     break;
@@ -844,7 +844,7 @@ void X86_64::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
     if (rel.expr == R_RELAX_TLS_LD_TO_LE) {
       relaxTlsLdToLe(loc, rel, val);
     } else {
-      checkInt(loc, val, 32, rel);
+      checkInt(ctx, loc, val, 32, rel);
       write32le(loc, val);
     }
     break;
@@ -852,12 +852,12 @@ void X86_64::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
     if (rel.expr == R_RELAX_TLS_IE_TO_LE) {
       relaxTlsIeToLe(loc, rel, val);
     } else {
-      checkInt(loc, val, 32, rel);
+      checkInt(ctx, loc, val, 32, rel);
       write32le(loc, val);
     }
     break;
   case R_X86_64_TPOFF32:
-    checkInt(loc, val, 32, rel);
+    checkInt(ctx, loc, val, 32, rel);
     write32le(loc, val);
     break;
 

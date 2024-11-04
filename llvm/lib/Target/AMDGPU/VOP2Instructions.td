@@ -287,7 +287,7 @@ multiclass
 
   let SchedRW = [Write32Bit] in {
     let Uses = !if(useSGPRInput, [VCC, EXEC], [EXEC]) in {
-      if !eq(VOPDOp, -1) then
+      if !empty(VOPDName) then
         def _e32 : VOP2_Pseudo <opName, P>,
                    Commutable_REV<revOp#"_e32", !eq(revOp, opName)>;
       else
@@ -319,7 +319,7 @@ multiclass
 multiclass
     VOP2eInst<string opName, VOPProfile P, SDPatternOperator node = null_frag,
               string revOp = opName, bit useSGPRInput = !eq(P.NumSrcArgs, 3)>
-    : VOP2eInst_Base<opName, P, -1, "", node, revOp, useSGPRInput>;
+    : VOP2eInst_Base<opName, P, 0, "", node, revOp, useSGPRInput>;
 
 multiclass
     VOP2eInst_VOPD<string opName, VOPProfile P, bits<5> VOPDOp, string VOPDName,
@@ -1664,8 +1664,8 @@ multiclass VOP3Only_Realtriple_gfx11_gfx12<bits<10> op> :
   VOP3Only_Realtriple<GFX11Gen, op>, VOP3Only_Realtriple<GFX12Gen, op>;
 
 multiclass VOP3Only_Realtriple_t16_gfx11_gfx12<bits<10> op, string asmName, string OpName = NAME> :
-  VOP3Only_Realtriple_t16<GFX11Gen, op, asmName, OpName>,
-  VOP3Only_Realtriple_t16<GFX12Gen, op, asmName, OpName>;
+  VOP3_Realtriple_t16_gfx11<op, asmName, OpName, "", /*IsSingle*/1>,
+  VOP3_Realtriple_t16_gfx12<op, asmName, OpName, "", /*IsSingle*/1>;
 
 multiclass VOP3Only_Realtriple_t16_and_fake16_gfx11_gfx12<bits<10> op, string asmName, string OpName = NAME> {
   defm OpName#"_t16": VOP3Only_Realtriple_t16_gfx11_gfx12<op, asmName, OpName#"_t16">;

@@ -349,7 +349,7 @@ LogicalResult DPPOp::verify() {
       return emitOpError("quad_perm attribute must have exactly 4 elements");
     }
     for (auto elem : quadPermAttr.getAsRange<IntegerAttr>()) {
-      uint32_t num = elem.getInt();
+      int32_t num = elem.getInt();
       if (num < 0 || num > 3) {
         return emitOpError(
             "Each element of quad_perm must be in the range [0, 3]");

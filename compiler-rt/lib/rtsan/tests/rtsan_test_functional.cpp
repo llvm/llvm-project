@@ -204,11 +204,11 @@ TEST(TestRtsan, ThrowingAnExceptionDiesWhenRealtime) {
 
 TEST(TestRtsan, DoesNotDieIfTurnedOff) {
   std::mutex mutex;
-  auto RealtimeUnsafeFunc = [&]() {
+  auto RealtimeBlockingFunc = [&]() {
     __rtsan_disable();
     mutex.lock();
     mutex.unlock();
     __rtsan_enable();
   };
-  RealtimeInvoke(RealtimeUnsafeFunc);
+  RealtimeInvoke(RealtimeBlockingFunc);
 }

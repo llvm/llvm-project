@@ -1251,6 +1251,29 @@ func.func @no_fold_expand_of_collapse_dynamic(%arg0 : tensor<?x?x?xf32>, %arg1: 
 
 // -----
 
+func.func @compose_expand_of_collapse_last_two_dims(%arg0: tensor<?x64x1xf32>) -> tensor<?x384xf32> {
+  %collapsed = tensor.collapse_shape %arg0 [[0, 1, 2]] : tensor<?x64x1xf32> into tensor<?xf32>
+  %c0 = arith.constant 0 : index
+  %dim = tensor.dim %collapsed, %c0 : tensor<?xf32>
+  %c384= arith.constant 384 : index
+  %div = arith.divui %dim, %c384 : index
+  %expanded = tensor.expand_shape %collapsed [[0, 1]] output_shape [%div, 384] : tensor<?xf32> into tensor<?x384xf32>
+  return %expanded : tensor<?x384xf32>
+}
+//       CHECK: #[[$MAP:.*]] = affine_map<()[s0] -> (s0 * 64)>
+// CHECK-LABEL: @compose_expand_of_collapse_last_two_dims
+//  CHECK-SAME: %[[ARG0:.+]]: tensor<?x64x1xf32>
+//       CHECK: %[[CONSTANT0:.+]] = arith.constant 0 : index
+//       CHECK: %[[CONSTANT384:.+]] = arith.constant 384 : index
+//       CHECK: %[[COLLAPSE:.+]] = tensor.collapse_shape %[[ARG0]] {{\[}}[0, 1, 2]] : tensor<?x64x1xf32> into tensor<?xf32>
+//       CHECK: %[[DIM:.+]] = tensor.dim %[[ARG0]], %[[CONSTANT0]] : tensor<?x64x1xf32>
+//       CHECK: %[[AFFAPPLY:.+]] = affine.apply #[[$MAP]]()[%[[DIM]]]
+//       CHECK: %[[DIVUI:.+]] = arith.divui %[[AFFAPPLY]], %[[CONSTANT384]] : index
+//       CHECK: %[[RESULT:.+]] = tensor.expand_shape %[[COLLAPSE]] {{\[}}[0, 1]] output_shape [%[[DIVUI]], 384] : tensor<?xf32> into tensor<?x384xf32>
+//       CHECK: return %[[RESULT]]
+
+// -----
+
 func.func @compose_expand_of_collapse(%arg0 : tensor<2x3x4x5x6x7x8xf32>)
     -> tensor<24x5x42x8xf32> {
   %0 = tensor.collapse_shape %arg0 [[0, 1, 2, 3, 4, 5, 6]]
@@ -2718,3 +2741,57 @@ func.func @pack_dont_drop_attributes(%arg0: tensor<?x?x?xf16>, %arg1: tensor<128
   %pack = tensor.pack %arg0 padding_value(%cst : f16) outer_dims_perm = [0, 1, 2] inner_dims_pos = [1, 2] inner_tiles = [16, 1] into %arg1 {test_attr} : tensor<?x?x?xf16> -> tensor<128x?x100x16x1xf16>
   return %pack : tensor<128x?x100x16x1xf16>
 }
+
+// -----
+
+func.func @fold_expand_of_cast(%arg0 : tensor<10x10xf32>)
+    -> tensor<10x1x10xf32> {
+  %c1 = arith.constant 1 : index 
+  %c10 = arith.constant 10 : index 
+  %0 = tensor.cast %arg0 : tensor<10x10xf32> to tensor<?x?xf32>
+  %1 = tensor.expand_shape %0 [[0, 1], [2]] output_shape [%c10, %c1, %c10]
+      : tensor<?x?xf32> into tensor<?x?x?xf32>
+  %2 = tensor.cast %1 : tensor<?x?x?xf32> to tensor<10x1x10xf32>
+  return %2 : tensor<10x1x10xf32>
+}
+// CHECK-LABEL:  func.func @fold_expand_of_cast
+//       CHECK:   %[[RES:.+]] = tensor.expand_shape %{{.*}} {{\[}}[0, 1], [2]] output_shape [10, 1, 10]
+//       CHECK:   return %[[RES]]
+
+// -----
+
+func.func @sink_expand_of_cast(%arg0 : tensor<?x10xf32>)
+    -> tensor<?x?x?xf32> {
+  %c1 = arith.constant 1 : index
+  %c10 = arith.constant 10 : index
+  %0 = tensor.cast %arg0 : tensor<?x10xf32> to tensor<?x?xf32>
+  %1 = tensor.expand_shape %0 [[0, 1], [2]] output_shape [%c10, %c1, %c10]
+      : tensor<?x?xf32> into tensor<?x?x?xf32>
+  return %1 : tensor<?x?x?xf32>
+}
+// CHECK-LABEL:  func.func @sink_expand_of_cast
+//   CHECK-DAG:   %[[C10:.*]] = arith.constant 10
+//   CHECK-DAG:   %[[C1:.*]] = arith.constant 1
+//       CHECK:   %[[EXPAND:.+]] = tensor.expand_shape %{{.*}} {{\[}}[0, 1], [2]] 
+//  CHECK-SAME:     output_shape [%[[C10]], %[[C1]], 10]
+//       CHECK:   %[[RES:.+]] = tensor.cast %[[EXPAND]]
+//       CHECK:   return %[[RES]]
+
+// -----
+
+func.func @partial_sink_expand_of_cast(%arg0 : tensor<10x10xf32>, %arg1 : index, %arg2 : index)
+    -> tensor<?x?x?xf32> {
+  %c10 = arith.constant 10 : index
+  %0 = tensor.cast %arg0 : tensor<10x10xf32> to tensor<?x?xf32>
+  %1 = tensor.expand_shape %0 [[0, 1], [2]] output_shape [%arg1, %arg2, %c10]
+      : tensor<?x?xf32> into tensor<?x?x?xf32>
+  return %1 : tensor<?x?x?xf32>
+}
+// CHECK-LABEL:  func.func @partial_sink_expand_of_cast
+//       CHECK:   %[[CAST:.+]] = tensor.cast
+//  CHECK-SAME:     tensor<10x10xf32> to tensor<?x10xf32>
+//       CHECK:   %[[EXPAND:.+]] = tensor.expand_shape %{{.*}} {{\[}}[0, 1], [2]] 
+//  CHECK-SAME:     output_shape [%{{.*}}, %{{.*}}, 10]
+//       CHECK:   %[[RES:.+]] = tensor.cast %[[EXPAND]]
+//  CHECK-SAME:     tensor<?x?x10xf32> to tensor<?x?x?xf32>
+//       CHECK:   return %[[RES]]

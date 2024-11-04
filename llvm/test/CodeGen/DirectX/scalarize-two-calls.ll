@@ -2,7 +2,7 @@
 
 ; CHECK: target triple = "dxilv1.3-pc-shadermodel6.3-library"
 ; CHECK-LABEL: cos_sin_float_test
-define noundef <4 x float> @cos_sin_float_test(<4 x float> noundef %a) {
+define noundef <4 x float> @cos_sin_float_test(<4 x float> noundef %a) #0 {
     ; CHECK: [[ee0:%.*]] = extractelement <4 x float> %a, i64 0
     ; CHECK: [[ie0:%.*]] = call float @dx.op.unary.f32(i32 13, float [[ee0]])
     ; CHECK: [[ee1:%.*]] = extractelement <4 x float> %a, i64 1
@@ -23,3 +23,5 @@ define noundef <4 x float> @cos_sin_float_test(<4 x float> noundef %a) {
     %3 = tail call <4 x float> @llvm.cos.v4f32(<4 x float> %2) 
     ret <4 x float> %3 
 } 
+
+attributes #0 = { convergent norecurse nounwind "hlsl.export"}

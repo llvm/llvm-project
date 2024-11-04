@@ -1968,13 +1968,16 @@ let TargetGuard = "v8.3a,neon" in {
   def VCADDQ_ROT90  : SInst<"vcaddq_rot90", "QQQ", "f">;
   def VCADDQ_ROT270 : SInst<"vcaddq_rot270", "QQQ", "f">;
 
-  defm VCMLA_F32        : VCMLA_ROTS<"f", "uint64x1_t", "uint64x2_t">;
+  defm VCMLA_F32    : VCMLA_ROTS<"f", "uint64x1_t", "uint64x2_t">;
 }
 let ArchGuard = "defined(__aarch64__) || defined(__arm64ec__)", TargetGuard = "v8.3a,neon" in {
   def VCADDQ_ROT90_FP64  : SInst<"vcaddq_rot90", "QQQ", "d">;
   def VCADDQ_ROT270_FP64 : SInst<"vcaddq_rot270", "QQQ", "d">;
 
-  defm VCMLA_FP64 : VCMLA_ROTS<"d", "uint64x2_t", "uint64x2_t">;
+  def VCMLAQ_FP64        : SInst<"vcmlaq", "QQQQ", "d">;
+  def VCMLAQ_ROT90_FP64  : SInst<"vcmlaq_rot90", "QQQQ", "d">;
+  def VCMLAQ_ROT180_FP64 : SInst<"vcmlaq_rot180", "QQQQ", "d">;
+  def VCMLAQ_ROT270_FP64 : SInst<"vcmlaq_rot270", "QQQQ", "d">;
 }
 
 // V8.2-A BFloat intrinsics

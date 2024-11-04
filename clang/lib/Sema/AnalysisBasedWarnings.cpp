@@ -2279,7 +2279,16 @@ public:
         QualType srcType = ECE->getSubExpr()->getType();
         const uint64_t sSize =
             Ctx.getTypeSize(srcType.getTypePtr()->getPointeeType());
+
         if (sSize >= dSize)
+          return;
+
+        if (const auto *CE = dyn_cast<CXXMemberCallExpr>(
+                ECE->getSubExpr()->IgnoreParens())) {
+          D = CE->getMethodDecl();
+        }
+
+        if (!D)
           return;
 
         MsgParam = 4;

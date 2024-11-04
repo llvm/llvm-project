@@ -160,7 +160,7 @@ DXILOperationDesc::DXILOperationDesc(const Record *R) {
 
   const RecordVal *RV = R->getValue("LLVMIntrinsic");
   if (RV && RV->getValue()) {
-    if (DefInit *DI = dyn_cast<DefInit>(RV->getValue())) {
+    if (const DefInit *DI = dyn_cast<DefInit>(RV->getValue())) {
       auto *IntrinsicDef = DI->getDef();
       auto DefName = IntrinsicDef->getName();
       assert(DefName.starts_with("int_") && "invalid intrinsic name");

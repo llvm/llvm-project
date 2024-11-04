@@ -1309,11 +1309,13 @@ Currently, only the following parameter attributes are defined:
     structure that is the return value of the function in the source
     program. This pointer must be guaranteed by the caller to be valid:
     loads and stores to the structure may be assumed by the callee not
-    to trap and to be properly aligned. This is not a valid attribute
-    for return values.
+    to trap and to be properly aligned.
 
     The sret type argument specifies the in memory type, which must be
     the same as the pointee type of the argument.
+
+    A function that accepts an ``sret`` argument must return ``void``.
+    A return value may not be ``sret``.
 
 .. _attr_elementtype:
 
@@ -2332,7 +2334,7 @@ example:
     This attribute indicates that RealtimeSanitizer checks
     (realtime safety analysis - no allocations, syscalls or exceptions) are enabled
     for this function.
-``sanitize_realtime_unsafe``
+``sanitize_realtime_blocking``
     This attribute indicates that RealtimeSanitizer should error immediately
     if the attributed function is called during invocation of a function
     attributed with ``sanitize_realtime``.
@@ -12329,6 +12331,7 @@ Syntax:
 ::
 
       <result> = icmp <cond> <ty> <op1>, <op2>   ; yields i1 or <N x i1>:result
+      <result> = icmp samesign <cond> <ty> <op1>, <op2>   ; yields i1 or <N x i1>:result
 
 Overview:
 """""""""
@@ -12397,6 +12400,9 @@ are compared as if they were integers.
 If the operands are integer vectors, then they are compared element by
 element. The result is an ``i1`` vector with the same number of elements
 as the values being compared. Otherwise, the result is an ``i1``.
+
+If the ``samesign`` keyword is present and the operands are not of the
+same sign then the result is a :ref:`poison value <poisonvalues>`.
 
 Example:
 """"""""
@@ -19919,8 +19925,8 @@ More update operation types may be added in the future.
 
 ::
 
-    declare <8 x i32> @llvm.experimental.vector.histogram.add.v8p0.i32(<8 x ptr> %ptrs, i32 %inc, <8 x i1> %mask)
-    declare <vscale x 2 x i64> @llvm.experimental.vector.histogram.add.nxv2p0.i64(<vscale x 2 x ptr> %ptrs, i64 %inc, <vscale x 2 x i1> %mask)
+    declare void @llvm.experimental.vector.histogram.add.v8p0.i32(<8 x ptr> %ptrs, i32 %inc, <8 x i1> %mask)
+    declare void @llvm.experimental.vector.histogram.add.nxv2p0.i64(<vscale x 2 x ptr> %ptrs, i64 %inc, <vscale x 2 x i1> %mask)
 
 Arguments:
 """"""""""

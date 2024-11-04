@@ -274,7 +274,7 @@ def : Pat<(i32 (xor GPR:$rs1, (not GPR:$rs2))), (XNOR GPR:$rs1, GPR:$rs2)>;
 
 def : PatGprGpr<rotl, ROLW, i32, i32>;
 def : PatGprGpr<rotr, RORW, i32, i32>;
-def : Pat<(i32 (rotl GPR:$rs1, uimm5i32:$imm)),
+def : Pat<(i32 (rotr GPR:$rs1, uimm5i32:$imm)),
           (RORIW GPR:$rs1, (i64 (as_i64imm $imm)))>;
 
 def : Pat<(i32 (rotl GPR:$rs1, uimm5i32:$rs2)),

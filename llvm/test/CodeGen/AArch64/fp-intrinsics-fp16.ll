@@ -398,6 +398,22 @@ define half @atan_f16(half %x) #0 {
   ret half %val
 }
 
+define half @atan2_f16(half %x, half %y) #0 {
+; CHECK-LABEL: atan2_f16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    .cfi_offset w30, -16
+; CHECK-NEXT:    fcvt s1, h1
+; CHECK-NEXT:    fcvt s0, h0
+; CHECK-NEXT:    bl atan2f
+; CHECK-NEXT:    fcvt h0, s0
+; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    ret
+  %val = call half @llvm.experimental.constrained.atan2.f16(half %x, half %y, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
+  ret half %val
+}
+
 define half @sinh_f16(half %x) #0 {
 ; CHECK-LABEL: sinh_f16:
 ; CHECK:       // %bb.0:

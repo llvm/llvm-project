@@ -118,7 +118,7 @@ public:
 
   /// Rewrite debug value intrinsics to conform to a new SSA form.
   ///
-  /// This will scout out all the debug value instrinsics associated with
+  /// This will scout out all the debug value intrinsics associated with
   /// the instruction. Anything outside of its block will have its
   /// value set to the new SSA value if available, and undef if not.
   void UpdateDebugValues(Instruction *I);

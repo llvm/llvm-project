@@ -103,7 +103,6 @@ void testOmpCreation(void) {
 "        omp.loop_nest (%3) : i32 = (%0) to (%2) step (%1) {                    \n"
 "          omp.yield                                                            \n"
 "        }                                                                      \n"
-"        omp.terminator                                                         \n"
 "      }                                                                        \n"
 "      omp.terminator                                                           \n"
 "    }                                                                          \n"

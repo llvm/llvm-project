@@ -2991,7 +2991,7 @@ TemplateParameterList *Sema::MatchTemplateParametersToScopeSpecifier(
 
       // Fabricate an empty template parameter list for the invented header.
       return TemplateParameterList::Create(Context, SourceLocation(),
-                                           SourceLocation(), std::nullopt,
+                                           SourceLocation(), {},
                                            SourceLocation(), nullptr);
     }
 
@@ -6072,6 +6072,13 @@ bool UnnamedLocalNoLinkageFinder::VisitNestedNameSpecifier(
     return Visit(QualType(NNS->getAsType(), 0));
   }
   llvm_unreachable("Invalid NestedNameSpecifier::Kind!");
+}
+
+bool UnnamedLocalNoLinkageFinder::VisitHLSLAttributedResourceType(
+    const HLSLAttributedResourceType *T) {
+  if (T->hasContainedType() && Visit(T->getContainedType()))
+    return true;
+  return Visit(T->getWrappedType());
 }
 
 bool Sema::CheckTemplateArgument(TypeSourceInfo *ArgInfo) {

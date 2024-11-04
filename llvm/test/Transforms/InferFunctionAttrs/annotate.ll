@@ -643,6 +643,15 @@ declare float @log2f(float)
 ; CHECK: declare x86_fp80 @log2l(x86_fp80) [[NOFREE_NOUNWIND_WILLRETURN_WRITEONLY]]
 declare x86_fp80 @log2l(x86_fp80)
 
+; CHECK: declare i32 @ilogb(double) [[NOFREE_NOUNWIND_WILLRETURN_WRITEONLY]]
+declare i32 @ilogb(double)
+
+; CHECK: declare i32 @ilogbf(float) [[NOFREE_NOUNWIND_WILLRETURN_WRITEONLY]]
+declare i32 @ilogbf(float)
+
+; CHECK: declare i32 @ilogbl(x86_fp80) [[NOFREE_NOUNWIND_WILLRETURN_WRITEONLY]]
+declare i32 @ilogbl(x86_fp80)
+
 ; CHECK: declare double @logb(double) [[NOFREE_NOUNWIND_WILLRETURN_WRITEONLY]]
 declare double @logb(double)
 
@@ -866,6 +875,24 @@ declare float @roundf(float)
 
 ; CHECK: declare x86_fp80 @roundl(x86_fp80) [[NOFREE_NOUNWIND_WILLRETURN_WRITEONLY]]
 declare x86_fp80 @roundl(x86_fp80)
+
+; CHECK: declare double @scalbln(double, i64) [[NOFREE_NOUNWIND_WILLRETURN_WRITEONLY]]
+declare double @scalbln(double, i64)
+
+; CHECK: declare float @scalblnf(float, i64) [[NOFREE_NOUNWIND_WILLRETURN_WRITEONLY]]
+declare float @scalblnf(float, i64)
+
+; CHECK: declare x86_fp80 @scalblnl(x86_fp80, i64) [[NOFREE_NOUNWIND_WILLRETURN_WRITEONLY]]
+declare x86_fp80 @scalblnl(x86_fp80, i64)
+
+; CHECK: declare double @scalbn(double, i32) [[NOFREE_NOUNWIND_WILLRETURN_WRITEONLY]]
+declare double @scalbn(double, i32)
+
+; CHECK: declare float @scalbnf(float, i32) [[NOFREE_NOUNWIND_WILLRETURN_WRITEONLY]]
+declare float @scalbnf(float, i32)
+
+; CHECK: declare x86_fp80 @scalbnl(x86_fp80, i32) [[NOFREE_NOUNWIND_WILLRETURN_WRITEONLY]]
+declare x86_fp80 @scalbnl(x86_fp80, i32)
 
 ; CHECK: declare noundef i32 @scanf(ptr nocapture noundef readonly, ...) [[NOFREE_NOUNWIND]]
 declare i32 @scanf(ptr, ...)

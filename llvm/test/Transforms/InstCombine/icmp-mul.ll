@@ -849,7 +849,7 @@ define i1 @not_mul_of_bool(i32 %x, i8 %y) {
 ; CHECK-NEXT:    [[Q:%.*]] = and i32 [[X:%.*]], 3
 ; CHECK-NEXT:    [[Z:%.*]] = zext i8 [[Y:%.*]] to i32
 ; CHECK-NEXT:    [[M:%.*]] = mul nuw nsw i32 [[Q]], [[Z]]
-; CHECK-NEXT:    [[R:%.*]] = icmp ugt i32 [[M]], 255
+; CHECK-NEXT:    [[R:%.*]] = icmp samesign ugt i32 [[M]], 255
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %q = and i32 %x, 3
@@ -866,7 +866,7 @@ define i1 @not_mul_of_bool_commute(i32 %x, i32 %y) {
 ; CHECK-NEXT:    [[X30:%.*]] = lshr i32 [[X:%.*]], 30
 ; CHECK-NEXT:    [[Y8:%.*]] = and i32 [[Y:%.*]], 255
 ; CHECK-NEXT:    [[M:%.*]] = mul nuw nsw i32 [[Y8]], [[X30]]
-; CHECK-NEXT:    [[R:%.*]] = icmp ugt i32 [[M]], 255
+; CHECK-NEXT:    [[R:%.*]] = icmp samesign ugt i32 [[M]], 255
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %x30 = lshr i32 %x, 30
@@ -935,7 +935,7 @@ define i1 @not_mul_of_pow2(i32 %x, i8 %y) {
 ; CHECK-NEXT:    [[Q:%.*]] = and i32 [[X:%.*]], 6
 ; CHECK-NEXT:    [[Z:%.*]] = zext i8 [[Y:%.*]] to i32
 ; CHECK-NEXT:    [[M:%.*]] = mul nuw nsw i32 [[Q]], [[Z]]
-; CHECK-NEXT:    [[R:%.*]] = icmp ugt i32 [[M]], 1530
+; CHECK-NEXT:    [[R:%.*]] = icmp samesign ugt i32 [[M]], 1530
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %q = and i32 %x, 6
@@ -952,7 +952,7 @@ define i1 @not_mul_of_pow2_commute(i32 %x, i32 %y) {
 ; CHECK-NEXT:    [[X30:%.*]] = and i32 [[X:%.*]], 12
 ; CHECK-NEXT:    [[Y8:%.*]] = and i32 [[Y:%.*]], 255
 ; CHECK-NEXT:    [[M:%.*]] = mul nuw nsw i32 [[Y8]], [[X30]]
-; CHECK-NEXT:    [[R:%.*]] = icmp ugt i32 [[M]], 3060
+; CHECK-NEXT:    [[R:%.*]] = icmp samesign ugt i32 [[M]], 3060
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %x30 = and i32 %x, 12

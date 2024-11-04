@@ -141,18 +141,22 @@ using namespace llvm;
 // `object::PGOAnalysisMap::Features::decode(PgoAnalysisMapFeatures.getBits())`
 // succeeds.
 enum class PGOMapFeaturesEnum {
+  None,
   FuncEntryCount,
   BBFreq,
   BrProb,
+  All,
 };
 static cl::bits<PGOMapFeaturesEnum> PgoAnalysisMapFeatures(
     "pgo-analysis-map", cl::Hidden, cl::CommaSeparated,
-    cl::values(clEnumValN(PGOMapFeaturesEnum::FuncEntryCount,
-                          "func-entry-count", "Function Entry Count"),
-               clEnumValN(PGOMapFeaturesEnum::BBFreq, "bb-freq",
-                          "Basic Block Frequency"),
-               clEnumValN(PGOMapFeaturesEnum::BrProb, "br-prob",
-                          "Branch Probability")),
+    cl::values(
+        clEnumValN(PGOMapFeaturesEnum::None, "none", "Disable all options"),
+        clEnumValN(PGOMapFeaturesEnum::FuncEntryCount, "func-entry-count",
+                   "Function Entry Count"),
+        clEnumValN(PGOMapFeaturesEnum::BBFreq, "bb-freq",
+                   "Basic Block Frequency"),
+        clEnumValN(PGOMapFeaturesEnum::BrProb, "br-prob", "Branch Probability"),
+        clEnumValN(PGOMapFeaturesEnum::All, "all", "Enable all options")),
     cl::desc(
         "Enable extended information within the SHT_LLVM_BB_ADDR_MAP that is "
         "extracted from PGO related analysis."));
@@ -1367,9 +1371,28 @@ static uint32_t getBBAddrMapMetadata(const MachineBasicBlock &MBB) {
 
 static llvm::object::BBAddrMap::Features
 getBBAddrMapFeature(const MachineFunction &MF, int NumMBBSectionRanges) {
-  return {PgoAnalysisMapFeatures.isSet(PGOMapFeaturesEnum::FuncEntryCount),
-          PgoAnalysisMapFeatures.isSet(PGOMapFeaturesEnum::BBFreq),
-          PgoAnalysisMapFeatures.isSet(PGOMapFeaturesEnum::BrProb),
+  // Ensure that the user has not passed in additional options while also
+  // specifying all or none.
+  if ((PgoAnalysisMapFeatures.isSet(PGOMapFeaturesEnum::None) ||
+       PgoAnalysisMapFeatures.isSet(PGOMapFeaturesEnum::All)) &&
+      popcount(PgoAnalysisMapFeatures.getBits()) != 1) {
+    MF.getFunction().getContext().emitError(
+        "-pgo-anaylsis-map can accept only all or none with no additional "
+        "values.");
+  }
+
+  bool NoFeatures = PgoAnalysisMapFeatures.isSet(PGOMapFeaturesEnum::None);
+  bool AllFeatures = PgoAnalysisMapFeatures.isSet(PGOMapFeaturesEnum::All);
+  bool FuncEntryCountEnabled =
+      AllFeatures || (!NoFeatures && PgoAnalysisMapFeatures.isSet(
+                                         PGOMapFeaturesEnum::FuncEntryCount));
+  bool BBFreqEnabled =
+      AllFeatures ||
+      (!NoFeatures && PgoAnalysisMapFeatures.isSet(PGOMapFeaturesEnum::BBFreq));
+  bool BrProbEnabled =
+      AllFeatures ||
+      (!NoFeatures && PgoAnalysisMapFeatures.isSet(PGOMapFeaturesEnum::BrProb));
+  return {FuncEntryCountEnabled, BBFreqEnabled, BrProbEnabled,
           MF.hasBBSections() && NumMBBSectionRanges > 1};
 }
 
@@ -2849,7 +2872,7 @@ void AsmPrinter::emitJumpTableSizesSection(const MachineJumpTableInfo *MJTI,
 
   if (isElf) {
     MCSymbolELF *LinkedToSym = dyn_cast<MCSymbolELF>(CurrentFnSym);
-    int Flags = F.hasComdat() ? ELF::SHF_GROUP : 0;
+    int Flags = F.hasComdat() ? static_cast<int>(ELF::SHF_GROUP) : 0;
 
     JumpTableSizesSection = OutContext.getELFSection(
         sectionName, ELF::SHT_LLVM_JT_SIZES, Flags, 0, GroupName, F.hasComdat(),

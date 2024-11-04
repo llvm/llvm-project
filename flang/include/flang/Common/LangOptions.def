@@ -20,6 +20,8 @@ LANGOPT(Name, Bits, Default)
 #endif
 
 ENUM_LANGOPT(FPContractMode, FPModeKind, 2, FPM_Fast) ///< FP Contract Mode (off/fast)
+/// signed integer overflow handling
+ENUM_LANGOPT(SignedOverflowBehavior, SignedOverflowBehaviorTy, 1, SOB_Undefined)
 
 /// Indicate a build without the standard GPU libraries.
 LANGOPT(NoGPULib  , 1, false)
