@@ -481,7 +481,8 @@ public:
   /// This extension point allows adding optimization right after passes that do
   /// basic simplification of the input IR.
   void registerPipelineEarlySimplificationEPCallback(
-      const std::function<void(ModulePassManager &, OptimizationLevel)> &C) {
+      const std::function<void(ModulePassManager &, OptimizationLevel,
+                               ThinOrFullLTOPhase)> &C) {
     PipelineEarlySimplificationEPCallbacks.push_back(C);
   }
 
@@ -644,7 +645,8 @@ public:
   void invokePipelineStartEPCallbacks(ModulePassManager &MPM,
                                       OptimizationLevel Level);
   void invokePipelineEarlySimplificationEPCallbacks(ModulePassManager &MPM,
-                                                    OptimizationLevel Level);
+                                                    OptimizationLevel Level,
+                                                    ThinOrFullLTOPhase Phase);
 
   static bool checkParametrizedPassName(StringRef Name, StringRef PassName) {
     if (!Name.consume_front(PassName))
@@ -769,7 +771,9 @@ private:
       FullLinkTimeOptimizationLastEPCallbacks;
   SmallVector<std::function<void(ModulePassManager &, OptimizationLevel)>, 2>
       PipelineStartEPCallbacks;
-  SmallVector<std::function<void(ModulePassManager &, OptimizationLevel)>, 2>
+  SmallVector<std::function<void(ModulePassManager &, OptimizationLevel,
+                                 ThinOrFullLTOPhase)>,
+              2>
       PipelineEarlySimplificationEPCallbacks;
 
   SmallVector<std::function<void(ModuleAnalysisManager &)>, 2>

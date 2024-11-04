@@ -1015,7 +1015,8 @@ void EmitAssemblyHelper::RunOptimizationPipeline(
                   createModuleToFunctionPassAdaptor(ObjCARCExpandPass()));
           });
       PB.registerPipelineEarlySimplificationEPCallback(
-          [](ModulePassManager &MPM, OptimizationLevel Level) {
+          [](ModulePassManager &MPM, OptimizationLevel Level,
+             ThinOrFullLTOPhase) {
             if (Level != OptimizationLevel::O0)
               MPM.addPass(ObjCARCAPElimPass());
           });
