@@ -5704,3 +5704,38 @@ multiclass sme2_fmop4as_fp16_fp32_widening<bit S, string mnemonic> {
   // Multiple vectors
   def _M2Z2Z_HtoS : sme2_fp16_fp32_quarter_tile_outer_product<1, 1, S, mnemonic, ZZ_h_mul_r_Lo, ZZ_h_mul_r_Hi>;
 }
+
+class sme2_fp8_fp16_quarter_tile_outer_product<bit M, bit N, string mnemonic, RegisterOperand zn_ty, RegisterOperand zm_ty>
+    : I<(outs TileOp16:$ZAda),
+        (ins TileOp16:$_ZAda, zn_ty:$Zn, zm_ty:$Zm),
+        mnemonic, "\t$ZAda, $Zn, $Zm",
+        "", []>, Sched<[]> {
+  bit     ZAda;
+  bits<3> Zn;
+  bits<3> Zm;
+
+  let Inst{31-21} = 0b10000000001;
+  let Inst{20} = M;
+  let Inst{19-17} = Zm;
+  let Inst{16-10} = 0b0000000;
+  let Inst{9} = N;
+  let Inst{8-6} = Zn;
+  let Inst{5-1} = 0b00100;
+  let Inst{0} = ZAda;
+
+  let Constraints = "$ZAda = $_ZAda";
+}
+
+multiclass sme2_fmop4a_fp8_fp16_2way<string mnemonic> {
+  // Single vectors
+  def _MZZ_BtoH : sme2_fp8_fp16_quarter_tile_outer_product<0b0, 0b0, mnemonic, ZPR8Mul2_Lo, ZPR8Mul2_Hi>;
+
+  // Multiple and single vectors
+  def _M2ZZ_BtoH : sme2_fp8_fp16_quarter_tile_outer_product<0b0, 0b1, mnemonic, ZZ_b_mul_r_Lo, ZPR8Mul2_Hi>;
+
+  // Single and multiple vectors
+  def _MZ2Z_BtoH : sme2_fp8_fp16_quarter_tile_outer_product<0b1, 0b0, mnemonic, ZPR8Mul2_Lo, ZZ_b_mul_r_Hi>;
+
+  // Multiple vectors
+  def _M2Z2Z_BtoH : sme2_fp8_fp16_quarter_tile_outer_product<0b1, 0b1, mnemonic, ZZ_b_mul_r_Lo, ZZ_b_mul_r_Hi>;
+}
