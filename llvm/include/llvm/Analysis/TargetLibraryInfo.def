@@ -517,6 +517,16 @@ TLI_DEFINE_ENUM_INTERNAL(Exit)
 TLI_DEFINE_STRING_INTERNAL("_Exit")
 TLI_DEFINE_SIG_INTERNAL(Void, Int)
 
+/// void std::terminate();
+TLI_DEFINE_ENUM_INTERNAL(terminate)
+TLI_DEFINE_STRING_INTERNAL("_ZSt9terminatev")
+TLI_DEFINE_SIG_INTERNAL(Void)
+
+/// void __cxa_throw(void *, void *, void (*)(void *));
+TLI_DEFINE_ENUM_INTERNAL(cxa_throw)
+TLI_DEFINE_STRING_INTERNAL("__cxa_throw")
+TLI_DEFINE_SIG_INTERNAL(Void, Ptr, Ptr, Ptr)
+
 /// void __cxa_guard_abort(guard_t *guard);
 /// guard_t is int64_t in Itanium ABI or int32_t on ARM eabi.
 TLI_DEFINE_ENUM_INTERNAL(cxa_guard_abort)
@@ -1386,6 +1396,39 @@ TLI_DEFINE_SIG_INTERNAL(Floating, Same, Same)
 /// long double fminl(long double x, long double y);
 TLI_DEFINE_ENUM_INTERNAL(fminl)
 TLI_DEFINE_STRING_INTERNAL("fminl")
+TLI_DEFINE_SIG_INTERNAL(Floating, Same, Same)
+
+// Calls to fmaximum_num and fminimum_num library functions expand to the llvm.maximumnum and
+// llvm.minimumnum intrinsics with the correct parameter types for the arguments
+// (all types must match).
+/// double fmaximum_num(double x, double y);
+TLI_DEFINE_ENUM_INTERNAL(fmaximum_num)
+TLI_DEFINE_STRING_INTERNAL("fmaximum_num")
+TLI_DEFINE_SIG_INTERNAL(Floating, Same, Same)
+
+/// float fmaximum_numf(float x, float y);
+TLI_DEFINE_ENUM_INTERNAL(fmaximum_numf)
+TLI_DEFINE_STRING_INTERNAL("fmaximum_numf")
+TLI_DEFINE_SIG_INTERNAL(Floating, Same, Same)
+
+/// long double fmaximum_numl(long double x, long double y);
+TLI_DEFINE_ENUM_INTERNAL(fmaximum_numl)
+TLI_DEFINE_STRING_INTERNAL("fmaximum_numl")
+TLI_DEFINE_SIG_INTERNAL(Floating, Same, Same)
+
+/// double fminimum_num(double x, double y);
+TLI_DEFINE_ENUM_INTERNAL(fminimum_num)
+TLI_DEFINE_STRING_INTERNAL("fminimum_num")
+TLI_DEFINE_SIG_INTERNAL(Floating, Same, Same)
+
+/// float fminimum_numf(float x, float y);
+TLI_DEFINE_ENUM_INTERNAL(fminimum_numf)
+TLI_DEFINE_STRING_INTERNAL("fminimum_numf")
+TLI_DEFINE_SIG_INTERNAL(Floating, Same, Same)
+
+/// long double fminimum_numl(long double x, long double y);
+TLI_DEFINE_ENUM_INTERNAL(fminimum_numl)
+TLI_DEFINE_STRING_INTERNAL("fminimum_numl")
 TLI_DEFINE_SIG_INTERNAL(Floating, Same, Same)
 
 /// double fmod(double x, double y);

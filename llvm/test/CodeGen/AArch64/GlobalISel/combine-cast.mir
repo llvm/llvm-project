@@ -129,3 +129,98 @@ body:             |
     %res:_(<2 x s64>) = G_SELECT %cond(<2 x s32>), %bv, %bv2
     %small:_(<2 x s32>) = G_TRUNC %res(<2 x s64>)
     $x0 = COPY %small(<2 x s32>)
+...
+---
+name:            test_combine_trunc_build_vector
+legalized: true
+body:             |
+  bb.1:
+    ; CHECK-PRE-LABEL: name: test_combine_trunc_build_vector
+    ; CHECK-PRE: %arg1:_(s64) = COPY $x0
+    ; CHECK-PRE-NEXT: %arg2:_(s64) = COPY $x0
+    ; CHECK-PRE-NEXT: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC %arg1(s64)
+    ; CHECK-PRE-NEXT: [[TRUNC1:%[0-9]+]]:_(s32) = G_TRUNC %arg2(s64)
+    ; CHECK-PRE-NEXT: %small:_(<2 x s32>) = G_BUILD_VECTOR [[TRUNC]](s32), [[TRUNC1]](s32)
+    ; CHECK-PRE-NEXT: $x0 = COPY %small(<2 x s32>)
+    ;
+    ; CHECK-POST-LABEL: name: test_combine_trunc_build_vector
+    ; CHECK-POST: %arg1:_(s64) = COPY $x0
+    ; CHECK-POST-NEXT: %arg2:_(s64) = COPY $x0
+    ; CHECK-POST-NEXT: %bv:_(<2 x s64>) = G_BUILD_VECTOR %arg1(s64), %arg2(s64)
+    ; CHECK-POST-NEXT: %small:_(<2 x s32>) = G_TRUNC %bv(<2 x s64>)
+    ; CHECK-POST-NEXT: $x0 = COPY %small(<2 x s32>)
+    %arg1:_(s64) = COPY $x0
+    %arg2:_(s64) = COPY $x0
+    %bv:_(<2 x s64>) = G_BUILD_VECTOR %arg1(s64), %arg2(s64)
+    %small:_(<2 x s32>) = G_TRUNC %bv(<2 x s64>)
+    $x0 = COPY %small(<2 x s32>)
+...
+---
+name:            test_combine_zext_build_vector
+legalized: true
+body:             |
+  bb.1:
+    ; CHECK-LABEL: name: test_combine_zext_build_vector
+    ; CHECK: %arg1:_(s32) = COPY $w0
+    ; CHECK-NEXT: %arg2:_(s32) = COPY $w0
+    ; CHECK-NEXT: %bv:_(<2 x s32>) = G_BUILD_VECTOR %arg1(s32), %arg2(s32)
+    ; CHECK-NEXT: %large:_(<2 x s64>) = G_ZEXT %bv(<2 x s32>)
+    ; CHECK-NEXT: $q0 = COPY %large(<2 x s64>)
+    %arg1:_(s32) = COPY $w0
+    %arg2:_(s32) = COPY $w0
+    %bv:_(<2 x s32>) = G_BUILD_VECTOR %arg1(s32), %arg2(s32)
+    %large:_(<2 x s64>) = G_ZEXT %bv(<2 x s32>)
+    $q0 = COPY %large(<2 x s64>)
+...
+---
+name:            test_combine_anyext_build_vector
+legalized: true
+body:             |
+  bb.1:
+    ; CHECK-LABEL: name: test_combine_anyext_build_vector
+    ; CHECK: %arg1:_(s32) = COPY $w0
+    ; CHECK-NEXT: %arg2:_(s32) = COPY $w0
+    ; CHECK-NEXT: %bv:_(<2 x s32>) = G_BUILD_VECTOR %arg1(s32), %arg2(s32)
+    ; CHECK-NEXT: %large:_(<2 x s64>) = G_ANYEXT %bv(<2 x s32>)
+    ; CHECK-NEXT: $q0 = COPY %large(<2 x s64>)
+    %arg1:_(s32) = COPY $w0
+    %arg2:_(s32) = COPY $w0
+    %bv:_(<2 x s32>) = G_BUILD_VECTOR %arg1(s32), %arg2(s32)
+    %large:_(<2 x s64>) = G_ANYEXT %bv(<2 x s32>)
+    $q0 = COPY %large(<2 x s64>)
+...
+---
+name:            test_combine_sext_build_vector
+legalized: true
+body:             |
+  bb.1:
+    ; CHECK-LABEL: name: test_combine_sext_build_vector
+    ; CHECK: %arg1:_(s32) = COPY $w0
+    ; CHECK-NEXT: %arg2:_(s32) = COPY $w0
+    ; CHECK-NEXT: %bv:_(<2 x s32>) = G_BUILD_VECTOR %arg1(s32), %arg2(s32)
+    ; CHECK-NEXT: %large:_(<2 x s64>) = G_SEXT %bv(<2 x s32>)
+    ; CHECK-NEXT: $q0 = COPY %large(<2 x s64>)
+    %arg1:_(s32) = COPY $w0
+    %arg2:_(s32) = COPY $w0
+    %bv:_(<2 x s32>) = G_BUILD_VECTOR %arg1(s32), %arg2(s32)
+    %large:_(<2 x s64>) = G_SEXT %bv(<2 x s32>)
+    $q0 = COPY %large(<2 x s64>)
+...
+---
+name:            test_combine_anyext_build_vector_multi_use
+legalized: true
+body:             |
+  bb.1:
+    ; CHECK-LABEL: name: test_combine_anyext_build_vector_multi_use
+    ; CHECK: %arg1:_(s32) = COPY $w0
+    ; CHECK-NEXT: %arg2:_(s32) = COPY $w0
+    ; CHECK-NEXT: %bv:_(<2 x s32>) = G_BUILD_VECTOR %arg1(s32), %arg2(s32)
+    ; CHECK-NEXT: %large:_(<2 x s64>) = G_ANYEXT %bv(<2 x s32>)
+    ; CHECK-NEXT: $q0 = COPY %large(<2 x s64>)
+    ; CHECK-NEXT: $d0 = COPY %bv(<2 x s32>)
+    %arg1:_(s32) = COPY $w0
+    %arg2:_(s32) = COPY $w0
+    %bv:_(<2 x s32>) = G_BUILD_VECTOR %arg1(s32), %arg2(s32)
+    %large:_(<2 x s64>) = G_ANYEXT %bv(<2 x s32>)
+    $q0 = COPY %large(<2 x s64>)
+    $d0 = COPY %bv(<2 x s32>)

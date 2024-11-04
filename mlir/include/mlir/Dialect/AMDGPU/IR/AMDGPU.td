@@ -402,6 +402,61 @@ def AMDGPU_RawBufferAtomicUminOp :
   let hasVerifier = 1;
 }
 
+def AMDGPU_DPPPerm : I32EnumAttr<"DPPPerm",
+    "The possible permutations for a DPP operation",
+    [  
+      I32EnumAttrCase<"quad_perm",  0>,
+      I32EnumAttrCase<"row_shl",    1>,
+      I32EnumAttrCase<"row_shr",    2>,
+      I32EnumAttrCase<"row_ror",    3>,
+      I32EnumAttrCase<"wave_shl",   4>,
+      I32EnumAttrCase<"wave_shr",   5>,
+      I32EnumAttrCase<"wave_ror",   6>,
+      I32EnumAttrCase<"wave_rol",   7>,
+      I32EnumAttrCase<"row_mirror", 8>,
+      I32EnumAttrCase<"row_half_mirror", 9>,
+      I32EnumAttrCase<"row_bcast_15", 10>,
+      I32EnumAttrCase<"row_bcast_31", 11>
+    ]> {
+  let genSpecializedAttr = 0;  
+  let cppNamespace = "::mlir::amdgpu";
+}
+
+def AMDGPU_DPPPermAttr : EnumAttr<AMDGPU_Dialect, AMDGPU_DPPPerm,
+  "dpp_perm">;
+
+def AMDGPU_DPPOp : AMDGPU_Op<"dpp", [SameTypeOperands, AllTypesMatch<["result", "old", "src"]>]>,
+  Arguments<(ins AnyType:$old,
+                  AnyType:$src,
+                  AMDGPU_DPPPermAttr:$kind,
+                  OptionalAttr<AnyAttrOf<[I32Attr, ArrayAttr, UnitAttr]>>:$permArgument,
+                  DefaultValuedAttr<I32Attr, "0xf">:$row_mask,
+                  DefaultValuedAttr<I32Attr, "0xf">:$bank_mask,
+                  DefaultValuedAttr<BoolAttr, "false">:$bound_ctrl)> {
+  let summary = "AMDGPU DPP operation";
+  let description = [{
+    This operation represents DPP functionality in a GPU program.
+     DPP provides the following operations:
+    - Full crossbar in a group of four (`quad_perm`)
+    - Wavefront shift left by one lane (`wave_shl`)
+    - Wavefront shift right by one lane (`wave_shr`)
+    - Wavefront rotate right by one lane (`wave_ror`)
+    - Wavefront rotate left by one lane (`wave_rol`)
+    - Row shift left by 1–15 lanes (`row_shl`)
+    - Row shift right by 1–15 lanes (`row_shr`)
+    - Row rotate right by 1–15 lanes (`row_ror`)
+    - Reverse within a row (`row_mirror`)
+    - Reverse within a half-row (`row_half_mirror`)
+    - Broadcast the 15th lane of each row to the next row (`row_bcast`)
+    - Broadcast lane 31 to rows 2 and 3 (`row_bcast`)
+  }];
+  let results = (outs AnyType:$result);
+  let assemblyFormat = [{
+    $old $src $kind (`(` $permArgument^ `)`)? attr-dict `:` type($result)
+  }];
+  let hasVerifier = 1;
+}
+
 def AMDGPU_LDSBarrierOp : AMDGPU_Op<"lds_barrier"> {
   let summary = "Barrier that includes a wait for LDS memory operations.";
   let description = [{

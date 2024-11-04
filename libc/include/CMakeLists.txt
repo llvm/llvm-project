@@ -45,6 +45,7 @@ add_header_macro(
   ctype.h
   DEPENDS
     .llvm_libc_common_h
+    .llvm-libc-types.locale_t
 )
 
 add_header_macro(
@@ -420,19 +421,21 @@ add_header_macro(
     .llvm-libc-types.posix_spawn_file_actions_t
 )
 
-add_gen_header(
+add_header_macro(
   link
-  DEF_FILE link.h.def
-  GEN_HDR link.h
+  ../libc/newhdrgen/yaml/link.yaml
+  link.h.def
+  link.h
   DEPENDS
     .llvm_libc_common_h
     .llvm-libc-macros.link_macros
 )
 
-add_gen_header(
+add_header_macro(
   elf
-  DEF_FILE elf.h.def
-  GEN_HDR elf.h
+  ../libc/newhdrgen/yaml/elf.yaml
+  elf.h.def
+  elf.h
   DEPENDS
     .llvm-libc-macros.elf_macros
 )
@@ -715,6 +718,18 @@ add_header_macro(
     .llvm-libc-types.size_t
     .llvm-libc-types.wint_t
     .llvm-libc-types.wchar_t
+)
+
+add_header_macro(
+  locale
+  ../libc/newhdrgen/yaml/locale.yaml
+  locale.h.def
+  locale.h
+  DEPENDS
+    .llvm_libc_common_h
+    .llvm-libc-macros.locale_macros
+    .llvm-libc-types.locale_t
+    .llvm-libc-types.struct_lconv
 )
 
 if(LIBC_TARGET_OS_IS_GPU)

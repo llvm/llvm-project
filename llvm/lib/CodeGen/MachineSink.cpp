@@ -766,8 +766,7 @@ bool MachineSinking::runOnMachineFunction(MachineFunction &MF) {
   }
 
   if (SinkInstsIntoCycle) {
-    SmallVector<MachineCycle *, 8> Cycles(CI->toplevel_begin(),
-                                          CI->toplevel_end());
+    SmallVector<MachineCycle *, 8> Cycles(CI->toplevel_cycles());
     for (auto *Cycle : Cycles) {
       MachineBasicBlock *Preheader = Cycle->getCyclePreheader();
       if (!Preheader) {

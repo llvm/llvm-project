@@ -146,15 +146,30 @@ template <typename T> class MathPerf {
       cpp::numeric_limits<StorageType>::max();
 
 public:
-  typedef T Func(T);
-
   template <size_t N = 1>
-  static uint64_t run_throughput_in_range(Func f, int min_exp, int max_exp) {
+  static uint64_t run_throughput_in_range(T f(T), int min_exp, int max_exp) {
     cpp::array<T, N> inputs;
     for (size_t i = 0; i < N; ++i)
       inputs[i] = get_rand_input<T>(min_exp, max_exp);
 
     uint64_t total_time = LIBC_NAMESPACE::throughput(f, inputs);
+
+    return total_time / N;
+  }
+
+  // Throughput benchmarking for functions that take 2 inputs.
+  template <size_t N = 1>
+  static uint64_t run_throughput_in_range(T f(T, T), int arg1_min_exp,
+                                          int arg1_max_exp, int arg2_min_exp,
+                                          int arg2_max_exp) {
+    cpp::array<T, N> inputs1;
+    cpp::array<T, N> inputs2;
+    for (size_t i = 0; i < N; ++i) {
+      inputs1[i] = get_rand_input<T>(arg1_min_exp, arg1_max_exp);
+      inputs2[i] = get_rand_input<T>(arg2_min_exp, arg2_max_exp);
+    }
+
+    uint64_t total_time = LIBC_NAMESPACE::throughput(f, inputs1, inputs2);
 
     return total_time / N;
   }

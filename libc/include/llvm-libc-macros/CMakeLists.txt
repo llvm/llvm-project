@@ -295,3 +295,9 @@ add_macro_header(
   HDR
     elf-macros.h
 )
+
+add_macro_header(
+  locale_macros
+  HDR
+    locale-macros.h
+)

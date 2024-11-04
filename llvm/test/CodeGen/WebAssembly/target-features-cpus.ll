@@ -28,7 +28,7 @@ target triple = "wasm32-unknown-unknown"
 ; GENERIC-NEXT: .ascii  "sign-ext"
 
 ; bleeding-edge: +atomics, +bulk-memory, +exception-handling, +extended-const,
-;                +half-precision, +multimemory, +multivalue, +mutable-globals,
+;                +fp16, +multimemory, +multivalue, +mutable-globals,
 ;                +nontrapping-fptoint, +relaxed-simd, +reference-types,
 ;                +simd128, +sign-ext, +tail-call
 ; BLEEDING-EDGE-LABEL: .section  .custom_section.target_features,"",@
@@ -46,8 +46,8 @@ target triple = "wasm32-unknown-unknown"
 ; BLEEDING-EDGE-NEXT: .int8  14
 ; BLEEDING-EDGE-NEXT: .ascii  "extended-const"
 ; BLEEDING-EDGE-NEXT: .int8  43
-; BLEEDING-EDGE-NEXT: .int8  14
-; BLEEDING-EDGE-NEXT: .ascii  "half-precision"
+; BLEEDING-EDGE-NEXT: .int8  4
+; BLEEDING-EDGE-NEXT: .ascii  "fp16"
 ; BLEEDING-EDGE-NEXT: .int8  43
 ; BLEEDING-EDGE-NEXT: .int8  11
 ; BLEEDING-EDGE-NEXT: .ascii  "multimemory"

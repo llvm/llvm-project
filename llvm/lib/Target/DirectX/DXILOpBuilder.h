@@ -14,13 +14,16 @@
 
 #include "DXILConstants.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/TargetParser/Triple.h"
+#include "llvm/IR/IRBuilder.h"
+#include "llvm/Support/DXILABI.h"
 #include "llvm/Support/Error.h"
+#include "llvm/TargetParser/Triple.h"
 
 namespace llvm {
 class Module;
 class IRBuilderBase;
 class CallInst;
+class Constant;
 class Value;
 class Type;
 class FunctionType;
@@ -29,29 +32,28 @@ namespace dxil {
 
 class DXILOpBuilder {
 public:
-  DXILOpBuilder(Module &M, IRBuilderBase &B);
+  DXILOpBuilder(Module &M);
+
+  IRBuilder<> &getIRB() { return IRB; }
 
   /// Create a call instruction for the given DXIL op. The arguments
   /// must be valid for an overload of the operation.
-  CallInst *createOp(dxil::OpCode Op, ArrayRef<Value *> &Args,
+  CallInst *createOp(dxil::OpCode Op, ArrayRef<Value *> Args,
                      Type *RetTy = nullptr);
-
-#define DXIL_OPCODE(Op, Name)                                                  \
-  CallInst *create##Name##Op(ArrayRef<Value *> &Args, Type *RetTy = nullptr) { \
-    return createOp(dxil::OpCode(Op), Args, RetTy);                            \
-  }
-#include "DXILOperation.inc"
 
   /// Try to create a call instruction for the given DXIL op. Fails if the
   /// overload is invalid.
   Expected<CallInst *> tryCreateOp(dxil::OpCode Op, ArrayRef<Value *> Args,
                                    Type *RetTy = nullptr);
-#define DXIL_OPCODE(Op, Name)                                                  \
-  Expected<CallInst *> tryCreate##Name##Op(ArrayRef<Value *> &Args,            \
-                                           Type *RetTy = nullptr) {            \
-    return tryCreateOp(dxil::OpCode(Op), Args, RetTy);                         \
-  }
-#include "DXILOperation.inc"
+
+  /// Get the `%dx.types.Handle` type.
+  StructType *getHandleType();
+
+  /// Get a constant `%dx.types.ResBind` value.
+  Constant *getResBind(uint32_t LowerBound, uint32_t UpperBound,
+                       uint32_t SpaceID, dxil::ResourceClass RC);
+  /// Get a constant `%dx.types.ResourceProperties` value.
+  Constant *getResProps(uint32_t Word0, uint32_t Word1);
 
   /// Return the name of the given opcode.
   static const char *getOpCodeName(dxil::OpCode DXILOp);
@@ -63,7 +65,7 @@ private:
                                   Type *OverloadType = nullptr);
 
   Module &M;
-  IRBuilderBase &B;
+  IRBuilder<> IRB;
   VersionTuple DXILVersion;
   Triple::EnvironmentType ShaderStage;
 };

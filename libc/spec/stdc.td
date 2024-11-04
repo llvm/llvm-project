@@ -4,6 +4,7 @@ def StdC : StandardSpec<"stdc"> {
   PtrType StructTmPtr = PtrType<StructTmType>;
   PtrType TimeTTypePtr = PtrType<TimeTType>;
   NamedType ClockT = NamedType<"clock_t">;
+  NamedType LocaleT = NamedType<"locale_t">;
 
   NamedType DivTType = NamedType<"div_t">;
   NamedType LDivTType = NamedType<"ldiv_t">;
@@ -34,7 +35,9 @@ def StdC : StandardSpec<"stdc"> {
   HeaderSpec CType = HeaderSpec<
       "ctype.h",
       [], // Macros
-      [], // Types
+      [
+          LocaleT
+      ], // Types
       [], // Enumerations
       [
           FunctionSpec<
@@ -106,6 +109,76 @@ def StdC : StandardSpec<"stdc"> {
               "toupper",
               RetValSpec<IntType>,
               [ArgSpec<IntType>]
+          >,
+          FunctionSpec<
+              "isalnum_l",
+              RetValSpec<IntType>,
+              [ArgSpec<IntType>, ArgSpec<LocaleT>]
+          >,
+          FunctionSpec<
+              "isalpha_l",
+              RetValSpec<IntType>,
+              [ArgSpec<IntType>, ArgSpec<LocaleT>]
+          >,
+          FunctionSpec<
+              "isblank_l",
+              RetValSpec<IntType>,
+              [ArgSpec<IntType>, ArgSpec<LocaleT>]
+          >,
+          FunctionSpec<
+              "iscntrl_l",
+              RetValSpec<IntType>,
+              [ArgSpec<IntType>, ArgSpec<LocaleT>]
+          >,
+          FunctionSpec<
+              "isdigit_l",
+              RetValSpec<IntType>,
+              [ArgSpec<IntType>, ArgSpec<LocaleT>]
+          >,
+          FunctionSpec<
+              "isgraph_l",
+              RetValSpec<IntType>,
+              [ArgSpec<IntType>, ArgSpec<LocaleT>]
+          >,
+          FunctionSpec<
+              "islower_l",
+              RetValSpec<IntType>,
+              [ArgSpec<IntType>, ArgSpec<LocaleT>]
+          >,
+          FunctionSpec<
+              "isprint_l",
+              RetValSpec<IntType>,
+              [ArgSpec<IntType>, ArgSpec<LocaleT>]
+          >,
+          FunctionSpec<
+              "ispunct_l",
+              RetValSpec<IntType>,
+              [ArgSpec<IntType>, ArgSpec<LocaleT>]
+          >,
+          FunctionSpec<
+              "isspace_l",
+              RetValSpec<IntType>,
+              [ArgSpec<IntType>, ArgSpec<LocaleT>]
+          >,
+          FunctionSpec<
+              "isupper_l",
+              RetValSpec<IntType>,
+              [ArgSpec<IntType>, ArgSpec<LocaleT>]
+          >,
+          FunctionSpec<
+              "isxdigit_l",
+              RetValSpec<IntType>,
+              [ArgSpec<IntType>, ArgSpec<LocaleT>]
+          >,
+          FunctionSpec<
+              "tolower_l",
+              RetValSpec<IntType>,
+              [ArgSpec<IntType>, ArgSpec<LocaleT>]
+          >,
+          FunctionSpec<
+              "toupper_l",
+              RetValSpec<IntType>,
+              [ArgSpec<IntType>, ArgSpec<LocaleT>]
           >,
       ]
   >;
@@ -715,6 +788,7 @@ def StdC : StandardSpec<"stdc"> {
 
           FunctionSpec<"atan2", RetValSpec<DoubleType>, [ArgSpec<DoubleType>, ArgSpec<DoubleType>]>,
           FunctionSpec<"atan2f", RetValSpec<FloatType>, [ArgSpec<FloatType>, ArgSpec<FloatType>]>,
+          FunctionSpec<"atan2l", RetValSpec<LongDoubleType>, [ArgSpec<LongDoubleType>, ArgSpec<LongDoubleType>]>,
 
           FunctionSpec<"acoshf", RetValSpec<FloatType>, [ArgSpec<FloatType>]>,
           FunctionSpec<"asinhf", RetValSpec<FloatType>, [ArgSpec<FloatType>]>,
@@ -752,11 +826,11 @@ def StdC : StandardSpec<"stdc"> {
 	  GuardedFunctionSpec<"totalorderf16", RetValSpec<IntType>, [ArgSpec<ConstFloat16Ptr>, ArgSpec<ConstFloat16Ptr>], "LIBC_TYPES_HAS_FLOAT16">,
 	  GuardedFunctionSpec<"totalorderf128", RetValSpec<IntType>, [ArgSpec<ConstFloat128Ptr>, ArgSpec<ConstFloat128Ptr>], "LIBC_TYPES_HAS_FLOAT128">,
 
-          FunctionSpec<"totalordermag", RetValSpec<IntType>, [ArgSpec<DoublePtr>, ArgSpec<DoublePtr>]>,
-	  FunctionSpec<"totalordermagf", RetValSpec<IntType>, [ArgSpec<FloatPtr>, ArgSpec<FloatPtr>]>,
-	  FunctionSpec<"totalordermagl", RetValSpec<IntType>, [ArgSpec<LongDoublePtr>, ArgSpec<LongDoublePtr>]>,
-	  GuardedFunctionSpec<"totalordermagf16", RetValSpec<IntType>, [ArgSpec<Float16Ptr>, ArgSpec<Float16Ptr>], "LIBC_TYPES_HAS_FLOAT16">,
-	  GuardedFunctionSpec<"totalordermagf128", RetValSpec<IntType>, [ArgSpec<Float128Ptr>, ArgSpec<Float128Ptr>], "LIBC_TYPES_HAS_FLOAT128">,
+          FunctionSpec<"totalordermag", RetValSpec<IntType>, [ArgSpec<ConstDoublePtr>, ArgSpec<ConstDoublePtr>]>,
+          FunctionSpec<"totalordermagf", RetValSpec<IntType>, [ArgSpec<ConstFloatPtr>, ArgSpec<ConstFloatPtr>]>,
+          FunctionSpec<"totalordermagl", RetValSpec<IntType>, [ArgSpec<ConstLongDoublePtr>, ArgSpec<ConstLongDoublePtr>]>,
+          GuardedFunctionSpec<"totalordermagf16", RetValSpec<IntType>, [ArgSpec<ConstFloat16Ptr>, ArgSpec<ConstFloat16Ptr>], "LIBC_TYPES_HAS_FLOAT16">,
+          GuardedFunctionSpec<"totalordermagf128", RetValSpec<IntType>, [ArgSpec<ConstFloat128Ptr>, ArgSpec<ConstFloat128Ptr>], "LIBC_TYPES_HAS_FLOAT128">,
 
           FunctionSpec<"getpayload", RetValSpec<DoubleType>, [ArgSpec<DoublePtr>]>,
 	  FunctionSpec<"getpayloadf", RetValSpec<FloatType>, [ArgSpec<FloatPtr>]>,
@@ -969,11 +1043,24 @@ def StdC : StandardSpec<"stdc"> {
                ArgSpec<VarArgType>]
           >,
           FunctionSpec<
+              "vscanf",
+              RetValSpec<IntType>,
+              [ArgSpec<ConstCharRestrictedPtr>,
+               ArgSpec<VaListType>]
+          >,
+          FunctionSpec<
               "fscanf",
               RetValSpec<IntType>,
               [ArgSpec<FILERestrictedPtr>,
                ArgSpec<ConstCharRestrictedPtr>,
                ArgSpec<VarArgType>]
+          >,
+          FunctionSpec<
+              "vfscanf",
+              RetValSpec<IntType>,
+              [ArgSpec<FILERestrictedPtr>,
+               ArgSpec<ConstCharRestrictedPtr>,
+               ArgSpec<VaListType>]
           >,
           FunctionSpec<
               "sprintf",
@@ -1590,6 +1677,61 @@ def StdC : StandardSpec<"stdc"> {
       ]
   >;
 
+  
+  NamedType StructLconv = NamedType<"struct lconv">;
+  PtrType StructLconvPtr = PtrType<StructLconv>;
+
+  HeaderSpec Locale = HeaderSpec<
+     "locale.h",
+      [], // Macros
+      [LocaleT, StructLconv], // Types
+      [], // Enumerations
+      [
+        FunctionSpec<
+          "duplocale",
+          RetValSpec<LocaleT>,
+          [
+            ArgSpec<LocaleT>
+          ]
+        >,
+        FunctionSpec<
+          "freelocale",
+          RetValSpec<VoidType>,
+          [
+            ArgSpec<LocaleT>
+          ]
+        >,
+        FunctionSpec<
+          "localeconv",
+          RetValSpec<StructLconvPtr>,
+          []
+        >,
+        FunctionSpec<
+          "newlocale",
+          RetValSpec<LocaleT>,
+          [
+            ArgSpec<IntType>,
+            ArgSpec<ConstCharPtr>,
+            ArgSpec<LocaleT>
+          ]
+        >,
+        FunctionSpec<
+          "setlocale",
+          RetValSpec<CharPtr>,
+          [
+            ArgSpec<IntType>,
+            ArgSpec<ConstCharPtr>
+          ]
+        >,
+        FunctionSpec<
+          "uselocale",
+          RetValSpec<LocaleT>,
+          [
+            ArgSpec<LocaleT>
+          ]
+        >
+      ]  // Functions
+  >;
 
   let Headers = [
     Assert,
@@ -1612,5 +1754,6 @@ def StdC : StandardSpec<"stdc"> {
     Time,
     UChar,
     WChar,
+    Locale,
   ];
 }

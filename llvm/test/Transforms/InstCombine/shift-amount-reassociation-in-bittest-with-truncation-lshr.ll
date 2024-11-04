@@ -294,7 +294,7 @@ define i1 @t10_almost_highest_bit(i32 %x, i64 %y, i32 %len) {
 define i1 @t11_no_shift(i32 %x, i64 %y, i32 %len) {
 ; CHECK-LABEL: @t11_no_shift(
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext i32 [[X:%.*]] to i64
-; CHECK-NEXT:    [[TMP2:%.*]] = and i64 [[TMP1]], [[Y:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = and i64 [[Y:%.*]], [[TMP1]]
 ; CHECK-NEXT:    [[T5:%.*]] = icmp ne i64 [[TMP2]], 0
 ; CHECK-NEXT:    ret i1 [[T5]]
 ;

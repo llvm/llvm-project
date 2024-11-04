@@ -61,6 +61,18 @@ define i32 @ashr_lshr2(i32 %x, i32 %y) {
   ret i32 %ret
 }
 
+define i128 @ashr_lshr2_i128(i128 %x, i128 %y) {
+; CHECK-LABEL: @ashr_lshr2_i128(
+; CHECK-NEXT:    [[CMP1:%.*]] = ashr i128 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    ret i128 [[CMP1]]
+;
+  %cmp = icmp sgt i128 %x, 5
+  %l = lshr i128 %x, %y
+  %r = ashr exact i128 %x, %y
+  %ret = select i1 %cmp, i128 %l, i128 %r
+  ret i128 %ret
+}
+
 define <2 x i32> @ashr_lshr_splat_vec(<2 x i32> %x, <2 x i32> %y) {
 ; CHECK-LABEL: @ashr_lshr_splat_vec(
 ; CHECK-NEXT:    [[CMP12:%.*]] = ashr <2 x i32> [[X:%.*]], [[Y:%.*]]
@@ -608,7 +620,7 @@ define <2 x i8> @ashr_known_pos_exact_vec(<2 x i8> %x, <2 x i8> %y) {
 define i32 @lshr_mul_times_3_div_2(i32 %0) {
 ; CHECK-LABEL: @lshr_mul_times_3_div_2(
 ; CHECK-NEXT:    [[TMP2:%.*]] = lshr i32 [[TMP0:%.*]], 1
-; CHECK-NEXT:    [[LSHR:%.*]] = add nuw nsw i32 [[TMP2]], [[TMP0]]
+; CHECK-NEXT:    [[LSHR:%.*]] = add nuw nsw i32 [[TMP0]], [[TMP2]]
 ; CHECK-NEXT:    ret i32 [[LSHR]]
 ;
   %mul = mul nsw nuw i32 %0, 3
@@ -619,7 +631,7 @@ define i32 @lshr_mul_times_3_div_2(i32 %0) {
 define i32 @lshr_mul_times_3_div_2_exact(i32 %x) {
 ; CHECK-LABEL: @lshr_mul_times_3_div_2_exact(
 ; CHECK-NEXT:    [[TMP1:%.*]] = lshr exact i32 [[X:%.*]], 1
-; CHECK-NEXT:    [[LSHR:%.*]] = add nsw i32 [[TMP1]], [[X]]
+; CHECK-NEXT:    [[LSHR:%.*]] = add nsw i32 [[X]], [[TMP1]]
 ; CHECK-NEXT:    ret i32 [[LSHR]]
 ;
   %mul = mul nsw i32 %x, 3
@@ -658,7 +670,7 @@ define i32 @mul_times_3_div_2_multiuse_lshr(i32 %x) {
 define i32 @lshr_mul_times_3_div_2_exact_2(i32 %x) {
 ; CHECK-LABEL: @lshr_mul_times_3_div_2_exact_2(
 ; CHECK-NEXT:    [[TMP1:%.*]] = lshr exact i32 [[X:%.*]], 1
-; CHECK-NEXT:    [[LSHR:%.*]] = add nuw i32 [[TMP1]], [[X]]
+; CHECK-NEXT:    [[LSHR:%.*]] = add nuw i32 [[X]], [[TMP1]]
 ; CHECK-NEXT:    ret i32 [[LSHR]]
 ;
   %mul = mul nuw i32 %x, 3
@@ -669,7 +681,7 @@ define i32 @lshr_mul_times_3_div_2_exact_2(i32 %x) {
 define i32 @lshr_mul_times_5_div_4(i32 %0) {
 ; CHECK-LABEL: @lshr_mul_times_5_div_4(
 ; CHECK-NEXT:    [[TMP2:%.*]] = lshr i32 [[TMP0:%.*]], 2
-; CHECK-NEXT:    [[LSHR:%.*]] = add nuw nsw i32 [[TMP2]], [[TMP0]]
+; CHECK-NEXT:    [[LSHR:%.*]] = add nuw nsw i32 [[TMP0]], [[TMP2]]
 ; CHECK-NEXT:    ret i32 [[LSHR]]
 ;
   %mul = mul nsw nuw i32 %0, 5
@@ -680,7 +692,7 @@ define i32 @lshr_mul_times_5_div_4(i32 %0) {
 define i32 @lshr_mul_times_5_div_4_exact(i32 %x) {
 ; CHECK-LABEL: @lshr_mul_times_5_div_4_exact(
 ; CHECK-NEXT:    [[TMP1:%.*]] = lshr exact i32 [[X:%.*]], 2
-; CHECK-NEXT:    [[LSHR:%.*]] = add nsw i32 [[TMP1]], [[X]]
+; CHECK-NEXT:    [[LSHR:%.*]] = add nsw i32 [[X]], [[TMP1]]
 ; CHECK-NEXT:    ret i32 [[LSHR]]
 ;
   %mul = mul nsw i32 %x, 5
@@ -719,7 +731,7 @@ define i32 @mul_times_5_div_4_multiuse_lshr(i32 %x) {
 define i32 @lshr_mul_times_5_div_4_exact_2(i32 %x) {
 ; CHECK-LABEL: @lshr_mul_times_5_div_4_exact_2(
 ; CHECK-NEXT:    [[TMP1:%.*]] = lshr exact i32 [[X:%.*]], 2
-; CHECK-NEXT:    [[LSHR:%.*]] = add nuw i32 [[TMP1]], [[X]]
+; CHECK-NEXT:    [[LSHR:%.*]] = add nuw i32 [[X]], [[TMP1]]
 ; CHECK-NEXT:    ret i32 [[LSHR]]
 ;
   %mul = mul nuw i32 %x, 5
@@ -730,7 +742,7 @@ define i32 @lshr_mul_times_5_div_4_exact_2(i32 %x) {
 define i32 @ashr_mul_times_3_div_2(i32 %0) {
 ; CHECK-LABEL: @ashr_mul_times_3_div_2(
 ; CHECK-NEXT:    [[TMP2:%.*]] = ashr i32 [[TMP0:%.*]], 1
-; CHECK-NEXT:    [[ASHR:%.*]] = add nuw nsw i32 [[TMP2]], [[TMP0]]
+; CHECK-NEXT:    [[ASHR:%.*]] = add nuw nsw i32 [[TMP0]], [[TMP2]]
 ; CHECK-NEXT:    ret i32 [[ASHR]]
 ;
   %mul = mul nuw nsw i32 %0, 3
@@ -741,7 +753,7 @@ define i32 @ashr_mul_times_3_div_2(i32 %0) {
 define i32 @ashr_mul_times_3_div_2_exact(i32 %x) {
 ; CHECK-LABEL: @ashr_mul_times_3_div_2_exact(
 ; CHECK-NEXT:    [[TMP1:%.*]] = ashr exact i32 [[X:%.*]], 1
-; CHECK-NEXT:    [[ASHR:%.*]] = add nsw i32 [[TMP1]], [[X]]
+; CHECK-NEXT:    [[ASHR:%.*]] = add nsw i32 [[X]], [[TMP1]]
 ; CHECK-NEXT:    ret i32 [[ASHR]]
 ;
   %mul = mul nsw i32 %x, 3
@@ -793,7 +805,7 @@ define i32 @mul_times_3_div_2_multiuse_ashr(i32 %x) {
 define i32 @ashr_mul_times_3_div_2_exact_2(i32 %x) {
 ; CHECK-LABEL: @ashr_mul_times_3_div_2_exact_2(
 ; CHECK-NEXT:    [[TMP1:%.*]] = ashr exact i32 [[X:%.*]], 1
-; CHECK-NEXT:    [[ASHR:%.*]] = add nsw i32 [[TMP1]], [[X]]
+; CHECK-NEXT:    [[ASHR:%.*]] = add nsw i32 [[X]], [[TMP1]]
 ; CHECK-NEXT:    ret i32 [[ASHR]]
 ;
   %mul = mul nsw i32 %x, 3
@@ -804,7 +816,7 @@ define i32 @ashr_mul_times_3_div_2_exact_2(i32 %x) {
 define i32 @ashr_mul_times_5_div_4(i32 %0) {
 ; CHECK-LABEL: @ashr_mul_times_5_div_4(
 ; CHECK-NEXT:    [[TMP2:%.*]] = ashr i32 [[TMP0:%.*]], 2
-; CHECK-NEXT:    [[ASHR:%.*]] = add nuw nsw i32 [[TMP2]], [[TMP0]]
+; CHECK-NEXT:    [[ASHR:%.*]] = add nuw nsw i32 [[TMP0]], [[TMP2]]
 ; CHECK-NEXT:    ret i32 [[ASHR]]
 ;
   %mul = mul nuw nsw i32 %0, 5
@@ -815,7 +827,7 @@ define i32 @ashr_mul_times_5_div_4(i32 %0) {
 define i32 @ashr_mul_times_5_div_4_exact(i32 %x) {
 ; CHECK-LABEL: @ashr_mul_times_5_div_4_exact(
 ; CHECK-NEXT:    [[TMP1:%.*]] = ashr exact i32 [[X:%.*]], 2
-; CHECK-NEXT:    [[ASHR:%.*]] = add nsw i32 [[TMP1]], [[X]]
+; CHECK-NEXT:    [[ASHR:%.*]] = add nsw i32 [[X]], [[TMP1]]
 ; CHECK-NEXT:    ret i32 [[ASHR]]
 ;
   %mul = mul nsw i32 %x, 5
@@ -854,7 +866,7 @@ define i32 @mul_times_5_div_4_multiuse_ashr(i32 %x) {
 define i32 @ashr_mul_times_5_div_4_exact_2(i32 %x) {
 ; CHECK-LABEL: @ashr_mul_times_5_div_4_exact_2(
 ; CHECK-NEXT:    [[TMP1:%.*]] = ashr exact i32 [[X:%.*]], 2
-; CHECK-NEXT:    [[ASHR:%.*]] = add nsw i32 [[TMP1]], [[X]]
+; CHECK-NEXT:    [[ASHR:%.*]] = add nsw i32 [[X]], [[TMP1]]
 ; CHECK-NEXT:    ret i32 [[ASHR]]
 ;
   %mul = mul nsw i32 %x, 5

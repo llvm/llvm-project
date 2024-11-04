@@ -1056,8 +1056,9 @@ extern template class Integer<16>;
 extern template class Integer<32>;
 extern template class Integer<64>;
 using X87IntegerContainer =
-    Integer<80, true, 16, std::uint16_t, std::uint32_t, 128>;
-extern template class Integer<80, true, 16, std::uint16_t, std::uint32_t, 128>;
+    Integer<80, isHostLittleEndian, 16, std::uint16_t, std::uint32_t, 128>;
+extern template class Integer<80, isHostLittleEndian, 16, std::uint16_t,
+    std::uint32_t, 128>;
 extern template class Integer<128>;
 } // namespace Fortran::evaluate::value
 #endif // FORTRAN_EVALUATE_INTEGER_H_

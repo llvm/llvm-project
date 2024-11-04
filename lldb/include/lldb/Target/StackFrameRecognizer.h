@@ -17,6 +17,7 @@
 #include "lldb/lldb-private-forward.h"
 #include "lldb/lldb-public.h"
 
+#include <cstdint>
 #include <deque>
 #include <optional>
 #include <vector>
@@ -28,20 +29,23 @@ namespace lldb_private {
 /// This class provides extra information about a stack frame that was
 /// provided by a specific stack frame recognizer. Right now, this class only
 /// holds recognized arguments (via GetRecognizedArguments).
-
 class RecognizedStackFrame
     : public std::enable_shared_from_this<RecognizedStackFrame> {
 public:
+  virtual ~RecognizedStackFrame() = default;
+
   virtual lldb::ValueObjectListSP GetRecognizedArguments() {
     return m_arguments;
   }
   virtual lldb::ValueObjectSP GetExceptionObject() {
     return lldb::ValueObjectSP();
   }
-  virtual lldb::StackFrameSP GetMostRelevantFrame() { return nullptr; };
-  virtual ~RecognizedStackFrame() = default;
+  virtual lldb::StackFrameSP GetMostRelevantFrame() { return nullptr; }
 
   std::string GetStopDescription() { return m_stop_desc; }
+  /// Controls whether this frame should be filtered out when
+  /// displaying backtraces, for example.
+  virtual bool ShouldHide() { return false; }
 
 protected:
   lldb::ValueObjectListSP m_arguments;
@@ -53,7 +57,6 @@ protected:
 /// A base class for frame recognizers. Subclasses (actual frame recognizers)
 /// should implement RecognizeFrame to provide a RecognizedStackFrame for a
 /// given stack frame.
-
 class StackFrameRecognizer
     : public std::enable_shared_from_this<StackFrameRecognizer> {
 public:
@@ -73,10 +76,10 @@ public:
 /// Python implementation for frame recognizers. An instance of this class
 /// tracks a particular Python classobject, which will be asked to recognize
 /// stack frames.
-
 class ScriptedStackFrameRecognizer : public StackFrameRecognizer {
   lldb_private::ScriptInterpreter *m_interpreter;
   lldb_private::StructuredData::ObjectSP m_python_object_sp;
+
   std::string m_python_class;
 
 public:
@@ -123,8 +126,14 @@ public:
   lldb::StackFrameRecognizerSP GetRecognizerForFrame(lldb::StackFrameSP frame);
 
   lldb::RecognizedStackFrameSP RecognizeFrame(lldb::StackFrameSP frame);
+  /// Returns a number that changes whenever the list of recognizers
+  /// has been modified.
+  uint16_t GetGeneration() const { return m_generation; }
 
 private:
+  /// Increase the generation counter.
+  void BumpGeneration();
+
   struct RegisteredEntry {
     uint32_t recognizer_id;
     lldb::StackFrameRecognizerSP recognizer;
@@ -137,6 +146,7 @@ private:
   };
 
   std::deque<RegisteredEntry> m_recognizers;
+  uint16_t m_generation = 0;
 };
 
 /// \class ValueObjectRecognizerSynthesizedValue
@@ -144,7 +154,6 @@ private:
 /// ValueObject subclass that presents the passed ValueObject as a recognized
 /// value with the specified ValueType. Frame recognizers should return
 /// instances of this class as the returned objects in GetRecognizedArguments().
-
 class ValueObjectRecognizerSynthesizedValue : public ValueObject {
  public:
   static lldb::ValueObjectSP Create(ValueObject &parent, lldb::ValueType type) {

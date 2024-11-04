@@ -170,6 +170,9 @@ bool types::isAcceptedByFlang(ID Id) {
   case TY_LLVM_IR:
   case TY_LLVM_BC:
     return true;
+  case TY_PP_CUDA:
+  case TY_CUDA:
+    return true;
   }
 }
 

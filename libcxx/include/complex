@@ -421,7 +421,8 @@ public:
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR complex(float __re = 0.0f, float __im = 0.0f) : __re_(__re), __im_(__im) {}
 
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR complex(__from_builtin_tag, _Complex float __v)
+  template <class _Tag, __enable_if_t<_IsSame<_Tag, __from_builtin_tag>::value, int> = 0>
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR explicit complex(_Tag, _Complex float __v)
       : __re_(__real__ __v), __im_(__imag__ __v) {}
 
   _LIBCPP_HIDE_FROM_ABI explicit _LIBCPP_CONSTEXPR complex(const complex<double>& __c);
@@ -517,7 +518,8 @@ public:
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR complex(double __re = 0.0, double __im = 0.0) : __re_(__re), __im_(__im) {}
 
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR complex(__from_builtin_tag, _Complex double __v)
+  template <class _Tag, __enable_if_t<_IsSame<_Tag, __from_builtin_tag>::value, int> = 0>
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR explicit complex(_Tag, _Complex double __v)
       : __re_(__real__ __v), __im_(__imag__ __v) {}
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR complex(const complex<float>& __c);
@@ -617,7 +619,8 @@ public:
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR complex(long double __re = 0.0L, long double __im = 0.0L)
       : __re_(__re), __im_(__im) {}
 
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR complex(__from_builtin_tag, _Complex long double __v)
+  template <class _Tag, __enable_if_t<_IsSame<_Tag, __from_builtin_tag>::value, int> = 0>
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR explicit complex(_Tag, _Complex long double __v)
       : __re_(__real__ __v), __im_(__imag__ __v) {}
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR complex(const complex<float>& __c);

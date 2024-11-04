@@ -620,6 +620,11 @@ TEST_F(TokenAnnotatorTest, UnderstandsNonTemplateAngleBrackets) {
   EXPECT_TOKEN(Tokens[2], tok::less, TT_BinaryOperator);
   EXPECT_TOKEN(Tokens[8], tok::greater, TT_BinaryOperator);
 
+  Tokens = annotate("return checklower ? a < b : a > b;");
+  ASSERT_EQ(Tokens.size(), 12u) << Tokens;
+  EXPECT_TOKEN(Tokens[4], tok::less, TT_BinaryOperator);
+  EXPECT_TOKEN(Tokens[8], tok::greater, TT_BinaryOperator);
+
   Tokens = annotate("return A < B ^ A > B;");
   ASSERT_EQ(Tokens.size(), 10u) << Tokens;
   EXPECT_TOKEN(Tokens[2], tok::less, TT_BinaryOperator);
@@ -746,6 +751,12 @@ TEST_F(TokenAnnotatorTest, UnderstandsCasts) {
   EXPECT_TOKEN(Tokens[5], tok::star, TT_PointerOrReference);
   EXPECT_TOKEN(Tokens[9], tok::r_paren, TT_CastRParen);
   EXPECT_TOKEN(Tokens[10], tok::amp, TT_UnaryOperator);
+
+  Tokens = annotate("int result = ((int)a) - b;");
+  ASSERT_EQ(Tokens.size(), 13u) << Tokens;
+  EXPECT_TOKEN(Tokens[6], tok::r_paren, TT_CastRParen);
+  EXPECT_TOKEN(Tokens[8], tok::r_paren, TT_Unknown);
+  EXPECT_TOKEN(Tokens[9], tok::minus, TT_BinaryOperator);
 
   auto Style = getLLVMStyle();
   Style.TypeNames.push_back("Foo");
@@ -3358,6 +3369,15 @@ TEST_F(TokenAnnotatorTest, TypenameMacro) {
   EXPECT_TOKEN(Tokens[1], tok::l_paren, TT_TypeDeclarationParen);
   EXPECT_TOKEN(Tokens[5], tok::r_paren, TT_TypeDeclarationParen);
   EXPECT_TOKEN(Tokens[6], tok::l_brace, TT_Unknown);
+}
+
+TEST_F(TokenAnnotatorTest, GNULanguageStandard) {
+  auto Style = getGNUStyle();
+  EXPECT_EQ(Style.Standard, FormatStyle::LS_Latest);
+
+  auto Tokens = annotate("return 1 <=> 2;", Style);
+  ASSERT_EQ(Tokens.size(), 6u);
+  EXPECT_TOKEN(Tokens[2], tok::spaceship, TT_BinaryOperator);
 }
 
 } // namespace

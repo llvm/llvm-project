@@ -72,8 +72,7 @@ define void @select_v2i64(ptr %res, ptr %a0, ptr %a1) nounwind {
 ; CHECK-NEXT:    vld $vr0, $a1, 0
 ; CHECK-NEXT:    vld $vr1, $a2, 0
 ; CHECK-NEXT:    pcalau12i $a1, %pc_hi20(.LCPI4_0)
-; CHECK-NEXT:    addi.d $a1, $a1, %pc_lo12(.LCPI4_0)
-; CHECK-NEXT:    vld $vr2, $a1, 0
+; CHECK-NEXT:    vld $vr2, $a1, %pc_lo12(.LCPI4_0)
 ; CHECK-NEXT:    vbitsel.v $vr0, $vr1, $vr0, $vr2
 ; CHECK-NEXT:    vst $vr0, $a0, 0
 ; CHECK-NEXT:    ret

@@ -126,9 +126,13 @@ DefinedImportThunk::DefinedImportThunk(COFFLinkerContext &ctx, StringRef name,
 
 Defined *Undefined::getWeakAlias() {
   // A weak alias may be a weak alias to another symbol, so check recursively.
-  for (Symbol *a = weakAlias; a; a = cast<Undefined>(a)->weakAlias)
+  DenseSet<Symbol *> weakChain;
+  for (Symbol *a = weakAlias; a; a = cast<Undefined>(a)->weakAlias) {
     if (auto *d = dyn_cast<Defined>(a))
       return d;
+    if (!weakChain.insert(a).second)
+      break; // We have a cycle.
+  }
   return nullptr;
 }
 

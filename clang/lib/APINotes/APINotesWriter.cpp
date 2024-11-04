@@ -62,6 +62,13 @@ class APINotesWriter::Implementation {
       llvm::SmallVector<std::pair<VersionTuple, ObjCPropertyInfo>, 1>>
       ObjCProperties;
 
+  /// Information about C record fields.
+  ///
+  /// Indexed by the context ID and name ID.
+  llvm::DenseMap<SingleDeclTableKey,
+                 llvm::SmallVector<std::pair<VersionTuple, FieldInfo>, 1>>
+      Fields;
+
   /// Information about Objective-C methods.
   ///
   /// Indexed by the context ID, selector ID, and Boolean (stored as a char)
@@ -158,6 +165,7 @@ private:
   void writeObjCPropertyBlock(llvm::BitstreamWriter &Stream);
   void writeObjCMethodBlock(llvm::BitstreamWriter &Stream);
   void writeCXXMethodBlock(llvm::BitstreamWriter &Stream);
+  void writeFieldBlock(llvm::BitstreamWriter &Stream);
   void writeObjCSelectorBlock(llvm::BitstreamWriter &Stream);
   void writeGlobalVariableBlock(llvm::BitstreamWriter &Stream);
   void writeGlobalFunctionBlock(llvm::BitstreamWriter &Stream);
@@ -190,6 +198,7 @@ void APINotesWriter::Implementation::writeToStream(llvm::raw_ostream &OS) {
     writeObjCPropertyBlock(Stream);
     writeObjCMethodBlock(Stream);
     writeCXXMethodBlock(Stream);
+    writeFieldBlock(Stream);
     writeObjCSelectorBlock(Stream);
     writeGlobalVariableBlock(Stream);
     writeGlobalFunctionBlock(Stream);
@@ -859,6 +868,62 @@ void APINotesWriter::Implementation::writeCXXMethodBlock(
 }
 
 namespace {
+/// Used to serialize the on-disk C field table.
+class FieldTableInfo
+    : public VersionedTableInfo<FieldTableInfo, SingleDeclTableKey, FieldInfo> {
+public:
+  unsigned getKeyLength(key_type_ref) {
+    return sizeof(uint32_t) + sizeof(uint32_t);
+  }
+
+  void EmitKey(raw_ostream &OS, key_type_ref Key, unsigned) {
+    llvm::support::endian::Writer writer(OS, llvm::endianness::little);
+    writer.write<uint32_t>(Key.parentContextID);
+    writer.write<uint32_t>(Key.nameID);
+  }
+
+  hash_value_type ComputeHash(key_type_ref key) {
+    return static_cast<size_t>(key.hashValue());
+  }
+
+  unsigned getUnversionedInfoSize(const FieldInfo &FI) {
+    return getVariableInfoSize(FI);
+  }
+
+  void emitUnversionedInfo(raw_ostream &OS, const FieldInfo &FI) {
+    emitVariableInfo(OS, FI);
+  }
+};
+} // namespace
+
+void APINotesWriter::Implementation::writeFieldBlock(
+    llvm::BitstreamWriter &Stream) {
+  llvm::BCBlockRAII Scope(Stream, FIELD_BLOCK_ID, 3);
+
+  if (Fields.empty())
+    return;
+
+  {
+    llvm::SmallString<4096> HashTableBlob;
+    uint32_t Offset;
+    {
+      llvm::OnDiskChainedHashTableGenerator<FieldTableInfo> Generator;
+      for (auto &FD : Fields)
+        Generator.insert(FD.first, FD.second);
+
+      llvm::raw_svector_ostream BlobStream(HashTableBlob);
+      // Make sure that no bucket is at offset 0
+      llvm::support::endian::write<uint32_t>(BlobStream, 0,
+                                             llvm::endianness::little);
+      Offset = Generator.Emit(BlobStream);
+    }
+
+    field_block::FieldDataLayout FieldData(Stream);
+    FieldData.emit(Scratch, Offset, HashTableBlob);
+  }
+}
+
+namespace {
 /// Used to serialize the on-disk Objective-C selector table.
 class ObjCSelectorTableInfo {
 public:
@@ -1421,6 +1486,14 @@ void APINotesWriter::addCXXMethod(ContextID CtxID, llvm::StringRef Name,
   IdentifierID NameID = Implementation->getIdentifier(Name);
   SingleDeclTableKey Key(CtxID.Value, NameID);
   Implementation->CXXMethods[Key].push_back({SwiftVersion, Info});
+}
+
+void APINotesWriter::addField(ContextID CtxID, llvm::StringRef Name,
+                              const FieldInfo &Info,
+                              VersionTuple SwiftVersion) {
+  IdentifierID NameID = Implementation->getIdentifier(Name);
+  SingleDeclTableKey Key(CtxID.Value, NameID);
+  Implementation->Fields[Key].push_back({SwiftVersion, Info});
 }
 
 void APINotesWriter::addGlobalVariable(std::optional<Context> Ctx,

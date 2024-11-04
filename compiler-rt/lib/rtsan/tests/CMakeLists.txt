@@ -60,14 +60,13 @@ endif()
 foreach(arch ${RTSAN_TEST_ARCH})
   set(RtsanTestObjects)
 
-  # TODO: Re-enable once -fsanitize=realtime exists in clang driver
-  #generate_compiler_rt_tests(RtsanTestObjects
-  #  RtsanUnitTests "Rtsan-${arch}-Test" ${arch}
-  #  COMPILE_DEPS ${RTSAN_UNITTEST_HEADERS}
-  #  SOURCES ${RTSAN_INST_TEST_SOURCES} ${COMPILER_RT_GOOGLETEST_SOURCES}
-  #  DEPS rtsan
-  #  CFLAGS ${RTSAN_UNITTEST_CFLAGS} -fsanitize=realtime
-  #  LINK_FLAGS ${RTSAN_UNITTEST_LINK_FLAGS} -fsanitize=realtime)
+  generate_compiler_rt_tests(RtsanTestObjects
+    RtsanUnitTests "Rtsan-${arch}-Test" ${arch}
+    COMPILE_DEPS ${RTSAN_UNITTEST_HEADERS}
+    SOURCES ${RTSAN_INST_TEST_SOURCES} ${COMPILER_RT_GOOGLETEST_SOURCES}
+    DEPS rtsan
+    CFLAGS ${RTSAN_UNITTEST_CFLAGS} -fsanitize=realtime
+    LINK_FLAGS ${RTSAN_UNITTEST_LINK_FLAGS} -fsanitize=realtime)
 
   set(RTSAN_TEST_RUNTIME RTRtsanTest.${arch})
   if(APPLE)

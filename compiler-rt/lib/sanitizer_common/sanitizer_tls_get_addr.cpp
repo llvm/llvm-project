@@ -66,7 +66,7 @@ static DTLS::DTVBlock *DTLS_NextBlock(atomic_uintptr_t *cur) {
 }
 
 static DTLS::DTV *DTLS_Find(uptr id) {
-  VReport(2, "__tls_get_addr: DTLS_Find %p %zd\n", (void *)&dtls, id);
+  VReport(3, "__tls_get_addr: DTLS_Find %p %zd\n", (void *)&dtls, id);
   static constexpr uptr kPerBlock = ARRAY_SIZE(DTLS::DTVBlock::dtvs);
   DTLS::DTVBlock *cur = DTLS_NextBlock(&dtls.dtv_block);
   if (!cur)

@@ -1499,7 +1499,7 @@ v128_t test_v128_xor(v128_t a, v128_t b) {
 // CHECK-LABEL: @test_v128_andnot(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[NOT_I:%.*]] = xor <4 x i32> [[B:%.*]], <i32 -1, i32 -1, i32 -1, i32 -1>
-// CHECK-NEXT:    [[AND_I:%.*]] = and <4 x i32> [[NOT_I]], [[A:%.*]]
+// CHECK-NEXT:    [[AND_I:%.*]] = and <4 x i32> [[A:%.*]], [[NOT_I]]
 // CHECK-NEXT:    ret <4 x i32> [[AND_I]]
 //
 v128_t test_v128_andnot(v128_t a, v128_t b) {

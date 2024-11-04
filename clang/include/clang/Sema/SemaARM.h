@@ -13,15 +13,18 @@
 #ifndef LLVM_CLANG_SEMA_SEMAARM_H
 #define LLVM_CLANG_SEMA_SEMAARM_H
 
-#include "clang/AST/DeclBase.h"
-#include "clang/AST/Expr.h"
-#include "clang/Basic/TargetInfo.h"
+#include "clang/AST/ASTFwd.h"
 #include "clang/Sema/SemaBase.h"
-#include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringRef.h"
 #include <tuple>
+
+namespace llvm {
+template <typename T, unsigned N> class SmallVector;
+} // namespace llvm
 
 namespace clang {
 class ParsedAttr;
+class TargetInfo;
 
 class SemaARM : public SemaBase {
 public:
@@ -60,10 +63,10 @@ public:
                             unsigned ExpectedFieldNum, bool AllowName);
   bool BuiltinARMMemoryTaggingCall(unsigned BuiltinID, CallExpr *TheCall);
 
-  bool MveAliasValid(unsigned BuiltinID, StringRef AliasName);
-  bool CdeAliasValid(unsigned BuiltinID, StringRef AliasName);
-  bool SveAliasValid(unsigned BuiltinID, StringRef AliasName);
-  bool SmeAliasValid(unsigned BuiltinID, StringRef AliasName);
+  bool MveAliasValid(unsigned BuiltinID, llvm::StringRef AliasName);
+  bool CdeAliasValid(unsigned BuiltinID, llvm::StringRef AliasName);
+  bool SveAliasValid(unsigned BuiltinID, llvm::StringRef AliasName);
+  bool SmeAliasValid(unsigned BuiltinID, llvm::StringRef AliasName);
   void handleBuiltinAliasAttr(Decl *D, const ParsedAttr &AL);
   void handleNewAttr(Decl *D, const ParsedAttr &AL);
   void handleCmseNSEntryAttr(Decl *D, const ParsedAttr &AL);

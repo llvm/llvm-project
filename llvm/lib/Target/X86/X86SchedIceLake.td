@@ -1524,8 +1524,10 @@ def ICXWriteResGroup113 : SchedWriteRes<[ICXPort0,ICXPort49,ICXPort78,ICXPort015
   let ReleaseAtCycles = [1,8,8,2];
 }
 def: InstRW<[ICXWriteResGroup113], (instrs VPSCATTERDQZmr,
+                                           VPSCATTERQDZmr,
                                            VPSCATTERQQZmr,
                                            VSCATTERDPDZmr,
+                                           VSCATTERQPSZmr,
                                            VSCATTERQPDZmr)>;
 
 def ICXWriteResGroup114 : SchedWriteRes<[ICXPort0,ICXPort49,ICXPort5,ICXPort78,ICXPort0156]> {

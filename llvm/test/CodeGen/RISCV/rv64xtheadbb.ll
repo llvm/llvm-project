@@ -702,6 +702,22 @@ define i64 @zext_bf_i64(i64 %a) nounwind {
   ret i64 %and
 }
 
+define i64 @zext_bf2_i64(i64 %a) nounwind {
+; RV64I-LABEL: zext_bf2_i64:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    slli a0, a0, 48
+; RV64I-NEXT:    srli a0, a0, 49
+; RV64I-NEXT:    ret
+;
+; RV64XTHEADBB-LABEL: zext_bf2_i64:
+; RV64XTHEADBB:       # %bb.0:
+; RV64XTHEADBB-NEXT:    th.extu a0, a0, 15, 1
+; RV64XTHEADBB-NEXT:    ret
+  %t0 = and i64 %a, 65535
+  %result = lshr i64 %t0, 1
+  ret i64 %result
+}
+
 define i64 @zext_i64_srliw(i64 %a) nounwind {
 ; RV64I-LABEL: zext_i64_srliw:
 ; RV64I:       # %bb.0:

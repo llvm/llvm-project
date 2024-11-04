@@ -17,6 +17,7 @@
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/ConstantFolding.h"
 #include "llvm/Analysis/InstructionSimplify.h"
+#include "llvm/Analysis/Passes.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/ValueLattice.h"
 #include "llvm/Analysis/ValueTracking.h"
@@ -511,8 +512,8 @@ public:
 } // namespace llvm
 
 void LazyValueInfoImpl::solve() {
-  SmallVector<std::pair<BasicBlock *, Value *>, 8> StartingStack(
-      BlockValueStack.begin(), BlockValueStack.end());
+  SmallVector<std::pair<BasicBlock *, Value *>, 8> StartingStack =
+      BlockValueStack;
 
   unsigned processedCount = 0;
   while (!BlockValueStack.empty()) {

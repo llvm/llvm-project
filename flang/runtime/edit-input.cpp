@@ -507,18 +507,29 @@ static RT_API_ATTRS void RaiseFPExceptions(
 #define RAISE std::feraiseexcept
 #endif
 #endif // !defined(RT_DEVICE_COMPILATION)
+
+// Some environment (e.g. emscripten, musl) don't define FE_OVERFLOW as allowed
+// by c99 (but not c++11) :-/
+#if defined(FE_OVERFLOW) || defined(RT_DEVICE_COMPILATION)
   if (flags & decimal::ConversionResultFlags::Overflow) {
     RAISE(FE_OVERFLOW);
   }
+#endif
+#if defined(FE_UNDERFLOW) || defined(RT_DEVICE_COMPILATION)
   if (flags & decimal::ConversionResultFlags::Underflow) {
     RAISE(FE_UNDERFLOW);
   }
+#endif
+#if defined(FE_INEXACT) || defined(RT_DEVICE_COMPILATION)
   if (flags & decimal::ConversionResultFlags::Inexact) {
     RAISE(FE_INEXACT);
   }
+#endif
+#if defined(FE_INVALID) || defined(RT_DEVICE_COMPILATION)
   if (flags & decimal::ConversionResultFlags::Invalid) {
     RAISE(FE_INVALID);
   }
+#endif
 #undef RAISE
 }
 

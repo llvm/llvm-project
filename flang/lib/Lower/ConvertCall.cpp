@@ -372,7 +372,7 @@ std::pair<fir::ExtendedValue, bool> Fortran::lower::genCallOpAndResult(
       auto stackSaveSymbol = bldr->getSymbolRefAttr(stackSaveFn.getName());
       mlir::Value sp;
       fir::CallOp call = bldr->create<fir::CallOp>(
-          loc, stackSaveFn.getFunctionType().getResults(), stackSaveSymbol,
+          loc, stackSaveSymbol, stackSaveFn.getFunctionType().getResults(),
           mlir::ValueRange{});
       if (call.getNumResults() != 0)
         sp = call.getResult(0);
@@ -380,9 +380,9 @@ std::pair<fir::ExtendedValue, bool> Fortran::lower::genCallOpAndResult(
         auto stackRestoreFn = fir::factory::getLlvmStackRestore(*bldr);
         auto stackRestoreSymbol =
             bldr->getSymbolRefAttr(stackRestoreFn.getName());
-        bldr->create<fir::CallOp>(loc,
+        bldr->create<fir::CallOp>(loc, stackRestoreSymbol,
                                   stackRestoreFn.getFunctionType().getResults(),
-                                  stackRestoreSymbol, mlir::ValueRange{sp});
+                                  mlir::ValueRange{sp});
       });
     }
     mlir::Value temp =
@@ -640,11 +640,15 @@ std::pair<fir::ExtendedValue, bool> Fortran::lower::genCallOpAndResult(
     if (callNumResults != 0)
       callResult = dispatch.getResult(0);
   } else {
-    // Standard procedure call with fir.call.
-    auto call = builder.create<fir::CallOp>(loc, funcType.getResults(),
-                                            funcSymbolAttr, operands);
+    // TODO: gather other procedure attributes.
+    fir::FortranProcedureFlagsEnumAttr procAttrs;
     if (caller.characterize().IsBindC())
-      call.setIsBindC(true);
+      procAttrs = fir::FortranProcedureFlagsEnumAttr::get(
+          builder.getContext(), fir::FortranProcedureFlagsEnum::bind_c);
+
+    // Standard procedure call with fir.call.
+    auto call = builder.create<fir::CallOp>(
+        loc, funcType.getResults(), funcSymbolAttr, operands, procAttrs);
 
     callNumResults = call.getNumResults();
     if (callNumResults != 0)

@@ -22,22 +22,30 @@ func.func @float32_unary_scalar(%arg0: f32) {
   // CHECK: %[[ADDONE:.+]] = spirv.FAdd %[[ONE]], %{{.+}}
   // CHECK: spirv.GL.Log %[[ADDONE]]
   %5 = math.log1p %arg0 : f32
+  // CHECK: %[[LOG2_RECIPROCAL:.+]] = spirv.Constant 1.44269502 : f32
+  // CHECK: %[[LOG0:.+]] = spirv.GL.Log {{.+}}
+  // CHECK: spirv.FMul %[[LOG0]], %[[LOG2_RECIPROCAL]]
+  %6 = math.log2 %arg0 : f32
+  // CHECK: %[[LOG10_RECIPROCAL:.+]] = spirv.Constant 0.434294492 : f32
+  // CHECK: %[[LOG1:.+]] = spirv.GL.Log {{.+}}
+  // CHECK: spirv.FMul %[[LOG1]], %[[LOG10_RECIPROCAL]]
+  %7 = math.log10 %arg0 : f32
   // CHECK: spirv.GL.RoundEven %{{.*}}: f32
-  %6 = math.roundeven %arg0 : f32
+  %8 = math.roundeven %arg0 : f32
   // CHECK: spirv.GL.InverseSqrt %{{.*}}: f32
-  %7 = math.rsqrt %arg0 : f32
+  %9 = math.rsqrt %arg0 : f32
   // CHECK: spirv.GL.Sqrt %{{.*}}: f32
-  %8 = math.sqrt %arg0 : f32
+  %10 = math.sqrt %arg0 : f32
   // CHECK: spirv.GL.Tanh %{{.*}}: f32
-  %9 = math.tanh %arg0 : f32
+  %11 = math.tanh %arg0 : f32
   // CHECK: spirv.GL.Sin %{{.*}}: f32
-  %10 = math.sin %arg0 : f32
+  %12 = math.sin %arg0 : f32
   // CHECK: spirv.GL.FAbs %{{.*}}: f32
-  %11 = math.absf %arg0 : f32
+  %13 = math.absf %arg0 : f32
   // CHECK: spirv.GL.Ceil %{{.*}}: f32
-  %12 = math.ceil %arg0 : f32
+  %14 = math.ceil %arg0 : f32
   // CHECK: spirv.GL.Floor %{{.*}}: f32
-  %13 = math.floor %arg0 : f32
+  %15 = math.floor %arg0 : f32
   return
 }
 
@@ -59,16 +67,24 @@ func.func @float32_unary_vector(%arg0: vector<3xf32>) {
   // CHECK: %[[ADDONE:.+]] = spirv.FAdd %[[ONE]], %{{.+}}
   // CHECK: spirv.GL.Log %[[ADDONE]]
   %5 = math.log1p %arg0 : vector<3xf32>
+  // CHECK: %[[LOG2_RECIPROCAL:.+]] = spirv.Constant dense<1.44269502> : vector<3xf32>
+  // CHECK: %[[LOG0:.+]] = spirv.GL.Log {{.+}}
+  // CHECK: spirv.FMul %[[LOG0]], %[[LOG2_RECIPROCAL]]
+  %6 = math.log2 %arg0 : vector<3xf32>
+  // CHECK: %[[LOG10_RECIPROCAL:.+]] = spirv.Constant dense<0.434294492> : vector<3xf32>
+  // CHECK: %[[LOG1:.+]] = spirv.GL.Log {{.+}}
+  // CHECK: spirv.FMul %[[LOG1]], %[[LOG10_RECIPROCAL]]
+  %7 = math.log10 %arg0 : vector<3xf32>
   // CHECK: spirv.GL.RoundEven %{{.*}}: vector<3xf32>
-  %6 = math.roundeven %arg0 : vector<3xf32>
+  %8 = math.roundeven %arg0 : vector<3xf32>
   // CHECK: spirv.GL.InverseSqrt %{{.*}}: vector<3xf32>
-  %7 = math.rsqrt %arg0 : vector<3xf32>
+  %9 = math.rsqrt %arg0 : vector<3xf32>
   // CHECK: spirv.GL.Sqrt %{{.*}}: vector<3xf32>
-  %8 = math.sqrt %arg0 : vector<3xf32>
+  %10 = math.sqrt %arg0 : vector<3xf32>
   // CHECK: spirv.GL.Tanh %{{.*}}: vector<3xf32>
-  %9 = math.tanh %arg0 : vector<3xf32>
+  %11 = math.tanh %arg0 : vector<3xf32>
   // CHECK: spirv.GL.Sin %{{.*}}: vector<3xf32>
-  %10 = math.sin %arg0 : vector<3xf32>
+  %12 = math.sin %arg0 : vector<3xf32>
   return
 }
 

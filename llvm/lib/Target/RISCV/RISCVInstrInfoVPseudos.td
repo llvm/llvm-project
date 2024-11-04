@@ -92,8 +92,8 @@ def AVL : RegisterOperand<GPRNoX0> {
 def VLOp : ComplexPattern<XLenVT, 1, "selectVLOp">;
 
 def DecImm : SDNodeXForm<imm, [{
-  return CurDAG->getTargetConstant(N->getSExtValue() - 1, SDLoc(N),
-                                   N->getValueType(0));
+  return CurDAG->getSignedConstant(N->getSExtValue() - 1, SDLoc(N),
+                                   N->getValueType(0), /*isTarget=*/true);
 }]>;
 
 defvar TAIL_AGNOSTIC = 1;

@@ -491,3 +491,22 @@ class MiniDumpNewTestCase(TestBase):
         spec_dir_norm = os.path.normcase(module.GetFileSpec().GetDirectory())
         exe_dir_norm = os.path.normcase(exe_dir)
         self.assertEqual(spec_dir_norm, exe_dir_norm)
+
+    def test_minidump_memory64list(self):
+        """Test that lldb can read from the memory64list in a minidump."""
+        self.process_from_yaml("linux-x86_64_mem64.yaml")
+
+        region_count = 3
+        region_info_list = self.process.GetMemoryRegions()
+        self.assertEqual(region_info_list.GetSize(), region_count)
+
+        region = lldb.SBMemoryRegionInfo()
+        self.assertTrue(region_info_list.GetMemoryRegionAtIndex(0, region))
+        self.assertEqual(region.GetRegionBase(), 0x7FFF12A84030)
+        self.assertTrue(region.GetRegionEnd(), 0x7FFF12A84030 + 0x2FD0)
+        self.assertTrue(region_info_list.GetMemoryRegionAtIndex(1, region))
+        self.assertEqual(region.GetRegionBase(), 0x00007fff12a87000)
+        self.assertTrue(region.GetRegionEnd(), 0x00007fff12a87000 + 0x00000018)
+        self.assertTrue(region_info_list.GetMemoryRegionAtIndex(2, region))
+        self.assertEqual(region.GetRegionBase(), 0x00007fff12a87018)
+        self.assertTrue(region.GetRegionEnd(), 0x00007fff12a87018 + 0x00000400)

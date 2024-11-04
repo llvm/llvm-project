@@ -555,5 +555,12 @@ TEST(WalkAST, FriendDecl) {
   testWalk("void $explicit^foo();", "struct Bar { friend void ^foo(); };");
   testWalk("struct $explicit^Foo {};", "struct Bar { friend struct ^Foo; };");
 }
+
+TEST(WalkAST, OperatorNewDelete) {
+  testWalk("void* $ambiguous^operator new(decltype(sizeof(int)), void*);",
+           "struct Bar { void foo() { Bar b; ^new (&b) Bar; } };");
+  testWalk("struct A { static void $ambiguous^operator delete(void*); };",
+           "void foo() { A a; ^delete &a; }");
+}
 } // namespace
 } // namespace clang::include_cleaner

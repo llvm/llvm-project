@@ -4552,7 +4552,8 @@ extern int __kmpc_get_target_offload();
 typedef enum kmp_pause_status_t {
   kmp_not_paused = 0, // status is not paused, or, requesting resume
   kmp_soft_paused = 1, // status is soft-paused, or, requesting soft pause
-  kmp_hard_paused = 2 // status is hard-paused, or, requesting hard pause
+  kmp_hard_paused = 2, // status is hard-paused, or, requesting hard pause
+  kmp_stop_tool_paused = 3 // requesting stop_tool pause
 } kmp_pause_status_t;
 
 // This stores the pause state of the runtime
@@ -4731,6 +4732,8 @@ public:
       : f(nullptr) {
     open(filename, mode, env_var);
   }
+  kmp_safe_raii_file_t(const kmp_safe_raii_file_t &other) = delete;
+  kmp_safe_raii_file_t &operator=(const kmp_safe_raii_file_t &other) = delete;
   ~kmp_safe_raii_file_t() { close(); }
 
   /// Open filename using mode. This is automatically closed in the destructor.

@@ -239,6 +239,8 @@ snprintf       |check|
 vsprintf       |check|
 vsnprintf      |check|
 sscanf         |check|
+scanf          |check|
+fscanf         |check|
 putchar        |check|    |check|
 fclose         |check|    |check|
 fopen          |check|    |check|

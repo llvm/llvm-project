@@ -140,14 +140,12 @@ write_cmake_config("config") {
   if (current_os == "linux" || current_os == "android") {
     values += [
       "HAVE_FUTIMENS=1",
-      "HAVE_LINK_H=1",
       "HAVE_MALLINFO=1",
       "HAVE_STRUCT_STAT_ST_MTIM_TV_NSEC=1",
     ]
   } else {
     values += [
       "HAVE_FUTIMENS=",
-      "HAVE_LINK_H=",
       "HAVE_MALLINFO=",
       "HAVE_STRUCT_STAT_ST_MTIM_TV_NSEC=",
     ]

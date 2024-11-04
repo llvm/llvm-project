@@ -390,12 +390,6 @@ public:
   /// Transform zext(trunc(x)) to x.
   bool matchCombineZextTrunc(MachineInstr &MI, Register &Reg);
 
-  /// Transform [asz]ext([asz]ext(x)) to [asz]ext x.
-  bool matchCombineExtOfExt(MachineInstr &MI,
-                            std::tuple<Register, unsigned> &MatchInfo);
-  void applyCombineExtOfExt(MachineInstr &MI,
-                            std::tuple<Register, unsigned> &MatchInfo);
-
   /// Transform trunc (shl x, K) to shl (trunc x), K
   ///    if K < VT.getScalarSizeInBits().
   ///
@@ -902,6 +896,12 @@ public:
 
   // fold ((A-C1)+C2) -> (A+(C2-C1))
   bool matchFoldAMinusC1PlusC2(const MachineInstr &MI, BuildFnTy &MatchInfo);
+
+  bool matchExtOfExt(const MachineInstr &FirstMI, const MachineInstr &SecondMI,
+                     BuildFnTy &MatchInfo);
+
+  bool matchCastOfBuildVector(const MachineInstr &CastMI,
+                              const MachineInstr &BVMI, BuildFnTy &MatchInfo);
 
 private:
   /// Checks for legality of an indexed variant of \p LdSt.

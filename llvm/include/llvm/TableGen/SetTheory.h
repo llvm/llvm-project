@@ -76,7 +76,7 @@ public:
 
     /// apply - Apply this operator to Expr's arguments and insert the result
     /// in Elts.
-    virtual void apply(SetTheory&, DagInit *Expr, RecSet &Elts,
+    virtual void apply(SetTheory &, const DagInit *Expr, RecSet &Elts,
                        ArrayRef<SMLoc> Loc) = 0;
   };
 
@@ -89,13 +89,13 @@ public:
   public:
     virtual ~Expander() = default;
 
-    virtual void expand(SetTheory&, Record*, RecSet &Elts) = 0;
+    virtual void expand(SetTheory &, const Record *, RecSet &Elts) = 0;
   };
 
 private:
   // Map set defs to their fully expanded contents. This serves as a memoization
   // cache and it makes it possible to return const references on queries.
-  using ExpandMap = std::map<Record *, RecVec>;
+  using ExpandMap = std::map<const Record *, RecVec>;
   ExpandMap Expansions;
 
   // Known DAG operators by name.
@@ -125,7 +125,7 @@ public:
   void addOperator(StringRef Name, std::unique_ptr<Operator>);
 
   /// evaluate - Evaluate Expr and append the resulting set to Elts.
-  void evaluate(Init *Expr, RecSet &Elts, ArrayRef<SMLoc> Loc);
+  void evaluate(const Init *Expr, RecSet &Elts, ArrayRef<SMLoc> Loc);
 
   /// evaluate - Evaluate a sequence of Inits and append to Elts.
   template<typename Iter>
@@ -137,7 +137,7 @@ public:
   /// expand - Expand a record into a set of elements if possible.  Return a
   /// pointer to the expanded elements, or NULL if Set cannot be expanded
   /// further.
-  const RecVec *expand(Record *Set);
+  const RecVec *expand(const Record *Set);
 };
 
 } // end namespace llvm

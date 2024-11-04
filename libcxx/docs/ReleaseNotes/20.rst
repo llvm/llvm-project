@@ -38,7 +38,7 @@ What's New in Libc++ 20.0.0?
 Implemented Papers
 ------------------
 
-- TODO
+- P2985R0: A type trait for detecting virtual base classes (`Github <https://github.com/llvm/llvm-project/issues/105432>`__)
 
 
 Improvements and New Features
@@ -62,7 +62,7 @@ Deprecations and Removals
   ``_LIBCPP_ENABLE_REMOVED_WEEKDAY_RELATIONAL_OPERATORS`` macro that was used to re-enable this extension will be
   ignored in LLVM 20.
 
-- TODO: The ``_LIBCPP_ENABLE_REMOVED_ALLOCATOR_CONST`` macro will no longer have an effect.
+- The ``_LIBCPP_ENABLE_REMOVED_ALLOCATOR_CONST`` macro no longer has any effect. ``std::allocator<const T>`` is not supported as an extension anymore, please migrate any code that uses e.g. ``std::vector<const T>`` to be standards conforming.
 
 Upcoming Deprecations and Removals
 ----------------------------------

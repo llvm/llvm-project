@@ -33,24 +33,23 @@ cl::opt<bool> EmitLongStrLiterals(
     cl::Hidden, cl::init(true));
 } // end namespace llvm
 
-namespace {
+static cl::OptionCategory PrintEnumsCat("Options for -print-enums");
+static cl::opt<std::string> Class("class",
+                                  cl::desc("Print Enum list for this class"),
+                                  cl::value_desc("class name"),
+                                  cl::cat(PrintEnumsCat));
 
-cl::OptionCategory PrintEnumsCat("Options for -print-enums");
-cl::opt<std::string> Class("class", cl::desc("Print Enum list for this class"),
-                           cl::value_desc("class name"),
-                           cl::cat(PrintEnumsCat));
-
-void PrintRecords(RecordKeeper &Records, raw_ostream &OS) {
+static void PrintRecords(RecordKeeper &Records, raw_ostream &OS) {
   OS << Records; // No argument, dump all contents
 }
 
-void PrintEnums(RecordKeeper &Records, raw_ostream &OS) {
+static void PrintEnums(RecordKeeper &Records, raw_ostream &OS) {
   for (Record *Rec : Records.getAllDerivedDefinitions(Class))
     OS << Rec->getName() << ", ";
   OS << "\n";
 }
 
-void PrintSets(RecordKeeper &Records, raw_ostream &OS) {
+static void PrintSets(RecordKeeper &Records, raw_ostream &OS) {
   SetTheory Sets;
   Sets.addFieldExpander("Set", "Elements");
   for (Record *Rec : Records.getAllDerivedDefinitions("Set")) {
@@ -63,7 +62,7 @@ void PrintSets(RecordKeeper &Records, raw_ostream &OS) {
   }
 }
 
-TableGen::Emitter::Opt X[] = {
+static TableGen::Emitter::Opt X[] = {
     {"print-records", PrintRecords, "Print all records to stdout (default)",
      true},
     {"print-detailed-records", EmitDetailedRecords,
@@ -74,8 +73,6 @@ TableGen::Emitter::Opt X[] = {
     {"print-enums", PrintEnums, "Print enum values for a class"},
     {"print-sets", PrintSets, "Print expanded sets for testing DAG exprs"},
 };
-
-} // namespace
 
 int main(int argc, char **argv) {
   InitLLVM X(argc, argv);

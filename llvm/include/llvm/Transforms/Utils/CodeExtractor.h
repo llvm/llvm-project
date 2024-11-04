@@ -199,7 +199,8 @@ public:
     /// sets, before extraction occurs. These modifications won't have any
     /// significant impact on the cost however.
     void findInputsOutputs(ValueSet &Inputs, ValueSet &Outputs,
-                           const ValueSet &Allocas) const;
+                           const ValueSet &Allocas,
+                           bool CollectGlobalInputs = false) const;
 
     /// Check if life time marker nodes can be hoisted/sunk into the outline
     /// region.

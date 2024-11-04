@@ -129,6 +129,7 @@ __all__ = [
     "Float8E5M2Type",
     "FloatAttr",
     "FloatTF32Type",
+    "FloatType",
     "FunctionType",
     "IndexType",
     "InferShapedTypeOpInterface",

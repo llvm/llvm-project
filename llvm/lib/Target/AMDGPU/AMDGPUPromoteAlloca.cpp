@@ -1195,14 +1195,10 @@ bool AMDGPUPromoteAllocaImpl::collectUsesWithPtrTypes(
       WorkList.push_back(ICmp);
     }
 
-    if (UseInst->getOpcode() == Instruction::AddrSpaceCast) {
-      // Give up if the pointer may be captured.
-      if (PointerMayBeCaptured(UseInst, true, true))
-        return false;
-      // Don't collect the users of this.
-      WorkList.push_back(User);
-      continue;
-    }
+    // TODO: If we know the address is only observed through flat pointers, we
+    // could still promote.
+    if (UseInst->getOpcode() == Instruction::AddrSpaceCast)
+      return false;
 
     // Do not promote vector/aggregate type instructions. It is hard to track
     // their users.

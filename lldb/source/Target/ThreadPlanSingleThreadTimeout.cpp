@@ -29,10 +29,10 @@ ThreadPlanSingleThreadTimeout::ThreadPlanSingleThreadTimeout(
     : ThreadPlan(ThreadPlan::eKindSingleThreadTimeout, "Single thread timeout",
                  thread, eVoteNo, eVoteNoOpinion),
       m_info(info), m_state(State::WaitTimeout) {
-  // TODO: reuse m_timer_thread without recreation.
-  m_timer_thread = std::thread(TimeoutThreadFunc, this);
   m_info->m_isAlive = true;
   m_state = m_info->m_last_state;
+  // TODO: reuse m_timer_thread without recreation.
+  m_timer_thread = std::thread(TimeoutThreadFunc, this);
 }
 
 ThreadPlanSingleThreadTimeout::~ThreadPlanSingleThreadTimeout() {

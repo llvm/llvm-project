@@ -28,7 +28,7 @@ int main(void) {
 // NDEBG: main
 // DEBUG:  main {{.*}}free_wrong_ptr_kind.c:22
 //
-// CHECK: Last allocation of size 8:
+// CHECK: Last allocation of size 8 -> device pointer
 // CHECK:  dataAlloc
 // CHECK:  llvm_omp_target_alloc_host
 // NDEBG:  main

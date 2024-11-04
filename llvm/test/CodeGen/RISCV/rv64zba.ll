@@ -1555,16 +1555,14 @@ define zeroext i32 @sext_ashr_zext_i8(i8 %a) nounwind {
 ; RV64I-LABEL: sext_ashr_zext_i8:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    slli a0, a0, 56
-; RV64I-NEXT:    srai a0, a0, 56
-; RV64I-NEXT:    slli a0, a0, 23
+; RV64I-NEXT:    srai a0, a0, 31
 ; RV64I-NEXT:    srli a0, a0, 32
 ; RV64I-NEXT:    ret
 ;
 ; RV64ZBANOZBB-LABEL: sext_ashr_zext_i8:
 ; RV64ZBANOZBB:       # %bb.0:
 ; RV64ZBANOZBB-NEXT:    slli a0, a0, 56
-; RV64ZBANOZBB-NEXT:    srai a0, a0, 56
-; RV64ZBANOZBB-NEXT:    slli a0, a0, 23
+; RV64ZBANOZBB-NEXT:    srai a0, a0, 31
 ; RV64ZBANOZBB-NEXT:    srli a0, a0, 32
 ; RV64ZBANOZBB-NEXT:    ret
 ;
@@ -1674,16 +1672,14 @@ define zeroext i32 @sext_ashr_zext_i16(i16 %a) nounwind {
 ; RV64I-LABEL: sext_ashr_zext_i16:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    slli a0, a0, 48
-; RV64I-NEXT:    srai a0, a0, 48
-; RV64I-NEXT:    slli a0, a0, 23
+; RV64I-NEXT:    srai a0, a0, 25
 ; RV64I-NEXT:    srli a0, a0, 32
 ; RV64I-NEXT:    ret
 ;
 ; RV64ZBANOZBB-LABEL: sext_ashr_zext_i16:
 ; RV64ZBANOZBB:       # %bb.0:
 ; RV64ZBANOZBB-NEXT:    slli a0, a0, 48
-; RV64ZBANOZBB-NEXT:    srai a0, a0, 48
-; RV64ZBANOZBB-NEXT:    slli a0, a0, 23
+; RV64ZBANOZBB-NEXT:    srai a0, a0, 25
 ; RV64ZBANOZBB-NEXT:    srli a0, a0, 32
 ; RV64ZBANOZBB-NEXT:    ret
 ;
@@ -2991,4 +2987,70 @@ entry:
   %1 = lshr i64 %0, 15
   %2 = and i64 %1, 34359738360
   ret i64 %2
+}
+
+define ptr @srai_srli_sh3add(ptr %0, i64 %1) nounwind {
+; RV64I-LABEL: srai_srli_sh3add:
+; RV64I:       # %bb.0: # %entry
+; RV64I-NEXT:    srai a1, a1, 32
+; RV64I-NEXT:    srli a1, a1, 6
+; RV64I-NEXT:    slli a1, a1, 3
+; RV64I-NEXT:    add a0, a0, a1
+; RV64I-NEXT:    ret
+;
+; RV64ZBA-LABEL: srai_srli_sh3add:
+; RV64ZBA:       # %bb.0: # %entry
+; RV64ZBA-NEXT:    srai a1, a1, 32
+; RV64ZBA-NEXT:    srli a1, a1, 6
+; RV64ZBA-NEXT:    sh3add a0, a1, a0
+; RV64ZBA-NEXT:    ret
+entry:
+  %2 = ashr i64 %1, 32
+  %3 = lshr i64 %2, 6
+  %4 = getelementptr i64, ptr %0, i64 %3
+  ret ptr %4
+}
+
+define ptr @srai_srli_slli(ptr %0, i64 %1) nounwind {
+; CHECK-LABEL: srai_srli_slli:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    srai a1, a1, 32
+; CHECK-NEXT:    srli a1, a1, 6
+; CHECK-NEXT:    slli a1, a1, 4
+; CHECK-NEXT:    add a0, a0, a1
+; CHECK-NEXT:    ret
+entry:
+  %2 = ashr i64 %1, 32
+  %3 = lshr i64 %2, 6
+  %4 = getelementptr i128, ptr %0, i64 %3
+  ret ptr %4
+}
+
+; Negative to make sure the peephole added for srai_srli_slli and
+; srai_srli_sh3add doesn't break this.
+define i64 @srai_andi(i64 %x) nounwind {
+; CHECK-LABEL: srai_andi:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    srai a0, a0, 8
+; CHECK-NEXT:    andi a0, a0, -8
+; CHECK-NEXT:    ret
+entry:
+  %y = ashr i64 %x, 8
+  %z = and i64 %y, -8
+  ret i64 %z
+}
+
+; Negative to make sure the peephole added for srai_srli_slli and
+; srai_srli_sh3add doesn't break this.
+define i64 @srai_lui_and(i64 %x) nounwind {
+; CHECK-LABEL: srai_lui_and:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    srai a0, a0, 8
+; CHECK-NEXT:    lui a1, 1048574
+; CHECK-NEXT:    and a0, a0, a1
+; CHECK-NEXT:    ret
+entry:
+  %y = ashr i64 %x, 8
+  %z = and i64 %y, -8192
+  ret i64 %z
 }

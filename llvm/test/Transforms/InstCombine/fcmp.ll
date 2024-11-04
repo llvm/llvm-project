@@ -1439,7 +1439,7 @@ define i1 @fcmp_fadd_neg_zero(float %x, float %y) {
 
 define i1 @fcmp_fadd_zero_switched(float %x, float %y) {
 ; CHECK-LABEL: @fcmp_fadd_zero_switched(
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp ult float [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp ugt float [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %add = fadd float %y, 0.000000e+00

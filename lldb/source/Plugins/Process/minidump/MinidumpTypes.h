@@ -62,9 +62,6 @@ Status consumeObject(llvm::ArrayRef<uint8_t> &Buffer, const T *&Object) {
 struct MinidumpMemoryDescriptor64 {
   llvm::support::ulittle64_t start_of_memory_range;
   llvm::support::ulittle64_t data_size;
-
-  static std::pair<llvm::ArrayRef<MinidumpMemoryDescriptor64>, uint64_t>
-  ParseMemory64List(llvm::ArrayRef<uint8_t> &data);
 };
 static_assert(sizeof(MinidumpMemoryDescriptor64) == 16,
               "sizeof MinidumpMemoryDescriptor64 is not correct!");

@@ -1,16 +1,12 @@
-//===- DXILPrettyPrinter.cpp - DXIL Resource helper objects ---------------===//
+//===- DXILPrettyPrinter.cpp - Print resources for textual DXIL -----------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-///
-/// \file This file contains a pass for pretty printing DXIL metadata into IR
-/// comments when printing assembly output.
-///
-//===----------------------------------------------------------------------===//
 
+#include "DXILPrettyPrinter.h"
 #include "DXILResourceAnalysis.h"
 #include "DirectX.h"
 #include "llvm/ADT/StringRef.h"
@@ -20,18 +16,30 @@
 
 using namespace llvm;
 
+static void prettyPrintResources(raw_ostream &OS,
+                                 const dxil::Resources &MDResources) {
+  MDResources.print(OS);
+}
+
+PreservedAnalyses DXILPrettyPrinterPass::run(Module &M,
+                                             ModuleAnalysisManager &MAM) {
+  const dxil::Resources &MDResources = MAM.getResult<DXILResourceMDAnalysis>(M);
+  prettyPrintResources(OS, MDResources);
+  return PreservedAnalyses::all();
+}
+
 namespace {
-class DXILPrettyPrinter : public llvm::ModulePass {
+class DXILPrettyPrinterLegacy : public llvm::ModulePass {
   raw_ostream &OS; // raw_ostream to print to.
 
 public:
   static char ID;
-  DXILPrettyPrinter() : ModulePass(ID), OS(dbgs()) {
-    initializeDXILPrettyPrinterPass(*PassRegistry::getPassRegistry());
+  DXILPrettyPrinterLegacy() : ModulePass(ID), OS(dbgs()) {
+    initializeDXILPrettyPrinterLegacyPass(*PassRegistry::getPassRegistry());
   }
 
-  explicit DXILPrettyPrinter(raw_ostream &O) : ModulePass(ID), OS(O) {
-    initializeDXILPrettyPrinterPass(*PassRegistry::getPassRegistry());
+  explicit DXILPrettyPrinterLegacy(raw_ostream &O) : ModulePass(ID), OS(O) {
+    initializeDXILPrettyPrinterLegacyPass(*PassRegistry::getPassRegistry());
   }
 
   StringRef getPassName() const override {
@@ -46,19 +54,19 @@ public:
 };
 } // namespace
 
-char DXILPrettyPrinter::ID = 0;
-INITIALIZE_PASS_BEGIN(DXILPrettyPrinter, "dxil-pretty-printer",
+char DXILPrettyPrinterLegacy::ID = 0;
+INITIALIZE_PASS_BEGIN(DXILPrettyPrinterLegacy, "dxil-pretty-printer",
                       "DXIL Metadata Pretty Printer", true, true)
 INITIALIZE_PASS_DEPENDENCY(DXILResourceMDWrapper)
-INITIALIZE_PASS_END(DXILPrettyPrinter, "dxil-pretty-printer",
+INITIALIZE_PASS_END(DXILPrettyPrinterLegacy, "dxil-pretty-printer",
                     "DXIL Metadata Pretty Printer", true, true)
 
-bool DXILPrettyPrinter::runOnModule(Module &M) {
+bool DXILPrettyPrinterLegacy::runOnModule(Module &M) {
   dxil::Resources &Res = getAnalysis<DXILResourceMDWrapper>().getDXILResource();
   Res.print(OS);
   return false;
 }
 
-ModulePass *llvm::createDXILPrettyPrinterPass(raw_ostream &OS) {
-  return new DXILPrettyPrinter(OS);
+ModulePass *llvm::createDXILPrettyPrinterLegacyPass(raw_ostream &OS) {
+  return new DXILPrettyPrinterLegacy(OS);
 }

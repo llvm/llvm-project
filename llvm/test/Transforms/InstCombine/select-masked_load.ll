@@ -92,7 +92,7 @@ define <4 x i32> @masked_load_and_zero_inactive_7(ptr %ptr, <4 x i1> %mask1, <4 
 define <4 x float> @masked_load_and_zero_inactive_8(ptr %ptr, <4 x i1> %inv_mask, <4 x i1> %cond) {
 ; CHECK-LABEL: @masked_load_and_zero_inactive_8(
 ; CHECK-NEXT:    [[MASK:%.*]] = xor <4 x i1> [[INV_MASK:%.*]], <i1 true, i1 true, i1 true, i1 true>
-; CHECK-NEXT:    [[PG:%.*]] = and <4 x i1> [[MASK]], [[COND:%.*]]
+; CHECK-NEXT:    [[PG:%.*]] = and <4 x i1> [[COND:%.*]], [[MASK]]
 ; CHECK-NEXT:    [[LOAD:%.*]] = call <4 x float> @llvm.masked.load.v4f32.p0(ptr [[PTR:%.*]], i32 4, <4 x i1> [[PG]], <4 x float> zeroinitializer)
 ; CHECK-NEXT:    ret <4 x float> [[LOAD]]
 ;

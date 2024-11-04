@@ -608,7 +608,7 @@ void AMDGPUMCCodeEmitter::getMachineOpValueT16(
         AMDGPU::getNamedOperandIdx(MI.getOpcode(), AMDGPU::OpName::vdst);
     if (VDstMOIdx != -1) {
       auto DstReg = MI.getOperand(VDstMOIdx).getReg();
-      if (AMDGPU::isHi(DstReg, MRI))
+      if (AMDGPU::isHi16Reg(DstReg, MRI))
         Op |= SISrcMods::DST_OP_SEL;
     }
   } else if ((int)OpNo == AMDGPU::getNamedOperandIdx(
@@ -626,7 +626,7 @@ void AMDGPUMCCodeEmitter::getMachineOpValueT16(
   auto SrcReg = SrcMO.getReg();
   if (AMDGPU::isSGPR(SrcReg, &MRI))
     return;
-  if (AMDGPU::isHi(SrcReg, MRI))
+  if (AMDGPU::isHi16Reg(SrcReg, MRI))
     Op |= SISrcMods::OP_SEL_0;
 }
 
@@ -637,7 +637,7 @@ void AMDGPUMCCodeEmitter::getMachineOpValueT16Lo128(
   if (MO.isReg()) {
     uint16_t Encoding = MRI.getEncodingValue(MO.getReg());
     unsigned RegIdx = Encoding & AMDGPU::HWEncoding::REG_IDX_MASK;
-    bool IsHi = Encoding & AMDGPU::HWEncoding::IS_HI;
+    bool IsHi = Encoding & AMDGPU::HWEncoding::IS_HI16;
     bool IsVGPR = Encoding & AMDGPU::HWEncoding::IS_VGPR;
     assert((!IsVGPR || isUInt<7>(RegIdx)) && "VGPR0-VGPR127 expected!");
     Op = (IsVGPR ? 0x100 : 0) | (IsHi ? 0x80 : 0) | RegIdx;

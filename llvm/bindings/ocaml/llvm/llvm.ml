@@ -296,6 +296,10 @@ module AtomicRMWBinOp = struct
   | UMin
   | FAdd
   | FSub
+  | FMax
+  | FMin
+  | UInc_Wrap
+  | UDec_Wrap
 end
 
 module ValueKind = struct

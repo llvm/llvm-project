@@ -2344,132 +2344,258 @@ std::optional<unsigned> AArch64InstrInfo::getUnscaledLdSt(unsigned Opc) {
 unsigned AArch64InstrInfo::getLoadStoreImmIdx(unsigned Opc) {
   switch (Opc) {
   default:
+    llvm_unreachable("Unhandled Opcode in getLoadStoreImmIdx");
+  case AArch64::ADDG:
+  case AArch64::LDAPURBi:
+  case AArch64::LDAPURHi:
+  case AArch64::LDAPURi:
+  case AArch64::LDAPURSBWi:
+  case AArch64::LDAPURSBXi:
+  case AArch64::LDAPURSHWi:
+  case AArch64::LDAPURSHXi:
+  case AArch64::LDAPURSWi:
+  case AArch64::LDAPURXi:
+  case AArch64::LDR_PPXI:
+  case AArch64::LDR_PXI:
+  case AArch64::LDR_ZXI:
+  case AArch64::LDR_ZZXI:
+  case AArch64::LDR_ZZZXI:
+  case AArch64::LDR_ZZZZXI:
+  case AArch64::LDRBBui:
+  case AArch64::LDRBui:
+  case AArch64::LDRDui:
+  case AArch64::LDRHHui:
+  case AArch64::LDRHui:
+  case AArch64::LDRQui:
+  case AArch64::LDRSBWui:
+  case AArch64::LDRSBXui:
+  case AArch64::LDRSHWui:
+  case AArch64::LDRSHXui:
+  case AArch64::LDRSui:
+  case AArch64::LDRSWui:
+  case AArch64::LDRWui:
+  case AArch64::LDRXui:
+  case AArch64::LDURBBi:
+  case AArch64::LDURBi:
+  case AArch64::LDURDi:
+  case AArch64::LDURHHi:
+  case AArch64::LDURHi:
+  case AArch64::LDURQi:
+  case AArch64::LDURSBWi:
+  case AArch64::LDURSBXi:
+  case AArch64::LDURSHWi:
+  case AArch64::LDURSHXi:
+  case AArch64::LDURSi:
+  case AArch64::LDURSWi:
+  case AArch64::LDURWi:
+  case AArch64::LDURXi:
+  case AArch64::PRFMui:
+  case AArch64::PRFUMi:
+  case AArch64::ST2Gi:
+  case AArch64::STGi:
+  case AArch64::STLURBi:
+  case AArch64::STLURHi:
+  case AArch64::STLURWi:
+  case AArch64::STLURXi:
+  case AArch64::StoreSwiftAsyncContext:
+  case AArch64::STR_PPXI:
+  case AArch64::STR_PXI:
+  case AArch64::STR_ZXI:
+  case AArch64::STR_ZZXI:
+  case AArch64::STR_ZZZXI:
+  case AArch64::STR_ZZZZXI:
+  case AArch64::STRBBui:
+  case AArch64::STRBui:
+  case AArch64::STRDui:
+  case AArch64::STRHHui:
+  case AArch64::STRHui:
+  case AArch64::STRQui:
+  case AArch64::STRSui:
+  case AArch64::STRWui:
+  case AArch64::STRXui:
+  case AArch64::STURBBi:
+  case AArch64::STURBi:
+  case AArch64::STURDi:
+  case AArch64::STURHHi:
+  case AArch64::STURHi:
+  case AArch64::STURQi:
+  case AArch64::STURSi:
+  case AArch64::STURWi:
+  case AArch64::STURXi:
+  case AArch64::STZ2Gi:
+  case AArch64::STZGi:
+  case AArch64::TAGPstack:
     return 2;
-  case AArch64::LDPXi:
-  case AArch64::LDPDi:
-  case AArch64::STPXi:
-  case AArch64::STPDi:
-  case AArch64::LDNPXi:
-  case AArch64::LDNPDi:
-  case AArch64::STNPXi:
-  case AArch64::STNPDi:
-  case AArch64::LDPQi:
-  case AArch64::STPQi:
-  case AArch64::LDNPQi:
-  case AArch64::STNPQi:
-  case AArch64::LDPWi:
-  case AArch64::LDPSi:
-  case AArch64::STPWi:
-  case AArch64::STPSi:
-  case AArch64::LDNPWi:
-  case AArch64::LDNPSi:
-  case AArch64::STNPWi:
-  case AArch64::STNPSi:
-  case AArch64::LDG:
-  case AArch64::STGPi:
-
-  case AArch64::LD1B_IMM:
-  case AArch64::LD1B_H_IMM:
-  case AArch64::LD1B_S_IMM:
   case AArch64::LD1B_D_IMM:
-  case AArch64::LD1SB_H_IMM:
-  case AArch64::LD1SB_S_IMM:
-  case AArch64::LD1SB_D_IMM:
+  case AArch64::LD1B_H_IMM:
+  case AArch64::LD1B_IMM:
+  case AArch64::LD1B_S_IMM:
+  case AArch64::LD1D_IMM:
+  case AArch64::LD1H_D_IMM:
   case AArch64::LD1H_IMM:
   case AArch64::LD1H_S_IMM:
-  case AArch64::LD1H_D_IMM:
-  case AArch64::LD1SH_S_IMM:
-  case AArch64::LD1SH_D_IMM:
-  case AArch64::LD1W_IMM:
-  case AArch64::LD1W_D_IMM:
-  case AArch64::LD1SW_D_IMM:
-  case AArch64::LD1D_IMM:
-
-  case AArch64::LD2B_IMM:
-  case AArch64::LD2H_IMM:
-  case AArch64::LD2W_IMM:
-  case AArch64::LD2D_IMM:
-  case AArch64::LD3B_IMM:
-  case AArch64::LD3H_IMM:
-  case AArch64::LD3W_IMM:
-  case AArch64::LD3D_IMM:
-  case AArch64::LD4B_IMM:
-  case AArch64::LD4H_IMM:
-  case AArch64::LD4W_IMM:
-  case AArch64::LD4D_IMM:
-
-  case AArch64::ST1B_IMM:
-  case AArch64::ST1B_H_IMM:
-  case AArch64::ST1B_S_IMM:
-  case AArch64::ST1B_D_IMM:
-  case AArch64::ST1H_IMM:
-  case AArch64::ST1H_S_IMM:
-  case AArch64::ST1H_D_IMM:
-  case AArch64::ST1W_IMM:
-  case AArch64::ST1W_D_IMM:
-  case AArch64::ST1D_IMM:
-
-  case AArch64::ST2B_IMM:
-  case AArch64::ST2H_IMM:
-  case AArch64::ST2W_IMM:
-  case AArch64::ST2D_IMM:
-  case AArch64::ST3B_IMM:
-  case AArch64::ST3H_IMM:
-  case AArch64::ST3W_IMM:
-  case AArch64::ST3D_IMM:
-  case AArch64::ST4B_IMM:
-  case AArch64::ST4H_IMM:
-  case AArch64::ST4W_IMM:
-  case AArch64::ST4D_IMM:
-
-  case AArch64::LD1RB_IMM:
-  case AArch64::LD1RB_H_IMM:
-  case AArch64::LD1RB_S_IMM:
   case AArch64::LD1RB_D_IMM:
-  case AArch64::LD1RSB_H_IMM:
-  case AArch64::LD1RSB_S_IMM:
-  case AArch64::LD1RSB_D_IMM:
+  case AArch64::LD1RB_H_IMM:
+  case AArch64::LD1RB_IMM:
+  case AArch64::LD1RB_S_IMM:
+  case AArch64::LD1RD_IMM:
+  case AArch64::LD1RH_D_IMM:
   case AArch64::LD1RH_IMM:
   case AArch64::LD1RH_S_IMM:
-  case AArch64::LD1RH_D_IMM:
-  case AArch64::LD1RSH_S_IMM:
+  case AArch64::LD1RSB_D_IMM:
+  case AArch64::LD1RSB_H_IMM:
+  case AArch64::LD1RSB_S_IMM:
   case AArch64::LD1RSH_D_IMM:
-  case AArch64::LD1RW_IMM:
-  case AArch64::LD1RW_D_IMM:
+  case AArch64::LD1RSH_S_IMM:
   case AArch64::LD1RSW_IMM:
-  case AArch64::LD1RD_IMM:
-
-  case AArch64::LDNT1B_ZRI:
-  case AArch64::LDNT1H_ZRI:
-  case AArch64::LDNT1W_ZRI:
-  case AArch64::LDNT1D_ZRI:
-  case AArch64::STNT1B_ZRI:
-  case AArch64::STNT1H_ZRI:
-  case AArch64::STNT1W_ZRI:
-  case AArch64::STNT1D_ZRI:
-
-  case AArch64::LDNF1B_IMM:
-  case AArch64::LDNF1B_H_IMM:
-  case AArch64::LDNF1B_S_IMM:
+  case AArch64::LD1RW_D_IMM:
+  case AArch64::LD1RW_IMM:
+  case AArch64::LD1SB_D_IMM:
+  case AArch64::LD1SB_H_IMM:
+  case AArch64::LD1SB_S_IMM:
+  case AArch64::LD1SH_D_IMM:
+  case AArch64::LD1SH_S_IMM:
+  case AArch64::LD1SW_D_IMM:
+  case AArch64::LD1W_D_IMM:
+  case AArch64::LD1W_IMM:
+  case AArch64::LD2B_IMM:
+  case AArch64::LD2D_IMM:
+  case AArch64::LD2H_IMM:
+  case AArch64::LD2W_IMM:
+  case AArch64::LD3B_IMM:
+  case AArch64::LD3D_IMM:
+  case AArch64::LD3H_IMM:
+  case AArch64::LD3W_IMM:
+  case AArch64::LD4B_IMM:
+  case AArch64::LD4D_IMM:
+  case AArch64::LD4H_IMM:
+  case AArch64::LD4W_IMM:
+  case AArch64::LDG:
   case AArch64::LDNF1B_D_IMM:
-  case AArch64::LDNF1SB_H_IMM:
-  case AArch64::LDNF1SB_S_IMM:
-  case AArch64::LDNF1SB_D_IMM:
+  case AArch64::LDNF1B_H_IMM:
+  case AArch64::LDNF1B_IMM:
+  case AArch64::LDNF1B_S_IMM:
+  case AArch64::LDNF1D_IMM:
+  case AArch64::LDNF1H_D_IMM:
   case AArch64::LDNF1H_IMM:
   case AArch64::LDNF1H_S_IMM:
-  case AArch64::LDNF1H_D_IMM:
-  case AArch64::LDNF1SH_S_IMM:
+  case AArch64::LDNF1SB_D_IMM:
+  case AArch64::LDNF1SB_H_IMM:
+  case AArch64::LDNF1SB_S_IMM:
   case AArch64::LDNF1SH_D_IMM:
-  case AArch64::LDNF1W_IMM:
-  case AArch64::LDNF1W_D_IMM:
+  case AArch64::LDNF1SH_S_IMM:
   case AArch64::LDNF1SW_D_IMM:
-  case AArch64::LDNF1D_IMM:
+  case AArch64::LDNF1W_D_IMM:
+  case AArch64::LDNF1W_IMM:
+  case AArch64::LDNPDi:
+  case AArch64::LDNPQi:
+  case AArch64::LDNPSi:
+  case AArch64::LDNPWi:
+  case AArch64::LDNPXi:
+  case AArch64::LDNT1B_ZRI:
+  case AArch64::LDNT1D_ZRI:
+  case AArch64::LDNT1H_ZRI:
+  case AArch64::LDNT1W_ZRI:
+  case AArch64::LDPDi:
+  case AArch64::LDPQi:
+  case AArch64::LDPSi:
+  case AArch64::LDPWi:
+  case AArch64::LDPXi:
+  case AArch64::LDRBBpost:
+  case AArch64::LDRBBpre:
+  case AArch64::LDRBpost:
+  case AArch64::LDRBpre:
+  case AArch64::LDRDpost:
+  case AArch64::LDRDpre:
+  case AArch64::LDRHHpost:
+  case AArch64::LDRHHpre:
+  case AArch64::LDRHpost:
+  case AArch64::LDRHpre:
+  case AArch64::LDRQpost:
+  case AArch64::LDRQpre:
+  case AArch64::LDRSpost:
+  case AArch64::LDRSpre:
+  case AArch64::LDRWpost:
+  case AArch64::LDRWpre:
+  case AArch64::LDRXpost:
+  case AArch64::LDRXpre:
+  case AArch64::ST1B_D_IMM:
+  case AArch64::ST1B_H_IMM:
+  case AArch64::ST1B_IMM:
+  case AArch64::ST1B_S_IMM:
+  case AArch64::ST1D_IMM:
+  case AArch64::ST1H_D_IMM:
+  case AArch64::ST1H_IMM:
+  case AArch64::ST1H_S_IMM:
+  case AArch64::ST1W_D_IMM:
+  case AArch64::ST1W_IMM:
+  case AArch64::ST2B_IMM:
+  case AArch64::ST2D_IMM:
+  case AArch64::ST2H_IMM:
+  case AArch64::ST2W_IMM:
+  case AArch64::ST3B_IMM:
+  case AArch64::ST3D_IMM:
+  case AArch64::ST3H_IMM:
+  case AArch64::ST3W_IMM:
+  case AArch64::ST4B_IMM:
+  case AArch64::ST4D_IMM:
+  case AArch64::ST4H_IMM:
+  case AArch64::ST4W_IMM:
+  case AArch64::STGPi:
+  case AArch64::STNPDi:
+  case AArch64::STNPQi:
+  case AArch64::STNPSi:
+  case AArch64::STNPWi:
+  case AArch64::STNPXi:
+  case AArch64::STNT1B_ZRI:
+  case AArch64::STNT1D_ZRI:
+  case AArch64::STNT1H_ZRI:
+  case AArch64::STNT1W_ZRI:
+  case AArch64::STPDi:
+  case AArch64::STPQi:
+  case AArch64::STPSi:
+  case AArch64::STPWi:
+  case AArch64::STPXi:
+  case AArch64::STRBBpost:
+  case AArch64::STRBBpre:
+  case AArch64::STRBpost:
+  case AArch64::STRBpre:
+  case AArch64::STRDpost:
+  case AArch64::STRDpre:
+  case AArch64::STRHHpost:
+  case AArch64::STRHHpre:
+  case AArch64::STRHpost:
+  case AArch64::STRHpre:
+  case AArch64::STRQpost:
+  case AArch64::STRQpre:
+  case AArch64::STRSpost:
+  case AArch64::STRSpre:
+  case AArch64::STRWpost:
+  case AArch64::STRWpre:
+  case AArch64::STRXpost:
+  case AArch64::STRXpre:
     return 3;
-  case AArch64::ADDG:
-  case AArch64::STGi:
-  case AArch64::LDR_PXI:
-  case AArch64::STR_PXI:
-    return 2;
+  case AArch64::LDPDpost:
+  case AArch64::LDPDpre:
+  case AArch64::LDPQpost:
+  case AArch64::LDPQpre:
+  case AArch64::LDPSpost:
+  case AArch64::LDPSpre:
+  case AArch64::LDPWpost:
+  case AArch64::LDPWpre:
+  case AArch64::LDPXpost:
+  case AArch64::LDPXpre:
+  case AArch64::STPDpost:
+  case AArch64::STPDpre:
+  case AArch64::STPQpost:
+  case AArch64::STPQpre:
+  case AArch64::STPSpost:
+  case AArch64::STPSpre:
+  case AArch64::STPWpost:
+  case AArch64::STPWpre:
+  case AArch64::STPXpost:
+  case AArch64::STPXpre:
+    return 4;
   }
 }
 
@@ -3834,19 +3960,55 @@ bool AArch64InstrInfo::getMemOpInfo(unsigned Opcode, TypeSize &Scale,
     MinOffset = -256;
     MaxOffset = 255;
     break;
-  case AArch64::STRXpre:
-  case AArch64::STRDpre:
-  case AArch64::LDRXpost:
   case AArch64::LDRDpost:
+  case AArch64::LDRDpre:
+  case AArch64::LDRXpost:
+  case AArch64::LDRXpre:
+  case AArch64::STRDpost:
+  case AArch64::STRDpre:
+  case AArch64::STRXpost:
+  case AArch64::STRXpre:
     Scale = TypeSize::getFixed(1);
     Width = TypeSize::getFixed(8);
     MinOffset = -256;
     MaxOffset = 255;
     break;
   case AArch64::STRWpost:
+  case AArch64::STRWpre:
   case AArch64::LDRWpost:
+  case AArch64::LDRWpre:
+  case AArch64::STRSpost:
+  case AArch64::STRSpre:
+  case AArch64::LDRSpost:
+  case AArch64::LDRSpre:
     Scale = TypeSize::getFixed(1);
     Width = TypeSize::getFixed(4);
+    MinOffset = -256;
+    MaxOffset = 255;
+    break;
+  case AArch64::LDRHpost:
+  case AArch64::LDRHpre:
+  case AArch64::STRHpost:
+  case AArch64::STRHpre:
+  case AArch64::LDRHHpost:
+  case AArch64::LDRHHpre:
+  case AArch64::STRHHpost:
+  case AArch64::STRHHpre:
+    Scale = TypeSize::getFixed(1);
+    Width = TypeSize::getFixed(2);
+    MinOffset = -256;
+    MaxOffset = 255;
+    break;
+  case AArch64::LDRBpost:
+  case AArch64::LDRBpre:
+  case AArch64::STRBpost:
+  case AArch64::STRBpre:
+  case AArch64::LDRBBpost:
+  case AArch64::LDRBBpre:
+  case AArch64::STRBBpost:
+  case AArch64::STRBBpre:
+    Scale = TypeSize::getFixed(1);
+    Width = TypeSize::getFixed(1);
     MinOffset = -256;
     MaxOffset = 255;
     break;
@@ -3918,8 +4080,10 @@ bool AArch64InstrInfo::getMemOpInfo(unsigned Opcode, TypeSize &Scale,
   case AArch64::LDNPQi:
   case AArch64::STPQi:
   case AArch64::STNPQi:
-  case AArch64::STPQpre:
   case AArch64::LDPQpost:
+  case AArch64::LDPQpre:
+  case AArch64::STPQpost:
+  case AArch64::STPQpre:
     Scale = TypeSize::getFixed(16);
     Width = TypeSize::getFixed(16 * 2);
     MinOffset = -64;
@@ -3933,10 +4097,14 @@ bool AArch64InstrInfo::getMemOpInfo(unsigned Opcode, TypeSize &Scale,
   case AArch64::STPDi:
   case AArch64::STNPXi:
   case AArch64::STNPDi:
-  case AArch64::STPXpre:
-  case AArch64::LDPXpost:
-  case AArch64::STPDpre:
   case AArch64::LDPDpost:
+  case AArch64::LDPDpre:
+  case AArch64::LDPXpost:
+  case AArch64::LDPXpre:
+  case AArch64::STPDpost:
+  case AArch64::STPDpre:
+  case AArch64::STPXpost:
+  case AArch64::STPXpre:
     Scale = TypeSize::getFixed(8);
     Width = TypeSize::getFixed(8 * 2);
     MinOffset = -64;
@@ -3950,6 +4118,14 @@ bool AArch64InstrInfo::getMemOpInfo(unsigned Opcode, TypeSize &Scale,
   case AArch64::STPSi:
   case AArch64::STNPWi:
   case AArch64::STNPSi:
+  case AArch64::LDPSpost:
+  case AArch64::LDPSpre:
+  case AArch64::LDPWpost:
+  case AArch64::LDPWpre:
+  case AArch64::STPSpost:
+  case AArch64::STPSpre:
+  case AArch64::STPWpost:
+  case AArch64::STPWpre:
     Scale = TypeSize::getFixed(4);
     Width = TypeSize::getFixed(4 * 2);
     MinOffset = -64;
@@ -4340,6 +4516,16 @@ AArch64InstrInfo::getLdStOffsetOp(const MachineInstr &MI) {
   return MI.getOperand(Idx);
 }
 
+const MachineOperand &
+AArch64InstrInfo::getLdStAmountOp(const MachineInstr &MI) {
+  switch (MI.getOpcode()) {
+  default:
+    llvm_unreachable("Unexpected opcode");
+  case AArch64::LDRBBroX:
+    return MI.getOperand(4);
+  }
+}
+
 static const TargetRegisterClass *getRegClass(const MachineInstr &MI,
                                               Register Reg) {
   if (MI.getParent() == nullptr)
@@ -4592,7 +4778,7 @@ bool AArch64InstrInfo::shouldClusterMemOps(
 }
 
 static const MachineInstrBuilder &AddSubReg(const MachineInstrBuilder &MIB,
-                                            unsigned Reg, unsigned SubIdx,
+                                            MCRegister Reg, unsigned SubIdx,
                                             unsigned State,
                                             const TargetRegisterInfo *TRI) {
   if (!SubIdx)
@@ -4639,8 +4825,8 @@ void AArch64InstrInfo::copyPhysRegTuple(MachineBasicBlock &MBB,
 
 void AArch64InstrInfo::copyGPRRegTuple(MachineBasicBlock &MBB,
                                        MachineBasicBlock::iterator I,
-                                       DebugLoc DL, unsigned DestReg,
-                                       unsigned SrcReg, bool KillSrc,
+                                       const DebugLoc &DL, MCRegister DestReg,
+                                       MCRegister SrcReg, bool KillSrc,
                                        unsigned Opcode, unsigned ZeroReg,
                                        llvm::ArrayRef<unsigned> Indices) const {
   const TargetRegisterInfo *TRI = &getRegisterInfo();
@@ -8875,8 +9061,8 @@ AArch64InstrInfo::getOutliningCandidateInfo(
     // link register.
     outliner::Candidate &FirstCand = RepeatedSequenceLocs[0];
     bool ModStackToSaveLR = false;
-    if (std::any_of(FirstCand.begin(), std::prev(FirstCand.end()),
-                    [](const MachineInstr &MI) { return MI.isCall(); }))
+    if (any_of(drop_end(FirstCand),
+               [](const MachineInstr &MI) { return MI.isCall(); }))
       ModStackToSaveLR = true;
 
     // Handle the last instruction separately. If this is a tail call, then the
@@ -10248,6 +10434,28 @@ AArch64InstrInfo::analyzeLoopForPipelining(MachineBasicBlock *LoopBB) const {
   return std::make_unique<AArch64PipelinerLoopInfo>(
       LoopBB, CondBranch, Comp, CompCounterOprNum, Update, UpdateCounterOprNum,
       Init, IsUpdatePriorComp, Cond);
+}
+
+/// verifyInstruction - Perform target specific instruction verification.
+bool AArch64InstrInfo::verifyInstruction(const MachineInstr &MI,
+                                         StringRef &ErrInfo) const {
+
+  // Verify that immediate offsets on load/store instructions are within range.
+  // Stack objects with an FI operand are excluded as they can be fixed up
+  // during PEI.
+  TypeSize Scale(0U, false), Width(0U, false);
+  int64_t MinOffset, MaxOffset;
+  if (getMemOpInfo(MI.getOpcode(), Scale, Width, MinOffset, MaxOffset)) {
+    unsigned ImmIdx = getLoadStoreImmIdx(MI.getOpcode());
+    if (MI.getOperand(ImmIdx).isImm() && !MI.getOperand(ImmIdx - 1).isFI()) {
+      int64_t Imm = MI.getOperand(ImmIdx).getImm();
+      if (Imm < MinOffset || Imm > MaxOffset) {
+        ErrInfo = "Unexpected immediate on load/store instruction";
+        return false;
+      }
+    }
+  }
+  return true;
 }
 
 #define GET_INSTRINFO_HELPERS

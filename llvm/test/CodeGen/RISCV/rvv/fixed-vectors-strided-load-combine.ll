@@ -32,9 +32,8 @@ define void @widen_3xv4i16(ptr %x, ptr %z) {
 ; CHECK-NEXT:    vle16.v v10, (a0)
 ; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
 ; CHECK-NEXT:    vslideup.vi v8, v9, 4
-; CHECK-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
-; CHECK-NEXT:    vslideup.vi v8, v10, 8
 ; CHECK-NEXT:    vsetivli zero, 12, e16, m2, ta, ma
+; CHECK-NEXT:    vslideup.vi v8, v10, 8
 ; CHECK-NEXT:    vse16.v v8, (a1)
 ; CHECK-NEXT:    ret
   %a = load <4 x i16>, ptr %x

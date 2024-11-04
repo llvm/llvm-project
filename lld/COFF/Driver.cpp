@@ -1317,6 +1317,72 @@ void LinkerDriver::convertResources() {
   f->includeResourceChunks();
 }
 
+void LinkerDriver::maybeCreateECExportThunk(StringRef name, Symbol *&sym) {
+  Defined *def;
+  if (!sym)
+    return;
+  if (auto undef = dyn_cast<Undefined>(sym))
+    def = undef->getWeakAlias();
+  else
+    def = dyn_cast<Defined>(sym);
+  if (!def)
+    return;
+
+  if (def->getChunk()->getArm64ECRangeType() != chpe_range_type::Arm64EC)
+    return;
+  StringRef expName;
+  if (auto mangledName = getArm64ECMangledFunctionName(name))
+    expName = saver().save("EXP+" + *mangledName);
+  else
+    expName = saver().save("EXP+" + name);
+  sym = addUndefined(expName);
+  if (auto undef = dyn_cast<Undefined>(sym)) {
+    if (!undef->getWeakAlias()) {
+      auto thunk = make<ECExportThunkChunk>(def);
+      replaceSymbol<DefinedSynthetic>(undef, undef->getName(), thunk);
+    }
+  }
+}
+
+void LinkerDriver::createECExportThunks() {
+  // Check if EXP+ symbols have corresponding $hp_target symbols and use them
+  // to create export thunks when available.
+  for (Symbol *s : ctx.symtab.expSymbols) {
+    if (!s->isUsedInRegularObj)
+      continue;
+    assert(s->getName().starts_with("EXP+"));
+    std::string targetName =
+        (s->getName().substr(strlen("EXP+")) + "$hp_target").str();
+    Symbol *sym = ctx.symtab.find(targetName);
+    if (!sym)
+      continue;
+    Defined *targetSym;
+    if (auto undef = dyn_cast<Undefined>(sym))
+      targetSym = undef->getWeakAlias();
+    else
+      targetSym = dyn_cast<Defined>(sym);
+    if (!targetSym)
+      continue;
+
+    auto *undef = dyn_cast<Undefined>(s);
+    if (undef && !undef->getWeakAlias()) {
+      auto thunk = make<ECExportThunkChunk>(targetSym);
+      replaceSymbol<DefinedSynthetic>(undef, undef->getName(), thunk);
+    }
+    if (!targetSym->isGCRoot) {
+      targetSym->isGCRoot = true;
+      ctx.config.gcroot.push_back(targetSym);
+    }
+  }
+
+  if (ctx.config.entry)
+    maybeCreateECExportThunk(ctx.config.entry->getName(), ctx.config.entry);
+  for (Export &e : ctx.config.exports) {
+    if (!e.data)
+      maybeCreateECExportThunk(e.extName.empty() ? e.name : e.extName, e.sym);
+  }
+}
+
 // In MinGW, if no symbols are chosen to be exported, then all symbols are
 // automatically exported by default. This behavior can be forced by the
 // -export-all-symbols option, so that it happens even when exports are
@@ -2374,8 +2440,12 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   if (isArm64EC(config->machine)) {
     ctx.symtab.addAbsolute("__arm64x_extra_rfe_table", 0);
     ctx.symtab.addAbsolute("__arm64x_extra_rfe_table_size", 0);
+    ctx.symtab.addAbsolute("__arm64x_redirection_metadata", 0);
+    ctx.symtab.addAbsolute("__arm64x_redirection_metadata_count", 0);
     ctx.symtab.addAbsolute("__hybrid_code_map", 0);
     ctx.symtab.addAbsolute("__hybrid_code_map_count", 0);
+    ctx.symtab.addAbsolute("__x64_code_ranges_to_entry_points", 0);
+    ctx.symtab.addAbsolute("__x64_code_ranges_to_entry_points_count", 0);
   }
 
   if (config->pseudoRelocs) {
@@ -2519,6 +2589,9 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   // Apply symbol renames for -wrap.
   if (!wrapped.empty())
     wrapSymbols(ctx, wrapped);
+
+  if (isArm64EC(config->machine))
+    createECExportThunks();
 
   // Resolve remaining undefined symbols and warn about imported locals.
   ctx.symtab.resolveRemainingUndefines();

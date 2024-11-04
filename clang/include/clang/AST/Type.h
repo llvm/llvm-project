@@ -1929,6 +1929,11 @@ protected:
     unsigned Kind : NumOfBuiltinTypeBits;
   };
 
+public:
+  static constexpr int FunctionTypeNumParamsWidth = 16;
+  static constexpr int FunctionTypeNumParamsLimit = (1 << 16) - 1;
+
+protected:
   /// FunctionTypeBitfields store various bits belonging to FunctionProtoType.
   /// Only common bits are stored here. Additional uncommon bits are stored
   /// in a trailing object after FunctionProtoType.
@@ -1966,7 +1971,7 @@ protected:
     /// According to [implimits] 8 bits should be enough here but this is
     /// somewhat easy to exceed with metaprogramming and so we would like to
     /// keep NumParams as wide as reasonably possible.
-    unsigned NumParams : 16;
+    unsigned NumParams : FunctionTypeNumParamsWidth;
 
     /// The type of exception specification this function has.
     LLVM_PREFERRED_TYPE(ExceptionSpecificationType)

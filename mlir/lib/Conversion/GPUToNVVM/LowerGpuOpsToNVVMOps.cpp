@@ -102,6 +102,10 @@ struct GPUSubgroupReduceOpLowering
 
   matchAndRewrite(gpu::SubgroupReduceOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
+    if (op.getClusterSize())
+      return rewriter.notifyMatchFailure(
+          op, "lowering for clustered reduce not implemented");
+
     if (!op.getUniform())
       return rewriter.notifyMatchFailure(
           op, "cannot be lowered to redux as the op must be run "
