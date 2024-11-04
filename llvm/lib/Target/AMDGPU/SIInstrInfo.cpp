@@ -4159,7 +4159,8 @@ bool SIInstrInfo::hasUnwantedEffectsWhenEXECEmpty(const MachineInstr &MI) const 
   if (Opcode == AMDGPU::V_READFIRSTLANE_B32 ||
       Opcode == AMDGPU::V_READLANE_B32 || Opcode == AMDGPU::V_WRITELANE_B32 ||
       Opcode == AMDGPU::SI_RESTORE_S32_FROM_VGPR ||
-      Opcode == AMDGPU::SI_SPILL_S32_TO_VGPR)
+      Opcode == AMDGPU::SI_SPILL_S32_TO_VGPR ||
+      Opcode == AMDGPU::SI_READANYLANE)
     return true;
 
   return false;
@@ -9619,6 +9620,7 @@ SIInstrInfo::getInstructionUniformity(const MachineInstr &MI) const {
   unsigned opcode = MI.getOpcode();
   if (opcode == AMDGPU::V_READLANE_B32 ||
       opcode == AMDGPU::V_READFIRSTLANE_B32 ||
+      opcode == AMDGPU::SI_READANYLANE ||
       opcode == AMDGPU::SI_RESTORE_S32_FROM_VGPR)
     return InstructionUniformity::AlwaysUniform;
 

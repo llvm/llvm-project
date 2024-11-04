@@ -5475,6 +5475,7 @@ bool AMDGPULegalizerInfo::legalizeLaneOp(LegalizerHelper &Helper,
     auto LaneOp = B.buildIntrinsic(IID, {VT}).addUse(Src0);
     switch (IID) {
     case Intrinsic::amdgcn_readfirstlane:
+    case Intrinsic::amdgcn_readanylane:
     case Intrinsic::amdgcn_permlane64:
       return LaneOp.getReg(0);
     case Intrinsic::amdgcn_readlane:
@@ -7561,6 +7562,7 @@ bool AMDGPULegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
   case Intrinsic::amdgcn_readlane:
   case Intrinsic::amdgcn_writelane:
   case Intrinsic::amdgcn_readfirstlane:
+  case Intrinsic::amdgcn_readanylane:
   case Intrinsic::amdgcn_permlane16:
   case Intrinsic::amdgcn_permlanex16:
   case Intrinsic::amdgcn_permlane64:

@@ -546,6 +546,10 @@ def SI_MASKED_UNREACHABLE : SPseudoInstSI <(outs), (ins),
   let maybeAtomic = 0;
 }
 
+def SI_READANYLANE : SPseudoInstSI <(outs SReg_32:$dst), (ins VGPR_32:$src)> {
+  let SALU = 1;
+}
+
 // Used as an isel pseudo to directly emit initialization with an
 // s_mov_b32 rather than a copy of another initialized
 // register. MachineCSE skips copies, and we don't want to have to
@@ -3501,6 +3505,11 @@ def : GCNPat<
 // the ignored src1.
 def : GCNPat<
   (i32 (int_amdgcn_readfirstlane (i32 imm:$src))),
+  (S_MOV_B32 SReg_32:$src)
+>;
+
+def : GCNPat<
+  (i32 (int_amdgcn_readanylane (i32 imm:$src))),
   (S_MOV_B32 SReg_32:$src)
 >;
 

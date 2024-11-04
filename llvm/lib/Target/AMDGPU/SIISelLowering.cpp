@@ -6186,6 +6186,7 @@ static SDValue lowerLaneOp(const SITargetLowering &TLI, SDNode *N,
       Operands.push_back(Src1);
       [[fallthrough]];
     case Intrinsic::amdgcn_readfirstlane:
+    case Intrinsic::amdgcn_readanylane:
     case Intrinsic::amdgcn_permlane64:
       Operands.push_back(Src0);
       break;
@@ -8837,6 +8838,7 @@ SDValue SITargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
     return lowerADDRSPACECAST(Op, DAG);
   case Intrinsic::amdgcn_readlane:
   case Intrinsic::amdgcn_readfirstlane:
+  case Intrinsic::amdgcn_readanylane:
   case Intrinsic::amdgcn_writelane:
   case Intrinsic::amdgcn_permlane16:
   case Intrinsic::amdgcn_permlanex16:

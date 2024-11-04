@@ -25,6 +25,7 @@
 #include "llvm/CodeGen/GlobalISel/MIPatternMatch.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
+#include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 #include <optional>
@@ -97,9 +98,11 @@ bool AMDGPUInstructionSelector::isVCC(Register Reg,
 
 bool AMDGPUInstructionSelector::constrainCopyLikeIntrin(MachineInstr &MI,
                                                         unsigned NewOpc) const {
+  const bool NeedExec = NewOpc != AMDGPU::SI_READANYLANE;
   MI.setDesc(TII.get(NewOpc));
   MI.removeOperand(1); // Remove intrinsic ID.
-  MI.addOperand(*MF, MachineOperand::CreateReg(AMDGPU::EXEC, false, true));
+  if (NeedExec)
+    MI.addOperand(*MF, MachineOperand::CreateReg(AMDGPU::EXEC, false, true));
 
   MachineOperand &Dst = MI.getOperand(0);
   MachineOperand &Src = MI.getOperand(1);
@@ -112,7 +115,7 @@ bool AMDGPUInstructionSelector::constrainCopyLikeIntrin(MachineInstr &MI,
     = TRI.getConstrainedRegClassForOperand(Dst, *MRI);
   const TargetRegisterClass *SrcRC
     = TRI.getConstrainedRegClassForOperand(Src, *MRI);
-  if (!DstRC || DstRC != SrcRC)
+  if (!DstRC || (NeedExec && DstRC != SrcRC))
     return false;
 
   return RBI.constrainGenericRegister(Dst.getReg(), *DstRC, *MRI) &&
@@ -1061,6 +1064,8 @@ bool AMDGPUInstructionSelector::selectG_INTRINSIC(MachineInstr &I) const {
     return constrainCopyLikeIntrin(I, AMDGPU::STRICT_WQM);
   case Intrinsic::amdgcn_writelane:
     return selectWritelane(I);
+  case Intrinsic::amdgcn_readanylane:
+    return constrainCopyLikeIntrin(I, AMDGPU::SI_READANYLANE);
   case Intrinsic::amdgcn_div_scale:
     return selectDivScale(I);
   case Intrinsic::amdgcn_icmp:
