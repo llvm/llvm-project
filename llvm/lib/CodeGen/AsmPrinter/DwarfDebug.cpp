@@ -2061,10 +2061,8 @@ void DwarfDebug::beginInstruction(const MachineInstr *MI) {
   unsigned LastAsmLine =
       Asm->OutStreamer->getContext().getCurrentDwarfLoc().getLine();
 
-  bool PrevInstInSameSection =
-      (!PrevInstBB ||
-       PrevInstBB->getSectionID() == MI->getParent()->getSectionID());
-  if (DL == PrevInstLoc && PrevInstInSameSection) {
+  bool PrevInstInDiffBB = PrevInstBB && PrevInstBB != MI->getParent();
+  if (DL == PrevInstLoc && !PrevInstInDiffBB) {
     // If we have an ongoing unspecified location, nothing to do here.
     if (!DL)
       return;
@@ -2093,8 +2091,7 @@ void DwarfDebug::beginInstruction(const MachineInstr *MI) {
     //   possibly debug information; we want it to have a source location.
     // - Instruction is at the top of a block; we don't want to inherit the
     //   location from the physically previous (maybe unrelated) block.
-    if (UnknownLocations == Enable || PrevLabel ||
-        (PrevInstBB && PrevInstBB != MI->getParent())) {
+    if (UnknownLocations == Enable || PrevLabel || PrevInstInDiffBB) {
       // Preserve the file and column numbers, if we can, to save space in
       // the encoded line table.
       // Do not update PrevInstLoc, it remembers the last non-0 line.
@@ -2119,9 +2116,11 @@ void DwarfDebug::beginInstruction(const MachineInstr *MI) {
     PrologEndLoc = DebugLoc();
   }
   // If the line changed, we call that a new statement; unless we went to
-  // line 0 and came back, in which case it is not a new statement.
+  // line 0 and came back, in which case it is not a new statement. We also
+  // mark is_stmt for the first non-0 line in each BB, in case a predecessor BB
+  // ends with a different line.
   unsigned OldLine = PrevInstLoc ? PrevInstLoc.getLine() : LastAsmLine;
-  if (DL.getLine() && DL.getLine() != OldLine)
+  if (DL.getLine() && (DL.getLine() != OldLine || PrevInstInDiffBB))
     Flags |= DWARF2_FLAG_IS_STMT;
 
   const MDNode *Scope = DL.getScope();

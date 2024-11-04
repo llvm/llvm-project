@@ -2537,14 +2537,19 @@ static bool hoistAdd(ICmpInst::Predicate Pred, Value *VariantLHS,
                      Value *InvariantRHS, ICmpInst &ICmp, Loop &L,
                      ICFLoopSafetyInfo &SafetyInfo, MemorySSAUpdater &MSSAU,
                      AssumptionCache *AC, DominatorTree *DT) {
-  assert(ICmpInst::isSigned(Pred) && "Not supported yet!");
   assert(!L.isLoopInvariant(VariantLHS) && "Precondition.");
   assert(L.isLoopInvariant(InvariantRHS) && "Precondition.");
+
+  bool IsSigned = ICmpInst::isSigned(Pred);
 
   // Try to represent VariantLHS as sum of invariant and variant operands.
   using namespace PatternMatch;
   Value *VariantOp, *InvariantOp;
-  if (!match(VariantLHS, m_NSWAdd(m_Value(VariantOp), m_Value(InvariantOp))))
+  if (IsSigned &&
+      !match(VariantLHS, m_NSWAdd(m_Value(VariantOp), m_Value(InvariantOp))))
+    return false;
+  if (!IsSigned &&
+      !match(VariantLHS, m_NUWAdd(m_Value(VariantOp), m_Value(InvariantOp))))
     return false;
 
   // LHS itself is a loop-variant, try to represent it in the form:
@@ -2559,17 +2564,20 @@ static bool hoistAdd(ICmpInst::Predicate Pred, Value *VariantLHS,
   // normal linear arithmetics). Overflows make things much more complicated, so
   // we want to avoid this.
   auto &DL = L.getHeader()->getDataLayout();
-  bool ProvedNoOverflowAfterReassociate =
-      computeOverflowForSignedSub(InvariantRHS, InvariantOp,
-                                  SimplifyQuery(DL, DT, AC, &ICmp)) ==
-      llvm::OverflowResult::NeverOverflows;
-  if (!ProvedNoOverflowAfterReassociate)
+  SimplifyQuery SQ(DL, DT, AC, &ICmp);
+  if (IsSigned && computeOverflowForSignedSub(InvariantRHS, InvariantOp, SQ) !=
+                      llvm::OverflowResult::NeverOverflows)
+    return false;
+  if (!IsSigned &&
+      computeOverflowForUnsignedSub(InvariantRHS, InvariantOp, SQ) !=
+          llvm::OverflowResult::NeverOverflows)
     return false;
   auto *Preheader = L.getLoopPreheader();
   assert(Preheader && "Loop is not in simplify form?");
   IRBuilder<> Builder(Preheader->getTerminator());
-  Value *NewCmpOp = Builder.CreateSub(InvariantRHS, InvariantOp, "invariant.op",
-                                      /*HasNUW*/ false, /*HasNSW*/ true);
+  Value *NewCmpOp =
+      Builder.CreateSub(InvariantRHS, InvariantOp, "invariant.op",
+                        /*HasNUW*/ !IsSigned, /*HasNSW*/ IsSigned);
   ICmp.setPredicate(Pred);
   ICmp.setOperand(0, VariantOp);
   ICmp.setOperand(1, NewCmpOp);
@@ -2584,14 +2592,19 @@ static bool hoistSub(ICmpInst::Predicate Pred, Value *VariantLHS,
                      Value *InvariantRHS, ICmpInst &ICmp, Loop &L,
                      ICFLoopSafetyInfo &SafetyInfo, MemorySSAUpdater &MSSAU,
                      AssumptionCache *AC, DominatorTree *DT) {
-  assert(ICmpInst::isSigned(Pred) && "Not supported yet!");
   assert(!L.isLoopInvariant(VariantLHS) && "Precondition.");
   assert(L.isLoopInvariant(InvariantRHS) && "Precondition.");
+
+  bool IsSigned = ICmpInst::isSigned(Pred);
 
   // Try to represent VariantLHS as sum of invariant and variant operands.
   using namespace PatternMatch;
   Value *VariantOp, *InvariantOp;
-  if (!match(VariantLHS, m_NSWSub(m_Value(VariantOp), m_Value(InvariantOp))))
+  if (IsSigned &&
+      !match(VariantLHS, m_NSWSub(m_Value(VariantOp), m_Value(InvariantOp))))
+    return false;
+  if (!IsSigned &&
+      !match(VariantLHS, m_NUWSub(m_Value(VariantOp), m_Value(InvariantOp))))
     return false;
 
   bool VariantSubtracted = false;
@@ -2613,14 +2626,24 @@ static bool hoistSub(ICmpInst::Predicate Pred, Value *VariantLHS,
   // "C1 - C2" does not overflow.
   auto &DL = L.getHeader()->getDataLayout();
   SimplifyQuery SQ(DL, DT, AC, &ICmp);
-  if (VariantSubtracted) {
+  if (VariantSubtracted && IsSigned) {
     // C1 - LV < C2 --> LV > C1 - C2
     if (computeOverflowForSignedSub(InvariantOp, InvariantRHS, SQ) !=
         llvm::OverflowResult::NeverOverflows)
       return false;
-  } else {
+  } else if (VariantSubtracted && !IsSigned) {
+    // C1 - LV < C2 --> LV > C1 - C2
+    if (computeOverflowForUnsignedSub(InvariantOp, InvariantRHS, SQ) !=
+        llvm::OverflowResult::NeverOverflows)
+      return false;
+  } else if (!VariantSubtracted && IsSigned) {
     // LV - C1 < C2 --> LV < C1 + C2
     if (computeOverflowForSignedAdd(InvariantOp, InvariantRHS, SQ) !=
+        llvm::OverflowResult::NeverOverflows)
+      return false;
+  } else { // !VariantSubtracted && !IsSigned
+    // LV - C1 < C2 --> LV < C1 + C2
+    if (computeOverflowForUnsignedAdd(InvariantOp, InvariantRHS, SQ) !=
         llvm::OverflowResult::NeverOverflows)
       return false;
   }
@@ -2630,9 +2653,9 @@ static bool hoistSub(ICmpInst::Predicate Pred, Value *VariantLHS,
   Value *NewCmpOp =
       VariantSubtracted
           ? Builder.CreateSub(InvariantOp, InvariantRHS, "invariant.op",
-                              /*HasNUW*/ false, /*HasNSW*/ true)
+                              /*HasNUW*/ !IsSigned, /*HasNSW*/ IsSigned)
           : Builder.CreateAdd(InvariantOp, InvariantRHS, "invariant.op",
-                              /*HasNUW*/ false, /*HasNSW*/ true);
+                              /*HasNUW*/ !IsSigned, /*HasNSW*/ IsSigned);
   ICmp.setPredicate(Pred);
   ICmp.setOperand(0, VariantOp);
   ICmp.setOperand(1, NewCmpOp);
@@ -2648,10 +2671,6 @@ static bool hoistAddSub(Instruction &I, Loop &L, ICFLoopSafetyInfo &SafetyInfo,
   ICmpInst::Predicate Pred;
   Value *LHS, *RHS;
   if (!match(&I, m_ICmp(Pred, m_Value(LHS), m_Value(RHS))))
-    return false;
-
-  // TODO: Support unsigned predicates?
-  if (!ICmpInst::isSigned(Pred))
     return false;
 
   // Put variant operand to LHS position.

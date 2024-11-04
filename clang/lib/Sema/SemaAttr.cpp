@@ -216,6 +216,59 @@ void Sema::inferGslOwnerPointerAttribute(CXXRecordDecl *Record) {
   inferGslPointerAttribute(Record, Record);
 }
 
+void Sema::inferLifetimeBoundAttribute(FunctionDecl *FD) {
+  if (FD->getNumParams() == 0)
+    return;
+
+  if (unsigned BuiltinID = FD->getBuiltinID()) {
+    // Add lifetime attribute to std::move, std::fowrard et al.
+    switch (BuiltinID) {
+    case Builtin::BIaddressof:
+    case Builtin::BI__addressof:
+    case Builtin::BI__builtin_addressof:
+    case Builtin::BIas_const:
+    case Builtin::BIforward:
+    case Builtin::BIforward_like:
+    case Builtin::BImove:
+    case Builtin::BImove_if_noexcept:
+      if (ParmVarDecl *P = FD->getParamDecl(0u);
+          !P->hasAttr<LifetimeBoundAttr>())
+        P->addAttr(
+            LifetimeBoundAttr::CreateImplicit(Context, FD->getLocation()));
+      break;
+    default:
+      break;
+    }
+    return;
+  }
+  if (auto *CMD = dyn_cast<CXXMethodDecl>(FD)) {
+    const auto *CRD = CMD->getParent();
+    if (!CRD->isInStdNamespace() || !CRD->getIdentifier())
+      return;
+
+    if (isa<CXXConstructorDecl>(CMD)) {
+      auto *Param = CMD->getParamDecl(0);
+      if (Param->hasAttr<LifetimeBoundAttr>())
+        return;
+      if (CRD->getName() == "basic_string_view" &&
+          Param->getType()->isPointerType()) {
+        // construct from a char array pointed by a pointer.
+        //   basic_string_view(const CharT* s);
+        //   basic_string_view(const CharT* s, size_type count);
+        Param->addAttr(
+            LifetimeBoundAttr::CreateImplicit(Context, FD->getLocation()));
+      } else if (CRD->getName() == "span") {
+        // construct from a reference of array.
+        //   span(std::type_identity_t<element_type> (&arr)[N]);
+        const auto *LRT = Param->getType()->getAs<LValueReferenceType>();
+        if (LRT && LRT->getPointeeType().IgnoreParens()->isArrayType())
+          Param->addAttr(
+              LifetimeBoundAttr::CreateImplicit(Context, FD->getLocation()));
+      }
+    }
+  }
+}
+
 void Sema::inferNullableClassAttribute(CXXRecordDecl *CRD) {
   static const llvm::StringSet<> Nullable{
       "auto_ptr",         "shared_ptr", "unique_ptr",         "exception_ptr",

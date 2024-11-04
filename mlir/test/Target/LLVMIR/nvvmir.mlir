@@ -574,3 +574,40 @@ llvm.func @kernel_func(%arg0: !llvm.ptr {llvm.byval = i32, nvvm.grid_constant}) 
 llvm.func @kernel_func(%arg0: !llvm.ptr {llvm.byval = i32, nvvm.grid_constant}, %arg1: f32, %arg2: !llvm.ptr {llvm.byval = f32, nvvm.grid_constant}) attributes {nvvm.kernel} {
   llvm.return
 }
+
+
+// -----
+// CHECK-LABEL: @nvvm_fence_proxy_tensormap_generic_release
+llvm.func @nvvm_fence_proxy_tensormap_generic_release() {
+  %c128 = llvm.mlir.constant(128) : i32
+  // CHECK: call void @llvm.nvvm.fence.proxy.tensormap_generic.release.cta()
+  nvvm.fence.proxy.release #nvvm.mem_scope<cta>
+
+  // CHECK: call void @llvm.nvvm.fence.proxy.tensormap_generic.release.cluster()
+  nvvm.fence.proxy.release #nvvm.mem_scope<cluster>
+
+  // CHECK: call void @llvm.nvvm.fence.proxy.tensormap_generic.release.gpu()
+  nvvm.fence.proxy.release #nvvm.mem_scope<gpu>
+
+  // CHECK: call void @llvm.nvvm.fence.proxy.tensormap_generic.release.sys()
+  nvvm.fence.proxy.release #nvvm.mem_scope<sys>
+  llvm.return
+}
+
+// -----
+// CHECK-LABEL: @nvvm_fence_proxy_tensormap_generic_acquire
+llvm.func @nvvm_fence_proxy_tensormap_generic_acquire(%addr : !llvm.ptr) {
+  %c128 = llvm.mlir.constant(128) : i32
+  // CHECK: call void @llvm.nvvm.fence.proxy.tensormap_generic.acquire.cta(ptr {{%[0-9]+}}, i32 128)
+  nvvm.fence.proxy.acquire #nvvm.mem_scope<cta> %addr, %c128
+
+  // CHECK: call void @llvm.nvvm.fence.proxy.tensormap_generic.acquire.cluster(ptr {{%[0-9]+}}, i32 128)
+  nvvm.fence.proxy.acquire #nvvm.mem_scope<cluster> %addr, %c128
+
+  // CHECK: call void @llvm.nvvm.fence.proxy.tensormap_generic.acquire.gpu(ptr {{%[0-9]+}}, i32 128)
+  nvvm.fence.proxy.acquire #nvvm.mem_scope<gpu> %addr, %c128
+
+  // CHECK: call void @llvm.nvvm.fence.proxy.tensormap_generic.acquire.sys(ptr {{%[0-9]+}}, i32 128)
+  nvvm.fence.proxy.acquire #nvvm.mem_scope<sys> %addr, %c128
+  llvm.return
+}

@@ -9,12 +9,12 @@
 // RUN: %clang_cc1 -std=c++20 %t/A.cppm -emit-reduced-module-interface -o %t/A.pcm \
 // RUN:     -fmodule-file=M=%t/M.pcm
 // RUN: llvm-bcanalyzer --dump --disable-histogram --show-binary-blobs %t/A.pcm > %t/A.dump
-// RUN: cat %t/A.dump | FileCheck %t/A.cppm
+// RUN: cat %t/A.dump | FileCheck %t/A.check
 //
 // RUN: %clang_cc1 -std=c++20 %t/A1.cppm -emit-reduced-module-interface -o %t/A1.pcm \
 // RUN:     -fmodule-file=M=%t/M.pcm
 // RUN: llvm-bcanalyzer --dump --disable-histogram --show-binary-blobs %t/A1.pcm > %t/A1.dump
-// RUN: cat %t/A1.dump | FileCheck %t/A1.cppm
+// RUN: cat %t/A1.dump | FileCheck %t/A1.check
 
 //--- foo.h
 namespace ns {
@@ -82,6 +82,7 @@ module;
 export module A;
 import M;
 
+//--- A.check
 // CHECK-NOT: <DECL_CXX_RECORD
 // CHECK-NOT: <DECL_UPDATE_OFFSETS
 
@@ -91,6 +92,7 @@ import M;
 #include "foo.h"
 export module A;
 
+//--- A1.check
 // CHECK-NOT: <DECL_CXX_RECORD
 // CHECK-NOT: <DECL_UPDATE_OFFSETS
 

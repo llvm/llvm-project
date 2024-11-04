@@ -74,6 +74,20 @@ namespace class_template {
   // new-error@-1 {{ambiguous partial specialization}}
 } // namespace class_template
 
+namespace class_template_func {
+  template <class T1, class T2 = float> struct A {};
+
+  template <template <class T4> class TT1, class T5> void f(TT1<T5>);
+  // new-note@-1 {{candidate function}}
+
+  template <class T6, class T7>                      void f(A<T6, T7>) {};
+  // new-note@-1 {{candidate function}}
+
+  void g() {
+    f(A<int>()); // new-error {{call to 'f' is ambiguous}}
+  }
+} // namespace class_template_func
+
 namespace type_pack1 {
   template<class T2> struct A;
   template<template<class ...T3s> class TT1, class T4> struct A<TT1<T4>>   ;

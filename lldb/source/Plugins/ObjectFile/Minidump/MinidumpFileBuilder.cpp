@@ -86,10 +86,10 @@ Status MinidumpFileBuilder::AddHeaderAndCalculateDirectories() {
   Status error;
   offset_t new_offset = m_core_file->SeekFromStart(m_saved_data_size);
   if (new_offset != m_saved_data_size)
-    error.SetErrorStringWithFormat("Failed to fill in header and directory "
-                                   "sections. Written / Expected (%" PRIx64
-                                   " / %" PRIx64 ")",
-                                   new_offset, m_saved_data_size);
+    error = Status::FromErrorStringWithFormat(
+        "Failed to fill in header and directory "
+        "sections. Written / Expected (%" PRIx64 " / %" PRIx64 ")",
+        new_offset, m_saved_data_size);
 
   return error;
 }
@@ -99,14 +99,15 @@ Status MinidumpFileBuilder::AddDirectory(StreamType type,
   // We explicitly cast type, an 32b enum, to uint32_t to avoid warnings.
   Status error;
   if (GetCurrentDataEndOffset() > UINT32_MAX) {
-    error.SetErrorStringWithFormat("Unable to add directory for stream type "
-                                   "%x, offset is greater then 32 bit limit.",
-                                   (uint32_t)type);
+    error = Status::FromErrorStringWithFormat(
+        "Unable to add directory for stream type "
+        "%x, offset is greater then 32 bit limit.",
+        (uint32_t)type);
     return error;
   }
 
   if (m_directories.size() + 1 > m_expected_directories) {
-    error.SetErrorStringWithFormat(
+    error = Status::FromErrorStringWithFormat(
         "Unable to add directory for stream type %x, exceeded expected number "
         "of directories %zu.",
         (uint32_t)type, m_expected_directories);
@@ -161,8 +162,9 @@ Status MinidumpFileBuilder::AddSystemInfo() {
     arch = ProcessorArchitecture::PPC;
     break;
   default:
-    error.SetErrorStringWithFormat("Architecture %s not supported.",
-                                   target_triple.getArchName().str().c_str());
+    error = Status::FromErrorStringWithFormat(
+        "Architecture %s not supported.",
+        target_triple.getArchName().str().c_str());
     return error;
   };
 
@@ -185,8 +187,8 @@ Status MinidumpFileBuilder::AddSystemInfo() {
     platform_id = OSPlatform::IOS;
     break;
   default:
-    error.SetErrorStringWithFormat("OS %s not supported.",
-                                   target_triple.getOSName().str().c_str());
+    error = Status::FromErrorStringWithFormat(
+        "OS %s not supported.", target_triple.getOSName().str().c_str());
     return error;
   };
 
@@ -203,7 +205,8 @@ Status MinidumpFileBuilder::AddSystemInfo() {
 
   error = WriteString(csd_string, &m_data);
   if (error.Fail()) {
-    error.SetErrorString("Unable to convert the csd string to UTF16.");
+    error =
+        Status::FromErrorString("Unable to convert the csd string to UTF16.");
     return error;
   }
 
@@ -219,7 +222,7 @@ Status WriteString(const std::string &to_write,
 
   bool converted = convertUTF8ToUTF16String(to_write_ref, to_write_utf16);
   if (!converted) {
-    error.SetErrorStringWithFormat(
+    error = Status::FromErrorStringWithFormat(
         "Unable to convert the string to UTF16. Failed to convert %s",
         to_write.c_str());
     return error;
@@ -322,7 +325,7 @@ Status MinidumpFileBuilder::AddModuleList() {
       llvm::Error mod_size_err = maybe_mod_size.takeError();
       llvm::handleAllErrors(std::move(mod_size_err),
                             [&](const llvm::ErrorInfoBase &E) {
-                              error.SetErrorStringWithFormat(
+                              error = Status::FromErrorStringWithFormat(
                                   "Unable to get the size of module %s: %s.",
                                   module_name.c_str(), E.message().c_str());
                             });
@@ -488,12 +491,14 @@ GetThreadContext_x86_64(RegisterContext *reg_ctx) {
   thread_context.r14 = read_register_u64(reg_ctx, "r14");
   thread_context.r15 = read_register_u64(reg_ctx, "r15");
   thread_context.rip = read_register_u64(reg_ctx, "rip");
-  thread_context.eflags = read_register_u32(reg_ctx, "rflags");
-  thread_context.cs = read_register_u16(reg_ctx, "cs");
-  thread_context.fs = read_register_u16(reg_ctx, "fs");
-  thread_context.gs = read_register_u16(reg_ctx, "gs");
-  thread_context.ss = read_register_u16(reg_ctx, "ss");
-  thread_context.ds = read_register_u16(reg_ctx, "ds");
+  // To make our code agnostic to whatever type the register value identifies
+  // itself as, we read as a u64 and truncate to u32/u16 ourselves.
+  thread_context.eflags = read_register_u64(reg_ctx, "rflags");
+  thread_context.cs = read_register_u64(reg_ctx, "cs");
+  thread_context.fs = read_register_u64(reg_ctx, "fs");
+  thread_context.gs = read_register_u64(reg_ctx, "gs");
+  thread_context.ss = read_register_u64(reg_ctx, "ss");
+  thread_context.ds = read_register_u64(reg_ctx, "ds");
   return thread_context;
 }
 
@@ -575,7 +580,7 @@ Status MinidumpFileBuilder::FixThreadStacks() {
     size_t bytes_written = bytes_to_write;
     error = m_core_file->Write(&thread, bytes_written);
     if (error.Fail() || bytes_to_write != bytes_written) {
-      error.SetErrorStringWithFormat(
+      error = Status::FromErrorStringWithFormat(
           "Wrote incorrect number of bytes to minidump file. (written %zd/%zd)",
           bytes_written, bytes_to_write);
       return error;
@@ -614,7 +619,7 @@ Status MinidumpFileBuilder::AddThreadList() {
     RegisterContextSP reg_ctx_sp(thread_sp->GetRegisterContext());
 
     if (!reg_ctx_sp) {
-      error.SetErrorString("Unable to get the register context.");
+      error = Status::FromErrorString("Unable to get the register context.");
       return error;
     }
     RegisterContext *reg_ctx = reg_ctx_sp.get();
@@ -622,7 +627,7 @@ Status MinidumpFileBuilder::AddThreadList() {
     const ArchSpec &arch = target.GetArchitecture();
     ArchThreadContexts thread_context(arch.GetMachine());
     if (!thread_context.prepareRegisterContext(reg_ctx)) {
-      error.SetErrorStringWithFormat(
+      error = Status::FromErrorStringWithFormat(
           "architecture %s not supported.",
           arch.GetTriple().getArchName().str().c_str());
       return error;
@@ -848,9 +853,10 @@ Status MinidumpFileBuilder::AddMemoryList() {
   }
 
   if (total_size >= UINT32_MAX) {
-    error.SetErrorStringWithFormat("Unable to write minidump. Stack memory "
-                                   "exceeds 32b limit. (Num Stacks %zu)",
-                                   ranges_32.size());
+    error = Status::FromErrorStringWithFormat(
+        "Unable to write minidump. Stack memory "
+        "exceeds 32b limit. (Num Stacks %zu)",
+        ranges_32.size());
     return error;
   }
 
@@ -917,7 +923,7 @@ Status MinidumpFileBuilder::DumpHeader() const {
   error = m_core_file->Write(&header, bytes_written);
   if (error.Fail() || bytes_written != HEADER_SIZE) {
     if (bytes_written != HEADER_SIZE)
-      error.SetErrorStringWithFormat(
+      error = Status::FromErrorStringWithFormat(
           "Unable to write the minidump header (written %zd/%zd)",
           bytes_written, HEADER_SIZE);
     return error;
@@ -938,7 +944,7 @@ Status MinidumpFileBuilder::DumpDirectories() const {
     error = m_core_file->Write(&dir, bytes_written);
     if (error.Fail() || bytes_written != DIRECTORY_SIZE) {
       if (bytes_written != DIRECTORY_SIZE)
-        error.SetErrorStringWithFormat(
+        error = Status::FromErrorStringWithFormat(
             "unable to write the directory (written %zd/%zd)", bytes_written,
             DIRECTORY_SIZE);
       return error;
@@ -1130,7 +1136,7 @@ MinidumpFileBuilder::AddMemoryList_64(Process::CoreFileMemoryRanges &ranges) {
     error = m_core_file->Write(descriptors.data(), bytes_written);
     if (error.Fail() ||
         bytes_written != sizeof(MemoryDescriptor_64) * descriptors.size()) {
-      error.SetErrorStringWithFormat(
+      error = Status::FromErrorStringWithFormat(
           "unable to write the memory descriptors (written %zd/%zd)",
           bytes_written, sizeof(MemoryDescriptor_64) * descriptors.size());
     }
@@ -1167,7 +1173,7 @@ Status MinidumpFileBuilder::FlushBufferToDisk() {
     // so just decrement the remaining bytes.
     error = m_core_file->Write(m_data.GetBytes() + offset, bytes_written);
     if (error.Fail()) {
-      error.SetErrorStringWithFormat(
+      error = Status::FromErrorStringWithFormat(
           "Wrote incorrect number of bytes to minidump file. (written %" PRIx64
           "/%" PRIx64 ")",
           starting_size - remaining_bytes, starting_size);

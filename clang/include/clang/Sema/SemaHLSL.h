@@ -59,8 +59,11 @@ public:
   void handleResourceClassAttr(Decl *D, const ParsedAttr &AL);
   void handleResourceBindingAttr(Decl *D, const ParsedAttr &AL);
   void handleParamModifierAttr(Decl *D, const ParsedAttr &AL);
+  bool handleResourceTypeAttr(const ParsedAttr &AL);
 
   bool CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall);
+  QualType ProcessResourceTypeAttributes(QualType Wrapped);
+  SourceLocation TakeLocForHLSLAttribute(const HLSLAttributedResourceType *RT);
 
   // HLSL Type trait implementations
   bool IsScalarizedLayoutCompatible(QualType T1, QualType T2) const;

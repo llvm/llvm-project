@@ -552,6 +552,7 @@ void WebAssemblyPassConfig::addPostRegAlloc() {
   disablePass(&StackMapLivenessID);
   disablePass(&PatchableFunctionID);
   disablePass(&ShrinkWrapID);
+  disablePass(&RemoveLoadsIntoFakeUsesID);
 
   // This pass hurts code size for wasm because it can generate irreducible
   // control flow.

@@ -38,10 +38,13 @@ SANITIZER_INTERFACE_ATTRIBUTE void __rtsan_realtime_exit();
 
 // Disable all RTSan error reporting.
 // Injected into the code if "nosanitize(realtime)" is on a function.
-SANITIZER_INTERFACE_ATTRIBUTE void __rtsan_off();
+SANITIZER_INTERFACE_ATTRIBUTE void __rtsan_disable();
 
 // Re-enable all RTSan error reporting.
-// The counterpart to `__rtsan_off`.
-SANITIZER_INTERFACE_ATTRIBUTE void __rtsan_on();
+// The counterpart to `__rtsan_disable`.
+SANITIZER_INTERFACE_ATTRIBUTE void __rtsan_enable();
+
+SANITIZER_INTERFACE_ATTRIBUTE void
+__rtsan_expect_not_realtime(const char *intercepted_function_name);
 
 } // extern "C"

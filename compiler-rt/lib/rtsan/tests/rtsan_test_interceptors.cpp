@@ -18,6 +18,8 @@
 #if SANITIZER_APPLE
 #include <libkern/OSAtomic.h>
 #include <os/lock.h>
+#include <sys/types.h>
+#include <unistd.h>
 #endif
 
 #if SANITIZER_INTERCEPT_MEMALIGN || SANITIZER_INTERCEPT_PVALLOC
@@ -33,6 +35,7 @@
 #include <pthread.h>
 #include <stdio.h>
 #include <sys/socket.h>
+#include <sys/uio.h>
 
 using namespace testing;
 using namespace rtsan_testing;
@@ -68,6 +71,12 @@ private:
 TEST(TestRtsanInterceptors, MallocDiesWhenRealtime) {
   auto Func = []() { EXPECT_NE(nullptr, malloc(1)); };
   ExpectRealtimeDeath(Func, "malloc");
+  ExpectNonRealtimeSurvival(Func);
+}
+
+TEST(TestRtsanInterceptors, CallocDiesWhenRealtime) {
+  auto Func = []() { EXPECT_NE(nullptr, calloc(2, 4)); };
+  ExpectRealtimeDeath(Func, "calloc");
   ExpectNonRealtimeSurvival(Func);
 }
 
@@ -184,25 +193,24 @@ TEST_F(RtsanFileTest, OpenatDiesWhenRealtime) {
   ExpectNonRealtimeSurvival(func);
 }
 
-// FIXME: This fails on the build machines, but not locally!
-// see https://github.com/llvm/llvm-project/pull/105732#issuecomment-2310286530
-// Value of: st.st_mode & 0777
-// Expected: is equal to 420
-// Actual: 384
-// TEST_F(RtsanFileTest, OpenCreatesFileWithProperMode) {
-//   const int mode = S_IRGRP | S_IROTH | S_IRUSR | S_IWUSR;
-//
-//   const int fd = open(GetTemporaryFilePath(), O_CREAT | O_WRONLY, mode);
-//   ASSERT_THAT(fd, Ne(-1));
-//   close(fd);
-//
-//   struct stat st;
-//   ASSERT_THAT(stat(GetTemporaryFilePath(), &st), Eq(0));
-//
-//   // Mask st_mode to get permission bits only
-//
-//   //ASSERT_THAT(st.st_mode & 0777, Eq(mode)); FAILED ASSERTION
-// }
+TEST_F(RtsanFileTest, OpenCreatesFileWithProperMode) {
+  const mode_t existing_umask = umask(0);
+  umask(existing_umask);
+
+  const int mode = S_IRGRP | S_IROTH | S_IRUSR | S_IWUSR;
+
+  const int fd = open(GetTemporaryFilePath(), O_CREAT | O_WRONLY, mode);
+  ASSERT_THAT(fd, Ne(-1));
+  close(fd);
+
+  struct stat st;
+  ASSERT_THAT(stat(GetTemporaryFilePath(), &st), Eq(0));
+
+  // Mask st_mode to get permission bits only
+  const mode_t actual_mode = st.st_mode & 0777;
+  const mode_t expected_mode = mode & ~existing_umask;
+  ASSERT_THAT(actual_mode, Eq(expected_mode));
+}
 
 TEST_F(RtsanFileTest, CreatDiesWhenRealtime) {
   auto func = [this]() { creat(GetTemporaryFilePath(), S_IWOTH | S_IROTH); };
@@ -274,23 +282,43 @@ TEST_F(RtsanFileTest, FopenDiesWhenRealtime) {
   ExpectNonRealtimeSurvival(func);
 }
 
-TEST_F(RtsanFileTest, FreadDiesWhenRealtime) {
-  auto fd = fopen(GetTemporaryFilePath(), "w");
-  auto func = [fd]() {
+class RtsanOpenedFileTest : public RtsanFileTest {
+protected:
+  void SetUp() override {
+    RtsanFileTest::SetUp();
+    file = fopen(GetTemporaryFilePath(), "w");
+    ASSERT_THAT(file, Ne(nullptr));
+    fd = fileno(file);
+    ASSERT_THAT(fd, Ne(-1));
+  }
+
+  void TearDown() override {
+    if (file != nullptr)
+      fclose(file);
+    RtsanFileTest::TearDown();
+  }
+
+  FILE *GetOpenFile() { return file; }
+
+  int GetOpenFd() { return fd; }
+
+private:
+  FILE *file = nullptr;
+  int fd = -1;
+};
+
+TEST_F(RtsanOpenedFileTest, FreadDiesWhenRealtime) {
+  auto func = [this]() {
     char c{};
-    fread(&c, 1, 1, fd);
+    fread(&c, 1, 1, GetOpenFile());
   };
   ExpectRealtimeDeath(func, "fread");
   ExpectNonRealtimeSurvival(func);
-  if (fd != nullptr)
-    fclose(fd);
 }
 
-TEST_F(RtsanFileTest, FwriteDiesWhenRealtime) {
-  auto fd = fopen(GetTemporaryFilePath(), "w");
-  ASSERT_NE(nullptr, fd);
-  auto message = "Hello, world!";
-  auto func = [&]() { fwrite(&message, 1, 4, fd); };
+TEST_F(RtsanOpenedFileTest, FwriteDiesWhenRealtime) {
+  const char *message = "Hello, world!";
+  auto func = [&]() { fwrite(&message, 1, 4, GetOpenFile()); };
   ExpectRealtimeDeath(func, "fwrite");
   ExpectNonRealtimeSurvival(func);
 }
@@ -309,14 +337,66 @@ TEST(TestRtsanInterceptors, PutsDiesWhenRealtime) {
   ExpectNonRealtimeSurvival(func);
 }
 
-TEST_F(RtsanFileTest, FputsDiesWhenRealtime) {
-  auto fd = fopen(GetTemporaryFilePath(), "w");
-  ASSERT_THAT(fd, Ne(nullptr)) << errno;
-  auto func = [fd]() { fputs("Hello, world!\n", fd); };
+TEST_F(RtsanOpenedFileTest, FputsDiesWhenRealtime) {
+  auto func = [this]() { fputs("Hello, world!\n", GetOpenFile()); };
   ExpectRealtimeDeath(func);
   ExpectNonRealtimeSurvival(func);
-  if (fd != nullptr)
-    fclose(fd);
+}
+
+TEST_F(RtsanOpenedFileTest, ReadDiesWhenRealtime) {
+  auto Func = [this]() {
+    char c{};
+    read(GetOpenFd(), &c, 1);
+  };
+  ExpectRealtimeDeath(Func, "read");
+  ExpectNonRealtimeSurvival(Func);
+}
+
+TEST_F(RtsanOpenedFileTest, WriteDiesWhenRealtime) {
+  auto Func = [this]() {
+    char c = 'a';
+    write(GetOpenFd(), &c, 1);
+  };
+  ExpectRealtimeDeath(Func, "write");
+  ExpectNonRealtimeSurvival(Func);
+}
+
+TEST_F(RtsanOpenedFileTest, PreadDiesWhenRealtime) {
+  auto Func = [this]() {
+    char c{};
+    pread(GetOpenFd(), &c, 1, 0);
+  };
+  ExpectRealtimeDeath(Func, "pread");
+  ExpectNonRealtimeSurvival(Func);
+}
+
+TEST_F(RtsanOpenedFileTest, ReadvDiesWhenRealtime) {
+  auto Func = [this]() {
+    char c{};
+    iovec iov{&c, 1};
+    readv(GetOpenFd(), &iov, 1);
+  };
+  ExpectRealtimeDeath(Func, "readv");
+  ExpectNonRealtimeSurvival(Func);
+}
+
+TEST_F(RtsanOpenedFileTest, PwriteDiesWhenRealtime) {
+  auto Func = [this]() {
+    char c = 'a';
+    pwrite(GetOpenFd(), &c, 1, 0);
+  };
+  ExpectRealtimeDeath(Func, "pwrite");
+  ExpectNonRealtimeSurvival(Func);
+}
+
+TEST_F(RtsanOpenedFileTest, WritevDiesWhenRealtime) {
+  auto Func = [this]() {
+    char c = 'a';
+    iovec iov{&c, 1};
+    writev(GetOpenFd(), &iov, 1);
+  };
+  ExpectRealtimeDeath(Func, "writev");
+  ExpectNonRealtimeSurvival(Func);
 }
 
 /*

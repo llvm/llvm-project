@@ -98,7 +98,8 @@ Status SharedSocket::CompleteSending(lldb::pid_t child_pid) {
   if (::WSADuplicateSocket(m_socket, child_pid, &protocol_info) ==
       SOCKET_ERROR) {
     int last_error = ::WSAGetLastError();
-    return Status("WSADuplicateSocket() failed, error: %d", last_error);
+    return Status::FromErrorStringWithFormat(
+        "WSADuplicateSocket() failed, error: %d", last_error);
   }
 
   size_t num_bytes;
@@ -108,8 +109,8 @@ Status SharedSocket::CompleteSending(lldb::pid_t child_pid) {
   if (error.Fail())
     return error;
   if (num_bytes != sizeof(protocol_info))
-    return Status("WriteWithTimeout(WSAPROTOCOL_INFO) failed: %d bytes",
-                  num_bytes);
+    return Status::FromErrorStringWithFormatv(
+        "WriteWithTimeout(WSAPROTOCOL_INFO) failed: {0} bytes", num_bytes);
 #endif
   return Status();
 }
@@ -128,16 +129,16 @@ Status SharedSocket::GetNativeSocket(shared_fd_t fd, NativeSocket &socket) {
     if (error.Fail())
       return error;
     if (num_bytes != sizeof(protocol_info)) {
-      return Status(
-          "socket_pipe.ReadWithTimeout(WSAPROTOCOL_INFO) failed: % d bytes",
+      return Status::FromErrorStringWithFormatv(
+          "socket_pipe.ReadWithTimeout(WSAPROTOCOL_INFO) failed: {0} bytes",
           num_bytes);
     }
   }
   socket = ::WSASocket(FROM_PROTOCOL_INFO, FROM_PROTOCOL_INFO,
                        FROM_PROTOCOL_INFO, &protocol_info, 0, 0);
   if (socket == INVALID_SOCKET) {
-    return Status("WSASocket(FROM_PROTOCOL_INFO) failed: error %d",
-                  ::WSAGetLastError());
+    return Status::FromErrorStringWithFormatv(
+        "WSASocket(FROM_PROTOCOL_INFO) failed: error {0}", ::WSAGetLastError());
   }
   return Status();
 #else
@@ -231,7 +232,7 @@ std::unique_ptr<Socket> Socket::Create(const SocketProtocol protocol,
     socket_up =
         std::make_unique<DomainSocket>(true, child_processes_inherit);
 #else
-    error.SetErrorString(
+    error = Status::FromErrorString(
         "Unix domain sockets are not supported on this platform.");
 #endif
     break;
@@ -240,7 +241,7 @@ std::unique_ptr<Socket> Socket::Create(const SocketProtocol protocol,
     socket_up =
         std::make_unique<AbstractSocket>(child_processes_inherit);
 #else
-    error.SetErrorString(
+    error = Status::FromErrorString(
         "Abstract domain sockets are not supported on this platform.");
 #endif
     break;
@@ -420,9 +421,9 @@ size_t Socket::Send(const void *buf, const size_t num_bytes) {
 
 void Socket::SetLastError(Status &error) {
 #if defined(_WIN32)
-  error.SetError(::WSAGetLastError(), lldb::eErrorTypeWin32);
+  error = Status(::WSAGetLastError(), lldb::eErrorTypeWin32);
 #else
-  error.SetErrorToErrno();
+  error = Status::FromErrno();
 #endif
 }
 

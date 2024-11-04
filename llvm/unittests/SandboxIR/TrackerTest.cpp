@@ -747,6 +747,41 @@ define void @foo(i32 %cond0, i32 %cond1) {
   EXPECT_EQ(*HIt++, Handler1);
 }
 
+TEST_F(TrackerTest, LandingPadInstSetters) {
+  parseIR(C, R"IR(
+define void @foo() {
+entry:
+  invoke void @foo()
+      to label %bb unwind label %unwind
+unwind:
+  %lpad = landingpad { ptr, i32 }
+            catch ptr null
+  ret void
+bb:
+  ret void
+}
+)IR");
+  Function &LLVMF = *M->getFunction("foo");
+  auto *LLVMUnwind = getBasicBlockByName(LLVMF, "unwind");
+
+  sandboxir::Context Ctx(C);
+  [[maybe_unused]] auto &F = *Ctx.createFunction(&LLVMF);
+  auto *Unwind = cast<sandboxir::BasicBlock>(Ctx.getValue(LLVMUnwind));
+  auto It = Unwind->begin();
+  auto *LPad = cast<sandboxir::LandingPadInst>(&*It++);
+  [[maybe_unused]] auto *Ret = cast<sandboxir::ReturnInst>(&*It++);
+
+  // Check setCleanup().
+  auto OrigIsCleanup = LPad->isCleanup();
+  auto NewIsCleanup = true;
+  EXPECT_NE(NewIsCleanup, OrigIsCleanup);
+  Ctx.save();
+  LPad->setCleanup(NewIsCleanup);
+  EXPECT_EQ(LPad->isCleanup(), NewIsCleanup);
+  Ctx.revert();
+  EXPECT_EQ(LPad->isCleanup(), OrigIsCleanup);
+}
+
 TEST_F(TrackerTest, CatchReturnInstSetters) {
   parseIR(C, R"IR(
 define void @foo() {
@@ -903,9 +938,10 @@ define void @foo(i32 %cond0, i32 %cond1) {
   Ctx.revert();
   EXPECT_EQ(Switch->getSuccessor(0), OrigSucc);
   // Check addCase().
-  auto *Zero = sandboxir::ConstantInt::get(Type::getInt32Ty(C), 0, Ctx);
-  auto *One = sandboxir::ConstantInt::get(Type::getInt32Ty(C), 1, Ctx);
-  auto *FortyTwo = sandboxir::ConstantInt::get(Type::getInt32Ty(C), 42, Ctx);
+  auto *Zero = sandboxir::ConstantInt::get(sandboxir::Type::getInt32Ty(Ctx), 0);
+  auto *One = sandboxir::ConstantInt::get(sandboxir::Type::getInt32Ty(Ctx), 1);
+  auto *FortyTwo =
+      sandboxir::ConstantInt::get(sandboxir::Type::getInt32Ty(Ctx), 42);
   Ctx.save();
   Switch->addCase(FortyTwo, Entry);
   EXPECT_EQ(Switch->getNumCases(), 3u);
@@ -951,6 +987,58 @@ define void @foo(<2 x i8> %v1, <2 x i8> %v2) {
               testing::Not(testing::ElementsAreArray(OrigMask)));
   Ctx.revert();
   EXPECT_THAT(SVI->getShuffleMask(), testing::ElementsAreArray(OrigMask));
+}
+
+TEST_F(TrackerTest, PossiblyDisjointInstSetters) {
+  parseIR(C, R"IR(
+define void @foo(i8 %arg0, i8 %arg1) {
+  %or = or i8 %arg0, %arg1
+  ret void
+}
+)IR");
+  Function &LLVMF = *M->getFunction("foo");
+  sandboxir::Context Ctx(C);
+
+  auto &F = *Ctx.createFunction(&LLVMF);
+  auto *BB = &*F.begin();
+  auto It = BB->begin();
+  auto *PDI = cast<sandboxir::PossiblyDisjointInst>(&*It++);
+
+  // Check setIsDisjoint().
+  auto OrigIsDisjoint = PDI->isDisjoint();
+  auto NewIsDisjoint = true;
+  EXPECT_NE(NewIsDisjoint, OrigIsDisjoint);
+  Ctx.save();
+  PDI->setIsDisjoint(NewIsDisjoint);
+  EXPECT_EQ(PDI->isDisjoint(), NewIsDisjoint);
+  Ctx.revert();
+  EXPECT_EQ(PDI->isDisjoint(), OrigIsDisjoint);
+}
+
+TEST_F(TrackerTest, PossiblyNonNegInstSetters) {
+  parseIR(C, R"IR(
+define void @foo(i32 %arg) {
+  %zext = zext i32 %arg to i64
+  ret void
+}
+)IR");
+  Function &LLVMF = *M->getFunction("foo");
+  sandboxir::Context Ctx(C);
+
+  auto &F = *Ctx.createFunction(&LLVMF);
+  auto *BB = &*F.begin();
+  auto It = BB->begin();
+  auto *PNNI = cast<sandboxir::PossiblyNonNegInst>(&*It++);
+
+  // Check setNonNeg().
+  auto OrigNonNeg = PNNI->hasNonNeg();
+  auto NewNonNeg = true;
+  EXPECT_NE(NewNonNeg, OrigNonNeg);
+  Ctx.save();
+  PNNI->setNonNeg(NewNonNeg);
+  EXPECT_EQ(PNNI->hasNonNeg(), NewNonNeg);
+  Ctx.revert();
+  EXPECT_EQ(PNNI->hasNonNeg(), OrigNonNeg);
 }
 
 TEST_F(TrackerTest, AtomicRMWSetters) {
@@ -1100,7 +1188,7 @@ define void @foo(i8 %arg) {
   // Check setAllocatedType().
   Ctx.save();
   auto *OrigTy = Alloca->getAllocatedType();
-  auto *NewTy = Type::getInt64Ty(C);
+  auto *NewTy = sandboxir::Type::getInt64Ty(Ctx);
   EXPECT_NE(NewTy, OrigTy);
   Alloca->setAllocatedType(NewTy);
   EXPECT_EQ(Alloca->getAllocatedType(), NewTy);

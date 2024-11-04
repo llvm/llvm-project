@@ -186,10 +186,7 @@ class LLVMConfig(object):
 
     def _find_git_windows_unix_tools(self, tools_needed):
         assert sys.platform == "win32"
-        if sys.version_info.major >= 3:
-            import winreg
-        else:
-            import _winreg as winreg
+        import winreg
 
         # Search both the 64 and 32-bit hives, as well as HKLM + HKCU
         masks = [0, winreg.KEY_WOW64_64KEY]

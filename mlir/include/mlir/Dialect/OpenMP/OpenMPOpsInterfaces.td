@@ -71,10 +71,10 @@ def ReductionClauseInterface : OpInterface<"ReductionClauseInterface"> {
 
 def LoopWrapperInterface : OpInterface<"LoopWrapperInterface"> {
   let description = [{
-    OpenMP operations that can wrap a single loop nest. When taking a wrapper
-    role, these operations must only contain a single region with a single block
-    in which there's a single operation and a terminator. That nested operation
-    must be another loop wrapper or an `omp.loop_nest`.
+    OpenMP operations that wrap a single loop nest. They must only contain a
+    single region with a single block in which there's a single operation and a
+    terminator. That nested operation must be another loop wrapper or an
+    `omp.loop_nest`.
   }];
 
   let cppNamespace = "::mlir::omp";
@@ -82,45 +82,12 @@ def LoopWrapperInterface : OpInterface<"LoopWrapperInterface"> {
   let methods = [
     InterfaceMethod<
       /*description=*/[{
-        Tell whether the operation could be taking the role of a loop wrapper.
-        That is, it has a single region with a single block in which there are
-        two operations: another wrapper (also taking a loop wrapper role) or
-        `omp.loop_nest` operation and a terminator.
-      }],
-      /*retTy=*/"bool",
-      /*methodName=*/"isWrapper",
-      (ins ), [{}], [{
-        if ($_op->getNumRegions() != 1)
-          return false;
-
-        Region &r = $_op->getRegion(0);
-        if (!r.hasOneBlock())
-          return false;
-
-        if (::llvm::range_size(r.getOps()) != 2)
-          return false;
-
-        Operation &firstOp = *r.op_begin();
-        Operation &secondOp = *(std::next(r.op_begin()));
-
-        if (!secondOp.hasTrait<OpTrait::IsTerminator>())
-          return false;
-
-        if (auto wrapper = ::llvm::dyn_cast<LoopWrapperInterface>(firstOp))
-          return wrapper.isWrapper();
-
-        return ::llvm::isa<LoopNestOp>(firstOp);
-      }]
-    >,
-    InterfaceMethod<
-      /*description=*/[{
         If there is another loop wrapper immediately nested inside, return that
-        operation. Assumes this operation is taking a loop wrapper role.
+        operation. Assumes this operation is a valid loop wrapper.
       }],
       /*retTy=*/"::mlir::omp::LoopWrapperInterface",
       /*methodName=*/"getNestedWrapper",
       (ins), [{}], [{
-        assert($_op.isWrapper() && "Unexpected non-wrapper op");
         Operation *nested = &*$_op->getRegion(0).op_begin();
         return ::llvm::dyn_cast<LoopWrapperInterface>(nested);
       }]
@@ -128,12 +95,11 @@ def LoopWrapperInterface : OpInterface<"LoopWrapperInterface"> {
     InterfaceMethod<
       /*description=*/[{
         Return the loop nest nested directly or indirectly inside of this loop
-        wrapper. Assumes this operation is taking a loop wrapper role.
+        wrapper. Assumes this operation is a valid loop wrapper.
       }],
       /*retTy=*/"::mlir::Operation *",
       /*methodName=*/"getWrappedLoop",
       (ins), [{}], [{
-        assert($_op.isWrapper() && "Unexpected non-wrapper op");
         if (LoopWrapperInterface nested = $_op.getNestedWrapper())
           return nested.getWrappedLoop();
         return &*$_op->getRegion(0).op_begin();

@@ -2200,6 +2200,7 @@ cc_library(
         ":Pass",
         ":TransformUtils",
         ":VectorDialect",
+        "//llvm:Support",
     ],
 )
 
@@ -5415,11 +5416,11 @@ cc_library(
     hdrs = glob(["include/mlir/Dialect/LLVMIR/Transforms/*.h"]),
     includes = ["include"],
     deps = [
-	":DataLayoutInterfaces",
         ":Analysis",
+        ":DataLayoutInterfaces",
         ":FuncDialect",
-	    ":InliningUtils",
         ":IR",
+        ":InliningUtils",
         ":LLVMDialect",
         ":LLVMPassIncGen",
         ":NVVMDialect",
@@ -6041,13 +6042,13 @@ cc_library(
 cc_library(
     name = "GPUToGPURuntimeTransforms",
     srcs = [
+        "lib/Conversion/GPUCommon/AttrToSPIRVConverter.cpp",
         "lib/Conversion/GPUCommon/GPUOpsLowering.cpp",
         "lib/Conversion/GPUCommon/GPUToLLVMConversion.cpp",
-        "lib/Conversion/GPUCommon/AttrToSPIRVConverter.cpp",
     ],
     hdrs = [
-        "include/mlir/Conversion/GPUCommon/GPUCommonPass.h",
         "include/mlir/Conversion/GPUCommon/AttrToSPIRVConverter.h",
+        "include/mlir/Conversion/GPUCommon/GPUCommonPass.h",
         "lib/Conversion/GPUCommon/GPUOpsLowering.h",
     ],
     includes = ["include"],
@@ -6067,8 +6068,8 @@ cc_library(
         ":LLVMCommonConversion",
         ":LLVMDialect",
         ":MemRefDialect",
-        ":SPIRVDialect",
         ":MemRefToLLVM",
+        ":SPIRVDialect",
         ":Support",
         ":VectorToLLVM",
         "//llvm:Support",
@@ -6551,7 +6552,10 @@ cc_library(
 
 cc_library(
     name = "ROCDLTarget",
-    srcs = ["lib/Target/LLVM/ROCDL/Target.cpp"],
+    srcs = [
+        "lib/Target/LLVM/ROCDL/Target.cpp",
+        "lib/Target/LLVM/ROCDL/Utils.cpp",
+    ],
     hdrs = glob(["include/mlir/Target/LLVM/ROCDL/*.h"]),
     includes = ["include"],
     deps = [
@@ -6564,6 +6568,7 @@ cc_library(
         ":TargetLLVM",
         ":ToLLVMIRTranslation",
         "//llvm:Core",
+        "//llvm:FrontendOffloading",
         "//llvm:MC",
         "//llvm:MCParser",
         "//llvm:Support",
@@ -8410,6 +8415,7 @@ cc_library(
         ":ArithTransforms",
         ":ConversionPassIncGen",
         ":FuncToSPIRV",
+        ":GPUDialect",
         ":GPUToSPIRV",
         ":IR",
         ":IndexToSPIRV",
@@ -9987,6 +9993,7 @@ cc_binary(
     deps = [
         ":ArithDialect",
         ":BuiltinToLLVMIRTranslation",
+        ":ConvertToSPIRV",
         ":ExecutionEngineUtils",
         ":FuncDialect",
         ":FuncToLLVM",

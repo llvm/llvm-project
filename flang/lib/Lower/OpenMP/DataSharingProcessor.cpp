@@ -231,9 +231,7 @@ void DataSharingProcessor::insertBarrier() {
 void DataSharingProcessor::insertLastPrivateCompare(mlir::Operation *op) {
   mlir::omp::LoopNestOp loopOp;
   if (auto wrapper = mlir::dyn_cast<mlir::omp::LoopWrapperInterface>(op))
-    loopOp = wrapper.isWrapper()
-                 ? mlir::cast<mlir::omp::LoopNestOp>(wrapper.getWrappedLoop())
-                 : nullptr;
+    loopOp = mlir::cast<mlir::omp::LoopNestOp>(wrapper.getWrappedLoop());
 
   bool cmpCreated = false;
   mlir::OpBuilder::InsertionGuard guard(firOpBuilder);

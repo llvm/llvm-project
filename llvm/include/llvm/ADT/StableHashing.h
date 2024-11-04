@@ -50,6 +50,23 @@ inline stable_hash stable_hash_combine(stable_hash A, stable_hash B,
   return stable_hash_combine(Hashes);
 }
 
+// Removes suffixes introduced by LLVM from the name to enhance stability and
+// maintain closeness to the original name across different builds.
+inline StringRef get_stable_name(StringRef Name) {
+  auto [P1, S1] = Name.rsplit(".llvm.");
+  auto [P2, S2] = P1.rsplit(".__uniq.");
+  return P2;
+}
+
+// Generates a consistent hash value for a given input name across different
+// program executions and environments. This function first converts the input
+// name into a stable form using the `get_stable_name` function, and then
+// computes a hash of this stable name. For instance, `foo.llvm.1234` would have
+// the same hash as `foo.llvm.5678.
+inline stable_hash stable_hash_name(StringRef Name) {
+  return xxh3_64bits(get_stable_name(Name));
+}
+
 } // namespace llvm
 
 #endif

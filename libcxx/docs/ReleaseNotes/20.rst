@@ -38,6 +38,8 @@ What's New in Libc++ 20.0.0?
 Implemented Papers
 ------------------
 
+- P2747R2: ``constexpr`` placement new (`Github <https://github.com/llvm/llvm-project/issues/105427>`__)
+- P2609R3: Relaxing Ranges Just A Smidge (`Github <https://github.com/llvm/llvm-project/issues/105253>`__)
 - P2985R0: A type trait for detecting virtual base classes (`Github <https://github.com/llvm/llvm-project/issues/105432>`__)
 
 
@@ -46,6 +48,8 @@ Improvements and New Features
 
 - The ``lexicographical_compare`` and ``ranges::lexicographical_compare`` algorithms have been optimized for trivially
   equality comparable types, resulting in a performance improvement of up to 40x.
+
+- The ``_LIBCPP_ENABLE_CXX20_REMOVED_UNCAUGHT_EXCEPTION`` macro has been added to make ``std::uncaught_exception`` available in C++20 and later modes.
 
 
 Deprecations and Removals

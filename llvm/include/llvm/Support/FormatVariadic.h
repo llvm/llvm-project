@@ -67,23 +67,20 @@ class formatv_object_base {
 protected:
   StringRef Fmt;
   ArrayRef<support::detail::format_adapter *> Adapters;
-
-  static bool consumeFieldLayout(StringRef &Spec, AlignStyle &Where,
-                                 size_t &Align, char &Pad);
-
-  static std::pair<ReplacementItem, StringRef>
-  splitLiteralAndReplacement(StringRef Fmt);
+  bool Validate;
 
   formatv_object_base(StringRef Fmt,
-                      ArrayRef<support::detail::format_adapter *> Adapters)
-      : Fmt(Fmt), Adapters(Adapters) {}
+                      ArrayRef<support::detail::format_adapter *> Adapters,
+                      bool Validate)
+      : Fmt(Fmt), Adapters(Adapters), Validate(Validate) {}
 
   formatv_object_base(formatv_object_base const &rhs) = delete;
   formatv_object_base(formatv_object_base &&rhs) = default;
 
 public:
   void format(raw_ostream &S) const {
-    for (auto &R : parseFormatString(Fmt)) {
+    const auto Replacements = parseFormatString(Fmt, Adapters.size(), Validate);
+    for (const auto &R : Replacements) {
       if (R.Type == ReplacementType::Empty)
         continue;
       if (R.Type == ReplacementType::Literal) {
@@ -101,9 +98,10 @@ public:
       Align.format(S, R.Options);
     }
   }
-  static SmallVector<ReplacementItem, 2> parseFormatString(StringRef Fmt);
 
-  static std::optional<ReplacementItem> parseReplacementItem(StringRef Spec);
+  // Parse and optionally validate format string (in debug builds).
+  static SmallVector<ReplacementItem, 2>
+  parseFormatString(StringRef Fmt, size_t NumArgs, bool Validate);
 
   std::string str() const {
     std::string Result;
@@ -149,8 +147,8 @@ template <typename Tuple> class formatv_object : public formatv_object_base {
   };
 
 public:
-  formatv_object(StringRef Fmt, Tuple &&Params)
-      : formatv_object_base(Fmt, ParameterPointers),
+  formatv_object(StringRef Fmt, Tuple &&Params, bool Validate)
+      : formatv_object_base(Fmt, ParameterPointers, Validate),
         Parameters(std::move(Params)) {
     ParameterPointers = std::apply(create_adapters(), Parameters);
   }
@@ -247,15 +245,22 @@ public:
 // assertion.  Otherwise, it will try to do something reasonable, but in general
 // the details of what that is are undefined.
 //
+
+// formatv() with validation enable/disable controlled by the first argument.
 template <typename... Ts>
-inline auto formatv(const char *Fmt, Ts &&...Vals)
+inline auto formatv(bool Validate, const char *Fmt, Ts &&...Vals)
     -> formatv_object<decltype(std::make_tuple(
         support::detail::build_format_adapter(std::forward<Ts>(Vals))...))> {
   using ParamTuple = decltype(std::make_tuple(
       support::detail::build_format_adapter(std::forward<Ts>(Vals))...));
-  return formatv_object<ParamTuple>(
-      Fmt, std::make_tuple(support::detail::build_format_adapter(
-               std::forward<Ts>(Vals))...));
+  auto Params = std::make_tuple(
+      support::detail::build_format_adapter(std::forward<Ts>(Vals))...);
+  return formatv_object<ParamTuple>(Fmt, std::move(Params), Validate);
+}
+
+// formatv() with validation enabled.
+template <typename... Ts> inline auto formatv(const char *Fmt, Ts &&...Vals) {
+  return formatv<Ts...>(true, Fmt, std::forward<Ts>(Vals)...);
 }
 
 } // end namespace llvm

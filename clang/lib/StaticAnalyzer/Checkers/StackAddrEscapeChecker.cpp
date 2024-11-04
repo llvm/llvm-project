@@ -305,6 +305,17 @@ static const MemSpaceRegion *getStackOrGlobalSpaceRegion(const MemRegion *R) {
   return nullptr;
 }
 
+const MemRegion *getOriginBaseRegion(const MemRegion *Reg) {
+  Reg = Reg->getBaseRegion();
+  while (const auto *SymReg = dyn_cast<SymbolicRegion>(Reg)) {
+    const auto *OriginReg = SymReg->getSymbol()->getOriginRegion();
+    if (!OriginReg)
+      break;
+    Reg = OriginReg->getBaseRegion();
+  }
+  return Reg;
+}
+
 std::optional<std::string> printReferrer(const MemRegion *Referrer) {
   assert(Referrer);
   const StringRef ReferrerMemorySpace = [](const MemSpaceRegion *Space) {
@@ -313,7 +324,8 @@ std::optional<std::string> printReferrer(const MemRegion *Referrer) {
     if (isa<GlobalsSpaceRegion>(Space))
       return "global";
     assert(isa<StackSpaceRegion>(Space));
-    return "stack";
+    // This case covers top-level and inlined analyses.
+    return "caller";
   }(getStackOrGlobalSpaceRegion(Referrer));
 
   while (!Referrer->canPrintPretty()) {
@@ -326,7 +338,6 @@ std::optional<std::string> printReferrer(const MemRegion *Referrer) {
       // warn_init_ptr_member_to_parameter_addr
       return std::nullopt;
     } else {
-      Referrer->dump();
       assert(false && "Unexpected referrer region type.");
       return std::nullopt;
     }
@@ -341,6 +352,18 @@ std::optional<std::string> printReferrer(const MemRegion *Referrer) {
   return buf;
 }
 
+/// Check whether \p Region refers to a freshly minted symbol after an opaque
+/// function call.
+bool isInvalidatedSymbolRegion(const MemRegion *Region) {
+  const auto *SymReg = Region->getAs<SymbolicRegion>();
+  if (!SymReg)
+    return false;
+  SymbolRef Symbol = SymReg->getSymbol();
+
+  const auto *DerS = dyn_cast<SymbolDerived>(Symbol);
+  return DerS && isa_and_nonnull<SymbolConjured>(DerS->getParentSymbol());
+}
+
 void StackAddrEscapeChecker::checkEndFunction(const ReturnStmt *RS,
                                               CheckerContext &Ctx) const {
   if (!ChecksEnabled[CK_StackAddrEscapeChecker])
@@ -348,12 +371,26 @@ void StackAddrEscapeChecker::checkEndFunction(const ReturnStmt *RS,
 
   ExplodedNode *Node = Ctx.getPredecessor();
 
+  bool ExitingTopFrame =
+      Ctx.getPredecessor()->getLocationContext()->inTopFrame();
+
+  if (ExitingTopFrame &&
+      Node->getLocation().getTag() == ExprEngine::cleanupNodeTag() &&
+      Node->getFirstPred()) {
+    // When finishing analysis of a top-level function, engine proactively
+    // removes dead symbols thus preventing this checker from looking through
+    // the output parameters. Take 1 step back, to the node where these symbols
+    // and their bindings are still present
+    Node = Node->getFirstPred();
+  }
+
   // Iterate over all bindings to global variables and see if it contains
   // a memory region in the stack space.
   class CallBack : public StoreManager::BindingsHandler {
   private:
     CheckerContext &Ctx;
     const StackFrameContext *PoppedFrame;
+    const bool TopFrame;
 
     /// Look for stack variables referring to popped stack variables.
     /// Returns true only if it found some dangling stack variables
@@ -369,24 +406,51 @@ void StackAddrEscapeChecker::checkEndFunction(const ReturnStmt *RS,
 
       const auto *ReferrerStackSpace =
           ReferrerMemSpace->getAs<StackSpaceRegion>();
+
       if (!ReferrerStackSpace)
         return false;
 
-      if (ReferredMemSpace->getStackFrame() == PoppedFrame &&
-          ReferrerStackSpace->getStackFrame()->isParentOf(PoppedFrame)) {
+      if (const auto *ReferredFrame = ReferredMemSpace->getStackFrame();
+          ReferredFrame != PoppedFrame) {
+        return false;
+      }
+
+      if (ReferrerStackSpace->getStackFrame()->isParentOf(PoppedFrame)) {
+        V.emplace_back(Referrer, Referred);
+        return true;
+      }
+      if (isa<StackArgumentsSpaceRegion>(ReferrerMemSpace) &&
+          ReferrerStackSpace->getStackFrame() == PoppedFrame && TopFrame) {
+        // Output parameter of a top-level function
         V.emplace_back(Referrer, Referred);
         return true;
       }
       return false;
     }
 
+    // Keep track of the variables that were invalidated through an opaque
+    // function call. Even if the initial values of such variables were bound to
+    // an address of a local variable, we cannot claim anything now, at the
+    // function exit, so skip them to avoid false positives.
+    void recordInInvalidatedRegions(const MemRegion *Region) {
+      if (isInvalidatedSymbolRegion(Region))
+        ExcludedRegions.insert(getOriginBaseRegion(Region));
+    }
+
   public:
     SmallVector<std::pair<const MemRegion *, const MemRegion *>, 10> V;
+    // ExcludedRegions are skipped from reporting.
+    // I.e., if a referrer in this set, skip the related bug report.
+    // It is useful to avoid false positive for the variables that were
+    // reset to a conjured value after an opaque function call.
+    llvm::SmallPtrSet<const MemRegion *, 4> ExcludedRegions;
 
-    CallBack(CheckerContext &CC) : Ctx(CC), PoppedFrame(CC.getStackFrame()) {}
+    CallBack(CheckerContext &CC, bool TopFrame)
+        : Ctx(CC), PoppedFrame(CC.getStackFrame()), TopFrame(TopFrame) {}
 
     bool HandleBinding(StoreManager &SMgr, Store S, const MemRegion *Region,
                        SVal Val) override {
+      recordInInvalidatedRegions(Region);
       const MemRegion *VR = Val.getAsRegion();
       if (!VR)
         return true;
@@ -395,7 +459,8 @@ void StackAddrEscapeChecker::checkEndFunction(const ReturnStmt *RS,
         return true;
 
       // Check the globals for the same.
-      if (!isa<GlobalsSpaceRegion>(Region->getMemorySpace()))
+      if (!isa_and_nonnull<GlobalsSpaceRegion>(
+              getStackOrGlobalSpaceRegion(Region)))
         return true;
       if (VR && VR->hasStackStorage() && !isNotInCurrentFrame(VR, Ctx))
         V.emplace_back(Region, VR);
@@ -403,7 +468,7 @@ void StackAddrEscapeChecker::checkEndFunction(const ReturnStmt *RS,
     }
   };
 
-  CallBack Cb(Ctx);
+  CallBack Cb(Ctx, ExitingTopFrame);
   ProgramStateRef State = Node->getState();
   State->getStateManager().getStoreManager().iterBindings(State->getStore(),
                                                           Cb);
@@ -424,6 +489,9 @@ void StackAddrEscapeChecker::checkEndFunction(const ReturnStmt *RS,
   for (const auto &P : Cb.V) {
     const MemRegion *Referrer = P.first->getBaseRegion();
     const MemRegion *Referred = P.second;
+    if (Cb.ExcludedRegions.contains(getOriginBaseRegion(Referrer))) {
+      continue;
+    }
 
     // Generate a report for this bug.
     const StringRef CommonSuffix =

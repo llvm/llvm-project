@@ -517,6 +517,12 @@ void PruningFunctionCloner::CloneBlock(
   for (BasicBlock::const_iterator II = StartingInst, IE = --BB->end(); II != IE;
        ++II) {
 
+    // Don't clone fake_use as it may suppress many optimizations
+    // due to inlining, especially SROA.
+    if (auto *IntrInst = dyn_cast<IntrinsicInst>(II))
+      if (IntrInst->getIntrinsicID() == Intrinsic::fake_use)
+        continue;
+
     Instruction *NewInst = cloneInstruction(II);
     NewInst->insertInto(NewBB, NewBB->end());
 

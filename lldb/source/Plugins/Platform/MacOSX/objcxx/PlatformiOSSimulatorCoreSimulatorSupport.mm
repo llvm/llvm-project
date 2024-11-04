@@ -341,7 +341,7 @@ operator!=(const CoreSimulatorSupport::ModelIdentifier &lhs,
 
 bool CoreSimulatorSupport::Device::Boot(Status &err) {
   if (m_dev == nil) {
-    err.SetErrorString("no valid simulator instance");
+    err = Status::FromErrorString("no valid simulator instance");
     return false;
   }
 
@@ -360,7 +360,7 @@ bool CoreSimulatorSupport::Device::Boot(Status &err) {
     err.Clear();
     return true;
   } else {
-    err.SetErrorString([[nserror description] UTF8String]);
+    err = Status::FromErrorString([[nserror description] UTF8String]);
     return false;
   }
 }
@@ -371,7 +371,7 @@ bool CoreSimulatorSupport::Device::Shutdown(Status &err) {
     err.Clear();
     return true;
   } else {
-    err.SetErrorString([[nserror description] UTF8String]);
+    err = Status::FromErrorString([[nserror description] UTF8String]);
     return false;
   }
 }
@@ -387,12 +387,12 @@ static Status HandleFileAction(ProcessLaunchInfo &launch_info,
       break;
 
     case FileAction::eFileActionClose:
-      error.SetErrorStringWithFormat("close file action for %i not supported",
-                                     fd);
+      error = Status::FromErrorStringWithFormat(
+          "close file action for %i not supported", fd);
       break;
 
     case FileAction::eFileActionDuplicate:
-      error.SetErrorStringWithFormat(
+      error = Status::FromErrorStringWithFormat(
           "duplication file action for %i not supported", fd);
       break;
 
@@ -417,7 +417,6 @@ static Status HandleFileAction(ProcessLaunchInfo &launch_info,
             return error; // Success
           }
         }
-        Status posix_error;
         int oflag = file_action->GetActionArgument();
         int created_fd =
             open(file_spec.GetPath().c_str(), oflag, S_IRUSR | S_IWUSR);
@@ -433,10 +432,10 @@ static Status HandleFileAction(ProcessLaunchInfo &launch_info,
           [options setValue:[NSNumber numberWithInteger:created_fd] forKey:key];
           return error; // Success
         } else {
-          posix_error.SetErrorToErrno();
-          error.SetErrorStringWithFormat("unable to open file '%s': %s",
-                                         file_spec.GetPath().c_str(),
-                                         posix_error.AsCString());
+          Status posix_error = Status::FromErrno();
+          return Status::FromErrorStringWithFormatv(
+              "unable to open file '{0}': {1}", file_spec.GetPath(),
+              posix_error.AsCString());
         }
       }
     } break;
@@ -536,7 +535,8 @@ CoreSimulatorSupport::Device::Spawn(ProcessLaunchInfo &launch_info) {
 
   if (!success) {
     const char *nserror_string = [[nserror description] UTF8String];
-    error.SetErrorString(nserror_string ? nserror_string : "unable to launch");
+    error = Status::FromErrorString(nserror_string ? nserror_string
+                                                   : "unable to launch");
   }
 
   return CoreSimulatorSupport::Process(pid, error);

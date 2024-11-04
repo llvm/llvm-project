@@ -28,8 +28,8 @@ int HasSanitizeAddress() { return 1; }
 // CHECK-NOASAN: {{Function Attrs: mustprogress noinline nounwind$}}
 // CHECK-ASAN: Function Attrs: mustprogress noinline nounwind sanitize_address
 // CHECK-KASAN: Function Attrs: mustprogress noinline nounwind sanitize_address
-// CHECK-HWASAN: Function Attrs: mustprogress noinline nounwind sanitize_hwaddress
-// CHECK-KHWASAN: Function Attrs: mustprogress noinline nounwind sanitize_hwaddress
+// CHECK-HWASAN: Function Attrs: mustprogress nobuiltin noinline nounwind sanitize_hwaddress
+// CHECK-KHWASAN: Function Attrs: mustprogress nobuiltin noinline nounwind sanitize_hwaddress
 
 __attribute__((no_sanitize("address"))) int NoSanitizeQuoteAddress() {
   return 0;
@@ -37,15 +37,15 @@ __attribute__((no_sanitize("address"))) int NoSanitizeQuoteAddress() {
 // CHECK-NOASAN: {{Function Attrs: mustprogress noinline nounwind$}}
 // CHECK-ASAN: {{Function Attrs: mustprogress noinline nounwind$}}
 // CHECK-KASAN: {{Function Attrs: mustprogress noinline nounwind$}}
-// CHECK-HWASAN: {{Function Attrs: mustprogress noinline nounwind sanitize_hwaddress$}}
-// CHECK-KHWASAN: {{Function Attrs: mustprogress noinline nounwind sanitize_hwaddress$}}
+// CHECK-HWASAN: {{Function Attrs: mustprogress nobuiltin noinline nounwind sanitize_hwaddress$}}
+// CHECK-KHWASAN: {{Function Attrs: mustprogress nobuiltin noinline nounwind sanitize_hwaddress$}}
 
 __attribute__((no_sanitize_address)) int NoSanitizeAddress() { return 0; }
 // CHECK-NOASAN: {{Function Attrs: mustprogress noinline nounwind$}}
 // CHECK-ASAN: {{Function Attrs: mustprogress noinline nounwind$}}
 // CHECK-KASAN: {{Function Attrs: mustprogress noinline nounwind$}}
-// CHECK-HWASAN: {{Function Attrs: mustprogress noinline nounwind sanitize_hwaddress$}}
-// CHECK-KHWASAN: {{Function Attrs: mustprogress noinline nounwind sanitize_hwaddress$}}
+// CHECK-HWASAN: {{Function Attrs: mustprogress nobuiltin noinline nounwind sanitize_hwaddress$}}
+// CHECK-KHWASAN: {{Function Attrs: mustprogress nobuiltin noinline nounwind sanitize_hwaddress$}}
 
 __attribute__((no_sanitize("kernel-address"))) int NoSanitizeKernelAddress() {
   return 0;
@@ -53,8 +53,8 @@ __attribute__((no_sanitize("kernel-address"))) int NoSanitizeKernelAddress() {
 // CHECK-NOASAN: {{Function Attrs: mustprogress noinline nounwind$}}
 // CHECK-ASAN: {{Function Attrs: mustprogress noinline nounwind$}}
 // CHECK-KASAN: {{Function Attrs: mustprogress noinline nounwind$}}
-// CHECK-HWASAN: {{Function Attrs: mustprogress noinline nounwind sanitize_hwaddress$}}
-// CHECK-KHWASAN: {{Function Attrs: mustprogress noinline nounwind sanitize_hwaddress$}}
+// CHECK-HWASAN: {{Function Attrs: mustprogress nobuiltin noinline nounwind sanitize_hwaddress$}}
+// CHECK-KHWASAN: {{Function Attrs: mustprogress nobuiltin noinline nounwind sanitize_hwaddress$}}
 
 __attribute__((no_sanitize("hwaddress"))) int NoSanitizeHWAddress() {
   return 0;
@@ -62,8 +62,8 @@ __attribute__((no_sanitize("hwaddress"))) int NoSanitizeHWAddress() {
 // CHECK-NOASAN: {{Function Attrs: mustprogress noinline nounwind$}}
 // CHECK-ASAN: {{Function Attrs: mustprogress noinline nounwind sanitize_address$}}
 // CHECK-KASAN: {{Function Attrs: mustprogress noinline nounwind sanitize_address$}}
-// CHECK-HWASAN: {{Function Attrs: mustprogress noinline nounwind$}}
-// CHECK-KHWASAN: {{Function Attrs: mustprogress noinline nounwind$}}
+// CHECK-HWASAN: {{Function Attrs: mustprogress nobuiltin noinline nounwind$}}
+// CHECK-KHWASAN: {{Function Attrs: mustprogress nobuiltin noinline nounwind$}}
 
 __attribute__((no_sanitize("kernel-hwaddress"))) int NoSanitizeKernelHWAddress() {
   return 0;
@@ -71,8 +71,8 @@ __attribute__((no_sanitize("kernel-hwaddress"))) int NoSanitizeKernelHWAddress()
 // CHECK-NOASAN: {{Function Attrs: mustprogress noinline nounwind$}}
 // CHECK-ASAN: {{Function Attrs: mustprogress noinline nounwind sanitize_address$}}
 // CHECK-KASAN: {{Function Attrs: mustprogress noinline nounwind sanitize_address$}}
-// CHECK-HWASAN: {{Function Attrs: mustprogress noinline nounwind$}}
-// CHECK-KHWASAN: {{Function Attrs: mustprogress noinline nounwind$}}
+// CHECK-HWASAN: {{Function Attrs: mustprogress nobuiltin noinline nounwind$}}
+// CHECK-KHWASAN: {{Function Attrs: mustprogress nobuiltin noinline nounwind$}}
 
 __attribute__((disable_sanitizer_instrumentation)) int DisableSanitizerInstrumentation() {
   return 0;
@@ -80,5 +80,5 @@ __attribute__((disable_sanitizer_instrumentation)) int DisableSanitizerInstrumen
 // CHECK-NOASAN: {{Function Attrs: disable_sanitizer_instrumentation mustprogress noinline nounwind$}}
 // CHECK-ASAN: {{Function Attrs: disable_sanitizer_instrumentation mustprogress noinline nounwind$}}
 // CHECK-KASAN: {{Function Attrs: disable_sanitizer_instrumentation mustprogress noinline nounwind$}}
-// CHECK-HWASAN: {{Function Attrs: disable_sanitizer_instrumentation mustprogress noinline nounwind$}}
-// CHECK-KHWASAN: {{Function Attrs: disable_sanitizer_instrumentation mustprogress noinline nounwind$}}
+// CHECK-HWASAN: {{Function Attrs: disable_sanitizer_instrumentation mustprogress nobuiltin noinline nounwind$}}
+// CHECK-KHWASAN: {{Function Attrs: disable_sanitizer_instrumentation mustprogress nobuiltin noinline nounwind$}}

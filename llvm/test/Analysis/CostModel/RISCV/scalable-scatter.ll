@@ -2,6 +2,7 @@
 ; RUN: opt -passes="print<cost-model>" 2>&1 -disable-output -mtriple=riscv64 -mattr=+v,+f,+d,+zfh,+zvfh < %s | FileCheck %s --check-prefixes=CHECK,GENERIC
 ; RUN: opt -passes="print<cost-model>" 2>&1 -disable-output -mtriple=riscv64 -mattr=+v,+f,+d,+zfh,+zvfh -riscv-v-vector-bits-max=256 < %s | FileCheck %s --check-prefixes=CHECK,MAX256
 ; RUN: opt -passes="print<cost-model>" 2>&1 -disable-output -mtriple=riscv64 < %s | FileCheck %s --check-prefixes=CHECK,UNSUPPORTED
+; RUN: opt -passes="print<cost-model>" 2>&1 -disable-output -mtriple=riscv64 -mattr=+zve32f,+zvl128b,+f,+d,+zfh,+zvfh < %s | FileCheck %s --check-prefixes=CHECK,UNSUPPORTED
 
 define void @masked_scatter_aligned() {
 ; GENERIC-LABEL: 'masked_scatter_aligned'

@@ -878,7 +878,7 @@ protected:
     Status error;
 
     if (!m_regex_cmd_up) {
-      error.SetErrorStringWithFormat(
+      return Status::FromErrorStringWithFormat(
           "invalid regular expression command object for: '%.*s'",
           (int)regex_sed.size(), regex_sed.data());
       return error;
@@ -887,16 +887,17 @@ protected:
     size_t regex_sed_size = regex_sed.size();
 
     if (regex_sed_size <= 1) {
-      error.SetErrorStringWithFormat(
+      return Status::FromErrorStringWithFormat(
           "regular expression substitution string is too short: '%.*s'",
           (int)regex_sed.size(), regex_sed.data());
       return error;
     }
 
     if (regex_sed[0] != 's') {
-      error.SetErrorStringWithFormat("regular expression substitution string "
-                                     "doesn't start with 's': '%.*s'",
-                                     (int)regex_sed.size(), regex_sed.data());
+      return Status::FromErrorStringWithFormat(
+          "regular expression substitution string "
+          "doesn't start with 's': '%.*s'",
+          (int)regex_sed.size(), regex_sed.data());
       return error;
     }
     const size_t first_separator_char_pos = 1;
@@ -907,7 +908,7 @@ protected:
         regex_sed.find(separator_char, first_separator_char_pos + 1);
 
     if (second_separator_char_pos == std::string::npos) {
-      error.SetErrorStringWithFormat(
+      return Status::FromErrorStringWithFormat(
           "missing second '%c' separator char after '%.*s' in '%.*s'",
           separator_char,
           (int)(regex_sed.size() - first_separator_char_pos - 1),
@@ -920,7 +921,7 @@ protected:
         regex_sed.find(separator_char, second_separator_char_pos + 1);
 
     if (third_separator_char_pos == std::string::npos) {
-      error.SetErrorStringWithFormat(
+      return Status::FromErrorStringWithFormat(
           "missing third '%c' separator char after '%.*s' in '%.*s'",
           separator_char,
           (int)(regex_sed.size() - second_separator_char_pos - 1),
@@ -934,7 +935,7 @@ protected:
       if (regex_sed.find_first_not_of("\t\n\v\f\r ",
                                       third_separator_char_pos + 1) !=
           std::string::npos) {
-        error.SetErrorStringWithFormat(
+        return Status::FromErrorStringWithFormat(
             "extra data found after the '%.*s' regular expression substitution "
             "string: '%.*s'",
             (int)third_separator_char_pos + 1, regex_sed.data(),
@@ -943,13 +944,13 @@ protected:
         return error;
       }
     } else if (first_separator_char_pos + 1 == second_separator_char_pos) {
-      error.SetErrorStringWithFormat(
+      return Status::FromErrorStringWithFormat(
           "<regex> can't be empty in 's%c<regex>%c<subst>%c' string: '%.*s'",
           separator_char, separator_char, separator_char, (int)regex_sed.size(),
           regex_sed.data());
       return error;
     } else if (second_separator_char_pos + 1 == third_separator_char_pos) {
-      error.SetErrorStringWithFormat(
+      return Status::FromErrorStringWithFormat(
           "<subst> can't be empty in 's%c<regex>%c<subst>%c' string: '%.*s'",
           separator_char, separator_char, separator_char, (int)regex_sed.size(),
           regex_sed.data());
@@ -1249,16 +1250,19 @@ private:
       ScriptInterpreter *scripter = 
         m_interpreter.GetDebugger().GetScriptInterpreter();
       if (!scripter) {
-        error.SetErrorString("No script interpreter for SetOptionValue.");
+        return Status::FromErrorString(
+            "No script interpreter for SetOptionValue.");
         return error;
       }
       if (!m_cmd_obj_sp) {
-        error.SetErrorString("SetOptionValue called with empty cmd_obj.");
+        return Status::FromErrorString(
+            "SetOptionValue called with empty cmd_obj.");
         return error;
       }
       if (!m_options_definition_up) {
-        error.SetErrorString("SetOptionValue called before options definitions "
-                             "were created.");
+        return Status::FromErrorString(
+            "SetOptionValue called before options definitions "
+            "were created.");
         return error;
       }
       // Pass the long option, since you aren't actually required to have a
@@ -1269,8 +1273,8 @@ private:
       bool success = scripter->SetOptionValueForCommandObject(m_cmd_obj_sp, 
         execution_context, long_option, option_arg);
       if (!success)
-        error.SetErrorStringWithFormatv("Error setting option: {0} to {1}",
-                                        long_option, option_arg);
+        return Status::FromErrorStringWithFormatv(
+            "Error setting option: {0} to {1}", long_option, option_arg);
       return error;
     }
 
@@ -1311,9 +1315,8 @@ private:
         // If this is an integer, then this specifies a single group:
         uint32_t value = uint_val->GetValue();
         if (value == 0) {
-          error.SetErrorStringWithFormatv(
+          return Status::FromErrorStringWithFormatv(
               "0 is not a valid group for option {0}", counter);
-          return error;
         }
         usage_mask = (1 << (value - 1));
         return error;
@@ -1321,9 +1324,8 @@ private:
       // Otherwise it has to be an array:
       StructuredData::Array *array_val = obj_sp->GetAsArray();
       if (!array_val) {
-        error.SetErrorStringWithFormatv(
+        return Status::FromErrorStringWithFormatv(
             "required field is not a array for option {0}", counter);
-        return error;
       }
       // This is the array ForEach for accumulating a group usage mask from
       // an array of string descriptions of groups.
@@ -1334,7 +1336,7 @@ private:
         if (int_val) {
           uint32_t value = int_val->GetValue();
           if (value == 0) {
-            error.SetErrorStringWithFormatv(
+            error = Status::FromErrorStringWithFormatv(
                 "0 is not a valid group for element {0}", counter);
             return false;
           }
@@ -1343,35 +1345,41 @@ private:
         }
         StructuredData::Array *arr_val = obj->GetAsArray();
         if (!arr_val) {
-          error.SetErrorStringWithFormatv(
-              "Group element not an int or array of integers for element {0}", 
+          error = Status::FromErrorStringWithFormatv(
+              "Group element not an int or array of integers for element {0}",
               counter);
           return false; 
         }
         size_t num_range_elem = arr_val->GetSize();
         if (num_range_elem != 2) {
-          error.SetErrorStringWithFormatv(
-              "Subranges of a group not a start and a stop for element {0}", 
+          error = Status::FromErrorStringWithFormatv(
+              "Subranges of a group not a start and a stop for element {0}",
               counter);
           return false; 
         }
         int_val = arr_val->GetItemAtIndex(0)->GetAsUnsignedInteger();
         if (!int_val) {
-          error.SetErrorStringWithFormatv("Start element of a subrange of a "
-              "group not unsigned int for element {0}", counter);
+          error = Status::FromErrorStringWithFormatv(
+              "Start element of a subrange of a "
+              "group not unsigned int for element {0}",
+              counter);
           return false; 
         }
         uint32_t start = int_val->GetValue();
         int_val = arr_val->GetItemAtIndex(1)->GetAsUnsignedInteger();
         if (!int_val) {
-          error.SetErrorStringWithFormatv("End element of a subrange of a group"
-              " not unsigned int for element {0}", counter);
+          error = Status::FromErrorStringWithFormatv(
+              "End element of a subrange of a group"
+              " not unsigned int for element {0}",
+              counter);
           return false; 
         }
         uint32_t end = int_val->GetValue();
         if (start == 0 || end == 0 || start > end) {
-          error.SetErrorStringWithFormatv("Invalid subrange of a group: {0} - "
-              "{1} for element {2}", start, end, counter);
+          error = Status::FromErrorStringWithFormatv(
+              "Invalid subrange of a group: {0} - "
+              "{1} for element {2}",
+              start, end, counter);
           return false;
         }
         for (uint32_t i = start; i <= end; i++) {
@@ -1401,7 +1409,8 @@ private:
           (llvm::StringRef long_option, StructuredData::Object *object) -> bool {
         StructuredData::Dictionary *opt_dict = object->GetAsDictionary();
         if (!opt_dict) {
-          error.SetErrorString("Value in options dictionary is not a dictionary");
+          error = Status::FromErrorString(
+              "Value in options dictionary is not a dictionary");
           return false;
         }
         OptionDefinition &option_def = m_options_definition_up.get()[counter];
@@ -1432,8 +1441,10 @@ private:
         if (obj_sp) {
           StructuredData::Boolean *boolean_val = obj_sp->GetAsBoolean();
           if (!boolean_val) {
-            error.SetErrorStringWithFormatv("'required' field is not a boolean "
-                "for option {0}", counter);
+            error = Status::FromErrorStringWithFormatv(
+                "'required' field is not a boolean "
+                "for option {0}",
+                counter);
             return false;
           } 
           option_def.required = boolean_val->GetValue();      
@@ -1446,12 +1457,16 @@ private:
           // The value is a string, so pull the 
           llvm::StringRef short_str = obj_sp->GetStringValue();
           if (short_str.empty()) {
-            error.SetErrorStringWithFormatv("short_option field empty for "
-                "option {0}", counter);
+            error = Status::FromErrorStringWithFormatv(
+                "short_option field empty for "
+                "option {0}",
+                counter);
             return false;
           } else if (short_str.size() != 1) {
-            error.SetErrorStringWithFormatv("short_option field has extra "
-                "characters for option {0}", counter);
+            error = Status::FromErrorStringWithFormatv(
+                "short_option field has extra "
+                "characters for option {0}",
+                counter);
             return false;
           }
           short_option = (int) short_str[0];
@@ -1464,8 +1479,8 @@ private:
         
         // Long Option is the key from the outer dict:
         if (long_option.empty()) {
-          error.SetErrorStringWithFormatv("empty long_option for option {0}", 
-              counter);
+          error = Status::FromErrorStringWithFormatv(
+              "empty long_option for option {0}", counter);
           return false;
         }
         auto inserted = g_string_storer.insert(long_option.str());
@@ -1477,14 +1492,17 @@ private:
           StructuredData::UnsignedInteger *uint_val 
               = obj_sp->GetAsUnsignedInteger();
           if (!uint_val) {
-            error.SetErrorStringWithFormatv("Value type must be an unsigned "
+            error = Status::FromErrorStringWithFormatv(
+                "Value type must be an unsigned "
                 "integer");
             return false;
           }
           uint64_t val_type = uint_val->GetValue();
           if (val_type >= eArgTypeLastArg) {
-            error.SetErrorStringWithFormatv("Value type {0} beyond the "
-                "CommandArgumentType bounds", val_type);
+            error =
+                Status::FromErrorStringWithFormatv("Value type {0} beyond the "
+                                                   "CommandArgumentType bounds",
+                                                   val_type);
             return false;
           }
           option_def.argument_type = (CommandArgumentType) val_type;
@@ -1499,14 +1517,18 @@ private:
         if (obj_sp) {
           StructuredData::UnsignedInteger *uint_val = obj_sp->GetAsUnsignedInteger();
           if (!uint_val) {
-            error.SetErrorStringWithFormatv("Completion type must be an "
-                "unsigned integer for option {0}", counter);
+            error = Status::FromErrorStringWithFormatv(
+                "Completion type must be an "
+                "unsigned integer for option {0}",
+                counter);
             return false;
           }
           uint64_t completion_type = uint_val->GetValue();
           if (completion_type > eCustomCompletion) {
-            error.SetErrorStringWithFormatv("Completion type for option {0} "
-                "beyond the CompletionType bounds", completion_type);
+            error = Status::FromErrorStringWithFormatv(
+                "Completion type for option {0} "
+                "beyond the CompletionType bounds",
+                completion_type);
             return false;
           }
           option_def.completion_type = (CommandArgumentType) completion_type;
@@ -1517,15 +1539,17 @@ private:
         std::string usage_text;
         obj_sp = opt_dict->GetValueForKey("help");
         if (!obj_sp) {
-          error.SetErrorStringWithFormatv("required usage missing from option "
-              "{0}", counter);
+          error = Status::FromErrorStringWithFormatv(
+              "required usage missing from option "
+              "{0}",
+              counter);
           return false;
         }
         llvm::StringRef usage_stref;
         usage_stref = obj_sp->GetStringValue();
         if (usage_stref.empty()) {
-          error.SetErrorStringWithFormatv("empty usage text for option {0}", 
-              counter);
+          error = Status::FromErrorStringWithFormatv(
+              "empty usage text for option {0}", counter);
           return false;
         }
         m_usage_container[counter] = usage_stref.str().c_str();
@@ -1537,8 +1561,10 @@ private:
         if (obj_sp) {
           StructuredData::Array *array = obj_sp->GetAsArray();
           if (!array) {
-            error.SetErrorStringWithFormatv("enum values must be an array for "
-                "option {0}", counter);
+            error = Status::FromErrorStringWithFormatv(
+                "enum values must be an array for "
+                "option {0}",
+                counter);
             return false;
           }
           size_t num_elem = array->GetSize();
@@ -1554,13 +1580,16 @@ private:
               (StructuredData::Object *object) -> bool {
             StructuredData::Array *enum_arr = object->GetAsArray();
             if (!enum_arr) {
-              error.SetErrorStringWithFormatv("Enum values for option {0} not "
-                  "an array", counter);
+              error = Status::FromErrorStringWithFormatv(
+                  "Enum values for option {0} not "
+                  "an array",
+                  counter);
               return false;
             }
             size_t num_enum_elements = enum_arr->GetSize();
             if (num_enum_elements != 2) {
-              error.SetErrorStringWithFormatv("Wrong number of elements: {0} "
+              error = Status::FromErrorStringWithFormatv(
+                  "Wrong number of elements: {0} "
                   "for enum {1} in option {2}",
                   num_enum_elements, enum_ctr, counter);
               return false;
@@ -1573,8 +1602,10 @@ private:
             // Enum Usage:
             obj_sp = enum_arr->GetItemAtIndex(1);
             if (!obj_sp) {
-              error.SetErrorStringWithFormatv("No usage for enum {0} in option "
-                  "{1}",  enum_ctr, counter);
+              error = Status::FromErrorStringWithFormatv(
+                  "No usage for enum {0} in option "
+                  "{1}",
+                  enum_ctr, counter);
               return false;
             }
             llvm::StringRef usage_stref = obj_sp->GetStringValue();
@@ -1701,7 +1732,7 @@ public:
     StreamString stream;
     ScriptInterpreter *scripter = GetDebugger().GetScriptInterpreter();
     if (!scripter) {
-      m_options_error.SetErrorString("No script interpreter");
+      m_options_error = Status::FromErrorString("No script interpreter");
       return;
     }
 
@@ -1725,7 +1756,7 @@ public:
         if (m_options_error.Fail())
           return;
       } else {
-        m_options_error.SetErrorString("Options array not an array");
+        m_options_error = Status::FromErrorString("Options array not an array");
         return;
       }
     }
@@ -1736,7 +1767,8 @@ public:
     if (args_object_sp) {
       StructuredData::Array *args_array = args_object_sp->GetAsArray();        
       if (!args_array) {
-        m_args_error.SetErrorString("Argument specification is not an array");
+        m_args_error =
+            Status::FromErrorString("Argument specification is not an array");
         return;
       }
       size_t counter = 0;
@@ -1755,14 +1787,16 @@ public:
           CommandArgumentType arg_type = eArgTypeNone;
           ArgumentRepetitionType arg_repetition = eArgRepeatOptional;
           uint32_t arg_opt_set_association;
-          
-          auto report_error = [this, elem_counter, counter] 
-              (const char *err_txt) -> bool {
-            m_args_error.SetErrorStringWithFormatv("Element {0} of arguments "
-                "list element {1}: %s.", elem_counter, counter, err_txt);
+
+          auto report_error = [this, elem_counter,
+                               counter](const char *err_txt) -> bool {
+            m_args_error = Status::FromErrorStringWithFormatv(
+                "Element {0} of arguments "
+                "list element {1}: %s.",
+                elem_counter, counter, err_txt);
             return false;
           };
-          
+
           StructuredData::Dictionary *arg_dict = object->GetAsDictionary();
           if (!arg_dict) {
             report_error("is not a dictionary.");
@@ -1813,16 +1847,20 @@ public:
         };
         StructuredData::Array *args_array = object->GetAsArray();
         if (!args_array) {
-          m_args_error.SetErrorStringWithFormatv("Argument definition element "
-              "{0} is not an array", counter);
+          m_args_error =
+              Status::FromErrorStringWithFormatv("Argument definition element "
+                                                 "{0} is not an array",
+                                                 counter);
         }
         
         args_array->ForEach(args_adder);
         if (m_args_error.Fail())
           return false;
         if (this_entry.empty()) {
-          m_args_error.SetErrorStringWithFormatv("Argument definition element "
-              "{0} is empty", counter);
+          m_args_error =
+              Status::FromErrorStringWithFormatv("Argument definition element "
+                                                 "{0} is empty",
+                                                 counter);
           return false;
         }
         m_arguments.push_back(this_entry);
@@ -2098,7 +2136,7 @@ protected:
             (ScriptedCommandSynchronicity)OptionArgParser::ToOptionEnum(
                 option_arg, GetDefinitions()[option_idx].enum_values, 0, error);
         if (!error.Success())
-          error.SetErrorStringWithFormat(
+          return Status::FromErrorStringWithFormat(
               "unrecognized value for synchronicity '%s'",
               option_arg.str().c_str());
         break;
@@ -2109,7 +2147,7 @@ protected:
             static_cast<lldb::CompletionType>(OptionArgParser::ToOptionEnum(
                 option_arg, definition.enum_values, eNoCompletion, error));
         if (!error.Success())
-          error.SetErrorStringWithFormat(
+          return Status::FromErrorStringWithFormat(
               "unrecognized value for command completion type '%s'",
               option_arg.str().c_str());
         m_completion_type = completion_type;

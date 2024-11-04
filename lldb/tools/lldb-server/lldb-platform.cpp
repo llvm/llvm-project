@@ -103,8 +103,9 @@ static Status save_socket_id_to_file(const std::string &socket_id,
   FileSpec temp_file_spec(file_spec.GetDirectory().GetStringRef());
   Status error(llvm::sys::fs::create_directory(temp_file_spec.GetPath()));
   if (error.Fail())
-    return Status("Failed to create directory %s: %s",
-                  temp_file_spec.GetPath().c_str(), error.AsCString());
+    return Status::FromErrorStringWithFormat(
+        "Failed to create directory %s: %s", temp_file_spec.GetPath().c_str(),
+        error.AsCString());
 
   Status status;
   if (auto Err = llvm::writeToOutput(file_spec.GetPath(),
@@ -112,9 +113,9 @@ static Status save_socket_id_to_file(const std::string &socket_id,
                                        OS << socket_id;
                                        return llvm::Error::success();
                                      }))
-    return Status("Failed to atomically write file %s: %s",
-                  file_spec.GetPath().c_str(),
-                  llvm::toString(std::move(Err)).c_str());
+    return Status::FromErrorStringWithFormat(
+        "Failed to atomically write file %s: %s", file_spec.GetPath().c_str(),
+        llvm::toString(std::move(Err)).c_str());
   return status;
 }
 
@@ -223,7 +224,7 @@ static Status spawn_process(const char *progname, const Socket *conn_socket,
 
   lldb::pid_t child_pid = launch_info.GetProcessID();
   if (child_pid == LLDB_INVALID_PROCESS_ID)
-    return Status("invalid pid");
+    return Status::FromErrorString("invalid pid");
 
   LLDB_LOG(GetLog(LLDBLog::Platform), "lldb-platform launched '{0}', pid={1}",
            cmd, child_pid);

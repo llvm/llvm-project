@@ -827,8 +827,8 @@ public:
   // Users might provide custom allocators, and prior to C++20 we have no existing way to detect whether the allocator's
   // pointer type is contiguous (though it has to be by the Standard). Using the wrapper type ensures the iterator is
   // considered contiguous.
-  typedef __bounded_iter<__wrap_iter<pointer>> iterator;
-  typedef __bounded_iter<__wrap_iter<const_pointer>> const_iterator;
+  typedef __bounded_iter<__wrap_iter<pointer> > iterator;
+  typedef __bounded_iter<__wrap_iter<const_pointer> > const_iterator;
 #else
   typedef __wrap_iter<pointer> iterator;
   typedef __wrap_iter<const_pointer> const_iterator;
@@ -3461,14 +3461,6 @@ inline _LIBCPP_CONSTEXPR_SINCE_CXX20 void basic_string<_CharT, _Traits, _Allocat
 }
 
 // find
-
-template <class _Traits>
-struct _LIBCPP_HIDDEN __traits_eq {
-  typedef typename _Traits::char_type char_type;
-  _LIBCPP_HIDE_FROM_ABI bool operator()(const char_type& __x, const char_type& __y) _NOEXCEPT {
-    return _Traits::eq(__x, __y);
-  }
-};
 
 template <class _CharT, class _Traits, class _Allocator>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 typename basic_string<_CharT, _Traits, _Allocator>::size_type

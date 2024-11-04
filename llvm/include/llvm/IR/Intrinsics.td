@@ -1835,6 +1835,9 @@ def int_is_constant : DefaultAttrsIntrinsic<[llvm_i1_ty], [llvm_any_ty],
                                 [IntrNoMem, IntrWillReturn, IntrConvergent],
                                 "llvm.is.constant">;
 
+// Introduce a use of the argument without generating any code.
+def int_fake_use : Intrinsic<[], [llvm_vararg_ty]>;
+
 // Intrinsic to mask out bits of a pointer.
 // First argument must be pointer or vector of pointer. This is checked by the
 // verifier.
@@ -1846,8 +1849,8 @@ def int_threadlocal_address : DefaultAttrsIntrinsic<[llvm_anyptr_ty], [LLVMMatch
                                                     [NonNull<RetIndex>, NonNull<ArgIndex<0>>,
                                                      IntrNoMem, IntrSpeculatable, IntrWillReturn]>;
 
-def int_experimental_stepvector : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
-                                                        [], [IntrNoMem]>;
+def int_stepvector : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+                                            [], [IntrNoMem]>;
 
 //===---------------- Vector Predication Intrinsics --------------===//
 // Memory Intrinsics

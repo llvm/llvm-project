@@ -555,20 +555,6 @@ using ::tgammal _LIBCPP_USING_IF_EXISTS;
 using ::truncl _LIBCPP_USING_IF_EXISTS;
 
 template <class _A1, __enable_if_t<is_floating_point<_A1>::value, int> = 0>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR bool __constexpr_isnan(_A1 __lcpp_x) _NOEXCEPT {
-#if __has_builtin(__builtin_isnan)
-  return __builtin_isnan(__lcpp_x);
-#else
-  return isnan(__lcpp_x);
-#endif
-}
-
-template <class _A1, __enable_if_t<!is_floating_point<_A1>::value, int> = 0>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR bool __constexpr_isnan(_A1 __lcpp_x) _NOEXCEPT {
-  return std::isnan(__lcpp_x);
-}
-
-template <class _A1, __enable_if_t<is_floating_point<_A1>::value, int> = 0>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR bool __constexpr_isinf(_A1 __lcpp_x) _NOEXCEPT {
 #if __has_builtin(__builtin_isinf)
   return __builtin_isinf(__lcpp_x);
@@ -580,20 +566,6 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR bool __constexpr_isinf(_A1 __lcpp_x) _NO
 template <class _A1, __enable_if_t<!is_floating_point<_A1>::value, int> = 0>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR bool __constexpr_isinf(_A1 __lcpp_x) _NOEXCEPT {
   return std::isinf(__lcpp_x);
-}
-
-template <class _A1, __enable_if_t<is_floating_point<_A1>::value, int> = 0>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR bool __constexpr_isfinite(_A1 __lcpp_x) _NOEXCEPT {
-#if __has_builtin(__builtin_isfinite)
-  return __builtin_isfinite(__lcpp_x);
-#else
-  return isfinite(__lcpp_x);
-#endif
-}
-
-template <class _A1, __enable_if_t<!is_floating_point<_A1>::value, int> = 0>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR bool __constexpr_isfinite(_A1 __lcpp_x) _NOEXCEPT {
-  return __builtin_isfinite(__lcpp_x);
 }
 
 #if _LIBCPP_STD_VER >= 20

@@ -487,11 +487,18 @@ std::string getTypeAsString(mlir::Type ty, const KindMapping &kindMap,
 /// target dependent type size inquiries in lowering. It would also not be
 /// straightforward given the need for a kind map that would need to be
 /// converted in terms of mlir::DataLayoutEntryKey.
+
+/// This variant terminates the compilation if an unsupported type is passed.
 std::pair<std::uint64_t, unsigned short>
+getTypeSizeAndAlignmentOrCrash(mlir::Location loc, mlir::Type ty,
+                               const mlir::DataLayout &dl,
+                               const fir::KindMapping &kindMap);
+
+/// This variant returns std::nullopt if an unsupported type is passed.
+std::optional<std::pair<uint64_t, unsigned short>>
 getTypeSizeAndAlignment(mlir::Location loc, mlir::Type ty,
                         const mlir::DataLayout &dl,
                         const fir::KindMapping &kindMap);
-
 } // namespace fir
 
 #endif // FORTRAN_OPTIMIZER_DIALECT_FIRTYPE_H

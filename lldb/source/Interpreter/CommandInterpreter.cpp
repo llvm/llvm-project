@@ -961,20 +961,23 @@ CommandObjectMultiword *CommandInterpreter::VerifyUserMultiwordCmdPath(
       [&result](CommandObjectSP cmd_sp,
                            const char *name) -> CommandObjectMultiword * {
     if (!cmd_sp) {
-      result.SetErrorStringWithFormat("Path component: '%s' not found", name);
+      result = Status::FromErrorStringWithFormat(
+          "Path component: '%s' not found", name);
       return nullptr;
     }
     if (!cmd_sp->IsUserCommand()) {
-      result.SetErrorStringWithFormat("Path component: '%s' is not a user "
-                                      "command",
-                                      name);
+      result = Status::FromErrorStringWithFormat(
+          "Path component: '%s' is not a user "
+          "command",
+          name);
       return nullptr;
     }
     CommandObjectMultiword *cmd_as_multi = cmd_sp->GetAsMultiwordCommand();
     if (!cmd_as_multi) {
-      result.SetErrorStringWithFormat("Path component: '%s' is not a container "
-                                      "command",
-                                      name);
+      result = Status::FromErrorStringWithFormat(
+          "Path component: '%s' is not a container "
+          "command",
+          name);
       return nullptr;
     }
     return cmd_as_multi;
@@ -982,7 +985,7 @@ CommandObjectMultiword *CommandInterpreter::VerifyUserMultiwordCmdPath(
 
   size_t num_args = path.GetArgumentCount();
   if (num_args == 0) {
-    result.SetErrorString("empty command path");
+    result = Status::FromErrorString("empty command path");
     return nullptr;
   }
 
@@ -1169,18 +1172,19 @@ Status CommandInterpreter::AddUserCommand(llvm::StringRef name,
     lldbassert((this == &cmd_sp->GetCommandInterpreter()) &&
                "tried to add a CommandObject from a different interpreter");
   if (name.empty()) {
-    result.SetErrorString("can't use the empty string for a command name");
+    result = Status::FromErrorString(
+        "can't use the empty string for a command name");
     return result;
   }
   // do not allow replacement of internal commands
   if (CommandExists(name)) {
-    result.SetErrorString("can't replace builtin command");
+    result = Status::FromErrorString("can't replace builtin command");
     return result;
   }
 
   if (UserCommandExists(name)) {
     if (!can_replace) {
-      result.SetErrorStringWithFormatv(
+      result = Status::FromErrorStringWithFormatv(
           "user command \"{0}\" already exists and force replace was not set "
           "by --overwrite or 'settings set interpreter.require-overwrite "
           "false'",
@@ -1189,13 +1193,14 @@ Status CommandInterpreter::AddUserCommand(llvm::StringRef name,
     }
     if (cmd_sp->IsMultiwordObject()) {
       if (!m_user_mw_dict[std::string(name)]->IsRemovable()) {
-        result.SetErrorString(
+        result = Status::FromErrorString(
             "can't replace explicitly non-removable multi-word command");
         return result;
       }
     } else {
       if (!m_user_dict[std::string(name)]->IsRemovable()) {
-        result.SetErrorString("can't replace explicitly non-removable command");
+        result = Status::FromErrorString(
+            "can't replace explicitly non-removable command");
         return result;
       }
     }
@@ -1835,16 +1840,18 @@ CommandInterpreter::PreprocessToken(std::string &expr_str) {
       if (value_string_size) {
         expr_str = value_strm.GetData();
       } else {
-        error.SetErrorStringWithFormat("expression value didn't result "
-                                       "in a scalar value for the "
-                                       "expression '%s'",
-                                       expr_str.c_str());
+        error =
+            Status::FromErrorStringWithFormat("expression value didn't result "
+                                              "in a scalar value for the "
+                                              "expression '%s'",
+                                              expr_str.c_str());
       }
     } else {
-      error.SetErrorStringWithFormat("expression value didn't result "
-                                     "in a scalar value for the "
-                                     "expression '%s'",
-                                     expr_str.c_str());
+      error =
+          Status::FromErrorStringWithFormat("expression value didn't result "
+                                            "in a scalar value for the "
+                                            "expression '%s'",
+                                            expr_str.c_str());
     }
     return error;
   }
@@ -1857,8 +1864,9 @@ CommandInterpreter::PreprocessToken(std::string &expr_str) {
     error = expr_result_valobj_sp->GetError();
 
   if (error.Success()) {
-    std::string result = lldb_private::toString(expr_result);
-    error.SetErrorString(result + "for the expression '" + expr_str + "'");
+    std::string result = lldb_private::toString(expr_result) +
+                         "for the expression '" + expr_str + "'";
+    error = Status(result);
   }
   return error;
 }

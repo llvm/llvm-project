@@ -50,20 +50,20 @@ class CommandObjectSourceInfo : public CommandObjectParsed {
       switch (short_option) {
       case 'l':
         if (option_arg.getAsInteger(0, start_line))
-          error.SetErrorStringWithFormat("invalid line number: '%s'",
-                                         option_arg.str().c_str());
+          error = Status::FromErrorStringWithFormat("invalid line number: '%s'",
+                                                    option_arg.str().c_str());
         break;
 
       case 'e':
         if (option_arg.getAsInteger(0, end_line))
-          error.SetErrorStringWithFormat("invalid line number: '%s'",
-                                         option_arg.str().c_str());
+          error = Status::FromErrorStringWithFormat("invalid line number: '%s'",
+                                                    option_arg.str().c_str());
         break;
 
       case 'c':
         if (option_arg.getAsInteger(0, num_lines))
-          error.SetErrorStringWithFormat("invalid line count: '%s'",
-                                         option_arg.str().c_str());
+          error = Status::FromErrorStringWithFormat("invalid line count: '%s'",
+                                                    option_arg.str().c_str());
         break;
 
       case 'f':
@@ -612,14 +612,14 @@ class CommandObjectSourceList : public CommandObjectParsed {
       switch (short_option) {
       case 'l':
         if (option_arg.getAsInteger(0, start_line))
-          error.SetErrorStringWithFormat("invalid line number: '%s'",
-                                         option_arg.str().c_str());
+          error = Status::FromErrorStringWithFormat("invalid line number: '%s'",
+                                                    option_arg.str().c_str());
         break;
 
       case 'c':
         if (option_arg.getAsInteger(0, num_lines))
-          error.SetErrorStringWithFormat("invalid line count: '%s'",
-                                         option_arg.str().c_str());
+          error = Status::FromErrorStringWithFormat("invalid line count: '%s'",
+                                                    option_arg.str().c_str());
         break;
 
       case 'f':
@@ -649,9 +649,8 @@ class CommandObjectSourceList : public CommandObjectParsed {
         OptionValueFileColonLine value;
         Status fcl_err = value.SetValueFromString(option_arg);
         if (!fcl_err.Success()) {
-          error.SetErrorStringWithFormat(
-              "Invalid value for file:line specifier: %s",
-              fcl_err.AsCString());
+          error = Status::FromErrorStringWithFormat(
+              "Invalid value for file:line specifier: %s", fcl_err.AsCString());
         } else {
           file_name = value.GetFileSpec().GetPath();
           start_line = value.GetLineNumber();
@@ -1077,8 +1076,8 @@ protected:
               target.GetSourceManager().GetLastFile());
           if (last_file_sp) {
             const bool show_inlines = true;
-            m_breakpoint_locations.Reset(last_file_sp->GetFileSpec(), 0,
-                                         show_inlines);
+            m_breakpoint_locations.Reset(
+                last_file_sp->GetSupportFile()->GetSpecOnly(), 0, show_inlines);
             SearchFilterForUnconstrainedSearches target_search_filter(
                 target.shared_from_this());
             target_search_filter.Search(m_breakpoint_locations);

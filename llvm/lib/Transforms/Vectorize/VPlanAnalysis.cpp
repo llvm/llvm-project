@@ -9,9 +9,11 @@
 #include "VPlanAnalysis.h"
 #include "VPlan.h"
 #include "VPlanCFG.h"
+#include "VPlanDominatorTree.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/PatternMatch.h"
+#include "llvm/Support/GenericDomTreeConstruction.h"
 
 using namespace llvm;
 
@@ -318,4 +320,47 @@ void llvm::collectEphemeralRecipesForVPlan(
       Worklist.push_back(OpR);
     }
   }
+}
+
+template void DomTreeBuilder::Calculate<DominatorTreeBase<VPBlockBase, false>>(
+    DominatorTreeBase<VPBlockBase, false> &DT);
+
+bool VPDominatorTree::properlyDominates(const VPRecipeBase *A,
+                                        const VPRecipeBase *B) {
+  if (A == B)
+    return false;
+
+  auto LocalComesBefore = [](const VPRecipeBase *A, const VPRecipeBase *B) {
+    for (auto &R : *A->getParent()) {
+      if (&R == A)
+        return true;
+      if (&R == B)
+        return false;
+    }
+    llvm_unreachable("recipe not found");
+  };
+  const VPBlockBase *ParentA = A->getParent();
+  const VPBlockBase *ParentB = B->getParent();
+  if (ParentA == ParentB)
+    return LocalComesBefore(A, B);
+
+#ifndef NDEBUG
+  auto GetReplicateRegion = [](VPRecipeBase *R) -> VPRegionBlock * {
+    auto *Region = dyn_cast_or_null<VPRegionBlock>(R->getParent()->getParent());
+    if (Region && Region->isReplicator()) {
+      assert(Region->getNumSuccessors() == 1 &&
+             Region->getNumPredecessors() == 1 && "Expected SESE region!");
+      assert(R->getParent()->size() == 1 &&
+             "A recipe in an original replicator region must be the only "
+             "recipe in its block");
+      return Region;
+    }
+    return nullptr;
+  };
+  assert(!GetReplicateRegion(const_cast<VPRecipeBase *>(A)) &&
+         "No replicate regions expected at this point");
+  assert(!GetReplicateRegion(const_cast<VPRecipeBase *>(B)) &&
+         "No replicate regions expected at this point");
+#endif
+  return Base::properlyDominates(ParentA, ParentB);
 }

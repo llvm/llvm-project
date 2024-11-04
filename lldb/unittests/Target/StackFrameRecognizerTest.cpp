@@ -55,7 +55,7 @@ void RegisterDummyStackFrameRecognizer(StackFrameRecognizerManager &manager) {
   StackFrameRecognizerSP dummy_recognizer_sp(new DummyStackFrameRecognizer());
 
   manager.AddRecognizer(dummy_recognizer_sp, module_regex_sp, symbol_regex_sp,
-                        false);
+                        Mangled::NamePreference::ePreferDemangled, false);
 }
 
 } // namespace
@@ -72,6 +72,7 @@ TEST_F(StackFrameRecognizerTest, NullModuleRegex) {
   manager.ForEach([&any_printed](uint32_t recognizer_id, std::string name,
                                  std::string function,
                                  llvm::ArrayRef<ConstString> symbols,
+                                 Mangled::NamePreference symbol_mangling,
                                  bool regexp) { any_printed = true; });
 
   EXPECT_TRUE(any_printed);

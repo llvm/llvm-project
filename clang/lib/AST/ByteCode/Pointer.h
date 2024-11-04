@@ -491,6 +491,14 @@ public:
     }
     return false;
   }
+  /// Checks if the storage has been dynamically allocated.
+  bool isDynamic() const {
+    if (isBlockPointer()) {
+      assert(asBlockPointer().Pointee);
+      return asBlockPointer().Pointee->isDynamic();
+    }
+    return false;
+  }
   /// Checks if the storage is a static temporary.
   bool isStaticTemporary() const { return isStatic() && isTemporary(); }
 

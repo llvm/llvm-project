@@ -1583,7 +1583,7 @@ public:
       IntrusiveRefCntPtr<vfs::FileSystem> ExternalFS = new DummyFileSystem(),
       StringRef YAMLFilePath = "") {
     std::string VersionPlusContent("{\n  'version':0,\n");
-    VersionPlusContent += Content.slice(Content.find('{') + 1, StringRef::npos);
+    VersionPlusContent += Content.substr(Content.find('{') + 1);
     return getFromYAMLRawString(VersionPlusContent, ExternalFS, YAMLFilePath);
   }
 

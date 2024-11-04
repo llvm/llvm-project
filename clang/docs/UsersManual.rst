@@ -950,10 +950,13 @@ treated as a file name and is searched for sequentially in the directories:
     - system directory,
     - the directory where Clang executable resides.
 
-Both user and system directories for configuration files are specified during
-clang build using CMake parameters, ``CLANG_CONFIG_FILE_USER_DIR`` and
-``CLANG_CONFIG_FILE_SYSTEM_DIR`` respectively. The first file found is used.
-It is an error if the required file cannot be found.
+Both user and system directories for configuration files can be specified
+either during build or during runtime. At build time, use
+``CLANG_CONFIG_FILE_USER_DIR`` and ``CLANG_CONFIG_FILE_SYSTEM_DIR``. At run
+time use the ``--config-user-dir=`` and ``--config-system-dir=`` command line
+options. Specifying config directories at runtime overrides the config
+directories set at build time The first file found is used. It is an error if
+the required file cannot be found.
 
 The default configuration files are searched for in the same directories
 following the rules described in the next paragraphs. Loading default

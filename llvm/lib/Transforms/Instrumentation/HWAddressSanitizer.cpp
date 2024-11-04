@@ -598,6 +598,24 @@ void HWAddressSanitizer::initializeModule() {
   LLVM_DEBUG(dbgs() << "Init " << M.getName() << "\n");
   TargetTriple = Triple(M.getTargetTriple());
 
+  for (auto &F : M.functions()) {
+    // Remove memory attributes that are invalid with HWASan.
+    // HWASan checks read from shadow, which invalidates memory(argmem: *)
+    // Short granule checks on function arguments read from the argument memory
+    // (last byte of the granule), which invalidates writeonly.
+    //
+    // This is not only true for sanitized functions, because AttrInfer can
+    // infer those attributes on libc functions, which is not true if those
+    // are instrumented (Android) or intercepted.
+
+    // nobuiltin makes sure later passes don't restore assumptions about
+    // the function.
+    F.addFnAttr(llvm::Attribute::NoBuiltin);
+    F.removeFnAttr(llvm::Attribute::Memory);
+    for (auto &A : F.args())
+      A.removeAttr(llvm::Attribute::WriteOnly);
+  }
+
   // x86_64 currently has two modes:
   // - Intel LAM (default)
   // - pointer aliasing (heap only)
@@ -1586,10 +1604,10 @@ void HWAddressSanitizer::sanitizeFunction(Function &F,
   SmallVector<Instruction *, 8> LandingPadVec;
   const TargetLibraryInfo &TLI = FAM.getResult<TargetLibraryAnalysis>(F);
 
-  memtag::StackInfoBuilder SIB(SSI);
+  memtag::StackInfoBuilder SIB(SSI, DEBUG_TYPE);
   for (auto &Inst : instructions(F)) {
     if (InstrumentStack) {
-      SIB.visit(Inst);
+      SIB.visit(ORE, Inst);
     }
 
     if (InstrumentLandingPads && isa<LandingPadInst>(Inst))
@@ -1621,14 +1639,6 @@ void HWAddressSanitizer::sanitizeFunction(Function &F,
     return;
 
   assert(!ShadowBase);
-
-  // Remove memory attributes that are about to become invalid.
-  // HWASan checks read from shadow, which invalidates memory(argmem: *)
-  // Short granule checks on function arguments read from the argument memory
-  // (last byte of the granule), which invalidates writeonly.
-  F.removeFnAttr(llvm::Attribute::Memory);
-  for (auto &A : F.args())
-    A.removeAttr(llvm::Attribute::WriteOnly);
 
   BasicBlock::iterator InsertPt = F.getEntryBlock().begin();
   IRBuilder<> EntryIRB(&F.getEntryBlock(), InsertPt);

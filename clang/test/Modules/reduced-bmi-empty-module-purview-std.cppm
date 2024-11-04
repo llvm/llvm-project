@@ -7,7 +7,7 @@
 //
 // RUN: %clang_cc1 -std=c++20 %t/A.cppm -emit-reduced-module-interface -o %t/A.pcm
 // RUN: llvm-bcanalyzer --dump --disable-histogram --show-binary-blobs %t/A.pcm > %t/A.dump
-// RUN: cat %t/A.dump | FileCheck %t/A.cppm
+// RUN: cat %t/A.dump | FileCheck %t/A.check
 
 //--- std.h
 namespace std {
@@ -22,6 +22,8 @@ module;
 #include "std.h"
 export module A;
 
+
+//--- A.check
 // CHECK-NOT: <DECL_NAMESPACE
 // CHECK-NOT: <DECL_CONTEXT_LEXICAL
 // CHECK-NOT: <DELAYED_NAMESPACE_LEXICAL_VISIBLE_RECORD

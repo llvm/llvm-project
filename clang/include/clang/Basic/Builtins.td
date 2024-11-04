@@ -2518,7 +2518,7 @@ def IsoVolatileStore : MSLangBuiltin, Int8_16_32_64Template {
 
 def Noop : MSLangBuiltin {
   let Spellings = ["__noop"];
-  let Attributes = [NoThrow];
+  let Attributes = [NoThrow, Constexpr];
   let Prototype = "int(...)";
 }
 
