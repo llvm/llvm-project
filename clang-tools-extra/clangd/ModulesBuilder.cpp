@@ -12,6 +12,7 @@
 #include "clang/Frontend/FrontendAction.h"
 #include "clang/Frontend/FrontendActions.h"
 #include "clang/Serialization/ASTReader.h"
+#include "clang/Serialization/InMemoryModuleCache.h"
 
 namespace clang {
 namespace clangd {
@@ -127,50 +128,68 @@ struct ModuleFile {
   std::string ModuleFilePath;
 };
 
-bool IsModuleFileUpToDate(
-    PathRef ModuleFilePath,
-    const PrerequisiteModules &RequisiteModules) {
-IntrusiveRefCntPtr<DiagnosticsEngine> Diags =
-      CompilerInstance::createDiagnostics(new DiagnosticOptions());
-
+bool IsModuleFileUpToDate(PathRef ModuleFilePath,
+                          const PrerequisiteModules &RequisiteModules,
+                          llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS) {
   auto HSOpts = std::make_shared<HeaderSearchOptions>();
   RequisiteModules.adjustHeaderSearchOptions(*HSOpts);
   HSOpts->ForceCheckCXX20ModulesInputFiles = true;
   HSOpts->ValidateASTInputFilesContent = true;
 
+  clang::clangd::IgnoreDiagnostics IgnoreDiags;
+  IntrusiveRefCntPtr<DiagnosticsEngine> Diags =
+      CompilerInstance::createDiagnostics(new DiagnosticOptions, &IgnoreDiags,
+                                          /*ShouldOwnClient=*/false);
+
+  LangOptions LangOpts;
+  LangOpts.SkipODRCheckInGMF = true;
+
+  FileManager FileMgr(FileSystemOptions(), VFS);
+
+  SourceManager SourceMgr(*Diags, FileMgr);
+
+  HeaderSearch HeaderInfo(HSOpts, SourceMgr, *Diags, LangOpts,
+                          /*Target=*/nullptr);
+
+  TrivialModuleLoader ModuleLoader;
+  Preprocessor PP(std::make_shared<PreprocessorOptions>(), *Diags, LangOpts,
+                  SourceMgr, HeaderInfo, ModuleLoader);
+
+  IntrusiveRefCntPtr<InMemoryModuleCache> ModuleCache = new InMemoryModuleCache;
   PCHContainerOperations PCHOperations;
-  std::unique_ptr<ASTUnit> Unit = ASTUnit::LoadFromASTFile(
-      ModuleFilePath.str(), PCHOperations.getRawReader(), ASTUnit::LoadASTOnly,
-      Diags, FileSystemOptions(), std::move(HSOpts));
+  ASTReader Reader(PP, *ModuleCache, /*ASTContext=*/nullptr,
+                   PCHOperations.getRawReader(), {});
 
-  if (!Unit)
-    return false;
+  // We don't need any listener here. By default it will use a validator
+  // listener.
+  Reader.setListener(nullptr);
 
-  auto Reader = Unit->getASTReader();
-  if (!Reader)
+  if (Reader.ReadAST(ModuleFilePath, serialization::MK_MainFile,
+                     SourceLocation(),
+                     ASTReader::ARR_None) != ASTReader::Success)
     return false;
 
   bool UpToDate = true;
-  Reader->getModuleManager().visit([&](serialization::ModuleFile &MF) -> bool {
-    Reader->visitInputFiles(
+  Reader.getModuleManager().visit([&](serialization::ModuleFile &MF) -> bool {
+    Reader.visitInputFiles(
         MF, /*IncludeSystem=*/false, /*Complain=*/false,
         [&](const serialization::InputFile &IF, bool isSystem) {
           if (!IF.getFile() || IF.isOutOfDate())
             UpToDate = false;
         });
-
     return !UpToDate;
   });
-
   return UpToDate;
 }
 
 bool IsModuleFilesUpToDate(
     llvm::SmallVector<PathRef> ModuleFilePaths,
-    const PrerequisiteModules &RequisiteModules) {
-  return llvm::all_of(ModuleFilePaths, [&RequisiteModules](auto ModuleFilePath) {
-    return IsModuleFileUpToDate(ModuleFilePath, RequisiteModules);
-  });
+    const PrerequisiteModules &RequisiteModules,
+    llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS) {
+  return llvm::all_of(
+      ModuleFilePaths, [&RequisiteModules, VFS](auto ModuleFilePath) {
+        return IsModuleFileUpToDate(ModuleFilePath, RequisiteModules, VFS);
+      });
 }
 
 // StandalonePrerequisiteModules - stands for PrerequisiteModules for which all
@@ -347,7 +366,7 @@ bool StandalonePrerequisiteModules::canReuse(
   SmallVector<StringRef> BMIPaths;
   for (auto &MF : RequiredModules)
     BMIPaths.push_back(MF.ModuleFilePath);
-  return IsModuleFilesUpToDate(BMIPaths, *this);
+  return IsModuleFilesUpToDate(BMIPaths, *this, VFS);
 }
 
 } // namespace clangd

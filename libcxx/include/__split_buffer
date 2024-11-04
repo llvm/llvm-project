@@ -14,6 +14,7 @@
 #include <__algorithm/move.h>
 #include <__algorithm/move_backward.h>
 #include <__config>
+#include <__cstddef/size_t.h>
 #include <__iterator/distance.h>
 #include <__iterator/iterator_traits.h>
 #include <__iterator/move_iterator.h>
@@ -35,7 +36,6 @@
 #include <__type_traits/remove_reference.h>
 #include <__utility/forward.h>
 #include <__utility/move.h>
-#include <cstddef>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

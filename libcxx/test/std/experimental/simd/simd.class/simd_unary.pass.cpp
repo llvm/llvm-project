@@ -16,6 +16,10 @@
 //   clang: error: unable to execute command: Illegal instruction: 4
 // XFAIL: target=x86_64-apple-macosx13.7
 
+// FIXME: The following issue occurs on Windows to Armv7 Ubuntu Linux:
+//   Assertion failed: N->getValueType(0) == MVT::v1i1 && "Expected v1i1 type"
+// XFAIL: target=armv7-unknown-linux-gnueabihf
+
 // <experimental/simd>
 //
 // [simd.class]

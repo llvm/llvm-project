@@ -68,6 +68,7 @@ private:
     /// used to diagnose if there are multiple 'for' loops at any one level.
     LLVM_PREFERRED_TYPE(bool)
     unsigned CurLevelHasLoopAlready : 1;
+
   } LoopInfo{/*TopLevelLoopSeen=*/false, /*CurLevelHasLoopAlready=*/false};
 
   /// The 'collapse' clause requires quite a bit of checking while
@@ -108,6 +109,14 @@ private:
     /// the current number of 'for' loops.
     bool TileDepthSatisfied = true;
   } TileInfo;
+
+  /// A list of the active reduction clauses, which allows us to check that all
+  /// vars on nested constructs for the same reduction var have the same
+  /// reduction operator. Currently this is enforced against all constructs
+  /// despite the rule being in the 'loop' section. By current reading, this
+  /// should apply to all anyway, but we may need to make this more like the
+  /// 'loop' clause enforcement, where this is 'blocked' by a compute construct.
+  llvm::SmallVector<OpenACCReductionClause *> ActiveReductionClauses;
 
 public:
   ComputeConstructInfo &getActiveComputeConstructInfo() {
@@ -615,7 +624,9 @@ public:
 
   /// Called while semantically analyzing the reduction clause, ensuring the var
   /// is the correct kind of reference.
-  ExprResult CheckReductionVar(Expr *VarExpr);
+  ExprResult CheckReductionVar(OpenACCDirectiveKind DirectiveKind,
+                               OpenACCReductionOperator ReductionOp,
+                               Expr *VarExpr);
 
   /// Called to check the 'var' type is a variable of pointer type, necessary
   /// for 'deviceptr' and 'attach' clauses. Returns true on success.
@@ -633,6 +644,22 @@ public:
 
   // Check a single expression on a gang clause.
   ExprResult CheckGangExpr(OpenACCGangKind GK, Expr *E);
+
+  // Does the checking for a 'gang' clause that needs to be done in dependent
+  // and not dependent cases.
+  OpenACCClause *
+  CheckGangClause(ArrayRef<const OpenACCClause *> ExistingClauses,
+                  SourceLocation BeginLoc, SourceLocation LParenLoc,
+                  ArrayRef<OpenACCGangKind> GangKinds,
+                  ArrayRef<Expr *> IntExprs, SourceLocation EndLoc);
+  // Does the checking for a 'reduction ' clause that needs to be done in
+  // dependent and not dependent cases.
+  OpenACCClause *
+  CheckReductionClause(ArrayRef<const OpenACCClause *> ExistingClauses,
+                       OpenACCDirectiveKind DirectiveKind,
+                       SourceLocation BeginLoc, SourceLocation LParenLoc,
+                       OpenACCReductionOperator ReductionOp,
+                       ArrayRef<Expr *> Vars, SourceLocation EndLoc);
 
   ExprResult BuildOpenACCAsteriskSizeExpr(SourceLocation AsteriskLoc);
   ExprResult ActOnOpenACCAsteriskSizeExpr(SourceLocation AsteriskLoc);
@@ -686,6 +713,7 @@ public:
     SourceLocation OldLoopWorkerClauseLoc;
     SourceLocation OldLoopVectorClauseLoc;
     llvm::SmallVector<OpenACCLoopConstruct *> ParentlessLoopConstructs;
+    llvm::SmallVector<OpenACCReductionClause *> ActiveReductionClauses;
     LoopInConstructRAII LoopRAII;
 
   public:

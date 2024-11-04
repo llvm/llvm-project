@@ -33,13 +33,11 @@
 #include "llvm/Analysis/ModuleSummaryAnalysis.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Bitcode/BitcodeReader.h"
-#include "llvm/IR/Constants.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/ModuleSummaryIndex.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/CommandLine.h"
-#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/GraphWriter.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/IPO.h"
@@ -928,8 +926,11 @@ bool allocTypesMatch(
     const std::vector<uint8_t> &InAllocTypes,
     const std::vector<std::shared_ptr<ContextEdge<DerivedCCG, FuncTy, CallTy>>>
         &Edges) {
+  // This should be called only when the InAllocTypes vector was computed for
+  // this set of Edges. Make sure the sizes are the same.
+  assert(InAllocTypes.size() == Edges.size());
   return std::equal(
-      InAllocTypes.begin(), InAllocTypes.end(), Edges.begin(),
+      InAllocTypes.begin(), InAllocTypes.end(), Edges.begin(), Edges.end(),
       [](const uint8_t &l,
          const std::shared_ptr<ContextEdge<DerivedCCG, FuncTy, CallTy>> &r) {
         // Can share if one of the edges is None type - don't
@@ -940,6 +941,46 @@ bool allocTypesMatch(
           return true;
         return allocTypeToUse(l) == allocTypeToUse(r->AllocTypes);
       });
+}
+
+// Helper to check if the alloc types for all edges recorded in the
+// InAllocTypes vector match the alloc types for callee edges in the given
+// clone. Because the InAllocTypes were computed from the original node's callee
+// edges, and other cloning could have happened after this clone was created, we
+// need to find the matching clone callee edge, which may or may not exist.
+template <typename DerivedCCG, typename FuncTy, typename CallTy>
+bool allocTypesMatchClone(
+    const std::vector<uint8_t> &InAllocTypes,
+    const ContextNode<DerivedCCG, FuncTy, CallTy> *Clone) {
+  const ContextNode<DerivedCCG, FuncTy, CallTy> *Node = Clone->CloneOf;
+  assert(Node);
+  // InAllocTypes should have been computed for the original node's callee
+  // edges.
+  assert(InAllocTypes.size() == Node->CalleeEdges.size());
+  // First create a map of the clone callee edge callees to the edge alloc type.
+  DenseMap<const ContextNode<DerivedCCG, FuncTy, CallTy> *, uint8_t>
+      EdgeCalleeMap;
+  for (const auto &E : Clone->CalleeEdges) {
+    assert(!EdgeCalleeMap.contains(E->Callee));
+    EdgeCalleeMap[E->Callee] = E->AllocTypes;
+  }
+  // Next, walk the original node's callees, and look for the corresponding
+  // clone edge to that callee.
+  for (unsigned I = 0; I < Node->CalleeEdges.size(); I++) {
+    auto Iter = EdgeCalleeMap.find(Node->CalleeEdges[I]->Callee);
+    // Not found is ok, we will simply add an edge if we use this clone.
+    if (Iter == EdgeCalleeMap.end())
+      continue;
+    // Can share if one of the edges is None type - don't
+    // care about the type along that edge as it doesn't
+    // exist for those context ids.
+    if (InAllocTypes[I] == (uint8_t)AllocationType::None ||
+        Iter->second == (uint8_t)AllocationType::None)
+      continue;
+    if (allocTypeToUse(Iter->second) != allocTypeToUse(InAllocTypes[I]))
+      return false;
+  }
+  return true;
 }
 
 } // end anonymous namespace
@@ -3364,11 +3405,22 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::identifyClones(
           allocTypeToUse(CallerAllocTypeForAlloc))
         continue;
 
-      if (!allocTypesMatch<DerivedCCG, FuncTy, CallTy>(
-              CalleeEdgeAllocTypesForCallerEdge, CurClone->CalleeEdges))
-        continue;
-      Clone = CurClone;
-      break;
+      bool BothSingleAlloc = hasSingleAllocType(CurClone->AllocTypes) &&
+                             hasSingleAllocType(CallerAllocTypeForAlloc);
+      // The above check should mean that if both have single alloc types that
+      // they should be equal.
+      assert(!BothSingleAlloc ||
+             CurClone->AllocTypes == CallerAllocTypeForAlloc);
+
+      // If either both have a single alloc type (which are the same), or if the
+      // clone's callee edges have the same alloc types as those for the current
+      // allocation on Node's callee edges (CalleeEdgeAllocTypesForCallerEdge),
+      // then we can reuse this clone.
+      if (BothSingleAlloc || allocTypesMatchClone<DerivedCCG, FuncTy, CallTy>(
+                                 CalleeEdgeAllocTypesForCallerEdge, CurClone)) {
+        Clone = CurClone;
+        break;
+      }
     }
 
     // The edge iterator is adjusted when we move the CallerEdge to the clone.

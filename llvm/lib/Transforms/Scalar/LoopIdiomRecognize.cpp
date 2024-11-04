@@ -2490,7 +2490,7 @@ static bool detectShiftUntilBitTestIdiom(Loop *CurLoop, Value *&BaseX,
       dyn_cast<Instruction>(CurrXPN->getIncomingValueForBlock(LoopHeaderBB));
 
   assert(CurLoop->isLoopInvariant(BaseX) &&
-         "Expected BaseX to be avaliable in the preheader!");
+         "Expected BaseX to be available in the preheader!");
 
   if (!NextX || !match(NextX, m_Shl(m_Specific(CurrX), m_One()))) {
     // FIXME: support right-shift?

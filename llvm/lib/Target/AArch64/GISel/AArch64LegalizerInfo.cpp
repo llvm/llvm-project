@@ -91,6 +91,7 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
 
   const bool HasCSSC = ST.hasCSSC();
   const bool HasRCPC3 = ST.hasRCPC3();
+  const bool HasSVE = ST.hasSVE();
 
   getActionDefinitionsBuilder(
       {G_IMPLICIT_DEF, G_FREEZE, G_CONSTANT_FOLD_BARRIER})
@@ -127,7 +128,34 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .clampNumElements(0, v2s64, v2s64)
       .moreElementsToNextPow2(0);
 
-  getActionDefinitionsBuilder({G_ADD, G_SUB, G_MUL, G_AND, G_OR, G_XOR})
+  getActionDefinitionsBuilder({G_ADD, G_SUB, G_AND, G_OR, G_XOR})
+      .legalFor({s32, s64, v2s32, v2s64, v4s32, v4s16, v8s16, v16s8, v8s8})
+      .legalFor(HasSVE, {nxv16s8, nxv8s16, nxv4s32, nxv2s64})
+      .widenScalarToNextPow2(0)
+      .clampScalar(0, s32, s64)
+      .clampMaxNumElements(0, s8, 16)
+      .clampMaxNumElements(0, s16, 8)
+      .clampNumElements(0, v2s32, v4s32)
+      .clampNumElements(0, v2s64, v2s64)
+      .minScalarOrEltIf(
+          [=](const LegalityQuery &Query) {
+            return Query.Types[0].getNumElements() <= 2;
+          },
+          0, s32)
+      .minScalarOrEltIf(
+          [=](const LegalityQuery &Query) {
+            return Query.Types[0].getNumElements() <= 4;
+          },
+          0, s16)
+      .minScalarOrEltIf(
+          [=](const LegalityQuery &Query) {
+            return Query.Types[0].getNumElements() <= 16;
+          },
+          0, s8)
+      .scalarizeIf(scalarOrEltWiderThan(0, 64), 0)
+      .moreElementsToNextPow2(0);
+
+  getActionDefinitionsBuilder(G_MUL)
       .legalFor({s32, s64, v2s32, v2s64, v4s32, v4s16, v8s16, v16s8, v8s8})
       .widenScalarToNextPow2(0)
       .clampScalar(0, s32, s64)
@@ -950,6 +978,10 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
   getActionDefinitionsBuilder(G_INSERT_VECTOR_ELT)
       .legalIf(
           typeInSet(0, {v16s8, v8s8, v8s16, v4s16, v4s32, v2s32, v2s64, v2p0}))
+      .legalFor(HasSVE, {{nxv16s8, s32, s64},
+                         {nxv8s16, s32, s64},
+                         {nxv4s32, s32, s64},
+                         {nxv2s64, s64, s64}})
       .moreElementsToNextPow2(0)
       .widenVectorEltsToVectorMinSize(0, 64)
       .clampNumElements(0, v8s8, v16s8)
@@ -1248,6 +1280,7 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
 
   getActionDefinitionsBuilder({G_UADDSAT, G_SADDSAT, G_USUBSAT, G_SSUBSAT})
       .legalFor({v2s64, v2s32, v4s32, v4s16, v8s16, v8s8, v16s8})
+      .legalFor(HasSVE, {nxv2s64, nxv4s32, nxv8s16, nxv16s8})
       .clampNumElements(0, v8s8, v16s8)
       .clampNumElements(0, v4s16, v8s16)
       .clampNumElements(0, v2s32, v4s32)
@@ -1287,6 +1320,10 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .legalFor({{v8s8, v16s8}, {v4s16, v8s16}, {v2s32, v4s32}})
       .widenScalarOrEltToNextPow2(0)
       .immIdx(0); // Inform verifier imm idx 0 is handled.
+
+  // TODO: {nxv16s8, s8}, {nxv8s16, s16}
+  getActionDefinitionsBuilder(G_SPLAT_VECTOR)
+      .legalFor(HasSVE, {{nxv4s32, s32}, {nxv2s64, s64}});
 
   getLegacyLegalizerInfo().computeTables();
   verify(*ST.getInstrInfo());
@@ -1508,6 +1545,14 @@ bool AArch64LegalizerInfo::legalizeSmallCMGlobalValue(
 
 bool AArch64LegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
                                              MachineInstr &MI) const {
+  auto LowerBinOp = [&MI](unsigned Opcode) {
+    MachineIRBuilder MIB(MI);
+    MIB.buildInstr(Opcode, {MI.getOperand(0)},
+                   {MI.getOperand(2), MI.getOperand(3)});
+    MI.eraseFromParent();
+    return true;
+  };
+
   Intrinsic::ID IntrinsicID = cast<GIntrinsic>(MI).getIntrinsicID();
   switch (IntrinsicID) {
   case Intrinsic::vacopy: {
@@ -1647,37 +1692,25 @@ bool AArch64LegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
     return true;
   }
   case Intrinsic::aarch64_neon_smax:
+    return LowerBinOp(TargetOpcode::G_SMAX);
   case Intrinsic::aarch64_neon_smin:
+    return LowerBinOp(TargetOpcode::G_SMIN);
   case Intrinsic::aarch64_neon_umax:
+    return LowerBinOp(TargetOpcode::G_UMAX);
   case Intrinsic::aarch64_neon_umin:
+    return LowerBinOp(TargetOpcode::G_UMIN);
   case Intrinsic::aarch64_neon_fmax:
+    return LowerBinOp(TargetOpcode::G_FMAXIMUM);
   case Intrinsic::aarch64_neon_fmin:
+    return LowerBinOp(TargetOpcode::G_FMINIMUM);
   case Intrinsic::aarch64_neon_fmaxnm:
-  case Intrinsic::aarch64_neon_fminnm: {
-    MachineIRBuilder MIB(MI);
-    if (IntrinsicID == Intrinsic::aarch64_neon_smax)
-      MIB.buildSMax(MI.getOperand(0), MI.getOperand(2), MI.getOperand(3));
-    else if (IntrinsicID == Intrinsic::aarch64_neon_smin)
-      MIB.buildSMin(MI.getOperand(0), MI.getOperand(2), MI.getOperand(3));
-    else if (IntrinsicID == Intrinsic::aarch64_neon_umax)
-      MIB.buildUMax(MI.getOperand(0), MI.getOperand(2), MI.getOperand(3));
-    else if (IntrinsicID == Intrinsic::aarch64_neon_umin)
-      MIB.buildUMin(MI.getOperand(0), MI.getOperand(2), MI.getOperand(3));
-    else if (IntrinsicID == Intrinsic::aarch64_neon_fmax)
-      MIB.buildInstr(TargetOpcode::G_FMAXIMUM, {MI.getOperand(0)},
-                     {MI.getOperand(2), MI.getOperand(3)});
-    else if (IntrinsicID == Intrinsic::aarch64_neon_fmin)
-      MIB.buildInstr(TargetOpcode::G_FMINIMUM, {MI.getOperand(0)},
-                     {MI.getOperand(2), MI.getOperand(3)});
-    else if (IntrinsicID == Intrinsic::aarch64_neon_fmaxnm)
-      MIB.buildInstr(TargetOpcode::G_FMAXNUM, {MI.getOperand(0)},
-                     {MI.getOperand(2), MI.getOperand(3)});
-    else if (IntrinsicID == Intrinsic::aarch64_neon_fminnm)
-      MIB.buildInstr(TargetOpcode::G_FMINNUM, {MI.getOperand(0)},
-                     {MI.getOperand(2), MI.getOperand(3)});
-    MI.eraseFromParent();
-    return true;
-  }
+    return LowerBinOp(TargetOpcode::G_FMAXNUM);
+  case Intrinsic::aarch64_neon_fminnm:
+    return LowerBinOp(TargetOpcode::G_FMINNUM);
+  case Intrinsic::aarch64_neon_smull:
+    return LowerBinOp(AArch64::G_UMULL);
+  case Intrinsic::aarch64_neon_umull:
+    return LowerBinOp(AArch64::G_SMULL);
   case Intrinsic::vector_reverse:
     // TODO: Add support for vector_reverse
     return false;

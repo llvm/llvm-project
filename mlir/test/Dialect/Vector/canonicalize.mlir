@@ -800,6 +800,43 @@ func.func @fold_extract_shapecast_to_shapecast(%arg0 : vector<3x4xf32>) -> vecto
 
 // -----
 
+// CHECK-LABEL: func @extract_no_fold_scalar_to_0d(
+//  CHECK-SAME:     %[[v:.*]]: vector<f32>)
+//       CHECK:   %[[extract:.*]] = vector.extract %[[v]][] : f32 from vector<f32>
+//       CHECK:   return %[[extract]]
+func.func @extract_no_fold_scalar_to_0d(%v: vector<f32>) -> f32 {
+  %0 = vector.extract %v[] : f32 from vector<f32>
+  return %0 : f32
+}
+
+// -----
+
+// CHECK-LABEL: func @insert_fold_same_rank(
+//  CHECK-SAME:     %[[v:.*]]: vector<2x2xf32>)
+//       CHECK:      %[[CST:.+]] = arith.constant
+//  CHECK-SAME:                    : vector<2x2xf32>
+//       CHECK-NOT:  vector.insert
+//       CHECK:   return %[[CST]]
+func.func @insert_fold_same_rank(%v: vector<2x2xf32>) -> vector<2x2xf32> {
+  %cst = arith.constant dense<0.000000e+00> : vector<2x2xf32>
+  %0 = vector.insert %cst, %v [] : vector<2x2xf32> into vector<2x2xf32>
+  return %0 : vector<2x2xf32>
+}
+
+// -----
+
+// CHECK-LABEL: func @insert_no_fold_scalar_to_0d(
+//  CHECK-SAME:     %[[v:.*]]: vector<f32>)
+//       CHECK:   %[[extract:.*]] = vector.insert %{{.*}}, %[[v]] [] : f32 into vector<f32>
+//       CHECK:   return %[[extract]]
+func.func @insert_no_fold_scalar_to_0d(%v: vector<f32>) -> vector<f32> {
+  %cst = arith.constant 0.000000e+00 : f32
+  %0 = vector.insert %cst, %v [] : f32 into vector<f32>
+  return %0 : vector<f32>
+}
+
+// -----
+
 // CHECK-LABEL: dont_fold_expand_collapse
 //       CHECK:   %[[A:.*]] = vector.shape_cast %{{.*}} : vector<1x1x64xf32> to vector<1x1x8x8xf32>
 //       CHECK:   %[[B:.*]] = vector.shape_cast %{{.*}} : vector<1x1x8x8xf32> to vector<8x8xf32>
@@ -2606,17 +2643,6 @@ func.func @rank_1_shuffle_to_interleave(%arg0: vector<6xi32>, %arg1: vector<6xi3
 
 // -----
 
-// CHECK-LABEL: func @extract_from_0d_regression(
-//  CHECK-SAME:     %[[v:.*]]: vector<f32>)
-//       CHECK:   %[[extract:.*]] = vector.extract %[[v]][] : f32 from vector<f32>
-//       CHECK:   return %[[extract]]
-func.func @extract_from_0d_regression(%v: vector<f32>) -> f32 {
-  %0 = vector.extract %v[] : f32 from vector<f32>
-  return %0 : f32
-}
-
-// -----
-
 // CHECK-LABEL: func @extract_from_0d_splat_broadcast_regression(
 //  CHECK-SAME:     %[[a:.*]]: f32, %[[b:.*]]: vector<f32>, %[[c:.*]]: vector<2xf32>)
 func.func @extract_from_0d_splat_broadcast_regression(%a: f32, %b: vector<f32>, %c: vector<2xf32>) -> (f32, f32, f32, f32, f32, vector<6x7xf32>, vector<3xf32>) {
@@ -2722,15 +2748,6 @@ func.func @from_elements_to_splat(%a: f32, %b: f32) -> (vector<2x3xf32>, vector<
   return %0, %1, %2 : vector<2x3xf32>, vector<2x3xf32>, vector<f32>
 }
 
-// -----
-
-// CHECK-LABEL: @fold_vector_step_to_constant
-// CHECK: %[[CONSTANT:.*]] = arith.constant dense<[0, 1, 2, 3]> : vector<4xindex>
-// CHECK: return %[[CONSTANT]] : vector<4xindex>
-func.func @fold_vector_step_to_constant() -> vector<4xindex> {
-  %0 = vector.step : vector<4xindex>
-  return %0 : vector<4xindex>
-}
 
 // -----
 

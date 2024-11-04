@@ -71,6 +71,9 @@ NamedDecl *getAsNamedDecl(TemplateParameter P);
 class TemplateParameterList final
     : private llvm::TrailingObjects<TemplateParameterList, NamedDecl *,
                                     Expr *> {
+  /// The template argument list of the template parameter list.
+  TemplateArgument *InjectedArgs = nullptr;
+
   /// The location of the 'template' keyword.
   SourceLocation TemplateLoc;
 
@@ -195,6 +198,9 @@ public:
   void getAssociatedConstraints(llvm::SmallVectorImpl<const Expr *> &AC) const;
 
   bool hasAssociatedConstraints() const;
+
+  /// Get the template argument list of the template parameter list.
+  ArrayRef<TemplateArgument> getInjectedTemplateArgs(const ASTContext &Context);
 
   SourceLocation getTemplateLoc() const { return TemplateLoc; }
   SourceLocation getLAngleLoc() const { return LAngleLoc; }
@@ -793,15 +799,6 @@ protected:
     /// The first value in the array is the number of specializations/partial
     /// specializations that follow.
     GlobalDeclID *LazySpecializations = nullptr;
-
-    /// The set of "injected" template arguments used within this
-    /// template.
-    ///
-    /// This pointer refers to the template arguments (there are as
-    /// many template arguments as template parameters) for the
-    /// template, and is allocated lazily, since most templates do not
-    /// require the use of this information.
-    TemplateArgument *InjectedArgs = nullptr;
   };
 
   /// Pointer to the common data shared by all declarations of this
@@ -860,16 +857,6 @@ public:
   /// \endcode
   bool isMemberSpecialization() const { return Common.getInt(); }
 
-  /// Determines whether any redeclaration of this template was
-  /// a specialization of a member template.
-  bool hasMemberSpecialization() const {
-    for (const auto *D : redecls()) {
-      if (D->isMemberSpecialization())
-        return true;
-    }
-    return false;
-  }
-
   /// Note that this member template is a specialization.
   void setMemberSpecialization() {
     assert(!isMemberSpecialization() && "already a member specialization");
@@ -927,7 +914,10 @@ public:
   /// Although the C++ standard has no notion of the "injected" template
   /// arguments for a template, the notion is convenient when
   /// we need to perform substitutions inside the definition of a template.
-  ArrayRef<TemplateArgument> getInjectedTemplateArgs();
+  ArrayRef<TemplateArgument>
+  getInjectedTemplateArgs(const ASTContext &Context) const {
+    return getTemplateParameters()->getInjectedTemplateArgs(Context);
+  }
 
   using redecl_range = redeclarable_base::redecl_range;
   using redecl_iterator = redeclarable_base::redecl_iterator;
@@ -1965,13 +1955,7 @@ public:
   /// specialization which was specialized by this.
   llvm::PointerUnion<ClassTemplateDecl *,
                      ClassTemplatePartialSpecializationDecl *>
-  getSpecializedTemplateOrPartial() const {
-    if (const auto *PartialSpec =
-            SpecializedTemplate.dyn_cast<SpecializedPartialSpecialization *>())
-      return PartialSpec->PartialSpecialization;
-
-    return SpecializedTemplate.get<ClassTemplateDecl*>();
-  }
+  getSpecializedTemplateOrPartial() const;
 
   /// Retrieve the set of template arguments that should be used
   /// to instantiate members of the class template or class template partial
@@ -2087,10 +2071,6 @@ class ClassTemplatePartialSpecializationDecl
   /// The list of template parameters
   TemplateParameterList *TemplateParams = nullptr;
 
-  /// The set of "injected" template arguments used within this
-  /// partial specialization.
-  TemplateArgument *InjectedArgs = nullptr;
-
   /// The class template partial specialization from which this
   /// class template partial specialization was instantiated.
   ///
@@ -2136,9 +2116,11 @@ public:
     return TemplateParams;
   }
 
-  /// Retrieve the template arguments list of the template parameter list
-  /// of this template.
-  ArrayRef<TemplateArgument> getInjectedTemplateArgs();
+  /// Get the template argument list of the template parameter list.
+  ArrayRef<TemplateArgument>
+  getInjectedTemplateArgs(const ASTContext &Context) const {
+    return getTemplateParameters()->getInjectedTemplateArgs(Context);
+  }
 
   /// \brief All associated constraints of this partial specialization,
   /// including the requires clause and any constraints derived from
@@ -2208,17 +2190,6 @@ public:
   /// \endcode
   bool isMemberSpecialization() const {
     return InstantiatedFromMember.getInt();
-  }
-
-  /// Determines whether any redeclaration of this this class template partial
-  /// specialization was a specialization of a member partial specialization.
-  bool hasMemberSpecialization() const {
-    for (const auto *D : redecls()) {
-      if (cast<ClassTemplatePartialSpecializationDecl>(D)
-              ->isMemberSpecialization())
-        return true;
-    }
-    return false;
   }
 
   /// Note that this member template is a specialization.
@@ -2742,13 +2713,7 @@ public:
   /// Retrieve the variable template or variable template partial
   /// specialization which was specialized by this.
   llvm::PointerUnion<VarTemplateDecl *, VarTemplatePartialSpecializationDecl *>
-  getSpecializedTemplateOrPartial() const {
-    if (const auto *PartialSpec =
-            SpecializedTemplate.dyn_cast<SpecializedPartialSpecialization *>())
-      return PartialSpec->PartialSpecialization;
-
-    return SpecializedTemplate.get<VarTemplateDecl *>();
-  }
+  getSpecializedTemplateOrPartial() const;
 
   /// Retrieve the set of template arguments that should be used
   /// to instantiate the initializer of the variable template or variable
@@ -2864,10 +2829,6 @@ class VarTemplatePartialSpecializationDecl
   /// The list of template parameters
   TemplateParameterList *TemplateParams = nullptr;
 
-  /// The set of "injected" template arguments used within this
-  /// partial specialization.
-  TemplateArgument *InjectedArgs = nullptr;
-
   /// The variable template partial specialization from which this
   /// variable template partial specialization was instantiated.
   ///
@@ -2914,9 +2875,11 @@ public:
     return TemplateParams;
   }
 
-  /// Retrieve the template arguments list of the template parameter list
-  /// of this template.
-  ArrayRef<TemplateArgument> getInjectedTemplateArgs();
+  /// Get the template argument list of the template parameter list.
+  ArrayRef<TemplateArgument>
+  getInjectedTemplateArgs(const ASTContext &Context) const {
+    return getTemplateParameters()->getInjectedTemplateArgs(Context);
+  }
 
   /// \brief All associated constraints of this partial specialization,
   /// including the requires clause and any constraints derived from
@@ -2982,18 +2945,6 @@ public:
   /// \endcode
   bool isMemberSpecialization() const {
     return InstantiatedFromMember.getInt();
-  }
-
-  /// Determines whether any redeclaration of this this variable template
-  /// partial specialization was a specialization of a member partial
-  /// specialization.
-  bool hasMemberSpecialization() const {
-    for (const auto *D : redecls()) {
-      if (cast<VarTemplatePartialSpecializationDecl>(D)
-              ->isMemberSpecialization())
-        return true;
-    }
-    return false;
   }
 
   /// Note that this member template is a specialization.
@@ -3167,6 +3118,9 @@ public:
   spec_iterator spec_end() const {
     return makeSpecIterator(getSpecializations(), true);
   }
+
+  /// Merge \p Prev with our RedeclarableTemplateDecl::Common.
+  void mergePrevDecl(VarTemplateDecl *Prev);
 
   // Implement isa/cast/dyncast support
   static bool classof(const Decl *D) { return classofKind(D->getKind()); }
