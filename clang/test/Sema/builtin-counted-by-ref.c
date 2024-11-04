@@ -16,6 +16,8 @@ void test1(struct fam_struct *ptr, int size, int idx) {
 
   *__builtin_counted_by_ref(ptr->array) = size;             // ok
   *__builtin_counted_by_ref(&ptr->array[idx]) = size;       // ok
+  *__builtin_counted_by_ref(&ptr->array) = size;            // ok
+
 
   {
       size_t __ignored_assignment;
