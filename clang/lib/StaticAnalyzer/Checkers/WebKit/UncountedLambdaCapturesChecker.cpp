@@ -72,8 +72,10 @@ public:
         auto *VD = dyn_cast_or_null<VarDecl>(DRE->getDecl());
         if (!VD)
           return true;
-        auto *Init = VD->getInit()->IgnoreParenCasts();
-        auto *L = dyn_cast_or_null<LambdaExpr>(Init);
+        auto *Init = VD->getInit();
+        if (!Init)
+          return true;
+        auto *L = dyn_cast_or_null<LambdaExpr>(Init->IgnoreParenCasts());
         if (!L)
           return true;
         Checker->visitLambdaExpr(L, shouldCheckThis());
