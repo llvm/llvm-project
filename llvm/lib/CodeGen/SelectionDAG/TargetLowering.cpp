@@ -2030,6 +2030,21 @@ bool TargetLowering::SimplifyDemandedBits(
       Known = TLO.DAG.computeKnownBits(Op, DemandedElts, Depth);
     }
 
+    // If we are only demanding sign bits then we can use the shift source
+    // directly.
+    if (std::optional<uint64_t> MaxSA =
+            TLO.DAG.getValidMaximumShiftAmount(Op, DemandedElts, Depth + 1)) {
+      unsigned ShAmt = *MaxSA;
+      // Must already be signbits in DemandedBits bounds, and can't demand any
+      // shifted in zeroes.
+      if (DemandedBits.countl_zero() >= ShAmt) {
+        unsigned NumSignBits =
+            TLO.DAG.ComputeNumSignBits(Op0, DemandedElts, Depth + 1);
+        if (DemandedBits.countr_zero() >= (BitWidth - NumSignBits))
+          return TLO.CombineTo(Op, Op0);
+      }
+    }
+
     // Try to match AVG patterns (after shift simplification).
     if (SDValue AVG = combineShiftToAVG(Op, TLO, *this, DemandedBits,
                                         DemandedElts, Depth + 1))

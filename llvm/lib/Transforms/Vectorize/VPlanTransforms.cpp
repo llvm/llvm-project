@@ -706,7 +706,6 @@ void VPlanTransforms::optimizeForVFAndUF(VPlan &Plan, ElementCount BestVF,
     }
 
     VPBlockBase *Preheader = Plan.getVectorLoopRegion()->getSinglePredecessor();
-    auto HeaderSuccs = to_vector(Header->getSuccessors());
     VPBasicBlock *Exiting =
         cast<VPBasicBlock>(Plan.getVectorLoopRegion()->getExiting());
 
@@ -720,6 +719,8 @@ void VPlanTransforms::optimizeForVFAndUF(VPlan &Plan, ElementCount BestVF,
     VPBlockUtils::connectBlocks(Preheader, Header);
 
     VPBlockUtils::connectBlocks(Exiting, Middle);
+    // Set LoopRegion's Entry to nullptr, as the CFG from LoopRegion shouldn't
+    // be deleted when the region is deleted.
     LoopRegion->clearEntry();
     delete LoopRegion;
   } else {

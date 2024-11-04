@@ -295,6 +295,15 @@ SYCL conformance
 | alexey.bader\@intel.com (email), bader (Phabricator), bader (GitHub)
 
 
+Issue Triage
+~~~~~~~~~~~~
+| Shafik Yaghmour
+| shafik.yaghmour\@intel.com (email), shafik (GitHub), shafik.yaghmour (Discord), shafik (Discourse)
+
+| hstk30
+| hanwei62\@huawei.com (email), hstk30-hw (GitHub), hstk30(Discord), hstk30 (Discourse)
+
+
 Inactive Maintainers
 ====================
 The following people have graciously spent time performing maintainership

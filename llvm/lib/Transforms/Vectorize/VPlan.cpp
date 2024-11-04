@@ -415,12 +415,11 @@ VPBasicBlock::createEmptyBasicBlock(VPTransformState::CFGState &CFG) {
                                          PrevBB->getParent(), CFG.ExitBB);
   LLVM_DEBUG(dbgs() << "LV: created " << NewBB->getName() << '\n');
 
-  connectToPredecessors(NewBB, CFG);
   return NewBB;
 }
 
-void VPBasicBlock::connectToPredecessors(BasicBlock *NewBB,
-                                         VPTransformState::CFGState &CFG) {
+void VPBasicBlock::connectToPredecessors(VPTransformState::CFGState &CFG) {
+  BasicBlock *NewBB = CFG.VPBB2IRBB[this];
   // Hook up the new basic block to its predecessors.
   for (VPBlockBase *PredVPBlock : getHierarchicalPredecessors()) {
     VPBasicBlock *PredVPBB = PredVPBlock->getExitingBasicBlock();
@@ -458,6 +457,8 @@ void VPIRBasicBlock::execute(VPTransformState *State) {
   assert(getHierarchicalSuccessors().size() <= 2 &&
          "VPIRBasicBlock can have at most two successors at the moment!");
   State->Builder.SetInsertPoint(IRBB->getTerminator());
+  State->CFG.PrevBB = IRBB;
+  State->CFG.VPBB2IRBB[this] = IRBB;
   executeRecipes(State, IRBB);
   // Create a branch instruction to terminate IRBB if one was not created yet
   // and is needed.
@@ -471,7 +472,7 @@ void VPIRBasicBlock::execute(VPTransformState *State) {
         "other blocks must be terminated by a branch");
   }
 
-  connectToPredecessors(IRBB, State->CFG);
+  connectToPredecessors(State->CFG);
 }
 
 void VPBasicBlock::execute(VPTransformState *State) {
@@ -503,6 +504,7 @@ void VPBasicBlock::execute(VPTransformState *State) {
     //    predecessor of this region.
 
     NewBB = createEmptyBasicBlock(State->CFG);
+
     State->Builder.SetInsertPoint(NewBB);
     // Temporarily terminate with unreachable until CFG is rewired.
     UnreachableInst *Terminator = State->Builder.CreateUnreachable();
@@ -511,7 +513,12 @@ void VPBasicBlock::execute(VPTransformState *State) {
     if (State->CurrentVectorLoop)
       State->CurrentVectorLoop->addBasicBlockToLoop(NewBB, *State->LI);
     State->Builder.SetInsertPoint(Terminator);
+
     State->CFG.PrevBB = NewBB;
+    State->CFG.VPBB2IRBB[this] = NewBB;
+    connectToPredecessors(State->CFG);
+  } else {
+    State->CFG.VPBB2IRBB[this] = NewBB;
   }
 
   // 2. Fill the IR basic block with IR instructions.
@@ -532,7 +539,6 @@ void VPBasicBlock::executeRecipes(VPTransformState *State, BasicBlock *BB) {
   LLVM_DEBUG(dbgs() << "LV: vectorizing VPBB:" << getName()
                     << " in BB:" << BB->getName() << '\n');
 
-  State->CFG.VPBB2IRBB[this] = BB;
   State->CFG.PrevVPBB = this;
 
   for (VPRecipeBase &Recipe : Recipes)
