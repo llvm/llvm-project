@@ -134,9 +134,9 @@ static Value extractSubvectorFrom(RewriterBase &rewriter, Location loc,
                                   VectorType extractType, Value source,
                                   int64_t frontOffset, int64_t subvecSize) {
   auto vectorType = dyn_cast<VectorType>(source.getType());
-  assert(
-      (vectorType && vectorType.getRank() == 1 && extractType.getRank() == 1) &&
-      "expected 1-D source and destination types");
+  assert(vectorType && vectorType.getRank() == 1 &&
+         extractType.getRank() == 1 &&
+         "expected 1-D source and destination types");
   auto offsets = rewriter.getI64ArrayAttr({frontOffset});
   auto sizes = rewriter.getI64ArrayAttr({subvecSize});
   auto strides = rewriter.getI64ArrayAttr({1});
@@ -183,7 +183,7 @@ static Value dynamicallyExtractSubVector(RewriterBase &rewriter, Location loc,
   return dest;
 }
 
-/// Returns the op sequence for an emulated sub-byte datatype vector load.
+/// Returns the op sequence for an emulated sub-byte data type vector load.
 /// specifically, use `emulatedElemType` for loading a vector of `origElemType`.
 /// The load location is given by `base` and `linearizedIndices`, and the
 /// load size is given by `numEmulatedElementsToLoad`.
