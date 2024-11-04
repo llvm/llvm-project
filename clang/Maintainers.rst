@@ -295,6 +295,12 @@ SYCL conformance
 | alexey.bader\@intel.com (email), bader (Phabricator), bader (GitHub)
 
 
+HLSL conformance
+~~~~~~~~~~~~~~~~
+| Chris Bieneman
+| chris.bieneman\@gmail.com (email), llvm-beanz (GitHub), beanz (Discord), beanz (Discourse)
+
+
 Issue Triage
 ~~~~~~~~~~~~
 | Shafik Yaghmour
