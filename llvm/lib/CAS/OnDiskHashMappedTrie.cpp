@@ -9,6 +9,7 @@
 #include "llvm/CAS/OnDiskHashMappedTrie.h"
 #include "HashMappedTrieIndexGenerator.h"
 #include "llvm/ADT/ScopeExit.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/CAS/MappedFileRegionBumpPtr.h"
 #include "llvm/Support/Debug.h"
@@ -1146,6 +1147,11 @@ private:
 };
 } // namespace
 
+static Error createInvalidTrieError(uint64_t Offset, const Twine &Msg) {
+  return createStringError(make_error_code(std::errc::protocol_error),
+                           "invalid trie at 0x" + toHex(Offset) + ": " + Msg);
+}
+
 Error TrieVisitor::visit(HashMappedTrieHandle Trie) {
   auto Root = Trie.getRoot();
   if (!Root)
@@ -1157,6 +1163,11 @@ Error TrieVisitor::visit(HashMappedTrieHandle Trie) {
 }
 
 Error TrieVisitor::traverseTrieNode(SubtrieHandle Node, StringRef Prefix) {
+  char *Addr = reinterpret_cast<char *>(&Node.getHeader());
+  if (Addr + Node.getSize() >=
+      Trie.getRegion().data() + Trie.getRegion().size())
+    return createInvalidTrieError((uint64_t)Addr, "subtrie node out of bound");
+
   if (auto Err = visitSubTrie(Prefix, Node))
     return Err;
 
@@ -1167,6 +1178,9 @@ Error TrieVisitor::traverseTrieNode(SubtrieHandle Node, StringRef Prefix) {
     SubtrieSlotValue Slot = Node.load(I);
     if (!Slot)
       continue;
+    uint64_t Offset = Slot.isSubtrie() ? Slot.asSubtrie() : Slot.asData();
+    if (Offset >= (uint64_t)Trie.getRegion().size())
+      return createInvalidTrieError(Offset, "slot points out of bound");
     std::string SubtriePrefix = Prefix.str();
     appendIndexBits(SubtriePrefix, I, NumSlots);
     if (Slot.isSubtrie()) {
