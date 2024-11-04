@@ -1031,8 +1031,7 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
         !ST->getFeatureString().contains("+wavefrontsize"))
       break;
     return IC.replaceInstUsesWith(
-        II, ConstantInt::get(II.getType(),
-                                                       ST->getWavefrontSize()));
+        II, ConstantInt::get(II.getType(), ST->getWavefrontSize()));
   }
   case Intrinsic::amdgcn_wqm_vote: {
     // wqm_vote is identity when the argument is constant.
