@@ -189,10 +189,6 @@ static LogicalResult checkImplementationStatus(Operation &op) {
     if (!op.getLinearVars().empty() || !op.getLinearStepVars().empty())
       result = todo("linear");
   };
-  auto checkMergeable = [&todo](auto op, LogicalResult &result) {
-    if (op.getMergeable())
-      result = todo("mergeable");
-  };
   auto checkNontemporal = [&todo](auto op, LogicalResult &result) {
     if (!op.getNontemporalVars().empty())
       result = todo("nontemporal");
@@ -255,7 +251,6 @@ static LogicalResult checkImplementationStatus(Operation &op) {
       .Case([&](omp::TaskOp op) {
         checkAllocate(op, result);
         checkInReduction(op, result);
-        checkMergeable(op, result);
         checkPriority(op, result);
         checkPrivate(op, result);
         checkUntied(op, result);
@@ -1507,7 +1502,8 @@ convertOmpTaskOp(omp::TaskOp taskOp, llvm::IRBuilderBase &builder,
       moduleTranslation.getOpenMPBuilder()->createTask(
           ompLoc, allocaIP, bodyCB, !taskOp.getUntied(),
           moduleTranslation.lookupValue(taskOp.getFinal()),
-          moduleTranslation.lookupValue(taskOp.getIfExpr()), dds);
+          moduleTranslation.lookupValue(taskOp.getIfExpr()), dds,
+          taskOp.getMergeable());
 
   if (failed(handleError(afterIP, *taskOp)))
     return failure();

@@ -447,17 +447,6 @@ llvm.func @task_in_reduction(%x : !llvm.ptr) {
 
 // -----
 
-llvm.func @task_mergeable() {
-  // expected-error@below {{mergeable clause not yet supported}}
-  // expected-error@below {{LLVM Translation failed for operation: omp.task}}
-  omp.task mergeable {
-    omp.terminator
-  }
-  llvm.return
-}
-
-// -----
-
 llvm.func @task_priority(%x : i32) {
   // expected-error@below {{priority clause not yet supported}}
   // expected-error@below {{LLVM Translation failed for operation: omp.task}}

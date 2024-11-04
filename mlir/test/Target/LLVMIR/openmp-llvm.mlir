@@ -2952,6 +2952,19 @@ module attributes {omp.is_target_device = true} {
 
 // -----
 
+// Third argument is 5: essentially (4 || 1)
+// signifying this task is TIED and MERGEABLE
+
+// CHECK: {{.*}} = call ptr @__kmpc_omp_task_alloc(ptr @1, i32 %omp_global_thread_num, i32 5, i64 40, i64 0, ptr @omp_task_mergeable..omp_par)
+llvm.func @omp_task_mergeable() {
+  omp.task mergeable {
+    omp.terminator
+  }
+  llvm.return
+}
+
+// -----
+
 llvm.func external @foo_before() -> ()
 llvm.func external @foo() -> ()
 llvm.func external @foo_after() -> ()
