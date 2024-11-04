@@ -29,7 +29,7 @@ static void extractDbgRecordsFromModule(Oracle &O, ReducerWorkItem &WorkItem) {
   for (auto &F : M)
     for (auto &BB : F)
       for (auto &I : BB)
-        for (DbgRecord &DR : llvm::make_early_inc_range(I.getDbgValueRange()))
+        for (DbgRecord &DR : llvm::make_early_inc_range(I.getDbgRecordRange()))
           if (!O.shouldKeep())
             DR.eraseFromParent();
 }
