@@ -4700,8 +4700,10 @@ void AffineLinearizeIndexOp::build(OpBuilder &odsBuilder,
 LogicalResult AffineLinearizeIndexOp::verify() {
   if (getStaticBasis().empty())
     return emitOpError("basis should not be empty");
+
   if (getMultiIndex().size() != getStaticBasis().size())
     return emitOpError("should be passed an index for each basis element");
+
   auto dynamicMarkersCount =
       llvm::count_if(getStaticBasis(), ShapedType::isDynamic);
   if (static_cast<size_t>(dynamicMarkersCount) != getDynamicBasis().size())
@@ -4709,6 +4711,7 @@ LogicalResult AffineLinearizeIndexOp::verify() {
         "mismatch between dynamic and static basis (kDynamic marker but no "
         "corresponding dynamic basis entry) -- this can only happen due to an "
         "incorrect fold/rewrite");
+
   return success();
 }
 

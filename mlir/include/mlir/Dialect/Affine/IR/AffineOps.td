@@ -1109,7 +1109,7 @@ def AffineLinearizeIndexOp : Affine_Op<"linearize_index",
     The `affine.linearize_index` operation takes a sequence of index values and a
     basis of the same length and linearizes the indices using that basis.
 
-    That is, for indices `%idx_1` through `%i_N` and basis elements `b_1` through `b_N`,
+    That is, for indices `%idx_1` through `%idx_N` and basis elements `b_1` through `b_N`,
     it computes
 
     ```
@@ -1117,21 +1117,21 @@ def AffineLinearizeIndexOp : Affine_Op<"linearize_index",
     ```
 
     If the `disjoint` property is present, this is an optimization hint that,
-    for all i, 0 <= %idx_i < B_i - that is, no index affects any other index,
-    except that %idx_0 may be negative to make the index as a whole negative.
+    for all `i`, `0 <= %idx_i < B_i` - that is, no index affects any other index,
+    except that `%idx_0` may be negative to make the index as a whole negative.
 
     Note that the outputs of `affine.delinearize_index` are, by definition, `disjoint`.
 
     Example:
 
     ```mlir
-    %linear_index = affine.delinearize_index [%index_0, %index_1, %index_2] (16, 224, 224) : index
+    %linear_index = affine.linearize_index [%index_0, %index_1, %index_2] (2, 3, 5) : index
     ```
 
     In the above example, `%linear_index` conceptually holds the following:
 
     ```mlir
-    #map = affine_map<()[s0, s1, s2] -> (s0 * 50176 + s1 * 224 + s2)>
+    #map = affine_map<()[s0, s1, s2] -> (s0 * 15 + s1 * 5 + s2)>
     %linear_index = affine.apply #map()[%index_0, %index_1, %index_2]
     ```
   }];
