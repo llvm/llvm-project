@@ -1,4 +1,5 @@
 ; RUN: opt -safe-stack -safe-stack-coloring -S -mtriple=aarch64-linux-android < %s -o - | FileCheck %s
+; RUN: opt -passes=safe-stack -safe-stack-coloring -S -mtriple=aarch64-linux-android < %s -o - | FileCheck %s
 
 define void @foo() nounwind uwtable safestack {
 entry:

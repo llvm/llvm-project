@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -transform-interpreter -verify-diagnostics | FileCheck %s
+// RUN: mlir-opt %s -transform-interpreter | FileCheck %s
 
 // CHECK-LABEL: @conv_2d_nhwc_fhwc_f64
 // CHECK-SAME: (%[[INPUT:.+]]: tensor<1x4x4x6xf64>, %[[FILTER:.+]]: tensor<8x2x2x6xf64>, %[[INIT:.+]]: tensor<1x2x2x8xf64>) -> tensor<1x2x2x8xf64> {

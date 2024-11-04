@@ -31,10 +31,10 @@ static bool GlibcSupportsFloat128(const std::string &Linker) {
 
   // Since glibc 2.34, the installed .so file is not symlink anymore. But we can
   // still safely assume it's newer than 2.32.
-  if (LinkerName.startswith("ld64.so"))
+  if (LinkerName.starts_with("ld64.so"))
     return true;
 
-  if (!LinkerName.startswith("ld-2."))
+  if (!LinkerName.starts_with("ld-2."))
     return false;
   unsigned Minor = (LinkerName[5] - '0') * 10 + (LinkerName[6] - '0');
   if (Minor < 32)

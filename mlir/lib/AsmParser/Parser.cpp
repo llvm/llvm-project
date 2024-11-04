@@ -2477,7 +2477,7 @@ public:
   AsmResourceEntryKind getKind() const final {
     if (value.isAny(Token::kw_true, Token::kw_false))
       return AsmResourceEntryKind::Bool;
-    return value.getSpelling().startswith("\"0x")
+    return value.getSpelling().starts_with("\"0x")
                ? AsmResourceEntryKind::Blob
                : AsmResourceEntryKind::String;
   }

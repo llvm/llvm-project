@@ -126,25 +126,22 @@ public:
     return CreateAlignedStore(getInt1(Value), Addr, CharUnits::One());
   }
 
-  // Temporarily use old signature; clang will be updated to an Address overload
-  // in a subsequent patch.
   llvm::AtomicCmpXchgInst *
-  CreateAtomicCmpXchg(llvm::Value *Ptr, llvm::Value *Cmp, llvm::Value *New,
+  CreateAtomicCmpXchg(Address Addr, llvm::Value *Cmp, llvm::Value *New,
                       llvm::AtomicOrdering SuccessOrdering,
                       llvm::AtomicOrdering FailureOrdering,
                       llvm::SyncScope::ID SSID = llvm::SyncScope::System) {
     return CGBuilderBaseTy::CreateAtomicCmpXchg(
-        Ptr, Cmp, New, llvm::MaybeAlign(), SuccessOrdering, FailureOrdering,
-        SSID);
+        Addr.getPointer(), Cmp, New, Addr.getAlignment().getAsAlign(),
+        SuccessOrdering, FailureOrdering, SSID);
   }
 
-  // Temporarily use old signature; clang will be updated to an Address overload
-  // in a subsequent patch.
   llvm::AtomicRMWInst *
-  CreateAtomicRMW(llvm::AtomicRMWInst::BinOp Op, llvm::Value *Ptr,
-                  llvm::Value *Val, llvm::AtomicOrdering Ordering,
+  CreateAtomicRMW(llvm::AtomicRMWInst::BinOp Op, Address Addr, llvm::Value *Val,
+                  llvm::AtomicOrdering Ordering,
                   llvm::SyncScope::ID SSID = llvm::SyncScope::System) {
-    return CGBuilderBaseTy::CreateAtomicRMW(Op, Ptr, Val, llvm::MaybeAlign(),
+    return CGBuilderBaseTy::CreateAtomicRMW(Op, Addr.getPointer(), Val,
+                                            Addr.getAlignment().getAsAlign(),
                                             Ordering, SSID);
   }
 

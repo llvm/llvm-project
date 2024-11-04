@@ -105,8 +105,10 @@ TEST(VerifierTest, InvalidRetAttribute) {
   std::string Error;
   raw_string_ostream ErrorOS(Error);
   EXPECT_TRUE(verifyModule(M, &ErrorOS));
-  EXPECT_TRUE(StringRef(ErrorOS.str()).startswith(
-      "Attribute 'uwtable' does not apply to function return values"));
+  EXPECT_TRUE(
+      StringRef(ErrorOS.str())
+          .starts_with(
+              "Attribute 'uwtable' does not apply to function return values"));
 }
 
 /// Test the verifier rejects invalid nofpclass values that the assembler may
@@ -134,11 +136,11 @@ TEST(VerifierTest, InvalidNoFPClassAttribute) {
     StringRef ErrMsg(ErrorOS.str());
 
     if (InvalidMask == 0) {
-      EXPECT_TRUE(ErrMsg.startswith(
+      EXPECT_TRUE(ErrMsg.starts_with(
           "Attribute 'nofpclass' must have at least one test bit set"))
           << ErrMsg;
     } else {
-      EXPECT_TRUE(ErrMsg.startswith("Invalid value for 'nofpclass' test mask"))
+      EXPECT_TRUE(ErrMsg.starts_with("Invalid value for 'nofpclass' test mask"))
           << ErrMsg;
     }
   }
@@ -195,8 +197,9 @@ TEST(VerifierTest, CrossModuleRef) {
 
   Error.clear();
   EXPECT_TRUE(verifyModule(M3, &ErrorOS));
-  EXPECT_TRUE(StringRef(ErrorOS.str()).startswith(
-      "Referencing personality function in another module!"));
+  EXPECT_TRUE(
+      StringRef(ErrorOS.str())
+          .starts_with("Referencing personality function in another module!"));
 
   // Erase bad methods to avoid triggering an assertion failure on destruction
   F1->eraseFromParent();
@@ -211,9 +214,9 @@ TEST(VerifierTest, InvalidVariableLinkage) {
   std::string Error;
   raw_string_ostream ErrorOS(Error);
   EXPECT_TRUE(verifyModule(M, &ErrorOS));
-  EXPECT_TRUE(
-      StringRef(ErrorOS.str()).startswith("Global is external, but doesn't "
-                                          "have external or weak linkage!"));
+  EXPECT_TRUE(StringRef(ErrorOS.str())
+                  .starts_with("Global is external, but doesn't "
+                               "have external or weak linkage!"));
 }
 
 TEST(VerifierTest, InvalidFunctionLinkage) {
@@ -225,9 +228,9 @@ TEST(VerifierTest, InvalidFunctionLinkage) {
   std::string Error;
   raw_string_ostream ErrorOS(Error);
   EXPECT_TRUE(verifyModule(M, &ErrorOS));
-  EXPECT_TRUE(
-      StringRef(ErrorOS.str()).startswith("Global is external, but doesn't "
-                                          "have external or weak linkage!"));
+  EXPECT_TRUE(StringRef(ErrorOS.str())
+                  .starts_with("Global is external, but doesn't "
+                               "have external or weak linkage!"));
 }
 
 TEST(VerifierTest, DetectInvalidDebugInfo) {
@@ -284,8 +287,9 @@ TEST(VerifierTest, MDNodeWrongContext) {
   std::string Error;
   raw_string_ostream ErrorOS(Error);
   EXPECT_TRUE(verifyModule(M, &ErrorOS));
-  EXPECT_TRUE(StringRef(ErrorOS.str())
-                  .startswith("MDNode context does not match Module context!"));
+  EXPECT_TRUE(
+      StringRef(ErrorOS.str())
+          .starts_with("MDNode context does not match Module context!"));
 }
 
 TEST(VerifierTest, AttributesWrongContext) {

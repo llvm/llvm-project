@@ -53,7 +53,7 @@ for.body:                                         ; preds = %entry, %for.body
   %1 = load float, ptr %arrayidx2, align 4
   %add = fadd float %1, %mul
   store float %add, ptr %arrayidx2, align 4
-  %2 = or i64 %indvars.iv, 1
+  %2 = or disjoint i64 %indvars.iv, 1
   %arrayidx5 = getelementptr inbounds float, ptr %b, i64 %2
   %3 = load float, ptr %arrayidx5, align 4
   %mul6 = fmul float %3, %alpha
@@ -61,7 +61,7 @@ for.body:                                         ; preds = %entry, %for.body
   %4 = load float, ptr %arrayidx9, align 4
   %add10 = fadd float %4, %mul6
   store float %add10, ptr %arrayidx9, align 4
-  %5 = or i64 %indvars.iv, 2
+  %5 = or disjoint i64 %indvars.iv, 2
   %arrayidx13 = getelementptr inbounds float, ptr %b, i64 %5
   %6 = load float, ptr %arrayidx13, align 4
   %mul14 = fmul float %6, %alpha
@@ -69,7 +69,7 @@ for.body:                                         ; preds = %entry, %for.body
   %7 = load float, ptr %arrayidx17, align 4
   %add18 = fadd float %7, %mul14
   store float %add18, ptr %arrayidx17, align 4
-  %8 = or i64 %indvars.iv, 3
+  %8 = or disjoint i64 %indvars.iv, 3
   %arrayidx21 = getelementptr inbounds float, ptr %b, i64 %8
   %9 = load float, ptr %arrayidx21, align 4
   %mul22 = fmul float %9, %alpha
@@ -77,7 +77,7 @@ for.body:                                         ; preds = %entry, %for.body
   %10 = load float, ptr %arrayidx25, align 4
   %add26 = fadd float %10, %mul22
   store float %add26, ptr %arrayidx25, align 4
-  %11 = or i64 %indvars.iv, 4
+  %11 = or disjoint i64 %indvars.iv, 4
   %arrayidx29 = getelementptr inbounds float, ptr %b, i64 %11
   %12 = load float, ptr %arrayidx29, align 4
   %mul30 = fmul float %12, %alpha
@@ -85,7 +85,7 @@ for.body:                                         ; preds = %entry, %for.body
   %13 = load float, ptr %arrayidx33, align 4
   %add34 = fadd float %13, %mul30
   store float %add34, ptr %arrayidx33, align 4
-  %14 = or i64 %indvars.iv, 5
+  %14 = or disjoint i64 %indvars.iv, 5
   %arrayidx37 = getelementptr inbounds float, ptr %b, i64 %14
   %15 = load float, ptr %arrayidx37, align 4
   %mul38 = fmul float %15, %alpha
@@ -93,7 +93,7 @@ for.body:                                         ; preds = %entry, %for.body
   %16 = load float, ptr %arrayidx41, align 4
   %add42 = fadd float %16, %mul38
   store float %add42, ptr %arrayidx41, align 4
-  %17 = or i64 %indvars.iv, 6
+  %17 = or disjoint i64 %indvars.iv, 6
   %arrayidx45 = getelementptr inbounds float, ptr %b, i64 %17
   %18 = load float, ptr %arrayidx45, align 4
   %mul46 = fmul float %18, %alpha
@@ -101,7 +101,7 @@ for.body:                                         ; preds = %entry, %for.body
   %19 = load float, ptr %arrayidx49, align 4
   %add50 = fadd float %19, %mul46
   store float %add50, ptr %arrayidx49, align 4
-  %20 = or i64 %indvars.iv, 7
+  %20 = or disjoint i64 %indvars.iv, 7
   %arrayidx53 = getelementptr inbounds float, ptr %b, i64 %20
   %21 = load float, ptr %arrayidx53, align 4
   %mul54 = fmul float %21, %alpha
@@ -109,7 +109,7 @@ for.body:                                         ; preds = %entry, %for.body
   %22 = load float, ptr %arrayidx57, align 4
   %add58 = fadd float %22, %mul54
   store float %add58, ptr %arrayidx57, align 4
-  %23 = or i64 %indvars.iv, 8
+  %23 = or disjoint i64 %indvars.iv, 8
   %arrayidx61 = getelementptr inbounds float, ptr %b, i64 %23
   %24 = load float, ptr %arrayidx61, align 4
   %mul62 = fmul float %24, %alpha
@@ -117,7 +117,7 @@ for.body:                                         ; preds = %entry, %for.body
   %25 = load float, ptr %arrayidx65, align 4
   %add66 = fadd float %25, %mul62
   store float %add66, ptr %arrayidx65, align 4
-  %26 = or i64 %indvars.iv, 9
+  %26 = or disjoint i64 %indvars.iv, 9
   %arrayidx69 = getelementptr inbounds float, ptr %b, i64 %26
   %27 = load float, ptr %arrayidx69, align 4
   %mul70 = fmul float %27, %alpha
@@ -125,7 +125,7 @@ for.body:                                         ; preds = %entry, %for.body
   %28 = load float, ptr %arrayidx73, align 4
   %add74 = fadd float %28, %mul70
   store float %add74, ptr %arrayidx73, align 4
-  %29 = or i64 %indvars.iv, 10
+  %29 = or disjoint i64 %indvars.iv, 10
   %arrayidx77 = getelementptr inbounds float, ptr %b, i64 %29
   %30 = load float, ptr %arrayidx77, align 4
   %mul78 = fmul float %30, %alpha
@@ -133,7 +133,7 @@ for.body:                                         ; preds = %entry, %for.body
   %31 = load float, ptr %arrayidx81, align 4
   %add82 = fadd float %31, %mul78
   store float %add82, ptr %arrayidx81, align 4
-  %32 = or i64 %indvars.iv, 11
+  %32 = or disjoint i64 %indvars.iv, 11
   %arrayidx85 = getelementptr inbounds float, ptr %b, i64 %32
   %33 = load float, ptr %arrayidx85, align 4
   %mul86 = fmul float %33, %alpha
@@ -141,7 +141,7 @@ for.body:                                         ; preds = %entry, %for.body
   %34 = load float, ptr %arrayidx89, align 4
   %add90 = fadd float %34, %mul86
   store float %add90, ptr %arrayidx89, align 4
-  %35 = or i64 %indvars.iv, 12
+  %35 = or disjoint i64 %indvars.iv, 12
   %arrayidx93 = getelementptr inbounds float, ptr %b, i64 %35
   %36 = load float, ptr %arrayidx93, align 4
   %mul94 = fmul float %36, %alpha
@@ -149,7 +149,7 @@ for.body:                                         ; preds = %entry, %for.body
   %37 = load float, ptr %arrayidx97, align 4
   %add98 = fadd float %37, %mul94
   store float %add98, ptr %arrayidx97, align 4
-  %38 = or i64 %indvars.iv, 13
+  %38 = or disjoint i64 %indvars.iv, 13
   %arrayidx101 = getelementptr inbounds float, ptr %b, i64 %38
   %39 = load float, ptr %arrayidx101, align 4
   %mul102 = fmul float %39, %alpha
@@ -157,7 +157,7 @@ for.body:                                         ; preds = %entry, %for.body
   %40 = load float, ptr %arrayidx105, align 4
   %add106 = fadd float %40, %mul102
   store float %add106, ptr %arrayidx105, align 4
-  %41 = or i64 %indvars.iv, 14
+  %41 = or disjoint i64 %indvars.iv, 14
   %arrayidx109 = getelementptr inbounds float, ptr %b, i64 %41
   %42 = load float, ptr %arrayidx109, align 4
   %mul110 = fmul float %42, %alpha
@@ -165,7 +165,7 @@ for.body:                                         ; preds = %entry, %for.body
   %43 = load float, ptr %arrayidx113, align 4
   %add114 = fadd float %43, %mul110
   store float %add114, ptr %arrayidx113, align 4
-  %44 = or i64 %indvars.iv, 15
+  %44 = or disjoint i64 %indvars.iv, 15
   %arrayidx117 = getelementptr inbounds float, ptr %b, i64 %44
   %45 = load float, ptr %arrayidx117, align 4
   %mul118 = fmul float %45, %alpha
@@ -173,7 +173,7 @@ for.body:                                         ; preds = %entry, %for.body
   %46 = load float, ptr %arrayidx121, align 4
   %add122 = fadd float %46, %mul118
   store float %add122, ptr %arrayidx121, align 4
-  %47 = or i64 %indvars.iv, 16
+  %47 = or disjoint i64 %indvars.iv, 16
   %arrayidx125 = getelementptr inbounds float, ptr %b, i64 %47
   %48 = load float, ptr %arrayidx125, align 4
   %mul126 = fmul float %48, %alpha
@@ -181,7 +181,7 @@ for.body:                                         ; preds = %entry, %for.body
   %49 = load float, ptr %arrayidx129, align 4
   %add130 = fadd float %49, %mul126
   store float %add130, ptr %arrayidx129, align 4
-  %50 = or i64 %indvars.iv, 17
+  %50 = or disjoint i64 %indvars.iv, 17
   %arrayidx133 = getelementptr inbounds float, ptr %b, i64 %50
   %51 = load float, ptr %arrayidx133, align 4
   %mul134 = fmul float %51, %alpha
@@ -189,7 +189,7 @@ for.body:                                         ; preds = %entry, %for.body
   %52 = load float, ptr %arrayidx137, align 4
   %add138 = fadd float %52, %mul134
   store float %add138, ptr %arrayidx137, align 4
-  %53 = or i64 %indvars.iv, 18
+  %53 = or disjoint i64 %indvars.iv, 18
   %arrayidx141 = getelementptr inbounds float, ptr %b, i64 %53
   %54 = load float, ptr %arrayidx141, align 4
   %mul142 = fmul float %54, %alpha
@@ -197,7 +197,7 @@ for.body:                                         ; preds = %entry, %for.body
   %55 = load float, ptr %arrayidx145, align 4
   %add146 = fadd float %55, %mul142
   store float %add146, ptr %arrayidx145, align 4
-  %56 = or i64 %indvars.iv, 19
+  %56 = or disjoint i64 %indvars.iv, 19
   %arrayidx149 = getelementptr inbounds float, ptr %b, i64 %56
   %57 = load float, ptr %arrayidx149, align 4
   %mul150 = fmul float %57, %alpha
@@ -205,7 +205,7 @@ for.body:                                         ; preds = %entry, %for.body
   %58 = load float, ptr %arrayidx153, align 4
   %add154 = fadd float %58, %mul150
   store float %add154, ptr %arrayidx153, align 4
-  %59 = or i64 %indvars.iv, 20
+  %59 = or disjoint i64 %indvars.iv, 20
   %arrayidx157 = getelementptr inbounds float, ptr %b, i64 %59
   %60 = load float, ptr %arrayidx157, align 4
   %mul158 = fmul float %60, %alpha
@@ -213,7 +213,7 @@ for.body:                                         ; preds = %entry, %for.body
   %61 = load float, ptr %arrayidx161, align 4
   %add162 = fadd float %61, %mul158
   store float %add162, ptr %arrayidx161, align 4
-  %62 = or i64 %indvars.iv, 21
+  %62 = or disjoint i64 %indvars.iv, 21
   %arrayidx165 = getelementptr inbounds float, ptr %b, i64 %62
   %63 = load float, ptr %arrayidx165, align 4
   %mul166 = fmul float %63, %alpha
@@ -221,7 +221,7 @@ for.body:                                         ; preds = %entry, %for.body
   %64 = load float, ptr %arrayidx169, align 4
   %add170 = fadd float %64, %mul166
   store float %add170, ptr %arrayidx169, align 4
-  %65 = or i64 %indvars.iv, 22
+  %65 = or disjoint i64 %indvars.iv, 22
   %arrayidx173 = getelementptr inbounds float, ptr %b, i64 %65
   %66 = load float, ptr %arrayidx173, align 4
   %mul174 = fmul float %66, %alpha
@@ -229,7 +229,7 @@ for.body:                                         ; preds = %entry, %for.body
   %67 = load float, ptr %arrayidx177, align 4
   %add178 = fadd float %67, %mul174
   store float %add178, ptr %arrayidx177, align 4
-  %68 = or i64 %indvars.iv, 23
+  %68 = or disjoint i64 %indvars.iv, 23
   %arrayidx181 = getelementptr inbounds float, ptr %b, i64 %68
   %69 = load float, ptr %arrayidx181, align 4
   %mul182 = fmul float %69, %alpha
@@ -237,7 +237,7 @@ for.body:                                         ; preds = %entry, %for.body
   %70 = load float, ptr %arrayidx185, align 4
   %add186 = fadd float %70, %mul182
   store float %add186, ptr %arrayidx185, align 4
-  %71 = or i64 %indvars.iv, 24
+  %71 = or disjoint i64 %indvars.iv, 24
   %arrayidx189 = getelementptr inbounds float, ptr %b, i64 %71
   %72 = load float, ptr %arrayidx189, align 4
   %mul190 = fmul float %72, %alpha
@@ -245,7 +245,7 @@ for.body:                                         ; preds = %entry, %for.body
   %73 = load float, ptr %arrayidx193, align 4
   %add194 = fadd float %73, %mul190
   store float %add194, ptr %arrayidx193, align 4
-  %74 = or i64 %indvars.iv, 25
+  %74 = or disjoint i64 %indvars.iv, 25
   %arrayidx197 = getelementptr inbounds float, ptr %b, i64 %74
   %75 = load float, ptr %arrayidx197, align 4
   %mul198 = fmul float %75, %alpha
@@ -253,7 +253,7 @@ for.body:                                         ; preds = %entry, %for.body
   %76 = load float, ptr %arrayidx201, align 4
   %add202 = fadd float %76, %mul198
   store float %add202, ptr %arrayidx201, align 4
-  %77 = or i64 %indvars.iv, 26
+  %77 = or disjoint i64 %indvars.iv, 26
   %arrayidx205 = getelementptr inbounds float, ptr %b, i64 %77
   %78 = load float, ptr %arrayidx205, align 4
   %mul206 = fmul float %78, %alpha
@@ -261,7 +261,7 @@ for.body:                                         ; preds = %entry, %for.body
   %79 = load float, ptr %arrayidx209, align 4
   %add210 = fadd float %79, %mul206
   store float %add210, ptr %arrayidx209, align 4
-  %80 = or i64 %indvars.iv, 27
+  %80 = or disjoint i64 %indvars.iv, 27
   %arrayidx213 = getelementptr inbounds float, ptr %b, i64 %80
   %81 = load float, ptr %arrayidx213, align 4
   %mul214 = fmul float %81, %alpha
@@ -269,7 +269,7 @@ for.body:                                         ; preds = %entry, %for.body
   %82 = load float, ptr %arrayidx217, align 4
   %add218 = fadd float %82, %mul214
   store float %add218, ptr %arrayidx217, align 4
-  %83 = or i64 %indvars.iv, 28
+  %83 = or disjoint i64 %indvars.iv, 28
   %arrayidx221 = getelementptr inbounds float, ptr %b, i64 %83
   %84 = load float, ptr %arrayidx221, align 4
   %mul222 = fmul float %84, %alpha
@@ -277,7 +277,7 @@ for.body:                                         ; preds = %entry, %for.body
   %85 = load float, ptr %arrayidx225, align 4
   %add226 = fadd float %85, %mul222
   store float %add226, ptr %arrayidx225, align 4
-  %86 = or i64 %indvars.iv, 29
+  %86 = or disjoint i64 %indvars.iv, 29
   %arrayidx229 = getelementptr inbounds float, ptr %b, i64 %86
   %87 = load float, ptr %arrayidx229, align 4
   %mul230 = fmul float %87, %alpha
@@ -285,7 +285,7 @@ for.body:                                         ; preds = %entry, %for.body
   %88 = load float, ptr %arrayidx233, align 4
   %add234 = fadd float %88, %mul230
   store float %add234, ptr %arrayidx233, align 4
-  %89 = or i64 %indvars.iv, 30
+  %89 = or disjoint i64 %indvars.iv, 30
   %arrayidx237 = getelementptr inbounds float, ptr %b, i64 %89
   %90 = load float, ptr %arrayidx237, align 4
   %mul238 = fmul float %90, %alpha
@@ -293,7 +293,7 @@ for.body:                                         ; preds = %entry, %for.body
   %91 = load float, ptr %arrayidx241, align 4
   %add242 = fadd float %91, %mul238
   store float %add242, ptr %arrayidx241, align 4
-  %92 = or i64 %indvars.iv, 31
+  %92 = or disjoint i64 %indvars.iv, 31
   %arrayidx245 = getelementptr inbounds float, ptr %b, i64 %92
   %93 = load float, ptr %arrayidx245, align 4
   %mul246 = fmul float %93, %alpha

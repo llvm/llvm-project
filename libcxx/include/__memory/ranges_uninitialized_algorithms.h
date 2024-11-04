@@ -47,8 +47,8 @@ struct __fn {
     requires default_initializable<iter_value_t<_ForwardIterator>>
   _LIBCPP_HIDE_FROM_ABI _ForwardIterator operator()(_ForwardIterator __first, _Sentinel __last) const {
     using _ValueType = remove_reference_t<iter_reference_t<_ForwardIterator>>;
-    return _VSTD::__uninitialized_default_construct<_ValueType>(
-        _VSTD::move(__first), _VSTD::move(__last));
+    return std::__uninitialized_default_construct<_ValueType>(
+        std::move(__first), std::move(__last));
   }
 
   template <__nothrow_forward_range _ForwardRange>
@@ -74,7 +74,7 @@ struct __fn {
   _LIBCPP_HIDE_FROM_ABI _ForwardIterator operator()(_ForwardIterator __first,
                               iter_difference_t<_ForwardIterator> __n) const {
     using _ValueType = remove_reference_t<iter_reference_t<_ForwardIterator>>;
-    return _VSTD::__uninitialized_default_construct_n<_ValueType>(_VSTD::move(__first), __n);
+    return std::__uninitialized_default_construct_n<_ValueType>(std::move(__first), __n);
   }
 };
 
@@ -94,8 +94,8 @@ struct __fn {
     requires default_initializable<iter_value_t<_ForwardIterator>>
   _LIBCPP_HIDE_FROM_ABI _ForwardIterator operator()(_ForwardIterator __first, _Sentinel __last) const {
     using _ValueType = remove_reference_t<iter_reference_t<_ForwardIterator>>;
-    return _VSTD::__uninitialized_value_construct<_ValueType>(
-        _VSTD::move(__first), _VSTD::move(__last));
+    return std::__uninitialized_value_construct<_ValueType>(
+        std::move(__first), std::move(__last));
   }
 
   template <__nothrow_forward_range _ForwardRange>
@@ -121,7 +121,7 @@ struct __fn {
   _LIBCPP_HIDE_FROM_ABI _ForwardIterator operator()(_ForwardIterator __first,
                               iter_difference_t<_ForwardIterator> __n) const {
     using _ValueType = remove_reference_t<iter_reference_t<_ForwardIterator>>;
-    return _VSTD::__uninitialized_value_construct_n<_ValueType>(_VSTD::move(__first), __n);
+    return std::__uninitialized_value_construct_n<_ValueType>(std::move(__first), __n);
   }
 };
 
@@ -142,7 +142,7 @@ struct __fn {
     requires constructible_from<iter_value_t<_ForwardIterator>, const _Tp&>
   _LIBCPP_HIDE_FROM_ABI _ForwardIterator operator()(_ForwardIterator __first, _Sentinel __last, const _Tp& __x) const {
     using _ValueType = remove_reference_t<iter_reference_t<_ForwardIterator>>;
-    return _VSTD::__uninitialized_fill<_ValueType>(_VSTD::move(__first), _VSTD::move(__last), __x);
+    return std::__uninitialized_fill<_ValueType>(std::move(__first), std::move(__last), __x);
   }
 
   template <__nothrow_forward_range _ForwardRange, class _Tp>
@@ -169,7 +169,7 @@ struct __fn {
                               iter_difference_t<_ForwardIterator> __n,
                               const _Tp& __x) const {
     using _ValueType = remove_reference_t<iter_reference_t<_ForwardIterator>>;
-    return _VSTD::__uninitialized_fill_n<_ValueType>(_VSTD::move(__first), __n, __x);
+    return std::__uninitialized_fill_n<_ValueType>(std::move(__first), __n, __x);
   }
 };
 
@@ -199,7 +199,7 @@ struct __fn {
     auto __stop_copying = [&__olast](auto&& __out_iter) -> bool { return __out_iter == __olast; };
     auto __result       = std::__uninitialized_copy<_ValueType>(
         std::move(__ifirst), std::move(__ilast), std::move(__ofirst), __stop_copying);
-    return {_VSTD::move(__result.first), _VSTD::move(__result.second)};
+    return {std::move(__result.first), std::move(__result.second)};
   }
 
   template <input_range _InputRange, __nothrow_forward_range _OutputRange>
@@ -236,7 +236,7 @@ struct __fn {
     auto __stop_copying = [&__olast](auto&& __out_iter) -> bool { return __out_iter == __olast; };
     auto __result =
         std::__uninitialized_copy_n<_ValueType>(std::move(__ifirst), __n, std::move(__ofirst), __stop_copying);
-    return {_VSTD::move(__result.first), _VSTD::move(__result.second)};
+    return {std::move(__result.first), std::move(__result.second)};
   }
 };
 
@@ -266,7 +266,7 @@ struct __fn {
     auto __stop_moving = [&__olast](auto&& __out_iter) -> bool { return __out_iter == __olast; };
     auto __result      = std::__uninitialized_move<_ValueType>(
         std::move(__ifirst), std::move(__ilast), std::move(__ofirst), __stop_moving, __iter_move);
-    return {_VSTD::move(__result.first), _VSTD::move(__result.second)};
+    return {std::move(__result.first), std::move(__result.second)};
   }
 
   template <input_range _InputRange, __nothrow_forward_range _OutputRange>
@@ -304,7 +304,7 @@ struct __fn {
     auto __stop_moving = [&__olast](auto&& __out_iter) -> bool { return __out_iter == __olast; };
     auto __result      = std::__uninitialized_move_n<_ValueType>(
         std::move(__ifirst), __n, std::move(__ofirst), __stop_moving, __iter_move);
-    return {_VSTD::move(__result.first), _VSTD::move(__result.second)};
+    return {std::move(__result.first), std::move(__result.second)};
   }
 };
 

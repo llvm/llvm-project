@@ -175,7 +175,7 @@ public:
         Ty = Type::getPPC_FP128Ty(Context);
       else if (Arg == "x86_mmx")
         Ty = Type::getX86_MMXTy(Context);
-      else if (Arg.startswith("i")) {
+      else if (Arg.starts_with("i")) {
         unsigned N = 0;
         Arg.drop_front().getAsInteger(10, N);
         if (N > 0)

@@ -369,8 +369,14 @@ static bool canTransformAccumulatorRecursion(Instruction *I, CallInst *CI) {
   if (!I->isAssociative() || !I->isCommutative())
     return false;
 
-  assert(I->getNumOperands() == 2 &&
-         "Associative/commutative operations should have 2 args!");
+  assert(I->getNumOperands() >= 2 &&
+         "Associative/commutative operations should have at least 2 args!");
+
+  if (IntrinsicInst *II = dyn_cast<IntrinsicInst>(I)) {
+    // Accumulators must have an identity.
+    if (!ConstantExpr::getIntrinsicIdentity(II->getIntrinsicID(), I->getType()))
+      return false;
+  }
 
   // Exactly one operand should be the result of the call instruction.
   if ((I->getOperand(0) == CI && I->getOperand(1) == CI) ||
@@ -569,8 +575,8 @@ void TailRecursionEliminator::insertAccumulator(Instruction *AccRecInstr) {
   for (pred_iterator PI = PB; PI != PE; ++PI) {
     BasicBlock *P = *PI;
     if (P == &F.getEntryBlock()) {
-      Constant *Identity = ConstantExpr::getBinOpIdentity(
-          AccRecInstr->getOpcode(), AccRecInstr->getType());
+      Constant *Identity =
+          ConstantExpr::getIdentity(AccRecInstr, AccRecInstr->getType());
       AccPN->addIncoming(Identity, P);
     } else {
       AccPN->addIncoming(AccPN, P);

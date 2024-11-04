@@ -499,4 +499,27 @@ define i1 @lshr_value(i32 %length.i, i32 %i, i32 %v) {
   ret i1 %res
 }
 
+define i1 @same_ops_with_constant(i8 %x) {
+; CHECK-LABEL: @same_ops_with_constant(
+; CHECK-NEXT:    ret i1 true
+;
+  %cmp1 = icmp sgt i8 %x, 5
+  %cmp2 = icmp ugt i8 %x, 5
+  %res = icmp ule i1 %cmp1, %cmp2
+  ret i1 %res
+}
+
+define i1 @same_ops_with_constant_wrong_sign(i8 %x) {
+; CHECK-LABEL: @same_ops_with_constant_wrong_sign(
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp sgt i8 [[X:%.*]], -5
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp ugt i8 [[X]], -5
+; CHECK-NEXT:    [[RES:%.*]] = icmp ule i1 [[CMP1]], [[CMP2]]
+; CHECK-NEXT:    ret i1 [[RES]]
+;
+  %cmp1 = icmp sgt i8 %x, -5
+  %cmp2 = icmp ugt i8 %x, -5
+  %res = icmp ule i1 %cmp1, %cmp2
+  ret i1 %res
+}
+
 declare void @llvm.assume(i1)

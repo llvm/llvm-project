@@ -18,7 +18,6 @@
 #include "src/__support/FPUtil/nearest_integer.h"
 #include "src/__support/FPUtil/rounding_mode.h"
 #include "src/__support/FPUtil/sqrt.h" // Speedup for powf(x, 1/2) = sqrtf(x)
-#include "src/__support/bit.h"
 #include "src/__support/common.h"
 #include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
 
@@ -390,29 +389,31 @@ static constexpr DoubleDouble LOG2_R2_DD[] = {
 LIBC_INLINE bool is_odd_integer(float x) {
   using FloatProp = typename fputil::FloatProperties<float>;
   uint32_t x_u = cpp::bit_cast<uint32_t>(x);
-  int x_e = static_cast<int>((x_u & FloatProp::EXPONENT_MASK) >>
-                             FloatProp::MANTISSA_WIDTH);
-  int lsb = unsafe_ctz(x_u | FloatProp::EXPONENT_MASK);
-  constexpr int UNIT_EXPONENT =
-      static_cast<int>(FloatProp::EXPONENT_BIAS + FloatProp::MANTISSA_WIDTH);
+  int32_t x_e = static_cast<int32_t>((x_u & FloatProp::EXPONENT_MASK) >>
+                                     FloatProp::MANTISSA_WIDTH);
+  int32_t lsb = cpp::countr_zero(x_u | FloatProp::EXPONENT_MASK);
+  constexpr int32_t UNIT_EXPONENT =
+      FloatProp::EXPONENT_BIAS +
+      static_cast<int32_t>(FloatProp::MANTISSA_WIDTH);
   return (x_e + lsb == UNIT_EXPONENT);
 }
 
 LIBC_INLINE bool is_integer(float x) {
   using FloatProp = typename fputil::FloatProperties<float>;
   uint32_t x_u = cpp::bit_cast<uint32_t>(x);
-  int x_e = static_cast<int>((x_u & FloatProp::EXPONENT_MASK) >>
-                             FloatProp::MANTISSA_WIDTH);
-  int lsb = unsafe_ctz(x_u | FloatProp::EXPONENT_MASK);
-  constexpr int UNIT_EXPONENT =
-      static_cast<int>(FloatProp::EXPONENT_BIAS + FloatProp::MANTISSA_WIDTH);
+  int32_t x_e = static_cast<int32_t>((x_u & FloatProp::EXPONENT_MASK) >>
+                                     FloatProp::MANTISSA_WIDTH);
+  int32_t lsb = cpp::countr_zero(x_u | FloatProp::EXPONENT_MASK);
+  constexpr int32_t UNIT_EXPONENT =
+      FloatProp::EXPONENT_BIAS +
+      static_cast<int32_t>(FloatProp::MANTISSA_WIDTH);
   return (x_e + lsb >= UNIT_EXPONENT);
 }
 
 LIBC_INLINE bool larger_exponent(double a, double b) {
   using DoubleBits = typename fputil::FPBits<double>;
-  return DoubleBits(a).get_unbiased_exponent() >=
-         DoubleBits(b).get_unbiased_exponent();
+  return DoubleBits(a).get_biased_exponent() >=
+         DoubleBits(b).get_biased_exponent();
 }
 
 // Calculate 2^(y * log2(x)) in double-double precision.

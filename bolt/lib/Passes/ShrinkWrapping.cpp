@@ -1416,12 +1416,12 @@ bool ShrinkWrapping::foldIdenticalSplitEdges() {
   bool Changed = false;
   for (auto Iter = BF.begin(); Iter != BF.end(); ++Iter) {
     BinaryBasicBlock &BB = *Iter;
-    if (!BB.getName().startswith(".LSplitEdge"))
+    if (!BB.getName().starts_with(".LSplitEdge"))
       continue;
     for (BinaryBasicBlock &RBB : llvm::reverse(BF)) {
       if (&RBB == &BB)
         break;
-      if (!RBB.getName().startswith(".LSplitEdge") || !RBB.isValid() ||
+      if (!RBB.getName().starts_with(".LSplitEdge") || !RBB.isValid() ||
           !isIdenticalSplitEdgeBB(BC, *Iter, RBB))
         continue;
       assert(RBB.pred_size() == 1 && "Invalid split edge BB");

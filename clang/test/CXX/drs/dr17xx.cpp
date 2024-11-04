@@ -1,10 +1,10 @@
-// RUN: %clang_cc1 -std=c++98 %s -verify -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++11 %s -verify -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++14 %s -verify -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++17 %s -verify -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++20 %s -verify -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++23 %s -verify -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++2c %s -verify -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++98 %s -verify=expected -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++11 %s -verify=expected,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++14 %s -verify=expected,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++17 %s -verify=expected,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++20 %s -verify=expected,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++23 %s -verify=expected,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++2c %s -verify=expected,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
 
 namespace dr1710 { // dr1710: no
 // FIXME: all of the following is well-formed
@@ -32,13 +32,17 @@ namespace dr1715 { // dr1715: 3.9
   struct D : B {
     using B::B;
   };
-  struct E : B { // expected-note 2{{candidate}}
-    template<class T> E(T t, typename T::Q q) : B(t, q) {} // expected-note {{'Q' is a private member}}
+  struct E : B { // #dr1715-E
+    template<class T> E(T t, typename T::Q q) : B(t, q) {} // #dr1715-E-ctor
   };
 
   B b(S(), 1);
   D d(S(), 2);
-  E e(S(), 3); // expected-error {{no match}}
+  E e(S(), 3);
+  // since-cxx11-error@-1 {{no matching constructor for initialization of 'E'}}
+  //   since-cxx11-note@#dr1715-E-ctor {{candidate template ignored: substitution failure [with T = S]: 'Q' is a private member of 'dr1715::S'}}
+  //   since-cxx11-note@#dr1715-E {{candidate constructor (the implicit copy constructor) not viable: requires 1 argument, but 2 were provided}}
+  //   since-cxx11-note@#dr1715-E {{candidate constructor (the implicit move constructor) not viable: requires 1 argument, but 2 were provided}}
 #endif
 }
 
@@ -73,12 +77,15 @@ struct S {
     struct L : S {
       using S::S;
     };
-    typename T::type value; // expected-error {{no member}}
-    L l(value); // expected-note {{instantiation of}}
+    typename T::type value;
+    // since-cxx11-error@-1 {{type 'int' cannot be used prior to '::' because it has no members}}
+    //   since-cxx11-note@#dr1736-l {{in instantiation of function template specialization 'dr1736::S::S<int>' requested here}}
+    //   since-cxx11-note@#dr1736-s {{in instantiation of function template specialization 'dr1736::S::S<dr1736::Q>' requested here}}
+    L l(value); // #dr1736-l
   }
 };
 struct Q { typedef int type; } q;
-S s(q); // expected-note {{instantiation of}}
+S s(q); // #dr1736-s
 #endif
 }
 
@@ -91,18 +98,23 @@ namespace dr1753 { // dr1753: 11
     n.~T();
     n.T::~T();
 
-    n.dr1753::~T(); // expected-error {{'dr1753' does not refer to a type name in pseudo-destructor}}
+    n.dr1753::~T();
+    // expected-error@-1 {{'dr1753' does not refer to a type name in pseudo-destructor expression; expected the name of type 'T' (aka 'int')}}
     n.dr1753::T::~T();
 
-    n.A::~T(); // expected-error {{the type of object expression ('T' (aka 'int')) does not match the type being destroyed ('A') in pseudo-destructor expression}}
+    n.A::~T();
+    // expected-error@-1 {{the type of object expression ('T' (aka 'int')) does not match the type being destroyed ('A') in pseudo-destructor expression}}
     n.A::T::~T();
 
-    n.B::~T(); // expected-error {{'B' does not refer to a type name in pseudo-destructor expression}}
+    n.B::~T();
+    // expected-error@-1 {{'B' does not refer to a type name in pseudo-destructor expression; expected the name of type 'T' (aka 'int')}}
     n.B::T::~T();
 
   #if __cplusplus >= 201103L
-    n.decltype(n)::~T(); // expected-error {{not a class, namespace, or enumeration}}
-    n.T::~decltype(n)(); // expected-error {{expected a class name after '~'}}
+    n.decltype(n)::~T();
+    // since-cxx11-error@-1 {{'decltype(n)' (aka 'int') is not a class, namespace, or enumeration}}
+    n.T::~decltype(n)();
+    // since-cxx11-error@-1 {{expected a class name after '~' to name a destructor}}
     n.~decltype(n)(); // OK
   #endif
   }
@@ -141,9 +153,9 @@ namespace dr1758 { // dr1758: 3.7
 namespace dr1762 { // dr1762: 14
 #if __cplusplus >= 201103L
   float operator ""_E(const char *);
-  // expected-error@+2 {{invalid suffix on literal; C++11 requires a space between literal and identifier}}
-  // expected-warning@+1 {{user-defined literal suffixes not starting with '_' are reserved; no literal will invoke this operator}}
   float operator ""E(const char *);
+  // since-cxx11-error@-1 {{invalid suffix on literal; C++11 requires a space between literal and identifier}}
+  // since-cxx11-warning@-2 {{user-defined literal suffixes not starting with '_' are reserved; no literal will invoke this operator}}
 #endif
 }
 

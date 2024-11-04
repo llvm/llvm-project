@@ -31,15 +31,15 @@ constexpr void test() {
   using ChunkByView     = std::ranges::chunk_by_view<Underlying, std::ranges::less_equal>;
   using ChunkByIterator = std::ranges::iterator_t<ChunkByView>;
 
-  auto make_chunk_by_view = [](auto begin, auto end) {
-    View view{Iterator(begin), Sentinel(Iterator(end))};
+  auto make_chunk_by_view = [](auto& arr) {
+    View view{Iterator(arr.data()), Sentinel(Iterator(arr.data() + arr.size()))};
     return ChunkByView(std::move(view), std::ranges::less_equal{});
   };
 
   // Test operator==
   {
     std::array array{0, 1, 2};
-    ChunkByView view  = make_chunk_by_view(array.begin(), array.end());
+    ChunkByView view  = make_chunk_by_view(array);
     ChunkByIterator i = view.begin();
     ChunkByIterator j = view.begin();
 
@@ -52,7 +52,7 @@ constexpr void test() {
   // Test synthesized operator!=
   {
     std::array array{0, 1, 2};
-    ChunkByView view  = make_chunk_by_view(array.begin(), array.end());
+    ChunkByView view  = make_chunk_by_view(array);
     ChunkByIterator i = view.begin();
     ChunkByIterator j = view.begin();
 
@@ -65,7 +65,7 @@ constexpr void test() {
   // Test operator== with std::default_sentinel_t
   {
     std::array array{0, 1, 2};
-    ChunkByView view  = make_chunk_by_view(array.begin(), array.end());
+    ChunkByView view  = make_chunk_by_view(array);
     ChunkByIterator i = view.begin();
 
     std::same_as<bool> decltype(auto) result = (i == std::default_sentinel);
@@ -77,7 +77,7 @@ constexpr void test() {
   // Test synthesized operator!= with std::default_sentinel_t
   {
     std::array array{0, 1, 2};
-    ChunkByView view  = make_chunk_by_view(array.begin(), array.end());
+    ChunkByView view  = make_chunk_by_view(array);
     ChunkByIterator i = view.begin();
 
     std::same_as<bool> decltype(auto) result = (i != std::default_sentinel);

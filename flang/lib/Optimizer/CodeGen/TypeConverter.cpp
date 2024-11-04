@@ -27,12 +27,13 @@
 namespace fir {
 
 LLVMTypeConverter::LLVMTypeConverter(mlir::ModuleOp module, bool applyTBAA,
-                                     bool forceUnifiedTBAATree)
+                                     bool forceUnifiedTBAATree,
+                                     const mlir::DataLayout &dl)
     : mlir::LLVMTypeConverter(module.getContext()),
       kindMapping(getKindMapping(module)),
       specifics(CodeGenSpecifics::get(module.getContext(),
                                       getTargetTriple(module),
-                                      getKindMapping(module))),
+                                      getKindMapping(module), dl)),
       tbaaBuilder(std::make_unique<TBAABuilder>(module->getContext(), applyTBAA,
                                                 forceUnifiedTBAATree)) {
   LLVM_DEBUG(llvm::dbgs() << "FIR type converter\n");

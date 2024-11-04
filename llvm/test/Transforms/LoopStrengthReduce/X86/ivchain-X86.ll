@@ -385,7 +385,7 @@ for.body:                                         ; preds = %for.body, %entry
   %conv3 = trunc i32 %add to i8
   %arrayidx4 = getelementptr inbounds i8, ptr %c, i32 %i.07
   store i8 %conv3, ptr %arrayidx4, align 1
-  %inc1 = or i32 %i.07, 1
+  %inc1 = or disjoint i32 %i.07, 1
   %arrayidx.1 = getelementptr inbounds i8, ptr %a, i32 %inc1
   %2 = load i8, ptr %arrayidx.1, align 1
   %conv5.1 = zext i8 %2 to i32
@@ -396,7 +396,7 @@ for.body:                                         ; preds = %for.body, %entry
   %conv3.1 = trunc i32 %add.1 to i8
   %arrayidx4.1 = getelementptr inbounds i8, ptr %c, i32 %inc1
   store i8 %conv3.1, ptr %arrayidx4.1, align 1
-  %inc.12 = or i32 %i.07, 2
+  %inc.12 = or disjoint i32 %i.07, 2
   %arrayidx.2 = getelementptr inbounds i8, ptr %a, i32 %inc.12
   %4 = load i8, ptr %arrayidx.2, align 1
   %conv5.2 = zext i8 %4 to i32
@@ -407,7 +407,7 @@ for.body:                                         ; preds = %for.body, %entry
   %conv3.2 = trunc i32 %add.2 to i8
   %arrayidx4.2 = getelementptr inbounds i8, ptr %c, i32 %inc.12
   store i8 %conv3.2, ptr %arrayidx4.2, align 1
-  %inc.23 = or i32 %i.07, 3
+  %inc.23 = or disjoint i32 %i.07, 3
   %arrayidx.3 = getelementptr inbounds i8, ptr %a, i32 %inc.23
   %6 = load i8, ptr %arrayidx.3, align 1
   %conv5.3 = zext i8 %6 to i32
@@ -478,7 +478,7 @@ for.body:
   %p = phi ptr [ %p.next, %for.body ], [ %a, %entry ]
   %i = phi i32 [ %inc4, %for.body ], [ 0, %entry ]
   store i32 %i, ptr %p, align 4
-  %inc1 = or i32 %i, 1
+  %inc1 = or disjoint i32 %i, 1
   %add.ptr.i1 = getelementptr inbounds i32, ptr %p, i32 1
   store i32 %inc1, ptr %add.ptr.i1, align 4
   %inc2 = add nsw i32 %i, 2

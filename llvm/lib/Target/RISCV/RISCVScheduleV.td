@@ -69,19 +69,23 @@ multiclass LMULSEWWriteResMXSEW<string name, list<ProcResourceKind> resources,
 // is created similiarly if IsWorstCase is true.
 multiclass LMULWriteResMXVariant<string name, SchedPredicateBase Pred,
                                  list<ProcResourceKind> resources,
-                                 int predLat, list<int> predCycles,
-                                 int noPredLat, list<int> noPredCycles,
+                                 int predLat, list<int> predAcquireCycles,
+                                 list<int> predReleaseCycles, int noPredLat,
+                                 list<int> noPredAcquireCycles,
+                                 list<int> noPredReleaseCycles,
                                  string mx, bit IsWorstCase> {
   defvar nameMX = name # "_" # mx;
 
   // Define the different behaviors
-  def NAME # nameMX # "_Pred" : SchedWriteRes<resources> {
+  def nameMX # "_Pred" : SchedWriteRes<resources>{
     let Latency = predLat;
-    let ReleaseAtCycles = predCycles;
+    let AcquireAtCycles = predAcquireCycles;
+    let ReleaseAtCycles = predReleaseCycles;
   }
-  def NAME # nameMX # "_NoPred" : SchedWriteRes<resources> {
+  def nameMX # "_NoPred" : SchedWriteRes<resources> {
     let Latency = noPredLat;
-    let ReleaseAtCycles = noPredCycles;
+    let AcquireAtCycles = noPredAcquireCycles;
+    let ReleaseAtCycles = noPredReleaseCycles;
   }
 
   // Tie behavior to predicate

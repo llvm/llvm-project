@@ -133,7 +133,7 @@ Linux                 i386, x86_64, arm, arm64  Only glibc-2.24 and later and no
 Android 5.0+          i386, x86_64, arm, arm64
 Windows               i386, x86_64              Both MSVC and MinGW style environments, ABI in MSVC environments is :doc:`unstable <DesignDocs/ABIVersioning>`
 AIX 7.2TL5+           powerpc, powerpc64
-Embedded (picolibc)   arm                       Support for building with picolibc is currently work-in-progress
+Embedded (picolibc)   arm
 ===================== ========================= ============================
 
 Generally speaking, libc++ should work on any platform that provides a fairly complete
@@ -202,6 +202,11 @@ Design Documents
 Build Bots and Test Coverage
 ============================
 
+.. image:: https://github.com/llvm/llvm-project/actions/workflows/libcxx-build-and-test.yaml/badge.svg?branch=main&event=schedule
+   :target: https://github.com/llvm/llvm-project/actions/workflows/libcxx-build-and-test.yaml?query=event%3Aschedule
+   :alt: Build and Test libc++
+
+* `Github Actions CI pipeline <https://github.com/llvm/llvm-project/actions/workflows/libcxx-build-and-test.yaml>`_
 * `Buildkite CI pipeline <https://buildkite.com/llvm-project/libcxx-ci>`_
 * `LLVM Buildbot Builders <https://lab.llvm.org/buildbot>`_
 * :ref:`Adding New CI Jobs <AddingNewCIJobs>`

@@ -144,7 +144,13 @@ int main() {
 // CHECK: [[ARR_IDX6:%.+]] = getelementptr inbounds [4 x i32], ptr [[ARR_ADDR]], i64 0, i64 0
 // CHECK: [[A_ADDR2:%.+]] = getelementptr inbounds %struct.S, ptr [[THIS]], i32 0, i32 0
 // CHECK: [[P4:%.+]] = mul nuw i64 [[CONV:%.+]], 4
-// CHECK: [[ARR_END:%.+]] = getelementptr i32, ptr [[ARR_IDX6]], i32 1
+// CHECK: [[A_ADDR3:%.+]] = getelementptr inbounds %struct.S, ptr [[THIS]], i32 0, i32 0
+// CHECK: [[L5:%.+]] = load i32, ptr [[A_ADDR3]]
+// CHECK: [[L6:%.+]] = sext i32 [[L5]] to i64
+// CHECK: [[LB_ADD_LEN:%lb_add_len]] = add nsw i64 -1, [[L6]]
+// CHECK: [[ARR_ADDR9:%.+]] = getelementptr inbounds %struct.S, ptr [[THIS]], i32 0, i32 3
+// CHECK: [[ARR_IDX10:%arrayidx.+]] = getelementptr inbounds [4 x i32], ptr [[ARR_ADDR9]], i64 0, i64 %lb_add_len
+// CHECK: [[ARR_END:%.+]] = getelementptr i32, ptr [[ARR_IDX10]], i32 1
 // CHECK: [[E:%.+]] = ptrtoint ptr [[ARR_END]] to i64
 // CHECK: [[B:%.+]] = ptrtoint ptr [[A_ADDR]] to i64
 // CHECK: [[DIFF:%.+]] = sub i64 [[E]], [[B]]

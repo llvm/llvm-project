@@ -27,9 +27,8 @@ static bool GetBranchTargetEnforcement(const Function &F,
 
   const StringRef BTIEnable =
       F.getFnAttribute("branch-target-enforcement").getValueAsString();
-  assert(BTIEnable.equals_insensitive("true") ||
-         BTIEnable.equals_insensitive("false"));
-  return BTIEnable.equals_insensitive("true");
+  assert(BTIEnable == "true" || BTIEnable == "false");
+  return BTIEnable == "true";
 }
 
 // The pair returns values for the ARMFunctionInfo members

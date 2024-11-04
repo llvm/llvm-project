@@ -837,6 +837,7 @@ set(files
   __type_traits/void_t.h
   __undef_macros
   __utility/as_const.h
+  __utility/as_lvalue.h
   __utility/auto_cast.h
   __utility/cmp.h
   __utility/convert_to_integral.h

@@ -24,7 +24,8 @@ define ptr @group_to_flat_addrspacecast(ptr addrspace(3) %ptr) {
 ; CHECK-LABEL: group_to_flat_addrspacecast:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_load_dword s4, s[6:7], 0x10
+; CHECK-NEXT:    s_mov_b64 s[4:5], 0xc4
+; CHECK-NEXT:    s_load_dword s4, s[4:5], 0x0
 ; CHECK-NEXT:    v_cmp_ne_u32_e32 vcc, -1, v0
 ; CHECK-NEXT:    v_cndmask_b32_e32 v0, 0, v0, vcc
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
@@ -50,7 +51,8 @@ define ptr @private_to_flat_addrspacecast(ptr addrspace(5) %ptr) {
 ; CHECK-LABEL: private_to_flat_addrspacecast:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_load_dword s4, s[6:7], 0x11
+; CHECK-NEXT:    s_mov_b64 s[4:5], 0xc0
+; CHECK-NEXT:    s_load_dword s4, s[4:5], 0x0
 ; CHECK-NEXT:    v_cmp_ne_u32_e32 vcc, -1, v0
 ; CHECK-NEXT:    v_cndmask_b32_e32 v0, 0, v0, vcc
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
@@ -204,3 +206,6 @@ define ptr addrspace(6) @addrspacecast_flat_null_to_constant32bit() {
 }
 
 attributes #0 = { "amdgpu-32bit-address-high-bits"="0xffff8000" }
+
+!llvm.module.flags = !{!0}
+!0 = !{i32 1, !"amdgpu_code_object_version", i32 500}

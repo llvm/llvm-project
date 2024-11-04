@@ -1,4 +1,5 @@
 ; RUN: opt < %s -mattr=+neon -interleaved-access -S | FileCheck %s
+; RUN: opt < %s -mattr=+neon -passes=interleaved-access -S | FileCheck %s
 
 target datalayout = "e-m:e-p:32:32-i64:64-v128:64:128-n32-S64"
 target triple = "arm---eabi"

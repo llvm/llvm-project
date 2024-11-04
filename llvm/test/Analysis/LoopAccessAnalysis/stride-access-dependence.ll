@@ -65,7 +65,7 @@ for.body:                                         ; preds = %entry, %for.body
   %arrayidx = getelementptr inbounds i32, ptr %A, i64 %indvars.iv
   %0 = trunc i64 %indvars.iv to i32
   store i32 %0, ptr %arrayidx, align 4
-  %1 = or i64 %indvars.iv, 3
+  %1 = or disjoint i64 %indvars.iv, 3
   %arrayidx2 = getelementptr inbounds i32, ptr %A, i64 %1
   %2 = load i32, ptr %arrayidx2, align 4
   %add3 = add nsw i32 %2, %sum.013
@@ -99,7 +99,7 @@ for.body:                                         ; preds = %entry, %for.body
   %arrayidx = getelementptr inbounds i32, ptr %A, i64 %indvars.iv
   %0 = trunc i64 %indvars.iv to i32
   store i32 %0, ptr %arrayidx, align 4
-  %1 = or i64 %indvars.iv, 1
+  %1 = or disjoint i64 %indvars.iv, 1
   %arrayidx3 = getelementptr inbounds i32, ptr %A, i64 %1
   %2 = trunc i64 %1 to i32
   store i32 %2, ptr %arrayidx3, align 4
@@ -213,7 +213,7 @@ for.body:                                         ; preds = %entry, %for.body
   %arrayidx = getelementptr inbounds i32, ptr %A, i64 %indvars.iv
   %0 = trunc i64 %indvars.iv to i32
   store i32 %0, ptr %arrayidx, align 4
-  %1 = or i64 %indvars.iv, 1
+  %1 = or disjoint i64 %indvars.iv, 1
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 2
   %arrayidx3 = getelementptr inbounds i32, ptr %A, i64 %indvars.iv.next
   %2 = trunc i64 %1 to i32
@@ -328,7 +328,7 @@ for.body:                                         ; preds = %entry, %for.body
   %arrayidx = getelementptr inbounds i32, ptr %A, i64 %indvars.iv
   %0 = trunc i64 %indvars.iv to i32
   store i32 %0, ptr %arrayidx, align 4
-  %1 = or i64 %indvars.iv, 1
+  %1 = or disjoint i64 %indvars.iv, 1
   %arrayidx2 = getelementptr inbounds i32, ptr %add.ptr, i64 %indvars.iv
   %2 = trunc i64 %1 to i32
   store i32 %2, ptr %arrayidx2, align 4
@@ -525,7 +525,7 @@ for.body:                                         ; preds = %entry, %for.body
   %0 = trunc i64 %indvars.iv to i32
   %arrayidx2 = getelementptr inbounds i32, ptr %incdec.ptr, i64 %indvars.iv
   store i32 %0, ptr %arrayidx2, align 4
-  %1 = or i64 %indvars.iv, 1
+  %1 = or disjoint i64 %indvars.iv, 1
   %arrayidx5 = getelementptr inbounds i32, ptr %A, i64 %1
   %2 = trunc i64 %1 to i32
   store i32 %2, ptr %arrayidx5, align 4

@@ -9,19 +9,15 @@
 #ifndef LLVM_LIB_TARGET_AMDGPU_UTILS_AMDGPUMEMORYUTILS_H
 #define LLVM_LIB_TARGET_AMDGPU_UTILS_AMDGPUMEMORYUTILS_H
 
-#include <vector>
-
 namespace llvm {
 
 struct Align;
 class AAResults;
 class DataLayout;
-class Function;
 class GlobalVariable;
 class LoadInst;
 class MemoryDef;
 class MemorySSA;
-class Module;
 class Value;
 
 namespace AMDGPU {

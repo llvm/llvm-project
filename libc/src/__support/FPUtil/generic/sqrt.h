@@ -10,13 +10,12 @@
 #define LLVM_LIBC_SRC___SUPPORT_FPUTIL_GENERIC_SQRT_H
 
 #include "sqrt_80_bit_long_double.h"
-#include "src/__support/CPP/bit.h"
+#include "src/__support/CPP/bit.h" // countl_zero
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/rounding_mode.h"
 #include "src/__support/UInt128.h"
-#include "src/__support/bit.h"
 #include "src/__support/common.h"
 
 namespace LIBC_NAMESPACE {
@@ -28,33 +27,33 @@ template <typename T> struct SpecialLongDouble {
   static constexpr bool VALUE = false;
 };
 
-#if defined(SPECIAL_X86_LONG_DOUBLE)
+#if defined(LIBC_LONG_DOUBLE_IS_X86_FLOAT80)
 template <> struct SpecialLongDouble<long double> {
   static constexpr bool VALUE = true;
 };
-#endif // SPECIAL_X86_LONG_DOUBLE
+#endif // LIBC_LONG_DOUBLE_IS_X86_FLOAT80
 
 template <typename T>
 LIBC_INLINE void normalize(int &exponent,
                            typename FPBits<T>::UIntType &mantissa) {
-  const int shift = unsafe_clz(mantissa) -
+  const int shift = cpp::countl_zero(mantissa) -
                     (8 * sizeof(mantissa) - 1 - MantissaWidth<T>::VALUE);
   exponent -= shift;
   mantissa <<= shift;
 }
 
-#ifdef LONG_DOUBLE_IS_DOUBLE
+#ifdef LIBC_LONG_DOUBLE_IS_FLOAT64
 template <>
 LIBC_INLINE void normalize<long double>(int &exponent, uint64_t &mantissa) {
   normalize<double>(exponent, mantissa);
 }
-#elif !defined(SPECIAL_X86_LONG_DOUBLE)
+#elif !defined(LIBC_LONG_DOUBLE_IS_X86_FLOAT80)
 template <>
 LIBC_INLINE void normalize<long double>(int &exponent, UInt128 &mantissa) {
   const uint64_t hi_bits = static_cast<uint64_t>(mantissa >> 64);
-  const int shift = hi_bits
-                        ? (unsafe_clz(hi_bits) - 15)
-                        : (unsafe_clz(static_cast<uint64_t>(mantissa)) + 49);
+  const int shift =
+      hi_bits ? (cpp::countl_zero(hi_bits) - 15)
+              : (cpp::countl_zero(static_cast<uint64_t>(mantissa)) + 49);
   exponent -= shift;
   mantissa <<= shift;
 }
@@ -98,7 +97,7 @@ LIBC_INLINE cpp::enable_if_t<cpp::is_floating_point_v<T>, T> sqrt(T x) {
       UIntType x_mant = bits.get_mantissa();
 
       // Step 1a: Normalize denormal input and append hidden bit to the mantissa
-      if (bits.get_unbiased_exponent() == 0) {
+      if (bits.get_biased_exponent() == 0) {
         ++x_exp; // let x_exp be the correct exponent of ONE bit.
         internal::normalize<T>(x_exp, x_mant);
       } else {
@@ -137,7 +136,7 @@ LIBC_INLINE cpp::enable_if_t<cpp::is_floating_point_v<T>, T> sqrt(T x) {
 
       // We compute one more iteration in order to round correctly.
       bool lsb = static_cast<bool>(y & 1); // Least significant bit
-      bool rb = false;  // Round bit
+      bool rb = false;                     // Round bit
       r <<= 2;
       UIntType tmp = (y << 2) + 1;
       if (r >= tmp) {

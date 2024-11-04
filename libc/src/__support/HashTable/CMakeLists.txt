@@ -6,7 +6,7 @@ add_header_library(
     PREFER_GENERIC
   DEPENDS
     libc.src.__support.common
-    libc.src.__support.bit
+    libc.src.__support.CPP.bit
     libc.src.__support.macros.properties.cpu_features
 )
 
@@ -25,17 +25,16 @@ add_header_library(
     table.h
   DEPENDS
     .bitmask
-    libc.src.__support.memory_size
-    libc.src.__support.bit
-    libc.src.__support.CPP.type_traits
+    libc.include.llvm-libc-types.ENTRY
+    libc.src.__support.CPP.bit
     libc.src.__support.CPP.new
+    libc.src.__support.hash
     libc.src.__support.macros.attributes
     libc.src.__support.macros.optimization
-    libc.src.__support.hash
+    libc.src.__support.memory_size
     libc.src.string.memset
     libc.src.string.strcmp
     libc.src.string.strlen
-    libc.include.llvm-libc-types.ENTRY
 )
 
 add_header_library(

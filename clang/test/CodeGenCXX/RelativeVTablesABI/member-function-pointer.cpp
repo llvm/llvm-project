@@ -14,7 +14,7 @@
 
 // The loading of the virtual function here should be replaced with a llvm.load.relative() call.
 // CHECK-NEXT:   [[vtable:%.+]] = load ptr, ptr [[this_adj]], align 8
-// CHECK-NEXT:   [[offset:%.+]] = add i64 [[fn_ptr]], -1
+// CHECK-NEXT:   [[offset:%.+]] = add nsw i64 [[fn_ptr]], -1
 // CHECK-NEXT:   [[ptr:%.+]] = tail call ptr @llvm.load.relative.i64(ptr [[vtable]], i64 [[offset]])
 // CHECK-NEXT:   br label %[[memptr_end:.+]]
 // CHECK:      [[nonvirt]]:

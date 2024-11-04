@@ -53,15 +53,23 @@ struct Test {
       std::array<int, 0> a;
       std::array<int, 0> b;
       std::array<int, std::size(a) + std::size(b)> out;
-      std::merge(
-          policy, Iter1(std::begin(a)), Iter1(std::end(a)), Iter2(std::begin(b)), Iter2(std::end(b)), std::begin(out));
+      std::merge(policy,
+                 Iter1(std::data(a)),
+                 Iter1(std::data(a) + std::size(a)),
+                 Iter2(std::data(b)),
+                 Iter2(std::data(b) + std::size(b)),
+                 std::begin(out));
     }
     { // check that it works with the first range being empty
       std::array<int, 0> a;
       int b[] = {2, 4, 6, 8, 10};
       std::array<int, std::size(a) + std::size(b)> out;
-      std::merge(
-          policy, Iter1(std::begin(a)), Iter1(std::end(a)), Iter2(std::begin(b)), Iter2(std::end(b)), std::begin(out));
+      std::merge(policy,
+                 Iter1(std::data(a)),
+                 Iter1(std::data(a) + std::size(a)),
+                 Iter2(std::begin(b)),
+                 Iter2(std::end(b)),
+                 std::begin(out));
       assert((out == std::array{2, 4, 6, 8, 10}));
     }
 
@@ -69,8 +77,12 @@ struct Test {
       int a[] = {2, 4, 6, 8, 10};
       std::array<int, 0> b;
       std::array<int, std::size(a) + std::size(b)> out;
-      std::merge(
-          policy, Iter1(std::begin(a)), Iter1(std::end(a)), Iter2(std::begin(b)), Iter2(std::end(b)), std::begin(out));
+      std::merge(policy,
+                 Iter1(std::begin(a)),
+                 Iter1(std::end(a)),
+                 Iter2(std::data(b)),
+                 Iter2(std::data(b) + std::size(b)),
+                 std::begin(out));
       assert((out == std::array{2, 4, 6, 8, 10}));
     }
 

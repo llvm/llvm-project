@@ -1492,3 +1492,15 @@ func.func @add_poison() -> !shape.size {
   %result = shape.add %1, %2 : !shape.size, !shape.size -> !shape.size
   return %result : !shape.size
 }
+
+// -----
+
+// CHECK-LABEL: func @shape_of_0d(
+//  CHECK-SAME:     %[[arg0:.*]]: tensor<f32>
+//       CHECK:   %[[const:.*]] = shape.const_shape [] : tensor<0xindex>
+//       CHECK:   %[[cast:.*]] = tensor.cast %[[const]] : tensor<0xindex> to tensor<?xindex>
+//       CHECK:   return %[[cast]]
+func.func @shape_of_0d(%arg0: tensor<f32>) -> tensor<?xindex> {
+  %0 = shape.shape_of %arg0 : tensor<f32> -> tensor<?xindex>
+  return %0 : tensor<?xindex>
+}

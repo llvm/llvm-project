@@ -10,8 +10,9 @@
 #define LLVM_LIBC_SRC___SUPPORT_FPUTIL_FLOATPROPERTIES_H
 
 #include "src/__support/UInt128.h"
-#include "src/__support/macros/attributes.h"       // LIBC_INLINE
+#include "src/__support/macros/attributes.h" // LIBC_INLINE, LIBC_INLINE_VAR
 #include "src/__support/macros/properties/float.h" // LIBC_COMPILER_HAS_FLOAT128
+#include "src/__support/math_extras.h"             // mask_trailing_ones
 
 #include <stdint.h>
 
@@ -27,116 +28,151 @@ enum class FPType {
   X86_Binary80,
 };
 
-template <FPType> struct FPProperties {};
-template <> struct FPProperties<FPType::IEEE754_Binary32> {
-  typedef uint32_t BitsType;
+// For now 'FPEncoding', 'FPBaseProperties' and 'FPCommonProperties' are
+// implementation details.
+namespace internal {
 
-  static constexpr uint32_t BIT_WIDTH = sizeof(BitsType) * 8;
-
-  static constexpr uint32_t MANTISSA_WIDTH = 23;
-  // The mantissa precision includes the implicit bit.
-  static constexpr uint32_t MANTISSA_PRECISION = MANTISSA_WIDTH + 1;
-  static constexpr uint32_t EXPONENT_WIDTH = 8;
-  static constexpr BitsType MANTISSA_MASK = (BitsType(1) << MANTISSA_WIDTH) - 1;
-  static constexpr BitsType SIGN_MASK = BitsType(1)
-                                        << (EXPONENT_WIDTH + MANTISSA_WIDTH);
-  static constexpr BitsType EXPONENT_MASK = ~(SIGN_MASK | MANTISSA_MASK);
-  static constexpr uint32_t EXPONENT_BIAS = 127;
-
-  static constexpr BitsType EXP_MANT_MASK = MANTISSA_MASK + EXPONENT_MASK;
-  static_assert(EXP_MANT_MASK == ~SIGN_MASK,
-                "Exponent and mantissa masks are not as expected.");
-
-  // If a number x is a NAN, then it is a quiet NAN if:
-  //   QuietNaNMask & bits(x) != 0
-  // Else, it is a signalling NAN.
-  static constexpr BitsType QUIET_NAN_MASK = 0x00400000U;
+// The type of encoding for supported floating point types.
+enum class FPEncoding {
+  IEEE754,
+  X86_ExtendedPrecision,
 };
 
-template <> struct FPProperties<FPType::IEEE754_Binary64> {
-  typedef uint64_t BitsType;
+template <FPType> struct FPBaseProperties {};
 
-  static constexpr uint32_t BIT_WIDTH = sizeof(BitsType) * 8;
-
-  static constexpr uint32_t MANTISSA_WIDTH = 52;
-  static constexpr uint32_t MANTISSA_PRECISION = MANTISSA_WIDTH + 1;
-  static constexpr uint32_t EXPONENT_WIDTH = 11;
-  static constexpr BitsType MANTISSA_MASK = (BitsType(1) << MANTISSA_WIDTH) - 1;
-  static constexpr BitsType SIGN_MASK = BitsType(1)
-                                        << (EXPONENT_WIDTH + MANTISSA_WIDTH);
-  static constexpr BitsType EXPONENT_MASK = ~(SIGN_MASK | MANTISSA_MASK);
-  static constexpr uint32_t EXPONENT_BIAS = 1023;
-
-  static constexpr BitsType EXP_MANT_MASK = MANTISSA_MASK + EXPONENT_MASK;
-  static_assert(EXP_MANT_MASK == ~SIGN_MASK,
-                "Exponent and mantissa masks are not as expected.");
-
-  // If a number x is a NAN, then it is a quiet NAN if:
-  //   QuietNaNMask & bits(x) != 0
-  // Else, it is a signalling NAN.
-  static constexpr BitsType QUIET_NAN_MASK = 0x0008000000000000ULL;
+template <> struct FPBaseProperties<FPType::IEEE754_Binary16> {
+  using UIntType = uint16_t;
+  LIBC_INLINE_VAR static constexpr int TOTAL_BITS = 16;
+  LIBC_INLINE_VAR static constexpr int SIG_BITS = 10;
+  LIBC_INLINE_VAR static constexpr int EXP_BITS = 5;
+  LIBC_INLINE_VAR static constexpr auto ENCODING = FPEncoding::IEEE754;
 };
 
-// Properties for numbers represented in 80 bits long double on non-Windows x86
-// platforms.
-template <> struct FPProperties<FPType::X86_Binary80> {
-  typedef UInt128 BitsType;
-
-  static constexpr uint32_t BIT_WIDTH = (sizeof(BitsType) * 8) - 48;
-  static constexpr BitsType FULL_WIDTH_MASK = ((BitsType(1) << BIT_WIDTH) - 1);
-
-  static constexpr uint32_t MANTISSA_WIDTH = 63;
-  static constexpr uint32_t MANTISSA_PRECISION = MANTISSA_WIDTH + 1;
-  static constexpr uint32_t EXPONENT_WIDTH = 15;
-  static constexpr BitsType MANTISSA_MASK = (BitsType(1) << MANTISSA_WIDTH) - 1;
-
-  // The x86 80 bit float represents the leading digit of the mantissa
-  // explicitly. This is the mask for that bit.
-  static constexpr BitsType EXPLICIT_BIT_MASK = (BitsType(1) << MANTISSA_WIDTH);
-
-  static constexpr BitsType SIGN_MASK =
-      BitsType(1) << (EXPONENT_WIDTH + MANTISSA_WIDTH + 1);
-  static constexpr BitsType EXPONENT_MASK =
-      ((BitsType(1) << EXPONENT_WIDTH) - 1) << (MANTISSA_WIDTH + 1);
-  static constexpr uint32_t EXPONENT_BIAS = 16383;
-
-  static constexpr BitsType EXP_MANT_MASK =
-      MANTISSA_MASK | EXPLICIT_BIT_MASK | EXPONENT_MASK;
-  static_assert(EXP_MANT_MASK == (~SIGN_MASK & FULL_WIDTH_MASK),
-                "Exponent and mantissa masks are not as expected.");
-
-  // If a number x is a NAN, then it is a quiet NAN if:
-  //   QuietNaNMask & bits(x) != 0
-  // Else, it is a signalling NAN.
-  static constexpr BitsType QUIET_NAN_MASK = BitsType(1)
-                                             << (MANTISSA_WIDTH - 1);
+template <> struct FPBaseProperties<FPType::IEEE754_Binary32> {
+  using UIntType = uint32_t;
+  LIBC_INLINE_VAR static constexpr int TOTAL_BITS = 32;
+  LIBC_INLINE_VAR static constexpr int SIG_BITS = 23;
+  LIBC_INLINE_VAR static constexpr int EXP_BITS = 8;
+  LIBC_INLINE_VAR static constexpr auto ENCODING = FPEncoding::IEEE754;
 };
 
-// Properties for numbers represented in 128 bits long double on non x86
-// platform.
-template <> struct FPProperties<FPType::IEEE754_Binary128> {
-  typedef UInt128 BitsType;
+template <> struct FPBaseProperties<FPType::IEEE754_Binary64> {
+  using UIntType = uint64_t;
+  LIBC_INLINE_VAR static constexpr int TOTAL_BITS = 64;
+  LIBC_INLINE_VAR static constexpr int SIG_BITS = 52;
+  LIBC_INLINE_VAR static constexpr int EXP_BITS = 11;
+  LIBC_INLINE_VAR static constexpr auto ENCODING = FPEncoding::IEEE754;
+};
 
-  static constexpr uint32_t BIT_WIDTH = sizeof(BitsType) << 3;
+template <> struct FPBaseProperties<FPType::IEEE754_Binary128> {
+  using UIntType = UInt128;
+  LIBC_INLINE_VAR static constexpr int TOTAL_BITS = 128;
+  LIBC_INLINE_VAR static constexpr int SIG_BITS = 112;
+  LIBC_INLINE_VAR static constexpr int EXP_BITS = 15;
+  LIBC_INLINE_VAR static constexpr auto ENCODING = FPEncoding::IEEE754;
+};
 
-  static constexpr uint32_t MANTISSA_WIDTH = 112;
-  static constexpr uint32_t MANTISSA_PRECISION = MANTISSA_WIDTH + 1;
-  static constexpr uint32_t EXPONENT_WIDTH = 15;
-  static constexpr BitsType MANTISSA_MASK = (BitsType(1) << MANTISSA_WIDTH) - 1;
-  static constexpr BitsType SIGN_MASK = BitsType(1)
-                                        << (EXPONENT_WIDTH + MANTISSA_WIDTH);
-  static constexpr BitsType EXPONENT_MASK = ~(SIGN_MASK | MANTISSA_MASK);
-  static constexpr uint32_t EXPONENT_BIAS = 16383;
+template <> struct FPBaseProperties<FPType::X86_Binary80> {
+  using UIntType = UInt128;
+  LIBC_INLINE_VAR static constexpr int TOTAL_BITS = 80;
+  LIBC_INLINE_VAR static constexpr int SIG_BITS = 64;
+  LIBC_INLINE_VAR static constexpr int EXP_BITS = 15;
+  LIBC_INLINE_VAR static constexpr auto ENCODING =
+      FPEncoding::X86_ExtendedPrecision;
+};
 
-  static constexpr BitsType EXP_MANT_MASK = MANTISSA_MASK | EXPONENT_MASK;
-  static_assert(EXP_MANT_MASK == ~SIGN_MASK,
-                "Exponent and mantissa masks are not as expected.");
+} // namespace internal
+
+template <FPType fp_type>
+struct FPProperties : public internal::FPBaseProperties<fp_type> {
+private:
+  using UP = internal::FPBaseProperties<fp_type>;
+  // The number of bits to represent sign. For documentation purpose, always 1.
+  LIBC_INLINE_VAR static constexpr int SIGN_BITS = 1;
+  using UP::EXP_BITS;   // The number of bits for the *exponent* part
+  using UP::SIG_BITS;   // The number of bits for the *significand* part
+  using UP::TOTAL_BITS; // For convenience, the sum of `SIG_BITS`, `EXP_BITS`,
+                        // and `SIGN_BITS`.
+  static_assert(SIGN_BITS + EXP_BITS + SIG_BITS == TOTAL_BITS);
+
+public:
+  // An unsigned integer that is wide enough to contain all of the floating
+  // point bits.
+  using UIntType = typename UP::UIntType;
+
+  // The number of bits in UIntType.
+  LIBC_INLINE_VAR static constexpr int UINTTYPE_BITS =
+      sizeof(UIntType) * CHAR_BIT;
+  static_assert(UINTTYPE_BITS >= TOTAL_BITS);
+
+private:
+  // The exponent bias. Always positive.
+  LIBC_INLINE_VAR static constexpr int32_t EXP_BIAS =
+      (1U << (EXP_BITS - 1U)) - 1U;
+  static_assert(EXP_BIAS > 0);
+
+  // The shift amount to get the *significand* part to the least significant
+  // bit. Always `0` but kept for consistency.
+  LIBC_INLINE_VAR static constexpr int SIG_MASK_SHIFT = 0;
+  // The shift amount to get the *exponent* part to the least significant bit.
+  LIBC_INLINE_VAR static constexpr int EXP_MASK_SHIFT = SIG_BITS;
+  // The shift amount to get the *sign* part to the least significant bit.
+  LIBC_INLINE_VAR static constexpr int SIGN_MASK_SHIFT = SIG_BITS + EXP_BITS;
+
+  // The bit pattern that keeps only the *significand* part.
+  LIBC_INLINE_VAR static constexpr UIntType SIG_MASK =
+      mask_trailing_ones<UIntType, SIG_BITS>() << SIG_MASK_SHIFT;
+  // The bit pattern that keeps only the *exponent* part.
+  LIBC_INLINE_VAR static constexpr UIntType EXP_MASK =
+      mask_trailing_ones<UIntType, EXP_BITS>() << EXP_MASK_SHIFT;
+
+public:
+  // The bit pattern that keeps only the *sign* part.
+  LIBC_INLINE_VAR static constexpr UIntType SIGN_MASK =
+      mask_trailing_ones<UIntType, SIGN_BITS>() << SIGN_MASK_SHIFT;
+  // The bit pattern that keeps only the *sign + exponent + significand* part.
+  LIBC_INLINE_VAR static constexpr UIntType FP_MASK =
+      mask_trailing_ones<UIntType, TOTAL_BITS>();
+
+  static_assert((SIG_MASK & EXP_MASK & SIGN_MASK) == 0, "masks disjoint");
+  static_assert((SIG_MASK | EXP_MASK | SIGN_MASK) == FP_MASK, "masks cover");
+
+private:
+  LIBC_INLINE static constexpr UIntType bit_at(int position) {
+    return UIntType(1) << position;
+  }
+
+  LIBC_INLINE_VAR static constexpr UIntType QNAN_MASK =
+      UP::ENCODING == internal::FPEncoding::X86_ExtendedPrecision
+          ? bit_at(SIG_BITS - 1) | bit_at(SIG_BITS - 2) // 0b1100...
+          : bit_at(SIG_BITS - 1);                       // 0b1000...
+
+  LIBC_INLINE_VAR static constexpr UIntType SNAN_MASK =
+      UP::ENCODING == internal::FPEncoding::X86_ExtendedPrecision
+          ? bit_at(SIG_BITS - 1) | bit_at(SIG_BITS - 3) // 0b1010...
+          : bit_at(SIG_BITS - 2);                       // 0b0100...
+
+  // The number of bits after the decimal dot when the number if in normal form.
+  LIBC_INLINE_VAR static constexpr int FRACTION_BITS =
+      UP::ENCODING == internal::FPEncoding::X86_ExtendedPrecision ? SIG_BITS - 1
+                                                                  : SIG_BITS;
+
+public:
+  LIBC_INLINE_VAR static constexpr uint32_t BIT_WIDTH = TOTAL_BITS;
+  LIBC_INLINE_VAR static constexpr uint32_t MANTISSA_WIDTH = FRACTION_BITS;
+  LIBC_INLINE_VAR static constexpr uint32_t MANTISSA_PRECISION =
+      MANTISSA_WIDTH + 1;
+  LIBC_INLINE_VAR static constexpr UIntType MANTISSA_MASK =
+      mask_trailing_ones<UIntType, MANTISSA_WIDTH>();
+  LIBC_INLINE_VAR static constexpr uint32_t EXPONENT_WIDTH = EXP_BITS;
+  LIBC_INLINE_VAR static constexpr int32_t EXPONENT_BIAS = EXP_BIAS;
+  LIBC_INLINE_VAR static constexpr UIntType EXPONENT_MASK = EXP_MASK;
+  LIBC_INLINE_VAR static constexpr UIntType EXP_MANT_MASK = EXP_MASK | SIG_MASK;
 
   // If a number x is a NAN, then it is a quiet NAN if:
   //   QuietNaNMask & bits(x) != 0
   // Else, it is a signalling NAN.
-  static constexpr BitsType QUIET_NAN_MASK = BitsType(1)
-                                             << (MANTISSA_WIDTH - 1);
+  static constexpr UIntType QUIET_NAN_MASK = QNAN_MASK;
 };
 
 //-----------------------------------------------------------------------------

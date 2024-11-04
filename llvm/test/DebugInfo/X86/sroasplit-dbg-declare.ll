@@ -1,4 +1,5 @@
 ; RUN: opt -S -passes='sroa' -o - %s | FileCheck %s
+; RUN: opt --try-experimental-debuginfo-iterators -S -passes='sroa' -o - %s | FileCheck %s
 
 ; SROA should split the alloca in two new ones, each with its own dbg.declare.
 ; The original alloca and dbg.declare should be removed.

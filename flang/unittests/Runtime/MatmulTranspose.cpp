@@ -206,7 +206,7 @@ TEST(MatmulTranspose, Basic) {
   auto yLog{MakeArray<TypeCategory::Logical, 2>(std::vector<int>{3, 2},
       std::vector<std::uint16_t>{false, false, false, true, true, false})};
   auto vLog{MakeArray<TypeCategory::Logical, 1>(
-      std::vector<int>{3}, std::vector<std::uint16_t>{true, false, true})};
+      std::vector<int>{3}, std::vector<std::uint8_t>{true, false, true})};
   RTNAME(MatmulTranspose)(result, *xLog, *yLog, __FILE__, __LINE__);
   ASSERT_EQ(result.rank(), 2);
   EXPECT_EQ(result.GetDimension(0).LowerBound(), 1);

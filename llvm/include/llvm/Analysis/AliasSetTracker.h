@@ -330,7 +330,7 @@ public:
   /// These methods return true if inserting the instruction resulted in the
   /// addition of a new alias set (i.e., the pointer did not alias anything).
   ///
-  void add(Value *Ptr, LocationSize Size, const AAMDNodes &AAInfo); // Add a loc
+  void add(const MemoryLocation &Loc);
   void add(LoadInst *LI);
   void add(StoreInst *SI);
   void add(VAArgInst *VAAI);

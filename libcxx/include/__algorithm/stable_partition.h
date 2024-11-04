@@ -144,7 +144,7 @@ __stable_partition_impl(_ForwardIterator __first, _ForwardIterator __last, _Pred
     {
 // TODO: Remove the use of std::get_temporary_buffer
 _LIBCPP_SUPPRESS_DEPRECATED_PUSH
-        __p = _VSTD::get_temporary_buffer<value_type>(__len);
+        __p = std::get_temporary_buffer<value_type>(__len);
 _LIBCPP_SUPPRESS_DEPRECATED_POP
         __h.reset(__p.first);
     }
@@ -298,7 +298,7 @@ __stable_partition_impl(_BidirectionalIterator __first, _BidirectionalIterator _
     {
 // TODO: Remove the use of std::get_temporary_buffer
 _LIBCPP_SUPPRESS_DEPRECATED_PUSH
-        __p = _VSTD::get_temporary_buffer<value_type>(__len);
+        __p = std::get_temporary_buffer<value_type>(__len);
 _LIBCPP_SUPPRESS_DEPRECATED_POP
         __h.reset(__p.first);
     }
@@ -315,7 +315,7 @@ _ForwardIterator __stable_partition(
 }
 
 template <class _ForwardIterator, class _Predicate>
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_HIDE_FROM_ABI
 _ForwardIterator
 stable_partition(_ForwardIterator __first, _ForwardIterator __last, _Predicate __pred)
 {

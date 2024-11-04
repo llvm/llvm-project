@@ -1,4 +1,5 @@
 ; RUN: opt -passes=instcombine -S %s | FileCheck %s
+; RUN: opt -passes=instcombine -S %s --try-experimental-debuginfo-iterators | FileCheck %s
 
 ; Make sure we collapse the fences in this case
 

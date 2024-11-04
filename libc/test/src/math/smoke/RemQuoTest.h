@@ -20,11 +20,11 @@ class RemQuoTestTemplate : public LIBC_NAMESPACE::testing::Test {
   using FPBits = LIBC_NAMESPACE::fputil::FPBits<T>;
   using UIntType = typename FPBits::UIntType;
 
-  const T zero = T(LIBC_NAMESPACE::fputil::FPBits<T>::zero());
-  const T neg_zero = T(LIBC_NAMESPACE::fputil::FPBits<T>::neg_zero());
-  const T inf = T(LIBC_NAMESPACE::fputil::FPBits<T>::inf());
-  const T neg_inf = T(LIBC_NAMESPACE::fputil::FPBits<T>::neg_inf());
-  const T nan = T(LIBC_NAMESPACE::fputil::FPBits<T>::build_quiet_nan(1));
+  const T zero = T(FPBits::zero());
+  const T neg_zero = T(FPBits::neg_zero());
+  const T inf = T(FPBits::inf());
+  const T neg_inf = T(FPBits::neg_inf());
+  const T nan = T(FPBits::build_quiet_nan(1));
 
 public:
   typedef T (*RemQuoFunc)(T, T, int *);

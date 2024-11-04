@@ -15,6 +15,7 @@
 
 #include "../../../../containers/sequences/insert_range_sequence_containers.h"
 #include "test_macros.h"
+#include "asan_testing.h"
 
 // Tested cases:
 // - different kinds of insertions (appending an {empty/one-element/mid-sized/long range} into an
@@ -43,9 +44,13 @@ int main(int, char**) {
     std::string c;
     static_assert(std::is_lvalue_reference_v<decltype(c.append_range(FullContainer_Begin_EmptyRange<char>.input))>);
     assert(&c.append_range(FullContainer_Begin_EmptyRange<char>.input) == &c);
+    LIBCPP_ASSERT(is_string_asan_correct(c));
     assert(&c.append_range(FullContainer_Begin_OneElementRange<char>.input) == &c);
+    LIBCPP_ASSERT(is_string_asan_correct(c));
     assert(&c.append_range(FullContainer_Begin_MidRange<char>.input) == &c);
+    LIBCPP_ASSERT(is_string_asan_correct(c));
     assert(&c.append_range(FullContainer_Begin_LongRange<char>.input) == &c);
+    LIBCPP_ASSERT(is_string_asan_correct(c));
   }
 
   // Note: `test_append_range_exception_safety_throwing_copy` doesn't apply because copying chars cannot throw.

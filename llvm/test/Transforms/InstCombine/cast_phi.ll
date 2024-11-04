@@ -319,7 +319,7 @@ define i8 @trunc_in_loop_exit_block() {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[IV]], 100
 ; CHECK-NEXT:    br i1 [[CMP]], label [[LOOP_LATCH]], label [[EXIT:%.*]]
 ; CHECK:       loop.latch:
-; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i32 [[IV]], 1
 ; CHECK-NEXT:    br label [[LOOP]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i32 [[PHI]] to i8

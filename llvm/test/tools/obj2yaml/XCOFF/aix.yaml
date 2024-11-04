@@ -52,12 +52,30 @@
 # CHECK32-NEXT:     Type:            0x0
 # CHECK32-NEXT:     StorageClass:    C_EXT
 # CHECK32-NEXT:     NumberOfAuxEntries: 1
+# CHECK32-NEXT:     AuxEntries:
+# CHECK32-NEXT:       - Type:            AUX_CSECT
+# CHECK32-NEXT:         ParameterHashIndex: 0
+# CHECK32-NEXT:         TypeChkSectNum:  0
+# CHECK32-NEXT:         SymbolAlignmentAndType: 0
+# CHECK32-NEXT:         StorageMappingClass: XMC_PR
+# CHECK32-NEXT:         SectionOrLength: 0
+# CHECK32-NEXT:         StabInfoIndex:   0
+# CHECK32-NEXT:         StabSectNum:     0
 # CHECK32-NEXT:   - Name:            .data
 # CHECK32-NEXT:     Value:           0x70
 # CHECK32-NEXT:     Section:         .data
 # CHECK32-NEXT:     Type:            0x0
 # CHECK32-NEXT:     StorageClass:    C_HIDEXT
 # CHECK32-NEXT:     NumberOfAuxEntries: 1
+# CHECK32-NEXT:     AuxEntries:
+# CHECK32-NEXT:       - Type:            AUX_CSECT
+# CHECK32-NEXT:         ParameterHashIndex: 0
+# CHECK32-NEXT:         TypeChkSectNum:  0
+# CHECK32-NEXT:         SymbolAlignmentAndType: 0
+# CHECK32-NEXT:         StorageMappingClass: XMC_PR
+# CHECK32-NEXT:         SectionOrLength: 0
+# CHECK32-NEXT:         StabInfoIndex:   0
+# CHECK32-NEXT:         StabSectNum:     0
 
 # CHECK64:      --- !XCOFF
 # CHECK64-NEXT: FileHeader:
@@ -106,12 +124,28 @@
 # CHECK64-NEXT:     Type:            0x0
 # CHECK64-NEXT:     StorageClass:    C_EXT
 # CHECK64-NEXT:     NumberOfAuxEntries: 1
+# CHECK64-NEXT:     AuxEntries:
+# CHECK64-NEXT:       - Type:            AUX_CSECT
+# CHECK64-NEXT:         ParameterHashIndex: 0
+# CHECK64-NEXT:         TypeChkSectNum:  0
+# CHECK64-NEXT:         SymbolAlignmentAndType: 0
+# CHECK64-NEXT:         StorageMappingClass: XMC_PR
+# CHECK64-NEXT:         SectionOrLengthLo: 0
+# CHECK64-NEXT:         SectionOrLengthHi: 0
 # CHECK64-NEXT:   - Name:            .data
 # CHECK64-NEXT:     Value:           0x70
 # CHECK64-NEXT:     Section:         .data
 # CHECK64-NEXT:     Type:            0x0
 # CHECK64-NEXT:     StorageClass:    C_HIDEXT
 # CHECK64-NEXT:     NumberOfAuxEntries: 1
+# CHECK64-NEXT:     AuxEntries:
+# CHECK64-NEXT:       - Type:            AUX_CSECT
+# CHECK64-NEXT:         ParameterHashIndex: 0
+# CHECK64-NEXT:         TypeChkSectNum:  0
+# CHECK64-NEXT:         SymbolAlignmentAndType: 0
+# CHECK64-NEXT:         StorageMappingClass: XMC_PR
+# CHECK64-NEXT:         SectionOrLengthLo: 0
+# CHECK64-NEXT:         SectionOrLengthHi: 0
 
 --- !XCOFF
 FileHeader:
@@ -140,9 +174,13 @@ Symbols:
     Type:               0x0
     StorageClass:       C_EXT
     NumberOfAuxEntries: 1
+    AuxEntries:
+       - Type:          AUX_CSECT
   - Name:               .data
     Value:              0x70
     Section:            .data
     Type:               0x0
     StorageClass:       C_HIDEXT
     NumberOfAuxEntries: 1
+    AuxEntries:
+       - Type:          AUX_CSECT

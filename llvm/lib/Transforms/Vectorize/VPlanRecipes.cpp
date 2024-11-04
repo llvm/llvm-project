@@ -120,7 +120,6 @@ bool VPRecipeBase::mayHaveSideEffects() const {
     case Instruction::ICmp:
     case VPInstruction::Not:
     case VPInstruction::CalculateTripCountMinusVF:
-    case VPInstruction::CanonicalIVIncrement:
     case VPInstruction::CanonicalIVIncrementForPart:
       return false;
     default:
@@ -272,9 +271,16 @@ Value *VPInstruction::generateInstruction(VPTransformState &State,
   Builder.SetCurrentDebugLocation(getDebugLoc());
 
   if (Instruction::isBinaryOp(getOpcode())) {
+    if (Part != 0 && vputils::onlyFirstPartUsed(this))
+      return State.get(this, 0);
+
     Value *A = State.get(getOperand(0), Part);
     Value *B = State.get(getOperand(1), Part);
-    return Builder.CreateBinOp((Instruction::BinaryOps)getOpcode(), A, B, Name);
+    auto *Res =
+        Builder.CreateBinOp((Instruction::BinaryOps)getOpcode(), A, B, Name);
+    if (auto *I = dyn_cast<Instruction>(Res))
+      setFlags(I);
+    return Res;
   }
 
   switch (getOpcode()) {
@@ -335,19 +341,6 @@ Value *VPInstruction::generateInstruction(VPTransformState &State,
     Value *Zero = ConstantInt::get(ScalarTC->getType(), 0);
     return Builder.CreateSelect(Cmp, Sub, Zero);
   }
-  case VPInstruction::CanonicalIVIncrement: {
-    if (Part == 0) {
-      auto *Phi = State.get(getOperand(0), 0);
-      // The loop step is equal to the vectorization factor (num of SIMD
-      // elements) times the unroll factor (num of SIMD instructions).
-      Value *Step =
-          createStepForVF(Builder, Phi->getType(), State.VF, State.UF);
-      return Builder.CreateAdd(Phi, Step, Name, hasNoUnsignedWrap(),
-                               hasNoSignedWrap());
-    }
-    return State.get(this, 0);
-  }
-
   case VPInstruction::CanonicalIVIncrementForPart: {
     auto *IV = State.get(getOperand(0), VPIteration(0, 0));
     if (Part == 0)
@@ -467,9 +460,6 @@ void VPInstruction::print(raw_ostream &O, const Twine &Indent,
     break;
   case VPInstruction::FirstOrderRecurrenceSplice:
     O << "first-order splice";
-    break;
-  case VPInstruction::CanonicalIVIncrement:
-    O << "VF * UF +";
     break;
   case VPInstruction::BranchOnCond:
     O << "branch-on-cond";
@@ -635,6 +625,10 @@ void VPRecipeWithIRFlags::printFlags(raw_ostream &O) const {
   case OperationType::Cmp:
     O << " " << CmpInst::getPredicateName(getPredicate());
     break;
+  case OperationType::DisjointOp:
+    if (DisjointFlags.IsDisjoint)
+      O << " disjoint";
+    break;
   case OperationType::PossiblyExactOp:
     if (ExactFlags.IsExact)
       O << " exact";
@@ -651,6 +645,10 @@ void VPRecipeWithIRFlags::printFlags(raw_ostream &O) const {
   case OperationType::GEPOp:
     if (GEPFlags.IsInBounds)
       O << " inbounds";
+    break;
+  case OperationType::NonNegOp:
+    if (NonNegFlags.NonNeg)
+      O << " nneg";
     break;
   case OperationType::Other:
     break;
@@ -774,9 +772,14 @@ void VPWidenCastRecipe::execute(VPTransformState &State) {
   /// Vectorize casts.
   assert(State.VF.isVector() && "Not vectorizing?");
   Type *DestTy = VectorType::get(getResultType(), State.VF);
-
+  VPValue *Op = getOperand(0);
   for (unsigned Part = 0; Part < State.UF; ++Part) {
-    Value *A = State.get(getOperand(0), Part);
+    if (Part > 0 && Op->isLiveIn()) {
+      // FIXME: Remove once explicit unrolling is implemented using VPlan.
+      State.set(this, State.get(this, 0), Part);
+      continue;
+    }
+    Value *A = State.get(Op, Part);
     Value *Cast = Builder.CreateCast(Instruction::CastOps(Opcode), A, DestTy);
     State.set(this, Cast, Part);
     State.addMetadata(Cast, cast_or_null<Instruction>(getUnderlyingValue()));
@@ -789,6 +792,7 @@ void VPWidenCastRecipe::print(raw_ostream &O, const Twine &Indent,
   O << Indent << "WIDEN-CAST ";
   printAsOperand(O, SlotTracker);
   O << " = " << Instruction::getOpcodeName(Opcode) << " ";
+  printFlags(O);
   printOperands(O, SlotTracker);
   O << " to " << *getResultType();
 }

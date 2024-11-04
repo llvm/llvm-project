@@ -146,13 +146,13 @@ struct DriverArgs {
           Stdlib = Cmd.CommandLine[I + 1];
       } else if (Arg.consume_front("-stdlib=")) {
         Stdlib = Arg.str();
-      } else if (Arg.startswith("-specs=")) {
+      } else if (Arg.starts_with("-specs=")) {
         // clang requires a single token like `-specs=file` or `--specs=file`,
         // but gcc will accept two tokens like `--specs file`. Since the
         // compilation database is presumably correct, we just forward the flags
         // as-is.
         Specs.push_back(Arg.str());
-      } else if (Arg.startswith("--specs=")) {
+      } else if (Arg.starts_with("--specs=")) {
         Specs.push_back(Arg.str());
       } else if (Arg == "--specs" && I + 1 < E) {
         Specs.push_back(Arg.str());
@@ -282,7 +282,7 @@ std::optional<DriverInfo> parseDriverOutput(llvm::StringRef Output) {
       if (!SeenIncludes && Line.trim() == SIS) {
         SeenIncludes = true;
         State = IncludesExtracting;
-      } else if (!SeenTarget && Line.trim().startswith(TS)) {
+      } else if (!SeenTarget && Line.trim().starts_with(TS)) {
         SeenTarget = true;
         llvm::StringRef TargetLine = Line.trim();
         TargetLine.consume_front(TS);
@@ -448,7 +448,7 @@ tooling::CompileCommand &setTarget(tooling::CompileCommand &Cmd,
   if (!Target.empty()) {
     // We do not want to override existing target with extracted one.
     for (llvm::StringRef Arg : Cmd.CommandLine) {
-      if (Arg == "-target" || Arg.startswith("--target="))
+      if (Arg == "-target" || Arg.starts_with("--target="))
         return Cmd;
     }
     // Just append when `--` isn't present.

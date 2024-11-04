@@ -345,13 +345,13 @@ class PipelineSolver {
   // return the number of edges missed.
   int addEdges(SmallVectorImpl<SchedGroup> &SyncPipeline, SUnit *SU, int SGID,
                std::vector<std::pair<SUnit *, SUnit *>> &AddedEdges);
-  // Link the pipeline as if \p SU was in the SchedGroup with ID \p SGID. It
-  // returns the cost (in terms of missed pipeline edges), and tracks the edges
-  // added in \p AddedEdges
+  /// Link the pipeline as if \p SU was in the SchedGroup with ID \p SGID. It
+  /// returns the cost (in terms of missed pipeline edges), and tracks the edges
+  /// added in \p AddedEdges
   template <typename T>
   int linkSUnit(SUnit *SU, int SGID,
                 std::vector<std::pair<SUnit *, SUnit *>> &AddedEdges, T I, T E);
-  // Remove the edges passed via \p AddedEdges
+  /// Remove the edges passed via \p AddedEdges
   void removeEdges(const std::vector<std::pair<SUnit *, SUnit *>> &AddedEdges);
   // Convert the passed in maps to arrays for bidirectional iterators
   void convertSyncMapsToArrays();
@@ -847,11 +847,11 @@ protected:
   const SIInstrInfo *TII;
 
 public:
-  // Add SchedGroups to \p Pipeline to implement this Strategy.
+  /// Add SchedGroups to \p SyncedSchedGroups to implement this Strategy.
   virtual void applyIGLPStrategy(
       DenseMap<int, SUnitsToCandidateSGsMap> &SyncedInstrs,
       DenseMap<int, SmallVector<SchedGroup, 4>> &SyncedSchedGroups,
-      bool IsPostRA) = 0;
+      bool IsReentry) = 0;
 
   // Returns true if this strategy should be applied to a ScheduleDAG.
   virtual bool shouldApplyStrategy(ScheduleDAGInstrs *DAG) = 0;
@@ -870,7 +870,7 @@ public:
   void applyIGLPStrategy(
       DenseMap<int, SUnitsToCandidateSGsMap> &SyncedInstrs,
       DenseMap<int, SmallVector<SchedGroup, 4>> &SyncedSchedGroups,
-      bool IsPostRA) override;
+      bool IsReentry) override;
 
   bool shouldApplyStrategy(ScheduleDAGInstrs *DAG) override { return true; }
 
@@ -883,7 +883,7 @@ public:
 void MFMASmallGemmOpt::applyIGLPStrategy(
     DenseMap<int, SUnitsToCandidateSGsMap> &SyncedInstrs,
     DenseMap<int, SmallVector<SchedGroup, 4>> &SyncedSchedGroups,
-    bool IsPostRA) {
+    bool IsReentry) {
   // Count the number of MFMA instructions.
   unsigned MFMACount = 0;
   for (const MachineInstr &I : *DAG)
@@ -1045,8 +1045,8 @@ private:
         : InstructionRule(TII, SGID, NeedsCache) {}
   };
 
-  // Whether the SU shares a V_PERM predecessor with any SU in the SchedGroup
-  // that is /p Distance steps away
+  /// Whether the SU shares a V_PERM predecessor with any SU in the SchedGroup
+  /// that is \p Distance steps away
   class SharesPredWithPrevNthGroup final : public InstructionRule {
   private:
     unsigned Distance = 1;
@@ -1100,7 +1100,7 @@ public:
   void applyIGLPStrategy(
       DenseMap<int, SUnitsToCandidateSGsMap> &SyncedInstrs,
       DenseMap<int, SmallVector<SchedGroup, 4>> &SyncedSchedGroups,
-      bool IsPostRA) override;
+      bool IsReentry) override;
 
   bool shouldApplyStrategy(ScheduleDAGInstrs *DAG) override { return true; }
 
@@ -1117,12 +1117,12 @@ static unsigned DSWWithSharedVMEMCount = 0;
 void MFMASmallGemmSingleWaveOpt::applyIGLPStrategy(
     DenseMap<int, SUnitsToCandidateSGsMap> &SyncedInstrs,
     DenseMap<int, SmallVector<SchedGroup, 4>> &SyncedSchedGroups,
-    bool IsPostRA) {
+    bool IsReentry) {
   unsigned MFMACount = 0;
   unsigned DSRCount = 0;
 
-  assert((IsPostRA || (DSWCount == 0 && DSWWithPermCount == 0 &&
-                       DSWWithSharedVMEMCount == 0)) &&
+  assert((IsReentry || (DSWCount == 0 && DSWWithPermCount == 0 &&
+                        DSWWithSharedVMEMCount == 0)) &&
          "DSWCounters should be zero in pre-RA scheduling!");
   SmallVector<SUnit *, 6> DSWithPerms;
   for (auto &SU : DAG->SUnits) {
@@ -1132,7 +1132,7 @@ void MFMASmallGemmSingleWaveOpt::applyIGLPStrategy(
     else if (TII->isDS(*I)) {
       if (I->mayLoad())
         ++DSRCount;
-      else if (I->mayStore() && !IsPostRA) {
+      else if (I->mayStore() && !IsReentry) {
         ++DSWCount;
         for (auto Pred : SU.Preds) {
           if (Pred.getSUnit()->getInstr()->getOpcode() ==
@@ -1145,7 +1145,7 @@ void MFMASmallGemmSingleWaveOpt::applyIGLPStrategy(
     }
   }
 
-  if (!IsPostRA) {
+  if (!IsReentry) {
     DSWWithPermCount = DSWithPerms.size();
     auto I = DSWithPerms.begin();
     auto E = DSWithPerms.end();
@@ -1412,11 +1412,11 @@ public:
   // first created SchedGroup first.
   bool IsBottomUp = 1;
 
-  // Whether the mutation is being applied to post RA scheduling
-  bool IsPostRA = false;
+  // Whether or not this is a reentry into the IGroupLPDAGMutation.
+  bool IsReentry = false;
 
   IGroupLPDAGMutation() = default;
-  IGroupLPDAGMutation(bool IsPostRA) : IsPostRA(IsPostRA) {}
+  IGroupLPDAGMutation(bool IsReentry) : IsReentry(IsReentry) {}
 };
 
 unsigned SchedGroup::NumSchedGroups = 0;
@@ -1704,7 +1704,7 @@ void IGroupLPDAGMutation::initIGLPOpt(SUnit &SU) {
   auto S = createIGLPStrategy(StrategyID, DAG, TII);
   if (S->shouldApplyStrategy(DAG)) {
     IsBottomUp = S->IsBottomUp;
-    S->applyIGLPStrategy(SyncedInstrs, SyncedSchedGroups, IsPostRA);
+    S->applyIGLPStrategy(SyncedInstrs, SyncedSchedGroups, IsReentry);
   }
 }
 
@@ -1712,8 +1712,13 @@ void IGroupLPDAGMutation::initIGLPOpt(SUnit &SU) {
 
 namespace llvm {
 
-std::unique_ptr<ScheduleDAGMutation> createIGroupLPDAGMutation(bool IsPostRA) {
-  return std::make_unique<IGroupLPDAGMutation>(IsPostRA);
+/// \p IsReentry specifes whether or not this is a reentry into the
+/// IGroupLPDAGMutation. Since there may be multiple scheduling passes on the
+/// same scheduling region (e.g. pre and post-RA scheduling / multiple
+/// scheduling "phases"), we can reenter this mutation framework more than once
+/// for a given region.
+std::unique_ptr<ScheduleDAGMutation> createIGroupLPDAGMutation(bool IsReentry) {
+  return std::make_unique<IGroupLPDAGMutation>(IsReentry);
 }
 
 } // end namespace llvm

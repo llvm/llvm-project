@@ -59,9 +59,9 @@ define void @array_1D_insert(ptr %addr, %my_subtype %elt) #0 {
 ; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    ld1d { z1.d }, p0/z, [x0, #2, mul vl]
 ; CHECK-NEXT:    ld1d { z2.d }, p0/z, [x0]
+; CHECK-NEXT:    st1d { z0.d }, p0, [sp, #1, mul vl]
 ; CHECK-NEXT:    st1d { z1.d }, p0, [sp, #2, mul vl]
 ; CHECK-NEXT:    st1d { z2.d }, p0, [sp]
-; CHECK-NEXT:    st1d { z0.d }, p0, [sp, #1, mul vl]
 ; CHECK-NEXT:    addvl sp, sp, #3
 ; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret

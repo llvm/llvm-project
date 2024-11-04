@@ -152,7 +152,7 @@ static bool isInput(const ArrayRef<StringLiteral> &Prefixes, StringRef Arg) {
   if (Arg == "-")
     return true;
   for (const StringRef &Prefix : Prefixes)
-    if (Arg.startswith(Prefix))
+    if (Arg.starts_with(Prefix))
       return false;
   return true;
 }
@@ -161,10 +161,10 @@ static bool isInput(const ArrayRef<StringLiteral> &Prefixes, StringRef Arg) {
 static unsigned matchOption(const OptTable::Info *I, StringRef Str,
                             bool IgnoreCase) {
   for (auto Prefix : I->Prefixes) {
-    if (Str.startswith(Prefix)) {
+    if (Str.starts_with(Prefix)) {
       StringRef Rest = Str.substr(Prefix.size());
       bool Matched = IgnoreCase ? Rest.starts_with_insensitive(I->getName())
-                                : Rest.startswith(I->getName());
+                                : Rest.starts_with(I->getName());
       if (Matched)
         return Prefix.size() + StringRef(I->getName()).size();
     }
@@ -175,7 +175,7 @@ static unsigned matchOption(const OptTable::Info *I, StringRef Str,
 // Returns true if one of the Prefixes + In.Names matches Option
 static bool optionMatches(const OptTable::Info &In, StringRef Option) {
   for (auto Prefix : In.Prefixes)
-    if (Option.endswith(In.getName()))
+    if (Option.ends_with(In.getName()))
       if (Option.slice(0, Option.size() - In.getName().size()) == Prefix)
         return true;
   return false;
@@ -197,7 +197,7 @@ OptTable::suggestValueCompletions(StringRef Option, StringRef Arg) const {
 
     std::vector<std::string> Result;
     for (StringRef Val : Candidates)
-      if (Val.startswith(Arg) && Arg.compare(Val))
+      if (Val.starts_with(Arg) && Arg.compare(Val))
         Result.push_back(std::string(Val));
     return Result;
   }
@@ -221,7 +221,7 @@ OptTable::findByPrefix(StringRef Cur, Visibility VisibilityMask,
       std::string S = (Prefix + In.getName() + "\t").str();
       if (In.HelpText)
         S += In.HelpText;
-      if (StringRef(S).startswith(Cur) && S != std::string(Cur) + "\t")
+      if (StringRef(S).starts_with(Cur) && S != std::string(Cur) + "\t")
         Ret.push_back(S);
     }
   }

@@ -32,6 +32,8 @@
 #include <__ranges/view_interface.h>
 #include <__type_traits/common_type.h>
 #include <__type_traits/maybe_const.h>
+#include <__utility/as_lvalue.h>
+#include <__utility/empty.h>
 #include <__utility/forward.h>
 #include <optional>
 
@@ -41,10 +43,7 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-// Note: `join_view` is still marked experimental because there is an ABI-breaking change that affects `join_view` in
-// the pipeline (https://isocpp.org/files/papers/D2770R0.html).
-// TODO: make `join_view` non-experimental once D2770 is implemented.
-#if _LIBCPP_STD_VER >= 20 && defined(_LIBCPP_ENABLE_EXPERIMENTAL)
+#if _LIBCPP_STD_VER >= 20
 
 namespace ranges {
   template<class>
@@ -84,10 +83,15 @@ namespace ranges {
     template <class>
     friend struct std::__segmented_iterator_traits;
 
-    static constexpr bool _UseCache = !is_reference_v<_InnerRange>;
-    using _Cache = _If<_UseCache, __non_propagating_cache<remove_cvref_t<_InnerRange>>, __empty_cache>;
-    _LIBCPP_NO_UNIQUE_ADDRESS _Cache __cache_;
     _LIBCPP_NO_UNIQUE_ADDRESS _View __base_ = _View();
+
+    static constexpr bool _UseOuterCache = !forward_range<_View>;
+    using _OuterCache = _If<_UseOuterCache, __non_propagating_cache<iterator_t<_View>>, __empty_cache>;
+    _LIBCPP_NO_UNIQUE_ADDRESS _OuterCache __outer_;
+
+    static constexpr bool _UseInnerCache = !is_reference_v<_InnerRange>;
+    using _InnerCache = _If<_UseInnerCache, __non_propagating_cache<remove_cvref_t<_InnerRange>>, __empty_cache>;
+    _LIBCPP_NO_UNIQUE_ADDRESS _InnerCache __inner_;
 
   public:
     _LIBCPP_HIDE_FROM_ABI
@@ -105,16 +109,22 @@ namespace ranges {
 
     _LIBCPP_HIDE_FROM_ABI
     constexpr auto begin() {
-      constexpr bool __use_const = __simple_view<_View> &&
-                                   is_reference_v<range_reference_t<_View>>;
-      return __iterator<__use_const>{*this, ranges::begin(__base_)};
+      if constexpr (forward_range<_View>) {
+        constexpr bool __use_const = __simple_view<_View> &&
+                                     is_reference_v<range_reference_t<_View>>;
+        return __iterator<__use_const>{*this, ranges::begin(__base_)};
+      } else {
+        __outer_.__emplace(ranges::begin(__base_));
+        return __iterator<false>{*this};
+      }
     }
 
     template<class _V2 = _View>
     _LIBCPP_HIDE_FROM_ABI
     constexpr auto begin() const
-      requires input_range<const _V2> &&
-               is_reference_v<range_reference_t<const _V2>>
+      requires forward_range<const _V2> &&
+               is_reference_v<range_reference_t<const _V2>> &&
+               input_range<range_reference_t<const _V2>>
     {
       return __iterator<true>{*this, ranges::begin(__base_)};
     }
@@ -134,13 +144,12 @@ namespace ranges {
     template<class _V2 = _View>
     _LIBCPP_HIDE_FROM_ABI
     constexpr auto end() const
-      requires input_range<const _V2> &&
-               is_reference_v<range_reference_t<const _V2>>
+      requires forward_range<const _V2> &&
+               is_reference_v<range_reference_t<const _V2>> &&
+               input_range<range_reference_t<const _V2>>
     {
       using _ConstInnerRange = range_reference_t<const _View>;
-      if constexpr (forward_range<const _View> &&
-                    is_reference_v<_ConstInnerRange> &&
-                    forward_range<_ConstInnerRange> &&
+      if constexpr (forward_range<_ConstInnerRange> &&
                     common_range<const _View> &&
                     common_range<_ConstInnerRange>) {
         return __iterator<true>{*this, ranges::end(__base_)};
@@ -154,12 +163,12 @@ namespace ranges {
     requires view<_View> && input_range<range_reference_t<_View>>
   template<bool _Const>
   struct join_view<_View>::__sentinel {
-  template<bool>
+  private:
+    template <bool>
     friend struct __sentinel;
 
-  private:
-    using _Parent = __maybe_const<_Const, join_view<_View>>;
-    using _Base = __maybe_const<_Const, _View>;
+    using _Parent            = __maybe_const<_Const, join_view>;
+    using _Base              = __maybe_const<_Const, _View>;
     sentinel_t<_Base> __end_ = sentinel_t<_Base>();
 
   public:
@@ -179,7 +188,7 @@ namespace ranges {
       requires sentinel_for<sentinel_t<_Base>, iterator_t<__maybe_const<_OtherConst, _View>>>
     _LIBCPP_HIDE_FROM_ABI
     friend constexpr bool operator==(const __iterator<_OtherConst>& __x, const __sentinel& __y) {
-      return __x.__outer_ == __y.__end_;
+      return __x.__get_outer() == __y.__end_;
     }
   };
 
@@ -191,9 +200,7 @@ namespace ranges {
   template<bool _Const>
   struct join_view<_View>::__iterator final
     : public __join_view_iterator_category<__maybe_const<_Const, _View>> {
-
-    template<bool>
-    friend struct __iterator;
+    friend join_view;
 
     template <class>
     friend struct std::__segmented_iterator_traits;
@@ -207,23 +214,25 @@ namespace ranges {
     using _Inner = iterator_t<range_reference_t<_Base>>;
     using _InnerRange = range_reference_t<_View>;
 
+    static_assert(!_Const || forward_range<_Base>, "Const can only be true when Base models forward_range.");
+
     static constexpr bool __ref_is_glvalue = is_reference_v<range_reference_t<_Base>>;
 
-  public:
-    _Outer __outer_ = _Outer();
+    static constexpr bool _OuterPresent = forward_range<_Base>;
+    using _OuterType                    = _If<_OuterPresent, _Outer, std::__empty>;
+    _LIBCPP_NO_UNIQUE_ADDRESS _OuterType __outer_ = _OuterType();
 
-  private:
     optional<_Inner> __inner_;
-    _Parent *__parent_ = nullptr;
+    _Parent* __parent_ = nullptr;
 
     _LIBCPP_HIDE_FROM_ABI
     constexpr void __satisfy() {
-      for (; __outer_ != ranges::end(__parent_->__base_); ++__outer_) {
-        auto&& __inner = [&]() -> auto&& {
+      for (; __get_outer() != ranges::end(__parent_->__base_); ++__get_outer()) {
+        auto&& __inner = [this]() -> auto&& {
           if constexpr (__ref_is_glvalue)
-            return *__outer_;
+            return *__get_outer();
           else
-            return __parent_->__cache_.__emplace_from([&]() -> decltype(auto) { return *__outer_; });
+            return __parent_->__inner_.__emplace_from([&]() -> decltype(auto) { return *__get_outer(); });
         }();
         __inner_ = ranges::begin(__inner);
         if (*__inner_ != ranges::end(__inner))
@@ -234,8 +243,37 @@ namespace ranges {
         __inner_.reset();
     }
 
+    _LIBCPP_HIDE_FROM_ABI constexpr _Outer& __get_outer() {
+      if constexpr (forward_range<_Base>) {
+        return __outer_;
+      } else {
+        return *__parent_->__outer_;
+      }
+    }
+
+    _LIBCPP_HIDE_FROM_ABI constexpr const _Outer& __get_outer() const {
+      if constexpr (forward_range<_Base>) {
+        return __outer_;
+      } else {
+        return *__parent_->__outer_;
+      }
+    }
+
+    _LIBCPP_HIDE_FROM_ABI constexpr __iterator(_Parent& __parent, _Outer __outer)
+      requires forward_range<_Base>
+        : __outer_(std::move(__outer)), __parent_(std::addressof(__parent)) {
+      __satisfy();
+    }
+
+    _LIBCPP_HIDE_FROM_ABI constexpr explicit __iterator(_Parent& __parent)
+      requires(!forward_range<_Base>)
+        : __parent_(std::addressof(__parent)) {
+      __satisfy();
+    }
+
     _LIBCPP_HIDE_FROM_ABI constexpr __iterator(_Parent* __parent, _Outer __outer, _Inner __inner)
-      : __outer_(std::move(__outer)), __inner_(std::move(__inner)), __parent_(__parent) {}
+      requires forward_range<_Base>
+        : __outer_(std::move(__outer)), __inner_(std::move(__inner)), __parent_(__parent) {}
 
   public:
     using iterator_concept = _If<
@@ -254,15 +292,7 @@ namespace ranges {
     using difference_type = common_type_t<
       range_difference_t<_Base>, range_difference_t<range_reference_t<_Base>>>;
 
-    _LIBCPP_HIDE_FROM_ABI
-    __iterator() requires default_initializable<_Outer> = default;
-
-    _LIBCPP_HIDE_FROM_ABI
-    constexpr __iterator(_Parent& __parent, _Outer __outer)
-      : __outer_(std::move(__outer))
-      , __parent_(std::addressof(__parent)) {
-      __satisfy();
-    }
+    _LIBCPP_HIDE_FROM_ABI __iterator() = default;
 
     _LIBCPP_HIDE_FROM_ABI
     constexpr __iterator(__iterator<!_Const> __i)
@@ -287,14 +317,14 @@ namespace ranges {
 
     _LIBCPP_HIDE_FROM_ABI
     constexpr __iterator& operator++() {
-      auto&& __inner = [&]() -> auto&& {
+      auto __get_inner_range = [&]() -> decltype(auto) {
         if constexpr (__ref_is_glvalue)
-          return *__outer_;
+          return *__get_outer();
         else
-          return *__parent_->__cache_;
-      }();
-      if (++*__inner_ == ranges::end(__inner)) {
-        ++__outer_;
+          return *__parent_->__inner_;
+      };
+      if (++*__inner_ == ranges::end(std::__as_lvalue(__get_inner_range()))) {
+        ++__get_outer();
         __satisfy();
       }
       return *this;
@@ -324,11 +354,11 @@ namespace ranges {
                common_range<range_reference_t<_Base>>
     {
       if (__outer_ == ranges::end(__parent_->__base_))
-        __inner_ = ranges::end(*--__outer_);
+        __inner_ = ranges::end(std::__as_lvalue(*--__outer_));
 
       // Skip empty inner ranges when going backwards.
-      while (*__inner_ == ranges::begin(*__outer_)) {
-        __inner_ = ranges::end(*--__outer_);
+      while (*__inner_ == ranges::begin(std::__as_lvalue(*__outer_))) {
+        __inner_ = ranges::end(std::__as_lvalue(*--__outer_));
       }
 
       --*__inner_;
@@ -350,7 +380,7 @@ namespace ranges {
     _LIBCPP_HIDE_FROM_ABI
     friend constexpr bool operator==(const __iterator& __x, const __iterator& __y)
       requires __ref_is_glvalue &&
-               equality_comparable<iterator_t<_Base>> &&
+               forward_range<_Base> &&
                equality_comparable<iterator_t<range_reference_t<_Base>>>
     {
       return __x.__outer_ == __y.__outer_ && __x.__inner_ == __y.__inner_;
@@ -436,7 +466,7 @@ struct __segmented_iterator_traits<_JoinViewIterator> {
   }
 };
 
-#endif // #if _LIBCPP_STD_VER >= 20 && defined(_LIBCPP_ENABLE_EXPERIMENTAL)
+#endif // #if _LIBCPP_STD_VER >= 20
 
 _LIBCPP_END_NAMESPACE_STD
 

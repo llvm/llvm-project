@@ -10,17 +10,14 @@
 #ifndef SUPPORT_TEST_MACROS_HPP
 #define SUPPORT_TEST_MACROS_HPP
 
-// Attempt to get STL specific macros like _LIBCPP_VERSION using the most
-// minimal header possible. If we're testing libc++, we should use `<__config>`.
-// If <__config> isn't available, fall back to <ciso646>.
 #ifdef __has_include
-# if __has_include("<__config>")
-#   include <__config>
-#   define TEST_IMP_INCLUDED_HEADER
-# endif
-#endif
-#ifndef TEST_IMP_INCLUDED_HEADER
-#include <ciso646>
+#  if __has_include("<version>")
+#    include <version>
+#  else
+#    include <ciso646>
+#  endif
+#else
+#  include <ciso646>
 #endif
 
 #define TEST_STRINGIZE_IMPL(...) #__VA_ARGS__
@@ -149,6 +146,18 @@
 # define TEST_IS_CONSTANT_EVALUATED __builtin_is_constant_evaluated()
 #else
 # define TEST_IS_CONSTANT_EVALUATED false
+#endif
+
+#if TEST_STD_VER >= 23
+#  define TEST_STD_AT_LEAST_23_OR_RUNTIME_EVALUATED true
+#else
+#  define TEST_STD_AT_LEAST_23_OR_RUNTIME_EVALUATED (!TEST_IS_CONSTANT_EVALUATED)
+#endif
+
+#if TEST_STD_VER >= 20
+#  define TEST_STD_AT_LEAST_20_OR_RUNTIME_EVALUATED true
+#else
+#  define TEST_STD_AT_LEAST_20_OR_RUNTIME_EVALUATED (!TEST_IS_CONSTANT_EVALUATED)
 #endif
 
 #if TEST_STD_VER >= 14

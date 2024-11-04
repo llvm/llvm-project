@@ -212,6 +212,14 @@ define void @locally_streaming_func() "aarch64_pstate_sm_body" {
 
 // -----
 
+; CHECK-LABEL: @streaming_compatible_func
+; CHECK-SAME: attributes {arm_streaming_compatible}
+define void @streaming_compatible_func() "aarch64_pstate_sm_compatible" {
+  ret void
+}
+
+// -----
+
 ; CHECK-LABEL: @section_func
 ; CHECK-SAME: attributes {section = ".section.name"}
 define void @section_func() section ".section.name" {

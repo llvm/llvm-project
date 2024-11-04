@@ -128,6 +128,13 @@ struct PipeliningOption {
   /// lambda to generate the predicated version of operations.
   bool peelEpilogue = true;
 
+  /// Control whether the transformation checks that the number of iterations is
+  /// greater or equal to the number of stages and skip the transformation if
+  /// this is not the case. If the loop is dynamic and this is set to true and
+  /// the loop bounds are not static the pipeliner will have to predicate
+  /// operations in the the prologue/epilogue.
+  bool supportDynamicLoops = false;
+
   // Callback to predicate operations when the prologue or epilogue are not
   // peeled. This takes the original operation, an i1 predicate value and the
   // pattern rewriter. It is expected to replace the given operation with

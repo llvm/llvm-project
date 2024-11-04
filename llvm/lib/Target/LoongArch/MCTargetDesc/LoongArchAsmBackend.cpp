@@ -162,12 +162,13 @@ void LoongArchAsmBackend::applyFixup(const MCAssembler &Asm,
 
 bool LoongArchAsmBackend::shouldForceRelocation(const MCAssembler &Asm,
                                                 const MCFixup &Fixup,
-                                                const MCValue &Target) {
+                                                const MCValue &Target,
+                                                const MCSubtargetInfo *STI) {
   if (Fixup.getKind() >= FirstLiteralRelocationKind)
     return true;
   switch (Fixup.getTargetKind()) {
   default:
-    return STI.hasFeature(LoongArch::FeatureRelax);
+    return STI->hasFeature(LoongArch::FeatureRelax);
   case FK_Data_1:
   case FK_Data_2:
   case FK_Data_4:

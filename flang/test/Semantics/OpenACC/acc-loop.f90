@@ -276,4 +276,11 @@ program openacc_loop_validity
     end do
   end do
 
+  !$acc parallel
+  !$acc loop
+  do i = 1, n
+    if(i == 10) cycle
+  end do
+  !$acc end parallel
+
 end program openacc_loop_validity

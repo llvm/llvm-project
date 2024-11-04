@@ -14,6 +14,8 @@
 
 namespace llvm {
 
+class GCNSubtarget;
+
 // Track defaults for fields in the MODE register.
 struct SIModeRegisterDefaults {
   /// Floating point opcodes that support exception flag gathering quiet and
@@ -40,7 +42,7 @@ struct SIModeRegisterDefaults {
     FP32Denormals(DenormalMode::getIEEE()),
     FP64FP16Denormals(DenormalMode::getIEEE()) {}
 
-  SIModeRegisterDefaults(const Function &F);
+  SIModeRegisterDefaults(const Function &F, const GCNSubtarget &ST);
 
   static SIModeRegisterDefaults getDefaultForCallingConv(CallingConv::ID CC) {
     SIModeRegisterDefaults Mode;

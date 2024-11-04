@@ -302,7 +302,7 @@ Error BasicBlockSectionsProfileReader::ReadV0Profile() {
       // specifier starting with `M=`.
       auto [AliasesStr, DIFilenameStr] = S.split(' ');
       SmallString<128> DIFilename;
-      if (DIFilenameStr.startswith("M=")) {
+      if (DIFilenameStr.starts_with("M=")) {
         DIFilename =
             sys::path::remove_leading_dotslash(DIFilenameStr.substr(2));
         if (DIFilename.empty())

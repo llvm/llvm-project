@@ -187,30 +187,28 @@ public:
     result = func(x, 0);
     FPBits x_bits = FPBits(x);
     FPBits result_bits = FPBits(result);
-    ASSERT_EQ(result_bits.get_unbiased_exponent(),
-              uint16_t(x_bits.get_unbiased_exponent() - 1));
+    ASSERT_EQ(result_bits.get_biased_exponent(),
+              uint16_t(x_bits.get_biased_exponent() - 1));
     ASSERT_EQ(result_bits.get_mantissa(),
               (UIntType(1) << MantissaWidth::VALUE) - 1);
 
     result = func(x, 33.0);
     result_bits = FPBits(result);
-    ASSERT_EQ(result_bits.get_unbiased_exponent(),
-              x_bits.get_unbiased_exponent());
+    ASSERT_EQ(result_bits.get_biased_exponent(), x_bits.get_biased_exponent());
     ASSERT_EQ(result_bits.get_mantissa(), x_bits.get_mantissa() + UIntType(1));
 
     x = -x;
 
     result = func(x, 0);
     result_bits = FPBits(result);
-    ASSERT_EQ(result_bits.get_unbiased_exponent(),
-              uint16_t(x_bits.get_unbiased_exponent() - 1));
+    ASSERT_EQ(result_bits.get_biased_exponent(),
+              uint16_t(x_bits.get_biased_exponent() - 1));
     ASSERT_EQ(result_bits.get_mantissa(),
               (UIntType(1) << MantissaWidth::VALUE) - 1);
 
     result = func(x, -33.0);
     result_bits = FPBits(result);
-    ASSERT_EQ(result_bits.get_unbiased_exponent(),
-              x_bits.get_unbiased_exponent());
+    ASSERT_EQ(result_bits.get_biased_exponent(), x_bits.get_biased_exponent());
     ASSERT_EQ(result_bits.get_mantissa(), x_bits.get_mantissa() + UIntType(1));
   }
 };

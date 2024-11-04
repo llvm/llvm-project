@@ -1,6 +1,7 @@
 ; Test spilling a temp generates dbg.declare in resume/destroy/cleanup functions.
 ;
 ; RUN: opt < %s -passes='cgscc(coro-split)' -S | FileCheck %s
+; RUN: opt --try-experimental-debuginfo-iterators < %s -passes='cgscc(coro-split)' -S | FileCheck %s
 ;
 ; The test case simulates a coroutine method in a class.
 ;

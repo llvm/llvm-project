@@ -104,7 +104,7 @@ static void test_exception_contains_paths()
     } catch (filesystem_error const& err) {
         assert(err.path1() == p);
         // libc++ provides the current path as the second path in the exception
-        LIBCPP_ONLY(assert(err.path2() == current_path()));
+        LIBCPP_ASSERT(err.path2() == current_path());
     }
     fs::current_path(static_env.Dir);
     try {
@@ -112,7 +112,7 @@ static void test_exception_contains_paths()
         assert(false);
     } catch (filesystem_error const& err) {
         assert(err.path1() == p);
-        LIBCPP_ONLY(assert(err.path2() == static_env.Dir));
+        LIBCPP_ASSERT(err.path2() == static_env.Dir);
     }
 #endif
 }

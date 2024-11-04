@@ -461,7 +461,8 @@ SDValue SelectionDAGLegalize::OptimizeFloatStore(StoreSDNode* ST) {
                           ST->getOriginalAlign(), MMOFlags, AAInfo);
     }
 
-    if (CFP->getValueType(0) == MVT::f64) {
+    if (CFP->getValueType(0) == MVT::f64 &&
+        !TLI.isFPImmLegal(CFP->getValueAPF(), MVT::f64)) {
       // If this target supports 64-bit registers, do a single 64-bit store.
       if (TLI.isTypeLegal(MVT::i64)) {
         SDValue Con = DAG.getConstant(CFP->getValueAPF().bitcastToAPInt().

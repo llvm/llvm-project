@@ -62,7 +62,9 @@ getRUsageTimes() {
   ::getrusage(RUSAGE_SELF, &RU);
   return {toDuration(RU.ru_utime), toDuration(RU.ru_stime)};
 #else
+#ifndef __MVS__ // Exclude for MVS in case -pedantic is used
 #warning Cannot get usage times on this platform
+#endif
   return {std::chrono::microseconds::zero(), std::chrono::microseconds::zero()};
 #endif
 }
@@ -117,7 +119,9 @@ size_t Process::GetMallocUsage() {
     return EndOfMemory - StartOfMemory;
   return 0;
 #else
+#ifndef __MVS__ // Exclude for MVS in case -pedantic is used
 #warning Cannot get malloc info on this platform
+#endif
   return 0;
 #endif
 }

@@ -584,6 +584,19 @@ Expected<JITDylibSP> setUpGenericLLVMIRPlatform(LLJIT &J);
 /// with the generic IR platform.
 Expected<JITDylibSP> setUpInactivePlatform(LLJIT &J);
 
+/// A Platform-support class that implements initialize / deinitialize by
+/// forwarding to ORC runtime dlopen / dlclose operations.
+class ORCPlatformSupport : public LLJIT::PlatformSupport {
+public:
+  ORCPlatformSupport(orc::LLJIT &J) : J(J) {}
+  Error initialize(orc::JITDylib &JD) override;
+  Error deinitialize(orc::JITDylib &JD) override;
+
+private:
+  orc::LLJIT &J;
+  DenseMap<orc::JITDylib *, orc::ExecutorAddr> DSOHandles;
+};
+
 } // End namespace orc
 } // End namespace llvm
 

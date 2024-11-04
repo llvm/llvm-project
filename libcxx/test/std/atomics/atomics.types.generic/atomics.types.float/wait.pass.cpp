@@ -7,11 +7,8 @@
 //===----------------------------------------------------------------------===//
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 // XFAIL: availability-synchronization_library-missing
-// Clang's support for atomic operations on long double is broken. See https://github.com/llvm/llvm-project/issues/72893
-// XFAIL: tsan
-// XFAIL: target={{x86_64-.*}} && msan
-// ADDITIONAL_COMPILE_FLAGS(has-latomic): -latomic
 // XFAIL: !has-64-bit-atomics
+// UNSUPPORTED: !non-lockfree-atomics
 
 // void wait(T old, memory_order order = memory_order::seq_cst) const volatile noexcept;
 // void wait(T old, memory_order order = memory_order::seq_cst) const noexcept;
@@ -51,7 +48,7 @@ void test_impl() {
   // should x87 80bit long double work at all?
   if constexpr (!std::same_as<T, long double>) {
     for (auto i = 0; i < 100; ++i) {
-      const T old = 3.1;
+      const T old = T(3.1);
       MaybeVolatile<std::atomic<T>> a(old);
 
       std::atomic_bool started = false;
@@ -120,7 +117,8 @@ void test() {
 int main(int, char**) {
   test<float>();
   test<double>();
-  test<long double>();
+  // TODO https://github.com/llvm/llvm-project/issues/47978
+  // test<long double>();
 
   return 0;
 }

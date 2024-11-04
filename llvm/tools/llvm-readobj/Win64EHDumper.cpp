@@ -397,7 +397,7 @@ void Dumper::printData(const Context &Ctx) {
     else
       consumeError(NameOrErr.takeError());
 
-    if (Name != ".pdata" && !Name.startswith(".pdata$"))
+    if (Name != ".pdata" && !Name.starts_with(".pdata$"))
       continue;
 
     const coff_section *PData = Ctx.COFF.getCOFFSection(Section);

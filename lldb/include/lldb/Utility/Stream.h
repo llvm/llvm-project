@@ -231,6 +231,40 @@ public:
   ///     The string to be output to the stream.
   size_t PutCString(llvm::StringRef cstr);
 
+  /// Output a C string to the stream with color highlighting.
+  ///
+  /// Print a C string \a text to the stream, applying color highlighting to
+  /// the portions of the string that match the regex pattern \a pattern. The
+  /// pattern is matched as many times as possible throughout the string. If \a
+  /// pattern is nullptr, then no highlighting is applied.
+  ///
+  /// The highlighting is applied by enclosing the matching text in ANSI color
+  /// codes. The \a prefix parameter specifies the ANSI code to start the color
+  /// (the standard value is assumed to be 'ansi.fg.red', representing red
+  /// foreground), and the \a suffix parameter specifies the ANSI code to end
+  /// the color (the standard value is assumed to be 'ansi.normal', resetting to
+  /// default text style). These constants should be defined appropriately in
+  /// your environment.
+  ///
+  /// \param[in] text
+  ///     The string to be output to the stream.
+  ///
+  /// \param[in] pattern
+  ///     The regex pattern to match against the \a text string. Portions of \a
+  ///     text matching this pattern will be colorized. If this parameter is
+  ///     nullptr, highlighting is not performed.
+  /// \param[in] prefix
+  ///     The ANSI color code to start colorization. This is
+  ///     environment-dependent.
+  /// \param[in] suffix
+  ///     The ANSI color code to end colorization. This is
+  ///     environment-dependent.
+
+  void PutCStringColorHighlighted(llvm::StringRef text,
+                                  llvm::StringRef pattern = "",
+                                  llvm::StringRef prefix = "",
+                                  llvm::StringRef suffix = "");
+
   /// Output and End of Line character to the stream.
   size_t EOL();
 

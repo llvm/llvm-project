@@ -596,35 +596,47 @@ void GuardWideningImpl::makeAvailableAt(Value *V, Instruction *Loc) const {
 }
 
 // Return Instruction before which we can insert freeze for the value V as close
-// to def as possible. If there is no place to add freeze, return nullptr.
-static Instruction *getFreezeInsertPt(Value *V, const DominatorTree &DT) {
+// to def as possible. If there is no place to add freeze, return empty.
+static std::optional<BasicBlock::iterator>
+getFreezeInsertPt(Value *V, const DominatorTree &DT) {
   auto *I = dyn_cast<Instruction>(V);
   if (!I)
-    return &*DT.getRoot()->getFirstNonPHIOrDbgOrAlloca();
+    return DT.getRoot()->getFirstNonPHIOrDbgOrAlloca()->getIterator();
 
-  auto *Res = I->getInsertionPointAfterDef();
+  std::optional<BasicBlock::iterator> Res = I->getInsertionPointAfterDef();
   // If there is no place to add freeze - return nullptr.
-  if (!Res || !DT.dominates(I, Res))
-    return nullptr;
+  if (!Res || !DT.dominates(I, &**Res))
+    return std::nullopt;
+
+  Instruction *ResInst = &**Res;
 
   // If there is a User dominated by original I, then it should be dominated
   // by Freeze instruction as well.
   if (any_of(I->users(), [&](User *U) {
         Instruction *User = cast<Instruction>(U);
-        return Res != User && DT.dominates(I, User) && !DT.dominates(Res, User);
+        return ResInst != User && DT.dominates(I, User) &&
+               !DT.dominates(ResInst, User);
       }))
-    return nullptr;
+    return std::nullopt;
   return Res;
 }
 
 Value *GuardWideningImpl::freezeAndPush(Value *Orig, Instruction *InsertPt) {
   if (isGuaranteedNotToBePoison(Orig, nullptr, InsertPt, &DT))
     return Orig;
-  Instruction *InsertPtAtDef = getFreezeInsertPt(Orig, DT);
-  if (!InsertPtAtDef)
-    return new FreezeInst(Orig, "gw.freeze", InsertPt);
-  if (isa<Constant>(Orig) || isa<GlobalValue>(Orig))
-    return new FreezeInst(Orig, "gw.freeze", InsertPtAtDef);
+  std::optional<BasicBlock::iterator> InsertPtAtDef =
+      getFreezeInsertPt(Orig, DT);
+  if (!InsertPtAtDef) {
+    FreezeInst *FI = new FreezeInst(Orig, "gw.freeze");
+    FI->insertBefore(InsertPt);
+    return FI;
+  }
+  if (isa<Constant>(Orig) || isa<GlobalValue>(Orig)) {
+    BasicBlock::iterator InsertPt = *InsertPtAtDef;
+    FreezeInst *FI = new FreezeInst(Orig, "gw.freeze");
+    FI->insertBefore(*InsertPt->getParent(), InsertPt);
+    return FI;
+  }
 
   SmallSet<Value *, 16> Visited;
   SmallVector<Value *, 16> Worklist;
@@ -643,8 +655,10 @@ Value *GuardWideningImpl::freezeAndPush(Value *Orig, Instruction *InsertPt) {
     if (Visited.insert(Def).second) {
       if (isGuaranteedNotToBePoison(Def, nullptr, InsertPt, &DT))
         return true;
-      CacheOfFreezes[Def] = new FreezeInst(Def, Def->getName() + ".gw.fr",
-                                           getFreezeInsertPt(Def, DT));
+      BasicBlock::iterator InsertPt = *getFreezeInsertPt(Def, DT);
+      FreezeInst *FI = new FreezeInst(Def, Def->getName() + ".gw.fr");
+      FI->insertBefore(*InsertPt->getParent(), InsertPt);
+      CacheOfFreezes[Def] = FI;
     }
 
     if (CacheOfFreezes.count(Def))
@@ -685,8 +699,9 @@ Value *GuardWideningImpl::freezeAndPush(Value *Orig, Instruction *InsertPt) {
 
   Value *Result = Orig;
   for (Value *V : NeedFreeze) {
-    auto *FreezeInsertPt = getFreezeInsertPt(V, DT);
-    FreezeInst *FI = new FreezeInst(V, V->getName() + ".gw.fr", FreezeInsertPt);
+    BasicBlock::iterator FreezeInsertPt = *getFreezeInsertPt(V, DT);
+    FreezeInst *FI = new FreezeInst(V, V->getName() + ".gw.fr");
+    FI->insertBefore(*FreezeInsertPt->getParent(), FreezeInsertPt);
     ++FreezeAdded;
     if (V == Orig)
       Result = FI;

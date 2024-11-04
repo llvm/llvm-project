@@ -6,8 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: LIBCXX-PICOLIBC-FIXME
-
 // <iostream>
 
 // ostream cout;

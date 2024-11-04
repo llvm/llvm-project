@@ -240,7 +240,7 @@ llvm::StringRef fir::NameUniquer::doProgramEntry() {
 
 std::pair<fir::NameUniquer::NameKind, fir::NameUniquer::DeconstructedName>
 fir::NameUniquer::deconstruct(llvm::StringRef uniq) {
-  if (uniq.startswith("_Q")) {
+  if (uniq.starts_with("_Q")) {
     llvm::SmallVector<std::string> modules;
     llvm::SmallVector<std::string> procs;
     std::int64_t blockId = 0;

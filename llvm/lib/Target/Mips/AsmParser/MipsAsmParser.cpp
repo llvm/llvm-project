@@ -6249,7 +6249,7 @@ int MipsAsmParser::matchFPURegisterName(StringRef Name) {
 }
 
 int MipsAsmParser::matchFCCRegisterName(StringRef Name) {
-  if (Name.startswith("fcc")) {
+  if (Name.starts_with("fcc")) {
     StringRef NumString = Name.substr(3);
     unsigned IntVal;
     if (NumString.getAsInteger(10, IntVal))
@@ -6262,7 +6262,7 @@ int MipsAsmParser::matchFCCRegisterName(StringRef Name) {
 }
 
 int MipsAsmParser::matchACRegisterName(StringRef Name) {
-  if (Name.startswith("ac")) {
+  if (Name.starts_with("ac")) {
     StringRef NumString = Name.substr(2);
     unsigned IntVal;
     if (NumString.getAsInteger(10, IntVal))
@@ -6567,7 +6567,7 @@ bool MipsAsmParser::searchSymbolAlias(OperandVector &Operands) {
     if (Expr->getKind() == MCExpr::SymbolRef) {
       const MCSymbolRefExpr *Ref = static_cast<const MCSymbolRefExpr *>(Expr);
       StringRef DefSymbol = Ref->getSymbol().getName();
-      if (DefSymbol.startswith("$")) {
+      if (DefSymbol.starts_with("$")) {
         ParseStatus Res =
             matchAnyRegisterNameWithoutDollar(Operands, DefSymbol.substr(1), S);
         if (Res.isSuccess()) {

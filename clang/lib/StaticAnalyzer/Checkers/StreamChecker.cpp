@@ -1072,6 +1072,9 @@ void StreamChecker::evalFtell(const FnDescription *Desc, const CallEvent &Call,
   ProgramStateRef StateFailed = State->BindExpr(
       CE, C.getLocationContext(), SVB.makeIntVal(-1, C.getASTContext().LongTy));
 
+  // This function does not affect the stream state.
+  // Still we add success and failure state with the appropriate return value.
+  // StdLibraryFunctionsChecker can change these states (set the 'errno' state).
   C.addTransition(StateNotFailed);
   C.addTransition(StateFailed);
 }

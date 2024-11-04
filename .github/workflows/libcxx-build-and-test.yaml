@@ -22,6 +22,12 @@ on:
       - 'runtimes/**'
       - 'cmake/**'
       - '.github/workflows/libcxx-build-and-test.yaml'
+  schedule:
+    # Run nightly at 8 AM UTC (or roughly 3 AM eastern)
+    - cron: '0 3 * * *'
+
+permissions:
+  contents: read # Default everything to read-only
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
@@ -44,11 +50,10 @@ env:
 jobs:
   stage1:
     if: github.repository_owner == 'llvm'
-    runs-on:
-      group: libcxx-runners-8
+    runs-on: libcxx-runners-8-set
     continue-on-error: false
     strategy:
-      fail-fast: true
+      fail-fast: false
       matrix:
         config: [
           'generic-cxx03',
@@ -83,12 +88,11 @@ jobs:
             **/crash_diagnostics/*
   stage2:
     if: github.repository_owner == 'llvm'
-    runs-on:
-      group: libcxx-runners-8
+    runs-on: libcxx-runners-8-set
     needs: [ stage1 ]
     continue-on-error: false
     strategy:
-      fail-fast: true
+      fail-fast: false
       matrix:
         config: [
           'generic-cxx11',
@@ -156,30 +160,34 @@ jobs:
           'generic-no-tzdb',
           'generic-no-unicode',
           'generic-no-wide-characters',
+          'generic-no-rtti',
           'generic-static',
-          'generic-with_llvm_unwinder'
+          'generic-with_llvm_unwinder',
+          # TODO Find a better place for the benchmark and bootstrapping builds to live. They're either very expensive
+          # or don't provide much value since the benchmark run results are too noise on the bots.
+          'benchmarks',
+          'bootstrapping-build'
         ]
-        machine: [ 'libcxx-runners-8' ]
+        machine: [ 'libcxx-runners-8-set' ]
         std_modules: [ 'OFF' ]
         include:
         - config: 'generic-cxx26'
-          machine: libcxx-runners-8
+          machine: libcxx-runners-8-set
           std_modules: 'ON'
         - config: 'generic-asan'
-          machine: libcxx-runners-8
+          machine: libcxx-runners-8-set
           std_modules: 'OFF'
         - config: 'generic-tsan'
-          machine: libcxx-runners-8
+          machine: libcxx-runners-8-set
           std_modules: 'OFF'
         - config: 'generic-ubsan'
-          machine: libcxx-runners-8
+          machine: libcxx-runners-8-set
           std_modules: 'OFF'
         # Use a larger machine for MSAN to avoid timeout and memory allocation issues.
         - config: 'generic-msan'
-          machine: libcxx-runners-32
+          machine: libcxx-runners-32-set
           std_modules: 'OFF'
-    runs-on:
-      group: ${{ matrix.machine }}
+    runs-on: ${{ matrix.machine }}
     steps:
       - uses: actions/checkout@v4
       - name: ${{ matrix.config }}

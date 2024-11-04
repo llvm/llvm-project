@@ -32,6 +32,8 @@ bool Operator::hasPoisonGeneratingFlags() const {
   case Instruction::AShr:
   case Instruction::LShr:
     return cast<PossiblyExactOperator>(this)->isExact();
+  case Instruction::Or:
+    return cast<PossiblyDisjointInst>(this)->isDisjoint();
   case Instruction::GetElementPtr: {
     auto *GEP = cast<GEPOperator>(this);
     // Note: inrange exists on constexpr only

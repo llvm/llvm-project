@@ -179,13 +179,13 @@ class __save_flags
     __save_flags(const __save_flags&);
     __save_flags& operator=(const __save_flags&);
 public:
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     explicit __save_flags(__stream_type& __stream)
         : __stream_(__stream),
           __fmtflags_(__stream.flags()),
           __fill_(__stream.fill())
         {}
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     ~__save_flags()
     {
         __stream_.flags(__fmtflags_);

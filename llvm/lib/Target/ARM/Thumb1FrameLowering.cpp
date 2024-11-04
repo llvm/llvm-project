@@ -40,7 +40,6 @@
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
-#include <bitset>
 #include <cassert>
 #include <iterator>
 #include <vector>

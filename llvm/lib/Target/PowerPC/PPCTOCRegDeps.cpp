@@ -100,7 +100,7 @@ protected:
         return true;
 
       for (const MachineOperand &MO : MI.operands()) {
-        if ((MO.getTargetFlags() & PPCII::MO_ACCESS_MASK) == PPCII::MO_TOC_LO)
+        if (MO.getTargetFlags() == PPCII::MO_TOC_LO)
           return true;
       }
 

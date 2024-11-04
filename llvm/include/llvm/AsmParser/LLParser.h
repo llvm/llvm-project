@@ -51,15 +51,23 @@ namespace llvm {
   /// or a symbolic (%var) reference.  This is just a discriminated union.
   struct ValID {
     enum {
-      t_LocalID, t_GlobalID,           // ID in UIntVal.
-      t_LocalName, t_GlobalName,       // Name in StrVal.
-      t_APSInt, t_APFloat,             // Value in APSIntVal/APFloatVal.
-      t_Null, t_Undef, t_Zero, t_None, t_Poison, // No value.
-      t_EmptyArray,                    // No value:  []
-      t_Constant,                      // Value in ConstantVal.
-      t_InlineAsm,                     // Value in FTy/StrVal/StrVal2/UIntVal.
-      t_ConstantStruct,                // Value in ConstantStructElts.
-      t_PackedConstantStruct           // Value in ConstantStructElts.
+      t_LocalID,             // ID in UIntVal.
+      t_GlobalID,            // ID in UIntVal.
+      t_LocalName,           // Name in StrVal.
+      t_GlobalName,          // Name in StrVal.
+      t_APSInt,              // Value in APSIntVal.
+      t_APFloat,             // Value in APFloatVal.
+      t_Null,                // No value.
+      t_Undef,               // No value.
+      t_Zero,                // No value.
+      t_None,                // No value.
+      t_Poison,              // No value.
+      t_EmptyArray,          // No value:  []
+      t_Constant,            // Value in ConstantVal.
+      t_ConstantSplat,       // Value in ConstantVal.
+      t_InlineAsm,           // Value in FTy/StrVal/StrVal2/UIntVal.
+      t_ConstantStruct,      // Value in ConstantStructElts.
+      t_PackedConstantStruct // Value in ConstantStructElts.
     } Kind = t_LocalID;
 
     LLLexer::LocTy Loc;
@@ -290,6 +298,7 @@ namespace llvm {
     bool parseOptionalCallingConv(unsigned &CC);
     bool parseOptionalAlignment(MaybeAlign &Alignment,
                                 bool AllowParens = false);
+    bool parseOptionalCodeModel(CodeModel::Model &model);
     bool parseOptionalDerefAttrBytes(lltok::Kind AttrKind, uint64_t &Bytes);
     bool parseOptionalUWTableKind(UWTableKind &Kind);
     bool parseAllocKind(AllocFnKind &Kind);
@@ -406,9 +415,10 @@ namespace llvm {
         std::map<std::vector<uint64_t>, WholeProgramDevirtResolution::ByArg>
             &ResByArg);
     bool parseArgs(std::vector<uint64_t> &Args);
-    void addGlobalValueToIndex(std::string Name, GlobalValue::GUID,
+    bool addGlobalValueToIndex(std::string Name, GlobalValue::GUID,
                                GlobalValue::LinkageTypes Linkage, unsigned ID,
-                               std::unique_ptr<GlobalValueSummary> Summary);
+                               std::unique_ptr<GlobalValueSummary> Summary,
+                               LocTy Loc);
     bool parseOptionalAllocs(std::vector<AllocInfo> &Allocs);
     bool parseMemProfs(std::vector<MIBInfo> &MIBs);
     bool parseAllocType(uint8_t &AllocType);

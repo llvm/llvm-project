@@ -286,7 +286,7 @@ struct __weak_result_type<_Rp (_Cp::*)(_A1, _A2, _A3...) const volatile>
 template <class _Tp, class ..._Args>
 struct __invoke_return
 {
-    typedef decltype(_VSTD::__invoke(std::declval<_Tp>(), std::declval<_Args>()...)) type;
+    typedef decltype(std::__invoke(std::declval<_Tp>(), std::declval<_Args>()...)) type;
 };
 
 _LIBCPP_END_NAMESPACE_STD

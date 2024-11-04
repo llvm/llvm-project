@@ -59,12 +59,11 @@ constexpr void mixin_extents(const H& handle, const L& layout, const A& acc) {
 template <class H, class A>
 constexpr void mixin_layout(const H& handle, const A& acc) {
   // make sure we test a trivially copyable mapping
-  static_assert(std::is_trivially_move_assignable_v<typename std::layout_left::template mapping<std::extents<int>>>);
+  static_assert(std::is_trivially_move_assignable_v<std::layout_left::mapping<std::extents<int>>>);
   mixin_extents(handle, std::layout_left(), acc);
   mixin_extents(handle, std::layout_right(), acc);
   // make sure we test a not trivially copyable mapping
-  static_assert(
-      !std::is_trivially_move_assignable_v<typename layout_wrapping_integral<4>::template mapping<std::extents<int>>>);
+  static_assert(!std::is_trivially_move_assignable_v<layout_wrapping_integral<4>::mapping<std::extents<int>>>);
   mixin_extents(handle, layout_wrapping_integral<4>(), acc);
 }
 

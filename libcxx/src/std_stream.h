@@ -172,7 +172,7 @@ __stdinbuf<_CharT>::__getchar(bool __consume)
     }
 
     char __extbuf[__limit];
-    int __nread = _VSTD::max(1, __encoding_);
+    int __nread = std::max(1, __encoding_);
     for (int __i = 0; __i < __nread; ++__i)
     {
         int __c = getc(__file_);
@@ -191,7 +191,7 @@ __stdinbuf<_CharT>::__getchar(bool __consume)
                                &__1buf, &__1buf + 1, __inxt);
         switch (__r)
         {
-        case _VSTD::codecvt_base::ok:
+        case std::codecvt_base::ok:
             break;
         case codecvt_base::partial:
             *__st_ = __sv_st;
@@ -207,11 +207,11 @@ __stdinbuf<_CharT>::__getchar(bool __consume)
             break;
         case codecvt_base::error:
             return traits_type::eof();
-        case _VSTD::codecvt_base::noconv:
+        case std::codecvt_base::noconv:
             __1buf = static_cast<char_type>(__extbuf[0]);
             break;
         }
-    } while (__r == _VSTD::codecvt_base::partial);
+    } while (__r == std::codecvt_base::partial);
     if (!__consume)
     {
         for (int __i = __nread; __i > 0;)
@@ -251,9 +251,9 @@ __stdinbuf<_CharT>::pbackfail(int_type __c)
         switch (__cv_->out(*__st_, &__ci, &__ci + 1, __inxt,
                                   __extbuf, __extbuf + sizeof(__extbuf), __enxt))
         {
-        case _VSTD::codecvt_base::ok:
+        case std::codecvt_base::ok:
             break;
-        case _VSTD::codecvt_base::noconv:
+        case std::codecvt_base::noconv:
             __extbuf[0] = static_cast<char>(__last_consumed_);
             __enxt = __extbuf + 1;
             break;

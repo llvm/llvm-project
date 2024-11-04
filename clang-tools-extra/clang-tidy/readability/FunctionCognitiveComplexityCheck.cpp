@@ -20,6 +20,7 @@
 #include "clang/Basic/DiagnosticIDs.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/SourceLocation.h"
+#include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -167,15 +168,13 @@ static const std::array<const StringRef, 4> Msgs = {{
 // Criteria is a bitset, thus a few helpers are needed.
 CognitiveComplexity::Criteria operator|(CognitiveComplexity::Criteria LHS,
                                         CognitiveComplexity::Criteria RHS) {
-  return static_cast<CognitiveComplexity::Criteria>(
-      static_cast<std::underlying_type_t<CognitiveComplexity::Criteria>>(LHS) |
-      static_cast<std::underlying_type_t<CognitiveComplexity::Criteria>>(RHS));
+  return static_cast<CognitiveComplexity::Criteria>(llvm::to_underlying(LHS) |
+                                                    llvm::to_underlying(RHS));
 }
 CognitiveComplexity::Criteria operator&(CognitiveComplexity::Criteria LHS,
                                         CognitiveComplexity::Criteria RHS) {
-  return static_cast<CognitiveComplexity::Criteria>(
-      static_cast<std::underlying_type_t<CognitiveComplexity::Criteria>>(LHS) &
-      static_cast<std::underlying_type_t<CognitiveComplexity::Criteria>>(RHS));
+  return static_cast<CognitiveComplexity::Criteria>(llvm::to_underlying(LHS) &
+                                                    llvm::to_underlying(RHS));
 }
 CognitiveComplexity::Criteria &operator|=(CognitiveComplexity::Criteria &LHS,
                                           CognitiveComplexity::Criteria RHS) {

@@ -117,7 +117,7 @@ public:
         using _RawPromise = __remove_cv_t<_Promise>;
         coroutine_handle __tmp;
         __tmp.__handle_ =
-            __builtin_coro_promise(_VSTD::addressof(const_cast<_RawPromise&>(__promise)), alignof(_Promise), true);
+            __builtin_coro_promise(std::addressof(const_cast<_RawPromise&>(__promise)), alignof(_Promise), true);
         return __tmp;
     }
 

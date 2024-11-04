@@ -44,15 +44,15 @@ public:
 
         _LIBCPP_HIDE_FROM_ABI explicit param_type(result_type __t = 1, double __p = 0.5);
 
-        _LIBCPP_INLINE_VISIBILITY
+        _LIBCPP_HIDE_FROM_ABI
         result_type t() const {return __t_;}
-        _LIBCPP_INLINE_VISIBILITY
+        _LIBCPP_HIDE_FROM_ABI
         double p() const {return __p_;}
 
-        friend _LIBCPP_INLINE_VISIBILITY
+        friend _LIBCPP_HIDE_FROM_ABI
             bool operator==(const param_type& __x, const param_type& __y)
             {return __x.__t_ == __y.__t_ && __x.__p_ == __y.__p_;}
-        friend _LIBCPP_INLINE_VISIBILITY
+        friend _LIBCPP_HIDE_FROM_ABI
             bool operator!=(const param_type& __x, const param_type& __y)
             {return !(__x == __y);}
 
@@ -65,50 +65,50 @@ private:
 public:
     // constructors and reset functions
 #ifndef _LIBCPP_CXX03_LANG
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     binomial_distribution() : binomial_distribution(1) {}
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     explicit binomial_distribution(result_type __t, double __p = 0.5)
         : __p_(param_type(__t, __p)) {}
 #else
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     explicit binomial_distribution(result_type __t = 1, double __p = 0.5)
         : __p_(param_type(__t, __p)) {}
 #endif
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     explicit binomial_distribution(const param_type& __p) : __p_(__p) {}
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     void reset() {}
 
     // generating functions
     template<class _URNG>
-        _LIBCPP_INLINE_VISIBILITY
+        _LIBCPP_HIDE_FROM_ABI
         result_type operator()(_URNG& __g)
         {return (*this)(__g, __p_);}
     template<class _URNG>
     _LIBCPP_HIDE_FROM_ABI result_type operator()(_URNG& __g, const param_type& __p);
 
     // property functions
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     result_type t() const {return __p_.t();}
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     double p() const {return __p_.p();}
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     param_type param() const {return __p_;}
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     void param(const param_type& __p) {__p_ = __p;}
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     result_type min() const {return 0;}
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     result_type max() const {return t();}
 
-    friend _LIBCPP_INLINE_VISIBILITY
+    friend _LIBCPP_HIDE_FROM_ABI
         bool operator==(const binomial_distribution& __x,
                         const binomial_distribution& __y)
         {return __x.__p_ == __y.__p_;}
-    friend _LIBCPP_INLINE_VISIBILITY
+    friend _LIBCPP_HIDE_FROM_ABI
         bool operator!=(const binomial_distribution& __x,
                         const binomial_distribution& __y)
         {return !(__x == __y);}
@@ -118,7 +118,7 @@ public:
 extern "C" double lgamma_r(double, int *);
 #endif
 
-inline _LIBCPP_INLINE_VISIBILITY double __libcpp_lgamma(double __d) {
+inline _LIBCPP_HIDE_FROM_ABI double __libcpp_lgamma(double __d) {
 #if defined(_LIBCPP_MSVCRT_LIKE)
   return lgamma(__d);
 #else
@@ -134,10 +134,10 @@ binomial_distribution<_IntType>::param_type::param_type(result_type __t, double 
     if (0 < __p_ && __p_ < 1)
     {
         __r0_ = static_cast<result_type>((__t_ + 1) * __p_);
-        __pr_ = _VSTD::exp(std::__libcpp_lgamma(__t_ + 1.) -
+        __pr_ = std::exp(std::__libcpp_lgamma(__t_ + 1.) -
                            std::__libcpp_lgamma(__r0_ + 1.) -
-                           std::__libcpp_lgamma(__t_ - __r0_ + 1.) + __r0_ * _VSTD::log(__p_) +
-                           (__t_ - __r0_) * _VSTD::log(1 - __p_));
+                           std::__libcpp_lgamma(__t_ - __r0_ + 1.) + __r0_ * std::log(__p_) +
+                           (__t_ - __r0_) * std::log(1 - __p_));
         __odds_ratio_ = __p_ / (1 - __p_);
     }
 }

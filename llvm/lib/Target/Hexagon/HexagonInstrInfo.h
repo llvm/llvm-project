@@ -309,10 +309,11 @@ public:
   ///
   /// This is a raw interface to the itinerary that may be directly overriden by
   /// a target. Use computeOperandLatency to get the best estimate of latency.
-  int getOperandLatency(const InstrItineraryData *ItinData,
-                        const MachineInstr &DefMI, unsigned DefIdx,
-                        const MachineInstr &UseMI,
-                        unsigned UseIdx) const override;
+  std::optional<unsigned> getOperandLatency(const InstrItineraryData *ItinData,
+                                            const MachineInstr &DefMI,
+                                            unsigned DefIdx,
+                                            const MachineInstr &UseMI,
+                                            unsigned UseIdx) const override;
 
   /// Decompose the machine operand's target flags into two values - the direct
   /// target flag value and any of bit flags that are applied.

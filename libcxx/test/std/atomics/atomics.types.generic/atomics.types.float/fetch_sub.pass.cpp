@@ -6,14 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 // UNSUPPORTED: c++03, c++11, c++14, c++17
-// UNSUPPORTED: target={{.+}}-windows-gnu
-// XFAIL: LIBCXX-AIX-FIXME
-// Clang's support for atomic operations on long double is broken. See https://github.com/llvm/llvm-project/issues/72893
-// XFAIL: tsan
-// Hangs with msan.
-// UNSUPPORTED: msan
-// ADDITIONAL_COMPILE_FLAGS(has-latomic): -latomic
+// UNSUPPORTED: LIBCXX-AIX-FIXME
 // XFAIL: !has-64-bit-atomics
+// UNSUPPORTED: !non-lockfree-atomics
+
+// https://github.com/llvm/llvm-project/issues/72893
+// XFAIL: target={{x86_64-.*}} && tsan
 
 // floating-point-type fetch_sub(floating-point-type,
 //                               memory_order = memory_order::seq_cst) volatile noexcept;
@@ -44,7 +42,7 @@ void test_impl() {
 
   // fetch_sub
   {
-    MaybeVolatile<std::atomic<T>> a(3.1);
+    MaybeVolatile<std::atomic<T>> a(T(3.1));
     std::same_as<T> decltype(auto) r = a.fetch_sub(T(1.2), std::memory_order::relaxed);
     assert(r == T(3.1));
     assert(a.load() == T(3.1) - T(1.2));
@@ -80,7 +78,7 @@ void test_impl() {
       return res;
     };
 
-    assert(at.load() == accu_neg(1.234, number_of_threads * loop));
+    assert(at.load() == accu_neg(T(1.234), number_of_threads * loop));
   }
 #endif
 
@@ -116,7 +114,8 @@ void test() {
 int main(int, char**) {
   test<float>();
   test<double>();
-  test<long double>();
+  // TODO https://github.com/llvm/llvm-project/issues/47978
+  // test<long double>();
 
   return 0;
 }

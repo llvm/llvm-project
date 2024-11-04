@@ -197,6 +197,7 @@ define i32 @extract_second_last_iteration(ptr %cval, i32 %x)  {
 ; CHECK-VF4UF2: vector.ph
 ; CHECK-VF4UF2: call i32 @llvm.vscale.i32()
 ; CHECK-VF4UF2: call i32 @llvm.vscale.i32()
+; CHECK-VF4UF2: call i32 @llvm.vscale.i32()
 ; CHECK-VF4UF2: %[[VSCALE1:.*]] = call i32 @llvm.vscale.i32()
 ; CHECK-VF4UF2: %[[MUL1:.*]] = mul i32 %[[VSCALE1]], 4
 ; CHECK-VF4UF2: %[[SUB1:.*]] = sub i32 %[[MUL1]], 1

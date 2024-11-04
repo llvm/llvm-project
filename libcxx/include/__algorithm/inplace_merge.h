@@ -44,17 +44,17 @@ class __invert // invert the sense of a comparison
 private:
     _Predicate __p_;
 public:
-    _LIBCPP_INLINE_VISIBILITY __invert() {}
+    _LIBCPP_HIDE_FROM_ABI __invert() {}
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     explicit __invert(_Predicate __p) : __p_(__p) {}
 
     template <class _T1>
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     bool operator()(const _T1& __x) {return !__p_(__x);}
 
     template <class _T1, class _T2>
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     bool operator()(const _T1& __x, const _T2& __y) {return __p_(__y, __x);}
 };
 
@@ -224,10 +224,10 @@ __inplace_merge(_BidirectionalIterator __first, _BidirectionalIterator __middle,
     typedef typename iterator_traits<_BidirectionalIterator>::difference_type difference_type;
     difference_type __len1 = _IterOps<_AlgPolicy>::distance(__first, __middle);
     difference_type __len2 = _IterOps<_AlgPolicy>::distance(__middle, __last);
-    difference_type __buf_size = _VSTD::min(__len1, __len2);
+    difference_type __buf_size = std::min(__len1, __len2);
 // TODO: Remove the use of std::get_temporary_buffer
 _LIBCPP_SUPPRESS_DEPRECATED_PUSH
-    pair<value_type*, ptrdiff_t> __buf = _VSTD::get_temporary_buffer<value_type>(__buf_size);
+    pair<value_type*, ptrdiff_t> __buf = std::get_temporary_buffer<value_type>(__buf_size);
 _LIBCPP_SUPPRESS_DEPRECATED_POP
     unique_ptr<value_type, __return_temporary_buffer> __h(__buf.first);
     return std::__inplace_merge<_AlgPolicy>(

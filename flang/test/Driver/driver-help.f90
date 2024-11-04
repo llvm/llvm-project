@@ -22,7 +22,6 @@
 ! HELP-NEXT: -D <macro>=<value>      Define <macro> to <value> (or 1 if <value> omitted)
 ! HELP-NEXT: -emit-llvm              Use the LLVM representation for assembler and object files
 ! HELP-NEXT: -E                      Only run the preprocessor
-! HELP-NEXT: -falias-analysis        Pass alias information on to LLVM (default when optimizing for speed)
 ! HELP-NEXT: -falternative-parameter-statement
 ! HELP-NEXT:                         Enable the old style PARAMETER statement
 ! HELP-NEXT: -fapprox-func           Allow certain math function calls to be replaced with an approximately equivalent calculation
@@ -53,9 +52,9 @@
 ! HELP-NEXT: -flto                   Enable LTO in 'full' mode
 ! HELP-NEXT: -fms-runtime-lib=<value>
 ! HELP-NEXT:                         Select Windows run-time library
-! HELP-NEXT: -fno-alias-analysis     Do not pass alias information on to LLVM (default for unoptimized builds)
 ! HELP-NEXT: -fno-automatic          Implies the SAVE attribute for non-automatic local objects in subprograms unless RECURSIVE
 ! HELP-NEXT: -fno-color-diagnostics  Disable colors in diagnostics
+! HELP-NEXT: -fno-fortran-main       Do not include Fortran_main.a (provided by Flang) when linking
 ! HELP-NEXT: -fno-integrated-as      Disable the integrated assembler
 ! HELP-NEXT: -fno-lto                Disable LTO mode (default)
 ! HELP-NEXT: -fno-ppc-native-vector-element-order
@@ -64,6 +63,7 @@
 ! HELP-NEXT: -fno-stack-arrays       Allocate array temporaries on the heap (default)
 ! HELP-NEXT: -fno-version-loops-for-stride
 ! HELP-NEXT:                         Do not create unit-strided loops (default)
+! HELP-NEXT: -fomit-frame-pointer    Omit the frame pointer from functions that don't need it. Some stack unwinding cases, such as profilers and sanitizers, may prefer specifying -fno-omit-frame-pointer. On many targets, -O1 and higher omit the frame pointer by default. -m[no-]omit-leaf-frame-pointer takes precedence for leaf functions
 ! HELP-NEXT: -fopenacc               Enable OpenACC
 ! HELP-NEXT: -fopenmp-target-debug   Enable debugging in the OpenMP offloading device RTL
 ! HELP-NEXT: -fopenmp-targets=<value>
@@ -151,7 +151,6 @@
 ! HELP-FC1-NEXT: -emit-llvm              Use the LLVM representation for assembler and object files
 ! HELP-FC1-NEXT: -emit-obj               Emit native object files
 ! HELP-FC1-NEXT: -E                      Only run the preprocessor
-! HELP-FC1-NEXT: -falias-analysis        Pass alias information on to LLVM (default when optimizing for speed)
 ! HELP-FC1-NEXT: -falternative-parameter-statement
 ! HELP-FC1-NEXT:                         Enable the old style PARAMETER statement
 ! HELP-FC1-NEXT: -fapprox-func           Allow certain math function calls to be replaced with an approximately equivalent calculation
@@ -198,7 +197,6 @@
 ! HELP-FC1-NEXT: -flogical-abbreviations Enable logical abbreviations
 ! HELP-FC1-NEXT: -flto=<value>           Set LTO mode
 ! HELP-FC1-NEXT: -flto                   Enable LTO in 'full' mode
-! HELP-FC1-NEXT: -fno-alias-analysis     Do not pass alias information on to LLVM (default for unoptimized builds)
 ! HELP-FC1-NEXT: -fno-analyzed-objects-for-unparse
 ! HELP-FC1-NEXT:                         Do not use the analyzed objects when unparsing
 ! HELP-FC1-NEXT: -fno-automatic          Implies the SAVE attribute for non-automatic local objects in subprograms unless RECURSIVE
@@ -238,6 +236,7 @@
 ! HELP-FC1-NEXT:                         Specify code object ABI version. Defaults to 4. (AMDGPU only)
 ! HELP-FC1-NEXT: -menable-no-infs        Allow optimization to assume there are no infinities.
 ! HELP-FC1-NEXT: -menable-no-nans        Allow optimization to assume there are no NaNs.
+! HELP-FC1-NEXT: -mframe-pointer=<value> Specify which frame pointers to retain.
 ! HELP-FC1-NEXT: -mllvm <value>          Additional arguments to forward to LLVM's option processing
 ! HELP-FC1-NEXT: -mmlir <value>          Additional arguments to forward to MLIR's option processing
 ! HELP-FC1-NEXT: -module-dir <dir>       Put MODULE files in <dir>

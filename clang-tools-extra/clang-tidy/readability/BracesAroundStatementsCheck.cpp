@@ -79,7 +79,7 @@ static SourceLocation findEndLocation(const Stmt &S, const SourceManager &SM,
     SourceRange TokRange(Loc, TokEndLoc);
     StringRef Comment = Lexer::getSourceText(
         CharSourceRange::getTokenRange(TokRange), SM, Context->getLangOpts());
-    if (Comment.startswith("/*") && Comment.contains('\n')) {
+    if (Comment.starts_with("/*") && Comment.contains('\n')) {
       // Multi-line block comment, insert brace before.
       break;
     }

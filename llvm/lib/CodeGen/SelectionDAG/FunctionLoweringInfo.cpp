@@ -64,10 +64,17 @@ static ISD::NodeType getPreferredExtendForValue(const Instruction *I) {
   // can be exposed.
   ISD::NodeType ExtendKind = ISD::ANY_EXTEND;
   unsigned NumOfSigned = 0, NumOfUnsigned = 0;
-  for (const User *U : I->users()) {
-    if (const auto *CI = dyn_cast<CmpInst>(U)) {
+  for (const Use &U : I->uses()) {
+    if (const auto *CI = dyn_cast<CmpInst>(U.getUser())) {
       NumOfSigned += CI->isSigned();
       NumOfUnsigned += CI->isUnsigned();
+    }
+    if (const auto *CallI = dyn_cast<CallBase>(U.getUser())) {
+      if (!CallI->isArgOperand(&U))
+        continue;
+      unsigned ArgNo = CallI->getArgOperandNo(&U);
+      NumOfUnsigned += CallI->paramHasAttr(ArgNo, Attribute::ZExt);
+      NumOfSigned += CallI->paramHasAttr(ArgNo, Attribute::SExt);
     }
   }
   if (NumOfSigned > NumOfUnsigned)
@@ -350,6 +357,7 @@ void FunctionLoweringInfo::clear() {
   StatepointRelocationMaps.clear();
   PreferredExtendType.clear();
   PreprocessedDbgDeclares.clear();
+  PreprocessedDPVDeclares.clear();
 }
 
 /// CreateReg - Allocate a single virtual register for the given type.

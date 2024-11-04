@@ -4,8 +4,8 @@ Test lldb-dap setBreakpoints request
 
 import os
 
-import lldbdap_testcase
 import dap_server
+import lldbdap_testcase
 from lldbsuite.test import lldbutil
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
@@ -152,7 +152,13 @@ class TestDAP_variables(lldbdap_testcase.DAPTestCaseBase):
         globals = self.dap_server.get_global_variables()
         buffer_children = make_buffer_verify_dict(0, 32)
         verify_locals = {
-            "argc": {"equals": {"type": "int", "value": "1"}},
+            "argc": {
+                "equals": {"type": "int", "value": "1"},
+                "declaration": {
+                    "equals": {"line": 12, "column": 14},
+                    "contains": {"path": ["lldb-dap", "variables", "main.cpp"]},
+                },
+            },
             "argv": {
                 "equals": {"type": "const char **"},
                 "startswith": {"value": "0x"},

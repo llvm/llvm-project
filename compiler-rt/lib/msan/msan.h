@@ -336,6 +336,8 @@ void *MsanTSDGet();
 void MsanTSDSet(void *tsd);
 void MsanTSDDtor(void *tsd);
 
+void InstallAtForkHandler();
+
 }  // namespace __msan
 
 #endif  // MSAN_H

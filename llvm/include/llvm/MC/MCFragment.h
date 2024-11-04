@@ -428,7 +428,7 @@ public:
   }
 };
 
-class MCLEBFragment final : public MCEncodedFragmentWithFixups<10, 1> {
+class MCLEBFragment final : public MCEncodedFragmentWithFixups<8, 0> {
   /// True if this is a sleb128, false if uleb128.
   bool IsSigned;
 
@@ -437,7 +437,7 @@ class MCLEBFragment final : public MCEncodedFragmentWithFixups<10, 1> {
 
 public:
   MCLEBFragment(const MCExpr &Value, bool IsSigned, MCSection *Sec = nullptr)
-      : MCEncodedFragmentWithFixups<10, 1>(FT_LEB, false, Sec),
+      : MCEncodedFragmentWithFixups<8, 0>(FT_LEB, false, Sec),
         IsSigned(IsSigned), Value(&Value) {
     getContents().push_back(0);
   }

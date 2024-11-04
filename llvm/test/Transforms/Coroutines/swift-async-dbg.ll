@@ -2,6 +2,13 @@
 ; RUN: opt -mtriple='x86_64' %s -S -passes='module(coro-early),cgscc(coro-split,simplifycfg)' -o - | FileCheck %s
 ; RUN: opt -mtriple='i386-' %s -S -passes='module(coro-early),cgscc(coro-split,simplifycfg)' -o - | FileCheck %s --check-prefix=NOENTRY
 ; RUN: opt -mtriple='armv7-' %s -S -passes='module(coro-early),cgscc(coro-split,simplifycfg)' -o - | FileCheck %s --check-prefix=NOENTRY
+
+;; Replicate those tests with non-instruction debug markers.
+; RUN: opt --try-experimental-debuginfo-iterators -mtriple='arm64-' %s -S -passes='module(coro-early),cgscc(coro-split,simplifycfg)' -o - | FileCheck %s
+; RUN: opt --try-experimental-debuginfo-iterators -mtriple='x86_64' %s -S -passes='module(coro-early),cgscc(coro-split,simplifycfg)' -o - | FileCheck %s
+; RUN: opt --try-experimental-debuginfo-iterators -mtriple='i386-' %s -S -passes='module(coro-early),cgscc(coro-split,simplifycfg)' -o - | FileCheck %s --check-prefix=NOENTRY
+; RUN: opt --try-experimental-debuginfo-iterators -mtriple='armv7-' %s -S -passes='module(coro-early),cgscc(coro-split,simplifycfg)' -o - | FileCheck %s --check-prefix=NOENTRY
+
 ; NOENTRY-NOT: OP_llvm_entry_value
 
 target datalayout = "e-m:o-i64:64-i128:128-n32:64-S128"

@@ -40,10 +40,16 @@ static_assert(!std::is_invocable_v<decltype(std::views::lazy_split), SomeView, N
 static_assert(!std::is_invocable_v<decltype(std::views::lazy_split), NotAView, SomeView>);
 static_assert( std::is_invocable_v<decltype(std::views::lazy_split), SomeView, SomeView>);
 
-static_assert( CanBePiped<SomeView&,    decltype(std::views::lazy_split)>);
-static_assert( CanBePiped<char(&)[10],  decltype(std::views::lazy_split)>);
-static_assert(!CanBePiped<char(&&)[10], decltype(std::views::lazy_split)>);
-static_assert(!CanBePiped<NotAView,     decltype(std::views::lazy_split)>);
+// Regression test for #75002, views::lazy_split shouldn't be a range adaptor closure
+static_assert(!CanBePiped<SomeView&, decltype(std::views::lazy_split)>);
+static_assert(!CanBePiped<char (&)[10], decltype(std::views::lazy_split)>);
+static_assert(!CanBePiped<char (&&)[10], decltype(std::views::lazy_split)>);
+static_assert(!CanBePiped<NotAView, decltype(std::views::lazy_split)>);
+
+static_assert(CanBePiped<SomeView&, decltype(std::views::lazy_split('x'))>);
+static_assert(CanBePiped<char (&)[10], decltype(std::views::lazy_split('x'))>);
+static_assert(!CanBePiped<char (&&)[10], decltype(std::views::lazy_split('x'))>);
+static_assert(!CanBePiped<NotAView, decltype(std::views::lazy_split('x'))>);
 
 static_assert(std::same_as<decltype(std::views::lazy_split), decltype(std::ranges::views::lazy_split)>);
 

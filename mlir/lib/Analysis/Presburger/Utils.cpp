@@ -529,3 +529,12 @@ SmallVector<int64_t, 8> presburger::getInt64Vec(ArrayRef<MPInt> range) {
   std::transform(range.begin(), range.end(), result.begin(), int64FromMPInt);
   return result;
 }
+
+Fraction presburger::dotProduct(ArrayRef<Fraction> a, ArrayRef<Fraction> b) {
+  assert(a.size() == b.size() &&
+         "dot product is only valid for vectors of equal sizes!");
+  Fraction sum = 0;
+  for (unsigned i = 0, e = a.size(); i < e; i++)
+    sum += a[i] * b[i];
+  return sum;
+}

@@ -195,12 +195,10 @@ struct FixupInfoThumb : public FixupInfoBase {
 ///
 template <EdgeKind_aarch32 Kind> struct FixupInfo {};
 
-namespace {
 struct FixupInfoArmBranch : public FixupInfoArm {
   static constexpr uint32_t Opcode = 0x0a000000;
   static constexpr uint32_t ImmMask = 0x00ffffff;
 };
-} // namespace
 
 template <> struct FixupInfo<Arm_Jump24> : public FixupInfoArmBranch {
   static constexpr uint32_t OpcodeMask = 0x0f000000;
@@ -214,13 +212,11 @@ template <> struct FixupInfo<Arm_Call> : public FixupInfoArmBranch {
   static constexpr uint32_t BitBlx = 0x10000000;
 };
 
-namespace {
 struct FixupInfoArmMov : public FixupInfoArm {
   static constexpr uint32_t OpcodeMask = 0x0ff00000;
   static constexpr uint32_t ImmMask = 0x000f0fff;
   static constexpr uint32_t RegMask = 0x0000f000;
 };
-} // namespace
 
 template <> struct FixupInfo<Arm_MovtAbs> : public FixupInfoArmMov {
   static constexpr uint32_t Opcode = 0x03400000;
@@ -244,13 +240,11 @@ template <> struct FixupInfo<Thumb_Call> : public FixupInfoThumb {
   static constexpr uint16_t LoBitNoBlx = 0x1000;
 };
 
-namespace {
 struct FixupInfoThumbMov : public FixupInfoThumb {
   static constexpr HalfWords OpcodeMask{0xfbf0, 0x8000};
   static constexpr HalfWords ImmMask{0x040f, 0x70ff};
   static constexpr HalfWords RegMask{0x0000, 0x0f00};
 };
-} // namespace
 
 template <> struct FixupInfo<Thumb_MovtAbs> : public FixupInfoThumbMov {
   static constexpr HalfWords Opcode{0xf2c0, 0x0000};

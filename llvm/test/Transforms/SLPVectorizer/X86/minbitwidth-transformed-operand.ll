@@ -6,8 +6,8 @@ define void @test(i64 %d.promoted.i) {
 ; CHECK-SAME: i64 [[D_PROMOTED_I:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x i64> <i64 poison, i64 0>, i64 [[D_PROMOTED_I]], i32 0
-; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i64> zeroinitializer, [[TMP0]]
-; CHECK-NEXT:    [[TMP2:%.*]] = trunc <2 x i64> [[TMP1]] to <2 x i1>
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc <2 x i64> [[TMP0]] to <2 x i1>
+; CHECK-NEXT:    [[TMP2:%.*]] = and <2 x i1> zeroinitializer, [[TMP1]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = mul <2 x i1> [[TMP2]], zeroinitializer
 ; CHECK-NEXT:    [[TMP4:%.*]] = or <2 x i1> [[TMP3]], zeroinitializer
 ; CHECK-NEXT:    [[TMP5:%.*]] = or <2 x i1> [[TMP4]], zeroinitializer

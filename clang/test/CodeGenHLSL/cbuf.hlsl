@@ -24,5 +24,5 @@ float foo() {
 
 // CHECK: !hlsl.cbufs = !{![[CBMD:[0-9]+]]}
 // CHECK: !hlsl.srvs = !{![[TBMD:[0-9]+]]}
-// CHECK: ![[CBMD]] = !{ptr @[[CB]], !"A.cb.ty", i32 13, i32 0, i32 2}
-// CHECK: ![[TBMD]] = !{ptr @[[TB]], !"A.tb.ty", i32 15, i32 2, i32 1}
+// CHECK: ![[CBMD]] = !{ptr @[[CB]], !"A.cb.ty", i32 13, i1 false, i32 0, i32 2}
+// CHECK: ![[TBMD]] = !{ptr @[[TB]], !"A.tb.ty", i32 15, i1 false, i32 2, i32 1}

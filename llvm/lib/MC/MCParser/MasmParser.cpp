@@ -2117,7 +2117,7 @@ bool MasmParser::parseStatement(ParseStatementInfo &Info,
     // Treat ".<number>" as a valid identifier in this context.
     IDVal = getTok().getString();
     Lex(); // always eat a token
-    if (!IDVal.startswith("."))
+    if (!IDVal.starts_with("."))
       return Error(IDLoc, "unexpected token at start of statement");
   } else if (parseIdentifier(IDVal, StartOfStatement)) {
     if (!TheCondState.Ignore) {
@@ -7190,7 +7190,7 @@ bool MasmParser::parseDirectiveRadix(SMLoc DirectiveLoc) {
 bool MasmParser::parseDirectiveEcho(SMLoc DirectiveLoc) {
   std::string Message = parseStringTo(AsmToken::EndOfStatement);
   llvm::outs() << Message;
-  if (!StringRef(Message).endswith("\n"))
+  if (!StringRef(Message).ends_with("\n"))
     llvm::outs() << '\n';
   return false;
 }

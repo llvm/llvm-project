@@ -27,7 +27,7 @@ b4:                                               ; preds = %b4, %b1
   %v5 = load i32, ptr %v4, align 4, !tbaa !1
   %v6 = add nsw i32 %v5, %v3
   store i32 %v6, ptr %v4, align 4, !tbaa !1
-  %v7 = or i32 %v1, 1
+  %v7 = or disjoint i32 %v1, 1
   %v8 = getelementptr inbounds i32, ptr %a1, i32 %v7
   %v9 = load i32, ptr %v8, align 4, !tbaa !1
   %v10 = getelementptr inbounds i32, ptr %a0, i32 %v7

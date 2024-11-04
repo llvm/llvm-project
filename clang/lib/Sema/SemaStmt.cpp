@@ -1327,6 +1327,9 @@ Sema::ActOnFinishSwitchStmt(SourceLocation SwitchLoc, Stmt *Switch,
     }
   }
 
+  if (!TheDefaultStmt)
+    Diag(SwitchLoc, diag::warn_switch_default);
+
   if (!HasDependentValue) {
     // If we don't have a default statement, check whether the
     // condition is constant.

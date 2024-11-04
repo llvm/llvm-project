@@ -316,7 +316,8 @@ void ModuleDepCollector::applyDiscoveredDependencies(CompilerInvocation &CI) {
 
 static std::string getModuleContextHash(const ModuleDeps &MD,
                                         const CowCompilerInvocation &CI,
-                                        bool EagerLoadModules) {
+                                        bool EagerLoadModules,
+                                        llvm::vfs::FileSystem &VFS) {
   llvm::HashBuilder<llvm::TruncatedBLAKE3<16>, llvm::endianness::native>
       HashBuilder;
   SmallString<32> Scratch;
@@ -325,6 +326,9 @@ static std::string getModuleContextHash(const ModuleDeps &MD,
   // will be readable.
   HashBuilder.add(getClangFullRepositoryVersion());
   HashBuilder.add(serialization::VERSION_MAJOR, serialization::VERSION_MINOR);
+  llvm::ErrorOr<std::string> CWD = VFS.getCurrentWorkingDirectory();
+  if (CWD)
+    HashBuilder.add(*CWD);
 
   // Hash the BuildInvocation without any input files.
   SmallString<0> ArgVec;
@@ -356,7 +360,8 @@ static std::string getModuleContextHash(const ModuleDeps &MD,
 
 void ModuleDepCollector::associateWithContextHash(
     const CowCompilerInvocation &CI, ModuleDeps &Deps) {
-  Deps.ID.ContextHash = getModuleContextHash(Deps, CI, EagerLoadModules);
+  Deps.ID.ContextHash = getModuleContextHash(
+      Deps, CI, EagerLoadModules, ScanInstance.getVirtualFileSystem());
   bool Inserted = ModuleDepsByID.insert({Deps.ID, &Deps}).second;
   (void)Inserted;
   assert(Inserted && "duplicate module mapping");
@@ -516,7 +521,7 @@ ModuleDepCollectorPP::handleTopLevelModule(const Module *M) {
 
   serialization::ModuleFile *MF =
       MDC.ScanInstance.getASTReader()->getModuleManager().lookup(
-          M->getASTFile());
+          *M->getASTFile());
   MDC.ScanInstance.getASTReader()->visitInputFileInfos(
       *MF, /*IncludeSystem=*/true,
       [&](const serialization::InputFileInfo &IFI, bool IsSystem) {
@@ -525,7 +530,7 @@ ModuleDepCollectorPP::handleTopLevelModule(const Module *M) {
         // this file in the proper directory and relies on the rest of Clang to
         // handle it like normal. With explicitly built modules we don't need
         // to play VFS tricks, so replace it with the correct module map.
-        if (StringRef(IFI.Filename).endswith("__inferred_module.map")) {
+        if (StringRef(IFI.Filename).ends_with("__inferred_module.map")) {
           MDC.addFileDep(MD, ModuleMap->getName());
           return;
         }
@@ -543,7 +548,7 @@ ModuleDepCollectorPP::handleTopLevelModule(const Module *M) {
         if (!(IFI.TopLevel && IFI.ModuleMap))
           return;
         if (StringRef(IFI.FilenameAsRequested)
-                .endswith("__inferred_module.map"))
+                .ends_with("__inferred_module.map"))
           return;
         MD.ModuleMapFileDeps.emplace_back(IFI.FilenameAsRequested);
       });

@@ -7,6 +7,14 @@ func.func @foo() {
 
 // -----
 
+llvm.func @vector_with_non_vector_type() -> f32 {
+  // expected-error @below{{expected vector or array type}}
+  %cst = llvm.mlir.constant(dense<100.0> : vector<1xf64>) : f32
+  llvm.return %cst : f32
+}
+
+// -----
+
 llvm.func @no_non_complex_struct() -> !llvm.array<2 x array<2 x array<2 x struct<(i32)>>>> {
   // expected-error @below{{expected struct type to be a complex number}}
   %0 = llvm.mlir.constant(dense<[[[1, 2], [3, 4]], [[42, 43], [44, 45]]]> : tensor<2x2x2xi32>) : !llvm.array<2 x array<2 x array<2 x struct<(i32)>>>>
@@ -27,6 +35,30 @@ llvm.func @struct_wrong_attribute_element_type() -> !llvm.struct<(f64, f64)> {
   // expected-error @below{{FloatAttr does not match expected type of the constant}}
   %0 = llvm.mlir.constant([1.0 : f32, 1.0 : f32]) : !llvm.struct<(f64, f64)>
   llvm.return %0 : !llvm.struct<(f64, f64)>
+}
+
+// -----
+
+llvm.func @integer_with_float_type() -> f32 {
+  // expected-error @+1 {{expected integer type}}
+  %0 = llvm.mlir.constant(1 : index) : f32
+  llvm.return %0 : f32
+}
+
+// -----
+
+llvm.func @incompatible_float_attribute_type() -> f32 {
+  // expected-error @below{{expected float type of width 64}}
+  %cst = llvm.mlir.constant(1.0 : f64) : f32
+  llvm.return %cst : f32
+}
+
+// -----
+
+llvm.func @incompatible_integer_type_for_float_attr() -> i32 {
+  // expected-error @below{{expected integer type of width 16}}
+  %cst = llvm.mlir.constant(1.0 : f16) : i32
+  llvm.return %cst : i32
 }
 
 // -----
@@ -241,6 +273,27 @@ llvm.func @stepvector_intr_wrong_type() -> vector<7xf32> {
   // expected-error @below{{op result #0 must be LLVM dialect-compatible vector of signless integer, but got 'vector<7xf32>'}}
   %0 = llvm.intr.experimental.stepvector : vector<7xf32>
   llvm.return %0 : vector<7xf32>
+}
+
+// -----
+
+// expected-error @below{{target features can not contain ','}}
+llvm.func @invalid_target_feature() attributes { target_features = #llvm.target_features<["+bad,feature", "+test"]> }
+{
+}
+
+// -----
+
+// expected-error @below{{target features must start with '+' or '-'}}
+llvm.func @missing_target_feature_prefix() attributes { target_features = #llvm.target_features<["sme"]> }
+{
+}
+
+// -----
+
+// expected-error @below{{target features can not be null or empty}}
+llvm.func @empty_target_feature() attributes { target_features = #llvm.target_features<["", "+sve"]> }
+{
 }
 
 // -----

@@ -213,7 +213,7 @@ cond.end22:                                       ; preds = %for.body10, %cond.t
   %tobool24 = icmp ne i32 %cond23, 0
   %frombool = zext i1 %tobool24 to i8
   store i8 %frombool, ptr @var_36, align 1
-  %add = or i32 %i_15.044, 1
+  %add = or disjoint i32 %i_15.044, 1
   %arraydecay.1 = getelementptr inbounds [18 x [22 x i8]], ptr %arr_60, i32 %add, i32 0
   %2 = ptrtoint ptr %arraydecay.1 to i32
   %arrayidx13.1 = getelementptr inbounds [1 x i32], ptr @arr_61, i32 0, i32 %add
@@ -258,7 +258,7 @@ cond.end22.1119:                                  ; preds = %cond.true19.1114, %
   %tobool24.1116 = icmp ne i32 %cond23.1115, 0
   %frombool.1117 = zext i1 %tobool24.1116 to i8
   store i8 %frombool.1117, ptr @var_36, align 1
-  %add.1118 = or i32 %i_15.044.1, 1
+  %add.1118 = or disjoint i32 %i_15.044.1, 1
   %arraydecay.1.1 = getelementptr inbounds [18 x [22 x i8]], ptr %arr_60, i32 %add.1118, i32 0
   %6 = ptrtoint ptr %arraydecay.1.1 to i32
   %arrayidx13.1.1 = getelementptr inbounds [1 x i32], ptr @arr_61, i32 0, i32 %add.1118
@@ -308,7 +308,7 @@ cond.end22.2:                                     ; preds = %cond.true19.2, %for
   %tobool24.2 = icmp ne i32 %cond23.2, 0
   %frombool.2 = zext i1 %tobool24.2 to i8
   store i8 %frombool.2, ptr @var_36, align 1
-  %add.2 = or i32 %i_15.044.2, 1
+  %add.2 = or disjoint i32 %i_15.044.2, 1
   %arraydecay.1.2 = getelementptr inbounds [18 x [22 x i8]], ptr %arr_60, i32 %add.2, i32 0
   %10 = ptrtoint ptr %arraydecay.1.2 to i32
   %arrayidx13.1.2 = getelementptr inbounds [1 x i32], ptr @arr_61, i32 0, i32 %add.2
@@ -385,19 +385,17 @@ define i32 @d(i64 %e, i32 %f, i64 %g, i32 %h) {
 ; CHECK-NEXT:    @ implicit-def: $r11
 ; CHECK-NEXT:    mov.w r9, #12
 ; CHECK-NEXT:    str r4, [sp, #12] @ 4-byte Spill
-; CHECK-NEXT:    add.w r0, r0, r2, lsr #1
 ; CHECK-NEXT:    add.w r1, r1, r2, lsr #1
-; CHECK-NEXT:    movw r2, #65532
-; CHECK-NEXT:    vdup.32 q6, r0
-; CHECK-NEXT:    movt r2, #32767
-; CHECK-NEXT:    and.w r3, r1, r2
+; CHECK-NEXT:    add.w r0, r0, r2, lsr #1
+; CHECK-NEXT:    bic r3, r1, #3
 ; CHECK-NEXT:    adr r1, .LCPI1_0
-; CHECK-NEXT:    vdup.32 q7, r0
 ; CHECK-NEXT:    vldrw.u32 q0, [r1]
 ; CHECK-NEXT:    adr r1, .LCPI1_1
 ; CHECK-NEXT:    vldrw.u32 q5, [r1]
-; CHECK-NEXT:    strd r3, r7, [sp, #4] @ 8-byte Folded Spill
+; CHECK-NEXT:    vdup.32 q6, r0
 ; CHECK-NEXT:    vadd.i32 q4, q0, r7
+; CHECK-NEXT:    vdup.32 q7, r0
+; CHECK-NEXT:    strd r3, r7, [sp, #4] @ 8-byte Folded Spill
 ; CHECK-NEXT:    b .LBB1_6
 ; CHECK-NEXT:  .LBB1_2: @ %for.body6.preheader
 ; CHECK-NEXT:    @ in Loop: Header=BB1_6 Depth=1

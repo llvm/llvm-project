@@ -77,7 +77,7 @@ __sift_down(_RandomAccessIterator __first, _Compare&& __comp,
 
         // check if we are in heap-order
     } while (!__comp(*__child_i, __top));
-    *__start = _VSTD::move(__top);
+    *__start = std::move(__top);
 }
 
 template <class _AlgPolicy, class _Compare, class _RandomAccessIterator>

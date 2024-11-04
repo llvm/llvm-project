@@ -132,6 +132,11 @@ public:
 
 } // namespace
 
+bool IsStructOrClassTag(llvm::dwarf::Tag Tag) {
+  return Tag == llvm::dwarf::Tag::DW_TAG_class_type ||
+         Tag == llvm::dwarf::Tag::DW_TAG_structure_type;
+}
+
 static PluginProperties &GetGlobalPluginProperties() {
   static PluginProperties g_settings;
   return g_settings;
@@ -2591,175 +2596,155 @@ void SymbolFileDWARF::GetMangledNamesForFunction(
   }
 }
 
-void SymbolFileDWARF::FindTypes(
-    ConstString name, const CompilerDeclContext &parent_decl_ctx,
-    uint32_t max_matches,
-    llvm::DenseSet<lldb_private::SymbolFile *> &searched_symbol_files,
-    TypeMap &types) {
-  std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
-  // Make sure we haven't already searched this SymbolFile before.
-  if (!searched_symbol_files.insert(this).second)
-    return;
-
-  Log *log = GetLog(DWARFLog::Lookups);
-
-  if (log) {
-    if (parent_decl_ctx)
-      GetObjectFile()->GetModule()->LogMessage(
-          log,
-          "SymbolFileDWARF::FindTypes (sc, name=\"{0}\", parent_decl_ctx = "
-          "{1:p} (\"{2}\"), max_matches={3}, type_list)",
-          name.GetCString(), static_cast<const void *>(&parent_decl_ctx),
-          parent_decl_ctx.GetName().AsCString("<NULL>"), max_matches);
-    else
-      GetObjectFile()->GetModule()->LogMessage(
-          log,
-          "SymbolFileDWARF::FindTypes (sc, name=\"{0}\", parent_decl_ctx = "
-          "NULL, max_matches={1}, type_list)",
-          name.GetCString(), max_matches);
+/// Split a name up into a basename and template parameters.
+static bool SplitTemplateParams(llvm::StringRef fullname,
+                                llvm::StringRef &basename,
+                                llvm::StringRef &template_params) {
+  auto it = fullname.find('<');
+  if (it == llvm::StringRef::npos) {
+    basename = fullname;
+    template_params = llvm::StringRef();
+    return false;
   }
+  basename = fullname.slice(0, it);
+  template_params = fullname.slice(it, fullname.size());
+  return true;
+}
 
-  if (!DeclContextMatchesThisSymbolFile(parent_decl_ctx))
+static bool UpdateCompilerContextForSimpleTemplateNames(TypeQuery &match) {
+  // We need to find any names in the context that have template parameters
+  // and strip them so the context can be matched when -gsimple-template-names
+  // is being used. Returns true if any of the context items were updated.
+  bool any_context_updated = false;
+  for (auto &context : match.GetContextRef()) {
+    llvm::StringRef basename, params;
+    if (SplitTemplateParams(context.name.GetStringRef(), basename, params)) {
+      context.name = ConstString(basename);
+      any_context_updated = true;
+    }
+  }
+  return any_context_updated;
+}
+void SymbolFileDWARF::FindTypes(const TypeQuery &query, TypeResults &results) {
+
+  // Make sure we haven't already searched this SymbolFile before.
+  if (results.AlreadySearched(this))
     return;
 
-  // Unlike FindFunctions(), FindTypes() following cannot produce false
-  // positives.
+  std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
 
-  const llvm::StringRef name_ref = name.GetStringRef();
-  auto name_bracket_index = name_ref.find('<');
-  m_index->GetTypes(name, [&](DWARFDIE die) {
-    if (!DIEInDeclContext(parent_decl_ctx, die))
-      return true; // The containing decl contexts don't match
+  bool have_index_match = false;
+  m_index->GetTypes(query.GetTypeBasename(), [&](DWARFDIE die) {
+    // Check the language, but only if we have a language filter.
+    if (query.HasLanguage()) {
+      if (!query.LanguageMatches(GetLanguageFamily(*die.GetCU())))
+        return true; // Keep iterating over index types, language mismatch.
+    }
 
-    Type *matching_type = ResolveType(die, true, true);
-    if (!matching_type)
-      return true;
+    // Check the context matches
+    std::vector<lldb_private::CompilerContext> die_context;
+    if (query.GetModuleSearch())
+      die_context = die.GetDeclContext();
+    else
+      die_context = die.GetTypeLookupContext();
+    assert(!die_context.empty());
+    if (!query.ContextMatches(die_context))
+      return true; // Keep iterating over index types, context mismatch.
 
-    // With -gsimple-template-names, a templated type's DW_AT_name will not
-    // contain the template parameters. Make sure that if the original query
-    // didn't contain a '<', we filter out entries with template parameters.
-    if (name_bracket_index == llvm::StringRef::npos &&
-        matching_type->IsTemplateType())
-      return true;
-
-    // We found a type pointer, now find the shared pointer form our type
-    // list
-    types.InsertUnique(matching_type->shared_from_this());
-    return types.GetSize() < max_matches;
+    // Try to resolve the type.
+    if (Type *matching_type = ResolveType(die, true, true)) {
+      if (matching_type->IsTemplateType()) {
+        // We have to watch out for case where we lookup a type by basename and
+        // it matches a template with simple template names. Like looking up
+        // "Foo" and if we have simple template names then we will match
+        // "Foo<int>" and "Foo<double>" because all the DWARF has is "Foo" in
+        // the accelerator tables. The main case we see this in is when the
+        // expression parser is trying to parse "Foo<int>" and it will first do
+        // a lookup on just "Foo". We verify the type basename matches before
+        // inserting the type in the results.
+        auto CompilerTypeBasename =
+            matching_type->GetForwardCompilerType().GetTypeName(true);
+        if (CompilerTypeBasename != query.GetTypeBasename())
+          return true; // Keep iterating over index types, basename mismatch.
+      }
+      have_index_match = true;
+      results.InsertUnique(matching_type->shared_from_this());
+    }
+    return !results.Done(query); // Keep iterating if we aren't done.
   });
+
+  if (results.Done(query))
+    return;
 
   // With -gsimple-template-names, a templated type's DW_AT_name will not
   // contain the template parameters. Try again stripping '<' and anything
   // after, filtering out entries with template parameters that don't match.
-  if (types.GetSize() < max_matches) {
-    if (name_bracket_index != llvm::StringRef::npos) {
-      const llvm::StringRef name_no_template_params =
-          name_ref.slice(0, name_bracket_index);
-      const llvm::StringRef template_params =
-          name_ref.slice(name_bracket_index, name_ref.size());
-      m_index->GetTypes(ConstString(name_no_template_params), [&](DWARFDIE die) {
-        if (!DIEInDeclContext(parent_decl_ctx, die))
-          return true; // The containing decl contexts don't match
+  if (!have_index_match) {
+    // Create a type matcher with a compiler context that is tuned for
+    // -gsimple-template-names. We will use this for the index lookup and the
+    // context matching, but will use the original "match" to insert matches
+    // into if things match. The "match_simple" has a compiler context with
+    // all template parameters removed to allow the names and context to match.
+    // The UpdateCompilerContextForSimpleTemplateNames(...) will return true if
+    // it trims any context items down by removing template parameter names.
+    TypeQuery query_simple(query);
+    if (UpdateCompilerContextForSimpleTemplateNames(query_simple)) {
 
-        const llvm::StringRef base_name = GetTypeForDIE(die)->GetBaseName().AsCString();
-        auto it = base_name.find('<');
-        // If the candidate qualified name doesn't have '<', it doesn't have
-        // template params to compare.
-        if (it == llvm::StringRef::npos)
-          return true;
+      // Copy our match's context and update the basename we are looking for
+      // so we can use this only to compare the context correctly.
+      m_index->GetTypes(query_simple.GetTypeBasename(), [&](DWARFDIE die) {
+        // Check the language, but only if we have a language filter.
+        if (query.HasLanguage()) {
+          if (!query.LanguageMatches(GetLanguageFamily(*die.GetCU())))
+            return true; // Keep iterating over index types, language mismatch.
+        }
 
-        // Filter out non-matching instantiations by comparing template params.
-        const llvm::StringRef base_name_template_params =
-            base_name.slice(it, base_name.size());
+        // Check the context matches
+        std::vector<lldb_private::CompilerContext> die_context;
+        if (query.GetModuleSearch())
+          die_context = die.GetDeclContext();
+        else
+          die_context = die.GetTypeLookupContext();
+        assert(!die_context.empty());
+        if (!query_simple.ContextMatches(die_context))
+          return true; // Keep iterating over index types, context mismatch.
 
-        if (template_params != base_name_template_params)
-          return true;
+        // Try to resolve the type.
+        if (Type *matching_type = ResolveType(die, true, true)) {
+          ConstString name = matching_type->GetQualifiedName();
+          // We have found a type that still might not match due to template
+          // parameters. If we create a new TypeQuery that uses the new type's
+          // fully qualified name, we can find out if this type matches at all
+          // context levels. We can't use just the "match_simple" context
+          // because all template parameters were stripped off. The fully
+          // qualified name of the type will have the template parameters and
+          // will allow us to make sure it matches correctly.
+          TypeQuery die_query(name.GetStringRef(),
+                              TypeQueryOptions::e_exact_match);
+          if (!query.ContextMatches(die_query.GetContextRef()))
+            return true; // Keep iterating over index types, context mismatch.
 
-        Type *matching_type = ResolveType(die, true, true);
-        if (!matching_type)
-          return true;
-
-        // We found a type pointer, now find the shared pointer form our type
-        // list.
-        types.InsertUnique(matching_type->shared_from_this());
-        return types.GetSize() < max_matches;
+          results.InsertUnique(matching_type->shared_from_this());
+        }
+        return !results.Done(query); // Keep iterating if we aren't done.
       });
+      if (results.Done(query))
+        return;
     }
   }
-
-  // Next search through the reachable Clang modules. This only applies for
-  // DWARF objects compiled with -gmodules that haven't been processed by
-  // dsymutil.
-  if (types.GetSize() < max_matches) {
-    UpdateExternalModuleListIfNeeded();
-
-    for (const auto &pair : m_external_type_modules)
-      if (ModuleSP external_module_sp = pair.second)
-        if (SymbolFile *sym_file = external_module_sp->GetSymbolFile())
-          sym_file->FindTypes(name, parent_decl_ctx, max_matches,
-                              searched_symbol_files, types);
-  }
-
-  if (log && types.GetSize()) {
-    if (parent_decl_ctx) {
-      GetObjectFile()->GetModule()->LogMessage(
-          log,
-          "SymbolFileDWARF::FindTypes (sc, name=\"{0}\", parent_decl_ctx "
-          "= {1:p} (\"{2}\"), max_matches={3}, type_list) => {4}",
-          name.GetCString(), static_cast<const void *>(&parent_decl_ctx),
-          parent_decl_ctx.GetName().AsCString("<NULL>"), max_matches,
-          types.GetSize());
-    } else {
-      GetObjectFile()->GetModule()->LogMessage(
-          log,
-          "SymbolFileDWARF::FindTypes (sc, name=\"{0}\", parent_decl_ctx "
-          "= NULL, max_matches={1}, type_list) => {2}",
-          name.GetCString(), max_matches, types.GetSize());
-    }
-  }
-}
-
-void SymbolFileDWARF::FindTypes(
-    llvm::ArrayRef<CompilerContext> pattern, LanguageSet languages,
-    llvm::DenseSet<SymbolFile *> &searched_symbol_files, TypeMap &types) {
-  // Make sure we haven't already searched this SymbolFile before.
-  if (!searched_symbol_files.insert(this).second)
-    return;
-
-  std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
-  if (pattern.empty())
-    return;
-
-  ConstString name = pattern.back().name;
-
-  if (!name)
-    return;
-
-  m_index->GetTypes(name, [&](DWARFDIE die) {
-    if (!languages[GetLanguageFamily(*die.GetCU())])
-      return true;
-
-    std::vector<CompilerContext> die_context = die.GetDeclContext();
-    if (!contextMatches(die_context, pattern))
-      return true;
-
-    if (Type *matching_type = ResolveType(die, true, true)) {
-      // We found a type pointer, now find the shared pointer form our type
-      // list.
-      types.InsertUnique(matching_type->shared_from_this());
-    }
-    return true;
-  });
 
   // Next search through the reachable Clang modules. This only applies for
   // DWARF objects compiled with -gmodules that haven't been processed by
   // dsymutil.
   UpdateExternalModuleListIfNeeded();
 
-  for (const auto &pair : m_external_type_modules)
-    if (ModuleSP external_module_sp = pair.second)
-      external_module_sp->FindTypes(pattern, languages, searched_symbol_files,
-                                    types);
+  for (const auto &pair : m_external_type_modules) {
+    if (ModuleSP external_module_sp = pair.second) {
+      external_module_sp->FindTypes(query, results);
+      if (results.Done(query))
+        return;
+    }
+  }
 }
 
 CompilerDeclContext
@@ -2947,29 +2932,18 @@ TypeSP SymbolFileDWARF::FindCompleteObjCDefinitionTypeForDIE(
 
   m_index->GetCompleteObjCClass(
       type_name, must_be_implementation, [&](DWARFDIE type_die) {
-        bool try_resolving_type = false;
-
         // Don't try and resolve the DIE we are looking for with the DIE
         // itself!
-        if (type_die != die) {
-          switch (type_die.Tag()) {
-          case DW_TAG_class_type:
-          case DW_TAG_structure_type:
-            try_resolving_type = true;
-            break;
-          default:
-            break;
-          }
-        }
-        if (!try_resolving_type)
+        if (type_die == die || !IsStructOrClassTag(type_die.Tag()))
           return true;
 
         if (must_be_implementation &&
-            type_die.Supports_DW_AT_APPLE_objc_complete_type())
-          try_resolving_type = type_die.GetAttributeValueAsUnsigned(
+            type_die.Supports_DW_AT_APPLE_objc_complete_type()) {
+          const bool try_resolving_type = type_die.GetAttributeValueAsUnsigned(
               DW_AT_APPLE_objc_complete_type, 0);
-        if (!try_resolving_type)
-          return true;
+          if (!try_resolving_type)
+            return true;
+        }
 
         Type *resolved_type = ResolveType(type_die, false, true);
         if (!resolved_type || resolved_type == DIE_IS_BEING_PARSED)
@@ -3120,43 +3094,20 @@ SymbolFileDWARF::FindDefinitionTypeForDWARFDeclContext(const DWARFDIE &die) {
         template_params = dwarf_ast->GetDIEClassTemplateParams(die);
     }
 
-    m_index->GetTypes(GetDWARFDeclContext(die), [&](DWARFDIE type_die) {
+    const DWARFDeclContext die_dwarf_decl_ctx = GetDWARFDeclContext(die);
+    m_index->GetTypes(die_dwarf_decl_ctx, [&](DWARFDIE type_die) {
       // Make sure type_die's language matches the type system we are
       // looking for. We don't want to find a "Foo" type from Java if we
       // are looking for a "Foo" type for C, C++, ObjC, or ObjC++.
       if (type_system &&
           !type_system->SupportsLanguage(GetLanguage(*type_die.GetCU())))
         return true;
-      bool try_resolving_type = false;
 
-      // Don't try and resolve the DIE we are looking for with the DIE
-      // itself!
       const dw_tag_t type_tag = type_die.Tag();
-      // Make sure the tags match
-      if (type_tag == tag) {
-        // The tags match, lets try resolving this type
-        try_resolving_type = true;
-      } else {
-        // The tags don't match, but we need to watch our for a forward
-        // declaration for a struct and ("struct foo") ends up being a
-        // class ("class foo { ... };") or vice versa.
-        switch (type_tag) {
-        case DW_TAG_class_type:
-          // We had a "class foo", see if we ended up with a "struct foo
-          // { ... };"
-          try_resolving_type = (tag == DW_TAG_structure_type);
-          break;
-        case DW_TAG_structure_type:
-          // We had a "struct foo", see if we ended up with a "class foo
-          // { ... };"
-          try_resolving_type = (tag == DW_TAG_class_type);
-          break;
-        default:
-          // Tags don't match, don't event try to resolve using this type
-          // whose name matches....
-          break;
-        }
-      }
+      // Resolve the type if both have the same tag or {class, struct} tags.
+      const bool try_resolving_type =
+          type_tag == tag ||
+          (IsStructOrClassTag(type_tag) && IsStructOrClassTag(tag));
 
       if (!try_resolving_type) {
         if (log) {
@@ -3184,7 +3135,7 @@ SymbolFileDWARF::FindDefinitionTypeForDWARFDeclContext(const DWARFDIE &die) {
       }
 
       // Make sure the decl contexts match all the way up
-      if (GetDWARFDeclContext(die) != type_dwarf_decl_ctx)
+      if (die_dwarf_decl_ctx != type_dwarf_decl_ctx)
         return true;
 
       Type *resolved_type = ResolveType(type_die, false);
@@ -4339,6 +4290,7 @@ const std::shared_ptr<SymbolFileDWARFDwo> &SymbolFileDWARF::GetDwpSymbolFile() {
     module_spec.GetSymbolFileSpec() =
         FileSpec(m_objfile_sp->GetModule()->GetFileSpec().GetPath() + ".dwp");
 
+    module_spec.GetUUID() = m_objfile_sp->GetUUID();
     FileSpecList search_paths = Target::GetDefaultDebugFileSearchPaths();
     FileSpec dwp_filespec =
         PluginManager::LocateExecutableSymbolFile(module_spec, search_paths);

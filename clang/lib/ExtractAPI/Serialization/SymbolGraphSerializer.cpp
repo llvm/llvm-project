@@ -199,9 +199,10 @@ StringRef getLanguageName(Language Lang) {
     return "objective-c";
   case Language::CXX:
     return "c++";
+  case Language::ObjCXX:
+    return "objective-c++";
 
   // Unsupported language currently
-  case Language::ObjCXX:
   case Language::OpenCL:
   case Language::OpenCLCXX:
   case Language::CUDA:
@@ -742,7 +743,7 @@ bool SymbolGraphSerializer::shouldSkip(const APIRecord &Record) const {
 
   // Filter out symbols prefixed with an underscored as they are understood to
   // be symbols clients should not use.
-  if (Record.Name.startswith("_"))
+  if (Record.Name.starts_with("_"))
     return true;
 
   return false;
