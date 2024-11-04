@@ -179,6 +179,11 @@ alexei.starovoitov@gmail.com (email), [4ast](https://github.com/4ast) (GitHub)
 Zi Xuan Wu (Zeson) \
 zixuan.wu@linux.alibaba.com (email), [zixuan-wu](https://github.com/zixuan-wu) (GitHub)
 
+#### DirectX backend
+
+Justin Bogner \
+mail@justinbogner.com (email), [bogner](https://github.com/bogner) (GitHub)
+
 #### Hexagon backend
 
 Sundeep Kushwaha \
