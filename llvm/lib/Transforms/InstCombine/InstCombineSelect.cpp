@@ -561,8 +561,14 @@ Instruction *InstCombinerImpl::foldSelectIntoOp(SelectInst &SI, Value *TrueVal,
     BinaryOperator *BO =
         BinaryOperator::Create(TVI->getOpcode(), FalseVal, NewSel);
     BO->copyIRFlags(TVI);
-    if (isa<FPMathOperator>(&SI))
-      BO->andIRFlags(NewSel);
+    if (isa<FPMathOperator>(&SI)) {
+      // Merge poison generating flags from the select.
+      BO->setHasNoNaNs(BO->hasNoNaNs() && FMF.noNaNs());
+      BO->setHasNoInfs(BO->hasNoInfs() && FMF.noInfs());
+      // Merge no-signed-zeros flag from the select.
+      // Otherwise we may produce zeros with different sign.
+      BO->setHasNoSignedZeros(BO->hasNoSignedZeros() && FMF.noSignedZeros());
+    }
     return BO;
   };
 
@@ -1050,7 +1056,7 @@ static Value *canonicalizeSaturatedAdd(ICmpInst *Cmp, Value *TVal, Value *FVal,
   // Strictness of the comparison is irrelevant.
   X = Cmp0;
   Y = Cmp1;
-  if (match(FVal, m_c_Add(m_Not(m_Specific(X)), m_Specific(Y)))) {
+  if (match(FVal, m_c_Add(m_NotForbidPoison(m_Specific(X)), m_Specific(Y)))) {
     // (X u< Y) ? -1 : (~X + Y) --> uadd.sat(~X, Y)
     // (X u< Y) ? -1 : (Y + ~X) --> uadd.sat(Y, ~X)
     BinaryOperator *BO = cast<BinaryOperator>(FVal);
