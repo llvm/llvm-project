@@ -5728,14 +5728,14 @@ class sme2_fp8_fp16_quarter_tile_outer_product<bit M, bit N, string mnemonic, Re
 
 multiclass sme2_fmop4a_fp8_fp16_2way<string mnemonic> {
   // Single vectors
-  def _MZZ_BtoH : sme2_fp8_fp16_quarter_tile_outer_product<0, 0, mnemonic, ZPR8Mul2_Lo, ZPR8Mul2_Hi>;
+  def _MZZ_BtoH : sme2_fp8_fp16_quarter_tile_outer_product<0b0, 0b0, mnemonic, ZPR8Mul2_Lo, ZPR8Mul2_Hi>;
 
   // Multiple and single vectors
-  def _M2ZZ_BtoH : sme2_fp8_fp16_quarter_tile_outer_product<0, 1, mnemonic, ZZ_b_mul_r_Lo, ZPR8Mul2_Hi>;
+  def _M2ZZ_BtoH : sme2_fp8_fp16_quarter_tile_outer_product<0b0, 0b1, mnemonic, ZZ_b_mul_r_Lo, ZPR8Mul2_Hi>;
 
   // Single and multiple vectors
-  def _MZ2Z_BtoH : sme2_fp8_fp16_quarter_tile_outer_product<1, 0, mnemonic, ZPR8Mul2_Lo, ZZ_b_mul_r_Hi>;
+  def _MZ2Z_BtoH : sme2_fp8_fp16_quarter_tile_outer_product<0b1, 0b0, mnemonic, ZPR8Mul2_Lo, ZZ_b_mul_r_Hi>;
 
   // Multiple vectors
-  def _M2Z2Z_BtoH : sme2_fp8_fp16_quarter_tile_outer_product<1, 1, mnemonic, ZZ_b_mul_r_Lo, ZZ_b_mul_r_Hi>;
+  def _M2Z2Z_BtoH : sme2_fp8_fp16_quarter_tile_outer_product<0b1, 0b1, mnemonic, ZZ_b_mul_r_Lo, ZZ_b_mul_r_Hi>;
 }
