@@ -4,10 +4,10 @@
 // memref.alloc exists here because sub-byte vector data types such as i2
 // are currently not supported as input arguments.
 
-// CHECK: #map = affine_map<()[s0, s1] -> ((s0 * 3 + s1) floordiv 4)>
-// CHECK: #map1 = affine_map<()[s0, s1] -> ((s0 * 3 + s1) mod 4)>
-// CHECK: #map2 = affine_map<()[s0] -> ((s0 * 3 + 2) floordiv 4)>
-// CHECK: #map3 = affine_map<()[s0] -> (s0 * 3 - ((s0 * 3 + 2) floordiv 4) * 4 + 2)>
+// CHECK: #[[$MAP:.+]] = affine_map<()[s0, s1] -> ((s0 * 3 + s1) floordiv 4)>
+// CHECK: #[[$MAP1:.+]] = affine_map<()[s0, s1] -> ((s0 * 3 + s1) mod 4)>
+// CHECK: #[[$MAP2:.+]] = affine_map<()[s0] -> ((s0 * 3 + 2) floordiv 4)>
+// CHECK: #[[$MAP3:.+]] = affine_map<()[s0] -> (s0 * 3 - ((s0 * 3 + 2) floordiv 4) * 4 + 2)>
 
 func.func @vector_load_i2() -> vector<3x3xi2> {
   %0 = memref.alloc() : memref<3x3xi2>
@@ -88,8 +88,8 @@ func.func @vector_load_i2_dynamic_indexing(%idx1: index, %idx2: index) -> vector
 // CHECK-LABEL: func @vector_load_i2_dynamic_indexing(
 // CHECK-SAME: %[[ARG0:.+]]: index, %[[ARG1:.+]]: index) -> vector<3xi2>
 // CHECK: %[[ALLOC:.+]]= memref.alloc() : memref<3xi8>
-// CHECK: %[[LOADADDR1:.+]] = affine.apply #map()[%[[ARG0]], %[[ARG1]]]
-// CHECK: %[[LOADADDR2:.+]] = affine.apply #map1()[%[[ARG0]], %[[ARG1]]]
+// CHECK: %[[LOADADDR1:.+]] = affine.apply #[[$MAP]]()[%[[ARG0]], %[[ARG1]]]
+// CHECK: %[[LOADADDR2:.+]] = affine.apply #[[$MAP1]]()[%[[ARG0]], %[[ARG1]]]
 // CHECK: %[[EMULATED_LOAD:.+]] = vector.load %alloc[%[[LOADADDR1]]] : memref<3xi8>, vector<2xi8>
 // CHECK: %[[BITCAST:.+]] = vector.bitcast %[[EMULATED_LOAD]] : vector<2xi8> to vector<8xi2>
 // CHECK: %[[ZERO:.+]] = arith.constant dense<0> : vector<3xi2>
@@ -114,8 +114,8 @@ func.func @vector_load_i2_dynamic_indexing_mixed(%idx: index) -> vector<3xi2> {
 // CHECK-LABEL: func @vector_load_i2_dynamic_indexing_mixed(
 // CHECK-SAME: %[[ARG0:.+]]: index) -> vector<3xi2>
 // CHECK: %[[ALLOC:.+]]= memref.alloc() : memref<3xi8>
-// CHECK: %[[LOADADDR1:.+]] = affine.apply #map2()[%[[ARG0]]]
-// CHECK: %[[LOADADDR2:.+]] = affine.apply #map3()[%[[ARG0]]]
+// CHECK: %[[LOADADDR1:.+]] = affine.apply #[[$MAP2]]()[%[[ARG0]]]
+// CHECK: %[[LOADADDR2:.+]] = affine.apply #[[$MAP3]]()[%[[ARG0]]]
 // CHECK: %[[EMULATED_LOAD:.+]] = vector.load %alloc[%[[LOADADDR1]]] : memref<3xi8>, vector<2xi8>
 // CHECK: %[[BITCAST:.+]] = vector.bitcast %[[EMULATED_LOAD]] : vector<2xi8> to vector<8xi2>
 // CHECK: %[[ZERO:.+]] = arith.constant dense<0> : vector<3xi2>
@@ -140,8 +140,8 @@ func.func @vector_transfer_read_i2_dynamic_indexing(%idx1: index, %idx2: index) 
 // CHECK-SAME: %[[ARG0:.+]]: index, %[[ARG1:.+]]: index) -> vector<3xi2>
 // CHECK: %[[ALLOC:.+]] = memref.alloc() : memref<3xi8>
 // CHECK: %[[C0:.+]] = arith.extui %c0_i2 : i2 to i8
-// CHECK: %[[LOADADDR1:.+]] = affine.apply #map()[%[[ARG0]], %[[ARG1]]]
-// CHECK: %[[LOADADDR2:.+]] = affine.apply #map1()[%[[ARG0]], %[[ARG1]]]
+// CHECK: %[[LOADADDR1:.+]] = affine.apply #[[$MAP]]()[%[[ARG0]], %[[ARG1]]]
+// CHECK: %[[LOADADDR2:.+]] = affine.apply #[[$MAP1]]()[%[[ARG0]], %[[ARG1]]]
 // CHECK: %[[READ:.+]] = vector.transfer_read %[[ALLOC]][%[[LOADADDR1]]], %[[C0]] : memref<3xi8>, vector<2xi8>
 // CHECK: %[[BITCAST:.+]] = vector.bitcast %[[READ]] : vector<2xi8> to vector<8xi2>
 // CHECK: %[[CST:.+]] = arith.constant dense<0> : vector<3xi2>
@@ -167,8 +167,8 @@ func.func @vector_transfer_read_i2_dynamic_indexing_mixed(%idx1: index) -> vecto
 // CHECK-SAME: %[[ARG0:.+]]: index) -> vector<3xi2>
 // CHECK: %[[ALLOC:.+]] = memref.alloc() : memref<3xi8>
 // CHECK: %[[C0:.+]] = arith.extui %c0_i2 : i2 to i8
-// CHECK: %[[LOADADDR1:.+]] = affine.apply #map2()[%[[ARG0]]]
-// CHECK: %[[LOADADDR2:.+]] = affine.apply #map3()[%[[ARG0]]]
+// CHECK: %[[LOADADDR1:.+]] = affine.apply #[[$MAP2]]()[%[[ARG0]]]
+// CHECK: %[[LOADADDR2:.+]] = affine.apply #[[$MAP3]]()[%[[ARG0]]]
 // CHECK: %[[READ:.+]] = vector.transfer_read %[[ALLOC]][%[[LOADADDR1]]], %[[C0]] : memref<3xi8>, vector<2xi8>
 // CHECK: %[[BITCAST:.+]] = vector.bitcast %[[READ]] : vector<2xi8> to vector<8xi2>
 // CHECK: %[[CST:.+]] = arith.constant dense<0> : vector<3xi2>
