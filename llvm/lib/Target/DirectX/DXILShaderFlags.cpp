@@ -71,11 +71,10 @@ static void updateFlags(ComputedShaderFlags &CSF, const Instruction &I) {
 }
 
 static DXILModuleShaderFlagsInfo computeFlags(const Module &M) {
-  DXILModuleShaderFlagsInfo MSFI;
   // Construct a sorted list of functions in the module. Walk the sorted list to
   // create a list of <Function, Shader Flags Mask> pairs. This list is thus
   // sorted at construction time and may be looked up using binary search.
-  SmallVector<Function const *> FuncList;
+  SmallVector<const Function *> FuncList;
   for (const auto &F : M.getFunctionList()) {
     if (F.isDeclaration())
       continue;
@@ -83,19 +82,16 @@ static DXILModuleShaderFlagsInfo computeFlags(const Module &M) {
   }
   llvm::sort(FuncList);
 
-  MSFI.clear();
+  DXILModuleShaderFlagsInfo MSFI;
 
   // Collect shader flags for each of the functions
-  for (const auto &F : FuncList) {
+  for (const Function *F : FuncList) {
     ComputedShaderFlags CSF{};
     for (const auto &BB : *F)
       for (const auto &I : BB)
         updateFlags(CSF, I);
     // Insert shader flag mask for function F
-    if (!MSFI.insertInorderFunctionFlags(F, CSF)) {
-      M.getContext().diagnose(DiagnosticInfoShaderFlags(
-          M, "Failed to add shader flags mask for function" + F->getName()));
-    }
+    MSFI.insertInorderFunctionFlags(F, CSF);
   }
   return MSFI;
 }
@@ -118,43 +114,28 @@ void ComputedShaderFlags::print(raw_ostream &OS) const {
   OS << ";\n";
 }
 
-void DXILModuleShaderFlagsInfo::clear() {
-  ModuleFlags = ComputedShaderFlags{};
-  FunctionFlags.clear();
-}
-
 /// Insert the pair <Func, FlagMask> into the sorted vector
 /// FunctionFlags. The insertion is expected to be in-order and hence
 /// is done at the end of the already sorted list.
-[[nodiscard]] bool DXILModuleShaderFlagsInfo::insertInorderFunctionFlags(
+void DXILModuleShaderFlagsInfo::insertInorderFunctionFlags(
     const Function *Func, ComputedShaderFlags FlagMask) {
-  std::pair<Function const *, ComputedShaderFlags> V{Func, {}};
-  auto Iter = llvm::lower_bound(FunctionFlags, V);
-  if (Iter != FunctionFlags.end())
-    return false;
-
   FunctionFlags.push_back({Func, FlagMask});
-  return true;
 }
 
-SmallVector<std::pair<Function const *, ComputedShaderFlags>>
+const SmallVector<std::pair<Function const *, ComputedShaderFlags>> &
 DXILModuleShaderFlagsInfo::getFunctionFlags() const {
   return FunctionFlags;
 }
 
-ComputedShaderFlags DXILModuleShaderFlagsInfo::getModuleFlags() const {
+const ComputedShaderFlags &DXILModuleShaderFlagsInfo::getModuleFlags() const {
   return ModuleFlags;
 }
 
 Expected<const ComputedShaderFlags &>
 DXILModuleShaderFlagsInfo::getShaderFlagsMask(const Function *Func) const {
   std::pair<Function const *, ComputedShaderFlags> V{Func, {}};
-  // It is correct to delegate comparison of two pairs, say P1, P2, to default
-  // operator< for pairs that returns the evaluation of (P1.first < P2.first)
-  // viz., comparison of Function pointers - the same comparison criterion used
-  // for sorting module functions walked to form FunctionFLags vector..
-  auto Iter = llvm::lower_bound(FunctionFlags, V);
-  if (Iter == FunctionFlags.end()) {
+  const auto *Iter = llvm::lower_bound(FunctionFlags, V);
+  if (Iter == FunctionFlags.end() || Iter->first != Func) {
     return createStringError("Shader Flags information of Function '" +
                              Func->getName() + "' not found");
   }

@@ -77,12 +77,10 @@ struct DXILModuleShaderFlagsInfo {
   Expected<const ComputedShaderFlags &>
   getShaderFlagsMask(const Function *Func) const;
   bool hasShaderFlagsMask(const Function *Func) const;
-  void clear();
-  ComputedShaderFlags getModuleFlags() const;
-  SmallVector<std::pair<Function const *, ComputedShaderFlags>>
+  const ComputedShaderFlags &getModuleFlags() const;
+  const SmallVector<std::pair<Function const *, ComputedShaderFlags>> &
   getFunctionFlags() const;
-  [[nodiscard]] bool insertInorderFunctionFlags(const Function *,
-                                                ComputedShaderFlags);
+  void insertInorderFunctionFlags(const Function *, ComputedShaderFlags);
 
 private:
   // Shader Flag mask representing module-level properties. These are
