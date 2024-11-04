@@ -245,6 +245,13 @@ static cl::opt<bool, true> LateCFGStructurize(
   cl::location(AMDGPUTargetMachine::EnableLateStructurizeCFG),
   cl::Hidden);
 
+// Disable structurizer-based control-flow lowering in order to test convergence
+// control tokens. This should eventually be replaced by the wave-transform.
+static cl::opt<bool, true> DisableStructurizer(
+    "amdgpu-disable-structurizer",
+    cl::desc("Disable structurizer for experiments; produces unusable code"),
+    cl::location(AMDGPUTargetMachine::DisableStructurizer), cl::ReallyHidden);
+
 // Enable lib calls simplifications
 static cl::opt<bool> EnableLibCallSimplify(
   "amdgpu-simplify-libcall",
@@ -461,7 +468,7 @@ createGCNMaxOccupancyMachineScheduler(MachineSchedContext *C) {
   DAG->addMutation(createLoadClusterDAGMutation(DAG->TII, DAG->TRI));
   if (ST.shouldClusterStores())
     DAG->addMutation(createStoreClusterDAGMutation(DAG->TII, DAG->TRI));
-  DAG->addMutation(createIGroupLPDAGMutation(/*IsPostRA=*/false));
+  DAG->addMutation(createIGroupLPDAGMutation(AMDGPU::SchedulingPhase::Initial));
   DAG->addMutation(createAMDGPUMacroFusionDAGMutation());
   DAG->addMutation(createAMDGPUExportClusteringDAGMutation());
   return DAG;
@@ -471,7 +478,7 @@ static ScheduleDAGInstrs *
 createGCNMaxILPMachineScheduler(MachineSchedContext *C) {
   ScheduleDAGMILive *DAG =
       new GCNScheduleDAGMILive(C, std::make_unique<GCNMaxILPSchedStrategy>(C));
-  DAG->addMutation(createIGroupLPDAGMutation(/*IsPostRA=*/false));
+  DAG->addMutation(createIGroupLPDAGMutation(AMDGPU::SchedulingPhase::Initial));
   return DAG;
 }
 
@@ -591,6 +598,7 @@ AMDGPUTargetMachine::AMDGPUTargetMachine(const Target &T, const Triple &TT,
 bool AMDGPUTargetMachine::EnableLateStructurizeCFG = false;
 bool AMDGPUTargetMachine::EnableFunctionCalls = false;
 bool AMDGPUTargetMachine::EnableLowerModuleLDS = true;
+bool AMDGPUTargetMachine::DisableStructurizer = false;
 
 AMDGPUTargetMachine::~AMDGPUTargetMachine() = default;
 
@@ -934,7 +942,8 @@ public:
     if (ST.shouldClusterStores())
       DAG->addMutation(createStoreClusterDAGMutation(DAG->TII, DAG->TRI));
     DAG->addMutation(ST.createFillMFMAShadowMutation(DAG->TII));
-    DAG->addMutation(createIGroupLPDAGMutation(/*IsPostRA=*/true));
+    DAG->addMutation(
+        createIGroupLPDAGMutation(AMDGPU::SchedulingPhase::PostRA));
     if (isPassEnabled(EnableVOPD, CodeGenOptLevel::Less))
       DAG->addMutation(createVOPDPairingMutation());
     return DAG;
@@ -1055,7 +1064,7 @@ void AMDGPUPassConfig::addIRPasses() {
     addPass(createAMDGPUAtomicOptimizerPass(AMDGPUAtomicOptimizerStrategy));
   }
 
-  addPass(createAtomicExpandPass());
+  addPass(createAtomicExpandLegacyPass());
 
   if (TM.getOptLevel() > CodeGenOptLevel::None) {
     addPass(createAMDGPUPromoteAlloca());
@@ -1185,7 +1194,7 @@ bool GCNPassConfig::addPreISel() {
   // Merge divergent exit nodes. StructurizeCFG won't recognize the multi-exit
   // regions formed by them.
   addPass(&AMDGPUUnifyDivergentExitNodesID);
-  if (!LateCFGStructurize) {
+  if (!LateCFGStructurize && !DisableStructurizer) {
     if (EnableStructurizerWorkarounds) {
       addPass(createFixIrreduciblePass());
       addPass(createUnifyLoopExitsPass());
@@ -1193,7 +1202,7 @@ bool GCNPassConfig::addPreISel() {
     addPass(createStructurizeCFGPass(false)); // true -> SkipUniformRegions
   }
   addPass(createAMDGPUAnnotateUniformValues());
-  if (!LateCFGStructurize) {
+  if (!LateCFGStructurize && !DisableStructurizer) {
     addPass(createSIAnnotateControlFlowPass());
     // TODO: Move this right after structurizeCFG to avoid extra divergence
     // analysis. This depends on stopping SIAnnotateControlFlow from making

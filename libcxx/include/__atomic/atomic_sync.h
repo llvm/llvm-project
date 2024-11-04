@@ -18,7 +18,11 @@
 #include <__memory/addressof.h>
 #include <__thread/poll_with_backoff.h>
 #include <__thread/support.h>
+#include <__type_traits/conjunction.h>
 #include <__type_traits/decay.h>
+#include <__type_traits/invoke.h>
+#include <__type_traits/void_t.h>
+#include <__utility/declval.h>
 #include <cstring>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
@@ -27,15 +31,40 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-template <class _Atp, class _Poll>
-struct __libcpp_atomic_wait_poll_impl {
-  _Atp* __a_;
+// The customisation points to enable the following functions:
+// - __atomic_wait
+// - __atomic_wait_unless
+// - __atomic_notify_one
+// - __atomic_notify_all
+// Note that std::atomic<T>::wait was back-ported to C++03
+// The below implementations look ugly to support C++03
+template <class _Tp, class = void>
+struct __atomic_waitable_traits {
+  template <class _AtomicWaitable>
+  static void __atomic_load(_AtomicWaitable&&, memory_order) = delete;
+
+  template <class _AtomicWaitable>
+  static void __atomic_contention_address(_AtomicWaitable&&) = delete;
+};
+
+template <class _Tp, class = void>
+struct __atomic_waitable : false_type {};
+
+template <class _Tp>
+struct __atomic_waitable< _Tp,
+                          __void_t<decltype(__atomic_waitable_traits<__decay_t<_Tp> >::__atomic_load(
+                                       std::declval<const _Tp&>(), std::declval<memory_order>())),
+                                   decltype(__atomic_waitable_traits<__decay_t<_Tp> >::__atomic_contention_address(
+                                       std::declval<const _Tp&>()))> > : true_type {};
+
+template <class _AtomicWaitable, class _Poll>
+struct __atomic_wait_poll_impl {
+  const _AtomicWaitable& __a_;
   _Poll __poll_;
   memory_order __order_;
 
-  _LIBCPP_AVAILABILITY_SYNC
   _LIBCPP_HIDE_FROM_ABI bool operator()() const {
-    auto __current_val = std::__cxx_atomic_load(__a_, __order_);
+    auto __current_val = __atomic_waitable_traits<__decay_t<_AtomicWaitable> >::__atomic_load(__a_, __order_);
     return __poll_(__current_val);
   }
 };
@@ -56,42 +85,45 @@ __libcpp_atomic_monitor(__cxx_atomic_contention_t const volatile*);
 _LIBCPP_AVAILABILITY_SYNC _LIBCPP_EXPORTED_FROM_ABI void
 __libcpp_atomic_wait(__cxx_atomic_contention_t const volatile*, __cxx_contention_t);
 
-template <class _Atp, class _Poll>
-struct __libcpp_atomic_wait_backoff_impl {
-  _Atp* __a_;
+template <class _AtomicWaitable, class _Poll>
+struct __atomic_wait_backoff_impl {
+  const _AtomicWaitable& __a_;
   _Poll __poll_;
   memory_order __order_;
 
+  using __waitable_traits = __atomic_waitable_traits<__decay_t<_AtomicWaitable> >;
+
   _LIBCPP_AVAILABILITY_SYNC
   _LIBCPP_HIDE_FROM_ABI bool
-  __poll_or_get_monitor(__cxx_atomic_contention_t const volatile*, __cxx_contention_t& __monitor) const {
-    // In case the atomic can be waited on directly, the monitor value is just
-    // the value of the atomic.
+  __update_monitor_val_and_poll(__cxx_atomic_contention_t const volatile*, __cxx_contention_t& __monitor_val) const {
+    // In case the contention type happens to be __cxx_atomic_contention_t, i.e. __cxx_atomic_impl<int64_t>,
+    // the platform wait is directly monitoring the atomic value itself.
     // `__poll_` takes the current value of the atomic as an in-out argument
     // to potentially modify it. After it returns, `__monitor` has a value
     // which can be safely waited on by `std::__libcpp_atomic_wait` without any
     // ABA style issues.
-    __monitor = std::__cxx_atomic_load(__a_, __order_);
-    return __poll_(__monitor);
+    __monitor_val = __waitable_traits::__atomic_load(__a_, __order_);
+    return __poll_(__monitor_val);
   }
 
   _LIBCPP_AVAILABILITY_SYNC
-  _LIBCPP_HIDE_FROM_ABI bool __poll_or_get_monitor(void const volatile*, __cxx_contention_t& __monitor) const {
-    // In case we must wait on an atomic from the pool, the monitor comes from
-    // `std::__libcpp_atomic_monitor`.
-    // Only then we may read from `__a_`. This is the "event count" pattern.
-    __monitor          = std::__libcpp_atomic_monitor(__a_);
-    auto __current_val = std::__cxx_atomic_load(__a_, __order_);
+  _LIBCPP_HIDE_FROM_ABI bool
+  __update_monitor_val_and_poll(void const volatile* __contention_address, __cxx_contention_t& __monitor_val) const {
+    // In case the contention type is anything else, platform wait is monitoring a __cxx_atomic_contention_t
+    // from the global pool, the monitor comes from __libcpp_atomic_monitor
+    __monitor_val      = std::__libcpp_atomic_monitor(__contention_address);
+    auto __current_val = __waitable_traits::__atomic_load(__a_, __order_);
     return __poll_(__current_val);
   }
 
   _LIBCPP_AVAILABILITY_SYNC
   _LIBCPP_HIDE_FROM_ABI bool operator()(chrono::nanoseconds __elapsed) const {
     if (__elapsed > chrono::microseconds(64)) {
-      __cxx_contention_t __monitor;
-      if (__poll_or_get_monitor(__a_, __monitor))
+      auto __contention_address = __waitable_traits::__atomic_contention_address(__a_);
+      __cxx_contention_t __monitor_val;
+      if (__update_monitor_val_and_poll(__contention_address, __monitor_val))
         return true;
-      std::__libcpp_atomic_wait(__a_, __monitor);
+      std::__libcpp_atomic_wait(__contention_address, __monitor_val);
     } else if (__elapsed > chrono::microseconds(4))
       __libcpp_thread_yield();
     else {
@@ -105,28 +137,43 @@ struct __libcpp_atomic_wait_backoff_impl {
 // predicate (is the loaded value unequal to `old`?), the predicate function is
 // specified as an argument. The loaded value is given as an in-out argument to
 // the predicate. If the predicate function returns `true`,
-// `_cxx_atomic_wait_unless` will return. If the predicate function returns
+// `__atomic_wait_unless` will return. If the predicate function returns
 // `false`, it must set the argument to its current understanding of the atomic
 // value. The predicate function must not return `false` spuriously.
-template <class _Atp, class _Poll>
+template <class _AtomicWaitable, class _Poll>
 _LIBCPP_AVAILABILITY_SYNC _LIBCPP_HIDE_FROM_ABI void
-__cxx_atomic_wait_unless(_Atp* __a, _Poll&& __poll, memory_order __order) {
-  __libcpp_atomic_wait_poll_impl<_Atp, __decay_t<_Poll> > __poll_fn       = {__a, __poll, __order};
-  __libcpp_atomic_wait_backoff_impl<_Atp, __decay_t<_Poll> > __backoff_fn = {__a, __poll, __order};
-  (void)std::__libcpp_thread_poll_with_backoff(__poll_fn, __backoff_fn);
+__atomic_wait_unless(const _AtomicWaitable& __a, _Poll&& __poll, memory_order __order) {
+  static_assert(__atomic_waitable<_AtomicWaitable>::value, "");
+  __atomic_wait_poll_impl<_AtomicWaitable, __decay_t<_Poll> > __poll_impl     = {__a, __poll, __order};
+  __atomic_wait_backoff_impl<_AtomicWaitable, __decay_t<_Poll> > __backoff_fn = {__a, __poll, __order};
+  std::__libcpp_thread_poll_with_backoff(__poll_impl, __backoff_fn);
+}
+
+template <class _AtomicWaitable>
+_LIBCPP_AVAILABILITY_SYNC _LIBCPP_HIDE_FROM_ABI void __atomic_notify_one(const _AtomicWaitable& __a) {
+  static_assert(__atomic_waitable<_AtomicWaitable>::value, "");
+  std::__cxx_atomic_notify_one(__atomic_waitable_traits<__decay_t<_AtomicWaitable> >::__atomic_contention_address(__a));
+}
+
+template <class _AtomicWaitable>
+_LIBCPP_AVAILABILITY_SYNC _LIBCPP_HIDE_FROM_ABI void __atomic_notify_all(const _AtomicWaitable& __a) {
+  static_assert(__atomic_waitable<_AtomicWaitable>::value, "");
+  std::__cxx_atomic_notify_all(__atomic_waitable_traits<__decay_t<_AtomicWaitable> >::__atomic_contention_address(__a));
 }
 
 #else // _LIBCPP_HAS_NO_THREADS
 
-template <class _Tp>
-_LIBCPP_HIDE_FROM_ABI void __cxx_atomic_notify_all(__cxx_atomic_impl<_Tp> const volatile*) {}
-template <class _Tp>
-_LIBCPP_HIDE_FROM_ABI void __cxx_atomic_notify_one(__cxx_atomic_impl<_Tp> const volatile*) {}
-template <class _Atp, class _Poll>
-_LIBCPP_HIDE_FROM_ABI void __cxx_atomic_wait_unless(_Atp* __a, _Poll&& __poll, memory_order __order) {
-  __libcpp_atomic_wait_poll_impl<_Atp, __decay_t<_Poll> > __poll_fn = {__a, __poll, __order};
-  (void)std::__libcpp_thread_poll_with_backoff(__poll_fn, __spinning_backoff_policy());
+template <class _AtomicWaitable, class _Poll>
+_LIBCPP_HIDE_FROM_ABI void __atomic_wait_unless(const _AtomicWaitable& __a, _Poll&& __poll, memory_order __order) {
+  __atomic_wait_poll_impl<_AtomicWaitable, __decay_t<_Poll> > __poll_fn = {__a, __poll, __order};
+  std::__libcpp_thread_poll_with_backoff(__poll_fn, __spinning_backoff_policy());
 }
+
+template <class _AtomicWaitable>
+_LIBCPP_HIDE_FROM_ABI void __atomic_notify_one(const _AtomicWaitable&) {}
+
+template <class _AtomicWaitable>
+_LIBCPP_HIDE_FROM_ABI void __atomic_notify_all(const _AtomicWaitable&) {}
 
 #endif // _LIBCPP_HAS_NO_THREADS
 
@@ -137,17 +184,18 @@ _LIBCPP_HIDE_FROM_ABI bool __cxx_nonatomic_compare_equal(_Tp const& __lhs, _Tp c
 
 template <class _Tp>
 struct __atomic_compare_unequal_to {
-  _Tp __val;
-  _LIBCPP_HIDE_FROM_ABI bool operator()(_Tp& __current_val) const {
-    return !std::__cxx_nonatomic_compare_equal(__current_val, __val);
+  _Tp __val_;
+  _LIBCPP_HIDE_FROM_ABI bool operator()(const _Tp& __arg) const {
+    return !std::__cxx_nonatomic_compare_equal(__arg, __val_);
   }
 };
 
-template <class _Atp, class _Tp>
+template <class _AtomicWaitable, class _Up>
 _LIBCPP_AVAILABILITY_SYNC _LIBCPP_HIDE_FROM_ABI void
-__cxx_atomic_wait(_Atp* __a, _Tp const __val, memory_order __order) {
-  __atomic_compare_unequal_to<_Tp> __poll_fn = {__val};
-  std::__cxx_atomic_wait_unless(__a, __poll_fn, __order);
+__atomic_wait(_AtomicWaitable& __a, _Up __val, memory_order __order) {
+  static_assert(__atomic_waitable<_AtomicWaitable>::value, "");
+  __atomic_compare_unequal_to<_Up> __nonatomic_equal = {__val};
+  std::__atomic_wait_unless(__a, __nonatomic_equal, __order);
 }
 
 _LIBCPP_END_NAMESPACE_STD

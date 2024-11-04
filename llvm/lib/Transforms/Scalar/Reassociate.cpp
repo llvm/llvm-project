@@ -270,7 +270,8 @@ static BinaryOperator *CreateMul(Value *S1, Value *S2, const Twine &Name,
 }
 
 static Instruction *CreateNeg(Value *S1, const Twine &Name,
-                              Instruction *InsertBefore, Value *FlagsOp) {
+                              BasicBlock::iterator InsertBefore,
+                              Value *FlagsOp) {
   if (S1->getType()->isIntOrIntVectorTy())
     return BinaryOperator::CreateNeg(S1, Name, InsertBefore);
 
@@ -958,7 +959,8 @@ static Value *NegateValue(Value *V, Instruction *BI,
 
   // Insert a 'neg' instruction that subtracts the value from zero to get the
   // negation.
-  Instruction *NewNeg = CreateNeg(V, V->getName() + ".neg", BI, BI);
+  Instruction *NewNeg =
+      CreateNeg(V, V->getName() + ".neg", BI->getIterator(), BI);
   ToRedo.insert(NewNeg);
   return NewNeg;
 }
@@ -1246,7 +1248,7 @@ Value *ReassociatePass::RemoveFactorFromExpression(Value *V, Value *Factor) {
   }
 
   if (NeedsNegate)
-    V = CreateNeg(V, "neg", &*InsertPt, BO);
+    V = CreateNeg(V, "neg", InsertPt, BO);
 
   return V;
 }

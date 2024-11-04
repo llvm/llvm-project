@@ -149,8 +149,7 @@ CompilerInvocationBase::CompilerInvocationBase()
       FSOpts(std::make_shared<FileSystemOptions>()),
       FrontendOpts(std::make_shared<FrontendOptions>()),
       DependencyOutputOpts(std::make_shared<DependencyOutputOptions>()),
-      PreprocessorOutputOpts(std::make_shared<PreprocessorOutputOptions>()),
-      InstallAPIOpts(std::make_shared<InstallAPIOptions>()) {}
+      PreprocessorOutputOpts(std::make_shared<PreprocessorOutputOptions>()) {}
 
 CompilerInvocationBase &
 CompilerInvocationBase::deep_copy_assign(const CompilerInvocationBase &X) {
@@ -168,7 +167,6 @@ CompilerInvocationBase::deep_copy_assign(const CompilerInvocationBase &X) {
     FrontendOpts = make_shared_copy(X.getFrontendOpts());
     DependencyOutputOpts = make_shared_copy(X.getDependencyOutputOpts());
     PreprocessorOutputOpts = make_shared_copy(X.getPreprocessorOutputOpts());
-    InstallAPIOpts = make_shared_copy(X.getInstallAPIOpts());
   }
   return *this;
 }
@@ -189,8 +187,18 @@ CompilerInvocationBase::shallow_copy_assign(const CompilerInvocationBase &X) {
     FrontendOpts = X.FrontendOpts;
     DependencyOutputOpts = X.DependencyOutputOpts;
     PreprocessorOutputOpts = X.PreprocessorOutputOpts;
-    InstallAPIOpts = X.InstallAPIOpts;
   }
+  return *this;
+}
+
+CompilerInvocation::CompilerInvocation(const CowCompilerInvocation &X)
+    : CompilerInvocationBase(EmptyConstructor{}) {
+  CompilerInvocationBase::deep_copy_assign(X);
+}
+
+CompilerInvocation &
+CompilerInvocation::operator=(const CowCompilerInvocation &X) {
+  CompilerInvocationBase::deep_copy_assign(X);
   return *this;
 }
 
@@ -1978,14 +1986,6 @@ bool CompilerInvocation::ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args,
     Opts.LinkBitcodeFiles.push_back(F);
   }
 
-  if (Arg *A = Args.getLastArg(OPT_ftlsmodel_EQ)) {
-    if (T.isOSAIX()) {
-      StringRef Name = A->getValue();
-      if (Name == "local-dynamic")
-        Diags.Report(diag::err_aix_unsupported_tls_model) << Name;
-    }
-  }
-
   if (Arg *A = Args.getLastArg(OPT_fdenormal_fp_math_EQ)) {
     StringRef Val = A->getValue();
     Opts.FPDenormalMode = llvm::parseDenormalFPAttribute(Val);
@@ -2159,34 +2159,6 @@ bool CompilerInvocation::ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args,
     Diags.Report(diag::err_drv_amdgpu_ieee_without_no_honor_nans);
 
   return Diags.getNumErrors() == NumErrorsBefore;
-}
-
-static bool ParseInstallAPIArgs(InstallAPIOptions &Opts, ArgList &Args,
-                                DiagnosticsEngine &Diags,
-                                frontend::ActionKind Action) {
-  unsigned NumErrorsBefore = Diags.getNumErrors();
-
-  InstallAPIOptions &InstallAPIOpts = Opts;
-#define INSTALLAPI_OPTION_WITH_MARSHALLING(...)                                \
-  PARSE_OPTION_WITH_MARSHALLING(Args, Diags, __VA_ARGS__)
-#include "clang/Driver/Options.inc"
-#undef INSTALLAPI_OPTION_WITH_MARSHALLING
-  if (Arg *A = Args.getLastArg(options::OPT_current__version))
-    Opts.CurrentVersion.parse64(A->getValue());
-
-  return Diags.getNumErrors() == NumErrorsBefore;
-}
-
-static void GenerateInstallAPIArgs(const InstallAPIOptions &Opts,
-                                   ArgumentConsumer Consumer) {
-  const InstallAPIOptions &InstallAPIOpts = Opts;
-#define INSTALLAPI_OPTION_WITH_MARSHALLING(...)                                \
-  GENERATE_OPTION_WITH_MARSHALLING(Consumer, __VA_ARGS__)
-#include "clang/Driver/Options.inc"
-#undef INSTALLAPI_OPTION_WITH_MARSHALLING
-  if (!Opts.CurrentVersion.empty())
-    GenerateArg(Consumer, OPT_current__version,
-                std::string(Opts.CurrentVersion));
 }
 
 static void GenerateDependencyOutputArgs(const DependencyOutputOptions &Opts,
@@ -2588,7 +2560,6 @@ static const auto &getFrontendActionTable() {
       {frontend::GeneratePCH, OPT_emit_pch},
       {frontend::GenerateInterfaceStubs, OPT_emit_interface_stubs},
       {frontend::InitOnly, OPT_init_only},
-      {frontend::InstallAPI, OPT_installapi},
       {frontend::ParseSyntaxOnly, OPT_fsyntax_only},
       {frontend::ModuleFileInfo, OPT_module_file_info},
       {frontend::VerifyPCH, OPT_verify_pch},
@@ -4312,7 +4283,6 @@ static bool isStrictlyPreprocessorAction(frontend::ActionKind Action) {
   case frontend::GenerateHeaderUnit:
   case frontend::GeneratePCH:
   case frontend::GenerateInterfaceStubs:
-  case frontend::InstallAPI:
   case frontend::ParseSyntaxOnly:
   case frontend::ModuleFileInfo:
   case frontend::VerifyPCH:
@@ -4687,11 +4657,6 @@ bool CompilerInvocation::CreateFromArgsImpl(
       Res.getDependencyOutputOpts().Targets.empty())
     Diags.Report(diag::err_fe_dependency_file_requires_MT);
 
-  if (Args.hasArg(OPT_installapi)) {
-    ParseInstallAPIArgs(Res.getInstallAPIOpts(), Args, Diags,
-                        Res.getFrontendOpts().ProgramAction);
-  }
-
   // If sanitizer is enabled, disable OPT_ffine_grained_bitfield_accesses.
   if (Res.getCodeGenOpts().FineGrainedBitfieldAccesses &&
       !Res.getLangOpts().Sanitize.empty()) {
@@ -4882,7 +4847,6 @@ void CompilerInvocationBase::generateCC1CommandLine(
   GeneratePreprocessorOutputArgs(getPreprocessorOutputOpts(), Consumer,
                                  getFrontendOpts().ProgramAction);
   GenerateDependencyOutputArgs(getDependencyOutputOpts(), Consumer);
-  GenerateInstallAPIArgs(getInstallAPIOpts(), Consumer);
 }
 
 std::vector<std::string> CompilerInvocationBase::getCC1CommandLine() const {

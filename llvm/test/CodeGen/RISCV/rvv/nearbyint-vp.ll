@@ -468,7 +468,7 @@ define <vscale x 32 x half> @vp_nearbyint_nxv32f16(<vscale x 32 x half> %va, <vs
 ; ZVFHMIN-NEXT:    slli a1, a1, 3
 ; ZVFHMIN-NEXT:    sub sp, sp, a1
 ; ZVFHMIN-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x08, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 8 * vlenb
-; ZVFHMIN-NEXT:    vmv1r.v v1, v0
+; ZVFHMIN-NEXT:    vmv1r.v v7, v0
 ; ZVFHMIN-NEXT:    csrr a2, vlenb
 ; ZVFHMIN-NEXT:    slli a1, a2, 1
 ; ZVFHMIN-NEXT:    sub a3, a0, a1
@@ -507,13 +507,13 @@ define <vscale x 32 x half> @vp_nearbyint_nxv32f16(<vscale x 32 x half> %va, <vs
 ; ZVFHMIN-NEXT:    vl8r.v v16, (a1) # Unknown-size Folded Reload
 ; ZVFHMIN-NEXT:    vfwcvt.f.f.v v24, v16
 ; ZVFHMIN-NEXT:    vsetvli zero, a0, e32, m8, ta, ma
-; ZVFHMIN-NEXT:    vmv1r.v v0, v1
+; ZVFHMIN-NEXT:    vmv1r.v v0, v7
 ; ZVFHMIN-NEXT:    vfabs.v v16, v24, v0.t
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m8, ta, mu
-; ZVFHMIN-NEXT:    vmflt.vf v1, v16, fa5, v0.t
+; ZVFHMIN-NEXT:    vmflt.vf v7, v16, fa5, v0.t
 ; ZVFHMIN-NEXT:    frflags a0
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m8, ta, ma
-; ZVFHMIN-NEXT:    vmv1r.v v0, v1
+; ZVFHMIN-NEXT:    vmv1r.v v0, v7
 ; ZVFHMIN-NEXT:    vfcvt.x.f.v v16, v24, v0.t
 ; ZVFHMIN-NEXT:    vfcvt.f.x.v v16, v16, v0.t
 ; ZVFHMIN-NEXT:    fsflags a0

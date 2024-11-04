@@ -569,10 +569,3 @@ int kernel_within_loop(int *a, int *b, int N, int num_iters) {
 // CHECK:       omp.precond.end:
 // CHECK-NEXT:    ret void
 //
-//
-// CHECK-LABEL: define internal void @.omp_offloading.requires_reg
-// CHECK-SAME: () #[[ATTR4:[0-9]+]] {
-// CHECK-NEXT:  entry:
-// CHECK-NEXT:    call void @__tgt_register_requires(i64 1)
-// CHECK-NEXT:    ret void
-//

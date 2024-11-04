@@ -1911,7 +1911,7 @@ bool llvm::LowerDbgDeclare(Function &F) {
     for (Instruction &BI : FI) {
       if (auto *DDI = dyn_cast<DbgDeclareInst>(&BI))
         Dbgs.push_back(DDI);
-      for (DPValue &DPV : BI.getDbgValueRange()) {
+      for (DPValue &DPV : DPValue::filter(BI.getDbgValueRange())) {
         if (DPV.getType() == DPValue::LocationType::Declare)
           DPVs.push_back(&DPV);
       }
@@ -1996,7 +1996,7 @@ static void insertDPValuesForPHIs(BasicBlock *BB,
   // Map existing PHI nodes to their DPValues.
   DenseMap<Value *, DPValue *> DbgValueMap;
   for (auto &I : *BB) {
-    for (auto &DPV : I.getDbgValueRange()) {
+    for (DPValue &DPV : DPValue::filter(I.getDbgValueRange())) {
       for (Value *V : DPV.location_ops())
         if (auto *Loc = dyn_cast_or_null<PHINode>(V))
           DbgValueMap.insert({Loc, &DPV});
@@ -2811,7 +2811,7 @@ unsigned llvm::changeToUnreachable(Instruction *I, bool PreserveLCSSA,
     if (DTU)
       UniqueSuccessors.insert(Successor);
   }
-  auto *UI = new UnreachableInst(I->getContext(), I);
+  auto *UI = new UnreachableInst(I->getContext(), I->getIterator());
   UI->setDebugLoc(I->getDebugLoc());
 
   // All instructions after this are dead.
@@ -2868,7 +2868,7 @@ CallInst *llvm::changeToCall(InvokeInst *II, DomTreeUpdater *DTU) {
 
   // Follow the call by a branch to the normal destination.
   BasicBlock *NormalDestBB = II->getNormalDest();
-  BranchInst::Create(NormalDestBB, II);
+  BranchInst::Create(NormalDestBB, II->getIterator());
 
   // Update PHI nodes in the unwind destination
   BasicBlock *BB = II->getParent();
@@ -3048,7 +3048,7 @@ static bool markAliveBlocks(Function &F,
             // jump to the normal destination branch.
             BasicBlock *NormalDestBB = II->getNormalDest();
             BasicBlock *UnwindDestBB = II->getUnwindDest();
-            BranchInst::Create(NormalDestBB, II);
+            BranchInst::Create(NormalDestBB, II->getIterator());
             UnwindDestBB->removePredecessor(II->getParent());
             II->eraseFromParent();
             if (DTU)
@@ -3131,12 +3131,12 @@ Instruction *llvm::removeUnwindEdge(BasicBlock *BB, DomTreeUpdater *DTU) {
   BasicBlock *UnwindDest;
 
   if (auto *CRI = dyn_cast<CleanupReturnInst>(TI)) {
-    NewTI = CleanupReturnInst::Create(CRI->getCleanupPad(), nullptr, CRI);
+    NewTI = CleanupReturnInst::Create(CRI->getCleanupPad(), nullptr, CRI->getIterator());
     UnwindDest = CRI->getUnwindDest();
   } else if (auto *CatchSwitch = dyn_cast<CatchSwitchInst>(TI)) {
     auto *NewCatchSwitch = CatchSwitchInst::Create(
         CatchSwitch->getParentPad(), nullptr, CatchSwitch->getNumHandlers(),
-        CatchSwitch->getName(), CatchSwitch);
+        CatchSwitch->getName(), CatchSwitch->getIterator());
     for (BasicBlock *PadBB : CatchSwitch->handlers())
       NewCatchSwitch->addHandler(PadBB);
 
@@ -3369,11 +3369,17 @@ void llvm::patchReplacementInstruction(Instruction *I, Value *Repl) {
 
   // Patch the replacement so that it is not more restrictive than the value
   // being replaced.
+  WithOverflowInst *UnusedWO;
+  // When replacing the result of a llvm.*.with.overflow intrinsic with a
+  // overflowing binary operator, nuw/nsw flags may no longer hold.
+  if (isa<OverflowingBinaryOperator>(ReplInst) &&
+      match(I, m_ExtractValue<0>(m_WithOverflowInst(UnusedWO))))
+    ReplInst->dropPoisonGeneratingFlags();
   // Note that if 'I' is a load being replaced by some operation,
   // for example, by an arithmetic operation, then andIRFlags()
   // would just erase all math flags from the original arithmetic
   // operation, which is clearly not wanted and not needed.
-  if (!isa<LoadInst>(I))
+  else if (!isa<LoadInst>(I))
     ReplInst->andIRFlags(I);
 
   // FIXME: If both the original and replacement value are part of the
@@ -3966,23 +3972,23 @@ bool llvm::recognizeBSwapOrBitReverseIdiom(
   // We may need to truncate the provider.
   if (DemandedTy != Provider->getType()) {
     auto *Trunc =
-        CastInst::CreateIntegerCast(Provider, DemandedTy, false, "trunc", I);
+        CastInst::CreateIntegerCast(Provider, DemandedTy, false, "trunc", I->getIterator());
     InsertedInsts.push_back(Trunc);
     Provider = Trunc;
   }
 
-  Instruction *Result = CallInst::Create(F, Provider, "rev", I);
+  Instruction *Result = CallInst::Create(F, Provider, "rev", I->getIterator());
   InsertedInsts.push_back(Result);
 
   if (!DemandedMask.isAllOnes()) {
     auto *Mask = ConstantInt::get(DemandedTy, DemandedMask);
-    Result = BinaryOperator::Create(Instruction::And, Result, Mask, "mask", I);
+    Result = BinaryOperator::Create(Instruction::And, Result, Mask, "mask", I->getIterator());
     InsertedInsts.push_back(Result);
   }
 
   // We may need to zeroextend back to the result type.
   if (ITy != Result->getType()) {
-    auto *ExtInst = CastInst::CreateIntegerCast(Result, ITy, false, "zext", I);
+    auto *ExtInst = CastInst::CreateIntegerCast(Result, ITy, false, "zext", I->getIterator());
     InsertedInsts.push_back(ExtInst);
   }
 

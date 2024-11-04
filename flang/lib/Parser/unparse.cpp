@@ -1819,6 +1819,11 @@ public:
             [&](const CompilerDirective::LoopCount &lcount) {
               Walk("!DIR$ LOOP COUNT (", lcount.v, ", ", ")");
             },
+            [&](const std::list<CompilerDirective::AssumeAligned>
+                    &assumeAligned) {
+              Word("!DIR$ ASSUME_ALIGNED ");
+              Walk(" ", assumeAligned, ", ");
+            },
             [&](const std::list<CompilerDirective::NameValue> &names) {
               Walk("!DIR$ ", names, " ");
             },
@@ -1840,6 +1845,11 @@ public:
   void Unparse(const CompilerDirective::NameValue &x) {
     Walk(std::get<Name>(x.t));
     Walk("=", std::get<std::optional<std::uint64_t>>(x.t));
+  }
+  void Unparse(const CompilerDirective::AssumeAligned &x) {
+    Walk(std::get<common::Indirection<Designator>>(x.t));
+    Put(":");
+    Walk(std::get<uint64_t>(x.t));
   }
 
   // OpenACC Directives & Clauses

@@ -52,6 +52,10 @@ using llvm::Value;
 //                         Scalar Expression Emitter
 //===----------------------------------------------------------------------===//
 
+namespace llvm {
+extern cl::opt<bool> EnableSingleByteCoverage;
+} // namespace llvm
+
 namespace {
 
 /// Determine whether the given binary operation may overflow.
@@ -723,7 +727,9 @@ public:
     if (Ops.Ty->isSignedIntegerOrEnumerationType()) {
       switch (CGF.getLangOpts().getSignedOverflowBehavior()) {
       case LangOptions::SOB_Defined:
-        return Builder.CreateMul(Ops.LHS, Ops.RHS, "mul");
+        if (!CGF.SanOpts.has(SanitizerKind::SignedIntegerOverflow))
+          return Builder.CreateMul(Ops.LHS, Ops.RHS, "mul");
+        [[fallthrough]];
       case LangOptions::SOB_Undefined:
         if (!CGF.SanOpts.has(SanitizerKind::SignedIntegerOverflow))
           return Builder.CreateNSWMul(Ops.LHS, Ops.RHS, "mul");
@@ -2568,7 +2574,9 @@ llvm::Value *ScalarExprEmitter::EmitIncDecConsiderOverflowBehavior(
   StringRef Name = IsInc ? "inc" : "dec";
   switch (CGF.getLangOpts().getSignedOverflowBehavior()) {
   case LangOptions::SOB_Defined:
-    return Builder.CreateAdd(InVal, Amount, Name);
+    if (!CGF.SanOpts.has(SanitizerKind::SignedIntegerOverflow))
+      return Builder.CreateAdd(InVal, Amount, Name);
+    [[fallthrough]];
   case LangOptions::SOB_Undefined:
     if (!CGF.SanOpts.has(SanitizerKind::SignedIntegerOverflow))
       return Builder.CreateNSWAdd(InVal, Amount, Name);
@@ -3913,7 +3921,9 @@ Value *ScalarExprEmitter::EmitAdd(const BinOpInfo &op) {
   if (op.Ty->isSignedIntegerOrEnumerationType()) {
     switch (CGF.getLangOpts().getSignedOverflowBehavior()) {
     case LangOptions::SOB_Defined:
-      return Builder.CreateAdd(op.LHS, op.RHS, "add");
+      if (!CGF.SanOpts.has(SanitizerKind::SignedIntegerOverflow))
+        return Builder.CreateAdd(op.LHS, op.RHS, "add");
+      [[fallthrough]];
     case LangOptions::SOB_Undefined:
       if (!CGF.SanOpts.has(SanitizerKind::SignedIntegerOverflow))
         return Builder.CreateNSWAdd(op.LHS, op.RHS, "add");
@@ -4067,7 +4077,9 @@ Value *ScalarExprEmitter::EmitSub(const BinOpInfo &op) {
     if (op.Ty->isSignedIntegerOrEnumerationType()) {
       switch (CGF.getLangOpts().getSignedOverflowBehavior()) {
       case LangOptions::SOB_Defined:
-        return Builder.CreateSub(op.LHS, op.RHS, "sub");
+        if (!CGF.SanOpts.has(SanitizerKind::SignedIntegerOverflow))
+          return Builder.CreateSub(op.LHS, op.RHS, "sub");
+        [[fallthrough]];
       case LangOptions::SOB_Undefined:
         if (!CGF.SanOpts.has(SanitizerKind::SignedIntegerOverflow))
           return Builder.CreateNSWSub(op.LHS, op.RHS, "sub");
@@ -4917,8 +4929,13 @@ VisitAbstractConditionalOperator(const AbstractConditionalOperator *E) {
 
     // If the dead side doesn't have labels we need, just emit the Live part.
     if (!CGF.ContainsLabel(dead)) {
-      if (CondExprBool)
+      if (CondExprBool) {
+        if (llvm::EnableSingleByteCoverage) {
+          CGF.incrementProfileCounter(lhsExpr);
+          CGF.incrementProfileCounter(rhsExpr);
+        }
         CGF.incrementProfileCounter(E);
+      }
       Value *Result = Visit(live);
 
       // If the live part is a throw expression, it acts like it has a void
@@ -4997,7 +5014,12 @@ VisitAbstractConditionalOperator(const AbstractConditionalOperator *E) {
     llvm::Value *CondV = CGF.EvaluateExprAsBool(condExpr);
     llvm::Value *StepV = Builder.CreateZExtOrBitCast(CondV, CGF.Int64Ty);
 
-    CGF.incrementProfileCounter(E, StepV);
+    if (llvm::EnableSingleByteCoverage) {
+      CGF.incrementProfileCounter(lhsExpr);
+      CGF.incrementProfileCounter(rhsExpr);
+      CGF.incrementProfileCounter(E);
+    } else
+      CGF.incrementProfileCounter(E, StepV);
 
     llvm::Value *LHS = Visit(lhsExpr);
     llvm::Value *RHS = Visit(rhsExpr);
@@ -5029,7 +5051,11 @@ VisitAbstractConditionalOperator(const AbstractConditionalOperator *E) {
   if (CGF.MCDCLogOpStack.empty())
     CGF.maybeUpdateMCDCTestVectorBitmap(condExpr);
 
-  CGF.incrementProfileCounter(E);
+  if (llvm::EnableSingleByteCoverage)
+    CGF.incrementProfileCounter(lhsExpr);
+  else
+    CGF.incrementProfileCounter(E);
+
   eval.begin(CGF);
   Value *LHS = Visit(lhsExpr);
   eval.end(CGF);
@@ -5044,6 +5070,9 @@ VisitAbstractConditionalOperator(const AbstractConditionalOperator *E) {
   // may also contain a boolean expression.
   if (CGF.MCDCLogOpStack.empty())
     CGF.maybeUpdateMCDCTestVectorBitmap(condExpr);
+
+  if (llvm::EnableSingleByteCoverage)
+    CGF.incrementProfileCounter(rhsExpr);
 
   eval.begin(CGF);
   Value *RHS = Visit(rhsExpr);
@@ -5062,6 +5091,11 @@ VisitAbstractConditionalOperator(const AbstractConditionalOperator *E) {
   llvm::PHINode *PN = Builder.CreatePHI(LHS->getType(), 2, "cond");
   PN->addIncoming(LHS, LHSBlock);
   PN->addIncoming(RHS, RHSBlock);
+
+  // When single byte coverage mode is enabled, add a counter to continuation
+  // block.
+  if (llvm::EnableSingleByteCoverage)
+    CGF.incrementProfileCounter(E);
 
   return PN;
 }

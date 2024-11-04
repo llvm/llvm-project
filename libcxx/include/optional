@@ -177,7 +177,7 @@ namespace std {
 
 */
 
-#include <__assert> // all public C++ headers provide the assertion handler
+#include <__assert>
 #include <__availability>
 #include <__compare/compare_three_way_result.h>
 #include <__compare/three_way_comparable.h>
@@ -186,8 +186,8 @@ namespace std {
 #include <__exception/exception.h>
 #include <__functional/hash.h>
 #include <__functional/invoke.h>
-#include <__functional/reference_wrapper.h>
 #include <__functional/unary_function.h>
+#include <__fwd/functional.h>
 #include <__memory/addressof.h>
 #include <__memory/construct_at.h>
 #include <__tuple/sfinae_helpers.h>

@@ -69,7 +69,6 @@ Information about LLVM's development process.
 
    Projects
    HowToReleaseLLVM
-   Packaging
    ReleaseProcess
    HowToAddABuilder
    ReleaseNotes
@@ -88,9 +87,6 @@ Information about LLVM's development process.
 
 :doc:`HowToAddABuilder`
    Instructions for adding new builder to LLVM buildbot master.
-
-:doc:`Packaging`
-   Advice on packaging LLVM into a distribution.
 
 :doc:`Release notes for the current release <ReleaseNotes>`
    This describes new features, known bugs, and other limitations.

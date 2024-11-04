@@ -181,6 +181,13 @@ declare_mlir_python_sources(
   SOURCES
     dialects/transform/extras/__init__.py)
 
+declare_mlir_python_sources(
+  MLIRPythonSources.Dialects.transform.interpreter
+  ADD_TO_PARENT MLIRPythonSources.Dialects
+  ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/mlir"
+  SOURCES
+    dialects/transform/interpreter/__init__.py)
+
 declare_mlir_dialect_extension_python_bindings(
   ADD_TO_PARENT MLIRPythonSources.Dialects
   ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/mlir"
@@ -607,6 +614,18 @@ declare_mlir_python_extension(MLIRPythonExtension.SparseTensorDialectPasses
     LLVMSupport
   EMBED_CAPI_LINK_LIBS
     MLIRCAPISparseTensor
+)
+
+declare_mlir_python_extension(MLIRPythonExtension.TransformInterpreter
+  MODULE_NAME _mlirTransformInterpreter
+  ADD_TO_PARENT MLIRPythonSources.Dialects.transform
+  ROOT_DIR "${PYTHON_SOURCE_DIR}"
+  SOURCES
+    TransformInterpreter.cpp
+  PRIVATE_LINK_LIBS
+    LLVMSupport
+  EMBED_CAPI_LINK_LIBS
+    MLIRCAPITransformDialectTransforms
 )
 
 # TODO: Figure out how to put this in the test tree.

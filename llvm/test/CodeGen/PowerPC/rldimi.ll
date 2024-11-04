@@ -58,3 +58,18 @@ entry:
   %8 = or i64 %6, %7
   ret i64 %8
 }
+
+define i64 @rldimi_intrinsic(i64 %a) {
+; CHECK-LABEL: rldimi_intrinsic:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    rldimi 3, 3, 8, 0
+; CHECK-NEXT:    rldimi 3, 3, 16, 0
+; CHECK-NEXT:    rldimi 3, 3, 32, 0
+; CHECK-NEXT:    blr
+  %r1 = call i64 @llvm.ppc.rldimi(i64 %a, i64 %a, i32 8, i64 -256)
+  %r2 = call i64 @llvm.ppc.rldimi(i64 %r1, i64 %r1, i32 16, i64 -65536)
+  %r3 = call i64 @llvm.ppc.rldimi(i64 %r2, i64 %r2, i32 32, i64 -4294967296)
+  ret i64 %r3
+}
+
+declare i64 @llvm.ppc.rldimi(i64, i64, i32 immarg, i64 immarg)

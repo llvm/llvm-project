@@ -15,7 +15,7 @@
 #include "src/__support/common.h"
 #include "src/__support/libc_assert.h"       // LIBC_ASSERT
 #include "src/__support/macros/attributes.h" // LIBC_INLINE, LIBC_INLINE_VAR
-#include "src/__support/macros/properties/float.h" // LIBC_COMPILER_HAS_FLOAT128
+#include "src/__support/macros/properties/types.h" // LIBC_TYPES_HAS_FLOAT128
 #include "src/__support/math_extras.h"             // mask_trailing_ones
 
 #include <stdint.h>
@@ -239,23 +239,23 @@ protected:
 
   // An opaque type to store a floating point exponent.
   // We define special values but it is valid to create arbitrary values as long
-  // as they are in the range [MIN, MAX].
+  // as they are in the range [min, max].
   struct Exponent : public TypedInt<int32_t> {
     using UP = TypedInt<int32_t>;
     using UP::UP;
-    LIBC_INLINE static constexpr auto SUBNORMAL() {
+    LIBC_INLINE static constexpr auto subnormal() {
       return Exponent(-EXP_BIAS);
     }
-    LIBC_INLINE static constexpr auto MIN() { return Exponent(1 - EXP_BIAS); }
-    LIBC_INLINE static constexpr auto ZERO() { return Exponent(0); }
-    LIBC_INLINE static constexpr auto MAX() { return Exponent(EXP_BIAS); }
-    LIBC_INLINE static constexpr auto INF() { return Exponent(EXP_BIAS + 1); }
+    LIBC_INLINE static constexpr auto min() { return Exponent(1 - EXP_BIAS); }
+    LIBC_INLINE static constexpr auto zero() { return Exponent(0); }
+    LIBC_INLINE static constexpr auto max() { return Exponent(EXP_BIAS); }
+    LIBC_INLINE static constexpr auto inf() { return Exponent(EXP_BIAS + 1); }
   };
 
   // An opaque type to store a floating point biased exponent.
   // We define special values but it is valid to create arbitrary values as long
-  // as they are in the range [BITS_ALL_ZEROES, BITS_ALL_ONES].
-  // Values greater than BITS_ALL_ONES are truncated.
+  // as they are in the range [zero, bits_all_ones].
+  // Values greater than bits_all_ones are truncated.
   struct BiasedExponent : public TypedInt<uint32_t> {
     using UP = TypedInt<uint32_t>;
     using UP::UP;
@@ -269,13 +269,13 @@ protected:
     }
 
     LIBC_INLINE constexpr BiasedExponent &operator++() {
-      LIBC_ASSERT(*this != BiasedExponent(Exponent::INF()));
+      LIBC_ASSERT(*this != BiasedExponent(Exponent::inf()));
       ++UP::value;
       return *this;
     }
 
     LIBC_INLINE constexpr BiasedExponent &operator--() {
-      LIBC_ASSERT(*this != BiasedExponent(Exponent::SUBNORMAL()));
+      LIBC_ASSERT(*this != BiasedExponent(Exponent::subnormal()));
       --UP::value;
       return *this;
     }
@@ -283,9 +283,9 @@ protected:
 
   // An opaque type to store a floating point significand.
   // We define special values but it is valid to create arbitrary values as long
-  // as they are in the range [ZERO, BITS_ALL_ONES].
+  // as they are in the range [zero, bits_all_ones].
   // Note that the semantics of the Significand are implementation dependent.
-  // Values greater than BITS_ALL_ONES are truncated.
+  // Values greater than bits_all_ones are truncated.
   struct Significand : public TypedInt<StorageType> {
     using UP = TypedInt<StorageType>;
     using UP::UP;
@@ -305,16 +305,16 @@ protected:
       return Significand(StorageType(a.to_storage_type() >> shift));
     }
 
-    LIBC_INLINE static constexpr auto ZERO() {
+    LIBC_INLINE static constexpr auto zero() {
       return Significand(StorageType(0));
     }
-    LIBC_INLINE static constexpr auto LSB() {
+    LIBC_INLINE static constexpr auto lsb() {
       return Significand(StorageType(1));
     }
-    LIBC_INLINE static constexpr auto MSB() {
+    LIBC_INLINE static constexpr auto msb() {
       return Significand(StorageType(1) << (SIG_LEN - 1));
     }
-    LIBC_INLINE static constexpr auto BITS_ALL_ONES() {
+    LIBC_INLINE static constexpr auto bits_all_ones() {
       return Significand(SIG_MASK);
     }
   };
@@ -393,58 +393,58 @@ protected:
 public:
   // Builders
   LIBC_INLINE static constexpr RetT zero(Sign sign = Sign::POS) {
-    return RetT(encode(sign, Exponent::SUBNORMAL(), Significand::ZERO()));
+    return RetT(encode(sign, Exponent::subnormal(), Significand::zero()));
   }
   LIBC_INLINE static constexpr RetT one(Sign sign = Sign::POS) {
-    return RetT(encode(sign, Exponent::ZERO(), Significand::ZERO()));
+    return RetT(encode(sign, Exponent::zero(), Significand::zero()));
   }
   LIBC_INLINE static constexpr RetT min_subnormal(Sign sign = Sign::POS) {
-    return RetT(encode(sign, Exponent::SUBNORMAL(), Significand::LSB()));
+    return RetT(encode(sign, Exponent::subnormal(), Significand::lsb()));
   }
   LIBC_INLINE static constexpr RetT max_subnormal(Sign sign = Sign::POS) {
     return RetT(
-        encode(sign, Exponent::SUBNORMAL(), Significand::BITS_ALL_ONES()));
+        encode(sign, Exponent::subnormal(), Significand::bits_all_ones()));
   }
   LIBC_INLINE static constexpr RetT min_normal(Sign sign = Sign::POS) {
-    return RetT(encode(sign, Exponent::MIN(), Significand::ZERO()));
+    return RetT(encode(sign, Exponent::min(), Significand::zero()));
   }
   LIBC_INLINE static constexpr RetT max_normal(Sign sign = Sign::POS) {
-    return RetT(encode(sign, Exponent::MAX(), Significand::BITS_ALL_ONES()));
+    return RetT(encode(sign, Exponent::max(), Significand::bits_all_ones()));
   }
   LIBC_INLINE static constexpr RetT inf(Sign sign = Sign::POS) {
-    return RetT(encode(sign, Exponent::INF(), Significand::ZERO()));
+    return RetT(encode(sign, Exponent::inf(), Significand::zero()));
   }
   LIBC_INLINE static constexpr RetT signaling_nan(Sign sign = Sign::POS,
                                                   StorageType v = 0) {
-    return RetT(encode(sign, Exponent::INF(),
-                       (v ? Significand(v) : (Significand::MSB() >> 1))));
+    return RetT(encode(sign, Exponent::inf(),
+                       (v ? Significand(v) : (Significand::msb() >> 1))));
   }
   LIBC_INLINE static constexpr RetT quiet_nan(Sign sign = Sign::POS,
                                               StorageType v = 0) {
     return RetT(
-        encode(sign, Exponent::INF(), Significand::MSB() | Significand(v)));
+        encode(sign, Exponent::inf(), Significand::msb() | Significand(v)));
   }
 
   // Observers
   LIBC_INLINE constexpr bool is_zero() const { return exp_sig_bits() == 0; }
   LIBC_INLINE constexpr bool is_nan() const {
-    return exp_sig_bits() > encode(Exponent::INF(), Significand::ZERO());
+    return exp_sig_bits() > encode(Exponent::inf(), Significand::zero());
   }
   LIBC_INLINE constexpr bool is_quiet_nan() const {
-    return exp_sig_bits() >= encode(Exponent::INF(), Significand::MSB());
+    return exp_sig_bits() >= encode(Exponent::inf(), Significand::msb());
   }
   LIBC_INLINE constexpr bool is_signaling_nan() const {
     return is_nan() && !is_quiet_nan();
   }
   LIBC_INLINE constexpr bool is_inf() const {
-    return exp_sig_bits() == encode(Exponent::INF(), Significand::ZERO());
+    return exp_sig_bits() == encode(Exponent::inf(), Significand::zero());
   }
   LIBC_INLINE constexpr bool is_finite() const {
-    return exp_bits() != encode(Exponent::INF());
+    return exp_bits() != encode(Exponent::inf());
   }
   LIBC_INLINE
   constexpr bool is_subnormal() const {
-    return exp_bits() == encode(Exponent::SUBNORMAL());
+    return exp_bits() == encode(Exponent::subnormal());
   }
   LIBC_INLINE constexpr bool is_normal() const {
     return is_finite() && !is_subnormal();
@@ -493,37 +493,37 @@ protected:
 public:
   // Builders
   LIBC_INLINE static constexpr RetT zero(Sign sign = Sign::POS) {
-    return RetT(encode(sign, Exponent::SUBNORMAL(), Significand::ZERO()));
+    return RetT(encode(sign, Exponent::subnormal(), Significand::zero()));
   }
   LIBC_INLINE static constexpr RetT one(Sign sign = Sign::POS) {
-    return RetT(encode(sign, Exponent::ZERO(), Significand::MSB()));
+    return RetT(encode(sign, Exponent::zero(), Significand::msb()));
   }
   LIBC_INLINE static constexpr RetT min_subnormal(Sign sign = Sign::POS) {
-    return RetT(encode(sign, Exponent::SUBNORMAL(), Significand::LSB()));
+    return RetT(encode(sign, Exponent::subnormal(), Significand::lsb()));
   }
   LIBC_INLINE static constexpr RetT max_subnormal(Sign sign = Sign::POS) {
-    return RetT(encode(sign, Exponent::SUBNORMAL(),
-                       Significand::BITS_ALL_ONES() ^ Significand::MSB()));
+    return RetT(encode(sign, Exponent::subnormal(),
+                       Significand::bits_all_ones() ^ Significand::msb()));
   }
   LIBC_INLINE static constexpr RetT min_normal(Sign sign = Sign::POS) {
-    return RetT(encode(sign, Exponent::MIN(), Significand::MSB()));
+    return RetT(encode(sign, Exponent::min(), Significand::msb()));
   }
   LIBC_INLINE static constexpr RetT max_normal(Sign sign = Sign::POS) {
-    return RetT(encode(sign, Exponent::MAX(), Significand::BITS_ALL_ONES()));
+    return RetT(encode(sign, Exponent::max(), Significand::bits_all_ones()));
   }
   LIBC_INLINE static constexpr RetT inf(Sign sign = Sign::POS) {
-    return RetT(encode(sign, Exponent::INF(), Significand::MSB()));
+    return RetT(encode(sign, Exponent::inf(), Significand::msb()));
   }
   LIBC_INLINE static constexpr RetT signaling_nan(Sign sign = Sign::POS,
                                                   StorageType v = 0) {
-    return RetT(encode(sign, Exponent::INF(),
-                       Significand::MSB() |
-                           (v ? Significand(v) : (Significand::MSB() >> 2))));
+    return RetT(encode(sign, Exponent::inf(),
+                       Significand::msb() |
+                           (v ? Significand(v) : (Significand::msb() >> 2))));
   }
   LIBC_INLINE static constexpr RetT quiet_nan(Sign sign = Sign::POS,
                                               StorageType v = 0) {
-    return RetT(encode(sign, Exponent::INF(),
-                       Significand::MSB() | (Significand::MSB() >> 1) |
+    return RetT(encode(sign, Exponent::inf(),
+                       Significand::msb() | (Significand::msb() >> 1) |
                            Significand(v)));
   }
 
@@ -541,33 +541,33 @@ public:
     // - Quiet Not a Number
     // - Unnormal
     // This can be reduced to the following logic:
-    if (exp_bits() == encode(Exponent::INF()))
+    if (exp_bits() == encode(Exponent::inf()))
       return !is_inf();
-    if (exp_bits() != encode(Exponent::SUBNORMAL()))
-      return (sig_bits() & encode(Significand::MSB())) == 0;
+    if (exp_bits() != encode(Exponent::subnormal()))
+      return (sig_bits() & encode(Significand::msb())) == 0;
     return false;
   }
   LIBC_INLINE constexpr bool is_quiet_nan() const {
     return exp_sig_bits() >=
-           encode(Exponent::INF(),
-                  Significand::MSB() | (Significand::MSB() >> 1));
+           encode(Exponent::inf(),
+                  Significand::msb() | (Significand::msb() >> 1));
   }
   LIBC_INLINE constexpr bool is_signaling_nan() const {
     return is_nan() && !is_quiet_nan();
   }
   LIBC_INLINE constexpr bool is_inf() const {
-    return exp_sig_bits() == encode(Exponent::INF(), Significand::MSB());
+    return exp_sig_bits() == encode(Exponent::inf(), Significand::msb());
   }
   LIBC_INLINE constexpr bool is_finite() const {
     return !is_inf() && !is_nan();
   }
   LIBC_INLINE
   constexpr bool is_subnormal() const {
-    return exp_bits() == encode(Exponent::SUBNORMAL());
+    return exp_bits() == encode(Exponent::subnormal());
   }
   LIBC_INLINE constexpr bool is_normal() const {
     const auto exp = exp_bits();
-    if (exp == encode(Exponent::SUBNORMAL()) || exp == encode(Exponent::INF()))
+    if (exp == encode(Exponent::subnormal()) || exp == encode(Exponent::inf()))
       return false;
     return get_implicit_bit();
   }
@@ -578,7 +578,7 @@ public:
       } else if (exp_sig_bits() == max_subnormal().uintval()) {
         return min_normal(sign());
       } else if (sig_bits() == SIG_MASK) {
-        return RetT(encode(sign(), ++biased_exponent(), Significand::ZERO()));
+        return RetT(encode(sign(), ++biased_exponent(), Significand::zero()));
       } else {
         return RetT(bits + StorageType(1));
       }
@@ -715,9 +715,9 @@ public:
   LIBC_INLINE constexpr int get_explicit_exponent() const {
     Exponent exponent(UP::biased_exponent());
     if (is_zero())
-      exponent = Exponent::ZERO();
-    if (exponent == Exponent::SUBNORMAL())
-      exponent = Exponent::MIN();
+      exponent = Exponent::zero();
+    if (exponent == Exponent::subnormal())
+      exponent = Exponent::min();
     return static_cast<int32_t>(exponent);
   }
 
@@ -804,16 +804,12 @@ template <typename T> LIBC_INLINE static constexpr FPType get_fp_type() {
     else if constexpr (__LDBL_MANT_DIG__ == 113)
       return FPType::IEEE754_Binary128;
   }
-#if defined(LIBC_COMPILER_HAS_C23_FLOAT16)
-  else if constexpr (cpp::is_same_v<UnqualT, _Float16>)
+#if defined(LIBC_TYPES_HAS_FLOAT16)
+  else if constexpr (cpp::is_same_v<UnqualT, float16>)
     return FPType::IEEE754_Binary16;
 #endif
-#if defined(LIBC_COMPILER_HAS_C23_FLOAT128)
-  else if constexpr (cpp::is_same_v<UnqualT, _Float128>)
-    return FPType::IEEE754_Binary128;
-#endif
-#if defined(LIBC_COMPILER_HAS_FLOAT128_EXTENSION)
-  else if constexpr (cpp::is_same_v<UnqualT, __float128>)
+#if defined(LIBC_TYPES_HAS_FLOAT128)
+  else if constexpr (cpp::is_same_v<UnqualT, float128>)
     return FPType::IEEE754_Binary128;
 #endif
   else

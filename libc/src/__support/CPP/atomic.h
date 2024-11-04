@@ -166,7 +166,7 @@ LIBC_INLINE void atomic_thread_fence([[maybe_unused]] MemoryOrder mem_ord) {
 // except no instructions for memory ordering are issued. Only reordering of
 // the instructions by the compiler is suppressed as order instructs.
 LIBC_INLINE void atomic_signal_fence([[maybe_unused]] MemoryOrder mem_ord) {
-#if __has_builtin(__atomic_signal_fence)
+#if LIBC_HAS_BUILTIN(__atomic_signal_fence)
   __atomic_signal_fence(static_cast<int>(mem_ord));
 #else
   // if the builtin is not ready, use asm as a full compiler barrier.

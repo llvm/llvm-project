@@ -1682,6 +1682,7 @@ def : ProcNoItin<"neoverse-n1",                         [ARMv82a,
 
 def : ProcNoItin<"neoverse-n2",                         [ARMv9a,
                                                          FeatureBF16,
+                                                         FeatureFP16FML,
                                                          FeatureMatMulInt8]>;
 
 def : ProcessorModel<"cyclone",     SwiftModel,         [ARMv8a, ProcSwift,

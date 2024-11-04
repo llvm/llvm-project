@@ -6,11 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef __LLVM_LIBC_TYPES_PTHREAD_MUTEX_T_H
-#define __LLVM_LIBC_TYPES_PTHREAD_MUTEX_T_H
+#ifndef LLVM_LIBC_TYPES_PTHREAD_MUTEX_T_H
+#define LLVM_LIBC_TYPES_PTHREAD_MUTEX_T_H
 
 #include <llvm-libc-types/__mutex_type.h>
 
 typedef __mutex_type pthread_mutex_t;
 
-#endif // __LLVM_LIBC_TYPES_PTHREAD_MUTEX_T_H
+#endif // LLVM_LIBC_TYPES_PTHREAD_MUTEX_T_H

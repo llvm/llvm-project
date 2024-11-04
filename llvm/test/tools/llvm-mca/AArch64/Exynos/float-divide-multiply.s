@@ -26,11 +26,11 @@ fsqrt	d11, d12
 # EM3-NEXT: Total uOps:        800
 
 # EM4-NEXT: Instructions:      1200
-# EM4-NEXT: Total Cycles:      575
+# EM4-NEXT: Total Cycles:      572
 # EM4-NEXT: Total uOps:        1200
 
 # EM5-NEXT: Instructions:      1200
-# EM5-NEXT: Total Cycles:      433
+# EM5-NEXT: Total Cycles:      434
 # EM5-NEXT: Total uOps:        1200
 
 # ALL:      Dispatch Width:    6
@@ -39,12 +39,12 @@ fsqrt	d11, d12
 # EM3-NEXT: IPC:               0.18
 # EM3-NEXT: Block RThroughput: 45.0
 
-# EM4-NEXT: uOps Per Cycle:    2.09
-# EM4-NEXT: IPC:               2.09
+# EM4-NEXT: uOps Per Cycle:    2.10
+# EM4-NEXT: IPC:               2.10
 # EM4-NEXT: Block RThroughput: 4.0
 
-# EM5-NEXT: uOps Per Cycle:    2.77
-# EM5-NEXT: IPC:               2.77
+# EM5-NEXT: uOps Per Cycle:    2.76
+# EM5-NEXT: IPC:               2.76
 # EM5-NEXT: Block RThroughput: 4.0
 
 # ALL:      Instruction Info:

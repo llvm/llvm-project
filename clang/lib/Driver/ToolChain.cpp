@@ -77,10 +77,19 @@ static ToolChain::RTTIMode CalculateRTTIMode(const ArgList &Args,
   return NoRTTI ? ToolChain::RM_Disabled : ToolChain::RM_Enabled;
 }
 
+static ToolChain::ExceptionsMode CalculateExceptionsMode(const ArgList &Args) {
+  if (Args.hasFlag(options::OPT_fexceptions, options::OPT_fno_exceptions,
+                   true)) {
+    return ToolChain::EM_Enabled;
+  }
+  return ToolChain::EM_Disabled;
+}
+
 ToolChain::ToolChain(const Driver &D, const llvm::Triple &T,
                      const ArgList &Args)
     : D(D), Triple(T), Args(Args), CachedRTTIArg(GetRTTIArgument(Args)),
-      CachedRTTIMode(CalculateRTTIMode(Args, Triple, CachedRTTIArg)) {
+      CachedRTTIMode(CalculateRTTIMode(Args, Triple, CachedRTTIArg)),
+      CachedExceptionsMode(CalculateExceptionsMode(Args)) {
   auto addIfExists = [this](path_list &List, const std::string &Path) {
     if (getVFS().exists(Path))
       List.push_back(Path);
@@ -191,7 +200,12 @@ static void getAArch64MultilibFlags(const Driver &D,
   for (const auto &Ext : AArch64::Extensions)
     if (FeatureSet.contains(Ext.NegFeature))
       MArch.push_back(("no" + Ext.Name).str());
-  MArch.insert(MArch.begin(), ("-march=" + Triple.getArchName()).str());
+  StringRef ArchName;
+  for (const auto &ArchInfo : AArch64::ArchInfos)
+    if (FeatureSet.contains(ArchInfo->ArchFeature))
+      ArchName = ArchInfo->Name;
+  assert(!ArchName.empty() && "at least one architecture should be found");
+  MArch.insert(MArch.begin(), ("-march=" + ArchName).str());
   Result.push_back(llvm::join(MArch, "+"));
 }
 
@@ -263,6 +277,18 @@ ToolChain::getMultilibFlags(const llvm::opt::ArgList &Args) const {
   default:
     break;
   }
+
+  // Include fno-exceptions and fno-rtti
+  // to improve multilib selection
+  if (getRTTIMode() == ToolChain::RTTIMode::RM_Disabled)
+    Result.push_back("-fno-rtti");
+  else
+    Result.push_back("-frtti");
+
+  if (getExceptionsMode() == ToolChain::ExceptionsMode::EM_Disabled)
+    Result.push_back("-fno-exceptions");
+  else
+    Result.push_back("-fexceptions");
 
   // Sort and remove duplicates.
   std::sort(Result.begin(), Result.end());
@@ -532,7 +558,6 @@ Tool *ToolChain::getTool(Action::ActionClass AC) const {
   case Action::PrecompileJobClass:
   case Action::PreprocessJobClass:
   case Action::ExtractAPIJobClass:
-  case Action::InstallAPIJobClass:
   case Action::AnalyzeJobClass:
   case Action::MigrateJobClass:
   case Action::VerifyPCHJobClass:
@@ -656,19 +681,29 @@ std::string ToolChain::getCompilerRT(const ArgList &Args, StringRef Component,
   // Check for runtime files in the new layout without the architecture first.
   std::string CRTBasename =
       buildCompilerRTBasename(Args, Component, Type, /*AddArch=*/false);
+  SmallString<128> Path;
   for (const auto &LibPath : getLibraryPaths()) {
     SmallString<128> P(LibPath);
     llvm::sys::path::append(P, CRTBasename);
     if (getVFS().exists(P))
       return std::string(P);
+    if (Path.empty())
+      Path = P;
   }
+  if (getTriple().isOSAIX())
+    Path.clear();
 
-  // Fall back to the old expected compiler-rt name if the new one does not
-  // exist.
+  // Check the filename for the old layout if the new one does not exist.
   CRTBasename =
       buildCompilerRTBasename(Args, Component, Type, /*AddArch=*/true);
-  SmallString<128> Path(getCompilerRTPath());
-  llvm::sys::path::append(Path, CRTBasename);
+  SmallString<128> OldPath(getCompilerRTPath());
+  llvm::sys::path::append(OldPath, CRTBasename);
+  if (Path.empty() || getVFS().exists(OldPath))
+    return std::string(OldPath);
+
+  // If none is found, use a file name from the new layout, which may get
+  // printed in an error message, aiding users in knowing what Clang is
+  // looking for.
   return std::string(Path);
 }
 

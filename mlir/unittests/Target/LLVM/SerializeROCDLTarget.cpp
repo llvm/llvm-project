@@ -39,7 +39,7 @@ using namespace mlir;
 
 class MLIRTargetLLVMROCDL : public ::testing::Test {
 protected:
-  virtual void SetUp() {
+  void SetUp() override {
     registerBuiltinDialectTranslation(registry);
     registerLLVMDialectTranslation(registry);
     registerGPUDialectTranslation(registry);
@@ -89,7 +89,7 @@ TEST_F(MLIRTargetLLVMROCDL, SKIP_WITHOUT_AMDGPU(SerializeROCDLMToLLVM)) {
         serializer.serializeToObject(gpuModule, options);
     // Check that the serializer was successful.
     ASSERT_TRUE(object != std::nullopt);
-    ASSERT_TRUE(object->size() > 0);
+    ASSERT_TRUE(!object->empty());
 
     // Read the serialized module.
     llvm::MemoryBufferRef buffer(StringRef(object->data(), object->size()),
@@ -125,7 +125,7 @@ TEST_F(MLIRTargetLLVMROCDL, SKIP_WITHOUT_AMDGPU(SerializeROCDLToPTX)) {
         serializer.serializeToObject(gpuModule, options);
     // Check that the serializer was successful.
     ASSERT_TRUE(object != std::nullopt);
-    ASSERT_TRUE(object->size() > 0);
+    ASSERT_TRUE(!object->empty());
 
     ASSERT_TRUE(
         StringRef(object->data(), object->size()).contains("rocdl_kernel"));

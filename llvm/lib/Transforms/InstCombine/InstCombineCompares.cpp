@@ -7294,14 +7294,14 @@ Instruction *InstCombinerImpl::foldFCmpIntToFPConst(FCmpInst &I,
   int MantissaWidth = LHSI->getType()->getFPMantissaWidth();
   if (MantissaWidth == -1) return nullptr;  // Unknown.
 
-  IntegerType *IntTy = cast<IntegerType>(LHSI->getOperand(0)->getType());
-
+  Type *IntTy = LHSI->getOperand(0)->getType();
+  unsigned IntWidth = IntTy->getScalarSizeInBits();
   bool LHSUnsigned = isa<UIToFPInst>(LHSI);
 
   if (I.isEquality()) {
     FCmpInst::Predicate P = I.getPredicate();
     bool IsExact = false;
-    APSInt RHSCvt(IntTy->getBitWidth(), LHSUnsigned);
+    APSInt RHSCvt(IntWidth, LHSUnsigned);
     RHS.convertToInteger(RHSCvt, APFloat::rmNearestTiesToEven, &IsExact);
 
     // If the floating point constant isn't an integer value, we know if we will
@@ -7326,23 +7326,22 @@ Instruction *InstCombinerImpl::foldFCmpIntToFPConst(FCmpInst &I,
   // Check to see that the input is converted from an integer type that is small
   // enough that preserves all bits.  TODO: check here for "known" sign bits.
   // This would allow us to handle (fptosi (x >>s 62) to float) if x is i64 f.e.
-  unsigned InputSize = IntTy->getScalarSizeInBits();
 
-  // Following test does NOT adjust InputSize downwards for signed inputs,
+  // Following test does NOT adjust IntWidth downwards for signed inputs,
   // because the most negative value still requires all the mantissa bits
   // to distinguish it from one less than that value.
-  if ((int)InputSize > MantissaWidth) {
+  if ((int)IntWidth > MantissaWidth) {
     // Conversion would lose accuracy. Check if loss can impact comparison.
     int Exp = ilogb(RHS);
     if (Exp == APFloat::IEK_Inf) {
       int MaxExponent = ilogb(APFloat::getLargest(RHS.getSemantics()));
-      if (MaxExponent < (int)InputSize - !LHSUnsigned)
+      if (MaxExponent < (int)IntWidth - !LHSUnsigned)
         // Conversion could create infinity.
         return nullptr;
     } else {
       // Note that if RHS is zero or NaN, then Exp is negative
       // and first condition is trivially false.
-      if (MantissaWidth <= Exp && Exp <= (int)InputSize - !LHSUnsigned)
+      if (MantissaWidth <= Exp && Exp <= (int)IntWidth - !LHSUnsigned)
         // Conversion could affect comparison.
         return nullptr;
     }
@@ -7390,8 +7389,6 @@ Instruction *InstCombinerImpl::foldFCmpIntToFPConst(FCmpInst &I,
 
   // See if the FP constant is too large for the integer.  For example,
   // comparing an i8 to 300.0.
-  unsigned IntWidth = IntTy->getScalarSizeInBits();
-
   if (!LHSUnsigned) {
     // If the RHS value is > SignedMax, fold the comparison.  This handles +INF
     // and large values.

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef __LLVM_LIBC_MACROS_LINUX_UNISTD_MACROS_H
-#define __LLVM_LIBC_MACROS_LINUX_UNISTD_MACROS_H
+#ifndef LLVM_LIBC_MACROS_LINUX_UNISTD_MACROS_H
+#define LLVM_LIBC_MACROS_LINUX_UNISTD_MACROS_H
 
 // Values for mode argument to the access(...) function.
 #define F_OK 0
@@ -27,4 +27,4 @@
                       (long)(arg4), (long)(arg5), (long)(arg6))
 #define syscall(...) __syscall_helper(__VA_ARGS__, 0, 1, 2, 3, 4, 5, 6)
 
-#endif // __LLVM_LIBC_MACROS_LINUX_UNISTD_MACROS_H
+#endif // LLVM_LIBC_MACROS_LINUX_UNISTD_MACROS_H

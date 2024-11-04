@@ -21,6 +21,9 @@ _Static_assert(!!1.0, ""); // pedantic-ref-warning {{not an integer constant exp
                            // pedantic-expected-warning {{not an integer constant expression}}
 _Static_assert(!!1, "");
 
+_Static_assert(!(_Bool){(void*)0}, ""); // pedantic-ref-warning {{not an integer constant expression}} \
+                                        // pedantic-expected-warning {{not an integer constant expression}}
+
 int a = (1 == 1 ? 5 : 3);
 _Static_assert(a == 5, ""); // all-error {{not an integral constant expression}}
 
@@ -30,15 +33,15 @@ const int b = 3;
 _Static_assert(b == 3, ""); // pedantic-ref-warning {{not an integer constant expression}} \
                             // pedantic-expected-warning {{not an integer constant expression}}
 
-/// FIXME: The new interpreter is missing the "initializer of 'c' unknown" diagnostics.
-const int c; // ref-note {{declared here}} \
-             // pedantic-ref-note {{declared here}}
+const int c; // all-note {{declared here}}
 _Static_assert(c == 0, ""); // ref-error {{not an integral constant expression}} \
                             // ref-note {{initializer of 'c' is unknown}} \
                             // pedantic-ref-error {{not an integral constant expression}} \
                             // pedantic-ref-note {{initializer of 'c' is unknown}} \
                             // expected-error {{not an integral constant expression}} \
-                            // pedantic-expected-error {{not an integral constant expression}}
+                            // expected-note {{initializer of 'c' is unknown}} \
+                            // pedantic-expected-error {{not an integral constant expression}} \
+                            // pedantic-expected-note {{initializer of 'c' is unknown}}
 
 _Static_assert(&c != 0, ""); // ref-warning {{always true}} \
                              // pedantic-ref-warning {{always true}} \
@@ -177,3 +180,19 @@ void test4(void) {
   t1 = sizeof(int);
 }
 
+void localCompoundLiteral(void) {
+  struct S { int x, y; } s = {}; // pedantic-expected-warning {{use of an empty initializer}} \
+                                 // pedantic-ref-warning {{use of an empty initializer}}
+  struct T {
+	int i;
+    struct S s;
+  } t1 = { 1, {} }; // pedantic-expected-warning {{use of an empty initializer}} \
+                    // pedantic-ref-warning {{use of an empty initializer}}
+
+  struct T t3 = {
+    (int){}, // pedantic-expected-warning {{use of an empty initializer}} \
+             // pedantic-ref-warning {{use of an empty initializer}}
+    {} // pedantic-expected-warning {{use of an empty initializer}} \
+       // pedantic-ref-warning {{use of an empty initializer}}
+  };
+}

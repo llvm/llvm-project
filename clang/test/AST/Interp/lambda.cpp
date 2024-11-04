@@ -235,3 +235,16 @@ namespace LambdaToAPValue {
     static_assert(g() == f(), "");
   }
 }
+
+namespace ns2_capture_this_byval {
+  struct S {
+    int s;
+    constexpr S(int s) : s{s} { }
+    constexpr auto f(S o) {
+      return [*this,o] (auto a) { return s + o.s + a.s; };
+    }
+  };
+
+  constexpr auto L = S{5}.f(S{10});
+  static_assert(L(S{100}) == 115, "");
+} // end test_captures_1::ns2_capture_this_byval

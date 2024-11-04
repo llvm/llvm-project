@@ -18,12 +18,12 @@
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
 #include "flang/Optimizer/HLFIR/Passes.h"
 #include "mlir/IR/BuiltinDialect.h"
+#include "mlir/IR/MLIRContext.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Pass/PassManager.h"
 #include "mlir/Support/LogicalResult.h"
-#include "mlir/Transforms/DialectConversion.h"
-#include <mlir/IR/MLIRContext.h>
+#include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include <optional>
 
 namespace hlfir {
@@ -176,7 +176,7 @@ protected:
           rewriter.eraseOp(use);
       }
     }
-    rewriter.replaceAllUsesWith(op->getResults(), {base});
+
     rewriter.replaceOp(op, base);
   }
 };
@@ -484,19 +484,19 @@ public:
                 ProductOpConversion, TransposeOpConversion, CountOpConversion,
                 DotProductOpConversion, MaxvalOpConversion, MinvalOpConversion,
                 MinlocOpConversion, MaxlocOpConversion>(context);
-    mlir::ConversionTarget target(*context);
-    target.addLegalDialect<mlir::BuiltinDialect, mlir::arith::ArithDialect,
-                           mlir::func::FuncDialect, fir::FIROpsDialect,
-                           hlfir::hlfirDialect>();
-    target.addIllegalOp<hlfir::MatmulOp, hlfir::MatmulTransposeOp, hlfir::SumOp,
-                        hlfir::ProductOp, hlfir::TransposeOp, hlfir::AnyOp,
-                        hlfir::AllOp, hlfir::DotProductOp, hlfir::CountOp,
-                        hlfir::MaxvalOp, hlfir::MinvalOp, hlfir::MinlocOp,
-                        hlfir::MaxlocOp>();
-    target.markUnknownOpDynamicallyLegal(
-        [](mlir::Operation *) { return true; });
-    if (mlir::failed(
-            mlir::applyFullConversion(module, target, std::move(patterns)))) {
+
+    // While conceptually this pass is performing dialect conversion, we use
+    // pattern rewrites here instead of dialect conversion because this pass
+    // looses array bounds from some of the expressions e.g.
+    // !hlfir.expr<2xi32> -> !hlfir.expr<?xi32>
+    // MLIR thinks this is a different type so dialect conversion fails.
+    // Pattern rewriting only requires that the resulting IR is still valid
+    mlir::GreedyRewriteConfig config;
+    // Prevent the pattern driver from merging blocks
+    config.enableRegionSimplification = false;
+
+    if (mlir::failed(mlir::applyPatternsAndFoldGreedily(
+            module, std::move(patterns), config))) {
       mlir::emitError(mlir::UnknownLoc::get(context),
                       "failure in HLFIR intrinsic lowering");
       signalPassFailure();

@@ -19,7 +19,7 @@ func.func @matmul(%A: tensor<1024x512xf32>,
 // CHECK-DAG:  %[[C16:.*]] = arith.constant 16 : index
 // CHECK:      %[[VSCALE:.*]] = vector.vscale
 // CHECK:      %[[STEP:.*]] = arith.muli %[[VSCALE]], %[[C16]] : index
-// CHECK:      %2 = scf.for {{.*}} %[[C0]] to %[[C1024]] step %[[C8]] iter_args(%arg4 = %arg2) -> (tensor<1024x2000xf32>) {
+// CHECK:      scf.for {{.*}} %[[C0]] to %[[C1024]] step %[[C8]] iter_args(%arg4 = %arg2) -> (tensor<1024x2000xf32>) {
 
 // Main loop after vectorisation (without masking)
 

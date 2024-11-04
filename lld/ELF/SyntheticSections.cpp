@@ -537,9 +537,11 @@ SmallVector<EhFrameSection::FdeData, 0> EhFrameSection::getFdeData() const {
     for (EhSectionPiece *fde : rec->fdes) {
       uint64_t pc = getFdePc(buf, fde->outputOff, enc);
       uint64_t fdeVA = getParent()->addr + fde->outputOff;
-      if (!isInt<32>(pc - va))
-        fatal(toString(fde->sec) + ": PC offset is too large: 0x" +
-              Twine::utohexstr(pc - va));
+      if (!isInt<32>(pc - va)) {
+        errorOrWarn(toString(fde->sec) + ": PC offset is too large: 0x" +
+                    Twine::utohexstr(pc - va));
+        continue;
+      }
       ret.push_back({uint32_t(pc - va), uint32_t(fdeVA - va)});
     }
   }

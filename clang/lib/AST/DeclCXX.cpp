@@ -2543,8 +2543,19 @@ QualType CXXMethodDecl::getThisType(const FunctionProtoType *FPT,
                                     const CXXRecordDecl *Decl) {
   ASTContext &C = Decl->getASTContext();
   QualType ObjectTy = ::getThisObjectType(C, FPT, Decl);
-  return C.getLangOpts().HLSL ? C.getLValueReferenceType(ObjectTy)
-                              : C.getPointerType(ObjectTy);
+
+  // Unlike 'const' and 'volatile', a '__restrict' qualifier must be
+  // attached to the pointer type, not the pointee.
+  bool Restrict = FPT->getMethodQuals().hasRestrict();
+  if (Restrict)
+    ObjectTy.removeLocalRestrict();
+
+  ObjectTy = C.getLangOpts().HLSL ? C.getLValueReferenceType(ObjectTy)
+                                  : C.getPointerType(ObjectTy);
+
+  if (Restrict)
+    ObjectTy.addRestrict();
+  return ObjectTy;
 }
 
 QualType CXXMethodDecl::getThisType() const {

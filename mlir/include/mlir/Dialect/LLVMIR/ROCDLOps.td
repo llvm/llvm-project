@@ -28,6 +28,22 @@ def ROCDL_Dialect : Dialect {
   let hasOperationAttrVerify = 1;
 
   let extraClassDeclaration = [{
+    /// Get the name of the attribute used to annotate external kernel
+    /// functions.
+    static StringRef getKernelFuncAttrName() { return "rocdl.kernel"; }
+    static constexpr ::llvm::StringLiteral getFlatWorkGroupSizeAttrName() {
+      return ::llvm::StringLiteral("rocdl.flat_work_group_size");
+    }
+    static constexpr ::llvm::StringLiteral getReqdWorkGroupSizeAttrName() {
+      return ::llvm::StringLiteral("rocdl.reqd_work_group_size");
+    }
+    /// MLIR's gpu-related infrastructure effectively assume uniform workgroup
+    /// sizes, so this attribute defaults to "true" on `rocdl.kernel` functions.
+    /// It is provided here to allow overriding this assumption.
+    static constexpr ::llvm::StringLiteral getUniformWorkGroupSizeAttrName() {
+      return ::llvm::StringLiteral("rocdl.uniform_work_group_size");
+    }
+
     /// The address space value that represents global memory.
     static constexpr unsigned kGlobalMemoryAddressSpace = 1;
     /// The address space value that represents shared memory.

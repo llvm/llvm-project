@@ -75,7 +75,7 @@ add_object_library(
 )
 
 if(NOT (TARGET libc.src.__support.File.file) AND LLVM_LIBC_FULL_BUILD)
-  # Not all platforms have a file implementation. If file is unvailable, and a 
+  # Not all platforms have a file implementation. If file is unvailable, and a
   # full build is requested, then we must skip all file based printf sections.
   return()
 endif()

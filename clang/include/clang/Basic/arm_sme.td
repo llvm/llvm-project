@@ -142,7 +142,7 @@ let TargetGuard = "sme" in {
   def SVZERO_MASK_ZA : SInst<"svzero_mask_za", "vi", "", MergeNone, "aarch64_sme_zero",
                              [IsOverloadNone, IsStreamingCompatible, IsInOutZA],
                              [ImmCheck<0, ImmCheck0_255>]>;
-  def SVZERO_ZA      : SInst<"svzero_za", "v", "", MergeNone, "aarch64_sme_zero",
+  def SVZERO_ZA      : SInst<"svzero_za", "vv", "", MergeNone, "aarch64_sme_zero",
                              [IsOverloadNone, IsStreamingCompatible, IsOutZA]>;
 }
 

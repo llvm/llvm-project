@@ -43,4 +43,4 @@ LIBC_INLINE_VAR constexpr bool is_fixed_point_v = is_fixed_point<T>::value;
 
 } // namespace LIBC_NAMESPACE::cpp
 
-#endif // LLVM_LIBC_SRC___SUPPORT_CPP_TYPE_TRAITS_IS_INTEGRAL_H
+#endif // LLVM_LIBC_SRC___SUPPORT_CPP_TYPE_TRAITS_IS_FIXED_POINT_H

@@ -21,15 +21,13 @@ define float @cvt_i16_to_f32(i16 %a0) nounwind {
 ;
 ; F16C-LABEL: cvt_i16_to_f32:
 ; F16C:       # %bb.0:
-; F16C-NEXT:    movzwl %di, %eax
-; F16C-NEXT:    vmovd %eax, %xmm0
+; F16C-NEXT:    vmovd %edi, %xmm0
 ; F16C-NEXT:    vcvtph2ps %xmm0, %xmm0
 ; F16C-NEXT:    retq
 ;
 ; AVX512-LABEL: cvt_i16_to_f32:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    movzwl %di, %eax
-; AVX512-NEXT:    vmovd %eax, %xmm0
+; AVX512-NEXT:    vmovd %edi, %xmm0
 ; AVX512-NEXT:    vcvtph2ps %xmm0, %xmm0
 ; AVX512-NEXT:    retq
   %1 = bitcast i16 %a0 to half
@@ -1370,16 +1368,14 @@ define double @cvt_i16_to_f64(i16 %a0) nounwind {
 ;
 ; F16C-LABEL: cvt_i16_to_f64:
 ; F16C:       # %bb.0:
-; F16C-NEXT:    movzwl %di, %eax
-; F16C-NEXT:    vmovd %eax, %xmm0
+; F16C-NEXT:    vmovd %edi, %xmm0
 ; F16C-NEXT:    vcvtph2ps %xmm0, %xmm0
 ; F16C-NEXT:    vcvtss2sd %xmm0, %xmm0, %xmm0
 ; F16C-NEXT:    retq
 ;
 ; AVX512-LABEL: cvt_i16_to_f64:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    movzwl %di, %eax
-; AVX512-NEXT:    vmovd %eax, %xmm0
+; AVX512-NEXT:    vmovd %edi, %xmm0
 ; AVX512-NEXT:    vcvtph2ps %xmm0, %xmm0
 ; AVX512-NEXT:    vcvtss2sd %xmm0, %xmm0, %xmm0
 ; AVX512-NEXT:    retq
@@ -1410,14 +1406,12 @@ define <2 x double> @cvt_2i16_to_2f64(<2 x i16> %a0) nounwind {
 ;
 ; F16C-LABEL: cvt_2i16_to_2f64:
 ; F16C:       # %bb.0:
-; F16C-NEXT:    vpmovzxdq {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero
 ; F16C-NEXT:    vcvtph2ps %xmm0, %xmm0
 ; F16C-NEXT:    vcvtps2pd %xmm0, %xmm0
 ; F16C-NEXT:    retq
 ;
 ; AVX512-LABEL: cvt_2i16_to_2f64:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpmovzxdq {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero
 ; AVX512-NEXT:    vcvtph2ps %xmm0, %xmm0
 ; AVX512-NEXT:    vcvtps2pd %xmm0, %xmm0
 ; AVX512-NEXT:    retq
@@ -1503,14 +1497,12 @@ define <2 x double> @cvt_8i16_to_2f64(<8 x i16> %a0) nounwind {
 ;
 ; F16C-LABEL: cvt_8i16_to_2f64:
 ; F16C:       # %bb.0:
-; F16C-NEXT:    vpmovzxdq {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero
 ; F16C-NEXT:    vcvtph2ps %xmm0, %xmm0
 ; F16C-NEXT:    vcvtps2pd %xmm0, %xmm0
 ; F16C-NEXT:    retq
 ;
 ; AVX512-LABEL: cvt_8i16_to_2f64:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpmovzxdq {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero
 ; AVX512-NEXT:    vcvtph2ps %xmm0, %xmm0
 ; AVX512-NEXT:    vcvtps2pd %xmm0, %xmm0
 ; AVX512-NEXT:    retq
@@ -1877,16 +1869,14 @@ define <2 x double> @load_cvt_2i16_to_2f64(ptr %a0) nounwind {
 ;
 ; F16C-LABEL: load_cvt_2i16_to_2f64:
 ; F16C:       # %bb.0:
-; F16C-NEXT:    vmovd {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; F16C-NEXT:    vpmovzxdq {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero
+; F16C-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; F16C-NEXT:    vcvtph2ps %xmm0, %xmm0
 ; F16C-NEXT:    vcvtps2pd %xmm0, %xmm0
 ; F16C-NEXT:    retq
 ;
 ; AVX512-LABEL: load_cvt_2i16_to_2f64:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vmovd {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; AVX512-NEXT:    vpmovzxdq {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero
+; AVX512-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; AVX512-NEXT:    vcvtph2ps %xmm0, %xmm0
 ; AVX512-NEXT:    vcvtps2pd %xmm0, %xmm0
 ; AVX512-NEXT:    retq
@@ -4976,32 +4966,22 @@ define <4 x i32> @fptosi_2f16_to_4i32(<2 x half> %a) nounwind {
 ;
 ; F16C-LABEL: fptosi_2f16_to_4i32:
 ; F16C:       # %bb.0:
-; F16C-NEXT:    vpextrw $0, %xmm0, %eax
-; F16C-NEXT:    movzwl %ax, %eax
-; F16C-NEXT:    vmovd %eax, %xmm1
+; F16C-NEXT:    vpsrld $16, %xmm0, %xmm1
 ; F16C-NEXT:    vcvtph2ps %xmm1, %xmm1
-; F16C-NEXT:    vpsrld $16, %xmm0, %xmm0
-; F16C-NEXT:    vpextrw $0, %xmm0, %eax
-; F16C-NEXT:    movzwl %ax, %eax
-; F16C-NEXT:    vmovd %eax, %xmm0
+; F16C-NEXT:    vpmovzxwd {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero
 ; F16C-NEXT:    vcvtph2ps %xmm0, %xmm0
-; F16C-NEXT:    vunpcklps {{.*#+}} xmm0 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
+; F16C-NEXT:    vunpcklps {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
 ; F16C-NEXT:    vcvttps2dq %xmm0, %xmm0
 ; F16C-NEXT:    vmovq {{.*#+}} xmm0 = xmm0[0],zero
 ; F16C-NEXT:    retq
 ;
 ; AVX512-LABEL: fptosi_2f16_to_4i32:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpextrw $0, %xmm0, %eax
-; AVX512-NEXT:    movzwl %ax, %eax
-; AVX512-NEXT:    vmovd %eax, %xmm1
+; AVX512-NEXT:    vpsrld $16, %xmm0, %xmm1
 ; AVX512-NEXT:    vcvtph2ps %xmm1, %xmm1
-; AVX512-NEXT:    vpsrld $16, %xmm0, %xmm0
-; AVX512-NEXT:    vpextrw $0, %xmm0, %eax
-; AVX512-NEXT:    movzwl %ax, %eax
-; AVX512-NEXT:    vmovd %eax, %xmm0
+; AVX512-NEXT:    vpmovzxwd {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero
 ; AVX512-NEXT:    vcvtph2ps %xmm0, %xmm0
-; AVX512-NEXT:    vunpcklps {{.*#+}} xmm0 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
+; AVX512-NEXT:    vunpcklps {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
 ; AVX512-NEXT:    vcvttps2dq %xmm0, %xmm0
 ; AVX512-NEXT:    vmovq {{.*#+}} xmm0 = xmm0[0],zero
 ; AVX512-NEXT:    retq

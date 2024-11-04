@@ -29,10 +29,11 @@ const std::vector<std::string> &ModuleDeps::getBuildArguments() {
   return std::get<std::vector<std::string>>(BuildInfo);
 }
 
-static void optimizeHeaderSearchOpts(HeaderSearchOptions &Opts,
-                                     ASTReader &Reader,
-                                     const serialization::ModuleFile &MF,
-                                     ScanningOptimizations OptimizeArgs) {
+static void
+optimizeHeaderSearchOpts(HeaderSearchOptions &Opts, ASTReader &Reader,
+                         const serialization::ModuleFile &MF,
+                         const PrebuiltModuleVFSMapT &PrebuiltModuleVFSMap,
+                         ScanningOptimizations OptimizeArgs) {
   if (any(OptimizeArgs & ScanningOptimizations::HeaderSearch)) {
     // Only preserve search paths that were used during the dependency scan.
     std::vector<HeaderSearchOptions::Entry> Entries;
@@ -65,11 +66,25 @@ static void optimizeHeaderSearchOpts(HeaderSearchOptions &Opts,
     llvm::DenseSet<const serialization::ModuleFile *> Visited;
     std::function<void(const serialization::ModuleFile *)> VisitMF =
         [&](const serialization::ModuleFile *MF) {
-          VFSUsage |= MF->VFSUsage;
           Visited.insert(MF);
-          for (const serialization::ModuleFile *Import : MF->Imports)
-            if (!Visited.contains(Import))
-              VisitMF(Import);
+          if (MF->Kind == serialization::MK_ImplicitModule) {
+            VFSUsage |= MF->VFSUsage;
+            // We only need to recurse into implicit modules. Other module types
+            // will have the correct set of VFSs for anything they depend on.
+            for (const serialization::ModuleFile *Import : MF->Imports)
+              if (!Visited.contains(Import))
+                VisitMF(Import);
+          } else {
+            // This is not an implicitly built module, so it may have different
+            // VFS options. Fall back to a string comparison instead.
+            auto VFSMap = PrebuiltModuleVFSMap.find(MF->FileName);
+            if (VFSMap == PrebuiltModuleVFSMap.end())
+              return;
+            for (std::size_t I = 0, E = VFSOverlayFiles.size(); I != E; ++I) {
+              if (VFSMap->second.contains(VFSOverlayFiles[I]))
+                VFSUsage[I] = true;
+            }
+          }
         };
     VisitMF(&MF);
 
@@ -596,6 +611,7 @@ ModuleDepCollectorPP::handleTopLevelModule(const Module *M) {
                                         ScanningOptimizations::VFS)))
               optimizeHeaderSearchOpts(BuildInvocation.getMutHeaderSearchOpts(),
                                        *MDC.ScanInstance.getASTReader(), *MF,
+                                       MDC.PrebuiltModuleVFSMap,
                                        MDC.OptimizeArgs);
             if (any(MDC.OptimizeArgs & ScanningOptimizations::SystemWarnings))
               optimizeDiagnosticOpts(
@@ -697,9 +713,11 @@ ModuleDepCollector::ModuleDepCollector(
     std::unique_ptr<DependencyOutputOptions> Opts,
     CompilerInstance &ScanInstance, DependencyConsumer &C,
     DependencyActionController &Controller, CompilerInvocation OriginalCI,
+    PrebuiltModuleVFSMapT PrebuiltModuleVFSMap,
     ScanningOptimizations OptimizeArgs, bool EagerLoadModules,
     bool IsStdModuleP1689Format)
     : ScanInstance(ScanInstance), Consumer(C), Controller(Controller),
+      PrebuiltModuleVFSMap(std::move(PrebuiltModuleVFSMap)),
       Opts(std::move(Opts)),
       CommonInvocation(
           makeCommonInvocationForModuleBuild(std::move(OriginalCI))),

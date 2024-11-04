@@ -643,7 +643,7 @@ void MergeFunctions::filterInstsUnrelatedToPDI(
        BI != BIE; ++BI) {
     // Examine DPValues as they happen "before" the instruction. Are they
     // connected to parameters?
-    for (DPValue &DPV : BI->getDbgValueRange()) {
+    for (DPValue &DPV : DPValue::filter(BI->getDbgValueRange())) {
       if (DPV.isDbgValue() || DPV.isDbgAssign()) {
         ExamineDbgValue(&DPV, PDPVRelated);
       } else {
@@ -686,7 +686,7 @@ void MergeFunctions::filterInstsUnrelatedToPDI(
 
   // Collect the set of unrelated instructions and debug records.
   for (Instruction &I : *GEntryBlock) {
-    for (auto &DPV : I.getDbgValueRange())
+    for (DPValue &DPV : DPValue::filter(I.getDbgValueRange()))
       IsPDIRelated(&DPV, PDPVRelated, PDPVUnrelatedWL);
     IsPDIRelated(&I, PDIRelated, PDIUnrelatedWL);
   }
@@ -747,6 +747,7 @@ void MergeFunctions::writeThunk(Function *F, Function *G) {
     NewG = Function::Create(G->getFunctionType(), G->getLinkage(),
                             G->getAddressSpace(), "", G->getParent());
     NewG->setComdat(G->getComdat());
+    NewG->IsNewDbgInfoFormat = G->IsNewDbgInfoFormat;
     BB = BasicBlock::Create(F->getContext(), "", NewG);
   }
 
@@ -874,6 +875,7 @@ void MergeFunctions::mergeTwoFunctions(Function *F, Function *G) {
                                       F->getAddressSpace(), "", F->getParent());
     NewF->copyAttributesFrom(F);
     NewF->takeName(F);
+    NewF->IsNewDbgInfoFormat = F->IsNewDbgInfoFormat;
     // Ensure CFI type metadata is propagated to the new function.
     copyMetadataIfPresent(F, NewF, "type");
     copyMetadataIfPresent(F, NewF, "kcfi_type");

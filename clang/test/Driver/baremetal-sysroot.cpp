@@ -18,5 +18,5 @@
 // CHECK-V6M-C-SAME: "-x" "c++" "{{.*}}baremetal-sysroot.cpp"
 // CHECK-V6M-C-NEXT: "{{[^"]*}}ld{{(\.(lld|bfd|gold))?}}{{(\.exe)?}}" "{{.*}}.o" "-Bstatic"
 // CHECK-V6M-C-SAME: "-L{{.*}}/baremetal_default_sysroot{{[/\\]+}}bin{{[/\\]+}}..{{[/\\]+}}lib{{[/\\]+}}clang-runtimes{{[/\\]+}}armv6m-none-eabi{{[/\\]+}}lib"
-// CHECK-V6M-C-SAME: "-lc" "-lm" "-lclang_rt.builtins-armv6m"
+// CHECK-V6M-C-SAME: "-lc" "-lm" "{{[^"]*}}libclang_rt.builtins.a"
 // CHECK-V6M-C-SAME: "-o" "{{.*}}.o"

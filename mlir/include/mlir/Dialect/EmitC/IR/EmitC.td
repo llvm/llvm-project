@@ -31,6 +31,14 @@ include "mlir/IR/RegionKindInterface.td"
 class EmitC_Op<string mnemonic, list<Trait> traits = []>
     : Op<EmitC_Dialect, mnemonic, traits>;
 
+// Base class for unary operations.
+class EmitC_UnaryOp<string mnemonic, list<Trait> traits = []> :
+    EmitC_Op<mnemonic, traits> {
+  let arguments = (ins AnyType);
+  let results = (outs AnyType);
+  let assemblyFormat = "operands attr-dict `:` functional-type(operands, results)";
+}
+
 // Base class for binary operations.
 class EmitC_BinaryOp<string mnemonic, list<Trait> traits = []> :
     EmitC_Op<mnemonic, traits> {
@@ -93,6 +101,114 @@ def EmitC_ApplyOp : EmitC_Op<"apply", []> {
     $applicableOperator `(` $operand `)` attr-dict `:` functional-type($operand, results)
   }];
   let hasVerifier = 1;
+}
+
+def EmitC_BitwiseAndOp : EmitC_BinaryOp<"bitwise_and", []> {
+  let summary = "Bitwise and operation";
+  let description = [{
+    With the `bitwise_and` operation the bitwise operator & (and) can
+    be applied.
+
+    Example:
+
+    ```mlir
+    %0 = emitc.bitwise_and %arg0, %arg1 : (i32, i32) -> i32
+    ```
+    ```c++
+    // Code emitted for the operation above.
+    int32_t v3 = v1 & v2;
+    ```
+  }];
+}
+
+def EmitC_BitwiseLeftShiftOp : EmitC_BinaryOp<"bitwise_left_shift", []> {
+  let summary = "Bitwise left shift operation";
+  let description = [{
+    With the `bitwise_left_shift` operation the bitwise operator <<
+    (left shift) can be applied.
+
+    Example:
+
+    ```mlir
+    %0 = emitc.bitwise_left_shift %arg0, %arg1 : (i32, i32) -> i32
+    ```
+    ```c++
+    // Code emitted for the operation above.
+    int32_t v3 = v1 << v2;
+    ```
+  }];
+}
+
+def EmitC_BitwiseNotOp : EmitC_UnaryOp<"bitwise_not", []> {
+  let summary = "Bitwise not operation";
+  let description = [{
+    With the `bitwise_not` operation the bitwise operator ~ (not) can
+    be applied.
+
+    Example:
+
+    ```mlir
+    %0 = emitc.bitwise_not %arg0 : (i32) -> i32
+    ```
+    ```c++
+    // Code emitted for the operation above.
+    int32_t v2 = ~v1;
+    ```
+  }];
+}
+
+def EmitC_BitwiseOrOp : EmitC_BinaryOp<"bitwise_or", []> {
+  let summary = "Bitwise or operation";
+  let description = [{
+    With the `bitwise_or` operation the bitwise operator | (or)
+    can be applied.
+
+    Example:
+
+    ```mlir
+    %0 = emitc.bitwise_or %arg0, %arg1 : (i32, i32) -> i32
+    ```
+    ```c++
+    // Code emitted for the operation above.
+    int32_t v3 = v1 | v2;
+    ```
+  }];
+}
+
+def EmitC_BitwiseRightShiftOp : EmitC_BinaryOp<"bitwise_right_shift", []> {
+  let summary = "Bitwise right shift operation";
+  let description = [{
+    With the `bitwise_right_shift` operation the bitwise operator >>
+    (right shift) can be applied.
+
+    Example:
+
+    ```mlir
+    %0 = emitc.bitwise_right_shift %arg0, %arg1 : (i32, i32) -> i32
+    ```
+    ```c++
+    // Code emitted for the operation above.
+    int32_t v3 = v1 >> v2;
+    ```
+  }];
+}
+
+def EmitC_BitwiseXorOp : EmitC_BinaryOp<"bitwise_xor", []> {
+  let summary = "Bitwise xor operation";
+  let description = [{
+    With the `bitwise_xor` operation the bitwise operator ^ (xor)
+    can be applied.
+
+    Example:
+
+    ```mlir
+    %0 = emitc.bitwise_xor %arg0, %arg1 : (i32, i32) -> i32
+    ```
+    ```c++
+    // Code emitted for the operation above.
+    int32_t v3 = v1 ^ v2;
+    ```
+  }];
 }
 
 def EmitC_CallOpaqueOp : EmitC_Op<"call_opaque", []> {
@@ -656,6 +772,69 @@ def EmitC_LiteralOp : EmitC_Op<"literal", [Pure]> {
 
   let hasVerifier = 1;
   let assemblyFormat = "$value attr-dict `:` type($result)";
+}
+
+def EmitC_LogicalAndOp : EmitC_BinaryOp<"logical_and", []> {
+  let summary = "Logical and operation";
+  let description = [{
+    With the `logical_and` operation the logical operator && (and) can
+    be applied.
+
+    Example:
+
+    ```mlir
+    %0 = emitc.logical_and %arg0, %arg1 : i32, i32
+    ```
+    ```c++
+    // Code emitted for the operation above.
+    bool v3 = v1 && v2;
+    ```
+  }];
+
+  let results = (outs I1);
+  let assemblyFormat = "operands attr-dict `:` type(operands)";
+}
+
+def EmitC_LogicalNotOp : EmitC_UnaryOp<"logical_not", []> {
+  let summary = "Logical not operation";
+  let description = [{
+    With the `logical_not` operation the logical operator ! (negation) can
+    be applied.
+
+    Example:
+
+    ```mlir
+    %0 = emitc.logical_not %arg0 : i32
+    ```
+    ```c++
+    // Code emitted for the operation above.
+    bool v2 = !v1;
+    ```
+  }];
+
+  let results = (outs I1);
+  let assemblyFormat = "operands attr-dict `:` type(operands)";
+}
+
+def EmitC_LogicalOrOp : EmitC_BinaryOp<"logical_or", []> {
+  let summary = "Logical or operation";
+  let description = [{
+    With the `logical_or` operation the logical operator || (inclusive or)
+    can be applied.
+
+    Example:
+
+    ```mlir
+    %0 = emitc.logical_or %arg0, %arg1 : i32, i32
+    ```
+    ```c++
+    // Code emitted for the operation above.
+    bool v3 = v1 || v2;
+    ```
+  }];
+
+  let results = (outs I1);
+  let assemblyFormat = "operands attr-dict `:` type(operands)";
 }
 
 def EmitC_MulOp : EmitC_BinaryOp<"mul", []> {

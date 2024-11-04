@@ -15,6 +15,7 @@
 #include "mlir-c/Support.h"
 
 #include <assert.h>
+#include <inttypes.h>
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -105,7 +106,7 @@ static int testStructTypeCreation(MlirContext ctx) {
   // CHECK: i8
   // CHECK: i32
   // CHECK: i64
-  fprintf(stderr, "num elements: %ld\n",
+  fprintf(stderr, "num elements: %" PRIdPTR "\n",
           mlirLLVMStructTypeGetNumElementTypes(literal));
   for (intptr_t i = 0; i < 3; ++i) {
     mlirTypeDump(mlirLLVMStructTypeGetElementType(literal, i));

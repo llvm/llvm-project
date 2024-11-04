@@ -1319,7 +1319,7 @@ def POSIX : StandardSpec<"POSIX"> {
             "hsearch",
             RetValSpec<EntryTypePtr>,
             [
-                ArgSpec<EntryType>, 
+                ArgSpec<EntryType>,
                 ArgSpec<ActionType>
             ]
         >,
@@ -1339,7 +1339,7 @@ def POSIX : StandardSpec<"POSIX"> {
             ]
         >,
     ]
-  >; 
+  >;
 
   HeaderSpec Termios = HeaderSpec<
     "termios.h",

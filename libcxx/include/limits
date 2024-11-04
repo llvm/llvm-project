@@ -102,7 +102,6 @@ template<> class numeric_limits<cv long double>;
 
 */
 
-#include <__assert> // all public C++ headers provide the assertion handler
 #include <__config>
 #include <__type_traits/is_arithmetic.h>
 #include <__type_traits/is_signed.h>

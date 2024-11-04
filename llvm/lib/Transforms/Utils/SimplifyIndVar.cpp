@@ -25,6 +25,7 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Utils/Local.h"
+#include "llvm/Transforms/Utils/LoopUtils.h"
 #include "llvm/Transforms/Utils/ScalarEvolutionExpander.h"
 
 using namespace llvm;
@@ -300,7 +301,7 @@ bool SimplifyIndvar::eliminateSDiv(BinaryOperator *SDiv) {
   if (SE->isKnownNonNegative(N) && SE->isKnownNonNegative(D)) {
     auto *UDiv = BinaryOperator::Create(
         BinaryOperator::UDiv, SDiv->getOperand(0), SDiv->getOperand(1),
-        SDiv->getName() + ".udiv", SDiv);
+        SDiv->getName() + ".udiv", SDiv->getIterator());
     UDiv->setIsExact(SDiv->isExact());
     SDiv->replaceAllUsesWith(UDiv);
     LLVM_DEBUG(dbgs() << "INDVARS: Simplified sdiv: " << *SDiv << '\n');
@@ -317,7 +318,7 @@ bool SimplifyIndvar::eliminateSDiv(BinaryOperator *SDiv) {
 void SimplifyIndvar::replaceSRemWithURem(BinaryOperator *Rem) {
   auto *N = Rem->getOperand(0), *D = Rem->getOperand(1);
   auto *URem = BinaryOperator::Create(BinaryOperator::URem, N, D,
-                                      Rem->getName() + ".urem", Rem);
+                                      Rem->getName() + ".urem", Rem->getIterator());
   Rem->replaceAllUsesWith(URem);
   LLVM_DEBUG(dbgs() << "INDVARS: Simplified srem: " << *Rem << '\n');
   ++NumSimplifiedSRem;
@@ -338,9 +339,9 @@ void SimplifyIndvar::replaceRemWithNumerator(BinaryOperator *Rem) {
 void SimplifyIndvar::replaceRemWithNumeratorOrZero(BinaryOperator *Rem) {
   auto *T = Rem->getType();
   auto *N = Rem->getOperand(0), *D = Rem->getOperand(1);
-  ICmpInst *ICmp = new ICmpInst(Rem, ICmpInst::ICMP_EQ, N, D);
+  ICmpInst *ICmp = new ICmpInst(Rem->getIterator(), ICmpInst::ICMP_EQ, N, D);
   SelectInst *Sel =
-      SelectInst::Create(ICmp, ConstantInt::get(T, 0), N, "iv.rem", Rem);
+      SelectInst::Create(ICmp, ConstantInt::get(T, 0), N, "iv.rem", Rem->getIterator());
   Rem->replaceAllUsesWith(Sel);
   LLVM_DEBUG(dbgs() << "INDVARS: Simplified rem: " << *Rem << '\n');
   ++NumElimRem;
@@ -410,7 +411,7 @@ bool SimplifyIndvar::eliminateOverflowIntrinsic(WithOverflowInst *WO) {
   // intrinsic as well.
 
   BinaryOperator *NewResult = BinaryOperator::Create(
-      WO->getBinaryOp(), WO->getLHS(), WO->getRHS(), "", WO);
+      WO->getBinaryOp(), WO->getLHS(), WO->getRHS(), "", WO->getIterator());
 
   if (WO->isSigned())
     NewResult->setHasNoSignedWrap(true);
@@ -448,7 +449,7 @@ bool SimplifyIndvar::eliminateSaturatingIntrinsic(SaturatingInst *SI) {
     return false;
 
   BinaryOperator *BO = BinaryOperator::Create(
-      SI->getBinaryOp(), SI->getLHS(), SI->getRHS(), SI->getName(), SI);
+      SI->getBinaryOp(), SI->getLHS(), SI->getRHS(), SI->getName(), SI->getIterator());
   if (SI->isSigned())
     BO->setHasNoSignedWrap();
   else
@@ -643,10 +644,21 @@ bool SimplifyIndvar::replaceIVUserWithLoopInvariant(Instruction *I) {
   }
 
   auto *Invariant = Rewriter.expandCodeFor(S, I->getType(), IP);
+  bool NeedToEmitLCSSAPhis = false;
+  if (!LI->replacementPreservesLCSSAForm(I, Invariant))
+    NeedToEmitLCSSAPhis = true;
 
   I->replaceAllUsesWith(Invariant);
   LLVM_DEBUG(dbgs() << "INDVARS: Replace IV user: " << *I
                     << " with loop invariant: " << *S << '\n');
+
+  if (NeedToEmitLCSSAPhis) {
+    SmallVector<Instruction *, 1> NeedsLCSSAPhis;
+    NeedsLCSSAPhis.push_back(cast<Instruction>(Invariant));
+    formLCSSAForInstructions(NeedsLCSSAPhis, *DT, *LI, SE);
+    LLVM_DEBUG(dbgs() << " INDVARS: Replacement breaks LCSSA form"
+                      << " inserting LCSSA Phis" << '\n');
+  }
   ++NumFoldedUser;
   Changed = true;
   DeadInsts.emplace_back(I);
@@ -1755,7 +1767,7 @@ Instruction *WidenIV::widenIVUse(WidenIV::NarrowIVDefUse DU,
 
         PHINode *WidePhi =
           PHINode::Create(DU.WideDef->getType(), 1, UsePhi->getName() + ".wide",
-                          UsePhi);
+                          UsePhi->getIterator());
         WidePhi->addIncoming(DU.WideDef, UsePhi->getIncomingBlock(0));
         BasicBlock *WidePhiBB = WidePhi->getParent();
         IRBuilder<> Builder(WidePhiBB, WidePhiBB->getFirstInsertionPt());

@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 #include "PerfReader.h"
 #include "ProfileGenerator.h"
+#include "llvm/ADT/SmallString.h"
 #include "llvm/DebugInfo/Symbolize/SymbolizableModule.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Process.h"
@@ -361,8 +362,11 @@ PerfScriptReader::convertPerfDataToTrace(ProfiledBinary *Binary,
     exitWithError("Perf not found.");
   }
   std::string PerfPath = *PerfExecutable;
-  std::string PerfTraceFile = PerfData.str() + ".script.tmp";
-  std::string ErrorFile = PerfData.str() + ".script.err.tmp";
+
+  SmallString<128> PerfTraceFile;
+  sys::fs::createUniquePath("perf-script-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%.tmp",
+                            PerfTraceFile, /*MakeAbsolute=*/true);
+  std::string ErrorFile = std::string(PerfTraceFile) + ".err";
   StringRef ScriptMMapArgs[] = {PerfPath, "script",   "--show-mmap-events",
                                 "-F",     "comm,pid", "-i",
                                 PerfData};
@@ -400,7 +404,8 @@ PerfScriptReader::convertPerfDataToTrace(ProfiledBinary *Binary,
                                   PIDs,     "-i",         PerfData};
   sys::ExecuteAndWait(PerfPath, ScriptSampleArgs, std::nullopt, Redirects);
 
-  return {PerfTraceFile, PerfFormat::PerfScript, PerfContent::UnknownContent};
+  return {std::string(PerfTraceFile), PerfFormat::PerfScript,
+          PerfContent::UnknownContent};
 }
 
 void PerfScriptReader::updateBinaryAddress(const MMapEvent &Event) {

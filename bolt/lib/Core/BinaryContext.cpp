@@ -1967,7 +1967,7 @@ void BinaryContext::printInstruction(raw_ostream &OS, const MCInst &Instruction,
     OS << " # Offset: " << *Offset;
   if (std::optional<uint32_t> Size = MIB->getSize(Instruction))
     OS << " # Size: " << *Size;
-  if (MCSymbol *Label = MIB->getLabel(Instruction))
+  if (MCSymbol *Label = MIB->getInstLabel(Instruction))
     OS << " # Label: " << *Label;
 
   MIB->printAnnotations(Instruction, OS);

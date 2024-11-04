@@ -768,7 +768,6 @@ static void getUnderlyingObjects(const MachineInstr *MI,
       Objs.clear();
       return;
     }
-    Objs.push_back(V);
   }
 }
 

@@ -173,3 +173,18 @@ void lambda_value_reference_auxiliary_var(T&& t) {
 }
 
 } // namespace negative_cases
+
+namespace deleted_functions {
+
+template <typename T>
+void f(T &&) = delete;
+
+struct S {
+    template <typename T>
+    S(T &&) = delete;
+
+    template <typename T>
+    void operator&(T &&) = delete;
+};
+
+} // namespace deleted_functions

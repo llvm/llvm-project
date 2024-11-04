@@ -366,8 +366,7 @@ bool ARMSubtarget::isGVIndirectSymbol(const GlobalValue *GV) const {
 }
 
 bool ARMSubtarget::isGVInGOT(const GlobalValue *GV) const {
-  return isTargetELF() && TM.isPositionIndependent() &&
-         !TM.shouldAssumeDSOLocal(*GV->getParent(), GV);
+  return isTargetELF() && TM.isPositionIndependent() && !GV->isDSOLocal();
 }
 
 unsigned ARMSubtarget::getMispredictionPenalty() const {
@@ -494,11 +493,38 @@ bool ARMSubtarget::ignoreCSRForAllocationOrder(const MachineFunction &MF,
          ARM::GPRRegClass.contains(PhysReg);
 }
 
-bool ARMSubtarget::splitFramePointerPush(const MachineFunction &MF) const {
+ARMSubtarget::PushPopSplitVariation
+ARMSubtarget::getPushPopSplitVariation(const MachineFunction &MF) const {
   const Function &F = MF.getFunction();
-  if (!MF.getTarget().getMCAsmInfo()->usesWindowsCFI() ||
-      !F.needsUnwindTableEntry())
-    return false;
   const MachineFrameInfo &MFI = MF.getFrameInfo();
-  return MFI.hasVarSizedObjects() || getRegisterInfo()->hasStackRealignment(MF);
+  const std::vector<CalleeSavedInfo> CSI =
+      MF.getFrameInfo().getCalleeSavedInfo();
+  // Returns R7Split if the frame setup must be split into two separate pushes
+  // of r0-r7,lr and another containing r8-r11 (+r12 if necessary). This is
+  // always required on Thumb1-only targets, as the push and pop instructions
+  // can't access the high registers. This is also required when R7 is the frame
+  // pointer and frame pointer elimiination is disabled, or branch signing is
+  // enabled and AAPCS is disabled.
+  if ((MF.getInfo<ARMFunctionInfo>()->shouldSignReturnAddress() &&
+       !createAAPCSFrameChain()) ||
+      (getFramePointerReg() == ARM::R7 &&
+       MF.getTarget().Options.DisableFramePointerElim(MF)) ||
+      isThumb1Only())
+    return R7Split;
+  // Returns R11SplitWindowsSEHUnwind when the stack pointer needs to be
+  // restored from the frame pointer r11 + an offset and Windows CFI is enabled.
+  // This stack unwinding cannot be expressed with SEH unwind opcodes when done
+  // with a single push, making it necessary to split the push into r4-r10, and
+  // another containing r11+lr.
+  if (MF.getTarget().getMCAsmInfo()->usesWindowsCFI() &&
+      F.needsUnwindTableEntry() &&
+      (MFI.hasVarSizedObjects() || getRegisterInfo()->hasStackRealignment(MF)))
+    return R11SplitWindowsSEHUnwind;
+  // Returns R11SplitAAPCSBranchSigning if R11 and lr are not adjacent to each
+  // other in the list of callee saved registers in a frame, and branch
+  // signing is enabled.
+  if (MF.getInfo<ARMFunctionInfo>()->shouldSignReturnAddress() &&
+      getFramePointerReg() == ARM::R11)
+    return R11SplitAAPCSBranchSigning;
+  return NoSplit;
 }

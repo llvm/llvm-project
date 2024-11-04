@@ -170,6 +170,9 @@ public:
     if (!Callee)
       return false;
 
+    if (isMethodOnWTFContainerType(Callee))
+      return true;
+
     auto overloadedOperatorType = Callee->getOverloadedOperator();
     if (overloadedOperatorType == OO_EqualEqual ||
         overloadedOperatorType == OO_ExclaimEqual ||
@@ -196,6 +199,31 @@ public:
       return true;
 
     return false;
+  }
+
+  bool isMethodOnWTFContainerType(const FunctionDecl *Decl) const {
+    if (!isa<CXXMethodDecl>(Decl))
+      return false;
+    auto *ClassDecl = Decl->getParent();
+    if (!ClassDecl || !isa<CXXRecordDecl>(ClassDecl))
+      return false;
+
+    auto *NsDecl = ClassDecl->getParent();
+    if (!NsDecl || !isa<NamespaceDecl>(NsDecl))
+      return false;
+
+    auto MethodName = safeGetName(Decl);
+    auto ClsNameStr = safeGetName(ClassDecl);
+    StringRef ClsName = ClsNameStr; // FIXME: Make safeGetName return StringRef.
+    auto NamespaceName = safeGetName(NsDecl);
+    // FIXME: These should be implemented via attributes.
+    return NamespaceName == "WTF" &&
+           (MethodName == "find" || MethodName == "findIf" ||
+            MethodName == "reverseFind" || MethodName == "reverseFindIf" ||
+            MethodName == "get" || MethodName == "inlineGet" ||
+            MethodName == "contains" || MethodName == "containsIf") &&
+           (ClsName.ends_with("Vector") || ClsName.ends_with("Set") ||
+            ClsName.ends_with("Map"));
   }
 
   void reportBug(const Expr *CallArg, const ParmVarDecl *Param) const {

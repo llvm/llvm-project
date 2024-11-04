@@ -35,6 +35,7 @@ class ValidationEvent <int event_number> {
   int EventNumber = event_number;
 }
 
+// TableGen names for events defined in `llvm::exegesis::ValidationEvent`.
 def InstructionRetired  : ValidationEvent<0>;
 def L1DCacheLoadMiss : ValidationEvent<1>;
 def L1DCacheStoreMiss : ValidationEvent<2>;

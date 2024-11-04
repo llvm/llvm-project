@@ -724,7 +724,7 @@ define void @verify_all_operands_are_initialised() {
 ; CHECK-NEXT:    add sp, sp, #16
 ; CHECK-NEXT:    ldp x29, x30, [sp], #16 // 16-byte Folded Reload
 ; CHECK-NEXT:    ret
-  call void @func_f8_and_v0_passed_via_memory(float 0.0, float 1.0, float 2.0, float 3.0, float 4.0, float 5.0, float 6.0, float 7.0, float 8.0, <vscale x 4 x float> shufflevector (<vscale x 4 x float> insertelement (<vscale x 4 x float> poison, float 9.000000e+00, i64 0), <vscale x 4 x float> poison, <vscale x 4 x i32> zeroinitializer))
+  call void @func_f8_and_v0_passed_via_memory(float 0.0, float 1.0, float 2.0, float 3.0, float 4.0, float 5.0, float 6.0, float 7.0, float 8.0, <vscale x 4 x float> splat (float 9.000000e+00))
   ret void
 }
 

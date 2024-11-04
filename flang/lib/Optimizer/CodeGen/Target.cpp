@@ -47,7 +47,7 @@ static const llvm::fltSemantics &floatToSemantics(const KindMapping &kindMap,
 }
 
 static void typeTodo(const llvm::fltSemantics *sem, mlir::Location loc,
-                     std::string context) {
+                     const std::string &context) {
   if (sem == &llvm::APFloat::IEEEhalf()) {
     TODO(loc, "COMPLEX(KIND=2): for " + context + " type");
   } else if (sem == &llvm::APFloat::BFloat()) {

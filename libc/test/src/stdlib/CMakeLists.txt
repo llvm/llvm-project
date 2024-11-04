@@ -54,20 +54,17 @@ add_libc_test(
     libc.src.stdlib.atoll
 )
 
-# This fails on NVPTX where the output value is one-off of the expected value.
-if(NOT LIBC_GPU_TARGET_ARCHITECTURE_IS_NVPTX)
-  add_fp_unittest(
-    strtod_test
-    SUITE
-      libc-stdlib-tests
-    SRCS
-      strtod_test.cpp
-    DEPENDS
-      libc.src.errno.errno
-      libc.src.stdlib.strtod
-      libc.src.__support.FPUtil.fenv_impl
-  )
-endif()
+add_fp_unittest(
+  strtod_test
+  SUITE
+    libc-stdlib-tests
+  SRCS
+    strtod_test.cpp
+  DEPENDS
+    libc.src.errno.errno
+    libc.src.stdlib.strtod
+    libc.src.__support.FPUtil.fenv_impl
+)
 
 add_fp_unittest(
   strtof_test
@@ -126,20 +123,17 @@ add_libc_test(
     .strtol_test_support
 )
 
-# This fails on NVPTX where the output value is one-off of the expected value.
-if(NOT LIBC_GPU_TARGET_ARCHITECTURE_IS_NVPTX)
-  add_libc_test(
-    strtold_test
-    SUITE
-      libc-stdlib-tests
-    SRCS
-      strtold_test.cpp
-    DEPENDS
-      libc.src.errno.errno
-      libc.src.__support.uint128
-      libc.src.stdlib.strtold
-  )
-endif()
+add_libc_test(
+  strtold_test
+  SUITE
+    libc-stdlib-tests
+  SRCS
+    strtold_test.cpp
+  DEPENDS
+    libc.src.errno.errno
+    libc.src.__support.uint128
+    libc.src.stdlib.strtold
+)
 
 add_libc_test(
   strtoll_test
@@ -339,7 +333,7 @@ if(LLVM_LIBC_FULL_BUILD)
   )
 
   # Only the GPU has an in-tree 'malloc' implementation.
-  if(LIBC_TARGET_ARCHITECTURE_IS_GPU)
+  if(LIBC_TARGET_OS_IS_GPU)
     add_libc_test(
       malloc_test
       HERMETIC_TEST_ONLY

@@ -29,17 +29,17 @@ class GlobalVariable;
 namespace dxil {
 
 struct ComputedShaderFlags {
-#define SHADER_FLAG(bit, FlagName, Str) bool FlagName : 1;
+#define SHADER_FEATURE_FLAG(bit, FlagName, Str) bool FlagName : 1;
 #include "llvm/BinaryFormat/DXContainerConstants.def"
 
-#define SHADER_FLAG(bit, FlagName, Str) FlagName = false;
+#define SHADER_FEATURE_FLAG(bit, FlagName, Str) FlagName = false;
   ComputedShaderFlags() {
 #include "llvm/BinaryFormat/DXContainerConstants.def"
   }
 
   operator uint64_t() const {
     uint64_t FlagValue = 0;
-#define SHADER_FLAG(bit, FlagName, Str)                                        \
+#define SHADER_FEATURE_FLAG(bit, FlagName, Str)                                \
   FlagValue |=                                                                 \
       FlagName ? static_cast<uint64_t>(dxbc::FeatureFlags::FlagName) : 0ull;
 #include "llvm/BinaryFormat/DXContainerConstants.def"

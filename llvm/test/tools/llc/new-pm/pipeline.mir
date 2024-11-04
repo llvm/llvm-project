@@ -1,7 +1,6 @@
 # RUN: llc -mtriple=x86_64-pc-linux-gnu -x mir -passes=no-op-machine-function --print-pipeline-passes -filetype=null < %s | FileCheck %s --match-full-lines
 
-# CHECK: IR pipeline: PrintMIRPreparePass
-# CHECK: MIR pipeline: no-op-machine-function,print,FreeMachineFunctionPass
+# CHECK: machine-function(no-op-machine-function),PrintMIRPreparePass,machine-function(print,FreeMachineFunctionPass)
 
 ---
 name: f

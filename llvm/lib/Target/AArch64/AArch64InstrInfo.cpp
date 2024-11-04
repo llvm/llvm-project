@@ -9481,58 +9481,6 @@ unsigned llvm::getBLRCallOpcode(const MachineFunction &MF) {
     return AArch64::BLR;
 }
 
-bool AArch64InstrInfo::isReallyTriviallyReMaterializable(
-    const MachineInstr &MI) const {
-  const MachineFunction &MF = *MI.getMF();
-  const AArch64FunctionInfo &AFI = *MF.getInfo<AArch64FunctionInfo>();
-
-  // If the function contains changes to streaming mode, then there
-  // is a danger that rematerialised instructions end up between
-  // instruction sequences (e.g. call sequences, or prolog/epilogue)
-  // where the streaming-SVE mode is temporarily changed.
-  if (AFI.hasStreamingModeChanges()) {
-    // Avoid rematerializing rematerializable instructions that use/define
-    // scalable values, such as 'pfalse' or 'ptrue', which result in different
-    // results when the runtime vector length is different.
-    const MachineRegisterInfo &MRI = MF.getRegInfo();
-    const MachineFrameInfo &MFI = MF.getFrameInfo();
-    if (any_of(MI.operands(), [&MRI, &MFI](const MachineOperand &MO) {
-          if (MO.isFI() &&
-              MFI.getStackID(MO.getIndex()) == TargetStackID::ScalableVector)
-            return true;
-          if (!MO.isReg())
-            return false;
-
-          if (MO.getReg().isVirtual()) {
-            const TargetRegisterClass *RC = MRI.getRegClass(MO.getReg());
-            return AArch64::ZPRRegClass.hasSubClassEq(RC) ||
-                   AArch64::PPRRegClass.hasSubClassEq(RC);
-          }
-          return AArch64::ZPRRegClass.contains(MO.getReg()) ||
-                 AArch64::PPRRegClass.contains(MO.getReg());
-        }))
-      return false;
-
-    // Avoid rematerializing instructions that return a value that is
-    // different depending on vector length, even when it is not returned
-    // in a scalable vector/predicate register.
-    switch (MI.getOpcode()) {
-    default:
-      break;
-    case AArch64::RDVLI_XI:
-    case AArch64::ADDVL_XXI:
-    case AArch64::ADDPL_XXI:
-    case AArch64::CNTB_XPiI:
-    case AArch64::CNTH_XPiI:
-    case AArch64::CNTW_XPiI:
-    case AArch64::CNTD_XPiI:
-      return false;
-    }
-  }
-
-  return TargetInstrInfo::isReallyTriviallyReMaterializable(MI);
-}
-
 MachineBasicBlock::iterator
 AArch64InstrInfo::probedStackAlloc(MachineBasicBlock::iterator MBBI,
                                    Register TargetReg, bool FrameSetup) const {

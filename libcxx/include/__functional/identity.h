@@ -11,7 +11,7 @@
 #define _LIBCPP___FUNCTIONAL_IDENTITY_H
 
 #include <__config>
-#include <__functional/reference_wrapper.h>
+#include <__fwd/functional.h>
 #include <__type_traits/integral_constant.h>
 #include <__utility/forward.h>
 

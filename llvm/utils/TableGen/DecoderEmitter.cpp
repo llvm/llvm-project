@@ -22,12 +22,14 @@
 #include "llvm/ADT/CachedHashString.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
+#include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/MC/MCDecoderOps.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FormattedStream.h"
@@ -49,6 +51,13 @@
 using namespace llvm;
 
 #define DEBUG_TYPE "decoder-emitter"
+
+extern cl::OptionCategory DisassemblerEmitterCat;
+
+cl::opt<bool> DecoderEmitterSuppressDuplicates(
+    "suppress-per-hwmode-duplicates",
+    cl::desc("Suppress duplication of instrs into per-HwMode decoder tables"),
+    cl::init(false), cl::cat(DisassemblerEmitterCat));
 
 namespace {
 
@@ -2440,6 +2449,23 @@ static void emitCheck(formatted_raw_ostream &OS) {
      << "}\n\n";
 }
 
+// Collect all HwModes referenced by the target for encoding purposes,
+// returning a vector of corresponding names.
+static void
+collectHwModesReferencedForEncodings(const CodeGenHwModes &HWM,
+                                     std::vector<StringRef> &Names) {
+  SmallBitVector BV(HWM.getNumModeIds());
+  for (const auto &MS : HWM.getHwModeSelects()) {
+    for (const HwModeSelect::PairType &P : MS.second.Items) {
+      if (P.second->isSubClassOf("InstructionEncoding"))
+        BV.set(P.first);
+    }
+  }
+  transform(BV.set_bits(), std::back_inserter(Names), [&HWM](const int &M) {
+    return HWM.getModeName(M, /*IncludeDefault=*/true);
+  });
+}
+
 // Emits disassembler code for instruction decoding.
 void DecoderEmitter::run(raw_ostream &o) {
   formatted_raw_ostream OS(o);
@@ -2461,45 +2487,39 @@ void DecoderEmitter::run(raw_ostream &o) {
   Target.reverseBitsForLittleEndianEncoding();
 
   // Parameterize the decoders based on namespace and instruction width.
-  std::set<StringRef> HwModeNames;
+
+  // First, collect all encoding-related HwModes referenced by the target.
+  // If HwModeNames is empty, add the empty string so we always have one HwMode.
+  const CodeGenHwModes &HWM = Target.getHwModes();
+  std::vector<StringRef> HwModeNames;
+  collectHwModesReferencedForEncodings(HWM, HwModeNames);
+  if (HwModeNames.empty())
+    HwModeNames.push_back("");
+
   const auto &NumberedInstructions = Target.getInstructionsByEnumValue();
   NumberedEncodings.reserve(NumberedInstructions.size());
-  // First, collect all HwModes referenced by the target.
-  for (const auto &NumberedInstruction : NumberedInstructions) {
-    if (const RecordVal *RV =
-            NumberedInstruction->TheDef->getValue("EncodingInfos")) {
-      if (auto *DI = dyn_cast_or_null<DefInit>(RV->getValue())) {
-        const CodeGenHwModes &HWM = Target.getHwModes();
-        EncodingInfoByHwMode EBM(DI->getDef(), HWM);
-        for (auto &KV : EBM)
-          HwModeNames.insert(HWM.getMode(KV.first).Name);
-      }
-    }
-  }
-
-  // If HwModeNames is empty, add the empty string so we always have one HwMode.
-  if (HwModeNames.empty())
-    HwModeNames.insert("");
-
   for (const auto &NumberedInstruction : NumberedInstructions) {
     if (const RecordVal *RV =
             NumberedInstruction->TheDef->getValue("EncodingInfos")) {
       if (DefInit *DI = dyn_cast_or_null<DefInit>(RV->getValue())) {
-        const CodeGenHwModes &HWM = Target.getHwModes();
         EncodingInfoByHwMode EBM(DI->getDef(), HWM);
-        for (auto &KV : EBM) {
-          NumberedEncodings.emplace_back(KV.second, NumberedInstruction,
-                                         HWM.getMode(KV.first).Name);
-          HwModeNames.insert(HWM.getMode(KV.first).Name);
-        }
+        for (auto &KV : EBM)
+          NumberedEncodings.emplace_back(
+              KV.second, NumberedInstruction,
+              HWM.getModeName(KV.first, /*IncludeDefault=*/true));
         continue;
       }
     }
     // This instruction is encoded the same on all HwModes. Emit it for all
-    // HwModes.
-    for (StringRef HwModeName : HwModeNames)
+    // HwModes by default, otherwise leave it in a single common table.
+    if (DecoderEmitterSuppressDuplicates) {
       NumberedEncodings.emplace_back(NumberedInstruction->TheDef,
-                                     NumberedInstruction, HwModeName);
+                                     NumberedInstruction, "AllModes");
+    } else {
+      for (StringRef HwModeName : HwModeNames)
+        NumberedEncodings.emplace_back(NumberedInstruction->TheDef,
+                                       NumberedInstruction, HwModeName);
+    }
   }
   for (const auto &NumberedAlias :
        RK.getAllDerivedDefinitions("AdditionalEncoding"))

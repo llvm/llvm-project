@@ -1966,6 +1966,13 @@ ModuleImport::processDebugIntrinsic(llvm::DbgVariableIntrinsic *dbgIntr,
   // TODO: find a way to support this case.
   if (isMetadataKillLocation(dbgIntr))
     return emitUnsupportedWarning();
+  // Drop debug intrinsics if the associated variable information cannot be
+  // translated due to cyclic debug metadata.
+  // TODO: Support cyclic debug metadata.
+  DILocalVariableAttr localVariableAttr =
+      matchLocalVariableAttr(dbgIntr->getArgOperand(1));
+  if (!localVariableAttr)
+    return emitUnsupportedWarning();
   FailureOr<Value> argOperand = convertMetadataValue(dbgIntr->getArgOperand(0));
   if (failed(argOperand))
     return emitError(loc) << "failed to convert a debug intrinsic operand: "
@@ -1991,8 +1998,6 @@ ModuleImport::processDebugIntrinsic(llvm::DbgVariableIntrinsic *dbgIntr,
   } else {
     builder.setInsertionPointAfterValue(*argOperand);
   }
-  DILocalVariableAttr localVariableAttr =
-      matchLocalVariableAttr(dbgIntr->getArgOperand(1));
   auto locationExprAttr =
       debugImporter->translateExpression(dbgIntr->getExpression());
   Operation *op =

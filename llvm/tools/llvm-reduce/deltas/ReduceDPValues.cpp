@@ -29,11 +29,11 @@ static void extractDPValuesFromModule(Oracle &O, ReducerWorkItem &WorkItem) {
   for (auto &F : M)
     for (auto &BB : F)
       for (auto &I : BB)
-        for (DPValue &DPV : llvm::make_early_inc_range(I.getDbgValueRange()))
+        for (DbgRecord &DR : llvm::make_early_inc_range(I.getDbgValueRange()))
           if (!O.shouldKeep())
-            DPV.eraseFromParent();
+            DR.eraseFromParent();
 }
 
-void llvm::reduceDPValuesDeltaPass(TestRunner &Test) {
-  runDeltaPass(Test, extractDPValuesFromModule, "Reducing DPValues");
+void llvm::reduceDbgRecordDeltaPass(TestRunner &Test) {
+  runDeltaPass(Test, extractDPValuesFromModule, "Reducing DbgRecords");
 }

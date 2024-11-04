@@ -852,9 +852,8 @@ public:
                         mlir::Type elementType) {
       if (auto ty = elementType.dyn_cast<mlir::FloatType>()) {
         const llvm::fltSemantics &sem = ty.getFloatSemantics();
-        return builder.createRealConstant(
-            loc, elementType,
-            llvm::APFloat::getLargest(sem, /*Negative=*/isMax));
+        llvm::APFloat limit = llvm::APFloat::getInf(sem, /*Negative=*/isMax);
+        return builder.createRealConstant(loc, elementType, limit);
       }
       unsigned bits = elementType.getIntOrFloatBitWidth();
       int64_t limitInt =
@@ -895,7 +894,7 @@ public:
       // Set flag that mask was true at some point
       mlir::Value flagSet = builder.createIntegerConstant(
           loc, mlir::cast<fir::ReferenceType>(flagRef.getType()).getEleTy(), 1);
-      builder.create<fir::StoreOp>(loc, flagSet, flagRef);
+      mlir::Value isFirst = builder.create<fir::LoadOp>(loc, flagRef);
       mlir::Value addr = hlfir::getElementAt(loc, builder, hlfir::Entity{array},
                                              oneBasedIndices);
       mlir::Value elem = builder.create<fir::LoadOp>(loc, addr);
@@ -903,11 +902,22 @@ public:
       // Compare with the max reduction value
       mlir::Value cmp;
       if (elementType.isa<mlir::FloatType>()) {
+        // For FP reductions we want the first smallest value to be used, that
+        // is not NaN. A OGL/OLT condition will usually work for this unless all
+        // the values are Nan or Inf. This follows the same logic as
+        // NumericCompare for Minloc/Maxlox in extrema.cpp.
         cmp = builder.create<mlir::arith::CmpFOp>(
             loc,
             isMax ? mlir::arith::CmpFPredicate::OGT
                   : mlir::arith::CmpFPredicate::OLT,
             elem, reduction);
+
+        mlir::Value cmpNan = builder.create<mlir::arith::CmpFOp>(
+            loc, mlir::arith::CmpFPredicate::UNE, reduction, reduction);
+        mlir::Value cmpNan2 = builder.create<mlir::arith::CmpFOp>(
+            loc, mlir::arith::CmpFPredicate::OEQ, elem, elem);
+        cmpNan = builder.create<mlir::arith::AndIOp>(loc, cmpNan, cmpNan2);
+        cmp = builder.create<mlir::arith::OrIOp>(loc, cmp, cmpNan);
       } else if (elementType.isa<mlir::IntegerType>()) {
         cmp = builder.create<mlir::arith::CmpIOp>(
             loc,
@@ -918,11 +928,18 @@ public:
         llvm_unreachable("unsupported type");
       }
 
+      // The condition used for the loop is isFirst || <the condition above>.
+      isFirst = builder.create<fir::ConvertOp>(loc, cmp.getType(), isFirst);
+      isFirst = builder.create<mlir::arith::XOrIOp>(
+          loc, isFirst, builder.createIntegerConstant(loc, cmp.getType(), 1));
+      cmp = builder.create<mlir::arith::OrIOp>(loc, cmp, isFirst);
+
       // Set the new coordinate to the result
       fir::IfOp ifOp = builder.create<fir::IfOp>(loc, elementType, cmp,
                                                  /*withElseRegion*/ true);
 
       builder.setInsertionPointToStart(&ifOp.getThenRegion().front());
+      builder.create<fir::StoreOp>(loc, flagSet, flagRef);
       mlir::Type resultElemTy =
           hlfir::getFortranElementType(resultArr.getType());
       mlir::Type returnRefTy = builder.getRefType(resultElemTy);

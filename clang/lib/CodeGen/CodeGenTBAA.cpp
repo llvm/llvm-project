@@ -15,6 +15,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "CodeGenTBAA.h"
+#include "CGRecordLayout.h"
+#include "CodeGenTypes.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Attr.h"
 #include "clang/AST/Mangle.h"
@@ -26,16 +28,16 @@
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Type.h"
+#include "llvm/Support/Debug.h"
 using namespace clang;
 using namespace CodeGen;
 
-CodeGenTBAA::CodeGenTBAA(ASTContext &Ctx, llvm::Module &M,
-                         const CodeGenOptions &CGO,
+CodeGenTBAA::CodeGenTBAA(ASTContext &Ctx, CodeGenTypes &CGTypes,
+                         llvm::Module &M, const CodeGenOptions &CGO,
                          const LangOptions &Features, MangleContext &MContext)
-  : Context(Ctx), Module(M), CodeGenOpts(CGO),
-    Features(Features), MContext(MContext), MDHelper(M.getContext()),
-    Root(nullptr), Char(nullptr)
-{}
+    : Context(Ctx), CGTypes(CGTypes), Module(M), CodeGenOpts(CGO),
+      Features(Features), MContext(MContext), MDHelper(M.getContext()),
+      Root(nullptr), Char(nullptr) {}
 
 CodeGenTBAA::~CodeGenTBAA() {
 }
@@ -294,14 +296,34 @@ CodeGenTBAA::CollectFields(uint64_t BaseOffset,
         return false;
 
     const ASTRecordLayout &Layout = Context.getASTRecordLayout(RD);
+    const CGRecordLayout &CGRL = CGTypes.getCGRecordLayout(RD);
 
     unsigned idx = 0;
-    for (RecordDecl::field_iterator i = RD->field_begin(),
-         e = RD->field_end(); i != e; ++i, ++idx) {
-      if ((*i)->isZeroSize(Context) || (*i)->isUnnamedBitfield())
+    for (RecordDecl::field_iterator i = RD->field_begin(), e = RD->field_end();
+         i != e; ++i, ++idx) {
+      if ((*i)->isZeroSize(Context))
         continue;
-      uint64_t Offset = BaseOffset +
-                        Layout.getFieldOffset(idx) / Context.getCharWidth();
+
+      uint64_t Offset =
+          BaseOffset + Layout.getFieldOffset(idx) / Context.getCharWidth();
+
+      // Create a single field for consecutive named bitfields using char as
+      // base type.
+      if ((*i)->isBitField()) {
+        const CGBitFieldInfo &Info = CGRL.getBitFieldInfo(*i);
+        if (Info.Offset != 0)
+          continue;
+        unsigned CurrentBitFieldSize = Info.StorageSize;
+        uint64_t Size =
+            llvm::divideCeil(CurrentBitFieldSize, Context.getCharWidth());
+        llvm::MDNode *TBAAType = getChar();
+        llvm::MDNode *TBAATag =
+            getAccessTagInfo(TBAAAccessInfo(TBAAType, Size));
+        Fields.push_back(
+            llvm::MDBuilder::TBAAStructField(Offset, Size, TBAATag));
+        continue;
+      }
+
       QualType FieldQTy = i->getType();
       if (!CollectFields(Offset, FieldQTy, Fields,
                          MayAlias || TypeHasMayAlias(FieldQTy)))

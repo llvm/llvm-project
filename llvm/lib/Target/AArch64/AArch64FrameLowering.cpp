@@ -1054,6 +1054,12 @@ bool AArch64FrameLowering::canUseAsPrologue(
       return false;
   }
 
+  // Certain stack probing sequences might clobber flags, then we can't use
+  // the block as a prologue if the flags register is a live-in.
+  if (MF->getInfo<AArch64FunctionInfo>()->hasStackProbing() &&
+      MBB.isLiveIn(AArch64::NZCV))
+    return false;
+
   // Don't need a scratch register if we're not going to re-align the stack or
   // emit stack probes.
   if (!RegInfo->hasStackRealignment(*MF) && !TLI->hasInlineStackProbe(*MF))
@@ -3117,12 +3123,12 @@ bool AArch64FrameLowering::restoreCalleeSavedRegisters(
   // For performance reasons restore SVE register in increasing order
   auto IsPPR = [](const RegPairInfo &c) { return c.Type == RegPairInfo::PPR; };
   auto PPRBegin = std::find_if(RegPairs.begin(), RegPairs.end(), IsPPR);
-  auto PPREnd = std::find_if(RegPairs.rbegin(), RegPairs.rend(), IsPPR);
-  std::reverse(PPRBegin, PPREnd.base());
+  auto PPREnd = std::find_if_not(PPRBegin, RegPairs.end(), IsPPR);
+  std::reverse(PPRBegin, PPREnd);
   auto IsZPR = [](const RegPairInfo &c) { return c.Type == RegPairInfo::ZPR; };
   auto ZPRBegin = std::find_if(RegPairs.begin(), RegPairs.end(), IsZPR);
-  auto ZPREnd = std::find_if(RegPairs.rbegin(), RegPairs.rend(), IsZPR);
-  std::reverse(ZPRBegin, ZPREnd.base());
+  auto ZPREnd = std::find_if_not(ZPRBegin, RegPairs.end(), IsZPR);
+  std::reverse(ZPRBegin, ZPREnd);
 
   for (const RegPairInfo &RPI : RegPairs) {
     unsigned Reg1 = RPI.Reg1;

@@ -75,6 +75,7 @@ public:
 
   /// Classifies an expression.
   std::optional<PrimType> classify(const Expr *E) const {
+    assert(E);
     if (E->isGLValue()) {
       if (E->getType()->isFunctionType())
         return PT_FnPtr;

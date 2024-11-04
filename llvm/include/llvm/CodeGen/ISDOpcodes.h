@@ -921,6 +921,8 @@ enum NodeType {
   /// has native conversions.
   BF16_TO_FP,
   FP_TO_BF16,
+  STRICT_BF16_TO_FP,
+  STRICT_FP_TO_BF16,
 
   /// Perform various unary floating-point operations inspired by libm. For
   /// FPOWI, the result is undefined if the integer operand doesn't fit into
@@ -978,7 +980,7 @@ enum NodeType {
 
   /// FMINIMUM/FMAXIMUM - NaN-propagating minimum/maximum that also treat -0.0
   /// as less than 0.0. While FMINNUM_IEEE/FMAXNUM_IEEE follow IEEE 754-2008
-  /// semantics, FMINIMUM/FMAXIMUM follow IEEE 754-2018 draft semantics.
+  /// semantics, FMINIMUM/FMAXIMUM follow IEEE 754-2019 semantics.
   FMINIMUM,
   FMAXIMUM,
 
@@ -1383,6 +1385,15 @@ enum NodeType {
 // Vector Predication
 #define BEGIN_REGISTER_VP_SDNODE(VPSDID, ...) VPSDID,
 #include "llvm/IR/VPIntrinsics.def"
+
+  // The `llvm.experimental.convergence.*` intrinsics.
+  CONVERGENCECTRL_ANCHOR,
+  CONVERGENCECTRL_ENTRY,
+  CONVERGENCECTRL_LOOP,
+  // This does not correspond to any convergence control intrinsic. It used to
+  // glue a convergence control token to a convergent operation in the DAG,
+  // which is later translated to an implicit use in the MIR.
+  CONVERGENCECTRL_GLUE,
 
   /// BUILTIN_OP_END - This must be the last enum value in this list.
   /// The target-specific pre-isel opcode values start here.

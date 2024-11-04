@@ -2686,8 +2686,9 @@ bool CodeGenPrepare::dupRetToEnableTailCallOpts(BasicBlock *BB,
             attributesPermitTailCall(F, CI, RetI, *TLI)) {
           // Either we return void or the return value must be the first
           // argument of a known intrinsic or library function.
-          if (!V || (isIntrinsicOrLFToBeTailCalled(TLInfo, CI) &&
-                     V == CI->getArgOperand(0))) {
+          if (!V || isa<UndefValue>(V) ||
+              (isIntrinsicOrLFToBeTailCalled(TLInfo, CI) &&
+               V == CI->getArgOperand(0))) {
             TailCallBBs.push_back(Pred);
           }
         }
@@ -8505,7 +8506,7 @@ bool CodeGenPrepare::fixupDbgValue(Instruction *I) {
 
 bool CodeGenPrepare::fixupDPValuesOnInst(Instruction &I) {
   bool AnyChange = false;
-  for (DPValue &DPV : I.getDbgValueRange())
+  for (DPValue &DPV : DPValue::filter(I.getDbgValueRange()))
     AnyChange |= fixupDPValue(DPV);
   return AnyChange;
 }
@@ -8618,7 +8619,8 @@ bool CodeGenPrepare::placeDbgValues(Function &F) {
 
       // If this isn't a dbg.value, process any attached DPValue records
       // attached to this instruction.
-      for (DPValue &DPV : llvm::make_early_inc_range(Insn.getDbgValueRange())) {
+      for (DPValue &DPV : llvm::make_early_inc_range(
+               DPValue::filter(Insn.getDbgValueRange()))) {
         if (DPV.Type != DPValue::LocationType::Value)
           continue;
         DbgProcessor(&DPV, &Insn);
