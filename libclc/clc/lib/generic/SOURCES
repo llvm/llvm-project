@@ -1,4 +1,6 @@
 geometric/clc_dot.cl
+integer/clc_abs.cl
+integer/clc_abs_diff.cl
 shared/clc_clamp.cl
 shared/clc_max.cl
 shared/clc_min.cl
