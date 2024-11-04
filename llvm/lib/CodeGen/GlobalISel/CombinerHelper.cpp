@@ -1983,6 +1983,41 @@ void CombinerHelper::applyShiftOfShiftedLogic(MachineInstr &MI,
   MI.eraseFromParent();
 }
 
+bool CombinerHelper::matchLsbClearByShifts(MachineInstr &MI,
+                                           BuildFnTy &MatchInfo) {
+  // fold (A >> C) << C to A & K, where K = (-1 >> C) << C
+  const GShl *Shl = cast<GShl>(&MI);
+  GLShr *Lshr = cast<GLShr>(MRI.getVRegDef(Shl->getSrcReg()));
+
+  if (!MRI.hasOneNonDBGUse(Lshr->getReg(0)))
+    return false;
+
+  APInt C1, C2;
+  if (!mi_match(Shl->getShiftReg(), MRI, m_ICstOrSplat(C1)) ||
+      !mi_match(Lshr->getShiftReg(), MRI, m_ICstOrSplat(C2)))
+    return false;
+
+  if (C2.ne(C1))
+    return false;
+
+  Register Dst = Shl->getReg(0);
+  LLT DstTy = MRI.getType(Dst);
+
+  if (!isLegalOrBeforeLegalizer({TargetOpcode::G_AND, DstTy}) ||
+      !isConstantLegalOrBeforeLegalizer(DstTy))
+    return false;
+
+  MatchInfo = [=](MachineIRBuilder &B) {
+    APInt C = C1;
+    C.setAllBits();
+    C = C.lshr(C1).shl(C1);
+    auto Const = B.buildConstant(DstTy, C);
+    B.buildAnd(Dst, Lshr->getSrcReg(), Const);
+  };
+
+  return true;
+}
+
 bool CombinerHelper::matchCommuteShift(MachineInstr &MI, BuildFnTy &MatchInfo) {
   assert(MI.getOpcode() == TargetOpcode::G_SHL && "Expected G_SHL");
   // Combine (shl (add x, c1), c2) -> (add (shl x, c2), c1 << c2)

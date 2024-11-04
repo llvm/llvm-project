@@ -315,6 +315,7 @@ public:
   void applyShiftOfShiftedLogic(MachineInstr &MI,
                                 ShiftOfShiftedLogic &MatchInfo);
 
+  bool matchLsbClearByShifts(MachineInstr &MI, BuildFnTy &MatchInfo);
   bool matchCommuteShift(MachineInstr &MI, BuildFnTy &MatchInfo);
 
   /// Transform a multiply by a power-of-2 value to a left shift.

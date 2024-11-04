@@ -365,6 +365,13 @@ def bitreverse_lshr : GICombineRule<
                                                     MRI.getType(${amt}.getReg())}}); }]),
   (apply (G_SHL $d, $val, $amt))>;
 
+def lsb_bits_clearing_by_shifts_to_and: GICombineRule<
+  (defs root:$root, build_fn_matchinfo:$matchinfo),
+  (match (G_LSHR $d, $src, $amt1),
+         (G_SHL $root, $d, $amt2):$root,
+         [{ return Helper.matchLsbClearByShifts(*${root}, ${matchinfo}); }]),
+  (apply [{ Helper.applyBuildFn(*${root}, ${matchinfo}); }])>;
+
 // Combine (shl (add x, c1), c2) -> (add (shl x, c2), c1 << c2)
 // Combine (shl (or x, c1), c2) -> (or (shl x, c2), c1 << c2)
 def commute_shift : GICombineRule<
@@ -1930,7 +1937,8 @@ def all_combines : GICombineGroup<[integer_reassoc_combines, trivial_combines,
     not_cmp_fold, opt_brcond_by_inverting_cond,
     const_combines, xor_of_and_with_same_reg, ptr_add_with_zero,
     shift_immed_chain, shift_of_shifted_logic_chain, load_or_combine,
-    div_rem_to_divrem, funnel_shift_combines, bitreverse_shift, commute_shift,
+    div_rem_to_divrem, funnel_shift_combines, bitreverse_shift,
+    lsb_bits_clearing_by_shifts_to_and, commute_shift,
     form_bitfield_extract, constant_fold_binops, constant_fold_fma,
     constant_fold_cast_op, fabs_fneg_fold,
     intdiv_combines, mulh_combines, redundant_neg_operands,
