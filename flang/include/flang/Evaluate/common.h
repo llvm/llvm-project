@@ -20,6 +20,7 @@
 #include "flang/Parser/message.h"
 #include <cinttypes>
 #include <map>
+#include <set>
 #include <string>
 
 namespace Fortran::semantics {
@@ -217,26 +218,30 @@ class FoldingContext {
 public:
   FoldingContext(const common::IntrinsicTypeDefaultKinds &d,
       const IntrinsicProcTable &t, const TargetCharacteristics &c,
-      const common::LanguageFeatureControl &lfc)
+      const common::LanguageFeatureControl &lfc,
+      std::set<std::string> &tempNames)
       : defaults_{d}, intrinsics_{t}, targetCharacteristics_{c},
-        languageFeatures_{lfc} {}
+        languageFeatures_{lfc}, tempNames_{tempNames} {}
   FoldingContext(const parser::ContextualMessages &m,
       const common::IntrinsicTypeDefaultKinds &d, const IntrinsicProcTable &t,
-      const TargetCharacteristics &c, const common::LanguageFeatureControl &lfc)
+      const TargetCharacteristics &c, const common::LanguageFeatureControl &lfc,
+      std::set<std::string> &tempNames)
       : messages_{m}, defaults_{d}, intrinsics_{t}, targetCharacteristics_{c},
-        languageFeatures_{lfc} {}
+        languageFeatures_{lfc}, tempNames_{tempNames} {}
   FoldingContext(const FoldingContext &that)
       : messages_{that.messages_}, defaults_{that.defaults_},
         intrinsics_{that.intrinsics_},
         targetCharacteristics_{that.targetCharacteristics_},
         pdtInstance_{that.pdtInstance_}, impliedDos_{that.impliedDos_},
-        languageFeatures_{that.languageFeatures_} {}
+        languageFeatures_{that.languageFeatures_}, tempNames_{that.tempNames_} {
+  }
   FoldingContext(
       const FoldingContext &that, const parser::ContextualMessages &m)
       : messages_{m}, defaults_{that.defaults_}, intrinsics_{that.intrinsics_},
         targetCharacteristics_{that.targetCharacteristics_},
         pdtInstance_{that.pdtInstance_}, impliedDos_{that.impliedDos_},
-        languageFeatures_{that.languageFeatures_} {}
+        languageFeatures_{that.languageFeatures_}, tempNames_{that.tempNames_} {
+  }
 
   parser::ContextualMessages &messages() { return messages_; }
   const parser::ContextualMessages &messages() const { return messages_; }
@@ -273,6 +278,10 @@ public:
     return common::ScopedSet(pdtInstance_, nullptr);
   }
 
+  parser::CharBlock SaveTempName(std::string &&name) {
+    return {*tempNames_.emplace(std::move(name)).first};
+  }
+
 private:
   parser::ContextualMessages messages_;
   const common::IntrinsicTypeDefaultKinds &defaults_;
@@ -282,6 +291,7 @@ private:
   bool inModuleFile_{false};
   std::map<parser::CharBlock, ConstantSubscript> impliedDos_;
   const common::LanguageFeatureControl &languageFeatures_;
+  std::set<std::string> &tempNames_;
 };
 
 void RealFlagWarnings(FoldingContext &, const RealFlags &, const char *op);

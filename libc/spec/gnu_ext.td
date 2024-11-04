@@ -238,7 +238,9 @@ def GnuExtensions : StandardSpec<"GNUExtensions"> {
       [], // Macros
       [], // Types
       [], // Enumerations
-      []  // Functions
+      [
+        //TODO: Add getauxval here
+      ]  // Functions
   >;
 
   HeaderSpec SendFile = HeaderSpec<

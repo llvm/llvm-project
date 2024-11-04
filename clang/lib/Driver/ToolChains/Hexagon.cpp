@@ -54,8 +54,7 @@ static void handleHVXTargetFeatures(const Driver &D, const ArgList &Args,
   auto makeFeature = [&Args](Twine T, bool Enable) -> StringRef {
     const std::string &S = T.str();
     StringRef Opt(S);
-    if (Opt.ends_with("="))
-      Opt = Opt.drop_back(1);
+    Opt.consume_back("=");
     if (Opt.starts_with("mno-"))
       Opt = Opt.drop_front(4);
     else if (Opt.starts_with("m"))
@@ -801,7 +800,6 @@ StringRef HexagonToolChain::GetTargetCPUVersion(const ArgList &Args) {
     CpuArg = A;
 
   StringRef CPU = CpuArg ? CpuArg->getValue() : GetDefaultCPU();
-  if (CPU.starts_with("hexagon"))
-    return CPU.substr(sizeof("hexagon") - 1);
+  CPU.consume_front("hexagon");
   return CPU;
 }

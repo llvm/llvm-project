@@ -21,7 +21,7 @@ define <16 x i8> @combine_pavgb_self(<16 x i8> %a0) {
 define <16 x i8> @combine_pavgw_knownbits(<8 x i16> %a0, <8 x i16> %a1, <8 x i16> %a2, <8 x i16> %a3) {
 ; SSE-LABEL: combine_pavgw_knownbits:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    movdqa {{.*#+}} xmm4 = [31,31,31,31,31,31,31,31]
+; SSE-NEXT:    pmovsxbw {{.*#+}} xmm4 = [31,31,31,31,31,31,31,31]
 ; SSE-NEXT:    pand %xmm4, %xmm0
 ; SSE-NEXT:    pand %xmm4, %xmm1
 ; SSE-NEXT:    pavgw %xmm1, %xmm0

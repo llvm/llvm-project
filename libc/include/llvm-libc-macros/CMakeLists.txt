@@ -74,6 +74,12 @@ add_macro_header(
 )
 
 add_macro_header(
+  limits_macros
+  HDR
+    limits-macros.h
+)
+
+add_macro_header(
   math_macros
   HDR
     math-macros.h
@@ -103,6 +109,12 @@ add_macro_header(
   signal_macros
   HDR
     signal-macros.h
+)
+
+add_macro_header(
+  stdbit_macros
+  HDR
+    stdbit-macros.h
 )
 
 add_macro_header(
@@ -208,4 +220,10 @@ add_macro_header(
   wchar_macros
   HDR
     wchar-macros.h
+)
+
+add_macro_header(
+  inttypes_macros
+  HDR
+    inttypes-macros.h
 )

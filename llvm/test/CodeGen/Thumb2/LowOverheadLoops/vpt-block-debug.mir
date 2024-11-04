@@ -7,37 +7,37 @@
 
   %struct.arm_2d_size_t = type { i16, i16 }
 
-  define void @__arm_2d_impl_rgb16_cl_key_1x1_paving_x_mirror_xx(i16* noalias %pSource, i16 signext %iSourceStride, i16* noalias %pTarget, i16 signext %iTargetStride, %struct.arm_2d_size_t* noalias nocapture readonly %ptSrcCopySize, %struct.arm_2d_size_t* noalias nocapture readonly %ptDstCopySize, i16 zeroext %Colour) local_unnamed_addr #0 !dbg !12 {
+  define void @__arm_2d_impl_rgb16_cl_key_1x1_paving_x_mirror_xx(ptr noalias %pSource, i16 signext %iSourceStride, ptr noalias %pTarget, i16 signext %iTargetStride, ptr noalias nocapture readonly %ptSrcCopySize, ptr noalias nocapture readonly %ptDstCopySize, i16 zeroext %Colour) local_unnamed_addr #0 !dbg !12 {
   entry:
-    call void @llvm.dbg.value(metadata i16* %pSource, metadata !33, metadata !DIExpression()), !dbg !62
+    call void @llvm.dbg.value(metadata ptr %pSource, metadata !33, metadata !DIExpression()), !dbg !62
     call void @llvm.dbg.value(metadata i16 %iSourceStride, metadata !34, metadata !DIExpression()), !dbg !62
-    call void @llvm.dbg.value(metadata i16* %pTarget, metadata !35, metadata !DIExpression()), !dbg !62
+    call void @llvm.dbg.value(metadata ptr %pTarget, metadata !35, metadata !DIExpression()), !dbg !62
     call void @llvm.dbg.value(metadata i16 %iTargetStride, metadata !36, metadata !DIExpression()), !dbg !62
-    call void @llvm.dbg.value(metadata %struct.arm_2d_size_t* %ptSrcCopySize, metadata !37, metadata !DIExpression()), !dbg !62
-    call void @llvm.dbg.value(metadata %struct.arm_2d_size_t* %ptDstCopySize, metadata !38, metadata !DIExpression()), !dbg !62
+    call void @llvm.dbg.value(metadata ptr %ptSrcCopySize, metadata !37, metadata !DIExpression()), !dbg !62
+    call void @llvm.dbg.value(metadata ptr %ptDstCopySize, metadata !38, metadata !DIExpression()), !dbg !62
     call void @llvm.dbg.value(metadata i16 %Colour, metadata !39, metadata !DIExpression()), !dbg !62
     call void @llvm.dbg.value(metadata i16 undef, metadata !40, metadata !DIExpression(DW_OP_LLVM_convert, 16, DW_ATE_signed, DW_OP_LLVM_convert, 32, DW_ATE_signed, DW_OP_stack_value)), !dbg !62
     call void @llvm.dbg.value(metadata i32 0, metadata !43, metadata !DIExpression()), !dbg !63
-    %iHeight = getelementptr inbounds %struct.arm_2d_size_t, %struct.arm_2d_size_t* %ptDstCopySize, i32 0, i32 1
-    %0 = load i16, i16* %iHeight, align 2, !tbaa !64
+    %iHeight = getelementptr inbounds %struct.arm_2d_size_t, ptr %ptDstCopySize, i32 0, i32 1
+    %0 = load i16, ptr %iHeight, align 2, !tbaa !64
     %conv1 = sext i16 %0 to i32
     %conv8 = sext i16 %iSourceStride to i32
     %conv10 = sext i16 %iTargetStride to i32
-    call void @llvm.dbg.value(metadata i16* %pSource, metadata !33, metadata !DIExpression()), !dbg !62
-    call void @llvm.dbg.value(metadata i16* %pTarget, metadata !35, metadata !DIExpression()), !dbg !62
+    call void @llvm.dbg.value(metadata ptr %pSource, metadata !33, metadata !DIExpression()), !dbg !62
+    call void @llvm.dbg.value(metadata ptr %pTarget, metadata !35, metadata !DIExpression()), !dbg !62
     call void @llvm.dbg.value(metadata i32 0, metadata !43, metadata !DIExpression()), !dbg !63
     %cmp34 = icmp sgt i16 %0, 0, !dbg !69
     br i1 %cmp34, label %for.body.lr.ph, label %for.cond.cleanup, !dbg !70
 
   for.body.lr.ph:                                   ; preds = %entry
-    %iWidth2 = bitcast %struct.arm_2d_size_t* %ptSrcCopySize to i16*, !dbg !71
-    %1 = load i16, i16* %iWidth2, align 2, !dbg !71, !tbaa !72
+    %iWidth2 = bitcast ptr %ptSrcCopySize to ptr, !dbg !71
+    %1 = load i16, ptr %iWidth2, align 2, !dbg !71, !tbaa !72
     call void @llvm.dbg.value(metadata i16 %1, metadata !40, metadata !DIExpression(DW_OP_LLVM_convert, 16, DW_ATE_signed, DW_OP_LLVM_convert, 32, DW_ATE_signed, DW_OP_stack_value)), !dbg !62
     %conv = sext i16 %1 to i32, !dbg !73
     call void @llvm.dbg.value(metadata i32 %conv, metadata !40, metadata !DIExpression()), !dbg !62
     %sub = add nsw i32 %conv, -1
-    %iWidth33 = bitcast %struct.arm_2d_size_t* %ptDstCopySize to i16*
-    %2 = load i16, i16* %iWidth33, align 2, !tbaa !72
+    %iWidth33 = bitcast ptr %ptDstCopySize to ptr
+    %2 = load i16, ptr %iWidth33, align 2, !tbaa !72
     %conv4 = sext i16 %2 to i32
     %3 = tail call { <8 x i16>, i32 } @llvm.arm.mve.vddup.v8i16(i32 %sub, i32 1), !dbg !62
     %4 = add i32 %conv4, 7, !dbg !70
@@ -51,14 +51,14 @@
     ret void, !dbg !74
 
   for.body:                                         ; preds = %do.end, %for.body.lr.ph
-    %pSource.addr.037 = phi i16* [ %pSource, %for.body.lr.ph ], [ %add.ptr9, %do.end ]
-    %pTarget.addr.036 = phi i16* [ %pTarget, %for.body.lr.ph ], [ %add.ptr11, %do.end ]
+    %pSource.addr.037 = phi ptr [ %pSource, %for.body.lr.ph ], [ %add.ptr9, %do.end ]
+    %pTarget.addr.036 = phi ptr [ %pTarget, %for.body.lr.ph ], [ %add.ptr11, %do.end ]
     %y.035 = phi i32 [ 0, %for.body.lr.ph ], [ %inc, %do.end ]
-    call void @llvm.dbg.value(metadata i16* %pSource.addr.037, metadata !33, metadata !DIExpression()), !dbg !62
-    call void @llvm.dbg.value(metadata i16* %pTarget.addr.036, metadata !35, metadata !DIExpression()), !dbg !62
+    call void @llvm.dbg.value(metadata ptr %pSource.addr.037, metadata !33, metadata !DIExpression()), !dbg !62
+    call void @llvm.dbg.value(metadata ptr %pTarget.addr.036, metadata !35, metadata !DIExpression()), !dbg !62
     call void @llvm.dbg.value(metadata i32 %y.035, metadata !43, metadata !DIExpression()), !dbg !63
-    call void @llvm.dbg.value(metadata i16* %pTarget.addr.036, metadata !46, metadata !DIExpression()), !dbg !75
-    call void @llvm.dbg.value(metadata i16* %pSource.addr.037, metadata !49, metadata !DIExpression()), !dbg !75
+    call void @llvm.dbg.value(metadata ptr %pTarget.addr.036, metadata !46, metadata !DIExpression()), !dbg !75
+    call void @llvm.dbg.value(metadata ptr %pSource.addr.037, metadata !49, metadata !DIExpression()), !dbg !75
     call void @llvm.dbg.value(metadata i32 %conv4, metadata !50, metadata !DIExpression()), !dbg !75
     call void @llvm.dbg.value(metadata i32 undef, metadata !51, metadata !DIExpression()), !dbg !75
     call void @llvm.dbg.value(metadata <8 x i16> undef, metadata !52, metadata !DIExpression()), !dbg !75
@@ -66,20 +66,20 @@
     br label %do.body, !dbg !76
 
   do.body:                                          ; preds = %do.body, %for.body
-    %pDst.0 = phi i16* [ %pTarget.addr.036, %for.body ], [ %add.ptr, %do.body ], !dbg !75
+    %pDst.0 = phi ptr [ %pTarget.addr.036, %for.body ], [ %add.ptr, %do.body ], !dbg !75
     %dstWidth.0 = phi i32 [ %conv4, %for.body ], [ %sub5, %do.body ], !dbg !75
     %.pn = phi { <8 x i16>, i32 } [ %3, %for.body ], [ %12, %do.body ]
     %9 = phi i32 [ %8, %for.body ], [ %17, %do.body ], !dbg !75
-    %pDst.01 = bitcast i16* %pDst.0 to <8 x i16>*, !dbg !75
+    %pDst.01 = bitcast ptr %pDst.0 to ptr, !dbg !75
     %offset.0 = extractvalue { <8 x i16>, i32 } %.pn, 0, !dbg !75
     %curOffsetIdx.0 = extractvalue { <8 x i16>, i32 } %.pn, 1, !dbg !75
     call void @llvm.dbg.value(metadata <8 x i16> %offset.0, metadata !52, metadata !DIExpression()), !dbg !75
     call void @llvm.dbg.value(metadata i32 %curOffsetIdx.0, metadata !51, metadata !DIExpression()), !dbg !75
     call void @llvm.dbg.value(metadata i32 %dstWidth.0, metadata !50, metadata !DIExpression()), !dbg !75
-    call void @llvm.dbg.value(metadata i16* %pDst.0, metadata !46, metadata !DIExpression()), !dbg !75
+    call void @llvm.dbg.value(metadata ptr %pDst.0, metadata !46, metadata !DIExpression()), !dbg !75
     %10 = tail call <8 x i1> @llvm.arm.mve.vctp16(i32 %dstWidth.0), !dbg !77
     call void @llvm.dbg.value(metadata i32 undef, metadata !58, metadata !DIExpression()), !dbg !78
-    %11 = tail call <8 x i16> @llvm.arm.mve.vldr.gather.offset.predicated.v8i16.p0i16.v8i16.v8i1(i16* %pSource.addr.037, <8 x i16> %offset.0, i32 16, i32 1, i32 1, <8 x i1> %10), !dbg !79
+    %11 = tail call <8 x i16> @llvm.arm.mve.vldr.gather.offset.predicated.v8i16.p0.v8i16.v8i1(ptr %pSource.addr.037, <8 x i16> %offset.0, i32 16, i32 1, i32 1, <8 x i1> %10), !dbg !79
     call void @llvm.dbg.value(metadata <8 x i16> %11, metadata !61, metadata !DIExpression()), !dbg !78
     %12 = tail call { <8 x i16>, i32 } @llvm.arm.mve.vddup.predicated.v8i16.v8i1(<8 x i16> undef, i32 %curOffsetIdx.0, i32 1, <8 x i1> %10), !dbg !80
     call void @llvm.dbg.value(metadata i32 undef, metadata !51, metadata !DIExpression()), !dbg !75
@@ -89,9 +89,9 @@
     %15 = icmp ne <8 x i16> %11, %14, !dbg !81
     %16 = and <8 x i1> %15, %10, !dbg !81
     call void @llvm.dbg.value(metadata i32 undef, metadata !58, metadata !DIExpression(DW_OP_LLVM_convert, 32, DW_ATE_unsigned, DW_OP_LLVM_convert, 16, DW_ATE_unsigned, DW_OP_stack_value)), !dbg !78
-    tail call void @llvm.masked.store.v8i16.p0v8i16(<8 x i16> %11, <8 x i16>* %pDst.01, i32 2, <8 x i1> %16), !dbg !82
-    %add.ptr = getelementptr inbounds i16, i16* %pDst.0, i32 8, !dbg !83
-    call void @llvm.dbg.value(metadata i16* %add.ptr, metadata !46, metadata !DIExpression()), !dbg !75
+    tail call void @llvm.masked.store.v8i16.p0(<8 x i16> %11, ptr %pDst.01, i32 2, <8 x i1> %16), !dbg !82
+    %add.ptr = getelementptr inbounds i16, ptr %pDst.0, i32 8, !dbg !83
+    call void @llvm.dbg.value(metadata ptr %add.ptr, metadata !46, metadata !DIExpression()), !dbg !75
     %sub5 = add nsw i32 %dstWidth.0, -8, !dbg !84
     call void @llvm.dbg.value(metadata i32 %sub5, metadata !50, metadata !DIExpression()), !dbg !75
     %17 = call i32 @llvm.loop.decrement.reg.i32(i32 %9, i32 1), !dbg !85
@@ -99,10 +99,10 @@
     br i1 %18, label %do.body, label %do.end, !dbg !85, !llvm.loop !86
 
   do.end:                                           ; preds = %do.body
-    %add.ptr9 = getelementptr inbounds i16, i16* %pSource.addr.037, i32 %conv8, !dbg !89
-    call void @llvm.dbg.value(metadata i16* %add.ptr9, metadata !33, metadata !DIExpression()), !dbg !62
-    %add.ptr11 = getelementptr inbounds i16, i16* %pTarget.addr.036, i32 %conv10, !dbg !90
-    call void @llvm.dbg.value(metadata i16* %add.ptr11, metadata !35, metadata !DIExpression()), !dbg !62
+    %add.ptr9 = getelementptr inbounds i16, ptr %pSource.addr.037, i32 %conv8, !dbg !89
+    call void @llvm.dbg.value(metadata ptr %add.ptr9, metadata !33, metadata !DIExpression()), !dbg !62
+    %add.ptr11 = getelementptr inbounds i16, ptr %pTarget.addr.036, i32 %conv10, !dbg !90
+    call void @llvm.dbg.value(metadata ptr %add.ptr11, metadata !35, metadata !DIExpression()), !dbg !62
     %inc = add nuw nsw i32 %y.035, 1, !dbg !91
     call void @llvm.dbg.value(metadata i32 %inc, metadata !43, metadata !DIExpression()), !dbg !63
     %exitcond.not = icmp eq i32 %inc, %conv1, !dbg !69
@@ -111,9 +111,9 @@
 
   declare { <8 x i16>, i32 } @llvm.arm.mve.vddup.v8i16(i32, i32)
   declare <8 x i1> @llvm.arm.mve.vctp16(i32)
-  declare <8 x i16> @llvm.arm.mve.vldr.gather.offset.predicated.v8i16.p0i16.v8i16.v8i1(i16*, <8 x i16>, i32, i32, i32, <8 x i1>)
+  declare <8 x i16> @llvm.arm.mve.vldr.gather.offset.predicated.v8i16.p0.v8i16.v8i1(ptr, <8 x i16>, i32, i32, i32, <8 x i1>)
   declare { <8 x i16>, i32 } @llvm.arm.mve.vddup.predicated.v8i16.v8i1(<8 x i16>, i32, i32, <8 x i1>)
-  declare void @llvm.masked.store.v8i16.p0v8i16(<8 x i16>, <8 x i16>*, i32 immarg, <8 x i1>)
+  declare void @llvm.masked.store.v8i16.p0(<8 x i16>, ptr, i32 immarg, <8 x i1>)
   declare void @llvm.dbg.value(metadata, metadata, metadata)
   declare i32 @llvm.smin.i32(i32, i32)
   declare i32 @llvm.start.loop.iterations.i32(i32)

@@ -1802,6 +1802,27 @@ Fortran::lower::pft::BlockDataUnit::BlockDataUnit(
           std::get<parser::Statement<parser::EndBlockDataStmt>>(bd.t).source)} {
 }
 
+//===----------------------------------------------------------------------===//
+// Variable implementation
+//===----------------------------------------------------------------------===//
+
+bool Fortran::lower::pft::Variable::isRuntimeTypeInfoData() const {
+  // So far, use flags to detect if this symbol were generated during
+  // semantics::BuildRuntimeDerivedTypeTables(). Scope cannot be used since the
+  // symbols are injected in the user scopes defining the described derived
+  // types. A robustness improvement for this test could be to get hands on the
+  // semantics::RuntimeDerivedTypeTables and to check if the symbol names
+  // belongs to this structure.
+  using Flags = Fortran::semantics::Symbol::Flag;
+  const auto *nominal = std::get_if<Nominal>(&var);
+  return nominal && nominal->symbol->test(Flags::CompilerCreated) &&
+         nominal->symbol->test(Flags::ReadOnly);
+}
+
+//===----------------------------------------------------------------------===//
+// API implementation
+//===----------------------------------------------------------------------===//
+
 std::unique_ptr<lower::pft::Program>
 Fortran::lower::createPFT(const parser::Program &root,
                           const semantics::SemanticsContext &semanticsContext) {

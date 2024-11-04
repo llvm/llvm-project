@@ -14,10 +14,10 @@
 
 //      OPENMP-ELF: @__start_omp_offloading_entries = external hidden constant [0 x %struct.__tgt_offload_entry]
 // OPENMP-ELF-NEXT: @__stop_omp_offloading_entries = external hidden constant [0 x %struct.__tgt_offload_entry]
-// OPENMP-ELF-NEXT: @__dummy.omp_offloading_entries = hidden constant [0 x %struct.__tgt_offload_entry] zeroinitializer, section "omp_offloading_entries"
+// OPENMP-ELF-NEXT: @__dummy.omp_offloading_entries = internal constant [0 x %struct.__tgt_offload_entry] zeroinitializer, section "omp_offloading_entries"
 
-//      OPENMP-COFF: @__start_omp_offloading_entries = hidden constant [0 x %struct.__tgt_offload_entry] zeroinitializer, section "omp_offloading_entries$OA"
-// OPENMP-COFF-NEXT: @__stop_omp_offloading_entries = hidden constant [0 x %struct.__tgt_offload_entry] zeroinitializer, section "omp_offloading_entries$OZ"
+//      OPENMP-COFF: @__start_omp_offloading_entries = weak_odr hidden constant [0 x %struct.__tgt_offload_entry] zeroinitializer, section "omp_offloading_entries$OA"
+// OPENMP-COFF-NEXT: @__stop_omp_offloading_entries = weak_odr hidden constant [0 x %struct.__tgt_offload_entry] zeroinitializer, section "omp_offloading_entries$OZ"
 
 //      OPENMP: @.omp_offloading.device_image = internal unnamed_addr constant [[[SIZE:[0-9]+]] x i8] c"\10\FF\10\AD{{.*}}", section ".llvm.offloading", align 8
 // OPENMP-NEXT: @.omp_offloading.device_images = internal unnamed_addr constant [1 x %__tgt_device_image] [%__tgt_device_image { ptr getelementptr inbounds ([[[BEGIN:[0-9]+]] x i8], ptr @.omp_offloading.device_image, i64 1, i64 0), ptr getelementptr inbounds ([[[END:[0-9]+]] x i8], ptr @.omp_offloading.device_image, i64 1, i64 0), ptr @__start_omp_offloading_entries, ptr @__stop_omp_offloading_entries }]
@@ -47,10 +47,10 @@
 
 //      CUDA-ELF: @__start_cuda_offloading_entries = external hidden constant [0 x %struct.__tgt_offload_entry]
 // CUDA-ELF-NEXT: @__stop_cuda_offloading_entries = external hidden constant [0 x %struct.__tgt_offload_entry]
-// CUDA-ELF-NEXT: @__dummy.cuda_offloading_entries = hidden constant [0 x %struct.__tgt_offload_entry] zeroinitializer, section "cuda_offloading_entries"
+// CUDA-ELF-NEXT: @__dummy.cuda_offloading_entries = internal constant [0 x %struct.__tgt_offload_entry] zeroinitializer, section "cuda_offloading_entries"
 
-//      CUDA-COFF: @__start_cuda_offloading_entries = hidden constant [0 x %struct.__tgt_offload_entry] zeroinitializer, section "cuda_offloading_entries$OA"
-// CUDA-COFF-NEXT: @__stop_cuda_offloading_entries = hidden constant [0 x %struct.__tgt_offload_entry] zeroinitializer, section "cuda_offloading_entries$OZ"
+//      CUDA-COFF: @__start_cuda_offloading_entries = weak_odr hidden constant [0 x %struct.__tgt_offload_entry] zeroinitializer, section "cuda_offloading_entries$OA"
+// CUDA-COFF-NEXT: @__stop_cuda_offloading_entries = weak_odr hidden constant [0 x %struct.__tgt_offload_entry] zeroinitializer, section "cuda_offloading_entries$OZ"
 
 //      CUDA: @.fatbin_image = internal constant [0 x i8] zeroinitializer, section ".nv_fatbin"
 // CUDA-NEXT: @.fatbin_wrapper = internal constant %fatbin_wrapper { i32 1180844977, i32 1, ptr @.fatbin_image, ptr null }, section ".nvFatBinSegment", align 8
@@ -145,10 +145,10 @@
 
 //      HIP-ELF: @__start_hip_offloading_entries = external hidden constant [0 x %struct.__tgt_offload_entry]
 // HIP-ELF-NEXT: @__stop_hip_offloading_entries = external hidden constant [0 x %struct.__tgt_offload_entry]
-// HIP-ELF-NEXT: @__dummy.hip_offloading_entries = hidden constant [0 x %struct.__tgt_offload_entry] zeroinitializer, section "hip_offloading_entries"
+// HIP-ELF-NEXT: @__dummy.hip_offloading_entries = internal constant [0 x %struct.__tgt_offload_entry] zeroinitializer, section "hip_offloading_entries"
 
-//      HIP-COFF: @__start_hip_offloading_entries = hidden constant [0 x %struct.__tgt_offload_entry] zeroinitializer, section "hip_offloading_entries$OA"
-// HIP-COFF-NEXT: @__stop_hip_offloading_entries = hidden constant [0 x %struct.__tgt_offload_entry] zeroinitializer, section "hip_offloading_entries$OZ"
+//      HIP-COFF: @__start_hip_offloading_entries = weak_odr hidden constant [0 x %struct.__tgt_offload_entry] zeroinitializer, section "hip_offloading_entries$OA"
+// HIP-COFF-NEXT: @__stop_hip_offloading_entries = weak_odr hidden constant [0 x %struct.__tgt_offload_entry] zeroinitializer, section "hip_offloading_entries$OZ"
 
 //      HIP: @.fatbin_image = internal constant [0 x i8] zeroinitializer, section ".hip_fatbin"
 // HIP-NEXT: @.fatbin_wrapper = internal constant %fatbin_wrapper { i32 1212764230, i32 1, ptr @.fatbin_image, ptr null }, section ".hipFatBinSegment", align 8

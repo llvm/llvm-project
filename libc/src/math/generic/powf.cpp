@@ -657,7 +657,7 @@ LLVM_LIBC_FUNCTION(float, powf, (float x, float y)) {
         // pow( negative, non-integer ) = NaN
         fputil::set_errno_if_required(EDOM);
         fputil::raise_except_if_required(FE_INVALID);
-        return FloatBits::build_quiet_nan().get_val();
+        return FloatBits::quiet_nan().get_val();
       }
     }
   }

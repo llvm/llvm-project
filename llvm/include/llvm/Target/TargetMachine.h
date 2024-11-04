@@ -248,6 +248,9 @@ public:
   /// Returns true if this target uses emulated TLS.
   bool useEmulatedTLS() const;
 
+  /// Returns true if this target uses TLS Descriptors.
+  bool useTLSDESC() const;
+
   /// Returns the TLS model which should be used for the given global variable.
   TLSModel::Model getTLSModel(const GlobalValue *GV) const;
 
@@ -460,11 +463,6 @@ public:
                                      PassInstrumentationCallbacks *) {
     return make_error<StringError>("buildCodeGenPipeline is not overridden",
                                    inconvertibleErrorCode());
-  }
-
-  virtual std::pair<StringRef, bool> getPassNameFromLegacyName(StringRef) {
-    llvm_unreachable(
-        "getPassNameFromLegacyName parseMIRPipeline is not overridden");
   }
 
   /// Add passes to the specified pass manager to get machine code emitted with

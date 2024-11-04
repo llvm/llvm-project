@@ -46,6 +46,7 @@ public:
   const uint16_t RegSizeInBits;
   const int8_t CopyCost;
   const bool Allocatable;
+  const bool BaseClass;
 
   /// getID() - Return the register class ID number.
   ///
@@ -97,6 +98,9 @@ public:
   /// isAllocatable - Return true if this register class may be used to create
   /// virtual registers.
   bool isAllocatable() const { return Allocatable; }
+
+  /// Return true if this register class has a defined BaseClassOrder.
+  bool isBaseClass() const { return BaseClass; }
 };
 
 /// MCRegisterDesc - This record contains information about a particular

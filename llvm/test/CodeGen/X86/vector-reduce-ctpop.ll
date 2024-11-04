@@ -1121,8 +1121,7 @@ define <8 x i32> @reduce_ctpop_v4i64_buildvector_v8i32(<4 x i64> %a0, <4 x i64> 
 ; AVX512VL-NEXT:    vpsadbw %ymm0, %ymm6, %ymm6
 ; AVX512VL-NEXT:    vinserti128 $1, %xmm5, %ymm4, %ymm4
 ; AVX512VL-NEXT:    vpsadbw %ymm0, %ymm4, %ymm4
-; AVX512VL-NEXT:    vbroadcasti128 {{.*#+}} ymm5 = [0,4,8,12,0,4,8,12]
-; AVX512VL-NEXT:    # ymm5 = mem[0,1,0,1]
+; AVX512VL-NEXT:    vpmovsxbd {{.*#+}} ymm5 = [0,0,0,0,0,4,8,12]
 ; AVX512VL-NEXT:    vpermi2d %ymm6, %ymm4, %ymm5
 ; AVX512VL-NEXT:    vpunpckldq {{.*#+}} xmm1 = xmm8[0],xmm1[0],xmm8[1],xmm1[1]
 ; AVX512VL-NEXT:    vinserti128 $1, %xmm3, %ymm2, %ymm2
@@ -1165,8 +1164,7 @@ define <8 x i32> @reduce_ctpop_v4i64_buildvector_v8i32(<4 x i64> %a0, <4 x i64> 
 ; AVX512VPOPCNT-NEXT:    vpsadbw %ymm3, %ymm1, %ymm1
 ; AVX512VPOPCNT-NEXT:    vinserti128 $1, %xmm5, %ymm4, %ymm2
 ; AVX512VPOPCNT-NEXT:    vpsadbw %ymm3, %ymm2, %ymm2
-; AVX512VPOPCNT-NEXT:    vbroadcasti128 {{.*#+}} ymm3 = [0,4,8,12,0,4,8,12]
-; AVX512VPOPCNT-NEXT:    # ymm3 = mem[0,1,0,1]
+; AVX512VPOPCNT-NEXT:    vpmovsxbd {{.*#+}} ymm3 = [0,0,0,0,0,4,8,12]
 ; AVX512VPOPCNT-NEXT:    vpermi2d %ymm1, %ymm2, %ymm3
 ; AVX512VPOPCNT-NEXT:    vpblendd {{.*#+}} ymm0 = ymm0[0,1,2,3],ymm3[4,5,6,7]
 ; AVX512VPOPCNT-NEXT:    retq

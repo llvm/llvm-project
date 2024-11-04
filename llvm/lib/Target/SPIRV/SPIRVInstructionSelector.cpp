@@ -53,6 +53,10 @@ class SPIRVInstructionSelector : public InstructionSelector {
   SPIRVGlobalRegistry &GR;
   MachineRegisterInfo *MRI;
 
+  /// We need to keep track of the number we give to anonymous global values to
+  /// generate the same name every time when this is needed.
+  mutable DenseMap<const GlobalValue *, unsigned> UnnamedGlobalIDs;
+
 public:
   SPIRVInstructionSelector(const SPIRVTargetMachine &TM,
                            const SPIRVSubtarget &ST,
@@ -1519,7 +1523,17 @@ bool SPIRVInstructionSelector::selectGlobalValue(
   SPIRVType *ResType = GR.getOrCreateSPIRVPointerType(
       PointerBaseType, I, TII,
       addressSpaceToStorageClass(GV->getAddressSpace()));
-  std::string GlobalIdent = GV->getGlobalIdentifier();
+
+  std::string GlobalIdent;
+  if (!GV->hasName()) {
+    unsigned &ID = UnnamedGlobalIDs[GV];
+    if (ID == 0)
+      ID = UnnamedGlobalIDs.size();
+    GlobalIdent = "__unnamed_" + Twine(ID).str();
+  } else {
+    GlobalIdent = GV->getGlobalIdentifier();
+  }
+
   // We have functions as operands in tests with blocks of instruction e.g. in
   // transcoding/global_block.ll. These operands are not used and should be
   // substituted by zero constants. Their type is expected to be always

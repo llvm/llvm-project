@@ -19,7 +19,9 @@
 using namespace clang;
 using namespace clang::interp;
 
-Pointer::Pointer(Block *Pointee) : Pointer(Pointee, 0, 0) {}
+Pointer::Pointer(Block *Pointee)
+    : Pointer(Pointee, Pointee->getDescriptor()->getMetadataSize(),
+              Pointee->getDescriptor()->getMetadataSize()) {}
 
 Pointer::Pointer(Block *Pointee, unsigned BaseAndOffset)
     : Pointer(Pointee, BaseAndOffset, BaseAndOffset) {}

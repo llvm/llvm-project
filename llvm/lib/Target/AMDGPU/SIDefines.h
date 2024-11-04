@@ -167,6 +167,9 @@ enum : uint64_t {
 
   // ds_gws_* instructions.
   GWS = UINT64_C(1) << 62,
+
+  // Is a SWMMAC instruction.
+  IsSWMMAC = UINT64_C(1) << 63,
 };
 
 // v_cmp_class_* etc. use a 10-bit mask for what operation is checked.

@@ -138,6 +138,7 @@ public:
 
   // Either generate a new OpTypeXXX instruction or return an existing one
   // corresponding to the given string containing the name of the builtin type.
+  // Return nullptr if unable to recognize SPIRV type name from `TypeStr`.
   SPIRVType *getOrCreateSPIRVTypeByName(
       StringRef TypeStr, MachineIRBuilder &MIRBuilder,
       SPIRV::StorageClass::StorageClass SC = SPIRV::StorageClass::Function,

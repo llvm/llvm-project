@@ -170,7 +170,7 @@ namespace std {
   template<class Context> class basic_format_arg;
 
   template<class Visitor, class Context>
-    see below visit_format_arg(Visitor&& vis, basic_format_arg<Context> arg);
+    see below visit_format_arg(Visitor&& vis, basic_format_arg<Context> arg); // Deprecated in C++26
 
   // [format.arg.store], class template format-arg-store
   template<class Context, class... Args> struct format-arg-store;      // exposition only

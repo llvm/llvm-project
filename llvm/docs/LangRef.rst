@@ -421,6 +421,13 @@ added in the future:
     This calling convention, like the `PreserveMost` calling convention, will be
     used by a future version of the ObjectiveC runtime and should be considered
     experimental at this time.
+"``preserve_nonecc``" - The `PreserveNone` calling convention
+    This calling convention doesn't preserve any general registers. So all
+    general registers are caller saved registers. It also uses all general
+    registers to pass arguments. This attribute doesn't impact non-general
+    purpose registers (e.g. floating point registers, on X86 XMMs/YMMs).
+    Non-general purpose registers still follow the standard c calling
+    convention. Currently it is for x86_64 only.
 "``cxx_fast_tlscc``" - The `CXX_FAST_TLS` calling convention for access functions
     Clang generates an access function to access C++-style TLS. The access
     function generally has an entry block, an exit block and an initialization
@@ -3312,7 +3319,7 @@ Memory Model for Concurrent Operations
 The LLVM IR does not define any way to start parallel threads of
 execution or to register signal handlers. Nonetheless, there are
 platform-specific ways to create them, and we define LLVM IR's behavior
-in their presence. This model is inspired by the C++0x memory model.
+in their presence. This model is inspired by the C++ memory model.
 
 For a more informal introduction to this model, see the :doc:`Atomics`.
 
@@ -3320,7 +3327,7 @@ We define a *happens-before* partial order as the least partial order
 that
 
 -  Is a superset of single-thread program order, and
--  When a *synchronizes-with* ``b``, includes an edge from ``a`` to
+-  When ``a`` *synchronizes-with* ``b``, includes an edge from ``a`` to
    ``b``. *Synchronizes-with* pairs are introduced by platform-specific
    techniques, like pthread locks, thread creation, thread joining,
    etc., and by atomic instructions. (See also :ref:`Atomic Memory Ordering
@@ -3384,13 +3391,12 @@ Atomic instructions (:ref:`cmpxchg <i_cmpxchg>`,
 :ref:`atomicrmw <i_atomicrmw>`, :ref:`fence <i_fence>`,
 :ref:`atomic load <i_load>`, and :ref:`atomic store <i_store>`) take
 ordering parameters that determine which other atomic instructions on
-the same address they *synchronize with*. These semantics are borrowed
-from Java and C++0x, but are somewhat more colloquial. If these
-descriptions aren't precise enough, check those specs (see spec
-references in the :doc:`atomics guide <Atomics>`).
-:ref:`fence <i_fence>` instructions treat these orderings somewhat
-differently since they don't take an address. See that instruction's
-documentation for details.
+the same address they *synchronize with*. These semantics implement
+the Java or C++ memory models; if these descriptions aren't precise
+enough, check those specs (see spec references in the
+:doc:`atomics guide <Atomics>`). :ref:`fence <i_fence>` instructions
+treat these orderings somewhat differently since they don't take an
+address. See that instruction's documentation for details.
 
 For a simpler introduction to the ordering constraints, see the
 :doc:`Atomics`.
@@ -3418,32 +3424,37 @@ For a simpler introduction to the ordering constraints, see the
     stronger) operations on the same address. If an address is written
     ``monotonic``-ally by one thread, and other threads ``monotonic``-ally
     read that address repeatedly, the other threads must eventually see
-    the write. This corresponds to the C++0x/C1x
-    ``memory_order_relaxed``.
+    the write. This corresponds to the C/C++ ``memory_order_relaxed``.
 ``acquire``
     In addition to the guarantees of ``monotonic``, a
     *synchronizes-with* edge may be formed with a ``release`` operation.
-    This is intended to model C++'s ``memory_order_acquire``.
+    This is intended to model C/C++'s ``memory_order_acquire``.
 ``release``
     In addition to the guarantees of ``monotonic``, if this operation
     writes a value which is subsequently read by an ``acquire``
-    operation, it *synchronizes-with* that operation. (This isn't a
-    complete description; see the C++0x definition of a release
-    sequence.) This corresponds to the C++0x/C1x
+    operation, it *synchronizes-with* that operation. Furthermore,
+    this occurs even if the value written by a ``release`` operation
+    has been modified by a read-modify-write operation before being
+    read. (Such a set of operations comprises a *release
+    sequence*). This corresponds to the C/C++
     ``memory_order_release``.
 ``acq_rel`` (acquire+release)
     Acts as both an ``acquire`` and ``release`` operation on its
-    address. This corresponds to the C++0x/C1x ``memory_order_acq_rel``.
+    address. This corresponds to the C/C++ ``memory_order_acq_rel``.
 ``seq_cst`` (sequentially consistent)
     In addition to the guarantees of ``acq_rel`` (``acquire`` for an
     operation that only reads, ``release`` for an operation that only
     writes), there is a global total order on all
-    sequentially-consistent operations on all addresses, which is
-    consistent with the *happens-before* partial order and with the
-    modification orders of all the affected addresses. Each
+    sequentially-consistent operations on all addresses. Each
     sequentially-consistent read sees the last preceding write to the
-    same address in this global order. This corresponds to the C++0x/C1x
-    ``memory_order_seq_cst`` and Java volatile.
+    same address in this global order. This corresponds to the C/C++
+    ``memory_order_seq_cst`` and Java ``volatile``.
+
+    Note: this global total order is *not* guaranteed to be fully
+    consistent with the *happens-before* partial order if
+    non-``seq_cst`` accesses are involved. See the C++ standard
+    `[atomics.order] <https://wg21.link/atomics.order>`_ section
+    for more details on the exact guarantees.
 
 .. _syncscope:
 
@@ -5071,7 +5082,7 @@ Some constraint codes are typically supported by all targets:
 - ``i``: An integer constant (of target-specific width). Allows either a simple
   immediate, or a relocatable value.
 - ``n``: An integer constant -- *not* including relocatable values.
-- ``s``: An integer constant, but allowing *only* relocatable values.
+- ``s``: A symbol or label reference with a constant offset.
 - ``X``: Allows an operand of any kind, no constraint whatsoever. Typically
   useful to pass a label for an asm branch or call.
 
@@ -5103,6 +5114,8 @@ AArch64:
   offsets). (However, LLVM currently does this for the ``m`` constraint as
   well.)
 - ``r``: A 32 or 64-bit integer register (W* or X*).
+- ``S``: A symbol or label reference with a constant offset. The generic ``s``
+  is not supported.
 - ``Uci``: Like r, but restricted to registers 8 to 11 inclusive.
 - ``Ucj``: Like r, but restricted to registers 12 to 15 inclusive.
 - ``w``: A 32, 64, or 128-bit floating-point, SIMD or SVE vector register.
@@ -5279,6 +5292,7 @@ RISC-V:
 - ``f``: A 32- or 64-bit floating-point register (requires F or D extension).
 - ``r``: A 32- or 64-bit general-purpose register (depending on the platform
   ``XLEN``).
+- ``S``: Alias for ``s``.
 - ``vr``: A vector register. (requires V extension).
 - ``vm``: A vector register for masking operand. (requires V extension).
 
@@ -10762,7 +10776,13 @@ still *synchronize-with* the explicit ``fence`` and establish the
 
 A ``fence`` which has ``seq_cst`` ordering, in addition to having both
 ``acquire`` and ``release`` semantics specified above, participates in
-the global program order of other ``seq_cst`` operations and/or fences.
+the global program order of other ``seq_cst`` operations and/or
+fences. Furthermore, the global ordering created by a ``seq_cst``
+fence must be compatible with the individual total orders of
+``monotonic`` (or stronger) memory accesses occurring before and after
+such a fence. The exact semantics of this interaction are somewhat
+complicated, see the C++ standard's `[atomics.order]
+<https://wg21.link/atomics.order>`_ section for more details.
 
 A ``fence`` instruction can also take an optional
 ":ref:`syncscope <syncscope>`" argument.

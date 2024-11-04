@@ -679,6 +679,7 @@ CXCallingConv clang_getFunctionTypeCallingConv(CXType X) {
       TCALLINGCONV(PreserveMost);
       TCALLINGCONV(PreserveAll);
       TCALLINGCONV(M68kRTD);
+      TCALLINGCONV(PreserveNone);
     case CC_SpirFunction: return CXCallingConv_Unexposed;
     case CC_AMDGPUKernelCall: return CXCallingConv_Unexposed;
     case CC_OpenCLKernel: return CXCallingConv_Unexposed;

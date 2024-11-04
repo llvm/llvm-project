@@ -8,12 +8,14 @@ set(TARGET_PUBLIC_HEADERS
     libc.include.fenv
     libc.include.float
     libc.include.inttypes
+    libc.include.limits
     libc.include.math
     libc.include.pthread
     libc.include.sched
     libc.include.signal
     libc.include.spawn
     libc.include.setjmp
+    libc.include.stdbit
     libc.include.stdio
     libc.include.stdlib
     libc.include.string
@@ -28,6 +30,7 @@ set(TARGET_PUBLIC_HEADERS
     libc.include.arpa_inet
 
     libc.include.sys_auxv
+    libc.include.sys_epoll
     libc.include.sys_ioctl
     libc.include.sys_mman
     libc.include.sys_prctl

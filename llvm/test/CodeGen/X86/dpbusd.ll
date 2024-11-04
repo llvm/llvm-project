@@ -379,7 +379,7 @@ define i32 @vpdpbusd_2xi32(ptr%a, ptr%b, i32 %c, i32 %n) {
 ; AVX512VNNI-LABEL: vpdpbusd_2xi32:
 ; AVX512VNNI:       # %bb.0: # %entry
 ; AVX512VNNI-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
-; AVX512VNNI-NEXT:    vmovdqa {{.*#+}} xmm1 = [65535,0,0,0]
+; AVX512VNNI-NEXT:    vmovd {{.*#+}} xmm1 = [65535,0,0,0]
 ; AVX512VNNI-NEXT:    vpandq %zmm1, %zmm0, %zmm0
 ; AVX512VNNI-NEXT:    vmovq {{.*#+}} xmm2 = mem[0],zero
 ; AVX512VNNI-NEXT:    vpandq %zmm1, %zmm2, %zmm1

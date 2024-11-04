@@ -1526,6 +1526,62 @@ static bool shouldHoistCommonInstructions(Instruction *I1, Instruction *I2,
   return true;
 }
 
+/// Hoists DPValues from \p I1 and \p OtherInstrs that are identical in
+/// lock-step to \p TI. This matches how dbg.* intrinsics are hoisting in
+/// hoistCommonCodeFromSuccessors. e.g. The input:
+///    I1                DPVs: { x, z },
+///    OtherInsts: { I2  DPVs: { x, y, z } }
+/// would result in hoisting only DPValue x.
+static void
+hoistLockstepIdenticalDPValues(Instruction *TI, Instruction *I1,
+                               SmallVectorImpl<Instruction *> &OtherInsts) {
+  if (!I1->hasDbgValues())
+    return;
+  using CurrentAndEndIt =
+      std::pair<DPValue::self_iterator, DPValue::self_iterator>;
+  // Vector of {Current, End} iterators.
+  SmallVector<CurrentAndEndIt> Itrs;
+  Itrs.reserve(OtherInsts.size() + 1);
+  // Helper lambdas for lock-step checks:
+  // Return true if this Current == End.
+  auto atEnd = [](const CurrentAndEndIt &Pair) {
+    return Pair.first == Pair.second;
+  };
+  // Return true if all Current are identical.
+  auto allIdentical = [](const SmallVector<CurrentAndEndIt> &Itrs) {
+    return all_of(make_first_range(ArrayRef(Itrs).drop_front()),
+                  [&](DPValue::self_iterator I) {
+                    return Itrs[0].first->isIdenticalToWhenDefined(*I);
+                  });
+  };
+
+  // Collect the iterators.
+  Itrs.push_back(
+      {I1->getDbgValueRange().begin(), I1->getDbgValueRange().end()});
+  for (Instruction *Other : OtherInsts) {
+    if (!Other->hasDbgValues())
+      return;
+    Itrs.push_back(
+        {Other->getDbgValueRange().begin(), Other->getDbgValueRange().end()});
+  }
+
+  // Iterate in lock-step until any of the DPValue lists are exausted. If
+  // the lock-step DPValues are identical, hoist all of them to TI.
+  // This replicates the dbg.* intrinsic behaviour in
+  // hoistCommonCodeFromSuccessors.
+  while (none_of(Itrs, atEnd)) {
+    bool HoistDPVs = allIdentical(Itrs);
+    for (CurrentAndEndIt &Pair : Itrs) {
+      // Increment Current iterator now as we may be about to move the DPValue.
+      DPValue &DPV = *Pair.first++;
+      if (HoistDPVs) {
+        DPV.removeFromParent();
+        TI->getParent()->insertDPValueBefore(&DPV, TI->getIterator());
+      }
+    }
+  }
+}
+
 /// Hoist any common code in the successor blocks up into the block. This
 /// function guarantees that BB dominates all successors. If EqTermsOnly is
 /// given, only perform hoisting in case both blocks only contain a terminator.
@@ -1598,7 +1654,6 @@ bool SimplifyCFGOpt::hoistCommonCodeFromSuccessors(BasicBlock *BB,
     auto OtherSuccIterRange = make_first_range(OtherSuccIterPairRange);
 
     Instruction *I1 = &*BB1ItrPair.first;
-    auto *BB1 = I1->getParent();
 
     // Skip debug info if it is not identical.
     bool AllDbgInstsAreIdentical = all_of(OtherSuccIterRange, [I1](auto &Iter) {
@@ -1624,18 +1679,23 @@ bool SimplifyCFGOpt::hoistCommonCodeFromSuccessors(BasicBlock *BB,
         AllInstsAreIdentical = false;
     }
 
+    SmallVector<Instruction *, 8> OtherInsts;
+    for (auto &SuccIter : OtherSuccIterRange)
+      OtherInsts.push_back(&*SuccIter);
+
     // If we are hoisting the terminator instruction, don't move one (making a
     // broken BB), instead clone it, and remove BI.
     if (HasTerminator) {
       // Even if BB, which contains only one unreachable instruction, is ignored
       // at the beginning of the loop, we can hoist the terminator instruction.
       // If any instructions remain in the block, we cannot hoist terminators.
-      if (NumSkipped || !AllInstsAreIdentical)
+      if (NumSkipped || !AllInstsAreIdentical) {
+        hoistLockstepIdenticalDPValues(TI, I1, OtherInsts);
         return Changed;
-      SmallVector<Instruction *, 8> Insts;
-      for (auto &SuccIter : OtherSuccIterRange)
-        Insts.push_back(&*SuccIter);
-      return hoistSuccIdenticalTerminatorToSwitchOrIf(TI, I1, Insts) || Changed;
+      }
+
+      return hoistSuccIdenticalTerminatorToSwitchOrIf(TI, I1, OtherInsts) ||
+             Changed;
     }
 
     if (AllInstsAreIdentical) {
@@ -1660,18 +1720,25 @@ bool SimplifyCFGOpt::hoistCommonCodeFromSuccessors(BasicBlock *BB,
         // The debug location is an integral part of a debug info intrinsic
         // and can't be separated from it or replaced.  Instead of attempting
         // to merge locations, simply hoist both copies of the intrinsic.
-        I1->moveBeforePreserving(TI);
+        hoistLockstepIdenticalDPValues(TI, I1, OtherInsts);
+        // We've just hoisted DPValues; move I1 after them (before TI) and
+        // leave any that were not hoisted behind (by calling moveBefore
+        // rather than moveBeforePreserving).
+        I1->moveBefore(TI);
         for (auto &SuccIter : OtherSuccIterRange) {
           auto *I2 = &*SuccIter++;
           assert(isa<DbgInfoIntrinsic>(I2));
-          I2->moveBeforePreserving(TI);
+          I2->moveBefore(TI);
         }
       } else {
         // For a normal instruction, we just move one to right before the
         // branch, then replace all uses of the other with the first.  Finally,
         // we remove the now redundant second instruction.
-        I1->moveBeforePreserving(TI);
-        BB->splice(TI->getIterator(), BB1, I1->getIterator());
+        hoistLockstepIdenticalDPValues(TI, I1, OtherInsts);
+        // We've just hoisted DPValues; move I1 after them (before TI) and
+        // leave any that were not hoisted behind (by calling moveBefore
+        // rather than moveBeforePreserving).
+        I1->moveBefore(TI);
         for (auto &SuccIter : OtherSuccIterRange) {
           Instruction *I2 = &*SuccIter++;
           assert(I2 != I1);
@@ -1690,8 +1757,10 @@ bool SimplifyCFGOpt::hoistCommonCodeFromSuccessors(BasicBlock *BB,
       Changed = true;
       NumHoistCommonInstrs += SuccIterPairs.size();
     } else {
-      if (NumSkipped >= HoistCommonSkipLimit)
+      if (NumSkipped >= HoistCommonSkipLimit) {
+        hoistLockstepIdenticalDPValues(TI, I1, OtherInsts);
         return Changed;
+      }
       // We are about to skip over a pair of non-identical instructions. Record
       // if any have characteristics that would prevent reordering instructions
       // across them.
@@ -1752,7 +1821,10 @@ bool SimplifyCFGOpt::hoistSuccIdenticalTerminatorToSwitchOrIf(
     }
   }
 
-  // Okay, it is safe to hoist the terminator.
+  // Hoist DPValues attached to the terminator to match dbg.* intrinsic hoisting
+  // behaviour in hoistCommonCodeFromSuccessors.
+  hoistLockstepIdenticalDPValues(TI, I1, OtherSuccTIs);
+  // Clone the terminator and hoist it into the pred, without any debug info.
   Instruction *NT = I1->clone();
   NT->insertInto(TIParent, TI->getIterator());
   if (!NT->getType()->isVoidTy()) {
@@ -1770,11 +1842,6 @@ bool SimplifyCFGOpt::hoistSuccIdenticalTerminatorToSwitchOrIf(
   Locs.push_back(I1->getDebugLoc());
   for (auto *OtherSuccTI : OtherSuccTIs)
     Locs.push_back(OtherSuccTI->getDebugLoc());
-  // Also clone DPValues from the existing terminator, and all others (to
-  // duplicate existing hoisting behaviour).
-  NT->cloneDebugInfoFrom(I1);
-  for (Instruction *OtherSuccTI : OtherSuccTIs)
-    NT->cloneDebugInfoFrom(OtherSuccTI);
   NT->setDebugLoc(DILocation::getMergedLocations(Locs));
 
   // PHIs created below will adopt NT's merged DebugLoc.
@@ -7395,10 +7462,33 @@ static bool passingValueIsAlwaysUndefined(Value *V, Instruction *I, bool PtrValu
     // Look through GEPs. A load from a GEP derived from NULL is still undefined
     if (GetElementPtrInst *GEP = dyn_cast<GetElementPtrInst>(Use))
       if (GEP->getPointerOperand() == I) {
-        if (!GEP->isInBounds() || !GEP->hasAllZeroIndices())
+        // The current base address is null, there are four cases to consider:
+        // getelementptr (TY, null, 0)                 -> null
+        // getelementptr (TY, null, not zero)          -> may be modified
+        // getelementptr inbounds (TY, null, 0)        -> null
+        // getelementptr inbounds (TY, null, not zero) -> poison iff null is
+        // undefined?
+        if (!GEP->hasAllZeroIndices() &&
+            (!GEP->isInBounds() ||
+             NullPointerIsDefined(GEP->getFunction(),
+                                  GEP->getPointerAddressSpace())))
           PtrValueMayBeModified = true;
         return passingValueIsAlwaysUndefined(V, GEP, PtrValueMayBeModified);
       }
+
+    // Look through return.
+    if (ReturnInst *Ret = dyn_cast<ReturnInst>(Use)) {
+      bool HasNoUndefAttr =
+          Ret->getFunction()->hasRetAttribute(Attribute::NoUndef);
+      // Return undefined to a noundef return value is undefined.
+      if (isa<UndefValue>(C) && HasNoUndefAttr)
+        return true;
+      // Return null to a nonnull+noundef return value is undefined.
+      if (C->isNullValue() && HasNoUndefAttr &&
+          Ret->getFunction()->hasRetAttribute(Attribute::NonNull)) {
+        return !PtrValueMayBeModified;
+      }
+    }
 
     // Look through bitcasts.
     if (BitCastInst *BC = dyn_cast<BitCastInst>(Use))

@@ -62,13 +62,13 @@ define <4 x double> @signbits_ashr_sitofp_0(<4 x i64> %a0) nounwind {
 ; X86-NEXT:    vpsrlq $36, %xmm1, %xmm2
 ; X86-NEXT:    vpsrlq $35, %xmm1, %xmm1
 ; X86-NEXT:    vpblendw {{.*#+}} xmm1 = xmm1[0,1,2,3],xmm2[4,5,6,7]
-; X86-NEXT:    vmovdqa {{.*#+}} xmm2 = [268435456,0,134217728,0]
+; X86-NEXT:    vpmovsxdq {{.*#+}} xmm2 = [268435456,134217728]
 ; X86-NEXT:    vpxor %xmm2, %xmm1, %xmm1
 ; X86-NEXT:    vpsubq %xmm2, %xmm1, %xmm1
 ; X86-NEXT:    vpsrlq $34, %xmm0, %xmm2
 ; X86-NEXT:    vpsrlq $33, %xmm0, %xmm0
 ; X86-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0,1,2,3],xmm2[4,5,6,7]
-; X86-NEXT:    vmovdqa {{.*#+}} xmm2 = [1073741824,0,536870912,0]
+; X86-NEXT:    vpmovsxdq {{.*#+}} xmm2 = [1073741824,536870912]
 ; X86-NEXT:    vpxor %xmm2, %xmm0, %xmm0
 ; X86-NEXT:    vpsubq %xmm2, %xmm0, %xmm0
 ; X86-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[0,2],xmm1[0,2]
@@ -81,13 +81,13 @@ define <4 x double> @signbits_ashr_sitofp_0(<4 x i64> %a0) nounwind {
 ; X64-AVX1-NEXT:    vpsrlq $36, %xmm1, %xmm2
 ; X64-AVX1-NEXT:    vpsrlq $35, %xmm1, %xmm1
 ; X64-AVX1-NEXT:    vpblendw {{.*#+}} xmm1 = xmm1[0,1,2,3],xmm2[4,5,6,7]
-; X64-AVX1-NEXT:    vmovdqa {{.*#+}} xmm2 = [268435456,134217728]
+; X64-AVX1-NEXT:    vpmovsxdq {{.*#+}} xmm2 = [268435456,134217728]
 ; X64-AVX1-NEXT:    vpxor %xmm2, %xmm1, %xmm1
 ; X64-AVX1-NEXT:    vpsubq %xmm2, %xmm1, %xmm1
 ; X64-AVX1-NEXT:    vpsrlq $34, %xmm0, %xmm2
 ; X64-AVX1-NEXT:    vpsrlq $33, %xmm0, %xmm0
 ; X64-AVX1-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0,1,2,3],xmm2[4,5,6,7]
-; X64-AVX1-NEXT:    vmovdqa {{.*#+}} xmm2 = [1073741824,536870912]
+; X64-AVX1-NEXT:    vpmovsxdq {{.*#+}} xmm2 = [1073741824,536870912]
 ; X64-AVX1-NEXT:    vpxor %xmm2, %xmm0, %xmm0
 ; X64-AVX1-NEXT:    vpsubq %xmm2, %xmm0, %xmm0
 ; X64-AVX1-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[0,2],xmm1[0,2]
@@ -97,7 +97,7 @@ define <4 x double> @signbits_ashr_sitofp_0(<4 x i64> %a0) nounwind {
 ; X64-AVX2-LABEL: signbits_ashr_sitofp_0:
 ; X64-AVX2:       # %bb.0:
 ; X64-AVX2-NEXT:    vpsrlvq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
-; X64-AVX2-NEXT:    vmovdqa {{.*#+}} ymm1 = [1073741824,536870912,268435456,134217728]
+; X64-AVX2-NEXT:    vpmovsxdq {{.*#+}} ymm1 = [1073741824,536870912,268435456,134217728]
 ; X64-AVX2-NEXT:    vpxor %ymm1, %ymm0, %ymm0
 ; X64-AVX2-NEXT:    vpsubq %ymm1, %ymm0, %ymm0
 ; X64-AVX2-NEXT:    vextracti128 $1, %ymm0, %xmm1

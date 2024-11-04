@@ -81,7 +81,7 @@ public:
   static AffineMap getMinorIdentityMap(unsigned dims, unsigned results,
                                        MLIRContext *context);
 
-  /// Returns an identity affine map witn `numDims` input dimensions and
+  /// Returns an identity affine map with `numDims` input dimensions and
   /// filtered results using `keepDimFilter`. If `keepDimFilter` returns true
   /// for a dimension, the dimension is kept in the affine map results.
   /// Otherwise, the dimension is dropped from the results.

@@ -106,10 +106,10 @@ define void @failing(ptr %0, ptr %1) nounwind {
 ; CHECK-AVX2-NEXT:    movq 8(%rdi), %rax
 ; CHECK-AVX2-NEXT:    movq 24(%rsi), %rcx
 ; CHECK-AVX2-NEXT:    movq 32(%rsi), %rdx
-; CHECK-AVX2-NEXT:    vmovdqa {{.*#+}} xmm0 = [0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0]
+; CHECK-AVX2-NEXT:    vpmovsxbq {{.*#+}} xmm0 = [0,1]
 ; CHECK-AVX2-NEXT:    xorl %esi, %esi
-; CHECK-AVX2-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [1,1]
-; CHECK-AVX2-NEXT:    vpbroadcastq {{.*#+}} xmm2 = [2,2]
+; CHECK-AVX2-NEXT:    vpmovsxbq {{.*#+}} xmm1 = [1,1]
+; CHECK-AVX2-NEXT:    vpmovsxbq {{.*#+}} xmm2 = [2,2]
 ; CHECK-AVX2-NEXT:    .p2align 4, 0x90
 ; CHECK-AVX2-NEXT:  .LBB0_1: # %vector.ph
 ; CHECK-AVX2-NEXT:    # =>This Loop Header: Depth=1

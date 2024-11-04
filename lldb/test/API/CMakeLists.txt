@@ -98,12 +98,6 @@ if(CMAKE_HOST_APPLE)
     set(LLDB_FRAMEWORK_DIR ${LLDB_FRAMEWORK_ABSOLUTE_BUILD_DIR}/LLDB.framework)
   endif()
 
-  # Use the same identity for testing
-  get_property(code_sign_identity_used GLOBAL PROPERTY LLDB_DEBUGSERVER_CODESIGN_IDENTITY)
-  if(code_sign_identity_used)
-    list(APPEND LLDB_TEST_COMMON_ARGS_VAR --codesign-identity "${code_sign_identity_used}")
-  endif()
-
   if(LLDB_USE_SYSTEM_DEBUGSERVER)
     lldb_find_system_debugserver(system_debugserver_path)
     if(LLDB_BUILD_FRAMEWORK)

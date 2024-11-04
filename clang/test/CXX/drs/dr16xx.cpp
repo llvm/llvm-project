@@ -99,7 +99,6 @@ namespace dr1638 { // dr1638: 3.1
 
   enum class A<unsigned>::E;
   // since-cxx11-error@-1 {{template specialization requires 'template<>'}}
-  // since-cxx11-error@-2 {{forward declaration of enum class cannot have a nested name specifier}}
   template enum class A<unsigned>::E;
   // since-cxx11-error@-1 {{enumerations cannot be explicitly instantiated}}
   enum class A<unsigned>::E *e;

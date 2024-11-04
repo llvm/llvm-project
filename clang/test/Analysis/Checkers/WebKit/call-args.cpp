@@ -10,6 +10,12 @@ namespace simple {
     consume_refcntbl(provide());
     // expected-warning@-1{{Call argument is uncounted and unsafe}}
   }
+
+  // Test that the checker works with [[clang::suppress]].
+  void foo_suppressed() {
+    [[clang::suppress]]
+    consume_refcntbl(provide()); // no-warning
+  }
 }
 
 namespace multi_arg {

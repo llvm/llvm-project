@@ -202,6 +202,21 @@ void test_conditional_bzero(void) {
   // CHECK-NOT: phi
 }
 
+// CHECK-LABEL: define{{.*}} void @test_conditional_bcopy
+void test_conditional_bcopy(void) {
+  char dst[20];
+  char src[20];
+  int _sz = 20, len = 20;
+  return (_sz
+          ? ((_sz >= len)
+              ? __builtin_bcopy(src, dst, len)
+              : foo())
+          : __builtin_bcopy(src, dst, len));
+  // CHECK: call void @llvm.memmove
+  // CHECK: call void @llvm.memmove
+  // CHECK-NOT: phi
+}
+
 // CHECK-LABEL: define{{.*}} void @test_float_builtins
 void test_float_builtins(__fp16 *H, float F, double D, long double LD) {
   volatile int res;

@@ -2488,6 +2488,8 @@ private:
         (Tok.Next->Next->is(tok::numeric_constant) || Line.InPPDirective)) {
       return false;
     }
+    if (Line.InPPDirective && Tok.Next->is(tok::minus))
+      return false;
     // Search for unexpected tokens.
     for (FormatToken *Prev = Tok.Previous; Prev != Tok.MatchingParen;
          Prev = Prev->Previous) {
@@ -3432,6 +3434,8 @@ bool TokenAnnotator::mustBreakForReturnType(const AnnotatedLine &Line) const {
 
   switch (Style.AlwaysBreakAfterReturnType) {
   case FormatStyle::RTBS_None:
+  case FormatStyle::RTBS_Automatic:
+  case FormatStyle::RTBS_ExceptShortType:
     return false;
   case FormatStyle::RTBS_All:
   case FormatStyle::RTBS_TopLevel:
@@ -4272,14 +4276,7 @@ bool TokenAnnotator::spaceRequiredBetween(const AnnotatedLine &Line,
         Left.isOneOf(tok::kw_new, tok::kw_delete) &&
         Right.isNot(TT_OverloadedOperatorLParen) &&
         !(Line.MightBeFunctionDecl && Left.is(TT_FunctionDeclarationName))) {
-      if (Style.SpaceBeforeParensOptions.AfterPlacementOperator ==
-              FormatStyle::SpaceBeforeParensCustom::APO_Always ||
-          (Style.SpaceBeforeParensOptions.AfterPlacementOperator ==
-               FormatStyle::SpaceBeforeParensCustom::APO_Leave &&
-           Right.hasWhitespaceBefore())) {
-        return true;
-      }
-      return false;
+      return Style.SpaceBeforeParensOptions.AfterPlacementOperator;
     }
     if (Line.Type == LT_ObjCDecl)
       return true;

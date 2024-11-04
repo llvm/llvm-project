@@ -22,11 +22,11 @@ define void @test0(i1 %c1) personality ptr @__gxx_wasm_personality_v0 {
 ; CHECK-NEXT:    [[TMP0:%.*]] = alloca [[STRUCT_BLAM:%.*]], align 4
 ; CHECK-NEXT:    br i1 [[C1:%.*]], label [[BB1:%.*]], label [[BB2:%.*]]
 ; CHECK:       bb1:
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [[STRUCT_BLAM]], ptr [[TMP0]], i32 0, i32 1
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr [[TMP0]], i32 4
 ; CHECK-NEXT:    invoke void @foo()
 ; CHECK-NEXT:    to label [[BB3:%.*]] unwind label [[BB4:%.*]]
 ; CHECK:       bb2:
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds [[STRUCT_BLAM]], ptr [[TMP0]], i32 0, i32 1
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i8, ptr [[TMP0]], i32 4
 ; CHECK-NEXT:    invoke void @foo()
 ; CHECK-NEXT:    to label [[BB3]] unwind label [[BB4]]
 ; CHECK:       bb3:

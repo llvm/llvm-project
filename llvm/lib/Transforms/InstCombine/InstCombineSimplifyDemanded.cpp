@@ -802,6 +802,9 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Value *V, APInt DemandedMask,
         return InsertNewInstWith(LShr, I->getIterator());
       } else if (Known.One[BitWidth-ShiftAmt-1]) { // New bits are known one.
         Known.One |= HighBits;
+        // SignBits may be out-of-sync with Known.countMinSignBits(). Mask out
+        // high bits of Known.Zero to avoid conflicts.
+        Known.Zero &= ~HighBits;
       }
     } else {
       computeKnownBits(I, Known, Depth, CxtI);

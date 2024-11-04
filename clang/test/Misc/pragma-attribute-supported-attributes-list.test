@@ -163,6 +163,7 @@
 // CHECK-NEXT: PassObjectSize (SubjectMatchRule_variable_is_parameter)
 // CHECK-NEXT: PatchableFunctionEntry (SubjectMatchRule_function, SubjectMatchRule_objc_method)
 // CHECK-NEXT: Pointer (SubjectMatchRule_record_not_is_union)
+// CHECK-NEXT: PreserveNone (SubjectMatchRule_hasType_functionType)
 // CHECK-NEXT: RandomizeLayout (SubjectMatchRule_record)
 // CHECK-NEXT: ReadOnlyPlacement (SubjectMatchRule_record)
 // CHECK-NEXT: ReleaseHandle (SubjectMatchRule_variable_is_parameter)

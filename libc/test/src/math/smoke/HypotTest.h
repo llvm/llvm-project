@@ -22,16 +22,16 @@ private:
   using FPBits = LIBC_NAMESPACE::fputil::FPBits<T>;
   using StorageType = typename FPBits::StorageType;
   using Sign = LIBC_NAMESPACE::fputil::Sign;
-  const T nan = T(FPBits::build_quiet_nan());
-  const T inf = T(FPBits::inf(Sign::POS));
-  const T neg_inf = T(FPBits::inf(Sign::NEG));
-  const T zero = T(FPBits::zero(Sign::POS));
-  const T neg_zero = T(FPBits::zero(Sign::NEG));
+  const T nan = FPBits::quiet_nan().get_val();
+  const T inf = FPBits::inf(Sign::POS).get_val();
+  const T neg_inf = FPBits::inf(Sign::NEG).get_val();
+  const T zero = FPBits::zero(Sign::POS).get_val();
+  const T neg_zero = FPBits::zero(Sign::NEG).get_val();
 
-  const T max_normal = T(FPBits::max_normal());
-  const T min_normal = T(FPBits::min_normal());
-  const T max_subnormal = T(FPBits::max_subnormal());
-  const T min_subnormal = T(FPBits::min_subnormal());
+  const T max_normal = FPBits::max_normal().get_val();
+  const T min_normal = FPBits::min_normal().get_val();
+  const T max_subnormal = FPBits::max_subnormal().get_val();
+  const T min_subnormal = FPBits::min_subnormal().get_val();
 
 public:
   void test_special_numbers(Func func) {

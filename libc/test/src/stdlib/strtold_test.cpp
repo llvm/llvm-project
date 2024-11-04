@@ -13,7 +13,6 @@
 
 #include "test/UnitTest/Test.h"
 
-#include <limits.h>
 #include <stddef.h>
 
 #if defined(LIBC_LONG_DOUBLE_IS_FLOAT64)
@@ -78,7 +77,7 @@ public:
         LIBC_NAMESPACE::fputil::FPBits<long double>(expectedRawData);
     const int expected_errno = expectedErrno;
 
-    libc_errno = 0;
+    LIBC_NAMESPACE::libc_errno = 0;
     long double result = LIBC_NAMESPACE::strtold(inputString, &str_end);
 
     LIBC_NAMESPACE::fputil::FPBits<long double> actual_fp =
@@ -91,7 +90,7 @@ public:
     EXPECT_EQ(actual_fp.is_neg(), expected_fp.is_neg());
     EXPECT_EQ(actual_fp.get_exponent(), expected_fp.get_exponent());
     EXPECT_EQ(actual_fp.get_mantissa(), expected_fp.get_mantissa());
-    EXPECT_EQ(libc_errno, expected_errno);
+    ASSERT_ERRNO_EQ(expected_errno);
   }
 };
 

@@ -29,6 +29,8 @@
 #include "lldb/Utility/UserIDResolver.h"
 #include "lldb/lldb-private-forward.h"
 #include "lldb/lldb-public.h"
+
+#include "llvm/Support/Error.h"
 #include "llvm/Support/VersionTuple.h"
 
 namespace lldb_private {

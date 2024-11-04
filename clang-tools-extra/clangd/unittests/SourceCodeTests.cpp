@@ -813,6 +813,25 @@ TEST(SourceCodeTests, isKeywords) {
   EXPECT_FALSE(isKeyword("override", LangOpts));
 }
 
+TEST(SourceCodeTests, isSpelledInSource) {
+  Annotations Test("");
+  ParsedAST AST = TestTU::withCode(Test.code()).build();
+  const SourceManager &SM = AST.getSourceManager();
+
+  EXPECT_TRUE(
+      isSpelledInSource(SM.getLocForStartOfFile(SM.getMainFileID()), SM));
+
+  // Check that isSpelledInSource() handles various invalid source locations
+  // gracefully.
+  //
+  // Returning true for SourceLocation() is a behavior that falls out of the
+  // current implementation, which has an early exit for isFileID().
+  // FIXME: Should it return false on SourceLocation()? Does it matter?
+  EXPECT_TRUE(isSpelledInSource(SourceLocation(), SM));
+  EXPECT_FALSE(isSpelledInSource(
+      SourceLocation::getFromRawEncoding(SourceLocation::UIntTy(1 << 31)), SM));
+}
+
 struct IncrementalTestStep {
   llvm::StringRef Src;
   llvm::StringRef Contents;

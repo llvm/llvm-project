@@ -13,7 +13,7 @@
 #include "DXILConstants.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Module.h"
-#include "llvm/Support/DXILOperationCommon.h"
+#include "llvm/Support/DXILABI.h"
 #include "llvm/Support/ErrorHandling.h"
 
 using namespace llvm;

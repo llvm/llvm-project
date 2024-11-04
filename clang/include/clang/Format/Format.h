@@ -914,16 +914,31 @@ struct FormatStyle {
   /// Different ways to break after the function definition or
   /// declaration return type.
   enum ReturnTypeBreakingStyle : int8_t {
-    /// Break after return type automatically.
-    /// ``PenaltyReturnTypeOnItsOwnLine`` is taken into account.
+    /// This is **deprecated**. See ``Automatic`` below.
+    RTBS_None,
+    /// Break after return type based on ``PenaltyReturnTypeOnItsOwnLine``.
     /// \code
     ///   class A {
     ///     int f() { return 0; };
     ///   };
     ///   int f();
     ///   int f() { return 1; }
+    ///   int
+    ///   LongName::AnotherLongName();
     /// \endcode
-    RTBS_None,
+    RTBS_Automatic,
+    /// Same as ``Automatic`` above, except that there is no break after short
+    /// return types.
+    /// \code
+    ///   class A {
+    ///     int f() { return 0; };
+    ///   };
+    ///   int f();
+    ///   int f() { return 1; }
+    ///   int LongName::
+    ///       AnotherLongName();
+    /// \endcode
+    RTBS_ExceptShortType,
     /// Always break after the return type.
     /// \code
     ///   class A {
@@ -938,6 +953,8 @@ struct FormatStyle {
     ///   f() {
     ///     return 1;
     ///   }
+    ///   int
+    ///   LongName::AnotherLongName();
     /// \endcode
     RTBS_All,
     /// Always break after the return types of top-level functions.
@@ -951,6 +968,8 @@ struct FormatStyle {
     ///   f() {
     ///     return 1;
     ///   }
+    ///   int
+    ///   LongName::AnotherLongName();
     /// \endcode
     RTBS_TopLevel,
     /// Always break after the return type of function definitions.
@@ -966,6 +985,8 @@ struct FormatStyle {
     ///   f() {
     ///     return 1;
     ///   }
+    ///   int
+    ///   LongName::AnotherLongName();
     /// \endcode
     RTBS_AllDefinitions,
     /// Always break after the return type of top-level definitions.
@@ -978,6 +999,8 @@ struct FormatStyle {
     ///   f() {
     ///     return 1;
     ///   }
+    ///   int
+    ///   LongName::AnotherLongName();
     /// \endcode
     RTBS_TopLevelDefinitions,
   };
@@ -4157,14 +4180,9 @@ struct FormatStyle {
 
   /// Different ways to put a space before opening parentheses.
   enum SpaceBeforeParensStyle : int8_t {
-    /// Never put a space before opening parentheses.
-    /// \code
-    ///    void f() {
-    ///      if(true) {
-    ///        f();
-    ///      }
-    ///    }
-    /// \endcode
+    /// This is **deprecated** and replaced by ``Custom`` below, with all
+    /// ``SpaceBeforeParensOptions`` but ``AfterPlacementOperator`` set to
+    /// ``false``.
     SBPO_Never,
     /// Put a space before opening parentheses only after control statement
     /// keywords (``for/if/while...``).
@@ -4273,28 +4291,14 @@ struct FormatStyle {
     ///    object.operator++ (10);                object.operator++(10);
     /// \endcode
     bool AfterOverloadedOperator;
-    /// Styles for adding spacing between ``new/delete`` operators and opening
-    /// parentheses.
-    enum AfterPlacementOperatorStyle : int8_t {
-      /// Remove space after ``new/delete`` operators and before ``(``.
-      /// \code
-      ///    new(buf) T;
-      ///    delete(buf) T;
-      /// \endcode
-      APO_Never,
-      /// Always add space after ``new/delete`` operators and before ``(``.
-      /// \code
-      ///    new (buf) T;
-      ///    delete (buf) T;
-      /// \endcode
-      APO_Always,
-      /// Leave placement ``new/delete`` expressions as they are.
-      APO_Leave,
-    };
-    /// Defines in which cases to put a space between ``new/delete`` operators
-    /// and opening parentheses.
-    /// \version 18
-    AfterPlacementOperatorStyle AfterPlacementOperator;
+    /// If ``true``, put a space between operator ``new``/``delete`` and opening
+    /// parenthesis.
+    /// \code
+    ///    true:                                  false:
+    ///    new (buf) T;                    vs.    new(buf) T;
+    ///    delete (buf) T;                        delete(buf) T;
+    /// \endcode
+    bool AfterPlacementOperator;
     /// If ``true``, put space between requires keyword in a requires clause and
     /// opening parentheses, if there is one.
     /// \code
@@ -4327,7 +4331,7 @@ struct FormatStyle {
         : AfterControlStatements(false), AfterForeachMacros(false),
           AfterFunctionDeclarationName(false),
           AfterFunctionDefinitionName(false), AfterIfMacros(false),
-          AfterOverloadedOperator(false), AfterPlacementOperator(APO_Leave),
+          AfterOverloadedOperator(false), AfterPlacementOperator(true),
           AfterRequiresInClause(false), AfterRequiresInExpression(false),
           BeforeNonEmptyParentheses(false) {}
 
@@ -4842,6 +4846,7 @@ struct FormatStyle {
                R.IncludeStyle.IncludeIsMainRegex &&
            IncludeStyle.IncludeIsMainSourceRegex ==
                R.IncludeStyle.IncludeIsMainSourceRegex &&
+           IncludeStyle.MainIncludeChar == R.IncludeStyle.MainIncludeChar &&
            IndentAccessModifiers == R.IndentAccessModifiers &&
            IndentCaseBlocks == R.IndentCaseBlocks &&
            IndentCaseLabels == R.IndentCaseLabels &&

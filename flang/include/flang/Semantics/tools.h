@@ -692,5 +692,8 @@ std::string GetModuleOrSubmoduleName(const Symbol &);
 // Return the assembly name emitted for a common block.
 std::string GetCommonBlockObjectName(const Symbol &, bool underscoring);
 
+// Check for ambiguous USE associations
+bool HadUseError(SemanticsContext &, SourceName at, const Symbol *);
+
 } // namespace Fortran::semantics
 #endif // FORTRAN_SEMANTICS_TOOLS_H_

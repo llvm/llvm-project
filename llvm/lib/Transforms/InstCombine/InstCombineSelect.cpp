@@ -99,7 +99,8 @@ static Instruction *foldSelectBinOpIdentity(SelectInst &Sel,
   // transform. Bail out if we can not exclude that possibility.
   if (isa<FPMathOperator>(BO))
     if (!BO->hasNoSignedZeros() &&
-        !cannotBeNegativeZero(Y, IC.getDataLayout(), &TLI))
+        !cannotBeNegativeZero(Y, 0,
+                              IC.getSimplifyQuery().getWithInstruction(&Sel)))
       return nullptr;
 
   // BO = binop Y, X
@@ -2765,6 +2766,37 @@ static Instruction *foldSelectWithFCmpToFabs(SelectInst &SI,
       NewFNeg->setFastMathFlags(SI.getFastMathFlags());
       return NewFNeg;
     }
+  }
+
+  // Match select with (icmp slt (bitcast X to int), 0)
+  //                or (icmp sgt (bitcast X to int), -1)
+  if (ICmpInst::makeCmpResultType(SI.getType()) != CondVal->getType())
+    return ChangedFMF ? &SI : nullptr;
+
+  for (bool Swap : {false, true}) {
+    Value *TrueVal = SI.getTrueValue();
+    Value *X = SI.getFalseValue();
+
+    if (Swap)
+      std::swap(TrueVal, X);
+
+    CmpInst::Predicate Pred;
+    const APInt *C;
+    bool TrueIfSigned;
+    if (!match(CondVal, m_ICmp(Pred, m_BitCast(m_Specific(X)), m_APInt(C))) ||
+        !IC.isSignBitCheck(Pred, *C, TrueIfSigned))
+      continue;
+    if (!match(TrueVal, m_FNeg(m_Specific(X))))
+      return nullptr;
+    if (Swap == TrueIfSigned && !CondVal->hasOneUse() && !TrueVal->hasOneUse())
+      return nullptr;
+
+    // Fold (IsNeg ? -X : X) or (!IsNeg ? X : -X) to fabs(X)
+    // Fold (IsNeg ? X : -X) or (!IsNeg ? -X : X) to -fabs(X)
+    Value *Fabs = IC.Builder.CreateUnaryIntrinsic(Intrinsic::fabs, X, &SI);
+    if (Swap != TrueIfSigned)
+      return IC.replaceInstUsesWith(SI, Fabs);
+    return UnaryOperator::CreateFNegFMF(Fabs, &SI);
   }
 
   return ChangedFMF ? &SI : nullptr;

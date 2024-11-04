@@ -262,9 +262,9 @@ std::function<bool(llvm::StringRef)> headerFilter() {
     return nullptr;
 
   return [OnlyMatches, IgnoreMatches](llvm::StringRef Header) {
-    if (OnlyHeaders.getNumOccurrences() && !OnlyMatches(Header))
+    if (!OnlyHeaders.empty() && !OnlyMatches(Header))
       return true;
-    if (IgnoreHeaders.getNumOccurrences() && IgnoreMatches(Header))
+    if (!IgnoreHeaders.empty() && IgnoreMatches(Header))
       return true;
     return false;
   };

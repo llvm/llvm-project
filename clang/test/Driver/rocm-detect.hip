@@ -77,8 +77,18 @@
 // RUN:   --hip-path=%t/myhip --print-rocm-search-dirs %s 2>&1 \
 // RUN:   | FileCheck -check-prefixes=ROCM-ENV,HIP-PATH %s
 
+// Test detecting /usr directory.
+// RUN: rm -rf %t/*
+// RUN: cp -r %S/Inputs/rocm %t/usr
+// RUN: mkdir -p %t/usr/share/hip
+// RUN: mv %t/usr/bin/.hipVersion %t/usr/share/hip/version
+// RUN: mkdir -p %t/usr/local
+// RUN: %clang -### --target=x86_64-linux-gnu --offload-arch=gfx1010 --sysroot=%t \
+// RUN:   --print-rocm-search-dirs --hip-link %s 2>&1 \
+// RUN:   | FileCheck -check-prefixes=USR %s
+
 // Test detecting latest /opt/rocm-{release} directory.
-// RUN: rm -rf %t/opt
+// RUN: rm -rf %t/*
 // RUN: mkdir -p %t/opt
 // RUN: cp -r %S/Inputs/rocm %t/opt/rocm-3.9.0-1234
 // RUN: cp -r %S/Inputs/rocm %t/opt/rocm-3.10.0
@@ -129,6 +139,11 @@
 // ROCM-PATH: "-mlink-builtin-bitcode" "[[ROCM_PATH]]/amdgcn/bitcode/oclc_isa_version_1010.bc"
 // ROCM-PATH: "-idirafter" "[[ROCM_PATH]]/include"
 // ROCM-PATH: "-L[[ROCM_PATH]]/lib" {{.*}}"-lamdhip64"
+
+// USR: ROCm installation search path: [[ROCM_PATH:.*/usr$]]
+// USR: "-mlink-builtin-bitcode" "[[ROCM_PATH]]/amdgcn/bitcode/oclc_isa_version_1010.bc"
+// USR: "-idirafter" "[[ROCM_PATH]]/include"
+// USR: "-L[[ROCM_PATH]]/lib" {{.*}}"-lamdhip64"
 
 // ROCM-REL: ROCm installation search path: {{.*}}/opt/rocm
 // ROCM-REL: ROCm installation search path: {{.*}}/opt/rocm-3.10.0

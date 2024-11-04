@@ -774,7 +774,7 @@ exit:
 
 define void @canonicalize_assume(ptr %0) {
 ; DEFAULT-LABEL: @canonicalize_assume(
-; DEFAULT-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i32, ptr [[TMP0:%.*]], i64 2
+; DEFAULT-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i8, ptr [[TMP0:%.*]], i64 8
 ; DEFAULT-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[TMP2]], i64 16) ]
 ; DEFAULT-NEXT:    ret void
 ;

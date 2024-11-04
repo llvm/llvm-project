@@ -142,6 +142,9 @@ enum NodeType : unsigned {
   SM4KS, SM4ED,
   SM3P0, SM3P1,
 
+  // May-Be-Operations
+  MOPR, MOPRR,
+
   // Vector Extension
   FIRST_VL_VECTOR_OP,
   // VMV_V_V_VL matches the semantics of vmv.v.v but includes an extra operand
@@ -414,6 +417,33 @@ enum NodeType : unsigned {
   STRICT_FSETCCS_VL,
   STRICT_VFROUND_NOEXCEPT_VL,
   LAST_RISCV_STRICTFP_OPCODE = STRICT_VFROUND_NOEXCEPT_VL,
+
+  SF_VC_XV_SE,
+  SF_VC_IV_SE,
+  SF_VC_VV_SE,
+  SF_VC_FV_SE,
+  SF_VC_XVV_SE,
+  SF_VC_IVV_SE,
+  SF_VC_VVV_SE,
+  SF_VC_FVV_SE,
+  SF_VC_XVW_SE,
+  SF_VC_IVW_SE,
+  SF_VC_VVW_SE,
+  SF_VC_FVW_SE,
+  SF_VC_V_X_SE,
+  SF_VC_V_I_SE,
+  SF_VC_V_XV_SE,
+  SF_VC_V_IV_SE,
+  SF_VC_V_VV_SE,
+  SF_VC_V_FV_SE,
+  SF_VC_V_XVV_SE,
+  SF_VC_V_IVV_SE,
+  SF_VC_V_VVV_SE,
+  SF_VC_V_FVV_SE,
+  SF_VC_V_XVW_SE,
+  SF_VC_V_IVW_SE,
+  SF_VC_V_VVW_SE,
+  SF_VC_V_FVW_SE,
 
   // WARNING: Do not add anything in the end unless you want the node to
   // have memop! In fact, starting from FIRST_TARGET_MEMORY_OPCODE all
@@ -855,6 +885,7 @@ private:
   SDValue getStaticTLSAddr(GlobalAddressSDNode *N, SelectionDAG &DAG,
                            bool UseGOT) const;
   SDValue getDynamicTLSAddr(GlobalAddressSDNode *N, SelectionDAG &DAG) const;
+  SDValue getTLSDescAddr(GlobalAddressSDNode *N, SelectionDAG &DAG) const;
 
   SDValue lowerGlobalAddress(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerBlockAddress(SDValue Op, SelectionDAG &DAG) const;

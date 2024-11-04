@@ -231,9 +231,7 @@ TEST(LlvmLibcSScanfTest, FloatConvSimple) {
   float result = 0;
 
   float inf = LIBC_NAMESPACE::fputil::FPBits<float>::inf().get_val();
-  float nan = LIBC_NAMESPACE::fputil::FPBits<float>::build_nan(
-                  LIBC_NAMESPACE::fputil::Sign::POS, 1)
-                  .get_val();
+  float nan = LIBC_NAMESPACE::fputil::FPBits<float>::quiet_nan().get_val();
 
   ret_val = LIBC_NAMESPACE::sscanf("123", "%f", &result);
   EXPECT_EQ(ret_val, 1);
@@ -297,9 +295,8 @@ TEST(LlvmLibcSScanfTest, FloatConvLengthModifier) {
   long double ld_result = 0;
 
   double d_inf = LIBC_NAMESPACE::fputil::FPBits<double>::inf().get_val();
-  long double ld_nan = LIBC_NAMESPACE::fputil::FPBits<long double>::build_nan(
-                           LIBC_NAMESPACE::fputil::Sign::POS, 1)
-                           .get_val();
+  long double ld_nan =
+      LIBC_NAMESPACE::fputil::FPBits<long double>::quiet_nan().get_val();
 
   ret_val = LIBC_NAMESPACE::sscanf("123", "%lf", &d_result);
   EXPECT_EQ(ret_val, 1);
@@ -395,9 +392,7 @@ TEST(LlvmLibcSScanfTest, FloatConvComplexParsing) {
   float result = 0;
 
   float inf = LIBC_NAMESPACE::fputil::FPBits<float>::inf().get_val();
-  float nan = LIBC_NAMESPACE::fputil::FPBits<float>::build_nan(
-                  LIBC_NAMESPACE::fputil::Sign::POS, 1)
-                  .get_val();
+  float nan = LIBC_NAMESPACE::fputil::FPBits<float>::quiet_nan().get_val();
 
   ret_val = LIBC_NAMESPACE::sscanf("0x1.0e3", "%f", &result);
   EXPECT_EQ(ret_val, 1);

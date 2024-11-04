@@ -18,7 +18,7 @@
 
 namespace llvm {
 
-class AAResults;
+class BatchAAResults;
 class AssumptionCache;
 class DataLayout;
 class DominatorTree;
@@ -129,11 +129,10 @@ extern cl::opt<unsigned> DefMaxInstsToScan;
 /// location in memory, as opposed to the value operand of a store.
 ///
 /// \returns The found value, or nullptr if no value is found.
-Value *FindAvailableLoadedValue(LoadInst *Load,
-                                BasicBlock *ScanBB,
+Value *FindAvailableLoadedValue(LoadInst *Load, BasicBlock *ScanBB,
                                 BasicBlock::iterator &ScanFrom,
                                 unsigned MaxInstsToScan = DefMaxInstsToScan,
-                                AAResults *AA = nullptr,
+                                BatchAAResults *AA = nullptr,
                                 bool *IsLoadCSE = nullptr,
                                 unsigned *NumScanedInst = nullptr);
 
@@ -141,7 +140,8 @@ Value *FindAvailableLoadedValue(LoadInst *Load,
 /// FindAvailableLoadedValue() for the case where we are not interested in
 /// finding the closest clobbering instruction if no available load is found.
 /// This overload cannot be used to scan across multiple blocks.
-Value *FindAvailableLoadedValue(LoadInst *Load, AAResults &AA, bool *IsLoadCSE,
+Value *FindAvailableLoadedValue(LoadInst *Load, BatchAAResults &AA,
+                                bool *IsLoadCSE,
                                 unsigned MaxInstsToScan = DefMaxInstsToScan);
 
 /// Scan backwards to see if we have the value of the given pointer available
@@ -170,7 +170,7 @@ Value *FindAvailableLoadedValue(LoadInst *Load, AAResults &AA, bool *IsLoadCSE,
 Value *findAvailablePtrLoadStore(const MemoryLocation &Loc, Type *AccessTy,
                                  bool AtLeastAtomic, BasicBlock *ScanBB,
                                  BasicBlock::iterator &ScanFrom,
-                                 unsigned MaxInstsToScan, AAResults *AA,
+                                 unsigned MaxInstsToScan, BatchAAResults *AA,
                                  bool *IsLoadCSE, unsigned *NumScanedInst);
 
 /// Returns true if a pointer value \p A can be replace with another pointer

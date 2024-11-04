@@ -2567,43 +2567,6 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
     return constrainSelectedInstRegOperands(*MovAddr, TII, TRI, RBI);
   }
 
-  case TargetOpcode::G_BSWAP: {
-    // Handle vector types for G_BSWAP directly.
-    Register DstReg = I.getOperand(0).getReg();
-    LLT DstTy = MRI.getType(DstReg);
-
-    // We should only get vector types here; everything else is handled by the
-    // importer right now.
-    if (!DstTy.isVector() || DstTy.getSizeInBits() > 128) {
-      LLVM_DEBUG(dbgs() << "Dst type for G_BSWAP currently unsupported.\n");
-      return false;
-    }
-
-    // Only handle 4 and 2 element vectors for now.
-    // TODO: 16-bit elements.
-    unsigned NumElts = DstTy.getNumElements();
-    if (NumElts != 4 && NumElts != 2) {
-      LLVM_DEBUG(dbgs() << "Unsupported number of elements for G_BSWAP.\n");
-      return false;
-    }
-
-    // Choose the correct opcode for the supported types. Right now, that's
-    // v2s32, v4s32, and v2s64.
-    unsigned Opc = 0;
-    unsigned EltSize = DstTy.getElementType().getSizeInBits();
-    if (EltSize == 32)
-      Opc = (DstTy.getNumElements() == 2) ? AArch64::REV32v8i8
-                                          : AArch64::REV32v16i8;
-    else if (EltSize == 64)
-      Opc = AArch64::REV64v16i8;
-
-    // We should always get something by the time we get here...
-    assert(Opc != 0 && "Didn't get an opcode for G_BSWAP?");
-
-    I.setDesc(TII.get(Opc));
-    return constrainSelectedInstRegOperands(I, TII, TRI, RBI);
-  }
-
   case TargetOpcode::G_FCONSTANT:
   case TargetOpcode::G_CONSTANT: {
     const bool isFP = Opcode == TargetOpcode::G_FCONSTANT;
@@ -4600,8 +4563,7 @@ MachineInstr *AArch64InstructionSelector::emitFPCompare(
   if (Ty.isVector())
     return nullptr;
   unsigned OpSize = Ty.getSizeInBits();
-  if (OpSize != 32 && OpSize != 64)
-    return nullptr;
+  assert(OpSize == 16 || OpSize == 32 || OpSize == 64);
 
   // If this is a compare against +0.0, then we don't have
   // to explicitly materialize a constant.
@@ -4620,9 +4582,11 @@ MachineInstr *AArch64InstructionSelector::emitFPCompare(
       std::swap(LHS, RHS);
     }
   }
-  unsigned CmpOpcTbl[2][2] = {{AArch64::FCMPSrr, AArch64::FCMPDrr},
-                              {AArch64::FCMPSri, AArch64::FCMPDri}};
-  unsigned CmpOpc = CmpOpcTbl[ShouldUseImm][OpSize == 64];
+  unsigned CmpOpcTbl[2][3] = {
+      {AArch64::FCMPHrr, AArch64::FCMPSrr, AArch64::FCMPDrr},
+      {AArch64::FCMPHri, AArch64::FCMPSri, AArch64::FCMPDri}};
+  unsigned CmpOpc =
+      CmpOpcTbl[ShouldUseImm][OpSize == 16 ? 0 : (OpSize == 32 ? 1 : 2)];
 
   // Partially build the compare. Decide if we need to add a use for the
   // third operand based off whether or not we're comparing against 0.0.
@@ -4889,18 +4853,21 @@ MachineInstr *AArch64InstructionSelector::emitConditionalComparison(
   // TODO: emit CMN as an optimization.
   auto &MRI = *MIB.getMRI();
   LLT OpTy = MRI.getType(LHS);
-  assert(OpTy.getSizeInBits() == 32 || OpTy.getSizeInBits() == 64);
   unsigned CCmpOpc;
   std::optional<ValueAndVReg> C;
   if (CmpInst::isIntPredicate(CC)) {
+    assert(OpTy.getSizeInBits() == 32 || OpTy.getSizeInBits() == 64);
     C = getIConstantVRegValWithLookThrough(RHS, MRI);
     if (C && C->Value.ult(32))
       CCmpOpc = OpTy.getSizeInBits() == 32 ? AArch64::CCMPWi : AArch64::CCMPXi;
     else
       CCmpOpc = OpTy.getSizeInBits() == 32 ? AArch64::CCMPWr : AArch64::CCMPXr;
   } else {
+    assert(OpTy.getSizeInBits() == 16 || OpTy.getSizeInBits() == 32 ||
+           OpTy.getSizeInBits() == 64);
     switch (OpTy.getSizeInBits()) {
     case 16:
+      assert(STI.hasFullFP16() && "Expected Full FP16 for fp16 comparisons");
       CCmpOpc = AArch64::FCCMPHrr;
       break;
     case 32:

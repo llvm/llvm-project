@@ -71,6 +71,9 @@ public:
   /// Is this an array or an assumed ranked entity?
   bool isArray() const { return getRank() != 0; }
 
+  /// Is this an assumed ranked entity?
+  bool isAssumedRank() const { return getRank() == -1; }
+
   /// Return the rank of this entity or -1 if it is an assumed rank.
   int getRank() const {
     mlir::Type type = fir::unwrapPassByRefType(fir::unwrapRefType(getType()));

@@ -155,6 +155,9 @@ set(LLVM_COMPILER_CHECKED ON)
 include(AddLLVM)
 include(HandleLLVMOptions)
 
+# Loot at the PATH first to avoid a version mismatch between the command-line
+# python and the CMake-found version
+set(Python3_FIND_REGISTRY LAST)
 find_package(Python3 REQUIRED COMPONENTS Interpreter)
 
 # Host triple is used by tests to check if they are running natively.

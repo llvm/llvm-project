@@ -853,3 +853,48 @@ define <8 x float> @shuffle_v8f32_as_i64(<8 x float> %v) {
   %shuffle = shufflevector <8 x float> %v, <8 x float> poison, <8 x i32> <i32 1, i32 0, i32 3, i32 2, i32 5, i32 4, i32 7, i32 6>
   ret <8 x float> %shuffle
 }
+
+define <8 x float> @shuffle_v8f32_as_i64_exact(<8 x float> %v) vscale_range(2,2) {
+; RV32-LABEL: shuffle_v8f32_as_i64_exact:
+; RV32:       # %bb.0:
+; RV32-NEXT:    li a0, 32
+; RV32-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
+; RV32-NEXT:    vmv.v.x v10, a0
+; RV32-NEXT:    li a0, 63
+; RV32-NEXT:    vand.vx v12, v10, a0
+; RV32-NEXT:    vsll.vv v12, v8, v12
+; RV32-NEXT:    vrsub.vi v10, v10, 0
+; RV32-NEXT:    vand.vx v10, v10, a0
+; RV32-NEXT:    vsrl.vv v8, v8, v10
+; RV32-NEXT:    vor.vv v8, v12, v8
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: shuffle_v8f32_as_i64_exact:
+; RV64:       # %bb.0:
+; RV64-NEXT:    li a0, 32
+; RV64-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
+; RV64-NEXT:    vsrl.vx v10, v8, a0
+; RV64-NEXT:    vsll.vx v8, v8, a0
+; RV64-NEXT:    vor.vv v8, v8, v10
+; RV64-NEXT:    ret
+;
+; ZVKB-V-LABEL: shuffle_v8f32_as_i64_exact:
+; ZVKB-V:       # %bb.0:
+; ZVKB-V-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
+; ZVKB-V-NEXT:    vror.vi v8, v8, 32
+; ZVKB-V-NEXT:    ret
+;
+; ZVKB-ZVE32X-LABEL: shuffle_v8f32_as_i64_exact:
+; ZVKB-ZVE32X:       # %bb.0:
+; ZVKB-ZVE32X-NEXT:    lui a0, 8240
+; ZVKB-ZVE32X-NEXT:    addi a0, a0, 1
+; ZVKB-ZVE32X-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; ZVKB-ZVE32X-NEXT:    vmv.s.x v10, a0
+; ZVKB-ZVE32X-NEXT:    vsext.vf4 v12, v10
+; ZVKB-ZVE32X-NEXT:    vrgather.vv v11, v9, v12
+; ZVKB-ZVE32X-NEXT:    vrgather.vv v10, v8, v12
+; ZVKB-ZVE32X-NEXT:    vmv2r.v v8, v10
+; ZVKB-ZVE32X-NEXT:    ret
+  %shuffle = shufflevector <8 x float> %v, <8 x float> poison, <8 x i32> <i32 1, i32 0, i32 3, i32 2, i32 5, i32 4, i32 7, i32 6>
+  ret <8 x float> %shuffle
+}

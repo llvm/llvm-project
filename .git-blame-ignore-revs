@@ -73,3 +73,8 @@ f6d557ee34b6bbdb1dc32f29e34b4a4a8ad35e81
 
 # [libc++] Format the code base (#74334)
 9783f28cbb155e4a8d49c12e1c60ce14dcfaf0c7
+
+# [RFC] compiler-rt builtins cleanup and refactoring
+082b89b25faae3e45a023caf51b65ca0f02f377f
+0ba22f51d128bee9d69756c56c4678097270e10b
+84da0e1bb75f8666cf222d2f600f37bebb9ea389

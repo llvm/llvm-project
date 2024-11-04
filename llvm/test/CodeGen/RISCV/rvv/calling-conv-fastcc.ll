@@ -4,35 +4,35 @@
 ; RUN: llc -mtriple=riscv64 -mattr=+m,+v -verify-machineinstrs < %s \
 ; RUN:   | FileCheck %s --check-prefixes=CHECK,RV64
 
-define fastcc <vscale x 4 x i8> @ret_nxv4i8(<vscale x 4 x i8>* %p) {
+define fastcc <vscale x 4 x i8> @ret_nxv4i8(ptr %p) {
 ; CHECK-LABEL: ret_nxv4i8:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a1, zero, e8, mf2, ta, ma
 ; CHECK-NEXT:    vle8.v v8, (a0)
 ; CHECK-NEXT:    ret
-  %v = load <vscale x 4 x i8>, <vscale x 4 x i8>* %p
+  %v = load <vscale x 4 x i8>, ptr %p
   ret <vscale x 4 x i8> %v
 }
 
-define fastcc <vscale x 4 x i32> @ret_nxv4i32(<vscale x 4 x i32>* %p) {
+define fastcc <vscale x 4 x i32> @ret_nxv4i32(ptr %p) {
 ; CHECK-LABEL: ret_nxv4i32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vl2re32.v v8, (a0)
 ; CHECK-NEXT:    ret
-  %v = load <vscale x 4 x i32>, <vscale x 4 x i32>* %p
+  %v = load <vscale x 4 x i32>, ptr %p
   ret <vscale x 4 x i32> %v
 }
 
-define fastcc <vscale x 8 x i32> @ret_nxv8i32(<vscale x 8 x i32>* %p) {
+define fastcc <vscale x 8 x i32> @ret_nxv8i32(ptr %p) {
 ; CHECK-LABEL: ret_nxv8i32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vl4re32.v v8, (a0)
 ; CHECK-NEXT:    ret
-  %v = load <vscale x 8 x i32>, <vscale x 8 x i32>* %p
+  %v = load <vscale x 8 x i32>, ptr %p
   ret <vscale x 8 x i32> %v
 }
 
-define fastcc <vscale x 16 x i64> @ret_nxv16i64(<vscale x 16 x i64>* %p) {
+define fastcc <vscale x 16 x i64> @ret_nxv16i64(ptr %p) {
 ; CHECK-LABEL: ret_nxv16i64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    csrr a1, vlenb
@@ -41,32 +41,32 @@ define fastcc <vscale x 16 x i64> @ret_nxv16i64(<vscale x 16 x i64>* %p) {
 ; CHECK-NEXT:    vl8re64.v v16, (a1)
 ; CHECK-NEXT:    vl8re64.v v8, (a0)
 ; CHECK-NEXT:    ret
-  %v = load <vscale x 16 x i64>, <vscale x 16 x i64>* %p
+  %v = load <vscale x 16 x i64>, ptr %p
   ret <vscale x 16 x i64> %v
 }
 
-define fastcc <vscale x 8 x i1> @ret_mask_nxv8i1(<vscale x 8 x i1>* %p) {
+define fastcc <vscale x 8 x i1> @ret_mask_nxv8i1(ptr %p) {
 ; CHECK-LABEL: ret_mask_nxv8i1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a1, zero, e8, m1, ta, ma
 ; CHECK-NEXT:    vlm.v v0, (a0)
 ; CHECK-NEXT:    ret
-  %v = load <vscale x 8 x i1>, <vscale x 8 x i1>* %p
+  %v = load <vscale x 8 x i1>, ptr %p
   ret <vscale x 8 x i1> %v
 }
 
-define fastcc <vscale x 32 x i1> @ret_mask_nxv32i1(<vscale x 32 x i1>* %p) {
+define fastcc <vscale x 32 x i1> @ret_mask_nxv32i1(ptr %p) {
 ; CHECK-LABEL: ret_mask_nxv32i1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a1, zero, e8, m4, ta, ma
 ; CHECK-NEXT:    vlm.v v0, (a0)
 ; CHECK-NEXT:    ret
-  %v = load <vscale x 32 x i1>, <vscale x 32 x i1>* %p
+  %v = load <vscale x 32 x i1>, ptr %p
   ret <vscale x 32 x i1> %v
 }
 
 ; Return the vector via registers v8-v23
-define fastcc <vscale x 64 x i32> @ret_split_nxv64i32(<vscale x 64 x i32>* %x) {
+define fastcc <vscale x 64 x i32> @ret_split_nxv64i32(ptr %x) {
 ; CHECK-LABEL: ret_split_nxv64i32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    csrr a2, vlenb
@@ -89,12 +89,12 @@ define fastcc <vscale x 64 x i32> @ret_split_nxv64i32(<vscale x 64 x i32>* %x) {
 ; CHECK-NEXT:    add a0, a0, a3
 ; CHECK-NEXT:    vs8r.v v8, (a0)
 ; CHECK-NEXT:    ret
-  %v = load <vscale x 64 x i32>, <vscale x 64 x i32>* %x
+  %v = load <vscale x 64 x i32>, ptr %x
   ret <vscale x 64 x i32> %v
 }
 
 ; Return the vector fully via the stack
-define fastcc <vscale x 128 x i32> @ret_split_nxv128i32(<vscale x 128 x i32>* %x) {
+define fastcc <vscale x 128 x i32> @ret_split_nxv128i32(ptr %x) {
 ; CHECK-LABEL: ret_split_nxv128i32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi sp, sp, -16
@@ -186,7 +186,7 @@ define fastcc <vscale x 128 x i32> @ret_split_nxv128i32(<vscale x 128 x i32>* %x
 ; CHECK-NEXT:    add sp, sp, a0
 ; CHECK-NEXT:    addi sp, sp, 16
 ; CHECK-NEXT:    ret
-  %v = load <vscale x 128 x i32>, <vscale x 128 x i32>* %x
+  %v = load <vscale x 128 x i32>, ptr %x
   ret <vscale x 128 x i32> %v
 }
 

@@ -978,6 +978,19 @@ bool Parser::ConsumeAndStoreFunctionPrologue(CachedTokens &Toks) {
       } else {
         break;
       }
+      // Pack indexing
+      if (Tok.is(tok::ellipsis) && NextToken().is(tok::l_square)) {
+        Toks.push_back(Tok);
+        SourceLocation OpenLoc = ConsumeToken();
+        Toks.push_back(Tok);
+        ConsumeBracket();
+        if (!ConsumeAndStoreUntil(tok::r_square, Toks, /*StopAtSemi=*/true)) {
+          Diag(Tok.getLocation(), diag::err_expected) << tok::r_square;
+          Diag(OpenLoc, diag::note_matching) << tok::l_square;
+          return true;
+        }
+      }
+
     } while (Tok.is(tok::coloncolon));
 
     if (Tok.is(tok::code_completion)) {

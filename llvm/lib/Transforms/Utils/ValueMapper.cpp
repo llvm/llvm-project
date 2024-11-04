@@ -1056,9 +1056,13 @@ void Mapper::remapFunction(Function &F) {
       A.mutateType(TypeMapper->remapType(A.getType()));
 
   // Remap the instructions.
-  for (BasicBlock &BB : F)
-    for (Instruction &I : BB)
+  for (BasicBlock &BB : F) {
+    for (Instruction &I : BB) {
       remapInstruction(&I);
+      for (DPValue &DPV : I.getDbgValueRange())
+        remapDPValue(DPV);
+    }
+  }
 }
 
 void Mapper::mapAppendingVariable(GlobalVariable &GV, Constant *InitPrefix,

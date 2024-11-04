@@ -1433,6 +1433,27 @@ static void CheckAssociated(evaluate::ActualArguments &arguments,
   }
 }
 
+// IMAGE_INDEX (F'2023 16.9.107)
+static void CheckImage_Index(evaluate::ActualArguments &arguments,
+    parser::ContextualMessages &messages) {
+  if (arguments[1] && arguments[0]) {
+    if (const auto subArrShape{
+            evaluate::GetShape(arguments[1]->UnwrapExpr())}) {
+      if (const auto *coarrayArgSymbol{UnwrapWholeSymbolOrComponentDataRef(
+              arguments[0]->UnwrapExpr())}) {
+        const auto coarrayArgCorank = coarrayArgSymbol->Corank();
+        if (const auto subArrSize = evaluate::ToInt64(*subArrShape->front())) {
+          if (subArrSize != coarrayArgCorank) {
+            messages.Say(arguments[1]->sourceLocation(),
+                "The size of 'SUB=' (%jd) for intrinsic 'image_index' must be equal to the corank of 'COARRAY=' (%d)"_err_en_US,
+                static_cast<std::int64_t>(*subArrSize), coarrayArgCorank);
+          }
+        }
+      }
+    }
+  }
+}
+
 // MOVE_ALLOC (F'2023 16.9.147)
 static void CheckMove_Alloc(evaluate::ActualArguments &arguments,
     parser::ContextualMessages &messages) {
@@ -1466,6 +1487,30 @@ static void CheckMove_Alloc(evaluate::ActualArguments &arguments,
     if (type0 && type1 && type0->IsPolymorphic() && !type1->IsPolymorphic()) {
       messages.Say(arguments[1]->sourceLocation(),
           "When MOVE_ALLOC(FROM=) is polymorphic, TO= must also be polymorphic"_err_en_US);
+    }
+  }
+}
+
+// PRESENT (F'2023 16.9.163)
+static void CheckPresent(evaluate::ActualArguments &arguments,
+    parser::ContextualMessages &messages) {
+  if (arguments.size() == 1) {
+    if (const auto &arg{arguments[0]}; arg) {
+      const Symbol *symbol{nullptr};
+      if (const auto *expr{arg->UnwrapExpr()}) {
+        if (const auto *proc{
+                std::get_if<evaluate::ProcedureDesignator>(&expr->u)}) {
+          symbol = proc->GetSymbol();
+        } else {
+          symbol = evaluate::UnwrapWholeSymbolDataRef(*expr);
+        }
+      } else {
+        symbol = arg->GetAssumedTypeDummy();
+      }
+      if (!symbol || !symbol->attrs().test(semantics::Attr::OPTIONAL)) {
+        messages.Say(arg ? arg->sourceLocation() : messages.at(),
+            "Argument of PRESENT() must be the name of a whole OPTIONAL dummy argument"_err_en_US);
+      }
     }
   }
 }
@@ -1678,8 +1723,12 @@ static void CheckSpecificIntrinsic(evaluate::ActualArguments &arguments,
     const evaluate::SpecificIntrinsic &intrinsic) {
   if (intrinsic.name == "associated") {
     CheckAssociated(arguments, context, scope);
+  } else if (intrinsic.name == "image_index") {
+    CheckImage_Index(arguments, context.foldingContext().messages());
   } else if (intrinsic.name == "move_alloc") {
     CheckMove_Alloc(arguments, context.foldingContext().messages());
+  } else if (intrinsic.name == "present") {
+    CheckPresent(arguments, context.foldingContext().messages());
   } else if (intrinsic.name == "reduce") {
     CheckReduce(arguments, context.foldingContext());
   } else if (intrinsic.name == "transfer") {

@@ -577,6 +577,7 @@ AMDGPUTargetLowering::AMDGPUTargetLowering(const TargetMachine &TM,
                        ISD::AssertSext, ISD::INTRINSIC_WO_CHAIN});
 
   setMaxAtomicSizeInBitsSupported(64);
+  setMaxDivRemBitWidthSupported(64);
 }
 
 bool AMDGPUTargetLowering::mayIgnoreSignedZero(SDValue Op) const {
@@ -4206,6 +4207,7 @@ static SDValue getAddOneOp(const SDNode *V) {
 
 SDValue AMDGPUTargetLowering::performMulCombine(SDNode *N,
                                                 DAGCombinerInfo &DCI) const {
+  assert(N->getOpcode() == ISD::MUL);
   EVT VT = N->getValueType(0);
 
   // Don't generate 24-bit multiplies on values that are in SGPRs, since
@@ -4253,10 +4255,6 @@ SDValue AMDGPUTargetLowering::performMulCombine(SDNode *N,
     SDValue MulVal = DAG.getNode(N->getOpcode(), DL, VT, N0, MulOper);
     return DAG.getNode(ISD::ADD, DL, VT, MulVal, N0);
   }
-
-  // Skip if already mul24.
-  if (N->getOpcode() != ISD::MUL)
-    return SDValue();
 
   // There are i16 integer mul/mad.
   if (Subtarget->has16BitInsts() && VT.getScalarType().bitsLE(MVT::i16))
@@ -5081,7 +5079,7 @@ SDValue AMDGPUTargetLowering::PerformDAGCombine(SDNode *N,
   case AMDGPUISD::MUL_I24: {
     if (SDValue Simplified = simplifyMul24(N, DCI))
       return Simplified;
-    return performMulCombine(N, DCI);
+    break;
   }
   case AMDGPUISD::MULHI_I24:
   case AMDGPUISD::MULHI_U24:

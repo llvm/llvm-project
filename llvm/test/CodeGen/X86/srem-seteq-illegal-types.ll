@@ -250,7 +250,7 @@ define <3 x i1> @test_srem_vec(<3 x i33> %X) nounwind {
 ; SSE41-NEXT:    subq %rax, %rdi
 ; SSE41-NEXT:    movq %rdi, %xmm0
 ; SSE41-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
-; SSE41-NEXT:    movdqa {{.*#+}} xmm1 = [8589934591,8589934591]
+; SSE41-NEXT:    pmovsxbd {{.*#+}} xmm1 = [4294967295,1,4294967295,1]
 ; SSE41-NEXT:    pand %xmm1, %xmm0
 ; SSE41-NEXT:    movabsq $2049638230412172401, %rdx # imm = 0x1C71C71C71C71C71
 ; SSE41-NEXT:    movq %rcx, %rax

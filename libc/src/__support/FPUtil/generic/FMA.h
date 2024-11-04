@@ -58,8 +58,8 @@ template <> LIBC_INLINE float fma<float>(float x, float y, float z) {
     // correct (when it matters).
     fputil::FPBits<double> t(
         (bit_prod.get_biased_exponent() >= bitz.get_biased_exponent())
-            ? ((double(bit_sum) - double(bit_prod)) - double(bitz))
-            : ((double(bit_sum) - double(bitz)) - double(bit_prod)));
+            ? ((bit_sum.get_val() - bit_prod.get_val()) - bitz.get_val())
+            : ((bit_sum.get_val() - bitz.get_val()) - bit_prod.get_val()));
 
     // Update sticky bits if t != 0.0 and the least (52 - 23 - 1 = 28) bits are
     // zero.
@@ -72,7 +72,7 @@ template <> LIBC_INLINE float fma<float>(float x, float y, float z) {
     }
   }
 
-  return static_cast<float>(static_cast<double>(bit_sum));
+  return static_cast<float>(bit_sum.get_val());
 }
 
 namespace internal {
@@ -257,7 +257,7 @@ template <> LIBC_INLINE double fma<double>(double x, double y, double z) {
         (round_mode == FE_DOWNWARD && prod_sign.is_pos())) {
       return FPBits::max_normal(prod_sign).get_val();
     }
-    return static_cast<double>(FPBits::inf(prod_sign));
+    return FPBits::inf(prod_sign).get_val();
   }
 
   // Remove hidden bit and append the exponent field and sign bit.

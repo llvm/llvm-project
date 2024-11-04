@@ -15,14 +15,14 @@ define void @reduce_fadd_half() {
 ; FP-REDUCE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; SIZE-LABEL: 'reduce_fadd_half'
-; SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V1 = call fast half @llvm.vector.reduce.fadd.v1f16(half 0xH0000, <1 x half> undef)
-; SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V2 = call fast half @llvm.vector.reduce.fadd.v2f16(half 0xH0000, <2 x half> undef)
-; SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V4 = call fast half @llvm.vector.reduce.fadd.v4f16(half 0xH0000, <4 x half> undef)
-; SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V8 = call fast half @llvm.vector.reduce.fadd.v8f16(half 0xH0000, <8 x half> undef)
-; SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V16 = call fast half @llvm.vector.reduce.fadd.v16f16(half 0xH0000, <16 x half> undef)
-; SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v32 = call fast half @llvm.vector.reduce.fadd.v32f16(half 0xH0000, <32 x half> undef)
-; SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V64 = call fast half @llvm.vector.reduce.fadd.v64f16(half 0xH0000, <64 x half> undef)
-; SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V128 = call fast half @llvm.vector.reduce.fadd.v128f16(half 0xH0000, <128 x half> undef)
+; SIZE-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V1 = call fast half @llvm.vector.reduce.fadd.v1f16(half 0xH0000, <1 x half> undef)
+; SIZE-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V2 = call fast half @llvm.vector.reduce.fadd.v2f16(half 0xH0000, <2 x half> undef)
+; SIZE-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V4 = call fast half @llvm.vector.reduce.fadd.v4f16(half 0xH0000, <4 x half> undef)
+; SIZE-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V8 = call fast half @llvm.vector.reduce.fadd.v8f16(half 0xH0000, <8 x half> undef)
+; SIZE-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V16 = call fast half @llvm.vector.reduce.fadd.v16f16(half 0xH0000, <16 x half> undef)
+; SIZE-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v32 = call fast half @llvm.vector.reduce.fadd.v32f16(half 0xH0000, <32 x half> undef)
+; SIZE-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V64 = call fast half @llvm.vector.reduce.fadd.v64f16(half 0xH0000, <64 x half> undef)
+; SIZE-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V128 = call fast half @llvm.vector.reduce.fadd.v128f16(half 0xH0000, <128 x half> undef)
 ; SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
   %V1 = call fast half @llvm.vector.reduce.fadd.v1f16(half 0.0, <1 x half> undef)
@@ -45,18 +45,18 @@ define void @reduce_fadd_float() {
 ; FP-REDUCE-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V16 = call fast float @llvm.vector.reduce.fadd.v16f32(float 0.000000e+00, <16 x float> undef)
 ; FP-REDUCE-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %v32 = call fast float @llvm.vector.reduce.fadd.v32f32(float 0.000000e+00, <32 x float> undef)
 ; FP-REDUCE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V64 = call fast float @llvm.vector.reduce.fadd.v64f32(float 0.000000e+00, <64 x float> undef)
-; FP-REDUCE-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %V128 = call fast float @llvm.vector.reduce.fadd.v128f32(float 0.000000e+00, <128 x float> undef)
+; FP-REDUCE-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V128 = call fast float @llvm.vector.reduce.fadd.v128f32(float 0.000000e+00, <128 x float> undef)
 ; FP-REDUCE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; SIZE-LABEL: 'reduce_fadd_float'
-; SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V1 = call fast float @llvm.vector.reduce.fadd.v1f32(float 0.000000e+00, <1 x float> undef)
-; SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V2 = call fast float @llvm.vector.reduce.fadd.v2f32(float 0.000000e+00, <2 x float> undef)
-; SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V4 = call fast float @llvm.vector.reduce.fadd.v4f32(float 0.000000e+00, <4 x float> undef)
-; SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V8 = call fast float @llvm.vector.reduce.fadd.v8f32(float 0.000000e+00, <8 x float> undef)
-; SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V16 = call fast float @llvm.vector.reduce.fadd.v16f32(float 0.000000e+00, <16 x float> undef)
-; SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v32 = call fast float @llvm.vector.reduce.fadd.v32f32(float 0.000000e+00, <32 x float> undef)
-; SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V64 = call fast float @llvm.vector.reduce.fadd.v64f32(float 0.000000e+00, <64 x float> undef)
-; SIZE-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V128 = call fast float @llvm.vector.reduce.fadd.v128f32(float 0.000000e+00, <128 x float> undef)
+; SIZE-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V1 = call fast float @llvm.vector.reduce.fadd.v1f32(float 0.000000e+00, <1 x float> undef)
+; SIZE-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V2 = call fast float @llvm.vector.reduce.fadd.v2f32(float 0.000000e+00, <2 x float> undef)
+; SIZE-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V4 = call fast float @llvm.vector.reduce.fadd.v4f32(float 0.000000e+00, <4 x float> undef)
+; SIZE-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V8 = call fast float @llvm.vector.reduce.fadd.v8f32(float 0.000000e+00, <8 x float> undef)
+; SIZE-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V16 = call fast float @llvm.vector.reduce.fadd.v16f32(float 0.000000e+00, <16 x float> undef)
+; SIZE-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v32 = call fast float @llvm.vector.reduce.fadd.v32f32(float 0.000000e+00, <32 x float> undef)
+; SIZE-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V64 = call fast float @llvm.vector.reduce.fadd.v64f32(float 0.000000e+00, <64 x float> undef)
+; SIZE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V128 = call fast float @llvm.vector.reduce.fadd.v128f32(float 0.000000e+00, <128 x float> undef)
 ; SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
   %V1 = call fast float @llvm.vector.reduce.fadd.v1f32(float 0.0, <1 x float> undef)
@@ -78,19 +78,19 @@ define void @reduce_fadd_double() {
 ; FP-REDUCE-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %V8 = call fast double @llvm.vector.reduce.fadd.v8f64(double 0.000000e+00, <8 x double> undef)
 ; FP-REDUCE-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V16 = call fast double @llvm.vector.reduce.fadd.v16f64(double 0.000000e+00, <16 x double> undef)
 ; FP-REDUCE-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %v32 = call fast double @llvm.vector.reduce.fadd.v32f64(double 0.000000e+00, <32 x double> undef)
-; FP-REDUCE-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %V64 = call fast double @llvm.vector.reduce.fadd.v64f64(double 0.000000e+00, <64 x double> undef)
-; FP-REDUCE-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V128 = call fast double @llvm.vector.reduce.fadd.v128f64(double 0.000000e+00, <128 x double> undef)
+; FP-REDUCE-NEXT:  Cost Model: Found an estimated cost of 15 for instruction: %V64 = call fast double @llvm.vector.reduce.fadd.v64f64(double 0.000000e+00, <64 x double> undef)
+; FP-REDUCE-NEXT:  Cost Model: Found an estimated cost of 31 for instruction: %V128 = call fast double @llvm.vector.reduce.fadd.v128f64(double 0.000000e+00, <128 x double> undef)
 ; FP-REDUCE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; SIZE-LABEL: 'reduce_fadd_double'
-; SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V1 = call fast double @llvm.vector.reduce.fadd.v1f64(double 0.000000e+00, <1 x double> undef)
-; SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V2 = call fast double @llvm.vector.reduce.fadd.v2f64(double 0.000000e+00, <2 x double> undef)
-; SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V4 = call fast double @llvm.vector.reduce.fadd.v4f64(double 0.000000e+00, <4 x double> undef)
-; SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V8 = call fast double @llvm.vector.reduce.fadd.v8f64(double 0.000000e+00, <8 x double> undef)
-; SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V16 = call fast double @llvm.vector.reduce.fadd.v16f64(double 0.000000e+00, <16 x double> undef)
-; SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v32 = call fast double @llvm.vector.reduce.fadd.v32f64(double 0.000000e+00, <32 x double> undef)
-; SIZE-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V64 = call fast double @llvm.vector.reduce.fadd.v64f64(double 0.000000e+00, <64 x double> undef)
-; SIZE-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %V128 = call fast double @llvm.vector.reduce.fadd.v128f64(double 0.000000e+00, <128 x double> undef)
+; SIZE-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V1 = call fast double @llvm.vector.reduce.fadd.v1f64(double 0.000000e+00, <1 x double> undef)
+; SIZE-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V2 = call fast double @llvm.vector.reduce.fadd.v2f64(double 0.000000e+00, <2 x double> undef)
+; SIZE-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V4 = call fast double @llvm.vector.reduce.fadd.v4f64(double 0.000000e+00, <4 x double> undef)
+; SIZE-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V8 = call fast double @llvm.vector.reduce.fadd.v8f64(double 0.000000e+00, <8 x double> undef)
+; SIZE-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V16 = call fast double @llvm.vector.reduce.fadd.v16f64(double 0.000000e+00, <16 x double> undef)
+; SIZE-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v32 = call fast double @llvm.vector.reduce.fadd.v32f64(double 0.000000e+00, <32 x double> undef)
+; SIZE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V64 = call fast double @llvm.vector.reduce.fadd.v64f64(double 0.000000e+00, <64 x double> undef)
+; SIZE-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V128 = call fast double @llvm.vector.reduce.fadd.v128f64(double 0.000000e+00, <128 x double> undef)
 ; SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
   %V1 = call fast double @llvm.vector.reduce.fadd.v1f64(double 0.0, <1 x double> undef)
@@ -117,14 +117,14 @@ define void @reduce_oredered_fadd_half() {
 ; FP-REDUCE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; SIZE-LABEL: 'reduce_oredered_fadd_half'
-; SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V1 = call half @llvm.vector.reduce.fadd.v1f16(half 0xH0000, <1 x half> undef)
-; SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V2 = call half @llvm.vector.reduce.fadd.v2f16(half 0xH0000, <2 x half> undef)
-; SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V4 = call half @llvm.vector.reduce.fadd.v4f16(half 0xH0000, <4 x half> undef)
-; SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V8 = call half @llvm.vector.reduce.fadd.v8f16(half 0xH0000, <8 x half> undef)
-; SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V16 = call half @llvm.vector.reduce.fadd.v16f16(half 0xH0000, <16 x half> undef)
-; SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v32 = call half @llvm.vector.reduce.fadd.v32f16(half 0xH0000, <32 x half> undef)
-; SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V64 = call half @llvm.vector.reduce.fadd.v64f16(half 0xH0000, <64 x half> undef)
-; SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V128 = call half @llvm.vector.reduce.fadd.v128f16(half 0xH0000, <128 x half> undef)
+; SIZE-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V1 = call half @llvm.vector.reduce.fadd.v1f16(half 0xH0000, <1 x half> undef)
+; SIZE-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V2 = call half @llvm.vector.reduce.fadd.v2f16(half 0xH0000, <2 x half> undef)
+; SIZE-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V4 = call half @llvm.vector.reduce.fadd.v4f16(half 0xH0000, <4 x half> undef)
+; SIZE-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V8 = call half @llvm.vector.reduce.fadd.v8f16(half 0xH0000, <8 x half> undef)
+; SIZE-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V16 = call half @llvm.vector.reduce.fadd.v16f16(half 0xH0000, <16 x half> undef)
+; SIZE-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v32 = call half @llvm.vector.reduce.fadd.v32f16(half 0xH0000, <32 x half> undef)
+; SIZE-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V64 = call half @llvm.vector.reduce.fadd.v64f16(half 0xH0000, <64 x half> undef)
+; SIZE-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V128 = call half @llvm.vector.reduce.fadd.v128f16(half 0xH0000, <128 x half> undef)
 ; SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
   %V1 = call half @llvm.vector.reduce.fadd.v1f16(half 0.0, <1 x half> undef)
@@ -147,18 +147,18 @@ define void @reduce_oredered_fadd_float() {
 ; FP-REDUCE-NEXT:  Cost Model: Found an estimated cost of 18 for instruction: %V16 = call float @llvm.vector.reduce.fadd.v16f32(float 0.000000e+00, <16 x float> undef)
 ; FP-REDUCE-NEXT:  Cost Model: Found an estimated cost of 34 for instruction: %v32 = call float @llvm.vector.reduce.fadd.v32f32(float 0.000000e+00, <32 x float> undef)
 ; FP-REDUCE-NEXT:  Cost Model: Found an estimated cost of 66 for instruction: %V64 = call float @llvm.vector.reduce.fadd.v64f32(float 0.000000e+00, <64 x float> undef)
-; FP-REDUCE-NEXT:  Cost Model: Found an estimated cost of 131 for instruction: %V128 = call float @llvm.vector.reduce.fadd.v128f32(float 0.000000e+00, <128 x float> undef)
+; FP-REDUCE-NEXT:  Cost Model: Found an estimated cost of 130 for instruction: %V128 = call float @llvm.vector.reduce.fadd.v128f32(float 0.000000e+00, <128 x float> undef)
 ; FP-REDUCE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; SIZE-LABEL: 'reduce_oredered_fadd_float'
-; SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V1 = call float @llvm.vector.reduce.fadd.v1f32(float 0.000000e+00, <1 x float> undef)
-; SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V2 = call float @llvm.vector.reduce.fadd.v2f32(float 0.000000e+00, <2 x float> undef)
-; SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V4 = call float @llvm.vector.reduce.fadd.v4f32(float 0.000000e+00, <4 x float> undef)
-; SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V8 = call float @llvm.vector.reduce.fadd.v8f32(float 0.000000e+00, <8 x float> undef)
-; SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V16 = call float @llvm.vector.reduce.fadd.v16f32(float 0.000000e+00, <16 x float> undef)
-; SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v32 = call float @llvm.vector.reduce.fadd.v32f32(float 0.000000e+00, <32 x float> undef)
-; SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V64 = call float @llvm.vector.reduce.fadd.v64f32(float 0.000000e+00, <64 x float> undef)
-; SIZE-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V128 = call float @llvm.vector.reduce.fadd.v128f32(float 0.000000e+00, <128 x float> undef)
+; SIZE-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V1 = call float @llvm.vector.reduce.fadd.v1f32(float 0.000000e+00, <1 x float> undef)
+; SIZE-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V2 = call float @llvm.vector.reduce.fadd.v2f32(float 0.000000e+00, <2 x float> undef)
+; SIZE-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V4 = call float @llvm.vector.reduce.fadd.v4f32(float 0.000000e+00, <4 x float> undef)
+; SIZE-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V8 = call float @llvm.vector.reduce.fadd.v8f32(float 0.000000e+00, <8 x float> undef)
+; SIZE-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V16 = call float @llvm.vector.reduce.fadd.v16f32(float 0.000000e+00, <16 x float> undef)
+; SIZE-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v32 = call float @llvm.vector.reduce.fadd.v32f32(float 0.000000e+00, <32 x float> undef)
+; SIZE-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V64 = call float @llvm.vector.reduce.fadd.v64f32(float 0.000000e+00, <64 x float> undef)
+; SIZE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V128 = call float @llvm.vector.reduce.fadd.v128f32(float 0.000000e+00, <128 x float> undef)
 ; SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
   %V1 = call float @llvm.vector.reduce.fadd.v1f32(float 0.0, <1 x float> undef)
@@ -180,19 +180,19 @@ define void @reduce_oredered_fadd_double() {
 ; FP-REDUCE-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %V8 = call double @llvm.vector.reduce.fadd.v8f64(double 0.000000e+00, <8 x double> undef)
 ; FP-REDUCE-NEXT:  Cost Model: Found an estimated cost of 18 for instruction: %V16 = call double @llvm.vector.reduce.fadd.v16f64(double 0.000000e+00, <16 x double> undef)
 ; FP-REDUCE-NEXT:  Cost Model: Found an estimated cost of 34 for instruction: %v32 = call double @llvm.vector.reduce.fadd.v32f64(double 0.000000e+00, <32 x double> undef)
-; FP-REDUCE-NEXT:  Cost Model: Found an estimated cost of 67 for instruction: %V64 = call double @llvm.vector.reduce.fadd.v64f64(double 0.000000e+00, <64 x double> undef)
-; FP-REDUCE-NEXT:  Cost Model: Found an estimated cost of 133 for instruction: %V128 = call double @llvm.vector.reduce.fadd.v128f64(double 0.000000e+00, <128 x double> undef)
+; FP-REDUCE-NEXT:  Cost Model: Found an estimated cost of 66 for instruction: %V64 = call double @llvm.vector.reduce.fadd.v64f64(double 0.000000e+00, <64 x double> undef)
+; FP-REDUCE-NEXT:  Cost Model: Found an estimated cost of 130 for instruction: %V128 = call double @llvm.vector.reduce.fadd.v128f64(double 0.000000e+00, <128 x double> undef)
 ; FP-REDUCE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; SIZE-LABEL: 'reduce_oredered_fadd_double'
-; SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V1 = call double @llvm.vector.reduce.fadd.v1f64(double 0.000000e+00, <1 x double> undef)
-; SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V2 = call double @llvm.vector.reduce.fadd.v2f64(double 0.000000e+00, <2 x double> undef)
-; SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V4 = call double @llvm.vector.reduce.fadd.v4f64(double 0.000000e+00, <4 x double> undef)
-; SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V8 = call double @llvm.vector.reduce.fadd.v8f64(double 0.000000e+00, <8 x double> undef)
-; SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V16 = call double @llvm.vector.reduce.fadd.v16f64(double 0.000000e+00, <16 x double> undef)
-; SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v32 = call double @llvm.vector.reduce.fadd.v32f64(double 0.000000e+00, <32 x double> undef)
-; SIZE-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V64 = call double @llvm.vector.reduce.fadd.v64f64(double 0.000000e+00, <64 x double> undef)
-; SIZE-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %V128 = call double @llvm.vector.reduce.fadd.v128f64(double 0.000000e+00, <128 x double> undef)
+; SIZE-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V1 = call double @llvm.vector.reduce.fadd.v1f64(double 0.000000e+00, <1 x double> undef)
+; SIZE-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V2 = call double @llvm.vector.reduce.fadd.v2f64(double 0.000000e+00, <2 x double> undef)
+; SIZE-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V4 = call double @llvm.vector.reduce.fadd.v4f64(double 0.000000e+00, <4 x double> undef)
+; SIZE-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V8 = call double @llvm.vector.reduce.fadd.v8f64(double 0.000000e+00, <8 x double> undef)
+; SIZE-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V16 = call double @llvm.vector.reduce.fadd.v16f64(double 0.000000e+00, <16 x double> undef)
+; SIZE-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v32 = call double @llvm.vector.reduce.fadd.v32f64(double 0.000000e+00, <32 x double> undef)
+; SIZE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V64 = call double @llvm.vector.reduce.fadd.v64f64(double 0.000000e+00, <64 x double> undef)
+; SIZE-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V128 = call double @llvm.vector.reduce.fadd.v128f64(double 0.000000e+00, <128 x double> undef)
 ; SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
   %V1 = call double @llvm.vector.reduce.fadd.v1f64(double 0.0, <1 x double> undef)

@@ -153,7 +153,7 @@ define void @fshr_v8i64() {
   %r5 = call i64 @llvm.fshr.i64(i64 %a5, i64 %a5, i64 %b5)
   %r6 = call i64 @llvm.fshr.i64(i64 %a6, i64 %a6, i64 %b6)
   %r7 = call i64 @llvm.fshr.i64(i64 %a7, i64 %a7, i64 %b7)
-  store i64 %r0, ptr getelementptr inbounds ([8 x i64], ptr @d64, i32 0, i64 0), align 8
+  store i64 %r0, ptr @d64, align 8
   store i64 %r1, ptr getelementptr inbounds ([8 x i64], ptr @d64, i32 0, i64 1), align 8
   store i64 %r2, ptr getelementptr inbounds ([8 x i64], ptr @d64, i32 0, i64 2), align 8
   store i64 %r3, ptr getelementptr inbounds ([8 x i64], ptr @d64, i32 0, i64 3), align 8

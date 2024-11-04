@@ -1443,15 +1443,16 @@ Compilation *Driver::BuildCompilation(ArrayRef<const char *> ArgList) {
   const ToolChain &TC = getToolChain(
       *UArgs, computeTargetTriple(*this, TargetTriple, *UArgs));
 
-  if (TC.getTriple().isAndroid()) {
-    llvm::Triple Triple = TC.getTriple();
-    StringRef TripleVersionName = Triple.getEnvironmentVersionString();
-
-    if (Triple.getEnvironmentVersion().empty() && TripleVersionName != "") {
-      Diags.Report(diag::err_drv_triple_version_invalid)
-          << TripleVersionName << TC.getTripleString();
-      ContainsError = true;
-    }
+  // Check if the environment version is valid.
+  llvm::Triple Triple = TC.getTriple();
+  StringRef TripleVersionName = Triple.getEnvironmentVersionString();
+  StringRef TripleObjectFormat =
+      Triple.getObjectFormatTypeName(Triple.getObjectFormat());
+  if (Triple.getEnvironmentVersion().empty() && TripleVersionName != "" &&
+      TripleVersionName != TripleObjectFormat) {
+    Diags.Report(diag::err_drv_triple_version_invalid)
+        << TripleVersionName << TC.getTripleString();
+    ContainsError = true;
   }
 
   // Report warning when arm64EC option is overridden by specified target
@@ -4764,9 +4765,9 @@ Action *Driver::ConstructPhaseAction(
   case phases::Backend: {
     if (isUsingLTO() && TargetDeviceOffloadKind == Action::OFK_None) {
       types::ID Output;
-      if (Args.hasArg(options::OPT_ffat_lto_objects))
-        Output = Args.hasArg(options::OPT_emit_llvm) ? types::TY_LTO_IR
-                                                     : types::TY_PP_Asm;
+      if (Args.hasArg(options::OPT_ffat_lto_objects) &&
+          !Args.hasArg(options::OPT_emit_llvm))
+        Output = types::TY_PP_Asm;
       else if (Args.hasArg(options::OPT_S))
         Output = types::TY_LTO_IR;
       else
@@ -6482,18 +6483,15 @@ bool Driver::GetReleaseVersion(StringRef Str, unsigned &Major, unsigned &Minor,
     return false;
   if (Str.empty())
     return true;
-  if (Str[0] != '.')
+  if (!Str.consume_front("."))
     return false;
-
-  Str = Str.drop_front(1);
 
   if (Str.consumeInteger(10, Minor))
     return false;
   if (Str.empty())
     return true;
-  if (Str[0] != '.')
+  if (!Str.consume_front("."))
     return false;
-  Str = Str.drop_front(1);
 
   if (Str.consumeInteger(10, Micro))
     return false;
@@ -6521,9 +6519,8 @@ bool Driver::GetReleaseVersion(StringRef Str,
     Digits[CurDigit] = Digit;
     if (Str.empty())
       return true;
-    if (Str[0] != '.')
+    if (!Str.consume_front("."))
       return false;
-    Str = Str.drop_front(1);
     CurDigit++;
   }
 

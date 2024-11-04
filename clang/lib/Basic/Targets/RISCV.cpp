@@ -96,7 +96,8 @@ bool RISCVTargetInfo::validateAsmConstraint(
     // An address that is held in a general-purpose register.
     Info.setAllowsMemory();
     return true;
-  case 'S': // A symbolic address
+  case 's':
+  case 'S': // A symbol or label reference with a constant offset
     Info.setAllowsRegister();
     return true;
   case 'v':

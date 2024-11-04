@@ -18,9 +18,9 @@
 #include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/iterator_range.h"
-#include "llvm/CodeGen/LowLevelType.h"
 #include "llvm/CodeGen/Register.h"
 #include "llvm/CodeGen/RegisterBank.h"
+#include "llvm/CodeGenTypes/LowLevelType.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <cassert>
 #include <initializer_list>

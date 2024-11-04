@@ -202,16 +202,17 @@ public:
                                    FPClassTest Interested = fcAllFlags,
                                    const Instruction *CtxI = nullptr,
                                    unsigned Depth = 0) const {
-    return llvm::computeKnownFPClass(Val, FMF, DL, Interested, Depth, &TLI, &AC,
-                                     CtxI, &DT);
+    return llvm::computeKnownFPClass(
+        Val, FMF, Interested, Depth,
+        getSimplifyQuery().getWithInstruction(CtxI));
   }
 
   KnownFPClass computeKnownFPClass(Value *Val,
                                    FPClassTest Interested = fcAllFlags,
                                    const Instruction *CtxI = nullptr,
                                    unsigned Depth = 0) const {
-    return llvm::computeKnownFPClass(Val, DL, Interested, Depth, &TLI, &AC,
-                                     CtxI, &DT);
+    return llvm::computeKnownFPClass(
+        Val, Interested, Depth, getSimplifyQuery().getWithInstruction(CtxI));
   }
 
   /// Check if fmul \p MulVal, +0.0 will yield +0.0 (or signed zero is
@@ -736,6 +737,13 @@ public:
   Value *EvaluateInDifferentType(Value *V, Type *Ty, bool isSigned);
 
   bool tryToSinkInstruction(Instruction *I, BasicBlock *DestBlock);
+  void tryToSinkInstructionDbgValues(
+      Instruction *I, BasicBlock::iterator InsertPos, BasicBlock *SrcBlock,
+      BasicBlock *DestBlock, SmallVectorImpl<DbgVariableIntrinsic *> &DbgUsers);
+  void tryToSinkInstructionDPValues(Instruction *I,
+                                    BasicBlock::iterator InsertPos,
+                                    BasicBlock *SrcBlock, BasicBlock *DestBlock,
+                                    SmallVectorImpl<DPValue *> &DPUsers);
 
   bool removeInstructionsBeforeUnreachable(Instruction &I);
   void addDeadEdge(BasicBlock *From, BasicBlock *To,

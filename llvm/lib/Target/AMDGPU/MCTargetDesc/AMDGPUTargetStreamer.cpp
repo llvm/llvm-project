@@ -26,6 +26,7 @@
 #include "llvm/Support/AMDGPUMetadata.h"
 #include "llvm/Support/AMDHSAKernelDescriptor.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FormattedStream.h"
 #include "llvm/TargetParser/TargetParser.h"
 
@@ -35,6 +36,12 @@ using namespace llvm::AMDGPU;
 //===----------------------------------------------------------------------===//
 // AMDGPUTargetStreamer
 //===----------------------------------------------------------------------===//
+
+static cl::opt<unsigned>
+    ForceGenericVersion("amdgpu-force-generic-version",
+                        cl::desc("Force a specific generic_v<N> flag to be "
+                                 "added. For testing purposes only."),
+                        cl::ReallyHidden, cl::init(0));
 
 bool AMDGPUTargetStreamer::EmitHSAMetadataV3(StringRef HSAMetadataString) {
   msgpack::Document HSAMetadataDoc;
@@ -575,6 +582,8 @@ unsigned AMDGPUTargetELFStreamer::getEFlagsUnknownOS() {
 unsigned AMDGPUTargetELFStreamer::getEFlagsAMDHSA() {
   assert(isHsaAbi(STI));
 
+  if (CodeObjectVersion >= 6)
+    return getEFlagsV6();
   return getEFlagsV4();
 }
 
@@ -644,6 +653,23 @@ unsigned AMDGPUTargetELFStreamer::getEFlagsV4() {
   }
 
   return EFlagsV4;
+}
+
+unsigned AMDGPUTargetELFStreamer::getEFlagsV6() {
+  unsigned Flags = getEFlagsV4();
+
+  unsigned Version = ForceGenericVersion;
+
+  // Versions start at 1.
+  if (Version) {
+    if (Version > ELF::EF_AMDGPU_GENERIC_VERSION_MAX)
+      report_fatal_error("Cannot encode generic code object version " +
+                         Twine(Version) +
+                         " - no ELF flag can represent this version!");
+    Flags |= (Version << ELF::EF_AMDGPU_GENERIC_VERSION_OFFSET);
+  }
+
+  return Flags;
 }
 
 void AMDGPUTargetELFStreamer::EmitDirectiveAMDGCNTarget() {}

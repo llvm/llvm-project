@@ -377,7 +377,7 @@ ClangDocContext::ClangDocContext(tooling::ExecutionContext *ECtx,
   if (SourceRoot.empty())
     // If no SourceRoot was provided the current path is used as the default
     llvm::sys::fs::current_path(SourceRootDir);
-  this->SourceRoot = std::string(SourceRootDir.str());
+  this->SourceRoot = std::string(SourceRootDir);
   if (!RepositoryUrl.empty()) {
     this->RepositoryUrl = std::string(RepositoryUrl);
     if (!RepositoryUrl.empty() && RepositoryUrl.find("http://") != 0 &&

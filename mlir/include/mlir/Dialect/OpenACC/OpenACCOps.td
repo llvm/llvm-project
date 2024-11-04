@@ -900,15 +900,21 @@ def OpenACC_ParallelOp : OpenACC_Op<"parallel",
       // parallel region
     }
     ```
+
+    `async`, `wait`, `num_gangs`, `num_workers` and `vector_length` operands are
+    supported with `device_type` information. They should only be accessed by
+    the extra provided getters. If modified, the corresponding `device_type`
+    attributes must be modified as well.
   }];
 
   let arguments = (ins
-      Variadic<IntOrIndex>:$async,
-      OptionalAttr<DeviceTypeArrayAttr>:$asyncDeviceType,
+      Variadic<IntOrIndex>:$asyncOperands,
+      OptionalAttr<DeviceTypeArrayAttr>:$asyncOperandsDeviceType,
       OptionalAttr<DeviceTypeArrayAttr>:$asyncOnly,
       Variadic<IntOrIndex>:$waitOperands,
       OptionalAttr<DenseI32ArrayAttr>:$waitOperandsSegments,
       OptionalAttr<DeviceTypeArrayAttr>:$waitOperandsDeviceType,
+      OptionalAttr<BoolArrayAttr>:$hasWaitDevnum,
       OptionalAttr<DeviceTypeArrayAttr>:$waitOnly,
       Variadic<IntOrIndex>:$numGangs,
       OptionalAttr<DenseI32ArrayAttr>:$numGangsSegments,
@@ -979,13 +985,18 @@ def OpenACC_ParallelOp : OpenACC_Op<"parallel",
     /// present.
     mlir::Operation::operand_range
     getWaitValues(mlir::acc::DeviceType deviceType);
+    /// Return the wait devnum value clause if present;
+    mlir::Value getWaitDevnum();
+    /// Return the wait devnum value clause for the given device_type if
+    /// present.
+    mlir::Value getWaitDevnum(mlir::acc::DeviceType deviceType);
   }];
 
   let assemblyFormat = [{
     oilist(
         `dataOperands` `(` $dataClauseOperands `:` type($dataClauseOperands) `)`
-      | `async` `(` custom<DeviceTypeOperands>($async,
-            type($async), $asyncDeviceType) `)`
+      | `async` `(` custom<DeviceTypeOperands>($asyncOperands,
+            type($asyncOperands), $asyncOperandsDeviceType) `)`
       | `firstprivate` `(` custom<SymOperandList>($gangFirstPrivateOperands,
             type($gangFirstPrivateOperands), $firstprivatizations)
         `)`
@@ -998,8 +1009,9 @@ def OpenACC_ParallelOp : OpenACC_Op<"parallel",
         `)`
       | `vector_length` `(` custom<DeviceTypeOperands>($vectorLength,
             type($vectorLength), $vectorLengthDeviceType) `)`
-      | `wait` `(` custom<DeviceTypeOperandsWithSegment>($waitOperands,
-            type($waitOperands), $waitOperandsDeviceType, $waitOperandsSegments) `)`
+      | `wait` `` custom<WaitClause>($waitOperands, type($waitOperands),
+          $waitOperandsDeviceType, $waitOperandsSegments, $hasWaitDevnum,
+          $waitOnly)
       | `self` `(` $selfCond `)`
       | `if` `(` $ifCond `)`
       | `reduction` `(` custom<SymOperandList>(
@@ -1031,15 +1043,20 @@ def OpenACC_SerialOp : OpenACC_Op<"serial",
       // serial region
     }
     ```
+
+    `async` and `wait` operands are supported with `device_type` information.
+    They should only be accessed by the extra provided getters. If modified,
+    the corresponding `device_type` attributes must be modified as well.
   }];
 
   let arguments = (ins
-      Variadic<IntOrIndex>:$async,
-      OptionalAttr<DeviceTypeArrayAttr>:$asyncDeviceType,
+      Variadic<IntOrIndex>:$asyncOperands,
+      OptionalAttr<DeviceTypeArrayAttr>:$asyncOperandsDeviceType,
       OptionalAttr<DeviceTypeArrayAttr>:$asyncOnly,
       Variadic<IntOrIndex>:$waitOperands,
       OptionalAttr<DenseI32ArrayAttr>:$waitOperandsSegments,
       OptionalAttr<DeviceTypeArrayAttr>:$waitOperandsDeviceType,
+      OptionalAttr<BoolArrayAttr>:$hasWaitDevnum,
       OptionalAttr<DeviceTypeArrayAttr>:$waitOnly,
       Optional<I1>:$ifCond,
       Optional<I1>:$selfCond,
@@ -1084,21 +1101,27 @@ def OpenACC_SerialOp : OpenACC_Op<"serial",
     /// present.
     mlir::Operation::operand_range
     getWaitValues(mlir::acc::DeviceType deviceType);
+    /// Return the wait devnum value clause if present;
+    mlir::Value getWaitDevnum();
+    /// Return the wait devnum value clause for the given device_type if
+    /// present.
+    mlir::Value getWaitDevnum(mlir::acc::DeviceType deviceType);
   }];
 
   let assemblyFormat = [{
     oilist(
         `dataOperands` `(` $dataClauseOperands `:` type($dataClauseOperands) `)`
-      | `async` `(` custom<DeviceTypeOperands>($async,
-            type($async), $asyncDeviceType) `)`
+      | `async` `(` custom<DeviceTypeOperands>($asyncOperands,
+            type($asyncOperands), $asyncOperandsDeviceType) `)`
       | `firstprivate` `(` custom<SymOperandList>($gangFirstPrivateOperands,
             type($gangFirstPrivateOperands), $firstprivatizations)
         `)`
       | `private` `(` custom<SymOperandList>(
             $gangPrivateOperands, type($gangPrivateOperands), $privatizations)
         `)`
-      | `wait` `(` custom<DeviceTypeOperandsWithSegment>($waitOperands,
-            type($waitOperands), $waitOperandsDeviceType, $waitOperandsSegments) `)`
+      | `wait` `` custom<WaitClause>($waitOperands, type($waitOperands),
+          $waitOperandsDeviceType, $waitOperandsSegments, $hasWaitDevnum,
+          $waitOnly)
       | `self` `(` $selfCond `)`
       | `if` `(` $ifCond `)`
       | `reduction` `(` custom<SymOperandList>(
@@ -1132,15 +1155,21 @@ def OpenACC_KernelsOp : OpenACC_Op<"kernels",
       // kernels region
     }
     ```
+
+    `collapse`, `gang`, `worker`, `vector`, `seq`, `independent`, `auto` and
+    `tile` operands are supported with `device_type` information. They should
+    only be accessed by the extra provided getters. If modified, the
+    corresponding `device_type` attributes must be modified as well.
   }];
 
   let arguments = (ins
-      Variadic<IntOrIndex>:$async,
-      OptionalAttr<DeviceTypeArrayAttr>:$asyncDeviceType,
+      Variadic<IntOrIndex>:$asyncOperands,
+      OptionalAttr<DeviceTypeArrayAttr>:$asyncOperandsDeviceType,
       OptionalAttr<DeviceTypeArrayAttr>:$asyncOnly,
       Variadic<IntOrIndex>:$waitOperands,
       OptionalAttr<DenseI32ArrayAttr>:$waitOperandsSegments,
       OptionalAttr<DeviceTypeArrayAttr>:$waitOperandsDeviceType,
+      OptionalAttr<BoolArrayAttr>:$hasWaitDevnum,
       OptionalAttr<DeviceTypeArrayAttr>:$waitOnly,
       Variadic<IntOrIndex>:$numGangs,
       OptionalAttr<DenseI32ArrayAttr>:$numGangsSegments,
@@ -1205,22 +1234,27 @@ def OpenACC_KernelsOp : OpenACC_Op<"kernels",
     /// present.
     mlir::Operation::operand_range
     getWaitValues(mlir::acc::DeviceType deviceType);
+    /// Return the wait devnum value clause if present;
+    mlir::Value getWaitDevnum();
+    /// Return the wait devnum value clause for the given device_type if
+    /// present.
+    mlir::Value getWaitDevnum(mlir::acc::DeviceType deviceType);
   }];
 
   let assemblyFormat = [{
     oilist(
         `dataOperands` `(` $dataClauseOperands `:` type($dataClauseOperands) `)`
-      | `async` `(` custom<DeviceTypeOperands>($async,
-            type($async), $asyncDeviceType) `)`
+      | `async` `(` custom<DeviceTypeOperands>($asyncOperands,
+            type($asyncOperands), $asyncOperandsDeviceType) `)`
       | `num_gangs` `(` custom<NumGangs>($numGangs,
             type($numGangs), $numGangsDeviceType, $numGangsSegments) `)`
       | `num_workers` `(` custom<DeviceTypeOperands>($numWorkers,
             type($numWorkers), $numWorkersDeviceType) `)`
       | `vector_length` `(` custom<DeviceTypeOperands>($vectorLength,
             type($vectorLength), $vectorLengthDeviceType) `)`
-      | `wait` `(` custom<DeviceTypeOperandsWithSegment>($waitOperands,
-            type($waitOperands), $waitOperandsDeviceType,
-            $waitOperandsSegments) `)`
+      | `wait` `` custom<WaitClause>($waitOperands, type($waitOperands),
+          $waitOperandsDeviceType, $waitOperandsSegments, $hasWaitDevnum,
+          $waitOnly)
       | `self` `(` $selfCond `)`
       | `if` `(` $ifCond `)`
     )
@@ -1254,17 +1288,21 @@ def OpenACC_DataOp : OpenACC_Op<"data",
       // data region
     }
     ```
+
+    `async` and `wait` operands are supported with `device_type` information.
+    They should only be accessed by the extra provided getters. If modified,
+    the corresponding `device_type` attributes must be modified as well.
   }];
 
 
   let arguments = (ins Optional<I1>:$ifCond,
-      Variadic<IntOrIndex>:$async,
-      OptionalAttr<DeviceTypeArrayAttr>:$asyncDeviceType,
+      Variadic<IntOrIndex>:$asyncOperands,
+      OptionalAttr<DeviceTypeArrayAttr>:$asyncOperandsDeviceType,
       OptionalAttr<DeviceTypeArrayAttr>:$asyncOnly,
-      Optional<IntOrIndex>:$waitDevnum,
       Variadic<IntOrIndex>:$waitOperands,
       OptionalAttr<DenseI32ArrayAttr>:$waitOperandsSegments,
       OptionalAttr<DeviceTypeArrayAttr>:$waitOperandsDeviceType,
+      OptionalAttr<BoolArrayAttr>:$hasWaitDevnum,
       OptionalAttr<DeviceTypeArrayAttr>:$waitOnly,
       Variadic<OpenACC_PointerLikeTypeInterface>:$dataClauseOperands,
       OptionalAttr<DefaultValueAttr>:$defaultAttr);
@@ -1300,18 +1338,22 @@ def OpenACC_DataOp : OpenACC_Op<"data",
     /// present.
     mlir::Operation::operand_range
     getWaitValues(mlir::acc::DeviceType deviceType);
+    /// Return the wait devnum value clause if present;
+    mlir::Value getWaitDevnum();
+    /// Return the wait devnum value clause for the given device_type if
+    /// present.
+    mlir::Value getWaitDevnum(mlir::acc::DeviceType deviceType);
   }];
 
   let assemblyFormat = [{
     oilist(
         `if` `(` $ifCond `)`
-      | `async` `(` custom<DeviceTypeOperands>($async,
-            type($async), $asyncDeviceType) `)`
+      | `async` `(` custom<DeviceTypeOperands>($asyncOperands,
+            type($asyncOperands), $asyncOperandsDeviceType) `)`
       | `dataOperands` `(` $dataClauseOperands `:` type($dataClauseOperands) `)`
-      | `wait_devnum` `(` $waitDevnum `:` type($waitDevnum) `)`
-      | `wait` `(` custom<DeviceTypeOperandsWithSegment>($waitOperands,
-            type($waitOperands), $waitOperandsDeviceType, 
-            $waitOperandsSegments) `)`
+      | `wait` `` custom<WaitClause>($waitOperands, type($waitOperands),
+          $waitOperandsDeviceType, $waitOperandsSegments, $hasWaitDevnum,
+          $waitOnly)
     )
     $region attr-dict-with-keyword
   }];
@@ -1496,6 +1538,11 @@ def OpenACC_LoopOp : OpenACC_Op<"loop",
       acc.yield
     } attributes { collapse = [3] }
     ```
+
+    `collapse`, `gang`, `worker`, `vector`, `seq`, `independent`, `auto` and
+    `tile` operands are supported with `device_type` information. They should
+    only be accessed by the extra provided getters. If modified, the
+    corresponding `device_type` attributes must be modified as well.
   }];
 
   let arguments = (ins
@@ -1538,6 +1585,7 @@ def OpenACC_LoopOp : OpenACC_Op<"loop",
     static StringRef getGangNumKeyword() { return "num"; }
     static StringRef getGangDimKeyword() { return "dim"; }
     static StringRef getGangStaticKeyword() { return "static"; }
+    static StringRef getControlKeyword() { return "control"; }
 
     /// The number of private and reduction operands.
     unsigned getNumDataOperands();
@@ -1994,11 +2042,17 @@ def OpenACC_RoutineOp : OpenACC_Op<"routine", [IsolatedFromAbove]> {
     Example:
 
     ```mlir
-    func.func @acc_func(%a : i64) -> () attributes {acc.routine_info = #acc.routine_info<[@acc_func_rout1]>} {
+    func.func @acc_func(%a : i64) -> () attributes 
+        {acc.routine_info = #acc.routine_info<[@acc_func_rout1]>} {
       return
     }
     acc.routine @acc_func_rout1 func(@acc_func) gang
     ```
+
+    `bind`, `gang`, `worker`, `vector` and `seq` operands are supported with
+    `device_type` information. They should only be accessed by the extra
+    provided getters. If modified, the corresponding `device_type` attributes
+    must be modified as well.
   }];
 
   let arguments = (ins SymbolNameAttr:$sym_name,
@@ -2193,17 +2247,23 @@ def OpenACC_UpdateOp : OpenACC_Op<"update",
     ```mlir
     acc.update device(%d1 : memref<10xf32>) attributes {async}
     ```
+
+    `async` and `wait` operands are supported with `device_type` information.
+    They should only be accessed by the extra provided getters. If modified,
+    the corresponding `device_type` attributes must be modified as well.
   }];
 
   let arguments = (ins Optional<I1>:$ifCond,
-                       Optional<IntOrIndex>:$asyncOperand,
-                       Optional<IntOrIndex>:$waitDevnum,
-                       Variadic<IntOrIndex>:$waitOperands,
-                       UnitAttr:$async,
-                       UnitAttr:$wait,
-                       OptionalAttr<TypedArrayAttrBase<OpenACC_DeviceTypeAttr, "Device type attributes">>:$device_types,
-                       Variadic<OpenACC_PointerLikeTypeInterface>:$dataClauseOperands,
-                       UnitAttr:$ifPresent);
+      Variadic<IntOrIndex>:$asyncOperands,
+      OptionalAttr<DeviceTypeArrayAttr>:$asyncOperandsDeviceType,
+      OptionalAttr<DeviceTypeArrayAttr>:$async,
+      Variadic<IntOrIndex>:$waitOperands,
+      OptionalAttr<DenseI32ArrayAttr>:$waitOperandsSegments,
+      OptionalAttr<DeviceTypeArrayAttr>:$waitOperandsDeviceType,
+      OptionalAttr<BoolArrayAttr>:$hasWaitDevnum,
+      OptionalAttr<DeviceTypeArrayAttr>:$waitOnly,
+      Variadic<OpenACC_PointerLikeTypeInterface>:$dataClauseOperands,
+      UnitAttr:$ifPresent);
 
   let extraClassDeclaration = [{
     /// The number of data operands.
@@ -2211,14 +2271,45 @@ def OpenACC_UpdateOp : OpenACC_Op<"update",
 
     /// The i-th data operand passed.
     Value getDataOperand(unsigned i);
+
+    /// Return true if the op has the async attribute for the
+    /// mlir::acc::DeviceType::None device_type.
+    bool hasAsyncOnly();
+    /// Return true if the op has the async attribute for the given device_type.
+    bool hasAsyncOnly(mlir::acc::DeviceType deviceType);
+    /// Return the value of the async clause if present.
+    mlir::Value getAsyncValue();
+    /// Return the value of the async clause for the given device_type if
+    /// present.
+    mlir::Value getAsyncValue(mlir::acc::DeviceType deviceType);
+
+    /// Return true if the op has the wait attribute for the
+    /// mlir::acc::DeviceType::None device_type.
+    bool hasWaitOnly();
+    /// Return true if the op has the wait attribute for the given device_type.
+    bool hasWaitOnly(mlir::acc::DeviceType deviceType);
+    /// Return the values of the wait clause if present.
+    mlir::Operation::operand_range getWaitValues();
+    /// Return the values of the wait clause for the given device_type if
+    /// present.
+    mlir::Operation::operand_range
+    getWaitValues(mlir::acc::DeviceType deviceType);
+    /// Return the wait devnum value clause if present;
+    mlir::Value getWaitDevnum();
+    /// Return the wait devnum value clause for the given device_type if
+    /// present.
+    mlir::Value getWaitDevnum(mlir::acc::DeviceType deviceType);
   }];
 
   let assemblyFormat = [{
     oilist(
         `if` `(` $ifCond `)`
-      | `async` `(` $asyncOperand `:` type($asyncOperand) `)`
-      | `wait_devnum` `(` $waitDevnum `:` type($waitDevnum) `)`
-      | `wait` `(` $waitOperands `:` type($waitOperands) `)`
+      | `async` `` custom<DeviceTypeOperandsWithKeywordOnly>(
+            $asyncOperands, type($asyncOperands),
+            $asyncOperandsDeviceType, $async)
+      | `wait` `` custom<WaitClause>($waitOperands, type($waitOperands),
+          $waitOperandsDeviceType, $waitOperandsSegments, $hasWaitDevnum,
+          $waitOnly)
       | `dataOperands` `(` $dataClauseOperands `:` type($dataClauseOperands) `)`
     )
     attr-dict-with-keyword

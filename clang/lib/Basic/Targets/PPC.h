@@ -359,6 +359,13 @@ public:
   bool isSPRegName(StringRef RegName) const override {
     return RegName.equals("r1") || RegName.equals("x1");
   }
+
+  // We support __builtin_cpu_supports/__builtin_cpu_is on targets that
+  // have Glibc since it is Glibc that provides the HWCAP[2] in the auxv.
+  bool supportsCpuSupports() const override { return getTriple().isOSGlibc(); }
+  bool supportsCpuIs() const override { return getTriple().isOSGlibc(); }
+  bool validateCpuSupports(StringRef Feature) const override;
+  bool validateCpuIs(StringRef Name) const override;
 };
 
 class LLVM_LIBRARY_VISIBILITY PPC32TargetInfo : public PPCTargetInfo {

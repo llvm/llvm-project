@@ -29,9 +29,9 @@
 // CHECK-DAG:       %[[VAL_10:.*]] = bufferization.to_memref %[[VAL_2]] : memref<32x16xf32>
 // CHECK:           linalg.fill ins(%{{.*}} : f32) outs(%[[VAL_10]] : memref<32x16xf32>)
 // CHECK:           scf.for %[[VAL_11:.*]] = %[[VAL_5]] to %[[VAL_3]] step %[[VAL_6]] {
+// CHECK:             %[[VAL_13:.*]] = arith.muli %[[VAL_11]], %[[VAL_4]] : index
 // CHECK:             scf.for %[[VAL_12:.*]] = %[[VAL_5]] to %[[VAL_4]] step %[[VAL_6]] {
-// CHECK:               %[[VAL_13:.*]] = arith.muli %[[VAL_11]], %[[VAL_4]] : index
-// CHECK:               %[[VAL_14:.*]] = arith.addi %[[VAL_13]], %[[VAL_12]] : index
+// CHECK:               %[[VAL_14:.*]] = arith.addi %[[VAL_12]], %[[VAL_13]] : index
 // CHECK:               %[[VAL_15:.*]] = memref.load %[[VAL_7]]{{\[}}%[[VAL_14]]] : memref<?xf32>
 // CHECK:               %[[VAL_16:.*]] = memref.load %[[VAL_8]]{{\[}}%[[VAL_11]], %[[VAL_12]]] : memref<32x16xf32>
 // CHECK:               %[[VAL_17:.*]] = arith.addf %[[VAL_15]], %[[VAL_16]] : f32
@@ -66,9 +66,9 @@ func.func @add_dd(%arga: tensor<32x16xf32, #Tdd>, %argb: tensor<32x16xf32>, %arg
 // CHECK-DAG:       %[[VAL_10:.*]] = bufferization.to_memref %[[VAL_2]] : memref<32x16xi1>
 // CHECK:           linalg.fill ins(%[[VAL_5]] : i1) outs(%[[VAL_10]] : memref<32x16xi1>)
 // CHECK:           scf.for %[[VAL_11:.*]] = %[[VAL_6]] to %[[VAL_3]] step %[[VAL_7]] {
+// CHECK:             %[[VAL_13:.*]] = arith.muli %[[VAL_11]], %[[VAL_4]] : index
 // CHECK:             scf.for %[[VAL_12:.*]] = %[[VAL_6]] to %[[VAL_4]] step %[[VAL_7]] {
-// CHECK:               %[[VAL_13:.*]] = arith.muli %[[VAL_11]], %[[VAL_4]] : index
-// CHECK:               %[[VAL_14:.*]] = arith.addi %[[VAL_13]], %[[VAL_12]] : index
+// CHECK:               %[[VAL_14:.*]] = arith.addi %[[VAL_12]], %[[VAL_13]] : index
 // CHECK:               %[[VAL_15:.*]] = memref.load %[[VAL_8]]{{\[}}%[[VAL_14]]] : memref<?xf32>
 // CHECK:               %[[VAL_16:.*]] = memref.load %[[VAL_9]]{{\[}}%[[VAL_11]], %[[VAL_12]]] : memref<32x16xf32>
 // CHECK:               %[[VAL_17:.*]] = arith.cmpf ult, %[[VAL_15]], %[[VAL_16]] : f32
@@ -102,9 +102,9 @@ func.func @cmp_dd(%arga: tensor<32x16xf32, #Tdd>, %argb: tensor<32x16xf32>, %arg
 // CHECK-DAG:       %[[VAL_10:.*]] = bufferization.to_memref %[[VAL_2]] : memref<32x16xf32>
 // CHECK:           linalg.fill ins(%{{.*}} : f32) outs(%[[VAL_10]] : memref<32x16xf32>)
 // CHECK:           scf.for %[[VAL_11:.*]] = %[[VAL_5]] to %[[VAL_3]] step %[[VAL_6]] {
+// CHECK:             %[[VAL_13:.*]] = arith.muli %[[VAL_11]], %[[VAL_4]] : index
 // CHECK:             scf.for %[[VAL_12:.*]] = %[[VAL_5]] to %[[VAL_4]] step %[[VAL_6]] {
-// CHECK:               %[[VAL_13:.*]] = arith.muli %[[VAL_11]], %[[VAL_4]] : index
-// CHECK:               %[[VAL_14:.*]] = arith.addi %[[VAL_13]], %[[VAL_12]] : index
+// CHECK:               %[[VAL_14:.*]] = arith.addi %[[VAL_12]], %[[VAL_13]] : index
 // CHECK:               %[[VAL_15:.*]] = memref.load %[[VAL_7]]{{\[}}%[[VAL_14]]] : memref<?xf32>
 // CHECK:               %[[VAL_16:.*]] = memref.load %[[VAL_8]]{{\[}}%[[VAL_11]], %[[VAL_12]]] : memref<32x16xf32>
 // CHECK:               %[[VAL_17:.*]] = arith.mulf %[[VAL_15]], %[[VAL_16]] : f32
@@ -319,9 +319,9 @@ func.func @mul_ds(%arga: tensor<32x16xf32, #Tds>, %argb: tensor<32x16xf32>, %arg
 // CHECK:             %[[VAL_22:.*]] = memref.load %[[VAL_9]]{{\[}}%[[VAL_20]]] : memref<?xindex>
 // CHECK:             %[[VAL_23:.*]] = arith.cmpi eq, %[[VAL_22]], %[[VAL_21]] : index
 // CHECK:             scf.if %[[VAL_23]] {
+// CHECK:               %[[VAL_25:.*]] = arith.muli %[[VAL_20]], %[[VAL_4]] : index
 // CHECK:               scf.for %[[VAL_24:.*]] = %[[VAL_6]] to %[[VAL_4]] step %[[VAL_7]] {
-// CHECK:                 %[[VAL_25:.*]] = arith.muli %[[VAL_20]], %[[VAL_4]] : index
-// CHECK:                 %[[VAL_26:.*]] = arith.addi %[[VAL_25]], %[[VAL_24]] : index
+// CHECK:                 %[[VAL_26:.*]] = arith.addi %[[VAL_24]], %[[VAL_25]] : index
 // CHECK:                 %[[VAL_27:.*]] = memref.load %[[VAL_10]]{{\[}}%[[VAL_26]]] : memref<?xf32>
 // CHECK:                 %[[VAL_28:.*]] = memref.load %[[VAL_11]]{{\[}}%[[VAL_21]], %[[VAL_24]]] : memref<32x16xf32>
 // CHECK:                 %[[VAL_29:.*]] = arith.addf %[[VAL_27]], %[[VAL_28]] : f32
@@ -389,9 +389,9 @@ func.func @add_sd(%arga: tensor<32x16xf32, #Tsd>, %argb: tensor<32x16xf32>, %arg
 // CHECK:             %[[VAL_23:.*]] = memref.load %[[VAL_11]]{{\[}}%[[VAL_21]]] : memref<?xindex>
 // CHECK:             %[[VAL_24:.*]] = arith.cmpi eq, %[[VAL_23]], %[[VAL_22]] : index
 // CHECK:             scf.if %[[VAL_24]] {
+// CHECK:               %[[VAL_26:.*]] = arith.muli %[[VAL_21]], %[[VAL_3]] : index
 // CHECK:               scf.for %[[VAL_25:.*]] = %[[VAL_6]] to %[[VAL_3]] step %[[VAL_7]] {
-// CHECK:                 %[[VAL_26:.*]] = arith.muli %[[VAL_21]], %[[VAL_3]] : index
-// CHECK:                 %[[VAL_27:.*]] = arith.addi %[[VAL_26]], %[[VAL_25]] : index
+// CHECK:                 %[[VAL_27:.*]] = arith.addi %[[VAL_25]], %[[VAL_26]] : index
 // CHECK:                 %[[VAL_28:.*]] = memref.load %[[VAL_12]]{{\[}}%[[VAL_27]]] : memref<?xf32>
 // CHECK:                 %[[VAL_29:.*]] = memref.load %[[VAL_13]]{{\[}}%[[VAL_22]], %[[VAL_25]]] : memref<32x16xf32>
 // CHECK:                 %[[VAL_30:.*]] = arith.cmpf ult, %[[VAL_28]], %[[VAL_29]] : f32
@@ -451,9 +451,9 @@ func.func @cmp_sd(%arga: tensor<32x16xf32, #Tsd>, %argb: tensor<32x16xf32>, %arg
 // CHECK:           %[[VAL_13:.*]] = memref.load %[[VAL_6]]{{\[}}%[[VAL_5]]] : memref<?xindex>
 // CHECK:           scf.for %[[VAL_14:.*]] = %[[VAL_12]] to %[[VAL_13]] step %[[VAL_5]] {
 // CHECK:             %[[VAL_15:.*]] = memref.load %[[VAL_7]]{{\[}}%[[VAL_14]]] : memref<?xindex>
+// CHECK:             %[[VAL_17:.*]] = arith.muli %[[VAL_14]], %[[VAL_3]] : index
 // CHECK:             scf.for %[[VAL_16:.*]] = %[[VAL_4]] to %[[VAL_3]] step %[[VAL_5]] {
-// CHECK:               %[[VAL_17:.*]] = arith.muli %[[VAL_14]], %[[VAL_3]] : index
-// CHECK:               %[[VAL_18:.*]] = arith.addi %[[VAL_17]], %[[VAL_16]] : index
+// CHECK:               %[[VAL_18:.*]] = arith.addi %[[VAL_16]], %[[VAL_17]] : index
 // CHECK:               %[[VAL_19:.*]] = memref.load %[[VAL_8]]{{\[}}%[[VAL_18]]] : memref<?xf32>
 // CHECK:               %[[VAL_20:.*]] = memref.load %[[VAL_9]]{{\[}}%[[VAL_15]], %[[VAL_16]]] : memref<32x16xf32>
 // CHECK:               %[[VAL_21:.*]] = arith.mulf %[[VAL_19]], %[[VAL_20]] : f32
@@ -1272,6 +1272,7 @@ func.func @mul_ss_ss(%arga: tensor<32x16xf32, #Tss>, %argb: tensor<32x16xf32, #T
 // CHECK:             %[[VAL_24:.*]] = memref.load %[[VAL_9]]{{\[}}%[[VAL_22]]] : memref<?xindex>
 // CHECK:             %[[VAL_25:.*]] = arith.cmpi eq, %[[VAL_24]], %[[VAL_23]] : index
 // CHECK:             scf.if %[[VAL_25]] {
+// CHECK:               %[[VAL_36:.*]] = arith.muli %[[VAL_22]], %[[VAL_4]] : index
 // CHECK:               %[[VAL_26:.*]] = memref.load %[[VAL_11]]{{\[}}%[[VAL_23]]] : memref<?xindex>
 // CHECK:               %[[VAL_27:.*]] = arith.addi %[[VAL_23]], %[[VAL_7]] : index
 // CHECK:               %[[VAL_28:.*]] = memref.load %[[VAL_11]]{{\[}}%[[VAL_27]]] : memref<?xindex>
@@ -1281,8 +1282,7 @@ func.func @mul_ss_ss(%arga: tensor<32x16xf32, #Tss>, %argb: tensor<32x16xf32, #T
 // CHECK:               } do {
 // CHECK:               ^bb0(%[[VAL_33:.*]]: index, %[[VAL_34:.*]]: index):
 // CHECK:                 %[[VAL_35:.*]] = memref.load %[[VAL_12]]{{\[}}%[[VAL_33]]] : memref<?xindex>
-// CHECK:                 %[[VAL_36:.*]] = arith.muli %[[VAL_22]], %[[VAL_4]] : index
-// CHECK:                 %[[VAL_37:.*]] = arith.addi %[[VAL_36]], %[[VAL_34]] : index
+// CHECK:                 %[[VAL_37:.*]] = arith.addi %[[VAL_34]], %[[VAL_36]] : index
 // CHECK:                 %[[VAL_38:.*]] = arith.cmpi eq, %[[VAL_35]], %[[VAL_34]] : index
 // CHECK:                 scf.if %[[VAL_38]] {
 // CHECK:                   %[[VAL_39:.*]] = memref.load %[[VAL_10]]{{\[}}%[[VAL_37]]] : memref<?xf32>
@@ -1303,8 +1303,7 @@ func.func @mul_ss_ss(%arga: tensor<32x16xf32, #Tss>, %argb: tensor<32x16xf32, #T
 // CHECK:                 scf.yield %[[VAL_45]], %[[VAL_46]] : index, index
 // CHECK:               }
 // CHECK:               scf.for %[[VAL_47:.*]] = %[[VAL_48:.*]]#1 to %[[VAL_4]] step %[[VAL_7]] {
-// CHECK:                 %[[VAL_49:.*]] = arith.muli %[[VAL_22]], %[[VAL_4]] : index
-// CHECK:                 %[[VAL_50:.*]] = arith.addi %[[VAL_49]], %[[VAL_47]] : index
+// CHECK:                 %[[VAL_50:.*]] = arith.addi %[[VAL_47]], %[[VAL_36]] : index
 // CHECK:                 %[[VAL_51:.*]] = memref.load %[[VAL_10]]{{\[}}%[[VAL_50]]] : memref<?xf32>
 // CHECK:                 memref.store %[[VAL_51]], %[[VAL_15]]{{\[}}%[[VAL_23]], %[[VAL_47]]] : memref<32x16xf32>
 // CHECK:               }
@@ -1369,13 +1368,13 @@ func.func @add_sd_ds(%arga: tensor<32x16xf32, #Tsd>, %argb: tensor<32x16xf32, #T
 // CHECK:           %[[VAL_15:.*]] = memref.load %[[VAL_6]]{{\[}}%[[VAL_5]]] : memref<?xindex>
 // CHECK:           scf.for %[[VAL_16:.*]] = %[[VAL_14]] to %[[VAL_15]] step %[[VAL_5]] {
 // CHECK:             %[[VAL_17:.*]] = memref.load %[[VAL_7]]{{\[}}%[[VAL_16]]] : memref<?xindex>
+// CHECK:             %[[VAL_23:.*]] = arith.muli %[[VAL_16]], %[[VAL_3]] : index
 // CHECK:             %[[VAL_18:.*]] = memref.load %[[VAL_9]]{{\[}}%[[VAL_17]]] : memref<?xindex>
 // CHECK:             %[[VAL_19:.*]] = arith.addi %[[VAL_17]], %[[VAL_5]] : index
 // CHECK:             %[[VAL_20:.*]] = memref.load %[[VAL_9]]{{\[}}%[[VAL_19]]] : memref<?xindex>
 // CHECK:             scf.for %[[VAL_21:.*]] = %[[VAL_18]] to %[[VAL_20]] step %[[VAL_5]] {
 // CHECK:               %[[VAL_22:.*]] = memref.load %[[VAL_10]]{{\[}}%[[VAL_21]]] : memref<?xindex>
-// CHECK:               %[[VAL_23:.*]] = arith.muli %[[VAL_16]], %[[VAL_3]] : index
-// CHECK:               %[[VAL_24:.*]] = arith.addi %[[VAL_23]], %[[VAL_22]] : index
+// CHECK:               %[[VAL_24:.*]] = arith.addi %[[VAL_22]], %[[VAL_23]] : index
 // CHECK:               %[[VAL_25:.*]] = memref.load %[[VAL_8]]{{\[}}%[[VAL_24]]] : memref<?xf32>
 // CHECK:               %[[VAL_26:.*]] = memref.load %[[VAL_11]]{{\[}}%[[VAL_21]]] : memref<?xf32>
 // CHECK:               %[[VAL_27:.*]] = arith.mulf %[[VAL_25]], %[[VAL_26]] : f32

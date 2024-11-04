@@ -973,7 +973,7 @@ resolveForwardingParameters(const FunctionDecl *D, unsigned MaxDepth) {
         Parameters.drop_front(Head.size() + Pack.size());
     SmallVector<const ParmVarDecl *> Result(Parameters.size());
     // Fill in non-pack parameters
-    auto HeadIt = std::copy(Head.begin(), Head.end(), Result.begin());
+    auto *HeadIt = std::copy(Head.begin(), Head.end(), Result.begin());
     auto TailIt = std::copy(Tail.rbegin(), Tail.rend(), Result.rbegin());
     // Recurse on pack parameters
     size_t Depth = 0;

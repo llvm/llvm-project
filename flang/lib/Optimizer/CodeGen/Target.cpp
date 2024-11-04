@@ -59,63 +59,6 @@ static void typeTodo(const llvm::fltSemantics *sem, mlir::Location loc,
   }
 }
 
-/// Return the size and alignment of FIR types.
-/// TODO: consider moving this to a DataLayoutTypeInterface implementation
-/// for FIR types. It should first be ensured that it is OK to open the gate of
-/// target dependent type size inquiries in lowering. It would also not be
-/// straightforward given the need for a kind map that would need to be
-/// converted in terms of mlir::DataLayoutEntryKey.
-static std::pair<std::uint64_t, unsigned short>
-getSizeAndAlignment(mlir::Location loc, mlir::Type ty,
-                    const mlir::DataLayout &dl,
-                    const fir::KindMapping &kindMap) {
-  if (mlir::isa<mlir::IntegerType, mlir::FloatType, mlir::ComplexType>(ty)) {
-    llvm::TypeSize size = dl.getTypeSize(ty);
-    unsigned short alignment = dl.getTypeABIAlignment(ty);
-    return {size, alignment};
-  }
-  if (auto firCmplx = mlir::dyn_cast<fir::ComplexType>(ty)) {
-    auto [floatSize, floatAlign] =
-        getSizeAndAlignment(loc, firCmplx.getEleType(kindMap), dl, kindMap);
-    return {llvm::alignTo(floatSize, floatAlign) + floatSize, floatAlign};
-  }
-  if (auto real = mlir::dyn_cast<fir::RealType>(ty))
-    return getSizeAndAlignment(loc, real.getFloatType(kindMap), dl, kindMap);
-
-  if (auto seqTy = mlir::dyn_cast<fir::SequenceType>(ty)) {
-    auto [eleSize, eleAlign] =
-        getSizeAndAlignment(loc, seqTy.getEleTy(), dl, kindMap);
-
-    std::uint64_t size =
-        llvm::alignTo(eleSize, eleAlign) * seqTy.getConstantArraySize();
-    return {size, eleAlign};
-  }
-  if (auto recTy = mlir::dyn_cast<fir::RecordType>(ty)) {
-    std::uint64_t size = 0;
-    unsigned short align = 1;
-    for (auto component : recTy.getTypeList()) {
-      auto [compSize, compAlign] =
-          getSizeAndAlignment(loc, component.second, dl, kindMap);
-      size =
-          llvm::alignTo(size, compAlign) + llvm::alignTo(compSize, compAlign);
-      align = std::max(align, compAlign);
-    }
-    return {size, align};
-  }
-  if (auto logical = mlir::dyn_cast<fir::LogicalType>(ty)) {
-    mlir::Type intTy = mlir::IntegerType::get(
-        logical.getContext(), kindMap.getLogicalBitsize(logical.getFKind()));
-    return getSizeAndAlignment(loc, intTy, dl, kindMap);
-  }
-  if (auto character = mlir::dyn_cast<fir::CharacterType>(ty)) {
-    mlir::Type intTy = mlir::IntegerType::get(
-        character.getContext(),
-        kindMap.getCharacterBitsize(character.getFKind()));
-    return getSizeAndAlignment(loc, intTy, dl, kindMap);
-  }
-  TODO(loc, "computing size of a component");
-}
-
 namespace {
 template <typename S>
 struct GenericTarget : public CodeGenSpecifics {
@@ -489,7 +432,7 @@ struct TargetX86_64 : public GenericTarget<TargetX86_64> {
       }
       mlir::Type compType = component.second;
       auto [compSize, compAlign] =
-          getSizeAndAlignment(loc, compType, getDataLayout(), kindMap);
+          fir::getTypeSizeAndAlignment(loc, compType, getDataLayout(), kindMap);
       byteOffset = llvm::alignTo(byteOffset, compAlign);
       ArgClass LoComp, HiComp;
       classify(loc, compType, byteOffset, LoComp, HiComp);
@@ -510,7 +453,7 @@ struct TargetX86_64 : public GenericTarget<TargetX86_64> {
     mlir::Type eleTy = seqTy.getEleTy();
     const std::uint64_t arraySize = seqTy.getConstantArraySize();
     auto [eleSize, eleAlign] =
-        getSizeAndAlignment(loc, eleTy, getDataLayout(), kindMap);
+        fir::getTypeSizeAndAlignment(loc, eleTy, getDataLayout(), kindMap);
     std::uint64_t eleStorageSize = llvm::alignTo(eleSize, eleAlign);
     for (std::uint64_t i = 0; i < arraySize; ++i) {
       byteOffset = llvm::alignTo(byteOffset, eleAlign);
@@ -697,7 +640,8 @@ struct TargetX86_64 : public GenericTarget<TargetX86_64> {
   CodeGenSpecifics::Marshalling passOnTheStack(mlir::Location loc,
                                                mlir::Type ty) const {
     CodeGenSpecifics::Marshalling marshal;
-    auto sizeAndAlign = getSizeAndAlignment(loc, ty, getDataLayout(), kindMap);
+    auto sizeAndAlign =
+        fir::getTypeSizeAndAlignment(loc, ty, getDataLayout(), kindMap);
     // The stack is always 8 byte aligned (note 14 in 3.2.3).
     unsigned short align =
         std::max(sizeAndAlign.second, static_cast<unsigned short>(8));
@@ -1113,51 +1057,57 @@ struct TargetLoongArch64 : public GenericTarget<TargetLoongArch64> {
 // TODO: Add other targets to this file as needed.
 std::unique_ptr<fir::CodeGenSpecifics>
 fir::CodeGenSpecifics::get(mlir::MLIRContext *ctx, llvm::Triple &&trp,
-                           KindMapping &&kindMap, const mlir::DataLayout &dl) {
+                           KindMapping &&kindMap, llvm::StringRef targetCPU,
+                           mlir::LLVM::TargetFeaturesAttr targetFeatures,
+                           const mlir::DataLayout &dl) {
   switch (trp.getArch()) {
   default:
     break;
   case llvm::Triple::ArchType::x86:
     if (trp.isOSWindows())
       return std::make_unique<TargetI386Win>(ctx, std::move(trp),
-                                             std::move(kindMap), dl);
+                                             std::move(kindMap), targetCPU,
+                                             targetFeatures, dl);
     else
       return std::make_unique<TargetI386>(ctx, std::move(trp),
-                                          std::move(kindMap), dl);
+                                          std::move(kindMap), targetCPU,
+                                          targetFeatures, dl);
   case llvm::Triple::ArchType::x86_64:
     if (trp.isOSWindows())
       return std::make_unique<TargetX86_64Win>(ctx, std::move(trp),
-                                               std::move(kindMap), dl);
+                                               std::move(kindMap), targetCPU,
+                                               targetFeatures, dl);
     else
       return std::make_unique<TargetX86_64>(ctx, std::move(trp),
-                                            std::move(kindMap), dl);
+                                            std::move(kindMap), targetCPU,
+                                            targetFeatures, dl);
   case llvm::Triple::ArchType::aarch64:
-    return std::make_unique<TargetAArch64>(ctx, std::move(trp),
-                                           std::move(kindMap), dl);
+    return std::make_unique<TargetAArch64>(
+        ctx, std::move(trp), std::move(kindMap), targetCPU, targetFeatures, dl);
   case llvm::Triple::ArchType::ppc64:
-    return std::make_unique<TargetPPC64>(ctx, std::move(trp),
-                                         std::move(kindMap), dl);
+    return std::make_unique<TargetPPC64>(
+        ctx, std::move(trp), std::move(kindMap), targetCPU, targetFeatures, dl);
   case llvm::Triple::ArchType::ppc64le:
-    return std::make_unique<TargetPPC64le>(ctx, std::move(trp),
-                                           std::move(kindMap), dl);
+    return std::make_unique<TargetPPC64le>(
+        ctx, std::move(trp), std::move(kindMap), targetCPU, targetFeatures, dl);
   case llvm::Triple::ArchType::sparc:
-    return std::make_unique<TargetSparc>(ctx, std::move(trp),
-                                         std::move(kindMap), dl);
+    return std::make_unique<TargetSparc>(
+        ctx, std::move(trp), std::move(kindMap), targetCPU, targetFeatures, dl);
   case llvm::Triple::ArchType::sparcv9:
-    return std::make_unique<TargetSparcV9>(ctx, std::move(trp),
-                                           std::move(kindMap), dl);
+    return std::make_unique<TargetSparcV9>(
+        ctx, std::move(trp), std::move(kindMap), targetCPU, targetFeatures, dl);
   case llvm::Triple::ArchType::riscv64:
-    return std::make_unique<TargetRISCV64>(ctx, std::move(trp),
-                                           std::move(kindMap), dl);
+    return std::make_unique<TargetRISCV64>(
+        ctx, std::move(trp), std::move(kindMap), targetCPU, targetFeatures, dl);
   case llvm::Triple::ArchType::amdgcn:
-    return std::make_unique<TargetAMDGPU>(ctx, std::move(trp),
-                                          std::move(kindMap), dl);
+    return std::make_unique<TargetAMDGPU>(
+        ctx, std::move(trp), std::move(kindMap), targetCPU, targetFeatures, dl);
   case llvm::Triple::ArchType::nvptx64:
-    return std::make_unique<TargetNVPTX>(ctx, std::move(trp),
-                                         std::move(kindMap), dl);
+    return std::make_unique<TargetNVPTX>(
+        ctx, std::move(trp), std::move(kindMap), targetCPU, targetFeatures, dl);
   case llvm::Triple::ArchType::loongarch64:
-    return std::make_unique<TargetLoongArch64>(ctx, std::move(trp),
-                                               std::move(kindMap), dl);
+    return std::make_unique<TargetLoongArch64>(
+        ctx, std::move(trp), std::move(kindMap), targetCPU, targetFeatures, dl);
   }
   TODO(mlir::UnknownLoc::get(ctx), "target not implemented");
 }

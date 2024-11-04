@@ -131,7 +131,6 @@ def write_implementation(module_path, module, namespace, check_name_camel):
 //===----------------------------------------------------------------------===//
 
 #include "%(check_name)s.h"
-#include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 
 using namespace clang::ast_matchers;
@@ -146,7 +145,7 @@ void %(check_name)s::registerMatchers(MatchFinder *Finder) {
 void %(check_name)s::check(const MatchFinder::MatchResult &Result) {
   // FIXME: Add callback implementation.
   const auto *MatchedDecl = Result.Nodes.getNodeAs<FunctionDecl>("x");
-  if (!MatchedDecl->getIdentifier() || MatchedDecl->getName().startswith("awesome_"))
+  if (!MatchedDecl->getIdentifier() || MatchedDecl->getName().starts_with("awesome_"))
     return;
   diag(MatchedDecl->getLocation(), "function %%0 is insufficiently awesome")
       << MatchedDecl

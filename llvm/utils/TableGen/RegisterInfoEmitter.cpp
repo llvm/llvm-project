@@ -25,7 +25,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/SparseBitVector.h"
 #include "llvm/ADT/Twine.h"
-#include "llvm/CodeGen/MachineValueType.h"
+#include "llvm/CodeGenTypes/MachineValueType.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Format.h"
@@ -1069,7 +1069,8 @@ RegisterInfoEmitter::runMCDesc(raw_ostream &OS, CodeGenTarget &Target,
        << RegClassStrings.get(RC.getName()) << ", " << RC.getOrder().size()
        << ", " << RCBitsSize << ", " << RC.getQualifiedIdName() << ", "
        << RegSize << ", " << RC.CopyCost << ", "
-       << (RC.Allocatable ? "true" : "false") << " },\n";
+       << (RC.Allocatable ? "true" : "false") << ", "
+       << (RC.getBaseClassOrder() ? "true" : "false") << " },\n";
   }
 
   OS << "};\n\n";
@@ -1846,6 +1847,7 @@ void RegisterInfoEmitter::debugDump(raw_ostream &OS) {
     OS << "\tCoveredBySubRegs: " << RC.CoveredBySubRegs << '\n';
     OS << "\tAllocatable: " << RC.Allocatable << '\n';
     OS << "\tAllocationPriority: " << unsigned(RC.AllocationPriority) << '\n';
+    OS << "\tBaseClassOrder: " << RC.getBaseClassOrder() << '\n';
     OS << "\tRegs:";
     for (const CodeGenRegister *R : RC.getMembers()) {
       OS << " " << R->getName();

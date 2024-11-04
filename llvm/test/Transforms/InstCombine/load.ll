@@ -136,7 +136,7 @@ C:		; preds = %F, %T
 
 define double @test11(ptr %p) {
 ; CHECK-LABEL: @test11(
-; CHECK-NEXT:    [[T0:%.*]] = getelementptr double, ptr [[P:%.*]], i64 1
+; CHECK-NEXT:    [[T0:%.*]] = getelementptr i8, ptr [[P:%.*]], i64 8
 ; CHECK-NEXT:    store double 2.000000e+00, ptr [[T0]], align 8
 ; CHECK-NEXT:    ret double 2.000000e+00
 ;

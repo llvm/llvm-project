@@ -776,6 +776,49 @@ struct OuterProductOpConversion
   }
 };
 
+/// Lower 2-way and 4-way widening outer products to intrinsics.
+template <class OuterProductWideningOp, class OuterProductWideningIntrOp>
+struct OuterProductWideningOpConversion
+    : public ConvertArmSMEOpToLLVMPattern<OuterProductWideningOp> {
+  using ConvertArmSMEOpToLLVMPattern<
+      OuterProductWideningOp>::ConvertArmSMEOpToLLVMPattern;
+
+  LogicalResult
+  matchAndRewrite(OuterProductWideningOp op,
+                  typename OuterProductWideningOp::Adaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    auto tileId = getTileIdOrError(op);
+    if (!tileId)
+      return failure();
+
+    Value acc = op.getAcc();
+    if (!acc)
+      // Initalize accumulator with zero.
+      acc = op.template createOpAndForwardTileId<arm_sme::ZeroOp>(
+          rewriter, op.getLoc(), op.getResultType());
+
+    Value lhsMask = op.getLhsMask();
+    Value rhsMask = op.getRhsMask();
+    if (!lhsMask || !rhsMask) {
+      auto predTy = op.getLhsType().cloneWith({}, rewriter.getI1Type());
+      Value allActiveMask = rewriter.create<arith::ConstantOp>(
+          op.getLoc(), DenseElementsAttr::get(predTy, true));
+      lhsMask = allActiveMask;
+      rhsMask = allActiveMask;
+    }
+
+    rewriter.create<OuterProductWideningIntrOp>(op.getLoc(), tileId, lhsMask,
+                                                rhsMask, adaptor.getLhs(),
+                                                adaptor.getRhs());
+
+    // The outerproduct intrinsics have no result, replace
+    // 'arm_sme.outerproduct' with the input tile to preserve dataflow.
+    rewriter.replaceOp(op, acc);
+
+    return success();
+  }
+};
+
 /// Lower `arm_sme.streaming_vl` to SME CNTS intrinsics.
 ///
 /// Example:
@@ -854,6 +897,13 @@ void mlir::configureArmSMEToLLVMConversionLegality(ConversionTarget &target) {
       arm_sme::aarch64_sme_st1q_vert, arm_sme::aarch64_sme_read_horiz,
       arm_sme::aarch64_sme_read_vert, arm_sme::aarch64_sme_write_horiz,
       arm_sme::aarch64_sme_write_vert, arm_sme::aarch64_sme_mopa,
+      arm_sme::aarch64_sme_mopa_wide, arm_sme::aarch64_sme_mops_wide,
+      arm_sme::aarch64_sme_smopa_wide, arm_sme::aarch64_sme_smops_wide,
+      arm_sme::aarch64_sme_umopa_wide, arm_sme::aarch64_sme_umops_wide,
+      arm_sme::aarch64_sme_smopa_za32, arm_sme::aarch64_sme_smops_za32,
+      arm_sme::aarch64_sme_umopa_za32, arm_sme::aarch64_sme_umops_za32,
+      arm_sme::aarch64_sme_sumopa_wide, arm_sme::aarch64_sme_sumops_wide,
+      arm_sme::aarch64_sme_usmopa_wide, arm_sme::aarch64_sme_usmops_wide,
       arm_sme::aarch64_sme_cntsb, arm_sme::aarch64_sme_cntsh,
       arm_sme::aarch64_sme_cntsw, arm_sme::aarch64_sme_cntsd>();
   target.addLegalDialect<arith::ArithDialect,
@@ -876,8 +926,20 @@ void mlir::populateArmSMEToLLVMConversionPatterns(LLVMTypeConverter &converter,
   addArmSMEConversionPatterns<
       LoadTileSliceConversion, MoveTileSliceToVectorConversion,
       MoveVectorToTileSliceConversion, StoreTileSliceConversion,
-      OuterProductOpConversion, ZeroOpConversion, GetTileConversion,
-      StreamingVLOpConversion>(patterns, converter);
+      StreamingVLOpConversion, OuterProductOpConversion,
+      OuterProductWideningOpConversion<arm_sme::FMopa2WayOp,
+                                       arm_sme::aarch64_sme_mopa_wide>,
+      OuterProductWideningOpConversion<arm_sme::FMops2WayOp,
+                                       arm_sme::aarch64_sme_mops_wide>,
+      OuterProductWideningOpConversion<arm_sme::SMopa2WayOp,
+                                       arm_sme::aarch64_sme_smopa_za32>,
+      OuterProductWideningOpConversion<arm_sme::SMops2WayOp,
+                                       arm_sme::aarch64_sme_smops_za32>,
+      OuterProductWideningOpConversion<arm_sme::UMopa2WayOp,
+                                       arm_sme::aarch64_sme_umopa_za32>,
+      OuterProductWideningOpConversion<arm_sme::UMops2WayOp,
+                                       arm_sme::aarch64_sme_umops_za32>,
+      ZeroOpConversion, GetTileConversion>(patterns, converter);
 }
 
 std::unique_ptr<Pass> mlir::createConvertArmSMEToLLVMPass() {

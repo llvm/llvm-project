@@ -776,6 +776,10 @@ std::optional<FileSpec> SymbolLocatorDebugSymbols::LocateExecutableSymbolFile(
       exec_fspec ? exec_fspec->GetFilename().AsCString("<NULL>") : "<NULL>",
       arch ? arch->GetArchitectureName() : "<NULL>", (const void *)uuid);
 
+  Progress progress(
+      "Locating external symbol file",
+      module_spec.GetFileSpec().GetFilename().AsCString("<Unknown>"));
+
   FileSpec symbol_fspec;
   ModuleSpec dsym_module_spec;
   // First try and find the dSYM in the same directory as the executable or in
@@ -1045,33 +1049,28 @@ bool SymbolLocatorDebugSymbols::DownloadObjectAndSymbolFile(
   if (!dsymForUUID_exe_spec)
     return false;
 
+  // Create the dsymForUUID command.
   const std::string dsymForUUID_exe_path = dsymForUUID_exe_spec.GetPath();
   const std::string uuid_str = uuid_ptr ? uuid_ptr->GetAsString() : "";
-  const std::string file_path_str =
-      file_spec_ptr ? file_spec_ptr->GetPath() : "";
 
-  Log *log = GetLog(LLDBLog::Host);
-
-  // Create the dsymForUUID command.
-  StreamString command;
-  const char *copy_executable_arg = copy_executable ? "--copyExecutable " : "";
-  if (!uuid_str.empty()) {
-    command.Printf("%s --ignoreNegativeCache %s%s",
-                   dsymForUUID_exe_path.c_str(), copy_executable_arg,
-                   uuid_str.c_str());
-    LLDB_LOGF(log, "Calling %s with UUID %s to find dSYM: %s",
-              dsymForUUID_exe_path.c_str(), uuid_str.c_str(),
-              command.GetString().data());
-  } else if (!file_path_str.empty()) {
-    command.Printf("%s --ignoreNegativeCache %s%s",
-                   dsymForUUID_exe_path.c_str(), copy_executable_arg,
-                   file_path_str.c_str());
-    LLDB_LOGF(log, "Calling %s with file %s to find dSYM: %s",
-              dsymForUUID_exe_path.c_str(), file_path_str.c_str(),
-              command.GetString().data());
-  } else {
+  std::string lookup_arg = uuid_str;
+  if (lookup_arg.empty())
+    lookup_arg = file_spec_ptr ? file_spec_ptr->GetPath() : "";
+  if (lookup_arg.empty())
     return false;
-  }
+
+  StreamString command;
+  command << dsymForUUID_exe_path << " --ignoreNegativeCache ";
+  if (copy_executable)
+    command << "--copyExecutable ";
+  command << lookup_arg;
+
+  // Log and report progress.
+  Log *log = GetLog(LLDBLog::Host);
+  LLDB_LOG(log, "Calling {0} with {1} to find dSYM: {2}", dsymForUUID_exe_path,
+           lookup_arg, command.GetString());
+
+  Progress progress("Downloading symbol file", lookup_arg);
 
   // Invoke dsymForUUID.
   int exit_status = -1;

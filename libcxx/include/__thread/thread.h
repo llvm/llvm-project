@@ -19,7 +19,7 @@
 #include <__mutex/mutex.h>
 #include <__system_error/system_error.h>
 #include <__thread/id.h>
-#include <__threading_support>
+#include <__thread/support.h>
 #include <__utility/forward.h>
 #include <tuple>
 
@@ -31,6 +31,9 @@
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
 #endif
+
+_LIBCPP_PUSH_MACROS
+#include <__undef_macros>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
@@ -250,5 +253,7 @@ thread::thread(_Fp __f) {
 inline _LIBCPP_HIDE_FROM_ABI void swap(thread& __x, thread& __y) _NOEXCEPT { __x.swap(__y); }
 
 _LIBCPP_END_NAMESPACE_STD
+
+_LIBCPP_POP_MACROS
 
 #endif // _LIBCPP___THREAD_THREAD_H

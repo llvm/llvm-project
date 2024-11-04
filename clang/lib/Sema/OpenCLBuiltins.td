@@ -936,7 +936,7 @@ def : Builtin<"read_mem_fence", [Void, MemFenceFlags]>;
 def : Builtin<"write_mem_fence", [Void, MemFenceFlags]>;
 
 // OpenCL v3.0 s6.15.10 - Address Space Qualifier Functions.
-// to_global, to_local, to_private are declared in Builtins.def.
+// to_global, to_local, to_private are declared in Builtins.td.
 
 let Extension = FuncExtOpenCLCGenericAddressSpace in {
   // The OpenCL 3.0 specification defines these with a "gentype" argument indicating any builtin
@@ -1448,25 +1448,25 @@ let Extension = FuncExtOpenCLCWGCollectiveFunctions in {
 //--------------------------------------------------------------------
 // OpenCL2.0 : 6.13.16 : Pipe Functions
 // --- Table 27 ---
-// Defined in Builtins.def
+// Defined in Builtins.td
 
 // --- Table 28 ---
-// Builtins taking pipe arguments are defined in Builtins.def
+// Builtins taking pipe arguments are defined in Builtins.td
 let Extension = FuncExtOpenCLCPipes in {
   def : Builtin<"is_valid_reserve_id", [Bool, ReserveId]>;
 }
 
 // --- Table 29 ---
-// Defined in Builtins.def
+// Defined in Builtins.td
 
 
 //--------------------------------------------------------------------
 // OpenCL2.0 : 6.13.17 : Enqueuing Kernels
 // --- Table 30 ---
-// Defined in Builtins.def
+// Defined in Builtins.td
 
 // --- Table 32 ---
-// Defined in Builtins.def
+// Defined in Builtins.td
 
 // --- Table 33 ---
 let Extension = FuncExtOpenCLCDeviceEnqueue in {

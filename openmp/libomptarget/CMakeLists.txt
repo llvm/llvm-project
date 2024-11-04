@@ -81,17 +81,22 @@ if(NOT LLVM_ENABLE_RTTI)
   set(offload_compile_flags ${offload_compile_flags} -fno-rtti)
 endif()
 
-# If LTO is not explicitly disabled we check if we can enable it and do so.
-set(LIBOMPTARGET_USE_LTO TRUE CACHE BOOL "Use LTO for the offload runtimes if available")
+# TODO: Consider enabling LTO by default if supported.
+# https://cmake.org/cmake/help/latest/module/CheckIPOSupported.html can be used
+# to test for working LTO. However, before CMake 3.24 this will test the
+# default linker and ignore options such as LLVM_ENABLE_LLD. As a result, CMake
+# would test whether LTO works with the default linker but build with another one.
+# In a typical scenario, libomptarget is compiled with the in-tree Clang, but
+# linked with ld.gold, which requires the LLVMgold plugin, when it actually
+# would work with the lld linker (or also fail because the system lld is too old
+# to understand opaque pointers). Using gcc as the compiler would pass the test, but fail
+# when linking with lld since does not understand gcc's LTO format.
+set(LIBOMPTARGET_USE_LTO FALSE CACHE BOOL "Use LTO for the offload runtimes if available")
 if (LIBOMPTARGET_USE_LTO)
-  include(CheckIPOSupported)
-  check_ipo_supported(RESULT use_lto OUTPUT output)
-  if(use_lto)
-    set(offload_compile_flags ${offload_compile_flags} -flto)
-    set(offload_link_flags ${offload_link_flags} -flto)
-  else()
-    message(WARNING "LTO is not supported: ${output}")
-  endif()
+  # CMake sets CMAKE_CXX_COMPILE_OPTIONS_IPO depending on the compiler and is
+  # also what CheckIPOSupported uses to test support.
+  list(APPEND offload_compile_flags ${CMAKE_CXX_COMPILE_OPTIONS_IPO})
+  list(APPEND offload_link_flags ${CMAKE_CXX_COMPILE_OPTIONS_IPO})
 endif()
 
 # OMPT support for libomptarget

@@ -149,3 +149,21 @@ void foo() {
   auto caller = make_caller.operator()<&S1::f1>();
 }
 } // namespace ReturnTypeRequirementInLambda
+
+namespace GH73418 {
+void foo() {
+  int x;
+  [&x](auto) {
+    return [](auto y) {
+      return [](auto obj, auto... params)
+        requires requires {
+          sizeof...(params);
+          [](auto... pack) {
+            return sizeof...(pack);
+          }(params...);
+        }
+      { return false; }(y);
+    }(x);
+  }(x);
+}
+} // namespace GH73418

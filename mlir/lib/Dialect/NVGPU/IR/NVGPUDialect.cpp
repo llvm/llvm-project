@@ -355,6 +355,23 @@ std::optional<InFlightDiagnostic> verifyTmaDescriptorWithMemref(
   if (!descMemref.hasStaticShape())
     return op->emitError() << "the tensor map descriptor must be static shaped";
 
+  for (auto dim : descMemref.getShape()) {
+    if (dim <= 0 || dim > kMaxTMADimension) {
+      return op->emitError() << "the tensor map descriptor must have "
+                                "dimensions between 1 and "
+                             << kMaxTMADimension << " but it is " << dim;
+    }
+  }
+  if (descMemref.getRank() > 1) {
+    unsigned lastDimensionByte =
+        descMemref.getElementTypeBitWidth() * descMemref.getShape().back() / 8;
+    if (lastDimensionByte != kMaxTMALastdimByte)
+      return op->emitError() << "the tensormap descriptor must have last "
+                                "dimension of "
+                             << kMaxTMALastdimByte << " bytes but it is "
+                             << lastDimensionByte << " bytes";
+  }
+
   // No verification if memref type is not provided
   if (!memrefType.has_value())
     return std::nullopt;

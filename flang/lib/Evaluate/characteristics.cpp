@@ -1456,9 +1456,11 @@ public:
       : features_{features} {}
 
   // Are these procedures distinguishable for a generic name?
-  bool Distinguishable(const Procedure &, const Procedure &) const;
+  std::optional<bool> Distinguishable(
+      const Procedure &, const Procedure &) const;
   // Are these procedures distinguishable for a generic operator or assignment?
-  bool DistinguishableOpOrAssign(const Procedure &, const Procedure &) const;
+  std::optional<bool> DistinguishableOpOrAssign(
+      const Procedure &, const Procedure &) const;
 
 private:
   struct CountDummyProcedures {
@@ -1474,6 +1476,8 @@ private:
     int notOptional{0};
   };
 
+  bool AnyOptionalData(const DummyArguments &) const;
+  bool AnyUnlimitedPolymorphicData(const DummyArguments &) const;
   bool Rule3Distinguishable(const Procedure &, const Procedure &) const;
   const DummyArgument *Rule1DistinguishingArg(
       const DummyArguments &, const DummyArguments &) const;
@@ -1500,7 +1504,7 @@ private:
 };
 
 // Simpler distinguishability rules for operators and assignment
-bool DistinguishUtils::DistinguishableOpOrAssign(
+std::optional<bool> DistinguishUtils::DistinguishableOpOrAssign(
     const Procedure &proc1, const Procedure &proc2) const {
   if ((proc1.IsFunction() && proc2.IsSubroutine()) ||
       (proc1.IsSubroutine() && proc2.IsFunction())) {
@@ -1519,7 +1523,7 @@ bool DistinguishUtils::DistinguishableOpOrAssign(
   return false;
 }
 
-bool DistinguishUtils::Distinguishable(
+std::optional<bool> DistinguishUtils::Distinguishable(
     const Procedure &proc1, const Procedure &proc2) const {
   if ((proc1.IsFunction() && proc2.IsSubroutine()) ||
       (proc1.IsSubroutine() && proc2.IsFunction())) {
@@ -1550,6 +1554,35 @@ bool DistinguishUtils::Distinguishable(
   }
   if (proc1.cudaSubprogramAttrs != proc2.cudaSubprogramAttrs) {
     return true;
+  }
+  // If there are no optional or unlimited polymorphic dummy arguments,
+  // then we know the result for sure; otherwise, it's possible for
+  // the procedures to be unambiguous.
+  if ((AnyOptionalData(args1) || AnyUnlimitedPolymorphicData(args1)) &&
+      (AnyOptionalData(args2) || AnyUnlimitedPolymorphicData(args2))) {
+    return std::nullopt; // meaning "maybe"
+  } else {
+    return false;
+  }
+}
+
+bool DistinguishUtils::AnyOptionalData(const DummyArguments &args) const {
+  for (const auto &arg : args) {
+    if (std::holds_alternative<DummyDataObject>(arg.u) && arg.IsOptional()) {
+      return true;
+    }
+  }
+  return false;
+}
+
+bool DistinguishUtils::AnyUnlimitedPolymorphicData(
+    const DummyArguments &args) const {
+  for (const auto &arg : args) {
+    if (const auto *object{std::get_if<DummyDataObject>(&arg.u)}) {
+      if (object->type.type().IsUnlimitedPolymorphic()) {
+        return true;
+      }
+    }
   }
   return false;
 }
@@ -1704,7 +1737,7 @@ bool DistinguishUtils::Distinguishable(
     const DummyProcedure &x, const DummyProcedure &y) const {
   const Procedure &xProc{x.procedure.value()};
   const Procedure &yProc{y.procedure.value()};
-  if (Distinguishable(xProc, yProc)) {
+  if (Distinguishable(xProc, yProc).value_or(false)) {
     return true;
   } else {
     const std::optional<FunctionResult> &xResult{xProc.functionResult};
@@ -1730,7 +1763,8 @@ bool DistinguishUtils::Distinguishable(
           },
           [&](const CopyableIndirection<Procedure> &z) {
             return Distinguishable(z.value(),
-                std::get<CopyableIndirection<Procedure>>(y.u).value());
+                std::get<CopyableIndirection<Procedure>>(y.u).value())
+                .value_or(false);
           },
       },
       x.u);
@@ -1795,13 +1829,15 @@ const DummyArgument *DistinguishUtils::GetPassArg(const Procedure &proc) const {
   return nullptr;
 }
 
-bool Distinguishable(const common::LanguageFeatureControl &features,
-    const Procedure &x, const Procedure &y) {
+std::optional<bool> Distinguishable(
+    const common::LanguageFeatureControl &features, const Procedure &x,
+    const Procedure &y) {
   return DistinguishUtils{features}.Distinguishable(x, y);
 }
 
-bool DistinguishableOpOrAssign(const common::LanguageFeatureControl &features,
-    const Procedure &x, const Procedure &y) {
+std::optional<bool> DistinguishableOpOrAssign(
+    const common::LanguageFeatureControl &features, const Procedure &x,
+    const Procedure &y) {
   return DistinguishUtils{features}.DistinguishableOpOrAssign(x, y);
 }
 

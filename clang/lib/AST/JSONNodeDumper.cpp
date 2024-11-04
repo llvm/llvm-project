@@ -77,7 +77,7 @@ void JSONNodeDumper::Visit(const Type *T) {
     return;
 
   JOS.attribute("kind", (llvm::Twine(T->getTypeClassName()) + "Type").str());
-  JOS.attribute("type", createQualType(QualType(T, 0), /*Desugar*/ false));
+  JOS.attribute("type", createQualType(QualType(T, 0), /*Desugar=*/false));
   attributeOnlyIfTrue("containsErrors", T->containsErrors());
   attributeOnlyIfTrue("isDependent", T->isDependentType());
   attributeOnlyIfTrue("isInstantiationDependent",
@@ -94,6 +94,21 @@ void JSONNodeDumper::Visit(QualType T) {
   JOS.attribute("kind", "QualType");
   JOS.attribute("type", createQualType(T));
   JOS.attribute("qualifiers", T.split().Quals.getAsString());
+}
+
+void JSONNodeDumper::Visit(TypeLoc TL) {
+  if (TL.isNull())
+    return;
+  JOS.attribute("kind",
+                (llvm::Twine(TL.getTypeLocClass() == TypeLoc::Qualified
+                                 ? "Qualified"
+                                 : TL.getTypePtr()->getTypeClassName()) +
+                 "TypeLoc")
+                    .str());
+  JOS.attribute("type",
+                createQualType(QualType(TL.getType()), /*Desugar=*/false));
+  JOS.attributeObject("range",
+                      [TL, this] { writeSourceRange(TL.getSourceRange()); });
 }
 
 void JSONNodeDumper::Visit(const Decl *D) {
@@ -221,6 +236,22 @@ void JSONNodeDumper::Visit(const APValue &Value, QualType Ty) {
   llvm::raw_string_ostream OS(Str);
   Value.printPretty(OS, Ctx, Ty);
   JOS.attribute("value", OS.str());
+}
+
+void JSONNodeDumper::Visit(const ConceptReference *CR) {
+  JOS.attribute("kind", "ConceptReference");
+  JOS.attribute("id", createPointerRepresentation(CR->getNamedConcept()));
+  if (const auto *Args = CR->getTemplateArgsAsWritten()) {
+    JOS.attributeArray("templateArgsAsWritten", [Args, this] {
+      for (const TemplateArgumentLoc &TAL : Args->arguments())
+        JOS.object(
+            [&TAL, this] { Visit(TAL.getArgument(), TAL.getSourceRange()); });
+    });
+  }
+  JOS.attributeObject("loc",
+                      [CR, this] { writeSourceLocation(CR->getLocation()); });
+  JOS.attributeObject("range",
+                      [CR, this] { writeSourceRange(CR->getSourceRange()); });
 }
 
 void JSONNodeDumper::writeIncludeStack(PresumedLoc Loc, bool JustFirst) {
@@ -702,6 +733,9 @@ void JSONNodeDumper::VisitVectorType(const VectorType *VT) {
     break;
   case VectorKind::RVVFixedLengthData:
     JOS.attribute("vectorKind", "fixed-length rvv data vector");
+    break;
+  case VectorKind::RVVFixedLengthMask:
+    JOS.attribute("vectorKind", "fixed-length rvv mask vector");
     break;
   }
 }

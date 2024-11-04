@@ -752,8 +752,8 @@ define amdgpu_kernel void @test_kernel_addrspacecasted_format_str(i32 %n) {
 ;
 entry:
   %str = alloca [9 x i8], align 1, addrspace(5)
-  %arraydecay = getelementptr inbounds [9 x i8], [9 x i8] addrspace(5)* %str, i32 0, i32 0
-  %call1 = call i32 (ptr addrspace(4), ...) @printf(ptr addrspace(4) addrspacecast (i8 addrspace(1)* getelementptr inbounds ([6 x i8], ptr addrspace(1) @str.as1, i32 0, i32 0) to ptr addrspace(4)), ptr addrspace(5) %arraydecay, i32 %n)
+  %arraydecay = getelementptr inbounds [9 x i8], ptr addrspace(5) %str, i32 0, i32 0
+  %call1 = call i32 (ptr addrspace(4), ...) @printf(ptr addrspace(4) addrspacecast (ptr addrspace(1) @str.as1 to ptr addrspace(4)), ptr addrspace(5) %arraydecay, i32 %n)
   ret void
 }
 

@@ -53,6 +53,17 @@ Value getValueOrCreateCastToIndexLike(OpBuilder &b, Location loc,
 Value convertScalarToDtype(OpBuilder &b, Location loc, Value operand,
                            Type toType, bool isUnsignedCast);
 
+/// Create a constant of type `type` at location `loc` whose value is `value`
+/// (an APInt or APFloat whose type must match the element type of `type`).
+/// If `type` is a shaped type, create a splat constant of the given value.
+/// Constants are folded if possible.
+Value createScalarOrSplatConstant(OpBuilder &builder, Location loc, Type type,
+                                  const APInt &value);
+Value createScalarOrSplatConstant(OpBuilder &builder, Location loc, Type type,
+                                  int64_t value);
+Value createScalarOrSplatConstant(OpBuilder &builder, Location loc, Type type,
+                                  const APFloat &value);
+
 /// Helper struct to build simple arithmetic quantities with minimal type
 /// inference support.
 struct ArithBuilder {

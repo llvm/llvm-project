@@ -439,7 +439,14 @@ Instruction *InstCombinerImpl::commonShiftTransforms(BinaryOperator &I) {
   if (match(Op0, m_Constant(C)) &&
       match(Op1, m_NUWAdd(m_Value(A), m_Constant(C1)))) {
     Value *NewC = Builder.CreateBinOp(I.getOpcode(), C, C1);
-    return BinaryOperator::Create(I.getOpcode(), NewC, A);
+    BinaryOperator *NewShiftOp = BinaryOperator::Create(I.getOpcode(), NewC, A);
+    if (I.getOpcode() == Instruction::Shl) {
+      NewShiftOp->setHasNoSignedWrap(I.hasNoSignedWrap());
+      NewShiftOp->setHasNoUnsignedWrap(I.hasNoUnsignedWrap());
+    } else {
+      NewShiftOp->setIsExact(I.isExact());
+    }
+    return NewShiftOp;
   }
 
   unsigned BitWidth = Ty->getScalarSizeInBits();

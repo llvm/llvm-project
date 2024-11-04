@@ -146,7 +146,9 @@ namespace test5 {
 namespace test6 {
   enum A : unsigned;
   struct A::a; // expected-error {{incomplete type 'test6::A' named in nested name specifier}}
+               // expected-error@-1{{forward declaration of struct cannot have a nested name specifier}}
   enum A::b; // expected-error {{incomplete type 'test6::A' named in nested name specifier}}
+             // expected-error@-1{{forward declaration of enum cannot have a nested name specifier}}
   int A::c; // expected-error {{incomplete type 'test6::A' named in nested name specifier}}
   void A::d(); // expected-error {{incomplete type 'test6::A' named in nested name specifier}}
   void test() {

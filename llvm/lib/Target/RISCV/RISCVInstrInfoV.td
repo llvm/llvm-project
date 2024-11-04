@@ -861,9 +861,9 @@ multiclass VMSFS_MV_V<string opcodestr, bits<6> funct6, bits<5> vs1> {
            SchedUnaryMC<"WriteVMSFSV", "ReadVMSFSV">;
 }
 
-multiclass VMIOT_MV_V<string opcodestr, bits<6> funct6, bits<5> vs1> {
+multiclass VIOTA_MV_V<string opcodestr, bits<6> funct6, bits<5> vs1> {
   def "" : VALUVs2<funct6, vs1, OPMVV, opcodestr>,
-           SchedUnaryMC<"WriteVMIotV", "ReadVMIotV">;
+           SchedUnaryMC<"WriteVIotaV", "ReadVIotaV">;
 }
 
 multiclass VSHT_IV_V_X_I<string opcodestr, bits<6> funct6> {
@@ -1621,7 +1621,7 @@ defm VMSIF_M : VMSFS_MV_V<"vmsif.m", 0b010100, 0b00011>;
 // vmsof.m set-only-first mask bit
 defm VMSOF_M : VMSFS_MV_V<"vmsof.m", 0b010100, 0b00010>;
 // Vector Iota Instruction
-defm VIOTA_M : VMIOT_MV_V<"viota.m", 0b010100, 0b10000>;
+defm VIOTA_M : VIOTA_MV_V<"viota.m", 0b010100, 0b10000>;
 
 } // Constraints = "@earlyclobber $vd", RVVConstraint = Iota
 
@@ -1631,7 +1631,7 @@ let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in {
 let vs2 = 0 in
 def VID_V : RVInstV<0b010100, 0b10001, OPMVV, (outs VR:$vd),
                     (ins VMaskOp:$vm), "vid.v", "$vd$vm">,
-            SchedNullaryMC<"WriteVMIdxV">;
+            SchedNullaryMC<"WriteVIdxV">;
 
 // Integer Scalar Move Instructions
 let vm = 1, RVVConstraint = NoConstraint in {

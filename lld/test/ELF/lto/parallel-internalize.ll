@@ -4,7 +4,7 @@
 ; RUN: ld.lld --lto-partitions=2 -save-temps -o out a.bc -e foo --lto-O0
 ; RUN: llvm-readobj --symbols --dyn-syms out | FileCheck %s
 ; RUN: llvm-nm out.lto.o | FileCheck --check-prefix=CHECK0 %s
-; RUN: llvm-nm out1.lto.o | FileCheck --check-prefix=CHECK1 %s
+; RUN: llvm-nm out.lto.1.o | FileCheck --check-prefix=CHECK1 %s
 
 ; CHECK:      Symbols [
 ; CHECK-NEXT:   Symbol {

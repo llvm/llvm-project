@@ -108,7 +108,9 @@
 ! HELP-NEXT: -mllvm=<arg>            Alias for -mllvm
 ! HELP-NEXT: -mllvm <value>          Additional arguments to forward to LLVM's option processing
 ! HELP-NEXT: -mmlir <value>          Additional arguments to forward to MLIR's option processing
+! HELP-NEXT: -mno-outline-atomics    Don't generate local calls to out-of-line atomic operations
 ! HELP-NEXT: -module-dir <dir>       Put MODULE files in <dir>
+! HELP-NEXT: -moutline-atomics       Generate local calls to out-of-line atomic operations
 ! HELP-NEXT: -mrvv-vector-bits=<value>
 ! HELP-NEXT:                         Specify the size in bits of an RVV vector register
 ! HELP-NEXT: -msve-vector-bits=<value>

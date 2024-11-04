@@ -1469,7 +1469,7 @@ WhitespaceManager::CellDescriptions WhitespaceManager::getCells(unsigned Start,
         while (NextNonComment->is(tok::comma))
           NextNonComment = NextNonComment->getNextNonComment();
         auto j = i;
-        while (Changes[j].Tok != NextNonComment && j < End)
+        while (j < End && Changes[j].Tok != NextNonComment)
           ++j;
         if (j < End && Changes[j].NewlinesBefore == 0 &&
             Changes[j].Tok->isNot(tok::r_brace)) {

@@ -57,7 +57,8 @@ class MatcherTableEmitter {
 
   // We de-duplicate the predicates by code string, and use this map to track
   // all the patterns with "identical" predicates.
-  StringMap<TinyPtrVector<TreePattern *>> NodePredicatesByCodeToRun;
+  MapVector<std::string, TinyPtrVector<TreePattern *>, StringMap<unsigned>>
+      NodePredicatesByCodeToRun;
 
   std::vector<std::string> PatternPredicates;
 

@@ -604,3 +604,27 @@ define i1 @select_constants_and_icmp_ne_fval(i1 %x, i1 %y) {
   %cmp = icmp ne i8 %and, 3
   ret i1 %cmp
 }
+
+define i1 @icmp_eq_select(i1 %cond, i32 %a, i32 %b) {
+; CHECK-LABEL: @icmp_eq_select(
+; CHECK-NEXT:    [[RES:%.*]] = icmp eq i32 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RES]]
+;
+  %lhs = select i1 %cond, i32 %a, i32 %b
+  %rhs = select i1 %cond, i32 %b, i32 %a
+  %res = icmp eq i32 %lhs, %rhs
+  ret i1 %res
+}
+
+define i1 @icmp_slt_select(i1 %cond, i32 %a, i32 %b) {
+; CHECK-LABEL: @icmp_slt_select(
+; CHECK-NEXT:    [[LHS:%.*]] = select i1 [[COND:%.*]], i32 [[A:%.*]], i32 [[B:%.*]]
+; CHECK-NEXT:    [[RHS:%.*]] = select i1 [[COND]], i32 [[B]], i32 [[A]]
+; CHECK-NEXT:    [[RES:%.*]] = icmp slt i32 [[LHS]], [[RHS]]
+; CHECK-NEXT:    ret i1 [[RES]]
+;
+  %lhs = select i1 %cond, i32 %a, i32 %b
+  %rhs = select i1 %cond, i32 %b, i32 %a
+  %res = icmp slt i32 %lhs, %rhs
+  ret i1 %res
+}

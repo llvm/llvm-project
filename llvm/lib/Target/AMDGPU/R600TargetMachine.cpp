@@ -50,7 +50,7 @@ static MachineSchedRegistry R600SchedRegistry("r600",
 
 R600TargetMachine::R600TargetMachine(const Target &T, const Triple &TT,
                                      StringRef CPU, StringRef FS,
-                                     TargetOptions Options,
+                                     const TargetOptions &Options,
                                      std::optional<Reloc::Model> RM,
                                      std::optional<CodeModel::Model> CM,
                                      CodeGenOptLevel OL, bool JIT)

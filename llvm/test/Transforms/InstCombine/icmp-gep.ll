@@ -244,7 +244,7 @@ declare i32 @test58_d(i64)
 
 define i1 @test59(ptr %foo) {
 ; CHECK-LABEL: @test59(
-; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds i32, ptr [[FOO:%.*]], i64 2
+; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds i8, ptr [[FOO:%.*]], i64 8
 ; CHECK-NEXT:    [[USE:%.*]] = ptrtoint ptr [[GEP1]] to i64
 ; CHECK-NEXT:    [[CALL:%.*]] = call i32 @test58_d(i64 [[USE]])
 ; CHECK-NEXT:    ret i1 true
@@ -259,7 +259,7 @@ define i1 @test59(ptr %foo) {
 
 define i1 @test59_as1(ptr addrspace(1) %foo) {
 ; CHECK-LABEL: @test59_as1(
-; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds i32, ptr addrspace(1) [[FOO:%.*]], i16 2
+; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[FOO:%.*]], i16 8
 ; CHECK-NEXT:    [[TMP1:%.*]] = ptrtoint ptr addrspace(1) [[GEP1]] to i16
 ; CHECK-NEXT:    [[USE:%.*]] = zext i16 [[TMP1]] to i64
 ; CHECK-NEXT:    [[CALL:%.*]] = call i32 @test58_d(i64 [[USE]])
@@ -417,7 +417,7 @@ define i1 @test60_extra_use(ptr %foo, i64 %i, i64 %j) {
 
 define i1 @test60_extra_use_const_operands_inbounds(ptr %foo, i64 %i, i64 %j) {
 ; CHECK-LABEL: @test60_extra_use_const_operands_inbounds(
-; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds i32, ptr [[FOO:%.*]], i64 1
+; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds i8, ptr [[FOO:%.*]], i64 4
 ; CHECK-NEXT:    call void @use(ptr nonnull [[GEP1]])
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i64 [[J:%.*]], 2
 ; CHECK-NEXT:    ret i1 [[CMP]]
@@ -431,7 +431,7 @@ define i1 @test60_extra_use_const_operands_inbounds(ptr %foo, i64 %i, i64 %j) {
 
 define i1 @test60_extra_use_const_operands_no_inbounds(ptr %foo, i64 %i, i64 %j) {
 ; CHECK-LABEL: @test60_extra_use_const_operands_no_inbounds(
-; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr i32, ptr [[FOO:%.*]], i64 1
+; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr i8, ptr [[FOO:%.*]], i64 4
 ; CHECK-NEXT:    call void @use(ptr [[GEP1]])
 ; CHECK-NEXT:    [[GEP2_IDX_MASK:%.*]] = and i64 [[J:%.*]], 9223372036854775807
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i64 [[GEP2_IDX_MASK]], 2

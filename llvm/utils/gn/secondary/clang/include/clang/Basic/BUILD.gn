@@ -92,6 +92,14 @@ clang_tablegen("AttrHasAttributeImpl") {
   td_file = "Attr.td"
 }
 
+clang_tablegen("Builtins") {
+  args = [ "-gen-clang-builtins" ]
+}
+
+clang_tablegen("BuiltinsBPF") {
+  args = [ "-gen-clang-builtins" ]
+}
+
 # ARM CDE, MVE, and NEON.
 
 clang_tablegen("arm_neon") {

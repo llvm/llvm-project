@@ -59,7 +59,7 @@ define <2 x i32> @var_funnnel_v2i32(<2 x i32> %x, <2 x i32> %y, <2 x i32> %amt) 
 ;
 ; SSE41-LABEL: var_funnnel_v2i32:
 ; SSE41:       # %bb.0:
-; SSE41-NEXT:    movdqa {{.*#+}} xmm3 = [31,31,31,31]
+; SSE41-NEXT:    pmovsxbd {{.*#+}} xmm3 = [31,31,31,31]
 ; SSE41-NEXT:    movdqa %xmm2, %xmm4
 ; SSE41-NEXT:    pand %xmm3, %xmm4
 ; SSE41-NEXT:    pshuflw {{.*#+}} xmm5 = xmm4[2,3,3,3,4,5,6,7]
@@ -454,7 +454,7 @@ define <2 x i32> @constant_funnnel_v2i32(<2 x i32> %x, <2 x i32> %y) nounwind {
 ; AVX512VBMI2:       # %bb.0:
 ; AVX512VBMI2-NEXT:    # kill: def $xmm1 killed $xmm1 def $zmm1
 ; AVX512VBMI2-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
-; AVX512VBMI2-NEXT:    vpbroadcastq {{.*#+}} xmm2 = [4,5,4,5]
+; AVX512VBMI2-NEXT:    vpmovsxbd {{.*#+}} xmm2 = [4,5,0,0]
 ; AVX512VBMI2-NEXT:    vpshrdvd %zmm2, %zmm0, %zmm1
 ; AVX512VBMI2-NEXT:    vmovdqa %xmm1, %xmm0
 ; AVX512VBMI2-NEXT:    vzeroupper

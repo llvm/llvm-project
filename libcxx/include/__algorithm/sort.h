@@ -39,6 +39,9 @@
 #  pragma GCC system_header
 #endif
 
+_LIBCPP_PUSH_MACROS
+#include <__undef_macros>
+
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 // stable, 2-3 compares, 0-2 swaps
@@ -1008,5 +1011,7 @@ sort(_RandomAccessIterator __first, _RandomAccessIterator __last) {
 }
 
 _LIBCPP_END_NAMESPACE_STD
+
+_LIBCPP_POP_MACROS
 
 #endif // _LIBCPP___ALGORITHM_SORT_H

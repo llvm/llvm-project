@@ -85,6 +85,7 @@ void unsafe_method_invocation_single_param() {
 
 void safe_method_invocation_single_param() {
   int* p = new int[10];
+  // CHECK-NOT: fix-it:"{{.*}}":{[[@LINE-1]]:{{.*}}-[[@LINE-1]]:{{.*}}}
   foo(p);
 }
 

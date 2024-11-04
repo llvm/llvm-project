@@ -125,8 +125,9 @@ static char getInvokeSig(wasm::ValType VT) {
     return 'F';
   case wasm::ValType::EXTERNREF:
     return 'X';
+  default:
+    llvm_unreachable("Unhandled wasm::ValType enum");
   }
-  llvm_unreachable("Unhandled wasm::ValType enum");
 }
 
 // Given the wasm signature, generate the invoke name in the format JS glue code

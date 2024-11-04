@@ -3,7 +3,7 @@
 
 %struct.key_t = type { i32, [16 x i8] }
 
-declare void @llvm.memset.p0i8.i64(ptr, i8, i64, i1)
+declare void @llvm.memset.p0.i64(ptr, i8, i64, i1)
 declare void @test1(ptr)
 
 define i32 @test() nounwind {
@@ -21,7 +21,7 @@ define i32 @test() nounwind {
 ; CHECK-NEXT:    addi.d $sp, $sp, 32
 ; CHECK-NEXT:    ret
   %key = alloca %struct.key_t, align 4
-  call void @llvm.memset.p0i8.i64(ptr %key, i8 0, i64 20, i1 false)
+  call void @llvm.memset.p0.i64(ptr %key, i8 0, i64 20, i1 false)
   %1 = getelementptr inbounds %struct.key_t, ptr %key, i64 0, i32 1, i64 0
   call void @test1(ptr %1)
   ret i32 0

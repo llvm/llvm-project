@@ -110,7 +110,7 @@ private:
 // A chunk for the import descriptor table.
 class ImportDirectoryChunk : public NonSectionChunk {
 public:
-  explicit ImportDirectoryChunk(Chunk *n) : dllName(n) {}
+  explicit ImportDirectoryChunk(Chunk *n) : dllName(n) { setAlignment(4); }
   size_t getSize() const override { return sizeof(ImportDirectoryTableEntry); }
 
   void writeTo(uint8_t *buf) const override {

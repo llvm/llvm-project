@@ -17,7 +17,7 @@
 
 TEST(LlvmLibcSchedCpuCountTest, SmokeTest) {
   cpu_set_t mask;
-  libc_errno = 0;
+  LIBC_NAMESPACE::libc_errno = 0;
   using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Succeeds;
   pid_t tid = LIBC_NAMESPACE::syscall_impl<pid_t>(SYS_gettid);
   ASSERT_GT(tid, pid_t(0));

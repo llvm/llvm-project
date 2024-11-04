@@ -2819,9 +2819,8 @@ InlineResult CallAnalyzer::analyze() {
 
     // If we're unable to select a particular successor, just count all of
     // them.
-    for (unsigned TIdx = 0, TSize = TI->getNumSuccessors(); TIdx != TSize;
-         ++TIdx)
-      BBWorklist.insert(TI->getSuccessor(TIdx));
+    for (BasicBlock *Succ : successors(BB))
+      BBWorklist.insert(Succ);
 
     onBlockAnalyzed(BB);
   }

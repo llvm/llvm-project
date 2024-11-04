@@ -36,8 +36,8 @@ MIR patterns use the DAG datatype in TableGen.
 
   (inst operand0, operand1, ...)
 
-``inst`` must be a def which inherits from ``Instruction`` (e.g. ``G_FADD``)
-or ``GICombinePatFrag``.
+``inst`` must be a def which inherits from ``Instruction`` (e.g. ``G_FADD``),
+``Intrinsic`` or ``GICombinePatFrag``.
 
 Operands essentially fall into one of two categories:
 
@@ -227,7 +227,6 @@ Limitations
 
 This a non-exhaustive list of known issues with MIR patterns at this time.
 
-* Matching intrinsics is not yet possible.
 * Using ``GICombinePatFrag`` within another ``GICombinePatFrag`` is not
   supported.
 * ``GICombinePatFrag`` can only have a single root.

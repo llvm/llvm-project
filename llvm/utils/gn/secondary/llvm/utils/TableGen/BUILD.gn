@@ -23,7 +23,7 @@ executable("llvm-tblgen") {
   deps = [
     ":llvm-min-tblgen-sources",
     "//llvm/include/llvm/Config:llvm-config",
-    "//llvm/lib/CodeGen:CodeGenTypes",
+    "//llvm/lib/CodeGenTypes",
     "//llvm/lib/Support",
     "//llvm/lib/TableGen",
     "//llvm/utils/TableGen/GlobalISel",

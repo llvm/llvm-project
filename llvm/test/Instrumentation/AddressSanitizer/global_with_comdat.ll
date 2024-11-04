@@ -108,7 +108,7 @@ target triple = "x86_64-unknown-linux-gnu"
 
 ; NOMODULEID:      define internal void @asan.module_ctor() #[[#]] comdat {
 ; NOMODULEID-NEXT:   call void @__asan_init()
-; NOMODULEID-NEXT:   call void @__asan_version_mismatch_check_v8()
+; NOMODULEID-NEXT:   call void @__asan_version_mismatch_check_{{.*}}
 ; NOMODULEID-NEXT:   call void @__asan_register_elf_globals(i64 ptrtoint (ptr @___asan_globals_registered to i64), i64 ptrtoint (ptr @__start_asan_globals to i64), i64 ptrtoint (ptr @__stop_asan_globals to i64))
 ; NOMODULEID-NEXT:   ret void
 ; NOMODULEID-NEXT: }

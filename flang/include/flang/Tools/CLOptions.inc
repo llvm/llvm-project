@@ -274,6 +274,7 @@ inline void createHLFIRToFIRPassPipeline(
 /// rather than the host device.
 inline void createOpenMPFIRPassPipeline(
     mlir::PassManager &pm, bool isTargetDevice) {
+  pm.addPass(fir::createOMPDescriptorMapInfoGenPass());
   pm.addPass(fir::createOMPMarkDeclareTargetPass());
   if (isTargetDevice)
     pm.addPass(fir::createOMPFunctionFilteringPass());
@@ -315,15 +316,22 @@ inline void createDefaultFIRCodeGenPassPipeline(
   // Add function attributes
   fir::FunctionAttrTypes functionAttrs;
 
-  if (config.FramePointerKind != llvm::FramePointerKind::None) {
+  if (config.FramePointerKind != llvm::FramePointerKind::None ||
+      config.NoInfsFPMath || config.NoNaNsFPMath || config.ApproxFuncFPMath ||
+      config.NoSignedZerosFPMath || config.UnsafeFPMath) {
     if (config.FramePointerKind == llvm::FramePointerKind::NonLeaf)
       functionAttrs.framePointerKind =
           mlir::LLVM::framePointerKind::FramePointerKind::NonLeaf;
-    else
+    else if (config.FramePointerKind == llvm::FramePointerKind::All)
       functionAttrs.framePointerKind =
           mlir::LLVM::framePointerKind::FramePointerKind::All;
+    else
+      functionAttrs.framePointerKind =
+          mlir::LLVM::framePointerKind::FramePointerKind::None;
 
-    pm.addPass(fir::createFunctionAttrPass(functionAttrs));
+    pm.addPass(fir::createFunctionAttrPass(functionAttrs, config.NoInfsFPMath,
+        config.NoNaNsFPMath, config.ApproxFuncFPMath,
+        config.NoSignedZerosFPMath, config.UnsafeFPMath));
   }
 
   fir::addFIRToLLVMPass(pm, config);

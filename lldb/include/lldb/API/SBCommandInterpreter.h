@@ -13,6 +13,7 @@
 
 #include "lldb/API/SBDebugger.h"
 #include "lldb/API/SBDefines.h"
+#include "lldb/API/SBStructuredData.h"
 
 namespace lldb_private {
 class CommandPluginInterfaceImplementation;
@@ -314,6 +315,8 @@ public:
   /// Resolve the command just as HandleCommand would, expanding abbreviations
   /// and aliases.  If successful, result->GetOutput has the full expansion.
   void ResolveCommand(const char *command_line, SBCommandReturnObject &result);
+
+  SBStructuredData GetStatistics();
 
 protected:
   friend class lldb_private::CommandPluginInterfaceImplementation;

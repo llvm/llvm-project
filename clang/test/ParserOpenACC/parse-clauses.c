@@ -205,18 +205,24 @@ void IfClause() {
 #pragma acc serial if, seq
   for(;;){}
 
-  // expected-error@+2{{expected expression}}
+  // expected-error@+4{{expected expression}}
+  // expected-error@+3{{expected ')'}}
+  // expected-note@+2{{to match this '('}}
   // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
 #pragma acc serial if(
   for(;;){}
 
-  // expected-error@+2{{use of undeclared identifier 'seq'}}
+  // expected-error@+4{{use of undeclared identifier 'seq'}}
+  // expected-error@+3{{expected ')'}}
+  // expected-note@+2{{to match this '('}}
   // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
 #pragma acc serial if( seq
   for(;;){}
 
-  // expected-error@+3{{expected expression}}
-  // expected-error@+2{{use of undeclared identifier 'seq'}}
+  // expected-error@+5{{expected expression}}
+  // expected-error@+4{{use of undeclared identifier 'seq'}}
+  // expected-error@+3{{expected ')'}}
+  // expected-note@+2{{to match this '('}}
   // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
 #pragma acc serial if(, seq
   for(;;){}
@@ -284,18 +290,24 @@ void SyncClause() {
 #pragma acc serial loop self, seq
   for(;;){}
 
-  // expected-error@+2{{expected expression}}
+  // expected-error@+4{{expected expression}}
+  // expected-error@+3{{expected ')'}}
+  // expected-note@+2{{to match this '('}}
   // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
 #pragma acc serial loop self(
   for(;;){}
 
-  // expected-error@+2{{use of undeclared identifier 'seq'}}
+  // expected-error@+4{{use of undeclared identifier 'seq'}}
+  // expected-error@+3{{expected ')'}}
+  // expected-note@+2{{to match this '('}}
   // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
 #pragma acc serial loop self( seq
   for(;;){}
 
-  // expected-error@+3{{expected expression}}
-  // expected-error@+2{{use of undeclared identifier 'seq'}}
+  // expected-error@+5{{expected expression}}
+  // expected-error@+4{{use of undeclared identifier 'seq'}}
+  // expected-error@+3{{expected ')'}}
+  // expected-note@+2{{to match this '('}}
   // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
 #pragma acc serial loop self(, seq
   for(;;){}
@@ -340,7 +352,9 @@ void SyncClause() {
 #pragma acc serial self(i > j
   for(;;){}
 
-  // expected-error@+2{{use of undeclared identifier 'seq'}}
+  // expected-error@+4{{use of undeclared identifier 'seq'}}
+  // expected-error@+3{{expected ')'}}
+  // expected-note@+2{{to match this '('}}
   // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
 #pragma acc serial self(i > j, seq
   for(;;){}
@@ -405,11 +419,15 @@ void VarListClauses() {
   // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
 #pragma acc serial copy), seq
 
-  // expected-error@+2{{expected expression}}
+  // expected-error@+4{{expected expression}}
+  // expected-error@+3{{expected ')'}}
+  // expected-note@+2{{to match this '('}}
   // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
 #pragma acc serial copy(
 
-  // expected-error@+2{{expected expression}}
+  // expected-error@+4{{expected expression}}
+  // expected-error@+3{{expected ')'}}
+  // expected-note@+2{{to match this '('}}
   // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
 #pragma acc serial copy(, seq
 
@@ -907,6 +925,358 @@ void IntExprParsing() {
   // expected-error@+2{{invalid tag 'length' on 'worker' clause}}
   // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
 #pragma acc loop worker(length:returns_int())
+}
+
+void device_type() {
+  // expected-error@+2{{expected '('}}
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc parallel device_type
+  // expected-error@+2{{expected '('}}
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc parallel dtype
+
+  // expected-error@+4{{expected identifier}}
+  // expected-error@+3{{expected ')'}}
+  // expected-note@+2{{to match this '('}}
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc parallel device_type(
+  // expected-error@+4{{expected identifier}}
+  // expected-error@+3{{expected ')'}}
+  // expected-note@+2{{to match this '('}}
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc parallel dtype(
+
+  // expected-error@+2{{expected identifier}}
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc parallel device_type()
+  // expected-error@+2{{expected identifier}}
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc parallel dtype()
+
+  // expected-error@+3{{expected ')'}}
+  // expected-note@+2{{to match this '('}}
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc parallel device_type(*
+  // expected-error@+3{{expected ')'}}
+  // expected-note@+2{{to match this '('}}
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc parallel dtype(*
+
+  // expected-error@+3{{expected ')'}}
+  // expected-note@+2{{to match this '('}}
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc parallel device_type(ident
+  // expected-error@+3{{expected ')'}}
+  // expected-note@+2{{to match this '('}}
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc parallel dtype(ident
+
+  // expected-error@+4{{expected ','}}
+  // expected-error@+3{{expected ')'}}
+  // expected-note@+2{{to match this '('}}
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc parallel device_type(ident ident2
+  // expected-error@+4{{expected ','}}
+  // expected-error@+3{{expected ')'}}
+  // expected-note@+2{{to match this '('}}
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc parallel dtype(ident ident2
+
+  // expected-error@+3{{expected ')'}}
+  // expected-note@+2{{to match this '('}}
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc parallel device_type(ident, ident2
+  // expected-error@+3{{expected ')'}}
+  // expected-note@+2{{to match this '('}}
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc parallel dtype(ident, ident2
+
+  // expected-error@+2{{expected identifier}}
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc parallel device_type(ident, ident2,)
+  // expected-error@+2{{expected identifier}}
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc parallel dtype(ident, ident2,)
+
+  // expected-error@+3{{expected ')'}}
+  // expected-note@+2{{to match this '('}}
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc parallel device_type(*,)
+  // expected-error@+3{{expected ')'}}
+  // expected-note@+2{{to match this '('}}
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc parallel dtype(*,)
+
+  // expected-error@+3{{expected ')'}}
+  // expected-note@+2{{to match this '('}}
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc parallel device_type(*,ident)
+  // expected-error@+3{{expected ')'}}
+  // expected-note@+2{{to match this '('}}
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc parallel dtype(*,ident)
+
+  // expected-error@+2{{expected identifier}}
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc parallel device_type(ident, *)
+  // expected-error@+2{{expected identifier}}
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc parallel dtype(ident, *)
+
+  // expected-error@+2{{expected identifier}}
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc parallel device_type("foo", 54)
+  // expected-error@+2{{expected identifier}}
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc parallel dtype(31, "bar")
+
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc parallel device_type(ident, auto, int, float)
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc parallel dtype(ident, auto, int, float)
+
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc parallel device_type(ident, auto, int, float) dtype(ident, auto, int, float)
+}
+
+#define acc_async_sync -1
+void AsyncArgument() {
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc parallel async
+
+  // expected-error@+2{{expected expression}}
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc parallel async()
+
+  // expected-error@+2{{use of undeclared identifier 'invalid'}}
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc parallel async(invalid)
+
+  // expected-error@+3{{expected ')'}}
+  // expected-note@+2{{to match this '('}}
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc parallel async(4, 3)
+
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc parallel async(returns_int())
+
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc parallel async(5)
+
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc parallel async(acc_async_sync)
+}
+
+void Tile() {
+
+  int* Foo;
+  // expected-error@+2{{expected '('}}
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc loop tile
+  for(;;){}
+  // expected-error@+4{{expected expression}}
+  // expected-error@+3{{expected ')'}}
+  // expected-note@+2{{to match this '('}}
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc loop tile(
+  for(;;){}
+  // expected-error@+2{{expected expression}}
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc loop tile()
+  for(;;){}
+  // expected-error@+4{{expected expression}}
+  // expected-error@+3{{expected ')'}}
+  // expected-note@+2{{to match this '('}}
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc loop tile(,
+  for(;;){}
+  // expected-error@+2{{expected expression}}
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc loop tile(,)
+  for(;;){}
+  // expected-error@+2{{use of undeclared identifier 'invalid'}}
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc loop tile(returns_int(), *, invalid, *)
+  for(;;){}
+
+  // expected-error@+2{{expected expression}}
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc loop tile(returns_int() *, Foo, *)
+  for(;;){}
+
+  // expected-error@+2{{indirection requires pointer operand ('int' invalid)}}
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc loop tile(* returns_int() , *)
+  for(;;){}
+
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc loop tile(*)
+  for(;;){}
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc loop tile(*Foo, *Foo)
+  for(;;){}
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc loop tile(5)
+  for(;;){}
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc loop tile(*, 5)
+  for(;;){}
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc loop tile(5, *)
+  for(;;){}
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc loop tile(5, *, 3, *)
+  for(;;){}
+}
+
+void Gang() {
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc loop gang
+  for(;;){}
+  // expected-error@+4{{expected expression}}
+  // expected-error@+3{{expected ')'}}
+  // expected-note@+2{{to match this '('}}
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc loop gang(
+  for(;;){}
+  // expected-error@+2{{expected expression}}
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc loop gang()
+  for(;;){}
+
+  // expected-error@+2{{expected expression}}
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc loop gang(5, *)
+  for(;;){}
+
+  // expected-error@+2{{expected expression}}
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc loop gang(*)
+  for(;;){}
+
+  // expected-error@+2{{expected expression}}
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc loop gang(5, num:*)
+  for(;;){}
+
+  // expected-error@+2{{expected expression}}
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc loop gang(num:5, *)
+  for(;;){}
+
+  // expected-error@+2{{expected expression}}
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc loop gang(num:5, num:*)
+  for(;;){}
+
+  // expected-error@+2{{expected expression}}
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc loop gang(num:*)
+  for(;;){}
+
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc loop gang(dim:5)
+  for(;;){}
+
+  // expected-error@+2{{expected expression}}
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc loop gang(dim:5, dim:*)
+  for(;;){}
+
+  // expected-error@+2{{expected expression}}
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc loop gang(dim:*)
+  for(;;){}
+
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc loop gang(static:*)
+  for(;;){}
+
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc loop gang(static:*, static:5)
+  for(;;){}
+
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc loop gang(static:*, 5)
+  for(;;){}
+
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc loop gang(static:45, 5)
+  for(;;){}
+
+  // expected-error@+4{{expected expression}}
+  // expected-error@+3{{expected ')'}}
+  // expected-note@+2{{to match this '('}}
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc loop gang(static:45,
+  for(;;){}
+
+  // expected-error@+3{{expected ')'}}
+  // expected-note@+2{{to match this '('}}
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc loop gang(static:45
+  for(;;){}
+
+  // expected-error@+4{{expected expression}}
+  // expected-error@+3{{expected ')'}}
+  // expected-note@+2{{to match this '('}}
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc loop gang(static:*,
+  for(;;){}
+
+  // expected-error@+3{{expected ')'}}
+  // expected-note@+2{{to match this '('}}
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc loop gang(static:*
+  for(;;){}
+
+  // expected-error@+4{{expected expression}}
+  // expected-error@+3{{expected ')'}}
+  // expected-note@+2{{to match this '('}}
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc loop gang(45,
+  for(;;){}
+
+  // expected-error@+3{{expected ')'}}
+  // expected-note@+2{{to match this '('}}
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc loop gang(45
+  for(;;){}
+
+  // expected-error@+4{{expected expression}}
+  // expected-error@+3{{expected ')'}}
+  // expected-note@+2{{to match this '('}}
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc loop gang(num:45,
+  for(;;){}
+
+  // expected-error@+3{{expected ')'}}
+  // expected-note@+2{{to match this '('}}
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc loop gang(num:45
+  for(;;){}
+
+  // expected-error@+4{{expected expression}}
+  // expected-error@+3{{expected ')'}}
+  // expected-note@+2{{to match this '('}}
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc loop gang(dim:45,
+  for(;;){}
+
+  // expected-error@+3{{expected ')'}}
+  // expected-note@+2{{to match this '('}}
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc loop gang(dim:45
+  for(;;){}
+
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc loop gang(static:*, dim:returns_int(), 5)
+  for(;;){}
+
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc loop gang(num: 32, static:*, dim:returns_int(), 5)
+  for(;;){}
+
 }
 
   // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}

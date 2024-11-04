@@ -41,11 +41,11 @@ LIBC_INLINE T trunc(T x) {
 
   // If the exponent is such that abs(x) is less than 1, then return 0.
   if (exponent <= -1)
-    return T(FPBits<T>::zero(bits.sign()));
+    return FPBits<T>::zero(bits.sign()).get_val();
 
   int trim_size = FPBits<T>::FRACTION_LEN - exponent;
   bits.set_mantissa((bits.get_mantissa() >> trim_size) << trim_size);
-  return T(bits);
+  return bits.get_val();
 }
 
 template <typename T, cpp::enable_if_t<cpp::is_floating_point_v<T>, int> = 0>
@@ -73,7 +73,7 @@ LIBC_INLINE T ceil(T x) {
 
   uint32_t trim_size = FPBits<T>::FRACTION_LEN - exponent;
   bits.set_mantissa((bits.get_mantissa() >> trim_size) << trim_size);
-  T trunc_value = T(bits);
+  T trunc_value = bits.get_val();
 
   // If x is already an integer, return it.
   if (trunc_value == x)
@@ -114,19 +114,19 @@ LIBC_INLINE T round(T x) {
 
   if (exponent == -1) {
     // Absolute value of x is greater than equal to 0.5 but less than 1.
-    return T(FPBits<T>::one(bits.sign()));
+    return FPBits<T>::one(bits.sign()).get_val();
   }
 
   if (exponent <= -2) {
     // Absolute value of x is less than 0.5.
-    return T(FPBits<T>::zero(bits.sign()));
+    return FPBits<T>::zero(bits.sign()).get_val();
   }
 
   uint32_t trim_size = FPBits<T>::FRACTION_LEN - exponent;
   bool half_bit_set =
       bool(bits.get_mantissa() & (StorageType(1) << (trim_size - 1)));
   bits.set_mantissa((bits.get_mantissa() >> trim_size) << trim_size);
-  T trunc_value = T(bits);
+  T trunc_value = bits.get_val();
 
   // If x is already an integer, return it.
   if (trunc_value == x)
@@ -180,7 +180,7 @@ LIBC_INLINE T round_using_current_rounding_mode(T x) {
   uint32_t trim_size = FPBits<T>::FRACTION_LEN - exponent;
   FPBits<T> new_bits = bits;
   new_bits.set_mantissa((bits.get_mantissa() >> trim_size) << trim_size);
-  T trunc_value = T(new_bits);
+  T trunc_value = new_bits.get_val();
 
   // If x is already an integer, return it.
   if (trunc_value == x)

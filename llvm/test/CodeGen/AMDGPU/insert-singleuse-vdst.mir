@@ -18,7 +18,6 @@ body: |
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
   ; CHECK-NEXT:   liveins: $vgpr0, $vgpr2
-  ; CHECK-NEXT: {{  $}}
   bb.0:
     liveins: $vgpr0
     $vgpr1 = V_ADD_U32_e32 $vgpr0, $vgpr0, implicit $exec
@@ -43,7 +42,6 @@ body: |
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
   ; CHECK-NEXT:   liveins: $vgpr4_vgpr5
-  ; CHECK-NEXT: {{  $}}
   bb.0:
     liveins: $vgpr0_vgpr1
     $vgpr2_vgpr3 = V_LSHLREV_B64_e64 0, $vgpr0_vgpr1, implicit $exec
@@ -70,7 +68,6 @@ body: |
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
   ; CHECK-NEXT:   liveins: $vgpr0, $vgpr3
-  ; CHECK-NEXT: {{  $}}
   bb.0:
     liveins: $vgpr0
     $vgpr1 = V_ADD_U32_e32 $vgpr0, $vgpr0, implicit $exec
@@ -144,7 +141,6 @@ body: |
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
   ; CHECK-NEXT:   liveins: $vgpr0, $vgpr2
-  ; CHECK-NEXT: {{  $}}
   bb.0:
     liveins: $vgpr0
     $vgpr1 = V_MOV_B32_e32 $vgpr0, implicit $exec
@@ -180,7 +176,6 @@ body: |
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
   ; CHECK-NEXT:   liveins: $vgpr16, $vgpr18
-  ; CHECK-NEXT: {{  $}}
   bb.0:
     liveins: $vgpr3, $vgpr5, $sgpr0, $sgpr2, $sgpr4, $sgpr5, $sgpr16, $sgpr17, $sgpr18, $sgpr19
     $vgpr14 = V_MUL_F32_e32 $sgpr4, $vgpr3, implicit $exec, implicit $mode
@@ -213,7 +208,6 @@ body: |
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
   ; CHECK-NEXT:   liveins: $vgpr1, $vgpr2
-  ; CHECK-NEXT: {{  $}}
   bb.0:
     liveins: $vgpr0
     $vgpr0 = V_MOV_B32_e32 $vgpr0, implicit $exec
@@ -244,7 +238,6 @@ body: |
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
   ; CHECK-NEXT:   liveins: $vgpr1, $vgpr2
-  ; CHECK-NEXT: {{  $}}
   bb.0:
     liveins: $vgpr0
     $vgpr0 = V_MOV_B32_e32 $vgpr0, implicit $exec
@@ -275,7 +268,6 @@ body: |
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
   ; CHECK-NEXT:   liveins: $vgpr2, $vgpr3
-  ; CHECK-NEXT: {{  $}}
   bb.0:
     liveins: $vgpr0
     $vgpr0 = V_MOV_B32_e32 $vgpr0, implicit $exec
@@ -310,7 +302,6 @@ body: |
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2:
   ; CHECK-NEXT:   liveins: $vgpr1, $vgpr2
-  ; CHECK-NEXT: {{  $}}
   bb.0:
     liveins: $vgpr0
     $vgpr0 = V_MOV_B32_e32 $vgpr0, implicit $exec
@@ -347,7 +338,6 @@ body: |
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2:
   ; CHECK-NEXT:   liveins: $vgpr3
-  ; CHECK-NEXT: {{  $}}
   bb.0:
     liveins: $vgpr0, $vgpr1
     $vgpr2 = V_MOV_B32_e32 $vgpr1, implicit $exec
@@ -384,7 +374,6 @@ body: |
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2:
   ; CHECK-NEXT:   liveins: $vgpr0, $vgpr1, $vgpr2
-  ; CHECK-NEXT: {{  $}}
   bb.0:
     liveins: $vgpr0
     $vgpr0 = V_MOV_B32_e32 $vgpr0, implicit $exec
@@ -416,7 +405,6 @@ body: |
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
   ; CHECK-NEXT:   liveins: $vgpr0
-  ; CHECK-NEXT: {{  $}}
   bb.0:
     liveins: $sgpr0_sgpr1
     $vgpr0 = V_MOV_B32_e32 0, implicit $exec
@@ -443,7 +431,6 @@ body: |
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
   ; CHECK-NEXT:   liveins: $vgpr0
-  ; CHECK-NEXT: {{  $}}
   bb.0:
     liveins: $sgpr0
     $vgpr0 = V_MOV_B32_e32 0, implicit $exec
@@ -470,7 +457,6 @@ body: |
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
   ; CHECK-NEXT:   liveins: $vgpr0
-  ; CHECK-NEXT: {{  $}}
   bb.0:
     liveins: $sgpr0
     $vgpr0 = V_MOV_B32_e32 0, implicit $exec
@@ -495,7 +481,6 @@ body: |
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
   ; CHECK-NEXT:   liveins: $vgpr1_lo16
-  ; CHECK-NEXT: {{  $}}
   bb.0:
     $vgpr0 = V_MOV_B32_e32 0, implicit $exec
     $vgpr1_lo16 = V_MOV_B16_t16_e32 $vgpr0_lo16, implicit $exec
@@ -518,7 +503,6 @@ body: |
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
   ; CHECK-NEXT:   liveins: $vgpr1_hi16
-  ; CHECK-NEXT: {{  $}}
   bb.0:
     $vgpr0 = V_MOV_B32_e32 0, implicit $exec
     $vgpr1_hi16 = V_MOV_B16_t16_e32 $vgpr0_hi16, implicit $exec
@@ -544,7 +528,6 @@ body: |
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
   ; CHECK-NEXT:   liveins: $vgpr1
-  ; CHECK-NEXT: {{  $}}
   bb.0:
     $vgpr0 = V_MOV_B32_e32 0, implicit $exec
     $vgpr1_lo16 = V_MOV_B16_t16_e32 $vgpr0_lo16, implicit $exec
@@ -568,7 +551,6 @@ body: |
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
   ; CHECK-NEXT:   liveins: $vgpr1_lo16
-  ; CHECK-NEXT: {{  $}}
   bb.0:
     $vgpr0 = V_MOV_B32_e32 0, implicit $exec
     $vgpr1_lo16 = V_ADD_F16_t16_e32 $vgpr0_lo16, $vgpr0_hi16, implicit $mode, implicit $exec
@@ -592,7 +574,6 @@ body: |
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
   ; CHECK-NEXT:   liveins: $vgpr1
-  ; CHECK-NEXT: {{  $}}
   bb.0:
     liveins: $vgpr0
     $vgpr0_lo16 = V_MOV_B16_t16_e32 0, implicit $exec
@@ -617,7 +598,6 @@ body: |
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
   ; CHECK-NEXT:   liveins: $vgpr1
-  ; CHECK-NEXT: {{  $}}
   bb.0:
     liveins: $vgpr0
     $vgpr0_hi16 = V_MOV_B16_t16_e32 0, implicit $exec

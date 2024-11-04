@@ -39,9 +39,13 @@ public:
              const wasm::WasmTableType *TableType,
              const wasm::WasmSignature *Signature)
       : Info(Info), GlobalType(GlobalType), TableType(TableType),
-        Signature(Signature) {}
+        Signature(Signature) {
+    assert(!Signature || Signature->Kind != wasm::WasmSignature::Placeholder);
+  }
 
-  const wasm::WasmSymbolInfo &Info;
+  // Symbol info as represented in the symbol's 'syminfo' entry of an object
+  // file's symbol table.
+  wasm::WasmSymbolInfo Info;
   const wasm::WasmGlobalType *GlobalType;
   const wasm::WasmTableType *TableType;
   const wasm::WasmSignature *Signature;
@@ -209,6 +213,7 @@ public:
   Expected<SubtargetFeatures> getFeatures() const override;
   bool isRelocatableObject() const override;
   bool isSharedObject() const;
+  bool hasUnmodeledTypes() const { return HasUnmodeledTypes; }
 
   struct ReadContext {
     const uint8_t *Start;
@@ -291,6 +296,7 @@ private:
   bool HasLinkingSection = false;
   bool HasDylinkSection = false;
   bool HasMemory64 = false;
+  bool HasUnmodeledTypes = false;
   wasm::WasmLinkingData LinkingData;
   uint32_t NumImportedGlobals = 0;
   uint32_t NumImportedTables = 0;

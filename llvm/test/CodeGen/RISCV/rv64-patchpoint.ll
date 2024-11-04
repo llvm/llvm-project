@@ -14,10 +14,10 @@ define void @small_patchpoint_codegen(i64 %p1, i64 %p2, i64 %p3, i64 %p4) {
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    ret
 entry:
-  %result = tail call i64 (i64, i32, i8*, i32, ...) @llvm.experimental.patchpoint.i64(i64 5, i32 20, i8* null, i32 2, i64 %p1, i64 %p2)
+  %result = tail call i64 (i64, i32, ptr, i32, ...) @llvm.experimental.patchpoint.i64(i64 5, i32 20, ptr null, i32 2, i64 %p1, i64 %p2)
   ret void
 }
 
 declare void @llvm.experimental.stackmap(i64, i32, ...)
-declare void @llvm.experimental.patchpoint.void(i64, i32, i8*, i32, ...)
-declare i64 @llvm.experimental.patchpoint.i64(i64, i32, i8*, i32, ...)
+declare void @llvm.experimental.patchpoint.void(i64, i32, ptr, i32, ...)
+declare i64 @llvm.experimental.patchpoint.i64(i64, i32, ptr, i32, ...)

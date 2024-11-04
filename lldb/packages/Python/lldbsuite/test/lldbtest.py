@@ -1543,14 +1543,6 @@ class Base(unittest2.TestCase):
         d = {"CXX_SOURCES": sources, "EXE": exe_name}
         self.build(dictionary=d)
 
-    def signBinary(self, binary_path):
-        if sys.platform.startswith("darwin"):
-            codesign_cmd = 'codesign --force --sign "%s" %s' % (
-                lldbtest_config.codesign_identity,
-                binary_path,
-            )
-            call(codesign_cmd, shell=True)
-
     def findBuiltClang(self):
         """Tries to find and use Clang from the build directory as the compiler (instead of the system compiler)."""
         paths_to_try = [

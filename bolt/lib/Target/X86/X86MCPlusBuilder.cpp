@@ -2197,7 +2197,7 @@ public:
               MO->BaseRegNum != X86::RIP && MO->BaseRegNum != X86::RBP &&
               MO->BaseRegNum != X86::NoRegister &&
               MO->IndexRegNum == X86::NoRegister &&
-              MO->SegRegNum == X86::NoRegister && MO->BaseRegNum != X86::RIP) {
+              MO->SegRegNum == X86::NoRegister) {
             VtableRegNum = MO->BaseRegNum;
             MethodOffset = MO->DispImm;
             MethodFetchInsns.push_back(&CurInst);

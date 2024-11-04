@@ -1,5 +1,7 @@
 ; RUN: opt -passes='declare-to-assign,verify' %s -S -o - \
 ; RUN: | FileCheck %s --implicit-check-not="call void @llvm.dbg"
+; RUN: opt --try-experimental-debuginfo-iterators -passes='declare-to-assign,verify' %s -S -o - \
+; RUN: | FileCheck %s --implicit-check-not="call void @llvm.dbg"
 
 ;; This test checks that `trackAssignments` is working correctly by using the
 ;; pass-wrapper `declare-to-assign`. Each function checks some specific

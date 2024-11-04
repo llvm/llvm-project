@@ -232,7 +232,7 @@ bool CGIOperandList::hasSubOperandAlias(
 
 std::pair<unsigned,unsigned>
 CGIOperandList::ParseOperandName(StringRef Op, bool AllowWholeOp) {
-  if (Op.empty() || Op[0] != '$')
+  if (!Op.starts_with("$"))
     PrintFatalError(TheDef->getLoc(),
                     TheDef->getName() + ": Illegal operand name: '" + Op + "'");
 

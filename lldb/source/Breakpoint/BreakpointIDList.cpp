@@ -15,6 +15,8 @@
 #include "lldb/Utility/Args.h"
 #include "lldb/Utility/StreamString.h"
 
+#include "llvm/ADT/STLExtras.h"
+
 using namespace lldb;
 using namespace lldb_private;
 
@@ -48,36 +50,8 @@ bool BreakpointIDList::AddBreakpointID(BreakpointID bp_id) {
                // return true.
 }
 
-bool BreakpointIDList::AddBreakpointID(const char *bp_id_str) {
-  auto bp_id = BreakpointID::ParseCanonicalReference(bp_id_str);
-  if (!bp_id)
-    return false;
-
-  m_breakpoint_ids.push_back(*bp_id);
-  return true;
-}
-
-bool BreakpointIDList::FindBreakpointID(BreakpointID &bp_id,
-                                        size_t *position) const {
-  for (size_t i = 0; i < m_breakpoint_ids.size(); ++i) {
-    BreakpointID tmp_id = m_breakpoint_ids[i];
-    if (tmp_id.GetBreakpointID() == bp_id.GetBreakpointID() &&
-        tmp_id.GetLocationID() == bp_id.GetLocationID()) {
-      *position = i;
-      return true;
-    }
-  }
-
-  return false;
-}
-
-bool BreakpointIDList::FindBreakpointID(const char *bp_id_str,
-                                        size_t *position) const {
-  auto bp_id = BreakpointID::ParseCanonicalReference(bp_id_str);
-  if (!bp_id)
-    return false;
-
-  return FindBreakpointID(*bp_id, position);
+bool BreakpointIDList::Contains(BreakpointID bp_id) const {
+  return llvm::is_contained(m_breakpoint_ids, bp_id);
 }
 
 //  This function takes OLD_ARGS, which is usually the result of breaking the

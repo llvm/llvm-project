@@ -1215,8 +1215,8 @@ define <4 x i64> @PR50356(<4 x i64> %0, <4 x i32> %1, <4 x i64> %2) unnamed_addr
 ; AVX512-NEXT:    vmovq {{.*#+}} xmm1 = mem[0],zero
 ; AVX512-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm1[0],xmm0[0]
 ; AVX512-NEXT:    vpcmpgtq %zmm0, %zmm2, %k1
-; AVX512-NEXT:    vmovdqa {{.*#+}} ymm1 = [17,51,85,119]
-; AVX512-NEXT:    vmovdqa {{.*#+}} ymm0 = [34,68,102,136]
+; AVX512-NEXT:    vpmovsxbq {{.*#+}} ymm1 = [17,51,85,119]
+; AVX512-NEXT:    vpmovzxbq {{.*#+}} ymm0 = [34,68,102,136]
 ; AVX512-NEXT:    vmovdqa64 %zmm1, %zmm0 {%k1}
 ; AVX512-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
 ; AVX512-NEXT:    movq %rbp, %rsp
@@ -1238,8 +1238,8 @@ define <4 x i64> @PR50356(<4 x i64> %0, <4 x i32> %1, <4 x i64> %2) unnamed_addr
 ; AVX512VL-NEXT:    vmovq {{.*#+}} xmm1 = mem[0],zero
 ; AVX512VL-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm1[0],xmm0[0]
 ; AVX512VL-NEXT:    vpcmpgtq %ymm0, %ymm2, %k1
-; AVX512VL-NEXT:    vmovdqa {{.*#+}} ymm0 = [34,68,102,136]
-; AVX512VL-NEXT:    vmovdqa64 {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0 {%k1}
+; AVX512VL-NEXT:    vpmovzxbq {{.*#+}} ymm0 = [34,68,102,136]
+; AVX512VL-NEXT:    vmovdqa64 {{.*#+}} ymm0 {%k1} = [17,51,85,119]
 ; AVX512VL-NEXT:    movq %rbp, %rsp
 ; AVX512VL-NEXT:    popq %rbp
 ; AVX512VL-NEXT:    retq

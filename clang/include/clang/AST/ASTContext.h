@@ -214,6 +214,9 @@ class ASTContext : public RefCountedBase<ASTContext> {
       DependentTypeOfExprTypes;
   mutable llvm::ContextualFoldingSet<DependentDecltypeType, ASTContext &>
       DependentDecltypeTypes;
+
+  mutable llvm::FoldingSet<PackIndexingType> DependentPackIndexingTypes;
+
   mutable llvm::FoldingSet<TemplateTypeParmType> TemplateTypeParmTypes;
   mutable llvm::FoldingSet<ObjCTypeParamType> ObjCTypeParamTypes;
   mutable llvm::FoldingSet<SubstTemplateTypeParmType>
@@ -1713,6 +1716,11 @@ public:
   /// C++11 decltype.
   QualType getDecltypeType(Expr *e, QualType UnderlyingType) const;
 
+  QualType getPackIndexingType(QualType Pattern, Expr *IndexExpr,
+                               bool FullySubstituted = false,
+                               ArrayRef<QualType> Expansions = {},
+                               int Index = -1) const;
+
   /// Unary type transforms
   QualType getUnaryTransformType(QualType BaseType, QualType UnderlyingType,
                                  UnaryTransformType::UTTKind UKind) const;
@@ -2405,12 +2413,18 @@ public:
   unsigned getTargetDefaultAlignForAttributeAligned() const;
 
   /// Return the alignment in bits that should be given to a
-  /// global variable with type \p T.
-  unsigned getAlignOfGlobalVar(QualType T) const;
+  /// global variable with type \p T. If \p VD is non-null it will be
+  /// considered specifically for the query.
+  unsigned getAlignOfGlobalVar(QualType T, const VarDecl *VD) const;
 
   /// Return the alignment in characters that should be given to a
-  /// global variable with type \p T.
-  CharUnits getAlignOfGlobalVarInChars(QualType T) const;
+  /// global variable with type \p T. If \p VD is non-null it will be
+  /// considered specifically for the query.
+  CharUnits getAlignOfGlobalVarInChars(QualType T, const VarDecl *VD) const;
+
+  /// Return the minimum alignement as specified by the target. If \p VD is
+  /// non-null it may be used to identify external or weak variables.
+  unsigned getMinGlobalAlignOfVar(uint64_t Size, const VarDecl *VD) const;
 
   /// Return a conservative estimate of the alignment of the specified
   /// decl \p D.

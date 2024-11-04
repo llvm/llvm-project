@@ -328,8 +328,9 @@ bool llvm::runPassPipeline(
     StringRef Arg0, Module &M, TargetMachine *TM, TargetLibraryInfoImpl *TLII,
     ToolOutputFile *Out, ToolOutputFile *ThinLTOLinkOut,
     ToolOutputFile *OptRemarkFile, StringRef PassPipeline,
-    ArrayRef<PassPlugin> PassPlugins, OutputKind OK, VerifierKind VK,
-    bool ShouldPreserveAssemblyUseListOrder,
+    ArrayRef<PassPlugin> PassPlugins,
+    ArrayRef<std::function<void(llvm::PassBuilder &)>> PassBuilderCallbacks,
+    OutputKind OK, VerifierKind VK, bool ShouldPreserveAssemblyUseListOrder,
     bool ShouldPreserveBitcodeUseListOrder, bool EmitSummaryIndex,
     bool EmitModuleHash, bool EnableDebugify, bool VerifyDIPreserve,
     bool UnifiedLTO) {
@@ -427,6 +428,10 @@ bool llvm::runPassPipeline(
   // For any loaded plugins, let them register pass builder callbacks.
   for (auto &PassPlugin : PassPlugins)
     PassPlugin.registerPassBuilderCallbacks(PB);
+
+  // Load any explicitly specified plugins.
+  for (auto &PassCallback : PassBuilderCallbacks)
+    PassCallback(PB);
 
 #define HANDLE_EXTENSION(Ext)                                                  \
   get##Ext##PluginInfo().RegisterPassBuilderCallbacks(PB);

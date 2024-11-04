@@ -41,10 +41,10 @@ target datalayout = "e-m:e-p:32:32-i64:64-v128:64:128-a:0:32-n32-S64"
 target triple = "armv8r-arm-none-eabi"
 
 ; Function Attrs: norecurse nounwind readnone
-define hidden i32 @foo(i32 %a, i32 %b, i32 %c, i32* %d) local_unnamed_addr #0 {
+define hidden i32 @foo(i32 %a, i32 %b, i32 %c, ptr %d) local_unnamed_addr #0 {
 entry:
   %xor = xor i32 %c, %b
-  %ld = load i32, i32* %d
+  %ld = load i32, ptr %d
   %add = add nsw i32 %xor, %ld
   %div = sdiv i32 %a, %b
   %sub = sub i32 %div, %add

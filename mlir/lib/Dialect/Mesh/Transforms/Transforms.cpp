@@ -8,6 +8,7 @@
 
 #include "mlir/Dialect/Mesh/Transforms/Transforms.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
+#include "mlir/Dialect/Mesh/IR/MeshDialect.h"
 #include "mlir/Dialect/Mesh/IR/MeshOps.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/DialectRegistry.h"
@@ -24,7 +25,7 @@ namespace mlir::mesh {
 namespace {
 
 /// Lower `mesh.process_multi_index` into expression using
-/// `mesh.process_linear_index` and `mesh.cluster_shape`.
+/// `mesh.process_linear_index` and `mesh.mesh_shape`.
 struct ProcessMultiIndexOpLowering : OpRewritePattern<ProcessMultiIndexOp> {
   template <typename... OpRewritePatternArgs>
   ProcessMultiIndexOpLowering(SymbolTableCollection &symbolTableCollection,
@@ -35,9 +36,8 @@ struct ProcessMultiIndexOpLowering : OpRewritePattern<ProcessMultiIndexOp> {
 
   LogicalResult matchAndRewrite(ProcessMultiIndexOp op,
                                 PatternRewriter &rewriter) const override {
-    ClusterOp mesh =
-        symbolTableCollection.lookupNearestSymbolFrom<mesh::ClusterOp>(
-            op.getOperation(), op.getMeshAttr());
+    MeshOp mesh = symbolTableCollection.lookupNearestSymbolFrom<mesh::MeshOp>(
+        op.getOperation(), op.getMeshAttr());
     if (!mesh) {
       return failure();
     }
@@ -45,7 +45,7 @@ struct ProcessMultiIndexOpLowering : OpRewritePattern<ProcessMultiIndexOp> {
     ImplicitLocOpBuilder builder(op->getLoc(), rewriter);
     builder.setInsertionPointAfter(op.getOperation());
     Value linearIndex = builder.create<ProcessLinearIndexOp>(mesh);
-    ValueRange meshShape = builder.create<ClusterShapeOp>(mesh).getResults();
+    ValueRange meshShape = builder.create<MeshShapeOp>(mesh).getResults();
     SmallVector<Value> completeMultiIndex =
         builder.create<affine::AffineDelinearizeIndexOp>(linearIndex, meshShape)
             .getMultiIndex();

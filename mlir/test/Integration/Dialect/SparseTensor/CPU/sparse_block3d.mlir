@@ -32,9 +32,9 @@
 
 #Sparse1 = #sparse_tensor.encoding<{
   map = (i, j, k) -> (
-    i : compressed,
     j : compressed,
-    k : compressed
+    k : compressed,
+    i : dense
   )
 }>
 
@@ -91,7 +91,7 @@ module {
     // dense “fibers” in the i-dim, we end up with 8 stored entries.
     //
     // CHECK: 8
-    // CHECK-NEXT: ( 1, 5, 2, 6, 3, 7, 4, 8 )
+    // CHECK-NEXT: ( 1, 2, 3, 4, 5, 6, 7, 8 )
     //
     %na = sparse_tensor.number_of_entries %a : tensor<4x4x4xi32, #Sparse1>
     vector.print %na : index

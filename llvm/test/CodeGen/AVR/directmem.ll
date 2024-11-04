@@ -25,7 +25,7 @@ define void @global8_store() {
 ; CHECK-TINY-LABEL: global8_store:
 ; CHECK-TINY: ldi [[REG:r[0-9]+]], 6
 ; CHECK-TINY: sts char, [[REG]]
-  store i8 6, i8* @char
+  store i8 6, ptr @char
   ret void
 }
 
@@ -35,7 +35,7 @@ define i8 @global8_load() {
 ;
 ; CHECK-TINY-LABEL: global8_load:
 ; CHECK-TINY: lds r24, char
-  %result = load i8, i8* @char
+  %result = load i8, ptr @char
   ret i8 %result
 }
 
@@ -51,9 +51,9 @@ define void @array8_store() {
 ; CHECK-TINY-LABEL: array8_store:
 ; CHECK-TINY: ldi [[REG1:r[0-9]+]], 3
 ; CHECK-TINY: sts char.array+2, [[REG1]]
-  store i8 1, i8* getelementptr inbounds ([3 x i8], [3 x i8]* @char.array, i32 0, i64 0)
-  store i8 2, i8* getelementptr inbounds ([3 x i8], [3 x i8]* @char.array, i32 0, i64 1)
-  store i8 3, i8* getelementptr inbounds ([3 x i8], [3 x i8]* @char.array, i32 0, i64 2)
+  store i8 1, ptr @char.array
+  store i8 2, ptr getelementptr inbounds ([3 x i8], ptr @char.array, i32 0, i64 1)
+  store i8 3, ptr getelementptr inbounds ([3 x i8], ptr @char.array, i32 0, i64 2)
   ret void
 }
 
@@ -63,7 +63,7 @@ define i8 @array8_load() {
 ;
 ; CHECK-TINY-LABEL: array8_load:
 ; CHECK-TINY: lds r24, char.array+2
-  %result = load i8, i8* getelementptr inbounds ([3 x i8], [3 x i8]* @char.array, i32 0, i64 2)
+  %result = load i8, ptr getelementptr inbounds ([3 x i8], ptr @char.array, i32 0, i64 2)
   ret i8 %result
 }
 
@@ -77,9 +77,9 @@ define i8 @static8_inc() {
 ; CHECK-TINY: lds r24, char.static
 ; CHECK-TINY: inc r24
 ; CHECK-TINY: sts char.static, r24
-  %1 = load i8, i8* @char.static
+  %1 = load i8, ptr @char.static
   %inc = add nsw i8 %1, 1
-  store i8 %inc, i8* @char.static
+  store i8 %inc, ptr @char.static
   ret i8 %inc
 }
 
@@ -89,7 +89,7 @@ define void @global16_store() {
 ; CHECK: ldi [[REG2:r[0-9]+]], 170
 ; CHECK: sts int+1, [[REG2]]
 ; CHECK: sts int, [[REG1]]
-  store i16 43707, i16* @int
+  store i16 43707, ptr @int
   ret void
 }
 
@@ -97,7 +97,7 @@ define i16 @global16_load() {
 ; CHECK-LABEL: global16_load:
 ; CHECK: lds r24, int
 ; CHECK: lds r25, int+1
-  %result = load i16, i16* @int
+  %result = load i16, ptr @int
   ret i16 %result
 }
 
@@ -118,9 +118,9 @@ define void @array16_store() {
 ; CHECK: ldi [[REG2:r[0-9]+]], 170
 ; CHECK: sts int.array+1, [[REG2]]
 ; CHECK: sts int.array, [[REG1]]
-  store i16 43707, i16* getelementptr inbounds ([3 x i16], [3 x i16]* @int.array, i32 0, i64 0)
-  store i16 43724, i16* getelementptr inbounds ([3 x i16], [3 x i16]* @int.array, i32 0, i64 1)
-  store i16 43741, i16* getelementptr inbounds ([3 x i16], [3 x i16]* @int.array, i32 0, i64 2)
+  store i16 43707, ptr @int.array
+  store i16 43724, ptr getelementptr inbounds ([3 x i16], ptr @int.array, i32 0, i64 1)
+  store i16 43741, ptr getelementptr inbounds ([3 x i16], ptr @int.array, i32 0, i64 2)
   ret void
 }
 
@@ -128,7 +128,7 @@ define i16 @array16_load() {
 ; CHECK-LABEL: array16_load:
 ; CHECK: lds r24, int.array+4
 ; CHECK: lds r25, int.array+5
-  %result = load i16, i16* getelementptr inbounds ([3 x i16], [3 x i16]* @int.array, i32 0, i64 2)
+  %result = load i16, ptr getelementptr inbounds ([3 x i16], ptr @int.array, i32 0, i64 2)
   ret i16 %result
 }
 
@@ -139,9 +139,9 @@ define i16 @static16_inc() {
 ; CHECK: adiw r24, 1
 ; CHECK: sts int.static+1, r25
 ; CHECK: sts int.static, r24
-  %1 = load i16, i16* @int.static
+  %1 = load i16, ptr @int.static
   %inc = add nsw i16 %1, 1
-  store i16 %inc, i16* @int.static
+  store i16 %inc, ptr @int.static
   ret i16 %inc
 }
 
@@ -155,7 +155,7 @@ define void @global32_store() {
 ; CHECK: ldi [[REG2:r[0-9]+]], 204
 ; CHECK: sts long+1, [[REG2]]
 ; CHECK: sts long, [[REG1]]
-  store i32 2864434397, i32* @long
+  store i32 2864434397, ptr @long
   ret void
 }
 
@@ -165,7 +165,7 @@ define i32 @global32_load() {
 ; CHECK: lds r23, long+1
 ; CHECK: lds r24, long+2
 ; CHECK: lds r25, long+3
-  %result = load i32, i32* @long
+  %result = load i32, ptr @long
   ret i32 %result
 }
 
@@ -201,9 +201,9 @@ define void @array32_store() {
 ; CHECK: ldi [[REG2:r[0-9]+]], 13
 ; CHECK: sts long.array+1, [[REG2]]
 ; CHECK: sts long.array, [[REG1]]
-  store i32 2887454020, i32* getelementptr inbounds ([3 x i32], [3 x i32]* @long.array, i32 0, i64 0)
-  store i32 1432778632, i32* getelementptr inbounds ([3 x i32], [3 x i32]* @long.array, i32 0, i64 1)
-  store i32 2578103244, i32* getelementptr inbounds ([3 x i32], [3 x i32]* @long.array, i32 0, i64 2)
+  store i32 2887454020, ptr @long.array
+  store i32 1432778632, ptr getelementptr inbounds ([3 x i32], ptr @long.array, i32 0, i64 1)
+  store i32 2578103244, ptr getelementptr inbounds ([3 x i32], ptr @long.array, i32 0, i64 2)
   ret void
 }
 
@@ -213,7 +213,7 @@ define i32 @array32_load() {
 ; CHECK: lds r23, long.array+9
 ; CHECK: lds r24, long.array+10
 ; CHECK: lds r25, long.array+11
-  %result = load i32, i32* getelementptr inbounds ([3 x i32], [3 x i32]* @long.array, i32 0, i64 2)
+  %result = load i32, ptr getelementptr inbounds ([3 x i32], ptr @long.array, i32 0, i64 2)
   ret i32 %result
 }
 
@@ -231,9 +231,9 @@ define i32 @static32_inc() {
 ; CHECK-DAG: sts long.static+2, r24
 ; CHECK-DAG: sts long.static+1, r23
 ; CHECK-DAG: sts long.static, r22
-  %1 = load i32, i32* @long.static
+  %1 = load i32, ptr @long.static
   %inc = add nsw i32 %1, 1
-  store i32 %inc, i32* @long.static
+  store i32 %inc, ptr @long.static
   ret i32 %inc
 }
 
@@ -255,7 +255,7 @@ define void @global64_store() {
 ; CHECK: ldi [[REG2:r[0-9]+]], 119
 ; CHECK: sts longlong+1, [[REG2]]
 ; CHECK: sts longlong, [[REG1]]
-  store i64 1234605616436508552, i64* @longlong
+  store i64 1234605616436508552, ptr @longlong
   ret void
 }
 
@@ -269,7 +269,7 @@ define i64 @global64_load() {
 ; CHECK: lds r23, longlong+5
 ; CHECK: lds r24, longlong+6
 ; CHECK: lds r25, longlong+7
-  %result = load i64, i64* @longlong
+  %result = load i64, ptr @longlong
   ret i64 %result
 }
 
@@ -291,9 +291,9 @@ define void @array64_store() {
 ; CHECK: ldi [[REG2:r[0-9]+]], 119
 ; CHECK: sts longlong.array+1, [[REG2]]
 ; CHECK: sts longlong.array, [[REG1]]
-  store i64 1234605616436508552, i64* getelementptr inbounds ([3 x i64], [3 x i64]* @longlong.array, i64 0, i64 0)
-  store i64 81985529216486895, i64* getelementptr inbounds ([3 x i64], [3 x i64]* @longlong.array, i64 0, i64 1)
-  store i64 1836475854449306472, i64* getelementptr inbounds ([3 x i64], [3 x i64]* @longlong.array, i64 0, i64 2)
+  store i64 1234605616436508552, ptr @longlong.array
+  store i64 81985529216486895, ptr getelementptr inbounds ([3 x i64], ptr @longlong.array, i64 0, i64 1)
+  store i64 1836475854449306472, ptr getelementptr inbounds ([3 x i64], ptr @longlong.array, i64 0, i64 2)
   ret void
 }
 
@@ -307,7 +307,7 @@ define i64 @array64_load() {
 ; CHECK: lds r23, longlong.array+21
 ; CHECK: lds r24, longlong.array+22
 ; CHECK: lds r25, longlong.array+23
-  %result = load i64, i64* getelementptr inbounds ([3 x i64], [3 x i64]* @longlong.array, i64 0, i64 2)
+  %result = load i64, ptr getelementptr inbounds ([3 x i64], ptr @longlong.array, i64 0, i64 2)
   ret i64 %result
 }
 
@@ -337,16 +337,16 @@ define i64 @static64_inc() {
 ; CHECK-DAG: sts longlong.static+2, r20
 ; CHECK-DAG: sts longlong.static+1, r19
 ; CHECK-DAG: sts longlong.static, r18
-  %1 = load i64, i64* @longlong.static
+  %1 = load i64, ptr @longlong.static
   %inc = add nsw i64 %1, 1
-  store i64 %inc, i64* @longlong.static
+  store i64 %inc, ptr @longlong.static
   ret i64 %inc
 }
 
 define i8 @constantaddr_read8() {
 ; CHECK-LABEL: constantaddr_read8:
 ; CHECK: lds r24, 1234
-  %1 = load i8, i8* inttoptr (i16 1234 to i8*)
+  %1 = load i8, ptr inttoptr (i16 1234 to ptr)
   ret i8 %1
 }
 
@@ -354,14 +354,14 @@ define i16 @constantaddr_read16() {
 ; CHECK-LABEL: constantaddr_read16:
 ; CHECK: lds r24, 1234
 ; CHECK: lds r25, 1235
-  %1 = load i16, i16* inttoptr (i16 1234 to i16*)
+  %1 = load i16, ptr inttoptr (i16 1234 to ptr)
   ret i16 %1
 }
 
 define void @constantaddr_write8() {
 ; CHECK-LABEL: constantaddr_write8:
 ; CHECK: sts 1234
-  store i8 22, i8* inttoptr (i16 1234 to i8*)
+  store i8 22, ptr inttoptr (i16 1234 to ptr)
   ret void
 }
 
@@ -369,6 +369,6 @@ define void @constantaddr_write16() {
 ; CHECK-LABEL: constantaddr_write16:
 ; CHECK: sts 1235
 ; CHECK: sts 1234
-  store i16 2222, i16* inttoptr (i16 1234 to i16*)
+  store i16 2222, ptr inttoptr (i16 1234 to ptr)
   ret void
 }

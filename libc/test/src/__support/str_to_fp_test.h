@@ -66,7 +66,7 @@ template <typename T> struct LlvmLibcStrToFloatTest : public testing::Test {
                                       const int expectedErrno = 0) {
     StorageType actual_output_mantissa = 0;
     uint32_t actual_output_exp2 = 0;
-    libc_errno = 0;
+    LIBC_NAMESPACE::libc_errno = 0;
 
     auto result = internal::simple_decimal_conversion<T>(numStart);
 
