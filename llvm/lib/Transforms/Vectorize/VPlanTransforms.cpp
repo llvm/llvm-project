@@ -694,8 +694,7 @@ void VPlanTransforms::optimizeForVFAndUF(VPlan &Plan, ElementCount BestVF,
 
   SmallVector<VPValue *> PossiblyDead(Term->operands());
   Term->eraseFromParent();
-  VPBasicBlock *Header =
-      cast<VPBasicBlock>(Plan.getVectorLoopRegion()->getEntry());
+  auto *Header = cast<VPBasicBlock>(Plan.getVectorLoopRegion()->getEntry());
   if (all_of(Header->phis(), [](VPRecipeBase &R) {
         return !isa<VPWidenIntOrFpInductionRecipe, VPReductionPHIRecipe>(&R);
       })) {
@@ -706,7 +705,7 @@ void VPlanTransforms::optimizeForVFAndUF(VPlan &Plan, ElementCount BestVF,
     }
 
     VPBlockBase *Preheader = Plan.getVectorLoopRegion()->getSinglePredecessor();
-    VPBasicBlock *Exiting =
+    auto *Exiting =
         cast<VPBasicBlock>(Plan.getVectorLoopRegion()->getExiting());
 
     auto *LoopRegion = Plan.getVectorLoopRegion();
@@ -741,7 +740,7 @@ void VPlanTransforms::optimizeForVFAndUF(VPlan &Plan, ElementCount BestVF,
 }
 
 /// Sink users of \p FOR after the recipe defining the previous value \p
-// Previous of the recurrence. \returns true if all users of \p FOR could be
+/// Previous of the recurrence. \returns true if all users of \p FOR could be
 /// re-arranged as needed or false if it is not possible.
 static bool
 sinkRecurrenceUsersAfterPrevious(VPFirstOrderRecurrencePHIRecipe *FOR,

@@ -7729,9 +7729,9 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
           dyn_cast<VPRegionBlock>(BestVPlan.getEntry()->getSingleSuccessor())) {
     VPBasicBlock *HeaderVPBB = R->getEntryBasicBlock();
     Loop *L = LI->getLoopFor(State.CFG.VPBB2IRBB[HeaderVPBB]);
-    if (VectorizedLoopID)
+    if (VectorizedLoopID) {
       L->setLoopID(*VectorizedLoopID);
-    else {
+    } else {
       // Keep all loop hints from the original loop on the vector loop (we'll
       // replace the vectorizer-specific hints below).
       if (MDNode *LID = OrigLoop->getLoopID())
