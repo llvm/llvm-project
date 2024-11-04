@@ -434,8 +434,7 @@ struct ConvertVectorLoad final : OpConversionPattern<vector::LoadOp> {
             : 0;
 
     // Always load enough elements which can cover the original elements.
-    int64_t maxintraDataOffset =
-        foldedIntraVectorOffset ? *foldedIntraVectorOffset : scale - 1;
+    int64_t maxintraDataOffset = foldedIntraVectorOffset.value_or(scale - 1);
     auto numElements =
         llvm::divideCeil(maxintraDataOffset + origElements, scale);
     Value result =
