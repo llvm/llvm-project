@@ -754,7 +754,7 @@ stackFrameIncludesInlinedCallStack(ArrayRef<Frame> ProfileCallStack,
   return InlCallStackIter == InlinedCallStack.end();
 }
 
-static bool isAllocationWithHotColdVariant(Function *Callee,
+static bool isAllocationWithHotColdVariant(const Function *Callee,
                                            const TargetLibraryInfo &TLI) {
   if (!Callee)
     return false;

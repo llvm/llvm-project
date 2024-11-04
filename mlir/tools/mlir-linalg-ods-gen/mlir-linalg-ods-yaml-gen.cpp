@@ -31,9 +31,6 @@
 using namespace mlir;
 
 using llvm::yaml::Input;
-using llvm::yaml::MappingTraits;
-using llvm::yaml::ScalarEnumerationTraits;
-using llvm::yaml::ScalarTraits;
 
 #define DEBUG_TYPE "linalg-ods-gen"
 
