@@ -88,9 +88,8 @@ struct BitcastBuffer {
   const std::byte *data() const { return Data.data(); }
 
   std::byte *getBytes(unsigned BitOffset) const {
-    if (BitOffset % 8 == 0)
-      return const_cast<std::byte *>(data() + (BitOffset / 8));
-    assert(false && "hmm, how to best handle this?");
+    assert(BitOffset % 8 == 0);
+    return const_cast<std::byte *>(data() + (BitOffset / 8));
   }
 
   bool allInitialized() const {
