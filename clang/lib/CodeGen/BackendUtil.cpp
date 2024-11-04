@@ -1067,9 +1067,8 @@ void EmitAssemblyHelper::RunOptimizationPipeline(
 
     if (LangOpts.SoftPointerAuth)
       PB.registerOptimizerLastEPCallback(
-          [](ModulePassManager &MPM, OptimizationLevel Level) {
-            MPM.addPass(SoftPointerAuthPass());
-          });
+          [](ModulePassManager &MPM, OptimizationLevel Level,
+             ThinOrFullLTOPhase) { MPM.addPass(SoftPointerAuthPass()); });
 
     if (std::optional<GCOVOptions> Options =
             getGCOVOptions(CodeGenOpts, LangOpts))
