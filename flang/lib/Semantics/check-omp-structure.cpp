@@ -283,7 +283,7 @@ struct ContiguousHelper {
     return Visit(x.get());
   }
   template <typename T> std::optional<bool> Visit(const evaluate::Expr<T> &x) {
-    return std::visit([this](auto &&s) { return Visit(s); }, x.u);
+    return common::visit([this](auto &&s) { return Visit(s); }, x.u);
   }
   template <typename T>
   std::optional<bool> Visit(const evaluate::Designator<T> &x) {
