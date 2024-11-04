@@ -3533,35 +3533,64 @@ void CXXNameMangler::mangleExtFunctionInfo(const FunctionType *T) {
   // FIXME: noreturn
 }
 
-bool hasSharedState(unsigned SMEAttrs) {
+unsigned getZAState(unsigned SMEAttrs) {
   switch (SMEAttrs) {
   case FunctionType::ARM_In:
+    return 1;
   case FunctionType::ARM_Out:
+    return 2;
   case FunctionType::ARM_InOut:
+    return 3;
   case FunctionType::ARM_Preserves:
-    return true;
+    return 4;
   default:
-    return false;
+    return 0;
   }
 }
 
+// The mangling scheme for function types which have SME attributes is implemented as
+// a "pseudo" template:
+//
+//   '__SME_ATTRS<<normal_function_type>, <sme_state>>'
+//
+// Combining the function type with a bitmask representing the streaming and ZA properties
+// of the function's interface. The bits of sme_state are defined as follows:
+//    0:  Streaming Mode
+//    1:  Streaming Compatible
+//    2:  ZA Agnostic
+//  3-5:  ZA State
+//  6-8:  ZT0 State
+//  9-63: 0, reserved for future type attributes.
+//
+// For example:
+//  void f(svint8_t (*fn)() __arm_streaming_compatible __arm_inout("za")) { fn(); }
+//
+// The function fn is described as '__SME_ATTRS<Fu10__SVInt8_tvE, 26u>' and mangled as:
+//
+//  "11__SME_ATTRSI" + function type mangling + "Lj" + bitmask + "EE"
+//
+//  i.e. "11__SME_ATTRSIFu10__SVInt8_tvELj26EE"
+//
 void CXXNameMangler::mangleSMEAttrs(unsigned SMEAttrs) {
   if (!SMEAttrs)
     return;
 
   // Streaming Mode
+  unsigned Bitmask = 0;
   if (SMEAttrs & FunctionType::SME_PStateSMEnabledMask)
-    Out << "Lj1E";
+    Bitmask |= 1;
   else if (SMEAttrs & FunctionType::SME_PStateSMCompatibleMask)
-    Out << "Lj2E";
-  else
-    Out << "Lj0E";
+    Bitmask |= 1 << 1;
 
-  // ZA & ZT0 State
-  Out << (hasSharedState(FunctionType::getArmZAState(SMEAttrs)) ? "Lj1E"
-                                                                : "Lj0E");
-  Out << (hasSharedState(FunctionType::getArmZT0State(SMEAttrs)) ? "Lj1E"
-                                                                 : "Lj0E");
+  // TODO: Must represent __arm_agnostic("sme_za_state")
+
+  // ZA-State
+  Bitmask |= getZAState(FunctionType::getArmZAState(SMEAttrs)) << 3;
+
+  // ZT0 State
+  Bitmask |= getZAState(FunctionType::getArmZT0State(SMEAttrs)) << 6;
+
+  Out << "Lj" << Bitmask << "EE";
 
   return;
 }
@@ -3641,9 +3670,9 @@ void CXXNameMangler::mangleType(const FunctionProtoType *T) {
   // Mangle the ref-qualifier, if present.
   mangleRefQualifier(T->getRefQualifier());
 
-  mangleSMEAttrs(SMEAttrs);
-
   Out << 'E';
+
+  mangleSMEAttrs(SMEAttrs);
 }
 
 void CXXNameMangler::mangleType(const FunctionNoProtoType *T) {
