@@ -78,6 +78,7 @@ public:
   bool hasAtomBitwise64() const { return SmVersion >= 32; }
   bool hasAtomMinMax64() const { return SmVersion >= 32; }
   bool hasAtomCas16() const { return SmVersion >= 70 && PTXVersion >= 63; }
+  bool hasClusters() const { return SmVersion >= 90 && PTXVersion >= 78; }
   bool hasLDG() const { return SmVersion >= 32; }
   bool hasHWROT32() const { return SmVersion >= 32; }
   bool hasImageHandles() const;
@@ -94,6 +95,14 @@ public:
   bool hasDotInstructions() const {
     return SmVersion >= 61 && PTXVersion >= 50;
   }
+  // Prior to CUDA 12.3 ptxas did not recognize that the trap instruction
+  // terminates a basic block. Instead, it would assume that control flow
+  // continued to the next instruction. The next instruction could be in the
+  // block that's lexically below it. This would lead to a phantom CFG edges
+  // being created within ptxas. This issue was fixed in CUDA 12.3. Thus, when
+  // PTX ISA versions 8.3+ we can confidently say that the bug will not be
+  // present.
+  bool hasPTXASUnreachableBug() const { return PTXVersion < 83; }
   bool hasCvtaParam() const { return SmVersion >= 70 && PTXVersion >= 77; }
   unsigned int getFullSmVersion() const { return FullSmVersion; }
   unsigned int getSmVersion() const { return getFullSmVersion() / 10; }
@@ -119,6 +128,8 @@ public:
 
   NVPTXSubtarget &initializeSubtargetDependencies(StringRef CPU, StringRef FS);
   void ParseSubtargetFeatures(StringRef CPU, StringRef TuneCPU, StringRef FS);
+
+  void failIfClustersUnsupported(std::string const &FailureMessage) const;
 };
 
 } // End llvm namespace

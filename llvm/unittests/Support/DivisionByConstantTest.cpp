@@ -32,7 +32,7 @@ APInt SignedDivideUsingMagic(APInt Numerator, APInt Divisor,
   unsigned Bits = Numerator.getBitWidth();
 
   APInt Factor(Bits, 0);
-  APInt ShiftMask(Bits, -1);
+  APInt ShiftMask(Bits, -1, true);
   if (Divisor.isOne() || Divisor.isAllOnes()) {
     // If d is +1/-1, we just multiply the numerator by +1/-1.
     Factor = Divisor.getSExtValue();

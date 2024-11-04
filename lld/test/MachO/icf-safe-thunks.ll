@@ -22,6 +22,13 @@
 ; CHECK-ARM64-NEXT:   _func_3identical_v3_canmerge:
 ; CHECK-ARM64-NEXT:        mov {{.*}}, #0x21
 ;
+; CHECK-ARM64:        _func_call_thunked_1_nomerge:
+; CHECK-ARM64-NEXT:        stp	x29
+;
+; CHECK-ARM64:        _func_call_thunked_2_nomerge:
+; CHECK-ARM64-NEXT:   _func_call_thunked_2_merge:
+; CHECK-ARM64-NEXT:        stp	x29
+;
 ; CHECK-ARM64:        _call_all_funcs:
 ; CHECK-ARM64-NEXT:        stp  x29
 ;
@@ -43,6 +50,9 @@
 ; CHECK-ARM64-MAP-NEXT: 0x00000010 [  2] _func_3identical_v1_canmerge
 ; CHECK-ARM64-MAP-NEXT: 0x00000000 [  2] _func_3identical_v2_canmerge
 ; CHECK-ARM64-MAP-NEXT: 0x00000000 [  2] _func_3identical_v3_canmerge
+; CHECK-ARM64-MAP-NEXT: 0x00000020 [  2] _func_call_thunked_1_nomerge
+; CHECK-ARM64-MAP-NEXT: 0x00000020 [  2] _func_call_thunked_2_nomerge
+; CHECK-ARM64-MAP-NEXT: 0x00000000 [  2] _func_call_thunked_2_merge
 ; CHECK-ARM64-MAP-NEXT: 0x00000034 [  2] _call_all_funcs
 ; CHECK-ARM64-MAP-NEXT: 0x00000050 [  2] _take_func_addr
 ; CHECK-ARM64-MAP-NEXT: 0x00000004 [  2] _func_2identical_v2
@@ -122,6 +132,30 @@ entry:
 define void @func_3identical_v3_canmerge() local_unnamed_addr #0 {
 entry:
   store volatile i8 33, ptr @g_val, align 1, !tbaa !5
+  ret void
+}
+
+; Function Attrs: mustprogress nofree noinline norecurse nounwind ssp memory(readwrite, argmem: none) uwtable(sync)
+define void @func_call_thunked_1_nomerge() local_unnamed_addr #0 {
+entry:
+  tail call void @func_2identical_v1()
+  store volatile i8 77, ptr @g_val, align 1, !tbaa !5
+  ret void
+}
+
+; Function Attrs: mustprogress nofree noinline norecurse nounwind ssp memory(readwrite, argmem: none) uwtable(sync)
+define void @func_call_thunked_2_nomerge() local_unnamed_addr #0 {
+entry:
+  tail call void @func_2identical_v2()
+  store volatile i8 77, ptr @g_val, align 1, !tbaa !5
+  ret void
+}
+
+; Function Attrs: mustprogress nofree noinline norecurse nounwind ssp memory(readwrite, argmem: none) uwtable(sync)
+define void @func_call_thunked_2_merge() local_unnamed_addr #0 {
+entry:
+  tail call void @func_2identical_v2()
+  store volatile i8 77, ptr @g_val, align 1, !tbaa !5
   ret void
 }
 
@@ -225,6 +259,21 @@ attributes #1 = { mustprogress nofree noinline norecurse nounwind ssp uwtable(sy
 ;
 ; ATTR void func_3identical_v3_canmerge() {
 ;     g_val = 33;
+; }
+;
+; ATTR void func_call_thunked_1_nomerge() {
+;     func_2identical_v1();
+;     g_val = 77;
+; }
+;
+; ATTR void func_call_thunked_2_nomerge() {
+;     func_2identical_v2();
+;     g_val = 77;
+; }
+;
+; ATTR void func_call_thunked_2_merge() {
+;     func_2identical_v2();
+;     g_val = 77;
 ; }
 ;
 ; ATTR void call_all_funcs() {

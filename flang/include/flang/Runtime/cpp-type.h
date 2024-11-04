@@ -78,12 +78,12 @@ template <> struct CppTypeForHelper<TypeCategory::Real, 10> {
 #endif
 #if __STDCPP_FLOAT128_T__
 using CppFloat128Type = std::float128_t;
-#elif LDBL_MANT_DIG == 113
+#elif HAS_LDBL128
 using CppFloat128Type = long double;
 #elif HAS_FLOAT128
 using CppFloat128Type = __float128;
 #endif
-#if __STDCPP_FLOAT128_t || LDBL_MANT_DIG == 113 || HAS_FLOAT128
+#if __STDCPP_FLOAT128_t || HAS_LDBL128 || HAS_FLOAT128
 template <> struct CppTypeForHelper<TypeCategory::Real, 16> {
   using type = CppFloat128Type;
 };

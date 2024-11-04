@@ -26,7 +26,7 @@ using namespace lld::elf;
 namespace {
 class PPC final : public TargetInfo {
 public:
-  PPC();
+  PPC(Ctx &);
   RelExpr getRelExpr(RelType type, const Symbol &s,
                      const uint8_t *loc) const override;
   RelType getDynRel(RelType type) const override;
@@ -64,22 +64,22 @@ private:
 static uint16_t lo(uint32_t v) { return v; }
 static uint16_t ha(uint32_t v) { return (v + 0x8000) >> 16; }
 
-static uint32_t readFromHalf16(const uint8_t *loc) {
-  return read32(config->isLE ? loc : loc - 2);
+static uint32_t readFromHalf16(Ctx &ctx, const uint8_t *loc) {
+  return read32(ctx.arg.isLE ? loc : loc - 2);
 }
 
-static void writeFromHalf16(uint8_t *loc, uint32_t insn) {
-  write32(config->isLE ? loc : loc - 2, insn);
+static void writeFromHalf16(Ctx &ctx, uint8_t *loc, uint32_t insn) {
+  write32(ctx.arg.isLE ? loc : loc - 2, insn);
 }
 
-void elf::writePPC32GlinkSection(uint8_t *buf, size_t numEntries) {
+void elf::writePPC32GlinkSection(Ctx &ctx, uint8_t *buf, size_t numEntries) {
   // Create canonical PLT entries for non-PIE code. Compilers don't generate
   // non-GOT-non-PLT relocations referencing external functions for -fpie/-fPIE.
   uint32_t glink = ctx.in.plt->getVA(); // VA of .glink
-  if (!config->isPic) {
+  if (!ctx.arg.isPic) {
     for (const Symbol *sym :
          cast<PPC32GlinkSection>(*ctx.in.plt).canonical_plts) {
-      writePPC32PltCallStub(buf, sym->getGotPltVA(), nullptr, 0);
+      writePPC32PltCallStub(ctx, buf, sym->getGotPltVA(ctx), nullptr, 0);
       buf += 16;
       glink += 16;
     }
@@ -104,7 +104,7 @@ void elf::writePPC32GlinkSection(uint8_t *buf, size_t numEntries) {
   // itself) and calls _dl_runtime_resolve() (in glibc).
   uint32_t got = ctx.in.got->getVA();
   const uint8_t *end = buf + 64;
-  if (config->isPic) {
+  if (ctx.arg.isPic) {
     uint32_t afterBcl = 4 * ctx.in.plt->getNumEntries() + 12;
     uint32_t gotBcl = got + 4 - (glink + afterBcl);
     write32(buf + 0, 0x3d6b0000 | ha(afterBcl));  // addis r11,r11,1f-glink@ha
@@ -152,7 +152,7 @@ void elf::writePPC32GlinkSection(uint8_t *buf, size_t numEntries) {
     write32(buf, 0x60000000);
 }
 
-PPC::PPC() {
+PPC::PPC(Ctx &ctx) : TargetInfo(ctx) {
   copyRel = R_PPC_COPY;
   gotRel = R_PPC_GLOB_DAT;
   pltRel = R_PPC_JMP_SLOT;
@@ -181,7 +181,7 @@ void PPC::writeIplt(uint8_t *buf, const Symbol &sym,
                     uint64_t /*pltEntryAddr*/) const {
   // In -pie or -shared mode, assume r30 points to .got2+0x8000, and use a
   // .got2.plt_pic32. thunk.
-  writePPC32PltCallStub(buf, sym.getGotPltVA(), sym.file, 0x8000);
+  writePPC32PltCallStub(ctx, buf, sym.getGotPltVA(ctx), sym.file, 0x8000);
 }
 
 void PPC::writeGotHeader(uint8_t *buf) const {
@@ -194,14 +194,14 @@ void PPC::writeGotHeader(uint8_t *buf) const {
 void PPC::writeGotPlt(uint8_t *buf, const Symbol &s) const {
   // Address of the symbol resolver stub in .glink .
   write32(buf,
-          ctx.in.plt->getVA() + ctx.in.plt->headerSize + 4 * s.getPltIdx());
+          ctx.in.plt->getVA() + ctx.in.plt->headerSize + 4 * s.getPltIdx(ctx));
 }
 
 bool PPC::needsThunk(RelExpr expr, RelType type, const InputFile *file,
                      uint64_t branchAddr, const Symbol &s, int64_t a) const {
   if (type != R_PPC_LOCAL24PC && type != R_PPC_REL24 && type != R_PPC_PLTREL24)
     return false;
-  if (s.isInPlt())
+  if (s.isInPlt(ctx))
     return true;
   if (s.isUndefWeak())
     return false;
@@ -265,7 +265,7 @@ RelExpr PPC::getRelExpr(RelType type, const Symbol &s,
   case R_PPC_TPREL16_HI:
     return R_TPREL;
   default:
-    error(getErrorLocation(loc) + "unknown relocation (" + Twine(type) +
+    error(getErrorLoc(ctx, loc) + "unknown relocation (" + Twine(type) +
           ") against symbol " + toString(s));
     return R_NONE;
   }
@@ -292,7 +292,7 @@ int64_t PPC::getImplicitAddend(const uint8_t *buf, RelType type) const {
   case R_PPC_TPREL32:
     return SignExtend64<32>(read32(buf));
   default:
-    internalLinkerError(getErrorLocation(buf),
+    internalLinkerError(getErrorLoc(ctx, buf),
                         "cannot read addend for relocation " + toString(type));
     return 0;
   }
@@ -412,8 +412,8 @@ void PPC::relaxTlsGdToIe(uint8_t *loc, const Relocation &rel,
   switch (rel.type) {
   case R_PPC_GOT_TLSGD16: {
     // addi rT, rA, x@got@tlsgd --> lwz rT, x@got@tprel(rA)
-    uint32_t insn = readFromHalf16(loc);
-    writeFromHalf16(loc, 0x80000000 | (insn & 0x03ff0000));
+    uint32_t insn = readFromHalf16(ctx, loc);
+    writeFromHalf16(ctx, loc, 0x80000000 | (insn & 0x03ff0000));
     relocateNoSym(loc, R_PPC_GOT_TPREL16, val);
     break;
   }
@@ -431,7 +431,7 @@ void PPC::relaxTlsGdToLe(uint8_t *loc, const Relocation &rel,
   switch (rel.type) {
   case R_PPC_GOT_TLSGD16:
     // addi r3, r31, x@got@tlsgd --> addis r3, r2, x@tprel@ha
-    writeFromHalf16(loc, 0x3c620000 | ha(val));
+    writeFromHalf16(ctx, loc, 0x3c620000 | ha(val));
     break;
   case R_PPC_TLSGD:
     // bl __tls_get_addr(x@tldgd) --> add r3, r3, x@tprel@l
@@ -447,7 +447,7 @@ void PPC::relaxTlsLdToLe(uint8_t *loc, const Relocation &rel,
   switch (rel.type) {
   case R_PPC_GOT_TLSLD16:
     // addi r3, rA, x@got@tlsgd --> addis r3, r2, 0
-    writeFromHalf16(loc, 0x3c620000);
+    writeFromHalf16(ctx, loc, 0x3c620000);
     break;
   case R_PPC_TLSLD:
     // r3+x@dtprel computes r3+x-0x8000, while we want it to compute r3+x@tprel
@@ -471,8 +471,8 @@ void PPC::relaxTlsIeToLe(uint8_t *loc, const Relocation &rel,
   switch (rel.type) {
   case R_PPC_GOT_TPREL16: {
     // lwz rT, x@got@tprel(rA) --> addis rT, r2, x@tprel@ha
-    uint32_t rt = readFromHalf16(loc) & 0x03e00000;
-    writeFromHalf16(loc, 0x3c020000 | rt | ha(val));
+    uint32_t rt = readFromHalf16(ctx, loc) & 0x03e00000;
+    writeFromHalf16(ctx, loc, 0x3c020000 | rt | ha(val));
     break;
   }
   case R_PPC_TLS: {
@@ -501,10 +501,8 @@ void PPC::relocateAlloc(InputSectionBase &sec, uint8_t *buf) const {
     secAddr += s->outSecOff;
   for (const Relocation &rel : sec.relocs()) {
     uint8_t *loc = buf + rel.offset;
-    const uint64_t val = SignExtend64(
-        sec.getRelocTargetVA(sec.file, rel.type, rel.addend,
-                             secAddr + rel.offset, *rel.sym, rel.expr),
-        32);
+    const uint64_t val =
+        SignExtend64(sec.getRelocTargetVA(ctx, rel, secAddr + rel.offset), 32);
     switch (rel.expr) {
     case R_RELAX_TLS_GD_TO_IE_GOT_OFF:
       relaxTlsGdToIe(loc, rel, val);
@@ -525,7 +523,4 @@ void PPC::relocateAlloc(InputSectionBase &sec, uint8_t *buf) const {
   }
 }
 
-TargetInfo *elf::getPPCTargetInfo() {
-  static PPC target;
-  return &target;
-}
+void elf::setPPCTargetInfo(Ctx &ctx) { ctx.target.reset(new PPC(ctx)); }

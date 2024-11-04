@@ -44,3 +44,7 @@ LSAN_FLAG(bool, use_poisoned, false,
 LSAN_FLAG(bool, log_pointers, false, "Debug logging")
 LSAN_FLAG(bool, log_threads, false, "Debug logging")
 LSAN_FLAG(const char *, suppressions, "", "Suppressions file name.")
+LSAN_FLAG(int, thread_suspend_fail, 1,
+          "Behaviour if thread suspendion all thread (0 - "
+          "abandon leak checking, 1 - continue with leak checking (reported "
+          "leaks can be false), 2 - crash (for debugging LSAN)).")

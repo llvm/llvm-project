@@ -24,6 +24,55 @@ store i32 0, ptr addrspace(3) @used_by_kernel
 }
 ; CHECK: ; LDSByteSize: 4 bytes
 
+define void @nonkernel() {
+; GFX9-LABEL: nonkernel:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    v_mov_b32_e32 v0, 0
+; GFX9-NEXT:    v_mov_b32_e32 v1, v0
+; GFX9-NEXT:    ds_write_b32 v0, v0 offset:8
+; GFX9-NEXT:    ds_write_b64 v0, v[0:1]
+; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX9-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX10-LABEL: nonkernel:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    v_mov_b32_e32 v0, 0
+; GFX10-NEXT:    v_mov_b32_e32 v1, v0
+; GFX10-NEXT:    ds_write_b32 v0, v0 offset:8
+; GFX10-NEXT:    ds_write_b64 v0, v[0:1]
+; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; G_GFX9-LABEL: nonkernel:
+; G_GFX9:       ; %bb.0:
+; G_GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; G_GFX9-NEXT:    v_mov_b32_e32 v2, 0
+; G_GFX9-NEXT:    v_mov_b32_e32 v3, 8
+; G_GFX9-NEXT:    v_mov_b32_e32 v0, 0
+; G_GFX9-NEXT:    v_mov_b32_e32 v1, 0
+; G_GFX9-NEXT:    ds_write_b32 v3, v2
+; G_GFX9-NEXT:    ds_write_b64 v2, v[0:1]
+; G_GFX9-NEXT:    s_waitcnt lgkmcnt(0)
+; G_GFX9-NEXT:    s_setpc_b64 s[30:31]
+;
+; G_GFX10-LABEL: nonkernel:
+; G_GFX10:       ; %bb.0:
+; G_GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; G_GFX10-NEXT:    v_mov_b32_e32 v2, 0
+; G_GFX10-NEXT:    v_mov_b32_e32 v3, 8
+; G_GFX10-NEXT:    v_mov_b32_e32 v0, 0
+; G_GFX10-NEXT:    v_mov_b32_e32 v1, 0
+; G_GFX10-NEXT:    ds_write_b32 v3, v2
+; G_GFX10-NEXT:    ds_write_b64 v2, v[0:1]
+; G_GFX10-NEXT:    s_waitcnt lgkmcnt(0)
+; G_GFX10-NEXT:    s_setpc_b64 s[30:31]
+  store i32 0, ptr addrspace(3) @used_by_both
+  store double 0.0, ptr addrspace(3) @used_by_function
+  ret void
+}
+
 ; Needs to allocate both variables, store to used_by_both is at sizeof(double)
 define amdgpu_kernel void @withcall() {
 ; GFX9-LABEL: withcall:
@@ -170,56 +219,6 @@ define amdgpu_kernel void @nocall_false_sharing() {
   ret void
 }
 ; CHECK: ; LDSByteSize: 4 bytes
-
-
-define void @nonkernel() {
-; GFX9-LABEL: nonkernel:
-; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    v_mov_b32_e32 v0, 0
-; GFX9-NEXT:    v_mov_b32_e32 v1, v0
-; GFX9-NEXT:    ds_write_b32 v0, v0 offset:8
-; GFX9-NEXT:    ds_write_b64 v0, v[0:1]
-; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX10-LABEL: nonkernel:
-; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    v_mov_b32_e32 v0, 0
-; GFX10-NEXT:    v_mov_b32_e32 v1, v0
-; GFX10-NEXT:    ds_write_b32 v0, v0 offset:8
-; GFX10-NEXT:    ds_write_b64 v0, v[0:1]
-; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX10-NEXT:    s_setpc_b64 s[30:31]
-;
-; G_GFX9-LABEL: nonkernel:
-; G_GFX9:       ; %bb.0:
-; G_GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; G_GFX9-NEXT:    v_mov_b32_e32 v2, 0
-; G_GFX9-NEXT:    v_mov_b32_e32 v3, 8
-; G_GFX9-NEXT:    v_mov_b32_e32 v0, 0
-; G_GFX9-NEXT:    v_mov_b32_e32 v1, 0
-; G_GFX9-NEXT:    ds_write_b32 v3, v2
-; G_GFX9-NEXT:    ds_write_b64 v2, v[0:1]
-; G_GFX9-NEXT:    s_waitcnt lgkmcnt(0)
-; G_GFX9-NEXT:    s_setpc_b64 s[30:31]
-;
-; G_GFX10-LABEL: nonkernel:
-; G_GFX10:       ; %bb.0:
-; G_GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; G_GFX10-NEXT:    v_mov_b32_e32 v2, 0
-; G_GFX10-NEXT:    v_mov_b32_e32 v3, 8
-; G_GFX10-NEXT:    v_mov_b32_e32 v0, 0
-; G_GFX10-NEXT:    v_mov_b32_e32 v1, 0
-; G_GFX10-NEXT:    ds_write_b32 v3, v2
-; G_GFX10-NEXT:    ds_write_b64 v2, v[0:1]
-; G_GFX10-NEXT:    s_waitcnt lgkmcnt(0)
-; G_GFX10-NEXT:    s_setpc_b64 s[30:31]
-  store i32 0, ptr addrspace(3) @used_by_both
-  store double 0.0, ptr addrspace(3) @used_by_function
-  ret void
-}
 
 !llvm.module.flags = !{!0}
 !0 = !{i32 1, !"amdhsa_code_object_version", i32 500}

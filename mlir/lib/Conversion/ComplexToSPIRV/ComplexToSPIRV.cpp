@@ -102,8 +102,8 @@ struct ImOpPattern final : OpConversionPattern<complex::ImOp> {
 // Pattern population
 //===----------------------------------------------------------------------===//
 
-void mlir::populateComplexToSPIRVPatterns(SPIRVTypeConverter &typeConverter,
-                                          RewritePatternSet &patterns) {
+void mlir::populateComplexToSPIRVPatterns(
+    const SPIRVTypeConverter &typeConverter, RewritePatternSet &patterns) {
   MLIRContext *context = patterns.getContext();
 
   patterns.add<ConstantOpPattern, CreateOpPattern, ReOpPattern, ImOpPattern>(

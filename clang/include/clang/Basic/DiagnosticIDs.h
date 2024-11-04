@@ -14,7 +14,6 @@
 #ifndef LLVM_CLANG_BASIC_DIAGNOSTICIDS_H
 #define LLVM_CLANG_BASIC_DIAGNOSTICIDS_H
 
-#include "clang/Basic/DiagnosticCategories.h"
 #include "clang/Basic/LLVM.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/ADT/StringRef.h"
@@ -85,7 +84,7 @@ namespace clang {
     /// to either Ignore (nothing), Remark (emit a remark), Warning
     /// (emit a warning) or Error (emit as an error).  It allows clients to
     /// map ERRORs to Error or Fatal (stop emitting diagnostics after this one).
-    enum class Severity : uint8_t {
+    enum class Severity {
       // NOTE: 0 means "uncomputed".
       Ignored = 1, ///< Do not present this diagnostic, ignore it.
       Remark = 2,  ///< Present this diagnostic as a remark.
@@ -182,96 +181,13 @@ public:
 class DiagnosticIDs : public RefCountedBase<DiagnosticIDs> {
 public:
   /// The level of the diagnostic, after it has been through mapping.
-  enum Level : uint8_t { Ignored, Note, Remark, Warning, Error, Fatal };
-
-  // Diagnostic classes.
-  enum Class {
-    CLASS_INVALID = 0x00,
-    CLASS_NOTE = 0x01,
-    CLASS_REMARK = 0x02,
-    CLASS_WARNING = 0x03,
-    CLASS_EXTENSION = 0x04,
-    CLASS_ERROR = 0x05
-  };
-
-  static bool IsCustomDiag(diag::kind Diag) {
-    return Diag >= diag::DIAG_UPPER_LIMIT;
-  }
-
-  class CustomDiagDesc {
-    LLVM_PREFERRED_TYPE(diag::Severity)
-    unsigned DefaultSeverity : 3;
-    LLVM_PREFERRED_TYPE(Class)
-    unsigned DiagClass : 3;
-    LLVM_PREFERRED_TYPE(bool)
-    unsigned ShowInSystemHeader : 1;
-    LLVM_PREFERRED_TYPE(bool)
-    unsigned ShowInSystemMacro : 1;
-    LLVM_PREFERRED_TYPE(bool)
-    unsigned HasGroup : 1;
-    diag::Group Group;
-    std::string Description;
-
-    auto get_as_tuple() const {
-      return std::tuple(DefaultSeverity, DiagClass, ShowInSystemHeader,
-                        ShowInSystemMacro, HasGroup, Group,
-                        std::string_view{Description});
-    }
-
-  public:
-    CustomDiagDesc(diag::Severity DefaultSeverity, std::string Description,
-                   unsigned Class = CLASS_WARNING,
-                   bool ShowInSystemHeader = false,
-                   bool ShowInSystemMacro = false,
-                   std::optional<diag::Group> Group = std::nullopt)
-        : DefaultSeverity(static_cast<unsigned>(DefaultSeverity)),
-          DiagClass(Class), ShowInSystemHeader(ShowInSystemHeader),
-          ShowInSystemMacro(ShowInSystemMacro), HasGroup(Group != std::nullopt),
-          Group(Group.value_or(diag::Group{})),
-          Description(std::move(Description)) {}
-
-    std::optional<diag::Group> GetGroup() const {
-      if (HasGroup)
-        return Group;
-      return std::nullopt;
-    }
-
-    diag::Severity GetDefaultSeverity() const {
-      return static_cast<diag::Severity>(DefaultSeverity);
-    }
-
-    Class GetClass() const { return static_cast<Class>(DiagClass); }
-    std::string_view GetDescription() const { return Description; }
-    bool ShouldShowInSystemHeader() const { return ShowInSystemHeader; }
-
-    friend bool operator==(const CustomDiagDesc &lhs,
-                           const CustomDiagDesc &rhs) {
-      return lhs.get_as_tuple() == rhs.get_as_tuple();
-    }
-
-    friend bool operator<(const CustomDiagDesc &lhs,
-                          const CustomDiagDesc &rhs) {
-      return lhs.get_as_tuple() < rhs.get_as_tuple();
-    }
-  };
-
-  struct GroupInfo {
-    LLVM_PREFERRED_TYPE(diag::Severity)
-    unsigned Severity : 3;
-    LLVM_PREFERRED_TYPE(bool)
-    unsigned HasNoWarningAsError : 1;
+  enum Level {
+    Ignored, Note, Remark, Warning, Error, Fatal
   };
 
 private:
   /// Information for uniquing and looking up custom diags.
   std::unique_ptr<diag::CustomDiagInfo> CustomDiagInfo;
-  std::unique_ptr<GroupInfo[]> GroupInfos = []() {
-    auto GIs = std::make_unique<GroupInfo[]>(
-        static_cast<size_t>(diag::Group::NUM_GROUPS));
-    for (size_t i = 0; i != static_cast<size_t>(diag::Group::NUM_GROUPS); ++i)
-      GIs[i] = {{}, false};
-    return GIs;
-  }();
 
 public:
   DiagnosticIDs();
@@ -286,35 +202,7 @@ public:
   // FIXME: Replace this function with a create-only facilty like
   // createCustomDiagIDFromFormatString() to enforce safe usage. At the time of
   // writing, nearly all callers of this function were invalid.
-  unsigned getCustomDiagID(CustomDiagDesc Diag);
-
-  // TODO: Deprecate this once all uses are removed from LLVM
-  // [[deprecated("Use a CustomDiagDesc instead of a Level")]]
-  unsigned getCustomDiagID(Level Level, StringRef Message) {
-    return getCustomDiagID([&]() -> CustomDiagDesc {
-      switch (Level) {
-      case DiagnosticIDs::Level::Ignored:
-        return {diag::Severity::Ignored, std::string(Message), CLASS_WARNING,
-                /*ShowInSystemHeader*/ true};
-      case DiagnosticIDs::Level::Note:
-        return {diag::Severity::Fatal, std::string(Message), CLASS_NOTE,
-                /*ShowInSystemHeader*/ true};
-      case DiagnosticIDs::Level::Remark:
-        return {diag::Severity::Remark, std::string(Message), CLASS_REMARK,
-                /*ShowInSystemHeader*/ true};
-      case DiagnosticIDs::Level::Warning:
-        return {diag::Severity::Warning, std::string(Message), CLASS_WARNING,
-                /*ShowInSystemHeader*/ true};
-      case DiagnosticIDs::Level::Error:
-        return {diag::Severity::Error, std::string(Message), CLASS_ERROR,
-                /*ShowInSystemHeader*/ true};
-      case DiagnosticIDs::Level::Fatal:
-        return {diag::Severity::Fatal, std::string(Message), CLASS_ERROR,
-                /*ShowInSystemHeader*/ true};
-      }
-      llvm_unreachable("Fully covered switch above!");
-    }());
-  }
+  unsigned getCustomDiagID(Level L, StringRef FormatString);
 
   //===--------------------------------------------------------------------===//
   // Diagnostic classification and reporting interfaces.
@@ -326,36 +214,35 @@ public:
   /// Return true if the unmapped diagnostic levelof the specified
   /// diagnostic ID is a Warning or Extension.
   ///
-  /// This is not legal to call on NOTEs.
-  bool isWarningOrExtension(unsigned DiagID) const;
+  /// This only works on builtin diagnostics, not custom ones, and is not
+  /// legal to call on NOTEs.
+  static bool isBuiltinWarningOrExtension(unsigned DiagID);
 
   /// Return true if the specified diagnostic is mapped to errors by
   /// default.
-  bool isDefaultMappingAsError(unsigned DiagID) const;
+  static bool isDefaultMappingAsError(unsigned DiagID);
 
   /// Get the default mapping for this diagnostic.
-  DiagnosticMapping getDefaultMapping(unsigned DiagID) const;
+  static DiagnosticMapping getDefaultMapping(unsigned DiagID);
 
-  void initCustomDiagMapping(DiagnosticMapping &, unsigned DiagID);
+  /// Determine whether the given built-in diagnostic ID is a Note.
+  static bool isBuiltinNote(unsigned DiagID);
 
-  /// Determine whether the given diagnostic ID is a Note.
-  bool isNote(unsigned DiagID) const;
-
-  /// Determine whether the given diagnostic ID is for an
+  /// Determine whether the given built-in diagnostic ID is for an
   /// extension of some sort.
-  bool isExtensionDiag(unsigned DiagID) const {
+  static bool isBuiltinExtensionDiag(unsigned DiagID) {
     bool ignored;
-    return isExtensionDiag(DiagID, ignored);
+    return isBuiltinExtensionDiag(DiagID, ignored);
   }
 
-  /// Determine whether the given diagnostic ID is for an
+  /// Determine whether the given built-in diagnostic ID is for an
   /// extension of some sort, and whether it is enabled by default.
   ///
   /// This also returns EnabledByDefault, which is set to indicate whether the
   /// diagnostic is ignored by default (in which case -pedantic enables it) or
   /// treated as a warning/error by default.
   ///
-  bool isExtensionDiag(unsigned DiagID, bool &EnabledByDefault) const;
+  static bool isBuiltinExtensionDiag(unsigned DiagID, bool &EnabledByDefault);
 
   /// Given a group ID, returns the flag that toggles the group.
   /// For example, for Group::DeprecatedDeclarations, returns
@@ -365,22 +252,19 @@ public:
   /// Given a diagnostic group ID, return its documentation.
   static StringRef getWarningOptionDocumentation(diag::Group GroupID);
 
-  void setGroupSeverity(StringRef Group, diag::Severity);
-  void setGroupNoWarningsAsError(StringRef Group, bool);
-
   /// Given a group ID, returns the flag that toggles the group.
   /// For example, for "deprecated-declarations", returns
   /// Group::DeprecatedDeclarations.
   static std::optional<diag::Group> getGroupForWarningOption(StringRef);
 
   /// Return the lowest-level group that contains the specified diagnostic.
-  std::optional<diag::Group> getGroupForDiag(unsigned DiagID) const;
+  static std::optional<diag::Group> getGroupForDiag(unsigned DiagID);
 
   /// Return the lowest-level warning option that enables the specified
   /// diagnostic.
   ///
   /// If there is no -Wfoo flag that controls the diagnostic, this returns null.
-  StringRef getWarningOptionForDiag(unsigned DiagID);
+  static StringRef getWarningOptionForDiag(unsigned DiagID);
 
   /// Return the category number that a specified \p DiagID belongs to,
   /// or 0 if no category.
@@ -480,8 +364,6 @@ private:
   diag::Severity
   getDiagnosticSeverity(unsigned DiagID, SourceLocation Loc,
                         const DiagnosticsEngine &Diag) const LLVM_READONLY;
-
-  Class getDiagClass(unsigned DiagID) const;
 
   /// Used to report a diagnostic that is finally fully formed.
   ///

@@ -501,7 +501,7 @@ def FeatureSSVE_FP8DOT2 : ExtensionWithMArch<"ssve-fp8dot2", "SSVE_FP8DOT2", "FE
   "Enable SVE2 FP8 2-way dot product instructions", [FeatureSSVE_FP8DOT4]>;
 
 def FeatureSME_LUTv2 : ExtensionWithMArch<"sme-lutv2", "SME_LUTv2", "FEAT_SME_LUTv2",
-  "Enable Scalable Matrix Extension (SME) LUTv2 instructions">;
+  "Enable Scalable Matrix Extension (SME) LUTv2 instructions", [FeatureSME2]>;
 
 def FeatureSMEF8F32 : ExtensionWithMArch<"sme-f8f32", "SMEF8F32", "FEAT_SME_F8F32",
   "Enable Scalable Matrix Extension (SME) F8F32 instructions", [FeatureSME2, FeatureFP8]>;
@@ -517,6 +517,11 @@ def FeaturePAuthLR : ExtensionWithMArch<"pauth-lr", "PAuthLR", "FEAT_PAuth_LR",
 
 def FeatureTLBIW : ExtensionWithMArch<"tlbiw", "TLBIW", "FEAT_TLBIW",
   "Enable Armv9.5-A TLBI VMALL for Dirty State">;
+
+//===----------------------------------------------------------------------===//
+//  Armv9.6 Architecture Extensions
+//===----------------------------------------------------------------------===//
+
 
 //===----------------------------------------------------------------------===//
 //  Other Features
@@ -827,6 +832,9 @@ def HasV9_4aOps : Architecture64<9, 4, "a", "v9.4a",
 def HasV9_5aOps : Architecture64<9, 5, "a", "v9.5a",
   [HasV9_4aOps, FeatureCPA],
   !listconcat(HasV9_4aOps.DefaultExts, [FeatureCPA,  FeatureLUT, FeatureFAMINMAX])>;
+def HasV9_6aOps : Architecture64<9, 6, "a", "v9.6a",
+  [HasV9_5aOps],
+  !listconcat(HasV9_5aOps.DefaultExts, [])>;
 def HasV8_0rOps : Architecture64<8, 0, "r", "v8r",
   [ //v8.1
     FeatureCRC, FeaturePAN, FeatureLSE, FeatureCONTEXTIDREL2,

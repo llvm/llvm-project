@@ -89,7 +89,8 @@ llvm.func @func_no_debug() {
 #spType1 = #llvm.di_subroutine_type<callingConvention = DW_CC_normal>
 #sp1 = #llvm.di_subprogram<
   compileUnit = #cu, scope = #module, name = "empty_types",
-  file = #file, subprogramFlags = "Definition", type = #spType1
+  file = #file, subprogramFlags = "Definition", type = #spType1,
+  annotations = #llvm.di_annotation<name = "foo", value = "bar">
 >
 
 // CHECK-LABEL: define void @func_with_debug(
@@ -177,10 +178,13 @@ llvm.func @empty_types() {
 // CHECK: ![[CALLEE_ARGS]] = !{![[ARG_TYPE:.*]], ![[ARG_TYPE:.*]]}
 // CHECK: ![[INLINE_LOC]] = !DILocation(line: 28, column: 5,
 
-// CHECK: ![[EMPTY_TYPES_LOC]] = distinct !DISubprogram(name: "empty_types", scope: ![[MODULE:.*]], file: ![[CU_FILE_LOC]], type: ![[EMPTY_TYPES_TYPE:.*]], spFlags: DISPFlagDefinition
+// CHECK: ![[EMPTY_TYPES_LOC]] = distinct !DISubprogram(name: "empty_types", scope: ![[MODULE:.*]], file: ![[CU_FILE_LOC]], type: ![[EMPTY_TYPES_TYPE:.*]], spFlags: DISPFlagDefinition, unit: ![[CU_LOC]], annotations: ![[ANNOTATIONS:.*]])
 // CHECK: ![[MODULE]] = !DIModule(scope: ![[CU_FILE_LOC]], name: "module", configMacros: "bar", includePath: "/", apinotes: "/", file: ![[CU_FILE_LOC]], line: 42, isDecl: true)
 // CHECK: ![[EMPTY_TYPES_TYPE]] = !DISubroutineType(cc: DW_CC_normal, types: ![[EMPTY_TYPES_ARGS:.*]])
 // CHECK: ![[EMPTY_TYPES_ARGS]] = !{}
+
+// CHECK: ![[ANNOTATIONS]] = !{![[ANNOTATION:.*]]}
+// CHECK: ![[ANNOTATION]] = !{!"foo", !"bar"}
 
 // -----
 
@@ -656,3 +660,33 @@ llvm.func @string_ty(%arg0: !llvm.ptr) {
 
 // CHECK-DAG: !DIStringType(name: "character(*)", stringLength: ![[VAR:[0-9]+]], stringLengthExpression: !DIExpression(DW_OP_push_object_address, DW_OP_plus_uconst, 8), stringLocationExpression: !DIExpression(DW_OP_push_object_address, DW_OP_deref), size: 32, align: 8)
 // CHECK-DAG: ![[VAR]] = !DILocalVariable(name: "string_size"{{.*}} flags: DIFlagArtificial)
+
+// -----
+
+// Test translation of DICommonBlockAttr.
+#bt = #llvm.di_basic_type<tag = DW_TAG_base_type, name = "int", sizeInBits = 32>
+#file = #llvm.di_file<"test.f90" in "">
+#cu = #llvm.di_compile_unit<id = distinct[0]<>, sourceLanguage = DW_LANG_C,
+ file = #file, isOptimized = false, emissionKind = Full>
+#sp = #llvm.di_subprogram<compileUnit = #cu, scope = #file, name = "test",
+ file = #file, subprogramFlags = Definition>
+#di_common_block = #llvm.di_common_block<scope = #sp, name = "block",
+ file = #file, line = 3>
+#global_var = #llvm.di_global_variable<scope = #di_common_block, name = "a",
+ file = #file, line = 2, type = #bt>
+#var_expression = #llvm.di_global_variable_expression<var = #global_var,
+ expr = <>>
+
+llvm.mlir.global common @block_(dense<0> : tensor<8xi8>)
+  {dbg_expr = #var_expression} : !llvm.array<8 x i8>
+
+llvm.func @test() {
+  llvm.return
+} loc(#loc2)
+
+#loc1 = loc("test.f90":1:0)
+#loc2 = loc(fused<#sp>[#loc1])
+
+// CHECK: !DICommonBlock(scope: ![[SCOPE:[0-9]+]], declaration: null, name: "block", file: ![[FILE:[0-9]+]], line: 3)
+// CHECK: ![[SCOPE]] = {{.*}}!DISubprogram(name: "test"{{.*}})
+// CHECK: ![[FILE]] = !DIFile(filename: "test.f90"{{.*}})

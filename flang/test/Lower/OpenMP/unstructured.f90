@@ -330,7 +330,7 @@ end
 
 ! CHECK-LABEL: func @_QPss9() {
 ! CHECK:    omp.parallel  {
-! CHECK-NEXT: omp.parallel private(@{{.*}} %{{.*}}#0 -> %{{.*}} : {{.*}}, @{{.*}} %{{.*}}#0 -> %{{.*}} : {{.*}}) {
+! CHECK-NEXT: omp.parallel private(@{{.*}} %{{.*}}#0 -> %{{.*}}, @{{.*}} %{{.*}}#0 -> %{{.*}} : {{.*}}) {
 ! CHECK:      br ^[[BB1:.*]]
 ! CHECK:         ^[[BB1]]:
 ! CHECK:      cond_br %{{.*}}, ^[[BB2:.*]], ^[[BB5:.*]]

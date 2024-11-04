@@ -154,17 +154,14 @@ public:
         newOperands.emplace_back(arg);
       unsigned passArgShift = newOperands.size();
       newOperands.append(op.getOperands().begin() + 1, op.getOperands().end());
-
-      fir::DispatchOp newDispatchOp;
+      mlir::IntegerAttr passArgPos;
       if (op.getPassArgPos())
-        newOp = rewriter.create<fir::DispatchOp>(
-            loc, newResultTypes, rewriter.getStringAttr(op.getMethod()),
-            op.getOperands()[0], newOperands,
-            rewriter.getI32IntegerAttr(*op.getPassArgPos() + passArgShift));
-      else
-        newOp = rewriter.create<fir::DispatchOp>(
-            loc, newResultTypes, rewriter.getStringAttr(op.getMethod()),
-            op.getOperands()[0], newOperands, nullptr);
+        passArgPos =
+            rewriter.getI32IntegerAttr(*op.getPassArgPos() + passArgShift);
+      newOp = rewriter.create<fir::DispatchOp>(
+          loc, newResultTypes, rewriter.getStringAttr(op.getMethod()),
+          op.getOperands()[0], newOperands, passArgPos,
+          op.getProcedureAttrsAttr());
     }
 
     if (isResultBuiltinCPtr) {

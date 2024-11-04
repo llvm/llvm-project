@@ -794,13 +794,21 @@ entry:
 }
 
 define float @reduce_fadd_after_fmul_of_buildvec(float %a, float %b, float %c) {
-; CHECK-LABEL: @reduce_fadd_after_fmul_of_buildvec(
-; CHECK-NEXT:    [[MUL_0:%.*]] = fmul fast float [[A:%.*]], 1.000000e+01
-; CHECK-NEXT:    [[MUL_1:%.*]] = fmul fast float [[B:%.*]], 1.000000e+01
-; CHECK-NEXT:    [[MUL_2:%.*]] = fmul fast float [[C:%.*]], 1.000000e+01
-; CHECK-NEXT:    [[ADD_0:%.*]] = fadd fast float [[MUL_0]], [[MUL_1]]
-; CHECK-NEXT:    [[ADD_1:%.*]] = fadd fast float [[ADD_0]], [[MUL_2]]
-; CHECK-NEXT:    ret float [[ADD_1]]
+; NON-POW2-LABEL: @reduce_fadd_after_fmul_of_buildvec(
+; NON-POW2-NEXT:    [[TMP1:%.*]] = insertelement <3 x float> poison, float [[A:%.*]], i32 0
+; NON-POW2-NEXT:    [[TMP2:%.*]] = insertelement <3 x float> [[TMP1]], float [[B:%.*]], i32 1
+; NON-POW2-NEXT:    [[TMP3:%.*]] = insertelement <3 x float> [[TMP2]], float [[C:%.*]], i32 2
+; NON-POW2-NEXT:    [[TMP4:%.*]] = fmul fast <3 x float> [[TMP3]], <float 1.000000e+01, float 1.000000e+01, float 1.000000e+01>
+; NON-POW2-NEXT:    [[TMP5:%.*]] = call fast float @llvm.vector.reduce.fadd.v3f32(float 0.000000e+00, <3 x float> [[TMP4]])
+; NON-POW2-NEXT:    ret float [[TMP5]]
+;
+; POW2-ONLY-LABEL: @reduce_fadd_after_fmul_of_buildvec(
+; POW2-ONLY-NEXT:    [[MUL_0:%.*]] = fmul fast float [[A:%.*]], 1.000000e+01
+; POW2-ONLY-NEXT:    [[MUL_1:%.*]] = fmul fast float [[B:%.*]], 1.000000e+01
+; POW2-ONLY-NEXT:    [[MUL_2:%.*]] = fmul fast float [[C:%.*]], 1.000000e+01
+; POW2-ONLY-NEXT:    [[ADD_0:%.*]] = fadd fast float [[MUL_0]], [[MUL_1]]
+; POW2-ONLY-NEXT:    [[ADD_1:%.*]] = fadd fast float [[ADD_0]], [[MUL_2]]
+; POW2-ONLY-NEXT:    ret float [[ADD_1]]
 ;
   %mul.0 = fmul fast float %a, 10.0
   %mul.1 = fmul fast float %b, 10.0

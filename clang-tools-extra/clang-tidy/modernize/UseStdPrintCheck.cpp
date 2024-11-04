@@ -68,6 +68,7 @@ void UseStdPrintCheck::registerPPCallbacks(const SourceManager &SM,
                                            Preprocessor *PP,
                                            Preprocessor *ModuleExpanderPP) {
   IncludeInserter.registerPreprocessor(PP);
+  this->PP = PP;
 }
 
 static clang::ast_matchers::StatementMatcher
@@ -131,7 +132,8 @@ void UseStdPrintCheck::check(const MatchFinder::MatchResult &Result) {
   ConverterConfig.StrictMode = StrictMode;
   ConverterConfig.AllowTrailingNewlineRemoval = true;
   utils::FormatStringConverter Converter(
-      Result.Context, Printf, FormatArgOffset, ConverterConfig, getLangOpts());
+      Result.Context, Printf, FormatArgOffset, ConverterConfig, getLangOpts(),
+      *Result.SourceManager, *PP);
   const Expr *PrintfCall = Printf->getCallee();
   const StringRef ReplacementFunction = Converter.usePrintNewlineFunction()
                                             ? ReplacementPrintlnFunction

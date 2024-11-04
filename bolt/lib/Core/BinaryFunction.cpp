@@ -165,6 +165,12 @@ bool shouldPrint(const BinaryFunction &Function) {
     }
   }
 
+  std::optional<StringRef> Origin = Function.getOriginSectionName();
+  if (Origin && llvm::any_of(opts::PrintOnly, [&](const std::string &Name) {
+        return Name == *Origin;
+      }))
+    return true;
+
   return false;
 }
 

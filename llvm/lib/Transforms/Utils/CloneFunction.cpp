@@ -74,6 +74,7 @@ llvm::CloneBasicBlock(const BasicBlock *BB, ValueToValueMapTy &VMap,
     if (isa<CallInst>(I) && !I.isDebugOrPseudoInst()) {
       hasCalls = true;
       hasMemProfMetadata |= I.hasMetadata(LLVMContext::MD_memprof);
+      hasMemProfMetadata |= I.hasMetadata(LLVMContext::MD_callsite);
     }
     if (const AllocaInst *AI = dyn_cast<AllocaInst>(&I)) {
       if (!AI->isStaticAlloca()) {
@@ -428,8 +429,8 @@ PruningFunctionCloner::cloneInstruction(BasicBlock::const_iterator II) {
 
       // Create intrinsic call.
       LLVMContext &Ctx = NewFunc->getContext();
-      Function *IFn =
-          Intrinsic::getDeclaration(NewFunc->getParent(), CIID, TParams);
+      Function *IFn = Intrinsic::getOrInsertDeclaration(NewFunc->getParent(),
+                                                        CIID, TParams);
       SmallVector<Value *, 4> Args;
       unsigned NumOperands = OldInst.getNumOperands();
       if (isa<CallInst>(OldInst))
@@ -560,6 +561,7 @@ void PruningFunctionCloner::CloneBlock(
     if (isa<CallInst>(II) && !II->isDebugOrPseudoInst()) {
       hasCalls = true;
       hasMemProfMetadata |= II->hasMetadata(LLVMContext::MD_memprof);
+      hasMemProfMetadata |= II->hasMetadata(LLVMContext::MD_callsite);
     }
 
     CloneDbgRecordsToHere(NewInst, II);

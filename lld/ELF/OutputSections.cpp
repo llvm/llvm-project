@@ -16,7 +16,7 @@
 #include "lld/Common/Arrays.h"
 #include "lld/Common/Memory.h"
 #include "llvm/BinaryFormat/Dwarf.h"
-#include "llvm/Config/llvm-config.h" // LLVM_ENABLE_ZLIB
+#include "llvm/Config/llvm-config.h" // LLVM_ENABLE_ZLIB, LLVM_ENABLE_ZSTD
 #include "llvm/Support/Compression.h"
 #include "llvm/Support/LEB128.h"
 #include "llvm/Support/Parallel.h"
@@ -42,7 +42,7 @@ using namespace lld::elf;
 
 uint32_t OutputSection::getPhdrFlags() const {
   uint32_t ret = 0;
-  if (config->emachine != EM_ARM || !(flags & SHF_ARM_PURECODE))
+  if (ctx.arg.emachine != EM_ARM || !(flags & SHF_ARM_PURECODE))
     ret |= PF_R;
   if (flags & SHF_WRITE)
     ret |= PF_W;
@@ -66,8 +66,9 @@ void OutputSection::writeHeaderTo(typename ELFT::Shdr *shdr) {
 }
 
 OutputSection::OutputSection(StringRef name, uint32_t type, uint64_t flags)
-    : SectionBase(Output, name, flags, /*Entsize*/ 0, /*Alignment*/ 1, type,
-                  /*Info*/ 0, /*Link*/ 0) {}
+    : SectionBase(Output, ctx.internalFile, name, flags, /*entsize=*/0,
+                  /*addralign=*/1, type,
+                  /*info=*/0, /*link=*/0) {}
 
 // We allow sections of types listed below to merged into a
 // single progbits section. This is typically done by linker
@@ -78,11 +79,11 @@ OutputSection::OutputSection(StringRef name, uint32_t type, uint64_t flags)
 //
 // NOTE: clang since rL252300 emits SHT_X86_64_UNWIND .eh_frame sections. Allow
 // them to be merged into SHT_PROGBITS .eh_frame (GNU as .cfi_*).
-static bool canMergeToProgbits(unsigned type) {
+static bool canMergeToProgbits(Ctx &ctx, unsigned type) {
   return type == SHT_NOBITS || type == SHT_PROGBITS || type == SHT_INIT_ARRAY ||
          type == SHT_PREINIT_ARRAY || type == SHT_FINI_ARRAY ||
          type == SHT_NOTE ||
-         (type == SHT_X86_64_UNWIND && config->emachine == EM_X86_64);
+         (type == SHT_X86_64_UNWIND && ctx.arg.emachine == EM_X86_64);
 }
 
 // Record that isec will be placed in the OutputSection. isec does not become
@@ -105,7 +106,7 @@ void OutputSection::recordSection(InputSectionBase *isec) {
 // Update fields (type, flags, alignment, etc) according to the InputSection
 // isec. Also check whether the InputSection flags and type are consistent with
 // other InputSections.
-void OutputSection::commitSection(InputSection *isec) {
+void OutputSection::commitSection(Ctx &ctx, InputSection *isec) {
   if (LLVM_UNLIKELY(type != isec->type)) {
     if (!hasInputSections && !typeIsSet) {
       type = isec->type;
@@ -120,8 +121,8 @@ void OutputSection::commitSection(InputSection *isec) {
         name = saver().save(".crel" + name);
       }
     } else {
-      if (typeIsSet || !canMergeToProgbits(type) ||
-          !canMergeToProgbits(isec->type)) {
+      if (typeIsSet || !canMergeToProgbits(ctx, type) ||
+          !canMergeToProgbits(ctx, isec->type)) {
         // The (NOLOAD) changes the section type to SHT_NOBITS, the intention is
         // that the contents at that address is provided by some other means.
         // Some projects (e.g.
@@ -130,9 +131,9 @@ void OutputSection::commitSection(InputSection *isec) {
         if (type != SHT_NOBITS) {
           errorOrWarn("section type mismatch for " + isec->name + "\n>>> " +
                       toString(isec) + ": " +
-                      getELFSectionTypeName(config->emachine, isec->type) +
+                      getELFSectionTypeName(ctx.arg.emachine, isec->type) +
                       "\n>>> output section " + name + ": " +
-                      getELFSectionTypeName(config->emachine, type));
+                      getELFSectionTypeName(ctx.arg.emachine, type));
         }
       }
       if (!typeIsSet)
@@ -155,7 +156,7 @@ void OutputSection::commitSection(InputSection *isec) {
 
   isec->parent = this;
   uint64_t andMask =
-      config->emachine == EM_ARM ? (uint64_t)SHF_ARM_PURECODE : 0;
+      ctx.arg.emachine == EM_ARM ? (uint64_t)SHF_ARM_PURECODE : 0;
   uint64_t orMask = ~andMask;
   uint64_t andFlags = (flags & isec->flags) & andMask;
   uint64_t orFlags = (flags | isec->flags) & orMask;
@@ -172,13 +173,13 @@ void OutputSection::commitSection(InputSection *isec) {
     entsize = 0;
 }
 
-static MergeSyntheticSection *createMergeSynthetic(StringRef name,
+static MergeSyntheticSection *createMergeSynthetic(Ctx &ctx, StringRef name,
                                                    uint32_t type,
                                                    uint64_t flags,
                                                    uint32_t addralign) {
-  if ((flags & SHF_STRINGS) && config->optimize >= 2)
-    return make<MergeTailSection>(name, type, flags, addralign);
-  return make<MergeNoTailSection>(name, type, flags, addralign);
+  if ((flags & SHF_STRINGS) && ctx.arg.optimize >= 2)
+    return make<MergeTailSection>(ctx, name, type, flags, addralign);
+  return make<MergeNoTailSection>(ctx, name, type, flags, addralign);
 }
 
 // This function scans over the InputSectionBase list sectionBases to create
@@ -188,7 +189,8 @@ static MergeSyntheticSection *createMergeSynthetic(StringRef name,
 // new synthetic sections at the location of the first input section
 // that it replaces. It then finalizes each synthetic section in order
 // to compute an output offset for each piece of each input section.
-void OutputSection::finalizeInputSections(LinkerScript *script) {
+void OutputSection::finalizeInputSections(Ctx &ctx) {
+  auto *script = ctx.script;
   std::vector<MergeSyntheticSection *> mergeSections;
   for (SectionCommand *cmd : commands) {
     auto *isd = dyn_cast<InputSectionDescription>(cmd);
@@ -222,8 +224,8 @@ void OutputSection::finalizeInputSections(LinkerScript *script) {
                (sec->addralign == ms->addralign || !(sec->flags & SHF_STRINGS));
       });
       if (i == mergeSections.end()) {
-        MergeSyntheticSection *syn =
-            createMergeSynthetic(s->name, ms->type, ms->flags, ms->addralign);
+        MergeSyntheticSection *syn = createMergeSynthetic(
+            ctx, s->name, ms->type, ms->flags, ms->addralign);
         mergeSections.push_back(syn);
         i = std::prev(mergeSections.end());
         syn->entsize = ms->entsize;
@@ -243,7 +245,7 @@ void OutputSection::finalizeInputSections(LinkerScript *script) {
 
     // Some input sections may be removed from the list after ICF.
     for (InputSection *s : isd->sections)
-      commitSection(s);
+      commitSection(ctx, s);
   }
   for (auto *ms : mergeSections)
     ms->finalizeContents();
@@ -260,8 +262,8 @@ static void sortByOrder(MutableArrayRef<InputSection *> in,
     in[i] = v[i].second;
 }
 
-uint64_t elf::getHeaderSize() {
-  if (config->oFormatBinary)
+uint64_t elf::getHeaderSize(Ctx &ctx) {
+  if (ctx.arg.oFormatBinary)
     return 0;
   return ctx.out.elfHeader->size + ctx.out.programHeaders->size;
 }
@@ -273,7 +275,7 @@ void OutputSection::sort(llvm::function_ref<int(InputSectionBase *s)> order) {
       sortByOrder(isd->sections, order);
 }
 
-static void nopInstrFill(uint8_t *buf, size_t size) {
+static void nopInstrFill(Ctx &ctx, uint8_t *buf, size_t size) {
   if (size == 0)
     return;
   unsigned i = 0;
@@ -341,17 +343,17 @@ static SmallVector<uint8_t, 0> deflateShard(ArrayRef<uint8_t> in, int level,
 //
 // * (if --compress-debug-sections is specified) non-empty .debug_* sections
 // * (if --compress-sections is specified) matched sections
-template <class ELFT> void OutputSection::maybeCompress() {
+template <class ELFT> void OutputSection::maybeCompress(Ctx &ctx) {
   using Elf_Chdr = typename ELFT::Chdr;
   (void)sizeof(Elf_Chdr);
 
   DebugCompressionType ctype = DebugCompressionType::None;
   size_t compressedSize = sizeof(Elf_Chdr);
   unsigned level = 0; // default compression level
-  if (!(flags & SHF_ALLOC) && config->compressDebugSections &&
+  if (!(flags & SHF_ALLOC) && ctx.arg.compressDebugSections &&
       name.starts_with(".debug_"))
-    ctype = *config->compressDebugSections;
-  for (auto &[glob, t, l] : config->compressSections)
+    ctype = *ctx.arg.compressDebugSections;
+  for (auto &[glob, t, l] : ctx.arg.compressSections)
     if (glob.match(name))
       std::tie(ctype, level) = {t, l};
   if (ctype == DebugCompressionType::None)
@@ -367,7 +369,7 @@ template <class ELFT> void OutputSection::maybeCompress() {
   // Write uncompressed data to a temporary zero-initialized buffer.
   {
     parallel::TaskGroup tg;
-    writeTo<ELFT>(buf.get(), tg);
+    writeTo<ELFT>(ctx, buf.get(), tg);
   }
   // The generic ABI specifies "The sh_size and sh_addralign fields of the
   // section header for a compressed section reflect the requirements of the
@@ -468,7 +470,7 @@ static void writeInt(uint8_t *buf, uint64_t data, uint64_t size) {
 }
 
 template <class ELFT>
-void OutputSection::writeTo(uint8_t *buf, parallel::TaskGroup &tg) {
+void OutputSection::writeTo(Ctx &ctx, uint8_t *buf, parallel::TaskGroup &tg) {
   llvm::TimeTraceScope timeScope("Write sections", name);
   if (type == SHT_NOBITS)
     return;
@@ -507,7 +509,7 @@ void OutputSection::writeTo(uint8_t *buf, parallel::TaskGroup &tg) {
 
   // Write leading padding.
   ArrayRef<InputSection *> sections = getInputSections(*this, storage);
-  std::array<uint8_t, 4> filler = getFiller();
+  std::array<uint8_t, 4> filler = getFiller(ctx);
   bool nonZeroFiller = read32(filler.data()) != 0;
   if (nonZeroFiller)
     fill(buf, sections.empty() ? size : sections[0]->outSecOff, filler);
@@ -518,7 +520,7 @@ void OutputSection::writeTo(uint8_t *buf, parallel::TaskGroup &tg) {
     return;
   }
 
-  auto fn = [=](size_t begin, size_t end) {
+  auto fn = [=, &ctx](size_t begin, size_t end) {
     size_t numSections = sections.size();
     for (size_t i = begin; i != end; ++i) {
       InputSection *isec = sections[i];
@@ -529,7 +531,7 @@ void OutputSection::writeTo(uint8_t *buf, parallel::TaskGroup &tg) {
 
       // When in Arm BE8 mode, the linker has to convert the big-endian
       // instructions to little-endian, leaving the data big-endian.
-      if (config->emachine == EM_ARM && !config->isLE && config->armBe8 &&
+      if (ctx.arg.emachine == EM_ARM && !ctx.arg.isLE && ctx.arg.armBe8 &&
           (flags & SHF_EXECINSTR))
         convertArmInstructionstoBE8(isec, buf + isec->outSecOff);
 
@@ -543,7 +545,7 @@ void OutputSection::writeTo(uint8_t *buf, parallel::TaskGroup &tg) {
           end = buf + sections[i + 1]->outSecOff;
         if (isec->nopFiller) {
           assert(ctx.target->nopInstrs);
-          nopInstrFill(start, end - start);
+          nopInstrFill(ctx, start, end - start);
         } else
           fill(start, end - start, filler);
       }
@@ -582,7 +584,8 @@ void OutputSection::writeTo(uint8_t *buf, parallel::TaskGroup &tg) {
   }
 }
 
-static void finalizeShtGroup(OutputSection *os, InputSection *section) {
+static void finalizeShtGroup(Ctx &ctx, OutputSection *os,
+                             InputSection *section) {
   // sh_link field for SHT_GROUP sections should contain the section index of
   // the symbol table.
   os->link = ctx.in.symTab->getParent()->sectionIndex;
@@ -661,14 +664,14 @@ static size_t relToCrel(raw_svector_ostream &os, Elf_Crel<ELFT::Is64Bits> &out,
   for (auto rel : rels) {
     encodeOneCrel<typename ELFT::uint>(
         os, out, sec->getVA(rel.r_offset), file.getRelocTargetSym(rel),
-        rel.getType(config->isMips64EL), getAddend<ELFT>(rel));
+        rel.getType(ctx.arg.isMips64EL), getAddend<ELFT>(rel));
   }
   return rels.size();
 }
 
 // Compute the content of a non-alloc CREL section due to -r or --emit-relocs.
 // Input CREL sections are decoded while REL[A] need to be converted.
-template <bool is64> void OutputSection::finalizeNonAllocCrel() {
+template <bool is64> void OutputSection::finalizeNonAllocCrel(Ctx &ctx) {
   using uint = typename Elf_Crel_Impl<is64>::uint;
   raw_svector_ostream os(crelBody);
   uint64_t totalCount = 0;
@@ -690,10 +693,10 @@ template <bool is64> void OutputSection::finalizeNonAllocCrel() {
 
     // Convert REL[A] to CREL.
     if constexpr (is64) {
-      totalCount += config->isLE ? relToCrel<ELF64LE>(os, out, relSec, sec)
+      totalCount += ctx.arg.isLE ? relToCrel<ELF64LE>(os, out, relSec, sec)
                                  : relToCrel<ELF64BE>(os, out, relSec, sec);
     } else {
-      totalCount += config->isLE ? relToCrel<ELF32LE>(os, out, relSec, sec)
+      totalCount += ctx.arg.isLE ? relToCrel<ELF32LE>(os, out, relSec, sec)
                                  : relToCrel<ELF32BE>(os, out, relSec, sec);
     }
   }
@@ -702,7 +705,7 @@ template <bool is64> void OutputSection::finalizeNonAllocCrel() {
   size = getULEB128Size(crelHeader) + crelBody.size();
 }
 
-void OutputSection::finalize() {
+void OutputSection::finalize(Ctx &ctx) {
   InputSection *first = getFirstInputSection(this);
 
   if (flags & SHF_LINK_ORDER) {
@@ -718,11 +721,11 @@ void OutputSection::finalize() {
   }
 
   if (type == SHT_GROUP) {
-    finalizeShtGroup(this, first);
+    finalizeShtGroup(ctx, this, first);
     return;
   }
 
-  if (!config->copyRelocs || !isStaticRelSecType(type))
+  if (!ctx.arg.copyRelocs || !isStaticRelSecType(type))
     return;
 
   // Skip if 'first' is synthetic, i.e. not a section created by --emit-relocs.
@@ -740,10 +743,10 @@ void OutputSection::finalize() {
   flags |= SHF_INFO_LINK;
   // Finalize the content of non-alloc CREL.
   if (type == SHT_CREL) {
-    if (config->is64)
-      finalizeNonAllocCrel<true>();
+    if (ctx.arg.is64)
+      finalizeNonAllocCrel<true>(ctx);
     else
-      finalizeNonAllocCrel<false>();
+      finalizeNonAllocCrel<false>(ctx);
   }
 }
 
@@ -854,7 +857,7 @@ void OutputSection::sortInitFini() {
   sort([](InputSectionBase *s) { return getPriority(s->name); });
 }
 
-std::array<uint8_t, 4> OutputSection::getFiller() {
+std::array<uint8_t, 4> OutputSection::getFiller(Ctx &ctx) {
   if (filler)
     return *filler;
   if (flags & SHF_EXECINSTR)
@@ -862,8 +865,8 @@ std::array<uint8_t, 4> OutputSection::getFiller() {
   return {0, 0, 0, 0};
 }
 
-void OutputSection::checkDynRelAddends(const uint8_t *bufStart) {
-  assert(config->writeAddends && config->checkDynamicRelocs);
+void OutputSection::checkDynRelAddends(Ctx &ctx) {
+  assert(ctx.arg.writeAddends && ctx.arg.checkDynamicRelocs);
   assert(isStaticRelSecType(type));
   SmallVector<InputSection *, 0> storage;
   ArrayRef<InputSection *> sections = getInputSections(*this, storage);
@@ -881,12 +884,12 @@ void OutputSection::checkDynRelAddends(const uint8_t *bufStart) {
       assert(relOsec != nullptr && "missing output section for relocation");
       // Some targets have NOBITS synthetic sections with dynamic relocations
       // with non-zero addends. Skip such sections.
-      if (is_contained({EM_PPC, EM_PPC64}, config->emachine) &&
+      if (is_contained({EM_PPC, EM_PPC64}, ctx.arg.emachine) &&
           (rel.inputSec == ctx.in.ppc64LongBranchTarget.get() ||
            rel.inputSec == ctx.in.igotPlt.get()))
         continue;
-      const uint8_t *relocTarget =
-          bufStart + relOsec->offset + rel.inputSec->getOffset(rel.offsetInSec);
+      const uint8_t *relocTarget = ctx.bufferStart + relOsec->offset +
+                                   rel.inputSec->getOffset(rel.offsetInSec);
       // For SHT_NOBITS the written addend is always zero.
       int64_t writtenAddend =
           relOsec->type == SHT_NOBITS
@@ -894,7 +897,7 @@ void OutputSection::checkDynRelAddends(const uint8_t *bufStart) {
               : ctx.target->getImplicitAddend(relocTarget, rel.type);
       if (addend != writtenAddend)
         internalLinkerError(
-            getErrorLocation(relocTarget),
+            getErrorLoc(ctx, relocTarget),
             "wrote incorrect addend value 0x" + utohexstr(writtenAddend) +
                 " instead of 0x" + utohexstr(addend) +
                 " for dynamic relocation " + toString(rel.type) +
@@ -909,16 +912,16 @@ template void OutputSection::writeHeaderTo<ELF32BE>(ELF32BE::Shdr *Shdr);
 template void OutputSection::writeHeaderTo<ELF64LE>(ELF64LE::Shdr *Shdr);
 template void OutputSection::writeHeaderTo<ELF64BE>(ELF64BE::Shdr *Shdr);
 
-template void OutputSection::writeTo<ELF32LE>(uint8_t *,
+template void OutputSection::writeTo<ELF32LE>(Ctx &, uint8_t *,
                                               llvm::parallel::TaskGroup &);
-template void OutputSection::writeTo<ELF32BE>(uint8_t *,
+template void OutputSection::writeTo<ELF32BE>(Ctx &, uint8_t *,
                                               llvm::parallel::TaskGroup &);
-template void OutputSection::writeTo<ELF64LE>(uint8_t *,
+template void OutputSection::writeTo<ELF64LE>(Ctx &, uint8_t *,
                                               llvm::parallel::TaskGroup &);
-template void OutputSection::writeTo<ELF64BE>(uint8_t *,
+template void OutputSection::writeTo<ELF64BE>(Ctx &, uint8_t *,
                                               llvm::parallel::TaskGroup &);
 
-template void OutputSection::maybeCompress<ELF32LE>();
-template void OutputSection::maybeCompress<ELF32BE>();
-template void OutputSection::maybeCompress<ELF64LE>();
-template void OutputSection::maybeCompress<ELF64BE>();
+template void OutputSection::maybeCompress<ELF32LE>(Ctx &);
+template void OutputSection::maybeCompress<ELF32BE>(Ctx &);
+template void OutputSection::maybeCompress<ELF64LE>(Ctx &);
+template void OutputSection::maybeCompress<ELF64BE>(Ctx &);

@@ -405,7 +405,7 @@ bool LoopDataPrefetch::runOnLoop(Loop *L) {
     IRBuilder<> Builder(P.InsertPt);
     Module *M = BB->getParent()->getParent();
     Type *I32 = Type::getInt32Ty(BB->getContext());
-    Function *PrefetchFunc = Intrinsic::getDeclaration(
+    Function *PrefetchFunc = Intrinsic::getOrInsertDeclaration(
         M, Intrinsic::prefetch, PrefPtrValue->getType());
     Builder.CreateCall(
         PrefetchFunc,

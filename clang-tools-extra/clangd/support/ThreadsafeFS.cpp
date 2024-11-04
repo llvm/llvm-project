@@ -29,7 +29,7 @@ public:
       : ProxyFileSystem(std::move(FS)) {}
 
   llvm::ErrorOr<std::unique_ptr<llvm::vfs::File>>
-  openFileForRead(const llvm::Twine &InPath, bool IsText = true) override {
+  openFileForRead(const llvm::Twine &InPath) override {
     llvm::SmallString<128> Path;
     InPath.toVector(Path);
 

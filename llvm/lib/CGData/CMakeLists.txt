@@ -12,6 +12,8 @@ add_llvm_component_library(LLVMCGData
   intrinsics_gen
 
   LINK_COMPONENTS
+  BitReader
+  BitWriter
   Core
   Support
   Object

@@ -1637,6 +1637,129 @@ private:
 
     size_t GetNumOptions() { return m_num_options; }
 
+    void PrepareOptionsForCompletion(CompletionRequest &request,
+                                     OptionElementVector &option_vec,
+                                     ExecutionContext *exe_ctx) {
+      // I'm not sure if we'll get into trouble doing an option parsing start
+      // and end in this context.  If so, then I'll have to directly tell the
+      // scripter to do this.
+      OptionParsingStarting(exe_ctx);
+      auto opt_defs = GetDefinitions();
+
+      // Iterate through the options we found so far, and push them into
+      // the scripted side.
+      for (auto option_elem : option_vec) {
+        int cur_defs_index = option_elem.opt_defs_index;
+        // If we don't recognize this option we can't set it.
+        if (cur_defs_index == OptionArgElement::eUnrecognizedArg ||
+            cur_defs_index == OptionArgElement::eBareDash ||
+            cur_defs_index == OptionArgElement::eBareDoubleDash)
+          continue;
+        bool option_has_arg = opt_defs[cur_defs_index].option_has_arg;
+        llvm::StringRef cur_arg_value;
+        if (option_has_arg) {
+          int cur_arg_pos = option_elem.opt_arg_pos;
+          if (cur_arg_pos != OptionArgElement::eUnrecognizedArg &&
+              cur_arg_pos != OptionArgElement::eBareDash &&
+              cur_arg_pos != OptionArgElement::eBareDoubleDash) {
+            cur_arg_value =
+                request.GetParsedLine().GetArgumentAtIndex(cur_arg_pos);
+          }
+        }
+        SetOptionValue(cur_defs_index, cur_arg_value, exe_ctx);
+      }
+      OptionParsingFinished(exe_ctx);
+    }
+
+    void
+    ProcessCompletionDict(CompletionRequest &request,
+                          StructuredData::DictionarySP &completion_dict_sp) {
+      // We don't know how to process an empty completion dict, our callers have
+      // to do that.
+      assert(completion_dict_sp && "Must have valid completion dict");
+      // First handle the case of a single completion:
+      llvm::StringRef completion;
+      // If the dictionary has one element "no-completion" then we return here
+      if (completion_dict_sp->GetValueForKeyAsString("no-completion",
+                                                     completion))
+        return;
+
+      if (completion_dict_sp->GetValueForKeyAsString("completion",
+                                                     completion)) {
+        llvm::StringRef mode_str;
+        CompletionMode mode = CompletionMode::Normal;
+        if (completion_dict_sp->GetValueForKeyAsString("mode", mode_str)) {
+          if (mode_str == "complete")
+            mode = CompletionMode::Normal;
+          else if (mode_str == "partial")
+            mode = CompletionMode::Partial;
+          else {
+            // FIXME - how do I report errors here?
+            return;
+          }
+        }
+        request.AddCompletion(completion, "", mode);
+        return;
+      }
+      // The completions are required, the descriptions are not:
+      StructuredData::Array *completions;
+      StructuredData::Array *descriptions;
+      if (completion_dict_sp->GetValueForKeyAsArray("values", completions)) {
+        completion_dict_sp->GetValueForKeyAsArray("descriptions", descriptions);
+        size_t num_completions = completions->GetSize();
+        for (size_t idx = 0; idx < num_completions; idx++) {
+          auto val = completions->GetItemAtIndexAsString(idx);
+          if (!val)
+            // FIXME: How do I report this error?
+            return;
+
+          if (descriptions) {
+            auto desc = descriptions->GetItemAtIndexAsString(idx);
+            request.AddCompletion(*val, desc ? *desc : "");
+          } else
+            request.AddCompletion(*val);
+        }
+      }
+    }
+
+    void
+    HandleOptionArgumentCompletion(lldb_private::CompletionRequest &request,
+                                   OptionElementVector &option_vec,
+                                   int opt_element_index,
+                                   CommandInterpreter &interpreter) override {
+      ScriptInterpreter *scripter =
+          interpreter.GetDebugger().GetScriptInterpreter();
+
+      if (!scripter)
+        return;
+
+      ExecutionContext exe_ctx = interpreter.GetExecutionContext();
+      PrepareOptionsForCompletion(request, option_vec, &exe_ctx);
+
+      auto defs = GetDefinitions();
+
+      size_t defs_index = option_vec[opt_element_index].opt_defs_index;
+      llvm::StringRef option_name = defs[defs_index].long_option;
+      bool is_enum = defs[defs_index].enum_values.size() != 0;
+      if (option_name.empty())
+        return;
+      // If this is an enum, we don't call the custom completer, just let the
+      // regular option completer handle that:
+      StructuredData::DictionarySP completion_dict_sp;
+      if (!is_enum)
+        completion_dict_sp =
+            scripter->HandleOptionArgumentCompletionForScriptedCommand(
+                m_cmd_obj_sp, option_name, request.GetCursorCharPos());
+
+      if (!completion_dict_sp) {
+        Options::HandleOptionArgumentCompletion(request, option_vec,
+                                                opt_element_index, interpreter);
+        return;
+      }
+
+      ProcessCompletionDict(request, completion_dict_sp);
+    }
+
   private:
     struct EnumValueStorage {
       EnumValueStorage() {
@@ -1877,6 +2000,74 @@ public:
   Status GetOptionsError() { return m_options_error.Clone(); }
   Status GetArgsError() { return m_args_error.Clone(); }
   bool WantsCompletion() override { return true; }
+
+private:
+  void PrepareOptionsForCompletion(CompletionRequest &request,
+                                   OptionElementVector &option_vec) {
+    // First, we have to tell the Scripted side to set the values in its
+    // option store, then we call into the handle_completion passing in
+    // an array of the args, the arg index and the cursor position in the arg.
+    // We want the script side to have a chance to clear its state, so tell
+    // it argument parsing has started:
+    Options *options = GetOptions();
+    // If there are not options, this will be nullptr, and in that case we
+    // can just skip setting the options on the scripted side:
+    if (options)
+      m_options.PrepareOptionsForCompletion(request, option_vec, &m_exe_ctx);
+  }
+
+public:
+  void HandleArgumentCompletion(CompletionRequest &request,
+                                OptionElementVector &option_vec) override {
+    ScriptInterpreter *scripter = GetDebugger().GetScriptInterpreter();
+
+    if (!scripter)
+      return;
+
+    // Set up the options values on the scripted side:
+    PrepareOptionsForCompletion(request, option_vec);
+
+    // Now we have to make up the argument list.
+    // The ParseForCompletion only identifies tokens in the m_parsed_line
+    // it doesn't remove the options leaving only the args as it does for
+    // the regular Parse, so we have to filter out the option ones using the
+    // option_element_vector:
+
+    Options *options = GetOptions();
+    auto defs = options->GetDefinitions();
+
+    std::unordered_set<size_t> option_slots;
+    for (const auto &elem : option_vec) {
+      if (elem.opt_defs_index == -1)
+        continue;
+      option_slots.insert(elem.opt_pos);
+      if (defs[elem.opt_defs_index].option_has_arg)
+        option_slots.insert(elem.opt_arg_pos);
+    }
+
+    std::vector<llvm::StringRef> args_vec;
+    Args &args = request.GetParsedLine();
+    size_t num_args = args.GetArgumentCount();
+    size_t cursor_idx = request.GetCursorIndex();
+    size_t args_elem_pos = cursor_idx;
+
+    for (size_t idx = 0; idx < num_args; idx++) {
+      if (option_slots.count(idx) == 0)
+        args_vec.push_back(args[idx].ref());
+      else if (idx < cursor_idx)
+        args_elem_pos--;
+    }
+    StructuredData::DictionarySP completion_dict_sp =
+        scripter->HandleArgumentCompletionForScriptedCommand(
+            m_cmd_obj_sp, args_vec, args_elem_pos, request.GetCursorCharPos());
+
+    if (!completion_dict_sp) {
+      CommandObject::HandleArgumentCompletion(request, option_vec);
+      return;
+    }
+
+    m_options.ProcessCompletionDict(request, completion_dict_sp);
+  }
 
   bool IsRemovable() const override { return true; }
 

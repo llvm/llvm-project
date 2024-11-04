@@ -1843,7 +1843,7 @@ Address CodeGenFunction::recoverAddrOfEscapedLocal(CodeGenFunction &ParentCGF,
         std::make_pair(ParentAlloca, ParentCGF.EscapedLocals.size()));
     int FrameEscapeIdx = InsertPair.first->second;
     // call ptr @llvm.localrecover(ptr @parentFn, ptr %fp, i32 N)
-    llvm::Function *FrameRecoverFn = llvm::Intrinsic::getDeclaration(
+    llvm::Function *FrameRecoverFn = llvm::Intrinsic::getOrInsertDeclaration(
         &CGM.getModule(), llvm::Intrinsic::localrecover);
     RecoverCall = Builder.CreateCall(
         FrameRecoverFn, {ParentCGF.CurFn, ParentFP,
@@ -1942,7 +1942,7 @@ void CodeGenFunction::EmitCapturedLocals(CodeGenFunction &ParentCGF,
       // %1 = call ptr @llvm.localrecover(@"?fin$0@0@main@@",..)
       // %2 = load ptr, ptr %1, align 8
       //   ==> %2 is the frame-pointer of outermost host function
-      llvm::Function *FrameRecoverFn = llvm::Intrinsic::getDeclaration(
+      llvm::Function *FrameRecoverFn = llvm::Intrinsic::getOrInsertDeclaration(
           &CGM.getModule(), llvm::Intrinsic::localrecover);
       ParentFP = Builder.CreateCall(
           FrameRecoverFn, {ParentCGF.CurFn, ParentFP,

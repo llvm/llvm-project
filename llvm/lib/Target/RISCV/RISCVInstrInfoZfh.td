@@ -33,9 +33,14 @@ def riscv_fmv_x_signexth
 
 // Zhinxmin and Zhinx
 
+def GPRAsFPR16 : AsmOperandClass {
+  let Name = "GPRAsFPR16";
+  let ParserMethod = "parseGPRAsFPR";
+  let RenderMethod = "addRegOperands";
+}
+
 def FPR16INX : RegisterOperand<GPRF16> {
-  let ParserMatchClass = GPRAsFPR;
-  let DecoderMethod = "DecodeGPRRegisterClass";
+  let ParserMatchClass = GPRAsFPR16;
 }
 
 def ZfhExt     : ExtInfo<"", "", [HasStdExtZfh],
@@ -83,6 +88,19 @@ def FLH : FPLoad_r<0b001, "flh", FPR16, WriteFLD16>;
 // encoding.
 def FSH : FPStore_r<0b001, "fsh", FPR16, WriteFST16>;
 } // Predicates = [HasHalfFPLoadStoreMove]
+
+let Predicates = [HasStdExtZhinxmin], isCodeGenOnly = 1 in {
+def LH_INX : Load_ri<0b001, "lh", GPRF16>, Sched<[WriteLDH, ReadMemBase]>;
+def SH_INX : Store_rri<0b001, "sh", GPRF16>,
+             Sched<[WriteSTH, ReadStoreData, ReadMemBase]>;
+
+// ADDI with GPRF16 register class to use for copy. This should not be used as
+// general ADDI, so the immediate should always be zero.
+let isReMaterializable = 1, isAsCheapAsAMove = 1, isMoveReg = 1,
+    hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
+def PseudoMV_FPR16INX : Pseudo<(outs GPRF16:$rd), (ins GPRF16:$rs), []>,
+                        Sched<[WriteIALU, ReadIALU]>;
+}
 
 foreach Ext = ZfhExts in {
   let SchedRW = [WriteFMA16, ReadFMA16, ReadFMA16, ReadFMA16Addend] in {
@@ -426,13 +444,10 @@ let Predicates = [HasStdExtZhinxmin] in {
 defm Select_FPR16INX : SelectCC_GPR_rrirr<FPR16INX, f16>;
 
 /// Loads
-def : Pat<(f16 (load (AddrRegImm (XLenVT GPR:$rs1), simm12:$imm12))),
-          (COPY_TO_REGCLASS (LH GPR:$rs1, simm12:$imm12), GPRF16)>;
+def : LdPat<load, LH_INX, f16>;
 
 /// Stores
-def : Pat<(store (f16 FPR16INX:$rs2),
-                 (AddrRegImm (XLenVT GPR:$rs1), simm12:$imm12)),
-          (SH (COPY_TO_REGCLASS FPR16INX:$rs2, GPR), GPR:$rs1, simm12:$imm12)>;
+def : StPat<store, SH_INX, GPRF16, f16>;
 } // Predicates = [HasStdExtZhinxmin]
 
 let Predicates = [HasStdExtZfhmin] in {
@@ -458,8 +473,8 @@ def : Pat<(any_fpround FPR32INX:$rs1), (FCVT_H_S_INX FPR32INX:$rs1, FRM_DYN)>;
 def : Pat<(any_fpextend FPR16INX:$rs1), (FCVT_S_H_INX FPR16INX:$rs1, FRM_RNE)>;
 
 // Moves (no conversion)
-def : Pat<(f16 (riscv_fmv_h_x GPR:$src)), (COPY_TO_REGCLASS GPR:$src, GPR)>;
-def : Pat<(riscv_fmv_x_anyexth FPR16INX:$src), (COPY_TO_REGCLASS FPR16INX:$src, GPR)>;
+def : Pat<(f16 (riscv_fmv_h_x GPR:$src)), (EXTRACT_SUBREG GPR:$src, sub_16)>;
+def : Pat<(riscv_fmv_x_anyexth FPR16INX:$src), (INSERT_SUBREG (XLenVT (IMPLICIT_DEF)), FPR16INX:$src, sub_16)>;
 
 def : Pat<(fcopysign FPR32INX:$rs1, FPR16INX:$rs2), (FSGNJ_S_INX $rs1, (FCVT_S_H_INX $rs2, FRM_RNE))>;
 } // Predicates = [HasStdExtZhinxmin]

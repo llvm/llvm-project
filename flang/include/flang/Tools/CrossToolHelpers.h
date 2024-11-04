@@ -7,15 +7,15 @@
 //===----------------------------------------------------------------------===//
 // A header file for containing functionallity that is used across Flang tools,
 // such as helper functions which apply or generate information needed accross
-// tools like bbc and flang-new.
+// tools like bbc and flang.
 //===----------------------------------------------------------------------===//
 
 #ifndef FORTRAN_TOOLS_CROSS_TOOL_HELPERS_H
 #define FORTRAN_TOOLS_CROSS_TOOL_HELPERS_H
 
+#include "flang/Common/LangOptions.h"
 #include "flang/Common/MathOptionsBase.h"
 #include "flang/Frontend/CodeGenOptions.h"
-#include "flang/Frontend/LangOptions.h"
 #include <cstdint>
 
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
@@ -145,7 +145,7 @@ struct OffloadModuleOpts {
         OMPTargetTriples(OMPTargetTriples.begin(), OMPTargetTriples.end()),
         NoGPULib(NoGPULib) {}
 
-  OffloadModuleOpts(Fortran::frontend::LangOptions &Opts)
+  OffloadModuleOpts(Fortran::common::LangOptions &Opts)
       : OpenMPTargetDebug(Opts.OpenMPTargetDebug),
         OpenMPTeamSubscription(Opts.OpenMPTeamSubscription),
         OpenMPThreadSubscription(Opts.OpenMPThreadSubscription),

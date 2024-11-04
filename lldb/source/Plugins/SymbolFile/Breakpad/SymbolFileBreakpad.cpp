@@ -614,7 +614,7 @@ bool SymbolFileBreakpad::ParseCFIUnwindRow(llvm::StringRef unwind_rules,
       row.GetCFAValue().SetIsDWARFExpression(saved.data(), saved.size());
     } else if (const RegisterInfo *info =
                    ResolveRegisterOrRA(triple, resolver, lhs)) {
-      UnwindPlan::Row::RegisterLocation loc;
+      UnwindPlan::Row::AbstractRegisterLocation loc;
       loc.SetIsDWARFExpression(saved.data(), saved.size());
       row.SetRegisterInfo(info->kinds[eRegisterKindLLDB], loc);
     } else
@@ -766,7 +766,7 @@ SymbolFileBreakpad::ParseWinUnwindPlan(const Bookmark &bookmark,
     }
 
     llvm::ArrayRef<uint8_t> saved = SaveAsDWARF(*it->second);
-    UnwindPlan::Row::RegisterLocation loc;
+    UnwindPlan::Row::AbstractRegisterLocation loc;
     loc.SetIsDWARFExpression(saved.data(), saved.size());
     row_sp->SetRegisterInfo(info->kinds[eRegisterKindLLDB], loc);
   }

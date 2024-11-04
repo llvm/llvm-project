@@ -51,7 +51,8 @@ arith::NarrowTypeEmulationConverter::NarrowTypeEmulationConverter(
 }
 
 void arith::populateArithNarrowTypeEmulationPatterns(
-    NarrowTypeEmulationConverter &typeConverter, RewritePatternSet &patterns) {
+    const NarrowTypeEmulationConverter &typeConverter,
+    RewritePatternSet &patterns) {
   // Populate `func.*` conversion patterns.
   populateFunctionOpInterfaceTypeConversionPattern<func::FuncOp>(patterns,
                                                                  typeConverter);

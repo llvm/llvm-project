@@ -406,9 +406,9 @@
 // RUN:    /Zm \
 // RUN:    /Zo \
 // RUN:    /Zo- \
-// RUN:    -### -- %s 2>&1 | FileCheck -check-prefix=IGNORED %s
+// RUN:    -### -- %s 2>&1 | FileCheck -DMSG=%errc_ENOENT -check-prefix=IGNORED %s
 // IGNORED-NOT: argument unused during compilation
-// IGNORED-NOT: no such file or directory
+// IGNORED-NOT: [[MSG]]
 // Don't confuse /openmp- with the /o flag:
 // IGNORED-NOT: "-o" "penmp-.obj"
 
@@ -626,6 +626,8 @@
 // LTO-THIN: -flto=thin
 
 // RUN: not %clang_cl -### -Fe%t.exe -entry:main -flto -- %s 2>&1 | FileCheck -check-prefix=LTO-WITHOUT-LLD %s
+// RUN: not %clang_cl -### -fuse-ld=link -Fe%t.exe -entry:main -flto -- %s 2>&1 | FileCheck -check-prefix=LTO-WITHOUT-LLD %s
+// RUN: not %clang -### --target=x86_64-windows-msvc -fuse-ld=link -Fe%t.exe -entry:main -flto -- %s 2>&1 | FileCheck -check-prefix=LTO-WITHOUT-LLD %s
 // LTO-WITHOUT-LLD: LTO requires -fuse-ld=lld
 
 // RUN: %clang_cl  -### -- %s 2>&1 | FileCheck -check-prefix=NOCFGUARD %s

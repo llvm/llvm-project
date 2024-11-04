@@ -237,7 +237,7 @@ Value *CachingVPExpander::convertEVLToMask(IRBuilder<> &Builder,
   if (ElemCount.isScalable()) {
     auto *M = Builder.GetInsertBlock()->getModule();
     Type *BoolVecTy = VectorType::get(Builder.getInt1Ty(), ElemCount);
-    Function *ActiveMaskFunc = Intrinsic::getDeclaration(
+    Function *ActiveMaskFunc = Intrinsic::getOrInsertDeclaration(
         M, Intrinsic::get_active_lane_mask, {BoolVecTy, EVLParam->getType()});
     // `get_active_lane_mask` performs an implicit less-than comparison.
     Value *ConstZero = Builder.getInt32(0);
@@ -299,7 +299,7 @@ Value *CachingVPExpander::expandPredicationToIntCall(
   case Intrinsic::umin: {
     Value *Op0 = VPI.getOperand(0);
     Value *Op1 = VPI.getOperand(1);
-    Function *Fn = Intrinsic::getDeclaration(
+    Function *Fn = Intrinsic::getOrInsertDeclaration(
         VPI.getModule(), UnpredicatedIntrinsicID, {VPI.getType()});
     Value *NewOp = Builder.CreateCall(Fn, {Op0, Op1}, VPI.getName());
     replaceOperation(*NewOp, VPI);
@@ -308,7 +308,7 @@ Value *CachingVPExpander::expandPredicationToIntCall(
   case Intrinsic::bswap:
   case Intrinsic::bitreverse: {
     Value *Op = VPI.getOperand(0);
-    Function *Fn = Intrinsic::getDeclaration(
+    Function *Fn = Intrinsic::getOrInsertDeclaration(
         VPI.getModule(), UnpredicatedIntrinsicID, {VPI.getType()});
     Value *NewOp = Builder.CreateCall(Fn, {Op}, VPI.getName());
     replaceOperation(*NewOp, VPI);
@@ -327,7 +327,7 @@ Value *CachingVPExpander::expandPredicationToFPCall(
   case Intrinsic::fabs:
   case Intrinsic::sqrt: {
     Value *Op0 = VPI.getOperand(0);
-    Function *Fn = Intrinsic::getDeclaration(
+    Function *Fn = Intrinsic::getOrInsertDeclaration(
         VPI.getModule(), UnpredicatedIntrinsicID, {VPI.getType()});
     Value *NewOp = Builder.CreateCall(Fn, {Op0}, VPI.getName());
     replaceOperation(*NewOp, VPI);
@@ -337,7 +337,7 @@ Value *CachingVPExpander::expandPredicationToFPCall(
   case Intrinsic::minnum: {
     Value *Op0 = VPI.getOperand(0);
     Value *Op1 = VPI.getOperand(1);
-    Function *Fn = Intrinsic::getDeclaration(
+    Function *Fn = Intrinsic::getOrInsertDeclaration(
         VPI.getModule(), UnpredicatedIntrinsicID, {VPI.getType()});
     Value *NewOp = Builder.CreateCall(Fn, {Op0, Op1}, VPI.getName());
     replaceOperation(*NewOp, VPI);
@@ -350,7 +350,7 @@ Value *CachingVPExpander::expandPredicationToFPCall(
     Value *Op0 = VPI.getOperand(0);
     Value *Op1 = VPI.getOperand(1);
     Value *Op2 = VPI.getOperand(2);
-    Function *Fn = Intrinsic::getDeclaration(
+    Function *Fn = Intrinsic::getOrInsertDeclaration(
         VPI.getModule(), UnpredicatedIntrinsicID, {VPI.getType()});
     Value *NewOp;
     if (Intrinsic::isConstrainedFPIntrinsic(UnpredicatedIntrinsicID))
@@ -594,7 +594,7 @@ bool CachingVPExpander::discardEVLParameter(VPIntrinsic &VPI) {
     // TODO add caching
     auto *M = VPI.getModule();
     Function *VScaleFunc =
-        Intrinsic::getDeclaration(M, Intrinsic::vscale, Int32Ty);
+        Intrinsic::getOrInsertDeclaration(M, Intrinsic::vscale, Int32Ty);
     IRBuilder<> Builder(VPI.getParent(), VPI.getIterator());
     Value *FactorConst = Builder.getInt32(StaticElemCount.getKnownMinValue());
     Value *VScale = Builder.CreateCall(VScaleFunc, {}, "vscale");

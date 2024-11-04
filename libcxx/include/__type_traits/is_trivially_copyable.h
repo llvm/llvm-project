@@ -27,8 +27,10 @@ template <class _Tp>
 inline constexpr bool is_trivially_copyable_v = __is_trivially_copyable(_Tp);
 #endif
 
+#if _LIBCPP_STD_VER >= 20
 template <class _Tp>
-inline const bool __is_cheap_to_copy = __is_trivially_copyable(_Tp) && sizeof(_Tp) <= sizeof(std::intmax_t);
+inline constexpr bool __is_cheap_to_copy = is_trivially_copyable_v<_Tp> && sizeof(_Tp) <= sizeof(std::intmax_t);
+#endif
 
 _LIBCPP_END_NAMESPACE_STD
 

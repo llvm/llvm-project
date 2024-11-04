@@ -900,6 +900,10 @@ bool AMDGPUTargetLowering::isSDNodeAlwaysUniform(const SDNode *N) const {
     unsigned IntrID = N->getConstantOperandVal(0);
     return AMDGPU::isIntrinsicAlwaysUniform(IntrID);
   }
+  case ISD::INTRINSIC_W_CHAIN: {
+    unsigned IntrID = N->getConstantOperandVal(1);
+    return AMDGPU::isIntrinsicAlwaysUniform(IntrID);
+  }
   case ISD::LOAD:
     if (cast<LoadSDNode>(N)->getMemOperand()->getAddrSpace() ==
         AMDGPUAS::CONSTANT_ADDRESS_32BIT)
@@ -4198,7 +4202,7 @@ SDValue AMDGPUTargetLowering::performTruncateCombine(
   // integer operation.
   // trunc (srl (bitcast (build_vector x, y))), 16 -> trunc (bitcast y)
   if (Src.getOpcode() == ISD::SRL && !VT.isVector()) {
-    if (auto K = isConstOrConstSplat(Src.getOperand(1))) {
+    if (auto *K = isConstOrConstSplat(Src.getOperand(1))) {
       if (2 * K->getZExtValue() == Src.getValueType().getScalarSizeInBits()) {
         SDValue BV = stripBitcast(Src.getOperand(0));
         if (BV.getOpcode() == ISD::BUILD_VECTOR &&
@@ -5775,7 +5779,7 @@ void AMDGPUTargetLowering::computeKnownBitsForTargetNode(
     break;
   }
   case AMDGPUISD::LDS: {
-    auto GA = cast<GlobalAddressSDNode>(Op.getOperand(0).getNode());
+    auto *GA = cast<GlobalAddressSDNode>(Op.getOperand(0).getNode());
     Align Alignment = GA->getGlobal()->getPointerAlignment(DAG.getDataLayout());
 
     Known.Zero.setHighBits(16);
@@ -6038,23 +6042,4 @@ bool AMDGPUTargetLowering::isKnownNeverNaNForTargetNode(SDValue Op,
 bool AMDGPUTargetLowering::isReassocProfitable(MachineRegisterInfo &MRI,
                                                Register N0, Register N1) const {
   return MRI.hasOneNonDBGUse(N0); // FIXME: handle regbanks
-}
-
-/// Whether it is profitable to sink the operands of an
-/// Instruction I to the basic block of I.
-/// This helps using several modifiers (like abs and neg) more often.
-bool AMDGPUTargetLowering::shouldSinkOperands(
-    Instruction *I, SmallVectorImpl<Use *> &Ops) const {
-  using namespace PatternMatch;
-
-  for (auto &Op : I->operands()) {
-    // Ensure we are not already sinking this operand.
-    if (any_of(Ops, [&](Use *U) { return U->get() == Op.get(); }))
-      continue;
-
-    if (match(&Op, m_FAbs(m_Value())) || match(&Op, m_FNeg(m_Value())))
-      Ops.push_back(&Op);
-  }
-
-  return !Ops.empty();
 }

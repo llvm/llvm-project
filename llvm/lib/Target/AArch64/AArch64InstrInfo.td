@@ -5050,6 +5050,27 @@ def : Pat<(v1f64 (fmaxnum (v1f64 FPR64:$Rn), (v1f64 FPR64:$Rm))),
 def : Pat<(v1f64 (fminnum (v1f64 FPR64:$Rn), (v1f64 FPR64:$Rm))),
           (FMINNMDrr FPR64:$Rn, FPR64:$Rm)>;
 
+def : Pat<(fminnum_ieee (f64 FPR64:$a), (f64 FPR64:$b)),
+          (FMINNMDrr FPR64:$a, FPR64:$b)>;
+def : Pat<(fmaxnum_ieee (f64 FPR64:$a), (f64 FPR64:$b)),
+          (FMAXNMDrr FPR64:$a, FPR64:$b)>;
+def : Pat<(f64 (fcanonicalize f64:$a)),
+          (FMINNMDrr   f64:$a, f64:$a)>;
+def : Pat<(fminnum_ieee (f32 FPR32:$a), (f32 FPR32:$b)),
+          (FMINNMSrr FPR32:$a, FPR32:$b)>;
+def : Pat<(fmaxnum_ieee (f32 FPR32:$a), (f32 FPR32:$b)),
+          (FMAXNMSrr FPR32:$a, FPR32:$b)>;
+def : Pat<(f32 (fcanonicalize f32:$a)),
+          (FMINNMSrr   f32:$a, f32:$a)>;
+
+let Predicates = [HasFullFP16] in {
+def : Pat<(fminnum_ieee (f16 FPR16:$a), (f16 FPR16:$b)),
+          (FMINNMHrr FPR16:$a, FPR16:$b)>;
+def : Pat<(fmaxnum_ieee (f16 FPR16:$a), (f16 FPR16:$b)),
+          (FMAXNMHrr FPR16:$a, FPR16:$b)>;
+def : Pat<(f16 (fcanonicalize f16:$a)),
+          (FMINNMHrr   f16:$a, f16:$a)>;
+}
 //===----------------------------------------------------------------------===//
 // Floating point three operand instructions.
 //===----------------------------------------------------------------------===//
@@ -5553,6 +5574,42 @@ defm FMINNMP : SIMDThreeSameVectorFP<1,1,0b000,"fminnmp", int_aarch64_neon_fminn
 defm FMINNM  : SIMDThreeSameVectorFP<0,1,0b000,"fminnm", any_fminnum>;
 defm FMINP   : SIMDThreeSameVectorFP<1,1,0b110,"fminp", int_aarch64_neon_fminp>;
 defm FMIN    : SIMDThreeSameVectorFP<0,1,0b110,"fmin", any_fminimum>;
+
+let Predicates = [HasNEON] in {
+def : Pat<(v2f64 (fminnum_ieee (v2f64 V128:$Rn), (v2f64 V128:$Rm))),
+          (v2f64 (FMINNMv2f64 (v2f64 V128:$Rn), (v2f64 V128:$Rm)))>;
+def : Pat<(v2f64 (fmaxnum_ieee (v2f64 V128:$Rn), (v2f64 V128:$Rm))),
+          (v2f64 (FMAXNMv2f64 (v2f64 V128:$Rn), (v2f64 V128:$Rm)))>;
+def : Pat<(v2f64 (fcanonicalize (v2f64 V128:$Rn))),
+          (v2f64 (FMINNMv2f64 (v2f64 V128:$Rn), (v2f64 V128:$Rn)))>;
+def : Pat<(v4f32 (fminnum_ieee (v4f32 V128:$Rn), (v4f32 V128:$Rm))),
+          (v4f32 (FMINNMv4f32 (v4f32 V128:$Rn), (v4f32 V128:$Rm)))>;
+def : Pat<(v4f32 (fmaxnum_ieee (v4f32 V128:$Rn), (v4f32 V128:$Rm))),
+          (v4f32 (FMAXNMv4f32 (v4f32 V128:$Rn), (v4f32 V128:$Rm)))>;
+def : Pat<(v4f32 (fcanonicalize (v4f32 V128:$Rn))),
+          (v4f32 (FMINNMv4f32 (v4f32 V128:$Rn), (v4f32 V128:$Rn)))>;
+def : Pat<(v2f32 (fminnum_ieee (v2f32 V64:$Rn), (v2f32 V64:$Rm))),
+          (v2f32 (FMINNMv2f32 (v2f32 V64:$Rn), (v2f32 V64:$Rm)))>;
+def : Pat<(v2f32 (fmaxnum_ieee (v2f32 V64:$Rn), (v2f32 V64:$Rm))),
+          (v2f32 (FMAXNMv2f32 (v2f32 V64:$Rn), (v2f32 V64:$Rm)))>;
+def : Pat<(v2f32 (fcanonicalize (v2f32 V64:$Rn))),
+          (v2f32 (FMINNMv2f32 (v2f32 V64:$Rn), (v2f32 V64:$Rn)))>;
+}
+
+let Predicates = [HasNEON, HasFullFP16] in {
+def : Pat<(v8f16 (fminnum_ieee (v8f16 V128:$Rn), (v8f16 V128:$Rm))),
+          (v8f16 (FMINNMv8f16 (v8f16 V128:$Rn), (v8f16 V128:$Rm)))>;
+def : Pat<(v8f16 (fmaxnum_ieee (v8f16 V128:$Rn), (v8f16 V128:$Rm))),
+          (v8f16 (FMAXNMv8f16 (v8f16 V128:$Rn), (v8f16 V128:$Rm)))>;
+def : Pat<(v8f16 (fcanonicalize (v8f16 V128:$Rn))),
+          (v8f16 (FMINNMv8f16 (v8f16 V128:$Rn), (v8f16 V128:$Rn)))>;
+def : Pat<(v4f16 (fminnum_ieee (v4f16 V64:$Rn), (v4f16 V64:$Rm))),
+          (v4f16 (FMINNMv4f16 (v4f16 V64:$Rn), (v4f16 V64:$Rm)))>;
+def : Pat<(v4f16 (fmaxnum_ieee (v4f16 V64:$Rn), (v4f16 V64:$Rm))),
+          (v4f16 (FMAXNMv4f16 (v4f16 V64:$Rn), (v4f16 V64:$Rm)))>;
+def : Pat<(v4f16 (fcanonicalize (v4f16 V64:$Rn))),
+          (v4f16 (FMINNMv4f16 (v4f16 V64:$Rn), (v4f16 V64:$Rn)))>;
+}
 
 // NOTE: The operands of the PatFrag are reordered on FMLA/FMLS because the
 // instruction expects the addend first, while the fma intrinsic puts it last.
@@ -9697,6 +9754,7 @@ def : Pat<(AArch64tcret tglobaladdr:$dst, (i32 timm:$FPDiff)),
 def : Pat<(AArch64tcret texternalsym:$dst, (i32 timm:$FPDiff)),
           (TCRETURNdi texternalsym:$dst, imm:$FPDiff)>;
 
+let Size = 8 in
 def MOVMCSym : Pseudo<(outs GPR64:$dst), (ins i64imm:$sym), []>, Sched<[]>;
 def : Pat<(i64 (AArch64LocalRecover mcsym:$sym)), (MOVMCSym mcsym:$sym)>;
 
@@ -10136,7 +10194,7 @@ let Uses = [FPMR, FPCR], Predicates = [HasFP8] in {
   defm BF2CVTL : SIMDMixedTwoVectorFP8<0b11, "bf2cvtl">;
   defm FCVTN_F16_F8 : SIMDThreeSameSizeVectorCvt<"fcvtn">;
   defm FCVTN_F32_F8 : SIMDThreeVectorCvt<"fcvtn">;
-  defm FSCALE : SIMDThreeSameVectorFP<0b1, 0b1, 0b111, "fscale", null_frag>;
+  defm FSCALE : SIMDThreeVectorFscale<0b1, 0b1, 0b111, "fscale", int_aarch64_neon_fp8_fscale>;
 } // End let Predicates = [HasFP8]
 
 // fminimum(abs(a), abs(b)) -> famin(a, b)

@@ -26,8 +26,8 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/ADT/StringSet.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <cassert>
@@ -84,7 +84,7 @@ analyze(llvm::ArrayRef<Decl *> ASTRoots,
   auto &SM = PP.getSourceManager();
   const auto MainFile = *SM.getFileEntryRefForID(SM.getMainFileID());
   llvm::DenseSet<const Include *> Used;
-  llvm::StringSet<> Missing;
+  llvm::StringMap<Header> Missing;
   if (!HeaderFilter)
     HeaderFilter = [](llvm::StringRef) { return false; };
   OptionalDirectoryEntryRef ResourceDir =
@@ -119,7 +119,7 @@ analyze(llvm::ArrayRef<Decl *> ASTRoots,
                Satisfied = true;
              }
              if (!Satisfied)
-               Missing.insert(std::move(Spelling));
+               Missing.try_emplace(std::move(Spelling), Providers.front());
            });
 
   AnalysisResults Results;
@@ -144,8 +144,8 @@ analyze(llvm::ArrayRef<Decl *> ASTRoots,
     }
     Results.Unused.push_back(&I);
   }
-  for (llvm::StringRef S : Missing.keys())
-    Results.Missing.push_back(S.str());
+  for (auto &E : Missing)
+    Results.Missing.emplace_back(E.first().str(), E.second);
   llvm::sort(Results.Missing);
   return Results;
 }
@@ -158,9 +158,9 @@ std::string fixIncludes(const AnalysisResults &Results,
   // Encode insertions/deletions in the magic way clang-format understands.
   for (const Include *I : Results.Unused)
     cantFail(R.add(tooling::Replacement(FileName, UINT_MAX, 1, I->quote())));
-  for (llvm::StringRef Spelled : Results.Missing)
-    cantFail(R.add(tooling::Replacement(FileName, UINT_MAX, 0,
-                                        ("#include " + Spelled).str())));
+  for (auto &[Spelled, _] : Results.Missing)
+    cantFail(R.add(
+        tooling::Replacement(FileName, UINT_MAX, 0, "#include " + Spelled)));
   // "cleanup" actually turns the UINT_MAX replacements into concrete edits.
   auto Positioned = cantFail(format::cleanupAroundReplacements(Code, R, Style));
   return cantFail(tooling::applyAllReplacements(Code, Positioned));

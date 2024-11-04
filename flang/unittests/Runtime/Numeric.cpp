@@ -310,7 +310,7 @@ TEST(Numeric, FPowI) {
   EXPECT_EQ(RTNAME(FPow10k)(Real<10>{-3}, Int<8>{3}), Real<10>{-27});
   EXPECT_EQ(RTNAME(FPow10k)(Real<10>{-2}, Int<8>{-3}), Real<10>{-0.125});
 #endif
-#if LDBL_MANT_DIG == 113 || HAS_FLOAT128
+#if HAS_LDBL128 || HAS_FLOAT128
   EXPECT_EQ(RTNAME(FPow16i)(Real<16>{0}, Int<4>{0}), Real<16>{1});
   EXPECT_EQ(RTNAME(FPow16i)(Real<16>{0.3}, Int<4>{0}), Real<16>{1});
   EXPECT_EQ(RTNAME(FPow16i)(Real<16>{2}, Int<4>{-1}), Real<16>{0.5});

@@ -1290,7 +1290,7 @@ public:
       if (AllowContraction) {
         // Use fmuladd for floating point operations and let the backend decide
         // if that's profitable.
-        Function *FMulAdd = Intrinsic::getDeclaration(
+        Function *FMulAdd = Intrinsic::getOrInsertDeclaration(
             Func.getParent(), Intrinsic::fmuladd, A->getType());
         return Builder.CreateCall(FMulAdd, {A, B, Sum});
       }
@@ -2306,7 +2306,6 @@ public:
         default:
           llvm_unreachable("Unhandled case");
         }
-        SS.flush();
         write(Tmp);
       }
     }
@@ -2361,7 +2360,6 @@ public:
         else
           TmpStream << "scalar";
       }
-      TmpStream.flush();
       Tmp = std::string(StringRef(Tmp).trim());
       LineLength += Tmp.size();
       Stream << Tmp;
@@ -2435,7 +2433,6 @@ public:
     }
 
     const std::string &getResult() {
-      Stream.flush();
       return Str;
     }
   };

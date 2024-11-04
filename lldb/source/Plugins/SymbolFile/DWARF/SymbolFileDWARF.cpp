@@ -2748,8 +2748,9 @@ void SymbolFileDWARF::FindTypes(const TypeQuery &query, TypeResults &results) {
 
   std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
 
+  TypeQuery query_full(query);
   bool have_index_match = false;
-  m_index->GetTypes(type_basename, [&](DWARFDIE die) {
+  m_index->GetTypesWithQuery(query_full, [&](DWARFDIE die) {
     // Check the language, but only if we have a language filter.
     if (query.HasLanguage()) {
       if (!query.LanguageMatches(GetLanguageFamily(*die.GetCU())))
@@ -2813,7 +2814,7 @@ void SymbolFileDWARF::FindTypes(const TypeQuery &query, TypeResults &results) {
       auto type_basename_simple = query_simple.GetTypeBasename();
       // Copy our match's context and update the basename we are looking for
       // so we can use this only to compare the context correctly.
-      m_index->GetTypes(type_basename_simple, [&](DWARFDIE die) {
+      m_index->GetTypesWithQuery(query_simple, [&](DWARFDIE die) {
         // Check the language, but only if we have a language filter.
         if (query.HasLanguage()) {
           if (!query.LanguageMatches(GetLanguageFamily(*die.GetCU())))

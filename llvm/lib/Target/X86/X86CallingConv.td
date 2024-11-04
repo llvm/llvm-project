@@ -1104,6 +1104,9 @@ def CC_X86 : CallingConv<[
 
 def CSR_NoRegs : CalleeSavedRegs<(add)>;
 
+def CSR_IPRA_32 : CalleeSavedRegs<(add EBP, ESI)>;
+def CSR_IPRA_64 : CalleeSavedRegs<(add RBP, RBX)>;
+
 def CSR_32 : CalleeSavedRegs<(add ESI, EDI, EBX, EBP)>;
 def CSR_64 : CalleeSavedRegs<(add RBX, R12, R13, R14, R15, RBP)>;
 

@@ -32,14 +32,14 @@ inline void __throw_bad_alloc_shim() {
 #ifndef _LIBCPP_HAS_NO_EXCEPTIONS
   throw std::bad_alloc();
 #else
-  abort_message("bad_alloc was thrown in -fno-exceptions mode");
+  __abort_message("bad_alloc was thrown in -fno-exceptions mode");
 #endif
 }
 
 #define _LIBCPP_ASSERT_SHIM(expr, str)                                                                                 \
   do {                                                                                                                 \
     if (!expr)                                                                                                         \
-      abort_message(str);                                                                                              \
+      __abort_message(str);                                                                                            \
   } while (false)
 
 // ------------------ BEGIN COPY ------------------

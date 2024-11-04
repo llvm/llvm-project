@@ -180,10 +180,8 @@ public:
     return getUnderlyingValue();
   }
 
-  /// Returns true if the VPValue is defined outside any loop region, i.e. it
-  /// is a live-in value.
-  /// TODO: Also handle recipes defined in pre-header blocks.
-  bool isDefinedOutsideLoopRegions() const { return !hasDefiningRecipe(); }
+  /// Returns true if the VPValue is defined outside any loop region.
+  bool isDefinedOutsideLoopRegions() const;
 
   // Set \p Val as the underlying Value of this VPValue.
   void setUnderlyingValue(Value *Val) {
@@ -352,6 +350,7 @@ public:
     VPWidenCanonicalIVSC,
     VPWidenCastSC,
     VPWidenGEPSC,
+    VPWidenIntrinsicSC,
     VPWidenLoadEVLSC,
     VPWidenLoadSC,
     VPWidenStoreEVLSC,
@@ -360,6 +359,7 @@ public:
     VPWidenEVLSC,
     VPWidenSelectSC,
     VPBlendSC,
+    VPHistogramSC,
     // START: Phi-like recipes. Need to be kept together.
     VPWidenPHISC,
     VPPredInstPHISC,

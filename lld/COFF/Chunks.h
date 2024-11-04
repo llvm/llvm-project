@@ -185,6 +185,13 @@ public:
   // bytes, so this is used only for logging or debugging.
   virtual StringRef getDebugName() const { return ""; }
 
+  // Verify that chunk relocations are within their ranges.
+  virtual bool verifyRanges() { return true; };
+
+  // If needed, extend the chunk to ensure all relocations are within the
+  // allowed ranges. Return the additional space required for the extension.
+  virtual uint32_t extendRanges() { return 0; };
+
   static bool classof(const Chunk *c) { return c->kind() >= OtherKind; }
 
 protected:
@@ -620,12 +627,15 @@ private:
 class ImportThunkChunkARM64EC : public ImportThunkChunk {
 public:
   explicit ImportThunkChunkARM64EC(ImportFile *file);
-  size_t getSize() const override { return sizeof(importThunkARM64EC); };
+  size_t getSize() const override;
   MachineTypes getMachine() const override { return ARM64EC; }
   void writeTo(uint8_t *buf) const override;
+  bool verifyRanges() override;
+  uint32_t extendRanges() override;
 
   Defined *exitThunk;
   Defined *sym = nullptr;
+  bool extended = false;
 
 private:
   ImportFile *file;

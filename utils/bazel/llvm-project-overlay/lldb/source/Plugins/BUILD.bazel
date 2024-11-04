@@ -1091,6 +1091,7 @@ cc_library(
         "//lldb:Utility",
         "//lldb:UtilityPrivateHeaders",
         "//llvm:Core",
+        "//llvm:Support",
         "//llvm:TargetParser",
     ],
 )
@@ -2247,6 +2248,8 @@ cc_library(
     hdrs = glob(["Process/minidump/*.h"]),
     include_prefix = "Plugins",
     deps = [
+        ":PluginDynamicLoaderPosixDYLD",
+        ":PluginDynamicLoaderPosixDYLDHeaders",
         ":PluginObjectFilePlaceholder",
         ":PluginProcessElfCore",
         ":PluginProcessUtility",

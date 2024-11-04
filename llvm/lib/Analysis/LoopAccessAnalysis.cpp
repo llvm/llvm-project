@@ -512,10 +512,8 @@ void RuntimePointerChecking::groupChecks(
   unsigned TotalComparisons = 0;
 
   DenseMap<Value *, SmallVector<unsigned>> PositionMap;
-  for (unsigned Index = 0; Index < Pointers.size(); ++Index) {
-    auto [It, _] = PositionMap.insert({Pointers[Index].PointerValue, {}});
-    It->second.push_back(Index);
-  }
+  for (unsigned Index = 0; Index < Pointers.size(); ++Index)
+    PositionMap[Pointers[Index].PointerValue].push_back(Index);
 
   // We need to keep track of what pointers we've already seen so we
   // don't process them twice.
@@ -1943,16 +1941,24 @@ MemoryDepChecker::getDependenceDistanceStrideAndSize(
   // required for correctness.
   if (SE.isLoopInvariant(Src, InnermostLoop) ||
       SE.isLoopInvariant(Sink, InnermostLoop)) {
-    const auto &[SrcStart, SrcEnd] =
+    const auto &[SrcStart_, SrcEnd_] =
         getStartAndEndForAccess(InnermostLoop, Src, ATy, PSE, PointerBounds);
-    const auto &[SinkStart, SinkEnd] =
+    const auto &[SinkStart_, SinkEnd_] =
         getStartAndEndForAccess(InnermostLoop, Sink, BTy, PSE, PointerBounds);
-    if (!isa<SCEVCouldNotCompute>(SrcStart) &&
-        !isa<SCEVCouldNotCompute>(SrcEnd) &&
-        !isa<SCEVCouldNotCompute>(SinkStart) &&
-        !isa<SCEVCouldNotCompute>(SinkEnd)) {
+    if (!isa<SCEVCouldNotCompute>(SrcStart_) &&
+        !isa<SCEVCouldNotCompute>(SrcEnd_) &&
+        !isa<SCEVCouldNotCompute>(SinkStart_) &&
+        !isa<SCEVCouldNotCompute>(SinkEnd_)) {
+      if (!LoopGuards)
+        LoopGuards.emplace(
+            ScalarEvolution::LoopGuards::collect(InnermostLoop, SE));
+      auto SrcEnd = SE.applyLoopGuards(SrcEnd_, *LoopGuards);
+      auto SinkStart = SE.applyLoopGuards(SinkStart_, *LoopGuards);
       if (SE.isKnownPredicate(CmpInst::ICMP_ULE, SrcEnd, SinkStart))
         return MemoryDepChecker::Dependence::NoDep;
+
+      auto SinkEnd = SE.applyLoopGuards(SinkEnd_, *LoopGuards);
+      auto SrcStart = SE.applyLoopGuards(SrcStart_, *LoopGuards);
       if (SE.isKnownPredicate(CmpInst::ICMP_ULE, SinkEnd, SrcStart))
         return MemoryDepChecker::Dependence::NoDep;
     }
@@ -2449,13 +2455,20 @@ bool LoopAccessInfo::analyzeLoop(AAResults *AA, const LoopInfo *LI,
         continue;
 
       // If this is a load, save it. If this instruction can read from memory
-      // but is not a load, then we quit. Notice that we don't handle function
-      // calls that read or write.
+      // but is not a load, we only allow it if it's a call to a function with a
+      // vector mapping and no pointer arguments.
       if (I.mayReadFromMemory()) {
-        // If the function has an explicit vectorized counterpart, we can safely
-        // assume that it can be vectorized.
+        auto hasPointerArgs = [](CallBase *CB) {
+          return any_of(CB->args(), [](Value const *Arg) {
+            return Arg->getType()->isPointerTy();
+          });
+        };
+
+        // If the function has an explicit vectorized counterpart, and does not
+        // take output/input pointers, we can safely assume that it can be
+        // vectorized.
         if (Call && !Call->isNoBuiltin() && Call->getCalledFunction() &&
-            !VFDatabase::getMappings(*Call).empty())
+            !hasPointerArgs(Call) && !VFDatabase::getMappings(*Call).empty())
           continue;
 
         auto *Ld = dyn_cast<LoadInst>(&I);

@@ -1,12 +1,12 @@
-; RUN: opt -passes=sandbox-vectorizer -sbvec-print-pass-pipeline -sbvec-passes=bottom-up-vec,bottom-up-vec %s -disable-output | FileCheck %s
+; RUN: opt -passes=sandbox-vectorizer -sbvec-print-pass-pipeline -sbvec-passes=null,null %s -disable-output | FileCheck %s
 
 ; !!!WARNING!!! This won't get updated by update_test_checks.py !
 
 ; This checks the user defined pass pipeline.
 define void @pipeline() {
-; CHECK: pm
-; CHECK: bottom-up-vec
-; CHECK: bottom-up-vec
+; CHECK: rpm
+; CHECK: null
+; CHECK: null
 ; CHECK-EMPTY:
   ret void
 }

@@ -132,7 +132,7 @@ add_clang_library(clangStaticAnalyzerCheckers
   VLASizeChecker.cpp
   ValistChecker.cpp
   VirtualCallChecker.cpp
-  WebKit/NoUncountedMembersChecker.cpp
+  WebKit/RawPtrRefMemberChecker.cpp
   WebKit/ASTUtils.cpp
   WebKit/PtrTypesSemantics.cpp
   WebKit/RefCntblBaseVirtualDtorChecker.cpp
