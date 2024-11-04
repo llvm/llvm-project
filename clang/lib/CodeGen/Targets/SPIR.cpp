@@ -365,9 +365,8 @@ llvm::Type *CommonSPIRTargetCodeGenInfo::getSPIRVImageTypeFromHLSLResource(
     const HLSLAttributedResourceType::Attributes &attributes,
     llvm::Type *ElementType, llvm::LLVMContext &Ctx) const {
 
-  if (ElementType->isVectorTy()) {
+  if (ElementType->isVectorTy())
     ElementType = ElementType->getScalarType();
-  }
 
   assert(!ElementType->isIntegerTy() && !ElementType->isFloatingPointTy() &&
          "The element type for a SPIR-V resource must be a scalar integer or "
