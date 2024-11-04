@@ -150,9 +150,15 @@ def ArithToAMDGPUConversionPass : Pass<"convert-arith-to-amdgpu"> {
   let dependentDialects = ["amdgpu::AMDGPUDialect", "vector::VectorDialect"];
 
   let options = [
+    Option<"chipset", "chipset", "std::string",
+                        /*default=*/"\"gfx000\"",
+                        "Chipset that these operations will run on">,
     Option<"saturateFP8Truncf", "saturate-fp8-truncf", "bool",
            /*default=*/"false",
            "Use saturating truncation for 8-bit float types">,
+    Option<"allowPackedF16Rtz", "allow-packed-f16-round-to-zero", "bool",
+           /*default=*/"false",
+           "Whether we should allow f32->f16 packed round-to-zero conversion">,
   ];
 }
 

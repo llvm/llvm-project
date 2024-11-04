@@ -61,6 +61,9 @@ public:
   void handleParamModifierAttr(Decl *D, const ParsedAttr &AL);
 
   bool CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall);
+
+  // HLSL Type trait implementations
+  bool IsScalarizedLayoutCompatible(QualType T1, QualType T2) const;
 };
 
 } // namespace clang

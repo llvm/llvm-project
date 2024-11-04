@@ -65,6 +65,14 @@ public:
   void EmitIntrinsicToBuiltinMap(const CodeGenIntrinsicTable &Ints,
                                  bool IsClang, raw_ostream &OS);
 };
+
+// Helper class to use with `TableGen::Emitter::OptClass`.
+template <bool Enums> class IntrinsicEmitterOpt : public IntrinsicEmitter {
+public:
+  IntrinsicEmitterOpt(const RecordKeeper &R) : IntrinsicEmitter(R) {}
+  void run(raw_ostream &OS) { IntrinsicEmitter::run(OS, Enums); }
+};
+
 } // End anonymous namespace
 
 //===----------------------------------------------------------------------===//
@@ -770,16 +778,8 @@ Intrinsic::getIntrinsicFor{1}Builtin(StringRef TargetPrefix,
                 UpperCompilerName);
 }
 
-static void EmitIntrinsicEnums(RecordKeeper &RK, raw_ostream &OS) {
-  IntrinsicEmitter(RK).run(OS, /*Enums=*/true);
-}
+static TableGen::Emitter::OptClass<IntrinsicEmitterOpt</*Enums=*/true>>
+    X("gen-intrinsic-enums", "Generate intrinsic enums");
 
-static TableGen::Emitter::Opt X("gen-intrinsic-enums", EmitIntrinsicEnums,
-                                "Generate intrinsic enums");
-
-static void EmitIntrinsicImpl(RecordKeeper &RK, raw_ostream &OS) {
-  IntrinsicEmitter(RK).run(OS, /*Enums=*/false);
-}
-
-static TableGen::Emitter::Opt Y("gen-intrinsic-impl", EmitIntrinsicImpl,
-                                "Generate intrinsic implementation code");
+static TableGen::Emitter::OptClass<IntrinsicEmitterOpt</*Enums=*/false>>
+    Y("gen-intrinsic-impl", "Generate intrinsic implementation code");

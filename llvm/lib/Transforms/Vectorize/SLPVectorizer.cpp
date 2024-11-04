@@ -15975,6 +15975,10 @@ void BoUpSLP::computeMinimumValueSizes() {
                     auto It = MinBWs.find(TE);
                     if (It != MinBWs.end() && It->second.first > UserTESz)
                       return true;
+                    // The size of icmp is always 1 and should not be
+                    // considered.
+                    if (TE->getOpcode() == Instruction::ICmp)
+                      return true;
                     return DL->getTypeSizeInBits(U->getType()) > UserTESz;
                   }));
         })) {

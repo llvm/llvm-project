@@ -1524,3 +1524,85 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
   }
   return false;
 }
+
+static void BuildFlattenedTypeList(QualType BaseTy,
+                                   llvm::SmallVectorImpl<QualType> &List) {
+  llvm::SmallVector<QualType, 16> WorkList;
+  WorkList.push_back(BaseTy);
+  while (!WorkList.empty()) {
+    QualType T = WorkList.pop_back_val();
+    T = T.getCanonicalType().getUnqualifiedType();
+    assert(!isa<MatrixType>(T) && "Matrix types not yet supported in HLSL");
+    if (const auto *AT = dyn_cast<ConstantArrayType>(T)) {
+      llvm::SmallVector<QualType, 16> ElementFields;
+      // Generally I've avoided recursion in this algorithm, but arrays of
+      // structs could be time-consuming to flatten and churn through on the
+      // work list. Hopefully nesting arrays of structs containing arrays
+      // of structs too many levels deep is unlikely.
+      BuildFlattenedTypeList(AT->getElementType(), ElementFields);
+      // Repeat the element's field list n times.
+      for (uint64_t Ct = 0; Ct < AT->getZExtSize(); ++Ct)
+        List.insert(List.end(), ElementFields.begin(), ElementFields.end());
+      continue;
+    }
+    // Vectors can only have element types that are builtin types, so this can
+    // add directly to the list instead of to the WorkList.
+    if (const auto *VT = dyn_cast<VectorType>(T)) {
+      List.insert(List.end(), VT->getNumElements(), VT->getElementType());
+      continue;
+    }
+    if (const auto *RT = dyn_cast<RecordType>(T)) {
+      const RecordDecl *RD = RT->getDecl();
+      if (RD->isUnion()) {
+        List.push_back(T);
+        continue;
+      }
+      const CXXRecordDecl *CXXD = dyn_cast<CXXRecordDecl>(RD);
+
+      llvm::SmallVector<QualType, 16> FieldTypes;
+      if (CXXD && CXXD->isStandardLayout())
+        RD = CXXD->getStandardLayoutBaseWithFields();
+
+      for (const auto *FD : RD->fields())
+        FieldTypes.push_back(FD->getType());
+      // Reverse the newly added sub-range.
+      std::reverse(FieldTypes.begin(), FieldTypes.end());
+      WorkList.insert(WorkList.end(), FieldTypes.begin(), FieldTypes.end());
+
+      // If this wasn't a standard layout type we may also have some base
+      // classes to deal with.
+      if (CXXD && !CXXD->isStandardLayout()) {
+        FieldTypes.clear();
+        for (const auto &Base : CXXD->bases())
+          FieldTypes.push_back(Base.getType());
+        std::reverse(FieldTypes.begin(), FieldTypes.end());
+        WorkList.insert(WorkList.end(), FieldTypes.begin(), FieldTypes.end());
+      }
+      continue;
+    }
+    List.push_back(T);
+  }
+}
+
+bool SemaHLSL::IsScalarizedLayoutCompatible(QualType T1, QualType T2) const {
+  if (T1.isNull() || T2.isNull())
+    return false;
+
+  T1 = T1.getCanonicalType().getUnqualifiedType();
+  T2 = T2.getCanonicalType().getUnqualifiedType();
+
+  // If both types are the same canonical type, they're obviously compatible.
+  if (SemaRef.getASTContext().hasSameType(T1, T2))
+    return true;
+
+  llvm::SmallVector<QualType, 16> T1Types;
+  BuildFlattenedTypeList(T1, T1Types);
+  llvm::SmallVector<QualType, 16> T2Types;
+  BuildFlattenedTypeList(T2, T2Types);
+
+  // Check the flattened type list
+  return llvm::equal(T1Types, T2Types,
+                     [this](QualType LHS, QualType RHS) -> bool {
+                       return SemaRef.IsLayoutCompatible(LHS, RHS);
+                     });
+}

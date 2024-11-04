@@ -256,6 +256,9 @@ static bool IsBlockData(const Symbol &symbol) {
 }
 
 void CheckHelper::Check(const Symbol &symbol) {
+  if (symbol.has<UseErrorDetails>()) {
+    return;
+  }
   if (symbol.name().size() > common::maxNameLen &&
       &symbol == &symbol.GetUltimate()) {
     if (context_.ShouldWarn(common::LanguageFeature::LongNames)) {

@@ -18625,7 +18625,7 @@ bool RISCV::CC_RISCV(const DataLayout &DL, RISCVABI::ABI ABI, unsigned ValNo,
   // Static chain parameter must not be passed in normal argument registers,
   // so we assign t2 for it as done in GCC's __builtin_call_with_static_chain
   if (ArgFlags.isNest()) {
-    if (unsigned Reg = State.AllocateReg(RISCV::X7)) {
+    if (MCRegister Reg = State.AllocateReg(RISCV::X7)) {
       State.addLoc(CCValAssign::getReg(ValNo, ValVT, Reg, LocVT, LocInfo));
       return false;
     }
@@ -19098,7 +19098,7 @@ bool RISCV::CC_RISCV_FastCC(const DataLayout &DL, RISCVABI::ABI ABI,
                             const RISCVTargetLowering &TLI,
                             RVVArgDispatcher &RVVDispatcher) {
   if (LocVT == MVT::i32 || LocVT == MVT::i64) {
-    if (unsigned Reg = State.AllocateReg(getFastCCArgGPRs(ABI))) {
+    if (MCRegister Reg = State.AllocateReg(getFastCCArgGPRs(ABI))) {
       State.addLoc(CCValAssign::getReg(ValNo, ValVT, Reg, LocVT, LocInfo));
       return false;
     }
@@ -19113,7 +19113,7 @@ bool RISCV::CC_RISCV_FastCC(const DataLayout &DL, RISCVABI::ABI ABI,
         RISCV::F15_H, RISCV::F16_H, RISCV::F17_H, RISCV::F0_H,  RISCV::F1_H,
         RISCV::F2_H,  RISCV::F3_H,  RISCV::F4_H,  RISCV::F5_H,  RISCV::F6_H,
         RISCV::F7_H,  RISCV::F28_H, RISCV::F29_H, RISCV::F30_H, RISCV::F31_H};
-    if (unsigned Reg = State.AllocateReg(FPR16List)) {
+    if (MCRegister Reg = State.AllocateReg(FPR16List)) {
       State.addLoc(CCValAssign::getReg(ValNo, ValVT, Reg, LocVT, LocInfo));
       return false;
     }
@@ -19125,7 +19125,7 @@ bool RISCV::CC_RISCV_FastCC(const DataLayout &DL, RISCVABI::ABI ABI,
         RISCV::F15_F, RISCV::F16_F, RISCV::F17_F, RISCV::F0_F,  RISCV::F1_F,
         RISCV::F2_F,  RISCV::F3_F,  RISCV::F4_F,  RISCV::F5_F,  RISCV::F6_F,
         RISCV::F7_F,  RISCV::F28_F, RISCV::F29_F, RISCV::F30_F, RISCV::F31_F};
-    if (unsigned Reg = State.AllocateReg(FPR32List)) {
+    if (MCRegister Reg = State.AllocateReg(FPR32List)) {
       State.addLoc(CCValAssign::getReg(ValNo, ValVT, Reg, LocVT, LocInfo));
       return false;
     }
@@ -19137,7 +19137,7 @@ bool RISCV::CC_RISCV_FastCC(const DataLayout &DL, RISCVABI::ABI ABI,
         RISCV::F15_D, RISCV::F16_D, RISCV::F17_D, RISCV::F0_D,  RISCV::F1_D,
         RISCV::F2_D,  RISCV::F3_D,  RISCV::F4_D,  RISCV::F5_D,  RISCV::F6_D,
         RISCV::F7_D,  RISCV::F28_D, RISCV::F29_D, RISCV::F30_D, RISCV::F31_D};
-    if (unsigned Reg = State.AllocateReg(FPR64List)) {
+    if (MCRegister Reg = State.AllocateReg(FPR64List)) {
       State.addLoc(CCValAssign::getReg(ValNo, ValVT, Reg, LocVT, LocInfo));
       return false;
     }
@@ -19149,7 +19149,7 @@ bool RISCV::CC_RISCV_FastCC(const DataLayout &DL, RISCVABI::ABI ABI,
       (LocVT == MVT::f32 && Subtarget.hasStdExtZfinx()) ||
       (LocVT == MVT::f64 && Subtarget.is64Bit() &&
        Subtarget.hasStdExtZdinx())) {
-    if (unsigned Reg = State.AllocateReg(getFastCCArgGPRs(ABI))) {
+    if (MCRegister Reg = State.AllocateReg(getFastCCArgGPRs(ABI))) {
       State.addLoc(CCValAssign::getReg(ValNo, ValVT, Reg, LocVT, LocInfo));
       return false;
     }
@@ -19184,7 +19184,7 @@ bool RISCV::CC_RISCV_FastCC(const DataLayout &DL, RISCVABI::ABI ABI,
           CCValAssign::getReg(ValNo, ValVT, AllocatedVReg, LocVT, LocInfo));
     } else {
       // Try and pass the address via a "fast" GPR.
-      if (unsigned GPRReg = State.AllocateReg(getFastCCArgGPRs(ABI))) {
+      if (MCRegister GPRReg = State.AllocateReg(getFastCCArgGPRs(ABI))) {
         LocInfo = CCValAssign::Indirect;
         LocVT = TLI.getSubtarget().getXLenVT();
         State.addLoc(CCValAssign::getReg(ValNo, ValVT, GPRReg, LocVT, LocInfo));
@@ -19222,7 +19222,7 @@ bool RISCV::CC_RISCV_GHC(unsigned ValNo, MVT ValVT, MVT LocVT,
   if (LocVT == MVT::i32 || LocVT == MVT::i64) {
     // Pass in STG registers: Base, Sp, Hp, R1, R2, R3, R4, R5, R6, R7, SpLim
     //                        s1    s2  s3  s4  s5  s6  s7  s8  s9  s10 s11
-    if (unsigned Reg = State.AllocateReg(GPRList)) {
+    if (MCRegister Reg = State.AllocateReg(GPRList)) {
       State.addLoc(CCValAssign::getReg(ValNo, ValVT, Reg, LocVT, LocInfo));
       return false;
     }
@@ -19237,7 +19237,7 @@ bool RISCV::CC_RISCV_GHC(unsigned ValNo, MVT ValVT, MVT LocVT,
     static const MCPhysReg FPR32List[] = {RISCV::F8_F, RISCV::F9_F,
                                           RISCV::F18_F, RISCV::F19_F,
                                           RISCV::F20_F, RISCV::F21_F};
-    if (unsigned Reg = State.AllocateReg(FPR32List)) {
+    if (MCRegister Reg = State.AllocateReg(FPR32List)) {
       State.addLoc(CCValAssign::getReg(ValNo, ValVT, Reg, LocVT, LocInfo));
       return false;
     }
@@ -19249,7 +19249,7 @@ bool RISCV::CC_RISCV_GHC(unsigned ValNo, MVT ValVT, MVT LocVT,
     static const MCPhysReg FPR64List[] = {RISCV::F22_D, RISCV::F23_D,
                                           RISCV::F24_D, RISCV::F25_D,
                                           RISCV::F26_D, RISCV::F27_D};
-    if (unsigned Reg = State.AllocateReg(FPR64List)) {
+    if (MCRegister Reg = State.AllocateReg(FPR64List)) {
       State.addLoc(CCValAssign::getReg(ValNo, ValVT, Reg, LocVT, LocInfo));
       return false;
     }
@@ -19258,7 +19258,7 @@ bool RISCV::CC_RISCV_GHC(unsigned ValNo, MVT ValVT, MVT LocVT,
   if ((LocVT == MVT::f32 && Subtarget.hasStdExtZfinx()) ||
       (LocVT == MVT::f64 && Subtarget.hasStdExtZdinx() &&
        Subtarget.is64Bit())) {
-    if (unsigned Reg = State.AllocateReg(GPRList)) {
+    if (MCRegister Reg = State.AllocateReg(GPRList)) {
       State.addLoc(CCValAssign::getReg(ValNo, ValVT, Reg, LocVT, LocInfo));
       return false;
     }

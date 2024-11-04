@@ -68,7 +68,7 @@ static std::string capitalize(llvm::StringRef str) {
 
 void DAP::PopulateExceptionBreakpoints() {
   llvm::call_once(init_exception_breakpoints_flag, [this]() {
-    exception_breakpoints = std::vector<ExceptionBreakpoint> {};
+    exception_breakpoints = std::vector<ExceptionBreakpoint>{};
 
     if (lldb::SBDebugger::SupportsLanguage(lldb::eLanguageTypeC_plus_plus)) {
       exception_breakpoints->emplace_back("cpp_catch", "C++ Catch",
@@ -994,6 +994,34 @@ void DAP::SetThreadFormat(llvm::StringRef format) {
             format, error.GetCString())
             .str());
   }
+}
+
+InstructionBreakpoint *
+DAP::GetInstructionBreakpoint(const lldb::break_id_t bp_id) {
+  for (auto &bp : instruction_breakpoints) {
+    if (bp.second.id == bp_id)
+      return &bp.second;
+  }
+  return nullptr;
+}
+
+InstructionBreakpoint *
+DAP::GetInstructionBPFromStopReason(lldb::SBThread &thread) {
+  const auto num = thread.GetStopReasonDataCount();
+  InstructionBreakpoint *inst_bp = nullptr;
+  for (size_t i = 0; i < num; i += 2) {
+    // thread.GetStopReasonDataAtIndex(i) will return the bp ID and
+    // thread.GetStopReasonDataAtIndex(i+1) will return the location
+    // within that breakpoint. We only care about the bp ID so we can
+    // see if this is an instruction breakpoint that is getting hit.
+    lldb::break_id_t bp_id = thread.GetStopReasonDataAtIndex(i);
+    inst_bp = GetInstructionBreakpoint(bp_id);
+    // If any breakpoint is not an instruction breakpoint, then stop and
+    // report this as a normal breakpoint
+    if (inst_bp == nullptr)
+      return nullptr;
+  }
+  return inst_bp;
 }
 
 } // namespace lldb_dap

@@ -2415,17 +2415,15 @@ std::error_code DataAggregator::writeBATYAML(BinaryContext &BC,
         Fragments.insert(BF);
         for (const BinaryFunction *F : Fragments) {
           const uint64_t FuncAddr = F->getAddress();
-          const auto &FragmentProbes =
-              llvm::make_range(ProbeMap.lower_bound(FuncAddr),
-                               ProbeMap.lower_bound(FuncAddr + F->getSize()));
-          for (const auto &[OutputAddress, Probes] : FragmentProbes) {
+          for (const MCDecodedPseudoProbe &Probe :
+               ProbeMap.find(FuncAddr, FuncAddr + F->getSize())) {
+            const uint32_t OutputAddress = Probe.getAddress();
             const uint32_t InputOffset = BAT->translate(
                 FuncAddr, OutputAddress - FuncAddr, /*IsBranchSrc=*/true);
             const unsigned BlockIndex = getBlock(InputOffset).second;
-            for (const MCDecodedPseudoProbe &Probe : Probes)
-              YamlBF.Blocks[BlockIndex].PseudoProbes.emplace_back(
-                  yaml::bolt::PseudoProbeInfo{Probe.getGuid(), Probe.getIndex(),
-                                              Probe.getType()});
+            YamlBF.Blocks[BlockIndex].PseudoProbes.emplace_back(
+                yaml::bolt::PseudoProbeInfo{Probe.getGuid(), Probe.getIndex(),
+                                            Probe.getType()});
           }
         }
       }

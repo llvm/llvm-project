@@ -575,6 +575,33 @@ void Instruction::dumpOS(raw_ostream &OS) const {
 }
 #endif // NDEBUG
 
+FenceInst *FenceInst::create(AtomicOrdering Ordering, BBIterator WhereIt,
+                             BasicBlock *WhereBB, Context &Ctx,
+                             SyncScope::ID SSID) {
+  auto &Builder = Ctx.getLLVMIRBuilder();
+  if (WhereIt != WhereBB->end())
+    Builder.SetInsertPoint((*WhereIt).getTopmostLLVMInstruction());
+  else
+    Builder.SetInsertPoint(cast<llvm::BasicBlock>(WhereBB->Val));
+  llvm::FenceInst *LLVMI = Builder.CreateFence(Ordering, SSID);
+  return Ctx.createFenceInst(LLVMI);
+}
+
+void FenceInst::setOrdering(AtomicOrdering Ordering) {
+  Ctx.getTracker()
+      .emplaceIfTracking<
+          GenericSetter<&FenceInst::getOrdering, &FenceInst::setOrdering>>(
+          this);
+  cast<llvm::FenceInst>(Val)->setOrdering(Ordering);
+}
+
+void FenceInst::setSyncScopeID(SyncScope::ID SSID) {
+  Ctx.getTracker()
+      .emplaceIfTracking<GenericSetter<&FenceInst::getSyncScopeID,
+                                       &FenceInst::setSyncScopeID>>(this);
+  cast<llvm::FenceInst>(Val)->setSyncScopeID(SSID);
+}
+
 Value *SelectInst::createCommon(Value *Cond, Value *True, Value *False,
                                 const Twine &Name, IRBuilder<> &Builder,
                                 Context &Ctx) {
@@ -2157,6 +2184,11 @@ Value *Context::getOrCreateValueInternal(llvm::Value *LLVMV, llvm::User *U) {
   assert(isa<llvm::Instruction>(LLVMV) && "Expected Instruction");
 
   switch (cast<llvm::Instruction>(LLVMV)->getOpcode()) {
+  case llvm::Instruction::Fence: {
+    auto *LLVMFence = cast<llvm::FenceInst>(LLVMV);
+    It->second = std::unique_ptr<FenceInst>(new FenceInst(LLVMFence, *this));
+    return It->second.get();
+  }
   case llvm::Instruction::Select: {
     auto *LLVMSel = cast<llvm::SelectInst>(LLVMV);
     It->second = std::unique_ptr<SelectInst>(new SelectInst(LLVMSel, *this));
@@ -2347,6 +2379,11 @@ BasicBlock *Context::createBasicBlock(llvm::BasicBlock *LLVMBB) {
   // Create SandboxIR for BB's body.
   BB->buildBasicBlockFromLLVMIR(LLVMBB);
   return BB;
+}
+
+FenceInst *Context::createFenceInst(llvm::FenceInst *SI) {
+  auto NewPtr = std::unique_ptr<FenceInst>(new FenceInst(SI, *this));
+  return cast<FenceInst>(registerValue(std::move(NewPtr)));
 }
 
 SelectInst *Context::createSelectInst(llvm::SelectInst *SI) {

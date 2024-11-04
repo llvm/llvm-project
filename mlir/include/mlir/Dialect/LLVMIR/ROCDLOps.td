@@ -166,7 +166,7 @@ def ROCDL_BallotOp :
   let summary = "Vote across thread group";
 
   let description = [{
-      Ballot provides a bit mask containing the 1-bit predicate value from each lane. 
+      Ballot provides a bit mask containing the 1-bit predicate value from each lane.
       The nth bit of the result contains the 1 bit contributed by the nth warp lane.
   }];
 
@@ -576,6 +576,21 @@ def ROCDL_DPPUpdateOp : ROCDL_IntrOp<"update.dpp", [], [0],
       };
       $res = createIntrinsicCall(builder,
         llvm::Intrinsic::amdgcn_update_dpp, args, {vdataType});
+  }];
+}
+
+//===---------------------------------------------------------------------===//
+// 16-bit float intrinsics
+//===---------------------------------------------------------------------===//
+def ROCDL_CvtPkRtz:
+    ROCDL_IntrOp<"cvt.pkrtz", [], [], [Pure], 1>,
+    Arguments<(ins F32:$srcA, F32:$srcB)> {
+  let summary = "Convert two f32 input into a vector<2xf16>";
+  let description = [{
+    Convert two f32 values into a packed vector<2xf16>.
+  }];
+  let assemblyFormat = [{
+    attr-dict $srcA `,` $srcB `:` type($res)
   }];
 }
 
