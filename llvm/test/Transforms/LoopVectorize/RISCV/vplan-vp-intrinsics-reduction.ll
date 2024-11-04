@@ -72,6 +72,7 @@ define i32 @reduction(ptr %a, i64 %n, i32 %start) {
 ; IF-EVL-INLOOP-NEXT:   IR   %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
 ; IF-EVL-INLOOP-NEXT:   IR   %rdx = phi i32 [ %start, %entry ], [ %add, %for.body ]
 ; IF-EVL-INLOOP:        IR   %exitcond.not = icmp eq i64 %iv.next, %n
+; IF-EVL-INLOOP-NEXT: No successors
 ; IF-EVL-INLOOP-NEXT: }
 ;
 

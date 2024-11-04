@@ -448,8 +448,10 @@ void VPBasicBlock::connectToPredecessors(BasicBlock *NewBB,
       // Set each forward successor here when it is created, excluding
       // backedges. A backward successor is set when the branch is created.
       unsigned idx = PredVPSuccessors.front() == this ? 0 : 1;
-      assert(!TermBr->getSuccessor(idx) &&
-             "Trying to reset an existing successor block.");
+      assert(
+          (!TermBr->getSuccessor(idx) ||
+           (isa<VPIRBasicBlock>(this) && TermBr->getSuccessor(idx) == NewBB)) &&
+          "Trying to reset an existing successor block.");
       TermBr->setSuccessor(idx, NewBB);
     }
     CFG.DTU.applyUpdates({{DominatorTree::Insert, PredBB, NewBB}});
@@ -472,23 +474,7 @@ void VPIRBasicBlock::execute(VPTransformState *State) {
         "other blocks must be terminated by a branch");
   }
 
-  for (VPBlockBase *PredVPBlock : getHierarchicalPredecessors()) {
-    VPBasicBlock *PredVPBB = PredVPBlock->getExitingBasicBlock();
-    BasicBlock *PredBB = State->CFG.VPBB2IRBB[PredVPBB];
-    assert(PredBB && "Predecessor basic-block not found building successor.");
-    LLVM_DEBUG(dbgs() << "LV: draw edge from" << PredBB->getName() << '\n');
-
-    auto *PredBBTerminator = PredBB->getTerminator();
-    auto *TermBr = cast<BranchInst>(PredBBTerminator);
-    // Set each forward successor here when it is created, excluding
-    // backedges. A backward successor is set when the branch is created.
-    const auto &PredVPSuccessors = PredVPBB->getHierarchicalSuccessors();
-    unsigned idx = PredVPSuccessors.front() == this ? 0 : 1;
-    assert((!TermBr->getSuccessor(idx) || TermBr->getSuccessor(idx) == IRBB) &&
-           "Trying to reset an existing successor block.");
-    TermBr->setSuccessor(idx, IRBB);
-    State->CFG.DTU.applyUpdates({{DominatorTree::Insert, PredBB, IRBB}});
-  }
+  connectToPredecessors(IRBB, State->CFG);
 }
 
 void VPBasicBlock::execute(VPTransformState *State) {
@@ -1039,11 +1025,9 @@ void VPlan::execute(VPTransformState *State) {
   // VPlan execution rather than earlier during VPlan construction.
   BasicBlock *MiddleBB = State->CFG.ExitBB;
   BasicBlock *ScalarPh = MiddleBB->getSingleSuccessor();
+  VPBasicBlock *MiddleVPBB = getMiddleBlock();
   replaceVPBBWithIRVPBB(getScalarPreheader(), ScalarPh);
-  if (getVectorLoopRegion()) {
-    VPBasicBlock *MiddleVPBB = getMiddleBlock();
-    replaceVPBBWithIRVPBB(MiddleVPBB, MiddleBB);
-  }
+  replaceVPBBWithIRVPBB(MiddleVPBB, MiddleBB);
 
   // Disconnect the middle block from its single successor (the scalar loop
   // header) in both the CFG and DT. The branch will be recreated during VPlan
