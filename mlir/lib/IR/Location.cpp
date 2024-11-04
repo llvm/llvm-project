@@ -78,21 +78,25 @@ struct FileLineColRangeAttrStorage final
             ArrayRef<unsigned>{std::get<1>(tblgenKey)}.drop_front());
   }
 
-  std::optional<unsigned> getLineCols(unsigned index) const {
-    if (size() <= index)
-      return std::nullopt;
+  unsigned getLineCols(unsigned index) const {
     return getTrailingObjects<unsigned>()[index - 1];
   }
 
-  std::optional<unsigned> getStartLine() const {
-    // Only return nullopt if there are no other locations and start line is 0.
-    if (startLine == 0 && filenameAndTrailing.getInt() == 0)
-      return std::nullopt;
+  unsigned getStartLine() const {
     return startLine;
   }
-  std::optional<unsigned> getStartColumn() const { return getLineCols(1); }
-  std::optional<unsigned> getEndColumn() const { return getLineCols(2); }
-  std::optional<unsigned> getEndLine() const { return getLineCols(3); }
+  unsigned getStartColumn() const {
+    if (size() <= 1) return 0;
+    return getLineCols(1);
+  }
+  unsigned getEndColumn() const {
+    if (size() <= 2) return getStartColumn();
+    return getLineCols(2);
+  }
+  unsigned getEndLine() const {
+    if (size() <= 3) return getStartLine();
+    return getLineCols(3);
+  }
 
   static ::llvm::hash_code hashKey(const KeyTy &tblgenKey) {
     return ::llvm::hash_combine(std::get<0>(tblgenKey), std::get<1>(tblgenKey));
@@ -188,16 +192,16 @@ StringAttr FileLineColRange::getFilename() const {
   return getImpl()->filenameAndTrailing.getPointer();
 }
 
-std::optional<unsigned> FileLineColRange::getStartLine() const {
+unsigned FileLineColRange::getStartLine() const {
   return getImpl()->getStartLine();
 }
-std::optional<unsigned> FileLineColRange::getStartColumn() const {
+unsigned FileLineColRange::getStartColumn() const {
   return getImpl()->getStartColumn();
 }
-std::optional<unsigned> FileLineColRange::getEndColumn() const {
+unsigned FileLineColRange::getEndColumn() const {
   return getImpl()->getEndColumn();
 }
-std::optional<unsigned> FileLineColRange::getEndLine() const {
+unsigned FileLineColRange::getEndLine() const {
   return getImpl()->getEndLine();
 }
 

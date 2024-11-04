@@ -73,8 +73,8 @@ readPotentiallySplatString(DialectBytecodeReader &reader, ShapedType type,
   return success();
 }
 
-void writePotentiallySplatString(DialectBytecodeWriter &writer,
-                                 DenseStringElementsAttr attr) {
+static void writePotentiallySplatString(DialectBytecodeWriter &writer,
+                                        DenseStringElementsAttr attr) {
   bool isSplat = attr.isSplat();
   if (isSplat)
     return writer.writeOwnedString(attr.getRawStringData().front());
@@ -83,8 +83,9 @@ void writePotentiallySplatString(DialectBytecodeWriter &writer,
     writer.writeOwnedString(str);
 }
 
-FileLineColRange getFileLineColRange(MLIRContext *context, StringAttr filename,
-                                     ArrayRef<uint64_t> lineCols) {
+static FileLineColRange getFileLineColRange(MLIRContext *context,
+                                            StringAttr filename,
+                                            ArrayRef<uint64_t> lineCols) {
   switch (lineCols.size()) {
   case 0:
     return FileLineColRange::get(filename);
@@ -97,34 +98,52 @@ FileLineColRange getFileLineColRange(MLIRContext *context, StringAttr filename,
                                  lineCols[2]);
   case 4:
     return FileLineColRange::get(filename, lineCols[0], lineCols[1],
-                                 lineCols[3], lineCols[2]);
+                                 lineCols[2], lineCols[3]);
   default:
     return {};
   }
 }
 
-LogicalResult readFileLineColRangeLocs(DialectBytecodeReader &reader,
+static LogicalResult readFileLineColRangeLocs(DialectBytecodeReader &reader,
                                        SmallVectorImpl<uint64_t> &lineCols) {
   return reader.readList(
       lineCols, [&reader](uint64_t &val) { return reader.readVarInt(val); });
 }
 
-void writeFileLineColRangeLocs(DialectBytecodeWriter &writer,
-                               FileLineColRange range) {
-  int count = range.getStartLine().has_value() +
-              range.getStartColumn().has_value() +
-              range.getEndLine().has_value() + range.getEndColumn().has_value();
-  writer.writeVarInt(count);
-  if (count == 0)
+static void writeFileLineColRangeLocs(DialectBytecodeWriter &writer,
+                                      FileLineColRange range) {
+  if (range.getStartLine() == range.getStartColumn() == range.getEndLine() ==
+      range.getEndColumn() == 0) {
+    writer.writeVarInt(0);
     return;
-  // Startline here is either known or zero with other trailing offsets.
-  writer.writeVarInt(range.getStartLine().value_or(0));
-  if (range.getStartColumn().has_value())
-    writer.writeVarInt(*range.getStartColumn());
-  if (range.getEndColumn().has_value())
-    writer.writeVarInt(*range.getEndColumn());
-  if (range.getEndLine().has_value())
-    writer.writeVarInt(*range.getEndLine());
+  }
+  if (range.getStartColumn() == 0 &&
+      range.getStartLine() == range.getEndLine()) {
+    writer.writeVarInt(1);
+    writer.writeVarInt(range.getStartLine());
+    return;
+  }
+  // The single file:line:col is handled by other writer, but checked here for
+  // completeness.
+  if (range.endColumn() == range.startColumn() &&
+      range.getStartLine() == range.getEndLine()) {
+    writer.writeVarInt(2);
+    writer.writeVarInt(range.getStartLine());
+    writer.writeVarInt(range.getStartColumn());
+    return;
+  }
+  if (range.getStartLine() == range.getEndLine()) {
+    writer.writeVarInt(3);
+    writer.writeVarInt(range.getStartLine());
+    writer.writeVarInt(range.getStartColumn());
+    writer.writeVarInt(range.getEndColumn());
+    return;
+  }
+  writer.writeVarInt(4);
+  writer.writeVarInt(range.getStartLine());
+  writer.writeVarInt(range.getStartColumn());
+  writer.writeVarInt(range.getEndLine());
+  writer.writeVarInt(range.getEndColumn());
 }
 
 #include "mlir/IR/BuiltinDialectBytecode.cpp.inc"

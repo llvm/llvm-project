@@ -90,9 +90,9 @@ def FileLineColRange : Builtin_LocationAttr<"FileLineColRange"> {
     ```
   }];
 
-  // Note: this only shows the parameters for which accessors are generated. The
-  // locations are only set in storage.
-  let parameters = (ins "StringAttr":$filename);
+  let parameters = (ins "StringAttr":$filename,
+    "unsigned":$start_line, "unsigned":$start_column,
+    "unsigned":$end_line, "unsigned":$end_column);
   let builders = [
     AttrBuilderWithInferredContext<(ins "StringAttr":$filename), [{
       return $_get(filename.getContext(), filename, ArrayRef<unsigned>{});
@@ -142,12 +142,14 @@ def FileLineColRange : Builtin_LocationAttr<"FileLineColRange"> {
   ];
 
   let extraClassDeclaration = [{
+    ::mlir::StringAttr getFilename() const;
     std::optional<unsigned> getStartLine() const;
     std::optional<unsigned> getStartColumn() const;
     std::optional<unsigned> getEndColumn() const;
     std::optional<unsigned> getEndLine() const;
   }];
   let skipDefaultBuilders = 1;
+  let genAccessors = 0;
   let genStorageClass = 0;
   let attrName = "builtin.file_line_range";
 }
