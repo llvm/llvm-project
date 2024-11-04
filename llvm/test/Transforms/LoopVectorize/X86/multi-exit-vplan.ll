@@ -49,9 +49,13 @@ define i64 @multi_exiting_to_different_exits_with_store(ptr %p, i64 %N) {
 ; CHECK-NEXT: No successors
 ; CHECK-EMPTY:
 ; CHECK-NEXT: scalar.ph:
+; CHECK-NEXT: ir-bb<loop.header>
+; CHECK-EMPTY:
+; CHECK-NEXT: ir-bb<loop.header>:
+; CHECK-NEXT:   IR   %iv = phi i64 [ %inc, %loop.latch ], [ 0, %entry ]
+; CHECK-NEXT:   IR   %c.1 = icmp uge i64 %iv, %N
 ; CHECK-NEXT: No successors
 ; CHECK-NEXT: }
-;
 entry:
   br label %loop.header
 
@@ -120,6 +124,11 @@ define i64 @multi_exiting_to_same_exit_with_store(ptr %p, i64 %N) {
 ; CHECK-NEXT: Successor(s): ir-bb<e>, scalar.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT: scalar.ph:
+; CHECK-NEXT: ir-bb<loop.header>
+; CHECK-EMPTY:
+; CHECK-NEXT: ir-bb<loop.header>:
+; CHECK-NEXT:   IR   %iv = phi i64 [ %inc, %loop.latch ], [ 0, %entry ]
+; CHECK-NEXT:   IR   %c.1 = icmp uge i64 %iv, %N
 ; CHECK-NEXT: No successors
 ; CHECK-NEXT: }
 ;

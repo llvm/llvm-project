@@ -1797,8 +1797,7 @@ void VPlanTransforms::convertToMultiCond(VPlan &Plan, ScalarEvolution &SE,
   auto *LatchVPBB =
       cast<VPBasicBlock>(Plan.getVectorLoopRegion()->getExiting());
   VPBuilder Builder(LatchVPBB->getTerminator());
-  auto *MiddleVPBB =
-      cast<VPBasicBlock>(Plan.getVectorLoopRegion()->getSingleSuccessor());
+  auto *MiddleVPBB = Plan.getMiddleBlock();
 
   VPRegionBlock *LoopRegion = Plan.getVectorLoopRegion();
 
@@ -1818,7 +1817,7 @@ void VPlanTransforms::convertToMultiCond(VPlan &Plan, ScalarEvolution &SE,
     BasicBlock *TrueSucc = ExitingTerm->getSuccessor(0);
     BasicBlock *FalseSucc = ExitingTerm->getSuccessor(1);
     VPIRBasicBlock *VPExitBlock;
-    if (OrigLoop->getUniqueExitBlock())
+    if (OrigLoop->getUniqueExitBlock() || Exiting == OrigLoop->getLoopLatch())
       VPExitBlock = cast<VPIRBasicBlock>(MiddleVPBB->getSuccessors()[0]);
     else
       VPExitBlock = VPIRBasicBlock::fromBasicBlock(
@@ -1835,11 +1834,6 @@ void VPlanTransforms::convertToMultiCond(VPlan &Plan, ScalarEvolution &SE,
     }
 
     if (Exiting == OrigLoop->getLoopLatch()) {
-      if (MiddleVPBB->getNumSuccessors() == 0) {
-        VPBasicBlock *ScalarPH = new VPBasicBlock("scalar.ph");
-        VPBlockUtils::connectBlocks(MiddleVPBB, VPExitBlock);
-        VPBlockUtils::connectBlocks(MiddleVPBB, ScalarPH);
-      }
       continue;
     }
 
@@ -1856,7 +1850,6 @@ void VPlanTransforms::convertToMultiCond(VPlan &Plan, ScalarEvolution &SE,
 
     VPBuilder MiddleBuilder(NewMiddle);
     MiddleBuilder.createNaryOp(VPInstruction::BranchOnCond, {EarlyExitTaken});
-    // MiddleVPBB = NewMiddle;
   }
   auto *Term = dyn_cast<VPInstruction>(LatchVPBB->getTerminator());
   auto *IsLatchExiting = Builder.createICmp(

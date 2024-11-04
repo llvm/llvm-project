@@ -3822,10 +3822,10 @@ public:
   /// whether to execute the scalar tail loop or the exit block from the loop
   /// latch.
   const VPBasicBlock *getMiddleBlock() const {
-    return cast<VPBasicBlock>(getVectorLoopRegion()->getSingleSuccessor());
+    return cast<VPBasicBlock>(getScalarPreheader()->getSinglePredecessor());
   }
   VPBasicBlock *getMiddleBlock() {
-    return cast<VPBasicBlock>(getVectorLoopRegion()->getSingleSuccessor());
+    return cast<VPBasicBlock>(getScalarPreheader()->getSinglePredecessor());
   }
 
   /// The trip count of the original loop.

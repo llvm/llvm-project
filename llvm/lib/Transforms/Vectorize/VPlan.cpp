@@ -911,7 +911,6 @@ VPlanPtr VPlan::createInitialVPlan(Type *InductionTy,
   VPBasicBlock *ScalarPH = new VPBasicBlock("scalar.ph");
   VPBlockUtils::connectBlocks(ScalarPH, ScalarHeader);
   if (!RequiresScalarEpilogueCheck) {
-    VPBasicBlock *ScalarPH = new VPBasicBlock("scalar.ph");
     VPBlockUtils::connectBlocks(MiddleVPBB, ScalarPH);
     return Plan;
   }
@@ -925,14 +924,17 @@ VPlanPtr VPlan::createInitialVPlan(Type *InductionTy,
   //    we unconditionally branch to the scalar preheader.  Do nothing.
   // 3) Otherwise, construct a runtime check.
   BasicBlock *IRExitBlock = TheLoop->getUniqueExitBlock();
-  if (IRExitBlock) {
-    auto *VPExitBlock = VPIRBasicBlock::fromBasicBlock(IRExitBlock);
-    // The connection order corresponds to the operands of the conditional
-    // branch.
-    VPBlockUtils::insertBlockAfter(VPExitBlock, MiddleVPBB);
-    VPBasicBlock *ScalarPH = new VPBasicBlock("scalar.ph");
-    VPBlockUtils::connectBlocks(MiddleVPBB, ScalarPH);
+  if (!IRExitBlock) {
+    auto *Term = cast<BranchInst>(TheLoop->getLoopLatch()->getTerminator());
+    IRExitBlock = TheLoop->contains(Term->getSuccessor(0))
+                      ? Term->getSuccessor(1)
+                      : Term->getSuccessor(0);
   }
+  auto *VPExitBlock = VPIRBasicBlock::fromBasicBlock(IRExitBlock);
+  // The connection order corresponds to the operands of the conditional
+  // branch.
+  VPBlockUtils::insertBlockAfter(VPExitBlock, MiddleVPBB);
+  VPBlockUtils::connectBlocks(MiddleVPBB, ScalarPH);
 
   auto *ScalarLatchTerm = TheLoop->getLoopLatch()->getTerminator();
   // Here we use the same DebugLoc as the scalar loop latch terminator instead
