@@ -16,7 +16,7 @@ void QueryProfile::printUserFriendlyTable(llvm::raw_ostream &OS) {
   OS.flush();
 }
 
-QueryProfile::~QueryProfiling() {
+QueryProfile::~QueryProfile() {
   TG.emplace("clang-query", "clang-query matcher profiling", Records);
   printUserFriendlyTable(llvm::errs());
 }

@@ -45,9 +45,9 @@ bool HelpQuery::run(llvm::raw_ostream &OS, QuerySession &QS) const {
         "  set bind-root (true|false)        "
         "Set whether to bind the root matcher to \"root\".\n"
         "  set print-matcher (true|false)    "
-        "  set enable-profile (true|false)    "
-        "Set whether to enable matcher profiling,\n"
         "Set whether to print the current matcher,\n"
+        "  set enable-profile (true|false)   "
+        "Set whether to enable matcher profiling,\n"
         "  set traversal <kind>              "
         "Set traversal kind of clang-query session. Available kinds are:\n"
         "    AsIs                            "
@@ -101,7 +101,7 @@ bool MatchQuery::run(llvm::raw_ostream &OS, QuerySession &QS) const {
 
   std::optional<QueryProfile> Profiling;
   if (QS.EnableProfile)
-    Profiling = QueryProfile();
+    Profiling.emplace();
 
   for (auto &AST : QS.ASTs) {
     ast_matchers::MatchFinder::MatchFinderOptions FinderOptions;
