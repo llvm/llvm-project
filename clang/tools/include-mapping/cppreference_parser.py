@@ -40,7 +40,7 @@ def _HasClass(tag, *classes):
     return False
 
 
-def _ParseSymbolPage(symbol_page_html, symbol_name, qual_name):
+def _ParseSymbolPage(symbol_page_html, symbols):
     """Parse symbol page and retrieve the include header defined in this page.
     The symbol page provides header for the symbol, specifically in
     "Defined in header <header>" section. An example:
@@ -51,8 +51,12 @@ def _ParseSymbolPage(symbol_page_html, symbol_name, qual_name):
 
     Returns a list of headers.
     """
-    headers = set()
+    headers = collections.defaultdict(set)
     all_headers = set()
+    symbol_names = {}
+    for symbol_name, qualified_symbol_name in symbols:
+        symbol_names[symbol_name] = symbol_name
+        symbol_names[qualified_symbol_name] = symbol_name
 
     soup = BeautifulSoup(symbol_page_html, "html.parser")
     # Rows in table are like:
@@ -69,11 +73,10 @@ def _ParseSymbolPage(symbol_page_html, symbol_name, qual_name):
                 was_decl = True
                 # Symbols are in the first cell.
                 found_symbols = row.find("td").stripped_strings
-                if not any(
-                    sym == symbol_name or sym == qual_name for sym in found_symbols
-                ):
-                    continue
-                headers.update(current_headers)
+                for found_symbol in found_symbols:
+                    symbol_name = symbol_names.get(found_symbol)
+                    if symbol_name:
+                        headers[symbol_name].update(current_headers)
             elif _HasClass(row, "t-dsc-header"):
                 # If we saw a decl since the last header, this is a new block of headers
                 # for a new block of decls.
@@ -88,7 +91,10 @@ def _ParseSymbolPage(symbol_page_html, symbol_name, qual_name):
                     current_headers.append(header_code.text)
                     all_headers.add(header_code.text)
     # If the symbol was never named, consider all named headers.
-    return headers or all_headers
+    return [
+        (symbol_name, headers.get(symbol_name) or all_headers)
+        for symbol_name, _ in symbols
+    ]
 
 
 def _ParseSymbolVariant(caption):
@@ -138,9 +144,9 @@ def _ParseIndexPage(index_page_html):
     return symbols
 
 
-def _ReadSymbolPage(path, name, qual_name):
+def _ReadSymbolPage(path, symbols):
     with open(path) as f:
-        return _ParseSymbolPage(f.read(), name, qual_name)
+        return _ParseSymbolPage(f.read(), symbols)
 
 
 def _GetSymbols(pool, root_dir, index_page_name, namespace, variants_to_accept):
@@ -159,6 +165,7 @@ def _GetSymbols(pool, root_dir, index_page_name, namespace, variants_to_accept):
     with open(index_page_path, "r") as f:
         # Read each symbol page in parallel.
         results = []  # (symbol_name, promise of [header...])
+        symbols_by_page = collections.defaultdict(list)
         for symbol_name, symbol_page_path, variant in _ParseIndexPage(f.read()):
             # Variant symbols (e.g. the std::locale version of isalpha) add ambiguity.
             # FIXME: use these as a fallback rather than ignoring entirely.
@@ -167,25 +174,24 @@ def _GetSymbols(pool, root_dir, index_page_name, namespace, variants_to_accept):
             if variant and variant not in variants_for_symbol:
                 continue
             path = os.path.join(root_dir, symbol_page_path)
-            if os.path.isfile(path):
-                results.append(
-                    (
-                        symbol_name,
-                        pool.apply_async(
-                            _ReadSymbolPage, (path, symbol_name, qualified_symbol_name)
-                        ),
-                    )
-                )
+            if path in symbols_by_page or os.path.isfile(path):
+                symbols_by_page[path].append((symbol_name, qualified_symbol_name))
             else:
                 sys.stderr.write(
                     "Discarding information for symbol: %s. Page %s does not exist.\n"
                     % (symbol_name, path)
                 )
 
+        for path, symbols in symbols_by_page.items():
+            results.append(
+                pool.apply_async(_ReadSymbolPage, (path, symbols)),
+            )
+
         # Build map from symbol name to a set of headers.
         symbol_headers = collections.defaultdict(set)
-        for symbol_name, lazy_headers in results:
-            symbol_headers[symbol_name].update(lazy_headers.get())
+        for lazy_mapping in results:
+            for symbol_name, headers in lazy_mapping.get():
+                symbol_headers[symbol_name].update(headers)
 
     symbols = []
     for name, headers in sorted(symbol_headers.items(), key=lambda t: t[0]):
