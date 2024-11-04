@@ -230,15 +230,18 @@ static void getAArch64MultilibFlags(const Driver &D,
     Result.push_back(BranchProtectionArg->getAsString(Args));
   }
 
-  const Arg *StrictAlignArg = Args.getLastArgNoClaim(
-      options::OPT_mstrict_align, options::OPT_mno_unaligned_access);
-  if (StrictAlignArg) {
-    Result.push_back(StrictAlignArg->getAsString(Args));
+  if (Arg *AlignArg = Args.getLastArg(
+          options::OPT_mstrict_align, options::OPT_mno_strict_align,
+          options::OPT_mno_unaligned_access, options::OPT_munaligned_access)) {
+    if (AlignArg->getOption().matches(options::OPT_mstrict_align) ||
+        AlignArg->getOption().matches(options::OPT_mno_unaligned_access))
+      Result.push_back(AlignArg->getAsString(Args));
   }
 
-  const Arg *BigEndian = Args.getLastArgNoClaim(options::OPT_mbig_endian);
-  if (BigEndian) {
-    Result.push_back(BigEndian->getAsString(Args));
+  if (Arg *Endian = Args.getLastArg(options::OPT_mbig_endian,
+                                    options::OPT_mlittle_endian)) {
+    if (Endian->getOption().matches(options::OPT_mbig_endian))
+      Result.push_back(Endian->getAsString(Args));
   }
 
   const Arg *ABIArg = Args.getLastArgNoClaim(options::OPT_mabi_EQ);
@@ -299,15 +302,18 @@ static void getARMMultilibFlags(const Driver &D,
     Result.push_back(BranchProtectionArg->getAsString(Args));
   }
 
-  const Arg *StrictAlignArg = Args.getLastArgNoClaim(
-      options::OPT_mstrict_align, options::OPT_mno_unaligned_access);
-  if (StrictAlignArg) {
-    Result.push_back(StrictAlignArg->getAsString(Args));
+  if (Arg *AlignArg = Args.getLastArg(
+          options::OPT_mstrict_align, options::OPT_mno_strict_align,
+          options::OPT_mno_unaligned_access, options::OPT_munaligned_access)) {
+    if (AlignArg->getOption().matches(options::OPT_mstrict_align) ||
+        AlignArg->getOption().matches(options::OPT_mno_unaligned_access))
+      Result.push_back(AlignArg->getAsString(Args));
   }
 
-  const Arg *BigEndian = Args.getLastArgNoClaim(options::OPT_mbig_endian);
-  if (BigEndian) {
-    Result.push_back(BigEndian->getAsString(Args));
+  if (Arg *Endian = Args.getLastArg(options::OPT_mbig_endian,
+                                    options::OPT_mlittle_endian)) {
+    if (Endian->getOption().matches(options::OPT_mbig_endian))
+      Result.push_back(Endian->getAsString(Args));
   }
 }
 
