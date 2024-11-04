@@ -346,8 +346,8 @@ CallInst *IRBuilderBase::CreateMalloc(Type *IntPtrTy, Type *AllocTy,
                                       Value *AllocSize, Value *ArraySize,
                                       Function *MallocF, const Twine &Name) {
 
-  return CreateMalloc(IntPtrTy, AllocTy, AllocSize, ArraySize, std::nullopt,
-                      MallocF, Name);
+  return CreateMalloc(IntPtrTy, AllocTy, AllocSize, ArraySize, {}, MallocF,
+                      Name);
 }
 
 /// CreateFree - Generate the IR for a call to the builtin free function.

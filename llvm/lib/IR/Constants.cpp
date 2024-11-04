@@ -2521,7 +2521,7 @@ Constant *ConstantExpr::getGetElementPtr(Type *Ty, Constant *C,
   }
 
   const ConstantExprKeyType Key(Instruction::GetElementPtr, ArgVec, NW.getRaw(),
-                                std::nullopt, Ty, InRange);
+                                {}, Ty, InRange);
 
   LLVMContextImpl *pImpl = C->getContext().pImpl;
   return pImpl->ExprConstants.getOrCreate(ReqTy, Key);
