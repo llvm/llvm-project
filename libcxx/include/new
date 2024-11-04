@@ -87,6 +87,7 @@ void  operator delete[](void* ptr, void*) noexcept;
 */
 
 #include <__config>
+#include <__cstddef/max_align_t.h>
 #include <__cstddef/size_t.h>
 #include <__exception/exception.h>
 #include <__type_traits/is_function.h>
