@@ -501,16 +501,17 @@ Constant *InstCostVisitor::visitUnaryOperator(UnaryOperator &I) {
 Constant *InstCostVisitor::visitBinaryOperator(BinaryOperator &I) {
   assert(LastVisited != KnownConstants.end() && "Invalid iterator!");
 
-  bool Swap = I.getOperand(1) == LastVisited->first;
-  Value *V = Swap ? I.getOperand(0) : I.getOperand(1);
+  bool ConstOnRHS = I.getOperand(1) == LastVisited->first;
+  Value *V = ConstOnRHS ? I.getOperand(0) : I.getOperand(1);
   Constant *Other = findConstantFor(V, KnownConstants);
-  if (!Other)
-    return nullptr;
+  Value *OtherVal = Other ? Other : V;
+  Value *ConstVal = LastVisited->second;
 
-  Constant *Const = LastVisited->second;
-  return dyn_cast_or_null<Constant>(Swap ?
-        simplifyBinOp(I.getOpcode(), Other, Const, SimplifyQuery(DL))
-      : simplifyBinOp(I.getOpcode(), Const, Other, SimplifyQuery(DL)));
+  if (ConstOnRHS)
+    std::swap(ConstVal, OtherVal);
+
+  return dyn_cast_or_null<Constant>(
+      simplifyBinOp(I.getOpcode(), ConstVal, OtherVal, SimplifyQuery(DL)));
 }
 
 Constant *FunctionSpecializer::getPromotableAlloca(AllocaInst *Alloca,
