@@ -5,10 +5,9 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===---------------------------------------------------------------------===//
-
 ///
 /// \file This file contains a pass to flatten arrays for the DirectX Backend.
-//
+///
 //===----------------------------------------------------------------------===//
 
 #include "DXILFlattenArrays.h"
@@ -26,10 +25,12 @@
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
+#include <utility>
 
 #define DEBUG_TYPE "dxil-flatten-arrays"
 
 using namespace llvm;
+namespace {
 
 class DXILFlattenArraysLegacy : public ModulePass {
 
@@ -75,19 +76,18 @@ public:
   bool visitCallInst(CallInst &ICI) { return false; }
   bool visitFreezeInst(FreezeInst &FI) { return false; }
   static bool isMultiDimensionalArray(Type *T);
-  static unsigned getTotalElements(Type *ArrayTy);
-  static Type *getBaseElementType(Type *ArrayTy);
+  static std::pair<unsigned, Type *> getElementCountAndType(Type *ArrayTy);
 
 private:
-  SmallVector<WeakTrackingVH, 32> PotentiallyDeadInstrs;
+  SmallVector<WeakTrackingVH> PotentiallyDeadInstrs;
   DenseMap<GetElementPtrInst *, GEPData> GEPChainMap;
   bool finish();
-  ConstantInt *constFlattenIndices(ArrayRef<Value *> Indices,
-                                   ArrayRef<uint64_t> Dims,
-                                   IRBuilder<> &Builder);
-  Value *instructionFlattenIndices(ArrayRef<Value *> Indices,
-                                   ArrayRef<uint64_t> Dims,
-                                   IRBuilder<> &Builder);
+  ConstantInt *genConstFlattenIndices(ArrayRef<Value *> Indices,
+                                      ArrayRef<uint64_t> Dims,
+                                      IRBuilder<> &Builder);
+  Value *genInstructionFlattenIndices(ArrayRef<Value *> Indices,
+                                      ArrayRef<uint64_t> Dims,
+                                      IRBuilder<> &Builder);
   void
   recursivelyCollectGEPs(GetElementPtrInst &CurrGEP,
                          ArrayType *FlattenedArrayType, Value *PtrOperand,
@@ -99,6 +99,7 @@ private:
   bool visitGetElementPtrInstInGEPChainBase(GEPData &GEPInfo,
                                             GetElementPtrInst &GEP);
 };
+} // namespace
 
 bool DXILFlattenArraysVisitor::finish() {
   RecursivelyDeleteTriviallyDeadInstructionsPermissive(PotentiallyDeadInstrs);
@@ -111,25 +112,18 @@ bool DXILFlattenArraysVisitor::isMultiDimensionalArray(Type *T) {
   return false;
 }
 
-unsigned DXILFlattenArraysVisitor::getTotalElements(Type *ArrayTy) {
+std::pair<unsigned, Type *>
+DXILFlattenArraysVisitor::getElementCountAndType(Type *ArrayTy) {
   unsigned TotalElements = 1;
   Type *CurrArrayTy = ArrayTy;
   while (auto *InnerArrayTy = dyn_cast<ArrayType>(CurrArrayTy)) {
     TotalElements *= InnerArrayTy->getNumElements();
     CurrArrayTy = InnerArrayTy->getElementType();
   }
-  return TotalElements;
+  return std::make_pair(TotalElements, CurrArrayTy);
 }
 
-Type *DXILFlattenArraysVisitor::getBaseElementType(Type *ArrayTy) {
-  Type *CurrArrayTy = ArrayTy;
-  while (auto *InnerArrayTy = dyn_cast<ArrayType>(CurrArrayTy)) {
-    CurrArrayTy = InnerArrayTy->getElementType();
-  }
-  return CurrArrayTy;
-}
-
-ConstantInt *DXILFlattenArraysVisitor::constFlattenIndices(
+ConstantInt *DXILFlattenArraysVisitor::genConstFlattenIndices(
     ArrayRef<Value *> Indices, ArrayRef<uint64_t> Dims, IRBuilder<> &Builder) {
   assert(Indices.size() == Dims.size() &&
          "Indicies and dimmensions should be the same");
@@ -146,7 +140,7 @@ ConstantInt *DXILFlattenArraysVisitor::constFlattenIndices(
   return Builder.getInt32(FlatIndex);
 }
 
-Value *DXILFlattenArraysVisitor::instructionFlattenIndices(
+Value *DXILFlattenArraysVisitor::genInstructionFlattenIndices(
     ArrayRef<Value *> Indices, ArrayRef<uint64_t> Dims, IRBuilder<> &Builder) {
   if (Indices.size() == 1)
     return Indices[0];
@@ -202,10 +196,9 @@ bool DXILFlattenArraysVisitor::visitAllocaInst(AllocaInst &AI) {
 
   ArrayType *ArrType = cast<ArrayType>(AI.getAllocatedType());
   IRBuilder<> Builder(&AI);
-  unsigned TotalElements = getTotalElements(ArrType);
+  auto [TotalElements, BaseType] = getElementCountAndType(ArrType);
 
-  ArrayType *FattenedArrayType =
-      ArrayType::get(getBaseElementType(ArrType), TotalElements);
+  ArrayType *FattenedArrayType = ArrayType::get(BaseType, TotalElements);
   AllocaInst *FlatAlloca =
       Builder.CreateAlloca(FattenedArrayType, nullptr, AI.getName() + ".flat");
   FlatAlloca->setAlignment(AI.getAlign());
@@ -261,10 +254,10 @@ bool DXILFlattenArraysVisitor::visitGetElementPtrInstInGEPChainBase(
   IRBuilder<> Builder(&GEP);
   Value *FlatIndex;
   if (GEPInfo.AllIndicesAreConstInt)
-    FlatIndex = constFlattenIndices(GEPInfo.Indices, GEPInfo.Dims, Builder);
+    FlatIndex = genConstFlattenIndices(GEPInfo.Indices, GEPInfo.Dims, Builder);
   else
     FlatIndex =
-        instructionFlattenIndices(GEPInfo.Indices, GEPInfo.Dims, Builder);
+        genInstructionFlattenIndices(GEPInfo.Indices, GEPInfo.Dims, Builder);
 
   ArrayType *FlattenedArrayType = GEPInfo.ParentArrayType;
   Value *FlatGEP =
@@ -285,9 +278,8 @@ bool DXILFlattenArraysVisitor::visitGetElementPtrInst(GetElementPtrInst &GEP) {
 
   ArrayType *ArrType = cast<ArrayType>(GEP.getSourceElementType());
   IRBuilder<> Builder(&GEP);
-  unsigned TotalElements = getTotalElements(ArrType);
-  ArrayType *FlattenedArrayType =
-      ArrayType::get(getBaseElementType(ArrType), TotalElements);
+  auto [TotalElements, BaseType] = getElementCountAndType(ArrType);
+  ArrayType *FlattenedArrayType = ArrayType::get(BaseType, TotalElements);
 
   Value *PtrOperand = GEP.getPointerOperand();
 
@@ -313,7 +305,6 @@ bool DXILFlattenArraysVisitor::visitGetElementPtrInst(GetElementPtrInst &GEP) {
 
 bool DXILFlattenArraysVisitor::visit(Function &F) {
   bool MadeChange = false;
-  ////for (BasicBlock &BB : make_early_inc_range(F)) {
   ReversePostOrderTraversal<Function *> RPOT(&F);
   for (BasicBlock *BB : make_early_inc_range(RPOT)) {
     for (Instruction &I : make_early_inc_range(*BB)) {
@@ -345,8 +336,7 @@ static void collectElements(Constant *Init,
       collectElements(DataArrayConstant->getElementAsConstant(I), Elements);
     }
   } else {
-    assert(
-        false &&
+    llvm_unreachable(
         "Expected a ConstantArray or ConstantDataArray for array initializer!");
   }
 }
@@ -382,10 +372,9 @@ flattenGlobalArrays(Module &M,
       continue;
 
     ArrayType *ArrType = cast<ArrayType>(OrigType);
-    unsigned TotalElements =
-        DXILFlattenArraysVisitor::getTotalElements(ArrType);
-    ArrayType *FattenedArrayType = ArrayType::get(
-        DXILFlattenArraysVisitor::getBaseElementType(ArrType), TotalElements);
+    auto [TotalElements, BaseType] =
+        DXILFlattenArraysVisitor::getElementCountAndType(ArrType);
+    ArrayType *FattenedArrayType = ArrayType::get(BaseType, TotalElements);
 
     // Create a new global variable with the updated type
     // Note: Initializer is set via transformInitializer

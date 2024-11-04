@@ -9,9 +9,7 @@
 #ifndef LLVM_TARGET_DIRECTX_DXILFLATTENARRAYS_H
 #define LLVM_TARGET_DIRECTX_DXILFLATTENARRAYS_H
 
-#include "DXILResource.h"
 #include "llvm/IR/PassManager.h"
-#include "llvm/Pass.h"
 
 namespace llvm {
 

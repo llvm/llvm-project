@@ -1,35 +1,38 @@
+
 ; RUN: opt -S -dxil-flatten-arrays  %s | FileCheck %s
 
 ; CHECK-LABEL: alloca_2d_test
 define void @alloca_2d_test ()  {
-    ; CHECK: alloca [9 x i32], align 4
-    ; CHECK-NOT: alloca [3 x [3 x i32]], align 4
-    %1 = alloca [3 x [3 x i32]], align 4
-    ret void
+; CHECK-NEXT:    alloca [9 x i32], align 4
+; CHECK-NEXT:    ret void
+;
+  %1 = alloca [3 x [3 x i32]], align 4
+  ret void
 }
 
 ; CHECK-LABEL: alloca_3d_test
 define void @alloca_3d_test ()  {
-    ; CHECK: alloca [8 x i32], align 4
-    ; CHECK-NOT: alloca [2 x[2 x [2 x i32]]], align 4
-    %1 = alloca [2 x[2 x [2 x i32]]], align 4
-    ret void
+; CHECK-NEXT:    alloca [8 x i32], align 4
+; CHECK-NEXT:    ret void
+;
+  %1 = alloca [2 x[2 x [2 x i32]]], align 4
+  ret void
 }
 
 ; CHECK-LABEL: alloca_4d_test
 define void @alloca_4d_test ()  {
-    ; CHECK: alloca [16 x i32], align 4
-    ; CHECK-NOT: alloca [ 2x[2 x[2 x [2 x i32]]]], align 4
-    %1 = alloca [2x[2 x[2 x [2 x i32]]]], align 4
-    ret void
+; CHECK-NEXT:    alloca [16 x i32], align 4
+; CHECK-NEXT:    ret void
+;
+  %1 = alloca [2x[2 x[2 x [2 x i32]]]], align 4
+  ret void
 }
 
 ; CHECK-LABEL: gep_2d_test
 define void @gep_2d_test ()  {
     ; CHECK: [[a:%.*]] = alloca [9 x i32], align 4
     ; CHECK-COUNT-9: getelementptr inbounds [9 x i32], ptr [[a]], i32 {{[0-8]}}
-    ; CHECK-NOT: getelementptr inbounds [3 x [3 x i32]], ptr %1, i32 0, i32 0, i32 {{[0-2]}}
-    ; CHECK-NOT: getelementptr inbounds [3 x i32], [3 x i32]* {{.*}}, i32 0, i32 {{[0-2]}}
+    ; CHECK-NEXT:    ret void
     %1 = alloca [3 x [3 x i32]], align 4
     %g2d0 = getelementptr inbounds [3 x [3 x i32]], [3 x [3 x i32]]* %1, i32 0, i32 0
     %g1d_1 = getelementptr inbounds [3 x i32], [3 x i32]* %g2d0, i32 0, i32 0
@@ -51,9 +54,7 @@ define void @gep_2d_test ()  {
 define void @gep_3d_test ()  {
     ; CHECK: [[a:%.*]] = alloca [8 x i32], align 4
     ; CHECK-COUNT-8: getelementptr inbounds [8 x i32], ptr [[a]], i32 {{[0-7]}}
-    ; CHECK-NOT: getelementptr inbounds [2 x[2 x [2 x i32]]], ptr %1, i32 0, i32 0, i32 {{[0-1]}}
-    ; CHECK-NOT: getelementptr inbounds [2 x [2 x i32]], ptr {{.*}}, i32 0, i32 0, i32 {{[0-1]}}
-    ; CHECK-NOT: getelementptr inbounds [2 x i32], [2 x i32]* {{.*}}, i32 0, i32 {{[0-1]}}
+    ; CHECK-NEXT:    ret void
     %1 = alloca [2 x[2 x [2 x i32]]], align 4
     %g3d0 = getelementptr inbounds [2 x[2 x [2 x i32]]], [2 x[2 x [2 x i32]]]* %1, i32 0, i32 0
     %g2d0 = getelementptr inbounds [2 x [2 x i32]], [2 x [2 x i32]]* %g3d0, i32 0, i32 0
@@ -76,10 +77,7 @@ define void @gep_3d_test ()  {
 define void @gep_4d_test ()  {
     ; CHECK: [[a:%.*]] = alloca [16 x i32], align 4
     ; CHECK-COUNT-16: getelementptr inbounds [16 x i32], ptr [[a]], i32 {{[0-9]|1[0-5]}}
-    ; CHECK-NOT: getelementptr inbounds [2x[2 x[2 x [2 x i32]]]], ptr %1, i32 0, i32 0, i32 {{[0-1]}}
-    ; CHECK-NOT: getelementptr inbounds [2 x[2 x [2 x i32]]], ptr {{.*}}, i32 0, i32 0, i32 {{[0-1]}}
-    ; CHECK-NOT: getelementptr inbounds [2 x [2 x i32]], ptr {{.*}}, i32 0, i32 0, i32 {{[0-1]}}
-    ; CHECK-NOT: getelementptr inbounds [2 x i32], [2 x i32]* {{.*}}, i32 0, i32 {{[0-1]}}
+    ; CHECK-NEXT:    ret void
     %1 = alloca [2x[2 x[2 x [2 x i32]]]], align 4
     %g4d0 = getelementptr inbounds [2x[2 x[2 x [2 x i32]]]], [2x[2 x[2 x [2 x i32]]]]* %1, i32 0, i32 0
     %g3d0 = getelementptr inbounds [2 x[2 x [2 x i32]]], [2 x[2 x [2 x i32]]]* %g4d0, i32 0, i32 0
@@ -127,9 +125,7 @@ define void @gep_4d_test ()  {
 define void @global_gep_load() {
   ; CHECK: [[GEP_PTR:%.*]] = getelementptr inbounds [24 x i32], ptr @a.1dim, i32 6
   ; CHECK: load i32, ptr [[GEP_PTR]], align 4
-  ; CHECK-NOT: getelementptr inbounds [2 x [3 x [4 x i32]]]{{.*}}
-  ; CHECK-NOT: getelementptr inbounds [3 x [4 x i32]]{{.*}}
-  ; CHECK-NOT: getelementptr inbounds [4 x i32]{{.*}}
+  ; CHECK-NEXT:    ret void
   %1 = getelementptr inbounds [2 x [3 x [4 x i32]]], [2 x [3 x [4 x i32]]]* @a, i32 0, i32 0
   %2 = getelementptr inbounds [3 x [4 x i32]], [3 x [4 x i32]]* %1, i32 0, i32 1
   %3 = getelementptr inbounds [4 x i32], [4 x i32]* %2, i32 0, i32 2
@@ -183,9 +179,7 @@ define void @global_incomplete_gep_chain(i32 %row, i32 %col) {
 define void @global_gep_store() {
   ; CHECK: [[GEP_PTR:%.*]] = getelementptr inbounds [24 x i32], ptr @b.1dim, i32 13
   ; CHECK:  store i32 1, ptr [[GEP_PTR]], align 4
-  ; CHECK-NOT: getelementptr inbounds [2 x [3 x [4 x i32]]]{{.*}}
-  ; CHECK-NOT: getelementptr inbounds [3 x [4 x i32]]{{.*}}
-  ; CHECK-NOT: getelementptr inbounds [4 x i32]{{.*}}
+  ; CHECK-NEXT:    ret void
   %1 = getelementptr inbounds [2 x [3 x [4 x i32]]], [2 x [3 x [4 x i32]]]* @b, i32 0, i32 1
   %2 = getelementptr inbounds [3 x [4 x i32]], [3 x [4 x i32]]* %1, i32 0, i32 0
   %3 = getelementptr inbounds [4 x i32], [4 x i32]* %2, i32 0, i32 1
