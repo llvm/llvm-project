@@ -1023,9 +1023,8 @@ void Driver::CreateOffloadingDeviceToolChains(Compilation &C,
   // SYCL
   //
   // We need to generate a SYCL toolchain if the user specified -fsycl.
-  bool IsSYCL =
-      C.getInputArgs().hasFlag(options::OPT_fsycl, options::OPT_fno_sycl,
-                               false);
+  bool IsSYCL = C.getInputArgs().hasFlag(options::OPT_fsycl,
+                                         options::OPT_fno_sycl, false);
 
   auto argSYCLIncompatible = [&](OptSpecifier OptId) {
     if (!IsSYCL)
@@ -2089,7 +2088,8 @@ void Driver::PrintHelp(bool ShowHidden) const {
 }
 
 llvm::Triple Driver::getSYCLDeviceTriple(StringRef TargetArch) const {
-  SmallVector<StringRef, 5> SYCLAlias = { "spir", "spir64", "spirv32", "spirv64"};
+  SmallVector<StringRef, 5> SYCLAlias = {"spir", "spir64", "spirv32",
+                                         "spirv64"};
   if (std::find(SYCLAlias.begin(), SYCLAlias.end(), TargetArch) !=
       SYCLAlias.end()) {
     llvm::Triple TT;

@@ -15,8 +15,7 @@ using namespace clang::driver::tools;
 using namespace clang;
 using namespace llvm::opt;
 
-SYCLInstallationDetector::SYCLInstallationDetector(const Driver &D)
-    : D(D) {
+SYCLInstallationDetector::SYCLInstallationDetector(const Driver &D) : D(D) {
   InstallationCandidates.emplace_back(D.Dir + "/..");
 }
 
@@ -52,7 +51,7 @@ void SYCLInstallationDetector::print(llvm::raw_ostream &OS) const {
 // Unsupported options for SYCL device compilation.
 static std::vector<OptSpecifier> getUnsupportedOpts() {
   std::vector<OptSpecifier> UnsupportedOpts = {
-      options::OPT_fsanitize_EQ, // -fsanitize
+      options::OPT_fsanitize_EQ,      // -fsanitize
       options::OPT_fcf_protection_EQ, // -fcf-protection
       options::OPT_fprofile_generate,
       options::OPT_fprofile_generate_EQ,
@@ -61,17 +60,17 @@ static std::vector<OptSpecifier> getUnsupportedOpts() {
       options::OPT_fno_test_coverage, // -f[no-]test-coverage
       options::OPT_fcoverage_mapping,
       options::OPT_fno_coverage_mapping, // -f[no-]coverage-mapping
-      options::OPT_coverage, // --coverage
+      options::OPT_coverage,             // --coverage
       options::OPT_fprofile_instr_generate,
       options::OPT_fprofile_instr_generate_EQ,
       options::OPT_fno_profile_instr_generate, // -f[no-]profile-instr-generate
       options::OPT_fprofile_arcs,
       options::OPT_fno_profile_arcs, // -f[no-]profile-arcs
-      options::OPT_fcreate_profile, // -fcreate-profile
+      options::OPT_fcreate_profile,  // -fcreate-profile
       options::OPT_fprofile_instr_use,
-      options::OPT_fprofile_instr_use_EQ, // -fprofile-instr-use
+      options::OPT_fprofile_instr_use_EQ,       // -fprofile-instr-use
       options::OPT_forder_file_instrumentation, // -forder-file-instrumentation
-      options::OPT_fcs_profile_generate, // -fcs-profile-generate
+      options::OPT_fcs_profile_generate,        // -fcs-profile-generate
       options::OPT_fcs_profile_generate_EQ};
   return UnsupportedOpts;
 }
