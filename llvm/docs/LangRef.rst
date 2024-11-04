@@ -1532,6 +1532,30 @@ Currently, only the following parameter attributes are defined:
     If a function reads from a writeonly pointer argument, the behavior is
     undefined.
 
+``writable``
+    This attribute is only meaningful in conjunction with ``dereferenceable(N)``
+    or another attribute that implies the first ``N`` bytes of the pointer
+    argument are dereferenceable.
+
+    In that case, the attribute indicates that the first ``N`` bytes will be
+    (non-atomically) loaded and stored back on entry to the function.
+
+    This implies that it's possible to introduce spurious stores on entry to
+    the function without introducing traps or data races. This does not
+    necessarily hold throughout the whole function, as the pointer may escape
+    to a different thread during the execution of the function. See also the
+    :ref:`atomic optimization guide <Optimization outside atomic>`
+
+    The "other attributes" that imply dereferenceability are
+    ``dereferenceable_or_null`` (if the pointer is non-null) and the
+    ``sret``, ``byval``, ``byref``, ``inalloca``, ``preallocated`` family of
+    attributes. Note that not all of these combinations are useful, e.g.
+    ``byval`` arguments are known to be writable even without this attribute.
+
+    The ``writable`` attribute cannot be combined with ``readnone``,
+    ``readonly`` or a ``memory`` attribute that does not contain
+    ``argmem: write``.
+
 .. _gc:
 
 Garbage Collector Strategy Names

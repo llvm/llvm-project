@@ -2171,7 +2171,10 @@ bool llvm::promoteLoopAccessesToScalars(
   // violating the memory model.
   if (StoreSafety == StoreSafetyUnknown) {
     Value *Object = getUnderlyingObject(SomePtr);
-    if (isWritableObject(Object) &&
+    bool ExplicitlyDereferenceableOnly;
+    if (isWritableObject(Object, ExplicitlyDereferenceableOnly) &&
+        (!ExplicitlyDereferenceableOnly ||
+         isDereferenceablePointer(SomePtr, AccessTy, MDL)) &&
         isThreadLocalObject(Object, CurLoop, DT, TTI))
       StoreSafety = StoreSafe;
   }

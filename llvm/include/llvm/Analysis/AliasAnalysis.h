@@ -875,10 +875,16 @@ bool isNotVisibleOnUnwind(const Value *Object,
 
 /// Return true if the Object is writable, in the sense that any location based
 /// on this pointer that can be loaded can also be stored to without trapping.
+/// Additionally, at the point Object is declared, stores can be introduced
+/// without data races. At later points, this is only the case if the pointer
+/// can not escape to a different thread.
 ///
-/// By itself, this does not imply that introducing spurious stores is safe,
-/// for example due to thread-safety reasons.
-bool isWritableObject(const Value *Object);
+/// If ExplicitlyDereferenceableOnly is set to true, this property only holds
+/// for the part of Object that is explicitly marked as dereferenceable, e.g.
+/// using the dereferenceable(N) attribute. It does not necessarily hold for
+/// parts that are only known to be dereferenceable due to the presence of
+/// loads.
+bool isWritableObject(const Value *Object, bool &ExplicitlyDereferenceableOnly);
 
 /// A manager for alias analyses.
 ///

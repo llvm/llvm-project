@@ -994,6 +994,7 @@ Function *CodeExtractor::constructFunctionDeclaration(
       case Attribute::ImmArg:
       case Attribute::ByRef:
       case Attribute::WriteOnly:
+      case Attribute::Writable:
       //  These are not really attributes.
       case Attribute::None:
       case Attribute::EndAttrKinds:
