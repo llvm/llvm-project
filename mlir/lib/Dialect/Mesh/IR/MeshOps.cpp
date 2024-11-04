@@ -548,6 +548,10 @@ LogicalResult ShardingOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
 }
 
 namespace {
+// Sharding annotations "halo sizes" and "sharded dims offsets"
+// are a mix of attributes and dynamic values. This canonicalization moves
+// constant values to the respective attribute lists and so minimizes the number
+// of values.
 class FoldDynamicLists final : public OpRewritePattern<ShardingOp> {
 public:
   using OpRewritePattern<ShardingOp>::OpRewritePattern;
