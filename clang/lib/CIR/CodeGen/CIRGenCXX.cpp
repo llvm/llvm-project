@@ -123,13 +123,13 @@ bool CIRGenModule::tryEmitBaseDestructorAsAlias(const CXXDestructorDecl *D) {
   // Check if we have it already.
   StringRef MangledName = getMangledName(AliasDecl);
   auto Entry = getGlobalValue(MangledName);
-  auto globalValue = dyn_cast<mlir::cir::CIRGlobalValueInterface>(Entry);
+  auto globalValue =
+      dyn_cast_or_null<mlir::cir::CIRGlobalValueInterface>(Entry);
   if (Entry && globalValue && !globalValue.isDeclaration())
     return false;
   if (Replacements.count(MangledName))
     return false;
 
-  assert(globalValue && "only knows how to handle GlobalValue");
   [[maybe_unused]] auto AliasValueType = getTypes().GetFunctionType(AliasDecl);
 
   // Find the referent.

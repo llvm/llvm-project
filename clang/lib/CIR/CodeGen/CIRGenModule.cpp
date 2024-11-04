@@ -2144,8 +2144,11 @@ void CIRGenModule::buildAliasForGlobal(StringRef mangledName,
                         mangledName, aliasee.getFunctionType(), aliasFD);
   alias.setAliasee(aliasee.getName());
   alias.setLinkage(linkage);
+  // Declarations cannot have public MLIR visibility, just mark them private
+  // but this really should have no meaning since CIR should not be using
+  // this information to derive linkage information.
   mlir::SymbolTable::setSymbolVisibility(
-      alias, getMLIRVisibilityFromCIRLinkage(linkage));
+      alias, mlir::SymbolTable::Visibility::Private);
 
   // Alias constructors and destructors are always unnamed_addr.
   assert(!MissingFeatures::unnamedAddr());

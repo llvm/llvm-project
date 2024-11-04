@@ -258,7 +258,8 @@ RValue CIRGenFunction::buildCXXMemberOrOperatorMemberCallExpr(
       DevirtualizedMethod ? DevirtualizedMethod : MD;
   const CIRGenFunctionInfo *FInfo = nullptr;
   if (const auto *Dtor = dyn_cast<CXXDestructorDecl>(CalleeDecl))
-    llvm_unreachable("NYI");
+    FInfo = &CGM.getTypes().arrangeCXXStructorDeclaration(
+        GlobalDecl(Dtor, Dtor_Complete));
   else
     FInfo = &CGM.getTypes().arrangeCXXMethodDeclaration(CalleeDecl);
 
@@ -295,7 +296,33 @@ RValue CIRGenFunction::buildCXXMemberOrOperatorMemberCallExpr(
   bool useVirtualCall = CanUseVirtualCall && !DevirtualizedMethod;
 
   if (const auto *dtor = dyn_cast<CXXDestructorDecl>(CalleeDecl)) {
-    llvm_unreachable("NYI");
+    assert(CE->arg_begin() == CE->arg_end() &&
+           "Destructor shouldn't have explicit parameters");
+    assert(ReturnValue.isNull() && "Destructor shouldn't have return value");
+    if (useVirtualCall) {
+      llvm_unreachable("NYI");
+    } else {
+      GlobalDecl globalDecl(dtor, Dtor_Complete);
+      CIRGenCallee Callee;
+      if (getLangOpts().AppleKext && dtor->isVirtual() && HasQualifier)
+        llvm_unreachable("NYI");
+      else if (!DevirtualizedMethod)
+        Callee = CIRGenCallee::forDirect(
+            CGM.getAddrOfCXXStructor(globalDecl, FInfo, Ty), globalDecl);
+      else {
+        Callee = CIRGenCallee::forDirect(CGM.GetAddrOfFunction(globalDecl, Ty),
+                                         globalDecl);
+      }
+
+      QualType thisTy =
+          IsArrow ? Base->getType()->getPointeeType() : Base->getType();
+      // CIRGen does not pass CallOrInvoke here (different from OG LLVM codegen)
+      // because in practice it always null even in OG.
+      buildCXXDestructorCall(globalDecl, Callee, This.getPointer(), thisTy,
+                             /*ImplicitParam=*/nullptr,
+                             /*ImplicitParamTy=*/QualType(), CE);
+    }
+    return RValue::get(nullptr);
   }
 
   // FIXME: Uses of 'MD' past this point need to be audited. We may need to use

@@ -37,4 +37,4 @@ B::B() {
 // CHECK:   %1 = cir.load %0 : !cir.ptr<!cir.ptr<!ty_B>>, !cir.ptr<!ty_B>
 // CHECK:   cir.return
 // CHECK: }
-// CHECK: cir.func @_ZN1BC1Ev(!cir.ptr<!ty_B>) alias(@_ZN1BC2Ev)
+// CHECK: cir.func private @_ZN1BC1Ev(!cir.ptr<!ty_B>) alias(@_ZN1BC2Ev)
