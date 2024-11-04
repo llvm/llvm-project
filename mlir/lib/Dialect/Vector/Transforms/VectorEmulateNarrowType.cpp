@@ -133,9 +133,9 @@ static FailureOr<Operation *> getCompressedMaskOp(OpBuilder &rewriter,
 static Value extractSubvectorFrom(RewriterBase &rewriter, Location loc,
                                   VectorType extractType, Value source,
                                   int64_t frontOffset, int64_t subvecSize) {
-  auto vectorType = dyn_cast<VectorType>(source.getType());
-  assert(vectorType && vectorType.getRank() == 1 &&
-         extractType.getRank() == 1 &&
+  auto vectorType = cast<VectorType>(source.getType());
+  assert((vectorType.getRank() == 1 &&
+         extractType.getRank() == 1) &&
          "expected 1-D source and destination types");
   auto offsets = rewriter.getI64ArrayAttr({frontOffset});
   auto sizes = rewriter.getI64ArrayAttr({subvecSize});
