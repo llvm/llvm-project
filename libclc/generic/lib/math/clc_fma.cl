@@ -22,6 +22,7 @@
 
 #include <clc/clc.h>
 #include <clc/clcmacro.h>
+#include <clc/integer/clc_abs.h>
 
 #include "config.h"
 #include "math.h"
@@ -84,7 +85,7 @@ _CLC_DEF _CLC_OVERLOAD float __clc_sw_fma(float a, float b, float c) {
 
   st_c.mantissa <<= C_ADJUST;
   ulong cutoff_bits = 0;
-  ulong cutoff_mask = (1ul << abs(exp_diff)) - 1ul;
+  ulong cutoff_mask = (1ul << __clc_abs(exp_diff)) - 1ul;
   if (exp_diff > 0) {
     cutoff_bits =
         exp_diff >= 64 ? st_c.mantissa : (st_c.mantissa & cutoff_mask);

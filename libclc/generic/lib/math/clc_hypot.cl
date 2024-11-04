@@ -22,6 +22,7 @@
 
 #include <clc/clc.h>
 #include <clc/clcmacro.h>
+#include <clc/integer/clc_abs.h>
 #include <clc/shared/clc_clamp.h>
 #include <math/clc_hypot.h>
 
@@ -82,7 +83,7 @@ _CLC_DEF _CLC_OVERLOAD double __clc_hypot(double x, double y) {
 
   // If the difference in exponents between x and y is large
   double s = x + y;
-  c = abs(xexp - yexp) > MANTLENGTH_DP64 + 1;
+  c = __clc_abs(xexp - yexp) > MANTLENGTH_DP64 + 1;
   r = c ? s : r;
 
   // Check for NaN
