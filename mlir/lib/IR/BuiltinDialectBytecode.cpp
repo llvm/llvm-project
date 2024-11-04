@@ -113,8 +113,8 @@ readFileLineColRangeLocs(DialectBytecodeReader &reader,
 
 static void writeFileLineColRangeLocs(DialectBytecodeWriter &writer,
                                       FileLineColRange range) {
-  if (range.getStartLine() == range.getStartColumn() == range.getEndLine() ==
-      range.getEndColumn() == 0) {
+  if (range.getStartLine() == 0 && range.getStartColumn() == 0 &&
+      range.getEndLine() == 0 && range.getEndColumn() == 0) {
     writer.writeVarInt(0);
     return;
   }
