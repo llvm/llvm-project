@@ -260,19 +260,6 @@ CodeExtractor::CodeExtractor(ArrayRef<BasicBlock *> BBs, DominatorTree *DT,
                                      KeepOldBlocks)),
       Suffix(Suffix), ArgsInZeroAddressSpace(ArgsInZeroAddressSpace) {}
 
-CodeExtractor::CodeExtractor(DominatorTree &DT, Loop &L, bool AggregateArgs,
-                             BlockFrequencyInfo *BFI,
-                             BranchProbabilityInfo *BPI, AssumptionCache *AC,
-                             std::string Suffix)
-    : DT(&DT), AggregateArgs(AggregateArgs || AggregateArgsOpt), BFI(BFI),
-      BPI(BPI), AC(AC), AllocationBlock(nullptr), AllowVarArgs(false),
-      KeepOldBlocks(false),
-      Blocks(buildExtractionBlockSet(L.getBlocks(), &DT,
-                                     /* AllowVarArgs */ false,
-                                     /* AllowAlloca */ false,
-                                     /* KeepOldBlocks */ false)),
-      Suffix(Suffix), ArgsInZeroAddressSpace(false) {}
-
 /// definedInRegion - Return true if the specified value is defined in the
 /// extracted region.
 static bool definedInRegion(const SetVector<BasicBlock *> &Blocks, Value *V) {
