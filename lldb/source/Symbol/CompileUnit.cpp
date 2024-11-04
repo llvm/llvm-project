@@ -326,16 +326,18 @@ void CompileUnit::ResolveSymbolContext(
   // the function containing the PC of the line table match.  That way we can
   // limit the call site search to that function.
   // We will miss functions that ONLY exist as a call site entry.
-
+  
   if (line_entry.IsValid() &&
-      (line_entry.line != line || line_entry.column != column_num) &&
-      resolve_scope & eSymbolContextLineEntry && check_inlines) {
+      (line_entry.line != line || (column_num != 0 && line_entry.column != column_num))
+      && (resolve_scope & eSymbolContextLineEntry) && check_inlines) {
     // We don't move lines over function boundaries, so the address in the
     // line entry will be the in function that contained the line that might
     // be a CallSite, and we can just iterate over that function to find any
     // inline records, and dig up their call sites.
     Address start_addr = line_entry.range.GetBaseAddress();
     Function *function = start_addr.CalculateSymbolContextFunction();
+    // Record the size of the list to see if we added to it:
+    size_t old_sc_list_size = sc_list.GetSize();
 
     Declaration sought_decl(file_spec, line, column_num);
     // We use this recursive function to descend the block structure looking
@@ -417,7 +419,7 @@ void CompileUnit::ResolveSymbolContext(
     // FIXME: Should I also do this for "call site line exists between the
     // given line number and the later line we found in the line table"?  That's
     // a closer approximation to our general sliding algorithm.
-    if (sc_list.GetSize())
+    if (sc_list.GetSize() > old_sc_list_size)
       return;
   }
 
