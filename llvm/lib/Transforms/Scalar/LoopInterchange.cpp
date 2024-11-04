@@ -234,6 +234,14 @@ static void populateWorklist(Loop &L, LoopVector &LoopList) {
   LoopList.push_back(CurrentLoop);
 }
 
+static bool hasMinimumLoopDepth(SmallVectorImpl<Loop *> &LoopList) {
+  unsigned LoopNestDepth = LoopList.size();
+  if (LoopNestDepth < 2) {
+    LLVM_DEBUG(dbgs() << "Loop doesn't contain minimum nesting level.\n");
+    return false;
+  }
+  return true;
+}
 namespace {
 
 /// LoopInterchangeLegality checks if it is legal to interchange the loop.
@@ -416,11 +424,11 @@ struct LoopInterchange {
 
   bool processLoopList(SmallVectorImpl<Loop *> &LoopList) {
     bool Changed = false;
-    unsigned LoopNestDepth = LoopList.size();
-    if (LoopNestDepth < 2) {
-      LLVM_DEBUG(dbgs() << "Loop doesn't contain minimum nesting level.\n");
+
+    if (!hasMinimumLoopDepth(LoopList))
       return false;
-    }
+
+    unsigned LoopNestDepth = LoopList.size();
     if (LoopNestDepth > MaxLoopNestDepth) {
       LLVM_DEBUG(dbgs() << "Cannot handle loops of depth greater than "
                         << MaxLoopNestDepth << "\n");
@@ -1713,6 +1721,12 @@ PreservedAnalyses LoopInterchangePass::run(LoopNest &LN,
                                            LPMUpdater &U) {
   Function &F = *LN.getParent();
 
+  SmallVector<Loop *, 8> LoopList(LN.getLoops());
+  
+  // Ensure minimum depth of the loop nest to do the interchange.
+  if (!hasMinimumLoopDepth(LoopList))
+    return PreservedAnalyses::all();
+  
   DependenceInfo DI(&F, &AR.AA, &AR.SE, &AR.LI);
   std::unique_ptr<CacheCost> CC =
       CacheCost::getCacheCost(LN.getOutermostLoop(), AR, DI);
