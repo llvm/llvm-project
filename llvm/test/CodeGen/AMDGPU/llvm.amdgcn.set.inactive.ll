@@ -504,6 +504,29 @@ define amdgpu_kernel void @set_inactive_p6(ptr addrspace(1) %out, ptr addrspace(
   ret void
 }
 
+define void @set_inactive_i16(ptr addrspace(1) %out, i16 %in) {
+; GCN-LABEL: set_inactive_i16:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    s_xor_saveexec_b64 s[4:5], -1
+; GCN-NEXT:    buffer_store_dword v3, off, s[0:3], s32 ; 4-byte Folded Spill
+; GCN-NEXT:    s_mov_b64 exec, s[4:5]
+; GCN-NEXT:    s_or_saveexec_b64 s[4:5], -1
+; GCN-NEXT:    v_cndmask_b32_e64 v3, 3, v2, s[4:5]
+; GCN-NEXT:    s_mov_b64 exec, s[4:5]
+; GCN-NEXT:    v_mov_b32_e32 v2, v3
+; GCN-NEXT:    flat_store_short v[0:1], v2
+; GCN-NEXT:    s_xor_saveexec_b64 s[4:5], -1
+; GCN-NEXT:    buffer_load_dword v3, off, s[0:3], s32 ; 4-byte Folded Reload
+; GCN-NEXT:    s_mov_b64 exec, s[4:5]
+; GCN-NEXT:    s_waitcnt vmcnt(0)
+; GCN-NEXT:    s_setpc_b64 s[30:31]
+  %tmp.0 = call i16 @llvm.amdgcn.set.inactive.i16(i16 %in, i16 3) #0
+  %tmp = call i16 @llvm.amdgcn.strict.wwm.i16(i16 %tmp.0)
+  store i16 %tmp, ptr addrspace(1) %out
+  ret void
+}
+
 declare i32 @llvm.amdgcn.set.inactive.i32(i32, i32) #0
 declare i64 @llvm.amdgcn.set.inactive.i64(i64, i64) #0
 declare i32 @llvm.amdgcn.strict.wwm.i32(i32) #1

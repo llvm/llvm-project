@@ -6552,6 +6552,17 @@ void SITargetLowering::ReplaceNodeResults(SDNode *N,
       Results.push_back(LoadVal);
       return;
     }
+    case Intrinsic::amdgcn_readlane:
+    case Intrinsic::amdgcn_readfirstlane:
+    case Intrinsic::amdgcn_writelane:
+    case Intrinsic::amdgcn_permlane16:
+    case Intrinsic::amdgcn_permlanex16:
+    case Intrinsic::amdgcn_permlane64:
+    case Intrinsic::amdgcn_set_inactive:
+    case Intrinsic::amdgcn_set_inactive_chain_arg:
+    case Intrinsic::amdgcn_mov_dpp8:
+      Results.push_back(lowerLaneOp(*this, N, DAG));
+      return;
     }
     break;
   }

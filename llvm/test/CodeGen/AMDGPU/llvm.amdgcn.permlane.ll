@@ -8932,6 +8932,85 @@ define void @v_permlane16_v2f32(ptr addrspace(1) %out, <2 x float> %src0, i32 %s
   ret void
 }
 
+define void @v_permlane16_i8(ptr addrspace(1) %out, i8 %src0, i32 %src1, i32 %src2) {
+; GFX10-LABEL: v_permlane16_i8:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    v_readfirstlane_b32 s4, v3
+; GFX10-NEXT:    v_readfirstlane_b32 s5, v4
+; GFX10-NEXT:    v_permlane16_b32 v2, v2, s4, s5
+; GFX10-NEXT:    global_store_byte v[0:1], v2, off
+; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: v_permlane16_i8:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_readfirstlane_b32 s0, v3
+; GFX11-NEXT:    v_readfirstlane_b32 s1, v4
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-NEXT:    v_permlane16_b32 v2, v2, s0, s1
+; GFX11-NEXT:    global_store_b8 v[0:1], v2, off
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX12-LABEL: v_permlane16_i8:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NEXT:    s_wait_expcnt 0x0
+; GFX12-NEXT:    s_wait_samplecnt 0x0
+; GFX12-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    v_readfirstlane_b32 s0, v3
+; GFX12-NEXT:    v_readfirstlane_b32 s1, v4
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX12-NEXT:    v_permlane16_b32 v2, v2, s0, s1
+; GFX12-NEXT:    global_store_b8 v[0:1], v2, off
+; GFX12-NEXT:    s_setpc_b64 s[30:31]
+  %v = call i8 @llvm.amdgcn.permlane16.i8(i8 %src0, i8 %src0, i32 %src1, i32 %src2, i1 false, i1 false)
+  store i8 %v, ptr addrspace(1) %out
+  ret void
+}
+
+define void @v_permlane16_i1(ptr addrspace(1) %out, i1 %src0, i32 %src1, i32 %src2) {
+; GFX10-LABEL: v_permlane16_i1:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    v_readfirstlane_b32 s4, v3
+; GFX10-NEXT:    v_readfirstlane_b32 s5, v4
+; GFX10-NEXT:    v_permlane16_b32 v2, v2, s4, s5
+; GFX10-NEXT:    v_and_b32_e32 v2, 1, v2
+; GFX10-NEXT:    global_store_byte v[0:1], v2, off
+; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: v_permlane16_i1:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_readfirstlane_b32 s0, v3
+; GFX11-NEXT:    v_readfirstlane_b32 s1, v4
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX11-NEXT:    v_permlane16_b32 v2, v2, s0, s1
+; GFX11-NEXT:    v_and_b32_e32 v2, 1, v2
+; GFX11-NEXT:    global_store_b8 v[0:1], v2, off
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX12-LABEL: v_permlane16_i1:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NEXT:    s_wait_expcnt 0x0
+; GFX12-NEXT:    s_wait_samplecnt 0x0
+; GFX12-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    v_readfirstlane_b32 s0, v3
+; GFX12-NEXT:    v_readfirstlane_b32 s1, v4
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX12-NEXT:    v_permlane16_b32 v2, v2, s0, s1
+; GFX12-NEXT:    v_and_b32_e32 v2, 1, v2
+; GFX12-NEXT:    global_store_b8 v[0:1], v2, off
+; GFX12-NEXT:    s_setpc_b64 s[30:31]
+  %v = call i1 @llvm.amdgcn.permlane16.i1(i1 %src0, i1 %src0, i32 %src1, i32 %src2, i1 false, i1 false)
+  store i1 %v, ptr addrspace(1) %out
+  ret void
+}
+
 define void @v_permlanex16_v2f32(ptr addrspace(1) %out, <2 x float> %src0, i32 %src1, i32 %src2) {
 ; GFX10-SDAG-LABEL: v_permlanex16_v2f32:
 ; GFX10-SDAG:       ; %bb.0:
@@ -9428,5 +9507,84 @@ define void @v_permlanex16_v8i16(ptr addrspace(1) %out, <8 x i16> %src0, i32 %sr
 ; GFX12-GISEL-NEXT:    s_setpc_b64 s[30:31]
   %v = call <8 x i16> @llvm.amdgcn.permlanex16.v8i16(<8 x i16> %src0, <8 x i16> %src0, i32 %src1, i32 %src2, i1 false, i1 false)
   store <8 x i16> %v, ptr addrspace(1) %out
+  ret void
+}
+
+define void @v_permlanex16_i8(ptr addrspace(1) %out, i8 %src0, i32 %src1, i32 %src2) {
+; GFX10-LABEL: v_permlanex16_i8:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    v_readfirstlane_b32 s4, v3
+; GFX10-NEXT:    v_readfirstlane_b32 s5, v4
+; GFX10-NEXT:    v_permlanex16_b32 v2, v2, s4, s5
+; GFX10-NEXT:    global_store_byte v[0:1], v2, off
+; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: v_permlanex16_i8:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_readfirstlane_b32 s0, v3
+; GFX11-NEXT:    v_readfirstlane_b32 s1, v4
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-NEXT:    v_permlanex16_b32 v2, v2, s0, s1
+; GFX11-NEXT:    global_store_b8 v[0:1], v2, off
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX12-LABEL: v_permlanex16_i8:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NEXT:    s_wait_expcnt 0x0
+; GFX12-NEXT:    s_wait_samplecnt 0x0
+; GFX12-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    v_readfirstlane_b32 s0, v3
+; GFX12-NEXT:    v_readfirstlane_b32 s1, v4
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX12-NEXT:    v_permlanex16_b32 v2, v2, s0, s1
+; GFX12-NEXT:    global_store_b8 v[0:1], v2, off
+; GFX12-NEXT:    s_setpc_b64 s[30:31]
+  %v = call i8 @llvm.amdgcn.permlanex16.i8(i8 %src0, i8 %src0, i32 %src1, i32 %src2, i1 false, i1 false)
+  store i8 %v, ptr addrspace(1) %out
+  ret void
+}
+
+define void @v_permlanex16_i1(ptr addrspace(1) %out, i1 %src0, i32 %src1, i32 %src2) {
+; GFX10-LABEL: v_permlanex16_i1:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    v_readfirstlane_b32 s4, v3
+; GFX10-NEXT:    v_readfirstlane_b32 s5, v4
+; GFX10-NEXT:    v_permlanex16_b32 v2, v2, s4, s5
+; GFX10-NEXT:    v_and_b32_e32 v2, 1, v2
+; GFX10-NEXT:    global_store_byte v[0:1], v2, off
+; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: v_permlanex16_i1:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_readfirstlane_b32 s0, v3
+; GFX11-NEXT:    v_readfirstlane_b32 s1, v4
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX11-NEXT:    v_permlanex16_b32 v2, v2, s0, s1
+; GFX11-NEXT:    v_and_b32_e32 v2, 1, v2
+; GFX11-NEXT:    global_store_b8 v[0:1], v2, off
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX12-LABEL: v_permlanex16_i1:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NEXT:    s_wait_expcnt 0x0
+; GFX12-NEXT:    s_wait_samplecnt 0x0
+; GFX12-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    v_readfirstlane_b32 s0, v3
+; GFX12-NEXT:    v_readfirstlane_b32 s1, v4
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX12-NEXT:    v_permlanex16_b32 v2, v2, s0, s1
+; GFX12-NEXT:    v_and_b32_e32 v2, 1, v2
+; GFX12-NEXT:    global_store_b8 v[0:1], v2, off
+; GFX12-NEXT:    s_setpc_b64 s[30:31]
+  %v = call i1 @llvm.amdgcn.permlanex16.i1(i1 %src0, i1 %src0, i32 %src1, i32 %src2, i1 false, i1 false)
+  store i1 %v, ptr addrspace(1) %out
   ret void
 }

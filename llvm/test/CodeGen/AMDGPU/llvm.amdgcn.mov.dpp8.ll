@@ -186,6 +186,25 @@ define amdgpu_ps void @dpp8_double(double %in, ptr addrspace(1) %out) {
   ret void
 }
 
+; GFX10PLUS-LABEL: {{^}}dpp8_i8:
+; GFX10PLUS: v_mov_b32_dpp v0, v0 dpp8:[1,0,0,0,0,0,0,0]
+; GFX10PLUS: global_store_{{byte|b8}} v[1:2], v0, off
+define amdgpu_ps void @dpp8_i8(i8 %in, ptr addrspace(1) %out) {
+  %tmp0 = call i8 @llvm.amdgcn.mov.dpp8.i8(i8 %in, i32 1)
+  store i8 %tmp0, ptr addrspace(1) %out
+  ret void
+}
+
+; GFX10PLUS-LABEL: {{^}}dpp8_i1:
+; GFX10PLUS: v_mov_b32_dpp v0, v0 dpp8:[1,0,0,0,0,0,0,0]
+; GFX10PLUS: v_and_b32_e32 v0, 1, v0
+; GFX10PLUS: global_store_{{byte|b8}} v[1:2], v0, off
+define amdgpu_ps void @dpp8_i1(i1 %in, ptr addrspace(1) %out) {
+  %tmp0 = call i1 @llvm.amdgcn.mov.dpp8.i1(i1 %in, i32 1)
+  store i1 %tmp0, ptr addrspace(1) %out
+  ret void
+}
+
 declare i32 @llvm.amdgcn.mov.dpp8.i32(i32, i32) #0
 
 attributes #0 = { nounwind readnone convergent }
