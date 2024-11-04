@@ -77,9 +77,9 @@ void clang::ProcessWarningOptions(DiagnosticsEngine &Diags,
     Diags.setExtensionHandlingBehavior(diag::Severity::Ignored);
 
   if (!Opts.DiagnosticSuppressionMappingsFile.empty()) {
-    if (auto Buf =
+    if (auto FileContents =
             VFS.getBufferForFile(Opts.DiagnosticSuppressionMappingsFile)) {
-      Diags.setDiagSuppressionMapping(**Buf);
+      Diags.setDiagSuppressionMapping(**FileContents);
     } else if (ReportDiags) {
       Diags.Report(diag::err_drv_no_such_file)
           << Opts.DiagnosticSuppressionMappingsFile;

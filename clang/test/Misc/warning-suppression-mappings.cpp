@@ -17,6 +17,7 @@ namespace {
 void foo() {
   const char *x;
   format_err(x); // Warning suppressed here.
+  const char *y; // expected-warning{{unused variable 'y'}}
 }
 }
 
