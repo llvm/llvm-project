@@ -1197,21 +1197,12 @@ OptionElementVector Options::ParseForCompletion(const Args &args,
         }
         break;
       case OptionParser::eOptionalArgument:
-        if (OptionParser::GetOptionArgument() != nullptr) {
-          option_element_vector.push_back(OptionArgElement(
-              opt_defs_index,
-              FindOriginalIndex(dummy_vec[OptionParser::GetOptionIndex() - 2],
-                                args),
-              FindOriginalIndex(dummy_vec[OptionParser::GetOptionIndex() - 1],
-                                args)));
-        } else {
-          option_element_vector.push_back(OptionArgElement(
-              opt_defs_index,
-              FindOriginalIndex(dummy_vec[OptionParser::GetOptionIndex() - 2],
-                                args),
-              FindOriginalIndex(dummy_vec[OptionParser::GetOptionIndex() - 1],
-                                args)));
-        }
+        option_element_vector.push_back(OptionArgElement(
+            opt_defs_index,
+            FindOriginalIndex(dummy_vec[OptionParser::GetOptionIndex() - 2],
+                              args),
+            FindOriginalIndex(dummy_vec[OptionParser::GetOptionIndex() - 1],
+                              args)));
         break;
       default:
         // The options table is messed up.  Here we'll just continue

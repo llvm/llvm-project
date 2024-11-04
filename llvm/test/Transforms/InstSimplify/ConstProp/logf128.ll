@@ -3,6 +3,7 @@
 
 ; REQUIRES: has_logf128
 declare fp128 @llvm.log.f128(fp128)
+declare fp128 @logl(fp128)
 
 define fp128 @log_e_64(){
 ; CHECK-LABEL: define fp128 @log_e_64() {
@@ -123,4 +124,50 @@ define <2 x fp128> @log_e_negative_2_vector(){
 ;
   %A = call <2 x fp128> @llvm.log.v2f128(<2 x fp128> <fp128 0xL0000000000000000C000000000000000, fp128 0xL0000000000000000C000000000000001>)
   ret <2 x fp128> %A
+}
+
+define fp128 @logl_e_64(){
+; CHECK-LABEL: define fp128 @logl_e_64() {
+; CHECK-NEXT:    [[A:%.*]] = call fp128 @logl(fp128 noundef 0xL00000000000000004005000000000000)
+; CHECK-NEXT:    ret fp128 0xL300000000000000040010A2B23F3BAB7
+;
+  %A = call fp128 @logl(fp128 noundef 0xL00000000000000004005000000000000)
+  ret fp128 %A
+}
+
+define fp128 @logl_e_0(){
+; CHECK-LABEL: define fp128 @logl_e_0() {
+; CHECK-NEXT:    [[A:%.*]] = call fp128 @logl(fp128 noundef 0xL00000000000000000000000000000000)
+; CHECK-NEXT:    ret fp128 [[A]]
+;
+  %A = call fp128 @logl(fp128 noundef 0xL00000000000000000000000000000000)
+  ret fp128 %A
+}
+
+define fp128 @logl_e_infinity(){
+; CHECK-LABEL: define fp128 @logl_e_infinity() {
+; CHECK-NEXT:    [[A:%.*]] = call fp128 @logl(fp128 noundef 0xL00000000000000007FFF000000000000)
+; CHECK-NEXT:    ret fp128 0xL00000000000000007FFF000000000000
+;
+  %A = call fp128 @logl(fp128 noundef 0xL00000000000000007FFF000000000000)
+  ret fp128 %A
+}
+
+define fp128 @logl_e_nan(){
+; CHECK-LABEL: define fp128 @logl_e_nan() {
+; CHECK-NEXT:    [[A:%.*]] = call fp128 @logl(fp128 noundef 0xL00000000000000007FFF000000000001)
+; CHECK-NEXT:    ret fp128 [[A]]
+;
+  %A = call fp128 @logl(fp128 noundef 0xL00000000000000007FFF000000000001)
+  ret fp128 %A
+}
+
+
+define fp128 @logl_e_negative_2(){
+; CHECK-LABEL: define fp128 @logl_e_negative_2() {
+; CHECK-NEXT:    [[A:%.*]] = call fp128 @logl(fp128 noundef 0xL0000000000000000C000000000000000)
+; CHECK-NEXT:    ret fp128 [[A]]
+;
+  %A = call fp128 @logl(fp128 noundef 0xL0000000000000000C000000000000000)
+  ret fp128 %A
 }

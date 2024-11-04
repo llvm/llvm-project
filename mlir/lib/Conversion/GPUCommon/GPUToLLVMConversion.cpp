@@ -49,8 +49,6 @@ namespace mlir {
 
 using namespace mlir;
 
-static constexpr const char *kGpuBinaryStorageSuffix = "_gpubin_cst";
-
 namespace {
 class GpuToLLVMConversionPass
     : public impl::GpuToLLVMConversionPassBase<GpuToLLVMConversionPass> {
@@ -97,36 +95,6 @@ protected:
   Type llvmIntPtrType = IntegerType::get(
       context, this->getTypeConverter()->getPointerBitwidth(0));
 
-  FunctionCallBuilder moduleLoadCallBuilder = {
-      "mgpuModuleLoad",
-      llvmPointerType /* void *module */,
-      {llvmPointerType /* void *cubin */, llvmInt64Type /* size_t size */}};
-  FunctionCallBuilder moduleUnloadCallBuilder = {
-      "mgpuModuleUnload", llvmVoidType, {llvmPointerType /* void *module */}};
-  FunctionCallBuilder moduleGetFunctionCallBuilder = {
-      "mgpuModuleGetFunction",
-      llvmPointerType /* void *function */,
-      {
-          llvmPointerType, /* void *module */
-          llvmPointerType  /* char *name   */
-      }};
-  FunctionCallBuilder launchKernelCallBuilder = {
-      "mgpuLaunchKernel",
-      llvmVoidType,
-      {
-          llvmPointerType, /* void* f */
-          llvmIntPtrType,  /* intptr_t gridXDim */
-          llvmIntPtrType,  /* intptr_t gridyDim */
-          llvmIntPtrType,  /* intptr_t gridZDim */
-          llvmIntPtrType,  /* intptr_t blockXDim */
-          llvmIntPtrType,  /* intptr_t blockYDim */
-          llvmIntPtrType,  /* intptr_t blockZDim */
-          llvmInt32Type,   /* unsigned int sharedMemBytes */
-          llvmPointerType, /* void *hstream */
-          llvmPointerType, /* void **kernelParams */
-          llvmPointerType, /* void **extra */
-          llvmInt64Type    /* size_t paramsCount */
-      }};
   FunctionCallBuilder streamCreateCallBuilder = {
       "mgpuStreamCreate", llvmPointerType /* void *stream */, {}};
   FunctionCallBuilder streamDestroyCallBuilder = {
@@ -451,55 +419,21 @@ private:
                   ConversionPatternRewriter &rewriter) const override;
 };
 
-/// A rewrite patter to convert gpu.launch_func operations into a sequence of
-/// GPU runtime calls. Currently it supports CUDA and ROCm (HIP).
-///
-/// In essence, a gpu.launch_func operations gets compiled into the following
-/// sequence of runtime calls:
-///
-/// * moduleLoad        -- loads the module given the cubin / hsaco data
-/// * moduleGetFunction -- gets a handle to the actual kernel function
-/// * getStreamHelper   -- initializes a new compute stream on GPU
-/// * launchKernel      -- launches the kernel on a stream
-/// * streamSynchronize -- waits for operations on the stream to finish
-///
-/// Intermediate data structures are allocated on the stack.
-class ConvertLaunchFuncOpToGpuRuntimeCallPattern
+/// A rewrite patter to legalize gpu.launch_func with LLVM types.
+class LegalizeLaunchFuncOpPattern
     : public ConvertOpToGpuRuntimeCallPattern<gpu::LaunchFuncOp> {
 public:
-  ConvertLaunchFuncOpToGpuRuntimeCallPattern(
-      const LLVMTypeConverter &typeConverter, StringRef gpuBinaryAnnotation,
-      bool kernelBarePtrCallConv, SymbolTable *cachedModuleTable)
+  LegalizeLaunchFuncOpPattern(const LLVMTypeConverter &typeConverter,
+                              bool kernelBarePtrCallConv)
       : ConvertOpToGpuRuntimeCallPattern<gpu::LaunchFuncOp>(typeConverter),
-        gpuBinaryAnnotation(gpuBinaryAnnotation),
-        kernelBarePtrCallConv(kernelBarePtrCallConv),
-        cachedModuleTable(cachedModuleTable) {}
+        kernelBarePtrCallConv(kernelBarePtrCallConv) {}
 
 private:
-  Value generateParamsArray(gpu::LaunchFuncOp launchOp, OpAdaptor adaptor,
-                            OpBuilder &builder) const;
-  Value generateKernelNameConstant(StringRef moduleName, StringRef name,
-                                   Location loc, OpBuilder &builder) const;
-
   LogicalResult
   matchAndRewrite(gpu::LaunchFuncOp launchOp, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override;
 
-  llvm::SmallString<32> gpuBinaryAnnotation;
   bool kernelBarePtrCallConv;
-  SymbolTable *cachedModuleTable;
-};
-
-class EraseGpuModuleOpPattern : public OpRewritePattern<gpu::GPUModuleOp> {
-  using OpRewritePattern<gpu::GPUModuleOp>::OpRewritePattern;
-
-  LogicalResult matchAndRewrite(gpu::GPUModuleOp op,
-                                PatternRewriter &rewriter) const override {
-    // GPU kernel modules are no longer necessary since we have a global
-    // constant with the CUBIN, or HSACO data.
-    rewriter.eraseOp(op);
-    return success();
-  }
 };
 
 /// A rewrite pattern to convert gpu.memcpy operations into a GPU runtime
@@ -587,7 +521,6 @@ DECLARE_CONVERT_OP_TO_GPU_RUNTIME_CALL_PATTERN(SetCsrPointersOp)
 
 void GpuToLLVMConversionPass::runOnOperation() {
   MLIRContext *context = &getContext();
-  SymbolTable symbolTable = SymbolTable(getOperation());
   LowerToLLVMOptions options(context);
   options.useBarePtrCallConv = hostBarePtrCallConv;
   RewritePatternSet patterns(context);
@@ -604,30 +537,20 @@ void GpuToLLVMConversionPass::runOnOperation() {
     iface->populateConvertToLLVMConversionPatterns(target, converter, patterns);
   }
 
-  // Preserve GPU modules if they have target attributes.
-  target.addDynamicallyLegalOp<gpu::GPUModuleOp>(
-      [](gpu::GPUModuleOp module) -> bool {
-        return module.getTargetsAttr() != nullptr;
-      });
-  // Accept as legal LaunchFuncOps if they refer to GPU Modules with targets and
-  // the operands have been lowered.
+  // Preserve GPU modules and binaries. Modules are preserved as they can be
+  // converted later by `gpu-module-to-binary`.
+  target.addLegalOp<gpu::GPUModuleOp, gpu::BinaryOp>();
+  // Accept as legal LaunchFuncOps if the operands have been lowered.
   target.addDynamicallyLegalOp<gpu::LaunchFuncOp>(
-      [&](gpu::LaunchFuncOp op) -> bool {
-        auto module =
-            symbolTable.lookup<gpu::GPUModuleOp>(op.getKernelModuleName());
-        return converter.isLegal(op->getOperandTypes()) &&
-               converter.isLegal(op->getResultTypes()) &&
-               (module && module.getTargetsAttr() &&
-                !module.getTargetsAttr().empty());
-      });
+      [&](gpu::LaunchFuncOp op) -> bool { return converter.isLegal(op); });
 
   // These aren't covered by the ConvertToLLVMPatternInterface right now.
   populateVectorToLLVMConversionPatterns(converter, patterns);
   populateFinalizeMemRefToLLVMConversionPatterns(converter, patterns);
   populateAsyncStructuralTypeConversionsAndLegality(converter, patterns,
                                                     target);
-  populateGpuToLLVMConversionPatterns(converter, patterns, gpuBinaryAnnotation,
-                                      kernelBarePtrCallConv, &symbolTable);
+  populateGpuToLLVMConversionPatterns(converter, patterns,
+                                      kernelBarePtrCallConv);
 
   if (failed(
           applyPartialConversion(getOperation(), target, std::move(patterns))))
@@ -1002,100 +925,8 @@ LogicalResult ConvertWaitAsyncOpToGpuRuntimeCallPattern::matchAndRewrite(
   return success();
 }
 
-// Creates a struct containing all kernel parameters on the stack and returns
-// an array of type-erased pointers to the fields of the struct. The array can
-// then be passed to the CUDA / ROCm (HIP) kernel launch calls.
-// The generated code is essentially as follows:
-//
-// %struct = alloca(sizeof(struct { Parameters... }))
-// %array = alloca(NumParameters * sizeof(void *))
-// for (i : [0, NumParameters))
-//   %fieldPtr = llvm.getelementptr %struct[0, i]
-//   llvm.store parameters[i], %fieldPtr
-//   %elementPtr = llvm.getelementptr %array[i]
-//   llvm.store %fieldPtr, %elementPtr
-// return %array
-Value ConvertLaunchFuncOpToGpuRuntimeCallPattern::generateParamsArray(
-    gpu::LaunchFuncOp launchOp, OpAdaptor adaptor, OpBuilder &builder) const {
-  auto loc = launchOp.getLoc();
-  auto numKernelOperands = launchOp.getNumKernelOperands();
-  // Note: If `useBarePtrCallConv` is set in the type converter's options,
-  // the value of `kernelBarePtrCallConv` will be ignored.
-  SmallVector<Value, 4> arguments = getTypeConverter()->promoteOperands(
-      loc, launchOp.getOperands().take_back(numKernelOperands),
-      adaptor.getOperands().take_back(numKernelOperands), builder,
-      /*useBarePtrCallConv=*/kernelBarePtrCallConv);
-  auto numArguments = arguments.size();
-  SmallVector<Type, 4> argumentTypes;
-  argumentTypes.reserve(numArguments);
-  for (auto argument : arguments)
-    argumentTypes.push_back(argument.getType());
-  auto structType = LLVM::LLVMStructType::getNewIdentified(context, StringRef(),
-                                                           argumentTypes);
-  auto one = builder.create<LLVM::ConstantOp>(loc, llvmInt32Type, 1);
-  auto structPtr =
-      builder.create<LLVM::AllocaOp>(loc, llvmPointerType, structType, one,
-                                     /*alignment=*/0);
-  auto arraySize =
-      builder.create<LLVM::ConstantOp>(loc, llvmInt32Type, numArguments);
-  auto arrayPtr = builder.create<LLVM::AllocaOp>(
-      loc, llvmPointerType, llvmPointerType, arraySize, /*alignment=*/0);
-  for (const auto &en : llvm::enumerate(arguments)) {
-    const auto index = static_cast<int32_t>(en.index());
-    Value fieldPtr =
-        builder.create<LLVM::GEPOp>(loc, llvmPointerType, structType, structPtr,
-                                    ArrayRef<LLVM::GEPArg>{0, index});
-    builder.create<LLVM::StoreOp>(loc, en.value(), fieldPtr);
-    auto elementPtr =
-        builder.create<LLVM::GEPOp>(loc, llvmPointerType, llvmPointerType,
-                                    arrayPtr, ArrayRef<LLVM::GEPArg>{index});
-    builder.create<LLVM::StoreOp>(loc, fieldPtr, elementPtr);
-  }
-  return arrayPtr;
-}
-
-// Generates an LLVM IR dialect global that contains the name of the given
-// kernel function as a C string, and returns a pointer to its beginning.
-// The code is essentially:
-//
-// llvm.global constant @kernel_name("function_name\00")
-// func(...) {
-//   %0 = llvm.addressof @kernel_name
-//   %1 = llvm.constant (0 : index)
-//   %2 = llvm.getelementptr %0[%1, %1] : !llvm<"i8*">
-// }
-Value ConvertLaunchFuncOpToGpuRuntimeCallPattern::generateKernelNameConstant(
-    StringRef moduleName, StringRef name, Location loc,
-    OpBuilder &builder) const {
-  // Make sure the trailing zero is included in the constant.
-  std::vector<char> kernelName(name.begin(), name.end());
-  kernelName.push_back('\0');
-
-  std::string globalName =
-      std::string(llvm::formatv("{0}_{1}_kernel_name", moduleName, name));
-  return LLVM::createGlobalString(
-      loc, builder, globalName, StringRef(kernelName.data(), kernelName.size()),
-      LLVM::Linkage::Internal);
-}
-
-// Emits LLVM IR to launch a kernel function. Expects the module that contains
-// the compiled kernel function as a cubin in the 'nvvm.cubin' attribute, or a
-// hsaco in the 'rocdl.hsaco' attribute of the kernel function in the IR.
-//
-// %0 = call %binarygetter
-// %1 = call %moduleLoad(%0)
-// %2 = <see generateKernelNameConstant>
-// %3 = call %moduleGetFunction(%1, %2)
-// %4 = call %streamCreate()
-// %5 = <see generateParamsArray>
-// call %launchKernel(%3, <launchOp operands 0..5>, 0, %4, %5, nullptr)
-// call %streamSynchronize(%4)
-// call %streamDestroy(%4)
-// call %moduleUnload(%1)
-//
-// If the op is async, the stream corresponds to the (single) async dependency
-// as well as the async token the op produces.
-LogicalResult ConvertLaunchFuncOpToGpuRuntimeCallPattern::matchAndRewrite(
+// Legalize the op's operands.
+LogicalResult LegalizeLaunchFuncOpPattern::matchAndRewrite(
     gpu::LaunchFuncOp launchOp, OpAdaptor adaptor,
     ConversionPatternRewriter &rewriter) const {
   if (failed(areAllLLVMTypes(launchOp, adaptor.getOperands(), rewriter)))
@@ -1114,123 +945,37 @@ LogicalResult ConvertLaunchFuncOpToGpuRuntimeCallPattern::matchAndRewrite(
 
   Location loc = launchOp.getLoc();
 
-  // Create an LLVM global with CUBIN extracted from the kernel annotation and
-  // obtain a pointer to the first byte in it.
-  gpu::GPUModuleOp kernelModule;
-  if (cachedModuleTable)
-    kernelModule = cachedModuleTable->lookup<gpu::GPUModuleOp>(
-        launchOp.getKernelModuleName());
-  else
-    kernelModule = SymbolTable::lookupNearestSymbolFrom<gpu::GPUModuleOp>(
-        launchOp, launchOp.getKernelModuleName());
-  assert(kernelModule && "expected a kernel module");
+  Value stream = Value();
+  if (!adaptor.getAsyncDependencies().empty())
+    stream = adaptor.getAsyncDependencies().front();
+  // If the async keyword is present and there are no dependencies, then a
+  // stream must be created to pass to subsequent operations.
+  else if (launchOp.getAsyncToken())
+    stream = streamCreateCallBuilder.create(loc, rewriter, {}).getResult();
+  // Lower the kernel operands to match kernel parameters.
+  // Note: If `useBarePtrCallConv` is set in the type converter's options,
+  // the value of `kernelBarePtrCallConv` will be ignored.
+  SmallVector<Value, 4> arguments = getTypeConverter()->promoteOperands(
+      loc, launchOp.getKernelOperands(), adaptor.getKernelOperands(), rewriter,
+      /*useBarePtrCallConv=*/kernelBarePtrCallConv);
 
-  // If the module has Targets then just update the op operands.
-  if (ArrayAttr targets = kernelModule.getTargetsAttr()) {
-    Value stream = Value();
-    if (!adaptor.getAsyncDependencies().empty())
-      stream = adaptor.getAsyncDependencies().front();
-    // If the async keyword is present and there are no dependencies, then a
-    // stream must be created to pass to subsequent operations.
-    else if (launchOp.getAsyncToken())
-      stream = streamCreateCallBuilder.create(loc, rewriter, {}).getResult();
-
-    // Lower the kernel operands to match kernel parameters.
-    // Note: If `useBarePtrCallConv` is set in the type converter's options,
-    // the value of `kernelBarePtrCallConv` will be ignored.
-    SmallVector<Value, 4> arguments = getTypeConverter()->promoteOperands(
-        loc, launchOp.getKernelOperands(), adaptor.getKernelOperands(),
-        rewriter, /*useBarePtrCallConv=*/kernelBarePtrCallConv);
-
-    std::optional<gpu::KernelDim3> clusterSize = std::nullopt;
-    if (launchOp.hasClusterSize()) {
-      clusterSize =
-          gpu::KernelDim3{adaptor.getClusterSizeX(), adaptor.getClusterSizeY(),
-                          adaptor.getClusterSizeZ()};
-    }
-    rewriter.create<gpu::LaunchFuncOp>(
-        launchOp.getLoc(), launchOp.getKernelAttr(),
-        gpu::KernelDim3{adaptor.getGridSizeX(), adaptor.getGridSizeY(),
-                        adaptor.getGridSizeZ()},
-        gpu::KernelDim3{adaptor.getBlockSizeX(), adaptor.getBlockSizeY(),
-                        adaptor.getBlockSizeZ()},
-        adaptor.getDynamicSharedMemorySize(), arguments, stream, clusterSize);
-    if (launchOp.getAsyncToken())
-      rewriter.replaceOp(launchOp, {stream});
-    else
-      rewriter.eraseOp(launchOp);
-    return success();
+  std::optional<gpu::KernelDim3> clusterSize = std::nullopt;
+  if (launchOp.hasClusterSize()) {
+    clusterSize =
+        gpu::KernelDim3{adaptor.getClusterSizeX(), adaptor.getClusterSizeY(),
+                        adaptor.getClusterSizeZ()};
   }
-
-  auto binaryAttr =
-      kernelModule->getAttrOfType<StringAttr>(gpuBinaryAnnotation);
-  if (!binaryAttr) {
-    kernelModule.emitOpError()
-        << "missing " << gpuBinaryAnnotation << " attribute";
-    return failure();
-  }
-
-  SmallString<128> nameBuffer(kernelModule.getName());
-  nameBuffer.append(kGpuBinaryStorageSuffix);
-  Value data =
-      LLVM::createGlobalString(loc, rewriter, nameBuffer.str(),
-                               binaryAttr.getValue(), LLVM::Linkage::Internal);
-
-  // Pass the binary size. SPIRV requires binary size.
-  auto gpuBlob = binaryAttr.getValue();
-  auto gpuBlobSize = rewriter.create<mlir::LLVM::ConstantOp>(
-      loc, llvmInt64Type,
-      mlir::IntegerAttr::get(llvmInt64Type,
-                             static_cast<int64_t>(gpuBlob.size())));
-
-  auto module =
-      moduleLoadCallBuilder.create(loc, rewriter, {data, gpuBlobSize});
-
-  // Pass the count of the parameters to runtime wrappers
-  auto paramsCount = rewriter.create<mlir::LLVM::ConstantOp>(
-      loc, llvmInt64Type,
-      mlir::IntegerAttr::get(
-          llvmInt64Type,
-          static_cast<int64_t>(launchOp.getNumKernelOperands())));
-
-  // Get the function from the module. The name corresponds to the name of
-  // the kernel function.
-  auto kernelName = generateKernelNameConstant(
-      launchOp.getKernelModuleName().getValue(),
-      launchOp.getKernelName().getValue(), loc, rewriter);
-  auto function = moduleGetFunctionCallBuilder.create(
-      loc, rewriter, {module.getResult(), kernelName});
-  Value zero = rewriter.create<LLVM::ConstantOp>(loc, llvmInt32Type, 0);
-  Value stream =
-      adaptor.getAsyncDependencies().empty()
-          ? streamCreateCallBuilder.create(loc, rewriter, {}).getResult()
-          : adaptor.getAsyncDependencies().front();
-  // Create array of pointers to kernel arguments.
-  auto kernelParams = generateParamsArray(launchOp, adaptor, rewriter);
-  auto nullpointer = rewriter.create<LLVM::ZeroOp>(loc, llvmPointerType);
-  Value dynamicSharedMemorySize = launchOp.getDynamicSharedMemorySize()
-                                      ? launchOp.getDynamicSharedMemorySize()
-                                      : zero;
-  launchKernelCallBuilder.create(
-      loc, rewriter,
-      {function.getResult(), adaptor.getGridSizeX(), adaptor.getGridSizeY(),
-       adaptor.getGridSizeZ(), adaptor.getBlockSizeX(), adaptor.getBlockSizeY(),
-       adaptor.getBlockSizeZ(), dynamicSharedMemorySize, stream, kernelParams,
-       /*extra=*/nullpointer, paramsCount});
-
-  if (launchOp.getAsyncToken()) {
-    // Async launch: make dependent ops use the same stream.
+  rewriter.create<gpu::LaunchFuncOp>(
+      launchOp.getLoc(), launchOp.getKernelAttr(),
+      gpu::KernelDim3{adaptor.getGridSizeX(), adaptor.getGridSizeY(),
+                      adaptor.getGridSizeZ()},
+      gpu::KernelDim3{adaptor.getBlockSizeX(), adaptor.getBlockSizeY(),
+                      adaptor.getBlockSizeZ()},
+      adaptor.getDynamicSharedMemorySize(), arguments, stream, clusterSize);
+  if (launchOp.getAsyncToken())
     rewriter.replaceOp(launchOp, {stream});
-  } else {
-    // Synchronize with host and destroy stream. This must be the stream created
-    // above (with no other uses) because we check that the synchronous version
-    // does not have any async dependencies.
-    streamSynchronizeCallBuilder.create(loc, rewriter, stream);
-    streamDestroyCallBuilder.create(loc, rewriter, stream);
+  else
     rewriter.eraseOp(launchOp);
-  }
-  moduleUnloadCallBuilder.create(loc, rewriter, module.getResult());
-
   return success();
 }
 
@@ -1978,9 +1723,7 @@ LogicalResult ConvertCreateBsrOpToGpuRuntimeCallPattern::matchAndRewrite(
 
 void mlir::populateGpuToLLVMConversionPatterns(LLVMTypeConverter &converter,
                                                RewritePatternSet &patterns,
-                                               StringRef gpuBinaryAnnotation,
-                                               bool kernelBarePtrCallConv,
-                                               SymbolTable *cachedModuleTable) {
+                                               bool kernelBarePtrCallConv) {
   addOpaquePointerConversion<gpu::AsyncTokenType>(converter);
   addOpaquePointerConversion<gpu::SparseDnTensorHandleType>(converter);
   addOpaquePointerConversion<gpu::SparseSpMatHandleType>(converter);
@@ -2017,7 +1760,5 @@ void mlir::populateGpuToLLVMConversionPatterns(LLVMTypeConverter &converter,
                ConvertSpGEMMCopyOpToGpuRuntimeCallPattern,
                ConvertSpMatGetSizeOpToGpuRuntimeCallPattern,
                ConvertSetCsrPointersOpToGpuRuntimeCallPattern>(converter);
-  patterns.add<ConvertLaunchFuncOpToGpuRuntimeCallPattern>(
-      converter, gpuBinaryAnnotation, kernelBarePtrCallConv, cachedModuleTable);
-  patterns.add<EraseGpuModuleOpPattern>(&converter.getContext());
+  patterns.add<LegalizeLaunchFuncOpPattern>(converter, kernelBarePtrCallConv);
 }

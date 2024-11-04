@@ -712,18 +712,20 @@ public:
 
   void finishLayout(MCAssembler const &Asm,
                     MCAsmLayout &Layout) const override {
+    SmallVector<MCFragment *> Frags;
     for (auto *I : Layout.getSectionOrder()) {
-      auto &Fragments = I->getFragmentList();
-      for (auto &J : Fragments) {
-        switch (J.getKind()) {
+      Frags.clear();
+      for (MCFragment &F : *I)
+        Frags.push_back(&F);
+      for (size_t J = 0, E = Frags.size(); J != E; ++J) {
+        switch (Frags[J]->getKind()) {
         default:
           break;
         case MCFragment::FT_Align: {
-          auto Size = Asm.computeFragmentSize(Layout, J);
-          for (auto K = J.getIterator();
-               K != Fragments.begin() && Size >= HEXAGON_PACKET_SIZE;) {
+          auto Size = Asm.computeFragmentSize(Layout, *Frags[J]);
+          for (auto K = J; K != 0 && Size >= HEXAGON_PACKET_SIZE;) {
             --K;
-            switch (K->getKind()) {
+            switch (Frags[K]->getKind()) {
             default:
               break;
             case MCFragment::FT_Align: {
@@ -733,7 +735,7 @@ public:
             }
             case MCFragment::FT_Relaxable: {
               MCContext &Context = Asm.getContext();
-              auto &RF = cast<MCRelaxableFragment>(*K);
+              auto &RF = cast<MCRelaxableFragment>(*Frags[K]);
               auto &Inst = const_cast<MCInst &>(RF.getInst());
               while (Size > 0 &&
                      HexagonMCInstrInfo::bundleSize(Inst) < MaxPacketSize) {

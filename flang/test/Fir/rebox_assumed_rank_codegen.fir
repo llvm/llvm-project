@@ -34,10 +34,18 @@ func.func @test_new_dtype(%arg0: !fir.box<!fir.array<*:!t2>> ) {
   return
 }
 
+!sometype = !fir.type<sometype{i:i32}>
+func.func @test_poly_to_nonepoly(%arg0: !fir.class<!fir.array<*:!sometype>>) {
+  %1 = fir.rebox_assumed_rank %arg0 lbs ones : (!fir.class<!fir.array<*:!sometype>>) -> !fir.box<!fir.array<*:!sometype>>
+  fir.call @takes_assumed_rank_t(%1) : (!fir.box<!fir.array<*:!sometype>>) -> ()
+  return
+}
+
 func.func private @somefunc(!fir.box<!fir.array<*:f32>>)
 func.func private @somefuncalloc(!fir.box<!fir.heap<!fir.array<*:f32>>>)
 func.func private @somefuncpointer(!fir.box<!fir.ptr<!fir.array<*:f32>>>)
 func.func private @somefunct1(!fir.box<!fir.array<*:!t1>>)
+func.func private @takes_assumed_rank_t(!fir.box<!fir.array<*:!sometype>>)
 
 // CHECK-LABEL:   func.func @test_simple(
 // CHECK-SAME:                           %[[VAL_0:.*]]: !fir.box<!fir.array<*:f32>>) {
@@ -107,5 +115,10 @@ func.func private @somefunct1(!fir.box<!fir.array<*:!t1>>)
 // CHECK:           fir.call @somefunct1(%[[VAL_10]]) : (!fir.box<!fir.array<*:!fir.type<t1{i:i32}>>>) -> ()
 // CHECK:           return
 // CHECK:         }
+
+// CHECK-LABEL:   func.func @test_poly_to_nonepoly(
+// CHECK:           %[[VAL_4:.*]] = fir.type_desc !fir.type<sometype{i:i32}>
+// CHECK:           %[[VAL_7:.*]] = fir.convert %[[VAL_4]] : (!fir.tdesc<!fir.type<sometype{i:i32}>>) -> !fir.ref<none>
+// CHECK:           %[[VAL_8:.*]] = fir.call @_FortranACopyAndUpdateDescriptor(%{{.*}}, %{{.*}}, %[[VAL_7]],
 
 // CHECK:         func.func private @_FortranACopyAndUpdateDescriptor(!fir.ref<!fir.box<none>> {llvm.nocapture}, !fir.box<none> {llvm.nocapture}, !fir.ref<none>, i8, i32) -> none attributes {fir.runtime}

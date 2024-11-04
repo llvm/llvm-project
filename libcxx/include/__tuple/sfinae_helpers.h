@@ -35,8 +35,8 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 struct __tuple_sfinae_base {
   template <template <class, class...> class _Trait, class... _LArgs, class... _RArgs>
-  static auto __do_test(__tuple_types<_LArgs...>, __tuple_types<_RArgs...>)
-      -> __all<__enable_if_t<_Trait<_LArgs, _RArgs>::value, bool>{true}...>;
+  static auto __do_test(__tuple_types<_LArgs...>,
+                        __tuple_types<_RArgs...>) -> __all<__enable_if_t<_Trait<_LArgs, _RArgs>::value, bool>{true}...>;
   template <template <class...> class>
   static auto __do_test(...) -> false_type;
 

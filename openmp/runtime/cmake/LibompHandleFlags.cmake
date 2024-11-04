@@ -170,7 +170,7 @@ function(libomp_get_fflags fflags)
   set(${fflags} ${fflags_local} PARENT_SCOPE)
 endfunction()
 
-# Perl generate-defs.pl flags (For Windows only)
+# Python generate-defs.py flags (For Windows only)
 function(libomp_get_gdflags gdflags)
   set(gdflags_local)
   if(${IA32})

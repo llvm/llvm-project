@@ -1631,11 +1631,6 @@ static Value foldExtractFromBroadcast(ExtractOp extractOp) {
   if (!defOp || !isa<vector::BroadcastOp, SplatOp>(defOp))
     return Value();
 
-  // 0-D vectors not supported.
-  assert(!hasZeroDimVectors(extractOp) && "0-D vectors not supported");
-  if (hasZeroDimVectors(defOp))
-    return Value();
-
   Value source = defOp->getOperand(0);
   if (extractOp.getType() == source.getType())
     return source;
@@ -1882,8 +1877,50 @@ static Value foldExtractStridedOpFromInsertChain(ExtractOp extractOp) {
   return Value();
 }
 
+/// Try to fold the extraction of a scalar from a vector defined by
+/// vector.from_elements. E.g.:
+///
+/// %0 = vector.from_elements %a, %b : vector<2xf32>
+/// %1 = vector.extract %0[0] : f32 from vector<2xf32>
+/// ==> fold to %a
+static Value foldScalarExtractFromFromElements(ExtractOp extractOp) {
+  // Dynamic extractions cannot be folded.
+  if (extractOp.hasDynamicPosition())
+    return {};
+
+  // Look for extract(from_elements).
+  auto fromElementsOp = extractOp.getVector().getDefiningOp<FromElementsOp>();
+  if (!fromElementsOp)
+    return {};
+
+  // Scalable vectors are not supported.
+  auto vecType = llvm::cast<VectorType>(fromElementsOp.getType());
+  if (vecType.isScalable())
+    return {};
+
+  // Only extractions of scalars are supported.
+  int64_t rank = vecType.getRank();
+  ArrayRef<int64_t> indices = extractOp.getStaticPosition();
+  if (extractOp.getType() != vecType.getElementType())
+    return {};
+  assert(static_cast<int64_t>(indices.size()) == rank &&
+         "unexpected number of indices");
+
+  // Compute flattened/linearized index and fold to operand.
+  int flatIndex = 0;
+  int stride = 1;
+  for (int i = rank - 1; i >= 0; --i) {
+    flatIndex += indices[i] * stride;
+    stride *= vecType.getDimSize(i);
+  }
+  return fromElementsOp.getElements()[flatIndex];
+}
+
 OpFoldResult ExtractOp::fold(FoldAdaptor) {
-  if (getNumIndices() == 0)
+  // Fold "vector.extract %v[] : vector<2x2xf32> from vector<2x2xf32>" to %v.
+  // Note: Do not fold "vector.extract %v[] : f32 from vector<f32>" (type
+  // mismatch).
+  if (getNumIndices() == 0 && getVector().getType() == getResult().getType())
     return getVector();
   if (succeeded(foldExtractOpFromExtractChain(*this)))
     return getResult();
@@ -1896,6 +1933,8 @@ OpFoldResult ExtractOp::fold(FoldAdaptor) {
   if (auto val = foldExtractFromExtractStrided(*this))
     return val;
   if (auto val = foldExtractStridedOpFromInsertChain(*this))
+    return val;
+  if (auto val = foldScalarExtractFromFromElements(*this))
     return val;
   return OpFoldResult();
 }
@@ -2101,6 +2140,52 @@ LogicalResult foldExtractFromShapeCastToShapeCast(ExtractOp extractOp,
   return success();
 }
 
+/// Try to canonicalize the extraction of a subvector from a vector defined by
+/// vector.from_elements. E.g.:
+///
+/// %0 = vector.from_elements %a, %b, %a, %a : vector<2x2xf32>
+/// %1 = vector.extract %0[0] : vector<2xf32> from vector<2x2xf32>
+/// ==> canonicalize to vector.from_elements %a, %b : vector<2xf32>
+LogicalResult foldExtractFromFromElements(ExtractOp extractOp,
+                                          PatternRewriter &rewriter) {
+  // Dynamic positions are not supported.
+  if (extractOp.hasDynamicPosition())
+    return failure();
+
+  // Scalar extracts are handled by the folder.
+  auto resultType = dyn_cast<VectorType>(extractOp.getType());
+  if (!resultType)
+    return failure();
+
+  // Look for extracts from a from_elements op.
+  auto fromElementsOp = extractOp.getVector().getDefiningOp<FromElementsOp>();
+  if (!fromElementsOp)
+    return failure();
+  VectorType inputType = fromElementsOp.getType();
+
+  // Scalable vectors are not supported.
+  if (resultType.isScalable() || inputType.isScalable())
+    return failure();
+
+  // Compute the position of first extracted element and flatten/linearize the
+  // position.
+  SmallVector<int64_t> firstElementPos =
+      llvm::to_vector(extractOp.getStaticPosition());
+  firstElementPos.append(/*NumInputs=*/resultType.getRank(), /*Elt=*/0);
+  int flatIndex = 0;
+  int stride = 1;
+  for (int64_t i = inputType.getRank() - 1; i >= 0; --i) {
+    flatIndex += firstElementPos[i] * stride;
+    stride *= inputType.getDimSize(i);
+  }
+
+  // Replace the op with a smaller from_elements op.
+  rewriter.replaceOpWithNewOp<FromElementsOp>(
+      extractOp, resultType,
+      fromElementsOp.getElements().slice(flatIndex,
+                                         resultType.getNumElements()));
+  return success();
+}
 } // namespace
 
 void ExtractOp::getCanonicalizationPatterns(RewritePatternSet &results,
@@ -2108,6 +2193,7 @@ void ExtractOp::getCanonicalizationPatterns(RewritePatternSet &results,
   results.add<ExtractOpSplatConstantFolder, ExtractOpNonSplatConstantFolder,
               ExtractOpFromBroadcast, ExtractOpFromCreateMask>(context);
   results.add(foldExtractFromShapeCastToShapeCast);
+  results.add(foldExtractFromFromElements);
 }
 
 static void populateFromInt64AttrArray(ArrayAttr arrayAttr,
@@ -2122,6 +2208,29 @@ static void populateFromInt64AttrArray(ArrayAttr arrayAttr,
 
 std::optional<SmallVector<int64_t, 4>> FMAOp::getShapeForUnroll() {
   return llvm::to_vector<4>(getVectorType().getShape());
+}
+
+//===----------------------------------------------------------------------===//
+// FromElementsOp
+//===----------------------------------------------------------------------===//
+
+/// Rewrite a vector.from_elements into a vector.splat if all elements are the
+/// same SSA value. E.g.:
+///
+/// %0 = vector.from_elements %a, %a, %a : vector<3xf32>
+/// ==> rewrite to vector.splat %a : vector<3xf32>
+static LogicalResult rewriteFromElementsAsSplat(FromElementsOp fromElementsOp,
+                                                PatternRewriter &rewriter) {
+  if (!llvm::all_equal(fromElementsOp.getElements()))
+    return failure();
+  rewriter.replaceOpWithNewOp<SplatOp>(fromElementsOp, fromElementsOp.getType(),
+                                       fromElementsOp.getElements().front());
+  return success();
+}
+
+void FromElementsOp::getCanonicalizationPatterns(RewritePatternSet &results,
+                                                 MLIRContext *context) {
+  results.add(rewriteFromElementsAsSplat);
 }
 
 //===----------------------------------------------------------------------===//
@@ -4123,7 +4232,7 @@ void TransferReadOp::getEffects(
     SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
         &effects) {
   if (llvm::isa<MemRefType>(getShapedType()))
-    effects.emplace_back(MemoryEffects::Read::get(), getSource(),
+    effects.emplace_back(MemoryEffects::Read::get(), &getSourceMutable(),
                          SideEffects::DefaultResource::get());
 }
 
@@ -4497,7 +4606,7 @@ void TransferWriteOp::getEffects(
     SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
         &effects) {
   if (llvm::isa<MemRefType>(getShapedType()))
-    effects.emplace_back(MemoryEffects::Write::get(), getSource(),
+    effects.emplace_back(MemoryEffects::Write::get(), &getSourceMutable(),
                          SideEffects::DefaultResource::get());
 }
 

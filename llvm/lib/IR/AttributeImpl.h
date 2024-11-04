@@ -21,6 +21,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/ConstantRange.h"
+#include "llvm/IR/ConstantRangeList.h"
 #include "llvm/Support/TrailingObjects.h"
 #include <cassert>
 #include <cstddef>
@@ -48,6 +49,7 @@ protected:
     StringAttrEntry,
     TypeAttrEntry,
     ConstantRangeAttrEntry,
+    ConstantRangeListAttrEntry,
   };
 
   AttributeImpl(AttrEntryKind KindID) : KindID(KindID) {}
@@ -64,6 +66,9 @@ public:
   bool isConstantRangeAttribute() const {
     return KindID == ConstantRangeAttrEntry;
   }
+  bool isConstantRangeListAttribute() const {
+    return KindID == ConstantRangeListAttrEntry;
+  }
 
   bool hasAttribute(Attribute::AttrKind A) const;
   bool hasAttribute(StringRef Kind) const;
@@ -79,6 +84,8 @@ public:
 
   const ConstantRange &getValueAsConstantRange() const;
 
+  ArrayRef<ConstantRange> getValueAsConstantRangeList() const;
+
   /// Used when sorting the attributes.
   bool operator<(const AttributeImpl &AI) const;
 
@@ -91,8 +98,10 @@ public:
       Profile(ID, getKindAsString(), getValueAsString());
     else if (isTypeAttribute())
       Profile(ID, getKindAsEnum(), getValueAsType());
-    else
+    else if (isConstantRangeAttribute())
       Profile(ID, getKindAsEnum(), getValueAsConstantRange());
+    else
+      Profile(ID, getKindAsEnum(), getValueAsConstantRangeList());
   }
 
   static void Profile(FoldingSetNodeID &ID, Attribute::AttrKind Kind) {
@@ -123,6 +132,16 @@ public:
     ID.AddInteger(Kind);
     CR.getLower().Profile(ID);
     CR.getUpper().Profile(ID);
+  }
+
+  static void Profile(FoldingSetNodeID &ID, Attribute::AttrKind Kind,
+                      ArrayRef<ConstantRange> Val) {
+    ID.AddInteger(Kind);
+    ID.AddInteger(Val.size());
+    for (auto &CR : Val) {
+      CR.getLower().Profile(ID);
+      CR.getUpper().Profile(ID);
+    }
   }
 };
 
@@ -220,6 +239,38 @@ public:
       : EnumAttributeImpl(ConstantRangeAttrEntry, Kind), CR(CR) {}
 
   const ConstantRange &getConstantRangeValue() const { return CR; }
+};
+
+class ConstantRangeListAttributeImpl final
+    : public EnumAttributeImpl,
+      private TrailingObjects<ConstantRangeListAttributeImpl, ConstantRange> {
+  friend TrailingObjects;
+
+  unsigned Size;
+  size_t numTrailingObjects(OverloadToken<ConstantRange>) const { return Size; }
+
+public:
+  ConstantRangeListAttributeImpl(Attribute::AttrKind Kind,
+                                 ArrayRef<ConstantRange> Val)
+      : EnumAttributeImpl(ConstantRangeListAttrEntry, Kind), Size(Val.size()) {
+    assert(Size > 0);
+    ConstantRange *TrailingCR = getTrailingObjects<ConstantRange>();
+    std::uninitialized_copy(Val.begin(), Val.end(), TrailingCR);
+  }
+
+  ~ConstantRangeListAttributeImpl() {
+    ConstantRange *TrailingCR = getTrailingObjects<ConstantRange>();
+    for (unsigned I = 0; I != Size; ++I)
+      TrailingCR[I].~ConstantRange();
+  }
+
+  ArrayRef<ConstantRange> getConstantRangeListValue() const {
+    return ArrayRef(getTrailingObjects<ConstantRange>(), Size);
+  }
+
+  static size_t totalSizeToAlloc(ArrayRef<ConstantRange> Val) {
+    return TrailingObjects::totalSizeToAlloc<ConstantRange>(Val.size());
+  }
 };
 
 class AttributeBitSet {

@@ -740,15 +740,25 @@ TEST(Error, ErrorCodeConversions) {
 TEST(Error, ErrorMessage) {
   EXPECT_EQ(toString(Error::success()), "");
 
+  Error E0 = Error::success();
+  EXPECT_EQ(toStringWithoutConsuming(E0), "");
+  EXPECT_EQ(toString(std::move(E0)), "");
+
   Error E1 = make_error<CustomError>(0);
+  EXPECT_EQ(toStringWithoutConsuming(E1), "CustomError {0}");
   EXPECT_EQ(toString(std::move(E1)), "CustomError {0}");
 
   Error E2 = make_error<CustomError>(0);
+  visitErrors(E2, [](const ErrorInfoBase &EI) {
+    EXPECT_EQ(EI.message(), "CustomError {0}");
+  });
   handleAllErrors(std::move(E2), [](const CustomError &CE) {
     EXPECT_EQ(CE.message(), "CustomError {0}");
   });
 
   Error E3 = joinErrors(make_error<CustomError>(0), make_error<CustomError>(1));
+  EXPECT_EQ(toStringWithoutConsuming(E3), "CustomError {0}\n"
+                                          "CustomError {1}");
   EXPECT_EQ(toString(std::move(E3)), "CustomError {0}\n"
                                      "CustomError {1}");
 }

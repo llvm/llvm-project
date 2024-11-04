@@ -35,7 +35,6 @@ static_library("Checkers") {
     "CheckObjCInstMethSignature.cpp",
     "CheckPlacementNew.cpp",
     "CheckSecuritySyntaxOnly.cpp",
-    "CheckSizeofPointer.cpp",
     "CheckerDocumentation.cpp",
     "ChrootChecker.cpp",
     "CloneChecker.cpp",

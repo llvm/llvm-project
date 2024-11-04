@@ -1160,6 +1160,24 @@ define i64 @test60(ptr %foo, i64 %i, i64 %j) {
   ret i64 %sub
 }
 
+define i64 @test60_nuw(ptr %foo, i64 %i, i64 %j) {
+; CHECK-LABEL: @test60_nuw(
+; CHECK-NEXT:    [[GEP1_IDX:%.*]] = mul nuw i64 [[J:%.*]], 100
+; CHECK-NEXT:    [[GEP1_OFFS:%.*]] = add nuw i64 [[GEP1_IDX]], [[I:%.*]]
+; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr nuw i8, ptr [[FOO:%.*]], i64 [[GEP1_OFFS]]
+; CHECK-NEXT:    [[GEPDIFF:%.*]] = add i64 [[GEP1_OFFS]], -4200
+; CHECK-NEXT:    store ptr [[GEP1]], ptr @dummy_global1, align 8
+; CHECK-NEXT:    ret i64 [[GEPDIFF]]
+;
+  %gep1 = getelementptr nuw [100 x [100 x i8]], ptr %foo, i64 0, i64 %j, i64 %i
+  %gep2 = getelementptr nuw [100 x [100 x i8]], ptr %foo, i64 0, i64 42, i64 0
+  %cast1 = ptrtoint ptr %gep1 to i64
+  %cast2 = ptrtoint ptr %gep2 to i64
+  %sub = sub i64 %cast1, %cast2
+  store ptr %gep1, ptr @dummy_global1
+  ret i64 %sub
+}
+
 define i64 @test61(ptr %foo, i64 %i, i64 %j) {
 ; CHECK-LABEL: @test61(
 ; CHECK-NEXT:    [[GEP2_IDX:%.*]] = mul nsw i64 [[J:%.*]], 100

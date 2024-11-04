@@ -117,11 +117,11 @@ attributes #2 = { "llvm.assume"="B,C" }
 attributes #3 = { "llvm.assume"="B,C,A" }
 ;.
 ; TUNIT: attributes #[[ATTR0]] = { "llvm.assume"="A" }
-; TUNIT: attributes #[[ATTR1]] = { "llvm.assume"="B,A" }
-; TUNIT: attributes #[[ATTR2]] = { "llvm.assume"="B,C,A" }
+; TUNIT: attributes #[[ATTR1]] = { "llvm.assume"="A,B" }
+; TUNIT: attributes #[[ATTR2]] = { "llvm.assume"="A,B,C" }
 ;.
 ; CGSCC: attributes #[[ATTR0]] = { "llvm.assume"="A" }
-; CGSCC: attributes #[[ATTR1]] = { "llvm.assume"="B,A" }
-; CGSCC: attributes #[[ATTR2]] = { "llvm.assume"="B,C,A" }
+; CGSCC: attributes #[[ATTR1]] = { "llvm.assume"="A,B" }
+; CGSCC: attributes #[[ATTR2]] = { "llvm.assume"="A,B,C" }
 ; CGSCC: attributes #[[ATTR3]] = { "llvm.assume"="B" }
 ;.

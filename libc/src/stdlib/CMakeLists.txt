@@ -380,31 +380,25 @@ elseif(LIBC_TARGET_OS_IS_GPU)
     aligned_alloc
   )
 else()
-  add_header_library(
-    block
-    HDRS
-      block.h
-    DEPENDS
-      libc.src.__support.CPP.algorithm
-      libc.src.__support.CPP.limits
-      libc.src.__support.CPP.new
-      libc.src.__support.CPP.optional
-      libc.src.__support.CPP.span
-      libc.src.__support.CPP.type_traits
-  )
-  add_header_library(
-    freelist
-    HDRS
-      freelist.h
-    DEPENDS
-      libc.src.__support.fixedvector
-      libc.src.__support.CPP.cstddef
-      libc.src.__support.CPP.array
-      libc.src.__support.CPP.span
-  )
-  add_entrypoint_external(
-    malloc
-  )
+  # Only add malloc in full build mode.  Use the system malloc in overlay mode.
+  if(LLVM_LIBC_FULL_BUILD)
+    add_entrypoint_object(
+      malloc
+      SRCS
+        freelist_malloc.cpp
+      HDRS
+        malloc.h
+      DEPENDS
+        libc.src.__support.freelist_heap
+      COMPILE_OPTIONS
+        -DLIBC_FREELIST_MALLOC_SIZE=${LIBC_CONF_FREELIST_MALLOC_BUFFER_SIZE}
+    )
+  else()
+    add_entrypoint_external(
+      malloc
+    )
+  endif()
+
   add_entrypoint_external(
     free
   )

@@ -731,10 +731,8 @@ void InstrProfRecord::accumulateCounts(CountSumOrPercent &Sum) const {
     uint64_t KindSum = 0;
     uint32_t NumValueSites = getNumValueSites(VK);
     for (size_t I = 0; I < NumValueSites; ++I) {
-      uint32_t NV = getNumValueDataForSite(VK, I);
-      std::unique_ptr<InstrProfValueData[]> VD = getValueForSite(VK, I);
-      for (uint32_t V = 0; V < NV; V++)
-        KindSum += VD[V].Count;
+      for (const auto &V : getValueArrayForSite(VK, I))
+        KindSum += V.Count;
     }
     Sum.ValueCounts[VK] += KindSum;
   }
@@ -847,19 +845,26 @@ void InstrProfValueSiteRecord::merge(InstrProfValueSiteRecord &Input,
   Input.sortByTargetValues();
   auto I = ValueData.begin();
   auto IE = ValueData.end();
+  std::vector<InstrProfValueData> Merged;
+  Merged.reserve(std::max(ValueData.size(), Input.ValueData.size()));
   for (const InstrProfValueData &J : Input.ValueData) {
-    while (I != IE && I->Value < J.Value)
+    while (I != IE && I->Value < J.Value) {
+      Merged.push_back(*I);
       ++I;
+    }
     if (I != IE && I->Value == J.Value) {
       bool Overflowed;
       I->Count = SaturatingMultiplyAdd(J.Count, Weight, I->Count, &Overflowed);
       if (Overflowed)
         Warn(instrprof_error::counter_overflow);
+      Merged.push_back(*I);
       ++I;
       continue;
     }
-    ValueData.insert(I, J);
+    Merged.push_back(J);
   }
+  Merged.insert(Merged.end(), I, IE);
+  ValueData = std::move(Merged);
 }
 
 void InstrProfValueSiteRecord::scale(uint64_t N, uint64_t D,
@@ -996,6 +1001,7 @@ void InstrProfRecord::addValueData(uint32_t ValueKind, uint32_t Site,
   }
   std::vector<InstrProfValueSiteRecord> &ValueSites =
       getOrCreateValueSitesForKind(ValueKind);
+  assert(ValueSites.size() == Site);
   if (N == 0)
     ValueSites.emplace_back();
   else
@@ -1082,13 +1088,14 @@ uint32_t getNumValueDataInstrProf(const void *Record, uint32_t VKind) {
 
 uint32_t getNumValueDataForSiteInstrProf(const void *R, uint32_t VK,
                                          uint32_t S) {
-  return reinterpret_cast<const InstrProfRecord *>(R)
-      ->getNumValueDataForSite(VK, S);
+  const auto *IPR = reinterpret_cast<const InstrProfRecord *>(R);
+  return IPR->getValueArrayForSite(VK, S).size();
 }
 
 void getValueForSiteInstrProf(const void *R, InstrProfValueData *Dst,
                               uint32_t K, uint32_t S) {
-  reinterpret_cast<const InstrProfRecord *>(R)->getValueForSite(Dst, K, S);
+  const auto *IPR = reinterpret_cast<const InstrProfRecord *>(R);
+  llvm::copy(IPR->getValueArrayForSite(K, S), Dst);
 }
 
 ValueProfData *allocValueProfDataInstrProf(size_t TotalSizeInBytes) {
@@ -1267,15 +1274,12 @@ void annotateValueSite(Module &M, Instruction &Inst,
                        const InstrProfRecord &InstrProfR,
                        InstrProfValueKind ValueKind, uint32_t SiteIdx,
                        uint32_t MaxMDCount) {
-  uint32_t NV = InstrProfR.getNumValueDataForSite(ValueKind, SiteIdx);
-  if (!NV)
+  auto VDs = InstrProfR.getValueArrayForSite(ValueKind, SiteIdx);
+  if (VDs.empty())
     return;
-
   uint64_t Sum = 0;
-  std::unique_ptr<InstrProfValueData[]> VD =
-      InstrProfR.getValueForSite(ValueKind, SiteIdx, &Sum);
-
-  ArrayRef<InstrProfValueData> VDs(VD.get(), NV);
+  for (const InstrProfValueData &V : VDs)
+    Sum = SaturatingAdd(Sum, V.Count);
   annotateValueSite(M, Inst, VDs, Sum, ValueKind, MaxMDCount);
 }
 
@@ -1376,22 +1380,6 @@ getValueProfDataFromInst(const Instruction &Inst, InstrProfValueKind ValueKind,
                                     ActualNumValueData, TotalC, GetNoICPValue))
     return nullptr;
   return ValueDataArray;
-}
-
-// FIXME: Migrate existing callers to the function above that returns an
-// array.
-bool getValueProfDataFromInst(const Instruction &Inst,
-                              InstrProfValueKind ValueKind,
-                              uint32_t MaxNumValueData,
-                              InstrProfValueData ValueData[],
-                              uint32_t &ActualNumValueData, uint64_t &TotalC,
-                              bool GetNoICPValue) {
-  MDNode *MD = mayHaveValueProfileOfKind(Inst, ValueKind);
-  if (!MD)
-    return false;
-  return getValueProfDataFromInstImpl(MD, MaxNumValueData, ValueData,
-                                      ActualNumValueData, TotalC,
-                                      GetNoICPValue);
 }
 
 MDNode *getPGOFuncNameMetadata(const Function &F) {

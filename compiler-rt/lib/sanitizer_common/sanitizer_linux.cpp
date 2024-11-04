@@ -1136,7 +1136,7 @@ uptr GetMaxUserVirtualAddress() {
   return addr;
 }
 
-#  if !SANITIZER_ANDROID
+#  if !SANITIZER_ANDROID || defined(__aarch64__)
 uptr GetPageSize() {
 #    if SANITIZER_LINUX && (defined(__x86_64__) || defined(__i386__)) && \
         defined(EXEC_PAGESIZE)
@@ -1155,7 +1155,7 @@ uptr GetPageSize() {
   return sysconf(_SC_PAGESIZE);  // EXEC_PAGESIZE may not be trustworthy.
 #    endif
 }
-#  endif  // !SANITIZER_ANDROID
+#  endif
 
 uptr ReadBinaryName(/*out*/ char *buf, uptr buf_len) {
 #  if SANITIZER_SOLARIS
@@ -1180,7 +1180,7 @@ uptr ReadBinaryName(/*out*/ char *buf, uptr buf_len) {
   uptr module_name_len = internal_readlink(default_module_name, buf, buf_len);
   int readlink_error;
   bool IsErr = internal_iserror(module_name_len, &readlink_error);
-#    endif  // SANITIZER_SOLARIS
+#    endif
   if (IsErr) {
     // We can't read binary name for some reason, assume it's unknown.
     Report(

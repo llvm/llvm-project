@@ -1156,16 +1156,16 @@ class AtomicLoadOp8<PatFrag Op> : AtomicLoadOp<Op, GPR8, PTRREGS>;
 class AtomicLoadOp16<PatFrag Op> : AtomicLoadOp<Op, DREGS, PTRDISPREGS>;
 
 let usesCustomInserter=1 in {
-  def AtomicLoadAdd8 : AtomicLoadOp8<atomic_load_add_8>;
-  def AtomicLoadAdd16 : AtomicLoadOp16<atomic_load_add_16>;
-  def AtomicLoadSub8 : AtomicLoadOp8<atomic_load_sub_8>;
-  def AtomicLoadSub16 : AtomicLoadOp16<atomic_load_sub_16>;
-  def AtomicLoadAnd8 : AtomicLoadOp8<atomic_load_and_8>;
-  def AtomicLoadAnd16 : AtomicLoadOp16<atomic_load_and_16>;
-  def AtomicLoadOr8 : AtomicLoadOp8<atomic_load_or_8>;
-  def AtomicLoadOr16 : AtomicLoadOp16<atomic_load_or_16>;
-  def AtomicLoadXor8 : AtomicLoadOp8<atomic_load_xor_8>;
-  def AtomicLoadXor16 : AtomicLoadOp16<atomic_load_xor_16>;
+  def AtomicLoadAdd8 : AtomicLoadOp8<atomic_load_add_i8>;
+  def AtomicLoadAdd16 : AtomicLoadOp16<atomic_load_add_i16>;
+  def AtomicLoadSub8 : AtomicLoadOp8<atomic_load_sub_i8>;
+  def AtomicLoadSub16 : AtomicLoadOp16<atomic_load_sub_i16>;
+  def AtomicLoadAnd8 : AtomicLoadOp8<atomic_load_and_i8>;
+  def AtomicLoadAnd16 : AtomicLoadOp16<atomic_load_and_i16>;
+  def AtomicLoadOr8 : AtomicLoadOp8<atomic_load_or_i8>;
+  def AtomicLoadOr16 : AtomicLoadOp16<atomic_load_or_i16>;
+  def AtomicLoadXor8 : AtomicLoadOp8<atomic_load_xor_i8>;
+  def AtomicLoadXor16 : AtomicLoadOp16<atomic_load_xor_i16>;
 }
 def AtomicFence
     : Pseudo<(outs), (ins), "atomic_fence", [(atomic_fence timm, timm)]>;

@@ -244,7 +244,9 @@ void LineEntry::ApplyFileMappings(lldb::TargetSP target_sp) {
   if (target_sp) {
     // Apply any file remappings to our file.
     if (auto new_file_spec = target_sp->GetSourcePathMap().FindFile(
-            original_file_sp->GetSpecOnly()))
-      file_sp->Update(*new_file_spec);
+            original_file_sp->GetSpecOnly())) {
+      file_sp = std::make_shared<SupportFile>(*new_file_spec,
+                                              original_file_sp->GetChecksum());
+    }
   }
 }

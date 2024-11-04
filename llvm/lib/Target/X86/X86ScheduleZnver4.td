@@ -1631,17 +1631,25 @@ def : InstRW<[Zn4WriteFCmp64], (instregex
 	)>;
 
 // MOV Instructions
-def Zn4MOVS: SchedWriteRes<[Zn4FPFMisc12]> {
+def Zn4MOVDUPZ: SchedWriteRes<[Zn4FPFMisc12]> {
   let Latency = 2;
   let ReleaseAtCycles = [2];
+  let NumMicroOps = 1;
+}
+def : InstRW<[Zn4MOVDUPZ], (instregex
+        "(V?)VMOVDDUP(Z|Z128|Z256)(rr|rrk|rrkz)"
+	)>;
+
+def Zn4MOVS: SchedWriteRes<[Zn4FPFMisc12]> {
+  let Latency = 2;
+  let ReleaseAtCycles = [1];
   let NumMicroOps = 1;
 }
 def : InstRW<[Zn4MOVS], (instregex
         "(V?)PMOV(SX|ZX)(BD|BQ|BW|WD|WQ|DQ)(Z128?|Z256?)(rr|rrk|rrkz)",
         "(V?)PMOV(SX|QD|UZ|ZX)(BD|BQ|BW?)(Y|Z128?)(rr|rrk|rrkz)",
         "(V?)PMOV(SX|US|ZX)(DQ|WD|QW|WQ?)(Y|Z128?)(rr|rrk|rrkz)",
-        "(V?)VMOVDDUP(Z|Z128|Z256)(rr|rrk|rrkz)",
-        "VPMOV(DB|DW|QB|QD|QW|SDB|SDW|SQB|SQD|SQW|SWB|USDB|USDW|USQB|USQD|USWB|WB)(Z128?)(rr|rrk|rrkz)"
+        "VPMOV(DB|DW|QB|QD|QW|SDB|SDW|SQB|SQD|SQW|SWB|USDB|USDW|USQB|USQD|USWB|WB)(Z128?|Z256?)(rr|rrk|rrkz)"
 	)>;
 
 def Zn4MOVSZ: SchedWriteRes<[Zn4FPFMisc12]> {

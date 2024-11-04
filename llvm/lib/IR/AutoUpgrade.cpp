@@ -863,9 +863,9 @@ static bool upgradeArmOrAarch64IntrinsicFunction(bool IsArm, Function *F,
         static const Regex LdRegex("^[234](.nxv[a-z0-9]+|$)");
         if (LdRegex.match(Name)) {
           Type *ScalarTy =
-              dyn_cast<VectorType>(F->getReturnType())->getElementType();
-          ElementCount EC = dyn_cast<VectorType>(F->arg_begin()->getType())
-                                ->getElementCount();
+              cast<VectorType>(F->getReturnType())->getElementType();
+          ElementCount EC =
+              cast<VectorType>(F->arg_begin()->getType())->getElementCount();
           Type *Ty = VectorType::get(ScalarTy, EC);
           static const Intrinsic::ID LoadIDs[] = {
               Intrinsic::aarch64_sve_ld2_sret,
@@ -4385,8 +4385,7 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
                      .StartsWith("aarch64.sve.ld3", 3)
                      .StartsWith("aarch64.sve.ld4", 4)
                      .Default(0);
-    ScalableVectorType *RetTy =
-        dyn_cast<ScalableVectorType>(F->getReturnType());
+    auto *RetTy = cast<ScalableVectorType>(F->getReturnType());
     unsigned MinElts = RetTy->getMinNumElements() / N;
     SmallVector<Value *, 2> Args(CI->args());
     Value *NewLdCall = Builder.CreateCall(NewFn, Args);
@@ -4414,8 +4413,7 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
       DefaultCase();
       return;
     }
-    ScalableVectorType *RetTy =
-        dyn_cast<ScalableVectorType>(F->getReturnType());
+    auto *RetTy = cast<ScalableVectorType>(F->getReturnType());
     unsigned MinElts = RetTy->getMinNumElements();
     unsigned I = cast<ConstantInt>(CI->getArgOperand(1))->getZExtValue();
     Value *NewIdx = ConstantInt::get(Type::getInt64Ty(C), I * MinElts);
@@ -4431,9 +4429,8 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
       return;
     }
     if (Name.starts_with("aarch64.sve.tuple.set")) {
-      unsigned I = dyn_cast<ConstantInt>(CI->getArgOperand(1))->getZExtValue();
-      ScalableVectorType *Ty =
-          dyn_cast<ScalableVectorType>(CI->getArgOperand(2)->getType());
+      unsigned I = cast<ConstantInt>(CI->getArgOperand(1))->getZExtValue();
+      auto *Ty = cast<ScalableVectorType>(CI->getArgOperand(2)->getType());
       Value *NewIdx =
           ConstantInt::get(Type::getInt64Ty(C), I * Ty->getMinNumElements());
       NewCall = Builder.CreateCall(
@@ -4447,8 +4444,7 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
                        .StartsWith("aarch64.sve.tuple.create4", 4)
                        .Default(0);
       assert(N > 1 && "Create is expected to be between 2-4");
-      ScalableVectorType *RetTy =
-          dyn_cast<ScalableVectorType>(F->getReturnType());
+      auto *RetTy = cast<ScalableVectorType>(F->getReturnType());
       Value *Ret = llvm::PoisonValue::get(RetTy);
       unsigned MinElts = RetTy->getMinNumElements() / N;
       for (unsigned I = 0; I < N; I++) {

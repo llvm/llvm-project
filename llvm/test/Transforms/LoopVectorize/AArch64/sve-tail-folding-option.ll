@@ -93,6 +93,7 @@ define float @fadd_red_fast(ptr noalias nocapture readonly %a, i64 %n) #0 {
 ; CHECK-NOTF:         %[[LOAD:.*]] = load <vscale x 4 x float>
 ; CHECK-NOTF:         %[[ADD:.*]] = fadd fast <vscale x 4 x float> %[[LOAD]]
 ; CHECK-NOTF:       middle.block:
+; CHECK-NOTF-NEXT:    %cmp.n = icmp eq i64 %n, %n.vec
 ; CHECK-NOTF-NEXT:    call fast float @llvm.vector.reduce.fadd.nxv4f32(float -0.000000e+00, <vscale x 4 x float> %[[ADD]])
 
 ; CHECK-TF-NORED-LABEL: @fadd_red_fast
@@ -101,6 +102,7 @@ define float @fadd_red_fast(ptr noalias nocapture readonly %a, i64 %n) #0 {
 ; CHECK-TF-NORED:         %[[LOAD:.*]] = load <vscale x 4 x float>
 ; CHECK-TF-NORED:         %[[ADD:.*]] = fadd fast <vscale x 4 x float> %[[LOAD]]
 ; CHECK-TF-NORED:       middle.block:
+; CHECK-TF-NORED-NEXT:   %cmp.n = icmp eq i64 %n, %n.vec
 ; CHECK-TF-NORED-NEXT:    call fast float @llvm.vector.reduce.fadd.nxv4f32(float -0.000000e+00, <vscale x 4 x float> %[[ADD]])
 
 ; CHECK-TF-NOREC-LABEL: @fadd_red_fast
@@ -149,6 +151,7 @@ define float @fadd_red_fast(ptr noalias nocapture readonly %a, i64 %n) #0 {
 ; CHECK-NEOVERSE-V1:         %[[LOAD:.*]] = load <vscale x 4 x float>
 ; CHECK-NEOVERSE-V1:         %[[ADD:.*]] = fadd fast <vscale x 4 x float> %[[LOAD]]
 ; CHECK-NEOVERSE-V1:       middle.block:
+; CHECK-NEOVERSE-V1-NEXT:    %cmp.n = icmp eq i64 %n, %n.vec
 ; CHECK-NEOVERSE-V1-NEXT:    call fast float @llvm.vector.reduce.fadd.nxv4f32(float -0.000000e+00, <vscale x 4 x float> %[[ADD]])
 
 entry:

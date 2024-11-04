@@ -209,4 +209,84 @@ define <2 x i16> @local_atomic_fadd_v2bf16_rtn(ptr addrspace(3) %ptr, <2 x i16> 
   ret <2 x i16> %ret
 }
 
+define <2 x half> @local_atomic_fadd_ret_v2f16_offset(ptr addrspace(3) %ptr, <2 x half> %val) {
+; GFX940-LABEL: local_atomic_fadd_ret_v2f16_offset:
+; GFX940:       ; %bb.0:
+; GFX940-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX940-NEXT:    ds_pk_add_rtn_f16 v0, v0, v1 offset:65532
+; GFX940-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX940-NEXT:    s_setpc_b64 s[30:31]
+  %gep = getelementptr <2 x half>, ptr addrspace(3) %ptr, i32 16383
+  %result = atomicrmw fadd ptr addrspace(3) %gep, <2 x half> %val seq_cst
+  ret <2 x half> %result
+}
+
+define void @local_atomic_fadd_noret_v2f16_offset(ptr addrspace(3) %ptr, <2 x half> %val) {
+; GFX940-LABEL: local_atomic_fadd_noret_v2f16_offset:
+; GFX940:       ; %bb.0:
+; GFX940-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX940-NEXT:    ds_pk_add_f16 v0, v1 offset:65532
+; GFX940-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX940-NEXT:    s_setpc_b64 s[30:31]
+  %gep = getelementptr <2 x half>, ptr addrspace(3) %ptr, i32 16383
+  %unused = atomicrmw fadd ptr addrspace(3) %gep, <2 x half> %val seq_cst
+  ret void
+}
+
+define <2 x half> @global_atomic_fadd_ret_v2f16_agent_offset(ptr addrspace(1) %ptr, <2 x half> %val) {
+; GFX940-LABEL: global_atomic_fadd_ret_v2f16_agent_offset:
+; GFX940:       ; %bb.0:
+; GFX940-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX940-NEXT:    buffer_wbl2 sc1
+; GFX940-NEXT:    global_atomic_pk_add_f16 v0, v[0:1], v2, off offset:1024 sc0
+; GFX940-NEXT:    s_waitcnt vmcnt(0)
+; GFX940-NEXT:    buffer_inv sc1
+; GFX940-NEXT:    s_setpc_b64 s[30:31]
+  %gep = getelementptr <2 x half>, ptr addrspace(1) %ptr, i32 256
+  %result = atomicrmw fadd ptr addrspace(1) %gep, <2 x half> %val syncscope("agent") seq_cst
+  ret <2 x half> %result
+}
+
+define void @global_atomic_fadd_noret_v2f16_agent_offset(ptr addrspace(1) %ptr, <2 x half> %val) {
+; GFX940-LABEL: global_atomic_fadd_noret_v2f16_agent_offset:
+; GFX940:       ; %bb.0:
+; GFX940-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX940-NEXT:    buffer_wbl2 sc1
+; GFX940-NEXT:    global_atomic_pk_add_f16 v[0:1], v2, off offset:1024
+; GFX940-NEXT:    s_waitcnt vmcnt(0)
+; GFX940-NEXT:    buffer_inv sc1
+; GFX940-NEXT:    s_setpc_b64 s[30:31]
+  %gep = getelementptr <2 x half>, ptr addrspace(1) %ptr, i32 256
+  %unused = atomicrmw fadd ptr addrspace(1) %gep, <2 x half> %val syncscope("agent") seq_cst
+  ret void
+}
+
+define <2 x half> @flat_atomic_fadd_ret_v2f16_agent_offset(ptr %ptr, <2 x half> %val) {
+; GFX940-LABEL: flat_atomic_fadd_ret_v2f16_agent_offset:
+; GFX940:       ; %bb.0:
+; GFX940-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX940-NEXT:    buffer_wbl2 sc1
+; GFX940-NEXT:    flat_atomic_pk_add_f16 v0, v[0:1], v2 offset:1024 sc0
+; GFX940-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX940-NEXT:    buffer_inv sc1
+; GFX940-NEXT:    s_setpc_b64 s[30:31]
+  %gep = getelementptr <2 x half>, ptr %ptr, i32 256
+  %result = atomicrmw fadd ptr %gep, <2 x half> %val syncscope("agent") seq_cst
+  ret <2 x half> %result
+}
+
+define void @flat_atomic_fadd_noret_v2f16_agent_offset(ptr %ptr, <2 x half> %val) {
+; GFX940-LABEL: flat_atomic_fadd_noret_v2f16_agent_offset:
+; GFX940:       ; %bb.0:
+; GFX940-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX940-NEXT:    buffer_wbl2 sc1
+; GFX940-NEXT:    flat_atomic_pk_add_f16 v[0:1], v2 offset:1024
+; GFX940-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX940-NEXT:    buffer_inv sc1
+; GFX940-NEXT:    s_setpc_b64 s[30:31]
+  %gep = getelementptr <2 x half>, ptr %ptr, i32 256
+  %unused = atomicrmw fadd ptr %gep, <2 x half> %val syncscope("agent") seq_cst
+  ret void
+}
+
 attributes #0 = { "denormal-fp-math-f32"="ieee,ieee" }

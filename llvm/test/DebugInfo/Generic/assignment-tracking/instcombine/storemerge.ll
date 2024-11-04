@@ -48,11 +48,11 @@
 ;; with the same DIAssignID attachments too.
 
 ; CHECK: if.then:
-; CHECK: call void @llvm.dbg.assign(metadata float %call2, metadata ![[var:[0-9]+]], metadata !DIExpression(), metadata ![[id:[0-9]+]], metadata ptr %p, metadata !DIExpression()), !dbg
+; CHECK: #dbg_assign(float %call2, ![[var:[0-9]+]], !DIExpression(), ![[id:[0-9]+]], ptr %p, !DIExpression(),
 ; CHECK: br label %for.inc
 
 ; CHECK: if.else:
-; CHECK: call void @llvm.dbg.assign(metadata float %call5, metadata ![[var]], metadata !DIExpression(), metadata ![[id]], metadata ptr %p, metadata !DIExpression()), !dbg
+; CHECK: #dbg_assign(float %call5, ![[var]], !DIExpression(), ![[id]], ptr %p, !DIExpression(),
 ; CHECK: br label %for.inc
 
 ; CHECK: for.inc:
@@ -60,11 +60,11 @@
 ; CHECK-NEXT: store float %storemerge, ptr %p, align 4{{.+}}!DIAssignID ![[id]]
 
 ; CHECK: if.then.1:
-; CHECK: call void @llvm.dbg.assign(metadata float %call2.1, metadata ![[var]], metadata !DIExpression(), metadata ![[id]], metadata ptr %p, metadata !DIExpression()), !dbg
+; CHECK: #dbg_assign(float %call2.1, ![[var]], !DIExpression(), ![[id]], ptr %p, !DIExpression(),
 ; CHECK: br label %for.inc.1
 
 ; CHECK: if.else.1:
-; CHECK: call void @llvm.dbg.assign(metadata float %call5.1, metadata ![[var]], metadata !DIExpression(), metadata ![[id]], metadata ptr %p, metadata !DIExpression()), !dbg
+; CHECK: #dbg_assign(float %call5.1, ![[var]], !DIExpression(), ![[id]], ptr %p, !DIExpression(),
 ; CHECK: br label %for.inc.1
 
 ; CHECK: for.inc.1:
@@ -72,11 +72,11 @@
 ; CHECK-NEXT: store float %storemerge1, ptr %p, align 4{{.+}}!DIAssignID ![[id]]
 
 ; CHECK: if.then.2:
-; CHECK: call void @llvm.dbg.assign(metadata float %call2.2, metadata ![[var]], metadata !DIExpression(), metadata ![[id]], metadata ptr %p, metadata !DIExpression()), !dbg
+; CHECK: #dbg_assign(float %call2.2, ![[var]], !DIExpression(), ![[id]], ptr %p, !DIExpression(),
 ; CHECK: br label %for.inc.2
 
 ; CHECK: if.else.2:
-; CHECK: call void @llvm.dbg.assign(metadata float %call5.2, metadata ![[var]], metadata !DIExpression(), metadata ![[id]], metadata ptr %p, metadata !DIExpression()), !dbg
+; CHECK: #dbg_assign(float %call5.2, ![[var]], !DIExpression(), ![[id]], ptr %p, !DIExpression(),
 ; CHECK:  br label %for.inc.2
 
 ; CHECK: for.inc.2:

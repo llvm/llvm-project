@@ -223,8 +223,10 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
     StringRef s = a->getValue();
     if (args.getLastArgValue(OPT_m) == "i386pe" && s.starts_with("_"))
       add("-entry:" + s.substr(1));
-    else
+    else if (!s.empty())
       add("-entry:" + s);
+    else
+      add("-noentry");
   }
 
   if (args.hasArg(OPT_major_os_version, OPT_minor_os_version,

@@ -1,0 +1,104 @@
+name: Release Sources
+
+permissions:
+  contents: read
+
+on:
+  workflow_dispatch:
+    inputs:
+      release-version:
+        description: Release Version
+        required: true
+        type: string
+  workflow_call:
+    inputs:
+      release-version:
+        description: Release Version
+        required: true
+        type: string
+  # Run on pull_requests for testing purposes.
+  pull_request:
+    paths:
+      - '.github/workflows/release-sources.yml'
+    types:
+      - opened
+      - synchronize
+      - reopened
+      # When a PR is closed, we still start this workflow, but then skip
+      # all the jobs, which makes it effectively a no-op.  The reason to
+      # do this is that it allows us to take advantage of concurrency groups
+      # to cancel in progress CI jobs whenever the PR is closed.
+      - closed
+
+concurrency:
+  group: ${{ github.workflow }}-${{ inputs.release-version || github.event.pull_request.number }}
+  cancel-in-progress: True
+
+jobs:
+  inputs:
+    name: Collect Job Inputs
+    if: >-
+      github.repository_owner == 'llvm' &&
+      github.event.action != 'closed'
+    outputs:
+      ref: ${{ steps.inputs.outputs.ref }}
+      export-args: ${{ steps.inputs.outputs.export-args }}
+    runs-on: ubuntu-latest
+    steps:
+      - id: inputs
+        run: |
+          ref=${{ inputs.release-version || github.sha }}
+          if [ -n "${{ inputs.release-version }}" ]; then
+            export_args="-release ${{ inputs.release-version }} -final"
+          else
+            export_args="-git-ref ${{ github.sha }}"
+          fi
+          echo "ref=$ref" >> $GITHUB_OUTPUT
+          echo "export-args=$export_args" >> $GITHUB_OUTPUT
+
+  release-sources:
+    name: Package Release Sources
+    if: github.repository_owner == 'llvm'
+    runs-on: ubuntu-latest
+    needs:
+      - inputs
+    permissions:
+      id-token: write
+      attestations: write
+    steps:
+      - name: Checkout LLVM
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+        with:
+          ref: ${{ needs.inputs.outputs.ref }}
+          fetch-tags: true
+      - name: Install Dependencies
+        run: |
+          pip install --require-hashes -r ./llvm/utils/git/requirements.txt
+
+      - name: Check Permissions
+        if: github.event_name != 'pull_request'
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          USER_TOKEN: ${{ secrets.RELEASE_TASKS_USER_TOKEN }}
+        run: |
+          ./llvm/utils/release/./github-upload-release.py --token "$GITHUB_TOKEN" --user ${{ github.actor }} --user-token "$USER_TOKEN" check-permissions
+      - name: Create Tarballs
+        run: |
+          ./llvm/utils/release/export.sh ${{ needs.inputs.outputs.export-args }}
+      - name: Attest Build Provenance
+        if: github.event_name != 'pull_request'
+        id: provenance
+        uses: actions/attest-build-provenance@897ed5eab6ed058a474202017ada7f40bfa52940 # v1.0.0
+        with:
+          subject-path: "*.xz"
+      - if: github.event_name != 'pull_request'
+        run: |
+          mv ${{ steps.provenance.outputs.bundle-path }} .
+      - name: Create Tarball Artifacts
+        uses: actions/upload-artifact@65462800fd760344b1a7b4382951275a0abb4808 #v4.3.3
+        with:
+          path: |
+            *.xz
+            attestation.jsonl
+
+

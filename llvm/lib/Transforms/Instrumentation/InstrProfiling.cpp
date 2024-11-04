@@ -278,9 +278,9 @@ private:
   /// using the index represented by the a temp value into a bitmap.
   void lowerMCDCTestVectorBitmapUpdate(InstrProfMCDCTVBitmapUpdate *Ins);
 
-  /// Replace instrprof.mcdc.temp.update with a shift and or instruction using
-  /// the corresponding condition ID.
-  void lowerMCDCCondBitmapUpdate(InstrProfMCDCCondBitmapUpdate *Ins);
+  /// Get the Bias value for data to access mmap-ed area.
+  /// Create it if it hasn't been seen.
+  GlobalVariable *getOrCreateBiasVar(StringRef VarName);
 
   /// Compute the address of the counter value that this profiling instruction
   /// acts on.
@@ -648,9 +648,6 @@ bool InstrLowerer::lowerIntrinsics(Function *F) {
       } else if (auto *IPBU = dyn_cast<InstrProfMCDCTVBitmapUpdate>(&Instr)) {
         lowerMCDCTestVectorBitmapUpdate(IPBU);
         MadeChange = true;
-      } else if (auto *IPTU = dyn_cast<InstrProfMCDCCondBitmapUpdate>(&Instr)) {
-        lowerMCDCCondBitmapUpdate(IPTU);
-        MadeChange = true;
       }
     }
   }
@@ -892,6 +889,29 @@ void InstrLowerer::lowerValueProfileInst(InstrProfValueProfileInst *Ind) {
   Ind->eraseFromParent();
 }
 
+GlobalVariable *InstrLowerer::getOrCreateBiasVar(StringRef VarName) {
+  GlobalVariable *Bias = M.getGlobalVariable(VarName);
+  if (Bias)
+    return Bias;
+
+  Type *Int64Ty = Type::getInt64Ty(M.getContext());
+
+  // Compiler must define this variable when runtime counter relocation
+  // is being used. Runtime has a weak external reference that is used
+  // to check whether that's the case or not.
+  Bias = new GlobalVariable(M, Int64Ty, false, GlobalValue::LinkOnceODRLinkage,
+                            Constant::getNullValue(Int64Ty), VarName);
+  Bias->setVisibility(GlobalVariable::HiddenVisibility);
+  // A definition that's weak (linkonce_odr) without being in a COMDAT
+  // section wouldn't lead to link errors, but it would lead to a dead
+  // data word from every TU but one. Putting it in COMDAT ensures there
+  // will be exactly one data slot in the link.
+  if (TT.supportsCOMDAT())
+    Bias->setComdat(M.getOrInsertComdat(VarName));
+
+  return Bias;
+}
+
 Value *InstrLowerer::getCounterAddress(InstrProfCntrInstBase *I) {
   auto *Counters = getOrCreateRegionCounters(I);
   IRBuilder<> Builder(I);
@@ -910,23 +930,8 @@ Value *InstrLowerer::getCounterAddress(InstrProfCntrInstBase *I) {
   LoadInst *&BiasLI = FunctionToProfileBiasMap[Fn];
   if (!BiasLI) {
     IRBuilder<> EntryBuilder(&Fn->getEntryBlock().front());
-    auto *Bias = M.getGlobalVariable(getInstrProfCounterBiasVarName());
-    if (!Bias) {
-      // Compiler must define this variable when runtime counter relocation
-      // is being used. Runtime has a weak external reference that is used
-      // to check whether that's the case or not.
-      Bias = new GlobalVariable(
-          M, Int64Ty, false, GlobalValue::LinkOnceODRLinkage,
-          Constant::getNullValue(Int64Ty), getInstrProfCounterBiasVarName());
-      Bias->setVisibility(GlobalVariable::HiddenVisibility);
-      // A definition that's weak (linkonce_odr) without being in a COMDAT
-      // section wouldn't lead to link errors, but it would lead to a dead
-      // data word from every TU but one. Putting it in COMDAT ensures there
-      // will be exactly one data slot in the link.
-      if (TT.supportsCOMDAT())
-        Bias->setComdat(M.getOrInsertComdat(Bias->getName()));
-    }
-    BiasLI = EntryBuilder.CreateLoad(Int64Ty, Bias);
+    auto *Bias = getOrCreateBiasVar(getInstrProfCounterBiasVarName());
+    BiasLI = EntryBuilder.CreateLoad(Int64Ty, Bias, "profc_bias");
   }
   auto *Add = Builder.CreateAdd(Builder.CreatePtrToInt(Addr, Int64Ty), BiasLI);
   return Builder.CreateIntToPtr(Add, Addr->getType());
@@ -935,9 +940,6 @@ Value *InstrLowerer::getCounterAddress(InstrProfCntrInstBase *I) {
 Value *InstrLowerer::getBitmapAddress(InstrProfMCDCTVBitmapUpdate *I) {
   auto *Bitmaps = getOrCreateRegionBitmaps(I);
   IRBuilder<> Builder(I);
-
-  auto *Addr = Builder.CreateConstInBoundsGEP2_32(
-      Bitmaps->getValueType(), Bitmaps, 0, I->getBitmapIndex()->getZExtValue());
 
   if (isRuntimeCounterRelocationEnabled()) {
     LLVMContext &Ctx = M.getContext();
@@ -948,7 +950,7 @@ Value *InstrLowerer::getBitmapAddress(InstrProfMCDCTVBitmapUpdate *I) {
         DS_Warning));
   }
 
-  return Addr;
+  return Bitmaps;
 }
 
 void InstrLowerer::lowerCover(InstrProfCoverInst *CoverInstruction) {
@@ -1018,9 +1020,11 @@ void InstrLowerer::lowerMCDCTestVectorBitmapUpdate(
   auto *MCDCCondBitmapAddr = Update->getMCDCCondBitmapAddr();
   auto *BitmapAddr = getBitmapAddress(Update);
 
-  // Load Temp Val.
+  // Load Temp Val + BitmapIdx.
   //  %mcdc.temp = load i32, ptr %mcdc.addr, align 4
-  auto *Temp = Builder.CreateLoad(Int32Ty, MCDCCondBitmapAddr, "mcdc.temp");
+  auto *Temp = Builder.CreateAdd(
+      Builder.CreateLoad(Int32Ty, MCDCCondBitmapAddr, "mcdc.temp"),
+      Update->getBitmapIndex());
 
   // Calculate byte offset using div8.
   //  %1 = lshr i32 %mcdc.temp, 3
@@ -1051,34 +1055,6 @@ void InstrLowerer::lowerMCDCTestVectorBitmapUpdate(
   // Store the updated profile bitmap byte.
   //  store i8 %8, ptr %3, align 1
   Builder.CreateStore(Result, BitmapByteAddr);
-  Update->eraseFromParent();
-}
-
-void InstrLowerer::lowerMCDCCondBitmapUpdate(
-    InstrProfMCDCCondBitmapUpdate *Update) {
-  IRBuilder<> Builder(Update);
-  auto *Int32Ty = Type::getInt32Ty(M.getContext());
-  auto *MCDCCondBitmapAddr = Update->getMCDCCondBitmapAddr();
-
-  // Load the MCDC temporary value from the stack.
-  //  %mcdc.temp = load i32, ptr %mcdc.addr, align 4
-  auto *Temp = Builder.CreateLoad(Int32Ty, MCDCCondBitmapAddr, "mcdc.temp");
-
-  // Zero-extend the evaluated condition boolean value (0 or 1) by 32bits.
-  //  %1 = zext i1 %tobool to i32
-  auto *CondV_32 = Builder.CreateZExt(Update->getCondBool(), Int32Ty);
-
-  // Shift the boolean value left (by the condition's ID) to form a bitmap.
-  //  %2 = shl i32 %1, <Update->getCondID()>
-  auto *ShiftedVal = Builder.CreateShl(CondV_32, Update->getCondID());
-
-  // Perform logical OR of the bitmap against the loaded MCDC temporary value.
-  //  %3 = or i32 %mcdc.temp, %2
-  auto *Result = Builder.CreateOr(Temp, ShiftedVal);
-
-  // Store the updated temporary value back to the stack.
-  //  store i32 %3, ptr %mcdc.addr, align 4
-  Builder.CreateStore(Result, MCDCCondBitmapAddr);
   Update->eraseFromParent();
 }
 
@@ -1415,7 +1391,7 @@ GlobalVariable *
 InstrLowerer::createRegionBitmaps(InstrProfMCDCBitmapInstBase *Inc,
                                   StringRef Name,
                                   GlobalValue::LinkageTypes Linkage) {
-  uint64_t NumBytes = Inc->getNumBitmapBytes()->getZExtValue();
+  uint64_t NumBytes = Inc->getNumBitmapBytes();
   auto *BitmapTy = ArrayType::get(Type::getInt8Ty(M.getContext()), NumBytes);
   auto GV = new GlobalVariable(M, BitmapTy, false, Linkage,
                                Constant::getNullValue(BitmapTy), Name);
@@ -1434,7 +1410,7 @@ InstrLowerer::getOrCreateRegionBitmaps(InstrProfMCDCBitmapInstBase *Inc) {
   // the corresponding profile section.
   auto *BitmapPtr = setupProfileSection(Inc, IPSK_bitmap);
   PD.RegionBitmaps = BitmapPtr;
-  PD.NumBitmapBytes = Inc->getNumBitmapBytes()->getZExtValue();
+  PD.NumBitmapBytes = Inc->getNumBitmapBytes();
   return PD.RegionBitmaps;
 }
 

@@ -41,7 +41,6 @@ class raw_pwrite_stream;
 /// implementation.
 class MCObjectStreamer : public MCStreamer {
   std::unique_ptr<MCAssembler> Assembler;
-  MCSection::iterator CurInsertionPoint;
   bool EmitEHFrame;
   bool EmitDebugFrame;
   SmallVector<MCSymbol *, 2> PendingLabels;
@@ -94,7 +93,7 @@ public:
   void insert(MCFragment *F) {
     flushPendingLabels(F);
     MCSection *CurSection = getCurrentSectionOnly();
-    CurSection->getFragmentList().insert(CurInsertionPoint, F);
+    CurSection->addFragment(*F);
     F->setParent(CurSection);
   }
 

@@ -9,7 +9,7 @@ define <2 x i4> @shuf_bitcast_insert_use2(<2 x i8> %v, i8 %x, ptr %p) {
 ; CHECK-LABEL: @shuf_bitcast_insert_use2(
 ; CHECK-NEXT:    [[I:%.*]] = insertelement <2 x i8> [[V:%.*]], i8 [[X:%.*]], i64 0
 ; CHECK-NEXT:    store <2 x i8> [[I]], ptr [[P:%.*]], align 2, !DIAssignID ![[ID:[0-9]+]]
-; CHECK-NEXT:    dbg.assign(metadata <2 x i8> %i, {{.+}}, {{.+}}, metadata ![[ID]], metadata ptr %p,{{.+}})
+; CHECK-NEXT:    #dbg_assign(<2 x i8> %i, {{.+}}, {{.+}}, ![[ID]], ptr %p,{{.+}})
 ; CHECK-NEXT:    [[R:%.*]] = bitcast i8 [[X]] to <2 x i4>
 ; CHECK-NEXT:    ret <2 x i4> [[R]]
 ;

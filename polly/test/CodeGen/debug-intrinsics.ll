@@ -42,11 +42,11 @@ for.end:                                          ; preds = %for.cond.for.end_cr
 
 ; CHECK: polly.split_new_and_old:
 
-; CHECK: tail call void @llvm.dbg.value
-; CHECK: tail call void @llvm.dbg.value
-; CHECK: tail call void @llvm.dbg.value
-; CHECK: tail call void @llvm.dbg.value
-; CHECK-NOT: tail call void @llvm.dbg.value
+; CHECK: #dbg_value
+; CHECK: #dbg_value
+; CHECK: #dbg_value
+; CHECK: #dbg_value
+; CHECK-NOT: #dbg_value
 
 ; Function Attrs: nounwind readnone
 declare void @llvm.dbg.declare(metadata, metadata, metadata) #1

@@ -67,15 +67,10 @@ void member_access(S *p) {
   // The two hash values are for 64- and 32-bit Clang binaries, respectively.
   // FIXME: We should produce a 64-bit value either way.
   //
-  // CHECK-NEXT: xor i64 {{-4030275160588942838|1107558922}}, %[[VPTR]]
-  // CHECK-NEXT: mul i64 {{.*}}, -7070675565921424023
-  // CHECK-NEXT: lshr i64 {{.*}}, 47
-  // CHECK-NEXT: xor i64
-  // CHECK-NEXT: xor i64 %[[VPTR]]
-  // CHECK-NEXT: mul i64 {{.*}}, -7070675565921424023
-  // CHECK-NEXT: lshr i64 {{.*}}, 47
-  // CHECK-NEXT: xor i64
-  // CHECK-NEXT: %[[HASH:.*]] = mul i64 {{.*}}, -7070675565921424023
+  // CHECK-NEXT: mul i64 %[[VPTR]], -4658895280553007687, !nosanitize
+  // CHECK-NEXT: lshr i64 {{.*}}, 31
+  // CHECK-NEXT: xor i64 %[[#]], %[[#]]
+  // CHECK-NEXT: %[[HASH:.*]] = xor i64 4589795628539611399, %[[#]], !nosanitize
   //
   // Check the hash against the table:
   //
@@ -116,7 +111,7 @@ void member_access(S *p) {
   // (3b) Check that 'p' actually points to an 'S'
 
   // CHECK: load i64, ptr
-  // CHECK-NEXT: xor i64 {{-4030275160588942838|1107558922}},
+  // CHECK-NEXT: mul i64 %[[#]], -4658895280553007687, !nosanitize
   // [...]
   // CHECK: getelementptr inbounds [128 x i64], ptr @__ubsan_vptr_type_cache, i32 0, i64 %
   // CHECK: br i1

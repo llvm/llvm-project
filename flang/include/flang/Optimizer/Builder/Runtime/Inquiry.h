@@ -20,11 +20,13 @@ class FirOpBuilder;
 
 namespace fir::runtime {
 
-/// Generate call to general `LboundDim` runtime routine.  Calls to LBOUND
-/// without a DIM argument get transformed into descriptor inquiries so they're
-/// not handled in the runtime.
+/// Generate call to `LboundDim` runtime routine.
 mlir::Value genLboundDim(fir::FirOpBuilder &builder, mlir::Location loc,
                          mlir::Value array, mlir::Value dim);
+
+/// Generate call to Lbound` runtime routine.
+void genLbound(fir::FirOpBuilder &builder, mlir::Location loc,
+               mlir::Value resultAddr, mlir::Value arrayt, mlir::Value kind);
 
 /// Generate call to general `Ubound` runtime routine.  Calls to UBOUND
 /// with a DIM argument get transformed into an expression equivalent to

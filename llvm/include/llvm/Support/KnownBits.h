@@ -311,12 +311,6 @@ public:
     return KnownBits(Zero | RHS.Zero, One | RHS.One);
   }
 
-  /// Compute known bits common to LHS and RHS.
-  LLVM_DEPRECATED("use intersectWith instead", "intersectWith")
-  static KnownBits commonBits(const KnownBits &LHS, const KnownBits &RHS) {
-    return LHS.intersectWith(RHS);
-  }
-
   /// Return true if LHS and RHS have no common bits set.
   static bool haveNoCommonBitsSet(const KnownBits &LHS, const KnownBits &RHS) {
     return (LHS.Zero | RHS.Zero).isAllOnes();

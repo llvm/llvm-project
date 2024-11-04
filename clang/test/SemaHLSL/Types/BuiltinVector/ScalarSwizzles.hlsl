@@ -3,8 +3,8 @@
 
 
 // CHECK-LABEL: ToTwoInts
-// CHECK: ExtVectorElementExpr {{.*}} 'int __attribute__((ext_vector_type(2)))' xx
-// CHECK-NEXT: ImplicitCastExpr {{.*}} 'int __attribute__((ext_vector_type(1)))' lvalue <VectorSplat>
+// CHECK: ExtVectorElementExpr {{.*}} 'vector<int, 2>' xx
+// CHECK-NEXT: ImplicitCastExpr {{.*}} 'vector<int, 1>' lvalue <VectorSplat>
 // CHECK-NEXT: DeclRefExpr {{.*}} 'int' lvalue ParmVar {{.*}} 'V' 'int'
 
 int2 ToTwoInts(int V){
@@ -12,8 +12,8 @@ int2 ToTwoInts(int V){
 }
 
 // CHECK-LABEL: ToFourFloats
-// CHECK: ExtVectorElementExpr {{.*}} 'float __attribute__((ext_vector_type(4)))' rrrr
-// CHECK-NEXT: ImplicitCastExpr {{.*}} 'float __attribute__((ext_vector_type(1)))' lvalue <VectorSplat>
+// CHECK: ExtVectorElementExpr {{.*}} 'vector<float, 4>' rrrr
+// CHECK-NEXT: ImplicitCastExpr {{.*}} 'vector<float, 1>' lvalue <VectorSplat>
 // CHECK-NEXT: DeclRefExpr {{.*}} 'float' lvalue ParmVar {{.*}} 'V' 'float'
 
 
@@ -22,8 +22,8 @@ float4 ToFourFloats(float V){
 }
 
 // CHECK-LABEL: FillOne
-// CHECK: ExtVectorElementExpr {{.*}} 'int __attribute__((ext_vector_type(2)))' xx
-// CHECK-NEXT: ImplicitCastExpr {{.*}} 'int __attribute__((ext_vector_type(1)))' <VectorSplat>
+// CHECK: ExtVectorElementExpr {{.*}} 'vector<int, 2>' xx
+// CHECK-NEXT: ImplicitCastExpr {{.*}} 'vector<int, 1>' <VectorSplat>
 // CHECK-NEXT: IntegerLiteral {{.*}} 'int' 1
 
 int2 FillOne(){
@@ -31,8 +31,8 @@ int2 FillOne(){
 }
 
 // CHECK-LABEL: FillOneUnsigned
-// CHECK: ExtVectorElementExpr {{.*}} 'unsigned int __attribute__((ext_vector_type(3)))' xxx
-// CHECK-NEXT: ImplicitCastExpr {{.*}} 'unsigned int __attribute__((ext_vector_type(1)))' <VectorSplat>
+// CHECK: ExtVectorElementExpr {{.*}} 'vector<unsigned int, 3>' xxx
+// CHECK-NEXT: ImplicitCastExpr {{.*}} 'vector<unsigned int, 1>' <VectorSplat>
 // CHECK-NEXT: IntegerLiteral {{.*}} 'unsigned int' 1
 
 uint3 FillOneUnsigned(){
@@ -40,8 +40,8 @@ uint3 FillOneUnsigned(){
 }
 
 // CHECK-LABEL: FillOneUnsignedLong
-// CHECK: ExtVectorElementExpr {{.*}} 'unsigned long __attribute__((ext_vector_type(4)))' xxxx
-// CHECK-NEXT: ImplicitCastExpr {{.*}} 'unsigned long __attribute__((ext_vector_type(1)))' <VectorSplat>
+// CHECK: ExtVectorElementExpr {{.*}} 'vector<unsigned long, 4>' xxxx
+// CHECK-NEXT: ImplicitCastExpr {{.*}} 'vector<unsigned long, 1>' <VectorSplat>
 // CHECK-NEXT: IntegerLiteral {{.*}} 'unsigned long' 1
 
 vector<uint64_t,4> FillOneUnsignedLong(){
@@ -49,8 +49,8 @@ vector<uint64_t,4> FillOneUnsignedLong(){
 }
 
 // CHECK-LABEL: FillTwoPointFive
-// CHECK: ExtVectorElementExpr {{.*}} 'double __attribute__((ext_vector_type(2)))' rr
-// CHECK-NEXT: ImplicitCastExpr {{.*}} 'double __attribute__((ext_vector_type(1)))' <VectorSplat>
+// CHECK: ExtVectorElementExpr {{.*}} 'vector<double, 2>' rr
+// CHECK-NEXT: ImplicitCastExpr {{.*}} 'vector<double, 1>' <VectorSplat>
 // CHECK-NEXT: FloatingLiteral {{.*}} 'double' 2.500000e+00
 
 double2 FillTwoPointFive(){
@@ -58,8 +58,8 @@ double2 FillTwoPointFive(){
 }
 
 // CHECK-LABEL: FillOneHalf
-// CHECK: ExtVectorElementExpr {{.*}} 'double __attribute__((ext_vector_type(3)))' rrr
-// CHECK-NEXT: ImplicitCastExpr {{.*}} 'double __attribute__((ext_vector_type(1)))' <VectorSplat>
+// CHECK: ExtVectorElementExpr {{.*}} 'vector<double, 3>' rrr
+// CHECK-NEXT: ImplicitCastExpr {{.*}} 'vector<double, 1>' <VectorSplat>
 // CHECK-NEXT: FloatingLiteral {{.*}} 'double' 5.000000e-01
 
 double3 FillOneHalf(){
@@ -67,8 +67,8 @@ double3 FillOneHalf(){
 }
 
 // CHECK-LABEL: FillTwoPointFiveFloat
-// CHECK: ExtVectorElementExpr {{.*}} 'float __attribute__((ext_vector_type(4)))' rrrr
-// CHECK-NEXT: ImplicitCastExpr {{.*}} 'float __attribute__((ext_vector_type(1)))' <VectorSplat>
+// CHECK: ExtVectorElementExpr {{.*}} 'vector<float, 4>' rrrr
+// CHECK-NEXT: ImplicitCastExpr {{.*}} 'vector<float, 1>' <VectorSplat>
 // CHECK-NEXT: FloatingLiteral {{.*}} 'float' 2.500000e+00
 
 float4 FillTwoPointFiveFloat(){
@@ -80,9 +80,9 @@ float4 FillTwoPointFiveFloat(){
 // initialze the returned vector.
 
 // CHECK-LABEL: FillOneHalfFloat
-// CHECK: ImplicitCastExpr {{.*}} 'vector<float, 1>':'float __attribute__((ext_vector_type(1)))' <VectorSplat>
+// CHECK: ImplicitCastExpr {{.*}} 'vector<float, 1>' <VectorSplat>
 // CHECK-NEXT: ExtVectorElementExpr {{.*}} 'float' r
-// CHECK-NEXT: ImplicitCastExpr {{.*}} 'float __attribute__((ext_vector_type(1)))' <VectorSplat>
+// CHECK-NEXT: ImplicitCastExpr {{.*}} 'vector<float, 1>' <VectorSplat>
 // CHECK-NEXT: FloatingLiteral {{.*}} 'float' 5.000000e-01
 
 vector<float, 1> FillOneHalfFloat(){
@@ -90,9 +90,9 @@ vector<float, 1> FillOneHalfFloat(){
 }
 
 // CHECK-LABEL: HowManyFloats
-// CHECK: ExtVectorElementExpr {{.*}} 'float __attribute__((ext_vector_type(2)))' rr
-// CHECK-NEXT: ExtVectorElementExpr {{.*}} 'float __attribute__((ext_vector_type(2)))' rr
-// CHECK-NEXT: ImplicitCastExpr {{.*}} 'float __attribute__((ext_vector_type(1)))' lvalue <VectorSplat>
+// CHECK: ExtVectorElementExpr {{.*}} 'vector<float, 2>' rr
+// CHECK-NEXT: ExtVectorElementExpr {{.*}} 'vector<float, 2>' rr
+// CHECK-NEXT: ImplicitCastExpr {{.*}} 'vector<float, 1>' lvalue <VectorSplat>
 // CHECK-NEXT: DeclRefExpr {{.*}} 'float' lvalue ParmVar {{.*}} 'V' 'float'
 
 float2 HowManyFloats(float V) {
@@ -100,8 +100,8 @@ float2 HowManyFloats(float V) {
 }
 
 // CHECK-LABEL: HooBoy
-// CHECK: ExtVectorElementExpr {{.*}} 'long __attribute__((ext_vector_type(4)))' xxxx
-// CHECK-NEXT: ImplicitCastExpr {{.*}} 'long __attribute__((ext_vector_type(1)))' <VectorSplat>
+// CHECK: ExtVectorElementExpr {{.*}} 'vector<long, 4>' xxxx
+// CHECK-NEXT: ImplicitCastExpr {{.*}} 'vector<long, 1>' <VectorSplat>
 // CHECK-NEXT: IntegerLiteral {{.*}} 'long' 4
 
 int64_t4 HooBoy() {
@@ -113,9 +113,9 @@ int64_t4 HooBoy() {
 // list with float truncation casts.
 
 // CHECK-LABEL: AllRighty
-// CHECK: ImplicitCastExpr {{.*}} 'float3':'float __attribute__((ext_vector_type(3)))' <FloatingCast>
-// CHECK-NEXT: ExtVectorElementExpr {{.*}} 'double __attribute__((ext_vector_type(3)))' rrr
-// CHECK-NEXT: ImplicitCastExpr {{.*}} 'double __attribute__((ext_vector_type(1)))' <VectorSplat>
+// CHECK: ImplicitCastExpr {{.*}} 'float3':'vector<float, 3>' <FloatingCast>
+// CHECK-NEXT: ExtVectorElementExpr {{.*}} 'vector<double, 3>' rrr
+// CHECK-NEXT: ImplicitCastExpr {{.*}} 'vector<double, 1>' <VectorSplat>
 // CHECK-NEXT: FloatingLiteral {{.*}} 'double' 1.000000e+00
 
 float3 AllRighty() {
@@ -123,8 +123,8 @@ float3 AllRighty() {
 }
 
 // CHECK-LABEL: AllRighty2
-// CHECK: ExtVectorElementExpr {{.*}} 'float __attribute__((ext_vector_type(3)))' rrr
-// CHECK-NEXT: ImplicitCastExpr {{.*}} 'float __attribute__((ext_vector_type(1)))' <VectorSplat>
+// CHECK: ExtVectorElementExpr {{.*}} 'vector<float, 3>' rrr
+// CHECK-NEXT: ImplicitCastExpr {{.*}} 'vector<float, 1>' <VectorSplat>
 // CHECK-NEXT: FloatingLiteral {{.*}} 'float' 1.000000e+00
 
 float3 AllRighty2() {

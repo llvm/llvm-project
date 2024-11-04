@@ -420,12 +420,6 @@ void MCAsmLayout::layoutBundle(MCFragment *F) {
   // The fragment's offset will point to after the padding, and its computed
   // size won't include the padding.
   //
-  // When the -mc-relax-all flag is used, we optimize bundling by writting the
-  // padding directly into fragments when the instructions are emitted inside
-  // the streamer. When the fragment is larger than the bundle size, we need to
-  // ensure that it's bundle aligned. This means that if we end up with
-  // multiple fragments, we must emit bundle padding between fragments.
-  //
   // ".align N" is an example of a directive that introduces multiple
   // fragments. We could add a special case to handle ".align N" by emitting
   // within-fragment padding (which would produce less padding when N is less
@@ -436,7 +430,7 @@ void MCAsmLayout::layoutBundle(MCFragment *F) {
   MCEncodedFragment *EF = cast<MCEncodedFragment>(F);
   uint64_t FSize = Assembler.computeFragmentSize(*this, *EF);
 
-  if (!Assembler.getRelaxAll() && FSize > Assembler.getBundleAlignSize())
+  if (FSize > Assembler.getBundleAlignSize())
     report_fatal_error("Fragment can't be larger than a bundle size");
 
   uint64_t RequiredBundlePadding =
@@ -820,8 +814,11 @@ void MCAssembler::layout(MCAsmLayout &Layout) {
   for (MCSection &Sec : *this) {
     // Create dummy fragments to eliminate any empty sections, this simplifies
     // layout.
-    if (Sec.getFragmentList().empty())
-      new MCDataFragment(&Sec);
+    if (Sec.empty()) {
+      auto *F = getContext().allocFragment<MCDataFragment>();
+      F->setParent(&Sec);
+      Sec.addFragment(*F);
+    }
 
     Sec.setOrdinal(SectionIndex++);
   }
@@ -830,6 +827,19 @@ void MCAssembler::layout(MCAsmLayout &Layout) {
   for (unsigned i = 0, e = Layout.getSectionOrder().size(); i != e; ++i) {
     MCSection *Sec = Layout.getSectionOrder()[i];
     Sec->setLayoutOrder(i);
+
+    // Chain together fragments from all subsections.
+    MCDummyFragment Dummy(Sec);
+    MCFragment *Tail = &Dummy;
+    for (auto &[_, List] : Sec->Subsections) {
+      if (!List.Head)
+        continue;
+      Tail->Next = List.Head;
+      Tail = List.Tail;
+    }
+    Sec->Subsections.clear();
+    Sec->Subsections.push_back({0u, {Dummy.getNext(), Tail}});
+    Sec->CurFragList = &Sec->Subsections[0].second;
 
     unsigned FragmentIndex = 0;
     for (MCFragment &Frag : *Sec)
@@ -1094,7 +1104,7 @@ bool MCAssembler::relaxBoundaryAlign(MCAsmLayout &Layout,
 
   uint64_t AlignedOffset = Layout.getFragmentOffset(&BF);
   uint64_t AlignedSize = 0;
-  for (const MCFragment *F = BF.getNextNode();; F = F->getNextNode()) {
+  for (const MCFragment *F = BF.getNext();; F = F->getNext()) {
     AlignedSize += computeFragmentSize(Layout, *F);
     if (F == BF.getLastFragment())
       break;

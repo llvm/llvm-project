@@ -883,16 +883,16 @@ Where:
 
 - ``debug-info-location`` identifies a DILocation metadata node.
 
-These metadata attributes correspond to the operands of a ``llvm.dbg.declare``
-IR intrinsic, see the :ref:`source level debugging<format_common_intrinsics>`
-documentation.
+These metadata attributes correspond to the operands of a ``#dbg_declare``
+IR debug record, see the :ref:`source level
+debugging<debug_records>` documentation.
 
 Varying variable locations
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Variables that are not always on the stack or change location are specified
 with the ``DBG_VALUE``  meta machine instruction. It is synonymous with the
-``llvm.dbg.value`` IR intrinsic, and is written:
+``#dbg_value`` IR record, and is written:
 
 .. code-block:: text
 

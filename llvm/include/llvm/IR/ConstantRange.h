@@ -176,6 +176,11 @@ public:
                                              const APInt &Other,
                                              unsigned NoWrapKind);
 
+  /// Initialize a range containing all values X that satisfy `(X & Mask)
+  /// != C`. Note that the range returned may contain values where `(X & Mask)
+  /// == C` holds, making it less precise, but still conservative.
+  static ConstantRange makeMaskNotEqualRange(const APInt &Mask, const APInt &C);
+
   /// Returns true if ConstantRange calculations are supported for intrinsic
   /// with \p IntrinsicID.
   static bool isIntrinsicSupported(Intrinsic::ID IntrinsicID);

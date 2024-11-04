@@ -95,6 +95,13 @@ ABI Changes in This Version
 - Fixed Microsoft calling convention when returning classes that have a deleted
   copy assignment operator. Such a class should be returned indirectly.
 
+- Fixed Microsoft name mangling for auto non-type template arguments of pointer
+  type for MSVC 1920+. This change resolves incompatibilities with code compiled
+  by MSVC 1920+ but will introduce incompatibilities with code compiled by
+  earlier versions of Clang unless such code is built with the compiler option
+  `-fms-compatibility-version=19.14` to imitate the MSVC 1914 mangling behavior.
+
+
 AST Dumping Potentially Breaking Changes
 ----------------------------------------
 
@@ -135,12 +142,29 @@ Clang Frontend Potentially Breaking Changes
 - The ``hasTypeLoc`` AST matcher will no longer match a ``classTemplateSpecializationDecl``;
   existing uses should switch to ``templateArgumentLoc`` or ``hasAnyTemplateArgumentLoc`` instead.
 
+Clang Python Bindings Potentially Breaking Changes
+--------------------------------------------------
+- Renamed ``CursorKind`` variant 272 from ``OMP_TEAMS_DISTRIBUTE_DIRECTIVE``
+  to ``OMP_TEAMS_DISTRIBUTE_SIMD_DIRECTIVE``. The previous name was incorrect, it was a duplicate
+  of variant 271.
+- Renamed ``TypeKind`` variant 162 from ``OBJCCLASS`` to ``OBJCTYPEPARAM``.
+  The previous name was incorrect, it was a duplicate of variant 28.
+
 What's New in Clang |release|?
 ==============================
 Some of the major new features and improvements to Clang are listed
 here. Generic improvements to Clang as a whole or to its underlying
 infrastructure are described first, followed by language-specific
 sections with improvements to Clang's support for those languages.
+
+- The ``\par`` documentation comment command now supports an optional
+  argument, which denotes the header of the paragraph started by
+  an instance of the ``\par`` command comment. The implementation
+  of the argument handling matches its semantics
+  `in Doxygen <https://www.doxygen.nl/manual/commands.html#cmdpar>`.
+  Namely, any text on the same line as the ``\par`` command will become
+  a header for the paragaph, and if there is no text then the command
+  will start a new paragraph.
 
 C++ Language Changes
 --------------------
@@ -198,6 +222,12 @@ C++20 Feature Support
 - We have sufficient confidence and experience with the concepts implementation
   to update the ``__cpp_concepts`` macro to `202002L`. This enables
   ``<expected>`` from libstdc++ to work correctly with Clang.
+
+- User defined constructors are allowed for copy-list-initialization with CTAD.
+  The example code for deduction guides for std::map in
+  (`cppreference <https://en.cppreference.com/w/cpp/container/map/deduction_guides>`_)
+  will now work.
+  (#GH62925).
 
 C++23 Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
@@ -257,8 +287,14 @@ Resolutions to C++ Defect Reports
 - P0522 implementation is enabled by default in all language versions, and
   provisional wording for CWG2398 is implemented.
 
+- Clang now performs type-only lookup for the name in ``using enum`` declaration.
+  (`CWG2877: Type-only lookup for using-enum-declarator <https://cplusplus.github.io/CWG/issues/2877.html>`_).
+
 - Clang now requires a template argument list after a template keyword.
   (`CWG96: Syntactic disambiguation using the template keyword <https://cplusplus.github.io/CWG/issues/96.html>`_).
+
+- Clang now considers ``noexcept(typeid(expr))`` more carefully, instead of always assuming that ``std::bad_typeid`` can be thrown.
+  (`CWG2191: Incorrect result for noexcept(typeid(v)) <https://cplusplus.github.io/CWG/issues/2191.html>`_).
 
 C Language Changes
 ------------------
@@ -342,6 +378,9 @@ Non-comprehensive list of changes in this release
 
 - Added ``__is_bitwise_cloneable`` which is used to check whether a type
   can be safely copied by memcpy/memmove.
+
+- ``#pragma GCC diagnostic warning "-Wfoo"`` can now downgrade ``-Werror=foo``
+  errors and certain default-to-error ``-W`` diagnostics to warnings.
 
 New Compiler Flags
 ------------------
@@ -569,11 +608,30 @@ Improvements to Clang's diagnostics
 - Clang no longer emits a "declared here" note for a builtin function that has no declaration in source.
   Fixes #GH93369.
 
+- Clang now diagnoses unsupported class declarations for ``std::initializer_list<E>`` when they are
+  used rather than when they are needed for constant evaluation or when code is generated for them.
+  The check is now stricter to prevent crashes for some unsupported declarations (Fixes #GH95495).
+
 Improvements to Clang's time-trace
 ----------------------------------
 
 - Clang now specifies that using ``auto`` in a lambda parameter is a C++14 extension when
   appropriate. (`#46059: <https://github.com/llvm/llvm-project/issues/46059>`_).
+
+Improvements to Coverage Mapping
+--------------------------------
+
+- Macros defined in system headers are not expanded in coverage
+  mapping. Conditional expressions in system header macros are no
+  longer taken into account for branch coverage. They can be included
+  with ``-mllvm -system-headers-coverage``.
+  (`#78920: <https://github.com/llvm/llvm-project/issues/78920>`_)
+- MC/DC Coverage has been improved.
+  (`#82448: <https://github.com/llvm/llvm-project/pull/82448>`_)
+
+  - The maximum number of conditions is no longer limited to 6. See
+    `this <SourceBasedCodeCoverage.html#mc-dc-instrumentation>` for
+    more details.
 
 Bug Fixes in This Version
 -------------------------
@@ -659,6 +717,8 @@ Bug Fixes in This Version
 
 - Correctly reject declarations where a statement is required in C.
   Fixes #GH92775
+
+- Fixed `static_cast` to array of unknown bound. Fixes (#GH62863).
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -846,6 +906,14 @@ Bug Fixes to C++ Support
 - Fix a crash caused by improper use of ``__array_extent``. (#GH80474)
 - Fixed several bugs in capturing variables within unevaluated contexts. (#GH63845), (#GH67260), (#GH69307),
   (#GH88081), (#GH89496), (#GH90669) and (#GH91633).
+- Fixed handling of brace ellison when building deduction guides. (#GH64625), (#GH83368).
+- Clang now instantiates local constexpr functions eagerly for constant evaluators. (#GH35052), (#GH94849)
+- Fixed a failed assertion when attempting to convert an integer representing the difference
+  between the addresses of two labels (a GNU extension) to a pointer within a constant expression. (#GH95366).
+- Fix immediate escalation bugs in the presence of dependent call arguments. (#GH94935)
+- Clang now diagnoses explicit specializations with storage class specifiers in all contexts.
+- Fix an assertion failure caused by parsing a lambda used as a default argument for the value of a
+  forward-declared class. (#GH93512).
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -903,11 +971,13 @@ Arm and AArch64 Support
   a feature modifier for -march and -mcpu as well as via target attributes
   like ``target_version`` or ``target_clones``.
 - Support has been added for the following processors (-mcpu identifiers in parenthesis):
+    * Arm Cortex-R52+ (cortex-r52plus).
+    * Arm Cortex-R82AE (cortex-r82ae).
     * Arm Cortex-A78AE (cortex-a78ae).
     * Arm Cortex-A520AE (cortex-a520ae).
     * Arm Cortex-A720AE (cortex-a720ae).
-    * Arm Cortex-R82AE (cortex-r82ae).
-    * Arm Cortex-R52+ (cortex-r52plus).
+    * Arm Cortex-A725 (cortex-a725).
+    * Arm Cortex-X925 (cortex-x925).
     * Arm Neoverse-N3 (neoverse-n3).
     * Arm Neoverse-V3 (neoverse-v3).
     * Arm Neoverse-V3AE (neoverse-v3ae).
@@ -917,6 +987,10 @@ Android Support
 
 Windows Support
 ^^^^^^^^^^^^^^^
+
+- The clang-cl ``/Ot`` compiler option ("optimize for speed", also implied by
+  ``/O2``) now maps to clang's ``-O3`` optimizataztion level instead of ``-O2``.
+  Users who prefer the old behavior can use ``clang-cl /Ot /clang:-O2 ...``.
 
 - Clang-cl now supports function targets with intrinsic headers. This allows
   for runtime feature detection of intrinsics. Previously under clang-cl
@@ -972,10 +1046,10 @@ AIX Support
 WebAssembly Support
 ^^^^^^^^^^^^^^^^^^^
 
-The -mcpu=generic configuration now enables multivalue feature, which is
-standardized and available in all major engines. Enabling multivalue here only
-enables the language feature but does not turn on the multivalue ABI (this
-enables non-ABI uses of multivalue, like exnref).
+The -mcpu=generic configuration now enables multivalue and reference-types.
+These proposals are standardized and available in all major engines. Enabling
+multivalue here only enables the language feature but does not turn on the
+multivalue ABI (this enables non-ABI uses of multivalue, like exnref).
 
 AVR Support
 ^^^^^^^^^^^

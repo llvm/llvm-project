@@ -116,8 +116,7 @@ define double @pow_sitofp_f64_const_base_2(i32 %x) {
 define half @pow_sitofp_f16_const_base_2(i32 %x) {
 ; CHECK-LABEL: define half @pow_sitofp_f16_const_base_2(
 ; CHECK-SAME: i32 [[X:%.*]]) {
-; CHECK-NEXT:    [[ITOFP:%.*]] = sitofp i32 [[X]] to half
-; CHECK-NEXT:    [[POW:%.*]] = tail call half @llvm.pow.f16(half 0xH4000, half [[ITOFP]])
+; CHECK-NEXT:    [[POW:%.*]] = tail call half @llvm.ldexp.f16.i32(half 0xH3C00, i32 [[X]])
 ; CHECK-NEXT:    ret half [[POW]]
 ;
   %itofp = sitofp i32 %x to half

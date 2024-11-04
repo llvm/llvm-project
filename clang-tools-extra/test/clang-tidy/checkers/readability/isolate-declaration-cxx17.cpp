@@ -31,7 +31,7 @@ struct SomeClass {
 
 namespace std {
 template <typename T>
-class initializer_list {};
+class initializer_list { const T *a, *b; };
 
 template <typename T>
 class vector {

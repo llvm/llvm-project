@@ -1405,16 +1405,23 @@ foreach fvti = !listconcat(AllFloatVectors, AllBFloatVectors) in {
                    fvti.AVL, fvti.Log2SEW)>;
 
     def : Pat<(fvti.Vector (vselect (fvti.Mask V0),
+                                    (SplatFPOp (SelectFPImm (XLenVT GPR:$imm))),
+                                    fvti.RegClass:$rs2)),
+              (!cast<Instruction>("PseudoVMERGE_VXM_"#fvti.LMul.MX)
+                   (fvti.Vector (IMPLICIT_DEF)),
+                   fvti.RegClass:$rs2, GPR:$imm, (fvti.Mask V0), fvti.AVL, fvti.Log2SEW)>;
+
+    def : Pat<(fvti.Vector (vselect (fvti.Mask V0),
                                     (SplatFPOp (fvti.Scalar fpimm0)),
                                     fvti.RegClass:$rs2)),
               (!cast<Instruction>("PseudoVMERGE_VIM_"#fvti.LMul.MX)
                    (fvti.Vector (IMPLICIT_DEF)),
                    fvti.RegClass:$rs2, 0, (fvti.Mask V0), fvti.AVL, fvti.Log2SEW)>;
-
   }
+}
 
-  let Predicates = !listconcat(GetVTypePredicates<GetFpVTypeInfo<fvti>.Vti>.Predicates,
-                               GetVTypeScalarPredicates<fvti>.Predicates) in 
+foreach fvti = AllFloatVectors in {
+  let Predicates = GetVTypePredicates<fvti>.Predicates in
     def : Pat<(fvti.Vector (vselect (fvti.Mask V0),
                                     (SplatFPOp fvti.ScalarRegClass:$rs1),
                                     fvti.RegClass:$rs2)),
@@ -1470,26 +1477,6 @@ foreach fvtiToFWti = AllWidenableBFloatToFloatVectors in {
                 // RISCVInsertReadWriteCSR
                 FRM_DYN,
                 fvti.AVL, fvti.Log2SEW, TA_MA)>;
-}
-
-//===----------------------------------------------------------------------===//
-// Vector Splats
-//===----------------------------------------------------------------------===//
-
-foreach fvti = !listconcat(AllFloatVectors, AllBFloatVectors) in {
-  let Predicates = !listconcat(GetVTypePredicates<GetFpVTypeInfo<fvti>.Vti>.Predicates,
-                               GetVTypeScalarPredicates<fvti>.Predicates) in
-    def : Pat<(fvti.Vector (riscv_vfmv_v_f_vl undef, fvti.ScalarRegClass:$rs1, srcvalue)),
-              (!cast<Instruction>("PseudoVFMV_V_"#fvti.ScalarSuffix#"_"#fvti.LMul.MX)
-                (fvti.Vector (IMPLICIT_DEF)),
-                (fvti.Scalar fvti.ScalarRegClass:$rs1),
-                fvti.AVL, fvti.Log2SEW, TA_MA)>;
-  defvar ivti = GetIntVTypeInfo<fvti>.Vti;
-  let Predicates = GetVTypePredicates<ivti>.Predicates in
-    def : Pat<(fvti.Vector (SplatFPOp (fvti.Scalar fpimm0))),
-              (!cast<Instruction>("PseudoVMV_V_I_"#fvti.LMul.MX)
-                (fvti.Vector (IMPLICIT_DEF)),
-                0, fvti.AVL, fvti.Log2SEW, TA_MA)>;
 }
 
 //===----------------------------------------------------------------------===//

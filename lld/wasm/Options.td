@@ -38,9 +38,9 @@ multiclass B<string name, string help1, string help2> {
 // The following flags are shared with the ELF linker
 def Bsymbolic: F<"Bsymbolic">, HelpText<"Bind defined symbols locally">;
 
-def Bdynamic: F<"Bdynamic">, HelpText<"Link against shared libraries (default)">;
+def Bdynamic: F<"Bdynamic">, HelpText<"Link against shared libraries">;
 
-def Bstatic: F<"Bstatic">, HelpText<"Do not link against shared libraries">;
+def Bstatic: F<"Bstatic">, HelpText<"Do not link against shared libraries (default)">;
 
 def build_id: F<"build-id">, HelpText<"Alias for --build-id=fast">;
 

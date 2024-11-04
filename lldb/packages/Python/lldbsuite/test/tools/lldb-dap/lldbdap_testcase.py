@@ -195,8 +195,10 @@ class DAPTestCaseBase(TestBase):
     def get_console(self, timeout=0.0):
         return self.dap_server.get_output("console", timeout=timeout)
 
-    def collect_console(self, duration):
-        return self.dap_server.collect_output("console", duration=duration)
+    def collect_console(self, timeout_secs, pattern=None):
+        return self.dap_server.collect_output(
+            "console", timeout_secs=timeout_secs, pattern=pattern
+        )
 
     def get_local_as_int(self, name, threadId=None):
         value = self.dap_server.get_local_variable_value(name, threadId=threadId)

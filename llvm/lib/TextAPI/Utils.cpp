@@ -215,7 +215,7 @@ llvm::MachO::parseAliasList(std::unique_ptr<llvm::MemoryBuffer> &Buffer) {
     if (L.starts_with("#"))
       continue;
     StringRef Symbol, Remain, Alias;
-    // Base symbol is seperated by whitespace.
+    // Base symbol is separated by whitespace.
     std::tie(Symbol, Remain) = getToken(L);
     // The Alias symbol ends before a comment or EOL.
     std::tie(Alias, Remain) = getToken(Remain, "#");

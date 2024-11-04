@@ -1875,6 +1875,9 @@
 // WEBASSEMBLY-NEXT:#define __SIZE_TYPE__ long unsigned int
 // WEBASSEMBLY32-NEXT:#define __SIZE_WIDTH__ 32
 // WEBASSEMBLY64-NEXT:#define __SIZE_WIDTH__ 64
+// WEBASSEMBLY-NEXT:#define __STDC_EMBED_EMPTY__ 2
+// WEBASSEMBLY-NEXT:#define __STDC_EMBED_FOUND__ 1
+// WEBASSEMBLY-NEXT:#define __STDC_EMBED_NOT_FOUND__ 0
 // WEBASSEMBLY-NEXT:#define __STDC_HOSTED__ 0
 // WEBASSEMBLY-NOT:#define __STDC_MB_MIGHT_NEQ_WC__
 // WEBASSEMBLY-NOT:#define __STDC_NO_ATOMICS__
@@ -2527,6 +2530,8 @@
 // RUN:   | FileCheck -match-full-lines -check-prefix=RISCV64 %s
 // RUN: %clang_cc1 -E -dM -ffreestanding -fgnuc-version=4.2.1 -triple=riscv64-unknown-linux < /dev/null \
 // RUN:   | FileCheck -match-full-lines -check-prefixes=RISCV64,RISCV64-LINUX %s
+// RUN: %clang_cc1 -E -dM -ffreestanding -fgnuc-version=4.2.1 -triple=riscv64-unknown-fuchsia < /dev/null \
+// RUN:   | FileCheck -match-full-lines -check-prefixes=RISCV64 %s
 // RISCV64: #define _LP64 1
 // RISCV64: #define __ATOMIC_ACQUIRE 2
 // RISCV64: #define __ATOMIC_ACQ_REL 4

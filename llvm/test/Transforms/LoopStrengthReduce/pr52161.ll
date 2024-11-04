@@ -19,7 +19,7 @@ for.body:                                         ; preds = %for.body, %entry
 m:                                                ; preds = %m, %entry
   %0 = phi i16 [ 3, %m ], [ 6, %entry ]
   %gg = add i16 %0, 23
-  ; CHECK: call void @llvm.dbg.value(metadata i16 poison, metadata !{{[0-9]+}}, metadata !DIExpression()),
+  ; CHECK: #dbg_value(i16 poison, !{{[0-9]+}}, !DIExpression(),
   call void @llvm.dbg.value(metadata i16 %0, metadata !14, metadata !DIExpression()), !dbg !19
   br label %m
 }

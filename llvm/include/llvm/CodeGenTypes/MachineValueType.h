@@ -38,7 +38,7 @@ namespace llvm {
       // are considered extended value types.
       INVALID_SIMPLE_VALUE_TYPE = 0,
 
-#define GET_VT_ATTR(Ty, n, sz, Any, Int, FP, Vec, Sc) Ty = n,
+#define GET_VT_ATTR(Ty, n, sz, Any, Int, FP, Vec, Sc, NElem, EltTy) Ty = n,
 #define GET_VT_RANGES
 #include "llvm/CodeGen/GenVT.inc"
 #undef GET_VT_ATTR
@@ -171,9 +171,9 @@ namespace llvm {
     /// Return true if this is an overloaded type for TableGen.
     bool isOverloaded() const {
       switch (SimpleTy) {
-#define GET_VT_ATTR(Ty, n, sz, Any, Int, FP, Vec, Sc)                          \
-  case Ty:                                                                     \
-    return Any;
+#define GET_VT_ATTR(Ty, n, sz, Any, Int, FP, Vec, Sc, NElem, EltTy)          \
+    case Ty:                                                                   \
+      return Any;
 #include "llvm/CodeGen/GenVT.inc"
 #undef GET_VT_ATTR
       default:
@@ -252,30 +252,28 @@ namespace llvm {
     }
 
     MVT getVectorElementType() const {
-      switch (SimpleTy) {
-      default:
-        llvm_unreachable("Not a vector MVT!");
-
-#define GET_VT_VECATTR(Ty, Sc, nElem, ElTy, ElSz)                              \
-  case Ty:                                                                     \
-    return ElTy;
+      assert(SimpleTy >= FIRST_VALUETYPE && SimpleTy <= LAST_VALUETYPE);
+      static constexpr SimpleValueType EltTyTable[] = {
+#define GET_VT_ATTR(Ty, N, Sz, Any, Int, FP, Vec, Sc, NElem, EltTy) EltTy,
 #include "llvm/CodeGen/GenVT.inc"
-#undef GET_VT_VECATTR
-      }
+#undef GET_VT_ATTR
+      };
+      SimpleValueType VT = EltTyTable[SimpleTy - FIRST_VALUETYPE];
+      assert(VT != INVALID_SIMPLE_VALUE_TYPE && "Not a vector MVT!");
+      return VT;
     }
 
     /// Given a vector type, return the minimum number of elements it contains.
     unsigned getVectorMinNumElements() const {
-      switch (SimpleTy) {
-      default:
-        llvm_unreachable("Not a vector MVT!");
-
-#define GET_VT_VECATTR(Ty, Sc, nElem, ElTy, ElSz)                              \
-  case Ty:                                                                     \
-    return nElem;
+      assert(SimpleTy >= FIRST_VALUETYPE && SimpleTy <= LAST_VALUETYPE);
+      static constexpr uint16_t NElemTable[] = {
+#define GET_VT_ATTR(Ty, N, Sz, Any, Int, FP, Vec, Sc, NElem, EltTy) NElem,
 #include "llvm/CodeGen/GenVT.inc"
-#undef GET_VT_VECATTR
-      }
+#undef GET_VT_ATTR
+      };
+      unsigned NElem = NElemTable[SimpleTy - FIRST_VALUETYPE];
+      assert(NElem != 0 && "Not a vector MVT!");
+      return NElem;
     }
 
     ElementCount getVectorElementCount() const {
@@ -298,8 +296,8 @@ namespace llvm {
     /// base size.
     TypeSize getSizeInBits() const {
       static constexpr TypeSize SizeTable[] = {
-#define GET_VT_ATTR(Ty, N, Sz, Any, Int, FP, Vec, Sc)                          \
-  TypeSize(Sz, Sc || Ty == aarch64svcount /* FIXME: Not in the td. */),
+#define GET_VT_ATTR(Ty, N, Sz, Any, Int, FP, Vec, Sc, NElem, EltTy)          \
+    TypeSize(Sz, Sc || Ty == aarch64svcount /* FIXME: Not in the td. */),
 #include "llvm/CodeGen/GenVT.inc"
 #undef GET_VT_ATTR
       };
@@ -420,9 +418,9 @@ namespace llvm {
     }
 
     static MVT getFloatingPointVT(unsigned BitWidth) {
-#define GET_VT_ATTR(Ty, n, sz, Any, Int, FP, Vec, Sc)                          \
-  if (FP == 3 && sz == BitWidth)                                               \
-    return Ty;
+#define GET_VT_ATTR(Ty, n, sz, Any, Int, FP, Vec, Sc, NElem, EltTy)          \
+    if (FP == 3 && sz == BitWidth)                                             \
+      return Ty;
 #include "llvm/CodeGen/GenVT.inc"
 #undef GET_VT_ATTR
 
@@ -430,9 +428,9 @@ namespace llvm {
     }
 
     static MVT getIntegerVT(unsigned BitWidth) {
-#define GET_VT_ATTR(Ty, n, sz, Any, Int, FP, Vec, Sc)                          \
-  if (Int == 3 && sz == BitWidth)                                              \
-    return Ty;
+#define GET_VT_ATTR(Ty, n, sz, Any, Int, FP, Vec, Sc, NElem, EltTy)          \
+    if (Int == 3 && sz == BitWidth)                                            \
+      return Ty;
 #include "llvm/CodeGen/GenVT.inc"
 #undef GET_VT_ATTR
 
@@ -440,9 +438,9 @@ namespace llvm {
     }
 
     static MVT getVectorVT(MVT VT, unsigned NumElements) {
-#define GET_VT_VECATTR(Ty, Sc, nElem, ElTy, ElSz)                              \
-  if (!Sc && VT.SimpleTy == ElTy && NumElements == nElem)                      \
-    return Ty;
+#define GET_VT_VECATTR(Ty, Sc, nElem, ElTy)                                  \
+    if (!Sc && VT.SimpleTy == ElTy && NumElements == nElem)                    \
+      return Ty;
 #include "llvm/CodeGen/GenVT.inc"
 #undef GET_VT_VECATTR
 
@@ -450,9 +448,9 @@ namespace llvm {
     }
 
     static MVT getScalableVectorVT(MVT VT, unsigned NumElements) {
-#define GET_VT_VECATTR(Ty, Sc, nElem, ElTy, ElSz)                              \
-  if (Sc && VT.SimpleTy == ElTy && NumElements == nElem)                       \
-    return Ty;
+#define GET_VT_VECATTR(Ty, Sc, nElem, ElTy)                                  \
+    if (Sc && VT.SimpleTy == ElTy && NumElements == nElem)                     \
+      return Ty;
 #include "llvm/CodeGen/GenVT.inc"
 #undef GET_VT_VECATTR
 

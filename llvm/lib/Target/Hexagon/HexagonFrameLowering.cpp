@@ -413,9 +413,9 @@ void HexagonFrameLowering::findShrunkPrologEpilog(MachineFunction &MF,
   auto &HRI = *MF.getSubtarget<HexagonSubtarget>().getRegisterInfo();
 
   MachineDominatorTree MDT;
-  MDT.runOnMachineFunction(MF);
+  MDT.calculate(MF);
   MachinePostDominatorTree MPT;
-  MPT.runOnMachineFunction(MF);
+  MPT.recalculate(MF);
 
   using UnsignedMap = DenseMap<unsigned, unsigned>;
   using RPOTType = ReversePostOrderTraversal<const MachineFunction *>;

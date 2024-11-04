@@ -8,12 +8,6 @@ elemental function fct1(a, b) result(t)
   t = a // b
 end function
 
-elemental function fct2(c) result(t)
-  integer, intent(in) :: c
-  character(c) :: t
-
-end function
-
 subroutine sub2(a,b,c)
   character(*), intent(inout) :: c
   character(*), intent(in) :: a, b
@@ -41,25 +35,6 @@ end subroutine
 ! CHECK: %[[RES_LENGTH:.*]] = arith.select %[[CMPI]], %[[LEN_LEN_IDX]], %c0{{.*}} : index
 ! CHECK: %[[RES:.*]] = fir.alloca !fir.char<1,?>(%[[RES_LENGTH]] : index) {bindc_name = ".result"}
 ! CHECK: fir.call @_QMm1Pfct1
-
-subroutine sub3(c)
-  character(*), intent(inout) :: c(:)
-
-  c = fct2(10)
-end subroutine
-
-! CHECK-LABEL: func.func @_QMm1Psub3(
-! CHECK-SAME: %[[ARG0:.*]]: !fir.box<!fir.array<?x!fir.char<1,?>>> {fir.bindc_name = "c"}) {
-! CHECK: %[[C10:.*]] = arith.constant 10 : i32
-! CHECK: %[[C:.*]]:2 = hlfir.declare %[[ARG0]] dummy_scope %{{.*}} {fortran_attrs = #fir.var_attrs<intent_inout>, uniq_name = "_QMm1Fsub3Ec"} : (!fir.box<!fir.array<?x!fir.char<1,?>>>, !fir.dscope) -> (!fir.box<!fir.array<?x!fir.char<1,?>>>, !fir.box<!fir.array<?x!fir.char<1,?>>>)
-! CHECK: %[[ASSOC:.*]]:3 = hlfir.associate %[[C10]] {adapt.valuebyref} : (i32) -> (!fir.ref<i32>, !fir.ref<i32>, i1)
-! CHECK: %[[INPUT_ARG0:.*]]:2 = hlfir.declare %[[ASSOC]]#1 {fortran_attrs = #fir.var_attrs<intent_in>, uniq_name = "_QMm1Ffct2Ec"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-! CHECK: %[[LOAD_INPUT_ARG0:.*]] = fir.load %[[INPUT_ARG0]]#0 : !fir.ref<i32>
-! CHECK: %[[LOAD_INPUT_ARG0_IDX:.*]] = fir.convert %[[LOAD_INPUT_ARG0]] : (i32) -> index
-! CHECK: %[[CMPI:.*]] = arith.cmpi sgt, %[[LOAD_INPUT_ARG0_IDX]], %c0{{.*}} : index
-! CHECK: %[[LENGTH:.*]] = arith.select %[[CMPI]], %[[LOAD_INPUT_ARG0_IDX]], %c0{{.*}} : index
-! CHECK: %[[RES:.*]] = fir.alloca !fir.char<1,?>(%[[LENGTH]] : index) {bindc_name = ".result"}
-! CHECK: fir.call @_QMm1Pfct2
 
 subroutine sub4(a,b,c)
   character(*), intent(inout) :: c(:)

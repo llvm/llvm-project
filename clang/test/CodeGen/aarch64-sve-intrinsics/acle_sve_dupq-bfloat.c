@@ -6,7 +6,15 @@
 // RUN: %clang_cc1 -fclang-abi-compat=latest -DSVE_OVERLOADED_FORMS -triple aarch64 -target-feature +sve -target-feature +bf16 -disable-O0-optnone -Werror -Wall -emit-llvm -o - -x c++ %s | opt -S -passes=mem2reg,tailcallelim | FileCheck %s -check-prefix=CPP-CHECK
 
 // RUN: %clang_cc1 -fclang-abi-compat=latest -triple aarch64 -target-feature +sve -target-feature +bf16 -S -disable-O0-optnone -Werror -Wall -o /dev/null %s
+// RUN: %clang_cc1 -fclang-abi-compat=latest -triple aarch64 -target-feature +sme -target-feature +bf16 -S -disable-O0-optnone -Werror -Wall -o /dev/null %s
+
 #include <arm_sve.h>
+
+#if defined __ARM_FEATURE_SME
+#define MODE_ATTR __arm_streaming
+#else
+#define MODE_ATTR
+#endif
 
 #ifdef SVE_OVERLOADED_FORMS
 // A simple used,unused... macro, long enough to represent any SVE builtin.
@@ -25,7 +33,7 @@
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x bfloat> @llvm.aarch64.sve.dupq.lane.nxv8bf16(<vscale x 8 x bfloat> [[DATA:%.*]], i64 [[INDEX:%.*]])
 // CPP-CHECK-NEXT:    ret <vscale x 8 x bfloat> [[TMP0]]
 //
-svbfloat16_t test_svdupq_lane_bf16(svbfloat16_t data, uint64_t index) {
+svbfloat16_t test_svdupq_lane_bf16(svbfloat16_t data, uint64_t index) MODE_ATTR {
   // expected-warning@+1 {{implicit declaration of function 'svdupq_lane_bf16'}}
   return SVE_ACLE_FUNC(svdupq_lane, _bf16, , )(data, index);
 }
@@ -58,7 +66,7 @@ svbfloat16_t test_svdupq_lane_bf16(svbfloat16_t data, uint64_t index) {
 // CPP-CHECK-NEXT:    ret <vscale x 8 x bfloat> [[TMP9]]
 //
 svbfloat16_t test_svdupq_n_bf16(bfloat16_t x0, bfloat16_t x1, bfloat16_t x2, bfloat16_t x3,
-                                bfloat16_t x4, bfloat16_t x5, bfloat16_t x6, bfloat16_t x7) {
+                                bfloat16_t x4, bfloat16_t x5, bfloat16_t x6, bfloat16_t x7) MODE_ATTR {
   // <assume other insertelement>
   // expected-warning@+1 {{implicit declaration of function 'svdupq_n_bf16'}}
   return SVE_ACLE_FUNC(svdupq, _n, _bf16, )(x0, x1, x2, x3, x4, x5, x6, x7);

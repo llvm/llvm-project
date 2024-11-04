@@ -45,6 +45,7 @@ class MCSubtargetInfo;
 class MCSymbol;
 class raw_pwrite_stream;
 class PassBuilder;
+class PassInstrumentationCallbacks;
 struct PerFunctionMIParsingState;
 class SMDiagnostic;
 class SMRange;
@@ -431,7 +432,7 @@ public:
   /// and \p M has not been modified.
   virtual bool splitModule(
       Module &M, unsigned NumParts,
-      function_ref<void(std::unique_ptr<Module> MPart)> ModuleCallback) const {
+      function_ref<void(std::unique_ptr<Module> MPart)> ModuleCallback) {
     return false;
   }
 };

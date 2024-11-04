@@ -7,7 +7,7 @@
 // CHECK: Num Bitmap Bytes:
 // CHECK-NEXT: $1
 // CHECK-NEXT: Bitmap Byte Values:
-// CHECK-NEXT: 8
+// CHECK-NEXT: 0x4
 #include <stdio.h>
 #include <stdlib.h>
 extern int __llvm_profile_is_continuous_mode_enabled(void);

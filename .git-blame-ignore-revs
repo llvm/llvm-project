@@ -81,3 +81,6 @@ f6d557ee34b6bbdb1dc32f29e34b4a4a8ad35e81
 
 # [NFC] clang-format utils/TableGen (#80973)
 b9079baaddfed5e604fbfaa1d81a7a1c38e78c26
+
+# [libc++][NFC] Run clang-format on libcxx/include again (#95874)
+e2c2ffbe7a1b5d9e32a2ce64279475b50c4cba5b

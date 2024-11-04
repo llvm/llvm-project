@@ -26,7 +26,7 @@ define <1 x i64> @llrint_v1i64_v1f32(<1 x float> %x) {
 ; RV64-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
 ; RV64-NEXT:    vfmv.f.s fa5, v8
 ; RV64-NEXT:    fcvt.l.s a0, fa5
-; RV64-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
+; RV64-NEXT:    vsetvli zero, zero, e64, m1, ta, ma
 ; RV64-NEXT:    vmv.s.x v8, a0
 ; RV64-NEXT:    ret
   %a = call <1 x i64> @llvm.llrint.v1i64.v1f32(<1 x float> %x)

@@ -71,9 +71,12 @@ void DefaultABIInfo::computeInfo(CGFunctionInfo &FI) const {
     I.info = classifyArgumentType(I.type);
 }
 
-Address DefaultABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
-                                  QualType Ty) const {
-  return EmitVAArgInstr(CGF, VAListAddr, Ty, classifyArgumentType(Ty));
+RValue DefaultABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
+                                 QualType Ty, AggValueSlot Slot) const {
+  return CGF.EmitLoadOfAnyValue(
+      CGF.MakeAddrLValue(
+          EmitVAArgInstr(CGF, VAListAddr, Ty, classifyArgumentType(Ty)), Ty),
+      Slot);
 }
 
 ABIArgInfo CodeGen::coerceToIntArray(QualType Ty, ASTContext &Context,
@@ -199,12 +202,12 @@ CodeGen::emitVoidPtrDirectVAArg(CodeGenFunction &CGF, Address VAListAddr,
   return Addr.withElementType(DirectTy);
 }
 
-Address CodeGen::emitVoidPtrVAArg(CodeGenFunction &CGF, Address VAListAddr,
-                                  QualType ValueTy, bool IsIndirect,
-                                  TypeInfoChars ValueInfo,
-                                  CharUnits SlotSizeAndAlign,
-                                  bool AllowHigherAlign,
-                                  bool ForceRightAdjust) {
+RValue CodeGen::emitVoidPtrVAArg(CodeGenFunction &CGF, Address VAListAddr,
+                                 QualType ValueTy, bool IsIndirect,
+                                 TypeInfoChars ValueInfo,
+                                 CharUnits SlotSizeAndAlign,
+                                 bool AllowHigherAlign, AggValueSlot Slot,
+                                 bool ForceRightAdjust) {
   // The size and alignment of the value that was passed directly.
   CharUnits DirectSize, DirectAlign;
   if (IsIndirect) {
@@ -230,7 +233,7 @@ Address CodeGen::emitVoidPtrVAArg(CodeGenFunction &CGF, Address VAListAddr,
     Addr = Address(CGF.Builder.CreateLoad(Addr), ElementTy, ValueInfo.Align);
   }
 
-  return Addr;
+  return CGF.EmitLoadOfAnyValue(CGF.MakeAddrLValue(Addr, ValueTy), Slot);
 }
 
 Address CodeGen::emitMergePHI(CodeGenFunction &CGF, Address Addr1,

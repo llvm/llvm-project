@@ -265,11 +265,9 @@ public:
   // Catch commands before they execute by registering a callback that will get
   // called when the command gets executed. This allows GUI or command line
   // interfaces to intercept a command and stop it from happening
-#ifndef SWIG
   bool SetCommandOverrideCallback(const char *command_name,
                                   lldb::CommandOverrideCallback callback,
                                   void *baton);
-#endif
 
   /// Return true if the command interpreter is the active IO handler.
   ///

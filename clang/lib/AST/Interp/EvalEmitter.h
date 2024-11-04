@@ -55,7 +55,7 @@ protected:
 
   /// Methods implemented by the compiler.
   virtual bool visitExpr(const Expr *E) = 0;
-  virtual bool visitDecl(const VarDecl *VD) = 0;
+  virtual bool visitDecl(const VarDecl *VD, bool ConstantContext) = 0;
 
   /// Emits jumps.
   bool jumpTrue(const LabelTy &Label);

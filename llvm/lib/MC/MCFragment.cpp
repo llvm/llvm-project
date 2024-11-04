@@ -17,6 +17,7 @@
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCFixup.h"
 #include "llvm/MC/MCSection.h"
+#include "llvm/MC/MCSectionMachO.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/MC/MCValue.h"
 #include "llvm/Support/Casting.h"
@@ -141,7 +142,7 @@ const MCSymbol *MCAsmLayout::getBaseSymbol(const MCSymbol &Symbol) const {
 
 uint64_t MCAsmLayout::getSectionAddressSize(const MCSection *Sec) const {
   // The size is the last fragment's end offset.
-  const MCFragment &F = Sec->getFragmentList().back();
+  const MCFragment &F = *Sec->curFragList()->Tail;
   return getFragmentOffset(&F) + getAssembler().computeFragmentSize(*this, F);
 }
 
@@ -197,12 +198,10 @@ uint64_t llvm::computeBundlePadding(const MCAssembler &Assembler,
 
 /* *** */
 
-void ilist_alloc_traits<MCFragment>::deleteNode(MCFragment *V) { V->destroy(); }
-
 MCFragment::MCFragment(FragmentType Kind, bool HasInstructions,
                        MCSection *Parent)
-    : Parent(Parent), Atom(nullptr), Offset(~UINT64_C(0)), LayoutOrder(0),
-      Kind(Kind), HasInstructions(HasInstructions) {
+    : Parent(Parent), Kind(Kind), HasInstructions(HasInstructions),
+      LinkerRelaxable(false) {
   if (Parent && !isa<MCDummyFragment>(*this))
     Parent->addFragment(*this);
 }
@@ -264,6 +263,10 @@ void MCFragment::destroy() {
       delete cast<MCDummyFragment>(this);
       return;
   }
+}
+
+const MCSymbol *MCFragment::getAtom() const {
+  return cast<MCSectionMachO>(Parent)->getAtom(LayoutOrder);
 }
 
 // Debugging methods

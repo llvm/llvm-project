@@ -62,10 +62,9 @@ mlir::LLVM::ConstantOp ConvertFIRToLLVMPattern::genConstantOffset(
 /// to the specific target may involve some sign-extending or truncation of
 /// values, particularly to fit them from abstract box types to the
 /// appropriate reified structures.
-mlir::Value
-ConvertFIRToLLVMPattern::integerCast(mlir::Location loc,
-                                     mlir::ConversionPatternRewriter &rewriter,
-                                     mlir::Type ty, mlir::Value val) const {
+mlir::Value ConvertFIRToLLVMPattern::integerCast(
+    mlir::Location loc, mlir::ConversionPatternRewriter &rewriter,
+    mlir::Type ty, mlir::Value val, bool fold) const {
   auto valTy = val.getType();
   // If the value was not yet lowered, lower its type so that it can
   // be used in getPrimitiveTypeSizeInBits.
@@ -73,10 +72,17 @@ ConvertFIRToLLVMPattern::integerCast(mlir::Location loc,
     valTy = convertType(valTy);
   auto toSize = mlir::LLVM::getPrimitiveTypeSizeInBits(ty);
   auto fromSize = mlir::LLVM::getPrimitiveTypeSizeInBits(valTy);
-  if (toSize < fromSize)
-    return rewriter.create<mlir::LLVM::TruncOp>(loc, ty, val);
-  if (toSize > fromSize)
-    return rewriter.create<mlir::LLVM::SExtOp>(loc, ty, val);
+  if (fold) {
+    if (toSize < fromSize)
+      return rewriter.createOrFold<mlir::LLVM::TruncOp>(loc, ty, val);
+    if (toSize > fromSize)
+      return rewriter.createOrFold<mlir::LLVM::SExtOp>(loc, ty, val);
+  } else {
+    if (toSize < fromSize)
+      return rewriter.create<mlir::LLVM::TruncOp>(loc, ty, val);
+    if (toSize > fromSize)
+      return rewriter.create<mlir::LLVM::SExtOp>(loc, ty, val);
+  }
   return val;
 }
 
@@ -274,16 +280,19 @@ mlir::Value ConvertFIRToLLVMPattern::computeBoxSize(
 // Find the Block in which the alloca should be inserted.
 // The order to recursively find the proper block:
 // 1. An OpenMP Op that will be outlined.
-// 2. A LLVMFuncOp
-// 3. The first ancestor that is an OpenMP Op or a LLVMFuncOp
-mlir::Block *
-ConvertFIRToLLVMPattern::getBlockForAllocaInsert(mlir::Operation *op) const {
+// 2. An OpenMP or OpenACC Op with one or more regions holding executable code.
+// 3. A LLVMFuncOp
+// 4. The first ancestor that is one of the above.
+mlir::Block *ConvertFIRToLLVMPattern::getBlockForAllocaInsert(
+    mlir::Operation *op, mlir::Region *parentRegion) const {
   if (auto iface = mlir::dyn_cast<mlir::omp::OutlineableOpenMPOpInterface>(op))
     return iface.getAllocaBlock();
+  if (auto recipeIface = mlir::dyn_cast<mlir::accomp::RecipeInterface>(op))
+    return recipeIface.getAllocaBlock(*parentRegion);
   if (auto llvmFuncOp = mlir::dyn_cast<mlir::LLVM::LLVMFuncOp>(op))
     return &llvmFuncOp.front();
 
-  return getBlockForAllocaInsert(op->getParentOp());
+  return getBlockForAllocaInsert(op->getParentOp(), parentRegion);
 }
 
 // Generate an alloca of size 1 for an object of type \p llvmObjectTy in the
@@ -297,16 +306,9 @@ mlir::Value ConvertFIRToLLVMPattern::genAllocaAndAddrCastWithType(
     mlir::ConversionPatternRewriter &rewriter) const {
   auto thisPt = rewriter.saveInsertionPoint();
   mlir::Operation *parentOp = rewriter.getInsertionBlock()->getParentOp();
-  if (mlir::isa<mlir::omp::DeclareReductionOp>(parentOp) ||
-      mlir::isa<mlir::omp::PrivateClauseOp>(parentOp)) {
-    // DeclareReductionOp & PrivateClauseOp have multiple child regions. We want
-    // to get the first block of whichever of those regions we are currently in
-    mlir::Region *parentRegion = rewriter.getInsertionBlock()->getParent();
-    rewriter.setInsertionPointToStart(&parentRegion->front());
-  } else {
-    mlir::Block *insertBlock = getBlockForAllocaInsert(parentOp);
-    rewriter.setInsertionPointToStart(insertBlock);
-  }
+  mlir::Region *parentRegion = rewriter.getInsertionBlock()->getParent();
+  mlir::Block *insertBlock = getBlockForAllocaInsert(parentOp, parentRegion);
+  rewriter.setInsertionPointToStart(insertBlock);
   auto size = genI32Constant(loc, rewriter, 1);
   unsigned allocaAs = getAllocaAddressSpace(rewriter);
   unsigned programAs = getProgramAddressSpace(rewriter);

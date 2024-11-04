@@ -83,6 +83,8 @@ class CGDebugInfo {
 #include "clang/Basic/OpenCLExtensionTypes.def"
 #define WASM_TYPE(Name, Id, SingletonId) llvm::DIType *SingletonId = nullptr;
 #include "clang/Basic/WebAssemblyReferenceTypes.def"
+#define AMDGPU_TYPE(Name, Id, SingletonId) llvm::DIType *SingletonId = nullptr;
+#include "clang/Basic/AMDGPUTypes.def"
 
   /// Cache of previously constructed Types.
   llvm::DenseMap<const void *, llvm::TrackingMDRef> TypeCache;
@@ -337,9 +339,6 @@ class CGDebugInfo {
   llvm::DIDerivedType *createBitFieldType(const FieldDecl *BitFieldDecl,
                                           llvm::DIScope *RecordTy,
                                           const RecordDecl *RD);
-
-  /// Create type for binding declarations.
-  llvm::DIType *CreateBindingDeclType(const BindingDecl *BD);
 
   /// Create an anonnymous zero-size separator for bit-field-decl if needed on
   /// the target.
