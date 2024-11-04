@@ -40,10 +40,10 @@ define zeroext i1 @_Z8test_cosv() {
 ; CHECK-NEXT:    subl $8, %esp
 ; CHECK-NEXT:    .cfi_def_cfa_offset 12
 ; CHECK-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; CHECK-NEXT:    movss {{.*#+}} xmm2 = mem[0],zero,zero,zero
+; CHECK-NEXT:    movss {{.*#+}} xmm2 = [8.70000004E-1,0.0E+0,0.0E+0,0.0E+0]
 ; CHECK-NEXT:    divss {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; CHECK-NEXT:    movss %xmm0, {{[0-9]+}}(%esp)
-; CHECK-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; CHECK-NEXT:    movss {{.*#+}} xmm0 = [8.60000014E-1,0.0E+0,0.0E+0,0.0E+0]
 ; CHECK-NEXT:    flds {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    fcos

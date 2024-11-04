@@ -632,8 +632,12 @@ void AArch64PassConfig::addIRPasses() {
   addPass(createSMEABIPass());
 
   // Add Control Flow Guard checks.
-  if (TM->getTargetTriple().isOSWindows())
-    addPass(createCFGuardCheckPass());
+  if (TM->getTargetTriple().isOSWindows()) {
+    if (TM->getTargetTriple().isWindowsArm64EC())
+      addPass(createAArch64Arm64ECCallLoweringPass());
+    else
+      addPass(createCFGuardCheckPass());
+  }
 
   if (TM->Options.JMCInstrument)
     addPass(createJMCInstrumenterPass());

@@ -126,11 +126,11 @@ subroutine lastprivate()
             x = x * 10
 !CHECK: omp.section {
 !CHECK: %[[PRIVATE_X:.*]] = fir.alloca i32 {bindc_name = "x", pinned, uniq_name = "_QFlastprivateEx"}
-!CHECK: %[[true:.*]] = arith.constant true
 !CHECK: %[[temp:.*]] = fir.load %[[PRIVATE_X]] : !fir.ref<i32>
 !CHECK: %[[const:.*]] = arith.constant 1 : i32
 !CHECK: %[[result:.*]] = arith.addi %[[temp]], %[[const]] : i32
 !CHECK: fir.store %[[result]] to %[[PRIVATE_X]] : !fir.ref<i32>
+!CHECK: %[[true:.*]] = arith.constant true
 !CHECK: fir.if %[[true]] {
 !CHECK: %[[temp:.*]] = fir.load %[[PRIVATE_X]] : !fir.ref<i32>
 !CHECK: fir.store %[[temp]] to %[[X]] : !fir.ref<i32>
@@ -163,11 +163,11 @@ subroutine lastprivate()
 !CHECK: %[[temp:.*]] = fir.load %[[X]] : !fir.ref<i32>
 !CHECK: fir.store %[[temp]] to %[[PRIVATE_X]] : !fir.ref<i32>
 !CHECK: omp.barrier
-!CHECK: %[[true:.*]] = arith.constant true
 !CHECK: %[[temp:.*]] = fir.load %[[PRIVATE_X]] : !fir.ref<i32>
 !CHECK: %[[const:.*]] = arith.constant 1 : i32
 !CHECK: %[[result:.*]] = arith.addi %[[temp]], %[[const]] : i32
 !CHECK: fir.store %[[result]] to %[[PRIVATE_X]] : !fir.ref<i32>
+!CHECK: %[[true:.*]] = arith.constant true
 !CHECK: fir.if %true {
 !CHECK: %[[temp:.*]] = fir.load %[[PRIVATE_X]] : !fir.ref<i32>
 !CHECK: fir.store %[[temp]] to %[[X]] : !fir.ref<i32>
@@ -200,11 +200,11 @@ subroutine lastprivate()
 !CHECK: %[[temp:.*]] = fir.load %[[X]] : !fir.ref<i32>
 !CHECK: fir.store %[[temp]] to %[[PRIVATE_X]] : !fir.ref<i32>
 !CHECK: omp.barrier
-!CHECK: %[[true:.*]] = arith.constant true
 !CHECK: %[[temp:.*]] = fir.load %[[PRIVATE_X]] : !fir.ref<i32>
 !CHECK: %[[const:.*]] = arith.constant 1 : i32
 !CHECK: %[[result:.*]] = arith.addi %[[temp]], %[[const]] : i32
 !CHECK: fir.store %[[result]] to %[[PRIVATE_X]] : !fir.ref<i32>
+!CHECK: %[[true:.*]] = arith.constant true
 !CHECK: fir.if %true {
 !CHECK: %[[temp:.*]] = fir.load %[[PRIVATE_X]] : !fir.ref<i32>
 !CHECK: fir.store %[[temp]] to %[[X]] : !fir.ref<i32>

@@ -1728,6 +1728,18 @@ extern __inline
 
 extern __inline
     __attribute__((__gnu_inline__, __always_inline__, __artificial__)) __m256
+    __lasx_xvfrecipe_s(__m256 _1) {
+  return (__m256)__builtin_lasx_xvfrecipe_s((v8f32)_1);
+}
+
+extern __inline
+    __attribute__((__gnu_inline__, __always_inline__, __artificial__)) __m256d
+    __lasx_xvfrecipe_d(__m256d _1) {
+  return (__m256d)__builtin_lasx_xvfrecipe_d((v4f64)_1);
+}
+
+extern __inline
+    __attribute__((__gnu_inline__, __always_inline__, __artificial__)) __m256
     __lasx_xvfrint_s(__m256 _1) {
   return (__m256)__builtin_lasx_xvfrint_s((v8f32)_1);
 }
@@ -1748,6 +1760,18 @@ extern __inline
     __attribute__((__gnu_inline__, __always_inline__, __artificial__)) __m256d
     __lasx_xvfrsqrt_d(__m256d _1) {
   return (__m256d)__builtin_lasx_xvfrsqrt_d((v4f64)_1);
+}
+
+extern __inline
+    __attribute__((__gnu_inline__, __always_inline__, __artificial__)) __m256
+    __lasx_xvfrsqrte_s(__m256 _1) {
+  return (__m256)__builtin_lasx_xvfrsqrte_s((v8f32)_1);
+}
+
+extern __inline
+    __attribute__((__gnu_inline__, __always_inline__, __artificial__)) __m256d
+    __lasx_xvfrsqrte_d(__m256d _1) {
+  return (__m256d)__builtin_lasx_xvfrsqrte_d((v4f64)_1);
 }
 
 extern __inline

@@ -6,7 +6,7 @@
 // RUN: %clang_cc1 -fclang-abi-compat=latest -DSME_OVERLOADED_FORMS -triple aarch64-none-linux-gnu -target-feature +sme -target-feature +sve -target-feature +bf16 -S -O1 -Werror -emit-llvm -o - -x c++ %s | FileCheck %s -check-prefixes=CHECK,CHECK-CXX
 // RUN: %clang_cc1 -fclang-abi-compat=latest -triple aarch64-none-linux-gnu -target-feature +sme -target-feature +sve -target-feature +bf16 -S -O1 -Werror -o /dev/null %s
 
-#include <arm_sme_draft_spec_subject_to_change.h>
+#include <arm_sme.h>
 
 #ifdef SME_OVERLOADED_FORMS
 #define SME_ACLE_FUNC(A1,A2_UNUSED,A3) A1##A3

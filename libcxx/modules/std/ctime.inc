@@ -24,5 +24,5 @@ export namespace std {
   using std::mktime;
   using std::strftime;
   using std::time;
-  using std::timespec_get;
+  using std::timespec_get _LIBCPP_USING_IF_EXISTS;
 } // namespace std

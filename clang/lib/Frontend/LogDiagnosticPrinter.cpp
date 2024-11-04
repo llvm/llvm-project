@@ -134,7 +134,7 @@ void LogDiagnosticPrinter::HandleDiagnostic(DiagnosticsEngine::Level Level,
   // Format the message.
   SmallString<100> MessageStr;
   Info.FormatDiagnostic(MessageStr);
-  DE.Message = std::string(MessageStr.str());
+  DE.Message = std::string(MessageStr);
 
   // Set the location information.
   DE.Filename = "";

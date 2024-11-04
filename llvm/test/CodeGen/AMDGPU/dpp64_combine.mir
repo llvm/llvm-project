@@ -1,5 +1,5 @@
-# RUN: llc -march=amdgcn -mcpu=gfx90a -run-pass=gcn-dpp-combine -verify-machineinstrs -o - %s | FileCheck %s --check-prefix=GCN
-# RUN: llc -march=amdgcn -mcpu=gfx940 -run-pass=gcn-dpp-combine -verify-machineinstrs -o - %s | FileCheck %s --check-prefix=GCN
+# RUN: llc -mtriple=amdgcn -mcpu=gfx90a -run-pass=gcn-dpp-combine -verify-machineinstrs -o - %s | FileCheck %s --check-prefix=GCN
+# RUN: llc -mtriple=amdgcn -mcpu=gfx940 -run-pass=gcn-dpp-combine -verify-machineinstrs -o - %s | FileCheck %s --check-prefix=GCN
 
 ---
 # GCN-LABEL: name: dpp64_old_impdef

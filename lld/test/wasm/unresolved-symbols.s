@@ -18,10 +18,15 @@
 # RUN:   FileCheck -check-prefix=ERR1 %s
 
 ## Ignore all should not produce error and should not produce
-# any imports.  It should create a stub function in the place of the missing
-# function symbol.
+## any imports.  It should create a stub function in the place of the missing
+## function symbol.
 # RUN: wasm-ld %t1.o -o %t2.wasm --unresolved-symbols=ignore-all
 # RUN: obj2yaml %t2.wasm | FileCheck -check-prefix=IGNORE %s
+
+## --warn-unresolved-symbols should behave the same
+# RUN: wasm-ld %t1.o -o %t2.wasm --warn-unresolved-symbols
+# RUN: obj2yaml %t2.wasm | FileCheck -check-prefix=IGNORE %s
+
 # IGNORE-NOT: - Type:            IMPORT
 # IGNORE-NOT: - Type:            ELEM
 #
@@ -52,10 +57,10 @@
 # IGNORE-NEXT:      - Index:           3
 # IGNORE-NEXT:        Name:            get_func_addr
 
-## --import-undefined should handle unresolved funtions symbols
-# by importing them but still report errors/warning for missing data symbols.
-# `--allow-undefined` should behave like `--import-undefined` +
-# `--unresolve-symbols=ignore`
+## --import-undefined should handle unresolved functions symbols
+## by importing them but still report errors/warning for missing data symbols.
+## `--allow-undefined` should behave like `--import-undefined` +
+## `--unresolve-symbols=ignore`
 # RUN: wasm-ld %t1.o -o %t3.wasm --import-undefined --unresolved-symbols=ignore-all
 # RUN: obj2yaml %t3.wasm | FileCheck -check-prefix=IMPORT %s
 #      IMPORT:  - Type:            IMPORT

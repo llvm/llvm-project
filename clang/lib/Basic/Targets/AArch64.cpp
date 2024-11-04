@@ -622,9 +622,8 @@ AArch64TargetInfo::getVScaleRange(const LangOptions &LangOpts) const {
 unsigned AArch64TargetInfo::multiVersionSortPriority(StringRef Name) const {
   if (Name == "default")
     return 0;
-  for (const auto &E : llvm::AArch64::Extensions)
-    if (Name == E.Name)
-      return E.FmvPriority;
+  if (auto Ext = llvm::AArch64::parseArchExtension(Name))
+    return Ext->FmvPriority;
   return 0;
 }
 
@@ -634,24 +633,19 @@ unsigned AArch64TargetInfo::multiVersionFeatureCost() const {
 }
 
 bool AArch64TargetInfo::doesFeatureAffectCodeGen(StringRef Name) const {
-  auto F = llvm::find_if(llvm::AArch64::Extensions, [&](const auto &E) {
-    return Name == E.Name && !E.DependentFeatures.empty();
-  });
-  return F != std::end(llvm::AArch64::Extensions);
+  if (auto Ext = llvm::AArch64::parseArchExtension(Name))
+    return !Ext->DependentFeatures.empty();
+  return false;
 }
 
 StringRef AArch64TargetInfo::getFeatureDependencies(StringRef Name) const {
-  auto F = llvm::find_if(llvm::AArch64::Extensions,
-                         [&](const auto &E) { return Name == E.Name; });
-  return F != std::end(llvm::AArch64::Extensions) ? F->DependentFeatures
-                                                  : StringRef();
+  if (auto Ext = llvm::AArch64::parseArchExtension(Name))
+    return Ext->DependentFeatures;
+  return StringRef();
 }
 
 bool AArch64TargetInfo::validateCpuSupports(StringRef FeatureStr) const {
-  for (const auto &E : llvm::AArch64::Extensions)
-    if (FeatureStr == E.Name)
-      return true;
-  return false;
+  return llvm::AArch64::parseArchExtension(FeatureStr).has_value();
 }
 
 bool AArch64TargetInfo::hasFeature(StringRef Feature) const {
@@ -1093,8 +1087,7 @@ ParsedTargetAttr AArch64TargetInfo::parseTargetAttr(StringRef Features) const {
       FoundArch = true;
       std::pair<StringRef, StringRef> Split =
           Feature.split("=").second.trim().split("+");
-      const std::optional<llvm::AArch64::ArchInfo> AI =
-          llvm::AArch64::parseArch(Split.first);
+      const llvm::AArch64::ArchInfo *AI = llvm::AArch64::parseArch(Split.first);
 
       // Parse the architecture version, adding the required features to
       // Ret.Features.

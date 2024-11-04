@@ -166,7 +166,7 @@ SBTypeFilter::SBTypeFilter(const lldb::TypeFilterImplSP &typefilter_impl_sp)
 bool SBTypeFilter::CopyOnWrite_Impl() {
   if (!IsValid())
     return false;
-  if (m_opaque_sp.unique())
+  if (m_opaque_sp.use_count() == 1)
     return true;
 
   TypeFilterImplSP new_sp(new TypeFilterImpl(GetOptions()));

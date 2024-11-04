@@ -202,6 +202,7 @@ set(BENCHMARK_TESTS
     allocation.bench.cpp
     deque.bench.cpp
     deque_iterator.bench.cpp
+    exception_ptr.bench.cpp
     filesystem.bench.cpp
     format_to_n.bench.cpp
     format_to.bench.cpp

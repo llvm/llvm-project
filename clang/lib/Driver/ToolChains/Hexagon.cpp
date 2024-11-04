@@ -550,7 +550,7 @@ std::string HexagonToolChain::getCompilerRTPath() const {
   if (!SelectedMultilibs.empty()) {
     Dir += SelectedMultilibs.back().gccSuffix();
   }
-  return std::string(Dir.str());
+  return std::string(Dir);
 }
 
 void HexagonToolChain::getHexagonLibraryPaths(const ArgList &Args,

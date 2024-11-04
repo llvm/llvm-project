@@ -133,7 +133,7 @@ private:
 void Writer::calculateCustomSections() {
   log("calculateCustomSections");
   bool stripDebug = config->stripDebug || config->stripAll;
-  for (ObjFile *file : symtab->objectFiles) {
+  for (ObjFile *file : ctx.objectFiles) {
     for (InputChunk *section : file->customSections) {
       // Exclude COMDAT sections that are not selected for inclusion
       if (section->discarded)
@@ -207,7 +207,7 @@ void Writer::createRelocSections() {
 }
 
 void Writer::populateProducers() {
-  for (ObjFile *file : symtab->objectFiles) {
+  for (ObjFile *file : ctx.objectFiles) {
     const WasmProducerInfo &info = file->getWasmObj()->getProducerInfo();
     out.producersSec->addInfo(info);
   }
@@ -332,7 +332,7 @@ void Writer::layoutMemory() {
   uint64_t memoryPtr = 0;
 
   auto placeStack = [&]() {
-    if (config->relocatable || config->isPic)
+    if (config->relocatable || ctx.isPic)
       return;
     memoryPtr = alignTo(memoryPtr, stackAlignment);
     if (WasmSym::stackLow)
@@ -415,7 +415,7 @@ void Writer::layoutMemory() {
 
   uint64_t staticDataSize = memoryPtr - dataStart;
   log("mem: static data = " + Twine(staticDataSize));
-  if (config->isPic)
+  if (ctx.isPic)
     out.dylinkSec->memSize = staticDataSize;
 
   if (!config->stackFirst)
@@ -489,7 +489,7 @@ void Writer::layoutMemory() {
     if (max == 0) {
       // If no maxMemory config was supplied but we are building with
       // shared memory, we need to pick a sensible upper limit.
-      if (config->isPic)
+      if (ctx.isPic)
         max = maxMemorySetting;
       else
         max = memoryPtr;
@@ -568,7 +568,7 @@ void Writer::populateTargetFeatures() {
   SmallSet<std::string, 8> &allowed = out.targetFeaturesSec->features;
   bool tlsUsed = false;
 
-  if (config->isPic) {
+  if (ctx.isPic) {
     // This should not be necessary because all PIC objects should
     // contain the mutable-globals feature.
     // TODO (https://github.com/llvm/llvm-project/issues/51681)
@@ -591,7 +591,7 @@ void Writer::populateTargetFeatures() {
   }
 
   // Find the sets of used, required, and disallowed features
-  for (ObjFile *file : symtab->objectFiles) {
+  for (ObjFile *file : ctx.objectFiles) {
     StringRef fileName(file->getName());
     for (auto &feature : file->getWasmObj()->getTargetFeatures()) {
       switch (feature.Prefix) {
@@ -654,7 +654,7 @@ void Writer::populateTargetFeatures() {
   }
 
   // Validate the required and disallowed constraints for each file
-  for (ObjFile *file : symtab->objectFiles) {
+  for (ObjFile *file : ctx.objectFiles) {
     StringRef fileName(file->getName());
     SmallSet<std::string, 8> objectFeatures;
     for (const auto &feature : file->getWasmObj()->getTargetFeatures()) {
@@ -683,7 +683,7 @@ done:
   // the bss segments, so these segments need to exist in the binary.
   if (config->emitRelocs ||
       (config->memoryImport.has_value() && !allowed.count("bulk-memory")))
-    config->emitBssSegments = true;
+    ctx.emitBssSegments = true;
 
   if (allowed.count("extended-const"))
     config->extendedConst = true;
@@ -734,18 +734,18 @@ static bool shouldImport(Symbol *sym) {
     return true;
   if (!sym->isUndefined())
     return false;
-  if (sym->isWeak() && !config->relocatable && !config->isPic)
+  if (sym->isWeak() && !config->relocatable && !ctx.isPic)
     return false;
 
   // In PIC mode we only need to import functions when they are called directly.
   // Indirect usage all goes via GOT imports.
-  if (config->isPic) {
+  if (ctx.isPic) {
     if (auto *f = dyn_cast<UndefinedFunction>(sym))
       if (!f->isCalledDirectly)
         return false;
   }
 
-  if (config->isPic || config->relocatable || config->importUndefined ||
+  if (ctx.isPic || config->relocatable || config->importUndefined ||
       config->unresolvedSymbols == UnresolvedPolicy::ImportDynamic)
     return true;
   if (config->allowUndefinedSymbols.count(sym->getName()) != 0)
@@ -832,7 +832,7 @@ void Writer::populateSymtab() {
     if (sym->isUsedInRegularObj && sym->isLive())
       out.linkingSec->addToSymtab(sym);
 
-  for (ObjFile *file : symtab->objectFiles) {
+  for (ObjFile *file : ctx.objectFiles) {
     LLVM_DEBUG(dbgs() << "Local symtab entries: " << file->getName() << "\n");
     for (Symbol *sym : file->getSymbols())
       if (sym->isLocal() && !isa<SectionSymbol>(sym) && sym->isLive())
@@ -848,7 +848,7 @@ void Writer::calculateTypes() {
   // 4. The signatures of all imported tags
   // 5. The signatures of all defined tags
 
-  for (ObjFile *file : symtab->objectFiles) {
+  for (ObjFile *file : ctx.objectFiles) {
     ArrayRef<WasmSignature> types = file->getWasmObj()->types();
     for (uint32_t i = 0; i < types.size(); i++)
       if (file->typeIsUsed[i])
@@ -873,7 +873,7 @@ void Writer::calculateTypes() {
 // which calls the constructors and destructors.
 void Writer::createCommandExportWrappers() {
   // This logic doesn't currently support Emscripten-style PIC mode.
-  assert(!config->isPic);
+  assert(!ctx.isPic);
 
   // If there are no ctors and there's no libc `__wasm_call_dtors` to
   // call, don't wrap the exports.
@@ -939,7 +939,7 @@ static void finalizeIndirectFunctionTable() {
 }
 
 static void scanRelocations() {
-  for (ObjFile *file : symtab->objectFiles) {
+  for (ObjFile *file : ctx.objectFiles) {
     LLVM_DEBUG(dbgs() << "scanRelocations: " << file->getName() << "\n");
     for (InputChunk *chunk : file->functions)
       scanRelocations(chunk);
@@ -955,37 +955,37 @@ void Writer::assignIndexes() {
   // global are effected by the number of imports.
   out.importSec->seal();
 
-  for (InputFunction *func : symtab->syntheticFunctions)
+  for (InputFunction *func : ctx.syntheticFunctions)
     out.functionSec->addFunction(func);
 
-  for (ObjFile *file : symtab->objectFiles) {
+  for (ObjFile *file : ctx.objectFiles) {
     LLVM_DEBUG(dbgs() << "Functions: " << file->getName() << "\n");
     for (InputFunction *func : file->functions)
       out.functionSec->addFunction(func);
   }
 
-  for (InputGlobal *global : symtab->syntheticGlobals)
+  for (InputGlobal *global : ctx.syntheticGlobals)
     out.globalSec->addGlobal(global);
 
-  for (ObjFile *file : symtab->objectFiles) {
+  for (ObjFile *file : ctx.objectFiles) {
     LLVM_DEBUG(dbgs() << "Globals: " << file->getName() << "\n");
     for (InputGlobal *global : file->globals)
       out.globalSec->addGlobal(global);
   }
 
-  for (ObjFile *file : symtab->objectFiles) {
+  for (ObjFile *file : ctx.objectFiles) {
     LLVM_DEBUG(dbgs() << "Tags: " << file->getName() << "\n");
     for (InputTag *tag : file->tags)
       out.tagSec->addTag(tag);
   }
 
-  for (ObjFile *file : symtab->objectFiles) {
+  for (ObjFile *file : ctx.objectFiles) {
     LLVM_DEBUG(dbgs() << "Tables: " << file->getName() << "\n");
     for (InputTable *table : file->tables)
       out.tableSec->addTable(table);
   }
 
-  for (InputTable *table : symtab->syntheticTables)
+  for (InputTable *table : ctx.syntheticTables)
     out.tableSec->addTable(table);
 
   out.globalSec->assignIndexes();
@@ -1022,7 +1022,7 @@ OutputSegment *Writer::createOutputSegment(StringRef name) {
 }
 
 void Writer::createOutputSegments() {
-  for (ObjFile *file : symtab->objectFiles) {
+  for (ObjFile *file : ctx.objectFiles) {
     for (InputChunk *segment : file->segments) {
       if (!segment->live)
         continue;
@@ -1072,7 +1072,7 @@ void Writer::combineOutputSegments() {
   // This restriction does not apply when the extended const extension is
   // available: https://github.com/WebAssembly/extended-const
   assert(!config->extendedConst);
-  assert(config->isPic && !config->sharedMemory);
+  assert(ctx.isPic && !config->sharedMemory);
   if (segments.size() <= 1)
     return;
   OutputSegment *combined = make<OutputSegment>(".data");
@@ -1174,7 +1174,7 @@ void Writer::createSyntheticInitFunctions() {
     }
   }
 
-  if (config->isPic && out.globalSec->needsRelocations()) {
+  if (ctx.isPic && out.globalSec->needsRelocations()) {
     WasmSym::applyGlobalRelocs = symtab->addSyntheticFunction(
         "__wasm_apply_global_relocs", WASM_SYMBOL_VISIBILITY_HIDDEN,
         make<SyntheticFunction>(nullSignature, "__wasm_apply_global_relocs"));
@@ -1257,7 +1257,7 @@ void Writer::createInitMemoryFunction() {
     //    (i32.const 1)
 
     auto writeGetFlagAddress = [&]() {
-      if (config->isPic) {
+      if (ctx.isPic) {
         writeU8(os, WASM_OPCODE_LOCAL_GET, "local.get");
         writeUleb128(os, 0, "local 0");
       } else {
@@ -1267,7 +1267,7 @@ void Writer::createInitMemoryFunction() {
 
     if (config->sharedMemory) {
       // With PIC code we cache the flag address in local 0
-      if (config->isPic) {
+      if (ctx.isPic) {
         writeUleb128(os, 1, "num local decls");
         writeUleb128(os, 2, "local count");
         writeU8(os, is64 ? WASM_TYPE_I64 : WASM_TYPE_I32, "address type");
@@ -1317,7 +1317,7 @@ void Writer::createInitMemoryFunction() {
         // instructions take as their first argument the destination
         // address.
         writePtrConst(os, s->startVA, is64, "destination address");
-        if (config->isPic) {
+        if (ctx.isPic) {
           writeU8(os, WASM_OPCODE_GLOBAL_GET, "GLOBAL_GET");
           writeUleb128(os, WasmSym::memoryBase->getGlobalIndex(),
                        "__memory_base");
@@ -1329,7 +1329,7 @@ void Writer::createInitMemoryFunction() {
         // global.  This allows the runtime to use this static copy of the
         // TLS data for the first/main thread.
         if (config->sharedMemory && s->isTLS()) {
-          if (config->isPic) {
+          if (ctx.isPic) {
             // Cache the result of the addionion in local 0
             writeU8(os, WASM_OPCODE_LOCAL_TEE, "local.tee");
             writeUleb128(os, 1, "local 1");
@@ -1339,7 +1339,7 @@ void Writer::createInitMemoryFunction() {
           writeU8(os, WASM_OPCODE_GLOBAL_SET, "GLOBAL_SET");
           writeUleb128(os, WasmSym::tlsBase->getGlobalIndex(),
                        "__tls_base");
-          if (config->isPic) {
+          if (ctx.isPic) {
             writeU8(os, WASM_OPCODE_LOCAL_GET, "local.tee");
             writeUleb128(os, 1, "local 1");
           }
@@ -1639,7 +1639,7 @@ void Writer::calculateInitFunctions() {
   if (!config->relocatable && !WasmSym::callCtors->isLive())
     return;
 
-  for (ObjFile *file : symtab->objectFiles) {
+  for (ObjFile *file : ctx.objectFiles) {
     const WasmLinkingData &l = file->getWasmObj()->linkingData();
     for (const WasmInitFunc &f : l.InitFunctions) {
       FunctionSymbol *sym = file->getFunctionSymbol(f.Symbol);
@@ -1687,7 +1687,7 @@ void Writer::createSyntheticSectionsPostLayout() {
 void Writer::run() {
   // For PIC code the table base is assigned dynamically by the loader.
   // For non-PIC, we start at 1 so that accessing table index 0 always traps.
-  if (!config->isPic) {
+  if (!ctx.isPic) {
     if (WasmSym::definedTableBase)
       WasmSym::definedTableBase->setVA(config->tableBase);
     if (WasmSym::definedTableBase32)
@@ -1734,7 +1734,7 @@ void Writer::run() {
   // `__memory_base` import.  Unless we support the extended const expression we
   // can't do addition inside the constant expression, so we much combine the
   // segments into a single one that can live at `__memory_base`.
-  if (config->isPic && !config->extendedConst && !config->sharedMemory) {
+  if (ctx.isPic && !config->extendedConst && !config->sharedMemory) {
     // In shared memory mode all data segments are passive and initialized
     // via __wasm_init_memory.
     log("-- combineOutputSegments");
@@ -1779,7 +1779,7 @@ void Writer::run() {
     // If the input contains a call to `__wasm_call_ctors`, either in one of
     // the input objects or an explicit export from the command-line, we
     // assume ctors and dtors are taken care of already.
-    if (!config->relocatable && !config->isPic &&
+    if (!config->relocatable && !ctx.isPic &&
         !WasmSym::callCtors->isUsedInRegularObj &&
         !WasmSym::callCtors->isExported()) {
       log("-- createCommandExportWrappers");

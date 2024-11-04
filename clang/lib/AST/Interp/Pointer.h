@@ -98,7 +98,7 @@ public:
   }
 
   /// Converts the pointer to an APValue that is an rvalue.
-  APValue toRValue(const Context &Ctx) const;
+  std::optional<APValue> toRValue(const Context &Ctx) const;
 
   /// Offsets a pointer inside an array.
   [[nodiscard]] Pointer atIndex(unsigned Idx) const {
@@ -379,6 +379,7 @@ public:
       return *reinterpret_cast<T *>(Pointee->rawData() + Base +
                                     sizeof(InitMapPtr));
 
+    assert(Offset + sizeof(T) <= Pointee->getDescriptor()->getAllocSize());
     return *reinterpret_cast<T *>(Pointee->rawData() + Offset);
   }
 

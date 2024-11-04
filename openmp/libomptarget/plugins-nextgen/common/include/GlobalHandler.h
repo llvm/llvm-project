@@ -47,9 +47,6 @@ public:
   GlobalTy(const std::string &Name, uint32_t Size, void *Ptr = nullptr)
       : Name(Name), Size(Size), Ptr(Ptr) {}
 
-  GlobalTy(const __tgt_offload_entry &Entry)
-      : Name(Entry.name), Size(Entry.size), Ptr(Entry.addr) {}
-
   const std::string &getName() const { return Name; }
   uint32_t getSize() const { return Size; }
   void *getPtr() const { return Ptr; }

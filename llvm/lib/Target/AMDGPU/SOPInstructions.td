@@ -292,8 +292,11 @@ def S_BITSET0_B64 : SOP1_64_32 <"s_bitset0_b64", [], 1>;
 def S_BITSET1_B32 : SOP1_32    <"s_bitset1_b32", [], 1>;
 def S_BITSET1_B64 : SOP1_64_32 <"s_bitset1_b64", [], 1>;
 
+def S_GETPC_B64 : SOP1_64_0  <"s_getpc_b64">;
+// PSEUDO includes a workaround for a hardware anomaly where some ASICs
+// zero-extend the result from 48 bits instead of sign-extending.
 let isReMaterializable = 1 in
-def S_GETPC_B64 : SOP1_64_0  <"s_getpc_b64",
+def S_GETPC_B64_pseudo : SOP1_64_0  <"s_getpc_b64",
   [(set i64:$sdst, (int_amdgcn_s_getpc))]
 >;
 
@@ -502,8 +505,6 @@ def S_WAKEUP_BARRIER_IMM : SOP1_Pseudo <"s_wakeup_barrier", (outs),
   (ins SplitBarrier:$src0), "$src0", []>{
   let SchedRW = [WriteBarrier];
   let isConvergent = 1;
-
-
 }
 } // End has_sdst = 0
 
@@ -1124,7 +1125,7 @@ class S_SETREG_B32_Pseudo <list<dag> pattern=[]> : SOPK_Pseudo <
   pattern>;
 
 def S_SETREG_B32 : S_SETREG_B32_Pseudo <
-  [(int_amdgcn_s_setreg (i32 timm:$simm16), i32:$sdst)]> {
+  [(int_amdgcn_s_setreg (i32 SIMM16bit:$simm16), i32:$sdst)]> {
   // Use custom inserter to optimize some cases to
   // S_DENORM_MODE/S_ROUND_MODE/S_SETREG_B32_mode.
   let usesCustomInserter = 1;
@@ -1597,6 +1598,13 @@ def S_WAITCNT : SOPP_Pseudo <"s_waitcnt" , (ins SWaitCnt:$simm16), "$simm16",
 // that doesn't access memory.
 def S_WAITCNT_soft : SOPP_Pseudo <"s_soft_waitcnt" , (ins SWaitCnt:$simm16), "$simm16">;
 def S_WAITCNT_VSCNT_soft : SOPK_WAITCNT<"s_soft_waitcnt_vscnt">;
+let SubtargetPredicate = isGFX12Plus in {
+  def S_WAIT_LOADCNT_soft : SOPP_Pseudo <"s_soft_wait_loadcnt", (ins s16imm:$simm16), "$simm16">;
+  def S_WAIT_STORECNT_soft : SOPP_Pseudo <"s_soft_wait_storecnt", (ins s16imm:$simm16), "$simm16">;
+  def S_WAIT_SAMPLECNT_soft : SOPP_Pseudo <"s_soft_wait_samplecnt", (ins s16imm:$simm16), "$simm16">;
+  def S_WAIT_BVHCNT_soft : SOPP_Pseudo <"s_soft_wait_bvhcnt", (ins s16imm:$simm16), "$simm16">;
+  def S_WAIT_DSCNT_soft : SOPP_Pseudo <"s_soft_wait_dscnt", (ins s16imm:$simm16), "$simm16">;
+}
 
 def S_SETHALT : SOPP_Pseudo <"s_sethalt" , (ins i32imm:$simm16), "$simm16",
     [(int_amdgcn_s_sethalt timm:$simm16)]>;
@@ -1712,23 +1720,30 @@ let SubtargetPredicate = HasVGPRSingleUseHintInsts in {
 
 let SubtargetPredicate = isGFX12Plus, hasSideEffects = 1 in {
   def S_WAIT_LOADCNT :
-    SOPP_Pseudo<"s_wait_loadcnt", (ins s16imm:$simm16), "$simm16">;
+    SOPP_Pseudo<"s_wait_loadcnt", (ins s16imm:$simm16), "$simm16",
+                [(int_amdgcn_s_wait_loadcnt timm:$simm16)]>;
   def S_WAIT_LOADCNT_DSCNT :
     SOPP_Pseudo<"s_wait_loadcnt_dscnt", (ins s16imm:$simm16), "$simm16">;
   def S_WAIT_STORECNT :
-    SOPP_Pseudo<"s_wait_storecnt", (ins s16imm:$simm16), "$simm16">;
+    SOPP_Pseudo<"s_wait_storecnt", (ins s16imm:$simm16), "$simm16",
+                [(int_amdgcn_s_wait_storecnt timm:$simm16)]>;
   def S_WAIT_STORECNT_DSCNT :
     SOPP_Pseudo<"s_wait_storecnt_dscnt", (ins s16imm:$simm16), "$simm16">;
   def S_WAIT_SAMPLECNT :
-    SOPP_Pseudo<"s_wait_samplecnt", (ins s16imm:$simm16), "$simm16">;
+    SOPP_Pseudo<"s_wait_samplecnt", (ins s16imm:$simm16), "$simm16",
+                [(int_amdgcn_s_wait_samplecnt timm:$simm16)]>;
   def S_WAIT_BVHCNT :
-    SOPP_Pseudo<"s_wait_bvhcnt", (ins s16imm:$simm16), "$simm16">;
+    SOPP_Pseudo<"s_wait_bvhcnt", (ins s16imm:$simm16), "$simm16",
+                [(int_amdgcn_s_wait_bvhcnt timm:$simm16)]>;
   def S_WAIT_EXPCNT :
-    SOPP_Pseudo<"s_wait_expcnt", (ins s16imm:$simm16), "$simm16">;
+    SOPP_Pseudo<"s_wait_expcnt", (ins s16imm:$simm16), "$simm16",
+                [(int_amdgcn_s_wait_expcnt timm:$simm16)]>;
   def S_WAIT_DSCNT :
-    SOPP_Pseudo<"s_wait_dscnt", (ins s16imm:$simm16), "$simm16">;
+    SOPP_Pseudo<"s_wait_dscnt", (ins s16imm:$simm16), "$simm16",
+                [(int_amdgcn_s_wait_dscnt timm:$simm16)]>;
   def S_WAIT_KMCNT :
-    SOPP_Pseudo<"s_wait_kmcnt", (ins s16imm:$simm16), "$simm16">;
+    SOPP_Pseudo<"s_wait_kmcnt", (ins s16imm:$simm16), "$simm16",
+                [(int_amdgcn_s_wait_kmcnt timm:$simm16)]>;
 } // End SubtargetPredicate = isGFX12Plus, hasSideEffects = 1
 
 //===----------------------------------------------------------------------===//
@@ -1768,10 +1783,10 @@ def : GCNPat<
   (S_SEXT_I32_I16 $src)
 >;
 
-def : GCNPat <
-  (int_amdgcn_s_wait_event_export_ready),
-    (S_WAIT_EVENT (i16 0))
->;
+let SubtargetPredicate = isNotGFX12Plus in
+  def : GCNPat <(int_amdgcn_s_wait_event_export_ready), (S_WAIT_EVENT (i16 0))>;
+let SubtargetPredicate = isGFX12Plus in
+  def : GCNPat <(int_amdgcn_s_wait_event_export_ready), (S_WAIT_EVENT (i16 1))>;
 
 // The first 10 bits of the mode register are the core FP mode on all
 // subtargets.
@@ -2610,7 +2625,7 @@ multiclass SOPP_Real_With_Relaxation_gfx11_gfx12<bits<7>op> :
 defm S_SETKILL                    : SOPP_Real_32_gfx11_gfx12<0x001>;
 defm S_SETHALT                    : SOPP_Real_32_gfx11_gfx12<0x002>;
 defm S_SLEEP                      : SOPP_Real_32_gfx11_gfx12<0x003>;
-defm S_SET_INST_PREFETCH_DISTANCE : SOPP_Real_32_Renamed_gfx11_gfx12<0x004, S_INST_PREFETCH, "s_set_inst_prefetch_distance">;
+defm S_SET_INST_PREFETCH_DISTANCE : SOPP_Real_32_Renamed_gfx11<0x004, S_INST_PREFETCH, "s_set_inst_prefetch_distance">;
 defm S_CLAUSE                     : SOPP_Real_32_gfx11_gfx12<0x005>;
 defm S_DELAY_ALU                  : SOPP_Real_32_gfx11_gfx12<0x007>;
 defm S_WAITCNT_DEPCTR             : SOPP_Real_32_gfx11<0x008>;

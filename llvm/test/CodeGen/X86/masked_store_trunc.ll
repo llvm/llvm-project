@@ -1395,7 +1395,7 @@ define void @truncstore_v4i64_v4i8(<4 x i64> %x, ptr %p, <4 x i32> %mask) {
 ; SSE4-LABEL: truncstore_v4i64_v4i8:
 ; SSE4:       # %bb.0:
 ; SSE4-NEXT:    pxor %xmm3, %xmm3
-; SSE4-NEXT:    movdqa {{.*#+}} xmm4 = <0,8,u,u,u,u,u,u,u,u,u,u,u,u,u,u>
+; SSE4-NEXT:    movdqa {{.*#+}} xmm4 = [0,8,u,u,u,u,u,u,u,u,u,u,u,u,u,u]
 ; SSE4-NEXT:    pshufb %xmm4, %xmm1
 ; SSE4-NEXT:    pshufb %xmm4, %xmm0
 ; SSE4-NEXT:    punpcklwd {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3]

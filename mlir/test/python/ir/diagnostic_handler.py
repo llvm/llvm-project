@@ -113,7 +113,7 @@ def testDiagnosticNonEmptyNotes():
     def callback(d):
         # CHECK: DIAGNOSTIC:
         # CHECK:   message='arith.addi' op requires one result
-        # CHECK:   notes=['see current operation: "arith.addi"() : () -> ()']
+        # CHECK:   notes=['see current operation: "arith.addi"() {{.*}} : () -> ()']
         print(f"DIAGNOSTIC:")
         print(f"  message={d.message}")
         print(f"  notes={list(map(str, d.notes))}")

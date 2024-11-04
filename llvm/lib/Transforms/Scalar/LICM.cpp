@@ -2323,8 +2323,8 @@ collectPromotionCandidates(MemorySSA *MSSA, AliasAnalysis *AA, Loop *L) {
   SmallVector<std::pair<SmallSetVector<Value *, 8>, bool>, 0> Result;
   for (auto [Set, HasReadsOutsideSet] : Sets) {
     SmallSetVector<Value *, 8> PointerMustAliases;
-    for (const auto &ASI : *Set)
-      PointerMustAliases.insert(ASI.getValue());
+    for (const auto &MemLoc : *Set)
+      PointerMustAliases.insert(const_cast<Value *>(MemLoc.Ptr));
     Result.emplace_back(std::move(PointerMustAliases), HasReadsOutsideSet);
   }
 

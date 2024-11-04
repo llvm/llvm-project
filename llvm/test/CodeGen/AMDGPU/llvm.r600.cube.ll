@@ -1,4 +1,4 @@
-; RUN: llc -march=r600 -mcpu=redwood < %s | FileCheck %s
+; RUN: llc -mtriple=r600 -mcpu=redwood < %s | FileCheck %s
 
 ; CHECK-LABEL: {{^}}cube:
 ; CHECK: CUBE T{{[0-9]}}.X

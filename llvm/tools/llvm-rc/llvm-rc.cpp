@@ -561,7 +561,7 @@ RcOptions parseRcOptions(ArrayRef<const char *> ArgsArr,
     SmallString<128> OutputFile(Opts.InputFile);
     llvm::sys::fs::make_absolute(OutputFile);
     llvm::sys::path::replace_extension(OutputFile, "res");
-    OutArgsInfo.push_back(std::string(OutputFile.str()));
+    OutArgsInfo.push_back(std::string(OutputFile));
   }
   if (!Opts.IsDryRun) {
     if (OutArgsInfo.size() != 1)

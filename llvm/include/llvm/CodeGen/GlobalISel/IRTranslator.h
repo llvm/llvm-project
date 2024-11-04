@@ -204,6 +204,27 @@ private:
   /// \return true if the materialization succeeded.
   bool translate(const Constant &C, Register Reg);
 
+  /// Examine any debug-info attached to the instruction (in the form of
+  /// DPValues) and translate it.
+  void translateDbgInfo(const Instruction &Inst,
+                          MachineIRBuilder &MIRBuilder);
+
+  /// Translate a debug-info record of a dbg.value into a DBG_* instruction.
+  /// Pass in all the contents of the record, rather than relying on how it's
+  /// stored.
+  void translateDbgValueRecord(Value *V, bool HasArgList,
+                         const DILocalVariable *Variable,
+                         const DIExpression *Expression, const DebugLoc &DL,
+                         MachineIRBuilder &MIRBuilder);
+
+  /// Translate a debug-info record of a dbg.declare into an indirect DBG_*
+  /// instruction. Pass in all the contents of the record, rather than relying
+  /// on how it's stored.
+  void translateDbgDeclareRecord(Value *Address, bool HasArgList,
+                         const DILocalVariable *Variable,
+                         const DIExpression *Expression, const DebugLoc &DL,
+                         MachineIRBuilder &MIRBuilder);
+
   // Translate U as a copy of V.
   bool translateCopy(const User &U, const Value &V,
                      MachineIRBuilder &MIRBuilder);
@@ -250,14 +271,14 @@ private:
   /// possible.
   std::optional<MCRegister> getArgPhysReg(Argument &Arg);
 
-  /// If DebugInst targets an Argument and its expression is an EntryValue,
-  /// lower it as an entry in the MF debug table.
-  bool translateIfEntryValueArgument(const DbgDeclareInst &DebugInst);
-
-  /// If DebugInst targets an Argument and its expression is an EntryValue,
-  /// lower as a DBG_VALUE targeting the corresponding livein register for that
-  /// Argument.
-  bool translateIfEntryValueArgument(const DbgValueInst &DebugInst,
+  /// If debug-info targets an Argument and its expression is an EntryValue,
+  /// lower it as either an entry in the MF debug table (dbg.declare), or a
+  /// DBG_VALUE targeting the corresponding livein register for that Argument
+  /// (dbg.value).
+  bool translateIfEntryValueArgument(bool isDeclare, Value *Arg,
+                                     const DILocalVariable *Var,
+                                     const DIExpression *Expr,
+                                     const DebugLoc &DL,
                                      MachineIRBuilder &MIRBuilder);
 
   bool translateInlineAsm(const CallBase &CB, MachineIRBuilder &MIRBuilder);

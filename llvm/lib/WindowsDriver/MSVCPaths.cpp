@@ -328,7 +328,7 @@ bool appendArchToWindowsSDKLibPath(int SDKMajor, SmallString<128> LibPath,
     }
   }
 
-  path = std::string(LibPath.str());
+  path = std::string(LibPath);
   return true;
 }
 
@@ -383,7 +383,7 @@ std::string getSubDirectoryPath(SubDirectoryType Type, ToolsetLayout VSLayout,
     sys::path::append(Path, "lib", SubdirName);
     break;
   }
-  return std::string(Path.str());
+  return std::string(Path);
 }
 
 bool useUniversalCRT(ToolsetLayout VSLayout, const std::string &VCToolChainPath,
@@ -720,7 +720,7 @@ bool findVCToolChainViaRegistry(std::string &Path, ToolsetLayout &VSLayout) {
       SmallString<256> VCPath(StringRef(VSInstallPath.c_str(), pos));
       sys::path::append(VCPath, "VC");
 
-      Path = std::string(VCPath.str());
+      Path = std::string(VCPath);
       VSLayout = ToolsetLayout::OlderVS;
       return true;
     }

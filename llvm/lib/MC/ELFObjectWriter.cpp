@@ -226,6 +226,8 @@ class ELFObjectWriter : public MCObjectWriter {
 
   bool SeenGnuAbi = false;
 
+  std::optional<uint8_t> OverrideABIVersion;
+
   bool hasRelocationAddend() const;
 
   bool shouldRelocateWithSymbol(const MCAssembler &Asm, const MCValue &Val,
@@ -238,6 +240,7 @@ public:
 
   void reset() override {
     SeenGnuAbi = false;
+    OverrideABIVersion.reset();
     Relocations.clear();
     Renames.clear();
     MCObjectWriter::reset();
@@ -263,6 +266,10 @@ public:
 
   void markGnuAbi() override { SeenGnuAbi = true; }
   bool seenGnuAbi() const { return SeenGnuAbi; }
+
+  bool seenOverrideABIVersion() const { return OverrideABIVersion.has_value(); }
+  uint8_t getOverrideABIVersion() const { return OverrideABIVersion.value(); }
+  void setOverrideABIVersion(uint8_t V) override { OverrideABIVersion = V; }
 
   friend struct ELFWriter;
 };
@@ -417,7 +424,9 @@ void ELFWriter::writeHeader(const MCAssembler &Asm) {
                    ? int(ELF::ELFOSABI_GNU)
                    : OSABI);
   // e_ident[EI_ABIVERSION]
-  W.OS << char(OWriter.TargetObjectWriter->getABIVersion());
+  W.OS << char(OWriter.seenOverrideABIVersion()
+                   ? OWriter.getOverrideABIVersion()
+                   : OWriter.TargetObjectWriter->getABIVersion());
 
   W.OS.write_zeros(ELF::EI_NIDENT - ELF::EI_PAD);
 

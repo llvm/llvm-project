@@ -612,7 +612,9 @@ private:
   void visitInlineAsm(const CallBase &Call,
                       const BasicBlock *EHPadBB = nullptr);
 
-  bool visitEntryValueDbgValue(const DbgValueInst &I);
+  bool visitEntryValueDbgValue(ArrayRef<const Value *> Values,
+                               DILocalVariable *Variable, DIExpression *Expr,
+                               DebugLoc DbgLoc);
   void visitIntrinsicCall(const CallInst &I, unsigned Intrinsic);
   void visitTargetIntrinsic(const CallInst &I, unsigned Intrinsic);
   void visitConstrainedFPIntrinsic(const ConstrainedFPIntrinsic &FPI);

@@ -43,14 +43,13 @@ class ExpandIfCondition : public OpRewritePattern<OpTy> {
     if (!matchPattern(op.getIfCond(), m_Constant(&constAttr))) {
       auto ifOp = rewriter.create<scf::IfOp>(op.getLoc(), TypeRange(),
                                              op.getIfCond(), false);
-      rewriter.updateRootInPlace(op, [&]() { op.getIfCondMutable().erase(0); });
+      rewriter.modifyOpInPlace(op, [&]() { op.getIfCondMutable().erase(0); });
       auto thenBodyBuilder = ifOp.getThenBodyBuilder(rewriter.getListener());
       thenBodyBuilder.clone(*op.getOperation());
       rewriter.eraseOp(op);
     } else {
       if (constAttr.getInt())
-        rewriter.updateRootInPlace(op,
-                                   [&]() { op.getIfCondMutable().erase(0); });
+        rewriter.modifyOpInPlace(op, [&]() { op.getIfCondMutable().erase(0); });
       else
         rewriter.eraseOp(op);
     }

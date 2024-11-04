@@ -1102,8 +1102,8 @@ bool ODRDiagsEmitter::diagnoseMismatch(
 
     const bool FirstVirtual = FirstMethod->isVirtualAsWritten();
     const bool SecondVirtual = SecondMethod->isVirtualAsWritten();
-    const bool FirstPure = FirstMethod->isPure();
-    const bool SecondPure = SecondMethod->isPure();
+    const bool FirstPure = FirstMethod->isPureVirtual();
+    const bool SecondPure = SecondMethod->isPureVirtual();
     if ((FirstVirtual || SecondVirtual) &&
         (FirstVirtual != SecondVirtual || FirstPure != SecondPure)) {
       DiagMethodError(MethodVirtual) << FirstPure << FirstVirtual;

@@ -116,7 +116,7 @@ void VirtualCallChecker::checkPreCall(const CallEvent &Call,
   if (!ObState)
     return;
 
-  bool IsPure = MD->isPure();
+  bool IsPure = MD->isPureVirtual();
 
   // At this point we're sure that we're calling a virtual method
   // during construction or destruction, so we'll emit a report.

@@ -10,7 +10,6 @@
 // UNSUPPORTED: GCC-ALWAYS_INLINE-FIXME
 
 // XFAIL: availability-fp_to_chars-missing
-// XFAIL: availability-print-missing
 
 // Clang modules do not work with the definiton of _LIBCPP_TESTING_PRINT_IS_TERMINAL
 // XFAIL: clang-modules-build

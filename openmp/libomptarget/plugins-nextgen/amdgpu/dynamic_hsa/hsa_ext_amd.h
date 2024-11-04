@@ -63,6 +63,7 @@ typedef enum {
 } hsa_amd_memory_pool_access_t;
 
 typedef enum hsa_amd_agent_info_s {
+  HSA_AMD_AGENT_INFO_CHIP_ID = 0xA000,
   HSA_AMD_AGENT_INFO_CACHELINE_SIZE = 0xA001,
   HSA_AMD_AGENT_INFO_COMPUTE_UNIT_COUNT = 0xA002,
   HSA_AMD_AGENT_INFO_MAX_CLOCK_FREQUENCY = 0xA003,

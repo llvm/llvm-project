@@ -19,7 +19,7 @@ struct Struct {
 void regularImplicitConversionIntegerToBoolIsNotIgnored() {
   int integer = 0;
   functionTaking<bool>(integer);
-  // CHECK-MESSAGES: :[[@LINE-1]]:24: warning: implicit conversion 'int' -> bool [readability-implicit-bool-conversion]
+  // CHECK-MESSAGES: :[[@LINE-1]]:24: warning: implicit conversion 'int' -> 'bool' [readability-implicit-bool-conversion]
   // CHECK-FIXES: functionTaking<bool>(integer != 0);
 }
 
@@ -54,12 +54,12 @@ void implicitConversionIntegerToBoolInConditionalsIsAllowed() {
 void regularImplicitConversionPointerToBoolIsNotIgnored() {
   int* pointer = nullptr;
   functionTaking<bool>(pointer);
-  // CHECK-MESSAGES: :[[@LINE-1]]:24: warning: implicit conversion 'int *' -> bool
+  // CHECK-MESSAGES: :[[@LINE-1]]:24: warning: implicit conversion 'int *' -> 'bool'
   // CHECK-FIXES: functionTaking<bool>(pointer != nullptr);
 
   int Struct::* memberPointer = &Struct::member;
   functionTaking<bool>(memberPointer);
-  // CHECK-MESSAGES: :[[@LINE-1]]:24: warning: implicit conversion 'int Struct::*' -> bool
+  // CHECK-MESSAGES: :[[@LINE-1]]:24: warning: implicit conversion 'int Struct::*' -> 'bool'
   // CHECK-FIXES: functionTaking<bool>(memberPointer != nullptr);
 }
 

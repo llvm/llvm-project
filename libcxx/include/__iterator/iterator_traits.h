@@ -121,7 +121,7 @@ private:
          __void_t<typename _Up::pointer>*           = nullptr);
 
 public:
-  static const bool value = decltype(__test<_Tp>(0, 0, 0, 0, 0))::value;
+  static const bool value = decltype(__test<_Tp>(nullptr, nullptr, nullptr, nullptr, nullptr))::value;
 };
 
 template <class _Tp>

@@ -29,7 +29,7 @@ LLVM_LIBC_FUNCTION(float, acoshf, (float x)) {
     // x < 1.
     fputil::set_errno_if_required(EDOM);
     fputil::raise_except_if_required(FE_INVALID);
-    return FPBits_t::build_quiet_nan(0);
+    return FPBits_t::build_quiet_nan().get_val();
   }
 
   if (LIBC_UNLIKELY(x_u >= 0x4f8ffb03)) {

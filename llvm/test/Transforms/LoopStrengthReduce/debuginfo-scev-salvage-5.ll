@@ -1,4 +1,5 @@
 ; RUN: opt -S -loop-reduce %s | FileCheck %s
+; RUN: opt --try-experimental-debuginfo-iterators -S -loop-reduce %s | FileCheck %s
 ; REQUIRES: x86-registered-target
 
 ;; Ensure that SCEV-based salvaging in Loop Strength Reduction can salvage

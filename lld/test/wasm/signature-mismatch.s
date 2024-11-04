@@ -8,6 +8,11 @@
 # RUN: wasm-ld -r -o %t.reloc.o %t.main.o %t.ret32.o %t.call.o 2>&1 | FileCheck %s -check-prefix=WARN
 # RUN: obj2yaml %t.reloc.o | FileCheck %s -check-prefix=RELOC
 
+# RUN: rm -f %t.a
+# RUN: ar crS %t.a %t.ret32.o %t.call.o
+# RUN: wasm-ld --export=call_ret32 --export=ret32 -o %t2.wasm %t.main.o %t.a 2>&1 | FileCheck %s -check-prefix=ARCHIVE
+# RUN: obj2yaml %t2.wasm | FileCheck %s -check-prefix=YAML
+
 # RUN: not wasm-ld --fatal-warnings -o %t.wasm %t.main.o %t.ret32.o %t.call.o 2>&1 | FileCheck %s -check-prefix=ERROR
 
 .functype ret32 (i32, i64, i32) -> (i32)
@@ -42,6 +47,10 @@ ret32_address_main:
 # WARN-NEXT: >>> defined as (i32, i64, i32) -> i32 in {{.*}}.main.o
 # WARN-NEXT: >>> defined as (f32) -> i32 in {{.*}}.ret32.o
 
+# ARCHIVE: warning: function signature mismatch: ret32
+# ARCHIVE-NEXT: >>> defined as (i32, i64, i32) -> i32 in {{.*}}.main.o
+# ARCHIVE-NEXT: >>> defined as (f32) -> i32 in {{.*}}.ret32.o
+
 # ERROR: error: function signature mismatch: ret32
 # ERROR-NEXT: >>> defined as (i32, i64, i32) -> i32 in {{.*}}.main.o
 # ERROR-NEXT: >>> defined as (f32) -> i32 in {{.*}}.ret32.o
@@ -56,7 +65,7 @@ ret32_address_main:
 
 # YAML:        - Type:            CUSTOM
 # YAML-NEXT:     Name:            name
-# YAML-NEXT:     FunctionNames:   
+# YAML-NEXT:     FunctionNames:
 # YAML-NEXT:       - Index:           0
 # YAML-NEXT:         Name:            'signature_mismatch:ret32'
 # YAML-NEXT:       - Index:           1

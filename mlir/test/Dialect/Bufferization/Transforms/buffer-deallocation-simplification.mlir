@@ -160,3 +160,14 @@ func.func @alloc_and_bbarg(%arg0: memref<5xf32>, %arg1: index, %arg2: index, %ar
 //       CHECK:     bufferization.dealloc (%[[view]] : memref<f32>)
 //   CHECK-NOT:     retain
 //       CHECK:     scf.yield %[[alloc]], %[[true]]
+
+// -----
+
+func.func @duplicate_memref(%arg0: memref<5xf32>, %arg1: memref<6xf32>, %c: i1) -> i1 {
+  %0 = bufferization.dealloc (%arg0, %arg0 : memref<5xf32>, memref<5xf32>) if (%c, %c) retain (%arg1 : memref<6xf32>)
+  return %0 : i1
+}
+
+// CHECK-LABEL: func @duplicate_memref(
+//       CHECK:   %[[r:.*]] = bufferization.dealloc (%{{.*}} : memref<5xf32>) if (%{{.*}}) retain (%{{.*}} : memref<6xf32>)
+//       CHECK:   return %[[r]]

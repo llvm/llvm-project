@@ -98,6 +98,7 @@ namespace std {
 #include <__type_traits/is_nothrow_move_constructible.h>
 #include <__type_traits/is_reference.h>
 #include <__type_traits/is_same.h>
+#include <__type_traits/is_void.h>
 #include <__type_traits/remove_cv.h>
 #include <__type_traits/remove_cvref.h>
 #include <__type_traits/remove_reference.h>
@@ -555,6 +556,7 @@ inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_AVAILABILITY_THROW_BAD_ANY_CAST _ValueType 
 
 template <class _ValueType>
 inline _LIBCPP_HIDE_FROM_ABI add_pointer_t<add_const_t<_ValueType>> any_cast(any const* __any) _NOEXCEPT {
+  static_assert(!is_void_v<_ValueType>, "_ValueType may not be void.");
   static_assert(!is_reference<_ValueType>::value, "_ValueType may not be a reference.");
   return std::any_cast<_ValueType>(const_cast<any*>(__any));
 }
@@ -572,6 +574,7 @@ inline _LIBCPP_HIDE_FROM_ABI _RetType __pointer_or_func_cast(void*, /*IsFunction
 template <class _ValueType>
 _LIBCPP_HIDE_FROM_ABI add_pointer_t<_ValueType> any_cast(any* __any) _NOEXCEPT {
   using __any_imp::_Action;
+  static_assert(!is_void_v<_ValueType>, "_ValueType may not be void.");
   static_assert(!is_reference<_ValueType>::value, "_ValueType may not be a reference.");
   typedef add_pointer_t<_ValueType> _ReturnType;
   if (__any && __any->__h_) {

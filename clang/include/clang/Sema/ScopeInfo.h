@@ -66,7 +66,7 @@ namespace sema {
 /// parsed.
 class CompoundScopeInfo {
 public:
-  /// Whether this compound stamement contains `for' or `while' loops
+  /// Whether this compound statement contains `for' or `while' loops
   /// with empty bodies.
   bool HasEmptyLoopBodies = false;
 
@@ -168,7 +168,7 @@ public:
   /// to build, the initial and final coroutine suspend points
   bool NeedsCoroutineSuspends : 1;
 
-  /// An enumeration represeting the kind of the first coroutine statement
+  /// An enumeration representing the kind of the first coroutine statement
   /// in the function. One of co_return, co_await, or co_yield.
   unsigned char FirstCoroutineStmtKind : 2;
 
@@ -220,7 +220,7 @@ public:
   /// The initial and final coroutine suspend points.
   std::pair<Stmt *, Stmt *> CoroutineSuspends;
 
-  /// The stack of currently active compound stamement scopes in the
+  /// The stack of currently active compound statement scopes in the
   /// function.
   SmallVector<CompoundScopeInfo, 4> CompoundScopes;
 

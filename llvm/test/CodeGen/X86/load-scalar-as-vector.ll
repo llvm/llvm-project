@@ -587,13 +587,13 @@ define <2 x double> @fsub_op1_constant(ptr %p) nounwind {
 define <4 x float> @fsub_op0_constant(ptr %p) nounwind {
 ; SSE-LABEL: fsub_op0_constant:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; SSE-NEXT:    movss {{.*#+}} xmm0 = [4.2E+1,0.0E+0,0.0E+0,0.0E+0]
 ; SSE-NEXT:    subss (%rdi), %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: fsub_op0_constant:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; AVX-NEXT:    vmovss {{.*#+}} xmm0 = [4.2E+1,0.0E+0,0.0E+0,0.0E+0]
 ; AVX-NEXT:    vsubss (%rdi), %xmm0, %xmm0
 ; AVX-NEXT:    retq
   %x = load float, ptr %p
@@ -641,13 +641,13 @@ define <2 x double> @fdiv_op1_constant(ptr %p) nounwind {
 define <4 x float> @fdiv_op0_constant(ptr %p) nounwind {
 ; SSE-LABEL: fdiv_op0_constant:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; SSE-NEXT:    movss {{.*#+}} xmm0 = [4.2E+1,0.0E+0,0.0E+0,0.0E+0]
 ; SSE-NEXT:    divss (%rdi), %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: fdiv_op0_constant:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; AVX-NEXT:    vmovss {{.*#+}} xmm0 = [4.2E+1,0.0E+0,0.0E+0,0.0E+0]
 ; AVX-NEXT:    vdivss (%rdi), %xmm0, %xmm0
 ; AVX-NEXT:    retq
   %x = load float, ptr %p
@@ -661,7 +661,7 @@ define <4 x float> @frem_op1_constant(ptr %p) nounwind {
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    pushq %rax
 ; SSE-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; SSE-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; SSE-NEXT:    movss {{.*#+}} xmm1 = [4.2E+1,0.0E+0,0.0E+0,0.0E+0]
 ; SSE-NEXT:    callq fmodf@PLT
 ; SSE-NEXT:    popq %rax
 ; SSE-NEXT:    retq
@@ -670,7 +670,7 @@ define <4 x float> @frem_op1_constant(ptr %p) nounwind {
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    pushq %rax
 ; AVX-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; AVX-NEXT:    vmovss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; AVX-NEXT:    vmovss {{.*#+}} xmm1 = [4.2E+1,0.0E+0,0.0E+0,0.0E+0]
 ; AVX-NEXT:    callq fmodf@PLT
 ; AVX-NEXT:    popq %rax
 ; AVX-NEXT:    retq
@@ -685,7 +685,7 @@ define <2 x double> @frem_op0_constant(ptr %p) nounwind {
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    pushq %rax
 ; SSE-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
-; SSE-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; SSE-NEXT:    movsd {{.*#+}} xmm0 = [4.2E+1,0.0E+0]
 ; SSE-NEXT:    callq fmod@PLT
 ; SSE-NEXT:    popq %rax
 ; SSE-NEXT:    retq
@@ -694,7 +694,7 @@ define <2 x double> @frem_op0_constant(ptr %p) nounwind {
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    pushq %rax
 ; AVX-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
-; AVX-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; AVX-NEXT:    vmovsd {{.*#+}} xmm0 = [4.2E+1,0.0E+0]
 ; AVX-NEXT:    callq fmod@PLT
 ; AVX-NEXT:    popq %rax
 ; AVX-NEXT:    retq

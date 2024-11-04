@@ -155,8 +155,8 @@ LIBC_INLINE int set_except(int excepts) {
 LIBC_INLINE int raise_except(int excepts) {
   float zero = 0.0f;
   float one = 1.0f;
-  float largeValue = float(FPBits<float>(FPBits<float>::MAX_NORMAL));
-  float smallValue = float(FPBits<float>(FPBits<float>::MIN_NORMAL));
+  float largeValue = FPBits<float>::max_normal().get_val();
+  float smallValue = FPBits<float>::min_normal().get_val();
   auto divfunc = [](float a, float b) {
     __asm__ __volatile__("ldr  s0, %0\n\t"
                          "ldr  s1, %1\n\t"

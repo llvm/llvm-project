@@ -21,6 +21,7 @@
 import sys
 
 sys.path.append(sys.argv[1])
+from libcxx.header_information import module_c_headers
 from libcxx.test.modules import module_test_generator
 
 generator = module_test_generator(
@@ -30,33 +31,12 @@ generator = module_test_generator(
     "%{test-tools}/clang_tidy_checks/libcxx-tidy.plugin",
     "%{cxx}",
     "%{flags} %{compile_flags}",
+    "std.compat",
 )
 
 
 print("//--- module_std_compat.sh.cpp")
 generator.write_test(
     "std.compat",
-    [
-        "cassert",
-        "cctype",
-        "cerrno",
-        "cfenv",
-        "cfloat",
-        "cinttypes",
-        "climits",
-        "clocale",
-        "cmath",
-        "csetjmp",
-        "csignal",
-        "cstdarg",
-        "cstddef",
-        "cstdint",
-        "cstdio",
-        "cstdlib",
-        "cstring",
-        "ctime",
-        "cuchar",
-        "cwchar",
-        "cwctype",
-    ],
+    module_c_headers,
 )

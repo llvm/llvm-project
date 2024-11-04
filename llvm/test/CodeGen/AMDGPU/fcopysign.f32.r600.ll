@@ -1,4 +1,4 @@
-; RUN: llc -march=r600 -mcpu=cypress < %s | FileCheck -check-prefix=EG %s
+; RUN: llc -mtriple=r600 -mcpu=cypress < %s | FileCheck -check-prefix=EG %s
 
 declare float @llvm.copysign.f32(float, float) nounwind readnone
 declare <2 x float> @llvm.copysign.v2f32(<2 x float>, <2 x float>) nounwind readnone

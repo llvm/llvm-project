@@ -32,7 +32,8 @@ namespace dataflow {
 class ControlFlowContext {
 public:
   /// Builds a ControlFlowContext from a `FunctionDecl`.
-  /// `Func.hasBody()` must be true, and `Func.isTemplated()` must be false.
+  /// `Func.doesThisDeclarationHaveABody()` must be true, and
+  /// `Func.isTemplated()` must be false.
   static llvm::Expected<ControlFlowContext> build(const FunctionDecl &Func);
 
   /// Builds a ControlFlowContext from an AST node. `D` is the function in which

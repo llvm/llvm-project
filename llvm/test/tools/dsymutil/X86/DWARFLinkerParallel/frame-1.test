@@ -1,7 +1,7 @@
 # RUN: rm -rf %t
 # RUN: mkdir -p %t
 # RUN: llc -filetype=obj %p/../../Inputs/frame-dw2.ll -o %t/frame-dw2.o
-# RUN: dsymutil --linker llvm -f -oso-prepend-path=%t -y %s -o - | \
+# RUN: dsymutil --linker parallel -f -oso-prepend-path=%t -y %s -o - | \
 # RUN:   llvm-dwarfdump -debug-frame - | FileCheck %s
 
 # This test is meant to verify that identical CIEs will get reused

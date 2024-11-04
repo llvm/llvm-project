@@ -181,8 +181,6 @@ void RTNAME(ExecuteCommandLine)(const Descriptor &command, bool wait,
     }
     FreeMemory(wcmd);
 #else
-    // terminated children do not become zombies
-    signal(SIGCHLD, SIG_IGN);
     pid_t pid{fork()};
     if (pid < 0) {
       if (!cmdstat) {
@@ -192,6 +190,19 @@ void RTNAME(ExecuteCommandLine)(const Descriptor &command, bool wait,
         CheckAndCopyCharsToDescriptor(cmdmsg, "Fork failed");
       }
     } else if (pid == 0) {
+      // Create a new session, let init process take care of zombie child
+      if (setsid() == -1) {
+        if (!cmdstat) {
+          terminator.Crash("setsid() failed with errno: %d, asynchronous "
+                           "process initiation failed.",
+              errno);
+        } else {
+          StoreIntToDescriptor(cmdstat, ASYNC_NO_SUPPORT_ERR, terminator);
+          CheckAndCopyCharsToDescriptor(cmdmsg,
+              "setsid() failed, asynchronous process initiation failed.");
+        }
+        exit(EXIT_FAILURE);
+      }
       int status{std::system(newCmd)};
       TerminationCheck(status, cmdstat, cmdmsg, terminator);
       exit(status);

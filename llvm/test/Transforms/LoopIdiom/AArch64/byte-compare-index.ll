@@ -1190,6 +1190,100 @@ while.end:
 }
 
 
+; Similar to @compare_bytes_simple, except in the while.end block we have an extra PHI
+; with unique values for each incoming block from the loop.
+define i32 @compare_bytes_simple3(ptr %a, ptr %b, ptr %c, i32 %d, i32 %len, i32 %n) {
+; CHECK-LABEL: define i32 @compare_bytes_simple3(
+; CHECK-SAME: ptr [[A:%.*]], ptr [[B:%.*]], ptr [[C:%.*]], i32 [[D:%.*]], i32 [[LEN:%.*]], i32 [[N:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[WHILE_COND:%.*]]
+; CHECK:       while.cond:
+; CHECK-NEXT:    [[LEN_ADDR:%.*]] = phi i32 [ [[LEN]], [[ENTRY:%.*]] ], [ [[INC:%.*]], [[WHILE_BODY:%.*]] ]
+; CHECK-NEXT:    [[INC]] = add i32 [[LEN_ADDR]], 1
+; CHECK-NEXT:    [[CMP_NOT:%.*]] = icmp eq i32 [[INC]], [[N]]
+; CHECK-NEXT:    br i1 [[CMP_NOT]], label [[WHILE_END:%.*]], label [[WHILE_BODY]]
+; CHECK:       while.body:
+; CHECK-NEXT:    [[IDXPROM:%.*]] = zext i32 [[INC]] to i64
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 [[IDXPROM]]
+; CHECK-NEXT:    [[TMP0:%.*]] = load i8, ptr [[ARRAYIDX]], align 1
+; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds i8, ptr [[B]], i64 [[IDXPROM]]
+; CHECK-NEXT:    [[TMP1:%.*]] = load i8, ptr [[ARRAYIDX2]], align 1
+; CHECK-NEXT:    [[CMP_NOT2:%.*]] = icmp eq i8 [[TMP0]], [[TMP1]]
+; CHECK-NEXT:    br i1 [[CMP_NOT2]], label [[WHILE_COND]], label [[WHILE_END]]
+; CHECK:       while.end:
+; CHECK-NEXT:    [[FINAL_VAL:%.*]] = phi i32 [ [[D]], [[WHILE_BODY]] ], [ [[INC]], [[WHILE_COND]] ]
+; CHECK-NEXT:    store i32 [[FINAL_VAL]], ptr [[C]], align 4
+; CHECK-NEXT:    ret i32 [[FINAL_VAL]]
+;
+; LOOP-DEL-LABEL: define i32 @compare_bytes_simple3(
+; LOOP-DEL-SAME: ptr [[A:%.*]], ptr [[B:%.*]], ptr [[C:%.*]], i32 [[D:%.*]], i32 [[LEN:%.*]], i32 [[N:%.*]]) #[[ATTR0]] {
+; LOOP-DEL-NEXT:  entry:
+; LOOP-DEL-NEXT:    br label [[WHILE_COND:%.*]]
+; LOOP-DEL:       while.cond:
+; LOOP-DEL-NEXT:    [[LEN_ADDR:%.*]] = phi i32 [ [[LEN]], [[ENTRY:%.*]] ], [ [[INC:%.*]], [[WHILE_BODY:%.*]] ]
+; LOOP-DEL-NEXT:    [[INC]] = add i32 [[LEN_ADDR]], 1
+; LOOP-DEL-NEXT:    [[CMP_NOT:%.*]] = icmp eq i32 [[INC]], [[N]]
+; LOOP-DEL-NEXT:    br i1 [[CMP_NOT]], label [[WHILE_END:%.*]], label [[WHILE_BODY]]
+; LOOP-DEL:       while.body:
+; LOOP-DEL-NEXT:    [[IDXPROM:%.*]] = zext i32 [[INC]] to i64
+; LOOP-DEL-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 [[IDXPROM]]
+; LOOP-DEL-NEXT:    [[TMP0:%.*]] = load i8, ptr [[ARRAYIDX]], align 1
+; LOOP-DEL-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds i8, ptr [[B]], i64 [[IDXPROM]]
+; LOOP-DEL-NEXT:    [[TMP1:%.*]] = load i8, ptr [[ARRAYIDX2]], align 1
+; LOOP-DEL-NEXT:    [[CMP_NOT2:%.*]] = icmp eq i8 [[TMP0]], [[TMP1]]
+; LOOP-DEL-NEXT:    br i1 [[CMP_NOT2]], label [[WHILE_COND]], label [[WHILE_END]]
+; LOOP-DEL:       while.end:
+; LOOP-DEL-NEXT:    [[FINAL_VAL:%.*]] = phi i32 [ [[D]], [[WHILE_BODY]] ], [ [[INC]], [[WHILE_COND]] ]
+; LOOP-DEL-NEXT:    store i32 [[FINAL_VAL]], ptr [[C]], align 4
+; LOOP-DEL-NEXT:    ret i32 [[FINAL_VAL]]
+;
+; NO-TRANSFORM-LABEL: define i32 @compare_bytes_simple3(
+; NO-TRANSFORM-SAME: ptr [[A:%.*]], ptr [[B:%.*]], ptr [[C:%.*]], i32 [[D:%.*]], i32 [[LEN:%.*]], i32 [[N:%.*]]) {
+; NO-TRANSFORM-NEXT:  entry:
+; NO-TRANSFORM-NEXT:    br label [[WHILE_COND:%.*]]
+; NO-TRANSFORM:       while.cond:
+; NO-TRANSFORM-NEXT:    [[LEN_ADDR:%.*]] = phi i32 [ [[LEN]], [[ENTRY:%.*]] ], [ [[INC:%.*]], [[WHILE_BODY:%.*]] ]
+; NO-TRANSFORM-NEXT:    [[INC]] = add i32 [[LEN_ADDR]], 1
+; NO-TRANSFORM-NEXT:    [[CMP_NOT:%.*]] = icmp eq i32 [[INC]], [[N]]
+; NO-TRANSFORM-NEXT:    br i1 [[CMP_NOT]], label [[WHILE_END:%.*]], label [[WHILE_BODY]]
+; NO-TRANSFORM:       while.body:
+; NO-TRANSFORM-NEXT:    [[IDXPROM:%.*]] = zext i32 [[INC]] to i64
+; NO-TRANSFORM-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 [[IDXPROM]]
+; NO-TRANSFORM-NEXT:    [[TMP0:%.*]] = load i8, ptr [[ARRAYIDX]], align 1
+; NO-TRANSFORM-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds i8, ptr [[B]], i64 [[IDXPROM]]
+; NO-TRANSFORM-NEXT:    [[TMP1:%.*]] = load i8, ptr [[ARRAYIDX2]], align 1
+; NO-TRANSFORM-NEXT:    [[CMP_NOT2:%.*]] = icmp eq i8 [[TMP0]], [[TMP1]]
+; NO-TRANSFORM-NEXT:    br i1 [[CMP_NOT2]], label [[WHILE_COND]], label [[WHILE_END]]
+; NO-TRANSFORM:       while.end:
+; NO-TRANSFORM-NEXT:    [[FINAL_VAL:%.*]] = phi i32 [ [[D]], [[WHILE_BODY]] ], [ [[INC]], [[WHILE_COND]] ]
+; NO-TRANSFORM-NEXT:    store i32 [[FINAL_VAL]], ptr [[C]], align 4
+; NO-TRANSFORM-NEXT:    ret i32 [[FINAL_VAL]]
+;
+entry:
+  br label %while.cond
+
+while.cond:
+  %len.addr = phi i32 [ %len, %entry ], [ %inc, %while.body ]
+  %inc = add i32 %len.addr, 1
+  %cmp.not = icmp eq i32 %inc, %n
+  br i1 %cmp.not, label %while.end, label %while.body
+
+while.body:
+  %idxprom = zext i32 %inc to i64
+  %arrayidx = getelementptr inbounds i8, ptr %a, i64 %idxprom
+  %0 = load i8, ptr %arrayidx
+  %arrayidx2 = getelementptr inbounds i8, ptr %b, i64 %idxprom
+  %1 = load i8, ptr %arrayidx2
+  %cmp.not2 = icmp eq i8 %0, %1
+  br i1 %cmp.not2, label %while.cond, label %while.end
+
+while.end:
+  %final_val = phi i32 [ %d, %while.body ], [ %inc, %while.cond ]
+  store i32 %final_val, ptr %c
+  ret i32 %final_val
+}
+
+
 define i32 @compare_bytes_sign_ext(ptr %a, ptr %b, i32 %len, i32 %n) {
 ; CHECK-LABEL: define i32 @compare_bytes_sign_ext(
 ; CHECK-SAME: ptr [[A:%.*]], ptr [[B:%.*]], i32 [[LEN:%.*]], i32 [[N:%.*]]) #[[ATTR0]] {

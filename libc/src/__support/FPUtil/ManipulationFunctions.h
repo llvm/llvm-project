@@ -49,13 +49,13 @@ LIBC_INLINE T modf(T x, T &iptr) {
     return x;
   } else if (bits.is_inf()) {
     iptr = x;
-    return bits.get_sign() ? T(FPBits<T>::neg_zero()) : T(FPBits<T>::zero());
+    return T(FPBits<T>::zero(bits.sign()));
   } else {
     iptr = trunc(x);
     if (x == iptr) {
       // If x is already an integer value, then return zero with the right
       // sign.
-      return bits.get_sign() ? T(FPBits<T>::neg_zero()) : T(FPBits<T>::zero());
+      return T(FPBits<T>::zero(bits.sign()));
     } else {
       return x - iptr;
     }
@@ -65,7 +65,7 @@ LIBC_INLINE T modf(T x, T &iptr) {
 template <typename T, cpp::enable_if_t<cpp::is_floating_point_v<T>, int> = 0>
 LIBC_INLINE T copysign(T x, T y) {
   FPBits<T> xbits(x);
-  xbits.set_sign(FPBits<T>(y).get_sign());
+  xbits.set_sign(FPBits<T>(y).sign());
   return T(xbits);
 }
 
@@ -103,7 +103,7 @@ LIBC_INLINE T logb(T x) {
   if (bits.is_zero()) {
     // TODO(Floating point exception): Raise div-by-zero exception.
     // TODO(errno): POSIX requires setting errno to ERANGE.
-    return T(FPBits<T>::neg_inf());
+    return T(FPBits<T>::inf(Sign::NEG));
   } else if (bits.is_nan()) {
     return x;
   } else if (bits.is_inf()) {
@@ -127,15 +127,15 @@ LIBC_INLINE T ldexp(T x, int exp) {
   // that adding |exp| to it does not lead to integer rollover. But, if |exp|
   // value is larger the exponent range for type T, then we can return infinity
   // early. Because the result of the ldexp operation can be a subnormal number,
-  // we need to accommodate the (mantissaWidht + 1) worth of shift in
+  // we need to accommodate the (mantissaWidth + 1) worth of shift in
   // calculating the limit.
   int exp_limit = FPBits<T>::MAX_BIASED_EXPONENT + FPBits<T>::FRACTION_LEN + 1;
   if (exp > exp_limit)
-    return bits.get_sign() ? T(FPBits<T>::neg_inf()) : T(FPBits<T>::inf());
+    return T(FPBits<T>::inf(bits.sign()));
 
   // Similarly on the negative side we return zero early if |exp| is too small.
   if (exp < -exp_limit)
-    return bits.get_sign() ? T(FPBits<T>::neg_zero()) : T(FPBits<T>::zero());
+    return T(FPBits<T>::zero(bits.sign()));
 
   // For all other values, NormalFloat to T conversion handles it the right way.
   NormalFloat<T> normal(bits);
@@ -164,26 +164,22 @@ LIBC_INLINE T nextafter(T from, U to) {
     return static_cast<T>(to);
 
   using StorageType = typename FPBits<T>::StorageType;
-  StorageType int_val = from_bits.uintval();
-  if (from != FPBits<T>::zero()) {
-    if ((static_cast<U>(from) < to) == (from > FPBits<T>::zero())) {
-      ++int_val;
+  if (from != T(0)) {
+    if ((static_cast<U>(from) < to) == (from > T(0))) {
+      from_bits = FPBits<T>(StorageType(from_bits.uintval() + 1));
     } else {
-      --int_val;
+      from_bits = FPBits<T>(StorageType(from_bits.uintval() - 1));
     }
   } else {
-    int_val = FPBits<T>::MIN_SUBNORMAL;
-    if (to_bits.get_sign())
-      int_val |= FPBits<T>::SIGN_MASK;
+    from_bits = FPBits<T>::min_subnormal(to_bits.sign());
   }
 
-  StorageType exponent_bits = int_val & FPBits<T>::EXP_MASK;
-  if (exponent_bits == StorageType(0))
+  if (from_bits.is_subnormal())
     raise_except_if_required(FE_UNDERFLOW | FE_INEXACT);
-  else if (exponent_bits == FPBits<T>::EXP_MASK)
+  else if (from_bits.is_inf())
     raise_except_if_required(FE_OVERFLOW | FE_INEXACT);
 
-  return cpp::bit_cast<T>(int_val);
+  return from_bits.get_val();
 }
 
 } // namespace fputil

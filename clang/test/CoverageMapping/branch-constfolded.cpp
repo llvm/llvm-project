@@ -90,10 +90,10 @@ bool for_7(bool a) {       // MCDC: Decision,File 0, [[@LINE+1]]:10 -> [[@LINE+1
 }                          // CHECK: Branch,File 0, [[@LINE-1]]:15 -> [[@LINE-1]]:19 = 0, 0
 
 // CHECK-LABEL: _Z5for_8b:
-bool for_8(bool a) {       // MCDC: Decision,File 0, [[@LINE+3]]:17 -> [[@LINE+3]]:30 = M:0, C:2
-                           // CHECK: Branch,File 0, [[@LINE+2]]:17 -> [[@LINE+2]]:21 = 0, 0
-                           // CHECK: Branch,File 0, [[@LINE+1]]:25 -> [[@LINE+1]]:30 = 0, 0
-  if constexpr (true && false)
+bool for_8(bool a) {       // MCDC: Decision,File 0, [[@LINE+3]]:7 -> [[@LINE+3]]:20 = M:0, C:2
+                           // CHECK: Branch,File 0, [[@LINE+2]]:7 -> [[@LINE+2]]:11 = 0, 0
+                           // CHECK: Branch,File 0, [[@LINE+1]]:15 -> [[@LINE+1]]:20 = 0, 0
+  if (true && false)
       return true;
   else
       return false;

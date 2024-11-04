@@ -50,8 +50,8 @@ struct Variable;
 } // namespace pft
 
 // Generate the OpenMP terminator for Operation at Location.
-void genOpenMPTerminator(fir::FirOpBuilder &, mlir::Operation *,
-                         mlir::Location);
+mlir::Operation *genOpenMPTerminator(fir::FirOpBuilder &, mlir::Operation *,
+                                     mlir::Location);
 
 void genOpenMPConstruct(AbstractConverter &, Fortran::lower::SymMap &,
                         semantics::SemanticsContext &, pft::Evaluation &,

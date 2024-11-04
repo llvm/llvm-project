@@ -29,11 +29,6 @@ namespace AMDGPU {
 //===----------------------------------------------------------------------===//
 namespace HSAMD {
 
-/// HSA metadata major version for code object V2.
-constexpr uint32_t VersionMajorV2 = 1;
-/// HSA metadata minor version for code object V2.
-constexpr uint32_t VersionMinorV2 = 0;
-
 /// HSA metadata major version for code object V3.
 constexpr uint32_t VersionMajorV3 = 1;
 /// HSA metadata minor version for code object V3.
@@ -49,10 +44,9 @@ constexpr uint32_t VersionMajorV5 = 1;
 /// HSA metadata minor version for code object V5.
 constexpr uint32_t VersionMinorV5 = 2;
 
-/// HSA metadata beginning assembler directive.
+/// Old HSA metadata beginning assembler directive for V2. This is only used for
+/// diagnostics now.
 constexpr char AssemblerDirectiveBegin[] = ".amd_amdgpu_hsa_metadata";
-/// HSA metadata ending assembler directive.
-constexpr char AssemblerDirectiveEnd[] = ".end_amd_amdgpu_hsa_metadata";
 
 /// Access qualifiers.
 enum class AccessQualifier : uint8_t {

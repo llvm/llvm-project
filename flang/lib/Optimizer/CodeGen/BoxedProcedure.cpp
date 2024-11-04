@@ -215,14 +215,14 @@ public:
             rewriter.replaceOpWithNewOp<ConvertOp>(
                 addr, typeConverter.convertType(addr.getType()), addr.getVal());
           } else if (typeConverter.needsConversion(resTy)) {
-            rewriter.startRootUpdate(op);
+            rewriter.startOpModification(op);
             op->getResult(0).setType(typeConverter.convertType(resTy));
-            rewriter.finalizeRootUpdate(op);
+            rewriter.finalizeOpModification(op);
           }
         } else if (auto func = mlir::dyn_cast<mlir::func::FuncOp>(op)) {
           mlir::FunctionType ty = func.getFunctionType();
           if (typeConverter.needsConversion(ty)) {
-            rewriter.startRootUpdate(func);
+            rewriter.startOpModification(func);
             auto toTy =
                 typeConverter.convertType(ty).cast<mlir::FunctionType>();
             if (!func.empty())
@@ -235,7 +235,7 @@ public:
                 block.eraseArgument(i + 1);
               }
             func.setType(toTy);
-            rewriter.finalizeRootUpdate(func);
+            rewriter.finalizeOpModification(func);
           }
         } else if (auto embox = mlir::dyn_cast<EmboxProcOp>(op)) {
           // Rewrite all `fir.emboxproc` ops to either `fir.convert` or a thunk
@@ -273,10 +273,10 @@ public:
         } else if (auto global = mlir::dyn_cast<GlobalOp>(op)) {
           auto ty = global.getType();
           if (typeConverter.needsConversion(ty)) {
-            rewriter.startRootUpdate(global);
+            rewriter.startOpModification(global);
             auto toTy = typeConverter.convertType(ty);
             global.setType(toTy);
-            rewriter.finalizeRootUpdate(global);
+            rewriter.finalizeOpModification(global);
           }
         } else if (auto mem = mlir::dyn_cast<AllocaOp>(op)) {
           auto ty = mem.getType();
@@ -339,17 +339,17 @@ public:
                 mem, toTy, index.getFieldId(), toOnTy, index.getTypeparams());
           }
         } else if (op->getDialect() == firDialect) {
-          rewriter.startRootUpdate(op);
+          rewriter.startOpModification(op);
           for (auto i : llvm::enumerate(op->getResultTypes()))
             if (typeConverter.needsConversion(i.value())) {
               auto toTy = typeConverter.convertType(i.value());
               op->getResult(i.index()).setType(toTy);
             }
-          rewriter.finalizeRootUpdate(op);
+          rewriter.finalizeOpModification(op);
         }
         // Ensure block arguments are updated if needed.
         if (op->getNumRegions() != 0) {
-          rewriter.startRootUpdate(op);
+          rewriter.startOpModification(op);
           for (mlir::Region &region : op->getRegions())
             for (mlir::Block &block : region.getBlocks())
               for (mlir::BlockArgument blockArg : block.getArguments())
@@ -358,7 +358,7 @@ public:
                       typeConverter.convertType(blockArg.getType());
                   blockArg.setType(toTy);
                 }
-          rewriter.finalizeRootUpdate(op);
+          rewriter.finalizeOpModification(op);
         }
       });
     }

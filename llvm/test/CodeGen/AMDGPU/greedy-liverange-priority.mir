@@ -1,5 +1,5 @@
-# RUN: llc -march=amdgcn -mcpu=gfx1030 -greedy-regclass-priority-trumps-globalness=0 -start-before greedy -o - %s | FileCheck %s -check-prefixes=GCN,OLD
-# RUN: llc -march=amdgcn -mcpu=gfx1030 -greedy-regclass-priority-trumps-globalness=1 -start-before greedy -o - %s | FileCheck %s -check-prefixes=GCN,NEW
+# RUN: llc -mtriple=amdgcn -mcpu=gfx1030 -greedy-regclass-priority-trumps-globalness=0 -start-before greedy -o - %s | FileCheck %s -check-prefixes=GCN,OLD
+# RUN: llc -mtriple=amdgcn -mcpu=gfx1030 -greedy-regclass-priority-trumps-globalness=1 -start-before greedy -o - %s | FileCheck %s -check-prefixes=GCN,NEW
 
 # At the time of writing -greedy-regclass-priority-trumps-globalness makes a
 # significant improvement in the total number of vgprs needed to compile this

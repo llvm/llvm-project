@@ -87,7 +87,7 @@ LogicalResult linalg::linalgOpAnchoredEmptyTensorEliminationStep(
       }
 
       // Turn the "in" into an "out".
-      rewriter.updateRootInPlace(op, [&]() {
+      rewriter.modifyOpInPlace(op, [&]() {
         out->set(in->get());
         // The original "in" could be removed entirely here (because it will no
         // longer have any uses in the payload), but we delegate this to

@@ -59,11 +59,13 @@ void qux() {
 // CHECK-MESSAGES: [[@LINE-1]]:3: warning: consider replacing 'short' with 'int16'
 }
 
-// FIXME: This shouldn't warn, as UD-literal operators require one of a handful
-// of types as an argument.
 struct some_value {};
-constexpr some_value operator"" _some_literal(unsigned long long int i);
-// CHECK-MESSAGES: [[@LINE-1]]:47: warning: consider replacing 'unsigned long long'
+constexpr some_value operator"" _some_literal(unsigned long long int i)
+{
+  short j;
+  // CHECK-MESSAGES: [[@LINE-1]]:3: warning: consider replacing 'short' with 'int16'
+  return some_value();
+}
 
 struct A { A& operator=(const A&); };
 class B { A a[0]; };

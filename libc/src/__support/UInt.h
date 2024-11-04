@@ -197,7 +197,7 @@ template <size_t Bits, bool Signed> struct BigInt {
     return d.borrow;
   }
 
-  LIBC_INLINE BigInt<Bits, Signed>
+  LIBC_INLINE constexpr BigInt<Bits, Signed>
   operator-(const BigInt<Bits, Signed> &other) const {
     BigInt<Bits, Signed> result;
     DiffBorrow<uint64_t> d{0, 0};

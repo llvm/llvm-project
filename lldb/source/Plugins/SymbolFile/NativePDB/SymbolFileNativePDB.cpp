@@ -534,9 +534,9 @@ SymbolFileNativePDB::CreateCompileUnit(const CompilandIndexItem &cci) {
   FileSpec fs(llvm::sys::path::convert_to_slash(
       source_file_name, llvm::sys::path::Style::windows_backslash));
 
-  CompUnitSP cu_sp =
-      std::make_shared<CompileUnit>(m_objfile_sp->GetModule(), nullptr, fs,
-                                    toOpaqueUid(cci.m_id), lang, optimized);
+  CompUnitSP cu_sp = std::make_shared<CompileUnit>(
+      m_objfile_sp->GetModule(), nullptr, std::make_shared<SupportFile>(fs),
+      toOpaqueUid(cci.m_id), lang, optimized);
 
   SetCompileUnitAtIndex(cci.m_id.modi, cu_sp);
   return cu_sp;

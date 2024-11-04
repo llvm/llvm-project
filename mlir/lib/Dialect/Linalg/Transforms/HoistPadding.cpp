@@ -854,10 +854,10 @@ padThroughLoopIterArg(RewriterBase &rewriter, Value paddedValueBeforeHoisting,
   LLVM_DEBUG(DBGS() << "with result #"
                     << numOriginalForOpResults + iterArgNumber
                     << " of forOp, giving us: " << extracted << "\n");
-  rewriter.startRootUpdate(extracted);
+  rewriter.startOpModification(extracted);
   extracted.getSourceMutable().assign(
       newForOp.getResult(numOriginalForOpResults + iterArgNumber));
-  rewriter.finalizeRootUpdate(extracted);
+  rewriter.finalizeOpModification(extracted);
 
   LLVM_DEBUG(DBGS() << "replace uses of: " << paddedValueBeforeHoisting
                     << "\n");

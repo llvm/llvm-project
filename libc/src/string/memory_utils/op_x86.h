@@ -116,6 +116,14 @@ LIBC_INLINE MemcmpReturnType cmp_neq<uint64_t>(CPtr p1, CPtr p2,
   return cmp_neq_uint64_t(a, b);
 }
 
+// SIMD types are defined with attributes. e.g., '__m128i' is defined as
+// long long  __attribute__((__vector_size__(16), __aligned__(16)))
+// When we use these SIMD types in template specialization GCC complains:
+// "ignoring attributes on template argument ‘__m128i’ [-Wignored-attributes]"
+// Therefore, we disable this warning in this file.
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wignored-attributes"
+
 ///////////////////////////////////////////////////////////////////////////////
 // Specializations for __m128i
 #if defined(__SSE4_1__)
@@ -303,6 +311,8 @@ LIBC_INLINE MemcmpReturnType cmp_neq<__m512i>(CPtr p1, CPtr p2, size_t offset) {
   return cmp_neq_uint64_t(ge, le);
 }
 #endif // __AVX512BW__
+
+#pragma GCC diagnostic pop
 
 } // namespace LIBC_NAMESPACE::generic
 

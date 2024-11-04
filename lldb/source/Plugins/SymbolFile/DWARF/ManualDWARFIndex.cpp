@@ -75,9 +75,8 @@ void ManualDWARFIndex::Index() {
   // Include 2 passes per unit to index for extracting DIEs from the unit and
   // indexing the unit, and then 8 extra entries for finalizing each index set.
   const uint64_t total_progress = units_to_index.size() * 2 + 8;
-  Progress progress(
-      llvm::formatv("Manually indexing DWARF for {0}", module_desc.GetData()),
-      total_progress);
+  Progress progress("Manually indexing DWARF", module_desc.GetData(),
+                    total_progress);
 
   std::vector<IndexSet> sets(units_to_index.size());
 

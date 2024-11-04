@@ -49,11 +49,14 @@ if(CMAKE_SYSTEM_PROCESSOR MATCHES "${tmachine}$")
   )
 
   if(LIBOMPTARGET_DEP_LIBFFI_FOUND)
-     libomptarget_say("Building ${tmachine_libname} plugin linked with libffi")
-     target_link_libraries("omptarget.rtl.${tmachine_libname}" PRIVATE
-                           ${FFI_LIBRARIES})
-     target_include_directories("omptarget.rtl.${tmachine_libname}" PRIVATE
-                                ${FFI_INCLUDE_DIRS})
+    libomptarget_say("Building ${tmachine_libname} plugin linked with libffi")
+    if(FFI_STATIC_LIBRARIES)
+      target_link_libraries(
+        "omptarget.rtl.${tmachine_libname}" PRIVATE FFI::ffi_static)
+    else()
+      target_link_libraries(
+        "omptarget.rtl.${tmachine_libname}" PRIVATE FFI::ffi)
+    endif()
   else()
      libomptarget_say("Building ${tmachine_libname} plugie for dlopened libffi")
      target_sources("omptarget.rtl.${tmachine_libname}" PRIVATE

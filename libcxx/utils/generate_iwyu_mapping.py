@@ -1,116 +1,74 @@
 #!/usr/bin/env python
 
-import os, pathlib, sys
+import libcxx.header_information
+import os
+import pathlib
+import re
+import typing
 
-
-def generate(private, public):
-    return f'{{ include: [ "{private}", "private", "<{public}>", "public" ] }}'
-
-
-def panic(file):
-    print(f"========== {__file__} error ==========", file=sys.stderr)
-    print(
-        f"\tFile '{file}' is a top-level detail header without a mapping",
-        file=sys.stderr,
-    )
-    sys.exit(1)
-
-
-def generate_map(include):
-    detail_files = []
-    detail_directories = []
-    c_headers = []
-
-    for i in include.iterdir():
-        if i.is_dir() and i.name.startswith("__"):
-            detail_directories.append(f"{i.name}")
-            continue
-
-        if i.name.startswith("__"):
-            detail_files.append(i.name)
-            continue
-
-        if i.name.endswith(".h"):
-            c_headers.append(i.name)
-
-    result = []
-    temporary_mappings = {"__locale_dir": "locale"}
-    for i in detail_directories:
-        public_header = temporary_mappings.get(i, i.lstrip("_"))
-        result.append(f'{generate(f"@<{i}/.*>", public_header)},')
-
-    for i in detail_files:
-        public = []
-        if i == "__assert":
-            continue
-        elif i == "__availability":
-            continue
-        elif i == "__bit_reference":
-            continue
-        elif i == "__bits":
-            public = ["bits"]
-        elif i == "__config_site.in":
-            continue
-        elif i == "__config":
-            continue
-        elif i == "__errc":
-            continue
-        elif i == "__hash_table":
-            public = ["unordered_map", "unordered_set"]
-        elif i == "__locale":
-            public = ["locale"]
-        elif i == "__mbstate_t.h":
-            continue
-        elif i == "__mutex_base":
-            continue
-        elif i == "__node_handle":
-            public = ["map", "set", "unordered_map", "unordered_set"]
-        elif i == "__pstl_algorithm":
-            continue
-        elif i == "__pstl_config_site.in":
-            continue
-        elif i == "__pstl_execution":
-            continue
-        elif i == "__pstl_memory":
-            continue
-        elif i == "__pstl_numeric":
-            continue
-        elif i == "__split_buffer":
-            public = ["deque", "vector"]
-        elif i == "__std_clang_module":
-            continue
-        elif i == "__std_mbstate_t.h":
-            continue
-        elif i == "__threading_support":
-            public = ["atomic", "mutex", "semaphore", "thread"]
-        elif i == "__tree":
-            public = ["map", "set"]
-        elif i == "__undef_macros":
-            continue
-        elif i == "__verbose_abort":
-            continue
-        else:
-            panic(i)
-
-        for p in public:
-            result.append(f'{generate(f"<{i}>", p)},')
-
-    result.sort()
-    return result
-
+def IWYU_mapping(header: str) -> typing.Optional[typing.List[str]]:
+    ignore = [
+        "__debug_utils/.+",
+        "__fwd/get[.]h",
+        "__support/.+",
+    ]
+    if any(re.match(pattern, header) for pattern in ignore):
+        return None
+    elif header == "__bits":
+        return ["bits"]
+    elif header in ("__bit_reference", "__fwd/bit_reference.h"):
+        return ["bitset", "vector"]
+    elif header == "__hash_table":
+        return ["unordered_map", "unordered_set"]
+    elif header == "__locale":
+        return ["locale"]
+    elif re.match("__locale_dir/.+", header):
+        return ["locale"]
+    elif re.match("__math/.+", header):
+        return ["cmath"]
+    elif header == "__node_handle":
+        return ["map", "set", "unordered_map", "unordered_set"]
+    elif header == "__split_buffer":
+        return ["deque", "vector"]
+    elif header == "__threading_support":
+        return ["atomic", "mutex", "semaphore", "thread"]
+    elif header == "__tree":
+        return ["map", "set"]
+    elif header == "__fwd/hash.h":
+        return ["functional"]
+    elif header == "__fwd/pair.h":
+        return ["utility"]
+    elif header == "__fwd/subrange.h":
+        return ["ranges"]
+    # Handle remaining forward declaration headers
+    elif re.match("__fwd/(.+)[.]h", header):
+        return [re.match("__fwd/(.+)[.]h", header).group(1)]
+    # Handle detail headers for things like <__algorithm/foo.h>
+    elif re.match("__(.+?)/.+", header):
+        return [re.match("__(.+?)/.+", header).group(1)]
+    else:
+        return None
 
 def main():
-    monorepo_root = pathlib.Path(
-        os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-    )
-    assert monorepo_root.exists()
-    include = pathlib.Path(os.path.join(monorepo_root, "libcxx", "include"))
+    mappings = []  # Pairs of (header, public_header)
+    for header in libcxx.header_information.all_headers:
+        public_headers = IWYU_mapping(header)
+        if public_headers is not None:
+            mappings.extend((header, public) for public in public_headers)
 
-    mapping = generate_map(include)
-    data = "[\n  " + "\n  ".join(mapping) + "\n]\n"
-    with open(f"{include}/libcxx.imp", "w") as f:
-        f.write(data)
+    # Validate that we only have valid public header names -- otherwise the mapping above
+    # needs to be updated.
+    for header, public in mappings:
+        if public not in libcxx.header_information.public_headers:
+            raise RuntimeError(f"{header}: Header {public} is not a valid header")
 
+    with open(libcxx.header_information.include / "libcxx.imp", "w") as f:
+        f.write("[\n")
+        for header, public in sorted(mappings):
+            f.write(
+                f'  {{ include: [ "<{header}>", "private", "<{public}>", "public" ] }},\n'
+            )
+        f.write("]\n")
 
 if __name__ == "__main__":
     main()

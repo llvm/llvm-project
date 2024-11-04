@@ -1265,9 +1265,9 @@ define void @load_i8_stride3_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, ptr
 ; AVX1-ONLY-NEXT:    vpshufb %xmm12, %xmm10, %xmm8
 ; AVX1-ONLY-NEXT:    vpshufb %xmm12, %xmm11, %xmm9
 ; AVX1-ONLY-NEXT:    vpshufb %xmm12, %xmm7, %xmm13
-; AVX1-ONLY-NEXT:    vmovdqa {{.*#+}} xmm14 = <1,4,7,10,13,128,128,128,128,128,128,u,u,u,u,u>
+; AVX1-ONLY-NEXT:    vmovdqa {{.*#+}} xmm14 = [1,4,7,10,13,128,128,128,128,128,128,u,u,u,u,u]
 ; AVX1-ONLY-NEXT:    vpshufb %xmm14, %xmm6, %xmm6
-; AVX1-ONLY-NEXT:    vmovdqa {{.*#+}} xmm15 = <128,128,128,128,128,0,3,6,9,12,15,u,u,u,u,u>
+; AVX1-ONLY-NEXT:    vmovdqa {{.*#+}} xmm15 = [128,128,128,128,128,0,3,6,9,12,15,u,u,u,u,u]
 ; AVX1-ONLY-NEXT:    vpshufb %xmm15, %xmm0, %xmm12
 ; AVX1-ONLY-NEXT:    vpor %xmm6, %xmm12, %xmm6
 ; AVX1-ONLY-NEXT:    vmovdqa %xmm6, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill

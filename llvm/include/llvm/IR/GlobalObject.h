@@ -133,6 +133,7 @@ public:
   using Value::addMetadata;
   using Value::clearMetadata;
   using Value::eraseMetadata;
+  using Value::eraseMetadataIf;
   using Value::getAllMetadata;
   using Value::getMetadata;
   using Value::hasMetadata;

@@ -1,0 +1,330 @@
+# RUN: llc --verify-machineinstrs -mcpu=pwr9 -o - %s -run-pass=pipeliner -ppc-enable-pipeliner  -pipeliner-register-pressure -pipeliner-max-mii=50 -pipeliner-ii-search-range=30 -pipeliner-max-stages=10 -debug-only=pipeliner 2>&1 | FileCheck %s
+
+# REQUIRES: asserts
+
+# Check that if the register pressure is too high, the schedule is rejected, II is incremented, and scheduling continues.
+# The specific value of II is not important.
+
+# CHECK: Try to schedule with 21
+# CHECK: 	Can't schedule
+# CHECK: Try to schedule with 22
+# CHECK: 	Can't schedule
+# CHECK: Try to schedule with 23
+# CHECK: Rejected the schedule because of too high register pressure
+# CHECK: Try to schedule with 24
+# CHECK: Rejected the schedule because of too high register pressure
+# CHECK: Try to schedule with 25
+# CHECK: Rejected the schedule because of too high register pressure
+# CHECK: Try to schedule with 26
+# CHECK: Schedule Found? 1 (II=26)
+
+--- |
+  ; ModuleID = 'a.ll'
+  source_filename = "a.c"
+  target datalayout = "e-m:e-Fn32-i64:64-n32:64"
+  target triple = "ppc64le"
+  
+  ; Function Attrs: nofree nosync nounwind memory(argmem: read) uwtable
+  define dso_local double @kernel(ptr nocapture noundef readonly %a, ptr nocapture noundef readonly %b, i32 noundef signext %n) local_unnamed_addr #0 {
+  entry:
+    %0 = load double, ptr %a, align 8, !tbaa !3
+    %arrayidx1 = getelementptr inbounds double, ptr %a, i64 1
+    %1 = load double, ptr %arrayidx1, align 8, !tbaa !3
+    %cmp163 = icmp sgt i32 %n, 0
+    br i1 %cmp163, label %for.body.preheader, label %for.cond.cleanup
+  
+  for.body.preheader:                               ; preds = %entry
+    %wide.trip.count = zext i32 %n to i64
+    %scevgep1 = getelementptr i8, ptr %b, i64 -8
+    call void @llvm.set.loop.iterations.i64(i64 %wide.trip.count)
+    br label %for.body
+  
+  for.cond.cleanup:                                 ; preds = %for.body, %entry
+    %res.0.lcssa = phi double [ 0.000000e+00, %entry ], [ %30, %for.body ]
+    ret double %res.0.lcssa
+  
+  for.body:                                         ; preds = %for.body, %for.body.preheader
+    %res.0165 = phi double [ 0.000000e+00, %for.body.preheader ], [ %30, %for.body ]
+    %2 = phi ptr [ %scevgep1, %for.body.preheader ], [ %3, %for.body ]
+    %3 = getelementptr i8, ptr %2, i64 8
+    %4 = load double, ptr %3, align 8, !tbaa !3
+    %5 = tail call double @llvm.fmuladd.f64(double %0, double %4, double %0)
+    %6 = tail call double @llvm.fmuladd.f64(double %5, double %4, double %5)
+    %7 = tail call double @llvm.fmuladd.f64(double %6, double %4, double %6)
+    %8 = tail call double @llvm.fmuladd.f64(double %7, double %4, double %7)
+    %9 = tail call double @llvm.fmuladd.f64(double %8, double %4, double %8)
+    %10 = tail call double @llvm.fmuladd.f64(double %9, double %4, double %9)
+    %11 = tail call double @llvm.fmuladd.f64(double %10, double %4, double %10)
+    %12 = tail call double @llvm.fmuladd.f64(double %11, double %4, double %11)
+    %13 = tail call double @llvm.fmuladd.f64(double %12, double %4, double %12)
+    %14 = tail call double @llvm.fmuladd.f64(double %13, double %4, double %13)
+    %15 = tail call double @llvm.fmuladd.f64(double %14, double %4, double %14)
+    %16 = tail call double @llvm.fmuladd.f64(double %15, double %4, double %15)
+    %17 = tail call double @llvm.fmuladd.f64(double %16, double %4, double %16)
+    %18 = tail call double @llvm.fmuladd.f64(double %17, double %4, double %17)
+    %19 = tail call double @llvm.fmuladd.f64(double %18, double %4, double %18)
+    %20 = tail call double @llvm.fmuladd.f64(double %19, double %4, double %19)
+    %add = fadd double %19, %20
+    %21 = tail call double @llvm.fmuladd.f64(double %20, double %4, double %add)
+    %add35 = fadd double %12, %21
+    %22 = tail call double @llvm.fmuladd.f64(double %5, double %4, double %add35)
+    %add38 = fadd double %13, %22
+    %23 = tail call double @llvm.fmuladd.f64(double %6, double %4, double %add38)
+    %mul = fmul double %4, %7
+    %mul46 = fmul double %mul, %14
+    %24 = tail call double @llvm.fmuladd.f64(double %mul46, double %13, double %16)
+    %mul50 = fmul double %4, %9
+    %mul51 = fmul double %1, %mul50
+    %25 = tail call double @llvm.fmuladd.f64(double %mul51, double %11, double %24)
+    %add53 = fadd double %5, %25
+    %add54 = fadd double %6, %add53
+    %mul55 = fmul double %14, %16
+    %mul56 = fmul double %mul55, %17
+    %mul57 = fmul double %mul56, %18
+    %26 = tail call double @llvm.fmuladd.f64(double %mul57, double %19, double %add54)
+    %27 = tail call double @llvm.fmuladd.f64(double %10, double %1, double %26)
+    %28 = tail call double @llvm.fmuladd.f64(double %8, double %6, double %27)
+    %mul61 = fmul double %20, %21
+    %mul62 = fmul double %mul61, %22
+    %29 = tail call double @llvm.fmuladd.f64(double %mul62, double %23, double %28)
+    %mul64 = fmul double %26, %29
+    %mul65 = fmul double %24, %mul64
+    %mul66 = fmul double %12, %mul65
+    %30 = tail call double @llvm.fmuladd.f64(double %mul66, double %10, double %res.0165)
+    %31 = call i1 @llvm.loop.decrement.i64(i64 1)
+    br i1 %31, label %for.body, label %for.cond.cleanup, !llvm.loop !7
+  }
+  
+  ; Function Attrs: nocallback nofree nosync nounwind speculatable willreturn memory(none)
+  declare double @llvm.fmuladd.f64(double, double, double) #1
+  
+  ; Function Attrs: nocallback noduplicate nofree nosync nounwind willreturn
+  declare void @llvm.set.loop.iterations.i64(i64) #2
+  
+  ; Function Attrs: nocallback noduplicate nofree nosync nounwind willreturn
+  declare i1 @llvm.loop.decrement.i64(i64) #2
+  
+  attributes #0 = { nofree nosync nounwind memory(argmem: read) uwtable "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="pwr9" "target-features"="+altivec,+bpermd,+crbits,+crypto,+direct-move,+extdiv,+htm,+isa-v206-instructions,+isa-v207-instructions,+isa-v30-instructions,+power8-vector,+power9-vector,+quadword-atomics,+vsx,-aix-small-local-exec-tls,-privileged,-rop-protect,-spe" }
+  attributes #1 = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
+  attributes #2 = { nocallback noduplicate nofree nosync nounwind willreturn }
+  
+  !llvm.module.flags = !{!0, !1}
+  !llvm.ident = !{!2}
+  
+  !0 = !{i32 1, !"wchar_size", i32 4}
+  !1 = !{i32 7, !"uwtable", i32 2}
+  !2 = !{!"clang version 18.0.0 (https://miratech-soft@dev.azure.com/miratech-soft/llvm/_git/llvm c8d01fb665fc5d9378100a6d92ebcd3be49be655)"}
+  !3 = !{!4, !4, i64 0}
+  !4 = !{!"double", !5, i64 0}
+  !5 = !{!"omnipotent char", !6, i64 0}
+  !6 = !{!"Simple C/C++ TBAA"}
+  !7 = distinct !{!7, !8, !9}
+  !8 = !{!"llvm.loop.mustprogress"}
+  !9 = !{!"llvm.loop.unroll.disable"}
+
+...
+---
+name:            kernel
+alignment:       16
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+failedISel:      false
+tracksRegLiveness: true
+hasWinCFI:       false
+callsEHReturn:   false
+callsUnwindInit: false
+hasEHCatchret:   false
+hasEHScopes:     false
+hasEHFunclets:   false
+isOutlined:      false
+debugInstrRef:   false
+failsVerification: false
+tracksDebugUserValues: false
+registers:
+  - { id: 0, class: vsfrc, preferred-register: '' }
+  - { id: 1, class: vsfrc, preferred-register: '' }
+  - { id: 2, class: g8rc, preferred-register: '' }
+  - { id: 3, class: vsfrc, preferred-register: '' }
+  - { id: 4, class: vsfrc, preferred-register: '' }
+  - { id: 5, class: g8rc_and_g8rc_nox0, preferred-register: '' }
+  - { id: 6, class: g8rc, preferred-register: '' }
+  - { id: 7, class: vsfrc, preferred-register: '' }
+  - { id: 8, class: g8rc_and_g8rc_nox0, preferred-register: '' }
+  - { id: 9, class: g8rc_and_g8rc_nox0, preferred-register: '' }
+  - { id: 10, class: g8rc, preferred-register: '' }
+  - { id: 11, class: gprc, preferred-register: '' }
+  - { id: 12, class: vsfrc, preferred-register: '' }
+  - { id: 13, class: crrc, preferred-register: '' }
+  - { id: 14, class: vsfrc, preferred-register: '' }
+  - { id: 15, class: g8rc, preferred-register: '' }
+  - { id: 16, class: g8rc, preferred-register: '' }
+  - { id: 17, class: g8rc, preferred-register: '' }
+  - { id: 18, class: f8rc, preferred-register: '' }
+  - { id: 19, class: g8rc_and_g8rc_nox0, preferred-register: '' }
+  - { id: 20, class: vsfrc, preferred-register: '' }
+  - { id: 21, class: vsfrc, preferred-register: '' }
+  - { id: 22, class: vsfrc, preferred-register: '' }
+  - { id: 23, class: vsfrc, preferred-register: '' }
+  - { id: 24, class: vsfrc, preferred-register: '' }
+  - { id: 25, class: vsfrc, preferred-register: '' }
+  - { id: 26, class: vsfrc, preferred-register: '' }
+  - { id: 27, class: vsfrc, preferred-register: '' }
+  - { id: 28, class: vsfrc, preferred-register: '' }
+  - { id: 29, class: vsfrc, preferred-register: '' }
+  - { id: 30, class: vsfrc, preferred-register: '' }
+  - { id: 31, class: vsfrc, preferred-register: '' }
+  - { id: 32, class: vsfrc, preferred-register: '' }
+  - { id: 33, class: vsfrc, preferred-register: '' }
+  - { id: 34, class: vsfrc, preferred-register: '' }
+  - { id: 35, class: vsfrc, preferred-register: '' }
+  - { id: 36, class: vsfrc, preferred-register: '' }
+  - { id: 37, class: vsfrc, preferred-register: '' }
+  - { id: 38, class: vsfrc, preferred-register: '' }
+  - { id: 39, class: vsfrc, preferred-register: '' }
+  - { id: 40, class: vsfrc, preferred-register: '' }
+  - { id: 41, class: vsfrc, preferred-register: '' }
+  - { id: 42, class: vsfrc, preferred-register: '' }
+  - { id: 43, class: vsfrc, preferred-register: '' }
+  - { id: 44, class: vsfrc, preferred-register: '' }
+  - { id: 45, class: vsfrc, preferred-register: '' }
+  - { id: 46, class: vsfrc, preferred-register: '' }
+  - { id: 47, class: vsfrc, preferred-register: '' }
+  - { id: 48, class: vsfrc, preferred-register: '' }
+  - { id: 49, class: vsfrc, preferred-register: '' }
+  - { id: 50, class: vsfrc, preferred-register: '' }
+  - { id: 51, class: vsfrc, preferred-register: '' }
+  - { id: 52, class: vsfrc, preferred-register: '' }
+  - { id: 53, class: vsfrc, preferred-register: '' }
+  - { id: 54, class: vsfrc, preferred-register: '' }
+  - { id: 55, class: vsfrc, preferred-register: '' }
+  - { id: 56, class: vsfrc, preferred-register: '' }
+  - { id: 57, class: vsfrc, preferred-register: '' }
+  - { id: 58, class: vsfrc, preferred-register: '' }
+  - { id: 59, class: vsfrc, preferred-register: '' }
+  - { id: 60, class: vsfrc, preferred-register: '' }
+  - { id: 61, class: vsfrc, preferred-register: '' }
+  - { id: 62, class: crbitrc, preferred-register: '' }
+liveins:
+  - { reg: '$x3', virtual-reg: '%8' }
+  - { reg: '$x4', virtual-reg: '%9' }
+  - { reg: '$x5', virtual-reg: '%10' }
+frameInfo:
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  offsetAdjustment: 0
+  maxAlignment:    1
+  adjustsStack:    false
+  hasCalls:        false
+  stackProtector:  ''
+  functionContext: ''
+  maxCallFrameSize: 4294967295
+  cvBytesOfCalleeSavedRegisters: 0
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+  hasTailCall:     false
+  localFrameSize:  0
+  savePoint:       ''
+  restorePoint:    ''
+fixedStack:      []
+stack:           []
+entry_values:    []
+callSites:       []
+debugValueSubstitutions: []
+constants:       []
+machineFunctionInfo: {}
+body:             |
+  bb.0.entry:
+    successors: %bb.2(0x50000000), %bb.1(0x30000000)
+    liveins: $x3, $x4, $x5
+  
+    %10:g8rc = COPY killed $x5
+    %9:g8rc_and_g8rc_nox0 = COPY killed $x4
+    %8:g8rc_and_g8rc_nox0 = COPY killed $x3
+    %11:gprc = COPY killed %10.sub_32
+    %13:crrc = CMPWI %11, 0
+    BCC 44, killed %13, %bb.2
+  
+  bb.1:
+    successors: %bb.3(0x80000000)
+  
+    %12:vsfrc = XXLXORdpz
+    B %bb.3
+  
+  bb.2.for.body.preheader:
+    successors: %bb.4(0x80000000)
+  
+    %0:vsfrc = DFLOADf64 0, %8 :: (load (s64) from %ir.a, !tbaa !3)
+    %1:vsfrc = DFLOADf64 8, killed %8 :: (load (s64) from %ir.arrayidx1, !tbaa !3)
+    %16:g8rc = IMPLICIT_DEF
+    %15:g8rc = INSERT_SUBREG killed %16, killed %11, %subreg.sub_32
+    %17:g8rc = RLDICL killed %15, 0, 32
+    %2:g8rc = ADDI8 killed %9, -8
+    MTCTR8loop killed %17, implicit-def dead $ctr8
+    %14:vsfrc = XXLXORdpz
+    B %bb.4
+  
+  bb.3.for.cond.cleanup:
+    %3:vsfrc = PHI %12, %bb.1, %7, %bb.4
+    $f1 = COPY killed %3
+    BLR8 implicit $lr8, implicit $rm, implicit killed $f1
+  
+  bb.4.for.body:
+    successors: %bb.4(0x7c000000), %bb.3(0x04000000)
+  
+    %4:vsfrc = PHI %14, %bb.2, %7, %bb.4
+    %5:g8rc_and_g8rc_nox0 = PHI %2, %bb.2, %6, %bb.4
+    %18:f8rc, %19:g8rc_and_g8rc_nox0 = LFDU 8, killed %5 :: (load (s64) from %ir.3, !tbaa !3)
+    %6:g8rc = COPY killed %19
+    %20:vsfrc = nofpexcept XSMADDADP %0, %0, %18, implicit $rm
+    %21:vsfrc = nofpexcept XSMADDADP %20, %20, %18, implicit $rm
+    %22:vsfrc = nofpexcept XSMADDADP %21, %21, %18, implicit $rm
+    %23:vsfrc = nofpexcept XSMADDADP %22, %22, %18, implicit $rm
+    %24:vsfrc = nofpexcept XSMADDADP %23, %23, %18, implicit $rm
+    %25:vsfrc = nofpexcept XSMADDADP %24, %24, %18, implicit $rm
+    %26:vsfrc = nofpexcept XSMADDADP %25, %25, %18, implicit $rm
+    %27:vsfrc = nofpexcept XSMADDADP %26, %26, %18, implicit $rm
+    %28:vsfrc = nofpexcept XSMADDADP %27, %27, %18, implicit $rm
+    %29:vsfrc = nofpexcept XSMADDADP %28, %28, %18, implicit $rm
+    %30:vsfrc = nofpexcept XSMADDADP %29, %29, %18, implicit $rm
+    %31:vsfrc = nofpexcept XSMADDADP killed %30, %30, %18, implicit $rm
+    %32:vsfrc = nofpexcept XSMADDADP %31, %31, %18, implicit $rm
+    %33:vsfrc = nofpexcept XSMADDADP %32, %32, %18, implicit $rm
+    %34:vsfrc = nofpexcept XSMADDADP %33, %33, %18, implicit $rm
+    %35:vsfrc = nofpexcept XSMADDADP %34, %34, %18, implicit $rm
+    %36:vsfrc = nofpexcept XSADDDP %34, %35, implicit $rm
+    %37:vsfrc = nofpexcept XSMADDADP killed %36, %35, %18, implicit $rm
+    %38:vsfrc = nofpexcept XSADDDP %27, %37, implicit $rm
+    %39:vsfrc = nofpexcept XSMADDADP killed %38, %20, %18, implicit $rm
+    %40:vsfrc = nofpexcept XSADDDP %28, %39, implicit $rm
+    %41:vsfrc = nofpexcept XSMADDADP killed %40, %21, %18, implicit $rm
+    %42:vsfrc = nofpexcept XSMULDP %18, killed %22, implicit $rm
+    %43:vsfrc = nofpexcept XSMULDP killed %42, %29, implicit $rm
+    %44:vsfrc = nofpexcept XSMADDADP %31, killed %43, killed %28, implicit $rm
+    %45:vsfrc = nofpexcept XSMULDP killed %18, killed %24, implicit $rm
+    %46:vsfrc = nofpexcept XSMULDP %1, killed %45, implicit $rm
+    %47:vsfrc = nofpexcept XSMADDADP %44, killed %46, killed %26, implicit $rm
+    %48:vsfrc = nofpexcept XSADDDP killed %20, killed %47, implicit $rm
+    %49:vsfrc = nofpexcept XSADDDP %21, killed %48, implicit $rm
+    %50:vsfrc = nofpexcept XSMULDP killed %29, killed %31, implicit $rm
+    %51:vsfrc = nofpexcept XSMULDP killed %50, killed %32, implicit $rm
+    %52:vsfrc = nofpexcept XSMULDP killed %51, killed %33, implicit $rm
+    %53:vsfrc = nofpexcept XSMADDADP killed %49, killed %52, killed %34, implicit $rm
+    %54:vsfrc = nofpexcept XSMADDADP %53, %25, %1, implicit $rm
+    %55:vsfrc = nofpexcept XSMADDADP killed %54, killed %23, killed %21, implicit $rm
+    %56:vsfrc = nofpexcept XSMULDP killed %35, killed %37, implicit $rm
+    %57:vsfrc = nofpexcept XSMULDP killed %56, killed %39, implicit $rm
+    %58:vsfrc = nofpexcept XSMADDADP killed %55, killed %57, killed %41, implicit $rm
+    %59:vsfrc = nofpexcept XSMULDP killed %53, killed %58, implicit $rm
+    %60:vsfrc = nofpexcept XSMULDP killed %44, killed %59, implicit $rm
+    %61:vsfrc = nofpexcept XSMULDP killed %27, killed %60, implicit $rm
+    %7:vsfrc = nofpexcept XSMADDADP killed %4, killed %61, killed %25, implicit $rm
+    BDNZ8 %bb.4, implicit-def $ctr8, implicit $ctr8
+    B %bb.3
+
+...

@@ -10,7 +10,7 @@
 #define SVE_ACLE_FUNC(A1,A2,A3,A4) A1##A2##A3##A4
 #endif
 
-#include <arm_sme_draft_spec_subject_to_change.h>
+#include <arm_sme.h>
 
 void test_range_0_0(uint32_t slice, svbool_t pg, void *ptr) __arm_streaming __arm_inout("za") {
   // expected-error@+1 {{argument value 18446744073709551615 is outside the valid range [0, 0]}}

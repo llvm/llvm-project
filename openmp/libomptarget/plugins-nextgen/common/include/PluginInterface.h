@@ -182,34 +182,6 @@ public:
 /// specific device. This class is responsible for storing and managing
 /// the offload entries for an image on a device.
 class DeviceImageTy {
-
-  /// Class representing the offload entry table. The class stores the
-  /// __tgt_target_table and a map to search in the table faster.
-  struct OffloadEntryTableTy {
-    /// Add new entry to the table.
-    void addEntry(const __tgt_offload_entry &Entry) {
-      Entries.push_back(Entry);
-      TTTablePtr.EntriesBegin = &Entries[0];
-      TTTablePtr.EntriesEnd = TTTablePtr.EntriesBegin + Entries.size();
-    }
-
-    /// Get the raw pointer to the __tgt_target_table.
-    operator __tgt_target_table *() {
-      if (Entries.empty())
-        return nullptr;
-      return &TTTablePtr;
-    }
-
-  private:
-    __tgt_target_table TTTablePtr;
-    llvm::SmallVector<__tgt_offload_entry> Entries;
-
-  public:
-    using const_iterator = decltype(Entries)::const_iterator;
-    const_iterator begin() const { return Entries.begin(); }
-    const_iterator end() const { return Entries.end(); }
-  };
-
   /// Image identifier within the corresponding device. Notice that this id is
   /// not unique between different device; they may overlap.
   int32_t ImageId;
@@ -218,24 +190,28 @@ class DeviceImageTy {
   const __tgt_device_image *TgtImage;
   const __tgt_device_image *TgtImageBitcode;
 
+  /// Reference to the device this image is loaded on.
+  GenericDeviceTy &Device;
+
   /// If this image has any global destructors that much be called.
   /// FIXME: This is only required because we currently have no invariants
   ///        towards the lifetime of the underlying image. We should either copy
   ///        the image into memory locally or erase the pointers after init.
   bool PendingGlobalDtors;
 
-  /// Table of offload entries.
-  OffloadEntryTableTy OffloadEntryTable;
-
 public:
-  DeviceImageTy(int32_t Id, const __tgt_device_image *Image)
-      : ImageId(Id), TgtImage(Image), TgtImageBitcode(nullptr),
+  DeviceImageTy(int32_t Id, GenericDeviceTy &Device,
+                const __tgt_device_image *Image)
+      : ImageId(Id), TgtImage(Image), TgtImageBitcode(nullptr), Device(Device),
         PendingGlobalDtors(false) {
     assert(TgtImage && "Invalid target image");
   }
 
   /// Get the image identifier within the device.
   int32_t getId() const { return ImageId; }
+
+  /// Get the device that this image is loaded onto.
+  GenericDeviceTy &getDevice() const { return Device; }
 
   /// Get the pointer to the raw __tgt_device_image.
   const __tgt_device_image *getTgtImage() const { return TgtImage; }
@@ -261,13 +237,9 @@ public:
     return MemoryBufferRef(StringRef((const char *)getStart(), getSize()),
                            "Image");
   }
-
   /// Accessors to the boolean value
   bool setPendingGlobalDtors() { return PendingGlobalDtors = true; }
   bool hasPendingGlobalDtors() const { return PendingGlobalDtors; }
-
-  /// Get a reference to the offload entry table for the image.
-  OffloadEntryTableTy &getOffloadEntryTable() { return OffloadEntryTable; }
 };
 
 /// Class implementing common functionalities of offload kernels. Each plugin
@@ -661,8 +633,8 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
   virtual Error deinitImpl() = 0;
 
   /// Load the binary image into the device and return the target table.
-  Expected<__tgt_target_table *> loadBinary(GenericPluginTy &Plugin,
-                                            const __tgt_device_image *TgtImage);
+  Expected<DeviceImageTy *> loadBinary(GenericPluginTy &Plugin,
+                                       const __tgt_device_image *TgtImage);
   virtual Expected<DeviceImageTy *>
   loadBinaryImpl(const __tgt_device_image *TgtImage, int32_t ImageId) = 0;
 
@@ -679,9 +651,6 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
   // plugins like the CPU targets. By default, it will not be executed so it is
   // up to the target to override this using the shouldSetupRPCServer function.
   Error setupRPCServer(GenericPluginTy &Plugin, DeviceImageTy &Image);
-
-  /// Register the offload entries for a specific image on the device.
-  Error registerOffloadEntries(DeviceImageTy &Image);
 
   /// Synchronize the current thread with the pending operations on the
   /// __tgt_async_info structure.
@@ -883,21 +852,15 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
 
   virtual Error getDeviceStackSize(uint64_t &V) = 0;
 
-private:
-  /// Register offload entry for global variable.
-  Error registerGlobalOffloadEntry(DeviceImageTy &DeviceImage,
-                                   const __tgt_offload_entry &GlobalEntry,
-                                   __tgt_offload_entry &DeviceEntry);
-
-  /// Register offload entry for kernel function.
-  Error registerKernelOffloadEntry(DeviceImageTy &DeviceImage,
-                                   const __tgt_offload_entry &KernelEntry,
-                                   __tgt_offload_entry &DeviceEntry);
+  /// Returns true if current plugin architecture is an APU
+  /// and unified_shared_memory was not requested by the program.
+  bool useAutoZeroCopy();
+  virtual bool useAutoZeroCopyImpl() { return false; }
 
   /// Allocate and construct a kernel object.
-  virtual Expected<GenericKernelTy &>
-  constructKernel(const __tgt_offload_entry &KernelEntry) = 0;
+  virtual Expected<GenericKernelTy &> constructKernel(const char *Name) = 0;
 
+private:
   /// Get and set the stack size and heap size for the device. If not used, the
   /// plugin can implement the setters as no-op and setting the output
   /// value to zero for the getters.
