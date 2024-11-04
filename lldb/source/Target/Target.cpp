@@ -68,7 +68,6 @@
 
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SetVector.h"
-#include "llvm/Support/ThreadPool.h"
 
 #include <memory>
 #include <mutex>
@@ -1576,6 +1575,7 @@ void Target::SetExecutableModule(ModuleSP &executable_sp,
                m_arch.GetSpec().GetTriple().getTriple());
     }
 
+    FileSpecList dependent_files;
     ObjectFile *executable_objfile = executable_sp->GetObjectFile();
     bool load_dependents = true;
     switch (load_dependent_files) {
@@ -1591,14 +1591,10 @@ void Target::SetExecutableModule(ModuleSP &executable_sp,
     }
 
     if (executable_objfile && load_dependents) {
-      // FileSpecList is not thread safe and needs to be synchronized.
-      FileSpecList dependent_files;
-      std::mutex dependent_files_mutex;
-
-      // ModuleList is thread safe.
       ModuleList added_modules;
-
-      auto GetDependentModules = [&](FileSpec dependent_file_spec) {
+      executable_objfile->GetDependentModules(dependent_files);
+      for (uint32_t i = 0; i < dependent_files.GetSize(); i++) {
+        FileSpec dependent_file_spec(dependent_files.GetFileSpecAtIndex(i));
         FileSpec platform_dependent_file_spec;
         if (m_platform_sp)
           m_platform_sp->GetFileWithUUID(dependent_file_spec, nullptr,
@@ -1612,48 +1608,9 @@ void Target::SetExecutableModule(ModuleSP &executable_sp,
         if (image_module_sp) {
           added_modules.AppendIfNeeded(image_module_sp, false);
           ObjectFile *objfile = image_module_sp->GetObjectFile();
-          if (objfile) {
-            // Create a local copy of the dependent file list so we don't have
-            // to lock for the whole duration of GetDependentModules.
-            FileSpecList dependent_files_copy;
-            {
-              std::lock_guard<std::mutex> guard(dependent_files_mutex);
-              dependent_files_copy = dependent_files;
-            }
-
-            // Remember the size of the local copy so we can append only the
-            // modules that have been added by GetDependentModules.
-            const size_t previous_dependent_files =
-                dependent_files_copy.GetSize();
-
-            objfile->GetDependentModules(dependent_files_copy);
-
-            {
-              std::lock_guard<std::mutex> guard(dependent_files_mutex);
-              for (size_t i = previous_dependent_files;
-                   i < dependent_files_copy.GetSize(); ++i)
-                dependent_files.AppendIfUnique(
-                    dependent_files_copy.GetFileSpecAtIndex(i));
-            }
-          }
+          if (objfile)
+            objfile->GetDependentModules(dependent_files);
         }
-      };
-
-      executable_objfile->GetDependentModules(dependent_files);
-
-      llvm::ThreadPoolTaskGroup task_group(Debugger::GetThreadPool());
-      for (uint32_t i = 0; i < dependent_files.GetSize(); i++) {
-        // Process all currently known dependencies in parallel in the innermost
-        // loop. This may create newly discovered dependencies to be appended to
-        // dependent_files. We'll deal with these files during the next
-        // iteration of the outermost loop.
-        {
-          std::lock_guard<std::mutex> guard(dependent_files_mutex);
-          for (; i < dependent_files.GetSize(); i++)
-            task_group.async(GetDependentModules,
-                             dependent_files.GetFileSpecAtIndex(i));
-        }
-        task_group.wait();
       }
       ModulesDidLoad(added_modules);
     }
