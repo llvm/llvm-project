@@ -740,6 +740,23 @@ public:
   }
 };
 
+class CIRMemsetOpLowering
+    : public mlir::OpConversionPattern<mlir::cir::MemSetOp> {
+public:
+  using mlir::OpConversionPattern<mlir::cir::MemSetOp>::OpConversionPattern;
+  mlir::LogicalResult
+  matchAndRewrite(mlir::cir::MemSetOp op, OpAdaptor adaptor,
+                  mlir::ConversionPatternRewriter &rewriter) const override {
+    auto converted = rewriter.create<mlir::LLVM::TruncOp>(
+        op.getLoc(), mlir::IntegerType::get(op.getContext(), 8),
+        adaptor.getVal());
+    rewriter.replaceOpWithNewOp<mlir::LLVM::MemsetOp>(
+        op, adaptor.getDst(), converted, adaptor.getLen(),
+        /*isVolatile=*/false);
+    return mlir::success();
+  }
+};
+
 static mlir::Value getLLVMIntCast(mlir::ConversionPatternRewriter &rewriter,
                                   mlir::Value llvmSrc, mlir::Type llvmDstIntTy,
                                   bool isUnsigned, uint64_t cirSrcWidth,
@@ -4260,7 +4277,7 @@ void populateCIRToLLVMConversionPatterns(
       CIRFreeExceptionOpLowering, CIRThrowOpLowering, CIRIntrinsicCallLowering,
       CIRBaseClassAddrOpLowering, CIRDerivedClassAddrOpLowering,
       CIRVTTAddrPointOpLowering, CIRIsFPClassOpLowering, CIRAbsOpLowering,
-      CIRMemMoveOpLowering
+      CIRMemMoveOpLowering, CIRMemsetOpLowering
 #define GET_BUILTIN_LOWERING_LIST
 #include "clang/CIR/Dialect/IR/CIRBuiltinsLowering.inc"
 #undef GET_BUILTIN_LOWERING_LIST

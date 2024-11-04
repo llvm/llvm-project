@@ -4045,6 +4045,36 @@ def MemMoveOp : CIR_MemCpyOp<"libc.memmove"> {
     `:` qualified(type($dst)) `,` type($len)
   }];
 }
+//===----------------------------------------------------------------------===//
+// MemSetOp
+//===----------------------------------------------------------------------===//
+
+def MemSetOp : CIR_Op<"libc.memset"> {
+  let arguments = (ins Arg<VoidPtr, "", [MemWrite]>:$dst,
+                       SInt32:$val,
+                       PrimitiveUInt:$len);
+  let summary = "Equivalent to libc's `memset`";
+  let description = [{
+    Given the CIR pointer, `dst`, `cir.libc.memset` will set the first `len`
+    bytes of the memory pointed by `dst` to the specified `val`.
+
+    Examples:
+
+    ```mlir
+      // Set 2 bytes from a struct to 0:
+      %2 = cir.const #cir.int<2> : !u32i
+      %3 = cir.const #cir.int<0> : !u32i
+      %zero = cir.cast(integral, %3 : !s32i), !u8i
+      cir.libc.memset %2 bytes from %struct set to %zero : !cir.ptr<!void>, !s32i, !u64i
+    ```
+  }];
+
+  let assemblyFormat = [{
+    $len `bytes` `from` $dst `set` `to` $val attr-dict
+    `:` qualified(type($dst)) `,` type($val) `,` type($len)
+  }];
+  let hasVerifier = 0;
+}
 
 //===----------------------------------------------------------------------===//
 // MemChrOp

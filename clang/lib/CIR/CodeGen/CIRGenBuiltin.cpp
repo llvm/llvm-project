@@ -1449,8 +1449,17 @@ RValue CIRGenFunction::buildBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     return RValue::get(Dest.getPointer());
   }
   case Builtin::BImemset:
-  case Builtin::BI__builtin_memset:
-    llvm_unreachable("BImemset like NYI");
+  case Builtin::BI__builtin_memset: {
+    Address Dest = buildPointerWithAlignment(E->getArg(0));
+    mlir::Value ByteVal = buildScalarExpr(E->getArg(1));
+    mlir::Value SizeVal = buildScalarExpr(E->getArg(2));
+    buildNonNullArgCheck(RValue::get(Dest.getPointer()),
+                         E->getArg(0)->getType(), E->getArg(0)->getExprLoc(),
+                         FD, 0);
+    builder.createMemSet(getLoc(E->getSourceRange()), Dest.getPointer(),
+                         ByteVal, SizeVal);
+    return RValue::get(Dest.getPointer());
+  }
 
   case Builtin::BI__builtin_memset_inline:
     llvm_unreachable("BI__builtin_memset_inline NYI");
