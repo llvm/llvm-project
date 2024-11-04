@@ -111,7 +111,6 @@ void RTDEF(CUFDataTransferPtrDesc)(void *addr, Descriptor *desc,
 
 void RTDECL(CUFDataTransferDescDesc)(Descriptor *dstDesc, Descriptor *srcDesc,
     unsigned mode, const char *sourceFile, int sourceLine) {
-  Terminator terminator{sourceFile, sourceLine};
   MemmoveFct memmoveFct;
   if (mode == kHostToDevice) {
     memmoveFct = &MemmoveHostToDevice;
@@ -119,6 +118,9 @@ void RTDECL(CUFDataTransferDescDesc)(Descriptor *dstDesc, Descriptor *srcDesc,
     memmoveFct = &MemmoveDeviceToHost;
   } else if (mode == kDeviceToDevice) {
     memmoveFct = &MemmoveDeviceToDevice;
+  } else {
+    Terminator terminator{sourceFile, sourceLine};
+    terminator.Crash("host to host copy not supported");
   }
   Fortran::runtime::Assign(
       *dstDesc, *srcDesc, terminator, MaybeReallocate, memmoveFct);
