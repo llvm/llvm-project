@@ -157,7 +157,7 @@ void AMDGPUTTIImpl::getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
   }
   unsigned MaxBoost = std::max(ThresholdPrivate, ThresholdLocal);
 
-  if (llvm::PHINode *IV = L->getInductionVariable(SE)) {
+  if (PHINode *IV = L->getInductionVariable(SE)) {
     // Look for subloops whose trip count would go from runtime-dependent to
     // runtime-independent if we were to unroll the loop. Give a bonus to the
     // current loop's unrolling threshold for each of these, as fully unrolling
