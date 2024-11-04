@@ -54,6 +54,12 @@ module attributes {omp.flags = #omp.flags<assume_teams_oversubscription = true, 
 // CHECK: module attributes {omp.flags = #omp.flags<assume_teams_oversubscription = true, assume_no_thread_state = true, openmp_device_version = 51>} {
 module attributes {omp.flags = #omp.flags<assume_no_thread_state = true, assume_teams_oversubscription = true, openmp_device_version = 51>} {}
 
+// CHECK: module attributes {omp.flags = #omp.flags<assume_teams_oversubscription = true, assume_no_thread_state = true, no_gpu_lib = true, openmp_device_version = 51>} {
+module attributes {omp.flags = #omp.flags<assume_no_thread_state = true, assume_teams_oversubscription = true, no_gpu_lib = true, openmp_device_version = 51>} {}
+
+// CHECK: module attributes {omp.flags = #omp.flags<assume_teams_oversubscription = true, openmp_device_version = 51>} {
+module attributes {omp.flags = #omp.flags<assume_teams_oversubscription = true, no_gpu_lib = false, openmp_device_version = 51>} {}
+
 // CHECK: module attributes {omp.version = #omp.version<version = 51>} {
 module attributes {omp.version = #omp.version<version = 51>} {}
 

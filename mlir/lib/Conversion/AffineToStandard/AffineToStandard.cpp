@@ -137,10 +137,9 @@ public:
   LogicalResult matchAndRewrite(AffineYieldOp op,
                                 PatternRewriter &rewriter) const override {
     if (isa<scf::ParallelOp>(op->getParentOp())) {
-      // scf.parallel does not yield any values via its terminator scf.yield but
-      // models reductions differently using additional ops in its region.
-      rewriter.replaceOpWithNewOp<scf::YieldOp>(op);
-      return success();
+      // Terminator is rewritten as part of the "affine.parallel" lowering
+      // pattern.
+      return failure();
     }
     rewriter.replaceOpWithNewOp<scf::YieldOp>(op, op.getOperands());
     return success();
@@ -203,7 +202,8 @@ public:
       steps.push_back(rewriter.create<arith::ConstantIndexOp>(loc, step));
 
     // Get the terminator op.
-    Operation *affineParOpTerminator = op.getBody()->getTerminator();
+    auto affineParOpTerminator =
+        cast<AffineYieldOp>(op.getBody()->getTerminator());
     scf::ParallelOp parOp;
     if (op.getResults().empty()) {
       // Case with no reduction operations/return values.
@@ -214,6 +214,8 @@ public:
       rewriter.inlineRegionBefore(op.getRegion(), parOp.getRegion(),
                                   parOp.getRegion().end());
       rewriter.replaceOp(op, parOp.getResults());
+      rewriter.setInsertionPoint(affineParOpTerminator);
+      rewriter.replaceOpWithNewOp<scf::ReduceOp>(affineParOpTerminator);
       return success();
     }
     // Case with affine.parallel with reduction operations/return values.
@@ -243,6 +245,11 @@ public:
                                 parOp.getRegion().end());
     assert(reductions.size() == affineParOpTerminator->getNumOperands() &&
            "Unequal number of reductions and operands.");
+
+    // Emit new "scf.reduce" terminator.
+    rewriter.setInsertionPoint(affineParOpTerminator);
+    auto reduceOp = rewriter.replaceOpWithNewOp<scf::ReduceOp>(
+        affineParOpTerminator, affineParOpTerminator->getOperands());
     for (unsigned i = 0, end = reductions.size(); i < end; i++) {
       // For each of the reduction operations get the respective mlir::Value.
       std::optional<arith::AtomicRMWKind> reductionOp =
@@ -251,13 +258,11 @@ public:
       assert(reductionOp && "Reduction Operation cannot be of None Type");
       arith::AtomicRMWKind reductionOpValue = *reductionOp;
       rewriter.setInsertionPoint(&parOp.getBody()->back());
-      auto reduceOp = rewriter.create<scf::ReduceOp>(
-          loc, affineParOpTerminator->getOperand(i));
-      rewriter.setInsertionPointToEnd(&reduceOp.getReductionOperator().front());
+      Block &reductionBody = reduceOp.getReductions()[i].front();
+      rewriter.setInsertionPointToEnd(&reductionBody);
       Value reductionResult = arith::getReductionOp(
-          reductionOpValue, rewriter, loc,
-          reduceOp.getReductionOperator().front().getArgument(0),
-          reduceOp.getReductionOperator().front().getArgument(1));
+          reductionOpValue, rewriter, loc, reductionBody.getArgument(0),
+          reductionBody.getArgument(1));
       rewriter.create<scf::ReduceReturnOp>(loc, reductionResult);
     }
     rewriter.replaceOp(op, parOp.getResults());

@@ -250,3 +250,55 @@ struct NF15 {
     S s2;
   };
 };
+
+// Direct in-class initialization with default constructor
+struct D1 {
+  S f1 {};
+  // CHECK-MESSAGES: :[[@LINE-1]]:8: warning: initializer for member 'f1' is redundant
+  // CHECK-FIXES: S f1;
+};
+
+// Direct in-class initialization with constructor with default argument
+struct D2 {
+  T f2  {};
+  // CHECK-MESSAGES: :[[@LINE-1]]:9: warning: initializer for member 'f2' is redundant
+  // CHECK-FIXES: T f2;
+};
+
+// Direct in-class initialization with default constructor (assign)
+struct D3 {
+  S f3 = {};
+  // CHECK-MESSAGES: :[[@LINE-1]]:8: warning: initializer for member 'f3' is redundant
+  // CHECK-FIXES: S f3;
+};
+
+// Direct in-class initialization with constructor with default argument (assign)
+struct D4 {
+  T f4 = {};
+  // CHECK-MESSAGES: :[[@LINE-1]]:8: warning: initializer for member 'f4' is redundant
+  // CHECK-FIXES: T f4;
+};
+
+// Templated class independent type
+template <class V>
+struct D5 {
+  S f5 /*comment*/ = S();
+  // CHECK-MESSAGES: :[[@LINE-1]]:22: warning: initializer for member 'f5' is redundant
+  // CHECK-FIXES: S f5 /*comment*/;
+};
+D5<int> d5i;
+D5<S> d5s;
+
+struct D6 {
+  UsesCleanup uc2{};
+  // CHECK-MESSAGES: :[[@LINE-1]]:18: warning: initializer for member 'uc2' is redundant
+  // CHECK-FIXES: UsesCleanup uc2;
+};
+
+template<typename V>
+struct D7 {
+  V f7;
+};
+
+D7<int> d7i;
+D7<S> d7s;

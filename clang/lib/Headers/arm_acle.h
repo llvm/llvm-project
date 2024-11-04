@@ -756,6 +756,65 @@ __arm_st64bv0(void *__addr, data512_t __value) {
   __builtin_arm_mops_memset_tag(__tagged_address, __value, __size)
 #endif
 
+/* Coprocessor Intrinsics */
+#if defined(__ARM_FEATURE_COPROC)
+
+#if (__ARM_FEATURE_COPROC & 0x1)
+
+#if (__ARM_ARCH < 8)
+#define __arm_cdp(coproc, opc1, CRd, CRn, CRm, opc2)                           \
+  __builtin_arm_cdp(coproc, opc1, CRd, CRn, CRm, opc2)
+#endif /* __ARM_ARCH < 8 */
+
+#define __arm_ldc(coproc, CRd, p) __builtin_arm_ldc(coproc, CRd, p)
+#define __arm_stc(coproc, CRd, p) __builtin_arm_stc(coproc, CRd, p)
+
+#define __arm_mcr(coproc, opc1, value, CRn, CRm, opc2)                         \
+  __builtin_arm_mcr(coproc, opc1, value, CRn, CRm, opc2)
+#define __arm_mrc(coproc, opc1, CRn, CRm, opc2)                                \
+  __builtin_arm_mrc(coproc, opc1, CRn, CRm, opc2)
+
+#if (__ARM_ARCH != 4) && (__ARM_ARCH < 8)
+#define __arm_ldcl(coproc, CRd, p) __builtin_arm_ldcl(coproc, CRd, p)
+#define __arm_stcl(coproc, CRd, p) __builtin_arm_stcl(coproc, CRd, p)
+#endif /* (__ARM_ARCH != 4) && (__ARM_ARCH != 8) */
+
+#if (__ARM_ARCH_8M_MAIN__) || (__ARM_ARCH_8_1M_MAIN__)
+#define __arm_cdp(coproc, opc1, CRd, CRn, CRm, opc2)                           \
+  __builtin_arm_cdp(coproc, opc1, CRd, CRn, CRm, opc2)
+#define __arm_ldcl(coproc, CRd, p) __builtin_arm_ldcl(coproc, CRd, p)
+#define __arm_stcl(coproc, CRd, p) __builtin_arm_stcl(coproc, CRd, p)
+#endif /* ___ARM_ARCH_8M_MAIN__ */
+
+#endif /* __ARM_FEATURE_COPROC & 0x1 */
+
+#if (__ARM_FEATURE_COPROC & 0x2)
+#define __arm_cdp2(coproc, opc1, CRd, CRn, CRm, opc2)                          \
+  __builtin_arm_cdp2(coproc, opc1, CRd, CRn, CRm, opc2)
+#define __arm_ldc2(coproc, CRd, p) __builtin_arm_ldc2(coproc, CRd, p)
+#define __arm_stc2(coproc, CRd, p) __builtin_arm_stc2(coproc, CRd, p)
+#define __arm_ldc2l(coproc, CRd, p) __builtin_arm_ldc2l(coproc, CRd, p)
+#define __arm_stc2l(coproc, CRd, p) __builtin_arm_stc2l(coproc, CRd, p)
+#define __arm_mcr2(coproc, opc1, value, CRn, CRm, opc2)                        \
+  __builtin_arm_mcr2(coproc, opc1, value, CRn, CRm, opc2)
+#define __arm_mrc2(coproc, opc1, CRn, CRm, opc2)                               \
+  __builtin_arm_mrc2(coproc, opc1, CRn, CRm, opc2)
+#endif
+
+#if (__ARM_FEATURE_COPROC & 0x4)
+#define __arm_mcrr(coproc, opc1, value, CRm)                                   \
+  __builtin_arm_mcrr(coproc, opc1, value, CRm)
+#define __arm_mrrc(coproc, opc1, CRm) __builtin_arm_mrrc(coproc, opc1, CRm)
+#endif
+
+#if (__ARM_FEATURE_COPROC & 0x8)
+#define __arm_mcrr2(coproc, opc1, value, CRm)                                  \
+  __builtin_arm_mcrr2(coproc, opc1, value, CRm)
+#define __arm_mrrc2(coproc, opc1, CRm) __builtin_arm_mrrc2(coproc, opc1, CRm)
+#endif
+
+#endif // __ARM_FEATURE_COPROC
+
 /* Transactional Memory Extension (TME) Intrinsics */
 #if defined(__ARM_FEATURE_TME) && __ARM_FEATURE_TME
 

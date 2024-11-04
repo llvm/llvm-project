@@ -641,7 +641,7 @@ void OptionsWithRaw::SetFromString(llvm::StringRef arg_string) {
 
   // If the string doesn't start with a dash, we just have no options and just
   // a raw part.
-  if (!arg_string.startswith("-")) {
+  if (!arg_string.starts_with("-")) {
     m_suffix = std::string(original_args);
     return;
   }

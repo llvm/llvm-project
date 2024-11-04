@@ -45,7 +45,7 @@ struct LargeStructTwoMember {
 struct LargeStructOneMember g_s;
 #endif
 
-// X86-LABEL: define{{.*}} void @foo(ptr noalias sret(%struct.Mat4X4) align 4 %agg.result, ptr noundef byval(%struct.Mat3X3) align 4 %in)
+// X86-LABEL: define{{.*}} void @foo(ptr dead_on_unwind noalias writable sret(%struct.Mat4X4) align 4 %agg.result, ptr noundef byval(%struct.Mat3X3) align 4 %in)
 // AMDGCN-LABEL: define{{.*}} %struct.Mat4X4 @foo([9 x i32] %in.coerce)
 Mat4X4 __attribute__((noinline)) foo(Mat3X3 in) {
   Mat4X4 out;
@@ -65,8 +65,8 @@ kernel void ker(global Mat3X3 *in, global Mat4X4 *out) {
   out[0] = foo(in[1]);
 }
 
-// X86-LABEL: define{{.*}} void @foo_large(ptr noalias sret(%struct.Mat64X64) align 4 %agg.result, ptr noundef byval(%struct.Mat32X32) align 4 %in)
-// AMDGCN-LABEL: define{{.*}} void @foo_large(ptr addrspace(5) noalias sret(%struct.Mat64X64) align 4 %agg.result, ptr addrspace(5) noundef byref(%struct.Mat32X32) align 4 %{{.*}}
+// X86-LABEL: define{{.*}} void @foo_large(ptr dead_on_unwind noalias writable sret(%struct.Mat64X64) align 4 %agg.result, ptr noundef byval(%struct.Mat32X32) align 4 %in)
+// AMDGCN-LABEL: define{{.*}} void @foo_large(ptr addrspace(5) dead_on_unwind noalias writable sret(%struct.Mat64X64) align 4 %agg.result, ptr addrspace(5) noundef byref(%struct.Mat32X32) align 4 %{{.*}}
 // AMDGCN:       %in = alloca %struct.Mat32X32, align 4, addrspace(5)
 // AMDGCN-NEXT:  call void @llvm.memcpy.p5.p5.i64(ptr addrspace(5) align 4 %in, ptr addrspace(5) align 4 %{{.*}}, i64 4096, i1 false)
 Mat64X64 __attribute__((noinline)) foo_large(Mat32X32 in) {

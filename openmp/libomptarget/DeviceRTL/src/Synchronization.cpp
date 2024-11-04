@@ -34,7 +34,8 @@ uint32_t atomicInc(uint32_t *Address, uint32_t Val, atomic::OrderingTy Ordering,
 
 template <typename Ty>
 Ty atomicAdd(Ty *Address, Ty Val, atomic::OrderingTy Ordering) {
-  return __atomic_fetch_add(Address, Val, Ordering);
+  return __scoped_atomic_fetch_add(Address, Val, Ordering,
+                                   __MEMORY_SCOPE_DEVICE);
 }
 
 template <typename Ty>
@@ -56,25 +57,28 @@ template <typename Ty> Ty atomicLoad(Ty *Address, atomic::OrderingTy Ordering) {
 
 template <typename Ty>
 void atomicStore(Ty *Address, Ty Val, atomic::OrderingTy Ordering) {
-  __atomic_store_n(Address, Val, Ordering);
+  __scoped_atomic_store_n(Address, Val, Ordering, __MEMORY_SCOPE_DEVICE);
 }
 
 template <typename Ty>
 bool atomicCAS(Ty *Address, Ty ExpectedV, Ty DesiredV,
                atomic::OrderingTy OrderingSucc,
                atomic::OrderingTy OrderingFail) {
-  return __atomic_compare_exchange(Address, &ExpectedV, &DesiredV, false,
-                                   OrderingSucc, OrderingFail);
+  return __scoped_atomic_compare_exchange(Address, &ExpectedV, &DesiredV, false,
+                                          OrderingSucc, OrderingFail,
+                                          __MEMORY_SCOPE_DEVICE);
 }
 
 template <typename Ty>
 Ty atomicMin(Ty *Address, Ty Val, atomic::OrderingTy Ordering) {
-  return __atomic_fetch_min(Address, Val, Ordering);
+  return __scoped_atomic_fetch_min(Address, Val, Ordering,
+                                   __MEMORY_SCOPE_DEVICE);
 }
 
 template <typename Ty>
 Ty atomicMax(Ty *Address, Ty Val, atomic::OrderingTy Ordering) {
-  return __atomic_fetch_max(Address, Val, Ordering);
+  return __scoped_atomic_fetch_max(Address, Val, Ordering,
+                                   __MEMORY_SCOPE_DEVICE);
 }
 
 // TODO: Implement this with __atomic_fetch_max and remove the duplication.
@@ -94,23 +98,26 @@ Ty atomicMaxFP(Ty *Address, Ty Val, atomic::OrderingTy Ordering) {
 
 template <typename Ty>
 Ty atomicOr(Ty *Address, Ty Val, atomic::OrderingTy Ordering) {
-  return __atomic_fetch_or(Address, Val, Ordering);
+  return __scoped_atomic_fetch_or(Address, Val, Ordering,
+                                  __MEMORY_SCOPE_DEVICE);
 }
 
 template <typename Ty>
 Ty atomicAnd(Ty *Address, Ty Val, atomic::OrderingTy Ordering) {
-  return __atomic_fetch_and(Address, Val, Ordering);
+  return __scoped_atomic_fetch_and(Address, Val, Ordering,
+                                   __MEMORY_SCOPE_DEVICE);
 }
 
 template <typename Ty>
 Ty atomicXOr(Ty *Address, Ty Val, atomic::OrderingTy Ordering) {
-  return __atomic_fetch_xor(Address, Val, Ordering);
+  return __scoped_atomic_fetch_xor(Address, Val, Ordering,
+                                   __MEMORY_SCOPE_DEVICE);
 }
 
 uint32_t atomicExchange(uint32_t *Address, uint32_t Val,
                         atomic::OrderingTy Ordering) {
   uint32_t R;
-  __atomic_exchange(Address, &Val, &R, Ordering);
+  __scoped_atomic_exchange(Address, &Val, &R, Ordering, __MEMORY_SCOPE_DEVICE);
   return R;
 }
 ///}

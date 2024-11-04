@@ -72,8 +72,7 @@ formatv_object_base::parseReplacementItem(StringRef Spec) {
     return ReplacementItem{};
   }
   RepString = RepString.trim();
-  if (!RepString.empty() && RepString.front() == ',') {
-    RepString = RepString.drop_front();
+  if (RepString.consume_front(",")) {
     if (!consumeFieldLayout(RepString, Where, Align, Pad))
       assert(false && "Invalid replacement field layout specification!");
   }

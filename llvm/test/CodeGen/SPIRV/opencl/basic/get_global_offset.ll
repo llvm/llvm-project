@@ -1,10 +1,7 @@
 ; RUN: llc -O0 -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s
 
 ; CHECK: OpEntryPoint Kernel %[[#test_func:]] "test"
-; CHECK: OpName %[[#outOffsets:]] "outOffsets"
-; CHECK: OpName %[[#test_func]] "test"
-; CHECK: OpName %[[#f2_decl:]] "BuiltInGlobalOffset"
-; CHECK: OpDecorate %[[#f2_decl]] LinkageAttributes "BuiltInGlobalOffset" Import
+; CHECK: OpDecorate %[[#f2_decl:]] LinkageAttributes "BuiltInGlobalOffset" Import
 ; CHECK: %[[#int_ty:]] = OpTypeInt 8 0
 ; CHECK: %[[#void_ty:]] = OpTypeVoid
 ; CHECK: %[[#iptr_ty:]] = OpTypePointer CrossWorkgroup  %[[#int_ty]]
@@ -26,14 +23,13 @@
 ; CHECK-NOT: %[[#vec_ty]] = OpFunction
 ; CHECK-NOT: %[[#func2_ty]] = OpFunction
 ; CHECK-NOT: %[[#f2_decl]] = OpFunction
-; CHECK: %[[#outOffsets]] = OpFunctionParameter %[[#iptr_ty]]
 
 define spir_kernel void @test(i32 addrspace(1)* %outOffsets) {
 entry:
   %0 = call spir_func <3 x i64> @BuiltInGlobalOffset() #1
   %call = extractelement <3 x i64> %0, i32 0
   %conv = trunc i64 %call to i32
-; CHECK: %[[#i1:]] = OpInBoundsPtrAccessChain %[[#i32ptr_ty]] %[[#outOffsets]]
+; CHECK: %[[#i1:]] = OpInBoundsPtrAccessChain %[[#i32ptr_ty]] %[[#outOffsets:]]
 ; CHECK: OpStore %[[#i1:]] %[[#]] Aligned 4
   %arrayidx = getelementptr inbounds i32, i32 addrspace(1)* %outOffsets, i64 0
   store i32 %conv, i32 addrspace(1)* %arrayidx, align 4

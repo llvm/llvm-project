@@ -85,7 +85,6 @@ void CodegenEnv::startEmit() {
     for (Level lvl = 0; lvl < lvlRank; lvl++)
       sortDependentLoops(latticeMerger.getDependentLoops(tid, lvl));
   }
-
   loopEmitter.initialize(
       tensors,
       StringAttr::get(linalgOp.getContext(),
@@ -95,17 +94,8 @@ void CodegenEnv::startEmit() {
       // TODO: compute the map and pass it to loop emitter directly instead of
       // passing in a callback.
       /*dependentLvlGetter=*/
-      [this](TensorId t,
-             Level lvl) -> std::vector<std::pair<TensorLevel, unsigned>> {
-        // Translates from a list of loop indices to a list of [tid, lvl] pair.
-        std::vector<LoopCoeffPair> &rLoops = merger().getDependentLoops(t, lvl);
-        std::vector<std::pair<TensorLevel, unsigned>> ret;
-        ret.reserve(rLoops.size());
-        for (auto [loop, coeff] : rLoops) {
-          TensorLevel tl = makeTensorLevel(merger().getLoopDefiningLvl(loop));
-          ret.emplace_back(tl, coeff);
-        };
-        return ret;
+      [this](TensorId t, Level lvl) -> std::vector<LoopCoeffPair> {
+        return merger().getDependentLoops(t, lvl);
       });
 }
 

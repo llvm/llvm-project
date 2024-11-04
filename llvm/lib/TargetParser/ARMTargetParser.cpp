@@ -348,11 +348,7 @@ StringRef ARM::getArchExtName(uint64_t ArchExtKind) {
 }
 
 static bool stripNegationPrefix(StringRef &Name) {
-  if (Name.starts_with("no")) {
-    Name = Name.substr(2);
-    return true;
-  }
-  return false;
+  return Name.consume_front("no");
 }
 
 StringRef ARM::getArchExtFeature(StringRef ArchExt) {

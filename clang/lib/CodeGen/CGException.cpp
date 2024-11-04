@@ -127,6 +127,8 @@ const EHPersonality
 EHPersonality::GNU_Wasm_CPlusPlus = { "__gxx_wasm_personality_v0", nullptr };
 const EHPersonality EHPersonality::XL_CPlusPlus = {"__xlcxx_personality_v1",
                                                    nullptr};
+const EHPersonality EHPersonality::ZOS_CPlusPlus = {"__zos_cxx_personality_v2",
+                                                    nullptr};
 
 static const EHPersonality &getCPersonality(const TargetInfo &Target,
                                             const LangOptions &L) {
@@ -156,7 +158,9 @@ static const EHPersonality &getObjCPersonality(const TargetInfo &Target,
   case ObjCRuntime::WatchOS:
     return EHPersonality::NeXT_ObjC;
   case ObjCRuntime::GNUstep:
-    if (L.ObjCRuntime.getVersion() >= VersionTuple(1, 7))
+    if (T.isOSCygMing())
+      return EHPersonality::GNU_CPlusPlus_SEH;
+    else if (L.ObjCRuntime.getVersion() >= VersionTuple(1, 7))
       return EHPersonality::GNUstep_ObjC;
     [[fallthrough]];
   case ObjCRuntime::GCC:
@@ -185,6 +189,8 @@ static const EHPersonality &getCXXPersonality(const TargetInfo &Target,
     return EHPersonality::GNU_CPlusPlus_SEH;
   if (L.hasWasmExceptions())
     return EHPersonality::GNU_Wasm_CPlusPlus;
+  if (T.isOSzOS())
+    return EHPersonality::ZOS_CPlusPlus;
   return EHPersonality::GNU_CPlusPlus;
 }
 
@@ -210,7 +216,8 @@ static const EHPersonality &getObjCXXPersonality(const TargetInfo &Target,
     return getObjCPersonality(Target, L);
 
   case ObjCRuntime::GNUstep:
-    return EHPersonality::GNU_ObjCXX;
+    return Target.getTriple().isOSCygMing() ? EHPersonality::GNU_CPlusPlus_SEH
+                                            : EHPersonality::GNU_ObjCXX;
 
   // The GCC runtime's personality function inherently doesn't support
   // mixed EH.  Use the ObjC personality just to avoid returning null.

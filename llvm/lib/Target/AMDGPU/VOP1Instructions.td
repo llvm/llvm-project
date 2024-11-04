@@ -74,6 +74,7 @@ class VOP1_Real <VOP1_Pseudo ps, int EncodingFamily, string real_name = ps.Mnemo
 
   // copy relevant pseudo op flags
   let SubtargetPredicate = ps.SubtargetPredicate;
+  let OtherPredicates    = ps.OtherPredicates;
   let AsmMatchConverter  = ps.AsmMatchConverter;
   let AsmVariantName     = ps.AsmVariantName;
   let Constraints        = ps.Constraints;
@@ -157,8 +158,11 @@ multiclass VOP1Inst_t16<string opName,
   let OtherPredicates = [NotHasTrue16BitInsts, Has16BitInsts]  in {
     defm NAME : VOP1Inst<opName, P, node>;
   }
-  let OtherPredicates = [HasTrue16BitInsts] in {
-    defm _t16 : VOP1Inst<opName#"_t16", VOPProfile_Fake16<P>, node>;
+  let OtherPredicates = [UseRealTrue16Insts] in {
+    defm _t16 : VOP1Inst<opName#"_t16", VOPProfile_True16<P>, node>;
+  }
+  let OtherPredicates = [UseFakeTrue16Insts] in {
+    defm _fake16 : VOP1Inst<opName#"_fake16", VOPProfile_Fake16<P>, node>;
   }
 }
 
@@ -679,6 +683,7 @@ class VOP1_DPP<bits<8> op, VOP1_DPP_Pseudo ps, VOPProfile p = ps.Pfl, bit isDPP1
   let SchedRW = ps.SchedRW;
   let Uses = ps.Uses;
   let TRANS = ps.TRANS;
+  let OtherPredicates = ps.OtherPredicates;
 
   bits<8> vdst;
   let Inst{8-0}   = 0xfa;
@@ -707,6 +712,7 @@ class VOP1_DPP8<bits<8> op, VOP1_Pseudo ps, VOPProfile p = ps.Pfl> :
   let Defs = ps.Defs;
   let SchedRW = ps.SchedRW;
   let Uses = ps.Uses;
+  let OtherPredicates = ps.OtherPredicates;
 
   bits<8> vdst;
   let Inst{8-0}   = fi;
@@ -742,7 +748,9 @@ multiclass VOP1_Real_e32<GFXGen Gen, bits<9> op, string opName = NAME> {
 multiclass VOP1_Real_e32_with_name<GFXGen Gen, bits<9> op, string opName,
                                    string asmName> {
   defvar ps = !cast<VOP1_Pseudo>(opName#"_e32");
-  let AsmString = asmName # ps.AsmOperands in {
+  let AsmString = asmName # ps.AsmOperands,
+      DecoderNamespace = Gen.DecoderNamespace #
+                         !if(ps.Pfl.IsRealTrue16, "", "_FAKE16") in {
     defm NAME : VOP1_Real_e32<Gen, op, opName>;
   }
 }
@@ -761,7 +769,9 @@ multiclass VOP1_Real_dpp<GFXGen Gen, bits<9> op, string opName = NAME> {
 multiclass VOP1_Real_dpp_with_name<GFXGen Gen, bits<9> op, string opName,
                                    string asmName> {
   defvar ps = !cast<VOP1_Pseudo>(opName#"_e32");
-  let AsmString = asmName # ps.Pfl.AsmDPP16 in {
+  let AsmString = asmName # ps.Pfl.AsmDPP16,
+      DecoderNamespace = "DPP" # Gen.DecoderNamespace #
+                         !if(ps.Pfl.IsRealTrue16, "", "_FAKE16") in {
     defm NAME : VOP1_Real_dpp<Gen, op, opName>;
   }
 }
@@ -774,7 +784,9 @@ multiclass VOP1_Real_dpp8<GFXGen Gen, bits<9> op, string opName = NAME> {
 multiclass VOP1_Real_dpp8_with_name<GFXGen Gen, bits<9> op, string opName,
                                     string asmName> {
   defvar ps = !cast<VOP1_Pseudo>(opName#"_e32");
-  let AsmString = asmName # ps.Pfl.AsmDPP8 in {
+  let AsmString = asmName # ps.Pfl.AsmDPP8,
+      DecoderNamespace = "DPP8" # Gen.DecoderNamespace #
+                         !if(ps.Pfl.IsRealTrue16, "", "_FAKE16") in {
     defm NAME : VOP1_Real_dpp8<Gen, op, opName>;
   }
 }
@@ -854,29 +866,30 @@ defm V_CLS_I32             : VOP1_Real_FULL_with_name_gfx11_gfx12<0x03b,
   "V_FFBH_I32", "v_cls_i32">;
 defm V_PERMLANE64_B32      : VOP1Only_Real_gfx11_gfx12<0x067>;
 defm V_MOV_B16_t16           : VOP1_Real_FULL_t16_gfx11_gfx12<0x01c, "v_mov_b16">;
-defm V_NOT_B16_t16           : VOP1_Real_FULL_t16_gfx11_gfx12<0x069, "v_not_b16">;
-defm V_CVT_I32_I16_t16       : VOP1_Real_FULL_t16_gfx11_gfx12<0x06a, "v_cvt_i32_i16">;
-defm V_CVT_U32_U16_t16       : VOP1_Real_FULL_t16_gfx11_gfx12<0x06b, "v_cvt_u32_u16">;
+defm V_NOT_B16_fake16        : VOP1_Real_FULL_t16_gfx11_gfx12<0x069, "v_not_b16">;
+defm V_CVT_I32_I16_fake16    : VOP1_Real_FULL_t16_gfx11_gfx12<0x06a, "v_cvt_i32_i16">;
+defm V_CVT_U32_U16_fake16    : VOP1_Real_FULL_t16_gfx11_gfx12<0x06b, "v_cvt_u32_u16">;
 
 defm V_CVT_F16_U16_t16       : VOP1_Real_FULL_t16_gfx11_gfx12<0x050, "v_cvt_f16_u16">;
 defm V_CVT_F16_I16_t16       : VOP1_Real_FULL_t16_gfx11_gfx12<0x051, "v_cvt_f16_i16">;
 defm V_CVT_U16_F16_t16       : VOP1_Real_FULL_t16_gfx11_gfx12<0x052, "v_cvt_u16_f16">;
 defm V_CVT_I16_F16_t16       : VOP1_Real_FULL_t16_gfx11_gfx12<0x053, "v_cvt_i16_f16">;
-defm V_RCP_F16_t16           : VOP1_Real_FULL_t16_gfx11_gfx12<0x054, "v_rcp_f16">;
-defm V_SQRT_F16_t16          : VOP1_Real_FULL_t16_gfx11_gfx12<0x055, "v_sqrt_f16">;
-defm V_RSQ_F16_t16           : VOP1_Real_FULL_t16_gfx11_gfx12<0x056, "v_rsq_f16">;
-defm V_LOG_F16_t16           : VOP1_Real_FULL_t16_gfx11_gfx12<0x057, "v_log_f16">;
-defm V_EXP_F16_t16           : VOP1_Real_FULL_t16_gfx11_gfx12<0x058, "v_exp_f16">;
-defm V_FREXP_MANT_F16_t16    : VOP1_Real_FULL_t16_gfx11_gfx12<0x059, "v_frexp_mant_f16">;
+defm V_RCP_F16_fake16        : VOP1_Real_FULL_t16_gfx11_gfx12<0x054, "v_rcp_f16">;
+defm V_SQRT_F16_fake16       : VOP1_Real_FULL_t16_gfx11_gfx12<0x055, "v_sqrt_f16">;
+defm V_RSQ_F16_fake16        : VOP1_Real_FULL_t16_gfx11_gfx12<0x056, "v_rsq_f16">;
+defm V_LOG_F16_fake16        : VOP1_Real_FULL_t16_gfx11_gfx12<0x057, "v_log_f16">;
+defm V_EXP_F16_fake16        : VOP1_Real_FULL_t16_gfx11_gfx12<0x058, "v_exp_f16">;
+defm V_FREXP_MANT_F16_fake16 : VOP1_Real_FULL_t16_gfx11_gfx12<0x059, "v_frexp_mant_f16">;
 defm V_FREXP_EXP_I16_F16_t16 : VOP1_Real_FULL_t16_gfx11_gfx12<0x05a, "v_frexp_exp_i16_f16">;
-defm V_FLOOR_F16_t16         : VOP1_Real_FULL_t16_gfx11_gfx12<0x05b, "v_floor_f16">;
+defm V_FLOOR_F16_fake16      : VOP1_Real_FULL_t16_gfx11_gfx12<0x05b, "v_floor_f16">;
 defm V_CEIL_F16_t16          : VOP1_Real_FULL_t16_gfx11_gfx12<0x05c, "v_ceil_f16">;
-defm V_TRUNC_F16_t16         : VOP1_Real_FULL_t16_gfx11_gfx12<0x05d, "v_trunc_f16">;
-defm V_RNDNE_F16_t16         : VOP1_Real_FULL_t16_gfx11_gfx12<0x05e, "v_rndne_f16">;
-defm V_FRACT_F16_t16         : VOP1_Real_FULL_t16_gfx11_gfx12<0x05f, "v_fract_f16">;
-defm V_SIN_F16_t16           : VOP1_Real_FULL_t16_gfx11_gfx12<0x060, "v_sin_f16">;
-defm V_COS_F16_t16           : VOP1_Real_FULL_t16_gfx11_gfx12<0x061, "v_cos_f16">;
-defm V_SAT_PK_U8_I16_t16     : VOP1_Real_FULL_t16_gfx11_gfx12<0x062, "v_sat_pk_u8_i16">;
+defm V_CEIL_F16_fake16       : VOP1_Real_FULL_t16_gfx11_gfx12<0x05c, "v_ceil_f16">;
+defm V_TRUNC_F16_fake16      : VOP1_Real_FULL_t16_gfx11_gfx12<0x05d, "v_trunc_f16">;
+defm V_RNDNE_F16_fake16      : VOP1_Real_FULL_t16_gfx11_gfx12<0x05e, "v_rndne_f16">;
+defm V_FRACT_F16_fake16      : VOP1_Real_FULL_t16_gfx11_gfx12<0x05f, "v_fract_f16">;
+defm V_SIN_F16_fake16        : VOP1_Real_FULL_t16_gfx11_gfx12<0x060, "v_sin_f16">;
+defm V_COS_F16_fake16        : VOP1_Real_FULL_t16_gfx11_gfx12<0x061, "v_cos_f16">;
+defm V_SAT_PK_U8_I16_fake16  : VOP1_Real_FULL_t16_gfx11_gfx12<0x062, "v_sat_pk_u8_i16">;
 defm V_CVT_NORM_I16_F16_t16  : VOP1_Real_FULL_t16_gfx11_gfx12<0x063, "v_cvt_norm_i16_f16">;
 defm V_CVT_NORM_U16_F16_t16  : VOP1_Real_FULL_t16_gfx11_gfx12<0x064, "v_cvt_norm_u16_f16">;
 

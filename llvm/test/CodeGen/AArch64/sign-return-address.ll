@@ -2,6 +2,9 @@
 ; RUN: llc -mtriple=aarch64              < %s | FileCheck --check-prefixes=CHECK,COMPAT %s
 ; RUN: llc -mtriple=aarch64 -mattr=v8.3a < %s | FileCheck --check-prefixes=CHECK,V83A %s
 
+; v9.5-A is not expected to change codegen without -mbranch-protection=+pc, so reuse V83A.
+; RUN: llc -mtriple=aarch64 -mattr=v9.5a < %s | FileCheck --check-prefixes=CHECK,V83A %s
+
 define i32 @leaf(i32 %x) {
 ; CHECK-LABEL: leaf:
 ; CHECK:       // %bb.0:

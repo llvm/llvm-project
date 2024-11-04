@@ -1910,6 +1910,20 @@ exit:
   ret i1 false
 }
 
+define i1 @binop_eval_order(i32 %x) {
+; CHECK-LABEL: @binop_eval_order(
+; CHECK-NEXT:    [[A:%.*]] = add nuw nsw i32 [[X:%.*]], 1
+; CHECK-NEXT:    [[B:%.*]] = add nuw nsw i32 [[A]], 1
+; CHECK-NEXT:    [[C:%.*]] = add nuw nsw i32 [[A]], [[B]]
+; CHECK-NEXT:    ret i1 true
+;
+  %a = add nuw nsw i32 %x, 1
+  %b = add nuw nsw i32 %a, 1
+  %c = add nuw nsw i32 %a, %b
+  %d = icmp ugt i32 %c, 2
+  ret i1 %d
+}
+
 declare i32 @llvm.uadd.sat.i32(i32, i32)
 declare i32 @llvm.usub.sat.i32(i32, i32)
 declare i32 @llvm.sadd.sat.i32(i32, i32)

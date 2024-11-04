@@ -317,8 +317,8 @@ added in the future:
     not be used lightly but only for specific situations such as an
     alternative to the *register pinning* performance technique often
     used when implementing functional programming languages. At the
-    moment only X86 and AArch64 support this convention. The following
-    limitations exist:
+    moment only X86, AArch64, and RISCV support this convention. The 
+    following limitations exist:
 
     -  On *X86-32* only up to 4 bit type parameters are supported. No
        floating-point types are supported.
@@ -327,6 +327,9 @@ added in the future:
     -  On *AArch64* only up to 4 32-bit floating-point parameters,
        4 64-bit floating-point parameters, and 10 bit type parameters
        are supported.
+    -  *RISCV64* only supports up to 11 bit type parameters, 4
+       32-bit floating-point parameters, and 4 64-bit floating-point
+       parameters.
 
     This calling convention supports `tail call
     optimization <CodeGenerator.html#tail-call-optimization>`_ but requires
@@ -959,10 +962,11 @@ IFuncs
 -------
 
 IFuncs, like as aliases, don't create any new data or func. They are just a new
-symbol that dynamic linker resolves at runtime by calling a resolver function.
+symbol that is resolved at runtime by calling a resolver function.
 
-IFuncs have a name and a resolver that is a function called by dynamic linker
-that returns address of another function associated with the name.
+On ELF platforms, IFuncs are resolved by the dynamic linker at load time. On
+Mach-O platforms, they are lowered in terms of ``.symbol_resolver`` functions,
+which lazily resolve the callee the first time they are called.
 
 IFunc may have an optional :ref:`linkage type <linkage>` and an optional
 :ref:`visibility style <visibility>`.
@@ -1514,7 +1518,7 @@ Currently, only the following parameter attributes are defined:
     over-alignment specification through language attributes).
 
 ``allocalign``
-    The function parameter marked with this attribute is is the alignment in bytes of the
+    The function parameter marked with this attribute is the alignment in bytes of the
     newly allocated block returned by this function. The returned value must either have
     the specified alignment or be the null pointer. The return value MAY be more aligned
     than the requested alignment, but not less aligned.  Invalid (e.g. non-power-of-2)
@@ -10514,9 +10518,10 @@ Atomic loads produce :ref:`defined <memmodel>` results when they may see
 multiple atomic stores. The type of the pointee must be an integer, pointer, or
 floating-point type whose bit width is a power of two greater than or equal to
 eight and less than or equal to a target-specific size limit.  ``align`` must be
-explicitly specified on atomic loads, and the load has undefined behavior if the
-alignment is not set to a value which is at least the size in bytes of the
-pointee. ``!nontemporal`` does not have any defined semantics for atomic loads.
+explicitly specified on atomic loads. Note: if the alignment is not greater or
+equal to the size of the `<value>` type, the atomic operation is likely to
+require a lock and have poor performance. ``!nontemporal`` does not have any
+defined semantics for atomic loads.
 
 The optional constant ``align`` argument specifies the alignment of the
 operation (that is, the alignment of the memory address). It is the
@@ -10654,9 +10659,10 @@ Atomic loads produce :ref:`defined <memmodel>` results when they may see
 multiple atomic stores. The type of the pointee must be an integer, pointer, or
 floating-point type whose bit width is a power of two greater than or equal to
 eight and less than or equal to a target-specific size limit.  ``align`` must be
-explicitly specified on atomic stores, and the store has undefined behavior if
-the alignment is not set to a value which is at least the size in bytes of the
-pointee. ``!nontemporal`` does not have any defined semantics for atomic stores.
+explicitly specified on atomic stores. Note: if the alignment is not greater or
+equal to the size of the `<value>` type, the atomic operation is likely to
+require a lock and have poor performance. ``!nontemporal`` does not have any
+defined semantics for atomic stores.
 
 The optional constant ``align`` argument specifies the alignment of the
 operation (that is, the alignment of the memory address). It is the
@@ -10806,8 +10812,9 @@ must be at least ``monotonic``, the failure ordering cannot be either
 A ``cmpxchg`` instruction can also take an optional
 ":ref:`syncscope <syncscope>`" argument.
 
-The alignment must be a power of two greater or equal to the size of the
-`<value>` type.
+Note: if the alignment is not greater or equal to the size of the `<value>`
+type, the atomic operation is likely to require a lock and have poor
+performance.
 
 The alignment is only optional when parsing textual IR; for in-memory IR, it is
 always present. If unspecified, the alignment is assumed to be equal to the
@@ -10909,8 +10916,9 @@ the ``atomicrmw`` is marked as ``volatile``, then the optimizer is not
 allowed to modify the number or order of execution of this
 ``atomicrmw`` with other :ref:`volatile operations <volatile>`.
 
-The alignment must be a power of two greater or equal to the size of the
-`<value>` type.
+Note: if the alignment is not greater or equal to the size of the `<value>`
+type, the atomic operation is likely to require a lock and have poor
+performance.
 
 The alignment is only optional when parsing textual IR; for in-memory IR, it is
 always present. If unspecified, the alignment is assumed to be equal to the
@@ -12245,7 +12253,7 @@ This instruction requires several arguments:
    #. Arguments with the :ref:`inalloca <attr_inalloca>` or
       :ref:`preallocated <attr_preallocated>` attribute are forwarded in place.
    #. If the musttail call appears in a function with the ``"thunk"`` attribute
-      and the caller and callee both have varargs, than any unprototyped
+      and the caller and callee both have varargs, then any unprototyped
       arguments in register or memory are forwarded to the callee. Similarly,
       the return value of the callee is returned to the caller's caller, even
       if a void return type is in use.
@@ -15746,7 +15754,11 @@ Semantics:
 """"""""""
 
 This function returns the same values as the libm ``rint`` functions
-would, and handles error conditions in the same way.
+would, and handles error conditions in the same way. Since LLVM assumes the
+:ref:`default floating-point environment <floatenv>`, the rounding mode is
+assumed to be set to "nearest", so halfway cases are rounded to the even
+integer. Use :ref:`Constrained Floating-Point Intrinsics <constrainedfp>`
+to avoid that assumption.
 
 .. _int_nearbyint:
 
@@ -15784,7 +15796,11 @@ Semantics:
 """"""""""
 
 This function returns the same values as the libm ``nearbyint``
-functions would, and handles error conditions in the same way.
+functions would, and handles error conditions in the same way. Since LLVM
+assumes the :ref:`default floating-point environment <floatenv>`, the rounding
+mode is assumed to be set to "nearest", so halfway cases are rounded to the even
+integer. Use :ref:`Constrained Floating-Point Intrinsics <constrainedfp>` to
+avoid that assumption.
 
 .. _int_round:
 
@@ -22797,7 +22813,7 @@ Semantics:
 
 The '``llvm.vp.fcmp``' compares its first two operands according to the
 condition code given as the third operand. The operands are compared element by
-element on each enabled lane, where the the semantics of the comparison are
+element on each enabled lane, where the semantics of the comparison are
 defined :ref:`according to the condition code <fcmp_md_cc_sem>`. Masked-off
 lanes are ``poison``.
 
@@ -22855,7 +22871,7 @@ Semantics:
 
 The '``llvm.vp.icmp``' compares its first two operands according to the
 condition code given as the third operand. The operands are compared element by
-element on each enabled lane, where the the semantics of the comparison are
+element on each enabled lane, where the semantics of the comparison are
 defined :ref:`according to the condition code <icmp_md_cc_sem>`. Masked-off
 lanes are ``poison``.
 
@@ -27211,9 +27227,6 @@ obviously not constant. However, a call like
 ``llvm.is.constant.i32(i32 %param)`` *can* return true after the
 function is inlined, if the value passed to the function parameter was
 a constant.
-
-On the other hand, if constant folding is not run, it will never
-evaluate to true, even in simple cases.
 
 .. _int_ptrmask:
 

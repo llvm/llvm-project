@@ -650,10 +650,16 @@ MCSectionGOFF *MCContext::getGOFFSection(StringRef Section, SectionKind Kind,
                                          MCSection *Parent,
                                          const MCExpr *SubsectionId) {
   // Do the lookup. If we don't have a hit, return a new section.
-  auto &GOFFSection = GOFFUniquingMap[Section.str()];
-  if (!GOFFSection)
-    GOFFSection = new (GOFFAllocator.Allocate())
-        MCSectionGOFF(Section, Kind, Parent, SubsectionId);
+  auto IterBool =
+      GOFFUniquingMap.insert(std::make_pair(Section.str(), nullptr));
+  auto Iter = IterBool.first;
+  if (!IterBool.second)
+    return Iter->second;
+
+  StringRef CachedName = Iter->first;
+  MCSectionGOFF *GOFFSection = new (GOFFAllocator.Allocate())
+      MCSectionGOFF(CachedName, Kind, Parent, SubsectionId);
+  Iter->second = GOFFSection;
 
   return GOFFSection;
 }

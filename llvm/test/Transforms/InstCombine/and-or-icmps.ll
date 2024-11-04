@@ -3015,10 +3015,8 @@ define i32 @icmp_x_slt_0_and_icmp_y_sgt_neg1_i32_fail(i32 %x, i32 %y) {
 
 define i32 @icmp_slt_0_xor_icmp_sge_neg2_i32_fail(i32 %x) {
 ; CHECK-LABEL: @icmp_slt_0_xor_icmp_sge_neg2_i32_fail(
-; CHECK-NEXT:    [[A:%.*]] = icmp sgt i32 [[X:%.*]], -3
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt i32 [[X]], 0
-; CHECK-NEXT:    [[TMP2:%.*]] = xor i1 [[TMP1]], [[A]]
-; CHECK-NEXT:    [[D:%.*]] = zext i1 [[TMP2]] to i32
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i32 [[X:%.*]], -2
+; CHECK-NEXT:    [[D:%.*]] = zext i1 [[TMP1]] to i32
 ; CHECK-NEXT:    ret i32 [[D]]
 ;
   %A = icmp sge i32 %x, -2

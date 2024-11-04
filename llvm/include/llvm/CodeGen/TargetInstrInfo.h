@@ -1025,6 +1025,11 @@ protected:
     return std::nullopt;
   }
 
+  virtual std::optional<DestSourcePair>
+  isCopyLikeInstrImpl(const MachineInstr &MI) const {
+    return std::nullopt;
+  }
+
   /// Return true if the given terminator MI is not expected to spill. This
   /// sets the live interval as not spillable and adjusts phi node lowering to
   /// not introduce copies after the terminator. Use with care, these are
@@ -1048,6 +1053,14 @@ public:
       return DestSourcePair{MI.getOperand(0), MI.getOperand(1)};
     }
     return isCopyInstrImpl(MI);
+  }
+
+  // Similar to `isCopyInstr`, but adds non-copy semantics on MIR, but
+  // ultimately generates a copy instruction.
+  std::optional<DestSourcePair> isCopyLikeInstr(const MachineInstr &MI) const {
+    if (auto IsCopyInstr = isCopyInstr(MI))
+      return IsCopyInstr;
+    return isCopyLikeInstrImpl(MI);
   }
 
   bool isFullCopyInstr(const MachineInstr &MI) const {

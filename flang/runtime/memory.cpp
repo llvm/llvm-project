@@ -8,11 +8,14 @@
 
 #include "flang/Runtime/memory.h"
 #include "terminator.h"
+#include "tools.h"
 #include <cstdlib>
 
 namespace Fortran::runtime {
+RT_OFFLOAD_VAR_GROUP_BEGIN
 
-void *AllocateMemoryOrCrash(const Terminator &terminator, std::size_t bytes) {
+RT_API_ATTRS void *AllocateMemoryOrCrash(
+    const Terminator &terminator, std::size_t bytes) {
   if (void *p{std::malloc(bytes)}) {
     return p;
   }
@@ -24,5 +27,20 @@ void *AllocateMemoryOrCrash(const Terminator &terminator, std::size_t bytes) {
   return nullptr;
 }
 
-void FreeMemory(void *p) { std::free(p); }
+RT_API_ATTRS void *ReallocateMemoryOrCrash(
+    const Terminator &terminator, void *ptr, std::size_t newByteSize) {
+  if (void *p{Fortran::runtime::realloc(ptr, newByteSize)}) {
+    return p;
+  }
+  if (newByteSize > 0) {
+    terminator.Crash("Fortran runtime internal error: memory realloc returned "
+                     "null, needed %zd bytes",
+        newByteSize);
+  }
+  return nullptr;
+}
+
+RT_API_ATTRS void FreeMemory(void *p) { std::free(p); }
+
+RT_OFFLOAD_VAR_GROUP_END
 } // namespace Fortran::runtime

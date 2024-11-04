@@ -58,7 +58,6 @@
 #  include <sched.h>
 #  include <signal.h>
 #  include <sys/mman.h>
-#  include <sys/param.h>
 #  if !SANITIZER_SOLARIS
 #    include <sys/ptrace.h>
 #  endif
@@ -136,9 +135,7 @@ const int FUTEX_WAKE_PRIVATE = FUTEX_WAKE | FUTEX_PRIVATE_FLAG;
 #    define SANITIZER_LINUX_USES_64BIT_SYSCALLS 0
 #  endif
 
-// Note : FreeBSD had implemented both
-// Linux apis, available from
-// future 12.x version most likely
+// Note : FreeBSD implemented both Linux and OpenBSD apis.
 #  if SANITIZER_LINUX && defined(__NR_getrandom)
 #    if !defined(GRND_NONBLOCK)
 #      define GRND_NONBLOCK 1
@@ -148,10 +145,8 @@ const int FUTEX_WAKE_PRIVATE = FUTEX_WAKE | FUTEX_PRIVATE_FLAG;
 #    define SANITIZER_USE_GETRANDOM 0
 #  endif  // SANITIZER_LINUX && defined(__NR_getrandom)
 
-#  if SANITIZER_FREEBSD && __FreeBSD_version >= 1200000
+#  if SANITIZER_FREEBSD
 #    define SANITIZER_USE_GETENTROPY 1
-#  else
-#    define SANITIZER_USE_GETENTROPY 0
 #  endif
 
 namespace __sanitizer {

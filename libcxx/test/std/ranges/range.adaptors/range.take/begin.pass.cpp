@@ -69,7 +69,7 @@ constexpr bool test() {
     ASSERT_SAME_TYPE(decltype(tv.begin()), std::counted_iterator<int*>);
   }
 
-  // __simple_view<V> && sized_range<V> && !size_range<!V>
+  // simple-view<V> && sized_range<V> && !size_range<!V>
   {
     std::ranges::take_view<NonCommonSimpleView> tv{};
     ASSERT_SAME_TYPE(decltype(tv.begin()), std::counted_iterator<int*>);

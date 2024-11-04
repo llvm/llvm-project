@@ -1095,3 +1095,39 @@ func.func @arm_sme_outerproduct_with_everything(%vecA: vector<[16]xi8>, %vecB: v
   %result = arm_sme.outerproduct %vecA, %vecB kind<sub> acc(%acc) masks(%maskA, %maskB) : vector<[16]xi8>, vector<[16]xi8>
   return %result : vector<[16]x[16]xi8>
 }
+
+//===----------------------------------------------------------------------===//
+// arm_sme.streaming_vl
+//===----------------------------------------------------------------------===//
+
+// -----
+
+func.func @arm_sme_streaming_vl_bytes() -> index {
+  // CHECK: arm_sme.streaming_vl <byte>
+  %svl_b = arm_sme.streaming_vl <byte>
+  return %svl_b : index
+}
+
+// -----
+
+func.func @arm_sme_streaming_vl_half_words() -> index {
+  // CHECK: arm_sme.streaming_vl <half>
+  %svl_h = arm_sme.streaming_vl <half>
+  return %svl_h : index
+}
+
+// -----
+
+func.func @arm_sme_streaming_vl_words() -> index {
+  // CHECK: arm_sme.streaming_vl <word>
+  %svl_w = arm_sme.streaming_vl <word>
+  return %svl_w : index
+}
+
+// -----
+
+func.func @arm_sme_streaming_vl_double_words() -> index {
+  // CHECK: arm_sme.streaming_vl <double>
+  %svl_d = arm_sme.streaming_vl <double>
+  return %svl_d : index
+}

@@ -119,7 +119,8 @@ void IRPrinterInstrumentation::runAfterPassFailed(Pass *pass, Operation *op) {
   config->printAfterIfEnabled(pass, op, [&](raw_ostream &out) {
     out << formatv("// -----// IR Dump After {0} Failed ({1})", pass->getName(),
                    pass->getArgument());
-    printIR(op, config->shouldPrintAtModuleScope(), out, OpPrintingFlags());
+    printIR(op, config->shouldPrintAtModuleScope(), out,
+            config->getOpPrintingFlags());
     out << "\n\n";
   });
 }

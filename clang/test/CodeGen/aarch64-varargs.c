@@ -601,7 +601,7 @@ typedef struct __attribute__((aligned(32))) {
   __int128 val;
 } overaligned_int128_struct;
 overaligned_int128_struct overaligned_int128_struct_test(void) {
-// CHECK-LABEL: define{{.*}} void @overaligned_int128_struct_test(ptr noalias sret(%struct.overaligned_int128_struct) align 32 %agg.result)
+// CHECK-LABEL: define{{.*}} void @overaligned_int128_struct_test(ptr dead_on_unwind noalias writable sret(%struct.overaligned_int128_struct) align 32 %agg.result)
   return va_arg(the_list, overaligned_int128_struct);
 // CHECK: [[GR_OFFS:%[a-z_0-9]+]] = load i32, ptr getelementptr inbounds (%struct.__va_list, ptr @the_list, i32 0, i32 3)
 // CHECK: [[EARLY_ONSTACK:%[a-z_0-9]+]] = icmp sge i32 [[GR_OFFS]], 0
@@ -804,7 +804,7 @@ typedef struct {
   __int128 val __attribute__((aligned(32)));
 } overaligned_int128_struct_member;
 overaligned_int128_struct_member overaligned_int128_struct_member_test(void) {
-// CHECK-LABEL: define{{.*}} void @overaligned_int128_struct_member_test(ptr noalias sret(%struct.overaligned_int128_struct_member) align 32 %agg.result)
+// CHECK-LABEL: define{{.*}} void @overaligned_int128_struct_member_test(ptr dead_on_unwind noalias writable sret(%struct.overaligned_int128_struct_member) align 32 %agg.result)
   return va_arg(the_list, overaligned_int128_struct_member);
 // CHECK: [[GR_OFFS:%[a-z_0-9]+]] = load i32, ptr getelementptr inbounds (%struct.__va_list, ptr @the_list, i32 0, i32 3)
 // CHECK: [[EARLY_ONSTACK:%[a-z_0-9]+]] = icmp sge i32 [[GR_OFFS]], 0

@@ -855,6 +855,23 @@ void Module::FindFunctions(ConstString name,
   }
 }
 
+void Module::FindFunctions(llvm::ArrayRef<CompilerContext> compiler_ctx,
+                           FunctionNameType name_type_mask,
+                           const ModuleFunctionSearchOptions &options,
+                           SymbolContextList &sc_list) {
+  if (compiler_ctx.empty() ||
+      compiler_ctx.back().kind != CompilerContextKind::Function)
+    return;
+  ConstString name = compiler_ctx.back().name;
+  SymbolContextList unfiltered;
+  FindFunctions(name, CompilerDeclContext(), name_type_mask, options,
+                unfiltered);
+  // Filter by context.
+  for (auto &sc : unfiltered)
+    if (sc.function && compiler_ctx.equals(sc.function->GetCompilerContext()))
+      sc_list.Append(sc);
+}
+
 void Module::FindFunctions(const RegularExpression &regex,
                            const ModuleFunctionSearchOptions &options,
                            SymbolContextList &sc_list) {
@@ -1354,7 +1371,7 @@ void Module::SetSymbolFileFileSpec(const FileSpec &file) {
         if (FileSystem::Instance().IsDirectory(file)) {
           std::string new_path(file.GetPath());
           std::string old_path(obj_file->GetFileSpec().GetPath());
-          if (llvm::StringRef(old_path).startswith(new_path)) {
+          if (llvm::StringRef(old_path).starts_with(new_path)) {
             // We specified the same bundle as the symbol file that we already
             // have
             return;

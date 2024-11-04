@@ -1790,7 +1790,7 @@ bool DataFlowGraph::hasUntrackedRef(Stmt S, bool IgnoreReserved) const {
   for (const MachineOperand &Op : S.Addr->getCode()->operands()) {
     if (!Op.isReg() && !Op.isRegMask())
       continue;
-    if (llvm::find(Ops, &Op) == Ops.end())
+    if (!llvm::is_contained(Ops, &Op))
       return true;
   }
   return false;

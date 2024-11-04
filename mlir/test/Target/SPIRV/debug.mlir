@@ -13,7 +13,7 @@ spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader], []> {
 
   spirv.func @atomic(%ptr: !spirv.ptr<i32, Workgroup>, %value: i32, %comparator: i32) "None" {
     // CHECK: loc({{".*debug.mlir"}}:16:10)
-    %1 = spirv.AtomicAnd "Device" "None" %ptr, %value : !spirv.ptr<i32, Workgroup>
+    %1 = spirv.AtomicAnd <Device> <None> %ptr, %value : !spirv.ptr<i32, Workgroup>
     spirv.Return
   }
 

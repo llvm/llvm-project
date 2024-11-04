@@ -486,7 +486,9 @@ feature_test_macros = [
             "values": {
                 "c++20": 202311  # DR P2909R4 Fix formatting of code units as integers
             },
-            "headers": [""],  # Note not in format
+            "headers": [
+                "format"  # TODO verify this entry since the paper was underspecified.
+            ],
         },
         {
             "name": "__cpp_lib_formatters",
@@ -568,7 +570,6 @@ feature_test_macros = [
             "name": "__cpp_lib_fstream_native_handle",
             "values": {"c++26": 202306},  # P1759R6 Native handles and file streams
             "headers": ["fstream"],
-            "unimplemented": True,
         },
         {
             "name": "__cpp_lib_function_ref",
@@ -660,7 +661,7 @@ feature_test_macros = [
         },
         {
             "name": "__cpp_lib_ios_noreplace",
-            "values": { "c++23": 202207 },
+            "values": {"c++23": 202207},
             "headers": ["ios"],
         },
         {
@@ -873,7 +874,6 @@ feature_test_macros = [
             "name": "__cpp_lib_print",
             "values": {"c++23": 202207},
             "headers": ["ostream", "print"],
-            "unimplemented": True,
         },
         {
             "name": "__cpp_lib_quoted_string_io",
@@ -1010,7 +1010,9 @@ feature_test_macros = [
         {
             "name": "__cpp_lib_saturation_arithmetic",
             "values": {"c++26": 202311},  # P0543R3 Saturation arithmetic
-            "headers": [""],  # Note not in <numerics>
+            "headers": [
+                "numeric"  # TODO verify this entry since the paper was underspecified.
+            ],
             "unimplemented": True,
         },
         {
@@ -1080,6 +1082,11 @@ feature_test_macros = [
                 # "c++26": 202311,  # P2821R5 span.at()
                 #          202311   # P2833R2 Freestanding Library: inout expected span
             },
+            "headers": ["span"],
+        },
+        {
+            "name": "__cpp_lib_span_at",
+            "values": {"c++26": 202311},  # P2821R3 span.at()
             "headers": ["span"],
         },
         {

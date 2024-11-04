@@ -885,6 +885,9 @@ struct PGOAnalysisMap {
     bool BBFreq : 1;
     bool BrProb : 1;
 
+    // True if at least one feature is enabled
+    bool anyEnabled() const { return FuncEntryCount || BBFreq || BrProb; }
+
     // Encodes to minimum bit width representation.
     uint8_t encode() const {
       return (static_cast<uint8_t>(FuncEntryCount) << 0) |

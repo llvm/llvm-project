@@ -779,7 +779,7 @@ namespace dr657 { // dr657: partial
 
   struct C { C(Abs) {} };
   // expected-error@-1 {{parameter type 'Abs' is an abstract class}}
-  // expected-note@#dr657-Abs {{unimplemented pure virtual method 'x' in 'Abs'}}
+  //   expected-note@#dr657-Abs {{unimplemented pure virtual method 'x' in 'Abs'}}
   struct Q { operator Abs() { __builtin_unreachable(); } } q;
   // expected-error@-1 {{return type 'Abs' is an abstract class}}
 #if __cplusplus >= 201703L
@@ -809,7 +809,7 @@ namespace dr659 { // dr659: 3.0
   struct A; // #dr659-A
   int m = alignof(A&);
   // since-cxx11-error@-1 {{invalid application of 'alignof' to an incomplete type 'A'}}
-  // since-cxx11-note@#dr659-A {{forward declaration of 'dr659::A'}}
+  //   since-cxx11-note@#dr659-A {{forward declaration of 'dr659::A'}}
 }
 #endif
 
@@ -836,7 +836,7 @@ namespace dr662 { // dr662: yes
     T &tr = t;
     T *tp = &t;
     // expected-error@-1 {{'tp' declared as a pointer to a reference of type 'int &'}}
-    // expected-note@#dr662-f-call {{in instantiation of function template specialization 'dr662::f<int &>' requested here}}
+    //   expected-note@#dr662-f-call {{in instantiation of function template specialization 'dr662::f<int &>' requested here}}
 #if __cplusplus >= 201103L
     auto *ap = &t;
 #endif
@@ -1302,12 +1302,12 @@ namespace dr692 { // dr692: 16
       e2(b2);
       f<int>(42);
       // expected-error@-1 {{call to 'f' is ambiguous}}
-      // expected-note@#dr692-f-deleted {{candidate function [with T = int, U = int] has been explicitly deleted}}
-      // expected-note@#dr692-f {{candidate function [with U = int]}}
+      //   expected-note@#dr692-f-deleted {{candidate function [with T = int, U = int] has been explicitly deleted}}
+      //   expected-note@#dr692-f {{candidate function [with U = int]}}
       g(42);
       // expected-error@-1 {{ambiguous}}
-      // expected-note@#dr692-g {{candidate function [with T = int]}}
-      // expected-note@#dr692-g-variadic {{candidate function [with T = int, U = <>]}}
+      //   expected-note@#dr692-g {{candidate function [with T = int]}}
+      //   expected-note@#dr692-g-variadic {{candidate function [with T = int, U = <>]}}
     }
   }
 
@@ -1371,7 +1371,7 @@ namespace dr696 { // dr696: 3.1
         int arr[N]; (void)arr;
         f(&N);
         // expected-error@-1 {{reference to local variable 'N' declared in enclosing function 'dr696::g'}}
-        // expected-note@#dr696-N {{'N' declared here}}
+        //   expected-note@#dr696-N {{'N' declared here}}
       }
     };
 #if __cplusplus >= 201103L

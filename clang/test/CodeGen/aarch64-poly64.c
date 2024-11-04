@@ -121,13 +121,13 @@ poly64x1_t test_vcreate_p64(uint64_t a) {
 }
 
 // CHECK-LABEL: define{{.*}} <1 x i64> @test_vdup_n_p64(i64 noundef %a) #0 {
-// CHECK:   [[VECINIT_I:%.*]] = insertelement <1 x i64> undef, i64 %a, i32 0
+// CHECK:   [[VECINIT_I:%.*]] = insertelement <1 x i64> poison, i64 %a, i32 0
 // CHECK:   ret <1 x i64> [[VECINIT_I]]
 poly64x1_t test_vdup_n_p64(poly64_t a) {
   return vdup_n_p64(a);
 }
 // CHECK-LABEL: define{{.*}} <2 x i64> @test_vdupq_n_p64(i64 noundef %a) #0 {
-// CHECK:   [[VECINIT_I:%.*]] = insertelement <2 x i64> undef, i64 %a, i32 0
+// CHECK:   [[VECINIT_I:%.*]] = insertelement <2 x i64> poison, i64 %a, i32 0
 // CHECK:   [[VECINIT1_I:%.*]] = insertelement <2 x i64> [[VECINIT_I]], i64 %a, i32 1
 // CHECK:   ret <2 x i64> [[VECINIT1_I]]
 poly64x2_t test_vdupq_n_p64(poly64_t a) {
@@ -135,14 +135,14 @@ poly64x2_t test_vdupq_n_p64(poly64_t a) {
 }
 
 // CHECK-LABEL: define{{.*}} <1 x i64> @test_vmov_n_p64(i64 noundef %a) #0 {
-// CHECK:   [[VECINIT_I:%.*]] = insertelement <1 x i64> undef, i64 %a, i32 0
+// CHECK:   [[VECINIT_I:%.*]] = insertelement <1 x i64> poison, i64 %a, i32 0
 // CHECK:   ret <1 x i64> [[VECINIT_I]]
 poly64x1_t test_vmov_n_p64(poly64_t a) {
   return vmov_n_p64(a);
 }
 
 // CHECK-LABEL: define{{.*}} <2 x i64> @test_vmovq_n_p64(i64 noundef %a) #0 {
-// CHECK:   [[VECINIT_I:%.*]] = insertelement <2 x i64> undef, i64 %a, i32 0
+// CHECK:   [[VECINIT_I:%.*]] = insertelement <2 x i64> poison, i64 %a, i32 0
 // CHECK:   [[VECINIT1_I:%.*]] = insertelement <2 x i64> [[VECINIT_I]], i64 %a, i32 1
 // CHECK:   ret <2 x i64> [[VECINIT1_I]]
 poly64x2_t test_vmovq_n_p64(poly64_t a) {

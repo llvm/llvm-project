@@ -158,7 +158,7 @@ float16x4_t test_vcmla_lane_f16(float16x4_t acc, float16x4_t lhs, float16x4_t rh
 // ACLE says this exists, but it won't map to a single instruction if lane > 1.
 // CHECK-LABEL: @test_vcmla_laneq_f16(
 // CHECK: [[CPLX:%.*]] = bitcast <8 x half> %rhs to <4 x i32>
-// CHECK: [[DUP:%.*]] = shufflevector <4 x i32> [[CPLX]], <4 x i32> undef, <2 x i32> <i32 3, i32 3>
+// CHECK: [[DUP:%.*]] = shufflevector <4 x i32> [[CPLX]], <4 x i32> poison, <2 x i32> <i32 3, i32 3>
 // CHECK: [[DUP_FLT:%.*]] = bitcast <2 x i32> [[DUP]] to <4 x half>
 // CHECK: [[RES:%.*]] = tail call <4 x half> @llvm.aarch64.neon.vcmla.rot0.v4f16(<4 x half> %acc, <4 x half> %lhs, <4 x half> [[DUP_FLT]])
 // CHECK: ret <4 x half> [[RES]]
@@ -176,7 +176,7 @@ float16x8_t test_vcmlaq_lane_f16(float16x8_t acc, float16x8_t lhs, float16x4_t r
 
 // CHECK-LABEL: @test_vcmlaq_laneq_f16(
 // CHECK: [[CPLX:%.*]] = bitcast <8 x half> %rhs to <4 x i32>
-// CHECK: [[DUP:%.*]] = shufflevector <4 x i32> [[CPLX]], <4 x i32> undef, <4 x i32> <i32 3, i32 3, i32 3, i32 3>
+// CHECK: [[DUP:%.*]] = shufflevector <4 x i32> [[CPLX]], <4 x i32> poison, <4 x i32> <i32 3, i32 3, i32 3, i32 3>
 // CHECK: [[DUP_FLT:%.*]] = bitcast <4 x i32> [[DUP]] to <8 x half>
 // CHECK: [[RES:%.*]] = tail call <8 x half> @llvm.aarch64.neon.vcmla.rot0.v8f16(<8 x half> %acc, <8 x half> %lhs, <8 x half> [[DUP_FLT]])
 // CHECK: ret <8 x half> [[RES]]
@@ -194,7 +194,7 @@ float32x2_t test_vcmla_lane_f32(float32x2_t acc, float32x2_t lhs, float32x2_t rh
 // ACLE says this exists, but it won't map to a single instruction if lane > 1.
 // CHECK-LABEL: @test_vcmla_laneq_f32(
 // CHECK: [[CPLX:%.*]] = bitcast <4 x float> %rhs to <2 x i64>
-// CHECK: [[DUP:%.*]] = shufflevector <2 x i64> [[CPLX]], <2 x i64> undef, <1 x i32> <i32 1>
+// CHECK: [[DUP:%.*]] = shufflevector <2 x i64> [[CPLX]], <2 x i64> poison, <1 x i32> <i32 1>
 // CHECK: [[DUP_FLT:%.*]] = bitcast <1 x i64> [[DUP]] to <2 x float>
 // CHECK: [[RES:%.*]] = tail call <2 x float> @llvm.aarch64.neon.vcmla.rot0.v2f32(<2 x float> %acc, <2 x float> %lhs, <2 x float> [[DUP_FLT]])
 // CHECK: ret <2 x float> [[RES]]
@@ -204,7 +204,7 @@ float32x2_t test_vcmla_laneq_f32(float32x2_t acc, float32x2_t lhs, float32x4_t r
 
 // CHECK-LABEL: @test_vcmlaq_lane_f32(
 // CHECK: [[CPLX:%.*]] = bitcast <2 x float> %rhs to i64
-// CHECK: [[CPLX_VEC:%.*]] = insertelement <2 x i64> undef, i64 [[CPLX]], i64 0
+// CHECK: [[CPLX_VEC:%.*]] = insertelement <2 x i64> poison, i64 [[CPLX]], i64 0
 // CHECK: [[CPLX2:%.*]] = bitcast <2 x i64> [[CPLX_VEC]] to <4 x float>
 // CHECK: [[DUP:%.*]] = shufflevector <4 x float> [[CPLX2]], <4 x float> poison, <4 x i32> <i32 0, i32 1, i32 0, i32 1>
 // CHECK: [[RES:%.*]] = tail call <4 x float> @llvm.aarch64.neon.vcmla.rot0.v4f32(<4 x float> %acc, <4 x float> %lhs, <4 x float> [[DUP]])
@@ -232,7 +232,7 @@ float16x4_t test_vcmla_rot90_lane_f16(float16x4_t acc, float16x4_t lhs, float16x
 // ACLE says this exists, but it won't map to a single instruction if lane > 1.
 // CHECK-LABEL: @test_vcmla_rot90_laneq_f16(
 // CHECK: [[CPLX:%.*]] = bitcast <8 x half> %rhs to <4 x i32>
-// CHECK: [[DUP:%.*]] = shufflevector <4 x i32> [[CPLX]], <4 x i32> undef, <2 x i32> <i32 3, i32 3>
+// CHECK: [[DUP:%.*]] = shufflevector <4 x i32> [[CPLX]], <4 x i32> poison, <2 x i32> <i32 3, i32 3>
 // CHECK: [[DUP_FLT:%.*]] = bitcast <2 x i32> [[DUP]] to <4 x half>
 // CHECK: [[RES:%.*]] = tail call <4 x half> @llvm.aarch64.neon.vcmla.rot90.v4f16(<4 x half> %acc, <4 x half> %lhs, <4 x half> [[DUP_FLT]])
 // CHECK: ret <4 x half> [[RES]]
@@ -250,7 +250,7 @@ float16x8_t test_vcmlaq_rot90_lane_f16(float16x8_t acc, float16x8_t lhs, float16
 
 // CHECK-LABEL: @test_vcmlaq_rot90_laneq_f16(
 // CHECK: [[CPLX:%.*]] = bitcast <8 x half> %rhs to <4 x i32>
-// CHECK: [[DUP:%.*]] = shufflevector <4 x i32> [[CPLX]], <4 x i32> undef, <4 x i32> <i32 3, i32 3, i32 3, i32 3>
+// CHECK: [[DUP:%.*]] = shufflevector <4 x i32> [[CPLX]], <4 x i32> poison, <4 x i32> <i32 3, i32 3, i32 3, i32 3>
 // CHECK: [[DUP_FLT:%.*]] = bitcast <4 x i32> [[DUP]] to <8 x half>
 // CHECK: [[RES:%.*]] = tail call <8 x half> @llvm.aarch64.neon.vcmla.rot90.v8f16(<8 x half> %acc, <8 x half> %lhs, <8 x half> [[DUP_FLT]])
 // CHECK: ret <8 x half> [[RES]]
@@ -268,7 +268,7 @@ float32x2_t test_vcmla_rot90_lane_f32(float32x2_t acc, float32x2_t lhs, float32x
 // ACLE says this exists, but it won't map to a single instruction if lane > 1.
 // CHECK-LABEL: @test_vcmla_rot90_laneq_f32(
 // CHECK: [[CPLX:%.*]] = bitcast <4 x float> %rhs to <2 x i64>
-// CHECK: [[DUP:%.*]] = shufflevector <2 x i64> [[CPLX]], <2 x i64> undef, <1 x i32> <i32 1>
+// CHECK: [[DUP:%.*]] = shufflevector <2 x i64> [[CPLX]], <2 x i64> poison, <1 x i32> <i32 1>
 // CHECK: [[DUP_FLT:%.*]] = bitcast <1 x i64> [[DUP]] to <2 x float>
 // CHECK: [[RES:%.*]] = tail call <2 x float> @llvm.aarch64.neon.vcmla.rot90.v2f32(<2 x float> %acc, <2 x float> %lhs, <2 x float> [[DUP_FLT]])
 // CHECK: ret <2 x float> [[RES]]
@@ -278,7 +278,7 @@ float32x2_t test_vcmla_rot90_laneq_f32(float32x2_t acc, float32x2_t lhs, float32
 
 // CHECK-LABEL: @test_vcmlaq_rot90_lane_f32(
 // CHECK: [[CPLX:%.*]] = bitcast <2 x float> %rhs to i64
-// CHECK: [[CPLX_VEC:%.*]] = insertelement <2 x i64> undef, i64 [[CPLX]], i64 0
+// CHECK: [[CPLX_VEC:%.*]] = insertelement <2 x i64> poison, i64 [[CPLX]], i64 0
 // CHECK: [[CPLX2:%.*]] = bitcast <2 x i64> [[CPLX_VEC]] to <4 x float>
 // CHECK: [[DUP:%.*]] = shufflevector <4 x float> [[CPLX2]], <4 x float> poison, <4 x i32> <i32 0, i32 1, i32 0, i32 1>
 // CHECK: [[RES:%.*]] = tail call <4 x float> @llvm.aarch64.neon.vcmla.rot90.v4f32(<4 x float> %acc, <4 x float> %lhs, <4 x float> [[DUP]])
@@ -306,7 +306,7 @@ float16x4_t test_vcmla_rot180_lane_f16(float16x4_t acc, float16x4_t lhs, float16
 // ACLE says this exists, but it won't map to a single instruction if lane > 1.
 // CHECK-LABEL: @test_vcmla_rot180_laneq_f16(
 // CHECK: [[CPLX:%.*]] = bitcast <8 x half> %rhs to <4 x i32>
-// CHECK: [[DUP:%.*]] = shufflevector <4 x i32> [[CPLX]], <4 x i32> undef, <2 x i32> <i32 3, i32 3>
+// CHECK: [[DUP:%.*]] = shufflevector <4 x i32> [[CPLX]], <4 x i32> poison, <2 x i32> <i32 3, i32 3>
 // CHECK: [[DUP_FLT:%.*]] = bitcast <2 x i32> [[DUP]] to <4 x half>
 // CHECK: [[RES:%.*]] = tail call <4 x half> @llvm.aarch64.neon.vcmla.rot180.v4f16(<4 x half> %acc, <4 x half> %lhs, <4 x half> [[DUP_FLT]])
 // CHECK: ret <4 x half> [[RES]]
@@ -324,7 +324,7 @@ float16x8_t test_vcmlaq_rot180_lane_f16(float16x8_t acc, float16x8_t lhs, float1
 
 // CHECK-LABEL: @test_vcmlaq_rot180_laneq_f16(
 // CHECK: [[CPLX:%.*]] = bitcast <8 x half> %rhs to <4 x i32>
-// CHECK: [[DUP:%.*]] = shufflevector <4 x i32> [[CPLX]], <4 x i32> undef, <4 x i32> <i32 3, i32 3, i32 3, i32 3>
+// CHECK: [[DUP:%.*]] = shufflevector <4 x i32> [[CPLX]], <4 x i32> poison, <4 x i32> <i32 3, i32 3, i32 3, i32 3>
 // CHECK: [[DUP_FLT:%.*]] = bitcast <4 x i32> [[DUP]] to <8 x half>
 // CHECK: [[RES:%.*]] = tail call <8 x half> @llvm.aarch64.neon.vcmla.rot180.v8f16(<8 x half> %acc, <8 x half> %lhs, <8 x half> [[DUP_FLT]])
 // CHECK: ret <8 x half> [[RES]]
@@ -342,7 +342,7 @@ float32x2_t test_vcmla_rot180_lane_f32(float32x2_t acc, float32x2_t lhs, float32
 // ACLE says this exists, but it won't map to a single instruction if lane > 1.
 // CHECK-LABEL: @test_vcmla_rot180_laneq_f32(
 // CHECK: [[CPLX:%.*]] = bitcast <4 x float> %rhs to <2 x i64>
-// CHECK: [[DUP:%.*]] = shufflevector <2 x i64> [[CPLX]], <2 x i64> undef, <1 x i32> <i32 1>
+// CHECK: [[DUP:%.*]] = shufflevector <2 x i64> [[CPLX]], <2 x i64> poison, <1 x i32> <i32 1>
 // CHECK: [[DUP_FLT:%.*]] = bitcast <1 x i64> [[DUP]] to <2 x float>
 // CHECK: [[RES:%.*]] = tail call <2 x float> @llvm.aarch64.neon.vcmla.rot180.v2f32(<2 x float> %acc, <2 x float> %lhs, <2 x float> [[DUP_FLT]])
 // CHECK: ret <2 x float> [[RES]]
@@ -352,7 +352,7 @@ float32x2_t test_vcmla_rot180_laneq_f32(float32x2_t acc, float32x2_t lhs, float3
 
 // CHECK-LABEL: @test_vcmlaq_rot180_lane_f32(
 // CHECK: [[CPLX:%.*]] = bitcast <2 x float> %rhs to i64
-// CHECK: [[CPLX_VEC:%.*]] = insertelement <2 x i64> undef, i64 [[CPLX]], i64 0
+// CHECK: [[CPLX_VEC:%.*]] = insertelement <2 x i64> poison, i64 [[CPLX]], i64 0
 // CHECK: [[CPLX2:%.*]] = bitcast <2 x i64> [[CPLX_VEC]] to <4 x float>
 // CHECK: [[DUP:%.*]] = shufflevector <4 x float> [[CPLX2]], <4 x float> poison, <4 x i32> <i32 0, i32 1, i32 0, i32 1>
 // CHECK: [[RES:%.*]] = tail call <4 x float> @llvm.aarch64.neon.vcmla.rot180.v4f32(<4 x float> %acc, <4 x float> %lhs, <4 x float> [[DUP]])
@@ -380,7 +380,7 @@ float16x4_t test_vcmla_rot270_lane_f16(float16x4_t acc, float16x4_t lhs, float16
 // ACLE says this exists, but it won't map to a single instruction if lane > 1.
 // CHECK-LABEL: @test_vcmla_rot270_laneq_f16(
 // CHECK: [[CPLX:%.*]] = bitcast <8 x half> %rhs to <4 x i32>
-// CHECK: [[DUP:%.*]] = shufflevector <4 x i32> [[CPLX]], <4 x i32> undef, <2 x i32> <i32 3, i32 3>
+// CHECK: [[DUP:%.*]] = shufflevector <4 x i32> [[CPLX]], <4 x i32> poison, <2 x i32> <i32 3, i32 3>
 // CHECK: [[DUP_FLT:%.*]] = bitcast <2 x i32> [[DUP]] to <4 x half>
 // CHECK: [[RES:%.*]] = tail call <4 x half> @llvm.aarch64.neon.vcmla.rot270.v4f16(<4 x half> %acc, <4 x half> %lhs, <4 x half> [[DUP_FLT]])
 // CHECK: ret <4 x half> [[RES]]
@@ -398,7 +398,7 @@ float16x8_t test_vcmlaq_rot270_lane_f16(float16x8_t acc, float16x8_t lhs, float1
 
 // CHECK-LABEL: @test_vcmlaq_rot270_laneq_f16(
 // CHECK: [[CPLX:%.*]] = bitcast <8 x half> %rhs to <4 x i32>
-// CHECK: [[DUP:%.*]] = shufflevector <4 x i32> [[CPLX]], <4 x i32> undef, <4 x i32> <i32 3, i32 3, i32 3, i32 3>
+// CHECK: [[DUP:%.*]] = shufflevector <4 x i32> [[CPLX]], <4 x i32> poison, <4 x i32> <i32 3, i32 3, i32 3, i32 3>
 // CHECK: [[DUP_FLT:%.*]] = bitcast <4 x i32> [[DUP]] to <8 x half>
 // CHECK: [[RES:%.*]] = tail call <8 x half> @llvm.aarch64.neon.vcmla.rot270.v8f16(<8 x half> %acc, <8 x half> %lhs, <8 x half> [[DUP_FLT]])
 // CHECK: ret <8 x half> [[RES]]
@@ -416,7 +416,7 @@ float32x2_t test_vcmla_rot270_lane_f32(float32x2_t acc, float32x2_t lhs, float32
 // ACLE says this exists, but it won't map to a single instruction if lane > 1.
 // CHECK-LABEL: @test_vcmla_rot270_laneq_f32(
 // CHECK: [[CPLX:%.*]] = bitcast <4 x float> %rhs to <2 x i64>
-// CHECK: [[DUP:%.*]] = shufflevector <2 x i64> [[CPLX]], <2 x i64> undef, <1 x i32> <i32 1>
+// CHECK: [[DUP:%.*]] = shufflevector <2 x i64> [[CPLX]], <2 x i64> poison, <1 x i32> <i32 1>
 // CHECK: [[DUP_FLT:%.*]] = bitcast <1 x i64> [[DUP]] to <2 x float>
 // CHECK: [[RES:%.*]] = tail call <2 x float> @llvm.aarch64.neon.vcmla.rot270.v2f32(<2 x float> %acc, <2 x float> %lhs, <2 x float> [[DUP_FLT]])
 // CHECK: ret <2 x float> [[RES]]
@@ -426,7 +426,7 @@ float32x2_t test_vcmla_rot270_laneq_f32(float32x2_t acc, float32x2_t lhs, float3
 
 // CHECK-LABEL: @test_vcmlaq_rot270_lane_f32(
 // CHECK: [[CPLX:%.*]] = bitcast <2 x float> %rhs to i64
-// CHECK: [[CPLX_VEC:%.*]] = insertelement <2 x i64> undef, i64 [[CPLX]], i64 0
+// CHECK: [[CPLX_VEC:%.*]] = insertelement <2 x i64> poison, i64 [[CPLX]], i64 0
 // CHECK: [[CPLX2:%.*]] = bitcast <2 x i64> [[DUP]] to <4 x float>
 // CHECK: [[DUP:%.*]] = shufflevector <4 x float> [[CPLX2]], <4 x float> poison, <4 x i32> <i32 0, i32 1, i32 0, i32 1>
 // CHECK: [[RES:%.*]] = tail call <4 x float> @llvm.aarch64.neon.vcmla.rot270.v4f32(<4 x float> %acc, <4 x float> %lhs, <4 x float> [[DUP]])

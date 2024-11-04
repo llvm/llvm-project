@@ -18,3 +18,5 @@ target_include_directories(libc-hdrgen PRIVATE ${LLVM_INCLUDE_DIR} ${LLVM_MAIN_I
 target_link_libraries(libc-hdrgen PRIVATE LibcTableGenUtil)
 
 add_subdirectory(PrototypeTestGen)
+
+setup_host_tool(libc-hdrgen LIBC_HDRGEN libc_hdrgen_exe libc_hdrgen_target)

@@ -952,8 +952,7 @@ static std::vector<SectionAlign> parseSectAlign(const opt::InputArgList &args) {
     StringRef segName = arg->getValue(0);
     StringRef sectName = arg->getValue(1);
     StringRef alignStr = arg->getValue(2);
-    if (alignStr.starts_with("0x") || alignStr.starts_with("0X"))
-      alignStr = alignStr.drop_front(2);
+    alignStr.consume_front_insensitive("0x");
     uint32_t align;
     if (alignStr.getAsInteger(16, align)) {
       error("-sectalign: failed to parse '" + StringRef(arg->getValue(2)) +

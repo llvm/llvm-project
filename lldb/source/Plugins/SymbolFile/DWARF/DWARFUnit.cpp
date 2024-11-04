@@ -809,7 +809,7 @@ removeHostnameFromPathname(llvm::StringRef path_from_dwarf) {
   // check whether we have a windows path, and so the first character is a
   // drive-letter not a hostname.
   if (host.size() == 1 && llvm::isAlpha(host[0]) &&
-      (path.startswith("\\") || path.startswith("/")))
+      (path.starts_with("\\") || path.starts_with("/")))
     return path_from_dwarf;
 
   return path;

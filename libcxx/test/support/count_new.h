@@ -181,6 +181,11 @@ public:
         return disable_checking || n == outstanding_new;
     }
 
+    bool checkOutstandingNewLessThanOrEqual(int n) const
+    {
+        return disable_checking || outstanding_new <= n;
+    }
+
     bool checkOutstandingNewNotEq(int n) const
     {
         return disable_checking || n != outstanding_new;

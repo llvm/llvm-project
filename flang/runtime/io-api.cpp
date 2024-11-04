@@ -185,9 +185,6 @@ template <Direction DIR, template <Direction> class STATE, typename... A>
 Cookie BeginExternalListIO(
     int unitNumber, const char *sourceFile, int sourceLine, A &&...xs) {
   Terminator terminator{sourceFile, sourceLine};
-  if (unitNumber == DefaultUnit) {
-    unitNumber = DIR == Direction::Input ? 5 : 6;
-  }
   Cookie errorCookie{nullptr};
   ExternalFileUnit *unit{GetOrCreateUnit(
       unitNumber, DIR, false /*!unformatted*/, terminator, errorCookie)};
@@ -246,9 +243,6 @@ Cookie BeginExternalFormattedIO(const char *format, std::size_t formatLength,
     const Descriptor *formatDescriptor, ExternalUnit unitNumber,
     const char *sourceFile, int sourceLine) {
   Terminator terminator{sourceFile, sourceLine};
-  if (unitNumber == DefaultUnit) {
-    unitNumber = DIR == Direction::Input ? 5 : 6;
-  }
   Cookie errorCookie{nullptr};
   ExternalFileUnit *unit{GetOrCreateUnit(
       unitNumber, DIR, false /*!unformatted*/, terminator, errorCookie)};
@@ -761,7 +755,8 @@ bool IONAME(SetAccess)(Cookie cookie, const char *keyword, std::size_t length) {
   IoStatementState &io{*cookie};
   auto *open{io.get_if<OpenStatementState>()};
   if (!open) {
-    if (!io.get_if<ErroneousIoStatementState>()) {
+    if (!io.get_if<NoopStatementState>() &&
+        !io.get_if<ErroneousIoStatementState>()) {
       io.GetIoErrorHandler().Crash(
           "SetAccess() called when not in an OPEN statement");
     }
@@ -796,7 +791,8 @@ bool IONAME(SetAction)(Cookie cookie, const char *keyword, std::size_t length) {
   IoStatementState &io{*cookie};
   auto *open{io.get_if<OpenStatementState>()};
   if (!open) {
-    if (!io.get_if<ErroneousIoStatementState>()) {
+    if (!io.get_if<NoopStatementState>() &&
+        !io.get_if<ErroneousIoStatementState>()) {
       io.GetIoErrorHandler().Crash(
           "SetAction() called when not in an OPEN statement");
     }
@@ -852,7 +848,8 @@ bool IONAME(SetAsynchronous)(
         handler.SignalError(IostatBadAsynchronous);
       }
     }
-  } else if (!io.get_if<ErroneousIoStatementState>()) {
+  } else if (!io.get_if<NoopStatementState>() &&
+      !io.get_if<ErroneousIoStatementState>()) {
     handler.Crash("SetAsynchronous() called when not in an OPEN or external "
                   "I/O statement");
   }
@@ -864,7 +861,8 @@ bool IONAME(SetCarriagecontrol)(
   IoStatementState &io{*cookie};
   auto *open{io.get_if<OpenStatementState>()};
   if (!open) {
-    if (!io.get_if<ErroneousIoStatementState>()) {
+    if (!io.get_if<NoopStatementState>() &&
+        !io.get_if<ErroneousIoStatementState>()) {
       io.GetIoErrorHandler().Crash(
           "SetCarriageControl() called when not in an OPEN statement");
     }
@@ -895,7 +893,8 @@ bool IONAME(SetConvert)(
   IoStatementState &io{*cookie};
   auto *open{io.get_if<OpenStatementState>()};
   if (!open) {
-    if (!io.get_if<ErroneousIoStatementState>()) {
+    if (!io.get_if<NoopStatementState>() &&
+        !io.get_if<ErroneousIoStatementState>()) {
       io.GetIoErrorHandler().Crash(
           "SetConvert() called when not in an OPEN statement");
     }
@@ -919,7 +918,8 @@ bool IONAME(SetEncoding)(
   IoStatementState &io{*cookie};
   auto *open{io.get_if<OpenStatementState>()};
   if (!open) {
-    if (!io.get_if<ErroneousIoStatementState>()) {
+    if (!io.get_if<NoopStatementState>() &&
+        !io.get_if<ErroneousIoStatementState>()) {
       io.GetIoErrorHandler().Crash(
           "SetEncoding() called when not in an OPEN statement");
     }
@@ -949,7 +949,8 @@ bool IONAME(SetForm)(Cookie cookie, const char *keyword, std::size_t length) {
   IoStatementState &io{*cookie};
   auto *open{io.get_if<OpenStatementState>()};
   if (!open) {
-    if (!io.get_if<ErroneousIoStatementState>()) {
+    if (!io.get_if<NoopStatementState>() &&
+        !io.get_if<ErroneousIoStatementState>()) {
       io.GetIoErrorHandler().Crash(
           "SetForm() called when not in an OPEN statement");
     }
@@ -977,7 +978,8 @@ bool IONAME(SetPosition)(
   IoStatementState &io{*cookie};
   auto *open{io.get_if<OpenStatementState>()};
   if (!open) {
-    if (!io.get_if<ErroneousIoStatementState>()) {
+    if (!io.get_if<NoopStatementState>() &&
+        !io.get_if<ErroneousIoStatementState>()) {
       io.GetIoErrorHandler().Crash(
           "SetPosition() called when not in an OPEN statement");
     }
@@ -1008,7 +1010,8 @@ bool IONAME(SetRecl)(Cookie cookie, std::size_t n) {
   IoStatementState &io{*cookie};
   auto *open{io.get_if<OpenStatementState>()};
   if (!open) {
-    if (!io.get_if<ErroneousIoStatementState>()) {
+    if (!io.get_if<NoopStatementState>() &&
+        !io.get_if<ErroneousIoStatementState>()) {
       io.GetIoErrorHandler().Crash(
           "SetRecl() called when not in an OPEN statement");
     }
@@ -1093,7 +1096,8 @@ bool IONAME(SetFile)(Cookie cookie, const char *path, std::size_t chars) {
     }
     open->set_path(path, chars);
     return true;
-  } else if (!io.get_if<ErroneousIoStatementState>()) {
+  } else if (!io.get_if<NoopStatementState>() &&
+      !io.get_if<ErroneousIoStatementState>()) {
     io.GetIoErrorHandler().Crash(
         "SetFile() called when not in an OPEN statement");
   }
@@ -1104,7 +1108,8 @@ bool IONAME(GetNewUnit)(Cookie cookie, int &unit, int kind) {
   IoStatementState &io{*cookie};
   auto *open{io.get_if<OpenStatementState>()};
   if (!open) {
-    if (!io.get_if<ErroneousIoStatementState>()) {
+    if (!io.get_if<NoopStatementState>() &&
+        !io.get_if<ErroneousIoStatementState>()) {
       io.GetIoErrorHandler().Crash(
           "GetNewUnit() called when not in an OPEN statement");
     }
@@ -1361,7 +1366,8 @@ std::size_t IONAME(GetSize)(Cookie cookie) {
   if (const auto *formatted{
           io.get_if<FormattedIoStatementState<Direction::Input>>()}) {
     return formatted->GetEditDescriptorChars();
-  } else if (!io.get_if<ErroneousIoStatementState>()) {
+  } else if (!io.get_if<NoopStatementState>() &&
+      !io.get_if<ErroneousIoStatementState>()) {
     handler.Crash("GetIoSize() called for an I/O statement that is not a "
                   "formatted READ()");
   }
@@ -1376,7 +1382,8 @@ std::size_t IONAME(GetIoLength)(Cookie cookie) {
   }
   if (const auto *inq{io.get_if<InquireIOLengthState>()}) {
     return inq->bytes();
-  } else if (!io.get_if<ErroneousIoStatementState>()) {
+  } else if (!io.get_if<NoopStatementState>() &&
+      !io.get_if<ErroneousIoStatementState>()) {
     handler.Crash("GetIoLength() called for an I/O statement that is not "
                   "INQUIRE(IOLENGTH=)");
   }

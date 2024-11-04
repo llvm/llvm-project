@@ -17,6 +17,9 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.ctype.tolower
     libc.src.ctype.toupper
 
+    # compiler entrypoints (no corresponding header)
+    libc.src.compiler.__stack_chk_fail
+
     # errno.h entrypoints
     libc.src.errno.errno
 
@@ -71,6 +74,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.stdio.vsnprintf
 
     # stdlib.h entrypoints
+    libc.src.stdlib.abort
     libc.src.stdlib.abs
     libc.src.stdlib.atoi
     libc.src.stdlib.atol

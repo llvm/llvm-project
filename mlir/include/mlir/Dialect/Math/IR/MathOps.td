@@ -136,18 +136,93 @@ def Math_AbsIOp : Math_IntegerUnaryOp<"absi"> {
 }
 
 //===----------------------------------------------------------------------===//
+// AcoshOp
+//===----------------------------------------------------------------------===//
+
+def Math_AcoshOp : Math_FloatUnaryOp<"acosh">{
+  let summary = "Hyperbolic arcus cosine of the given value";
+  let description = [{
+    Syntax:
+
+    ```
+    operation ::= ssa-id `=` `math.acosh` ssa-use `:` type
+    ```
+
+    The `acosh` operation computes the arcus cosine of a given value.  It takes
+    one operand of floating point type (i.e., scalar, tensor or vector) and returns
+    one result of the same type. It has no standard attributes.
+
+    Example:
+
+    ```mlir
+    // Hyperbolic arcus cosine of scalar value.
+    %a = math.acosh %b : f64
+    ```
+  }];
+  let hasFolder = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// AsinOp
+//===----------------------------------------------------------------------===//
+
+def Math_AsinOp : Math_FloatUnaryOp<"asin">{
+  let summary = "arcus sine of the given value";
+  let description = [{
+    Syntax:
+
+    ```
+    operation ::= ssa-id `=` `math.asin` ssa-use `:` type
+    ```
+
+    The `asin` operation computes the arcus sine of a given value.  It takes
+    one operand of floating point type (i.e., scalar, tensor or vector) and returns
+    one result of the same type. It has no standard attributes.
+
+    Example:
+
+    ```mlir
+    // Arcus sine of scalar value.
+    %a = math.asin %b : f64
+    ```
+  }];
+  let hasFolder = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// AsinhOp
+//===----------------------------------------------------------------------===//
+
+def Math_AsinhOp : Math_FloatUnaryOp<"asinh">{
+  let summary = "hyperbolic arcus sine of the given value";
+  let description = [{
+    Syntax:
+
+    ```
+    operation ::= ssa-id `=` `math.asinh` ssa-use `:` type
+    ```
+
+    The `asinh` operation computes the hyperbolic arcus sine of a given value.  It takes
+    one operand of floating point type (i.e., scalar, tensor or vector) and returns
+    one result of the same type. It has no standard attributes.
+
+    Example:
+
+    ```mlir
+    // Hyperbolic arcus sine of scalar value.
+    %a = math.asinh %b : f64
+    ```
+  }];
+  let hasFolder = 1;
+}
+
+//===----------------------------------------------------------------------===//
 // AtanOp
 //===----------------------------------------------------------------------===//
 
 def Math_AtanOp : Math_FloatUnaryOp<"atan">{
   let summary = "arcus tangent of the given value";
   let description = [{
-    Syntax:
-
-    ```
-    operation ::= ssa-id `=` `math.atan` ssa-use `:` type
-    ```
-
     The `atan` operation computes the arcus tangent of a given value.  It takes
     one operand of floating point type (i.e., scalar, tensor or vector) and returns
     one result of the same type. It has no standard attributes.
@@ -163,18 +238,39 @@ def Math_AtanOp : Math_FloatUnaryOp<"atan">{
 }
 
 //===----------------------------------------------------------------------===//
+// AtanhOp
+//===----------------------------------------------------------------------===//
+
+def Math_AtanhOp : Math_FloatUnaryOp<"atanh">{
+  let summary = "hyperbolic arcus tangent of the given value";
+  let description = [{
+    Syntax:
+
+    ```
+    operation ::= ssa-id `=` `math.atanh` ssa-use `:` type
+    ```
+
+    The `atanh` operation computes the hyperbolic arcus tangent of a given value.  It takes
+    one operand of floating point type (i.e., scalar, tensor or vector) and returns
+    one result of the same type. It has no standard attributes.
+
+    Example:
+
+    ```mlir
+    // Hyperbolic arcus tangent of scalar value.
+    %a = math.atanh %b : f64
+    ```
+  }];
+  let hasFolder = 1;
+}
+
+//===----------------------------------------------------------------------===//
 // Atan2Op
 //===----------------------------------------------------------------------===//
 
 def Math_Atan2Op : Math_FloatBinaryOp<"atan2">{
   let summary = "2-argument arcus tangent of the given values";
   let description = [{
-    Syntax:
-
-    ```
-    operation ::= ssa-id `=` `math.atan2` ssa-use `,` ssa-use `:` type
-    ```
-
     The `atan2` operation takes two operands and returns one result, all of
     which must be of the same type.  The operands must be of floating point type
     (i.e., scalar, tensor or vector).
@@ -225,12 +321,6 @@ def Math_CbrtOp : Math_FloatUnaryOp<"cbrt"> {
 def Math_CeilOp : Math_FloatUnaryOp<"ceil"> {
   let summary = "ceiling of the specified value";
   let description = [{
-    Syntax:
-
-    ```
-    operation ::= ssa-id `=` `math.ceil` ssa-use `:` type
-    ```
-
     The `ceil` operation computes the ceiling of a given value. It takes one
     operand of floating point type (i.e., scalar, tensor or vector) and returns one
     result of the same type.  It has no standard attributes.
@@ -252,12 +342,6 @@ def Math_CeilOp : Math_FloatUnaryOp<"ceil"> {
 def Math_CopySignOp : Math_FloatBinaryOp<"copysign"> {
   let summary = "A copysign operation";
   let description = [{
-    Syntax:
-
-    ```
-    operation ::= ssa-id `=` `math.copysign` ssa-use `,` ssa-use `:` type
-    ```
-
     The `copysign` returns a value with the magnitude of the first operand and
     the sign of the second operand. It takes two operands and returns one result of
     the same type. The operands must be of floating point type (i.e., scalar,
@@ -280,12 +364,6 @@ def Math_CopySignOp : Math_FloatBinaryOp<"copysign"> {
 def Math_CosOp : Math_FloatUnaryOp<"cos"> {
   let summary = "cosine of the specified value";
   let description = [{
-    Syntax:
-
-    ```
-    operation ::= ssa-id `=` `math.cos` ssa-use `:` type
-    ```
-
     The `cos` operation computes the cosine of a given value. It takes one
     operand of floating point type (i.e., scalar, tensor or vector) and returns one
     result of the same type.  It has no standard attributes.
@@ -307,12 +385,6 @@ def Math_CosOp : Math_FloatUnaryOp<"cos"> {
 def Math_AcosOp : Math_FloatUnaryOp<"acos"> {
   let summary = "arcus cosine of the specified value";
   let description = [{
-    Syntax:
-
-    ```
-    operation ::= ssa-id `=` `math.acos` ssa-use `:` type
-    ```
-
     The `acos` operation computes the arcus cosine of a given value. It takes one
     operand of floating point type (i.e., scalar, tensor or vector) and returns one
     result of the same type.  It has no standard attributes.
@@ -355,12 +427,6 @@ def Math_CoshOp : Math_FloatUnaryOp<"cosh"> {
 def Math_SinOp : Math_FloatUnaryOp<"sin"> {
   let summary = "sine of the specified value";
   let description = [{
-    Syntax:
-
-    ```
-    operation ::= ssa-id `=` `math.sin` ssa-use `:` type
-    ```
-
     The `sin` operation computes the sine of a given value. It takes one
     operand of floating point type (i.e., scalar, tensor or vector) and returns one
     result of the same type.  It has no standard attributes.
@@ -370,6 +436,27 @@ def Math_SinOp : Math_FloatUnaryOp<"sin"> {
     ```mlir
     // Scalar sine value.
     %a = math.sin %b : f64
+    ```
+  }];
+  let hasFolder = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// SinhOp
+//===----------------------------------------------------------------------===//
+
+def Math_SinhOp : Math_FloatUnaryOp<"sinh"> {
+  let summary = "hyperbolic sine of the specified value";
+  let description = [{
+    The `sinh` operation computes the hyperbolic sine. It takes one operand
+    of floating point type (i.e., scalar, tensor or vector) and returns one
+    result of the same type. It has no standard attributes.
+
+    Example:
+
+    ```mlir
+    // Scalar hyperbolic sine value.
+    %a = math.sinh %b : f64
     ```
   }];
   let hasFolder = 1;
@@ -442,12 +529,6 @@ def Math_CtPopOp : Math_IntegerUnaryOp<"ctpop"> {
 def Math_ErfOp : Math_FloatUnaryOp<"erf"> {
   let summary = "error function of the specified value";
   let description = [{
-    Syntax:
-
-    ```
-    operation ::= ssa-id `=` `math.erf` ssa-use `:` type
-    ```
-
     The `erf` operation computes the error function. It takes one operand of
     floating point type (i.e., scalar, tensor or vector) and returns one result of
     the same type. It has no standard attributes.
@@ -470,12 +551,6 @@ def Math_ErfOp : Math_FloatUnaryOp<"erf"> {
 def Math_ExpOp : Math_FloatUnaryOp<"exp"> {
   let summary = "base-e exponential of the specified value";
   let description = [{
-    Syntax:
-
-    ```
-    operation ::= ssa-id `=` `math.exp` ssa-use `:` type
-    ```
-
     The `exp` operation takes one operand of floating point type (i.e., scalar,
     tensor or vector) and returns one result of the same type. It has no standard
     attributes.
@@ -498,12 +573,6 @@ def Math_Exp2Op : Math_FloatUnaryOp<"exp2"> {
   let summary = "base-2 exponential of the specified value";
 
   let description = [{
-    Syntax:
-
-    ```
-    operation ::= ssa-id `=` `math.exp2` ssa-use `:` type
-    ```
-
     The `exp` operation takes one operand of floating point type (i.e., scalar,
     tensor or vector) and returns one result of the same type. It has no standard
     attributes.
@@ -525,12 +594,6 @@ def Math_Exp2Op : Math_FloatUnaryOp<"exp2"> {
 def Math_ExpM1Op : Math_FloatUnaryOp<"expm1"> {
   let summary = "base-e exponential of the specified value minus 1";
   let description = [{
-    Syntax:
-
-    ```
-    operation ::= ssa-id `=` `math.expm1` ssa-use `:` type
-    ```
-
     expm1(x) := exp(x) - 1
 
     The `expm1` operation takes one operand of floating point type (i.e.,
@@ -554,12 +617,6 @@ def Math_ExpM1Op : Math_FloatUnaryOp<"expm1"> {
 def Math_FloorOp : Math_FloatUnaryOp<"floor"> {
   let summary = "floor of the specified value";
   let description = [{
-    Syntax:
-
-    ```
-    operation ::= ssa-id `=` `math.floor` ssa-use `:` type
-    ```
-
     The `floor` operation computes the floor of a given value. It takes one
     operand of floating point type (i.e., scalar, tensor or vector) and returns one
     result of the same type.  It has no standard attributes.
@@ -582,12 +639,6 @@ def Math_FloorOp : Math_FloatUnaryOp<"floor"> {
 def Math_FmaOp : Math_FloatTernaryOp<"fma"> {
   let summary = "floating point fused multipy-add operation";
   let description = [{
-    Syntax:
-
-    ```
-    operation ::= ssa-id `=` `math.fma` ssa-use `,` ssa-use `,` ssa-use `:` type
-    ```
-
     The `fma` operation takes three operands and returns one result, each of
     these is required to be the same type. Operands must be of floating point type
     (i.e., scalar, tensor or vector).
@@ -613,12 +664,6 @@ def Math_FmaOp : Math_FloatTernaryOp<"fma"> {
 def Math_IPowIOp : Math_IntegerBinaryOp<"ipowi"> {
   let summary = "signed integer raised to the power of operation";
   let description = [{
-    Syntax:
-
-    ```
-    operation ::= ssa-id `=` `math.ipowi` ssa-use `,` ssa-use `:` type
-    ```
-
     The `ipowi` operation takes two operands of integer type (i.e., scalar,
     tensor or vector) and returns one result of the same type. Operands
     must have the same type.
@@ -730,12 +775,6 @@ def Math_Log2Op : Math_FloatUnaryOp<"log2"> {
 def Math_PowFOp : Math_FloatBinaryOp<"powf"> {
   let summary = "floating point raised to the power of operation";
   let description = [{
-    Syntax:
-
-    ```
-    operation ::= ssa-id `=` `math.powf` ssa-use `,` ssa-use `:` type
-    ```
-
     The `powf` operation takes two operands of floating point type (i.e.,
     scalar, tensor or vector) and returns one result of the same type. Operands
     must have the same type.
@@ -840,12 +879,6 @@ def Math_TanhOp : Math_FloatUnaryOp<"tanh"> {
 def Math_RoundEvenOp : Math_FloatUnaryOp<"roundeven"> {
   let summary = "round of the specified value with halfway cases to even";
   let description = [{
-    Syntax:
-
-    ```
-    operation ::= ssa-id `=` `math.roundeven` ssa-use `:` type
-    ```
-
     The `roundeven` operation returns the operand rounded to the nearest integer
     value in floating-point format. It takes one operand of floating point type
     (i.e., scalar, tensor or vector) and produces one result of the same type.  The
@@ -870,12 +903,6 @@ def Math_RoundEvenOp : Math_FloatUnaryOp<"roundeven"> {
 def Math_RoundOp : Math_FloatUnaryOp<"round"> {
   let summary = "round of the specified value";
   let description = [{
-    Syntax:
-
-    ```
-    operation ::= ssa-id `=` `math.round` ssa-use `:` type
-    ```
-
     The `round` operation returns the operand rounded to the nearest integer
     value in floating-point format. It takes one operand of floating point type
     (i.e., scalar, tensor or vector) and produces one result of the same type.  The
@@ -900,12 +927,6 @@ def Math_RoundOp : Math_FloatUnaryOp<"round"> {
 def Math_TruncOp : Math_FloatUnaryOp<"trunc"> {
   let summary = "trunc of the specified value";
   let description = [{
-    Syntax:
-
-    ```
-    operation ::= ssa-id `=` `math.trunc` ssa-use `:` type
-    ```
-
     The `trunc` operation returns the operand rounded to the nearest integer
     value in floating-point format. It takes one operand of floating point type
     (i.e., scalar, tensor or vector) and produces one result of the same type.
@@ -931,12 +952,6 @@ def Math_FPowIOp : Math_Op<"fpowi",
      DeclareOpInterfaceMethods<ArithFastMathInterface>]> {
   let summary = "floating point raised to the signed integer power";
   let description = [{
-    Syntax:
-
-    ```
-    operation ::= ssa-id `=` `math.fpowi` ssa-use `,` ssa-use `:` type
-    ```
-
     The `fpowi` operation takes a `base` operand of floating point type
     (i.e. scalar, tensor or vector) and a `power` operand of integer type
     (also scalar, tensor or vector) and returns one result of the same type

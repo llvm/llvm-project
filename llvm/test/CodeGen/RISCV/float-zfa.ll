@@ -265,7 +265,7 @@ define void @fli_remat() {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    fli.s fa0, 1.0
 ; CHECK-NEXT:    fli.s fa1, 1.0
-; CHECK-NEXT:    tail foo@plt
+; CHECK-NEXT:    tail foo
   tail call void @foo(float 1.000000e+00, float 1.000000e+00)
   ret void
 }

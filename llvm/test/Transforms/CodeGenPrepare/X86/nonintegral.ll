@@ -1,5 +1,5 @@
-; RUN: opt -S -codegenprepare < %s | FileCheck %s
-; RUN: opt -S -codegenprepare -addr-sink-using-gep=false < %s | FileCheck %s
+; RUN: opt -S -passes='require<profile-summary>,function(codegenprepare)' < %s | FileCheck %s
+; RUN: opt -S -passes='require<profile-summary>,function(codegenprepare)' -addr-sink-using-gep=false < %s | FileCheck %s
 
 ; This target data layout is modified to have a non-integral addrspace(1),
 ; in order to verify that codegenprepare does not try to introduce illegal

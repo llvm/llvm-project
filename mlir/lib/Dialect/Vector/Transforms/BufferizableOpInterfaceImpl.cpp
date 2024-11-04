@@ -217,8 +217,7 @@ struct MaskOpInterface
     SmallVector<Value> newReturnValues(maskOp->getNumResults(), Value());
     SmallVector<Value> newYieldedValues;
     for (const auto &it : llvm::enumerate(yieldOp.getOperands())) {
-      if (llvm::find(maskedOp->getOpResults(), it.value()) !=
-          maskedOp->getOpResults().end()) {
+      if (llvm::is_contained(maskedOp->getOpResults(), it.value())) {
         newYieldedValues.push_back(it.value());
       } else {
         // This used to be a tensor result of the masked op, but is now a memref

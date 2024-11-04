@@ -147,14 +147,14 @@ public:
                    llvm::SmallVectorImpl<SegmentEntry> &Seg,
                    llvm::MapVector<uint64_t, MemInfoBlock> &Prof,
                    CallStackMap &SM, bool KeepName = false)
-      : Symbolizer(std::move(Sym)), SegmentInfo(Seg.begin(), Seg.end()),
-        CallstackProfileData(Prof), StackMap(SM), KeepSymbolName(KeepName) {
+      : SegmentInfo(Seg.begin(), Seg.end()), CallstackProfileData(Prof),
+        StackMap(SM), KeepSymbolName(KeepName) {
     // We don't call initialize here since there is no raw profile to read. The
     // test should pass in the raw profile as structured data.
 
     // If there is an error here then the mock symbolizer has not been
     // initialized properly.
-    if (Error E = symbolizeAndFilterStackFrames())
+    if (Error E = symbolizeAndFilterStackFrames(std::move(Sym)))
       report_fatal_error(std::move(E));
     if (Error E = mapRawProfileToRecords())
       report_fatal_error(std::move(E));
@@ -173,7 +173,8 @@ private:
   // callstacks from the raw profile. Also prune callstack frames which we can't
   // symbolize or those that belong to the runtime. For profile entries where
   // the entire callstack is pruned, we drop the entry from the profile.
-  Error symbolizeAndFilterStackFrames();
+  Error symbolizeAndFilterStackFrames(
+      std::unique_ptr<llvm::symbolize::SymbolizableModule> Symbolizer);
   // Construct memprof records for each function and store it in the
   // `FunctionProfileData` map. A function may have allocation profile data or
   // callsite data or both.
@@ -183,8 +184,6 @@ private:
 
   // The profiled binary.
   object::OwningBinary<object::Binary> Binary;
-  // A symbolizer to translate virtual addresses to code locations.
-  std::unique_ptr<llvm::symbolize::SymbolizableModule> Symbolizer;
   // The preferred load address of the executable segment.
   uint64_t PreferredTextSegmentAddress = 0;
   // The base address of the text segment in the process during profiling.

@@ -239,7 +239,8 @@ public:
 
     // Emit the bits with VBR encoding, NumBits-1 bits at a time.
     while (Val >= Threshold) {
-      Emit((Val & ((1 << (NumBits-1))-1)) | (1 << (NumBits-1)), NumBits);
+      Emit((Val & ((1U << (NumBits - 1)) - 1)) | (1U << (NumBits - 1)),
+           NumBits);
       Val >>= NumBits-1;
     }
 
@@ -255,7 +256,8 @@ public:
 
     // Emit the bits with VBR encoding, NumBits-1 bits at a time.
     while (Val >= Threshold) {
-      Emit(((uint32_t)Val & ((1 << (NumBits - 1)) - 1)) | (1 << (NumBits - 1)),
+      Emit(((uint32_t)Val & ((1U << (NumBits - 1)) - 1)) |
+               (1U << (NumBits - 1)),
            NumBits);
       Val >>= NumBits-1;
     }

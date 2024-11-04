@@ -100,7 +100,7 @@ static Value *createByteGEP(IRBuilderBase &IRB, const DataLayout &DL,
                             Value *Ptr, Type *ResElemTy, int64_t Offset) {
   if (Offset != 0) {
     APInt APOffset(DL.getIndexTypeSizeInBits(Ptr->getType()), Offset);
-    Ptr = IRB.CreateGEP(IRB.getInt8Ty(), Ptr, IRB.getInt(APOffset));
+    Ptr = IRB.CreatePtrAdd(Ptr, IRB.getInt(APOffset));
   }
   return Ptr;
 }

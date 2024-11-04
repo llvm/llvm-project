@@ -98,9 +98,8 @@ private:
 
 class PassCrashReproducerGenerator {
 public:
-  PassCrashReproducerGenerator(
-      PassManager::ReproducerStreamFactory &streamFactory,
-      bool localReproducer);
+  PassCrashReproducerGenerator(ReproducerStreamFactory &streamFactory,
+                               bool localReproducer);
   ~PassCrashReproducerGenerator();
 
   /// Initialize the generator in preparation for reproducer generation. The

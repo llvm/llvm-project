@@ -55,6 +55,11 @@ multiclass CMPCCXADD_Aliases<string Cond, int CC> {
                   (CMPCCXADDmr32 GR32:$dst, i32mem:$dstsrc2, GR32:$src3, CC), 0>;
   def : InstAlias<"cmp"#Cond#"xadd"#"\t{$src3, $dst, $dstsrc2|$dstsrc2, $dst, $src3}",
                   (CMPCCXADDmr64 GR64:$dst, i64mem:$dstsrc2, GR64:$src3, CC), 0>;
+
+  def : InstAlias<"cmp"#Cond#"xadd"#"\t{$src3, $dst, $dstsrc2|$dstsrc2, $dst, $src3}",
+                  (CMPCCXADDmr32_EVEX GR32:$dst, i32mem:$dstsrc2, GR32:$src3, CC), 0>;
+  def : InstAlias<"cmp"#Cond#"xadd"#"\t{$src3, $dst, $dstsrc2|$dstsrc2, $dst, $src3}",
+                  (CMPCCXADDmr64_EVEX GR64:$dst, i64mem:$dstsrc2, GR64:$src3, CC), 0>;
 }
 
 //===----------------------------------------------------------------------===//
@@ -686,3 +691,11 @@ def : InstAlias<"vmsave\t{%rax|rax}", (VMSAVE64), 0>, Requires<[In64BitMode]>;
 def : InstAlias<"invlpga\t{%eax, %ecx|eax, ecx}", (INVLPGA32), 0>, Requires<[Not64BitMode]>;
 def : InstAlias<"invlpga\t{%rax, %ecx|rax, ecx}", (INVLPGA64), 0>, Requires<[In64BitMode]>;
 
+// Aliases with explicit %xmm0
+def : InstAlias<"sha256rnds2\t{$src2, $dst|$dst, $src2}",
+                (SHA256RNDS2rr VR128:$dst, VR128:$src2), 0>;
+def : InstAlias<"sha256rnds2\t{$src2, $dst|$dst, $src2}",
+                (SHA256RNDS2rm VR128:$dst, i128mem:$src2), 0>;
+
+def : InstAlias<"sha256rnds2\t{$src2, $dst|$dst, $src2}",
+                (SHA256RNDS2rm_EVEX VR128:$dst, i128mem:$src2), 0>;

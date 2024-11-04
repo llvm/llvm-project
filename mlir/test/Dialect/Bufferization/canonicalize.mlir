@@ -156,6 +156,18 @@ func.func @clone_and_cast(%arg0: memref<?xf32>) -> memref<32xf32> {
 
 // -----
 
+// CHECK-LABEL: @clone_incompatible
+func.func @clone_incompatible(%arg0: memref<32xf32, strided<[2]>>) -> memref<32xf32> {
+  %0 = bufferization.clone %arg0 : memref<32xf32, strided<[2]>> to memref<32xf32>
+  memref.dealloc %arg0 : memref<32xf32, strided<[2]>>
+  return %0 : memref<32xf32>
+}
+// CHECK-SAME: %[[ARG:.*]]: memref<32xf32, strided<[2]>>
+// CHECK-NEXT: bufferization.clone %[[ARG]] : memref<32xf32, strided<[2]>> to memref<32xf32>
+// CHECK-NOT: memref.cast
+
+// -----
+
 // CHECK-LABEL: @alias_is_freed
 func.func @alias_is_freed(%arg0 : memref<?xf32>) {
   %0 = memref.cast %arg0 : memref<?xf32> to memref<32xf32>

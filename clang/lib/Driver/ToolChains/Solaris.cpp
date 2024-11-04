@@ -295,13 +295,12 @@ static StringRef getSolarisLibSuffix(const llvm::Triple &Triple) {
   switch (Triple.getArch()) {
   case llvm::Triple::x86:
   case llvm::Triple::sparc:
+  default:
     break;
   case llvm::Triple::x86_64:
     return "/amd64";
   case llvm::Triple::sparcv9:
     return "/sparcv9";
-  default:
-    llvm_unreachable("Unsupported architecture");
   }
   return "";
 }

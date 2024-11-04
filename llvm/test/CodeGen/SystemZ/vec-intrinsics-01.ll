@@ -37,10 +37,10 @@ declare <16 x i8> @llvm.s390.vaccb(<16 x i8>, <16 x i8>)
 declare <8 x i16> @llvm.s390.vacch(<8 x i16>, <8 x i16>)
 declare <4 x i32> @llvm.s390.vaccf(<4 x i32>, <4 x i32>)
 declare <2 x i64> @llvm.s390.vaccg(<2 x i64>, <2 x i64>)
-declare <16 x i8> @llvm.s390.vaq(<16 x i8>, <16 x i8>)
-declare <16 x i8> @llvm.s390.vacq(<16 x i8>, <16 x i8>, <16 x i8>)
-declare <16 x i8> @llvm.s390.vaccq(<16 x i8>, <16 x i8>)
-declare <16 x i8> @llvm.s390.vacccq(<16 x i8>, <16 x i8>, <16 x i8>)
+declare i128 @llvm.s390.vaq(i128, i128)
+declare i128 @llvm.s390.vacq(i128, i128, i128)
+declare i128 @llvm.s390.vaccq(i128, i128)
+declare i128 @llvm.s390.vacccq(i128, i128, i128)
 declare <16 x i8> @llvm.s390.vavgb(<16 x i8>, <16 x i8>)
 declare <8 x i16> @llvm.s390.vavgh(<8 x i16>, <8 x i16>)
 declare <4 x i32> @llvm.s390.vavgf(<4 x i32>, <4 x i32>)
@@ -53,11 +53,11 @@ declare <4 x i32> @llvm.s390.vcksm(<4 x i32>, <4 x i32>)
 declare <8 x i16> @llvm.s390.vgfmb(<16 x i8>, <16 x i8>)
 declare <4 x i32> @llvm.s390.vgfmh(<8 x i16>, <8 x i16>)
 declare <2 x i64> @llvm.s390.vgfmf(<4 x i32>, <4 x i32>)
-declare <16 x i8> @llvm.s390.vgfmg(<2 x i64>, <2 x i64>)
+declare i128 @llvm.s390.vgfmg(<2 x i64>, <2 x i64>)
 declare <8 x i16> @llvm.s390.vgfmab(<16 x i8>, <16 x i8>, <8 x i16>)
 declare <4 x i32> @llvm.s390.vgfmah(<8 x i16>, <8 x i16>, <4 x i32>)
 declare <2 x i64> @llvm.s390.vgfmaf(<4 x i32>, <4 x i32>, <2 x i64>)
-declare <16 x i8> @llvm.s390.vgfmag(<2 x i64>, <2 x i64>, <16 x i8>)
+declare i128 @llvm.s390.vgfmag(<2 x i64>, <2 x i64>, i128)
 declare <16 x i8> @llvm.s390.vmahb(<16 x i8>, <16 x i8>, <16 x i8>)
 declare <8 x i16> @llvm.s390.vmahh(<8 x i16>, <8 x i16>, <8 x i16>)
 declare <4 x i32> @llvm.s390.vmahf(<4 x i32>, <4 x i32>, <4 x i32>)
@@ -109,16 +109,16 @@ declare <16 x i8> @llvm.s390.vscbib(<16 x i8>, <16 x i8>)
 declare <8 x i16> @llvm.s390.vscbih(<8 x i16>, <8 x i16>)
 declare <4 x i32> @llvm.s390.vscbif(<4 x i32>, <4 x i32>)
 declare <2 x i64> @llvm.s390.vscbig(<2 x i64>, <2 x i64>)
-declare <16 x i8> @llvm.s390.vsq(<16 x i8>, <16 x i8>)
-declare <16 x i8> @llvm.s390.vsbiq(<16 x i8>, <16 x i8>, <16 x i8>)
-declare <16 x i8> @llvm.s390.vscbiq(<16 x i8>, <16 x i8>)
-declare <16 x i8> @llvm.s390.vsbcbiq(<16 x i8>, <16 x i8>, <16 x i8>)
+declare i128 @llvm.s390.vsq(i128, i128)
+declare i128 @llvm.s390.vsbiq(i128, i128, i128)
+declare i128 @llvm.s390.vscbiq(i128, i128)
+declare i128 @llvm.s390.vsbcbiq(i128, i128, i128)
 declare <4 x i32> @llvm.s390.vsumb(<16 x i8>, <16 x i8>)
 declare <4 x i32> @llvm.s390.vsumh(<8 x i16>, <8 x i16>)
 declare <2 x i64> @llvm.s390.vsumgh(<8 x i16>, <8 x i16>)
 declare <2 x i64> @llvm.s390.vsumgf(<4 x i32>, <4 x i32>)
-declare <16 x i8> @llvm.s390.vsumqf(<4 x i32>, <4 x i32>)
-declare <16 x i8> @llvm.s390.vsumqg(<2 x i64>, <2 x i64>)
+declare i128 @llvm.s390.vsumqf(<4 x i32>, <4 x i32>)
+declare i128 @llvm.s390.vsumqg(<2 x i64>, <2 x i64>)
 declare i32 @llvm.s390.vtm(<16 x i8>, <16 x i8>)
 declare {<16 x i8>, i32} @llvm.s390.vceqbs(<16 x i8>, <16 x i8>)
 declare {<8 x i16>, i32} @llvm.s390.vceqhs(<8 x i16>, <8 x i16>)
@@ -886,45 +886,57 @@ define <2 x i64> @test_vaccg(<2 x i64> %a, <2 x i64> %b) {
 }
 
 ; VAQ.
-define <16 x i8> @test_vaq(<16 x i8> %a, <16 x i8> %b) {
+define i128 @test_vaq(i128 %a, i128 %b) {
 ; CHECK-LABEL: test_vaq:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vaq %v24, %v24, %v26
+; CHECK-NEXT:    vl %v0, 0(%r4), 3
+; CHECK-NEXT:    vl %v1, 0(%r3), 3
+; CHECK-NEXT:    vaq %v0, %v1, %v0
+; CHECK-NEXT:    vst %v0, 0(%r2), 3
 ; CHECK-NEXT:    br %r14
-  %res = call <16 x i8> @llvm.s390.vaq(<16 x i8> %a, <16 x i8> %b)
-  ret <16 x i8> %res
+  %res = call i128 @llvm.s390.vaq(i128 %a, i128 %b)
+  ret i128 %res
 }
 
 ; VACQ.
-define <16 x i8> @test_vacq(<16 x i8> %a, <16 x i8> %b, <16 x i8> %c) {
+define i128 @test_vacq(i128 %a, i128 %b, i128 %c) {
 ; CHECK-LABEL: test_vacq:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vacq %v24, %v24, %v26, %v28
+; CHECK-NEXT:    vl %v0, 0(%r5), 3
+; CHECK-NEXT:    vl %v1, 0(%r4), 3
+; CHECK-NEXT:    vl %v2, 0(%r3), 3
+; CHECK-NEXT:    vacq %v0, %v2, %v1, %v0
+; CHECK-NEXT:    vst %v0, 0(%r2), 3
 ; CHECK-NEXT:    br %r14
-  %res = call <16 x i8> @llvm.s390.vacq(<16 x i8> %a, <16 x i8> %b,
-                                        <16 x i8> %c)
-  ret <16 x i8> %res
+  %res = call i128 @llvm.s390.vacq(i128 %a, i128 %b, i128 %c)
+  ret i128 %res
 }
 
 ; VACCQ.
-define <16 x i8> @test_vaccq(<16 x i8> %a, <16 x i8> %b) {
+define i128 @test_vaccq(i128 %a, i128 %b) {
 ; CHECK-LABEL: test_vaccq:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vaccq %v24, %v24, %v26
+; CHECK-NEXT:    vl %v0, 0(%r4), 3
+; CHECK-NEXT:    vl %v1, 0(%r3), 3
+; CHECK-NEXT:    vaccq %v0, %v1, %v0
+; CHECK-NEXT:    vst %v0, 0(%r2), 3
 ; CHECK-NEXT:    br %r14
-  %res = call <16 x i8> @llvm.s390.vaccq(<16 x i8> %a, <16 x i8> %b)
-  ret <16 x i8> %res
+  %res = call i128 @llvm.s390.vaccq(i128 %a, i128 %b)
+  ret i128 %res
 }
 
 ; VACCCQ.
-define <16 x i8> @test_vacccq(<16 x i8> %a, <16 x i8> %b, <16 x i8> %c) {
+define i128 @test_vacccq(i128 %a, i128 %b, i128 %c) {
 ; CHECK-LABEL: test_vacccq:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vacccq %v24, %v24, %v26, %v28
+; CHECK-NEXT:    vl %v0, 0(%r5), 3
+; CHECK-NEXT:    vl %v1, 0(%r4), 3
+; CHECK-NEXT:    vl %v2, 0(%r3), 3
+; CHECK-NEXT:    vacccq %v0, %v2, %v1, %v0
+; CHECK-NEXT:    vst %v0, 0(%r2), 3
 ; CHECK-NEXT:    br %r14
-  %res = call <16 x i8> @llvm.s390.vacccq(<16 x i8> %a, <16 x i8> %b,
-                                          <16 x i8> %c)
-  ret <16 x i8> %res
+  %res = call i128 @llvm.s390.vacccq(i128 %a, i128 %b, i128 %c)
+  ret i128 %res
 }
 
 ; VAVGB.
@@ -1048,13 +1060,14 @@ define <2 x i64> @test_vgfmf(<4 x i32> %a, <4 x i32> %b) {
 }
 
 ; VGFMG.
-define <16 x i8> @test_vgfmg(<2 x i64> %a, <2 x i64> %b) {
+define i128 @test_vgfmg(<2 x i64> %a, <2 x i64> %b) {
 ; CHECK-LABEL: test_vgfmg:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vgfmg %v24, %v24, %v26
+; CHECK-NEXT:    vgfmg %v0, %v24, %v26
+; CHECK-NEXT:    vst %v0, 0(%r2), 3
 ; CHECK-NEXT:    br %r14
-  %res = call <16 x i8> @llvm.s390.vgfmg(<2 x i64> %a, <2 x i64> %b)
-  ret <16 x i8> %res
+  %res = call i128 @llvm.s390.vgfmg(<2 x i64> %a, <2 x i64> %b)
+  ret i128 %res
 }
 
 ; VGFMAB.
@@ -1091,14 +1104,15 @@ define <2 x i64> @test_vgfmaf(<4 x i32> %a, <4 x i32> %b, <2 x i64> %c) {
 }
 
 ; VGFMAG.
-define <16 x i8> @test_vgfmag(<2 x i64> %a, <2 x i64> %b, <16 x i8> %c) {
+define i128 @test_vgfmag(<2 x i64> %a, <2 x i64> %b, i128 %c) {
 ; CHECK-LABEL: test_vgfmag:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vgfmag %v24, %v24, %v26, %v28
+; CHECK-NEXT:    vl %v0, 0(%r3), 3
+; CHECK-NEXT:    vgfmag %v0, %v24, %v26, %v0
+; CHECK-NEXT:    vst %v0, 0(%r2), 3
 ; CHECK-NEXT:    br %r14
-  %res = call <16 x i8> @llvm.s390.vgfmag(<2 x i64> %a, <2 x i64> %b,
-                                          <16 x i8> %c)
-  ret <16 x i8> %res
+  %res = call i128 @llvm.s390.vgfmag(<2 x i64> %a, <2 x i64> %b, i128 %c)
+  ret i128 %res
 }
 
 ; VMAHB.
@@ -1650,45 +1664,57 @@ define <2 x i64> @test_vscbig(<2 x i64> %a, <2 x i64> %b) {
 }
 
 ; VSQ.
-define <16 x i8> @test_vsq(<16 x i8> %a, <16 x i8> %b) {
+define i128 @test_vsq(i128 %a, i128 %b) {
 ; CHECK-LABEL: test_vsq:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsq %v24, %v24, %v26
+; CHECK-NEXT:    vl %v0, 0(%r4), 3
+; CHECK-NEXT:    vl %v1, 0(%r3), 3
+; CHECK-NEXT:    vsq %v0, %v1, %v0
+; CHECK-NEXT:    vst %v0, 0(%r2), 3
 ; CHECK-NEXT:    br %r14
-  %res = call <16 x i8> @llvm.s390.vsq(<16 x i8> %a, <16 x i8> %b)
-  ret <16 x i8> %res
+  %res = call i128 @llvm.s390.vsq(i128 %a, i128 %b)
+  ret i128 %res
 }
 
 ; VSBIQ.
-define <16 x i8> @test_vsbiq(<16 x i8> %a, <16 x i8> %b, <16 x i8> %c) {
+define i128 @test_vsbiq(i128 %a, i128 %b, i128 %c) {
 ; CHECK-LABEL: test_vsbiq:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsbiq %v24, %v24, %v26, %v28
+; CHECK-NEXT:    vl %v0, 0(%r5), 3
+; CHECK-NEXT:    vl %v1, 0(%r4), 3
+; CHECK-NEXT:    vl %v2, 0(%r3), 3
+; CHECK-NEXT:    vsbiq %v0, %v2, %v1, %v0
+; CHECK-NEXT:    vst %v0, 0(%r2), 3
 ; CHECK-NEXT:    br %r14
-  %res = call <16 x i8> @llvm.s390.vsbiq(<16 x i8> %a, <16 x i8> %b,
-                                         <16 x i8> %c)
-  ret <16 x i8> %res
+  %res = call i128 @llvm.s390.vsbiq(i128 %a, i128 %b, i128 %c)
+  ret i128 %res
 }
 
 ; VSCBIQ.
-define <16 x i8> @test_vscbiq(<16 x i8> %a, <16 x i8> %b) {
+define i128 @test_vscbiq(i128 %a, i128 %b) {
 ; CHECK-LABEL: test_vscbiq:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vscbiq %v24, %v24, %v26
+; CHECK-NEXT:    vl %v0, 0(%r4), 3
+; CHECK-NEXT:    vl %v1, 0(%r3), 3
+; CHECK-NEXT:    vscbiq %v0, %v1, %v0
+; CHECK-NEXT:    vst %v0, 0(%r2), 3
 ; CHECK-NEXT:    br %r14
-  %res = call <16 x i8> @llvm.s390.vscbiq(<16 x i8> %a, <16 x i8> %b)
-  ret <16 x i8> %res
+  %res = call i128 @llvm.s390.vscbiq(i128 %a, i128 %b)
+  ret i128 %res
 }
 
 ; VSBCBIQ.
-define <16 x i8> @test_vsbcbiq(<16 x i8> %a, <16 x i8> %b, <16 x i8> %c) {
+define i128 @test_vsbcbiq(i128 %a, i128 %b, i128 %c) {
 ; CHECK-LABEL: test_vsbcbiq:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsbcbiq %v24, %v24, %v26, %v28
+; CHECK-NEXT:    vl %v0, 0(%r5), 3
+; CHECK-NEXT:    vl %v1, 0(%r4), 3
+; CHECK-NEXT:    vl %v2, 0(%r3), 3
+; CHECK-NEXT:    vsbcbiq %v0, %v2, %v1, %v0
+; CHECK-NEXT:    vst %v0, 0(%r2), 3
 ; CHECK-NEXT:    br %r14
-  %res = call <16 x i8> @llvm.s390.vsbcbiq(<16 x i8> %a, <16 x i8> %b,
-                                           <16 x i8> %c)
-  ret <16 x i8> %res
+  %res = call i128 @llvm.s390.vsbcbiq(i128 %a, i128 %b, i128 %c)
+  ret i128 %res
 }
 
 ; VSUMB.
@@ -1732,23 +1758,25 @@ define <2 x i64> @test_vsumgf(<4 x i32> %a, <4 x i32> %b) {
 }
 
 ; VSUMQF.
-define <16 x i8> @test_vsumqf(<4 x i32> %a, <4 x i32> %b) {
+define i128 @test_vsumqf(<4 x i32> %a, <4 x i32> %b) {
 ; CHECK-LABEL: test_vsumqf:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsumqf %v24, %v24, %v26
+; CHECK-NEXT:    vsumqf %v0, %v24, %v26
+; CHECK-NEXT:    vst %v0, 0(%r2), 3
 ; CHECK-NEXT:    br %r14
-  %res = call <16 x i8> @llvm.s390.vsumqf(<4 x i32> %a, <4 x i32> %b)
-  ret <16 x i8> %res
+  %res = call i128 @llvm.s390.vsumqf(<4 x i32> %a, <4 x i32> %b)
+  ret i128 %res
 }
 
 ; VSUMQG.
-define <16 x i8> @test_vsumqg(<2 x i64> %a, <2 x i64> %b) {
+define i128 @test_vsumqg(<2 x i64> %a, <2 x i64> %b) {
 ; CHECK-LABEL: test_vsumqg:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsumqg %v24, %v24, %v26
+; CHECK-NEXT:    vsumqg %v0, %v24, %v26
+; CHECK-NEXT:    vst %v0, 0(%r2), 3
 ; CHECK-NEXT:    br %r14
-  %res = call <16 x i8> @llvm.s390.vsumqg(<2 x i64> %a, <2 x i64> %b)
-  ret <16 x i8> %res
+  %res = call i128 @llvm.s390.vsumqg(<2 x i64> %a, <2 x i64> %b)
+  ret i128 %res
 }
 
 ; VTM with no processing of the result.

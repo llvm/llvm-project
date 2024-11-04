@@ -427,7 +427,7 @@ define amdgpu_kernel void @v_test_sub_v2i16_inline_neg1(ptr addrspace(1) %out, p
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    s_mov_b32 s3, 0xf000
 ; GFX9-NEXT:    s_mov_b32 s2, -1
-; GFX9-NEXT:    v_pk_sub_i16 v0, v0, -1 op_sel_hi:[1,0]
+; GFX9-NEXT:    v_pk_sub_i16 v0, v0, -1
 ; GFX9-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; GFX9-NEXT:    s_endpgm
 ;
@@ -460,7 +460,7 @@ define amdgpu_kernel void @v_test_sub_v2i16_inline_neg1(ptr addrspace(1) %out, p
 ; GFX10-NEXT:    s_waitcnt_depctr 0xffe3
 ; GFX10-NEXT:    s_mov_b32 s3, 0x31016000
 ; GFX10-NEXT:    s_mov_b32 s2, -1
-; GFX10-NEXT:    v_pk_sub_i16 v0, v0, -1 op_sel_hi:[1,0]
+; GFX10-NEXT:    v_pk_sub_i16 v0, v0, -1
 ; GFX10-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; GFX10-NEXT:    s_endpgm
 ;
@@ -473,7 +473,7 @@ define amdgpu_kernel void @v_test_sub_v2i16_inline_neg1(ptr addrspace(1) %out, p
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    s_mov_b32 s3, 0x31016000
 ; GFX11-NEXT:    s_mov_b32 s2, -1
-; GFX11-NEXT:    v_pk_sub_i16 v0, v0, -1 op_sel_hi:[1,0]
+; GFX11-NEXT:    v_pk_sub_i16 v0, v0, -1
 ; GFX11-NEXT:    buffer_store_b32 v0, off, s[0:3], 0
 ; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
@@ -562,13 +562,12 @@ define amdgpu_kernel void @v_test_sub_v2i16_inline_fp_split(ptr addrspace(1) %ou
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
-; GFX9-NEXT:    s_mov_b32 s4, 1.0
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    global_load_dword v0, v0, s[2:3] glc
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    s_mov_b32 s3, 0xf000
 ; GFX9-NEXT:    s_mov_b32 s2, -1
-; GFX9-NEXT:    v_pk_sub_i16 v0, v0, s4
+; GFX9-NEXT:    v_pk_sub_i16 v0, v0, 1.0
 ; GFX9-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; GFX9-NEXT:    s_endpgm
 ;
@@ -600,7 +599,7 @@ define amdgpu_kernel void @v_test_sub_v2i16_inline_fp_split(ptr addrspace(1) %ou
 ; GFX10-NEXT:    s_waitcnt_depctr 0xffe3
 ; GFX10-NEXT:    s_mov_b32 s3, 0x31016000
 ; GFX10-NEXT:    s_mov_b32 s2, -1
-; GFX10-NEXT:    v_pk_sub_i16 v0, v0, 0x3f80 op_sel:[0,1] op_sel_hi:[1,0]
+; GFX10-NEXT:    v_pk_sub_i16 v0, v0, 1.0
 ; GFX10-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; GFX10-NEXT:    s_endpgm
 ;
@@ -613,7 +612,7 @@ define amdgpu_kernel void @v_test_sub_v2i16_inline_fp_split(ptr addrspace(1) %ou
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    s_mov_b32 s3, 0x31016000
 ; GFX11-NEXT:    s_mov_b32 s2, -1
-; GFX11-NEXT:    v_pk_sub_i16 v0, v0, 0x3f80 op_sel:[0,1] op_sel_hi:[1,0]
+; GFX11-NEXT:    v_pk_sub_i16 v0, v0, 1.0
 ; GFX11-NEXT:    buffer_store_b32 v0, off, s[0:3], 0
 ; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)

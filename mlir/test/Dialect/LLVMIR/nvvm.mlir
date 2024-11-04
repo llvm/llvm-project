@@ -47,6 +47,8 @@ func.func @llvm_nvvm_barrier0() {
 func.func @llvm_nvvm_cluster_arrive() {
   // CHECK: nvvm.cluster.arrive
   nvvm.cluster.arrive
+  // CHECK: nvvm.cluster.arrive {aligned}
+  nvvm.cluster.arrive {aligned}
   llvm.return
 }
 
@@ -54,6 +56,8 @@ func.func @llvm_nvvm_cluster_arrive() {
 func.func @llvm_nvvm_cluster_arrive_relaxed() {
   // CHECK: nvvm.cluster.arrive.relaxed
   nvvm.cluster.arrive.relaxed
+  // CHECK: nvvm.cluster.arrive.relaxed {aligned}
+  nvvm.cluster.arrive.relaxed {aligned}
   llvm.return
 }
 
@@ -61,6 +65,8 @@ func.func @llvm_nvvm_cluster_arrive_relaxed() {
 func.func @llvm_nvvm_cluster_wait() {
   // CHECK: nvvm.cluster.wait
   nvvm.cluster.wait
+  // CHECK: nvvm.cluster.wait {aligned}
+  nvvm.cluster.wait {aligned}
   llvm.return
 }
 

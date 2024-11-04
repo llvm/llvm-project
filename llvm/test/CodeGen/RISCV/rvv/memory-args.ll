@@ -58,7 +58,7 @@ define <vscale x 64 x i8> @caller() {
 ; RV64IV-NEXT:    addi a1, sp, 64
 ; RV64IV-NEXT:    addi a0, sp, 64
 ; RV64IV-NEXT:    vs8r.v v24, (a1)
-; RV64IV-NEXT:    call callee@plt
+; RV64IV-NEXT:    call callee
 ; RV64IV-NEXT:    addi sp, s0, -80
 ; RV64IV-NEXT:    ld ra, 72(sp) # 8-byte Folded Reload
 ; RV64IV-NEXT:    ld s0, 64(sp) # 8-byte Folded Reload

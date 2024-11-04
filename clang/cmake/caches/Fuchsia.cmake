@@ -38,9 +38,25 @@ set(_FUCHSIA_BOOTSTRAP_PASSTHROUGH
   CURL_ROOT
   OpenSSL_ROOT
   httplib_ROOT
+
+  # Deprecated
   CursesAndPanel_ROOT
+
+  CURSES_INCLUDE_DIRS
+  CURSES_LIBRARIES
+  PANEL_LIBRARIES
+
+  # Deprecated
   Terminfo_ROOT
+
+  Terminfo_LIBRARIES
+
+  # Deprecated
   LibEdit_ROOT
+
+  LibEdit_INCLUDE_DIRS
+  LibEdit_LIBRARIES
+
   FUCHSIA_ENABLE_LLDB
   LLDB_ENABLE_CURSES
   LLDB_ENABLE_LIBEDIT

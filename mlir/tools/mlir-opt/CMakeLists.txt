@@ -26,7 +26,7 @@ if(MLIR_INCLUDE_TESTS)
     MLIRLoopLikeInterfaceTestPasses
     MLIRMathTestPasses
     MLIRMemRefTestPasses
-    MLIRMeshTestSimplifications
+    MLIRMeshTest
     MLIRNVGPUTestPasses
     MLIRSCFTestPasses
     MLIRShapeTestPasses
@@ -38,16 +38,24 @@ if(MLIR_INCLUDE_TESTS)
     MLIRTestIR
     MLIRTestOneToNTypeConversionPass
     MLIRTestPass
-    MLIRTestPDLL
     MLIRTestReducer
-    MLIRTestRewrite
-    MLIRTestTransformDialect
     MLIRTestTransforms
     MLIRTilingInterfaceTestPasses
     MLIRVectorTestPasses
     MLIRTestVectorToSPIRV
     MLIRLLVMTestPasses
     )
+  set(test_libs ${test_libs}
+    MLIRTestPDLL
+    MLIRTestTransformDialect
+    )
+
+  if (MLIR_ENABLE_PDL_IN_PATTERNMATCH)
+    set(test_libs ${test_libs}
+      MLIRTestPDLL
+      MLIRTestRewrite
+      )
+  endif()
 endif()
 
 set(LIBS

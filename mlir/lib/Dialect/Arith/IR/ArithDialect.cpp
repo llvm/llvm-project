@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "mlir/Conversion/ConvertToLLVM/ToLLVMInterface.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/UB/IR/UBOps.h"
 #include "mlir/IR/Builders.h"
@@ -44,6 +45,7 @@ void arith::ArithDialect::initialize() {
 #include "mlir/Dialect/Arith/IR/ArithOpsAttributes.cpp.inc"
       >();
   addInterfaces<ArithInlinerInterface>();
+  declarePromisedInterface<ArithDialect, ConvertToLLVMPatternInterface>();
 }
 
 /// Materialize an integer or floating point constant.

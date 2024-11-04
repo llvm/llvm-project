@@ -31,7 +31,7 @@ define <vscale x 1 x double> @foo(<vscale x 1 x double> %a, <vscale x 1 x double
 ; SPILL-O0-NEXT:    vs1r.v v8, (a0) # Unknown-size Folded Spill
 ; SPILL-O0-NEXT:    lui a0, %hi(.L.str)
 ; SPILL-O0-NEXT:    addi a0, a0, %lo(.L.str)
-; SPILL-O0-NEXT:    call puts@plt
+; SPILL-O0-NEXT:    call puts
 ; SPILL-O0-NEXT:    addi a1, sp, 32
 ; SPILL-O0-NEXT:    vl1r.v v10, (a1) # Unknown-size Folded Reload
 ; SPILL-O0-NEXT:    csrr a1, vlenb
@@ -69,7 +69,7 @@ define <vscale x 1 x double> @foo(<vscale x 1 x double> %a, <vscale x 1 x double
 ; SPILL-O2-NEXT:    vs1r.v v9, (a0) # Unknown-size Folded Spill
 ; SPILL-O2-NEXT:    lui a0, %hi(.L.str)
 ; SPILL-O2-NEXT:    addi a0, a0, %lo(.L.str)
-; SPILL-O2-NEXT:    call puts@plt
+; SPILL-O2-NEXT:    call puts
 ; SPILL-O2-NEXT:    vsetvli zero, s0, e64, m1, ta, ma
 ; SPILL-O2-NEXT:    csrr a0, vlenb
 ; SPILL-O2-NEXT:    add a0, sp, a0
@@ -101,7 +101,7 @@ define <vscale x 1 x double> @foo(<vscale x 1 x double> %a, <vscale x 1 x double
 ; SPILL-O2-VLEN128-NEXT:    vs1r.v v9, (a0) # Unknown-size Folded Spill
 ; SPILL-O2-VLEN128-NEXT:    lui a0, %hi(.L.str)
 ; SPILL-O2-VLEN128-NEXT:    addi a0, a0, %lo(.L.str)
-; SPILL-O2-VLEN128-NEXT:    call puts@plt
+; SPILL-O2-VLEN128-NEXT:    call puts
 ; SPILL-O2-VLEN128-NEXT:    vsetvli zero, s0, e64, m1, ta, ma
 ; SPILL-O2-VLEN128-NEXT:    addi a0, sp, 32
 ; SPILL-O2-VLEN128-NEXT:    vl1r.v v8, (a0) # Unknown-size Folded Reload

@@ -1813,5 +1813,42 @@ exit:
   ret i1 %res
 }
 
+; Illustrate if 2 pointers are non-equal when one of them is a recursive GEP.
+define i1 @icmp_recursiveGEP_withPtr(ptr %val1) {
+; CHECK-LABEL: @icmp_recursiveGEP_withPtr(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP_I:%.*]] = icmp eq ptr [[VAL1:%.*]], null
+; CHECK-NEXT:    br i1 [[CMP_I]], label [[_Z9STRINGLENPKS_EXIT:%.*]], label [[WHILE_COND_I:%.*]]
+; CHECK:       while.cond.i:
+; CHECK-NEXT:    [[A_PN_I:%.*]] = phi ptr [ [[TEST_0_I:%.*]], [[WHILE_COND_I]] ], [ [[VAL1]], [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[TEST_0_I]] = getelementptr inbounds i8, ptr [[A_PN_I]], i64 1
+; CHECK-NEXT:    [[TMP0:%.*]] = load i8, ptr [[TEST_0_I]], align 2
+; CHECK-NEXT:    [[CMP3_NOT_I:%.*]] = icmp eq i8 [[TMP0]], 0
+; CHECK-NEXT:    br i1 [[CMP3_NOT_I]], label [[WHILE_END_I:%.*]], label [[WHILE_COND_I]]
+; CHECK:       while.end.i:
+; CHECK-NEXT:    br label [[_Z9STRINGLENPKS_EXIT]]
+; CHECK:       _Z9stringlenPKs.exit:
+; CHECK-NEXT:    [[RETVAL_0_I:%.*]] = phi i1 [ false, [[WHILE_END_I]] ], [ true, [[ENTRY]] ]
+; CHECK-NEXT:    ret i1 [[RETVAL_0_I]]
+;
+entry:
+  %cmp.i = icmp eq ptr %val1, null
+  br i1 %cmp.i, label %_Z9stringlenPKs.exit, label %while.cond.i
+
+while.cond.i:
+  %a.pn.i = phi ptr [ %test.0.i, %while.cond.i ], [ %val1, %entry ]
+  %test.0.i = getelementptr inbounds i8, ptr %a.pn.i, i64 1
+  %0 = load i8, ptr %test.0.i, align 2
+  %cmp3.not.i = icmp eq i8 %0, 0
+  br i1 %cmp3.not.i, label %while.end.i, label %while.cond.i
+
+while.end.i:
+  %bool = icmp eq ptr %test.0.i, %val1
+  br label %_Z9stringlenPKs.exit
+
+_Z9stringlenPKs.exit:
+  %retval.0.i = phi i1 [ %bool, %while.end.i ], [ true, %entry ]
+  ret i1 %retval.0.i
+}
 
 !0 = !{ i8 1, i8 5 }

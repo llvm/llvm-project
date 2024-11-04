@@ -136,7 +136,7 @@ A foo1() {
   return a1;
 }
 
-// CHECK: define dso_local void @{{.*foo2.*}}(ptr noalias sret([[STRUCT_B]]) align 8 [[AGG_RESULT:%.*]])
+// CHECK: define dso_local void @{{.*foo2.*}}(ptr dead_on_unwind noalias writable sret([[STRUCT_B]]) align 8 [[AGG_RESULT:%.*]])
 // CHECK-NEXT: entry:
 // CHECK-NEXT: call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[AGG_RESULT]], ptr align 8 [[B1]], i64 24, i1 false)
 // CHECK-NEXT: ret void
@@ -144,7 +144,7 @@ B foo2() {
   return b1;
 }
 
-// CHECK: define dso_local void @{{.*foo3.*}}(ptr noalias sret([[STRUCT_C]]) align 8 [[AGG_RESULT:%.*]])
+// CHECK: define dso_local void @{{.*foo3.*}}(ptr dead_on_unwind noalias writable sret([[STRUCT_C]]) align 8 [[AGG_RESULT:%.*]])
 // CHECK-NEXT: entry:
 // CHECK-NEXT: call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[AGG_RESULT]], ptr align 8 [[C1]], i64 48, i1 false)
 // CHECK-NEXT: ret void
@@ -229,7 +229,7 @@ void foo7() {
   D d(A(1, 1), A(11, 11), A(111, 111));
 }
 
-// CHECK: dso_local void @{{.*foo8.*}}(ptr noalias sret([[STRUCT_D]]) align 8 [[AGG_RESULT:%.*]])
+// CHECK: dso_local void @{{.*foo8.*}}(ptr dead_on_unwind noalias writable sret([[STRUCT_D]]) align 8 [[AGG_RESULT:%.*]])
 // CHECK-NEXT: entry:
 // CHECK-NEXT: call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[AGG_RESULT]], ptr align 8 [[D1]], i64 56, i1 false)
 // CHECK-NEXT: ret void

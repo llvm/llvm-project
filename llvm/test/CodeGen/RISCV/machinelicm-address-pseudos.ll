@@ -156,7 +156,7 @@ define void @test_la_tls_gd(i32 signext %n) nounwind {
 ; RV32I-NEXT:  .LBB3_1: # %loop
 ; RV32I-NEXT:    # =>This Inner Loop Header: Depth=1
 ; RV32I-NEXT:    mv a0, s1
-; RV32I-NEXT:    call __tls_get_addr@plt
+; RV32I-NEXT:    call __tls_get_addr
 ; RV32I-NEXT:    lw zero, 0(a0)
 ; RV32I-NEXT:    addi s2, s2, 1
 ; RV32I-NEXT:    blt s2, s0, .LBB3_1
@@ -183,7 +183,7 @@ define void @test_la_tls_gd(i32 signext %n) nounwind {
 ; RV64I-NEXT:  .LBB3_1: # %loop
 ; RV64I-NEXT:    # =>This Inner Loop Header: Depth=1
 ; RV64I-NEXT:    mv a0, s1
-; RV64I-NEXT:    call __tls_get_addr@plt
+; RV64I-NEXT:    call __tls_get_addr
 ; RV64I-NEXT:    lw zero, 0(a0)
 ; RV64I-NEXT:    addiw s2, s2, 1
 ; RV64I-NEXT:    blt s2, s0, .LBB3_1

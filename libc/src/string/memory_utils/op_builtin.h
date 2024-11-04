@@ -26,13 +26,7 @@ template <size_t Size> struct Memcpy {
   static constexpr size_t SIZE = Size;
   LIBC_INLINE static void block_offset(Ptr __restrict dst, CPtr __restrict src,
                                        size_t offset) {
-#ifdef LLVM_LIBC_HAS_BUILTIN_MEMCPY_INLINE
-    return __builtin_memcpy_inline(dst + offset, src + offset, SIZE);
-#else
-    // The codegen may be suboptimal.
-    for (size_t i = 0; i < Size; ++i)
-      dst[i + offset] = src[i + offset];
-#endif
+    memcpy_inline<Size>(dst + offset, src + offset);
   }
 
   LIBC_INLINE static void block(Ptr __restrict dst, CPtr __restrict src) {

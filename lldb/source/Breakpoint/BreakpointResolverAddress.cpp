@@ -31,8 +31,7 @@ BreakpointResolverAddress::BreakpointResolverAddress(const BreakpointSP &bkpt,
       m_addr(addr), m_resolved_addr(LLDB_INVALID_ADDRESS) {}
 
 BreakpointResolverSP BreakpointResolverAddress::CreateFromStructuredData(
-    const BreakpointSP &bkpt, const StructuredData::Dictionary &options_dict,
-    Status &error) {
+    const StructuredData::Dictionary &options_dict, Status &error) {
   llvm::StringRef module_name;
   lldb::offset_t addr_offset;
   FileSpec module_filespec;
@@ -56,7 +55,7 @@ BreakpointResolverSP BreakpointResolverAddress::CreateFromStructuredData(
     }
     module_filespec.SetFile(module_name, FileSpec::Style::native);
   }
-  return std::make_shared<BreakpointResolverAddress>(bkpt, address,
+  return std::make_shared<BreakpointResolverAddress>(nullptr, address,
                                                      module_filespec);
 }
 
@@ -66,13 +65,11 @@ BreakpointResolverAddress::SerializeToStructuredData() {
       new StructuredData::Dictionary());
   SectionSP section_sp = m_addr.GetSection();
   if (section_sp) {
-    ModuleSP module_sp = section_sp->GetModule();
-    ConstString module_name;
-    if (module_sp)
-      module_name.SetCString(module_name.GetCString());
-
-    options_dict_sp->AddStringItem(GetKey(OptionNames::ModuleName),
-                                   module_name.GetCString());
+    if (ModuleSP module_sp = section_sp->GetModule()) {
+      const FileSpec &module_fspec = module_sp->GetFileSpec();
+      options_dict_sp->AddStringItem(GetKey(OptionNames::ModuleName),
+                                     module_fspec.GetPath().c_str());
+    }
     options_dict_sp->AddIntegerItem(GetKey(OptionNames::AddressOffset),
                                     m_addr.GetOffset());
   } else {

@@ -23,6 +23,8 @@ add_mlir_library(MLIRTestPDLL
   MLIRCastInterfaces
   MLIRIR
   MLIRPass
+  MLIRPDLInterpDialect
+  MLIRPDLDialect
   MLIRSupport
   MLIRTestDialect
   MLIRTransformUtils

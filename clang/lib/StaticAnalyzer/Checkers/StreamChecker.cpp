@@ -239,6 +239,7 @@ public:
 private:
   CallDescriptionMap<FnDescription> FnDescriptions = {
       {{{"fopen"}, 2}, {nullptr, &StreamChecker::evalFopen, ArgNone}},
+      {{{"fdopen"}, 2}, {nullptr, &StreamChecker::evalFopen, ArgNone}},
       {{{"freopen"}, 3},
        {&StreamChecker::preFreopen, &StreamChecker::evalFreopen, 2}},
       {{{"tmpfile"}, 0}, {nullptr, &StreamChecker::evalFopen, ArgNone}},
@@ -262,10 +263,22 @@ private:
       {{{"fputs"}, 2},
        {std::bind(&StreamChecker::preReadWrite, _1, _2, _3, _4, false),
         std::bind(&StreamChecker::evalFputx, _1, _2, _3, _4, false), 1}},
+      {{{"fprintf"}},
+       {std::bind(&StreamChecker::preReadWrite, _1, _2, _3, _4, false),
+        std::bind(&StreamChecker::evalFprintf, _1, _2, _3, _4), 0}},
+      {{{"ungetc"}, 2},
+       {std::bind(&StreamChecker::preReadWrite, _1, _2, _3, _4, false),
+        std::bind(&StreamChecker::evalUngetc, _1, _2, _3, _4), 1}},
       {{{"fseek"}, 3},
+       {&StreamChecker::preFseek, &StreamChecker::evalFseek, 0}},
+      {{{"fseeko"}, 3},
        {&StreamChecker::preFseek, &StreamChecker::evalFseek, 0}},
       {{{"ftell"}, 1},
        {&StreamChecker::preDefault, &StreamChecker::evalFtell, 0}},
+      {{{"ftello"}, 1},
+       {&StreamChecker::preDefault, &StreamChecker::evalFtell, 0}},
+      {{{"fflush"}, 1},
+       {&StreamChecker::preFflush, &StreamChecker::evalFflush, 0}},
       {{{"rewind"}, 1},
        {&StreamChecker::preDefault, &StreamChecker::evalRewind, 0}},
       {{{"fgetpos"}, 2},
@@ -329,6 +342,12 @@ private:
   void evalFputx(const FnDescription *Desc, const CallEvent &Call,
                  CheckerContext &C, bool IsSingleChar) const;
 
+  void evalFprintf(const FnDescription *Desc, const CallEvent &Call,
+                   CheckerContext &C) const;
+
+  void evalUngetc(const FnDescription *Desc, const CallEvent &Call,
+                  CheckerContext &C) const;
+
   void preFseek(const FnDescription *Desc, const CallEvent &Call,
                 CheckerContext &C) const;
   void evalFseek(const FnDescription *Desc, const CallEvent &Call,
@@ -359,6 +378,12 @@ private:
   void evalSetFeofFerror(const FnDescription *Desc, const CallEvent &Call,
                          CheckerContext &C,
                          const StreamErrorState &ErrorKind) const;
+
+  void preFflush(const FnDescription *Desc, const CallEvent &Call,
+                 CheckerContext &C) const;
+
+  void evalFflush(const FnDescription *Desc, const CallEvent &Call,
+                  CheckerContext &C) const;
 
   /// Check that the stream (in StreamVal) is not NULL.
   /// If it can only be NULL a fatal error is emitted and nullptr returned.
@@ -907,6 +932,88 @@ void StreamChecker::evalFputx(const FnDescription *Desc, const CallEvent &Call,
   C.addTransition(StateFailed);
 }
 
+void StreamChecker::evalFprintf(const FnDescription *Desc,
+                                const CallEvent &Call,
+                                CheckerContext &C) const {
+  ProgramStateRef State = C.getState();
+  if (Call.getNumArgs() < 2)
+    return;
+  SymbolRef StreamSym = getStreamArg(Desc, Call).getAsSymbol();
+  if (!StreamSym)
+    return;
+
+  const CallExpr *CE = dyn_cast_or_null<CallExpr>(Call.getOriginExpr());
+  if (!CE)
+    return;
+
+  const StreamState *OldSS = State->get<StreamMap>(StreamSym);
+  if (!OldSS)
+    return;
+
+  assertStreamStateOpened(OldSS);
+
+  NonLoc RetVal = makeRetVal(C, CE).castAs<NonLoc>();
+  State = State->BindExpr(CE, C.getLocationContext(), RetVal);
+  SValBuilder &SVB = C.getSValBuilder();
+  auto &ACtx = C.getASTContext();
+  auto Cond = SVB.evalBinOp(State, BO_GE, RetVal, SVB.makeZeroVal(ACtx.IntTy),
+                            SVB.getConditionType())
+                  .getAs<DefinedOrUnknownSVal>();
+  if (!Cond)
+    return;
+  ProgramStateRef StateNotFailed, StateFailed;
+  std::tie(StateNotFailed, StateFailed) = State->assume(*Cond);
+
+  StateNotFailed =
+      StateNotFailed->set<StreamMap>(StreamSym, StreamState::getOpened(Desc));
+  C.addTransition(StateNotFailed);
+
+  // Add transition for the failed state. The resulting value of the file
+  // position indicator for the stream is indeterminate.
+  StateFailed = StateFailed->set<StreamMap>(
+      StreamSym, StreamState::getOpened(Desc, ErrorFError, true));
+  C.addTransition(StateFailed);
+}
+
+void StreamChecker::evalUngetc(const FnDescription *Desc, const CallEvent &Call,
+                               CheckerContext &C) const {
+  ProgramStateRef State = C.getState();
+  SymbolRef StreamSym = getStreamArg(Desc, Call).getAsSymbol();
+  if (!StreamSym)
+    return;
+
+  const CallExpr *CE = dyn_cast_or_null<CallExpr>(Call.getOriginExpr());
+  if (!CE)
+    return;
+
+  const StreamState *OldSS = State->get<StreamMap>(StreamSym);
+  if (!OldSS)
+    return;
+
+  assertStreamStateOpened(OldSS);
+
+  // Generate a transition for the success state.
+  std::optional<NonLoc> PutVal = Call.getArgSVal(0).getAs<NonLoc>();
+  if (!PutVal)
+    return;
+  ProgramStateRef StateNotFailed =
+      State->BindExpr(CE, C.getLocationContext(), *PutVal);
+  StateNotFailed =
+      StateNotFailed->set<StreamMap>(StreamSym, StreamState::getOpened(Desc));
+  C.addTransition(StateNotFailed);
+
+  // Add transition for the failed state.
+  // Failure of 'ungetc' does not result in feof or ferror state.
+  // If the PutVal has value of EofVal the function should "fail", but this is
+  // the same transition as the success state.
+  // In this case only one state transition is added by the analyzer (the two
+  // new states may be similar).
+  ProgramStateRef StateFailed = bindInt(*EofVal, State, C, CE);
+  StateFailed =
+      StateFailed->set<StreamMap>(StreamSym, StreamState::getOpened(Desc));
+  C.addTransition(StateFailed);
+}
+
 void StreamChecker::preFseek(const FnDescription *Desc, const CallEvent &Call,
                              CheckerContext &C) const {
   ProgramStateRef State = C.getState();
@@ -1059,10 +1166,10 @@ void StreamChecker::evalFtell(const FnDescription *Desc, const CallEvent &Call,
   NonLoc RetVal = makeRetVal(C, CE).castAs<NonLoc>();
   ProgramStateRef StateNotFailed =
       State->BindExpr(CE, C.getLocationContext(), RetVal);
-  auto Cond = SVB.evalBinOp(State, BO_GE, RetVal,
-                            SVB.makeZeroVal(C.getASTContext().LongTy),
-                            SVB.getConditionType())
-                  .getAs<DefinedOrUnknownSVal>();
+  auto Cond =
+      SVB.evalBinOp(State, BO_GE, RetVal, SVB.makeZeroVal(Call.getResultType()),
+                    SVB.getConditionType())
+          .getAs<DefinedOrUnknownSVal>();
   if (!Cond)
     return;
   StateNotFailed = StateNotFailed->assume(*Cond, true);
@@ -1070,7 +1177,7 @@ void StreamChecker::evalFtell(const FnDescription *Desc, const CallEvent &Call,
     return;
 
   ProgramStateRef StateFailed = State->BindExpr(
-      CE, C.getLocationContext(), SVB.makeIntVal(-1, C.getASTContext().LongTy));
+      CE, C.getLocationContext(), SVB.makeIntVal(-1, Call.getResultType()));
 
   // This function does not affect the stream state.
   // Still we add success and failure state with the appropriate return value.
@@ -1189,6 +1296,84 @@ void StreamChecker::evalSetFeofFerror(const FnDescription *Desc,
   State = State->set<StreamMap>(
       StreamSym, StreamState::getOpened(SS->LastOperation, ErrorKind));
   C.addTransition(State);
+}
+
+void StreamChecker::preFflush(const FnDescription *Desc, const CallEvent &Call,
+                              CheckerContext &C) const {
+  ProgramStateRef State = C.getState();
+  SVal StreamVal = getStreamArg(Desc, Call);
+  std::optional<DefinedSVal> Stream = StreamVal.getAs<DefinedSVal>();
+  if (!Stream)
+    return;
+
+  ProgramStateRef StateNotNull, StateNull;
+  std::tie(StateNotNull, StateNull) =
+      C.getConstraintManager().assumeDual(State, *Stream);
+  if (StateNotNull && !StateNull)
+    ensureStreamOpened(StreamVal, C, StateNotNull);
+}
+
+void StreamChecker::evalFflush(const FnDescription *Desc, const CallEvent &Call,
+                               CheckerContext &C) const {
+  ProgramStateRef State = C.getState();
+  SVal StreamVal = getStreamArg(Desc, Call);
+  std::optional<DefinedSVal> Stream = StreamVal.getAs<DefinedSVal>();
+  if (!Stream)
+    return;
+
+  // Skip if the stream can be both NULL and non-NULL.
+  ProgramStateRef StateNotNull, StateNull;
+  std::tie(StateNotNull, StateNull) =
+      C.getConstraintManager().assumeDual(State, *Stream);
+  if (StateNotNull && StateNull)
+    return;
+  if (StateNotNull && !StateNull)
+    State = StateNotNull;
+  else
+    State = StateNull;
+
+  const CallExpr *CE = dyn_cast_or_null<CallExpr>(Call.getOriginExpr());
+  if (!CE)
+    return;
+
+  // `fflush` returns EOF on failure, otherwise returns 0.
+  ProgramStateRef StateFailed = bindInt(*EofVal, State, C, CE);
+  ProgramStateRef StateNotFailed = bindInt(0, State, C, CE);
+
+  // Clear error states if `fflush` returns 0, but retain their EOF flags.
+  auto ClearErrorInNotFailed = [&StateNotFailed, Desc](SymbolRef Sym,
+                                                       const StreamState *SS) {
+    if (SS->ErrorState & ErrorFError) {
+      StreamErrorState NewES =
+          (SS->ErrorState & ErrorFEof) ? ErrorFEof : ErrorNone;
+      StreamState NewSS = StreamState::getOpened(Desc, NewES, false);
+      StateNotFailed = StateNotFailed->set<StreamMap>(Sym, NewSS);
+    }
+  };
+
+  if (StateNotNull && !StateNull) {
+    // Skip if the input stream's state is unknown, open-failed or closed.
+    if (SymbolRef StreamSym = StreamVal.getAsSymbol()) {
+      const StreamState *SS = State->get<StreamMap>(StreamSym);
+      if (SS) {
+        assert(SS->isOpened() && "Stream is expected to be opened");
+        ClearErrorInNotFailed(StreamSym, SS);
+      } else
+        return;
+    }
+  } else {
+    // Clear error states for all streams.
+    const StreamMapTy &Map = StateNotFailed->get<StreamMap>();
+    for (const auto &I : Map) {
+      SymbolRef Sym = I.first;
+      const StreamState &SS = I.second;
+      if (SS.isOpened())
+        ClearErrorInNotFailed(Sym, &SS);
+    }
+  }
+
+  C.addTransition(StateNotFailed);
+  C.addTransition(StateFailed);
 }
 
 ProgramStateRef

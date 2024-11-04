@@ -13,9 +13,7 @@
 #include <__type_traits/is_same.h>
 #include <cstddef>
 #include <experimental/__config>
-#include <experimental/__simd/abi_tag.h>
 #include <experimental/__simd/declaration.h>
-#include <experimental/__simd/internal_declaration.h>
 #include <experimental/__simd/reference.h>
 #include <experimental/__simd/traits.h>
 

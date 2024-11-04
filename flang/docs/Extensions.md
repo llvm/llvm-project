@@ -96,6 +96,23 @@ end
 * `NULL()` without `MOLD=` is not allowed to be associated as an
   actual argument corresponding to an assumed-rank dummy argument;
   its rank in the called procedure would not be well-defined.
+* When an index variable of a `FORALL` or `DO CONCURRENT` is present
+  in the enclosing scope, and the construct does not have an explicit
+  type specification for its index variables, some weird restrictions
+  in F'2023 subclause 19.4 paragraphs 6 & 8 should apply.  Since this
+  compiler properly scopes these names, violations of these restrictions
+  elicit only portability warnings by default.
+* The standard defines the intrinsic functions `MOD` and `MODULO`
+  for real arguments using expressions in terms of `AINT` and `FLOOR`.
+  These definitions yield fairly poor results due to floating-point
+  cancellation, and every Fortran compiler (including this one)
+  uses better algorithms.
+* When an index variable of a `FORALL` or `DO CONCURRENT` is present
+  in the enclosing scope, and the construct does not have an explicit
+  type specification for its index variables, some weird restrictions
+  in F'2023 subclause 19.4 paragraphs 6 & 8 should apply.  Since this
+  compiler properly scopes these names, violations of these restrictions
+  elicit only portability warnings by default.
 
 ## Extensions, deletions, and legacy features supported by default
 
@@ -315,11 +332,17 @@ end
 * When a file included via an `INCLUDE` line or `#include` directive
   has a continuation marker at the end of its last line in free form,
   Fortran line continuation works.
+* A `NAMELIST` input group may omit its trailing `/` character if
+  it is followed by another `NAMELIST` input group.
+* A `NAMELIST` input group may begin with either `&` or `$`.
+* A comma in a fixed-width numeric input field terminates the
+  field rather than signaling an invalid character error.
 
 ### Extensions supported when enabled by options
 
 * C-style backslash escape sequences in quoted CHARACTER literals
-  (but not Hollerith) [-fbackslash]
+  (but not Hollerith) [-fbackslash], including Unicode escapes
+  with `\U`.
 * Logical abbreviations `.T.`, `.F.`, `.N.`, `.A.`, `.O.`, and `.X.`
   [-flogical-abbreviations]
 * `.XOR.` as a synonym for `.NEQV.` [-fxor-operator]
@@ -448,6 +471,9 @@ end
 * A `SEQUENCE` derived type is required (F'2023 C745) to have
   at least one component.  No compiler enforces this constraint;
   this compiler emits a warning.
+* Many compilers disallow a `VALUE` assumed-length character dummy
+  argument, which has been standard since F'2008.
+  We accept this usage with an optional portability warning.
 
 ## Behavior in cases where the standard is ambiguous or indefinite
 
@@ -641,6 +667,19 @@ module m
 end
 ```
 
+* When an intrinsic procedure appears in the specification part of a module
+  only in function references, but not an explicit `INTRINSIC` statement,
+  its name is not brought into other scopes by a `USE` statement.
+
+* The subclause on rounding in formatted I/O (13.7.2.3.8 in F'2023)
+  only discusses rounding for decimal-to/from-binary conversions,
+  omitting any mention of rounding for hexadecimal conversions.
+  As other compilers do apply rounding, so does this one.
+
+* For real `MAXVAL`, `MINVAL`, `MAXLOC`, and `MINLOC`, NaN values are
+  essentially ignored unless there are some unmasked array entries and
+  *all* of them are NaNs.
+
 ## De Facto Standard Features
 
 * `EXTENDS_TYPE_OF()` returns `.TRUE.` if both of its arguments have the
@@ -650,3 +689,7 @@ end
   but every Fortran compiler allows the encoding to be changed on an
   open unit.
 
+* A `NAMELIST` input item that references a scalar element of a vector
+  or contiguous array can be used as the initial element of a storage
+  sequence.  For example, "&GRP A(1)=1. 2. 3./" is treated as if had been
+  "&GRP A(1:)=1. 2. 3./".

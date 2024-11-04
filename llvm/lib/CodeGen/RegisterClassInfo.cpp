@@ -165,8 +165,7 @@ void RegisterClassInfo::compute(const TargetRegisterClass *RC) const {
   assert(RCI.NumRegs <= NumRegs && "Allocation order larger than regclass");
 
   // CSR aliases go after the volatile registers, preserve the target's order.
-  for (unsigned i = 0, e = CSRAlias.size(); i != e; ++i) {
-    unsigned PhysReg = CSRAlias[i];
+  for (unsigned PhysReg : CSRAlias) {
     uint8_t Cost = RegCosts[PhysReg];
     if (Cost != LastCost)
       LastCostChange = N;

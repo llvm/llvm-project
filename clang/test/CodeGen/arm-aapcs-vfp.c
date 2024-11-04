@@ -126,7 +126,7 @@ void test_vfp_stack_gpr_split_1(double a, double b, double c, double d, double e
 // CHECK: define{{.*}} arm_aapcs_vfpcc void @test_vfp_stack_gpr_split_2(double noundef %a, double noundef %b, double noundef %c, double noundef %d, double noundef %e, double noundef %f, double noundef %g, double noundef %h, double noundef %i, i32 noundef %j, [2 x i64] %k.coerce)
 void test_vfp_stack_gpr_split_2(double a, double b, double c, double d, double e, double f, double g, double h, double i, int j, struct_long_long_int k) {}
 
-// CHECK: define{{.*}} arm_aapcs_vfpcc void @test_vfp_stack_gpr_split_3(ptr noalias sret(%struct.struct_long_long_int) align 8 %agg.result, double noundef %a, double noundef %b, double noundef %c, double noundef %d, double noundef %e, double noundef %f, double noundef %g, double noundef %h, double noundef %i, [2 x i64] %k.coerce)
+// CHECK: define{{.*}} arm_aapcs_vfpcc void @test_vfp_stack_gpr_split_3(ptr dead_on_unwind noalias writable sret(%struct.struct_long_long_int) align 8 %agg.result, double noundef %a, double noundef %b, double noundef %c, double noundef %d, double noundef %e, double noundef %f, double noundef %g, double noundef %h, double noundef %i, [2 x i64] %k.coerce)
 struct_long_long_int test_vfp_stack_gpr_split_3(double a, double b, double c, double d, double e, double f, double g, double h, double i, struct_long_long_int k) {}
 
 typedef struct { int a; int b:4; int c; } struct_int_bitfield_int;

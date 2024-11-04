@@ -580,11 +580,13 @@ class LoopPrinterPass : public PassInfoMixin<LoopPrinterPass> {
 public:
   explicit LoopPrinterPass(raw_ostream &OS) : OS(OS) {}
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+  static bool isRequired() { return true; }
 };
 
 /// Verifier pass for the \c LoopAnalysis results.
 struct LoopVerifierPass : public PassInfoMixin<LoopVerifierPass> {
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+  static bool isRequired() { return true; }
 };
 
 /// The legacy pass manager's analysis pass to compute loop information.

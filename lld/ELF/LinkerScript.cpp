@@ -57,6 +57,10 @@ static StringRef getOutputSectionName(const InputSectionBase *s) {
   if (auto *isec = dyn_cast<InputSection>(s)) {
     if (InputSectionBase *rel = isec->getRelocatedSection()) {
       OutputSection *out = rel->getOutputSection();
+      if (!out) {
+        assert(config->relocatable && (rel->flags & SHF_LINK_ORDER));
+        return s->name;
+      }
       if (s->type == SHT_RELA)
         return saver().save(".rela" + out->name);
       return saver().save(".rel" + out->name);

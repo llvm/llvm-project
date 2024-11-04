@@ -467,10 +467,7 @@ define amdgpu_kernel void @global_atomic_fsub_uni_address_div_value_agent_scope_
 ; GFX9-NEXT:    v_bfrev_b32_e32 v2, 1
 ; GFX9-NEXT:  .LBB1_1: ; %ComputeLoop
 ; GFX9-NEXT:    ; =>This Inner Loop Header: Depth=1
-; GFX9-NEXT:    s_ff1_i32_b32 s2, s1
-; GFX9-NEXT:    s_ff1_i32_b32 s3, s0
-; GFX9-NEXT:    s_add_i32 s2, s2, 32
-; GFX9-NEXT:    s_min_u32 s2, s3, s2
+; GFX9-NEXT:    s_ff1_i32_b64 s2, s[0:1]
 ; GFX9-NEXT:    v_readlane_b32 s4, v0, s2
 ; GFX9-NEXT:    s_lshl_b64 s[2:3], 1, s2
 ; GFX9-NEXT:    s_andn2_b64 s[0:1], s[0:1], s[2:3]
@@ -536,10 +533,7 @@ define amdgpu_kernel void @global_atomic_fsub_uni_address_div_value_agent_scope_
 ; GFX1064-NEXT:    s_mov_b64 s[0:1], exec
 ; GFX1064-NEXT:  .LBB1_1: ; %ComputeLoop
 ; GFX1064-NEXT:    ; =>This Inner Loop Header: Depth=1
-; GFX1064-NEXT:    s_ff1_i32_b32 s2, s1
-; GFX1064-NEXT:    s_ff1_i32_b32 s3, s0
-; GFX1064-NEXT:    s_add_i32 s2, s2, 32
-; GFX1064-NEXT:    s_min_u32 s2, s3, s2
+; GFX1064-NEXT:    s_ff1_i32_b64 s2, s[0:1]
 ; GFX1064-NEXT:    v_readlane_b32 s4, v0, s2
 ; GFX1064-NEXT:    s_lshl_b64 s[2:3], 1, s2
 ; GFX1064-NEXT:    s_andn2_b64 s[0:1], s[0:1], s[2:3]
@@ -660,17 +654,14 @@ define amdgpu_kernel void @global_atomic_fsub_uni_address_div_value_agent_scope_
 ; GFX1164-NEXT:    s_mov_b64 s[0:1], exec
 ; GFX1164-NEXT:  .LBB1_1: ; %ComputeLoop
 ; GFX1164-NEXT:    ; =>This Inner Loop Header: Depth=1
-; GFX1164-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_2) | instid1(SALU_CYCLE_1)
-; GFX1164-NEXT:    s_ctz_i32_b32 s2, s1
-; GFX1164-NEXT:    s_ctz_i32_b32 s3, s0
-; GFX1164-NEXT:    s_add_i32 s2, s2, 32
-; GFX1164-NEXT:    s_min_u32 s2, s3, s2
-; GFX1164-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
+; GFX1164-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
+; GFX1164-NEXT:    s_ctz_i32_b64 s2, s[0:1]
 ; GFX1164-NEXT:    v_readlane_b32 s4, v0, s2
 ; GFX1164-NEXT:    s_lshl_b64 s[2:3], 1, s2
+; GFX1164-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX1164-NEXT:    s_and_not1_b64 s[0:1], s[0:1], s[2:3]
-; GFX1164-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1164-NEXT:    s_cmp_lg_u64 s[0:1], 0
+; GFX1164-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1164-NEXT:    v_add_f32_e32 v2, s4, v2
 ; GFX1164-NEXT:    s_cbranch_scc1 .LBB1_1
 ; GFX1164-NEXT:  ; %bb.2: ; %ComputeEnd
@@ -1706,10 +1697,7 @@ define amdgpu_kernel void @global_atomic_fsub_uni_address_div_value_one_as_scope
 ; GFX9-NEXT:    v_bfrev_b32_e32 v2, 1
 ; GFX9-NEXT:  .LBB3_1: ; %ComputeLoop
 ; GFX9-NEXT:    ; =>This Inner Loop Header: Depth=1
-; GFX9-NEXT:    s_ff1_i32_b32 s2, s1
-; GFX9-NEXT:    s_ff1_i32_b32 s3, s0
-; GFX9-NEXT:    s_add_i32 s2, s2, 32
-; GFX9-NEXT:    s_min_u32 s2, s3, s2
+; GFX9-NEXT:    s_ff1_i32_b64 s2, s[0:1]
 ; GFX9-NEXT:    v_readlane_b32 s4, v0, s2
 ; GFX9-NEXT:    s_lshl_b64 s[2:3], 1, s2
 ; GFX9-NEXT:    s_andn2_b64 s[0:1], s[0:1], s[2:3]
@@ -1775,10 +1763,7 @@ define amdgpu_kernel void @global_atomic_fsub_uni_address_div_value_one_as_scope
 ; GFX1064-NEXT:    s_mov_b64 s[0:1], exec
 ; GFX1064-NEXT:  .LBB3_1: ; %ComputeLoop
 ; GFX1064-NEXT:    ; =>This Inner Loop Header: Depth=1
-; GFX1064-NEXT:    s_ff1_i32_b32 s2, s1
-; GFX1064-NEXT:    s_ff1_i32_b32 s3, s0
-; GFX1064-NEXT:    s_add_i32 s2, s2, 32
-; GFX1064-NEXT:    s_min_u32 s2, s3, s2
+; GFX1064-NEXT:    s_ff1_i32_b64 s2, s[0:1]
 ; GFX1064-NEXT:    v_readlane_b32 s4, v0, s2
 ; GFX1064-NEXT:    s_lshl_b64 s[2:3], 1, s2
 ; GFX1064-NEXT:    s_andn2_b64 s[0:1], s[0:1], s[2:3]
@@ -1899,17 +1884,14 @@ define amdgpu_kernel void @global_atomic_fsub_uni_address_div_value_one_as_scope
 ; GFX1164-NEXT:    s_mov_b64 s[0:1], exec
 ; GFX1164-NEXT:  .LBB3_1: ; %ComputeLoop
 ; GFX1164-NEXT:    ; =>This Inner Loop Header: Depth=1
-; GFX1164-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_2) | instid1(SALU_CYCLE_1)
-; GFX1164-NEXT:    s_ctz_i32_b32 s2, s1
-; GFX1164-NEXT:    s_ctz_i32_b32 s3, s0
-; GFX1164-NEXT:    s_add_i32 s2, s2, 32
-; GFX1164-NEXT:    s_min_u32 s2, s3, s2
-; GFX1164-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
+; GFX1164-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
+; GFX1164-NEXT:    s_ctz_i32_b64 s2, s[0:1]
 ; GFX1164-NEXT:    v_readlane_b32 s4, v0, s2
 ; GFX1164-NEXT:    s_lshl_b64 s[2:3], 1, s2
+; GFX1164-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX1164-NEXT:    s_and_not1_b64 s[0:1], s[0:1], s[2:3]
-; GFX1164-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1164-NEXT:    s_cmp_lg_u64 s[0:1], 0
+; GFX1164-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1164-NEXT:    v_add_f32_e32 v2, s4, v2
 ; GFX1164-NEXT:    s_cbranch_scc1 .LBB3_1
 ; GFX1164-NEXT:  ; %bb.2: ; %ComputeEnd
@@ -2945,10 +2927,7 @@ define amdgpu_kernel void @global_atomic_fsub_uni_address_div_value_agent_scope_
 ; GFX9-NEXT:    v_bfrev_b32_e32 v2, 1
 ; GFX9-NEXT:  .LBB5_1: ; %ComputeLoop
 ; GFX9-NEXT:    ; =>This Inner Loop Header: Depth=1
-; GFX9-NEXT:    s_ff1_i32_b32 s2, s1
-; GFX9-NEXT:    s_ff1_i32_b32 s3, s0
-; GFX9-NEXT:    s_add_i32 s2, s2, 32
-; GFX9-NEXT:    s_min_u32 s2, s3, s2
+; GFX9-NEXT:    s_ff1_i32_b64 s2, s[0:1]
 ; GFX9-NEXT:    v_readlane_b32 s4, v0, s2
 ; GFX9-NEXT:    s_lshl_b64 s[2:3], 1, s2
 ; GFX9-NEXT:    s_andn2_b64 s[0:1], s[0:1], s[2:3]
@@ -3014,10 +2993,7 @@ define amdgpu_kernel void @global_atomic_fsub_uni_address_div_value_agent_scope_
 ; GFX1064-NEXT:    s_mov_b64 s[0:1], exec
 ; GFX1064-NEXT:  .LBB5_1: ; %ComputeLoop
 ; GFX1064-NEXT:    ; =>This Inner Loop Header: Depth=1
-; GFX1064-NEXT:    s_ff1_i32_b32 s2, s1
-; GFX1064-NEXT:    s_ff1_i32_b32 s3, s0
-; GFX1064-NEXT:    s_add_i32 s2, s2, 32
-; GFX1064-NEXT:    s_min_u32 s2, s3, s2
+; GFX1064-NEXT:    s_ff1_i32_b64 s2, s[0:1]
 ; GFX1064-NEXT:    v_readlane_b32 s4, v0, s2
 ; GFX1064-NEXT:    s_lshl_b64 s[2:3], 1, s2
 ; GFX1064-NEXT:    s_andn2_b64 s[0:1], s[0:1], s[2:3]
@@ -3138,17 +3114,14 @@ define amdgpu_kernel void @global_atomic_fsub_uni_address_div_value_agent_scope_
 ; GFX1164-NEXT:    s_mov_b64 s[0:1], exec
 ; GFX1164-NEXT:  .LBB5_1: ; %ComputeLoop
 ; GFX1164-NEXT:    ; =>This Inner Loop Header: Depth=1
-; GFX1164-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_2) | instid1(SALU_CYCLE_1)
-; GFX1164-NEXT:    s_ctz_i32_b32 s2, s1
-; GFX1164-NEXT:    s_ctz_i32_b32 s3, s0
-; GFX1164-NEXT:    s_add_i32 s2, s2, 32
-; GFX1164-NEXT:    s_min_u32 s2, s3, s2
-; GFX1164-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
+; GFX1164-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
+; GFX1164-NEXT:    s_ctz_i32_b64 s2, s[0:1]
 ; GFX1164-NEXT:    v_readlane_b32 s4, v0, s2
 ; GFX1164-NEXT:    s_lshl_b64 s[2:3], 1, s2
+; GFX1164-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX1164-NEXT:    s_and_not1_b64 s[0:1], s[0:1], s[2:3]
-; GFX1164-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1164-NEXT:    s_cmp_lg_u64 s[0:1], 0
+; GFX1164-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1164-NEXT:    v_add_f32_e32 v2, s4, v2
 ; GFX1164-NEXT:    s_cbranch_scc1 .LBB5_1
 ; GFX1164-NEXT:  ; %bb.2: ; %ComputeEnd
@@ -3726,10 +3699,7 @@ define amdgpu_kernel void @global_atomic_fsub_uni_address_div_value_agent_scope_
 ; GFX9-NEXT:    v_bfrev_b32_e32 v2, 1
 ; GFX9-NEXT:  .LBB6_1: ; %ComputeLoop
 ; GFX9-NEXT:    ; =>This Inner Loop Header: Depth=1
-; GFX9-NEXT:    s_ff1_i32_b32 s2, s1
-; GFX9-NEXT:    s_ff1_i32_b32 s3, s0
-; GFX9-NEXT:    s_add_i32 s2, s2, 32
-; GFX9-NEXT:    s_min_u32 s2, s3, s2
+; GFX9-NEXT:    s_ff1_i32_b64 s2, s[0:1]
 ; GFX9-NEXT:    v_readlane_b32 s4, v0, s2
 ; GFX9-NEXT:    s_lshl_b64 s[2:3], 1, s2
 ; GFX9-NEXT:    s_andn2_b64 s[0:1], s[0:1], s[2:3]
@@ -3795,10 +3765,7 @@ define amdgpu_kernel void @global_atomic_fsub_uni_address_div_value_agent_scope_
 ; GFX1064-NEXT:    s_mov_b64 s[0:1], exec
 ; GFX1064-NEXT:  .LBB6_1: ; %ComputeLoop
 ; GFX1064-NEXT:    ; =>This Inner Loop Header: Depth=1
-; GFX1064-NEXT:    s_ff1_i32_b32 s2, s1
-; GFX1064-NEXT:    s_ff1_i32_b32 s3, s0
-; GFX1064-NEXT:    s_add_i32 s2, s2, 32
-; GFX1064-NEXT:    s_min_u32 s2, s3, s2
+; GFX1064-NEXT:    s_ff1_i32_b64 s2, s[0:1]
 ; GFX1064-NEXT:    v_readlane_b32 s4, v0, s2
 ; GFX1064-NEXT:    s_lshl_b64 s[2:3], 1, s2
 ; GFX1064-NEXT:    s_andn2_b64 s[0:1], s[0:1], s[2:3]
@@ -3919,17 +3886,14 @@ define amdgpu_kernel void @global_atomic_fsub_uni_address_div_value_agent_scope_
 ; GFX1164-NEXT:    s_mov_b64 s[0:1], exec
 ; GFX1164-NEXT:  .LBB6_1: ; %ComputeLoop
 ; GFX1164-NEXT:    ; =>This Inner Loop Header: Depth=1
-; GFX1164-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_2) | instid1(SALU_CYCLE_1)
-; GFX1164-NEXT:    s_ctz_i32_b32 s2, s1
-; GFX1164-NEXT:    s_ctz_i32_b32 s3, s0
-; GFX1164-NEXT:    s_add_i32 s2, s2, 32
-; GFX1164-NEXT:    s_min_u32 s2, s3, s2
-; GFX1164-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
+; GFX1164-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
+; GFX1164-NEXT:    s_ctz_i32_b64 s2, s[0:1]
 ; GFX1164-NEXT:    v_readlane_b32 s4, v0, s2
 ; GFX1164-NEXT:    s_lshl_b64 s[2:3], 1, s2
+; GFX1164-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX1164-NEXT:    s_and_not1_b64 s[0:1], s[0:1], s[2:3]
-; GFX1164-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1164-NEXT:    s_cmp_lg_u64 s[0:1], 0
+; GFX1164-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1164-NEXT:    v_add_f32_e32 v2, s4, v2
 ; GFX1164-NEXT:    s_cbranch_scc1 .LBB6_1
 ; GFX1164-NEXT:  ; %bb.2: ; %ComputeEnd
@@ -4964,10 +4928,7 @@ define amdgpu_kernel void @global_atomic_fsub_uni_address_div_value_defalut_scop
 ; GFX9-NEXT:    v_bfrev_b32_e32 v2, 1
 ; GFX9-NEXT:  .LBB8_1: ; %ComputeLoop
 ; GFX9-NEXT:    ; =>This Inner Loop Header: Depth=1
-; GFX9-NEXT:    s_ff1_i32_b32 s2, s1
-; GFX9-NEXT:    s_ff1_i32_b32 s3, s0
-; GFX9-NEXT:    s_add_i32 s2, s2, 32
-; GFX9-NEXT:    s_min_u32 s2, s3, s2
+; GFX9-NEXT:    s_ff1_i32_b64 s2, s[0:1]
 ; GFX9-NEXT:    v_readlane_b32 s4, v0, s2
 ; GFX9-NEXT:    s_lshl_b64 s[2:3], 1, s2
 ; GFX9-NEXT:    s_andn2_b64 s[0:1], s[0:1], s[2:3]
@@ -5033,10 +4994,7 @@ define amdgpu_kernel void @global_atomic_fsub_uni_address_div_value_defalut_scop
 ; GFX1064-NEXT:    s_mov_b64 s[0:1], exec
 ; GFX1064-NEXT:  .LBB8_1: ; %ComputeLoop
 ; GFX1064-NEXT:    ; =>This Inner Loop Header: Depth=1
-; GFX1064-NEXT:    s_ff1_i32_b32 s2, s1
-; GFX1064-NEXT:    s_ff1_i32_b32 s3, s0
-; GFX1064-NEXT:    s_add_i32 s2, s2, 32
-; GFX1064-NEXT:    s_min_u32 s2, s3, s2
+; GFX1064-NEXT:    s_ff1_i32_b64 s2, s[0:1]
 ; GFX1064-NEXT:    v_readlane_b32 s4, v0, s2
 ; GFX1064-NEXT:    s_lshl_b64 s[2:3], 1, s2
 ; GFX1064-NEXT:    s_andn2_b64 s[0:1], s[0:1], s[2:3]
@@ -5157,17 +5115,14 @@ define amdgpu_kernel void @global_atomic_fsub_uni_address_div_value_defalut_scop
 ; GFX1164-NEXT:    s_mov_b64 s[0:1], exec
 ; GFX1164-NEXT:  .LBB8_1: ; %ComputeLoop
 ; GFX1164-NEXT:    ; =>This Inner Loop Header: Depth=1
-; GFX1164-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_2) | instid1(SALU_CYCLE_1)
-; GFX1164-NEXT:    s_ctz_i32_b32 s2, s1
-; GFX1164-NEXT:    s_ctz_i32_b32 s3, s0
-; GFX1164-NEXT:    s_add_i32 s2, s2, 32
-; GFX1164-NEXT:    s_min_u32 s2, s3, s2
-; GFX1164-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
+; GFX1164-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
+; GFX1164-NEXT:    s_ctz_i32_b64 s2, s[0:1]
 ; GFX1164-NEXT:    v_readlane_b32 s4, v0, s2
 ; GFX1164-NEXT:    s_lshl_b64 s[2:3], 1, s2
+; GFX1164-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX1164-NEXT:    s_and_not1_b64 s[0:1], s[0:1], s[2:3]
-; GFX1164-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1164-NEXT:    s_cmp_lg_u64 s[0:1], 0
+; GFX1164-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1164-NEXT:    v_add_f32_e32 v2, s4, v2
 ; GFX1164-NEXT:    s_cbranch_scc1 .LBB8_1
 ; GFX1164-NEXT:  ; %bb.2: ; %ComputeEnd

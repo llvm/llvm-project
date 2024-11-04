@@ -672,9 +672,8 @@ define <2 x i32> @test_mul_canonicalize_vec(<2 x i32> %x, <2 x i32> %y) {
 
 define i32 @test_mul_canonicalize_multiple_uses(i32 %x, i32 %y) {
 ; CHECK-LABEL: @test_mul_canonicalize_multiple_uses(
-; CHECK-NEXT:    [[NEG:%.*]] = sub i32 0, [[X:%.*]]
-; CHECK-NEXT:    [[MUL:%.*]] = mul i32 [[NEG]], [[Y:%.*]]
-; CHECK-NEXT:    [[MUL2:%.*]] = mul i32 [[MUL]], [[NEG]]
+; CHECK-NEXT:    [[MUL_NEG:%.*]] = mul i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[MUL2:%.*]] = mul i32 [[MUL_NEG]], [[X]]
 ; CHECK-NEXT:    ret i32 [[MUL2]]
 ;
   %neg = sub i32 0, %x

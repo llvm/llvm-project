@@ -163,9 +163,6 @@ void populateFoldConstantExtractSlicePatterns(
           return false;
         });
 
-/// Patterns to simplify tensor.pack.
-void populateSimplifyTensorPack(RewritePatternSet &patterns);
-
 } // namespace tensor
 } // namespace mlir
 

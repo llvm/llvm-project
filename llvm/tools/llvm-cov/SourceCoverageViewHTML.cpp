@@ -130,10 +130,14 @@ table {
 .light-row {
   background: #ffffff;
   border: 1px solid #dbdbdb;
+  border-left: none;
+  border-right: none;
 }
 .light-row-bold {
   background: #ffffff;
   border: 1px solid #dbdbdb;
+  border-left: none;
+  border-right: none;
   font-weight: bold;
 }
 .column-entry {
@@ -147,21 +151,28 @@ table {
   text-align: left;
   background-color: #ffffd0;
 }
-.column-entry-yellow:hover {
+.column-entry-yellow:hover, tr:hover .column-entry-yellow {
   background-color: #fffff0;
 }
 .column-entry-red {
   text-align: left;
   background-color: #ffd0d0;
 }
-.column-entry-red:hover {
+.column-entry-red:hover, tr:hover .column-entry-red {
   background-color: #fff0f0;
+}
+.column-entry-gray {
+  text-align: left;
+  background-color: #fbfbfb;
+}
+.column-entry-gray:hover, tr:hover .column-entry-gray {
+  background-color: #f0f0f0;
 }
 .column-entry-green {
   text-align: left;
   background-color: #d0ffd0;
 }
-.column-entry-green:hover {
+.column-entry-green:hover, tr:hover .column-entry-green {
   background-color: #f0fff0;
 }
 .line-number {
@@ -231,6 +242,9 @@ td:last-child {
 }
 tr:hover {
   background-color: #f0f0f0;
+}
+tr:last-child {
+  border-bottom: none;
 }
 )";
 
@@ -309,7 +323,9 @@ void emitTableRow(raw_ostream &OS, const CoverageViewOptions &Opts,
           RSO << '(' << Hit << '/' << Total << ')';
         }
         const char *CellClass = "column-entry-yellow";
-        if (Pctg >= Opts.HighCovWatermark)
+        if (!Total)
+          CellClass = "column-entry-gray";
+        else if (Pctg >= Opts.HighCovWatermark)
           CellClass = "column-entry-green";
         else if (Pctg < Opts.LowCovWatermark)
           CellClass = "column-entry-red";

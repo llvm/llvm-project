@@ -139,16 +139,18 @@ void Prescanner::Statement() {
         SkipSpaces();
       }
     } else {
-      // Compiler directive.  Emit normalized sentinel.
+      // Compiler directive.  Emit normalized sentinel, squash following spaces.
       EmitChar(tokens, '!');
       ++at_, ++column_;
       for (const char *sp{directiveSentinel_}; *sp != '\0';
            ++sp, ++at_, ++column_) {
         EmitChar(tokens, *sp);
       }
-      if (*at_ == ' ') {
+      if (*at_ == ' ' || *at_ == '\t') {
         EmitChar(tokens, ' ');
-        ++at_, ++column_;
+        while (*at_ == ' ' || *at_ == '\t') {
+          ++at_, ++column_;
+        }
       }
       tokens.CloseToken();
     }

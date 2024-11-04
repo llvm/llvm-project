@@ -29,7 +29,6 @@ bool ConstraintSystem::eliminateUsingFM() {
   assert(!Constraints.empty() &&
          "should only be called for non-empty constraint systems");
 
-  uint32_t NewGCD = 1;
   unsigned LastIdx = NumVariables - 1;
 
   // First, either remove the variable in place if it is 0 or add the row to
@@ -96,24 +95,20 @@ bool ConstraintSystem::eliminateUsingFM() {
           IdxUpper++;
         }
 
-        if (MulOverflow(UpperV, ((-1) * LowerLast / GCD), M1))
+        if (MulOverflow(UpperV, -1 * LowerLast, M1))
           return false;
         if (IdxLower < LowerRow.size() && LowerRow[IdxLower].Id == CurrentId) {
           LowerV = LowerRow[IdxLower].Coefficient;
           IdxLower++;
         }
 
-        if (MulOverflow(LowerV, (UpperLast / GCD), M2))
+        if (MulOverflow(LowerV, UpperLast, M2))
           return false;
         if (AddOverflow(M1, M2, N))
           return false;
         if (N == 0)
           continue;
         NR.emplace_back(N, CurrentId);
-
-        NewGCD =
-            APIntOps::GreatestCommonDivisor({32, (uint32_t)N}, {32, NewGCD})
-                .getZExtValue();
       }
       if (NR.empty())
         continue;
@@ -124,7 +119,6 @@ bool ConstraintSystem::eliminateUsingFM() {
     }
   }
   NumVariables -= 1;
-  GCD = NewGCD;
 
   return true;
 }

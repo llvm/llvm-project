@@ -17,8 +17,7 @@
 // DEFINE: %{env} =
 //--------------------------------------------------------------------------------------------------
 
-// FIXME: lib path does not support all of COO yet
-// R_U_N: %{compile} | %{run} | FileCheck %s
+// RUN: %{compile} | %{run} | FileCheck %s
 //
 // Do the same run, but now with direct IR generation.
 // REDEFINE: %{sparsifier_opts} = enable-runtime-library=false

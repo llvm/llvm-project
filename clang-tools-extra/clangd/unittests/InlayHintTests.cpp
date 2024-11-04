@@ -2205,6 +2205,19 @@ TEST(BlockEndHints, Macro) {
                       ExpectedHint{" // struct S1", "S1"});
 }
 
+TEST(BlockEndHints, PointerToMemberFunction) {
+  // Do not crash trying to summarize `a->*p`.
+  assertBlockEndHints(R"cpp(
+    class A {};
+    using Predicate = bool(A::*)();
+    void foo(A* a, Predicate p) {
+      if ((a->*p)()) {
+      $ptrmem[[}]]
+    } // suppress
+  )cpp",
+                      ExpectedHint{" // if", "ptrmem"});
+}
+
 // FIXME: Low-hanging fruit where we could omit a type hint:
 //  - auto x = TypeName(...);
 //  - auto x = (TypeName) (...);

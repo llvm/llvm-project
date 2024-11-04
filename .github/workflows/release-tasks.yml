@@ -25,7 +25,7 @@ jobs:
           echo "release-version=$release_version" >> "$GITHUB_OUTPUT"
 
       - name: Checkout LLVM
-        uses: actions/checkout@v4
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
 
       - name: Install Dependencies
         run: |
@@ -36,7 +36,7 @@ jobs:
               python3-github \
               ninja-build \
               texlive-font-utils
-          pip3 install --user -r ./llvm/docs/requirements.txt
+          pip3 install --user --require-hashes -r ./llvm/docs/requirements-hashed.txt
 
       - name: Create Release
         run: |
@@ -48,14 +48,14 @@ jobs:
           ./llvm/utils/release/github-upload-release.py --token ${{ github.token }} --release ${{ steps.validate-tag.outputs.release-version }} upload --files ./*doxygen*.tar.xz
 
       - name: Create Release Notes Artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@a8a3f3ad30e3422c9c7b888a15615d19a852ae32 # v3.1.3
         with:
           name: release-notes
           path: docs-build/html-export/
 
       - name: Clone www-releases
         if: ${{ !contains(steps.validate-tag.outputs.release-version, 'rc') }}
-        uses: actions/checkout@v4
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
         with:
           repository: ${{ github.repository_owner }}/www-releases
           ref: main
@@ -79,10 +79,10 @@ jobs:
     if: github.repository == 'llvm/llvm-project'
     steps:
       - name: Checkout LLVM
-        uses: actions/checkout@v4
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
 
       - name: Setup Cpp
-        uses: aminya/setup-cpp@v1
+        uses: aminya/setup-cpp@6e563b8e5f796db317104d19605a414345807897 # v1
         with:
           compiler: llvm-16.0.6
           cmake: true
@@ -108,14 +108,14 @@ jobs:
           python3 setup.py sdist
 
       - name: Upload lit to test.pypi.org
-        uses: pypa/gh-action-pypi-publish@release/v1
+        uses: pypa/gh-action-pypi-publish@2f6f737ca5f74c637829c0f5c3acd0e29ea5e8bf # release/v1
         with:
           password: ${{ secrets.LLVM_LIT_TEST_PYPI_API_TOKEN }}
           repository-url: https://test.pypi.org/legacy/
           packages-dir: llvm/utils/lit/dist/
 
       - name: Upload lit to pypi.org
-        uses: pypa/gh-action-pypi-publish@release/v1
+        uses: pypa/gh-action-pypi-publish@2f6f737ca5f74c637829c0f5c3acd0e29ea5e8bf # release/v1
         with:
           password: ${{ secrets.LLVM_LIT_PYPI_API_TOKEN }}
           packages-dir: llvm/utils/lit/dist/

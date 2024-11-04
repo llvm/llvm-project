@@ -123,7 +123,8 @@ def sync_source_lists(write):
 
     # Output necessary changes grouped by revision.
     for rev in sorted(changes_by_rev):
-        print("[gn build] Port {0} -- https://reviews.llvm.org/rG{0}".format(rev))
+        commit_url = 'https://github.com/llvm/llvm-project/commit/'
+        print("[gn build] Port {0} -- {1}/{0}".format(rev, commit_url))
         for gn_file, data in sorted(changes_by_rev[rev].items()):
             add = data.get("add", [])
             remove = data.get("remove", [])

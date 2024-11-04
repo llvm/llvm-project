@@ -22,7 +22,7 @@ namespace lldb_private {
 
 class StreamString : public Stream {
 public:
-  StreamString();
+  StreamString(bool colors = false);
 
   StreamString(uint32_t flags, uint32_t addr_size, lldb::ByteOrder byte_order);
 

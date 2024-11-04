@@ -113,3 +113,44 @@ define <2 x i64> @ldq_cluster(ptr %p) {
   %res  = mul nsw <2 x i64> %tmp2, %tmp3
   ret <2 x i64> %res
 }
+
+; Test LDURQi / LDRQui clustering
+;
+; CHECK: ********** MI Scheduling **********
+; CHECK: LDURQi_LDRQui:%bb.1 vector_body
+;
+; CHECK: Cluster ld/st SU(0) - SU(4)
+; CHECK: Cluster ld/st SU(1) - SU(5)
+;
+; CHECK: SU(0): %{{[0-9]+}}:fpr128 = LDURQi
+; CHECK: SU(1): %{{[0-9]+}}:fpr128 = LDURQi
+; CHECK: SU(4): %{{[0-9]+}}:fpr128 = LDRQui
+; CHECK: SU(5): %{{[0-9]+}}:fpr128 = LDRQui
+;
+define void @LDURQi_LDRQui(ptr nocapture readonly %arg) {
+entry:
+  br label %vector_body
+vector_body:
+  %phi1 = phi ptr [ null, %entry ], [ %r63, %vector_body ]
+  %phi2 = phi ptr [ %arg, %entry ], [ %r62, %vector_body ]
+  %phi3 = phi i32 [ 0, %entry ], [ %r61, %vector_body ]
+  %r51 = getelementptr i8, ptr %phi1, i64 -16
+  %r52 = load <2 x double>, ptr %r51, align 8
+  %r53 = getelementptr i8, ptr %phi2, i64 -16
+  %r54 = load <2 x double>, ptr %r53, align 8
+  %r55 = fmul fast <2 x double> %r54, <double 3.0, double 4.0>
+  %r56 = fsub fast <2 x double> %r52, %r55
+  store <2 x double> %r56, ptr %r51, align 1
+  %r57 = load <2 x double>, ptr %phi1, align 8
+  %r58 = load <2 x double>, ptr %phi2, align 8
+  %r59 = fmul fast <2 x double> %r58,<double 3.0, double 4.0>
+  %r60 = fsub fast <2 x double> %r57, %r59
+  store <2 x double> %r60, ptr %phi1, align 1
+  %r61 = add i32 %phi3, 4
+  %r62 = getelementptr i8, ptr %phi2, i64 32
+  %r63 = getelementptr i8, ptr %phi1, i64 32
+  %r.not = icmp eq i32 %r61, 0
+  br i1 %r.not, label %exit, label %vector_body
+exit:
+  ret void
+}

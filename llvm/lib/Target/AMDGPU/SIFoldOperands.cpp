@@ -208,9 +208,7 @@ bool SIFoldOperands::canUseImmWithOpSel(FoldCandidate &Fold) const {
   assert(Old.isReg() && Fold.isImm());
 
   if (!(TSFlags & SIInstrFlags::IsPacked) || (TSFlags & SIInstrFlags::IsMAI) ||
-      (ST->hasDOTOpSelHazard() && (TSFlags & SIInstrFlags::IsDOT)) ||
-      isUInt<16>(Fold.ImmToFold) ||
-      !AMDGPU::isFoldableLiteralV216(Fold.ImmToFold, ST->hasInv2PiInlineImm()))
+      (ST->hasDOTOpSelHazard() && (TSFlags & SIInstrFlags::IsDOT)))
     return false;
 
   unsigned Opcode = MI->getOpcode();
@@ -234,42 +232,123 @@ bool SIFoldOperands::tryFoldImmWithOpSel(FoldCandidate &Fold) const {
   MachineOperand &Old = MI->getOperand(Fold.UseOpNo);
   unsigned Opcode = MI->getOpcode();
   int OpNo = MI->getOperandNo(&Old);
+  uint8_t OpType = TII->get(Opcode).operands()[OpNo].OperandType;
 
-  // Set op_sel/op_sel_hi on this operand or bail out if op_sel is
-  // already set.
+  // If the literal can be inlined as-is, apply it and short-circuit the
+  // tests below. The main motivation for this is to avoid unintuitive
+  // uses of opsel.
+  if (AMDGPU::isInlinableLiteralV216(Fold.ImmToFold, OpType)) {
+    Old.ChangeToImmediate(Fold.ImmToFold);
+    return true;
+  }
+
+  // Refer to op_sel/op_sel_hi and check if we can change the immediate and
+  // op_sel in a way that allows an inline constant.
   int ModIdx = -1;
-  if (OpNo == AMDGPU::getNamedOperandIdx(Opcode, AMDGPU::OpName::src0))
+  unsigned SrcIdx = ~0;
+  if (OpNo == AMDGPU::getNamedOperandIdx(Opcode, AMDGPU::OpName::src0)) {
     ModIdx = AMDGPU::OpName::src0_modifiers;
-  else if (OpNo == AMDGPU::getNamedOperandIdx(Opcode, AMDGPU::OpName::src1))
+    SrcIdx = 0;
+  } else if (OpNo == AMDGPU::getNamedOperandIdx(Opcode, AMDGPU::OpName::src1)) {
     ModIdx = AMDGPU::OpName::src1_modifiers;
-  else if (OpNo == AMDGPU::getNamedOperandIdx(Opcode, AMDGPU::OpName::src2))
+    SrcIdx = 1;
+  } else if (OpNo == AMDGPU::getNamedOperandIdx(Opcode, AMDGPU::OpName::src2)) {
     ModIdx = AMDGPU::OpName::src2_modifiers;
+    SrcIdx = 2;
+  }
   assert(ModIdx != -1);
   ModIdx = AMDGPU::getNamedOperandIdx(Opcode, ModIdx);
   MachineOperand &Mod = MI->getOperand(ModIdx);
-  unsigned Val = Mod.getImm();
-  if ((Val & SISrcMods::OP_SEL_0) || !(Val & SISrcMods::OP_SEL_1))
-    return false;
+  unsigned ModVal = Mod.getImm();
 
-  // Only apply the following transformation if that operand requires
-  // a packed immediate.
-  // If upper part is all zero we do not need op_sel_hi.
-  if (!(Fold.ImmToFold & 0xffff)) {
-    MachineOperand New =
-        MachineOperand::CreateImm((Fold.ImmToFold >> 16) & 0xffff);
-    if (!TII->isOperandLegal(*MI, OpNo, &New))
-      return false;
-    Mod.setImm(Mod.getImm() | SISrcMods::OP_SEL_0);
-    Mod.setImm(Mod.getImm() & ~SISrcMods::OP_SEL_1);
-    Old.ChangeToImmediate((Fold.ImmToFold >> 16) & 0xffff);
-    return true;
-  }
-  MachineOperand New = MachineOperand::CreateImm(Fold.ImmToFold & 0xffff);
-  if (!TII->isOperandLegal(*MI, OpNo, &New))
+  uint16_t ImmLo = static_cast<uint16_t>(
+      Fold.ImmToFold >> (ModVal & SISrcMods::OP_SEL_0 ? 16 : 0));
+  uint16_t ImmHi = static_cast<uint16_t>(
+      Fold.ImmToFold >> (ModVal & SISrcMods::OP_SEL_1 ? 16 : 0));
+  uint32_t Imm = (static_cast<uint32_t>(ImmHi) << 16) | ImmLo;
+  unsigned NewModVal = ModVal & ~(SISrcMods::OP_SEL_0 | SISrcMods::OP_SEL_1);
+
+  // Helper function that attempts to inline the given value with a newly
+  // chosen opsel pattern.
+  auto tryFoldToInline = [&](uint32_t Imm) -> bool {
+    if (AMDGPU::isInlinableLiteralV216(Imm, OpType)) {
+      Mod.setImm(NewModVal | SISrcMods::OP_SEL_1);
+      Old.ChangeToImmediate(Imm);
+      return true;
+    }
+
+    // Try to shuffle the halves around and leverage opsel to get an inline
+    // constant.
+    uint16_t Lo = static_cast<uint16_t>(Imm);
+    uint16_t Hi = static_cast<uint16_t>(Imm >> 16);
+    if (Lo == Hi) {
+      if (AMDGPU::isInlinableLiteralV216(Lo, OpType)) {
+        Mod.setImm(NewModVal);
+        Old.ChangeToImmediate(Lo);
+        return true;
+      }
+
+      if (static_cast<int16_t>(Lo) < 0) {
+        int32_t SExt = static_cast<int16_t>(Lo);
+        if (AMDGPU::isInlinableLiteralV216(SExt, OpType)) {
+          Mod.setImm(NewModVal);
+          Old.ChangeToImmediate(SExt);
+          return true;
+        }
+      }
+
+      // This check is only useful for integer instructions
+      if (OpType == AMDGPU::OPERAND_REG_IMM_V2INT16 ||
+          OpType == AMDGPU::OPERAND_REG_INLINE_AC_V2INT16) {
+        if (AMDGPU::isInlinableLiteralV216(Lo << 16, OpType)) {
+          Mod.setImm(NewModVal | SISrcMods::OP_SEL_0 | SISrcMods::OP_SEL_1);
+          Old.ChangeToImmediate(static_cast<uint32_t>(Lo) << 16);
+          return true;
+        }
+      }
+    } else {
+      uint32_t Swapped = (static_cast<uint32_t>(Lo) << 16) | Hi;
+      if (AMDGPU::isInlinableLiteralV216(Swapped, OpType)) {
+        Mod.setImm(NewModVal | SISrcMods::OP_SEL_0);
+        Old.ChangeToImmediate(Swapped);
+        return true;
+      }
+    }
+
     return false;
-  Mod.setImm(Mod.getImm() & ~SISrcMods::OP_SEL_1);
-  Old.ChangeToImmediate(Fold.ImmToFold & 0xffff);
-  return true;
+  };
+
+  if (tryFoldToInline(Imm))
+    return true;
+
+  // Replace integer addition by subtraction and vice versa if it allows
+  // folding the immediate to an inline constant.
+  //
+  // We should only ever get here for SrcIdx == 1 due to canonicalization
+  // earlier in the pipeline, but we double-check here to be safe / fully
+  // general.
+  bool IsUAdd = Opcode == AMDGPU::V_PK_ADD_U16;
+  bool IsUSub = Opcode == AMDGPU::V_PK_SUB_U16;
+  if (SrcIdx == 1 && (IsUAdd || IsUSub)) {
+    unsigned ClampIdx =
+        AMDGPU::getNamedOperandIdx(Opcode, AMDGPU::OpName::clamp);
+    bool Clamp = MI->getOperand(ClampIdx).getImm() != 0;
+
+    if (!Clamp) {
+      uint16_t NegLo = -static_cast<uint16_t>(Imm);
+      uint16_t NegHi = -static_cast<uint16_t>(Imm >> 16);
+      uint32_t NegImm = (static_cast<uint32_t>(NegHi) << 16) | NegLo;
+
+      if (tryFoldToInline(NegImm)) {
+        unsigned NegOpcode =
+            IsUAdd ? AMDGPU::V_PK_SUB_U16 : AMDGPU::V_PK_ADD_U16;
+        MI->setDesc(TII->get(NegOpcode));
+        return true;
+      }
+    }
+  }
+
+  return false;
 }
 
 bool SIFoldOperands::updateOperand(FoldCandidate &Fold) const {
@@ -277,8 +356,19 @@ bool SIFoldOperands::updateOperand(FoldCandidate &Fold) const {
   MachineOperand &Old = MI->getOperand(Fold.UseOpNo);
   assert(Old.isReg());
 
-  if (Fold.isImm() && canUseImmWithOpSel(Fold))
-    return tryFoldImmWithOpSel(Fold);
+  if (Fold.isImm() && canUseImmWithOpSel(Fold)) {
+    if (tryFoldImmWithOpSel(Fold))
+      return true;
+
+    // We can't represent the candidate as an inline constant. Try as a literal
+    // with the original opsel, checking constant bus limitations.
+    MachineOperand New = MachineOperand::CreateImm(Fold.ImmToFold);
+    int OpNo = MI->getOperandNo(&Old);
+    if (!TII->isOperandLegal(*MI, OpNo, &New))
+      return false;
+    Old.ChangeToImmediate(Fold.ImmToFold);
+    return true;
+  }
 
   if ((Fold.isImm() || Fold.isFI() || Fold.isGlobal()) && Fold.needsShrink()) {
     MachineBasicBlock *MBB = MI->getParent();

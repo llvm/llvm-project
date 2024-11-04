@@ -135,15 +135,13 @@ define i1 @test_or_chain_ule_1(i4 %x, i4 %y, i4 %z, i4 %a, i4 %b) {
 ; CHECK-NEXT:    [[RES_2:%.*]] = xor i1 [[RES_1]], [[C_7]]
 ; CHECK-NEXT:    ret i1 [[RES_2]]
 ; CHECK:       exit:
-; CHECK-NEXT:    [[RES_3:%.*]] = xor i1 false, false
+; CHECK-NEXT:    [[RES_3:%.*]] = xor i1 true, true
 ; CHECK-NEXT:    [[RES_4:%.*]] = xor i1 [[RES_3]], true
 ; CHECK-NEXT:    [[RES_5:%.*]] = xor i1 [[RES_4]], true
 ; CHECK-NEXT:    [[RES_6:%.*]] = xor i1 [[RES_5]], true
 ; CHECK-NEXT:    [[RES_7:%.*]] = xor i1 [[RES_6]], true
-; CHECK-NEXT:    [[C_8:%.*]] = icmp ule i4 [[X]], [[A]]
-; CHECK-NEXT:    [[RES_8:%.*]] = xor i1 [[RES_7]], [[C_8]]
-; CHECK-NEXT:    [[C_9:%.*]] = icmp ule i4 [[X]], [[B:%.*]]
-; CHECK-NEXT:    [[RES_9:%.*]] = xor i1 [[RES_8]], [[C_9]]
+; CHECK-NEXT:    [[RES_8:%.*]] = xor i1 [[RES_7]], true
+; CHECK-NEXT:    [[RES_9:%.*]] = xor i1 [[RES_8]], true
 ; CHECK-NEXT:    ret i1 [[RES_9]]
 ;
 entry:
@@ -210,15 +208,13 @@ define i1 @test_or_chain_ule_2(i4 %x, i4 %y, i4 %z, i4 %a, i4 %b) {
 ; CHECK-NEXT:    [[RES_2:%.*]] = xor i1 [[RES_1]], [[C_7]]
 ; CHECK-NEXT:    ret i1 [[RES_2]]
 ; CHECK:       exit:
-; CHECK-NEXT:    [[RES_3:%.*]] = xor i1 false, false
+; CHECK-NEXT:    [[RES_3:%.*]] = xor i1 true, true
 ; CHECK-NEXT:    [[RES_4:%.*]] = xor i1 [[RES_3]], true
 ; CHECK-NEXT:    [[RES_5:%.*]] = xor i1 [[RES_4]], true
 ; CHECK-NEXT:    [[RES_6:%.*]] = xor i1 [[RES_5]], true
 ; CHECK-NEXT:    [[RES_7:%.*]] = xor i1 [[RES_6]], true
-; CHECK-NEXT:    [[C_8:%.*]] = icmp ule i4 [[X]], [[A]]
-; CHECK-NEXT:    [[RES_8:%.*]] = xor i1 [[RES_7]], [[C_8]]
-; CHECK-NEXT:    [[C_9:%.*]] = icmp ule i4 [[X]], [[B:%.*]]
-; CHECK-NEXT:    [[RES_9:%.*]] = xor i1 [[RES_8]], [[C_9]]
+; CHECK-NEXT:    [[RES_8:%.*]] = xor i1 [[RES_7]], true
+; CHECK-NEXT:    [[RES_9:%.*]] = xor i1 [[RES_8]], true
 ; CHECK-NEXT:    ret i1 [[RES_9]]
 ;
 entry:
@@ -354,8 +350,7 @@ define i1 @test_or_chain_with_and_ule(i4 %x, i4 %y, i4 %z, i4 %a, i4 %b) {
 ; CHECK-NEXT:    [[RES_6:%.*]] = xor i1 [[RES_5]], [[C_8]]
 ; CHECK-NEXT:    [[C_9:%.*]] = icmp ule i4 [[X]], [[B:%.*]]
 ; CHECK-NEXT:    [[RES_7:%.*]] = xor i1 [[RES_6]], [[C_9]]
-; CHECK-NEXT:    [[C_10:%.*]] = icmp ule i4 2, [[X]]
-; CHECK-NEXT:    [[RES_8:%.*]] = xor i1 [[RES_7]], [[C_10]]
+; CHECK-NEXT:    [[RES_8:%.*]] = xor i1 [[RES_7]], true
 ; CHECK-NEXT:    [[C_11:%.*]] = icmp ugt i4 2, [[A]]
 ; CHECK-NEXT:    [[RES_9:%.*]] = xor i1 [[RES_8]], [[C_11]]
 ; CHECK-NEXT:    ret i1 [[RES_9]]

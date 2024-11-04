@@ -5,7 +5,7 @@ transform.with_pdl_patterns {
   sequence %arg0 : !transform.any_op failures(propagate) {
   ^bb0(%arg1: !transform.any_op):
     %0 = pdl_match @some in %arg1 : (!transform.any_op) -> !transform.any_op
-    test_print_remark_at_operand %0, "matched" : !transform.any_op
+    transform.debug.emit_remark_at %0, "matched" : !transform.any_op
   }
 
   pdl.pattern @some : benefit(1) {

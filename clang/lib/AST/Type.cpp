@@ -2604,19 +2604,22 @@ bool QualType::isTrivialType(const ASTContext &Context) const {
   return false;
 }
 
-bool QualType::isTriviallyCopyableType(const ASTContext &Context) const {
-  if ((*this)->isArrayType())
-    return Context.getBaseElementType(*this).isTriviallyCopyableType(Context);
+static bool isTriviallyCopyableTypeImpl(const QualType &type,
+                                        const ASTContext &Context,
+                                        bool IsCopyConstructible) {
+  if (type->isArrayType())
+    return isTriviallyCopyableTypeImpl(Context.getBaseElementType(type),
+                                       Context, IsCopyConstructible);
 
-  if (hasNonTrivialObjCLifetime())
+  if (type.hasNonTrivialObjCLifetime())
     return false;
 
   // C++11 [basic.types]p9 - See Core 2094
   //   Scalar types, trivially copyable class types, arrays of such types, and
   //   cv-qualified versions of these types are collectively
-  //   called trivially copyable types.
+  //   called trivially copy constructible types.
 
-  QualType CanonicalType = getCanonicalType();
+  QualType CanonicalType = type.getCanonicalType();
   if (CanonicalType->isDependentType())
     return false;
 
@@ -2634,14 +2637,27 @@ bool QualType::isTriviallyCopyableType(const ASTContext &Context) const {
 
   if (const auto *RT = CanonicalType->getAs<RecordType>()) {
     if (const auto *ClassDecl = dyn_cast<CXXRecordDecl>(RT->getDecl())) {
-      if (!ClassDecl->isTriviallyCopyable()) return false;
+      if (IsCopyConstructible) {
+        return ClassDecl->isTriviallyCopyConstructible();
+      } else {
+        return ClassDecl->isTriviallyCopyable();
+      }
     }
-
     return true;
   }
-
   // No other types can match.
   return false;
+}
+
+bool QualType::isTriviallyCopyableType(const ASTContext &Context) const {
+  return isTriviallyCopyableTypeImpl(*this, Context,
+                                     /*IsCopyConstructible=*/false);
+}
+
+bool QualType::isTriviallyCopyConstructibleType(
+    const ASTContext &Context) const {
+  return isTriviallyCopyableTypeImpl(*this, Context,
+                                     /*IsCopyConstructible=*/true);
 }
 
 bool QualType::isTriviallyRelocatableType(const ASTContext &Context) const {
@@ -3412,6 +3428,13 @@ StringRef FunctionType::getNameForCallConv(CallingConv CC) {
   }
 
   llvm_unreachable("Invalid calling convention.");
+}
+
+void FunctionProtoType::ExceptionSpecInfo::instantiate() {
+  assert(Type == EST_Uninstantiated);
+  NoexceptExpr =
+      cast<FunctionProtoType>(SourceTemplate->getType())->getNoexceptExpr();
+  Type = EST_DependentNoexcept;
 }
 
 FunctionProtoType::FunctionProtoType(QualType result, ArrayRef<QualType> params,

@@ -10,9 +10,6 @@
 #define LLVM_LIBC_SRC_STDIO_PRINTF_CORE_PARSER_H
 
 #include "src/__support/CPP/optional.h"
-#include "src/__support/CPP/type_traits.h"
-#include "src/__support/arg_list.h"
-#include "src/__support/common.h"
 #include "src/__support/str_to_integer.h"
 #include "src/stdio/printf_core/core_structs.h"
 #include "src/stdio/printf_core/printf_config.h"
@@ -26,10 +23,10 @@ template <typename T> struct int_type_of {
   using type = T;
 };
 template <> struct int_type_of<double> {
-  using type = fputil::FPBits<double>::UIntType;
+  using type = fputil::FPBits<double>::StorageType;
 };
 template <> struct int_type_of<long double> {
-  using type = fputil::FPBits<long double>::UIntType;
+  using type = fputil::FPBits<long double>::StorageType;
 };
 template <typename T> using int_type_of_v = typename int_type_of<T>::type;
 

@@ -240,8 +240,8 @@ LogicalResult mlir::detail::verifyInferredResultTypes(Operation *op) {
   auto retTypeFn = cast<InferTypeOpInterface>(op);
   auto result = retTypeFn.refineReturnTypes(
       op->getContext(), op->getLoc(), op->getOperands(),
-      op->getDiscardableAttrDictionary(), op->getPropertiesStorage(),
-      op->getRegions(), inferredReturnTypes);
+      op->getRawDictionaryAttrs(), op->getPropertiesStorage(), op->getRegions(),
+      inferredReturnTypes);
   if (failed(result))
     op->emitOpError() << "failed to infer returned types";
 

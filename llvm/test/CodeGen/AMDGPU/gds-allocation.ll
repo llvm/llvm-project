@@ -13,11 +13,10 @@ define amdgpu_kernel void @alloc_lds_gds(ptr addrspace(1) %out) #1 {
 ; GCN-NEXT:    v_mov_b32_e32 v0, 5
 ; GCN-NEXT:    v_mov_b32_e32 v1, 0
 ; GCN-NEXT:    s_mov_b32 m0, 16
-; GCN-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GCN-NEXT:    s_nop 0
 ; GCN-NEXT:    ds_add_u32 v1, v0 offset:12 gds
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    buffer_wbinvl1
-; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    ds_add_u32 v1, v0 offset:12
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    s_endpgm
@@ -35,11 +34,10 @@ define amdgpu_kernel void @alloc_lds_gds_align(ptr addrspace(1) %out) #1 {
 ; GCN-NEXT:    v_mov_b32_e32 v0, 5
 ; GCN-NEXT:    v_mov_b32_e32 v1, 0
 ; GCN-NEXT:    s_mov_b32 m0, 16
-; GCN-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GCN-NEXT:    s_nop 0
 ; GCN-NEXT:    ds_add_u32 v1, v0 offset:12 gds
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    buffer_wbinvl1
-; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    ds_add_u32 v1, v0 offset:140
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    ds_add_u32 v1, v0 offset:12
@@ -65,11 +63,10 @@ define amdgpu_kernel void @gds_global_align(ptr addrspace(1) %out) {
 ; GCN-NEXT:    v_mov_b32_e32 v0, 5
 ; GCN-NEXT:    v_mov_b32_e32 v1, 0
 ; GCN-NEXT:    s_mov_b32 m0, 32
-; GCN-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GCN-NEXT:    s_nop 0
 ; GCN-NEXT:    ds_add_u32 v1, v0 offset:28 gds
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    buffer_wbinvl1
-; GCN-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    ds_add_u32 v1, v0 offset:12 gds
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    buffer_wbinvl1
@@ -87,11 +84,10 @@ define amdgpu_kernel void @gds_global_align_plus_attr(ptr addrspace(1) %out) #0 
 ; GCN-NEXT:    v_mov_b32_e32 v0, 5
 ; GCN-NEXT:    v_mov_b32_e32 v1, 0
 ; GCN-NEXT:    s_movk_i32 m0, 0x420
-; GCN-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GCN-NEXT:    s_nop 0
 ; GCN-NEXT:    ds_add_u32 v1, v0 offset:1052 gds
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    buffer_wbinvl1
-; GCN-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    ds_add_u32 v1, v0 offset:1036 gds
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    buffer_wbinvl1
@@ -118,7 +114,6 @@ define amdgpu_kernel void @gds_extern_align(ptr addrspace(1) %out, ptr addrspace
 ; GCN-NEXT:    ;;#ASMEND
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    v_mov_b32_e32 v1, s0
-; GCN-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    ds_add_u32 v1, v0 offset:12 gds
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    buffer_wbinvl1

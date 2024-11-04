@@ -102,7 +102,7 @@ define i8 @nopreserve4(i8 %A, i8 %B) {
 define <3 x i32> @shl_nuw_nsw_shuffle_splat_vec(<2 x i8> %x) {
 ; CHECK-LABEL: @shl_nuw_nsw_shuffle_splat_vec(
 ; CHECK-NEXT:    [[T2:%.*]] = zext <2 x i8> [[X:%.*]] to <2 x i32>
-; CHECK-NEXT:    [[SHUF:%.*]] = shufflevector <2 x i32> [[T2]], <2 x i32> undef, <3 x i32> <i32 1, i32 0, i32 1>
+; CHECK-NEXT:    [[SHUF:%.*]] = shufflevector <2 x i32> [[T2]], <2 x i32> poison, <3 x i32> <i32 1, i32 0, i32 1>
 ; CHECK-NEXT:    [[T3:%.*]] = shl nuw nsw <3 x i32> [[SHUF]], <i32 17, i32 17, i32 17>
 ; CHECK-NEXT:    ret <3 x i32> [[T3]]
 ;
@@ -118,7 +118,7 @@ define <3 x i32> @shl_nuw_nsw_shuffle_splat_vec(<2 x i8> %x) {
 define <3 x i32> @shl_nuw_nsw_shuffle_undef_elt_splat_vec(<2 x i8> %x) {
 ; CHECK-LABEL: @shl_nuw_nsw_shuffle_undef_elt_splat_vec(
 ; CHECK-NEXT:    [[T2:%.*]] = zext <2 x i8> [[X:%.*]] to <2 x i32>
-; CHECK-NEXT:    [[SHUF:%.*]] = shufflevector <2 x i32> [[T2]], <2 x i32> undef, <3 x i32> <i32 1, i32 poison, i32 0>
+; CHECK-NEXT:    [[SHUF:%.*]] = shufflevector <2 x i32> [[T2]], <2 x i32> poison, <3 x i32> <i32 1, i32 poison, i32 0>
 ; CHECK-NEXT:    [[T3:%.*]] = shl <3 x i32> [[SHUF]], <i32 17, i32 17, i32 17>
 ; CHECK-NEXT:    ret <3 x i32> [[T3]]
 ;

@@ -93,15 +93,20 @@ private:
 
     Interface LGI;
 
-    for (auto *Sym : G.defined_symbols()) {
+    auto AddSymbol = [&](Symbol *Sym) {
       // Skip local symbols.
       if (Sym->getScope() == Scope::Local)
-        continue;
+        return;
       assert(Sym->hasName() && "Anonymous non-local symbol?");
 
       LGI.SymbolFlags[ES.intern(Sym->getName())] =
           getJITSymbolFlagsForSymbol(*Sym);
-    }
+    };
+
+    for (auto *Sym : G.defined_symbols())
+      AddSymbol(Sym);
+    for (auto *Sym : G.absolute_symbols())
+      AddSymbol(Sym);
 
     if (hasInitializerSection(G))
       LGI.InitSymbol = makeInitSymbol(ES, G);
@@ -704,6 +709,9 @@ Error ObjectLinkingLayer::notifyEmitted(MaterializationResponsibility &MR,
 
   if (Err)
     return Err;
+
+  if (!FA)
+    return Error::success();
 
   return MR.withResourceKeyDo(
       [&](ResourceKey K) { Allocs[K].push_back(std::move(FA)); });

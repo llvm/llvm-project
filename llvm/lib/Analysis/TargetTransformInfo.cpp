@@ -37,6 +37,10 @@ static cl::opt<unsigned> CacheLineSize(
     cl::desc("Use this to override the target cache line size when "
              "specified by the user."));
 
+static cl::opt<unsigned> MinPageSize(
+    "min-page-size", cl::init(0), cl::Hidden,
+    cl::desc("Use this to override the target's minimum page size."));
+
 static cl::opt<unsigned> PredictableBranchThreshold(
     "predictable-branch-threshold", cl::init(99), cl::Hidden,
     cl::desc(
@@ -762,6 +766,11 @@ TargetTransformInfo::getCacheAssociativity(CacheLevel Level) const {
   return TTIImpl->getCacheAssociativity(Level);
 }
 
+std::optional<unsigned> TargetTransformInfo::getMinPageSize() const {
+  return MinPageSize.getNumOccurrences() > 0 ? MinPageSize
+                                             : TTIImpl->getMinPageSize();
+}
+
 unsigned TargetTransformInfo::getPrefetchDistance() const {
   return TTIImpl->getPrefetchDistance();
 }
@@ -858,6 +867,15 @@ InstructionCost TargetTransformInfo::getArithmeticInstrCost(
       TTIImpl->getArithmeticInstrCost(Opcode, Ty, CostKind,
                                       Op1Info, Op2Info,
                                       Args, CxtI);
+  assert(Cost >= 0 && "TTI should not produce negative costs!");
+  return Cost;
+}
+
+InstructionCost TargetTransformInfo::getAltInstrCost(
+    VectorType *VecTy, unsigned Opcode0, unsigned Opcode1,
+    const SmallBitVector &OpcodeMask, TTI::TargetCostKind CostKind) const {
+  InstructionCost Cost =
+      TTIImpl->getAltInstrCost(VecTy, Opcode0, Opcode1, OpcodeMask, CostKind);
   assert(Cost >= 0 && "TTI should not produce negative costs!");
   return Cost;
 }

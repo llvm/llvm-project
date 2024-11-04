@@ -39,8 +39,6 @@ static const SanitizerMask NotAllowedWithTrap = SanitizerKind::Vptr;
 static const SanitizerMask NotAllowedWithMinimalRuntime = SanitizerKind::Vptr;
 static const SanitizerMask NotAllowedWithExecuteOnly =
     SanitizerKind::Function | SanitizerKind::KCFI;
-static const SanitizerMask RequiresPIE =
-    SanitizerKind::DataFlow | SanitizerKind::Scudo;
 static const SanitizerMask NeedsUnwindTables =
     SanitizerKind::Address | SanitizerKind::HWAddress | SanitizerKind::Thread |
     SanitizerKind::Memory | SanitizerKind::DataFlow;
@@ -303,9 +301,7 @@ bool SanitizerArgs::needsCfiDiagRt() const {
          CfiCrossDso && !ImplicitCfiRuntime;
 }
 
-bool SanitizerArgs::requiresPIE() const {
-  return NeedPIE || (Sanitizers.Mask & RequiresPIE);
-}
+bool SanitizerArgs::requiresPIE() const { return NeedPIE; }
 
 bool SanitizerArgs::needsUnwindTables() const {
   return static_cast<bool>(Sanitizers.Mask & NeedsUnwindTables);
@@ -699,8 +695,6 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
     MsanParamRetval = Args.hasFlag(
         options::OPT_fsanitize_memory_param_retval,
         options::OPT_fno_sanitize_memory_param_retval, MsanParamRetval);
-    NeedPIE |= !(TC.getTriple().isOSLinux() &&
-                 TC.getTriple().getArch() == llvm::Triple::x86_64);
   } else if (AllAddedKinds & SanitizerKind::KernelMemory) {
     MsanUseAfterDtor = false;
     MsanParamRetval = Args.hasFlag(

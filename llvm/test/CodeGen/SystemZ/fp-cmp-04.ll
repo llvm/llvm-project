@@ -163,7 +163,7 @@ exit:
 define float @f9(float %a, float %b, ptr %dest) {
 ; CHECK-LABEL: f9:
 ; CHECK: meebr %f0, %f2
-; CHECK-NEXT: ltebr %f0, %f0
+; CHECK-NEXT: ltebr %f1, %f0
 ; CHECK-NEXT: blhr %r14
 ; CHECK: br %r14
 entry:
@@ -185,7 +185,7 @@ define float @f10(float %a, float %b, float %c, ptr %dest) {
 ; CHECK-LABEL: f10:
 ; CHECK: aebr %f0, %f2
 ; CHECK-NEXT: debr %f0, %f4
-; CHECK-NEXT: ltebr %f0, %f0
+; CHECK-NEXT: ltebr %f1, %f0
 ; CHECK-NEXT: bner %r14
 ; CHECK: br %r14
 entry:
@@ -209,7 +209,7 @@ define float @f11(float %a, float %b, float %c, ptr %dest1, ptr %dest2) {
 ; CHECK: aebr %f0, %f2
 ; CHECK-NEXT: sebr %f4, %f0
 ; CHECK-DAG: ste %f4, 0(%r2)
-; CHECK-DAG: ltebr %f0, %f0
+; CHECK-DAG: ltebr %f1, %f0
 ; CHECK-NEXT: ber %r14
 ; CHECK: br %r14
 entry:
@@ -227,10 +227,11 @@ exit:
   ret float %add
 }
 
-; Test that LER gets converted to LTEBR where useful.
+; %val in %f2 must be preserved during comparison and also copied to %f0.
 define float @f12(float %dummy, float %val, ptr %dest) {
 ; CHECK-LABEL: f12:
-; CHECK: ltebr %f0, %f2
+; CHECK: ler %f0, %f2
+; CHECK-NEXT: ltebr %f1, %f2
 ; CHECK-NEXT: #APP
 ; CHECK-NEXT: blah %f0
 ; CHECK-NEXT: #NO_APP
@@ -249,10 +250,11 @@ exit:
   ret float %val
 }
 
-; Test that LDR gets converted to LTDBR where useful.
+; Same for double.
 define double @f13(double %dummy, double %val, ptr %dest) {
 ; CHECK-LABEL: f13:
-; CHECK: ltdbr %f0, %f2
+; CHECK: ldr %f0, %f2
+; CHECK-NEXT: ltdbr %f1, %f2
 ; CHECK-NEXT: #APP
 ; CHECK-NEXT: blah %f0
 ; CHECK-NEXT: #NO_APP
@@ -271,14 +273,15 @@ exit:
   ret double %val
 }
 
-; Test that LXR gets converted to LTXBR where useful.
+; LXR cannot be converted to LTXBR as its input is live after it.
 define void @f14(ptr %ptr1, ptr %ptr2) {
 ; CHECK-LABEL: f14:
-; CHECK: ltxbr
+; CHECK: lxr
 ; CHECK-NEXT: dxbr
 ; CHECK-NEXT: std
 ; CHECK-NEXT: std
 ; CHECK-NEXT: mxbr
+; CHECK-NEXT: ltxbr
 ; CHECK-NEXT: std
 ; CHECK-NEXT: std
 ; CHECK-NEXT: blr %r14
@@ -301,11 +304,10 @@ exit:
   ret void
 }
 
-; Test a case where it is the source rather than destination of LER that
-; we need.
 define float @f15(float %val, float %dummy, ptr %dest) {
 ; CHECK-LABEL: f15:
-; CHECK: ltebr %f2, %f0
+; CHECK: ltebr %f1, %f0
+; CHECK-NEXT: ler %f2, %f0
 ; CHECK-NEXT: #APP
 ; CHECK-NEXT: blah %f2
 ; CHECK-NEXT: #NO_APP
@@ -324,11 +326,10 @@ exit:
   ret float %val
 }
 
-; Test a case where it is the source rather than destination of LDR that
-; we need.
 define double @f16(double %val, double %dummy, ptr %dest) {
 ; CHECK-LABEL: f16:
-; CHECK: ltdbr %f2, %f0
+; CHECK: ltdbr %f1, %f0
+; CHECK: ldr %f2, %f0
 ; CHECK-NEXT: #APP
 ; CHECK-NEXT: blah %f2
 ; CHECK-NEXT: #NO_APP

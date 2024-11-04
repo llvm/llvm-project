@@ -6,7 +6,7 @@
 // RUN: FileCheck %s < %t.d
 // CHECK: dependency-gen-pch.m.o
 // CHECK-NEXT: dependency-gen-pch.m
-// CHECK-NEXT: Inputs{{.}}module.map
+// CHECK-NEXT: Inputs{{.}}module.modulemap
 // CHECK-NEXT: diamond_top.pcm
 // CHECK-NEXT: Inputs{{.}}diamond_top.h
 

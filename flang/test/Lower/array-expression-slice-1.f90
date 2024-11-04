@@ -10,7 +10,7 @@
 ! CHECK-DAG:         %[[VAL_13:.*]] = arith.constant 2 : i64
 ! CHECK-DAG:         %[[VAL_14:.*]] = arith.constant 7 : i64
 ! CHECK-DAG:         %[[VAL_16:.*]] = arith.constant 4 : i64
-! CHECK-DAG:         %[[VAL_18:.*]] = arith.constant -1 : i32
+! CHECK-DAG:         %[[VAL_18:.*]] = arith.constant 6 : i32
 ! CHECK-DAG:         %[[VAL_19:.*]] = arith.constant 0 : i64
 ! CHECK-DAG:         %[[VAL_20:.*]] = arith.constant 1 : i64
 ! CHECK-DAG:         %[[VAL_21:.*]] = arith.constant 3 : i64
@@ -385,7 +385,7 @@ end program p
 ! CHECK-DAG:     %[[VAL_2:.*]] = arith.constant 2 : index
 ! CHECK-DAG:     %[[VAL_3:.*]] = arith.constant 1 : index
 ! CHECK-DAG:     %[[VAL_4:.*]] = arith.constant 4 : index
-! CHECK-DAG:     %[[VAL_6:.*]] = arith.constant -1 : i32
+! CHECK-DAG:     %[[VAL_6:.*]] = arith.constant 6 : i32
 ! CHECK-DAG:     %[[VAL_7:.*]] = arith.constant 10 : index
 ! CHECK:         %[[VAL_8:.*]]:2 = fir.unboxchar %[[VAL_0]] : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
 ! CHECK:         %[[VAL_9:.*]] = fir.convert %[[VAL_8]]#0 : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<!fir.array<10x!fir.char<1>>>

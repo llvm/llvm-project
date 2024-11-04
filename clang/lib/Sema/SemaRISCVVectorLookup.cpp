@@ -206,15 +206,16 @@ void RISCVIntrinsicManagerImpl::ConstructRVVIntrinsics(
       {"xsfvfwmaccqqq", RVV_REQ_Xsfvfwmaccqqq},
       {"xsfvqmaccdod", RVV_REQ_Xsfvqmaccdod},
       {"xsfvqmaccqoq", RVV_REQ_Xsfvqmaccqoq},
-      {"experimental-zvbb", RVV_REQ_Zvbb},
-      {"experimental-zvbc", RVV_REQ_Zvbc},
-      {"experimental-zvkb", RVV_REQ_Zvkb},
-      {"experimental-zvkg", RVV_REQ_Zvkg},
-      {"experimental-zvkned", RVV_REQ_Zvkned},
-      {"experimental-zvknha", RVV_REQ_Zvknha},
-      {"experimental-zvknhb", RVV_REQ_Zvknhb},
-      {"experimental-zvksed", RVV_REQ_Zvksed},
-      {"experimental-zvksh", RVV_REQ_Zvksh}};
+      {"zvbb", RVV_REQ_Zvbb},
+      {"zvbc", RVV_REQ_Zvbc},
+      {"zvkb", RVV_REQ_Zvkb},
+      {"zvkg", RVV_REQ_Zvkg},
+      {"zvkned", RVV_REQ_Zvkned},
+      {"zvknha", RVV_REQ_Zvknha},
+      {"zvknhb", RVV_REQ_Zvknhb},
+      {"zvksed", RVV_REQ_Zvksed},
+      {"zvksh", RVV_REQ_Zvksh},
+      {"experimental", RVV_REQ_Experimental}};
 
   // Construction of RVVIntrinsicRecords need to sync with createRVVIntrinsics
   // in RISCVVEmitter.cpp.
@@ -273,9 +274,8 @@ void RISCVIntrinsicManagerImpl::ConstructRVVIntrinsics(
         continue;
 
       if (BaseType == BasicType::Float16) {
-        if ((Record.RequiredExtensions & RVV_REQ_ZvfhminOrZvfh) ==
-            RVV_REQ_ZvfhminOrZvfh) {
-          if (!TI.hasFeature("zvfh") && !TI.hasFeature("zvfhmin"))
+        if ((Record.RequiredExtensions & RVV_REQ_Zvfhmin) == RVV_REQ_Zvfhmin) {
+          if (!TI.hasFeature("zvfhmin"))
             continue;
         } else if (!TI.hasFeature("zvfh")) {
           continue;

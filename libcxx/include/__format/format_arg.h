@@ -73,17 +73,17 @@ enum class __arg_t : uint8_t {
 };
 
 inline constexpr unsigned __packed_arg_t_bits = 5;
-inline constexpr uint8_t __packed_arg_t_mask = 0x1f;
+inline constexpr uint8_t __packed_arg_t_mask  = 0x1f;
 
 inline constexpr unsigned __packed_types_storage_bits = 64;
-inline constexpr unsigned __packed_types_max = __packed_types_storage_bits / __packed_arg_t_bits;
+inline constexpr unsigned __packed_types_max          = __packed_types_storage_bits / __packed_arg_t_bits;
 
-_LIBCPP_HIDE_FROM_ABI
-constexpr bool __use_packed_format_arg_store(size_t __size) { return __size <= __packed_types_max; }
+_LIBCPP_HIDE_FROM_ABI constexpr bool __use_packed_format_arg_store(size_t __size) {
+  return __size <= __packed_types_max;
+}
 
-_LIBCPP_HIDE_FROM_ABI
-constexpr __arg_t __get_packed_type(uint64_t __types, size_t __id) {
-  _LIBCPP_ASSERT_UNCATEGORIZED(__id <= __packed_types_max, "");
+_LIBCPP_HIDE_FROM_ABI constexpr __arg_t __get_packed_type(uint64_t __types, size_t __id) {
+  _LIBCPP_ASSERT_INTERNAL(__id <= __packed_types_max, "");
 
   if (__id > 0)
     __types >>= __id * __packed_arg_t_bits;
@@ -96,8 +96,7 @@ constexpr __arg_t __get_packed_type(uint64_t __types, size_t __id) {
 // This function is not user obervable, so it can directly use the non-standard
 // types of the "variant". See __arg_t for more details.
 template <class _Visitor, class _Context>
-_LIBCPP_HIDE_FROM_ABI decltype(auto)
-__visit_format_arg(_Visitor&& __vis, basic_format_arg<_Context> __arg) {
+_LIBCPP_HIDE_FROM_ABI decltype(auto) __visit_format_arg(_Visitor&& __vis, basic_format_arg<_Context> __arg) {
   switch (__arg.__type_) {
   case __format::__arg_t::__none:
     return std::invoke(std::forward<_Visitor>(__vis), __arg.__value_.__monostate_);
@@ -138,8 +137,8 @@ __visit_format_arg(_Visitor&& __vis, basic_format_arg<_Context> __arg) {
   case __format::__arg_t::__ptr:
     return std::invoke(std::forward<_Visitor>(__vis), __arg.__value_.__ptr_);
   case __format::__arg_t::__handle:
-    return std::invoke(std::forward<_Visitor>(__vis),
-                         typename basic_format_arg<_Context>::handle{__arg.__value_.__handle_});
+    return std::invoke(
+        std::forward<_Visitor>(__vis), typename basic_format_arg<_Context>::handle{__arg.__value_.__handle_});
   }
 
   __libcpp_unreachable();
@@ -224,12 +223,9 @@ class _LIBCPP_TEMPLATE_VIS basic_format_arg {
 public:
   class _LIBCPP_TEMPLATE_VIS handle;
 
-  _LIBCPP_HIDE_FROM_ABI basic_format_arg() noexcept
-      : __type_{__format::__arg_t::__none} {}
+  _LIBCPP_HIDE_FROM_ABI basic_format_arg() noexcept : __type_{__format::__arg_t::__none} {}
 
-  _LIBCPP_HIDE_FROM_ABI explicit operator bool() const noexcept {
-    return __type_ != __format::__arg_t::__none;
-  }
+  _LIBCPP_HIDE_FROM_ABI explicit operator bool() const noexcept { return __type_ != __format::__arg_t::__none; }
 
 private:
   using char_type = typename _Context::char_type;
@@ -257,8 +253,7 @@ public:
 template <class _Context>
 class _LIBCPP_TEMPLATE_VIS basic_format_arg<_Context>::handle {
 public:
-  _LIBCPP_HIDE_FROM_ABI
-  void format(basic_format_parse_context<char_type>& __parse_ctx, _Context& __ctx) const {
+  _LIBCPP_HIDE_FROM_ABI void format(basic_format_parse_context<char_type>& __parse_ctx, _Context& __ctx) const {
     __handle_.__format_(__parse_ctx, __ctx, __handle_.__ptr_);
   }
 
@@ -272,8 +267,7 @@ private:
 // This function is user facing, so it must wrap the non-standard types of
 // the "variant" in a handle to stay conforming. See __arg_t for more details.
 template <class _Visitor, class _Context>
-_LIBCPP_HIDE_FROM_ABI decltype(auto)
-visit_format_arg(_Visitor&& __vis, basic_format_arg<_Context> __arg) {
+_LIBCPP_HIDE_FROM_ABI decltype(auto) visit_format_arg(_Visitor&& __vis, basic_format_arg<_Context> __arg) {
   switch (__arg.__type_) {
 #  ifndef _LIBCPP_HAS_NO_INT128
   case __format::__arg_t::__i128: {

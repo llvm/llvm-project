@@ -1917,14 +1917,14 @@ TEST_F(SymbolCollectorTest, UndefOfModuleMacro) {
     #undef X
     )cpp";
   TU.AdditionalFiles["foo.h"] = "#define X 1";
-  TU.AdditionalFiles["module.map"] = R"cpp(
+  TU.AdditionalFiles["module.modulemap"] = R"cpp(
     module foo {
      header "foo.h"
      export *
    }
    )cpp";
   TU.ExtraArgs.push_back("-fmodules");
-  TU.ExtraArgs.push_back("-fmodule-map-file=" + testPath("module.map"));
+  TU.ExtraArgs.push_back("-fmodule-map-file=" + testPath("module.modulemap"));
   TU.OverlayRealFileSystemForModules = true;
 
   TU.build();

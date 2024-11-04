@@ -57,6 +57,12 @@
 /* Define if we have sys/resource.h (rlimits) */
 #cmakedefine CLANG_HAVE_RLIMITS ${CLANG_HAVE_RLIMITS}
 
+/* Define if we have dlfcn.h */
+#cmakedefine CLANG_HAVE_DLFCN_H ${CLANG_HAVE_DLFCN_H}
+
+/* Define if dladdr() is available on this platform. */
+#cmakedefine CLANG_HAVE_DLADDR ${CLANG_HAVE_DLADDR}
+
 /* Linker version detected at compile time. */
 #cmakedefine HOST_LINK_VERSION "${HOST_LINK_VERSION}"
 

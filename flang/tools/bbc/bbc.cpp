@@ -181,6 +181,12 @@ static llvm::cl::opt<bool> setOpenMPNoNestedParallelism(
                    "a parallel region."),
     llvm::cl::init(false));
 
+static llvm::cl::opt<bool>
+    setNoGPULib("nogpulib",
+                llvm::cl::desc("Do not link device library for CUDA/HIP device "
+                               "compilation"),
+                llvm::cl::init(false));
+
 static llvm::cl::opt<bool> enableOpenACC("fopenacc",
                                          llvm::cl::desc("enable openacc"),
                                          llvm::cl::init(false));
@@ -349,7 +355,7 @@ static mlir::LogicalResult convertFortranSourceToMLIR(
         OffloadModuleOpts(setOpenMPTargetDebug, setOpenMPTeamSubscription,
                           setOpenMPThreadSubscription, setOpenMPNoThreadState,
                           setOpenMPNoNestedParallelism, enableOpenMPDevice,
-                          enableOpenMPGPU, setOpenMPVersion);
+                          enableOpenMPGPU, setOpenMPVersion, "", setNoGPULib);
     setOffloadModuleInterfaceAttributes(mlirModule, offloadModuleOpts);
     setOpenMPVersionAttribute(mlirModule, setOpenMPVersion);
   }

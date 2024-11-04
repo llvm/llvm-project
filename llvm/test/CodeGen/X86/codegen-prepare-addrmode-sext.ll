@@ -1,4 +1,4 @@
-; RUN: opt -S -codegenprepare %s -o - | FileCheck %s
+; RUN: opt -S -passes='require<profile-summary>,function(codegenprepare)' %s -o - | FileCheck %s
 ; This file tests the different cases what are involved when codegen prepare
 ; tries to get sign/zero extension out of the way of addressing mode.
 ; This tests require an actual target as addressing mode decisions depends

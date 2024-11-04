@@ -8,7 +8,7 @@
 // RUN: %clang_cc1 -std=c++20 -triple %itanium_abi_triple %t/b.cppm \
 // RUN:     -emit-module-interface -fmodule-file=a=%t/a.pcm -o %t/b.pcm
 // RUN: %clang_cc1 -std=c++20 -triple %itanium_abi_triple %t/b.pcm -S \
-// RUN:     -emit-llvm -disable-llvm-passes -o - | FileCheck %t/b.cppm
+// RUN:     -emit-llvm -fmodule-file=a=%t/a.pcm -disable-llvm-passes -o - | FileCheck %t/b.cppm
 // RUN: %clang_cc1 -std=c++20 -triple %itanium_abi_triple %t/c.cpp -fmodule-file=a=%t/a.pcm \
 // RUN:     -S -emit-llvm -disable-llvm-passes -o - | FileCheck %t/c.cpp
 

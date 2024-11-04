@@ -2,7 +2,7 @@
 
 module attributes { transform.with_named_sequence } {
   transform.named_sequence @print_structured(%arg0: !transform.any_op {transform.readonly}) {
-    transform.test_print_remark_at_operand %arg0, "structured" : !transform.any_op
+    transform.debug.emit_remark_at %arg0, "structured" : !transform.any_op
     transform.yield
   }
 
@@ -94,8 +94,8 @@ module attributes { transform.with_named_sequence } {
     ^bb0(%arg1: !transform.any_op):
       transform.match.structured.yield %arg1 : !transform.any_op
     }
-    transform.test_print_remark_at_operand %0, "structured" : !transform.any_op
-    transform.test_print_remark_at_operand %arg0, "other" : !transform.any_op
+    transform.debug.emit_remark_at %0, "structured" : !transform.any_op
+    transform.debug.emit_remark_at %arg0, "other" : !transform.any_op
     transform.yield %0 : !transform.any_op
   }
 
@@ -132,7 +132,7 @@ module attributes { transform.with_named_sequence } {
 
 module attributes { transform.with_named_sequence } {
   transform.named_sequence @print_passthrough(%arg0: !transform.any_op {transform.readonly}) {
-    transform.test_print_remark_at_operand %arg0, "passthrough" : !transform.any_op
+    transform.debug.emit_remark_at %arg0, "passthrough" : !transform.any_op
     transform.yield
   }
 
@@ -182,7 +182,7 @@ module attributes { transform.with_named_sequence } {
 
 module attributes { transform.with_named_sequence } {
   transform.named_sequence @print_reduction(%arg0: !transform.any_op {transform.readonly}) {
-    transform.test_print_remark_at_operand %arg0, "reduction" : !transform.any_op
+    transform.debug.emit_remark_at %arg0, "reduction" : !transform.any_op
     transform.yield
   }
 
@@ -253,7 +253,7 @@ module attributes { transform.with_named_sequence } {
   }
 
   transform.named_sequence @print_dimension_size_match(%arg0: !transform.any_op {transform.readonly}) {
-    transform.test_print_remark_at_operand %arg0, "matched sizes" : !transform.any_op
+    transform.debug.emit_remark_at %arg0, "matched sizes" : !transform.any_op
     transform.yield
   }
 
@@ -276,14 +276,14 @@ module attributes { transform.with_named_sequence } {
           : !transform.any_op, !transform.param<i64>, !transform.param<i64>, !transform.param<i64>,
             !transform.param<i64>, !transform.param<i64>, !transform.param<i64>, !transform.param<i64>, !transform.param<i64>
     }
-    transform.test_print_param %0#1, "dimensions all:" at %0#0 : !transform.param<i64>, !transform.any_op
-    transform.test_print_param %0#2, "dimension 0:" at %0#0 : !transform.param<i64>, !transform.any_op
-    transform.test_print_param %0#3, "dimension -1:" at %0#0 : !transform.param<i64>, !transform.any_op
-    transform.test_print_param %0#4, "dimensions 0, 2:" at %0#0 : !transform.param<i64>, !transform.any_op
-    transform.test_print_param %0#5, "dimensions 0, -1:" at %0#0 : !transform.param<i64>, !transform.any_op
-    transform.test_print_param %0#6, "dimensions except -1:" at %0#0 : !transform.param<i64>, !transform.any_op
-    transform.test_print_param %0#7, "dimensions except 0, -2:" at %0#0 : !transform.param<i64>, !transform.any_op
-    transform.test_print_param %0#8, "dimensions 0, -3:" at %0#0 : !transform.param<i64>, !transform.any_op
+    transform.debug.emit_param_as_remark %0#1, "dimensions all:" at %0#0 : !transform.param<i64>, !transform.any_op
+    transform.debug.emit_param_as_remark %0#2, "dimension 0:" at %0#0 : !transform.param<i64>, !transform.any_op
+    transform.debug.emit_param_as_remark %0#3, "dimension -1:" at %0#0 : !transform.param<i64>, !transform.any_op
+    transform.debug.emit_param_as_remark %0#4, "dimensions 0, 2:" at %0#0 : !transform.param<i64>, !transform.any_op
+    transform.debug.emit_param_as_remark %0#5, "dimensions 0, -1:" at %0#0 : !transform.param<i64>, !transform.any_op
+    transform.debug.emit_param_as_remark %0#6, "dimensions except -1:" at %0#0 : !transform.param<i64>, !transform.any_op
+    transform.debug.emit_param_as_remark %0#7, "dimensions except 0, -2:" at %0#0 : !transform.param<i64>, !transform.any_op
+    transform.debug.emit_param_as_remark %0#8, "dimensions 0, -3:" at %0#0 : !transform.param<i64>, !transform.any_op
     transform.yield %0#0 : !transform.any_op
   }
 
@@ -338,19 +338,19 @@ module attributes { transform.with_named_sequence } {
 
 module attributes { transform.with_named_sequence } {
   transform.named_sequence @print_all_reduction(%arg0: !transform.any_op {transform.readonly}) {
-    transform.test_print_remark_at_operand %arg0, "all reduction" : !transform.any_op
+    transform.debug.emit_remark_at %arg0, "all reduction" : !transform.any_op
     transform.yield
   }
   transform.named_sequence @print_all_parallel(%arg0: !transform.any_op {transform.readonly}) {
-    transform.test_print_remark_at_operand %arg0, "all parallel" : !transform.any_op
+    transform.debug.emit_remark_at %arg0, "all parallel" : !transform.any_op
     transform.yield
   }
   transform.named_sequence @print_last_reduction(%arg0: !transform.any_op {transform.readonly}) {
-    transform.test_print_remark_at_operand %arg0, "last reduction" : !transform.any_op
+    transform.debug.emit_remark_at %arg0, "last reduction" : !transform.any_op
     transform.yield
   }
   transform.named_sequence @print_parallel_except_last(%arg0: !transform.any_op {transform.readonly}) {
-    transform.test_print_remark_at_operand %arg0, "parallel except last" : !transform.any_op
+    transform.debug.emit_remark_at %arg0, "parallel except last" : !transform.any_op
     transform.yield
   }
 
@@ -435,7 +435,7 @@ module attributes { transform.with_named_sequence } {
   }
 
   transform.named_sequence @print_bitwidth(%arg0: !transform.any_op {transform.readonly}, %arg1: !transform.param<i64> {transform.readonly}) {
-    transform.test_print_param %arg1, "bitwidth:" at %arg0 : !transform.param<i64>, !transform.any_op
+    transform.debug.emit_param_as_remark %arg1, "bitwidth:" at %arg0 : !transform.param<i64>, !transform.any_op
     transform.yield
   }
 
@@ -474,9 +474,9 @@ module attributes { transform.with_named_sequence } {
                                          %arg1: !transform.any_value {transform.readonly},
                                          %arg2: !transform.any_value {transform.readonly},
                                          %arg3: !transform.any_op {transform.readonly}) {
-    transform.test_print_remark_at_operand_value %arg1, "output 0" : !transform.any_value
-    transform.test_print_remark_at_operand %arg3, "output producer" : !transform.any_op
-    transform.test_print_remark_at_operand_value %arg2, "all output" : !transform.any_value
+    transform.debug.emit_remark_at %arg1, "output 0" : !transform.any_value
+    transform.debug.emit_remark_at %arg3, "output producer" : !transform.any_op
+    transform.debug.emit_remark_at %arg2, "all output" : !transform.any_value
     transform.yield
   }
 
@@ -544,15 +544,15 @@ module attributes { transform.with_named_sequence } {
   }
 
   transform.named_sequence @print_init_0_permutation(%arg0: !transform.any_op {transform.readonly}) {
-    transform.test_print_remark_at_operand %arg0, "matched output 0 permutation" : !transform.any_op
+    transform.debug.emit_remark_at %arg0, "matched output 0 permutation" : !transform.any_op
     transform.yield
   }
   transform.named_sequence @print_init_1_permutation(%arg0: !transform.any_op {transform.readonly}) {
-    transform.test_print_remark_at_operand %arg0, "matched output 1 permutation" : !transform.any_op
+    transform.debug.emit_remark_at %arg0, "matched output 1 permutation" : !transform.any_op
     transform.yield
   }
   transform.named_sequence @print_init_2_projected_permutation(%arg0: !transform.any_op {transform.readonly}) {
-    transform.test_print_remark_at_operand %arg0, "matched output 2 projected permutation" : !transform.any_op
+    transform.debug.emit_remark_at %arg0, "matched output 2 projected permutation" : !transform.any_op
     transform.yield
   }
 
@@ -618,8 +618,8 @@ module attributes { transform.with_named_sequence } {
       %arg0: !transform.param<i64> {transform.readonly},
       %arg1: !transform.param<i64> {transform.readonly},
       %arg2: !transform.any_op {transform.readonly}) {
-    transform.test_print_param %arg0, "inputs" at %arg2 : !transform.param<i64>, !transform.any_op
-    transform.test_print_param %arg1, "outputs" at %arg2 : !transform.param<i64>, !transform.any_op
+    transform.debug.emit_param_as_remark %arg0, "inputs" at %arg2 : !transform.param<i64>, !transform.any_op
+    transform.debug.emit_param_as_remark %arg1, "outputs" at %arg2 : !transform.param<i64>, !transform.any_op
     transform.yield
   }
 
@@ -680,7 +680,7 @@ module attributes { transform.with_named_sequence } {
 
   transform.named_sequence @print_rank(%arg0: !transform.param<i64> {transform.readonly},
                                        %arg2: !transform.any_op {transform.readonly}) {
-    transform.test_print_param %arg0, "rank" at %arg2 : !transform.param<i64>, !transform.any_op
+    transform.debug.emit_param_as_remark %arg0, "rank" at %arg2 : !transform.param<i64>, !transform.any_op
     transform.yield
   }
 
@@ -738,18 +738,18 @@ module attributes { transform.with_named_sequence } {
 
   transform.named_sequence @print_single_result(%arg0: !transform.any_op {transform.readonly},
                                                 %arg2: !transform.any_op {transform.readonly}) {
-    transform.test_print_remark_at_operand %arg2, "matched single result" : !transform.any_op
-    transform.test_print_remark_at_operand %arg0, "single user" : !transform.any_op
+    transform.debug.emit_remark_at %arg2, "matched single result" : !transform.any_op
+    transform.debug.emit_remark_at %arg0, "single user" : !transform.any_op
     transform.yield
   }
   transform.named_sequence @print_result_value(%arg0: !transform.any_value {transform.readonly},
                                                %arg1: !transform.any_op {transform.readonly}) {
-    transform.test_print_remark_at_operand %arg1, "matched result value" : !transform.any_op
-    transform.test_print_remark_at_operand_value %arg0, "op result" : !transform.any_value
+    transform.debug.emit_remark_at %arg1, "matched result value" : !transform.any_op
+    transform.debug.emit_remark_at %arg0, "op result" : !transform.any_value
     transform.yield
   }
   transform.named_sequence @print_any_result(%arg0: !transform.any_op {transform.readonly}) {
-    transform.test_print_remark_at_operand %arg0, "matched any result" : !transform.any_op
+    transform.debug.emit_remark_at %arg0, "matched any result" : !transform.any_op
     transform.yield
   }
 
@@ -824,12 +824,12 @@ module attributes { transform.with_named_sequence } {
 
   transform.named_sequence @print_indexing_map_1(%arg0: !transform.affine_map {transform.readonly},
                                                %arg1: !transform.any_op {transform.readonly}) {
-    transform.test_print_param %arg0, "indexing map 1" at %arg1 : !transform.affine_map, !transform.any_op
+    transform.debug.emit_param_as_remark %arg0, "indexing map 1" at %arg1 : !transform.affine_map, !transform.any_op
     transform.yield
   }
   transform.named_sequence @print_indexing_map_2(%arg0: !transform.affine_map {transform.readonly},
                                                %arg1: !transform.any_op {transform.readonly}) {
-    transform.test_print_param %arg0, "indexing map 2" at %arg1 : !transform.affine_map, !transform.any_op
+    transform.debug.emit_param_as_remark %arg0, "indexing map 2" at %arg1 : !transform.affine_map, !transform.any_op
     transform.yield
   }
 
@@ -875,11 +875,11 @@ module attributes { transform.with_named_sequence } {
       %m: !transform.param<i64> {transform.readonly},
       %n: !transform.param<i64> {transform.readonly},
       %k: !transform.param<i64> {transform.readonly}) {
-    transform.test_print_remark_at_operand %op, "contraction" : !transform.any_op
-    transform.test_print_param %batch, "batch dims" at %op : !transform.param<i64>, !transform.any_op
-    transform.test_print_param %m, "m dims" at %op : !transform.param<i64>, !transform.any_op
-    transform.test_print_param %n, "n dims" at %op : !transform.param<i64>, !transform.any_op
-    transform.test_print_param %k, "k dims" at %op : !transform.param<i64>, !transform.any_op
+    transform.debug.emit_remark_at %op, "contraction" : !transform.any_op
+    transform.debug.emit_param_as_remark %batch, "batch dims" at %op : !transform.param<i64>, !transform.any_op
+    transform.debug.emit_param_as_remark %m, "m dims" at %op : !transform.param<i64>, !transform.any_op
+    transform.debug.emit_param_as_remark %n, "n dims" at %op : !transform.param<i64>, !transform.any_op
+    transform.debug.emit_param_as_remark %k, "k dims" at %op : !transform.param<i64>, !transform.any_op
     transform.yield
   }
 
@@ -967,15 +967,15 @@ module attributes { transform.with_named_sequence } {
       %depth: !transform.param<i64> {transform.readonly},
       %strides: !transform.param<i64> {transform.readonly},
       %dilations: !transform.param<i64> {transform.readonly}) {
-    transform.test_print_remark_at_operand %op, "convolution" : !transform.any_op
-    transform.test_print_param %batch, "batch dims" at %op : !transform.param<i64>, !transform.any_op
-    transform.test_print_param %oi, "output image dims" at %op : !transform.param<i64>, !transform.any_op
-    transform.test_print_param %oc, "output channel dims" at %op : !transform.param<i64>, !transform.any_op
-    transform.test_print_param %fl, "filter loop dims" at %op : !transform.param<i64>, !transform.any_op
-    transform.test_print_param %ic, "input channel dims" at %op : !transform.param<i64>, !transform.any_op
-    transform.test_print_param %depth, "depth dims" at %op : !transform.param<i64>, !transform.any_op
-    transform.test_print_param %strides, "strides" at %op : !transform.param<i64>, !transform.any_op
-    transform.test_print_param %dilations, "dilations" at %op : !transform.param<i64>, !transform.any_op
+    transform.debug.emit_remark_at %op, "convolution" : !transform.any_op
+    transform.debug.emit_param_as_remark %batch, "batch dims" at %op : !transform.param<i64>, !transform.any_op
+    transform.debug.emit_param_as_remark %oi, "output image dims" at %op : !transform.param<i64>, !transform.any_op
+    transform.debug.emit_param_as_remark %oc, "output channel dims" at %op : !transform.param<i64>, !transform.any_op
+    transform.debug.emit_param_as_remark %fl, "filter loop dims" at %op : !transform.param<i64>, !transform.any_op
+    transform.debug.emit_param_as_remark %ic, "input channel dims" at %op : !transform.param<i64>, !transform.any_op
+    transform.debug.emit_param_as_remark %depth, "depth dims" at %op : !transform.param<i64>, !transform.any_op
+    transform.debug.emit_param_as_remark %strides, "strides" at %op : !transform.param<i64>, !transform.any_op
+    transform.debug.emit_param_as_remark %dilations, "dilations" at %op : !transform.param<i64>, !transform.any_op
     transform.yield
   }
 

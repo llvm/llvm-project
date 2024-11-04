@@ -142,12 +142,12 @@ namespace test1 {
     // CHECK:      [[ACTIVE:%.*]] = alloca i1
     // CHECK:      [[NEW:%.*]] = call noalias nonnull ptr @_Znwm(i64 8)
     // CHECK-NEXT: store i1 true, ptr [[ACTIVE]]
-    // CHECK-NEXT: invoke void @_ZN5test15makeBEv(ptr sret([[B:%.*]]) align 4 [[T0:%.*]])
+    // CHECK-NEXT: invoke void @_ZN5test15makeBEv(ptr dead_on_unwind writable sret([[B:%.*]]) align 4 [[T0:%.*]])
     // CHECK:      [[T1:%.*]] = invoke i32 @_ZN5test11BcviEv(ptr {{[^,]*}} [[T0]])
     // CHECK:      invoke void @_ZN5test11AC1Ei(ptr {{[^,]*}} [[NEW]], i32 [[T1]])
     // CHECK:      store i1 false, ptr [[ACTIVE]]
     // CHECK-NEXT: store ptr [[NEW]], ptr [[X]], align 8
-    // CHECK:      invoke void @_ZN5test15makeBEv(ptr sret([[B:%.*]]) align 4 [[T2:%.*]])
+    // CHECK:      invoke void @_ZN5test15makeBEv(ptr dead_on_unwind writable sret([[B:%.*]]) align 4 [[T2:%.*]])
     // CHECK:      [[RET:%.*]] = load ptr, ptr [[X]], align 8
 
     // CHECK98:      invoke void @_ZN5test11BD1Ev(ptr {{[^,]*}} [[T2]])
@@ -231,7 +231,7 @@ namespace test3 {
     // CHECK-NEXT: store ptr [[NEW]], ptr [[SAVED0]]
     // CHECK-NEXT: store ptr [[FOO]], ptr [[SAVED1]]
     // CHECK-NEXT: store i1 true, ptr [[CLEANUPACTIVE]]
-    // CHECK-NEXT: invoke void @_ZN5test35makeAEv(ptr sret([[A:%.*]]) align 8 [[NEW]])
+    // CHECK-NEXT: invoke void @_ZN5test35makeAEv(ptr dead_on_unwind writable sret([[A:%.*]]) align 8 [[NEW]])
     // CHECK: br label
     //   -> cond.end
             new(foo(),10.0) A(makeA()) :

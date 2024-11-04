@@ -79,7 +79,7 @@ private:
   // Loop itation types;
   SmallVector<utils::IteratorType> iterTypes;
 
-  // Adjacent matrix that represents the iteration graph.
+  // Adjacency matrix that represents the iteration graph.
   std::vector<std::vector<bool>> itGraph;
 
   // InDegree used for topo sort.

@@ -26,10 +26,12 @@ group("symlinks") {
 executable("llvm-readtapi") {
   deps = [
     ":TapiOpts",
+    "//llvm/lib/BinaryFormat",
     "//llvm/lib/Object",
     "//llvm/lib/Option",
     "//llvm/lib/Support",
     "//llvm/lib/TextAPI",
+    "//llvm/lib/TextAPI/BinaryReader",
   ]
   sources = [
     "DiffEngine.cpp",

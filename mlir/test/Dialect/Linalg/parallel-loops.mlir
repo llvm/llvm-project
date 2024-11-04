@@ -25,7 +25,7 @@ func.func @linalg_generic_sum(%lhs: memref<2x2xf32>,
 // CHECK:   %[[RHS_ELEM:.*]] = memref.load %[[RHS]][%[[I]], %[[J]]]
 // CHECK:   %[[SUM:.*]] = arith.addf %[[LHS_ELEM]], %[[RHS_ELEM]] : f32
 // CHECK:   store %[[SUM]], %{{.*}}[%[[I]], %[[J]]]
-// CHECK:   scf.yield
+// CHECK:   scf.reduce
 
 // -----
 

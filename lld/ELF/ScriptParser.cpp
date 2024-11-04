@@ -531,13 +531,17 @@ void ScriptParser::readSearchDir() {
 // linker's sections sanity check failures.
 // https://sourceware.org/binutils/docs/ld/Overlay-Description.html#Overlay-Description
 SmallVector<SectionCommand *, 0> ScriptParser::readOverlay() {
-  // VA and LMA expressions are optional, though for simplicity of
-  // implementation we assume they are not. That is what OVERLAY was designed
-  // for first of all: to allow sections with overlapping VAs at different LMAs.
-  Expr addrExpr = readExpr();
-  expect(":");
-  expect("AT");
-  Expr lmaExpr = readParenExpr();
+  Expr addrExpr;
+  if (consume(":")) {
+    addrExpr = [] { return script->getDot(); };
+  } else {
+    addrExpr = readExpr();
+    expect(":");
+  }
+  // When AT is omitted, LMA should equal VMA. script->getDot() when evaluating
+  // lmaExpr will ensure this, even if the start address is specified.
+  Expr lmaExpr =
+      consume("AT") ? readParenExpr() : [] { return script->getDot(); };
   expect("{");
 
   SmallVector<SectionCommand *, 0> v;
@@ -547,10 +551,15 @@ SmallVector<SectionCommand *, 0> ScriptParser::readOverlay() {
     // starting from the base load address specified.
     OutputDesc *osd = readOverlaySectionDescription();
     osd->osec.addrExpr = addrExpr;
-    if (prev)
+    if (prev) {
       osd->osec.lmaExpr = [=] { return prev->getLMA() + prev->size; };
-    else
+    } else {
       osd->osec.lmaExpr = lmaExpr;
+      // Use first section address for subsequent sections as initial addrExpr
+      // can be DOT. Ensure the first section, even if empty, is not discarded.
+      osd->osec.usedInExpression = true;
+      addrExpr = [=]() -> ExprValue { return {&osd->osec, false, 0, ""}; };
+    }
     v.push_back(osd);
     prev = &osd->osec;
   }

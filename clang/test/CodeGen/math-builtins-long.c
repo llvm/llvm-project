@@ -35,7 +35,7 @@ void foo(long double f, long double *l, int *i, const char *c) {
   __builtin_fabsl(f);
 
   // F80: call { x86_fp80, i32 } @llvm.frexp.f80.i32(x86_fp80 %{{.+}})
-  // PPC: call { ppc_fp128, i32 } @llvm.frexp.ppcf128.i32(ppc_fp128 %{{.+}})
+  // PPC: call ppc_fp128 @frexpl(ppc_fp128 noundef %{{.+}}, ptr noundef %{{.+}})
   // X86F128: call { fp128, i32 } @llvm.frexp.f128.i32(fp128 %{{.+}})
   // PPCF128: call { fp128, i32 } @llvm.frexp.f128.i32(fp128 %{{.+}})
   __builtin_frexpl(f,i);

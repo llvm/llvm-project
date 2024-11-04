@@ -1,6 +1,6 @@
-; RUN: opt -codegenprepare < %s -mtriple=aarch64-apple-ios -S | FileCheck -enable-var-scope %s --check-prefix=OPTALL --check-prefix=OPT --check-prefix=NONSTRESS
-; RUN: opt -codegenprepare < %s -mtriple=aarch64-apple-ios -S -stress-cgp-ext-ld-promotion | FileCheck -enable-var-scope %s --check-prefix=OPTALL --check-prefix=OPT --check-prefix=STRESS
-; RUN: opt -codegenprepare < %s -mtriple=aarch64-apple-ios -S -disable-cgp-ext-ld-promotion | FileCheck -enable-var-scope %s --check-prefix=OPTALL --check-prefix=DISABLE
+; RUN: opt -passes='require<profile-summary>,function(codegenprepare)' < %s -mtriple=aarch64-apple-ios -S | FileCheck -enable-var-scope %s --check-prefix=OPTALL --check-prefix=OPT --check-prefix=NONSTRESS
+; RUN: opt -passes='require<profile-summary>,function(codegenprepare)' < %s -mtriple=aarch64-apple-ios -S -stress-cgp-ext-ld-promotion | FileCheck -enable-var-scope %s --check-prefix=OPTALL --check-prefix=OPT --check-prefix=STRESS
+; RUN: opt -passes='require<profile-summary>,function(codegenprepare)' < %s -mtriple=aarch64-apple-ios -S -disable-cgp-ext-ld-promotion | FileCheck -enable-var-scope %s --check-prefix=OPTALL --check-prefix=DISABLE
 
 ; CodeGenPrepare should move the zext into the block with the load
 ; so that SelectionDAG can select it with the load.

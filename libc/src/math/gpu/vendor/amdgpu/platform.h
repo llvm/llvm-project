@@ -72,6 +72,10 @@ extern const LIBC_INLINE_VAR uint32_t __oclc_ISA_version = 9010;
 extern const LIBC_INLINE_VAR uint32_t __oclc_ISA_version = 9012;
 #elif defined(__gfx940__)
 extern const LIBC_INLINE_VAR uint32_t __oclc_ISA_version = 9400;
+#elif defined(__gfx941__)
+extern const LIBC_INLINE_VAR uint32_t __oclc_ISA_version = 9401;
+#elif defined(__gfx942__)
+extern const LIBC_INLINE_VAR uint32_t __oclc_ISA_version = 9402;
 #elif defined(__gfx1010__)
 extern const LIBC_INLINE_VAR uint32_t __oclc_ISA_version = 10100;
 #elif defined(__gfx1011__)

@@ -123,7 +123,7 @@ public:
                              llvm::function_ref<bool(Module &)>) override;
 
   bool ParseSupportFiles(CompileUnit &comp_unit,
-                         FileSpecList &support_files) override;
+                         SupportFileList &support_files) override;
 
   bool ParseIsOptimized(CompileUnit &comp_unit) override;
 
@@ -396,7 +396,7 @@ protected:
                          bool *type_is_new);
 
   bool ParseSupportFiles(DWARFUnit &dwarf_cu, const lldb::ModuleSP &module,
-                         FileSpecList &support_files);
+                         SupportFileList &support_files);
 
   lldb::VariableSP ParseVariableDIE(const SymbolContext &sc,
                                     const DWARFDIE &die,
@@ -489,7 +489,7 @@ protected:
 
   void FindDwpSymbolFile();
 
-  const FileSpecList &GetTypeUnitSupportFiles(DWARFTypeUnit &tu);
+  const SupportFileList *GetTypeUnitSupportFiles(DWARFTypeUnit &tu);
 
   void InitializeFirstCodeAddressRecursive(const SectionList &section_list);
 
@@ -529,7 +529,8 @@ protected:
   DIEToVariableSP m_die_to_variable_sp;
   DIEToCompilerType m_forward_decl_die_to_compiler_type;
   CompilerTypeToDIE m_forward_decl_compiler_type_to_die;
-  llvm::DenseMap<dw_offset_t, FileSpecList> m_type_unit_support_files;
+  llvm::DenseMap<dw_offset_t, std::unique_ptr<SupportFileList>>
+      m_type_unit_support_files;
   std::vector<uint32_t> m_lldb_cu_to_dwarf_unit;
   /// DWARF does not provide a good way for traditional (concatenating) linkers
   /// to invalidate debug info describing dead-stripped code. These linkers will

@@ -24,7 +24,7 @@ define void @amoswap_d_discard(ptr %a, i64 %b) nounwind {
 ; RV32-NEXT:    addi sp, sp, -16
 ; RV32-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32-NEXT:    li a3, 5
-; RV32-NEXT:    call __atomic_exchange_8@plt
+; RV32-NEXT:    call __atomic_exchange_8
 ; RV32-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32-NEXT:    addi sp, sp, 16
 ; RV32-NEXT:    ret
@@ -57,7 +57,7 @@ define void @amoadd_d_discard(ptr %a, i64 %b) nounwind {
 ; RV32-NEXT:    addi sp, sp, -16
 ; RV32-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32-NEXT:    li a3, 5
-; RV32-NEXT:    call __atomic_fetch_add_8@plt
+; RV32-NEXT:    call __atomic_fetch_add_8
 ; RV32-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32-NEXT:    addi sp, sp, 16
 ; RV32-NEXT:    ret
@@ -90,7 +90,7 @@ define void @amoand_d_discard(ptr %a, i64 %b) nounwind {
 ; RV32-NEXT:    addi sp, sp, -16
 ; RV32-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32-NEXT:    li a3, 5
-; RV32-NEXT:    call __atomic_fetch_and_8@plt
+; RV32-NEXT:    call __atomic_fetch_and_8
 ; RV32-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32-NEXT:    addi sp, sp, 16
 ; RV32-NEXT:    ret
@@ -123,7 +123,7 @@ define void @amoor_d_discard(ptr %a, i64 %b) nounwind {
 ; RV32-NEXT:    addi sp, sp, -16
 ; RV32-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32-NEXT:    li a3, 5
-; RV32-NEXT:    call __atomic_fetch_or_8@plt
+; RV32-NEXT:    call __atomic_fetch_or_8
 ; RV32-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32-NEXT:    addi sp, sp, 16
 ; RV32-NEXT:    ret
@@ -156,7 +156,7 @@ define void @amoxor_d_discard(ptr %a, i64 %b) nounwind {
 ; RV32-NEXT:    addi sp, sp, -16
 ; RV32-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32-NEXT:    li a3, 5
-; RV32-NEXT:    call __atomic_fetch_or_8@plt
+; RV32-NEXT:    call __atomic_fetch_or_8
 ; RV32-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32-NEXT:    addi sp, sp, 16
 ; RV32-NEXT:    ret
@@ -205,7 +205,7 @@ define void @amomax_d_discard(ptr %a, i64 %b) nounwind {
 ; RV32-NEXT:    li a4, 5
 ; RV32-NEXT:    li a5, 5
 ; RV32-NEXT:    mv a0, s0
-; RV32-NEXT:    call __atomic_compare_exchange_8@plt
+; RV32-NEXT:    call __atomic_compare_exchange_8
 ; RV32-NEXT:    lw a4, 12(sp)
 ; RV32-NEXT:    lw a5, 8(sp)
 ; RV32-NEXT:    bnez a0, .LBB11_6
@@ -281,7 +281,7 @@ define void @amomaxu_d_discard(ptr %a, i64 %b) nounwind {
 ; RV32-NEXT:    li a4, 5
 ; RV32-NEXT:    li a5, 5
 ; RV32-NEXT:    mv a0, s0
-; RV32-NEXT:    call __atomic_compare_exchange_8@plt
+; RV32-NEXT:    call __atomic_compare_exchange_8
 ; RV32-NEXT:    lw a4, 12(sp)
 ; RV32-NEXT:    lw a5, 8(sp)
 ; RV32-NEXT:    bnez a0, .LBB13_6
@@ -357,7 +357,7 @@ define void @amomin_d_discard(ptr %a, i64 %b) nounwind {
 ; RV32-NEXT:    li a4, 5
 ; RV32-NEXT:    li a5, 5
 ; RV32-NEXT:    mv a0, s0
-; RV32-NEXT:    call __atomic_compare_exchange_8@plt
+; RV32-NEXT:    call __atomic_compare_exchange_8
 ; RV32-NEXT:    lw a4, 12(sp)
 ; RV32-NEXT:    lw a5, 8(sp)
 ; RV32-NEXT:    bnez a0, .LBB15_6
@@ -433,7 +433,7 @@ define void @amominu_d_discard(ptr %a, i64 %b) nounwind {
 ; RV32-NEXT:    li a4, 5
 ; RV32-NEXT:    li a5, 5
 ; RV32-NEXT:    mv a0, s0
-; RV32-NEXT:    call __atomic_compare_exchange_8@plt
+; RV32-NEXT:    call __atomic_compare_exchange_8
 ; RV32-NEXT:    lw a4, 12(sp)
 ; RV32-NEXT:    lw a5, 8(sp)
 ; RV32-NEXT:    bnez a0, .LBB17_6

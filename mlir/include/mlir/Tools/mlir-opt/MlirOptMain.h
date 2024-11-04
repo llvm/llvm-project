@@ -173,6 +173,9 @@ public:
   }
   bool shouldVerifyRoundtrip() const { return verifyRoundtripFlag; }
 
+  /// Reproducer file generation (no crash required).
+  StringRef getReproducerFilename() const { return generateReproducerFileFlag; }
+
 protected:
   /// Allow operation with no registered dialects.
   /// This option is for convenience during testing only and discouraged in
@@ -228,6 +231,9 @@ protected:
 
   /// Verify that the input IR round-trips perfectly.
   bool verifyRoundtripFlag = false;
+
+  /// The reproducer output filename (no crash required).
+  std::string generateReproducerFileFlag = "";
 };
 
 /// This defines the function type used to setup the pass manager. This can be

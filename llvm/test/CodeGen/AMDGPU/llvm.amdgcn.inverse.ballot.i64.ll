@@ -102,9 +102,9 @@ define amdgpu_cs void @vgpr_inverse_ballot(i64 %input, ptr addrspace(1) %out) {
 ; GISEL:       ; %bb.0: ; %entry
 ; GISEL-NEXT:    v_readfirstlane_b32 s0, v0
 ; GISEL-NEXT:    v_readfirstlane_b32 s1, v1
-; GISEL-NEXT:    v_mov_b32_e32 v1, 0
-; GISEL-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[0:1]
-; GISEL-NEXT:    global_store_b64 v[2:3], v[0:1], off
+; GISEL-NEXT:    v_mov_b32_e32 v5, 0
+; GISEL-NEXT:    v_cndmask_b32_e64 v4, 0, 1, s[0:1]
+; GISEL-NEXT:    global_store_b64 v[2:3], v[4:5], off
 ; GISEL-NEXT:    s_nop 0
 ; GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GISEL-NEXT:    s_endpgm
@@ -164,8 +164,8 @@ define amdgpu_cs void @phi_uniform(i64 inreg %s0_1, i64 inreg %s2, ptr addrspace
 ; GISEL-NEXT:    s_add_u32 s0, s0, 1
 ; GISEL-NEXT:    s_addc_u32 s1, s1, 0
 ; GISEL-NEXT:  .LBB5_2: ; %endif
-; GISEL-NEXT:    v_cndmask_b32_e64 v2, 0, 1, s[0:1]
 ; GISEL-NEXT:    v_mov_b32_e32 v3, 0
+; GISEL-NEXT:    v_cndmask_b32_e64 v2, 0, 1, s[0:1]
 ; GISEL-NEXT:    global_store_b64 v[0:1], v[2:3], off
 ; GISEL-NEXT:    s_nop 0
 ; GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)

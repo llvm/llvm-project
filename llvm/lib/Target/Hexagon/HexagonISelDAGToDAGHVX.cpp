@@ -1337,8 +1337,7 @@ OpRef HvxSelector::packs(ShuffleMask SM, OpRef Va, OpRef Vb,
   // segments that are used in the output.
 
   unsigned Seg0 = ~0u, Seg1 = ~0u;
-  for (int I = 0, E = SegMap.size(); I != E; ++I) {
-    unsigned X = SegMap[I];
+  for (unsigned X : SegMap) {
     if (X == ~0u)
       continue;
     if (Seg0 == ~0u)
@@ -2037,8 +2036,7 @@ HvxSelector::completeToPerfect(ArrayRef<uint32_t> Completions, unsigned Width) {
 #ifndef NDEBUG
   // Check that we have generated a valid completion.
   uint32_t OrAll = 0;
-  for (unsigned I = 0, E = Comps.size(); I != E; ++I) {
-    uint32_t C = Comps[I];
+  for (uint32_t C : Comps) {
     assert(isPowerOf2_32(C));
     OrAll |= C;
   }
@@ -2575,8 +2573,7 @@ SDValue HvxSelector::getVectorConstant(ArrayRef<uint8_t> Data,
 void HvxSelector::selectExtractSubvector(SDNode *N) {
   SDValue Inp = N->getOperand(0);
   MVT ResTy = N->getValueType(0).getSimpleVT();
-  auto IdxN = cast<ConstantSDNode>(N->getOperand(1));
-  unsigned Idx = IdxN->getZExtValue();
+  unsigned Idx = N->getConstantOperandVal(1);
 
   [[maybe_unused]] MVT InpTy = Inp.getValueType().getSimpleVT();
   [[maybe_unused]] unsigned ResLen = ResTy.getVectorNumElements();
@@ -2897,7 +2894,7 @@ void HexagonDAGToDAGISel::SelectV65GatherPred(SDNode *N) {
   SDValue ImmOperand = CurDAG->getTargetConstant(0, dl, MVT::i32);
 
   unsigned Opcode;
-  unsigned IntNo = cast<ConstantSDNode>(N->getOperand(1))->getZExtValue();
+  unsigned IntNo = N->getConstantOperandVal(1);
   switch (IntNo) {
   default:
     llvm_unreachable("Unexpected HVX gather intrinsic.");
@@ -2936,7 +2933,7 @@ void HexagonDAGToDAGISel::SelectV65Gather(SDNode *N) {
   SDValue ImmOperand = CurDAG->getTargetConstant(0, dl, MVT::i32);
 
   unsigned Opcode;
-  unsigned IntNo = cast<ConstantSDNode>(N->getOperand(1))->getZExtValue();
+  unsigned IntNo = N->getConstantOperandVal(1);
   switch (IntNo) {
   default:
     llvm_unreachable("Unexpected HVX gather intrinsic.");
@@ -2965,7 +2962,7 @@ void HexagonDAGToDAGISel::SelectV65Gather(SDNode *N) {
 }
 
 void HexagonDAGToDAGISel::SelectHVXDualOutput(SDNode *N) {
-  unsigned IID = cast<ConstantSDNode>(N->getOperand(0))->getZExtValue();
+  unsigned IID = N->getConstantOperandVal(0);
   SDNode *Result;
   switch (IID) {
   case Intrinsic::hexagon_V6_vaddcarry: {

@@ -372,4 +372,27 @@ define i64 @select_cond_may_undef(i32 %a) {
   ret i64 %max
 }
 
+define i32 @test_solve_select_at_use(i32 %a, i32 %b, i32 %c) {
+; CHECK-LABEL: define i32 @test_solve_select_at_use
+; CHECK-SAME: (i32 [[A:%.*]], i32 [[B:%.*]], i32 [[C:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[A]], 0
+; CHECK-NEXT:    [[COND:%.*]] = icmp sgt i32 [[A]], -1
+; CHECK-NEXT:    br i1 [[COND]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    ret i32 [[C]]
+; CHECK:       if.else:
+; CHECK-NEXT:    ret i32 [[B]]
+;
+entry:
+  %cmp = icmp slt i32 %a, 0
+  %retval = select i1 %cmp, i32 %b, i32 %c
+  %cond = icmp sgt i32 %a, -1
+  br i1 %cond, label %if.then, label %if.else
+if.then:
+  ret i32 %retval
+if.else:
+  ret i32 %retval
+}
+
 !0 = !{}

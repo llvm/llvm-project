@@ -15,3 +15,8 @@ pfalse pn16.b
 // CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
 // CHECK-NEXT: pfalse pn16.b
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+pfalse pn5.d
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: Expected predicate-as-counter register name with .B suffix
+// CHECK-NEXT: pfalse pn5.d
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:

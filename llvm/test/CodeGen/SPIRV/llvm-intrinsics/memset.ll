@@ -25,9 +25,7 @@
 ; CHECK: %[[#VarNull:]] = OpVariable %[[#]] UniformConstant %[[#ConstNull]]
 
 ; CHECK-DAG: %[[#Int8PtrConst:]] = OpTypePointer UniformConstant %[[#Int8]]
-; CHECK: %[[#Target:]] = OpBitcast %[[#Int8Ptr]] %[[#]]
-; CHECK: %[[#Source:]] = OpBitcast %[[#Int8PtrConst]] %[[#VarNull]]
-; CHECK: OpCopyMemorySized %[[#Target]] %[[#Source]] %[[#Const12]] Aligned 4
+; CHECK: OpCopyMemorySized %[[#Target:]] %[[#Source:]] %[[#Const12]] Aligned 4
 
 ; CHECK: %[[#SourceComp:]] = OpBitcast %[[#Int8PtrConst]] %[[#VarComp]]
 ; CHECK: OpCopyMemorySized %[[#]] %[[#SourceComp]] %[[#Const4]] Aligned 4

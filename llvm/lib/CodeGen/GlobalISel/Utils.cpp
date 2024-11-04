@@ -18,6 +18,7 @@
 #include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
 #include "llvm/CodeGen/GlobalISel/LostDebugLocObserver.h"
 #include "llvm/CodeGen/GlobalISel/MIPatternMatch.h"
+#include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineOptimizationRemarkEmitter.h"
@@ -474,6 +475,152 @@ Register llvm::getSrcRegIgnoringCopies(Register Reg,
   std::optional<DefinitionAndSourceRegister> DefSrcReg =
       getDefSrcRegIgnoringCopies(Reg, MRI);
   return DefSrcReg ? DefSrcReg->Reg : Register();
+}
+
+void llvm::extractParts(Register Reg, LLT Ty, int NumParts,
+                        SmallVectorImpl<Register> &VRegs,
+                        MachineIRBuilder &MIRBuilder,
+                        MachineRegisterInfo &MRI) {
+  for (int i = 0; i < NumParts; ++i)
+    VRegs.push_back(MRI.createGenericVirtualRegister(Ty));
+  MIRBuilder.buildUnmerge(VRegs, Reg);
+}
+
+bool llvm::extractParts(Register Reg, LLT RegTy, LLT MainTy, LLT &LeftoverTy,
+                        SmallVectorImpl<Register> &VRegs,
+                        SmallVectorImpl<Register> &LeftoverRegs,
+                        MachineIRBuilder &MIRBuilder,
+                        MachineRegisterInfo &MRI) {
+  assert(!LeftoverTy.isValid() && "this is an out argument");
+
+  unsigned RegSize = RegTy.getSizeInBits();
+  unsigned MainSize = MainTy.getSizeInBits();
+  unsigned NumParts = RegSize / MainSize;
+  unsigned LeftoverSize = RegSize - NumParts * MainSize;
+
+  // Use an unmerge when possible.
+  if (LeftoverSize == 0) {
+    for (unsigned I = 0; I < NumParts; ++I)
+      VRegs.push_back(MRI.createGenericVirtualRegister(MainTy));
+    MIRBuilder.buildUnmerge(VRegs, Reg);
+    return true;
+  }
+
+  // Try to use unmerge for irregular vector split where possible
+  // For example when splitting a <6 x i32> into <4 x i32> with <2 x i32>
+  // leftover, it becomes:
+  //  <2 x i32> %2, <2 x i32>%3, <2 x i32> %4 = G_UNMERGE_VALUE <6 x i32> %1
+  //  <4 x i32> %5 = G_CONCAT_VECTOR <2 x i32> %2, <2 x i32> %3
+  if (RegTy.isVector() && MainTy.isVector()) {
+    unsigned RegNumElts = RegTy.getNumElements();
+    unsigned MainNumElts = MainTy.getNumElements();
+    unsigned LeftoverNumElts = RegNumElts % MainNumElts;
+    // If can unmerge to LeftoverTy, do it
+    if (MainNumElts % LeftoverNumElts == 0 &&
+        RegNumElts % LeftoverNumElts == 0 &&
+        RegTy.getScalarSizeInBits() == MainTy.getScalarSizeInBits() &&
+        LeftoverNumElts > 1) {
+      LeftoverTy =
+          LLT::fixed_vector(LeftoverNumElts, RegTy.getScalarSizeInBits());
+
+      // Unmerge the SrcReg to LeftoverTy vectors
+      SmallVector<Register, 4> UnmergeValues;
+      extractParts(Reg, LeftoverTy, RegNumElts / LeftoverNumElts, UnmergeValues,
+                   MIRBuilder, MRI);
+
+      // Find how many LeftoverTy makes one MainTy
+      unsigned LeftoverPerMain = MainNumElts / LeftoverNumElts;
+      unsigned NumOfLeftoverVal =
+          ((RegNumElts % MainNumElts) / LeftoverNumElts);
+
+      // Create as many MainTy as possible using unmerged value
+      SmallVector<Register, 4> MergeValues;
+      for (unsigned I = 0; I < UnmergeValues.size() - NumOfLeftoverVal; I++) {
+        MergeValues.push_back(UnmergeValues[I]);
+        if (MergeValues.size() == LeftoverPerMain) {
+          VRegs.push_back(
+              MIRBuilder.buildMergeLikeInstr(MainTy, MergeValues).getReg(0));
+          MergeValues.clear();
+        }
+      }
+      // Populate LeftoverRegs with the leftovers
+      for (unsigned I = UnmergeValues.size() - NumOfLeftoverVal;
+           I < UnmergeValues.size(); I++) {
+        LeftoverRegs.push_back(UnmergeValues[I]);
+      }
+      return true;
+    }
+  }
+  // Perform irregular split. Leftover is last element of RegPieces.
+  if (MainTy.isVector()) {
+    SmallVector<Register, 8> RegPieces;
+    extractVectorParts(Reg, MainTy.getNumElements(), RegPieces, MIRBuilder,
+                       MRI);
+    for (unsigned i = 0; i < RegPieces.size() - 1; ++i)
+      VRegs.push_back(RegPieces[i]);
+    LeftoverRegs.push_back(RegPieces[RegPieces.size() - 1]);
+    LeftoverTy = MRI.getType(LeftoverRegs[0]);
+    return true;
+  }
+
+  LeftoverTy = LLT::scalar(LeftoverSize);
+  // For irregular sizes, extract the individual parts.
+  for (unsigned I = 0; I != NumParts; ++I) {
+    Register NewReg = MRI.createGenericVirtualRegister(MainTy);
+    VRegs.push_back(NewReg);
+    MIRBuilder.buildExtract(NewReg, Reg, MainSize * I);
+  }
+
+  for (unsigned Offset = MainSize * NumParts; Offset < RegSize;
+       Offset += LeftoverSize) {
+    Register NewReg = MRI.createGenericVirtualRegister(LeftoverTy);
+    LeftoverRegs.push_back(NewReg);
+    MIRBuilder.buildExtract(NewReg, Reg, Offset);
+  }
+
+  return true;
+}
+
+void llvm::extractVectorParts(Register Reg, unsigned NumElts,
+                              SmallVectorImpl<Register> &VRegs,
+                              MachineIRBuilder &MIRBuilder,
+                              MachineRegisterInfo &MRI) {
+  LLT RegTy = MRI.getType(Reg);
+  assert(RegTy.isVector() && "Expected a vector type");
+
+  LLT EltTy = RegTy.getElementType();
+  LLT NarrowTy = (NumElts == 1) ? EltTy : LLT::fixed_vector(NumElts, EltTy);
+  unsigned RegNumElts = RegTy.getNumElements();
+  unsigned LeftoverNumElts = RegNumElts % NumElts;
+  unsigned NumNarrowTyPieces = RegNumElts / NumElts;
+
+  // Perfect split without leftover
+  if (LeftoverNumElts == 0)
+    return extractParts(Reg, NarrowTy, NumNarrowTyPieces, VRegs, MIRBuilder,
+                        MRI);
+
+  // Irregular split. Provide direct access to all elements for artifact
+  // combiner using unmerge to elements. Then build vectors with NumElts
+  // elements. Remaining element(s) will be (used to build vector) Leftover.
+  SmallVector<Register, 8> Elts;
+  extractParts(Reg, EltTy, RegNumElts, Elts, MIRBuilder, MRI);
+
+  unsigned Offset = 0;
+  // Requested sub-vectors of NarrowTy.
+  for (unsigned i = 0; i < NumNarrowTyPieces; ++i, Offset += NumElts) {
+    ArrayRef<Register> Pieces(&Elts[Offset], NumElts);
+    VRegs.push_back(MIRBuilder.buildMergeLikeInstr(NarrowTy, Pieces).getReg(0));
+  }
+
+  // Leftover element(s).
+  if (LeftoverNumElts == 1) {
+    VRegs.push_back(Elts[Offset]);
+  } else {
+    LLT LeftoverTy = LLT::fixed_vector(LeftoverNumElts, EltTy);
+    ArrayRef<Register> Pieces(&Elts[Offset], LeftoverNumElts);
+    VRegs.push_back(
+        MIRBuilder.buildMergeLikeInstr(LeftoverTy, Pieces).getReg(0));
+  }
 }
 
 MachineInstr *llvm::getOpcodeDef(unsigned Opcode, Register Reg,

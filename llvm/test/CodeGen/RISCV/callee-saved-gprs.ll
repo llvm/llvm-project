@@ -952,7 +952,7 @@ define void @caller() nounwind {
 ; RV32I-NEXT:    lw s11, 116(s5)
 ; RV32I-NEXT:    lw s1, 120(s5)
 ; RV32I-NEXT:    lw s2, 124(s5)
-; RV32I-NEXT:    call callee@plt
+; RV32I-NEXT:    call callee
 ; RV32I-NEXT:    sw s2, 124(s5)
 ; RV32I-NEXT:    sw s1, 120(s5)
 ; RV32I-NEXT:    sw s11, 116(s5)
@@ -1097,7 +1097,7 @@ define void @caller() nounwind {
 ; RV32I-WITH-FP-NEXT:    lw s4, 116(s6)
 ; RV32I-WITH-FP-NEXT:    lw s5, 120(s6)
 ; RV32I-WITH-FP-NEXT:    lw s7, 124(s6)
-; RV32I-WITH-FP-NEXT:    call callee@plt
+; RV32I-WITH-FP-NEXT:    call callee
 ; RV32I-WITH-FP-NEXT:    sw s7, 124(s6)
 ; RV32I-WITH-FP-NEXT:    sw s5, 120(s6)
 ; RV32I-WITH-FP-NEXT:    sw s4, 116(s6)
@@ -1229,7 +1229,7 @@ define void @caller() nounwind {
 ; RV32IZCMP-NEXT:    lw s11, 116(s1)
 ; RV32IZCMP-NEXT:    lw s2, 120(s1)
 ; RV32IZCMP-NEXT:    lw s3, 124(s1)
-; RV32IZCMP-NEXT:    call callee@plt
+; RV32IZCMP-NEXT:    call callee
 ; RV32IZCMP-NEXT:    sw s3, 124(s1)
 ; RV32IZCMP-NEXT:    sw s2, 120(s1)
 ; RV32IZCMP-NEXT:    sw s11, 116(s1)
@@ -1361,7 +1361,7 @@ define void @caller() nounwind {
 ; RV32IZCMP-WITH-FP-NEXT:    lw s4, 116(s1)
 ; RV32IZCMP-WITH-FP-NEXT:    lw s5, 120(s1)
 ; RV32IZCMP-WITH-FP-NEXT:    lw s7, 124(s1)
-; RV32IZCMP-WITH-FP-NEXT:    call callee@plt
+; RV32IZCMP-WITH-FP-NEXT:    call callee
 ; RV32IZCMP-WITH-FP-NEXT:    sw s7, 124(s1)
 ; RV32IZCMP-WITH-FP-NEXT:    sw s5, 120(s1)
 ; RV32IZCMP-WITH-FP-NEXT:    sw s4, 116(s1)
@@ -1505,7 +1505,7 @@ define void @caller() nounwind {
 ; RV64I-NEXT:    lw s11, 116(s5)
 ; RV64I-NEXT:    lw s1, 120(s5)
 ; RV64I-NEXT:    lw s2, 124(s5)
-; RV64I-NEXT:    call callee@plt
+; RV64I-NEXT:    call callee
 ; RV64I-NEXT:    sw s2, 124(s5)
 ; RV64I-NEXT:    sw s1, 120(s5)
 ; RV64I-NEXT:    sw s11, 116(s5)
@@ -1650,7 +1650,7 @@ define void @caller() nounwind {
 ; RV64I-WITH-FP-NEXT:    lw s4, 116(s6)
 ; RV64I-WITH-FP-NEXT:    lw s5, 120(s6)
 ; RV64I-WITH-FP-NEXT:    lw s7, 124(s6)
-; RV64I-WITH-FP-NEXT:    call callee@plt
+; RV64I-WITH-FP-NEXT:    call callee
 ; RV64I-WITH-FP-NEXT:    sw s7, 124(s6)
 ; RV64I-WITH-FP-NEXT:    sw s5, 120(s6)
 ; RV64I-WITH-FP-NEXT:    sw s4, 116(s6)
@@ -1782,7 +1782,7 @@ define void @caller() nounwind {
 ; RV64IZCMP-NEXT:    lw s11, 116(s1)
 ; RV64IZCMP-NEXT:    lw s2, 120(s1)
 ; RV64IZCMP-NEXT:    lw s3, 124(s1)
-; RV64IZCMP-NEXT:    call callee@plt
+; RV64IZCMP-NEXT:    call callee
 ; RV64IZCMP-NEXT:    sw s3, 124(s1)
 ; RV64IZCMP-NEXT:    sw s2, 120(s1)
 ; RV64IZCMP-NEXT:    sw s11, 116(s1)
@@ -1914,7 +1914,7 @@ define void @caller() nounwind {
 ; RV64IZCMP-WITH-FP-NEXT:    lw s4, 116(s1)
 ; RV64IZCMP-WITH-FP-NEXT:    lw s5, 120(s1)
 ; RV64IZCMP-WITH-FP-NEXT:    lw s7, 124(s1)
-; RV64IZCMP-WITH-FP-NEXT:    call callee@plt
+; RV64IZCMP-WITH-FP-NEXT:    call callee
 ; RV64IZCMP-WITH-FP-NEXT:    sw s7, 124(s1)
 ; RV64IZCMP-WITH-FP-NEXT:    sw s5, 120(s1)
 ; RV64IZCMP-WITH-FP-NEXT:    sw s4, 116(s1)
@@ -2279,7 +2279,7 @@ define void @varargs(...) {
 ; RV32I-NEXT:    sw a2, 24(sp)
 ; RV32I-NEXT:    sw a1, 20(sp)
 ; RV32I-NEXT:    sw a0, 16(sp)
-; RV32I-NEXT:    call callee@plt
+; RV32I-NEXT:    call callee
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 48
 ; RV32I-NEXT:    ret
@@ -2302,7 +2302,7 @@ define void @varargs(...) {
 ; RV32I-WITH-FP-NEXT:    sw a2, 8(s0)
 ; RV32I-WITH-FP-NEXT:    sw a1, 4(s0)
 ; RV32I-WITH-FP-NEXT:    sw a0, 0(s0)
-; RV32I-WITH-FP-NEXT:    call callee@plt
+; RV32I-WITH-FP-NEXT:    call callee
 ; RV32I-WITH-FP-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-WITH-FP-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
 ; RV32I-WITH-FP-NEXT:    addi sp, sp, 48
@@ -2322,7 +2322,7 @@ define void @varargs(...) {
 ; RV32IZCMP-NEXT:    sw a2, 24(sp)
 ; RV32IZCMP-NEXT:    sw a1, 20(sp)
 ; RV32IZCMP-NEXT:    sw a0, 16(sp)
-; RV32IZCMP-NEXT:    call callee@plt
+; RV32IZCMP-NEXT:    call callee
 ; RV32IZCMP-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32IZCMP-NEXT:    addi sp, sp, 48
 ; RV32IZCMP-NEXT:    ret
@@ -2345,7 +2345,7 @@ define void @varargs(...) {
 ; RV32IZCMP-WITH-FP-NEXT:    sw a2, 8(s0)
 ; RV32IZCMP-WITH-FP-NEXT:    sw a1, 4(s0)
 ; RV32IZCMP-WITH-FP-NEXT:    sw a0, 0(s0)
-; RV32IZCMP-WITH-FP-NEXT:    call callee@plt
+; RV32IZCMP-WITH-FP-NEXT:    call callee
 ; RV32IZCMP-WITH-FP-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32IZCMP-WITH-FP-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
 ; RV32IZCMP-WITH-FP-NEXT:    addi sp, sp, 48
@@ -2365,7 +2365,7 @@ define void @varargs(...) {
 ; RV64I-NEXT:    sd a2, 32(sp)
 ; RV64I-NEXT:    sd a1, 24(sp)
 ; RV64I-NEXT:    sd a0, 16(sp)
-; RV64I-NEXT:    call callee@plt
+; RV64I-NEXT:    call callee
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 80
 ; RV64I-NEXT:    ret
@@ -2388,7 +2388,7 @@ define void @varargs(...) {
 ; RV64I-WITH-FP-NEXT:    sd a2, 16(s0)
 ; RV64I-WITH-FP-NEXT:    sd a1, 8(s0)
 ; RV64I-WITH-FP-NEXT:    sd a0, 0(s0)
-; RV64I-WITH-FP-NEXT:    call callee@plt
+; RV64I-WITH-FP-NEXT:    call callee
 ; RV64I-WITH-FP-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-WITH-FP-NEXT:    ld s0, 0(sp) # 8-byte Folded Reload
 ; RV64I-WITH-FP-NEXT:    addi sp, sp, 80
@@ -2408,7 +2408,7 @@ define void @varargs(...) {
 ; RV64IZCMP-NEXT:    sd a2, 32(sp)
 ; RV64IZCMP-NEXT:    sd a1, 24(sp)
 ; RV64IZCMP-NEXT:    sd a0, 16(sp)
-; RV64IZCMP-NEXT:    call callee@plt
+; RV64IZCMP-NEXT:    call callee
 ; RV64IZCMP-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64IZCMP-NEXT:    addi sp, sp, 80
 ; RV64IZCMP-NEXT:    ret
@@ -2431,7 +2431,7 @@ define void @varargs(...) {
 ; RV64IZCMP-WITH-FP-NEXT:    sd a2, 16(s0)
 ; RV64IZCMP-WITH-FP-NEXT:    sd a1, 8(s0)
 ; RV64IZCMP-WITH-FP-NEXT:    sd a0, 0(s0)
-; RV64IZCMP-WITH-FP-NEXT:    call callee@plt
+; RV64IZCMP-WITH-FP-NEXT:    call callee
 ; RV64IZCMP-WITH-FP-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64IZCMP-WITH-FP-NEXT:    ld s0, 0(sp) # 8-byte Folded Reload
 ; RV64IZCMP-WITH-FP-NEXT:    addi sp, sp, 80

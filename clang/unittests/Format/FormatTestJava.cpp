@@ -603,6 +603,21 @@ TEST_F(FormatTestJava, ShortFunctions) {
                Style);
 }
 
+TEST_F(FormatTestJava, ConfigurableSpacesInSquareBrackets) {
+  FormatStyle Spaces = getLLVMStyle(FormatStyle::LK_Java);
+
+  verifyFormat("Object[] arguments", Spaces);
+  verifyFormat("final Class<?>[] types = new Class<?>[numElements];", Spaces);
+  verifyFormat("types[i] = arguments[i].getClass();", Spaces);
+
+  Spaces.SpacesInSquareBrackets = true;
+
+  verifyFormat("Object[ ] arguments", Spaces);
+  verifyFormat("final Class<?>[ ] types = new Class<?>[ numElements ];",
+               Spaces);
+  verifyFormat("types[ i ] = arguments[ i ].getClass();", Spaces);
+}
+
 } // namespace
 } // namespace test
 } // namespace format

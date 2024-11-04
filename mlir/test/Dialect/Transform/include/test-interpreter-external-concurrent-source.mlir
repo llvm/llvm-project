@@ -11,6 +11,6 @@ transform.with_pdl_patterns {
   sequence %arg0 : !transform.any_op failures(propagate) {
   ^bb1(%arg1: !transform.any_op):
     %0 = pdl_match @func_return in %arg1 : (!transform.any_op) -> !transform.op<"func.return">
-    test_print_remark_at_operand %0, "matched" : !transform.op<"func.return">
+    transform.debug.emit_remark_at %0, "matched" : !transform.op<"func.return">
   }
 }

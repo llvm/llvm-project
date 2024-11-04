@@ -64,6 +64,7 @@ class ELFObjectFileBase : public ObjectFile {
   SubtargetFeatures getLoongArchFeatures() const;
 
   StringRef getAMDGPUCPUName() const;
+  StringRef getNVPTXCPUName() const;
 
 protected:
   ELFObjectFileBase(unsigned int Type, MemoryBufferRef Source);
@@ -453,6 +454,7 @@ public:
   uint8_t getBytesInAddress() const override;
   StringRef getFileFormatName() const override;
   Triple::ArchType getArch() const override;
+  Triple::OSType getOS() const override;
   Expected<uint64_t> getStartAddress() const override;
 
   unsigned getPlatformFlags() const override { return EF.getHeader().e_flags; }
@@ -1348,6 +1350,12 @@ template <class ELFT> Triple::ArchType ELFObjectFile<ELFT>::getArch() const {
     return Triple::UnknownArch;
   }
 
+  case ELF::EM_CUDA: {
+    if (EF.getHeader().e_ident[ELF::EI_CLASS] == ELF::ELFCLASS32)
+      return Triple::nvptx;
+    return Triple::nvptx64;
+  }
+
   case ELF::EM_BPF:
     return IsLittleEndian ? Triple::bpfel : Triple::bpfeb;
 
@@ -1371,6 +1379,35 @@ template <class ELFT> Triple::ArchType ELFObjectFile<ELFT>::getArch() const {
 
   default:
     return Triple::UnknownArch;
+  }
+}
+
+template <class ELFT> Triple::OSType ELFObjectFile<ELFT>::getOS() const {
+  switch (EF.getHeader().e_ident[ELF::EI_OSABI]) {
+  case ELF::ELFOSABI_NETBSD:
+    return Triple::NetBSD;
+  case ELF::ELFOSABI_LINUX:
+    return Triple::Linux;
+  case ELF::ELFOSABI_HURD:
+    return Triple::Hurd;
+  case ELF::ELFOSABI_SOLARIS:
+    return Triple::Solaris;
+  case ELF::ELFOSABI_AIX:
+    return Triple::AIX;
+  case ELF::ELFOSABI_FREEBSD:
+    return Triple::FreeBSD;
+  case ELF::ELFOSABI_OPENBSD:
+    return Triple::OpenBSD;
+  case ELF::ELFOSABI_CUDA:
+    return Triple::CUDA;
+  case ELF::ELFOSABI_AMDGPU_HSA:
+    return Triple::AMDHSA;
+  case ELF::ELFOSABI_AMDGPU_PAL:
+    return Triple::AMDPAL;
+  case ELF::ELFOSABI_AMDGPU_MESA3D:
+    return Triple::Mesa3D;
+  default:
+    return Triple::UnknownOS;
   }
 }
 

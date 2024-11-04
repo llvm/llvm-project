@@ -67,6 +67,9 @@ class LLVM_PointerInAddressSpace<int addressSpace> : Type<
     # addressSpace # ")";
 }
 
+// Type constraint accepting an LLVM pointer type in address space 0.
+def LLVM_DefaultPointer : LLVM_PointerInAddressSpace<0>;
+
 // Type constraint accepting any LLVM structure type.
 def LLVM_AnyStruct : Type<CPred<"::llvm::isa<::mlir::LLVM::LLVMStructType>($_self)">,
                          "LLVM structure type">;

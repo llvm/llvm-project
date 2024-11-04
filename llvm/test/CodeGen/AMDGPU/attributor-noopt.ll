@@ -1,5 +1,6 @@
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 < %s | FileCheck -check-prefix=OPT %s
-; RUN: llc -O0 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 < %s | FileCheck -check-prefix=NOOPT %s
+; RUN: sed 's/CODE_OBJECT_VERSION/500/g' %s | llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 | FileCheck -check-prefix=OPT %s
+; RUN: sed 's/CODE_OBJECT_VERSION/400/g' %s | llc -O0 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 | FileCheck -check-prefixes=NOOPT,COV4 %s
+; RUN: sed 's/CODE_OBJECT_VERSION/500/g' %s | llc -O0 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 | FileCheck -check-prefixes=NOOPT,COV5 %s
 
 ; Check that AMDGPUAttributor is not run with -O0.
 ; OPT: .amdhsa_user_sgpr_private_segment_buffer 1
@@ -18,7 +19,8 @@
 
 ; NOOPT: .amdhsa_user_sgpr_private_segment_buffer 1
 ; NOOPT: .amdhsa_user_sgpr_dispatch_ptr 1
-; NOOPT: .amdhsa_user_sgpr_queue_ptr 1
+; COV4: .amdhsa_user_sgpr_queue_ptr 1
+; COV5: .amdhsa_user_sgpr_queue_ptr 0
 ; NOOPT: .amdhsa_user_sgpr_kernarg_segment_ptr 1
 ; NOOPT: .amdhsa_user_sgpr_dispatch_id 1
 ; NOOPT: .amdhsa_user_sgpr_flat_scratch_init 0
@@ -32,3 +34,6 @@
 define amdgpu_kernel void @foo() {
   ret void
 }
+
+!llvm.module.flags = !{!0}
+!0 = !{i32 1, !"amdgpu_code_object_version", i32 CODE_OBJECT_VERSION}

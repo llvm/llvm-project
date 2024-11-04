@@ -172,7 +172,7 @@ int __kmp_ncores = 0;
 int __kmp_chunk = 0;
 int __kmp_force_monotonic = 0;
 int __kmp_abort_delay = 0;
-#if KMP_OS_LINUX && defined(KMP_TDATA_GTID)
+#if (KMP_OS_LINUX || KMP_OS_AIX) && defined(KMP_TDATA_GTID)
 int __kmp_gtid_mode = 3; /* use __declspec(thread) TLS to store gtid */
 int __kmp_adjust_gtid_mode = FALSE;
 #elif KMP_OS_WINDOWS

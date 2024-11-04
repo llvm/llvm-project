@@ -310,13 +310,11 @@ void LinkerDriver::parseManifestUAC(StringRef arg) {
     arg = arg.ltrim();
     if (arg.empty())
       return;
-    if (arg.starts_with_insensitive("level=")) {
-      arg = arg.substr(strlen("level="));
+    if (arg.consume_front_insensitive("level=")) {
       std::tie(ctx.config.manifestLevel, arg) = arg.split(" ");
       continue;
     }
-    if (arg.starts_with_insensitive("uiaccess=")) {
-      arg = arg.substr(strlen("uiaccess="));
+    if (arg.consume_front_insensitive("uiaccess=")) {
       std::tie(ctx.config.manifestUIAccess, arg) = arg.split(" ");
       continue;
     }

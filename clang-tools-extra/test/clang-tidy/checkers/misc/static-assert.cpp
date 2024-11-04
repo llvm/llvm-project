@@ -20,6 +20,48 @@ void print(...);
 #define my_macro() assert(0 == 1)
 // CHECK-FIXES: #define my_macro() assert(0 == 1)
 
+namespace PR24066 {
+
+void referenceMember() {
+  struct {
+    int A;
+    int B;
+  } S;
+  assert(&S.B - &S.A == 1);
+}
+
+const int X = 1;
+void referenceVariable() {
+  assert(X > 0);
+}
+
+
+constexpr int Y = 1;
+void referenceConstexprVariable() {
+  assert(Y > 0);
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: found assert() that could be replaced by static_assert() [misc-static-assert]
+  // CHECK-FIXES-CXX11: {{^  }}static_assert(Y > 0, "");
+  // CHECK-FIXES-CXX17: {{^  }}static_assert(Y > 0);
+}
+
+void useInSizeOf() {
+  char a = 0;
+  assert(sizeof(a) == 1U);
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: found assert() that could be replaced by static_assert() [misc-static-assert]
+  // CHECK-FIXES-CXX11: {{^  }}static_assert(sizeof(a) == 1U, "");
+  // CHECK-FIXES-CXX17: {{^  }}static_assert(sizeof(a) == 1U);
+}
+
+void useInDecltype() {
+  char a = 0;
+  assert(static_cast<decltype(a)>(256) == 0);
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: found assert() that could be replaced by static_assert() [misc-static-assert]
+  // CHECK-FIXES-CXX11: {{^  }}static_assert(static_cast<decltype(a)>(256) == 0, "");
+  // CHECK-FIXES-CXX17: {{^  }}static_assert(static_cast<decltype(a)>(256) == 0);
+}
+
+}
+
 constexpr bool myfunc(int a, int b) { return a * b == 0; }
 
 typedef __SIZE_TYPE__ size_t;

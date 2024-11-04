@@ -41,8 +41,6 @@ void RISCVMCExpr::printImpl(raw_ostream &OS, const MCAsmInfo *MAI) const {
   if (HasVariant)
     OS << '%' << getVariantKindName(getKind()) << '(';
   Expr->print(OS, MAI);
-  if (Kind == VK_RISCV_CALL_PLT)
-    OS << "@plt";
   if (HasVariant)
     OS << ')';
 }

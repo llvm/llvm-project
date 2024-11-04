@@ -38,9 +38,9 @@
 ; FIXME-R600-NEXT: .long 0
 ; FIXME @nullptr8 = global ptr addrspace(8) addrspacecast (ptr null to ptr addrspace(8))
 
-; CHECK-LABEL: nullptr9:
-; R600-NEXT: .long 0
-@nullptr9 = global ptr addrspace(9) addrspacecast (ptr null to ptr addrspace(9))
+; FIXME-LABEL: nullptr9:
+; FIXME-R600-NEXT: .long 0
+; FIXME @nullptr9 = global ptr addrspace(9) addrspacecast (ptr null to ptr addrspace(9))
 
 ; CHECK-LABEL: nullptr10:
 ; R600-NEXT: .long 0

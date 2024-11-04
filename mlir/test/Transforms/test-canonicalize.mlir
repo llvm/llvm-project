@@ -70,19 +70,6 @@ func.func @test_commutative_multi_cst(%arg0: i32, %arg1: i32) -> (i32, i32) {
   return %y, %z: i32, i32
 }
 
-// CHECK-LABEL: func @typemismatch
-
-func.func @typemismatch() -> i32 {
-  %c42 = arith.constant 42.0 : f32
-
-  // The "passthrough_fold" folder will naively return its operand, but we don't
-  // want to fold here because of the type mismatch.
-
-  // CHECK: "test.passthrough_fold"
-  %0 = "test.passthrough_fold"(%c42) : (f32) -> (i32)
-  return %0 : i32
-}
-
 // CHECK-LABEL: test_dialect_canonicalizer
 func.func @test_dialect_canonicalizer() -> (i32) {
   %0 = "test.dialect_canonicalizable"() : () -> (i32)

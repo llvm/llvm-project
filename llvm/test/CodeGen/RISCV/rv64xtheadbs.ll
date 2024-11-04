@@ -69,4 +69,3 @@ define i64 @th_tst_i64_cmp(i64 %a) nounwind {
   %zext = zext i1 %cmp to i64
   ret i64 %zext
 }
-

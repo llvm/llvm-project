@@ -289,7 +289,7 @@ Value genToPositions(OpBuilder &builder, Location loc, Value tensor, Level lvl);
 /// stride and offset.  Otherwise, the result type is a memref without
 /// any specified layout.
 Value genToCoordinates(OpBuilder &builder, Location loc, Value tensor,
-                       Level lvl, Level cooStart);
+                       Level lvl);
 
 /// Infers the result type and generates `ToCoordinatesBufferOp`.
 Value genToCoordinatesBuffer(OpBuilder &builder, Location loc, Value tensor);

@@ -69,7 +69,8 @@ public:
 
   void registerDefaultAliasAnalyses(AAManager &AAM) override;
 
-  void registerPassBuilderCallbacks(PassBuilder &PB) override;
+  void registerPassBuilderCallbacks(PassBuilder &PB,
+                                    bool PopulateClassToPassNames) override;
 
   TargetTransformInfo getTargetTransformInfo(const Function &F) const override;
 

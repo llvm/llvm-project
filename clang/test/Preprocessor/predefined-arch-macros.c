@@ -2515,7 +2515,7 @@
 // RUN:   | FileCheck -match-full-lines %s -check-prefix=CHECK_SRF_M32
 // RUN: %clang -march=grandridge -m32 -E -dM %s -o - 2>&1 \
 // RUN:     --target=i386 \
-// RUN:   | FileCheck -match-full-lines %s -check-prefixes=CHECK_SRF_M32,CHECK_GRR_M32
+// RUN:   | FileCheck -match-full-lines %s -check-prefixes=CHECK_SRF_M32
 // RUN: %clang -march=arrowlake -m32 -E -dM %s -o - 2>&1 \
 // RUN:     -target i386-unknown-linux \
 // RUN:   | FileCheck -match-full-lines %s -check-prefix=CHECK_SRF_M32
@@ -2572,7 +2572,6 @@
 // CHECK_SRF_M32: #define __PRFCHW__ 1
 // CHECK_SRF_M32: #define __PTWRITE__ 1
 // CHECK_SRF_M32-NOT: #define __RAOINT__ 1
-// CHECK_GRR_M32: #define __RAOINT__ 1
 // CHECK_SRF_M32: #define __RDPID__ 1
 // CHECK_SRF_M32: #define __RDRND__ 1
 // CHECK_SRF_M32: #define __RDSEED__ 1
@@ -2618,7 +2617,7 @@
 // RUN:   | FileCheck -match-full-lines %s -check-prefix=CHECK_SRF_M64
 // RUN: %clang -march=grandridge -m64 -E -dM %s -o - 2>&1 \
 // RUN:     --target=i386 \
-// RUN:   | FileCheck -match-full-lines %s -check-prefixes=CHECK_SRF_M64,CHECK_GRR_M64
+// RUN:   | FileCheck -match-full-lines %s -check-prefixes=CHECK_SRF_M64
 // RUN: %clang -march=arrowlake -m64 -E -dM %s -o - 2>&1 \
 // RUN:     -target i386-unknown-linux \
 // RUN:   | FileCheck -match-full-lines %s -check-prefix=CHECK_SRF_M64
@@ -2675,7 +2674,6 @@
 // CHECK_SRF_M64: #define __PRFCHW__ 1
 // CHECK_SRF_M64: #define __PTWRITE__ 1
 // CHECK_SRF_M64-NOT: #define __RAOINT__ 1
-// CHECK_GRR_M64: #define __RAOINT__ 1
 // CHECK_SRF_M64: #define __RDPID__ 1
 // CHECK_SRF_M64: #define __RDRND__ 1
 // CHECK_SRF_M64: #define __RDSEED__ 1
