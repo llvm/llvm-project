@@ -693,7 +693,7 @@ static void addKCFIPass(const Triple &TargetTriple, const LangOptions &LangOpts,
 
   // Ensure we lower KCFI operand bundles with -O0.
   PB.registerOptimizerLastEPCallback(
-      [&](ModulePassManager &MPM, OptimizationLevel Level) {
+      [&](ModulePassManager &MPM, OptimizationLevel Level, ThinOrFullLTOPhase) {
         if (Level == OptimizationLevel::O0 &&
             LangOpts.Sanitize.has(SanitizerKind::KCFI))
           MPM.addPass(createModuleToFunctionPassAdaptor(KCFIPass()));
@@ -712,8 +712,8 @@ static void addKCFIPass(const Triple &TargetTriple, const LangOptions &LangOpts,
 static void addSanitizers(const Triple &TargetTriple,
                           const CodeGenOptions &CodeGenOpts,
                           const LangOptions &LangOpts, PassBuilder &PB) {
-  auto SanitizersCallback = [&](ModulePassManager &MPM,
-                                OptimizationLevel Level) {
+  auto SanitizersCallback = [&](ModulePassManager &MPM, OptimizationLevel Level,
+                                ThinOrFullLTOPhase) {
     if (CodeGenOpts.hasSanitizeCoverage()) {
       auto SancovOpts = getSancovOptsFromCGOpts(CodeGenOpts);
       MPM.addPass(SanitizerCoveragePass(
@@ -797,9 +797,10 @@ static void addSanitizers(const Triple &TargetTriple,
   };
   if (ClSanitizeOnOptimizerEarlyEP) {
     PB.registerOptimizerEarlyEPCallback(
-        [SanitizersCallback](ModulePassManager &MPM, OptimizationLevel Level) {
+        [SanitizersCallback](ModulePassManager &MPM, OptimizationLevel Level,
+                             ThinOrFullLTOPhase Phase) {
           ModulePassManager NewMPM;
-          SanitizersCallback(NewMPM, Level);
+          SanitizersCallback(NewMPM, Level, Phase);
           if (!NewMPM.isEmpty()) {
             // Sanitizers can abandon<GlobalsAA>.
             NewMPM.addPass(RequireAnalysisPass<GlobalsAA, llvm::Module>());
@@ -1086,11 +1087,12 @@ void EmitAssemblyHelper::RunOptimizationPipeline(
     // TODO: Consider passing the MemoryProfileOutput to the pass builder via
     // the PGOOptions, and set this up there.
     if (!CodeGenOpts.MemoryProfileOutput.empty()) {
-      PB.registerOptimizerLastEPCallback(
-          [](ModulePassManager &MPM, OptimizationLevel Level) {
-            MPM.addPass(createModuleToFunctionPassAdaptor(MemProfilerPass()));
-            MPM.addPass(ModuleMemProfilerPass());
-          });
+      PB.registerOptimizerLastEPCallback([](ModulePassManager &MPM,
+                                            OptimizationLevel Level,
+                                            ThinOrFullLTOPhase) {
+        MPM.addPass(createModuleToFunctionPassAdaptor(MemProfilerPass()));
+        MPM.addPass(ModuleMemProfilerPass());
+      });
     }
 
     if (CodeGenOpts.FatLTO) {
