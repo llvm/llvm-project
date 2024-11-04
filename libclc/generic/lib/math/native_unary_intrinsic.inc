@@ -27,7 +27,7 @@
 #define __CLC_INTRINSIC "llvm." __CLC_XSTR(__CLC_NATIVE_INTRINSIC)
 
 #undef cl_khr_fp64
-#include <math/unary_intrin.inc>
+#include <clc/math/unary_intrin.inc>
 
 #endif
 
