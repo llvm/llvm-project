@@ -69,6 +69,12 @@ Sema
 | aeternalmail\@gmail.com (email), Sirraide (GitHub), Ætérnal (Discord), Sirraide (Discourse)
 
 
+Recovery AST
+~~~~~~~~~~~~
+| Haojian Wu
+| hokein.wu\@gmail.com (email), hokein (Phabricator), hokein (GitHub)
+
+
 Experimental new constant interpreter
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 | Timm Bäder
