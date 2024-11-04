@@ -128,8 +128,8 @@ void RTDECL(CUFDataTransferDescDesc)(Descriptor *dstDesc, Descriptor *srcDesc,
 void RTDECL(CUFDataTransferGlobalDescDesc)(Descriptor *dstDesc,
     Descriptor *srcDesc, unsigned mode, const char *sourceFile,
     int sourceLine) {
-  RTNAME(CUFDataTransferDescDesc)(
-      dstDesc, srcDesc, mode, sourceFile, sourceLine);
+  RTNAME(CUFDataTransferDescDesc)
+  (dstDesc, srcDesc, mode, sourceFile, sourceLine);
   if ((mode == kHostToDevice) || (mode == kDeviceToDevice)) {
     void *deviceAddr{
         RTNAME(CUFGetDeviceAddress)((void *)dstDesc, sourceFile, sourceLine)};
