@@ -230,14 +230,13 @@ static void getAArch64MultilibFlags(const Driver &D,
     Result.push_back(BranchProtectionArg->getAsString(Args));
   }
 
-  const Arg *StrictAlignArg =
-      Args.getLastArgNoClaim(options::OPT_mstrict_align, options::OPT_mno_unaligned_access);
+  const Arg *StrictAlignArg = Args.getLastArgNoClaim(
+      options::OPT_mstrict_align, options::OPT_mno_unaligned_access);
   if (StrictAlignArg) {
     Result.push_back(StrictAlignArg->getAsString(Args));
   }
 
-  const Arg *BigEndian =
-      Args.getLastArgNoClaim(options::OPT_mbig_endian);
+  const Arg *BigEndian = Args.getLastArgNoClaim(options::OPT_mbig_endian);
   if (BigEndian) {
     Result.push_back(BigEndian->getAsString(Args));
   }
@@ -300,15 +299,13 @@ static void getARMMultilibFlags(const Driver &D,
     Result.push_back(BranchProtectionArg->getAsString(Args));
   }
 
-  const Arg *StrictAlignArg =
-      Args.getLastArgNoClaim(options::OPT_mstrict_align, options::
-OPT_mno_unaligned_access);
+  const Arg *StrictAlignArg = Args.getLastArgNoClaim(
+      options::OPT_mstrict_align, options::OPT_mno_unaligned_access);
   if (StrictAlignArg) {
     Result.push_back(StrictAlignArg->getAsString(Args));
   }
 
-  const Arg *BigEndian =
-      Args.getLastArgNoClaim(options::OPT_mbig_endian);
+  const Arg *BigEndian = Args.getLastArgNoClaim(options::OPT_mbig_endian);
   if (BigEndian) {
     Result.push_back(BigEndian->getAsString(Args));
   }
