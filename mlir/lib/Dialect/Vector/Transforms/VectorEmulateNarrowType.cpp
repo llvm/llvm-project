@@ -164,7 +164,7 @@ static Value insertSubvectorInto(RewriterBase &rewriter, Location loc,
 
 /// Extracts a 1-D subvector from a 1-D `source` vector, with index at `offset`
 /// and size `numElementsToExtract`, and inserts into the `dest` vector. This
-/// Function emits multiple `vector.extract` and `vector.insert` ops, so only
+/// function emits multiple `vector.extract` and `vector.insert` ops, so only
 /// use it when `offset` cannot be folded into a constant value.
 static Value dynamicallyExtractSubVector(RewriterBase &rewriter, Location loc,
                                          TypedValue<VectorType> source,
