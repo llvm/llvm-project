@@ -36,10 +36,10 @@ class ReadCountingInMemoryFileSystem : public vfs::InMemoryFileSystem
   std::map<std::string, unsigned> ReadCounts;
 
 public:
-  ErrorOr<std::unique_ptr<vfs::File>> openFileForRead(const Twine &Path) override
-  {
+  ErrorOr<std::unique_ptr<vfs::File>>
+  openFileForRead(const Twine &Path, bool IsText = true) override {
     ++ReadCounts[Canonicalize(Path)];
-    return InMemoryFileSystem::openFileForRead(Path);
+    return InMemoryFileSystem::openFileForRead(Path, IsText);
   }
 
   unsigned GetReadCount(const Twine &Path) const

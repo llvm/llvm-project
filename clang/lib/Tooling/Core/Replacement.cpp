@@ -605,7 +605,6 @@ llvm::Expected<std::string> applyAllReplacements(StringRef Code,
   std::string Result;
   llvm::raw_string_ostream OS(Result);
   Rewrite.getEditBuffer(ID).write(OS);
-  OS.flush();
   return Result;
 }
 

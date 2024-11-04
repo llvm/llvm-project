@@ -9861,6 +9861,7 @@ verifyNarrowIntegerArgs(const SmallVectorImpl<ISD::OutputArg> &Outs,
       assert((VT != MVT::i32 ||
               (Flags.isSExt() || Flags.isZExt() || Flags.isNoExt())) &&
              "Narrow integer argument must have a valid extension type.");
+      (void)Flags;
     }
   }
 }

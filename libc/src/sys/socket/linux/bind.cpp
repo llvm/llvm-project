@@ -20,13 +20,13 @@
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, bind,
-                   (int domain, const struct sockaddr *address,
+                   (int socket, const struct sockaddr *address,
                     socklen_t address_len)) {
-#ifdef SYS_socket
+#ifdef SYS_bind
   int ret =
-      LIBC_NAMESPACE::syscall_impl<int>(SYS_bind, domain, address, address_len);
+      LIBC_NAMESPACE::syscall_impl<int>(SYS_bind, socket, address, address_len);
 #elif defined(SYS_socketcall)
-  unsigned long sockcall_args[3] = {static_cast<unsigned long>(domain),
+  unsigned long sockcall_args[3] = {static_cast<unsigned long>(socket),
                                     reinterpret_cast<unsigned long>(address),
                                     static_cast<unsigned long>(address_len)};
   int ret = LIBC_NAMESPACE::syscall_impl<int>(SYS_socketcall, SYS_BIND,

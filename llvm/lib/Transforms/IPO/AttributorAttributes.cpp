@@ -1093,6 +1093,13 @@ struct AAPointerInfoImpl
     return State::numOffsetBins();
   }
   virtual bool reachesReturn() const override { return ReachesReturn; }
+  ChangeStatus setReachesReturn(bool Val) {
+    if (ReachesReturn == Val)
+      return ChangeStatus::UNCHANGED;
+
+    ReachesReturn = Val;
+    return ChangeStatus::CHANGED;
+  }
 
   bool forallInterferingAccesses(
       AA::RangeTy Range,
@@ -1380,12 +1387,12 @@ struct AAPointerInfoImpl
     if (!OtherAA.getState().isValidState() || !isValidState())
       return indicatePessimisticFixpoint();
 
+    ChangeStatus Changed = ChangeStatus::UNCHANGED;
     const auto &OtherAAImpl = static_cast<const AAPointerInfoImpl &>(OtherAA);
     bool IsByval = OtherAAImpl.getAssociatedArgument()->hasByValAttr();
-    ReachesReturn = OtherAAImpl.ReachesReturn;
+    Changed |= setReachesReturn(OtherAAImpl.ReachesReturn);
 
     // Combine the accesses bin by bin.
-    ChangeStatus Changed = ChangeStatus::UNCHANGED;
     const auto &State = OtherAAImpl.getState();
     for (const auto &It : State) {
       for (auto Index : It.getSecond()) {
@@ -1681,8 +1688,10 @@ ChangeStatus AAPointerInfoFloating::updateImpl(Attributor &A) {
     // Returns are allowed if they are in the associated functions. Users can
     // then check the call site return. Returns from other functions can't be
     // tracked and are cause for invalidation.
-    if (auto *RI = dyn_cast<ReturnInst>(Usr))
-      return ReachesReturn = RI->getFunction() == getAssociatedFunction();
+    if (auto *RI = dyn_cast<ReturnInst>(Usr)) {
+      Changed |= setReachesReturn(RI->getFunction() == getAssociatedFunction());
+      return ReachesReturn;
+    }
 
     // For PHIs we need to take care of the recurrence explicitly as the value
     // might change while we iterate through a loop. For now, we give up if

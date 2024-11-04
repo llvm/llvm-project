@@ -669,7 +669,6 @@ void CheckerManager::runCheckersForEvalCall(ExplodedNodeSet &Dst,
           std::string Buf;
           llvm::raw_string_ostream OS(Buf);
           Call.dump(OS);
-          OS.flush();
           return Buf;
         };
         std::string AssertionMessage = llvm::formatv(

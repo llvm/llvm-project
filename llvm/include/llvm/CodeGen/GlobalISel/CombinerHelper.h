@@ -845,7 +845,8 @@ public:
   bool matchExtractVectorElement(MachineInstr &MI, BuildFnTy &MatchInfo);
 
   /// Combine extract vector element with a build vector on the vector register.
-  bool matchExtractVectorElementWithBuildVector(const MachineOperand &MO,
+  bool matchExtractVectorElementWithBuildVector(const MachineInstr &MI,
+                                                const MachineInstr &MI2,
                                                 BuildFnTy &MatchInfo);
 
   /// Combine extract vector element with a build vector trunc on the vector
@@ -855,7 +856,8 @@ public:
 
   /// Combine extract vector element with a shuffle vector on the vector
   /// register.
-  bool matchExtractVectorElementWithShuffleVector(const MachineOperand &MO,
+  bool matchExtractVectorElementWithShuffleVector(const MachineInstr &MI,
+                                                  const MachineInstr &MI2,
                                                   BuildFnTy &MatchInfo);
 
   /// Combine extract vector element with a insert vector element on the vector

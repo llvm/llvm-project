@@ -125,7 +125,6 @@ IdentifierInfo *Sema::InventAbbreviatedTemplateParameterTypeName(
   else
     OS << ParamName->getName() << ":auto";
 
-  OS.flush();
   return &Context.Idents.get(OS.str());
 }
 

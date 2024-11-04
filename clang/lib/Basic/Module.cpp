@@ -252,7 +252,6 @@ std::string Module::getFullModuleName(bool AllowStringLiterals) const {
 
   llvm::raw_string_ostream Out(Result);
   printModuleId(Out, Names.rbegin(), Names.rend(), AllowStringLiterals);
-  Out.flush();
 
   return Result;
 }

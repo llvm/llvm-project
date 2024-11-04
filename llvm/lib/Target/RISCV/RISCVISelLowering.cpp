@@ -5802,22 +5802,29 @@ SDValue RISCVTargetLowering::lowerConstantFP(SDValue Op,
   MVT VT = Op.getSimpleValueType();
   const APFloat &Imm = cast<ConstantFPSDNode>(Op)->getValueAPF();
 
-  if (getLegalZfaFPImm(Imm, VT) >= 0)
-    return Op;
+  // Can this constant be selected by a Zfa FLI instruction?
+  bool Negate = false;
+  int Index = getLegalZfaFPImm(Imm, VT);
 
-  if (!Imm.isNegative())
-    return SDValue();
+  // If the constant is negative, try negating.
+  if (Index < 0 && Imm.isNegative()) {
+    Index = getLegalZfaFPImm(-Imm, VT);
+    Negate = true;
+  }
 
-  int Index = getLegalZfaFPImm(-Imm, VT);
+  // If we couldn't find a FLI lowering, fall back to generic code.
   if (Index < 0)
     return SDValue();
 
   // Emit an FLI+FNEG. We use a custom node to hide from constant folding.
   SDLoc DL(Op);
   SDValue Const =
-      DAG.getNode(RISCVISD::FLI, Op, VT,
+      DAG.getNode(RISCVISD::FLI, DL, VT,
                   DAG.getTargetConstant(Index, DL, Subtarget.getXLenVT()));
-  return DAG.getNode(ISD::FNEG, Op, VT, Const);
+  if (!Negate)
+    return Const;
+
+  return DAG.getNode(ISD::FNEG, DL, VT, Const);
 }
 
 static SDValue LowerATOMIC_FENCE(SDValue Op, SelectionDAG &DAG,

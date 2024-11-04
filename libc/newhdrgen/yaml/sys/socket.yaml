@@ -5,14 +5,97 @@ types:
   - type_name: struct_sockaddr
   - type_name: socklen_t
   - type_name: sa_family_t
+  - type_name: struct_msghdr
+  - type_name: struct_iovec
+  - type_name: size_t
+  - type_name: ssize_t
 enums: []
 objects: []
 functions:
+  - name: accept
+    standards:
+      - POSIX
+    return_type: int
+    arguments:
+      - type: int
+      - type: sockaddr *__restrict
+      - type: socklen_t *__restrict
   - name: bind
     standards:
       - POSIX
     return_type: int
     arguments:
+      - type: int
+      - type: const struct sockaddr *
+      - type: socklen_t
+  - name: connect
+    standards:
+      - POSIX
+    return_type: int
+    arguments:
+      - type: int
+      - type: const struct sockaddr *
+      - type: socklen_t
+  - name: listen
+    standards:
+      - POSIX
+    return_type: int
+    arguments:
+      - type: int
+      - type: int
+  - name: recv
+    standards:
+      - POSIX
+    return_type: ssize_t
+    arguments:
+      - type: int
+      - type: const void *
+      - type: size_t
+      - type: int
+  - name: recvfrom
+    standards:
+      - POSIX
+    return_type: ssize_t
+    arguments:
+      - type: int
+      - type: const void*
+      - type: size_t
+      - type: int
+      - type: const struct sockaddr *
+      - type: socklen_t
+  - name: recvmsg
+    standards:
+      - POSIX
+    return_type: ssize_t
+    arguments:
+      - type: int
+      - type: const struct msghdr *
+      - type: int
+  - name: send
+    standards:
+      - POSIX
+    return_type: ssize_t
+    arguments:
+      - type: int
+      - type: const void*
+      - type: size_t
+      - type: int
+  - name: sendmsg
+    standards:
+      - POSIX
+    return_type: ssize_t
+    arguments:
+      - type: int
+      - type: const struct msghdr *
+      - type: int
+  - name: sendto
+    standards:
+      - POSIX
+    return_type: ssize_t
+    arguments:
+      - type: int
+      - type: const void *
+      - type: size_t
       - type: int
       - type: const struct sockaddr *
       - type: socklen_t
@@ -24,3 +107,12 @@ functions:
       - type: int
       - type: int
       - type: int
+  - name: socketpair
+    standards:
+      - posix
+    return_type: int
+    arguments:
+      - type: int
+      - type: int
+      - type: int
+      - type: int*

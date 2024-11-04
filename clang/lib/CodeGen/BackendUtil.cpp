@@ -352,7 +352,6 @@ static std::string flattenClangCommandLine(ArrayRef<std::string> Args,
     llvm::sys::printArg(OS, Arg, /*Quote=*/true);
     PrintedOneArg = true;
   }
-  OS.flush();
   return FlatCmdLine;
 }
 

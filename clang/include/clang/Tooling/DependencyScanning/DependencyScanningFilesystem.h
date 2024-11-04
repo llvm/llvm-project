@@ -346,7 +346,7 @@ public:
 
   llvm::ErrorOr<llvm::vfs::Status> status(const Twine &Path) override;
   llvm::ErrorOr<std::unique_ptr<llvm::vfs::File>>
-  openFileForRead(const Twine &Path) override;
+  openFileForRead(const Twine &Path, bool IsText = true) override;
 
   std::error_code getRealPath(const Twine &Path,
                               SmallVectorImpl<char> &Output) override;

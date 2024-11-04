@@ -1,0 +1,62 @@
+# This file is licensed under the Apache License v2.0 with LLVM Exceptions.
+# See https://llvm.org/LICENSE.txt for license information.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
+# Tests for LLVM libc string.h functions.
+
+load("//libc/test:libc_test_rules.bzl", "libc_test")
+
+package(default_visibility = ["//visibility:public"])
+
+licenses(["notice"])
+
+libc_test(
+    name = "socket_test",
+    srcs = ["linux/socket_test.cpp"],
+    libc_function_deps = [
+        "//libc:socket",
+        "//libc:close",
+    ],
+)
+
+libc_test(
+    name = "socketpair_test",
+    srcs = ["linux/socketpair_test.cpp"],
+    libc_function_deps = [
+        "//libc:socketpair",
+        "//libc:close",
+    ],
+)
+
+libc_test(
+    name = "send_recv_test",
+    srcs = ["linux/send_recv_test.cpp"],
+    libc_function_deps = [
+        "//libc:socketpair",
+        "//libc:send",
+        "//libc:recv",
+        "//libc:close",
+    ],
+)
+
+libc_test(
+    name = "sendto_recvfrom_test",
+    srcs = ["linux/sendto_recvfrom_test.cpp"],
+    libc_function_deps = [
+        "//libc:socketpair",
+        "//libc:sendto",
+        "//libc:recvfrom",
+        "//libc:close",
+    ],
+)
+
+libc_test(
+    name = "sendmsg_recvmsg_test",
+    srcs = ["linux/sendmsg_recvmsg_test.cpp"],
+    libc_function_deps = [
+        "//libc:socketpair",
+        "//libc:sendmsg",
+        "//libc:recvmsg",
+        "//libc:close",
+    ],
+)
