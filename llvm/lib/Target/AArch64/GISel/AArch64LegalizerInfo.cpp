@@ -1280,6 +1280,7 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
 
   getActionDefinitionsBuilder({G_UADDSAT, G_SADDSAT, G_USUBSAT, G_SSUBSAT})
       .legalFor({v2s64, v2s32, v4s32, v4s16, v8s16, v8s8, v16s8})
+      .legalFor(HasSVE, {nxv2s64, nxv4s32, nxv8s16, nxv16s8})
       .clampNumElements(0, v8s8, v16s8)
       .clampNumElements(0, v4s16, v8s16)
       .clampNumElements(0, v2s32, v4s32)
