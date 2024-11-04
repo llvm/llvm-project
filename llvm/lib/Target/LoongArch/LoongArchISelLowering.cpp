@@ -3106,10 +3106,10 @@ void LoongArchTargetLowering::ReplaceNodeResults(
   }
   case ISD::LROUND: {
     SDValue Op0 = N->getOperand(0);
-    RTLIB::Libcall LC =
-        Op0.getValueType() == MVT::f64 ? RTLIB::LROUND_F64 : RTLIB::LROUND_F32;
-    MakeLibCallOptions CallOptions;
     EVT OpVT = Op0.getValueType();
+    RTLIB::Libcall LC =
+        OpVT == MVT::f64 ? RTLIB::LROUND_F64 : RTLIB::LROUND_F32;
+    MakeLibCallOptions CallOptions;
     CallOptions.setTypeListBeforeSoften(OpVT, MVT::i64, true);
     SDValue Result = makeLibCall(DAG, LC, MVT::i64, Op0, CallOptions, DL).first;
     Result = DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, Result);
