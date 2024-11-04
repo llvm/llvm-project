@@ -3,15 +3,15 @@
 
 ; CHECK: DW_TAG_base_type
 ; CHECK: DW_AT_name ("ExtraInhabitantBasicType")
-; CHECK: DW_AT_APPLE_num_extra_inhabitants (0xfe)
+; CHECK: DW_AT_LLVM_num_extra_inhabitants (0xfe)
 
 ; CHECK: DW_TAG_structure_type
 ; CHECK: DW_AT_name ("ExtraInhabitantCompositeType")
-; CHECK: DW_AT_APPLE_num_extra_inhabitants (0x42)
+; CHECK: DW_AT_LLVM_num_extra_inhabitants (0x42)
 
 ; CHECK: DW_TAG_structure_type
 ; CHECK: DW_AT_name ("NoExtraInhabitantType")
-; CHECK-NOT: DW_AT_APPLE_num_extra_inhabitants
+; CHECK-NOT: DW_AT_LLVM_num_extra_inhabitants
 
 target datalayout = "e-m:o-i64:64-i128:128-n32:64-S128"
 
