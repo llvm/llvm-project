@@ -10,13 +10,17 @@
 #include "src/__support/CPP/cstddef.h" // cpp::byte
 #include "src/__support/common.h"
 #include "src/__support/macros/config.h"
+#include "src/__support/memory_size.h"
 
 namespace LIBC_NAMESPACE_DECL {
 LLVM_LIBC_FUNCTION(void *, lfind,
                    (const void *key, const void *base, size_t *nmemb, size_t size,
                     int (*compar)(const void *, const void *))) {
+  size_t byte_len = 0;
+  if (internal::mul_overflow(*nmemb, size, &byte_len)) return nullptr;
+    
   const cpp::byte *next = reinterpret_cast<const cpp::byte *>(base);
-  const cpp::byte *end = next + (*nmemb * size);
+  const cpp::byte *end = next + byte_len;
   while (next < end) {
     if (compar(key, next) == 0) {
       // According to IEEE Std 1003.1-2024 we are expected to accept a const reference 

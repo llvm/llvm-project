@@ -108,4 +108,5 @@ add_entrypoint_object(
   DEPENDS
     libc.include.search
     libc.src.__support.CPP.cstddef
+    libc.src.__support.memory_size
 )
