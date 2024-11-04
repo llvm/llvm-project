@@ -943,13 +943,13 @@ public:
   void viewCFG() const;
 
   /// viewCFG - This function is meant for use from the debugger. It works just
-  /// like viewCFG(), but generates the dot file with the given filename.
-  void viewCFG(const char *Name) const;
+  /// like viewCFG(), but generates the dot file with the given file name.
+  void viewCFG(const char *OutputFileName) const;
 
   /// Extended form to print edge weights.
   void viewCFG(bool ViewCFGOnly, const BlockFrequencyInfo *BFI,
                const BranchProbabilityInfo *BPI,
-               const char *Name = nullptr) const;
+               const char *OutputFileName = nullptr) const;
 
   /// viewCFGOnly - This function is meant for use from the debugger.  It works
   /// just like viewCFG, but it does not include the contents of basic blocks
@@ -959,8 +959,8 @@ public:
   void viewCFGOnly() const;
 
   /// viewCFG - This function is meant for use from the debugger. It works just
-  /// like viewCFGOnly(), but generates the dot file with the given filename.
-  void viewCFGOnly(const char *Name) const;
+  /// like viewCFGOnly(), but generates the dot file with the given file name.
+  void viewCFGOnly(const char *OutputFileName) const;
 
   /// Extended form to print edge weights.
   void viewCFGOnly(const BlockFrequencyInfo *BFI,
