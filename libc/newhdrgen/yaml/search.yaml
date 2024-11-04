@@ -62,8 +62,8 @@ functions:
       - POSIX
     return_type: void *
     arguments:
-      - type: void *
-      - type: void *
+      - type: const void *
+      - type: const void *
       - type: size_t *
       - type: size_t
       - type: int(*compar)(const void *, const void *)

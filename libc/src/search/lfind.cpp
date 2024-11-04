@@ -13,10 +13,10 @@
 
 namespace LIBC_NAMESPACE_DECL {
 LLVM_LIBC_FUNCTION(void *, lfind,
-                   (void *key, void *base, size_t *nmemb, size_t size,
-                    int (*compar)(void *, void *))) {
-  cpp::byte *next = reinterpret_cast<cpp::byte *>(base);
-  cpp::byte *end = next + (*nmemb * size);
+                   (const void *key, const void *base, size_t *nmemb, size_t size,
+                    int (*compar)(const void *, const void *))) {
+  const cpp::byte *next = reinterpret_cast<const cpp::byte *>(base);
+  const cpp::byte *end = next + (*nmemb * size);
   while (next < end) {
     if (compar(key, next) == 0) {
       return next;

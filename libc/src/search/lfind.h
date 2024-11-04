@@ -13,8 +13,8 @@
 #include <search.h> // size_t
 
 namespace LIBC_NAMESPACE_DECL {
-void *lfind(void *key, void *base, size_t *nmemb, size_t size,
-            int (*compar)(void *, void *));
+void *lfind(const void *key, const void *base, size_t *nmemb, size_t size,
+            int (*compar)(const void *, const void *));
 } // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_SEARCH_LFIND_H
