@@ -60,7 +60,7 @@
 ; CHECK-NEXT:    br label %return
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  exit0.split:
-; CHECK-NEXT:    %b.merge_with_extracted3 = phi i32 [ %b, %exiting0 ], [ undef, %exiting1 ], [ undef, %exiting1 ]
+; CHECK-NEXT:    %b.merge_with_extracted3 = phi i32 [ %b, %exiting0 ], [ poison, %exiting1 ], [ poison, %exiting1 ]
 ; CHECK-NEXT:    %B.ce = phi i32 [ %b, %exiting0 ], [ %a, %exiting1 ], [ %a, %exiting1 ]
 ; CHECK-NEXT:    br label %exit0
 ; CHECK-EMPTY:
