@@ -7,15 +7,13 @@
 #===----------------------------------------------------------------------===##
 #
 # This file defines the buildkite and github actions builder images.
-# You can build & push both images using:
+# You can build both images using:
 #
 #   docker compose build
-#   docker compose push
 #
-# Or you can select a single image to build & push using:
+# Or you can select a single image to build
 #
 #  docker compose build buildkite-builder
-#  docker compose push buildkite-builder
 #
 # The final images can be found at
 #
@@ -23,7 +21,8 @@
 #  ghcr.io/libcxx/actions-builder
 #  ghcr.io/libcxx/android-buildkite-builder
 #
-# Members of the github.com/libcxx/ organizations have permissions required to push new images.
+# Members of the github.com/libcxx/ organizations can push new images to the CI.
+# This is done by GitHub actions in the https://github.com/libcxx/builders repo.
 #
 # ===----------------------------------------------------------------------===##
 #                     Running the buildkite image

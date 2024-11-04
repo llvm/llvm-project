@@ -268,6 +268,8 @@ def err_expected_semi_after_namespace_name : Error<
   "expected ';' after namespace name">;
 def err_unexpected_namespace_attributes_alias : Error<
   "attributes cannot be specified on namespace alias">;
+def err_unexpected_qualified_namespace_alias : Error<
+  "namespace alias must be a single identifier">;
 def err_unexpected_nested_namespace_attribute : Error<
   "attributes cannot be specified on a nested namespace definition">;
 def err_inline_namespace_alias : Error<"namespace alias cannot be inline">;
@@ -1029,6 +1031,7 @@ def err_expected_lambda_body : Error<"expected body of lambda expression">;
 def warn_cxx98_compat_lambda : Warning<
   "lambda expressions are incompatible with C++98">,
   InGroup<CXX98Compat>, DefaultIgnore;
+def ext_lambda : ExtWarn<"lambdas are a C++11 extension">, InGroup<CXX11>;
 def err_lambda_decl_specifier_repeated : Error<
   "%select{'mutable'|'static'|'constexpr'|'consteval'}0 cannot "
   "appear multiple times in a lambda declarator">;

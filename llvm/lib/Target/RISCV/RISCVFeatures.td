@@ -1226,6 +1226,10 @@ def TuneNoSinkSplatOperands
                        "false", "Disable sink splat operands to enable .vx, .vf,"
                        ".wx, and .wf instructions">;
 
+def TuneNoStripWSuffix
+    : SubtargetFeature<"no-strip-w-suffix", "EnableStripWSuffix", "false",
+                       "Disable strip W suffix">;
+
 def TuneConditionalCompressedMoveFusion
     : SubtargetFeature<"conditional-cmv-fusion", "HasConditionalCompressedMoveFusion",
                        "true", "Enable branch+c.mv fusion">;

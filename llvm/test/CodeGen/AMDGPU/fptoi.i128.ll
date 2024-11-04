@@ -238,7 +238,7 @@ define i128 @fptosi_f64_to_i128(double %x) {
 ; GISEL-NEXT:    s_xor_b64 s[16:17], exec, s[6:7]
 ; GISEL-NEXT:    s_cbranch_execz .LBB0_4
 ; GISEL-NEXT:  ; %bb.3: ; %fp-to-i-if-else
-; GISEL-NEXT:    v_add_co_u32_e32 v6, vcc, 0xfffffbcd, v6
+; GISEL-NEXT:    v_add_u32_e32 v6, 0xfffffbcd, v6
 ; GISEL-NEXT:    v_lshlrev_b64 v[0:1], v6, v[4:5]
 ; GISEL-NEXT:    v_cmp_gt_u32_e32 vcc, 64, v6
 ; GISEL-NEXT:    v_cndmask_b32_e32 v11, 0, v0, vcc
@@ -612,7 +612,7 @@ define i128 @fptoui_f64_to_i128(double %x) {
 ; GISEL-NEXT:    s_xor_b64 s[16:17], exec, s[6:7]
 ; GISEL-NEXT:    s_cbranch_execz .LBB1_4
 ; GISEL-NEXT:  ; %bb.3: ; %fp-to-i-if-else
-; GISEL-NEXT:    v_add_co_u32_e32 v6, vcc, 0xfffffbcd, v6
+; GISEL-NEXT:    v_add_u32_e32 v6, 0xfffffbcd, v6
 ; GISEL-NEXT:    v_lshlrev_b64 v[0:1], v6, v[4:5]
 ; GISEL-NEXT:    v_cmp_gt_u32_e32 vcc, 64, v6
 ; GISEL-NEXT:    v_cndmask_b32_e32 v11, 0, v0, vcc
@@ -978,7 +978,7 @@ define i128 @fptosi_f32_to_i128(float %x) {
 ; GISEL-NEXT:    s_xor_b64 s[16:17], exec, s[6:7]
 ; GISEL-NEXT:    s_cbranch_execz .LBB2_4
 ; GISEL-NEXT:  ; %bb.3: ; %fp-to-i-if-else
-; GISEL-NEXT:    v_add_co_u32_e32 v6, vcc, 0xffffff6a, v6
+; GISEL-NEXT:    v_add_u32_e32 v6, 0xffffff6a, v6
 ; GISEL-NEXT:    v_lshlrev_b64 v[0:1], v6, v[4:5]
 ; GISEL-NEXT:    v_cmp_gt_u32_e32 vcc, 64, v6
 ; GISEL-NEXT:    v_cndmask_b32_e32 v11, 0, v0, vcc
@@ -1338,7 +1338,7 @@ define i128 @fptoui_f32_to_i128(float %x) {
 ; GISEL-NEXT:    s_xor_b64 s[16:17], exec, s[6:7]
 ; GISEL-NEXT:    s_cbranch_execz .LBB3_4
 ; GISEL-NEXT:  ; %bb.3: ; %fp-to-i-if-else
-; GISEL-NEXT:    v_add_co_u32_e32 v6, vcc, 0xffffff6a, v6
+; GISEL-NEXT:    v_add_u32_e32 v6, 0xffffff6a, v6
 ; GISEL-NEXT:    v_lshlrev_b64 v[0:1], v6, v[4:5]
 ; GISEL-NEXT:    v_cmp_gt_u32_e32 vcc, 64, v6
 ; GISEL-NEXT:    v_cndmask_b32_e32 v11, 0, v0, vcc

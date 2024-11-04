@@ -82,18 +82,18 @@ Like so:
                          |
                          |
                          v
-                  +------------+
-          <-------+  DPMarker  |<-------
-         /        +------------+        \
-        /                                \
-       /                                  \
-      v                                    ^
+                  +-------------+
+          <-------+  DbgMarker  |<-------
+         /        +-------------+        \
+        /                                 \
+       /                                   \
+      v                                     ^
  +-------------+    +-------------+   +-------------+
  |  DbgRecord  +--->|  DbgRecord  +-->|  DbgRecord  |
  +-------------+    +-------------+   +-------------+
 ```
 
-Each instruction has a pointer to a `DPMarker` (which will become optional), that contains a list of `DbgRecord` objects. No debugging records appear in the instruction list at all. `DbgRecord`s have a parent pointer to their owning `DPMarker`, and each `DPMarker` has a pointer back to it's owning instruction.
+Each instruction has a pointer to a `DbgMarker` (which will become optional), that contains a list of `DbgRecord` objects. No debugging records appear in the instruction list at all. `DbgRecord`s have a parent pointer to their owning `DbgMarker`, and each `DbgMarker` has a pointer back to it's owning instruction.
 
 Not shown are the links from DbgRecord to other parts of the `Value`/`Metadata` hierachy: `DbgRecord` subclasses have tracking pointers to the DIMetadata that they use, and `DbgVariableRecord` has references to `Value`s that are stored in a `DebugValueUser` base class. This refers to a `ValueAsMetadata` object referring to `Value`s, via the `TrackingMetadata` facility.
 

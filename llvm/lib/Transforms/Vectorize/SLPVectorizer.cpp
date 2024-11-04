@@ -2239,7 +2239,7 @@ public:
   /// of the cost, considered to be good enough score.
   std::optional<int>
   findBestRootPair(ArrayRef<std::pair<Value *, Value *>> Candidates,
-                   int Limit = LookAheadHeuristics::ScoreFail) {
+                   int Limit = LookAheadHeuristics::ScoreFail) const {
     LookAheadHeuristics LookAhead(*TLI, *DL, *SE, *this, /*NumLanes=*/2,
                                   RootLookAheadMaxDepth);
     int BestScore = Limit;
@@ -9275,11 +9275,18 @@ bool BoUpSLP::isTreeTinyAndNotFullyVectorizable(bool ForReduction) const {
 
   // Check if any of the gather node forms an insertelement buildvector
   // somewhere.
-  if (any_of(VectorizableTree, [](const std::unique_ptr<TreeEntry> &TE) {
+  bool IsAllowedSingleBVNode =
+      VectorizableTree.size() > 1 ||
+      (VectorizableTree.size() == 1 && VectorizableTree.front()->getOpcode() &&
+       VectorizableTree.front()->getOpcode() != Instruction::PHI &&
+       VectorizableTree.front()->getOpcode() != Instruction::GetElementPtr &&
+       allSameBlock(VectorizableTree.front()->Scalars));
+  if (any_of(VectorizableTree, [&](const std::unique_ptr<TreeEntry> &TE) {
         return TE->State == TreeEntry::NeedToGather &&
-               all_of(TE->Scalars, [](Value *V) {
+               all_of(TE->Scalars, [&](Value *V) {
                  return isa<ExtractElementInst, UndefValue>(V) ||
-                        (!V->hasNUsesOrMore(UsesLimit) &&
+                        (IsAllowedSingleBVNode &&
+                         !V->hasNUsesOrMore(UsesLimit) &&
                          any_of(V->users(), [](User *U) {
                            return isa<InsertElementInst>(U);
                          }));
@@ -12468,12 +12475,12 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E, bool PostponedPHIs) {
       if (UseIntrinsic && isVectorIntrinsicWithOverloadTypeAtArg(ID, -1))
         TysForDecl.push_back(
             FixedVectorType::get(CI->getType(), E->Scalars.size()));
+      auto *CEI = cast<CallInst>(VL0);
       for (unsigned I : seq<unsigned>(0, CI->arg_size())) {
         ValueList OpVL;
         // Some intrinsics have scalar arguments. This argument should not be
         // vectorized.
         if (UseIntrinsic && isVectorIntrinsicWithScalarOpAtArg(ID, I)) {
-          CallInst *CEI = cast<CallInst>(VL0);
           ScalarArg = CEI->getArgOperand(I);
           OpVecs.push_back(CEI->getArgOperand(I));
           if (isVectorIntrinsicWithOverloadTypeAtArg(ID, I))
@@ -12485,6 +12492,13 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E, bool PostponedPHIs) {
         if (E->VectorizedValue) {
           LLVM_DEBUG(dbgs() << "SLP: Diamond merged for " << *VL0 << ".\n");
           return E->VectorizedValue;
+        }
+        ScalarArg = CEI->getArgOperand(I);
+        if (cast<VectorType>(OpVec->getType())->getElementType() !=
+            ScalarArg->getType()) {
+          auto *CastTy = FixedVectorType::get(ScalarArg->getType(),
+                                              VecTy->getNumElements());
+          OpVec = Builder.CreateIntCast(OpVec, CastTy, GetOperandSignedness(I));
         }
         LLVM_DEBUG(dbgs() << "SLP: OpVec[" << I << "]: " << *OpVec << "\n");
         OpVecs.push_back(OpVec);
@@ -13995,7 +14009,7 @@ bool BoUpSLP::collectValuesToDemote(
     if (MultiNodeScalars.contains(V))
       return false;
     uint32_t OrigBitWidth = DL->getTypeSizeInBits(V->getType());
-    if (OrigBitWidth < BitWidth) {
+    if (OrigBitWidth > BitWidth) {
       APInt Mask = APInt::getBitsSetFrom(OrigBitWidth, BitWidth);
       if (MaskedValueIsZero(V, Mask, SimplifyQuery(*DL)))
         return true;
@@ -15945,7 +15959,7 @@ public:
         LLVM_DEBUG(dbgs() << "SLP: Found cost = " << Cost
                           << " for reduction\n");
         if (!Cost.isValid())
-          return nullptr;
+          break;
         if (Cost >= -SLPCostThreshold) {
           V.getORE()->emit([&]() {
             return OptimizationRemarkMissed(

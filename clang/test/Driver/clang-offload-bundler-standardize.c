@@ -1,6 +1,6 @@
 // REQUIRES: x86-registered-target
 // REQUIRES: asserts
-// UNSUPPORTED: target={{.*}}-darwin{{.*}}, target={{.*}}-aix{{.*}}
+// UNSUPPORTED: target={{.*}}-macosx{{.*}}, target={{.*}}-darwin{{.*}}, target={{.*}}-aix{{.*}}
 // REQUIRES: asserts
 
 // Generate the file we can bundle.

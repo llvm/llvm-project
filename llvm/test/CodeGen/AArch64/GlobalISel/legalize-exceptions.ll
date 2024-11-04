@@ -48,7 +48,7 @@ define void @bar() personality ptr @__gxx_personality_v0 {
   ; CHECK-NEXT:   $x0 = COPY [[LOAD]](p0)
   ; CHECK-NEXT:   BL @_Unwind_Resume, csr_darwin_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit $x0
   ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
-  ; CHECK-NEXT:   G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.trap)
+  ; CHECK-NEXT:   G_TRAP
   %exn.slot = alloca ptr
   %ehselector.slot = alloca i32
   %1 = invoke i32 @foo(i32 42) to label %continue unwind label %cleanup

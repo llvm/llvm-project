@@ -70,6 +70,8 @@ static std::optional<int64_t> getConstantIntValue(OpFoldResult ofr) {
 ValueBoundsConstraintSet::ValueBoundsConstraintSet(MLIRContext *ctx)
     : builder(ctx) {}
 
+char ValueBoundsConstraintSet::ID = 0;
+
 #ifndef NDEBUG
 static void assertValidValueDim(Value value, std::optional<int64_t> dim) {
   if (value.getType().isIndex()) {
@@ -472,46 +474,6 @@ FailureOr<int64_t> ValueBoundsConstraintSet::computeConstantBound(
 }
 
 FailureOr<int64_t> ValueBoundsConstraintSet::computeConstantBound(
-    presburger::BoundType type, AffineMap map, ValueDimList operands,
-    StopConditionFn stopCondition, bool closedUB) {
-  assert(map.getNumResults() == 1 && "expected affine map with one result");
-  ValueBoundsConstraintSet cstr(map.getContext());
-  int64_t pos = cstr.insert(/*isSymbol=*/false);
-
-  // Add map and operands to the constraint set. Dimensions are converted to
-  // symbols. All operands are added to the worklist.
-  auto mapper = [&](std::pair<Value, std::optional<int64_t>> v) {
-    return cstr.getExpr(v.first, v.second);
-  };
-  SmallVector<AffineExpr> dimReplacements = llvm::to_vector(
-      llvm::map_range(ArrayRef(operands).take_front(map.getNumDims()), mapper));
-  SmallVector<AffineExpr> symReplacements = llvm::to_vector(
-      llvm::map_range(ArrayRef(operands).drop_front(map.getNumDims()), mapper));
-  cstr.addBound(
-      presburger::BoundType::EQ, pos,
-      map.getResult(0).replaceDimsAndSymbols(dimReplacements, symReplacements));
-
-  // Process the backward slice of `operands` (i.e., reverse use-def chain)
-  // until `stopCondition` is met.
-  if (stopCondition) {
-    cstr.processWorklist(stopCondition);
-  } else {
-    // No stop condition specified: Keep adding constraints until a bound could
-    // be computed.
-    cstr.processWorklist(
-        /*stopCondition=*/[&](Value v, std::optional<int64_t> dim) {
-          return cstr.cstr.getConstantBound64(type, pos).has_value();
-        });
-  }
-
-  // Compute constant bound for `valueDim`.
-  int64_t ubAdjustment = closedUB ? 0 : 1;
-  if (auto bound = cstr.cstr.getConstantBound64(type, pos))
-    return type == BoundType::UB ? *bound + ubAdjustment : *bound;
-  return failure();
-}
-
-FailureOr<int64_t> ValueBoundsConstraintSet::computeConstantBound(
     presburger::BoundType type, AffineMap map, ArrayRef<Value> operands,
     StopConditionFn stopCondition, bool closedUB) {
   ValueDimList valueDims;
@@ -520,6 +482,78 @@ FailureOr<int64_t> ValueBoundsConstraintSet::computeConstantBound(
     valueDims.emplace_back(v, std::nullopt);
   }
   return computeConstantBound(type, map, valueDims, stopCondition, closedUB);
+}
+
+FailureOr<int64_t> ValueBoundsConstraintSet::computeConstantBound(
+    presburger::BoundType type, AffineMap map, ValueDimList operands,
+    StopConditionFn stopCondition, bool closedUB) {
+  assert(map.getNumResults() == 1 && "expected affine map with one result");
+  ValueBoundsConstraintSet cstr(map.getContext());
+
+  int64_t pos = 0;
+  if (stopCondition) {
+    cstr.populateConstraintsSet(map, operands, stopCondition, &pos);
+  } else {
+    // No stop condition specified: Keep adding constraints until a bound could
+    // be computed.
+    cstr.populateConstraintsSet(
+        map, operands,
+        [&](Value v, std::optional<int64_t> dim) {
+          return cstr.cstr.getConstantBound64(type, pos).has_value();
+        },
+        &pos);
+  }
+  // Compute constant bound for `valueDim`.
+  int64_t ubAdjustment = closedUB ? 0 : 1;
+  if (auto bound = cstr.cstr.getConstantBound64(type, pos))
+    return type == BoundType::UB ? *bound + ubAdjustment : *bound;
+  return failure();
+}
+
+int64_t ValueBoundsConstraintSet::populateConstraintsSet(
+    Value value, std::optional<int64_t> dim, StopConditionFn stopCondition) {
+#ifndef NDEBUG
+  assertValidValueDim(value, dim);
+#endif // NDEBUG
+
+  AffineMap map =
+      AffineMap::get(/*dimCount=*/1, /*symbolCount=*/0,
+                     Builder(value.getContext()).getAffineDimExpr(0));
+  return populateConstraintsSet(map, {{value, dim}}, stopCondition);
+}
+
+int64_t ValueBoundsConstraintSet::populateConstraintsSet(
+    AffineMap map, ValueDimList operands, StopConditionFn stopCondition,
+    int64_t *posOut) {
+  assert(map.getNumResults() == 1 && "expected affine map with one result");
+  int64_t pos = insert(/*isSymbol=*/false);
+  if (posOut)
+    *posOut = pos;
+
+  // Add map and operands to the constraint set. Dimensions are converted to
+  // symbols. All operands are added to the worklist.
+  auto mapper = [&](std::pair<Value, std::optional<int64_t>> v) {
+    return getExpr(v.first, v.second);
+  };
+  SmallVector<AffineExpr> dimReplacements = llvm::to_vector(
+      llvm::map_range(ArrayRef(operands).take_front(map.getNumDims()), mapper));
+  SmallVector<AffineExpr> symReplacements = llvm::to_vector(
+      llvm::map_range(ArrayRef(operands).drop_front(map.getNumDims()), mapper));
+  addBound(
+      presburger::BoundType::EQ, pos,
+      map.getResult(0).replaceDimsAndSymbols(dimReplacements, symReplacements));
+
+  // Process the backward slice of `operands` (i.e., reverse use-def chain)
+  // until `stopCondition` is met.
+  if (stopCondition) {
+    processWorklist(stopCondition);
+  } else {
+    // No stop condition specified: Keep adding constraints until the worklist
+    // is empty.
+    processWorklist([](Value v, std::optional<int64_t> dim) { return false; });
+  }
+
+  return pos;
 }
 
 FailureOr<int64_t>

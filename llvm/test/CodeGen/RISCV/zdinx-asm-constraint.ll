@@ -4,21 +4,15 @@
 define dso_local void @zdinx_asm(ptr nocapture noundef writeonly %a, double noundef %b, double noundef %c) nounwind {
 ; CHECK-LABEL: zdinx_asm:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    addi sp, sp, -16
-; CHECK-NEXT:    sw a1, 8(sp)
-; CHECK-NEXT:    sw a2, 12(sp)
-; CHECK-NEXT:    lw a6, 8(sp)
-; CHECK-NEXT:    lw a7, 12(sp)
-; CHECK-NEXT:    sw a3, 8(sp)
-; CHECK-NEXT:    sw a4, 12(sp)
-; CHECK-NEXT:    lw a2, 8(sp)
-; CHECK-NEXT:    lw a3, 12(sp)
+; CHECK-NEXT:    mv a5, a4
+; CHECK-NEXT:    mv a7, a2
+; CHECK-NEXT:    mv a4, a3
+; CHECK-NEXT:    mv a6, a1
 ; CHECK-NEXT:    #APP
-; CHECK-NEXT:    fsgnjx.d a2, a6, a2
+; CHECK-NEXT:    fsgnjx.d a2, a6, a4
 ; CHECK-NEXT:    #NO_APP
 ; CHECK-NEXT:    sw a2, 8(a0)
 ; CHECK-NEXT:    sw a3, 12(a0)
-; CHECK-NEXT:    addi sp, sp, 16
 ; CHECK-NEXT:    ret
 entry:
   %arrayidx = getelementptr inbounds double, ptr %a, i32 1

@@ -352,6 +352,12 @@ def StdC : StandardSpec<"stdc"> {
           Macro<"INFINITY">,
           Macro<"NAN">,
 
+          Macro<"FP_INT_UPWARD">,
+          Macro<"FP_INT_DOWNWARD">,
+          Macro<"FP_INT_TOWARDZERO">,
+          Macro<"FP_INT_TONEARESTFROMZERO">,
+          Macro<"FP_INT_TONEAREST">,
+
           Macro<"FP_ILOGB0">,
           Macro<"FP_ILOGBNAN">,
 
@@ -400,6 +406,46 @@ def StdC : StandardSpec<"stdc"> {
           FunctionSpec<"fmaxf", RetValSpec<FloatType>, [ArgSpec<FloatType>, ArgSpec<FloatType>]>,
           FunctionSpec<"fmaxl", RetValSpec<LongDoubleType>, [ArgSpec<LongDoubleType>, ArgSpec<LongDoubleType>]>,
           GuardedFunctionSpec<"fmaxf128", RetValSpec<Float128Type>, [ArgSpec<Float128Type>, ArgSpec<Float128Type>], "LIBC_TYPES_HAS_FLOAT128">,
+	  
+	  FunctionSpec<"fmaximum", RetValSpec<DoubleType>, [ArgSpec<DoubleType>, ArgSpec<DoubleType>]>,
+          FunctionSpec<"fmaximumf", RetValSpec<FloatType>, [ArgSpec<FloatType>, ArgSpec<FloatType>]>,
+          FunctionSpec<"fmaximuml", RetValSpec<LongDoubleType>, [ArgSpec<LongDoubleType>, ArgSpec<LongDoubleType>]>,
+          GuardedFunctionSpec<"fmaximumf128", RetValSpec<Float128Type>, [ArgSpec<Float128Type>, ArgSpec<Float128Type>], "LIBC_TYPES_HAS_FLOAT128">,
+	  
+	  FunctionSpec<"fmaximum_num", RetValSpec<DoubleType>, [ArgSpec<DoubleType>, ArgSpec<DoubleType>]>,
+          FunctionSpec<"fmaximum_numf", RetValSpec<FloatType>, [ArgSpec<FloatType>, ArgSpec<FloatType>]>,
+          FunctionSpec<"fmaximum_numl", RetValSpec<LongDoubleType>, [ArgSpec<LongDoubleType>, ArgSpec<LongDoubleType>]>,
+          GuardedFunctionSpec<"fmaximum_numf128", RetValSpec<Float128Type>, [ArgSpec<Float128Type>, ArgSpec<Float128Type>], "LIBC_TYPES_HAS_FLOAT128">,
+	  
+	  FunctionSpec<"fmaximum_mag", RetValSpec<DoubleType>, [ArgSpec<DoubleType>, ArgSpec<DoubleType>]>,
+          FunctionSpec<"fmaximum_magf", RetValSpec<FloatType>, [ArgSpec<FloatType>, ArgSpec<FloatType>]>,
+          FunctionSpec<"fmaximum_magl", RetValSpec<LongDoubleType>, [ArgSpec<LongDoubleType>, ArgSpec<LongDoubleType>]>,
+          GuardedFunctionSpec<"fmaximum_magf128", RetValSpec<Float128Type>, [ArgSpec<Float128Type>, ArgSpec<Float128Type>], "LIBC_TYPES_HAS_FLOAT128">,
+	  
+	  FunctionSpec<"fmaximum_mag_num", RetValSpec<DoubleType>, [ArgSpec<DoubleType>, ArgSpec<DoubleType>]>,
+          FunctionSpec<"fmaximum_mag_numf", RetValSpec<FloatType>, [ArgSpec<FloatType>, ArgSpec<FloatType>]>,
+          FunctionSpec<"fmaximum_mag_numl", RetValSpec<LongDoubleType>, [ArgSpec<LongDoubleType>, ArgSpec<LongDoubleType>]>,
+          GuardedFunctionSpec<"fmaximum_mag_numf128", RetValSpec<Float128Type>, [ArgSpec<Float128Type>, ArgSpec<Float128Type>], "LIBC_TYPES_HAS_FLOAT128">,
+	  
+	  FunctionSpec<"fminimum", RetValSpec<DoubleType>, [ArgSpec<DoubleType>, ArgSpec<DoubleType>]>,
+          FunctionSpec<"fminimumf", RetValSpec<FloatType>, [ArgSpec<FloatType>, ArgSpec<FloatType>]>,
+          FunctionSpec<"fminimuml", RetValSpec<LongDoubleType>, [ArgSpec<LongDoubleType>, ArgSpec<LongDoubleType>]>,
+          GuardedFunctionSpec<"fminimumf128", RetValSpec<Float128Type>, [ArgSpec<Float128Type>, ArgSpec<Float128Type>], "LIBC_TYPES_HAS_FLOAT128">,
+	  
+	  FunctionSpec<"fminimum_num", RetValSpec<DoubleType>, [ArgSpec<DoubleType>, ArgSpec<DoubleType>]>,
+          FunctionSpec<"fminimum_numf", RetValSpec<FloatType>, [ArgSpec<FloatType>, ArgSpec<FloatType>]>,
+          FunctionSpec<"fmaximum_numl", RetValSpec<LongDoubleType>, [ArgSpec<LongDoubleType>, ArgSpec<LongDoubleType>]>,
+          GuardedFunctionSpec<"fminimum_numf128", RetValSpec<Float128Type>, [ArgSpec<Float128Type>, ArgSpec<Float128Type>], "LIBC_TYPES_HAS_FLOAT128">,
+	  
+	  FunctionSpec<"fminimum_mag", RetValSpec<DoubleType>, [ArgSpec<DoubleType>, ArgSpec<DoubleType>]>,
+          FunctionSpec<"fminimum_magf", RetValSpec<FloatType>, [ArgSpec<FloatType>, ArgSpec<FloatType>]>,
+          FunctionSpec<"fminimum_magl", RetValSpec<LongDoubleType>, [ArgSpec<LongDoubleType>, ArgSpec<LongDoubleType>]>,
+          GuardedFunctionSpec<"fminimum_magf128", RetValSpec<Float128Type>, [ArgSpec<Float128Type>, ArgSpec<Float128Type>], "LIBC_TYPES_HAS_FLOAT128">,
+	  
+	  FunctionSpec<"fminimum_mag_num", RetValSpec<DoubleType>, [ArgSpec<DoubleType>, ArgSpec<DoubleType>]>,
+          FunctionSpec<"fminimum_mag_numf", RetValSpec<FloatType>, [ArgSpec<FloatType>, ArgSpec<FloatType>]>,
+          FunctionSpec<"fminimum_mag_numl", RetValSpec<LongDoubleType>, [ArgSpec<LongDoubleType>, ArgSpec<LongDoubleType>]>,
+          GuardedFunctionSpec<"fminimum_mag_numf128", RetValSpec<Float128Type>, [ArgSpec<Float128Type>, ArgSpec<Float128Type>], "LIBC_TYPES_HAS_FLOAT128">,
 
           FunctionSpec<"fma", RetValSpec<DoubleType>, [ArgSpec<DoubleType>, ArgSpec<DoubleType>, ArgSpec<DoubleType>]>,
           FunctionSpec<"fmaf", RetValSpec<FloatType>, [ArgSpec<FloatType>, ArgSpec<FloatType>, ArgSpec<FloatType>]>,
@@ -413,6 +459,26 @@ def StdC : StandardSpec<"stdc"> {
           FunctionSpec<"frexpf", RetValSpec<FloatType>, [ArgSpec<FloatType>, ArgSpec<IntPtr>]>,
           FunctionSpec<"frexpl", RetValSpec<LongDoubleType>, [ArgSpec<LongDoubleType>, ArgSpec<IntPtr>]>,
           GuardedFunctionSpec<"frexpf128", RetValSpec<Float128Type>, [ArgSpec<Float128Type>, ArgSpec<IntPtr>], "LIBC_TYPES_HAS_FLOAT128">,
+
+          FunctionSpec<"fromfp", RetValSpec<DoubleType>, [ArgSpec<DoubleType>, ArgSpec<IntType>, ArgSpec<UnsignedIntType>]>,
+          FunctionSpec<"fromfpf", RetValSpec<FloatType>, [ArgSpec<FloatType>, ArgSpec<IntType>, ArgSpec<UnsignedIntType>]>,
+          FunctionSpec<"fromfpl", RetValSpec<LongDoubleType>, [ArgSpec<LongDoubleType>, ArgSpec<IntType>, ArgSpec<UnsignedIntType>]>,
+          GuardedFunctionSpec<"fromfpf128", RetValSpec<LongDoubleType>, [ArgSpec<LongDoubleType>, ArgSpec<IntType>, ArgSpec<UnsignedIntType>], "LIBC_TYPES_HAS_FLOAT128">,
+
+          FunctionSpec<"fromfpx", RetValSpec<DoubleType>, [ArgSpec<DoubleType>, ArgSpec<IntType>, ArgSpec<UnsignedIntType>]>,
+          FunctionSpec<"fromfpxf", RetValSpec<FloatType>, [ArgSpec<FloatType>, ArgSpec<IntType>, ArgSpec<UnsignedIntType>]>,
+          FunctionSpec<"fromfpxl", RetValSpec<LongDoubleType>, [ArgSpec<LongDoubleType>, ArgSpec<IntType>, ArgSpec<UnsignedIntType>]>,
+          GuardedFunctionSpec<"fromfpxf128", RetValSpec<LongDoubleType>, [ArgSpec<LongDoubleType>, ArgSpec<IntType>, ArgSpec<UnsignedIntType>], "LIBC_TYPES_HAS_FLOAT128">,
+
+          FunctionSpec<"ufromfp", RetValSpec<DoubleType>, [ArgSpec<DoubleType>, ArgSpec<IntType>, ArgSpec<UnsignedIntType>]>,
+          FunctionSpec<"ufromfpf", RetValSpec<FloatType>, [ArgSpec<FloatType>, ArgSpec<IntType>, ArgSpec<UnsignedIntType>]>,
+          FunctionSpec<"ufromfpl", RetValSpec<LongDoubleType>, [ArgSpec<LongDoubleType>, ArgSpec<IntType>, ArgSpec<UnsignedIntType>]>,
+          GuardedFunctionSpec<"ufromfpf128", RetValSpec<LongDoubleType>, [ArgSpec<LongDoubleType>, ArgSpec<IntType>, ArgSpec<UnsignedIntType>], "LIBC_TYPES_HAS_FLOAT128">,
+
+          FunctionSpec<"ufromfpx", RetValSpec<DoubleType>, [ArgSpec<DoubleType>, ArgSpec<IntType>, ArgSpec<UnsignedIntType>]>,
+          FunctionSpec<"ufromfpxf", RetValSpec<FloatType>, [ArgSpec<FloatType>, ArgSpec<IntType>, ArgSpec<UnsignedIntType>]>,
+          FunctionSpec<"ufromfpxl", RetValSpec<LongDoubleType>, [ArgSpec<LongDoubleType>, ArgSpec<IntType>, ArgSpec<UnsignedIntType>]>,
+          GuardedFunctionSpec<"ufromfpxf128", RetValSpec<LongDoubleType>, [ArgSpec<LongDoubleType>, ArgSpec<IntType>, ArgSpec<UnsignedIntType>], "LIBC_TYPES_HAS_FLOAT128">,
 
           FunctionSpec<"hypot", RetValSpec<DoubleType>, [ArgSpec<DoubleType>, ArgSpec<DoubleType>]>,
           FunctionSpec<"hypotf", RetValSpec<FloatType>, [ArgSpec<FloatType>, ArgSpec<FloatType>]>,
@@ -707,6 +773,11 @@ def StdC : StandardSpec<"stdc"> {
               [ArgSpec<ConstCharPtr>]
           >,
           FunctionSpec<
+              "rename",
+              RetValSpec<IntType>,
+              [ArgSpec<ConstCharPtr>, ArgSpec<ConstCharPtr>]
+          >,
+          FunctionSpec<
               "setbuf",
               RetValSpec<VoidType>,
               [ArgSpec<FILERestrictedPtr>, ArgSpec<CharRestrictedPtr>]
@@ -955,6 +1026,10 @@ def StdC : StandardSpec<"stdc"> {
 
           FunctionSpec<"rand", RetValSpec<IntType>, [ArgSpec<VoidType>]>,
           FunctionSpec<"srand", RetValSpec<VoidType>, [ArgSpec<UnsignedIntType>]>,
+
+          FunctionSpec<"strfromf", RetValSpec<IntType>, [ArgSpec<CharRestrictedPtr>, ArgSpec<SizeTType>, ArgSpec<ConstCharRestrictedPtr>, ArgSpec<FloatType>]>,
+          FunctionSpec<"strfromd", RetValSpec<IntType>, [ArgSpec<CharRestrictedPtr>, ArgSpec<SizeTType>, ArgSpec<ConstCharRestrictedPtr>, ArgSpec<DoubleType>]>,
+          FunctionSpec<"strfroml", RetValSpec<IntType>, [ArgSpec<CharRestrictedPtr>, ArgSpec<SizeTType>, ArgSpec<ConstCharRestrictedPtr>, ArgSpec<LongDoubleType>]>,
 
           FunctionSpec<"strtof", RetValSpec<FloatType>, [ArgSpec<ConstCharRestrictedPtr>, ArgSpec<CharRestrictedPtrPtr>]>,
           FunctionSpec<"strtod", RetValSpec<DoubleType>, [ArgSpec<ConstCharRestrictedPtr>, ArgSpec<CharRestrictedPtrPtr>]>,

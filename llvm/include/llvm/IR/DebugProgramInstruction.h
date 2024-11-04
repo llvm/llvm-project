@@ -16,22 +16,22 @@
 //
 // and all information is stored in the Value / Metadata hierachy defined
 // elsewhere in LLVM. In the "DbgRecord" design, each instruction /may/ have a
-// connection with a DPMarker, which identifies a position immediately before
-// the instruction, and each DPMarker /may/ then have connections to DbgRecords
+// connection with a DbgMarker, which identifies a position immediately before
+// the instruction, and each DbgMarker /may/ then have connections to DbgRecords
 // which record the variable assignment information. To illustrate:
 //
 //    %foo = add i32 1, %0
-//       ; foo->DbgMarker == nullptr
+//       ; foo->DebugMarker == nullptr
 //       ;; There are no variable assignments / debug records "in front" of
-//       ;; the instruction for %foo, therefore it has no DbgMarker.
+//       ;; the instruction for %foo, therefore it has no DebugMarker.
 //    %bar = void call @ext(%foo)
-//       ; bar->DbgMarker = {
+//       ; bar->DebugMarker = {
 //       ;   StoredDbgRecords = {
 //       ;     DbgVariableRecord(metadata i32 %foo, ...)
 //       ;   }
 //       ; }
 //       ;; There is a debug-info record in front of the %bar instruction,
-//       ;; thus it points at a DPMarker object. That DPMarker contains a
+//       ;; thus it points at a DbgMarker object. That DbgMarker contains a
 //       ;; DbgVariableRecord in it's ilist, storing the equivalent information
 //       to the
 //       ;; dbg.value above: the Value, DILocalVariable, etc.
@@ -66,7 +66,7 @@ class DbgVariableIntrinsic;
 class DbgInfoIntrinsic;
 class DbgLabelInst;
 class DIAssignID;
-class DPMarker;
+class DbgMarker;
 class DbgVariableRecord;
 class raw_ostream;
 
@@ -120,7 +120,7 @@ public:
 /// Base class for non-instruction debug metadata records that have positions
 /// within IR. Features various methods copied across from the Instruction
 /// class to aid ease-of-use. DbgRecords should always be linked into a
-/// DPMarker's StoredDbgRecords list. The marker connects a DbgRecord back to
+/// DbgMarker's StoredDbgRecords list. The marker connects a DbgRecord back to
 /// it's position in the BasicBlock.
 ///
 /// We need a discriminator for dyn/isa casts. In order to avoid paying for a
@@ -134,7 +134,7 @@ public:
 class DbgRecord : public ilist_node<DbgRecord> {
 public:
   /// Marker that this DbgRecord is linked into.
-  DPMarker *Marker = nullptr;
+  DbgMarker *Marker = nullptr;
   /// Subclass discriminator.
   enum Kind : uint8_t { ValueKind, LabelKind };
 
@@ -166,10 +166,10 @@ public:
 
   Kind getRecordKind() const { return RecordKind; }
 
-  void setMarker(DPMarker *M) { Marker = M; }
+  void setMarker(DbgMarker *M) { Marker = M; }
 
-  DPMarker *getMarker() { return Marker; }
-  const DPMarker *getMarker() const { return Marker; }
+  DbgMarker *getMarker() { return Marker; }
+  const DbgMarker *getMarker() const { return Marker; }
 
   BasicBlock *getBlock();
   const BasicBlock *getBlock() const;
@@ -220,8 +220,6 @@ inline raw_ostream &operator<<(raw_ostream &OS, const DbgRecord &R) {
 
 /// Records a position in IR for a source label (DILabel). Corresponds to the
 /// llvm.dbg.label intrinsic.
-/// FIXME: Rename DbgLabelRecord when DbgVariableRecord is renamed to
-/// DbgVariableRecord.
 class DbgLabelRecord : public DbgRecord {
   DbgRecordParamRef<DILabel> Label;
 
@@ -539,7 +537,7 @@ filterDbgVars(iterator_range<simple_ilist<DbgRecord>::iterator> R) {
 }
 
 /// Per-instruction record of debug-info. If an Instruction is the position of
-/// some debugging information, it points at a DPMarker storing that info. Each
+/// some debugging information, it points at a DbgMarker storing that info. Each
 /// marker points back at the instruction that owns it. Various utilities are
 /// provided for manipulating the DbgRecords contained within this marker.
 ///
@@ -559,9 +557,9 @@ filterDbgVars(iterator_range<simple_ilist<DbgRecord>::iterator> R) {
 /// which we can improve in the future. Additionally, many improvements in the
 /// way that debug-info is stored can be achieved in this class, at a future
 /// date.
-class DPMarker {
+class DbgMarker {
 public:
-  DPMarker() {}
+  DbgMarker() {}
   /// Link back to the Instruction that owns this marker. Can be null during
   /// operations that move a marker from one instruction to another.
   Instruction *MarkedInstr = nullptr;
@@ -585,7 +583,7 @@ public:
   void removeFromParent();
   void eraseFromParent();
 
-  /// Implement operator<< on DPMarker.
+  /// Implement operator<< on DbgMarker.
   void print(raw_ostream &O, bool IsForDebug = false) const;
   void print(raw_ostream &ROS, ModuleSlotTracker &MST, bool IsForDebug) const;
 
@@ -593,22 +591,23 @@ public:
   iterator_range<simple_ilist<DbgRecord>::iterator> getDbgRecordRange();
   iterator_range<simple_ilist<DbgRecord>::const_iterator>
   getDbgRecordRange() const;
-  /// Transfer any DbgRecords from \p Src into this DPMarker. If \p InsertAtHead
-  /// is true, place them before existing DbgRecords, otherwise afterwards.
-  void absorbDebugValues(DPMarker &Src, bool InsertAtHead);
-  /// Transfer the DbgRecords in \p Range from \p Src into this DPMarker. If
+  /// Transfer any DbgRecords from \p Src into this DbgMarker. If \p
+  /// InsertAtHead is true, place them before existing DbgRecords, otherwise
+  /// afterwards.
+  void absorbDebugValues(DbgMarker &Src, bool InsertAtHead);
+  /// Transfer the DbgRecords in \p Range from \p Src into this DbgMarker. If
   /// \p InsertAtHead is true, place them before existing DbgRecords, otherwise
   // afterwards.
   void absorbDebugValues(iterator_range<DbgRecord::self_iterator> Range,
-                         DPMarker &Src, bool InsertAtHead);
-  /// Insert a DbgRecord into this DPMarker, at the end of the list. If
+                         DbgMarker &Src, bool InsertAtHead);
+  /// Insert a DbgRecord into this DbgMarker, at the end of the list. If
   /// \p InsertAtHead is true, at the start.
   void insertDbgRecord(DbgRecord *New, bool InsertAtHead);
   /// Insert a DbgRecord prior to a DbgRecord contained within this marker.
   void insertDbgRecord(DbgRecord *New, DbgRecord *InsertBefore);
   /// Insert a DbgRecord after a DbgRecord contained within this marker.
   void insertDbgRecordAfter(DbgRecord *New, DbgRecord *InsertAfter);
-  /// Clone all DPMarkers from \p From into this marker. There are numerous
+  /// Clone all DbgMarkers from \p From into this marker. There are numerous
   /// options to customise the source/destination, due to gnarliness, see class
   /// comment.
   /// \p FromHere If non-null, copy from FromHere to the end of From's
@@ -617,10 +616,10 @@ public:
   /// StoredDbgRecords
   /// \returns Range over all the newly cloned DbgRecords
   iterator_range<simple_ilist<DbgRecord>::iterator>
-  cloneDebugInfoFrom(DPMarker *From,
+  cloneDebugInfoFrom(DbgMarker *From,
                      std::optional<simple_ilist<DbgRecord>::iterator> FromHere,
                      bool InsertAtHead = false);
-  /// Erase all DbgRecords in this DPMarker.
+  /// Erase all DbgRecords in this DbgMarker.
   void dropDbgRecords();
   /// Erase a single DbgRecord from this marker. In an ideal future, we would
   /// never erase an assignment in this way, but it's the equivalent to
@@ -628,34 +627,34 @@ public:
   void dropOneDbgRecord(DbgRecord *DR);
 
   /// We generally act like all llvm Instructions have a range of DbgRecords
-  /// attached to them, but in reality sometimes we don't allocate the DPMarker
+  /// attached to them, but in reality sometimes we don't allocate the DbgMarker
   /// to save time and memory, but still have to return ranges of DbgRecords.
   /// When we need to describe such an unallocated DbgRecord range, use this
   /// static markers range instead. This will bite us if someone tries to insert
   /// a DbgRecord in that range, but they should be using the Official (TM) API
   /// for that.
-  static DPMarker EmptyDPMarker;
+  static DbgMarker EmptyDbgMarker;
   static iterator_range<simple_ilist<DbgRecord>::iterator>
   getEmptyDbgRecordRange() {
-    return make_range(EmptyDPMarker.StoredDbgRecords.end(),
-                      EmptyDPMarker.StoredDbgRecords.end());
+    return make_range(EmptyDbgMarker.StoredDbgRecords.end(),
+                      EmptyDbgMarker.StoredDbgRecords.end());
   }
 };
 
-inline raw_ostream &operator<<(raw_ostream &OS, const DPMarker &Marker) {
+inline raw_ostream &operator<<(raw_ostream &OS, const DbgMarker &Marker) {
   Marker.print(OS);
   return OS;
 }
 
 /// Inline helper to return a range of DbgRecords attached to a marker. It needs
 /// to be inlined as it's frequently called, but also come after the declaration
-/// of DPMarker. Thus: it's pre-declared by users like Instruction, then an
+/// of DbgMarker. Thus: it's pre-declared by users like Instruction, then an
 /// inlineable body defined here.
 inline iterator_range<simple_ilist<DbgRecord>::iterator>
-getDbgRecordRange(DPMarker *DbgMarker) {
-  if (!DbgMarker)
-    return DPMarker::getEmptyDbgRecordRange();
-  return DbgMarker->getDbgRecordRange();
+getDbgRecordRange(DbgMarker *DebugMarker) {
+  if (!DebugMarker)
+    return DbgMarker::getEmptyDbgRecordRange();
+  return DebugMarker->getDbgRecordRange();
 }
 
 DEFINE_ISA_CONVERSION_FUNCTIONS(DbgRecord, LLVMDbgRecordRef)

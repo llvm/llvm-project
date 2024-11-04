@@ -1,7 +1,8 @@
 // RUN: mlir-opt -split-input-file -transform-interpreter %s | FileCheck %s
 
 module attributes {transform.with_named_sequence} {
-  transform.named_sequence @__transform_main(%func_op: !transform.op<"func.func"> {transform.readonly}) {
+  transform.named_sequence @__transform_main(%root : !transform.any_op {transform.readonly}) {
+    %func_op = transform.structured.match ops{["func.func"]} in %root : (!transform.any_op) -> !transform.op<"func.func">
     transform.apply_patterns to %func_op {
       transform.apply_patterns.tensor.rewrite_as_constant
     } : !transform.op<"func.func">

@@ -220,7 +220,7 @@ LogicalResult mlir::scf::peelForLoopFirstIteration(RewriterBase &b, ForOp forOp,
   auto stepInt = getConstantIntValue(forOp.getStep());
 
   // Peeling is not needed if there is one or less iteration.
-  if (lbInt && ubInt && stepInt && (*ubInt - *lbInt) / *stepInt <= 1)
+  if (lbInt && ubInt && stepInt && ceil(float(*ubInt - *lbInt) / *stepInt) <= 1)
     return failure();
 
   AffineExpr lbSymbol, stepSymbol;

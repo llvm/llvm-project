@@ -318,6 +318,7 @@ struct MUBUFInfo {
   bool has_srsrc;
   bool has_soffset;
   bool IsBufferInv;
+  bool tfe;
 };
 
 struct MTBUFInfo {
@@ -464,6 +465,11 @@ bool getMUBUFHasSoffset(unsigned Opc) {
 bool getMUBUFIsBufferInv(unsigned Opc) {
   const MUBUFInfo *Info = getMUBUFOpcodeHelper(Opc);
   return Info ? Info->IsBufferInv : false;
+}
+
+bool getMUBUFTfe(unsigned Opc) {
+  const MUBUFInfo *Info = getMUBUFOpcodeHelper(Opc);
+  return Info ? Info->tfe : false;
 }
 
 bool getSMEMIsBuffer(unsigned Opc) {
@@ -1081,7 +1087,7 @@ unsigned getVGPRAllocGranule(const MCSubtargetInfo *STI,
       *EnableWavefrontSize32 :
       STI->getFeatureBits().test(FeatureWavefrontSize32);
 
-  if (STI->getFeatureBits().test(FeatureGFX11FullVGPRs))
+  if (STI->getFeatureBits().test(Feature1_5xVGPRs))
     return IsWave32 ? 24 : 12;
 
   if (hasGFX10_3Insts(*STI))
@@ -1108,7 +1114,7 @@ unsigned getTotalNumVGPRs(const MCSubtargetInfo *STI) {
   if (!isGFX10Plus(*STI))
     return 256;
   bool IsWave32 = STI->getFeatureBits().test(FeatureWavefrontSize32);
-  if (STI->getFeatureBits().test(FeatureGFX11FullVGPRs))
+  if (STI->getFeatureBits().test(Feature1_5xVGPRs))
     return IsWave32 ? 1536 : 768;
   return IsWave32 ? 1024 : 512;
 }

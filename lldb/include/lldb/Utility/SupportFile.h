@@ -45,6 +45,9 @@ public:
   /// Materialize the file to disk and return the path to that temporary file.
   virtual const FileSpec &Materialize() { return m_file_spec; }
 
+  /// Change the file name.
+  void Update(const FileSpec &file_spec) { m_file_spec = file_spec; }
+
 protected:
   FileSpec m_file_spec;
   Checksum m_checksum;

@@ -12,6 +12,7 @@
 #define FORTRAN_RUNTIME_LOCK_H_
 
 #include "terminator.h"
+#include "tools.h"
 
 // Avoid <mutex> if possible to avoid introduction of C++ runtime
 // library dependence.
@@ -35,7 +36,17 @@ namespace Fortran::runtime {
 
 class Lock {
 public:
-#if USE_PTHREADS
+#if RT_USE_PSEUDO_LOCK
+  // No lock implementation, e.g. for using together
+  // with RT_USE_PSEUDO_FILE_UNIT.
+  // The users of Lock class may use it under
+  // USE_PTHREADS and otherwise, so it has to provide
+  // all the interfaces.
+  RT_API_ATTRS void Take() {}
+  RT_API_ATTRS bool Try() { return true; }
+  RT_API_ATTRS void Drop() {}
+  RT_API_ATTRS bool TakeIfNoDeadlock() { return true; }
+#elif USE_PTHREADS
   Lock() { pthread_mutex_init(&mutex_, nullptr); }
   ~Lock() { pthread_mutex_destroy(&mutex_); }
   void Take() {
@@ -79,7 +90,9 @@ public:
   }
 
 private:
-#if USE_PTHREADS
+#if RT_USE_PSEUDO_FILE_UNIT
+  // No state.
+#elif USE_PTHREADS
   pthread_mutex_t mutex_{};
   volatile bool isBusy_{false};
   volatile pthread_t holder_;
@@ -92,8 +105,10 @@ private:
 
 class CriticalSection {
 public:
-  explicit CriticalSection(Lock &lock) : lock_{lock} { lock_.Take(); }
-  ~CriticalSection() { lock_.Drop(); }
+  explicit RT_API_ATTRS CriticalSection(Lock &lock) : lock_{lock} {
+    lock_.Take();
+  }
+  RT_API_ATTRS ~CriticalSection() { lock_.Drop(); }
 
 private:
   Lock &lock_;

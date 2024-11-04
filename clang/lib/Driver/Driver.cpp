@@ -6203,28 +6203,35 @@ std::string Driver::GetStdModuleManifestPath(const Compilation &C,
 
   switch (TC.GetCXXStdlibType(C.getArgs())) {
   case ToolChain::CST_Libcxx: {
-    std::string lib = GetFilePath("libc++.so", TC);
+    auto evaluate = [&](const char *library) -> std::optional<std::string> {
+      std::string lib = GetFilePath(library, TC);
 
-    // Note when there are multiple flavours of libc++ the module json needs to
-    // look at the command-line arguments for the proper json.
-    // These flavours do not exist at the moment, but there are plans to
-    // provide a variant that is built with sanitizer instrumentation enabled.
+      // Note when there are multiple flavours of libc++ the module json needs
+      // to look at the command-line arguments for the proper json. These
+      // flavours do not exist at the moment, but there are plans to provide a
+      // variant that is built with sanitizer instrumentation enabled.
 
-    // For example
-    //  StringRef modules = [&] {
-    //    const SanitizerArgs &Sanitize = TC.getSanitizerArgs(C.getArgs());
-    //    if (Sanitize.needsAsanRt())
-    //      return "modules-asan.json";
-    //    return "modules.json";
-    //  }();
+      // For example
+      //  StringRef modules = [&] {
+      //    const SanitizerArgs &Sanitize = TC.getSanitizerArgs(C.getArgs());
+      //    if (Sanitize.needsAsanRt())
+      //      return "libc++.modules-asan.json";
+      //    return "libc++.modules.json";
+      //  }();
 
-    SmallString<128> path(lib.begin(), lib.end());
-    llvm::sys::path::remove_filename(path);
-    llvm::sys::path::append(path, "modules.json");
-    if (TC.getVFS().exists(path))
-      return static_cast<std::string>(path);
+      SmallString<128> path(lib.begin(), lib.end());
+      llvm::sys::path::remove_filename(path);
+      llvm::sys::path::append(path, "libc++.modules.json");
+      if (TC.getVFS().exists(path))
+        return static_cast<std::string>(path);
 
-    return error;
+      return {};
+    };
+
+    if (std::optional<std::string> result = evaluate("libc++.so"); result)
+      return *result;
+
+    return evaluate("libc++.a").value_or(error);
   }
 
   case ToolChain::CST_Libstdcxx:

@@ -463,6 +463,13 @@ private:
   /// Dump data structures into a file readable by llvm-bolt
   std::error_code writeAggregatedFile(StringRef OutputFilename) const;
 
+  /// Dump translated data structures into YAML
+  std::error_code writeBATYAML(BinaryContext &BC,
+                               StringRef OutputFilename) const;
+
+  /// Fixup profile collected on BOLTed binary, namely handle split functions.
+  void fixupBATProfile(BinaryContext &BC);
+
   /// Filter out binaries based on PID
   void filterBinaryMMapInfo();
 

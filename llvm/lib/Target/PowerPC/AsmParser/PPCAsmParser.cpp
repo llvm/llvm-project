@@ -276,9 +276,11 @@ public:
     return TLSReg.Sym;
   }
 
-  unsigned getReg() const override {
+  MCRegister getReg() const override { llvm_unreachable("Not implemented"); }
+
+  unsigned getRegNum() const {
     assert(isRegNumber() && "Invalid access!");
-    return (unsigned) Imm.Val;
+    return (unsigned)Imm.Val;
   }
 
   unsigned getFpReg() const {
@@ -459,22 +461,22 @@ public:
 
   void addRegGPRCOperands(MCInst &Inst, unsigned N) const {
     assert(N == 1 && "Invalid number of operands!");
-    Inst.addOperand(MCOperand::createReg(RRegs[getReg()]));
+    Inst.addOperand(MCOperand::createReg(RRegs[getRegNum()]));
   }
 
   void addRegGPRCNoR0Operands(MCInst &Inst, unsigned N) const {
     assert(N == 1 && "Invalid number of operands!");
-    Inst.addOperand(MCOperand::createReg(RRegsNoR0[getReg()]));
+    Inst.addOperand(MCOperand::createReg(RRegsNoR0[getRegNum()]));
   }
 
   void addRegG8RCOperands(MCInst &Inst, unsigned N) const {
     assert(N == 1 && "Invalid number of operands!");
-    Inst.addOperand(MCOperand::createReg(XRegs[getReg()]));
+    Inst.addOperand(MCOperand::createReg(XRegs[getRegNum()]));
   }
 
   void addRegG8RCNoX0Operands(MCInst &Inst, unsigned N) const {
     assert(N == 1 && "Invalid number of operands!");
-    Inst.addOperand(MCOperand::createReg(XRegsNoX0[getReg()]));
+    Inst.addOperand(MCOperand::createReg(XRegsNoX0[getRegNum()]));
   }
 
   void addRegG8pRCOperands(MCInst &Inst, unsigned N) const {
@@ -498,12 +500,12 @@ public:
 
   void addRegF4RCOperands(MCInst &Inst, unsigned N) const {
     assert(N == 1 && "Invalid number of operands!");
-    Inst.addOperand(MCOperand::createReg(FRegs[getReg()]));
+    Inst.addOperand(MCOperand::createReg(FRegs[getRegNum()]));
   }
 
   void addRegF8RCOperands(MCInst &Inst, unsigned N) const {
     assert(N == 1 && "Invalid number of operands!");
-    Inst.addOperand(MCOperand::createReg(FRegs[getReg()]));
+    Inst.addOperand(MCOperand::createReg(FRegs[getRegNum()]));
   }
 
   void addRegFpRCOperands(MCInst &Inst, unsigned N) const {
@@ -513,12 +515,12 @@ public:
 
   void addRegVFRCOperands(MCInst &Inst, unsigned N) const {
     assert(N == 1 && "Invalid number of operands!");
-    Inst.addOperand(MCOperand::createReg(VFRegs[getReg()]));
+    Inst.addOperand(MCOperand::createReg(VFRegs[getRegNum()]));
   }
 
   void addRegVRRCOperands(MCInst &Inst, unsigned N) const {
     assert(N == 1 && "Invalid number of operands!");
-    Inst.addOperand(MCOperand::createReg(VRegs[getReg()]));
+    Inst.addOperand(MCOperand::createReg(VRegs[getRegNum()]));
   }
 
   void addRegVSRCOperands(MCInst &Inst, unsigned N) const {
@@ -538,12 +540,12 @@ public:
 
   void addRegSPE4RCOperands(MCInst &Inst, unsigned N) const {
     assert(N == 1 && "Invalid number of operands!");
-    Inst.addOperand(MCOperand::createReg(RRegs[getReg()]));
+    Inst.addOperand(MCOperand::createReg(RRegs[getRegNum()]));
   }
 
   void addRegSPERCOperands(MCInst &Inst, unsigned N) const {
     assert(N == 1 && "Invalid number of operands!");
-    Inst.addOperand(MCOperand::createReg(SPERegs[getReg()]));
+    Inst.addOperand(MCOperand::createReg(SPERegs[getRegNum()]));
   }
 
   void addRegACCRCOperands(MCInst &Inst, unsigned N) const {

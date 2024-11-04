@@ -611,25 +611,6 @@ bool TargetLowering::ShrinkDemandedOp(SDValue Op, unsigned BitWidth,
   return false;
 }
 
-static SDValue simplifyUseOfIntToFP(SDValue Op, const APInt &DemandedBits,
-                                    SelectionDAG &DAG) {
-  unsigned Opc = Op.getOpcode();
-  assert((Opc == ISD::SINT_TO_FP || Opc == ISD::UINT_TO_FP) &&
-         "Invalid Int -> FP Opcode");
-  if (!DemandedBits.isSignMask())
-    return SDValue();
-
-  EVT VT = Op.getValueType();
-  if (Opc == ISD::UINT_TO_FP)
-    return DAG.getConstant(0, SDLoc(Op), VT);
-
-  EVT InnerVT = Op.getOperand(0).getValueType();
-  if (VT.getScalarSizeInBits() == InnerVT.getScalarSizeInBits())
-    return DAG.getBitcast(VT, Op.getOperand(0));
-
-  return SDValue();
-}
-
 bool TargetLowering::SimplifyDemandedBits(SDValue Op, const APInt &DemandedBits,
                                           DAGCombinerInfo &DCI) const {
   SelectionDAG &DAG = DCI.DAG;
@@ -835,11 +816,6 @@ SDValue TargetLowering::SimplifyMultipleUseDemandedBits(
     }
     break;
   }
-  case ISD::UINT_TO_FP:
-  case ISD::SINT_TO_FP:
-    if (SDValue R = simplifyUseOfIntToFP(Op, DemandedBits, DAG))
-      return R;
-    break;
   case ISD::SIGN_EXTEND_INREG: {
     // If none of the extended bits are demanded, eliminate the sextinreg.
     SDValue Op0 = Op.getOperand(0);
@@ -2337,12 +2313,6 @@ bool TargetLowering::SimplifyDemandedBits(
     Known = TLO.DAG.computeKnownBits(Op, DemandedElts, Depth);
     break;
   }
-  case ISD::UINT_TO_FP:
-  case ISD::SINT_TO_FP:
-    if (SDValue R = simplifyUseOfIntToFP(Op, DemandedBits, TLO.DAG))
-      return TLO.CombineTo(Op, R);
-    Known = TLO.DAG.computeKnownBits(Op, DemandedElts, Depth);
-    break;
   case ISD::SIGN_EXTEND_INREG: {
     SDValue Op0 = Op.getOperand(0);
     EVT ExVT = cast<VTSDNode>(Op.getOperand(1))->getVT();
@@ -3816,7 +3786,15 @@ bool TargetLowering::isGuaranteedNotToBeUndefOrPoisonForTargetNode(
        Op.getOpcode() == ISD::INTRINSIC_VOID) &&
       "Should use isGuaranteedNotToBeUndefOrPoison if you don't know whether Op"
       " is a target node!");
-  return false;
+
+  // If Op can't create undef/poison and none of its operands are undef/poison
+  // then Op is never undef/poison.
+  return !canCreateUndefOrPoisonForTargetNode(Op, DemandedElts, DAG, PoisonOnly,
+                                              /*ConsiderFlags*/ true, Depth) &&
+         all_of(Op->ops(), [&](SDValue V) {
+           return DAG.isGuaranteedNotToBeUndefOrPoison(V, PoisonOnly,
+                                                       Depth + 1);
+         });
 }
 
 bool TargetLowering::canCreateUndefOrPoisonForTargetNode(
@@ -6938,6 +6916,11 @@ TargetLowering::prepareSREMEqFold(EVT SETCCVT, SDValue REMNode,
     // Q = floor((2 * A) / (2^K))
     APInt Q = (2 * A).udiv(APInt::getOneBitSet(W, K));
 
+    assert(APInt::getAllOnes(SVT.getSizeInBits()).ugt(A) &&
+           "We are expecting that A is always less than all-ones for SVT");
+    assert(APInt::getAllOnes(ShSVT.getSizeInBits()).ugt(K) &&
+           "We are expecting that K is always less than all-ones for ShSVT");
+
     // If D was a power of two, apply the alternate constant derivation.
     if (D0.isOne()) {
       // A = 2^(W-1)
@@ -6945,11 +6928,6 @@ TargetLowering::prepareSREMEqFold(EVT SETCCVT, SDValue REMNode,
       // - Q = 2^(W-K) - 1
       Q = APInt::getAllOnes(W - K).zext(W);
     }
-
-    assert(APInt::getAllOnes(SVT.getSizeInBits()).ugt(A) &&
-           "We are expecting that A is always less than all-ones for SVT");
-    assert(APInt::getAllOnes(ShSVT.getSizeInBits()).ugt(K) &&
-           "We are expecting that K is always less than all-ones for ShSVT");
 
     // If the divisor is 1 the result can be constant-folded. Likewise, we
     // don't care about INT_MIN lanes, those can be set to undef if appropriate.

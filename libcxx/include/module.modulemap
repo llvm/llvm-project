@@ -697,7 +697,10 @@ module std_private_algorithm_minmax                                      [system
   export *
 }
 module std_private_algorithm_minmax_element                              [system] { header "__algorithm/minmax_element.h" }
-module std_private_algorithm_mismatch                                    [system] { header "__algorithm/mismatch.h" }
+module std_private_algorithm_mismatch                                    [system] {
+  header "__algorithm/mismatch.h"
+  export std_private_algorithm_simd_utils
+}
 module std_private_algorithm_move                                        [system] { header "__algorithm/move.h" }
 module std_private_algorithm_move_backward                               [system] { header "__algorithm/move_backward.h" }
 module std_private_algorithm_next_permutation                            [system] { header "__algorithm/next_permutation.h" }
@@ -1048,6 +1051,7 @@ module std_private_algorithm_sort                                        [system
   header "__algorithm/sort.h"
   export std_private_debug_utils_strict_weak_ordering_check
 }
+module std_private_algorithm_simd_utils                                  [system] { header "__algorithm/simd_utils.h" }
 module std_private_algorithm_sort_heap                                   [system] { header "__algorithm/sort_heap.h" }
 module std_private_algorithm_stable_partition                            [system] { header "__algorithm/stable_partition.h" }
 module std_private_algorithm_stable_sort                                 [system] { header "__algorithm/stable_sort.h" }

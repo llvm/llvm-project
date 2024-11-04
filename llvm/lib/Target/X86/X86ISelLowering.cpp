@@ -21512,7 +21512,9 @@ SDValue X86TargetLowering::LowerFP_ROUND(SDValue Op, SelectionDAG &DAG) const {
   }
 
   if (VT.getScalarType() == MVT::bf16) {
-    if (SVT.getScalarType() == MVT::f32 && isTypeLegal(VT))
+    if (SVT.getScalarType() == MVT::f32 &&
+        ((Subtarget.hasBF16() && Subtarget.hasVLX()) ||
+         Subtarget.hasAVXNECONVERT()))
       return Op;
     return SDValue();
   }
@@ -21619,7 +21621,8 @@ SDValue X86TargetLowering::LowerFP_TO_BF16(SDValue Op,
   SDLoc DL(Op);
 
   MVT SVT = Op.getOperand(0).getSimpleValueType();
-  if (SVT == MVT::f32 && (Subtarget.hasBF16() || Subtarget.hasAVXNECONVERT())) {
+  if (SVT == MVT::f32 && ((Subtarget.hasBF16() && Subtarget.hasVLX()) ||
+                          Subtarget.hasAVXNECONVERT())) {
     SDValue Res;
     Res = DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, MVT::v4f32, Op.getOperand(0));
     Res = DAG.getNode(X86ISD::CVTNEPS2BF16, DL, MVT::v8bf16, Res);

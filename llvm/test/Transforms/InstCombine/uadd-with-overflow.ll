@@ -124,3 +124,26 @@ define { i32, i1 } @no_fold_wrapped_add(i32 %x) {
   %b = tail call { i32, i1 } @llvm.uadd.with.overflow.i32(i32 30, i32 %a)
   ret { i32, i1 } %b
 }
+
+
+define { <2 x i32>, <2 x i1> } @fold_simple_splat_with_disjoint_or_constant(<2 x i32> %x) {
+; CHECK-LABEL: @fold_simple_splat_with_disjoint_or_constant(
+; CHECK-NEXT:    [[B:%.*]] = call { <2 x i32>, <2 x i1> } @llvm.uadd.with.overflow.v2i32(<2 x i32> [[X:%.*]], <2 x i32> <i32 42, i32 42>)
+; CHECK-NEXT:    ret { <2 x i32>, <2 x i1> } [[B]]
+;
+  %a = or disjoint <2 x i32> %x, <i32 12, i32 12>
+  %b = tail call { <2 x i32>, <2 x i1> } @llvm.uadd.with.overflow.v2i32(<2 x i32> %a, <2 x i32> <i32 30, i32 30>)
+  ret { <2 x i32>, <2 x i1> } %b
+}
+
+
+define { <2 x i32>, <2 x i1> } @fold_simple_splat_constant_with_or_fail(<2 x i32> %x) {
+; CHECK-LABEL: @fold_simple_splat_constant_with_or_fail(
+; CHECK-NEXT:    [[A:%.*]] = or <2 x i32> [[X:%.*]], <i32 12, i32 12>
+; CHECK-NEXT:    [[B:%.*]] = tail call { <2 x i32>, <2 x i1> } @llvm.uadd.with.overflow.v2i32(<2 x i32> [[A]], <2 x i32> <i32 30, i32 30>)
+; CHECK-NEXT:    ret { <2 x i32>, <2 x i1> } [[B]]
+;
+  %a = or <2 x i32> %x, <i32 12, i32 12>
+  %b = tail call { <2 x i32>, <2 x i1> } @llvm.uadd.with.overflow.v2i32(<2 x i32> %a, <2 x i32> <i32 30, i32 30>)
+  ret { <2 x i32>, <2 x i1> } %b
+}

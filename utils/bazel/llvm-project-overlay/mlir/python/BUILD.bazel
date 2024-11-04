@@ -493,6 +493,44 @@ filegroup(
 )
 
 ##---------------------------------------------------------------------------##
+# Index dialect.
+##---------------------------------------------------------------------------##
+
+gentbl_filegroup(
+    name = "IndexOpsPyGen",
+    tbl_outs = [
+        (
+            [
+                "-gen-python-enum-bindings",
+                "-bind-dialect=index",
+            ],
+            "mlir/dialects/_index_enum_gen.py",
+        ),
+        (
+            [
+                "-gen-python-op-bindings",
+                "-bind-dialect=index",
+            ],
+            "mlir/dialects/_index_ops_gen.py",
+        ),
+    ],
+    tblgen = "//mlir:mlir-tblgen",
+    td_file = "mlir/dialects/IndexOps.td",
+    deps = [
+        "//mlir:IndexOpsTdFiles",
+        "//mlir:OpBaseTdFiles",
+    ],
+)
+
+filegroup(
+    name = "IndexOpsPyFiles",
+    srcs = [
+        "mlir/dialects/index.py",
+        ":IndexOpsPyGen",
+    ],
+)
+
+##---------------------------------------------------------------------------##
 # Math dialect.
 ##---------------------------------------------------------------------------##
 

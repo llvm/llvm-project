@@ -780,6 +780,9 @@ class PathDiagnostic : public llvm::FoldingSetNode {
   PathDiagnosticLocation UniqueingLoc;
   const Decl *UniqueingDecl;
 
+  /// The top-level entry point from which this issue was discovered.
+  const Decl *AnalysisEntryPoint = nullptr;
+
   /// Lines executed in the path.
   std::unique_ptr<FilesToLineNumsMap> ExecutedLines;
 
@@ -788,7 +791,7 @@ public:
   PathDiagnostic(StringRef CheckerName, const Decl *DeclWithIssue,
                  StringRef bugtype, StringRef verboseDesc, StringRef shortDesc,
                  StringRef category, PathDiagnosticLocation LocationToUnique,
-                 const Decl *DeclToUnique,
+                 const Decl *DeclToUnique, const Decl *AnalysisEntryPoint,
                  std::unique_ptr<FilesToLineNumsMap> ExecutedLines);
   ~PathDiagnostic();
 
@@ -851,6 +854,9 @@ public:
   FilesToLineNumsMap &getExecutedLines() {
     return *ExecutedLines;
   }
+
+  /// Get the top-level entry point from which this issue was discovered.
+  const Decl *getAnalysisEntryPoint() const { return AnalysisEntryPoint; }
 
   /// Return the semantic context where an issue occurred.  If the
   /// issue occurs along a path, this represents the "central" area

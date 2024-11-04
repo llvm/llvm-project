@@ -3706,15 +3706,39 @@ private:
     return false;
   }
 
+  static void genCUDADataTransfer(fir::FirOpBuilder &builder,
+                                  mlir::Location loc, bool lhsIsDevice,
+                                  hlfir::Entity &lhs, bool rhsIsDevice,
+                                  hlfir::Entity &rhs) {
+    if (rhs.isBoxAddressOrValue() || lhs.isBoxAddressOrValue())
+      TODO(loc, "CUDA data transfler with descriptors");
+    if (lhsIsDevice && !rhsIsDevice) {
+      auto transferKindAttr = fir::CUDADataTransferKindAttr::get(
+          builder.getContext(), fir::CUDADataTransferKind::HostDevice);
+      // device = host
+      if (!rhs.isVariable()) {
+        auto associate = hlfir::genAssociateExpr(
+            loc, builder, rhs, rhs.getType(), ".cuf_host_tmp");
+        builder.create<fir::CUDADataTransferOp>(loc, associate.getBase(), lhs,
+                                                transferKindAttr);
+        builder.create<hlfir::EndAssociateOp>(loc, associate);
+      } else {
+        builder.create<fir::CUDADataTransferOp>(loc, rhs, lhs,
+                                                transferKindAttr);
+      }
+      return;
+    }
+    TODO(loc, "Assignement with CUDA Fortran variables");
+  }
+
   void genDataAssignment(
       const Fortran::evaluate::Assignment &assign,
       const Fortran::evaluate::ProcedureRef *userDefinedAssignment) {
     mlir::Location loc = getCurrentLocation();
     fir::FirOpBuilder &builder = getFirOpBuilder();
 
-    if (Fortran::evaluate::HasCUDAAttrs(assign.lhs) ||
-        Fortran::evaluate::HasCUDAAttrs(assign.rhs))
-      TODO(loc, "Assignement with CUDA Fortran variables");
+    bool lhsIsDevice = Fortran::evaluate::HasCUDAAttrs(assign.lhs);
+    bool rhsIsDevice = Fortran::evaluate::HasCUDAAttrs(assign.rhs);
 
     // Gather some information about the assignment that will impact how it is
     // lowered.
@@ -3772,9 +3796,13 @@ private:
       Fortran::lower::StatementContext localStmtCtx;
       hlfir::Entity rhs = evaluateRhs(localStmtCtx);
       hlfir::Entity lhs = evaluateLhs(localStmtCtx);
-      builder.create<hlfir::AssignOp>(loc, rhs, lhs,
-                                      isWholeAllocatableAssignment,
-                                      keepLhsLengthInAllocatableAssignment);
+      if (lhsIsDevice || rhsIsDevice) {
+        genCUDADataTransfer(builder, loc, lhsIsDevice, lhs, rhsIsDevice, rhs);
+      } else {
+        builder.create<hlfir::AssignOp>(loc, rhs, lhs,
+                                        isWholeAllocatableAssignment,
+                                        keepLhsLengthInAllocatableAssignment);
+      }
       return;
     }
     // Assignments inside Forall, Where, or assignments to a vector subscripted
@@ -3995,11 +4023,12 @@ private:
                     sym->Rank() == 0) {
                   // get the corresponding Cray pointer
 
-                  auto ptrSym = Fortran::lower::getCrayPointer(*sym);
+                  const Fortran::semantics::Symbol &ptrSym =
+                      Fortran::semantics::GetCrayPointer(*sym);
                   fir::ExtendedValue ptr =
                       getSymbolExtendedValue(ptrSym, nullptr);
                   mlir::Value ptrVal = fir::getBase(ptr);
-                  mlir::Type ptrTy = genType(*ptrSym);
+                  mlir::Type ptrTy = genType(ptrSym);
 
                   fir::ExtendedValue pte =
                       getSymbolExtendedValue(*sym, nullptr);
