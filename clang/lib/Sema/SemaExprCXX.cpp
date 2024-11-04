@@ -5718,7 +5718,7 @@ static bool EvaluateUnaryTypeTrait(Sema &Self, TypeTrait UTT,
 
   case UTT_IsTypedResourceElementCompatible:
     assert(Self.getLangOpts().HLSL &&
-           "line vector layout compatible types are HLSL-only feature");
+           "typed resource element compatible types are an HLSL-only feature");
     if (Self.RequireCompleteType(TInfo->getTypeLoc().getBeginLoc(), T,
                                  diag::err_incomplete_type))
       return false;

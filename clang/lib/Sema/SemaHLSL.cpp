@@ -2176,7 +2176,7 @@ bool SemaHLSL::IsTypedResourceElementCompatible(clang::QualType QT) {
 
   assert(QTTypes.size() > 0 &&
          "expected at least one constituent type from non-null type");
-  QualType FirstQT = QTTypes[0];
+  QualType FirstQT = SemaRef.Context.getCanonicalType(QTTypes[0]);
 
   // element count cannot exceed 4
   if (QTTypes.size() > 4)
@@ -2184,17 +2184,17 @@ bool SemaHLSL::IsTypedResourceElementCompatible(clang::QualType QT) {
 
   for (QualType TempQT : QTTypes) {
     // ensure homogeneity
-    if (TempQT != FirstQT)
+    if (!getASTContext().hasSameUnqualifiedType(FirstQT, TempQT))
+      return false;
+  }
+
+  if (const BuiltinType *BT = FirstQT->getAs<BuiltinType>()) {
+    if (BT->isBooleanType() || BT->isEnumeralType())
       return false;
 
-    if (const BuiltinType *BT = TempQT->getAs<BuiltinType>()) {
-      if (BT->isBooleanType() || BT->isEnumeralType())
-        return false;
-
-      // Check if it is an array type.
-      if (TempQT->isArrayType())
-        return false;
-    }
+    // Check if it is an array type.
+    if (FirstQT->isArrayType())
+      return false;
   }
 
   // if the loop above completes without returning, then
