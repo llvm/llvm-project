@@ -9,8 +9,8 @@
 #include "src/search/lfind.h"
 #include "test/UnitTest/Test.h"
 
-int compar(void *a, void *b) {
-  return *reinterpret_cast<int *>(a) - *reinterpret_cast<int *>(b);
+int compar(const void *a, const void *b) {
+  return *reinterpret_cast<const int *>(a) != *reinterpret_cast<const int *>(b);
 }
 
 TEST(LlvmLibcLfindTest, SearchHead) {
