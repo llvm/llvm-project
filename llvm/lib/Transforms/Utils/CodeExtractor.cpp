@@ -811,21 +811,16 @@ Function *CodeExtractor::constructFunctionDeclaration(
   // Assemble the function's parameter lists.
   std::vector<Type *> ParamTy;
   std::vector<Type *> AggParamTy;
-  std::vector<std::tuple<unsigned, Value *>> NumberedInputs;
-  std::vector<std::tuple<unsigned, Value *>> NumberedOutputs;
   const DataLayout &DL = M->getDataLayout();
 
   // Add the types of the input values to the function's argument list
-  unsigned ArgNum = 0;
   for (Value *value : inputs) {
     LLVM_DEBUG(dbgs() << "value used in func: " << *value << "\n");
     if (AggregateArgs && !ExcludeArgsFromAggregate.contains(value)) {
       AggParamTy.push_back(value->getType());
       StructValues.insert(value);
-    } else {
+    } else
       ParamTy.push_back(value->getType());
-      NumberedInputs.emplace_back(ArgNum++, value);
-    }
   }
 
   // Add the types of the output values to the function's argument list.
@@ -834,11 +829,9 @@ Function *CodeExtractor::constructFunctionDeclaration(
     if (AggregateArgs && !ExcludeArgsFromAggregate.contains(output)) {
       AggParamTy.push_back(output->getType());
       StructValues.insert(output);
-    } else {
+    } else
       ParamTy.push_back(
           PointerType::get(output->getType(), DL.getAllocaAddrSpace()));
-      NumberedOutputs.emplace_back(ArgNum++, output);
-    }
   }
 
   assert(
