@@ -1,7 +1,7 @@
 
 ; RUN: llc -enable-ipra -print-regusage -o /dev/null 2>&1 < %s | FileCheck %s
 
-; RUN: llc -stop-after=irtranslator -o - %s \
+; RUN: llc -stop-after=prologepilog -o - %s \
 ; RUN: | llc -x=mir -enable-ipra -passes="require<reg-usage>,function(machine-function(reg-usage-propagation,reg-usage-collector)),print<reg-usage>" -o /dev/null 2>&1 \
 ; RUN: | FileCheck %s
 
