@@ -2740,6 +2740,10 @@ ExprResult SemaObjC::BuildClassMessage(
     if (!isImplicit)
       checkCocoaAPI(SemaRef, Result);
   }
+
+  if (Method && Context.isObjCMsgSendUsageFileSpecified())
+    Context.recordObjCMsgSendUsage(Method);
+
   if (Method)
     checkFoundationAPI(SemaRef, SelLoc, Method, ArrayRef(Args, NumArgs),
                        ReceiverType, /*IsClassObjectCall=*/true);
@@ -3332,6 +3336,10 @@ ExprResult SemaObjC::BuildInstanceMessage(
     if (!isImplicit)
       checkCocoaAPI(SemaRef, Result);
   }
+
+  if (Method && Context.isObjCMsgSendUsageFileSpecified())
+    Context.recordObjCMsgSendUsage(Method);
+
   if (Method) {
     bool IsClassObjectCall = ClassMessage;
     // 'self' message receivers in class methods should be treated as message

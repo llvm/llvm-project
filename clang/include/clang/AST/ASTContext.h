@@ -505,6 +505,24 @@ class ASTContext : public RefCountedBase<ASTContext> {
 
   ASTContext &this_() { return *this; }
 
+  mutable std::optional<std::string> ObjCMsgSendUsageFile;
+  llvm::SmallVector<const ObjCMethodDecl *, 4> ObjCMsgSendUsage;
+
+public:
+  /// Check whether env variable CLANG_COMPILER_OBJC_MESSAGE_TRACE_PATH is set.
+  /// If it is set, assign the value to ObjCMsgSendUsageFile.
+  bool isObjCMsgSendUsageFileSpecified() const;
+
+  /// Return the file name stored in ObjCMsgSendUsageFile if it has a value,
+  /// return an empty string otherwise.
+  std::string getObjCMsgSendUsageFilename() const;
+
+  /// Record an ObjC method.
+  void recordObjCMsgSendUsage(const ObjCMethodDecl *Method);
+
+  /// Write the collected ObjC method tracing information to a file.
+  void writeObjCMsgSendUsages(const std::string &Filename);
+
 public:
   /// A type synonym for the TemplateOrInstantiation mapping.
   using TemplateOrSpecializationInfo =

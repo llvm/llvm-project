@@ -37,6 +37,7 @@
 #include "clang/AST/Mangle.h"
 #include "clang/AST/MangleNumberingContext.h"
 #include "clang/AST/NestedNameSpecifier.h"
+#include "clang/AST/ObjCMethodReferenceInfo.h"
 #include "clang/AST/ParentMapContext.h"
 #include "clang/AST/RawCommentList.h"
 #include "clang/AST/RecordLayout.h"
@@ -84,6 +85,7 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/JSON.h"
 #include "llvm/Support/MD5.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/SipHash.h"
@@ -9392,6 +9394,133 @@ static TypedefDecl *CreateVoidPtrBuiltinVaListDecl(const ASTContext *Context) {
   // typedef void* __builtin_va_list;
   QualType T = Context->getPointerType(Context->VoidTy);
   return Context->buildImplicitTypedef(T, "__builtin_va_list");
+}
+
+bool ASTContext::isObjCMsgSendUsageFileSpecified() const {
+  if (!ObjCMsgSendUsageFile) {
+    if (const char *Filename =
+            std::getenv("CLANG_COMPILER_OBJC_MESSAGE_TRACE_PATH"))
+      ObjCMsgSendUsageFile = Filename;
+    else
+      return false;
+  }
+
+  return true;
+}
+
+std::string ASTContext::getObjCMsgSendUsageFilename() const {
+  if (isObjCMsgSendUsageFileSpecified())
+    return *ObjCMsgSendUsageFile;
+  return "";
+}
+
+void ASTContext::recordObjCMsgSendUsage(const ObjCMethodDecl *Method) {
+  ObjCMsgSendUsage.push_back(Method);
+}
+
+static StringRef selectMethodKey(const clang::ObjCMethodDecl *clangD) {
+  assert(clangD);
+  if (clangD->isInstanceMethod())
+    return "instance_method";
+  assert(clangD->isClassMethod() && "must be a class method");
+  return "class_method";
+}
+
+static std::array<std::pair<StringRef, StringRef>, 2>
+selectMethodOwnerKey(const clang::NamedDecl *clangD) {
+  assert(clangD);
+  if (isa<clang::ObjCInterfaceDecl>(clangD))
+    return {{{"interface_type", clangD->getName()}, {}}};
+  if (isa<clang::ObjCImplementationDecl>(clangD))
+    return {{{"implementation_type", clangD->getName()}, {}}};
+  if (auto *Cat = dyn_cast<clang::ObjCCategoryDecl>(clangD))
+    return {{{"interface_type", Cat->getClassInterface()->getName()},
+             {"category_type", Cat->getName()}}};
+  if (auto *Cat = dyn_cast<clang::ObjCCategoryImplDecl>(clangD))
+    return {{{"interface_type",
+              Cat->getCategoryDecl()->getClassInterface()->getName()},
+             {"category_implementation_type", Cat->getName()}}};
+  if (isa<clang::ObjCProtocolDecl>(clangD))
+    return {{{"protocol_type", clangD->getName()}, {}}};
+  llvm_unreachable("unknown method owner");
+}
+
+void clang::serializeObjCMethodReferencesAsJson(
+    const clang::ObjCMethodReferenceInfo &Info, llvm::raw_ostream &OS) {
+  llvm::json::OStream Out(OS, /*IndentSize=*/4);
+  Out.object([&] {
+    Out.attribute("format-version", Info.FormatVersion);
+    Out.attribute("target", Info.Target);
+    if (!Info.TargetVariant.empty())
+      Out.attribute("target-variant", Info.TargetVariant);
+    Out.attributeArray("references", [&] {
+      for (auto &Ref : Info.References) {
+        unsigned FileID = Ref.first;
+        for (const clang::ObjCMethodDecl *clangD : Ref.second) {
+          auto &SM = clangD->getASTContext().getSourceManager();
+          clang::SourceLocation Loc = clangD->getLocation();
+          if (!Loc.isValid())
+            continue;
+          Out.object([&] {
+            if (auto *parent =
+                    dyn_cast_or_null<clang::NamedDecl>(clangD->getParent())) {
+              std::array<std::pair<StringRef, StringRef>, 2> OwnerInfo =
+                  selectMethodOwnerKey(parent);
+              for (auto I : OwnerInfo)
+                if (I.first.data())
+                  Out.attribute(I.first, I.second);
+            }
+
+            std::string MangledMethodName;
+            llvm::raw_string_ostream Out2(MangledMethodName);
+            std::unique_ptr<MangleContext> Mangler(
+                clangD->getASTContext().createMangleContext());
+            Mangler->mangleObjCMethodName(clangD, Out2,
+                                          /*includePrefixByte=*/false, true);
+            Out.attribute(selectMethodKey(clangD), MangledMethodName);
+            Out.attribute("declared_at", Loc.printToString(SM));
+            Out.attribute("referenced_at_file_id", FileID);
+          });
+        }
+      }
+    });
+
+    Out.attributeArray("fileMap", [&] {
+      for (unsigned I = 0, N = Info.FilePaths.size(); I != N; I++) {
+        Out.object([&] {
+          Out.attribute("file_id", I + 1);
+          Out.attribute("file_path", Info.FilePaths[I]);
+        });
+      }
+    });
+  });
+}
+
+void ASTContext::writeObjCMsgSendUsages(const std::string &Filename) {
+  std::error_code EC;
+  auto FDS = std::make_unique<llvm::raw_fd_ostream>(
+      Filename, EC, llvm::sys::fs::OF_Text | llvm::sys::fs::OF_Append);
+  if (EC) {
+    unsigned ID = getDiagnostics().getCustomDiagID(
+        DiagnosticsEngine::Error,
+        "couldn't open objc message send tracing file %0");
+    getDiagnostics().Report(ID) << Filename;
+    return;
+  }
+
+  if (auto L = FDS->lock()) {
+    clang::ObjCMethodReferenceInfo Info;
+    OptionalFileEntryRef FE =
+        SourceMgr.getFileEntryRefForID(SourceMgr.getMainFileID());
+    SmallString<256> MainFile(FE->getName());
+    SourceMgr.getFileManager().makeAbsolutePath(MainFile);
+    Info.Target = getTargetInfo().getTriple().str();
+    if (auto *VariantTriple = getTargetInfo().getDarwinTargetVariantTriple())
+      Info.TargetVariant = VariantTriple->str();
+    Info.FilePaths.push_back(MainFile.c_str());
+    Info.References[1] = ObjCMsgSendUsage;
+    serializeObjCMethodReferencesAsJson(Info, *FDS);
+  }
 }
 
 static TypedefDecl *
