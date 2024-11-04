@@ -18,10 +18,9 @@ define { i32, i1 } @std_thread_new() {
 ; NO-ATOMIC-NEXT:  ; %bb.0: ; %start
 ; NO-ATOMIC-NEXT:    suba.l #12, %sp
 ; NO-ATOMIC-NEXT:    .cfi_def_cfa_offset -16
-; NO-ATOMIC-NEXT:    lea (thread_id,%pc), %a0
-; NO-ATOMIC-NEXT:    move.l %a0, (%sp)
 ; NO-ATOMIC-NEXT:    move.l #1, (8,%sp)
 ; NO-ATOMIC-NEXT:    move.l #0, (4,%sp)
+; NO-ATOMIC-NEXT:    move.l #thread_id, (%sp)
 ; NO-ATOMIC-NEXT:    jsr __sync_val_compare_and_swap_4
 ; NO-ATOMIC-NEXT:    cmpi.l #0, %d0
 ; NO-ATOMIC-NEXT:    seq %d1
@@ -33,7 +32,8 @@ define { i32, i1 } @std_thread_new() {
 ; NO-ATOMIC-PIC-NEXT:  ; %bb.0: ; %start
 ; NO-ATOMIC-PIC-NEXT:    suba.l #12, %sp
 ; NO-ATOMIC-PIC-NEXT:    .cfi_def_cfa_offset -16
-; NO-ATOMIC-PIC-NEXT:    lea (thread_id,%pc), %a0
+; NO-ATOMIC-PIC-NEXT:    lea (_GLOBAL_OFFSET_TABLE_@GOTPCREL,%pc), %a0
+; NO-ATOMIC-PIC-NEXT:    adda.l #thread_id@GOTOFF, %a0
 ; NO-ATOMIC-PIC-NEXT:    move.l %a0, (%sp)
 ; NO-ATOMIC-PIC-NEXT:    move.l #1, (8,%sp)
 ; NO-ATOMIC-PIC-NEXT:    move.l #0, (4,%sp)
@@ -46,7 +46,7 @@ define { i32, i1 } @std_thread_new() {
 ; ATOMIC-LABEL: std_thread_new:
 ; ATOMIC:         .cfi_startproc
 ; ATOMIC-NEXT:  ; %bb.0: ; %start
-; ATOMIC-NEXT:    lea (thread_id,%pc), %a0
+; ATOMIC-NEXT:    move.l #thread_id, %a0
 ; ATOMIC-NEXT:    moveq #1, %d1
 ; ATOMIC-NEXT:    moveq #0, %d0
 ; ATOMIC-NEXT:    cas.l %d0, %d1, (%a0)
@@ -57,12 +57,18 @@ define { i32, i1 } @std_thread_new() {
 ; ATOMIC-PIC-LABEL: std_thread_new:
 ; ATOMIC-PIC:         .cfi_startproc
 ; ATOMIC-PIC-NEXT:  ; %bb.0: ; %start
-; ATOMIC-PIC-NEXT:    lea (thread_id,%pc), %a0
-; ATOMIC-PIC-NEXT:    moveq #1, %d1
+; ATOMIC-PIC-NEXT:    suba.l #4, %sp
+; ATOMIC-PIC-NEXT:    .cfi_def_cfa_offset -8
+; ATOMIC-PIC-NEXT:    movem.l %d2, (0,%sp) ; 8-byte Folded Spill
+; ATOMIC-PIC-NEXT:    lea (_GLOBAL_OFFSET_TABLE_@GOTPCREL,%pc), %a0
+; ATOMIC-PIC-NEXT:    move.l #thread_id@GOTOFF, %d1
+; ATOMIC-PIC-NEXT:    moveq #1, %d2
 ; ATOMIC-PIC-NEXT:    moveq #0, %d0
-; ATOMIC-PIC-NEXT:    cas.l %d0, %d1, (%a0)
+; ATOMIC-PIC-NEXT:    cas.l %d0, %d2, (0,%a0,%d1)
 ; ATOMIC-PIC-NEXT:    cmpi.l #0, %d0
 ; ATOMIC-PIC-NEXT:    seq %d1
+; ATOMIC-PIC-NEXT:    movem.l (0,%sp), %d2 ; 8-byte Folded Reload
+; ATOMIC-PIC-NEXT:    adda.l #4, %sp
 ; ATOMIC-PIC-NEXT:    rts
 start:
   %1 = cmpxchg ptr @thread_id, i32 0, i32 1 acquire monotonic, align 4
