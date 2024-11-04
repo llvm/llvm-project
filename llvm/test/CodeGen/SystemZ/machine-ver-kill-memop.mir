@@ -1,5 +1,5 @@
 # RUN: llc -o /dev/null %s -mtriple=s390x-linux-gnu -mcpu=z16 \
-# RUN:   -disable-machine-dce -verify-machineinstrs -run-pass=register-coalescer
+# RUN:   -verify-machineinstrs -run-pass=register-coalescer
 
 # Test that the MemoryOperand of the produced KILL instruction is removed
 # and as a result the machine verifier succeeds.
