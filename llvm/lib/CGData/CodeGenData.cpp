@@ -165,7 +165,7 @@ CodeGenData &CodeGenData::getInstance() {
         Instance->publishOutlinedHashTree(Reader->releaseOutlinedHashTree());
     }
   });
-  return *(Instance.get());
+  return *Instance;
 }
 
 namespace IndexedCGData {

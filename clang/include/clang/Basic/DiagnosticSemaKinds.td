@@ -10097,6 +10097,9 @@ def err_lifetimebound_no_object_param : Error<
 def err_lifetimebound_ctor_dtor : Error<
   "'lifetimebound' attribute cannot be applied to a "
   "%select{constructor|destructor}0">;
+def err_lifetimebound_void_return_type : Error<
+  "'lifetimebound' attribute cannot be applied to a parameter of a function "
+  "that returns void">;
 
 // CHECK: returning address/reference of stack memory
 def warn_ret_stack_addr_ref : Warning<
@@ -10188,7 +10191,7 @@ def warn_new_dangling_initializer_list : Warning<
   "will be destroyed at the end of the full-expression">,
   InGroup<DanglingInitializerList>;
 def warn_dangling_pointer_assignment : Warning<
-   "object backing the pointer %0 "
+   "object backing %select{|the pointer }0%1 "
    "will be destroyed at the end of the full-expression">,
    InGroup<DanglingAssignment>;
 

@@ -12,7 +12,7 @@
 #include <string>
 
 #ifdef _LIBCPP_MSVCRT_LIKE
-#  include <__locale_dir/locale_base_api/locale_guard.h>
+#  include <__locale_dir/locale_guard.h>
 #endif
 
 #define _str(s) #s
@@ -109,7 +109,7 @@ static void force_locale_initialization() {
   static bool once = []() {
     auto loc = newlocale(LC_ALL_MASK, "C", 0);
     {
-      __libcpp_locale_guard g(loc); // forces initialization of locale TLS
+      __locale_guard g(loc); // forces initialization of locale TLS
       ((void)g);
     }
     freelocale(loc);

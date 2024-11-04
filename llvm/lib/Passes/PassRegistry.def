@@ -220,10 +220,11 @@ MODULE_PASS_WITH_PARAMS(
     parseMSanPassOptions, "recover;kernel;eager-checks;track-origins=N")
 MODULE_PASS_WITH_PARAMS(
     "print<structural-hash>", "StructuralHashPrinterPass",
-    [](bool EnableDetailedStructuralHash) {
-      return StructuralHashPrinterPass(dbgs(), EnableDetailedStructuralHash);
+    [](StructuralHashOptions Options) {
+      return StructuralHashPrinterPass(dbgs(), Options);
     },
-    parseStructuralHashPrinterPassOptions, "detailed")
+    parseStructuralHashPrinterPassOptions, "detailed;call-target-ignored")
+
 #undef MODULE_PASS_WITH_PARAMS
 
 #ifndef CGSCC_ANALYSIS

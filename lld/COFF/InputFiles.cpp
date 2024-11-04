@@ -455,11 +455,35 @@ void ObjFile::initializeSymbols() {
     COFFSymbolRef coffSym = check(coffObj->getSymbol(i));
     bool prevailingComdat;
     if (coffSym.isUndefined()) {
-      symbols[i] = createUndefined(coffSym);
+      symbols[i] = createUndefined(coffSym, false);
     } else if (coffSym.isWeakExternal()) {
-      symbols[i] = createUndefined(coffSym);
-      weakAliases.emplace_back(symbols[i],
-                               coffSym.getAux<coff_aux_weak_external>());
+      auto aux = coffSym.getAux<coff_aux_weak_external>();
+      bool overrideLazy = true;
+
+      // On ARM64EC, external function calls emit a pair of weak-dependency
+      // aliases: func to #func and #func to the func guess exit thunk
+      // (instead of a single undefined func symbol, which would be emitted on
+      // other targets). Allow such aliases to be overridden by lazy archive
+      // symbols, just as we would for undefined symbols.
+      if (isArm64EC(getMachineType()) &&
+          aux->Characteristics == IMAGE_WEAK_EXTERN_ANTI_DEPENDENCY) {
+        COFFSymbolRef targetSym = check(coffObj->getSymbol(aux->TagIndex));
+        if (!targetSym.isAnyUndefined()) {
+          // If the target is defined, it may be either a guess exit thunk or
+          // the actual implementation. If it's the latter, consider the alias
+          // to be part of the implementation and override potential lazy
+          // archive symbols.
+          StringRef targetName = check(coffObj->getSymbolName(targetSym));
+          StringRef name = check(coffObj->getSymbolName(coffSym));
+          std::optional<std::string> mangledName =
+              getArm64ECMangledFunctionName(name);
+          overrideLazy = mangledName == targetName;
+        } else {
+          overrideLazy = false;
+        }
+      }
+      symbols[i] = createUndefined(coffSym, overrideLazy);
+      weakAliases.emplace_back(symbols[i], aux);
     } else if (std::optional<Symbol *> optSym =
                    createDefined(coffSym, comdatDefs, prevailingComdat)) {
       symbols[i] = *optSym;
@@ -508,9 +532,9 @@ void ObjFile::initializeSymbols() {
   decltype(sparseChunks)().swap(sparseChunks);
 }
 
-Symbol *ObjFile::createUndefined(COFFSymbolRef sym) {
+Symbol *ObjFile::createUndefined(COFFSymbolRef sym, bool overrideLazy) {
   StringRef name = check(coffObj->getSymbolName(sym));
-  return ctx.symtab.addUndefined(name, this, sym.isWeakExternal());
+  return ctx.symtab.addUndefined(name, this, overrideLazy);
 }
 
 static const coff_aux_section_definition *findSectionDef(COFFObjectFile *obj,

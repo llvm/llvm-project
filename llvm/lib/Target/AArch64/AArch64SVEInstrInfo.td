@@ -3586,10 +3586,10 @@ let Predicates = [HasSVE2orSME] in {
   defm UMINP_ZPmZ : sve2_int_arith_pred<0b101111, "uminp", int_aarch64_sve_uminp>;
 
   // SVE2 integer unary operations (predicated)
-  defm URECPE_ZPmZ  : sve2_int_un_pred_arit_s<0b000, "urecpe",  int_aarch64_sve_urecpe>;
-  defm URSQRTE_ZPmZ : sve2_int_un_pred_arit_s<0b001, "ursqrte", int_aarch64_sve_ursqrte>;
-  defm SQABS_ZPmZ   : sve2_int_un_pred_arit<0b100,   "sqabs",   int_aarch64_sve_sqabs>;
-  defm SQNEG_ZPmZ   : sve2_int_un_pred_arit<0b101,   "sqneg",   int_aarch64_sve_sqneg>;
+  defm URECPE_ZPmZ  : sve2_int_un_pred_arit_s<0b00, "urecpe",  int_aarch64_sve_urecpe>;
+  defm URSQRTE_ZPmZ : sve2_int_un_pred_arit_s<0b01, "ursqrte", int_aarch64_sve_ursqrte>;
+  defm SQABS_ZPmZ   : sve2_int_un_pred_arit<  0b10, "sqabs",   int_aarch64_sve_sqabs>;
+  defm SQNEG_ZPmZ   : sve2_int_un_pred_arit<  0b11, "sqneg",   int_aarch64_sve_sqneg>;
 
   // SVE2 saturating add/subtract
   defm SQADD_ZPmZ  : sve2_int_arith_pred<0b110000, "sqadd",  int_aarch64_sve_sqadd>;
@@ -3917,6 +3917,23 @@ let Predicates = [HasSVE2BitPerm] in {
   defm BGRP_ZZZ : sve2_misc_bitwise<0b1110, "bgrp", int_aarch64_sve_bgrp_x>;
 } // End HasSVE2BitPerm
 
+let Predicates = [HasSVEAES2, HasSVE2p1orSSVE_AES] in {
+  // SVE_AES2 multi-vector instructions (x2)
+  def AESE_2ZZI_B    : sve_crypto_binary_multi2<0b000, "aese">;
+  def AESD_2ZZI_B    : sve_crypto_binary_multi2<0b010, "aesd">;
+  def AESEMC_2ZZI_B  : sve_crypto_binary_multi2<0b100, "aesemc">;
+  def AESDMIC_2ZZI_B : sve_crypto_binary_multi2<0b110, "aesdimc">;
+  // SVE_AES2 multi-vector instructions (x4)
+  def AESE_4ZZI_B    : sve_crypto_binary_multi4<0b0000, "aese">;
+  def AESD_4ZZI_B    : sve_crypto_binary_multi4<0b0100, "aesd">;
+  def AESEMC_4ZZI_B  : sve_crypto_binary_multi4<0b1000, "aesemc">;
+  def AESDMIC_4ZZI_B : sve_crypto_binary_multi4<0b1100, "aesdimc">;
+
+  // SVE_AES2 multi-vector polynomial multiply
+  def PMLAL_2ZZZ_Q : sve_crypto_pmlal_multi<"pmlal">;
+  def PMULL_2ZZZ_Q : sve_crypto_pmull_multi<"pmull">;
+} // End HasSVEAES2, HasSVE2p1orSSVE_AES
+
 //===----------------------------------------------------------------------===//
 // SME or SVE2.1 instructions
 //===----------------------------------------------------------------------===//
@@ -4163,7 +4180,9 @@ defm BFMIN_ZPZZ   : sve_fp_2op_p_zds_zeroing_bfloat<int_aarch64_sve_fmin>;
 defm BFMAX_ZPZZ   : sve_fp_2op_p_zds_zeroing_bfloat<int_aarch64_sve_fmax>;
 } // HasSVEB16B16, UseExperimentalZeroingPseudos
 
-
+let Predicates = [HasSVEBFSCALE] in {
+  def BFSCALE_ZPZZ : sve_fp_2op_p_zds_bfscale<0b1001, "bfscale", DestructiveBinary>;
+} // HasSVEBFSCALE
 //===----------------------------------------------------------------------===//
 // SME2.1 or SVE2.1 instructions
 //===----------------------------------------------------------------------===//
@@ -4196,6 +4215,63 @@ defm UZPQ2_ZZZ : sve2p1_permute_vec_elems_q<0b011, "uzpq2", int_aarch64_sve_uzpq
 defm TBXQ_ZZZ : sve2_int_perm_tbx<"tbxq", 0b10, int_aarch64_sve_tbxq>;
 defm TBLQ_ZZZ  : sve2p1_tblq<"tblq", int_aarch64_sve_tblq>;
 } // End HasSVE2p1_or_HasSME2p1
+
+
+//===----------------------------------------------------------------------===//
+// SME2.2 or SVE2.2 instructions
+//===----------------------------------------------------------------------===//
+let Predicates = [HasSVE2p2orSME2p2] in {
+  // SVE2p2 floating-point convert precision down (placing odd), zeroing predicate
+  defm FCVTNT_ZPzZ      : sve_fp_fcvtntz<"fcvtnt">;
+  def FCVTXNT_ZPzZ_DtoS : sve_fp_fcvt2z<0b0010, "fcvtxnt", ZPR32, ZPR64>;
+
+  // SVE2p2 floating-point convert precision up, zeroing predicate
+  defm FCVTLT_ZPzZ      : sve_fp_fcvtltz<"fcvtlt">;
+
+  // SVE2p2 floating-point convert single-to-bf (placing odd), zeroing predicate
+  def BFCVTNT_ZPzZ      : sve_fp_fcvt2z<0b1010, "bfcvtnt", ZPR16, ZPR32>;
+
+  // Floating-point convert to integer, zeroing predicate
+  defm FCVTZS_ZPzZ : sve_fp_z2op_p_zd_d<0b0, "fcvtzs">;
+  defm FCVTZU_ZPzZ : sve_fp_z2op_p_zd_d<0b1, "fcvtzu">;
+  // Integer convert to floating-point, zeroing predicate
+  defm SCVTF_ZPzZ  : sve_fp_z2op_p_zd_c<0b0, "scvtf">;
+  defm UCVTF_ZPzZ  : sve_fp_z2op_p_zd_c<0b1, "ucvtf">;
+  // Signed integer base 2 logarithm of fp value, zeroing predicate
+  defm FLOGB_ZPzZ : sve_fp_z2op_p_zd_d_flogb<"flogb">;
+
+  // SVE2 integer unary operations, zeroing predicate
+  def URECPE_ZPzZ  : sve2_int_un_pred_arit_z<0b10, 0b00, "urecpe", ZPR32>;
+  def URSQRTE_ZPzZ : sve2_int_un_pred_arit_z<0b10, 0b01, "ursqrte", ZPR32>;
+  defm SQABS_ZPzZ  : sve2_int_un_pred_arit_z<0b10, "sqabs">;
+  defm SQNEG_ZPzZ  : sve2_int_un_pred_arit_z<0b11, "sqneg">;
+
+  // Floating point round to integral fp value in integer size range
+  // Merging
+  defm FRINT32Z_ZPmZ : sve_fp_2op_p_zd_frint<0b00, "frint32z">;
+  defm FRINT32X_ZPmZ : sve_fp_2op_p_zd_frint<0b01, "frint32x">;
+  defm FRINT64X_ZPmZ : sve_fp_2op_p_zd_frint<0b10, "frint64z">;
+  defm FRINT64Z_ZPmZ : sve_fp_2op_p_zd_frint<0b11, "frint64x">;
+  // Zeroing
+  defm FRINT32Z_ZPzZ : sve_fp_z2op_p_zd_frint<0b00, "frint32z">;
+  defm FRINT32X_ZPzZ : sve_fp_z2op_p_zd_frint<0b01, "frint32x">;
+  defm FRINT64Z_ZPzZ : sve_fp_z2op_p_zd_frint<0b10, "frint64z">;
+  defm FRINT64X_ZPzZ : sve_fp_z2op_p_zd_frint<0b11, "frint64x">;
+
+  // Floating-point round to integral fp value, zeroing predicate
+  defm FRINTN_ZPzZ : sve_fp_z2op_p_zd_hsd<0b00000, "frintn">;
+  defm FRINTP_ZPzZ : sve_fp_z2op_p_zd_hsd<0b00001, "frintp">;
+  defm FRINTM_ZPzZ : sve_fp_z2op_p_zd_hsd<0b00010, "frintm">;
+  defm FRINTZ_ZPzZ : sve_fp_z2op_p_zd_hsd<0b00011, "frintz">;
+  defm FRINTA_ZPzZ : sve_fp_z2op_p_zd_hsd<0b00100, "frinta">;
+  defm FRINTX_ZPzZ : sve_fp_z2op_p_zd_hsd<0b00110, "frintx">;
+  defm FRINTI_ZPzZ : sve_fp_z2op_p_zd_hsd<0b00111, "frinti">;
+  // Floating-point invert exponent, zeroing predicate
+  defm FRECPX_ZPzZ : sve_fp_z2op_p_zd_hsd<0b01100, "frecpx">;
+  // Floating-point square root, zeroing predicate
+  defm FSQRT_ZPZz  : sve_fp_z2op_p_zd_hsd<0b01101, "fsqrt">;
+
+} // End HasSME2p2orSVE2p2
 
 //===----------------------------------------------------------------------===//
 // SVE2 FP8 instructions

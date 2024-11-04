@@ -1927,8 +1927,8 @@ LoongArchTargetLowering::lowerGlobalTLSAddress(SDValue Op,
   }
 
   return getTLSDescAddr(N, DAG,
-                        Large ? LoongArch::PseudoLA_TLS_DESC_PC_LARGE
-                              : LoongArch::PseudoLA_TLS_DESC_PC,
+                        Large ? LoongArch::PseudoLA_TLS_DESC_LARGE
+                              : LoongArch::PseudoLA_TLS_DESC,
                         Large);
 }
 
@@ -5734,6 +5734,13 @@ LoongArchTargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *AI) const {
       AI->getOperation() == AtomicRMWInst::USubCond ||
       AI->getOperation() == AtomicRMWInst::USubSat)
     return AtomicExpansionKind::CmpXChg;
+
+  if (Subtarget.hasLAM_BH() && Subtarget.is64Bit() &&
+      (AI->getOperation() == AtomicRMWInst::Xchg ||
+       AI->getOperation() == AtomicRMWInst::Add ||
+       AI->getOperation() == AtomicRMWInst::Sub)) {
+    return AtomicExpansionKind::None;
+  }
 
   unsigned Size = AI->getType()->getPrimitiveSizeInBits();
   if (Size == 8 || Size == 16)

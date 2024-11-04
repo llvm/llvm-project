@@ -20,7 +20,8 @@ extern "C" {
 void *RTDECL(CUFRegisterModule)(void *data);
 
 /// Register a device function.
-void RTDECL(CUFRegisterFunction)(void **module, const char *fct);
+void RTDECL(CUFRegisterFunction)(
+    void **module, const char *fctSym, char *fctName);
 
 } // extern "C"
 

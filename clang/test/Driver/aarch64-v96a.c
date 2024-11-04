@@ -53,3 +53,20 @@
 // RUN: %clang -target aarch64 -march=armv9.6a+sve-f16f32mm -### -c %s 2>&1 | FileCheck -check-prefix=V96A-SVE-F16F32MM %s
 // RUN: %clang -target aarch64 -march=armv9.6-a+sve-f16f32mm -### -c %s 2>&1 | FileCheck -check-prefix=V96A-SVE-F16F32MM %s
 // V96A-SVE-F16F32MM: "-cc1"{{.*}} "-triple" "aarch64{{.*}}" "-target-cpu" "generic" "-target-feature" "+v9.6a"{{.*}} "-target-feature" "+sve-f16f32mm"
+//
+// RUN: %clang -target aarch64 -march=armv9.6a+lsui -### -c %s 2>&1 | FileCheck -check-prefix=V96A-LSUI %s
+// RUN: %clang -target aarch64 -march=armv9.6-a+lsui -### -c %s 2>&1 | FileCheck -check-prefix=V96A-LSUI %s
+// V96A-LSUI: "-cc1"{{.*}} "-triple" "aarch64{{.*}}" "-target-cpu" "generic" "-target-feature" "+v9.6a"{{.*}} "-target-feature" "+lsui"
+//
+// RUN: %clang -target aarch64 -march=armv9.6a+occmo -### -c %s 2>&1 | FileCheck -check-prefix=V96A-OCCMO %s
+// RUN: %clang -target aarch64 -march=armv9.6-a+occmo -### -c %s 2>&1 | FileCheck -check-prefix=V96A-OCCMO %s
+// V96A-OCCMO: "-cc1"{{.*}} "-triple" "aarch64{{.*}}" "-target-cpu" "generic" "-target-feature" "+v9.6a"{{.*}} "-target-feature" "+occmo"
+//
+// RUN: %clang -target aarch64 -march=armv9.6a+pcdphint -### -c %s 2>&1 | FileCheck -check-prefix=V96A-PCDPHINT %s
+// RUN: %clang -target aarch64 -march=armv9.6-a+pcdphint -### -c %s 2>&1 | FileCheck -check-prefix=V96A-PCDPHINT %s
+// V96A-PCDPHINT: "-cc1"{{.*}} "-triple" "aarch64{{.*}}" "-target-cpu" "generic" "-target-feature" "+v9.6a"{{.*}} "-target-feature" "+pcdphint"
+
+// RUN: %clang -target aarch64 -march=armv9.6a+pops -### -c %s 2>&1 | FileCheck -check-prefix=V96A-POPS %s
+// RUN: %clang -target aarch64 -march=armv9.6-a+pops -### -c %s 2>&1 | FileCheck -check-prefix=V96A-POPS %s
+// V96A-POPS: "-cc1"{{.*}} "-triple" "aarch64{{.*}}" "-target-cpu" "generic" "-target-feature" "+v9.6a"{{.*}} "-target-feature" "+pops"
+//

@@ -931,6 +931,13 @@ def FeatureStdExtSmepmp
     : RISCVExtension<"smepmp", 1, 0,
                      "'Smepmp' (Enhanced Physical Memory Protection)">;
 
+def FeatureStdExtSmrnmi
+    : RISCVExtension<"smrnmi", 1, 0,
+                     "'Smrnmi' (Resumable Non-Maskable Interrupts)">;
+def HasStdExtSmrnmi : Predicate<"Subtarget->hasStdExtSmrnmi()">,
+                       AssemblerPredicate<(all_of FeatureStdExtSmrnmi),
+                           "'Smrnmi' (Resumable Non-Maskable Interrupts)">; 
+
 def FeatureStdExtSmcdeleg
     : RISCVExtension<"smcdeleg", 1, 0,
                      "'Smcdeleg' (Counter Delegation Machine Level)">;
@@ -1022,39 +1029,50 @@ def FeatureStdExtSvpbmt
     : RISCVExtension<"svpbmt", 1, 0,
                      "'Svpbmt' (Page-Based Memory Types)">;
 
+def FeatureStdExtSvvptc
+    : RISCVExtension<"svvptc", 1, 0,
+                     "'svvptc' (Obviating Memory-Management Instructions after Marking PTEs Valid)">;                    
+
+def FeatureStdExtSha
+    : RISCVExtension<"sha", 1, 0,
+                     "'Sha' (Augmented Hypervisor)",
+                     [FeatureStdExtH, FeatureStdExtSsstateen, FeatureStdExtShcounterenw,
+                      FeatureStdExtShvstvala, FeatureStdExtShtvala, FeatureStdExtShvstvecd,
+                      FeatureStdExtShvsatpa, FeatureStdExtShgatpa]>;
+
 // Pointer Masking extensions
 
 // A supervisor-level extension that provides pointer masking for the next lower
 // privilege mode (U-mode), and for VS- and VU-modes if the H extension is
 // present.
 def FeatureStdExtSsnpm
-    : RISCVExperimentalExtension<"ssnpm", 1, 0,
-                                 "'Ssnpm' (Supervisor-level Pointer Masking for next lower privilege mode)">;
+    : RISCVExtension<"ssnpm", 1, 0,
+                     "'Ssnpm' (Supervisor-level Pointer Masking for next lower privilege mode)">;
 
 // A machine-level extension that provides pointer masking for the next lower
 // privilege mode (S/HS if S-mode is implemented, or U-mode otherwise).
 def FeatureStdExtSmnpm
-    : RISCVExperimentalExtension<"smnpm", 1, 0,
-                                 "'Smnpm' (Machine-level Pointer Masking for next lower privilege mode)">;
+    : RISCVExtension<"smnpm", 1, 0,
+                     "'Smnpm' (Machine-level Pointer Masking for next lower privilege mode)">;
 
 // A machine-level extension that provides pointer masking for M-mode.
 def FeatureStdExtSmmpm
-    : RISCVExperimentalExtension<"smmpm", 1, 0,
-                                 "'Smmpm' (Machine-level Pointer Masking for M-mode)">;
+    : RISCVExtension<"smmpm", 1, 0,
+                     "'Smmpm' (Machine-level Pointer Masking for M-mode)">;
 
 // An extension that indicates that there is pointer-masking support available
 // in supervisor mode, with some facility provided in the supervisor execution
 // environment to control pointer masking.
 def FeatureStdExtSspm
-    : RISCVExperimentalExtension<"sspm", 1, 0,
-                                 "'Sspm' (Indicates Supervisor-mode Pointer Masking)">;
+    : RISCVExtension<"sspm", 1, 0,
+                     "'Sspm' (Indicates Supervisor-mode Pointer Masking)">;
 
 // An extension that indicates that there is pointer-masking support available
 // in user mode, with some facility provided in the application execution
 // environment to control pointer masking.
 def FeatureStdExtSupm
-    : RISCVExperimentalExtension<"supm", 1, 0,
-                                 "'Supm' (Indicates User-mode Pointer Masking)">;
+    : RISCVExtension<"supm", 1, 0,
+                     "'Supm' (Indicates User-mode Pointer Masking)">;
 
 def FeatureStdExtSmctr
     : RISCVExperimentalExtension<"smctr", 1, 0,

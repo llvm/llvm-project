@@ -91,6 +91,7 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
 
   const bool HasCSSC = ST.hasCSSC();
   const bool HasRCPC3 = ST.hasRCPC3();
+  const bool HasSVE = ST.hasSVE();
 
   getActionDefinitionsBuilder(
       {G_IMPLICIT_DEF, G_FREEZE, G_CONSTANT_FOLD_BARRIER})
@@ -127,7 +128,34 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .clampNumElements(0, v2s64, v2s64)
       .moreElementsToNextPow2(0);
 
-  getActionDefinitionsBuilder({G_ADD, G_SUB, G_MUL, G_AND, G_OR, G_XOR})
+  getActionDefinitionsBuilder({G_ADD, G_SUB, G_AND, G_OR, G_XOR})
+      .legalFor({s32, s64, v2s32, v2s64, v4s32, v4s16, v8s16, v16s8, v8s8})
+      .legalFor(HasSVE, {nxv16s8, nxv8s16, nxv4s32, nxv2s64})
+      .widenScalarToNextPow2(0)
+      .clampScalar(0, s32, s64)
+      .clampMaxNumElements(0, s8, 16)
+      .clampMaxNumElements(0, s16, 8)
+      .clampNumElements(0, v2s32, v4s32)
+      .clampNumElements(0, v2s64, v2s64)
+      .minScalarOrEltIf(
+          [=](const LegalityQuery &Query) {
+            return Query.Types[0].getNumElements() <= 2;
+          },
+          0, s32)
+      .minScalarOrEltIf(
+          [=](const LegalityQuery &Query) {
+            return Query.Types[0].getNumElements() <= 4;
+          },
+          0, s16)
+      .minScalarOrEltIf(
+          [=](const LegalityQuery &Query) {
+            return Query.Types[0].getNumElements() <= 16;
+          },
+          0, s8)
+      .scalarizeIf(scalarOrEltWiderThan(0, 64), 0)
+      .moreElementsToNextPow2(0);
+
+  getActionDefinitionsBuilder(G_MUL)
       .legalFor({s32, s64, v2s32, v2s64, v4s32, v4s16, v8s16, v16s8, v8s8})
       .widenScalarToNextPow2(0)
       .clampScalar(0, s32, s64)
@@ -269,9 +297,10 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .libcallFor({{s64, s128}})
       .minScalarOrElt(1, MinFPScalar);
 
-  getActionDefinitionsBuilder(
-      {G_FCOS, G_FSIN, G_FPOW, G_FLOG, G_FLOG2, G_FLOG10, G_FTAN, G_FEXP,
-       G_FEXP2, G_FEXP10, G_FACOS, G_FASIN, G_FATAN, G_FCOSH, G_FSINH, G_FTANH})
+  getActionDefinitionsBuilder({G_FCOS, G_FSIN, G_FPOW, G_FLOG, G_FLOG2,
+                               G_FLOG10, G_FTAN, G_FEXP, G_FEXP2, G_FEXP10,
+                               G_FACOS, G_FASIN, G_FATAN, G_FATAN2, G_FCOSH,
+                               G_FSINH, G_FTANH})
       // We need a call for these, so we always need to scalarize.
       .scalarize(0)
       // Regardless of FP16 support, widen 16-bit elements to 32-bits.

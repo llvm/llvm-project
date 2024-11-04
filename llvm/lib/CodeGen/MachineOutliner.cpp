@@ -1370,7 +1370,7 @@ void MachineOutliner::emitOutlinedHashTree(Module &M) {
 
     Triple TT(M.getTargetTriple());
     embedBufferInModule(
-        M, *Buffer.get(),
+        M, *Buffer,
         getCodeGenDataSectionName(CG_outline, TT.getObjectFormat()));
   }
 }

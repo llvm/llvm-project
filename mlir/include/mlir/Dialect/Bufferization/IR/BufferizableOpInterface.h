@@ -11,7 +11,6 @@
 
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/PatternMatch.h"
-#include "mlir/Interfaces/FunctionInterfaces.h"
 #include "mlir/Support/LLVM.h"
 #include "llvm/ADT/DenseMapInfoVariant.h"
 #include "llvm/ADT/SetVector.h"
@@ -261,9 +260,9 @@ struct BufferizationOptions {
   using AnalysisStateInitFn = std::function<void(AnalysisState &)>;
   /// Tensor -> MemRef type converter.
   /// Parameters: Value, memory space, func op, bufferization options
-  using FunctionArgTypeConverterFn = std::function<BaseMemRefType(
-      TensorType, Attribute memorySpace, FunctionOpInterface,
-      const BufferizationOptions &)>;
+  using FunctionArgTypeConverterFn =
+      std::function<BaseMemRefType(TensorType, Attribute memorySpace,
+                                   func::FuncOp, const BufferizationOptions &)>;
   /// Tensor -> MemRef type converter.
   /// Parameters: Value, memory space, bufferization options
   using UnknownTypeConverterFn = std::function<BaseMemRefType(

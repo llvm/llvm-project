@@ -100,11 +100,6 @@ static cl::opt<bool> EnableMISchedLoadStoreClustering(
     cl::desc("Enable load and store clustering in the machine scheduler"),
     cl::init(true));
 
-static cl::opt<bool> EnableVSETVLIAfterRVVRegAlloc(
-    "riscv-vsetvl-after-rvv-regalloc", cl::Hidden,
-    cl::desc("Insert vsetvls after vector register allocation"),
-    cl::init(true));
-
 static cl::opt<bool>
     EnableVLOptimizer("riscv-enable-vl-optimizer",
                       cl::desc("Enable the RISC-V VL Optimizer pass"),
@@ -414,8 +409,7 @@ FunctionPass *RISCVPassConfig::createRVVRegAllocPass(bool Optimized) {
 
 bool RISCVPassConfig::addRegAssignAndRewriteFast() {
   addPass(createRVVRegAllocPass(false));
-  if (EnableVSETVLIAfterRVVRegAlloc)
-    addPass(createRISCVInsertVSETVLIPass());
+  addPass(createRISCVInsertVSETVLIPass());
   if (TM->getOptLevel() != CodeGenOptLevel::None &&
       EnableRISCVDeadRegisterElimination)
     addPass(createRISCVDeadRegisterDefinitionsPass());
@@ -425,8 +419,7 @@ bool RISCVPassConfig::addRegAssignAndRewriteFast() {
 bool RISCVPassConfig::addRegAssignAndRewriteOptimized() {
   addPass(createRVVRegAllocPass(true));
   addPass(createVirtRegRewriter(false));
-  if (EnableVSETVLIAfterRVVRegAlloc)
-    addPass(createRISCVInsertVSETVLIPass());
+  addPass(createRISCVInsertVSETVLIPass());
   if (TM->getOptLevel() != CodeGenOptLevel::None &&
       EnableRISCVDeadRegisterElimination)
     addPass(createRISCVDeadRegisterDefinitionsPass());
@@ -579,15 +572,6 @@ void RISCVPassConfig::addPreRegAlloc() {
   addPass(createRISCVInsertReadWriteCSRPass());
   addPass(createRISCVInsertWriteVXRMPass());
   addPass(createRISCVLandingPadSetupPass());
-
-  // Run RISCVInsertVSETVLI after PHI elimination. On O1 and above do it after
-  // register coalescing so needVSETVLIPHI doesn't need to look through COPYs.
-  if (!EnableVSETVLIAfterRVVRegAlloc) {
-    if (TM->getOptLevel() == CodeGenOptLevel::None)
-      insertPass(&PHIEliminationID, &RISCVInsertVSETVLIID);
-    else
-      insertPass(&RegisterCoalescerID, &RISCVInsertVSETVLIID);
-  }
 }
 
 void RISCVPassConfig::addFastRegAlloc() {

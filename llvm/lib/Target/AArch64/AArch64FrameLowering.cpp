@@ -126,14 +126,15 @@
 // and the SME unit try to access the same area of memory, including if the
 // access is to an area of the stack. To try to alleviate this we attempt to
 // introduce extra padding into the stack frame between FP and GPR accesses,
-// controlled by the StackHazardSize option. Without changing the layout of the
-// stack frame in the diagram above, a stack object of size StackHazardSize is
-// added between GPR and FPR CSRs. Another is added to the stack objects
-// section, and stack objects are sorted so that FPR > Hazard padding slot >
-// GPRs (where possible). Unfortunately some things are not handled well (VLA
-// area, arguments on the stack, object with both GPR and FPR accesses), but if
-// those are controlled by the user then the entire stack frame becomes GPR at
-// the start/end with FPR in the middle, surrounded by Hazard padding.
+// controlled by the aarch64-stack-hazard-size option. Without changing the
+// layout of the stack frame in the diagram above, a stack object of size
+// aarch64-stack-hazard-size is added between GPR and FPR CSRs. Another is added
+// to the stack objects section, and stack objects are sorted so that FPR >
+// Hazard padding slot > GPRs (where possible). Unfortunately some things are
+// not handled well (VLA area, arguments on the stack, objects with both GPR and
+// FPR accesses), but if those are controlled by the user then the entire stack
+// frame becomes GPR at the start/end with FPR in the middle, surrounded by
+// Hazard padding.
 //
 // An example of the prologue:
 //
@@ -273,9 +274,6 @@ cl::opt<bool> EnableHomogeneousPrologEpilog(
     cl::desc("Emit homogeneous prologue and epilogue for the size "
              "optimization (default = off)"));
 
-// Stack hazard padding size. 0 = disabled.
-static cl::opt<unsigned> StackHazardSize("aarch64-stack-hazard-size",
-                                         cl::init(0), cl::Hidden);
 // Stack hazard size for analysis remarks. StackHazardSize takes precedence.
 static cl::opt<unsigned>
     StackHazardRemarkSize("aarch64-stack-hazard-remark-size", cl::init(0),
@@ -702,7 +700,10 @@ void AArch64FrameLowering::resetCFIToInitialState(
 
   // Flip the RA sign state.
   if (MFI.shouldSignReturnAddress(MF)) {
-    CFIIndex = MF.addFrameInst(MCCFIInstruction::createNegateRAState(nullptr));
+    auto CFIInst = MFI.branchProtectionPAuthLR()
+                       ? MCCFIInstruction::createNegateRAStateWithPC(nullptr)
+                       : MCCFIInstruction::createNegateRAState(nullptr);
+    CFIIndex = MF.addFrameInst(CFIInst);
     BuildMI(MBB, InsertPt, DL, CFIDesc).addCFIIndex(CFIIndex);
   }
 
@@ -1612,6 +1613,10 @@ static void fixupCalleeSaveRestoreStackOffset(MachineInstr &MI,
 
 static bool isTargetWindows(const MachineFunction &MF) {
   return MF.getSubtarget<AArch64Subtarget>().isTargetWindows();
+}
+
+static unsigned getStackHazardSize(const MachineFunction &MF) {
+  return MF.getSubtarget<AArch64Subtarget>().getStreamingHazardSize();
 }
 
 // Convenience function to determine whether I is an SVE callee save.
@@ -2985,6 +2990,7 @@ static void computeCalleeSaveRegisterPairs(
   bool IsWindows = isTargetWindows(MF);
   bool NeedsWinCFI = needsWinCFI(MF);
   AArch64FunctionInfo *AFI = MF.getInfo<AArch64FunctionInfo>();
+  unsigned StackHazardSize = getStackHazardSize(MF);
   MachineFrameInfo &MFI = MF.getFrameInfo();
   CallingConv::ID CC = MF.getFunction().getCallingConv();
   unsigned Count = CSI.size();
@@ -3612,6 +3618,7 @@ static std::optional<int> getLdStFrameID(const MachineInstr &MI,
 // which can be used to determine if any hazard padding is needed.
 void AArch64FrameLowering::determineStackHazardSlot(
     MachineFunction &MF, BitVector &SavedRegs) const {
+  unsigned StackHazardSize = getStackHazardSize(MF);
   if (StackHazardSize == 0 || StackHazardSize % 16 != 0 ||
       MF.getInfo<AArch64FunctionInfo>()->hasStackHazardSlotIndex())
     return;
@@ -3802,7 +3809,7 @@ void AArch64FrameLowering::determineCalleeSaves(MachineFunction &MF,
   // StackHazardSize if so.
   determineStackHazardSlot(MF, SavedRegs);
   if (AFI->hasStackHazardSlotIndex())
-    CSStackSize += StackHazardSize;
+    CSStackSize += getStackHazardSize(MF);
 
   // Save number of saved regs, so we can easily update CSStackSize later.
   unsigned NumSavedRegs = SavedRegs.count();
@@ -3917,6 +3924,7 @@ bool AArch64FrameLowering::assignCalleeSavedSpillSlots(
     std::vector<CalleeSavedInfo> &CSI, unsigned &MinCSFrameIndex,
     unsigned &MaxCSFrameIndex) const {
   bool NeedsWinCFI = needsWinCFI(MF);
+  unsigned StackHazardSize = getStackHazardSize(MF);
   // To match the canonical windows frame layout, reverse the list of
   // callee saved registers to get them laid out by PrologEpilogInserter
   // in the right order. (PrologEpilogInserter allocates stack objects top
@@ -5151,6 +5159,7 @@ void AArch64FrameLowering::emitRemarks(
   if (Attrs.hasNonStreamingInterfaceAndBody())
     return;
 
+  unsigned StackHazardSize = getStackHazardSize(MF);
   const uint64_t HazardSize =
       (StackHazardSize) ? StackHazardSize : StackHazardRemarkSize;
 

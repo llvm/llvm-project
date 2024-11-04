@@ -10452,6 +10452,7 @@ cc_library(
         ":OpenACCPassIncGen",
         ":Pass",
         ":TransformUtils",
+        "//llvm:Support",
     ],
 )
 

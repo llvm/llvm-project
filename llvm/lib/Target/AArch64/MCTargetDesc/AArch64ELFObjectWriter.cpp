@@ -34,8 +34,6 @@ public:
 
   ~AArch64ELFObjectWriter() override = default;
 
-  MCSectionELF *getMemtagRelocsSection(MCContext &Ctx) const override;
-
 protected:
   unsigned getRelocType(MCContext &Ctx, const MCValue &Target,
                         const MCFixup &Fixup, bool IsPCRel) const override;
@@ -189,6 +187,11 @@ unsigned AArch64ELFObjectWriter::getRelocType(MCContext &Ctx,
     case AArch64::fixup_aarch64_pcrel_branch16:
       Ctx.reportError(Fixup.getLoc(),
                       "relocation of PAC/AUT instructions is not supported");
+      return ELF::R_AARCH64_NONE;
+    case AArch64::fixup_aarch64_pcrel_branch9:
+      Ctx.reportError(
+          Fixup.getLoc(),
+          "relocation of compare-and-branch instructions not supported");
       return ELF::R_AARCH64_NONE;
     case AArch64::fixup_aarch64_pcrel_branch19:
       return R_CLS(CONDBR19);
@@ -460,12 +463,6 @@ bool AArch64ELFObjectWriter::needsRelocateWithSymbol(const MCValue &Val,
                                                      const MCSymbol &,
                                                      unsigned) const {
   return (Val.getRefKind() & AArch64MCExpr::VK_GOT) == AArch64MCExpr::VK_GOT;
-}
-
-MCSectionELF *
-AArch64ELFObjectWriter::getMemtagRelocsSection(MCContext &Ctx) const {
-  return Ctx.getELFSection(".memtag.globals.static",
-                           ELF::SHT_AARCH64_MEMTAG_GLOBALS_STATIC, 0);
 }
 
 std::unique_ptr<MCObjectTargetWriter>

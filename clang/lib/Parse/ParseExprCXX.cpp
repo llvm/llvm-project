@@ -1579,9 +1579,8 @@ ExprResult Parser::ParseLambdaExpressionAfterIntroducer(
                       DynamicExceptionRanges.data(), DynamicExceptions.size(),
                       NoexceptExpr.isUsable() ? NoexceptExpr.get() : nullptr,
                       /*ExceptionSpecTokens*/ nullptr,
-                      /*DeclsInPrototype=*/std::nullopt, LParenLoc,
-                      FunLocalRangeEnd, D, TrailingReturnType,
-                      TrailingReturnTypeLoc, &DS),
+                      /*DeclsInPrototype=*/{}, LParenLoc, FunLocalRangeEnd, D,
+                      TrailingReturnType, TrailingReturnTypeLoc, &DS),
                   std::move(Attributes), DeclEndLoc);
 
     // We have called ActOnLambdaClosureQualifiers for parentheses-less cases

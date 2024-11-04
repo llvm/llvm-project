@@ -734,18 +734,19 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::FCOPYSIGN, MVT::bf16, Promote);
   }
 
-  for (auto Op : {ISD::FREM,         ISD::FPOW,          ISD::FPOWI,
-                  ISD::FCOS,         ISD::FSIN,          ISD::FSINCOS,
-                  ISD::FACOS,        ISD::FASIN,         ISD::FATAN,
-                  ISD::FCOSH,        ISD::FSINH,         ISD::FTANH,
-                  ISD::FTAN,         ISD::FEXP,          ISD::FEXP2,
-                  ISD::FEXP10,       ISD::FLOG,          ISD::FLOG2,
-                  ISD::FLOG10,       ISD::STRICT_FREM,   ISD::STRICT_FPOW,
-                  ISD::STRICT_FPOWI, ISD::STRICT_FCOS,   ISD::STRICT_FSIN,
-                  ISD::STRICT_FACOS, ISD::STRICT_FASIN,  ISD::STRICT_FATAN,
-                  ISD::STRICT_FCOSH, ISD::STRICT_FSINH,  ISD::STRICT_FTANH,
-                  ISD::STRICT_FEXP,  ISD::STRICT_FEXP2,  ISD::STRICT_FLOG,
-                  ISD::STRICT_FLOG2, ISD::STRICT_FLOG10, ISD::STRICT_FTAN}) {
+  for (auto Op : {ISD::FREM,          ISD::FPOW,          ISD::FPOWI,
+                  ISD::FCOS,          ISD::FSIN,          ISD::FSINCOS,
+                  ISD::FACOS,         ISD::FASIN,         ISD::FATAN,
+                  ISD::FATAN2,        ISD::FCOSH,         ISD::FSINH,
+                  ISD::FTANH,         ISD::FTAN,          ISD::FEXP,
+                  ISD::FEXP2,         ISD::FEXP10,        ISD::FLOG,
+                  ISD::FLOG2,         ISD::FLOG10,        ISD::STRICT_FREM,
+                  ISD::STRICT_FPOW,   ISD::STRICT_FPOWI,  ISD::STRICT_FCOS,
+                  ISD::STRICT_FSIN,   ISD::STRICT_FACOS,  ISD::STRICT_FASIN,
+                  ISD::STRICT_FATAN,  ISD::STRICT_FATAN2, ISD::STRICT_FCOSH,
+                  ISD::STRICT_FSINH,  ISD::STRICT_FTANH,  ISD::STRICT_FEXP,
+                  ISD::STRICT_FEXP2,  ISD::STRICT_FLOG,   ISD::STRICT_FLOG2,
+                  ISD::STRICT_FLOG10, ISD::STRICT_FTAN}) {
     setOperationAction(Op, MVT::f16, Promote);
     setOperationAction(Op, MVT::v4f16, Expand);
     setOperationAction(Op, MVT::v8f16, Expand);
@@ -1122,7 +1123,8 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
                        ISD::INSERT_VECTOR_ELT, ISD::EXTRACT_VECTOR_ELT,
                        ISD::VECREDUCE_ADD, ISD::STEP_VECTOR});
 
-  setTargetDAGCombine({ISD::MGATHER, ISD::MSCATTER});
+  setTargetDAGCombine(
+      {ISD::MGATHER, ISD::MSCATTER, ISD::EXPERIMENTAL_VECTOR_HISTOGRAM});
 
   setTargetDAGCombine(ISD::FP_EXTEND);
 
@@ -1189,7 +1191,7 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
     // silliness like this:
     // clang-format off
     for (auto Op :
-         {ISD::SELECT,            ISD::SELECT_CC,
+         {ISD::SELECT,            ISD::SELECT_CC,      ISD::FATAN2,
           ISD::BR_CC,             ISD::FADD,           ISD::FSUB,
           ISD::FMUL,              ISD::FDIV,           ISD::FMA,
           ISD::FNEG,              ISD::FABS,           ISD::FCEIL,
@@ -1648,6 +1650,7 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::FACOS, VT, Expand);
       setOperationAction(ISD::FASIN, VT, Expand);
       setOperationAction(ISD::FATAN, VT, Expand);
+      setOperationAction(ISD::FATAN2, VT, Expand);
       setOperationAction(ISD::FCOSH, VT, Expand);
       setOperationAction(ISD::FSINH, VT, Expand);
       setOperationAction(ISD::FTANH, VT, Expand);
@@ -1903,6 +1906,7 @@ void AArch64TargetLowering::addTypeForNEON(MVT VT) {
     setOperationAction(ISD::FASIN, VT, Expand);
     setOperationAction(ISD::FACOS, VT, Expand);
     setOperationAction(ISD::FATAN, VT, Expand);
+    setOperationAction(ISD::FATAN2, VT, Expand);
     setOperationAction(ISD::FSINH, VT, Expand);
     setOperationAction(ISD::FCOSH, VT, Expand);
     setOperationAction(ISD::FTANH, VT, Expand);
@@ -5586,6 +5590,13 @@ static SDValue optimizeIncrementingWhile(SDValue Op, SelectionDAG &DAG,
   SDLoc dl(Op);
   APInt X = Op.getConstantOperandAPInt(1);
   APInt Y = Op.getConstantOperandAPInt(2);
+
+  // When the second operand is the maximum value, comparisons that include
+  // equality can never fail and thus we can return an all active predicate.
+  if (IsEqual)
+    if (IsSigned ? Y.isMaxSignedValue() : Y.isMaxValue())
+      return DAG.getConstant(1, dl, Op.getValueType());
+
   bool Overflow;
   APInt NumActiveElems =
       IsSigned ? Y.ssub_ov(X, Overflow) : Y.usub_ov(X, Overflow);
@@ -5970,6 +5981,29 @@ SDValue AArch64TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
                          DAG.getNode(AArch64ISD::VLSHR, dl,
                                      Op.getOperand(1).getValueType(),
                                      Op.getOperand(1), Op.getOperand(2)));
+    return SDValue();
+  case Intrinsic::aarch64_neon_sqrshrn:
+    if (Op.getValueType().isVector())
+      return DAG.getNode(
+          ISD::TRUNCATE_SSAT_S, dl, Op.getValueType(),
+          DAG.getNode(
+              AArch64ISD::SRSHR_I, dl, Op.getOperand(1).getValueType(),
+              Op.getOperand(1), Op.getOperand(2)));
+    return SDValue();
+  case Intrinsic::aarch64_neon_sqrshrun:
+    if (Op.getValueType().isVector())
+      return DAG.getNode(
+          ISD::TRUNCATE_SSAT_U, dl, Op.getValueType(),
+          DAG.getNode(
+              AArch64ISD::SRSHR_I, dl, Op.getOperand(1).getValueType(),
+              Op.getOperand(1), Op.getOperand(2)));
+    return SDValue();
+  case Intrinsic::aarch64_neon_uqrshrn:
+    if (Op.getValueType().isVector())
+      return DAG.getNode(
+          ISD::TRUNCATE_USAT_U, dl, Op.getValueType(),
+          DAG.getNode(
+              AArch64ISD::URSHR_I, dl, Op.getOperand(1).getValueType(), Op.getOperand(1), Op.getOperand(2)));
     return SDValue();
   case Intrinsic::aarch64_sve_whilelo:
     return optimizeIncrementingWhile(Op, DAG, /*IsSigned=*/false,
@@ -11836,6 +11870,36 @@ const char *AArch64TargetLowering::LowerXConstraint(EVT ConstraintVT) const {
 
 enum class PredicateConstraint { Uph, Upl, Upa };
 
+// Returns a {Reg, RegisterClass} tuple if the constraint is
+// a specific predicate register.
+//
+// For some constraint like "{pn3}" the default path in
+// TargetLowering::getRegForInlineAsmConstraint() leads it to determine that a
+// suitable register class for this register is "PPRorPNR", after which it
+// determines that nxv16i1 is an appropriate type for the constraint, which is
+// not what we want. The code here pre-empts this by matching the register
+// explicitly.
+static std::optional<std::pair<unsigned, const TargetRegisterClass *>>
+parsePredicateRegAsConstraint(StringRef Constraint) {
+  if (!Constraint.starts_with('{') || !Constraint.ends_with('}') ||
+      Constraint[1] != 'p')
+    return std::nullopt;
+
+  Constraint = Constraint.substr(2, Constraint.size() - 3);
+  bool IsPredicateAsCount = Constraint.starts_with("n");
+  if (IsPredicateAsCount)
+    Constraint = Constraint.drop_front(1);
+
+  unsigned V;
+  if (Constraint.getAsInteger(10, V) || V > 31)
+    return std::nullopt;
+
+  if (IsPredicateAsCount)
+    return std::make_pair(AArch64::PN0 + V, &AArch64::PNRRegClass);
+  else
+    return std::make_pair(AArch64::P0 + V, &AArch64::PPRRegClass);
+}
+
 static std::optional<PredicateConstraint>
 parsePredicateConstraint(StringRef Constraint) {
   return StringSwitch<std::optional<PredicateConstraint>>(Constraint)
@@ -12083,6 +12147,8 @@ AArch64TargetLowering::getRegForInlineAsmConstraint(
       break;
     }
   } else {
+    if (const auto P = parsePredicateRegAsConstraint(Constraint))
+      return *P;
     if (const auto PC = parsePredicateConstraint(Constraint))
       if (const auto *RegClass = getPredicateRegisterClass(*PC, VT))
         return std::make_pair(0U, RegClass);
@@ -14489,7 +14555,9 @@ SDValue AArch64TargetLowering::LowerBUILD_VECTOR(SDValue Op,
                                                  SelectionDAG &DAG) const {
   EVT VT = Op.getValueType();
 
-  if (useSVEForFixedLengthVectorVT(VT, !Subtarget->isNeonAvailable()))
+  bool OverrideNEON = !Subtarget->isNeonAvailable() ||
+                      cast<BuildVectorSDNode>(Op)->isConstantSequence();
+  if (useSVEForFixedLengthVectorVT(VT, OverrideNEON))
     return LowerFixedLengthBuildVectorToSVE(Op, DAG);
 
   // Try to build a simple constant vector.
@@ -23798,11 +23866,9 @@ static bool findMoreOptimalIndexType(const MaskedGatherScatterSDNode *N,
 
 static SDValue performMaskedGatherScatterCombine(
     SDNode *N, TargetLowering::DAGCombinerInfo &DCI, SelectionDAG &DAG) {
-  MaskedGatherScatterSDNode *MGS = cast<MaskedGatherScatterSDNode>(N);
-  assert(MGS && "Can only combine gather load or scatter store nodes");
-
   if (!DCI.isBeforeLegalize())
     return SDValue();
+  MaskedGatherScatterSDNode *MGS = cast<MaskedGatherScatterSDNode>(N);
 
   SDLoc DL(MGS);
   SDValue Chain = MGS->getChain();
@@ -23824,12 +23890,18 @@ static SDValue performMaskedGatherScatterCombine(
         DAG.getVTList(N->getValueType(0), MVT::Other), MGT->getMemoryVT(), DL,
         Ops, MGT->getMemOperand(), IndexType, MGT->getExtensionType());
   }
-  auto *MSC = cast<MaskedScatterSDNode>(MGS);
-  SDValue Data = MSC->getValue();
-  SDValue Ops[] = {Chain, Data, Mask, BasePtr, Index, Scale};
-  return DAG.getMaskedScatter(DAG.getVTList(MVT::Other), MSC->getMemoryVT(), DL,
-                              Ops, MSC->getMemOperand(), IndexType,
-                              MSC->isTruncatingStore());
+  if (auto *MSC = dyn_cast<MaskedScatterSDNode>(MGS)) {
+    SDValue Data = MSC->getValue();
+    SDValue Ops[] = {Chain, Data, Mask, BasePtr, Index, Scale};
+    return DAG.getMaskedScatter(DAG.getVTList(MVT::Other), MSC->getMemoryVT(),
+                                DL, Ops, MSC->getMemOperand(), IndexType,
+                                MSC->isTruncatingStore());
+  }
+  auto *HG = cast<MaskedHistogramSDNode>(MGS);
+  SDValue Ops[] = {Chain, HG->getInc(), Mask,          BasePtr,
+                   Index, Scale,        HG->getIntID()};
+  return DAG.getMaskedHistogram(DAG.getVTList(MVT::Other), HG->getMemoryVT(),
+                                DL, Ops, HG->getMemOperand(), IndexType);
 }
 
 /// Target-specific DAG combine function for NEON load/store intrinsics
@@ -25996,6 +26068,7 @@ SDValue AArch64TargetLowering::PerformDAGCombine(SDNode *N,
     return performMSTORECombine(N, DCI, DAG, Subtarget);
   case ISD::MGATHER:
   case ISD::MSCATTER:
+  case ISD::EXPERIMENTAL_VECTOR_HISTOGRAM:
     return performMaskedGatherScatterCombine(N, DCI, DAG);
   case ISD::FP_EXTEND:
     return performFPExtendCombine(N, DAG, DCI, Subtarget);

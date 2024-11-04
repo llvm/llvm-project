@@ -2518,9 +2518,19 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
         Symbol *sym = ctx.symtab.find(from);
         if (!sym)
           continue;
-        if (auto *u = dyn_cast<Undefined>(sym))
-          if (!u->weakAlias)
-            u->setWeakAlias(ctx.symtab.addUndefined(to));
+        if (auto *u = dyn_cast<Undefined>(sym)) {
+          if (u->weakAlias) {
+            // On ARM64EC, anti-dependency aliases are treated as undefined
+            // symbols unless a demangled symbol aliases a defined one, which is
+            // part of the implementation.
+            if (!isArm64EC(ctx.config.machine) || !u->isAntiDep)
+              continue;
+            if (!isa<Undefined>(u->weakAlias) &&
+                !isArm64ECMangledFunctionName(u->getName()))
+              continue;
+          }
+          u->setWeakAlias(ctx.symtab.addUndefined(to));
+        }
       }
 
       // If any inputs are bitcode files, the LTO code generator may create
