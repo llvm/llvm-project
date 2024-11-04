@@ -25,6 +25,7 @@
 #include "clang/Sema/Initialization.h"
 #include "clang/Sema/Overload.h"
 #include "clang/Sema/ScopeInfo.h"
+#include "clang/Sema/Sema.h"
 #include "clang/Sema/SemaInternal.h"
 #include "llvm/ADT/SmallSet.h"
 
@@ -1378,8 +1379,21 @@ bool CoroutineStmtBuilder::makeReturnOnAllocFailure() {
 static bool collectPlacementArgs(Sema &S, FunctionDecl &FD, SourceLocation Loc,
                                  SmallVectorImpl<Expr *> &PlacementArgs) {
   if (auto *MD = dyn_cast<CXXMethodDecl>(&FD)) {
-    if (MD->isImplicitObjectMemberFunction() && !isLambdaCallOperator(MD)) {
-      ExprResult ThisExpr = S.ActOnCXXThis(Loc);
+    if (MD->isImplicitObjectMemberFunction()) {
+      ExprResult ThisExpr{};
+
+      if (isLambdaCallOperator(MD) && !MD->isStatic()) {
+        Qualifiers ThisQuals = MD->getMethodQualifiers();
+        CXXRecordDecl *Record = MD->getParent();
+
+        Sema::CXXThisScopeRAII ThisScope(S, Record, ThisQuals,
+                                         Record != nullptr);
+
+        ThisExpr = S.ActOnCXXThis(Loc, /*ThisRefersToClosureObject=*/true);
+      } else {
+        ThisExpr = S.ActOnCXXThis(Loc);
+      }
+
       if (ThisExpr.isInvalid())
         return false;
       ThisExpr = S.CreateBuiltinUnaryOp(Loc, UO_Deref, ThisExpr.get());

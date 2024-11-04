@@ -6752,10 +6752,18 @@ public:
                             SourceLocation RParenLoc);
 
   //// ActOnCXXThis -  Parse 'this' pointer.
-  ExprResult ActOnCXXThis(SourceLocation loc);
+  ///
+  /// \param ThisRefersToClosureObject Whether to skip the 'this' check for a
+  /// lambda because 'this' refers to the closure object.
+  ExprResult ActOnCXXThis(SourceLocation loc,
+                          bool ThisRefersToClosureObject = false);
 
   /// Build a CXXThisExpr and mark it referenced in the current context.
-  Expr *BuildCXXThisExpr(SourceLocation Loc, QualType Type, bool IsImplicit);
+  ///
+  /// \param ThisRefersToClosureObject Whether to skip the 'this' check for a
+  /// lambda because 'this' refers to the closure object.
+  Expr *BuildCXXThisExpr(SourceLocation Loc, QualType Type, bool IsImplicit,
+                         bool ThisRefersToClosureObject = false);
   void MarkThisReferenced(CXXThisExpr *This);
 
   /// Try to retrieve the type of the 'this' pointer.

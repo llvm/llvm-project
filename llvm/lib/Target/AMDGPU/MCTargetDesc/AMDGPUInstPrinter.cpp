@@ -451,19 +451,20 @@ void AMDGPUInstPrinter::printVINTRPDst(const MCInst *MI, unsigned OpNo,
 void AMDGPUInstPrinter::printImmediateInt16(uint32_t Imm,
                                             const MCSubtargetInfo &STI,
                                             raw_ostream &O) {
-  int16_t SImm = static_cast<int16_t>(Imm);
+  int32_t SImm = static_cast<int32_t>(Imm);
   if (isInlinableIntLiteral(SImm)) {
     O << SImm;
-  } else {
-    uint64_t Imm16 = static_cast<uint16_t>(Imm);
-    O << formatHex(Imm16);
+    return;
   }
+
+  if (printImmediateFloat32(Imm, STI, O))
+    return;
+
+  O << formatHex(static_cast<uint64_t>(Imm & 0xffff));
 }
 
-// This must accept a 32-bit immediate value to correctly handle packed 16-bit
-// operations.
-static bool printImmediateFloat16(uint32_t Imm, const MCSubtargetInfo &STI,
-                                  raw_ostream &O) {
+static bool printImmediateFP16(uint32_t Imm, const MCSubtargetInfo &STI,
+                               raw_ostream &O) {
   if (Imm == 0x3C00)
     O << "1.0";
   else if (Imm == 0xBC00)
@@ -529,9 +530,9 @@ void AMDGPUInstPrinter::printImmediateBF16(uint32_t Imm,
   O << formatHex(static_cast<uint64_t>(Imm));
 }
 
-void AMDGPUInstPrinter::printImmediate16(uint32_t Imm,
-                                         const MCSubtargetInfo &STI,
-                                         raw_ostream &O) {
+void AMDGPUInstPrinter::printImmediateF16(uint32_t Imm,
+                                          const MCSubtargetInfo &STI,
+                                          raw_ostream &O) {
   int16_t SImm = static_cast<int16_t>(Imm);
   if (isInlinableIntLiteral(SImm)) {
     O << SImm;
@@ -539,7 +540,7 @@ void AMDGPUInstPrinter::printImmediate16(uint32_t Imm,
   }
 
   uint16_t HImm = static_cast<uint16_t>(Imm);
-  if (printImmediateFloat16(HImm, STI, O))
+  if (printImmediateFP16(HImm, STI, O))
     return;
 
   uint64_t Imm16 = static_cast<uint16_t>(Imm);
@@ -566,7 +567,7 @@ void AMDGPUInstPrinter::printImmediateV216(uint32_t Imm, uint8_t OpType,
   case AMDGPU::OPERAND_REG_INLINE_C_V2FP16:
   case AMDGPU::OPERAND_REG_INLINE_AC_V2FP16:
     if (isUInt<16>(Imm) &&
-        printImmediateFloat16(static_cast<uint16_t>(Imm), STI, O))
+        printImmediateFP16(static_cast<uint16_t>(Imm), STI, O))
       return;
     break;
   case AMDGPU::OPERAND_REG_IMM_V2BF16:
@@ -845,7 +846,7 @@ void AMDGPUInstPrinter::printRegularOperand(const MCInst *MI, unsigned OpNo,
     case AMDGPU::OPERAND_REG_INLINE_AC_FP16:
     case AMDGPU::OPERAND_REG_IMM_FP16:
     case AMDGPU::OPERAND_REG_IMM_FP16_DEFERRED:
-      printImmediate16(Op.getImm(), STI, O);
+      printImmediateF16(Op.getImm(), STI, O);
       break;
     case AMDGPU::OPERAND_REG_INLINE_C_BF16:
     case AMDGPU::OPERAND_REG_INLINE_AC_BF16:

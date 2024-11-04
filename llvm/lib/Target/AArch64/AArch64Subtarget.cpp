@@ -140,6 +140,7 @@ void AArch64Subtarget::initializeProperties(bool HasMinSize) {
   case CortexA76:
   case CortexA77:
   case CortexA78:
+  case CortexA78AE:
   case CortexA78C:
   case CortexR82:
   case CortexX1:

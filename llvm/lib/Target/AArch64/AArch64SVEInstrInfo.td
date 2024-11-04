@@ -4101,7 +4101,7 @@ defm FMINNMQV : sve2p1_fp_reduction_q<0b101, "fminnmqv", int_aarch64_sve_fminnmq
 defm FMAXQV   : sve2p1_fp_reduction_q<0b110, "fmaxqv", int_aarch64_sve_fmaxqv>;
 defm FMINQV   : sve2p1_fp_reduction_q<0b111, "fminqv", int_aarch64_sve_fminqv>;
 
-defm DUPQ_ZZI : sve2p1_dupq<"dupq">;
+defm DUPQ_ZZI : sve2p1_dupq<"dupq", int_aarch64_sve_dup_laneq>;
 defm EXTQ_ZZI : sve2p1_extq<"extq", int_aarch64_sve_extq>;
 
 defm PMOV_PZI : sve2p1_vector_to_pred<"pmov", int_aarch64_sve_pmov_to_pred_lane, int_aarch64_sve_pmov_to_pred_lane_zero>;

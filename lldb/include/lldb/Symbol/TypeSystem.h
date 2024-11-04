@@ -300,9 +300,10 @@ public:
 
   virtual lldb::Format GetFormat(lldb::opaque_compiler_type_t type) = 0;
 
-  virtual uint32_t GetNumChildren(lldb::opaque_compiler_type_t type,
-                                  bool omit_empty_base_classes,
-                                  const ExecutionContext *exe_ctx) = 0;
+  virtual llvm::Expected<uint32_t>
+  GetNumChildren(lldb::opaque_compiler_type_t type,
+                 bool omit_empty_base_classes,
+                 const ExecutionContext *exe_ctx) = 0;
 
   virtual CompilerType GetBuiltinTypeByName(ConstString name);
 
