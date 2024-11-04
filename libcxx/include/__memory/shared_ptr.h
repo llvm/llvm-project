@@ -42,9 +42,11 @@
 #include <__type_traits/is_constructible.h>
 #include <__type_traits/is_convertible.h>
 #include <__type_traits/is_reference.h>
+#include <__type_traits/is_same.h>
 #include <__type_traits/is_unbounded_array.h>
 #include <__type_traits/nat.h>
 #include <__type_traits/negation.h>
+#include <__type_traits/remove_cv.h>
 #include <__type_traits/remove_extent.h>
 #include <__type_traits/remove_reference.h>
 #include <__utility/declval.h>
