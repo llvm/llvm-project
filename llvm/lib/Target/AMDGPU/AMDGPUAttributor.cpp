@@ -826,6 +826,16 @@ struct AAAMDSizeRangeAttribute
       if (!CallerInfo || !CallerInfo->isValidState())
         return false;
 
+      /// When the caller AA is in its initial state, the state remains valid
+      /// but awaits propagation. We skip processing in this case. Note that we
+      /// must return true since the state is still considered valid.
+      if (CallerInfo->isAtInitialState()) {
+        LLVM_DEBUG(dbgs() << '[' << getName() << "] Caller "
+                          << Caller->getName()
+                          << " is still at initial state. Skip the update.\n");
+        return true;
+      }
+
       Change |=
           clampStateAndIndicateChange(this->getState(), CallerInfo->getState());
 
@@ -868,6 +878,15 @@ struct AAAMDSizeRangeAttribute
     return A.manifestAttrs(getIRPosition(),
                            {Attribute::get(Ctx, AttrName, OS.str())},
                            /*ForceReplace=*/true);
+  }
+
+  /// The initial state of `IntegerRangeState` represents an empty set, which
+  /// does not constitute a valid range. This empty state complicates
+  /// propagation, particularly for arithmetic operations like
+  /// `getAssumed().getUpper() - 1`. Therefore, it is recommended to skip the
+  /// initial state during processing.
+  bool isAtInitialState() const {
+    return isValidState() && getAssumed().isEmptySet();
   }
 
   const std::string getAsStr(Attributor *) const override {
@@ -926,6 +945,11 @@ struct AAAMDFlatWorkGroupSize : public AAAMDSizeRangeAttribute {
                                                    Attributor &A);
 
   ChangeStatus manifest(Attributor &A) override {
+    if (isAtInitialState()) {
+      LLVM_DEBUG(dbgs() << '[' << getName()
+                        << "] Still at initial state. No manifest.\n";);
+      return ChangeStatus::UNCHANGED;
+    }
     Function *F = getAssociatedFunction();
     auto &InfoCache = static_cast<AMDGPUInformationCache &>(A.getInfoCache());
     return emitAttributeIfNotDefaultAfterClamp(
@@ -1152,31 +1176,71 @@ struct AAAMDWavesPerEU : public AAAMDSizeRangeAttribute {
     auto &InfoCache = static_cast<AMDGPUInformationCache &>(A.getInfoCache());
     ChangeStatus Change = ChangeStatus::UNCHANGED;
 
+    Function *F = getAssociatedFunction();
+
+    const auto *AAFlatWorkGroupSize = A.getAAFor<AAAMDFlatWorkGroupSize>(
+        *this, IRPosition::function(*F), DepClassTy::REQUIRED);
+    if (!AAFlatWorkGroupSize || !AAFlatWorkGroupSize->isValidState()) {
+      LLVM_DEBUG(
+          dbgs() << '[' << getName()
+                 << "] AAAMDFlatWorkGroupSize is unavailable or invalid.\n");
+      return ChangeStatus::UNCHANGED;
+    }
+
+    if (AAFlatWorkGroupSize->isAtInitialState()) {
+      LLVM_DEBUG(dbgs() << '[' << getName()
+                        << "] AAAMDFlatWorkGroupSize is still at initial "
+                           "state. Skip the update.\n");
+      return ChangeStatus::UNCHANGED;
+    }
+
+    auto CurrentWorkGroupSize = std::make_pair(
+        AAFlatWorkGroupSize->getAssumed().getLower().getZExtValue(),
+        AAFlatWorkGroupSize->getAssumed().getUpper().getZExtValue() - 1);
+
+    auto DoUpdate = [&](std::pair<unsigned, unsigned> WavesPerEU,
+                        std::pair<unsigned, unsigned> FlatWorkGroupSize) {
+      auto [Min, Max] =
+          InfoCache.getEffectiveWavesPerEU(*F, WavesPerEU, FlatWorkGroupSize);
+      ConstantRange CR(APInt(32, Min), APInt(32, Max + 1));
+      IntegerRangeState IRS(CR);
+      Change |= clampStateAndIndicateChange(this->getState(), IRS);
+    };
+
+    // We need to clamp once if we are not at initial state, because
+    // AAAMDFlatWorkGroupSize could be updated in last iteration.
+    if (!isAtInitialState()) {
+      auto CurrentWavesPerEU =
+          std::make_pair(getAssumed().getLower().getZExtValue(),
+                         getAssumed().getUpper().getZExtValue() - 1);
+      DoUpdate(CurrentWavesPerEU, CurrentWorkGroupSize);
+    }
+
     auto CheckCallSite = [&](AbstractCallSite CS) {
       Function *Caller = CS.getInstruction()->getFunction();
-      Function *Func = getAssociatedFunction();
+
       LLVM_DEBUG(dbgs() << '[' << getName() << "] Call " << Caller->getName()
-                        << "->" << Func->getName() << '\n');
+                        << "->" << F->getName() << '\n');
 
-      const auto *CallerInfo = A.getAAFor<AAAMDWavesPerEU>(
+      const auto *AAWavesPerEU = A.getAAFor<AAAMDWavesPerEU>(
           *this, IRPosition::function(*Caller), DepClassTy::REQUIRED);
-      const auto *AssumedGroupSize = A.getAAFor<AAAMDFlatWorkGroupSize>(
-          *this, IRPosition::function(*Func), DepClassTy::REQUIRED);
-      if (!CallerInfo || !AssumedGroupSize || !CallerInfo->isValidState() ||
-          !AssumedGroupSize->isValidState())
+      if (!AAWavesPerEU || !AAWavesPerEU->isValidState()) {
+        LLVM_DEBUG(dbgs() << '[' << getName() << "] Caller "
+                          << Caller->getName()
+                          << " is unavailable or invalid.\n");
         return false;
+      }
+      if (AAWavesPerEU->isAtInitialState()) {
+        LLVM_DEBUG(dbgs() << '[' << getName() << "] Caller "
+                          << Caller->getName()
+                          << " is still at initial state. Skip the update.\n");
+        return true;
+      }
 
-      unsigned Min, Max;
-      std::tie(Min, Max) = InfoCache.getEffectiveWavesPerEU(
-          *Caller,
-          {CallerInfo->getAssumed().getLower().getZExtValue(),
-           CallerInfo->getAssumed().getUpper().getZExtValue() - 1},
-          {AssumedGroupSize->getAssumed().getLower().getZExtValue(),
-           AssumedGroupSize->getAssumed().getUpper().getZExtValue() - 1});
-      ConstantRange CallerRange(APInt(32, Min), APInt(32, Max + 1));
-      IntegerRangeState CallerRangeState(CallerRange);
-      Change |= clampStateAndIndicateChange(this->getState(), CallerRangeState);
-
+      auto CallerWavesPerEU = std::make_pair(
+          AAWavesPerEU->getAssumed().getLower().getZExtValue(),
+          AAWavesPerEU->getAssumed().getUpper().getZExtValue() - 1);
+      DoUpdate(CallerWavesPerEU, CurrentWorkGroupSize);
       return true;
     };
 
@@ -1192,6 +1256,11 @@ struct AAAMDWavesPerEU : public AAAMDSizeRangeAttribute {
                                             Attributor &A);
 
   ChangeStatus manifest(Attributor &A) override {
+    if (isAtInitialState()) {
+      LLVM_DEBUG(dbgs() << '[' << getName()
+                        << "] Still at initial state. No manifest.\n";);
+      return ChangeStatus::UNCHANGED;
+    }
     Function *F = getAssociatedFunction();
     auto &InfoCache = static_cast<AMDGPUInformationCache &>(A.getInfoCache());
     return emitAttributeIfNotDefaultAfterClamp(
