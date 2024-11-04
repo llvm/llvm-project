@@ -433,7 +433,7 @@ struct ConvertVectorLoad final : OpConversionPattern<vector::LoadOp> {
             ? getConstantIntValue(linearizedInfo.intraDataOffset)
             : 0;
 
-    // always load enough elements which can cover the original elements
+    // Always load enough elements which can cover the original elements.
     int64_t maxintraDataOffset =
         foldedIntraVectorOffset ? *foldedIntraVectorOffset : scale - 1;
     auto numElements =
