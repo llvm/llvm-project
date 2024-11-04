@@ -196,23 +196,24 @@ private:
 };
 
 /// Check if `type` is index or integer type with `getWidth() > targetBitwidth`.
-static bool checkIntType(Type type, unsigned targetBitwidth) {
+static LogicalResult checkIntType(Type type, unsigned targetBitwidth) {
   Type elemType = getElementTypeOrSelf(type);
   if (isa<IndexType>(elemType))
-    return true;
+    return success();
 
   if (auto intType = dyn_cast<IntegerType>(elemType))
     if (intType.getWidth() > targetBitwidth)
-      return true;
+      return success();
 
-  return false;
+  return failure();
 }
 
 /// Check if op have same type for all operands and results and this type
 /// is suitable for truncation.
-static bool checkElementwiseOpType(Operation *op, unsigned targetBitwidth) {
+static LogicalResult checkElementwiseOpType(Operation *op,
+                                            unsigned targetBitwidth) {
   if (op->getNumOperands() == 0 || op->getNumResults() == 0)
-    return false;
+    return failure();
 
   Type type;
   for (Value val : llvm::concat<Value>(op->getOperands(), op->getResults())) {
@@ -222,7 +223,7 @@ static bool checkElementwiseOpType(Operation *op, unsigned targetBitwidth) {
     }
 
     if (type != val.getType())
-      return false;
+      return failure();
   }
 
   return checkIntType(type, targetBitwidth);
@@ -258,8 +259,8 @@ static Type getTargetType(Type srcType, unsigned targetBitwidth) {
 }
 
 /// Check provided `range` is inside `smin, smax, umin, umax` bounds.
-static bool checkRange(const ConstantIntRanges &range, APInt smin, APInt smax,
-                       APInt umin, APInt umax) {
+static LogicalResult checkRange(const ConstantIntRanges &range, APInt smin,
+                                APInt smax, APInt umin, APInt umax) {
   auto sge = [](APInt val1, APInt val2) -> bool {
     unsigned width = std::max(val1.getBitWidth(), val2.getBitWidth());
     val1 = val1.sext(width);
@@ -284,8 +285,8 @@ static bool checkRange(const ConstantIntRanges &range, APInt smin, APInt smax,
     val2 = val2.zext(width);
     return val1.ule(val2);
   };
-  return sge(range.smin(), smin) && sle(range.smax(), smax) &&
-         uge(range.umin(), umin) && ule(range.umax(), umax);
+  return success(sge(range.smin(), smin) && sle(range.smax(), smax) &&
+                 uge(range.umin(), umin) && ule(range.umax(), umax));
 }
 
 static Value doCast(OpBuilder &builder, Location loc, Value src, Type dstType) {
@@ -324,7 +325,7 @@ struct NarrowElementwise final : OpTraitRewritePattern<OpTrait::Elementwise> {
       return failure();
 
     for (unsigned targetBitwidth : targetBitwidths) {
-      if (!checkElementwiseOpType(op, targetBitwidth))
+      if (failed(checkElementwiseOpType(op, targetBitwidth)))
         continue;
 
       Type srcType = op->getResult(0).getType();
@@ -337,7 +338,7 @@ struct NarrowElementwise final : OpTraitRewritePattern<OpTrait::Elementwise> {
       auto smax = APInt::getSignedMaxValue(targetBitwidth);
       auto umin = APInt::getMinValue(targetBitwidth);
       auto umax = APInt::getMaxValue(targetBitwidth);
-      if (!checkRange(*range, smin, smax, umin, umax))
+      if (failed(checkRange(*range, smin, smax, umin, umax)))
         continue;
 
       Type targetType = getTargetType(srcType, targetBitwidth);
@@ -388,14 +389,14 @@ struct NarrowCmpI final : OpRewritePattern<arith::CmpIOp> {
 
     for (unsigned targetBitwidth : targetBitwidths) {
       Type srcType = lhs.getType();
-      if (!checkIntType(srcType, targetBitwidth))
+      if (failed(checkIntType(srcType, targetBitwidth)))
         continue;
 
       auto smin = APInt::getSignedMinValue(targetBitwidth);
       auto smax = APInt::getSignedMaxValue(targetBitwidth);
       auto umin = APInt::getMinValue(targetBitwidth);
       auto umax = APInt::getMaxValue(targetBitwidth);
-      if (!checkRange(*range, smin, smax, umin, umax))
+      if (failed(checkRange(*range, smin, smax, umin, umax)))
         continue;
 
       Type targetType = getTargetType(srcType, targetBitwidth);
