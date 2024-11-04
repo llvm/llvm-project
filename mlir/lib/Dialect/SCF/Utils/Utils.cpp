@@ -381,7 +381,7 @@ FailureOr<UnrolledLoopInfo> mlir::loopUnrollByFactor(
 
   // Return if the loop body is empty.
   if (llvm::hasSingleElement(forOp.getBody()->getOperations()))
-    return UnrolledLoopInfo{forOp, nullptr};
+    return UnrolledLoopInfo{forOp, std::nullopt};
 
   // Compute tripCount = ceilDiv((upperBound - lowerBound), step) and populate
   // 'upperBoundUnrolled' and 'stepUnrolled' for static and dynamic cases.
@@ -403,7 +403,7 @@ FailureOr<UnrolledLoopInfo> mlir::loopUnrollByFactor(
       if (*constTripCount == 1 &&
           failed(forOp.promoteIfSingleIteration(rewriter)))
         return failure();
-      return UnrolledLoopInfo{forOp, nullptr};
+      return UnrolledLoopInfo{forOp, std::nullopt};
     }
 
     int64_t tripCountEvenMultiple =

@@ -112,8 +112,8 @@ void collapseParallelLoops(RewriterBase &rewriter, scf::ParallelOp loops,
                            ArrayRef<std::vector<unsigned>> combinedDimensions);
 
 struct UnrolledLoopInfo {
-  scf::ForOp mainLoopOp = nullptr;
-  scf::ForOp epilogueLoopOp = nullptr;
+  std::optional<scf::ForOp> mainLoopOp = std::nullopt;
+  std::optional<scf::ForOp> epilogueLoopOp = std::nullopt;
 };
 
 /// Unrolls this for operation by the specified unroll factor. Returns the
