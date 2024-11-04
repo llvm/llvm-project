@@ -13,8 +13,7 @@ declare void @use_i32(i32)
 define i32 @select_ult_shl_clamp_and_i32(i32 %a0, i32 %a1, i32 %a2) {
 ; CHECK-LABEL: @select_ult_shl_clamp_and_i32(
 ; CHECK-NEXT:    [[C:%.*]] = icmp ult i32 [[A1:%.*]], 32
-; CHECK-NEXT:    [[M:%.*]] = and i32 [[A1]], 31
-; CHECK-NEXT:    [[TMP1:%.*]] = shl i32 [[A0:%.*]], [[M]]
+; CHECK-NEXT:    [[TMP1:%.*]] = shl i32 [[A0:%.*]], [[A1]]
 ; CHECK-NEXT:    [[R:%.*]] = select i1 [[C]], i32 [[TMP1]], i32 [[A2:%.*]]
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
@@ -28,8 +27,7 @@ define i32 @select_ult_shl_clamp_and_i32(i32 %a0, i32 %a1, i32 %a2) {
 define i32 @select_ule_ashr_clamp_and_i32(i32 %a0, i32 %a1, i32 %a2) {
 ; CHECK-LABEL: @select_ule_ashr_clamp_and_i32(
 ; CHECK-NEXT:    [[C:%.*]] = icmp ult i32 [[A1:%.*]], 32
-; CHECK-NEXT:    [[M:%.*]] = and i32 [[A1]], 127
-; CHECK-NEXT:    [[TMP1:%.*]] = ashr i32 [[A0:%.*]], [[M]]
+; CHECK-NEXT:    [[TMP1:%.*]] = ashr i32 [[A0:%.*]], [[A1]]
 ; CHECK-NEXT:    [[R:%.*]] = select i1 [[C]], i32 [[TMP1]], i32 [[A2:%.*]]
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
@@ -43,8 +41,7 @@ define i32 @select_ule_ashr_clamp_and_i32(i32 %a0, i32 %a1, i32 %a2) {
 define i32 @select_ugt_lshr_clamp_and_i32(i32 %a0, i32 %a1, i32 %a2) {
 ; CHECK-LABEL: @select_ugt_lshr_clamp_and_i32(
 ; CHECK-NEXT:    [[C:%.*]] = icmp ugt i32 [[A1:%.*]], 31
-; CHECK-NEXT:    [[M:%.*]] = and i32 [[A1]], 31
-; CHECK-NEXT:    [[TMP1:%.*]] = lshr i32 [[A0:%.*]], [[M]]
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr i32 [[A0:%.*]], [[A1]]
 ; CHECK-NEXT:    [[R:%.*]] = select i1 [[C]], i32 [[A2:%.*]], i32 [[TMP1]]
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
@@ -58,8 +55,7 @@ define i32 @select_ugt_lshr_clamp_and_i32(i32 %a0, i32 %a1, i32 %a2) {
 define i32 @select_uge_shl_clamp_and_i32(i32 %a0, i32 %a1, i32 %a2) {
 ; CHECK-LABEL: @select_uge_shl_clamp_and_i32(
 ; CHECK-NEXT:    [[C:%.*]] = icmp ugt i32 [[A1:%.*]], 31
-; CHECK-NEXT:    [[M:%.*]] = and i32 [[A1]], 63
-; CHECK-NEXT:    [[TMP1:%.*]] = shl i32 [[A0:%.*]], [[M]]
+; CHECK-NEXT:    [[TMP1:%.*]] = shl i32 [[A0:%.*]], [[A1]]
 ; CHECK-NEXT:    [[R:%.*]] = select i1 [[C]], i32 [[A2:%.*]], i32 [[TMP1]]
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
@@ -129,8 +125,7 @@ define i17 @select_uge_lshr_clamp_and_i17_nonpow2(i17 %a0, i17 %a1, i17 %a2) {
 define i32 @select_ult_shl_clamp_umin_i32(i32 %a0, i32 %a1, i32 %a2) {
 ; CHECK-LABEL: @select_ult_shl_clamp_umin_i32(
 ; CHECK-NEXT:    [[C:%.*]] = icmp ult i32 [[A1:%.*]], 32
-; CHECK-NEXT:    [[M:%.*]] = call i32 @llvm.umin.i32(i32 [[A1]], i32 31)
-; CHECK-NEXT:    [[TMP1:%.*]] = shl i32 [[A0:%.*]], [[M]]
+; CHECK-NEXT:    [[TMP1:%.*]] = shl i32 [[A0:%.*]], [[A1]]
 ; CHECK-NEXT:    [[R:%.*]] = select i1 [[C]], i32 [[TMP1]], i32 [[A2:%.*]]
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
@@ -144,8 +139,7 @@ define i32 @select_ult_shl_clamp_umin_i32(i32 %a0, i32 %a1, i32 %a2) {
 define i17 @select_ule_ashr_clamp_umin_i17(i17 %a0, i17 %a1, i17 %a2) {
 ; CHECK-LABEL: @select_ule_ashr_clamp_umin_i17(
 ; CHECK-NEXT:    [[C:%.*]] = icmp ult i17 [[A1:%.*]], 17
-; CHECK-NEXT:    [[M:%.*]] = call i17 @llvm.umin.i17(i17 [[A1]], i17 17)
-; CHECK-NEXT:    [[TMP1:%.*]] = ashr i17 [[A0:%.*]], [[M]]
+; CHECK-NEXT:    [[TMP1:%.*]] = ashr i17 [[A0:%.*]], [[A1]]
 ; CHECK-NEXT:    [[R:%.*]] = select i1 [[C]], i17 [[TMP1]], i17 [[A2:%.*]]
 ; CHECK-NEXT:    ret i17 [[R]]
 ;
@@ -159,8 +153,7 @@ define i17 @select_ule_ashr_clamp_umin_i17(i17 %a0, i17 %a1, i17 %a2) {
 define i32 @select_ugt_shl_clamp_umin_i32(i32 %a0, i32 %a1, i32 %a2) {
 ; CHECK-LABEL: @select_ugt_shl_clamp_umin_i32(
 ; CHECK-NEXT:    [[C:%.*]] = icmp ugt i32 [[A1:%.*]], 31
-; CHECK-NEXT:    [[M:%.*]] = call i32 @llvm.umin.i32(i32 [[A1]], i32 128)
-; CHECK-NEXT:    [[S:%.*]] = shl i32 [[A0:%.*]], [[M]]
+; CHECK-NEXT:    [[S:%.*]] = shl i32 [[A0:%.*]], [[A1]]
 ; CHECK-NEXT:    [[R:%.*]] = select i1 [[C]], i32 [[A2:%.*]], i32 [[S]]
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
@@ -174,8 +167,7 @@ define i32 @select_ugt_shl_clamp_umin_i32(i32 %a0, i32 %a1, i32 %a2) {
 define <2 x i32> @select_uge_lshr_clamp_umin_v2i32(<2 x i32> %a0, <2 x i32> %a1, <2 x i32> %a2) {
 ; CHECK-LABEL: @select_uge_lshr_clamp_umin_v2i32(
 ; CHECK-NEXT:    [[C:%.*]] = icmp ugt <2 x i32> [[A1:%.*]], <i32 31, i32 31>
-; CHECK-NEXT:    [[M:%.*]] = call <2 x i32> @llvm.umin.v2i32(<2 x i32> [[A1]], <2 x i32> <i32 63, i32 31>)
-; CHECK-NEXT:    [[S:%.*]] = lshr <2 x i32> [[A0:%.*]], [[M]]
+; CHECK-NEXT:    [[S:%.*]] = lshr <2 x i32> [[A0:%.*]], [[A1]]
 ; CHECK-NEXT:    [[R:%.*]] = select <2 x i1> [[C]], <2 x i32> [[A2:%.*]], <2 x i32> [[S]]
 ; CHECK-NEXT:    ret <2 x i32> [[R]]
 ;
@@ -223,8 +215,7 @@ define i17 @select_uge_lshr_clamp_umin_i17_badlimit(i17 %a0, i17 %a1, i17 %a2) {
 define range(i64 0, -9223372036854775807) <4 x i64> @PR109888(<4 x i64> %0) {
 ; CHECK-LABEL: @PR109888(
 ; CHECK-NEXT:    [[C:%.*]] = icmp ult <4 x i64> [[TMP0:%.*]], <i64 64, i64 64, i64 64, i64 64>
-; CHECK-NEXT:    [[M:%.*]] = and <4 x i64> [[TMP0]], <i64 63, i64 63, i64 63, i64 63>
-; CHECK-NEXT:    [[TMP2:%.*]] = shl nuw <4 x i64> <i64 1, i64 1, i64 1, i64 1>, [[M]]
+; CHECK-NEXT:    [[TMP2:%.*]] = shl nuw <4 x i64> <i64 1, i64 1, i64 1, i64 1>, [[TMP0]]
 ; CHECK-NEXT:    [[R:%.*]] = select <4 x i1> [[C]], <4 x i64> [[TMP2]], <4 x i64> zeroinitializer
 ; CHECK-NEXT:    ret <4 x i64> [[R]]
 ;

@@ -2761,6 +2761,67 @@ static Instruction *foldSelectWithSRem(SelectInst &SI, InstCombinerImpl &IC,
   return nullptr;
 }
 
+static Instruction *foldSelectWithClampedShift(SelectInst &SI,
+                                               InstCombinerImpl &IC,
+                                               IRBuilderBase &Builder) {
+  Value *CondVal = SI.getCondition();
+  Value *TrueVal = SI.getTrueValue();
+  Value *FalseVal = SI.getFalseValue();
+  Type *SelType = SI.getType();
+  uint64_t BW = SelType->getScalarSizeInBits();
+
+  auto MatchClampedShift = [&](Value *V, Value *Amt) -> BinaryOperator * {
+    Value *X, *Limit;
+
+    // Fold (select (icmp_ugt A, BW-1), TrueVal, (shift X, (umin A, C)))
+    //  --> (select (icmp_ugt A, BW-1), TrueVal, (shift X, A))
+    // Fold (select (icmp_ult A, BW), (shift X, (umin A, C)), FalseVal)
+    //  --> (select (icmp_ult A, BW), (shift X, A), FalseVal)
+    // iff C >= BW-1
+    if (match(V, m_OneUse(m_Shift(m_Value(X),
+                                  m_UMin(m_Specific(Amt), m_Value(Limit)))))) {
+      KnownBits KnownLimit = IC.computeKnownBits(Limit, 0, &SI);
+      if (KnownLimit.getMinValue().uge(BW - 1))
+        return cast<BinaryOperator>(V);
+    }
+
+    // Fold (select (icmp_ugt A, BW-1), (shift X, (and A, C)), FalseVal)
+    //  --> (select (icmp_ugt A, BW-1), (shift X, A), FalseVal)
+    // Fold (select (icmp_ult A, BW), (shift X, (and A, C)), FalseVal)
+    //  --> (select (icmp_ult A, BW), (shift X, A), FalseVal)
+    // iff Pow2 element width and C masks all amt bits.
+    if (isPowerOf2_64(BW) &&
+        match(V, m_OneUse(m_Shift(m_Value(X),
+                                  m_And(m_Specific(Amt), m_Value(Limit)))))) {
+      KnownBits KnownLimit = IC.computeKnownBits(Limit, 0, &SI);
+      if (KnownLimit.countMinTrailingOnes() >= Log2_64(BW))
+        return cast<BinaryOperator>(V);
+    }
+
+    return nullptr;
+  };
+
+  Value *Amt;
+  if (match(CondVal, m_SpecificICmp(ICmpInst::ICMP_UGT, m_Value(Amt),
+                                    m_SpecificInt(BW - 1)))) {
+    if (BinaryOperator *ShiftI = MatchClampedShift(FalseVal, Amt))
+      return SelectInst::Create(
+          CondVal, TrueVal,
+          Builder.CreateBinOp(ShiftI->getOpcode(), ShiftI->getOperand(0), Amt));
+  }
+
+  if (match(CondVal, m_SpecificICmp(ICmpInst::ICMP_ULT, m_Value(Amt),
+                                    m_SpecificInt(BW)))) {
+    if (BinaryOperator *ShiftI = MatchClampedShift(TrueVal, Amt))
+      return SelectInst::Create(
+          CondVal,
+          Builder.CreateBinOp(ShiftI->getOpcode(), ShiftI->getOperand(0), Amt),
+          FalseVal);
+  }
+
+  return nullptr;
+}
+
 static Value *foldSelectWithFrozenICmp(SelectInst &Sel, InstCombiner::BuilderTy &Builder) {
   FreezeInst *FI = dyn_cast<FreezeInst>(Sel.getCondition());
   if (!FI)
@@ -3869,6 +3930,9 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
       return IV;
 
   if (Instruction *I = foldSelectExtConst(SI))
+    return I;
+
+  if (Instruction *I = foldSelectWithClampedShift(SI, *this, Builder))
     return I;
 
   if (Instruction *I = foldSelectWithSRem(SI, *this, Builder))
