@@ -488,8 +488,8 @@ bool VectorCombine::isExtractExtractCheap(ExtractElementInst *Ext0,
     // TODO: The cost model has an option for a "broadcast" shuffle
     //       (splat-from-element-0), but no option for a more general splat.
     if (auto *FixedVecTy = dyn_cast<FixedVectorType>(VecTy)) {
-      SmallVector<int> ShuffleMask;
-      ShuffleMask.append(FixedVecTy->getNumElements(), PoisonMaskElem);
+      SmallVector<int> ShuffleMask(FixedVecTy->getNumElements(),
+                                   PoisonMaskElem);
       ShuffleMask[BestInsIndex] = BestExtIndex;
       NewCost += TTI.getShuffleCost(TargetTransformInfo::SK_PermuteSingleSrc,
                                     VecTy, ShuffleMask);
