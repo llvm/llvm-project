@@ -128,47 +128,44 @@ static FailureOr<Operation *> getCompressedMaskOp(OpBuilder &rewriter,
   return newMask;
 }
 
-/// A wrapper function for emitting `vector.extract_strided_slice`. The vector
-/// has to be of 1-D shape.
+/// Extracts 1-D subvector from a 1-D vector. It is a wrapper function for
+/// emitting `vector.extract_strided_slice`.
 static Value extractSubvectorFrom(RewriterBase &rewriter, Location loc,
-                                  VectorType extractType, Value vector,
+                                  VectorType extractType, Value source,
                                   int64_t frontOffset, int64_t subvecSize) {
-  auto vectorType = dyn_cast<VectorType>(vector.getType());
-  assert(vectorType && "expected vector type");
-  assert(vectorType.getShape().size() == 1 && "expected 1-D vector type");
-  assert(extractType.getShape().size() == 1 &&
-         "extractType must be 1-D vector type");
-
+  auto vectorType = dyn_cast<VectorType>(source.getType());
+  assert(
+      (vectorType && vectorType.getRank() == 1 && extractType.getRank() == 1) &&
+      "expected 1-D source and destination types");
   auto offsets = rewriter.getI64ArrayAttr({frontOffset});
   auto sizes = rewriter.getI64ArrayAttr({subvecSize});
   auto strides = rewriter.getI64ArrayAttr({1});
   return rewriter
-      .create<vector::ExtractStridedSliceOp>(loc, extractType, vector, offsets,
+      .create<vector::ExtractStridedSliceOp>(loc, extractType, source, offsets,
                                              sizes, strides)
       ->getResult(0);
 }
 
-/// A wrapper function for emitting `vector.insert_strided_slice`. The source
-/// and dest vectors must be of 1-D shape.
+/// Inserts 1-D subvector into a 1-D vector by overwriting the elements starting
+/// at `offset`. it is a wrapper function for emitting
+/// `vector.insert_strided_slice`.
 static Value insertSubvectorInto(RewriterBase &rewriter, Location loc,
                                  Value src, Value dest, int64_t offset) {
   auto srcType = dyn_cast<VectorType>(src.getType());
-  assert(srcType && "expected vector type");
-  assert(srcType.getShape().size() == 1 && "expected 1-D vector type");
   auto destType = dyn_cast<VectorType>(dest.getType());
-  assert(destType && "expected vector type");
-  assert(destType.getShape().size() == 1 && "expected 1-D vector type");
-
+  assert(srcType && srcType.getRank() == 1 && destType &&
+         destType.getRank() == 1 &&
+         "expected source and dest to be vector type");
   auto offsets = rewriter.getI64ArrayAttr({offset});
   auto strides = rewriter.getI64ArrayAttr({1});
   return rewriter.create<vector::InsertStridedSliceOp>(loc, dest.getType(), src,
                                                        dest, offsets, strides);
 }
 
-/// Extracts `lengthSubvec` elements from `srcVec` into `destVec` starting at
-/// the offset specified by `srcOffsetVar`. Use this function when
-/// `srcOffsetVar` is not a constant, making it impossible to use
-/// vector.extract_strided_slice, as it requires constant offsets.
+/// Extracts a 1-D subvector from a 1-D `source` vector, with index at `offset`
+/// and size `numElementsToExtract`, and inserts into the `dest` vector. This
+/// Function emits multiple `vector.extract` and `vector.insert` ops, so only
+/// use it when `offset` cannot be folded into a constant value.
 static Value dynamicallyExtractSubVector(RewriterBase &rewriter, Location loc,
                                          TypedValue<VectorType> source,
                                          Value dest, OpFoldResult offset,
@@ -186,21 +183,23 @@ static Value dynamicallyExtractSubVector(RewriterBase &rewriter, Location loc,
   return dest;
 }
 
-/// Load `numLoadedElements` of `newElementType` from `base` at
-/// `linearizedIndices`, then bitcast the result into a vector of
-/// `oldElementType`.
+/// Returns the op sequence for an emulated sub-byte datatype vector load.
+/// specifically, use `emulatedElemType` for loading a vector of `origElemType`.
+/// The load location is given by `base` and `linearizedIndices`, and the
+/// load size is given by `numEmulatedElementsToLoad`.
 static TypedValue<VectorType>
 emulatedVectorLoad(ConversionPatternRewriter &rewriter, Location loc,
                    Value base, OpFoldResult linearizedIndices,
-                   int64_t numElementsToLoad, Type oldElememtType,
-                   Type newElementType) {
-  auto scale = newElementType.getIntOrFloatBitWidth() /
-               oldElememtType.getIntOrFloatBitWidth();
+                   int64_t numEmultedElementsToLoad, Type origElemType,
+                   Type emulatedElemType) {
+  auto scale = emulatedElemType.getIntOrFloatBitWidth() /
+               origElemType.getIntOrFloatBitWidth();
   auto newLoad = rewriter.create<vector::LoadOp>(
-      loc, VectorType::get(numElementsToLoad, newElementType), base,
+      loc, VectorType::get(numEmultedElementsToLoad, emulatedElemType), base,
       getValueOrCreateConstantIndexOp(rewriter, loc, linearizedIndices));
   return rewriter.create<vector::BitCastOp>(
-      loc, VectorType::get(numElementsToLoad * scale, oldElememtType), newLoad);
+      loc, VectorType::get(numEmultedElementsToLoad * scale, origElemType),
+      newLoad);
 };
 
 namespace {
@@ -435,7 +434,7 @@ struct ConvertVectorLoad final : OpConversionPattern<vector::LoadOp> {
             : 0;
 
     // always load enough elements which can cover the original elements
-    auto maxintraDataOffset =
+    int64_t maxintraDataOffset =
         foldedIntraVectorOffset ? *foldedIntraVectorOffset : scale - 1;
     auto numElements =
         llvm::divideCeil(maxintraDataOffset + origElements, scale);

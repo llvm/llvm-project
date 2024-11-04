@@ -17,7 +17,7 @@ func.func @vector_load_i2() -> vector<3x3xi2> {
   return %2 : vector<3x3xi2>
 }
 
-// CHECK: func @vector_load_i2
+// CHECK-LABEL: func @vector_load_i2
 // CHECK: %[[ALLOC:.+]] = memref.alloc() : memref<3xi8>
 // CHECK: %[[INDEX:.+]] = arith.constant 1 : index
 // CHECK: %[[VEC:.+]] = vector.load %[[ALLOC]][%[[INDEX]]] : memref<3xi8>, vector<2xi8>
@@ -35,7 +35,7 @@ func.func @vector_transfer_read_i2() -> vector<3xi2> {
   return %1 : vector<3xi2>
 }
 
-// CHECK: func @vector_transfer_read_i2
+// CHECK-LABEL: func @vector_transfer_read_i2
 // CHECK: %[[ALLOC:.+]] = memref.alloc() : memref<3xi8>
 // CHECK: %[[INDEX:.+]] = arith.constant 1 : index
 // CHECK: %[[READ:.+]] = vector.transfer_read %[[ALLOC]][%[[INDEX]]], %0 : memref<3xi8>, vector<2xi8>
@@ -56,11 +56,12 @@ func.func @vector_cst_maskedload_i2(%passthru: vector<5xi2>) -> vector<3x5xi2> {
   return %2 : vector<3x5xi2>
 }
 
-// CHECK: func @vector_cst_maskedload_i2
+// CHECK-LABEL: func @vector_cst_maskedload_i2(
+// CHECK-SAME: %[[ARG0:.+]]: vector<5xi2>) -> vector<3x5xi2>
 // CHECK: %[[ORIGINMASK:.+]] = vector.constant_mask [3] : vector<5xi1>
 // CHECK: %[[NEWMASK:.+]] = arith.constant dense<true> : vector<2xi1>
 // CHECK: %[[VESSEL:.+]] = arith.constant dense<0> : vector<8xi2>
-// CHECK: %[[INSERT1:.+]] = vector.insert_strided_slice %arg0, %[[VESSEL]]
+// CHECK: %[[INSERT1:.+]] = vector.insert_strided_slice %[[ARG0]], %[[VESSEL]]
 // CHECK-SAME: {offsets = [2], strides = [1]} : vector<5xi2> into vector<8xi2>
 // CHECK: %[[BITCAST1:.+]] = vector.bitcast %[[INSERT1]] : vector<8xi2> to vector<2xi8>
 // CHECK: %[[C2:.+]] = arith.constant 2 : index
@@ -82,7 +83,8 @@ func.func @vector_load_i2_dynamic_indexing(%idx1: index, %idx2: index) -> vector
   return %1 : vector<3xi2>
 }
 
-// CHECK: func @vector_load_i2_dynamic_indexing
+// CHECK-LABEL: func @vector_load_i2_dynamic_indexing(
+// CHECK-SAME: %[[ARG0:.+]]: index, %[[ARG1:.+]]: index) -> vector<3xi2>
 // CHECK: %[[ALLOC:.+]]= memref.alloc() : memref<3xi8>
 // CHECK: %[[LOADADDR1:.+]] = affine.apply #map()[%arg0, %arg1]
 // CHECK: %[[LOADADDR2:.+]] = affine.apply #map1()[%arg0, %arg1]
@@ -106,11 +108,12 @@ func.func @vector_transfer_read_i2_dynamic_indexing(%idx1: index, %idx2: index) 
   return %1 : vector<3xi2>
 }
 
-// CHECK: func @vector_transfer_read_i2_dynamic_indexing
+// CHECK-LABEL: func @vector_transfer_read_i2_dynamic_indexing(
+// CHECK-SAME: %[[ARG0:.+]]: index, %[[ARG1:.+]]: index) -> vector<3xi2>
 // CHECK: %[[ALLOC:.+]] = memref.alloc() : memref<3xi8>
 // CHECK: %[[C0:.+]] = arith.extui %c0_i2 : i2 to i8
-// CHECK: %[[LOADADDR1:.+]] = affine.apply #map()[%arg0, %arg1]
-// CHECK: %[[LOADADDR2:.+]] = affine.apply #map1()[%arg0, %arg1]
+// CHECK: %[[LOADADDR1:.+]] = affine.apply #map()[%[[ARG0]], %[[ARG1]]]
+// CHECK: %[[LOADADDR2:.+]] = affine.apply #map1()[%[[ARG0]], %[[ARG1]]]
 // CHECK: %[[READ:.+]] = vector.transfer_read %[[ALLOC]][%[[LOADADDR1]]], %[[C0]] : memref<3xi8>, vector<2xi8>
 // CHECK: %[[BITCAST:.+]] = vector.bitcast %[[READ]] : vector<2xi8> to vector<8xi2>
 // CHECK: %[[CST:.+]] = arith.constant dense<0> : vector<3xi2>
