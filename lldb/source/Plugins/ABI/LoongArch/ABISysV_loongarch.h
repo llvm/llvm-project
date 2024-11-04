@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_ABISysV_loongarch_h_
-#define liblldb_ABISysV_loongarch_h_
+#ifndef LLDB_SOURCE_PLUGINS_ABI_LOONGARCH_ABISYSV_LOONGARCH_H
+#define LLDB_SOURCE_PLUGINS_ABI_LOONGARCH_ABISYSV_LOONGARCH_H
 
 // Other libraries and framework includes
 #include "llvm/TargetParser/Triple.h"
@@ -101,4 +101,4 @@ private:
                   // loongarch32
 };
 
-#endif // liblldb_ABISysV_loongarch_h_
+#endif // LLDB_SOURCE_PLUGINS_ABI_LOONGARCH_ABISYSV_LOONGARCH_H
