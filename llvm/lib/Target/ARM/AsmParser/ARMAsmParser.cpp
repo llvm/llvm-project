@@ -659,6 +659,8 @@ class ARMAsmParser : public MCTargetAsmParser {
 
   bool validateInstruction(MCInst &Inst, const OperandVector &Ops,
                            unsigned MnemonicOpsEndInd);
+  bool revalidateInstruction(MCInst &Inst, const OperandVector &Ops,
+                             unsigned MnemonicOpsEndInd, unsigned OrigOpcode);
   bool processInstruction(MCInst &Inst, const OperandVector &Ops,
                           unsigned MnemonicOpsEndInd, MCStreamer &Out);
   bool shouldOmitVectorPredicateOperand(StringRef Mnemonic,
@@ -8294,7 +8296,9 @@ bool ARMAsmParser::validateInstruction(MCInst &Inst,
     break;
   }
   case ARM::tADDi8: {
-    MCParsedAsmOperand &Op = *Operands[MnemonicOpsEndInd + 1];
+    int i = (Operands[MnemonicOpsEndInd + 1]->isImm()) ? MnemonicOpsEndInd + 1
+                                                       : MnemonicOpsEndInd + 2;
+    MCParsedAsmOperand &Op = *Operands[i];
     if (isARMMCExpr(Op) && !isThumbI8Relocation(Op))
       return Error(Op.getStartLoc(),
                    "Immediate expression for Thumb adds requires :lower0_7:,"
@@ -8302,7 +8306,7 @@ bool ARMAsmParser::validateInstruction(MCInst &Inst,
     break;
   }
   case ARM::tMOVi8: {
-    MCParsedAsmOperand &Op = *Operands[MnemonicOpsEndInd];
+    MCParsedAsmOperand &Op = *Operands[MnemonicOpsEndInd + 1];
     if (isARMMCExpr(Op) && !isThumbI8Relocation(Op))
       return Error(Op.getStartLoc(),
                    "Immediate expression for Thumb movs requires :lower0_7:,"
@@ -8648,6 +8652,41 @@ bool ARMAsmParser::validateInstruction(MCInst &Inst,
                    "coprocessor must be configured as GCP");
     break;
   }
+  }
+
+  return false;
+}
+
+// After processInstruction has transformed an instruction being assembled into
+// a different opcode, do any further validity checks that the new opcode
+// depends on.
+//
+// `Inst` contains the final modified form of the instruction, but `Operands`
+// contains the parsed operands from the _original_ instruction, because
+// nothing has updated them (`processInstruction` received them as const).
+// `OrigOpcode` contains the original value of `Inst.getOpcode()`, which should
+// give enough context to know how to understand the original operands list.
+bool ARMAsmParser::revalidateInstruction(MCInst &Inst,
+                                         const OperandVector &Operands,
+                                         unsigned MnemonicOpsEndInd,
+                                         unsigned OrigOpcode) {
+  const unsigned NewOpcode = Inst.getOpcode();
+
+  if (OrigOpcode == ARM::t2ADDri && NewOpcode == ARM::tADDi8) {
+    // t2ADDri is the Thumb 32-bit immediate add instruction, for example
+    // 'add[s] r0,r1,#0xff00'. If its immediate argument isn't a constant
+    // requiring shifting, then processInstruction can turn it into tADDi8, the
+    // simpler 16-bit Thumb immediate add (provided all the other conditions
+    // for that transformation are met). That makes it too late for
+    // validateInstruction to do this check, which it would have done if it had
+    // known from the start that the instruction was tADDi8.
+    int i = (Operands[MnemonicOpsEndInd + 1]->isImm()) ? MnemonicOpsEndInd + 1
+                                                       : MnemonicOpsEndInd + 2;
+    MCParsedAsmOperand &Op = *Operands[i];
+    if (isARMMCExpr(Op) && !isThumbI8Relocation(Op))
+      return Error(Op.getStartLoc(),
+                   "Immediate expression for Thumb adds requires :lower0_7:,"
+                   " :lower8_15:, :upper0_7: or :upper8_15:");
   }
 
   return false;
@@ -11399,7 +11438,7 @@ bool ARMAsmParser::matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
   unsigned MnemonicOpsEndInd = getMnemonicOpsEndInd(Operands);
 
   switch (MatchResult) {
-  case Match_Success:
+  case Match_Success: {
     LLVM_DEBUG(dbgs() << "Parsed as: ";
                Inst.dump_pretty(dbgs(), MII.getName(Inst.getOpcode()));
                dbgs() << "\n");
@@ -11414,15 +11453,31 @@ bool ARMAsmParser::matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
       return true;
     }
 
-    {
-      // Some instructions need post-processing to, for example, tweak which
-      // encoding is selected. Loop on it while changes happen so the
-      // individual transformations can chain off each other. E.g.,
-      // tPOP(r8)->t2LDMIA_UPD(sp,r8)->t2STR_POST(sp,r8)
-      while (processInstruction(Inst, Operands, MnemonicOpsEndInd, Out))
+    // Some instructions need post-processing to, for example, tweak which
+    // encoding is selected. Loop on it while changes happen so the individual
+    // transformations can chain off each other. E.g.,
+    // tPOP(r8)->t2LDMIA_UPD(sp,r8)->t2STR_POST(sp,r8)
+    //
+    // This is written as a do-while inside an if, instead of the more obvious
+    // while loop, so that after postprocessing has completed the revised
+    // instruction can be revalidated, but (to save time) only if any changes
+    // had to be made at all.
+    unsigned OrigOpcode = Inst.getOpcode();
+    if (processInstruction(Inst, Operands, MnemonicOpsEndInd, Out)) {
+      do {
         LLVM_DEBUG(dbgs() << "Changed to: ";
                    Inst.dump_pretty(dbgs(), MII.getName(Inst.getOpcode()));
                    dbgs() << "\n");
+      } while (processInstruction(Inst, Operands, MnemonicOpsEndInd, Out));
+
+      MnemonicOpsEndInd = getMnemonicOpsEndInd(Operands);
+      if (revalidateInstruction(Inst, Operands, MnemonicOpsEndInd,
+                                OrigOpcode)) {
+        // As above, advance IT/VPT positions if we're exiting early.
+        forwardITPosition();
+        forwardVPTPosition();
+        return true;
+      }
     }
 
     // Only move forward at the very end so that everything in validate
@@ -11445,6 +11500,7 @@ bool ARMAsmParser::matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
       Out.emitInstruction(Inst, getSTI());
     }
     return false;
+  }
   case Match_NearMisses:
     ReportNearMisses(NearMisses, IDLoc, Operands);
     return true;
