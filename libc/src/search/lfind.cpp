@@ -19,7 +19,9 @@ LLVM_LIBC_FUNCTION(void *, lfind,
   const cpp::byte *end = next + (*nmemb * size);
   while (next < end) {
     if (compar(key, next) == 0) {
-      return next;
+      // According to IEEE Std 1003.1-2024 we are expected to accept a const reference 
+      // to base, but return a non-const reference to the element it contains.  
+      return const_cast<cpp::byte *>(next);
     }
     next += size;
   }
