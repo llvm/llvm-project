@@ -119,7 +119,7 @@ def P600WriteCMOV : SchedWriteRes<[SiFiveP600Branch, SiFiveP600CMOV]> {
 }
 def : InstRW<[P600WriteCMOV], (instrs PseudoCCMOVGPRNoX0)>;
 
-let Latency = 3 in {
+let Latency = 2 in {
 // Integer multiplication
 def : WriteRes<WriteIMul, [SiFiveP600MulI2F]>;
 def : WriteRes<WriteIMul32, [SiFiveP600MulI2F]>;
