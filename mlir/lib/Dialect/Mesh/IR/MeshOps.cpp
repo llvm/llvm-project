@@ -511,7 +511,7 @@ LogicalResult ShardingOp::verify() {
     return failure();
 
   if (!getStaticHaloSizes().empty() && !getStaticShardedDimsOffsets().empty()) {
-    return emitOpError("halo sizes and shard shapes are mutually exclusive");
+    return emitOpError("halo sizes and shard offsets are mutually exclusive");
   }
 
   if (!getStaticHaloSizes().empty()) {
