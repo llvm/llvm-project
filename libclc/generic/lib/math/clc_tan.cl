@@ -20,11 +20,11 @@
  * THE SOFTWARE.
  */
 #include <clc/clc.h>
+#include <clc/clcmacro.h>
 #include <clc/math/clc_fabs.h>
 
 #include "math.h"
 #include "sincos_helpers.h"
-#include "../clcmacro.h"
 #include "tables.h"
 
 _CLC_DEF _CLC_OVERLOAD float __clc_tan(float x) {
