@@ -104,7 +104,7 @@ def TestTarget : Target;
 // CHECK:      	SuperClasses:
 //
 // CHECK:      RegisterClass DRegs:
-// CHECK:      	LaneMask: 0000000000000004
+// CHECK:      	LaneMask: 0000000000000044
 // CHECK:      	HasDisjunctSubRegs: 1
 // CHECK:      	CoveredBySubRegs: 1
 // CHECK:      	Regs: D0 D1 D2
@@ -112,7 +112,7 @@ def TestTarget : Target;
 // CHECK:      	SuperClasses:
 //
 // CHECK:      RegisterClass QRegs:
-// CHECK:      	LaneMask: 0000000000000044
+// CHECK:      	LaneMask: 0000000000000045
 // CHECK:      	HasDisjunctSubRegs: 1
 // CHECK:      	CoveredBySubRegs: 1
 // CHECK:      	Regs: Q0 Q1 Q2
