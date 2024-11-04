@@ -1775,6 +1775,17 @@ CoroCleanup
 This pass runs late to lower all coroutine related intrinsics not replaced by
 earlier passes.
 
+Attributes
+==========
+
+coro_only_destroy_when_complete
+-------------------------------
+
+When the coroutine are marked with coro_only_destroy_when_complete, it indicates
+the coroutine must reach the final suspend point when it get destroyed.
+
+This attribute only works for switched-resume coroutines now.
+
 Metadata
 ========
 
