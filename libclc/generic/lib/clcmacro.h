@@ -1,3 +1,4 @@
+#include <clc/clc.h>
 #include <utils.h>
 
 #define _CLC_UNARY_VECTORIZE(DECLSPEC, RET_TYPE, FUNCTION, ARG1_TYPE) \
