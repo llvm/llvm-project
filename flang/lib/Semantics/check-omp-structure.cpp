@@ -272,7 +272,7 @@ bool OmpStructureChecker::IsCloselyNestedRegion(const OmpDirectiveSet &set) {
 namespace {
 struct ContiguousHelper {
   ContiguousHelper(SemanticsContext &context)
-      : sctx_(context), fctx_(context.foldingContext()) {}
+      : fctx_(context.foldingContext()) {}
 
   template <typename Contained>
   std::optional<bool> Visit(const common::Indirection<Contained> &x) {
@@ -296,7 +296,6 @@ struct ContiguousHelper {
   }
 
 private:
-  [[maybe_unused]] SemanticsContext &sctx_;
   evaluate::FoldingContext &fctx_;
 };
 } // namespace
