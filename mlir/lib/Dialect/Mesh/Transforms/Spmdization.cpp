@@ -441,72 +441,71 @@ tryUpdateHaloInResharding(ImplicitLocOpBuilder &builder, MeshOp mesh,
                           TypedValue<ShapedType> sourceShard) {
   // Currently handles only cases where halo sizes differ but everything else
   // stays the same (from source to destination sharding).
-  if (sourceSharding.equalSplitAndPartialAxes(targetSharding) &&
-      sourceSharding.getPartialAxes().empty() &&
-      targetSharding.getPartialAxes().empty() &&
-      sourceSharding.getStaticShardedDimsOffsets().empty() &&
-      targetSharding.getStaticShardedDimsOffsets().empty() &&
-      !sourceSharding.equalHaloSizes(targetSharding)) {
-    auto srcHaloSizes = sourceSharding.getStaticHaloSizes();
-    auto tgtHaloSizes = targetSharding.getStaticHaloSizes();
-    assert(srcHaloSizes.empty() || srcHaloSizes.size() == tgtHaloSizes.size());
-    assert(
-        ((srcHaloSizes.empty() || !ShapedType::isDynamicShape(srcHaloSizes)) &&
-         !ShapedType::isDynamicShape(tgtHaloSizes) &&
-         sourceShard.getType().hasStaticShape()) &&
-        "dynamic shapes/halos are not supported yet for mesh-spmdization");
-    auto rank = sourceShard.getType().getRank();
-    auto splitAxes = sourceSharding.getSplitAxes();
-    SmallVector<int64_t> srcCoreOffs(rank, 0), tgtCoreOffs(rank, 0),
-        strides(rank, 1), outShape(sourceShard.getType().getShape()),
-        coreShape(sourceShard.getType().getShape());
-
-    // Determine "core" of source and destination.
-    // The core is the local part of the shard excluding halo regions.
-    for (auto i = 0u; i < rank; ++i) {
-      if (i < splitAxes.size() && !splitAxes[i].empty()) {
-        if (!srcHaloSizes.empty()) {
-          coreShape[i] -= srcHaloSizes[i * 2] + srcHaloSizes[i * 2 + 1];
-          srcCoreOffs[i] = srcHaloSizes[i * 2];
-        }
-        tgtCoreOffs[i] = tgtHaloSizes[i * 2];
-        outShape[i] =
-            coreShape[i] + tgtHaloSizes[i * 2] + tgtHaloSizes[i * 2 + 1];
-      }
-    }
-
-    // Extract core from source and copy into destination core.
-    auto noVals = ValueRange{};
-    auto initVal = builder.create<tensor::EmptyOp>(
-        sourceShard.getLoc(), outShape, sourceShard.getType().getElementType());
-    auto core = builder.create<tensor::ExtractSliceOp>(
-        sourceShard.getLoc(),
-        RankedTensorType::get(coreShape,
-                              sourceShard.getType().getElementType()),
-        sourceShard, noVals, noVals, noVals, srcCoreOffs, coreShape, strides);
-    auto initOprnd = builder.create<tensor::InsertSliceOp>(
-        sourceShard.getLoc(), core, initVal, noVals, noVals, noVals,
-        tgtCoreOffs, coreShape, strides);
-
-    // Finally update the halo.
-    auto updateHaloResult =
-        builder
-            .create<UpdateHaloOp>(
-                sourceShard.getLoc(),
-                RankedTensorType::get(outShape,
-                                      sourceShard.getType().getElementType()),
-                sourceShard, initOprnd, mesh.getSymName(),
-                MeshAxesArrayAttr::get(builder.getContext(),
-                                       sourceSharding.getSplitAxes()),
-                sourceSharding.getDynamicHaloSizes(),
-                sourceSharding.getStaticHaloSizes(),
-                targetSharding.getDynamicHaloSizes(),
-                targetSharding.getStaticHaloSizes())
-            .getResult();
-    return std::make_tuple(cast<TypedValue<ShapedType>>(updateHaloResult),
-                           targetSharding);
+  if (!sourceSharding.equalSplitAndPartialAxes(targetSharding) ||
+      !sourceSharding.getPartialAxes().empty() ||
+      !targetSharding.getPartialAxes().empty() ||
+      !sourceSharding.getStaticShardedDimsOffsets().empty() ||
+      !targetSharding.getStaticShardedDimsOffsets().empty() ||
+      sourceSharding.equalHaloSizes(targetSharding)) {
+    return std::nullopt;
   }
-  return std::nullopt;
+
+  auto srcHaloSizes = sourceSharding.getStaticHaloSizes();
+  auto tgtHaloSizes = targetSharding.getStaticHaloSizes();
+  assert(srcHaloSizes.empty() || srcHaloSizes.size() == tgtHaloSizes.size());
+  assert(((srcHaloSizes.empty() || !ShapedType::isDynamicShape(srcHaloSizes)) &&
+          !ShapedType::isDynamicShape(tgtHaloSizes) &&
+          sourceShard.getType().hasStaticShape()) &&
+         "dynamic shapes/halos are not supported yet for mesh-spmdization");
+  auto rank = sourceShard.getType().getRank();
+  auto splitAxes = sourceSharding.getSplitAxes();
+  SmallVector<int64_t> srcCoreOffs(rank, 0), tgtCoreOffs(rank, 0),
+      strides(rank, 1), outShape(sourceShard.getType().getShape()),
+      coreShape(sourceShard.getType().getShape());
+
+  // Determine "core" of source and destination.
+  // The core is the local part of the shard excluding halo regions.
+  for (auto i = 0u; i < rank; ++i) {
+    if (i < splitAxes.size() && !splitAxes[i].empty()) {
+      if (!srcHaloSizes.empty()) {
+        coreShape[i] -= srcHaloSizes[i * 2] + srcHaloSizes[i * 2 + 1];
+        srcCoreOffs[i] = srcHaloSizes[i * 2];
+      }
+      tgtCoreOffs[i] = tgtHaloSizes[i * 2];
+      outShape[i] =
+          coreShape[i] + tgtHaloSizes[i * 2] + tgtHaloSizes[i * 2 + 1];
+    }
+  }
+
+  // Extract core from source and copy into destination core.
+  auto noVals = ValueRange{};
+  auto initVal = builder.create<tensor::EmptyOp>(
+      sourceShard.getLoc(), outShape, sourceShard.getType().getElementType());
+  auto core = builder.create<tensor::ExtractSliceOp>(
+      sourceShard.getLoc(),
+      RankedTensorType::get(coreShape, sourceShard.getType().getElementType()),
+      sourceShard, noVals, noVals, noVals, srcCoreOffs, coreShape, strides);
+  auto initOprnd = builder.create<tensor::InsertSliceOp>(
+      sourceShard.getLoc(), core, initVal, noVals, noVals, noVals, tgtCoreOffs,
+      coreShape, strides);
+
+  // Finally update the halo.
+  auto updateHaloResult =
+      builder
+          .create<UpdateHaloOp>(
+              sourceShard.getLoc(),
+              RankedTensorType::get(outShape,
+                                    sourceShard.getType().getElementType()),
+              sourceShard, initOprnd, mesh.getSymName(),
+              MeshAxesArrayAttr::get(builder.getContext(),
+                                     sourceSharding.getSplitAxes()),
+              sourceSharding.getDynamicHaloSizes(),
+              sourceSharding.getStaticHaloSizes(),
+              targetSharding.getDynamicHaloSizes(),
+              targetSharding.getStaticHaloSizes())
+          .getResult();
+  return std::make_tuple(cast<TypedValue<ShapedType>>(updateHaloResult),
+                         targetSharding);
 }
 
 // Handles only resharding on a 1D mesh.
