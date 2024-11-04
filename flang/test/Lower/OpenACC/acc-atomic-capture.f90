@@ -138,21 +138,17 @@ end subroutine capture_with_convert_i32_to_f64
 ! CHECK: %[[V_DECL:.*]]:2 = hlfir.declare %[[V]] {uniq_name = "_QFcapture_with_convert_i32_to_f64Ev"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK: %[[X:.*]] = fir.alloca f64 {bindc_name = "x", uniq_name = "_QFcapture_with_convert_i32_to_f64Ex"}
 ! CHECK: %[[X_DECL:.*]]:2 = hlfir.declare %[[X]] {uniq_name = "_QFcapture_with_convert_i32_to_f64Ex"} : (!fir.ref<f64>) -> (!fir.ref<f64>, !fir.ref<f64>)
+! CHECK: %[[X_CONV:.*]] = fir.convert %[[X_DECL]]#1 : (!fir.ref<f64>) -> !fir.ref<i32>
 ! CHECK: %[[CST:.*]] = arith.constant 1.000000e+00 : f64
 ! CHECK: hlfir.assign %[[CST]] to %[[X_DECL]]#0 : f64, !fir.ref<f64>
 ! CHECK: %c0_i32 = arith.constant 0 : i32
 ! CHECK: hlfir.assign %c0_i32 to %[[V_DECL]]#0 : i32, !fir.ref<i32>
-! CHECK: %[[ALLOCA:.*]] = fir.alloca f64
-! CHECK: %[[LOAD1:.*]] = fir.load %[[ALLOCA]] : !fir.ref<f64>
-! CHECK: %[[CONV1:.*]] = fir.convert %[[LOAD1]] : (f64) -> i32
-! CHECK: %[[CONV2:.*]] = fir.convert %[[CONV1]] : (i32) -> f64
+! CHECK: %[[LOAD:.*]] = fir.load %[[V_DECL]]#0 : !fir.ref<i32>
+! CHECK: %[[CONV:.*]] = fir.convert %[[LOAD]] : (i32) -> f64
 ! CHECK: acc.atomic.capture {
-! CHECK:   acc.atomic.read %[[ALLOCA]] = %[[X_DECL]]#1 : !fir.ref<f64>, f64
-! CHECK:   acc.atomic.write %[[X_DECL]]#1 = %[[CONV2]] : !fir.ref<f64>, f64
+! CHECK:   acc.atomic.read %[[V_DECL]] = %[[X_CONV]]#1 : !fir.ref<f64>, i32
+! CHECK:   acc.atomic.write %[[X_DECL]]#1 = %[[CONV]] : !fir.ref<f64>, f64
 ! CHECK: }
-! CHECK: %[[LOAD2:.*]] = fir.load %[[ALLOCA]] : !fir.ref<f64>
-! CHECK: %[[CONV3:.*]] = fir.convert %[[LOAD2]] : (f64) -> i32
-! CHECK: fir.store %[[CONV3]] to %[[V_DECL]]#1 : !fir.ref<i32>
 
 subroutine capture_with_convert_f64_to_i32()
   integer :: x
