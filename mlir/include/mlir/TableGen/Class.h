@@ -521,8 +521,6 @@ public:
   /// Write the parent class declaration.
   void writeTo(raw_indented_ostream &os) const;
 
-  friend class OpClass;
-
 private:
   /// The fully resolved C++ name of the parent class.
   std::string name;

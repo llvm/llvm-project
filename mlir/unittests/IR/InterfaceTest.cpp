@@ -104,13 +104,6 @@ TEST(OperationInterfaceTest, CastInterfaceToOpOrInterface) {
   ctx.appendDialectRegistry(registry);
   OwningOpRef<ModuleOp> module = parseSourceString<ModuleOp>(ir, &ctx);
   Operation &op = cast<func::FuncOp>(module->front()).getBody().front().front();
-
-  static_assert(std::is_base_of_v<llvm::concrete_op_base_type<arith::AddIOp>,
-                                  arith::AddIOp>,
-                "");
-  static_assert(llvm::is_concrete_op_type<arith::AddIOp>(), "");
-  static_assert(!llvm::is_concrete_op_type<OpAsmOpInterface>(), "");
-
   OpAsmOpInterface interface = llvm::cast<OpAsmOpInterface>(op);
 
   bool constantOp = llvm::TypeSwitch<OpAsmOpInterface, bool>(interface)
