@@ -337,7 +337,7 @@ public:
       : TargetPassConfig(TM, PM) {
     if (TM.getOptLevel() != CodeGenOptLevel::None)
       substitutePass(&PostRASchedulerID, &PostMachineSchedulerID);
-    setEnableSinkAndFold(EnableSinkFold);
+    TM.Options.EnableSinkAndFold = EnableSinkFold;
     EnableLoopTermFold = true;
   }
 

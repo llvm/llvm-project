@@ -137,7 +137,8 @@ namespace llvm {
           ApproxFuncFPMath(false), EnableAIXExtendedAltivecABI(false),
           HonorSignDependentRoundingFPMathOption(false), NoZerosInBSS(false),
           GuaranteedTailCallOpt(false), StackSymbolOrdering(true),
-          EnableFastISel(false), EnableGlobalISel(false), UseInitArray(false),
+          EnableSinkAndFold(false), EnableFastISel(false),
+          EnableGlobalISel(false), UseInitArray(false),
           DisableIntegratedAS(false), FunctionSections(false),
           DataSections(false), IgnoreXCOFFVisibility(false),
           XCOFFTracebackTable(true), UniqueSectionNames(true),
@@ -238,6 +239,11 @@ namespace llvm {
     /// heuristics). When false, the local symbols are left in whatever order
     /// they were generated. Default is true.
     unsigned StackSymbolOrdering : 1;
+
+    /// EnableSinkAndFold - Enable sinking of instructions in MachineSink where
+    /// a computation can be folded into the addressing mode of a memory
+    /// load/store instruction or replace a copy.
+    unsigned EnableSinkAndFold : 1;
 
     /// EnableFastISel - This flag enables fast-path instruction selection
     /// which trades away generated code quality in favor of reducing

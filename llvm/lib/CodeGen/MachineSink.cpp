@@ -54,6 +54,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Target/TargetMachine.h"
 #include <algorithm>
 #include <cassert>
 #include <cstdint>
@@ -729,7 +730,8 @@ bool MachineSinking::runOnMachineFunction(MachineFunction &MF) {
   AA = &getAnalysis<AAResultsWrapperPass>().getAAResults();
   RegClassInfo.runOnMachineFunction(MF);
   TargetPassConfig *PassConfig = &getAnalysis<TargetPassConfig>();
-  EnableSinkAndFold = PassConfig->getEnableSinkAndFold();
+  auto &TM = PassConfig->getTM<TargetMachine>();
+  EnableSinkAndFold = TM.Options.EnableSinkAndFold;
 
   bool EverMadeChange = false;
 

@@ -505,7 +505,7 @@ public:
       : TargetPassConfig(TM, PM) {
     if (TM.getOptLevel() != CodeGenOptLevel::None)
       substitutePass(&PostRASchedulerID, &PostMachineSchedulerID);
-    setEnableSinkAndFold(EnableSinkFold);
+    TM.Options.EnableSinkAndFold = EnableSinkFold;
   }
 
   AArch64TargetMachine &getAArch64TargetMachine() const {
