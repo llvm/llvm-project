@@ -574,7 +574,6 @@ TEST(CodeExtractor, PartialAggregateArgs) {
   EXPECT_FALSE(verifyFunction(*Func));
 }
 
-
 TEST(CodeExtractor, AllocaBlock) {
   LLVMContext Ctx;
   SMDiagnostic Err;
@@ -625,8 +624,6 @@ TEST(CodeExtractor, AllocaBlock) {
   }
   EXPECT_EQ(NumAllocas, 2);
 }
-
-
 
 TEST(CodeExtractor, OpenMPAggregateArgs) {
   LLVMContext Ctx;

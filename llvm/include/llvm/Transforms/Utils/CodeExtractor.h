@@ -151,10 +151,9 @@ public:
                   BranchProbabilityInfo *BPI = nullptr,
                   AssumptionCache *AC = nullptr, bool AllowVarArgs = false,
                   bool AllowAlloca = false,
-                  BasicBlock *AllocationBlock = nullptr,  std::string Suffix = ""
-      , bool ArgsInZeroAddressSpace = false
-      , bool KeepOldBlocks = false
-    );
+                  BasicBlock *AllocationBlock = nullptr,
+                  std::string Suffix = "", bool ArgsInZeroAddressSpace = false,
+                  bool KeepOldBlocks = false);
 
     /// Create a code extractor for a loop body.
     ///

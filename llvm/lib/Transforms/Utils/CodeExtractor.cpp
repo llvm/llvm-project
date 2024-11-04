@@ -251,24 +251,28 @@ buildExtractionBlockSet(ArrayRef<BasicBlock *> BBs, DominatorTree *DT,
 CodeExtractor::CodeExtractor(ArrayRef<BasicBlock *> BBs, DominatorTree *DT,
                              bool AggregateArgs, BlockFrequencyInfo *BFI,
                              BranchProbabilityInfo *BPI, AssumptionCache *AC,
-                             bool AllowVarArgs, bool AllowAlloca,  BasicBlock *AllocationBlock, std::string Suffix,   bool ArgsInZeroAddressSpace,     bool KeepOldBlocks) 
+                             bool AllowVarArgs, bool AllowAlloca,
+                             BasicBlock *AllocationBlock, std::string Suffix,
+                             bool ArgsInZeroAddressSpace, bool KeepOldBlocks)
     : DT(DT), AggregateArgs(AggregateArgs || AggregateArgsOpt), BFI(BFI),
       BPI(BPI), AC(AC), AllocationBlock(AllocationBlock),
-        AllowVarArgs(AllowVarArgs), KeepOldBlocks(KeepOldBlocks),
-      Blocks(buildExtractionBlockSet(BBs, DT, AllowVarArgs, AllowAlloca, KeepOldBlocks)),
-      Suffix(Suffix),ArgsInZeroAddressSpace(ArgsInZeroAddressSpace) {}
+      AllowVarArgs(AllowVarArgs), KeepOldBlocks(KeepOldBlocks),
+      Blocks(buildExtractionBlockSet(BBs, DT, AllowVarArgs, AllowAlloca,
+                                     KeepOldBlocks)),
+      Suffix(Suffix), ArgsInZeroAddressSpace(ArgsInZeroAddressSpace) {}
 
 CodeExtractor::CodeExtractor(DominatorTree &DT, Loop &L, bool AggregateArgs,
                              BlockFrequencyInfo *BFI,
                              BranchProbabilityInfo *BPI, AssumptionCache *AC,
                              std::string Suffix)
     : DT(&DT), AggregateArgs(AggregateArgs || AggregateArgsOpt), BFI(BFI),
-      BPI(BPI), AC(AC), AllocationBlock(nullptr), AllowVarArgs(false), KeepOldBlocks(false),
+      BPI(BPI), AC(AC), AllocationBlock(nullptr), AllowVarArgs(false),
+      KeepOldBlocks(false),
       Blocks(buildExtractionBlockSet(L.getBlocks(), &DT,
                                      /* AllowVarArgs */ false,
                                      /* AllowAlloca */ false,
                                      /* KeepOldBlocks */ false)),
-      Suffix(Suffix),    ArgsInZeroAddressSpace(false)  {}
+      Suffix(Suffix), ArgsInZeroAddressSpace(false) {}
 
 /// definedInRegion - Return true if the specified value is defined in the
 /// extracted region.
@@ -1117,8 +1121,6 @@ static void insertLifetimeMarkersSurroundingCall(
                   /*InsertBefore=*/false);
   }
 }
-
-
 
 void CodeExtractor::moveCodeToFunction(Function *newFunction) {
   Function *oldFunc = Blocks.front()->getParent();
