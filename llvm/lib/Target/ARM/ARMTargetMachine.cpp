@@ -11,6 +11,7 @@
 
 #include "ARMTargetMachine.h"
 #include "ARM.h"
+#include "ARMLatencyMutations.h"
 #include "ARMMachineFunctionInfo.h"
 #include "ARMMacroFusion.h"
 #include "ARMSubtarget.h"
@@ -371,6 +372,8 @@ public:
     const ARMSubtarget &ST = C->MF->getSubtarget<ARMSubtarget>();
     if (ST.hasFusion())
       DAG->addMutation(createARMMacroFusionDAGMutation());
+    if (auto Mutation = createARMLatencyMutations(ST, C->AA))
+      DAG->addMutation(std::move(Mutation));
     return DAG;
   }
 
