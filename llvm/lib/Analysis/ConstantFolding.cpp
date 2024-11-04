@@ -2633,14 +2633,8 @@ static Constant *ConstantFoldLibCall2(StringRef Name, Type *Ty,
   case LibFunc_scalblnf:
   case LibFunc_scalblnl:
     if (TLI->has(Func)) {
-      Constant *tmp = ConstantFoldBinaryFP(pow, APFloat(2.0), Op2V, Ty);
-      const auto *tmp1 = dyn_cast<ConstantFP>(tmp);
-      if (!tmp1)
-        return nullptr;
-      APFloat Op1V2(Op1V);
-      auto eval_ret = Op1V2.multiply(tmp1->getValueAPF(), RoundingMode::TowardZero);
-      if (APFloat::opStatus::opOK == eval_ret)
-        return ConstantFP::get(Ty->getContext(), Op1V2);
+      APFloat ret = llvm::scalbn(Op1V, (int)Op2V.convertToDouble(), RoundingMode::TowardZero);
+      return ConstantFP::get(Ty->getContext(), ret);
     }
     break;
   case LibFunc_pow:
