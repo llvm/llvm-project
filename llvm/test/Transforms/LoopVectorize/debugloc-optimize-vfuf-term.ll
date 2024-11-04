@@ -3,60 +3,34 @@
 ;; Tests that when we simplify the loop-exit branch condition, we preserve the
 ;; !dbg attachment for all loop-exit branches.
 
-define i32 @foo(i64 %a, ptr %p) {
+define i32 @foo(ptr %p) {
 ; CHECK-LABEL: define i32 @foo(
-; CHECK-SAME: i64 [[A:%.*]], ptr [[P:%.*]]) {
+; CHECK-SAME: ptr [[P:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    [[WIDE_TRIP_COUNT:%.*]] = and i64 [[A]], 1
-; CHECK-NEXT:    [[TMP0:%.*]] = add nuw nsw i64 [[WIDE_TRIP_COUNT]], 1
 ; CHECK-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[N_RND_UP:%.*]] = add i64 [[TMP0]], 1
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N_RND_UP]], 2
-; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[N_RND_UP]], [[N_MOD_VF]]
-; CHECK-NEXT:    [[TRIP_COUNT_MINUS_1:%.*]] = sub i64 [[TMP0]], 1
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <2 x i64> poison, i64 [[TRIP_COUNT_MINUS_1]], i64 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <2 x i64> [[BROADCAST_SPLATINSERT1]], <2 x i64> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
-; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[PRED_STORE_CONTINUE4:.*]] ], !dbg [[DBG3:![0-9]+]]
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x i64> poison, i64 [[INDEX]], i64 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <2 x i64> [[BROADCAST_SPLATINSERT]], <2 x i64> poison, <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[VEC_IV:%.*]] = add <2 x i64> [[BROADCAST_SPLAT]], <i64 0, i64 1>
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ule <2 x i64> [[VEC_IV]], [[BROADCAST_SPLAT2]]
-; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <2 x i1> [[TMP1]], i32 0
-; CHECK-NEXT:    br i1 [[TMP2]], label %[[PRED_STORE_IF:.*]], label %[[PRED_STORE_CONTINUE:.*]]
-; CHECK:       [[PRED_STORE_IF]]:
-; CHECK-NEXT:    [[TMP3:%.*]] = trunc i64 0 to i8, !dbg [[DBG7:![0-9]+]]
-; CHECK-NEXT:    store i8 [[TMP3]], ptr [[P]], align 1, !dbg [[DBG8:![0-9]+]]
-; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE]]
-; CHECK:       [[PRED_STORE_CONTINUE]]:
-; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x i1> [[TMP1]], i32 1, !dbg [[DBG8]]
-; CHECK-NEXT:    br i1 [[TMP4]], label %[[PRED_STORE_IF3:.*]], label %[[PRED_STORE_CONTINUE4]], !dbg [[DBG8]]
-; CHECK:       [[PRED_STORE_IF3]]:
-; CHECK-NEXT:    [[TMP5:%.*]] = trunc i64 0 to i8, !dbg [[DBG7]]
-; CHECK-NEXT:    store i8 [[TMP5]], ptr [[P]], align 1, !dbg [[DBG8]]
-; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE4]], !dbg [[DBG8]]
-; CHECK:       [[PRED_STORE_CONTINUE4]]:
-; CHECK-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 2, !dbg [[DBG3]]
-; CHECK-NEXT:    br i1 true, label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !dbg [[DBG3]], !llvm.loop [[LOOP9:![0-9]+]]
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ], !dbg [[DBG3:![0-9]+]]
+; CHECK-NEXT:    store i8 0, ptr [[P]], align 1, !dbg [[DBG7:![0-9]+]]
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2, !dbg [[DBG3]]
+; CHECK-NEXT:    br i1 true, label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !dbg [[DBG3]], !llvm.loop [[LOOP8:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    br i1 true, label %[[EXIT:.*]], label %[[SCALAR_PH]], !dbg [[DBG12:![0-9]+]]
+; CHECK-NEXT:    br i1 true, label %[[EXIT:.*]], label %[[SCALAR_PH]], !dbg [[DBG11:![0-9]+]]
 ; CHECK:       [[SCALAR_PH]]:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ], !dbg [[DBG3]]
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 2, %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ], !dbg [[DBG3]]
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[IV_NEXT:%.*]], %[[LOOP]] ], [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], !dbg [[DBG3]]
-; CHECK-NEXT:    [[CONV:%.*]] = trunc i64 0 to i8, !dbg [[DBG7]]
-; CHECK-NEXT:    store i8 [[CONV]], ptr [[P]], align 1, !dbg [[DBG8]]
+; CHECK-NEXT:    [[CONV:%.*]] = trunc i64 0 to i8, !dbg [[DBG12:![0-9]+]]
+; CHECK-NEXT:    store i8 [[CONV]], ptr [[P]], align 1, !dbg [[DBG7]]
 ; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1, !dbg [[DBG13:![0-9]+]]
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[IV]], [[WIDE_TRIP_COUNT]], !dbg [[DBG14:![0-9]+]]
-; CHECK-NEXT:    br i1 [[EXITCOND]], label %[[EXIT]], label %[[LOOP]], !dbg [[DBG12]], !llvm.loop [[LOOP15:![0-9]+]]
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[IV]], 1, !dbg [[DBG14:![0-9]+]]
+; CHECK-NEXT:    br i1 [[EXITCOND]], label %[[EXIT]], label %[[LOOP]], !dbg [[DBG11]], !llvm.loop [[LOOP15:![0-9]+]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret i32 0
 ;
 entry:
-  %wide.trip.count = and i64 %a, 1
   br label %loop
 
 loop:                                          ; preds = %loop, %entry
@@ -64,7 +38,7 @@ loop:                                          ; preds = %loop, %entry
   %conv = trunc i64 0 to i8, !dbg !4
   store i8 %conv, ptr %p, align 1, !dbg !5
   %iv.next = add i64 %iv, 1, !dbg !6
-  %exitcond = icmp eq i64 %iv, %wide.trip.count, !dbg !7
+  %exitcond = icmp eq i64 %iv, 1, !dbg !7
   br i1 %exitcond, label %exit, label %loop, !dbg !8
 
 exit:                              ; preds = %loop
@@ -93,13 +67,13 @@ exit:                              ; preds = %loop
 ; CHECK: [[META4]] = distinct !DISubprogram(name: "foo", scope: [[META1]], file: [[META1]], line: 11, type: [[META5:![0-9]+]], spFlags: DISPFlagDefinition, unit: [[META0]], retainedNodes: [[META6:![0-9]+]])
 ; CHECK: [[META5]] = distinct !DISubroutineType(types: [[META6]])
 ; CHECK: [[META6]] = !{}
-; CHECK: [[DBG7]] = !DILocation(line: 5, scope: [[META4]])
-; CHECK: [[DBG8]] = !DILocation(line: 6, scope: [[META4]])
-; CHECK: [[LOOP9]] = distinct !{[[LOOP9]], [[META10:![0-9]+]], [[META11:![0-9]+]]}
-; CHECK: [[META10]] = !{!"llvm.loop.isvectorized", i32 1}
-; CHECK: [[META11]] = !{!"llvm.loop.unroll.runtime.disable"}
-; CHECK: [[DBG12]] = !DILocation(line: 9, scope: [[META4]])
+; CHECK: [[DBG7]] = !DILocation(line: 6, scope: [[META4]])
+; CHECK: [[LOOP8]] = distinct !{[[LOOP8]], [[META9:![0-9]+]], [[META10:![0-9]+]]}
+; CHECK: [[META9]] = !{!"llvm.loop.isvectorized", i32 1}
+; CHECK: [[META10]] = !{!"llvm.loop.unroll.runtime.disable"}
+; CHECK: [[DBG11]] = !DILocation(line: 9, scope: [[META4]])
+; CHECK: [[DBG12]] = !DILocation(line: 5, scope: [[META4]])
 ; CHECK: [[DBG13]] = !DILocation(line: 7, scope: [[META4]])
 ; CHECK: [[DBG14]] = !DILocation(line: 8, scope: [[META4]])
-; CHECK: [[LOOP15]] = distinct !{[[LOOP15]], [[META11]], [[META10]]}
+; CHECK: [[LOOP15]] = distinct !{[[LOOP15]], [[META10]], [[META9]]}
 ;.
