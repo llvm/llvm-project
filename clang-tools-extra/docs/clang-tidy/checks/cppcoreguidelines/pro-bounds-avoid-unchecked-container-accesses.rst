@@ -42,7 +42,7 @@ Options
 .. option:: SubscriptFixMode
 
     Determines what fixes are suggested. Either `None` (default), `at` (use 
-    ``a.at(index)`` if a fitting function exists ) or `function` (use a 
+    ``a.at(index)`` if a fitting function exists) or `function` (use a 
     function ``f(a, index)``).
 
 .. option:: SubscriptFixFunction
