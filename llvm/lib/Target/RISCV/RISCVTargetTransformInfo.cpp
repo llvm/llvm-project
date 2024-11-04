@@ -2505,9 +2505,19 @@ RISCVTTIImpl::enableMemCmpExpansion(bool OptSize, bool IsZeroCmp) const {
   else
     Options.LoadSizes = {4, 2, 1};
   if (IsZeroCmp && ST->hasVInstructions()) {
-    unsigned RealMinVLen = ST->getRealMinVLen() / 8;
-    for (int LMUL = 1; LMUL <= 8; LMUL *= 2)
-      Options.LoadSizes.insert(Options.LoadSizes.begin(), RealMinVLen * LMUL);
+    unsigned RealMinVLen = ST->getRealMinVLen();
+    // Support Fractional LMULs if the lengths are larger than XLen.
+    for (unsigned LMUL = 8; LMUL >= 2; LMUL /= 2) {
+      unsigned Len = RealMinVLen / LMUL;
+      if (Len > ST->getXLen())
+        Options.LoadSizes.insert(Options.LoadSizes.begin(), Len / 8);
+    }
+    for (unsigned LMUL = 1; LMUL <= ST->getMaxLMULForFixedLengthVectors();
+         LMUL *= 2) {
+      unsigned Len = RealMinVLen * LMUL;
+      if (Len > ST->getXLen())
+        Options.LoadSizes.insert(Options.LoadSizes.begin(), Len / 8);
+    }
   }
   return Options;
 }

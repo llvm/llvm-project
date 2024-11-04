@@ -1706,50 +1706,13 @@ define i32 @bcmp_size_8(ptr %s1, ptr %s2) nounwind {
 ;
 ; CHECK-ALIGNED-RV32-V-LABEL: bcmp_size_8:
 ; CHECK-ALIGNED-RV32-V:       # %bb.0: # %entry
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu a2, 1(a0)
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu a3, 0(a0)
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu a4, 2(a0)
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu a5, 3(a0)
-; CHECK-ALIGNED-RV32-V-NEXT:    slli a2, a2, 8
-; CHECK-ALIGNED-RV32-V-NEXT:    or a2, a2, a3
-; CHECK-ALIGNED-RV32-V-NEXT:    slli a4, a4, 16
-; CHECK-ALIGNED-RV32-V-NEXT:    slli a5, a5, 24
-; CHECK-ALIGNED-RV32-V-NEXT:    or a4, a5, a4
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu a3, 0(a1)
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu a5, 1(a1)
-; CHECK-ALIGNED-RV32-V-NEXT:    or a2, a4, a2
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu a4, 2(a1)
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu a6, 3(a1)
-; CHECK-ALIGNED-RV32-V-NEXT:    slli a5, a5, 8
-; CHECK-ALIGNED-RV32-V-NEXT:    or a3, a5, a3
-; CHECK-ALIGNED-RV32-V-NEXT:    slli a4, a4, 16
-; CHECK-ALIGNED-RV32-V-NEXT:    slli a6, a6, 24
-; CHECK-ALIGNED-RV32-V-NEXT:    or a4, a6, a4
-; CHECK-ALIGNED-RV32-V-NEXT:    or a3, a4, a3
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu a4, 4(a0)
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu a5, 5(a0)
-; CHECK-ALIGNED-RV32-V-NEXT:    xor a2, a2, a3
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu a3, 6(a0)
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu a0, 7(a0)
-; CHECK-ALIGNED-RV32-V-NEXT:    slli a5, a5, 8
-; CHECK-ALIGNED-RV32-V-NEXT:    or a4, a5, a4
-; CHECK-ALIGNED-RV32-V-NEXT:    slli a3, a3, 16
-; CHECK-ALIGNED-RV32-V-NEXT:    slli a0, a0, 24
-; CHECK-ALIGNED-RV32-V-NEXT:    or a0, a0, a3
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu a3, 4(a1)
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu a5, 5(a1)
-; CHECK-ALIGNED-RV32-V-NEXT:    or a0, a0, a4
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu a4, 6(a1)
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu a1, 7(a1)
-; CHECK-ALIGNED-RV32-V-NEXT:    slli a5, a5, 8
-; CHECK-ALIGNED-RV32-V-NEXT:    or a3, a5, a3
-; CHECK-ALIGNED-RV32-V-NEXT:    slli a4, a4, 16
-; CHECK-ALIGNED-RV32-V-NEXT:    slli a1, a1, 24
-; CHECK-ALIGNED-RV32-V-NEXT:    or a1, a1, a4
-; CHECK-ALIGNED-RV32-V-NEXT:    or a1, a1, a3
-; CHECK-ALIGNED-RV32-V-NEXT:    xor a0, a0, a1
-; CHECK-ALIGNED-RV32-V-NEXT:    or a0, a2, a0
-; CHECK-ALIGNED-RV32-V-NEXT:    snez a0, a0
+; CHECK-ALIGNED-RV32-V-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
+; CHECK-ALIGNED-RV32-V-NEXT:    vle8.v v8, (a0)
+; CHECK-ALIGNED-RV32-V-NEXT:    vle8.v v9, (a1)
+; CHECK-ALIGNED-RV32-V-NEXT:    vmseq.vv v8, v8, v9
+; CHECK-ALIGNED-RV32-V-NEXT:    vmnot.m v8, v8
+; CHECK-ALIGNED-RV32-V-NEXT:    vcpop.m a0, v8
+; CHECK-ALIGNED-RV32-V-NEXT:    seqz a0, a0
 ; CHECK-ALIGNED-RV32-V-NEXT:    ret
 ;
 ; CHECK-ALIGNED-RV64-V-LABEL: bcmp_size_8:
@@ -1864,14 +1827,13 @@ define i32 @bcmp_size_8(ptr %s1, ptr %s2) nounwind {
 ;
 ; CHECK-UNALIGNED-RV32-V-LABEL: bcmp_size_8:
 ; CHECK-UNALIGNED-RV32-V:       # %bb.0: # %entry
-; CHECK-UNALIGNED-RV32-V-NEXT:    lw a2, 0(a0)
-; CHECK-UNALIGNED-RV32-V-NEXT:    lw a0, 4(a0)
-; CHECK-UNALIGNED-RV32-V-NEXT:    lw a3, 0(a1)
-; CHECK-UNALIGNED-RV32-V-NEXT:    lw a1, 4(a1)
-; CHECK-UNALIGNED-RV32-V-NEXT:    xor a2, a2, a3
-; CHECK-UNALIGNED-RV32-V-NEXT:    xor a0, a0, a1
-; CHECK-UNALIGNED-RV32-V-NEXT:    or a0, a2, a0
-; CHECK-UNALIGNED-RV32-V-NEXT:    snez a0, a0
+; CHECK-UNALIGNED-RV32-V-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
+; CHECK-UNALIGNED-RV32-V-NEXT:    vle8.v v8, (a0)
+; CHECK-UNALIGNED-RV32-V-NEXT:    vle8.v v9, (a1)
+; CHECK-UNALIGNED-RV32-V-NEXT:    vmseq.vv v8, v8, v9
+; CHECK-UNALIGNED-RV32-V-NEXT:    vmnot.m v8, v8
+; CHECK-UNALIGNED-RV32-V-NEXT:    vcpop.m a0, v8
+; CHECK-UNALIGNED-RV32-V-NEXT:    seqz a0, a0
 ; CHECK-UNALIGNED-RV32-V-NEXT:    ret
 ;
 ; CHECK-UNALIGNED-RV64-V-LABEL: bcmp_size_8:
@@ -2372,41 +2334,41 @@ define i32 @bcmp_size_15(ptr %s1, ptr %s2) nounwind {
 ; CHECK-ALIGNED-RV32-V-NEXT:    slli a4, a4, 16
 ; CHECK-ALIGNED-RV32-V-NEXT:    slli a5, a5, 24
 ; CHECK-ALIGNED-RV32-V-NEXT:    or a4, a5, a4
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu a3, 0(a1)
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu a5, 1(a1)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a3, 4(a0)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a5, 5(a0)
 ; CHECK-ALIGNED-RV32-V-NEXT:    or a2, a4, a2
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu a4, 2(a1)
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu a6, 3(a1)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a4, 6(a0)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a6, 7(a0)
 ; CHECK-ALIGNED-RV32-V-NEXT:    slli a5, a5, 8
 ; CHECK-ALIGNED-RV32-V-NEXT:    or a3, a5, a3
 ; CHECK-ALIGNED-RV32-V-NEXT:    slli a4, a4, 16
 ; CHECK-ALIGNED-RV32-V-NEXT:    slli a6, a6, 24
 ; CHECK-ALIGNED-RV32-V-NEXT:    or a4, a6, a4
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a5, 0(a1)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a6, 1(a1)
 ; CHECK-ALIGNED-RV32-V-NEXT:    or a3, a4, a3
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu a4, 4(a0)
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu a5, 5(a0)
-; CHECK-ALIGNED-RV32-V-NEXT:    xor a2, a2, a3
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu a3, 6(a0)
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu a6, 7(a0)
-; CHECK-ALIGNED-RV32-V-NEXT:    slli a5, a5, 8
-; CHECK-ALIGNED-RV32-V-NEXT:    or a4, a5, a4
-; CHECK-ALIGNED-RV32-V-NEXT:    slli a3, a3, 16
-; CHECK-ALIGNED-RV32-V-NEXT:    slli a6, a6, 24
-; CHECK-ALIGNED-RV32-V-NEXT:    or a3, a6, a3
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu a5, 4(a1)
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu a6, 5(a1)
-; CHECK-ALIGNED-RV32-V-NEXT:    or a3, a3, a4
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu a4, 6(a1)
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu a7, 7(a1)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a4, 2(a1)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a7, 3(a1)
 ; CHECK-ALIGNED-RV32-V-NEXT:    slli a6, a6, 8
 ; CHECK-ALIGNED-RV32-V-NEXT:    or a5, a6, a5
 ; CHECK-ALIGNED-RV32-V-NEXT:    slli a4, a4, 16
 ; CHECK-ALIGNED-RV32-V-NEXT:    slli a7, a7, 24
 ; CHECK-ALIGNED-RV32-V-NEXT:    or a4, a7, a4
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a6, 4(a1)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a7, 5(a1)
 ; CHECK-ALIGNED-RV32-V-NEXT:    or a4, a4, a5
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a5, 6(a1)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu t0, 7(a1)
+; CHECK-ALIGNED-RV32-V-NEXT:    slli a7, a7, 8
+; CHECK-ALIGNED-RV32-V-NEXT:    or a6, a7, a6
+; CHECK-ALIGNED-RV32-V-NEXT:    slli a5, a5, 16
+; CHECK-ALIGNED-RV32-V-NEXT:    slli t0, t0, 24
+; CHECK-ALIGNED-RV32-V-NEXT:    or a5, t0, a5
+; CHECK-ALIGNED-RV32-V-NEXT:    or a5, a5, a6
+; CHECK-ALIGNED-RV32-V-NEXT:    xor a3, a3, a5
 ; CHECK-ALIGNED-RV32-V-NEXT:    lbu a5, 8(a0)
 ; CHECK-ALIGNED-RV32-V-NEXT:    lbu a6, 9(a0)
-; CHECK-ALIGNED-RV32-V-NEXT:    xor a3, a3, a4
+; CHECK-ALIGNED-RV32-V-NEXT:    xor a2, a2, a4
 ; CHECK-ALIGNED-RV32-V-NEXT:    lbu a4, 10(a0)
 ; CHECK-ALIGNED-RV32-V-NEXT:    lbu a7, 11(a0)
 ; CHECK-ALIGNED-RV32-V-NEXT:    slli a6, a6, 8
@@ -2438,9 +2400,9 @@ define i32 @bcmp_size_15(ptr %s1, ptr %s2) nounwind {
 ; CHECK-ALIGNED-RV32-V-NEXT:    or a6, t0, a7
 ; CHECK-ALIGNED-RV32-V-NEXT:    xor a5, a5, a6
 ; CHECK-ALIGNED-RV32-V-NEXT:    xor a0, a0, a1
-; CHECK-ALIGNED-RV32-V-NEXT:    or a2, a2, a3
-; CHECK-ALIGNED-RV32-V-NEXT:    or a4, a4, a5
 ; CHECK-ALIGNED-RV32-V-NEXT:    or a2, a2, a4
+; CHECK-ALIGNED-RV32-V-NEXT:    or a0, a5, a0
+; CHECK-ALIGNED-RV32-V-NEXT:    or a0, a0, a3
 ; CHECK-ALIGNED-RV32-V-NEXT:    or a0, a2, a0
 ; CHECK-ALIGNED-RV32-V-NEXT:    snez a0, a0
 ; CHECK-ALIGNED-RV32-V-NEXT:    ret
@@ -2631,18 +2593,18 @@ define i32 @bcmp_size_15(ptr %s1, ptr %s2) nounwind {
 ; CHECK-UNALIGNED-RV32-V:       # %bb.0: # %entry
 ; CHECK-UNALIGNED-RV32-V-NEXT:    lw a2, 0(a0)
 ; CHECK-UNALIGNED-RV32-V-NEXT:    lw a3, 4(a0)
-; CHECK-UNALIGNED-RV32-V-NEXT:    lw a4, 8(a0)
+; CHECK-UNALIGNED-RV32-V-NEXT:    lw a4, 7(a0)
 ; CHECK-UNALIGNED-RV32-V-NEXT:    lw a0, 11(a0)
 ; CHECK-UNALIGNED-RV32-V-NEXT:    lw a5, 0(a1)
 ; CHECK-UNALIGNED-RV32-V-NEXT:    lw a6, 4(a1)
-; CHECK-UNALIGNED-RV32-V-NEXT:    lw a7, 8(a1)
+; CHECK-UNALIGNED-RV32-V-NEXT:    lw a7, 7(a1)
 ; CHECK-UNALIGNED-RV32-V-NEXT:    lw a1, 11(a1)
 ; CHECK-UNALIGNED-RV32-V-NEXT:    xor a2, a2, a5
 ; CHECK-UNALIGNED-RV32-V-NEXT:    xor a3, a3, a6
 ; CHECK-UNALIGNED-RV32-V-NEXT:    xor a4, a4, a7
 ; CHECK-UNALIGNED-RV32-V-NEXT:    xor a0, a0, a1
-; CHECK-UNALIGNED-RV32-V-NEXT:    or a2, a2, a3
-; CHECK-UNALIGNED-RV32-V-NEXT:    or a0, a4, a0
+; CHECK-UNALIGNED-RV32-V-NEXT:    or a0, a3, a0
+; CHECK-UNALIGNED-RV32-V-NEXT:    or a2, a2, a4
 ; CHECK-UNALIGNED-RV32-V-NEXT:    or a0, a2, a0
 ; CHECK-UNALIGNED-RV32-V-NEXT:    snez a0, a0
 ; CHECK-UNALIGNED-RV32-V-NEXT:    ret
@@ -3859,134 +3821,192 @@ define i32 @bcmp_size_31(ptr %s1, ptr %s2) nounwind {
 ;
 ; CHECK-ALIGNED-RV32-V-LABEL: bcmp_size_31:
 ; CHECK-ALIGNED-RV32-V:       # %bb.0: # %entry
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu a2, 17(a0)
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu a3, 16(a0)
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu a4, 18(a0)
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu a5, 19(a0)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a2, 5(a0)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a3, 4(a0)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a4, 6(a0)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a5, 7(a0)
 ; CHECK-ALIGNED-RV32-V-NEXT:    slli a2, a2, 8
 ; CHECK-ALIGNED-RV32-V-NEXT:    or a2, a2, a3
 ; CHECK-ALIGNED-RV32-V-NEXT:    slli a4, a4, 16
 ; CHECK-ALIGNED-RV32-V-NEXT:    slli a5, a5, 24
 ; CHECK-ALIGNED-RV32-V-NEXT:    or a4, a5, a4
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu a3, 16(a1)
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu a5, 17(a1)
-; CHECK-ALIGNED-RV32-V-NEXT:    or a2, a4, a2
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu a4, 18(a1)
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu a6, 19(a1)
-; CHECK-ALIGNED-RV32-V-NEXT:    slli a5, a5, 8
-; CHECK-ALIGNED-RV32-V-NEXT:    or a3, a5, a3
-; CHECK-ALIGNED-RV32-V-NEXT:    slli a4, a4, 16
-; CHECK-ALIGNED-RV32-V-NEXT:    slli a6, a6, 24
-; CHECK-ALIGNED-RV32-V-NEXT:    or a4, a6, a4
-; CHECK-ALIGNED-RV32-V-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; CHECK-ALIGNED-RV32-V-NEXT:    vmv.v.i v8, 0
-; CHECK-ALIGNED-RV32-V-NEXT:    or a3, a4, a3
-; CHECK-ALIGNED-RV32-V-NEXT:    vmv.v.i v9, 0
-; CHECK-ALIGNED-RV32-V-NEXT:    vsetvli zero, zero, e32, m1, tu, ma
-; CHECK-ALIGNED-RV32-V-NEXT:    vmv.s.x v9, a2
-; CHECK-ALIGNED-RV32-V-NEXT:    vmv.v.i v10, 0
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu a2, 20(a0)
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu a4, 21(a0)
-; CHECK-ALIGNED-RV32-V-NEXT:    vmv.s.x v10, a3
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu a3, 22(a0)
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu a5, 23(a0)
-; CHECK-ALIGNED-RV32-V-NEXT:    slli a4, a4, 8
-; CHECK-ALIGNED-RV32-V-NEXT:    or a2, a4, a2
-; CHECK-ALIGNED-RV32-V-NEXT:    slli a3, a3, 16
-; CHECK-ALIGNED-RV32-V-NEXT:    slli a5, a5, 24
-; CHECK-ALIGNED-RV32-V-NEXT:    or a3, a5, a3
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu a4, 20(a1)
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu a5, 21(a1)
-; CHECK-ALIGNED-RV32-V-NEXT:    or a2, a3, a2
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu a3, 22(a1)
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu a6, 23(a1)
-; CHECK-ALIGNED-RV32-V-NEXT:    slli a5, a5, 8
-; CHECK-ALIGNED-RV32-V-NEXT:    or a4, a5, a4
-; CHECK-ALIGNED-RV32-V-NEXT:    slli a3, a3, 16
-; CHECK-ALIGNED-RV32-V-NEXT:    slli a6, a6, 24
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a3, 0(a0)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a6, 1(a0)
+; CHECK-ALIGNED-RV32-V-NEXT:    or a5, a4, a2
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a2, 2(a0)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a4, 3(a0)
+; CHECK-ALIGNED-RV32-V-NEXT:    slli a6, a6, 8
 ; CHECK-ALIGNED-RV32-V-NEXT:    or a3, a6, a3
-; CHECK-ALIGNED-RV32-V-NEXT:    or a3, a3, a4
-; CHECK-ALIGNED-RV32-V-NEXT:    vmv.v.i v11, 0
-; CHECK-ALIGNED-RV32-V-NEXT:    vmv.s.x v11, a2
-; CHECK-ALIGNED-RV32-V-NEXT:    vmv.v.i v12, 0
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu a2, 24(a0)
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu a4, 25(a0)
-; CHECK-ALIGNED-RV32-V-NEXT:    vmv.s.x v12, a3
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu a3, 26(a0)
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu a5, 27(a0)
-; CHECK-ALIGNED-RV32-V-NEXT:    slli a4, a4, 8
+; CHECK-ALIGNED-RV32-V-NEXT:    slli a2, a2, 16
+; CHECK-ALIGNED-RV32-V-NEXT:    slli a4, a4, 24
 ; CHECK-ALIGNED-RV32-V-NEXT:    or a2, a4, a2
-; CHECK-ALIGNED-RV32-V-NEXT:    slli a3, a3, 16
-; CHECK-ALIGNED-RV32-V-NEXT:    slli a5, a5, 24
-; CHECK-ALIGNED-RV32-V-NEXT:    or a3, a5, a3
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu a4, 24(a1)
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu a5, 25(a1)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a6, 12(a0)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a7, 13(a0)
+; CHECK-ALIGNED-RV32-V-NEXT:    or a4, a2, a3
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a2, 14(a0)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a3, 15(a0)
+; CHECK-ALIGNED-RV32-V-NEXT:    slli a7, a7, 8
+; CHECK-ALIGNED-RV32-V-NEXT:    or a6, a7, a6
+; CHECK-ALIGNED-RV32-V-NEXT:    slli a2, a2, 16
+; CHECK-ALIGNED-RV32-V-NEXT:    slli a3, a3, 24
 ; CHECK-ALIGNED-RV32-V-NEXT:    or a2, a3, a2
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu a3, 26(a1)
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu a6, 27(a1)
-; CHECK-ALIGNED-RV32-V-NEXT:    slli a5, a5, 8
-; CHECK-ALIGNED-RV32-V-NEXT:    or a4, a5, a4
-; CHECK-ALIGNED-RV32-V-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
-; CHECK-ALIGNED-RV32-V-NEXT:    vle8.v v13, (a0)
-; CHECK-ALIGNED-RV32-V-NEXT:    vle8.v v14, (a1)
-; CHECK-ALIGNED-RV32-V-NEXT:    slli a3, a3, 16
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a7, 8(a0)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu t0, 9(a0)
+; CHECK-ALIGNED-RV32-V-NEXT:    or a3, a2, a6
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a2, 10(a0)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a6, 11(a0)
+; CHECK-ALIGNED-RV32-V-NEXT:    slli t0, t0, 8
+; CHECK-ALIGNED-RV32-V-NEXT:    or a7, t0, a7
+; CHECK-ALIGNED-RV32-V-NEXT:    slli a2, a2, 16
 ; CHECK-ALIGNED-RV32-V-NEXT:    slli a6, a6, 24
-; CHECK-ALIGNED-RV32-V-NEXT:    or a3, a6, a3
-; CHECK-ALIGNED-RV32-V-NEXT:    or a3, a3, a4
-; CHECK-ALIGNED-RV32-V-NEXT:    vmv1r.v v15, v8
-; CHECK-ALIGNED-RV32-V-NEXT:    vsetvli zero, zero, e32, m4, tu, ma
-; CHECK-ALIGNED-RV32-V-NEXT:    vmv.s.x v15, a2
-; CHECK-ALIGNED-RV32-V-NEXT:    vmv1r.v v16, v8
-; CHECK-ALIGNED-RV32-V-NEXT:    vmv.s.x v16, a3
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu a2, 28(a0)
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu a3, 29(a0)
+; CHECK-ALIGNED-RV32-V-NEXT:    or a2, a6, a2
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a6, 4(a1)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu t0, 5(a1)
+; CHECK-ALIGNED-RV32-V-NEXT:    or a2, a2, a7
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a7, 6(a1)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu t1, 7(a1)
+; CHECK-ALIGNED-RV32-V-NEXT:    slli t0, t0, 8
+; CHECK-ALIGNED-RV32-V-NEXT:    or a6, t0, a6
+; CHECK-ALIGNED-RV32-V-NEXT:    slli a7, a7, 16
+; CHECK-ALIGNED-RV32-V-NEXT:    slli t1, t1, 24
+; CHECK-ALIGNED-RV32-V-NEXT:    or a7, t1, a7
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu t0, 0(a1)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu t1, 1(a1)
+; CHECK-ALIGNED-RV32-V-NEXT:    or a6, a7, a6
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a7, 2(a1)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu t2, 3(a1)
+; CHECK-ALIGNED-RV32-V-NEXT:    slli t1, t1, 8
+; CHECK-ALIGNED-RV32-V-NEXT:    or t0, t1, t0
+; CHECK-ALIGNED-RV32-V-NEXT:    slli a7, a7, 16
+; CHECK-ALIGNED-RV32-V-NEXT:    slli t2, t2, 24
+; CHECK-ALIGNED-RV32-V-NEXT:    or a7, t2, a7
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu t1, 12(a1)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu t2, 13(a1)
+; CHECK-ALIGNED-RV32-V-NEXT:    or a7, a7, t0
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu t0, 14(a1)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu t3, 15(a1)
+; CHECK-ALIGNED-RV32-V-NEXT:    slli t2, t2, 8
+; CHECK-ALIGNED-RV32-V-NEXT:    or t1, t2, t1
+; CHECK-ALIGNED-RV32-V-NEXT:    slli t0, t0, 16
+; CHECK-ALIGNED-RV32-V-NEXT:    slli t3, t3, 24
+; CHECK-ALIGNED-RV32-V-NEXT:    or t0, t3, t0
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu t2, 8(a1)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu t3, 9(a1)
+; CHECK-ALIGNED-RV32-V-NEXT:    or t0, t0, t1
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu t1, 10(a1)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu t4, 11(a1)
+; CHECK-ALIGNED-RV32-V-NEXT:    slli t3, t3, 8
+; CHECK-ALIGNED-RV32-V-NEXT:    or t2, t3, t2
+; CHECK-ALIGNED-RV32-V-NEXT:    slli t1, t1, 16
+; CHECK-ALIGNED-RV32-V-NEXT:    slli t4, t4, 24
+; CHECK-ALIGNED-RV32-V-NEXT:    or t1, t4, t1
+; CHECK-ALIGNED-RV32-V-NEXT:    or t1, t1, t2
+; CHECK-ALIGNED-RV32-V-NEXT:    xor a2, a2, t1
+; CHECK-ALIGNED-RV32-V-NEXT:    xor a3, a3, t0
+; CHECK-ALIGNED-RV32-V-NEXT:    xor a4, a4, a7
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a7, 20(a0)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu t0, 21(a0)
+; CHECK-ALIGNED-RV32-V-NEXT:    xor a5, a5, a6
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a6, 22(a0)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu t1, 23(a0)
+; CHECK-ALIGNED-RV32-V-NEXT:    slli t0, t0, 8
+; CHECK-ALIGNED-RV32-V-NEXT:    or a7, t0, a7
+; CHECK-ALIGNED-RV32-V-NEXT:    slli a6, a6, 16
+; CHECK-ALIGNED-RV32-V-NEXT:    slli t1, t1, 24
+; CHECK-ALIGNED-RV32-V-NEXT:    or a6, t1, a6
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu t0, 16(a0)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu t1, 17(a0)
+; CHECK-ALIGNED-RV32-V-NEXT:    or a6, a6, a7
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a7, 18(a0)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu t2, 19(a0)
+; CHECK-ALIGNED-RV32-V-NEXT:    slli t1, t1, 8
+; CHECK-ALIGNED-RV32-V-NEXT:    or t0, t1, t0
+; CHECK-ALIGNED-RV32-V-NEXT:    slli a7, a7, 16
+; CHECK-ALIGNED-RV32-V-NEXT:    slli t2, t2, 24
+; CHECK-ALIGNED-RV32-V-NEXT:    or a7, t2, a7
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu t1, 20(a1)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu t2, 21(a1)
+; CHECK-ALIGNED-RV32-V-NEXT:    or a7, a7, t0
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu t0, 22(a1)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu t3, 23(a1)
+; CHECK-ALIGNED-RV32-V-NEXT:    slli t2, t2, 8
+; CHECK-ALIGNED-RV32-V-NEXT:    or t1, t2, t1
+; CHECK-ALIGNED-RV32-V-NEXT:    slli t0, t0, 16
+; CHECK-ALIGNED-RV32-V-NEXT:    slli t3, t3, 24
+; CHECK-ALIGNED-RV32-V-NEXT:    or t0, t3, t0
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu t2, 16(a1)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu t3, 17(a1)
+; CHECK-ALIGNED-RV32-V-NEXT:    or t0, t0, t1
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu t1, 18(a1)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu t4, 19(a1)
+; CHECK-ALIGNED-RV32-V-NEXT:    slli t3, t3, 8
+; CHECK-ALIGNED-RV32-V-NEXT:    or t2, t3, t2
+; CHECK-ALIGNED-RV32-V-NEXT:    slli t1, t1, 16
+; CHECK-ALIGNED-RV32-V-NEXT:    slli t4, t4, 24
+; CHECK-ALIGNED-RV32-V-NEXT:    or t1, t4, t1
+; CHECK-ALIGNED-RV32-V-NEXT:    or t1, t1, t2
+; CHECK-ALIGNED-RV32-V-NEXT:    xor a7, a7, t1
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu t1, 24(a0)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu t2, 25(a0)
+; CHECK-ALIGNED-RV32-V-NEXT:    xor a6, a6, t0
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu t0, 26(a0)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu t3, 27(a0)
+; CHECK-ALIGNED-RV32-V-NEXT:    slli t2, t2, 8
+; CHECK-ALIGNED-RV32-V-NEXT:    or t1, t2, t1
+; CHECK-ALIGNED-RV32-V-NEXT:    slli t0, t0, 16
+; CHECK-ALIGNED-RV32-V-NEXT:    slli t3, t3, 24
+; CHECK-ALIGNED-RV32-V-NEXT:    or t0, t3, t0
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu t2, 24(a1)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu t3, 25(a1)
+; CHECK-ALIGNED-RV32-V-NEXT:    or t0, t0, t1
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu t1, 26(a1)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu t4, 27(a1)
+; CHECK-ALIGNED-RV32-V-NEXT:    slli t3, t3, 8
+; CHECK-ALIGNED-RV32-V-NEXT:    or t2, t3, t2
+; CHECK-ALIGNED-RV32-V-NEXT:    slli t1, t1, 16
+; CHECK-ALIGNED-RV32-V-NEXT:    slli t4, t4, 24
+; CHECK-ALIGNED-RV32-V-NEXT:    or t1, t4, t1
+; CHECK-ALIGNED-RV32-V-NEXT:    or t1, t1, t2
+; CHECK-ALIGNED-RV32-V-NEXT:    xor t0, t0, t1
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu t1, 28(a0)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu t2, 29(a0)
 ; CHECK-ALIGNED-RV32-V-NEXT:    lbu a0, 30(a0)
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu a4, 28(a1)
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu a5, 29(a1)
-; CHECK-ALIGNED-RV32-V-NEXT:    slli a3, a3, 8
-; CHECK-ALIGNED-RV32-V-NEXT:    or a2, a3, a2
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu t3, 28(a1)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu t4, 29(a1)
+; CHECK-ALIGNED-RV32-V-NEXT:    slli t2, t2, 8
+; CHECK-ALIGNED-RV32-V-NEXT:    or t1, t2, t1
 ; CHECK-ALIGNED-RV32-V-NEXT:    lbu a1, 30(a1)
-; CHECK-ALIGNED-RV32-V-NEXT:    slli a5, a5, 8
-; CHECK-ALIGNED-RV32-V-NEXT:    or a4, a5, a4
-; CHECK-ALIGNED-RV32-V-NEXT:    vmv1r.v v17, v8
-; CHECK-ALIGNED-RV32-V-NEXT:    vmv.s.x v17, a2
-; CHECK-ALIGNED-RV32-V-NEXT:    vmv1r.v v18, v8
-; CHECK-ALIGNED-RV32-V-NEXT:    vmv.s.x v18, a4
-; CHECK-ALIGNED-RV32-V-NEXT:    vmv1r.v v19, v8
-; CHECK-ALIGNED-RV32-V-NEXT:    vmv.s.x v19, a0
-; CHECK-ALIGNED-RV32-V-NEXT:    vmv.s.x v8, a1
-; CHECK-ALIGNED-RV32-V-NEXT:    vsetvli zero, zero, e8, m1, ta, ma
-; CHECK-ALIGNED-RV32-V-NEXT:    vmsne.vv v15, v15, v16
-; CHECK-ALIGNED-RV32-V-NEXT:    vmsne.vv v11, v11, v12
-; CHECK-ALIGNED-RV32-V-NEXT:    vmor.mm v11, v11, v15
-; CHECK-ALIGNED-RV32-V-NEXT:    vmsne.vv v9, v9, v10
-; CHECK-ALIGNED-RV32-V-NEXT:    vmsne.vv v10, v13, v14
-; CHECK-ALIGNED-RV32-V-NEXT:    vmor.mm v9, v10, v9
-; CHECK-ALIGNED-RV32-V-NEXT:    vmor.mm v9, v9, v11
-; CHECK-ALIGNED-RV32-V-NEXT:    vmsne.vv v8, v19, v8
-; CHECK-ALIGNED-RV32-V-NEXT:    vmsne.vv v10, v17, v18
-; CHECK-ALIGNED-RV32-V-NEXT:    vmor.mm v8, v10, v8
-; CHECK-ALIGNED-RV32-V-NEXT:    vmnor.mm v8, v9, v8
-; CHECK-ALIGNED-RV32-V-NEXT:    vcpop.m a0, v8
-; CHECK-ALIGNED-RV32-V-NEXT:    seqz a0, a0
+; CHECK-ALIGNED-RV32-V-NEXT:    slli t4, t4, 8
+; CHECK-ALIGNED-RV32-V-NEXT:    or t2, t4, t3
+; CHECK-ALIGNED-RV32-V-NEXT:    xor t1, t1, t2
+; CHECK-ALIGNED-RV32-V-NEXT:    xor a0, a0, a1
+; CHECK-ALIGNED-RV32-V-NEXT:    or a1, a5, a6
+; CHECK-ALIGNED-RV32-V-NEXT:    or a4, a4, a7
+; CHECK-ALIGNED-RV32-V-NEXT:    or a5, t0, t1
+; CHECK-ALIGNED-RV32-V-NEXT:    or a4, a4, a5
+; CHECK-ALIGNED-RV32-V-NEXT:    or a1, a1, a3
+; CHECK-ALIGNED-RV32-V-NEXT:    or a0, a0, a2
+; CHECK-ALIGNED-RV32-V-NEXT:    or a0, a4, a0
+; CHECK-ALIGNED-RV32-V-NEXT:    or a0, a0, a1
+; CHECK-ALIGNED-RV32-V-NEXT:    snez a0, a0
 ; CHECK-ALIGNED-RV32-V-NEXT:    ret
 ;
 ; CHECK-ALIGNED-RV64-V-LABEL: bcmp_size_31:
 ; CHECK-ALIGNED-RV64-V:       # %bb.0: # %entry
-; CHECK-ALIGNED-RV64-V-NEXT:    lbu a2, 17(a0)
-; CHECK-ALIGNED-RV64-V-NEXT:    lbu a3, 16(a0)
-; CHECK-ALIGNED-RV64-V-NEXT:    lbu a4, 18(a0)
-; CHECK-ALIGNED-RV64-V-NEXT:    lbu a5, 19(a0)
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu a2, 1(a0)
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu a3, 0(a0)
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu a4, 2(a0)
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu a5, 3(a0)
 ; CHECK-ALIGNED-RV64-V-NEXT:    slli a2, a2, 8
 ; CHECK-ALIGNED-RV64-V-NEXT:    or a2, a2, a3
 ; CHECK-ALIGNED-RV64-V-NEXT:    slli a4, a4, 16
 ; CHECK-ALIGNED-RV64-V-NEXT:    slli a5, a5, 24
 ; CHECK-ALIGNED-RV64-V-NEXT:    or a4, a5, a4
-; CHECK-ALIGNED-RV64-V-NEXT:    lbu a3, 20(a0)
-; CHECK-ALIGNED-RV64-V-NEXT:    lbu a5, 21(a0)
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu a3, 4(a0)
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu a5, 5(a0)
 ; CHECK-ALIGNED-RV64-V-NEXT:    or a2, a4, a2
-; CHECK-ALIGNED-RV64-V-NEXT:    lbu a4, 22(a0)
-; CHECK-ALIGNED-RV64-V-NEXT:    lbu a6, 23(a0)
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu a4, 6(a0)
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu a6, 7(a0)
 ; CHECK-ALIGNED-RV64-V-NEXT:    slli a5, a5, 8
 ; CHECK-ALIGNED-RV64-V-NEXT:    or a3, a5, a3
 ; CHECK-ALIGNED-RV64-V-NEXT:    slli a4, a4, 16
@@ -3994,91 +4014,159 @@ define i32 @bcmp_size_31(ptr %s1, ptr %s2) nounwind {
 ; CHECK-ALIGNED-RV64-V-NEXT:    or a4, a6, a4
 ; CHECK-ALIGNED-RV64-V-NEXT:    or a3, a4, a3
 ; CHECK-ALIGNED-RV64-V-NEXT:    slli a3, a3, 32
-; CHECK-ALIGNED-RV64-V-NEXT:    lbu a4, 16(a1)
-; CHECK-ALIGNED-RV64-V-NEXT:    lbu a5, 17(a1)
-; CHECK-ALIGNED-RV64-V-NEXT:    or a2, a3, a2
-; CHECK-ALIGNED-RV64-V-NEXT:    lbu a3, 18(a1)
-; CHECK-ALIGNED-RV64-V-NEXT:    lbu a6, 19(a1)
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu a4, 8(a0)
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu a5, 9(a0)
+; CHECK-ALIGNED-RV64-V-NEXT:    or a3, a3, a2
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu a2, 10(a0)
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu a6, 11(a0)
 ; CHECK-ALIGNED-RV64-V-NEXT:    slli a5, a5, 8
 ; CHECK-ALIGNED-RV64-V-NEXT:    or a4, a5, a4
-; CHECK-ALIGNED-RV64-V-NEXT:    slli a3, a3, 16
+; CHECK-ALIGNED-RV64-V-NEXT:    slli a2, a2, 16
 ; CHECK-ALIGNED-RV64-V-NEXT:    slli a6, a6, 24
-; CHECK-ALIGNED-RV64-V-NEXT:    or a3, a6, a3
-; CHECK-ALIGNED-RV64-V-NEXT:    lbu a5, 20(a1)
-; CHECK-ALIGNED-RV64-V-NEXT:    lbu a6, 21(a1)
-; CHECK-ALIGNED-RV64-V-NEXT:    or a3, a3, a4
-; CHECK-ALIGNED-RV64-V-NEXT:    lbu a4, 22(a1)
-; CHECK-ALIGNED-RV64-V-NEXT:    lbu a7, 23(a1)
+; CHECK-ALIGNED-RV64-V-NEXT:    or a2, a6, a2
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu a5, 12(a0)
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu a6, 13(a0)
+; CHECK-ALIGNED-RV64-V-NEXT:    or a2, a2, a4
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu a4, 14(a0)
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu a7, 15(a0)
 ; CHECK-ALIGNED-RV64-V-NEXT:    slli a6, a6, 8
 ; CHECK-ALIGNED-RV64-V-NEXT:    or a5, a6, a5
-; CHECK-ALIGNED-RV64-V-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
-; CHECK-ALIGNED-RV64-V-NEXT:    vle8.v v8, (a0)
-; CHECK-ALIGNED-RV64-V-NEXT:    vle8.v v9, (a1)
 ; CHECK-ALIGNED-RV64-V-NEXT:    slli a4, a4, 16
 ; CHECK-ALIGNED-RV64-V-NEXT:    slli a7, a7, 24
 ; CHECK-ALIGNED-RV64-V-NEXT:    or a4, a7, a4
 ; CHECK-ALIGNED-RV64-V-NEXT:    or a4, a4, a5
 ; CHECK-ALIGNED-RV64-V-NEXT:    slli a4, a4, 32
-; CHECK-ALIGNED-RV64-V-NEXT:    or a3, a4, a3
-; CHECK-ALIGNED-RV64-V-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
-; CHECK-ALIGNED-RV64-V-NEXT:    vmv.v.x v10, a2
-; CHECK-ALIGNED-RV64-V-NEXT:    vslide1down.vx v10, v10, zero
-; CHECK-ALIGNED-RV64-V-NEXT:    vmv.v.x v11, a3
-; CHECK-ALIGNED-RV64-V-NEXT:    lbu a2, 24(a0)
-; CHECK-ALIGNED-RV64-V-NEXT:    lbu a3, 25(a0)
-; CHECK-ALIGNED-RV64-V-NEXT:    vslide1down.vx v11, v11, zero
-; CHECK-ALIGNED-RV64-V-NEXT:    lbu a4, 26(a0)
-; CHECK-ALIGNED-RV64-V-NEXT:    lbu a5, 27(a0)
-; CHECK-ALIGNED-RV64-V-NEXT:    slli a3, a3, 8
-; CHECK-ALIGNED-RV64-V-NEXT:    or a2, a3, a2
-; CHECK-ALIGNED-RV64-V-NEXT:    slli a4, a4, 16
-; CHECK-ALIGNED-RV64-V-NEXT:    slli a5, a5, 24
-; CHECK-ALIGNED-RV64-V-NEXT:    or a4, a5, a4
-; CHECK-ALIGNED-RV64-V-NEXT:    lbu a3, 24(a1)
-; CHECK-ALIGNED-RV64-V-NEXT:    lbu a5, 25(a1)
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu a5, 0(a1)
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu a6, 1(a1)
 ; CHECK-ALIGNED-RV64-V-NEXT:    or a2, a4, a2
-; CHECK-ALIGNED-RV64-V-NEXT:    lbu a4, 26(a1)
-; CHECK-ALIGNED-RV64-V-NEXT:    lbu a6, 27(a1)
-; CHECK-ALIGNED-RV64-V-NEXT:    slli a5, a5, 8
-; CHECK-ALIGNED-RV64-V-NEXT:    or a3, a5, a3
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu a4, 2(a1)
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu a7, 3(a1)
+; CHECK-ALIGNED-RV64-V-NEXT:    slli a6, a6, 8
+; CHECK-ALIGNED-RV64-V-NEXT:    or a5, a6, a5
 ; CHECK-ALIGNED-RV64-V-NEXT:    slli a4, a4, 16
-; CHECK-ALIGNED-RV64-V-NEXT:    slli a6, a6, 24
-; CHECK-ALIGNED-RV64-V-NEXT:    or a4, a6, a4
-; CHECK-ALIGNED-RV64-V-NEXT:    or a3, a4, a3
-; CHECK-ALIGNED-RV64-V-NEXT:    vmv.v.x v12, a2
-; CHECK-ALIGNED-RV64-V-NEXT:    vslide1down.vx v12, v12, zero
-; CHECK-ALIGNED-RV64-V-NEXT:    vmv.v.x v13, a3
-; CHECK-ALIGNED-RV64-V-NEXT:    vslide1down.vx v13, v13, zero
-; CHECK-ALIGNED-RV64-V-NEXT:    lbu a2, 28(a0)
-; CHECK-ALIGNED-RV64-V-NEXT:    lbu a3, 29(a0)
-; CHECK-ALIGNED-RV64-V-NEXT:    lbu a0, 30(a0)
-; CHECK-ALIGNED-RV64-V-NEXT:    lbu a4, 28(a1)
-; CHECK-ALIGNED-RV64-V-NEXT:    lbu a5, 29(a1)
-; CHECK-ALIGNED-RV64-V-NEXT:    slli a3, a3, 8
-; CHECK-ALIGNED-RV64-V-NEXT:    or a2, a3, a2
-; CHECK-ALIGNED-RV64-V-NEXT:    lbu a1, 30(a1)
-; CHECK-ALIGNED-RV64-V-NEXT:    slli a5, a5, 8
+; CHECK-ALIGNED-RV64-V-NEXT:    slli a7, a7, 24
+; CHECK-ALIGNED-RV64-V-NEXT:    or a4, a7, a4
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu a6, 4(a1)
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu a7, 5(a1)
+; CHECK-ALIGNED-RV64-V-NEXT:    or a4, a4, a5
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu a5, 6(a1)
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu t0, 7(a1)
+; CHECK-ALIGNED-RV64-V-NEXT:    slli a7, a7, 8
+; CHECK-ALIGNED-RV64-V-NEXT:    or a6, a7, a6
+; CHECK-ALIGNED-RV64-V-NEXT:    slli a5, a5, 16
+; CHECK-ALIGNED-RV64-V-NEXT:    slli t0, t0, 24
+; CHECK-ALIGNED-RV64-V-NEXT:    or a5, t0, a5
+; CHECK-ALIGNED-RV64-V-NEXT:    or a5, a5, a6
+; CHECK-ALIGNED-RV64-V-NEXT:    slli a5, a5, 32
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu a6, 8(a1)
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu a7, 9(a1)
 ; CHECK-ALIGNED-RV64-V-NEXT:    or a4, a5, a4
-; CHECK-ALIGNED-RV64-V-NEXT:    vmv.v.x v14, a2
-; CHECK-ALIGNED-RV64-V-NEXT:    vslide1down.vx v14, v14, zero
-; CHECK-ALIGNED-RV64-V-NEXT:    vmv.v.x v15, a4
-; CHECK-ALIGNED-RV64-V-NEXT:    vslide1down.vx v15, v15, zero
-; CHECK-ALIGNED-RV64-V-NEXT:    vmv.v.x v16, a0
-; CHECK-ALIGNED-RV64-V-NEXT:    vslide1down.vx v16, v16, zero
-; CHECK-ALIGNED-RV64-V-NEXT:    vmv.v.x v17, a1
-; CHECK-ALIGNED-RV64-V-NEXT:    vslide1down.vx v17, v17, zero
-; CHECK-ALIGNED-RV64-V-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
-; CHECK-ALIGNED-RV64-V-NEXT:    vmsne.vv v10, v10, v11
-; CHECK-ALIGNED-RV64-V-NEXT:    vmsne.vv v8, v8, v9
-; CHECK-ALIGNED-RV64-V-NEXT:    vmor.mm v8, v8, v10
-; CHECK-ALIGNED-RV64-V-NEXT:    vmsne.vv v9, v12, v13
-; CHECK-ALIGNED-RV64-V-NEXT:    vmsne.vv v10, v14, v15
-; CHECK-ALIGNED-RV64-V-NEXT:    vmor.mm v9, v9, v10
-; CHECK-ALIGNED-RV64-V-NEXT:    vmor.mm v8, v8, v9
-; CHECK-ALIGNED-RV64-V-NEXT:    vmsne.vv v9, v16, v17
-; CHECK-ALIGNED-RV64-V-NEXT:    vmnor.mm v8, v8, v9
-; CHECK-ALIGNED-RV64-V-NEXT:    vcpop.m a0, v8
-; CHECK-ALIGNED-RV64-V-NEXT:    seqz a0, a0
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu a5, 10(a1)
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu t0, 11(a1)
+; CHECK-ALIGNED-RV64-V-NEXT:    slli a7, a7, 8
+; CHECK-ALIGNED-RV64-V-NEXT:    or a6, a7, a6
+; CHECK-ALIGNED-RV64-V-NEXT:    slli a5, a5, 16
+; CHECK-ALIGNED-RV64-V-NEXT:    slli t0, t0, 24
+; CHECK-ALIGNED-RV64-V-NEXT:    or a5, t0, a5
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu a7, 12(a1)
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu t0, 13(a1)
+; CHECK-ALIGNED-RV64-V-NEXT:    or a5, a5, a6
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu a6, 14(a1)
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu t1, 15(a1)
+; CHECK-ALIGNED-RV64-V-NEXT:    slli t0, t0, 8
+; CHECK-ALIGNED-RV64-V-NEXT:    or a7, t0, a7
+; CHECK-ALIGNED-RV64-V-NEXT:    slli a6, a6, 16
+; CHECK-ALIGNED-RV64-V-NEXT:    slli t1, t1, 24
+; CHECK-ALIGNED-RV64-V-NEXT:    or a6, t1, a6
+; CHECK-ALIGNED-RV64-V-NEXT:    or a6, a6, a7
+; CHECK-ALIGNED-RV64-V-NEXT:    slli a6, a6, 32
+; CHECK-ALIGNED-RV64-V-NEXT:    or a5, a6, a5
+; CHECK-ALIGNED-RV64-V-NEXT:    xor a2, a2, a5
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu a5, 16(a0)
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu a6, 17(a0)
+; CHECK-ALIGNED-RV64-V-NEXT:    xor a3, a3, a4
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu a4, 18(a0)
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu a7, 19(a0)
+; CHECK-ALIGNED-RV64-V-NEXT:    slli a6, a6, 8
+; CHECK-ALIGNED-RV64-V-NEXT:    or a5, a6, a5
+; CHECK-ALIGNED-RV64-V-NEXT:    slli a4, a4, 16
+; CHECK-ALIGNED-RV64-V-NEXT:    slli a7, a7, 24
+; CHECK-ALIGNED-RV64-V-NEXT:    or a4, a7, a4
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu a6, 20(a0)
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu a7, 21(a0)
+; CHECK-ALIGNED-RV64-V-NEXT:    or a4, a4, a5
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu a5, 22(a0)
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu t0, 23(a0)
+; CHECK-ALIGNED-RV64-V-NEXT:    slli a7, a7, 8
+; CHECK-ALIGNED-RV64-V-NEXT:    or a6, a7, a6
+; CHECK-ALIGNED-RV64-V-NEXT:    slli a5, a5, 16
+; CHECK-ALIGNED-RV64-V-NEXT:    slli t0, t0, 24
+; CHECK-ALIGNED-RV64-V-NEXT:    or a5, t0, a5
+; CHECK-ALIGNED-RV64-V-NEXT:    or a5, a5, a6
+; CHECK-ALIGNED-RV64-V-NEXT:    slli a5, a5, 32
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu a6, 16(a1)
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu a7, 17(a1)
+; CHECK-ALIGNED-RV64-V-NEXT:    or a4, a5, a4
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu a5, 18(a1)
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu t0, 19(a1)
+; CHECK-ALIGNED-RV64-V-NEXT:    slli a7, a7, 8
+; CHECK-ALIGNED-RV64-V-NEXT:    or a6, a7, a6
+; CHECK-ALIGNED-RV64-V-NEXT:    slli a5, a5, 16
+; CHECK-ALIGNED-RV64-V-NEXT:    slli t0, t0, 24
+; CHECK-ALIGNED-RV64-V-NEXT:    or a5, t0, a5
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu a7, 20(a1)
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu t0, 21(a1)
+; CHECK-ALIGNED-RV64-V-NEXT:    or a5, a5, a6
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu a6, 22(a1)
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu t1, 23(a1)
+; CHECK-ALIGNED-RV64-V-NEXT:    slli t0, t0, 8
+; CHECK-ALIGNED-RV64-V-NEXT:    or a7, t0, a7
+; CHECK-ALIGNED-RV64-V-NEXT:    slli a6, a6, 16
+; CHECK-ALIGNED-RV64-V-NEXT:    slli t1, t1, 24
+; CHECK-ALIGNED-RV64-V-NEXT:    or a6, t1, a6
+; CHECK-ALIGNED-RV64-V-NEXT:    or a6, a6, a7
+; CHECK-ALIGNED-RV64-V-NEXT:    slli a6, a6, 32
+; CHECK-ALIGNED-RV64-V-NEXT:    or a5, a6, a5
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu a6, 24(a0)
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu a7, 25(a0)
+; CHECK-ALIGNED-RV64-V-NEXT:    xor a4, a4, a5
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu a5, 26(a0)
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu t0, 27(a0)
+; CHECK-ALIGNED-RV64-V-NEXT:    slli a7, a7, 8
+; CHECK-ALIGNED-RV64-V-NEXT:    or a6, a7, a6
+; CHECK-ALIGNED-RV64-V-NEXT:    slli a5, a5, 16
+; CHECK-ALIGNED-RV64-V-NEXT:    slli t0, t0, 24
+; CHECK-ALIGNED-RV64-V-NEXT:    or a5, t0, a5
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu a7, 24(a1)
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu t0, 25(a1)
+; CHECK-ALIGNED-RV64-V-NEXT:    or a5, a5, a6
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu a6, 26(a1)
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu t1, 27(a1)
+; CHECK-ALIGNED-RV64-V-NEXT:    slli t0, t0, 8
+; CHECK-ALIGNED-RV64-V-NEXT:    or a7, t0, a7
+; CHECK-ALIGNED-RV64-V-NEXT:    slli a6, a6, 16
+; CHECK-ALIGNED-RV64-V-NEXT:    slli t1, t1, 24
+; CHECK-ALIGNED-RV64-V-NEXT:    or a6, t1, a6
+; CHECK-ALIGNED-RV64-V-NEXT:    or a6, a6, a7
+; CHECK-ALIGNED-RV64-V-NEXT:    xor a5, a5, a6
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu a6, 28(a0)
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu a7, 29(a0)
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu a0, 30(a0)
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu t0, 28(a1)
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu t1, 29(a1)
+; CHECK-ALIGNED-RV64-V-NEXT:    slli a7, a7, 8
+; CHECK-ALIGNED-RV64-V-NEXT:    or a6, a7, a6
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu a1, 30(a1)
+; CHECK-ALIGNED-RV64-V-NEXT:    slli t1, t1, 8
+; CHECK-ALIGNED-RV64-V-NEXT:    or a7, t1, t0
+; CHECK-ALIGNED-RV64-V-NEXT:    xor a6, a6, a7
+; CHECK-ALIGNED-RV64-V-NEXT:    xor a0, a0, a1
+; CHECK-ALIGNED-RV64-V-NEXT:    or a3, a3, a4
+; CHECK-ALIGNED-RV64-V-NEXT:    or a1, a5, a6
+; CHECK-ALIGNED-RV64-V-NEXT:    or a0, a1, a0
+; CHECK-ALIGNED-RV64-V-NEXT:    or a0, a0, a2
+; CHECK-ALIGNED-RV64-V-NEXT:    or a0, a3, a0
+; CHECK-ALIGNED-RV64-V-NEXT:    snez a0, a0
 ; CHECK-ALIGNED-RV64-V-NEXT:    ret
 ;
 ; CHECK-UNALIGNED-RV32-LABEL: bcmp_size_31:
@@ -4251,34 +4339,58 @@ define i32 @bcmp_size_31(ptr %s1, ptr %s2) nounwind {
 ;
 ; CHECK-UNALIGNED-RV32-V-LABEL: bcmp_size_31:
 ; CHECK-UNALIGNED-RV32-V:       # %bb.0: # %entry
-; CHECK-UNALIGNED-RV32-V-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
-; CHECK-UNALIGNED-RV32-V-NEXT:    vle8.v v8, (a0)
-; CHECK-UNALIGNED-RV32-V-NEXT:    vle8.v v9, (a1)
-; CHECK-UNALIGNED-RV32-V-NEXT:    addi a0, a0, 15
-; CHECK-UNALIGNED-RV32-V-NEXT:    addi a1, a1, 15
-; CHECK-UNALIGNED-RV32-V-NEXT:    vle8.v v10, (a0)
-; CHECK-UNALIGNED-RV32-V-NEXT:    vle8.v v11, (a1)
-; CHECK-UNALIGNED-RV32-V-NEXT:    vmsne.vv v8, v8, v9
-; CHECK-UNALIGNED-RV32-V-NEXT:    vmsne.vv v9, v10, v11
-; CHECK-UNALIGNED-RV32-V-NEXT:    vmnor.mm v8, v8, v9
-; CHECK-UNALIGNED-RV32-V-NEXT:    vcpop.m a0, v8
-; CHECK-UNALIGNED-RV32-V-NEXT:    seqz a0, a0
+; CHECK-UNALIGNED-RV32-V-NEXT:    lw a2, 0(a0)
+; CHECK-UNALIGNED-RV32-V-NEXT:    lw a3, 4(a0)
+; CHECK-UNALIGNED-RV32-V-NEXT:    lw a4, 8(a0)
+; CHECK-UNALIGNED-RV32-V-NEXT:    lw a5, 12(a0)
+; CHECK-UNALIGNED-RV32-V-NEXT:    lw a6, 4(a1)
+; CHECK-UNALIGNED-RV32-V-NEXT:    lw a7, 12(a1)
+; CHECK-UNALIGNED-RV32-V-NEXT:    lw t0, 8(a1)
+; CHECK-UNALIGNED-RV32-V-NEXT:    lw t1, 0(a1)
+; CHECK-UNALIGNED-RV32-V-NEXT:    xor a3, a3, a6
+; CHECK-UNALIGNED-RV32-V-NEXT:    xor a5, a5, a7
+; CHECK-UNALIGNED-RV32-V-NEXT:    lw a6, 15(a0)
+; CHECK-UNALIGNED-RV32-V-NEXT:    lw a7, 19(a0)
+; CHECK-UNALIGNED-RV32-V-NEXT:    lw t2, 23(a0)
+; CHECK-UNALIGNED-RV32-V-NEXT:    lw a0, 27(a0)
+; CHECK-UNALIGNED-RV32-V-NEXT:    lw t3, 15(a1)
+; CHECK-UNALIGNED-RV32-V-NEXT:    lw t4, 19(a1)
+; CHECK-UNALIGNED-RV32-V-NEXT:    lw t5, 23(a1)
+; CHECK-UNALIGNED-RV32-V-NEXT:    lw a1, 27(a1)
+; CHECK-UNALIGNED-RV32-V-NEXT:    xor a2, a2, t1
+; CHECK-UNALIGNED-RV32-V-NEXT:    xor a4, a4, t0
+; CHECK-UNALIGNED-RV32-V-NEXT:    xor a7, a7, t4
+; CHECK-UNALIGNED-RV32-V-NEXT:    xor a0, a0, a1
+; CHECK-UNALIGNED-RV32-V-NEXT:    xor a1, a6, t3
+; CHECK-UNALIGNED-RV32-V-NEXT:    xor a6, t2, t5
+; CHECK-UNALIGNED-RV32-V-NEXT:    or a4, a4, a6
+; CHECK-UNALIGNED-RV32-V-NEXT:    or a1, a2, a1
+; CHECK-UNALIGNED-RV32-V-NEXT:    or a0, a5, a0
+; CHECK-UNALIGNED-RV32-V-NEXT:    or a2, a3, a7
+; CHECK-UNALIGNED-RV32-V-NEXT:    or a0, a2, a0
+; CHECK-UNALIGNED-RV32-V-NEXT:    or a1, a1, a4
+; CHECK-UNALIGNED-RV32-V-NEXT:    or a0, a1, a0
+; CHECK-UNALIGNED-RV32-V-NEXT:    snez a0, a0
 ; CHECK-UNALIGNED-RV32-V-NEXT:    ret
 ;
 ; CHECK-UNALIGNED-RV64-V-LABEL: bcmp_size_31:
 ; CHECK-UNALIGNED-RV64-V:       # %bb.0: # %entry
-; CHECK-UNALIGNED-RV64-V-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
-; CHECK-UNALIGNED-RV64-V-NEXT:    vle8.v v8, (a0)
-; CHECK-UNALIGNED-RV64-V-NEXT:    vle8.v v9, (a1)
-; CHECK-UNALIGNED-RV64-V-NEXT:    addi a0, a0, 15
-; CHECK-UNALIGNED-RV64-V-NEXT:    addi a1, a1, 15
-; CHECK-UNALIGNED-RV64-V-NEXT:    vle8.v v10, (a0)
-; CHECK-UNALIGNED-RV64-V-NEXT:    vle8.v v11, (a1)
-; CHECK-UNALIGNED-RV64-V-NEXT:    vmsne.vv v8, v8, v9
-; CHECK-UNALIGNED-RV64-V-NEXT:    vmsne.vv v9, v10, v11
-; CHECK-UNALIGNED-RV64-V-NEXT:    vmnor.mm v8, v8, v9
-; CHECK-UNALIGNED-RV64-V-NEXT:    vcpop.m a0, v8
-; CHECK-UNALIGNED-RV64-V-NEXT:    seqz a0, a0
+; CHECK-UNALIGNED-RV64-V-NEXT:    ld a2, 0(a0)
+; CHECK-UNALIGNED-RV64-V-NEXT:    ld a3, 8(a0)
+; CHECK-UNALIGNED-RV64-V-NEXT:    ld a4, 15(a0)
+; CHECK-UNALIGNED-RV64-V-NEXT:    ld a0, 23(a0)
+; CHECK-UNALIGNED-RV64-V-NEXT:    ld a5, 0(a1)
+; CHECK-UNALIGNED-RV64-V-NEXT:    ld a6, 8(a1)
+; CHECK-UNALIGNED-RV64-V-NEXT:    ld a7, 15(a1)
+; CHECK-UNALIGNED-RV64-V-NEXT:    ld a1, 23(a1)
+; CHECK-UNALIGNED-RV64-V-NEXT:    xor a2, a2, a5
+; CHECK-UNALIGNED-RV64-V-NEXT:    xor a3, a3, a6
+; CHECK-UNALIGNED-RV64-V-NEXT:    xor a4, a4, a7
+; CHECK-UNALIGNED-RV64-V-NEXT:    xor a0, a0, a1
+; CHECK-UNALIGNED-RV64-V-NEXT:    or a0, a3, a0
+; CHECK-UNALIGNED-RV64-V-NEXT:    or a2, a2, a4
+; CHECK-UNALIGNED-RV64-V-NEXT:    or a0, a2, a0
+; CHECK-UNALIGNED-RV64-V-NEXT:    snez a0, a0
 ; CHECK-UNALIGNED-RV64-V-NEXT:    ret
 entry:
   %bcmp = call signext i32 @bcmp(ptr %s1, ptr %s2, iXLen 31)
@@ -5589,837 +5701,726 @@ define i32 @bcmp_size_63(ptr %s1, ptr %s2) nounwind {
 ;
 ; CHECK-ALIGNED-RV32-V-LABEL: bcmp_size_63:
 ; CHECK-ALIGNED-RV32-V:       # %bb.0: # %entry
-; CHECK-ALIGNED-RV32-V-NEXT:    addi sp, sp, -64
-; CHECK-ALIGNED-RV32-V-NEXT:    sw s0, 60(sp) # 4-byte Folded Spill
-; CHECK-ALIGNED-RV32-V-NEXT:    sw s1, 56(sp) # 4-byte Folded Spill
-; CHECK-ALIGNED-RV32-V-NEXT:    sw s2, 52(sp) # 4-byte Folded Spill
-; CHECK-ALIGNED-RV32-V-NEXT:    sw s3, 48(sp) # 4-byte Folded Spill
-; CHECK-ALIGNED-RV32-V-NEXT:    sw s4, 44(sp) # 4-byte Folded Spill
-; CHECK-ALIGNED-RV32-V-NEXT:    sw s5, 40(sp) # 4-byte Folded Spill
-; CHECK-ALIGNED-RV32-V-NEXT:    sw s6, 36(sp) # 4-byte Folded Spill
-; CHECK-ALIGNED-RV32-V-NEXT:    sw s7, 32(sp) # 4-byte Folded Spill
-; CHECK-ALIGNED-RV32-V-NEXT:    sw s8, 28(sp) # 4-byte Folded Spill
-; CHECK-ALIGNED-RV32-V-NEXT:    sw s9, 24(sp) # 4-byte Folded Spill
-; CHECK-ALIGNED-RV32-V-NEXT:    sw s10, 20(sp) # 4-byte Folded Spill
-; CHECK-ALIGNED-RV32-V-NEXT:    sw s11, 16(sp) # 4-byte Folded Spill
-; CHECK-ALIGNED-RV32-V-NEXT:    csrr a2, vlenb
-; CHECK-ALIGNED-RV32-V-NEXT:    slli a2, a2, 2
-; CHECK-ALIGNED-RV32-V-NEXT:    sub sp, sp, a2
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu a2, 45(a0)
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu a3, 44(a0)
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu a6, 46(a0)
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu a4, 47(a0)
+; CHECK-ALIGNED-RV32-V-NEXT:    addi sp, sp, -32
+; CHECK-ALIGNED-RV32-V-NEXT:    sw s0, 28(sp) # 4-byte Folded Spill
+; CHECK-ALIGNED-RV32-V-NEXT:    sw s1, 24(sp) # 4-byte Folded Spill
+; CHECK-ALIGNED-RV32-V-NEXT:    sw s2, 20(sp) # 4-byte Folded Spill
+; CHECK-ALIGNED-RV32-V-NEXT:    sw s3, 16(sp) # 4-byte Folded Spill
+; CHECK-ALIGNED-RV32-V-NEXT:    sw s4, 12(sp) # 4-byte Folded Spill
+; CHECK-ALIGNED-RV32-V-NEXT:    sw s5, 8(sp) # 4-byte Folded Spill
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a2, 9(a0)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a3, 8(a0)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a4, 10(a0)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a5, 11(a0)
 ; CHECK-ALIGNED-RV32-V-NEXT:    slli a2, a2, 8
-; CHECK-ALIGNED-RV32-V-NEXT:    or a5, a2, a3
-; CHECK-ALIGNED-RV32-V-NEXT:    slli a6, a6, 16
-; CHECK-ALIGNED-RV32-V-NEXT:    slli a2, a4, 24
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu a3, 40(a0)
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu t0, 41(a0)
-; CHECK-ALIGNED-RV32-V-NEXT:    or a6, a2, a6
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu a2, 42(a0)
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu a7, 43(a0)
-; CHECK-ALIGNED-RV32-V-NEXT:    slli t0, t0, 8
-; CHECK-ALIGNED-RV32-V-NEXT:    or t0, t0, a3
-; CHECK-ALIGNED-RV32-V-NEXT:    slli a2, a2, 16
-; CHECK-ALIGNED-RV32-V-NEXT:    slli a3, a7, 24
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu t1, 36(a0)
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu t3, 37(a0)
-; CHECK-ALIGNED-RV32-V-NEXT:    or t2, a3, a2
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu a2, 38(a0)
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu t5, 39(a0)
-; CHECK-ALIGNED-RV32-V-NEXT:    slli t3, t3, 8
-; CHECK-ALIGNED-RV32-V-NEXT:    or s1, t3, t1
-; CHECK-ALIGNED-RV32-V-NEXT:    slli a2, a2, 16
-; CHECK-ALIGNED-RV32-V-NEXT:    slli a3, t5, 24
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu t1, 32(a0)
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu t3, 33(a0)
-; CHECK-ALIGNED-RV32-V-NEXT:    or s2, a3, a2
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu a2, 34(a0)
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu s4, 35(a0)
-; CHECK-ALIGNED-RV32-V-NEXT:    slli t3, t3, 8
-; CHECK-ALIGNED-RV32-V-NEXT:    or s7, t3, t1
-; CHECK-ALIGNED-RV32-V-NEXT:    slli a2, a2, 16
-; CHECK-ALIGNED-RV32-V-NEXT:    slli a3, s4, 24
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu t1, 44(a1)
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu t3, 45(a1)
-; CHECK-ALIGNED-RV32-V-NEXT:    or s8, a3, a2
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu a2, 46(a1)
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu a3, 47(a1)
-; CHECK-ALIGNED-RV32-V-NEXT:    slli t3, t3, 8
-; CHECK-ALIGNED-RV32-V-NEXT:    or t1, t3, t1
-; CHECK-ALIGNED-RV32-V-NEXT:    slli a2, a2, 16
-; CHECK-ALIGNED-RV32-V-NEXT:    slli t3, a3, 24
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu t6, 40(a1)
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu s0, 41(a1)
-; CHECK-ALIGNED-RV32-V-NEXT:    or t3, t3, a2
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu a2, 42(a1)
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu t4, 43(a1)
-; CHECK-ALIGNED-RV32-V-NEXT:    slli s0, s0, 8
-; CHECK-ALIGNED-RV32-V-NEXT:    or t6, s0, t6
-; CHECK-ALIGNED-RV32-V-NEXT:    slli a2, a2, 16
-; CHECK-ALIGNED-RV32-V-NEXT:    slli s0, t4, 24
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu s5, 36(a1)
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu s6, 37(a1)
-; CHECK-ALIGNED-RV32-V-NEXT:    or s0, s0, a2
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu a2, 38(a1)
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu s3, 39(a1)
-; CHECK-ALIGNED-RV32-V-NEXT:    slli s6, s6, 8
-; CHECK-ALIGNED-RV32-V-NEXT:    or s5, s6, s5
-; CHECK-ALIGNED-RV32-V-NEXT:    slli a2, a2, 16
-; CHECK-ALIGNED-RV32-V-NEXT:    slli s6, s3, 24
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu s10, 32(a1)
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu s11, 33(a1)
-; CHECK-ALIGNED-RV32-V-NEXT:    or s6, s6, a2
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu a2, 34(a1)
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu s9, 35(a1)
-; CHECK-ALIGNED-RV32-V-NEXT:    slli s11, s11, 8
-; CHECK-ALIGNED-RV32-V-NEXT:    or s11, s11, s10
-; CHECK-ALIGNED-RV32-V-NEXT:    slli a2, a2, 16
-; CHECK-ALIGNED-RV32-V-NEXT:    slli s10, s9, 24
-; CHECK-ALIGNED-RV32-V-NEXT:    or s10, s10, a2
-; CHECK-ALIGNED-RV32-V-NEXT:    li a2, 32
-; CHECK-ALIGNED-RV32-V-NEXT:    or s7, s8, s7
-; CHECK-ALIGNED-RV32-V-NEXT:    vsetvli zero, a2, e8, m2, ta, ma
-; CHECK-ALIGNED-RV32-V-NEXT:    vmv.v.x v8, s7
-; CHECK-ALIGNED-RV32-V-NEXT:    slli s7, s7, 16
-; CHECK-ALIGNED-RV32-V-NEXT:    srli s7, s7, 24
-; CHECK-ALIGNED-RV32-V-NEXT:    vslide1down.vx v8, v8, s7
-; CHECK-ALIGNED-RV32-V-NEXT:    srli s7, s8, 16
-; CHECK-ALIGNED-RV32-V-NEXT:    vslide1down.vx v8, v8, s7
-; CHECK-ALIGNED-RV32-V-NEXT:    vslide1down.vx v8, v8, s4
-; CHECK-ALIGNED-RV32-V-NEXT:    or s1, s2, s1
-; CHECK-ALIGNED-RV32-V-NEXT:    vslide1down.vx v8, v8, s1
-; CHECK-ALIGNED-RV32-V-NEXT:    slli s1, s1, 16
-; CHECK-ALIGNED-RV32-V-NEXT:    srli s1, s1, 24
-; CHECK-ALIGNED-RV32-V-NEXT:    vslide1down.vx v8, v8, s1
-; CHECK-ALIGNED-RV32-V-NEXT:    srli s1, s2, 16
-; CHECK-ALIGNED-RV32-V-NEXT:    vslide1down.vx v8, v8, s1
-; CHECK-ALIGNED-RV32-V-NEXT:    vslide1down.vx v8, v8, t5
-; CHECK-ALIGNED-RV32-V-NEXT:    or t0, t2, t0
-; CHECK-ALIGNED-RV32-V-NEXT:    vslide1down.vx v8, v8, t0
-; CHECK-ALIGNED-RV32-V-NEXT:    slli t0, t0, 16
-; CHECK-ALIGNED-RV32-V-NEXT:    srli t0, t0, 24
-; CHECK-ALIGNED-RV32-V-NEXT:    vslide1down.vx v8, v8, t0
-; CHECK-ALIGNED-RV32-V-NEXT:    srli t0, t2, 16
-; CHECK-ALIGNED-RV32-V-NEXT:    vslide1down.vx v8, v8, t0
-; CHECK-ALIGNED-RV32-V-NEXT:    vslide1down.vx v8, v8, a7
-; CHECK-ALIGNED-RV32-V-NEXT:    or a5, a6, a5
-; CHECK-ALIGNED-RV32-V-NEXT:    vslide1down.vx v8, v8, a5
-; CHECK-ALIGNED-RV32-V-NEXT:    slli a5, a5, 16
-; CHECK-ALIGNED-RV32-V-NEXT:    srli a5, a5, 24
-; CHECK-ALIGNED-RV32-V-NEXT:    vslide1down.vx v8, v8, a5
-; CHECK-ALIGNED-RV32-V-NEXT:    srli a5, a6, 16
-; CHECK-ALIGNED-RV32-V-NEXT:    vslide1down.vx v8, v8, a5
-; CHECK-ALIGNED-RV32-V-NEXT:    vslide1down.vx v8, v8, a4
-; CHECK-ALIGNED-RV32-V-NEXT:    csrr a4, vlenb
-; CHECK-ALIGNED-RV32-V-NEXT:    slli a4, a4, 1
-; CHECK-ALIGNED-RV32-V-NEXT:    add a4, sp, a4
-; CHECK-ALIGNED-RV32-V-NEXT:    addi a4, a4, 16
-; CHECK-ALIGNED-RV32-V-NEXT:    vs2r.v v8, (a4) # Unknown-size Folded Spill
-; CHECK-ALIGNED-RV32-V-NEXT:    or a4, s10, s11
-; CHECK-ALIGNED-RV32-V-NEXT:    vmv.v.x v10, a4
+; CHECK-ALIGNED-RV32-V-NEXT:    or a2, a2, a3
 ; CHECK-ALIGNED-RV32-V-NEXT:    slli a4, a4, 16
-; CHECK-ALIGNED-RV32-V-NEXT:    srli a4, a4, 24
-; CHECK-ALIGNED-RV32-V-NEXT:    vslide1down.vx v10, v10, a4
-; CHECK-ALIGNED-RV32-V-NEXT:    srli a4, s10, 16
-; CHECK-ALIGNED-RV32-V-NEXT:    vslide1down.vx v10, v10, a4
-; CHECK-ALIGNED-RV32-V-NEXT:    vslide1down.vx v10, v10, s9
-; CHECK-ALIGNED-RV32-V-NEXT:    or a4, s6, s5
-; CHECK-ALIGNED-RV32-V-NEXT:    vslide1down.vx v10, v10, a4
-; CHECK-ALIGNED-RV32-V-NEXT:    slli a4, a4, 16
-; CHECK-ALIGNED-RV32-V-NEXT:    srli a4, a4, 24
-; CHECK-ALIGNED-RV32-V-NEXT:    vslide1down.vx v10, v10, a4
-; CHECK-ALIGNED-RV32-V-NEXT:    srli a4, s6, 16
-; CHECK-ALIGNED-RV32-V-NEXT:    vslide1down.vx v10, v10, a4
-; CHECK-ALIGNED-RV32-V-NEXT:    or a4, t3, t1
-; CHECK-ALIGNED-RV32-V-NEXT:    vslide1down.vx v10, v10, s3
-; CHECK-ALIGNED-RV32-V-NEXT:    slli a5, a4, 16
-; CHECK-ALIGNED-RV32-V-NEXT:    srli a5, a5, 24
-; CHECK-ALIGNED-RV32-V-NEXT:    or a6, s0, t6
-; CHECK-ALIGNED-RV32-V-NEXT:    vslide1down.vx v10, v10, a6
-; CHECK-ALIGNED-RV32-V-NEXT:    slli a6, a6, 16
-; CHECK-ALIGNED-RV32-V-NEXT:    srli a6, a6, 24
-; CHECK-ALIGNED-RV32-V-NEXT:    srli a7, t3, 16
-; CHECK-ALIGNED-RV32-V-NEXT:    srli s0, s0, 16
-; CHECK-ALIGNED-RV32-V-NEXT:    vslide1down.vx v10, v10, a6
-; CHECK-ALIGNED-RV32-V-NEXT:    vslide1down.vx v10, v10, s0
-; CHECK-ALIGNED-RV32-V-NEXT:    vslide1down.vx v10, v10, t4
-; CHECK-ALIGNED-RV32-V-NEXT:    vslide1down.vx v10, v10, a4
-; CHECK-ALIGNED-RV32-V-NEXT:    vslide1down.vx v10, v10, a5
-; CHECK-ALIGNED-RV32-V-NEXT:    vslide1down.vx v10, v10, a7
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu a4, 48(a0)
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu a5, 49(a0)
-; CHECK-ALIGNED-RV32-V-NEXT:    vslide1down.vx v8, v10, a3
-; CHECK-ALIGNED-RV32-V-NEXT:    addi a3, sp, 16
-; CHECK-ALIGNED-RV32-V-NEXT:    vs2r.v v8, (a3) # Unknown-size Folded Spill
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu a3, 50(a0)
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu a6, 51(a0)
+; CHECK-ALIGNED-RV32-V-NEXT:    slli a5, a5, 24
+; CHECK-ALIGNED-RV32-V-NEXT:    or a4, a5, a4
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a3, 12(a0)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a5, 13(a0)
+; CHECK-ALIGNED-RV32-V-NEXT:    or t1, a4, a2
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a2, 14(a0)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a4, 15(a0)
+; CHECK-ALIGNED-RV32-V-NEXT:    slli a5, a5, 8
+; CHECK-ALIGNED-RV32-V-NEXT:    or a3, a5, a3
+; CHECK-ALIGNED-RV32-V-NEXT:    slli a2, a2, 16
+; CHECK-ALIGNED-RV32-V-NEXT:    slli a4, a4, 24
+; CHECK-ALIGNED-RV32-V-NEXT:    or a2, a4, a2
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a4, 4(a0)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a5, 5(a0)
+; CHECK-ALIGNED-RV32-V-NEXT:    or t0, a2, a3
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a2, 6(a0)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a3, 7(a0)
 ; CHECK-ALIGNED-RV32-V-NEXT:    slli a5, a5, 8
 ; CHECK-ALIGNED-RV32-V-NEXT:    or a4, a5, a4
-; CHECK-ALIGNED-RV32-V-NEXT:    slli a3, a3, 16
-; CHECK-ALIGNED-RV32-V-NEXT:    slli a5, a6, 24
+; CHECK-ALIGNED-RV32-V-NEXT:    slli a2, a2, 16
+; CHECK-ALIGNED-RV32-V-NEXT:    slli a3, a3, 24
+; CHECK-ALIGNED-RV32-V-NEXT:    or a2, a3, a2
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a3, 0(a0)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a5, 1(a0)
+; CHECK-ALIGNED-RV32-V-NEXT:    or a7, a2, a4
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a2, 2(a0)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a4, 3(a0)
+; CHECK-ALIGNED-RV32-V-NEXT:    slli a5, a5, 8
 ; CHECK-ALIGNED-RV32-V-NEXT:    or a3, a5, a3
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu a5, 48(a1)
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu a7, 49(a1)
-; CHECK-ALIGNED-RV32-V-NEXT:    or a4, a3, a4
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu t0, 50(a1)
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu t1, 51(a1)
-; CHECK-ALIGNED-RV32-V-NEXT:    slli a7, a7, 8
-; CHECK-ALIGNED-RV32-V-NEXT:    or a5, a7, a5
-; CHECK-ALIGNED-RV32-V-NEXT:    slli t0, t0, 16
-; CHECK-ALIGNED-RV32-V-NEXT:    slli a7, t1, 24
-; CHECK-ALIGNED-RV32-V-NEXT:    or a7, a7, t0
-; CHECK-ALIGNED-RV32-V-NEXT:    slli t0, a4, 16
-; CHECK-ALIGNED-RV32-V-NEXT:    srli t0, t0, 24
-; CHECK-ALIGNED-RV32-V-NEXT:    srli a3, a3, 16
-; CHECK-ALIGNED-RV32-V-NEXT:    vmv.v.i v12, 0
-; CHECK-ALIGNED-RV32-V-NEXT:    or a5, a7, a5
-; CHECK-ALIGNED-RV32-V-NEXT:    vmv1r.v v24, v12
-; CHECK-ALIGNED-RV32-V-NEXT:    vsetvli zero, zero, e8, m2, tu, ma
-; CHECK-ALIGNED-RV32-V-NEXT:    vmv.s.x v24, a4
-; CHECK-ALIGNED-RV32-V-NEXT:    slli a4, a5, 16
-; CHECK-ALIGNED-RV32-V-NEXT:    srli a4, a4, 24
-; CHECK-ALIGNED-RV32-V-NEXT:    srli a7, a7, 16
-; CHECK-ALIGNED-RV32-V-NEXT:    vmv.s.x v22, t0
-; CHECK-ALIGNED-RV32-V-NEXT:    vmv.s.x v23, a3
-; CHECK-ALIGNED-RV32-V-NEXT:    vmv.s.x v26, a6
-; CHECK-ALIGNED-RV32-V-NEXT:    vmv1r.v v14, v12
-; CHECK-ALIGNED-RV32-V-NEXT:    vmv.s.x v14, a5
-; CHECK-ALIGNED-RV32-V-NEXT:    vmv.s.x v15, a4
-; CHECK-ALIGNED-RV32-V-NEXT:    vmv.s.x v16, a7
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu a3, 52(a0)
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu a4, 53(a0)
-; CHECK-ALIGNED-RV32-V-NEXT:    vmv.s.x v17, t1
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu a5, 54(a0)
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu a6, 55(a0)
-; CHECK-ALIGNED-RV32-V-NEXT:    slli a4, a4, 8
-; CHECK-ALIGNED-RV32-V-NEXT:    or a3, a4, a3
-; CHECK-ALIGNED-RV32-V-NEXT:    slli a5, a5, 16
-; CHECK-ALIGNED-RV32-V-NEXT:    slli a4, a6, 24
-; CHECK-ALIGNED-RV32-V-NEXT:    or a4, a4, a5
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu a5, 52(a1)
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu a7, 53(a1)
-; CHECK-ALIGNED-RV32-V-NEXT:    or a3, a4, a3
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu t0, 54(a1)
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu t1, 55(a1)
-; CHECK-ALIGNED-RV32-V-NEXT:    slli a7, a7, 8
-; CHECK-ALIGNED-RV32-V-NEXT:    or a5, a7, a5
-; CHECK-ALIGNED-RV32-V-NEXT:    slli t0, t0, 16
-; CHECK-ALIGNED-RV32-V-NEXT:    slli a7, t1, 24
-; CHECK-ALIGNED-RV32-V-NEXT:    or a7, a7, t0
-; CHECK-ALIGNED-RV32-V-NEXT:    slli t0, a3, 16
-; CHECK-ALIGNED-RV32-V-NEXT:    srli t0, t0, 24
-; CHECK-ALIGNED-RV32-V-NEXT:    srli a4, a4, 16
-; CHECK-ALIGNED-RV32-V-NEXT:    or a5, a7, a5
-; CHECK-ALIGNED-RV32-V-NEXT:    vmv1r.v v18, v12
-; CHECK-ALIGNED-RV32-V-NEXT:    vmv.s.x v18, a3
-; CHECK-ALIGNED-RV32-V-NEXT:    slli a3, a5, 16
-; CHECK-ALIGNED-RV32-V-NEXT:    srli a3, a3, 24
-; CHECK-ALIGNED-RV32-V-NEXT:    srli a7, a7, 16
-; CHECK-ALIGNED-RV32-V-NEXT:    vmv.s.x v25, t0
-; CHECK-ALIGNED-RV32-V-NEXT:    vmv.s.x v28, a4
-; CHECK-ALIGNED-RV32-V-NEXT:    vmv.s.x v29, a6
-; CHECK-ALIGNED-RV32-V-NEXT:    vmv1r.v v19, v12
-; CHECK-ALIGNED-RV32-V-NEXT:    vmv.s.x v19, a5
-; CHECK-ALIGNED-RV32-V-NEXT:    vmv.s.x v30, a3
-; CHECK-ALIGNED-RV32-V-NEXT:    vmv.s.x v31, a7
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu a3, 56(a0)
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu a4, 57(a0)
-; CHECK-ALIGNED-RV32-V-NEXT:    vmv.s.x v7, t1
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu a5, 58(a0)
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu a6, 59(a0)
-; CHECK-ALIGNED-RV32-V-NEXT:    slli a4, a4, 8
-; CHECK-ALIGNED-RV32-V-NEXT:    or a3, a4, a3
-; CHECK-ALIGNED-RV32-V-NEXT:    slli a5, a5, 16
-; CHECK-ALIGNED-RV32-V-NEXT:    slli a4, a6, 24
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu a7, 56(a1)
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu t0, 57(a1)
-; CHECK-ALIGNED-RV32-V-NEXT:    or a4, a4, a5
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu a5, 58(a1)
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu t1, 59(a1)
-; CHECK-ALIGNED-RV32-V-NEXT:    slli t0, t0, 8
-; CHECK-ALIGNED-RV32-V-NEXT:    or a7, t0, a7
-; CHECK-ALIGNED-RV32-V-NEXT:    slli a5, a5, 16
-; CHECK-ALIGNED-RV32-V-NEXT:    slli t0, t1, 24
+; CHECK-ALIGNED-RV32-V-NEXT:    slli a2, a2, 16
+; CHECK-ALIGNED-RV32-V-NEXT:    slli a4, a4, 24
+; CHECK-ALIGNED-RV32-V-NEXT:    or a2, a4, a2
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a4, 28(a0)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a5, 29(a0)
+; CHECK-ALIGNED-RV32-V-NEXT:    or a6, a2, a3
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a2, 30(a0)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a3, 31(a0)
+; CHECK-ALIGNED-RV32-V-NEXT:    slli a5, a5, 8
+; CHECK-ALIGNED-RV32-V-NEXT:    or a4, a5, a4
+; CHECK-ALIGNED-RV32-V-NEXT:    slli a2, a2, 16
+; CHECK-ALIGNED-RV32-V-NEXT:    slli a3, a3, 24
+; CHECK-ALIGNED-RV32-V-NEXT:    or a2, a3, a2
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a3, 20(a0)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu t2, 21(a0)
+; CHECK-ALIGNED-RV32-V-NEXT:    or a5, a2, a4
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a2, 22(a0)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a4, 23(a0)
+; CHECK-ALIGNED-RV32-V-NEXT:    slli t2, t2, 8
+; CHECK-ALIGNED-RV32-V-NEXT:    or a3, t2, a3
+; CHECK-ALIGNED-RV32-V-NEXT:    slli a2, a2, 16
+; CHECK-ALIGNED-RV32-V-NEXT:    slli a4, a4, 24
+; CHECK-ALIGNED-RV32-V-NEXT:    or a2, a4, a2
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu t2, 16(a0)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu t3, 17(a0)
+; CHECK-ALIGNED-RV32-V-NEXT:    or a4, a2, a3
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a2, 18(a0)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a3, 19(a0)
+; CHECK-ALIGNED-RV32-V-NEXT:    slli t3, t3, 8
+; CHECK-ALIGNED-RV32-V-NEXT:    or t2, t3, t2
+; CHECK-ALIGNED-RV32-V-NEXT:    slli a2, a2, 16
+; CHECK-ALIGNED-RV32-V-NEXT:    slli a3, a3, 24
+; CHECK-ALIGNED-RV32-V-NEXT:    or a2, a3, a2
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu t3, 24(a0)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu t4, 25(a0)
+; CHECK-ALIGNED-RV32-V-NEXT:    or a3, a2, t2
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a2, 26(a0)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu t2, 27(a0)
+; CHECK-ALIGNED-RV32-V-NEXT:    slli t4, t4, 8
+; CHECK-ALIGNED-RV32-V-NEXT:    or t3, t4, t3
+; CHECK-ALIGNED-RV32-V-NEXT:    slli a2, a2, 16
+; CHECK-ALIGNED-RV32-V-NEXT:    slli t2, t2, 24
+; CHECK-ALIGNED-RV32-V-NEXT:    or a2, t2, a2
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu t2, 8(a1)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu t4, 9(a1)
+; CHECK-ALIGNED-RV32-V-NEXT:    or a2, a2, t3
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu t3, 10(a1)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu t5, 11(a1)
+; CHECK-ALIGNED-RV32-V-NEXT:    slli t4, t4, 8
+; CHECK-ALIGNED-RV32-V-NEXT:    or t2, t4, t2
+; CHECK-ALIGNED-RV32-V-NEXT:    slli t3, t3, 16
+; CHECK-ALIGNED-RV32-V-NEXT:    slli t5, t5, 24
+; CHECK-ALIGNED-RV32-V-NEXT:    or t3, t5, t3
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu t4, 12(a1)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu t5, 13(a1)
+; CHECK-ALIGNED-RV32-V-NEXT:    or t2, t3, t2
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu t3, 14(a1)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu t6, 15(a1)
+; CHECK-ALIGNED-RV32-V-NEXT:    slli t5, t5, 8
+; CHECK-ALIGNED-RV32-V-NEXT:    or t4, t5, t4
+; CHECK-ALIGNED-RV32-V-NEXT:    slli t3, t3, 16
+; CHECK-ALIGNED-RV32-V-NEXT:    slli t6, t6, 24
+; CHECK-ALIGNED-RV32-V-NEXT:    or t3, t6, t3
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu t5, 4(a1)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu t6, 5(a1)
+; CHECK-ALIGNED-RV32-V-NEXT:    or t3, t3, t4
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu t4, 6(a1)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu s0, 7(a1)
+; CHECK-ALIGNED-RV32-V-NEXT:    slli t6, t6, 8
+; CHECK-ALIGNED-RV32-V-NEXT:    or t5, t6, t5
+; CHECK-ALIGNED-RV32-V-NEXT:    slli t4, t4, 16
+; CHECK-ALIGNED-RV32-V-NEXT:    slli s0, s0, 24
+; CHECK-ALIGNED-RV32-V-NEXT:    or t4, s0, t4
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu t6, 0(a1)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu s0, 1(a1)
+; CHECK-ALIGNED-RV32-V-NEXT:    or t4, t4, t5
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu t5, 2(a1)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu s1, 3(a1)
+; CHECK-ALIGNED-RV32-V-NEXT:    slli s0, s0, 8
+; CHECK-ALIGNED-RV32-V-NEXT:    or t6, s0, t6
+; CHECK-ALIGNED-RV32-V-NEXT:    slli t5, t5, 16
+; CHECK-ALIGNED-RV32-V-NEXT:    slli s1, s1, 24
+; CHECK-ALIGNED-RV32-V-NEXT:    or t5, s1, t5
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu s0, 28(a1)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu s1, 29(a1)
+; CHECK-ALIGNED-RV32-V-NEXT:    or t5, t5, t6
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu t6, 30(a1)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu s2, 31(a1)
+; CHECK-ALIGNED-RV32-V-NEXT:    slli s1, s1, 8
+; CHECK-ALIGNED-RV32-V-NEXT:    or s0, s1, s0
+; CHECK-ALIGNED-RV32-V-NEXT:    slli t6, t6, 16
+; CHECK-ALIGNED-RV32-V-NEXT:    slli s2, s2, 24
+; CHECK-ALIGNED-RV32-V-NEXT:    or t6, s2, t6
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu s1, 20(a1)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu s2, 21(a1)
+; CHECK-ALIGNED-RV32-V-NEXT:    or t6, t6, s0
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu s0, 22(a1)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu s3, 23(a1)
+; CHECK-ALIGNED-RV32-V-NEXT:    slli s2, s2, 8
+; CHECK-ALIGNED-RV32-V-NEXT:    or s1, s2, s1
+; CHECK-ALIGNED-RV32-V-NEXT:    slli s0, s0, 16
+; CHECK-ALIGNED-RV32-V-NEXT:    slli s3, s3, 24
+; CHECK-ALIGNED-RV32-V-NEXT:    or s0, s3, s0
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu s2, 16(a1)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu s3, 17(a1)
+; CHECK-ALIGNED-RV32-V-NEXT:    or s0, s0, s1
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu s1, 18(a1)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu s4, 19(a1)
+; CHECK-ALIGNED-RV32-V-NEXT:    slli s3, s3, 8
+; CHECK-ALIGNED-RV32-V-NEXT:    or s2, s3, s2
+; CHECK-ALIGNED-RV32-V-NEXT:    slli s1, s1, 16
+; CHECK-ALIGNED-RV32-V-NEXT:    slli s4, s4, 24
+; CHECK-ALIGNED-RV32-V-NEXT:    or s1, s4, s1
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu s3, 24(a1)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu s4, 25(a1)
+; CHECK-ALIGNED-RV32-V-NEXT:    or s1, s1, s2
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu s2, 26(a1)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu s5, 27(a1)
+; CHECK-ALIGNED-RV32-V-NEXT:    slli s4, s4, 8
+; CHECK-ALIGNED-RV32-V-NEXT:    or s3, s4, s3
+; CHECK-ALIGNED-RV32-V-NEXT:    slli s2, s2, 16
+; CHECK-ALIGNED-RV32-V-NEXT:    slli s5, s5, 24
+; CHECK-ALIGNED-RV32-V-NEXT:    or s2, s5, s2
+; CHECK-ALIGNED-RV32-V-NEXT:    or s2, s2, s3
+; CHECK-ALIGNED-RV32-V-NEXT:    xor a2, a2, s2
+; CHECK-ALIGNED-RV32-V-NEXT:    xor a3, a3, s1
+; CHECK-ALIGNED-RV32-V-NEXT:    xor a4, a4, s0
+; CHECK-ALIGNED-RV32-V-NEXT:    xor a5, a5, t6
+; CHECK-ALIGNED-RV32-V-NEXT:    xor a6, a6, t5
+; CHECK-ALIGNED-RV32-V-NEXT:    xor a7, a7, t4
+; CHECK-ALIGNED-RV32-V-NEXT:    xor t0, t0, t3
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu t3, 40(a0)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu t4, 41(a0)
+; CHECK-ALIGNED-RV32-V-NEXT:    xor t1, t1, t2
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu t2, 42(a0)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu t5, 43(a0)
+; CHECK-ALIGNED-RV32-V-NEXT:    slli t4, t4, 8
+; CHECK-ALIGNED-RV32-V-NEXT:    or t3, t4, t3
+; CHECK-ALIGNED-RV32-V-NEXT:    slli t2, t2, 16
+; CHECK-ALIGNED-RV32-V-NEXT:    slli t5, t5, 24
+; CHECK-ALIGNED-RV32-V-NEXT:    or t2, t5, t2
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu t4, 44(a0)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu t6, 45(a0)
+; CHECK-ALIGNED-RV32-V-NEXT:    or t5, t2, t3
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu t2, 46(a0)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu t3, 47(a0)
+; CHECK-ALIGNED-RV32-V-NEXT:    slli t6, t6, 8
+; CHECK-ALIGNED-RV32-V-NEXT:    or t4, t6, t4
+; CHECK-ALIGNED-RV32-V-NEXT:    slli t2, t2, 16
+; CHECK-ALIGNED-RV32-V-NEXT:    slli t3, t3, 24
+; CHECK-ALIGNED-RV32-V-NEXT:    or t2, t3, t2
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu t3, 36(a0)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu t6, 37(a0)
+; CHECK-ALIGNED-RV32-V-NEXT:    or t4, t2, t4
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu t2, 38(a0)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu s0, 39(a0)
+; CHECK-ALIGNED-RV32-V-NEXT:    slli t6, t6, 8
+; CHECK-ALIGNED-RV32-V-NEXT:    or t3, t6, t3
+; CHECK-ALIGNED-RV32-V-NEXT:    slli t2, t2, 16
+; CHECK-ALIGNED-RV32-V-NEXT:    slli s0, s0, 24
+; CHECK-ALIGNED-RV32-V-NEXT:    or t2, s0, t2
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu t6, 32(a0)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu s0, 33(a0)
+; CHECK-ALIGNED-RV32-V-NEXT:    or t3, t2, t3
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu t2, 34(a0)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu s1, 35(a0)
+; CHECK-ALIGNED-RV32-V-NEXT:    slli s0, s0, 8
+; CHECK-ALIGNED-RV32-V-NEXT:    or t6, s0, t6
+; CHECK-ALIGNED-RV32-V-NEXT:    slli t2, t2, 16
+; CHECK-ALIGNED-RV32-V-NEXT:    slli s1, s1, 24
+; CHECK-ALIGNED-RV32-V-NEXT:    or t2, s1, t2
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu s0, 40(a1)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu s1, 41(a1)
+; CHECK-ALIGNED-RV32-V-NEXT:    or t2, t2, t6
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu t6, 42(a1)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu s2, 43(a1)
+; CHECK-ALIGNED-RV32-V-NEXT:    slli s1, s1, 8
+; CHECK-ALIGNED-RV32-V-NEXT:    or s0, s1, s0
+; CHECK-ALIGNED-RV32-V-NEXT:    slli t6, t6, 16
+; CHECK-ALIGNED-RV32-V-NEXT:    slli s2, s2, 24
+; CHECK-ALIGNED-RV32-V-NEXT:    or t6, s2, t6
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu s1, 44(a1)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu s2, 45(a1)
+; CHECK-ALIGNED-RV32-V-NEXT:    or t6, t6, s0
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu s0, 46(a1)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu s3, 47(a1)
+; CHECK-ALIGNED-RV32-V-NEXT:    slli s2, s2, 8
+; CHECK-ALIGNED-RV32-V-NEXT:    or s1, s2, s1
+; CHECK-ALIGNED-RV32-V-NEXT:    slli s0, s0, 16
+; CHECK-ALIGNED-RV32-V-NEXT:    slli s3, s3, 24
+; CHECK-ALIGNED-RV32-V-NEXT:    or s0, s3, s0
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu s2, 36(a1)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu s3, 37(a1)
+; CHECK-ALIGNED-RV32-V-NEXT:    or s0, s0, s1
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu s1, 38(a1)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu s4, 39(a1)
+; CHECK-ALIGNED-RV32-V-NEXT:    slli s3, s3, 8
+; CHECK-ALIGNED-RV32-V-NEXT:    or s2, s3, s2
+; CHECK-ALIGNED-RV32-V-NEXT:    slli s1, s1, 16
+; CHECK-ALIGNED-RV32-V-NEXT:    slli s4, s4, 24
+; CHECK-ALIGNED-RV32-V-NEXT:    or s1, s4, s1
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu s3, 32(a1)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu s4, 33(a1)
+; CHECK-ALIGNED-RV32-V-NEXT:    or s1, s1, s2
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu s2, 34(a1)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu s5, 35(a1)
+; CHECK-ALIGNED-RV32-V-NEXT:    slli s4, s4, 8
+; CHECK-ALIGNED-RV32-V-NEXT:    or s3, s4, s3
+; CHECK-ALIGNED-RV32-V-NEXT:    slli s2, s2, 16
+; CHECK-ALIGNED-RV32-V-NEXT:    slli s5, s5, 24
+; CHECK-ALIGNED-RV32-V-NEXT:    or s2, s5, s2
+; CHECK-ALIGNED-RV32-V-NEXT:    or s2, s2, s3
+; CHECK-ALIGNED-RV32-V-NEXT:    xor t2, t2, s2
+; CHECK-ALIGNED-RV32-V-NEXT:    xor t3, t3, s1
+; CHECK-ALIGNED-RV32-V-NEXT:    xor t4, t4, s0
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu s0, 48(a0)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu s1, 49(a0)
+; CHECK-ALIGNED-RV32-V-NEXT:    xor t5, t5, t6
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu t6, 50(a0)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu s2, 51(a0)
+; CHECK-ALIGNED-RV32-V-NEXT:    slli s1, s1, 8
+; CHECK-ALIGNED-RV32-V-NEXT:    or s0, s1, s0
+; CHECK-ALIGNED-RV32-V-NEXT:    slli t6, t6, 16
+; CHECK-ALIGNED-RV32-V-NEXT:    slli s2, s2, 24
+; CHECK-ALIGNED-RV32-V-NEXT:    or t6, s2, t6
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu s1, 52(a0)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu s2, 53(a0)
+; CHECK-ALIGNED-RV32-V-NEXT:    or s0, t6, s0
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu t6, 54(a0)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu s3, 55(a0)
+; CHECK-ALIGNED-RV32-V-NEXT:    slli s2, s2, 8
+; CHECK-ALIGNED-RV32-V-NEXT:    or s1, s2, s1
+; CHECK-ALIGNED-RV32-V-NEXT:    slli t6, t6, 16
+; CHECK-ALIGNED-RV32-V-NEXT:    slli s3, s3, 24
+; CHECK-ALIGNED-RV32-V-NEXT:    or t6, s3, t6
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu s2, 48(a1)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu s3, 49(a1)
+; CHECK-ALIGNED-RV32-V-NEXT:    or t6, t6, s1
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu s1, 50(a1)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu s4, 51(a1)
+; CHECK-ALIGNED-RV32-V-NEXT:    slli s3, s3, 8
+; CHECK-ALIGNED-RV32-V-NEXT:    or s2, s3, s2
+; CHECK-ALIGNED-RV32-V-NEXT:    slli s1, s1, 16
+; CHECK-ALIGNED-RV32-V-NEXT:    slli s4, s4, 24
+; CHECK-ALIGNED-RV32-V-NEXT:    or s1, s4, s1
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu s3, 52(a1)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu s4, 53(a1)
+; CHECK-ALIGNED-RV32-V-NEXT:    or s1, s1, s2
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu s2, 54(a1)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu s5, 55(a1)
+; CHECK-ALIGNED-RV32-V-NEXT:    slli s4, s4, 8
+; CHECK-ALIGNED-RV32-V-NEXT:    or s3, s4, s3
+; CHECK-ALIGNED-RV32-V-NEXT:    slli s2, s2, 16
+; CHECK-ALIGNED-RV32-V-NEXT:    slli s5, s5, 24
+; CHECK-ALIGNED-RV32-V-NEXT:    or s2, s5, s2
+; CHECK-ALIGNED-RV32-V-NEXT:    or s2, s2, s3
+; CHECK-ALIGNED-RV32-V-NEXT:    xor t6, t6, s2
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu s2, 56(a0)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu s3, 57(a0)
+; CHECK-ALIGNED-RV32-V-NEXT:    xor s0, s0, s1
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu s1, 58(a0)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu s4, 59(a0)
+; CHECK-ALIGNED-RV32-V-NEXT:    slli s3, s3, 8
+; CHECK-ALIGNED-RV32-V-NEXT:    or s2, s3, s2
+; CHECK-ALIGNED-RV32-V-NEXT:    slli s1, s1, 16
+; CHECK-ALIGNED-RV32-V-NEXT:    slli s4, s4, 24
+; CHECK-ALIGNED-RV32-V-NEXT:    or s1, s4, s1
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu s3, 56(a1)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu s4, 57(a1)
+; CHECK-ALIGNED-RV32-V-NEXT:    or s1, s1, s2
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu s2, 58(a1)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu s5, 59(a1)
+; CHECK-ALIGNED-RV32-V-NEXT:    slli s4, s4, 8
+; CHECK-ALIGNED-RV32-V-NEXT:    or s3, s4, s3
+; CHECK-ALIGNED-RV32-V-NEXT:    slli s2, s2, 16
+; CHECK-ALIGNED-RV32-V-NEXT:    slli s5, s5, 24
+; CHECK-ALIGNED-RV32-V-NEXT:    or s2, s5, s2
+; CHECK-ALIGNED-RV32-V-NEXT:    or s2, s2, s3
+; CHECK-ALIGNED-RV32-V-NEXT:    xor s1, s1, s2
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu s2, 60(a0)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu s3, 61(a0)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a0, 62(a0)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu s4, 60(a1)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu s5, 61(a1)
+; CHECK-ALIGNED-RV32-V-NEXT:    slli s3, s3, 8
+; CHECK-ALIGNED-RV32-V-NEXT:    or s2, s3, s2
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a1, 62(a1)
+; CHECK-ALIGNED-RV32-V-NEXT:    slli s5, s5, 8
+; CHECK-ALIGNED-RV32-V-NEXT:    or s3, s5, s4
+; CHECK-ALIGNED-RV32-V-NEXT:    xor s2, s2, s3
+; CHECK-ALIGNED-RV32-V-NEXT:    xor a0, a0, a1
+; CHECK-ALIGNED-RV32-V-NEXT:    or a1, t1, t5
+; CHECK-ALIGNED-RV32-V-NEXT:    or t0, t0, t4
+; CHECK-ALIGNED-RV32-V-NEXT:    or a7, a7, t3
+; CHECK-ALIGNED-RV32-V-NEXT:    or a6, a6, t2
+; CHECK-ALIGNED-RV32-V-NEXT:    or s0, s0, s1
+; CHECK-ALIGNED-RV32-V-NEXT:    or a0, s2, a0
+; CHECK-ALIGNED-RV32-V-NEXT:    or a6, a6, s0
 ; CHECK-ALIGNED-RV32-V-NEXT:    or a5, t0, a5
-; CHECK-ALIGNED-RV32-V-NEXT:    or a3, a4, a3
-; CHECK-ALIGNED-RV32-V-NEXT:    vmv1r.v v6, v12
-; CHECK-ALIGNED-RV32-V-NEXT:    vmv.s.x v6, a3
-; CHECK-ALIGNED-RV32-V-NEXT:    slli a3, a3, 16
-; CHECK-ALIGNED-RV32-V-NEXT:    srli a3, a3, 24
-; CHECK-ALIGNED-RV32-V-NEXT:    vmv.s.x v5, a3
-; CHECK-ALIGNED-RV32-V-NEXT:    vsetvli zero, zero, e8, m2, ta, ma
-; CHECK-ALIGNED-RV32-V-NEXT:    vle8.v v20, (a0)
-; CHECK-ALIGNED-RV32-V-NEXT:    vsetivli zero, 2, e8, m1, tu, ma
-; CHECK-ALIGNED-RV32-V-NEXT:    vslideup.vi v24, v22, 1
-; CHECK-ALIGNED-RV32-V-NEXT:    vsetivli zero, 3, e8, m1, tu, ma
-; CHECK-ALIGNED-RV32-V-NEXT:    vslideup.vi v24, v23, 2
-; CHECK-ALIGNED-RV32-V-NEXT:    vsetivli zero, 4, e8, m1, tu, ma
-; CHECK-ALIGNED-RV32-V-NEXT:    vslideup.vi v24, v26, 3
-; CHECK-ALIGNED-RV32-V-NEXT:    vmv2r.v v26, v12
-; CHECK-ALIGNED-RV32-V-NEXT:    vsetvli zero, a2, e8, m2, ta, ma
-; CHECK-ALIGNED-RV32-V-NEXT:    vle8.v v22, (a1)
-; CHECK-ALIGNED-RV32-V-NEXT:    vmv1r.v v26, v24
-; CHECK-ALIGNED-RV32-V-NEXT:    srli a4, a4, 16
-; CHECK-ALIGNED-RV32-V-NEXT:    or a3, a5, a7
-; CHECK-ALIGNED-RV32-V-NEXT:    vmv.s.x v4, a4
-; CHECK-ALIGNED-RV32-V-NEXT:    slli a4, a3, 16
-; CHECK-ALIGNED-RV32-V-NEXT:    srli a4, a4, 24
-; CHECK-ALIGNED-RV32-V-NEXT:    srli a5, a5, 16
-; CHECK-ALIGNED-RV32-V-NEXT:    vmv.s.x v3, a6
-; CHECK-ALIGNED-RV32-V-NEXT:    vmv1r.v v24, v12
-; CHECK-ALIGNED-RV32-V-NEXT:    vsetvli zero, zero, e8, m2, tu, ma
-; CHECK-ALIGNED-RV32-V-NEXT:    vmv.s.x v24, a3
-; CHECK-ALIGNED-RV32-V-NEXT:    vmv.s.x v2, a4
-; CHECK-ALIGNED-RV32-V-NEXT:    vmv.s.x v1, a5
-; CHECK-ALIGNED-RV32-V-NEXT:    vmv.s.x v0, t1
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu a3, 60(a0)
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu a4, 61(a0)
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu a5, 62(a0)
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu a6, 60(a1)
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu a7, 61(a1)
-; CHECK-ALIGNED-RV32-V-NEXT:    slli a0, a4, 8
-; CHECK-ALIGNED-RV32-V-NEXT:    or a3, a0, a3
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu a0, 62(a1)
-; CHECK-ALIGNED-RV32-V-NEXT:    slli a1, a7, 8
-; CHECK-ALIGNED-RV32-V-NEXT:    or a1, a1, a6
-; CHECK-ALIGNED-RV32-V-NEXT:    vsetivli zero, 2, e8, m1, tu, ma
-; CHECK-ALIGNED-RV32-V-NEXT:    vslideup.vi v14, v15, 1
-; CHECK-ALIGNED-RV32-V-NEXT:    vsetivli zero, 3, e8, m1, tu, ma
-; CHECK-ALIGNED-RV32-V-NEXT:    vslideup.vi v14, v16, 2
-; CHECK-ALIGNED-RV32-V-NEXT:    vsetivli zero, 4, e8, m1, tu, ma
-; CHECK-ALIGNED-RV32-V-NEXT:    vslideup.vi v14, v17, 3
-; CHECK-ALIGNED-RV32-V-NEXT:    vmv2r.v v16, v12
-; CHECK-ALIGNED-RV32-V-NEXT:    vmv1r.v v8, v12
-; CHECK-ALIGNED-RV32-V-NEXT:    vmv.s.x v8, a3
-; CHECK-ALIGNED-RV32-V-NEXT:    vmv1r.v v16, v14
-; CHECK-ALIGNED-RV32-V-NEXT:    vmv.s.x v10, a4
-; CHECK-ALIGNED-RV32-V-NEXT:    vsetivli zero, 2, e8, m1, tu, ma
-; CHECK-ALIGNED-RV32-V-NEXT:    vslideup.vi v18, v25, 1
-; CHECK-ALIGNED-RV32-V-NEXT:    vmv1r.v v25, v12
-; CHECK-ALIGNED-RV32-V-NEXT:    vmv.s.x v25, a1
-; CHECK-ALIGNED-RV32-V-NEXT:    vsetivli zero, 3, e8, m1, tu, ma
-; CHECK-ALIGNED-RV32-V-NEXT:    vslideup.vi v18, v28, 2
-; CHECK-ALIGNED-RV32-V-NEXT:    vmv.s.x v9, a7
-; CHECK-ALIGNED-RV32-V-NEXT:    vsetivli zero, 4, e8, m1, tu, ma
-; CHECK-ALIGNED-RV32-V-NEXT:    vslideup.vi v18, v29, 3
-; CHECK-ALIGNED-RV32-V-NEXT:    vsetivli zero, 2, e8, m1, tu, ma
-; CHECK-ALIGNED-RV32-V-NEXT:    vslideup.vi v19, v30, 1
-; CHECK-ALIGNED-RV32-V-NEXT:    vmv2r.v v14, v12
-; CHECK-ALIGNED-RV32-V-NEXT:    vsetivli zero, 3, e8, m1, tu, ma
-; CHECK-ALIGNED-RV32-V-NEXT:    vslideup.vi v19, v31, 2
-; CHECK-ALIGNED-RV32-V-NEXT:    vsetivli zero, 4, e8, m1, tu, ma
-; CHECK-ALIGNED-RV32-V-NEXT:    vslideup.vi v19, v7, 3
-; CHECK-ALIGNED-RV32-V-NEXT:    vmv2r.v v30, v12
-; CHECK-ALIGNED-RV32-V-NEXT:    vsetivli zero, 2, e8, m1, tu, ma
-; CHECK-ALIGNED-RV32-V-NEXT:    vslideup.vi v6, v5, 1
-; CHECK-ALIGNED-RV32-V-NEXT:    vsetivli zero, 3, e8, m1, tu, ma
-; CHECK-ALIGNED-RV32-V-NEXT:    vslideup.vi v6, v4, 2
-; CHECK-ALIGNED-RV32-V-NEXT:    vsetivli zero, 4, e8, m1, tu, ma
-; CHECK-ALIGNED-RV32-V-NEXT:    vslideup.vi v6, v3, 3
-; CHECK-ALIGNED-RV32-V-NEXT:    vmv2r.v v28, v12
-; CHECK-ALIGNED-RV32-V-NEXT:    vmv1r.v v11, v12
-; CHECK-ALIGNED-RV32-V-NEXT:    vmv.s.x v11, a5
-; CHECK-ALIGNED-RV32-V-NEXT:    vmv1r.v v14, v18
-; CHECK-ALIGNED-RV32-V-NEXT:    vmv1r.v v30, v19
-; CHECK-ALIGNED-RV32-V-NEXT:    vmv1r.v v28, v6
-; CHECK-ALIGNED-RV32-V-NEXT:    vsetivli zero, 2, e8, m1, tu, ma
-; CHECK-ALIGNED-RV32-V-NEXT:    vslideup.vi v24, v2, 1
-; CHECK-ALIGNED-RV32-V-NEXT:    vsetivli zero, 3, e8, m1, tu, ma
-; CHECK-ALIGNED-RV32-V-NEXT:    vslideup.vi v24, v1, 2
-; CHECK-ALIGNED-RV32-V-NEXT:    vsetivli zero, 4, e8, m1, tu, ma
-; CHECK-ALIGNED-RV32-V-NEXT:    vslideup.vi v24, v0, 3
-; CHECK-ALIGNED-RV32-V-NEXT:    vmv2r.v v18, v12
-; CHECK-ALIGNED-RV32-V-NEXT:    vsetivli zero, 2, e8, m1, tu, ma
-; CHECK-ALIGNED-RV32-V-NEXT:    vslideup.vi v8, v10, 1
-; CHECK-ALIGNED-RV32-V-NEXT:    vmv2r.v v6, v12
-; CHECK-ALIGNED-RV32-V-NEXT:    vslideup.vi v25, v9, 1
-; CHECK-ALIGNED-RV32-V-NEXT:    vmv2r.v v2, v12
-; CHECK-ALIGNED-RV32-V-NEXT:    vmv2r.v v4, v12
-; CHECK-ALIGNED-RV32-V-NEXT:    vmv.s.x v12, a0
-; CHECK-ALIGNED-RV32-V-NEXT:    vmv1r.v v18, v24
-; CHECK-ALIGNED-RV32-V-NEXT:    vmv1r.v v6, v8
-; CHECK-ALIGNED-RV32-V-NEXT:    vmv1r.v v2, v25
-; CHECK-ALIGNED-RV32-V-NEXT:    csrr a0, vlenb
-; CHECK-ALIGNED-RV32-V-NEXT:    slli a0, a0, 1
-; CHECK-ALIGNED-RV32-V-NEXT:    add a0, sp, a0
-; CHECK-ALIGNED-RV32-V-NEXT:    addi a0, a0, 16
-; CHECK-ALIGNED-RV32-V-NEXT:    vl2r.v v8, (a0) # Unknown-size Folded Reload
-; CHECK-ALIGNED-RV32-V-NEXT:    vsetvli zero, a2, e8, m2, ta, ma
-; CHECK-ALIGNED-RV32-V-NEXT:    vslide1down.vx v8, v8, zero
-; CHECK-ALIGNED-RV32-V-NEXT:    vslide1down.vx v8, v8, zero
-; CHECK-ALIGNED-RV32-V-NEXT:    vslide1down.vx v8, v8, zero
-; CHECK-ALIGNED-RV32-V-NEXT:    vslide1down.vx v8, v8, zero
-; CHECK-ALIGNED-RV32-V-NEXT:    vslide1down.vx v8, v8, zero
-; CHECK-ALIGNED-RV32-V-NEXT:    vslide1down.vx v8, v8, zero
-; CHECK-ALIGNED-RV32-V-NEXT:    vslide1down.vx v8, v8, zero
-; CHECK-ALIGNED-RV32-V-NEXT:    vslide1down.vx v8, v8, zero
-; CHECK-ALIGNED-RV32-V-NEXT:    vslide1down.vx v8, v8, zero
-; CHECK-ALIGNED-RV32-V-NEXT:    vslide1down.vx v8, v8, zero
-; CHECK-ALIGNED-RV32-V-NEXT:    vslide1down.vx v8, v8, zero
-; CHECK-ALIGNED-RV32-V-NEXT:    vslide1down.vx v8, v8, zero
-; CHECK-ALIGNED-RV32-V-NEXT:    vslide1down.vx v8, v8, zero
-; CHECK-ALIGNED-RV32-V-NEXT:    vslide1down.vx v8, v8, zero
-; CHECK-ALIGNED-RV32-V-NEXT:    vslide1down.vx v8, v8, zero
-; CHECK-ALIGNED-RV32-V-NEXT:    vslide1down.vx v8, v8, zero
-; CHECK-ALIGNED-RV32-V-NEXT:    addi a0, sp, 16
-; CHECK-ALIGNED-RV32-V-NEXT:    vl2r.v v24, (a0) # Unknown-size Folded Reload
-; CHECK-ALIGNED-RV32-V-NEXT:    vslide1down.vx v24, v24, zero
-; CHECK-ALIGNED-RV32-V-NEXT:    vslide1down.vx v24, v24, zero
-; CHECK-ALIGNED-RV32-V-NEXT:    vslide1down.vx v24, v24, zero
-; CHECK-ALIGNED-RV32-V-NEXT:    vslide1down.vx v24, v24, zero
-; CHECK-ALIGNED-RV32-V-NEXT:    vslide1down.vx v24, v24, zero
-; CHECK-ALIGNED-RV32-V-NEXT:    vslide1down.vx v24, v24, zero
-; CHECK-ALIGNED-RV32-V-NEXT:    vslide1down.vx v24, v24, zero
-; CHECK-ALIGNED-RV32-V-NEXT:    vslide1down.vx v24, v24, zero
-; CHECK-ALIGNED-RV32-V-NEXT:    vslide1down.vx v24, v24, zero
-; CHECK-ALIGNED-RV32-V-NEXT:    vslide1down.vx v24, v24, zero
-; CHECK-ALIGNED-RV32-V-NEXT:    vslide1down.vx v24, v24, zero
-; CHECK-ALIGNED-RV32-V-NEXT:    vslide1down.vx v24, v24, zero
-; CHECK-ALIGNED-RV32-V-NEXT:    vslide1down.vx v24, v24, zero
-; CHECK-ALIGNED-RV32-V-NEXT:    vslide1down.vx v24, v24, zero
-; CHECK-ALIGNED-RV32-V-NEXT:    vslide1down.vx v24, v24, zero
-; CHECK-ALIGNED-RV32-V-NEXT:    vslide1down.vx v24, v24, zero
-; CHECK-ALIGNED-RV32-V-NEXT:    vmv1r.v v4, v11
-; CHECK-ALIGNED-RV32-V-NEXT:    vmsne.vv v10, v14, v30
-; CHECK-ALIGNED-RV32-V-NEXT:    vmsne.vv v11, v26, v16
-; CHECK-ALIGNED-RV32-V-NEXT:    vmor.mm v10, v11, v10
-; CHECK-ALIGNED-RV32-V-NEXT:    vmsne.vv v11, v8, v24
-; CHECK-ALIGNED-RV32-V-NEXT:    vmsne.vv v8, v20, v22
-; CHECK-ALIGNED-RV32-V-NEXT:    vmor.mm v8, v8, v11
-; CHECK-ALIGNED-RV32-V-NEXT:    vmor.mm v8, v8, v10
-; CHECK-ALIGNED-RV32-V-NEXT:    vmsne.vv v9, v28, v18
-; CHECK-ALIGNED-RV32-V-NEXT:    vmsne.vv v10, v6, v2
-; CHECK-ALIGNED-RV32-V-NEXT:    vmor.mm v9, v9, v10
-; CHECK-ALIGNED-RV32-V-NEXT:    vmsne.vv v10, v4, v12
-; CHECK-ALIGNED-RV32-V-NEXT:    vmor.mm v9, v9, v10
-; CHECK-ALIGNED-RV32-V-NEXT:    vmnor.mm v8, v8, v9
-; CHECK-ALIGNED-RV32-V-NEXT:    vcpop.m a0, v8
-; CHECK-ALIGNED-RV32-V-NEXT:    seqz a0, a0
-; CHECK-ALIGNED-RV32-V-NEXT:    csrr a1, vlenb
-; CHECK-ALIGNED-RV32-V-NEXT:    slli a1, a1, 2
-; CHECK-ALIGNED-RV32-V-NEXT:    add sp, sp, a1
-; CHECK-ALIGNED-RV32-V-NEXT:    lw s0, 60(sp) # 4-byte Folded Reload
-; CHECK-ALIGNED-RV32-V-NEXT:    lw s1, 56(sp) # 4-byte Folded Reload
-; CHECK-ALIGNED-RV32-V-NEXT:    lw s2, 52(sp) # 4-byte Folded Reload
-; CHECK-ALIGNED-RV32-V-NEXT:    lw s3, 48(sp) # 4-byte Folded Reload
-; CHECK-ALIGNED-RV32-V-NEXT:    lw s4, 44(sp) # 4-byte Folded Reload
-; CHECK-ALIGNED-RV32-V-NEXT:    lw s5, 40(sp) # 4-byte Folded Reload
-; CHECK-ALIGNED-RV32-V-NEXT:    lw s6, 36(sp) # 4-byte Folded Reload
-; CHECK-ALIGNED-RV32-V-NEXT:    lw s7, 32(sp) # 4-byte Folded Reload
-; CHECK-ALIGNED-RV32-V-NEXT:    lw s8, 28(sp) # 4-byte Folded Reload
-; CHECK-ALIGNED-RV32-V-NEXT:    lw s9, 24(sp) # 4-byte Folded Reload
-; CHECK-ALIGNED-RV32-V-NEXT:    lw s10, 20(sp) # 4-byte Folded Reload
-; CHECK-ALIGNED-RV32-V-NEXT:    lw s11, 16(sp) # 4-byte Folded Reload
-; CHECK-ALIGNED-RV32-V-NEXT:    addi sp, sp, 64
+; CHECK-ALIGNED-RV32-V-NEXT:    or a4, t6, a4
+; CHECK-ALIGNED-RV32-V-NEXT:    or a4, a7, a4
+; CHECK-ALIGNED-RV32-V-NEXT:    or a4, a4, a5
+; CHECK-ALIGNED-RV32-V-NEXT:    or a0, a0, a3
+; CHECK-ALIGNED-RV32-V-NEXT:    or a0, a6, a0
+; CHECK-ALIGNED-RV32-V-NEXT:    or a1, a1, a2
+; CHECK-ALIGNED-RV32-V-NEXT:    or a0, a0, a1
+; CHECK-ALIGNED-RV32-V-NEXT:    or a0, a0, a4
+; CHECK-ALIGNED-RV32-V-NEXT:    snez a0, a0
+; CHECK-ALIGNED-RV32-V-NEXT:    lw s0, 28(sp) # 4-byte Folded Reload
+; CHECK-ALIGNED-RV32-V-NEXT:    lw s1, 24(sp) # 4-byte Folded Reload
+; CHECK-ALIGNED-RV32-V-NEXT:    lw s2, 20(sp) # 4-byte Folded Reload
+; CHECK-ALIGNED-RV32-V-NEXT:    lw s3, 16(sp) # 4-byte Folded Reload
+; CHECK-ALIGNED-RV32-V-NEXT:    lw s4, 12(sp) # 4-byte Folded Reload
+; CHECK-ALIGNED-RV32-V-NEXT:    lw s5, 8(sp) # 4-byte Folded Reload
+; CHECK-ALIGNED-RV32-V-NEXT:    addi sp, sp, 32
 ; CHECK-ALIGNED-RV32-V-NEXT:    ret
 ;
 ; CHECK-ALIGNED-RV64-V-LABEL: bcmp_size_63:
 ; CHECK-ALIGNED-RV64-V:       # %bb.0: # %entry
-; CHECK-ALIGNED-RV64-V-NEXT:    addi sp, sp, -16
-; CHECK-ALIGNED-RV64-V-NEXT:    sd s0, 8(sp) # 8-byte Folded Spill
-; CHECK-ALIGNED-RV64-V-NEXT:    sd s1, 0(sp) # 8-byte Folded Spill
-; CHECK-ALIGNED-RV64-V-NEXT:    lbu a2, 41(a0)
-; CHECK-ALIGNED-RV64-V-NEXT:    lbu a3, 40(a0)
-; CHECK-ALIGNED-RV64-V-NEXT:    lbu a4, 42(a0)
-; CHECK-ALIGNED-RV64-V-NEXT:    lbu a5, 43(a0)
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu a2, 9(a0)
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu a3, 8(a0)
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu a4, 10(a0)
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu a5, 11(a0)
 ; CHECK-ALIGNED-RV64-V-NEXT:    slli a2, a2, 8
 ; CHECK-ALIGNED-RV64-V-NEXT:    or a2, a2, a3
 ; CHECK-ALIGNED-RV64-V-NEXT:    slli a4, a4, 16
 ; CHECK-ALIGNED-RV64-V-NEXT:    slli a5, a5, 24
 ; CHECK-ALIGNED-RV64-V-NEXT:    or a4, a5, a4
-; CHECK-ALIGNED-RV64-V-NEXT:    lbu a5, 44(a0)
-; CHECK-ALIGNED-RV64-V-NEXT:    lbu a3, 45(a0)
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu a3, 12(a0)
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu a5, 13(a0)
 ; CHECK-ALIGNED-RV64-V-NEXT:    or a2, a4, a2
-; CHECK-ALIGNED-RV64-V-NEXT:    lbu a4, 46(a0)
-; CHECK-ALIGNED-RV64-V-NEXT:    lbu a6, 47(a0)
-; CHECK-ALIGNED-RV64-V-NEXT:    slli a7, a3, 8
-; CHECK-ALIGNED-RV64-V-NEXT:    or a5, a7, a5
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu a4, 14(a0)
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu a6, 15(a0)
+; CHECK-ALIGNED-RV64-V-NEXT:    slli a5, a5, 8
+; CHECK-ALIGNED-RV64-V-NEXT:    or a3, a5, a3
 ; CHECK-ALIGNED-RV64-V-NEXT:    slli a4, a4, 16
 ; CHECK-ALIGNED-RV64-V-NEXT:    slli a6, a6, 24
 ; CHECK-ALIGNED-RV64-V-NEXT:    or a4, a6, a4
-; CHECK-ALIGNED-RV64-V-NEXT:    or a4, a4, a5
-; CHECK-ALIGNED-RV64-V-NEXT:    slli a5, a4, 32
-; CHECK-ALIGNED-RV64-V-NEXT:    lbu a6, 32(a0)
-; CHECK-ALIGNED-RV64-V-NEXT:    lbu a7, 33(a0)
-; CHECK-ALIGNED-RV64-V-NEXT:    or a5, a5, a2
-; CHECK-ALIGNED-RV64-V-NEXT:    lbu a2, 34(a0)
-; CHECK-ALIGNED-RV64-V-NEXT:    lbu t0, 35(a0)
+; CHECK-ALIGNED-RV64-V-NEXT:    or a3, a4, a3
+; CHECK-ALIGNED-RV64-V-NEXT:    slli a3, a3, 32
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu a4, 0(a0)
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu a6, 1(a0)
+; CHECK-ALIGNED-RV64-V-NEXT:    or a5, a3, a2
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu a2, 2(a0)
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu a3, 3(a0)
+; CHECK-ALIGNED-RV64-V-NEXT:    slli a6, a6, 8
+; CHECK-ALIGNED-RV64-V-NEXT:    or a4, a6, a4
+; CHECK-ALIGNED-RV64-V-NEXT:    slli a2, a2, 16
+; CHECK-ALIGNED-RV64-V-NEXT:    slli a3, a3, 24
+; CHECK-ALIGNED-RV64-V-NEXT:    or a2, a3, a2
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu a3, 4(a0)
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu a6, 5(a0)
+; CHECK-ALIGNED-RV64-V-NEXT:    or a2, a2, a4
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu a4, 6(a0)
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu a7, 7(a0)
+; CHECK-ALIGNED-RV64-V-NEXT:    slli a6, a6, 8
+; CHECK-ALIGNED-RV64-V-NEXT:    or a3, a6, a3
+; CHECK-ALIGNED-RV64-V-NEXT:    slli a4, a4, 16
+; CHECK-ALIGNED-RV64-V-NEXT:    slli a7, a7, 24
+; CHECK-ALIGNED-RV64-V-NEXT:    or a4, a7, a4
+; CHECK-ALIGNED-RV64-V-NEXT:    or a3, a4, a3
+; CHECK-ALIGNED-RV64-V-NEXT:    slli a3, a3, 32
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu a6, 24(a0)
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu a7, 25(a0)
+; CHECK-ALIGNED-RV64-V-NEXT:    or a4, a3, a2
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu a2, 26(a0)
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu a3, 27(a0)
+; CHECK-ALIGNED-RV64-V-NEXT:    slli a7, a7, 8
+; CHECK-ALIGNED-RV64-V-NEXT:    or a6, a7, a6
+; CHECK-ALIGNED-RV64-V-NEXT:    slli a2, a2, 16
+; CHECK-ALIGNED-RV64-V-NEXT:    slli a3, a3, 24
+; CHECK-ALIGNED-RV64-V-NEXT:    or a2, a3, a2
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu a3, 28(a0)
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu a7, 29(a0)
+; CHECK-ALIGNED-RV64-V-NEXT:    or a2, a2, a6
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu a6, 30(a0)
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu t0, 31(a0)
+; CHECK-ALIGNED-RV64-V-NEXT:    slli a7, a7, 8
+; CHECK-ALIGNED-RV64-V-NEXT:    or a3, a7, a3
+; CHECK-ALIGNED-RV64-V-NEXT:    slli a6, a6, 16
+; CHECK-ALIGNED-RV64-V-NEXT:    slli t0, t0, 24
+; CHECK-ALIGNED-RV64-V-NEXT:    or a6, t0, a6
+; CHECK-ALIGNED-RV64-V-NEXT:    or a3, a6, a3
+; CHECK-ALIGNED-RV64-V-NEXT:    slli a3, a3, 32
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu a6, 16(a0)
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu a7, 17(a0)
+; CHECK-ALIGNED-RV64-V-NEXT:    or a3, a3, a2
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu a2, 18(a0)
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu t0, 19(a0)
 ; CHECK-ALIGNED-RV64-V-NEXT:    slli a7, a7, 8
 ; CHECK-ALIGNED-RV64-V-NEXT:    or a6, a7, a6
 ; CHECK-ALIGNED-RV64-V-NEXT:    slli a2, a2, 16
 ; CHECK-ALIGNED-RV64-V-NEXT:    slli t0, t0, 24
 ; CHECK-ALIGNED-RV64-V-NEXT:    or a2, t0, a2
-; CHECK-ALIGNED-RV64-V-NEXT:    lbu a7, 36(a0)
-; CHECK-ALIGNED-RV64-V-NEXT:    lbu t0, 37(a0)
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu a7, 20(a0)
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu t0, 21(a0)
 ; CHECK-ALIGNED-RV64-V-NEXT:    or a2, a2, a6
-; CHECK-ALIGNED-RV64-V-NEXT:    lbu a6, 38(a0)
-; CHECK-ALIGNED-RV64-V-NEXT:    lbu t1, 39(a0)
-; CHECK-ALIGNED-RV64-V-NEXT:    slli t2, t0, 8
-; CHECK-ALIGNED-RV64-V-NEXT:    or a7, t2, a7
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu a6, 22(a0)
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu t1, 23(a0)
+; CHECK-ALIGNED-RV64-V-NEXT:    slli t0, t0, 8
+; CHECK-ALIGNED-RV64-V-NEXT:    or a7, t0, a7
 ; CHECK-ALIGNED-RV64-V-NEXT:    slli a6, a6, 16
 ; CHECK-ALIGNED-RV64-V-NEXT:    slli t1, t1, 24
 ; CHECK-ALIGNED-RV64-V-NEXT:    or a6, t1, a6
-; CHECK-ALIGNED-RV64-V-NEXT:    or t2, a6, a7
-; CHECK-ALIGNED-RV64-V-NEXT:    slli a6, t2, 32
-; CHECK-ALIGNED-RV64-V-NEXT:    lbu a7, 40(a1)
-; CHECK-ALIGNED-RV64-V-NEXT:    lbu t1, 41(a1)
-; CHECK-ALIGNED-RV64-V-NEXT:    or t4, a6, a2
-; CHECK-ALIGNED-RV64-V-NEXT:    lbu a2, 42(a1)
-; CHECK-ALIGNED-RV64-V-NEXT:    lbu a6, 43(a1)
-; CHECK-ALIGNED-RV64-V-NEXT:    slli t1, t1, 8
-; CHECK-ALIGNED-RV64-V-NEXT:    or a7, t1, a7
-; CHECK-ALIGNED-RV64-V-NEXT:    slli a2, a2, 16
-; CHECK-ALIGNED-RV64-V-NEXT:    slli a6, a6, 24
+; CHECK-ALIGNED-RV64-V-NEXT:    or a6, a6, a7
+; CHECK-ALIGNED-RV64-V-NEXT:    slli a6, a6, 32
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu a7, 8(a1)
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu t0, 9(a1)
 ; CHECK-ALIGNED-RV64-V-NEXT:    or a2, a6, a2
-; CHECK-ALIGNED-RV64-V-NEXT:    lbu t1, 44(a1)
-; CHECK-ALIGNED-RV64-V-NEXT:    lbu a6, 45(a1)
-; CHECK-ALIGNED-RV64-V-NEXT:    or a2, a2, a7
-; CHECK-ALIGNED-RV64-V-NEXT:    lbu a7, 46(a1)
-; CHECK-ALIGNED-RV64-V-NEXT:    lbu t3, 47(a1)
-; CHECK-ALIGNED-RV64-V-NEXT:    slli t5, a6, 8
-; CHECK-ALIGNED-RV64-V-NEXT:    or t1, t5, t1
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu a6, 10(a1)
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu t1, 11(a1)
+; CHECK-ALIGNED-RV64-V-NEXT:    slli t0, t0, 8
+; CHECK-ALIGNED-RV64-V-NEXT:    or a7, t0, a7
+; CHECK-ALIGNED-RV64-V-NEXT:    slli a6, a6, 16
+; CHECK-ALIGNED-RV64-V-NEXT:    slli t1, t1, 24
+; CHECK-ALIGNED-RV64-V-NEXT:    or a6, t1, a6
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu t0, 12(a1)
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu t1, 13(a1)
+; CHECK-ALIGNED-RV64-V-NEXT:    or a6, a6, a7
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu a7, 14(a1)
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu t2, 15(a1)
+; CHECK-ALIGNED-RV64-V-NEXT:    slli t1, t1, 8
+; CHECK-ALIGNED-RV64-V-NEXT:    or t0, t1, t0
 ; CHECK-ALIGNED-RV64-V-NEXT:    slli a7, a7, 16
-; CHECK-ALIGNED-RV64-V-NEXT:    slli t3, t3, 24
-; CHECK-ALIGNED-RV64-V-NEXT:    or a7, t3, a7
-; CHECK-ALIGNED-RV64-V-NEXT:    or a7, a7, t1
-; CHECK-ALIGNED-RV64-V-NEXT:    slli t1, a7, 32
-; CHECK-ALIGNED-RV64-V-NEXT:    lbu t3, 32(a1)
-; CHECK-ALIGNED-RV64-V-NEXT:    lbu t5, 33(a1)
-; CHECK-ALIGNED-RV64-V-NEXT:    or t1, t1, a2
-; CHECK-ALIGNED-RV64-V-NEXT:    lbu a2, 34(a1)
-; CHECK-ALIGNED-RV64-V-NEXT:    lbu t6, 35(a1)
-; CHECK-ALIGNED-RV64-V-NEXT:    slli t5, t5, 8
-; CHECK-ALIGNED-RV64-V-NEXT:    or t5, t5, t3
-; CHECK-ALIGNED-RV64-V-NEXT:    slli a2, a2, 16
-; CHECK-ALIGNED-RV64-V-NEXT:    slli t6, t6, 24
-; CHECK-ALIGNED-RV64-V-NEXT:    or a2, t6, a2
-; CHECK-ALIGNED-RV64-V-NEXT:    lbu t6, 36(a1)
-; CHECK-ALIGNED-RV64-V-NEXT:    lbu t3, 37(a1)
-; CHECK-ALIGNED-RV64-V-NEXT:    or s0, a2, t5
-; CHECK-ALIGNED-RV64-V-NEXT:    lbu a2, 38(a1)
-; CHECK-ALIGNED-RV64-V-NEXT:    lbu t5, 39(a1)
-; CHECK-ALIGNED-RV64-V-NEXT:    slli s1, t3, 8
-; CHECK-ALIGNED-RV64-V-NEXT:    or t6, s1, t6
-; CHECK-ALIGNED-RV64-V-NEXT:    slli a2, a2, 16
-; CHECK-ALIGNED-RV64-V-NEXT:    slli t5, t5, 24
-; CHECK-ALIGNED-RV64-V-NEXT:    or t5, t5, a2
-; CHECK-ALIGNED-RV64-V-NEXT:    li a2, 32
-; CHECK-ALIGNED-RV64-V-NEXT:    or t5, t5, t6
-; CHECK-ALIGNED-RV64-V-NEXT:    slli t6, t5, 32
-; CHECK-ALIGNED-RV64-V-NEXT:    or t6, t6, s0
-; CHECK-ALIGNED-RV64-V-NEXT:    slli s0, t4, 48
-; CHECK-ALIGNED-RV64-V-NEXT:    srli s0, s0, 56
-; CHECK-ALIGNED-RV64-V-NEXT:    vsetvli zero, a2, e8, m2, ta, ma
-; CHECK-ALIGNED-RV64-V-NEXT:    vmv.v.x v8, t4
-; CHECK-ALIGNED-RV64-V-NEXT:    vslide1down.vx v8, v8, s0
-; CHECK-ALIGNED-RV64-V-NEXT:    srliw s0, t4, 16
-; CHECK-ALIGNED-RV64-V-NEXT:    vslide1down.vx v8, v8, s0
-; CHECK-ALIGNED-RV64-V-NEXT:    srliw t4, t4, 24
-; CHECK-ALIGNED-RV64-V-NEXT:    vslide1down.vx v8, v8, t4
-; CHECK-ALIGNED-RV64-V-NEXT:    vslide1down.vx v8, v8, t2
-; CHECK-ALIGNED-RV64-V-NEXT:    vslide1down.vx v8, v8, t0
-; CHECK-ALIGNED-RV64-V-NEXT:    srliw t0, t2, 16
-; CHECK-ALIGNED-RV64-V-NEXT:    vslide1down.vx v8, v8, t0
-; CHECK-ALIGNED-RV64-V-NEXT:    srliw t0, t2, 24
-; CHECK-ALIGNED-RV64-V-NEXT:    vslide1down.vx v8, v8, t0
-; CHECK-ALIGNED-RV64-V-NEXT:    slli t0, a5, 48
-; CHECK-ALIGNED-RV64-V-NEXT:    srli t0, t0, 56
-; CHECK-ALIGNED-RV64-V-NEXT:    vslide1down.vx v8, v8, a5
-; CHECK-ALIGNED-RV64-V-NEXT:    vslide1down.vx v8, v8, t0
-; CHECK-ALIGNED-RV64-V-NEXT:    srliw t0, a5, 16
-; CHECK-ALIGNED-RV64-V-NEXT:    vslide1down.vx v8, v8, t0
-; CHECK-ALIGNED-RV64-V-NEXT:    srliw a5, a5, 24
-; CHECK-ALIGNED-RV64-V-NEXT:    vslide1down.vx v8, v8, a5
-; CHECK-ALIGNED-RV64-V-NEXT:    srliw a5, a4, 24
-; CHECK-ALIGNED-RV64-V-NEXT:    vslide1down.vx v8, v8, a4
-; CHECK-ALIGNED-RV64-V-NEXT:    srliw a4, a4, 16
-; CHECK-ALIGNED-RV64-V-NEXT:    vslide1down.vx v8, v8, a3
-; CHECK-ALIGNED-RV64-V-NEXT:    srliw a3, t1, 24
-; CHECK-ALIGNED-RV64-V-NEXT:    vslide1down.vx v8, v8, a4
-; CHECK-ALIGNED-RV64-V-NEXT:    srliw a4, t1, 16
-; CHECK-ALIGNED-RV64-V-NEXT:    vslide1down.vx v8, v8, a5
-; CHECK-ALIGNED-RV64-V-NEXT:    slli a5, t6, 48
-; CHECK-ALIGNED-RV64-V-NEXT:    srli a5, a5, 56
-; CHECK-ALIGNED-RV64-V-NEXT:    vmv.v.x v10, t6
-; CHECK-ALIGNED-RV64-V-NEXT:    vslide1down.vx v10, v10, a5
-; CHECK-ALIGNED-RV64-V-NEXT:    srliw a5, t6, 16
-; CHECK-ALIGNED-RV64-V-NEXT:    vslide1down.vx v10, v10, a5
-; CHECK-ALIGNED-RV64-V-NEXT:    slli a5, t1, 48
-; CHECK-ALIGNED-RV64-V-NEXT:    srli a5, a5, 56
-; CHECK-ALIGNED-RV64-V-NEXT:    srliw t0, t6, 24
-; CHECK-ALIGNED-RV64-V-NEXT:    vslide1down.vx v10, v10, t0
-; CHECK-ALIGNED-RV64-V-NEXT:    srliw t0, a7, 24
-; CHECK-ALIGNED-RV64-V-NEXT:    vslide1down.vx v10, v10, t5
-; CHECK-ALIGNED-RV64-V-NEXT:    vslide1down.vx v10, v10, t3
-; CHECK-ALIGNED-RV64-V-NEXT:    srliw t2, t5, 16
-; CHECK-ALIGNED-RV64-V-NEXT:    vslide1down.vx v10, v10, t2
-; CHECK-ALIGNED-RV64-V-NEXT:    srliw t2, a7, 16
-; CHECK-ALIGNED-RV64-V-NEXT:    srliw t3, t5, 24
-; CHECK-ALIGNED-RV64-V-NEXT:    vslide1down.vx v10, v10, t3
-; CHECK-ALIGNED-RV64-V-NEXT:    vslide1down.vx v10, v10, t1
-; CHECK-ALIGNED-RV64-V-NEXT:    vslide1down.vx v10, v10, a5
-; CHECK-ALIGNED-RV64-V-NEXT:    vslide1down.vx v10, v10, a4
-; CHECK-ALIGNED-RV64-V-NEXT:    vslide1down.vx v10, v10, a3
-; CHECK-ALIGNED-RV64-V-NEXT:    vslide1down.vx v10, v10, a7
-; CHECK-ALIGNED-RV64-V-NEXT:    vslide1down.vx v10, v10, a6
-; CHECK-ALIGNED-RV64-V-NEXT:    vslide1down.vx v10, v10, t2
-; CHECK-ALIGNED-RV64-V-NEXT:    lbu a3, 48(a0)
-; CHECK-ALIGNED-RV64-V-NEXT:    lbu a4, 49(a0)
-; CHECK-ALIGNED-RV64-V-NEXT:    vslide1down.vx v10, v10, t0
-; CHECK-ALIGNED-RV64-V-NEXT:    lbu a5, 50(a0)
-; CHECK-ALIGNED-RV64-V-NEXT:    lbu a6, 51(a0)
-; CHECK-ALIGNED-RV64-V-NEXT:    slli a4, a4, 8
-; CHECK-ALIGNED-RV64-V-NEXT:    or a3, a4, a3
-; CHECK-ALIGNED-RV64-V-NEXT:    slli a5, a5, 16
-; CHECK-ALIGNED-RV64-V-NEXT:    slli a6, a6, 24
-; CHECK-ALIGNED-RV64-V-NEXT:    or a5, a6, a5
-; CHECK-ALIGNED-RV64-V-NEXT:    lbu a6, 52(a0)
-; CHECK-ALIGNED-RV64-V-NEXT:    lbu a4, 53(a0)
-; CHECK-ALIGNED-RV64-V-NEXT:    or a3, a5, a3
-; CHECK-ALIGNED-RV64-V-NEXT:    lbu a5, 54(a0)
-; CHECK-ALIGNED-RV64-V-NEXT:    lbu a7, 55(a0)
-; CHECK-ALIGNED-RV64-V-NEXT:    slli t0, a4, 8
-; CHECK-ALIGNED-RV64-V-NEXT:    or a6, t0, a6
-; CHECK-ALIGNED-RV64-V-NEXT:    slli a5, a5, 16
-; CHECK-ALIGNED-RV64-V-NEXT:    slli a7, a7, 24
-; CHECK-ALIGNED-RV64-V-NEXT:    or a5, a7, a5
-; CHECK-ALIGNED-RV64-V-NEXT:    or a6, a5, a6
-; CHECK-ALIGNED-RV64-V-NEXT:    slli a5, a6, 32
-; CHECK-ALIGNED-RV64-V-NEXT:    lbu a7, 48(a1)
-; CHECK-ALIGNED-RV64-V-NEXT:    lbu t0, 49(a1)
-; CHECK-ALIGNED-RV64-V-NEXT:    or t1, a5, a3
-; CHECK-ALIGNED-RV64-V-NEXT:    lbu a3, 50(a1)
-; CHECK-ALIGNED-RV64-V-NEXT:    lbu a5, 51(a1)
-; CHECK-ALIGNED-RV64-V-NEXT:    slli t0, t0, 8
-; CHECK-ALIGNED-RV64-V-NEXT:    or a7, t0, a7
-; CHECK-ALIGNED-RV64-V-NEXT:    slli a3, a3, 16
-; CHECK-ALIGNED-RV64-V-NEXT:    slli a5, a5, 24
-; CHECK-ALIGNED-RV64-V-NEXT:    or a5, a5, a3
-; CHECK-ALIGNED-RV64-V-NEXT:    lbu t0, 52(a1)
-; CHECK-ALIGNED-RV64-V-NEXT:    lbu a3, 53(a1)
-; CHECK-ALIGNED-RV64-V-NEXT:    or a7, a5, a7
-; CHECK-ALIGNED-RV64-V-NEXT:    lbu a5, 54(a1)
-; CHECK-ALIGNED-RV64-V-NEXT:    lbu t2, 55(a1)
-; CHECK-ALIGNED-RV64-V-NEXT:    slli t3, a3, 8
-; CHECK-ALIGNED-RV64-V-NEXT:    or t0, t3, t0
-; CHECK-ALIGNED-RV64-V-NEXT:    slli a5, a5, 16
 ; CHECK-ALIGNED-RV64-V-NEXT:    slli t2, t2, 24
-; CHECK-ALIGNED-RV64-V-NEXT:    or a5, t2, a5
-; CHECK-ALIGNED-RV64-V-NEXT:    or a5, a5, t0
-; CHECK-ALIGNED-RV64-V-NEXT:    slli t0, a5, 32
+; CHECK-ALIGNED-RV64-V-NEXT:    or a7, t2, a7
+; CHECK-ALIGNED-RV64-V-NEXT:    or a7, a7, t0
+; CHECK-ALIGNED-RV64-V-NEXT:    slli a7, a7, 32
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu t0, 0(a1)
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu t1, 1(a1)
+; CHECK-ALIGNED-RV64-V-NEXT:    or a6, a7, a6
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu a7, 2(a1)
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu t2, 3(a1)
+; CHECK-ALIGNED-RV64-V-NEXT:    slli t1, t1, 8
+; CHECK-ALIGNED-RV64-V-NEXT:    or t0, t1, t0
+; CHECK-ALIGNED-RV64-V-NEXT:    slli a7, a7, 16
+; CHECK-ALIGNED-RV64-V-NEXT:    slli t2, t2, 24
+; CHECK-ALIGNED-RV64-V-NEXT:    or a7, t2, a7
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu t1, 4(a1)
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu t2, 5(a1)
+; CHECK-ALIGNED-RV64-V-NEXT:    or a7, a7, t0
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu t0, 6(a1)
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu t3, 7(a1)
+; CHECK-ALIGNED-RV64-V-NEXT:    slli t2, t2, 8
+; CHECK-ALIGNED-RV64-V-NEXT:    or t1, t2, t1
+; CHECK-ALIGNED-RV64-V-NEXT:    slli t0, t0, 16
+; CHECK-ALIGNED-RV64-V-NEXT:    slli t3, t3, 24
+; CHECK-ALIGNED-RV64-V-NEXT:    or t0, t3, t0
+; CHECK-ALIGNED-RV64-V-NEXT:    or t0, t0, t1
+; CHECK-ALIGNED-RV64-V-NEXT:    slli t0, t0, 32
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu t1, 24(a1)
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu t2, 25(a1)
 ; CHECK-ALIGNED-RV64-V-NEXT:    or a7, t0, a7
-; CHECK-ALIGNED-RV64-V-NEXT:    slli t0, t1, 48
-; CHECK-ALIGNED-RV64-V-NEXT:    srli t0, t0, 56
-; CHECK-ALIGNED-RV64-V-NEXT:    vmv.v.x v12, t1
-; CHECK-ALIGNED-RV64-V-NEXT:    vslide1down.vx v12, v12, t0
-; CHECK-ALIGNED-RV64-V-NEXT:    srliw t0, t1, 24
-; CHECK-ALIGNED-RV64-V-NEXT:    srliw t1, t1, 16
-; CHECK-ALIGNED-RV64-V-NEXT:    vslide1down.vx v12, v12, t1
-; CHECK-ALIGNED-RV64-V-NEXT:    srliw t1, a6, 24
-; CHECK-ALIGNED-RV64-V-NEXT:    vslide1down.vx v12, v12, t0
-; CHECK-ALIGNED-RV64-V-NEXT:    srliw t0, a6, 16
-; CHECK-ALIGNED-RV64-V-NEXT:    vslide1down.vx v12, v12, a6
-; CHECK-ALIGNED-RV64-V-NEXT:    srliw a6, a7, 24
-; CHECK-ALIGNED-RV64-V-NEXT:    vslide1down.vx v12, v12, a4
-; CHECK-ALIGNED-RV64-V-NEXT:    srliw t2, a7, 16
-; CHECK-ALIGNED-RV64-V-NEXT:    vslide1down.vx v12, v12, t0
-; CHECK-ALIGNED-RV64-V-NEXT:    slli a4, a7, 48
-; CHECK-ALIGNED-RV64-V-NEXT:    srli t0, a4, 56
-; CHECK-ALIGNED-RV64-V-NEXT:    vslide1down.vx v12, v12, t1
-; CHECK-ALIGNED-RV64-V-NEXT:    srliw a4, a5, 24
-; CHECK-ALIGNED-RV64-V-NEXT:    vmv.v.x v14, a7
-; CHECK-ALIGNED-RV64-V-NEXT:    srliw a7, a5, 16
-; CHECK-ALIGNED-RV64-V-NEXT:    vslide1down.vx v14, v14, t0
-; CHECK-ALIGNED-RV64-V-NEXT:    vslide1down.vx v14, v14, t2
-; CHECK-ALIGNED-RV64-V-NEXT:    vslide1down.vx v14, v14, a6
-; CHECK-ALIGNED-RV64-V-NEXT:    vslide1down.vx v14, v14, a5
-; CHECK-ALIGNED-RV64-V-NEXT:    vslide1down.vx v14, v14, a3
-; CHECK-ALIGNED-RV64-V-NEXT:    vslide1down.vx v14, v14, a7
-; CHECK-ALIGNED-RV64-V-NEXT:    lbu a3, 56(a0)
-; CHECK-ALIGNED-RV64-V-NEXT:    lbu a5, 57(a0)
-; CHECK-ALIGNED-RV64-V-NEXT:    vslide1down.vx v16, v14, a4
-; CHECK-ALIGNED-RV64-V-NEXT:    lbu a4, 58(a0)
-; CHECK-ALIGNED-RV64-V-NEXT:    lbu a6, 59(a0)
-; CHECK-ALIGNED-RV64-V-NEXT:    slli a5, a5, 8
-; CHECK-ALIGNED-RV64-V-NEXT:    or a3, a5, a3
-; CHECK-ALIGNED-RV64-V-NEXT:    slli a4, a4, 16
-; CHECK-ALIGNED-RV64-V-NEXT:    slli a5, a6, 24
-; CHECK-ALIGNED-RV64-V-NEXT:    lbu a7, 56(a1)
-; CHECK-ALIGNED-RV64-V-NEXT:    lbu t0, 57(a1)
-; CHECK-ALIGNED-RV64-V-NEXT:    or a4, a5, a4
-; CHECK-ALIGNED-RV64-V-NEXT:    lbu a5, 58(a1)
-; CHECK-ALIGNED-RV64-V-NEXT:    lbu t1, 59(a1)
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu t0, 26(a1)
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu t3, 27(a1)
+; CHECK-ALIGNED-RV64-V-NEXT:    slli t2, t2, 8
+; CHECK-ALIGNED-RV64-V-NEXT:    or t1, t2, t1
+; CHECK-ALIGNED-RV64-V-NEXT:    slli t0, t0, 16
+; CHECK-ALIGNED-RV64-V-NEXT:    slli t3, t3, 24
+; CHECK-ALIGNED-RV64-V-NEXT:    or t0, t3, t0
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu t2, 28(a1)
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu t3, 29(a1)
+; CHECK-ALIGNED-RV64-V-NEXT:    or t0, t0, t1
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu t1, 30(a1)
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu t4, 31(a1)
+; CHECK-ALIGNED-RV64-V-NEXT:    slli t3, t3, 8
+; CHECK-ALIGNED-RV64-V-NEXT:    or t2, t3, t2
+; CHECK-ALIGNED-RV64-V-NEXT:    slli t1, t1, 16
+; CHECK-ALIGNED-RV64-V-NEXT:    slli t4, t4, 24
+; CHECK-ALIGNED-RV64-V-NEXT:    or t1, t4, t1
+; CHECK-ALIGNED-RV64-V-NEXT:    or t1, t1, t2
+; CHECK-ALIGNED-RV64-V-NEXT:    slli t1, t1, 32
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu t2, 16(a1)
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu t3, 17(a1)
+; CHECK-ALIGNED-RV64-V-NEXT:    or t0, t1, t0
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu t1, 18(a1)
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu t4, 19(a1)
+; CHECK-ALIGNED-RV64-V-NEXT:    slli t3, t3, 8
+; CHECK-ALIGNED-RV64-V-NEXT:    or t2, t3, t2
+; CHECK-ALIGNED-RV64-V-NEXT:    slli t1, t1, 16
+; CHECK-ALIGNED-RV64-V-NEXT:    slli t4, t4, 24
+; CHECK-ALIGNED-RV64-V-NEXT:    or t1, t4, t1
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu t3, 20(a1)
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu t4, 21(a1)
+; CHECK-ALIGNED-RV64-V-NEXT:    or t1, t1, t2
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu t2, 22(a1)
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu t5, 23(a1)
+; CHECK-ALIGNED-RV64-V-NEXT:    slli t4, t4, 8
+; CHECK-ALIGNED-RV64-V-NEXT:    or t3, t4, t3
+; CHECK-ALIGNED-RV64-V-NEXT:    slli t2, t2, 16
+; CHECK-ALIGNED-RV64-V-NEXT:    slli t5, t5, 24
+; CHECK-ALIGNED-RV64-V-NEXT:    or t2, t5, t2
+; CHECK-ALIGNED-RV64-V-NEXT:    or t2, t2, t3
+; CHECK-ALIGNED-RV64-V-NEXT:    slli t2, t2, 32
+; CHECK-ALIGNED-RV64-V-NEXT:    or t1, t2, t1
+; CHECK-ALIGNED-RV64-V-NEXT:    xor a2, a2, t1
+; CHECK-ALIGNED-RV64-V-NEXT:    xor a3, a3, t0
+; CHECK-ALIGNED-RV64-V-NEXT:    xor a4, a4, a7
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu a7, 40(a0)
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu t0, 41(a0)
+; CHECK-ALIGNED-RV64-V-NEXT:    xor a5, a5, a6
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu a6, 42(a0)
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu t1, 43(a0)
 ; CHECK-ALIGNED-RV64-V-NEXT:    slli t0, t0, 8
 ; CHECK-ALIGNED-RV64-V-NEXT:    or a7, t0, a7
-; CHECK-ALIGNED-RV64-V-NEXT:    slli a5, a5, 16
-; CHECK-ALIGNED-RV64-V-NEXT:    slli t0, t1, 24
-; CHECK-ALIGNED-RV64-V-NEXT:    or a5, t0, a5
-; CHECK-ALIGNED-RV64-V-NEXT:    vmv.v.i v14, 0
-; CHECK-ALIGNED-RV64-V-NEXT:    or a3, a4, a3
-; CHECK-ALIGNED-RV64-V-NEXT:    vmv1r.v v25, v14
-; CHECK-ALIGNED-RV64-V-NEXT:    vsetvli zero, zero, e8, m2, tu, ma
-; CHECK-ALIGNED-RV64-V-NEXT:    vmv.s.x v25, a3
-; CHECK-ALIGNED-RV64-V-NEXT:    slli a3, a3, 48
-; CHECK-ALIGNED-RV64-V-NEXT:    srli a3, a3, 56
-; CHECK-ALIGNED-RV64-V-NEXT:    vmv.s.x v22, a3
-; CHECK-ALIGNED-RV64-V-NEXT:    vsetvli zero, zero, e8, m2, ta, ma
-; CHECK-ALIGNED-RV64-V-NEXT:    vle8.v v18, (a0)
-; CHECK-ALIGNED-RV64-V-NEXT:    vle8.v v20, (a1)
-; CHECK-ALIGNED-RV64-V-NEXT:    srli a4, a4, 16
-; CHECK-ALIGNED-RV64-V-NEXT:    or a3, a5, a7
-; CHECK-ALIGNED-RV64-V-NEXT:    vmv.s.x v23, a4
-; CHECK-ALIGNED-RV64-V-NEXT:    slli a4, a3, 48
-; CHECK-ALIGNED-RV64-V-NEXT:    srli a4, a4, 56
-; CHECK-ALIGNED-RV64-V-NEXT:    srli a5, a5, 16
-; CHECK-ALIGNED-RV64-V-NEXT:    vmv.s.x v26, a6
-; CHECK-ALIGNED-RV64-V-NEXT:    vmv1r.v v5, v14
-; CHECK-ALIGNED-RV64-V-NEXT:    vsetvli zero, zero, e8, m2, tu, ma
-; CHECK-ALIGNED-RV64-V-NEXT:    vmv.s.x v5, a3
-; CHECK-ALIGNED-RV64-V-NEXT:    vmv.s.x v28, a4
-; CHECK-ALIGNED-RV64-V-NEXT:    vmv.s.x v29, a5
-; CHECK-ALIGNED-RV64-V-NEXT:    vmv.s.x v30, t1
-; CHECK-ALIGNED-RV64-V-NEXT:    lbu a3, 60(a0)
-; CHECK-ALIGNED-RV64-V-NEXT:    lbu a4, 61(a0)
+; CHECK-ALIGNED-RV64-V-NEXT:    slli a6, a6, 16
+; CHECK-ALIGNED-RV64-V-NEXT:    slli t1, t1, 24
+; CHECK-ALIGNED-RV64-V-NEXT:    or a6, t1, a6
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu t0, 44(a0)
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu t1, 45(a0)
+; CHECK-ALIGNED-RV64-V-NEXT:    or a6, a6, a7
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu a7, 46(a0)
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu t2, 47(a0)
+; CHECK-ALIGNED-RV64-V-NEXT:    slli t1, t1, 8
+; CHECK-ALIGNED-RV64-V-NEXT:    or t0, t1, t0
+; CHECK-ALIGNED-RV64-V-NEXT:    slli a7, a7, 16
+; CHECK-ALIGNED-RV64-V-NEXT:    slli t2, t2, 24
+; CHECK-ALIGNED-RV64-V-NEXT:    or a7, t2, a7
+; CHECK-ALIGNED-RV64-V-NEXT:    or a7, a7, t0
+; CHECK-ALIGNED-RV64-V-NEXT:    slli a7, a7, 32
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu t0, 32(a0)
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu t1, 33(a0)
+; CHECK-ALIGNED-RV64-V-NEXT:    or a7, a7, a6
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu a6, 34(a0)
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu t2, 35(a0)
+; CHECK-ALIGNED-RV64-V-NEXT:    slli t1, t1, 8
+; CHECK-ALIGNED-RV64-V-NEXT:    or t0, t1, t0
+; CHECK-ALIGNED-RV64-V-NEXT:    slli a6, a6, 16
+; CHECK-ALIGNED-RV64-V-NEXT:    slli t2, t2, 24
+; CHECK-ALIGNED-RV64-V-NEXT:    or a6, t2, a6
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu t1, 36(a0)
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu t2, 37(a0)
+; CHECK-ALIGNED-RV64-V-NEXT:    or a6, a6, t0
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu t0, 38(a0)
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu t3, 39(a0)
+; CHECK-ALIGNED-RV64-V-NEXT:    slli t2, t2, 8
+; CHECK-ALIGNED-RV64-V-NEXT:    or t1, t2, t1
+; CHECK-ALIGNED-RV64-V-NEXT:    slli t0, t0, 16
+; CHECK-ALIGNED-RV64-V-NEXT:    slli t3, t3, 24
+; CHECK-ALIGNED-RV64-V-NEXT:    or t0, t3, t0
+; CHECK-ALIGNED-RV64-V-NEXT:    or t0, t0, t1
+; CHECK-ALIGNED-RV64-V-NEXT:    slli t0, t0, 32
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu t1, 40(a1)
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu t2, 41(a1)
+; CHECK-ALIGNED-RV64-V-NEXT:    or a6, t0, a6
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu t0, 42(a1)
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu t3, 43(a1)
+; CHECK-ALIGNED-RV64-V-NEXT:    slli t2, t2, 8
+; CHECK-ALIGNED-RV64-V-NEXT:    or t1, t2, t1
+; CHECK-ALIGNED-RV64-V-NEXT:    slli t0, t0, 16
+; CHECK-ALIGNED-RV64-V-NEXT:    slli t3, t3, 24
+; CHECK-ALIGNED-RV64-V-NEXT:    or t0, t3, t0
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu t2, 44(a1)
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu t3, 45(a1)
+; CHECK-ALIGNED-RV64-V-NEXT:    or t0, t0, t1
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu t1, 46(a1)
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu t4, 47(a1)
+; CHECK-ALIGNED-RV64-V-NEXT:    slli t3, t3, 8
+; CHECK-ALIGNED-RV64-V-NEXT:    or t2, t3, t2
+; CHECK-ALIGNED-RV64-V-NEXT:    slli t1, t1, 16
+; CHECK-ALIGNED-RV64-V-NEXT:    slli t4, t4, 24
+; CHECK-ALIGNED-RV64-V-NEXT:    or t1, t4, t1
+; CHECK-ALIGNED-RV64-V-NEXT:    or t1, t1, t2
+; CHECK-ALIGNED-RV64-V-NEXT:    slli t1, t1, 32
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu t2, 32(a1)
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu t3, 33(a1)
+; CHECK-ALIGNED-RV64-V-NEXT:    or t0, t1, t0
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu t1, 34(a1)
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu t4, 35(a1)
+; CHECK-ALIGNED-RV64-V-NEXT:    slli t3, t3, 8
+; CHECK-ALIGNED-RV64-V-NEXT:    or t2, t3, t2
+; CHECK-ALIGNED-RV64-V-NEXT:    slli t1, t1, 16
+; CHECK-ALIGNED-RV64-V-NEXT:    slli t4, t4, 24
+; CHECK-ALIGNED-RV64-V-NEXT:    or t1, t4, t1
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu t3, 36(a1)
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu t4, 37(a1)
+; CHECK-ALIGNED-RV64-V-NEXT:    or t1, t1, t2
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu t2, 38(a1)
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu t5, 39(a1)
+; CHECK-ALIGNED-RV64-V-NEXT:    slli t4, t4, 8
+; CHECK-ALIGNED-RV64-V-NEXT:    or t3, t4, t3
+; CHECK-ALIGNED-RV64-V-NEXT:    slli t2, t2, 16
+; CHECK-ALIGNED-RV64-V-NEXT:    slli t5, t5, 24
+; CHECK-ALIGNED-RV64-V-NEXT:    or t2, t5, t2
+; CHECK-ALIGNED-RV64-V-NEXT:    or t2, t2, t3
+; CHECK-ALIGNED-RV64-V-NEXT:    slli t2, t2, 32
+; CHECK-ALIGNED-RV64-V-NEXT:    or t1, t2, t1
+; CHECK-ALIGNED-RV64-V-NEXT:    xor a6, a6, t1
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu t1, 48(a0)
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu t2, 49(a0)
+; CHECK-ALIGNED-RV64-V-NEXT:    xor a7, a7, t0
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu t0, 50(a0)
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu t3, 51(a0)
+; CHECK-ALIGNED-RV64-V-NEXT:    slli t2, t2, 8
+; CHECK-ALIGNED-RV64-V-NEXT:    or t1, t2, t1
+; CHECK-ALIGNED-RV64-V-NEXT:    slli t0, t0, 16
+; CHECK-ALIGNED-RV64-V-NEXT:    slli t3, t3, 24
+; CHECK-ALIGNED-RV64-V-NEXT:    or t0, t3, t0
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu t2, 52(a0)
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu t3, 53(a0)
+; CHECK-ALIGNED-RV64-V-NEXT:    or t0, t0, t1
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu t1, 54(a0)
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu t4, 55(a0)
+; CHECK-ALIGNED-RV64-V-NEXT:    slli t3, t3, 8
+; CHECK-ALIGNED-RV64-V-NEXT:    or t2, t3, t2
+; CHECK-ALIGNED-RV64-V-NEXT:    slli t1, t1, 16
+; CHECK-ALIGNED-RV64-V-NEXT:    slli t4, t4, 24
+; CHECK-ALIGNED-RV64-V-NEXT:    or t1, t4, t1
+; CHECK-ALIGNED-RV64-V-NEXT:    or t1, t1, t2
+; CHECK-ALIGNED-RV64-V-NEXT:    slli t1, t1, 32
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu t2, 48(a1)
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu t3, 49(a1)
+; CHECK-ALIGNED-RV64-V-NEXT:    or t0, t1, t0
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu t1, 50(a1)
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu t4, 51(a1)
+; CHECK-ALIGNED-RV64-V-NEXT:    slli t3, t3, 8
+; CHECK-ALIGNED-RV64-V-NEXT:    or t2, t3, t2
+; CHECK-ALIGNED-RV64-V-NEXT:    slli t1, t1, 16
+; CHECK-ALIGNED-RV64-V-NEXT:    slli t4, t4, 24
+; CHECK-ALIGNED-RV64-V-NEXT:    or t1, t4, t1
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu t3, 52(a1)
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu t4, 53(a1)
+; CHECK-ALIGNED-RV64-V-NEXT:    or t1, t1, t2
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu t2, 54(a1)
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu t5, 55(a1)
+; CHECK-ALIGNED-RV64-V-NEXT:    slli t4, t4, 8
+; CHECK-ALIGNED-RV64-V-NEXT:    or t3, t4, t3
+; CHECK-ALIGNED-RV64-V-NEXT:    slli t2, t2, 16
+; CHECK-ALIGNED-RV64-V-NEXT:    slli t5, t5, 24
+; CHECK-ALIGNED-RV64-V-NEXT:    or t2, t5, t2
+; CHECK-ALIGNED-RV64-V-NEXT:    or t2, t2, t3
+; CHECK-ALIGNED-RV64-V-NEXT:    slli t2, t2, 32
+; CHECK-ALIGNED-RV64-V-NEXT:    or t1, t2, t1
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu t2, 56(a0)
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu t3, 57(a0)
+; CHECK-ALIGNED-RV64-V-NEXT:    xor t0, t0, t1
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu t1, 58(a0)
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu t4, 59(a0)
+; CHECK-ALIGNED-RV64-V-NEXT:    slli t3, t3, 8
+; CHECK-ALIGNED-RV64-V-NEXT:    or t2, t3, t2
+; CHECK-ALIGNED-RV64-V-NEXT:    slli t1, t1, 16
+; CHECK-ALIGNED-RV64-V-NEXT:    slli t4, t4, 24
+; CHECK-ALIGNED-RV64-V-NEXT:    or t1, t4, t1
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu t3, 56(a1)
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu t4, 57(a1)
+; CHECK-ALIGNED-RV64-V-NEXT:    or t1, t1, t2
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu t2, 58(a1)
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu t5, 59(a1)
+; CHECK-ALIGNED-RV64-V-NEXT:    slli t4, t4, 8
+; CHECK-ALIGNED-RV64-V-NEXT:    or t3, t4, t3
+; CHECK-ALIGNED-RV64-V-NEXT:    slli t2, t2, 16
+; CHECK-ALIGNED-RV64-V-NEXT:    slli t5, t5, 24
+; CHECK-ALIGNED-RV64-V-NEXT:    or t2, t5, t2
+; CHECK-ALIGNED-RV64-V-NEXT:    or t2, t2, t3
+; CHECK-ALIGNED-RV64-V-NEXT:    xor t1, t1, t2
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu t2, 60(a0)
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu t3, 61(a0)
 ; CHECK-ALIGNED-RV64-V-NEXT:    lbu a0, 62(a0)
-; CHECK-ALIGNED-RV64-V-NEXT:    lbu a5, 60(a1)
-; CHECK-ALIGNED-RV64-V-NEXT:    lbu a6, 61(a1)
-; CHECK-ALIGNED-RV64-V-NEXT:    slli a7, a4, 8
-; CHECK-ALIGNED-RV64-V-NEXT:    or a3, a7, a3
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu t4, 60(a1)
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu t5, 61(a1)
+; CHECK-ALIGNED-RV64-V-NEXT:    slli t3, t3, 8
+; CHECK-ALIGNED-RV64-V-NEXT:    or t2, t3, t2
 ; CHECK-ALIGNED-RV64-V-NEXT:    lbu a1, 62(a1)
-; CHECK-ALIGNED-RV64-V-NEXT:    slli a7, a6, 8
-; CHECK-ALIGNED-RV64-V-NEXT:    or a5, a7, a5
-; CHECK-ALIGNED-RV64-V-NEXT:    vmv1r.v v4, v14
-; CHECK-ALIGNED-RV64-V-NEXT:    vmv.s.x v4, a3
-; CHECK-ALIGNED-RV64-V-NEXT:    vmv.s.x v31, a4
-; CHECK-ALIGNED-RV64-V-NEXT:    vmv1r.v v3, v14
-; CHECK-ALIGNED-RV64-V-NEXT:    vmv.s.x v3, a5
-; CHECK-ALIGNED-RV64-V-NEXT:    vmv.s.x v2, a6
-; CHECK-ALIGNED-RV64-V-NEXT:    vmv1r.v v24, v14
-; CHECK-ALIGNED-RV64-V-NEXT:    vmv.s.x v24, a0
-; CHECK-ALIGNED-RV64-V-NEXT:    vsetivli zero, 2, e8, m1, tu, ma
-; CHECK-ALIGNED-RV64-V-NEXT:    vslideup.vi v25, v22, 1
-; CHECK-ALIGNED-RV64-V-NEXT:    vsetivli zero, 3, e8, m1, tu, ma
-; CHECK-ALIGNED-RV64-V-NEXT:    vslideup.vi v25, v23, 2
-; CHECK-ALIGNED-RV64-V-NEXT:    vsetivli zero, 4, e8, m1, tu, ma
-; CHECK-ALIGNED-RV64-V-NEXT:    vslideup.vi v25, v26, 3
-; CHECK-ALIGNED-RV64-V-NEXT:    vmv2r.v v26, v14
-; CHECK-ALIGNED-RV64-V-NEXT:    vsetivli zero, 2, e8, m1, tu, ma
-; CHECK-ALIGNED-RV64-V-NEXT:    vslideup.vi v5, v28, 1
-; CHECK-ALIGNED-RV64-V-NEXT:    vsetivli zero, 3, e8, m1, tu, ma
-; CHECK-ALIGNED-RV64-V-NEXT:    vslideup.vi v5, v29, 2
-; CHECK-ALIGNED-RV64-V-NEXT:    vsetivli zero, 4, e8, m1, tu, ma
-; CHECK-ALIGNED-RV64-V-NEXT:    vslideup.vi v5, v30, 3
-; CHECK-ALIGNED-RV64-V-NEXT:    vmv2r.v v6, v14
-; CHECK-ALIGNED-RV64-V-NEXT:    vsetivli zero, 2, e8, m1, tu, ma
-; CHECK-ALIGNED-RV64-V-NEXT:    vslideup.vi v4, v31, 1
-; CHECK-ALIGNED-RV64-V-NEXT:    vmv2r.v v22, v14
-; CHECK-ALIGNED-RV64-V-NEXT:    vslideup.vi v3, v2, 1
-; CHECK-ALIGNED-RV64-V-NEXT:    vmv2r.v v28, v14
-; CHECK-ALIGNED-RV64-V-NEXT:    vmv2r.v v30, v14
-; CHECK-ALIGNED-RV64-V-NEXT:    vmv.s.x v14, a1
-; CHECK-ALIGNED-RV64-V-NEXT:    vmv1r.v v26, v25
-; CHECK-ALIGNED-RV64-V-NEXT:    vmv1r.v v6, v5
-; CHECK-ALIGNED-RV64-V-NEXT:    vmv1r.v v22, v4
-; CHECK-ALIGNED-RV64-V-NEXT:    vmv1r.v v28, v3
-; CHECK-ALIGNED-RV64-V-NEXT:    vsetvli zero, a2, e8, m2, ta, ma
-; CHECK-ALIGNED-RV64-V-NEXT:    vslide1down.vx v8, v8, zero
-; CHECK-ALIGNED-RV64-V-NEXT:    vslide1down.vx v8, v8, zero
-; CHECK-ALIGNED-RV64-V-NEXT:    vslide1down.vx v8, v8, zero
-; CHECK-ALIGNED-RV64-V-NEXT:    vslide1down.vx v8, v8, zero
-; CHECK-ALIGNED-RV64-V-NEXT:    vslide1down.vx v8, v8, zero
-; CHECK-ALIGNED-RV64-V-NEXT:    vslide1down.vx v8, v8, zero
-; CHECK-ALIGNED-RV64-V-NEXT:    vslide1down.vx v8, v8, zero
-; CHECK-ALIGNED-RV64-V-NEXT:    vslide1down.vx v8, v8, zero
-; CHECK-ALIGNED-RV64-V-NEXT:    vslide1down.vx v8, v8, zero
-; CHECK-ALIGNED-RV64-V-NEXT:    vslide1down.vx v8, v8, zero
-; CHECK-ALIGNED-RV64-V-NEXT:    vslide1down.vx v8, v8, zero
-; CHECK-ALIGNED-RV64-V-NEXT:    vslide1down.vx v8, v8, zero
-; CHECK-ALIGNED-RV64-V-NEXT:    vslide1down.vx v8, v8, zero
-; CHECK-ALIGNED-RV64-V-NEXT:    vslide1down.vx v8, v8, zero
-; CHECK-ALIGNED-RV64-V-NEXT:    vslide1down.vx v8, v8, zero
-; CHECK-ALIGNED-RV64-V-NEXT:    vslide1down.vx v8, v8, zero
-; CHECK-ALIGNED-RV64-V-NEXT:    vslide1down.vx v10, v10, zero
-; CHECK-ALIGNED-RV64-V-NEXT:    vslide1down.vx v10, v10, zero
-; CHECK-ALIGNED-RV64-V-NEXT:    vslide1down.vx v10, v10, zero
-; CHECK-ALIGNED-RV64-V-NEXT:    vslide1down.vx v10, v10, zero
-; CHECK-ALIGNED-RV64-V-NEXT:    vslide1down.vx v10, v10, zero
-; CHECK-ALIGNED-RV64-V-NEXT:    vslide1down.vx v10, v10, zero
-; CHECK-ALIGNED-RV64-V-NEXT:    vslide1down.vx v10, v10, zero
-; CHECK-ALIGNED-RV64-V-NEXT:    vslide1down.vx v10, v10, zero
-; CHECK-ALIGNED-RV64-V-NEXT:    vslide1down.vx v10, v10, zero
-; CHECK-ALIGNED-RV64-V-NEXT:    vslide1down.vx v10, v10, zero
-; CHECK-ALIGNED-RV64-V-NEXT:    vslide1down.vx v10, v10, zero
-; CHECK-ALIGNED-RV64-V-NEXT:    vslide1down.vx v10, v10, zero
-; CHECK-ALIGNED-RV64-V-NEXT:    vslide1down.vx v10, v10, zero
-; CHECK-ALIGNED-RV64-V-NEXT:    vslide1down.vx v10, v10, zero
-; CHECK-ALIGNED-RV64-V-NEXT:    vslide1down.vx v10, v10, zero
-; CHECK-ALIGNED-RV64-V-NEXT:    vslide1down.vx v10, v10, zero
-; CHECK-ALIGNED-RV64-V-NEXT:    vslide1down.vx v12, v12, zero
-; CHECK-ALIGNED-RV64-V-NEXT:    vslide1down.vx v12, v12, zero
-; CHECK-ALIGNED-RV64-V-NEXT:    vslide1down.vx v12, v12, zero
-; CHECK-ALIGNED-RV64-V-NEXT:    vslide1down.vx v12, v12, zero
-; CHECK-ALIGNED-RV64-V-NEXT:    vslide1down.vx v12, v12, zero
-; CHECK-ALIGNED-RV64-V-NEXT:    vslide1down.vx v12, v12, zero
-; CHECK-ALIGNED-RV64-V-NEXT:    vslide1down.vx v12, v12, zero
-; CHECK-ALIGNED-RV64-V-NEXT:    vslide1down.vx v12, v12, zero
-; CHECK-ALIGNED-RV64-V-NEXT:    vslide1down.vx v12, v12, zero
-; CHECK-ALIGNED-RV64-V-NEXT:    vslide1down.vx v12, v12, zero
-; CHECK-ALIGNED-RV64-V-NEXT:    vslide1down.vx v12, v12, zero
-; CHECK-ALIGNED-RV64-V-NEXT:    vslide1down.vx v12, v12, zero
-; CHECK-ALIGNED-RV64-V-NEXT:    vslide1down.vx v12, v12, zero
-; CHECK-ALIGNED-RV64-V-NEXT:    vslide1down.vx v12, v12, zero
-; CHECK-ALIGNED-RV64-V-NEXT:    vslide1down.vx v12, v12, zero
-; CHECK-ALIGNED-RV64-V-NEXT:    vslide1down.vx v12, v12, zero
-; CHECK-ALIGNED-RV64-V-NEXT:    vslide1down.vx v12, v12, zero
-; CHECK-ALIGNED-RV64-V-NEXT:    vslide1down.vx v12, v12, zero
-; CHECK-ALIGNED-RV64-V-NEXT:    vslide1down.vx v12, v12, zero
-; CHECK-ALIGNED-RV64-V-NEXT:    vslide1down.vx v12, v12, zero
-; CHECK-ALIGNED-RV64-V-NEXT:    vslide1down.vx v12, v12, zero
-; CHECK-ALIGNED-RV64-V-NEXT:    vslide1down.vx v12, v12, zero
-; CHECK-ALIGNED-RV64-V-NEXT:    vslide1down.vx v12, v12, zero
-; CHECK-ALIGNED-RV64-V-NEXT:    vslide1down.vx v12, v12, zero
-; CHECK-ALIGNED-RV64-V-NEXT:    vslide1down.vx v16, v16, zero
-; CHECK-ALIGNED-RV64-V-NEXT:    vslide1down.vx v16, v16, zero
-; CHECK-ALIGNED-RV64-V-NEXT:    vslide1down.vx v16, v16, zero
-; CHECK-ALIGNED-RV64-V-NEXT:    vslide1down.vx v16, v16, zero
-; CHECK-ALIGNED-RV64-V-NEXT:    vslide1down.vx v16, v16, zero
-; CHECK-ALIGNED-RV64-V-NEXT:    vslide1down.vx v16, v16, zero
-; CHECK-ALIGNED-RV64-V-NEXT:    vslide1down.vx v16, v16, zero
-; CHECK-ALIGNED-RV64-V-NEXT:    vslide1down.vx v16, v16, zero
-; CHECK-ALIGNED-RV64-V-NEXT:    vslide1down.vx v16, v16, zero
-; CHECK-ALIGNED-RV64-V-NEXT:    vslide1down.vx v16, v16, zero
-; CHECK-ALIGNED-RV64-V-NEXT:    vslide1down.vx v16, v16, zero
-; CHECK-ALIGNED-RV64-V-NEXT:    vslide1down.vx v16, v16, zero
-; CHECK-ALIGNED-RV64-V-NEXT:    vslide1down.vx v16, v16, zero
-; CHECK-ALIGNED-RV64-V-NEXT:    vslide1down.vx v16, v16, zero
-; CHECK-ALIGNED-RV64-V-NEXT:    vslide1down.vx v16, v16, zero
-; CHECK-ALIGNED-RV64-V-NEXT:    vslide1down.vx v16, v16, zero
-; CHECK-ALIGNED-RV64-V-NEXT:    vslide1down.vx v16, v16, zero
-; CHECK-ALIGNED-RV64-V-NEXT:    vslide1down.vx v16, v16, zero
-; CHECK-ALIGNED-RV64-V-NEXT:    vslide1down.vx v16, v16, zero
-; CHECK-ALIGNED-RV64-V-NEXT:    vslide1down.vx v16, v16, zero
-; CHECK-ALIGNED-RV64-V-NEXT:    vslide1down.vx v16, v16, zero
-; CHECK-ALIGNED-RV64-V-NEXT:    vslide1down.vx v16, v16, zero
-; CHECK-ALIGNED-RV64-V-NEXT:    vslide1down.vx v16, v16, zero
-; CHECK-ALIGNED-RV64-V-NEXT:    vslide1down.vx v16, v16, zero
-; CHECK-ALIGNED-RV64-V-NEXT:    vmv1r.v v30, v24
-; CHECK-ALIGNED-RV64-V-NEXT:    vmsne.vv v24, v12, v16
-; CHECK-ALIGNED-RV64-V-NEXT:    vmsne.vv v12, v26, v6
-; CHECK-ALIGNED-RV64-V-NEXT:    vmor.mm v12, v24, v12
-; CHECK-ALIGNED-RV64-V-NEXT:    vmsne.vv v13, v8, v10
-; CHECK-ALIGNED-RV64-V-NEXT:    vmsne.vv v8, v18, v20
-; CHECK-ALIGNED-RV64-V-NEXT:    vmor.mm v8, v8, v13
-; CHECK-ALIGNED-RV64-V-NEXT:    vmor.mm v8, v8, v12
-; CHECK-ALIGNED-RV64-V-NEXT:    vmsne.vv v9, v30, v14
-; CHECK-ALIGNED-RV64-V-NEXT:    vmsne.vv v10, v22, v28
-; CHECK-ALIGNED-RV64-V-NEXT:    vmor.mm v9, v10, v9
-; CHECK-ALIGNED-RV64-V-NEXT:    vmnor.mm v8, v8, v9
-; CHECK-ALIGNED-RV64-V-NEXT:    vcpop.m a0, v8
-; CHECK-ALIGNED-RV64-V-NEXT:    seqz a0, a0
-; CHECK-ALIGNED-RV64-V-NEXT:    ld s0, 8(sp) # 8-byte Folded Reload
-; CHECK-ALIGNED-RV64-V-NEXT:    ld s1, 0(sp) # 8-byte Folded Reload
-; CHECK-ALIGNED-RV64-V-NEXT:    addi sp, sp, 16
+; CHECK-ALIGNED-RV64-V-NEXT:    slli t5, t5, 8
+; CHECK-ALIGNED-RV64-V-NEXT:    or t3, t5, t4
+; CHECK-ALIGNED-RV64-V-NEXT:    xor t2, t2, t3
+; CHECK-ALIGNED-RV64-V-NEXT:    xor a0, a0, a1
+; CHECK-ALIGNED-RV64-V-NEXT:    or a1, a5, a7
+; CHECK-ALIGNED-RV64-V-NEXT:    or a4, a4, a6
+; CHECK-ALIGNED-RV64-V-NEXT:    or a5, t0, t1
+; CHECK-ALIGNED-RV64-V-NEXT:    or a0, t2, a0
+; CHECK-ALIGNED-RV64-V-NEXT:    or a4, a4, a5
+; CHECK-ALIGNED-RV64-V-NEXT:    or a1, a1, a3
+; CHECK-ALIGNED-RV64-V-NEXT:    or a0, a0, a2
+; CHECK-ALIGNED-RV64-V-NEXT:    or a0, a4, a0
+; CHECK-ALIGNED-RV64-V-NEXT:    or a0, a0, a1
+; CHECK-ALIGNED-RV64-V-NEXT:    snez a0, a0
 ; CHECK-ALIGNED-RV64-V-NEXT:    ret
 ;
 ; CHECK-UNALIGNED-RV32-LABEL: bcmp_size_63:
@@ -6562,36 +6563,130 @@ define i32 @bcmp_size_63(ptr %s1, ptr %s2) nounwind {
 ;
 ; CHECK-UNALIGNED-RV32-V-LABEL: bcmp_size_63:
 ; CHECK-UNALIGNED-RV32-V:       # %bb.0: # %entry
-; CHECK-UNALIGNED-RV32-V-NEXT:    li a2, 32
-; CHECK-UNALIGNED-RV32-V-NEXT:    vsetvli zero, a2, e8, m2, ta, ma
-; CHECK-UNALIGNED-RV32-V-NEXT:    vle8.v v8, (a0)
-; CHECK-UNALIGNED-RV32-V-NEXT:    vle8.v v10, (a1)
-; CHECK-UNALIGNED-RV32-V-NEXT:    addi a0, a0, 31
-; CHECK-UNALIGNED-RV32-V-NEXT:    addi a1, a1, 31
-; CHECK-UNALIGNED-RV32-V-NEXT:    vle8.v v12, (a0)
-; CHECK-UNALIGNED-RV32-V-NEXT:    vle8.v v14, (a1)
-; CHECK-UNALIGNED-RV32-V-NEXT:    vmsne.vv v16, v8, v10
-; CHECK-UNALIGNED-RV32-V-NEXT:    vmsne.vv v8, v12, v14
-; CHECK-UNALIGNED-RV32-V-NEXT:    vmnor.mm v8, v16, v8
-; CHECK-UNALIGNED-RV32-V-NEXT:    vcpop.m a0, v8
-; CHECK-UNALIGNED-RV32-V-NEXT:    seqz a0, a0
+; CHECK-UNALIGNED-RV32-V-NEXT:    addi sp, sp, -48
+; CHECK-UNALIGNED-RV32-V-NEXT:    sw s0, 44(sp) # 4-byte Folded Spill
+; CHECK-UNALIGNED-RV32-V-NEXT:    sw s1, 40(sp) # 4-byte Folded Spill
+; CHECK-UNALIGNED-RV32-V-NEXT:    sw s2, 36(sp) # 4-byte Folded Spill
+; CHECK-UNALIGNED-RV32-V-NEXT:    sw s3, 32(sp) # 4-byte Folded Spill
+; CHECK-UNALIGNED-RV32-V-NEXT:    sw s4, 28(sp) # 4-byte Folded Spill
+; CHECK-UNALIGNED-RV32-V-NEXT:    sw s5, 24(sp) # 4-byte Folded Spill
+; CHECK-UNALIGNED-RV32-V-NEXT:    sw s6, 20(sp) # 4-byte Folded Spill
+; CHECK-UNALIGNED-RV32-V-NEXT:    sw s7, 16(sp) # 4-byte Folded Spill
+; CHECK-UNALIGNED-RV32-V-NEXT:    sw s8, 12(sp) # 4-byte Folded Spill
+; CHECK-UNALIGNED-RV32-V-NEXT:    sw s9, 8(sp) # 4-byte Folded Spill
+; CHECK-UNALIGNED-RV32-V-NEXT:    sw s10, 4(sp) # 4-byte Folded Spill
+; CHECK-UNALIGNED-RV32-V-NEXT:    lw a2, 16(a0)
+; CHECK-UNALIGNED-RV32-V-NEXT:    lw a3, 20(a0)
+; CHECK-UNALIGNED-RV32-V-NEXT:    lw a4, 24(a0)
+; CHECK-UNALIGNED-RV32-V-NEXT:    lw a5, 28(a0)
+; CHECK-UNALIGNED-RV32-V-NEXT:    lw a6, 0(a0)
+; CHECK-UNALIGNED-RV32-V-NEXT:    lw a7, 4(a0)
+; CHECK-UNALIGNED-RV32-V-NEXT:    lw t0, 8(a0)
+; CHECK-UNALIGNED-RV32-V-NEXT:    lw t1, 12(a0)
+; CHECK-UNALIGNED-RV32-V-NEXT:    lw t2, 0(a1)
+; CHECK-UNALIGNED-RV32-V-NEXT:    lw t3, 4(a1)
+; CHECK-UNALIGNED-RV32-V-NEXT:    lw t4, 8(a1)
+; CHECK-UNALIGNED-RV32-V-NEXT:    lw t5, 12(a1)
+; CHECK-UNALIGNED-RV32-V-NEXT:    lw t6, 24(a1)
+; CHECK-UNALIGNED-RV32-V-NEXT:    lw s0, 28(a1)
+; CHECK-UNALIGNED-RV32-V-NEXT:    lw s1, 16(a1)
+; CHECK-UNALIGNED-RV32-V-NEXT:    lw s2, 20(a1)
+; CHECK-UNALIGNED-RV32-V-NEXT:    xor t1, t1, t5
+; CHECK-UNALIGNED-RV32-V-NEXT:    xor a5, a5, s0
+; CHECK-UNALIGNED-RV32-V-NEXT:    xor a7, a7, t3
+; CHECK-UNALIGNED-RV32-V-NEXT:    xor a3, a3, s2
+; CHECK-UNALIGNED-RV32-V-NEXT:    xor t0, t0, t4
+; CHECK-UNALIGNED-RV32-V-NEXT:    xor a4, a4, t6
+; CHECK-UNALIGNED-RV32-V-NEXT:    lw t3, 47(a0)
+; CHECK-UNALIGNED-RV32-V-NEXT:    lw t4, 51(a0)
+; CHECK-UNALIGNED-RV32-V-NEXT:    lw t5, 55(a0)
+; CHECK-UNALIGNED-RV32-V-NEXT:    lw t6, 59(a0)
+; CHECK-UNALIGNED-RV32-V-NEXT:    lw s0, 31(a0)
+; CHECK-UNALIGNED-RV32-V-NEXT:    lw s2, 35(a0)
+; CHECK-UNALIGNED-RV32-V-NEXT:    lw s3, 39(a0)
+; CHECK-UNALIGNED-RV32-V-NEXT:    lw a0, 43(a0)
+; CHECK-UNALIGNED-RV32-V-NEXT:    lw s4, 31(a1)
+; CHECK-UNALIGNED-RV32-V-NEXT:    lw s5, 35(a1)
+; CHECK-UNALIGNED-RV32-V-NEXT:    lw s6, 39(a1)
+; CHECK-UNALIGNED-RV32-V-NEXT:    lw s7, 43(a1)
+; CHECK-UNALIGNED-RV32-V-NEXT:    lw s8, 47(a1)
+; CHECK-UNALIGNED-RV32-V-NEXT:    lw s9, 51(a1)
+; CHECK-UNALIGNED-RV32-V-NEXT:    lw s10, 55(a1)
+; CHECK-UNALIGNED-RV32-V-NEXT:    lw a1, 59(a1)
+; CHECK-UNALIGNED-RV32-V-NEXT:    xor a6, a6, t2
+; CHECK-UNALIGNED-RV32-V-NEXT:    xor a2, a2, s1
+; CHECK-UNALIGNED-RV32-V-NEXT:    xor a0, a0, s7
+; CHECK-UNALIGNED-RV32-V-NEXT:    xor a1, t6, a1
+; CHECK-UNALIGNED-RV32-V-NEXT:    xor t2, s2, s5
+; CHECK-UNALIGNED-RV32-V-NEXT:    xor t4, t4, s9
+; CHECK-UNALIGNED-RV32-V-NEXT:    xor t6, s3, s6
+; CHECK-UNALIGNED-RV32-V-NEXT:    xor t5, t5, s10
+; CHECK-UNALIGNED-RV32-V-NEXT:    xor s0, s0, s4
+; CHECK-UNALIGNED-RV32-V-NEXT:    xor t3, t3, s8
+; CHECK-UNALIGNED-RV32-V-NEXT:    or a2, a2, t3
+; CHECK-UNALIGNED-RV32-V-NEXT:    or a6, a6, s0
+; CHECK-UNALIGNED-RV32-V-NEXT:    or a4, a4, t5
+; CHECK-UNALIGNED-RV32-V-NEXT:    or t0, t0, t6
+; CHECK-UNALIGNED-RV32-V-NEXT:    or a3, a3, t4
+; CHECK-UNALIGNED-RV32-V-NEXT:    or a7, a7, t2
+; CHECK-UNALIGNED-RV32-V-NEXT:    or a1, a5, a1
+; CHECK-UNALIGNED-RV32-V-NEXT:    or a0, t1, a0
+; CHECK-UNALIGNED-RV32-V-NEXT:    or a0, a0, a1
+; CHECK-UNALIGNED-RV32-V-NEXT:    or a1, a7, a3
+; CHECK-UNALIGNED-RV32-V-NEXT:    or a0, a1, a0
+; CHECK-UNALIGNED-RV32-V-NEXT:    or a1, t0, a4
+; CHECK-UNALIGNED-RV32-V-NEXT:    or a2, a6, a2
+; CHECK-UNALIGNED-RV32-V-NEXT:    or a1, a2, a1
+; CHECK-UNALIGNED-RV32-V-NEXT:    or a0, a1, a0
+; CHECK-UNALIGNED-RV32-V-NEXT:    snez a0, a0
+; CHECK-UNALIGNED-RV32-V-NEXT:    lw s0, 44(sp) # 4-byte Folded Reload
+; CHECK-UNALIGNED-RV32-V-NEXT:    lw s1, 40(sp) # 4-byte Folded Reload
+; CHECK-UNALIGNED-RV32-V-NEXT:    lw s2, 36(sp) # 4-byte Folded Reload
+; CHECK-UNALIGNED-RV32-V-NEXT:    lw s3, 32(sp) # 4-byte Folded Reload
+; CHECK-UNALIGNED-RV32-V-NEXT:    lw s4, 28(sp) # 4-byte Folded Reload
+; CHECK-UNALIGNED-RV32-V-NEXT:    lw s5, 24(sp) # 4-byte Folded Reload
+; CHECK-UNALIGNED-RV32-V-NEXT:    lw s6, 20(sp) # 4-byte Folded Reload
+; CHECK-UNALIGNED-RV32-V-NEXT:    lw s7, 16(sp) # 4-byte Folded Reload
+; CHECK-UNALIGNED-RV32-V-NEXT:    lw s8, 12(sp) # 4-byte Folded Reload
+; CHECK-UNALIGNED-RV32-V-NEXT:    lw s9, 8(sp) # 4-byte Folded Reload
+; CHECK-UNALIGNED-RV32-V-NEXT:    lw s10, 4(sp) # 4-byte Folded Reload
+; CHECK-UNALIGNED-RV32-V-NEXT:    addi sp, sp, 48
 ; CHECK-UNALIGNED-RV32-V-NEXT:    ret
 ;
 ; CHECK-UNALIGNED-RV64-V-LABEL: bcmp_size_63:
 ; CHECK-UNALIGNED-RV64-V:       # %bb.0: # %entry
-; CHECK-UNALIGNED-RV64-V-NEXT:    li a2, 32
-; CHECK-UNALIGNED-RV64-V-NEXT:    vsetvli zero, a2, e8, m2, ta, ma
-; CHECK-UNALIGNED-RV64-V-NEXT:    vle8.v v8, (a0)
-; CHECK-UNALIGNED-RV64-V-NEXT:    vle8.v v10, (a1)
-; CHECK-UNALIGNED-RV64-V-NEXT:    addi a0, a0, 31
-; CHECK-UNALIGNED-RV64-V-NEXT:    addi a1, a1, 31
-; CHECK-UNALIGNED-RV64-V-NEXT:    vle8.v v12, (a0)
-; CHECK-UNALIGNED-RV64-V-NEXT:    vle8.v v14, (a1)
-; CHECK-UNALIGNED-RV64-V-NEXT:    vmsne.vv v16, v8, v10
-; CHECK-UNALIGNED-RV64-V-NEXT:    vmsne.vv v8, v12, v14
-; CHECK-UNALIGNED-RV64-V-NEXT:    vmnor.mm v8, v16, v8
-; CHECK-UNALIGNED-RV64-V-NEXT:    vcpop.m a0, v8
-; CHECK-UNALIGNED-RV64-V-NEXT:    seqz a0, a0
+; CHECK-UNALIGNED-RV64-V-NEXT:    ld a2, 0(a0)
+; CHECK-UNALIGNED-RV64-V-NEXT:    ld a3, 8(a0)
+; CHECK-UNALIGNED-RV64-V-NEXT:    ld a4, 16(a0)
+; CHECK-UNALIGNED-RV64-V-NEXT:    ld a5, 24(a0)
+; CHECK-UNALIGNED-RV64-V-NEXT:    ld a6, 8(a1)
+; CHECK-UNALIGNED-RV64-V-NEXT:    ld a7, 24(a1)
+; CHECK-UNALIGNED-RV64-V-NEXT:    ld t0, 16(a1)
+; CHECK-UNALIGNED-RV64-V-NEXT:    ld t1, 0(a1)
+; CHECK-UNALIGNED-RV64-V-NEXT:    xor a3, a3, a6
+; CHECK-UNALIGNED-RV64-V-NEXT:    xor a5, a5, a7
+; CHECK-UNALIGNED-RV64-V-NEXT:    ld a6, 31(a0)
+; CHECK-UNALIGNED-RV64-V-NEXT:    ld a7, 39(a0)
+; CHECK-UNALIGNED-RV64-V-NEXT:    ld t2, 47(a0)
+; CHECK-UNALIGNED-RV64-V-NEXT:    ld a0, 55(a0)
+; CHECK-UNALIGNED-RV64-V-NEXT:    ld t3, 31(a1)
+; CHECK-UNALIGNED-RV64-V-NEXT:    ld t4, 39(a1)
+; CHECK-UNALIGNED-RV64-V-NEXT:    ld t5, 47(a1)
+; CHECK-UNALIGNED-RV64-V-NEXT:    ld a1, 55(a1)
+; CHECK-UNALIGNED-RV64-V-NEXT:    xor a2, a2, t1
+; CHECK-UNALIGNED-RV64-V-NEXT:    xor a4, a4, t0
+; CHECK-UNALIGNED-RV64-V-NEXT:    xor a7, a7, t4
+; CHECK-UNALIGNED-RV64-V-NEXT:    xor a0, a0, a1
+; CHECK-UNALIGNED-RV64-V-NEXT:    xor a1, a6, t3
+; CHECK-UNALIGNED-RV64-V-NEXT:    xor a6, t2, t5
+; CHECK-UNALIGNED-RV64-V-NEXT:    or a4, a4, a6
+; CHECK-UNALIGNED-RV64-V-NEXT:    or a1, a2, a1
+; CHECK-UNALIGNED-RV64-V-NEXT:    or a0, a5, a0
+; CHECK-UNALIGNED-RV64-V-NEXT:    or a2, a3, a7
+; CHECK-UNALIGNED-RV64-V-NEXT:    or a0, a2, a0
+; CHECK-UNALIGNED-RV64-V-NEXT:    or a1, a1, a4
+; CHECK-UNALIGNED-RV64-V-NEXT:    or a0, a1, a0
+; CHECK-UNALIGNED-RV64-V-NEXT:    snez a0, a0
 ; CHECK-UNALIGNED-RV64-V-NEXT:    ret
 entry:
   %bcmp = call signext i32 @bcmp(ptr %s1, ptr %s2, iXLen 63)
@@ -7918,1520 +8013,1512 @@ define i32 @bcmp_size_127(ptr %s1, ptr %s2) nounwind {
 ;
 ; CHECK-ALIGNED-RV32-V-LABEL: bcmp_size_127:
 ; CHECK-ALIGNED-RV32-V:       # %bb.0: # %entry
-; CHECK-ALIGNED-RV32-V-NEXT:    addi sp, sp, -512
-; CHECK-ALIGNED-RV32-V-NEXT:    sw ra, 508(sp) # 4-byte Folded Spill
-; CHECK-ALIGNED-RV32-V-NEXT:    sw s0, 504(sp) # 4-byte Folded Spill
-; CHECK-ALIGNED-RV32-V-NEXT:    sw s2, 500(sp) # 4-byte Folded Spill
-; CHECK-ALIGNED-RV32-V-NEXT:    sw s3, 496(sp) # 4-byte Folded Spill
-; CHECK-ALIGNED-RV32-V-NEXT:    sw s4, 492(sp) # 4-byte Folded Spill
-; CHECK-ALIGNED-RV32-V-NEXT:    sw s5, 488(sp) # 4-byte Folded Spill
-; CHECK-ALIGNED-RV32-V-NEXT:    sw s6, 484(sp) # 4-byte Folded Spill
-; CHECK-ALIGNED-RV32-V-NEXT:    sw s7, 480(sp) # 4-byte Folded Spill
-; CHECK-ALIGNED-RV32-V-NEXT:    sw s8, 476(sp) # 4-byte Folded Spill
-; CHECK-ALIGNED-RV32-V-NEXT:    sw s9, 472(sp) # 4-byte Folded Spill
-; CHECK-ALIGNED-RV32-V-NEXT:    sw s10, 468(sp) # 4-byte Folded Spill
-; CHECK-ALIGNED-RV32-V-NEXT:    sw s11, 464(sp) # 4-byte Folded Spill
-; CHECK-ALIGNED-RV32-V-NEXT:    addi s0, sp, 512
-; CHECK-ALIGNED-RV32-V-NEXT:    csrr a2, vlenb
-; CHECK-ALIGNED-RV32-V-NEXT:    slli a2, a2, 2
-; CHECK-ALIGNED-RV32-V-NEXT:    mv a3, a2
-; CHECK-ALIGNED-RV32-V-NEXT:    slli a2, a2, 2
-; CHECK-ALIGNED-RV32-V-NEXT:    add a2, a2, a3
-; CHECK-ALIGNED-RV32-V-NEXT:    sub sp, sp, a2
-; CHECK-ALIGNED-RV32-V-NEXT:    andi sp, sp, -64
-; CHECK-ALIGNED-RV32-V-NEXT:    li a2, 64
-; CHECK-ALIGNED-RV32-V-NEXT:    vsetvli zero, a2, e8, m4, ta, ma
-; CHECK-ALIGNED-RV32-V-NEXT:    vle8.v v8, (a0)
-; CHECK-ALIGNED-RV32-V-NEXT:    csrr a2, vlenb
-; CHECK-ALIGNED-RV32-V-NEXT:    slli a2, a2, 4
-; CHECK-ALIGNED-RV32-V-NEXT:    add a2, sp, a2
-; CHECK-ALIGNED-RV32-V-NEXT:    addi a2, a2, 464
-; CHECK-ALIGNED-RV32-V-NEXT:    vs4r.v v8, (a2) # Unknown-size Folded Spill
-; CHECK-ALIGNED-RV32-V-NEXT:    vle8.v v8, (a1)
-; CHECK-ALIGNED-RV32-V-NEXT:    csrr a2, vlenb
-; CHECK-ALIGNED-RV32-V-NEXT:    slli a2, a2, 2
-; CHECK-ALIGNED-RV32-V-NEXT:    mv a3, a2
-; CHECK-ALIGNED-RV32-V-NEXT:    slli a2, a2, 1
-; CHECK-ALIGNED-RV32-V-NEXT:    add a2, a2, a3
-; CHECK-ALIGNED-RV32-V-NEXT:    add a2, sp, a2
-; CHECK-ALIGNED-RV32-V-NEXT:    addi a2, a2, 464
-; CHECK-ALIGNED-RV32-V-NEXT:    vs4r.v v8, (a2) # Unknown-size Folded Spill
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu a2, 64(a0)
-; CHECK-ALIGNED-RV32-V-NEXT:    sw a2, 60(sp) # 4-byte Folded Spill
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu a2, 65(a0)
-; CHECK-ALIGNED-RV32-V-NEXT:    sw a2, 56(sp) # 4-byte Folded Spill
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu a2, 66(a0)
-; CHECK-ALIGNED-RV32-V-NEXT:    sw a2, 52(sp) # 4-byte Folded Spill
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu a2, 67(a0)
-; CHECK-ALIGNED-RV32-V-NEXT:    sw a2, 48(sp) # 4-byte Folded Spill
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu a2, 68(a0)
-; CHECK-ALIGNED-RV32-V-NEXT:    sw a2, 44(sp) # 4-byte Folded Spill
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu a2, 69(a0)
-; CHECK-ALIGNED-RV32-V-NEXT:    sw a2, 40(sp) # 4-byte Folded Spill
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu a2, 70(a0)
-; CHECK-ALIGNED-RV32-V-NEXT:    sw a2, 36(sp) # 4-byte Folded Spill
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu a2, 71(a0)
-; CHECK-ALIGNED-RV32-V-NEXT:    sw a2, 32(sp) # 4-byte Folded Spill
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu a2, 72(a0)
-; CHECK-ALIGNED-RV32-V-NEXT:    sw a2, 28(sp) # 4-byte Folded Spill
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu s10, 73(a0)
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu s11, 74(a0)
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu ra, 75(a0)
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu s5, 76(a0)
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu s6, 77(a0)
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu s7, 78(a0)
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu s8, 79(a0)
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu t6, 80(a0)
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu s2, 81(a0)
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu s3, 82(a0)
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu s4, 83(a0)
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu t2, 84(a0)
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu t3, 85(a0)
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu t4, 86(a0)
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu t5, 87(a0)
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu a6, 88(a0)
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu a7, 89(a0)
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu t0, 90(a0)
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu t1, 91(a0)
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu a2, 92(a0)
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu a3, 93(a0)
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu a4, 94(a0)
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu a5, 95(a0)
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu s9, 64(a1)
-; CHECK-ALIGNED-RV32-V-NEXT:    sw s9, 188(sp) # 4-byte Folded Spill
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu s9, 65(a1)
-; CHECK-ALIGNED-RV32-V-NEXT:    sw s9, 180(sp) # 4-byte Folded Spill
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu s9, 66(a1)
-; CHECK-ALIGNED-RV32-V-NEXT:    sw s9, 184(sp) # 4-byte Folded Spill
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu s9, 67(a1)
-; CHECK-ALIGNED-RV32-V-NEXT:    sw s9, 172(sp) # 4-byte Folded Spill
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu s9, 68(a1)
-; CHECK-ALIGNED-RV32-V-NEXT:    sw s9, 176(sp) # 4-byte Folded Spill
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu s9, 69(a1)
-; CHECK-ALIGNED-RV32-V-NEXT:    sw s9, 164(sp) # 4-byte Folded Spill
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu s9, 70(a1)
-; CHECK-ALIGNED-RV32-V-NEXT:    sw s9, 168(sp) # 4-byte Folded Spill
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu s9, 71(a1)
-; CHECK-ALIGNED-RV32-V-NEXT:    sw s9, 156(sp) # 4-byte Folded Spill
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu s9, 72(a1)
-; CHECK-ALIGNED-RV32-V-NEXT:    sw s9, 160(sp) # 4-byte Folded Spill
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu s9, 73(a1)
-; CHECK-ALIGNED-RV32-V-NEXT:    sw s9, 148(sp) # 4-byte Folded Spill
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu s9, 74(a1)
-; CHECK-ALIGNED-RV32-V-NEXT:    sw s9, 152(sp) # 4-byte Folded Spill
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu s9, 75(a1)
-; CHECK-ALIGNED-RV32-V-NEXT:    sw s9, 140(sp) # 4-byte Folded Spill
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu s9, 76(a1)
-; CHECK-ALIGNED-RV32-V-NEXT:    sw s9, 144(sp) # 4-byte Folded Spill
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu s9, 77(a1)
-; CHECK-ALIGNED-RV32-V-NEXT:    sw s9, 132(sp) # 4-byte Folded Spill
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu s9, 78(a1)
-; CHECK-ALIGNED-RV32-V-NEXT:    sw s9, 136(sp) # 4-byte Folded Spill
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu s9, 79(a1)
-; CHECK-ALIGNED-RV32-V-NEXT:    sw s9, 124(sp) # 4-byte Folded Spill
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu s9, 80(a1)
-; CHECK-ALIGNED-RV32-V-NEXT:    sw s9, 128(sp) # 4-byte Folded Spill
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu s9, 81(a1)
-; CHECK-ALIGNED-RV32-V-NEXT:    sw s9, 116(sp) # 4-byte Folded Spill
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu s9, 82(a1)
-; CHECK-ALIGNED-RV32-V-NEXT:    sw s9, 120(sp) # 4-byte Folded Spill
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu s9, 83(a1)
-; CHECK-ALIGNED-RV32-V-NEXT:    sw s9, 108(sp) # 4-byte Folded Spill
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu s9, 84(a1)
-; CHECK-ALIGNED-RV32-V-NEXT:    sw s9, 96(sp) # 4-byte Folded Spill
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu s9, 85(a1)
-; CHECK-ALIGNED-RV32-V-NEXT:    sw s9, 112(sp) # 4-byte Folded Spill
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu s9, 86(a1)
-; CHECK-ALIGNED-RV32-V-NEXT:    sw s9, 100(sp) # 4-byte Folded Spill
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu s9, 87(a1)
-; CHECK-ALIGNED-RV32-V-NEXT:    sw s9, 104(sp) # 4-byte Folded Spill
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu s9, 88(a1)
-; CHECK-ALIGNED-RV32-V-NEXT:    sw s9, 88(sp) # 4-byte Folded Spill
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu s9, 89(a1)
-; CHECK-ALIGNED-RV32-V-NEXT:    sw s9, 92(sp) # 4-byte Folded Spill
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu s9, 90(a1)
-; CHECK-ALIGNED-RV32-V-NEXT:    sw s9, 80(sp) # 4-byte Folded Spill
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu s9, 91(a1)
+; CHECK-ALIGNED-RV32-V-NEXT:    addi sp, sp, -128
+; CHECK-ALIGNED-RV32-V-NEXT:    sw ra, 124(sp) # 4-byte Folded Spill
+; CHECK-ALIGNED-RV32-V-NEXT:    sw s0, 120(sp) # 4-byte Folded Spill
+; CHECK-ALIGNED-RV32-V-NEXT:    sw s1, 116(sp) # 4-byte Folded Spill
+; CHECK-ALIGNED-RV32-V-NEXT:    sw s2, 112(sp) # 4-byte Folded Spill
+; CHECK-ALIGNED-RV32-V-NEXT:    sw s3, 108(sp) # 4-byte Folded Spill
+; CHECK-ALIGNED-RV32-V-NEXT:    sw s4, 104(sp) # 4-byte Folded Spill
+; CHECK-ALIGNED-RV32-V-NEXT:    sw s5, 100(sp) # 4-byte Folded Spill
+; CHECK-ALIGNED-RV32-V-NEXT:    sw s6, 96(sp) # 4-byte Folded Spill
+; CHECK-ALIGNED-RV32-V-NEXT:    sw s7, 92(sp) # 4-byte Folded Spill
+; CHECK-ALIGNED-RV32-V-NEXT:    sw s8, 88(sp) # 4-byte Folded Spill
 ; CHECK-ALIGNED-RV32-V-NEXT:    sw s9, 84(sp) # 4-byte Folded Spill
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu s9, 92(a1)
-; CHECK-ALIGNED-RV32-V-NEXT:    sw s9, 72(sp) # 4-byte Folded Spill
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu s9, 93(a1)
-; CHECK-ALIGNED-RV32-V-NEXT:    sw s9, 76(sp) # 4-byte Folded Spill
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu s9, 94(a1)
-; CHECK-ALIGNED-RV32-V-NEXT:    sw s9, 64(sp) # 4-byte Folded Spill
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu s9, 95(a1)
-; CHECK-ALIGNED-RV32-V-NEXT:    sw s9, 68(sp) # 4-byte Folded Spill
-; CHECK-ALIGNED-RV32-V-NEXT:    sb a2, 284(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    sb a3, 285(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    sb a4, 286(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    sb a5, 287(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    sb a6, 280(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    sb a7, 281(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    sb t0, 282(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    sb t1, 283(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    sb t2, 276(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    sb t3, 277(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    sb t4, 278(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    sb t5, 279(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    sb t6, 272(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    sb s2, 273(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    sb s3, 274(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    sb s4, 275(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    sb s5, 268(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    sb s6, 269(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    sb s7, 270(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    sb s8, 271(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    lw a2, 28(sp) # 4-byte Folded Reload
-; CHECK-ALIGNED-RV32-V-NEXT:    sb a2, 264(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    sb s10, 265(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    sb s11, 266(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    sb ra, 267(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    lw a2, 44(sp) # 4-byte Folded Reload
-; CHECK-ALIGNED-RV32-V-NEXT:    sb a2, 260(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    lw a2, 40(sp) # 4-byte Folded Reload
-; CHECK-ALIGNED-RV32-V-NEXT:    sb a2, 261(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    lw a2, 36(sp) # 4-byte Folded Reload
-; CHECK-ALIGNED-RV32-V-NEXT:    sb a2, 262(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    lw a2, 32(sp) # 4-byte Folded Reload
-; CHECK-ALIGNED-RV32-V-NEXT:    sb a2, 263(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    lw a2, 60(sp) # 4-byte Folded Reload
-; CHECK-ALIGNED-RV32-V-NEXT:    sb a2, 256(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    lw a2, 56(sp) # 4-byte Folded Reload
-; CHECK-ALIGNED-RV32-V-NEXT:    sb a2, 257(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    lw a2, 52(sp) # 4-byte Folded Reload
-; CHECK-ALIGNED-RV32-V-NEXT:    sb a2, 258(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    lw a2, 48(sp) # 4-byte Folded Reload
-; CHECK-ALIGNED-RV32-V-NEXT:    sb a2, 259(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    sb zero, 316(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    sb zero, 317(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    sb zero, 318(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    sb zero, 319(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    sb zero, 312(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    sb zero, 313(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    sb zero, 314(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    sb zero, 315(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    sb zero, 308(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    sb zero, 309(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    sb zero, 310(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    sb zero, 311(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    sb zero, 304(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    sb zero, 305(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    sb zero, 306(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    sb zero, 307(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    sb zero, 300(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    sb zero, 301(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    sb zero, 302(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    sb zero, 303(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    sb zero, 296(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    sb zero, 297(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    sb zero, 298(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    sb zero, 299(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    sb zero, 292(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    sb zero, 293(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    sb zero, 294(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    sb zero, 295(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    sb zero, 288(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    sb zero, 289(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    sb zero, 290(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    sb zero, 291(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    addi a2, sp, 256
-; CHECK-ALIGNED-RV32-V-NEXT:    vle8.v v8, (a2)
-; CHECK-ALIGNED-RV32-V-NEXT:    csrr a2, vlenb
-; CHECK-ALIGNED-RV32-V-NEXT:    slli a2, a2, 3
-; CHECK-ALIGNED-RV32-V-NEXT:    add a2, sp, a2
-; CHECK-ALIGNED-RV32-V-NEXT:    addi a2, a2, 464
-; CHECK-ALIGNED-RV32-V-NEXT:    vs4r.v v8, (a2) # Unknown-size Folded Spill
-; CHECK-ALIGNED-RV32-V-NEXT:    lw a2, 72(sp) # 4-byte Folded Reload
-; CHECK-ALIGNED-RV32-V-NEXT:    sb a2, 412(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    lw a2, 76(sp) # 4-byte Folded Reload
-; CHECK-ALIGNED-RV32-V-NEXT:    sb a2, 413(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    lw a2, 64(sp) # 4-byte Folded Reload
-; CHECK-ALIGNED-RV32-V-NEXT:    sb a2, 414(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    lw a2, 68(sp) # 4-byte Folded Reload
-; CHECK-ALIGNED-RV32-V-NEXT:    sb a2, 415(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    lw a2, 88(sp) # 4-byte Folded Reload
-; CHECK-ALIGNED-RV32-V-NEXT:    sb a2, 408(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    lw a2, 92(sp) # 4-byte Folded Reload
-; CHECK-ALIGNED-RV32-V-NEXT:    sb a2, 409(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    lw a2, 80(sp) # 4-byte Folded Reload
-; CHECK-ALIGNED-RV32-V-NEXT:    sb a2, 410(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    lw a2, 84(sp) # 4-byte Folded Reload
-; CHECK-ALIGNED-RV32-V-NEXT:    sb a2, 411(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    lw a2, 96(sp) # 4-byte Folded Reload
-; CHECK-ALIGNED-RV32-V-NEXT:    sb a2, 404(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    sb zero, 444(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    sb zero, 445(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    sb zero, 446(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    sb zero, 447(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    sb zero, 440(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    sb zero, 441(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    sb zero, 442(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    sb zero, 443(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    sb zero, 436(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    sb zero, 437(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    sb zero, 438(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    sb zero, 439(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    sb zero, 432(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    sb zero, 433(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    sb zero, 434(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    sb zero, 435(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    sb zero, 428(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    sb zero, 429(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    sb zero, 430(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    sb zero, 431(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    sb zero, 424(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    sb zero, 425(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    sb zero, 426(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    sb zero, 427(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    sb zero, 420(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    sb zero, 421(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    sb zero, 422(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    sb zero, 423(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    sb zero, 416(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    sb zero, 417(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    sb zero, 418(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    sb zero, 419(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    lw a2, 112(sp) # 4-byte Folded Reload
-; CHECK-ALIGNED-RV32-V-NEXT:    sb a2, 405(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    lw a2, 100(sp) # 4-byte Folded Reload
-; CHECK-ALIGNED-RV32-V-NEXT:    sb a2, 406(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    lw a2, 104(sp) # 4-byte Folded Reload
-; CHECK-ALIGNED-RV32-V-NEXT:    sb a2, 407(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    lw a2, 128(sp) # 4-byte Folded Reload
-; CHECK-ALIGNED-RV32-V-NEXT:    sb a2, 400(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    lw a2, 116(sp) # 4-byte Folded Reload
-; CHECK-ALIGNED-RV32-V-NEXT:    sb a2, 401(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    lw a2, 120(sp) # 4-byte Folded Reload
-; CHECK-ALIGNED-RV32-V-NEXT:    sb a2, 402(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    lw a2, 108(sp) # 4-byte Folded Reload
-; CHECK-ALIGNED-RV32-V-NEXT:    sb a2, 403(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    lw a2, 144(sp) # 4-byte Folded Reload
-; CHECK-ALIGNED-RV32-V-NEXT:    sb a2, 396(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    lw a2, 132(sp) # 4-byte Folded Reload
-; CHECK-ALIGNED-RV32-V-NEXT:    sb a2, 397(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    lw a2, 136(sp) # 4-byte Folded Reload
-; CHECK-ALIGNED-RV32-V-NEXT:    sb a2, 398(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    lw a2, 124(sp) # 4-byte Folded Reload
-; CHECK-ALIGNED-RV32-V-NEXT:    sb a2, 399(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    lw a2, 160(sp) # 4-byte Folded Reload
-; CHECK-ALIGNED-RV32-V-NEXT:    sb a2, 392(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    lw a2, 148(sp) # 4-byte Folded Reload
-; CHECK-ALIGNED-RV32-V-NEXT:    sb a2, 393(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    lw a2, 152(sp) # 4-byte Folded Reload
-; CHECK-ALIGNED-RV32-V-NEXT:    sb a2, 394(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    lw a2, 140(sp) # 4-byte Folded Reload
-; CHECK-ALIGNED-RV32-V-NEXT:    sb a2, 395(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    lw a2, 176(sp) # 4-byte Folded Reload
-; CHECK-ALIGNED-RV32-V-NEXT:    sb a2, 388(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    lw a2, 164(sp) # 4-byte Folded Reload
-; CHECK-ALIGNED-RV32-V-NEXT:    sb a2, 389(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    lw a2, 168(sp) # 4-byte Folded Reload
-; CHECK-ALIGNED-RV32-V-NEXT:    sb a2, 390(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    lw a2, 156(sp) # 4-byte Folded Reload
-; CHECK-ALIGNED-RV32-V-NEXT:    sb a2, 391(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    lw a2, 188(sp) # 4-byte Folded Reload
-; CHECK-ALIGNED-RV32-V-NEXT:    sb a2, 384(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    lw a2, 180(sp) # 4-byte Folded Reload
-; CHECK-ALIGNED-RV32-V-NEXT:    sb a2, 385(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    lw a2, 184(sp) # 4-byte Folded Reload
-; CHECK-ALIGNED-RV32-V-NEXT:    sb a2, 386(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    lw a2, 172(sp) # 4-byte Folded Reload
-; CHECK-ALIGNED-RV32-V-NEXT:    sb a2, 387(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    addi a2, sp, 384
-; CHECK-ALIGNED-RV32-V-NEXT:    vle8.v v8, (a2)
-; CHECK-ALIGNED-RV32-V-NEXT:    csrr a2, vlenb
-; CHECK-ALIGNED-RV32-V-NEXT:    slli a2, a2, 2
-; CHECK-ALIGNED-RV32-V-NEXT:    add a2, sp, a2
-; CHECK-ALIGNED-RV32-V-NEXT:    addi a2, a2, 464
-; CHECK-ALIGNED-RV32-V-NEXT:    vs4r.v v8, (a2) # Unknown-size Folded Spill
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu s6, 96(a0)
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu s7, 97(a0)
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu s8, 98(a0)
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu s5, 99(a0)
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu s9, 100(a0)
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu s10, 101(a0)
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu s11, 102(a0)
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu ra, 103(a0)
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu a6, 104(a0)
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu a7, 105(a0)
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu t0, 106(a0)
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu t1, 107(a0)
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu a2, 108(a0)
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu a3, 109(a0)
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu a4, 110(a0)
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu a5, 111(a0)
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu t2, 96(a1)
-; CHECK-ALIGNED-RV32-V-NEXT:    sw t2, 188(sp) # 4-byte Folded Spill
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu t2, 97(a1)
-; CHECK-ALIGNED-RV32-V-NEXT:    sw t2, 184(sp) # 4-byte Folded Spill
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu t2, 98(a1)
-; CHECK-ALIGNED-RV32-V-NEXT:    sw t2, 180(sp) # 4-byte Folded Spill
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu t2, 99(a1)
-; CHECK-ALIGNED-RV32-V-NEXT:    sw t2, 176(sp) # 4-byte Folded Spill
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu t2, 100(a1)
-; CHECK-ALIGNED-RV32-V-NEXT:    sw t2, 160(sp) # 4-byte Folded Spill
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu t2, 101(a1)
-; CHECK-ALIGNED-RV32-V-NEXT:    sw t2, 172(sp) # 4-byte Folded Spill
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu t2, 102(a1)
-; CHECK-ALIGNED-RV32-V-NEXT:    sw t2, 168(sp) # 4-byte Folded Spill
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu t2, 103(a1)
-; CHECK-ALIGNED-RV32-V-NEXT:    sw t2, 164(sp) # 4-byte Folded Spill
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu t3, 104(a1)
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu t4, 105(a1)
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu t5, 106(a1)
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu t6, 107(a1)
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu t2, 108(a1)
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu s2, 109(a1)
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu s3, 110(a1)
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu s4, 111(a1)
-; CHECK-ALIGNED-RV32-V-NEXT:    sb a2, 204(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    sb a3, 205(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    sb a4, 206(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    sb a5, 207(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    sb a6, 200(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    sb a7, 201(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    sb t0, 202(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    sb t1, 203(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    sb s9, 196(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    sb s10, 197(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    sb s11, 198(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    sb ra, 199(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    sb s6, 192(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    sb s7, 193(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    sb s8, 194(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    sb zero, 252(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    sb zero, 253(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    sb zero, 254(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    sb zero, 255(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    sb zero, 248(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    sb zero, 249(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    sb zero, 250(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    sb zero, 251(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    sb zero, 244(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    sb zero, 245(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    sb zero, 246(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    sb zero, 247(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    sb zero, 240(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    sb zero, 241(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    sb zero, 242(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    sb zero, 243(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    sb zero, 236(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    sb zero, 237(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    sb zero, 238(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    sb zero, 239(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    sb zero, 232(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    sb zero, 233(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    sb zero, 234(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    sb zero, 235(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    sb zero, 228(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    sb zero, 229(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    sb zero, 230(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    sb zero, 231(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    sb zero, 224(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    sb zero, 225(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    sb zero, 226(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    sb zero, 227(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    sb zero, 220(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    sb zero, 221(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    sb zero, 222(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    sb zero, 223(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    sb zero, 216(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    sb zero, 217(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    sb zero, 218(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    sb zero, 219(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    sb zero, 212(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    sb zero, 213(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    sb zero, 214(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    sb zero, 215(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    sb zero, 208(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    sb zero, 209(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    sb zero, 210(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    sb zero, 211(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    sb s5, 195(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    addi a2, sp, 192
-; CHECK-ALIGNED-RV32-V-NEXT:    vle8.v v8, (a2)
-; CHECK-ALIGNED-RV32-V-NEXT:    addi a2, sp, 464
-; CHECK-ALIGNED-RV32-V-NEXT:    vs4r.v v8, (a2) # Unknown-size Folded Spill
-; CHECK-ALIGNED-RV32-V-NEXT:    sb t2, 332(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    sb s2, 333(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    sb s3, 334(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    sb s4, 335(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    sb t3, 328(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    sb t4, 329(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    sb t5, 330(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    sb t6, 331(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    lw a2, 160(sp) # 4-byte Folded Reload
-; CHECK-ALIGNED-RV32-V-NEXT:    sb a2, 324(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    sb zero, 380(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    sb zero, 381(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    sb zero, 382(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    sb zero, 383(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    sb zero, 376(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    sb zero, 377(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    sb zero, 378(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    sb zero, 379(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    sb zero, 372(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    sb zero, 373(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    sb zero, 374(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    sb zero, 375(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    sb zero, 368(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    sb zero, 369(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    sb zero, 370(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    sb zero, 371(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    sb zero, 364(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    sb zero, 365(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    sb zero, 366(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    sb zero, 367(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    sb zero, 360(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    sb zero, 361(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    sb zero, 362(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    sb zero, 363(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    sb zero, 356(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    sb zero, 357(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    sb zero, 358(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    sb zero, 359(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    sb zero, 352(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    sb zero, 353(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    sb zero, 354(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    sb zero, 355(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    sb zero, 348(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    sb zero, 349(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    sb zero, 350(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    sb zero, 351(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    sb zero, 344(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    sb zero, 345(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    sb zero, 346(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    sb zero, 347(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    sb zero, 340(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    sb zero, 341(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    sb zero, 342(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    sb zero, 343(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    sb zero, 336(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    sb zero, 337(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    sb zero, 338(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    sb zero, 339(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    lw a2, 172(sp) # 4-byte Folded Reload
-; CHECK-ALIGNED-RV32-V-NEXT:    sb a2, 325(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    lw a2, 168(sp) # 4-byte Folded Reload
-; CHECK-ALIGNED-RV32-V-NEXT:    sb a2, 326(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    lw a2, 164(sp) # 4-byte Folded Reload
-; CHECK-ALIGNED-RV32-V-NEXT:    sb a2, 327(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    lw a2, 188(sp) # 4-byte Folded Reload
-; CHECK-ALIGNED-RV32-V-NEXT:    sb a2, 320(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    lw a2, 184(sp) # 4-byte Folded Reload
-; CHECK-ALIGNED-RV32-V-NEXT:    sb a2, 321(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    lw a2, 180(sp) # 4-byte Folded Reload
-; CHECK-ALIGNED-RV32-V-NEXT:    sb a2, 322(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    lw a2, 176(sp) # 4-byte Folded Reload
-; CHECK-ALIGNED-RV32-V-NEXT:    sb a2, 323(sp)
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu a2, 116(a0)
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu a3, 117(a0)
-; CHECK-ALIGNED-RV32-V-NEXT:    vmv.v.i v0, 0
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu a4, 118(a0)
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu a5, 119(a0)
-; CHECK-ALIGNED-RV32-V-NEXT:    slli a3, a3, 8
-; CHECK-ALIGNED-RV32-V-NEXT:    or a2, a3, a2
+; CHECK-ALIGNED-RV32-V-NEXT:    sw s10, 80(sp) # 4-byte Folded Spill
+; CHECK-ALIGNED-RV32-V-NEXT:    sw s11, 76(sp) # 4-byte Folded Spill
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a2, 17(a0)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a3, 16(a0)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a4, 18(a0)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a5, 19(a0)
+; CHECK-ALIGNED-RV32-V-NEXT:    slli a2, a2, 8
+; CHECK-ALIGNED-RV32-V-NEXT:    or a2, a2, a3
 ; CHECK-ALIGNED-RV32-V-NEXT:    slli a4, a4, 16
-; CHECK-ALIGNED-RV32-V-NEXT:    slli a3, a5, 24
-; CHECK-ALIGNED-RV32-V-NEXT:    or a3, a3, a4
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu a4, 116(a1)
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu a6, 117(a1)
+; CHECK-ALIGNED-RV32-V-NEXT:    slli a5, a5, 24
+; CHECK-ALIGNED-RV32-V-NEXT:    or a4, a5, a4
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a3, 24(a0)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a5, 25(a0)
+; CHECK-ALIGNED-RV32-V-NEXT:    or a2, a4, a2
+; CHECK-ALIGNED-RV32-V-NEXT:    sw a2, 36(sp) # 4-byte Folded Spill
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a2, 26(a0)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a4, 27(a0)
+; CHECK-ALIGNED-RV32-V-NEXT:    slli a5, a5, 8
+; CHECK-ALIGNED-RV32-V-NEXT:    or a3, a5, a3
+; CHECK-ALIGNED-RV32-V-NEXT:    slli a2, a2, 16
+; CHECK-ALIGNED-RV32-V-NEXT:    slli a4, a4, 24
+; CHECK-ALIGNED-RV32-V-NEXT:    or a2, a4, a2
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a4, 20(a0)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a5, 21(a0)
+; CHECK-ALIGNED-RV32-V-NEXT:    or a2, a2, a3
+; CHECK-ALIGNED-RV32-V-NEXT:    sw a2, 32(sp) # 4-byte Folded Spill
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a2, 22(a0)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a3, 23(a0)
+; CHECK-ALIGNED-RV32-V-NEXT:    slli a5, a5, 8
+; CHECK-ALIGNED-RV32-V-NEXT:    or a4, a5, a4
+; CHECK-ALIGNED-RV32-V-NEXT:    slli a2, a2, 16
+; CHECK-ALIGNED-RV32-V-NEXT:    slli a3, a3, 24
 ; CHECK-ALIGNED-RV32-V-NEXT:    or a2, a3, a2
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu a7, 118(a1)
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu t0, 119(a1)
-; CHECK-ALIGNED-RV32-V-NEXT:    slli a6, a6, 8
-; CHECK-ALIGNED-RV32-V-NEXT:    or a4, a6, a4
-; CHECK-ALIGNED-RV32-V-NEXT:    slli a7, a7, 16
-; CHECK-ALIGNED-RV32-V-NEXT:    slli a6, t0, 24
-; CHECK-ALIGNED-RV32-V-NEXT:    or a6, a6, a7
-; CHECK-ALIGNED-RV32-V-NEXT:    slli a7, a2, 16
-; CHECK-ALIGNED-RV32-V-NEXT:    srli a7, a7, 24
-; CHECK-ALIGNED-RV32-V-NEXT:    srli a3, a3, 16
-; CHECK-ALIGNED-RV32-V-NEXT:    or a4, a6, a4
-; CHECK-ALIGNED-RV32-V-NEXT:    vmv1r.v v7, v0
-; CHECK-ALIGNED-RV32-V-NEXT:    vsetvli zero, zero, e8, m4, tu, ma
-; CHECK-ALIGNED-RV32-V-NEXT:    vmv.s.x v7, a2
-; CHECK-ALIGNED-RV32-V-NEXT:    slli a2, a4, 16
-; CHECK-ALIGNED-RV32-V-NEXT:    srli a2, a2, 24
-; CHECK-ALIGNED-RV32-V-NEXT:    srli a6, a6, 16
-; CHECK-ALIGNED-RV32-V-NEXT:    vmv.s.x v8, a7
-; CHECK-ALIGNED-RV32-V-NEXT:    vmv.s.x v9, a3
-; CHECK-ALIGNED-RV32-V-NEXT:    vmv.s.x v10, a5
-; CHECK-ALIGNED-RV32-V-NEXT:    vmv1r.v v6, v0
-; CHECK-ALIGNED-RV32-V-NEXT:    vmv.s.x v6, a4
-; CHECK-ALIGNED-RV32-V-NEXT:    vmv.s.x v11, a2
-; CHECK-ALIGNED-RV32-V-NEXT:    vmv.s.x v12, a6
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu a2, 120(a0)
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu a3, 121(a0)
-; CHECK-ALIGNED-RV32-V-NEXT:    vmv.s.x v5, t0
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu a4, 122(a0)
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu a5, 123(a0)
-; CHECK-ALIGNED-RV32-V-NEXT:    slli a3, a3, 8
-; CHECK-ALIGNED-RV32-V-NEXT:    or a3, a3, a2
-; CHECK-ALIGNED-RV32-V-NEXT:    slli a4, a4, 16
-; CHECK-ALIGNED-RV32-V-NEXT:    slli a2, a5, 24
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu a6, 120(a1)
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu a7, 121(a1)
-; CHECK-ALIGNED-RV32-V-NEXT:    or a4, a2, a4
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu t0, 122(a1)
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu a2, 123(a1)
-; CHECK-ALIGNED-RV32-V-NEXT:    slli a7, a7, 8
-; CHECK-ALIGNED-RV32-V-NEXT:    or a6, a7, a6
-; CHECK-ALIGNED-RV32-V-NEXT:    slli t0, t0, 16
-; CHECK-ALIGNED-RV32-V-NEXT:    slli a7, a2, 24
-; CHECK-ALIGNED-RV32-V-NEXT:    or a7, a7, t0
-; CHECK-ALIGNED-RV32-V-NEXT:    vsetivli zero, 2, e8, m1, tu, ma
-; CHECK-ALIGNED-RV32-V-NEXT:    vslideup.vi v7, v8, 1
-; CHECK-ALIGNED-RV32-V-NEXT:    vsetivli zero, 3, e8, m1, tu, ma
-; CHECK-ALIGNED-RV32-V-NEXT:    vslideup.vi v7, v9, 2
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a3, 28(a0)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a5, 29(a0)
+; CHECK-ALIGNED-RV32-V-NEXT:    or a2, a2, a4
+; CHECK-ALIGNED-RV32-V-NEXT:    sw a2, 28(sp) # 4-byte Folded Spill
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a2, 30(a0)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a4, 31(a0)
+; CHECK-ALIGNED-RV32-V-NEXT:    slli a5, a5, 8
+; CHECK-ALIGNED-RV32-V-NEXT:    or a3, a5, a3
+; CHECK-ALIGNED-RV32-V-NEXT:    slli a2, a2, 16
+; CHECK-ALIGNED-RV32-V-NEXT:    slli a4, a4, 24
+; CHECK-ALIGNED-RV32-V-NEXT:    or a2, a4, a2
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a4, 12(a0)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a5, 13(a0)
+; CHECK-ALIGNED-RV32-V-NEXT:    or a2, a2, a3
+; CHECK-ALIGNED-RV32-V-NEXT:    sw a2, 24(sp) # 4-byte Folded Spill
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a2, 14(a0)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a3, 15(a0)
+; CHECK-ALIGNED-RV32-V-NEXT:    slli a5, a5, 8
+; CHECK-ALIGNED-RV32-V-NEXT:    or a4, a5, a4
+; CHECK-ALIGNED-RV32-V-NEXT:    slli a2, a2, 16
+; CHECK-ALIGNED-RV32-V-NEXT:    slli a3, a3, 24
+; CHECK-ALIGNED-RV32-V-NEXT:    or a2, a3, a2
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a3, 8(a0)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a5, 9(a0)
+; CHECK-ALIGNED-RV32-V-NEXT:    or a2, a2, a4
+; CHECK-ALIGNED-RV32-V-NEXT:    sw a2, 20(sp) # 4-byte Folded Spill
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a2, 10(a0)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a4, 11(a0)
+; CHECK-ALIGNED-RV32-V-NEXT:    slli a5, a5, 8
+; CHECK-ALIGNED-RV32-V-NEXT:    or a3, a5, a3
+; CHECK-ALIGNED-RV32-V-NEXT:    slli a2, a2, 16
+; CHECK-ALIGNED-RV32-V-NEXT:    slli a4, a4, 24
+; CHECK-ALIGNED-RV32-V-NEXT:    or a2, a4, a2
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a4, 0(a0)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a5, 1(a0)
+; CHECK-ALIGNED-RV32-V-NEXT:    or a2, a2, a3
+; CHECK-ALIGNED-RV32-V-NEXT:    sw a2, 16(sp) # 4-byte Folded Spill
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a2, 2(a0)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a3, 3(a0)
+; CHECK-ALIGNED-RV32-V-NEXT:    slli a5, a5, 8
+; CHECK-ALIGNED-RV32-V-NEXT:    or a4, a5, a4
+; CHECK-ALIGNED-RV32-V-NEXT:    slli a2, a2, 16
+; CHECK-ALIGNED-RV32-V-NEXT:    slli a3, a3, 24
+; CHECK-ALIGNED-RV32-V-NEXT:    or a2, a3, a2
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a3, 4(a0)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a5, 5(a0)
+; CHECK-ALIGNED-RV32-V-NEXT:    or a2, a2, a4
+; CHECK-ALIGNED-RV32-V-NEXT:    sw a2, 12(sp) # 4-byte Folded Spill
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a2, 6(a0)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a4, 7(a0)
+; CHECK-ALIGNED-RV32-V-NEXT:    slli a5, a5, 8
+; CHECK-ALIGNED-RV32-V-NEXT:    or a3, a5, a3
+; CHECK-ALIGNED-RV32-V-NEXT:    slli a2, a2, 16
+; CHECK-ALIGNED-RV32-V-NEXT:    slli a4, a4, 24
+; CHECK-ALIGNED-RV32-V-NEXT:    or a2, a4, a2
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a4, 60(a0)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a5, 61(a0)
+; CHECK-ALIGNED-RV32-V-NEXT:    or a2, a2, a3
+; CHECK-ALIGNED-RV32-V-NEXT:    sw a2, 40(sp) # 4-byte Folded Spill
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a2, 62(a0)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a3, 63(a0)
+; CHECK-ALIGNED-RV32-V-NEXT:    slli a5, a5, 8
+; CHECK-ALIGNED-RV32-V-NEXT:    or a4, a5, a4
+; CHECK-ALIGNED-RV32-V-NEXT:    slli a2, a2, 16
+; CHECK-ALIGNED-RV32-V-NEXT:    slli a3, a3, 24
+; CHECK-ALIGNED-RV32-V-NEXT:    or a2, a3, a2
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a3, 44(a0)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a5, 45(a0)
+; CHECK-ALIGNED-RV32-V-NEXT:    or a2, a2, a4
+; CHECK-ALIGNED-RV32-V-NEXT:    sw a2, 44(sp) # 4-byte Folded Spill
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a2, 46(a0)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a4, 47(a0)
+; CHECK-ALIGNED-RV32-V-NEXT:    slli a5, a5, 8
+; CHECK-ALIGNED-RV32-V-NEXT:    or a3, a5, a3
+; CHECK-ALIGNED-RV32-V-NEXT:    slli a2, a2, 16
+; CHECK-ALIGNED-RV32-V-NEXT:    slli a4, a4, 24
+; CHECK-ALIGNED-RV32-V-NEXT:    or a2, a4, a2
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a4, 36(a0)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a5, 37(a0)
+; CHECK-ALIGNED-RV32-V-NEXT:    or s2, a2, a3
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a2, 38(a0)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a3, 39(a0)
+; CHECK-ALIGNED-RV32-V-NEXT:    slli a5, a5, 8
+; CHECK-ALIGNED-RV32-V-NEXT:    or a4, a5, a4
+; CHECK-ALIGNED-RV32-V-NEXT:    slli a2, a2, 16
+; CHECK-ALIGNED-RV32-V-NEXT:    slli a3, a3, 24
+; CHECK-ALIGNED-RV32-V-NEXT:    or a2, a3, a2
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a3, 52(a0)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a5, 53(a0)
+; CHECK-ALIGNED-RV32-V-NEXT:    or s1, a2, a4
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a2, 54(a0)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a4, 55(a0)
+; CHECK-ALIGNED-RV32-V-NEXT:    slli a5, a5, 8
+; CHECK-ALIGNED-RV32-V-NEXT:    or a3, a5, a3
+; CHECK-ALIGNED-RV32-V-NEXT:    slli a2, a2, 16
+; CHECK-ALIGNED-RV32-V-NEXT:    slli a4, a4, 24
+; CHECK-ALIGNED-RV32-V-NEXT:    or a2, a4, a2
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a4, 56(a0)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a5, 57(a0)
+; CHECK-ALIGNED-RV32-V-NEXT:    or s0, a2, a3
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a2, 58(a0)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a3, 59(a0)
+; CHECK-ALIGNED-RV32-V-NEXT:    slli a5, a5, 8
+; CHECK-ALIGNED-RV32-V-NEXT:    or a4, a5, a4
+; CHECK-ALIGNED-RV32-V-NEXT:    slli a2, a2, 16
+; CHECK-ALIGNED-RV32-V-NEXT:    slli a3, a3, 24
+; CHECK-ALIGNED-RV32-V-NEXT:    or a2, a3, a2
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a3, 40(a0)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a5, 41(a0)
+; CHECK-ALIGNED-RV32-V-NEXT:    or t6, a2, a4
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a2, 42(a0)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a4, 43(a0)
+; CHECK-ALIGNED-RV32-V-NEXT:    slli a5, a5, 8
+; CHECK-ALIGNED-RV32-V-NEXT:    or a3, a5, a3
+; CHECK-ALIGNED-RV32-V-NEXT:    slli a2, a2, 16
+; CHECK-ALIGNED-RV32-V-NEXT:    slli a4, a4, 24
+; CHECK-ALIGNED-RV32-V-NEXT:    or a2, a4, a2
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a4, 32(a0)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a5, 33(a0)
+; CHECK-ALIGNED-RV32-V-NEXT:    or t5, a2, a3
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a2, 34(a0)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a3, 35(a0)
+; CHECK-ALIGNED-RV32-V-NEXT:    slli a5, a5, 8
+; CHECK-ALIGNED-RV32-V-NEXT:    or a4, a5, a4
+; CHECK-ALIGNED-RV32-V-NEXT:    slli a2, a2, 16
+; CHECK-ALIGNED-RV32-V-NEXT:    slli a3, a3, 24
+; CHECK-ALIGNED-RV32-V-NEXT:    or a2, a3, a2
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a3, 48(a0)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu s3, 49(a0)
+; CHECK-ALIGNED-RV32-V-NEXT:    or t4, a2, a4
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a2, 50(a0)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a4, 51(a0)
+; CHECK-ALIGNED-RV32-V-NEXT:    slli s3, s3, 8
+; CHECK-ALIGNED-RV32-V-NEXT:    or a3, s3, a3
+; CHECK-ALIGNED-RV32-V-NEXT:    slli a2, a2, 16
+; CHECK-ALIGNED-RV32-V-NEXT:    slli a4, a4, 24
+; CHECK-ALIGNED-RV32-V-NEXT:    or a2, a4, a2
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu s3, 16(a1)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu s4, 17(a1)
+; CHECK-ALIGNED-RV32-V-NEXT:    or t3, a2, a3
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a2, 18(a1)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a3, 19(a1)
+; CHECK-ALIGNED-RV32-V-NEXT:    slli s4, s4, 8
+; CHECK-ALIGNED-RV32-V-NEXT:    or s3, s4, s3
+; CHECK-ALIGNED-RV32-V-NEXT:    slli a2, a2, 16
+; CHECK-ALIGNED-RV32-V-NEXT:    slli a3, a3, 24
+; CHECK-ALIGNED-RV32-V-NEXT:    or a2, a3, a2
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a3, 24(a1)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu s4, 25(a1)
+; CHECK-ALIGNED-RV32-V-NEXT:    or s3, a2, s3
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a2, 26(a1)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu s5, 27(a1)
+; CHECK-ALIGNED-RV32-V-NEXT:    slli s4, s4, 8
+; CHECK-ALIGNED-RV32-V-NEXT:    or a3, s4, a3
+; CHECK-ALIGNED-RV32-V-NEXT:    slli a2, a2, 16
+; CHECK-ALIGNED-RV32-V-NEXT:    slli s5, s5, 24
+; CHECK-ALIGNED-RV32-V-NEXT:    or a2, s5, a2
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu s5, 20(a1)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu s6, 21(a1)
+; CHECK-ALIGNED-RV32-V-NEXT:    or s4, a2, a3
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a2, 22(a1)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a3, 23(a1)
+; CHECK-ALIGNED-RV32-V-NEXT:    slli s6, s6, 8
+; CHECK-ALIGNED-RV32-V-NEXT:    or s5, s6, s5
+; CHECK-ALIGNED-RV32-V-NEXT:    slli a2, a2, 16
+; CHECK-ALIGNED-RV32-V-NEXT:    slli a3, a3, 24
+; CHECK-ALIGNED-RV32-V-NEXT:    or a2, a3, a2
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a3, 28(a1)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu s6, 29(a1)
+; CHECK-ALIGNED-RV32-V-NEXT:    or s5, a2, s5
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a2, 30(a1)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu s7, 31(a1)
+; CHECK-ALIGNED-RV32-V-NEXT:    slli s6, s6, 8
+; CHECK-ALIGNED-RV32-V-NEXT:    or a3, s6, a3
+; CHECK-ALIGNED-RV32-V-NEXT:    slli a2, a2, 16
+; CHECK-ALIGNED-RV32-V-NEXT:    slli s7, s7, 24
+; CHECK-ALIGNED-RV32-V-NEXT:    or a2, s7, a2
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu s7, 12(a1)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu s8, 13(a1)
+; CHECK-ALIGNED-RV32-V-NEXT:    or s6, a2, a3
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a2, 14(a1)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a3, 15(a1)
+; CHECK-ALIGNED-RV32-V-NEXT:    slli s8, s8, 8
+; CHECK-ALIGNED-RV32-V-NEXT:    or s7, s8, s7
+; CHECK-ALIGNED-RV32-V-NEXT:    slli a2, a2, 16
+; CHECK-ALIGNED-RV32-V-NEXT:    slli a3, a3, 24
+; CHECK-ALIGNED-RV32-V-NEXT:    or a2, a3, a2
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a3, 8(a1)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu s8, 9(a1)
+; CHECK-ALIGNED-RV32-V-NEXT:    or s7, a2, s7
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a2, 10(a1)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu s9, 11(a1)
+; CHECK-ALIGNED-RV32-V-NEXT:    slli s8, s8, 8
+; CHECK-ALIGNED-RV32-V-NEXT:    or a3, s8, a3
+; CHECK-ALIGNED-RV32-V-NEXT:    slli a2, a2, 16
+; CHECK-ALIGNED-RV32-V-NEXT:    slli s9, s9, 24
+; CHECK-ALIGNED-RV32-V-NEXT:    or a2, s9, a2
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu s9, 0(a1)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu s10, 1(a1)
+; CHECK-ALIGNED-RV32-V-NEXT:    or s8, a2, a3
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a2, 2(a1)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a3, 3(a1)
+; CHECK-ALIGNED-RV32-V-NEXT:    slli s10, s10, 8
+; CHECK-ALIGNED-RV32-V-NEXT:    or s9, s10, s9
+; CHECK-ALIGNED-RV32-V-NEXT:    slli a2, a2, 16
+; CHECK-ALIGNED-RV32-V-NEXT:    slli a3, a3, 24
+; CHECK-ALIGNED-RV32-V-NEXT:    or a2, a3, a2
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a3, 4(a1)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu s10, 5(a1)
+; CHECK-ALIGNED-RV32-V-NEXT:    or s9, a2, s9
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a2, 6(a1)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu s11, 7(a1)
+; CHECK-ALIGNED-RV32-V-NEXT:    slli s10, s10, 8
+; CHECK-ALIGNED-RV32-V-NEXT:    or a3, s10, a3
+; CHECK-ALIGNED-RV32-V-NEXT:    slli a2, a2, 16
+; CHECK-ALIGNED-RV32-V-NEXT:    slli s11, s11, 24
+; CHECK-ALIGNED-RV32-V-NEXT:    or a2, s11, a2
+; CHECK-ALIGNED-RV32-V-NEXT:    or s10, a2, a3
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a2, 61(a1)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a3, 60(a1)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu s11, 62(a1)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu ra, 63(a1)
+; CHECK-ALIGNED-RV32-V-NEXT:    slli a2, a2, 8
+; CHECK-ALIGNED-RV32-V-NEXT:    or a2, a2, a3
+; CHECK-ALIGNED-RV32-V-NEXT:    slli s11, s11, 16
+; CHECK-ALIGNED-RV32-V-NEXT:    slli ra, ra, 24
+; CHECK-ALIGNED-RV32-V-NEXT:    or a3, ra, s11
+; CHECK-ALIGNED-RV32-V-NEXT:    or s11, a3, a2
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a4, 45(a1)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a3, 44(a1)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu ra, 46(a1)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a2, 47(a1)
+; CHECK-ALIGNED-RV32-V-NEXT:    slli a4, a4, 8
 ; CHECK-ALIGNED-RV32-V-NEXT:    or a3, a4, a3
-; CHECK-ALIGNED-RV32-V-NEXT:    vmv1r.v v8, v0
-; CHECK-ALIGNED-RV32-V-NEXT:    vmv.s.x v8, a3
-; CHECK-ALIGNED-RV32-V-NEXT:    slli a3, a3, 16
-; CHECK-ALIGNED-RV32-V-NEXT:    srli a3, a3, 24
-; CHECK-ALIGNED-RV32-V-NEXT:    vmv.s.x v9, a3
-; CHECK-ALIGNED-RV32-V-NEXT:    vsetivli zero, 4, e8, m1, tu, ma
-; CHECK-ALIGNED-RV32-V-NEXT:    vslideup.vi v7, v10, 3
-; CHECK-ALIGNED-RV32-V-NEXT:    srli a4, a4, 16
-; CHECK-ALIGNED-RV32-V-NEXT:    vmv.s.x v10, a4
-; CHECK-ALIGNED-RV32-V-NEXT:    vsetivli zero, 2, e8, m1, tu, ma
-; CHECK-ALIGNED-RV32-V-NEXT:    vslideup.vi v6, v11, 1
-; CHECK-ALIGNED-RV32-V-NEXT:    vsetivli zero, 3, e8, m1, tu, ma
-; CHECK-ALIGNED-RV32-V-NEXT:    vslideup.vi v6, v12, 2
-; CHECK-ALIGNED-RV32-V-NEXT:    or a3, a7, a6
-; CHECK-ALIGNED-RV32-V-NEXT:    vmv.s.x v11, a5
-; CHECK-ALIGNED-RV32-V-NEXT:    slli a4, a3, 16
-; CHECK-ALIGNED-RV32-V-NEXT:    srli a4, a4, 24
-; CHECK-ALIGNED-RV32-V-NEXT:    srli a5, a7, 16
-; CHECK-ALIGNED-RV32-V-NEXT:    vsetivli zero, 2, e8, m1, tu, ma
-; CHECK-ALIGNED-RV32-V-NEXT:    vslideup.vi v8, v9, 1
-; CHECK-ALIGNED-RV32-V-NEXT:    vsetivli zero, 3, e8, m1, tu, ma
-; CHECK-ALIGNED-RV32-V-NEXT:    vslideup.vi v8, v10, 2
-; CHECK-ALIGNED-RV32-V-NEXT:    vsetivli zero, 4, e8, m1, tu, ma
-; CHECK-ALIGNED-RV32-V-NEXT:    vslideup.vi v8, v11, 3
-; CHECK-ALIGNED-RV32-V-NEXT:    vmv1r.v v9, v0
-; CHECK-ALIGNED-RV32-V-NEXT:    vmv.s.x v9, a3
-; CHECK-ALIGNED-RV32-V-NEXT:    vmv.s.x v10, a4
-; CHECK-ALIGNED-RV32-V-NEXT:    vsetivli zero, 2, e8, m1, tu, ma
-; CHECK-ALIGNED-RV32-V-NEXT:    vslideup.vi v9, v10, 1
-; CHECK-ALIGNED-RV32-V-NEXT:    vmv.s.x v10, a5
-; CHECK-ALIGNED-RV32-V-NEXT:    vsetivli zero, 3, e8, m1, tu, ma
-; CHECK-ALIGNED-RV32-V-NEXT:    vslideup.vi v9, v10, 2
-; CHECK-ALIGNED-RV32-V-NEXT:    vmv.s.x v10, a2
-; CHECK-ALIGNED-RV32-V-NEXT:    vsetivli zero, 4, e8, m1, tu, ma
-; CHECK-ALIGNED-RV32-V-NEXT:    vslideup.vi v9, v10, 3
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu a2, 126(a0)
-; CHECK-ALIGNED-RV32-V-NEXT:    vmv4r.v v12, v0
-; CHECK-ALIGNED-RV32-V-NEXT:    vmv4r.v v16, v0
-; CHECK-ALIGNED-RV32-V-NEXT:    vslideup.vi v6, v5, 3
-; CHECK-ALIGNED-RV32-V-NEXT:    vmv1r.v v12, v8
-; CHECK-ALIGNED-RV32-V-NEXT:    vmv1r.v v16, v9
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu a3, 126(a1)
-; CHECK-ALIGNED-RV32-V-NEXT:    vmv4r.v v8, v0
-; CHECK-ALIGNED-RV32-V-NEXT:    vmv4r.v v20, v0
-; CHECK-ALIGNED-RV32-V-NEXT:    li a4, 64
-; CHECK-ALIGNED-RV32-V-NEXT:    vsetvli zero, a4, e8, m4, ta, ma
-; CHECK-ALIGNED-RV32-V-NEXT:    vmsne.vv v5, v12, v16
-; CHECK-ALIGNED-RV32-V-NEXT:    vmv1r.v v8, v7
-; CHECK-ALIGNED-RV32-V-NEXT:    vmv1r.v v20, v6
-; CHECK-ALIGNED-RV32-V-NEXT:    vmv1r.v v12, v0
-; CHECK-ALIGNED-RV32-V-NEXT:    vsetvli zero, zero, e8, m4, tu, ma
-; CHECK-ALIGNED-RV32-V-NEXT:    vmv.s.x v12, a2
-; CHECK-ALIGNED-RV32-V-NEXT:    vmv4r.v v28, v0
-; CHECK-ALIGNED-RV32-V-NEXT:    vsetvli zero, zero, e8, m4, ta, ma
-; CHECK-ALIGNED-RV32-V-NEXT:    vmsne.vv v7, v8, v20
-; CHECK-ALIGNED-RV32-V-NEXT:    vmv1r.v v6, v0
-; CHECK-ALIGNED-RV32-V-NEXT:    vmv1r.v v28, v12
-; CHECK-ALIGNED-RV32-V-NEXT:    vmv1r.v v8, v0
-; CHECK-ALIGNED-RV32-V-NEXT:    vmv1r.v v9, v0
-; CHECK-ALIGNED-RV32-V-NEXT:    vmv1r.v v10, v0
-; CHECK-ALIGNED-RV32-V-NEXT:    vmv4r.v v24, v0
-; CHECK-ALIGNED-RV32-V-NEXT:    vmv4r.v v20, v0
-; CHECK-ALIGNED-RV32-V-NEXT:    vmv4r.v v16, v0
-; CHECK-ALIGNED-RV32-V-NEXT:    vmv4r.v v12, v0
-; CHECK-ALIGNED-RV32-V-NEXT:    vsetvli zero, zero, e8, m4, tu, ma
-; CHECK-ALIGNED-RV32-V-NEXT:    vmv.s.x v0, a3
-; CHECK-ALIGNED-RV32-V-NEXT:    vsetvli zero, zero, e8, m4, ta, ma
-; CHECK-ALIGNED-RV32-V-NEXT:    vmsne.vv v4, v28, v0
+; CHECK-ALIGNED-RV32-V-NEXT:    slli ra, ra, 16
+; CHECK-ALIGNED-RV32-V-NEXT:    slli a2, a2, 24
+; CHECK-ALIGNED-RV32-V-NEXT:    or a2, a2, ra
+; CHECK-ALIGNED-RV32-V-NEXT:    or ra, a2, a3
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a5, 37(a1)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a3, 36(a1)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a4, 38(a1)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a2, 39(a1)
+; CHECK-ALIGNED-RV32-V-NEXT:    slli a5, a5, 8
+; CHECK-ALIGNED-RV32-V-NEXT:    or a3, a5, a3
+; CHECK-ALIGNED-RV32-V-NEXT:    slli a4, a4, 16
+; CHECK-ALIGNED-RV32-V-NEXT:    slli a2, a2, 24
+; CHECK-ALIGNED-RV32-V-NEXT:    or a2, a2, a4
+; CHECK-ALIGNED-RV32-V-NEXT:    or t2, a2, a3
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a3, 53(a1)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a4, 52(a1)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a5, 54(a1)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a2, 55(a1)
+; CHECK-ALIGNED-RV32-V-NEXT:    slli a3, a3, 8
+; CHECK-ALIGNED-RV32-V-NEXT:    or a3, a3, a4
+; CHECK-ALIGNED-RV32-V-NEXT:    slli a5, a5, 16
+; CHECK-ALIGNED-RV32-V-NEXT:    slli a2, a2, 24
+; CHECK-ALIGNED-RV32-V-NEXT:    or a2, a2, a5
+; CHECK-ALIGNED-RV32-V-NEXT:    or t1, a2, a3
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a3, 57(a1)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a4, 56(a1)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a5, 58(a1)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a2, 59(a1)
+; CHECK-ALIGNED-RV32-V-NEXT:    slli a3, a3, 8
+; CHECK-ALIGNED-RV32-V-NEXT:    or a3, a3, a4
+; CHECK-ALIGNED-RV32-V-NEXT:    slli a5, a5, 16
+; CHECK-ALIGNED-RV32-V-NEXT:    slli a2, a2, 24
+; CHECK-ALIGNED-RV32-V-NEXT:    or a2, a2, a5
+; CHECK-ALIGNED-RV32-V-NEXT:    or t0, a2, a3
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a3, 41(a1)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a4, 40(a1)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a5, 42(a1)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a2, 43(a1)
+; CHECK-ALIGNED-RV32-V-NEXT:    slli a3, a3, 8
+; CHECK-ALIGNED-RV32-V-NEXT:    or a3, a3, a4
+; CHECK-ALIGNED-RV32-V-NEXT:    slli a5, a5, 16
+; CHECK-ALIGNED-RV32-V-NEXT:    slli a2, a2, 24
+; CHECK-ALIGNED-RV32-V-NEXT:    or a2, a2, a5
+; CHECK-ALIGNED-RV32-V-NEXT:    or a7, a2, a3
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a3, 33(a1)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a4, 32(a1)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a5, 34(a1)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a2, 35(a1)
+; CHECK-ALIGNED-RV32-V-NEXT:    slli a3, a3, 8
+; CHECK-ALIGNED-RV32-V-NEXT:    or a3, a3, a4
+; CHECK-ALIGNED-RV32-V-NEXT:    slli a5, a5, 16
+; CHECK-ALIGNED-RV32-V-NEXT:    slli a2, a2, 24
+; CHECK-ALIGNED-RV32-V-NEXT:    or a2, a2, a5
+; CHECK-ALIGNED-RV32-V-NEXT:    or a6, a2, a3
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a3, 49(a1)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a4, 48(a1)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a5, 50(a1)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a2, 51(a1)
+; CHECK-ALIGNED-RV32-V-NEXT:    slli a3, a3, 8
+; CHECK-ALIGNED-RV32-V-NEXT:    or a3, a3, a4
+; CHECK-ALIGNED-RV32-V-NEXT:    slli a5, a5, 16
+; CHECK-ALIGNED-RV32-V-NEXT:    slli a2, a2, 24
+; CHECK-ALIGNED-RV32-V-NEXT:    or a2, a2, a5
+; CHECK-ALIGNED-RV32-V-NEXT:    or a2, a2, a3
+; CHECK-ALIGNED-RV32-V-NEXT:    xor a2, t3, a2
+; CHECK-ALIGNED-RV32-V-NEXT:    sw a2, 72(sp) # 4-byte Folded Spill
+; CHECK-ALIGNED-RV32-V-NEXT:    xor a2, t4, a6
+; CHECK-ALIGNED-RV32-V-NEXT:    sw a2, 68(sp) # 4-byte Folded Spill
+; CHECK-ALIGNED-RV32-V-NEXT:    xor a2, t5, a7
+; CHECK-ALIGNED-RV32-V-NEXT:    sw a2, 64(sp) # 4-byte Folded Spill
+; CHECK-ALIGNED-RV32-V-NEXT:    xor a2, t6, t0
+; CHECK-ALIGNED-RV32-V-NEXT:    sw a2, 60(sp) # 4-byte Folded Spill
+; CHECK-ALIGNED-RV32-V-NEXT:    xor a2, s0, t1
+; CHECK-ALIGNED-RV32-V-NEXT:    sw a2, 56(sp) # 4-byte Folded Spill
+; CHECK-ALIGNED-RV32-V-NEXT:    xor a2, s1, t2
+; CHECK-ALIGNED-RV32-V-NEXT:    sw a2, 52(sp) # 4-byte Folded Spill
+; CHECK-ALIGNED-RV32-V-NEXT:    xor a2, s2, ra
+; CHECK-ALIGNED-RV32-V-NEXT:    sw a2, 48(sp) # 4-byte Folded Spill
+; CHECK-ALIGNED-RV32-V-NEXT:    lw a2, 44(sp) # 4-byte Folded Reload
+; CHECK-ALIGNED-RV32-V-NEXT:    xor a2, a2, s11
+; CHECK-ALIGNED-RV32-V-NEXT:    sw a2, 44(sp) # 4-byte Folded Spill
+; CHECK-ALIGNED-RV32-V-NEXT:    lw a2, 40(sp) # 4-byte Folded Reload
+; CHECK-ALIGNED-RV32-V-NEXT:    xor a2, a2, s10
+; CHECK-ALIGNED-RV32-V-NEXT:    sw a2, 40(sp) # 4-byte Folded Spill
+; CHECK-ALIGNED-RV32-V-NEXT:    lw a2, 12(sp) # 4-byte Folded Reload
+; CHECK-ALIGNED-RV32-V-NEXT:    xor t3, a2, s9
+; CHECK-ALIGNED-RV32-V-NEXT:    lw a2, 16(sp) # 4-byte Folded Reload
+; CHECK-ALIGNED-RV32-V-NEXT:    xor t4, a2, s8
+; CHECK-ALIGNED-RV32-V-NEXT:    lw a2, 20(sp) # 4-byte Folded Reload
+; CHECK-ALIGNED-RV32-V-NEXT:    xor t5, a2, s7
+; CHECK-ALIGNED-RV32-V-NEXT:    lw a2, 24(sp) # 4-byte Folded Reload
+; CHECK-ALIGNED-RV32-V-NEXT:    xor t6, a2, s6
+; CHECK-ALIGNED-RV32-V-NEXT:    lw a2, 28(sp) # 4-byte Folded Reload
+; CHECK-ALIGNED-RV32-V-NEXT:    xor s0, a2, s5
+; CHECK-ALIGNED-RV32-V-NEXT:    lw a2, 32(sp) # 4-byte Folded Reload
+; CHECK-ALIGNED-RV32-V-NEXT:    xor s1, a2, s4
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a2, 80(a0)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a3, 81(a0)
+; CHECK-ALIGNED-RV32-V-NEXT:    lw a4, 36(sp) # 4-byte Folded Reload
+; CHECK-ALIGNED-RV32-V-NEXT:    xor s2, a4, s3
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a4, 82(a0)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a5, 83(a0)
+; CHECK-ALIGNED-RV32-V-NEXT:    slli a3, a3, 8
+; CHECK-ALIGNED-RV32-V-NEXT:    or a2, a3, a2
+; CHECK-ALIGNED-RV32-V-NEXT:    slli a4, a4, 16
+; CHECK-ALIGNED-RV32-V-NEXT:    slli a5, a5, 24
+; CHECK-ALIGNED-RV32-V-NEXT:    or a4, a5, a4
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a3, 88(a0)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a5, 89(a0)
+; CHECK-ALIGNED-RV32-V-NEXT:    or s10, a4, a2
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a2, 90(a0)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a4, 91(a0)
+; CHECK-ALIGNED-RV32-V-NEXT:    slli a5, a5, 8
+; CHECK-ALIGNED-RV32-V-NEXT:    or a3, a5, a3
+; CHECK-ALIGNED-RV32-V-NEXT:    slli a2, a2, 16
+; CHECK-ALIGNED-RV32-V-NEXT:    slli a4, a4, 24
+; CHECK-ALIGNED-RV32-V-NEXT:    or a2, a4, a2
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a4, 84(a0)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a5, 85(a0)
+; CHECK-ALIGNED-RV32-V-NEXT:    or s9, a2, a3
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a2, 86(a0)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a3, 87(a0)
+; CHECK-ALIGNED-RV32-V-NEXT:    slli a5, a5, 8
+; CHECK-ALIGNED-RV32-V-NEXT:    or a4, a5, a4
+; CHECK-ALIGNED-RV32-V-NEXT:    slli a2, a2, 16
+; CHECK-ALIGNED-RV32-V-NEXT:    slli a3, a3, 24
+; CHECK-ALIGNED-RV32-V-NEXT:    or a2, a3, a2
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a3, 92(a0)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a5, 93(a0)
+; CHECK-ALIGNED-RV32-V-NEXT:    or s8, a2, a4
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a2, 94(a0)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a4, 95(a0)
+; CHECK-ALIGNED-RV32-V-NEXT:    slli a5, a5, 8
+; CHECK-ALIGNED-RV32-V-NEXT:    or a3, a5, a3
+; CHECK-ALIGNED-RV32-V-NEXT:    slli a2, a2, 16
+; CHECK-ALIGNED-RV32-V-NEXT:    slli a4, a4, 24
+; CHECK-ALIGNED-RV32-V-NEXT:    or a2, a4, a2
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a4, 76(a0)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a5, 77(a0)
+; CHECK-ALIGNED-RV32-V-NEXT:    or s7, a2, a3
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a2, 78(a0)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a3, 79(a0)
+; CHECK-ALIGNED-RV32-V-NEXT:    slli a5, a5, 8
+; CHECK-ALIGNED-RV32-V-NEXT:    or a4, a5, a4
+; CHECK-ALIGNED-RV32-V-NEXT:    slli a2, a2, 16
+; CHECK-ALIGNED-RV32-V-NEXT:    slli a3, a3, 24
+; CHECK-ALIGNED-RV32-V-NEXT:    or a2, a3, a2
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a3, 72(a0)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a5, 73(a0)
+; CHECK-ALIGNED-RV32-V-NEXT:    or s6, a2, a4
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a2, 74(a0)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a4, 75(a0)
+; CHECK-ALIGNED-RV32-V-NEXT:    slli a5, a5, 8
+; CHECK-ALIGNED-RV32-V-NEXT:    or a3, a5, a3
+; CHECK-ALIGNED-RV32-V-NEXT:    slli a2, a2, 16
+; CHECK-ALIGNED-RV32-V-NEXT:    slli a4, a4, 24
+; CHECK-ALIGNED-RV32-V-NEXT:    or a2, a4, a2
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a4, 64(a0)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a5, 65(a0)
+; CHECK-ALIGNED-RV32-V-NEXT:    or s5, a2, a3
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a2, 66(a0)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a3, 67(a0)
+; CHECK-ALIGNED-RV32-V-NEXT:    slli a5, a5, 8
+; CHECK-ALIGNED-RV32-V-NEXT:    or a4, a5, a4
+; CHECK-ALIGNED-RV32-V-NEXT:    slli a2, a2, 16
+; CHECK-ALIGNED-RV32-V-NEXT:    slli a3, a3, 24
+; CHECK-ALIGNED-RV32-V-NEXT:    or a2, a3, a2
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a3, 68(a0)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a5, 69(a0)
+; CHECK-ALIGNED-RV32-V-NEXT:    or s4, a2, a4
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a2, 70(a0)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a4, 71(a0)
+; CHECK-ALIGNED-RV32-V-NEXT:    slli a5, a5, 8
+; CHECK-ALIGNED-RV32-V-NEXT:    or a3, a5, a3
+; CHECK-ALIGNED-RV32-V-NEXT:    slli a2, a2, 16
+; CHECK-ALIGNED-RV32-V-NEXT:    slli a4, a4, 24
+; CHECK-ALIGNED-RV32-V-NEXT:    or a2, a4, a2
+; CHECK-ALIGNED-RV32-V-NEXT:    or s3, a2, a3
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a2, 81(a1)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a3, 80(a1)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a4, 82(a1)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a5, 83(a1)
+; CHECK-ALIGNED-RV32-V-NEXT:    slli a2, a2, 8
+; CHECK-ALIGNED-RV32-V-NEXT:    or a2, a2, a3
+; CHECK-ALIGNED-RV32-V-NEXT:    slli a4, a4, 16
+; CHECK-ALIGNED-RV32-V-NEXT:    slli a5, a5, 24
+; CHECK-ALIGNED-RV32-V-NEXT:    or a3, a5, a4
+; CHECK-ALIGNED-RV32-V-NEXT:    or t2, a3, a2
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a2, 89(a1)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a4, 88(a1)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a5, 90(a1)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a6, 91(a1)
+; CHECK-ALIGNED-RV32-V-NEXT:    slli a2, a2, 8
+; CHECK-ALIGNED-RV32-V-NEXT:    or a2, a2, a4
+; CHECK-ALIGNED-RV32-V-NEXT:    slli a5, a5, 16
+; CHECK-ALIGNED-RV32-V-NEXT:    slli a6, a6, 24
+; CHECK-ALIGNED-RV32-V-NEXT:    or a4, a6, a5
+; CHECK-ALIGNED-RV32-V-NEXT:    or s11, a4, a2
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a2, 85(a1)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a4, 84(a1)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a5, 86(a1)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a6, 87(a1)
+; CHECK-ALIGNED-RV32-V-NEXT:    slli a2, a2, 8
+; CHECK-ALIGNED-RV32-V-NEXT:    or a2, a2, a4
+; CHECK-ALIGNED-RV32-V-NEXT:    slli a5, a5, 16
+; CHECK-ALIGNED-RV32-V-NEXT:    slli a6, a6, 24
+; CHECK-ALIGNED-RV32-V-NEXT:    or a4, a6, a5
+; CHECK-ALIGNED-RV32-V-NEXT:    or ra, a4, a2
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a2, 93(a1)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a4, 92(a1)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a5, 94(a1)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a6, 95(a1)
+; CHECK-ALIGNED-RV32-V-NEXT:    slli a2, a2, 8
+; CHECK-ALIGNED-RV32-V-NEXT:    or a2, a2, a4
+; CHECK-ALIGNED-RV32-V-NEXT:    slli a5, a5, 16
+; CHECK-ALIGNED-RV32-V-NEXT:    slli a6, a6, 24
+; CHECK-ALIGNED-RV32-V-NEXT:    or a4, a6, a5
+; CHECK-ALIGNED-RV32-V-NEXT:    or t1, a4, a2
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a4, 77(a1)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a5, 76(a1)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a6, 78(a1)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a2, 79(a1)
+; CHECK-ALIGNED-RV32-V-NEXT:    slli a4, a4, 8
+; CHECK-ALIGNED-RV32-V-NEXT:    or a4, a4, a5
+; CHECK-ALIGNED-RV32-V-NEXT:    slli a6, a6, 16
+; CHECK-ALIGNED-RV32-V-NEXT:    slli a2, a2, 24
+; CHECK-ALIGNED-RV32-V-NEXT:    or a2, a2, a6
+; CHECK-ALIGNED-RV32-V-NEXT:    or t0, a2, a4
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a4, 73(a1)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a5, 72(a1)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a6, 74(a1)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a2, 75(a1)
+; CHECK-ALIGNED-RV32-V-NEXT:    slli a4, a4, 8
+; CHECK-ALIGNED-RV32-V-NEXT:    or a4, a4, a5
+; CHECK-ALIGNED-RV32-V-NEXT:    slli a6, a6, 16
+; CHECK-ALIGNED-RV32-V-NEXT:    slli a2, a2, 24
+; CHECK-ALIGNED-RV32-V-NEXT:    or a2, a2, a6
+; CHECK-ALIGNED-RV32-V-NEXT:    or a7, a2, a4
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a4, 65(a1)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a5, 64(a1)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a6, 66(a1)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a2, 67(a1)
+; CHECK-ALIGNED-RV32-V-NEXT:    slli a4, a4, 8
+; CHECK-ALIGNED-RV32-V-NEXT:    or a4, a4, a5
+; CHECK-ALIGNED-RV32-V-NEXT:    slli a6, a6, 16
+; CHECK-ALIGNED-RV32-V-NEXT:    slli a2, a2, 24
+; CHECK-ALIGNED-RV32-V-NEXT:    or a2, a2, a6
+; CHECK-ALIGNED-RV32-V-NEXT:    or a3, a2, a4
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a4, 69(a1)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a5, 68(a1)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a6, 70(a1)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a2, 71(a1)
+; CHECK-ALIGNED-RV32-V-NEXT:    slli a4, a4, 8
+; CHECK-ALIGNED-RV32-V-NEXT:    or a4, a4, a5
+; CHECK-ALIGNED-RV32-V-NEXT:    slli a6, a6, 16
+; CHECK-ALIGNED-RV32-V-NEXT:    slli a2, a2, 24
+; CHECK-ALIGNED-RV32-V-NEXT:    or a2, a2, a6
+; CHECK-ALIGNED-RV32-V-NEXT:    or a2, a2, a4
+; CHECK-ALIGNED-RV32-V-NEXT:    xor s3, s3, a2
+; CHECK-ALIGNED-RV32-V-NEXT:    xor s4, s4, a3
+; CHECK-ALIGNED-RV32-V-NEXT:    xor s5, s5, a7
+; CHECK-ALIGNED-RV32-V-NEXT:    xor s6, s6, t0
+; CHECK-ALIGNED-RV32-V-NEXT:    xor s7, s7, t1
+; CHECK-ALIGNED-RV32-V-NEXT:    xor s8, s8, ra
+; CHECK-ALIGNED-RV32-V-NEXT:    xor s9, s9, s11
+; CHECK-ALIGNED-RV32-V-NEXT:    xor s10, s10, t2
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a2, 97(a0)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a3, 96(a0)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a4, 98(a0)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a5, 99(a0)
+; CHECK-ALIGNED-RV32-V-NEXT:    slli a2, a2, 8
+; CHECK-ALIGNED-RV32-V-NEXT:    or a2, a2, a3
+; CHECK-ALIGNED-RV32-V-NEXT:    slli a4, a4, 16
+; CHECK-ALIGNED-RV32-V-NEXT:    slli a5, a5, 24
+; CHECK-ALIGNED-RV32-V-NEXT:    or a4, a5, a4
+; CHECK-ALIGNED-RV32-V-NEXT:    or a2, a4, a2
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a3, 101(a0)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a4, 100(a0)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a5, 102(a0)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a6, 103(a0)
+; CHECK-ALIGNED-RV32-V-NEXT:    slli a3, a3, 8
+; CHECK-ALIGNED-RV32-V-NEXT:    or a3, a3, a4
+; CHECK-ALIGNED-RV32-V-NEXT:    slli a5, a5, 16
+; CHECK-ALIGNED-RV32-V-NEXT:    slli a6, a6, 24
+; CHECK-ALIGNED-RV32-V-NEXT:    or a4, a6, a5
+; CHECK-ALIGNED-RV32-V-NEXT:    or a3, a4, a3
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a4, 105(a0)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a5, 104(a0)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a6, 106(a0)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a7, 107(a0)
+; CHECK-ALIGNED-RV32-V-NEXT:    slli a4, a4, 8
+; CHECK-ALIGNED-RV32-V-NEXT:    or a4, a4, a5
+; CHECK-ALIGNED-RV32-V-NEXT:    slli a6, a6, 16
+; CHECK-ALIGNED-RV32-V-NEXT:    slli a7, a7, 24
+; CHECK-ALIGNED-RV32-V-NEXT:    or a5, a7, a6
+; CHECK-ALIGNED-RV32-V-NEXT:    or s11, a5, a4
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a4, 109(a0)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a5, 108(a0)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a6, 110(a0)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a7, 111(a0)
+; CHECK-ALIGNED-RV32-V-NEXT:    slli a4, a4, 8
+; CHECK-ALIGNED-RV32-V-NEXT:    or a4, a4, a5
+; CHECK-ALIGNED-RV32-V-NEXT:    slli a6, a6, 16
+; CHECK-ALIGNED-RV32-V-NEXT:    slli a7, a7, 24
+; CHECK-ALIGNED-RV32-V-NEXT:    or a5, a7, a6
+; CHECK-ALIGNED-RV32-V-NEXT:    or a4, a5, a4
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a5, 97(a1)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a6, 96(a1)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a7, 98(a1)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu t0, 99(a1)
+; CHECK-ALIGNED-RV32-V-NEXT:    slli a5, a5, 8
+; CHECK-ALIGNED-RV32-V-NEXT:    or a5, a5, a6
+; CHECK-ALIGNED-RV32-V-NEXT:    slli a7, a7, 16
+; CHECK-ALIGNED-RV32-V-NEXT:    slli t0, t0, 24
+; CHECK-ALIGNED-RV32-V-NEXT:    or a6, t0, a7
+; CHECK-ALIGNED-RV32-V-NEXT:    or a6, a6, a5
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a5, 101(a1)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a7, 100(a1)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu t0, 102(a1)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu t1, 103(a1)
+; CHECK-ALIGNED-RV32-V-NEXT:    slli a5, a5, 8
+; CHECK-ALIGNED-RV32-V-NEXT:    or a5, a5, a7
+; CHECK-ALIGNED-RV32-V-NEXT:    slli t0, t0, 16
+; CHECK-ALIGNED-RV32-V-NEXT:    slli t1, t1, 24
+; CHECK-ALIGNED-RV32-V-NEXT:    or a7, t1, t0
+; CHECK-ALIGNED-RV32-V-NEXT:    or a5, a7, a5
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a7, 105(a1)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu t0, 104(a1)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu t1, 106(a1)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu t2, 107(a1)
+; CHECK-ALIGNED-RV32-V-NEXT:    slli a7, a7, 8
+; CHECK-ALIGNED-RV32-V-NEXT:    or a7, a7, t0
+; CHECK-ALIGNED-RV32-V-NEXT:    slli t1, t1, 16
+; CHECK-ALIGNED-RV32-V-NEXT:    slli t2, t2, 24
+; CHECK-ALIGNED-RV32-V-NEXT:    or t0, t2, t1
+; CHECK-ALIGNED-RV32-V-NEXT:    or a7, t0, a7
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu t0, 109(a1)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu t1, 108(a1)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu t2, 110(a1)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu ra, 111(a1)
+; CHECK-ALIGNED-RV32-V-NEXT:    slli t0, t0, 8
+; CHECK-ALIGNED-RV32-V-NEXT:    or t0, t0, t1
+; CHECK-ALIGNED-RV32-V-NEXT:    slli t2, t2, 16
+; CHECK-ALIGNED-RV32-V-NEXT:    slli ra, ra, 24
+; CHECK-ALIGNED-RV32-V-NEXT:    or t1, ra, t2
+; CHECK-ALIGNED-RV32-V-NEXT:    or t0, t1, t0
+; CHECK-ALIGNED-RV32-V-NEXT:    xor ra, a4, t0
+; CHECK-ALIGNED-RV32-V-NEXT:    xor s11, s11, a7
+; CHECK-ALIGNED-RV32-V-NEXT:    xor a5, a3, a5
+; CHECK-ALIGNED-RV32-V-NEXT:    xor a4, a2, a6
 ; CHECK-ALIGNED-RV32-V-NEXT:    lbu a2, 113(a0)
 ; CHECK-ALIGNED-RV32-V-NEXT:    lbu a3, 112(a0)
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu a4, 114(a0)
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu a5, 115(a0)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a6, 114(a0)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a7, 115(a0)
 ; CHECK-ALIGNED-RV32-V-NEXT:    slli a2, a2, 8
 ; CHECK-ALIGNED-RV32-V-NEXT:    or a2, a2, a3
-; CHECK-ALIGNED-RV32-V-NEXT:    slli a4, a4, 16
-; CHECK-ALIGNED-RV32-V-NEXT:    slli a3, a5, 24
+; CHECK-ALIGNED-RV32-V-NEXT:    slli a6, a6, 16
+; CHECK-ALIGNED-RV32-V-NEXT:    slli a7, a7, 24
+; CHECK-ALIGNED-RV32-V-NEXT:    or a3, a7, a6
+; CHECK-ALIGNED-RV32-V-NEXT:    or a2, a3, a2
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a3, 117(a0)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a6, 116(a0)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a7, 118(a0)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu t0, 119(a0)
+; CHECK-ALIGNED-RV32-V-NEXT:    slli a3, a3, 8
+; CHECK-ALIGNED-RV32-V-NEXT:    or a3, a3, a6
+; CHECK-ALIGNED-RV32-V-NEXT:    slli a7, a7, 16
+; CHECK-ALIGNED-RV32-V-NEXT:    slli t0, t0, 24
+; CHECK-ALIGNED-RV32-V-NEXT:    or a6, t0, a7
+; CHECK-ALIGNED-RV32-V-NEXT:    or a3, a6, a3
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a6, 113(a1)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a7, 112(a1)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu t0, 114(a1)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu t1, 115(a1)
+; CHECK-ALIGNED-RV32-V-NEXT:    slli a6, a6, 8
+; CHECK-ALIGNED-RV32-V-NEXT:    or a6, a6, a7
+; CHECK-ALIGNED-RV32-V-NEXT:    slli t0, t0, 16
+; CHECK-ALIGNED-RV32-V-NEXT:    slli t1, t1, 24
+; CHECK-ALIGNED-RV32-V-NEXT:    or a7, t1, t0
+; CHECK-ALIGNED-RV32-V-NEXT:    or a6, a7, a6
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a7, 117(a1)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu t0, 116(a1)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu t1, 118(a1)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu t2, 119(a1)
+; CHECK-ALIGNED-RV32-V-NEXT:    slli a7, a7, 8
+; CHECK-ALIGNED-RV32-V-NEXT:    or a7, a7, t0
+; CHECK-ALIGNED-RV32-V-NEXT:    slli t1, t1, 16
+; CHECK-ALIGNED-RV32-V-NEXT:    slli t2, t2, 24
+; CHECK-ALIGNED-RV32-V-NEXT:    or t0, t2, t1
+; CHECK-ALIGNED-RV32-V-NEXT:    or a7, t0, a7
+; CHECK-ALIGNED-RV32-V-NEXT:    xor a3, a3, a7
+; CHECK-ALIGNED-RV32-V-NEXT:    xor a2, a2, a6
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a6, 121(a0)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a7, 120(a0)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu t0, 122(a0)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu t1, 123(a0)
+; CHECK-ALIGNED-RV32-V-NEXT:    slli a6, a6, 8
+; CHECK-ALIGNED-RV32-V-NEXT:    or a6, a6, a7
+; CHECK-ALIGNED-RV32-V-NEXT:    slli t0, t0, 16
+; CHECK-ALIGNED-RV32-V-NEXT:    slli t1, t1, 24
+; CHECK-ALIGNED-RV32-V-NEXT:    or a7, t1, t0
+; CHECK-ALIGNED-RV32-V-NEXT:    or a6, a7, a6
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a7, 121(a1)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu t0, 120(a1)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu t1, 122(a1)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu t2, 123(a1)
+; CHECK-ALIGNED-RV32-V-NEXT:    slli a7, a7, 8
+; CHECK-ALIGNED-RV32-V-NEXT:    or a7, a7, t0
+; CHECK-ALIGNED-RV32-V-NEXT:    slli t1, t1, 16
+; CHECK-ALIGNED-RV32-V-NEXT:    slli t2, t2, 24
+; CHECK-ALIGNED-RV32-V-NEXT:    or t0, t2, t1
+; CHECK-ALIGNED-RV32-V-NEXT:    or a7, t0, a7
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu t0, 125(a0)
+; CHECK-ALIGNED-RV32-V-NEXT:    xor a6, a6, a7
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a7, 124(a0)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a0, 126(a0)
+; CHECK-ALIGNED-RV32-V-NEXT:    slli t0, t0, 8
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu t1, 125(a1)
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu t2, 124(a1)
+; CHECK-ALIGNED-RV32-V-NEXT:    or a7, t0, a7
+; CHECK-ALIGNED-RV32-V-NEXT:    lbu a1, 126(a1)
+; CHECK-ALIGNED-RV32-V-NEXT:    slli t1, t1, 8
+; CHECK-ALIGNED-RV32-V-NEXT:    or t0, t1, t2
+; CHECK-ALIGNED-RV32-V-NEXT:    xor a7, a7, t0
+; CHECK-ALIGNED-RV32-V-NEXT:    xor a0, a0, a1
+; CHECK-ALIGNED-RV32-V-NEXT:    or a1, s2, s10
+; CHECK-ALIGNED-RV32-V-NEXT:    or t0, s1, s9
+; CHECK-ALIGNED-RV32-V-NEXT:    or t1, s0, s8
+; CHECK-ALIGNED-RV32-V-NEXT:    or t2, t6, s7
+; CHECK-ALIGNED-RV32-V-NEXT:    or t5, t5, s6
+; CHECK-ALIGNED-RV32-V-NEXT:    or t4, t4, s5
+; CHECK-ALIGNED-RV32-V-NEXT:    or t3, t3, s4
+; CHECK-ALIGNED-RV32-V-NEXT:    lw t6, 40(sp) # 4-byte Folded Reload
+; CHECK-ALIGNED-RV32-V-NEXT:    or t6, t6, s3
+; CHECK-ALIGNED-RV32-V-NEXT:    or a2, a4, a2
+; CHECK-ALIGNED-RV32-V-NEXT:    or a3, a5, a3
+; CHECK-ALIGNED-RV32-V-NEXT:    or a3, t6, a3
+; CHECK-ALIGNED-RV32-V-NEXT:    or a2, t3, a2
+; CHECK-ALIGNED-RV32-V-NEXT:    or a0, a7, a0
+; CHECK-ALIGNED-RV32-V-NEXT:    or a0, a6, a0
+; CHECK-ALIGNED-RV32-V-NEXT:    lw a4, 44(sp) # 4-byte Folded Reload
+; CHECK-ALIGNED-RV32-V-NEXT:    or a4, t2, a4
+; CHECK-ALIGNED-RV32-V-NEXT:    lw a5, 48(sp) # 4-byte Folded Reload
+; CHECK-ALIGNED-RV32-V-NEXT:    or a5, ra, a5
+; CHECK-ALIGNED-RV32-V-NEXT:    or a5, t5, a5
+; CHECK-ALIGNED-RV32-V-NEXT:    or a4, a5, a4
+; CHECK-ALIGNED-RV32-V-NEXT:    lw a5, 52(sp) # 4-byte Folded Reload
+; CHECK-ALIGNED-RV32-V-NEXT:    or a3, a3, a5
+; CHECK-ALIGNED-RV32-V-NEXT:    lw a5, 56(sp) # 4-byte Folded Reload
+; CHECK-ALIGNED-RV32-V-NEXT:    or a5, t1, a5
+; CHECK-ALIGNED-RV32-V-NEXT:    or a3, a3, a5
 ; CHECK-ALIGNED-RV32-V-NEXT:    or a3, a3, a4
-; CHECK-ALIGNED-RV32-V-NEXT:    or a2, a3, a2
-; CHECK-ALIGNED-RV32-V-NEXT:    slli a4, a2, 16
-; CHECK-ALIGNED-RV32-V-NEXT:    srli a4, a4, 24
-; CHECK-ALIGNED-RV32-V-NEXT:    vsetvli zero, zero, e8, m4, tu, ma
-; CHECK-ALIGNED-RV32-V-NEXT:    vmv.s.x v6, a2
-; CHECK-ALIGNED-RV32-V-NEXT:    vmv.s.x v11, a4
-; CHECK-ALIGNED-RV32-V-NEXT:    vsetivli zero, 2, e8, m1, tu, ma
-; CHECK-ALIGNED-RV32-V-NEXT:    vslideup.vi v6, v11, 1
-; CHECK-ALIGNED-RV32-V-NEXT:    srli a3, a3, 16
-; CHECK-ALIGNED-RV32-V-NEXT:    vmv.s.x v11, a3
-; CHECK-ALIGNED-RV32-V-NEXT:    vsetivli zero, 3, e8, m1, tu, ma
-; CHECK-ALIGNED-RV32-V-NEXT:    vslideup.vi v6, v11, 2
-; CHECK-ALIGNED-RV32-V-NEXT:    vmv.s.x v11, a5
-; CHECK-ALIGNED-RV32-V-NEXT:    vsetivli zero, 4, e8, m1, tu, ma
-; CHECK-ALIGNED-RV32-V-NEXT:    vslideup.vi v6, v11, 3
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu a2, 113(a1)
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu a3, 112(a1)
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu a4, 114(a1)
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu a5, 115(a1)
-; CHECK-ALIGNED-RV32-V-NEXT:    slli a2, a2, 8
-; CHECK-ALIGNED-RV32-V-NEXT:    or a2, a2, a3
-; CHECK-ALIGNED-RV32-V-NEXT:    slli a4, a4, 16
-; CHECK-ALIGNED-RV32-V-NEXT:    slli a3, a5, 24
-; CHECK-ALIGNED-RV32-V-NEXT:    or a3, a3, a4
-; CHECK-ALIGNED-RV32-V-NEXT:    or a2, a3, a2
-; CHECK-ALIGNED-RV32-V-NEXT:    vmv.s.x v8, a2
-; CHECK-ALIGNED-RV32-V-NEXT:    slli a2, a2, 16
-; CHECK-ALIGNED-RV32-V-NEXT:    srli a2, a2, 24
-; CHECK-ALIGNED-RV32-V-NEXT:    vmv.s.x v11, a2
-; CHECK-ALIGNED-RV32-V-NEXT:    vsetivli zero, 2, e8, m1, tu, ma
-; CHECK-ALIGNED-RV32-V-NEXT:    vslideup.vi v8, v11, 1
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu a2, 124(a0)
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu a0, 125(a0)
-; CHECK-ALIGNED-RV32-V-NEXT:    srli a3, a3, 16
-; CHECK-ALIGNED-RV32-V-NEXT:    vmv.s.x v11, a3
-; CHECK-ALIGNED-RV32-V-NEXT:    vsetivli zero, 3, e8, m1, tu, ma
-; CHECK-ALIGNED-RV32-V-NEXT:    vslideup.vi v8, v11, 2
-; CHECK-ALIGNED-RV32-V-NEXT:    slli a3, a0, 8
-; CHECK-ALIGNED-RV32-V-NEXT:    or a2, a3, a2
-; CHECK-ALIGNED-RV32-V-NEXT:    vmv.s.x v9, a2
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu a2, 125(a1)
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu a1, 124(a1)
-; CHECK-ALIGNED-RV32-V-NEXT:    vmv.s.x v11, a0
-; CHECK-ALIGNED-RV32-V-NEXT:    vsetivli zero, 2, e8, m1, tu, ma
-; CHECK-ALIGNED-RV32-V-NEXT:    vslideup.vi v9, v11, 1
-; CHECK-ALIGNED-RV32-V-NEXT:    slli a0, a2, 8
+; CHECK-ALIGNED-RV32-V-NEXT:    lw a4, 60(sp) # 4-byte Folded Reload
+; CHECK-ALIGNED-RV32-V-NEXT:    or a4, t0, a4
+; CHECK-ALIGNED-RV32-V-NEXT:    lw a5, 64(sp) # 4-byte Folded Reload
+; CHECK-ALIGNED-RV32-V-NEXT:    or a5, s11, a5
+; CHECK-ALIGNED-RV32-V-NEXT:    or a5, t4, a5
+; CHECK-ALIGNED-RV32-V-NEXT:    or a4, a5, a4
+; CHECK-ALIGNED-RV32-V-NEXT:    lw a5, 68(sp) # 4-byte Folded Reload
+; CHECK-ALIGNED-RV32-V-NEXT:    or a0, a0, a5
+; CHECK-ALIGNED-RV32-V-NEXT:    or a0, a2, a0
+; CHECK-ALIGNED-RV32-V-NEXT:    lw a2, 72(sp) # 4-byte Folded Reload
+; CHECK-ALIGNED-RV32-V-NEXT:    or a1, a1, a2
 ; CHECK-ALIGNED-RV32-V-NEXT:    or a0, a0, a1
-; CHECK-ALIGNED-RV32-V-NEXT:    vmv.s.x v10, a0
-; CHECK-ALIGNED-RV32-V-NEXT:    vmv.s.x v11, a2
-; CHECK-ALIGNED-RV32-V-NEXT:    vslideup.vi v10, v11, 1
-; CHECK-ALIGNED-RV32-V-NEXT:    addi a0, sp, 320
-; CHECK-ALIGNED-RV32-V-NEXT:    vmv.s.x v11, a5
-; CHECK-ALIGNED-RV32-V-NEXT:    li a1, 64
-; CHECK-ALIGNED-RV32-V-NEXT:    vsetvli zero, a1, e8, m4, ta, ma
-; CHECK-ALIGNED-RV32-V-NEXT:    vle8.v v28, (a0)
-; CHECK-ALIGNED-RV32-V-NEXT:    vsetivli zero, 4, e8, m1, tu, ma
-; CHECK-ALIGNED-RV32-V-NEXT:    vslideup.vi v8, v11, 3
-; CHECK-ALIGNED-RV32-V-NEXT:    vmv1r.v v16, v9
-; CHECK-ALIGNED-RV32-V-NEXT:    vmv1r.v v12, v10
-; CHECK-ALIGNED-RV32-V-NEXT:    vsetvli zero, a1, e8, m4, ta, ma
-; CHECK-ALIGNED-RV32-V-NEXT:    vmsne.vv v9, v16, v12
-; CHECK-ALIGNED-RV32-V-NEXT:    vmv1r.v v24, v6
-; CHECK-ALIGNED-RV32-V-NEXT:    vmv1r.v v20, v8
-; CHECK-ALIGNED-RV32-V-NEXT:    vmsne.vv v8, v24, v20
-; CHECK-ALIGNED-RV32-V-NEXT:    addi a0, sp, 464
-; CHECK-ALIGNED-RV32-V-NEXT:    vl4r.v v12, (a0) # Unknown-size Folded Reload
-; CHECK-ALIGNED-RV32-V-NEXT:    vmsne.vv v10, v12, v28
-; CHECK-ALIGNED-RV32-V-NEXT:    csrr a0, vlenb
-; CHECK-ALIGNED-RV32-V-NEXT:    slli a0, a0, 4
-; CHECK-ALIGNED-RV32-V-NEXT:    add a0, sp, a0
-; CHECK-ALIGNED-RV32-V-NEXT:    addi a0, a0, 464
-; CHECK-ALIGNED-RV32-V-NEXT:    vl4r.v v12, (a0) # Unknown-size Folded Reload
-; CHECK-ALIGNED-RV32-V-NEXT:    csrr a0, vlenb
-; CHECK-ALIGNED-RV32-V-NEXT:    slli a0, a0, 2
-; CHECK-ALIGNED-RV32-V-NEXT:    mv a1, a0
-; CHECK-ALIGNED-RV32-V-NEXT:    slli a0, a0, 1
-; CHECK-ALIGNED-RV32-V-NEXT:    add a0, a0, a1
-; CHECK-ALIGNED-RV32-V-NEXT:    add a0, sp, a0
-; CHECK-ALIGNED-RV32-V-NEXT:    addi a0, a0, 464
-; CHECK-ALIGNED-RV32-V-NEXT:    vl4r.v v16, (a0) # Unknown-size Folded Reload
-; CHECK-ALIGNED-RV32-V-NEXT:    vmsne.vv v11, v12, v16
-; CHECK-ALIGNED-RV32-V-NEXT:    csrr a0, vlenb
-; CHECK-ALIGNED-RV32-V-NEXT:    slli a0, a0, 3
-; CHECK-ALIGNED-RV32-V-NEXT:    add a0, sp, a0
-; CHECK-ALIGNED-RV32-V-NEXT:    addi a0, a0, 464
-; CHECK-ALIGNED-RV32-V-NEXT:    vl4r.v v16, (a0) # Unknown-size Folded Reload
-; CHECK-ALIGNED-RV32-V-NEXT:    csrr a0, vlenb
-; CHECK-ALIGNED-RV32-V-NEXT:    slli a0, a0, 2
-; CHECK-ALIGNED-RV32-V-NEXT:    add a0, sp, a0
-; CHECK-ALIGNED-RV32-V-NEXT:    addi a0, a0, 464
-; CHECK-ALIGNED-RV32-V-NEXT:    vl4r.v v20, (a0) # Unknown-size Folded Reload
-; CHECK-ALIGNED-RV32-V-NEXT:    vmsne.vv v12, v16, v20
-; CHECK-ALIGNED-RV32-V-NEXT:    vmor.mm v13, v7, v5
-; CHECK-ALIGNED-RV32-V-NEXT:    vmor.mm v9, v9, v4
-; CHECK-ALIGNED-RV32-V-NEXT:    vmor.mm v9, v13, v9
-; CHECK-ALIGNED-RV32-V-NEXT:    vmor.mm v8, v10, v8
-; CHECK-ALIGNED-RV32-V-NEXT:    vmor.mm v10, v11, v12
-; CHECK-ALIGNED-RV32-V-NEXT:    vmor.mm v8, v10, v8
-; CHECK-ALIGNED-RV32-V-NEXT:    vmnor.mm v8, v8, v9
-; CHECK-ALIGNED-RV32-V-NEXT:    vcpop.m a0, v8
-; CHECK-ALIGNED-RV32-V-NEXT:    seqz a0, a0
-; CHECK-ALIGNED-RV32-V-NEXT:    addi sp, s0, -512
-; CHECK-ALIGNED-RV32-V-NEXT:    lw ra, 508(sp) # 4-byte Folded Reload
-; CHECK-ALIGNED-RV32-V-NEXT:    lw s0, 504(sp) # 4-byte Folded Reload
-; CHECK-ALIGNED-RV32-V-NEXT:    lw s2, 500(sp) # 4-byte Folded Reload
-; CHECK-ALIGNED-RV32-V-NEXT:    lw s3, 496(sp) # 4-byte Folded Reload
-; CHECK-ALIGNED-RV32-V-NEXT:    lw s4, 492(sp) # 4-byte Folded Reload
-; CHECK-ALIGNED-RV32-V-NEXT:    lw s5, 488(sp) # 4-byte Folded Reload
-; CHECK-ALIGNED-RV32-V-NEXT:    lw s6, 484(sp) # 4-byte Folded Reload
-; CHECK-ALIGNED-RV32-V-NEXT:    lw s7, 480(sp) # 4-byte Folded Reload
-; CHECK-ALIGNED-RV32-V-NEXT:    lw s8, 476(sp) # 4-byte Folded Reload
-; CHECK-ALIGNED-RV32-V-NEXT:    lw s9, 472(sp) # 4-byte Folded Reload
-; CHECK-ALIGNED-RV32-V-NEXT:    lw s10, 468(sp) # 4-byte Folded Reload
-; CHECK-ALIGNED-RV32-V-NEXT:    lw s11, 464(sp) # 4-byte Folded Reload
-; CHECK-ALIGNED-RV32-V-NEXT:    addi sp, sp, 512
+; CHECK-ALIGNED-RV32-V-NEXT:    or a0, a0, a4
+; CHECK-ALIGNED-RV32-V-NEXT:    or a0, a0, a3
+; CHECK-ALIGNED-RV32-V-NEXT:    snez a0, a0
+; CHECK-ALIGNED-RV32-V-NEXT:    lw ra, 124(sp) # 4-byte Folded Reload
+; CHECK-ALIGNED-RV32-V-NEXT:    lw s0, 120(sp) # 4-byte Folded Reload
+; CHECK-ALIGNED-RV32-V-NEXT:    lw s1, 116(sp) # 4-byte Folded Reload
+; CHECK-ALIGNED-RV32-V-NEXT:    lw s2, 112(sp) # 4-byte Folded Reload
+; CHECK-ALIGNED-RV32-V-NEXT:    lw s3, 108(sp) # 4-byte Folded Reload
+; CHECK-ALIGNED-RV32-V-NEXT:    lw s4, 104(sp) # 4-byte Folded Reload
+; CHECK-ALIGNED-RV32-V-NEXT:    lw s5, 100(sp) # 4-byte Folded Reload
+; CHECK-ALIGNED-RV32-V-NEXT:    lw s6, 96(sp) # 4-byte Folded Reload
+; CHECK-ALIGNED-RV32-V-NEXT:    lw s7, 92(sp) # 4-byte Folded Reload
+; CHECK-ALIGNED-RV32-V-NEXT:    lw s8, 88(sp) # 4-byte Folded Reload
+; CHECK-ALIGNED-RV32-V-NEXT:    lw s9, 84(sp) # 4-byte Folded Reload
+; CHECK-ALIGNED-RV32-V-NEXT:    lw s10, 80(sp) # 4-byte Folded Reload
+; CHECK-ALIGNED-RV32-V-NEXT:    lw s11, 76(sp) # 4-byte Folded Reload
+; CHECK-ALIGNED-RV32-V-NEXT:    addi sp, sp, 128
 ; CHECK-ALIGNED-RV32-V-NEXT:    ret
 ;
 ; CHECK-ALIGNED-RV64-V-LABEL: bcmp_size_127:
 ; CHECK-ALIGNED-RV64-V:       # %bb.0: # %entry
-; CHECK-ALIGNED-RV64-V-NEXT:    addi sp, sp, -896
-; CHECK-ALIGNED-RV64-V-NEXT:    sd ra, 888(sp) # 8-byte Folded Spill
-; CHECK-ALIGNED-RV64-V-NEXT:    sd s0, 880(sp) # 8-byte Folded Spill
-; CHECK-ALIGNED-RV64-V-NEXT:    sd s2, 872(sp) # 8-byte Folded Spill
-; CHECK-ALIGNED-RV64-V-NEXT:    sd s3, 864(sp) # 8-byte Folded Spill
-; CHECK-ALIGNED-RV64-V-NEXT:    sd s4, 856(sp) # 8-byte Folded Spill
-; CHECK-ALIGNED-RV64-V-NEXT:    sd s5, 848(sp) # 8-byte Folded Spill
-; CHECK-ALIGNED-RV64-V-NEXT:    sd s6, 840(sp) # 8-byte Folded Spill
-; CHECK-ALIGNED-RV64-V-NEXT:    sd s7, 832(sp) # 8-byte Folded Spill
-; CHECK-ALIGNED-RV64-V-NEXT:    sd s8, 824(sp) # 8-byte Folded Spill
-; CHECK-ALIGNED-RV64-V-NEXT:    sd s9, 816(sp) # 8-byte Folded Spill
-; CHECK-ALIGNED-RV64-V-NEXT:    sd s10, 808(sp) # 8-byte Folded Spill
-; CHECK-ALIGNED-RV64-V-NEXT:    sd s11, 800(sp) # 8-byte Folded Spill
-; CHECK-ALIGNED-RV64-V-NEXT:    addi s0, sp, 896
-; CHECK-ALIGNED-RV64-V-NEXT:    csrr a2, vlenb
-; CHECK-ALIGNED-RV64-V-NEXT:    slli a2, a2, 2
-; CHECK-ALIGNED-RV64-V-NEXT:    sub sp, sp, a2
-; CHECK-ALIGNED-RV64-V-NEXT:    andi sp, sp, -64
-; CHECK-ALIGNED-RV64-V-NEXT:    li a2, 64
-; CHECK-ALIGNED-RV64-V-NEXT:    vsetvli zero, a2, e8, m4, ta, ma
-; CHECK-ALIGNED-RV64-V-NEXT:    vle8.v v8, (a0)
-; CHECK-ALIGNED-RV64-V-NEXT:    addi a2, sp, 800
-; CHECK-ALIGNED-RV64-V-NEXT:    vs4r.v v8, (a2) # Unknown-size Folded Spill
-; CHECK-ALIGNED-RV64-V-NEXT:    vle8.v v12, (a1)
-; CHECK-ALIGNED-RV64-V-NEXT:    lbu a2, 64(a0)
-; CHECK-ALIGNED-RV64-V-NEXT:    sd a2, 120(sp) # 8-byte Folded Spill
-; CHECK-ALIGNED-RV64-V-NEXT:    lbu a2, 65(a0)
-; CHECK-ALIGNED-RV64-V-NEXT:    sd a2, 112(sp) # 8-byte Folded Spill
-; CHECK-ALIGNED-RV64-V-NEXT:    lbu a2, 66(a0)
-; CHECK-ALIGNED-RV64-V-NEXT:    sd a2, 104(sp) # 8-byte Folded Spill
-; CHECK-ALIGNED-RV64-V-NEXT:    lbu a2, 67(a0)
-; CHECK-ALIGNED-RV64-V-NEXT:    sd a2, 96(sp) # 8-byte Folded Spill
-; CHECK-ALIGNED-RV64-V-NEXT:    lbu a2, 68(a0)
-; CHECK-ALIGNED-RV64-V-NEXT:    sd a2, 88(sp) # 8-byte Folded Spill
-; CHECK-ALIGNED-RV64-V-NEXT:    lbu a2, 69(a0)
-; CHECK-ALIGNED-RV64-V-NEXT:    sd a2, 80(sp) # 8-byte Folded Spill
-; CHECK-ALIGNED-RV64-V-NEXT:    lbu a2, 70(a0)
-; CHECK-ALIGNED-RV64-V-NEXT:    sd a2, 72(sp) # 8-byte Folded Spill
-; CHECK-ALIGNED-RV64-V-NEXT:    lbu a2, 71(a0)
-; CHECK-ALIGNED-RV64-V-NEXT:    sd a2, 64(sp) # 8-byte Folded Spill
-; CHECK-ALIGNED-RV64-V-NEXT:    lbu a2, 72(a0)
-; CHECK-ALIGNED-RV64-V-NEXT:    sd a2, 56(sp) # 8-byte Folded Spill
-; CHECK-ALIGNED-RV64-V-NEXT:    lbu s10, 73(a0)
-; CHECK-ALIGNED-RV64-V-NEXT:    lbu s11, 74(a0)
-; CHECK-ALIGNED-RV64-V-NEXT:    lbu ra, 75(a0)
-; CHECK-ALIGNED-RV64-V-NEXT:    lbu s5, 76(a0)
-; CHECK-ALIGNED-RV64-V-NEXT:    lbu s6, 77(a0)
-; CHECK-ALIGNED-RV64-V-NEXT:    lbu s7, 78(a0)
-; CHECK-ALIGNED-RV64-V-NEXT:    lbu s8, 79(a0)
-; CHECK-ALIGNED-RV64-V-NEXT:    lbu t6, 80(a0)
-; CHECK-ALIGNED-RV64-V-NEXT:    lbu s2, 81(a0)
-; CHECK-ALIGNED-RV64-V-NEXT:    lbu s3, 82(a0)
-; CHECK-ALIGNED-RV64-V-NEXT:    lbu s4, 83(a0)
-; CHECK-ALIGNED-RV64-V-NEXT:    lbu t2, 84(a0)
-; CHECK-ALIGNED-RV64-V-NEXT:    lbu t3, 85(a0)
-; CHECK-ALIGNED-RV64-V-NEXT:    lbu t4, 86(a0)
-; CHECK-ALIGNED-RV64-V-NEXT:    lbu t5, 87(a0)
-; CHECK-ALIGNED-RV64-V-NEXT:    lbu a6, 88(a0)
-; CHECK-ALIGNED-RV64-V-NEXT:    lbu a7, 89(a0)
-; CHECK-ALIGNED-RV64-V-NEXT:    lbu t0, 90(a0)
-; CHECK-ALIGNED-RV64-V-NEXT:    lbu t1, 91(a0)
-; CHECK-ALIGNED-RV64-V-NEXT:    lbu a2, 92(a0)
-; CHECK-ALIGNED-RV64-V-NEXT:    lbu a3, 93(a0)
-; CHECK-ALIGNED-RV64-V-NEXT:    lbu a4, 94(a0)
-; CHECK-ALIGNED-RV64-V-NEXT:    lbu a5, 95(a0)
-; CHECK-ALIGNED-RV64-V-NEXT:    lbu s9, 64(a1)
-; CHECK-ALIGNED-RV64-V-NEXT:    sd s9, 376(sp) # 8-byte Folded Spill
-; CHECK-ALIGNED-RV64-V-NEXT:    lbu s9, 65(a1)
-; CHECK-ALIGNED-RV64-V-NEXT:    sd s9, 360(sp) # 8-byte Folded Spill
-; CHECK-ALIGNED-RV64-V-NEXT:    lbu s9, 66(a1)
-; CHECK-ALIGNED-RV64-V-NEXT:    sd s9, 368(sp) # 8-byte Folded Spill
-; CHECK-ALIGNED-RV64-V-NEXT:    lbu s9, 67(a1)
-; CHECK-ALIGNED-RV64-V-NEXT:    sd s9, 344(sp) # 8-byte Folded Spill
-; CHECK-ALIGNED-RV64-V-NEXT:    lbu s9, 68(a1)
-; CHECK-ALIGNED-RV64-V-NEXT:    sd s9, 352(sp) # 8-byte Folded Spill
-; CHECK-ALIGNED-RV64-V-NEXT:    lbu s9, 69(a1)
-; CHECK-ALIGNED-RV64-V-NEXT:    sd s9, 328(sp) # 8-byte Folded Spill
-; CHECK-ALIGNED-RV64-V-NEXT:    lbu s9, 70(a1)
-; CHECK-ALIGNED-RV64-V-NEXT:    sd s9, 336(sp) # 8-byte Folded Spill
-; CHECK-ALIGNED-RV64-V-NEXT:    lbu s9, 71(a1)
-; CHECK-ALIGNED-RV64-V-NEXT:    sd s9, 312(sp) # 8-byte Folded Spill
-; CHECK-ALIGNED-RV64-V-NEXT:    lbu s9, 72(a1)
-; CHECK-ALIGNED-RV64-V-NEXT:    sd s9, 320(sp) # 8-byte Folded Spill
-; CHECK-ALIGNED-RV64-V-NEXT:    lbu s9, 73(a1)
-; CHECK-ALIGNED-RV64-V-NEXT:    sd s9, 296(sp) # 8-byte Folded Spill
-; CHECK-ALIGNED-RV64-V-NEXT:    lbu s9, 74(a1)
-; CHECK-ALIGNED-RV64-V-NEXT:    sd s9, 304(sp) # 8-byte Folded Spill
-; CHECK-ALIGNED-RV64-V-NEXT:    lbu s9, 75(a1)
-; CHECK-ALIGNED-RV64-V-NEXT:    sd s9, 280(sp) # 8-byte Folded Spill
-; CHECK-ALIGNED-RV64-V-NEXT:    lbu s9, 76(a1)
-; CHECK-ALIGNED-RV64-V-NEXT:    sd s9, 288(sp) # 8-byte Folded Spill
-; CHECK-ALIGNED-RV64-V-NEXT:    lbu s9, 77(a1)
-; CHECK-ALIGNED-RV64-V-NEXT:    sd s9, 264(sp) # 8-byte Folded Spill
-; CHECK-ALIGNED-RV64-V-NEXT:    lbu s9, 78(a1)
-; CHECK-ALIGNED-RV64-V-NEXT:    sd s9, 272(sp) # 8-byte Folded Spill
-; CHECK-ALIGNED-RV64-V-NEXT:    lbu s9, 79(a1)
-; CHECK-ALIGNED-RV64-V-NEXT:    sd s9, 248(sp) # 8-byte Folded Spill
-; CHECK-ALIGNED-RV64-V-NEXT:    lbu s9, 80(a1)
-; CHECK-ALIGNED-RV64-V-NEXT:    sd s9, 256(sp) # 8-byte Folded Spill
-; CHECK-ALIGNED-RV64-V-NEXT:    lbu s9, 81(a1)
-; CHECK-ALIGNED-RV64-V-NEXT:    sd s9, 232(sp) # 8-byte Folded Spill
-; CHECK-ALIGNED-RV64-V-NEXT:    lbu s9, 82(a1)
-; CHECK-ALIGNED-RV64-V-NEXT:    sd s9, 240(sp) # 8-byte Folded Spill
-; CHECK-ALIGNED-RV64-V-NEXT:    lbu s9, 83(a1)
-; CHECK-ALIGNED-RV64-V-NEXT:    sd s9, 216(sp) # 8-byte Folded Spill
-; CHECK-ALIGNED-RV64-V-NEXT:    lbu s9, 84(a1)
-; CHECK-ALIGNED-RV64-V-NEXT:    sd s9, 192(sp) # 8-byte Folded Spill
-; CHECK-ALIGNED-RV64-V-NEXT:    lbu s9, 85(a1)
-; CHECK-ALIGNED-RV64-V-NEXT:    sd s9, 224(sp) # 8-byte Folded Spill
-; CHECK-ALIGNED-RV64-V-NEXT:    lbu s9, 86(a1)
-; CHECK-ALIGNED-RV64-V-NEXT:    sd s9, 200(sp) # 8-byte Folded Spill
-; CHECK-ALIGNED-RV64-V-NEXT:    lbu s9, 87(a1)
-; CHECK-ALIGNED-RV64-V-NEXT:    sd s9, 208(sp) # 8-byte Folded Spill
-; CHECK-ALIGNED-RV64-V-NEXT:    lbu s9, 88(a1)
-; CHECK-ALIGNED-RV64-V-NEXT:    sd s9, 176(sp) # 8-byte Folded Spill
-; CHECK-ALIGNED-RV64-V-NEXT:    lbu s9, 89(a1)
-; CHECK-ALIGNED-RV64-V-NEXT:    sd s9, 184(sp) # 8-byte Folded Spill
-; CHECK-ALIGNED-RV64-V-NEXT:    lbu s9, 90(a1)
-; CHECK-ALIGNED-RV64-V-NEXT:    sd s9, 160(sp) # 8-byte Folded Spill
-; CHECK-ALIGNED-RV64-V-NEXT:    lbu s9, 91(a1)
-; CHECK-ALIGNED-RV64-V-NEXT:    sd s9, 168(sp) # 8-byte Folded Spill
-; CHECK-ALIGNED-RV64-V-NEXT:    lbu s9, 92(a1)
-; CHECK-ALIGNED-RV64-V-NEXT:    sd s9, 144(sp) # 8-byte Folded Spill
-; CHECK-ALIGNED-RV64-V-NEXT:    lbu s9, 93(a1)
-; CHECK-ALIGNED-RV64-V-NEXT:    sd s9, 152(sp) # 8-byte Folded Spill
-; CHECK-ALIGNED-RV64-V-NEXT:    lbu s9, 94(a1)
-; CHECK-ALIGNED-RV64-V-NEXT:    sd s9, 128(sp) # 8-byte Folded Spill
-; CHECK-ALIGNED-RV64-V-NEXT:    lbu s9, 95(a1)
-; CHECK-ALIGNED-RV64-V-NEXT:    sd s9, 136(sp) # 8-byte Folded Spill
-; CHECK-ALIGNED-RV64-V-NEXT:    sb a2, 540(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb a3, 541(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb a4, 542(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb a5, 543(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb a6, 536(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb a7, 537(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb t0, 538(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb t1, 539(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb t2, 532(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb t3, 533(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb t4, 534(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb t5, 535(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb t6, 528(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb s2, 529(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb s3, 530(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb s4, 531(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb s5, 524(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb s6, 525(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb s7, 526(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb s8, 527(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    ld a2, 56(sp) # 8-byte Folded Reload
-; CHECK-ALIGNED-RV64-V-NEXT:    sb a2, 520(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb s10, 521(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb s11, 522(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb ra, 523(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    ld a2, 88(sp) # 8-byte Folded Reload
-; CHECK-ALIGNED-RV64-V-NEXT:    sb a2, 516(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    ld a2, 80(sp) # 8-byte Folded Reload
-; CHECK-ALIGNED-RV64-V-NEXT:    sb a2, 517(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    ld a2, 72(sp) # 8-byte Folded Reload
-; CHECK-ALIGNED-RV64-V-NEXT:    sb a2, 518(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    ld a2, 64(sp) # 8-byte Folded Reload
-; CHECK-ALIGNED-RV64-V-NEXT:    sb a2, 519(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    ld a2, 120(sp) # 8-byte Folded Reload
-; CHECK-ALIGNED-RV64-V-NEXT:    sb a2, 512(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    ld a2, 112(sp) # 8-byte Folded Reload
-; CHECK-ALIGNED-RV64-V-NEXT:    sb a2, 513(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    ld a2, 104(sp) # 8-byte Folded Reload
-; CHECK-ALIGNED-RV64-V-NEXT:    sb a2, 514(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    ld a2, 96(sp) # 8-byte Folded Reload
-; CHECK-ALIGNED-RV64-V-NEXT:    sb a2, 515(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 572(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 573(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 574(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 575(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 568(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 569(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 570(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 571(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 564(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 565(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 566(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 567(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 560(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 561(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 562(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 563(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 556(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 557(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 558(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 559(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 552(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 553(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 554(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 555(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 548(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 549(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 550(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 551(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 544(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 545(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 546(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 547(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    addi a2, sp, 512
-; CHECK-ALIGNED-RV64-V-NEXT:    vle8.v v16, (a2)
-; CHECK-ALIGNED-RV64-V-NEXT:    ld a2, 144(sp) # 8-byte Folded Reload
-; CHECK-ALIGNED-RV64-V-NEXT:    sb a2, 732(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    ld a2, 152(sp) # 8-byte Folded Reload
-; CHECK-ALIGNED-RV64-V-NEXT:    sb a2, 733(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    ld a2, 128(sp) # 8-byte Folded Reload
-; CHECK-ALIGNED-RV64-V-NEXT:    sb a2, 734(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    ld a2, 136(sp) # 8-byte Folded Reload
-; CHECK-ALIGNED-RV64-V-NEXT:    sb a2, 735(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    ld a2, 176(sp) # 8-byte Folded Reload
-; CHECK-ALIGNED-RV64-V-NEXT:    sb a2, 728(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    ld a2, 184(sp) # 8-byte Folded Reload
-; CHECK-ALIGNED-RV64-V-NEXT:    sb a2, 729(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    ld a2, 160(sp) # 8-byte Folded Reload
-; CHECK-ALIGNED-RV64-V-NEXT:    sb a2, 730(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    ld a2, 168(sp) # 8-byte Folded Reload
-; CHECK-ALIGNED-RV64-V-NEXT:    sb a2, 731(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    ld a2, 192(sp) # 8-byte Folded Reload
-; CHECK-ALIGNED-RV64-V-NEXT:    sb a2, 724(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 764(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 765(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 766(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 767(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 760(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 761(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 762(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 763(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 756(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 757(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 758(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 759(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 752(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 753(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 754(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 755(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 748(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 749(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 750(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 751(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 744(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 745(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 746(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 747(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 740(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 741(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 742(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 743(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 736(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 737(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 738(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 739(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    ld a2, 224(sp) # 8-byte Folded Reload
-; CHECK-ALIGNED-RV64-V-NEXT:    sb a2, 725(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    ld a2, 200(sp) # 8-byte Folded Reload
-; CHECK-ALIGNED-RV64-V-NEXT:    sb a2, 726(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    ld a2, 208(sp) # 8-byte Folded Reload
-; CHECK-ALIGNED-RV64-V-NEXT:    sb a2, 727(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    ld a2, 256(sp) # 8-byte Folded Reload
-; CHECK-ALIGNED-RV64-V-NEXT:    sb a2, 720(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    ld a2, 232(sp) # 8-byte Folded Reload
-; CHECK-ALIGNED-RV64-V-NEXT:    sb a2, 721(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    ld a2, 240(sp) # 8-byte Folded Reload
-; CHECK-ALIGNED-RV64-V-NEXT:    sb a2, 722(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    ld a2, 216(sp) # 8-byte Folded Reload
-; CHECK-ALIGNED-RV64-V-NEXT:    sb a2, 723(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    ld a2, 288(sp) # 8-byte Folded Reload
-; CHECK-ALIGNED-RV64-V-NEXT:    sb a2, 716(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    ld a2, 264(sp) # 8-byte Folded Reload
-; CHECK-ALIGNED-RV64-V-NEXT:    sb a2, 717(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    ld a2, 272(sp) # 8-byte Folded Reload
-; CHECK-ALIGNED-RV64-V-NEXT:    sb a2, 718(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    ld a2, 248(sp) # 8-byte Folded Reload
-; CHECK-ALIGNED-RV64-V-NEXT:    sb a2, 719(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    ld a2, 320(sp) # 8-byte Folded Reload
-; CHECK-ALIGNED-RV64-V-NEXT:    sb a2, 712(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    ld a2, 296(sp) # 8-byte Folded Reload
-; CHECK-ALIGNED-RV64-V-NEXT:    sb a2, 713(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    ld a2, 304(sp) # 8-byte Folded Reload
-; CHECK-ALIGNED-RV64-V-NEXT:    sb a2, 714(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    ld a2, 280(sp) # 8-byte Folded Reload
-; CHECK-ALIGNED-RV64-V-NEXT:    sb a2, 715(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    ld a2, 352(sp) # 8-byte Folded Reload
-; CHECK-ALIGNED-RV64-V-NEXT:    sb a2, 708(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    ld a2, 328(sp) # 8-byte Folded Reload
-; CHECK-ALIGNED-RV64-V-NEXT:    sb a2, 709(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    ld a2, 336(sp) # 8-byte Folded Reload
-; CHECK-ALIGNED-RV64-V-NEXT:    sb a2, 710(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    ld a2, 312(sp) # 8-byte Folded Reload
-; CHECK-ALIGNED-RV64-V-NEXT:    sb a2, 711(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    ld a2, 376(sp) # 8-byte Folded Reload
-; CHECK-ALIGNED-RV64-V-NEXT:    sb a2, 704(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    ld a2, 360(sp) # 8-byte Folded Reload
-; CHECK-ALIGNED-RV64-V-NEXT:    sb a2, 705(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    ld a2, 368(sp) # 8-byte Folded Reload
-; CHECK-ALIGNED-RV64-V-NEXT:    sb a2, 706(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    ld a2, 344(sp) # 8-byte Folded Reload
-; CHECK-ALIGNED-RV64-V-NEXT:    sb a2, 707(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    addi a2, sp, 704
-; CHECK-ALIGNED-RV64-V-NEXT:    vle8.v v20, (a2)
-; CHECK-ALIGNED-RV64-V-NEXT:    lbu s6, 96(a0)
-; CHECK-ALIGNED-RV64-V-NEXT:    lbu s7, 97(a0)
-; CHECK-ALIGNED-RV64-V-NEXT:    lbu s8, 98(a0)
-; CHECK-ALIGNED-RV64-V-NEXT:    lbu t2, 99(a0)
-; CHECK-ALIGNED-RV64-V-NEXT:    lbu s9, 100(a0)
-; CHECK-ALIGNED-RV64-V-NEXT:    lbu s10, 101(a0)
-; CHECK-ALIGNED-RV64-V-NEXT:    lbu s11, 102(a0)
-; CHECK-ALIGNED-RV64-V-NEXT:    lbu ra, 103(a0)
-; CHECK-ALIGNED-RV64-V-NEXT:    lbu a6, 104(a0)
-; CHECK-ALIGNED-RV64-V-NEXT:    lbu a7, 105(a0)
-; CHECK-ALIGNED-RV64-V-NEXT:    lbu t0, 106(a0)
-; CHECK-ALIGNED-RV64-V-NEXT:    lbu t1, 107(a0)
-; CHECK-ALIGNED-RV64-V-NEXT:    lbu a2, 108(a0)
-; CHECK-ALIGNED-RV64-V-NEXT:    lbu a3, 109(a0)
-; CHECK-ALIGNED-RV64-V-NEXT:    lbu a4, 110(a0)
-; CHECK-ALIGNED-RV64-V-NEXT:    lbu a5, 111(a0)
-; CHECK-ALIGNED-RV64-V-NEXT:    lbu t3, 96(a1)
-; CHECK-ALIGNED-RV64-V-NEXT:    sd t3, 376(sp) # 8-byte Folded Spill
-; CHECK-ALIGNED-RV64-V-NEXT:    lbu t3, 97(a1)
-; CHECK-ALIGNED-RV64-V-NEXT:    sd t3, 368(sp) # 8-byte Folded Spill
-; CHECK-ALIGNED-RV64-V-NEXT:    lbu t3, 98(a1)
-; CHECK-ALIGNED-RV64-V-NEXT:    sd t3, 360(sp) # 8-byte Folded Spill
-; CHECK-ALIGNED-RV64-V-NEXT:    lbu t3, 99(a1)
-; CHECK-ALIGNED-RV64-V-NEXT:    sd t3, 352(sp) # 8-byte Folded Spill
-; CHECK-ALIGNED-RV64-V-NEXT:    lbu t3, 100(a1)
-; CHECK-ALIGNED-RV64-V-NEXT:    sd t3, 344(sp) # 8-byte Folded Spill
-; CHECK-ALIGNED-RV64-V-NEXT:    lbu t3, 101(a1)
-; CHECK-ALIGNED-RV64-V-NEXT:    sd t3, 336(sp) # 8-byte Folded Spill
-; CHECK-ALIGNED-RV64-V-NEXT:    lbu t3, 102(a1)
-; CHECK-ALIGNED-RV64-V-NEXT:    sd t3, 328(sp) # 8-byte Folded Spill
-; CHECK-ALIGNED-RV64-V-NEXT:    lbu t3, 103(a1)
-; CHECK-ALIGNED-RV64-V-NEXT:    sd t3, 320(sp) # 8-byte Folded Spill
-; CHECK-ALIGNED-RV64-V-NEXT:    lbu t3, 104(a1)
-; CHECK-ALIGNED-RV64-V-NEXT:    lbu t4, 105(a1)
-; CHECK-ALIGNED-RV64-V-NEXT:    lbu t5, 106(a1)
-; CHECK-ALIGNED-RV64-V-NEXT:    lbu t6, 107(a1)
-; CHECK-ALIGNED-RV64-V-NEXT:    lbu s2, 108(a1)
-; CHECK-ALIGNED-RV64-V-NEXT:    lbu s3, 109(a1)
-; CHECK-ALIGNED-RV64-V-NEXT:    lbu s4, 110(a1)
-; CHECK-ALIGNED-RV64-V-NEXT:    lbu s5, 111(a1)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb a2, 460(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb a3, 461(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb a4, 462(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb a5, 463(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb a6, 456(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb a7, 457(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb t0, 458(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb t1, 459(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb s9, 452(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb s10, 453(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb s11, 454(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb ra, 455(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb s6, 448(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb s7, 449(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb s8, 450(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 508(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 509(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 510(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 511(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 504(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 505(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 506(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 507(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 500(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 501(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 502(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 503(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 496(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 497(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 498(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 499(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 492(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 493(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 494(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 495(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 488(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 489(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 490(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 491(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 484(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 485(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 486(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 487(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 480(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 481(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 482(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 483(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 476(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 477(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 478(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 479(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 472(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 473(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 474(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 475(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 468(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 469(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 470(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 471(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 464(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 465(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 466(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 467(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb t2, 451(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    addi a2, sp, 448
-; CHECK-ALIGNED-RV64-V-NEXT:    vle8.v v24, (a2)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 700(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 701(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 702(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 703(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 696(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 697(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 698(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 699(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 692(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 693(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 694(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 695(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 688(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 689(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 690(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 691(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 684(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 685(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 686(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 687(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 680(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 681(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 682(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 683(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 676(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 677(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 678(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 679(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 672(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 673(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 674(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 675(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 668(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 669(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 670(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 671(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 664(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 665(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 666(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 667(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 660(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 661(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 662(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 663(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 656(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 657(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 658(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 659(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb s2, 652(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb s3, 653(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb s4, 654(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb s5, 655(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb t3, 648(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb t4, 649(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb t5, 650(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb t6, 651(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    ld a2, 344(sp) # 8-byte Folded Reload
-; CHECK-ALIGNED-RV64-V-NEXT:    sb a2, 644(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    ld a2, 336(sp) # 8-byte Folded Reload
-; CHECK-ALIGNED-RV64-V-NEXT:    sb a2, 645(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    ld a2, 328(sp) # 8-byte Folded Reload
-; CHECK-ALIGNED-RV64-V-NEXT:    sb a2, 646(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    ld a2, 320(sp) # 8-byte Folded Reload
-; CHECK-ALIGNED-RV64-V-NEXT:    sb a2, 647(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    ld a2, 376(sp) # 8-byte Folded Reload
-; CHECK-ALIGNED-RV64-V-NEXT:    sb a2, 640(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    ld a2, 368(sp) # 8-byte Folded Reload
-; CHECK-ALIGNED-RV64-V-NEXT:    sb a2, 641(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    ld a2, 360(sp) # 8-byte Folded Reload
-; CHECK-ALIGNED-RV64-V-NEXT:    sb a2, 642(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    ld a2, 352(sp) # 8-byte Folded Reload
-; CHECK-ALIGNED-RV64-V-NEXT:    sb a2, 643(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    addi a2, sp, 640
-; CHECK-ALIGNED-RV64-V-NEXT:    vle8.v v28, (a2)
-; CHECK-ALIGNED-RV64-V-NEXT:    lbu t3, 112(a0)
-; CHECK-ALIGNED-RV64-V-NEXT:    lbu t4, 113(a0)
-; CHECK-ALIGNED-RV64-V-NEXT:    lbu t5, 114(a0)
-; CHECK-ALIGNED-RV64-V-NEXT:    lbu a2, 115(a0)
-; CHECK-ALIGNED-RV64-V-NEXT:    lbu t6, 116(a0)
-; CHECK-ALIGNED-RV64-V-NEXT:    lbu s2, 117(a0)
-; CHECK-ALIGNED-RV64-V-NEXT:    lbu s3, 118(a0)
-; CHECK-ALIGNED-RV64-V-NEXT:    lbu s4, 119(a0)
-; CHECK-ALIGNED-RV64-V-NEXT:    lbu a3, 112(a1)
-; CHECK-ALIGNED-RV64-V-NEXT:    lbu a4, 113(a1)
-; CHECK-ALIGNED-RV64-V-NEXT:    lbu a5, 114(a1)
-; CHECK-ALIGNED-RV64-V-NEXT:    lbu a6, 115(a1)
-; CHECK-ALIGNED-RV64-V-NEXT:    lbu t2, 116(a1)
-; CHECK-ALIGNED-RV64-V-NEXT:    lbu a7, 117(a1)
-; CHECK-ALIGNED-RV64-V-NEXT:    lbu t0, 118(a1)
-; CHECK-ALIGNED-RV64-V-NEXT:    lbu t1, 119(a1)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb t6, 388(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb s2, 389(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb s3, 390(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb s4, 391(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb t3, 384(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb t4, 385(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb t5, 386(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 444(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 445(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 446(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 447(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 440(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 441(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 442(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 443(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 436(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 437(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 438(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 439(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 432(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 433(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 434(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 435(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 428(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 429(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 430(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 431(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 424(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 425(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 426(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 427(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 420(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 421(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 422(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 423(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 416(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 417(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 418(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 419(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 412(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 413(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 414(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 415(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 408(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 409(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 410(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 411(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 404(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 405(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 406(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 407(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 400(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 401(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 402(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 403(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 396(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 397(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 398(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 399(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 392(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 393(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 394(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 395(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb a2, 387(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    addi a2, sp, 384
-; CHECK-ALIGNED-RV64-V-NEXT:    vle8.v v4, (a2)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb t2, 580(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 636(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 637(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 638(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 639(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 632(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 633(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 634(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 635(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 628(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 629(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 630(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 631(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 624(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 625(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 626(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 627(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 620(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 621(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 622(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 623(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 616(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 617(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 618(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 619(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 612(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 613(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 614(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 615(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 608(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 609(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 610(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 611(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 604(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 605(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 606(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 607(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 600(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 601(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 602(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 603(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 596(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 597(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 598(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 599(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 592(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 593(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 594(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 595(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 588(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 589(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 590(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 591(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 584(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 585(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 586(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb zero, 587(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb a7, 581(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb t0, 582(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb t1, 583(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb a3, 576(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb a4, 577(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb a5, 578(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    sb a6, 579(sp)
-; CHECK-ALIGNED-RV64-V-NEXT:    addi a2, sp, 576
-; CHECK-ALIGNED-RV64-V-NEXT:    vle8.v v0, (a2)
-; CHECK-ALIGNED-RV64-V-NEXT:    vmsne.vv v8, v4, v0
-; CHECK-ALIGNED-RV64-V-NEXT:    vmsne.vv v9, v24, v28
-; CHECK-ALIGNED-RV64-V-NEXT:    lbu a2, 121(a0)
-; CHECK-ALIGNED-RV64-V-NEXT:    lbu a3, 120(a0)
-; CHECK-ALIGNED-RV64-V-NEXT:    lbu a4, 122(a0)
-; CHECK-ALIGNED-RV64-V-NEXT:    lbu a5, 123(a0)
+; CHECK-ALIGNED-RV64-V-NEXT:    addi sp, sp, -64
+; CHECK-ALIGNED-RV64-V-NEXT:    sd s0, 56(sp) # 8-byte Folded Spill
+; CHECK-ALIGNED-RV64-V-NEXT:    sd s1, 48(sp) # 8-byte Folded Spill
+; CHECK-ALIGNED-RV64-V-NEXT:    sd s2, 40(sp) # 8-byte Folded Spill
+; CHECK-ALIGNED-RV64-V-NEXT:    sd s3, 32(sp) # 8-byte Folded Spill
+; CHECK-ALIGNED-RV64-V-NEXT:    sd s4, 24(sp) # 8-byte Folded Spill
+; CHECK-ALIGNED-RV64-V-NEXT:    sd s5, 16(sp) # 8-byte Folded Spill
+; CHECK-ALIGNED-RV64-V-NEXT:    sd s6, 8(sp) # 8-byte Folded Spill
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu a2, 17(a0)
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu a3, 16(a0)
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu a4, 18(a0)
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu a5, 19(a0)
 ; CHECK-ALIGNED-RV64-V-NEXT:    slli a2, a2, 8
 ; CHECK-ALIGNED-RV64-V-NEXT:    or a2, a2, a3
 ; CHECK-ALIGNED-RV64-V-NEXT:    slli a4, a4, 16
-; CHECK-ALIGNED-RV64-V-NEXT:    slli a3, a5, 24
-; CHECK-ALIGNED-RV64-V-NEXT:    lbu a6, 120(a1)
-; CHECK-ALIGNED-RV64-V-NEXT:    lbu a7, 121(a1)
-; CHECK-ALIGNED-RV64-V-NEXT:    or a3, a3, a4
-; CHECK-ALIGNED-RV64-V-NEXT:    lbu a4, 122(a1)
-; CHECK-ALIGNED-RV64-V-NEXT:    lbu t0, 123(a1)
-; CHECK-ALIGNED-RV64-V-NEXT:    slli a7, a7, 8
-; CHECK-ALIGNED-RV64-V-NEXT:    or a6, a7, a6
+; CHECK-ALIGNED-RV64-V-NEXT:    slli a5, a5, 24
+; CHECK-ALIGNED-RV64-V-NEXT:    or a4, a5, a4
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu a3, 20(a0)
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu a5, 21(a0)
+; CHECK-ALIGNED-RV64-V-NEXT:    or a2, a4, a2
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu a4, 22(a0)
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu a6, 23(a0)
+; CHECK-ALIGNED-RV64-V-NEXT:    slli a5, a5, 8
+; CHECK-ALIGNED-RV64-V-NEXT:    or a3, a5, a3
 ; CHECK-ALIGNED-RV64-V-NEXT:    slli a4, a4, 16
-; CHECK-ALIGNED-RV64-V-NEXT:    slli a7, t0, 24
-; CHECK-ALIGNED-RV64-V-NEXT:    or a4, a7, a4
-; CHECK-ALIGNED-RV64-V-NEXT:    or a2, a3, a2
-; CHECK-ALIGNED-RV64-V-NEXT:    vmv.v.i v24, 0
-; CHECK-ALIGNED-RV64-V-NEXT:    addi a7, sp, 800
-; CHECK-ALIGNED-RV64-V-NEXT:    vl4r.v v28, (a7) # Unknown-size Folded Reload
-; CHECK-ALIGNED-RV64-V-NEXT:    vmsne.vv v10, v28, v12
-; CHECK-ALIGNED-RV64-V-NEXT:    vmv1r.v v11, v24
-; CHECK-ALIGNED-RV64-V-NEXT:    vsetvli zero, zero, e8, m4, tu, ma
-; CHECK-ALIGNED-RV64-V-NEXT:    vmv.s.x v11, a2
-; CHECK-ALIGNED-RV64-V-NEXT:    slli a2, a2, 48
-; CHECK-ALIGNED-RV64-V-NEXT:    srli a2, a2, 56
-; CHECK-ALIGNED-RV64-V-NEXT:    vmv.s.x v12, a2
-; CHECK-ALIGNED-RV64-V-NEXT:    srli a3, a3, 16
-; CHECK-ALIGNED-RV64-V-NEXT:    or a2, a4, a6
-; CHECK-ALIGNED-RV64-V-NEXT:    vmv.s.x v13, a3
-; CHECK-ALIGNED-RV64-V-NEXT:    slli a3, a2, 48
-; CHECK-ALIGNED-RV64-V-NEXT:    srli a3, a3, 56
-; CHECK-ALIGNED-RV64-V-NEXT:    srli a4, a4, 16
-; CHECK-ALIGNED-RV64-V-NEXT:    vmv.s.x v14, a5
-; CHECK-ALIGNED-RV64-V-NEXT:    vmv1r.v v15, v24
-; CHECK-ALIGNED-RV64-V-NEXT:    vmv.s.x v15, a2
-; CHECK-ALIGNED-RV64-V-NEXT:    vmv.s.x v28, a3
-; CHECK-ALIGNED-RV64-V-NEXT:    vmv.s.x v29, a4
-; CHECK-ALIGNED-RV64-V-NEXT:    vsetvli zero, zero, e8, m4, ta, ma
-; CHECK-ALIGNED-RV64-V-NEXT:    vmsne.vv v30, v16, v20
-; CHECK-ALIGNED-RV64-V-NEXT:    vmv.s.x v16, t0
-; CHECK-ALIGNED-RV64-V-NEXT:    lbu a2, 124(a0)
-; CHECK-ALIGNED-RV64-V-NEXT:    lbu a3, 125(a0)
-; CHECK-ALIGNED-RV64-V-NEXT:    lbu a0, 126(a0)
-; CHECK-ALIGNED-RV64-V-NEXT:    lbu a4, 124(a1)
-; CHECK-ALIGNED-RV64-V-NEXT:    lbu a5, 125(a1)
-; CHECK-ALIGNED-RV64-V-NEXT:    slli a6, a3, 8
-; CHECK-ALIGNED-RV64-V-NEXT:    or a2, a6, a2
-; CHECK-ALIGNED-RV64-V-NEXT:    lbu a1, 126(a1)
-; CHECK-ALIGNED-RV64-V-NEXT:    slli a6, a5, 8
+; CHECK-ALIGNED-RV64-V-NEXT:    slli a6, a6, 24
 ; CHECK-ALIGNED-RV64-V-NEXT:    or a4, a6, a4
-; CHECK-ALIGNED-RV64-V-NEXT:    vmv1r.v v17, v24
-; CHECK-ALIGNED-RV64-V-NEXT:    vsetvli zero, zero, e8, m4, tu, ma
-; CHECK-ALIGNED-RV64-V-NEXT:    vmv.s.x v17, a2
-; CHECK-ALIGNED-RV64-V-NEXT:    vmv.s.x v18, a3
-; CHECK-ALIGNED-RV64-V-NEXT:    vmv1r.v v19, v24
-; CHECK-ALIGNED-RV64-V-NEXT:    vmv.s.x v19, a4
-; CHECK-ALIGNED-RV64-V-NEXT:    vsetivli zero, 2, e8, m1, tu, ma
-; CHECK-ALIGNED-RV64-V-NEXT:    vslideup.vi v11, v12, 1
-; CHECK-ALIGNED-RV64-V-NEXT:    vsetivli zero, 3, e8, m1, tu, ma
-; CHECK-ALIGNED-RV64-V-NEXT:    vslideup.vi v11, v13, 2
-; CHECK-ALIGNED-RV64-V-NEXT:    vsetivli zero, 4, e8, m1, tu, ma
-; CHECK-ALIGNED-RV64-V-NEXT:    vslideup.vi v11, v14, 3
-; CHECK-ALIGNED-RV64-V-NEXT:    vmv4r.v v20, v24
-; CHECK-ALIGNED-RV64-V-NEXT:    vsetivli zero, 2, e8, m1, tu, ma
-; CHECK-ALIGNED-RV64-V-NEXT:    vslideup.vi v15, v28, 1
-; CHECK-ALIGNED-RV64-V-NEXT:    vsetivli zero, 3, e8, m1, tu, ma
-; CHECK-ALIGNED-RV64-V-NEXT:    vslideup.vi v15, v29, 2
-; CHECK-ALIGNED-RV64-V-NEXT:    vsetivli zero, 4, e8, m1, tu, ma
-; CHECK-ALIGNED-RV64-V-NEXT:    vslideup.vi v15, v16, 3
-; CHECK-ALIGNED-RV64-V-NEXT:    vmv4r.v v4, v24
-; CHECK-ALIGNED-RV64-V-NEXT:    vmv.s.x v12, a5
-; CHECK-ALIGNED-RV64-V-NEXT:    vmv1r.v v20, v11
-; CHECK-ALIGNED-RV64-V-NEXT:    vmv1r.v v4, v15
-; CHECK-ALIGNED-RV64-V-NEXT:    vsetivli zero, 2, e8, m1, tu, ma
-; CHECK-ALIGNED-RV64-V-NEXT:    vslideup.vi v17, v18, 1
-; CHECK-ALIGNED-RV64-V-NEXT:    vslideup.vi v19, v12, 1
-; CHECK-ALIGNED-RV64-V-NEXT:    vmv4r.v v12, v24
-; CHECK-ALIGNED-RV64-V-NEXT:    li a2, 64
-; CHECK-ALIGNED-RV64-V-NEXT:    vsetvli zero, a2, e8, m4, ta, ma
-; CHECK-ALIGNED-RV64-V-NEXT:    vmsne.vv v11, v20, v4
-; CHECK-ALIGNED-RV64-V-NEXT:    vmv4r.v v20, v24
-; CHECK-ALIGNED-RV64-V-NEXT:    vmv1r.v v16, v24
-; CHECK-ALIGNED-RV64-V-NEXT:    vsetvli zero, zero, e8, m4, tu, ma
-; CHECK-ALIGNED-RV64-V-NEXT:    vmv.s.x v16, a0
-; CHECK-ALIGNED-RV64-V-NEXT:    vmv1r.v v12, v17
-; CHECK-ALIGNED-RV64-V-NEXT:    vmv1r.v v20, v19
-; CHECK-ALIGNED-RV64-V-NEXT:    vmv4r.v v4, v24
-; CHECK-ALIGNED-RV64-V-NEXT:    vsetvli zero, zero, e8, m4, ta, ma
-; CHECK-ALIGNED-RV64-V-NEXT:    vmsne.vv v17, v12, v20
-; CHECK-ALIGNED-RV64-V-NEXT:    vmv1r.v v4, v16
-; CHECK-ALIGNED-RV64-V-NEXT:    vsetvli zero, zero, e8, m4, tu, ma
-; CHECK-ALIGNED-RV64-V-NEXT:    vmv.s.x v24, a1
-; CHECK-ALIGNED-RV64-V-NEXT:    vsetvli zero, zero, e8, m4, ta, ma
-; CHECK-ALIGNED-RV64-V-NEXT:    vmsne.vv v12, v4, v24
-; CHECK-ALIGNED-RV64-V-NEXT:    vmor.mm v8, v9, v8
-; CHECK-ALIGNED-RV64-V-NEXT:    vmor.mm v9, v10, v30
-; CHECK-ALIGNED-RV64-V-NEXT:    vmor.mm v8, v9, v8
-; CHECK-ALIGNED-RV64-V-NEXT:    vmor.mm v9, v11, v17
-; CHECK-ALIGNED-RV64-V-NEXT:    vmor.mm v9, v9, v12
-; CHECK-ALIGNED-RV64-V-NEXT:    vmnor.mm v8, v8, v9
-; CHECK-ALIGNED-RV64-V-NEXT:    vcpop.m a0, v8
-; CHECK-ALIGNED-RV64-V-NEXT:    seqz a0, a0
-; CHECK-ALIGNED-RV64-V-NEXT:    addi sp, s0, -896
-; CHECK-ALIGNED-RV64-V-NEXT:    ld ra, 888(sp) # 8-byte Folded Reload
-; CHECK-ALIGNED-RV64-V-NEXT:    ld s0, 880(sp) # 8-byte Folded Reload
-; CHECK-ALIGNED-RV64-V-NEXT:    ld s2, 872(sp) # 8-byte Folded Reload
-; CHECK-ALIGNED-RV64-V-NEXT:    ld s3, 864(sp) # 8-byte Folded Reload
-; CHECK-ALIGNED-RV64-V-NEXT:    ld s4, 856(sp) # 8-byte Folded Reload
-; CHECK-ALIGNED-RV64-V-NEXT:    ld s5, 848(sp) # 8-byte Folded Reload
-; CHECK-ALIGNED-RV64-V-NEXT:    ld s6, 840(sp) # 8-byte Folded Reload
-; CHECK-ALIGNED-RV64-V-NEXT:    ld s7, 832(sp) # 8-byte Folded Reload
-; CHECK-ALIGNED-RV64-V-NEXT:    ld s8, 824(sp) # 8-byte Folded Reload
-; CHECK-ALIGNED-RV64-V-NEXT:    ld s9, 816(sp) # 8-byte Folded Reload
-; CHECK-ALIGNED-RV64-V-NEXT:    ld s10, 808(sp) # 8-byte Folded Reload
-; CHECK-ALIGNED-RV64-V-NEXT:    ld s11, 800(sp) # 8-byte Folded Reload
-; CHECK-ALIGNED-RV64-V-NEXT:    addi sp, sp, 896
+; CHECK-ALIGNED-RV64-V-NEXT:    or a3, a4, a3
+; CHECK-ALIGNED-RV64-V-NEXT:    slli a3, a3, 32
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu a4, 24(a0)
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu a5, 25(a0)
+; CHECK-ALIGNED-RV64-V-NEXT:    or t1, a3, a2
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu a2, 26(a0)
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu a3, 27(a0)
+; CHECK-ALIGNED-RV64-V-NEXT:    slli a5, a5, 8
+; CHECK-ALIGNED-RV64-V-NEXT:    or a4, a5, a4
+; CHECK-ALIGNED-RV64-V-NEXT:    slli a2, a2, 16
+; CHECK-ALIGNED-RV64-V-NEXT:    slli a3, a3, 24
+; CHECK-ALIGNED-RV64-V-NEXT:    or a2, a3, a2
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu a3, 28(a0)
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu a5, 29(a0)
+; CHECK-ALIGNED-RV64-V-NEXT:    or a2, a2, a4
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu a4, 30(a0)
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu a6, 31(a0)
+; CHECK-ALIGNED-RV64-V-NEXT:    slli a5, a5, 8
+; CHECK-ALIGNED-RV64-V-NEXT:    or a3, a5, a3
+; CHECK-ALIGNED-RV64-V-NEXT:    slli a4, a4, 16
+; CHECK-ALIGNED-RV64-V-NEXT:    slli a6, a6, 24
+; CHECK-ALIGNED-RV64-V-NEXT:    or a4, a6, a4
+; CHECK-ALIGNED-RV64-V-NEXT:    or a3, a4, a3
+; CHECK-ALIGNED-RV64-V-NEXT:    slli a3, a3, 32
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu a4, 8(a0)
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu a5, 9(a0)
+; CHECK-ALIGNED-RV64-V-NEXT:    or t0, a3, a2
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu a2, 10(a0)
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu a3, 11(a0)
+; CHECK-ALIGNED-RV64-V-NEXT:    slli a5, a5, 8
+; CHECK-ALIGNED-RV64-V-NEXT:    or a4, a5, a4
+; CHECK-ALIGNED-RV64-V-NEXT:    slli a2, a2, 16
+; CHECK-ALIGNED-RV64-V-NEXT:    slli a3, a3, 24
+; CHECK-ALIGNED-RV64-V-NEXT:    or a2, a3, a2
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu a3, 12(a0)
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu a5, 13(a0)
+; CHECK-ALIGNED-RV64-V-NEXT:    or a2, a2, a4
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu a4, 14(a0)
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu a6, 15(a0)
+; CHECK-ALIGNED-RV64-V-NEXT:    slli a5, a5, 8
+; CHECK-ALIGNED-RV64-V-NEXT:    or a3, a5, a3
+; CHECK-ALIGNED-RV64-V-NEXT:    slli a4, a4, 16
+; CHECK-ALIGNED-RV64-V-NEXT:    slli a6, a6, 24
+; CHECK-ALIGNED-RV64-V-NEXT:    or a4, a6, a4
+; CHECK-ALIGNED-RV64-V-NEXT:    or a3, a4, a3
+; CHECK-ALIGNED-RV64-V-NEXT:    slli a3, a3, 32
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu a4, 0(a0)
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu a5, 1(a0)
+; CHECK-ALIGNED-RV64-V-NEXT:    or a7, a3, a2
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu a2, 2(a0)
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu a3, 3(a0)
+; CHECK-ALIGNED-RV64-V-NEXT:    slli a5, a5, 8
+; CHECK-ALIGNED-RV64-V-NEXT:    or a4, a5, a4
+; CHECK-ALIGNED-RV64-V-NEXT:    slli a2, a2, 16
+; CHECK-ALIGNED-RV64-V-NEXT:    slli a3, a3, 24
+; CHECK-ALIGNED-RV64-V-NEXT:    or a2, a3, a2
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu a3, 4(a0)
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu a5, 5(a0)
+; CHECK-ALIGNED-RV64-V-NEXT:    or a2, a2, a4
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu a4, 6(a0)
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu a6, 7(a0)
+; CHECK-ALIGNED-RV64-V-NEXT:    slli a5, a5, 8
+; CHECK-ALIGNED-RV64-V-NEXT:    or a3, a5, a3
+; CHECK-ALIGNED-RV64-V-NEXT:    slli a4, a4, 16
+; CHECK-ALIGNED-RV64-V-NEXT:    slli a6, a6, 24
+; CHECK-ALIGNED-RV64-V-NEXT:    or a4, a6, a4
+; CHECK-ALIGNED-RV64-V-NEXT:    or a3, a4, a3
+; CHECK-ALIGNED-RV64-V-NEXT:    slli a3, a3, 32
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu a4, 56(a0)
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu a5, 57(a0)
+; CHECK-ALIGNED-RV64-V-NEXT:    or a6, a3, a2
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu a2, 58(a0)
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu a3, 59(a0)
+; CHECK-ALIGNED-RV64-V-NEXT:    slli a5, a5, 8
+; CHECK-ALIGNED-RV64-V-NEXT:    or a4, a5, a4
+; CHECK-ALIGNED-RV64-V-NEXT:    slli a2, a2, 16
+; CHECK-ALIGNED-RV64-V-NEXT:    slli a3, a3, 24
+; CHECK-ALIGNED-RV64-V-NEXT:    or a2, a3, a2
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu a3, 60(a0)
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu a5, 61(a0)
+; CHECK-ALIGNED-RV64-V-NEXT:    or a2, a2, a4
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu a4, 62(a0)
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu t2, 63(a0)
+; CHECK-ALIGNED-RV64-V-NEXT:    slli a5, a5, 8
+; CHECK-ALIGNED-RV64-V-NEXT:    or a3, a5, a3
+; CHECK-ALIGNED-RV64-V-NEXT:    slli a4, a4, 16
+; CHECK-ALIGNED-RV64-V-NEXT:    slli t2, t2, 24
+; CHECK-ALIGNED-RV64-V-NEXT:    or a4, t2, a4
+; CHECK-ALIGNED-RV64-V-NEXT:    or a3, a4, a3
+; CHECK-ALIGNED-RV64-V-NEXT:    slli a3, a3, 32
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu a4, 40(a0)
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu t2, 41(a0)
+; CHECK-ALIGNED-RV64-V-NEXT:    or a5, a3, a2
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu a2, 42(a0)
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu a3, 43(a0)
+; CHECK-ALIGNED-RV64-V-NEXT:    slli t2, t2, 8
+; CHECK-ALIGNED-RV64-V-NEXT:    or a4, t2, a4
+; CHECK-ALIGNED-RV64-V-NEXT:    slli a2, a2, 16
+; CHECK-ALIGNED-RV64-V-NEXT:    slli a3, a3, 24
+; CHECK-ALIGNED-RV64-V-NEXT:    or a2, a3, a2
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu a3, 44(a0)
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu t2, 45(a0)
+; CHECK-ALIGNED-RV64-V-NEXT:    or a2, a2, a4
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu a4, 46(a0)
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu t3, 47(a0)
+; CHECK-ALIGNED-RV64-V-NEXT:    slli t2, t2, 8
+; CHECK-ALIGNED-RV64-V-NEXT:    or a3, t2, a3
+; CHECK-ALIGNED-RV64-V-NEXT:    slli a4, a4, 16
+; CHECK-ALIGNED-RV64-V-NEXT:    slli t3, t3, 24
+; CHECK-ALIGNED-RV64-V-NEXT:    or a4, t3, a4
+; CHECK-ALIGNED-RV64-V-NEXT:    or a3, a4, a3
+; CHECK-ALIGNED-RV64-V-NEXT:    slli a3, a3, 32
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu t2, 32(a0)
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu t3, 33(a0)
+; CHECK-ALIGNED-RV64-V-NEXT:    or a4, a3, a2
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu a2, 34(a0)
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu a3, 35(a0)
+; CHECK-ALIGNED-RV64-V-NEXT:    slli t3, t3, 8
+; CHECK-ALIGNED-RV64-V-NEXT:    or t2, t3, t2
+; CHECK-ALIGNED-RV64-V-NEXT:    slli a2, a2, 16
+; CHECK-ALIGNED-RV64-V-NEXT:    slli a3, a3, 24
+; CHECK-ALIGNED-RV64-V-NEXT:    or a2, a3, a2
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu a3, 36(a0)
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu t3, 37(a0)
+; CHECK-ALIGNED-RV64-V-NEXT:    or a2, a2, t2
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu t2, 38(a0)
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu t4, 39(a0)
+; CHECK-ALIGNED-RV64-V-NEXT:    slli t3, t3, 8
+; CHECK-ALIGNED-RV64-V-NEXT:    or a3, t3, a3
+; CHECK-ALIGNED-RV64-V-NEXT:    slli t2, t2, 16
+; CHECK-ALIGNED-RV64-V-NEXT:    slli t4, t4, 24
+; CHECK-ALIGNED-RV64-V-NEXT:    or t2, t4, t2
+; CHECK-ALIGNED-RV64-V-NEXT:    or a3, t2, a3
+; CHECK-ALIGNED-RV64-V-NEXT:    slli a3, a3, 32
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu t2, 48(a0)
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu t3, 49(a0)
+; CHECK-ALIGNED-RV64-V-NEXT:    or a3, a3, a2
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu a2, 50(a0)
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu t4, 51(a0)
+; CHECK-ALIGNED-RV64-V-NEXT:    slli t3, t3, 8
+; CHECK-ALIGNED-RV64-V-NEXT:    or t2, t3, t2
+; CHECK-ALIGNED-RV64-V-NEXT:    slli a2, a2, 16
+; CHECK-ALIGNED-RV64-V-NEXT:    slli t4, t4, 24
+; CHECK-ALIGNED-RV64-V-NEXT:    or a2, t4, a2
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu t3, 52(a0)
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu t4, 53(a0)
+; CHECK-ALIGNED-RV64-V-NEXT:    or a2, a2, t2
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu t2, 54(a0)
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu t5, 55(a0)
+; CHECK-ALIGNED-RV64-V-NEXT:    slli t4, t4, 8
+; CHECK-ALIGNED-RV64-V-NEXT:    or t3, t4, t3
+; CHECK-ALIGNED-RV64-V-NEXT:    slli t2, t2, 16
+; CHECK-ALIGNED-RV64-V-NEXT:    slli t5, t5, 24
+; CHECK-ALIGNED-RV64-V-NEXT:    or t2, t5, t2
+; CHECK-ALIGNED-RV64-V-NEXT:    or t2, t2, t3
+; CHECK-ALIGNED-RV64-V-NEXT:    slli t2, t2, 32
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu t3, 16(a1)
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu t4, 17(a1)
+; CHECK-ALIGNED-RV64-V-NEXT:    or a2, t2, a2
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu t2, 18(a1)
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu t5, 19(a1)
+; CHECK-ALIGNED-RV64-V-NEXT:    slli t4, t4, 8
+; CHECK-ALIGNED-RV64-V-NEXT:    or t3, t4, t3
+; CHECK-ALIGNED-RV64-V-NEXT:    slli t2, t2, 16
+; CHECK-ALIGNED-RV64-V-NEXT:    slli t5, t5, 24
+; CHECK-ALIGNED-RV64-V-NEXT:    or t2, t5, t2
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu t4, 20(a1)
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu t5, 21(a1)
+; CHECK-ALIGNED-RV64-V-NEXT:    or t2, t2, t3
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu t3, 22(a1)
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu t6, 23(a1)
+; CHECK-ALIGNED-RV64-V-NEXT:    slli t5, t5, 8
+; CHECK-ALIGNED-RV64-V-NEXT:    or t4, t5, t4
+; CHECK-ALIGNED-RV64-V-NEXT:    slli t3, t3, 16
+; CHECK-ALIGNED-RV64-V-NEXT:    slli t6, t6, 24
+; CHECK-ALIGNED-RV64-V-NEXT:    or t3, t6, t3
+; CHECK-ALIGNED-RV64-V-NEXT:    or t3, t3, t4
+; CHECK-ALIGNED-RV64-V-NEXT:    slli t3, t3, 32
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu t4, 24(a1)
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu t5, 25(a1)
+; CHECK-ALIGNED-RV64-V-NEXT:    or t2, t3, t2
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu t3, 26(a1)
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu t6, 27(a1)
+; CHECK-ALIGNED-RV64-V-NEXT:    slli t5, t5, 8
+; CHECK-ALIGNED-RV64-V-NEXT:    or t4, t5, t4
+; CHECK-ALIGNED-RV64-V-NEXT:    slli t3, t3, 16
+; CHECK-ALIGNED-RV64-V-NEXT:    slli t6, t6, 24
+; CHECK-ALIGNED-RV64-V-NEXT:    or t3, t6, t3
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu t5, 28(a1)
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu t6, 29(a1)
+; CHECK-ALIGNED-RV64-V-NEXT:    or t3, t3, t4
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu t4, 30(a1)
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu s0, 31(a1)
+; CHECK-ALIGNED-RV64-V-NEXT:    slli t6, t6, 8
+; CHECK-ALIGNED-RV64-V-NEXT:    or t5, t6, t5
+; CHECK-ALIGNED-RV64-V-NEXT:    slli t4, t4, 16
+; CHECK-ALIGNED-RV64-V-NEXT:    slli s0, s0, 24
+; CHECK-ALIGNED-RV64-V-NEXT:    or t4, s0, t4
+; CHECK-ALIGNED-RV64-V-NEXT:    or t4, t4, t5
+; CHECK-ALIGNED-RV64-V-NEXT:    slli t4, t4, 32
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu t5, 8(a1)
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu t6, 9(a1)
+; CHECK-ALIGNED-RV64-V-NEXT:    or t3, t4, t3
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu t4, 10(a1)
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu s0, 11(a1)
+; CHECK-ALIGNED-RV64-V-NEXT:    slli t6, t6, 8
+; CHECK-ALIGNED-RV64-V-NEXT:    or t5, t6, t5
+; CHECK-ALIGNED-RV64-V-NEXT:    slli t4, t4, 16
+; CHECK-ALIGNED-RV64-V-NEXT:    slli s0, s0, 24
+; CHECK-ALIGNED-RV64-V-NEXT:    or t4, s0, t4
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu t6, 12(a1)
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu s0, 13(a1)
+; CHECK-ALIGNED-RV64-V-NEXT:    or t4, t4, t5
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu t5, 14(a1)
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu s1, 15(a1)
+; CHECK-ALIGNED-RV64-V-NEXT:    slli s0, s0, 8
+; CHECK-ALIGNED-RV64-V-NEXT:    or t6, s0, t6
+; CHECK-ALIGNED-RV64-V-NEXT:    slli t5, t5, 16
+; CHECK-ALIGNED-RV64-V-NEXT:    slli s1, s1, 24
+; CHECK-ALIGNED-RV64-V-NEXT:    or t5, s1, t5
+; CHECK-ALIGNED-RV64-V-NEXT:    or t5, t5, t6
+; CHECK-ALIGNED-RV64-V-NEXT:    slli t5, t5, 32
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu t6, 0(a1)
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu s0, 1(a1)
+; CHECK-ALIGNED-RV64-V-NEXT:    or t4, t5, t4
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu t5, 2(a1)
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu s1, 3(a1)
+; CHECK-ALIGNED-RV64-V-NEXT:    slli s0, s0, 8
+; CHECK-ALIGNED-RV64-V-NEXT:    or t6, s0, t6
+; CHECK-ALIGNED-RV64-V-NEXT:    slli t5, t5, 16
+; CHECK-ALIGNED-RV64-V-NEXT:    slli s1, s1, 24
+; CHECK-ALIGNED-RV64-V-NEXT:    or t5, s1, t5
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu s0, 4(a1)
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu s1, 5(a1)
+; CHECK-ALIGNED-RV64-V-NEXT:    or t5, t5, t6
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu t6, 6(a1)
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu s2, 7(a1)
+; CHECK-ALIGNED-RV64-V-NEXT:    slli s1, s1, 8
+; CHECK-ALIGNED-RV64-V-NEXT:    or s0, s1, s0
+; CHECK-ALIGNED-RV64-V-NEXT:    slli t6, t6, 16
+; CHECK-ALIGNED-RV64-V-NEXT:    slli s2, s2, 24
+; CHECK-ALIGNED-RV64-V-NEXT:    or t6, s2, t6
+; CHECK-ALIGNED-RV64-V-NEXT:    or t6, t6, s0
+; CHECK-ALIGNED-RV64-V-NEXT:    slli t6, t6, 32
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu s0, 56(a1)
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu s1, 57(a1)
+; CHECK-ALIGNED-RV64-V-NEXT:    or t5, t6, t5
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu t6, 58(a1)
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu s2, 59(a1)
+; CHECK-ALIGNED-RV64-V-NEXT:    slli s1, s1, 8
+; CHECK-ALIGNED-RV64-V-NEXT:    or s0, s1, s0
+; CHECK-ALIGNED-RV64-V-NEXT:    slli t6, t6, 16
+; CHECK-ALIGNED-RV64-V-NEXT:    slli s2, s2, 24
+; CHECK-ALIGNED-RV64-V-NEXT:    or t6, s2, t6
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu s1, 60(a1)
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu s2, 61(a1)
+; CHECK-ALIGNED-RV64-V-NEXT:    or t6, t6, s0
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu s0, 62(a1)
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu s3, 63(a1)
+; CHECK-ALIGNED-RV64-V-NEXT:    slli s2, s2, 8
+; CHECK-ALIGNED-RV64-V-NEXT:    or s1, s2, s1
+; CHECK-ALIGNED-RV64-V-NEXT:    slli s0, s0, 16
+; CHECK-ALIGNED-RV64-V-NEXT:    slli s3, s3, 24
+; CHECK-ALIGNED-RV64-V-NEXT:    or s0, s3, s0
+; CHECK-ALIGNED-RV64-V-NEXT:    or s0, s0, s1
+; CHECK-ALIGNED-RV64-V-NEXT:    slli s0, s0, 32
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu s1, 40(a1)
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu s2, 41(a1)
+; CHECK-ALIGNED-RV64-V-NEXT:    or t6, s0, t6
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu s0, 42(a1)
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu s3, 43(a1)
+; CHECK-ALIGNED-RV64-V-NEXT:    slli s2, s2, 8
+; CHECK-ALIGNED-RV64-V-NEXT:    or s1, s2, s1
+; CHECK-ALIGNED-RV64-V-NEXT:    slli s0, s0, 16
+; CHECK-ALIGNED-RV64-V-NEXT:    slli s3, s3, 24
+; CHECK-ALIGNED-RV64-V-NEXT:    or s0, s3, s0
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu s2, 44(a1)
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu s3, 45(a1)
+; CHECK-ALIGNED-RV64-V-NEXT:    or s0, s0, s1
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu s1, 46(a1)
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu s4, 47(a1)
+; CHECK-ALIGNED-RV64-V-NEXT:    slli s3, s3, 8
+; CHECK-ALIGNED-RV64-V-NEXT:    or s2, s3, s2
+; CHECK-ALIGNED-RV64-V-NEXT:    slli s1, s1, 16
+; CHECK-ALIGNED-RV64-V-NEXT:    slli s4, s4, 24
+; CHECK-ALIGNED-RV64-V-NEXT:    or s1, s4, s1
+; CHECK-ALIGNED-RV64-V-NEXT:    or s1, s1, s2
+; CHECK-ALIGNED-RV64-V-NEXT:    slli s1, s1, 32
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu s2, 32(a1)
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu s3, 33(a1)
+; CHECK-ALIGNED-RV64-V-NEXT:    or s0, s1, s0
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu s1, 34(a1)
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu s4, 35(a1)
+; CHECK-ALIGNED-RV64-V-NEXT:    slli s3, s3, 8
+; CHECK-ALIGNED-RV64-V-NEXT:    or s2, s3, s2
+; CHECK-ALIGNED-RV64-V-NEXT:    slli s1, s1, 16
+; CHECK-ALIGNED-RV64-V-NEXT:    slli s4, s4, 24
+; CHECK-ALIGNED-RV64-V-NEXT:    or s1, s4, s1
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu s3, 36(a1)
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu s4, 37(a1)
+; CHECK-ALIGNED-RV64-V-NEXT:    or s1, s1, s2
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu s2, 38(a1)
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu s5, 39(a1)
+; CHECK-ALIGNED-RV64-V-NEXT:    slli s4, s4, 8
+; CHECK-ALIGNED-RV64-V-NEXT:    or s3, s4, s3
+; CHECK-ALIGNED-RV64-V-NEXT:    slli s2, s2, 16
+; CHECK-ALIGNED-RV64-V-NEXT:    slli s5, s5, 24
+; CHECK-ALIGNED-RV64-V-NEXT:    or s2, s5, s2
+; CHECK-ALIGNED-RV64-V-NEXT:    or s2, s2, s3
+; CHECK-ALIGNED-RV64-V-NEXT:    slli s2, s2, 32
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu s3, 48(a1)
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu s4, 49(a1)
+; CHECK-ALIGNED-RV64-V-NEXT:    or s1, s2, s1
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu s2, 50(a1)
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu s5, 51(a1)
+; CHECK-ALIGNED-RV64-V-NEXT:    slli s4, s4, 8
+; CHECK-ALIGNED-RV64-V-NEXT:    or s3, s4, s3
+; CHECK-ALIGNED-RV64-V-NEXT:    slli s2, s2, 16
+; CHECK-ALIGNED-RV64-V-NEXT:    slli s5, s5, 24
+; CHECK-ALIGNED-RV64-V-NEXT:    or s2, s5, s2
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu s4, 52(a1)
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu s5, 53(a1)
+; CHECK-ALIGNED-RV64-V-NEXT:    or s2, s2, s3
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu s3, 54(a1)
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu s6, 55(a1)
+; CHECK-ALIGNED-RV64-V-NEXT:    slli s5, s5, 8
+; CHECK-ALIGNED-RV64-V-NEXT:    or s4, s5, s4
+; CHECK-ALIGNED-RV64-V-NEXT:    slli s3, s3, 16
+; CHECK-ALIGNED-RV64-V-NEXT:    slli s6, s6, 24
+; CHECK-ALIGNED-RV64-V-NEXT:    or s3, s6, s3
+; CHECK-ALIGNED-RV64-V-NEXT:    or s3, s3, s4
+; CHECK-ALIGNED-RV64-V-NEXT:    slli s3, s3, 32
+; CHECK-ALIGNED-RV64-V-NEXT:    or s2, s3, s2
+; CHECK-ALIGNED-RV64-V-NEXT:    xor a2, a2, s2
+; CHECK-ALIGNED-RV64-V-NEXT:    xor a3, a3, s1
+; CHECK-ALIGNED-RV64-V-NEXT:    xor a4, a4, s0
+; CHECK-ALIGNED-RV64-V-NEXT:    xor a5, a5, t6
+; CHECK-ALIGNED-RV64-V-NEXT:    xor a6, a6, t5
+; CHECK-ALIGNED-RV64-V-NEXT:    xor a7, a7, t4
+; CHECK-ALIGNED-RV64-V-NEXT:    xor t0, t0, t3
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu t3, 80(a0)
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu t4, 81(a0)
+; CHECK-ALIGNED-RV64-V-NEXT:    xor t1, t1, t2
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu t2, 82(a0)
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu t5, 83(a0)
+; CHECK-ALIGNED-RV64-V-NEXT:    slli t4, t4, 8
+; CHECK-ALIGNED-RV64-V-NEXT:    or t3, t4, t3
+; CHECK-ALIGNED-RV64-V-NEXT:    slli t2, t2, 16
+; CHECK-ALIGNED-RV64-V-NEXT:    slli t5, t5, 24
+; CHECK-ALIGNED-RV64-V-NEXT:    or t2, t5, t2
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu t4, 84(a0)
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu t5, 85(a0)
+; CHECK-ALIGNED-RV64-V-NEXT:    or t2, t2, t3
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu t3, 86(a0)
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu t6, 87(a0)
+; CHECK-ALIGNED-RV64-V-NEXT:    slli t5, t5, 8
+; CHECK-ALIGNED-RV64-V-NEXT:    or t4, t5, t4
+; CHECK-ALIGNED-RV64-V-NEXT:    slli t3, t3, 16
+; CHECK-ALIGNED-RV64-V-NEXT:    slli t6, t6, 24
+; CHECK-ALIGNED-RV64-V-NEXT:    or t3, t6, t3
+; CHECK-ALIGNED-RV64-V-NEXT:    or t3, t3, t4
+; CHECK-ALIGNED-RV64-V-NEXT:    slli t3, t3, 32
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu t4, 88(a0)
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu t6, 89(a0)
+; CHECK-ALIGNED-RV64-V-NEXT:    or t5, t3, t2
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu t2, 90(a0)
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu t3, 91(a0)
+; CHECK-ALIGNED-RV64-V-NEXT:    slli t6, t6, 8
+; CHECK-ALIGNED-RV64-V-NEXT:    or t4, t6, t4
+; CHECK-ALIGNED-RV64-V-NEXT:    slli t2, t2, 16
+; CHECK-ALIGNED-RV64-V-NEXT:    slli t3, t3, 24
+; CHECK-ALIGNED-RV64-V-NEXT:    or t2, t3, t2
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu t3, 92(a0)
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu t6, 93(a0)
+; CHECK-ALIGNED-RV64-V-NEXT:    or t2, t2, t4
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu t4, 94(a0)
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu s0, 95(a0)
+; CHECK-ALIGNED-RV64-V-NEXT:    slli t6, t6, 8
+; CHECK-ALIGNED-RV64-V-NEXT:    or t3, t6, t3
+; CHECK-ALIGNED-RV64-V-NEXT:    slli t4, t4, 16
+; CHECK-ALIGNED-RV64-V-NEXT:    slli s0, s0, 24
+; CHECK-ALIGNED-RV64-V-NEXT:    or t4, s0, t4
+; CHECK-ALIGNED-RV64-V-NEXT:    or t3, t4, t3
+; CHECK-ALIGNED-RV64-V-NEXT:    slli t3, t3, 32
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu t6, 72(a0)
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu s0, 73(a0)
+; CHECK-ALIGNED-RV64-V-NEXT:    or t4, t3, t2
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu t2, 74(a0)
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu t3, 75(a0)
+; CHECK-ALIGNED-RV64-V-NEXT:    slli s0, s0, 8
+; CHECK-ALIGNED-RV64-V-NEXT:    or t6, s0, t6
+; CHECK-ALIGNED-RV64-V-NEXT:    slli t2, t2, 16
+; CHECK-ALIGNED-RV64-V-NEXT:    slli t3, t3, 24
+; CHECK-ALIGNED-RV64-V-NEXT:    or t2, t3, t2
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu t3, 76(a0)
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu s0, 77(a0)
+; CHECK-ALIGNED-RV64-V-NEXT:    or t2, t2, t6
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu t6, 78(a0)
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu s1, 79(a0)
+; CHECK-ALIGNED-RV64-V-NEXT:    slli s0, s0, 8
+; CHECK-ALIGNED-RV64-V-NEXT:    or t3, s0, t3
+; CHECK-ALIGNED-RV64-V-NEXT:    slli t6, t6, 16
+; CHECK-ALIGNED-RV64-V-NEXT:    slli s1, s1, 24
+; CHECK-ALIGNED-RV64-V-NEXT:    or t6, s1, t6
+; CHECK-ALIGNED-RV64-V-NEXT:    or t3, t6, t3
+; CHECK-ALIGNED-RV64-V-NEXT:    slli t3, t3, 32
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu t6, 64(a0)
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu s0, 65(a0)
+; CHECK-ALIGNED-RV64-V-NEXT:    or t3, t3, t2
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu t2, 66(a0)
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu s1, 67(a0)
+; CHECK-ALIGNED-RV64-V-NEXT:    slli s0, s0, 8
+; CHECK-ALIGNED-RV64-V-NEXT:    or t6, s0, t6
+; CHECK-ALIGNED-RV64-V-NEXT:    slli t2, t2, 16
+; CHECK-ALIGNED-RV64-V-NEXT:    slli s1, s1, 24
+; CHECK-ALIGNED-RV64-V-NEXT:    or t2, s1, t2
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu s0, 68(a0)
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu s1, 69(a0)
+; CHECK-ALIGNED-RV64-V-NEXT:    or t2, t2, t6
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu t6, 70(a0)
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu s2, 71(a0)
+; CHECK-ALIGNED-RV64-V-NEXT:    slli s1, s1, 8
+; CHECK-ALIGNED-RV64-V-NEXT:    or s0, s1, s0
+; CHECK-ALIGNED-RV64-V-NEXT:    slli t6, t6, 16
+; CHECK-ALIGNED-RV64-V-NEXT:    slli s2, s2, 24
+; CHECK-ALIGNED-RV64-V-NEXT:    or t6, s2, t6
+; CHECK-ALIGNED-RV64-V-NEXT:    or t6, t6, s0
+; CHECK-ALIGNED-RV64-V-NEXT:    slli t6, t6, 32
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu s0, 80(a1)
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu s1, 81(a1)
+; CHECK-ALIGNED-RV64-V-NEXT:    or t2, t6, t2
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu t6, 82(a1)
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu s2, 83(a1)
+; CHECK-ALIGNED-RV64-V-NEXT:    slli s1, s1, 8
+; CHECK-ALIGNED-RV64-V-NEXT:    or s0, s1, s0
+; CHECK-ALIGNED-RV64-V-NEXT:    slli t6, t6, 16
+; CHECK-ALIGNED-RV64-V-NEXT:    slli s2, s2, 24
+; CHECK-ALIGNED-RV64-V-NEXT:    or t6, s2, t6
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu s1, 84(a1)
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu s2, 85(a1)
+; CHECK-ALIGNED-RV64-V-NEXT:    or t6, t6, s0
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu s0, 86(a1)
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu s3, 87(a1)
+; CHECK-ALIGNED-RV64-V-NEXT:    slli s2, s2, 8
+; CHECK-ALIGNED-RV64-V-NEXT:    or s1, s2, s1
+; CHECK-ALIGNED-RV64-V-NEXT:    slli s0, s0, 16
+; CHECK-ALIGNED-RV64-V-NEXT:    slli s3, s3, 24
+; CHECK-ALIGNED-RV64-V-NEXT:    or s0, s3, s0
+; CHECK-ALIGNED-RV64-V-NEXT:    or s0, s0, s1
+; CHECK-ALIGNED-RV64-V-NEXT:    slli s0, s0, 32
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu s1, 88(a1)
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu s2, 89(a1)
+; CHECK-ALIGNED-RV64-V-NEXT:    or t6, s0, t6
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu s0, 90(a1)
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu s3, 91(a1)
+; CHECK-ALIGNED-RV64-V-NEXT:    slli s2, s2, 8
+; CHECK-ALIGNED-RV64-V-NEXT:    or s1, s2, s1
+; CHECK-ALIGNED-RV64-V-NEXT:    slli s0, s0, 16
+; CHECK-ALIGNED-RV64-V-NEXT:    slli s3, s3, 24
+; CHECK-ALIGNED-RV64-V-NEXT:    or s0, s3, s0
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu s2, 92(a1)
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu s3, 93(a1)
+; CHECK-ALIGNED-RV64-V-NEXT:    or s0, s0, s1
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu s1, 94(a1)
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu s4, 95(a1)
+; CHECK-ALIGNED-RV64-V-NEXT:    slli s3, s3, 8
+; CHECK-ALIGNED-RV64-V-NEXT:    or s2, s3, s2
+; CHECK-ALIGNED-RV64-V-NEXT:    slli s1, s1, 16
+; CHECK-ALIGNED-RV64-V-NEXT:    slli s4, s4, 24
+; CHECK-ALIGNED-RV64-V-NEXT:    or s1, s4, s1
+; CHECK-ALIGNED-RV64-V-NEXT:    or s1, s1, s2
+; CHECK-ALIGNED-RV64-V-NEXT:    slli s1, s1, 32
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu s2, 72(a1)
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu s3, 73(a1)
+; CHECK-ALIGNED-RV64-V-NEXT:    or s0, s1, s0
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu s1, 74(a1)
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu s4, 75(a1)
+; CHECK-ALIGNED-RV64-V-NEXT:    slli s3, s3, 8
+; CHECK-ALIGNED-RV64-V-NEXT:    or s2, s3, s2
+; CHECK-ALIGNED-RV64-V-NEXT:    slli s1, s1, 16
+; CHECK-ALIGNED-RV64-V-NEXT:    slli s4, s4, 24
+; CHECK-ALIGNED-RV64-V-NEXT:    or s1, s4, s1
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu s3, 76(a1)
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu s4, 77(a1)
+; CHECK-ALIGNED-RV64-V-NEXT:    or s1, s1, s2
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu s2, 78(a1)
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu s5, 79(a1)
+; CHECK-ALIGNED-RV64-V-NEXT:    slli s4, s4, 8
+; CHECK-ALIGNED-RV64-V-NEXT:    or s3, s4, s3
+; CHECK-ALIGNED-RV64-V-NEXT:    slli s2, s2, 16
+; CHECK-ALIGNED-RV64-V-NEXT:    slli s5, s5, 24
+; CHECK-ALIGNED-RV64-V-NEXT:    or s2, s5, s2
+; CHECK-ALIGNED-RV64-V-NEXT:    or s2, s2, s3
+; CHECK-ALIGNED-RV64-V-NEXT:    slli s2, s2, 32
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu s3, 64(a1)
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu s4, 65(a1)
+; CHECK-ALIGNED-RV64-V-NEXT:    or s1, s2, s1
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu s2, 66(a1)
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu s5, 67(a1)
+; CHECK-ALIGNED-RV64-V-NEXT:    slli s4, s4, 8
+; CHECK-ALIGNED-RV64-V-NEXT:    or s3, s4, s3
+; CHECK-ALIGNED-RV64-V-NEXT:    slli s2, s2, 16
+; CHECK-ALIGNED-RV64-V-NEXT:    slli s5, s5, 24
+; CHECK-ALIGNED-RV64-V-NEXT:    or s2, s5, s2
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu s4, 68(a1)
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu s5, 69(a1)
+; CHECK-ALIGNED-RV64-V-NEXT:    or s2, s2, s3
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu s3, 70(a1)
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu s6, 71(a1)
+; CHECK-ALIGNED-RV64-V-NEXT:    slli s5, s5, 8
+; CHECK-ALIGNED-RV64-V-NEXT:    or s4, s5, s4
+; CHECK-ALIGNED-RV64-V-NEXT:    slli s3, s3, 16
+; CHECK-ALIGNED-RV64-V-NEXT:    slli s6, s6, 24
+; CHECK-ALIGNED-RV64-V-NEXT:    or s3, s6, s3
+; CHECK-ALIGNED-RV64-V-NEXT:    or s3, s3, s4
+; CHECK-ALIGNED-RV64-V-NEXT:    slli s3, s3, 32
+; CHECK-ALIGNED-RV64-V-NEXT:    or s2, s3, s2
+; CHECK-ALIGNED-RV64-V-NEXT:    xor t2, t2, s2
+; CHECK-ALIGNED-RV64-V-NEXT:    xor t3, t3, s1
+; CHECK-ALIGNED-RV64-V-NEXT:    xor t4, t4, s0
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu s0, 96(a0)
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu s1, 97(a0)
+; CHECK-ALIGNED-RV64-V-NEXT:    xor t5, t5, t6
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu t6, 98(a0)
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu s2, 99(a0)
+; CHECK-ALIGNED-RV64-V-NEXT:    slli s1, s1, 8
+; CHECK-ALIGNED-RV64-V-NEXT:    or s0, s1, s0
+; CHECK-ALIGNED-RV64-V-NEXT:    slli t6, t6, 16
+; CHECK-ALIGNED-RV64-V-NEXT:    slli s2, s2, 24
+; CHECK-ALIGNED-RV64-V-NEXT:    or t6, s2, t6
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu s1, 100(a0)
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu s2, 101(a0)
+; CHECK-ALIGNED-RV64-V-NEXT:    or t6, t6, s0
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu s0, 102(a0)
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu s3, 103(a0)
+; CHECK-ALIGNED-RV64-V-NEXT:    slli s2, s2, 8
+; CHECK-ALIGNED-RV64-V-NEXT:    or s1, s2, s1
+; CHECK-ALIGNED-RV64-V-NEXT:    slli s0, s0, 16
+; CHECK-ALIGNED-RV64-V-NEXT:    slli s3, s3, 24
+; CHECK-ALIGNED-RV64-V-NEXT:    or s0, s3, s0
+; CHECK-ALIGNED-RV64-V-NEXT:    or s0, s0, s1
+; CHECK-ALIGNED-RV64-V-NEXT:    slli s0, s0, 32
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu s1, 104(a0)
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu s2, 105(a0)
+; CHECK-ALIGNED-RV64-V-NEXT:    or s0, s0, t6
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu t6, 106(a0)
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu s3, 107(a0)
+; CHECK-ALIGNED-RV64-V-NEXT:    slli s2, s2, 8
+; CHECK-ALIGNED-RV64-V-NEXT:    or s1, s2, s1
+; CHECK-ALIGNED-RV64-V-NEXT:    slli t6, t6, 16
+; CHECK-ALIGNED-RV64-V-NEXT:    slli s3, s3, 24
+; CHECK-ALIGNED-RV64-V-NEXT:    or t6, s3, t6
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu s2, 108(a0)
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu s3, 109(a0)
+; CHECK-ALIGNED-RV64-V-NEXT:    or t6, t6, s1
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu s1, 110(a0)
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu s4, 111(a0)
+; CHECK-ALIGNED-RV64-V-NEXT:    slli s3, s3, 8
+; CHECK-ALIGNED-RV64-V-NEXT:    or s2, s3, s2
+; CHECK-ALIGNED-RV64-V-NEXT:    slli s1, s1, 16
+; CHECK-ALIGNED-RV64-V-NEXT:    slli s4, s4, 24
+; CHECK-ALIGNED-RV64-V-NEXT:    or s1, s4, s1
+; CHECK-ALIGNED-RV64-V-NEXT:    or s1, s1, s2
+; CHECK-ALIGNED-RV64-V-NEXT:    slli s1, s1, 32
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu s2, 96(a1)
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu s3, 97(a1)
+; CHECK-ALIGNED-RV64-V-NEXT:    or t6, s1, t6
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu s1, 98(a1)
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu s4, 99(a1)
+; CHECK-ALIGNED-RV64-V-NEXT:    slli s3, s3, 8
+; CHECK-ALIGNED-RV64-V-NEXT:    or s2, s3, s2
+; CHECK-ALIGNED-RV64-V-NEXT:    slli s1, s1, 16
+; CHECK-ALIGNED-RV64-V-NEXT:    slli s4, s4, 24
+; CHECK-ALIGNED-RV64-V-NEXT:    or s1, s4, s1
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu s3, 100(a1)
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu s4, 101(a1)
+; CHECK-ALIGNED-RV64-V-NEXT:    or s1, s1, s2
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu s2, 102(a1)
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu s5, 103(a1)
+; CHECK-ALIGNED-RV64-V-NEXT:    slli s4, s4, 8
+; CHECK-ALIGNED-RV64-V-NEXT:    or s3, s4, s3
+; CHECK-ALIGNED-RV64-V-NEXT:    slli s2, s2, 16
+; CHECK-ALIGNED-RV64-V-NEXT:    slli s5, s5, 24
+; CHECK-ALIGNED-RV64-V-NEXT:    or s2, s5, s2
+; CHECK-ALIGNED-RV64-V-NEXT:    or s2, s2, s3
+; CHECK-ALIGNED-RV64-V-NEXT:    slli s2, s2, 32
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu s3, 104(a1)
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu s4, 105(a1)
+; CHECK-ALIGNED-RV64-V-NEXT:    or s1, s2, s1
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu s2, 106(a1)
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu s5, 107(a1)
+; CHECK-ALIGNED-RV64-V-NEXT:    slli s4, s4, 8
+; CHECK-ALIGNED-RV64-V-NEXT:    or s3, s4, s3
+; CHECK-ALIGNED-RV64-V-NEXT:    slli s2, s2, 16
+; CHECK-ALIGNED-RV64-V-NEXT:    slli s5, s5, 24
+; CHECK-ALIGNED-RV64-V-NEXT:    or s2, s5, s2
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu s4, 108(a1)
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu s5, 109(a1)
+; CHECK-ALIGNED-RV64-V-NEXT:    or s2, s2, s3
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu s3, 110(a1)
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu s6, 111(a1)
+; CHECK-ALIGNED-RV64-V-NEXT:    slli s5, s5, 8
+; CHECK-ALIGNED-RV64-V-NEXT:    or s4, s5, s4
+; CHECK-ALIGNED-RV64-V-NEXT:    slli s3, s3, 16
+; CHECK-ALIGNED-RV64-V-NEXT:    slli s6, s6, 24
+; CHECK-ALIGNED-RV64-V-NEXT:    or s3, s6, s3
+; CHECK-ALIGNED-RV64-V-NEXT:    or s3, s3, s4
+; CHECK-ALIGNED-RV64-V-NEXT:    slli s3, s3, 32
+; CHECK-ALIGNED-RV64-V-NEXT:    or s2, s3, s2
+; CHECK-ALIGNED-RV64-V-NEXT:    xor t6, t6, s2
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu s2, 112(a0)
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu s3, 113(a0)
+; CHECK-ALIGNED-RV64-V-NEXT:    xor s0, s0, s1
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu s1, 114(a0)
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu s4, 115(a0)
+; CHECK-ALIGNED-RV64-V-NEXT:    slli s3, s3, 8
+; CHECK-ALIGNED-RV64-V-NEXT:    or s2, s3, s2
+; CHECK-ALIGNED-RV64-V-NEXT:    slli s1, s1, 16
+; CHECK-ALIGNED-RV64-V-NEXT:    slli s4, s4, 24
+; CHECK-ALIGNED-RV64-V-NEXT:    or s1, s4, s1
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu s3, 116(a0)
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu s4, 117(a0)
+; CHECK-ALIGNED-RV64-V-NEXT:    or s1, s1, s2
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu s2, 118(a0)
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu s5, 119(a0)
+; CHECK-ALIGNED-RV64-V-NEXT:    slli s4, s4, 8
+; CHECK-ALIGNED-RV64-V-NEXT:    or s3, s4, s3
+; CHECK-ALIGNED-RV64-V-NEXT:    slli s2, s2, 16
+; CHECK-ALIGNED-RV64-V-NEXT:    slli s5, s5, 24
+; CHECK-ALIGNED-RV64-V-NEXT:    or s2, s5, s2
+; CHECK-ALIGNED-RV64-V-NEXT:    or s2, s2, s3
+; CHECK-ALIGNED-RV64-V-NEXT:    slli s2, s2, 32
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu s3, 112(a1)
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu s4, 113(a1)
+; CHECK-ALIGNED-RV64-V-NEXT:    or s1, s2, s1
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu s2, 114(a1)
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu s5, 115(a1)
+; CHECK-ALIGNED-RV64-V-NEXT:    slli s4, s4, 8
+; CHECK-ALIGNED-RV64-V-NEXT:    or s3, s4, s3
+; CHECK-ALIGNED-RV64-V-NEXT:    slli s2, s2, 16
+; CHECK-ALIGNED-RV64-V-NEXT:    slli s5, s5, 24
+; CHECK-ALIGNED-RV64-V-NEXT:    or s2, s5, s2
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu s4, 116(a1)
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu s5, 117(a1)
+; CHECK-ALIGNED-RV64-V-NEXT:    or s2, s2, s3
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu s3, 118(a1)
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu s6, 119(a1)
+; CHECK-ALIGNED-RV64-V-NEXT:    slli s5, s5, 8
+; CHECK-ALIGNED-RV64-V-NEXT:    or s4, s5, s4
+; CHECK-ALIGNED-RV64-V-NEXT:    slli s3, s3, 16
+; CHECK-ALIGNED-RV64-V-NEXT:    slli s6, s6, 24
+; CHECK-ALIGNED-RV64-V-NEXT:    or s3, s6, s3
+; CHECK-ALIGNED-RV64-V-NEXT:    or s3, s3, s4
+; CHECK-ALIGNED-RV64-V-NEXT:    slli s3, s3, 32
+; CHECK-ALIGNED-RV64-V-NEXT:    or s2, s3, s2
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu s3, 120(a0)
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu s4, 121(a0)
+; CHECK-ALIGNED-RV64-V-NEXT:    xor s1, s1, s2
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu s2, 122(a0)
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu s5, 123(a0)
+; CHECK-ALIGNED-RV64-V-NEXT:    slli s4, s4, 8
+; CHECK-ALIGNED-RV64-V-NEXT:    or s3, s4, s3
+; CHECK-ALIGNED-RV64-V-NEXT:    slli s2, s2, 16
+; CHECK-ALIGNED-RV64-V-NEXT:    slli s5, s5, 24
+; CHECK-ALIGNED-RV64-V-NEXT:    or s2, s5, s2
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu s4, 120(a1)
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu s5, 121(a1)
+; CHECK-ALIGNED-RV64-V-NEXT:    or s2, s2, s3
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu s3, 122(a1)
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu s6, 123(a1)
+; CHECK-ALIGNED-RV64-V-NEXT:    slli s5, s5, 8
+; CHECK-ALIGNED-RV64-V-NEXT:    or s4, s5, s4
+; CHECK-ALIGNED-RV64-V-NEXT:    slli s3, s3, 16
+; CHECK-ALIGNED-RV64-V-NEXT:    slli s6, s6, 24
+; CHECK-ALIGNED-RV64-V-NEXT:    or s3, s6, s3
+; CHECK-ALIGNED-RV64-V-NEXT:    or s3, s3, s4
+; CHECK-ALIGNED-RV64-V-NEXT:    xor s2, s2, s3
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu s3, 124(a0)
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu s4, 125(a0)
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu a0, 126(a0)
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu s5, 124(a1)
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu s6, 125(a1)
+; CHECK-ALIGNED-RV64-V-NEXT:    slli s4, s4, 8
+; CHECK-ALIGNED-RV64-V-NEXT:    or s3, s4, s3
+; CHECK-ALIGNED-RV64-V-NEXT:    lbu a1, 126(a1)
+; CHECK-ALIGNED-RV64-V-NEXT:    slli s6, s6, 8
+; CHECK-ALIGNED-RV64-V-NEXT:    or s4, s6, s5
+; CHECK-ALIGNED-RV64-V-NEXT:    xor s3, s3, s4
+; CHECK-ALIGNED-RV64-V-NEXT:    xor a0, a0, a1
+; CHECK-ALIGNED-RV64-V-NEXT:    or a1, t1, t5
+; CHECK-ALIGNED-RV64-V-NEXT:    or t0, t0, t4
+; CHECK-ALIGNED-RV64-V-NEXT:    or a7, a7, t3
+; CHECK-ALIGNED-RV64-V-NEXT:    or a6, a6, t2
+; CHECK-ALIGNED-RV64-V-NEXT:    or s0, s0, s1
+; CHECK-ALIGNED-RV64-V-NEXT:    or a6, a6, s0
+; CHECK-ALIGNED-RV64-V-NEXT:    or a0, s3, a0
+; CHECK-ALIGNED-RV64-V-NEXT:    or a0, s2, a0
+; CHECK-ALIGNED-RV64-V-NEXT:    or a5, t0, a5
+; CHECK-ALIGNED-RV64-V-NEXT:    or a4, t6, a4
+; CHECK-ALIGNED-RV64-V-NEXT:    or a4, a7, a4
+; CHECK-ALIGNED-RV64-V-NEXT:    or a4, a4, a5
+; CHECK-ALIGNED-RV64-V-NEXT:    or a0, a0, a3
+; CHECK-ALIGNED-RV64-V-NEXT:    or a0, a6, a0
+; CHECK-ALIGNED-RV64-V-NEXT:    or a1, a1, a2
+; CHECK-ALIGNED-RV64-V-NEXT:    or a0, a0, a1
+; CHECK-ALIGNED-RV64-V-NEXT:    or a0, a0, a4
+; CHECK-ALIGNED-RV64-V-NEXT:    snez a0, a0
+; CHECK-ALIGNED-RV64-V-NEXT:    ld s0, 56(sp) # 8-byte Folded Reload
+; CHECK-ALIGNED-RV64-V-NEXT:    ld s1, 48(sp) # 8-byte Folded Reload
+; CHECK-ALIGNED-RV64-V-NEXT:    ld s2, 40(sp) # 8-byte Folded Reload
+; CHECK-ALIGNED-RV64-V-NEXT:    ld s3, 32(sp) # 8-byte Folded Reload
+; CHECK-ALIGNED-RV64-V-NEXT:    ld s4, 24(sp) # 8-byte Folded Reload
+; CHECK-ALIGNED-RV64-V-NEXT:    ld s5, 16(sp) # 8-byte Folded Reload
+; CHECK-ALIGNED-RV64-V-NEXT:    ld s6, 8(sp) # 8-byte Folded Reload
+; CHECK-ALIGNED-RV64-V-NEXT:    addi sp, sp, 64
 ; CHECK-ALIGNED-RV64-V-NEXT:    ret
 ;
 ; CHECK-UNALIGNED-RV32-LABEL: bcmp_size_127:
@@ -9496,36 +9583,270 @@ define i32 @bcmp_size_127(ptr %s1, ptr %s2) nounwind {
 ;
 ; CHECK-UNALIGNED-RV32-V-LABEL: bcmp_size_127:
 ; CHECK-UNALIGNED-RV32-V:       # %bb.0: # %entry
-; CHECK-UNALIGNED-RV32-V-NEXT:    li a2, 64
-; CHECK-UNALIGNED-RV32-V-NEXT:    vsetvli zero, a2, e8, m4, ta, ma
-; CHECK-UNALIGNED-RV32-V-NEXT:    vle8.v v8, (a0)
-; CHECK-UNALIGNED-RV32-V-NEXT:    vle8.v v12, (a1)
-; CHECK-UNALIGNED-RV32-V-NEXT:    addi a0, a0, 63
-; CHECK-UNALIGNED-RV32-V-NEXT:    addi a1, a1, 63
-; CHECK-UNALIGNED-RV32-V-NEXT:    vle8.v v16, (a0)
-; CHECK-UNALIGNED-RV32-V-NEXT:    vle8.v v20, (a1)
-; CHECK-UNALIGNED-RV32-V-NEXT:    vmsne.vv v24, v8, v12
-; CHECK-UNALIGNED-RV32-V-NEXT:    vmsne.vv v8, v16, v20
-; CHECK-UNALIGNED-RV32-V-NEXT:    vmnor.mm v8, v24, v8
-; CHECK-UNALIGNED-RV32-V-NEXT:    vcpop.m a0, v8
-; CHECK-UNALIGNED-RV32-V-NEXT:    seqz a0, a0
+; CHECK-UNALIGNED-RV32-V-NEXT:    addi sp, sp, -96
+; CHECK-UNALIGNED-RV32-V-NEXT:    sw ra, 92(sp) # 4-byte Folded Spill
+; CHECK-UNALIGNED-RV32-V-NEXT:    sw s0, 88(sp) # 4-byte Folded Spill
+; CHECK-UNALIGNED-RV32-V-NEXT:    sw s1, 84(sp) # 4-byte Folded Spill
+; CHECK-UNALIGNED-RV32-V-NEXT:    sw s2, 80(sp) # 4-byte Folded Spill
+; CHECK-UNALIGNED-RV32-V-NEXT:    sw s3, 76(sp) # 4-byte Folded Spill
+; CHECK-UNALIGNED-RV32-V-NEXT:    sw s4, 72(sp) # 4-byte Folded Spill
+; CHECK-UNALIGNED-RV32-V-NEXT:    sw s5, 68(sp) # 4-byte Folded Spill
+; CHECK-UNALIGNED-RV32-V-NEXT:    sw s6, 64(sp) # 4-byte Folded Spill
+; CHECK-UNALIGNED-RV32-V-NEXT:    sw s7, 60(sp) # 4-byte Folded Spill
+; CHECK-UNALIGNED-RV32-V-NEXT:    sw s8, 56(sp) # 4-byte Folded Spill
+; CHECK-UNALIGNED-RV32-V-NEXT:    sw s9, 52(sp) # 4-byte Folded Spill
+; CHECK-UNALIGNED-RV32-V-NEXT:    sw s10, 48(sp) # 4-byte Folded Spill
+; CHECK-UNALIGNED-RV32-V-NEXT:    sw s11, 44(sp) # 4-byte Folded Spill
+; CHECK-UNALIGNED-RV32-V-NEXT:    lw s2, 32(a0)
+; CHECK-UNALIGNED-RV32-V-NEXT:    lw t1, 36(a0)
+; CHECK-UNALIGNED-RV32-V-NEXT:    lw t5, 40(a0)
+; CHECK-UNALIGNED-RV32-V-NEXT:    lw a5, 44(a0)
+; CHECK-UNALIGNED-RV32-V-NEXT:    lw s1, 0(a0)
+; CHECK-UNALIGNED-RV32-V-NEXT:    lw t0, 4(a0)
+; CHECK-UNALIGNED-RV32-V-NEXT:    lw t4, 8(a0)
+; CHECK-UNALIGNED-RV32-V-NEXT:    lw a4, 12(a0)
+; CHECK-UNALIGNED-RV32-V-NEXT:    lw s0, 48(a0)
+; CHECK-UNALIGNED-RV32-V-NEXT:    lw a7, 52(a0)
+; CHECK-UNALIGNED-RV32-V-NEXT:    lw t3, 56(a0)
+; CHECK-UNALIGNED-RV32-V-NEXT:    lw a3, 60(a0)
+; CHECK-UNALIGNED-RV32-V-NEXT:    lw t6, 16(a0)
+; CHECK-UNALIGNED-RV32-V-NEXT:    lw a6, 20(a0)
+; CHECK-UNALIGNED-RV32-V-NEXT:    lw t2, 24(a0)
+; CHECK-UNALIGNED-RV32-V-NEXT:    lw a2, 28(a0)
+; CHECK-UNALIGNED-RV32-V-NEXT:    lw s3, 12(a1)
+; CHECK-UNALIGNED-RV32-V-NEXT:    lw s4, 16(a1)
+; CHECK-UNALIGNED-RV32-V-NEXT:    lw s5, 20(a1)
+; CHECK-UNALIGNED-RV32-V-NEXT:    lw s6, 24(a1)
+; CHECK-UNALIGNED-RV32-V-NEXT:    lw s7, 28(a1)
+; CHECK-UNALIGNED-RV32-V-NEXT:    lw s8, 48(a1)
+; CHECK-UNALIGNED-RV32-V-NEXT:    lw s9, 52(a1)
+; CHECK-UNALIGNED-RV32-V-NEXT:    lw s10, 56(a1)
+; CHECK-UNALIGNED-RV32-V-NEXT:    lw s11, 60(a1)
+; CHECK-UNALIGNED-RV32-V-NEXT:    xor a2, a2, s7
+; CHECK-UNALIGNED-RV32-V-NEXT:    sw a2, 40(sp) # 4-byte Folded Spill
+; CHECK-UNALIGNED-RV32-V-NEXT:    lw s7, 40(a1)
+; CHECK-UNALIGNED-RV32-V-NEXT:    lw ra, 44(a1)
+; CHECK-UNALIGNED-RV32-V-NEXT:    xor a2, a3, s11
+; CHECK-UNALIGNED-RV32-V-NEXT:    sw a2, 36(sp) # 4-byte Folded Spill
+; CHECK-UNALIGNED-RV32-V-NEXT:    xor a2, a4, s3
+; CHECK-UNALIGNED-RV32-V-NEXT:    sw a2, 32(sp) # 4-byte Folded Spill
+; CHECK-UNALIGNED-RV32-V-NEXT:    lw s3, 0(a1)
+; CHECK-UNALIGNED-RV32-V-NEXT:    lw s11, 4(a1)
+; CHECK-UNALIGNED-RV32-V-NEXT:    xor a2, a5, ra
+; CHECK-UNALIGNED-RV32-V-NEXT:    sw a2, 28(sp) # 4-byte Folded Spill
+; CHECK-UNALIGNED-RV32-V-NEXT:    xor a2, a6, s5
+; CHECK-UNALIGNED-RV32-V-NEXT:    sw a2, 24(sp) # 4-byte Folded Spill
+; CHECK-UNALIGNED-RV32-V-NEXT:    lw s5, 32(a1)
+; CHECK-UNALIGNED-RV32-V-NEXT:    lw ra, 36(a1)
+; CHECK-UNALIGNED-RV32-V-NEXT:    xor a2, a7, s9
+; CHECK-UNALIGNED-RV32-V-NEXT:    sw a2, 20(sp) # 4-byte Folded Spill
+; CHECK-UNALIGNED-RV32-V-NEXT:    lw s9, 8(a1)
+; CHECK-UNALIGNED-RV32-V-NEXT:    xor a2, t0, s11
+; CHECK-UNALIGNED-RV32-V-NEXT:    sw a2, 16(sp) # 4-byte Folded Spill
+; CHECK-UNALIGNED-RV32-V-NEXT:    xor a2, t1, ra
+; CHECK-UNALIGNED-RV32-V-NEXT:    sw a2, 12(sp) # 4-byte Folded Spill
+; CHECK-UNALIGNED-RV32-V-NEXT:    xor t2, t2, s6
+; CHECK-UNALIGNED-RV32-V-NEXT:    xor t3, t3, s10
+; CHECK-UNALIGNED-RV32-V-NEXT:    xor t4, t4, s9
+; CHECK-UNALIGNED-RV32-V-NEXT:    xor t5, t5, s7
+; CHECK-UNALIGNED-RV32-V-NEXT:    xor t6, t6, s4
+; CHECK-UNALIGNED-RV32-V-NEXT:    xor s0, s0, s8
+; CHECK-UNALIGNED-RV32-V-NEXT:    xor s1, s1, s3
+; CHECK-UNALIGNED-RV32-V-NEXT:    xor s2, s2, s5
+; CHECK-UNALIGNED-RV32-V-NEXT:    lw s3, 107(a0)
+; CHECK-UNALIGNED-RV32-V-NEXT:    lw s4, 75(a0)
+; CHECK-UNALIGNED-RV32-V-NEXT:    lw s5, 83(a0)
+; CHECK-UNALIGNED-RV32-V-NEXT:    lw s6, 87(a0)
+; CHECK-UNALIGNED-RV32-V-NEXT:    lw s7, 91(a0)
+; CHECK-UNALIGNED-RV32-V-NEXT:    lw s8, 87(a1)
+; CHECK-UNALIGNED-RV32-V-NEXT:    lw s9, 91(a1)
+; CHECK-UNALIGNED-RV32-V-NEXT:    lw s10, 123(a0)
+; CHECK-UNALIGNED-RV32-V-NEXT:    lw s11, 123(a1)
+; CHECK-UNALIGNED-RV32-V-NEXT:    lw ra, 75(a1)
+; CHECK-UNALIGNED-RV32-V-NEXT:    xor s7, s7, s9
+; CHECK-UNALIGNED-RV32-V-NEXT:    lw s9, 107(a1)
+; CHECK-UNALIGNED-RV32-V-NEXT:    xor s10, s10, s11
+; CHECK-UNALIGNED-RV32-V-NEXT:    lw s11, 83(a1)
+; CHECK-UNALIGNED-RV32-V-NEXT:    xor s4, s4, ra
+; CHECK-UNALIGNED-RV32-V-NEXT:    lw ra, 115(a1)
+; CHECK-UNALIGNED-RV32-V-NEXT:    xor s3, s3, s9
+; CHECK-UNALIGNED-RV32-V-NEXT:    lw s9, 115(a0)
+; CHECK-UNALIGNED-RV32-V-NEXT:    xor s5, s5, s11
+; CHECK-UNALIGNED-RV32-V-NEXT:    lw s11, 119(a0)
+; CHECK-UNALIGNED-RV32-V-NEXT:    lw a7, 119(a1)
+; CHECK-UNALIGNED-RV32-V-NEXT:    xor s9, s9, ra
+; CHECK-UNALIGNED-RV32-V-NEXT:    lw ra, 71(a0)
+; CHECK-UNALIGNED-RV32-V-NEXT:    lw a5, 67(a0)
+; CHECK-UNALIGNED-RV32-V-NEXT:    lw a2, 67(a1)
+; CHECK-UNALIGNED-RV32-V-NEXT:    lw a6, 71(a1)
+; CHECK-UNALIGNED-RV32-V-NEXT:    lw a4, 99(a1)
+; CHECK-UNALIGNED-RV32-V-NEXT:    lw a3, 99(a0)
+; CHECK-UNALIGNED-RV32-V-NEXT:    xor t1, a5, a2
+; CHECK-UNALIGNED-RV32-V-NEXT:    lw a5, 103(a0)
+; CHECK-UNALIGNED-RV32-V-NEXT:    lw a2, 103(a1)
+; CHECK-UNALIGNED-RV32-V-NEXT:    xor t0, a3, a4
+; CHECK-UNALIGNED-RV32-V-NEXT:    xor a4, s6, s8
+; CHECK-UNALIGNED-RV32-V-NEXT:    xor a7, s11, a7
+; CHECK-UNALIGNED-RV32-V-NEXT:    xor a6, ra, a6
+; CHECK-UNALIGNED-RV32-V-NEXT:    xor a3, a5, a2
+; CHECK-UNALIGNED-RV32-V-NEXT:    lw a5, 95(a0)
+; CHECK-UNALIGNED-RV32-V-NEXT:    lw s6, 63(a0)
+; CHECK-UNALIGNED-RV32-V-NEXT:    lw s8, 111(a0)
+; CHECK-UNALIGNED-RV32-V-NEXT:    lw a2, 79(a0)
+; CHECK-UNALIGNED-RV32-V-NEXT:    lw s11, 79(a1)
+; CHECK-UNALIGNED-RV32-V-NEXT:    lw ra, 111(a1)
+; CHECK-UNALIGNED-RV32-V-NEXT:    lw a0, 63(a1)
+; CHECK-UNALIGNED-RV32-V-NEXT:    lw a1, 95(a1)
+; CHECK-UNALIGNED-RV32-V-NEXT:    xor a2, a2, s11
+; CHECK-UNALIGNED-RV32-V-NEXT:    xor s8, s8, ra
+; CHECK-UNALIGNED-RV32-V-NEXT:    xor a0, s6, a0
+; CHECK-UNALIGNED-RV32-V-NEXT:    xor a1, a5, a1
+; CHECK-UNALIGNED-RV32-V-NEXT:    or a1, s2, a1
+; CHECK-UNALIGNED-RV32-V-NEXT:    or a0, s1, a0
+; CHECK-UNALIGNED-RV32-V-NEXT:    or a5, s0, s8
+; CHECK-UNALIGNED-RV32-V-NEXT:    or a2, t6, a2
+; CHECK-UNALIGNED-RV32-V-NEXT:    or a3, t5, a3
+; CHECK-UNALIGNED-RV32-V-NEXT:    or a6, t4, a6
+; CHECK-UNALIGNED-RV32-V-NEXT:    or a7, t3, a7
+; CHECK-UNALIGNED-RV32-V-NEXT:    or a4, t2, a4
+; CHECK-UNALIGNED-RV32-V-NEXT:    lw t2, 12(sp) # 4-byte Folded Reload
+; CHECK-UNALIGNED-RV32-V-NEXT:    or t0, t2, t0
+; CHECK-UNALIGNED-RV32-V-NEXT:    lw t2, 16(sp) # 4-byte Folded Reload
+; CHECK-UNALIGNED-RV32-V-NEXT:    or t1, t2, t1
+; CHECK-UNALIGNED-RV32-V-NEXT:    lw t2, 20(sp) # 4-byte Folded Reload
+; CHECK-UNALIGNED-RV32-V-NEXT:    or t2, t2, s9
+; CHECK-UNALIGNED-RV32-V-NEXT:    lw t3, 24(sp) # 4-byte Folded Reload
+; CHECK-UNALIGNED-RV32-V-NEXT:    or t3, t3, s5
+; CHECK-UNALIGNED-RV32-V-NEXT:    lw t4, 28(sp) # 4-byte Folded Reload
+; CHECK-UNALIGNED-RV32-V-NEXT:    or t4, t4, s3
+; CHECK-UNALIGNED-RV32-V-NEXT:    lw t5, 32(sp) # 4-byte Folded Reload
+; CHECK-UNALIGNED-RV32-V-NEXT:    or t5, t5, s4
+; CHECK-UNALIGNED-RV32-V-NEXT:    lw t6, 36(sp) # 4-byte Folded Reload
+; CHECK-UNALIGNED-RV32-V-NEXT:    or t6, t6, s10
+; CHECK-UNALIGNED-RV32-V-NEXT:    lw s0, 40(sp) # 4-byte Folded Reload
+; CHECK-UNALIGNED-RV32-V-NEXT:    or s0, s0, s7
+; CHECK-UNALIGNED-RV32-V-NEXT:    or t6, s0, t6
+; CHECK-UNALIGNED-RV32-V-NEXT:    or t4, t5, t4
+; CHECK-UNALIGNED-RV32-V-NEXT:    or t4, t4, t6
+; CHECK-UNALIGNED-RV32-V-NEXT:    or t2, t3, t2
+; CHECK-UNALIGNED-RV32-V-NEXT:    or t0, t1, t0
+; CHECK-UNALIGNED-RV32-V-NEXT:    or t0, t0, t2
+; CHECK-UNALIGNED-RV32-V-NEXT:    or t0, t0, t4
+; CHECK-UNALIGNED-RV32-V-NEXT:    or a4, a4, a7
+; CHECK-UNALIGNED-RV32-V-NEXT:    or a3, a6, a3
+; CHECK-UNALIGNED-RV32-V-NEXT:    or a3, a3, a4
+; CHECK-UNALIGNED-RV32-V-NEXT:    or a2, a2, a5
+; CHECK-UNALIGNED-RV32-V-NEXT:    or a0, a0, a1
+; CHECK-UNALIGNED-RV32-V-NEXT:    or a0, a0, a2
+; CHECK-UNALIGNED-RV32-V-NEXT:    or a0, a0, a3
+; CHECK-UNALIGNED-RV32-V-NEXT:    or a0, a0, t0
+; CHECK-UNALIGNED-RV32-V-NEXT:    snez a0, a0
+; CHECK-UNALIGNED-RV32-V-NEXT:    lw ra, 92(sp) # 4-byte Folded Reload
+; CHECK-UNALIGNED-RV32-V-NEXT:    lw s0, 88(sp) # 4-byte Folded Reload
+; CHECK-UNALIGNED-RV32-V-NEXT:    lw s1, 84(sp) # 4-byte Folded Reload
+; CHECK-UNALIGNED-RV32-V-NEXT:    lw s2, 80(sp) # 4-byte Folded Reload
+; CHECK-UNALIGNED-RV32-V-NEXT:    lw s3, 76(sp) # 4-byte Folded Reload
+; CHECK-UNALIGNED-RV32-V-NEXT:    lw s4, 72(sp) # 4-byte Folded Reload
+; CHECK-UNALIGNED-RV32-V-NEXT:    lw s5, 68(sp) # 4-byte Folded Reload
+; CHECK-UNALIGNED-RV32-V-NEXT:    lw s6, 64(sp) # 4-byte Folded Reload
+; CHECK-UNALIGNED-RV32-V-NEXT:    lw s7, 60(sp) # 4-byte Folded Reload
+; CHECK-UNALIGNED-RV32-V-NEXT:    lw s8, 56(sp) # 4-byte Folded Reload
+; CHECK-UNALIGNED-RV32-V-NEXT:    lw s9, 52(sp) # 4-byte Folded Reload
+; CHECK-UNALIGNED-RV32-V-NEXT:    lw s10, 48(sp) # 4-byte Folded Reload
+; CHECK-UNALIGNED-RV32-V-NEXT:    lw s11, 44(sp) # 4-byte Folded Reload
+; CHECK-UNALIGNED-RV32-V-NEXT:    addi sp, sp, 96
 ; CHECK-UNALIGNED-RV32-V-NEXT:    ret
 ;
 ; CHECK-UNALIGNED-RV64-V-LABEL: bcmp_size_127:
 ; CHECK-UNALIGNED-RV64-V:       # %bb.0: # %entry
-; CHECK-UNALIGNED-RV64-V-NEXT:    li a2, 64
-; CHECK-UNALIGNED-RV64-V-NEXT:    vsetvli zero, a2, e8, m4, ta, ma
-; CHECK-UNALIGNED-RV64-V-NEXT:    vle8.v v8, (a0)
-; CHECK-UNALIGNED-RV64-V-NEXT:    vle8.v v12, (a1)
-; CHECK-UNALIGNED-RV64-V-NEXT:    addi a0, a0, 63
-; CHECK-UNALIGNED-RV64-V-NEXT:    addi a1, a1, 63
-; CHECK-UNALIGNED-RV64-V-NEXT:    vle8.v v16, (a0)
-; CHECK-UNALIGNED-RV64-V-NEXT:    vle8.v v20, (a1)
-; CHECK-UNALIGNED-RV64-V-NEXT:    vmsne.vv v24, v8, v12
-; CHECK-UNALIGNED-RV64-V-NEXT:    vmsne.vv v8, v16, v20
-; CHECK-UNALIGNED-RV64-V-NEXT:    vmnor.mm v8, v24, v8
-; CHECK-UNALIGNED-RV64-V-NEXT:    vcpop.m a0, v8
-; CHECK-UNALIGNED-RV64-V-NEXT:    seqz a0, a0
+; CHECK-UNALIGNED-RV64-V-NEXT:    addi sp, sp, -96
+; CHECK-UNALIGNED-RV64-V-NEXT:    sd s0, 88(sp) # 8-byte Folded Spill
+; CHECK-UNALIGNED-RV64-V-NEXT:    sd s1, 80(sp) # 8-byte Folded Spill
+; CHECK-UNALIGNED-RV64-V-NEXT:    sd s2, 72(sp) # 8-byte Folded Spill
+; CHECK-UNALIGNED-RV64-V-NEXT:    sd s3, 64(sp) # 8-byte Folded Spill
+; CHECK-UNALIGNED-RV64-V-NEXT:    sd s4, 56(sp) # 8-byte Folded Spill
+; CHECK-UNALIGNED-RV64-V-NEXT:    sd s5, 48(sp) # 8-byte Folded Spill
+; CHECK-UNALIGNED-RV64-V-NEXT:    sd s6, 40(sp) # 8-byte Folded Spill
+; CHECK-UNALIGNED-RV64-V-NEXT:    sd s7, 32(sp) # 8-byte Folded Spill
+; CHECK-UNALIGNED-RV64-V-NEXT:    sd s8, 24(sp) # 8-byte Folded Spill
+; CHECK-UNALIGNED-RV64-V-NEXT:    sd s9, 16(sp) # 8-byte Folded Spill
+; CHECK-UNALIGNED-RV64-V-NEXT:    sd s10, 8(sp) # 8-byte Folded Spill
+; CHECK-UNALIGNED-RV64-V-NEXT:    ld a2, 32(a0)
+; CHECK-UNALIGNED-RV64-V-NEXT:    ld a3, 40(a0)
+; CHECK-UNALIGNED-RV64-V-NEXT:    ld a4, 48(a0)
+; CHECK-UNALIGNED-RV64-V-NEXT:    ld a5, 56(a0)
+; CHECK-UNALIGNED-RV64-V-NEXT:    ld a6, 0(a0)
+; CHECK-UNALIGNED-RV64-V-NEXT:    ld a7, 8(a0)
+; CHECK-UNALIGNED-RV64-V-NEXT:    ld t0, 16(a0)
+; CHECK-UNALIGNED-RV64-V-NEXT:    ld t1, 24(a0)
+; CHECK-UNALIGNED-RV64-V-NEXT:    ld t2, 0(a1)
+; CHECK-UNALIGNED-RV64-V-NEXT:    ld t3, 8(a1)
+; CHECK-UNALIGNED-RV64-V-NEXT:    ld t4, 16(a1)
+; CHECK-UNALIGNED-RV64-V-NEXT:    ld t5, 24(a1)
+; CHECK-UNALIGNED-RV64-V-NEXT:    ld t6, 48(a1)
+; CHECK-UNALIGNED-RV64-V-NEXT:    ld s0, 56(a1)
+; CHECK-UNALIGNED-RV64-V-NEXT:    ld s1, 32(a1)
+; CHECK-UNALIGNED-RV64-V-NEXT:    ld s2, 40(a1)
+; CHECK-UNALIGNED-RV64-V-NEXT:    xor t1, t1, t5
+; CHECK-UNALIGNED-RV64-V-NEXT:    xor a5, a5, s0
+; CHECK-UNALIGNED-RV64-V-NEXT:    xor a7, a7, t3
+; CHECK-UNALIGNED-RV64-V-NEXT:    xor a3, a3, s2
+; CHECK-UNALIGNED-RV64-V-NEXT:    xor t0, t0, t4
+; CHECK-UNALIGNED-RV64-V-NEXT:    xor a4, a4, t6
+; CHECK-UNALIGNED-RV64-V-NEXT:    ld t3, 95(a0)
+; CHECK-UNALIGNED-RV64-V-NEXT:    ld t4, 103(a0)
+; CHECK-UNALIGNED-RV64-V-NEXT:    ld t5, 111(a0)
+; CHECK-UNALIGNED-RV64-V-NEXT:    ld t6, 119(a0)
+; CHECK-UNALIGNED-RV64-V-NEXT:    ld s0, 63(a0)
+; CHECK-UNALIGNED-RV64-V-NEXT:    ld s2, 71(a0)
+; CHECK-UNALIGNED-RV64-V-NEXT:    ld s3, 79(a0)
+; CHECK-UNALIGNED-RV64-V-NEXT:    ld a0, 87(a0)
+; CHECK-UNALIGNED-RV64-V-NEXT:    ld s4, 63(a1)
+; CHECK-UNALIGNED-RV64-V-NEXT:    ld s5, 71(a1)
+; CHECK-UNALIGNED-RV64-V-NEXT:    ld s6, 79(a1)
+; CHECK-UNALIGNED-RV64-V-NEXT:    ld s7, 87(a1)
+; CHECK-UNALIGNED-RV64-V-NEXT:    ld s8, 95(a1)
+; CHECK-UNALIGNED-RV64-V-NEXT:    ld s9, 103(a1)
+; CHECK-UNALIGNED-RV64-V-NEXT:    ld s10, 111(a1)
+; CHECK-UNALIGNED-RV64-V-NEXT:    ld a1, 119(a1)
+; CHECK-UNALIGNED-RV64-V-NEXT:    xor a6, a6, t2
+; CHECK-UNALIGNED-RV64-V-NEXT:    xor a2, a2, s1
+; CHECK-UNALIGNED-RV64-V-NEXT:    xor a0, a0, s7
+; CHECK-UNALIGNED-RV64-V-NEXT:    xor a1, t6, a1
+; CHECK-UNALIGNED-RV64-V-NEXT:    xor t2, s2, s5
+; CHECK-UNALIGNED-RV64-V-NEXT:    xor t4, t4, s9
+; CHECK-UNALIGNED-RV64-V-NEXT:    xor t6, s3, s6
+; CHECK-UNALIGNED-RV64-V-NEXT:    xor t5, t5, s10
+; CHECK-UNALIGNED-RV64-V-NEXT:    xor s0, s0, s4
+; CHECK-UNALIGNED-RV64-V-NEXT:    xor t3, t3, s8
+; CHECK-UNALIGNED-RV64-V-NEXT:    or a2, a2, t3
+; CHECK-UNALIGNED-RV64-V-NEXT:    or a6, a6, s0
+; CHECK-UNALIGNED-RV64-V-NEXT:    or a4, a4, t5
+; CHECK-UNALIGNED-RV64-V-NEXT:    or t0, t0, t6
+; CHECK-UNALIGNED-RV64-V-NEXT:    or a3, a3, t4
+; CHECK-UNALIGNED-RV64-V-NEXT:    or a7, a7, t2
+; CHECK-UNALIGNED-RV64-V-NEXT:    or a1, a5, a1
+; CHECK-UNALIGNED-RV64-V-NEXT:    or a0, t1, a0
+; CHECK-UNALIGNED-RV64-V-NEXT:    or a0, a0, a1
+; CHECK-UNALIGNED-RV64-V-NEXT:    or a1, a7, a3
+; CHECK-UNALIGNED-RV64-V-NEXT:    or a0, a1, a0
+; CHECK-UNALIGNED-RV64-V-NEXT:    or a1, t0, a4
+; CHECK-UNALIGNED-RV64-V-NEXT:    or a2, a6, a2
+; CHECK-UNALIGNED-RV64-V-NEXT:    or a1, a2, a1
+; CHECK-UNALIGNED-RV64-V-NEXT:    or a0, a1, a0
+; CHECK-UNALIGNED-RV64-V-NEXT:    snez a0, a0
+; CHECK-UNALIGNED-RV64-V-NEXT:    ld s0, 88(sp) # 8-byte Folded Reload
+; CHECK-UNALIGNED-RV64-V-NEXT:    ld s1, 80(sp) # 8-byte Folded Reload
+; CHECK-UNALIGNED-RV64-V-NEXT:    ld s2, 72(sp) # 8-byte Folded Reload
+; CHECK-UNALIGNED-RV64-V-NEXT:    ld s3, 64(sp) # 8-byte Folded Reload
+; CHECK-UNALIGNED-RV64-V-NEXT:    ld s4, 56(sp) # 8-byte Folded Reload
+; CHECK-UNALIGNED-RV64-V-NEXT:    ld s5, 48(sp) # 8-byte Folded Reload
+; CHECK-UNALIGNED-RV64-V-NEXT:    ld s6, 40(sp) # 8-byte Folded Reload
+; CHECK-UNALIGNED-RV64-V-NEXT:    ld s7, 32(sp) # 8-byte Folded Reload
+; CHECK-UNALIGNED-RV64-V-NEXT:    ld s8, 24(sp) # 8-byte Folded Reload
+; CHECK-UNALIGNED-RV64-V-NEXT:    ld s9, 16(sp) # 8-byte Folded Reload
+; CHECK-UNALIGNED-RV64-V-NEXT:    ld s10, 8(sp) # 8-byte Folded Reload
+; CHECK-UNALIGNED-RV64-V-NEXT:    addi sp, sp, 96
 ; CHECK-UNALIGNED-RV64-V-NEXT:    ret
 entry:
   %bcmp = call signext i32 @bcmp(ptr %s1, ptr %s2, iXLen 127)
