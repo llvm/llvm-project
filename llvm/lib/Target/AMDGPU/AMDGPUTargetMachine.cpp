@@ -744,10 +744,7 @@ void AMDGPUTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
 #include "llvm/Passes/TargetPassRegistry.inc"
 
   PB.registerPipelineStartEPCallback(
-      [this](ModulePassManager &PM, OptimizationLevel Level) {
-        PM.addPass(AMDGPUExpandPseudoIntrinsicsPass(*this));
-        FunctionPassManager FPM;
-        PM.addPass(createModuleToFunctionPassAdaptor(std::move(FPM)));
+      [](ModulePassManager &PM, OptimizationLevel Level) {
         if (EnableHipStdPar)
           PM.addPass(HipStdParAcceleratorCodeSelectionPass());
       });

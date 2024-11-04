@@ -1024,6 +1024,15 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
     }
     break;
   }
+  case Intrinsic::amdgcn_wavefrontsize: {
+    // TODO: this is a workaround for the pseudo-generic target one gets with no
+    // specified mcpu, which spoofs its wave size to 64; it should be removed.
+    if ((ST->getCPU().empty() || ST->getCPU() == "generic") &&
+        !ST->getFeatureString().contains("+wavefrontsize"))
+      break;
+    return IC.replaceInstUsesWith(II, ConstantInt::get(II.getType(),
+                                                       ST->getWavefrontSize()));
+  }
   case Intrinsic::amdgcn_wqm_vote: {
     // wqm_vote is identity when the argument is constant.
     if (!isa<Constant>(II.getArgOperand(0)))
