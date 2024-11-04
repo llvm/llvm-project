@@ -470,6 +470,9 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *CE) {
     return this->emitDecayPtr(*FromT, *ToT, CE);
   }
 
+  case CK_LValueToRValueBitCast:
+    return this->emitBuiltinBitCast(CE);
+
   case CK_IntegralToBoolean:
   case CK_FixedPointToBoolean:
   case CK_BooleanToSignedIntegral:
@@ -6426,6 +6429,64 @@ bool Compiler<Emitter>::emitDummyPtr(const DeclTy &D, const Expr *E) {
       return this->emitDecayPtr(PT_Ptr, PT, E);
     return false;
   }
+  return true;
+}
+
+//  This function is constexpr if and only if To, From, and the types of
+//  all subobjects of To and From are types T such that...
+//  (3.1) - is_union_v<T> is false;
+//  (3.2) - is_pointer_v<T> is false;
+//  (3.3) - is_member_pointer_v<T> is false;
+//  (3.4) - is_volatile_v<T> is false; and
+//  (3.5) - T has no non-static data members of reference type
+template <class Emitter>
+bool Compiler<Emitter>::emitBuiltinBitCast(const CastExpr *E) {
+  const Expr *SubExpr = E->getSubExpr();
+  QualType FromType = SubExpr->getType();
+  QualType ToType = E->getType();
+  std::optional<PrimType> ToT = classify(ToType);
+
+  assert(!DiscardResult && "Implement DiscardResult mode for bitcasts.");
+
+  if (ToType->isNullPtrType()) {
+    if (!this->discard(SubExpr))
+      return false;
+
+    return this->emitNullPtr(nullptr, E);
+  }
+
+  if (FromType->isNullPtrType() && ToT) {
+    if (!this->discard(SubExpr))
+      return false;
+
+    return visitZeroInitializer(*ToT, ToType, E);
+  }
+  assert(!ToType->isReferenceType());
+
+  // Get a pointer to the value-to-cast on the stack.
+  if (!this->visit(SubExpr))
+    return false;
+
+  if (!ToT || ToT == PT_Ptr)
+    return this->emitBitCastPtr(E);
+  assert(ToT);
+
+  const llvm::fltSemantics *TargetSemantics = nullptr;
+  if (ToT == PT_Float)
+    TargetSemantics = &Ctx.getFloatSemantics(ToType);
+
+  // Conversion to a primitive type. FromType can be another
+  // primitive type, or a record/array.
+  bool ToTypeIsUChar = (ToType->isSpecificBuiltinType(BuiltinType::UChar) ||
+                        ToType->isSpecificBuiltinType(BuiltinType::Char_U));
+  uint32_t ResultBitWidth = std::max(Ctx.getBitWidth(ToType), 8u);
+
+  if (!this->emitBitCast(*ToT, ToTypeIsUChar || ToType->isStdByteType(),
+                         ResultBitWidth, TargetSemantics, E))
+    return false;
+
+  if (DiscardResult)
+    return this->emitPop(*ToT, E);
 
   return true;
 }

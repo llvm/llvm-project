@@ -3979,9 +3979,9 @@ standard:
 - ``4``  - to nearest, ties away from zero
 The effect of passing some other value to ``__builtin_flt_rounds`` is
 implementation-defined. ``__builtin_set_flt_rounds`` is currently only supported
-to work on x86, x86_64, Arm and AArch64 targets. These builtins read and modify
-the floating-point environment, which is not always allowed and may have unexpected
-behavior. Please see the section on `Accessing the floating point environment <https://clang.llvm.org/docs/UsersManual.html#accessing-the-floating-point-environment>`_ for more information.
+to work on x86, x86_64, powerpc, powerpc64, Arm and AArch64 targets. These builtins
+read and modify the floating-point environment, which is not always allowed and may
+have unexpected behavior. Please see the section on `Accessing the floating point environment <https://clang.llvm.org/docs/UsersManual.html#accessing-the-floating-point-environment>`_ for more information.
 
 String builtins
 ---------------

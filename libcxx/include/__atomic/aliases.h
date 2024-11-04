@@ -14,9 +14,10 @@
 #include <__atomic/contention_t.h>
 #include <__atomic/is_always_lock_free.h>
 #include <__config>
+#include <__cstddef/ptrdiff_t.h>
+#include <__cstddef/size_t.h>
 #include <__type_traits/conditional.h>
 #include <__type_traits/make_unsigned.h>
-#include <cstddef>
 #include <cstdint>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
