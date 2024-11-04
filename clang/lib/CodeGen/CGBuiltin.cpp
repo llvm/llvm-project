@@ -20003,37 +20003,24 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
     getContext().GetBuiltinType(BuiltinID, Error, &ICEArguments);
     assert(Error == ASTContext::GE_None && "Should not codegen an error");
     llvm::Type *DataTy = ConvertType(E->getArg(0)->getType());
-    unsigned Size = DataTy->getPrimitiveSizeInBits();
-    llvm::Type *IntTy =
-        llvm::IntegerType::get(Builder.getContext(), std::max(Size, 32u));
     Function *F =
         CGM.getIntrinsic(BuiltinID == AMDGPU::BI__builtin_amdgcn_mov_dpp8
                              ? Intrinsic::amdgcn_mov_dpp8
                              : Intrinsic::amdgcn_update_dpp,
-                         IntTy);
+                         DataTy);
     assert(E->getNumArgs() == 5 || E->getNumArgs() == 6 ||
            E->getNumArgs() == 2);
     bool InsertOld = BuiltinID == AMDGPU::BI__builtin_amdgcn_mov_dpp;
     if (InsertOld)
-      Args.push_back(llvm::PoisonValue::get(IntTy));
-    for (unsigned I = 0; I != E->getNumArgs(); ++I) {
+      Args.push_back(llvm::PoisonValue::get(DataTy));
+    Args.push_back(EmitScalarOrConstFoldImmArg(ICEArguments, 0, E));
+    for (unsigned I = 1; I != E->getNumArgs(); ++I) {
       llvm::Value *V = EmitScalarOrConstFoldImmArg(ICEArguments, I, E);
-      if (I < (BuiltinID == AMDGPU::BI__builtin_amdgcn_update_dpp ? 2u : 1u) &&
-          Size < 32) {
-        if (!DataTy->isIntegerTy())
-          V = Builder.CreateBitCast(
-              V, llvm::IntegerType::get(Builder.getContext(), Size));
-        V = Builder.CreateZExtOrBitCast(V, IntTy);
-      }
       llvm::Type *ExpTy =
           F->getFunctionType()->getFunctionParamType(I + InsertOld);
       Args.push_back(Builder.CreateTruncOrBitCast(V, ExpTy));
     }
-    Value *V = Builder.CreateCall(F, Args);
-    if (Size < 32 && !DataTy->isIntegerTy())
-      V = Builder.CreateTrunc(
-          V, llvm::IntegerType::get(Builder.getContext(), Size));
-    return Builder.CreateTruncOrBitCast(V, DataTy);
+    return Builder.CreateCall(F, Args);
   }
   case AMDGPU::BI__builtin_amdgcn_permlane16:
   case AMDGPU::BI__builtin_amdgcn_permlanex16:
