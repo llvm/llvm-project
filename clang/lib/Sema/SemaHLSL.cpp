@@ -2188,8 +2188,7 @@ bool SemaHLSL::IsTypedResourceElementCompatible(clang::QualType QT) {
       return false;
 
     if (const BuiltinType *BT = TempQT->getAs<BuiltinType>()) {
-      if (BT->getKind() == BuiltinType::Bool ||
-          BT->getKind() == BuiltinType::Enum)
+      if (BT->isBooleanType() || BT->isEnumeralType())
         return false;
 
       // Check if it is an array type.
