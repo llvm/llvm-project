@@ -3583,10 +3583,10 @@ def ARMimmOneH: PatLeaf<(bitconvert (v8i16 (ARMvmovImm (i32 2620))))>; // 1.0 ha
 defm MVE_VMULf32 : MVE_VMUL_fp_m<MVE_v4f32, ARMimmOneF>;
 defm MVE_VMULf16 : MVE_VMUL_fp_m<MVE_v8f16, ARMimmOneH>;
 
-class MVE_VCMLA<string suffix, bits<2> size>
+class MVE_VCMLA<string suffix, bits<2> size, string cstr>
   : MVEFloatArithNeon<"vcmla", suffix, size{1}, (outs MQPR:$Qd),
                          (ins MQPR:$Qd_src, MQPR:$Qn, MQPR:$Qm, complexrotateop:$rot),
-                         "$Qd, $Qn, $Qm, $rot", vpred_n, "$Qd = $Qd_src", size, []> {
+                         "$Qd, $Qn, $Qm, $rot", vpred_n, "$Qd = $Qd_src"#cstr, size, []> {
   bits<4> Qd;
   bits<4> Qn;
   bits<2> rot;
@@ -3603,8 +3603,8 @@ class MVE_VCMLA<string suffix, bits<2> size>
   let Inst{4} = 0b0;
 }
 
-multiclass MVE_VCMLA_m<MVEVectorVTInfo VTI> {
-  def "" : MVE_VCMLA<VTI.Suffix, VTI.Size>;
+multiclass MVE_VCMLA_m<MVEVectorVTInfo VTI, string cstr=""> {
+  def "" : MVE_VCMLA<VTI.Suffix, VTI.Size, cstr>;
   defvar Inst = !cast<Instruction>(NAME);
 
   let Predicates = [HasMVEFloat] in {
@@ -3633,7 +3633,7 @@ multiclass MVE_VCMLA_m<MVEVectorVTInfo VTI> {
 }
 
 defm MVE_VCMLAf16 : MVE_VCMLA_m<MVE_v8f16>;
-defm MVE_VCMLAf32 : MVE_VCMLA_m<MVE_v4f32>;
+defm MVE_VCMLAf32 : MVE_VCMLA_m<MVE_v4f32, ",@earlyclobber $Qd">;
 
 class MVE_VADDSUBFMA_fp<string iname, string suffix, bits<2> size, bit bit_4,
                         bit bit_8, bit bit_21, dag iops=(ins),
