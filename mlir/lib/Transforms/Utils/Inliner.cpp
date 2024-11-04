@@ -21,6 +21,7 @@
 #include "mlir/Support/DebugStringHelper.h"
 #include "mlir/Transforms/InliningUtils.h"
 #include "llvm/ADT/SCCIterator.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/Support/Debug.h"
 
@@ -709,6 +710,13 @@ bool Inliner::Impl::shouldInline(ResolvedCall &resolvedCall) {
   // Don't allow inlining terminator calls. We currently don't support this
   // case.
   if (resolvedCall.call->hasTrait<OpTrait::IsTerminator>())
+    return false;
+
+  // Don't allow inlining if the target is a self-recursive function.
+  if (llvm::count_if(*resolvedCall.targetNode,
+                     [&](CallGraphNode::Edge const &edge) -> bool {
+                       return edge.getTarget() == resolvedCall.targetNode;
+                     }) > 0)
     return false;
 
   // Don't allow inlining if the target is an ancestor of the call. This

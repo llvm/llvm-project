@@ -119,6 +119,8 @@ add_math_entrypoint_object(fminf128)
 
 add_math_entrypoint_object(fmod)
 add_math_entrypoint_object(fmodf)
+add_math_entrypoint_object(fmodl)
+add_math_entrypoint_object(fmodf128)
 
 add_math_entrypoint_object(frexp)
 add_math_entrypoint_object(frexpf)
@@ -183,6 +185,7 @@ add_math_entrypoint_object(lroundf128)
 add_math_entrypoint_object(modf)
 add_math_entrypoint_object(modff)
 add_math_entrypoint_object(modfl)
+add_math_entrypoint_object(modff128)
 
 add_math_entrypoint_object(nan)
 add_math_entrypoint_object(nanf)

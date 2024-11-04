@@ -131,13 +131,11 @@ int main(void) {
 #pragma omp atomic write
   ullx = ullv;
 // CHECK: load float, ptr
-// CHECK: bitcast float {{.*}} to i32
-// CHECK: store atomic i32 {{.*}}, ptr {{.*}} monotonic, align 4
+// CHECK: store atomic float {{.*}}, ptr {{.*}} monotonic, align 4
 #pragma omp atomic write
   fx = fv;
 // CHECK: load double, ptr
-// CHECK: bitcast double {{.*}} to i64
-// CHECK: store atomic i64 {{.*}}, ptr {{.*}} monotonic, align 8
+// CHECK: store atomic double {{.*}}, ptr {{.*}} monotonic, align 8
 #pragma omp atomic write
   dx = dv;
 // CHECK: [[LD:%.+]] = load x86_fp80, ptr
@@ -215,11 +213,11 @@ int main(void) {
 #pragma omp atomic write
   cix = lv;
 // CHECK: load i64, ptr
-// CHECK: store atomic i32 %{{.+}}, ptr {{.*}} monotonic, align 4
+// CHECK: store atomic float %{{.+}}, ptr {{.*}} monotonic, align 4
 #pragma omp atomic write
   fx = ulv;
 // CHECK: load i64, ptr
-// CHECK: store atomic i64 %{{.+}}, ptr {{.*}} monotonic, align 8
+// CHECK: store atomic double %{{.+}}, ptr {{.*}} monotonic, align 8
 #pragma omp atomic write
   dx = llv;
 // CHECK: load i64, ptr
@@ -491,8 +489,7 @@ int main(void) {
   float2x.x = ulv;
 // CHECK: call i32 @llvm.read_register.i32(
 // CHECK: sitofp i32 %{{.+}} to double
-// CHECK: bitcast double %{{.+}} to i64
-// CHECK: store atomic i64 %{{.+}}, ptr @{{.+}} seq_cst, align 8
+// CHECK: store atomic double %{{.+}}, ptr @{{.+}} seq_cst, align 8
 // CHECK: call{{.*}} @__kmpc_flush(
 #pragma omp atomic write seq_cst
   dv = rix;

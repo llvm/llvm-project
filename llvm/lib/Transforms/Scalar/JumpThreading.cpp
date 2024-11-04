@@ -1488,7 +1488,7 @@ findMostPopularDest(BasicBlock *BB,
 
   // Populate DestPopularity with the successors in the order they appear in the
   // successor list.  This way, we ensure determinism by iterating it in the
-  // same order in std::max_element below.  We map nullptr to 0 so that we can
+  // same order in llvm::max_element below.  We map nullptr to 0 so that we can
   // return nullptr when PredToDestList contains nullptr only.
   DestPopularity[nullptr] = 0;
   for (auto *SuccBB : successors(BB))
@@ -1499,8 +1499,7 @@ findMostPopularDest(BasicBlock *BB,
       DestPopularity[PredToDest.second]++;
 
   // Find the most popular dest.
-  auto MostPopular = std::max_element(
-      DestPopularity.begin(), DestPopularity.end(), llvm::less_second());
+  auto MostPopular = llvm::max_element(DestPopularity, llvm::less_second());
 
   // Okay, we have finally picked the most popular destination.
   return MostPopular->first;
@@ -2553,8 +2552,7 @@ void JumpThreadingPass::updateBlockFreqAndEdgeWeight(BasicBlock *PredBB,
     BBSuccFreq.push_back(SuccFreq.getFrequency());
   }
 
-  uint64_t MaxBBSuccFreq =
-      *std::max_element(BBSuccFreq.begin(), BBSuccFreq.end());
+  uint64_t MaxBBSuccFreq = *llvm::max_element(BBSuccFreq);
 
   SmallVector<BranchProbability, 4> BBSuccProbs;
   if (MaxBBSuccFreq == 0)

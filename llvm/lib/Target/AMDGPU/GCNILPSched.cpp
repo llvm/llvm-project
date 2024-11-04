@@ -313,11 +313,11 @@ GCNILPScheduler::schedule(ArrayRef<const SUnit*> BotRoots,
   Schedule.reserve(SUnits.size());
   while (true) {
     if (AvailQueue.empty() && !PendingQueue.empty()) {
-      auto EarliestSU = std::min_element(
-        PendingQueue.begin(), PendingQueue.end(),
-        [=](const Candidate& C1, const Candidate& C2) {
-        return C1.SU->getHeight() < C2.SU->getHeight();
-      })->SU;
+      auto EarliestSU =
+          llvm::min_element(PendingQueue, [=](const Candidate &C1,
+                                              const Candidate &C2) {
+            return C1.SU->getHeight() < C2.SU->getHeight();
+          })->SU;
       advanceToCycle(std::max(CurCycle + 1, EarliestSU->getHeight()));
     }
     if (AvailQueue.empty())

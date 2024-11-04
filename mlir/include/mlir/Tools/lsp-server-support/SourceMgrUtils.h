@@ -11,8 +11,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_TOOLS_LSPSERVERSUPPORT_TRANSPORT_H
-#define MLIR_TOOLS_LSPSERVERSUPPORT_TRANSPORT_H
+#ifndef MLIR_TOOLS_LSPSERVERSUPPORT_SOURCEMGRUTILS_H
+#define MLIR_TOOLS_LSPSERVERSUPPORT_SOURCEMGRUTILS_H
 
 #include "mlir/Tools/lsp-server-support/Protocol.h"
 #include "llvm/Support/SourceMgr.h"

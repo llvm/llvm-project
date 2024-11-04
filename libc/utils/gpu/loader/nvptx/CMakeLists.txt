@@ -1,10 +1,10 @@
 add_executable(nvptx-loader Loader.cpp)
-add_dependencies(nvptx-loader libc.src.__support.RPC.rpc)
 
 if(NOT LLVM_ENABLE_RTTI)
   target_compile_options(nvptx-loader PRIVATE -fno-rtti)
 endif()
-target_include_directories(nvptx-loader PRIVATE ${LLVM_INCLUDE_DIRS})
+target_include_directories(nvptx-loader PRIVATE
+                           ${LLVM_MAIN_INCLUDE_DIR} ${LLVM_BINARY_DIR}/include)
 target_link_libraries(nvptx-loader
   PRIVATE
   gpu_loader

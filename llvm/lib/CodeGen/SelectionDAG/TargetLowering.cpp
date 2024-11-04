@@ -491,7 +491,7 @@ TargetLowering::isOffsetFoldingLegal(const GlobalAddressSDNode *GA) const {
 
   // If the address is not even local to this DSO we will have to load it from
   // a got and then add the offset.
-  if (!TM.shouldAssumeDSOLocal(*GV->getParent(), GV))
+  if (!TM.shouldAssumeDSOLocal(GV))
     return false;
 
   // If the code is position independent we will have to add a base register.

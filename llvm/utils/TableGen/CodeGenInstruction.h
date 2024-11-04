@@ -17,14 +17,13 @@
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/CodeGenTypes/MachineValueType.h"
+#include "llvm/TableGen/Record.h"
 #include <cassert>
 #include <string>
 #include <utility>
 #include <vector>
 
 namespace llvm {
-class Record;
-class DagInit;
 class CodeGenTarget;
 
 class CGIOperandList {
@@ -331,6 +330,12 @@ public:
   /// Check if the operand is required to be an immediate.
   bool isInOperandImmArg(unsigned i) const {
     return isOperandImpl("InOperandList", i, "IsImmediate");
+  }
+
+  /// Return true if the instruction uses a variable length encoding.
+  bool isVariableLengthEncoding() const {
+    const RecordVal *RV = TheDef->getValue("Inst");
+    return RV && isa<DagInit>(RV->getValue());
   }
 
 private:

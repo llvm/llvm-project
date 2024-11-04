@@ -697,6 +697,7 @@
   { include: [ "<__thread/this_thread.h>", "private", "<thread>", "public" ] },
   { include: [ "<__thread/thread.h>", "private", "<thread>", "public" ] },
   { include: [ "<__thread/timed_backoff_policy.h>", "private", "<thread>", "public" ] },
+  { include: [ "<__tuple/find_index.h>", "private", "<tuple>", "public" ] },
   { include: [ "<__tuple/make_tuple_types.h>", "private", "<tuple>", "public" ] },
   { include: [ "<__tuple/pair_like.h>", "private", "<tuple>", "public" ] },
   { include: [ "<__tuple/sfinae_helpers.h>", "private", "<tuple>", "public" ] },

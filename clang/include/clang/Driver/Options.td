@@ -1264,6 +1264,10 @@ def fno_gpu_sanitize : Flag<["-"], "fno-gpu-sanitize">, Group<f_Group>;
 def offload_compress : Flag<["--"], "offload-compress">,
   HelpText<"Compress offload device binaries (HIP only)">;
 def no_offload_compress : Flag<["--"], "no-offload-compress">;
+
+def offload_compression_level_EQ : Joined<["--"], "offload-compression-level=">,
+  Flags<[HelpHidden]>,
+  HelpText<"Compression level for offload device binaries (HIP only)">;
 }
 
 // CUDA options

@@ -3485,7 +3485,8 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
   case ISD::SRL:
     Known = computeKnownBits(Op.getOperand(0), DemandedElts, Depth + 1);
     Known2 = computeKnownBits(Op.getOperand(1), DemandedElts, Depth + 1);
-    Known = KnownBits::lshr(Known, Known2);
+    Known = KnownBits::lshr(Known, Known2, /*ShAmtNonZero=*/false,
+                            Op->getFlags().hasExact());
 
     // Minimum shift high bits are known zero.
     if (const APInt *ShMinAmt =
@@ -3495,7 +3496,8 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
   case ISD::SRA:
     Known = computeKnownBits(Op.getOperand(0), DemandedElts, Depth + 1);
     Known2 = computeKnownBits(Op.getOperand(1), DemandedElts, Depth + 1);
-    Known = KnownBits::ashr(Known, Known2);
+    Known = KnownBits::ashr(Known, Known2, /*ShAmtNonZero=*/false,
+                            Op->getFlags().hasExact());
     break;
   case ISD::FSHL:
   case ISD::FSHR:
@@ -6066,9 +6068,9 @@ static std::optional<APInt> FoldValue(unsigned Opcode, const APInt &C1,
     return (C1Ext + C2Ext + 1).extractBits(C1.getBitWidth(), 1);
   }
   case ISD::ABDS:
-    return APIntOps::smax(C1, C2) - APIntOps::smin(C1, C2);
+    return APIntOps::abds(C1, C2);
   case ISD::ABDU:
-    return APIntOps::umax(C1, C2) - APIntOps::umin(C1, C2);
+    return APIntOps::abdu(C1, C2);
   }
   return std::nullopt;
 }

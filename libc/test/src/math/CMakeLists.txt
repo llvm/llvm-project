@@ -1721,5 +1721,5 @@ add_subdirectory(smoke)
 
 if(NOT LLVM_LIBC_FULL_BUILD)
   add_subdirectory(exhaustive)
-  add_subdirectory(differential_testing)
+  add_subdirectory(performance_testing)
 endif()

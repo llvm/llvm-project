@@ -28926,6 +28926,9 @@ SDValue X86TargetLowering::LowerWin64_INT128_TO_FP(SDValue Op,
 // supported by the Subtarget
 static bool supportedVectorShiftWithImm(EVT VT, const X86Subtarget &Subtarget,
                                         unsigned Opcode) {
+  assert((Opcode == ISD::SHL || Opcode == ISD::SRA || Opcode == ISD::SRL) &&
+         "Unexpected shift opcode");
+
   if (!VT.isSimple())
     return false;
 
@@ -28959,6 +28962,9 @@ bool supportedVectorShiftWithBaseAmnt(EVT VT, const X86Subtarget &Subtarget,
 // natively supported by the Subtarget
 static bool supportedVectorVarShift(EVT VT, const X86Subtarget &Subtarget,
                                     unsigned Opcode) {
+  assert((Opcode == ISD::SHL || Opcode == ISD::SRA || Opcode == ISD::SRL) &&
+         "Unexpected shift opcode");
+
   if (!VT.isSimple())
     return false;
 
@@ -36747,7 +36753,7 @@ static void computeKnownBitsForPSADBW(SDValue LHS, SDValue RHS,
   APInt DemandedSrcElts = APIntOps::ScaleBitMask(DemandedElts, NumSrcElts);
   Known = DAG.computeKnownBits(RHS, DemandedSrcElts, Depth + 1);
   Known2 = DAG.computeKnownBits(LHS, DemandedSrcElts, Depth + 1);
-  Known = KnownBits::absdiff(Known, Known2).zext(16);
+  Known = KnownBits::abdu(Known, Known2).zext(16);
   // Known = (((D0 + D1) + (D2 + D3)) + ((D4 + D5) + (D6 + D7)))
   Known = KnownBits::computeForAddSub(/*Add=*/true, /*NSW=*/true, /*NUW=*/true,
                                       Known, Known);
@@ -48179,6 +48185,7 @@ static SDValue combineAndShuffleNot(SDNode *N, SelectionDAG &DAG,
   SDValue X, Y;
   SDValue N0 = N->getOperand(0);
   SDValue N1 = N->getOperand(1);
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
 
   if (SDValue Not = GetNot(N0)) {
     X = Not;
@@ -48192,9 +48199,11 @@ static SDValue combineAndShuffleNot(SDNode *N, SelectionDAG &DAG,
   X = DAG.getBitcast(VT, X);
   Y = DAG.getBitcast(VT, Y);
   SDLoc DL(N);
+
   // We do not split for SSE at all, but we need to split vectors for AVX1 and
   // AVX2.
-  if (!Subtarget.useAVX512Regs() && VT.is512BitVector()) {
+  if (!Subtarget.useAVX512Regs() && VT.is512BitVector() && 
+      TLI.isTypeLegal(VT.getHalfNumVectorElementsVT(*DAG.getContext()))) {
     SDValue LoX, HiX;
     std::tie(LoX, HiX) = splitVector(X, DAG, DL);
     SDValue LoY, HiY;
@@ -48204,7 +48213,11 @@ static SDValue combineAndShuffleNot(SDNode *N, SelectionDAG &DAG,
     SDValue HiV = DAG.getNode(X86ISD::ANDNP, DL, SplitVT, {HiX, HiY});
     return DAG.getNode(ISD::CONCAT_VECTORS, DL, VT, {LoV, HiV});
   }
-  return DAG.getNode(X86ISD::ANDNP, DL, VT, {X, Y});
+
+  if (TLI.isTypeLegal(VT))
+    return DAG.getNode(X86ISD::ANDNP, DL, VT, {X, Y});
+
+  return SDValue();
 }
 
 // Try to widen AND, OR and XOR nodes to VT in order to remove casts around

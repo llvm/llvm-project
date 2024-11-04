@@ -509,7 +509,6 @@ shared_mutex string
 shared_mutex version
 source_location cstdint
 source_location version
-span array
 span cstddef
 span initializer_list
 span limits
@@ -662,7 +661,6 @@ variant cstring
 variant initializer_list
 variant limits
 variant new
-variant tuple
 variant version
 vector array
 vector cctype

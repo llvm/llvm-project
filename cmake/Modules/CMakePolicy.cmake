@@ -10,3 +10,16 @@ endif()
 if(POLICY CMP0116)
   cmake_policy(SET CMP0116 OLD)
 endif()
+
+# MSVC debug information format flags are selected via
+# CMAKE_MSVC_DEBUG_INFORMATION_FORMAT, instead of
+# embedding flags in e.g. CMAKE_CXX_FLAGS_RELEASE.
+# New in CMake 3.25.
+#
+# Supports debug info with SCCache
+# (https://github.com/mozilla/sccache?tab=readme-ov-file#usage)
+# avoiding “fatal error C1041: cannot open program database; if
+# multiple CL.EXE write to the same .PDB file, please use /FS"
+if(POLICY CMP0141)
+  cmake_policy(SET CMP0141 NEW)
+endif()

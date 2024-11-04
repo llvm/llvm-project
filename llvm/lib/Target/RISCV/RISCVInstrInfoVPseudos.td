@@ -6767,14 +6767,14 @@ let mayLoad = 0, mayStore = 0, hasSideEffects = 0 in {
   let HasSEWOp = 1, BaseInstr = VMV_X_S in
   def PseudoVMV_X_S:
     Pseudo<(outs GPR:$rd), (ins VR:$rs2, ixlenimm:$sew), []>,
-    Sched<[WriteVIMovVX, ReadVIMovVX]>,
+    Sched<[WriteVMovXS, ReadVMovXS]>,
     RISCVVPseudo;
   let HasVLOp = 1, HasSEWOp = 1, BaseInstr = VMV_S_X,
       Constraints = "$rd = $rs1" in
   def PseudoVMV_S_X: Pseudo<(outs VR:$rd),
                             (ins VR:$rs1, GPR:$rs2, AVL:$vl, ixlenimm:$sew),
                             []>,
-    Sched<[WriteVIMovXV, ReadVIMovXV, ReadVIMovXX]>,
+    Sched<[WriteVMovSX, ReadVMovSX_V, ReadVMovSX_X]>,
     RISCVVPseudo;
 }
 } // Predicates = [HasVInstructions]
@@ -6793,7 +6793,7 @@ let mayLoad = 0, mayStore = 0, hasSideEffects = 0 in {
         def "PseudoVFMV_" # f.FX # "_S_" # mx :
           Pseudo<(outs f.fprclass:$rd),
                  (ins m.vrclass:$rs2, ixlenimm:$sew), []>,
-          Sched<[WriteVFMovVF, ReadVFMovVF]>,
+          Sched<[WriteVMovFS, ReadVMovFS]>,
           RISCVVPseudo;
         let HasVLOp = 1, HasSEWOp = 1, BaseInstr = VFMV_S_F,
             Constraints = "$rd = $rs1" in
@@ -6802,7 +6802,7 @@ let mayLoad = 0, mayStore = 0, hasSideEffects = 0 in {
                                                  (ins m.vrclass:$rs1, f.fprclass:$rs2,
                                                       AVL:$vl, ixlenimm:$sew),
                                                  []>,
-          Sched<[WriteVFMovFV, ReadVFMovFV, ReadVFMovFX]>,
+          Sched<[WriteVMovSF, ReadVMovSF_V, ReadVMovSF_F]>,
           RISCVVPseudo;
       }
     }
