@@ -283,7 +283,7 @@ struct ContiguousHelper {
     return Visit(x.get());
   }
   template <typename T> std::optional<bool> Visit(const evaluate::Expr<T> &x) {
-    return common::visit([this](auto &&s) { return Visit(s); }, x.u);
+    return common::visit([&](auto &&s) { return Visit(s); }, x.u);
   }
   template <typename T>
   std::optional<bool> Visit(const evaluate::Designator<T> &x) {
@@ -296,7 +296,7 @@ struct ContiguousHelper {
   }
 
 private:
-  SemanticsContext &sctx_;
+  [[maybe_unused]] SemanticsContext &sctx_;
   evaluate::FoldingContext &fctx_;
 };
 } // namespace
