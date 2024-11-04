@@ -19490,9 +19490,7 @@ public:
         // To prevent poison from leaking across what used to be sequential,
         // safe, scalar boolean logic operations, the reduction operand must be
         // frozen.
-        if ((isBoolLogicOp(RdxRootInst) ||
-             (AnyBoolLogicOp && VL.size() != TrackedVals.size())) &&
-            !isGuaranteedNotToBePoison(VectorizedRoot))
+        if (AnyBoolLogicOp && !isGuaranteedNotToBePoison(VectorizedRoot))
           VectorizedRoot = Builder.CreateFreeze(VectorizedRoot);
 
         // Emit code to correctly handle reused reduced values, if required.
