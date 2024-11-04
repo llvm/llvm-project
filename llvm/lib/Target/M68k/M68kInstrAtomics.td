@@ -23,7 +23,7 @@ foreach size = [8, 16, 32] in {
 }
 
 let Predicates = [AtLeastM68020] in {
-class MxCASOp<bits<2> size_encoding, MxType type>
+class MxCASARIOp<bits<2> size_encoding, MxType type>
     : MxInst<(outs type.ROp:$out),
              (ins type.ROp:$dc, type.ROp:$du, !cast<MxMemOp>("MxARI"#type.Size):$mem),
              "cas."#type.Prefix#" $dc, $du, $mem"> {
@@ -36,17 +36,44 @@ class MxCASOp<bits<2> size_encoding, MxType type>
   let mayStore = 1;
 }
 
-def CAS8  : MxCASOp<0x1, MxType8d>;
-def CAS16 : MxCASOp<0x2, MxType16d>;
-def CAS32 : MxCASOp<0x3, MxType32d>;
+def CASARI8  : MxCASARIOp<0x1, MxType8d>;
+def CASARI16 : MxCASARIOp<0x2, MxType16d>;
+def CASARI32 : MxCASARIOp<0x3, MxType32d>;
 
 
 foreach size = [8, 16, 32] in {
   def : Pat<(!cast<SDPatternOperator>("atomic_cmp_swap_i"#size) MxCP_ARI:$ptr,
                                                                 !cast<MxRegOp>("MxDRD"#size):$cmp,
                                                                 !cast<MxRegOp>("MxDRD"#size):$new),
-            (!cast<MxInst>("CAS"#size) !cast<MxRegOp>("MxDRD"#size):$cmp,
+            (!cast<MxInst>("CASARI"#size) !cast<MxRegOp>("MxDRD"#size):$cmp,
                                        !cast<MxRegOp>("MxDRD"#size):$new,
                                        !cast<MxMemOp>("MxARI"#size):$ptr)>;
+}
+
+class MxCASARIDOp<bits<2> size_encoding, MxType type>
+    : MxInst<(outs type.ROp:$out),
+             (ins type.ROp:$dc, type.ROp:$du, !cast<MxMemOp>("MxARID"#type.Size):$mem),
+             "cas."#type.Prefix#" $dc, $du, $mem"> {
+  let Inst = (ascend
+                (descend 0b00001, size_encoding, 0b011, MxEncAddrMode_p<"mem">.EA),
+                (descend 0b0000000, (operand "$du", 3), 0b000, (operand "$dc", 3))
+              );
+  let Constraints = "$out = $dc";
+  let mayLoad = 1;
+  let mayStore = 1;
+}
+
+def CASARID8  : MxCASARIDOp<0x1, MxType8d>;
+def CASARID16 : MxCASARIDOp<0x2, MxType16d>;
+def CASARID32 : MxCASARIDOp<0x3, MxType32d>;
+
+
+foreach size = [8, 16, 32] in {
+  def : Pat<(!cast<SDPatternOperator>("atomic_cmp_swap_i"#size) MxCP_ARID:$ptr,
+                                                                !cast<MxRegOp>("MxDRD"#size):$cmp,
+                                                                !cast<MxRegOp>("MxDRD"#size):$new),
+            (!cast<MxInst>("CASARID"#size) !cast<MxRegOp>("MxDRD"#size):$cmp,
+                                       !cast<MxRegOp>("MxDRD"#size):$new,
+                                       !cast<MxMemOp>("MxARID"#size):$ptr)>;
 }
 } // let Predicates = [AtLeastM68020]
