@@ -18,6 +18,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/FoldingSet.h"
+#include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/ilist.h"
@@ -1600,10 +1601,12 @@ public:
   /// libcall is expected to take all the operands of the \p Node followed by
   /// output pointers for each of the results. \p CallRetResNo can be optionally
   /// set to indicate that one of the results comes from the libcall's return
-  /// value.
-  bool expandMultipleResultFPLibCall(RTLIB::Libcall LC, SDNode *Node,
-                                     SmallVectorImpl<SDValue> &Results,
-                                     std::optional<unsigned> CallRetResNo = {});
+  /// value. The optional \p LegalizeOp callback can be set to legalize
+  /// non-result values created by this expansion.
+  bool expandMultipleResultFPLibCall(
+      RTLIB::Libcall LC, SDNode *Node, SmallVectorImpl<SDValue> &Results,
+      std::optional<unsigned> CallRetResNo = {},
+      function_ref<SDValue(SDValue)> LegalizeOp = nullptr);
 
   /// Expand the specified \c ISD::VAARG node as the Legalize pass would.
   SDValue expandVAArg(SDNode *Node);

@@ -2486,7 +2486,8 @@ SDValue SelectionDAG::getPartialReduceAdd(SDLoc DL, EVT ReducedTy, SDValue Op1,
 
 bool SelectionDAG::expandMultipleResultFPLibCall(
     RTLIB::Libcall LC, SDNode *Node, SmallVectorImpl<SDValue> &Results,
-    std::optional<unsigned> CallRetResNo) {
+    std::optional<unsigned> CallRetResNo,
+    function_ref<SDValue(SDValue)> LegalizeOp) {
   LLVMContext &Ctx = *getContext();
   EVT VT = Node->getValueType(0);
   unsigned NumResults = Node->getNumValues();
@@ -2608,7 +2609,7 @@ bool SelectionDAG::expandMultipleResultFPLibCall(
   // ensures the FP pop will be emitted.
   SDValue OutputChain =
       getNode(ISD::TokenFactor, DL, MVT::Other, getRoot(), CallChain);
-  setRoot(OutputChain);
+  setRoot(LegalizeOp ? LegalizeOp(OutputChain) : OutputChain);
 
   return true;
 }
