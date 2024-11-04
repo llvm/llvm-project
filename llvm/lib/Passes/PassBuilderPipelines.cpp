@@ -359,14 +359,16 @@ void PassBuilder::invokeVectorizerStartEPCallbacks(FunctionPassManager &FPM,
     C(FPM, Level);
 }
 void PassBuilder::invokeOptimizerEarlyEPCallbacks(ModulePassManager &MPM,
-                                                  OptimizationLevel Level) {
+                                                  OptimizationLevel Level,
+                                                  ThinOrFullLTOPhase Phase) {
   for (auto &C : OptimizerEarlyEPCallbacks)
-    C(MPM, Level);
+    C(MPM, Level, Phase);
 }
 void PassBuilder::invokeOptimizerLastEPCallbacks(ModulePassManager &MPM,
-                                                 OptimizationLevel Level) {
+                                                 OptimizationLevel Level,
+                                                 ThinOrFullLTOPhase Phase) {
   for (auto &C : OptimizerLastEPCallbacks)
-    C(MPM, Level);
+    C(MPM, Level, Phase);
 }
 void PassBuilder::invokeFullLinkTimeOptimizationEarlyEPCallbacks(
     ModulePassManager &MPM, OptimizationLevel Level) {
@@ -1464,7 +1466,7 @@ PassBuilder::buildModuleOptimizationPipeline(OptimizationLevel Level,
   if (EnableGlobalAnalyses)
     MPM.addPass(RecomputeGlobalsAAPass());
 
-  invokeOptimizerEarlyEPCallbacks(MPM, Level);
+  invokeOptimizerEarlyEPCallbacks(MPM, Level, LTOPhase);
 
   FunctionPassManager OptimizePM;
   // Scheduling LoopVersioningLICM when inlining is over, because after that
@@ -1559,7 +1561,7 @@ PassBuilder::buildModuleOptimizationPipeline(OptimizationLevel Level,
   MPM.addPass(createModuleToFunctionPassAdaptor(std::move(OptimizePM),
                                                 PTO.EagerlyInvalidateAnalyses));
 
-  invokeOptimizerLastEPCallbacks(MPM, Level);
+  invokeOptimizerLastEPCallbacks(MPM, Level, LTOPhase);
 
   // Split out cold code. Splitting is done late to avoid hiding context from
   // other optimizations and inadvertently regressing performance. The tradeoff
@@ -1716,8 +1718,10 @@ PassBuilder::buildThinLTOPreLinkDefaultPipeline(OptimizationLevel Level) {
   // Handle Optimizer{Early,Last}EPCallbacks added by clang on PreLink. Actual
   // optimization is going to be done in PostLink stage, but clang can't add
   // callbacks there in case of in-process ThinLTO called by linker.
-  invokeOptimizerEarlyEPCallbacks(MPM, Level);
-  invokeOptimizerLastEPCallbacks(MPM, Level);
+  invokeOptimizerEarlyEPCallbacks(MPM, Level,
+                                  /*Phase=*/ThinOrFullLTOPhase::ThinLTOPreLink);
+  invokeOptimizerLastEPCallbacks(MPM, Level,
+                                 /*Phase=*/ThinOrFullLTOPhase::ThinLTOPreLink);
 
   // Emit annotation remarks.
   addAnnotationRemarksPass(MPM);
@@ -2198,7 +2202,7 @@ PassBuilder::buildO0DefaultPipeline(OptimizationLevel Level,
       MPM.addPass(createModuleToFunctionPassAdaptor(std::move(FPM)));
   }
 
-  invokeOptimizerEarlyEPCallbacks(MPM, Level);
+  invokeOptimizerEarlyEPCallbacks(MPM, Level, Phase);
 
   if (!VectorizerStartEPCallbacks.empty()) {
     FunctionPassManager FPM;
@@ -2216,7 +2220,7 @@ PassBuilder::buildO0DefaultPipeline(OptimizationLevel Level,
   CoroPM.addPass(GlobalDCEPass());
   MPM.addPass(CoroConditionalWrapper(std::move(CoroPM)));
 
-  invokeOptimizerLastEPCallbacks(MPM, Level);
+  invokeOptimizerLastEPCallbacks(MPM, Level, Phase);
 
   if (isLTOPreLink(Phase))
     addRequiredLTOPreLinkPasses(MPM);

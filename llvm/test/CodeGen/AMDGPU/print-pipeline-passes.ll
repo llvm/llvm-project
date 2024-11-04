@@ -13,6 +13,7 @@
 ; O0-NOT: amdgpu-attributor
 
 ; PRE-NOT: internalize
+; PRE-NOT: amdgpu-attributor
 
 define amdgpu_kernel void @kernel() {
 entry:
