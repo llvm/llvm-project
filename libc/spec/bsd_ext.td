@@ -1,4 +1,16 @@
 def BsdExtensions : StandardSpec<"BSDExtensions"> {
+  HeaderSpec Math = HeaderSpec<
+      "math.h",
+      [], // Macros
+      [], // Types
+      [], // Enumerations
+      [
+          FunctionSpec<"isnan", RetValSpec<IntType>, [ArgSpec<DoubleType>]>,
+          FunctionSpec<"isnanf", RetValSpec<IntType>, [ArgSpec<FloatType>]>,
+          FunctionSpec<"isnanl", RetValSpec<IntType>, [ArgSpec<LongDoubleType>]>,
+      ]
+  >;
+
   HeaderSpec String = HeaderSpec<
       "string.h",
       [], // Macros
@@ -67,6 +79,7 @@ def BsdExtensions : StandardSpec<"BSDExtensions"> {
   >;
 
   let Headers = [
+    Math,
     String,
     Strings,
     SysWait,

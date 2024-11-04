@@ -32,6 +32,10 @@ typedef enum {
      The extra data is always 0. */
   ptrauth_key_function_pointer = ptrauth_key_process_independent_code,
 
+  /* The key used to sign C++ v-table pointers.
+     The extra data is always 0. */
+  ptrauth_key_cxx_vtable_pointer = ptrauth_key_process_independent_data,
+
   /* Other pointers signed under the ABI use private ABI rules. */
 
 } ptrauth_key;
@@ -53,6 +57,21 @@ typedef __UINTPTR_TYPE__ ptrauth_generic_signature_t;
 
 /* Authenticating a pointer that was not signed with the given key
    and extra-data value will (likely) fail by trapping. */
+
+/* The null function pointer is always the all-zero bit pattern.
+   Signing an all-zero bit pattern will embed a (likely) non-zero
+   signature in the result, and so the result will not seem to be
+   a null function pointer.  Authenticating this value will yield
+   a null function pointer back.  However, authenticating an
+   all-zero bit pattern will probably fail, because the
+   authentication will expect a (likely) non-zero signature to
+   embedded in the value.
+
+   Because of this, if a pointer may validly be null, you should
+   check for null before attempting to authenticate it with one
+   of these intrinsics.  This is not necessary when using the
+   __ptrauth qualifier; the compiler will perform this check
+   automatically. */
 
 #if __has_feature(ptrauth_intrinsics)
 
@@ -205,6 +224,12 @@ typedef __UINTPTR_TYPE__ ptrauth_generic_signature_t;
 #define ptrauth_sign_generic_data(__value, __data)                             \
   __builtin_ptrauth_sign_generic_data(__value, __data)
 
+/* C++ vtable pointer signing class attribute */
+#define ptrauth_cxx_vtable_pointer(key, address_discrimination,                \
+                                   extra_discrimination...)                    \
+  [[clang::ptrauth_vtable_pointer(key, address_discrimination,                 \
+                                  extra_discrimination)]]
+
 #else
 
 #define ptrauth_strip(__value, __key)                                          \
@@ -270,6 +295,10 @@ typedef __UINTPTR_TYPE__ ptrauth_generic_signature_t;
     (void)__data;                                                              \
     ((ptrauth_generic_signature_t)0);                                          \
   })
+
+
+#define ptrauth_cxx_vtable_pointer(key, address_discrimination,                \
+                                   extra_discrimination...)
 
 #endif /* __has_feature(ptrauth_intrinsics) */
 

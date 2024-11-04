@@ -55,6 +55,6 @@ void bar(RWBuffer<float> U : register(u3)) {
 struct S {
   // FIXME: generate better error when support semantic on struct field.
   // See https://github.com/llvm/llvm-project/issues/57889.
-  // expected-error@+1 {{expected expression}}
+  // expected-warning@+1 {{'register' attribute only applies to cbuffer/tbuffer and external global variables}}
   RWBuffer<float> U : register(u3);
 };

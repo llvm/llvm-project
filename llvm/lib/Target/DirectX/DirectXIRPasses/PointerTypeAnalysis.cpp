@@ -12,7 +12,9 @@
 
 #include "PointerTypeAnalysis.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/Module.h"
 
 using namespace llvm;
 using namespace llvm::dxil;

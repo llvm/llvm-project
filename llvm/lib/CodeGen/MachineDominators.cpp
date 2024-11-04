@@ -57,6 +57,33 @@ template bool Verify<MBBDomTree>(const MBBDomTree &DT,
 } // namespace DomTreeBuilder
 }
 
+bool MachineDominatorTree::invalidate(
+    MachineFunction &, const PreservedAnalyses &PA,
+    MachineFunctionAnalysisManager::Invalidator &) {
+  // Check whether the analysis, all analyses on machine functions, or the
+  // machine function's CFG have been preserved.
+  auto PAC = PA.getChecker<MachineDominatorTreeAnalysis>();
+  return !PAC.preserved() &&
+         !PAC.preservedSet<AllAnalysesOn<MachineFunction>>() &&
+         !PAC.preservedSet<CFGAnalyses>();
+}
+
+AnalysisKey MachineDominatorTreeAnalysis::Key;
+
+MachineDominatorTreeAnalysis::Result
+MachineDominatorTreeAnalysis::run(MachineFunction &MF,
+                                  MachineFunctionAnalysisManager &) {
+  return MachineDominatorTree(MF);
+}
+
+PreservedAnalyses
+MachineDominatorTreePrinterPass::run(MachineFunction &MF,
+                                     MachineFunctionAnalysisManager &MFAM) {
+  OS << "MachineDominatorTree for machine function: " << MF.getName() << '\n';
+  MFAM.getResult<MachineDominatorTreeAnalysis>(MF).print(OS);
+  return PreservedAnalyses::all();
+}
+
 char MachineDominatorTreeWrapperPass::ID = 0;
 
 INITIALIZE_PASS(MachineDominatorTreeWrapperPass, "machinedomtree",

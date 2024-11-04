@@ -453,3 +453,48 @@ void getline_buffer_size_negative() {
   free(buffer);
   fclose(file);
 }
+
+void gh_93408_regression(void *buffer) {
+  FILE *f = fopen("/tmp/foo.txt", "r");
+  fread(buffer, 1, 1, f); // expected-warning {{Stream pointer might be NULL}} no-crash
+  fclose(f);
+}
+
+typedef void VOID;
+void gh_93408_regression_typedef(VOID *buffer) {
+  FILE *f = fopen("/tmp/foo.txt", "r");
+  fread(buffer, 1, 1, f); // expected-warning {{Stream pointer might be NULL}} no-crash
+  fclose(f);
+}
+
+struct FAM {
+  int data;
+  int tail[];
+};
+
+struct FAM0 {
+  int data;
+  int tail[0];
+};
+
+void gh_93408_regression_FAM(struct FAM *p) {
+  FILE *f = fopen("/tmp/foo.txt", "r");
+  fread(p->tail, 1, 1, f); // expected-warning {{Stream pointer might be NULL}}
+  fclose(f);
+}
+
+void gh_93408_regression_FAM0(struct FAM0 *p) {
+  FILE *f = fopen("/tmp/foo.txt", "r");
+  fread(p->tail, 1, 1, f); // expected-warning {{Stream pointer might be NULL}}
+  fclose(f);
+}
+
+struct ZeroSized {
+    int data[0];
+};
+
+void gh_93408_regression_ZeroSized(struct ZeroSized *buffer) {
+  FILE *f = fopen("/tmp/foo.txt", "r");
+  fread(buffer, 1, 1, f); // expected-warning {{Stream pointer might be NULL}} no-crash
+  fclose(f);
+}

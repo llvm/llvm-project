@@ -715,7 +715,7 @@ namespace llvm {
 
 PreservedAnalyses
 StraightLineStrengthReducePass::run(Function &F, FunctionAnalysisManager &AM) {
-  const DataLayout *DL = &F.getParent()->getDataLayout();
+  const DataLayout *DL = &F.getDataLayout();
   auto *DT = &AM.getResult<DominatorTreeAnalysis>(F);
   auto *SE = &AM.getResult<ScalarEvolutionAnalysis>(F);
   auto *TTI = &AM.getResult<TargetIRAnalysis>(F);

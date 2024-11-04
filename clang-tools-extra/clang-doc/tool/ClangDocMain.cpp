@@ -150,7 +150,7 @@ llvm::Error getAssetFiles(clang::doc::ClangDocContext &CDCtx) {
         CDCtx.UserStylesheets.insert(CDCtx.UserStylesheets.begin(),
                                      std::string(FilePath));
       else if (llvm::sys::path::extension(FilePath) == ".js")
-        CDCtx.FilesToCopy.emplace_back(FilePath.str());
+        CDCtx.JsScripts.emplace_back(FilePath.str());
     }
   }
   if (FileErr)
@@ -167,7 +167,7 @@ llvm::Error getDefaultAssetFiles(const char *Argv0,
 
   llvm::SmallString<128> AssetsPath;
   AssetsPath = llvm::sys::path::parent_path(NativeClangDocPath);
-  llvm::sys::path::append(AssetsPath, "..", "share", "clang");
+  llvm::sys::path::append(AssetsPath, "..", "share", "clang-doc");
   llvm::SmallString<128> DefaultStylesheet;
   llvm::sys::path::native(AssetsPath, DefaultStylesheet);
   llvm::sys::path::append(DefaultStylesheet,
@@ -175,8 +175,6 @@ llvm::Error getDefaultAssetFiles(const char *Argv0,
   llvm::SmallString<128> IndexJS;
   llvm::sys::path::native(AssetsPath, IndexJS);
   llvm::sys::path::append(IndexJS, "index.js");
-
-  llvm::outs() << "Using default asset: " << AssetsPath << "\n";
 
   if (!llvm::sys::fs::is_regular_file(IndexJS))
     return llvm::createStringError(llvm::inconvertibleErrorCode(),
@@ -191,7 +189,7 @@ llvm::Error getDefaultAssetFiles(const char *Argv0,
 
   CDCtx.UserStylesheets.insert(CDCtx.UserStylesheets.begin(),
                                std::string(DefaultStylesheet));
-  CDCtx.FilesToCopy.emplace_back(IndexJS.str());
+  CDCtx.JsScripts.emplace_back(IndexJS.str());
 
   return llvm::Error::success();
 }
@@ -254,12 +252,13 @@ Example usage for a project using a compile commands database:
       OutDirectory,
       SourceRoot,
       RepositoryUrl,
-      {UserStylesheets.begin(), UserStylesheets.end()},
-      {"index.js", "index_json.js"}};
+      {UserStylesheets.begin(), UserStylesheets.end()}
+  };
 
   if (Format == "html") {
     if (auto Err = getHtmlAssetFiles(argv[0], CDCtx)) {
-      llvm::outs() << "warning: " <<  toString(std::move(Err)) << "\n";
+      llvm::errs() << toString(std::move(Err)) << "\n";
+      return 1;
     }
   }
 

@@ -3104,7 +3104,7 @@ void ExportEntry::pushNode(uint64_t offset) {
         }
       }
     }
-    if(ExportStart + ExportInfoSize != State.Current) {
+    if (ExportStart + ExportInfoSize < State.Current) {
       *E = malformedError(
           "inconsistent export info size: 0x" +
           Twine::utohexstr(ExportInfoSize) + " where actual size was: 0x" +

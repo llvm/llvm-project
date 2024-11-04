@@ -8,12 +8,13 @@
 
 #include "src/__support/GPU/utils.h"
 #include "src/__support/RPC/rpc_client.h"
+#include "src/__support/macros/config.h"
 #include "src/stdlib/atexit.h"
 #include "src/stdlib/exit.h"
 
 extern "C" int main(int argc, char **argv, char **envp);
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 extern "C" {
 // Nvidia's 'nvlink' linker does not provide these symbols. We instead need
@@ -41,7 +42,7 @@ static void call_fini_array_callbacks() {
     reinterpret_cast<FiniCallback *>(__fini_array_start[i - 1])();
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 extern "C" [[gnu::visibility("protected"), clang::nvptx_kernel]] void
 _begin(int argc, char **argv, char **env) {

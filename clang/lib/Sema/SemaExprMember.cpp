@@ -302,7 +302,6 @@ bool Sema::isPotentialImplicitMemberAccess(const CXXScopeSpec &SS,
     return isa<FieldDecl, IndirectFieldDecl, MSPropertyDecl>(R.getFoundDecl());
 }
 
-/// Builds an expression which might be an implicit member expression.
 ExprResult Sema::BuildPossibleImplicitMemberExpr(
     const CXXScopeSpec &SS, SourceLocation TemplateKWLoc, LookupResult &R,
     const TemplateArgumentListInfo *TemplateArgs, const Scope *S) {
@@ -613,18 +612,6 @@ static void DiagnoseQualifiedMemberReference(Sema &SemaRef,
     << SS.getRange() << rep << BaseType;
 }
 
-// Check whether the declarations we found through a nested-name
-// specifier in a member expression are actually members of the base
-// type.  The restriction here is:
-//
-//   C++ [expr.ref]p2:
-//     ... In these cases, the id-expression shall name a
-//     member of the class or of one of its base classes.
-//
-// So it's perfectly legitimate for the nested-name specifier to name
-// an unrelated class, and for us to find an overload set including
-// decls from classes which are not superclasses, as long as the decl
-// we actually pick through overload resolution is from a superclass.
 bool Sema::CheckQualifiedMemberReference(Expr *BaseExpr,
                                          QualType BaseType,
                                          const CXXScopeSpec &SS,
@@ -802,9 +789,6 @@ ExprResult Sema::BuildMemberReferenceExpr(
     ActOnMemberAccessExtraArgs *ExtraArgs) {
   LookupResult R(*this, NameInfo, LookupMemberName);
 
-  if (SS.isInvalid())
-    return ExprError();
-
   // Implicit member accesses.
   if (!Base) {
     TypoExpr *TE = nullptr;
@@ -838,6 +822,11 @@ ExprResult Sema::BuildMemberReferenceExpr(
     // LookupMemberExpr can modify Base, and thus change BaseType
     BaseType = Base->getType();
   }
+
+  // BuildMemberReferenceExpr expects the nested-name-specifier, if any, to be
+  // valid.
+  if (SS.isInvalid())
+    return ExprError();
 
   return BuildMemberReferenceExpr(Base, BaseType,
                                   OpLoc, IsArrow, SS, TemplateKWLoc,
@@ -1276,7 +1265,6 @@ static bool isPointerToRecordType(QualType T) {
   return false;
 }
 
-/// Perform conversions on the LHS of a member access expression.
 ExprResult
 Sema::PerformMemberExprBaseConversion(Expr *Base, bool IsArrow) {
   if (IsArrow && !Base->getType()->isFunctionType())
@@ -1757,26 +1745,11 @@ static ExprResult LookupMemberExpr(Sema &S, LookupResult &R,
   return ExprError();
 }
 
-/// The main callback when the parser finds something like
-///   expression . [nested-name-specifier] identifier
-///   expression -> [nested-name-specifier] identifier
-/// where 'identifier' encompasses a fairly broad spectrum of
-/// possibilities, including destructor and operator references.
-///
-/// \param OpKind either tok::arrow or tok::period
-/// \param ObjCImpDecl the current Objective-C \@implementation
-///   decl; this is an ugly hack around the fact that Objective-C
-///   \@implementations aren't properly put in the context chain
 ExprResult Sema::ActOnMemberAccessExpr(Scope *S, Expr *Base,
                                        SourceLocation OpLoc,
-                                       tok::TokenKind OpKind,
-                                       CXXScopeSpec &SS,
+                                       tok::TokenKind OpKind, CXXScopeSpec &SS,
                                        SourceLocation TemplateKWLoc,
-                                       UnqualifiedId &Id,
-                                       Decl *ObjCImpDecl) {
-  if (SS.isSet() && SS.isInvalid())
-    return ExprError();
-
+                                       UnqualifiedId &Id, Decl *ObjCImpDecl) {
   // Warn about the explicit constructor calls Microsoft extension.
   if (getLangOpts().MicrosoftExt &&
       Id.getKind() == UnqualifiedIdKind::IK_ConstructorName)
@@ -1928,10 +1901,6 @@ Sema::BuildFieldReferenceExpr(Expr *BaseExpr, bool IsArrow,
       /*HadMultipleCandidates=*/false, MemberNameInfo, MemberType, VK, OK);
 }
 
-/// Builds an implicit member access expression.  The current context
-/// is known to be an instance method, and the given unqualified lookup
-/// set is known to contain only instance members, at least one of which
-/// is from an appropriate type.
 ExprResult
 Sema::BuildImplicitMemberExpr(const CXXScopeSpec &SS,
                               SourceLocation TemplateKWLoc,

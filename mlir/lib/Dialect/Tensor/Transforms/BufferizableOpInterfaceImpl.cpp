@@ -387,8 +387,8 @@ struct ExtractSliceOpInterface
     if (failed(resultMemrefType))
       return failure();
     Value subView = rewriter.create<memref::SubViewOp>(
-        loc, llvm::cast<MemRefType>(*resultMemrefType), *srcMemref, mixedOffsets,
-        mixedSizes, mixedStrides);
+        loc, llvm::cast<MemRefType>(*resultMemrefType), *srcMemref,
+        mixedOffsets, mixedSizes, mixedStrides);
 
     replaceOpWithBufferizedValues(rewriter, op, subView);
     return success();
@@ -407,8 +407,9 @@ struct ExtractSliceOpInterface
     SmallVector<OpFoldResult> mixedSizes = extractSliceOp.getMixedSizes();
     SmallVector<OpFoldResult> mixedStrides = extractSliceOp.getMixedStrides();
     return cast<BaseMemRefType>(memref::SubViewOp::inferRankReducedResultType(
-        extractSliceOp.getType().getShape(), llvm::cast<MemRefType>(*srcMemrefType),
-        mixedOffsets, mixedSizes, mixedStrides));
+        extractSliceOp.getType().getShape(),
+        llvm::cast<MemRefType>(*srcMemrefType), mixedOffsets, mixedSizes,
+        mixedStrides));
   }
 };
 
@@ -995,6 +996,13 @@ struct ParallelInsertSliceOpInterface
 
     // Delete the op.
     rewriter.eraseOp(op);
+    return success();
+  }
+
+  /// tensor.parallel_insert_slice op has implicit inplace behavior. We
+  /// shouldn't create copy to resolve conflict.
+  LogicalResult resolveConflicts(Operation *op, RewriterBase &rewriter,
+                                 const AnalysisState &state) const {
     return success();
   }
 };

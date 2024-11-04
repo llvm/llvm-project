@@ -372,7 +372,7 @@ bool AArch64CallLowering::lowerReturn(MachineIRBuilder &MIRBuilder,
     MachineRegisterInfo &MRI = MF.getRegInfo();
     const AArch64TargetLowering &TLI = *getTLI<AArch64TargetLowering>();
     CCAssignFn *AssignFn = TLI.CCAssignFnForReturn(F.getCallingConv());
-    auto &DL = F.getParent()->getDataLayout();
+    auto &DL = F.getDataLayout();
     LLVMContext &Ctx = Val->getType()->getContext();
 
     SmallVector<EVT, 4> SplitEVTs;
@@ -639,7 +639,7 @@ bool AArch64CallLowering::lowerFormalArguments(
   MachineFunction &MF = MIRBuilder.getMF();
   MachineBasicBlock &MBB = MIRBuilder.getMBB();
   MachineRegisterInfo &MRI = MF.getRegInfo();
-  auto &DL = F.getParent()->getDataLayout();
+  auto &DL = F.getDataLayout();
   auto &Subtarget = MF.getSubtarget<AArch64Subtarget>();
 
   // Arm64EC has extra requirements for varargs calls which are only implemented
@@ -1257,7 +1257,7 @@ bool AArch64CallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
   MachineFunction &MF = MIRBuilder.getMF();
   const Function &F = MF.getFunction();
   MachineRegisterInfo &MRI = MF.getRegInfo();
-  auto &DL = F.getParent()->getDataLayout();
+  auto &DL = F.getDataLayout();
   const AArch64TargetLowering &TLI = *getTLI<AArch64TargetLowering>();
   const AArch64Subtarget &Subtarget = MF.getSubtarget<AArch64Subtarget>();
 

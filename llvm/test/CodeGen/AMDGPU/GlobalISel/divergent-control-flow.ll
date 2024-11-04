@@ -193,7 +193,7 @@ bb12:
 define amdgpu_kernel void @break_loop(i32 %arg) {
 ; CHECK-LABEL: break_loop:
 ; CHECK:       ; %bb.0: ; %bb
-; CHECK-NEXT:    s_load_dword s2, s[4:5], 0x0
+; CHECK-NEXT:    s_load_dword s2, s[6:7], 0x0
 ; CHECK-NEXT:    s_mov_b64 s[0:1], 0
 ; CHECK-NEXT:    ; implicit-def: $vgpr1
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)

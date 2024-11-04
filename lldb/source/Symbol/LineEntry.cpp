@@ -199,7 +199,8 @@ AddressRange LineEntry::GetSameLineContiguousAddressRange(
         next_line_sc.line_entry.range.GetByteSize() == 0)
       break;
 
-    if (*original_file_sp == *next_line_sc.line_entry.original_file_sp &&
+    if (original_file_sp->Equal(*next_line_sc.line_entry.original_file_sp,
+                                SupportFile::eEqualFileSpecAndChecksumIfSet) &&
         (next_line_sc.line_entry.line == 0 ||
          line == next_line_sc.line_entry.line)) {
       // Include any line 0 entries - they indicate that this is compiler-

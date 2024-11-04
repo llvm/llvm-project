@@ -38,7 +38,6 @@
 
 using namespace mlir;
 
-#if LLVM_HAS_NVPTX_TARGET
 namespace {
 
 //===----------------------------------------------------------------------===//
@@ -126,5 +125,3 @@ void mlir::gpu::registerGPUToNVVMPipeline() {
       "code.",
       buildLowerToNVVMPassPipeline);
 }
-
-#endif // LLVM_HAS_NVPTX_TARGET

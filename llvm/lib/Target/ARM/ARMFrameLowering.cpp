@@ -1673,8 +1673,8 @@ void ARMFrameLowering::emitPopInst(MachineBasicBlock &MBB,
                                     .addReg(ARM::SP)
                                     .add(predOps(ARMCC::AL))
                                     .setMIFlags(MachineInstr::FrameDestroy);
-      for (unsigned i = 0, e = Regs.size(); i < e; ++i)
-        MIB.addReg(Regs[i], getDefRegState(true));
+      for (unsigned Reg : Regs)
+        MIB.addReg(Reg, getDefRegState(true));
       if (DeleteRet) {
         if (MI != MBB.end()) {
           MIB.copyImplicitOps(*MI);

@@ -688,8 +688,7 @@ TEST_F(OpenMPDecompositionTest, Order1) {
   std::string Dir5 = stringify(Dec.output[5]);
   ASSERT_EQ(Dir0, "target"); // (31)
   ASSERT_EQ(Dir1, "teams");  // (31)
-  // XXX OMP.td doesn't list "order" as allowed for "distribute"
-  ASSERT_EQ(Dir2, "distribute");       // (31)
+  ASSERT_EQ(Dir2, "distribute order(1, 0)"); // (31)
   ASSERT_EQ(Dir3, "parallel");         // (31)
   ASSERT_EQ(Dir4, "for order(1, 0)");  // (31)
   ASSERT_EQ(Dir5, "simd order(1, 0)"); // (31)

@@ -91,7 +91,7 @@ TEST(CompilerInstance, AllowDiagnosticLogWithUnownedDiagnosticConsumer) {
       DiagOpts, DiagPrinter.get(), /*ShouldOwnClient=*/false);
 
   Diags->Report(diag::err_expected) << "no crash";
-  ASSERT_EQ(DiagnosticsOS.str(), "error: expected no crash\n");
+  ASSERT_EQ(DiagnosticOutput, "error: expected no crash\n");
 }
 
 } // anonymous namespace

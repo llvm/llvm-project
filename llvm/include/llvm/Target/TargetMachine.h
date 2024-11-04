@@ -369,8 +369,7 @@ public:
 
   /// Allow the target to modify the pass pipeline.
   // TODO: Populate all pass names by using <Target>PassRegistry.def.
-  virtual void registerPassBuilderCallbacks(PassBuilder &,
-                                            bool PopulateClassToPassNames) {}
+  virtual void registerPassBuilderCallbacks(PassBuilder &) {}
 
   /// Allow the target to register alias analyses with the AAManager for use
   /// with the new pass manager. Only affects the "default" AAManager.

@@ -59,6 +59,8 @@ bool expandReductions(Function &F, const TargetTransformInfo *TTI) {
         isa<FPMathOperator>(II) ? II->getFastMathFlags() : FastMathFlags{};
     Intrinsic::ID ID = II->getIntrinsicID();
     RecurKind RK = getMinMaxReductionRecurKind(ID);
+    TargetTransformInfo::ReductionShuffle RS =
+        TTI->getPreferredExpandedReductionShuffle(II);
 
     Value *Rdx = nullptr;
     IRBuilder<> Builder(II);
@@ -79,7 +81,7 @@ bool expandReductions(Function &F, const TargetTransformInfo *TTI) {
         if (!isPowerOf2_32(
                 cast<FixedVectorType>(Vec->getType())->getNumElements()))
           continue;
-        Rdx = getShuffleReduction(Builder, Vec, RdxOpcode, RK);
+        Rdx = getShuffleReduction(Builder, Vec, RdxOpcode, RS, RK);
         Rdx = Builder.CreateBinOp((Instruction::BinaryOps)RdxOpcode, Acc, Rdx,
                                   "bin.rdx");
       }
@@ -112,7 +114,7 @@ bool expandReductions(Function &F, const TargetTransformInfo *TTI) {
         break;
       }
       unsigned RdxOpcode = getArithmeticReductionInstruction(ID);
-      Rdx = getShuffleReduction(Builder, Vec, RdxOpcode, RK);
+      Rdx = getShuffleReduction(Builder, Vec, RdxOpcode, RS, RK);
       break;
     }
     case Intrinsic::vector_reduce_add:
@@ -127,7 +129,7 @@ bool expandReductions(Function &F, const TargetTransformInfo *TTI) {
               cast<FixedVectorType>(Vec->getType())->getNumElements()))
         continue;
       unsigned RdxOpcode = getArithmeticReductionInstruction(ID);
-      Rdx = getShuffleReduction(Builder, Vec, RdxOpcode, RK);
+      Rdx = getShuffleReduction(Builder, Vec, RdxOpcode, RS, RK);
       break;
     }
     case Intrinsic::vector_reduce_fmax:
@@ -140,7 +142,7 @@ bool expandReductions(Function &F, const TargetTransformInfo *TTI) {
           !FMF.noNaNs())
         continue;
       unsigned RdxOpcode = getArithmeticReductionInstruction(ID);
-      Rdx = getShuffleReduction(Builder, Vec, RdxOpcode, RK);
+      Rdx = getShuffleReduction(Builder, Vec, RdxOpcode, RS, RK);
       break;
     }
     }

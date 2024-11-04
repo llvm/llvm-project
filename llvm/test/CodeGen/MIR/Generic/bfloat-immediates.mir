@@ -1,0 +1,12 @@
+# RUN: llc -run-pass none -o - %s | FileCheck %s
+# This test ensures that the MIR parser parses bfloat immediates correctly.
+
+---
+name: bfloat_immediates
+body: |
+  bb.0:
+    ; CHECK: %0:_(s16) = G_FCONSTANT bfloat 0xR3E80
+    ; CHECK: %1:_(s16) = G_FCONSTANT bfloat 0xR3E80
+    %0:_(s16) = G_FCONSTANT bfloat 0xR3E80
+    %1:_(s16) = G_FCONSTANT bfloat 0.25
+...

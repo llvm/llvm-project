@@ -144,7 +144,7 @@ static bool addBoundsChecking(Function &F, TargetLibraryInfo &TLI,
   if (F.hasFnAttribute(Attribute::NoSanitizeBounds))
     return false;
 
-  const DataLayout &DL = F.getParent()->getDataLayout();
+  const DataLayout &DL = F.getDataLayout();
   ObjectSizeOpts EvalOpts;
   EvalOpts.RoundToAlign = true;
   EvalOpts.EvalMode = ObjectSizeOpts::Mode::ExactUnderlyingSizeAndOffset;

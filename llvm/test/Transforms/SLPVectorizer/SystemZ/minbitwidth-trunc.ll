@@ -6,7 +6,7 @@ define void @test() {
 ; CHECK-SAME: ) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext i8 0 to i32
 ; CHECK-NEXT:    [[TMP2:%.*]] = zext i8 0 to i32
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x i32> <i32 0, i32 poison, i32 0, i32 0>, i32 [[TMP2]], i32 1
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x i32> <i32 poison, i32 0, i32 0, i32 0>, i32 [[TMP2]], i32 0
 ; CHECK-NEXT:    [[TMP4:%.*]] = select <4 x i1> zeroinitializer, <4 x i32> zeroinitializer, <4 x i32> [[TMP3]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = select i1 false, i32 0, i32 0
 ; CHECK-NEXT:    [[TMP6:%.*]] = select i1 false, i32 0, i32 [[TMP1]]

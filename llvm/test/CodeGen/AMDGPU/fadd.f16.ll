@@ -9,8 +9,8 @@
 define amdgpu_kernel void @fadd_f16(
 ; SI-LABEL: fadd_f16:
 ; SI:       ; %bb.0: ; %entry
-; SI-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x9
-; SI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0xd
+; SI-NEXT:    s_load_dwordx4 s[4:7], s[2:3], 0x9
+; SI-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0xd
 ; SI-NEXT:    s_mov_b32 s11, 0xf000
 ; SI-NEXT:    s_mov_b32 s10, -1
 ; SI-NEXT:    s_mov_b32 s2, s10
@@ -35,8 +35,8 @@ define amdgpu_kernel void @fadd_f16(
 ;
 ; VI-LABEL: fadd_f16:
 ; VI:       ; %bb.0: ; %entry
-; VI-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x24
-; VI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x34
+; VI-NEXT:    s_load_dwordx4 s[4:7], s[2:3], 0x24
+; VI-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x34
 ; VI-NEXT:    s_mov_b32 s11, 0xf000
 ; VI-NEXT:    s_mov_b32 s10, -1
 ; VI-NEXT:    s_mov_b32 s2, s10
@@ -59,8 +59,8 @@ define amdgpu_kernel void @fadd_f16(
 ; GFX11-SDAG-LABEL: fadd_f16:
 ; GFX11-SDAG:       ; %bb.0: ; %entry
 ; GFX11-SDAG-NEXT:    s_clause 0x1
-; GFX11-SDAG-NEXT:    s_load_b128 s[4:7], s[0:1], 0x24
-; GFX11-SDAG-NEXT:    s_load_b64 s[0:1], s[0:1], 0x34
+; GFX11-SDAG-NEXT:    s_load_b128 s[4:7], s[2:3], 0x24
+; GFX11-SDAG-NEXT:    s_load_b64 s[0:1], s[2:3], 0x34
 ; GFX11-SDAG-NEXT:    s_mov_b32 s11, 0x31016000
 ; GFX11-SDAG-NEXT:    s_mov_b32 s10, -1
 ; GFX11-SDAG-NEXT:    s_mov_b32 s3, s11
@@ -87,8 +87,8 @@ define amdgpu_kernel void @fadd_f16(
 ; GFX11-GISEL-LABEL: fadd_f16:
 ; GFX11-GISEL:       ; %bb.0: ; %entry
 ; GFX11-GISEL-NEXT:    s_clause 0x1
-; GFX11-GISEL-NEXT:    s_load_b128 s[4:7], s[0:1], 0x24
-; GFX11-GISEL-NEXT:    s_load_b64 s[0:1], s[0:1], 0x34
+; GFX11-GISEL-NEXT:    s_load_b128 s[4:7], s[2:3], 0x24
+; GFX11-GISEL-NEXT:    s_load_b64 s[0:1], s[2:3], 0x34
 ; GFX11-GISEL-NEXT:    s_mov_b32 s10, -1
 ; GFX11-GISEL-NEXT:    s_mov_b32 s11, 0x31016000
 ; GFX11-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
@@ -111,8 +111,8 @@ define amdgpu_kernel void @fadd_f16(
 ; GFX11-FAKE16-SDAG-LABEL: fadd_f16:
 ; GFX11-FAKE16-SDAG:       ; %bb.0: ; %entry
 ; GFX11-FAKE16-SDAG-NEXT:    s_clause 0x1
-; GFX11-FAKE16-SDAG-NEXT:    s_load_b128 s[4:7], s[0:1], 0x24
-; GFX11-FAKE16-SDAG-NEXT:    s_load_b64 s[0:1], s[0:1], 0x34
+; GFX11-FAKE16-SDAG-NEXT:    s_load_b128 s[4:7], s[2:3], 0x24
+; GFX11-FAKE16-SDAG-NEXT:    s_load_b64 s[0:1], s[2:3], 0x34
 ; GFX11-FAKE16-SDAG-NEXT:    s_mov_b32 s11, 0x31016000
 ; GFX11-FAKE16-SDAG-NEXT:    s_mov_b32 s10, -1
 ; GFX11-FAKE16-SDAG-NEXT:    s_mov_b32 s3, s11
@@ -137,8 +137,8 @@ define amdgpu_kernel void @fadd_f16(
 ; GFX11-FAKE16-GISEL-LABEL: fadd_f16:
 ; GFX11-FAKE16-GISEL:       ; %bb.0: ; %entry
 ; GFX11-FAKE16-GISEL-NEXT:    s_clause 0x1
-; GFX11-FAKE16-GISEL-NEXT:    s_load_b128 s[4:7], s[0:1], 0x24
-; GFX11-FAKE16-GISEL-NEXT:    s_load_b64 s[0:1], s[0:1], 0x34
+; GFX11-FAKE16-GISEL-NEXT:    s_load_b128 s[4:7], s[2:3], 0x24
+; GFX11-FAKE16-GISEL-NEXT:    s_load_b64 s[0:1], s[2:3], 0x34
 ; GFX11-FAKE16-GISEL-NEXT:    s_mov_b32 s10, -1
 ; GFX11-FAKE16-GISEL-NEXT:    s_mov_b32 s11, 0x31016000
 ; GFX11-FAKE16-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
@@ -196,7 +196,7 @@ entry:
 define amdgpu_kernel void @fadd_f16_imm_a(
 ; SI-LABEL: fadd_f16_imm_a:
 ; SI:       ; %bb.0: ; %entry
-; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
+; SI-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x9
 ; SI-NEXT:    s_mov_b32 s7, 0xf000
 ; SI-NEXT:    s_mov_b32 s6, -1
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
@@ -216,7 +216,7 @@ define amdgpu_kernel void @fadd_f16_imm_a(
 ;
 ; VI-LABEL: fadd_f16_imm_a:
 ; VI:       ; %bb.0: ; %entry
-; VI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
+; VI-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x24
 ; VI-NEXT:    s_mov_b32 s7, 0xf000
 ; VI-NEXT:    s_mov_b32 s6, -1
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
@@ -234,7 +234,7 @@ define amdgpu_kernel void @fadd_f16_imm_a(
 ;
 ; GFX11-SDAG-LABEL: fadd_f16_imm_a:
 ; GFX11-SDAG:       ; %bb.0: ; %entry
-; GFX11-SDAG-NEXT:    s_load_b128 s[0:3], s[0:1], 0x24
+; GFX11-SDAG-NEXT:    s_load_b128 s[0:3], s[2:3], 0x24
 ; GFX11-SDAG-NEXT:    s_mov_b32 s7, 0x31016000
 ; GFX11-SDAG-NEXT:    s_mov_b32 s6, -1
 ; GFX11-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
@@ -256,7 +256,7 @@ define amdgpu_kernel void @fadd_f16_imm_a(
 ;
 ; GFX11-GISEL-LABEL: fadd_f16_imm_a:
 ; GFX11-GISEL:       ; %bb.0: ; %entry
-; GFX11-GISEL-NEXT:    s_load_b128 s[0:3], s[0:1], 0x24
+; GFX11-GISEL-NEXT:    s_load_b128 s[0:3], s[2:3], 0x24
 ; GFX11-GISEL-NEXT:    s_mov_b32 s6, -1
 ; GFX11-GISEL-NEXT:    s_mov_b32 s7, 0x31016000
 ; GFX11-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
@@ -274,7 +274,7 @@ define amdgpu_kernel void @fadd_f16_imm_a(
 ;
 ; GFX11-FAKE16-SDAG-LABEL: fadd_f16_imm_a:
 ; GFX11-FAKE16-SDAG:       ; %bb.0: ; %entry
-; GFX11-FAKE16-SDAG-NEXT:    s_load_b128 s[0:3], s[0:1], 0x24
+; GFX11-FAKE16-SDAG-NEXT:    s_load_b128 s[0:3], s[2:3], 0x24
 ; GFX11-FAKE16-SDAG-NEXT:    s_mov_b32 s7, 0x31016000
 ; GFX11-FAKE16-SDAG-NEXT:    s_mov_b32 s6, -1
 ; GFX11-FAKE16-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
@@ -294,7 +294,7 @@ define amdgpu_kernel void @fadd_f16_imm_a(
 ;
 ; GFX11-FAKE16-GISEL-LABEL: fadd_f16_imm_a:
 ; GFX11-FAKE16-GISEL:       ; %bb.0: ; %entry
-; GFX11-FAKE16-GISEL-NEXT:    s_load_b128 s[0:3], s[0:1], 0x24
+; GFX11-FAKE16-GISEL-NEXT:    s_load_b128 s[0:3], s[2:3], 0x24
 ; GFX11-FAKE16-GISEL-NEXT:    s_mov_b32 s6, -1
 ; GFX11-FAKE16-GISEL-NEXT:    s_mov_b32 s7, 0x31016000
 ; GFX11-FAKE16-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
@@ -340,7 +340,7 @@ entry:
 define amdgpu_kernel void @fadd_f16_imm_b(
 ; SI-LABEL: fadd_f16_imm_b:
 ; SI:       ; %bb.0: ; %entry
-; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
+; SI-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x9
 ; SI-NEXT:    s_mov_b32 s7, 0xf000
 ; SI-NEXT:    s_mov_b32 s6, -1
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
@@ -360,7 +360,7 @@ define amdgpu_kernel void @fadd_f16_imm_b(
 ;
 ; VI-LABEL: fadd_f16_imm_b:
 ; VI:       ; %bb.0: ; %entry
-; VI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
+; VI-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x24
 ; VI-NEXT:    s_mov_b32 s7, 0xf000
 ; VI-NEXT:    s_mov_b32 s6, -1
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
@@ -378,7 +378,7 @@ define amdgpu_kernel void @fadd_f16_imm_b(
 ;
 ; GFX11-SDAG-LABEL: fadd_f16_imm_b:
 ; GFX11-SDAG:       ; %bb.0: ; %entry
-; GFX11-SDAG-NEXT:    s_load_b128 s[0:3], s[0:1], 0x24
+; GFX11-SDAG-NEXT:    s_load_b128 s[0:3], s[2:3], 0x24
 ; GFX11-SDAG-NEXT:    s_mov_b32 s7, 0x31016000
 ; GFX11-SDAG-NEXT:    s_mov_b32 s6, -1
 ; GFX11-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
@@ -400,7 +400,7 @@ define amdgpu_kernel void @fadd_f16_imm_b(
 ;
 ; GFX11-GISEL-LABEL: fadd_f16_imm_b:
 ; GFX11-GISEL:       ; %bb.0: ; %entry
-; GFX11-GISEL-NEXT:    s_load_b128 s[0:3], s[0:1], 0x24
+; GFX11-GISEL-NEXT:    s_load_b128 s[0:3], s[2:3], 0x24
 ; GFX11-GISEL-NEXT:    s_mov_b32 s6, -1
 ; GFX11-GISEL-NEXT:    s_mov_b32 s7, 0x31016000
 ; GFX11-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
@@ -418,7 +418,7 @@ define amdgpu_kernel void @fadd_f16_imm_b(
 ;
 ; GFX11-FAKE16-SDAG-LABEL: fadd_f16_imm_b:
 ; GFX11-FAKE16-SDAG:       ; %bb.0: ; %entry
-; GFX11-FAKE16-SDAG-NEXT:    s_load_b128 s[0:3], s[0:1], 0x24
+; GFX11-FAKE16-SDAG-NEXT:    s_load_b128 s[0:3], s[2:3], 0x24
 ; GFX11-FAKE16-SDAG-NEXT:    s_mov_b32 s7, 0x31016000
 ; GFX11-FAKE16-SDAG-NEXT:    s_mov_b32 s6, -1
 ; GFX11-FAKE16-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
@@ -438,7 +438,7 @@ define amdgpu_kernel void @fadd_f16_imm_b(
 ;
 ; GFX11-FAKE16-GISEL-LABEL: fadd_f16_imm_b:
 ; GFX11-FAKE16-GISEL:       ; %bb.0: ; %entry
-; GFX11-FAKE16-GISEL-NEXT:    s_load_b128 s[0:3], s[0:1], 0x24
+; GFX11-FAKE16-GISEL-NEXT:    s_load_b128 s[0:3], s[2:3], 0x24
 ; GFX11-FAKE16-GISEL-NEXT:    s_mov_b32 s6, -1
 ; GFX11-FAKE16-GISEL-NEXT:    s_mov_b32 s7, 0x31016000
 ; GFX11-FAKE16-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
@@ -484,8 +484,8 @@ entry:
 define amdgpu_kernel void @fadd_v2f16(
 ; SI-LABEL: fadd_v2f16:
 ; SI:       ; %bb.0: ; %entry
-; SI-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x9
-; SI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0xd
+; SI-NEXT:    s_load_dwordx4 s[4:7], s[2:3], 0x9
+; SI-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0xd
 ; SI-NEXT:    s_mov_b32 s11, 0xf000
 ; SI-NEXT:    s_mov_b32 s14, 0
 ; SI-NEXT:    s_mov_b32 s15, s11
@@ -518,8 +518,8 @@ define amdgpu_kernel void @fadd_v2f16(
 ;
 ; VI-LABEL: fadd_v2f16:
 ; VI:       ; %bb.0: ; %entry
-; VI-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x24
-; VI-NEXT:    s_load_dwordx2 s[8:9], s[0:1], 0x34
+; VI-NEXT:    s_load_dwordx4 s[4:7], s[2:3], 0x24
+; VI-NEXT:    s_load_dwordx2 s[8:9], s[2:3], 0x34
 ; VI-NEXT:    v_lshlrev_b32_e32 v2, 2, v0
 ; VI-NEXT:    s_mov_b32 s3, 0xf000
 ; VI-NEXT:    s_mov_b32 s2, -1
@@ -544,11 +544,13 @@ define amdgpu_kernel void @fadd_v2f16(
 ; GFX11-SDAG-LABEL: fadd_v2f16:
 ; GFX11-SDAG:       ; %bb.0: ; %entry
 ; GFX11-SDAG-NEXT:    s_clause 0x1
-; GFX11-SDAG-NEXT:    s_load_b128 s[4:7], s[0:1], 0x24
-; GFX11-SDAG-NEXT:    s_load_b64 s[8:9], s[0:1], 0x34
-; GFX11-SDAG-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
+; GFX11-SDAG-NEXT:    s_load_b128 s[4:7], s[2:3], 0x24
+; GFX11-SDAG-NEXT:    s_load_b64 s[8:9], s[2:3], 0x34
+; GFX11-SDAG-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
 ; GFX11-SDAG-NEXT:    s_mov_b32 s3, 0x31016000
 ; GFX11-SDAG-NEXT:    s_mov_b32 s2, -1
+; GFX11-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-SDAG-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; GFX11-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-SDAG-NEXT:    s_clause 0x1
 ; GFX11-SDAG-NEXT:    global_load_b32 v1, v0, s[6:7]
@@ -565,8 +567,10 @@ define amdgpu_kernel void @fadd_v2f16(
 ; GFX11-GISEL-LABEL: fadd_v2f16:
 ; GFX11-GISEL:       ; %bb.0: ; %entry
 ; GFX11-GISEL-NEXT:    s_clause 0x1
-; GFX11-GISEL-NEXT:    s_load_b128 s[4:7], s[0:1], 0x24
-; GFX11-GISEL-NEXT:    s_load_b64 s[0:1], s[0:1], 0x34
+; GFX11-GISEL-NEXT:    s_load_b128 s[4:7], s[2:3], 0x24
+; GFX11-GISEL-NEXT:    s_load_b64 s[0:1], s[2:3], 0x34
+; GFX11-GISEL-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
+; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-GISEL-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; GFX11-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-GISEL-NEXT:    s_clause 0x1
@@ -584,11 +588,13 @@ define amdgpu_kernel void @fadd_v2f16(
 ; GFX11-FAKE16-SDAG-LABEL: fadd_v2f16:
 ; GFX11-FAKE16-SDAG:       ; %bb.0: ; %entry
 ; GFX11-FAKE16-SDAG-NEXT:    s_clause 0x1
-; GFX11-FAKE16-SDAG-NEXT:    s_load_b128 s[4:7], s[0:1], 0x24
-; GFX11-FAKE16-SDAG-NEXT:    s_load_b64 s[8:9], s[0:1], 0x34
-; GFX11-FAKE16-SDAG-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
+; GFX11-FAKE16-SDAG-NEXT:    s_load_b128 s[4:7], s[2:3], 0x24
+; GFX11-FAKE16-SDAG-NEXT:    s_load_b64 s[8:9], s[2:3], 0x34
+; GFX11-FAKE16-SDAG-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
 ; GFX11-FAKE16-SDAG-NEXT:    s_mov_b32 s3, 0x31016000
 ; GFX11-FAKE16-SDAG-NEXT:    s_mov_b32 s2, -1
+; GFX11-FAKE16-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-FAKE16-SDAG-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; GFX11-FAKE16-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-FAKE16-SDAG-NEXT:    s_clause 0x1
 ; GFX11-FAKE16-SDAG-NEXT:    global_load_b32 v1, v0, s[6:7]
@@ -605,8 +611,10 @@ define amdgpu_kernel void @fadd_v2f16(
 ; GFX11-FAKE16-GISEL-LABEL: fadd_v2f16:
 ; GFX11-FAKE16-GISEL:       ; %bb.0: ; %entry
 ; GFX11-FAKE16-GISEL-NEXT:    s_clause 0x1
-; GFX11-FAKE16-GISEL-NEXT:    s_load_b128 s[4:7], s[0:1], 0x24
-; GFX11-FAKE16-GISEL-NEXT:    s_load_b64 s[0:1], s[0:1], 0x34
+; GFX11-FAKE16-GISEL-NEXT:    s_load_b128 s[4:7], s[2:3], 0x24
+; GFX11-FAKE16-GISEL-NEXT:    s_load_b64 s[0:1], s[2:3], 0x34
+; GFX11-FAKE16-GISEL-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
+; GFX11-FAKE16-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-FAKE16-GISEL-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; GFX11-FAKE16-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-FAKE16-GISEL-NEXT:    s_clause 0x1
@@ -657,7 +665,7 @@ entry:
 define amdgpu_kernel void @fadd_v2f16_imm_a(
 ; SI-LABEL: fadd_v2f16_imm_a:
 ; SI:       ; %bb.0: ; %entry
-; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
+; SI-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x9
 ; SI-NEXT:    s_mov_b32 s7, 0xf000
 ; SI-NEXT:    s_mov_b32 s10, 0
 ; SI-NEXT:    s_mov_b32 s11, s7
@@ -684,7 +692,7 @@ define amdgpu_kernel void @fadd_v2f16_imm_a(
 ;
 ; VI-LABEL: fadd_v2f16_imm_a:
 ; VI:       ; %bb.0: ; %entry
-; VI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
+; VI-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x24
 ; VI-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; VI-NEXT:    s_mov_b32 s7, 0xf000
 ; VI-NEXT:    s_mov_b32 s6, -1
@@ -705,10 +713,12 @@ define amdgpu_kernel void @fadd_v2f16_imm_a(
 ;
 ; GFX11-SDAG-LABEL: fadd_v2f16_imm_a:
 ; GFX11-SDAG:       ; %bb.0: ; %entry
-; GFX11-SDAG-NEXT:    s_load_b128 s[0:3], s[0:1], 0x24
-; GFX11-SDAG-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
+; GFX11-SDAG-NEXT:    s_load_b128 s[0:3], s[2:3], 0x24
+; GFX11-SDAG-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
 ; GFX11-SDAG-NEXT:    s_mov_b32 s7, 0x31016000
 ; GFX11-SDAG-NEXT:    s_mov_b32 s6, -1
+; GFX11-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-SDAG-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; GFX11-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-SDAG-NEXT:    global_load_b32 v0, v0, s[2:3]
 ; GFX11-SDAG-NEXT:    s_mov_b32 s4, s0
@@ -722,7 +732,9 @@ define amdgpu_kernel void @fadd_v2f16_imm_a(
 ;
 ; GFX11-GISEL-LABEL: fadd_v2f16_imm_a:
 ; GFX11-GISEL:       ; %bb.0: ; %entry
-; GFX11-GISEL-NEXT:    s_load_b128 s[0:3], s[0:1], 0x24
+; GFX11-GISEL-NEXT:    s_load_b128 s[0:3], s[2:3], 0x24
+; GFX11-GISEL-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
+; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-GISEL-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; GFX11-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-GISEL-NEXT:    global_load_b32 v0, v0, s[2:3]
@@ -737,10 +749,12 @@ define amdgpu_kernel void @fadd_v2f16_imm_a(
 ;
 ; GFX11-FAKE16-SDAG-LABEL: fadd_v2f16_imm_a:
 ; GFX11-FAKE16-SDAG:       ; %bb.0: ; %entry
-; GFX11-FAKE16-SDAG-NEXT:    s_load_b128 s[0:3], s[0:1], 0x24
-; GFX11-FAKE16-SDAG-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
+; GFX11-FAKE16-SDAG-NEXT:    s_load_b128 s[0:3], s[2:3], 0x24
+; GFX11-FAKE16-SDAG-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
 ; GFX11-FAKE16-SDAG-NEXT:    s_mov_b32 s7, 0x31016000
 ; GFX11-FAKE16-SDAG-NEXT:    s_mov_b32 s6, -1
+; GFX11-FAKE16-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-FAKE16-SDAG-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; GFX11-FAKE16-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-FAKE16-SDAG-NEXT:    global_load_b32 v0, v0, s[2:3]
 ; GFX11-FAKE16-SDAG-NEXT:    s_mov_b32 s4, s0
@@ -754,7 +768,9 @@ define amdgpu_kernel void @fadd_v2f16_imm_a(
 ;
 ; GFX11-FAKE16-GISEL-LABEL: fadd_v2f16_imm_a:
 ; GFX11-FAKE16-GISEL:       ; %bb.0: ; %entry
-; GFX11-FAKE16-GISEL-NEXT:    s_load_b128 s[0:3], s[0:1], 0x24
+; GFX11-FAKE16-GISEL-NEXT:    s_load_b128 s[0:3], s[2:3], 0x24
+; GFX11-FAKE16-GISEL-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
+; GFX11-FAKE16-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-FAKE16-GISEL-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; GFX11-FAKE16-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-FAKE16-GISEL-NEXT:    global_load_b32 v0, v0, s[2:3]
@@ -796,7 +812,7 @@ entry:
 define amdgpu_kernel void @fadd_v2f16_imm_b(
 ; SI-LABEL: fadd_v2f16_imm_b:
 ; SI:       ; %bb.0: ; %entry
-; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
+; SI-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x9
 ; SI-NEXT:    s_mov_b32 s7, 0xf000
 ; SI-NEXT:    s_mov_b32 s10, 0
 ; SI-NEXT:    s_mov_b32 s11, s7
@@ -823,7 +839,7 @@ define amdgpu_kernel void @fadd_v2f16_imm_b(
 ;
 ; VI-LABEL: fadd_v2f16_imm_b:
 ; VI:       ; %bb.0: ; %entry
-; VI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
+; VI-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x24
 ; VI-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; VI-NEXT:    s_mov_b32 s7, 0xf000
 ; VI-NEXT:    s_mov_b32 s6, -1
@@ -844,10 +860,12 @@ define amdgpu_kernel void @fadd_v2f16_imm_b(
 ;
 ; GFX11-SDAG-LABEL: fadd_v2f16_imm_b:
 ; GFX11-SDAG:       ; %bb.0: ; %entry
-; GFX11-SDAG-NEXT:    s_load_b128 s[0:3], s[0:1], 0x24
-; GFX11-SDAG-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
+; GFX11-SDAG-NEXT:    s_load_b128 s[0:3], s[2:3], 0x24
+; GFX11-SDAG-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
 ; GFX11-SDAG-NEXT:    s_mov_b32 s7, 0x31016000
 ; GFX11-SDAG-NEXT:    s_mov_b32 s6, -1
+; GFX11-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-SDAG-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; GFX11-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-SDAG-NEXT:    global_load_b32 v0, v0, s[2:3]
 ; GFX11-SDAG-NEXT:    s_mov_b32 s4, s0
@@ -861,7 +879,9 @@ define amdgpu_kernel void @fadd_v2f16_imm_b(
 ;
 ; GFX11-GISEL-LABEL: fadd_v2f16_imm_b:
 ; GFX11-GISEL:       ; %bb.0: ; %entry
-; GFX11-GISEL-NEXT:    s_load_b128 s[0:3], s[0:1], 0x24
+; GFX11-GISEL-NEXT:    s_load_b128 s[0:3], s[2:3], 0x24
+; GFX11-GISEL-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
+; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-GISEL-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; GFX11-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-GISEL-NEXT:    global_load_b32 v0, v0, s[2:3]
@@ -876,10 +896,12 @@ define amdgpu_kernel void @fadd_v2f16_imm_b(
 ;
 ; GFX11-FAKE16-SDAG-LABEL: fadd_v2f16_imm_b:
 ; GFX11-FAKE16-SDAG:       ; %bb.0: ; %entry
-; GFX11-FAKE16-SDAG-NEXT:    s_load_b128 s[0:3], s[0:1], 0x24
-; GFX11-FAKE16-SDAG-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
+; GFX11-FAKE16-SDAG-NEXT:    s_load_b128 s[0:3], s[2:3], 0x24
+; GFX11-FAKE16-SDAG-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
 ; GFX11-FAKE16-SDAG-NEXT:    s_mov_b32 s7, 0x31016000
 ; GFX11-FAKE16-SDAG-NEXT:    s_mov_b32 s6, -1
+; GFX11-FAKE16-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-FAKE16-SDAG-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; GFX11-FAKE16-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-FAKE16-SDAG-NEXT:    global_load_b32 v0, v0, s[2:3]
 ; GFX11-FAKE16-SDAG-NEXT:    s_mov_b32 s4, s0
@@ -893,7 +915,9 @@ define amdgpu_kernel void @fadd_v2f16_imm_b(
 ;
 ; GFX11-FAKE16-GISEL-LABEL: fadd_v2f16_imm_b:
 ; GFX11-FAKE16-GISEL:       ; %bb.0: ; %entry
-; GFX11-FAKE16-GISEL-NEXT:    s_load_b128 s[0:3], s[0:1], 0x24
+; GFX11-FAKE16-GISEL-NEXT:    s_load_b128 s[0:3], s[2:3], 0x24
+; GFX11-FAKE16-GISEL-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
+; GFX11-FAKE16-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-FAKE16-GISEL-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; GFX11-FAKE16-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-FAKE16-GISEL-NEXT:    global_load_b32 v0, v0, s[2:3]

@@ -6,7 +6,7 @@
 # RUN: rm -rf %t && mkdir -p %t
 # RUN: llvm-mc -triple=x86_64-unknown-linux -position-independent \
 # RUN:     -filetype=obj -o %t/ELF_x86-64_perf.o %s
-# RUN: JITDUMPDIR="%t" llvm-jitlink -perf-support \
+# RUN: env JITDUMPDIR="%t" llvm-jitlink -perf-support \
 # RUN:     %t/ELF_x86-64_perf.o
 # RUN: test -f %t/.debug/jit/llvm-IR-jit-*/jit-*.dump
 

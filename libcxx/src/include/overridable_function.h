@@ -61,8 +61,6 @@
 // This mechanism should never be used outside of the libc++ built library. In particular,
 // attempting to use this within the libc++ headers will not work at all because we don't
 // want to be defining special sections inside user's executables which use our headers.
-// This is provided inside libc++'s include tree solely to make it easier to share with
-// libc++abi, which needs the same mechanism.
 //
 
 #if defined(_LIBCPP_OBJECT_FORMAT_MACHO)

@@ -642,6 +642,7 @@ Value *InferAddressSpacesImpl::cloneInstructionWithNewAddressSpace(
     Type *NewPtrTy = getPtrOrVecOfPtrsWithNewAS(I->getType(), AS);
     auto *NewI = new AddrSpaceCastInst(I, NewPtrTy);
     NewI->insertAfter(I);
+    NewI->setDebugLoc(I->getDebugLoc());
     return NewI;
   }
 
@@ -821,7 +822,7 @@ unsigned InferAddressSpacesImpl::joinAddressSpaces(unsigned AS1,
 }
 
 bool InferAddressSpacesImpl::run(Function &F) {
-  DL = &F.getParent()->getDataLayout();
+  DL = &F.getDataLayout();
 
   if (AssumeDefaultIsFlatAddressSpace)
     FlatAddrSpace = 0;

@@ -71,8 +71,13 @@ InstSeq generateTwoRegInstSeq(int64_t Val, const MCSubtargetInfo &STI,
 // If CompressionCost is true it will use a different cost calculation if RVC is
 // enabled. This should be used to compare two different sequences to determine
 // which is more compressible.
+//
+// If FreeZeroes is true, it will be assumed free to materialize any
+// XLen-sized chunks that are 0. This is appropriate to use in instances when
+// the zero register can be used, e.g. when estimating the cost of
+// materializing a value used by a particular operation.
 int getIntMatCost(const APInt &Val, unsigned Size, const MCSubtargetInfo &STI,
-                  bool CompressionCost = false);
+                  bool CompressionCost = false, bool FreeZeroes = false);
 } // namespace RISCVMatInt
 } // namespace llvm
 #endif

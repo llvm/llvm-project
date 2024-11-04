@@ -96,13 +96,6 @@ static SourceLocation findPreviousTokenKind(SourceLocation Start,
   }
 }
 
-static SourceLocation findOpenParen(const CallExpr &E, const SourceManager &SM,
-                                    const LangOptions &LangOpts) {
-  SourceLocation EndLoc =
-      E.getNumArgs() == 0 ? E.getRParenLoc() : E.getArg(0)->getBeginLoc();
-  return findPreviousTokenKind(EndLoc, SM, LangOpts, tok::TokenKind::l_paren);
-}
-
 RangeSelector transformer::before(RangeSelector Selector) {
   return [Selector](const MatchResult &Result) -> Expected<CharSourceRange> {
     Expected<CharSourceRange> SelectedRange = Selector(Result);
@@ -287,18 +280,50 @@ RangeSelector transformer::statements(std::string ID) {
 }
 
 namespace {
-// Returns the range of the source between the call's parentheses.
-CharSourceRange getCallArgumentsRange(const MatchResult &Result,
-                                      const CallExpr &CE) {
+
+SourceLocation getRLoc(const CallExpr &E) { return E.getRParenLoc(); }
+
+SourceLocation getRLoc(const CXXConstructExpr &E) {
+  return E.getParenOrBraceRange().getEnd();
+}
+
+tok::TokenKind getStartToken(const CallExpr &E) {
+  return tok::TokenKind::l_paren;
+}
+
+tok::TokenKind getStartToken(const CXXConstructExpr &E) {
+  return isa<CXXTemporaryObjectExpr>(E) ? tok::TokenKind::l_paren
+                                        : tok::TokenKind::l_brace;
+}
+
+template <typename ExprWithArgs>
+SourceLocation findArgStartDelimiter(const ExprWithArgs &E, SourceLocation RLoc,
+                                     const SourceManager &SM,
+                                     const LangOptions &LangOpts) {
+  SourceLocation Loc = E.getNumArgs() == 0 ? RLoc : E.getArg(0)->getBeginLoc();
+  return findPreviousTokenKind(Loc, SM, LangOpts, getStartToken(E));
+}
+// Returns the range of the source between the call's or construct expr's
+// parentheses/braces.
+template <typename ExprWithArgs>
+CharSourceRange getArgumentsRange(const MatchResult &Result,
+                                  const ExprWithArgs &CE) {
+  const SourceLocation RLoc = getRLoc(CE);
   return CharSourceRange::getCharRange(
-      findOpenParen(CE, *Result.SourceManager, Result.Context->getLangOpts())
+      findArgStartDelimiter(CE, RLoc, *Result.SourceManager,
+                            Result.Context->getLangOpts())
           .getLocWithOffset(1),
-      CE.getRParenLoc());
+      RLoc);
 }
 } // namespace
 
 RangeSelector transformer::callArgs(std::string ID) {
-  return RelativeSelector<CallExpr, getCallArgumentsRange>(std::move(ID));
+  return RelativeSelector<CallExpr, getArgumentsRange<CallExpr>>(std::move(ID));
+}
+
+RangeSelector transformer::constructExprArgs(std::string ID) {
+  return RelativeSelector<CXXConstructExpr,
+                          getArgumentsRange<CXXConstructExpr>>(std::move(ID));
 }
 
 namespace {

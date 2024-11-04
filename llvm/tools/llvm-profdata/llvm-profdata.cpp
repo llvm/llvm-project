@@ -291,6 +291,11 @@ cl::opt<bool> DropProfileSymbolList(
     cl::desc("Drop the profile symbol list when merging AutoFDO profiles "
              "(only meaningful for -sample)"));
 
+cl::opt<bool> KeepVTableSymbols(
+    "keep-vtable-symbols", cl::init(false), cl::Hidden,
+    cl::sub(MergeSubcommand),
+    cl::desc("If true, keep the vtable symbols in indexed profiles"));
+
 // Temporary support for writing the previous version of the format, to enable
 // some forward compatibility.
 // TODO: Consider enabling this with future version changes as well, to ease
@@ -767,11 +772,12 @@ static void loadInput(const WeightedFile &Input, SymbolRemapper *Remapper,
     });
   }
 
-  const InstrProfSymtab &symtab = Reader->getSymtab();
-  const auto &VTableNames = symtab.getVTableNames();
+  if (KeepVTableSymbols) {
+    const InstrProfSymtab &symtab = Reader->getSymtab();
+    const auto &VTableNames = symtab.getVTableNames();
 
-  for (const auto &kv : VTableNames) {
-    WC->Writer.addVTableName(kv.getKey());
+    for (const auto &kv : VTableNames)
+      WC->Writer.addVTableName(kv.getKey());
   }
 
   if (Reader->hasTemporalProfile()) {
@@ -1117,7 +1123,7 @@ adjustInstrProfile(std::unique_ptr<WriterContext> &WC,
     std::string FilePrefixes[] = {".cpp", "cc", ".c", ".hpp", ".h"};
     size_t PrefixPos = StringRef::npos;
     for (auto &FilePrefix : FilePrefixes) {
-      std::string NamePrefix = FilePrefix + kGlobalIdentifierDelimiter;
+      std::string NamePrefix = FilePrefix + GlobalIdentifierDelimiter;
       PrefixPos = Name.find_insensitive(NamePrefix);
       if (PrefixPos == StringRef::npos)
         continue;
@@ -1415,7 +1421,8 @@ remapSamples(const sampleprof::FunctionSamples &Samples,
     for (const auto &Callsite : CallsiteSamples.second) {
       sampleprof::FunctionSamples Remapped =
           remapSamples(Callsite.second, Remapper, Error);
-      MergeResult(Error, Target[Remapped.getFunction()].merge(Remapped));
+      mergeSampleProfErrors(Error,
+                            Target[Remapped.getFunction()].merge(Remapped));
     }
   }
   return Result;
@@ -1536,7 +1543,8 @@ static void mergeSampleProfile(const WeightedFileVector &Inputs,
                    : FunctionSamples();
       FunctionSamples &Samples = Remapper ? Remapped : I->second;
       SampleContext FContext = Samples.getContext();
-      MergeResult(Result, ProfileMap[FContext].merge(Samples, Input.Weight));
+      mergeSampleProfErrors(Result,
+                            ProfileMap[FContext].merge(Samples, Input.Weight));
       if (Result != sampleprof_error::success) {
         std::error_code EC = make_error_code(Result);
         handleMergeWriterError(errorCodeToError(EC), Input.Filename,

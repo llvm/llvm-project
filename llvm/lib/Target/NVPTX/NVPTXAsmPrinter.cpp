@@ -315,6 +315,8 @@ unsigned NVPTXAsmPrinter::encodeVirtualRegister(unsigned Reg) {
       Ret = (5 << 28);
     } else if (RC == &NVPTX::Float64RegsRegClass) {
       Ret = (6 << 28);
+    } else if (RC == &NVPTX::Int128RegsRegClass) {
+      Ret = (7 << 28);
     } else {
       report_fatal_error("Bad register class");
     }
@@ -415,7 +417,7 @@ void NVPTXAsmPrinter::printReturnValStr(const MachineFunction &MF,
 // llvm.loop.unroll.disable or llvm.loop.unroll.count=1.
 bool NVPTXAsmPrinter::isLoopHeaderOfNoUnroll(
     const MachineBasicBlock &MBB) const {
-  MachineLoopInfo &LI = getAnalysis<MachineLoopInfo>();
+  MachineLoopInfo &LI = getAnalysis<MachineLoopInfoWrapperPass>().getLI();
   // We insert .pragma "nounroll" only to the loop header.
   if (!LI.isLoopHeader(&MBB))
     return false;
@@ -859,8 +861,8 @@ void NVPTXAsmPrinter::emitGlobals(const Module &M) {
       *static_cast<const NVPTXSubtarget *>(NTM.getSubtargetImpl());
 
   // Print out module-level global variables in proper order
-  for (unsigned i = 0, e = Globals.size(); i != e; ++i)
-    printModuleLevelGV(Globals[i], OS2, /*processDemoted=*/false, STI);
+  for (const GlobalVariable *GV : Globals)
+    printModuleLevelGV(GV, OS2, /*processDemoted=*/false, STI);
 
   OS2 << '\n';
 

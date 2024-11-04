@@ -9,8 +9,9 @@
 #include "src/unistd/swab.h"
 
 #include "src/__support/common.h"
+#include "src/__support/macros/config.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(void, swab,
                    (const void *__restrict from, void *__restrict to,
@@ -23,4 +24,4 @@ LLVM_LIBC_FUNCTION(void, swab,
   }
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

@@ -5,7 +5,11 @@
 
 LIBRARY test.dll
 EXPORTS
+AltTestFunction
+AltTestFunction2
+AltTestData
 TestFunction==AltTestFunction
+TestData DATA == AltTestData
 ; When creating an import library, the DLL internal function name of
 ; the implementation of a function isn't visible at all.
 ImpLibName = Implementation
@@ -16,18 +20,25 @@ ImpLibName2 = Implementation2 == AltTestFunction2
 ; matter for the import library
 ImpLibName3 = kernel32.Sleep
 
+; CHECK:      T AltTestFunction
+; CHECK-NEXT: T __imp_AltTestFunction
+; CHECK:      T AltTestFunction2
+; CHECK-NEXT: T __imp_AltTestFunction2
+; CHECK:      T ImpLibName
+; CHECK-NEXT: T __imp_ImpLibName
+; CHECK:      T ImpLibName3
+; CHECK-NEXT: T __imp_ImpLibName3
 ; CHECK:      U AltTestFunction
 ; CHECK-NEXT: W TestFunction
 ; CHECK:      U __imp_AltTestFunction
 ; CHECK-NEXT: W __imp_TestFunction
-; CHECK:      T ImpLibName
-; CHECK-NEXT: T __imp_ImpLibName
+; CHECK-NOT:  W TestData
+; CHECK:      U __imp_AltTestData
+; CHECK-NEXT: W __imp_TestData
 ; CHECK:      U AltTestFunction2
 ; CHECK-NEXT: W ImpLibName2
 ; CHECK:      U __imp_AltTestFunction2
 ; CHECK-NEXT: W __imp_ImpLibName2
-; CHECK:      T ImpLibName3
-; CHECK-NEXT: T __imp_ImpLibName3
 
 ; ARCH-NOT: unknown arch
 

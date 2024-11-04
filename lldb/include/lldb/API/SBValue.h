@@ -89,6 +89,8 @@ public:
 
   lldb::SBValue GetNonSyntheticValue();
 
+  lldb::SBValue GetSyntheticValue();
+
   lldb::DynamicValueType GetPreferDynamicValue();
 
   void SetPreferDynamicValue(lldb::DynamicValueType use_dynamic);

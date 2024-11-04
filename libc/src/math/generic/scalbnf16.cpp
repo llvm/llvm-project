@@ -11,15 +11,16 @@
 #include "src/__support/common.h"
 
 #include "hdr/float_macros.h"
+#include "src/__support/macros/config.h"
 
 #if FLT_RADIX != 2
 #error "FLT_RADIX != 2 is not supported."
 #endif
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(float16, scalbnf16, (float16 x, int n)) {
   return fputil::ldexp(x, n);
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

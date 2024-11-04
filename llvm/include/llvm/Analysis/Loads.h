@@ -68,7 +68,7 @@ bool isDereferenceableAndAlignedPointer(const Value *V, Align Alignment,
 /// If it is not obviously safe to load from the specified pointer, we do a
 /// quick local scan of the basic block containing ScanFrom, to determine if
 /// the address is already accessed.
-bool isSafeToLoadUnconditionally(Value *V, Align Alignment, APInt &Size,
+bool isSafeToLoadUnconditionally(Value *V, Align Alignment, const APInt &Size,
                                  const DataLayout &DL,
                                  Instruction *ScanFrom = nullptr,
                                  AssumptionCache *AC = nullptr,
@@ -85,6 +85,11 @@ bool isSafeToLoadUnconditionally(Value *V, Align Alignment, APInt &Size,
 bool isDereferenceableAndAlignedInLoop(LoadInst *LI, Loop *L,
                                        ScalarEvolution &SE, DominatorTree &DT,
                                        AssumptionCache *AC = nullptr);
+
+/// Return true if the loop \p L cannot fault on any iteration and only
+/// contains read-only memory accesses.
+bool isDereferenceableReadOnlyLoop(Loop *L, ScalarEvolution *SE,
+                                   DominatorTree *DT, AssumptionCache *AC);
 
 /// Return true if we know that executing a load from this value cannot trap.
 ///

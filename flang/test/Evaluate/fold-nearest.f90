@@ -28,6 +28,12 @@ module m1
   logical, parameter :: test_15 = nearest(negZero, 0.) == minSubnormal
   logical, parameter :: test_16 = nearest(tiny(1.),-1.) == 1.1754942E-38
   logical, parameter :: test_17 = nearest(tiny(1.),1.) == 1.1754945E-38
+ contains
+  subroutine subr(a)
+    real, intent(in) :: a
+    !WARN: warning: NEAREST: S argument is zero
+    print *, nearest(a, 0.)
+  end
 end module
 
 module m2

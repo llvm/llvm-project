@@ -1336,13 +1336,6 @@ static bool hasInconsistentOrSupersetQualifiersOf(QualType ParamType,
   return (ParamQs.getCVRQualifiers() & ~ArgQs.getCVRQualifiers()) != 0;
 }
 
-/// Compare types for equality with respect to possibly compatible
-/// function types (noreturn adjustment, implicit calling conventions). If any
-/// of parameter and argument is not a function, just perform type comparison.
-///
-/// \param P the template parameter type.
-///
-/// \param A the argument type.
 bool Sema::isSameOrCompatibleFunctionType(QualType P, QualType A) {
   const FunctionType *PF = P->getAs<FunctionType>(),
                      *AF = A->getAs<FunctionType>();
@@ -2754,19 +2747,6 @@ static bool isSameTemplateArg(ASTContext &Context,
   llvm_unreachable("Invalid TemplateArgument Kind!");
 }
 
-/// Allocate a TemplateArgumentLoc where all locations have
-/// been initialized to the given location.
-///
-/// \param Arg The template argument we are producing template argument
-/// location information for.
-///
-/// \param NTTPType For a declaration template argument, the type of
-/// the non-type template parameter that corresponds to this template
-/// argument. Can be null if no type sugar is available to add to the
-/// type from the template argument.
-///
-/// \param Loc The source location to use for the resulting template
-/// argument.
 TemplateArgumentLoc
 Sema::getTrivialTemplateArgumentLoc(const TemplateArgument &Arg,
                                     QualType NTTPType, SourceLocation Loc,
@@ -3448,30 +3428,6 @@ static bool isSimpleTemplateIdType(QualType T) {
   return false;
 }
 
-/// Substitute the explicitly-provided template arguments into the
-/// given function template according to C++ [temp.arg.explicit].
-///
-/// \param FunctionTemplate the function template into which the explicit
-/// template arguments will be substituted.
-///
-/// \param ExplicitTemplateArgs the explicitly-specified template
-/// arguments.
-///
-/// \param Deduced the deduced template arguments, which will be populated
-/// with the converted and checked explicit template arguments.
-///
-/// \param ParamTypes will be populated with the instantiated function
-/// parameters.
-///
-/// \param FunctionType if non-NULL, the result type of the function template
-/// will also be instantiated and the pointed-to value will be updated with
-/// the instantiated function type.
-///
-/// \param Info if substitution fails for any reason, this object will be
-/// populated with more information about the failure.
-///
-/// \returns TemplateDeductionResult::Success if substitution was successful, or
-/// some failure condition.
 TemplateDeductionResult Sema::SubstituteExplicitTemplateArguments(
     FunctionTemplateDecl *FunctionTemplate,
     TemplateArgumentListInfo &ExplicitTemplateArgs,
@@ -3849,12 +3805,6 @@ static TemplateDeductionResult instantiateExplicitSpecifierDeferred(
   return TemplateDeductionResult::Success;
 }
 
-/// Finish template argument deduction for a function template,
-/// checking the deduced template arguments for completeness and forming
-/// the function template specialization.
-///
-/// \param OriginalCallArgs If non-NULL, the original call arguments against
-/// which the deduced argument types should be compared.
 TemplateDeductionResult Sema::FinishTemplateArgumentDeduction(
     FunctionTemplateDecl *FunctionTemplate,
     SmallVectorImpl<DeducedTemplateArgument> &Deduced,
@@ -4409,31 +4359,6 @@ static TemplateDeductionResult DeduceTemplateArgumentsFromCallArgument(
                                             ArgType, Info, Deduced, TDF);
 }
 
-/// Perform template argument deduction from a function call
-/// (C++ [temp.deduct.call]).
-///
-/// \param FunctionTemplate the function template for which we are performing
-/// template argument deduction.
-///
-/// \param ExplicitTemplateArgs the explicit template arguments provided
-/// for this call.
-///
-/// \param Args the function call arguments
-///
-/// \param Specialization if template argument deduction was successful,
-/// this will be set to the function template specialization produced by
-/// template argument deduction.
-///
-/// \param Info the argument will be updated to provide additional information
-/// about template argument deduction.
-///
-/// \param CheckNonDependent A callback to invoke to check conversions for
-/// non-dependent parameters, between deduction and substitution, per DR1391.
-/// If this returns true, substitution will be skipped and we return
-/// TemplateDeductionResult::NonDependentConversionFailure. The callback is
-/// passed the parameter types (after substituting explicit template arguments).
-///
-/// \returns the result of template argument deduction.
 TemplateDeductionResult Sema::DeduceTemplateArguments(
     FunctionTemplateDecl *FunctionTemplate,
     TemplateArgumentListInfo *ExplicitTemplateArgs, ArrayRef<Expr *> Args,
@@ -4695,34 +4620,6 @@ QualType Sema::adjustCCAndNoReturn(QualType ArgFunctionType,
                                  ArgFunctionTypeP->getParamTypes(), EPI);
 }
 
-/// Deduce template arguments when taking the address of a function
-/// template (C++ [temp.deduct.funcaddr]) or matching a specialization to
-/// a template.
-///
-/// \param FunctionTemplate the function template for which we are performing
-/// template argument deduction.
-///
-/// \param ExplicitTemplateArgs the explicitly-specified template
-/// arguments.
-///
-/// \param ArgFunctionType the function type that will be used as the
-/// "argument" type (A) when performing template argument deduction from the
-/// function template's function type. This type may be NULL, if there is no
-/// argument type to compare against, in C++0x [temp.arg.explicit]p3.
-///
-/// \param Specialization if template argument deduction was successful,
-/// this will be set to the function template specialization produced by
-/// template argument deduction.
-///
-/// \param Info the argument will be updated to provide additional information
-/// about template argument deduction.
-///
-/// \param IsAddressOfFunction If \c true, we are deducing as part of taking
-/// the address of a function template per [temp.deduct.funcaddr] and
-/// [over.over]. If \c false, we are looking up a function template
-/// specialization based on its signature, per [temp.deduct.decl].
-///
-/// \returns the result of template argument deduction.
 TemplateDeductionResult Sema::DeduceTemplateArguments(
     FunctionTemplateDecl *FunctionTemplate,
     TemplateArgumentListInfo *ExplicitTemplateArgs, QualType ArgFunctionType,
@@ -4850,9 +4747,6 @@ TemplateDeductionResult Sema::DeduceTemplateArguments(
   return TemplateDeductionResult::Success;
 }
 
-/// Deduce template arguments for a templated conversion
-/// function (C++ [temp.deduct.conv]) and, if successful, produce a
-/// conversion function template specialization.
 TemplateDeductionResult Sema::DeduceTemplateArguments(
     FunctionTemplateDecl *ConversionTemplate, QualType ObjectType,
     Expr::Classification ObjectClassification, QualType ToType,
@@ -4984,30 +4878,6 @@ TemplateDeductionResult Sema::DeduceTemplateArguments(
   return Result;
 }
 
-/// Deduce template arguments for a function template when there is
-/// nothing to deduce against (C++0x [temp.arg.explicit]p3).
-///
-/// \param FunctionTemplate the function template for which we are performing
-/// template argument deduction.
-///
-/// \param ExplicitTemplateArgs the explicitly-specified template
-/// arguments.
-///
-/// \param Specialization if template argument deduction was successful,
-/// this will be set to the function template specialization produced by
-/// template argument deduction.
-///
-/// \param Info the argument will be updated to provide additional information
-/// about template argument deduction.
-///
-/// \param IsAddressOfFunction If \c true, we are deducing as part of taking
-/// the address of a function template in a context where we do not have a
-/// target type, per [over.over]. If \c false, we are looking up a function
-/// template specialization based on its signature, which only happens when
-/// deducing a function parameter type from an argument that is a template-id
-/// naming a function template specialization.
-///
-/// \returns the result of template argument deduction.
 TemplateDeductionResult
 Sema::DeduceTemplateArguments(FunctionTemplateDecl *FunctionTemplate,
                               TemplateArgumentListInfo *ExplicitTemplateArgs,
@@ -5171,24 +5041,6 @@ static bool CheckDeducedPlaceholderConstraints(Sema &S, const AutoType &Type,
   return false;
 }
 
-/// Deduce the type for an auto type-specifier (C++11 [dcl.spec.auto]p6)
-///
-/// Note that this is done even if the initializer is dependent. (This is
-/// necessary to support partial ordering of templates using 'auto'.)
-/// A dependent type will be produced when deducing from a dependent type.
-///
-/// \param Type the type pattern using the auto type-specifier.
-/// \param Init the initializer for the variable whose type is to be deduced.
-/// \param Result if type deduction was successful, this will be set to the
-///        deduced type.
-/// \param Info the argument will be updated to provide additional information
-///        about template argument deduction.
-/// \param DependentDeduction Set if we should permit deduction in
-///        dependent cases. This is necessary for template partial ordering with
-///        'auto' template parameters. The template parameter depth to be used
-///        should be specified in the 'Info' parameter.
-/// \param IgnoreConstraints Set if we should not fail if the deduced type does
-///                          not satisfy the type-constraint in the auto type.
 TemplateDeductionResult
 Sema::DeduceAutoType(TypeLoc Type, Expr *Init, QualType &Result,
                      TemplateDeductionInfo &Info, bool DependentDeduction,
@@ -5675,34 +5527,6 @@ static bool isAtLeastAsSpecializedAs(Sema &S, SourceLocation Loc,
   return true;
 }
 
-/// Returns the more specialized function template according
-/// to the rules of function template partial ordering (C++ [temp.func.order]).
-///
-/// \param FT1 the first function template
-///
-/// \param FT2 the second function template
-///
-/// \param TPOC the context in which we are performing partial ordering of
-/// function templates.
-///
-/// \param NumCallArguments1 The number of arguments in the call to FT1, used
-/// only when \c TPOC is \c TPOC_Call. Does not include the object argument when
-/// calling a member function.
-///
-/// \param RawObj1Ty The type of the object parameter of FT1 if a member
-/// function only used if \c TPOC is \c TPOC_Call and FT1 is a Function
-/// template from a member function
-///
-/// \param RawObj2Ty The type of the object parameter of FT2 if a member
-/// function only used if \c TPOC is \c TPOC_Call and FT2 is a Function
-/// template from a member function
-///
-/// \param Reversed If \c true, exactly one of FT1 and FT2 is an overload
-/// candidate with a reversed parameter order. In this case, the corresponding
-/// P/A pairs between FT1 and FT2 are reversed.
-///
-/// \returns the more specialized function template. If neither
-/// template is more specialized, returns NULL.
 FunctionTemplateDecl *Sema::getMoreSpecializedTemplate(
     FunctionTemplateDecl *FT1, FunctionTemplateDecl *FT2, SourceLocation Loc,
     TemplatePartialOrderingContext TPOC, unsigned NumCallArguments1,
@@ -5921,31 +5745,6 @@ static bool isSameTemplate(TemplateDecl *T1, TemplateDecl *T2) {
   return T1->getCanonicalDecl() == T2->getCanonicalDecl();
 }
 
-/// Retrieve the most specialized of the given function template
-/// specializations.
-///
-/// \param SpecBegin the start iterator of the function template
-/// specializations that we will be comparing.
-///
-/// \param SpecEnd the end iterator of the function template
-/// specializations, paired with \p SpecBegin.
-///
-/// \param Loc the location where the ambiguity or no-specializations
-/// diagnostic should occur.
-///
-/// \param NoneDiag partial diagnostic used to diagnose cases where there are
-/// no matching candidates.
-///
-/// \param AmbigDiag partial diagnostic used to diagnose an ambiguity, if one
-/// occurs.
-///
-/// \param CandidateDiag partial diagnostic used for each function template
-/// specialization that is a candidate in the ambiguous ordering. One parameter
-/// in this diagnostic should be unbound, which will correspond to the string
-/// describing the template arguments for the function template specialization.
-///
-/// \returns the most specialized function template specialization, if
-/// found. Otherwise, returns SpecEnd.
 UnresolvedSetIterator Sema::getMostSpecialized(
     UnresolvedSetIterator SpecBegin, UnresolvedSetIterator SpecEnd,
     TemplateSpecCandidateSet &FailedCandidates,
@@ -6021,15 +5820,6 @@ UnresolvedSetIterator Sema::getMostSpecialized(
   return SpecEnd;
 }
 
-/// Returns the more constrained function according to the rules of
-/// partial ordering by constraints (C++ [temp.constr.order]).
-///
-/// \param FD1 the first function
-///
-/// \param FD2 the second function
-///
-/// \returns the more constrained function. If neither function is
-/// more constrained, returns NULL.
 FunctionDecl *Sema::getMoreConstrainedFunction(FunctionDecl *FD1,
                                                FunctionDecl *FD2) {
   assert(!FD1->getDescribedTemplate() && !FD2->getDescribedTemplate() &&
@@ -6289,16 +6079,6 @@ getMoreSpecialized(Sema &S, QualType T1, QualType T2, TemplateLikeDecl *P1,
   return AtLeastAsConstrained1 ? P1 : GetP2()(P1, P2);
 }
 
-/// Returns the more specialized class template partial specialization
-/// according to the rules of partial ordering of class template partial
-/// specializations (C++ [temp.class.order]).
-///
-/// \param PS1 the first class template partial specialization
-///
-/// \param PS2 the second class template partial specialization
-///
-/// \returns the more specialized class template partial specialization. If
-/// neither partial specialization is more specialized, returns NULL.
 ClassTemplatePartialSpecializationDecl *
 Sema::getMoreSpecializedPartialSpecialization(
                                   ClassTemplatePartialSpecializationDecl *PS1,
@@ -6911,13 +6691,6 @@ MarkUsedTemplateParameters(ASTContext &Ctx,
   }
 }
 
-/// Mark which template parameters are used in a given expression.
-///
-/// \param E the expression from which template parameters will be deduced.
-///
-/// \param Used a bit vector whose elements will be set to \c true
-/// to indicate when the corresponding template parameter will be
-/// deduced.
 void
 Sema::MarkUsedTemplateParameters(const Expr *E, bool OnlyDeduced,
                                  unsigned Depth,
@@ -6925,15 +6698,6 @@ Sema::MarkUsedTemplateParameters(const Expr *E, bool OnlyDeduced,
   ::MarkUsedTemplateParameters(Context, E, OnlyDeduced, Depth, Used);
 }
 
-/// Mark which template parameters can be deduced from a given
-/// template argument list.
-///
-/// \param TemplateArgs the template argument list from which template
-/// parameters will be deduced.
-///
-/// \param Used a bit vector whose elements will be set to \c true
-/// to indicate when the corresponding template parameter will be
-/// deduced.
 void
 Sema::MarkUsedTemplateParameters(const TemplateArgumentList &TemplateArgs,
                                  bool OnlyDeduced, unsigned Depth,
@@ -6951,8 +6715,6 @@ Sema::MarkUsedTemplateParameters(const TemplateArgumentList &TemplateArgs,
                                  Depth, Used);
 }
 
-/// Marks all of the template parameters that will be deduced by a
-/// call to the given function template.
 void Sema::MarkDeducedTemplateParameters(
     ASTContext &Ctx, const FunctionTemplateDecl *FunctionTemplate,
     llvm::SmallBitVector &Deduced) {

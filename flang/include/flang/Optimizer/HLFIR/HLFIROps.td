@@ -733,7 +733,7 @@ def hlfir_AssociateOp : hlfir_Op<"associate", [AttrSizedOperandSegments,
       CArg<"mlir::Value", "{}">:$shape, CArg<"mlir::ValueRange", "{}">:$typeparams,
       CArg<"fir::FortranVariableFlagsAttr", "{}">:$fortran_attrs)>,
     OpBuilder<(ins "mlir::Value":$memref, CArg<"mlir::Value", "{}">:$shape,
-      CArg<"mlir::ValueRange", "{}">:$typeparams, 
+      CArg<"mlir::ValueRange", "{}">:$typeparams,
       CArg<"fir::FortranVariableFlagsAttr", "{}">:$fortran_attrs,
       CArg<"llvm::ArrayRef<mlir::NamedAttribute>", "{}">:$attributes)>];
 
@@ -1258,7 +1258,7 @@ def hlfir_OrderedAssignmentTreeOpInterface : OpInterface<"OrderedAssignmentTreeO
 
   let extraClassDeclaration = [{
     /// Interface verifier imlementation.
-    mlir::LogicalResult verifyImpl();
+    llvm::LogicalResult verifyImpl();
 
     mlir::Block* getSubTreeBlock() {
       mlir::Region* region = getSubTreeRegion();
@@ -1733,8 +1733,8 @@ def hlfir_CharExtremumOp : hlfir_Op<"char_extremum",
     [DeclareOpInterfaceMethods<MemoryEffectsOpInterface>]> {
   let summary = "Find max/min from given character strings";
   let description = [{
-    Find the lexicographical minimum or maximum of two or more character 
-    strings of the same character kind and return the string with the lexicographical 
+    Find the lexicographical minimum or maximum of two or more character
+    strings of the same character kind and return the string with the lexicographical
     minimum or maximum number of characters. Example:
 
     %0 = hlfir.char_extremum min, %arg0, %arg1 : (!fir.ref<!fir.char<1,10>>, !fir.ref<!fir.char<1,20>>) -> !hlfir.expr<!fir.char<1,10>>

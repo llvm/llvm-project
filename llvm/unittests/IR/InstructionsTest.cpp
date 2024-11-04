@@ -1750,6 +1750,7 @@ TEST(InstructionsTest, AllocaInst) {
         %F = alloca [2 x half]
         %G = alloca [2 x [3 x i128]]
         %H = alloca %T
+        %I = alloca i32, i64 9223372036854775807
         ret void
       }
     )");
@@ -1766,6 +1767,7 @@ TEST(InstructionsTest, AllocaInst) {
   AllocaInst &F = cast<AllocaInst>(*It++);
   AllocaInst &G = cast<AllocaInst>(*It++);
   AllocaInst &H = cast<AllocaInst>(*It++);
+  AllocaInst &I = cast<AllocaInst>(*It++);
   EXPECT_EQ(A.getAllocationSizeInBits(DL), TypeSize::getFixed(32));
   EXPECT_EQ(B.getAllocationSizeInBits(DL), TypeSize::getFixed(128));
   EXPECT_FALSE(C.getAllocationSizeInBits(DL));
@@ -1774,6 +1776,7 @@ TEST(InstructionsTest, AllocaInst) {
   EXPECT_EQ(F.getAllocationSizeInBits(DL), TypeSize::getFixed(32));
   EXPECT_EQ(G.getAllocationSizeInBits(DL), TypeSize::getFixed(768));
   EXPECT_EQ(H.getAllocationSizeInBits(DL), TypeSize::getFixed(160));
+  EXPECT_FALSE(I.getAllocationSizeInBits(DL));
 }
 
 TEST(InstructionsTest, InsertAtBegin) {

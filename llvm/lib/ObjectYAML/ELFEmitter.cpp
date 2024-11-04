@@ -123,6 +123,12 @@ public:
     return encodeULEB128(Val, OS);
   }
 
+  unsigned writeSLEB128(int64_t Val) {
+    if (!checkLimit(10))
+      return 0;
+    return encodeSLEB128(Val, OS);
+  }
+
   template <typename T> void write(T Val, llvm::endianness E) {
     if (checkLimit(sizeof(T)))
       support::endian::write<T>(OS, Val, E);
@@ -1269,7 +1275,8 @@ void ELFState<ELFT>::writeSectionContent(
     Elf_Shdr &SHeader, const ELFYAML::RelocationSection &Section,
     ContiguousBlobAccumulator &CBA) {
   assert((Section.Type == llvm::ELF::SHT_REL ||
-          Section.Type == llvm::ELF::SHT_RELA) &&
+          Section.Type == llvm::ELF::SHT_RELA ||
+          Section.Type == llvm::ELF::SHT_CREL) &&
          "Section type is not SHT_REL nor SHT_RELA");
 
   if (!Section.RelocatableSec.empty())
@@ -1278,29 +1285,70 @@ void ELFState<ELFT>::writeSectionContent(
   if (!Section.Relocations)
     return;
 
+  const bool IsCrel = Section.Type == llvm::ELF::SHT_CREL;
   const bool IsRela = Section.Type == llvm::ELF::SHT_RELA;
+  typename ELFT::uint OffsetMask = 8, Offset = 0, Addend = 0;
+  uint32_t SymIdx = 0, Type = 0;
+  uint64_t CurrentOffset = CBA.getOffset();
+  if (IsCrel)
+    for (const ELFYAML::Relocation &Rel : *Section.Relocations)
+      OffsetMask |= Rel.Offset;
+  const int Shift = llvm::countr_zero(OffsetMask);
+  if (IsCrel)
+    CBA.writeULEB128(Section.Relocations->size() * 8 + ELF::CREL_HDR_ADDEND +
+                     Shift);
   for (const ELFYAML::Relocation &Rel : *Section.Relocations) {
     const bool IsDynamic = Section.Link && (*Section.Link == ".dynsym");
-    unsigned SymIdx =
+    uint32_t CurSymIdx =
         Rel.Symbol ? toSymbolIndex(*Rel.Symbol, Section.Name, IsDynamic) : 0;
-    if (IsRela) {
+    if (IsCrel) {
+      // The delta offset and flags member may be larger than uint64_t. Special
+      // case the first byte (3 flag bits and 4 offset bits). Other ULEB128
+      // bytes encode the remaining delta offset bits.
+      auto DeltaOffset =
+          (static_cast<typename ELFT::uint>(Rel.Offset) - Offset) >> Shift;
+      Offset = Rel.Offset;
+      uint8_t B =
+          DeltaOffset * 8 + (SymIdx != CurSymIdx) + (Type != Rel.Type ? 2 : 0) +
+          (Addend != static_cast<typename ELFT::uint>(Rel.Addend) ? 4 : 0);
+      if (DeltaOffset < 0x10) {
+        CBA.write(B);
+      } else {
+        CBA.write(B | 0x80);
+        CBA.writeULEB128(DeltaOffset >> 4);
+      }
+      // Delta symidx/type/addend members (SLEB128).
+      if (B & 1) {
+        CBA.writeSLEB128(
+            std::make_signed_t<typename ELFT::uint>(CurSymIdx - SymIdx));
+        SymIdx = CurSymIdx;
+      }
+      if (B & 2) {
+        CBA.writeSLEB128(static_cast<int32_t>(Rel.Type - Type));
+        Type = Rel.Type;
+      }
+      if (B & 4) {
+        CBA.writeSLEB128(
+            std::make_signed_t<typename ELFT::uint>(Rel.Addend - Addend));
+        Addend = Rel.Addend;
+      }
+    } else if (IsRela) {
       Elf_Rela REntry;
       zero(REntry);
       REntry.r_offset = Rel.Offset;
       REntry.r_addend = Rel.Addend;
-      REntry.setSymbolAndType(SymIdx, Rel.Type, isMips64EL(Doc));
+      REntry.setSymbolAndType(CurSymIdx, Rel.Type, isMips64EL(Doc));
       CBA.write((const char *)&REntry, sizeof(REntry));
     } else {
       Elf_Rel REntry;
       zero(REntry);
       REntry.r_offset = Rel.Offset;
-      REntry.setSymbolAndType(SymIdx, Rel.Type, isMips64EL(Doc));
+      REntry.setSymbolAndType(CurSymIdx, Rel.Type, isMips64EL(Doc));
       CBA.write((const char *)&REntry, sizeof(REntry));
     }
   }
 
-  SHeader.sh_size = (IsRela ? sizeof(Elf_Rela) : sizeof(Elf_Rel)) *
-                    Section.Relocations->size();
+  SHeader.sh_size = CBA.getOffset() - CurrentOffset;
 }
 
 template <class ELFT>

@@ -27,12 +27,13 @@ end:
 # ELF-NEXT:   GNU                   0x00000018	NT_GNU_PROPERTY_TYPE_0 (property note)
 # ELF-NEXT:   AArch64 PAuth ABI core info: platform [[PLATFORM]], version [[VERSION]]
 
-# OBJ:      Notes [
+# OBJ:      NoteSections [
 # OBJ-NEXT:   NoteSection {
 # OBJ-NEXT:     Name: .note.gnu.property
 # OBJ-NEXT:     Offset: 0x40
 # OBJ-NEXT:     Size: 0x28
-# OBJ-NEXT:     Note {
+# OBJ-NEXT:     Notes [
+# OBJ-NEXT:     {
 # OBJ-NEXT:       Owner: GNU
 # OBJ-NEXT:       Data size: 0x18
 # OBJ-NEXT:       Type: NT_GNU_PROPERTY_TYPE_0 (property note)
@@ -40,6 +41,7 @@ end:
 # OBJ-NEXT:         AArch64 PAuth ABI core info: platform [[PLATFORM]], version [[VERSION]]
 # OBJ-NEXT:       ]
 # OBJ-NEXT:     }
+# OBJ-NEXT:    ]
 # OBJ-NEXT:   }
 # OBJ-NEXT: ]
 
@@ -162,12 +164,13 @@ end:
 # ELF-ERR-NEXT:   GNU                   0x000000[[DATASIZE]]	NT_GNU_PROPERTY_TYPE_0 (property note)
 # ELF-ERR-NEXT:   AArch64 PAuth ABI core info: [[ERR]]
 
-# OBJ-ERR:      Notes [
+# OBJ-ERR:      NoteSections [
 # OBJ-ERR-NEXT:   NoteSection {
 # OBJ-ERR-NEXT:     Name: .note.gnu.property
 # OBJ-ERR-NEXT:     Offset: 0x40
 # OBJ-ERR-NEXT:     Size: 0x[[SIZE]]
-# OBJ-ERR-NEXT:     Note {
+# OBJ-ERR-NEXT:     Notes [
+# OBJ-ERR-NEXT:     {
 # OBJ-ERR-NEXT:       Owner: GNU
 # OBJ-ERR-NEXT:       Data size: 0x[[DATASIZE]]
 # OBJ-ERR-NEXT:       Type: NT_GNU_PROPERTY_TYPE_0 (property note)
@@ -175,6 +178,7 @@ end:
 # OBJ-ERR-NEXT:         AArch64 PAuth ABI core info: [[ERR]]
 # OBJ-ERR-NEXT:       ]
 # OBJ-ERR-NEXT:     }
+# OBJ-ERR-NEXT:    ]
 # OBJ-ERR-NEXT:   }
 # OBJ-ERR-NEXT: ]
 

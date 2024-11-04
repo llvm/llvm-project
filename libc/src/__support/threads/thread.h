@@ -14,6 +14,7 @@
 #include "src/__support/CPP/string_view.h"
 #include "src/__support/CPP/stringstream.h"
 #include "src/__support/macros/attributes.h"
+#include "src/__support/macros/config.h"
 #include "src/__support/macros/properties/architectures.h"
 
 #include <linux/param.h> // for exec_pagesize.
@@ -21,7 +22,7 @@
 #include <stddef.h> // For size_t
 #include <stdint.h>
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 using ThreadRunnerPosix = void *(void *);
 using ThreadRunnerStdc = int(void *);
@@ -43,6 +44,9 @@ union ThreadReturnValue {
      defined(LIBC_TARGET_ARCH_IS_X86_64) ||                                    \
      defined(LIBC_TARGET_ARCH_IS_ANY_RISCV))
 constexpr unsigned int STACK_ALIGNMENT = 16;
+#elif defined(LIBC_TARGET_ARCH_IS_ARM)
+// See Section 6.2.1.2 Stack constraints at a public interface of AAPCS32.
+constexpr unsigned int STACK_ALIGNMENT = 8;
 #endif
 // TODO: Provide stack alignment requirements for other architectures.
 
@@ -247,6 +251,6 @@ void call_atexit_callbacks(ThreadAttributes *attrib);
 
 } // namespace internal
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC___SUPPORT_THREADS_THREAD_H

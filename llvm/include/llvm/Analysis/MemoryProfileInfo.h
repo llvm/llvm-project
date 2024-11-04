@@ -37,6 +37,10 @@ MDNode *getMIBStackNode(const MDNode *MIB);
 /// Returns the allocation type from an MIB metadata node.
 AllocationType getMIBAllocType(const MDNode *MIB);
 
+/// Returns the total size from an MIB metadata node, or 0 if it was not
+/// recorded.
+uint64_t getMIBTotalSize(const MDNode *MIB);
+
 /// Returns the string to use in attributes with the given type.
 std::string getAllocTypeAttributeString(AllocationType Type);
 
@@ -54,10 +58,11 @@ private:
     // Allocation types for call context sharing the context prefix at this
     // node.
     uint8_t AllocTypes;
+    uint64_t TotalSize;
     // Map of caller stack id to the corresponding child Trie node.
     std::map<uint64_t, CallStackTrieNode *> Callers;
-    CallStackTrieNode(AllocationType Type)
-        : AllocTypes(static_cast<uint8_t>(Type)) {}
+    CallStackTrieNode(AllocationType Type, uint64_t TotalSize)
+        : AllocTypes(static_cast<uint8_t>(Type)), TotalSize(TotalSize) {}
   };
 
   // The node for the allocation at the root.
@@ -90,7 +95,8 @@ public:
   /// matching via a debug location hash), expected to be in order from the
   /// allocation call down to the bottom of the call stack (i.e. callee to
   /// caller order).
-  void addCallStack(AllocationType AllocType, ArrayRef<uint64_t> StackIds);
+  void addCallStack(AllocationType AllocType, ArrayRef<uint64_t> StackIds,
+                    uint64_t TotalSize = 0);
 
   /// Add the call stack context along with its allocation type from the MIB
   /// metadata to the Trie.

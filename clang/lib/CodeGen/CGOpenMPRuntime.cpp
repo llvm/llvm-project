@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "CGOpenMPRuntime.h"
+#include "ABIInfoImpl.h"
 #include "CGCXXABI.h"
 #include "CGCleanup.h"
 #include "CGRecordLayout.h"
@@ -30,6 +31,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SetOperations.h"
 #include "llvm/ADT/SmallBitVector.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Bitcode/BitcodeReader.h"
 #include "llvm/IR/Constants.h"
@@ -2553,6 +2555,15 @@ void CGOpenMPRuntime::emitForDispatchInit(
                       Args);
 }
 
+void CGOpenMPRuntime::emitForDispatchDeinit(CodeGenFunction &CGF,
+                                            SourceLocation Loc) {
+  if (!CGF.HaveInsertPoint())
+    return;
+  // Call __kmpc_dispatch_deinit(ident_t *loc, kmp_int32 tid);
+  llvm::Value *Args[] = {emitUpdateLocation(CGF, Loc), getThreadID(CGF, Loc)};
+  CGF.EmitRuntimeCall(OMPBuilder.createDispatchDeinitFunction(), Args);
+}
+
 static void emitForStaticInitCall(
     CodeGenFunction &CGF, llvm::Value *UpdateLocation, llvm::Value *ThreadId,
     llvm::FunctionCallee ForStaticInitFunction, OpenMPSchedType Schedule,
@@ -4248,14 +4259,18 @@ std::pair<llvm::Value *, Address> CGOpenMPRuntime::emitDependClause(
     // Include number of iterations, if any.
 
     if (const auto *IE = cast_or_null<OMPIteratorExpr>(D.IteratorExpr)) {
+      llvm::Value *ClauseIteratorSpace =
+          llvm::ConstantInt::get(CGF.IntPtrTy, 1);
       for (unsigned I = 0, E = IE->numOfIterators(); I < E; ++I) {
         llvm::Value *Sz = CGF.EmitScalarExpr(IE->getHelper(I).Upper);
         Sz = CGF.Builder.CreateIntCast(Sz, CGF.IntPtrTy, /*isSigned=*/false);
-        llvm::Value *NumClauseDeps = CGF.Builder.CreateNUWMul(
-            Sz, llvm::ConstantInt::get(CGF.IntPtrTy, D.DepExprs.size()));
-        NumOfRegularWithIterators =
-            CGF.Builder.CreateNUWAdd(NumOfRegularWithIterators, NumClauseDeps);
+        ClauseIteratorSpace = CGF.Builder.CreateNUWMul(Sz, ClauseIteratorSpace);
       }
+      llvm::Value *NumClauseDeps = CGF.Builder.CreateNUWMul(
+          ClauseIteratorSpace,
+          llvm::ConstantInt::get(CGF.IntPtrTy, D.DepExprs.size()));
+      NumOfRegularWithIterators =
+          CGF.Builder.CreateNUWAdd(NumOfRegularWithIterators, NumClauseDeps);
       HasRegularWithIterators = true;
       continue;
     }
@@ -7719,12 +7734,15 @@ private:
     for (const auto &I : RD->bases()) {
       if (I.isVirtual())
         continue;
-      const auto *Base = I.getType()->getAsCXXRecordDecl();
+
+      QualType BaseTy = I.getType();
+      const auto *Base = BaseTy->getAsCXXRecordDecl();
       // Ignore empty bases.
-      if (Base->isEmpty() || CGF.getContext()
-                                 .getASTRecordLayout(Base)
-                                 .getNonVirtualSize()
-                                 .isZero())
+      if (isEmptyRecordForLayout(CGF.getContext(), BaseTy) ||
+          CGF.getContext()
+              .getASTRecordLayout(Base)
+              .getNonVirtualSize()
+              .isZero())
         continue;
 
       unsigned FieldIndex = RL.getNonVirtualBaseLLVMFieldNo(Base);
@@ -7732,10 +7750,12 @@ private:
     }
     // Fill in virtual bases.
     for (const auto &I : RD->vbases()) {
-      const auto *Base = I.getType()->getAsCXXRecordDecl();
+      QualType BaseTy = I.getType();
       // Ignore empty bases.
-      if (Base->isEmpty())
+      if (isEmptyRecordForLayout(CGF.getContext(), BaseTy))
         continue;
+
+      const auto *Base = BaseTy->getAsCXXRecordDecl();
       unsigned FieldIndex = RL.getVirtualBaseIndex(Base);
       if (RecordLayout[FieldIndex])
         continue;
@@ -7746,7 +7766,8 @@ private:
     for (const auto *Field : RD->fields()) {
       // Fill in non-bitfields. (Bitfields always use a zero pattern, which we
       // will fill in later.)
-      if (!Field->isBitField() && !Field->isZeroSize(CGF.getContext())) {
+      if (!Field->isBitField() &&
+          !isEmptyFieldForLayout(CGF.getContext(), Field)) {
         unsigned FieldIndex = RL.getLLVMFieldNo(Field);
         RecordLayout[FieldIndex] = Field;
       }
@@ -8025,6 +8046,21 @@ private:
       MapCombinedInfoTy StructBaseCurInfo;
       const Decl *D = Data.first;
       const ValueDecl *VD = cast_or_null<ValueDecl>(D);
+      bool HasMapBasePtr = false;
+      bool HasMapArraySec = false;
+      if (VD && VD->getType()->isAnyPointerType()) {
+        for (const auto &M : Data.second) {
+          HasMapBasePtr = any_of(M, [](const MapInfo &L) {
+            return isa_and_present<DeclRefExpr>(L.VarRef);
+          });
+          HasMapArraySec = any_of(M, [](const MapInfo &L) {
+            return isa_and_present<ArraySectionExpr, ArraySubscriptExpr>(
+                L.VarRef);
+          });
+          if (HasMapBasePtr && HasMapArraySec)
+            break;
+        }
+      }
       for (const auto &M : Data.second) {
         for (const MapInfo &L : M) {
           assert(!L.Components.empty() &&
@@ -8041,7 +8077,8 @@ private:
               CurInfo, StructBaseCurInfo, PartialStruct,
               /*IsFirstComponentList=*/false, L.IsImplicit,
               /*GenerateAllInfoForClauses*/ true, L.Mapper, L.ForDeviceAddr, VD,
-              L.VarRef);
+              L.VarRef, /*OverlappedElements*/ std::nullopt,
+              HasMapBasePtr && HasMapArraySec);
 
           // If this entry relates to a device pointer, set the relevant
           // declaration and add the 'return pointer' flag.
@@ -10332,16 +10369,12 @@ void CGOpenMPRuntime::emitTargetDataStandAloneCall(
     // Source location for the ident struct
     llvm::Value *RTLoc = emitUpdateLocation(CGF, D.getBeginLoc());
 
-    llvm::Value *OffloadingArgs[] = {
-        RTLoc,
-        DeviceID,
-        PointerNum,
-        InputInfo.BasePointersArray.emitRawPointer(CGF),
-        InputInfo.PointersArray.emitRawPointer(CGF),
-        InputInfo.SizesArray.emitRawPointer(CGF),
-        MapTypesArray,
-        MapNamesArray,
-        InputInfo.MappersArray.emitRawPointer(CGF)};
+    SmallVector<llvm::Value *, 13> OffloadingArgs(
+        {RTLoc, DeviceID, PointerNum,
+         InputInfo.BasePointersArray.emitRawPointer(CGF),
+         InputInfo.PointersArray.emitRawPointer(CGF),
+         InputInfo.SizesArray.emitRawPointer(CGF), MapTypesArray, MapNamesArray,
+         InputInfo.MappersArray.emitRawPointer(CGF)});
 
     // Select the right runtime function call for each standalone
     // directive.
@@ -10429,6 +10462,12 @@ void CGOpenMPRuntime::emitTargetDataStandAloneCall(
     default:
       llvm_unreachable("Unexpected standalone target data directive.");
       break;
+    }
+    if (HasNowait) {
+      OffloadingArgs.push_back(llvm::Constant::getNullValue(CGF.Int32Ty));
+      OffloadingArgs.push_back(llvm::Constant::getNullValue(CGF.VoidPtrTy));
+      OffloadingArgs.push_back(llvm::Constant::getNullValue(CGF.Int32Ty));
+      OffloadingArgs.push_back(llvm::Constant::getNullValue(CGF.VoidPtrTy));
     }
     CGF.EmitRuntimeCall(
         OMPBuilder.getOrCreateRuntimeFunction(CGM.getModule(), RTLFn),
@@ -11993,6 +12032,11 @@ void CGOpenMPSIMDRuntime::emitForDispatchInit(
     CodeGenFunction &CGF, SourceLocation Loc,
     const OpenMPScheduleTy &ScheduleKind, unsigned IVSize, bool IVSigned,
     bool Ordered, const DispatchRTInput &DispatchValues) {
+  llvm_unreachable("Not supported in SIMD-only mode");
+}
+
+void CGOpenMPSIMDRuntime::emitForDispatchDeinit(CodeGenFunction &CGF,
+                                                SourceLocation Loc) {
   llvm_unreachable("Not supported in SIMD-only mode");
 }
 

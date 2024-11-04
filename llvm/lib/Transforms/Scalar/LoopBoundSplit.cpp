@@ -405,7 +405,7 @@ static bool splitLoopBound(Loop &L, DominatorTree &DT, LoopInfo &LI,
                      : SE.getUMinExpr(NewBoundSCEV, SplitBoundSCEV);
 
   SCEVExpander Expander(
-      SE, L.getHeader()->getParent()->getParent()->getDataLayout(), "split");
+      SE, L.getHeader()->getDataLayout(), "split");
   Instruction *InsertPt = SplitLoopPH->getTerminator();
   Value *NewBoundValue =
       Expander.expandCodeFor(NewBoundSCEV, NewBoundSCEV->getType(), InsertPt);

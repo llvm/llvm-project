@@ -66,8 +66,7 @@ extern "C" void workshareloop_rangefor(float *a, float *b, float *c) {
 // CHECK-NEXT:    store ptr [[__BEGIN2]], ptr [[TMP2]], align 8
 // CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds [[STRUCT_ANON]], ptr [[AGG_CAPTURED]], i32 0, i32 1
 // CHECK-NEXT:    store ptr [[__END2]], ptr [[TMP3]], align 8
-// CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [[STRUCT_ANON_0]], ptr [[AGG_CAPTURED1]], i32 0, i32 0
-// CHECK-NEXT:    call void @_ZN10MyIteratorC1ERKS_(ptr noundef nonnull align 1 dereferenceable(1) [[TMP4]], ptr noundef nonnull align 1 dereferenceable(1) [[__BEGIN2]])
+// CHECK-NEXT:    call void @_ZN10MyIteratorC1ERKS_(ptr noundef nonnull align 1 dereferenceable(1) [[AGG_CAPTURED1]], ptr noundef nonnull align 1 dereferenceable(1) [[__BEGIN2]])
 // CHECK-NEXT:    call void @__captured_stmt(ptr [[DOTCOUNT_ADDR]], ptr [[AGG_CAPTURED]])
 // CHECK-NEXT:    [[DOTCOUNT:%.*]] = load i64, ptr [[DOTCOUNT_ADDR]], align 8
 // CHECK-NEXT:    br label [[OMP_LOOP_PREHEADER:%.*]]
@@ -173,13 +172,12 @@ extern "C" void workshareloop_rangefor(float *a, float *b, float *c) {
 // CHECK-NEXT:    store i64 [[LOGICAL]], ptr [[LOGICAL_ADDR]], align 8
 // CHECK-NEXT:    store ptr [[__CONTEXT]], ptr [[__CONTEXT_ADDR]], align 8
 // CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[__CONTEXT_ADDR]], align 8
-// CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [[STRUCT_ANON_0:%.*]], ptr [[TMP0]], i32 0, i32 0
-// CHECK-NEXT:    [[TMP2:%.*]] = load i64, ptr [[LOGICAL_ADDR]], align 8
-// CHECK-NEXT:    [[MUL:%.*]] = mul i64 1, [[TMP2]]
+// CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr [[LOGICAL_ADDR]], align 8
+// CHECK-NEXT:    [[MUL:%.*]] = mul i64 1, [[TMP1]]
 // CHECK-NEXT:    [[CONV:%.*]] = trunc i64 [[MUL]] to i32
-// CHECK-NEXT:    call void @_ZNK10MyIteratorplEj(ptr dead_on_unwind writable sret([[STRUCT_MYITERATOR]]) align 1 [[REF_TMP]], ptr noundef nonnull align 1 dereferenceable(1) [[TMP1]], i32 noundef [[CONV]])
+// CHECK-NEXT:    call void @_ZNK10MyIteratorplEj(ptr dead_on_unwind writable sret([[STRUCT_MYITERATOR]]) align 1 [[REF_TMP]], ptr noundef nonnull align 1 dereferenceable(1) [[TMP0]], i32 noundef [[CONV]])
 // CHECK-NEXT:    [[CALL:%.*]] = call noundef i32 @_ZNK10MyIteratordeEv(ptr noundef nonnull align 1 dereferenceable(1) [[REF_TMP]])
-// CHECK-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[LOOPVAR_ADDR]], align 8
-// CHECK-NEXT:    store i32 [[CALL]], ptr [[TMP3]], align 4
+// CHECK-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[LOOPVAR_ADDR]], align 8
+// CHECK-NEXT:    store i32 [[CALL]], ptr [[TMP2]], align 4
 // CHECK-NEXT:    ret void
 //

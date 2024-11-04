@@ -157,7 +157,6 @@ SerializeGPUModuleBase::loadBitcodeFiles(llvm::Module &module) {
   return std::move(bcFiles);
 }
 
-#if LLVM_HAS_NVPTX_TARGET
 namespace {
 class NVPTXSerializer : public SerializeGPUModuleBase {
 public:
@@ -532,6 +531,12 @@ NVPTXSerializer::moduleToObject(llvm::Module &llvmModule) {
   if (targetOptions.getCompilationTarget() == gpu::CompilationTarget::Offload)
     return SerializeGPUModuleBase::moduleToObject(llvmModule);
 
+#if !LLVM_HAS_NVPTX_TARGET
+  getOperation()->emitError(
+      "The `NVPTX` target was not built. Please enable it when building LLVM.");
+  return std::nullopt;
+#endif // LLVM_HAS_NVPTX_TARGET
+
   // Emit PTX code.
   std::optional<llvm::TargetMachine *> targetMachine =
       getOrCreateTargetMachine();
@@ -569,7 +574,6 @@ NVPTXSerializer::moduleToObject(llvm::Module &llvmModule) {
   return compileToBinary(*serializedISA);
 #endif // MLIR_ENABLE_NVPTXCOMPILER
 }
-#endif // LLVM_HAS_NVPTX_TARGET
 
 std::optional<SmallVector<char, 0>>
 NVVMTargetAttrImpl::serializeToObject(Attribute attribute, Operation *module,
@@ -581,15 +585,9 @@ NVVMTargetAttrImpl::serializeToObject(Attribute attribute, Operation *module,
     module->emitError("Module must be a GPU module.");
     return std::nullopt;
   }
-#if LLVM_HAS_NVPTX_TARGET
   NVPTXSerializer serializer(*module, cast<NVVMTargetAttr>(attribute), options);
   serializer.init();
   return serializer.run();
-#else
-  module->emitError(
-      "The `NVPTX` target was not built. Please enable it when building LLVM.");
-  return std::nullopt;
-#endif // LLVM_HAS_NVPTX_TARGET
 }
 
 Attribute

@@ -411,7 +411,7 @@ void InputSection::copyRelocations(uint8_t *buf,
     auto *p = reinterpret_cast<typename ELFT::Rela *>(buf);
     buf += sizeof(RelTy);
 
-    if (RelTy::IsRela)
+    if (RelTy::HasAddend)
       p->r_addend = rel.addend;
 
     // Output section VA is zero for -r, so r_offset is an offset within the
@@ -452,7 +452,7 @@ void InputSection::copyRelocations(uint8_t *buf,
 
       int64_t addend = rel.addend;
       const uint8_t *bufLoc = sec->content().begin() + rel.offset;
-      if (!RelTy::IsRela)
+      if (!RelTy::HasAddend)
         addend = target.getImplicitAddend(bufLoc, type);
 
       if (config->emachine == EM_MIPS &&
@@ -471,7 +471,7 @@ void InputSection::copyRelocations(uint8_t *buf,
         addend += sec->getFile<ELFT>()->mipsGp0;
       }
 
-      if (RelTy::IsRela)
+      if (RelTy::HasAddend)
         p->r_addend = sym.getVA(addend) - section->getOutputSection()->addr;
       // For SHF_ALLOC sections relocated by REL, append a relocation to
       // sec->relocations so that relocateAlloc transitively called by
@@ -660,6 +660,11 @@ static int64_t getTlsTpOffset(const Symbol &s) {
     return s.getVA(0) + (tls->p_vaddr & (tls->p_align - 1)) - 0x7000;
   case EM_LOONGARCH:
   case EM_RISCV:
+    // See the comment in handleTlsRelocation. For TLSDESC=>IE,
+    // R_RISCV_TLSDESC_{LOAD_LO12,ADD_LO12_I,CALL} also reach here. While
+    // `tls` may be null, the return value is ignored.
+    if (s.type != STT_TLS)
+      return 0;
     return s.getVA(0) + (tls->p_vaddr & (tls->p_align - 1));
 
     // Variant 2.
@@ -934,7 +939,7 @@ void InputSection::relocateNonAlloc(uint8_t *buf, ArrayRef<RelTy> rels) {
     const uint64_t offset = rel.r_offset;
     uint8_t *bufLoc = buf + offset;
     int64_t addend = getAddend<ELFT>(rel);
-    if (!RelTy::IsRela)
+    if (!RelTy::HasAddend)
       addend += target.getImplicitAddend(bufLoc, type);
 
     Symbol &sym = f->getRelocTargetSym(rel);
@@ -1007,10 +1012,11 @@ void InputSection::relocateNonAlloc(uint8_t *buf, ArrayRef<RelTy> rels) {
       }
     }
 
-    // For a relocatable link, content relocated by RELA remains unchanged and
-    // we can stop here, while content relocated by REL referencing STT_SECTION
-    // needs updating implicit addends.
-    if (config->relocatable && (RelTy::IsRela || sym.type != STT_SECTION))
+    // For a relocatable link, content relocated by relocation types with an
+    // explicit addend, such as RELA, remain unchanged and we can stop here.
+    // While content relocated by relocation types with an implicit addend, such
+    // as REL, needs the implicit addend updated.
+    if (config->relocatable && (RelTy::HasAddend || sym.type != STT_SECTION))
       continue;
 
     // R_ABS/R_DTPREL and some other relocations can be used from non-SHF_ALLOC

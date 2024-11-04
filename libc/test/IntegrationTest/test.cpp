@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/__support/common.h"
+#include "src/__support/macros/config.h"
 #include <stddef.h>
 #include <stdint.h>
 
@@ -19,7 +20,7 @@
 // entrypoint to the internal implementation of the function used for testing.
 // This is done manually as not all targets support aliases.
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 int bcmp(const void *lhs, const void *rhs, size_t count);
 void bzero(void *ptr, size_t count);
@@ -29,7 +30,7 @@ void *memmove(void *dst, const void *src, size_t count);
 void *memset(void *ptr, int value, size_t count);
 int atexit(void (*func)(void));
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 extern "C" {
 

@@ -397,12 +397,12 @@ public:
       OpBuilder builder(startOperation);
       Operation *allocOp = alloc.getDefiningOp();
       if (auto allocInterface = dyn_cast<AllocationOpInterface>(allocOp)) {
-        Operation *alloca =
-            allocInterface.buildPromotedAlloc(builder, alloc).value();
+        std::optional<Operation *> alloca =
+            allocInterface.buildPromotedAlloc(builder, alloc);
         if (!alloca)
           continue;
         // Replace the original alloc by a newly created alloca.
-        allocOp->replaceAllUsesWith(alloca);
+        allocOp->replaceAllUsesWith(alloca.value());
         allocOp->erase();
       }
     }

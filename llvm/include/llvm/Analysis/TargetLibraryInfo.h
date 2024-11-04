@@ -327,11 +327,9 @@ public:
                            bool AllowCallerSuperset) const {
     if (!AllowCallerSuperset)
       return OverrideAsUnavailable == CalleeTLI.OverrideAsUnavailable;
-    BitVector B = OverrideAsUnavailable;
-    B |= CalleeTLI.OverrideAsUnavailable;
-    // We can inline if the union of the caller and callee's nobuiltin
-    // attributes is no stricter than the caller's nobuiltin attributes.
-    return B == OverrideAsUnavailable;
+    // We can inline if the callee's nobuiltin attributes are no stricter than
+    // the caller's.
+    return !CalleeTLI.OverrideAsUnavailable.test(OverrideAsUnavailable);
   }
 
   /// Return true if the function type FTy is valid for the library function
@@ -410,10 +408,12 @@ public:
       return false;
     switch (F) {
     default: break;
+      // clang-format off
     case LibFunc_copysign:     case LibFunc_copysignf:  case LibFunc_copysignl:
     case LibFunc_fabs:         case LibFunc_fabsf:      case LibFunc_fabsl:
     case LibFunc_sin:          case LibFunc_sinf:       case LibFunc_sinl:
     case LibFunc_cos:          case LibFunc_cosf:       case LibFunc_cosl:
+    case LibFunc_tan:          case LibFunc_tanf:       case LibFunc_tanl:
     case LibFunc_sqrt:         case LibFunc_sqrtf:      case LibFunc_sqrtl:
     case LibFunc_sqrt_finite:  case LibFunc_sqrtf_finite:
                                                    case LibFunc_sqrtl_finite:
@@ -432,6 +432,7 @@ public:
     case LibFunc_memcmp:       case LibFunc_bcmp:       case LibFunc_strcmp:
     case LibFunc_strcpy:       case LibFunc_stpcpy:     case LibFunc_strlen:
     case LibFunc_strnlen:      case LibFunc_memchr:     case LibFunc_mempcpy:
+      // clang-format on
       return true;
     }
     return false;

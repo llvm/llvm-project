@@ -106,7 +106,7 @@ define amdgpu_kernel void @v_abs_v2i16_2(ptr addrspace(1) %out, ptr addrspace(1)
 }
 
 ; GCN-LABEL: {{^}}s_abs_v4i16:
-; GFX9: s_load_dwordx4 s[[[#LOAD:]]:{{[0-9]+}}], s[0:1], 0x24
+; GFX9: s_load_dwordx4 s[[[#LOAD:]]:{{[0-9]+}}], s[2:3], 0x24
 ; GFX9-DAG: v_pk_sub_i16 [[SUB0:v[0-9]+]], 0, s[[#LOAD + 2]]
 ; GFX9-DAG: v_pk_sub_i16 [[SUB1:v[0-9]+]], 0, s[[#LOAD + 3]]
 ; GFX9-DAG: v_pk_max_i16 [[MAX0:v[0-9]+]], s[[#LOAD + 2]], [[SUB0]]

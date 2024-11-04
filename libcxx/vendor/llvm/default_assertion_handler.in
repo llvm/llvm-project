@@ -23,8 +23,11 @@
 
 #else
 
-// TODO(hardening): use `__builtin_verbose_trap(message)` once that becomes available.
-#  define _LIBCPP_ASSERTION_HANDLER(message) ((void)message, __builtin_trap())
+#  if __has_builtin(__builtin_verbose_trap)
+#    define _LIBCPP_ASSERTION_HANDLER(message) __builtin_verbose_trap("libc++", message)
+#  else
+#    define _LIBCPP_ASSERTION_HANDLER(message) ((void)message, __builtin_trap())
+#  endif
 
 #endif // _LIBCPP_HARDENING_MODE == _LIBCPP_HARDENING_MODE_DEBUG
 

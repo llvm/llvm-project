@@ -232,7 +232,7 @@ void CodeGenFunction::EmitCXXGlobalVarDeclInit(const VarDecl &D,
 
 /// Create a stub function, suitable for being passed to atexit,
 /// which passes the given address to the given destructor function.
-llvm::Function *CodeGenFunction::createAtExitStub(const VarDecl &VD,
+llvm::Constant *CodeGenFunction::createAtExitStub(const VarDecl &VD,
                                                   llvm::FunctionCallee dtor,
                                                   llvm::Constant *addr) {
   // Get the destructor function type, void(*)(void).
@@ -264,7 +264,12 @@ llvm::Function *CodeGenFunction::createAtExitStub(const VarDecl &VD,
 
   CGF.FinishFunction();
 
-  return fn;
+  // Get a proper function pointer.
+  FunctionProtoType::ExtProtoInfo EPI(getContext().getDefaultCallingConvention(
+      /*IsVariadic=*/false, /*IsCXXMethod=*/false));
+  QualType fnType = getContext().getFunctionType(getContext().VoidTy,
+                                                 {getContext().VoidPtrTy}, EPI);
+  return CGM.getFunctionPointer(fn, fnType);
 }
 
 /// Create a stub function, suitable for being passed to __pt_atexit_np,
@@ -333,7 +338,8 @@ void CodeGenFunction::registerGlobalDtorWithLLVM(const VarDecl &VD,
                                                  llvm::FunctionCallee Dtor,
                                                  llvm::Constant *Addr) {
   // Create a function which calls the destructor.
-  llvm::Function *dtorStub = createAtExitStub(VD, Dtor, Addr);
+  llvm::Function *dtorStub =
+      cast<llvm::Function>(createAtExitStub(VD, Dtor, Addr));
   CGM.AddGlobalDtor(dtorStub);
 }
 
@@ -839,6 +845,10 @@ CodeGenModule::EmitCXXGlobalInitFunc() {
     for (Module *M : ImportedModules) {
       // No Itanium initializer in header like modules.
       if (M->isHeaderLikeModule())
+        continue;
+      // We're allowed to skip the initialization if we are sure it doesn't
+      // do any thing.
+      if (!M->isNamedModuleInterfaceHasInit())
         continue;
       llvm::FunctionType *FTy = llvm::FunctionType::get(VoidTy, false);
       SmallString<256> FnName;
