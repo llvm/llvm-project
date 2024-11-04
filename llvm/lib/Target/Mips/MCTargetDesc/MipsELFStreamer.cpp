@@ -112,10 +112,11 @@ void MipsELFStreamer::EmitMipsOptionRecords() {
     I->EmitMipsOptionRecord();
 }
 
-MCELFStreamer *llvm::createMipsELFStreamer(
-    MCContext &Context, std::unique_ptr<MCAsmBackend> MAB,
-    std::unique_ptr<MCObjectWriter> OW, std::unique_ptr<MCCodeEmitter> Emitter,
-    bool RelaxAll) {
+MCELFStreamer *
+llvm::createMipsELFStreamer(MCContext &Context,
+                            std::unique_ptr<MCAsmBackend> MAB,
+                            std::unique_ptr<MCObjectWriter> OW,
+                            std::unique_ptr<MCCodeEmitter> Emitter) {
   return new MipsELFStreamer(Context, std::move(MAB), std::move(OW),
                              std::move(Emitter));
 }

@@ -13,25 +13,26 @@ define dso_local i32 @g() local_unnamed_addr {
 ; CHECK:       while.body:
 ; CHECK-NEXT:    [[C_022:%.*]] = phi ptr [ [[C_022_BE:%.*]], [[WHILE_BODY_BACKEDGE:%.*]] ], [ undef, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    [[TMP1:%.*]] = phi <2 x ptr> [ [[TMP14:%.*]], [[WHILE_BODY_BACKEDGE]] ], [ undef, [[ENTRY]] ]
-; CHECK-NEXT:    [[INCDEC_PTR:%.*]] = getelementptr inbounds i32, ptr [[C_022]], i64 1
-; CHECK-NEXT:    [[TMP2:%.*]] = ptrtoint ptr [[C_022]] to i64
+; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <2 x ptr> [[TMP1]], i32 1
+; CHECK-NEXT:    [[TMP2:%.*]] = ptrtoint ptr [[TMP9]] to i64
 ; CHECK-NEXT:    [[TMP3:%.*]] = trunc i64 [[TMP2]] to i32
+; CHECK-NEXT:    [[INCDEC_PTR1:%.*]] = getelementptr inbounds i32, ptr [[C_022]], i64 1
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr i32, <2 x ptr> [[TMP1]], <2 x i64> <i64 1, i64 1>
 ; CHECK-NEXT:    switch i32 [[TMP3]], label [[WHILE_BODY_BACKEDGE]] [
-; CHECK-NEXT:    i32 2, label [[SW_BB:%.*]]
-; CHECK-NEXT:    i32 4, label [[SW_BB6:%.*]]
+; CHECK-NEXT:      i32 2, label [[SW_BB:%.*]]
+; CHECK-NEXT:      i32 4, label [[SW_BB6:%.*]]
 ; CHECK-NEXT:    ]
 ; CHECK:       sw.bb:
 ; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x ptr> [[TMP4]], i32 0
 ; CHECK-NEXT:    [[TMP6:%.*]] = ptrtoint ptr [[TMP5]] to i64
 ; CHECK-NEXT:    [[TMP7:%.*]] = trunc i64 [[TMP6]] to i32
-; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr i32, <2 x ptr> [[TMP1]], <2 x i64> <i64 2, i64 2>
-; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <2 x ptr> [[TMP4]], i32 1
-; CHECK-NEXT:    store i32 [[TMP7]], ptr [[TMP9]], align 4
 ; CHECK-NEXT:    [[INCDEC_PTR5:%.*]] = getelementptr inbounds i32, ptr [[C_022]], i64 2
+; CHECK-NEXT:    store i32 [[TMP7]], ptr [[INCDEC_PTR1]], align 4
+; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr i32, <2 x ptr> [[TMP1]], <2 x i64> <i64 2, i64 2>
 ; CHECK-NEXT:    br label [[WHILE_BODY_BACKEDGE]]
 ; CHECK:       sw.bb6:
 ; CHECK-NEXT:    [[INCDEC_PTR8:%.*]] = getelementptr inbounds i32, ptr [[C_022]], i64 2
+; CHECK-NEXT:    [[INCDEC_PTR:%.*]] = getelementptr inbounds i32, ptr [[TMP9]], i64 1
 ; CHECK-NEXT:    [[TMP10:%.*]] = ptrtoint ptr [[INCDEC_PTR]] to i64
 ; CHECK-NEXT:    [[TMP11:%.*]] = trunc i64 [[TMP10]] to i32
 ; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr i32, <2 x ptr> [[TMP1]], <2 x i64> <i64 2, i64 2>
@@ -39,7 +40,7 @@ define dso_local i32 @g() local_unnamed_addr {
 ; CHECK-NEXT:    store i32 [[TMP11]], ptr [[TMP13]], align 4
 ; CHECK-NEXT:    br label [[WHILE_BODY_BACKEDGE]]
 ; CHECK:       while.body.backedge:
-; CHECK-NEXT:    [[C_022_BE]] = phi ptr [ [[INCDEC_PTR]], [[WHILE_BODY]] ], [ [[INCDEC_PTR8]], [[SW_BB6]] ], [ [[INCDEC_PTR5]], [[SW_BB]] ]
+; CHECK-NEXT:    [[C_022_BE]] = phi ptr [ [[INCDEC_PTR1]], [[WHILE_BODY]] ], [ [[INCDEC_PTR8]], [[SW_BB6]] ], [ [[INCDEC_PTR5]], [[SW_BB]] ]
 ; CHECK-NEXT:    [[TMP14]] = phi <2 x ptr> [ [[TMP4]], [[WHILE_BODY]] ], [ [[TMP12]], [[SW_BB6]] ], [ [[TMP8]], [[SW_BB]] ]
 ; CHECK-NEXT:    br label [[WHILE_BODY]]
 ; CHECK:       while.end:

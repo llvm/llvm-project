@@ -4,6 +4,9 @@ add_object_library(
     time_utils.cpp
   HDRS
     time_utils.h
+  DEPENDS
+    libc.hdr.types.clock_t
+    libc.hdr.time_macros
 )
 
 add_entrypoint_object(

@@ -217,6 +217,7 @@ TEST_F(SelectionDAGPatternMatchTest, matchConstants) {
   SDValue Zero = DAG->getConstant(0, DL, Int32VT);
   SDValue One = DAG->getConstant(1, DL, Int32VT);
   SDValue AllOnes = DAG->getConstant(APInt::getAllOnes(32), DL, Int32VT);
+  SDValue SetCC = DAG->getSetCC(DL, Int32VT, Arg0, Const3, ISD::SETULT);
 
   using namespace SDPatternMatch;
   EXPECT_TRUE(sd_match(Const87, m_ConstInt()));
@@ -233,6 +234,13 @@ TEST_F(SelectionDAGPatternMatchTest, matchConstants) {
   EXPECT_TRUE(sd_match(Zero, DAG.get(), m_False()));
   EXPECT_TRUE(sd_match(One, DAG.get(), m_True()));
   EXPECT_FALSE(sd_match(AllOnes, DAG.get(), m_True()));
+
+  ISD::CondCode CC;
+  EXPECT_TRUE(sd_match(
+      SetCC, m_Node(ISD::SETCC, m_Value(), m_Value(), m_CondCode(CC))));
+  EXPECT_EQ(CC, ISD::SETULT);
+  EXPECT_TRUE(sd_match(SetCC, m_Node(ISD::SETCC, m_Value(), m_Value(),
+                                     m_SpecificCondCode(ISD::SETULT))));
 }
 
 TEST_F(SelectionDAGPatternMatchTest, patternCombinators) {
@@ -249,6 +257,7 @@ TEST_F(SelectionDAGPatternMatchTest, patternCombinators) {
   EXPECT_TRUE(sd_match(
       Sub, m_AnyOf(m_Opc(ISD::ADD), m_Opc(ISD::SUB), m_Opc(ISD::MUL))));
   EXPECT_TRUE(sd_match(Add, m_AllOf(m_Opc(ISD::ADD), m_OneUse())));
+  EXPECT_TRUE(sd_match(Add, m_NoneOf(m_Opc(ISD::SUB), m_Opc(ISD::MUL))));
 }
 
 TEST_F(SelectionDAGPatternMatchTest, optionalResizing) {
@@ -260,6 +269,8 @@ TEST_F(SelectionDAGPatternMatchTest, optionalResizing) {
   SDValue Op64 = DAG->getCopyFromReg(DAG->getEntryNode(), DL, 1, Int64VT);
   SDValue ZExt = DAG->getNode(ISD::ZERO_EXTEND, DL, Int64VT, Op32);
   SDValue SExt = DAG->getNode(ISD::SIGN_EXTEND, DL, Int64VT, Op32);
+  SDValue SExtInReg = DAG->getNode(ISD::SIGN_EXTEND_INREG, DL, Int64VT, Op64,
+                                   DAG->getValueType(Int32VT));
   SDValue AExt = DAG->getNode(ISD::ANY_EXTEND, DL, Int64VT, Op32);
   SDValue Trunc = DAG->getNode(ISD::TRUNCATE, DL, Int32VT, Op64);
 
@@ -273,6 +284,8 @@ TEST_F(SelectionDAGPatternMatchTest, optionalResizing) {
   EXPECT_TRUE(A == Op64);
   EXPECT_TRUE(sd_match(SExt, m_SExtOrSelf(m_Value(A))));
   EXPECT_TRUE(A == Op32);
+  EXPECT_TRUE(sd_match(SExtInReg, m_SExtOrSelf(m_Value(A))));
+  EXPECT_TRUE(A == Op64);
   EXPECT_TRUE(sd_match(Op32, m_AExtOrSelf(m_Value(A))));
   EXPECT_TRUE(A == Op32);
   EXPECT_TRUE(sd_match(AExt, m_AExtOrSelf(m_Value(A))));

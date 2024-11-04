@@ -34,16 +34,16 @@ class EmitC_Op<string mnemonic, list<Trait> traits = []>
 // Base class for unary operations.
 class EmitC_UnaryOp<string mnemonic, list<Trait> traits = []> :
     EmitC_Op<mnemonic, traits> {
-  let arguments = (ins AnyType);
-  let results = (outs AnyType);
+  let arguments = (ins EmitCType);
+  let results = (outs EmitCType);
   let assemblyFormat = "operands attr-dict `:` functional-type(operands, results)";
 }
 
 // Base class for binary operations.
 class EmitC_BinaryOp<string mnemonic, list<Trait> traits = []> :
     EmitC_Op<mnemonic, traits> {
-  let arguments = (ins AnyType:$lhs, AnyType:$rhs);
-  let results = (outs AnyType);
+  let arguments = (ins EmitCType:$lhs, EmitCType:$rhs);
+  let results = (outs EmitCType);
   let assemblyFormat = "operands attr-dict `:` functional-type(operands, results)";
 }
 
@@ -97,9 +97,9 @@ def EmitC_ApplyOp : EmitC_Op<"apply", [CExpression]> {
   }];
   let arguments = (ins
     Arg<StrAttr, "the operator to apply">:$applicableOperator,
-    AnyType:$operand
+    EmitCType:$operand
   );
-  let results = (outs AnyType:$result);
+  let results = (outs EmitCType:$result);
   let assemblyFormat = [{
     $applicableOperator `(` $operand `)` attr-dict `:` functional-type($operand, results)
   }];
@@ -240,9 +240,9 @@ def EmitC_CallOpaqueOp : EmitC_Op<"call_opaque", [CExpression]> {
     Arg<StrAttr, "the C++ function to call">:$callee,
     Arg<OptionalAttr<ArrayAttr>, "the order of operands and further attributes">:$args,
     Arg<OptionalAttr<ArrayAttr>, "template arguments">:$template_args,
-    Variadic<AnyType>:$operands
+    Variadic<EmitCType>:$operands
   );
-  let results = (outs Variadic<AnyType>);
+  let results = (outs Variadic<EmitCType>);
   let builders = [
     OpBuilder<(ins
       "::mlir::TypeRange":$resultTypes,
@@ -284,8 +284,8 @@ def EmitC_CastOp : EmitC_Op<"cast",
     ```
   }];
 
-  let arguments = (ins AnyType:$source);
-  let results = (outs AnyType:$dest);
+  let arguments = (ins EmitCType:$source);
+  let results = (outs EmitCType:$dest);
   let assemblyFormat = "$source attr-dict `:` type($source) `to` type($dest)";
 }
 
@@ -323,9 +323,9 @@ def EmitC_CmpOp : EmitC_BinaryOp<"cmp", [CExpression]> {
   }];
 
   let arguments = (ins EmitC_CmpPredicateAttr:$predicate,
-                       AnyType:$lhs,
-                       AnyType:$rhs);
-  let results = (outs AnyType);
+                       EmitCType:$lhs,
+                       EmitCType:$rhs);
+  let results = (outs EmitCType);
 
   let assemblyFormat = "$predicate `,` operands attr-dict `:` functional-type(operands, results)";
 }
@@ -347,14 +347,13 @@ def EmitC_ConstantOp : EmitC_Op<"constant", [ConstantLike]> {
     %0 = "emitc.constant"(){value = 42 : i32} : () -> i32
 
     // Constant emitted as `char = CHAR_MIN;`
-    %1 = "emitc.constant"()
-        {value = #emitc.opaque<"CHAR_MIN"> : !emitc.opaque<"char">}
-        : () -> !emitc.opaque<"char">
+    %1 = "emitc.constant"() {value = #emitc.opaque<"CHAR_MIN">}
+      : () -> !emitc.opaque<"char">
     ```
   }];
 
   let arguments = (ins EmitC_OpaqueOrTypedAttr:$value);
-  let results = (outs AnyType);
+  let results = (outs EmitCType);
 
   let hasFolder = 1;
   let hasVerifier = 1;
@@ -424,7 +423,7 @@ def EmitC_ExpressionOp : EmitC_Op<"expression",
   }];
 
   let arguments = (ins UnitAttr:$do_not_inline);
-  let results = (outs AnyType:$result);
+  let results = (outs EmitCType:$result);
   let regions = (region SizedRegion<1>:$region);
 
   let hasVerifier = 1;
@@ -532,8 +531,8 @@ def EmitC_CallOp : EmitC_Op<"call",
     %2 = emitc.call @my_add(%0, %1) : (f32, f32) -> f32
     ```
   }];
-  let arguments = (ins FlatSymbolRefAttr:$callee, Variadic<AnyType>:$operands);
-  let results = (outs Variadic<AnyType>);
+  let arguments = (ins FlatSymbolRefAttr:$callee, Variadic<EmitCType>:$operands);
+  let results = (outs Variadic<EmitCType>);
 
   let builders = [
     OpBuilder<(ins "FuncOp":$callee, CArg<"ValueRange", "{}">:$operands), [{
@@ -723,7 +722,7 @@ def EmitC_ReturnOp : EmitC_Op<"return", [Pure, HasParent<"FuncOp">,
     }
     ```
   }];
-  let arguments = (ins Optional<AnyType>:$operand);
+  let arguments = (ins Optional<EmitCType>:$operand);
 
   let assemblyFormat = "attr-dict ($operand^ `:` type($operand))?";
   let hasVerifier = 1;
@@ -767,7 +766,7 @@ def EmitC_LiteralOp : EmitC_Op<"literal", [Pure]> {
   }];
 
   let arguments = (ins StrAttr:$value);
-  let results = (outs AnyType:$result);
+  let results = (outs EmitCType:$result);
 
   let hasVerifier = 1;
   let assemblyFormat = "$value attr-dict `:` type($result)";
@@ -933,8 +932,8 @@ def EmitC_ConditionalOp : EmitC_Op<"conditional",
     int32_t v6 = v3 ? v4 : v5;
     ```
   }];
-  let arguments = (ins I1:$condition, AnyType:$true_value, AnyType:$false_value);
-  let results = (outs AnyType:$result);
+  let arguments = (ins I1:$condition, EmitCType:$true_value, EmitCType:$false_value);
+  let results = (outs EmitCType:$result);
   let assemblyFormat = "operands attr-dict `:` type($result)";
 }
 
@@ -992,9 +991,8 @@ def EmitC_VariableOp : EmitC_Op<"variable", []> {
     %0 = "emitc.variable"(){value = 42 : i32} : () -> i32
 
     // Variable emitted as `int32_t* = NULL;`
-    %1 = "emitc.variable"()
-        {value = #emitc.opaque<"NULL"> : !emitc.opaque<"int32_t*">}
-        : () -> !emitc.opaque<"int32_t*">
+    %1 = "emitc.variable"() {value = #emitc.opaque<"NULL">} 
+      : () -> !emitc.ptr<!emitc.opaque<"int32_t">>
     ```
 
     Since folding is not supported, it can be used with pointers.
@@ -1011,9 +1009,78 @@ def EmitC_VariableOp : EmitC_Op<"variable", []> {
   }];
 
   let arguments = (ins EmitC_OpaqueOrTypedAttr:$value);
-  let results = (outs AnyType);
+  let results = (outs EmitCType);
 
   let hasVerifier = 1;
+}
+
+def EmitC_GlobalOp : EmitC_Op<"global", [Symbol]> {
+  let summary = "A global variable";
+  let description = [{
+    The `emitc.global` operation declares or defines a named global variable.
+    The backing memory for the variable is allocated statically and is
+    described by the type of the variable.
+    Optionally, an `initial_value` can be provided.
+    Internal linkage can be specified using the `static_specifier` unit attribute
+    and external linkage can be specified using the `extern_specifier` unit attribute.
+    Note that the default linkage without those two keywords depends on whether
+    the target is C or C++ and whether the global variable is `const`.
+    The global variable can also be marked constant using the `const_specifier`
+    unit attribute. Writing to such constant global variables is
+    undefined.
+
+    The global variable can be accessed by using the `emitc.get_global` to
+    retrieve the value for the global variable.
+
+    Example:
+
+    ```mlir
+    // Global variable with an initial value.
+    emitc.global @x : emitc.array<2xf32> = dense<0.0, 2.0>
+    // External global variable
+    emitc.global extern @x : emitc.array<2xf32>
+    // Constant global variable with internal linkage
+    emitc.global static const @x : i32 = 0
+    ```
+  }];
+
+  let arguments = (ins SymbolNameAttr:$sym_name,
+                       TypeAttr:$type,
+                       OptionalAttr<EmitC_OpaqueOrTypedAttr>:$initial_value,
+                       UnitAttr:$extern_specifier,
+                       UnitAttr:$static_specifier,
+                       UnitAttr:$const_specifier);
+
+  let assemblyFormat = [{
+       (`extern` $extern_specifier^)?
+       (`static` $static_specifier^)?
+       (`const` $const_specifier^)?
+       $sym_name
+       `:` custom<EmitCGlobalOpTypeAndInitialValue>($type, $initial_value)
+       attr-dict
+  }];
+
+  let hasVerifier = 1;
+}
+
+def EmitC_GetGlobalOp : EmitC_Op<"get_global",
+    [Pure, DeclareOpInterfaceMethods<SymbolUserOpInterface>]> {
+  let summary = "Obtain access to a global variable";
+  let description = [{
+     The `emitc.get_global` operation retrieves the lvalue of a
+     named global variable. If the global variable is marked constant, assigning
+     to that lvalue is undefined.
+
+     Example:
+
+     ```mlir
+     %x = emitc.get_global @foo : !emitc.array<2xf32>
+     ```
+  }];
+
+  let arguments = (ins FlatSymbolRefAttr:$name);
+  let results = (outs EmitCType:$result);
+  let assemblyFormat = "$name `:` type($result) attr-dict";
 }
 
 def EmitC_VerbatimOp : EmitC_Op<"verbatim"> {
@@ -1070,7 +1137,7 @@ def EmitC_AssignOp : EmitC_Op<"assign", []> {
     ```
   }];
 
-  let arguments = (ins AnyType:$var, AnyType:$value);
+  let arguments = (ins EmitCType:$var, EmitCType:$value);
   let results = (outs);
 
   let hasVerifier = 1;
@@ -1091,7 +1158,7 @@ def EmitC_YieldOp : EmitC_Op<"yield",
     value is yielded.
   }];
 
-  let arguments = (ins Optional<AnyType>:$result);
+  let arguments = (ins Optional<EmitCType>:$result);
   let builders = [OpBuilder<(ins), [{ /* nothing to do */ }]>];
 
   let hasVerifier = 1;
@@ -1155,35 +1222,41 @@ def EmitC_IfOp : EmitC_Op<"if",
   let hasCustomAssemblyFormat = 1;
 }
 
-def EmitC_SubscriptOp : EmitC_Op<"subscript",
-  [TypesMatchWith<"result type matches element type of 'array'",
-                  "array", "result",
-                  "::llvm::cast<ArrayType>($_self).getElementType()">]> {
-  let summary = "Array subscript operation";
+def EmitC_SubscriptOp : EmitC_Op<"subscript", []> {
+  let summary = "Subscript operation";
   let description = [{
     With the `subscript` operation the subscript operator `[]` can be applied
-    to variables or arguments of array type.
+    to variables or arguments of array, pointer and opaque type.
 
     Example:
 
     ```mlir
     %i = index.constant 1
     %j = index.constant 7
-    %0 = emitc.subscript %arg0[%i, %j] : <4x8xf32>, index, index
+    %0 = emitc.subscript %arg0[%i, %j] : !emitc.array<4x8xf32>, index, index
+    %1 = emitc.subscript %arg1[%i] : !emitc.ptr<i32>, index
     ```
   }];
-  let arguments = (ins Arg<EmitC_ArrayType, "the reference to load from">:$array,
-                       Variadic<IntegerIndexOrOpaqueType>:$indices);
-  let results = (outs AnyType:$result);
+  let arguments = (ins Arg<AnyTypeOf<[
+      EmitC_ArrayType,
+      EmitC_OpaqueType,
+      EmitC_PointerType]>,
+    "the value to subscript">:$value,
+    Variadic<EmitCType>:$indices);
+  let results = (outs EmitCType:$result);
 
   let builders = [
-    OpBuilder<(ins "Value":$array, "ValueRange":$indices), [{
-      build($_builder, $_state, cast<ArrayType>(array.getType()).getElementType(), array, indices);
+    OpBuilder<(ins "TypedValue<ArrayType>":$array, "ValueRange":$indices), [{
+      build($_builder, $_state, array.getType().getElementType(), array, indices);
+    }]>,
+    OpBuilder<(ins "TypedValue<PointerType>":$pointer, "Value":$index), [{
+      build($_builder, $_state, pointer.getType().getPointee(), pointer,
+            ValueRange{index});
     }]>
   ];
 
   let hasVerifier = 1;
-  let assemblyFormat = "$array `[` $indices `]` attr-dict `:` type($array) `,` type($indices)";
+  let assemblyFormat = "$value `[` $indices `]` attr-dict `:` functional-type(operands, results)";
 }
 
 

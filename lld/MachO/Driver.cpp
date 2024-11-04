@@ -1086,6 +1086,22 @@ static bool shouldEmitChainedFixups(const InputArgList &args) {
   return isRequested;
 }
 
+static bool shouldEmitRelativeMethodLists(const InputArgList &args) {
+  const Arg *arg = args.getLastArg(OPT_objc_relative_method_lists,
+                                   OPT_no_objc_relative_method_lists);
+  if (arg && arg->getOption().getID() == OPT_objc_relative_method_lists)
+    return true;
+  if (arg && arg->getOption().getID() == OPT_no_objc_relative_method_lists)
+    return false;
+
+  // TODO: If no flag is specified, don't default to false, but instead:
+  //   - default false on   <   ios14
+  //   - default true  on   >=  ios14
+  // For now, until this feature is confirmed stable, default to false if no
+  // flag is explicitly specified
+  return false;
+}
+
 void SymbolPatterns::clear() {
   literals.clear();
   globs.clear();
@@ -1491,7 +1507,7 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
       StringRef sep = sys::path::get_separator();
       // real_path removes trailing slashes as part of the normalization, but
       // these are meaningful for our text based stripping
-      if (config->osoPrefix.equals(".") || config->osoPrefix.ends_with(sep))
+      if (config->osoPrefix == "." || config->osoPrefix.ends_with(sep))
         expanded += sep;
       config->osoPrefix = saver().save(expanded.str());
     }
@@ -1630,6 +1646,7 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
   config->emitChainedFixups = shouldEmitChainedFixups(args);
   config->emitInitOffsets =
       config->emitChainedFixups || args.hasArg(OPT_init_offsets);
+  config->emitRelativeMethodLists = shouldEmitRelativeMethodLists(args);
   config->icfLevel = getICFLevel(args);
   config->dedupStrings =
       args.hasFlag(OPT_deduplicate_strings, OPT_no_deduplicate_strings, true);

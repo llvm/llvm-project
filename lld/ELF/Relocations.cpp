@@ -995,7 +995,8 @@ bool RelocationScanner::isStaticLinkTimeConstant(RelExpr e, RelType type,
   if (e == R_GOT || e == R_PLT)
     return target->usesOnlyLowPageBits(type) || !config->isPic;
 
-  if (sym.isPreemptible)
+  // R_AARCH64_AUTH_ABS64 requires a dynamic relocation.
+  if (sym.isPreemptible || e == R_AARCH64_AUTH)
     return false;
   if (!config->isPic)
     return true;
@@ -1141,12 +1142,26 @@ void RelocationScanner::processAux(RelExpr expr, RelType type, uint64_t offset,
         (rel == target->symbolicRel && !sym.isPreemptible)) {
       addRelativeReloc<true>(*sec, offset, sym, addend, expr, type);
       return;
-    } else if (rel != 0) {
+    }
+    if (rel != 0) {
       if (config->emachine == EM_MIPS && rel == target->symbolicRel)
         rel = target->relativeRel;
       std::lock_guard<std::mutex> lock(relocMutex);
-      sec->getPartition().relaDyn->addSymbolReloc(rel, *sec, offset, sym,
-                                                  addend, type);
+      Partition &part = sec->getPartition();
+      if (config->emachine == EM_AARCH64 && type == R_AARCH64_AUTH_ABS64) {
+        // For a preemptible symbol, we can't use a relative relocation. For an
+        // undefined symbol, we can't compute offset at link-time and use a
+        // relative relocation. Use a symbolic relocation instead.
+        if (sym.isPreemptible) {
+          part.relaDyn->addSymbolReloc(type, *sec, offset, sym, addend, type);
+        } else {
+          part.relaDyn->addReloc({R_AARCH64_AUTH_RELATIVE, sec, offset,
+                                  DynamicReloc::AddendOnlyWithTargetVA, sym,
+                                  addend, R_ABS});
+        }
+        return;
+      }
+      part.relaDyn->addSymbolReloc(rel, *sec, offset, sym, addend, type);
 
       // MIPS ABI turns using of GOT and dynamic relocations inside out.
       // While regular ABI uses dynamic relocations to fill up GOT entries
@@ -1171,7 +1186,10 @@ void RelocationScanner::processAux(RelExpr expr, RelType type, uint64_t offset,
 
   // When producing an executable, we can perform copy relocations (for
   // STT_OBJECT) and canonical PLT (for STT_FUNC) if sym is defined by a DSO.
-  if (!config->shared && sym.isShared()) {
+  // Copy relocations/canonical PLT entries are unsupported for
+  // R_AARCH64_AUTH_ABS64.
+  if (!config->shared && sym.isShared() &&
+      !(config->emachine == EM_AARCH64 && type == R_AARCH64_AUTH_ABS64)) {
     if (!canDefineSymbolInExecutable(sym)) {
       errorOrWarn("cannot preempt symbol: " + toString(sym) +
                   getLocation(*sec, sym, offset));
@@ -1401,11 +1419,16 @@ template <class ELFT, class RelTy> void RelocationScanner::scanOne(RelTy *&i) {
   uint32_t symIndex = rel.getSymbol(config->isMips64EL);
   Symbol &sym = sec->getFile<ELFT>()->getSymbol(symIndex);
   RelType type;
-  if (config->mipsN32Abi) {
-    type = getMipsN32RelType(i);
-  } else {
+  if constexpr (ELFT::Is64Bits) {
     type = rel.getType(config->isMips64EL);
     ++i;
+  } else {
+    if (config->mipsN32Abi) {
+      type = getMipsN32RelType(i);
+    } else {
+      type = rel.getType(config->isMips64EL);
+      ++i;
+    }
   }
   // Get an offset in an output section this relocation is applied to.
   uint64_t offset = getter.get(rel.r_offset);
@@ -1659,10 +1682,17 @@ static bool handleNonPreemptibleIfunc(Symbol &sym, uint16_t flags) {
   // original section/value pairs. For non-GOT non-PLT relocation case below, we
   // may alter section/value, so create a copy of the symbol to make
   // section/value fixed.
+  //
+  // Prior to Android V, there was a bug that caused RELR relocations to be
+  // applied after packed relocations. This meant that resolvers referenced by
+  // IRELATIVE relocations in the packed relocation section would read
+  // unrelocated globals with RELR relocations when
+  // --pack-relative-relocs=android+relr is enabled. Work around this by placing
+  // IRELATIVE in .rela.plt.
   auto *directSym = makeDefined(cast<Defined>(sym));
   directSym->allocateAux();
-  addPltEntry(*in.iplt, *in.igotPlt, *mainPart->relaDyn, target->iRelativeRel,
-              *directSym);
+  auto &dyn = config->androidPackDynRelocs ? *in.relaPlt : *mainPart->relaDyn;
+  addPltEntry(*in.iplt, *in.igotPlt, dyn, target->iRelativeRel, *directSym);
   sym.allocateAux();
   symAux.back().pltIdx = symAux[directSym->auxIdx].pltIdx;
 

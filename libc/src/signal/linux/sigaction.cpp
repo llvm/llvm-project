@@ -7,12 +7,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/signal/sigaction.h"
+
+#include "hdr/types/sigset_t.h"
+#include "src/__support/common.h"
 #include "src/errno/libc_errno.h"
 #include "src/signal/linux/signal_utils.h"
-
-#include "src/__support/common.h"
-
-#include <signal.h>
 
 namespace LIBC_NAMESPACE {
 

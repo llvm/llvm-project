@@ -52,3 +52,31 @@ void instantiate() {
 }
 
 }
+
+namespace GH89374 {
+
+struct A {};
+
+template <typename Derived>
+struct MatrixBase { // #GH89374-MatrixBase
+  template <typename OtherDerived>
+  Derived &operator=(const MatrixBase<OtherDerived> &); // #GH89374-copy-assignment
+};
+
+template <typename>
+struct solve_retval;
+
+template <typename Rhs>
+struct solve_retval<int> : MatrixBase<solve_retval<Rhs> > {};
+// expected-error@-1 {{partial specialization of 'solve_retval' does not use any of its template parameters}}
+
+void ApproximateChebyshev() {
+  MatrixBase<int> c;
+  c = solve_retval<int>();
+  // expected-error@-1 {{no viable overloaded '='}}
+  //   expected-note@#GH89374-copy-assignment {{candidate template ignored: could not match 'MatrixBase' against 'solve_retval'}}
+  //   expected-note@#GH89374-MatrixBase {{candidate function (the implicit copy assignment operator) not viable: no known conversion from 'solve_retval<int>' to 'const MatrixBase<int>' for 1st argument}}
+  //   expected-note@#GH89374-MatrixBase {{candidate function (the implicit move assignment operator) not viable: no known conversion from 'solve_retval<int>' to 'MatrixBase<int>' for 1st argument}}
+}
+
+} // namespace GH89374

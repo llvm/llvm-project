@@ -168,11 +168,11 @@ Here is an example of a YAML document that contains an LLVM module:
 
 .. code-block:: llvm
 
-       define i32 @inc(i32* %x) {
+       define i32 @inc(ptr %x) {
        entry:
-         %0 = load i32, i32* %x
+         %0 = load i32, ptr %x
          %1 = add i32 %0, 1
-         store i32 %1, i32* %x
+         store i32 %1, ptr %x
          ret i32 %1
        }
 

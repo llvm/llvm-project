@@ -137,8 +137,7 @@ std::vector<std::string> GetStrings(const llvm::json::Object *obj,
 
 static bool IsClassStructOrUnionType(lldb::SBType t) {
   return (t.GetTypeClass() & (lldb::eTypeClassUnion | lldb::eTypeClassStruct |
-                              lldb::eTypeClassUnion | lldb::eTypeClassArray)) !=
-         0;
+                              lldb::eTypeClassArray)) != 0;
 }
 
 /// Create a short summary for a container that contains the summary of its
@@ -748,13 +747,13 @@ llvm::json::Value CreateStackFrame(lldb::SBFrame &frame) {
     auto line = line_entry.GetLine();
     if (line && line != LLDB_INVALID_LINE_NUMBER)
       object.try_emplace("line", line);
+    else
+      object.try_emplace("line", 0);
     auto column = line_entry.GetColumn();
-    if (column && column != LLDB_INVALID_COLUMN_NUMBER)
-      object.try_emplace("column", column);
+    object.try_emplace("column", column);
   } else {
     object.try_emplace("line", 0);
     object.try_emplace("column", 0);
-    object.try_emplace("presentationHint", "subtle");
   }
 
   const auto pc = frame.GetPC();
@@ -987,8 +986,14 @@ VariableDescription::VariableDescription(lldb::SBValue v, bool format_hex,
   display_type_name =
       !raw_display_type_name.empty() ? raw_display_type_name : NO_TYPENAME;
 
-  if (format_hex)
-    v.SetFormat(lldb::eFormatHex);
+  // Only format hex/default if there is no existing special format.
+  if (v.GetFormat() == lldb::eFormatDefault ||
+      v.GetFormat() == lldb::eFormatHex) {
+    if (format_hex)
+      v.SetFormat(lldb::eFormatHex);
+    else
+      v.SetFormat(lldb::eFormatDefault);
+  }
 
   llvm::raw_string_ostream os_display_value(display_value);
 

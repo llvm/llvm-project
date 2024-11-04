@@ -134,15 +134,14 @@ computeDestructuringInfo(DestructurableMemorySlot &slot,
 /// subslots as specified by its allocator.
 static void destructureSlot(DestructurableMemorySlot &slot,
                             DestructurableAllocationOpInterface allocator,
-                            RewriterBase &rewriter,
-                            const DataLayout &dataLayout,
+                            OpBuilder &builder, const DataLayout &dataLayout,
                             MemorySlotDestructuringInfo &info,
                             const SROAStatistics &statistics) {
-  RewriterBase::InsertionGuard guard(rewriter);
+  OpBuilder::InsertionGuard guard(builder);
 
-  rewriter.setInsertionPointToStart(slot.ptr.getParentBlock());
+  builder.setInsertionPointToStart(slot.ptr.getParentBlock());
   DenseMap<Attribute, MemorySlot> subslots =
-      allocator.destructure(slot, info.usedIndices, rewriter);
+      allocator.destructure(slot, info.usedIndices, builder);
 
   if (statistics.slotsWithMemoryBenefit &&
       slot.elementPtrs.size() != info.usedIndices.size())
@@ -160,9 +159,9 @@ static void destructureSlot(DestructurableMemorySlot &slot,
 
   llvm::SmallVector<Operation *> toErase;
   for (Operation *toRewire : llvm::reverse(usersToRewire)) {
-    rewriter.setInsertionPointAfter(toRewire);
+    builder.setInsertionPointAfter(toRewire);
     if (auto accessor = dyn_cast<DestructurableAccessorOpInterface>(toRewire)) {
-      if (accessor.rewire(slot, subslots, rewriter, dataLayout) ==
+      if (accessor.rewire(slot, subslots, builder, dataLayout) ==
           DeletionKind::Delete)
         toErase.push_back(accessor);
       continue;
@@ -170,12 +169,12 @@ static void destructureSlot(DestructurableMemorySlot &slot,
 
     auto promotable = cast<PromotableOpInterface>(toRewire);
     if (promotable.removeBlockingUses(info.userToBlockingUses[promotable],
-                                      rewriter) == DeletionKind::Delete)
+                                      builder) == DeletionKind::Delete)
       toErase.push_back(promotable);
   }
 
   for (Operation *toEraseOp : toErase)
-    rewriter.eraseOp(toEraseOp);
+    toEraseOp->erase();
 
   assert(slot.ptr.use_empty() && "after destructuring, the original slot "
                                  "pointer should no longer be used");
@@ -186,12 +185,12 @@ static void destructureSlot(DestructurableMemorySlot &slot,
   if (statistics.destructuredAmount)
     (*statistics.destructuredAmount)++;
 
-  allocator.handleDestructuringComplete(slot, rewriter);
+  allocator.handleDestructuringComplete(slot, builder);
 }
 
 LogicalResult mlir::tryToDestructureMemorySlots(
     ArrayRef<DestructurableAllocationOpInterface> allocators,
-    RewriterBase &rewriter, const DataLayout &dataLayout,
+    OpBuilder &builder, const DataLayout &dataLayout,
     SROAStatistics statistics) {
   bool destructuredAny = false;
 
@@ -202,7 +201,7 @@ LogicalResult mlir::tryToDestructureMemorySlots(
       if (!info)
         continue;
 
-      destructureSlot(slot, allocator, rewriter, dataLayout, *info, statistics);
+      destructureSlot(slot, allocator, builder, dataLayout, *info, statistics);
       destructuredAny = true;
     }
   }
@@ -230,7 +229,6 @@ struct SROA : public impl::SROABase<SROA> {
         continue;
 
       OpBuilder builder(&region.front(), region.front().begin());
-      IRRewriter rewriter(builder);
 
       // Destructuring a slot can allow for further destructuring of other
       // slots, destructuring is tried until no destructuring succeeds.
@@ -243,7 +241,7 @@ struct SROA : public impl::SROABase<SROA> {
           allocators.emplace_back(allocator);
         });
 
-        if (failed(tryToDestructureMemorySlots(allocators, rewriter, dataLayout,
+        if (failed(tryToDestructureMemorySlots(allocators, builder, dataLayout,
                                                statistics)))
           break;
 

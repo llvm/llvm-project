@@ -138,9 +138,7 @@ define <vscale x 8 x half> @vfmerge_zv_nxv8f16(<vscale x 8 x half> %va, <vscale 
 ; CHECK-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
 ; CHECK-NEXT:    vmerge.vim v8, v8, 0, v0
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 8 x half> poison, half zeroinitializer, i32 0
-  %splat = shufflevector <vscale x 8 x half> %head, <vscale x 8 x half> poison, <vscale x 8 x i32> zeroinitializer
-  %vc = select <vscale x 8 x i1> %cond, <vscale x 8 x half> %splat, <vscale x 8 x half> %va
+  %vc = select <vscale x 8 x i1> %cond, <vscale x 8 x half> splat (half zeroinitializer), <vscale x 8 x half> %va
   ret <vscale x 8 x half> %vc
 }
 
@@ -148,9 +146,7 @@ define <vscale x 8 x half> @vmerge_truelhs_nxv8f16_0(<vscale x 8 x half> %va, <v
 ; CHECK-LABEL: vmerge_truelhs_nxv8f16_0:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    ret
-  %mhead = insertelement <vscale x 8 x i1> poison, i1 1, i32 0
-  %mtrue = shufflevector <vscale x 8 x i1> %mhead, <vscale x 8 x i1> poison, <vscale x 8 x i32> zeroinitializer
-  %vc = select <vscale x 8 x i1> %mtrue, <vscale x 8 x half> %va, <vscale x 8 x half> %vb
+  %vc = select <vscale x 8 x i1> splat (i1 1), <vscale x 8 x half> %va, <vscale x 8 x half> %vb
   ret <vscale x 8 x half> %vc
 }
 
@@ -322,9 +318,7 @@ define <vscale x 8 x float> @vfmerge_zv_nxv8f32(<vscale x 8 x float> %va, <vscal
 ; CHECK-NEXT:    vsetvli a0, zero, e32, m4, ta, ma
 ; CHECK-NEXT:    vmerge.vim v8, v8, 0, v0
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 8 x float> poison, float zeroinitializer, i32 0
-  %splat = shufflevector <vscale x 8 x float> %head, <vscale x 8 x float> poison, <vscale x 8 x i32> zeroinitializer
-  %vc = select <vscale x 8 x i1> %cond, <vscale x 8 x float> %splat, <vscale x 8 x float> %va
+  %vc = select <vscale x 8 x i1> %cond, <vscale x 8 x float> splat (float zeroinitializer), <vscale x 8 x float> %va
   ret <vscale x 8 x float> %vc
 }
 
@@ -444,9 +438,7 @@ define <vscale x 8 x double> @vfmerge_zv_nxv8f64(<vscale x 8 x double> %va, <vsc
 ; CHECK-NEXT:    vsetvli a0, zero, e64, m8, ta, ma
 ; CHECK-NEXT:    vmerge.vim v8, v8, 0, v0
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 8 x double> poison, double zeroinitializer, i32 0
-  %splat = shufflevector <vscale x 8 x double> %head, <vscale x 8 x double> poison, <vscale x 8 x i32> zeroinitializer
-  %vc = select <vscale x 8 x i1> %cond, <vscale x 8 x double> %splat, <vscale x 8 x double> %va
+  %vc = select <vscale x 8 x i1> %cond, <vscale x 8 x double> splat (double zeroinitializer), <vscale x 8 x double> %va
   ret <vscale x 8 x double> %vc
 }
 

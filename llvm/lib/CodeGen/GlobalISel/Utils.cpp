@@ -12,6 +12,7 @@
 #include "llvm/CodeGen/GlobalISel/Utils.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APInt.h"
+#include "llvm/Analysis/ValueTracking.h"
 #include "llvm/CodeGen/CodeGenCommonISel.h"
 #include "llvm/CodeGen/GlobalISel/GISelChangeObserver.h"
 #include "llvm/CodeGen/GlobalISel/GISelKnownBits.h"
@@ -28,6 +29,7 @@
 #include "llvm/CodeGen/StackProtector.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetLowering.h"
+#include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/IR/Constants.h"
@@ -997,6 +999,74 @@ llvm::ConstantFoldCountZeros(Register Src, const MachineRegisterInfo &MRI,
   return std::nullopt;
 }
 
+std::optional<SmallVector<APInt>>
+llvm::ConstantFoldICmp(unsigned Pred, const Register Op1, const Register Op2,
+                       const MachineRegisterInfo &MRI) {
+  LLT Ty = MRI.getType(Op1);
+  if (Ty != MRI.getType(Op2))
+    return std::nullopt;
+
+  auto TryFoldScalar = [&MRI, Pred](Register LHS,
+                                    Register RHS) -> std::optional<APInt> {
+    auto LHSCst = getIConstantVRegVal(LHS, MRI);
+    auto RHSCst = getIConstantVRegVal(RHS, MRI);
+    if (!LHSCst || !RHSCst)
+      return std::nullopt;
+
+    switch (Pred) {
+    case CmpInst::Predicate::ICMP_EQ:
+      return APInt(/*numBits=*/1, LHSCst->eq(*RHSCst));
+    case CmpInst::Predicate::ICMP_NE:
+      return APInt(/*numBits=*/1, LHSCst->ne(*RHSCst));
+    case CmpInst::Predicate::ICMP_UGT:
+      return APInt(/*numBits=*/1, LHSCst->ugt(*RHSCst));
+    case CmpInst::Predicate::ICMP_UGE:
+      return APInt(/*numBits=*/1, LHSCst->uge(*RHSCst));
+    case CmpInst::Predicate::ICMP_ULT:
+      return APInt(/*numBits=*/1, LHSCst->ult(*RHSCst));
+    case CmpInst::Predicate::ICMP_ULE:
+      return APInt(/*numBits=*/1, LHSCst->ule(*RHSCst));
+    case CmpInst::Predicate::ICMP_SGT:
+      return APInt(/*numBits=*/1, LHSCst->sgt(*RHSCst));
+    case CmpInst::Predicate::ICMP_SGE:
+      return APInt(/*numBits=*/1, LHSCst->sge(*RHSCst));
+    case CmpInst::Predicate::ICMP_SLT:
+      return APInt(/*numBits=*/1, LHSCst->slt(*RHSCst));
+    case CmpInst::Predicate::ICMP_SLE:
+      return APInt(/*numBits=*/1, LHSCst->sle(*RHSCst));
+    default:
+      return std::nullopt;
+    }
+  };
+
+  SmallVector<APInt> FoldedICmps;
+
+  if (Ty.isVector()) {
+    // Try to constant fold each element.
+    auto *BV1 = getOpcodeDef<GBuildVector>(Op1, MRI);
+    auto *BV2 = getOpcodeDef<GBuildVector>(Op2, MRI);
+    if (!BV1 || !BV2)
+      return std::nullopt;
+    assert(BV1->getNumSources() == BV2->getNumSources() && "Invalid vectors");
+    for (unsigned I = 0; I < BV1->getNumSources(); ++I) {
+      if (auto MaybeFold =
+              TryFoldScalar(BV1->getSourceReg(I), BV2->getSourceReg(I))) {
+        FoldedICmps.emplace_back(*MaybeFold);
+        continue;
+      }
+      return std::nullopt;
+    }
+    return FoldedICmps;
+  }
+
+  if (auto MaybeCst = TryFoldScalar(Op1, Op2)) {
+    FoldedICmps.emplace_back(*MaybeCst);
+    return FoldedICmps;
+  }
+
+  return std::nullopt;
+}
+
 bool llvm::isKnownToBeAPowerOfTwo(Register Reg, const MachineRegisterInfo &MRI,
                                   GISelKnownBits *KB) {
   std::optional<DefinitionAndSourceRegister> DefSrcReg =
@@ -1596,4 +1666,129 @@ void llvm::salvageDebugInfo(const MachineRegisterInfo &MRI, MachineInstr &MI) {
       salvageDebugInfoForDbgValue(MRI, MI, DbgUsers);
     }
   }
+}
+
+bool llvm::isPreISelGenericFloatingPointOpcode(unsigned Opc) {
+  switch (Opc) {
+  case TargetOpcode::G_FABS:
+  case TargetOpcode::G_FADD:
+  case TargetOpcode::G_FCANONICALIZE:
+  case TargetOpcode::G_FCEIL:
+  case TargetOpcode::G_FCONSTANT:
+  case TargetOpcode::G_FCOPYSIGN:
+  case TargetOpcode::G_FCOS:
+  case TargetOpcode::G_FDIV:
+  case TargetOpcode::G_FEXP2:
+  case TargetOpcode::G_FEXP:
+  case TargetOpcode::G_FFLOOR:
+  case TargetOpcode::G_FLOG10:
+  case TargetOpcode::G_FLOG2:
+  case TargetOpcode::G_FLOG:
+  case TargetOpcode::G_FMA:
+  case TargetOpcode::G_FMAD:
+  case TargetOpcode::G_FMAXIMUM:
+  case TargetOpcode::G_FMAXNUM:
+  case TargetOpcode::G_FMAXNUM_IEEE:
+  case TargetOpcode::G_FMINIMUM:
+  case TargetOpcode::G_FMINNUM:
+  case TargetOpcode::G_FMINNUM_IEEE:
+  case TargetOpcode::G_FMUL:
+  case TargetOpcode::G_FNEARBYINT:
+  case TargetOpcode::G_FNEG:
+  case TargetOpcode::G_FPEXT:
+  case TargetOpcode::G_FPOW:
+  case TargetOpcode::G_FPTRUNC:
+  case TargetOpcode::G_FREM:
+  case TargetOpcode::G_FRINT:
+  case TargetOpcode::G_FSIN:
+  case TargetOpcode::G_FSQRT:
+  case TargetOpcode::G_FSUB:
+  case TargetOpcode::G_INTRINSIC_ROUND:
+  case TargetOpcode::G_INTRINSIC_ROUNDEVEN:
+  case TargetOpcode::G_INTRINSIC_TRUNC:
+    return true;
+  default:
+    return false;
+  }
+}
+
+namespace {
+enum class UndefPoisonKind {
+  PoisonOnly = (1 << 0),
+  UndefOnly = (1 << 1),
+  UndefOrPoison = PoisonOnly | UndefOnly,
+};
+}
+
+[[maybe_unused]] static bool includesPoison(UndefPoisonKind Kind) {
+  return (unsigned(Kind) & unsigned(UndefPoisonKind::PoisonOnly)) != 0;
+}
+
+[[maybe_unused]] static bool includesUndef(UndefPoisonKind Kind) {
+  return (unsigned(Kind) & unsigned(UndefPoisonKind::UndefOnly)) != 0;
+}
+
+static bool canCreateUndefOrPoison(Register Reg, const MachineRegisterInfo &MRI,
+                                   bool ConsiderFlagsAndMetadata,
+                                   UndefPoisonKind Kind) {
+  MachineInstr *RegDef = MRI.getVRegDef(Reg);
+
+  switch (RegDef->getOpcode()) {
+  case TargetOpcode::G_FREEZE:
+    return false;
+  default:
+    return true;
+  }
+}
+
+static bool isGuaranteedNotToBeUndefOrPoison(Register Reg,
+                                             const MachineRegisterInfo &MRI,
+                                             unsigned Depth,
+                                             UndefPoisonKind Kind) {
+  if (Depth >= MaxAnalysisRecursionDepth)
+    return false;
+
+  MachineInstr *RegDef = MRI.getVRegDef(Reg);
+
+  switch (RegDef->getOpcode()) {
+  case TargetOpcode::G_FREEZE:
+    return true;
+  case TargetOpcode::G_IMPLICIT_DEF:
+    return !includesUndef(Kind);
+  default:
+    return false;
+  }
+}
+
+bool llvm::canCreateUndefOrPoison(Register Reg, const MachineRegisterInfo &MRI,
+                                  bool ConsiderFlagsAndMetadata) {
+  return ::canCreateUndefOrPoison(Reg, MRI, ConsiderFlagsAndMetadata,
+                                  UndefPoisonKind::UndefOrPoison);
+}
+
+bool canCreatePoison(Register Reg, const MachineRegisterInfo &MRI,
+                     bool ConsiderFlagsAndMetadata = true) {
+  return ::canCreateUndefOrPoison(Reg, MRI, ConsiderFlagsAndMetadata,
+                                  UndefPoisonKind::PoisonOnly);
+}
+
+bool llvm::isGuaranteedNotToBeUndefOrPoison(Register Reg,
+                                            const MachineRegisterInfo &MRI,
+                                            unsigned Depth) {
+  return ::isGuaranteedNotToBeUndefOrPoison(Reg, MRI, Depth,
+                                            UndefPoisonKind::UndefOrPoison);
+}
+
+bool llvm::isGuaranteedNotToBePoison(Register Reg,
+                                     const MachineRegisterInfo &MRI,
+                                     unsigned Depth) {
+  return ::isGuaranteedNotToBeUndefOrPoison(Reg, MRI, Depth,
+                                            UndefPoisonKind::PoisonOnly);
+}
+
+bool llvm::isGuaranteedNotToBeUndef(Register Reg,
+                                    const MachineRegisterInfo &MRI,
+                                    unsigned Depth) {
+  return ::isGuaranteedNotToBeUndefOrPoison(Reg, MRI, Depth,
+                                            UndefPoisonKind::UndefOnly);
 }

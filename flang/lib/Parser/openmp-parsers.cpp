@@ -136,6 +136,11 @@ TYPE_PARSER(construct<OmpReductionOperator>(Parser<DefinedOperator>{}) ||
     construct<OmpReductionOperator>(Parser<ProcedureDesignator>{}))
 
 TYPE_PARSER(construct<OmpReductionClause>(
+    maybe(
+        ("INSCAN" >> pure(OmpReductionClause::ReductionModifier::Inscan) ||
+            "TASK" >> pure(OmpReductionClause::ReductionModifier::Task) ||
+            "DEFAULT" >> pure(OmpReductionClause::ReductionModifier::Default)) /
+        ","),
     Parser<OmpReductionOperator>{} / ":", Parser<OmpObjectList>{}))
 
 // OMP 5.0 2.19.5.6 IN_REDUCTION (reduction-identifier: variable-name-list)
@@ -629,18 +634,20 @@ TYPE_PARSER(
 
 // Declarative constructs
 TYPE_PARSER(startOmpLine >>
-    sourced(construct<OpenMPDeclarativeConstruct>(
-                Parser<OpenMPDeclareReductionConstruct>{}) ||
-        construct<OpenMPDeclarativeConstruct>(
-            Parser<OpenMPDeclareSimdConstruct>{}) ||
-        construct<OpenMPDeclarativeConstruct>(
-            Parser<OpenMPDeclareTargetConstruct>{}) ||
-        construct<OpenMPDeclarativeConstruct>(
-            Parser<OpenMPDeclarativeAllocate>{}) ||
-        construct<OpenMPDeclarativeConstruct>(
-            Parser<OpenMPRequiresConstruct>{}) ||
-        construct<OpenMPDeclarativeConstruct>(Parser<OpenMPThreadprivate>{})) /
-        endOmpLine)
+    withMessage("expected OpenMP construct"_err_en_US,
+        sourced(construct<OpenMPDeclarativeConstruct>(
+                    Parser<OpenMPDeclareReductionConstruct>{}) ||
+            construct<OpenMPDeclarativeConstruct>(
+                Parser<OpenMPDeclareSimdConstruct>{}) ||
+            construct<OpenMPDeclarativeConstruct>(
+                Parser<OpenMPDeclareTargetConstruct>{}) ||
+            construct<OpenMPDeclarativeConstruct>(
+                Parser<OpenMPDeclarativeAllocate>{}) ||
+            construct<OpenMPDeclarativeConstruct>(
+                Parser<OpenMPRequiresConstruct>{}) ||
+            construct<OpenMPDeclarativeConstruct>(
+                Parser<OpenMPThreadprivate>{})) /
+            endOmpLine))
 
 // Block Construct
 TYPE_PARSER(construct<OpenMPBlockConstruct>(
@@ -676,17 +683,18 @@ TYPE_PARSER(construct<OpenMPSectionsConstruct>(
 
 TYPE_CONTEXT_PARSER("OpenMP construct"_en_US,
     startOmpLine >>
-        first(construct<OpenMPConstruct>(Parser<OpenMPSectionsConstruct>{}),
-            construct<OpenMPConstruct>(Parser<OpenMPLoopConstruct>{}),
-            construct<OpenMPConstruct>(Parser<OpenMPBlockConstruct>{}),
-            // OpenMPBlockConstruct is attempted before
-            // OpenMPStandaloneConstruct to resolve !$OMP ORDERED
-            construct<OpenMPConstruct>(Parser<OpenMPStandaloneConstruct>{}),
-            construct<OpenMPConstruct>(Parser<OpenMPAtomicConstruct>{}),
-            construct<OpenMPConstruct>(Parser<OpenMPExecutableAllocate>{}),
-            construct<OpenMPConstruct>(Parser<OpenMPAllocatorsConstruct>{}),
-            construct<OpenMPConstruct>(Parser<OpenMPDeclarativeAllocate>{}),
-            construct<OpenMPConstruct>(Parser<OpenMPCriticalConstruct>{})))
+        withMessage("expected OpenMP construct"_err_en_US,
+            first(construct<OpenMPConstruct>(Parser<OpenMPSectionsConstruct>{}),
+                construct<OpenMPConstruct>(Parser<OpenMPLoopConstruct>{}),
+                construct<OpenMPConstruct>(Parser<OpenMPBlockConstruct>{}),
+                // OpenMPBlockConstruct is attempted before
+                // OpenMPStandaloneConstruct to resolve !$OMP ORDERED
+                construct<OpenMPConstruct>(Parser<OpenMPStandaloneConstruct>{}),
+                construct<OpenMPConstruct>(Parser<OpenMPAtomicConstruct>{}),
+                construct<OpenMPConstruct>(Parser<OpenMPExecutableAllocate>{}),
+                construct<OpenMPConstruct>(Parser<OpenMPAllocatorsConstruct>{}),
+                construct<OpenMPConstruct>(Parser<OpenMPDeclarativeAllocate>{}),
+                construct<OpenMPConstruct>(Parser<OpenMPCriticalConstruct>{}))))
 
 // END OMP Block directives
 TYPE_PARSER(

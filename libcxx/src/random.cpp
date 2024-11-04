@@ -79,10 +79,8 @@ unsigned random_device::operator()() {
   char* p  = reinterpret_cast<char*>(&r);
   while (n > 0) {
     ssize_t s = read(__f_, p, n);
-    _LIBCPP_SUPPRESS_DEPRECATED_PUSH
     if (s == 0)
-      __throw_system_error(ENODATA, "random_device got EOF"); // TODO ENODATA -> ENOMSG
-    _LIBCPP_SUPPRESS_DEPRECATED_POP
+      __throw_system_error(ENOMSG, "random_device got EOF");
     if (s == -1) {
       if (errno != EINTR)
         __throw_system_error(errno, "random_device got an unexpected error");

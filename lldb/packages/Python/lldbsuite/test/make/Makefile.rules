@@ -238,10 +238,11 @@ ifeq "$(OS)" "Darwin"
 endif
 
 ifeq "$(OS)" "Darwin"
-	CFLAGS += $(ARCHFLAG) $(ARCH) $(FRAMEWORK_INCLUDES) -I$(LLDB_BASE_DIR)include
+	CFLAGS += $(ARCHFLAG) $(ARCH) $(FRAMEWORK_INCLUDES)
 else
-	CFLAGS += $(ARCHFLAG)$(ARCH) $(FRAMEWORK_INCLUDES) -I$(LLDB_BASE_DIR)include
+	CFLAGS += $(ARCHFLAG)$(ARCH)
 endif
+CFLAGS += -I$(LLDB_BASE_DIR)include -I$(LLDB_OBJ_ROOT)/include
 
 CFLAGS += -I$(SRCDIR) -I$(THIS_FILE_DIR)
 

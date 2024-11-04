@@ -62,9 +62,9 @@ define <vscale x 4 x float> @frem_nxv4f32(<vscale x 4 x float> %unused, <vscale 
 ; ARMPL-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
 ; ARMPL-NEXT:    .cfi_def_cfa_offset 16
 ; ARMPL-NEXT:    .cfi_offset w30, -16
-; ARMPL-NEXT:    ptrue p0.s
 ; ARMPL-NEXT:    mov z0.d, z1.d
 ; ARMPL-NEXT:    mov z1.d, z2.d
+; ARMPL-NEXT:    ptrue p0.s
 ; ARMPL-NEXT:    bl armpl_svfmod_f32_x
 ; ARMPL-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; ARMPL-NEXT:    ret
@@ -74,9 +74,9 @@ define <vscale x 4 x float> @frem_nxv4f32(<vscale x 4 x float> %unused, <vscale 
 ; SLEEF-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
 ; SLEEF-NEXT:    .cfi_def_cfa_offset 16
 ; SLEEF-NEXT:    .cfi_offset w30, -16
-; SLEEF-NEXT:    ptrue p0.s
 ; SLEEF-NEXT:    mov z0.d, z1.d
 ; SLEEF-NEXT:    mov z1.d, z2.d
+; SLEEF-NEXT:    ptrue p0.s
 ; SLEEF-NEXT:    bl _ZGVsMxvv_fmodf
 ; SLEEF-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; SLEEF-NEXT:    ret
@@ -90,9 +90,9 @@ define <vscale x 2 x double> @frem_strict_nxv2f64(<vscale x 2 x double> %unused,
 ; ARMPL-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
 ; ARMPL-NEXT:    .cfi_def_cfa_offset 16
 ; ARMPL-NEXT:    .cfi_offset w30, -16
-; ARMPL-NEXT:    ptrue p0.d
 ; ARMPL-NEXT:    mov z0.d, z1.d
 ; ARMPL-NEXT:    mov z1.d, z2.d
+; ARMPL-NEXT:    ptrue p0.d
 ; ARMPL-NEXT:    bl armpl_svfmod_f64_x
 ; ARMPL-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; ARMPL-NEXT:    ret
@@ -102,9 +102,9 @@ define <vscale x 2 x double> @frem_strict_nxv2f64(<vscale x 2 x double> %unused,
 ; SLEEF-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
 ; SLEEF-NEXT:    .cfi_def_cfa_offset 16
 ; SLEEF-NEXT:    .cfi_offset w30, -16
-; SLEEF-NEXT:    ptrue p0.d
 ; SLEEF-NEXT:    mov z0.d, z1.d
 ; SLEEF-NEXT:    mov z1.d, z2.d
+; SLEEF-NEXT:    ptrue p0.d
 ; SLEEF-NEXT:    bl _ZGVsMxvv_fmod
 ; SLEEF-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; SLEEF-NEXT:    ret

@@ -198,14 +198,8 @@ private:
   /// A trace is region of code executed between two LBR entries supplied in
   /// execution order.
   ///
-  /// Return true if the trace is valid, false otherwise.
-  bool
-  recordTrace(BinaryFunction &BF, const LBREntry &First, const LBREntry &Second,
-              uint64_t Count,
-              SmallVector<std::pair<uint64_t, uint64_t>, 16> &Branches) const;
-
   /// Return a vector of offsets corresponding to a trace in a function
-  /// (see recordTrace() above).
+  /// if the trace is valid, std::nullopt otherwise.
   std::optional<SmallVector<std::pair<uint64_t, uint64_t>, 16>>
   getFallthroughsInTrace(BinaryFunction &BF, const LBREntry &First,
                          const LBREntry &Second, uint64_t Count = 1) const;
@@ -225,6 +219,10 @@ private:
   /// Aggregation statistics
   uint64_t NumInvalidTraces{0};
   uint64_t NumLongRangeTraces{0};
+  /// Specifies how many samples were recorded in cold areas if we are dealing
+  /// with profiling data collected in a bolted binary. For LBRs, incremented
+  /// for the source of the branch to avoid counting cold activity twice (one
+  /// for source and another for destination).
   uint64_t NumColdSamples{0};
 
   /// Looks into system PATH for Linux Perf and set up the aggregator to use it
@@ -245,14 +243,12 @@ private:
   /// disassembled BinaryFunctions
   BinaryFunction *getBinaryFunctionContainingAddress(uint64_t Address) const;
 
+  /// Perform BAT translation for a given \p Func and return the parent
+  /// BinaryFunction or nullptr.
+  BinaryFunction *getBATParentFunction(const BinaryFunction &Func) const;
+
   /// Retrieve the location name to be used for samples recorded in \p Func.
-  /// If doing BAT translation, link cold parts to the hot part  names (used by
-  /// the original binary).  \p Count specifies how many samples were recorded
-  /// at that location, so we can tally total activity in cold areas if we are
-  /// dealing with profiling data collected in a bolted binary. For LBRs,
-  /// \p Count should only be used for the source of the branch to avoid
-  /// counting cold activity twice (one for source and another for destination).
-  StringRef getLocationName(BinaryFunction &Func, uint64_t Count);
+  StringRef getLocationName(const BinaryFunction &Func) const;
 
   /// Semantic actions - parser hooks to interpret parsed perf samples
   /// Register a sample (non-LBR mode), i.e. a new hit at \p Address
@@ -466,9 +462,6 @@ private:
   /// Dump translated data structures into YAML
   std::error_code writeBATYAML(BinaryContext &BC,
                                StringRef OutputFilename) const;
-
-  /// Fixup profile collected on BOLTed binary, namely handle split functions.
-  void fixupBATProfile(BinaryContext &BC);
 
   /// Filter out binaries based on PID
   void filterBinaryMMapInfo();

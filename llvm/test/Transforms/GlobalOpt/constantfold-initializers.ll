@@ -72,11 +72,12 @@ entry:
 }
 
 @threadlocalptr = global ptr null, align 4
-; CHECK: @threadlocalptr = global ptr null, align 4
+; CHECK: @threadlocalptr = local_unnamed_addr global ptr null, align 4
 @threadlocalvar = external thread_local global i32
 define internal void @test5() {
 entry:
-  store ptr @threadlocalvar, ptr @threadlocalptr, align 4
+  %p = call ptr @llvm.threadlocal.address(ptr @threadlocalvar)
+  store ptr %p, ptr @threadlocalptr, align 4
   ret void
 }
 

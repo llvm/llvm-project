@@ -58,8 +58,8 @@ public:
   Status SetFilePermissions(const FileSpec &file_spec,
                             uint32_t file_permissions) override;
 
-  bool CalculateMD5(const FileSpec &file_spec, uint64_t &low,
-                    uint64_t &high) override;
+  llvm::ErrorOr<llvm::MD5::MD5Result>
+  CalculateMD5(const FileSpec &file_spec) override;
 
   Status GetFileWithUUID(const FileSpec &platform_file, const UUID *uuid,
                          FileSpec &local_file) override;

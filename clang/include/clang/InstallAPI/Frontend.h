@@ -36,7 +36,7 @@ public:
   std::unique_ptr<ASTConsumer> CreateASTConsumer(CompilerInstance &CI,
                                                  StringRef InFile) override {
     Ctx.Diags->getClient()->BeginSourceFile(CI.getLangOpts());
-    Ctx.Verifier->setSourceManager(CI.getSourceManager());
+    Ctx.Verifier->setSourceManager(CI.getSourceManagerPtr());
     return std::make_unique<InstallAPIVisitor>(
         CI.getASTContext(), Ctx, CI.getSourceManager(), CI.getPreprocessor());
   }

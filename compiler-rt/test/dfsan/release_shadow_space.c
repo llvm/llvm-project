@@ -3,6 +3,9 @@
 // DFSAN_OPTIONS=no_huge_pages_for_shadow=false RUN: %clang_dfsan %s -DORIGIN_TRACKING -mllvm -dfsan-track-origins=1 -o %t && %run %t
 // DFSAN_OPTIONS=no_huge_pages_for_shadow=true RUN: %clang_dfsan %s -DORIGIN_TRACKING -mllvm -dfsan-track-origins=1 -o %t && %run %t
 
+// This test is flaky right now: https://github.com/llvm/llvm-project/issues/91287
+// UNSUPPORTED:  target={{.*}}
+
 #include <assert.h>
 #include <sanitizer/dfsan_interface.h>
 #include <stdbool.h>

@@ -10,11 +10,12 @@
 #define LLVM_LIBC_TEST_SRC_MATH_FMATEST_H
 
 #include "src/__support/FPUtil/FPBits.h"
+#include "test/UnitTest/FEnvSafeTest.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
 
 template <typename T>
-class FmaTestTemplate : public LIBC_NAMESPACE::testing::Test {
+class FmaTestTemplate : public LIBC_NAMESPACE::testing::FEnvSafeTest {
 private:
   using Func = T (*)(T, T, T);
   using FPBits = LIBC_NAMESPACE::fputil::FPBits<T>;

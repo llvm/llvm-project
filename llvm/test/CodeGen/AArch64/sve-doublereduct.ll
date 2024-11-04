@@ -87,8 +87,8 @@ define float @fmaximum_f32(<vscale x 8 x float> %a, <vscale x 4 x float> %b) {
 define i32 @add_i32(<vscale x 8 x i32> %a, <vscale x 4 x i32> %b) {
 ; CHECK-LABEL: add_i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    add z0.s, z0.s, z1.s
+; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    add z0.s, z0.s, z2.s
 ; CHECK-NEXT:    uaddv d0, p0, z0.s
 ; CHECK-NEXT:    fmov x0, d0
@@ -160,8 +160,8 @@ define i16 @add_ext_v32i16(<vscale x 32 x i8> %a, <vscale x 16 x i8> %b) {
 define i32 @and_i32(<vscale x 8 x i32> %a, <vscale x 4 x i32> %b) {
 ; CHECK-LABEL: and_i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    and z0.d, z0.d, z1.d
+; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    and z0.d, z0.d, z2.d
 ; CHECK-NEXT:    andv s0, p0, z0.s
 ; CHECK-NEXT:    fmov w0, s0
@@ -175,8 +175,8 @@ define i32 @and_i32(<vscale x 8 x i32> %a, <vscale x 4 x i32> %b) {
 define i32 @or_i32(<vscale x 8 x i32> %a, <vscale x 4 x i32> %b) {
 ; CHECK-LABEL: or_i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    orr z0.d, z0.d, z1.d
+; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    orr z0.d, z0.d, z2.d
 ; CHECK-NEXT:    orv s0, p0, z0.s
 ; CHECK-NEXT:    fmov w0, s0
@@ -190,8 +190,8 @@ define i32 @or_i32(<vscale x 8 x i32> %a, <vscale x 4 x i32> %b) {
 define i32 @xor_i32(<vscale x 8 x i32> %a, <vscale x 4 x i32> %b) {
 ; CHECK-LABEL: xor_i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    eor3 z0.d, z0.d, z1.d, z2.d
+; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    eorv s0, p0, z0.s
 ; CHECK-NEXT:    fmov w0, s0
 ; CHECK-NEXT:    ret

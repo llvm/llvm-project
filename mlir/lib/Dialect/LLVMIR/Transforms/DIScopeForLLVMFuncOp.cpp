@@ -115,8 +115,8 @@ struct DIScopeForLLVMFuncOp
       }
 
       compileUnitAttr = LLVM::DICompileUnitAttr::get(
-          context, DistinctAttr::create(UnitAttr::get(context)),
-          llvm::dwarf::DW_LANG_C, fileAttr, StringAttr::get(context, "MLIR"),
+          DistinctAttr::create(UnitAttr::get(context)), llvm::dwarf::DW_LANG_C,
+          fileAttr, StringAttr::get(context, "MLIR"),
           /*isOptimized=*/true, LLVM::DIEmissionKind::LineTablesOnly);
     }
 

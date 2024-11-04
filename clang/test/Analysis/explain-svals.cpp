@@ -1,7 +1,7 @@
 // RUN: %clang_analyze_cc1 -triple i386-apple-darwin10 -verify %s \
-// RUN:   -analyzer-checker=core.builtin \
 // RUN:   -analyzer-checker=debug.ExprInspection \
 // RUN:   -analyzer-checker=unix.cstring \
+// RUN:   -analyzer-checker=unix.Malloc \
 // RUN:   -analyzer-config display-checker-name=false
 
 typedef unsigned long size_t;

@@ -51,3 +51,53 @@ llvm.func @or_basic() -> i32 {
   // CHECK: llvm.return %[[RES]] : i32
   llvm.return %2 : i32
 }
+
+// -----
+
+// CHECK-LABEL: llvm.func @addressof
+llvm.func @addressof() {
+  // CHECK-NEXT: %[[ADDRESSOF:.+]] = llvm.mlir.addressof @foo
+  %0 = llvm.mlir.addressof @foo : !llvm.ptr
+  %1 = llvm.mlir.addressof @foo : !llvm.ptr
+  // CHECK-NEXT: llvm.call @bar(%[[ADDRESSOF]], %[[ADDRESSOF]])
+  llvm.call @bar(%0, %1) : (!llvm.ptr, !llvm.ptr) -> ()
+  // CHECK-NEXT: llvm.return
+  llvm.return
+}
+
+llvm.mlir.global constant @foo() : i32
+
+llvm.func @bar(!llvm.ptr, !llvm.ptr)
+
+// -----
+
+// CHECK-LABEL: llvm.func @addressof_select
+llvm.func @addressof_select(%arg: i1) -> !llvm.ptr {
+  // CHECK-NEXT: %[[ADDRESSOF:.+]] = llvm.mlir.addressof @foo
+  %0 = llvm.mlir.addressof @foo : !llvm.ptr
+  %1 = llvm.mlir.addressof @foo : !llvm.ptr
+  %2 = arith.select %arg, %0, %1 : !llvm.ptr
+  // CHECK-NEXT: llvm.return %[[ADDRESSOF]]
+  llvm.return %2 : !llvm.ptr
+}
+
+llvm.mlir.global constant @foo() : i32
+
+llvm.func @bar(!llvm.ptr, !llvm.ptr)
+
+// -----
+
+// CHECK-LABEL: llvm.func @addressof_blocks
+llvm.func @addressof_blocks(%arg: i1) -> !llvm.ptr {
+  // CHECK-NEXT: %[[ADDRESSOF:.+]] = llvm.mlir.addressof @foo
+  llvm.cond_br %arg, ^bb1, ^bb2
+^bb1:
+  %0 = llvm.mlir.addressof @foo : !llvm.ptr
+  llvm.return %0 : !llvm.ptr
+^bb2:
+  %1 = llvm.mlir.addressof @foo : !llvm.ptr
+  // CHECK: return %[[ADDRESSOF]]
+  llvm.return %1 : !llvm.ptr
+}
+
+llvm.mlir.global constant @foo() : i32

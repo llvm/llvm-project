@@ -121,6 +121,7 @@ if is_configured("llvm_use_sanitizer"):
             config.environment["DYLD_INSERT_LIBRARIES"] = find_sanitizer_runtime(
                 "libclang_rt.asan_osx_dynamic.dylib"
             )
+            config.environment["MallocNanoZone"] = "0"
 
     if "Thread" in config.llvm_use_sanitizer:
         config.environment["TSAN_OPTIONS"] = "halt_on_error=1"
@@ -238,6 +239,9 @@ if is_configured("llvm_tools_dir"):
 if is_configured("server"):
     dotest_cmd += ["--server", config.server]
 
+if is_configured("lldb_obj_root"):
+    dotest_cmd += ["--lldb-obj-root", config.lldb_obj_root]
+
 if is_configured("lldb_libs_dir"):
     dotest_cmd += ["--lldb-libs-dir", config.lldb_libs_dir]
 
@@ -309,6 +313,3 @@ if "FREEBSD_LEGACY_PLUGIN" in os.environ:
 # Propagate XDG_CACHE_HOME
 if "XDG_CACHE_HOME" in os.environ:
     config.environment["XDG_CACHE_HOME"] = os.environ["XDG_CACHE_HOME"]
-
-if is_configured("use_vendor_packages"):
-    config.environment["LLDB_TEST_USE_VENDOR_PACKAGES"] = "1"

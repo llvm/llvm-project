@@ -235,6 +235,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAArch64Target() {
   initializeAArch64O0PreLegalizerCombinerPass(*PR);
   initializeAArch64PreLegalizerCombinerPass(*PR);
   initializeAArch64PointerAuthPass(*PR);
+  initializeAArch64PostCoalescerPass(*PR);
   initializeAArch64PostLegalizerCombinerPass(*PR);
   initializeAArch64PostLegalizerLoweringPass(*PR);
   initializeAArch64PostSelectOptimizePass(*PR);
@@ -274,15 +275,15 @@ static std::string computeDataLayout(const Triple &TT,
                                      bool LittleEndian) {
   if (TT.isOSBinFormatMachO()) {
     if (TT.getArch() == Triple::aarch64_32)
-      return "e-m:o-p:32:32-i64:64-i128:128-n32:64-S128";
-    return "e-m:o-i64:64-i128:128-n32:64-S128";
+      return "e-m:o-p:32:32-i64:64-i128:128-n32:64-S128-Fn32";
+    return "e-m:o-i64:64-i128:128-n32:64-S128-Fn32";
   }
   if (TT.isOSBinFormatCOFF())
-    return "e-m:w-p:64:64-i32:32-i64:64-i128:128-n32:64-S128";
+    return "e-m:w-p:64:64-i32:32-i64:64-i128:128-n32:64-S128-Fn32";
   std::string Endian = LittleEndian ? "e" : "E";
   std::string Ptr32 = TT.getEnvironment() == Triple::GNUILP32 ? "-p:32:32" : "";
   return Endian + "-m:e" + Ptr32 +
-         "-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128";
+         "-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128-Fn32";
 }
 
 static StringRef computeDefaultCPU(const Triple &TT, StringRef CPU) {
@@ -539,6 +540,7 @@ public:
   void addPreEmitPass() override;
   void addPostBBSections() override;
   void addPreEmitPass2() override;
+  bool addRegAssignAndRewriteOptimized() override;
 
   std::unique_ptr<CSEConfigBase> getCSEConfig() const override;
 };
@@ -874,6 +876,11 @@ void AArch64PassConfig::addPreEmitPass2() {
   // SVE bundles move prefixes with destructive operations. BLR_RVMARKER pseudo
   // instructions are lowered to bundles as well.
   addPass(createUnpackMachineBundles(nullptr));
+}
+
+bool AArch64PassConfig::addRegAssignAndRewriteOptimized() {
+  addPass(createAArch64PostCoalescerPass());
+  return TargetPassConfig::addRegAssignAndRewriteOptimized();
 }
 
 MachineFunctionInfo *AArch64TargetMachine::createMachineFunctionInfo(

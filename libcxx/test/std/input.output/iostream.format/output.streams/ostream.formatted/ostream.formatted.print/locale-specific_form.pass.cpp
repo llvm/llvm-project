@@ -26,6 +26,7 @@
 //   void print(ostream& os, format_string<Args...> fmt, Args&&... args);
 // template<class... Args>
 //   void println(ostream& os, format_string<Args...> fmt, Args&&... args);
+// void println(ostream& os);                                                // since C++26
 //
 // void vprint_unicode(ostream& os, string_view fmt, format_args args);
 // void vprint_nonunicode(ostream& os, string_view fmt, format_args args);
@@ -67,7 +68,7 @@ test(std::stringstream& stream, std::string expected, test_format_string<char, A
   // *** vprint_unicode ***
   {
     stream.str("");
-    ;
+
     std::vprint_unicode(stream, fmt.get(), std::make_format_args(args...));
     std::string out = stream.str();
     TEST_REQUIRE(out == expected,
@@ -77,7 +78,7 @@ test(std::stringstream& stream, std::string expected, test_format_string<char, A
   // *** vprint_nonunicode ***
   {
     stream.str("");
-    ;
+
     std::vprint_nonunicode(stream, fmt.get(), std::make_format_args(args...));
     std::string out = stream.str();
     TEST_REQUIRE(out == expected,
@@ -88,7 +89,7 @@ test(std::stringstream& stream, std::string expected, test_format_string<char, A
   {
     expected += '\n'; // Tested last since it changes the expected value.
     stream.str("");
-    ;
+
     std::println(stream, fmt, std::forward<Args>(args)...);
     std::string out = stream.str();
     TEST_REQUIRE(out == expected,
@@ -111,6 +112,7 @@ static void test(std::string expected, std::locale loc, test_format_string<char,
 }
 
 #ifndef TEST_HAS_NO_UNICODE
+
 struct numpunct_unicode : std::numpunct<char> {
   string_type do_truename() const override { return "gültig"; }
   string_type do_falsename() const override { return "ungültig"; }
@@ -2188,12 +2190,47 @@ static void test_floating_point() {
   test_floating_point_default_precision<F>();
 }
 
+static void test_println_blank_line(std::stringstream& stream) {
+  std::string expected{'\n'};
+  stream.str("");
+
+  std::println(stream);
+  std::string out = stream.str();
+  TEST_REQUIRE(out == expected,
+               TEST_WRITE_CONCATENATED("\nExpected output (blank line) ", expected, "\nActual output   ", out, '\n'));
+}
+
+static void test_println_blank_line(std::locale loc) {
+  std::stringstream stream;
+  stream.imbue(loc);
+  test_println_blank_line(stream);
+}
+
+static void test_println_blank_line() {
+  std::locale::global(std::locale(LOCALE_en_US_UTF_8));
+  assert(std::locale().name() == LOCALE_en_US_UTF_8);
+  std::stringstream stream;
+  test_println_blank_line(stream);
+
+  std::locale loc = std::locale(std::locale(), new numpunct<char>());
+  std::locale::global(loc);
+  test_println_blank_line(std::locale(LOCALE_en_US_UTF_8));
+
+#ifndef TEST_HAS_NO_UNICODE
+
+  std::locale loc_unicode = std::locale(std::locale(), new numpunct_unicode());
+  test_println_blank_line(loc_unicode);
+
+#endif // TEST_HAS_NO_UNICODE
+}
+
 int main(int, char**) {
   test_bool();
   test_integer();
   test_floating_point<float>();
   test_floating_point<double>();
   test_floating_point<long double>();
+  test_println_blank_line();
 
   return 0;
 }

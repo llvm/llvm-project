@@ -76,19 +76,15 @@ private:
 
 class DiagnosticEventData : public EventData {
 public:
-  enum class Type {
-    Info,
-    Warning,
-    Error,
-  };
-  DiagnosticEventData(Type type, std::string message, bool debugger_specific)
-      : m_message(std::move(message)), m_type(type),
+  DiagnosticEventData(lldb::Severity severity, std::string message,
+                      bool debugger_specific)
+      : m_message(std::move(message)), m_severity(severity),
         m_debugger_specific(debugger_specific) {}
   ~DiagnosticEventData() override = default;
 
   const std::string &GetMessage() const { return m_message; }
   bool IsDebuggerSpecific() const { return m_debugger_specific; }
-  Type GetType() const { return m_type; }
+  lldb::Severity GetSeverity() const { return m_severity; }
 
   llvm::StringRef GetPrefix() const;
 
@@ -105,7 +101,7 @@ public:
 
 protected:
   std::string m_message;
-  Type m_type;
+  lldb::Severity m_severity;
   const bool m_debugger_specific;
 
   DiagnosticEventData(const DiagnosticEventData &) = delete;

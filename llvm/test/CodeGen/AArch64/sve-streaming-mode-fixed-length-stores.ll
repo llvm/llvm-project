@@ -8,8 +8,8 @@ target triple = "aarch64-unknown-linux-gnu"
 define void @store_v4i8(ptr %a) {
 ; CHECK-LABEL: store_v4i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.h, vl4
 ; CHECK-NEXT:    mov z0.h, #0 // =0x0
+; CHECK-NEXT:    ptrue p0.h, vl4
 ; CHECK-NEXT:    st1b { z0.h }, p0, [x0]
 ; CHECK-NEXT:    ret
   store <4 x i8> zeroinitializer, ptr %a
@@ -49,8 +49,8 @@ define void @store_v32i8(ptr %a) {
 define void @store_v2i16(ptr %a) {
 ; CHECK-LABEL: store_v2i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.s, vl2
 ; CHECK-NEXT:    mov z0.s, #0 // =0x0
+; CHECK-NEXT:    ptrue p0.s, vl2
 ; CHECK-NEXT:    st1h { z0.s }, p0, [x0]
 ; CHECK-NEXT:    ret
   store <2 x i16> zeroinitializer, ptr %a

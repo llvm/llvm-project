@@ -5,7 +5,7 @@
 // RUN: %clang_cc1 -fsyntax-only -pedantic -Wno-comment -std=c99 -verify %s
 // RUN: %clang_cc1 -fsyntax-only -pedantic -Wno-comment -std=c11 -verify %s
 // RUN: %clang_cc1 -fsyntax-only -pedantic -Wno-comment -std=c17 -verify %s
-// RUN: %clang_cc1 -fsyntax-only -pedantic -Wno-comment -std=c2x -verify %s
+// RUN: %clang_cc1 -fsyntax-only -pedantic -Wno-comment -std=c2x -verify=silent %s
 
 // silent-no-diagnostics
 
@@ -13,10 +13,10 @@
 // https://www.open-std.org/jtc1/sc22/wg14/www/docs/n2350.htm
 int simple(void) {
   return __builtin_offsetof(struct A // cpp-error {{'A' cannot be defined in a type specifier}} \
-                                        expected-warning {{defining a type within '__builtin_offsetof' is a Clang extension}}
+                                        expected-warning {{defining a type within '__builtin_offsetof' is a C23 extension}}
   {
     int a;
-    struct B // expected-warning {{defining a type within '__builtin_offsetof' is a Clang extension}}
+    struct B // expected-warning {{defining a type within '__builtin_offsetof' is a C23 extension}}
     {
       int c;
       int d;
@@ -26,7 +26,7 @@ int simple(void) {
 
 int anonymous_struct(void) {
   return __builtin_offsetof(struct // cpp-error-re {{'(unnamed struct at {{.*}})' cannot be defined in a type specifier}} \
-                                      expected-warning {{defining a type within '__builtin_offsetof' is a Clang extension}}
+                                      expected-warning {{defining a type within '__builtin_offsetof' is a C23 extension}}
   {
     int a;
     int b;
@@ -47,7 +47,7 @@ int struct_in_second_param(void) {
 
 int macro(void) {
   return offsetof(struct A // cpp-error {{'A' cannot be defined in a type specifier}} \
-                              expected-warning 2 {{defining a type within 'offsetof' is a Clang extension}}
+                              expected-warning 2 {{defining a type within 'offsetof' is a C23 extension}}
   {
     int a;
     struct B // verifier seems to think the error is emitted by the macro

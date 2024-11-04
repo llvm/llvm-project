@@ -45,6 +45,10 @@ static cl::opt<unsigned>
                      cl::desc("Max number of promotions for a single indirect "
                               "call callsite"));
 
+cl::opt<unsigned> MaxNumVTableAnnotations(
+    "icp-max-num-vtables", cl::init(6), cl::Hidden,
+    cl::desc("Max number of vtables annotated for a vtable load instruction."));
+
 ICallPromotionAnalysis::ICallPromotionAnalysis() {
   ValueDataArray = std::make_unique<InstrProfValueData[]>(MaxNumPromotions);
 }

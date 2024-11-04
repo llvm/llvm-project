@@ -18,7 +18,6 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Errc.h"
-#include <map>
 
 #undef  DEBUG_TYPE
 #define DEBUG_TYPE "bolt-prof"
@@ -1206,8 +1205,7 @@ std::error_code DataReader::parse() {
 
     // Add entry data for branches to another function or branches
     // to entry points (including recursive calls)
-    if (BI.To.IsSymbol &&
-        (!BI.From.Name.equals(BI.To.Name) || BI.To.Offset == 0)) {
+    if (BI.To.IsSymbol && (BI.From.Name != BI.To.Name || BI.To.Offset == 0)) {
       I = GetOrCreateFuncEntry(BI.To.Name);
       I->second.EntryData.emplace_back(std::move(BI));
     }

@@ -157,7 +157,7 @@ llvm::Value *CodeGen::emitRoundPointerUpToAlignment(CodeGenFunction &CGF,
   llvm::Value *RoundUp = CGF.Builder.CreateConstInBoundsGEP1_32(
       CGF.Builder.getInt8Ty(), Ptr, Align.getQuantity() - 1);
   return CGF.Builder.CreateIntrinsic(
-      llvm::Intrinsic::ptrmask, {CGF.AllocaInt8PtrTy, CGF.IntPtrTy},
+      llvm::Intrinsic::ptrmask, {Ptr->getType(), CGF.IntPtrTy},
       {RoundUp, llvm::ConstantInt::get(CGF.IntPtrTy, -Align.getQuantity())},
       nullptr, Ptr->getName() + ".aligned");
 }
@@ -247,7 +247,7 @@ Address CodeGen::emitMergePHI(CodeGenFunction &CGF, Address Addr1,
 
 bool CodeGen::isEmptyField(ASTContext &Context, const FieldDecl *FD,
                            bool AllowArrays, bool AsIfNoUniqueAddr) {
-  if (FD->isUnnamedBitfield())
+  if (FD->isUnnamedBitField())
     return true;
 
   QualType FT = FD->getType();
@@ -257,7 +257,7 @@ bool CodeGen::isEmptyField(ASTContext &Context, const FieldDecl *FD,
   bool WasArray = false;
   if (AllowArrays)
     while (const ConstantArrayType *AT = Context.getAsConstantArrayType(FT)) {
-      if (AT->getSize() == 0)
+      if (AT->isZeroSize())
         return true;
       FT = AT->getElementType();
       // The [[no_unique_address]] special case below does not apply to
@@ -352,7 +352,7 @@ const Type *CodeGen::isSingleElementStruct(QualType T, ASTContext &Context) {
 
     // Treat single element arrays as the element.
     while (const ConstantArrayType *AT = Context.getAsConstantArrayType(FT)) {
-      if (AT->getSize().getZExtValue() != 1)
+      if (AT->getZExtSize() != 1)
         break;
       FT = AT->getElementType();
     }

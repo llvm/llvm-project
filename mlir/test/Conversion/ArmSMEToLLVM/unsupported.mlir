@@ -9,6 +9,6 @@ func.func @arm_sme_outerproduct_unsupported_type(%lhs : vector<[16]xi8>, %rhs : 
   // expected-error@+2 {{failed to legalize operation 'arm_sme.outerproduct'}}
   // expected-error@+1 {{unsupported type}}
   %0 = arm_sme.outerproduct %lhs, %rhs  acc(%acc) : vector<[16]xi8>, vector<[16]xi8>
-  "prevent.dce"(%0) : (vector<[16]x[16]xi8>) -> ()
+  "test.some_use"(%0) : (vector<[16]x[16]xi8>) -> ()
 }
 

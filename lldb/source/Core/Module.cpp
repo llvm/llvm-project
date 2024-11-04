@@ -1009,6 +1009,8 @@ SymbolFile *Module::GetSymbolFile(bool can_create, Stream *feedback_strm) {
         m_symfile_up.reset(
             SymbolVendor::FindPlugin(shared_from_this(), feedback_strm));
         m_did_load_symfile = true;
+        if (m_unwind_table)
+          m_unwind_table->Update();
       }
     }
   }
@@ -1239,9 +1241,9 @@ void Module::SectionFileAddressesChanged() {
 
 UnwindTable &Module::GetUnwindTable() {
   if (!m_unwind_table) {
-    m_unwind_table.emplace(*this);
     if (!m_symfile_spec)
       SymbolLocator::DownloadSymbolFileAsync(GetUUID());
+    m_unwind_table.emplace(*this);
   }
   return *m_unwind_table;
 }
@@ -1359,15 +1361,10 @@ void Module::SetSymbolFileFileSpec(const FileSpec &file) {
         // one
         obj_file->ClearSymtab();
 
-        // Clear the unwind table too, as that may also be affected by the
-        // symbol file information.
-        m_unwind_table.reset();
-
         // The symbol file might be a directory bundle ("/tmp/a.out.dSYM")
         // instead of a full path to the symbol file within the bundle
         // ("/tmp/a.out.dSYM/Contents/Resources/DWARF/a.out"). So we need to
         // check this
-
         if (FileSystem::Instance().IsDirectory(file)) {
           std::string new_path(file.GetPath());
           std::string old_path(obj_file->GetFileSpec().GetPath());

@@ -42,9 +42,7 @@ define <vscale x 1 x i16> @vp_bswap_nxv1i16_unmasked(<vscale x 1 x i16> %va, i32
 ; CHECK-ZVKB-NEXT:    vsetvli zero, a0, e16, mf4, ta, ma
 ; CHECK-ZVKB-NEXT:    vrev8.v v8, v8
 ; CHECK-ZVKB-NEXT:    ret
-  %head = insertelement <vscale x 1 x i1> poison, i1 true, i32 0
-  %m = shufflevector <vscale x 1 x i1> %head, <vscale x 1 x i1> poison, <vscale x 1 x i32> zeroinitializer
-  %v = call <vscale x 1 x i16> @llvm.vp.bswap.nxv1i16(<vscale x 1 x i16> %va, <vscale x 1 x i1> %m, i32 %evl)
+  %v = call <vscale x 1 x i16> @llvm.vp.bswap.nxv1i16(<vscale x 1 x i16> %va, <vscale x 1 x i1> splat (i1 true), i32 %evl)
   ret <vscale x 1 x i16> %v
 }
 
@@ -82,9 +80,7 @@ define <vscale x 2 x i16> @vp_bswap_nxv2i16_unmasked(<vscale x 2 x i16> %va, i32
 ; CHECK-ZVKB-NEXT:    vsetvli zero, a0, e16, mf2, ta, ma
 ; CHECK-ZVKB-NEXT:    vrev8.v v8, v8
 ; CHECK-ZVKB-NEXT:    ret
-  %head = insertelement <vscale x 2 x i1> poison, i1 true, i32 0
-  %m = shufflevector <vscale x 2 x i1> %head, <vscale x 2 x i1> poison, <vscale x 2 x i32> zeroinitializer
-  %v = call <vscale x 2 x i16> @llvm.vp.bswap.nxv2i16(<vscale x 2 x i16> %va, <vscale x 2 x i1> %m, i32 %evl)
+  %v = call <vscale x 2 x i16> @llvm.vp.bswap.nxv2i16(<vscale x 2 x i16> %va, <vscale x 2 x i1> splat (i1 true), i32 %evl)
   ret <vscale x 2 x i16> %v
 }
 
@@ -122,9 +118,7 @@ define <vscale x 4 x i16> @vp_bswap_nxv4i16_unmasked(<vscale x 4 x i16> %va, i32
 ; CHECK-ZVKB-NEXT:    vsetvli zero, a0, e16, m1, ta, ma
 ; CHECK-ZVKB-NEXT:    vrev8.v v8, v8
 ; CHECK-ZVKB-NEXT:    ret
-  %head = insertelement <vscale x 4 x i1> poison, i1 true, i32 0
-  %m = shufflevector <vscale x 4 x i1> %head, <vscale x 4 x i1> poison, <vscale x 4 x i32> zeroinitializer
-  %v = call <vscale x 4 x i16> @llvm.vp.bswap.nxv4i16(<vscale x 4 x i16> %va, <vscale x 4 x i1> %m, i32 %evl)
+  %v = call <vscale x 4 x i16> @llvm.vp.bswap.nxv4i16(<vscale x 4 x i16> %va, <vscale x 4 x i1> splat (i1 true), i32 %evl)
   ret <vscale x 4 x i16> %v
 }
 
@@ -162,9 +156,7 @@ define <vscale x 8 x i16> @vp_bswap_nxv8i16_unmasked(<vscale x 8 x i16> %va, i32
 ; CHECK-ZVKB-NEXT:    vsetvli zero, a0, e16, m2, ta, ma
 ; CHECK-ZVKB-NEXT:    vrev8.v v8, v8
 ; CHECK-ZVKB-NEXT:    ret
-  %head = insertelement <vscale x 8 x i1> poison, i1 true, i32 0
-  %m = shufflevector <vscale x 8 x i1> %head, <vscale x 8 x i1> poison, <vscale x 8 x i32> zeroinitializer
-  %v = call <vscale x 8 x i16> @llvm.vp.bswap.nxv8i16(<vscale x 8 x i16> %va, <vscale x 8 x i1> %m, i32 %evl)
+  %v = call <vscale x 8 x i16> @llvm.vp.bswap.nxv8i16(<vscale x 8 x i16> %va, <vscale x 8 x i1> splat (i1 true), i32 %evl)
   ret <vscale x 8 x i16> %v
 }
 
@@ -202,9 +194,7 @@ define <vscale x 16 x i16> @vp_bswap_nxv16i16_unmasked(<vscale x 16 x i16> %va, 
 ; CHECK-ZVKB-NEXT:    vsetvli zero, a0, e16, m4, ta, ma
 ; CHECK-ZVKB-NEXT:    vrev8.v v8, v8
 ; CHECK-ZVKB-NEXT:    ret
-  %head = insertelement <vscale x 16 x i1> poison, i1 true, i32 0
-  %m = shufflevector <vscale x 16 x i1> %head, <vscale x 16 x i1> poison, <vscale x 16 x i32> zeroinitializer
-  %v = call <vscale x 16 x i16> @llvm.vp.bswap.nxv16i16(<vscale x 16 x i16> %va, <vscale x 16 x i1> %m, i32 %evl)
+  %v = call <vscale x 16 x i16> @llvm.vp.bswap.nxv16i16(<vscale x 16 x i16> %va, <vscale x 16 x i1> splat (i1 true), i32 %evl)
   ret <vscale x 16 x i16> %v
 }
 
@@ -242,9 +232,7 @@ define <vscale x 32 x i16> @vp_bswap_nxv32i16_unmasked(<vscale x 32 x i16> %va, 
 ; CHECK-ZVKB-NEXT:    vsetvli zero, a0, e16, m8, ta, ma
 ; CHECK-ZVKB-NEXT:    vrev8.v v8, v8
 ; CHECK-ZVKB-NEXT:    ret
-  %head = insertelement <vscale x 32 x i1> poison, i1 true, i32 0
-  %m = shufflevector <vscale x 32 x i1> %head, <vscale x 32 x i1> poison, <vscale x 32 x i32> zeroinitializer
-  %v = call <vscale x 32 x i16> @llvm.vp.bswap.nxv32i16(<vscale x 32 x i16> %va, <vscale x 32 x i1> %m, i32 %evl)
+  %v = call <vscale x 32 x i16> @llvm.vp.bswap.nxv32i16(<vscale x 32 x i16> %va, <vscale x 32 x i1> splat (i1 true), i32 %evl)
   ret <vscale x 32 x i16> %v
 }
 
@@ -298,9 +286,7 @@ define <vscale x 1 x i32> @vp_bswap_nxv1i32_unmasked(<vscale x 1 x i32> %va, i32
 ; CHECK-ZVKB-NEXT:    vsetvli zero, a0, e32, mf2, ta, ma
 ; CHECK-ZVKB-NEXT:    vrev8.v v8, v8
 ; CHECK-ZVKB-NEXT:    ret
-  %head = insertelement <vscale x 1 x i1> poison, i1 true, i32 0
-  %m = shufflevector <vscale x 1 x i1> %head, <vscale x 1 x i1> poison, <vscale x 1 x i32> zeroinitializer
-  %v = call <vscale x 1 x i32> @llvm.vp.bswap.nxv1i32(<vscale x 1 x i32> %va, <vscale x 1 x i1> %m, i32 %evl)
+  %v = call <vscale x 1 x i32> @llvm.vp.bswap.nxv1i32(<vscale x 1 x i32> %va, <vscale x 1 x i1> splat (i1 true), i32 %evl)
   ret <vscale x 1 x i32> %v
 }
 
@@ -354,9 +340,7 @@ define <vscale x 2 x i32> @vp_bswap_nxv2i32_unmasked(<vscale x 2 x i32> %va, i32
 ; CHECK-ZVKB-NEXT:    vsetvli zero, a0, e32, m1, ta, ma
 ; CHECK-ZVKB-NEXT:    vrev8.v v8, v8
 ; CHECK-ZVKB-NEXT:    ret
-  %head = insertelement <vscale x 2 x i1> poison, i1 true, i32 0
-  %m = shufflevector <vscale x 2 x i1> %head, <vscale x 2 x i1> poison, <vscale x 2 x i32> zeroinitializer
-  %v = call <vscale x 2 x i32> @llvm.vp.bswap.nxv2i32(<vscale x 2 x i32> %va, <vscale x 2 x i1> %m, i32 %evl)
+  %v = call <vscale x 2 x i32> @llvm.vp.bswap.nxv2i32(<vscale x 2 x i32> %va, <vscale x 2 x i1> splat (i1 true), i32 %evl)
   ret <vscale x 2 x i32> %v
 }
 
@@ -410,9 +394,7 @@ define <vscale x 4 x i32> @vp_bswap_nxv4i32_unmasked(<vscale x 4 x i32> %va, i32
 ; CHECK-ZVKB-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
 ; CHECK-ZVKB-NEXT:    vrev8.v v8, v8
 ; CHECK-ZVKB-NEXT:    ret
-  %head = insertelement <vscale x 4 x i1> poison, i1 true, i32 0
-  %m = shufflevector <vscale x 4 x i1> %head, <vscale x 4 x i1> poison, <vscale x 4 x i32> zeroinitializer
-  %v = call <vscale x 4 x i32> @llvm.vp.bswap.nxv4i32(<vscale x 4 x i32> %va, <vscale x 4 x i1> %m, i32 %evl)
+  %v = call <vscale x 4 x i32> @llvm.vp.bswap.nxv4i32(<vscale x 4 x i32> %va, <vscale x 4 x i1> splat (i1 true), i32 %evl)
   ret <vscale x 4 x i32> %v
 }
 
@@ -466,9 +448,7 @@ define <vscale x 8 x i32> @vp_bswap_nxv8i32_unmasked(<vscale x 8 x i32> %va, i32
 ; CHECK-ZVKB-NEXT:    vsetvli zero, a0, e32, m4, ta, ma
 ; CHECK-ZVKB-NEXT:    vrev8.v v8, v8
 ; CHECK-ZVKB-NEXT:    ret
-  %head = insertelement <vscale x 8 x i1> poison, i1 true, i32 0
-  %m = shufflevector <vscale x 8 x i1> %head, <vscale x 8 x i1> poison, <vscale x 8 x i32> zeroinitializer
-  %v = call <vscale x 8 x i32> @llvm.vp.bswap.nxv8i32(<vscale x 8 x i32> %va, <vscale x 8 x i1> %m, i32 %evl)
+  %v = call <vscale x 8 x i32> @llvm.vp.bswap.nxv8i32(<vscale x 8 x i32> %va, <vscale x 8 x i1> splat (i1 true), i32 %evl)
   ret <vscale x 8 x i32> %v
 }
 
@@ -522,9 +502,7 @@ define <vscale x 16 x i32> @vp_bswap_nxv16i32_unmasked(<vscale x 16 x i32> %va, 
 ; CHECK-ZVKB-NEXT:    vsetvli zero, a0, e32, m8, ta, ma
 ; CHECK-ZVKB-NEXT:    vrev8.v v8, v8
 ; CHECK-ZVKB-NEXT:    ret
-  %head = insertelement <vscale x 16 x i1> poison, i1 true, i32 0
-  %m = shufflevector <vscale x 16 x i1> %head, <vscale x 16 x i1> poison, <vscale x 16 x i32> zeroinitializer
-  %v = call <vscale x 16 x i32> @llvm.vp.bswap.nxv16i32(<vscale x 16 x i32> %va, <vscale x 16 x i1> %m, i32 %evl)
+  %v = call <vscale x 16 x i32> @llvm.vp.bswap.nxv16i32(<vscale x 16 x i32> %va, <vscale x 16 x i1> splat (i1 true), i32 %evl)
   ret <vscale x 16 x i32> %v
 }
 
@@ -694,9 +672,7 @@ define <vscale x 1 x i64> @vp_bswap_nxv1i64_unmasked(<vscale x 1 x i64> %va, i32
 ; CHECK-ZVKB-NEXT:    vsetvli zero, a0, e64, m1, ta, ma
 ; CHECK-ZVKB-NEXT:    vrev8.v v8, v8
 ; CHECK-ZVKB-NEXT:    ret
-  %head = insertelement <vscale x 1 x i1> poison, i1 true, i32 0
-  %m = shufflevector <vscale x 1 x i1> %head, <vscale x 1 x i1> poison, <vscale x 1 x i32> zeroinitializer
-  %v = call <vscale x 1 x i64> @llvm.vp.bswap.nxv1i64(<vscale x 1 x i64> %va, <vscale x 1 x i1> %m, i32 %evl)
+  %v = call <vscale x 1 x i64> @llvm.vp.bswap.nxv1i64(<vscale x 1 x i64> %va, <vscale x 1 x i1> splat (i1 true), i32 %evl)
   ret <vscale x 1 x i64> %v
 }
 
@@ -866,9 +842,7 @@ define <vscale x 2 x i64> @vp_bswap_nxv2i64_unmasked(<vscale x 2 x i64> %va, i32
 ; CHECK-ZVKB-NEXT:    vsetvli zero, a0, e64, m2, ta, ma
 ; CHECK-ZVKB-NEXT:    vrev8.v v8, v8
 ; CHECK-ZVKB-NEXT:    ret
-  %head = insertelement <vscale x 2 x i1> poison, i1 true, i32 0
-  %m = shufflevector <vscale x 2 x i1> %head, <vscale x 2 x i1> poison, <vscale x 2 x i32> zeroinitializer
-  %v = call <vscale x 2 x i64> @llvm.vp.bswap.nxv2i64(<vscale x 2 x i64> %va, <vscale x 2 x i1> %m, i32 %evl)
+  %v = call <vscale x 2 x i64> @llvm.vp.bswap.nxv2i64(<vscale x 2 x i64> %va, <vscale x 2 x i1> splat (i1 true), i32 %evl)
   ret <vscale x 2 x i64> %v
 }
 
@@ -1038,9 +1012,7 @@ define <vscale x 4 x i64> @vp_bswap_nxv4i64_unmasked(<vscale x 4 x i64> %va, i32
 ; CHECK-ZVKB-NEXT:    vsetvli zero, a0, e64, m4, ta, ma
 ; CHECK-ZVKB-NEXT:    vrev8.v v8, v8
 ; CHECK-ZVKB-NEXT:    ret
-  %head = insertelement <vscale x 4 x i1> poison, i1 true, i32 0
-  %m = shufflevector <vscale x 4 x i1> %head, <vscale x 4 x i1> poison, <vscale x 4 x i32> zeroinitializer
-  %v = call <vscale x 4 x i64> @llvm.vp.bswap.nxv4i64(<vscale x 4 x i64> %va, <vscale x 4 x i1> %m, i32 %evl)
+  %v = call <vscale x 4 x i64> @llvm.vp.bswap.nxv4i64(<vscale x 4 x i64> %va, <vscale x 4 x i1> splat (i1 true), i32 %evl)
   ret <vscale x 4 x i64> %v
 }
 
@@ -1283,9 +1255,7 @@ define <vscale x 7 x i64> @vp_bswap_nxv7i64_unmasked(<vscale x 7 x i64> %va, i32
 ; CHECK-ZVKB-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
 ; CHECK-ZVKB-NEXT:    vrev8.v v8, v8
 ; CHECK-ZVKB-NEXT:    ret
-  %head = insertelement <vscale x 7 x i1> poison, i1 true, i32 0
-  %m = shufflevector <vscale x 7 x i1> %head, <vscale x 7 x i1> poison, <vscale x 7 x i32> zeroinitializer
-  %v = call <vscale x 7 x i64> @llvm.vp.bswap.nxv7i64(<vscale x 7 x i64> %va, <vscale x 7 x i1> %m, i32 %evl)
+  %v = call <vscale x 7 x i64> @llvm.vp.bswap.nxv7i64(<vscale x 7 x i64> %va, <vscale x 7 x i1> splat (i1 true), i32 %evl)
   ret <vscale x 7 x i64> %v
 }
 
@@ -1528,9 +1498,7 @@ define <vscale x 8 x i64> @vp_bswap_nxv8i64_unmasked(<vscale x 8 x i64> %va, i32
 ; CHECK-ZVKB-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
 ; CHECK-ZVKB-NEXT:    vrev8.v v8, v8
 ; CHECK-ZVKB-NEXT:    ret
-  %head = insertelement <vscale x 8 x i1> poison, i1 true, i32 0
-  %m = shufflevector <vscale x 8 x i1> %head, <vscale x 8 x i1> poison, <vscale x 8 x i32> zeroinitializer
-  %v = call <vscale x 8 x i64> @llvm.vp.bswap.nxv8i64(<vscale x 8 x i64> %va, <vscale x 8 x i1> %m, i32 %evl)
+  %v = call <vscale x 8 x i64> @llvm.vp.bswap.nxv8i64(<vscale x 8 x i64> %va, <vscale x 8 x i1> splat (i1 true), i32 %evl)
   ret <vscale x 8 x i64> %v
 }
 
@@ -1655,9 +1623,7 @@ define <vscale x 64 x i16> @vp_bswap_nxv64i16_unmasked(<vscale x 64 x i16> %va, 
 ; CHECK-ZVKB-NEXT:    vsetvli zero, a0, e16, m8, ta, ma
 ; CHECK-ZVKB-NEXT:    vrev8.v v8, v8
 ; CHECK-ZVKB-NEXT:    ret
-  %head = insertelement <vscale x 64 x i1> poison, i1 true, i32 0
-  %m = shufflevector <vscale x 64 x i1> %head, <vscale x 64 x i1> poison, <vscale x 64 x i32> zeroinitializer
-  %v = call <vscale x 64 x i16> @llvm.vp.bswap.nxv64i16(<vscale x 64 x i16> %va, <vscale x 64 x i1> %m, i32 %evl)
+  %v = call <vscale x 64 x i16> @llvm.vp.bswap.nxv64i16(<vscale x 64 x i16> %va, <vscale x 64 x i1> splat (i1 true), i32 %evl)
   ret <vscale x 64 x i16> %v
 }
 

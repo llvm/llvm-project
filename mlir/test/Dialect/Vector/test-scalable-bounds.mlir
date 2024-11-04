@@ -26,8 +26,8 @@ func.func @fixed_size_loop_nest() {
     %min_i = affine.min #map_dim_i(%i)[%c4_vscale]
     scf.for %j = %c0 to %c16 step %c4_vscale {
       %min_j = affine.min #map_dim_j(%j)[%c4_vscale]
-      %bound_i = "test.reify_scalable_bound"(%min_i) {type = "UB", vscale_min = 1, vscale_max = 16} : (index) -> index
-      %bound_j = "test.reify_scalable_bound"(%min_j) {type = "UB", vscale_min = 1, vscale_max = 16} : (index) -> index
+      %bound_i = "test.reify_bound"(%min_i) {type = "UB", vscale_min = 1, vscale_max = 16, scalable} : (index) -> index
+      %bound_j = "test.reify_bound"(%min_j) {type = "UB", vscale_min = 1, vscale_max = 16, scalable} : (index) -> index
       "test.some_use"(%bound_i, %bound_j) : (index, index) -> ()
     }
   }
@@ -58,8 +58,8 @@ func.func @dynamic_size_loop_nest(%dim0: index, %dim1: index) {
     %min_i = affine.min #map_dynamic_dim(%i)[%c4_vscale, %dim0]
     scf.for %j = %c0 to %dim1 step %c4_vscale {
       %min_j = affine.min #map_dynamic_dim(%j)[%c4_vscale, %dim1]
-      %bound_i = "test.reify_scalable_bound"(%min_i) {type = "UB", vscale_min = 1, vscale_max = 16} : (index) -> index
-      %bound_j = "test.reify_scalable_bound"(%min_j) {type = "UB", vscale_min = 1, vscale_max = 16} : (index) -> index
+      %bound_i = "test.reify_bound"(%min_i) {type = "UB", vscale_min = 1, vscale_max = 16, scalable} : (index) -> index
+      %bound_j = "test.reify_bound"(%min_j) {type = "UB", vscale_min = 1, vscale_max = 16, scalable} : (index) -> index
       "test.some_use"(%bound_i, %bound_j) : (index, index) -> ()
     }
   }
@@ -80,7 +80,7 @@ func.func @add_to_vscale() {
   %vscale = vector.vscale
   %c8 = arith.constant 8 : index
   %vscale_plus_c8 = arith.addi %vscale, %c8 : index
-  %bound = "test.reify_scalable_bound"(%vscale_plus_c8) {type = "EQ", vscale_min = 1, vscale_max = 16} : (index) -> index
+  %bound = "test.reify_bound"(%vscale_plus_c8) {type = "EQ", vscale_min = 1, vscale_max = 16, scalable} : (index) -> index
   "test.some_use"(%bound) : (index) -> ()
   return
 }
@@ -94,7 +94,7 @@ func.func @add_to_vscale() {
 //       CHECK:   "test.some_use"(%[[C2]]) : (index) -> ()
 func.func @vscale_fixed_size() {
   %vscale = vector.vscale
-  %bound = "test.reify_scalable_bound"(%vscale) {type = "EQ", vscale_min = 2, vscale_max = 2} : (index) -> index
+  %bound = "test.reify_bound"(%vscale) {type = "EQ", vscale_min = 2, vscale_max = 2, scalable} : (index) -> index
   "test.some_use"(%bound) : (index) -> ()
   return
 }
@@ -107,7 +107,7 @@ func.func @unknown_bound(%a: index) {
   %vscale = vector.vscale
   %vscale_plus_a = arith.muli %vscale, %a : index
   // expected-error @below{{could not reify bound}}
-  %bound = "test.reify_scalable_bound"(%vscale_plus_a) {type = "UB", vscale_min = 1, vscale_max = 16} : (index) -> index
+  %bound = "test.reify_bound"(%vscale_plus_a) {type = "UB", vscale_min = 1, vscale_max = 16, scalable} : (index) -> index
   "test.some_use"(%bound) : (index) -> ()
   return
 }
@@ -134,7 +134,7 @@ func.func @duplicate_vscale_values() {
   %c2_vscale = arith.muli %vscale_1, %c2 : index
   %add = arith.addi %c2_vscale, %c4_vscale : index
 
-  %bound = "test.reify_scalable_bound"(%add) {type = "EQ", vscale_min = 1, vscale_max = 16} : (index) -> index
+  %bound = "test.reify_bound"(%add) {type = "EQ", vscale_min = 1, vscale_max = 16, scalable} : (index) -> index
   "test.some_use"(%bound) : (index) -> ()
   return
 }
@@ -154,7 +154,7 @@ func.func @non_scalable_code() {
   %c0 = arith.constant 0 : index
   scf.for %i = %c0 to %c1024 step %c4 {
     %min_i = affine.min #map_dim_i(%i)[%c4]
-    %bound_i = "test.reify_scalable_bound"(%min_i) {type = "UB", vscale_min = 1, vscale_max = 16} : (index) -> index
+    %bound_i = "test.reify_bound"(%min_i) {type = "UB", vscale_min = 1, vscale_max = 16, scalable} : (index) -> index
     "test.some_use"(%bound_i) : (index) -> ()
   }
   return

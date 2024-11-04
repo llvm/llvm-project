@@ -27,7 +27,7 @@ func.func @conv_1d(%arg0: memref<?xf32>, %arg1: memref<?xf32>, %arg2: memref<?xf
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
     %0 = transform.structured.match ops{["linalg.conv_1d"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-    %1, %loop = transform.structured.tile_using_for %0 [4] : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
+    %1, %loop = transform.structured.tile_using_for %0 tile_sizes [4] : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
     transform.yield
   }
 }

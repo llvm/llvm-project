@@ -156,7 +156,10 @@ public:
       std::unique_ptr<MaterializationResponsibility> MR,
       std::unique_ptr<MemoryBuffer> ObjBuffer)
       : JITLinkContext(&MR->getTargetJITDylib()), Layer(Layer),
-        MR(std::move(MR)), ObjBuffer(std::move(ObjBuffer)) {}
+        MR(std::move(MR)), ObjBuffer(std::move(ObjBuffer)) {
+    std::lock_guard<std::mutex> Lock(Layer.LayerMutex);
+    Plugins = Layer.Plugins;
+  }
 
   ~ObjectLinkingLayerJITLinkContext() {
     // If there is an object buffer return function then use it to
@@ -168,14 +171,14 @@ public:
   JITLinkMemoryManager &getMemoryManager() override { return Layer.MemMgr; }
 
   void notifyMaterializing(LinkGraph &G) {
-    for (auto &P : Layer.Plugins)
+    for (auto &P : Plugins)
       P->notifyMaterializing(*MR, G, *this,
                              ObjBuffer ? ObjBuffer->getMemBufferRef()
                              : MemoryBufferRef());
   }
 
   void notifyFailed(Error Err) override {
-    for (auto &P : Layer.Plugins)
+    for (auto &P : Plugins)
       Err = joinErrors(std::move(Err), P->notifyFailed(*MR));
     Layer.getExecutionSession().reportError(std::move(Err));
     MR->failMaterialization();
@@ -317,12 +320,12 @@ public:
     if (auto Err = MR->notifyResolved(InternedResult))
       return Err;
 
-    Layer.notifyLoaded(*MR);
+    notifyLoaded();
     return Error::success();
   }
 
   void notifyFinalized(JITLinkMemoryManager::FinalizedAlloc A) override {
-    if (auto Err = Layer.notifyEmitted(*MR, std::move(A))) {
+    if (auto Err = notifyEmitted(std::move(A))) {
       Layer.getExecutionSession().reportError(std::move(Err));
       MR->failMaterialization();
       return;
@@ -344,10 +347,34 @@ public:
       return claimOrExternalizeWeakAndCommonSymbols(G);
     });
 
-    Layer.modifyPassConfig(*MR, LG, Config);
+    for (auto &P : Plugins)
+      P->modifyPassConfig(*MR, LG, Config);
 
     Config.PreFixupPasses.push_back(
         [this](LinkGraph &G) { return registerDependencies(G); });
+
+    return Error::success();
+  }
+
+  void notifyLoaded() {
+    for (auto &P : Plugins)
+      P->notifyLoaded(*MR);
+  }
+
+  Error notifyEmitted(jitlink::JITLinkMemoryManager::FinalizedAlloc FA) {
+    Error Err = Error::success();
+    for (auto &P : Plugins)
+      Err = joinErrors(std::move(Err), P->notifyEmitted(*MR));
+
+    if (Err) {
+      if (FA)
+        Err =
+            joinErrors(std::move(Err), Layer.MemMgr.deallocate(std::move(FA)));
+      return Err;
+    }
+
+    if (FA)
+      return Layer.recordFinalizedAlloc(*MR, std::move(FA));
 
     return Error::success();
   }
@@ -522,7 +549,7 @@ private:
 
     SymbolDependenceGroup SynthSDG;
 
-    for (auto &P : Layer.Plugins) {
+    for (auto &P : Plugins) {
       auto SynthDeps = P->getSyntheticSymbolDependencies(*MR);
       if (SynthDeps.empty())
         continue;
@@ -636,6 +663,7 @@ private:
   }
 
   ObjectLinkingLayer &Layer;
+  std::vector<std::shared_ptr<ObjectLinkingLayer::Plugin>> Plugins;
   std::unique_ptr<MaterializationResponsibility> MR;
   std::unique_ptr<MemoryBuffer> ObjBuffer;
   DenseMap<Block *, SymbolNameSet> ExternalBlockDeps;
@@ -702,34 +730,9 @@ void ObjectLinkingLayer::emit(std::unique_ptr<MaterializationResponsibility> R,
   link(std::move(G), std::move(Ctx));
 }
 
-void ObjectLinkingLayer::modifyPassConfig(MaterializationResponsibility &MR,
-                                          LinkGraph &G,
-                                          PassConfiguration &PassConfig) {
-  for (auto &P : Plugins)
-    P->modifyPassConfig(MR, G, PassConfig);
-}
-
-void ObjectLinkingLayer::notifyLoaded(MaterializationResponsibility &MR) {
-  for (auto &P : Plugins)
-    P->notifyLoaded(MR);
-}
-
-Error ObjectLinkingLayer::notifyEmitted(MaterializationResponsibility &MR,
-                                        FinalizedAlloc FA) {
-  Error Err = Error::success();
-  for (auto &P : Plugins)
-    Err = joinErrors(std::move(Err), P->notifyEmitted(MR));
-
-  if (Err) {
-    if (FA)
-      Err = joinErrors(std::move(Err), MemMgr.deallocate(std::move(FA)));
-    return Err;
-  }
-
-  if (!FA)
-    return Error::success();
-
-  Err = MR.withResourceKeyDo(
+Error ObjectLinkingLayer::recordFinalizedAlloc(
+    MaterializationResponsibility &MR, FinalizedAlloc FA) {
+  auto Err = MR.withResourceKeyDo(
       [&](ResourceKey K) { Allocs[K].push_back(std::move(FA)); });
 
   if (Err)

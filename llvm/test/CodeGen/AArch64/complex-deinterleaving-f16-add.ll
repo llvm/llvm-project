@@ -127,15 +127,15 @@ define <4 x half> @complex_add_v4f16_with_intrinsic(<4 x half> %a, <4 x half> %b
 ; CHECK-NEXT:    fcadd v0.4h, v1.4h, v0.4h, #90
 ; CHECK-NEXT:    ret
 entry:
-  %a.deinterleaved = tail call { <2 x half>, <2 x half> } @llvm.experimental.vector.deinterleave2.v4f16(<4 x half> %a)
+  %a.deinterleaved = tail call { <2 x half>, <2 x half> } @llvm.vector.deinterleave2.v4f16(<4 x half> %a)
   %a.real = extractvalue { <2 x half>, <2 x half> } %a.deinterleaved, 0
   %a.imag = extractvalue { <2 x half>, <2 x half> } %a.deinterleaved, 1
-  %b.deinterleaved = tail call { <2 x half>, <2 x half> } @llvm.experimental.vector.deinterleave2.v4f16(<4 x half> %b)
+  %b.deinterleaved = tail call { <2 x half>, <2 x half> } @llvm.vector.deinterleave2.v4f16(<4 x half> %b)
   %b.real = extractvalue { <2 x half>, <2 x half> } %b.deinterleaved, 0
   %b.imag = extractvalue { <2 x half>, <2 x half> } %b.deinterleaved, 1
   %0 = fsub fast <2 x half> %b.real, %a.imag
   %1 = fadd fast <2 x half> %b.imag, %a.real
-  %interleaved.vec = tail call <4 x half> @llvm.experimental.vector.interleave2.v4f16(<2 x half> %0, <2 x half> %1)
+  %interleaved.vec = tail call <4 x half> @llvm.vector.interleave2.v4f16(<2 x half> %0, <2 x half> %1)
   ret <4 x half> %interleaved.vec
 }
 
@@ -146,15 +146,15 @@ define <8 x half> @complex_add_v8f16_with_intrinsic(<8 x half> %a, <8 x half> %b
 ; CHECK-NEXT:    fcadd v0.8h, v1.8h, v0.8h, #90
 ; CHECK-NEXT:    ret
 entry:
-  %a.deinterleaved = tail call { <4 x half>, <4 x half> } @llvm.experimental.vector.deinterleave2.v8f16(<8 x half> %a)
+  %a.deinterleaved = tail call { <4 x half>, <4 x half> } @llvm.vector.deinterleave2.v8f16(<8 x half> %a)
   %a.real = extractvalue { <4 x half>, <4 x half> } %a.deinterleaved, 0
   %a.imag = extractvalue { <4 x half>, <4 x half> } %a.deinterleaved, 1
-  %b.deinterleaved = tail call { <4 x half>, <4 x half> } @llvm.experimental.vector.deinterleave2.v8f16(<8 x half> %b)
+  %b.deinterleaved = tail call { <4 x half>, <4 x half> } @llvm.vector.deinterleave2.v8f16(<8 x half> %b)
   %b.real = extractvalue { <4 x half>, <4 x half> } %b.deinterleaved, 0
   %b.imag = extractvalue { <4 x half>, <4 x half> } %b.deinterleaved, 1
   %0 = fsub fast <4 x half> %b.real, %a.imag
   %1 = fadd fast <4 x half> %b.imag, %a.real
-  %interleaved.vec = tail call <8 x half> @llvm.experimental.vector.interleave2.v8f16(<4 x half> %0, <4 x half> %1)
+  %interleaved.vec = tail call <8 x half> @llvm.vector.interleave2.v8f16(<4 x half> %0, <4 x half> %1)
   ret <8 x half> %interleaved.vec
 }
 
@@ -166,15 +166,15 @@ define <16 x half> @complex_add_v16f16_with_intrinsic(<16 x half> %a, <16 x half
 ; CHECK-NEXT:    fcadd v0.8h, v2.8h, v0.8h, #90
 ; CHECK-NEXT:    ret
 entry:
-  %a.deinterleaved = tail call { <8 x half>, <8 x half> } @llvm.experimental.vector.deinterleave2.v16f16(<16 x half> %a)
+  %a.deinterleaved = tail call { <8 x half>, <8 x half> } @llvm.vector.deinterleave2.v16f16(<16 x half> %a)
   %a.real = extractvalue { <8 x half>, <8 x half> } %a.deinterleaved, 0
   %a.imag = extractvalue { <8 x half>, <8 x half> } %a.deinterleaved, 1
-  %b.deinterleaved = tail call { <8 x half>, <8 x half> } @llvm.experimental.vector.deinterleave2.v16f16(<16 x half> %b)
+  %b.deinterleaved = tail call { <8 x half>, <8 x half> } @llvm.vector.deinterleave2.v16f16(<16 x half> %b)
   %b.real = extractvalue { <8 x half>, <8 x half> } %b.deinterleaved, 0
   %b.imag = extractvalue { <8 x half>, <8 x half> } %b.deinterleaved, 1
   %0 = fsub fast <8 x half> %b.real, %a.imag
   %1 = fadd fast <8 x half> %b.imag, %a.real
-  %interleaved.vec = tail call <16 x half> @llvm.experimental.vector.interleave2.v16f16(<8 x half> %0, <8 x half> %1)
+  %interleaved.vec = tail call <16 x half> @llvm.vector.interleave2.v16f16(<8 x half> %0, <8 x half> %1)
   ret <16 x half> %interleaved.vec
 }
 
@@ -216,11 +216,11 @@ entry:
 }
 
 
-declare { <2 x half>, <2 x half> } @llvm.experimental.vector.deinterleave2.v4f16(<4 x half>)
-declare <4 x half> @llvm.experimental.vector.interleave2.v4f16(<2 x half>, <2 x half>)
+declare { <2 x half>, <2 x half> } @llvm.vector.deinterleave2.v4f16(<4 x half>)
+declare <4 x half> @llvm.vector.interleave2.v4f16(<2 x half>, <2 x half>)
 
-declare { <4 x half>, <4 x half> } @llvm.experimental.vector.deinterleave2.v8f16(<8 x half>)
-declare <8 x half> @llvm.experimental.vector.interleave2.v8f16(<4 x half>, <4 x half>)
+declare { <4 x half>, <4 x half> } @llvm.vector.deinterleave2.v8f16(<8 x half>)
+declare <8 x half> @llvm.vector.interleave2.v8f16(<4 x half>, <4 x half>)
 
-declare { <8 x half>, <8 x half> } @llvm.experimental.vector.deinterleave2.v16f16(<16 x half>)
-declare <16 x half> @llvm.experimental.vector.interleave2.v16f16(<8 x half>, <8 x half>)
+declare { <8 x half>, <8 x half> } @llvm.vector.deinterleave2.v16f16(<16 x half>)
+declare <16 x half> @llvm.vector.interleave2.v16f16(<8 x half>, <8 x half>)

@@ -18,7 +18,9 @@
 #include "llvm/CodeGen/BasicTTIImpl.h"
 #include "llvm/CodeGen/CostTable.h"
 #include "llvm/CodeGen/TargetLowering.h"
+#include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/IntrinsicInst.h"
+#include "llvm/IR/Intrinsics.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/MathExtras.h"
 
@@ -265,7 +267,7 @@ SystemZTTIImpl::getIntImmCostIntrin(Intrinsic::ID IID, unsigned Idx,
       return TTI::TCC_Free;
     break;
   case Intrinsic::experimental_patchpoint_void:
-  case Intrinsic::experimental_patchpoint_i64:
+  case Intrinsic::experimental_patchpoint:
     if ((Idx < 4) || (Imm.getBitWidth() <= 64 && isInt<64>(Imm.getSExtValue())))
       return TTI::TCC_Free;
     break;
@@ -601,12 +603,10 @@ InstructionCost SystemZTTIImpl::getArithmeticInstrCost(
                                        Args, CxtI);
 }
 
-InstructionCost SystemZTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
-                                               VectorType *Tp,
-                                               ArrayRef<int> Mask,
-                                               TTI::TargetCostKind CostKind,
-                                               int Index, VectorType *SubTp,
-                                               ArrayRef<const Value *> Args) {
+InstructionCost SystemZTTIImpl::getShuffleCost(
+    TTI::ShuffleKind Kind, VectorType *Tp, ArrayRef<int> Mask,
+    TTI::TargetCostKind CostKind, int Index, VectorType *SubTp,
+    ArrayRef<const Value *> Args, const Instruction *CxtI) {
   Kind = improveShuffleKindFromMask(Kind, Mask, Tp, Index, SubTp);
   if (ST->hasVector()) {
     unsigned NumVectors = getNumVectorRegs(Tp);
@@ -1295,18 +1295,14 @@ getVectorIntrinsicInstrCost(Intrinsic::ID ID, Type *RetTy,
   if (ID == Intrinsic::vector_reduce_add) {
     // Retrieve number and size of elements for the vector op.
     auto *VTy = cast<FixedVectorType>(ParamTys.front());
-    unsigned NumElements = VTy->getNumElements();
     unsigned ScalarSize = VTy->getScalarSizeInBits();
     // For scalar sizes >128 bits, we fall back to the generic cost estimate.
     if (ScalarSize > SystemZ::VectorBits)
       return -1;
-    // A single vector register can hold this many elements.
-    unsigned MaxElemsPerVector = SystemZ::VectorBits / ScalarSize;
     // This many vector regs are needed to represent the input elements (V).
     unsigned VectorRegsNeeded = getNumVectorRegs(VTy);
     // This many instructions are needed for the final sum of vector elems (S).
-    unsigned LastVectorHandling =
-        2 * Log2_32_Ceil(std::min(NumElements, MaxElemsPerVector));
+    unsigned LastVectorHandling = (ScalarSize < 32) ? 3 : 2;
     // We use vector adds to create a sum vector, which takes
     // V/2 + V/4 + ... = V - 1 operations.
     // Then, we need S operations to sum up the elements of that sum vector,
@@ -1325,4 +1321,24 @@ SystemZTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
   if (Cost != -1)
     return Cost;
   return BaseT::getIntrinsicInstrCost(ICA, CostKind);
+}
+
+bool SystemZTTIImpl::shouldExpandReduction(const IntrinsicInst *II) const {
+  // Always expand on Subtargets without vector instructions.
+  if (!ST->hasVector())
+    return true;
+
+  // Whether or not to expand is a per-intrinsic decision.
+  switch (II->getIntrinsicID()) {
+  default:
+    return true;
+  // Do not expand vector.reduce.add...
+  case Intrinsic::vector_reduce_add:
+    auto *VType = cast<FixedVectorType>(II->getOperand(0)->getType());
+    // ...unless the scalar size is i64 or larger,
+    // or the operand vector is not full, since the
+    // performance benefit is dubious in those cases.
+    return VType->getScalarSizeInBits() >= 64 ||
+           VType->getPrimitiveSizeInBits() < SystemZ::VectorBits;
+  }
 }

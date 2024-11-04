@@ -5,7 +5,7 @@ latest_release = 18
 
 clang_www_dir = os.path.dirname(__file__)
 default_issue_list_path = os.path.join(clang_www_dir, 'cwg_index.html')
-issue_list_url = "https://www.open-std.org/jtc1/sc22/wg21/docs/cwg_index.html"
+issue_list_url = "https://raw.githubusercontent.com/cplusplus/CWG/gh-pages/issues/cwg_index.html"
 output = os.path.join(clang_www_dir, 'cxx_dr_status.html')
 dr_test_dir = os.path.join(clang_www_dir, '../test/CXX/drs')
 
@@ -32,7 +32,7 @@ def parse(dr):
   return DR(section, issue, url, status, title)
 
 def collect_tests():
-  status_re = re.compile(r'\bdr([0-9]+): (.*)')
+  status_re = re.compile(r'\bcwg([0-9]+): (.*)')
   status_map = {}
   for test_cpp in os.listdir(dr_test_dir):
     if not test_cpp.endswith('.cpp'):
@@ -42,12 +42,12 @@ def collect_tests():
     for match in re.finditer(status_re, open(test_cpp, 'r').read()):
       dr_number = int(match.group(1))
       if dr_number in status_map:
-        print("error: Comment for dr{} encountered more than once. Duplicate found in {}".format(dr_number, test_cpp))
+        print("error: Comment for cwg{} encountered more than once. Duplicate found in {}".format(dr_number, test_cpp))
         sys.exit(1)
       status_map[dr_number] = match.group(2)
       found_any = True
     if not found_any:
-      print("warning:%s: no '// dr123: foo' comments in this file" % test_cpp, file=sys.stderr)
+      print("warning:%s: no '// cwg123: foo' comments in this file" % test_cpp, file=sys.stderr)
   return status_map
 
 def get_issues(path):
@@ -138,10 +138,10 @@ def availability(issue):
 
   unresolved_status = ''
   proposed_resolution = ''
-  unresolved_status_match = re.search(r' (open|drafting|review)', status)
+  unresolved_status_match = re.search(r' (open|drafting|review|tentatively ready)', status)
   if unresolved_status_match:
     unresolved_status = unresolved_status_match.group(1)
-    proposed_resolution_match = re.search(r' (open|drafting|review) (\d{4}-\d{2}(?:-\d{2})?|P\d{4}R\d+)$', status)
+    proposed_resolution_match = re.search(r' (open|drafting|review|tentatively ready) (\d{4}-\d{2}(?:-\d{2})?|P\d{4}R\d+)$', status)
     if proposed_resolution_match is None:
       raise AvailabilityError('Issue {}: \'{}\' status should be followed by a paper number (P1234R5) or proposed resolution in YYYY-MM-DD format'.format(dr.issue, unresolved_status))
     proposed_resolution = proposed_resolution_match.group(2)
@@ -236,7 +236,7 @@ for dr in drs:
     avail = 'Extension'
     avail_style = ''
 
-  elif dr.status in ('open', 'drafting', 'review'):
+  elif dr.status in ('open', 'drafting', 'review', 'tentatively ready'):
     row_style = ' class="open"'
     try:
       avail, avail_style, unresolved_status = availability(dr.issue)

@@ -6,7 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "token-sequence.h"
+#include "flang/Parser/token-sequence.h"
+
 #include "prescan.h"
 #include "flang/Parser/characters.h"
 #include "flang/Parser/message.h"

@@ -258,15 +258,24 @@ if (NOT DEFINED LLVM_LINKER_DETECTED AND NOT WIN32)
     endif()
   endif()
 
-  # Apple's linker complains about duplicate libraries, which CMake likes to do
-  # to support ELF platforms. To silence that warning, we can use
-  # -no_warn_duplicate_libraries, but only in versions of the linker that
-  # support that flag.
-  if(NOT LLVM_USE_LINKER AND ${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
+  if(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
     include(CheckLinkerFlag)
-    check_linker_flag(C "-Wl,-no_warn_duplicate_libraries" LLVM_LINKER_SUPPORTS_NO_WARN_DUPLICATE_LIBRARIES)
-  else()
-    set(LLVM_LINKER_SUPPORTS_NO_WARN_DUPLICATE_LIBRARIES OFF CACHE INTERNAL "")
+    # Linkers that support Darwin allow a setting to internalize all symbol exports, 
+    # aiding in reducing binary size and often is applicable for executables.
+    check_linker_flag(C "-Wl,-no_exported_symbols" LLVM_LINKER_SUPPORTS_NO_EXPORTED_SYMBOLS)
+    
+    if (NOT LLVM_USE_LINKER) 
+      # Apple's linker complains about duplicate libraries, which CMake likes to do
+      # to support ELF platforms. To silence that warning, we can use
+      # -no_warn_duplicate_libraries, but only in versions of the linker that
+      # support that flag.
+      check_linker_flag(C "-Wl,-no_warn_duplicate_libraries" LLVM_LINKER_SUPPORTS_NO_WARN_DUPLICATE_LIBRARIES)
+    else()
+      set(LLVM_LINKER_SUPPORTS_NO_WARN_DUPLICATE_LIBRARIES OFF CACHE INTERNAL "")
+    endif()
+  
+  else() 
+    set(LLVM_LINKER_SUPPORTS_NO_EXPORTED_SYMBOLS OFF CACHE INTERNAL "")
   endif()
 endif()
 
@@ -1028,6 +1037,17 @@ macro(add_llvm_executable name)
   if (LLVM_EXPORTED_SYMBOL_FILE)
     add_llvm_symbol_exports( ${name} ${LLVM_EXPORTED_SYMBOL_FILE} )
   endif(LLVM_EXPORTED_SYMBOL_FILE)
+
+  if (DEFINED LLVM_ENABLE_EXPORTED_SYMBOLS_IN_EXECUTABLES AND 
+      NOT LLVM_ENABLE_EXPORTED_SYMBOLS_IN_EXECUTABLES)
+    if(LLVM_LINKER_SUPPORTS_NO_EXPORTED_SYMBOLS)
+      set_property(TARGET ${name} APPEND_STRING PROPERTY
+        LINK_FLAGS " -Wl,-no_exported_symbols")
+    else()
+      message(FATAL_ERROR
+        "LLVM_ENABLE_EXPORTED_SYMBOLS_IN_EXECUTABLES cannot be disabled when linker does not support \"-no_exported_symbols\"")
+    endif()
+  endif()
 
   if (LLVM_LINK_LLVM_DYLIB AND NOT ARG_DISABLE_LLVM_LINK_LLVM_DYLIB)
     set(USE_SHARED USE_SHARED)

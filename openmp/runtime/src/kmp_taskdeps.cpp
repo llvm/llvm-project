@@ -1030,6 +1030,12 @@ void __kmpc_omp_taskwait_deps_51(ident_t *loc_ref, kmp_int32 gtid,
                        __kmp_task_stealing_constraint);
   }
 
+  // Wait until the last __kmp_release_deps is finished before we free the
+  // current stack frame holding the "node" variable; once its nrefs count
+  // reaches 1, we're sure nobody else can try to reference it again.
+  while (node.dn.nrefs > 1)
+    KMP_YIELD(TRUE);
+
 #if OMPT_SUPPORT
   __ompt_taskwait_dep_finish(current_task, taskwait_task_data);
 #endif /* OMPT_SUPPORT */

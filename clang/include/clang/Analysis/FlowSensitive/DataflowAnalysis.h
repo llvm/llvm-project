@@ -283,9 +283,8 @@ llvm::Expected<llvm::SmallVector<Diagnostic>> diagnoseFunction(
   if (!Context)
     return Context.takeError();
 
-  auto OwnedSolver = std::make_unique<WatchedLiteralsSolver>(MaxSATIterations);
-  const WatchedLiteralsSolver *Solver = OwnedSolver.get();
-  DataflowAnalysisContext AnalysisContext(std::move(OwnedSolver));
+  auto Solver = std::make_unique<WatchedLiteralsSolver>(MaxSATIterations);
+  DataflowAnalysisContext AnalysisContext(*Solver);
   Environment Env(AnalysisContext, FuncDecl);
   AnalysisT Analysis = createAnalysis<AnalysisT>(ASTCtx, Env);
   llvm::SmallVector<Diagnostic> Diagnostics;

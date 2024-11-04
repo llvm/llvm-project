@@ -128,6 +128,110 @@ class LibcxxChronoDataFormatterTestCase(TestBase):
             substrs=["sd_max = timestamp=2147483647 days"],
         )
 
+        # local_seconds aliasses
+
+        self.expect(
+            "frame variable ls_tp",
+            substrs=["ls_tp = date/time=1970-01-01T00:00:00 timestamp=0 s"],
+        )
+        self.expect(
+            "frame variable ls_tp_d",
+            substrs=["ls_tp_d = date/time=1970-01-01T00:00:00 timestamp=0 s"],
+        )
+        self.expect(
+            "frame variable ls_tp_d_r",
+            substrs=["ls_tp_d_r = date/time=1970-01-01T00:00:00 timestamp=0 s"],
+        )
+        self.expect(
+            "frame variable ls_tp_d_r2",
+            substrs=["ls_tp_d_r2 = date/time=1970-01-01T00:00:00 timestamp=0 s"],
+        )
+
+        # local_seconds
+
+        self.expect(
+            "frame variable ls_0",
+            substrs=["ls_0 = date/time=1970-01-01T00:00:00 timestamp=0 s"],
+        )
+
+        self.expect(
+            "frame variable ls_neg_date_time",
+            substrs=[
+                "ls_neg_date_time = date/time=-32767-01-01T00:00:00 timestamp=-1096193779200 s"
+            ],
+        )
+        self.expect(
+            "frame variable ls_neg_seconds",
+            substrs=["ls_neg_seconds = timestamp=-1096193779201 s"],
+        )
+
+        self.expect(
+            "frame variable ls_pos_date_time",
+            substrs=[
+                "ls_pos_date_time = date/time=32767-12-31T23:59:59 timestamp=971890963199 s"
+            ],
+        )
+        self.expect(
+            "frame variable ls_pos_seconds",
+            substrs=["ls_pos_seconds = timestamp=971890963200 s"],
+        )
+
+        self.expect(
+            "frame variable ls_min",
+            substrs=["ls_min = timestamp=-9223372036854775808 s"],
+        )
+        self.expect(
+            "frame variable ls_max",
+            substrs=["ls_max = timestamp=9223372036854775807 s"],
+        )
+
+        # local_days aliasses
+
+        self.expect(
+            "frame variable ld_tp",
+            substrs=["ld_tp = date=1970-01-01 timestamp=0 days"],
+        )
+        self.expect(
+            "frame variable ld_tp_d_r",
+            substrs=["ld_tp_d_r = date=1970-01-01 timestamp=0 days"],
+        )
+        self.expect(
+            "frame variable ld_tp_d_r2",
+            substrs=["ld_tp_d_r2 = date=1970-01-01 timestamp=0 days"],
+        )
+
+        # local_days
+
+        self.expect(
+            "frame variable ld_0", substrs=["ld_0 = date=1970-01-01 timestamp=0 days"]
+        )
+        self.expect(
+            "frame variable ld_neg_date",
+            substrs=["ld_neg_date = date=-32767-01-01 timestamp=-12687428 days"],
+        )
+        self.expect(
+            "frame variable ld_neg_days",
+            substrs=["ld_neg_days = timestamp=-12687429 days"],
+        )
+
+        self.expect(
+            "frame variable ld_pos_date",
+            substrs=["ld_pos_date = date=32767-12-31 timestamp=11248737 days"],
+        )
+        self.expect(
+            "frame variable ld_pos_days",
+            substrs=["ld_pos_days = timestamp=11248738 days"],
+        )
+
+        self.expect(
+            "frame variable ld_min",
+            substrs=["ld_min = timestamp=-2147483648 days"],
+        )
+        self.expect(
+            "frame variable ld_max",
+            substrs=["ld_max = timestamp=2147483647 days"],
+        )
+
         self.expect("frame variable d_0", substrs=["d_0 = day=0"])
         self.expect("frame variable d_1", substrs=["d_1 = day=1"])
         self.expect("frame variable d_31", substrs=["d_31 = day=31"])

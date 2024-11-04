@@ -140,7 +140,7 @@ LLVM_DUMP_METHOD void Program::dump(llvm::raw_ostream &OS) const {
     const Descriptor *Desc = G->block()->getDescriptor();
     Pointer GP = getPtrGlobal(GI);
 
-    OS << GI << ": " << (void *)G->block() << " ";
+    OS << GI << ": " << (const void *)G->block() << " ";
     {
       ColorScope SC(OS, true,
                     GP.isInitialized()
@@ -200,12 +200,31 @@ LLVM_DUMP_METHOD void Descriptor::dump(llvm::raw_ostream &OS) const {
     OS << " primitive";
 
   if (isZeroSizeArray())
-    OS << " zero-size-arrary";
+    OS << " zero-size-array";
   else if (isUnknownSizeArray())
     OS << " unknown-size-array";
 
   if (isDummy())
     OS << " dummy";
+}
+
+LLVM_DUMP_METHOD void InlineDescriptor::dump(llvm::raw_ostream &OS) const {
+  {
+    ColorScope SC(OS, true, {llvm::raw_ostream::BLUE, true});
+    OS << "InlineDescriptor " << (const void *)this << "\n";
+  }
+  OS << "Offset: " << Offset << "\n";
+  OS << "IsConst: " << IsConst << "\n";
+  OS << "IsInitialized: " << IsInitialized << "\n";
+  OS << "IsBase: " << IsBase << "\n";
+  OS << "IsActive: " << IsActive << "\n";
+  OS << "IsFieldMutable: " << IsFieldMutable << "\n";
+  OS << "Desc: ";
+  if (Desc)
+    Desc->dump(OS);
+  else
+    OS << "nullptr";
+  OS << "\n";
 }
 
 LLVM_DUMP_METHOD void InterpFrame::dump(llvm::raw_ostream &OS,
@@ -232,4 +251,57 @@ LLVM_DUMP_METHOD void InterpFrame::dump(llvm::raw_ostream &OS,
     F->dump(OS, Indent + 1);
     F = F->Caller;
   }
+}
+
+LLVM_DUMP_METHOD void Record::dump(llvm::raw_ostream &OS, unsigned Indentation,
+                                   unsigned Offset) const {
+  unsigned Indent = Indentation * 2;
+  OS.indent(Indent);
+  {
+    ColorScope SC(OS, true, {llvm::raw_ostream::BLUE, true});
+    OS << getName() << "\n";
+  }
+
+  unsigned I = 0;
+  for (const Record::Base &B : bases()) {
+    OS.indent(Indent) << "- Base " << I << ". Offset " << (Offset + B.Offset)
+                      << "\n";
+    B.R->dump(OS, Indentation + 1, Offset + B.Offset);
+    ++I;
+  }
+
+  I = 0;
+  for (const Record::Field &F : fields()) {
+    OS.indent(Indent) << "- Field " << I << ": ";
+    {
+      ColorScope SC(OS, true, {llvm::raw_ostream::BRIGHT_RED, true});
+      OS << F.Decl->getName();
+    }
+    OS << ". Offset " << (Offset + F.Offset) << "\n";
+    ++I;
+  }
+
+  I = 0;
+  for (const Record::Base &B : virtual_bases()) {
+    OS.indent(Indent) << "- Virtual Base " << I << ". Offset "
+                      << (Offset + B.Offset) << "\n";
+    B.R->dump(OS, Indentation + 1, Offset + B.Offset);
+    ++I;
+  }
+}
+
+LLVM_DUMP_METHOD void Block::dump(llvm::raw_ostream &OS) const {
+  {
+    ColorScope SC(OS, true, {llvm::raw_ostream::BRIGHT_BLUE, true});
+    OS << "Block " << (const void *)this << "\n";
+  }
+  unsigned NPointers = 0;
+  for (const Pointer *P = Pointers; P; P = P->Next) {
+    ++NPointers;
+  }
+  OS << "  Pointers: " << NPointers << "\n";
+  OS << "  Dead: " << IsDead << "\n";
+  OS << "  Static: " << IsStatic << "\n";
+  OS << "  Extern: " << IsExtern << "\n";
+  OS << "  Initialized: " << IsInitialized << "\n";
 }

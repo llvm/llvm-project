@@ -95,7 +95,8 @@ const char *SBEvent::GetBroadcasterClass() const {
 
   const Event *lldb_event = get();
   if (lldb_event)
-    return lldb_event->GetBroadcaster()->GetBroadcasterClass().AsCString();
+    return ConstString(lldb_event->GetBroadcaster()->GetBroadcasterClass())
+        .AsCString();
   else
     return "unknown class";
 }

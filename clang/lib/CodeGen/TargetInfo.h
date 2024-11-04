@@ -94,7 +94,8 @@ public:
   virtual void checkFunctionCallABI(CodeGenModule &CGM, SourceLocation CallLoc,
                                     const FunctionDecl *Caller,
                                     const FunctionDecl *Callee,
-                                    const CallArgList &Args) const {}
+                                    const CallArgList &Args,
+                                    QualType ReturnType) const {}
 
   /// Determines the size of struct _Unwind_Exception on this platform,
   /// in 8-bit units.  The Itanium ABI defines this as:

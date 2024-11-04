@@ -1,7 +1,7 @@
 // Check that the pointer adjustment from the virtual base offset is loaded as a
 // 32-bit int.
 
-// RUN: %clang_cc1 %s -triple=aarch64-unknown-fuchsia -S -o - -emit-llvm | FileCheck %s
+// RUN: %clang_cc1 %s -triple=aarch64-unknown-fuchsia -o - -emit-llvm | FileCheck %s
 
 // CHECK-LABEL: @_ZTv0_n12_N7Derived1fEi(
 // CHECK-NEXT:  entry:

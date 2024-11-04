@@ -89,3 +89,10 @@ void bit_cast() {
   __builtin_bit_cast(int *, static_cast<void *>(&d));
   // CHECK-MESSAGES: :[[@LINE-1]]:29: warning: do not cast 'double *' to 'int *' through 'void *' [bugprone-casting-through-void]
 }
+
+namespace PR87069 {
+  void castconstVoidToVoid() {
+    const void* ptr = nullptr;
+    int* numberPtr = static_cast<int*>(const_cast<void*>(ptr));
+  }
+}

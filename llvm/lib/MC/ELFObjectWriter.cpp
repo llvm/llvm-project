@@ -141,7 +141,6 @@ struct ELFWriter {
 
   // TargetObjectWriter wrappers.
   bool is64Bit() const;
-  bool usesRela(const MCSectionELF &Sec) const;
 
   uint64_t align(Align Alignment);
 
@@ -260,6 +259,7 @@ public:
   void recordRelocation(MCAssembler &Asm, const MCAsmLayout &Layout,
                         const MCFragment *Fragment, const MCFixup &Fixup,
                         MCValue Target, uint64_t &FixedValue) override;
+  bool usesRela(const MCSectionELF &Sec) const;
 
   void executePostLayoutBinding(MCAssembler &Asm,
                                 const MCAsmLayout &Layout) override;
@@ -392,11 +392,6 @@ void SymbolTableWriter::writeSymbol(uint32_t name, uint8_t info, uint64_t value,
 
 bool ELFWriter::is64Bit() const {
   return OWriter.TargetObjectWriter->is64Bit();
-}
-
-bool ELFWriter::usesRela(const MCSectionELF &Sec) const {
-  return OWriter.hasRelocationAddend() &&
-         Sec.getType() != ELF::SHT_LLVM_CALL_GRAPH_PROFILE;
 }
 
 // Emit the ELF header.
@@ -730,7 +725,13 @@ void ELFWriter::computeSymbolTable(
         HasLargeSectionIndex = true;
     }
 
+    // Temporary symbols generated for certain assembler features (.eh_frame,
+    // .debug_line) of an empty name may be referenced by relocations due to
+    // linker relaxation. Rename them to ".L0 " to match the gas fake label name
+    // and allow ld/objcopy --discard-locals to discard such symbols.
     StringRef Name = Symbol.getName();
+    if (Name.empty())
+      Name = ".L0 ";
 
     // Sections have their own string table
     if (Symbol.getType() != ELF::STT_SECTION) {
@@ -825,24 +826,22 @@ MCSectionELF *ELFWriter::createRelocationSection(MCContext &Ctx,
   if (OWriter.Relocations[&Sec].empty())
     return nullptr;
 
-  const StringRef SectionName = Sec.getName();
-  bool Rela = usesRela(Sec);
-  std::string RelaSectionName = Rela ? ".rela" : ".rel";
-  RelaSectionName += SectionName;
+  unsigned Flags = ELF::SHF_INFO_LINK;
+  if (Sec.getFlags() & ELF::SHF_GROUP)
+    Flags = ELF::SHF_GROUP;
 
+  const StringRef SectionName = Sec.getName();
+  const bool Rela = OWriter.usesRela(Sec);
   unsigned EntrySize;
   if (Rela)
     EntrySize = is64Bit() ? sizeof(ELF::Elf64_Rela) : sizeof(ELF::Elf32_Rela);
   else
     EntrySize = is64Bit() ? sizeof(ELF::Elf64_Rel) : sizeof(ELF::Elf32_Rel);
 
-  unsigned Flags = ELF::SHF_INFO_LINK;
-  if (Sec.getFlags() & ELF::SHF_GROUP)
-    Flags = ELF::SHF_GROUP;
-
-  MCSectionELF *RelaSection = Ctx.createELFRelSection(
-      RelaSectionName, Rela ? ELF::SHT_RELA : ELF::SHT_REL, Flags, EntrySize,
-      Sec.getGroup(), &Sec);
+  MCSectionELF *RelaSection =
+      Ctx.createELFRelSection(((Rela ? ".rela" : ".rel") + SectionName),
+                              Rela ? ELF::SHT_RELA : ELF::SHT_REL, Flags,
+                              EntrySize, Sec.getGroup(), &Sec);
   RelaSection->setAlignment(is64Bit() ? Align(8) : Align(4));
   return RelaSection;
 }
@@ -938,11 +937,11 @@ void ELFWriter::WriteSecHdrEntry(uint32_t Name, uint32_t Type, uint64_t Flags,
 void ELFWriter::writeRelocations(const MCAssembler &Asm,
                                        const MCSectionELF &Sec) {
   std::vector<ELFRelocationEntry> &Relocs = OWriter.Relocations[&Sec];
+  const bool Rela = OWriter.usesRela(Sec);
 
   // Sort the relocation entries. MIPS needs this.
   OWriter.TargetObjectWriter->sortRelocs(Asm, Relocs);
 
-  const bool Rela = usesRela(Sec);
   if (OWriter.TargetObjectWriter->getEMachine() == ELF::EM_MIPS) {
     for (const ELFRelocationEntry &Entry : Relocs) {
       uint32_t Symidx = Entry.Symbol ? Entry.Symbol->getIndex() : 0;
@@ -1499,7 +1498,7 @@ void ELFObjectWriter::recordRelocation(MCAssembler &Asm,
   FixedValue = !RelocateWithSymbol && SymA && !SymA->isUndefined()
                    ? C + Layout.getSymbolOffset(*SymA)
                    : C;
-  if (hasRelocationAddend()) {
+  if (usesRela(FixupSection)) {
     Addend = FixedValue;
     FixedValue = 0;
   }
@@ -1526,6 +1525,11 @@ void ELFObjectWriter::recordRelocation(MCAssembler &Asm,
   }
   ELFRelocationEntry Rec(FixupOffset, RenamedSymA, Type, Addend, SymA, C);
   Relocations[&FixupSection].push_back(Rec);
+}
+
+bool ELFObjectWriter::usesRela(const MCSectionELF &Sec) const {
+  return hasRelocationAddend() &&
+         Sec.getType() != ELF::SHT_LLVM_CALL_GRAPH_PROFILE;
 }
 
 bool ELFObjectWriter::isSymbolRefDifferenceFullyResolvedImpl(

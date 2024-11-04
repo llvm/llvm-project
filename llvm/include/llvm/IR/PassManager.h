@@ -64,23 +64,6 @@ extern llvm::cl::opt<bool> UseNewDbgInfoFormat;
 
 namespace llvm {
 
-// RemoveDIs: Provide facilities for converting debug-info from one form to
-// another, which are no-ops for everything but modules.
-template <class IRUnitT> inline bool shouldConvertDbgInfo(IRUnitT &IR) {
-  return false;
-}
-template <> inline bool shouldConvertDbgInfo(Module &IR) {
-  return !IR.IsNewDbgInfoFormat && UseNewDbgInfoFormat;
-}
-template <class IRUnitT> inline void doConvertDbgInfoToNew(IRUnitT &IR) {}
-template <> inline void doConvertDbgInfoToNew(Module &IR) {
-  IR.convertToNewDbgValues();
-}
-template <class IRUnitT> inline void doConvertDebugInfoToOld(IRUnitT &IR) {}
-template <> inline void doConvertDebugInfoToOld(Module &IR) {
-  IR.convertFromNewDbgValues();
-}
-
 // Forward declare the analysis manager template.
 template <typename IRUnitT, typename... ExtraArgTs> class AnalysisManager;
 
@@ -229,9 +212,7 @@ public:
 
     // RemoveDIs: if requested, convert debug-info to DbgRecord representation
     // for duration of these passes.
-    bool ShouldConvertDbgInfo = shouldConvertDbgInfo(IR);
-    if (ShouldConvertDbgInfo)
-      doConvertDbgInfoToNew(IR);
+    ScopedDbgInfoFormatSetter FormatSetter(IR, UseNewDbgInfoFormat);
 
     for (auto &Pass : Passes) {
       // Check the PassInstrumentation's BeforePass callbacks before running the
@@ -255,9 +236,6 @@ public:
       PA.intersect(std::move(PassPA));
     }
 
-    if (ShouldConvertDbgInfo)
-      doConvertDebugInfoToOld(IR);
-
     // Invalidation was handled after each pass in the above loop for the
     // current unit of IR. Therefore, the remaining analysis results in the
     // AnalysisManager are preserved. We mark this with a set so that we don't
@@ -267,29 +245,24 @@ public:
     return PA;
   }
 
-  template <typename PassT>
-  LLVM_ATTRIBUTE_MINSIZE
-      std::enable_if_t<!std::is_same<PassT, PassManager>::value>
-      addPass(PassT &&Pass) {
+  // FIXME: Revert to enable_if style when gcc >= 11.1
+  template <typename PassT> LLVM_ATTRIBUTE_MINSIZE void addPass(PassT &&Pass) {
     using PassModelT =
         detail::PassModel<IRUnitT, PassT, AnalysisManagerT, ExtraArgTs...>;
-    // Do not use make_unique or emplace_back, they cause too many template
-    // instantiations, causing terrible compile times.
-    Passes.push_back(std::unique_ptr<PassConceptT>(
-        new PassModelT(std::forward<PassT>(Pass))));
-  }
-
-  /// When adding a pass manager pass that has the same type as this pass
-  /// manager, simply move the passes over. This is because we don't have use
-  /// cases rely on executing nested pass managers. Doing this could reduce
-  /// implementation complexity and avoid potential invalidation issues that may
-  /// happen with nested pass managers of the same type.
-  template <typename PassT>
-  LLVM_ATTRIBUTE_MINSIZE
-      std::enable_if_t<std::is_same<PassT, PassManager>::value>
-      addPass(PassT &&Pass) {
-    for (auto &P : Pass.Passes)
-      Passes.push_back(std::move(P));
+    if constexpr (!std::is_same_v<PassT, PassManager>) {
+      // Do not use make_unique or emplace_back, they cause too many template
+      // instantiations, causing terrible compile times.
+      Passes.push_back(std::unique_ptr<PassConceptT>(
+          new PassModelT(std::forward<PassT>(Pass))));
+    } else {
+      /// When adding a pass manager pass that has the same type as this pass
+      /// manager, simply move the passes over. This is because we don't have
+      /// use cases rely on executing nested pass managers. Doing this could
+      /// reduce implementation complexity and avoid potential invalidation
+      /// issues that may happen with nested pass managers of the same type.
+      for (auto &P : Pass.Passes)
+        Passes.push_back(std::move(P));
+    }
   }
 
   /// Returns if the pass manager contains any passes.

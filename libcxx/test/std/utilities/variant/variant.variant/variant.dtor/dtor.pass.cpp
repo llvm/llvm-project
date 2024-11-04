@@ -21,55 +21,76 @@
 #include "test_macros.h"
 
 struct NonTDtor {
-  static int count;
-  NonTDtor() = default;
-  ~NonTDtor() { ++count; }
+  int* count;
+  constexpr NonTDtor(int* a, int*) : count(a) {}
+  TEST_CONSTEXPR_CXX20 ~NonTDtor() { ++*count; }
 };
-int NonTDtor::count = 0;
 static_assert(!std::is_trivially_destructible<NonTDtor>::value, "");
 
 struct NonTDtor1 {
-  static int count;
-  NonTDtor1() = default;
-  ~NonTDtor1() { ++count; }
+  int* count;
+  constexpr NonTDtor1(int*, int* b) : count(b) {}
+  TEST_CONSTEXPR_CXX20 ~NonTDtor1() { ++*count; }
 };
-int NonTDtor1::count = 0;
 static_assert(!std::is_trivially_destructible<NonTDtor1>::value, "");
 
 struct TDtor {
-  TDtor(const TDtor &) {} // non-trivial copy
-  ~TDtor() = default;
+  constexpr TDtor() = default;
+  constexpr TDtor(const TDtor&) {} // non-trivial copy
+  TEST_CONSTEXPR_CXX20 ~TDtor() = default;
 };
 static_assert(!std::is_trivially_copy_constructible<TDtor>::value, "");
 static_assert(std::is_trivially_destructible<TDtor>::value, "");
 
-int main(int, char**) {
+TEST_CONSTEXPR_CXX20 bool test() {
   {
     using V = std::variant<int, long, TDtor>;
     static_assert(std::is_trivially_destructible<V>::value, "");
+    [[maybe_unused]] V v(std::in_place_index<2>);
   }
   {
     using V = std::variant<NonTDtor, int, NonTDtor1>;
     static_assert(!std::is_trivially_destructible<V>::value, "");
     {
-      V v(std::in_place_index<0>);
-      assert(NonTDtor::count == 0);
-      assert(NonTDtor1::count == 0);
+      int count0 = 0;
+      int count1 = 0;
+      {
+        V v(std::in_place_index<0>, &count0, &count1);
+        assert(count0 == 0);
+        assert(count1 == 0);
+      }
+      assert(count0 == 1);
+      assert(count1 == 0);
     }
-    assert(NonTDtor::count == 1);
-    assert(NonTDtor1::count == 0);
-    NonTDtor::count = 0;
-    { V v(std::in_place_index<1>); }
-    assert(NonTDtor::count == 0);
-    assert(NonTDtor1::count == 0);
     {
-      V v(std::in_place_index<2>);
-      assert(NonTDtor::count == 0);
-      assert(NonTDtor1::count == 0);
+      int count0 = 0;
+      int count1 = 0;
+      { V v(std::in_place_index<1>); }
+      assert(count0 == 0);
+      assert(count1 == 0);
     }
-    assert(NonTDtor::count == 0);
-    assert(NonTDtor1::count == 1);
+    {
+      int count0 = 0;
+      int count1 = 0;
+      {
+        V v(std::in_place_index<2>, &count0, &count1);
+        assert(count0 == 0);
+        assert(count1 == 0);
+      }
+      assert(count0 == 0);
+      assert(count1 == 1);
+    }
   }
+
+  return true;
+}
+
+int main(int, char**) {
+  test();
+
+#if TEST_STD_VER >= 20
+  static_assert(test());
+#endif
 
   return 0;
 }

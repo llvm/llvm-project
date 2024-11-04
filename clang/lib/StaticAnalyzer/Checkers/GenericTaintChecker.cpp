@@ -59,13 +59,6 @@ constexpr llvm::StringLiteral MsgSanitizeSystemArgs =
     "Untrusted data is passed to a system call "
     "(CERT/STR02-C. Sanitize data passed to complex subsystems)";
 
-/// Check if tainted data is used as a buffer size in strn.. functions,
-/// and allocators.
-constexpr llvm::StringLiteral MsgTaintedBufferSize =
-    "Untrusted data is used to specify the buffer size "
-    "(CERT/STR31-C. Guarantee that storage for strings has sufficient space "
-    "for character data and the null terminator)";
-
 /// Check if tainted data is used as a custom sink's parameter.
 constexpr llvm::StringLiteral MsgCustomSink =
     "Untrusted data is passed to a user-defined sink";
@@ -296,14 +289,6 @@ public:
   /// Make a rule that taints all PropDstArgs if any of PropSrcArgs is tainted.
   static GenericTaintRule Prop(ArgSet &&SrcArgs, ArgSet &&DstArgs) {
     return {{}, {}, std::move(SrcArgs), std::move(DstArgs)};
-  }
-
-  /// Make a rule that taints all PropDstArgs if any of PropSrcArgs is tainted.
-  static GenericTaintRule
-  SinkProp(ArgSet &&SinkArgs, ArgSet &&SrcArgs, ArgSet &&DstArgs,
-           std::optional<StringRef> Msg = std::nullopt) {
-    return {
-        std::move(SinkArgs), {}, std::move(SrcArgs), std::move(DstArgs), Msg};
   }
 
   /// Process a function which could either be a taint source, a taint sink, a
@@ -718,24 +703,36 @@ void GenericTaintChecker::initTaintRules(CheckerContext &C) const {
       {{{"isupper"}}, TR::Prop({{0}}, {{ReturnValueIndex}})},
       {{{"isxdigit"}}, TR::Prop({{0}}, {{ReturnValueIndex}})},
 
-      {{CDM::CLibrary, {BI.getName(Builtin::BIstrncat)}},
+      {{CDM::CLibraryMaybeHardened, {BI.getName(Builtin::BIstrncat)}},
        TR::Prop({{1, 2}}, {{0, ReturnValueIndex}})},
-      {{CDM::CLibrary, {BI.getName(Builtin::BIstrlcpy)}},
+      {{CDM::CLibraryMaybeHardened, {BI.getName(Builtin::BIstrlcpy)}},
        TR::Prop({{1, 2}}, {{0}})},
-      {{CDM::CLibrary, {BI.getName(Builtin::BIstrlcat)}},
+      {{CDM::CLibraryMaybeHardened, {BI.getName(Builtin::BIstrlcat)}},
        TR::Prop({{1, 2}}, {{0}})},
-      {{CDM::CLibrary, {{"snprintf"}}},
+      {{CDM::CLibraryMaybeHardened, {{"snprintf"}}},
        TR::Prop({{1}, 3}, {{0, ReturnValueIndex}})},
-      {{CDM::CLibrary, {{"sprintf"}}},
+      {{CDM::CLibraryMaybeHardened, {{"sprintf"}}},
        TR::Prop({{1}, 2}, {{0, ReturnValueIndex}})},
-      {{CDM::CLibrary, {{"strcpy"}}}, TR::Prop({{1}}, {{0, ReturnValueIndex}})},
-      {{CDM::CLibrary, {{"stpcpy"}}}, TR::Prop({{1}}, {{0, ReturnValueIndex}})},
-      {{CDM::CLibrary, {{"strcat"}}}, TR::Prop({{1}}, {{0, ReturnValueIndex}})},
-      {{CDM::CLibrary, {{"wcsncat"}}},
+      {{CDM::CLibraryMaybeHardened, {{"strcpy"}}},
        TR::Prop({{1}}, {{0, ReturnValueIndex}})},
+      {{CDM::CLibraryMaybeHardened, {{"stpcpy"}}},
+       TR::Prop({{1}}, {{0, ReturnValueIndex}})},
+      {{CDM::CLibraryMaybeHardened, {{"strcat"}}},
+       TR::Prop({{0, 1}}, {{0, ReturnValueIndex}})},
+      {{CDM::CLibraryMaybeHardened, {{"wcsncat"}}},
+       TR::Prop({{0, 1}}, {{0, ReturnValueIndex}})},
       {{CDM::CLibrary, {{"strdup"}}}, TR::Prop({{0}}, {{ReturnValueIndex}})},
       {{CDM::CLibrary, {{"strdupa"}}}, TR::Prop({{0}}, {{ReturnValueIndex}})},
       {{CDM::CLibrary, {{"wcsdup"}}}, TR::Prop({{0}}, {{ReturnValueIndex}})},
+      {{CDM::CLibrary, BI.getName(Builtin::BImemcpy)},
+       TR::Prop({{1, 2}}, {{0, ReturnValueIndex}})},
+      {{CDM::CLibrary, {BI.getName(Builtin::BImemmove)}},
+       TR::Prop({{1, 2}}, {{0, ReturnValueIndex}})},
+      {{CDM::CLibrary, {BI.getName(Builtin::BIstrncpy)}},
+       TR::Prop({{1, 2}}, {{0, ReturnValueIndex}})},
+      {{CDM::CLibrary, {BI.getName(Builtin::BIstrndup)}},
+       TR::Prop({{0, 1}}, {{ReturnValueIndex}})},
+      {{CDM::CLibrary, {"bcopy"}}, TR::Prop({{0, 2}}, {{1}})},
 
       // Sinks
       {{{"system"}}, TR::Sink({{0}}, MsgSanitizeSystemArgs)},
@@ -749,30 +746,15 @@ void GenericTaintChecker::initTaintRules(CheckerContext &C) const {
       {{{"execvp"}}, TR::Sink({{0, 1}}, MsgSanitizeSystemArgs)},
       {{{"execvpe"}}, TR::Sink({{0, 1, 2}}, MsgSanitizeSystemArgs)},
       {{{"dlopen"}}, TR::Sink({{0}}, MsgSanitizeSystemArgs)},
-      {{CDM::CLibrary, {{"malloc"}}}, TR::Sink({{0}}, MsgTaintedBufferSize)},
-      {{CDM::CLibrary, {{"calloc"}}}, TR::Sink({{0}}, MsgTaintedBufferSize)},
-      {{CDM::CLibrary, {{"alloca"}}}, TR::Sink({{0}}, MsgTaintedBufferSize)},
-      {{CDM::CLibrary, {{"memccpy"}}}, TR::Sink({{3}}, MsgTaintedBufferSize)},
-      {{CDM::CLibrary, {{"realloc"}}}, TR::Sink({{1}}, MsgTaintedBufferSize)},
+
+      // malloc, calloc, alloca, realloc, memccpy
+      // are intentionally not marked as taint sinks because unconditional
+      // reporting for these functions generates many false positives.
+      // These taint sinks should be implemented in other checkers with more
+      // sophisticated sanitation heuristics.
       {{{{"setproctitle"}}}, TR::Sink({{0}, 1}, MsgUncontrolledFormatString)},
       {{{{"setproctitle_fast"}}},
-       TR::Sink({{0}, 1}, MsgUncontrolledFormatString)},
-
-      // SinkProps
-      {{CDM::CLibrary, BI.getName(Builtin::BImemcpy)},
-       TR::SinkProp({{2}}, {{1, 2}}, {{0, ReturnValueIndex}},
-                    MsgTaintedBufferSize)},
-      {{CDM::CLibrary, {BI.getName(Builtin::BImemmove)}},
-       TR::SinkProp({{2}}, {{1, 2}}, {{0, ReturnValueIndex}},
-                    MsgTaintedBufferSize)},
-      {{CDM::CLibrary, {BI.getName(Builtin::BIstrncpy)}},
-       TR::SinkProp({{2}}, {{1, 2}}, {{0, ReturnValueIndex}},
-                    MsgTaintedBufferSize)},
-      {{CDM::CLibrary, {BI.getName(Builtin::BIstrndup)}},
-       TR::SinkProp({{1}}, {{0, 1}}, {{ReturnValueIndex}},
-                    MsgTaintedBufferSize)},
-      {{CDM::CLibrary, {{"bcopy"}}},
-       TR::SinkProp({{2}}, {{0, 2}}, {{1}}, MsgTaintedBufferSize)}};
+       TR::Sink({{0}, 1}, MsgUncontrolledFormatString)}};
 
   // `getenv` returns taint only in untrusted environments.
   if (TR::UntrustedEnv(C)) {
@@ -1083,15 +1065,14 @@ void GenericTaintChecker::taintUnsafeSocketProtocol(const CallEvent &Call,
   const IdentifierInfo *ID = Call.getCalleeIdentifier();
   if (!ID)
     return;
-  if (!ID->getName().equals("socket"))
+  if (ID->getName() != "socket")
     return;
 
   SourceLocation DomLoc = Call.getArgExpr(0)->getExprLoc();
   StringRef DomName = C.getMacroNameOrSpelling(DomLoc);
   // Allow internal communication protocols.
-  bool SafeProtocol = DomName.equals("AF_SYSTEM") ||
-                      DomName.equals("AF_LOCAL") || DomName.equals("AF_UNIX") ||
-                      DomName.equals("AF_RESERVED_36");
+  bool SafeProtocol = DomName == "AF_SYSTEM" || DomName == "AF_LOCAL" ||
+                      DomName == "AF_UNIX" || DomName == "AF_RESERVED_36";
   if (SafeProtocol)
     return;
 

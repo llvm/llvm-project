@@ -9,6 +9,7 @@
 #include "flang/Runtime/numeric.h"
 #include "numeric-templates.h"
 #include "terminator.h"
+#include "tools.h"
 #include "flang/Common/float128.h"
 #include <cfloat>
 #include <climits>
@@ -18,30 +19,30 @@
 namespace Fortran::runtime {
 
 template <typename RES>
-inline RT_API_ATTRS RES getIntArgValue(const char *source, int line, void *arg,
-    int kind, std::int64_t defaultValue, int resKind) {
+inline RT_API_ATTRS RES GetIntArgValue(const char *source, int line,
+    const void *arg, int kind, std::int64_t defaultValue, int resKind) {
   RES res;
   if (!arg) {
     res = static_cast<RES>(defaultValue);
   } else if (kind == 1) {
     res = static_cast<RES>(
-        *static_cast<CppTypeFor<TypeCategory::Integer, 1> *>(arg));
+        *static_cast<const CppTypeFor<TypeCategory::Integer, 1> *>(arg));
   } else if (kind == 2) {
     res = static_cast<RES>(
-        *static_cast<CppTypeFor<TypeCategory::Integer, 2> *>(arg));
+        *static_cast<const CppTypeFor<TypeCategory::Integer, 2> *>(arg));
   } else if (kind == 4) {
     res = static_cast<RES>(
-        *static_cast<CppTypeFor<TypeCategory::Integer, 4> *>(arg));
+        *static_cast<const CppTypeFor<TypeCategory::Integer, 4> *>(arg));
   } else if (kind == 8) {
     res = static_cast<RES>(
-        *static_cast<CppTypeFor<TypeCategory::Integer, 8> *>(arg));
+        *static_cast<const CppTypeFor<TypeCategory::Integer, 8> *>(arg));
 #ifdef __SIZEOF_INT128__
   } else if (kind == 16) {
     if (resKind != 16) {
       Terminator{source, line}.Crash("Unexpected integer kind in runtime");
     }
     res = static_cast<RES>(
-        *static_cast<CppTypeFor<TypeCategory::Integer, 16> *>(arg));
+        *static_cast<const CppTypeFor<TypeCategory::Integer, 16> *>(arg));
 #endif
   } else {
     Terminator{source, line}.Crash("Unexpected integer kind in runtime");
@@ -108,6 +109,22 @@ inline RT_API_ATTRS CppTypeFor<TypeCategory::Integer, 4> SelectedIntKind(T x) {
   } else if (x <= 38) {
     return 16;
 #endif
+  }
+  return -1;
+}
+
+// SELECTED_LOGICAL_KIND (F'2023 16.9.182)
+template <typename T>
+inline RT_API_ATTRS CppTypeFor<TypeCategory::Integer, 4> SelectedLogicalKind(
+    T x) {
+  if (x <= 2) {
+    return 1;
+  } else if (x <= 4) {
+    return 2;
+  } else if (x <= 9) {
+    return 4;
+  } else if (x <= 18) {
+    return 8;
   }
   return -1;
 }
@@ -717,18 +734,50 @@ CppTypeFor<TypeCategory::Real, 10> RTDEF(Scale10)(
 }
 #endif
 
+// SELECTED_CHAR_KIND
+CppTypeFor<TypeCategory::Integer, 4> RTDEF(SelectedCharKind)(
+    const char *source, int line, const char *x, std::size_t length) {
+  static const char *keywords[]{
+      "ASCII", "DEFAULT", "UCS-2", "ISO_10646", "UCS-4", nullptr};
+  switch (IdentifyValue(x, length, keywords)) {
+  case 0: // ASCII
+  case 1: // DEFAULT
+    return 1;
+  case 2: // UCS-2
+    return 2;
+  case 3: // ISO_10646
+  case 4: // UCS-4
+    return 4;
+  default:
+    return -1;
+  }
+}
 // SELECTED_INT_KIND
 CppTypeFor<TypeCategory::Integer, 4> RTDEF(SelectedIntKind)(
     const char *source, int line, void *x, int xKind) {
 #ifdef __SIZEOF_INT128__
   CppTypeFor<TypeCategory::Integer, 16> r =
-      getIntArgValue<CppTypeFor<TypeCategory::Integer, 16>>(
+      GetIntArgValue<CppTypeFor<TypeCategory::Integer, 16>>(
           source, line, x, xKind, /*defaultValue*/ 0, /*resKind*/ 16);
 #else
-  std::int64_t r = getIntArgValue<std::int64_t>(
+  std::int64_t r = GetIntArgValue<std::int64_t>(
       source, line, x, xKind, /*defaultValue*/ 0, /*resKind*/ 8);
 #endif
   return SelectedIntKind(r);
+}
+
+// SELECTED_LOGICAL_KIND
+CppTypeFor<TypeCategory::Integer, 4> RTDEF(SelectedLogicalKind)(
+    const char *source, int line, void *x, int xKind) {
+#ifdef __SIZEOF_INT128__
+  CppTypeFor<TypeCategory::Integer, 16> r =
+      GetIntArgValue<CppTypeFor<TypeCategory::Integer, 16>>(
+          source, line, x, xKind, /*defaultValue*/ 0, /*resKind*/ 16);
+#else
+  std::int64_t r = GetIntArgValue<std::int64_t>(
+      source, line, x, xKind, /*defaultValue*/ 0, /*resKind*/ 8);
+#endif
+  return SelectedLogicalKind(r);
 }
 
 // SELECTED_REAL_KIND
@@ -737,20 +786,20 @@ CppTypeFor<TypeCategory::Integer, 4> RTDEF(SelectedRealKind)(const char *source,
     int dKind) {
 #ifdef __SIZEOF_INT128__
   CppTypeFor<TypeCategory::Integer, 16> p =
-      getIntArgValue<CppTypeFor<TypeCategory::Integer, 16>>(
+      GetIntArgValue<CppTypeFor<TypeCategory::Integer, 16>>(
           source, line, precision, pKind, /*defaultValue*/ 0, /*resKind*/ 16);
   CppTypeFor<TypeCategory::Integer, 16> r =
-      getIntArgValue<CppTypeFor<TypeCategory::Integer, 16>>(
+      GetIntArgValue<CppTypeFor<TypeCategory::Integer, 16>>(
           source, line, range, rKind, /*defaultValue*/ 0, /*resKind*/ 16);
   CppTypeFor<TypeCategory::Integer, 16> d =
-      getIntArgValue<CppTypeFor<TypeCategory::Integer, 16>>(
+      GetIntArgValue<CppTypeFor<TypeCategory::Integer, 16>>(
           source, line, radix, dKind, /*defaultValue*/ 2, /*resKind*/ 16);
 #else
-  std::int64_t p = getIntArgValue<std::int64_t>(
+  std::int64_t p = GetIntArgValue<std::int64_t>(
       source, line, precision, pKind, /*defaultValue*/ 0, /*resKind*/ 8);
-  std::int64_t r = getIntArgValue<std::int64_t>(
+  std::int64_t r = GetIntArgValue<std::int64_t>(
       source, line, range, rKind, /*defaultValue*/ 0, /*resKind*/ 8);
-  std::int64_t d = getIntArgValue<std::int64_t>(
+  std::int64_t d = GetIntArgValue<std::int64_t>(
       source, line, radix, dKind, /*defaultValue*/ 2, /*resKind*/ 8);
 #endif
   return SelectedRealKind(p, r, d);

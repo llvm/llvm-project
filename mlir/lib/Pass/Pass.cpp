@@ -60,8 +60,16 @@ Operation *PassExecutionAction::getOp() const {
 void Pass::anchor() {}
 
 /// Attempt to initialize the options of this pass from the given string.
-LogicalResult Pass::initializeOptions(StringRef options) {
-  return passOptions.parseFromString(options);
+LogicalResult Pass::initializeOptions(
+    StringRef options,
+    function_ref<LogicalResult(const Twine &)> errorHandler) {
+  std::string errStr;
+  llvm::raw_string_ostream os(errStr);
+  if (failed(passOptions.parseFromString(options, os))) {
+    os.flush();
+    return errorHandler(errStr);
+  }
+  return success();
 }
 
 /// Copy the option values from 'other', which is another instance of this

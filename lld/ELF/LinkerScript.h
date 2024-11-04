@@ -402,7 +402,12 @@ public:
   llvm::MapVector<StringRef, SmallVector<StringRef, 0>> provideMap;
 };
 
-LLVM_LIBRARY_VISIBILITY extern std::unique_ptr<LinkerScript> script;
+struct ScriptWrapper {
+  LinkerScript s;
+  LinkerScript *operator->() { return &s; }
+};
+
+LLVM_LIBRARY_VISIBILITY extern ScriptWrapper script;
 
 } // end namespace lld::elf
 

@@ -267,7 +267,7 @@ arrayLoadExtValue(fir::FirOpBuilder &builder, mlir::Location loc,
     mlir::Type ty = fir::applyPathToType(arrTy, path);
     if (!ty)
       fir::emitFatalError(loc, "path does not apply to type");
-    if (!ty.isa<fir::SequenceType>()) {
+    if (!mlir::isa<fir::SequenceType>(ty)) {
       if (fir::isa_char(ty)) {
         mlir::Value len = newLen;
         if (!len)
@@ -282,7 +282,7 @@ arrayLoadExtValue(fir::FirOpBuilder &builder, mlir::Location loc,
       }
       return newBase;
     }
-    arrTy = ty.cast<fir::SequenceType>();
+    arrTy = mlir::cast<fir::SequenceType>(ty);
   }
 
   auto arrayToExtendedValue =
@@ -412,15 +412,15 @@ static fir::ExtendedValue genLoad(fir::FirOpBuilder &builder,
   return addr.match(
       [](const fir::CharBoxValue &box) -> fir::ExtendedValue { return box; },
       [&](const fir::PolymorphicValue &p) -> fir::ExtendedValue {
-        if (fir::unwrapRefType(fir::getBase(p).getType())
-                .isa<fir::RecordType>())
+        if (mlir::isa<fir::RecordType>(
+                fir::unwrapRefType(fir::getBase(p).getType())))
           return p;
         mlir::Value load = builder.create<fir::LoadOp>(loc, fir::getBase(p));
         return fir::PolymorphicValue(load, p.getSourceBox());
       },
       [&](const fir::UnboxedValue &v) -> fir::ExtendedValue {
-        if (fir::unwrapRefType(fir::getBase(v).getType())
-                .isa<fir::RecordType>())
+        if (mlir::isa<fir::RecordType>(
+                fir::unwrapRefType(fir::getBase(v).getType())))
           return v;
         return builder.create<fir::LoadOp>(loc, fir::getBase(v));
       },
@@ -536,8 +536,8 @@ static mlir::Value
 createBoxProcCharTuple(Fortran::lower::AbstractConverter &converter,
                        mlir::Type argTy, mlir::Value funcAddr,
                        mlir::Value charLen) {
-  auto boxTy =
-      argTy.cast<mlir::TupleType>().getType(0).cast<fir::BoxProcType>();
+  auto boxTy = mlir::cast<fir::BoxProcType>(
+      mlir::cast<mlir::TupleType>(argTy).getType(0));
   mlir::Location loc = converter.getCurrentLocation();
   auto &builder = converter.getFirOpBuilder();
 
@@ -549,7 +549,7 @@ createBoxProcCharTuple(Fortran::lower::AbstractConverter &converter,
   mlir::Type toTy = boxTy.getEleTy();
   if (fir::isa_ref_type(fromTy))
     funcAddr = builder.createConvert(loc, toTy, funcAddr);
-  else if (fromTy.isa<fir::BoxProcType>())
+  else if (mlir::isa<fir::BoxProcType>(fromTy))
     funcAddr = builder.create<fir::BoxAddrOp>(loc, toTy, funcAddr);
 
   auto boxProc = [&]() -> mlir::Value {
@@ -575,7 +575,7 @@ absentBoxToUnallocatedBox(fir::FirOpBuilder &builder, mlir::Location loc,
                           mlir::Value isPresent) {
   mlir::Value box = fir::getBase(exv);
   mlir::Type boxType = box.getType();
-  assert(boxType.isa<fir::BoxType>() && "argument must be a fir.box");
+  assert(mlir::isa<fir::BoxType>(boxType) && "argument must be a fir.box");
   mlir::Value emptyBox =
       fir::factory::createUnallocatedBox(builder, loc, boxType, std::nullopt);
   auto safeToReadBox =
@@ -915,7 +915,7 @@ public:
     if (inInitializer)
       return Fortran::lower::genInlinedStructureCtorLit(converter, loc, ctor);
     mlir::Type ty = translateSomeExprToFIRType(converter, toEvExpr(ctor));
-    auto recTy = ty.cast<fir::RecordType>();
+    auto recTy = mlir::cast<fir::RecordType>(ty);
     auto fieldTy = fir::FieldType::get(ty.getContext());
     mlir::Value res = builder.createTemporary(loc, recTy);
     mlir::Value box = builder.createBox(loc, fir::ExtendedValue{res});
@@ -1172,8 +1172,8 @@ public:
     if (!charBox)
       fir::emitFatalError(loc, "expected scalar character");
     mlir::Value charAddr = charBox->getAddr();
-    auto charType =
-        fir::unwrapPassByRefType(charAddr.getType()).cast<fir::CharacterType>();
+    auto charType = mlir::cast<fir::CharacterType>(
+        fir::unwrapPassByRefType(charAddr.getType()));
     if (charType.hasConstantLen()) {
       // Erase previous constant length from the base type.
       fir::CharacterType::LenType newLen = fir::CharacterType::unknownLen();
@@ -1441,7 +1441,7 @@ public:
     auto fldTy = fir::FieldType::get(&converter.getMLIRContext());
     // FIXME: need to thread the LEN type parameters here.
     for (const Fortran::evaluate::Component *field : list) {
-      auto recTy = ty.cast<fir::RecordType>();
+      auto recTy = mlir::cast<fir::RecordType>(ty);
       const Fortran::semantics::Symbol &sym = getLastSym(*field);
       std::string name = converter.getRecordTypeFieldName(sym);
       coorArgs.push_back(builder.create<fir::FieldIndexOp>(
@@ -1478,7 +1478,7 @@ public:
   mlir::Type genSubType(mlir::Type arrTy, unsigned dims) {
     mlir::Type unwrapTy = fir::dyn_cast_ptrOrBoxEleTy(arrTy);
     assert(unwrapTy && "must be a pointer or box type");
-    auto seqTy = unwrapTy.cast<fir::SequenceType>();
+    auto seqTy = mlir::cast<fir::SequenceType>(unwrapTy);
     llvm::ArrayRef<int64_t> shape = seqTy.getShape();
     assert(shape.size() > 0 && "removing columns for sequence sans shape");
     assert(dims <= shape.size() && "removing more columns than exist");
@@ -1550,9 +1550,9 @@ public:
     }
 
     mlir::Type eleTy = fir::dyn_cast_ptrOrBoxEleTy(base.getType());
-    if (auto classTy = eleTy.dyn_cast<fir::ClassType>())
+    if (auto classTy = mlir::dyn_cast<fir::ClassType>(eleTy))
       eleTy = classTy.getEleTy();
-    auto seqTy = eleTy.cast<fir::SequenceType>();
+    auto seqTy = mlir::cast<fir::SequenceType>(eleTy);
     assert(args.size() == seqTy.getDimension());
     mlir::Type ty = builder.getRefType(seqTy.getEleTy());
     auto addr = builder.create<fir::CoordinateOp>(loc, ty, base, args);
@@ -1571,7 +1571,7 @@ public:
     mlir::Location loc = getLoc();
     mlir::Value addr = fir::getBase(array);
     mlir::Type arrTy = fir::dyn_cast_ptrEleTy(addr.getType());
-    auto eleTy = arrTy.cast<fir::SequenceType>().getEleTy();
+    auto eleTy = mlir::cast<fir::SequenceType>(arrTy).getEleTy();
     mlir::Type seqTy = builder.getRefType(builder.getVarLenSeqTy(eleTy));
     mlir::Type refTy = builder.getRefType(eleTy);
     mlir::Value base = builder.createConvert(loc, seqTy, addr);
@@ -1656,7 +1656,7 @@ public:
     mlir::Location loc = getLoc();
     mlir::Value addr = fir::getBase(exv);
     mlir::Type arrTy = fir::dyn_cast_ptrOrBoxEleTy(addr.getType());
-    mlir::Type eleTy = arrTy.cast<fir::SequenceType>().getEleTy();
+    mlir::Type eleTy = mlir::cast<fir::SequenceType>(arrTy).getEleTy();
     mlir::Type refTy = builder.getRefType(eleTy);
     mlir::IndexType idxTy = builder.getIndexType();
     llvm::SmallVector<mlir::Value> arrayCoorArgs;
@@ -1766,8 +1766,9 @@ public:
     mlir::Location loc = getLoc();
     ExtValue exv = genBoxArg(expr);
     auto exvTy = fir::getBase(exv).getType();
-    if (exvTy.isa<mlir::FunctionType>()) {
-      auto boxProcTy = builder.getBoxProcType(exvTy.cast<mlir::FunctionType>());
+    if (mlir::isa<mlir::FunctionType>(exvTy)) {
+      auto boxProcTy =
+          builder.getBoxProcType(mlir::cast<mlir::FunctionType>(exvTy));
       return builder.create<fir::EmboxProcOp>(loc, boxProcTy,
                                               fir::getBase(exv));
     }
@@ -1861,7 +1862,7 @@ public:
           // IS_CONTIGUOUS may require an assumed size TYPE(*) to be passed to
           // the intrinsic library utility as a fir.box.
           if (argRules.lowerAs == fir::LowerIntrinsicArgAs::Box &&
-              !fir::getBase(exv).getType().isa<fir::BaseBoxType>()) {
+              !mlir::isa<fir::BaseBoxType>(fir::getBase(exv).getType())) {
             operands.emplace_back(
                 fir::factory::createBoxValue(builder, loc, exv));
             continue;
@@ -2005,7 +2006,7 @@ public:
         fir::getTypeParams(mold);
     mlir::Value charLen;
     mlir::Type elementType = fir::unwrapSequenceType(type);
-    if (auto charType = elementType.dyn_cast<fir::CharacterType>()) {
+    if (auto charType = mlir::dyn_cast<fir::CharacterType>(elementType)) {
       charLen = allocMemTypeParams.empty()
                     ? fir::factory::readCharLen(builder, loc, mold)
                     : allocMemTypeParams[0];
@@ -2017,7 +2018,7 @@ public:
 
     mlir::Value temp = builder.create<fir::AllocMemOp>(
         loc, type, tempName, allocMemTypeParams, extents);
-    if (fir::unwrapSequenceType(type).isa<fir::CharacterType>())
+    if (mlir::isa<fir::CharacterType>(fir::unwrapSequenceType(type)))
       return fir::CharArrayBoxValue{temp, charLen, extents};
     return fir::ArrayBoxValue{temp, extents};
   }
@@ -2166,7 +2167,7 @@ public:
         // We have to initialize the temp if it may have components
         // that need initialization. If there are no components
         // requiring initialization, then the call is a no-op.
-        if (getElementTypeOf(temp).isa<fir::RecordType>()) {
+        if (mlir::isa<fir::RecordType>(getElementTypeOf(temp))) {
           mlir::Value tempBox = fir::getBase(builder.createBox(loc, temp));
           fir::runtime::genDerivedTypeInitialize(builder, loc, tempBox);
         }
@@ -2312,7 +2313,7 @@ public:
     if (!copyOutPair.restrictCopyAndFreeAtRuntime) {
       doCopyOut();
 
-      if (fir::getElementTypeOf(copyOutPair.temp).isa<fir::RecordType>()) {
+      if (mlir::isa<fir::RecordType>(fir::getElementTypeOf(copyOutPair.temp))) {
         // Destroy components of the temporary (if any).
         // If there are no components requiring destruction, then the call
         // is a no-op.
@@ -2330,7 +2331,8 @@ public:
     builder.genIfThen(loc, *copyOutPair.restrictCopyAndFreeAtRuntime)
         .genThen([&]() {
           doCopyOut();
-          if (fir::getElementTypeOf(copyOutPair.temp).isa<fir::RecordType>()) {
+          if (mlir::isa<fir::RecordType>(
+                  fir::getElementTypeOf(copyOutPair.temp))) {
             // Destroy components of the temporary (if any).
             // If there are no components requiring destruction, then the call
             // is a no-op.
@@ -2381,7 +2383,7 @@ public:
     mlir::Value actualArgBase = fir::getBase(actualArg);
     mlir::Value isPresent = builder.create<fir::IsPresentOp>(
         loc, builder.getI1Type(), actualArgBase);
-    if (!actualArgBase.getType().isa<fir::BoxType>())
+    if (!mlir::isa<fir::BoxType>(actualArgBase.getType()))
       return {actualArg, isPresent};
     ExtValue safeToReadBox =
         absentBoxToUnallocatedBox(builder, loc, actualArg, isPresent);
@@ -2408,7 +2410,7 @@ public:
                                       fir::getAdaptToByRefAttr(builder)});
       return fir::CharBoxValue{temp, len};
     }
-    assert((fir::isa_trivial(type) || type.isa<fir::RecordType>()) &&
+    assert((fir::isa_trivial(type) || mlir::isa<fir::RecordType>(type)) &&
            "must be simple scalar");
     return builder.createTemporary(loc, type,
                                    llvm::ArrayRef<mlir::NamedAttribute>{
@@ -2585,7 +2587,7 @@ public:
           // callee side, and it is illegal to use NULL without a MOLD if any
           // dummy length parameters are assumed.
           mlir::Type boxTy = fir::dyn_cast_ptrEleTy(argTy);
-          assert(boxTy && boxTy.isa<fir::BaseBoxType>() &&
+          assert(boxTy && mlir::isa<fir::BaseBoxType>(boxTy) &&
                  "must be a fir.box type");
           mlir::Value boxStorage = builder.createTemporary(loc, boxTy);
           mlir::Value nullBox = fir::factory::createUnallocatedBox(
@@ -2643,10 +2645,11 @@ public:
                 // If a character procedure was passed instead, handle the
                 // mismatch.
                 auto funcTy =
-                    x.getAddr().getType().dyn_cast<mlir::FunctionType>();
+                    mlir::dyn_cast<mlir::FunctionType>(x.getAddr().getType());
                 if (funcTy && funcTy.getNumResults() == 1 &&
-                    funcTy.getResult(0).isa<fir::BoxCharType>()) {
-                  auto boxTy = funcTy.getResult(0).cast<fir::BoxCharType>();
+                    mlir::isa<fir::BoxCharType>(funcTy.getResult(0))) {
+                  auto boxTy =
+                      mlir::cast<fir::BoxCharType>(funcTy.getResult(0));
                   mlir::Value ref = builder.createConvert(
                       loc, builder.getRefType(boxTy.getEleTy()), x.getAddr());
                   auto len = builder.create<fir::UndefOp>(
@@ -2667,7 +2670,7 @@ public:
                 // free-casting the base address to be a !fir.char reference and
                 // setting the LEN argument to undefined. What could go wrong?
                 auto dataPtr = fir::getBase(x);
-                assert(!dataPtr.getType().template isa<fir::BoxType>());
+                assert(!mlir::isa<fir::BoxType>(dataPtr.getType()));
                 return builder.convertWithSemantics(
                     loc, argTy, dataPtr,
                     /*allowCharacterConversion=*/true);
@@ -2742,7 +2745,7 @@ public:
                 loc,
                 fir::ClassType::get(mlir::NoneType::get(builder.getContext())),
                 box);
-          } else if (box.getType().isa<fir::BoxType>() &&
+          } else if (mlir::isa<fir::BoxType>(box.getType()) &&
                      fir::isPolymorphicType(argTy)) {
             box = builder.create<fir::ReboxOp>(loc, argTy, box, mlir::Value{},
                                                /*slice=*/mlir::Value{});
@@ -2791,7 +2794,7 @@ public:
                       : builder.createBox(getLoc(), genTempExtAddr(*expr),
                                           fir::isPolymorphicType(argTy),
                                           fir::isAssumedType(argTy));
-            if (box.getType().isa<fir::BoxType>() &&
+            if (mlir::isa<fir::BoxType>(box.getType()) &&
                 fir::isPolymorphicType(argTy) && !fir::isAssumedType(argTy)) {
               mlir::Type actualTy = argTy;
               if (Fortran::lower::isParentComponent(*expr))
@@ -3030,10 +3033,11 @@ private:
       Fortran::common::ScopedSet(semant, PushVal);
 
 static bool isAdjustedArrayElementType(mlir::Type t) {
-  return fir::isa_char(t) || fir::isa_derived(t) || t.isa<fir::SequenceType>();
+  return fir::isa_char(t) || fir::isa_derived(t) ||
+         mlir::isa<fir::SequenceType>(t);
 }
 static bool elementTypeWasAdjusted(mlir::Type t) {
-  if (auto ty = t.dyn_cast<fir::ReferenceType>())
+  if (auto ty = mlir::dyn_cast<fir::ReferenceType>(t))
     return isAdjustedArrayElementType(ty.getEleTy());
   return false;
 }
@@ -3050,15 +3054,15 @@ static void genScalarUserDefinedAssignmentCall(fir::FirOpBuilder &builder,
   auto prepareUserDefinedArg =
       [](fir::FirOpBuilder &builder, mlir::Location loc,
          const fir::ExtendedValue &value, mlir::Type argType) -> mlir::Value {
-    if (argType.isa<fir::BoxCharType>()) {
+    if (mlir::isa<fir::BoxCharType>(argType)) {
       const fir::CharBoxValue *charBox = value.getCharBox();
       assert(charBox && "argument type mismatch in elemental user assignment");
       return fir::factory::CharacterExprHelper{builder, loc}.createEmbox(
           *charBox);
     }
-    if (argType.isa<fir::BaseBoxType>()) {
+    if (mlir::isa<fir::BaseBoxType>(argType)) {
       mlir::Value box =
-          builder.createBox(loc, value, argType.isa<fir::ClassType>());
+          builder.createBox(loc, value, mlir::isa<fir::ClassType>(argType));
       return builder.createConvert(loc, argType, box);
     }
     // Simple pass by address.
@@ -3170,7 +3174,7 @@ convertToArrayBoxValue(mlir::Location loc, fir::FirOpBuilder &builder,
                        mlir::Value val, mlir::Value len) {
   mlir::Type ty = fir::unwrapRefType(val.getType());
   mlir::IndexType idxTy = builder.getIndexType();
-  auto seqTy = ty.cast<fir::SequenceType>();
+  auto seqTy = mlir::cast<fir::SequenceType>(ty);
   auto undef = builder.create<fir::UndefOp>(loc, idxTy);
   llvm::SmallVector<mlir::Value> extents(seqTy.getDimension(), undef);
   if (fir::isa_char(seqTy.getEleTy()))
@@ -3462,7 +3466,7 @@ public:
         [&](const auto &e) {
           auto f = genarr(e);
           ExtValue exv = f(IterationSpace{});
-          if (fir::getBase(exv).getType().template isa<fir::BaseBoxType>())
+          if (mlir::isa<fir::BaseBoxType>(fir::getBase(exv).getType()))
             return exv;
           fir::emitFatalError(getLoc(), "array must be emboxed");
         },
@@ -3487,10 +3491,9 @@ public:
                                            tempRes, dest.getSlice(),
                                            dest.getTypeparams());
 
-    auto arrTy =
-        fir::dyn_cast_ptrEleTy(tempRes.getType()).cast<fir::SequenceType>();
-    if (auto charTy =
-            arrTy.getEleTy().template dyn_cast<fir::CharacterType>()) {
+    auto arrTy = mlir::cast<fir::SequenceType>(
+        fir::dyn_cast_ptrEleTy(tempRes.getType()));
+    if (auto charTy = mlir::dyn_cast<fir::CharacterType>(arrTy.getEleTy())) {
       if (fir::characterWithDynamicLen(charTy))
         TODO(loc, "CHARACTER does not have constant LEN");
       mlir::Value len = builder.createIntegerConstant(
@@ -3912,17 +3915,18 @@ private:
   mlir::Value convertElementForUpdate(mlir::Location loc, mlir::Type eleTy,
                                       mlir::Value origVal) {
     if (auto origEleTy = fir::dyn_cast_ptrEleTy(origVal.getType()))
-      if (origEleTy.isa<fir::BaseBoxType>()) {
+      if (mlir::isa<fir::BaseBoxType>(origEleTy)) {
         // If origVal is a box variable, load it so it is in the value domain.
         origVal = builder.create<fir::LoadOp>(loc, origVal);
       }
-    if (origVal.getType().isa<fir::BoxType>() && !eleTy.isa<fir::BoxType>()) {
+    if (mlir::isa<fir::BoxType>(origVal.getType()) &&
+        !mlir::isa<fir::BoxType>(eleTy)) {
       if (isPointerAssignment())
         TODO(loc, "lhs of pointer assignment returned unexpected value");
       TODO(loc, "invalid box conversion in elemental computation");
     }
-    if (isPointerAssignment() && eleTy.isa<fir::BoxType>() &&
-        !origVal.getType().isa<fir::BoxType>()) {
+    if (isPointerAssignment() && mlir::isa<fir::BoxType>(eleTy) &&
+        !mlir::isa<fir::BoxType>(origVal.getType())) {
       // This is a pointer assignment and the rhs is a raw reference to a TARGET
       // in memory. Embox the reference so it can be stored to the boxed
       // POINTER variable.
@@ -3930,7 +3934,7 @@ private:
       if (auto eleTy = fir::dyn_cast_ptrEleTy(origVal.getType());
           fir::hasDynamicSize(eleTy))
         TODO(loc, "TARGET of pointer assignment with runtime size/shape");
-      auto memrefTy = fir::boxMemRefType(eleTy.cast<fir::BoxType>());
+      auto memrefTy = fir::boxMemRefType(mlir::cast<fir::BoxType>(eleTy));
       auto castTo = builder.createConvert(loc, memrefTy, origVal);
       origVal = builder.create<fir::EmboxOp>(loc, eleTy, castTo);
     }
@@ -3982,7 +3986,7 @@ private:
         auto arrayOp = builder.create<fir::ArrayAccessOp>(
             loc, resRefTy, innerArg, iterSpace.iterVec(),
             fir::factory::getTypeParams(loc, builder, destination));
-        if (auto charTy = eleTy.dyn_cast<fir::CharacterType>()) {
+        if (auto charTy = mlir::dyn_cast<fir::CharacterType>(eleTy)) {
           llvm::SmallVector<mlir::Value> substringBounds;
           populateBounds(substringBounds, substring);
           mlir::Value dstLen = fir::factory::genLenOfCharacter(
@@ -3996,7 +4000,7 @@ private:
               loc, destination, builder, arrayOp, exv, eleTy, innerArg);
           return abstractArrayExtValue(amend /*FIXME: typeparams?*/);
         }
-        assert(eleTy.isa<fir::SequenceType>() && "must be an array");
+        assert(mlir::isa<fir::SequenceType>(eleTy) && "must be an array");
         TODO(loc, "array (as element) assignment");
       }
       // By value semantics. The element is being assigned by value.
@@ -4060,7 +4064,7 @@ private:
   llvm::SmallVector<mlir::Value> getShape(ArrayOperand array) {
     if (array.slice)
       return computeSliceShape(array.slice);
-    if (array.memref.getType().isa<fir::BaseBoxType>())
+    if (mlir::isa<fir::BaseBoxType>(array.memref.getType()))
       return fir::factory::readExtents(builder, getLoc(),
                                        fir::BoxValue{array.memref});
     return fir::factory::getExtents(array.shape);
@@ -4133,7 +4137,7 @@ private:
     mlir::Location loc = getLoc();
     return [=, builder = &converter.getFirOpBuilder()](IterSpace iters) {
       mlir::Type arrTy = fir::dyn_cast_ptrOrBoxEleTy(tmp.getType());
-      auto eleTy = arrTy.cast<fir::SequenceType>().getEleTy();
+      auto eleTy = mlir::cast<fir::SequenceType>(arrTy).getEleTy();
       mlir::Type eleRefTy = builder->getRefType(eleTy);
       mlir::IntegerType i1Ty = builder->getI1Type();
       // Adjust indices for any shift of the origin of the array.
@@ -4442,15 +4446,15 @@ private:
       TODO(loc, "polymorphic array temporary");
     if (ccLoadDest)
       return (*ccLoadDest)(shape);
-    auto seqTy = type.dyn_cast<fir::SequenceType>();
+    auto seqTy = mlir::dyn_cast<fir::SequenceType>(type);
     assert(seqTy && "must be an array");
     // TODO: Need to thread the LEN parameters here. For character, they may
     // differ from the operands length (e.g concatenation). So the array loads
     // type parameters are not enough.
-    if (auto charTy = seqTy.getEleTy().dyn_cast<fir::CharacterType>())
+    if (auto charTy = mlir::dyn_cast<fir::CharacterType>(seqTy.getEleTy()))
       if (charTy.hasDynamicLen())
         TODO(loc, "character array expression temp with dynamic length");
-    if (auto recTy = seqTy.getEleTy().dyn_cast<fir::RecordType>())
+    if (auto recTy = mlir::dyn_cast<fir::RecordType>(seqTy.getEleTy()))
       if (recTy.getNumLenParams() > 0)
         TODO(loc, "derived type array expression temp with LEN parameters");
     if (mlir::Type eleTy = fir::unwrapSequenceType(type);
@@ -4827,7 +4831,7 @@ private:
             });
           } else {
             ExtValue exv = asScalarRef(*expr);
-            if (fir::getBase(exv).getType().isa<fir::BaseBoxType>()) {
+            if (mlir::isa<fir::BaseBoxType>(fir::getBase(exv).getType())) {
               operands.emplace_back(
                   [=](IterSpace iters) -> ExtValue { return exv; });
             } else {
@@ -5565,7 +5569,7 @@ private:
   }
 
   static mlir::Type unwrapBoxEleTy(mlir::Type ty) {
-    if (auto boxTy = ty.dyn_cast<fir::BaseBoxType>())
+    if (auto boxTy = mlir::dyn_cast<fir::BaseBoxType>(ty))
       return fir::unwrapRefType(boxTy.getEleTy());
     return ty;
   }
@@ -5575,7 +5579,7 @@ private:
     ty = unwrapBoxEleTy(ty);
     mlir::Location loc = getLoc();
     mlir::IndexType idxTy = builder.getIndexType();
-    for (auto extent : ty.cast<fir::SequenceType>().getShape()) {
+    for (auto extent : mlir::cast<fir::SequenceType>(ty).getShape()) {
       auto v = extent == fir::SequenceType::getUnknownExtent()
                    ? builder.create<fir::UndefOp>(loc, idxTy).getResult()
                    : builder.createIntegerConstant(loc, idxTy, extent);
@@ -5638,7 +5642,8 @@ private:
     mlir::Location loc = getLoc();
     mlir::Value memref = fir::getBase(extMemref);
     mlir::Type arrTy = fir::dyn_cast_ptrOrBoxEleTy(memref.getType());
-    assert(arrTy.isa<fir::SequenceType>() && "memory ref must be an array");
+    assert(mlir::isa<fir::SequenceType>(arrTy) &&
+           "memory ref must be an array");
     mlir::Value shape = builder.createShape(loc, extMemref);
     mlir::Value slice;
     if (components.isSlice()) {
@@ -5688,12 +5693,12 @@ private:
                                     components.suffixComponents);
       }
       if (components.hasComponents()) {
-        auto seqTy = arrTy.cast<fir::SequenceType>();
+        auto seqTy = mlir::cast<fir::SequenceType>(arrTy);
         mlir::Type eleTy =
             fir::applyPathToType(seqTy.getEleTy(), components.suffixComponents);
         if (!eleTy)
           fir::emitFatalError(loc, "slicing path is ill-formed");
-        if (auto realTy = eleTy.dyn_cast<fir::RealType>())
+        if (auto realTy = mlir::dyn_cast<fir::RealType>(eleTy))
           eleTy = Fortran::lower::convertReal(realTy.getContext(),
                                               realTy.getFKind());
 
@@ -5713,13 +5718,14 @@ private:
       // value. The value of the box is forwarded in the continuation.
       mlir::Type reduceTy = reduceRank(arrTy, slice);
       mlir::Type boxTy = fir::BoxType::get(reduceTy);
-      if (memref.getType().isa<fir::ClassType>() && !components.hasComponents())
+      if (mlir::isa<fir::ClassType>(memref.getType()) &&
+          !components.hasComponents())
         boxTy = fir::ClassType::get(reduceTy);
       if (components.substring) {
         // Adjust char length to substring size.
         fir::CharacterType charTy =
             fir::factory::CharacterExprHelper::getCharType(reduceTy);
-        auto seqTy = reduceTy.cast<fir::SequenceType>();
+        auto seqTy = mlir::cast<fir::SequenceType>(reduceTy);
         // TODO: Use a constant for fir.char LEN if we can compute it.
         boxTy = fir::BoxType::get(
             fir::SequenceType::get(fir::CharacterType::getUnknownLen(
@@ -5734,7 +5740,7 @@ private:
         nonDeferredLenParams = fir::factory::getNonDeferredLenParams(extMemref);
       }
       mlir::Value embox =
-          memref.getType().isa<fir::BaseBoxType>()
+          mlir::isa<fir::BaseBoxType>(memref.getType())
               ? builder.create<fir::ReboxOp>(loc, boxTy, memref, shape, slice)
                     .getResult()
               : builder
@@ -5745,7 +5751,7 @@ private:
         return fir::BoxValue(embox, lbounds, nonDeferredLenParams);
       };
     }
-    auto eleTy = arrTy.cast<fir::SequenceType>().getEleTy();
+    auto eleTy = mlir::cast<fir::SequenceType>(arrTy).getEleTy();
     if (isReferentiallyOpaque()) {
       // Semantics are an opaque reference to an array.
       // This case forwards a continuation that will generate the address
@@ -5760,12 +5766,12 @@ private:
         mlir::Value coor = builder.create<fir::ArrayCoorOp>(
             loc, refEleTy, memref, shape, slice, indices,
             fir::getTypeParams(extMemref));
-        if (auto charTy = eleTy.dyn_cast<fir::CharacterType>()) {
+        if (auto charTy = mlir::dyn_cast<fir::CharacterType>(eleTy)) {
           llvm::SmallVector<mlir::Value> substringBounds;
           populateBounds(substringBounds, components.substring);
           if (!substringBounds.empty()) {
             mlir::Value dstLen = fir::factory::genLenOfCharacter(
-                builder, loc, arrTy.cast<fir::SequenceType>(), memref,
+                builder, loc, mlir::cast<fir::SequenceType>(arrTy), memref,
                 fir::getTypeParams(extMemref), iters.iterVec(),
                 substringBounds);
             fir::CharBoxValue dstChar(coor, dstLen);
@@ -5863,7 +5869,7 @@ private:
         mlir::Type eleRefTy = builder.getRefType(eleTy);
         mlir::Value arrayOp = builder.create<fir::ArrayAccessOp>(
             loc, eleRefTy, arrLd, iters.iterVec(), arrLdTypeParams);
-        if (auto charTy = eleTy.dyn_cast<fir::CharacterType>()) {
+        if (auto charTy = mlir::dyn_cast<fir::CharacterType>(eleTy)) {
           llvm::SmallVector<mlir::Value> substringBounds;
           populateBounds(substringBounds, components.substring);
           if (!substringBounds.empty()) {
@@ -5896,7 +5902,7 @@ private:
     const bool hasOptionalAttr =
         fir::valueHasFirAttribute(base, fir::getOptionalAttrName());
     mlir::Type baseType = fir::unwrapRefType(base.getType());
-    const bool isBox = baseType.isa<fir::BoxType>();
+    const bool isBox = mlir::isa<fir::BoxType>(baseType);
     const bool isAllocOrPtr =
         Fortran::evaluate::IsAllocatableOrPointerObject(expr);
     mlir::Type arrType = fir::unwrapPassByRefType(baseType);
@@ -5989,7 +5995,7 @@ private:
     if (slice) {
       auto slOp = mlir::dyn_cast<fir::SliceOp>(slice.getDefiningOp());
       assert(slOp && "expected slice op");
-      auto seqTy = arrTy.dyn_cast<fir::SequenceType>();
+      auto seqTy = mlir::dyn_cast<fir::SequenceType>(arrTy);
       assert(seqTy && "expected array type");
       mlir::Operation::operand_range triples = slOp.getTriples();
       fir::SequenceType::Shape shape;
@@ -6053,7 +6059,7 @@ private:
     mlir::IndexType idxTy = builder.getIndexType();
     mlir::Value multiplier = builder.createIntegerConstant(loc, idxTy, 1);
     if (fir::hasDynamicSize(eleTy)) {
-      if (auto charTy = eleTy.dyn_cast<fir::CharacterType>()) {
+      if (auto charTy = mlir::dyn_cast<fir::CharacterType>(eleTy)) {
         // Array of char with dynamic LEN parameter. Downcast to an array
         // of singleton char, and scale by the len type parameter from
         // `exv`.
@@ -6074,7 +6080,7 @@ private:
             });
         fir::CharacterType newEleTy = fir::CharacterType::getSingleton(
             eleTy.getContext(), charTy.getFKind());
-        if (auto seqTy = resTy.dyn_cast<fir::SequenceType>()) {
+        if (auto seqTy = mlir::dyn_cast<fir::SequenceType>(resTy)) {
           assert(eleTy == seqTy.getEleTy());
           resTy = fir::SequenceType::get(seqTy.getShape(), newEleTy);
         }
@@ -6161,7 +6167,7 @@ private:
     if (!eleSz) {
       // Compute the element size at runtime.
       assert(fir::hasDynamicSize(eleTy));
-      if (auto charTy = eleTy.dyn_cast<fir::CharacterType>()) {
+      if (auto charTy = mlir::dyn_cast<fir::CharacterType>(eleTy)) {
         auto charBytes =
             builder.getKindMap().getCharacterBitsize(charTy.getFKind()) / 8;
         mlir::Value bytes =
@@ -6181,7 +6187,7 @@ private:
     auto computeCoordinate = [&](mlir::Value buff, mlir::Value off) {
       mlir::Type refTy = eleRefTy;
       if (fir::hasDynamicSize(eleTy)) {
-        if (auto charTy = eleTy.dyn_cast<fir::CharacterType>()) {
+        if (auto charTy = mlir::dyn_cast<fir::CharacterType>(eleTy)) {
           // Scale a simple pointer using dynamic length and offset values.
           auto chTy = fir::CharacterType::getSingleton(charTy.getContext(),
                                                        charTy.getFKind());
@@ -6308,7 +6314,7 @@ private:
         builder.createConvert(loc, idxTy, fir::getBase(asScalar(x.upper())));
     mlir::Value step =
         builder.createConvert(loc, idxTy, fir::getBase(asScalar(x.stride())));
-    auto seqTy = resTy.template cast<fir::SequenceType>();
+    auto seqTy = mlir::cast<fir::SequenceType>(resTy);
     mlir::Type eleTy = fir::unwrapSequenceType(seqTy);
     auto loop =
         builder.create<fir::DoLoopOp>(loc, lo, up, step, /*unordered=*/false,
@@ -6375,7 +6381,7 @@ private:
     auto evExpr = toEvExpr(x);
     mlir::Type resTy = translateSomeExprToFIRType(converter, evExpr);
     mlir::IndexType idxTy = builder.getIndexType();
-    auto seqTy = resTy.template cast<fir::SequenceType>();
+    auto seqTy = mlir::cast<fir::SequenceType>(resTy);
     mlir::Type eleTy = fir::unwrapSequenceType(resTy);
     mlir::Value buffSize = builder.createTemporary(loc, idxTy, ".buff.size");
     mlir::Value zero = builder.createIntegerConstant(loc, idxTy, 0);
@@ -6719,7 +6725,7 @@ private:
                 auto fieldTy = fir::FieldType::get(builder.getContext());
                 std::string name =
                     converter.getRecordTypeFieldName(getLastSym(*x));
-                if (auto recTy = ty.dyn_cast<fir::RecordType>()) {
+                if (auto recTy = mlir::dyn_cast<fir::RecordType>(ty)) {
                   ty = recTy.getType(name);
                   auto fld = builder.create<fir::FieldIndexOp>(
                       loc, fieldTy, name, recTy, fir::getTypeParams(arrayExv));
@@ -6728,7 +6734,7 @@ private:
                     // Need an intermediate  dereference if the boxed value
                     // appears in the middle of the component path or if it is
                     // on the right and this is not a pointer assignment.
-                    if (auto boxTy = ty.dyn_cast<fir::BaseBoxType>()) {
+                    if (auto boxTy = mlir::dyn_cast<fir::BaseBoxType>(ty)) {
                       auto currentFunc = components.getExtendCoorRef();
                       auto loc = getLoc();
                       auto *bldr = &converter.getFirOpBuilder();
@@ -6739,9 +6745,9 @@ private:
                       deref = true;
                     }
                   }
-                } else if (auto boxTy = ty.dyn_cast<fir::BaseBoxType>()) {
+                } else if (auto boxTy = mlir::dyn_cast<fir::BaseBoxType>(ty)) {
                   ty = fir::unwrapRefType(boxTy.getEleTy());
-                  auto recTy = ty.cast<fir::RecordType>();
+                  auto recTy = mlir::cast<fir::RecordType>(ty);
                   ty = recTy.getType(name);
                   auto fld = builder.create<fir::FieldIndexOp>(
                       loc, fieldTy, name, recTy, fir::getTypeParams(arrayExv));
@@ -6790,7 +6796,7 @@ private:
           auto arrayOp = builder.create<fir::ArrayAccessOp>(
               loc, eleRefTy, innerArg, iters.iterVec(),
               fir::factory::getTypeParams(loc, builder, load));
-          if (auto charTy = eleTy.dyn_cast<fir::CharacterType>()) {
+          if (auto charTy = mlir::dyn_cast<fir::CharacterType>(eleTy)) {
             mlir::Value dstLen = fir::factory::genLenOfCharacter(
                 builder, loc, load, iters.iterVec(), substringBounds);
             fir::ArrayAmendOp amend = createCharArrayAmend(
@@ -6806,13 +6812,13 @@ private:
             return arrayLoadExtValue(builder, loc, load, iters.iterVec(),
                                      amend);
           }
-          assert(eleTy.isa<fir::SequenceType>());
+          assert(mlir::isa<fir::SequenceType>(eleTy));
           TODO(loc, "array (as element) assignment");
         }
         if (components.hasExtendCoorRef()) {
           auto eleBoxTy =
               fir::applyPathToType(innerArg.getType(), iters.iterVec());
-          if (!eleBoxTy || !eleBoxTy.isa<fir::BoxType>())
+          if (!eleBoxTy || !mlir::isa<fir::BoxType>(eleBoxTy))
             TODO(loc, "assignment in a FORALL involving a designator with a "
                       "POINTER or ALLOCATABLE component part-ref");
           auto arrayOp = builder.create<fir::ArrayAccessOp>(
@@ -6824,7 +6830,7 @@ private:
           // assignment, then insert the dereference of the box before any
           // conversion and store.
           if (!isPointerAssignment()) {
-            if (auto boxTy = eleTy.dyn_cast<fir::BaseBoxType>()) {
+            if (auto boxTy = mlir::dyn_cast<fir::BaseBoxType>(eleTy)) {
               eleTy = fir::boxMemRefType(boxTy);
               addr = builder.create<fir::BoxAddrOp>(loc, eleTy, addr);
               eleTy = fir::unwrapRefType(eleTy);
@@ -6885,7 +6891,7 @@ private:
       }
       if (components.hasExtendCoorRef()) {
         auto eleBoxTy = fir::applyPathToType(load.getType(), iters.iterVec());
-        if (!eleBoxTy || !eleBoxTy.isa<fir::BoxType>())
+        if (!eleBoxTy || !mlir::isa<fir::BoxType>(eleBoxTy))
           TODO(loc, "assignment in a FORALL involving a designator with a "
                     "POINTER or ALLOCATABLE component part-ref");
         auto access = builder.create<fir::ArrayAccessOp>(
@@ -6897,7 +6903,7 @@ private:
       }
       if (isPointerAssignment()) {
         auto eleTy = fir::applyPathToType(load.getType(), iters.iterVec());
-        if (!eleTy.isa<fir::BoxType>()) {
+        if (!mlir::isa<fir::BoxType>(eleTy)) {
           // Rhs is a regular expression that will need to be boxed before
           // assigning to the boxed variable.
           auto typeParams = fir::factory::getTypeParams(loc, builder, load);
@@ -7615,7 +7621,7 @@ mlir::Value Fortran::lower::addCrayPointerInst(mlir::Location loc,
   auto box = builder.create<fir::EmboxOp>(loc, boxTy, ptrVal, empty, empty,
                                           emptyRange);
   mlir::Value addrof =
-      (ptrTy.isa<fir::ReferenceType>())
+      (mlir::isa<fir::ReferenceType>(ptrTy))
           ? builder.create<fir::BoxAddrOp>(loc, ptrTy, box)
           : builder.create<fir::BoxAddrOp>(loc, builder.getRefType(ptrTy), box);
 

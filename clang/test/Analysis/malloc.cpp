@@ -214,3 +214,14 @@ void *realloc(void **ptr, size_t size) { realloc(ptr, size); } // no-crash
 namespace pr46253_paramty2{
 void *realloc(void *ptr, int size) { realloc(ptr, size); } // no-crash
 } // namespace pr46253_paramty2
+
+namespace pr81597 {
+struct S {};
+struct T {
+  void free(const S& s);
+};
+void f(T& t) {
+  S s;
+  t.free(s); // no-warning: This is not the free you are looking for...
+}
+} // namespace pr81597

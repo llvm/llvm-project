@@ -72,7 +72,13 @@ void IntegerRelation::setId(VarKind kind, unsigned i, Identifier id) {
          "space must be using identifiers to set an identifier");
   assert(kind != VarKind::Local && "local variables cannot have identifiers");
   assert(i < space.getNumVarKind(kind) && "invalid variable index");
-  space.getId(kind, i) = id;
+  space.setId(kind, i, id);
+}
+
+ArrayRef<Identifier> IntegerRelation::getIds(VarKind kind) {
+  if (!space.isUsingIds())
+    space.resetIds();
+  return space.getIds(kind);
 }
 
 void IntegerRelation::append(const IntegerRelation &other) {
@@ -1318,14 +1324,14 @@ void IntegerRelation::mergeAndAlignSymbols(IntegerRelation &other) {
                         std::distance(findBegin, itr));
     } else {
       other.insertVar(VarKind::Symbol, i);
-      other.space.getId(VarKind::Symbol, i) = identifier;
+      other.space.setId(VarKind::Symbol, i, identifier);
     }
     ++i;
   }
 
   for (unsigned e = other.getNumVarKind(VarKind::Symbol); i < e; ++i) {
     insertVar(VarKind::Symbol, i);
-    space.getId(VarKind::Symbol, i) = other.space.getId(VarKind::Symbol, i);
+    space.setId(VarKind::Symbol, i, other.space.getId(VarKind::Symbol, i));
   }
 }
 
@@ -1451,28 +1457,22 @@ void IntegerRelation::removeRedundantLocalVars() {
 void IntegerRelation::convertVarKind(VarKind srcKind, unsigned varStart,
                                      unsigned varLimit, VarKind dstKind,
                                      unsigned pos) {
-  assert(varLimit <= getNumVarKind(srcKind) && "Invalid id range");
+  assert(varLimit <= getNumVarKind(srcKind) && "invalid id range");
 
   if (varStart >= varLimit)
     return;
 
-  // Append new local variables corresponding to the dimensions to be converted.
+  unsigned srcOffset = getVarKindOffset(srcKind);
+  unsigned dstOffset = getVarKindOffset(dstKind);
   unsigned convertCount = varLimit - varStart;
-  unsigned newVarsBegin = insertVar(dstKind, pos, convertCount);
+  int forwardMoveOffset = dstOffset > srcOffset ? -convertCount : 0;
 
-  // Swap the new local variables with dimensions.
-  //
-  // Essentially, this moves the information corresponding to the specified ids
-  // of kind `srcKind` to the `convertCount` newly created ids of kind
-  // `dstKind`. In particular, this moves the columns in the constraint
-  // matrices, and zeros out the initially occupied columns (because the newly
-  // created ids we're swapping with were zero-initialized).
-  unsigned offset = getVarKindOffset(srcKind);
-  for (unsigned i = 0; i < convertCount; ++i)
-    swapVar(offset + varStart + i, newVarsBegin + i);
+  equalities.moveColumns(srcOffset + varStart, convertCount,
+                         dstOffset + pos + forwardMoveOffset);
+  inequalities.moveColumns(srcOffset + varStart, convertCount,
+                           dstOffset + pos + forwardMoveOffset);
 
-  // Complete the move by deleting the initially occupied columns.
-  removeVarRange(srcKind, varStart, varLimit);
+  space.convertVarKind(srcKind, varStart, varLimit - varStart, dstKind, pos);
 }
 
 void IntegerRelation::addBound(BoundType type, unsigned pos,
@@ -2520,6 +2520,65 @@ bool IntegerRelation::isFullDim() {
   return llvm::none_of(llvm::seq<int>(getNumInequalities()), [&](int i) {
     return simplex.isFlatAlong(getInequality(i));
   });
+}
+
+void IntegerRelation::mergeAndCompose(const IntegerRelation &other) {
+  assert(getNumDomainVars() == other.getNumRangeVars() &&
+         "Domain of this and range of other do not match");
+  // assert(std::equal(values.begin(), values.begin() +
+  // other.getNumDomainVars(),
+  //                   otherValues.begin() + other.getNumDomainVars()) &&
+  //        "Domain of this and range of other do not match");
+
+  IntegerRelation result = other;
+
+  const unsigned thisDomain = getNumDomainVars();
+  const unsigned thisRange = getNumRangeVars();
+  const unsigned otherDomain = other.getNumDomainVars();
+  const unsigned otherRange = other.getNumRangeVars();
+
+  // Add dimension variables temporarily to merge symbol and local vars.
+  // Convert `this` from
+  //    [thisDomain] -> [thisRange]
+  // to
+  //    [otherDomain thisDomain] -> [otherRange thisRange].
+  // and `result` from
+  //    [otherDomain] -> [otherRange]
+  // to
+  //    [otherDomain thisDomain] -> [otherRange thisRange]
+  insertVar(VarKind::Domain, 0, otherDomain);
+  insertVar(VarKind::Range, 0, otherRange);
+  result.insertVar(VarKind::Domain, otherDomain, thisDomain);
+  result.insertVar(VarKind::Range, otherRange, thisRange);
+
+  // Merge symbol and local variables.
+  mergeAndAlignSymbols(result);
+  mergeLocalVars(result);
+
+  // Convert `result` from [otherDomain thisDomain] -> [otherRange thisRange] to
+  //                       [otherDomain] -> [thisRange]
+  result.removeVarRange(VarKind::Domain, otherDomain, otherDomain + thisDomain);
+  result.convertToLocal(VarKind::Range, 0, otherRange);
+  // Convert `this` from [otherDomain thisDomain] -> [otherRange thisRange] to
+  //                     [otherDomain] -> [thisRange]
+  convertToLocal(VarKind::Domain, otherDomain, otherDomain + thisDomain);
+  removeVarRange(VarKind::Range, 0, otherRange);
+
+  // Add and match domain of `result` to domain of `this`.
+  for (unsigned i = 0, e = result.getNumDomainVars(); i < e; ++i)
+    if (result.getSpace().getId(VarKind::Domain, i).hasValue())
+      space.setId(VarKind::Domain, i,
+                  result.getSpace().getId(VarKind::Domain, i));
+  // Add and match range of `this` to range of `result`.
+  for (unsigned i = 0, e = getNumRangeVars(); i < e; ++i)
+    if (space.getId(VarKind::Range, i).hasValue())
+      result.space.setId(VarKind::Range, i, space.getId(VarKind::Range, i));
+
+  // Append `this` to `result` and simplify constraints.
+  result.append(*this);
+  result.removeRedundantLocalVars();
+
+  *this = result;
 }
 
 void IntegerRelation::print(raw_ostream &os) const {

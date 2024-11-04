@@ -69,18 +69,18 @@ llvm.func @_QPopenmp_target_data_region(%0 : !llvm.ptr) {
 // CHECK:         %[[ARR_OFFSET:.*]] = getelementptr inbounds [1024 x i32], ptr %[[ARR_DATA:.*]], i64 0, i64 0
 // CHECK:         %[[VAL_5:.*]] = getelementptr inbounds [1 x ptr], ptr %[[VAL_0]], i32 0, i32 0
 // CHECK:         store ptr %[[ARR_DATA]], ptr %[[VAL_5]], align 8
-// CHECK:         %[[VAL_7:.*]] = getelementptr inbounds [1 x ptr], ptr %[[VAL_1]], i32 0, i32 0
-// CHECK:         store ptr %[[ARR_OFFSET]], ptr %[[VAL_7]], align 8
-// CHECK:         %[[VAL_8:.*]] = getelementptr inbounds [1 x ptr], ptr %[[VAL_2]], i64 0, i64 0
-// CHECK:         store ptr null, ptr %[[VAL_8]], align 8
-// CHECK:         %[[VAL_9:.*]] = getelementptr inbounds [1 x ptr], ptr %[[VAL_0]], i32 0, i32 0
-// CHECK:         %[[VAL_10:.*]] = getelementptr inbounds [1 x ptr], ptr %[[VAL_1]], i32 0, i32 0
-// CHECK:         call void @__tgt_target_data_begin_mapper(ptr @2, i64 -1, i32 1, ptr %[[VAL_9]], ptr %[[VAL_10]], ptr @.offload_sizes, ptr @.offload_maptypes, ptr @.offload_mapnames, ptr null)
-// CHECK:         %[[VAL_11:.*]] = getelementptr [1024 x i32], ptr %[[ARR_DATA]], i32 0, i64 0
-// CHECK:         store i32 99, ptr %[[VAL_11]], align 4
-// CHECK:         %[[VAL_12:.*]] = getelementptr inbounds [1 x ptr], ptr %[[VAL_0]], i32 0, i32 0
-// CHECK:         %[[VAL_13:.*]] = getelementptr inbounds [1 x ptr], ptr %[[VAL_1]], i32 0, i32 0
-// CHECK:         call void @__tgt_target_data_end_mapper(ptr @2, i64 -1, i32 1, ptr %[[VAL_12]], ptr %[[VAL_13]], ptr @.offload_sizes, ptr @.offload_maptypes, ptr @.offload_mapnames, ptr null)
+// CHECK:         %[[VAL_6:.*]] = getelementptr inbounds [1 x ptr], ptr %[[VAL_1]], i32 0, i32 0
+// CHECK:         store ptr %[[ARR_OFFSET]], ptr %[[VAL_6]], align 8
+// CHECK:         %[[VAL_7:.*]] = getelementptr inbounds [1 x ptr], ptr %[[VAL_2]], i64 0, i64 0
+// CHECK:         store ptr null, ptr %[[VAL_7]], align 8
+// CHECK:         %[[VAL_8:.*]] = getelementptr inbounds [1 x ptr], ptr %[[VAL_0]], i32 0, i32 0
+// CHECK:         %[[VAL_9:.*]] = getelementptr inbounds [1 x ptr], ptr %[[VAL_1]], i32 0, i32 0
+// CHECK:         call void @__tgt_target_data_begin_mapper(ptr @2, i64 -1, i32 1, ptr %[[VAL_8]], ptr %[[VAL_9]], ptr @.offload_sizes, ptr @.offload_maptypes, ptr @.offload_mapnames, ptr null)
+// CHECK:         %[[VAL_10:.*]] = getelementptr [1024 x i32], ptr %[[ARR_DATA]], i32 0, i64 0
+// CHECK:         store i32 99, ptr %[[VAL_10]], align 4
+// CHECK:         %[[VAL_11:.*]] = getelementptr inbounds [1 x ptr], ptr %[[VAL_0]], i32 0, i32 0
+// CHECK:         %[[VAL_12:.*]] = getelementptr inbounds [1 x ptr], ptr %[[VAL_1]], i32 0, i32 0
+// CHECK:         call void @__tgt_target_data_end_mapper(ptr @2, i64 -1, i32 1, ptr %[[VAL_11]], ptr %[[VAL_12]], ptr @.offload_sizes, ptr @.offload_maptypes, ptr @.offload_mapnames, ptr null)
 // CHECK:         ret void
 
 // -----
@@ -157,13 +157,13 @@ llvm.func @_QPomp_target_enter_exit(%1 : !llvm.ptr, %3 : !llvm.ptr) {
 // CHECK:         %[[ARR_OFFSET1:.*]] = getelementptr inbounds [1024 x i32], ptr %[[VAL_16:.*]], i64 0, i64 0
 // CHECK:         %[[ARR_OFFSET2:.*]] = getelementptr inbounds [512 x i32], ptr %[[VAL_20:.*]], i64 0, i64 0
 // CHECK:         %[[VAL_15:.*]] = getelementptr inbounds [2 x ptr], ptr %[[VAL_3]], i32 0, i32 0
-// CHECK:         store ptr %[[VAL_16:.*]], ptr %[[VAL_15]], align 8
+// CHECK:         store ptr %[[VAL_16]], ptr %[[VAL_15]], align 8
 // CHECK:         %[[VAL_17:.*]] = getelementptr inbounds [2 x ptr], ptr %[[VAL_4]], i32 0, i32 0
 // CHECK:         store ptr %[[ARR_OFFSET1]], ptr %[[VAL_17]], align 8
 // CHECK:         %[[VAL_18:.*]] = getelementptr inbounds [2 x ptr], ptr %[[VAL_5]], i64 0, i64 0
 // CHECK:         store ptr null, ptr %[[VAL_18]], align 8
 // CHECK:         %[[VAL_19:.*]] = getelementptr inbounds [2 x ptr], ptr %[[VAL_3]], i32 0, i32 1
-// CHECK:         store ptr %[[VAL_20:.*]], ptr %[[VAL_19]], align 8
+// CHECK:         store ptr %[[VAL_20]], ptr %[[VAL_19]], align 8
 // CHECK:         %[[VAL_21:.*]] = getelementptr inbounds [2 x ptr], ptr %[[VAL_4]], i32 0, i32 1
 // CHECK:         store ptr %[[ARR_OFFSET2]], ptr %[[VAL_21]], align 8
 // CHECK:         %[[VAL_22:.*]] = getelementptr inbounds [2 x ptr], ptr %[[VAL_5]], i64 0, i64 1

@@ -41,6 +41,8 @@ declare i32 @llvm.vp.reduce.umin.v4i32(i32, <4 x i32>, <4 x i1>, i32)
 declare i32 @llvm.vp.reduce.umax.v4i32(i32, <4 x i32>, <4 x i1>, i32)
 declare float @llvm.vp.reduce.fmin.v4f32(float, <4 x float>, <4 x i1>, i32)
 declare float @llvm.vp.reduce.fmax.v4f32(float, <4 x float>, <4 x i1>, i32)
+declare float @llvm.vp.reduce.fminimum.v4f32(float, <4 x float>, <4 x i1>, i32)
+declare float @llvm.vp.reduce.fmaximum.v4f32(float, <4 x float>, <4 x i1>, i32)
 declare float @llvm.vp.reduce.fadd.v4f32(float, <4 x float>, <4 x i1>, i32)
 declare float @llvm.vp.reduce.fmul.v4f32(float, <4 x float>, <4 x i1>, i32)
 ; Comparisons
@@ -133,10 +135,16 @@ define void @test_vp_reduce_fp_v4(float %f, <4 x float> %vf, <4 x i1> %m, i32 %n
   %r3 = call float @llvm.vp.reduce.fmax.v4f32(float %f, <4 x float> %vf, <4 x i1> %m, i32 %n)
   %r4 = call nnan float @llvm.vp.reduce.fmax.v4f32(float %f, <4 x float> %vf, <4 x i1> %m, i32 %n)
   %r5 = call nnan ninf float @llvm.vp.reduce.fmax.v4f32(float %f, <4 x float> %vf, <4 x i1> %m, i32 %n)
-  %r6 = call float @llvm.vp.reduce.fadd.v4f32(float %f, <4 x float> %vf, <4 x i1> %m, i32 %n)
-  %r7 = call reassoc float @llvm.vp.reduce.fadd.v4f32(float %f, <4 x float> %vf, <4 x i1> %m, i32 %n)
-  %r8 = call float @llvm.vp.reduce.fmul.v4f32(float %f, <4 x float> %vf, <4 x i1> %m, i32 %n)
-  %r9 = call reassoc float @llvm.vp.reduce.fmul.v4f32(float %f, <4 x float> %vf, <4 x i1> %m, i32 %n)
+  %r6 = call float @llvm.vp.reduce.fminimum.v4f32(float %f, <4 x float> %vf, <4 x i1> %m, i32 %n)
+  %r7 = call nnan float @llvm.vp.reduce.fminimum.v4f32(float %f, <4 x float> %vf, <4 x i1> %m, i32 %n)
+  %r8 = call nnan ninf float @llvm.vp.reduce.fminimum.v4f32(float %f, <4 x float> %vf, <4 x i1> %m, i32 %n)
+  %r9 = call float @llvm.vp.reduce.fmaximum.v4f32(float %f, <4 x float> %vf, <4 x i1> %m, i32 %n)
+  %r10 = call nnan float @llvm.vp.reduce.fmaximum.v4f32(float %f, <4 x float> %vf, <4 x i1> %m, i32 %n)
+  %r11 = call nnan ninf float @llvm.vp.reduce.fmaximum.v4f32(float %f, <4 x float> %vf, <4 x i1> %m, i32 %n)
+  %r12 = call float @llvm.vp.reduce.fadd.v4f32(float %f, <4 x float> %vf, <4 x i1> %m, i32 %n)
+  %r13 = call reassoc float @llvm.vp.reduce.fadd.v4f32(float %f, <4 x float> %vf, <4 x i1> %m, i32 %n)
+  %r14 = call float @llvm.vp.reduce.fmul.v4f32(float %f, <4 x float> %vf, <4 x i1> %m, i32 %n)
+  %r15 = call reassoc float @llvm.vp.reduce.fmul.v4f32(float %f, <4 x float> %vf, <4 x i1> %m, i32 %n)
   ret void
 }
 
@@ -254,6 +262,27 @@ define void @test_vp_cmp_v8(<8 x i32> %i0, <8 x i32> %i1, <8 x float> %f0, <8 x 
 ; ALL-CONVERT:  [[FMAX_NNAN_NINF:%.+]] = select <4 x i1> %{{.+}}, <4 x float> %vf, <4 x float> <float 0xC7EFFFFFE0000000, float 0xC7EFFFFFE0000000, float 0xC7EFFFFFE0000000, float 0xC7EFFFFFE0000000>
 ; ALL-CONVERT-NEXT:  [[RED:%.+]] = call nnan ninf float @llvm.vector.reduce.fmax.v4f32(<4 x float> [[FMAX_NNAN_NINF]])
 ; ALL-CONVERT-NEXT:  %{{.+}} = call nnan ninf float @llvm.maxnum.f32(float [[RED]], float %f)
+
+; ALL-CONVERT:       [[FMINIMUM:%.+]] = select <4 x i1> %{{.+}}, <4 x float> %vf, <4 x float> <float 0x7FF0000000000000, float 0x7FF0000000000000, float 0x7FF0000000000000, float 0x7FF0000000000000>
+; ALL-CONVERT-NEXT:  [[RED:%.+]] = call float @llvm.vector.reduce.fminimum.v4f32(<4 x float> [[FMINIMUM]])
+; ALL-CONVERT-NEXT:  %{{.+}} = call float @llvm.minimum.f32(float [[RED]], float %f)
+; ALL-CONVERT:       [[FMINIMUM_NNAN:%.+]] = select <4 x i1> %{{.+}}, <4 x float> %vf, <4 x float> <float 0x7FF0000000000000, float 0x7FF0000000000000, float 0x7FF0000000000000, float 0x7FF0000000000000>
+; ALL-CONVERT-NEXT:  [[RED:%.+]] = call nnan float @llvm.vector.reduce.fminimum.v4f32(<4 x float> [[FMINIMUM_NNAN]])
+; ALL-CONVERT-NEXT:  %{{.+}} = call nnan float @llvm.minimum.f32(float [[RED]], float %f)
+; ALL-CONVERT:       [[FMINIMUM_NNAN_NINF:%.+]] = select <4 x i1> %{{.+}}, <4 x float> %vf, <4 x float> <float 0x47EFFFFFE0000000, float 0x47EFFFFFE0000000, float 0x47EFFFFFE0000000, float 0x47EFFFFFE0000000>
+; ALL-CONVERT-NEXT:  [[RED:%.+]] = call nnan ninf float @llvm.vector.reduce.fminimum.v4f32(<4 x float> [[FMINIMUM_NNAN_NINF]])
+; ALL-CONVERT-NEXT:  %{{.+}} = call nnan ninf float @llvm.minimum.f32(float [[RED]], float %f)
+
+; ALL-CONVERT:  [[FMAXIMUM:%.+]] = select <4 x i1> %{{.+}}, <4 x float> %vf, <4 x float> <float 0xFFF0000000000000, float 0xFFF0000000000000, float 0xFFF0000000000000, float 0xFFF0000000000000>
+; ALL-CONVERT-NEXT:  [[RED:%.+]] = call float @llvm.vector.reduce.fmaximum.v4f32(<4 x float> [[FMAXIMUM]])
+; ALL-CONVERT-NEXT:  %{{.+}} = call float @llvm.maximum.f32(float [[RED]], float %f)
+; ALL-CONVERT:  [[FMAXIMUM_NNAN:%.+]] = select <4 x i1> %{{.+}}, <4 x float> %vf, <4 x float> <float 0xFFF0000000000000, float 0xFFF0000000000000, float 0xFFF0000000000000, float 0xFFF0000000000000>
+; ALL-CONVERT-NEXT:  [[RED:%.+]] = call nnan float @llvm.vector.reduce.fmaximum.v4f32(<4 x float> [[FMAXIMUM_NNAN]])
+; ALL-CONVERT-NEXT:  %{{.+}} = call nnan float @llvm.maximum.f32(float [[RED]], float %f)
+; ALL-CONVERT:  [[FMAXIMUM_NNAN_NINF:%.+]] = select <4 x i1> %{{.+}}, <4 x float> %vf, <4 x float> <float 0xC7EFFFFFE0000000, float 0xC7EFFFFFE0000000, float 0xC7EFFFFFE0000000, float 0xC7EFFFFFE0000000>
+; ALL-CONVERT-NEXT:  [[RED:%.+]] = call nnan ninf float @llvm.vector.reduce.fmaximum.v4f32(<4 x float> [[FMAXIMUM_NNAN_NINF]])
+; ALL-CONVERT-NEXT:  %{{.+}} = call nnan ninf float @llvm.maximum.f32(float [[RED]], float %f)
+
 ; ALL-CONVERT:  [[FADD:%.+]] = select <4 x i1> %{{.+}}, <4 x float> %vf, <4 x float> <float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>
 ; ALL-CONVERT-NEXT:  %{{.+}} = call float @llvm.vector.reduce.fadd.v4f32(float %f, <4 x float> [[FADD]])
 ; ALL-CONVERT:  [[FADD:%.+]] = select <4 x i1> %{{.+}}, <4 x float> %vf, <4 x float> <float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>
@@ -328,16 +357,22 @@ define void @test_vp_cmp_v8(<8 x i32> %i0, <8 x i32> %i1, <8 x float> %f0, <8 x 
 ; LEGAL_LEGAL-NEXT:  ret void
 
 ; LEGAL_LEGAL: define void @test_vp_reduce_fp_v4(float %f, <4 x float> %vf, <4 x i1> %m, i32 %n) {
-; LEGAL_LEGAL-NEXT:  %r0 = call float @llvm.vp.reduce.fmin.v4f32(float %f, <4 x float> %vf, <4 x i1> %m, i32 %n)
-; LEGAL_LEGAL-NEXT:  %r1 = call nnan float @llvm.vp.reduce.fmin.v4f32(float %f, <4 x float> %vf, <4 x i1> %m, i32 %n)
-; LEGAL_LEGAL-NEXT:  %r2 = call nnan ninf float @llvm.vp.reduce.fmin.v4f32(float %f, <4 x float> %vf, <4 x i1> %m, i32 %n)
-; LEGAL_LEGAL-NEXT:  %r3 = call float @llvm.vp.reduce.fmax.v4f32(float %f, <4 x float> %vf, <4 x i1> %m, i32 %n)
-; LEGAL_LEGAL-NEXT:  %r4 = call nnan float @llvm.vp.reduce.fmax.v4f32(float %f, <4 x float> %vf, <4 x i1> %m, i32 %n)
-; LEGAL_LEGAL-NEXT:  %r5 = call nnan ninf float @llvm.vp.reduce.fmax.v4f32(float %f, <4 x float> %vf, <4 x i1> %m, i32 %n)
-; LEGAL_LEGAL-NEXT:  %r6 = call float @llvm.vp.reduce.fadd.v4f32(float %f, <4 x float> %vf, <4 x i1> %m, i32 %n)
-; LEGAL_LEGAL-NEXT:  %r7 = call reassoc float @llvm.vp.reduce.fadd.v4f32(float %f, <4 x float> %vf, <4 x i1> %m, i32 %n)
-; LEGAL_LEGAL-NEXT:  %r8 = call float @llvm.vp.reduce.fmul.v4f32(float %f, <4 x float> %vf, <4 x i1> %m, i32 %n)
-; LEGAL_LEGAL-NEXT:  %r9 = call reassoc float @llvm.vp.reduce.fmul.v4f32(float %f, <4 x float> %vf, <4 x i1> %m, i32 %n)
+; LEGAL_LEGAL-NEXT: %r0 = call float @llvm.vp.reduce.fmin.v4f32(float %f, <4 x float> %vf, <4 x i1> %m, i32 %n)
+; LEGAL_LEGAL-NEXT: %r1 = call nnan float @llvm.vp.reduce.fmin.v4f32(float %f, <4 x float> %vf, <4 x i1> %m, i32 %n)
+; LEGAL_LEGAL-NEXT: %r2 = call nnan ninf float @llvm.vp.reduce.fmin.v4f32(float %f, <4 x float> %vf, <4 x i1> %m, i32 %n)
+; LEGAL_LEGAL-NEXT: %r3 = call float @llvm.vp.reduce.fmax.v4f32(float %f, <4 x float> %vf, <4 x i1> %m, i32 %n)
+; LEGAL_LEGAL-NEXT: %r4 = call nnan float @llvm.vp.reduce.fmax.v4f32(float %f, <4 x float> %vf, <4 x i1> %m, i32 %n)
+; LEGAL_LEGAL-NEXT: %r5 = call nnan ninf float @llvm.vp.reduce.fmax.v4f32(float %f, <4 x float> %vf, <4 x i1> %m, i32 %n)
+; LEGAL_LEGAL-NEXT: %r6 = call float @llvm.vp.reduce.fminimum.v4f32(float %f, <4 x float> %vf, <4 x i1> %m, i32 %n)
+; LEGAL_LEGAL-NEXT: %r7 = call nnan float @llvm.vp.reduce.fminimum.v4f32(float %f, <4 x float> %vf, <4 x i1> %m, i32 %n)
+; LEGAL_LEGAL-NEXT: %r8 = call nnan ninf float @llvm.vp.reduce.fminimum.v4f32(float %f, <4 x float> %vf, <4 x i1> %m, i32 %n)
+; LEGAL_LEGAL-NEXT: %r9 = call float @llvm.vp.reduce.fmaximum.v4f32(float %f, <4 x float> %vf, <4 x i1> %m, i32 %n)
+; LEGAL_LEGAL-NEXT: %r10 = call nnan float @llvm.vp.reduce.fmaximum.v4f32(float %f, <4 x float> %vf, <4 x i1> %m, i32 %n)
+; LEGAL_LEGAL-NEXT: %r11 = call nnan ninf float @llvm.vp.reduce.fmaximum.v4f32(float %f, <4 x float> %vf, <4 x i1> %m, i32 %n)
+; LEGAL_LEGAL-NEXT: %r12 = call float @llvm.vp.reduce.fadd.v4f32(float %f, <4 x float> %vf, <4 x i1> %m, i32 %n)
+; LEGAL_LEGAL-NEXT: %r13 = call reassoc float @llvm.vp.reduce.fadd.v4f32(float %f, <4 x float> %vf, <4 x i1> %m, i32 %n)
+; LEGAL_LEGAL-NEXT: %r14 = call float @llvm.vp.reduce.fmul.v4f32(float %f, <4 x float> %vf, <4 x i1> %m, i32 %n)
+; LEGAL_LEGAL-NEXT: %r15 = call reassoc float @llvm.vp.reduce.fmul.v4f32(float %f, <4 x float> %vf, <4 x i1> %m, i32 %n)
 ; LEGAL_LEGAL-NEXT:  ret void
 
 ; LEGAL_LEGAL: define void @test_vp_cmp_v8(<8 x i32> %i0, <8 x i32> %i1, <8 x float> %f0, <8 x float> %f1, <8 x i1> %m, i32 %n) {
@@ -425,10 +460,16 @@ define void @test_vp_cmp_v8(<8 x i32> %i0, <8 x i32> %i1, <8 x float> %f0, <8 x 
 ; DISCARD_LEGAL-NOT:  %r3 = call float @llvm.vp.reduce.fmax.v4f32(float %f, <4 x float> %vf, <4 x i1> %m, i32 4)
 ; DISCARD_LEGAL-NOT:  %r4 = call nnan float @llvm.vp.reduce.fmax.v4f32(float %f, <4 x float> %vf, <4 x i1> %m, i32 4)
 ; DISCARD_LEGAL-NOT:  %r5 = call nnan ninf float @llvm.vp.reduce.fmax.v4f32(float %f, <4 x float> %vf, <4 x i1> %m, i32 4)
-; DISCARD_LEGAL-NOT:  %r6 = call float @llvm.vp.reduce.fadd.v4f32(float %f, <4 x float> %vf, <4 x i1> %m, i32 4)
-; DISCARD_LEGAL-NOT:  %r7 = call reassoc float @llvm.vp.reduce.fadd.v4f32(float %f, <4 x float> %vf, <4 x i1> %m, i32 4)
-; DISCARD_LEGAL-NOT:  %r8 = call float @llvm.vp.reduce.fmul.v4f32(float %f, <4 x float> %vf, <4 x i1> %m, i32 4)
-; DISCARD_LEGAL-NOT:  %r9 = call reassoc float @llvm.vp.reduce.fmul.v4f32(float %f, <4 x float> %vf, <4 x i1> %m, i32 4)
+; DISCARD_LEGAL-NOT:  %r6 = call float @llvm.vp.reduce.fminimum.v4f32(float %f, <4 x float> %vf, <4 x i1> %m, i32 %n)
+; DISCARD_LEGAL-NOT:  %r7 = call nnan float @llvm.vp.reduce.fminimum.v4f32(float %f, <4 x float> %vf, <4 x i1> %m, i32 %n)
+; DISCARD_LEGAL-NOT:  %r8 = call nnan ninf float @llvm.vp.reduce.fminimum.v4f32(float %f, <4 x float> %vf, <4 x i1> %m, i32 %n)
+; DISCARD_LEGAL-NOT:  %r9 = call float @llvm.vp.reduce.fmaximum.v4f32(float %f, <4 x float> %vf, <4 x i1> %m, i32 %n)
+; DISCARD_LEGAL-NOT:  %r10 = call nnan float @llvm.vp.reduce.fmaximum.v4f32(float %f, <4 x float> %vf, <4 x i1> %m, i32 %n)
+; DISCARD_LEGAL-NOT:  %r11 = call nnan ninf float @llvm.vp.reduce.fmaximum.v4f32(float %f, <4 x float> %vf, <4 x i1> %m, i32 %n)
+; DISCARD_LEGAL-NOT:  %r12 = call float @llvm.vp.reduce.fadd.v4f32(float %f, <4 x float> %vf, <4 x i1> %m, i32 %n)
+; DISCARD_LEGAL-NOT:  %r13 = call reassoc float @llvm.vp.reduce.fadd.v4f32(float %f, <4 x float> %vf, <4 x i1> %m, i32 %n)
+; DISCARD_LEGAL-NOT:  %r14 = call float @llvm.vp.reduce.fmul.v4f32(float %f, <4 x float> %vf, <4 x i1> %m, i32 %n)
+; DISCARD_LEGAL-NOT:  %r15 = call reassoc float @llvm.vp.reduce.fmul.v4f32(float %f, <4 x float> %vf, <4 x i1> %m, i32 %n)
 ; DISCARD_LEGAL:      ret void
 
 ; DISCARD_LEGAL: define void @test_vp_cmp_v8(<8 x i32> %i0, <8 x i32> %i1, <8 x float> %f0, <8 x float> %f1, <8 x i1> %m, i32 %n) {
@@ -501,6 +542,12 @@ define void @test_vp_cmp_v8(<8 x i32> %i0, <8 x i32> %i1, <8 x float> %f0, <8 x 
 ; CONVERT_LEGAL-NOT:   %{{.+}} = call float @llvm.vp.reduce.fmax.v4f32(float %f, <4 x float> %vf, <4 x i1> %m, i32 4)
 ; CONVERT_LEGAL-NOT:   %{{.+}} = call nnan float @llvm.vp.reduce.fmax.v4f32(float %f, <4 x float> %vf, <4 x i1> %m, i32 4)
 ; CONVERT_LEGAL-NOT:   %{{.+}} = call nnan ninf float @llvm.vp.reduce.fmax.v4f32(float %f, <4 x float> %vf, <4 x i1> %m, i32 4)
+; CONVERT_LEGAL-NOT:   %{{.+}} = call float @llvm.vp.reduce.fminimum.v4f32(float %f, <4 x float> %vf, <4 x i1> [[NEWM]], i32 4)
+; CONVERT_LEGAL-NOT:   %{{.+}} = call nnan float @llvm.vp.reduce.fminimum.v4f32(float %f, <4 x float> %vf, <4 x i1> %m, i32 4)
+; CONVERT_LEGAL-NOT:   %{{.+}} = call nnan ninf float @llvm.vp.reduce.fminimum.v4f32(float %f, <4 x float> %vf, <4 x i1> %m, i32 4)
+; CONVERT_LEGAL-NOT:   %{{.+}} = call float @llvm.vp.reduce.fmaximum.v4f32(float %f, <4 x float> %vf, <4 x i1> %m, i32 4)
+; CONVERT_LEGAL-NOT:   %{{.+}} = call nnan float @llvm.vp.reduce.fmaximum.v4f32(float %f, <4 x float> %vf, <4 x i1> %m, i32 4)
+; CONVERT_LEGAL-NOT:   %{{.+}} = call nnan ninf float @llvm.vp.reduce.fmaximum.v4f32(float %f, <4 x float> %vf, <4 x i1> %m, i32 4)
 ; CONVERT_LEGAL-NOT:   %{{.+}} = call float @llvm.vp.reduce.fadd.v4f32(float %f, <4 x float> %vf, <4 x i1> %m, i32 4)
 ; CONVERT_LEGAL-NOT:   %{{.+}} = call reassoc float @llvm.vp.reduce.fadd.v4f32(float %f, <4 x float> %vf, <4 x i1> %m, i32 4)
 ; CONVERT_LEGAL-NOT:   %{{.+}} = call float @llvm.vp.reduce.fmul.v4f32(float %f, <4 x float> %vf, <4 x i1> %m, i32 4)

@@ -1168,33 +1168,34 @@ inline int getMemoryOperandNo(uint64_t TSFlags) {
 
 /// \returns true if the register is a XMM.
 inline bool isXMMReg(unsigned RegNo) {
-  assert(X86::XMM15 - X86::XMM0 == 15 &&
-         "XMM0-15 registers are not continuous");
-  assert(X86::XMM31 - X86::XMM16 == 15 &&
-         "XMM16-31 registers are not continuous");
+  static_assert(X86::XMM15 - X86::XMM0 == 15,
+                "XMM0-15 registers are not continuous");
+  static_assert(X86::XMM31 - X86::XMM16 == 15,
+                "XMM16-31 registers are not continuous");
   return (RegNo >= X86::XMM0 && RegNo <= X86::XMM15) ||
          (RegNo >= X86::XMM16 && RegNo <= X86::XMM31);
 }
 
 /// \returns true if the register is a YMM.
 inline bool isYMMReg(unsigned RegNo) {
-  assert(X86::YMM15 - X86::YMM0 == 15 &&
-         "YMM0-15 registers are not continuous");
-  assert(X86::YMM31 - X86::YMM16 == 15 &&
-         "YMM16-31 registers are not continuous");
+  static_assert(X86::YMM15 - X86::YMM0 == 15,
+                "YMM0-15 registers are not continuous");
+  static_assert(X86::YMM31 - X86::YMM16 == 15,
+                "YMM16-31 registers are not continuous");
   return (RegNo >= X86::YMM0 && RegNo <= X86::YMM15) ||
          (RegNo >= X86::YMM16 && RegNo <= X86::YMM31);
 }
 
 /// \returns true if the register is a ZMM.
 inline bool isZMMReg(unsigned RegNo) {
-  assert(X86::ZMM31 - X86::ZMM0 == 31 && "ZMM registers are not continuous");
+  static_assert(X86::ZMM31 - X86::ZMM0 == 31,
+                "ZMM registers are not continuous");
   return RegNo >= X86::ZMM0 && RegNo <= X86::ZMM31;
 }
 
 /// \returns true if \p RegNo is an apx extended register.
 inline bool isApxExtendedReg(unsigned RegNo) {
-  assert(X86::R31WH - X86::R16 == 95 && "EGPRs are not continuous");
+  static_assert(X86::R31WH - X86::R16 == 95, "EGPRs are not continuous");
   return RegNo >= X86::R16 && RegNo <= X86::R31WH;
 }
 

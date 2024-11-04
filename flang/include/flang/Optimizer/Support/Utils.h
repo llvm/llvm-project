@@ -29,7 +29,9 @@
 namespace fir {
 /// Return the integer value of a arith::ConstantOp.
 inline std::int64_t toInt(mlir::arith::ConstantOp cop) {
-  return cop.getValue().cast<mlir::IntegerAttr>().getValue().getSExtValue();
+  return mlir::cast<mlir::IntegerAttr>(cop.getValue())
+      .getValue()
+      .getSExtValue();
 }
 
 // Reconstruct binding tables for dynamic dispatch.
@@ -158,6 +160,9 @@ getCUDADataAttribute(mlir::MLIRContext *mlirContext,
     case Fortran::common::CUDADataAttr::Texture:
       // Obsolete attribute
       return {};
+    case Fortran::common::CUDADataAttr::Unified:
+      attr = fir::CUDADataAttribute::Unified;
+      break;
     }
     return fir::CUDADataAttributeAttr::get(mlirContext, attr);
   }
