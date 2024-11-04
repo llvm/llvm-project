@@ -706,6 +706,21 @@ end
   `INDEX` include an optional `BACK=` argument, but it doesn't actually
   work.
 
+* Allocatable components of array and structure constructors are deallocated
+  after use without calling final subroutines.
+  The standard does not specify when and how deallocation of array and structure
+  constructors allocatable components should happen. All compilers free the
+  memory after use, but the behavior when the allocatable component is a derived
+  type with finalization differ, especially when dealing with nested array and
+  structure constructors expressions. Some compilers call final routine for the
+  allocatable components of each constructor sub-expressions, some call it only
+  for the allocatable component of the top level constructor, and some only
+  deallocate the memory. Deallocating only the memory offers the most
+  flexibility when lowering such expressions, and it is not clear finalization
+  is desirable in such context (Fortran interop 1.6.2 in F2018 standards require
+  array and structure constructors not to be finalized, so it also makes sense
+  not to finalize their allocatable components when releasing their storage).
+
 ## De Facto Standard Features
 
 * `EXTENDS_TYPE_OF()` returns `.TRUE.` if both of its arguments have the

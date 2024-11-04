@@ -66,11 +66,6 @@ static cl::opt<bool> ShowEncoding("show-encoding",
                                   cl::desc("Show instruction encodings"),
                                   cl::cat(MCCategory));
 
-static cl::opt<bool> RelaxELFRel(
-    "relax-relocations", cl::init(true),
-    cl::desc("Emit R_X86_64_GOTPCRELX instead of R_X86_64_GOTPCREL"),
-    cl::cat(MCCategory));
-
 static cl::opt<DebugCompressionType> CompressDebugSections(
     "compress-debug-sections", cl::ValueOptional,
     cl::init(DebugCompressionType::None),
@@ -363,9 +358,10 @@ int main(int argc, char **argv) {
 
   cl::HideUnrelatedOptions({&MCCategory, &getColorCategory()});
   cl::ParseCommandLineOptions(argc, argv, "llvm machine code playground\n");
-  const MCTargetOptions MCOptions = mc::InitMCTargetOptionsFromFlags();
-  setDwarfDebugFlags(argc, argv);
+  MCTargetOptions MCOptions = mc::InitMCTargetOptionsFromFlags();
+  MCOptions.CompressDebugSections = CompressDebugSections.getValue();
 
+  setDwarfDebugFlags(argc, argv);
   setDwarfDebugProducer();
 
   const char *ProgName = argv[0];
@@ -401,7 +397,6 @@ int main(int argc, char **argv) {
       TheTarget->createMCAsmInfo(*MRI, TripleName, MCOptions));
   assert(MAI && "Unable to create target asm info!");
 
-  MAI->setRelaxELFRelocations(RelaxELFRel);
   if (CompressDebugSections != DebugCompressionType::None) {
     if (const char *Reason = compression::getReasonIfUnsupported(
             compression::formatFor(CompressDebugSections))) {
@@ -410,7 +405,6 @@ int main(int argc, char **argv) {
       return 1;
     }
   }
-  MAI->setCompressDebugSections(CompressDebugSections);
   MAI->setPreserveAsmComments(PreserveComments);
 
   // Package up features to be passed to target/subtarget

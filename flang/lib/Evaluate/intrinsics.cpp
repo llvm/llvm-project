@@ -2635,19 +2635,30 @@ SpecificCall IntrinsicProcTable::Implementation::HandleNull(
   static const char *const keywords[]{"mold", nullptr};
   if (CheckAndRearrangeArguments(arguments, context.messages(), keywords, 1) &&
       arguments[0]) {
-    if (Expr<SomeType> * mold{arguments[0]->UnwrapExpr()}) {
-      bool isProcPtrTarget{IsProcedurePointerTarget(*mold)};
+    Expr<SomeType> *mold{arguments[0]->UnwrapExpr()};
+    bool isBareNull{IsBareNullPointer(mold)};
+    if (isBareNull) {
+      // NULL(NULL()), NULL(NULL(NULL())), &c. are all just NULL()
+      mold = nullptr;
+    }
+    if (mold) {
+      bool isProcPtrTarget{
+          IsProcedurePointerTarget(*mold) && !IsNullObjectPointer(*mold)};
       if (isProcPtrTarget || IsAllocatableOrPointerObject(*mold)) {
         characteristics::DummyArguments args;
         std::optional<characteristics::FunctionResult> fResult;
         if (isProcPtrTarget) {
           // MOLD= procedure pointer
-          const Symbol *last{GetLastSymbol(*mold)};
-          CHECK(last);
-          auto procPointer{IsProcedure(*last)
-                  ? characteristics::Procedure::Characterize(*last, context)
-                  : std::nullopt};
-          // procPointer is null if there was an error with the analysis
+          std::optional<characteristics::Procedure> procPointer;
+          if (IsNullProcedurePointer(*mold)) {
+            procPointer =
+                characteristics::Procedure::Characterize(*mold, context);
+          } else {
+            const Symbol *last{GetLastSymbol(*mold)};
+            procPointer =
+                characteristics::Procedure::Characterize(DEREF(last), context);
+          }
+          // procPointer is vacant if there was an error with the analysis
           // associated with the procedure pointer
           if (procPointer) {
             args.emplace_back("mold"s,
@@ -2676,8 +2687,10 @@ SpecificCall IntrinsicProcTable::Implementation::HandleNull(
         }
       }
     }
-    context.messages().Say(arguments[0]->sourceLocation(),
-        "MOLD= argument to NULL() must be a pointer or allocatable"_err_en_US);
+    if (!isBareNull) {
+      context.messages().Say(arguments[0]->sourceLocation(),
+          "MOLD= argument to NULL() must be a pointer or allocatable"_err_en_US);
+    }
   }
   characteristics::Procedure::Attrs attrs;
   attrs.set(characteristics::Procedure::Attr::NullPointer);

@@ -382,6 +382,8 @@ private:
   CHECK_FN(checkGMemdup)
   CHECK_FN(checkGMallocN)
   CHECK_FN(checkGMallocN0)
+  CHECK_FN(preGetdelim)
+  CHECK_FN(checkGetdelim)
   CHECK_FN(checkReallocN)
   CHECK_FN(checkOwnershipAttr)
 
@@ -390,6 +392,11 @@ private:
 
   using CheckFn = std::function<void(const MallocChecker *,
                                      const CallEvent &Call, CheckerContext &C)>;
+
+  const CallDescriptionMap<CheckFn> PreFnMap{
+      {{{"getline"}, 3}, &MallocChecker::preGetdelim},
+      {{{"getdelim"}, 4}, &MallocChecker::preGetdelim},
+  };
 
   const CallDescriptionMap<CheckFn> FreeingMemFnMap{
       {{{"free"}, 1}, &MallocChecker::checkFree},
@@ -410,13 +417,13 @@ private:
       {{{"malloc"}, 3}, &MallocChecker::checkKernelMalloc},
       {{{"calloc"}, 2}, &MallocChecker::checkCalloc},
       {{{"valloc"}, 1}, &MallocChecker::checkBasicAlloc},
-      {{CDF_MaybeBuiltin, {"strndup"}, 2}, &MallocChecker::checkStrdup},
-      {{CDF_MaybeBuiltin, {"strdup"}, 1}, &MallocChecker::checkStrdup},
+      {{CDM::CLibrary, {"strndup"}, 2}, &MallocChecker::checkStrdup},
+      {{CDM::CLibrary, {"strdup"}, 1}, &MallocChecker::checkStrdup},
       {{{"_strdup"}, 1}, &MallocChecker::checkStrdup},
       {{{"kmalloc"}, 2}, &MallocChecker::checkKernelMalloc},
       {{{"if_nameindex"}, 1}, &MallocChecker::checkIfNameIndex},
-      {{CDF_MaybeBuiltin, {"wcsdup"}, 1}, &MallocChecker::checkStrdup},
-      {{CDF_MaybeBuiltin, {"_wcsdup"}, 1}, &MallocChecker::checkStrdup},
+      {{CDM::CLibrary, {"wcsdup"}, 1}, &MallocChecker::checkStrdup},
+      {{CDM::CLibrary, {"_wcsdup"}, 1}, &MallocChecker::checkStrdup},
       {{{"g_malloc"}, 1}, &MallocChecker::checkBasicAlloc},
       {{{"g_malloc0"}, 1}, &MallocChecker::checkGMalloc0},
       {{{"g_try_malloc"}, 1}, &MallocChecker::checkBasicAlloc},
@@ -439,6 +446,8 @@ private:
        std::bind(&MallocChecker::checkRealloc, _1, _2, _3, false)},
       {{{"g_realloc_n"}, 3}, &MallocChecker::checkReallocN},
       {{{"g_try_realloc_n"}, 3}, &MallocChecker::checkReallocN},
+      {{{"getline"}, 3}, &MallocChecker::checkGetdelim},
+      {{{"getdelim"}, 4}, &MallocChecker::checkGetdelim},
   };
 
   bool isMemCall(const CallEvent &Call) const;
@@ -588,11 +597,14 @@ private:
   ///      }
   /// \param [in] ReturnsNullOnFailure Whether the memory deallocation function
   ///   we're modeling returns with Null on failure.
+  /// \param [in] ArgValOpt Optional value to use for the argument instead of
+  /// the one obtained from ArgExpr.
   /// \returns The ProgramState right after deallocation.
   [[nodiscard]] ProgramStateRef
   FreeMemAux(CheckerContext &C, const Expr *ArgExpr, const CallEvent &Call,
              ProgramStateRef State, bool Hold, bool &IsKnownToBeAllocated,
-             AllocationFamily Family, bool ReturnsNullOnFailure = false) const;
+             AllocationFamily Family, bool ReturnsNullOnFailure = false,
+             std::optional<SVal> ArgValOpt = {}) const;
 
   // TODO: Needs some refactoring, as all other deallocation modeling
   // functions are suffering from out parameters and messy code due to how
@@ -1423,6 +1435,50 @@ void MallocChecker::checkGMallocN0(const CallEvent &Call,
   C.addTransition(State);
 }
 
+void MallocChecker::preGetdelim(const CallEvent &Call,
+                                CheckerContext &C) const {
+  if (!Call.isGlobalCFunction())
+    return;
+
+  ProgramStateRef State = C.getState();
+  const auto LinePtr = getPointeeDefVal(Call.getArgSVal(0), State);
+  if (!LinePtr)
+    return;
+
+  // FreeMemAux takes IsKnownToBeAllocated as an output parameter, and it will
+  // be true after the call if the symbol was registered by this checker.
+  // We do not need this value here, as FreeMemAux will take care
+  // of reporting any violation of the preconditions.
+  bool IsKnownToBeAllocated = false;
+  State = FreeMemAux(C, Call.getArgExpr(0), Call, State, false,
+                     IsKnownToBeAllocated, AF_Malloc, false, LinePtr);
+  if (State)
+    C.addTransition(State);
+}
+
+void MallocChecker::checkGetdelim(const CallEvent &Call,
+                                  CheckerContext &C) const {
+  if (!Call.isGlobalCFunction())
+    return;
+
+  ProgramStateRef State = C.getState();
+  // Handle the post-conditions of getline and getdelim:
+  // Register the new conjured value as an allocated buffer.
+  const CallExpr *CE = dyn_cast_or_null<CallExpr>(Call.getOriginExpr());
+  if (!CE)
+    return;
+
+  SValBuilder &SVB = C.getSValBuilder();
+
+  const auto LinePtr = getPointeeDefVal(Call.getArgSVal(0), State);
+  const auto Size = getPointeeDefVal(Call.getArgSVal(1), State);
+  if (!LinePtr || !Size || !LinePtr->getAsRegion())
+    return;
+
+  State = setDynamicExtent(State, LinePtr->getAsRegion(), *Size, SVB);
+  C.addTransition(MallocUpdateRefState(C, CE, State, AF_Malloc, *LinePtr));
+}
+
 void MallocChecker::checkReallocN(const CallEvent &Call,
                                   CheckerContext &C) const {
   ProgramStateRef State = C.getState();
@@ -1895,15 +1951,17 @@ static void printExpectedDeallocName(raw_ostream &os, AllocationFamily Family) {
   }
 }
 
-ProgramStateRef MallocChecker::FreeMemAux(
-    CheckerContext &C, const Expr *ArgExpr, const CallEvent &Call,
-    ProgramStateRef State, bool Hold, bool &IsKnownToBeAllocated,
-    AllocationFamily Family, bool ReturnsNullOnFailure) const {
+ProgramStateRef
+MallocChecker::FreeMemAux(CheckerContext &C, const Expr *ArgExpr,
+                          const CallEvent &Call, ProgramStateRef State,
+                          bool Hold, bool &IsKnownToBeAllocated,
+                          AllocationFamily Family, bool ReturnsNullOnFailure,
+                          std::optional<SVal> ArgValOpt) const {
 
   if (!State)
     return nullptr;
 
-  SVal ArgVal = C.getSVal(ArgExpr);
+  SVal ArgVal = ArgValOpt.value_or(C.getSVal(ArgExpr));
   if (!isa<DefinedOrUnknownSVal>(ArgVal))
     return nullptr;
   DefinedOrUnknownSVal location = ArgVal.castAs<DefinedOrUnknownSVal>();
@@ -2879,6 +2937,13 @@ void MallocChecker::checkPreCall(const CallEvent &Call,
     SymbolRef Sym = DC->getCXXThisVal().getAsSymbol();
     if (!Sym || checkDoubleDelete(Sym, C))
       return;
+  }
+
+  // We need to handle getline pre-conditions here before the pointed region
+  // gets invalidated by StreamChecker
+  if (const auto *PreFN = PreFnMap.lookup(Call)) {
+    (*PreFN)(this, Call, C);
+    return;
   }
 
   // We will check for double free in the post visit.

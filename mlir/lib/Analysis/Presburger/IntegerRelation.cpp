@@ -730,9 +730,7 @@ bool IntegerRelation::isEmpty() const {
 }
 
 bool IntegerRelation::isObviouslyEmpty() const {
-  if (isEmptyByGCDTest() || hasInvalidConstraint())
-    return true;
-  return false;
+  return isEmptyByGCDTest() || hasInvalidConstraint();
 }
 
 // Runs the GCD test on all equality constraints. Returns 'true' if this test

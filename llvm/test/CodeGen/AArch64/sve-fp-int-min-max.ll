@@ -19,8 +19,8 @@ define i64 @scalable_int_min_max(ptr %arg, ptr %arg1, <vscale x 2 x ptr> %i37, <
 ; CHECK-NEXT:    smax z4.d, z4.d, #0
 ; CHECK-NEXT:    smin z4.d, p0/m, z4.d, z5.d
 ; CHECK-NEXT:    cmpne p1.d, p0/z, z4.d, #0
-; CHECK-NEXT:    ld1w { z4.d }, p1/z, [x1]
 ; CHECK-NEXT:    ld1w { z0.d }, p1/z, [z0.d]
+; CHECK-NEXT:    ld1w { z4.d }, p1/z, [x1]
 ; CHECK-NEXT:    fadd z0.s, p0/m, z0.s, z4.s
 ; CHECK-NEXT:    fcmge p2.s, p0/z, z0.s, z3.s
 ; CHECK-NEXT:    add z0.d, z2.d, z1.d

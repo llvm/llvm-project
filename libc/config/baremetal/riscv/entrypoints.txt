@@ -279,6 +279,40 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.truncl
 )
 
+if(LIBC_COMPILER_HAS_FIXED_POINT)
+  list(APPEND TARGET_LIBM_ENTRYPOINTS
+    # stdfix.h _Fract and _Accum entrypoints
+    libc.src.stdfix.abshk
+    libc.src.stdfix.abshr
+    libc.src.stdfix.absk
+    libc.src.stdfix.absr
+    libc.src.stdfix.abslk
+    libc.src.stdfix.abslr
+    libc.src.stdfix.exphk
+    libc.src.stdfix.expk
+    libc.src.stdfix.roundhk
+    libc.src.stdfix.roundhr
+    libc.src.stdfix.roundk
+    libc.src.stdfix.roundr
+    libc.src.stdfix.roundlk
+    libc.src.stdfix.roundlr
+    libc.src.stdfix.rounduhk
+    libc.src.stdfix.rounduhr
+    libc.src.stdfix.rounduk
+    libc.src.stdfix.roundur
+    libc.src.stdfix.roundulk
+    libc.src.stdfix.roundulr
+    libc.src.stdfix.sqrtuhk
+    libc.src.stdfix.sqrtuhr
+    libc.src.stdfix.sqrtuk
+    libc.src.stdfix.sqrtur
+    # libc.src.stdfix.sqrtulk
+    libc.src.stdfix.sqrtulr
+    libc.src.stdfix.uhksqrtus
+    libc.src.stdfix.uksqrtui
+  )
+endif()
+
 set(TARGET_LLVMLIBC_ENTRYPOINTS
   ${TARGET_LIBC_ENTRYPOINTS}
   ${TARGET_LIBM_ENTRYPOINTS}

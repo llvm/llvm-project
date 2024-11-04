@@ -93,7 +93,6 @@ if(MLIR_ENABLE_CUDA_CONVERSIONS)
   # Define the `CUDAToolkit` path.
   target_compile_definitions(obj.MLIRNVVMTarget
     PRIVATE
-    MLIR_NVPTXCOMPILER_ENABLED=${MLIR_ENABLE_NVPTXCOMPILER}
     __DEFAULT_CUDATOOLKIT_PATH__="${MLIR_CUDAToolkit_ROOT}"
   )
 endif()

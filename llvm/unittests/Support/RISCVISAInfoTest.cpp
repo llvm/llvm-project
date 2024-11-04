@@ -218,6 +218,21 @@ TEST(ParseArchString, RejectsUnrecognizedExtensionNamesByDefault) {
       toString(
           RISCVISAInfo::parseArchString("rv64g_xmadeup", true).takeError()),
       "unsupported non-standard user-level extension 'xmadeup'");
+  EXPECT_EQ(
+      toString(RISCVISAInfo::parseArchString("rv64ib1p0", true).takeError()),
+      "unsupported standard user-level extension 'b'");
+  EXPECT_EQ(
+      toString(
+          RISCVISAInfo::parseArchString("rv32i_zmadeup1p0", true).takeError()),
+      "unsupported standard user-level extension 'zmadeup'");
+  EXPECT_EQ(
+      toString(
+          RISCVISAInfo::parseArchString("rv64g_smadeup1p0", true).takeError()),
+      "unsupported standard supervisor-level extension 'smadeup'");
+  EXPECT_EQ(
+      toString(
+          RISCVISAInfo::parseArchString("rv64g_xmadeup1p0", true).takeError()),
+      "unsupported non-standard user-level extension 'xmadeup'");
 }
 
 TEST(ParseArchString, IgnoresUnrecognizedExtensionNamesWithIgnoreUnknown) {
@@ -830,6 +845,7 @@ R"(All available -march extensions for RISC-V
     smepmp              1.0
     ssaia               1.0
     ssccptr             1.0
+    sscofpmf            1.0
     sscounterenw        1.0
     ssstateen           1.0
     ssstrict            1.0

@@ -16,6 +16,8 @@
 #include <type_traits>
 #include <utility>
 
+#include "test_range.h"
+
 struct Pred {
   constexpr bool operator()(int i) const { return i < 3; }
 };
@@ -50,12 +52,6 @@ static_assert(!std::is_invocable_v<decltype((std::views::drop_while)), int, Pred
 static_assert(std::is_invocable_v<decltype((std::views::drop_while)), int (&)[2], Pred>);
 static_assert(!std::is_invocable_v<decltype((std::views::drop_while)), Foo (&)[2], Pred>);
 static_assert(std::is_invocable_v<decltype((std::views::drop_while)), MoveOnlyView, Pred>);
-
-template <class View, class T>
-concept CanBePiped =
-    requires(View&& view, T&& t) {
-      { std::forward<View>(view) | std::forward<T>(t) };
-    };
 
 static_assert(!CanBePiped<MoveOnlyView, decltype(std::views::drop_while)>);
 static_assert(CanBePiped<MoveOnlyView, decltype(std::views::drop_while(Pred{}))>);

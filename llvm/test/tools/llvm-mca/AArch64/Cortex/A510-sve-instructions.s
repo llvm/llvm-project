@@ -5369,10 +5369,10 @@ zip2	z31.s, z31.s, z31.s
 # CHECK-NEXT:  1      3     0.50                        rbit	z0.d, p7/m, z31.d
 # CHECK-NEXT:  1      3     0.50                        rbit	z0.h, p7/m, z31.h
 # CHECK-NEXT:  1      3     0.50                        rbit	z0.s, p7/m, z31.s
-# CHECK-NEXT:  1      1     0.33                  U     rdffr	p0.b
-# CHECK-NEXT:  1      3     1.00                  U     rdffr	p0.b, p0/z
-# CHECK-NEXT:  1      1     0.33                  U     rdffr	p15.b
-# CHECK-NEXT:  1      3     1.00                  U     rdffr	p15.b, p15/z
+# CHECK-NEXT:  1      1     0.33    *             U     rdffr	p0.b
+# CHECK-NEXT:  1      3     1.00    *             U     rdffr	p0.b, p0/z
+# CHECK-NEXT:  1      1     0.33    *             U     rdffr	p15.b
+# CHECK-NEXT:  1      3     1.00    *             U     rdffr	p15.b, p15/z
 # CHECK-NEXT:  1      3     1.00                  U     rdffrs	p0.b, p0/z
 # CHECK-NEXT:  1      3     1.00                  U     rdffrs	p15.b, p15/z
 # CHECK-NEXT:  1      1     0.33                        rdvl	x0, #0

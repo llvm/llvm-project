@@ -5,6 +5,7 @@
 
 // RUN: not %clang -### -x hip \
 // RUN:   --target=x86_64-unknown-linux-gnu \
+// RUN:   --no-offload-new-driver \
 // RUN:   --offload-arch=gfx900 \
 // RUN:   --offload-arch=gfx906 \
 // RUN:   -c -nogpuinc -nogpulib -fuse-cuid=invalid \
@@ -16,6 +17,7 @@
 
 // RUN: %clang -### -x hip \
 // RUN:   --target=x86_64-unknown-linux-gnu \
+// RUN:   --no-offload-new-driver \
 // RUN:   --offload-arch=gfx900 \
 // RUN:   --offload-arch=gfx906 \
 // RUN:   -c -nogpuinc -nogpulib -fuse-cuid=random \
@@ -27,6 +29,7 @@
 
 // RUN: %clang -### -x hip \
 // RUN:   --target=x86_64-unknown-linux-gnu \
+// RUN:   --no-offload-new-driver \
 // RUN:   --offload-arch=gfx900 \
 // RUN:   --offload-arch=gfx906 \
 // RUN:   -c -nogpuinc -nogpulib -cuid=xyz_123 \
@@ -38,6 +41,7 @@
 
 // RUN: %clang -### -x hip \
 // RUN:   --target=x86_64-unknown-linux-gnu \
+// RUN:   --no-offload-new-driver \
 // RUN:   --offload-arch=gfx900 \
 // RUN:   --offload-arch=gfx906 \
 // RUN:   -c -nogpuinc -nogpulib -fuse-cuid=random -cuid=xyz_123 \
@@ -49,6 +53,7 @@
 
 // RUN: %clang -### -x hip \
 // RUN:   --target=x86_64-unknown-linux-gnu \
+// RUN:   --no-offload-new-driver \
 // RUN:   --offload-arch=gfx900 \
 // RUN:   --offload-arch=gfx906 \
 // RUN:   -c -nogpuinc -nogpulib -fuse-cuid=hash \

@@ -10,7 +10,8 @@ set(MSAN_LIBCXX_CFLAGS
   -fsanitize-memory-track-origins
   -fno-sanitize-memory-param-retval  # unittests test mostly this mode.
   -Wno-pedantic
-  -Xclang -fdepfile-entry=${COMPILER_RT_OUTPUT_DIR}/share/msan_ignorelist.txt
+    # Do not instrument __gxx_personality_v0 (part of libcxxabi)
+  -fsanitize-ignorelist=${COMPILER_RT_OUTPUT_DIR}/share/msan_ignorelist.txt
   )
 
 # Unittest sources and build flags.

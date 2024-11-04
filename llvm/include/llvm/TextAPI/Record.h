@@ -103,8 +103,8 @@ public:
   };
 
   GlobalRecord(StringRef Name, RecordLinkage Linkage, SymbolFlags Flags,
-               Kind GV)
-      : Record({Name, Linkage, Flags}), GV(GV) {}
+               Kind GV, bool Inlined)
+      : Record({Name, Linkage, Flags}), GV(GV), Inlined(Inlined) {}
 
   bool isFunction() const { return GV == Kind::Function; }
   bool isVariable() const { return GV == Kind::Variable; }
@@ -112,9 +112,11 @@ public:
     if (GV == Kind::Unknown)
       GV = V;
   }
+  bool isInlined() const { return Inlined; }
 
 private:
   Kind GV;
+  bool Inlined = false;
 };
 
 // Define Objective-C instance variable records.
@@ -143,6 +145,7 @@ public:
   ObjCIVarRecord *addObjCIVar(StringRef IVar, RecordLinkage Linkage);
   ObjCIVarRecord *findObjCIVar(StringRef IVar) const;
   std::vector<ObjCIVarRecord *> getObjCIVars() const;
+  RecordLinkage getLinkage() const { return Linkage; }
 
 private:
   RecordMap<ObjCIVarRecord> IVars;

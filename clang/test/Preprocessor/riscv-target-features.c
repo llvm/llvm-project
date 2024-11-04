@@ -29,6 +29,7 @@
 // CHECK-NOT: __riscv_smepmp {{.*$}}
 // CHECK-NOT: __riscv_ssaia {{.*$}}
 // CHECK-NOT: __riscv_ssccptr {{.*$}}
+// CHECK-NOT: __riscv_sscofpmf {{.*$}}
 // CHECK-NOT: __riscv_sscounterenw {{.*$}}
 // CHECK-NOT: __riscv_ssstateen {{.*$}}
 // CHECK-NOT: __riscv_ssstrict {{.*$}}
@@ -350,6 +351,14 @@
 // RUN:   -march=rv64issccptr -E -dM %s \
 // RUN:   -o - | FileCheck --check-prefix=CHECK-SSCCPTR-EXT %s
 // CHECK-SSCCPTR-EXT: __riscv_ssccptr 1000000{{$}}
+
+// RUN: %clang --target=riscv32-unknown-linux-gnu \
+// RUN:   -march=rv32isscofpmf -E -dM %s \
+// RUN:   -o - | FileCheck --check-prefix=CHECK-SSCOFPMF-EXT %s
+// RUN: %clang --target=riscv64-unknown-linux-gnu \
+// RUN:   -march=rv64isscofpmf -E -dM %s \
+// RUN:   -o - | FileCheck --check-prefix=CHECK-SSCOFPMF-EXT %s
+// CHECK-SSCOFPMF-EXT: __riscv_sscofpmf 1000000{{$}}
 
 // RUN: %clang --target=riscv32-unknown-linux-gnu \
 // RUN:   -march=rv32isscounterenw -E -dM %s \

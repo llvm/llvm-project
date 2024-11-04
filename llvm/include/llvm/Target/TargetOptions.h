@@ -141,18 +141,18 @@ namespace llvm {
           HonorSignDependentRoundingFPMathOption(false), NoZerosInBSS(false),
           GuaranteedTailCallOpt(false), StackSymbolOrdering(true),
           EnableFastISel(false), EnableGlobalISel(false), UseInitArray(false),
-          DisableIntegratedAS(false), RelaxELFRelocations(true),
-          FunctionSections(false), DataSections(false),
-          IgnoreXCOFFVisibility(false), XCOFFTracebackTable(true),
-          UniqueSectionNames(true), UniqueBasicBlockSectionNames(false),
-          TrapUnreachable(false), NoTrapAfterNoreturn(false), TLSSize(0),
-          EmulatedTLS(false), EnableTLSDESC(false), EnableIPRA(false),
-          EmitStackSizeSection(false), EnableMachineOutliner(false),
-          EnableMachineFunctionSplitter(false), SupportsDefaultOutlining(false),
-          EmitAddrsig(false), BBAddrMap(false), EmitCallSiteInfo(false),
-          SupportsDebugEntryValues(false), EnableDebugEntryValues(false),
-          ValueTrackingVariableLocations(false), ForceDwarfFrameSection(false),
-          XRayFunctionIndex(true), DebugStrictDwarf(false), Hotpatch(false),
+          DisableIntegratedAS(false), FunctionSections(false),
+          DataSections(false), IgnoreXCOFFVisibility(false),
+          XCOFFTracebackTable(true), UniqueSectionNames(true),
+          UniqueBasicBlockSectionNames(false), TrapUnreachable(false),
+          NoTrapAfterNoreturn(false), TLSSize(0), EmulatedTLS(false),
+          EnableTLSDESC(false), EnableIPRA(false), EmitStackSizeSection(false),
+          EnableMachineOutliner(false), EnableMachineFunctionSplitter(false),
+          SupportsDefaultOutlining(false), EmitAddrsig(false), BBAddrMap(false),
+          EmitCallSiteInfo(false), SupportsDebugEntryValues(false),
+          EnableDebugEntryValues(false), ValueTrackingVariableLocations(false),
+          ForceDwarfFrameSection(false), XRayFunctionIndex(true),
+          DebugStrictDwarf(false), Hotpatch(false),
           PPCGenScalarMASSEntries(false), JMCInstrument(false),
           EnableCFIFixup(false), MisExpect(false), XCOFFReadOnlyPointers(false),
           FPDenormalMode(DenormalMode::IEEE, DenormalMode::IEEE) {}
@@ -259,11 +259,6 @@ namespace llvm {
 
     /// Disable the integrated assembler.
     unsigned DisableIntegratedAS : 1;
-
-    /// Compress DWARF debug sections.
-    DebugCompressionType CompressDebugSections = DebugCompressionType::None;
-
-    unsigned RelaxELFRelocations : 1;
 
     /// Emit functions into separate sections.
     unsigned FunctionSections : 1;

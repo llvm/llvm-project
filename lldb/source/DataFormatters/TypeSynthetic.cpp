@@ -167,7 +167,7 @@ ScriptedSyntheticChildren::FrontEnd::FrontEnd(std::string pclass,
 ScriptedSyntheticChildren::FrontEnd::~FrontEnd() = default;
 
 lldb::ValueObjectSP
-ScriptedSyntheticChildren::FrontEnd::GetChildAtIndex(size_t idx) {
+ScriptedSyntheticChildren::FrontEnd::GetChildAtIndex(uint32_t idx) {
   if (!m_wrapper_sp || !m_interpreter)
     return lldb::ValueObjectSP();
 
@@ -178,13 +178,13 @@ bool ScriptedSyntheticChildren::FrontEnd::IsValid() {
   return (m_wrapper_sp && m_wrapper_sp->IsValid() && m_interpreter);
 }
 
-size_t ScriptedSyntheticChildren::FrontEnd::CalculateNumChildren() {
+uint32_t ScriptedSyntheticChildren::FrontEnd::CalculateNumChildren() {
   if (!m_wrapper_sp || m_interpreter == nullptr)
     return 0;
   return m_interpreter->CalculateNumChildren(m_wrapper_sp, UINT32_MAX);
 }
 
-size_t ScriptedSyntheticChildren::FrontEnd::CalculateNumChildren(uint32_t max) {
+uint32_t ScriptedSyntheticChildren::FrontEnd::CalculateNumChildren(uint32_t max) {
   if (!m_wrapper_sp || m_interpreter == nullptr)
     return 0;
   return m_interpreter->CalculateNumChildren(m_wrapper_sp, max);

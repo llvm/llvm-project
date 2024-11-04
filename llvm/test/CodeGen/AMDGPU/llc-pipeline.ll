@@ -51,6 +51,11 @@
 ; GCN-O0-NEXT:      AMDGPU Annotate Kernel Features
 ; GCN-O0-NEXT:      FunctionPass Manager
 ; GCN-O0-NEXT:        AMDGPU Lower Kernel Arguments
+; GCN-O0-NEXT:    Lower buffer fat pointer operations to buffer resources
+; GCN-O0-NEXT:    CallGraph Construction
+; GCN-O0-NEXT:    Call Graph SCC Pass Manager
+; GCN-O0-NEXT:      DummyCGSCCPass
+; GCN-O0-NEXT:      FunctionPass Manager
 ; GCN-O0-NEXT:        Lazy Value Information Analysis
 ; GCN-O0-NEXT:        Lower SwitchInst's to branches
 ; GCN-O0-NEXT:        Lower invoke and unwind, for unwindless code generators
@@ -229,6 +234,11 @@
 ; GCN-O1-NEXT:      AMDGPU Annotate Kernel Features
 ; GCN-O1-NEXT:      FunctionPass Manager
 ; GCN-O1-NEXT:        AMDGPU Lower Kernel Arguments
+; GCN-O1-NEXT:    Lower buffer fat pointer operations to buffer resources
+; GCN-O1-NEXT:    CallGraph Construction
+; GCN-O1-NEXT:    Call Graph SCC Pass Manager
+; GCN-O1-NEXT:      DummyCGSCCPass
+; GCN-O1-NEXT:      FunctionPass Manager
 ; GCN-O1-NEXT:        Dominator Tree Construction
 ; GCN-O1-NEXT:        Natural Loop Information
 ; GCN-O1-NEXT:        CodeGen Prepare
@@ -513,6 +523,11 @@
 ; GCN-O1-OPTS-NEXT:      AMDGPU Annotate Kernel Features
 ; GCN-O1-OPTS-NEXT:      FunctionPass Manager
 ; GCN-O1-OPTS-NEXT:        AMDGPU Lower Kernel Arguments
+; GCN-O1-OPTS-NEXT:    Lower buffer fat pointer operations to buffer resources
+; GCN-O1-OPTS-NEXT:    CallGraph Construction
+; GCN-O1-OPTS-NEXT:    Call Graph SCC Pass Manager
+; GCN-O1-OPTS-NEXT:      DummyCGSCCPass
+; GCN-O1-OPTS-NEXT:      FunctionPass Manager
 ; GCN-O1-OPTS-NEXT:        Dominator Tree Construction
 ; GCN-O1-OPTS-NEXT:        Natural Loop Information
 ; GCN-O1-OPTS-NEXT:        CodeGen Prepare
@@ -815,6 +830,11 @@
 ; GCN-O2-NEXT:      AMDGPU Annotate Kernel Features
 ; GCN-O2-NEXT:      FunctionPass Manager
 ; GCN-O2-NEXT:        AMDGPU Lower Kernel Arguments
+; GCN-O2-NEXT:    Lower buffer fat pointer operations to buffer resources
+; GCN-O2-NEXT:    CallGraph Construction
+; GCN-O2-NEXT:    Call Graph SCC Pass Manager
+; GCN-O2-NEXT:      DummyCGSCCPass
+; GCN-O2-NEXT:      FunctionPass Manager
 ; GCN-O2-NEXT:        Dominator Tree Construction
 ; GCN-O2-NEXT:        Natural Loop Information
 ; GCN-O2-NEXT:        CodeGen Prepare
@@ -1131,6 +1151,11 @@
 ; GCN-O3-NEXT:      AMDGPU Annotate Kernel Features
 ; GCN-O3-NEXT:      FunctionPass Manager
 ; GCN-O3-NEXT:        AMDGPU Lower Kernel Arguments
+; GCN-O3-NEXT:    Lower buffer fat pointer operations to buffer resources
+; GCN-O3-NEXT:    CallGraph Construction
+; GCN-O3-NEXT:    Call Graph SCC Pass Manager
+; GCN-O3-NEXT:      DummyCGSCCPass
+; GCN-O3-NEXT:      FunctionPass Manager
 ; GCN-O3-NEXT:        Dominator Tree Construction
 ; GCN-O3-NEXT:        Natural Loop Information
 ; GCN-O3-NEXT:        CodeGen Prepare

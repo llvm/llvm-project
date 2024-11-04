@@ -135,4 +135,4 @@ attributes #1 = { nounwind }
 !0 = !{i32 64, i32 1, i32 1}
 !1 = !{i32 1, i32 64, i32 1}
 !2 = !{i32 1, i32 1, i32 64}
-!3 = !{i32 1, !"amdgpu_code_object_version", i32 400}
+!3 = !{i32 1, !"amdhsa_code_object_version", i32 400}

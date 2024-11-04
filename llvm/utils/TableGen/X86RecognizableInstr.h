@@ -214,6 +214,8 @@ struct RecognizableInstrBase {
   bool HasEVEX_B;
   /// The hasEVEX_NF field from the record
   bool HasEVEX_NF;
+  /// The hasTwoConditionalOps field from the record
+  bool HasTwoConditionalOps;
   /// Indicates that the instruction uses the L and L' fields for RC.
   bool EncodeRC;
   /// The isCodeGenOnly field from the record

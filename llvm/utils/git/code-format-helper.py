@@ -125,6 +125,7 @@ View the diff from {self.name} here.
             pr.as_issue().create_comment(comment_text)
 
     def run(self, changed_files: List[str], args: FormatArgs) -> bool:
+        changed_files = [arg for arg in changed_files if "third-party" not in arg]
         diff = self.format_run(changed_files, args)
         should_update_gh = args.token is not None and args.repo is not None
 

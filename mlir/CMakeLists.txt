@@ -70,6 +70,12 @@ endif()
 check_c_compiler_flag("-Werror=implicit-function-declaration" C_SUPPORTS_WERROR_IMPLICIT_FUNCTION_DECLARATION)
 append_if(C_SUPPORTS_WERROR_IMPLICIT_FUNCTION_DECLARATION "-Werror=implicit-function-declaration" CMAKE_C_FLAGS)
 
+# Warn on undefined macros. This is often an indication that an include to
+# `mlir-config.h` or similar is missing.
+check_c_compiler_flag("-Wundef" C_SUPPORTS_WUNDEF)
+append_if(C_SUPPORTS_WUNDEF "-Wundef" CMAKE_C_FLAGS)
+append_if(C_SUPPORTS_WUNDEF "-Wundef" CMAKE_CXX_FLAGS)
+
 # Forbid mismatch between declaration and definition for class vs struct. This is
 # harmless on Unix systems, but it'll be a ticking bomb for MSVC/Windows systems
 # where it creeps into the ABI.
@@ -119,7 +125,6 @@ if ("AMDGPU" IN_LIST LLVM_TARGETS_TO_BUILD)
 else()
   set(MLIR_ENABLE_ROCM_CONVERSIONS 0)
 endif()
-add_definitions(-DMLIR_ROCM_CONVERSIONS_ENABLED=${MLIR_ENABLE_ROCM_CONVERSIONS})
 
 set(MLIR_ENABLE_CUDA_RUNNER 0 CACHE BOOL "Enable building the mlir CUDA runner")
 set(MLIR_ENABLE_ROCM_RUNNER 0 CACHE BOOL "Enable building the mlir ROCm runner")

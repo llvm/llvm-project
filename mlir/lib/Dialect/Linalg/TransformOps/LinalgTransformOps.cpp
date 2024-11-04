@@ -2112,15 +2112,31 @@ transform::ScalarizeOp::applyToOne(transform::TransformRewriter &rewriter,
 // ConvertToLoopsOp
 //===----------------------------------------------------------------------===//
 
-DiagnosedSilenceableFailure transform::ConvertToLoopsOp::applyToOne(
-    transform::TransformRewriter &rewriter, TilingInterface target,
-    transform::ApplyToEachResultList &results,
-    transform::TransformState &state) {
-  rewriter.setInsertionPoint(target);
-  FailureOr<SmallVector<scf::ForOp>> loops =
-      scf::lowerToLoopsUsingSCFForOp(rewriter, target);
-  if (failed(loops))
-    return emitDefaultDefiniteFailure(target);
+DiagnosedSilenceableFailure
+transform::ConvertToLoopsOp::apply(transform::TransformRewriter &rewriter,
+                                   transform::TransformResults &results,
+                                   transform::TransformState &state) {
+  SmallVector<Operation *> loops;
+  for (Operation *target : state.getPayloadOps(getTarget())) {
+    auto tilingOp = dyn_cast<TilingInterface>(*target);
+    if (!target) {
+      DiagnosedSilenceableFailure diag =
+          emitSilenceableError()
+          << "expected the payload to implement TilingInterface";
+      diag.attachNote(target->getLoc()) << "payload op";
+      return diag;
+    }
+    rewriter.setInsertionPoint(target);
+    FailureOr<SmallVector<scf::ForOp>> generatedLoops =
+        scf::lowerToLoopsUsingSCFForOp(rewriter, tilingOp);
+    if (failed(generatedLoops))
+      return emitDefaultDefiniteFailure(target);
+    for (scf::ForOp &loop : *generatedLoops) {
+      loops.push_back(loop.getOperation());
+    }
+    rewriter.eraseOp(target);
+  }
+  results.set(cast<OpResult>(getResult()), loops);
   return DiagnosedSilenceableFailure::success();
 }
 

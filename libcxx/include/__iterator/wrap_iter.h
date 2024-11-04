@@ -97,10 +97,14 @@ private:
   friend class __wrap_iter;
   template <class _CharT, class _Traits, class _Alloc>
   friend class basic_string;
+  template <class _CharT, class _Traits>
+  friend class basic_string_view;
   template <class _Tp, class _Alloc>
   friend class _LIBCPP_TEMPLATE_VIS vector;
   template <class _Tp, size_t>
   friend class _LIBCPP_TEMPLATE_VIS span;
+  template <class _Tp, size_t _Size>
+  friend struct array;
 };
 
 template <class _Iter1>

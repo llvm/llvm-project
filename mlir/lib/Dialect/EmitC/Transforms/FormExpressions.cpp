@@ -36,7 +36,7 @@ struct FormExpressionsPass
     // Wrap each C operator op with an expression op.
     OpBuilder builder(context);
     auto matchFun = [&](Operation *op) {
-      if (emitc::ExpressionOp::isCExpression(*op))
+      if (op->hasTrait<OpTrait::emitc::CExpression>())
         createExpression(op, builder);
     };
     rootOp->walk(matchFun);

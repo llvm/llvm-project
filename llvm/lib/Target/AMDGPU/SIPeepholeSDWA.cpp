@@ -338,6 +338,15 @@ MachineInstr *SDWASrcOperand::potentialToConvert(const SIInstrInfo *TII) {
 }
 
 bool SDWASrcOperand::convertToSDWA(MachineInstr &MI, const SIInstrInfo *TII) {
+  switch (MI.getOpcode()) {
+  case AMDGPU::V_CVT_F32_FP8_sdwa:
+  case AMDGPU::V_CVT_F32_BF8_sdwa:
+  case AMDGPU::V_CVT_PK_F32_FP8_sdwa:
+  case AMDGPU::V_CVT_PK_F32_BF8_sdwa:
+    // Does not support input modifiers: noabs, noneg, nosext.
+    return false;
+  }
+
   // Find operand in instruction that matches source operand and replace it with
   // target operand. Set corresponding src_sel
   bool IsPreserveSrc = false;

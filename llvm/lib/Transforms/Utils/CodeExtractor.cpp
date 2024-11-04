@@ -1837,37 +1837,41 @@ void CodeExtractor::emitFunctionBody(
     // In case Output is an invoke, we insert the store at the beginning in the
     // 'normal destination' BB. Otherwise we insert the store right after
     // Output.
-    Instruction *InsertBefore = nullptr;
+    BasicBlock::iterator InsertPt;
     if (auto *InvokeI = dyn_cast<InvokeInst>(Output))
-      InsertBefore = &*InvokeI->getNormalDest()->getFirstInsertionPt();
+      InsertPt = InvokeI->getNormalDest()->getFirstInsertionPt();
     else if (auto *Phi = dyn_cast<PHINode>(Output))
-      InsertBefore = &*Phi->getParent()->getFirstInsertionPt();
+      InsertPt = Phi->getParent()->getFirstInsertionPt();
     else if (auto *OutI = dyn_cast<Instruction>(Output))
-      InsertBefore = &*std::next(OutI->getIterator());
+      InsertPt = std::next(OutI->getIterator());
+    else {
+      // Globals don't need to be updated, just advance to the next argument.
+      if (StructValues.contains(Output))
+        ++AggIdx;
+      else
+        ++ScalarAI;
+      continue;
+    }
 
-    assert((!InsertBefore || InsertBefore->getFunction() == newFunction ||
-            Blocks.count(InsertBefore->getParent())) &&
+    assert((InsertPt->getFunction() == newFunction ||
+            Blocks.count(InsertPt->getParent())) &&
            "InsertPt should be in new function");
 
     if (StructValues.contains(Output)) {
-      if (InsertBefore) {
-        assert(AggArg && "Number of aggregate output arguments should match "
-                         "the number of defined values");
-        Value *Idx[2];
-        Idx[0] = Constant::getNullValue(Type::getInt32Ty(Context));
-        Idx[1] = ConstantInt::get(Type::getInt32Ty(Context), AggIdx);
-        GetElementPtrInst *GEP = GetElementPtrInst::Create(
-            StructArgTy, AggArg, Idx, "gep_" + Output->getName(), InsertBefore);
-        new StoreInst(Output, GEP, InsertBefore);
-      }
+      assert(AggArg && "Number of aggregate output arguments should match "
+                       "the number of defined values");
+      Value *Idx[2];
+      Idx[0] = Constant::getNullValue(Type::getInt32Ty(Context));
+      Idx[1] = ConstantInt::get(Type::getInt32Ty(Context), AggIdx);
+      GetElementPtrInst *GEP = GetElementPtrInst::Create(
+          StructArgTy, AggArg, Idx, "gep_" + Output->getName(), InsertPt);
+      new StoreInst(Output, GEP, InsertPt);
       ++AggIdx;
     } else {
-      if (InsertBefore) {
-        assert(ScalarAI != newFunction->arg_end() &&
-               "Number of scalar output arguments should match "
-               "the number of defined values");
-        new StoreInst(Output, &*ScalarAI, InsertBefore);
-      }
+      assert(ScalarAI != newFunction->arg_end() &&
+             "Number of scalar output arguments should match "
+             "the number of defined values");
+      new StoreInst(Output, &*ScalarAI, InsertPt);
       ++ScalarAI;
     }
   }
@@ -1913,7 +1917,7 @@ CallInst *CodeExtractor::emitReplacerCall(
 
     AllocaInst *alloca = new AllocaInst(
         output->getType(), DL.getAllocaAddrSpace(), nullptr,
-        output->getName() + ".loc", &*AllocaBlock->getFirstInsertionPt());
+        output->getName() + ".loc", AllocaBlock->getFirstInsertionPt());
     params.push_back(alloca);
     ReloadOutputs.push_back(alloca);
   }
@@ -1921,7 +1925,7 @@ CallInst *CodeExtractor::emitReplacerCall(
   AllocaInst *Struct = nullptr;
   if (!StructValues.empty()) {
     Struct = new AllocaInst(StructArgTy, DL.getAllocaAddrSpace(), nullptr,
-                            "structArg", &*AllocaBlock->getFirstInsertionPt());
+                            "structArg", AllocaBlock->getFirstInsertionPt());
     if (ArgsInZeroAddressSpace && DL.getAllocaAddrSpace() != 0) {
       auto *StructSpaceCast = new AddrSpaceCastInst(
           Struct, PointerType ::get(Context, 0), "structArg.ascast");
@@ -2020,15 +2024,17 @@ CallInst *CodeExtractor::emitReplacerCall(
 
     // Check if the function should return a value
     if (OldFnRetTy->isVoidTy()) {
-      ReturnInst::Create(Context, nullptr, TheSwitch); // Return void
+      ReturnInst::Create(Context, nullptr,
+                         TheSwitch->getIterator()); // Return void
     } else if (OldFnRetTy == TheSwitch->getCondition()->getType()) {
       // return what we have
-      ReturnInst::Create(Context, TheSwitch->getCondition(), TheSwitch);
+      ReturnInst::Create(Context, TheSwitch->getCondition(),
+                         TheSwitch->getIterator());
     } else {
       // Otherwise we must have code extracted an unwind or something, just
       // return whatever we want.
       ReturnInst::Create(Context, Constant::getNullValue(OldFnRetTy),
-                         TheSwitch);
+                         TheSwitch->getIterator());
     }
 
     TheSwitch->eraseFromParent();
@@ -2036,7 +2042,7 @@ CallInst *CodeExtractor::emitReplacerCall(
   case 1:
     // Only a single destination, change the switch into an unconditional
     // branch.
-    BranchInst::Create(TheSwitch->getSuccessor(1), TheSwitch);
+    BranchInst::Create(TheSwitch->getSuccessor(1), TheSwitch->getIterator());
     TheSwitch->eraseFromParent();
     break;
   case 2:
@@ -2044,7 +2050,7 @@ CallInst *CodeExtractor::emitReplacerCall(
     // Remark: This also swaps the target branches:
     // 0 -> false -> getSuccessor(2); 1 -> true -> getSuccessor(1)
     BranchInst::Create(TheSwitch->getSuccessor(1), TheSwitch->getSuccessor(2),
-                       call, TheSwitch);
+                       call, TheSwitch->getIterator());
     TheSwitch->eraseFromParent();
     break;
   default:

@@ -555,6 +555,8 @@ bool doesDirectiveHaveAssociatedStmt(OpenACCDirectiveKind DirKind) {
   default:
     return false;
   case OpenACCDirectiveKind::Parallel:
+  case OpenACCDirectiveKind::Serial:
+  case OpenACCDirectiveKind::Kernels:
     return true;
   }
   llvm_unreachable("Unhandled directive->assoc stmt");
@@ -563,6 +565,8 @@ bool doesDirectiveHaveAssociatedStmt(OpenACCDirectiveKind DirKind) {
 unsigned getOpenACCScopeFlags(OpenACCDirectiveKind DirKind) {
   switch (DirKind) {
   case OpenACCDirectiveKind::Parallel:
+  case OpenACCDirectiveKind::Serial:
+  case OpenACCDirectiveKind::Kernels:
     // Mark this as a BreakScope/ContinueScope as well as a compute construct
     // so that we can diagnose trying to 'break'/'continue' inside of one.
     return Scope::BreakScope | Scope::ContinueScope |

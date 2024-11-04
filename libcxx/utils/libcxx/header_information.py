@@ -155,7 +155,6 @@ headers_not_available = [
 def is_header(file):
     """Returns whether the given file is a header (i.e. not a directory or the modulemap file)."""
     return not file.is_dir() and not file.name in [
-        "module.modulemap.in",
         "module.modulemap",
         "CMakeLists.txt",
         "libcxx.imp",

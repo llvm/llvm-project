@@ -2804,11 +2804,19 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
   }
 
   case TargetOpcode::G_GLOBAL_VALUE: {
-    auto GV = I.getOperand(1).getGlobal();
-    if (GV->isThreadLocal())
-      return selectTLSGlobalValue(I, MRI);
+    const GlobalValue *GV = nullptr;
+    unsigned OpFlags;
+    if (I.getOperand(1).isSymbol()) {
+      OpFlags = I.getOperand(1).getTargetFlags();
+      // Currently only used by "RtLibUseGOT".
+      assert(OpFlags == AArch64II::MO_GOT);
+    } else {
+      GV = I.getOperand(1).getGlobal();
+      if (GV->isThreadLocal())
+        return selectTLSGlobalValue(I, MRI);
+      OpFlags = STI.ClassifyGlobalReference(GV, TM);
+    }
 
-    unsigned OpFlags = STI.ClassifyGlobalReference(GV, TM);
     if (OpFlags & AArch64II::MO_GOT) {
       I.setDesc(TII.get(AArch64::LOADgot));
       I.getOperand(1).setTargetFlags(OpFlags);
@@ -2989,13 +2997,14 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
       }
     }
 
-    if (IsZExtLoad) {
-      // The zextload from a smaller type to i32 should be handled by the
+    if (IsZExtLoad || (Opcode == TargetOpcode::G_LOAD &&
+                       ValTy == LLT::scalar(64) && MemSizeInBits == 32)) {
+      // The any/zextload from a smaller type to i32 should be handled by the
       // importer.
       if (MRI.getType(LoadStore->getOperand(0).getReg()).getSizeInBits() != 64)
         return false;
-      // If we have a ZEXTLOAD then change the load's type to be a narrower reg
-      // and zero_extend with SUBREG_TO_REG.
+      // If we have an extending load then change the load's type to be a
+      // narrower reg and zero_extend with SUBREG_TO_REG.
       Register LdReg = MRI.createVirtualRegister(&AArch64::GPR32RegClass);
       Register DstReg = LoadStore->getOperand(0).getReg();
       LoadStore->getOperand(0).setReg(LdReg);

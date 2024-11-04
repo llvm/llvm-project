@@ -13,8 +13,10 @@ def WriteShiftImm   : SchedWrite;    // 32 or 64-bit shift by immediate operatio
 def WriteShiftImm32 : SchedWrite;    // 32-bit shift by immediate operations on RV64Ix
 def WriteShiftReg   : SchedWrite;    // 32 or 64-bit shift by immediate operations
 def WriteShiftReg32 : SchedWrite;    // 32-bit shift by immediate operations on RV64Ix
-def WriteIDiv       : SchedWrite;    // 32-bit or 64-bit divide and remainder
-def WriteIDiv32     : SchedWrite;    // 32-bit divide and remainder on RV64I
+def WriteIDiv       : SchedWrite;    // 32-bit or 64-bit divide
+def WriteIDiv32     : SchedWrite;    // 32-bit divide on RV64I
+def WriteIRem       : SchedWrite;    // 32-bit or 64-bit remainder
+def WriteIRem32     : SchedWrite;    // 32-bit remainder on RV64I
 def WriteIMul       : SchedWrite;    // 32-bit or 64-bit multiply
 def WriteIMul32     : SchedWrite;    // 32-bit multiply on RV64I
 def WriteJmp        : SchedWrite;    // Jump
@@ -135,6 +137,8 @@ def ReadShiftReg    : SchedRead;
 def ReadShiftReg32  : SchedRead;    // 32-bit shift by register operations on RV64Ix
 def ReadIDiv        : SchedRead;
 def ReadIDiv32      : SchedRead;
+def ReadIRem        : SchedRead;
+def ReadIRem32      : SchedRead;
 def ReadIMul        : SchedRead;
 def ReadIMul32      : SchedRead;
 def ReadAtomicBA    : SchedRead;

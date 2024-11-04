@@ -373,4 +373,4 @@ define amdgpu_kernel void @k123() {
 ; GCN-NEXT: .size	llvm.amdgcn.lds.offset.table, 48
 
 !llvm.module.flags = !{!4}
-!4 = !{i32 1, !"amdgpu_code_object_version", i32 500}
+!4 = !{i32 1, !"amdhsa_code_object_version", i32 500}

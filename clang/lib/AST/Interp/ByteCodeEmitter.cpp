@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "ByteCodeEmitter.h"
-#include "ByteCodeGenError.h"
 #include "Context.h"
 #include "Floating.h"
 #include "IntegralAP.h"
