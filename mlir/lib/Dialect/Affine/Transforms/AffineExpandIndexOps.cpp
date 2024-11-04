@@ -48,8 +48,7 @@ struct LowerDelinearizeIndexOps
 
 /// Lowers `affine.linearize_index` into a sequence of multiplications and
 /// additions.
-struct LowerLinearizeIndexOps final
-    : OpRewritePattern<AffineLinearizeIndexOp> {
+struct LowerLinearizeIndexOps final : OpRewritePattern<AffineLinearizeIndexOp> {
   using OpRewritePattern::OpRewritePattern;
   LogicalResult matchAndRewrite(AffineLinearizeIndexOp op,
                                 PatternRewriter &rewriter) const override {
