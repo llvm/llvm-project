@@ -83,39 +83,33 @@ static void swapBytes(std::byte *M, size_t N) {
 /// have indeterminate value.
 /// All offsets are in bits.
 struct BitcastBuffer {
-  llvm::BitVector Data;
+  size_t SizeInBits = 0;
+  llvm::SmallVector<std::byte> Data;
 
   BitcastBuffer() = default;
 
-  size_t size() const { return Data.size(); }
+  size_t size() const { return SizeInBits; }
 
-  const std::byte *data() const {
-    unsigned NBytes = Data.size() / 8;
-    unsigned BitVectorWordSize = sizeof(uintptr_t);
-    bool FullWord = (NBytes % BitVectorWordSize == 0);
-
-    // llvm::BitVector uses 64-bit fields internally, so when we have
-    // fewer bytes than that, we need to compensate for that on
-    // big endian hosts.
-    unsigned DataPlus;
-    if (llvm::sys::IsBigEndianHost)
-      DataPlus = BitVectorWordSize - (NBytes % BitVectorWordSize);
-    else
-      DataPlus = 0;
-
-    return reinterpret_cast<const std::byte *>(Data.getData().data()) +
-           (FullWord ? 0 : DataPlus);
-  }
+  const std::byte *data() const { return Data.data(); }
 
   bool allInitialized() const {
     // FIXME: Implement.
     return true;
   }
 
+  bool atByteBoundary() const { return (Data.size() * 8) == SizeInBits; }
+
+  void pushBit(bool Value) {
+    if (atByteBoundary())
+      Data.push_back(std::byte{0});
+
+    if (Value)
+      Data.back() |= (std::byte{1} << (SizeInBits % 8));
+    ++SizeInBits;
+  }
+
   void pushData(const std::byte *data, size_t BitOffset, size_t BitWidth,
                 bool BigEndianTarget) {
-    Data.reserve(BitOffset + BitWidth);
-
     bool OnlyFullBytes = BitWidth % 8 == 0;
     unsigned NBytes = BitWidth / 8;
 
@@ -125,7 +119,7 @@ struct BitcastBuffer {
       std::byte B =
           BigEndianTarget ? data[NBytes - OnlyFullBytes - I] : data[I];
       for (unsigned X = 0; X != 8; ++X) {
-        Data.push_back(bitof(B, X));
+        pushBit(bitof(B, X));
         ++BitsHandled;
       }
     }
@@ -137,7 +131,7 @@ struct BitcastBuffer {
     assert((BitWidth - BitsHandled) < 8);
     std::byte B = BigEndianTarget ? data[0] : data[NBytes];
     for (size_t I = 0, E = (BitWidth - BitsHandled); I != E; ++I) {
-      Data.push_back(bitof(B, I));
+      pushBit(bitof(B, I));
       ++BitsHandled;
     }
 
@@ -321,19 +315,34 @@ static bool readPointerToBuffer(const Context &Ctx, const Pointer &FromPtr,
           assert(false && "Implement casting to pointer types");
 
         CharUnits ObjectReprChars = ASTCtx.getTypeSizeInChars(P.getType());
-        unsigned BitWidth;
-        if (const FieldDecl *FD = P.getField(); FD && FD->isBitField())
-          BitWidth = FD->getBitWidthValue(ASTCtx);
-        else
-          BitWidth = ASTCtx.toBits(ObjectReprChars);
-
+        unsigned BitWidth = ASTCtx.toBits(ObjectReprChars);
         llvm::SmallVector<std::byte> Buff(ObjectReprChars.getQuantity());
-        BITCAST_TYPE_SWITCH_WITH_FLOAT(T, {
-          T Val = P.deref<T>();
-          Val.bitcastToMemory(Buff.data());
-        });
-        if (SwapData)
-          swapBytes(Buff.data(), ObjectReprChars.getQuantity());
+        // Work around floating point types that contain unused padding bytes.
+        // This is really just `long double` on x86, which is the only
+        // fundamental type with padding bytes.
+        if (T == PT_Float) {
+          const Floating &F = P.deref<Floating>();
+          unsigned NumBits =
+              llvm::APFloatBase::getSizeInBits(F.getAPFloat().getSemantics());
+          assert(NumBits % 8 == 0);
+          assert(NumBits <= (ObjectReprChars.getQuantity() * 8));
+          F.bitcastToMemory(Buff.data());
+          // Now, only (maybe) swap the actual size of the float, excluding the
+          // padding bits.
+          if (SwapData)
+            swapBytes(Buff.data(), NumBits / 8);
+
+        } else {
+          if (const FieldDecl *FD = P.getField(); FD && FD->isBitField())
+            BitWidth = FD->getBitWidthValue(ASTCtx);
+
+          BITCAST_TYPE_SWITCH(T, {
+            T Val = P.deref<T>();
+            Val.bitcastToMemory(Buff.data());
+          });
+          if (SwapData)
+            swapBytes(Buff.data(), ObjectReprChars.getQuantity());
+        }
 
         if (BitWidth != (Buff.size() * 8) && BigEndianTarget) {
           Buffer.pushData(Buff.data() + (Buff.size() - 1 - (BitWidth / 8)),
@@ -362,6 +371,9 @@ bool clang::interp::DoBitCast(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
 
   HasIndeterminateBits = !Buffer.allInitialized();
   std::memcpy(Buff, Buffer.data(), BuffSize);
+
+  if (llvm::sys::IsBigEndianHost)
+    swapBytes(Buff, BuffSize);
 
   return Success;
 }

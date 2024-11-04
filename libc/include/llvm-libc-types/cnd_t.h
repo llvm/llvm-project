@@ -9,7 +9,7 @@
 #ifndef LLVM_LIBC_TYPES_CND_T_H
 #define LLVM_LIBC_TYPES_CND_T_H
 
-#include "llvm-libc-types/__futex_word.h"
+#include "__futex_word.h"
 
 typedef struct {
   void *__qfront;
