@@ -2507,6 +2507,7 @@ RISCVTTIImpl::enableMemCmpExpansion(bool OptSize, bool IsZeroCmp) const {
   if (IsZeroCmp && ST->hasVInstructions()) {
     unsigned RealMinVLen = ST->getRealMinVLen();
     // Support Fractional LMULs if the lengths are larger than XLen.
+    // TODO: Support non-power-of-2 types.
     for (unsigned LMUL = 8; LMUL >= 2; LMUL /= 2) {
       unsigned Len = RealMinVLen / LMUL;
       if (Len > ST->getXLen())

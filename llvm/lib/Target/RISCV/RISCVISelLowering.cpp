@@ -14492,6 +14492,10 @@ combineVectorSizedSetCCEquality(EVT VT, SDValue X, SDValue Y, ISD::CondCode CC,
     return SDValue();
 
   unsigned OpSize = OpVT.getSizeInBits();
+  // TODO: Support non-power-of-2 types.
+  if (!isPowerOf2_32(OpSize))
+    return SDValue();
+
   // The size should be larger than XLen and smaller than the maximum vector
   // size.
   if (OpSize <= Subtarget.getXLen() ||
