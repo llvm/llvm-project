@@ -522,3 +522,25 @@ module char
     call scalar('a')
   end
 end
+
+subroutine bug114080(arg, contigArg)
+  character(*) :: arg(..)
+  character(*), contiguous :: contigArg(..)
+  interface
+   subroutine sub1(arg1) bind(c)
+     character(1) :: arg1(2,4)
+   end subroutine
+  end interface
+  !ERROR: Assumed-rank character array may not be associated with a dummy argument that is not assumed-rank
+  call sub1(arg)
+  !ERROR: Assumed-rank character array may not be associated with a dummy argument that is not assumed-rank
+  call sub1(contigArg)
+  !ERROR: Assumed-rank character array may not be associated with a dummy argument that is not assumed-rank
+  call sub2(arg)
+  !ERROR: Assumed-rank character array may not be associated with a dummy argument that is not assumed-rank
+  call sub2(contigArg)
+  contains
+    subroutine sub2(arg2)
+      character(*) :: arg2(10)
+    end subroutine sub2
+end subroutine
