@@ -846,6 +846,9 @@ public:
 
   const NoSanitizeList &getNoSanitizeList() const { return *NoSanitizeL; }
 
+  bool isTypeIgnoredBySanitizer(const SanitizerMask &Mask,
+                                const QualType &Ty) const;
+
   const XRayFunctionFilter &getXRayFilter() const {
     return *XRayFilter;
   }
