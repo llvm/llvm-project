@@ -1,8 +1,8 @@
 ; RUN: llc < %s -mtriple=s390x-linux-gnu -mcpu=z16 -disable-machine-dce \
 ; RUN:   -verify-machineinstrs -O3
 ;
-; Test that this passes the verifier even though a KILL instruction with a
-; dangling memory operand emerges.
+; Test that the MemoryOperand of the produced KILL instruction is removed
+; and as a result the machine verifier succeeds.
 
 define void @fun(ptr %Src, ptr %Dst) {
   br label %2

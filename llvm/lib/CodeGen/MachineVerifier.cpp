@@ -2271,7 +2271,7 @@ void MachineVerifier::visitMachineInstrBefore(const MachineInstr *MI) {
 
   // Check the MachineMemOperands for basic consistency.
   for (MachineMemOperand *Op : MI->memoperands()) {
-    if (Op->isLoad() && (!MI->mayLoad() && !MI->isKill()))
+    if (Op->isLoad() && !MI->mayLoad())
       report("Missing mayLoad flag", MI);
     if (Op->isStore() && !MI->mayStore())
       report("Missing mayStore flag", MI);
