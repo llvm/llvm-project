@@ -167,6 +167,9 @@ return is a ‘list’ of lines in the format ‘--lines=<start>:<end>’
 which can be passed directly to ‘clang-format’."
   ;; Use temporary buffer for output of diff.
   (with-temp-buffer
+    ;; We could use diff.el:diff-no-select here. The reason we don't
+    ;; is diff-no-select requires extra copies on the buffers which
+    ;; induces noticable slowdowns, especially on larger files.
     (let ((status (call-process
                    "diff"
                    nil
