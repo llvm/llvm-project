@@ -20,6 +20,7 @@
  * THE SOFTWARE.
  */
 #include <clc/clc.h>
+#include <clc/math/clc_fabs.h>
 
 #include "math.h"
 #include "sincos_helpers.h"
@@ -48,7 +49,7 @@ _CLC_UNARY_VECTORIZE(_CLC_DEF _CLC_OVERLOAD, float, __clc_tan, float);
 #include "sincosD_piby4.h"
 
 _CLC_DEF _CLC_OVERLOAD double __clc_tan(double x) {
-  double y = fabs(x);
+  double y = __clc_fabs(x);
 
   double r, rr;
   int regn;
@@ -66,4 +67,5 @@ _CLC_DEF _CLC_OVERLOAD double __clc_tan(double x) {
   return isnan(x) || isinf(x) ? as_double(QNANBITPATT_DP64) : as_double(t);
 }
 _CLC_UNARY_VECTORIZE(_CLC_DEF _CLC_OVERLOAD, double, __clc_tan, double);
+
 #endif
