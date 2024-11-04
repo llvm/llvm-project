@@ -293,6 +293,16 @@ void tools::PS5cpu::Linker::ConstructJob(Compilation &C, const JobAction &JA,
         "dead-reloc-in-nonalloc=.debug_ranges=0xfffffffffffffffe");
     CmdArgs.push_back("-z");
     CmdArgs.push_back("dead-reloc-in-nonalloc=.debug_loc=0xfffffffffffffffe");
+
+    // The PlayStation loader expects linked objects to be laid out in a
+    // particular way. This is achieved by linker scripts that are supplied
+    // with the SDK. The scripts are inside <sdkroot>/target/lib, which is
+    // added as a search path elsewhere.
+    // "PRX" has long stood for "PlayStation Relocatable eXecutable".
+    CmdArgs.push_back("--default-script");
+    CmdArgs.push_back(Static   ? "static.script"
+                      : Shared ? "prx.script"
+                               : "main.script");
   }
 
   if (Static)
