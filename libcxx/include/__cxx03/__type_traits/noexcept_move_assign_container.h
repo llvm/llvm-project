@@ -9,10 +9,10 @@
 #ifndef _LIBCPP___TYPE_TRAITS_NOEXCEPT_MOVE_ASSIGN_CONTAINER_H
 #define _LIBCPP___TYPE_TRAITS_NOEXCEPT_MOVE_ASSIGN_CONTAINER_H
 
-#include <__config>
-#include <__memory/allocator_traits.h>
-#include <__type_traits/integral_constant.h>
-#include <__type_traits/is_nothrow_assignable.h>
+#include <__cxx03/__config>
+#include <__cxx03/__memory/allocator_traits.h>
+#include <__cxx03/__type_traits/integral_constant.h>
+#include <__cxx03/__type_traits/is_nothrow_assignable.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

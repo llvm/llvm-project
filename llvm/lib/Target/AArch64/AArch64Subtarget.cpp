@@ -86,6 +86,13 @@ static cl::alias AArch64StreamingStackHazardSize(
     cl::desc("alias for -aarch64-streaming-hazard-size"),
     cl::aliasopt(AArch64StreamingHazardSize));
 
+// Subreg liveness tracking is disabled by default for now until all issues
+// are ironed out. This option allows the feature to be used in tests.
+static cl::opt<bool>
+    EnableSubregLivenessTracking("aarch64-enable-subreg-liveness-tracking",
+                                 cl::init(false), cl::Hidden,
+                                 cl::desc("Enable subreg liveness tracking"));
+
 unsigned AArch64Subtarget::getVectorInsertExtractBaseCost() const {
   if (OverrideVectorInsertExtractBaseCost.getNumOccurrences() > 0)
     return OverrideVectorInsertExtractBaseCost;
@@ -380,6 +387,8 @@ AArch64Subtarget::AArch64Subtarget(const Triple &TT, StringRef CPU,
     ReserveXRegisterForRA.set(29);
 
   AddressCheckPSV.reset(new AddressCheckPseudoSourceValue(TM));
+
+  EnableSubregLiveness = EnableSubregLivenessTracking.getValue();
 }
 
 const CallLowering *AArch64Subtarget::getCallLowering() const {

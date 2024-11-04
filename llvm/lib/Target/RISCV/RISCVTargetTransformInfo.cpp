@@ -716,6 +716,28 @@ RISCVTTIImpl::getMaskedMemoryOpCost(unsigned Opcode, Type *Src, Align Alignment,
   return getMemoryOpCost(Opcode, Src, Alignment, AddressSpace, CostKind);
 }
 
+static bool hasOptimizedSegmentLoadStore(unsigned NF,
+                                         const RISCVSubtarget *ST) {
+  switch (NF) {
+  case 2:
+    return ST->hasOptimizedNF2SegmentLoadStore();
+  case 3:
+    return ST->hasOptimizedNF3SegmentLoadStore();
+  case 4:
+    return ST->hasOptimizedNF4SegmentLoadStore();
+  case 5:
+    return ST->hasOptimizedNF5SegmentLoadStore();
+  case 6:
+    return ST->hasOptimizedNF6SegmentLoadStore();
+  case 7:
+    return ST->hasOptimizedNF7SegmentLoadStore();
+  case 8:
+    return ST->hasOptimizedNF8SegmentLoadStore();
+  default:
+    llvm_unreachable("Unexpected NF");
+  }
+}
+
 InstructionCost RISCVTTIImpl::getInterleavedMemoryOpCost(
     unsigned Opcode, Type *VecTy, unsigned Factor, ArrayRef<unsigned> Indices,
     Align Alignment, unsigned AddressSpace, TTI::TargetCostKind CostKind,
@@ -723,8 +745,7 @@ InstructionCost RISCVTTIImpl::getInterleavedMemoryOpCost(
 
   // The interleaved memory access pass will lower interleaved memory ops (i.e
   // a load and store followed by a specific shuffle) to vlseg/vsseg
-  // intrinsics. In those cases then we can treat it as if it's just one (legal)
-  // memory op
+  // intrinsics.
   if (!UseMaskForCond && !UseMaskForGaps &&
       Factor <= TLI->getMaxSupportedInterleaveFactor()) {
     auto *VTy = cast<VectorType>(VecTy);
@@ -734,19 +755,27 @@ InstructionCost RISCVTTIImpl::getInterleavedMemoryOpCost(
       auto *SubVecTy =
           VectorType::get(VTy->getElementType(),
                           VTy->getElementCount().divideCoefficientBy(Factor));
-
       if (VTy->getElementCount().isKnownMultipleOf(Factor) &&
           TLI->isLegalInterleavedAccessType(SubVecTy, Factor, Alignment,
                                             AddressSpace, DL)) {
-        // FIXME: We use the memory op cost of the *legalized* type here,
-        // because it's getMemoryOpCost returns a really expensive cost for
-        // types like <6 x i8>, which show up when doing interleaves of
-        // Factor=3 etc. Should the memory op cost of these be cheaper?
-        auto *LegalVTy = VectorType::get(VTy->getElementType(),
-                                         LT.second.getVectorElementCount());
-        InstructionCost LegalMemCost = getMemoryOpCost(
-            Opcode, LegalVTy, Alignment, AddressSpace, CostKind);
-        return LT.first + LegalMemCost;
+
+        // Some processors optimize segment loads/stores as one wide memory op +
+        // Factor * LMUL shuffle ops.
+        if (hasOptimizedSegmentLoadStore(Factor, ST)) {
+          InstructionCost Cost =
+              getMemoryOpCost(Opcode, VTy, Alignment, AddressSpace, CostKind);
+          MVT SubVecVT = getTLI()->getValueType(DL, SubVecTy).getSimpleVT();
+          Cost += Factor * TLI->getLMULCost(SubVecVT);
+          return LT.first * Cost;
+        }
+
+        // Otherwise, the cost is proportional to the number of elements (VL *
+        // Factor ops).
+        InstructionCost MemOpCost =
+            getMemoryOpCost(Opcode, VTy->getElementType(), Alignment, 0,
+                            CostKind, {TTI::OK_AnyValue, TTI::OP_None});
+        unsigned NumLoads = getEstimatedVLFor(VTy);
+        return NumLoads * MemOpCost;
       }
     }
   }
@@ -948,12 +977,17 @@ RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
                                     TTI::TargetCostKind CostKind) {
   auto *RetTy = ICA.getReturnType();
   switch (ICA.getID()) {
+  case Intrinsic::lrint:
+  case Intrinsic::llrint:
+    // We can't currently lower half or bfloat vector lrint/llrint.
+    if (auto *VecTy = dyn_cast<VectorType>(ICA.getArgTypes()[0]);
+        VecTy && VecTy->getElementType()->is16bitFPTy())
+      return InstructionCost::getInvalid();
+    [[fallthrough]];
   case Intrinsic::ceil:
   case Intrinsic::floor:
   case Intrinsic::trunc:
   case Intrinsic::rint:
-  case Intrinsic::lrint:
-  case Intrinsic::llrint:
   case Intrinsic::round:
   case Intrinsic::roundeven: {
     // These all use the same code.
@@ -1552,13 +1586,6 @@ RISCVTTIImpl::getArithmeticReductionCost(unsigned Opcode, VectorType *Ty,
   }
 
   // IR Reduction is composed by two vmv and one rvv reduction instruction.
-  if (TTI::requiresOrderedReduction(FMF)) {
-    Opcodes.push_back(RISCV::VFMV_S_F);
-    for (unsigned i = 0; i < LT.first.getValue(); i++)
-      Opcodes.push_back(RISCV::VFREDOSUM_VS);
-    Opcodes.push_back(RISCV::VFMV_F_S);
-    return getRISCVInstructionCost(Opcodes, LT.second, CostKind);
-  }
   unsigned SplitOp;
   switch (ISD) {
   case ISD::ADD:
@@ -1582,7 +1609,14 @@ RISCVTTIImpl::getArithmeticReductionCost(unsigned Opcode, VectorType *Ty,
     if ((LT.second.getVectorElementType() == MVT::f16 &&
          !ST->hasVInstructionsF16()) ||
         LT.second.getVectorElementType() == MVT::bf16)
-      return InstructionCost::getInvalid();
+      return BaseT::getArithmeticReductionCost(Opcode, Ty, FMF, CostKind);
+    if (TTI::requiresOrderedReduction(FMF)) {
+      Opcodes.push_back(RISCV::VFMV_S_F);
+      for (unsigned i = 0; i < LT.first.getValue(); i++)
+        Opcodes.push_back(RISCV::VFREDOSUM_VS);
+      Opcodes.push_back(RISCV::VFMV_F_S);
+      return getRISCVInstructionCost(Opcodes, LT.second, CostKind);
+    }
     SplitOp = RISCV::VFADD_VV;
     Opcodes = {RISCV::VFMV_S_F, RISCV::VFREDUSUM_VS, RISCV::VFMV_F_S};
     break;
@@ -2284,6 +2318,23 @@ bool RISCVTTIImpl::isLSRCostLess(const TargetTransformInfo::LSRCost &C1,
          std::tie(C2.Insns, C2NumRegs, C2.AddRecCost,
                   C2.NumIVMuls, C2.NumBaseAdds,
                   C2.ScaleCost, C2.ImmCost, C2.SetupCost);
+}
+
+bool RISCVTTIImpl::isLegalMaskedExpandLoad(Type *DataTy, Align Alignment) {
+  auto *VTy = dyn_cast<VectorType>(DataTy);
+  if (!VTy || VTy->isScalableTy())
+    return false;
+
+  if (!isLegalMaskedLoadStore(DataTy, Alignment))
+    return false;
+
+  // FIXME: If it is an i8 vector and the element count exceeds 256, we should
+  // scalarize these types with LMUL >= maximum fixed-length LMUL.
+  if (VTy->getElementType()->isIntegerTy(8))
+    if (VTy->getElementCount().getFixedValue() > 256)
+      return VTy->getPrimitiveSizeInBits() / ST->getRealMinVLen() <
+             ST->getMaxLMULForFixedLengthVectors();
+  return true;
 }
 
 bool RISCVTTIImpl::isLegalMaskedCompressStore(Type *DataTy, Align Alignment) {

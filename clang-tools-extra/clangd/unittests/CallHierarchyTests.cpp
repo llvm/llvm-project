@@ -446,6 +446,51 @@ TEST(CallHierarchy, CallInLocalVarDecl) {
           AllOf(from(withName("caller3")), fromRanges(Source.range("call3")))));
 }
 
+TEST(CallHierarchy, HierarchyOnField) {
+  // Tests that the call hierarchy works on fields.
+  Annotations Source(R"cpp(
+    struct Vars {
+      int v^ar1 = 1;
+    };
+    void caller() {
+      Vars values;
+      values.$Callee[[var1]];
+    }
+  )cpp");
+  TestTU TU = TestTU::withCode(Source.code());
+  auto AST = TU.build();
+  auto Index = TU.index();
+
+  std::vector<CallHierarchyItem> Items =
+      prepareCallHierarchy(AST, Source.point(), testPath(TU.Filename));
+  ASSERT_THAT(Items, ElementsAre(withName("var1")));
+  auto IncomingLevel1 = incomingCalls(Items[0], Index.get());
+  ASSERT_THAT(IncomingLevel1,
+              ElementsAre(AllOf(from(withName("caller")),
+                                fromRanges(Source.range("Callee")))));
+}
+
+TEST(CallHierarchy, HierarchyOnVar) {
+  // Tests that the call hierarchy works on non-local variables.
+  Annotations Source(R"cpp(
+    int v^ar = 1;
+    void caller() {
+      $Callee[[var]];
+    }
+  )cpp");
+  TestTU TU = TestTU::withCode(Source.code());
+  auto AST = TU.build();
+  auto Index = TU.index();
+
+  std::vector<CallHierarchyItem> Items =
+      prepareCallHierarchy(AST, Source.point(), testPath(TU.Filename));
+  ASSERT_THAT(Items, ElementsAre(withName("var")));
+  auto IncomingLevel1 = incomingCalls(Items[0], Index.get());
+  ASSERT_THAT(IncomingLevel1,
+              ElementsAre(AllOf(from(withName("caller")),
+                                fromRanges(Source.range("Callee")))));
+}
+
 } // namespace
 } // namespace clangd
 } // namespace clang
