@@ -1264,6 +1264,11 @@ private:
     }
 
     bool TraverseStmt(Stmt *Statement) {
+      // If this statement is a `requires` clause from the top-level function
+      // being traversed, ignore it, since it's not generating runtime code.
+      // We skip the traversal of lambdas (beyond their captures, see
+      // TraverseLambdaExpr below), so just caching this from our constructor
+      // should suffice.
       if (Statement != TrailingRequiresClause)
         return Base::TraverseStmt(Statement);
       return true;
@@ -1307,6 +1312,7 @@ private:
     }
 
     bool TraverseBlockExpr(BlockExpr * /*unused*/) {
+      // As with lambdas, don't traverse the block's body.
       // TODO: are the capture expressions (ctor call?) safe?
       return true;
     }
