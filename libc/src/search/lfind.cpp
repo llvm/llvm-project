@@ -16,6 +16,9 @@ namespace LIBC_NAMESPACE_DECL {
 LLVM_LIBC_FUNCTION(void *, lfind,
                    (const void *key, const void *base, size_t *nmemb, size_t size,
                     int (*compar)(const void *, const void *))) {
+  if (key == nullptr || base == nullptr || nmemb == nullptr || compar == nullptr) 
+    return nullptr;
+  
   size_t byte_len = 0;
   if (internal::mul_overflow(*nmemb, size, &byte_len)) return nullptr;
     
