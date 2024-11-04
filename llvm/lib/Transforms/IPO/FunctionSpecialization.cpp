@@ -120,10 +120,6 @@ Cost InstCostVisitor::estimateBasicBlocks(
       continue;
 
     for (Instruction &I : *BB) {
-      // Disregard SSA copies.
-      if (auto *II = dyn_cast<IntrinsicInst>(&I))
-        if (II->getIntrinsicID() == Intrinsic::ssa_copy)
-          continue;
       // If it's a known constant we have already accounted for it.
       if (KnownConstants.contains(&I))
         continue;
@@ -402,6 +398,14 @@ Constant *InstCostVisitor::visitFreezeInst(FreezeInst &I) {
 }
 
 Constant *InstCostVisitor::visitCallBase(CallBase &I) {
+  assert(LastVisited != KnownConstants.end() && "Invalid iterator!");
+
+  // Look through calls to ssa_copy intrinsics.
+  if (auto *II = dyn_cast<IntrinsicInst>(&I);
+      II && II->getIntrinsicID() == Intrinsic::ssa_copy) {
+    return LastVisited->second;
+  }
+
   Function *F = I.getCalledFunction();
   if (!F || !canConstantFoldCallTo(&I, F))
     return nullptr;
