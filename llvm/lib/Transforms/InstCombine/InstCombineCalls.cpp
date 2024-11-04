@@ -1503,6 +1503,76 @@ foldMinimumOverTrailingOrLeadingZeroCount(Value *I0, Value *I1,
       ConstantInt::getTrue(ZeroUndef->getType()));
 }
 
+/// Return whether "X LOp (Y ROp Z)" is always equal to
+/// "(X LOp Y) ROp (X LOp Z)".
+static bool leftDistributesOverRight(Instruction::BinaryOps LOp, bool HasNUW,
+                                     bool HasNSW, Intrinsic::ID ROp) {
+  switch (ROp) {
+  case Intrinsic::umax:
+  case Intrinsic::umin:
+    return HasNUW && LOp == Instruction::Add;
+  case Intrinsic::smax:
+  case Intrinsic::smin:
+    return HasNSW && LOp == Instruction::Add;
+  default:
+    return false;
+  }
+}
+
+// Attempts to factorise a common term
+// in an instruction that has the form "(A op' B) op (C op' D)
+// where op is an intrinsic and op' is a binop
+static Value *
+foldIntrinsicUsingDistributiveLaws(IntrinsicInst *II,
+                                   InstCombiner::BuilderTy &Builder) {
+  Value *LHS = II->getOperand(0), *RHS = II->getOperand(1);
+  Intrinsic::ID TopLevelOpcode = II->getIntrinsicID();
+
+  OverflowingBinaryOperator *Op0 = dyn_cast<OverflowingBinaryOperator>(LHS);
+  OverflowingBinaryOperator *Op1 = dyn_cast<OverflowingBinaryOperator>(RHS);
+
+  if (!Op0 || !Op1)
+    return nullptr;
+
+  if (Op0->getOpcode() != Op1->getOpcode())
+    return nullptr;
+
+  if (!Op0->hasOneUse() || !Op1->hasOneUse())
+    return nullptr;
+
+  Instruction::BinaryOps InnerOpcode =
+      static_cast<Instruction::BinaryOps>(Op0->getOpcode());
+  bool HasNUW = Op0->hasNoUnsignedWrap() && Op1->hasNoUnsignedWrap();
+  bool HasNSW = Op0->hasNoSignedWrap() && Op1->hasNoSignedWrap();
+
+  if (!leftDistributesOverRight(InnerOpcode, HasNUW, HasNSW, TopLevelOpcode))
+    return nullptr;
+
+  assert(II->isCommutative() && Op0->isCommutative() &&
+         "Only inner and outer commutative op codes are supported.");
+
+  Value *A = Op0->getOperand(0);
+  Value *B = Op0->getOperand(1);
+  Value *C = Op1->getOperand(0);
+  Value *D = Op1->getOperand(1);
+
+  // Attempts to swap variables such that A always equals C
+  if (A != C && A != D)
+    std::swap(A, B);
+  if (A == C || A == D) {
+    if (A != C)
+      std::swap(C, D);
+    Value *NewIntrinsic = Builder.CreateBinaryIntrinsic(TopLevelOpcode, B, D);
+    BinaryOperator *NewBinop =
+        cast<BinaryOperator>(Builder.CreateBinOp(InnerOpcode, NewIntrinsic, A));
+    NewBinop->setHasNoSignedWrap(HasNSW);
+    NewBinop->setHasNoUnsignedWrap(HasNUW);
+    return NewBinop;
+  }
+
+  return nullptr;
+}
+
 /// CallInst simplification. This mostly only handles folding of intrinsic
 /// instructions. For normal calls, it allows visitCallBase to do the heavy
 /// lifting.
@@ -1927,6 +1997,9 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
                                      ConstantInt::get(II->getType(), *RHSC));
       }
     }
+
+    if (Value *V = foldIntrinsicUsingDistributiveLaws(II, Builder))
+      return replaceInstUsesWith(*II, V);
 
     break;
   }

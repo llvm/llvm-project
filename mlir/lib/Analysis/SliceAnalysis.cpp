@@ -16,7 +16,6 @@
 #include "mlir/IR/Operation.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Support/LLVM.h"
-#include "mlir/Transforms/RegionUtils.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
@@ -117,8 +116,18 @@ static void getBackwardSliceImpl(Operation *op,
   };
 
   if (!options.omitUsesFromAbove) {
-    visitUsedValuesDefinedAbove(op->getRegions(), [&](OpOperand *operand) {
-      processValue(operand->get());
+    llvm::for_each(op->getRegions(), [&](Region &region) {
+      // Walk this region recursively to collect the regions that descend from
+      // this op's nested regions (inclusive).
+      SmallPtrSet<Region *, 4> descendents;
+      region.walk(
+          [&](Region *childRegion) { descendents.insert(childRegion); });
+      region.walk([&](Operation *op) {
+        for (OpOperand &operand : op->getOpOperands()) {
+          if (!descendents.contains(operand.get().getParentRegion()))
+            processValue(operand.get());
+        }
+      });
     });
   }
   llvm::for_each(op->getOperands(), processValue);

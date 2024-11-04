@@ -190,6 +190,11 @@ libc_support_library(
     hdrs = ["hdr/stdio_overlay.h"],
 )
 
+libc_support_library(
+    name = "hdr_stdlib_overlay",
+    hdrs = ["hdr/stdlib_overlay.h"],
+)
+
 ############################ Type Proxy Header Files ###########################
 
 libc_support_library(
@@ -203,6 +208,12 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "types_div_t",
+    hdrs = ["hdr/types/div_t.h"],
+    deps = [":hdr_stdlib_overlay"],
+)
+
+libc_support_library(
     name = "types_fenv_t",
     hdrs = ["hdr/types/fenv_t.h"],
 )
@@ -210,6 +221,18 @@ libc_support_library(
 libc_support_library(
     name = "types_fexcept_t",
     hdrs = ["hdr/types/fexcept_t.h"],
+)
+
+libc_support_library(
+    name = "types_ldiv_t",
+    hdrs = ["hdr/types/ldiv_t.h"],
+    deps = [":hdr_stdlib_overlay"],
+)
+
+libc_support_library(
+    name = "types_lldiv_t",
+    hdrs = ["hdr/types/lldiv_t.h"],
+    deps = [":hdr_stdlib_overlay"],
 )
 
 libc_support_library(
@@ -221,6 +244,11 @@ libc_support_library(
 libc_support_library(
     name = "types_sigset_t",
     hdrs = ["hdr/types/sigset_t.h"],
+)
+
+libc_support_library(
+    name = "types_size_t",
+    hdrs = ["hdr/types/size_t.h"],
 )
 
 libc_support_library(
@@ -3304,6 +3332,7 @@ libc_function(
     deps = [
         ":__support_common",
         ":__support_integer_operations",
+        ":types_div_t",
     ],
 )
 
@@ -3314,6 +3343,7 @@ libc_function(
     deps = [
         ":__support_common",
         ":__support_integer_operations",
+        ":types_ldiv_t",
     ],
 )
 
@@ -3324,6 +3354,7 @@ libc_function(
     deps = [
         ":__support_common",
         ":__support_integer_operations",
+        ":types_lldiv_t",
     ],
 )
 
@@ -3402,6 +3433,7 @@ libc_function(
     deps = [
         ":__support_common",
         ":qsort_util",
+        ":types_size_t",
     ],
 )
 
@@ -3412,6 +3444,7 @@ libc_function(
     deps = [
         ":__support_common",
         ":qsort_util",
+        ":types_size_t",
     ],
 )
 

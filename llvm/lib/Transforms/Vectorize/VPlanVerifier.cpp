@@ -16,10 +16,8 @@
 #include "VPlan.h"
 #include "VPlanCFG.h"
 #include "VPlanDominatorTree.h"
-#include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/TypeSwitch.h"
-#include "llvm/Support/CommandLine.h"
 
 #define DEBUG_TYPE "loop-vectorize"
 
@@ -411,12 +409,6 @@ bool VPlanVerifier::verify(const VPlan &Plan) {
               "BranchOnCond VPInstruction\n";
     return false;
   }
-
-  for (const auto &KV : Plan.getLiveOuts())
-    if (KV.second->getNumOperands() != 1) {
-      errs() << "live outs must have a single operand\n";
-      return false;
-    }
 
   return true;
 }

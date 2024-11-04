@@ -2030,7 +2030,7 @@ const CXXRecordDecl *CXXRecordDecl::getTemplateInstantiationPattern() const {
   if (auto *TD = dyn_cast<ClassTemplateSpecializationDecl>(this)) {
     auto From = TD->getInstantiatedFrom();
     if (auto *CTD = From.dyn_cast<ClassTemplateDecl *>()) {
-      while (!CTD->hasMemberSpecialization()) {
+      while (!CTD->isMemberSpecialization()) {
         if (auto *NewCTD = CTD->getInstantiatedFromMemberTemplate())
           CTD = NewCTD;
         else
@@ -2040,7 +2040,7 @@ const CXXRecordDecl *CXXRecordDecl::getTemplateInstantiationPattern() const {
     }
     if (auto *CTPSD =
             From.dyn_cast<ClassTemplatePartialSpecializationDecl *>()) {
-      while (!CTPSD->hasMemberSpecialization()) {
+      while (!CTPSD->isMemberSpecialization()) {
         if (auto *NewCTPSD = CTPSD->getInstantiatedFromMemberTemplate())
           CTPSD = NewCTPSD;
         else
