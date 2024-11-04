@@ -621,21 +621,24 @@ bool SPIRVEmitNonSemanticDI::emitGlobalDI(MachineFunction &MF, const Module *M,
 
 bool SPIRVEmitNonSemanticDI::emitLineDI(MachineFunction &MF,
                                         LiveRepository &LR) const {
+  bool IsModified = false;
   for (auto &MBB : MF) {
     for (auto &MI : MBB) {
       if (MI.getDebugLoc().get()) {
         MachineIRBuilder MIRBuilder(MBB, MI);
         DebugLoc DL = MI.getDebugLoc();
+        assert(DL.getScope() && "DL.getScope() must exist and be DISubprogram");
         const auto *File = cast<DISubprogram>(DL.getScope())->getFile();
         const size_t ScopeIdx = emitDebugSource(File, MIRBuilder, TM, LR);
         const size_t LineIdx = LR.push(DL.getLine(), MIRBuilder, TM);
         const size_t ColIdx = LR.push(DL.getCol(), MIRBuilder, TM);
         LR.push<DebugLine>({ScopeIdx, LineIdx, LineIdx, ColIdx, ColIdx},
                            MIRBuilder, TM);
+        IsModified = true;
       }
     }
   }
-  return false;
+  return IsModified;
 }
 
 bool SPIRVEmitNonSemanticDI::runOnMachineFunction(MachineFunction &MF) {
@@ -653,9 +656,10 @@ bool SPIRVEmitNonSemanticDI::runOnMachineFunction(MachineFunction &MF) {
       const MachineModuleInfo &MMI =
           getAnalysis<MachineModuleInfoWrapperPass>().getMMI();
       const Module *M = MMI.getModule();
-      const NamedMDNode *DbgCu = M->getNamedMetadata("llvm.dbg.cu");
-      if (!DbgCu)
+      if (!M || !M->getNamedMetadata("llvm.dbg.cu")) {
         IsDIInModule = false;
+        return false;
+      }
       IsFunctionModified = emitGlobalDI(MF, M, LR);
     }
     IsFunctionModified |= emitLineDI(MF, LR);
