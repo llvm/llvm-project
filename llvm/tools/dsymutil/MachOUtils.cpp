@@ -373,7 +373,7 @@ static unsigned segmentLoadCommandSize(bool Is64Bit, unsigned NumSections) {
 // \a OutFile and it must be using a MachObjectWriter object to do so.
 bool generateDsymCompanion(
     llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS, const DebugMap &DM,
-    SymbolMapTranslator &Translator, MCStreamer &MS, raw_fd_ostream &OutFile,
+    MCStreamer &MS, raw_fd_ostream &OutFile,
     const std::vector<MachOUtils::DwarfRelocationApplicationInfo>
         &RelocationsToApply) {
   auto &ObjectStreamer = static_cast<MCObjectStreamer &>(MS);
@@ -509,12 +509,9 @@ bool generateDsymCompanion(
   }
 
   SmallString<0> NewSymtab;
-  std::function<StringRef(StringRef)> TranslationLambda =
-      Translator ? [&](StringRef Input) { return Translator(Input); }
-                 : static_cast<std::function<StringRef(StringRef)>>(nullptr);
   // Legacy dsymutil puts an empty string at the start of the line table.
   // thus we set NonRelocatableStringpool(,PutEmptyString=true)
-  NonRelocatableStringpool NewStrings(TranslationLambda, true);
+  NonRelocatableStringpool NewStrings(true);
   unsigned NListSize = Is64Bit ? sizeof(MachO::nlist_64) : sizeof(MachO::nlist);
   unsigned NumSyms = 0;
   uint64_t NewStringsSize = 0;

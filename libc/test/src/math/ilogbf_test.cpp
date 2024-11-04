@@ -8,12 +8,12 @@
 
 #include "ILogbTest.h"
 
+#include "include/llvm-libc-macros/math-macros.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/ManipulationFunctions.h"
 #include "src/math/ilogbf.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
-#include <math.h>
 
 TEST_F(LlvmLibcILogbTest, SpecialNumbers_ilogbf) {
   test_special_numbers<float>(&LIBC_NAMESPACE::ilogbf);

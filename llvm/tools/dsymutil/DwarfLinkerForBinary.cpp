@@ -634,25 +634,19 @@ bool DwarfLinkerForBinary::linkImpl(
 
   DebugMap DebugMap(Map.getTriple(), Map.getBinaryPath());
 
-  std::function<StringRef(StringRef)> TranslationLambda = [&](StringRef Input) {
-    assert(Options.Translator);
-    return Options.Translator(Input);
-  };
-
   std::unique_ptr<Linker> GeneralLinker = Linker::createLinker(
       [&](const Twine &Error, StringRef Context, const DWARFDie *DIE) {
         reportError(Error, Context, DIE);
       },
       [&](const Twine &Warning, StringRef Context, const DWARFDie *DIE) {
         reportWarning(Warning, Context, DIE);
-      },
-      Options.Translator ? TranslationLambda : nullptr);
+      });
 
   std::unique_ptr<classic::DwarfStreamer> Streamer;
   if (!Options.NoOutput) {
     if (Expected<std::unique_ptr<classic::DwarfStreamer>> StreamerOrErr =
             classic::DwarfStreamer::createStreamer(
-                Map.getTriple(), ObjectType, OutFile, Options.Translator,
+                Map.getTriple(), ObjectType, OutFile,
                 [&](const Twine &Warning, StringRef Context,
                     const DWARFDie *DIE) {
                   reportWarning(Warning, Context, DIE);
@@ -866,8 +860,8 @@ bool DwarfLinkerForBinary::linkImpl(
   if (Map.getTriple().isOSDarwin() && !Map.getBinaryPath().empty() &&
       ObjectType == Linker::OutputFileType::Object)
     return MachOUtils::generateDsymCompanion(
-        Options.VFS, Map, Options.Translator,
-        *Streamer->getAsmPrinter().OutStreamer, OutFile, RelocationsToApply);
+        Options.VFS, Map, *Streamer->getAsmPrinter().OutStreamer, OutFile,
+        RelocationsToApply);
 
   Streamer->finish();
   return true;

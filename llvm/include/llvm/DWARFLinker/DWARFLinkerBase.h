@@ -82,7 +82,6 @@ public:
       std::function<void(const DWARFFile &File, llvm::StringRef Output)>;
   using ObjectPrefixMapTy = std::map<std::string, std::string>;
   using CompileUnitHandlerTy = function_ref<void(const DWARFUnit &Unit)>;
-  using TranslatorFuncTy = std::function<StringRef(StringRef)>;
   using SwiftInterfacesMapTy = std::map<std::string, std::string>;
   /// Type of output file.
   enum class OutputFileType : uint8_t {

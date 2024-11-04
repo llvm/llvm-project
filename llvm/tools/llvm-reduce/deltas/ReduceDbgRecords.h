@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 //
 // This file implements a function which calls the Generic Delta pass in order
-// to reduce uninteresting DPValues from defined functions.
+// to reduce uninteresting DbgVariableRecords from defined functions.
 //
 //===----------------------------------------------------------------------===//
 

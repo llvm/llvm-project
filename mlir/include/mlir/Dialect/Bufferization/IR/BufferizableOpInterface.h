@@ -142,7 +142,7 @@ public:
   /// This function adds an ALLOW entry.
   void allowDialect(StringRef dialectNamespace) {
     Entry::FilterFn filterFn = [=](Operation *op) {
-      return op->getDialect()->getNamespace() == dialectNamespace;
+      return op->getName().getDialectNamespace() == dialectNamespace;
     };
     entries.push_back(Entry{filterFn, Entry::FilterType::ALLOW});
   }

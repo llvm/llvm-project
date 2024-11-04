@@ -2313,8 +2313,6 @@ TEST(TransferTest, AssignmentOperator_ArgByValue) {
 }
 
 TEST(TransferTest, AssignmentOperatorFromBase) {
-  // This is a crash repro. We don't model the copy this case, so no
-  // expectations on the copied field of the base class are checked.
   std::string Code = R"(
     struct Base {
       int base;
@@ -2326,14 +2324,33 @@ TEST(TransferTest, AssignmentOperatorFromBase) {
     void target(Base B, Derived D) {
       D.base = 1;
       D.derived = 1;
+      // [[before]]
       D = B;
-      // [[p]]
+      // [[after]]
     }
   )";
   runDataflow(
       Code,
       [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
-         ASTContext &ASTCtx) {});
+         ASTContext &ASTCtx) {
+        const Environment &EnvBefore =
+            getEnvironmentAtAnnotation(Results, "before");
+        const Environment &EnvAfter =
+            getEnvironmentAtAnnotation(Results, "after");
+
+        auto &BLoc =
+            getLocForDecl<RecordStorageLocation>(ASTCtx, EnvBefore, "B");
+        auto &DLoc =
+            getLocForDecl<RecordStorageLocation>(ASTCtx, EnvBefore, "D");
+
+        EXPECT_NE(getFieldValue(&BLoc, "base", ASTCtx, EnvBefore),
+                  getFieldValue(&DLoc, "base", ASTCtx, EnvBefore));
+        EXPECT_EQ(getFieldValue(&BLoc, "base", ASTCtx, EnvAfter),
+                  getFieldValue(&DLoc, "base", ASTCtx, EnvAfter));
+
+        EXPECT_EQ(getFieldValue(&DLoc, "derived", ASTCtx, EnvBefore),
+                  getFieldValue(&DLoc, "derived", ASTCtx, EnvAfter));
+      });
 }
 
 TEST(TransferTest, AssignmentOperatorFromCallResult) {

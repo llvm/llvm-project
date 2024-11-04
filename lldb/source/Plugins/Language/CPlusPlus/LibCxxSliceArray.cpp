@@ -35,7 +35,7 @@ bool LibcxxStdSliceArraySummaryProvider(ValueObject &valobj, Stream &stream,
     return false;
   const size_t stride = ptr_sp->GetValueAsUnsigned(0);
 
-  stream.Printf("stride=%" PRIu64 " size=%" PRIu64, stride, size);
+  stream.Printf("stride=%zu size=%zu", stride, size);
 
   return true;
 }

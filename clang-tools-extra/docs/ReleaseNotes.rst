@@ -110,6 +110,13 @@ New checks
   Detects error-prone Curiously Recurring Template Pattern usage, when the CRTP
   can be constructed outside itself and the derived class.
 
+- New :doc:`bugprone-suspicious-stringview-data-usage
+  <clang-tidy/checks/bugprone/suspicious-stringview-data-usage>` check.
+
+  Identifies suspicious usages of ``std::string_view::data()`` that could lead
+  to reading out-of-bounds data due to inadequate or incorrect string null
+  termination.
+
 - New :doc:`modernize-use-designated-initializers
   <clang-tidy/checks/modernize/use-designated-initializers>` check.
 
@@ -164,6 +171,10 @@ Changes in existing checks
   <clang-tidy/checks/cppcoreguidelines/missing-std-forward>` check by no longer
   giving false positives for deleted functions and fix false negative when some
   parameters are forwarded, but other aren't.
+
+- Improved :doc:`cppcoreguidelines-owning-memory
+  <clang-tidy/checks/cppcoreguidelines/owning-memory>` check to properly handle
+  return type in lambdas and in nested functions.
 
 - Cleaned up :doc:`cppcoreguidelines-prefer-member-initializer
   <clang-tidy/checks/cppcoreguidelines/prefer-member-initializer>`

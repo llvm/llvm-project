@@ -35,8 +35,8 @@
 #COO_3D = #sparse_tensor.encoding<{ map = (d0, d1, d2) -> (d0 : compressed(nonunique), d1 : singleton(nonunique), d2 : singleton), posWidth = 32, crdWidth = 32 }>
 
 module {
-  func.func private @printMemref3dF32(%ptr : tensor<?x?x?xf32>) attributes { llvm.emit_c_interface }
-  func.func private @printMemref2dF32(%ptr : tensor<?x?xf32>) attributes { llvm.emit_c_interface }
+  func.func private @printMemref3dF32(%ptr : tensor<?x?x?xf32> {bufferization.access = "read"}) attributes { llvm.emit_c_interface }
+  func.func private @printMemref2dF32(%ptr : tensor<?x?xf32> {bufferization.access = "read"}) attributes { llvm.emit_c_interface }
 
   func.func @test_sparse_rhs(%arg0: tensor<5x6xf32>, %arg1: tensor<6x2x3xf32, #COO_3D>) -> tensor<?x?x?xf32> {
     %collapsed = tensor.collapse_shape %arg1 [[0], [1, 2]] : tensor<6x2x3xf32, #COO_3D> into tensor<6x6xf32, #COO_2D>
@@ -46,6 +46,11 @@ module {
     %2 = linalg.matmul ins(%arg0, %collapsed : tensor<5x6xf32>, tensor<6x6xf32, #COO_2D>) outs(%1 : tensor<5x6xf32>) -> tensor<5x6xf32>
     %expanded = tensor.expand_shape %2 [[0], [1, 2]] : tensor<5x6xf32> into tensor<5x2x3xf32>
     %ret1 = tensor.cast %expanded : tensor<5x2x3xf32> to tensor<?x?x?xf32>
+
+    // Note: tensor.collapse_shape is a metadata-only operation on dense tensors
+    // but requires reallocation on sparse tensors.
+    bufferization.dealloc_tensor %collapsed : tensor<6x6xf32, #COO_2D>
+
     return %ret1 : tensor<?x?x?xf32>
   }
 
@@ -57,6 +62,11 @@ module {
     %2 = linalg.matmul ins(%arg0, %collapsed : tensor<5x6xf32, #COO_2D>, tensor<6x6xf32, #COO_2D>) outs(%1 : tensor<5x6xf32>) -> tensor<5x6xf32>
     %expanded = tensor.expand_shape %2 [[0], [1, 2]] : tensor<5x6xf32> into tensor<5x2x3xf32>
     %ret1 = tensor.cast %expanded : tensor<5x2x3xf32> to tensor<?x?x?xf32>
+
+    // Note: tensor.collapse_shape is a metadata-only operation on dense tensors
+    // but requires reallocation on sparse tensors.
+    bufferization.dealloc_tensor %collapsed : tensor<6x6xf32, #COO_2D>
+
     return %ret1 : tensor<?x?x?xf32>
   }
 
@@ -80,6 +90,11 @@ module {
     %2 = linalg.matmul ins(%arg0, %collapsed : tensor<5x6xf32, #COO_2D>, tensor<6x6xf32, #COO_2D>) outs(%1 : tensor<5x6xf32>) -> tensor<5x6xf32>
     %expanded = tensor.expand_shape %2 [[0], [1, 2]] : tensor<5x6xf32> into tensor<5x2x3xf32>
     %ret1 = tensor.cast %expanded : tensor<5x2x3xf32> to tensor<?x?x?xf32>
+
+    // Note: tensor.collapse_shape is a metadata-only operation on dense tensors
+    // but requires reallocation on sparse tensors.
+    bufferization.dealloc_tensor %collapsed : tensor<6x6xf32, #COO_2D>
+
     return %ret1 : tensor<?x?x?xf32>
   }
 
@@ -192,6 +207,7 @@ module {
     bufferization.dealloc_tensor %so1 : tensor<?x?x?xf32>
     bufferization.dealloc_tensor %so2 : tensor<?x?x?xf32>
     bufferization.dealloc_tensor %so3 : tensor<?x?x?xf32>
+
     return
   }
 }

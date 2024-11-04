@@ -1,4 +1,4 @@
-! RUN: bbc -polymorphic-type -emit-hlfir %s -o - | FileCheck %s
+! RUN: bbc -emit-hlfir %s -o - | FileCheck %s
 
 ! Test passing arguments to subprograms with polymorphic dummy arguments.
 

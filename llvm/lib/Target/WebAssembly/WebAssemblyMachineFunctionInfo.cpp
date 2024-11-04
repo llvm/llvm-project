@@ -105,7 +105,7 @@ void llvm::computeSignatureVTs(const FunctionType *Ty,
   }
 }
 
-void llvm::valTypesFromMVTs(const ArrayRef<MVT> &In,
+void llvm::valTypesFromMVTs(ArrayRef<MVT> In,
                             SmallVectorImpl<wasm::ValType> &Out) {
   for (MVT Ty : In)
     Out.push_back(WebAssembly::toValType(Ty));
