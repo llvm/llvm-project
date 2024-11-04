@@ -60,8 +60,8 @@ uint64_t LLLexer::atoull(const char *Buffer, const char *End) {
     uint64_t OldRes = Result;
     Result *= 10;
     Result += *Buffer-'0';
-    if (Result < OldRes) {  // Uh, oh, overflow detected!!!
-      LexError("constant bigger than 64 bits detected!");
+    if (Result < OldRes) { // overflow detected.
+      LexError("constant bigger than 64 bits detected");
       return 0;
     }
   }
@@ -75,8 +75,8 @@ uint64_t LLLexer::HexIntToVal(const char *Buffer, const char *End) {
     Result *= 16;
     Result += hexDigitValue(*Buffer);
 
-    if (Result < OldRes) {   // Uh, oh, overflow detected!!!
-      LexError("constant bigger than 64 bits detected!");
+    if (Result < OldRes) { // overflow detected.
+      LexError("constant bigger than 64 bits detected");
       return 0;
     }
   }
@@ -99,7 +99,7 @@ void LLLexer::HexToIntPair(const char *Buffer, const char *End,
     Pair[1] += hexDigitValue(*Buffer);
   }
   if (Buffer != End)
-    LexError("constant bigger than 128 bits detected!");
+    LexError("constant bigger than 128 bits detected");
 }
 
 /// FP80HexToIntPair - translate an 80 bit FP80 number (20 hexits) into
@@ -118,7 +118,7 @@ void LLLexer::FP80HexToIntPair(const char *Buffer, const char *End,
     Pair[0] += hexDigitValue(*Buffer);
   }
   if (Buffer != End)
-    LexError("constant bigger than 128 bits detected!");
+    LexError("constant bigger than 128 bits detected");
 }
 
 // UnEscapeLexed - Run through the specified buffer and change \xx codes to the
@@ -292,7 +292,7 @@ lltok::Kind LLLexer::LexDollar() {
         StrVal.assign(TokStart + 2, CurPtr - 1);
         UnEscapeLexed(StrVal);
         if (StringRef(StrVal).contains(0)) {
-          LexError("Null bytes are not allowed in names");
+          LexError("NUL character is not allowed in names");
           return lltok::Error;
         }
         return lltok::ComdatVar;
@@ -354,7 +354,7 @@ lltok::Kind LLLexer::LexUIntID(lltok::Kind Token) {
 
   uint64_t Val = atoull(TokStart + 1, CurPtr);
   if ((unsigned)Val != Val)
-    LexError("invalid value number (too large)!");
+    LexError("invalid value number (too large)");
   UIntVal = unsigned(Val);
   return Token;
 }
@@ -375,7 +375,7 @@ lltok::Kind LLLexer::LexVar(lltok::Kind Var, lltok::Kind VarID) {
         StrVal.assign(TokStart+2, CurPtr-1);
         UnEscapeLexed(StrVal);
         if (StringRef(StrVal).contains(0)) {
-          LexError("Null bytes are not allowed in names");
+          LexError("NUL character is not allowed in names");
           return lltok::Error;
         }
         return Var;
@@ -410,7 +410,7 @@ lltok::Kind LLLexer::LexQuote() {
   if (CurPtr[0] == ':') {
     ++CurPtr;
     if (StringRef(StrVal).contains(0)) {
-      LexError("Null bytes are not allowed in names");
+      LexError("NUL character is not allowed in names");
       kind = lltok::Error;
     } else {
       kind = lltok::LabelStr;
@@ -492,7 +492,7 @@ lltok::Kind LLLexer::LexIdentifier() {
     uint64_t NumBits = atoull(StartChar, CurPtr);
     if (NumBits < IntegerType::MIN_INT_BITS ||
         NumBits > IntegerType::MAX_INT_BITS) {
-      LexError("bitwidth for integer type out of range!");
+      LexError("bitwidth for integer type out of range");
       return lltok::Error;
     }
     TyVal = IntegerType::get(Context, NumBits);
@@ -1122,7 +1122,7 @@ lltok::Kind LLLexer::LexDigitOrNegative() {
     uint64_t Val = atoull(TokStart, CurPtr);
     ++CurPtr; // Skip the colon.
     if ((unsigned)Val != Val)
-      LexError("invalid value number (too large)!");
+      LexError("invalid value number (too large)");
     UIntVal = unsigned(Val);
     return lltok::LabelID;
   }

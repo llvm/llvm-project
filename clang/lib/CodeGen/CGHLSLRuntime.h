@@ -143,6 +143,7 @@ public:
 
   bool needsResourceBindingInitFn();
   llvm::Function *createResourceBindingInitFn();
+  llvm::Instruction *getConvergenceToken(llvm::BasicBlock &BB);
 
 private:
   void addBufferResourceAnnotation(llvm::GlobalVariable *GV,

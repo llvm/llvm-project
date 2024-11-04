@@ -110,7 +110,6 @@ json::Value ProgressEvent::ToJSON() const {
   std::string progress_id_str;
   llvm::raw_string_ostream progress_id_strm(progress_id_str);
   progress_id_strm << m_progress_id;
-  progress_id_strm.flush();
   body.try_emplace("progressId", progress_id_str);
 
   if (m_event_type == progressStart) {

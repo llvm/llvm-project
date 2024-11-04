@@ -1,6 +1,6 @@
 // Test that the DSO-local runtime library has been linked if -fxray-shared is passed.
 //
-// RUN: %clangxx -fxray-instrument -fxray-shared %s -shared -o %t.so
+// RUN: %clangxx -fxray-instrument -fxray-shared -fPIC %s -shared -o %t.so
 // RUN: llvm-nm %t.so | FileCheck %s --check-prefix ENABLED
 
 // RUN: %clangxx -fxray-instrument %s -shared -o %t.so

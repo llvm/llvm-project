@@ -21,4 +21,11 @@
 #  pragma GCC system_header
 #endif
 
+#if _LIBCPP_STD_VER >= 20
+
+using __standard_header_ciso646 _LIBCPP_DEPRECATED_("removed in C++20. Include <version> instead.") = void;
+using __use_standard_header_ciso646 = __standard_header_ciso646;
+
+#endif
+
 #endif // _LIBCPP_CISO646

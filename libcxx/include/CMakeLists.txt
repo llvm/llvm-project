@@ -358,6 +358,8 @@ set(files
   __filesystem/recursive_directory_iterator.h
   __filesystem/space_info.h
   __filesystem/u8path.h
+  __flat_map/flat_map.h
+  __flat_map/sorted_unique.h
   __format/buffer.h
   __format/concepts.h
   __format/container_adaptor.h
@@ -492,8 +494,10 @@ set(files
   __locale
   __locale_dir/locale_base_api.h
   __locale_dir/locale_base_api/android.h
+  __locale_dir/locale_base_api/apple.h
   __locale_dir/locale_base_api/bsd_locale_defaults.h
   __locale_dir/locale_base_api/bsd_locale_fallbacks.h
+  __locale_dir/locale_base_api/freebsd.h
   __locale_dir/locale_base_api/fuchsia.h
   __locale_dir/locale_base_api/ibm.h
   __locale_dir/locale_base_api/musl.h
@@ -919,6 +923,7 @@ set(files
   coroutine
   csetjmp
   csignal
+  cstdalign
   cstdarg
   cstdbool
   cstddef
@@ -957,6 +962,7 @@ set(files
   ext/hash_set
   fenv.h
   filesystem
+  flat_map
   float.h
   format
   forward_list

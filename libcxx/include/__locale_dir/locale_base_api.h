@@ -9,6 +9,8 @@
 #ifndef _LIBCPP___LOCALE_DIR_LOCALE_BASE_API_H
 #define _LIBCPP___LOCALE_DIR_LOCALE_BASE_API_H
 
+#include <__config>
+
 #if defined(_LIBCPP_MSVCRT_LIKE)
 #  include <__locale_dir/locale_base_api/win32.h>
 #elif defined(_AIX) || defined(__MVS__)
@@ -21,8 +23,16 @@
 #  include <__locale_dir/locale_base_api/fuchsia.h>
 #elif defined(__wasi__) || defined(_LIBCPP_HAS_MUSL_LIBC)
 #  include <__locale_dir/locale_base_api/musl.h>
-#elif defined(__APPLE__) || defined(__FreeBSD__)
-#  include <xlocale.h>
+#elif defined(__APPLE__)
+#  include <__locale_dir/locale_base_api/apple.h>
+#elif defined(__FreeBSD__)
+#  include <__locale_dir/locale_base_api/freebsd.h>
+#endif
+
+#ifdef _LIBCPP_LOCALE__L_EXTENSIONS
+#  include <__locale_dir/locale_base_api/bsd_locale_defaults.h>
+#else
+#  include <__locale_dir/locale_base_api/bsd_locale_fallbacks.h>
 #endif
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
@@ -44,7 +54,8 @@ size_t __libcpp_mbsnrtowcs_l(wchar_t* dest, const char** src, size_t max_out, si
 size_t __libcpp_mbrtowc_l(wchar_t* dest, cosnt char* src, size_t count, mbstate_t*, locale_t);
 int __libcpp_mbtowc_l(wchar_t* dest, const char* src, size_t count, locale_t);
 size_t __libcpp_mbrlen_l(const char* str, size_t count, mbstate_t*, locale_t);
-lconv* __libcpp_localeconv_l(locale_t);
+// TODO: __libcpp_localeconv_l shouldn't take a reference, but the Windows implementation doesn't allow copying locale_t
+lconv* __libcpp_localeconv_l(locale_t&);
 size_t __libcpp_mbsrtowcs_l(wchar_t* dest, const char** src, size_t len, mbstate_t*, locale_t);
 int __libcpp_snprintf_l(char* dest, size_t buff_size, locale_t, const char* format, ...);
 int __libcpp_asprintf_l(char** dest, locale_t, const char* format, ...);

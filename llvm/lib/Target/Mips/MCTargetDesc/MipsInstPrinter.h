@@ -84,7 +84,7 @@ public:
                         const MCSubtargetInfo &STI, raw_ostream &O);
   static const char *getRegisterName(MCRegister Reg);
 
-  void printRegName(raw_ostream &OS, MCRegister Reg) const override;
+  void printRegName(raw_ostream &OS, MCRegister Reg) override;
   void printInst(const MCInst *MI, uint64_t Address, StringRef Annot,
                  const MCSubtargetInfo &STI, raw_ostream &O) override;
 
