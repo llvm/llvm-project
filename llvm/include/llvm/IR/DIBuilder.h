@@ -227,7 +227,7 @@ namespace llvm {
     /// \param Flags       Optional DWARF attributes, e.g., DW_AT_endianity.
     /// \param NumExtraInhabitants The number of extra inhabitants of the type.
     /// An extra inhabitant is a bit pattern that does not represent a valid
-    /// value for instances of a given type.
+    /// value for instances of a given type. This is used by the Swift language.
     DIBasicType *createBasicType(StringRef Name, uint64_t SizeInBits,
                                  unsigned Encoding,
                                  DINode::DIFlags Flags = DINode::FlagZero,
@@ -490,7 +490,7 @@ namespace llvm {
     /// \param UniqueIdentifier A unique identifier for the struct.
     /// \param NumExtraInhabitants The number of extra inhabitants of the type.
     /// An extra inhabitant is a bit pattern that does not represent a valid
-    /// value for instances of a given type.
+    /// value for instances of a given type. This is used by the Swift language.
     DICompositeType *createStructType(
         DIScope *Scope, StringRef Name, DIFile *File, unsigned LineNumber,
         uint64_t SizeInBits, uint32_t AlignInBits, DINode::DIFlags Flags,

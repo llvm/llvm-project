@@ -617,6 +617,7 @@ HANDLE_DW_AT(0x3e07, LLVM_apinotes, 0, APPLE)
 HANDLE_DW_AT(0x3e08, LLVM_ptrauth_isa_pointer, 0, LLVM)
 HANDLE_DW_AT(0x3e09, LLVM_ptrauth_authenticates_null_values, 0, LLVM)
 HANDLE_DW_AT(0x3e0a, LLVM_ptrauth_authentication_mode, 0, LLVM)
+HANDLE_DW_AT(0x3e0b, LLVM_num_extra_inhabitants, 0, LLVM)
 
 // Apple extensions.
 
@@ -636,7 +637,6 @@ HANDLE_DW_AT(0x3fed, APPLE_property, 0, APPLE)
 HANDLE_DW_AT(0x3fee, APPLE_objc_direct, 0, APPLE)
 HANDLE_DW_AT(0x3fef, APPLE_sdk, 0, APPLE)
 HANDLE_DW_AT(0x3ff0, APPLE_origin, 0, APPLE)
-HANDLE_DW_AT(0x3ff1, APPLE_num_extra_inhabitants, 0, APPLE)
 
 // Attribute form encodings.
 HANDLE_DW_FORM(0x01, addr, 2, DWARF)
