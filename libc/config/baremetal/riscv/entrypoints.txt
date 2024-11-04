@@ -26,9 +26,9 @@ set(TARGET_LIBC_ENTRYPOINTS
     # errno.h entrypoints
     libc.src.errno.errno
 
-	# search.h entrypoints
-	libc.src.search.lfind
-	
+    # search.h entrypoints
+    libc.src.search.lfind
+
     # string.h entrypoints
     libc.src.string.bcmp
     libc.src.string.bcopy
