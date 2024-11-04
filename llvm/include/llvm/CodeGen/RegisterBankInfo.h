@@ -63,8 +63,8 @@ public:
     PartialMapping() = default;
 
     /// Provide a shortcut for quickly building PartialMapping.
-    PartialMapping(unsigned StartIdx, unsigned Length,
-                   const RegisterBank &RegBank)
+    constexpr PartialMapping(unsigned StartIdx, unsigned Length,
+                             const RegisterBank &RegBank)
         : StartIdx(StartIdx), Length(Length), RegBank(&RegBank) {}
 
     /// \return the index of in the original value of the most
@@ -157,7 +157,8 @@ public:
     /// Initialize a ValueMapping with the given parameter.
     /// \p BreakDown needs to have a life time at least as long
     /// as this instance.
-    ValueMapping(const PartialMapping *BreakDown, unsigned NumBreakDowns)
+    constexpr ValueMapping(const PartialMapping *BreakDown,
+                           unsigned NumBreakDowns)
         : BreakDown(BreakDown), NumBreakDowns(NumBreakDowns) {}
 
     /// Iterators through the PartialMappings.

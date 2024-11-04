@@ -14,6 +14,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/CodeGen/ExpandLargeDivRem.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Analysis/GlobalsModRef.h"
@@ -127,6 +128,13 @@ public:
   }
 };
 } // namespace
+
+PreservedAnalyses ExpandLargeDivRemPass::run(Function &F,
+                                             FunctionAnalysisManager &FAM) {
+  const TargetSubtargetInfo *STI = TM->getSubtargetImpl(F);
+  return runImpl(F, *STI->getTargetLowering()) ? PreservedAnalyses::none()
+                                               : PreservedAnalyses::all();
+}
 
 char ExpandLargeDivRemLegacyPass::ID = 0;
 INITIALIZE_PASS_BEGIN(ExpandLargeDivRemLegacyPass, "expand-large-div-rem",

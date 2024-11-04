@@ -492,6 +492,7 @@ libcxx/src/any.cpp
 libcxx/src/atomic.cpp
 libcxx/src/barrier.cpp
 libcxx/src/bind.cpp
+libcxx/src/call_once.cpp
 libcxx/src/charconv.cpp
 libcxx/src/chrono.cpp
 libcxx/src/condition_variable.cpp
@@ -708,7 +709,6 @@ libcxx/test/libcxx/containers/views/views.span/span.elem/assert.op_idx.pass.cpp
 libcxx/test/libcxx/containers/views/views.span/span.sub/assert.first.pass.cpp
 libcxx/test/libcxx/containers/views/views.span/span.sub/assert.last.pass.cpp
 libcxx/test/libcxx/containers/views/views.span/span.sub/assert.subspan.pass.cpp
-libcxx/test/libcxx/debug/containers/associative_containers.pass.cpp
 libcxx/test/libcxx/debug/containers.multithread.pass.cpp
 libcxx/test/libcxx/debug/containers/sequence_container_iterators.pass.cpp
 libcxx/test/libcxx/debug/containers/string.pass.cpp
@@ -827,7 +827,6 @@ libcxx/test/libcxx/iterators/predef.iterators/__unconstrained_reverse_iterator/t
 libcxx/test/libcxx/iterators/stream.iterators/ostreambuf.iterator/ostreambuf.iter.ops/failed.pass.cpp
 libcxx/test/libcxx/iterators/unwrap_iter.pass.cpp
 libcxx/test/libcxx/language.support/cxa_deleted_virtual.pass.cpp
-libcxx/test/libcxx/language.support/support.dynamic/aligned_alloc_availability.verify.cpp
 libcxx/test/libcxx/language.support/support.dynamic/libcpp_deallocate.sh.cpp
 libcxx/test/libcxx/language.support/support.dynamic/new_faligned_allocation.pass.cpp
 libcxx/test/libcxx/language.support/support.rtti/type.info/type_info.comparison.apple.compile.pass.cpp
@@ -1140,8 +1139,6 @@ libcxx/test/std/algorithms/alg.nonmodifying/alg.equal/ranges.equal.pass.cpp
 libcxx/test/std/algorithms/alg.nonmodifying/alg.find.end/find_end.pass.cpp
 libcxx/test/std/algorithms/alg.nonmodifying/alg.find.end/find_end_pred.pass.cpp
 libcxx/test/std/algorithms/alg.nonmodifying/alg.find.end/ranges.find_end.pass.cpp
-libcxx/test/std/algorithms/alg.nonmodifying/alg.find/find_if_not.pass.cpp
-libcxx/test/std/algorithms/alg.nonmodifying/alg.find/find_if.pass.cpp
 libcxx/test/std/algorithms/alg.nonmodifying/alg.find.first.of/find_first_of.pass.cpp
 libcxx/test/std/algorithms/alg.nonmodifying/alg.find.first.of/find_first_of_pred.pass.cpp
 libcxx/test/std/algorithms/alg.nonmodifying/alg.find.first.of/ranges.find_first_of.pass.cpp
@@ -7217,7 +7214,6 @@ libcxx/test/support/archetypes.h
 libcxx/test/support/archetypes.ipp
 libcxx/test/support/asan_testing.h
 libcxx/test/support/assert_macros.h
-libcxx/test/support/boolean_testable.h
 libcxx/test/support/callable_types.h
 libcxx/test/support/charconv_test_helpers.h
 libcxx/test/support/check_assertion.h

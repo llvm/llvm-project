@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -convert-nvgpu-to-nvvm='use-opaque-pointers=1' | FileCheck %s
+// RUN: mlir-opt %s -convert-nvgpu-to-nvvm | FileCheck %s
 // RUN: mlir-opt %s -transform-interpreter | FileCheck %s
 
 // CHECK-LABEL: @m16n8k16_fp16

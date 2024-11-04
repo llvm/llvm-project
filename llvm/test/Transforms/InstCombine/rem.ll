@@ -540,7 +540,8 @@ if.end:
   br i1 icmp eq (ptr getelementptr inbounds ([5 x i16], ptr @a, i64 0, i64 4), ptr @b), label %rem.is.safe, label %rem.is.unsafe
 
 rem.is.safe:
-  %rem = srem i32 %lhs, zext (i1 icmp eq (ptr getelementptr inbounds ([5 x i16], ptr @a, i64 0, i64 4), ptr @b) to i32)
+  %ext = zext i1 icmp eq (ptr getelementptr inbounds ([5 x i16], ptr @a, i64 0, i64 4), ptr @b) to i32
+  %rem = srem i32 %lhs, %ext
   ret i32 %rem
 
 rem.is.unsafe:
@@ -608,7 +609,8 @@ if.end:
   br i1 icmp eq (ptr getelementptr inbounds ([5 x i16], ptr @a, i64 0, i64 4), ptr @b), label %rem.is.safe, label %rem.is.unsafe
 
 rem.is.safe:
-  %rem = urem i32 %lhs, zext (i1 icmp eq (ptr getelementptr inbounds ([5 x i16], ptr @a, i64 0, i64 4), ptr @b) to i32)
+  %ext = zext i1 icmp eq (ptr getelementptr inbounds ([5 x i16], ptr @a, i64 0, i64 4), ptr @b) to i32
+  %rem = urem i32 %lhs, %ext
   ret i32 %rem
 
 rem.is.unsafe:

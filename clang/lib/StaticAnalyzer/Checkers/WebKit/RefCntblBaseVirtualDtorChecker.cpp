@@ -114,7 +114,7 @@ public:
       return true;
 
     const auto Kind = RD->getTagKind();
-    if (Kind != TTK_Struct && Kind != TTK_Class)
+    if (Kind != TagTypeKind::Struct && Kind != TagTypeKind::Class)
       return true;
 
     // Ignore CXXRecords that come from system headers.

@@ -2027,6 +2027,46 @@ func.func @insert_element_invalid_fold() -> vector<1xf32> {
   return %46 : vector<1xf32>
 }
 
+
+// -----
+
+// Do not crash on poison
+// CHECK-LABEL: func @insert_poison_fold1
+//       CHECK:   vector.insertelement
+func.func @insert_poison_fold1() -> vector<4xi32> {
+  %v = ub.poison : vector<4xi32>
+  %s = arith.constant 7 : i32
+  %i = arith.constant 2 : i32
+  %1 = vector.insertelement %s, %v[%i : i32] : vector<4xi32>
+  return %1 : vector<4xi32>
+}
+
+// -----
+
+// Do not crash on poison
+// CHECK-LABEL: func @insert_poison_fold2
+//       CHECK:   vector.insertelement
+func.func @insert_poison_fold2() -> vector<4xi32> {
+  %v = arith.constant dense<[0, 1, 2, 3]> : vector<4xi32>
+  %s = ub.poison : i32
+  %i = arith.constant 2 : i32
+  %1 = vector.insertelement %s, %v[%i : i32] : vector<4xi32>
+  return %1 : vector<4xi32>
+}
+
+// -----
+
+// Do not crash on poison
+// CHECK-LABEL: func @insert_poison_fold3
+//       CHECK:   vector.insertelement
+func.func @insert_poison_fold3() -> vector<4xi32> {
+  %v = arith.constant dense<[0, 1, 2, 3]> : vector<4xi32>
+  %s = arith.constant 7 : i32
+  %i = ub.poison : i32
+  %1 = vector.insertelement %s, %v[%i : i32] : vector<4xi32>
+  return %1 : vector<4xi32>
+}
+
 // -----
 
 // CHECK-LABEL: func @extract_element_fold
@@ -2045,6 +2085,30 @@ func.func @extract_element_fold() -> i32 {
 func.func @extract_element_splat_fold(%a : i32) -> i32 {
   %v = vector.splat %a : vector<4xi32>
   %i = arith.constant 2 : i32
+  %1 = vector.extractelement %v[%i : i32] : vector<4xi32>
+  return %1 : i32
+}
+
+// -----
+
+// Do not crash on poison
+// CHECK-LABEL: func @extract_element_poison_fold1
+//       CHECK:   vector.extractelement
+func.func @extract_element_poison_fold1() -> i32 {
+  %v = ub.poison : vector<4xi32>
+  %i = arith.constant 2 : i32
+  %1 = vector.extractelement %v[%i : i32] : vector<4xi32>
+  return %1 : i32
+}
+
+// -----
+
+// Do not crash on poison
+// CHECK-LABEL: func @extract_element_poison_fold2
+//       CHECK:   vector.extractelement
+func.func @extract_element_poison_fold2() -> i32 {
+  %v = arith.constant dense<[1, 3, 5, 7]> : vector<4xi32>
+  %i = ub.poison : i32
   %1 = vector.extractelement %v[%i : i32] : vector<4xi32>
   return %1 : i32
 }

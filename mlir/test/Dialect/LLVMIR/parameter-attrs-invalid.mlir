@@ -52,28 +52,13 @@ llvm.func @invalid_byval_arg_type(%0 : i32 {llvm.byval = !llvm.struct<(i32)>})
 
 // -----
 
-// expected-error@below {{"llvm.byval" attribute attached to LLVM pointer argument of different type}}
-llvm.func @invalid_byval_attr_type(%0 : !llvm.ptr<!llvm.struct<(f32)>> {llvm.byval = !llvm.struct<(i32)>})
-
-// -----
-
 // expected-error@below {{"llvm.byref" attribute attached to non-pointer LLVM type}}
 llvm.func @invalid_byref_arg_type(%0 : i32 {llvm.byref = !llvm.struct<(i32)>})
 
 // -----
 
-// expected-error@below {{"llvm.byref" attribute attached to LLVM pointer argument of different type}}
-llvm.func @invalid_byref_attr_type(%0 : !llvm.ptr<!llvm.struct<(f32)>> {llvm.byref = !llvm.struct<(i32)>})
-
-// -----
-
 // expected-error@below {{"llvm.inalloca" attribute attached to non-pointer LLVM type}}
 llvm.func @invalid_inalloca_arg_type(%0 : i32 {llvm.inalloca = !llvm.struct<(i32)>})
-
-// -----
-
-// expected-error@below {{"llvm.inalloca" attribute attached to LLVM pointer argument of different type}}
-llvm.func @invalid_inalloca_attr_type(%0 : !llvm.ptr<!llvm.struct<(f32)>> {llvm.inalloca = !llvm.struct<(i32)>})
 
 // -----
 

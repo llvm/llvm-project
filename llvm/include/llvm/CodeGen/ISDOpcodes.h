@@ -773,7 +773,10 @@ enum NodeType {
   /// into new bits.
   SIGN_EXTEND,
 
-  /// ZERO_EXTEND - Used for integer types, zeroing the new bits.
+  /// ZERO_EXTEND - Used for integer types, zeroing the new bits. Can carry
+  /// the NonNeg SDNodeFlag to indicate that the input is known to be
+  /// non-negative. If the flag is present and the input is negative, the result
+  /// is poison.
   ZERO_EXTEND,
 
   /// ANY_EXTEND - Used for integer types.  The high bits are undefined.

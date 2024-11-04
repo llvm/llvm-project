@@ -7,7 +7,8 @@ target datalayout = "e-p:32:32:32-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:32:64-f3
 
 define i32 @a() nounwind readnone {
 entry:
-  ret i32 zext (i1 icmp eq (i32 0, i32 ptrtoint (ptr @a to i32)) to i32)
+  %ext = zext i1 icmp eq (i32 0, i32 ptrtoint (ptr @a to i32)) to i32
+  ret i32 %ext
 }
 ; CHECK: INSTCOMBINE ITERATION #1
 ; CHECK-NOT: INSTCOMBINE ITERATION #2

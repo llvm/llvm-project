@@ -25,7 +25,6 @@
 #include <ranges>
 
 #include "almost_satisfies_types.h"
-#include "boolean_testable.h"
 #include "test_iterators.h"
 
 template <class Iter, class Sent = sentinel_wrapper<Iter>>
@@ -178,20 +177,6 @@ constexpr bool test() {
       auto ret = std::ranges::remove(a, S{}, &S::identity);
       assert(ret.begin() == std::begin(a));
       assert(ret.end() == std::end(a));
-    }
-  }
-
-  {
-    // check that the implicit conversion to bool works
-    {
-      StrictComparable<int> a[] = {1, 2, 3, 4};
-      auto ret                  = std::ranges::remove(a, a + 4, StrictComparable<int>{2});
-      assert(ret.begin() == a + 3);
-    }
-    {
-      StrictComparable<int> a[] = {1, 2, 3, 4};
-      auto ret                  = std::ranges::remove(a, StrictComparable<int>{2});
-      assert(ret.begin() == a + 3);
     }
   }
 

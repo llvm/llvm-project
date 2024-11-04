@@ -77,15 +77,17 @@ struct DynamicEnvironmentTy {
 // NOTE: Please don't change the order of those members as their indices are
 // used in the middle end. Always add the new data member at the end.
 struct ConfigurationEnvironmentTy {
-  uint8_t UseGenericStateMachine;
-  uint8_t MayUseNestedParallelism;
-  llvm::omp::OMPTgtExecModeFlags ExecMode;
+  uint8_t UseGenericStateMachine = 2;
+  uint8_t MayUseNestedParallelism = 2;
+  llvm::omp::OMPTgtExecModeFlags ExecMode = llvm::omp::OMP_TGT_EXEC_MODE_SPMD;
   // Information about (legal) launch configurations.
   //{
-  int32_t MinThreads;
-  int32_t MaxThreads;
-  int32_t MinTeams;
-  int32_t MaxTeams;
+  int32_t MinThreads = -1;
+  int32_t MaxThreads = -1;
+  int32_t MinTeams = -1;
+  int32_t MaxTeams = -1;
+  int32_t ReductionDataSize = 0;
+  int32_t ReductionBufferLength = 0;
   //}
 };
 
@@ -93,10 +95,14 @@ struct ConfigurationEnvironmentTy {
 // used in the middle end. Always add the new data member at the end.
 struct KernelEnvironmentTy {
   ConfigurationEnvironmentTy Configuration;
-  IdentTy *Ident;
-  DynamicEnvironmentTy *DynamicEnv;
+  IdentTy *Ident = nullptr;
+  DynamicEnvironmentTy *DynamicEnv = nullptr;
 };
 
-struct KernelLaunchEnvironmentTy {};
+struct KernelLaunchEnvironmentTy {
+  uint32_t ReductionCnt = 0;
+  uint32_t ReductionIterCnt = 0;
+  void *ReductionBuffer = nullptr;
+};
 
 #endif // _OMPTARGET_ENVIRONMENT_H_

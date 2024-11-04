@@ -232,6 +232,10 @@ New Compiler Flags
   preserving ``#include`` directives for "system" headers instead of copying
   the preprocessed text to the output. This can greatly reduce the size of the
   preprocessed output, which can be helpful when trying to reduce a test case.
+* ``-fassume-nothrow-exception-dtor`` is added to assume that the destructor of
+  an thrown exception object will not throw. The generated code for catch
+  handlers will be smaller. A throw expression of a type with a
+  potentially-throwing destructor will lead to an error.
 
 Deprecated Compiler Flags
 -------------------------
@@ -287,6 +291,11 @@ Attribute Changes in Clang
 
   When viewing ``S::FruitKind`` in a debugger, it will behave as if the member
   was declared as type ``E`` rather than ``unsigned``.
+
+- Clang now warns you that the ``_Alignas`` attribute on declaration specifiers
+  is ignored, changed from the former incorrect suggestion to move it past
+  declaration specifiers. (`#58637 <https://github.com/llvm/llvm-project/issues/58637>`_)
+
 
 Improvements to Clang's diagnostics
 -----------------------------------
@@ -426,6 +435,14 @@ Improvements to Clang's diagnostics
 - ``-Wzero-as-null-pointer-constant`` diagnostic is no longer emitted when using ``__null``
   (or, more commonly, ``NULL`` when the platform defines it as ``__null``) to be more consistent
   with GCC.
+
+Improvements to Clang's time-trace
+----------------------------------
+- Two time-trace scope variables are added. A time trace scope variable of
+  ``ParseDeclarationOrFunctionDefinition`` with the function's source location
+  is added to record the time spent parsing the function's declaration or
+  definition. Another time trace scope variable of ``ParseFunctionDefinition``
+  is also added to record the name of the defined function.
 
 Bug Fixes in This Version
 -------------------------
@@ -657,11 +674,6 @@ Bug Fixes to C++ Support
   declaration definition. Fixes:
   (`#61763 <https://github.com/llvm/llvm-project/issues/61763>`_)
 
-- Fix a bug where implicit deduction guides are not correctly generated for nested template
-  classes. Fixes:
-  (`#46200 <https://github.com/llvm/llvm-project/issues/46200>`_)
-  (`#57812 <https://github.com/llvm/llvm-project/issues/57812>`_)
-
 - Diagnose use of a variable-length array in a coroutine. The design of
   coroutines is such that it is not possible to support VLA use. Fixes:
   (`#65858 <https://github.com/llvm/llvm-project/issues/65858>`_)
@@ -669,6 +681,14 @@ Bug Fixes to C++ Support
 - Fix bug where we were overriding zero-initialization of class members when
   default initializing a base class in a constant expression context. Fixes:
   (`#69890 <https://github.com/llvm/llvm-project/issues/69890>`_)
+
+- Fix crash when template class static member imported to other translation unit.
+  Fixes:
+  (`#68769 <https://github.com/llvm/llvm-project/issues/68769>`_)
+
+- Clang now defers the instantiation of explicit specifier until constraint checking
+  completes (except deduction guides). Fixes:
+  (`#59827 <https://github.com/llvm/llvm-project/issues/59827>`_)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -697,6 +717,8 @@ Miscellaneous Clang Crashes Fixed
   `Issue 64564 <https://github.com/llvm/llvm-project/issues/64564>`_
 - Fixed a crash when an ObjC ivar has an invalid type. See
   (`#68001 <https://github.com/llvm/llvm-project/pull/68001>`_)
+- Fixed a crash in C when redefined struct is another nested redefinition.
+  `Issue 41302 <https://github.com/llvm/llvm-project/issues/41302>`_
 
 Target Specific Changes
 -----------------------
@@ -726,6 +748,8 @@ Arm and AArch64 Support
   (https://github.com/ARM-software/abi-aa/blob/main/aapcs64/aapcs64.rst).
   This affects C++ functions with SVE ACLE parameters. Clang will use the old
   manglings if ``-fclang-abi-compat=17`` or lower is  specified.
+
+- New AArch64 asm constraints have been added for r8-r11(Uci) and r12-r15(Ucj).
 
 Android Support
 ^^^^^^^^^^^^^^^

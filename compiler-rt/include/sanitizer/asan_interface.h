@@ -50,7 +50,15 @@ void SANITIZER_CDECL __asan_unpoison_memory_region(void const volatile *addr,
                                                    size_t size);
 
 // Macros provided for convenience.
-#if __has_feature(address_sanitizer) || defined(__SANITIZE_ADDRESS__)
+#ifdef __has_feature
+#if __has_feature(address_sanitizer)
+#define ASAN_DEFINE_REGION_MACROS
+#endif
+#elif defined(__SANITIZE_ADDRESS__)
+#define ASAN_DEFINE_REGION_MACROS
+#endif
+
+#ifdef ASAN_DEFINE_REGION_MACROS
 /// Marks a memory region as unaddressable.
 ///
 /// \note Macro provided for convenience; defined as a no-op if ASan is not
@@ -74,6 +82,7 @@ void SANITIZER_CDECL __asan_unpoison_memory_region(void const volatile *addr,
 #define ASAN_POISON_MEMORY_REGION(addr, size) ((void)(addr), (void)(size))
 #define ASAN_UNPOISON_MEMORY_REGION(addr, size) ((void)(addr), (void)(size))
 #endif
+#undef ASAN_DEFINE_REGION_MACROS
 
 /// Checks if an address is poisoned.
 ///

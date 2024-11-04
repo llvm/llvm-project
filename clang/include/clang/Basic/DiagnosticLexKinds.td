@@ -922,6 +922,11 @@ def err_header_import_semi_in_macro : Error<
 def err_header_import_not_header_unit : Error<
   "header file %0 (aka '%1') cannot be imported because "
   "it is not known to be a header unit">;
+def warn_pp_include_angled_in_module_purview : Warning<
+  "'#include <filename>' attaches the declarations to the named module '%0'"
+  ", which is not usually intended; consider moving that directive before "
+  "the module declaration">,
+  InGroup<DiagGroup<"include-angled-in-module-purview">>;
 
 def warn_header_guard : Warning<
   "%0 is used as a header guard here, followed by #define of a different macro">,

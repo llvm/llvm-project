@@ -103,6 +103,12 @@ RISCVRegisterBankInfo::getRegBankFromRegClass(const TargetRegisterClass &RC,
   }
 }
 
+static const RegisterBankInfo::ValueMapping *getFPValueMapping(unsigned Size) {
+  assert(Size == 32 || Size == 64);
+  unsigned Idx = Size == 64 ? RISCV::FPR64Idx : RISCV::FPR32Idx;
+  return &RISCV::ValueMappings[Idx];
+}
+
 const RegisterBankInfo::InstructionMapping &
 RISCVRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   const unsigned Opc = MI.getOpcode();
@@ -185,47 +191,32 @@ RISCVRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   case TargetOpcode::G_FMAXNUM:
   case TargetOpcode::G_FMINNUM: {
     LLT Ty = MRI.getType(MI.getOperand(0).getReg());
-    OperandsMapping = Ty.getSizeInBits() == 64
-                          ? &RISCV::ValueMappings[RISCV::FPR64Idx]
-                          : &RISCV::ValueMappings[RISCV::FPR32Idx];
+    OperandsMapping = getFPValueMapping(Ty.getSizeInBits());
     break;
   }
   case TargetOpcode::G_FMA: {
     LLT Ty = MRI.getType(MI.getOperand(0).getReg());
-    OperandsMapping =
-        Ty.getSizeInBits() == 64
-            ? getOperandsMapping({&RISCV::ValueMappings[RISCV::FPR64Idx],
-                                  &RISCV::ValueMappings[RISCV::FPR64Idx],
-                                  &RISCV::ValueMappings[RISCV::FPR64Idx],
-                                  &RISCV::ValueMappings[RISCV::FPR64Idx]})
-            : getOperandsMapping({&RISCV::ValueMappings[RISCV::FPR32Idx],
-                                  &RISCV::ValueMappings[RISCV::FPR32Idx],
-                                  &RISCV::ValueMappings[RISCV::FPR32Idx],
-                                  &RISCV::ValueMappings[RISCV::FPR32Idx]});
+    const RegisterBankInfo::ValueMapping *FPValueMapping =
+        getFPValueMapping(Ty.getSizeInBits());
+    OperandsMapping = getOperandsMapping(
+        {FPValueMapping, FPValueMapping, FPValueMapping, FPValueMapping});
     break;
   }
-  case TargetOpcode::G_FPEXT: {
-    LLT ToTy = MRI.getType(MI.getOperand(0).getReg());
-    (void)ToTy;
-    LLT FromTy = MRI.getType(MI.getOperand(1).getReg());
-    (void)FromTy;
-    assert(ToTy.getSizeInBits() == 64 && FromTy.getSizeInBits() == 32 &&
-           "Unsupported size for G_FPEXT");
-    OperandsMapping =
-        getOperandsMapping({&RISCV::ValueMappings[RISCV::FPR64Idx],
-                            &RISCV::ValueMappings[RISCV::FPR32Idx]});
-    break;
-  }
+  case TargetOpcode::G_FPEXT:
   case TargetOpcode::G_FPTRUNC: {
     LLT ToTy = MRI.getType(MI.getOperand(0).getReg());
     (void)ToTy;
     LLT FromTy = MRI.getType(MI.getOperand(1).getReg());
     (void)FromTy;
-    assert(ToTy.getSizeInBits() == 32 && FromTy.getSizeInBits() == 64 &&
-           "Unsupported size for G_FPTRUNC");
     OperandsMapping =
-        getOperandsMapping({&RISCV::ValueMappings[RISCV::FPR32Idx],
-                            &RISCV::ValueMappings[RISCV::FPR64Idx]});
+        getOperandsMapping({getFPValueMapping(ToTy.getSizeInBits()),
+                            getFPValueMapping(FromTy.getSizeInBits())});
+    break;
+  }
+  case TargetOpcode::G_FCONSTANT: {
+    LLT Ty = MRI.getType(MI.getOperand(0).getReg());
+    OperandsMapping =
+        getOperandsMapping({getFPValueMapping(Ty.getSizeInBits()), nullptr});
     break;
   }
   default:

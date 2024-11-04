@@ -2990,6 +2990,9 @@ static bool __kmp_affinity_create_cpuinfo_map(int *line,
 
   unsigned num_avail = 0;
   *line = 0;
+#if KMP_ARCH_S390X
+  bool reading_s390x_sys_info = true;
+#endif
   while (!feof(f)) {
     // Create an inner scoping level, so that all the goto targets at the end of
     // the loop appear in an outer scoping level. This avoids warnings about
@@ -3035,8 +3038,21 @@ static bool __kmp_affinity_create_cpuinfo_map(int *line,
       if (*buf == '\n' && *line == 2)
         continue;
 #endif
+#if KMP_ARCH_S390X
+      // s390x /proc/cpuinfo starts with a variable number of lines containing
+      // the overall system information. Skip them.
+      if (reading_s390x_sys_info) {
+        if (*buf == '\n')
+          reading_s390x_sys_info = false;
+        continue;
+      }
+#endif
 
+#if KMP_ARCH_S390X
+      char s1[] = "cpu number";
+#else
       char s1[] = "processor";
+#endif
       if (strncmp(buf, s1, sizeof(s1) - 1) == 0) {
         CHECK_LINE;
         char *p = strchr(buf + sizeof(s1) - 1, ':');
@@ -3061,6 +3077,23 @@ static bool __kmp_affinity_create_cpuinfo_map(int *line,
             "/sys/devices/system/cpu/cpu%u/topology/physical_package_id",
             threadInfo[num_avail][osIdIndex]);
         __kmp_read_from_file(path, "%u", &threadInfo[num_avail][pkgIdIndex]);
+
+#if KMP_ARCH_S390X
+        // Disambiguate physical_package_id.
+        unsigned book_id;
+        KMP_SNPRINTF(path, sizeof(path),
+                     "/sys/devices/system/cpu/cpu%u/topology/book_id",
+                     threadInfo[num_avail][osIdIndex]);
+        __kmp_read_from_file(path, "%u", &book_id);
+        threadInfo[num_avail][pkgIdIndex] |= (book_id << 8);
+
+        unsigned drawer_id;
+        KMP_SNPRINTF(path, sizeof(path),
+                     "/sys/devices/system/cpu/cpu%u/topology/drawer_id",
+                     threadInfo[num_avail][osIdIndex]);
+        __kmp_read_from_file(path, "%u", &drawer_id);
+        threadInfo[num_avail][pkgIdIndex] |= (drawer_id << 16);
+#endif
 
         KMP_SNPRINTF(path, sizeof(path),
                      "/sys/devices/system/cpu/cpu%u/topology/core_id",

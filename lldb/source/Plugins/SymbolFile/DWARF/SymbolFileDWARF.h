@@ -268,7 +268,8 @@ public:
   void DumpClangAST(Stream &s) override;
 
   /// List separate dwo files.
-  bool GetSeparateDebugInfo(StructuredData::Dictionary &d) override;
+  bool GetSeparateDebugInfo(StructuredData::Dictionary &d,
+                            bool errors_only) override;
 
   DWARFContext &GetDWARFContext() { return m_context; }
 

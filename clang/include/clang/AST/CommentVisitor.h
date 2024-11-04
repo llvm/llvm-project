@@ -31,8 +31,9 @@ public:
     switch (C->getCommentKind()) {
     default: llvm_unreachable("Unknown comment kind!");
 #define ABSTRACT_COMMENT(COMMENT)
-#define COMMENT(CLASS, PARENT) \
-    case Comment::CLASS##Kind: DISPATCH(CLASS, CLASS);
+#define COMMENT(CLASS, PARENT)                                                 \
+  case CommentKind::CLASS:                                                     \
+    DISPATCH(CLASS, CLASS);
 #include "clang/AST/CommentNodes.inc"
 #undef ABSTRACT_COMMENT
 #undef COMMENT

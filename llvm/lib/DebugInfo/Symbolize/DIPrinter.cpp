@@ -90,7 +90,7 @@ public:
       size_t PosEnd = PrunedSource->find('\n', Pos);
       StringRef String = PrunedSource->substr(
           Pos, (PosEnd == StringRef::npos) ? StringRef::npos : (PosEnd - Pos));
-      if (String.endswith("\r"))
+      if (String.ends_with("\r"))
         String = String.drop_back(1);
       OS << format_decimal(L, MaxLineNumberWidth);
       if (L == Line)

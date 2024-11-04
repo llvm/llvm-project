@@ -402,9 +402,8 @@ Error GenericKernelTy::init(GenericDeviceTy &GenericDevice,
     DP("Failed to read kernel environment for '%s': %s\n"
        "Using default SPMD (2) execution mode\n",
        Name, ErrStr.data());
-    KernelEnvironment.Configuration.ExecMode = OMP_TGT_EXEC_MODE_SPMD;
-    KernelEnvironment.Configuration.MayUseNestedParallelism = /*Unknown=*/2;
-    KernelEnvironment.Configuration.UseGenericStateMachine = /*Unknown=*/2;
+    assert(KernelEnvironment.Configuration.ReductionDataSize == 0 &&
+           "Default initialization failed.");
   }
 
   // Max = Config.Max > 0 ? min(Config.Max, Device.Max) : Device.Max;
@@ -441,6 +440,19 @@ GenericKernelTy::getKernelLaunchEnvironment(
   /// async data transfer.
   auto &LocalKLE = (*AsyncInfoWrapper).KernelLaunchEnvironment;
   LocalKLE = KernelLaunchEnvironment;
+  if (KernelEnvironment.Configuration.ReductionDataSize &&
+      KernelEnvironment.Configuration.ReductionBufferLength) {
+    auto AllocOrErr = GenericDevice.dataAlloc(
+        KernelEnvironment.Configuration.ReductionDataSize *
+            KernelEnvironment.Configuration.ReductionBufferLength,
+        /*HostPtr=*/nullptr, TargetAllocTy::TARGET_ALLOC_DEVICE);
+    if (!AllocOrErr)
+      return AllocOrErr.takeError();
+    LocalKLE.ReductionBuffer = *AllocOrErr;
+    // Remember to free the memory later.
+    AsyncInfoWrapper.freeAllocationAfterSynchronization(*AllocOrErr);
+  }
+
   auto Err = GenericDevice.dataSubmit(*AllocOrErr, &LocalKLE,
                                       sizeof(KernelLaunchEnvironmentTy),
                                       AsyncInfoWrapper);
@@ -492,6 +504,12 @@ Error GenericKernelTy::launch(GenericDeviceTy &GenericDevice, void **ArgPtrs,
           printLaunchInfo(GenericDevice, KernelArgs, NumThreads, NumBlocks))
     return Err;
 
+  if (RecordReplay.isRecording())
+    RecordReplay.saveKernelInputInfo(
+        getName(), getImage(), ArgPtrs, ArgOffsets,
+        KernelArgs.NumArgs - /* KernelLaunchEnvironment */ 1, NumBlocks,
+        NumThreads, KernelArgs.Tripcount);
+
   return launchImpl(GenericDevice, NumThreads, NumBlocks, KernelArgs,
                     KernelArgsPtr, AsyncInfoWrapper);
 }
@@ -501,6 +519,9 @@ void *GenericKernelTy::prepareArgs(
     uint32_t &NumArgs, llvm::SmallVectorImpl<void *> &Args,
     llvm::SmallVectorImpl<void *> &Ptrs,
     KernelLaunchEnvironmentTy *KernelLaunchEnvironment) const {
+  if (isCtorOrDtor())
+    return nullptr;
+
   NumArgs += 1;
 
   Args.resize(NumArgs);
@@ -1389,12 +1410,6 @@ Error GenericDeviceTy::launchKernel(void *EntryPtr, void **ArgPtrs,
 
   GenericKernelTy &GenericKernel =
       *reinterpret_cast<GenericKernelTy *>(EntryPtr);
-
-  if (RecordReplay.isRecording())
-    RecordReplay.saveKernelInputInfo(
-        GenericKernel.getName(), GenericKernel.getImage(), ArgPtrs, ArgOffsets,
-        KernelArgs.NumArgs, KernelArgs.NumTeams[0], KernelArgs.ThreadLimit[0],
-        KernelArgs.Tripcount);
 
   if (RecordReplay.isRecording())
     RecordReplay.saveImage(GenericKernel.getName(), GenericKernel.getImage());

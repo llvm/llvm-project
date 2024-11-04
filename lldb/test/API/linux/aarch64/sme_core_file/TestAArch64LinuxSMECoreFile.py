@@ -89,14 +89,19 @@ class AArch64LinuxSMECoreFileTestCase(TestBase):
             # Each row of ZA is set to the row number plus 1. For example:
             # za = {0x01 0x01 0x01 0x01 <repeat until end of row> 0x02 0x02 ...
             make_row = repeat_bytes
+            expected_zt0 = "{{{}}}".format(
+                " ".join(["0x{:02x}".format(i + 1) for i in range(512 // 8)])
+            )
         else:
             # When ZA is disabled lldb shows it as 0s.
             make_row = lambda _, n: repeat_bytes(0, n)
+            expected_zt0 = "{{{}}}".format(" ".join(["0x00" for i in range(512 // 8)]))
 
         expected_za = "{{{}}}".format(
             " ".join([make_row(i + 1, svl) for i in range(svl)])
         )
         self.expect("register read za", substrs=[expected_za])
+        self.expect("register read zt0", substrs=[expected_zt0])
 
     @skipIfLLVMTargetMissing("AArch64")
     def test_sme_core_file_ssve_vl32_svl16_za_enabled(self):

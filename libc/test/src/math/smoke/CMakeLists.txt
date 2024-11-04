@@ -1347,8 +1347,6 @@ add_fp_unittest(
     libc.src.math.fmodf
     libc.src.__support.FPUtil.basic_operations
     libc.src.__support.FPUtil.nearest_integer_operations
-  # Requires C++ limits.
-  UNIT_TEST_ONLY
 )
 
 add_fp_unittest(
@@ -1365,8 +1363,6 @@ add_fp_unittest(
     libc.src.math.fmod
     libc.src.__support.FPUtil.basic_operations
     libc.src.__support.FPUtil.nearest_integer_operations
-  # Requires C++ limits.
-  UNIT_TEST_ONLY
 )
 
 add_fp_unittest(
@@ -1532,5 +1528,17 @@ add_fp_unittest(
   DEPENDS
     libc.include.math
     libc.src.math.erff
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  powf_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    powf_test.cpp
+  DEPENDS
+    libc.include.math
+    libc.src.math.powf
     libc.src.__support.FPUtil.fp_bits
 )

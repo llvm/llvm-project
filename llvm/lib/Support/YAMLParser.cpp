@@ -1968,7 +1968,7 @@ std::string Node::getVerbatimTag() const {
       Ret = std::string(Doc->getTagMap().find("!")->second);
       Ret += Raw.substr(1);
       return Ret;
-    } else if (Raw.startswith("!!")) {
+    } else if (Raw.starts_with("!!")) {
       Ret = std::string(Doc->getTagMap().find("!!")->second);
       Ret += Raw.substr(2);
       return Ret;

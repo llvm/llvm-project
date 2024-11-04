@@ -167,6 +167,20 @@ void CompileUnit::cleanupDataAfterClonning() {
   getOrigUnit().clear();
 }
 
+/// Make a best effort to guess the
+/// Xcode.app/Contents/Developer/Toolchains/ path from an SDK path.
+static SmallString<128> guessToolchainBaseDir(StringRef SysRoot) {
+  SmallString<128> Result;
+  // Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk
+  StringRef Base = sys::path::parent_path(SysRoot);
+  if (sys::path::filename(Base) != "SDKs")
+    return Result;
+  Base = sys::path::parent_path(Base);
+  Result = Base;
+  Result += "/Toolchains";
+  return Result;
+}
+
 /// Collect references to parseable Swift interfaces in imported
 /// DW_TAG_module blocks.
 void CompileUnit::analyzeImportedModule(const DWARFDebugInfoEntry *DieEntry) {
@@ -186,6 +200,11 @@ void CompileUnit::analyzeImportedModule(const DWARFDebugInfoEntry *DieEntry) {
   if (SysRoot.empty())
     SysRoot = getSysRoot();
   if (!SysRoot.empty() && Path.startswith(SysRoot))
+    return;
+  // Don't track interfaces that are part of the toolchain.
+  // For example: Swift, _Concurrency, ...
+  SmallString<128> Toolchain = guessToolchainBaseDir(SysRoot);
+  if (!Toolchain.empty() && Path.startswith(Toolchain))
     return;
   if (std::optional<DWARFFormValue> Val = find(DieEntry, dwarf::DW_AT_name)) {
     Expected<const char *> Name = Val->getAsCString();

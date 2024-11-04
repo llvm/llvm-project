@@ -330,7 +330,7 @@ Value *AA::getWithType(Value &V, Type &Ty) {
       if (C->getType()->isIntegerTy() && Ty.isIntegerTy())
         return ConstantExpr::getTrunc(C, &Ty, /* OnlyIfReduced */ true);
       if (C->getType()->isFloatingPointTy() && Ty.isFloatingPointTy())
-        return ConstantExpr::getFPTrunc(C, &Ty, /* OnlyIfReduced */ true);
+        return ConstantFoldCastInstruction(Instruction::FPTrunc, C, &Ty);
     }
   }
   return nullptr;

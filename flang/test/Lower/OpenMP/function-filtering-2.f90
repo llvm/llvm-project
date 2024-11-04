@@ -26,9 +26,7 @@ subroutine no_declaretarget()
 end subroutine no_declaretarget
 
 ! MLIR-HOST: func.func @{{.*}}main(
-! MLIR-HOST-NOT: func.func @{{.*}}main_omp_outline{{.*}}()
 ! MLIR-DEVICE-NOT: func.func @{{.*}}main(
-! MLIR-DEVICE: func.func @{{.*}}main_omp_outline{{.*}}() attributes {omp.declare_target = #omp.declaretarget<device_type = (host), capture_clause = (to)>, omp.outline_parent_name = "_QQmain"}
 ! MLIR-ALL: return
 
 ! LLVM-HOST: define {{.*}} @{{.*}}main{{.*}}(

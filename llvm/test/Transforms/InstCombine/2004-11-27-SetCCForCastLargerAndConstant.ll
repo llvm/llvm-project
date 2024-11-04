@@ -34,7 +34,8 @@ define i1 @PR28011(i16 %a) {
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %conv = sext i16 %a to i32
-  %or = or i32 zext (i1 icmp ne (ptr @b, ptr @a) to i32), 1
+  %ext = zext i1 icmp ne (ptr @b, ptr @a) to i32
+  %or = or i32 %ext, 1
   %cmp = icmp ne i32 %conv, %or
   ret i1 %cmp
 }

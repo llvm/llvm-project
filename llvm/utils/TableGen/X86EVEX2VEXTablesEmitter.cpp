@@ -170,7 +170,7 @@ void X86EVEX2VEXTablesEmitter::run(raw_ostream &OS) {
     // Currently we only do AVX related checks and assume each instruction
     // has one and only one AVX related predicates.
     for (unsigned i = 0, e = PredicatesRecords.size(); i != e; ++i)
-      if (PredicatesRecords[i]->getName().startswith("HasAVX"))
+      if (PredicatesRecords[i]->getName().starts_with("HasAVX"))
         return PredicatesRecords[i]->getValueAsString("CondString");
     llvm_unreachable(
         "Instruction with checkPredicate set must have one predicate!");
@@ -187,7 +187,7 @@ void X86EVEX2VEXTablesEmitter::run(raw_ostream &OS) {
     if (!Def->isSubClassOf("X86Inst"))
       continue;
     // _REV instruction should not appear before encoding optimization
-    if (Def->getName().endswith("_REV"))
+    if (Def->getName().ends_with("_REV"))
       continue;
     RecognizableInstrBase RI(*Inst);
 

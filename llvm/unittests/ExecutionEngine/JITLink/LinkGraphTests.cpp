@@ -9,7 +9,6 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ExecutionEngine/JITLink/JITLink.h"
 #include "llvm/ExecutionEngine/Orc/ObjectFileInterface.h"
-#include "llvm/Support/Endian.h"
 #include "llvm/Support/Memory.h"
 
 #include "llvm/Testing/Support/Error.h"

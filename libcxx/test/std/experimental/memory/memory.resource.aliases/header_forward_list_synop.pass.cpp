@@ -8,8 +8,6 @@
 
 // UNSUPPORTED: c++03
 
-// XFAIL: availability-aligned_allocation-missing
-
 // <experimental/forward_list>
 
 // namespace std { namespace experimental { namespace pmr {

@@ -6,13 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <tuple>
-
 #include "PybindUtils.h"
 
 #include "Globals.h"
 #include "IRModule.h"
 #include "Pass.h"
+
+#include <tuple>
 
 namespace py = pybind11;
 using namespace mlir;
@@ -34,9 +34,14 @@ PYBIND11_MODULE(_mlir, m) {
           "append_dialect_search_prefix",
           [](PyGlobals &self, std::string moduleName) {
             self.getDialectSearchPrefixes().push_back(std::move(moduleName));
-            self.clearImportCache();
           },
           "module_name"_a)
+      .def(
+          "_check_dialect_module_loaded",
+          [](PyGlobals &self, const std::string &dialectNamespace) {
+            return self.loadDialectModule(dialectNamespace);
+          },
+          "dialect_namespace"_a)
       .def("_register_dialect_impl", &PyGlobals::registerDialectImpl,
            "dialect_namespace"_a, "dialect_class"_a,
            "Testing hook for directly registering a dialect")

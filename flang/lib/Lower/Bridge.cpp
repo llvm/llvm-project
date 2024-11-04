@@ -677,18 +677,27 @@ public:
             if (auto seqTy = symType.dyn_cast<fir::SequenceType>()) {
               fir::ExtendedValue read = fir::factory::genMutableBoxRead(
                   *builder, loc, box, /*mayBePolymorphic=*/false);
-              auto read_box = read.getBoxOf<fir::ArrayBoxValue>();
-              fir::factory::genInlinedAllocation(
-                  *builder, loc, *new_box, read_box->getLBounds(),
-                  read_box->getExtents(),
-                  /*lenParams=*/std::nullopt, name,
-                  /*mustBeHeap=*/true);
+              if (auto read_arr_box = read.getBoxOf<fir::ArrayBoxValue>()) {
+                fir::factory::genInlinedAllocation(
+                    *builder, loc, *new_box, read_arr_box->getLBounds(),
+                    read_arr_box->getExtents(),
+                    /*lenParams=*/std::nullopt, name,
+                    /*mustBeHeap=*/true);
+              } else if (auto read_char_arr_box =
+                             read.getBoxOf<fir::CharArrayBoxValue>()) {
+                fir::factory::genInlinedAllocation(
+                    *builder, loc, *new_box, read_char_arr_box->getLBounds(),
+                    read_char_arr_box->getExtents(),
+                    read_char_arr_box->getLen(), name,
+                    /*mustBeHeap=*/true);
+              } else {
+                TODO(loc, "Unhandled allocatable box type");
+              }
             } else {
               fir::factory::genInlinedAllocation(
-                  *builder, loc, *new_box,
-                  new_box->getMutableProperties().lbounds,
-                  new_box->getMutableProperties().extents,
-                  /*lenParams=*/std::nullopt, name,
+                  *builder, loc, *new_box, box.getMutableProperties().lbounds,
+                  box.getMutableProperties().extents,
+                  box.nonDeferredLenParams(), name,
                   /*mustBeHeap=*/true);
             }
           });

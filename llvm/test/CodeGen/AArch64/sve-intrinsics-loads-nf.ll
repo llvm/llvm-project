@@ -17,7 +17,8 @@ define <vscale x 16 x i8> @ldnf1b(<vscale x 16 x i1> %pg, ptr %a) {
 define <vscale x 16 x i8> @ldnf1b_out_of_lower_bound(<vscale x 16 x i1> %pg, ptr %a) {
 ; CHECK-LABEL: ldnf1b_out_of_lower_bound:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    addvl x8, x0, #-9
+; CHECK-NEXT:    rdvl x8, #-9
+; CHECK-NEXT:    add x8, x0, x8
 ; CHECK-NEXT:    ldnf1b { z0.b }, p0/z, [x8]
 ; CHECK-NEXT:    ret
   %base = getelementptr <vscale x 16 x i8>, <vscale x 16 x i8>* %a, i64 -9
@@ -62,7 +63,8 @@ define <vscale x 16 x i8> @ldnf1b_upper_bound(<vscale x 16 x i1> %pg, ptr %a) {
 define <vscale x 16 x i8> @ldnf1b_out_of_upper_bound(<vscale x 16 x i1> %pg, ptr %a) {
 ; CHECK-LABEL: ldnf1b_out_of_upper_bound:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    addvl x8, x0, #8
+; CHECK-NEXT:    rdvl x8, #8
+; CHECK-NEXT:    add x8, x0, x8
 ; CHECK-NEXT:    ldnf1b { z0.b }, p0/z, [x8]
 ; CHECK-NEXT:    ret
   %base = getelementptr <vscale x 16 x i8>, <vscale x 16 x i8>* %a, i64 8

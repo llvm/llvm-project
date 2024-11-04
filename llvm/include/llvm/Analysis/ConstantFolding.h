@@ -114,6 +114,11 @@ Constant *ConstantFoldSelectInstruction(Constant *Cond, Constant *V1,
 Constant *ConstantFoldCastOperand(unsigned Opcode, Constant *C, Type *DestTy,
                                   const DataLayout &DL);
 
+/// Constant fold a zext, sext or trunc, depending on IsSigned and whether the
+/// DestTy is wider or narrower than C. Returns nullptr on failure.
+Constant *ConstantFoldIntegerCast(Constant *C, Type *DestTy, bool IsSigned,
+                                  const DataLayout &DL);
+
 /// ConstantFoldInsertValueInstruction - Attempt to constant fold an insertvalue
 /// instruction with the specified operands and indices.  The constant result is
 /// returned if successful; if not, null is returned.

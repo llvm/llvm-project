@@ -1,4 +1,4 @@
-// RUN: mlir-opt -expand-strided-metadata -finalize-memref-to-llvm='use-opaque-pointers=1' -lower-affine -convert-arith-to-llvm -cse %s -split-input-file | FileCheck %s
+// RUN: mlir-opt -expand-strided-metadata -finalize-memref-to-llvm -lower-affine -convert-arith-to-llvm -cse %s -split-input-file | FileCheck %s
 //
 // This test demonstrates a full "memref to llvm" pipeline where
 // we first expand some of the memref operations (using affine,

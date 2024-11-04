@@ -31,7 +31,7 @@
 // Do the same run, but now with direct IR generation and VLA vectorization.
 // RUN: %if mlir_arm_sve_tests %{ %{compile_sve} | env %{env} %{run_sve} | FileCheck %s %}
 
-!Filename = !llvm.ptr<i8>
+!Filename = !llvm.ptr
 
 #SparseTensor = #sparse_tensor.encoding<{
   // Note that any dimToLvl permutation should give the same results

@@ -421,8 +421,8 @@ define <2 x i16> @rotate_left_commute_16bit_vec(<2 x i16> %v, <2 x i32> %shift) 
 
 define i8 @rotate_right_8bit(i8 %v, i3 %shift) {
 ; CHECK-LABEL: @rotate_right_8bit(
-; CHECK-NEXT:    [[TMP1:%.*]] = zext i3 [[SHIFT:%.*]] to i8
-; CHECK-NEXT:    [[CONV2:%.*]] = call i8 @llvm.fshr.i8(i8 [[V:%.*]], i8 [[V]], i8 [[TMP1]])
+; CHECK-NEXT:    [[SHAMT_TRUNC:%.*]] = zext i3 [[SHIFT:%.*]] to i8
+; CHECK-NEXT:    [[CONV2:%.*]] = call i8 @llvm.fshr.i8(i8 [[V:%.*]], i8 [[V]], i8 [[SHAMT_TRUNC]])
 ; CHECK-NEXT:    ret i8 [[CONV2]]
 ;
   %and = zext i3 %shift to i32
@@ -441,10 +441,10 @@ define i8 @rotate_right_8bit(i8 %v, i3 %shift) {
 define i8 @rotate_right_commute_8bit_unmasked_shl(i32 %v, i32 %shift) {
 ; CHECK-LABEL: @rotate_right_commute_8bit_unmasked_shl(
 ; CHECK-NEXT:    [[TMP1:%.*]] = trunc i32 [[SHIFT:%.*]] to i8
-; CHECK-NEXT:    [[TMP2:%.*]] = and i8 [[TMP1]], 3
-; CHECK-NEXT:    [[TMP3:%.*]] = trunc i32 [[V:%.*]] to i8
-; CHECK-NEXT:    [[TMP4:%.*]] = trunc i32 [[V]] to i8
-; CHECK-NEXT:    [[CONV2:%.*]] = call i8 @llvm.fshr.i8(i8 [[TMP3]], i8 [[TMP4]], i8 [[TMP2]])
+; CHECK-NEXT:    [[SHAMT_TRUNC:%.*]] = and i8 [[TMP1]], 3
+; CHECK-NEXT:    [[TMP2:%.*]] = trunc i32 [[V:%.*]] to i8
+; CHECK-NEXT:    [[TMP3:%.*]] = trunc i32 [[V]] to i8
+; CHECK-NEXT:    [[CONV2:%.*]] = call i8 @llvm.fshr.i8(i8 [[TMP2]], i8 [[TMP3]], i8 [[SHAMT_TRUNC]])
 ; CHECK-NEXT:    ret i8 [[CONV2]]
 ;
   %and = and i32 %shift, 3
@@ -462,10 +462,10 @@ define i8 @rotate_right_commute_8bit_unmasked_shl(i32 %v, i32 %shift) {
 define i8 @rotate_right_commute_8bit(i32 %v, i32 %shift) {
 ; CHECK-LABEL: @rotate_right_commute_8bit(
 ; CHECK-NEXT:    [[TMP1:%.*]] = trunc i32 [[SHIFT:%.*]] to i8
-; CHECK-NEXT:    [[TMP2:%.*]] = and i8 [[TMP1]], 3
-; CHECK-NEXT:    [[TMP3:%.*]] = trunc i32 [[V:%.*]] to i8
-; CHECK-NEXT:    [[TMP4:%.*]] = trunc i32 [[V]] to i8
-; CHECK-NEXT:    [[CONV2:%.*]] = call i8 @llvm.fshr.i8(i8 [[TMP3]], i8 [[TMP4]], i8 [[TMP2]])
+; CHECK-NEXT:    [[SHAMT_TRUNC:%.*]] = and i8 [[TMP1]], 3
+; CHECK-NEXT:    [[TMP2:%.*]] = trunc i32 [[V:%.*]] to i8
+; CHECK-NEXT:    [[TMP3:%.*]] = trunc i32 [[V]] to i8
+; CHECK-NEXT:    [[CONV2:%.*]] = call i8 @llvm.fshr.i8(i8 [[TMP2]], i8 [[TMP3]], i8 [[SHAMT_TRUNC]])
 ; CHECK-NEXT:    ret i8 [[CONV2]]
 ;
   %and = and i32 %shift, 3
@@ -483,8 +483,8 @@ define i8 @rotate_right_commute_8bit(i32 %v, i32 %shift) {
 
 define i8 @rotate8_not_safe(i8 %v, i32 %shamt) {
 ; CHECK-LABEL: @rotate8_not_safe(
-; CHECK-NEXT:    [[TMP1:%.*]] = trunc i32 [[SHAMT:%.*]] to i8
-; CHECK-NEXT:    [[RET:%.*]] = call i8 @llvm.fshl.i8(i8 [[V:%.*]], i8 [[V]], i8 [[TMP1]])
+; CHECK-NEXT:    [[SHAMT_TRUNC:%.*]] = trunc i32 [[SHAMT:%.*]] to i8
+; CHECK-NEXT:    [[RET:%.*]] = call i8 @llvm.fshl.i8(i8 [[V:%.*]], i8 [[V]], i8 [[SHAMT_TRUNC]])
 ; CHECK-NEXT:    ret i8 [[RET]]
 ;
   %conv = zext i8 %v to i32
@@ -597,8 +597,8 @@ define i8 @rotateright_8_neg_mask_commute(i8 %v, i8 %shamt) {
 
 define i16 @rotateright_16_neg_mask_wide_amount(i16 %v, i32 %shamt) {
 ; CHECK-LABEL: @rotateright_16_neg_mask_wide_amount(
-; CHECK-NEXT:    [[TMP1:%.*]] = trunc i32 [[SHAMT:%.*]] to i16
-; CHECK-NEXT:    [[RET:%.*]] = call i16 @llvm.fshr.i16(i16 [[V:%.*]], i16 [[V]], i16 [[TMP1]])
+; CHECK-NEXT:    [[SHAMT_TRUNC:%.*]] = trunc i32 [[SHAMT:%.*]] to i16
+; CHECK-NEXT:    [[RET:%.*]] = call i16 @llvm.fshr.i16(i16 [[V:%.*]], i16 [[V]], i16 [[SHAMT_TRUNC]])
 ; CHECK-NEXT:    ret i16 [[RET]]
 ;
   %neg = sub i32 0, %shamt
@@ -614,8 +614,8 @@ define i16 @rotateright_16_neg_mask_wide_amount(i16 %v, i32 %shamt) {
 
 define i16 @rotateright_16_neg_mask_wide_amount_commute(i16 %v, i32 %shamt) {
 ; CHECK-LABEL: @rotateright_16_neg_mask_wide_amount_commute(
-; CHECK-NEXT:    [[TMP1:%.*]] = trunc i32 [[SHAMT:%.*]] to i16
-; CHECK-NEXT:    [[RET:%.*]] = call i16 @llvm.fshr.i16(i16 [[V:%.*]], i16 [[V]], i16 [[TMP1]])
+; CHECK-NEXT:    [[SHAMT_TRUNC:%.*]] = trunc i32 [[SHAMT:%.*]] to i16
+; CHECK-NEXT:    [[RET:%.*]] = call i16 @llvm.fshr.i16(i16 [[V:%.*]], i16 [[V]], i16 [[SHAMT_TRUNC]])
 ; CHECK-NEXT:    ret i16 [[RET]]
 ;
   %neg = sub i32 0, %shamt
@@ -648,8 +648,8 @@ define i64 @rotateright_64_zext_neg_mask_amount(i64 %0, i32 %1) {
 
 define i8 @rotateleft_8_neg_mask_wide_amount(i8 %v, i32 %shamt) {
 ; CHECK-LABEL: @rotateleft_8_neg_mask_wide_amount(
-; CHECK-NEXT:    [[TMP1:%.*]] = trunc i32 [[SHAMT:%.*]] to i8
-; CHECK-NEXT:    [[RET:%.*]] = call i8 @llvm.fshl.i8(i8 [[V:%.*]], i8 [[V]], i8 [[TMP1]])
+; CHECK-NEXT:    [[SHAMT_TRUNC:%.*]] = trunc i32 [[SHAMT:%.*]] to i8
+; CHECK-NEXT:    [[RET:%.*]] = call i8 @llvm.fshl.i8(i8 [[V:%.*]], i8 [[V]], i8 [[SHAMT_TRUNC]])
 ; CHECK-NEXT:    ret i8 [[RET]]
 ;
   %neg = sub i32 0, %shamt
@@ -665,8 +665,8 @@ define i8 @rotateleft_8_neg_mask_wide_amount(i8 %v, i32 %shamt) {
 
 define i8 @rotateleft_8_neg_mask_wide_amount_commute(i8 %v, i32 %shamt) {
 ; CHECK-LABEL: @rotateleft_8_neg_mask_wide_amount_commute(
-; CHECK-NEXT:    [[TMP1:%.*]] = trunc i32 [[SHAMT:%.*]] to i8
-; CHECK-NEXT:    [[RET:%.*]] = call i8 @llvm.fshl.i8(i8 [[V:%.*]], i8 [[V]], i8 [[TMP1]])
+; CHECK-NEXT:    [[SHAMT_TRUNC:%.*]] = trunc i32 [[SHAMT:%.*]] to i8
+; CHECK-NEXT:    [[RET:%.*]] = call i8 @llvm.fshl.i8(i8 [[V:%.*]], i8 [[V]], i8 [[SHAMT_TRUNC]])
 ; CHECK-NEXT:    ret i8 [[RET]]
 ;
   %neg = sub i32 0, %shamt
@@ -956,4 +956,25 @@ define i8 @unmasked_shlop_unmasked_shift_amount(i32 %x, i32 %shamt) {
   %t7 = or i32 %t5, %t6
   %t8 = trunc i32 %t7 to i8
   ret i8 %t8
+}
+
+define i1 @check_rotate_masked_16bit(i8 %0, i32 %1) {
+; CHECK-LABEL: @check_rotate_masked_16bit(
+; CHECK-NEXT:    [[TMP3:%.*]] = and i32 [[TMP1:%.*]], 1
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i32 [[TMP3]], 0
+; CHECK-NEXT:    ret i1 [[TMP4]]
+;
+  %3 = and i32 %1, 1
+  %4 = and i8 %0, 15
+  %5 = zext i8 %4 to i32
+  %6 = lshr i32 %3, %5
+  %7 = sub i8 0, %0
+  %8 = and i8 %7, 15
+  %9 = zext i8 %8 to i32
+  %10 = shl nuw nsw i32 %3, %9
+  %11 = or i32 %6, %10
+  %12 = trunc i32 %11 to i16
+  %13 = sext i16 %12 to i64
+  %14 = icmp uge i64 0, %13
+  ret i1 %14
 }

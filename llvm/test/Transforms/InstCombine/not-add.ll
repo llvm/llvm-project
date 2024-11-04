@@ -175,7 +175,8 @@ define void @pr50370(i32 %x) {
 ;
 entry:
   %xor = xor i32 %x, 1
-  %or = or i32 zext (i1 icmp eq (ptr @g, ptr null) to i32), 1
+  %ext = zext i1 icmp eq (ptr @g, ptr null) to i32
+  %or = or i32 %ext, 1
   %or4 = or i32 %or, 65536
   %B6 = ashr i32 65536, %or4
   %B15 = srem i32 %B6, %xor

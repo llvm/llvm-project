@@ -37,6 +37,30 @@ struct CUDAKernelTy;
 struct CUDADeviceTy;
 struct CUDAPluginTy;
 
+#if (defined(CUDA_VERSION) && (CUDA_VERSION < 11000))
+/// Forward declarations for all Virtual Memory Management
+/// related data structures and functions. This is necessary
+/// for older cuda versions.
+typedef void *CUmemGenericAllocationHandle;
+typedef void *CUmemAllocationProp;
+typedef void *CUmemAccessDesc;
+typedef void *CUmemAllocationGranularity_flags;
+CUresult cuMemAddressReserve(CUdeviceptr *ptr, size_t size, size_t alignment,
+                             CUdeviceptr addr, unsigned long long flags) {}
+CUresult cuMemMap(CUdeviceptr ptr, size_t size, size_t offset,
+                  CUmemGenericAllocationHandle handle,
+                  unsigned long long flags) {}
+CUresult cuMemCreate(CUmemGenericAllocationHandle *handle, size_t size,
+                     const CUmemAllocationProp *prop,
+                     unsigned long long flags) {}
+CUresult cuMemSetAccess(CUdeviceptr ptr, size_t size,
+                        const CUmemAccessDesc *desc, size_t count) {}
+CUresult
+cuMemGetAllocationGranularity(size_t *granularity,
+                              const CUmemAllocationProp *prop,
+                              CUmemAllocationGranularity_flags option) {}
+#endif
+
 /// Class implementing the CUDA device images properties.
 struct CUDADeviceImageTy : public DeviceImageTy {
   /// Create the CUDA image with the id and the target image pointer.
@@ -518,7 +542,13 @@ struct CUDADeviceTy : public GenericDeviceTy {
   }
 
   /// CUDA support VA management
-  bool supportVAManagement() const override { return true; }
+  bool supportVAManagement() const override {
+#if (defined(CUDA_VERSION) && (CUDA_VERSION >= 11000))
+    return true;
+#else
+    return false;
+#endif
+  }
 
   /// Allocates \p RSize bytes (rounded up to page size) and hints the cuda
   /// driver to map it to \p VAddr. The obtained address is stored in \p Addr.

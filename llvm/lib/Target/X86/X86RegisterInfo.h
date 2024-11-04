@@ -51,6 +51,9 @@ private:
 public:
   explicit X86RegisterInfo(const Triple &TT);
 
+  /// Return the number of registers for the function.
+  unsigned getNumSupportedRegs(const MachineFunction &MF) const override;
+
   // FIXME: This should be tablegen'd like getDwarfRegNum is
   int getSEHRegNum(unsigned i) const;
 

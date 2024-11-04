@@ -116,7 +116,8 @@ define <vscale x 2 x i64> @decd_vec(<vscale x 2 x i64> %a) {
 define i64 @incb_scalar_i64(i64 %a) {
 ; NO_SCALAR_INC-LABEL: incb_scalar_i64:
 ; NO_SCALAR_INC:       // %bb.0:
-; NO_SCALAR_INC-NEXT:    addvl x0, x0, #1
+; NO_SCALAR_INC-NEXT:    rdvl x8, #1
+; NO_SCALAR_INC-NEXT:    add x0, x0, x8
 ; NO_SCALAR_INC-NEXT:    ret
 ;
 ; CHECK-LABEL: incb_scalar_i64:
@@ -185,7 +186,8 @@ define i64 @incd_scalar_i64(i64 %a) {
 define i64 @decb_scalar_i64(i64 %a) {
 ; NO_SCALAR_INC-LABEL: decb_scalar_i64:
 ; NO_SCALAR_INC:       // %bb.0:
-; NO_SCALAR_INC-NEXT:    addvl x0, x0, #-2
+; NO_SCALAR_INC-NEXT:    rdvl x8, #-2
+; NO_SCALAR_INC-NEXT:    add x0, x0, x8
 ; NO_SCALAR_INC-NEXT:    ret
 ;
 ; CHECK-LABEL: decb_scalar_i64:
@@ -257,9 +259,8 @@ define i64 @decd_scalar_i64(i64 %a) {
 define i32 @incb_scalar_i32(i32 %a) {
 ; NO_SCALAR_INC-LABEL: incb_scalar_i32:
 ; NO_SCALAR_INC:       // %bb.0:
-; NO_SCALAR_INC-NEXT:    // kill: def $w0 killed $w0 def $x0
-; NO_SCALAR_INC-NEXT:    addvl x0, x0, #3
-; NO_SCALAR_INC-NEXT:    // kill: def $w0 killed $w0 killed $x0
+; NO_SCALAR_INC-NEXT:    rdvl x8, #3
+; NO_SCALAR_INC-NEXT:    add w0, w0, w8
 ; NO_SCALAR_INC-NEXT:    ret
 ;
 ; CHECK-LABEL: incb_scalar_i32:
@@ -344,9 +345,8 @@ define i32 @incd_scalar_i32(i32 %a) {
 define i32 @decb_scalar_i32(i32 %a) {
 ; NO_SCALAR_INC-LABEL: decb_scalar_i32:
 ; NO_SCALAR_INC:       // %bb.0:
-; NO_SCALAR_INC-NEXT:    // kill: def $w0 killed $w0 def $x0
-; NO_SCALAR_INC-NEXT:    addvl x0, x0, #-4
-; NO_SCALAR_INC-NEXT:    // kill: def $w0 killed $w0 killed $x0
+; NO_SCALAR_INC-NEXT:    rdvl x8, #-4
+; NO_SCALAR_INC-NEXT:    add w0, w0, w8
 ; NO_SCALAR_INC-NEXT:    ret
 ;
 ; CHECK-LABEL: decb_scalar_i32:

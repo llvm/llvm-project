@@ -6795,7 +6795,7 @@ void Sema::AddOverloadCandidate(
     if (auto *SpecInfo = Function->getTemplateSpecializationInfo())
       ND = SpecInfo->getTemplate();
 
-    if (ND->getFormalLinkage() == Linkage::InternalLinkage) {
+    if (ND->getFormalLinkage() == Linkage::Internal) {
       Candidate.Viable = false;
       Candidate.FailureKind = ovl_fail_module_mismatched;
       return;

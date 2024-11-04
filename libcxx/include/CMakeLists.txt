@@ -925,6 +925,7 @@ set(files
   experimental/iterator
   experimental/list
   experimental/map
+  experimental/memory
   experimental/memory_resource
   experimental/propagate_const
   experimental/regex

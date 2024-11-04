@@ -1182,11 +1182,39 @@ namespace X86II {
     }
   }
 
+  /// \returns true if the register is a XMM.
+  inline bool isXMMReg(unsigned RegNo) {
+    assert(X86::XMM15 - X86::XMM0 == 15 &&
+           "XMM0-15 registers are not continuous");
+    assert(X86::XMM31 - X86::XMM16 == 15 &&
+           "XMM16-31 registers are not continuous");
+    return (RegNo >= X86::XMM0 && RegNo <= X86::XMM15) ||
+           (RegNo >= X86::XMM16 && RegNo <= X86::XMM31);
+  }
+
+  /// \returns true if the register is a YMM.
+  inline bool isYMMReg(unsigned RegNo) {
+    assert(X86::YMM15 - X86::YMM0 == 15 &&
+           "YMM0-15 registers are not continuous");
+    assert(X86::YMM31 - X86::YMM16 == 15 &&
+           "YMM16-31 registers are not continuous");
+    return (RegNo >= X86::YMM0 && RegNo <= X86::YMM15) ||
+           (RegNo >= X86::YMM16 && RegNo <= X86::YMM31);
+  }
+
+  /// \returns true if the register is a ZMM.
+  inline bool isZMMReg(unsigned RegNo) {
+    assert(X86::ZMM31 - X86::ZMM0 == 31 && "ZMM registers are not continuous");
+    return RegNo >= X86::ZMM0 && RegNo <= X86::ZMM31;
+  }
+
   /// \returns true if the MachineOperand is a x86-64 extended (r8 or
   /// higher) register,  e.g. r8, xmm8, xmm13, etc.
   inline bool isX86_64ExtendedReg(unsigned RegNo) {
-    if ((RegNo >= X86::XMM8 && RegNo <= X86::XMM31) ||
-        (RegNo >= X86::YMM8 && RegNo <= X86::YMM31) ||
+    if ((RegNo >= X86::XMM8 && RegNo <= X86::XMM15) ||
+        (RegNo >= X86::XMM16 && RegNo <= X86::XMM31) ||
+        (RegNo >= X86::YMM8 && RegNo <= X86::YMM15) ||
+        (RegNo >= X86::YMM16 && RegNo <= X86::YMM31) ||
         (RegNo >= X86::ZMM8 && RegNo <= X86::ZMM31))
       return true;
 

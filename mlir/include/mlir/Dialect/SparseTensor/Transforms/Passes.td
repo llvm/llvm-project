@@ -227,10 +227,10 @@ def SparseTensorConversionPass : Pass<"sparse-tensor-conversion", "ModuleOp"> {
         }
 
       After:
-        func.func @foo(%arg0: !llvm.ptr<i8>) -> memref<?xindex> {
+        func.func @foo(%arg0: !llvm.ptr) -> memref<?xindex> {
           %c1 = arith.constant 1 : index
           %0 = call @sparsePointers0(%arg0, %c1)
-             : (!llvm.ptr<i8>, index) -> memref<?xindex>
+             : (!llvm.ptr, index) -> memref<?xindex>
           return %0 : memref<?xindex>
         }
     ```

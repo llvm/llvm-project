@@ -45,7 +45,7 @@ A SPIR-V pointer also takes a Storage Class. At the moment, conversion does
 
 SPIR-V Dialect                                | LLVM Dialect
 :-------------------------------------------: | :-------------------------:
-`!spirv.ptr< <element-type>, <storage-class> >` | `!llvm.ptr<<element-type>>`
+`!spirv.ptr< <element-type>, <storage-class> >` | `!llvm.ptr`
 
 ### Array types
 
@@ -443,7 +443,7 @@ order to go through the pointer.
 %i   = ...
 %var = ...
 %0   = llvm.mlir.constant(0 : i32) : i32
-%el  = llvm.getelementptr %var[%0, %i, %i] : (!llvm.ptr<struct<packed (f32, array<4 x f32>)>>, i32, i32, i32)
+%el  = llvm.getelementptr %var[%0, %i, %i] : (!llvm.ptr, i32, i32, i32), !llvm.struct<packed (f32, array<4 x f32>)>
 ```
 
 #### `spirv.Load` and `spirv.Store`
@@ -453,16 +453,16 @@ These ops are converted to their LLVM counterparts: `llvm.load` and
 following cases, based on the value of the attribute:
 
 *   **Aligned**: alignment is passed on to LLVM op builder, for example: `mlir
-    // llvm.store %ptr, %val {alignment = 4 : i64} : !llvm.ptr<f32> spirv.Store
+    // llvm.store %ptr, %val {alignment = 4 : i64} : !llvm.ptr spirv.Store
     "Function" %ptr, %val ["Aligned", 4] : f32`
 *   **None**: same case as if there is no memory access attribute.
 
 *   **Nontemporal**: set `nontemporal` flag, for example: `mlir // %res =
-    llvm.load %ptr {nontemporal} : !llvm.ptr<f32> %res = spirv.Load "Function"
+    llvm.load %ptr {nontemporal} : !llvm.ptr %res = spirv.Load "Function"
     %ptr ["Nontemporal"] : f32`
 
 *   **Volatile**: mark the op as `volatile`, for example: `mlir // %res =
-    llvm.load volatile %ptr : !llvm.ptr<f32> %res = spirv.Load "Function" %ptr
+    llvm.load volatile %ptr : !llvm.ptr f32> %res = spirv.Load "Function" %ptr
     ["Volatile"] : f32` Otherwise the conversion fails as other cases
     (`MakePointerAvailable`, `MakePointerVisible`, `NonPrivatePointer`) are not
     supported yet.
@@ -491,7 +491,7 @@ spirv.module Logical GLSL450 {
 module {
   llvm.mlir.global private @struct() : !llvm.struct<packed (f32, [10 x f32])>
   llvm.func @func() {
-    %0 = llvm.mlir.addressof @struct : !llvm.ptr<struct<packed (f32, [10 x f32])>>
+    %0 = llvm.mlir.addressof @struct : !llvm.ptr
     llvm.return
   }
 }
@@ -535,13 +535,13 @@ Also, at the moment initialization is only possible via `spirv.Constant`.
 ```mlir
 // Conversion of VariableOp without initialization
                                                                %size = llvm.mlir.constant(1 : i32) : i32
-%res = spirv.Variable : !spirv.ptr<vector<3xf32>, Function>   =>   %res  = llvm.alloca  %size x vector<3xf32> : (i32) -> !llvm.ptr<vec<3 x f32>>
+%res = spirv.Variable : !spirv.ptr<vector<3xf32>, Function>   =>   %res  = llvm.alloca  %size x vector<3xf32> : (i32) -> !llvm.ptr
 
 // Conversion of VariableOp with initialization
                                                                %c    = llvm.mlir.constant(0 : i64) : i64
 %c   = spirv.Constant 0 : i64                                    %size = llvm.mlir.constant(1 : i32) : i32
-%res = spirv.Variable init(%c) : !spirv.ptr<i64, Function>    =>   %res  = llvm.alloca %[[SIZE]] x i64 : (i32) -> !llvm.ptr<i64>
-                                                               llvm.store %c, %res : !llvm.ptr<i64>
+%res = spirv.Variable init(%c) : !spirv.ptr<i64, Function>    =>   %res  = llvm.alloca %[[SIZE]] x i64 : (i32) -> !llvm.ptr
+                                                               llvm.store %c, %res : i64, !llvm.ptr
 ```
 
 Note that simple conversion to `alloca` may not be sufficient if the code has

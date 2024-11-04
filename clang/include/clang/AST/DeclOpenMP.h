@@ -158,6 +158,12 @@ public:
   static bool classofKind(Kind K) { return K == OMPThreadPrivate; }
 };
 
+enum class OMPDeclareReductionInitKind {
+  Call,   // Initialized by function call.
+  Direct, // omp_priv(<expr>)
+  Copy    // omp_priv = <expr>
+};
+
 /// This represents '#pragma omp declare reduction ...' directive.
 /// For example, in the following, declared reduction 'foo' for types 'int' and
 /// 'float':

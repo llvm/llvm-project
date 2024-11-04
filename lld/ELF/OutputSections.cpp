@@ -22,6 +22,8 @@
 #include "llvm/Support/Path.h"
 #include "llvm/Support/TimeProfiler.h"
 #if LLVM_ENABLE_ZLIB
+// Avoid introducing max as a macro from Windows headers.
+#define NOMINMAX
 #include <zlib.h>
 #endif
 #if LLVM_ENABLE_ZSTD

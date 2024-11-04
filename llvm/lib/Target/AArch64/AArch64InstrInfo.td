@@ -166,6 +166,35 @@ def HasFP8           : Predicate<"Subtarget->hasFP8()">,
                                  AssemblerPredicateWithAll<(all_of FeatureFP8), "fp8">;
 def HasFAMINMAX      : Predicate<"Subtarget->hasFAMINMAX()">,
                                  AssemblerPredicateWithAll<(all_of FeatureFAMINMAX), "faminmax">;
+def HasFP8FMA        : Predicate<"Subtarget->hasFP8FMA()">,
+                                 AssemblerPredicateWithAll<(all_of FeatureFP8FMA), "fp8fma">;
+def HasSSVE_FP8FMA   : Predicate<"Subtarget->SSVE_FP8FMA() || "
+                                 "(Subtarget->hasSVE2() && Subtarget->hasFP8FMA())">,
+                                 AssemblerPredicateWithAll<(any_of FeatureSSVE_FP8FMA,
+                                                           (all_of FeatureSVE2, FeatureFP8FMA)),
+                                                           "ssve-fp8fma or (sve2 and fp8fma)">;
+def HasFP8DOT2       : Predicate<"Subtarget->hasFP8DOT2()">,
+                                 AssemblerPredicateWithAll<(all_of FeatureFP8DOT2), "fp8dot2">;
+def HasSSVE_FP8DOT2  : Predicate<"Subtarget->hasSSVE_FP8DOT2() || "
+                                 "(Subtarget->hasSVE2() && Subtarget->hasFP8DOT2())">,
+                                 AssemblerPredicateWithAll<(any_of FeatureSSVE_FP8DOT2,
+                                                           (all_of FeatureSVE2, FeatureFP8DOT2)),
+                                "ssve-fp8dot2 or (sve2 and fp8dot2)">;
+def HasFP8DOT4       : Predicate<"Subtarget->hasFP8DOT4()">,
+                                 AssemblerPredicateWithAll<(all_of FeatureFP8DOT4), "fp8dot4">;
+def HasSSVE_FP8DOT4  : Predicate<"Subtarget->hasSSVE_FP8DOT4() || "
+                                 "(Subtarget->hasSVE2() && Subtarget->hasFP8DOT4())">,
+                                 AssemblerPredicateWithAll<(any_of FeatureSSVE_FP8DOT4,
+                                                           (all_of FeatureSVE2, FeatureFP8DOT4)),
+                                 "ssve-fp8dot4 or (sve2 and fp8dot4)">;
+def HasLUT          : Predicate<"Subtarget->hasLUT()">,
+                                 AssemblerPredicateWithAll<(all_of FeatureLUT), "lut">;
+def HasSME_LUTv2     : Predicate<"Subtarget->hasSME_LUTv2()">,
+                                 AssemblerPredicateWithAll<(all_of FeatureSME_LUTv2), "sme-lutv2">;
+def HasSMEF8F16     : Predicate<"Subtarget->hasSMEF8F16()">,
+                                 AssemblerPredicateWithAll<(all_of FeatureSMEF8F16), "sme-f8f16">;
+def HasSMEF8F32     : Predicate<"Subtarget->hasSMEF8F32()">,
+                                 AssemblerPredicateWithAll<(all_of FeatureSMEF8F32), "sme-f8f32">;
 
 // A subset of SVE(2) instructions are legal in Streaming SVE execution mode,
 // they should be enabled if either has been specified.
@@ -5943,6 +5972,13 @@ def : Pat<(v16i8 (int_aarch64_neon_tbx1 (v16i8 V128:$Rd),
                    (v16i8 V128:$Ri), (v16i8 V128:$Rn))),
           (TBXv16i8One V128:$Rd, V128:$Ri, V128:$Rn)>;
 
+//----------------------------------------------------------------------------
+// AdvSIMD LUT instructions
+//----------------------------------------------------------------------------
+let Predicates = [HasLUT] in {
+  defm LUT2 : BaseSIMDTableLookupIndexed2<"luti2">;
+  defm LUT4 : BaseSIMDTableLookupIndexed4<"luti4">;
+}
 
 //----------------------------------------------------------------------------
 // AdvSIMD scalar DUP instruction
@@ -9286,6 +9322,31 @@ let Predicates = [HasFAMINMAX] in {
  defm FAMIN : SIMDThreeSameVectorFP<0b1, 0b1, 0b011, "famin", null_frag>;
 } // End let Predicates = [HasFAMAXMIN]
 
+let Predicates = [HasFP8FMA] in {
+ defm FMLALBlane : SIMDThreeSameVectorMLAIndex<0b0, "fmlalb">;
+ defm FMLALTlane : SIMDThreeSameVectorMLAIndex<0b1, "fmlalt">;
+ defm FMLALLBBlane : SIMDThreeSameVectorMLALIndex<0b0, 0b00, "fmlallbb">;
+ defm FMLALLBTlane : SIMDThreeSameVectorMLALIndex<0b0, 0b01, "fmlallbt">;
+ defm FMLALLTBlane : SIMDThreeSameVectorMLALIndex<0b1, 0b00, "fmlalltb">;
+ defm FMLALLTTlane : SIMDThreeSameVectorMLALIndex<0b1, 0b01, "fmlalltt">;
+
+ defm FMLALB : SIMDThreeSameVectorMLA<0b0, "fmlalb">;
+ defm FMLALT : SIMDThreeSameVectorMLA<0b1, "fmlalt">;
+ defm FMLALLBB : SIMDThreeSameVectorMLAL<0b0, 0b00, "fmlallbb">;
+ defm FMLALLBT : SIMDThreeSameVectorMLAL<0b0, 0b01, "fmlallbt">;
+ defm FMLALLTB : SIMDThreeSameVectorMLAL<0b1, 0b00, "fmlalltb">;
+ defm FMLALLTT : SIMDThreeSameVectorMLAL<0b1, 0b01, "fmlalltt">;
+} // End let Predicates = [HasFP8FMA]
+
+let Predicates = [HasFP8DOT2] in {
+ defm FDOTlane : SIMDThreeSameVectorFP8DOT2Index<"fdot">;
+ defm FDOT : SIMDThreeSameVectorDOT2<"fdot">;
+} // End let Predicates = [HasFP8DOT2]
+
+let Predicates = [HasFP8DOT4] in {
+ defm FDOTlane : SIMDThreeSameVectorFP8DOT4Index<"fdot">;
+ defm FDOT : SIMDThreeSameVectorDOT4<"fdot">;
+} // End let Predicates = [HasFP8DOT4]
 
 include "AArch64InstrAtomics.td"
 include "AArch64SVEInstrInfo.td"
