@@ -1363,9 +1363,8 @@ static bool isSwiftError(const Value *V) {
 
 bool IRTranslator::translateLoad(const User &U, MachineIRBuilder &MIRBuilder) {
   const LoadInst &LI = cast<LoadInst>(U);
-
-  unsigned StoreSize = DL->getTypeStoreSize(LI.getType());
-  if (StoreSize == 0)
+  TypeSize StoreSize = DL->getTypeStoreSize(LI.getType());
+  if (StoreSize.isZero())
     return true;
 
   ArrayRef<Register> Regs = getOrCreateVRegs(LI);
@@ -3377,13 +3376,13 @@ void IRTranslator::translateDbgDeclareRecord(Value *Address, bool HasArgList,
 void IRTranslator::translateDbgInfo(const Instruction &Inst,
                                       MachineIRBuilder &MIRBuilder) {
   for (DbgRecord &DR : Inst.getDbgRecordRange()) {
-    if (DPLabel *DPL = dyn_cast<DPLabel>(&DR)) {
-      MIRBuilder.setDebugLoc(DPL->getDebugLoc());
-      assert(DPL->getLabel() && "Missing label");
-      assert(DPL->getLabel()->isValidLocationForIntrinsic(
+    if (DbgLabelRecord *DLR = dyn_cast<DbgLabelRecord>(&DR)) {
+      MIRBuilder.setDebugLoc(DLR->getDebugLoc());
+      assert(DLR->getLabel() && "Missing label");
+      assert(DLR->getLabel()->isValidLocationForIntrinsic(
                  MIRBuilder.getDebugLoc()) &&
              "Expected inlined-at fields to agree");
-      MIRBuilder.buildDbgLabel(DPL->getLabel());
+      MIRBuilder.buildDbgLabel(DLR->getLabel());
       continue;
     }
     DbgVariableRecord &DVR = cast<DbgVariableRecord>(DR);

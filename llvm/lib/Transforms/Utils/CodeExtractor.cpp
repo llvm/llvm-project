@@ -1294,8 +1294,8 @@ static void fixupDebugInfoPostExtraction(Function &OldFunc, Function &NewFunc,
 
   auto UpdateDbgRecordsOnInst = [&](Instruction &I) -> void {
     for (DbgRecord &DR : I.getDbgRecordRange()) {
-      if (DPLabel *DPL = dyn_cast<DPLabel>(&DR)) {
-        UpdateDbgLabel(DPL);
+      if (DbgLabelRecord *DLR = dyn_cast<DbgLabelRecord>(&DR)) {
+        UpdateDbgLabel(DLR);
         continue;
       }
 

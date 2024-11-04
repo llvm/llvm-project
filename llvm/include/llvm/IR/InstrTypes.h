@@ -43,6 +43,7 @@ namespace llvm {
 class StringRef;
 class Type;
 class Value;
+class ConstantRange;
 
 namespace Intrinsic {
 typedef unsigned ID;
@@ -1917,7 +1918,7 @@ public:
 
     // Look at the callee, if available.
     if (const Function *F = getCalledFunction())
-      return F->getAttributes().getRetAttr(Kind);
+      return F->getRetAttribute(Kind);
     return Attribute();
   }
 
@@ -2153,6 +2154,10 @@ public:
   /// Extract a test mask for disallowed floating-point value classes for the
   /// parameter.
   FPClassTest getParamNoFPClass(unsigned i) const;
+
+  /// If this return value has a range attribute, return the value range of the
+  /// argument. Otherwise, std::nullopt is returned.
+  std::optional<ConstantRange> getRange() const;
 
   /// Return true if the return value is known to be not null.
   /// This may be because it has the nonnull attribute, or because at least

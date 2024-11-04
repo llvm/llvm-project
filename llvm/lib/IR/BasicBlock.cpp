@@ -83,7 +83,8 @@ void BasicBlock::convertToNewDbgValues() {
     }
 
     if (DbgLabelInst *DLI = dyn_cast<DbgLabelInst>(&I)) {
-      DbgVarRecs.push_back(new DPLabel(DLI->getLabel(), DLI->getDebugLoc()));
+      DbgVarRecs.push_back(
+          new DbgLabelRecord(DLI->getLabel(), DLI->getDebugLoc()));
       DLI->eraseFromParent();
       continue;
     }

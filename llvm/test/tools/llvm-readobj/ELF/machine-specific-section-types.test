@@ -70,6 +70,8 @@
 
 # HEXAGON-LLVM: Name: hexagon_ordered
 # HEXAGON-LLVM: Type: SHT_HEX_ORDERED
+# HEXAGON-LLVM: Name: .hexagon.attributes
+# HEXAGON-LLVM: Type: SHT_HEXAGON_ATTRIBUTES
 
 # HEXAGON-GNU: hexagon_ordered HEX_ORDERED
 
@@ -141,3 +143,5 @@ FileHeader:
 Sections:
   - Name: hexagon_ordered
     Type: SHT_HEX_ORDERED
+  - Name: .hexagon.attributes
+    Type: SHT_HEXAGON_ATTRIBUTES

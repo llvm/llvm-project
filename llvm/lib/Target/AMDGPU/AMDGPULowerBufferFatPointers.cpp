@@ -801,7 +801,7 @@ Value *FatPtrConstMaterializer::materialize(Value *V) {
         Ops.push_back(cast<Constant>(U.get()));
       auto *NewGEP = ConstantExpr::getGetElementPtr(
           NewSrcTy, Ops[0], ArrayRef<Constant *>(Ops).slice(1),
-          GEPO->isInBounds(), GEPO->getInRangeIndex());
+          GEPO->isInBounds(), GEPO->getInRange());
       LLVM_DEBUG(dbgs() << "p7-getting GEP: " << *GEPO << " becomes " << *NewGEP
                         << "\n");
       Value *FurtherMap = materialize(NewGEP);

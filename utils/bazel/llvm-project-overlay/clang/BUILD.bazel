@@ -2407,6 +2407,7 @@ cc_binary(
     stamp = 0,
     deps = [
         ":basic",
+        ":diagnostic_defs_gen",
         ":frontend",
         ":lex",
         ":sema",

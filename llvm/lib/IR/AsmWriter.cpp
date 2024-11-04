@@ -1152,8 +1152,8 @@ void SlotTracker::processDbgRecordMetadata(const DbgRecord &DR) {
       if (auto *Empty = dyn_cast<MDNode>(DVR->getRawAddress()))
         CreateMetadataSlot(Empty);
     }
-  } else if (const DPLabel *DPL = dyn_cast<const DPLabel>(&DR)) {
-    CreateMetadataSlot(DPL->getRawLabel());
+  } else if (const DbgLabelRecord *DLR = dyn_cast<const DbgLabelRecord>(&DR)) {
+    CreateMetadataSlot(DLR->getRawLabel());
   } else {
     llvm_unreachable("unsupported DbgRecord kind");
   }
@@ -1414,6 +1414,10 @@ static void WriteOptimizationInfo(raw_ostream &Out, const User *U) {
   } else if (const GEPOperator *GEP = dyn_cast<GEPOperator>(U)) {
     if (GEP->isInBounds())
       Out << " inbounds";
+    if (auto InRange = GEP->getInRange()) {
+      Out << " inrange(" << InRange->getLower() << ", " << InRange->getUpper()
+          << ")";
+    }
   } else if (const auto *NNI = dyn_cast<PossiblyNonNegInst>(U)) {
     if (NNI->hasNonNeg())
       Out << " nneg";
@@ -1691,18 +1695,13 @@ static void WriteConstantInternal(raw_ostream &Out, const Constant *CV,
       Out << ' ' << static_cast<CmpInst::Predicate>(CE->getPredicate());
     Out << " (";
 
-    std::optional<unsigned> InRangeOp;
     if (const GEPOperator *GEP = dyn_cast<GEPOperator>(CE)) {
       WriterCtx.TypePrinter->print(GEP->getSourceElementType(), Out);
       Out << ", ";
-      InRangeOp = GEP->getInRangeIndex();
-      if (InRangeOp)
-        ++*InRangeOp;
     }
 
-    for (User::const_op_iterator OI=CE->op_begin(); OI != CE->op_end(); ++OI) {
-      if (InRangeOp && unsigned(OI - CE->op_begin()) == *InRangeOp)
-        Out << "inrange ";
+    for (User::const_op_iterator OI = CE->op_begin(); OI != CE->op_end();
+         ++OI) {
       WriterCtx.TypePrinter->print((*OI)->getType(), Out);
       Out << ' ';
       WriteAsOperandInternal(Out, *OI, WriterCtx);
@@ -2720,7 +2719,7 @@ public:
   void printInstruction(const Instruction &I);
   void printDPMarker(const DPMarker &DPI);
   void printDbgVariableRecord(const DbgVariableRecord &DVR);
-  void printDPLabel(const DPLabel &DPL);
+  void printDbgLabelRecord(const DbgLabelRecord &DLR);
   void printDbgRecord(const DbgRecord &DR);
   void printDbgRecordLine(const DbgRecord &DR);
 
@@ -4622,8 +4621,8 @@ void AssemblyWriter::printDPMarker(const DPMarker &Marker) {
 void AssemblyWriter::printDbgRecord(const DbgRecord &DR) {
   if (auto *DVR = dyn_cast<DbgVariableRecord>(&DR))
     printDbgVariableRecord(*DVR);
-  else if (auto *DPL = dyn_cast<DPLabel>(&DR))
-    printDPLabel(*DPL);
+  else if (auto *DLR = dyn_cast<DbgLabelRecord>(&DR))
+    printDbgLabelRecord(*DLR);
   else
     llvm_unreachable("Unexpected DbgRecord kind");
 }
@@ -4673,7 +4672,7 @@ void AssemblyWriter::printDbgRecordLine(const DbgRecord &DR) {
   Out << '\n';
 }
 
-void AssemblyWriter::printDPLabel(const DPLabel &Label) {
+void AssemblyWriter::printDbgLabelRecord(const DbgLabelRecord &Label) {
   auto WriterCtx = getContext();
   Out << "#dbg_label(";
   WriteAsOperandInternal(Out, Label.getRawLabel(), WriterCtx, true);
@@ -4935,7 +4934,7 @@ void DPMarker::print(raw_ostream &ROS, ModuleSlotTracker &MST,
   W.printDPMarker(*this);
 }
 
-void DPLabel::print(raw_ostream &ROS, bool IsForDebug) const {
+void DbgLabelRecord::print(raw_ostream &ROS, bool IsForDebug) const {
 
   ModuleSlotTracker MST(getModuleFromDPI(this), true);
   print(ROS, MST, IsForDebug);
@@ -4958,8 +4957,8 @@ void DbgVariableRecord::print(raw_ostream &ROS, ModuleSlotTracker &MST,
   W.printDbgVariableRecord(*this);
 }
 
-void DPLabel::print(raw_ostream &ROS, ModuleSlotTracker &MST,
-                    bool IsForDebug) const {
+void DbgLabelRecord::print(raw_ostream &ROS, ModuleSlotTracker &MST,
+                           bool IsForDebug) const {
   formatted_raw_ostream OS(ROS);
   SlotTracker EmptySlotTable(static_cast<const Module *>(nullptr));
   SlotTracker &SlotTable =
@@ -4971,7 +4970,7 @@ void DPLabel::print(raw_ostream &ROS, ModuleSlotTracker &MST,
   incorporateFunction(Marker->getParent() ? Marker->getParent()->getParent()
                                           : nullptr);
   AssemblyWriter W(OS, SlotTable, getModuleFromDPI(this), nullptr, IsForDebug);
-  W.printDPLabel(*this);
+  W.printDbgLabelRecord(*this);
 }
 
 void Value::print(raw_ostream &ROS, bool IsForDebug) const {
