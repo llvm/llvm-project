@@ -8,10 +8,7 @@
 //
 //  This file defines the DynamicRecursiveASTVisitor interface, which acts
 //  identically to RecursiveASTVisitor, except that it uses virtual dispatch
-//  instead of CRTP, which greatly improves compile times and  binary size.
-//
-//  However, it also comes with limitations in that some of the more seldom
-//  utilised features of RecursiveASTVisitor are not supported.
+//  instead of CRTP, which greatly improves compile times and binary size.
 //
 //  Prefer to use this over RecursiveASTVisitor whenever possible.
 //
@@ -28,20 +25,31 @@ class ASTContext;
 
 /// Recursive AST visitor that supports extension via dynamic dispatch.
 ///
-/// This only supports some of the more common visitation operations; in
-/// particular, it does not support overriding WalkUpFromX or post-order
-/// traversal.
+/// Like RecursiveASTVisitor, this class allows for traversal of arbitrarily
+/// complex ASTs. The main difference is that this uses virtual functions
+/// instead of CRTP, which greatly improves compile times of Clang itself,
+/// as well as binary size.
 ///
 /// Instead of functions (e.g. shouldVisitImplicitCode()), this class
 /// uses member variables (e.g. ShouldVisitImplicitCode) to control
 /// visitation behaviour.
 ///
-/// RAV features that are NOT supported:
+/// However, there is no support for overriding some of the less commonly
+/// used features of the RAV, such as WalkUpFromX or attribute traversal
+/// (attributes can still be traversed, but you can't change what happens
+/// when we traverse one).
+///
+/// The following is a list of RAV features that are NOT customisable:
 ///
 ///   - Visiting attributes,
-///   - Post-order traversal,
 ///   - Overriding WalkUpFromX,
 ///   - Overriding getStmtChildren().
+///
+/// Furthermore, post-order traversal is not supported at all.
+///
+/// Prefer to use this over RecursiveASTVisitor unless you absolutely
+/// need to use one of the features listed above (e.g. overriding
+/// WalkUpFromX or post-order traversal).
 ///
 /// \see RecursiveASTVisitor.
 class DynamicRecursiveASTVisitor {
