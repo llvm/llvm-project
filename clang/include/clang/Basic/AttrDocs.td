@@ -6620,6 +6620,16 @@ unbind runtime APIs.
   }];
 }
 
+def CUDAGridConstantAttrDocs : Documentation {
+  let Category = DocCatDecl;
+  let Content = [{
+The ``__grid_constant__`` attribute can be applied to a ``const``-qualified kernel
+function argument and allows compiler to take the address of that argument without
+making a copy. The argument applies to sm_70 or newer GPUs, during compilation
+with CUDA-11.7(PTX 7.7) or newer, and is ignored otherwise.
+  }];
+}
+
 def HIPManagedAttrDocs : Documentation {
   let Category = DocCatDecl;
   let Content = [{

@@ -1454,7 +1454,7 @@ def CUDAGridConstant : InheritableAttr {
   let Spellings = [GNU<"grid_constant">, Declspec<"__grid_constant__">];
   let Subjects = SubjectList<[ParmVar]>;
   let LangOpts = [CUDA];
-  let Documentation = [Undocumented];
+  let Documentation = [CUDAGridConstantAttrDocs];
 }
 
 def NVPTXKernel : InheritableAttr, TargetSpecificAttr<TargetNVPTX> {
