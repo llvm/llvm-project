@@ -88,9 +88,8 @@ struct BitcastBuffer {
   const std::byte *data() const { return Data.data(); }
 
   std::byte *getBytes(unsigned BitOffset) const {
-    if (BitOffset % 8 == 0)
-      return const_cast<std::byte *>(data() + (BitOffset / 8));
-    assert(false && "hmm, how to best handle this?");
+    assert(BitOffset % 8 == 0);
+    return const_cast<std::byte *>(data() + (BitOffset / 8));
   }
 
   bool allInitialized() const {
@@ -109,8 +108,7 @@ struct BitcastBuffer {
     ++SizeInBits;
   }
 
-  void pushData(const std::byte *data, size_t BitOffset, size_t BitWidth,
-                bool BigEndianTarget) {
+  void pushData(const std::byte *data, size_t BitWidth, bool BigEndianTarget) {
     bool OnlyFullBytes = BitWidth % 8 == 0;
     unsigned NBytes = BitWidth / 8;
 
@@ -347,9 +345,9 @@ static bool readPointerToBuffer(const Context &Ctx, const Pointer &FromPtr,
 
         if (BitWidth != (Buff.size() * 8) && BigEndianTarget) {
           Buffer.pushData(Buff.data() + (Buff.size() - 1 - (BitWidth / 8)),
-                          BitOffset, BitWidth, BigEndianTarget);
+                          BitWidth, BigEndianTarget);
         } else {
-          Buffer.pushData(Buff.data(), BitOffset, BitWidth, BigEndianTarget);
+          Buffer.pushData(Buff.data(), BitWidth, BigEndianTarget);
         }
         return true;
       });
