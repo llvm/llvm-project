@@ -171,7 +171,7 @@ which can be passed directly to ‘clang-format’."
     ;; is diff-no-select requires extra copies on the buffers which
     ;; induces noticable slowdowns, especially on larger files.
     (let ((status (call-process
-                   "diff"
+                   diff-command
                    nil
                    (current-buffer)
                    nil
