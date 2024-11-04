@@ -368,7 +368,7 @@ TARGET_BUILTIN(__builtin_lasx_xvrepli_d, "V4LLiIi", "nc", "lasx")
 
 TARGET_BUILTIN(__builtin_lasx_xvand_v, "V32UcV32UcV32Uc", "nc", "lasx")
 TARGET_BUILTIN(__builtin_lasx_xvor_v, "V32UcV32UcV32Uc", "nc", "lasx")
-TARGET_BUILTIN(__builtin_lasx_xvxor_v, "V32ScV32ScV32Sc", "nc", "lasx")
+TARGET_BUILTIN(__builtin_lasx_xvxor_v, "V32UcV32UcV32Uc", "nc", "lasx")
 TARGET_BUILTIN(__builtin_lasx_xvnor_v, "V32UcV32UcV32Uc", "nc", "lasx")
 TARGET_BUILTIN(__builtin_lasx_xvandn_v, "V32UcV32UcV32Uc", "nc", "lasx")
 TARGET_BUILTIN(__builtin_lasx_xvorn_v, "V32ScV32ScV32Sc", "nc", "lasx")
