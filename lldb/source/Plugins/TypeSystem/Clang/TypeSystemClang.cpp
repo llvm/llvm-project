@@ -8474,30 +8474,11 @@ bool TypeSystemClang::CompleteTagDeclarationDefinition(
   if (enum_decl->isCompleteDefinition())
     return true;
 
-  clang::ASTContext &ast = lldb_ast->getASTContext();
-
-  /// TODO This really needs to be fixed.
-
   QualType integer_type(enum_decl->getIntegerType());
   if (!integer_type.isNull()) {
-    unsigned NumPositiveBits = 1;
-    unsigned NumNegativeBits = 0;
-
-    clang::QualType promotion_qual_type;
-    // If the enum integer type is less than an integer in bit width,
-    // then we must promote it to an integer size.
-    if (ast.getTypeSize(enum_decl->getIntegerType()) <
-        ast.getTypeSize(ast.IntTy)) {
-      if (enum_decl->getIntegerType()->isSignedIntegerType())
-        promotion_qual_type = ast.IntTy;
-      else
-        promotion_qual_type = ast.UnsignedIntTy;
-    } else
-      promotion_qual_type = enum_decl->getIntegerType();
-
-    enum_decl->completeDefinition(enum_decl->getIntegerType(),
-                                  promotion_qual_type, NumPositiveBits,
-                                  NumNegativeBits);
+    enum_decl->completeDefinition(
+        enum_decl->getIntegerType(), enum_decl->getPromotionType(),
+        enum_decl->getNumPositiveBits(), enum_decl->getNumNegativeBits());
   }
   return true;
 }

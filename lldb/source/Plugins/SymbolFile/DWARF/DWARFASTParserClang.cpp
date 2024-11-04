@@ -2315,6 +2315,8 @@ size_t DWARFASTParserClang::ParseChildEnumerators(
     return 0;
 
   size_t enumerators_added = 0;
+  unsigned NumNegativeBits = 0;
+  unsigned NumPositiveBits = 0;
 
   for (DWARFDIE die : parent_die.children()) {
     const dw_tag_t tag = die.Tag();
@@ -2367,8 +2369,99 @@ size_t DWARFASTParserClang::ParseChildEnumerators(
       m_ast.AddEnumerationValueToEnumerationType(
           clang_type, decl, name, *enum_value, enumerator_byte_size * 8);
       ++enumerators_added;
+
+      llvm::APSInt InitVal = ECD->getInitVal();
+      // Keep track of the size of positive and negative values.
+      if (InitVal.isUnsigned() || InitVal.isNonNegative()) {
+        // If the enumerator is zero that should still be counted as a positive
+        // bit since we need a bit to store the value zero.
+        unsigned ActiveBits = InitVal.getActiveBits();
+        NumPositiveBits = std::max({NumPositiveBits, ActiveBits, 1u});
+      } else {
+        NumNegativeBits =
+            std::max(NumNegativeBits, (unsigned)InitVal.getSignificantBits());
+      }
     }
   }
+
+  /// The following code follows the same logic as in Sema::ActOnEnumBody
+  /// clang/lib/Sema/SemaDecl.cpp
+  // If we have an empty set of enumerators we still need one bit.
+  // From [dcl.enum]p8
+  // If the enumerator-list is empty, the values of the enumeration are as if
+  // the enumeration had a single enumerator with value 0
+  if (!NumPositiveBits && !NumNegativeBits)
+    NumPositiveBits = 1;
+
+  clang::QualType qual_type(ClangUtil::GetQualType(clang_type));
+  clang::EnumDecl *enum_decl = qual_type->getAs<clang::EnumType>()->getDecl();
+  enum_decl->setNumPositiveBits(NumPositiveBits);
+  enum_decl->setNumNegativeBits(NumNegativeBits);
+
+  // C++0x N3000 [conv.prom]p3:
+  //   An rvalue of an unscoped enumeration type whose underlying
+  //   type is not fixed can be converted to an rvalue of the first
+  //   of the following types that can represent all the values of
+  //   the enumeration: int, unsigned int, long int, unsigned long
+  //   int, long long int, or unsigned long long int.
+  // C99 6.4.4.3p2:
+  //   An identifier declared as an enumeration constant has type int.
+  // The C99 rule is modified by C23.
+  clang::QualType BestPromotionType;
+  unsigned BestWidth;
+
+  auto &Context = m_ast.getASTContext();
+  unsigned LongWidth = Context.getTargetInfo().getLongWidth();
+  unsigned IntWidth = Context.getTargetInfo().getIntWidth();
+  unsigned CharWidth = Context.getTargetInfo().getCharWidth();
+  unsigned ShortWidth = Context.getTargetInfo().getShortWidth();
+
+  bool is_cpp = Language::LanguageIsCPlusPlus(
+      SymbolFileDWARF::GetLanguage(*parent_die.GetCU()));
+
+  if (NumNegativeBits) {
+    // If there is a negative value, figure out the smallest integer type (of
+    // int/long/longlong) that fits.
+    if (NumNegativeBits <= CharWidth && NumPositiveBits < CharWidth) {
+      BestWidth = CharWidth;
+    } else if (NumNegativeBits <= ShortWidth && NumPositiveBits < ShortWidth) {
+      BestWidth = ShortWidth;
+    } else if (NumNegativeBits <= IntWidth && NumPositiveBits < IntWidth) {
+      BestWidth = IntWidth;
+    } else if (NumNegativeBits <= LongWidth && NumPositiveBits < LongWidth) {
+      BestWidth = LongWidth;
+    } else {
+      BestWidth = Context.getTargetInfo().getLongLongWidth();
+    }
+    BestPromotionType = (BestWidth <= IntWidth ? Context.IntTy : qual_type);
+  } else {
+    // If there is no negative value, figure out the smallest type that fits
+    // all of the enumerator values.
+    if (NumPositiveBits <= CharWidth) {
+      BestPromotionType = Context.IntTy;
+      BestWidth = CharWidth;
+    } else if (NumPositiveBits <= ShortWidth) {
+      BestPromotionType = Context.IntTy;
+      BestWidth = ShortWidth;
+    } else if (NumPositiveBits <= IntWidth) {
+      BestWidth = IntWidth;
+      BestPromotionType = (NumPositiveBits == BestWidth || !is_cpp)
+                              ? Context.UnsignedIntTy
+                              : Context.IntTy;
+    } else if (NumPositiveBits <= LongWidth) {
+      BestWidth = LongWidth;
+      BestPromotionType = (NumPositiveBits == BestWidth || !is_cpp)
+                              ? Context.UnsignedLongTy
+                              : Context.LongTy;
+    } else {
+      BestWidth = Context.getTargetInfo().getLongLongWidth();
+      BestPromotionType = (NumPositiveBits == BestWidth || !is_cpp)
+                              ? Context.UnsignedLongLongTy
+                              : Context.LongLongTy;
+    }
+  }
+  enum_decl->setPromotionType(BestPromotionType);
+
   return enumerators_added;
 }
 
