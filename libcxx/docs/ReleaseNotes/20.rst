@@ -62,6 +62,10 @@ Improvements and New Features
   compile times and smaller debug information as well as better code generation if optimizations are disabled.
   The Chromium project measured a 5% reduction in object file and debug information size.
 
+- The ``_LIBCPP_ABI_BOUNDED_UNIQUE_PTR`` ABI configuration was added, which allows ``std::unique_ptr<T[]>`` to
+  detect out-of-bounds accesses in certain circumstances. ``std::unique_ptr<T[]>`` can now also detect out-of-bounds
+  accesses for a limited set of types (non-trivially destructible types) when the ABI configuration is disabled.
+
 Deprecations and Removals
 -------------------------
 

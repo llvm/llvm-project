@@ -1,7 +1,3 @@
-revert: breaks MIOpen composableKernel build
-[clang][Sema] Add -Wswitch-default warning option (#73077)
-   https://ontrack-internal.amd.com/browse/SWDEV-436625
-
 ---
 Revert: breaking MIOpen test 2
 f8b1ca4992a2 [MCParser] .altmacro: Support argument expansion not preceded by
