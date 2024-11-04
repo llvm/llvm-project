@@ -280,6 +280,7 @@ public:
   bool visit(Function &F);
 
   bool isTriviallyScalarizable(Intrinsic::ID ID);
+  bool isIntrinsicWithOverloadTypeAtArg(Intrinsic::ID ID, int ScalarOpdIdx);
 
   // InstVisitor methods.  They return true if the instruction was scalarized,
   // false if nothing changed.
@@ -696,6 +697,13 @@ bool ScalarizerVisitor::isTriviallyScalarizable(Intrinsic::ID ID) {
          TTI->isTargetIntrinsicTriviallyScalarizable(ID);
 }
 
+bool ScalarizerVisitor::isIntrinsicWithOverloadTypeAtArg(Intrinsic::ID ID,
+                                                         int ScalarOpdIdx) {
+  return Intrinsic::isTargetIntrinsic(ID)
+             ? TTI->isVectorIntrinsicWithOverloadTypeAtArg(ID, ScalarOpdIdx)
+             : isVectorIntrinsicWithOverloadTypeAtArg(ID, ScalarOpdIdx);
+}
+
 /// If a call to a vector typed intrinsic function, split into a scalar call per
 /// element if possible for the intrinsic.
 bool ScalarizerVisitor::splitCall(CallInst &CI) {
@@ -727,8 +735,7 @@ bool ScalarizerVisitor::splitCall(CallInst &CI) {
 
   SmallVector<llvm::Type *, 3> Tys;
   // Add return type if intrinsic is overloaded on it.
-  if (TTI->isVectorIntrinsicWithOverloadTypeAtArg(
-          ID, -1, isVectorIntrinsicWithOverloadTypeAtArg(ID, -1)))
+  if (isIntrinsicWithOverloadTypeAtArg(ID, -1))
     Tys.push_back(VS->SplitTy);
 
   if (AreAllVectorsOfMatchingSize) {
@@ -768,15 +775,13 @@ bool ScalarizerVisitor::splitCall(CallInst &CI) {
       }
 
       Scattered[I] = scatter(&CI, OpI, *OpVS);
-      if (TTI->isVectorIntrinsicWithOverloadTypeAtArg(
-              ID, I, isVectorIntrinsicWithOverloadTypeAtArg(ID, I))) {
+      if (isIntrinsicWithOverloadTypeAtArg(ID, I)) {
         OverloadIdx[I] = Tys.size();
         Tys.push_back(OpVS->SplitTy);
       }
     } else {
       ScalarOperands[I] = OpI;
-      if (TTI->isVectorIntrinsicWithOverloadTypeAtArg(
-              ID, I, isVectorIntrinsicWithOverloadTypeAtArg(ID, I)))
+      if (isIntrinsicWithOverloadTypeAtArg(ID, I))
         Tys.push_back(OpI->getType());
     }
   }

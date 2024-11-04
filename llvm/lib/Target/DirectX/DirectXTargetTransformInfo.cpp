@@ -25,11 +25,11 @@ bool DirectXTTIImpl::isTargetIntrinsicWithScalarOpAtArg(Intrinsic::ID ID,
   }
 }
 
-bool DirectXTTIImpl::isVectorIntrinsicWithOverloadTypeAtArg(
-    Intrinsic::ID ID, unsigned ScalarOpdIdx, bool Default) {
+bool DirectXTTIImpl::isVectorIntrinsicWithOverloadTypeAtArg(Intrinsic::ID ID,
+                                                            int ScalarOpdIdx) {
   switch (ID) {
   default:
-    return Default;
+    return ScalarOpdIdx == -1;
   }
 }
 

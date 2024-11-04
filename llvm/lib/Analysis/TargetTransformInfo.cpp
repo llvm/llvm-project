@@ -613,9 +613,8 @@ bool TargetTransformInfo::isTargetIntrinsicWithScalarOpAtArg(
 }
 
 bool TargetTransformInfo::isVectorIntrinsicWithOverloadTypeAtArg(
-    Intrinsic::ID ID, unsigned ScalarOpdIdx, bool Default) const {
-  return TTIImpl->isVectorIntrinsicWithOverloadTypeAtArg(ID, ScalarOpdIdx,
-                                                         Default);
+    Intrinsic::ID ID, int ScalarOpdIdx) const {
+  return TTIImpl->isVectorIntrinsicWithOverloadTypeAtArg(ID, ScalarOpdIdx);
 }
 
 InstructionCost TargetTransformInfo::getScalarizationOverhead(

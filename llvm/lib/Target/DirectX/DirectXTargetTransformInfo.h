@@ -38,8 +38,7 @@ public:
   bool isTargetIntrinsicWithScalarOpAtArg(Intrinsic::ID ID,
                                           unsigned ScalarOpdIdx);
   bool isVectorIntrinsicWithOverloadTypeAtArg(Intrinsic::ID ID,
-                                              unsigned ScalarOpdIdx,
-                                              bool Default);
+                                              int ScalarOpdIdx);
 };
 } // namespace llvm
 

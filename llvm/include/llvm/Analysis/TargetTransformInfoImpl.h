@@ -393,9 +393,8 @@ public:
   }
 
   bool isVectorIntrinsicWithOverloadTypeAtArg(Intrinsic::ID ID,
-                                              unsigned ScalarOpdIdx,
-                                              bool Default) const {
-    return Default;
+                                              int ScalarOpdIdx) const {
+    return ScalarOpdIdx == -1;
   }
 
   InstructionCost getScalarizationOverhead(VectorType *Ty,
