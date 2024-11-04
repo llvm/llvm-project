@@ -119,7 +119,7 @@ void applyFlowInference(FlowFunction &Func);
 template <typename FT> class SampleProfileInference {
 public:
   using NodeRef = typename GraphTraits<FT *>::NodeRef;
-  using BasicBlockT = typename std::remove_pointer<NodeRef>::type;
+  using BasicBlockT = std::remove_pointer_t<NodeRef>;
   using FunctionT = FT;
   using Edge = std::pair<const BasicBlockT *, const BasicBlockT *>;
   using BlockWeightMap = DenseMap<const BasicBlockT *, uint64_t>;

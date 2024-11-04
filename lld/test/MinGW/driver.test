@@ -205,9 +205,11 @@ GC-SECTIONS: -opt:ref
 RUN: ld.lld -### -m i386pep foo.o 2>&1 | FileCheck -check-prefix ICF-NONE %s
 RUN: ld.lld -### -m i386pep foo.o --icf=none 2>&1 | FileCheck -check-prefix ICF-NONE %s
 RUN: ld.lld -### -m i386pep foo.o -icf=none 2>&1 | FileCheck -check-prefix ICF-NONE %s
-RUN: ld.lld -### -m i386pep foo.o --icf=safe 2>&1 | FileCheck -check-prefix ICF-NONE %s
-RUN: ld.lld -### -m i386pep foo.o -icf=safe 2>&1 | FileCheck -check-prefix ICF-NONE %s
 ICF-NONE: -opt:noicf
+
+RUN: ld.lld -### -m i386pep foo.o --icf=safe 2>&1 | FileCheck -check-prefix ICF-SAFE %s
+RUN: ld.lld -### -m i386pep foo.o -icf=safe 2>&1 | FileCheck -check-prefix ICF-SAFE %s
+ICF-SAFE: -opt:safeicf
 
 RUN: ld.lld -### -m i386pep foo.o --icf=all 2>&1 | FileCheck -check-prefix ICF %s
 RUN: ld.lld -### -m i386pep foo.o -icf=all 2>&1 | FileCheck -check-prefix ICF %s

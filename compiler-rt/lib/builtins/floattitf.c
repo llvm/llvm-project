@@ -16,6 +16,7 @@
 #include "fp_lib.h"
 #include "int_lib.h"
 
+#if defined(CRT_HAS_TF_MODE)
 #define SRC_I128
 #define DST_QUAD
 #include "int_to_fp_impl.inc"
@@ -29,7 +30,6 @@
 // mmmm | mmmm mmmm mmmm mmmm mmmm mmmm mmmm mmmm | mmmm mmmm mmmm mmmm mmmm
 // mmmm mmmm mmmm
 
-#if defined(CRT_HAS_TF_MODE)
 COMPILER_RT_ABI fp_t __floattitf(ti_int a) { return __floatXiYf__(a); }
 
 #endif

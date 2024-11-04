@@ -1641,14 +1641,6 @@ bool IRForTarget::runOnModule(Module &llvm_module) {
     }
   }
 
-  llvm::Type *int8_ty = Type::getInt8Ty(m_module->getContext());
-
-  m_reloc_placeholder = new llvm::GlobalVariable(
-      (*m_module), int8_ty, false /* IsConstant */,
-      GlobalVariable::InternalLinkage, Constant::getNullValue(int8_ty),
-      "reloc_placeholder", nullptr /* InsertBefore */,
-      GlobalVariable::NotThreadLocal /* ThreadLocal */, 0 /* AddressSpace */);
-
   ////////////////////////////////////////////////////////////
   // Replace $__lldb_expr_result with a persistent variable
   //

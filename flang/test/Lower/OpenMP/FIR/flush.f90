@@ -10,7 +10,7 @@ subroutine flush_standalone(a, b, c)
 !$omp flush
 !OMPDialect: omp.flush(%{{.*}}, %{{.*}}, %{{.*}} :
 !FIRDialect: !fir.ref<i32>, !fir.ref<i32>, !fir.ref<i32>)
-!LLVMIRDialect: !llvm.ptr<i32>, !llvm.ptr<i32>, !llvm.ptr<i32>)
+!LLVMIRDialect: !llvm.ptr, !llvm.ptr, !llvm.ptr)
 !OMPDialect: omp.flush
 
 end subroutine flush_standalone
@@ -23,7 +23,7 @@ subroutine flush_parallel(a, b, c)
 
 !OMPDialect: omp.flush(%{{.*}}, %{{.*}}, %{{.*}} :
 !FIRDialect: !fir.ref<i32>, !fir.ref<i32>, !fir.ref<i32>)
-!LLVMIRDialect: !llvm.ptr<i32>, !llvm.ptr<i32>, !llvm.ptr<i32>)
+!LLVMIRDialect: !llvm.ptr, !llvm.ptr, !llvm.ptr)
 !OMPDialect: omp.flush
 !$omp flush(a,b,c)
 !$omp flush
@@ -33,10 +33,10 @@ subroutine flush_parallel(a, b, c)
 !FIRDialect: %{{.*}} = arith.addi %{{.*}}, %{{.*}} : i32
 !FIRDialect: fir.store %{{.*}} to %{{.*}} : !fir.ref<i32>
 
-!LLVMIRDialect: %{{.*}} = llvm.load %{{.*}} : !llvm.ptr<i32>
-!LLVMIRDialect: %{{.*}} = llvm.load %{{.*}} : !llvm.ptr<i32>
+!LLVMIRDialect: %{{.*}} = llvm.load %{{.*}} : !llvm.ptr -> i32
+!LLVMIRDialect: %{{.*}} = llvm.load %{{.*}} : !llvm.ptr -> i32
 !LLVMIRDialect: %{{.*}} = llvm.add %{{.*}}, %{{.*}} : i32
-!LLVMIRDialect: llvm.store %{{.*}}, %{{.*}} : !llvm.ptr<i32>
+!LLVMIRDialect: llvm.store %{{.*}}, %{{.*}} : i32, !llvm.ptr
     c = a + b
 
 !OMPDialect: omp.terminator

@@ -141,15 +141,25 @@ define double @loadfpimm16() {
   ret double -1.0
 }
 
-; Ensure fli isn't incorrectly used for negated versions of numbers in the fli
+; Ensure fli isn't directly used for negated versions of numbers in the fli
 ; table.
 define double @loadfpimm17() {
 ; CHECK-LABEL: loadfpimm17:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    lui a0, %hi(.LCPI15_0)
-; CHECK-NEXT:    fld fa0, %lo(.LCPI15_0)(a0)
+; CHECK-NEXT:    fli.d fa5, 2.0
+; CHECK-NEXT:    fneg.d fa0, fa5
 ; CHECK-NEXT:    ret
   ret double -2.0
+}
+
+; Ensure fli isn't directly used for negative min normal value.
+define double @loadfpimm18() {
+; CHECK-LABEL: loadfpimm18:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    fli.d fa5, min
+; CHECK-NEXT:    fneg.d fa0, fa5
+; CHECK-NEXT:    ret
+  ret double 0x8010000000000000
 }
 
 declare double @llvm.minimum.f64(double, double)

@@ -93,7 +93,7 @@ define amdgpu_vs void @promote_load_from_store_aggr() #0 {
 ; CHECK-NEXT:    [[FOO3_FCA_0_EXTRACT:%.*]] = extractvalue [2 x float] [[FOO3]], 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x float> undef, float [[FOO3_FCA_0_EXTRACT]], i32 0
 ; CHECK-NEXT:    [[FOO3_FCA_1_EXTRACT:%.*]] = extractvalue [2 x float] [[FOO3]], 1
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x float> [[TMP1]], float [[FOO3_FCA_1_EXTRACT]], i64 1
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x float> [[TMP1]], float [[FOO3_FCA_1_EXTRACT]], i32 1
 ; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <2 x float> [[TMP2]], i32 [[FOO1]]
 ; CHECK-NEXT:    [[FOO9:%.*]] = insertelement <4 x float> undef, float [[TMP3]], i32 0
 ; CHECK-NEXT:    [[FOO10:%.*]] = insertelement <4 x float> [[FOO9]], float [[TMP3]], i32 1

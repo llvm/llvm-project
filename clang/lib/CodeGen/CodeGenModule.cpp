@@ -761,6 +761,14 @@ static void setVisibilityFromDLLStorageClass(const clang::LangOptions &LO,
   }
 }
 
+static bool isStackProtectorOn(const LangOptions &LangOpts,
+                               const llvm::Triple &Triple,
+                               clang::LangOptions::StackProtectorMode Mode) {
+  if (Triple.isAMDGPU() || Triple.isNVPTX())
+    return false;
+  return LangOpts.getStackProtector() == Mode;
+}
+
 void CodeGenModule::Release() {
   Module *Primary = getContext().getCurrentNamedModule();
   if (CXX20ModuleInits && Primary && !Primary->isHeaderLikeModule())
@@ -2296,13 +2304,13 @@ void CodeGenModule::SetLLVMFunctionAttributesForDefinition(const Decl *D,
   if (D && D->hasAttr<NoStackProtectorAttr>())
     ; // Do nothing.
   else if (D && D->hasAttr<StrictGuardStackCheckAttr>() &&
-           LangOpts.getStackProtector() == LangOptions::SSPOn)
+           isStackProtectorOn(LangOpts, getTriple(), LangOptions::SSPOn))
     B.addAttribute(llvm::Attribute::StackProtectStrong);
-  else if (LangOpts.getStackProtector() == LangOptions::SSPOn)
+  else if (isStackProtectorOn(LangOpts, getTriple(), LangOptions::SSPOn))
     B.addAttribute(llvm::Attribute::StackProtect);
-  else if (LangOpts.getStackProtector() == LangOptions::SSPStrong)
+  else if (isStackProtectorOn(LangOpts, getTriple(), LangOptions::SSPStrong))
     B.addAttribute(llvm::Attribute::StackProtectStrong);
-  else if (LangOpts.getStackProtector() == LangOptions::SSPReq)
+  else if (isStackProtectorOn(LangOpts, getTriple(), LangOptions::SSPReq))
     B.addAttribute(llvm::Attribute::StackProtectReq);
 
   if (!D) {
@@ -6094,12 +6102,10 @@ QualType CodeGenModule::getObjCFastEnumerationStateType() {
     D->startDefinition();
 
     QualType FieldTypes[] = {
-      Context.UnsignedLongTy,
-      Context.getPointerType(Context.getObjCIdType()),
-      Context.getPointerType(Context.UnsignedLongTy),
-      Context.getConstantArrayType(Context.UnsignedLongTy,
-                           llvm::APInt(32, 5), nullptr, ArrayType::Normal, 0)
-    };
+        Context.UnsignedLongTy, Context.getPointerType(Context.getObjCIdType()),
+        Context.getPointerType(Context.UnsignedLongTy),
+        Context.getConstantArrayType(Context.UnsignedLongTy, llvm::APInt(32, 5),
+                                     nullptr, ArraySizeModifier::Normal, 0)};
 
     for (size_t i = 0; i < 4; ++i) {
       FieldDecl *Field = FieldDecl::Create(Context,

@@ -14,6 +14,8 @@
 #ifndef _OMPTARGET_H_
 #define _OMPTARGET_H_
 
+#include "Environment.h"
+
 #include <cstdint>
 #include <deque>
 #include <functional>
@@ -192,6 +194,15 @@ struct __tgt_async_info {
   // We assume to use this structure to do synchronization. In CUDA backend, it
   // is CUstream.
   void *Queue = nullptr;
+
+  /// A collection of allocations that are associated with this stream and that
+  /// should be freed after finalization.
+  llvm::SmallVector<void *, 2> AssociatedAllocations;
+
+  /// The kernel launch environment used to issue a kernel. Stored here to
+  /// ensure it is a valid location while the transfer to the device is
+  /// happening.
+  KernelLaunchEnvironmentTy KernelLaunchEnvironment;
 };
 
 struct DeviceTy;
@@ -312,6 +323,7 @@ int omp_target_memcpy_rect(void *Dst, const void *Src, size_t ElementSize,
                            const size_t *DstDimensions,
                            const size_t *SrcDimensions, int DstDevice,
                            int SrcDevice);
+void *omp_target_memset(void *Ptr, int C, size_t N, int DeviceNum);
 int omp_target_associate_ptr(const void *HostPtr, const void *DevicePtr,
                              size_t Size, size_t DeviceOffset, int DeviceNum);
 int omp_target_disassociate_ptr(const void *HostPtr, int DeviceNum);
@@ -438,7 +450,7 @@ void __tgt_set_info_flag(uint32_t);
 int __tgt_print_device_info(int64_t DeviceId);
 
 int __tgt_activate_record_replay(int64_t DeviceId, uint64_t MemorySize,
-                                 bool IsRecord, bool SaveOutput);
+                                 void *VAddr, bool IsRecord, bool SaveOutput);
 
 #ifdef __cplusplus
 }

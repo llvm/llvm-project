@@ -25,8 +25,6 @@ from tools import sparse_compiler
 
 # ===----------------------------------------------------------------------=== #
 
-# TODO: move this boilerplate to its own module, so it can be used by
-# other tests and programs.
 class TypeConverter:
     """Converter between NumPy types and MLIR types."""
 
@@ -78,7 +76,6 @@ class TypeConverter:
     ) -> ir.RankedTensorType:
         """Returns the ir.RankedTensorType of a NumPy array.  Note that NumPy
         arrays can only be converted to/from dense tensors, not sparse tensors."""
-        # TODO: handle strides as well?
         return ir.RankedTensorType.get(
             nparray.shape, self.dtype_to_irtype(nparray.dtype)
         )
@@ -112,7 +109,6 @@ class StressTest:
         with ir.InsertionPoint(self._module.body):
             tp0 = types.pop(0)
             self._roundtripTp = tp0
-            # TODO: assert dense? assert element type is recognised by the TypeConverter?
             types.append(tp0)
             funcTp = ir.FunctionType.get(inputs=[tp0], results=[tp0])
             funcOp = func.FuncOp(name="main", type=funcTp)
@@ -206,8 +202,6 @@ def main():
         shape = range(2, 3)
         rank = len(shape)
         # All combinations.
-        # TODO: add singleton here too; which requires updating how `np_arg0`
-        # is initialized below.
         levels = list(
             itertools.product(
                 *itertools.repeat(

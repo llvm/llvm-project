@@ -20,7 +20,7 @@
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i16> @llvm.aarch64.sve.sqdmlslbt.nxv8i16(<vscale x 8 x i16> [[OP1:%.*]], <vscale x 16 x i8> [[OP2:%.*]], <vscale x 16 x i8> [[OP3:%.*]])
 // CHECK-NEXT:    ret <vscale x 8 x i16> [[TMP0]]
 //
-// CPP-CHECK-LABEL: @_Z19test_svqdmlslbt_s16u11__SVInt16_tu10__SVInt8_tu10__SVInt8_t(
+// CPP-CHECK-LABEL: @_Z19test_svqdmlslbt_s16u11__SVInt16_tu10__SVInt8_tS0_(
 // CPP-CHECK-NEXT:  entry:
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i16> @llvm.aarch64.sve.sqdmlslbt.nxv8i16(<vscale x 8 x i16> [[OP1:%.*]], <vscale x 16 x i8> [[OP2:%.*]], <vscale x 16 x i8> [[OP3:%.*]])
 // CPP-CHECK-NEXT:    ret <vscale x 8 x i16> [[TMP0]]
@@ -35,7 +35,7 @@ svint16_t test_svqdmlslbt_s16(svint16_t op1, svint8_t op2, svint8_t op3)
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x i32> @llvm.aarch64.sve.sqdmlslbt.nxv4i32(<vscale x 4 x i32> [[OP1:%.*]], <vscale x 8 x i16> [[OP2:%.*]], <vscale x 8 x i16> [[OP3:%.*]])
 // CHECK-NEXT:    ret <vscale x 4 x i32> [[TMP0]]
 //
-// CPP-CHECK-LABEL: @_Z19test_svqdmlslbt_s32u11__SVInt32_tu11__SVInt16_tu11__SVInt16_t(
+// CPP-CHECK-LABEL: @_Z19test_svqdmlslbt_s32u11__SVInt32_tu11__SVInt16_tS0_(
 // CPP-CHECK-NEXT:  entry:
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x i32> @llvm.aarch64.sve.sqdmlslbt.nxv4i32(<vscale x 4 x i32> [[OP1:%.*]], <vscale x 8 x i16> [[OP2:%.*]], <vscale x 8 x i16> [[OP3:%.*]])
 // CPP-CHECK-NEXT:    ret <vscale x 4 x i32> [[TMP0]]
@@ -50,7 +50,7 @@ svint32_t test_svqdmlslbt_s32(svint32_t op1, svint16_t op2, svint16_t op3)
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 2 x i64> @llvm.aarch64.sve.sqdmlslbt.nxv2i64(<vscale x 2 x i64> [[OP1:%.*]], <vscale x 4 x i32> [[OP2:%.*]], <vscale x 4 x i32> [[OP3:%.*]])
 // CHECK-NEXT:    ret <vscale x 2 x i64> [[TMP0]]
 //
-// CPP-CHECK-LABEL: @_Z19test_svqdmlslbt_s64u11__SVInt64_tu11__SVInt32_tu11__SVInt32_t(
+// CPP-CHECK-LABEL: @_Z19test_svqdmlslbt_s64u11__SVInt64_tu11__SVInt32_tS0_(
 // CPP-CHECK-NEXT:  entry:
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 2 x i64> @llvm.aarch64.sve.sqdmlslbt.nxv2i64(<vscale x 2 x i64> [[OP1:%.*]], <vscale x 4 x i32> [[OP2:%.*]], <vscale x 4 x i32> [[OP3:%.*]])
 // CPP-CHECK-NEXT:    ret <vscale x 2 x i64> [[TMP0]]

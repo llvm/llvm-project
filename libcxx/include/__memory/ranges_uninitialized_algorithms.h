@@ -196,8 +196,9 @@ struct __fn {
   operator()(_InputIterator __ifirst, _Sentinel1 __ilast, _OutputIterator __ofirst, _Sentinel2 __olast) const {
     using _ValueType = remove_reference_t<iter_reference_t<_OutputIterator>>;
 
-    auto __result = _VSTD::__uninitialized_copy<_ValueType>(_VSTD::move(__ifirst), _VSTD::move(__ilast),
-                                                            _VSTD::move(__ofirst), _VSTD::move(__olast));
+    auto __stop_copying = [&__olast](auto&& __out_iter) { return __out_iter == __olast; };
+    auto __result       = std::__uninitialized_copy<_ValueType>(
+        std::move(__ifirst), std::move(__ilast), std::move(__ofirst), __stop_copying);
     return {_VSTD::move(__result.first), _VSTD::move(__result.second)};
   }
 
@@ -232,8 +233,9 @@ struct __fn {
   operator()(_InputIterator __ifirst, iter_difference_t<_InputIterator> __n,
              _OutputIterator __ofirst, _Sentinel __olast) const {
     using _ValueType = remove_reference_t<iter_reference_t<_OutputIterator>>;
-    auto __result = _VSTD::__uninitialized_copy_n<_ValueType>(_VSTD::move(__ifirst), __n,
-                                                              _VSTD::move(__ofirst), _VSTD::move(__olast));
+    auto __stop_copying = [&__olast](auto&& __out_iter) { return __out_iter == __olast; };
+    auto __result =
+        std::__uninitialized_copy_n<_ValueType>(std::move(__ifirst), __n, std::move(__ofirst), __stop_copying);
     return {_VSTD::move(__result.first), _VSTD::move(__result.second)};
   }
 };
@@ -261,8 +263,9 @@ struct __fn {
   operator()(_InputIterator __ifirst, _Sentinel1 __ilast, _OutputIterator __ofirst, _Sentinel2 __olast) const {
     using _ValueType = remove_reference_t<iter_reference_t<_OutputIterator>>;
     auto __iter_move = [](auto&& __iter) -> decltype(auto) { return ranges::iter_move(__iter); };
-    auto __result = _VSTD::__uninitialized_move<_ValueType>(_VSTD::move(__ifirst), _VSTD::move(__ilast),
-                                                            _VSTD::move(__ofirst), _VSTD::move(__olast), __iter_move);
+    auto __stop_moving = [&__olast](auto&& __out_iter) { return __out_iter == __olast; };
+    auto __result      = std::__uninitialized_move<_ValueType>(
+        std::move(__ifirst), std::move(__ilast), std::move(__ofirst), __stop_moving, __iter_move);
     return {_VSTD::move(__result.first), _VSTD::move(__result.second)};
   }
 
@@ -298,8 +301,9 @@ struct __fn {
              _OutputIterator __ofirst, _Sentinel __olast) const {
     using _ValueType = remove_reference_t<iter_reference_t<_OutputIterator>>;
     auto __iter_move = [](auto&& __iter) -> decltype(auto) { return ranges::iter_move(__iter); };
-    auto __result = _VSTD::__uninitialized_move_n<_ValueType>(_VSTD::move(__ifirst), __n,
-                                                              _VSTD::move(__ofirst), _VSTD::move(__olast), __iter_move);
+    auto __stop_moving = [&__olast](auto&& __out_iter) { return __out_iter == __olast; };
+    auto __result      = std::__uninitialized_move_n<_ValueType>(
+        std::move(__ifirst), __n, std::move(__ofirst), __stop_moving, __iter_move);
     return {_VSTD::move(__result.first), _VSTD::move(__result.second)};
   }
 };

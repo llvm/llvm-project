@@ -702,6 +702,9 @@ BasicBlock *CreateControlFlowHub(
 // successors
 void InvertBranch(BranchInst *PBI, IRBuilderBase &Builder);
 
+// Check whether the function only has simple terminator:
+// br/brcond/unreachable/ret
+bool hasOnlySimpleTerminator(const Function &F);
 } // end namespace llvm
 
 #endif // LLVM_TRANSFORMS_UTILS_BASICBLOCKUTILS_H

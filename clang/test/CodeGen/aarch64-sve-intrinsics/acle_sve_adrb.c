@@ -49,7 +49,7 @@ svuint64_t test_svadrb_u64base_s64offset(svuint64_t bases, svint64_t offsets)
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x i32> @llvm.aarch64.sve.adrb.nxv4i32(<vscale x 4 x i32> [[BASES:%.*]], <vscale x 4 x i32> [[OFFSETS:%.*]])
 // CHECK-NEXT:    ret <vscale x 4 x i32> [[TMP0]]
 //
-// CPP-CHECK-LABEL: @_Z29test_svadrb_u32base_u32offsetu12__SVUint32_tu12__SVUint32_t(
+// CPP-CHECK-LABEL: @_Z29test_svadrb_u32base_u32offsetu12__SVUint32_tS_(
 // CPP-CHECK-NEXT:  entry:
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x i32> @llvm.aarch64.sve.adrb.nxv4i32(<vscale x 4 x i32> [[BASES:%.*]], <vscale x 4 x i32> [[OFFSETS:%.*]])
 // CPP-CHECK-NEXT:    ret <vscale x 4 x i32> [[TMP0]]
@@ -64,7 +64,7 @@ svuint32_t test_svadrb_u32base_u32offset(svuint32_t bases, svuint32_t offsets)
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 2 x i64> @llvm.aarch64.sve.adrb.nxv2i64(<vscale x 2 x i64> [[BASES:%.*]], <vscale x 2 x i64> [[OFFSETS:%.*]])
 // CHECK-NEXT:    ret <vscale x 2 x i64> [[TMP0]]
 //
-// CPP-CHECK-LABEL: @_Z29test_svadrb_u64base_u64offsetu12__SVUint64_tu12__SVUint64_t(
+// CPP-CHECK-LABEL: @_Z29test_svadrb_u64base_u64offsetu12__SVUint64_tS_(
 // CPP-CHECK-NEXT:  entry:
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 2 x i64> @llvm.aarch64.sve.adrb.nxv2i64(<vscale x 2 x i64> [[BASES:%.*]], <vscale x 2 x i64> [[OFFSETS:%.*]])
 // CPP-CHECK-NEXT:    ret <vscale x 2 x i64> [[TMP0]]

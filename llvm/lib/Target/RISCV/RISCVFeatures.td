@@ -813,6 +813,22 @@ def HasVendorXSfcie : Predicate<"Subtarget->hasVendorXSfcie()">,
                         AssemblerPredicate<(all_of FeatureVendorXSfcie),
                         "'XSfcie' (SiFive Custom Instruction Extension SCIE.)">;
 
+def FeatureVendorXSfvqmaccdod
+    : SubtargetFeature<"xsfvqmaccdod", "HasVendorXSfvqmaccdod", "true",
+                       "'XSfvqmaccdod' (SiFive Int8 Matrix Multiplication Instructions (2-by-8 and 8-by-2))",
+                       [FeatureStdExtZve32x]>;
+def HasVendorXSfvqmaccdod : Predicate<"Subtarget->hasVendorXSfvqmaccdod()">,
+                         AssemblerPredicate<(all_of FeatureVendorXSfvqmaccdod),
+                         "'XSfvqmaccdod' (SiFive Int8 Matrix Multiplication Instructions (2-by-8 and 8-by-2))">;
+
+def FeatureVendorXSfvqmaccqoq
+    : SubtargetFeature<"xsfvqmaccqoq", "HasVendorXSfvqmaccqoq", "true",
+                       "'XSfvqmaccqoq' (SiFive Int8 Matrix Multiplication Instructions (4-by-8 and 8-by-4))",
+                       [FeatureStdExtZve32x]>;
+def HasVendorXSfvqmaccqoq : Predicate<"Subtarget->hasVendorXSfvqmaccqoq()">,
+                         AssemblerPredicate<(all_of FeatureVendorXSfvqmaccqoq),
+                         "'XSfvqmaccqoq' (SiFive Int8 Matrix Multiplication Instructions (4-by-8 and 8-by-4))">;
+
 def FeatureVendorXCVbitmanip
     : SubtargetFeature<"xcvbitmanip", "HasVendorXCVbitmanip", "true",
                        "'XCVbitmanip' (CORE-V Bit Manipulation)">;
@@ -937,6 +953,10 @@ def TuneSiFive7 : SubtargetFeature<"sifive7", "RISCVProcFamily", "SiFive7",
                                    "SiFive 7-Series processors",
                                    [TuneNoDefaultUnroll,
                                     TuneShortForwardBranchOpt]>;
+
+def TuneVentanaVeyron : SubtargetFeature<"ventana-veyron", "RISCVProcFamily", "VentanaVeyron",
+                                         "Ventana-Veyron Series processors",
+                                         [TuneLUIADDIFusion]>;
 
 // Assume that lock-free native-width atomics are available, even if the target
 // and operating system combination would not usually provide them. The user

@@ -53,7 +53,7 @@ program openacc_update_validity
 
   !$acc update host(bb) device_type(*) wait
 
-  !$acc update self(cc) device_type(1,2) async device_type(3) wait
+  !$acc update self(cc) device_type(host,multicore) async device_type(*) wait
 
   !ERROR: At most one IF clause can appear on the UPDATE directive
   !$acc update device(aa) if(.true.) if(ifCondition)

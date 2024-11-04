@@ -145,7 +145,6 @@ gentbl_cc_library(
     ],
 )
 
-
 gentbl_cc_library(
     name = "TestOpsIncGen",
     strip_include_prefix = "lib/Dialect/Test",
@@ -468,6 +467,7 @@ cc_library(
         "//mlir:AffineDialect",
         "//mlir:ArithDialect",
         "//mlir:FuncDialect",
+        "//mlir:GPUDialect",
         "//mlir:IR",
         "//mlir:LinalgDialect",
         "//mlir:LinalgTransforms",
@@ -659,6 +659,8 @@ cc_library(
         "//mlir:IR",
         "//mlir:IndexDialect",
         "//mlir:IndexToLLVM",
+        "//mlir:LLVMDialect",
+        "//mlir:LinalgTransforms",
         "//mlir:MathToLLVM",
         "//mlir:MemRefDialect",
         "//mlir:MemRefToLLVM",

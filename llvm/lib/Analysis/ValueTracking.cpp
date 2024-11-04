@@ -1637,8 +1637,8 @@ static void computeKnownBitsFromOperator(const Operator *I,
         const Value *Mask = I->getOperand(1);
         Known2 = KnownBits(Mask->getType()->getScalarSizeInBits());
         computeKnownBits(Mask, Known2, Depth + 1, Q);
-        // This is basically a pointer typed and.
-        Known &= Known2.zextOrTrunc(Known.getBitWidth());
+        // TODO: 1-extend would be more precise.
+        Known &= Known2.anyextOrTrunc(BitWidth);
         break;
       }
       case Intrinsic::x86_sse42_crc32_64_64:
@@ -2263,6 +2263,10 @@ static bool isKnownNonNullFromDominatingCondition(const Value *V,
           DT->dominates(I, CtxI))
         return true;
     }
+
+    if (match(U, m_IDiv(m_Value(), m_Specific(V))) &&
+        isValidAssumeForContext(cast<Instruction>(U), CtxI, DT))
+      return true;
 
     // Consider only compare instructions uniquely controlling a branch
     Value *RHS;
@@ -3118,6 +3122,25 @@ static bool isNonEqualPHIs(const PHINode *PN1, const PHINode *PN2,
   return true;
 }
 
+static bool isNonEqualSelect(const Value *V1, const Value *V2, unsigned Depth,
+                             const SimplifyQuery &Q) {
+  const SelectInst *SI1 = dyn_cast<SelectInst>(V1);
+  if (!SI1)
+    return false;
+
+  if (const SelectInst *SI2 = dyn_cast<SelectInst>(V2)) {
+    const Value *Cond1 = SI1->getCondition();
+    const Value *Cond2 = SI2->getCondition();
+    if (Cond1 == Cond2)
+      return isKnownNonEqual(SI1->getTrueValue(), SI2->getTrueValue(),
+                             Depth + 1, Q) &&
+             isKnownNonEqual(SI1->getFalseValue(), SI2->getFalseValue(),
+                             Depth + 1, Q);
+  }
+  return isKnownNonEqual(SI1->getTrueValue(), V2, Depth + 1, Q) &&
+         isKnownNonEqual(SI1->getFalseValue(), V2, Depth + 1, Q);
+}
+
 /// Return true if it is known that V1 != V2.
 static bool isKnownNonEqual(const Value *V1, const Value *V2, unsigned Depth,
                             const SimplifyQuery &Q) {
@@ -3167,6 +3190,10 @@ static bool isKnownNonEqual(const Value *V1, const Value *V2, unsigned Depth,
         Known2.Zero.intersects(Known1.One))
       return true;
   }
+
+  if (isNonEqualSelect(V1, V2, Depth, Q) || isNonEqualSelect(V2, V1, Depth, Q))
+    return true;
+
   return false;
 }
 

@@ -22,7 +22,7 @@
 #include <mdspan>
 
 #include "check_assertion.h"
-#include "../../../../../std/containers/views/mdspan/mdspan/CustomTestLayouts.h"
+#include "../../../../../std/containers/views/mdspan/CustomTestLayouts.h"
 
 // We use a funky mapping in this test where required_span_size is much smaller than the size of the index space
 int main(int, char**) {

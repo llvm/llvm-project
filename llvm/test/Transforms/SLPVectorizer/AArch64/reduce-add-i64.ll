@@ -183,9 +183,9 @@ entry:
 define i64 @red_ld_2xi64(ptr %ptr) {
 ; CHECK-LABEL: @red_ld_2xi64(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[LD0:%.*]] = load i64, ptr [[PTR:%.*]], align 4
+; CHECK-NEXT:    [[LD0:%.*]] = load i64, ptr [[PTR:%.*]], align 8
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i64, ptr [[PTR]], i64 1
-; CHECK-NEXT:    [[LD1:%.*]] = load i64, ptr [[GEP]], align 4
+; CHECK-NEXT:    [[LD1:%.*]] = load i64, ptr [[GEP]], align 8
 ; CHECK-NEXT:    [[ADD_1:%.*]] = add nuw nsw i64 [[LD0]], [[LD1]]
 ; CHECK-NEXT:    ret i64 [[ADD_1]]
 ;
@@ -200,7 +200,7 @@ entry:
 define i64 @red_ld_4xi64(ptr %ptr) {
 ; CHECK-LABEL: @red_ld_4xi64(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i64>, ptr [[PTR:%.*]], align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i64>, ptr [[PTR:%.*]], align 8
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vector.reduce.add.v4i64(<4 x i64> [[TMP0]])
 ; CHECK-NEXT:    ret i64 [[TMP1]]
 ;
@@ -221,7 +221,7 @@ entry:
 define i64 @red_ld_8xi64(ptr %ptr) {
 ; CHECK-LABEL: @red_ld_8xi64(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = load <8 x i64>, ptr [[PTR:%.*]], align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = load <8 x i64>, ptr [[PTR:%.*]], align 8
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vector.reduce.add.v8i64(<8 x i64> [[TMP0]])
 ; CHECK-NEXT:    ret i64 [[TMP1]]
 ;
@@ -254,7 +254,7 @@ entry:
 define i64 @red_ld_16xi64(ptr %ptr) {
 ; CHECK-LABEL: @red_ld_16xi64(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = load <16 x i64>, ptr [[PTR:%.*]], align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = load <16 x i64>, ptr [[PTR:%.*]], align 8
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vector.reduce.add.v16i64(<16 x i64> [[TMP0]])
 ; CHECK-NEXT:    ret i64 [[TMP1]]
 ;

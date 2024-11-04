@@ -841,6 +841,10 @@ void APValue::printPretty(raw_ostream &Out, const PrintingPolicy &Policy,
           Out << *VD;
           ElemTy = VD->getType();
         }
+      } else if (ElemTy->isAnyComplexType()) {
+        // The lvalue refers to a complex type
+        Out << (Path[I].getAsArrayIndex() == 0 ? ".real" : ".imag");
+        ElemTy = ElemTy->castAs<ComplexType>()->getElementType();
       } else {
         // The lvalue must refer to an array.
         Out << '[' << Path[I].getAsArrayIndex() << ']';

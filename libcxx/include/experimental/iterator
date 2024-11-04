@@ -58,7 +58,6 @@ namespace std {
 #include <__utility/forward.h>
 #include <__utility/move.h>
 #include <experimental/__config>
-#include <iosfwd> // char_traits
 #include <iterator>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
@@ -120,6 +119,7 @@ _LIBCPP_END_NAMESPACE_LFTS
 #endif // _LIBCPP_STD_VER >= 14
 
 #if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 20
+#  include <iosfwd>
 #  include <type_traits>
 #endif
 

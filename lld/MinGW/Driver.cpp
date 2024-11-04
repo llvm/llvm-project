@@ -375,7 +375,9 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
     StringRef s = a->getValue();
     if (s == "all")
       add("-opt:icf");
-    else if (s == "safe" || s == "none")
+    else if (s == "safe")
+      add("-opt:safeicf");
+    else if (s == "none")
       add("-opt:noicf");
     else
       error("unknown parameter: --icf=" + s);

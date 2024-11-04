@@ -274,7 +274,8 @@ class PrologEpilogSGPRSpillBuilder {
       Register SubReg = NumSubRegs == 1
                             ? SuperReg
                             : Register(TRI.getSubReg(SuperReg, SplitParts[I]));
-      BuildMI(MBB, MI, DL, TII->get(AMDGPU::V_WRITELANE_B32), Spill[I].VGPR)
+      BuildMI(MBB, MI, DL, TII->get(AMDGPU::SI_SPILL_S32_TO_VGPR),
+              Spill[I].VGPR)
           .addReg(SubReg)
           .addImm(Spill[I].Lane)
           .addReg(Spill[I].VGPR, RegState::Undef);
@@ -319,7 +320,7 @@ class PrologEpilogSGPRSpillBuilder {
       Register SubReg = NumSubRegs == 1
                             ? SuperReg
                             : Register(TRI.getSubReg(SuperReg, SplitParts[I]));
-      BuildMI(MBB, MI, DL, TII->get(AMDGPU::V_READLANE_B32), SubReg)
+      BuildMI(MBB, MI, DL, TII->get(AMDGPU::SI_RESTORE_S32_FROM_VGPR), SubReg)
           .addReg(Spill[I].VGPR)
           .addImm(Spill[I].Lane);
     }
@@ -1554,12 +1555,10 @@ void SIFrameLowering::determineCalleeSaves(MachineFunction &MF,
       // TODO: Handle this elsewhere at an early point. Walking through all MBBs
       // here would be a bad heuristic. A better way should be by calling
       // allocateWWMSpill during the regalloc pipeline whenever a physical
-      // register is allocated for the intended virtual registers. That will
-      // also help excluding the general use of WRITELANE/READLANE intrinsics
-      // that won't really need any such special handling.
-      if (MI.getOpcode() == AMDGPU::V_WRITELANE_B32)
+      // register is allocated for the intended virtual registers.
+      if (MI.getOpcode() == AMDGPU::SI_SPILL_S32_TO_VGPR)
         MFI->allocateWWMSpill(MF, MI.getOperand(0).getReg());
-      else if (MI.getOpcode() == AMDGPU::V_READLANE_B32)
+      else if (MI.getOpcode() == AMDGPU::SI_RESTORE_S32_FROM_VGPR)
         MFI->allocateWWMSpill(MF, MI.getOperand(1).getReg());
       else if (TII->isWWMRegSpillOpcode(MI.getOpcode()))
         NeedExecCopyReservedReg = true;

@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -launch-func-to-vulkan='use-opaque-pointers=1' | FileCheck %s
+// RUN: mlir-opt %s -launch-func-to-vulkan | FileCheck %s
 
 // CHECK: llvm.mlir.global internal constant @kernel_spv_entry_point_name
 // CHECK: llvm.mlir.global internal constant @SPIRV_BIN

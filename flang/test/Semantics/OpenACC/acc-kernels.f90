@@ -122,10 +122,10 @@ program openacc_kernels_validity
   !$acc kernels device_type(*)
   !$acc end kernels
 
-  !$acc kernels device_type(1)
+  !$acc kernels device_type(default)
   !$acc end kernels
 
-  !$acc kernels device_type(1, 3)
+  !$acc kernels device_type(default, host)
   !$acc end kernels
 
   !$acc kernels device_type(*) async wait num_gangs(8) num_workers(8) vector_length(128)

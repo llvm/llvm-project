@@ -382,7 +382,6 @@ template <class R, class Alloc> struct uses_allocator<packaged_task<R>, Alloc>;
 #include <__system_error/error_code.h>
 #include <__system_error/error_condition.h>
 #include <__type_traits/aligned_storage.h>
-#include <__type_traits/alignment_of.h>
 #include <__type_traits/strip_signature.h>
 #include <__utility/auto_cast.h>
 #include <__utility/forward.h>
@@ -648,7 +647,7 @@ class _LIBCPP_AVAILABILITY_FUTURE _LIBCPP_HIDDEN __assoc_state
 {
     typedef __assoc_sub_state base;
 _LIBCPP_SUPPRESS_DEPRECATED_PUSH
-    typedef typename aligned_storage<sizeof(_Rp), alignment_of<_Rp>::value>::type _Up;
+    typedef typename aligned_storage<sizeof(_Rp), _LIBCPP_ALIGNOF(_Rp)>::type _Up;
 _LIBCPP_SUPPRESS_DEPRECATED_POP
 protected:
     _Up __value_;
@@ -2476,6 +2475,7 @@ _LIBCPP_END_NAMESPACE_STD
 #  include <atomic>
 #  include <cstdlib>
 #  include <exception>
+#  include <iosfwd>
 #  include <system_error>
 #endif
 

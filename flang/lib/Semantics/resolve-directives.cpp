@@ -61,6 +61,9 @@ protected:
         ? std::nullopt
         : std::make_optional<DirContext>(dirContext_.back());
   }
+  void PushContext(const parser::CharBlock &source, T dir, Scope &scope) {
+    dirContext_.emplace_back(source, dir, scope);
+  }
   void PushContext(const parser::CharBlock &source, T dir) {
     dirContext_.emplace_back(source, dir, context_.FindScope(source));
   }
@@ -115,8 +118,8 @@ protected:
 
 class AccAttributeVisitor : DirectiveAttributeVisitor<llvm::acc::Directive> {
 public:
-  explicit AccAttributeVisitor(SemanticsContext &context)
-      : DirectiveAttributeVisitor(context) {}
+  explicit AccAttributeVisitor(SemanticsContext &context, Scope *topScope)
+      : DirectiveAttributeVisitor(context), topScope_(topScope) {}
 
   template <typename A> void Walk(const A &x) { parser::Walk(x, *this); }
   template <typename A> bool Pre(const A &) { return true; }
@@ -254,9 +257,6 @@ private:
       Symbol::Flag::AccCopyIn, Symbol::Flag::AccCopyOut,
       Symbol::Flag::AccDelete, Symbol::Flag::AccPresent};
 
-  Symbol::Flags accFlagsRequireNewSymbol{Symbol::Flag::AccPrivate,
-      Symbol::Flag::AccFirstPrivate, Symbol::Flag::AccReduction};
-
   Symbol::Flags accDataMvtFlags{
       Symbol::Flag::AccDevice, Symbol::Flag::AccHost, Symbol::Flag::AccSelf};
 
@@ -266,7 +266,7 @@ private:
       Symbol::Flag::AccDevicePtr, Symbol::Flag::AccDeviceResident,
       Symbol::Flag::AccLink, Symbol::Flag::AccPresent};
 
-  void PrivatizeAssociatedLoopIndex(const parser::OpenACCLoopConstruct &);
+  void CheckAssociatedLoopIndex(const parser::OpenACCLoopConstruct &);
   void ResolveAccObjectList(const parser::AccObjectList &, Symbol::Flag);
   void ResolveAccObject(const parser::AccObject &, Symbol::Flag);
   Symbol *ResolveAcc(const parser::Name &, Symbol::Flag, Scope &);
@@ -284,6 +284,7 @@ private:
       const llvm::acc::Clause clause, const parser::AccObjectList &objectList);
   void AddRoutineInfoToSymbol(
       Symbol &, const parser::OpenACCRoutineConstruct &);
+  Scope *topScope_;
 };
 
 // Data-sharing and Data-mapping attributes for data-refs in OpenMP construct
@@ -805,10 +806,6 @@ bool AccAttributeVisitor::Pre(const parser::OpenACCDeclarativeConstruct &x) {
     const auto &declDir{
         std::get<parser::AccDeclarativeDirective>(declConstruct->t)};
     PushContext(declDir.source, llvm::acc::Directive::ACCD_declare);
-  } else if (const auto *routineConstruct{
-                 std::get_if<parser::OpenACCRoutineConstruct>(&x.u)}) {
-    const auto &verbatim{std::get<parser::Verbatim>(routineConstruct->t)};
-    PushContext(verbatim.source, llvm::acc::Directive::ACCD_routine);
   }
   ClearDataSharingAttributeObjects();
   return true;
@@ -877,7 +874,7 @@ bool AccAttributeVisitor::Pre(const parser::OpenACCLoopConstruct &x) {
   }
   ClearDataSharingAttributeObjects();
   SetContextAssociatedLoopLevel(GetAssociatedLoopLevelFromClauses(clauseList));
-  PrivatizeAssociatedLoopIndex(x);
+  CheckAssociatedLoopIndex(x);
   return true;
 }
 
@@ -916,6 +913,10 @@ Symbol *AccAttributeVisitor::ResolveFctName(const parser::Name &name) {
   Symbol *prev{currScope().FindSymbol(name.source)};
   if (!prev || (prev && prev->IsFuncResult())) {
     prev = currScope().parent().FindSymbol(name.source);
+    if (!prev) {
+      prev = &context_.globalScope().MakeSymbol(
+          name.source, Attrs{}, ProcEntityDetails{});
+    }
   }
   if (prev != name.symbol) {
     name.symbol = prev;
@@ -968,7 +969,7 @@ void AccAttributeVisitor::AddRoutineInfoToSymbol(
                      std::get_if<Fortran::parser::AccClause::Bind>(&clause.u)) {
         if (const auto *name =
                 std::get_if<Fortran::parser::Name>(&bindClause->v.u)) {
-          if (Symbol *sym = ResolveName(*name, true)) {
+          if (Symbol *sym = ResolveFctName(*name)) {
             info.set_bindName(sym->name().ToString());
           } else {
             context_.Say((*name).source,
@@ -993,6 +994,13 @@ void AccAttributeVisitor::AddRoutineInfoToSymbol(
 }
 
 bool AccAttributeVisitor::Pre(const parser::OpenACCRoutineConstruct &x) {
+  const auto &verbatim{std::get<parser::Verbatim>(x.t)};
+  if (topScope_) {
+    PushContext(
+        verbatim.source, llvm::acc::Directive::ACCD_routine, *topScope_);
+  } else {
+    PushContext(verbatim.source, llvm::acc::Directive::ACCD_routine);
+  }
   const auto &optName{std::get<std::optional<parser::Name>>(x.t)};
   if (optName) {
     if (Symbol *sym = ResolveFctName(*optName)) {
@@ -1004,14 +1012,16 @@ bool AccAttributeVisitor::Pre(const parser::OpenACCRoutineConstruct &x) {
           (*optName).source);
     }
   } else {
-    AddRoutineInfoToSymbol(*currScope().symbol(), x);
+    if (currScope().symbol()) {
+      AddRoutineInfoToSymbol(*currScope().symbol(), x);
+    }
   }
   return true;
 }
 
 bool AccAttributeVisitor::Pre(const parser::AccBindClause &x) {
   if (const auto *name{std::get_if<parser::Name>(&x.u)}) {
-    if (!ResolveName(*name, true)) {
+    if (!ResolveFctName(*name)) {
       context_.Say(name->source,
           "No function or subroutine declared for '%s'"_err_en_US,
           name->source);
@@ -1042,7 +1052,10 @@ static bool IsLastNameArray(const parser::Designator &designator) {
   const evaluate::DataRef dataRef{*(name.symbol)};
   return common::visit(
       common::visitors{
-          [](const evaluate::SymbolRef &ref) { return ref->Rank() > 0; },
+          [](const evaluate::SymbolRef &ref) {
+            return ref->Rank() > 0 ||
+                ref->GetType()->category() == DeclTypeSpec::Numeric;
+          },
           [](const evaluate::ArrayRef &aref) {
             return aref.base().IsSymbol() ||
                 aref.base().GetComponent().base().Rank() == 0;
@@ -1141,13 +1154,12 @@ std::int64_t AccAttributeVisitor::GetAssociatedLoopLevelFromClauses(
   return 1; // default is outermost loop
 }
 
-void AccAttributeVisitor::PrivatizeAssociatedLoopIndex(
+void AccAttributeVisitor::CheckAssociatedLoopIndex(
     const parser::OpenACCLoopConstruct &x) {
   std::int64_t level{GetContext().associatedLoopLevel};
-  if (level <= 0) { // collpase value was negative or 0
+  if (level <= 0) { // collapse value was negative or 0
     return;
   }
-  Symbol::Flag ivDSA{Symbol::Flag::AccPrivate};
 
   const auto getNextDoConstruct =
       [this](const parser::Block &block) -> const parser::DoConstruct * {
@@ -1166,16 +1178,8 @@ void AccAttributeVisitor::PrivatizeAssociatedLoopIndex(
 
   const auto &outer{std::get<std::optional<parser::DoConstruct>>(x.t)};
   for (const parser::DoConstruct *loop{&*outer}; loop && level > 0; --level) {
-    // go through all the nested do-loops and resolve index variables
-    const parser::Name *iv{GetLoopIndex(*loop)};
-    if (iv) {
-      if (auto *symbol{ResolveAcc(*iv, ivDSA, currScope())}) {
-        symbol->set(Symbol::Flag::AccPreDetermined);
-        iv->symbol = symbol; // adjust the symbol within region
-        AddToContextObjectWithDSA(*symbol, ivDSA);
-      }
-    }
-
+    // Go through all nested loops to ensure index variable exists.
+    GetLoopIndex(*loop);
     const auto &block{std::get<parser::Block>(loop->t)};
     loop = getNextDoConstruct(block);
   }
@@ -1328,20 +1332,12 @@ void AccAttributeVisitor::ResolveAccObject(
 
 Symbol *AccAttributeVisitor::ResolveAcc(
     const parser::Name &name, Symbol::Flag accFlag, Scope &scope) {
-  if (accFlagsRequireNewSymbol.test(accFlag)) {
-    return DeclarePrivateAccessEntity(name, accFlag, scope);
-  } else {
-    return DeclareOrMarkOtherAccessEntity(name, accFlag);
-  }
+  return DeclareOrMarkOtherAccessEntity(name, accFlag);
 }
 
 Symbol *AccAttributeVisitor::ResolveAcc(
     Symbol &symbol, Symbol::Flag accFlag, Scope &scope) {
-  if (accFlagsRequireNewSymbol.test(accFlag)) {
-    return DeclarePrivateAccessEntity(symbol, accFlag, scope);
-  } else {
-    return DeclareOrMarkOtherAccessEntity(symbol, accFlag);
-  }
+  return DeclareOrMarkOtherAccessEntity(symbol, accFlag);
 }
 
 Symbol *AccAttributeVisitor::DeclareOrMarkOtherAccessEntity(
@@ -1374,11 +1370,6 @@ static bool WithMultipleAppearancesAccException(
 void AccAttributeVisitor::CheckMultipleAppearances(
     const parser::Name &name, const Symbol &symbol, Symbol::Flag accFlag) {
   const auto *target{&symbol};
-  if (accFlagsRequireNewSymbol.test(accFlag)) {
-    if (const auto *details{symbol.detailsIf<HostAssocDetails>()}) {
-      target = &details->symbol();
-    }
-  }
   if (HasDataSharingAttributeObject(*target) &&
       !WithMultipleAppearancesAccException(symbol, accFlag)) {
     context_.Say(name.source,
@@ -2211,10 +2202,10 @@ void OmpAttributeVisitor::CheckMultipleAppearances(
   }
 }
 
-void ResolveAccParts(
-    SemanticsContext &context, const parser::ProgramUnit &node) {
+void ResolveAccParts(SemanticsContext &context, const parser::ProgramUnit &node,
+    Scope *topScope) {
   if (context.IsEnabled(common::LanguageFeature::OpenACC)) {
-    AccAttributeVisitor{context}.Walk(node);
+    AccAttributeVisitor{context, topScope}.Walk(node);
   }
 }
 
@@ -2253,7 +2244,9 @@ void ResolveOmpTopLevelParts(
       if (!std::holds_alternative<common::Indirection<parser::Module>>(
               unit.u) &&
           !std::holds_alternative<common::Indirection<parser::Submodule>>(
-              unit.u)) {
+              unit.u) &&
+          !std::holds_alternative<
+              common::Indirection<parser::CompilerDirective>>(unit.u)) {
         Symbol *symbol{common::visit(
             [&context](auto &x) {
               Scope *scope = GetScope(context, x.value());

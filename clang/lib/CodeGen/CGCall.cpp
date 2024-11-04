@@ -2719,7 +2719,7 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
 
       auto *Decl = ParamType->getAsRecordDecl();
       if (CodeGenOpts.PassByValueIsNoAlias && Decl &&
-          Decl->getArgPassingRestrictions() == RecordDecl::APK_CanPassInRegs)
+          Decl->getArgPassingRestrictions() == ArgPassingKind::CanPassInRegs)
         // When calling the function, the pointer passed in will be the only
         // reference to the underlying object. Mark it accordingly.
         Attrs.addAttribute(llvm::Attribute::NoAlias);
@@ -3062,7 +3062,7 @@ void CodeGenFunction::EmitFunctionProlog(const CGFunctionInfo &FI,
             // indicates dereferenceability, and if the size is constant we can
             // use the dereferenceable attribute (which requires the size in
             // bytes).
-            if (ArrTy->getSizeModifier() == ArrayType::Static) {
+            if (ArrTy->getSizeModifier() == ArraySizeModifier::Static) {
               QualType ETy = ArrTy->getElementType();
               llvm::Align Alignment =
                   CGM.getNaturalTypeAlignment(ETy).getAsAlign();
@@ -3086,7 +3086,7 @@ void CodeGenFunction::EmitFunctionProlog(const CGFunctionInfo &FI,
             // For C99 VLAs with the static keyword, we don't know the size so
             // we can't use the dereferenceable attribute, but in addrspace(0)
             // we know that it must be nonnull.
-            if (ArrTy->getSizeModifier() == VariableArrayType::Static) {
+            if (ArrTy->getSizeModifier() == ArraySizeModifier::Static) {
               QualType ETy = ArrTy->getElementType();
               llvm::Align Alignment =
                   CGM.getNaturalTypeAlignment(ETy).getAsAlign();
@@ -3447,9 +3447,9 @@ static llvm::Value *tryRemoveRetainOfSelf(CodeGenFunction &CGF,
   const VarDecl *self = method->getSelfDecl();
   if (!self->getType().isConstQualified()) return nullptr;
 
-  // Look for a retain call. Note: stripPointerCasts looks through returned arg
-  // functions, which would cause us to miss the retain.
-  llvm::CallInst *retainCall = dyn_cast<llvm::CallInst>(result);
+  // Look for a retain call.
+  llvm::CallInst *retainCall =
+    dyn_cast<llvm::CallInst>(result->stripPointerCasts());
   if (!retainCall || retainCall->getCalledOperand() !=
                          CGF.CGM.getObjCEntrypoints().objc_retain)
     return nullptr;

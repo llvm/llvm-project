@@ -111,10 +111,10 @@ program openacc_parallel_validity
   !$acc parallel device_type(*)
   !$acc end parallel
 
-  !$acc parallel device_type(1)
+  !$acc parallel device_type(default)
   !$acc end parallel
 
-  !$acc parallel device_type(1, 3)
+  !$acc parallel device_type(default, host)
   !$acc end parallel
 
   !ERROR: Clause PRIVATE is not allowed after clause DEVICE_TYPE on the PARALLEL directive
@@ -131,7 +131,7 @@ program openacc_parallel_validity
   !$acc parallel device_type(*) num_gangs(8)
   !$acc end parallel
 
-  !$acc parallel device_type(1) async device_type(2) wait
+  !$acc parallel device_type(*) async device_type(host) wait
   !$acc end parallel
 
   !ERROR: Clause IF is not allowed after clause DEVICE_TYPE on the PARALLEL directive

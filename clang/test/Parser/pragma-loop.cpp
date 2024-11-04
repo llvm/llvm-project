@@ -82,7 +82,7 @@ void test_type_template_vectorize(int *List, int Length) {
   }
 }
 
-void test(int *List, int Length) {
+void test(int *List, int Length) { // expected-note {{declared here}}
   int i = 0;
 
 #pragma clang loop vectorize(enable)
@@ -118,7 +118,8 @@ void test(int *List, int Length) {
     List[i] = i;
   }
 
-  int VList[Length];
+  int VList[Length]; // expected-warning {{variable length arrays in C++ are a Clang extension}} \
+                        expected-note {{function parameter 'Length' with unknown value cannot be used in a constant expression}}
 #pragma clang loop vectorize(disable) interleave(disable) unroll(disable) vectorize_predicate(disable)
   for (int j : VList) {
     VList[j] = List[j];

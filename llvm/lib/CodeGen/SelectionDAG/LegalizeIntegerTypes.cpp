@@ -4422,7 +4422,7 @@ void DAGTypeLegalizer::ExpandIntRes_ShiftThroughStack(SDNode *N, SDValue &Lo,
   // FIXME: should we be more picky about alignment?
   Align StackSlotAlignment(1);
   SDValue StackPtr = DAG.CreateStackTemporary(
-      TypeSize::getFixed(StackSlotByteWidth), StackSlotAlignment);
+      TypeSize::Fixed(StackSlotByteWidth), StackSlotAlignment);
   EVT PtrTy = StackPtr.getValueType();
   SDValue Ch = DAG.getEntryNode();
 

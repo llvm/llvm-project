@@ -423,8 +423,9 @@ Expected<StringRef> clang(ArrayRef<StringRef> InputFiles, const ArgList &Args) {
     CmdArgs.push_back(Args.MakeArgString("--cuda-path=" + CudaBinaryPath));
 
   for (StringRef Arg : Args.getAllArgValues(OPT_ptxas_arg))
-    llvm::copy(SmallVector<StringRef>({"-Xcuda-ptxas", Arg}),
-               std::back_inserter(CmdArgs));
+    llvm::copy(
+        SmallVector<StringRef>({"-Xcuda-ptxas", Args.MakeArgString(Arg)}),
+        std::back_inserter(CmdArgs));
 
   for (StringRef Arg : Args.getAllArgValues(OPT_linker_arg_EQ))
     CmdArgs.push_back(Args.MakeArgString("-Wl," + Arg));

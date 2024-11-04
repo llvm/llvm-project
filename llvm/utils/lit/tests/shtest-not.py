@@ -184,6 +184,7 @@
 # CHECK: # | Error: 'not --crash' cannot call 'rm'
 # CHECK: # error: command failed with exit status: {{.*}}
 
-# CHECK: Passed:  1
-# CHECK: Failed: 16
+# CHECK: Total Discovered Tests: 17
+# CHECK: Passed:  1 {{\([0-9]*\.[0-9]*%\)}}
+# CHECK: Failed: 16 {{\([0-9]*\.[0-9]*%\)}}
 # CHECK-NOT: {{.}}

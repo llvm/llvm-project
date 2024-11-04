@@ -48,7 +48,7 @@ define double @bitcast_i64_f64(i64 %x) {
 
 define ptr @inttoptr_i64_p64(i64 %x) {
 ; CHECK-LABEL: 'inttoptr_i64_p64'
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %r = inttoptr i64 %x to ptr
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %r = inttoptr i64 %x to ptr
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret ptr %r
 ;
   %r = inttoptr i64 %x to ptr
@@ -57,7 +57,7 @@ define ptr @inttoptr_i64_p64(i64 %x) {
 
 define i64 @ptrtoint_p64_i64(ptr %x) {
 ; CHECK-LABEL: 'ptrtoint_p64_i64'
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %r = ptrtoint ptr %x to i64
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %r = ptrtoint ptr %x to i64
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret i64 %r
 ;
   %r = ptrtoint ptr %x to i64

@@ -77,7 +77,7 @@ struct TestBytecodeDialectInterface : public BytecodeDialectInterface {
   }
 
   Attribute readAttribute(DialectBytecodeReader &reader) const final {
-    auto versionOr = reader.getDialectVersion("test");
+    auto versionOr = reader.getDialectVersion<test::TestDialect>();
     // Assume current version if not available through the reader.
     const auto version =
         (succeeded(versionOr))
@@ -93,9 +93,16 @@ struct TestBytecodeDialectInterface : public BytecodeDialectInterface {
 
   // Emit a specific version of the dialect.
   void writeVersion(DialectBytecodeWriter &writer) const final {
-    auto version = TestDialectVersion();
-    writer.writeVarInt(version.major_); // major
-    writer.writeVarInt(version.minor_); // minor
+    // Construct the current dialect version.
+    test::TestDialectVersion versionToEmit;
+
+    // Check if a target version to emit was specified on the writer configs.
+    auto versionOr = writer.getDialectVersion<test::TestDialect>();
+    if (succeeded(versionOr))
+      versionToEmit =
+          *reinterpret_cast<const test::TestDialectVersion *>(*versionOr);
+    writer.writeVarInt(versionToEmit.major_); // major
+    writer.writeVarInt(versionToEmit.minor_); // minor
   }
 
   std::unique_ptr<DialectVersion>

@@ -12,6 +12,7 @@
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/macros/attributes.h"
 #include "src/__support/macros/config.h" // LIBC_HAS_BUILTIN
+#include "src/__support/macros/sanitizer.h"
 
 namespace LIBC_NAMESPACE::cpp {
 
@@ -31,6 +32,7 @@ LIBC_INLINE constexpr To bit_cast(const From &from) {
   static_assert(cpp::is_trivially_copyable<To>::value &&
                     cpp::is_trivially_copyable<From>::value,
                 "Cannot bit-cast instances of non-trivially copyable classes.");
+  MSAN_UNPOISON(&from, sizeof(From));
 #if defined(LLVM_LIBC_HAS_BUILTIN_BIT_CAST)
   return __builtin_bit_cast(To, from);
 #else

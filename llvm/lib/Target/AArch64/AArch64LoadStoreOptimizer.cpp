@@ -723,6 +723,16 @@ static bool isMergeableLdStUpdate(MachineInstr &MI) {
   }
 }
 
+static bool isRewritableImplicitDef(unsigned Opc) {
+  switch (Opc) {
+  default:
+    return false;
+  case AArch64::ORRWrs:
+  case AArch64::ADDWri:
+    return true;
+  }
+}
+
 MachineBasicBlock::iterator
 AArch64LoadStoreOpt::mergeNarrowZeroStores(MachineBasicBlock::iterator I,
                                            MachineBasicBlock::iterator MergeMI,
@@ -871,12 +881,13 @@ AArch64LoadStoreOpt::mergePairedInsns(MachineBasicBlock::iterator I,
 
     // Return the sub/super register for RenameReg, matching the size of
     // OriginalReg.
-    auto GetMatchingSubReg = [this,
-                              RenameReg](MCPhysReg OriginalReg) -> MCPhysReg {
-      for (MCPhysReg SubOrSuper : TRI->sub_and_superregs_inclusive(*RenameReg))
-        if (TRI->getMinimalPhysRegClass(OriginalReg) ==
-            TRI->getMinimalPhysRegClass(SubOrSuper))
+    auto GetMatchingSubReg =
+        [this, RenameReg](const TargetRegisterClass *C) -> MCPhysReg {
+      for (MCPhysReg SubOrSuper :
+           TRI->sub_and_superregs_inclusive(*RenameReg)) {
+        if (C->contains(SubOrSuper))
           return SubOrSuper;
+      }
       llvm_unreachable("Should have found matching sub or super register!");
     };
 
@@ -884,7 +895,8 @@ AArch64LoadStoreOpt::mergePairedInsns(MachineBasicBlock::iterator I,
         [this, RegToRename, GetMatchingSubReg](MachineInstr &MI, bool IsDef) {
           if (IsDef) {
             bool SeenDef = false;
-            for (auto &MOP : MI.operands()) {
+            for (unsigned OpIdx = 0; OpIdx < MI.getNumOperands(); ++OpIdx) {
+              MachineOperand &MOP = MI.getOperand(OpIdx);
               // Rename the first explicit definition and all implicit
               // definitions matching RegToRename.
               if (MOP.isReg() && !MOP.isDebug() && MOP.getReg() &&
@@ -893,18 +905,33 @@ AArch64LoadStoreOpt::mergePairedInsns(MachineBasicBlock::iterator I,
                 assert((MOP.isImplicit() ||
                         (MOP.isRenamable() && !MOP.isEarlyClobber())) &&
                        "Need renamable operands");
-                MOP.setReg(GetMatchingSubReg(MOP.getReg()));
+                Register MatchingReg;
+                if (const TargetRegisterClass *RC =
+                        MI.getRegClassConstraint(OpIdx, TII, TRI))
+                  MatchingReg = GetMatchingSubReg(RC);
+                else {
+                  if (!isRewritableImplicitDef(MI.getOpcode()))
+                    continue;
+                  MatchingReg = GetMatchingSubReg(
+                      TRI->getMinimalPhysRegClass(MOP.getReg()));
+                }
+                MOP.setReg(MatchingReg);
                 SeenDef = true;
               }
             }
           } else {
-            for (auto &MOP : MI.operands()) {
+            for (unsigned OpIdx = 0; OpIdx < MI.getNumOperands(); ++OpIdx) {
+              MachineOperand &MOP = MI.getOperand(OpIdx);
               if (MOP.isReg() && !MOP.isDebug() && MOP.getReg() &&
                   TRI->regsOverlap(MOP.getReg(), RegToRename)) {
                 assert((MOP.isImplicit() ||
                         (MOP.isRenamable() && !MOP.isEarlyClobber())) &&
                            "Need renamable operands");
-                MOP.setReg(GetMatchingSubReg(MOP.getReg()));
+                const TargetRegisterClass *RC =
+                    MI.getRegClassConstraint(OpIdx, TII, TRI);
+                if (!RC)
+                  continue;
+                MOP.setReg(GetMatchingSubReg(RC));
               }
             }
           }
@@ -1404,6 +1431,16 @@ canRenameUpToDef(MachineInstr &FirstMI, LiveRegUnits &UsedInBetween,
             << MOP << ")\n");
         return false;
       }
+
+      // We cannot rename arbitrary implicit-defs, the specific rule to rewrite
+      // them must be known. For example, in ORRWrs the implicit-def
+      // corresponds to the result register.
+      if (MOP.isImplicit() && MOP.isDef()) {
+        if (!isRewritableImplicitDef(MOP.getParent()->getOpcode()))
+          return false;
+        return TRI->isSuperOrSubRegisterEq(
+            MOP.getParent()->getOperand(0).getReg(), MOP.getReg());
+      }
     }
     return MOP.isImplicit() ||
            (MOP.isRenamable() && !MOP.isEarlyClobber() && !MOP.isTied());
@@ -1511,10 +1548,9 @@ static std::optional<MCPhysReg> tryToFindRegisterToRename(
   // required register classes.
   auto CanBeUsedForAllClasses = [&RequiredClasses, TRI](MCPhysReg PR) {
     return all_of(RequiredClasses, [PR, TRI](const TargetRegisterClass *C) {
-      return any_of(TRI->sub_and_superregs_inclusive(PR),
-                    [C, TRI](MCPhysReg SubOrSuper) {
-                      return C == TRI->getMinimalPhysRegClass(SubOrSuper);
-                    });
+      return any_of(
+          TRI->sub_and_superregs_inclusive(PR),
+          [C](MCPhysReg SubOrSuper) { return C->contains(SubOrSuper); });
     });
   };
 

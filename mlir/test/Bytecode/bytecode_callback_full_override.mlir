@@ -1,4 +1,4 @@
-// RUN: not mlir-opt %s -split-input-file --test-bytecode-callback="callback-test=5" 2>&1 | FileCheck %s
+// RUN: not mlir-opt %s -split-input-file --test-bytecode-roundtrip="test-kind=5" 2>&1 | FileCheck %s
 
 // CHECK-NOT: failed to read bytecode
 func.func @base_test(%arg0 : i32) -> f32 {

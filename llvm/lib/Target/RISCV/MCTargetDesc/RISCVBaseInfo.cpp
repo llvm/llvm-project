@@ -206,6 +206,17 @@ unsigned RISCVVType::getSEWLMULRatio(unsigned SEW, RISCVII::VLMUL VLMul) {
   return (SEW * 8) / LMul;
 }
 
+std::optional<RISCVII::VLMUL>
+RISCVVType::getSameRatioLMUL(unsigned SEW, RISCVII::VLMUL VLMUL, unsigned EEW) {
+  unsigned Ratio = RISCVVType::getSEWLMULRatio(SEW, VLMUL);
+  unsigned EMULFixedPoint = (EEW * 8) / Ratio;
+  bool Fractional = EMULFixedPoint < 8;
+  unsigned EMUL = Fractional ? 8 / EMULFixedPoint : EMULFixedPoint / 8;
+  if (!isValidLMUL(EMUL, Fractional))
+    return std::nullopt;
+  return RISCVVType::encodeLMUL(EMUL, Fractional);
+}
+
 // Include the auto-generated portion of the compress emitter.
 #define GEN_UNCOMPRESS_INSTR
 #define GEN_COMPRESS_INSTR
@@ -242,7 +253,7 @@ int RISCVLoadFPImm::getLoadFPImm(APFloat FPImm) {
          "Unexpected semantics");
 
   // Handle the minimum normalized value which is different for each type.
-  if (FPImm.isSmallestNormalized())
+  if (FPImm.isSmallestNormalized() && !FPImm.isNegative())
     return 1;
 
   // Convert to single precision to use its lookup table.

@@ -329,7 +329,7 @@ void splitAndWriteThinLTOBitcode(
   // comdat in MergedM to keep the comdat together.
   DenseSet<const Comdat *> MergedMComdats;
   for (GlobalVariable &GV : M.globals())
-    if (HasTypeMetadata(&GV)) {
+    if (!GV.isDeclaration() && HasTypeMetadata(&GV)) {
       if (const auto *C = GV.getComdat())
         MergedMComdats.insert(C);
       forEachVirtualFunction(GV.getInitializer(), [&](Function *F) {

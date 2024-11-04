@@ -13,8 +13,6 @@
 #include "SystemZMachineScheduler.h"
 #include "SystemZTargetTransformInfo.h"
 #include "TargetInfo/SystemZTargetInfo.h"
-#include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/CodeGen/Passes.h"
@@ -25,11 +23,13 @@
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Target/TargetLoweringObjectFile.h"
 #include "llvm/Transforms/Scalar.h"
+#include <memory>
 #include <optional>
 #include <string>
 
 using namespace llvm;
 
+// NOLINTNEXTLINE(readability-identifier-naming)
 extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeSystemZTarget() {
   // Register the target.
   RegisterTargetMachine<SystemZTargetMachine> X(getTheSystemZTarget());
@@ -171,9 +171,9 @@ SystemZTargetMachine::getSubtargetImpl(const Function &F) const {
   // FIXME: This is related to the code below to reset the target options,
   // we need to know whether or not the soft float flag is set on the
   // function, so we can enable it as a subtarget feature.
-  bool softFloat = F.getFnAttribute("use-soft-float").getValueAsBool();
+  bool SoftFloat = F.getFnAttribute("use-soft-float").getValueAsBool();
 
-  if (softFloat)
+  if (SoftFloat)
     FS += FS.empty() ? "+soft-float" : ",+soft-float";
 
   auto &I = SubtargetMap[CPU + TuneCPU + FS];
@@ -225,6 +225,8 @@ void SystemZPassConfig::addIRPasses() {
     addPass(createSystemZTDCPass());
     addPass(createLoopDataPrefetchPass());
   }
+
+  addPass(createAtomicExpandPass());
 
   TargetPassConfig::addIRPasses();
 }

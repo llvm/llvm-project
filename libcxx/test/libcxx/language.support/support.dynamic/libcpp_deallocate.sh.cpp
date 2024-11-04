@@ -34,10 +34,9 @@
 // RUN: %{build} -fno-aligned-allocation -fno-sized-deallocation -DNO_ALIGN -DNO_SIZE
 // RUN: %{run}
 
-#include <new>
-#include <typeinfo>
-#include <string>
 #include <cassert>
+#include <cstdlib>
+#include <new>
 
 #include "test_macros.h"
 

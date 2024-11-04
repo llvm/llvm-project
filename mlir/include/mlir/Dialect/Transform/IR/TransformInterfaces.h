@@ -95,11 +95,23 @@ public:
     return *this;
   }
 
+  // Ensures that only a single top-level transform op is present in the IR.
+  TransformOptions &enableEnforceSingleToplevelTransformOp(bool enable = true) {
+    enforceSingleToplevelTransformOp = enable;
+    return *this;
+  }
+
   /// Returns true if the expensive checks are requested.
   bool getExpensiveChecksEnabled() const { return expensiveChecksEnabled; }
 
+  // Returns true if enforcing a single top-level transform op is requested.
+  bool getEnforceSingleToplevelTransformOp() const {
+    return enforceSingleToplevelTransformOp;
+  }
+
 private:
   bool expensiveChecksEnabled = true;
+  bool enforceSingleToplevelTransformOp = true;
 };
 
 /// Entry point to the Transform dialect infrastructure. Applies the

@@ -46,6 +46,20 @@ bool TargetMachine::isLargeData(const GlobalVariable *GV) const {
   // restrict this to medium.
   if (getCodeModel() != CodeModel::Medium)
     return false;
+
+  // Allowing large metadata sections in the presence of an explicit section is
+  // useful, even if GCC does not allow them. However, we should not mark
+  // certain well-known prefixes as large, because it would make the whole
+  // output section large and cause the linker to move it, which is almost
+  // always undesired.
+  StringRef Name = GV->getSection();
+  auto IsPrefix = [&](StringRef Prefix) {
+    StringRef S = Name;
+    return S.consume_front(Prefix) && (S.empty() || S[0] == '.');
+  };
+  if (IsPrefix(".bss") || IsPrefix(".data") || IsPrefix(".rodata"))
+    return false;
+
   const DataLayout &DL = GV->getParent()->getDataLayout();
   uint64_t Size = DL.getTypeSizeInBits(GV->getValueType()) / 8;
   return Size == 0 || Size > LargeDataThreshold;

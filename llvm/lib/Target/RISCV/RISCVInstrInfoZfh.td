@@ -85,7 +85,7 @@ def FSH : FPStore_r<0b001, "fsh", FPR16, WriteFST16>;
 } // Predicates = [HasHalfFPLoadStoreMove]
 
 foreach Ext = ZfhExts in {
-  let SchedRW = [WriteFMA16, ReadFMA16, ReadFMA16, ReadFMA16] in {
+  let SchedRW = [WriteFMA16, ReadFMA16, ReadFMA16, ReadFMA16Addend] in {
     defm FMADD_H  : FPFMA_rrr_frm_m<OPC_MADD,  0b10, "fmadd.h",  Ext>;
     defm FMSUB_H  : FPFMA_rrr_frm_m<OPC_MSUB,  0b10, "fmsub.h",  Ext>;
     defm FNMSUB_H : FPFMA_rrr_frm_m<OPC_NMSUB, 0b10, "fnmsub.h", Ext>;

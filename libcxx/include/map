@@ -596,6 +596,7 @@ erase_if(multimap<Key, T, Compare, Allocator>& c, Predicate pred);  // C++20
 #include <__utility/forward.h>
 #include <__utility/piecewise_construct.h>
 #include <__utility/swap.h>
+#include <stdexcept>
 #include <tuple>
 #include <version>
 

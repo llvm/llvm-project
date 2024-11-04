@@ -47,7 +47,7 @@
 ! MISSED-REGEX-LOOP-ONLY:       optimization-remark.f90:76:4: remark: loop not vectorized [-Rpass-missed=loop-vectorize]
 
 
-! ANALYSIS-REGEX-LOOP-ONLY:     optimization-remark.f90:79:7: remark: loop not vectorized: unsafe dependent memory operations in loop. Use #pragma loop distribute(enable) to allow loop distribution to attempt to isolate the offending operations into a separate loop
+! ANALYSIS-REGEX-LOOP-ONLY:     optimization-remark.f90:79:7: remark: loop not vectorized: unsafe dependent memory operations in loop. Use #pragma clang loop distribute(enable) to allow loop distribution to attempt to isolate the offending operations into a separate loop
 ! ANALYSIS-REGEX-LOOP-ONLY:     Unknown data dependence. Memory location is the same as accessed at optimization-remark.f90:78:7 [-Rpass-analysis=loop-vectorize]
 ! ANALYSIS-REGEX-LOOP-ONLY-NOT: remark: {{.*}}: IR instruction count changed from {{[0-9]+}} to {{[0-9]+}}; Delta: {{-?[0-9]+}} [-Rpass-analysis=size-info]
 
@@ -56,10 +56,10 @@
 
 ! MISSED:                       optimization-remark.f90:77:7: remark: failed to hoist load with loop-invariant address because load is conditionally executed [-Rpass-missed=licm]
 ! MISSED:                       optimization-remark.f90:76:4: remark: loop not vectorized [-Rpass-missed=loop-vectorize]
-! MISSED-NOT:                   optimization-remark.f90:79:7: remark: loop not vectorized: unsafe dependent memory operations in loop. Use #pragma loop distribute(enable) to allow loop distribution to attempt to isolate the offending operations into a separate loop
+! MISSED-NOT:                   optimization-remark.f90:79:7: remark: loop not vectorized: unsafe dependent memory operations in loop. Use #pragma clang loop distribute(enable) to allow loop distribution to attempt to isolate the offending operations into a separate loop
 ! MISSED-NOT:                   Unknown data dependence. Memory location is the same as accessed at optimization-remark.f90:78:7 [-Rpass-analysis=loop-vectorize]
 
-! ANALYSIS:                     optimization-remark.f90:79:7: remark: loop not vectorized: unsafe dependent memory operations in loop. Use #pragma loop distribute(enable) to allow loop distribution to attempt to isolate the offending operations into a separate loop
+! ANALYSIS:                     optimization-remark.f90:79:7: remark: loop not vectorized: unsafe dependent memory operations in loop. Use #pragma clang loop distribute(enable) to allow loop distribution to attempt to isolate the offending operations into a separate loop
 ! ANALYSIS:                     Unknown data dependence. Memory location is the same as accessed at optimization-remark.f90:78:7 [-Rpass-analysis=loop-vectorize]
 ! ANALYSIS:                     remark: {{.*}}: IR instruction count changed from {{[0-9]+}} to {{[0-9]+}}; Delta: {{-?[0-9]+}} [-Rpass-analysis=size-info]
 ! ANALYSIS-NOT:                 optimization-remark.f90:77:7: remark: failed to hoist load with loop-invariant address because load is conditionally executed [-Rpass-missed=licm]

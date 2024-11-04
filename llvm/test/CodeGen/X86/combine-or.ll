@@ -249,9 +249,8 @@ define <4 x i32> @test18(<4 x i32> %a, <4 x i32> %b) {
 ; CHECK-LIS-LABEL: test18:
 ; CHECK-LIS:       # %bb.0:
 ; CHECK-LIS-NEXT:    pxor %xmm2, %xmm2
-; CHECK-LIS-NEXT:    pxor %xmm3, %xmm3
-; CHECK-LIS-NEXT:    pblendw {{.*#+}} xmm3 = xmm0[0,1],xmm3[2,3,4,5,6,7]
-; CHECK-LIS-NEXT:    pshufd {{.*#+}} xmm0 = xmm3[1,0,1,1]
+; CHECK-LIS-NEXT:    pblendw {{.*#+}} xmm0 = xmm0[0,1],xmm2[2,3,4,5,6,7]
+; CHECK-LIS-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,0,1,1]
 ; CHECK-LIS-NEXT:    pblendw {{.*#+}} xmm2 = xmm1[0,1],xmm2[2,3,4,5,6,7]
 ; CHECK-LIS-NEXT:    por %xmm0, %xmm2
 ; CHECK-LIS-NEXT:    movdqa %xmm2, %xmm0

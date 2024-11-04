@@ -1372,8 +1372,11 @@ Instruction *InstCombinerImpl::visitSExt(SExtInst &Sext) {
   unsigned DestBitSize = DestTy->getScalarSizeInBits();
 
   // If the value being extended is zero or positive, use a zext instead.
-  if (isKnownNonNegative(Src, DL, 0, &AC, &Sext, &DT))
-    return CastInst::Create(Instruction::ZExt, Src, DestTy);
+  if (isKnownNonNegative(Src, DL, 0, &AC, &Sext, &DT)) {
+    auto CI = CastInst::Create(Instruction::ZExt, Src, DestTy);
+    CI->setNonNeg(true);
+    return CI;
+  }
 
   // Try to extend the entire expression tree to the wide destination type.
   if (shouldChangeType(SrcTy, DestTy) && canEvaluateSExtd(Src, DestTy)) {
@@ -1916,29 +1919,6 @@ Instruction *InstCombinerImpl::visitIntToPtr(IntToPtrInst &CI) {
   return nullptr;
 }
 
-/// Implement the transforms for cast of pointer (bitcast/ptrtoint)
-Instruction *InstCombinerImpl::commonPointerCastTransforms(CastInst &CI) {
-  Value *Src = CI.getOperand(0);
-
-  if (GetElementPtrInst *GEP = dyn_cast<GetElementPtrInst>(Src)) {
-    // If casting the result of a getelementptr instruction with no offset, turn
-    // this into a cast of the original pointer!
-    if (GEP->hasAllZeroIndices() &&
-        // If CI is an addrspacecast and GEP changes the poiner type, merging
-        // GEP into CI would undo canonicalizing addrspacecast with different
-        // pointer types, causing infinite loops.
-        (!isa<AddrSpaceCastInst>(CI) ||
-         GEP->getType() == GEP->getPointerOperandType())) {
-      // Changing the cast operand is usually not a good idea but it is safe
-      // here because the pointer operand is being replaced with another
-      // pointer operand so the opcode doesn't need to change.
-      return replaceOperand(CI, 0, GEP->getOperand(0));
-    }
-  }
-
-  return commonCastTransforms(CI);
-}
-
 Instruction *InstCombinerImpl::visitPtrToInt(PtrToIntInst &CI) {
   // If the destination integer type is not the intptr_t type for this target,
   // do a ptrtoint to intptr_t then do a trunc or zext.  This allows the cast
@@ -1980,7 +1960,7 @@ Instruction *InstCombinerImpl::visitPtrToInt(PtrToIntInst &CI) {
     return InsertElementInst::Create(Vec, NewCast, Index);
   }
 
-  return commonPointerCastTransforms(CI);
+  return commonCastTransforms(CI);
 }
 
 /// This input value (which is known to have vector type) is being zero extended
@@ -2702,11 +2682,9 @@ Instruction *InstCombinerImpl::visitBitCast(BitCastInst &CI) {
   if (Instruction *I = foldBitCastSelect(CI, Builder))
     return I;
 
-  if (SrcTy->isPointerTy())
-    return commonPointerCastTransforms(CI);
   return commonCastTransforms(CI);
 }
 
 Instruction *InstCombinerImpl::visitAddrSpaceCast(AddrSpaceCastInst &CI) {
-  return commonPointerCastTransforms(CI);
+  return commonCastTransforms(CI);
 }

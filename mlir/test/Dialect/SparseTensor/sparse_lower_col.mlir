@@ -53,15 +53,15 @@
 // CHECK-HIR:         }
 
 // CHECK-MIR-LABEL:   func @matvec(
-// CHECK-MIR-SAME:                 %[[VAL_0:.*]]: !llvm.ptr<i8>,
+// CHECK-MIR-SAME:                 %[[VAL_0:.*]]: !llvm.ptr,
 // CHECK-MIR-SAME:                 %[[VAL_1:.*]]: tensor<64xf64>,
 // CHECK-MIR-SAME:                 %[[VAL_2:.*]]: tensor<32xf64>) -> tensor<32xf64> {
 // CHECK-MIR-DAG:       %[[VAL_3:.*]] = arith.constant 64 : index
 // CHECK-MIR-DAG:       %[[VAL_5:.*]] = arith.constant 0 : index
 // CHECK-MIR-DAG:       %[[VAL_6:.*]] = arith.constant 1 : index
-// CHECK-MIR-DAG:       %[[VAL_7:.*]] = call @sparsePositions0(%[[VAL_0]], %[[VAL_6]]) : (!llvm.ptr<i8>, index) -> memref<?xindex>
-// CHECK-MIR-DAG:       %[[VAL_8:.*]] = call @sparseCoordinates0(%[[VAL_0]], %[[VAL_6]]) : (!llvm.ptr<i8>, index) -> memref<?xindex>
-// CHECK-MIR-DAG:       %[[VAL_9:.*]] = call @sparseValuesF64(%[[VAL_0]]) : (!llvm.ptr<i8>) -> memref<?xf64>
+// CHECK-MIR-DAG:       %[[VAL_7:.*]] = call @sparsePositions0(%[[VAL_0]], %[[VAL_6]]) : (!llvm.ptr, index) -> memref<?xindex>
+// CHECK-MIR-DAG:       %[[VAL_8:.*]] = call @sparseCoordinates0(%[[VAL_0]], %[[VAL_6]]) : (!llvm.ptr, index) -> memref<?xindex>
+// CHECK-MIR-DAG:       %[[VAL_9:.*]] = call @sparseValuesF64(%[[VAL_0]]) : (!llvm.ptr) -> memref<?xf64>
 // CHECK-MIR-DAG:       %[[VAL_10:.*]] = bufferization.to_memref %[[VAL_1]] : memref<64xf64>
 // CHECK-MIR-DAG:       %[[VAL_12:.*]] = bufferization.to_memref %[[VAL_2]] : memref<32xf64>
 // CHECK-MIR:           scf.for %[[VAL_15:.*]] = %[[VAL_5]] to %[[VAL_3]] step %[[VAL_6]] {
@@ -83,15 +83,15 @@
 // CHECK-MIR:         }
 
 // CHECK-LIR-LABEL:   func @matvec(
-// CHECK-LIR-SAME:                 %[[VAL_0:.*]]: !llvm.ptr<i8>,
+// CHECK-LIR-SAME:                 %[[VAL_0:.*]]: !llvm.ptr,
 // CHECK-LIR-SAME:                 %[[VAL_1:.*]]: memref<64xf64>,
 // CHECK-LIR-SAME:                 %[[VAL_2:.*]]: memref<32xf64>) -> memref<32xf64> {
 // CHECK-LIR-DAG:       %[[VAL_3:.*]] = arith.constant 64 : index
 // CHECK-LIR-DAG:       %[[VAL_5:.*]] = arith.constant 0 : index
 // CHECK-LIR-DAG:       %[[VAL_6:.*]] = arith.constant 1 : index
-// CHECK-LIR-DAG:       %[[VAL_7:.*]] = call @sparsePositions0(%[[VAL_0]], %[[VAL_6]]) : (!llvm.ptr<i8>, index) -> memref<?xindex>
-// CHECK-LIR-DAG:       %[[VAL_8:.*]] = call @sparseCoordinates0(%[[VAL_0]], %[[VAL_6]]) : (!llvm.ptr<i8>, index) -> memref<?xindex>
-// CHECK-LIR-DAG:       %[[VAL_9:.*]] = call @sparseValuesF64(%[[VAL_0]]) : (!llvm.ptr<i8>) -> memref<?xf64>
+// CHECK-LIR-DAG:       %[[VAL_7:.*]] = call @sparsePositions0(%[[VAL_0]], %[[VAL_6]]) : (!llvm.ptr, index) -> memref<?xindex>
+// CHECK-LIR-DAG:       %[[VAL_8:.*]] = call @sparseCoordinates0(%[[VAL_0]], %[[VAL_6]]) : (!llvm.ptr, index) -> memref<?xindex>
+// CHECK-LIR-DAG:       %[[VAL_9:.*]] = call @sparseValuesF64(%[[VAL_0]]) : (!llvm.ptr) -> memref<?xf64>
 // CHECK-LIR:           scf.for %[[VAL_13:.*]] = %[[VAL_5]] to %[[VAL_3]] step %[[VAL_6]] {
 // CHECK-LIR:             %[[VAL_14:.*]] = memref.load %[[VAL_1]]{{\[}}%[[VAL_13]]] : memref<64xf64>
 // CHECK-LIR:             %[[VAL_15:.*]] = memref.load %[[VAL_7]]{{\[}}%[[VAL_13]]] : memref<?xindex>

@@ -131,6 +131,9 @@ implemented, all the algorithms will eventually forward to the basis algorithms 
                                       _OutIterator __result,
                                       _Comp __comp);
 
+  template <class _ExecutionPolicy, class _Iterator, class _OutIterator>
+  optional<_OutIterator> __pstl_move(_Backend, _Iterator __first, _Iterator __last, _OutIterator __result);
+
   template <class _ExecutionPolicy, class _Iterator, class _Tp, class _BinaryOperation>
   optional<_Tp> __pstl_reduce(_Backend, _Iterator __first, _Iterator __last, _Tp __init, _BinaryOperation __op);
 
@@ -166,6 +169,10 @@ implemented, all the algorithms will eventually forward to the basis algorithms 
                                            _OutIterator __result,
                                            _Pred __pred,
                                            const _Tp& __new_value);
+
+  template <class _ExecutionPolicy, class _Iterator, class _OutIterator>
+  optional<_Iterator> __pstl_rotate_copy(
+      _Backend, _Iterator __first, _Iterator __middle, _Iterator __last, _OutIterator __result);
 
   template <class _ExecutionPolicy, class _Iterator, class _Comp>
   optional<__empty> __pstl_sort(_Backend, _Iterator __first, _Iterator __last, _Comp __comp);

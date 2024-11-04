@@ -166,13 +166,13 @@ define void @use_dispatch_id() #1 {
 ; AKF_HSA-LABEL: define {{[^@]+}}@use_dispatch_id
 ; AKF_HSA-SAME: () #[[ATTR1]] {
 ; AKF_HSA-NEXT:    [[VAL:%.*]] = call i64 @llvm.amdgcn.dispatch.id()
-; AKF_HSA-NEXT:    store volatile i64 [[VAL]], ptr addrspace(1) undef, align 4
+; AKF_HSA-NEXT:    store volatile i64 [[VAL]], ptr addrspace(1) undef, align 8
 ; AKF_HSA-NEXT:    ret void
 ;
 ; ATTRIBUTOR_HSA-LABEL: define {{[^@]+}}@use_dispatch_id
 ; ATTRIBUTOR_HSA-SAME: () #[[ATTR9:[0-9]+]] {
 ; ATTRIBUTOR_HSA-NEXT:    [[VAL:%.*]] = call i64 @llvm.amdgcn.dispatch.id()
-; ATTRIBUTOR_HSA-NEXT:    store volatile i64 [[VAL]], ptr addrspace(1) undef, align 4
+; ATTRIBUTOR_HSA-NEXT:    store volatile i64 [[VAL]], ptr addrspace(1) undef, align 8
 ; ATTRIBUTOR_HSA-NEXT:    ret void
 ;
   %val = call i64 @llvm.amdgcn.dispatch.id()

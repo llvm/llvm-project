@@ -1,6 +1,8 @@
-// RUN: %clang_cc1 -fsanitize=alignment,null,object-size,shift-base,shift-exponent,return,signed-integer-overflow,vla-bound,float-cast-overflow,integer-divide-by-zero,bool,returns-nonnull-attribute,nonnull-attribute -fsanitize-recover=alignment,null,object-size,shift-base,shift-exponent,signed-integer-overflow,vla-bound,float-cast-overflow,integer-divide-by-zero,bool,returns-nonnull-attribute,nonnull-attribute -emit-llvm %s -o - -triple x86_64-linux-gnu | FileCheck %s --check-prefix=CHECK-COMMON --check-prefix=CHECK-UBSAN
-// RUN: %clang_cc1 -fsanitize-trap=alignment,null,object-size,shift-base,shift-exponent,return,signed-integer-overflow,vla-bound,float-cast-overflow,integer-divide-by-zero,bool,returns-nonnull-attribute,nonnull-attribute -fsanitize-recover=alignment,null,object-size,shift-base,shift-exponent,signed-integer-overflow,vla-bound,float-cast-overflow,integer-divide-by-zero,bool,returns-nonnull-attribute,nonnull-attribute -fsanitize=alignment,null,object-size,shift-base,shift-exponent,return,signed-integer-overflow,vla-bound,float-cast-overflow,integer-divide-by-zero,bool,returns-nonnull-attribute,nonnull-attribute -fsanitize-recover=alignment,null,object-size,shift-base,shift-exponent,signed-integer-overflow,vla-bound,float-cast-overflow,integer-divide-by-zero,bool,returns-nonnull-attribute,nonnull-attribute -emit-llvm %s -o - -triple x86_64-linux-gnu | FileCheck %s --check-prefix=CHECK-COMMON --check-prefix=CHECK-TRAP
+// RUN: %clang_cc1 -fsanitize=alignment,null,object-size,shift-base,shift-exponent,return,signed-integer-overflow,vla-bound,float-cast-overflow,integer-divide-by-zero,bool,returns-nonnull-attribute,nonnull-attribute -fsanitize-recover=alignment,null,object-size,shift-base,shift-exponent,signed-integer-overflow,vla-bound,float-cast-overflow,integer-divide-by-zero,bool,returns-nonnull-attribute,nonnull-attribute -emit-llvm %s -o - -triple x86_64-linux-gnu | FileCheck %s --check-prefixes=CHECK-COMMON,CHECK-UBSAN,CHECK-ALIGNMENT-BUILTIN
+// RUN: %clang_cc1 -fsanitize-trap=alignment,null,object-size,shift-base,shift-exponent,return,signed-integer-overflow,vla-bound,float-cast-overflow,integer-divide-by-zero,bool,returns-nonnull-attribute,nonnull-attribute -fsanitize-recover=alignment,null,object-size,shift-base,shift-exponent,signed-integer-overflow,vla-bound,float-cast-overflow,integer-divide-by-zero,bool,returns-nonnull-attribute,nonnull-attribute -fsanitize=alignment,null,object-size,shift-base,shift-exponent,return,signed-integer-overflow,vla-bound,float-cast-overflow,integer-divide-by-zero,bool,returns-nonnull-attribute,nonnull-attribute -fsanitize-recover=alignment,null,object-size,shift-base,shift-exponent,signed-integer-overflow,vla-bound,float-cast-overflow,integer-divide-by-zero,bool,returns-nonnull-attribute,nonnull-attribute -emit-llvm %s -o - -triple x86_64-linux-gnu | FileCheck %s --check-prefixes=CHECK-COMMON,CHECK-ALIGNMENT-BUILTIN,CHECK-TRAP
 // RUN: %clang_cc1 -fsanitize=signed-integer-overflow -emit-llvm %s -o - -triple x86_64-linux-gnu | FileCheck %s --check-prefix=CHECK-OVERFLOW
+/// A variant of CHECK-UBSAN with -sanitize-alignment-builtin disabled
+// RUN: %clang_cc1 -fsanitize=alignment,null,object-size,shift-base,shift-exponent,return,signed-integer-overflow,vla-bound,float-cast-overflow,integer-divide-by-zero,bool,returns-nonnull-attribute,nonnull-attribute -fsanitize-recover=alignment,null,object-size,shift-base,shift-exponent,signed-integer-overflow,vla-bound,float-cast-overflow,integer-divide-by-zero,bool,returns-nonnull-attribute,nonnull-attribute -emit-llvm %s -o - -triple x86_64-linux-gnu -mllvm -sanitize-alignment-builtin=0 | FileCheck %s --check-prefixes=CHECK-COMMON,CHECK-UBSAN-NO-ALIGNMENT-BUILTIN
 
 // CHECK-UBSAN: @[[INT:.*]] = private unnamed_addr constant { i16, i16, [6 x i8] } { i16 0, i16 11, [6 x i8] c"'int'\00" }
 
@@ -363,11 +365,13 @@ extern void *memcpy(void *, const void *, unsigned long) __attribute__((nonnull(
 void call_memcpy_nonnull(void *p, void *q, int sz) {
   // CHECK-COMMON: icmp ne ptr {{.*}}, null
   // CHECK-UBSAN: call void @__ubsan_handle_nonnull_arg
+  // CHECK-UBSAN-NO-ALIGNMENT-BUILTIN: call void @__ubsan_handle_nonnull_arg
   // CHECK-TRAP: call void @llvm.ubsantrap(i8 16)
   // CHECK-COMMON-NOT: call
 
   // CHECK-COMMON: icmp ne ptr {{.*}}, null
   // CHECK-UBSAN: call void @__ubsan_handle_nonnull_arg
+  // CHECK-UBSAN-NO-ALIGNMENT-BUILTIN: call void @__ubsan_handle_nonnull_arg
   // CHECK-TRAP: call void @llvm.ubsantrap(i8 16)
   // CHECK-COMMON-NOT: call
 
@@ -379,18 +383,23 @@ void call_memcpy_nonnull(void *p, void *q, int sz) {
 void call_memcpy(long *p, short *q, int sz) {
   // CHECK-COMMON: icmp ne ptr {{.*}}, null
   // CHECK-UBSAN: call void @__ubsan_handle_nonnull_arg(
+  // CHECK-UBSAN-NO-ALIGNMENT-BUILTIN: call void @__ubsan_handle_nonnull_arg(
   // CHECK-TRAP: call void @llvm.ubsantrap(i8 16)
-  // CHECK-COMMON: and i64 %[[#]], 7, !nosanitize
-  // CHECK-COMMON: icmp eq i64 %[[#]], 0, !nosanitize
+  // CHECK-ALIGNMENT-BUILTIN: and i64 %[[#]], 7, !nosanitize
+  // CHECK-ALIGNMENT-BUILTIN: icmp eq i64 %[[#]], 0, !nosanitize
   // CHECK-UBSAN: call void @__ubsan_handle_type_mismatch_v1(ptr @[[LINE_1600]]
+  // CHECK-UBSAN-NO-ALIGNMENT-BUILTIN-NOT: call void @__ubsan_handle_type_mismatch_v1(
   // CHECK-TRAP: call void @llvm.ubsantrap(i8 22)
 
   // CHECK-COMMON: icmp ne ptr {{.*}}, null
   // CHECK-UBSAN: call void @__ubsan_handle_nonnull_arg(
+  // CHECK-UBSAN-NO-ALIGNMENT-BUILTIN: call void @__ubsan_handle_nonnull_arg(
+  // CHECK-UBSAN-DISABLE-BUILTIN: call
   // CHECK-TRAP: call void @llvm.ubsantrap(i8 16)
-  // CHECK-COMMON: and i64 %[[#]], 1, !nosanitize
-  // CHECK-COMMON: icmp eq i64 %[[#]], 0, !nosanitize
+  // CHECK-ALIGNMENT-BUILTIN: and i64 %[[#]], 1, !nosanitize
+  // CHECK-ALIGNMENT-BUILTIN: icmp eq i64 %[[#]], 0, !nosanitize
   // CHECK-UBSAN: call void @__ubsan_handle_type_mismatch_v1(
+  // CHECK-UBSAN-NO-ALIGNMENT-BUILTIN-NOT: call
   // CHECK-TRAP: call void @llvm.ubsantrap(i8 22)
 
   // CHECK-COMMON: call void @llvm.memcpy.p0.p0.i64(ptr align 8 %0, ptr align 2 %1, i64 %conv, i1 false)
@@ -405,14 +414,16 @@ void call_memcpy(long *p, short *q, int sz) {
 
 // CHECK-COMMON-LABEL: define{{.*}} void @call_memcpy_inline(
 void call_memcpy_inline(long *p, short *q) {
-  // CHECK-COMMON: and i64 %[[#]], 7, !nosanitize
-  // CHECK-COMMON: icmp eq i64 %[[#]], 0, !nosanitize
+  // CHECK-ALIGNMENT-BUILTIN: and i64 %[[#]], 7, !nosanitize
+  // CHECK-ALIGNMENT-BUILTIN: icmp eq i64 %[[#]], 0, !nosanitize
   // CHECK-UBSAN: call void @__ubsan_handle_type_mismatch_v1(
+  // CHECK-UBSAN-NO-ALIGNMENT-BUILTIN-NOT: call
   // CHECK-TRAP: call void @llvm.ubsantrap(i8 22)
 
-  // CHECK-COMMON: and i64 %[[#]], 1, !nosanitize
-  // CHECK-COMMON: icmp eq i64 %[[#]], 0, !nosanitize
+  // CHECK-ALIGNMENT-BUILTIN: and i64 %[[#]], 1, !nosanitize
+  // CHECK-ALIGNMENT-BUILTIN: icmp eq i64 %[[#]], 0, !nosanitize
   // CHECK-UBSAN: call void @__ubsan_handle_type_mismatch_v1(
+  // CHECK-UBSAN-NO-ALIGNMENT-BUILTIN-NOT: call
   // CHECK-TRAP: call void @llvm.ubsantrap(i8 22)
 
   // CHECK-COMMON: call void @llvm.memcpy.inline.p0.p0.i64(ptr align 8 %0, ptr align 2 %1, i64 2, i1 false)
@@ -425,10 +436,12 @@ extern void *memmove(void *, const void *, unsigned long) __attribute__((nonnull
 void call_memmove_nonnull(void *p, void *q, int sz) {
   // CHECK-COMMON: icmp ne ptr {{.*}}, null
   // CHECK-UBSAN: call void @__ubsan_handle_nonnull_arg
+  // CHECK-UBSAN-NO-ALIGNMENT-BUILTIN: call void @__ubsan_handle_nonnull_arg(
   // CHECK-TRAP: call void @llvm.ubsantrap(i8 16)
 
   // CHECK-COMMON: icmp ne ptr {{.*}}, null
   // CHECK-UBSAN: call void @__ubsan_handle_nonnull_arg
+  // CHECK-UBSAN-NO-ALIGNMENT-BUILTIN: call void @__ubsan_handle_nonnull_arg(
   // CHECK-TRAP: call void @llvm.ubsantrap(i8 16)
   memmove(p, q, sz);
 }
@@ -437,18 +450,22 @@ void call_memmove_nonnull(void *p, void *q, int sz) {
 void call_memmove(long *p, short *q, int sz) {
   // CHECK-COMMON: icmp ne ptr {{.*}}, null
   // CHECK-UBSAN: call void @__ubsan_handle_nonnull_arg(
+  // CHECK-UBSAN-NO-ALIGNMENT-BUILTIN: call void @__ubsan_handle_nonnull_arg(
   // CHECK-TRAP: call void @llvm.ubsantrap(i8 16)
-  // CHECK-COMMON: and i64 %[[#]], 7, !nosanitize
-  // CHECK-COMMON: icmp eq i64 %[[#]], 0, !nosanitize
+  // CHECK-ALIGNMENT-BUILTIN: and i64 %[[#]], 7, !nosanitize
+  // CHECK-ALIGNMENT-BUILTIN: icmp eq i64 %[[#]], 0, !nosanitize
   // CHECK-UBSAN: call void @__ubsan_handle_type_mismatch_v1(
+  // CHECK-UBSAN-NO-ALIGNMENT-BUILTIN-NOT: call
   // CHECK-TRAP: call void @llvm.ubsantrap(i8 22)
 
   // CHECK-COMMON: icmp ne ptr {{.*}}, null
   // CHECK-UBSAN: call void @__ubsan_handle_nonnull_arg(
+  // CHECK-UBSAN-NO-ALIGNMENT-BUILTIN: call void @__ubsan_handle_nonnull_arg(
   // CHECK-TRAP: call void @llvm.ubsantrap(i8 16)
-  // CHECK-COMMON: and i64 %[[#]], 1, !nosanitize
-  // CHECK-COMMON: icmp eq i64 %[[#]], 0, !nosanitize
+  // CHECK-ALIGNMENT-BUILTIN: and i64 %[[#]], 1, !nosanitize
+  // CHECK-ALIGNMENT-BUILTIN: icmp eq i64 %[[#]], 0, !nosanitize
   // CHECK-UBSAN: call void @__ubsan_handle_type_mismatch_v1(
+  // CHECK-UBSAN-NO-ALIGNMENT-BUILTIN-NOT: call
   // CHECK-TRAP: call void @llvm.ubsantrap(i8 22)
 
   // CHECK-COMMON: call void @llvm.memmove.p0.p0.i64(ptr align 8 %0, ptr align 2 %1, i64 %conv, i1 false)

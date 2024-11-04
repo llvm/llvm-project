@@ -143,6 +143,14 @@ enum class FPURestriction {
   SP_D16    ///< Only single-precision instructions, with 16 D registers
 };
 
+inline bool isDoublePrecision(const FPURestriction restriction) {
+  return restriction != FPURestriction::SP_D16;
+}
+
+inline bool has32Regs(const FPURestriction restriction) {
+  return restriction == FPURestriction::None;
+}
+
 // An FPU name implies one of three levels of Neon support:
 enum class NeonSupportLevel {
   None = 0, ///< No Neon

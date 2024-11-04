@@ -27,7 +27,7 @@ define i64 @test1_PR2274(i32 %x, i32 %g) nounwind {
 ; CHECK-LABEL: @test1_PR2274(
 ; CHECK-NEXT:    [[Y:%.*]] = lshr i32 [[X:%.*]], 30
 ; CHECK-NEXT:    [[R:%.*]] = udiv i32 [[Y]], [[G:%.*]]
-; CHECK-NEXT:    [[Z:%.*]] = zext i32 [[R]] to i64
+; CHECK-NEXT:    [[Z:%.*]] = zext nneg i32 [[R]] to i64
 ; CHECK-NEXT:    ret i64 [[Z]]
 ;
   %y = lshr i32 %x, 30
@@ -39,7 +39,7 @@ define i64 @test2_PR2274(i32 %x, i32 %v) nounwind {
 ; CHECK-LABEL: @test2_PR2274(
 ; CHECK-NEXT:    [[Y:%.*]] = lshr i32 [[X:%.*]], 31
 ; CHECK-NEXT:    [[R:%.*]] = udiv i32 [[Y]], [[V:%.*]]
-; CHECK-NEXT:    [[Z:%.*]] = zext i32 [[R]] to i64
+; CHECK-NEXT:    [[Z:%.*]] = zext nneg i32 [[R]] to i64
 ; CHECK-NEXT:    ret i64 [[Z]]
 ;
   %y = lshr i32 %x, 31

@@ -526,6 +526,9 @@ def LLVM_CoroResumeOp : LLVM_IntrOp<"coro.resume", [], [], [], 0> {
 class LLVM_DbgIntrOp<string name, string argName, list<Trait> traits = []>
     : LLVM_IntrOp<name, [], [], traits, 0> {
   let llvmBuilder = [{
+    // Debug intrinsics without debug locations are invalid.
+    if(!builder.getCurrentDebugLocation())
+      return success();
     llvm::Module *module = builder.GetInsertBlock()->getModule();
     llvm::LLVMContext &ctx = module->getContext();
     llvm::Function *fn =
@@ -566,6 +569,9 @@ def LLVM_DbgLabelOp : LLVM_IntrOp<"dbg.label", [], [], [], 0> {
   let summary = "Relates the program to a debug information label.";
   let arguments = (ins LLVM_DILabelAttr:$label);
   let llvmBuilder = [{
+    // Debug intrinsics without debug locations are invalid.
+    if(!builder.getCurrentDebugLocation())
+      return success();
     llvm::Module *module = builder.GetInsertBlock()->getModule();
     llvm::LLVMContext &ctx = module->getContext();
     llvm::Function *fn =

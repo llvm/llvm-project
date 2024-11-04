@@ -47,6 +47,12 @@ int memcmp(const void *lhs, const void *rhs, size_t count) {
   return 0;
 }
 
+void memset(void *dst, int C, size_t count) {
+  auto *dstc = reinterpret_cast<char *>(dst);
+  for (size_t I = 0; I < count; ++I)
+    dstc[I] = C;
+}
+
 /// printf() calls are rewritten by CGGPUBuiltin to __llvm_omp_vprintf
 int32_t __llvm_omp_vprintf(const char *Format, void *Arguments, uint32_t Size) {
   return impl::omp_vprintf(Format, Arguments, Size);

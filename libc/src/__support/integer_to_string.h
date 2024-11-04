@@ -213,15 +213,15 @@ template <typename T, typename Fmt = radix::Dec> class IntegerToString {
 
     LIBC_INLINE static char digit_char(uint8_t digit) {
       if (digit < 10)
-        return '0' + digit;
-      return (Fmt::IS_UPPERCASE ? 'A' : 'a') + (digit - 10);
+        return '0' + static_cast<char>(digit);
+      return (Fmt::IS_UPPERCASE ? 'A' : 'a') + static_cast<char>(digit - 10);
     }
 
     LIBC_INLINE static void
     write_unsigned_number(UNSIGNED_T value,
                           details::BackwardStringBufferWriter &sink) {
       for (; sink.ok() && value != 0; value /= Fmt::BASE) {
-        const uint8_t digit(value % Fmt::BASE);
+        const uint8_t digit(static_cast<uint8_t>(value % Fmt::BASE));
         sink.push(digit_char(digit));
       }
     }

@@ -540,11 +540,11 @@ def : Pat<(add (XLenVT GPR:$rs1), (shl GPR:$rs2, uimm2:$uimm2)),
           (TH_ADDSL GPR:$rs1, GPR:$rs2, uimm2:$uimm2)>;
 
 // Reuse complex patterns from StdExtZba
-def : Pat<(add sh1add_op:$rs1, non_imm12:$rs2),
+def : Pat<(add_non_imm12 sh1add_op:$rs1, (XLenVT GPR:$rs2)),
           (TH_ADDSL GPR:$rs2, sh1add_op:$rs1, 1)>;
-def : Pat<(add sh2add_op:$rs1, non_imm12:$rs2),
+def : Pat<(add_non_imm12 sh2add_op:$rs1, (XLenVT GPR:$rs2)),
           (TH_ADDSL GPR:$rs2, sh2add_op:$rs1, 2)>;
-def : Pat<(add sh3add_op:$rs1, non_imm12:$rs2),
+def : Pat<(add_non_imm12 sh3add_op:$rs1, (XLenVT GPR:$rs2)),
           (TH_ADDSL GPR:$rs2, sh3add_op:$rs1, 3)>;
 
 def : Pat<(add (mul_oneuse GPR:$rs1, (XLenVT 6)), GPR:$rs2),

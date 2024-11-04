@@ -40,7 +40,7 @@ TypeBuilderFunc getModel();
 template <>
 TypeBuilderFunc getModel<void *>() {
   return [](mlir::MLIRContext *context) -> mlir::Type {
-    return mlir::LLVM::LLVMPointerType::get(mlir::IntegerType::get(context, 8));
+    return mlir::LLVM::LLVMPointerType::get(context);
   };
 }
 template <>

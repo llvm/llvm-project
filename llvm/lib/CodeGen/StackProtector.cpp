@@ -178,8 +178,7 @@ static bool HasAddressTaken(const Instruction *AI, TypeSize AllocSize,
     // the bounds of the allocated object.
     std::optional<MemoryLocation> MemLoc = MemoryLocation::getOrNone(I);
     if (MemLoc && MemLoc->Size.hasValue() &&
-        !TypeSize::isKnownGE(AllocSize,
-                             TypeSize::getFixed(MemLoc->Size.getValue())))
+        !TypeSize::isKnownGE(AllocSize, MemLoc->Size.getValue()))
       return true;
     switch (I->getOpcode()) {
     case Instruction::Store:

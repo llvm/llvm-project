@@ -13,6 +13,7 @@
 #define OMPTARGET_STATE_H
 
 #include "Debug.h"
+#include "Environment.h"
 #include "Mapping.h"
 #include "Types.h"
 #include "Utils.h"
@@ -117,10 +118,15 @@ extern ThreadStateTy **ThreadStates;
 #pragma omp allocate(ThreadStates) allocator(omp_pteam_mem_alloc)
 
 /// Initialize the state machinery. Must be called by all threads.
-void init(bool IsSPMD, KernelEnvironmentTy &KernelEnvironment);
+void init(bool IsSPMD, KernelEnvironmentTy &KernelEnvironment,
+          KernelLaunchEnvironmentTy &KernelLaunchEnvironment);
 
-/// Return the kernel environment associated with the current kernel.
+/// Return the kernel and kernel launch environment associated with the current
+/// kernel. The former is static and contains compile time information that
+/// holds for all instances of the kernel. The latter is dynamic and provides
+/// per-launch information.
 KernelEnvironmentTy &getKernelEnvironment();
+KernelLaunchEnvironmentTy &getKernelLaunchEnvironment();
 
 /// TODO
 enum ValueKind {

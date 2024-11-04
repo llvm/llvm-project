@@ -58,6 +58,8 @@ struct IndexedLoadStoreMatchInfo {
   Register Addr;
   Register Base;
   Register Offset;
+  bool RematOffset; // True if Offset is a constant that needs to be
+                    // rematerialized before the new load/store.
   bool IsPre;
 };
 
@@ -402,9 +404,6 @@ public:
                                 std::pair<MachineInstr *, LLT> &MatchInfo);
   void applyCombineTruncOfShift(MachineInstr &MI,
                                 std::pair<MachineInstr *, LLT> &MatchInfo);
-
-  /// Transform G_MUL(x, -1) to G_SUB(0, x)
-  void applyCombineMulByNegativeOne(MachineInstr &MI);
 
   /// Return true if any explicit use operand on \p MI is defined by a
   /// G_IMPLICIT_DEF.
@@ -814,12 +813,14 @@ public:
   void applyCommuteBinOpOperands(MachineInstr &MI);
 
 private:
+  /// Checks for legality of an indexed variant of \p LdSt.
+  bool isIndexedLoadStoreLegal(GLoadStore &LdSt) const;
   /// Given a non-indexed load or store instruction \p MI, find an offset that
   /// can be usefully and legally folded into it as a post-indexing operation.
   ///
   /// \returns true if a candidate is found.
   bool findPostIndexCandidate(GLoadStore &MI, Register &Addr, Register &Base,
-                              Register &Offset);
+                              Register &Offset, bool &RematOffset);
 
   /// Given a non-indexed load or store instruction \p MI, find an offset that
   /// can be usefully and legally folded into it as a pre-indexing operation.

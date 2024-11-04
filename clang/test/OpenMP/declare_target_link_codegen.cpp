@@ -50,7 +50,7 @@ int maini1() {
   return 0;
 }
 
-// DEVICE: define weak_odr protected void @__omp_offloading_{{.*}}_{{.*}}maini1{{.*}}_l42(ptr noundef nonnull align {{[0-9]+}} dereferenceable{{[^,]*}}
+// DEVICE: define weak_odr protected void @__omp_offloading_{{.*}}_{{.*}}maini1{{.*}}_l42(ptr {{[^,]+}}, ptr noundef nonnull align {{[0-9]+}} dereferenceable{{[^,]*}}
 // DEVICE: [[C_REF:%.+]] = load ptr, ptr @c_decl_tgt_ref_ptr,
 // DEVICE: [[C:%.+]] = load i32, ptr [[C_REF]],
 // DEVICE: store i32 [[C]], ptr %

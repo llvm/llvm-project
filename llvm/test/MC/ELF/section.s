@@ -269,6 +269,8 @@ bar:
 // CHECK-NEXT:     ]
 
 .section .large,"l"
+// ASM: .section .large,"l"
+
 // CHECK:        Section {
 // CHECK:          Name: .large
 // CHECK-NEXT:     Type: SHT_PROGBITS

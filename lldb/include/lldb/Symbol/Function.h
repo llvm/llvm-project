@@ -533,6 +533,12 @@ public:
   ///     The DeclContext, or NULL if none exists.
   CompilerDeclContext GetDeclContext();
 
+  /// Get the CompilerContext for this function, if available.
+  ///
+  /// \return
+  ///     The CompilerContext, or an empty vector if none is available.
+  std::vector<CompilerContext> GetCompilerContext();
+
   /// Get accessor for the type that describes the function return value type,
   /// and parameter types.
   ///

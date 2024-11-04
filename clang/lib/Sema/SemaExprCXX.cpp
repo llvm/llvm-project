@@ -72,8 +72,8 @@ ParsedType Sema::getInheritingConstructorName(CXXScopeSpec &SS,
     // Strip off the last layer of the nested-name-specifier and build a
     // typename type for it.
     assert(NNS->getAsIdentifier() == &Name && "not a constructor name");
-    Type = Context.getDependentNameType(ETK_None, NNS->getPrefix(),
-                                        NNS->getAsIdentifier());
+    Type = Context.getDependentNameType(
+        ElaboratedTypeKeyword::None, NNS->getPrefix(), NNS->getAsIdentifier());
     break;
 
   case NestedNameSpecifier::Global:
@@ -101,7 +101,8 @@ ParsedType Sema::getConstructorName(IdentifierInfo &II,
   // friend declaration or an inherited constructor declaration), form an
   // unresolved "typename" type.
   if (CurClass->isDependentContext() && !EnteringContext && SS.getScopeRep()) {
-    QualType T = Context.getDependentNameType(ETK_None, SS.getScopeRep(), &II);
+    QualType T = Context.getDependentNameType(ElaboratedTypeKeyword::None,
+                                              SS.getScopeRep(), &II);
     return ParsedType::make(T);
   }
 
@@ -245,8 +246,9 @@ ParsedType Sema::getDestructorName(IdentifierInfo &II, SourceLocation NameLoc,
       if (IsAcceptableResult(Type)) {
         QualType T = Context.getTypeDeclType(Type);
         MarkAnyDeclReferenced(Type->getLocation(), Type, /*OdrUse=*/false);
-        return CreateParsedType(Context.getElaboratedType(ETK_None, nullptr, T),
-                                Context.getTrivialTypeSourceInfo(T, NameLoc));
+        return CreateParsedType(
+            Context.getElaboratedType(ElaboratedTypeKeyword::None, nullptr, T),
+            Context.getTrivialTypeSourceInfo(T, NameLoc));
       }
     }
 
@@ -362,9 +364,9 @@ ParsedType Sema::getDestructorName(IdentifierInfo &II, SourceLocation NameLoc,
     // We didn't find our type, but that's OK: it's dependent anyway.
 
     // FIXME: What if we have no nested-name-specifier?
-    QualType T = CheckTypenameType(ETK_None, SourceLocation(),
-                                   SS.getWithLocInContext(Context),
-                                   II, NameLoc);
+    QualType T =
+        CheckTypenameType(ElaboratedTypeKeyword::None, SourceLocation(),
+                          SS.getWithLocInContext(Context), II, NameLoc);
     return ParsedType::make(T);
   }
 
@@ -1333,6 +1335,7 @@ bool Sema::CheckCXXThisCapture(SourceLocation Loc, const bool Explicit,
       if (LSI && isGenericLambdaCallOperatorSpecialization(LSI->CallOperator)) {
         // This context can't implicitly capture 'this'; fail out.
         if (BuildAndDiagnose) {
+          LSI->CallOperator->setInvalidDecl();
           Diag(Loc, diag::err_this_capture)
               << (Explicit && idx == MaxFunctionScopesIndex);
           if (!Explicit)
@@ -1354,10 +1357,11 @@ bool Sema::CheckCXXThisCapture(SourceLocation Loc, const bool Explicit,
         continue;
       }
       // This context can't implicitly capture 'this'; fail out.
-      if (BuildAndDiagnose)
+      if (BuildAndDiagnose) {
+        LSI->CallOperator->setInvalidDecl();
         Diag(Loc, diag::err_this_capture)
             << (Explicit && idx == MaxFunctionScopesIndex);
-
+      }
       if (!Explicit)
         buildLambdaThisCaptureFixit(*this, LSI);
       return true;
@@ -2400,10 +2404,10 @@ ExprResult Sema::BuildCXXNew(SourceRange Range, bool UseGlobal,
           AllocType,
           llvm::APInt(Context.getTypeSize(Context.getSizeType()),
                       *KnownArraySize),
-          *ArraySize, ArrayType::Normal, 0);
+          *ArraySize, ArraySizeModifier::Normal, 0);
     else if (ArraySize)
-      InitType =
-          Context.getIncompleteArrayType(AllocType, ArrayType::Normal, 0);
+      InitType = Context.getIncompleteArrayType(AllocType,
+                                                ArraySizeModifier::Normal, 0);
     else
       InitType = AllocType;
 
@@ -6401,7 +6405,7 @@ QualType Sema::CheckVectorConditionalTypes(ExprResult &Cond, ExprResult &LHS,
           Context.getExtVectorType(ResultElementTy, CondVT->getNumElements());
     else
       ResultType = Context.getVectorType(
-          ResultElementTy, CondVT->getNumElements(), VectorType::GenericVector);
+          ResultElementTy, CondVT->getNumElements(), VectorKind::Generic);
 
     LHS = ImpCastExprToType(LHS.get(), ResultType, CK_VectorSplat);
     RHS = ImpCastExprToType(RHS.get(), ResultType, CK_VectorSplat);
@@ -6913,9 +6917,9 @@ QualType Sema::FindCompositePointerType(SourceLocation Loc,
       case Array:
         if (auto *CAT = cast_or_null<ConstantArrayType>(ClassOrBound))
           return Ctx.getConstantArrayType(T, CAT->getSize(), nullptr,
-                                          ArrayType::Normal, 0);
+                                          ArraySizeModifier::Normal, 0);
         else
-          return Ctx.getIncompleteArrayType(T, ArrayType::Normal, 0);
+          return Ctx.getIncompleteArrayType(T, ArraySizeModifier::Normal, 0);
       }
       llvm_unreachable("unknown step kind");
     }
@@ -8941,9 +8945,10 @@ Sema::ActOnTypeRequirement(SourceLocation TypenameKWLoc, CXXScopeSpec &SS,
          "Exactly one of TypeName and TemplateId must be specified.");
   TypeSourceInfo *TSI = nullptr;
   if (TypeName) {
-    QualType T = CheckTypenameType(ETK_Typename, TypenameKWLoc,
-                                   SS.getWithLocInContext(Context), *TypeName,
-                                   NameLoc, &TSI, /*DeducedTSTContext=*/false);
+    QualType T =
+        CheckTypenameType(ElaboratedTypeKeyword::Typename, TypenameKWLoc,
+                          SS.getWithLocInContext(Context), *TypeName, NameLoc,
+                          &TSI, /*DeducedTSTContext=*/false);
     if (T.isNull())
       return nullptr;
   } else {

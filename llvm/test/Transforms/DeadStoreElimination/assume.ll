@@ -33,6 +33,25 @@ define void @f2() {
   ret void
 }
 
+; FIXME: This is a miscompile
+define void @pr70547() {
+; CHECK-LABEL: @pr70547(
+; CHECK-NEXT:    [[A:%.*]] = alloca i8, align 1
+; CHECK-NEXT:    [[CALL:%.*]] = call ptr @quux(ptr [[A]]) #[[ATTR1:[0-9]+]]
+; CHECK-NEXT:    [[V:%.*]] = load i8, ptr [[CALL]], align 1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i8 [[V]], 1
+; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
+; CHECK-NEXT:    ret void
+;
+  %a = alloca i8
+  store i8 0, ptr %a
+  %call = call ptr @quux(ptr %a) memory(none) nounwind willreturn
+  %v = load i8, ptr %call
+  %cmp = icmp ne i8 %v, 1
+  call void @llvm.assume(i1 %cmp)
+  ret void
+}
+
 declare ptr @_Znwm(i64)
 
 declare void @llvm.assume(i1)

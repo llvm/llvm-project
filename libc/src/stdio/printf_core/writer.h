@@ -93,7 +93,7 @@ public:
   // Takes a string, copies it into the buffer if there is space, else passes it
   // to the overflow mechanism to be handled separately.
   LIBC_INLINE int write(cpp::string_view new_string) {
-    chars_written += new_string.size();
+    chars_written += static_cast<int>(new_string.size());
     if (LIBC_LIKELY(wb->buff_cur + new_string.size() <= wb->buff_len)) {
       inline_memcpy(wb->buff + wb->buff_cur, new_string.data(),
                     new_string.size());
@@ -107,7 +107,7 @@ public:
   // if there is space, else calls pad which will loop and call the overflow
   // mechanism on a secondary buffer.
   LIBC_INLINE int write(char new_char, size_t length) {
-    chars_written += length;
+    chars_written += static_cast<int>(length);
 
     if (LIBC_LIKELY(wb->buff_cur + length <= wb->buff_len)) {
       inline_memset(wb->buff + wb->buff_cur, new_char, length);

@@ -2210,6 +2210,52 @@ int testSymbolTable(MlirContext ctx) {
   return 0;
 }
 
+typedef struct {
+  const char *x;
+} callBackData;
+
+void walkCallBack(MlirOperation op, void *rootOpVoid) {
+  fprintf(stderr, "%s: %s\n", ((callBackData *)(rootOpVoid))->x,
+          mlirIdentifierStr(mlirOperationGetName(op)).data);
+}
+
+int testOperationWalk(MlirContext ctx) {
+  // CHECK-LABEL: @testOperationWalk
+  fprintf(stderr, "@testOperationWalk\n");
+
+  const char *moduleString = "module {\n"
+                             "  func.func @foo() {\n"
+                             "    %1 = arith.constant 10: i32\n"
+                             "    arith.addi %1, %1: i32\n"
+                             "    return\n"
+                             "  }\n"
+                             "}";
+  MlirModule module =
+      mlirModuleCreateParse(ctx, mlirStringRefCreateFromCString(moduleString));
+
+  callBackData data;
+  data.x = "i love you";
+
+  // CHECK: i love you: arith.constant
+  // CHECK: i love you: arith.addi
+  // CHECK: i love you: func.return
+  // CHECK: i love you: func.func
+  // CHECK: i love you: builtin.module
+  mlirOperationWalk(mlirModuleGetOperation(module), walkCallBack,
+                    (void *)(&data), MlirWalkPostOrder);
+
+  data.x = "i don't love you";
+  // CHECK: i don't love you: builtin.module
+  // CHECK: i don't love you: func.func
+  // CHECK: i don't love you: arith.constant
+  // CHECK: i don't love you: arith.addi
+  // CHECK: i don't love you: func.return
+  mlirOperationWalk(mlirModuleGetOperation(module), walkCallBack,
+                    (void *)(&data), MlirWalkPreOrder);
+  mlirModuleDestroy(module);
+  return 0;
+}
+
 int testDialectRegistry(void) {
   fprintf(stderr, "@testDialectRegistry\n");
 
@@ -2349,6 +2395,8 @@ int main(void) {
     return 14;
   if (testDialectRegistry())
     return 15;
+  if (testOperationWalk(ctx))
+    return 16;
 
   testExplicitThreadPools();
   testDiagnostics();

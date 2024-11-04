@@ -3230,14 +3230,14 @@ TEST(TransferTest, AssignFromBoolLiteral) {
         ASSERT_THAT(FooDecl, NotNull());
 
         const auto *FooVal =
-            dyn_cast_or_null<AtomicBoolValue>(Env.getValue(*FooDecl));
+            dyn_cast_or_null<BoolValue>(Env.getValue(*FooDecl));
         ASSERT_THAT(FooVal, NotNull());
 
         const ValueDecl *BarDecl = findValueDecl(ASTCtx, "Bar");
         ASSERT_THAT(BarDecl, NotNull());
 
         const auto *BarVal =
-            dyn_cast_or_null<AtomicBoolValue>(Env.getValue(*BarDecl));
+            dyn_cast_or_null<BoolValue>(Env.getValue(*BarDecl));
         ASSERT_THAT(BarVal, NotNull());
 
         EXPECT_EQ(FooVal, &Env.getBoolLiteralValue(true));
@@ -3415,7 +3415,7 @@ TEST(TransferTest, AssignFromBoolNegation) {
         ASSERT_THAT(FooDecl, NotNull());
 
         const auto *FooVal =
-            dyn_cast_or_null<AtomicBoolValue>(Env.getValue(*FooDecl));
+            dyn_cast_or_null<BoolValue>(Env.getValue(*FooDecl));
         ASSERT_THAT(FooVal, NotNull());
 
         const ValueDecl *BarDecl = findValueDecl(ASTCtx, "Bar");
@@ -3795,11 +3795,10 @@ TEST(TransferTest, BooleanEquality) {
         ASSERT_THAT(BarDecl, NotNull());
 
         auto &BarValThen = getFormula(*BarDecl, EnvThen);
-        EXPECT_TRUE(EnvThen.flowConditionImplies(BarValThen));
+        EXPECT_TRUE(EnvThen.proves(BarValThen));
 
         auto &BarValElse = getFormula(*BarDecl, EnvElse);
-        EXPECT_TRUE(
-            EnvElse.flowConditionImplies(EnvElse.arena().makeNot(BarValElse)));
+        EXPECT_TRUE(EnvElse.proves(EnvElse.arena().makeNot(BarValElse)));
       });
 }
 
@@ -3830,11 +3829,10 @@ TEST(TransferTest, BooleanInequality) {
         ASSERT_THAT(BarDecl, NotNull());
 
         auto &BarValThen = getFormula(*BarDecl, EnvThen);
-        EXPECT_TRUE(
-            EnvThen.flowConditionImplies(EnvThen.arena().makeNot(BarValThen)));
+        EXPECT_TRUE(EnvThen.proves(EnvThen.arena().makeNot(BarValThen)));
 
         auto &BarValElse = getFormula(*BarDecl, EnvElse);
-        EXPECT_TRUE(EnvElse.flowConditionImplies(BarValElse));
+        EXPECT_TRUE(EnvElse.proves(BarValElse));
       });
 }
 
@@ -3853,7 +3851,7 @@ TEST(TransferTest, IntegerLiteralEquality) {
 
         auto &Equal =
             getValueForDecl<BoolValue>(ASTCtx, Env, "equal").formula();
-        EXPECT_TRUE(Env.flowConditionImplies(Equal));
+        EXPECT_TRUE(Env.proves(Equal));
       });
 }
 
@@ -3890,19 +3888,19 @@ TEST(TransferTest, CorrelatedBranches) {
           ASSERT_THAT(BDecl, NotNull());
           auto &BVal = getFormula(*BDecl, Env);
 
-          EXPECT_TRUE(Env.flowConditionImplies(Env.arena().makeNot(BVal)));
+          EXPECT_TRUE(Env.proves(Env.arena().makeNot(BVal)));
         }
 
         {
           const Environment &Env = getEnvironmentAtAnnotation(Results, "p1");
           auto &CVal = getFormula(*CDecl, Env);
-          EXPECT_TRUE(Env.flowConditionImplies(CVal));
+          EXPECT_TRUE(Env.proves(CVal));
         }
 
         {
           const Environment &Env = getEnvironmentAtAnnotation(Results, "p2");
           auto &CVal = getFormula(*CDecl, Env);
-          EXPECT_TRUE(Env.flowConditionImplies(CVal));
+          EXPECT_TRUE(Env.proves(CVal));
         }
       });
 }
@@ -3934,7 +3932,7 @@ TEST(TransferTest, LoopWithAssignmentConverges) {
         ASSERT_THAT(BarDecl, NotNull());
 
         auto &BarVal = getFormula(*BarDecl, Env);
-        EXPECT_TRUE(Env.flowConditionImplies(Env.arena().makeNot(BarVal)));
+        EXPECT_TRUE(Env.proves(Env.arena().makeNot(BarVal)));
       });
 }
 
@@ -3967,12 +3965,11 @@ TEST(TransferTest, LoopWithStagedAssignments) {
 
         auto &BarVal = getFormula(*BarDecl, Env);
         auto &ErrVal = getFormula(*ErrDecl, Env);
-        EXPECT_TRUE(Env.flowConditionImplies(BarVal));
+        EXPECT_TRUE(Env.proves(BarVal));
         // An unsound analysis, for example only evaluating the loop once, can
         // conclude that `Err` is false. So, we test that this conclusion is not
         // reached.
-        EXPECT_FALSE(
-            Env.flowConditionImplies(Env.arena().makeNot(ErrVal)));
+        EXPECT_FALSE(Env.proves(Env.arena().makeNot(ErrVal)));
       });
 }
 
@@ -4002,7 +3999,7 @@ TEST(TransferTest, LoopWithReferenceAssignmentConverges) {
         ASSERT_THAT(BarDecl, NotNull());
 
         auto &BarVal = getFormula(*BarDecl, Env);
-        EXPECT_TRUE(Env.flowConditionImplies(Env.arena().makeNot(BarVal)));
+        EXPECT_TRUE(Env.proves(Env.arena().makeNot(BarVal)));
       });
 }
 
@@ -4531,11 +4528,10 @@ TEST(TransferTest, IfStmtBranchExtendsFlowCondition) {
         ASSERT_THAT(FooDecl, NotNull());
 
         auto &ThenFooVal= getFormula(*FooDecl, ThenEnv);
-        EXPECT_TRUE(ThenEnv.flowConditionImplies(ThenFooVal));
+        EXPECT_TRUE(ThenEnv.proves(ThenFooVal));
 
         auto &ElseFooVal = getFormula(*FooDecl, ElseEnv);
-        EXPECT_TRUE(
-            ElseEnv.flowConditionImplies(ElseEnv.arena().makeNot(ElseFooVal)));
+        EXPECT_TRUE(ElseEnv.proves(ElseEnv.arena().makeNot(ElseFooVal)));
       });
 }
 
@@ -4565,11 +4561,11 @@ TEST(TransferTest, WhileStmtBranchExtendsFlowCondition) {
         ASSERT_THAT(FooDecl, NotNull());
 
         auto &LoopBodyFooVal = getFormula(*FooDecl, LoopBodyEnv);
-        EXPECT_TRUE(LoopBodyEnv.flowConditionImplies(LoopBodyFooVal));
+        EXPECT_TRUE(LoopBodyEnv.proves(LoopBodyFooVal));
 
         auto &AfterLoopFooVal = getFormula(*FooDecl, AfterLoopEnv);
-        EXPECT_TRUE(AfterLoopEnv.flowConditionImplies(
-            AfterLoopEnv.arena().makeNot(AfterLoopFooVal)));
+        EXPECT_TRUE(
+            AfterLoopEnv.proves(AfterLoopEnv.arena().makeNot(AfterLoopFooVal)));
       });
 }
 
@@ -4606,15 +4602,13 @@ TEST(TransferTest, DoWhileStmtBranchExtendsFlowCondition) {
 
         auto &LoopBodyFooVal= getFormula(*FooDecl, LoopBodyEnv);
         auto &LoopBodyBarVal = getFormula(*BarDecl, LoopBodyEnv);
-        EXPECT_TRUE(LoopBodyEnv.flowConditionImplies(
-            A.makeOr(LoopBodyBarVal, LoopBodyFooVal)));
+        EXPECT_TRUE(
+            LoopBodyEnv.proves(A.makeOr(LoopBodyBarVal, LoopBodyFooVal)));
 
         auto &AfterLoopFooVal = getFormula(*FooDecl, AfterLoopEnv);
         auto &AfterLoopBarVal = getFormula(*BarDecl, AfterLoopEnv);
-        EXPECT_TRUE(
-            AfterLoopEnv.flowConditionImplies(A.makeNot(AfterLoopFooVal)));
-        EXPECT_TRUE(
-            AfterLoopEnv.flowConditionImplies(A.makeNot(AfterLoopBarVal)));
+        EXPECT_TRUE(AfterLoopEnv.proves(A.makeNot(AfterLoopFooVal)));
+        EXPECT_TRUE(AfterLoopEnv.proves(A.makeNot(AfterLoopBarVal)));
       });
 }
 
@@ -4644,11 +4638,11 @@ TEST(TransferTest, ForStmtBranchExtendsFlowCondition) {
         ASSERT_THAT(FooDecl, NotNull());
 
         auto &LoopBodyFooVal= getFormula(*FooDecl, LoopBodyEnv);
-        EXPECT_TRUE(LoopBodyEnv.flowConditionImplies(LoopBodyFooVal));
+        EXPECT_TRUE(LoopBodyEnv.proves(LoopBodyFooVal));
 
         auto &AfterLoopFooVal = getFormula(*FooDecl, AfterLoopEnv);
-        EXPECT_TRUE(AfterLoopEnv.flowConditionImplies(
-            AfterLoopEnv.arena().makeNot(AfterLoopFooVal)));
+        EXPECT_TRUE(
+            AfterLoopEnv.proves(AfterLoopEnv.arena().makeNot(AfterLoopFooVal)));
       });
 }
 
@@ -4673,7 +4667,7 @@ TEST(TransferTest, ForStmtBranchWithoutConditionDoesNotExtendFlowCondition) {
         ASSERT_THAT(FooDecl, NotNull());
 
         auto &LoopBodyFooVal= getFormula(*FooDecl, LoopBodyEnv);
-        EXPECT_FALSE(LoopBodyEnv.flowConditionImplies(LoopBodyFooVal));
+        EXPECT_FALSE(LoopBodyEnv.proves(LoopBodyFooVal));
       });
 }
 
@@ -4699,8 +4693,8 @@ TEST(TransferTest, ContextSensitiveOptionDisabled) {
         ASSERT_THAT(FooDecl, NotNull());
 
         auto &FooVal = getFormula(*FooDecl, Env);
-        EXPECT_FALSE(Env.flowConditionImplies(FooVal));
-        EXPECT_FALSE(Env.flowConditionImplies(Env.arena().makeNot(FooVal)));
+        EXPECT_FALSE(Env.proves(FooVal));
+        EXPECT_FALSE(Env.proves(Env.arena().makeNot(FooVal)));
       },
       {BuiltinOptions{/*.ContextSensitiveOpts=*/std::nullopt}});
 }
@@ -4838,8 +4832,8 @@ TEST(TransferTest, ContextSensitiveDepthZero) {
         ASSERT_THAT(FooDecl, NotNull());
 
         auto &FooVal = getFormula(*FooDecl, Env);
-        EXPECT_FALSE(Env.flowConditionImplies(FooVal));
-        EXPECT_FALSE(Env.flowConditionImplies(Env.arena().makeNot(FooVal)));
+        EXPECT_FALSE(Env.proves(FooVal));
+        EXPECT_FALSE(Env.proves(Env.arena().makeNot(FooVal)));
       },
       {BuiltinOptions{ContextSensitiveOptions{/*.Depth=*/0}}});
 }
@@ -4866,7 +4860,7 @@ TEST(TransferTest, ContextSensitiveSetTrue) {
         ASSERT_THAT(FooDecl, NotNull());
 
         auto &FooVal = getFormula(*FooDecl, Env);
-        EXPECT_TRUE(Env.flowConditionImplies(FooVal));
+        EXPECT_TRUE(Env.proves(FooVal));
       },
       {BuiltinOptions{ContextSensitiveOptions{}}});
 }
@@ -4893,7 +4887,7 @@ TEST(TransferTest, ContextSensitiveSetFalse) {
         ASSERT_THAT(FooDecl, NotNull());
 
         auto &FooVal = getFormula(*FooDecl, Env);
-        EXPECT_TRUE(Env.flowConditionImplies(Env.arena().makeNot(FooVal)));
+        EXPECT_TRUE(Env.proves(Env.arena().makeNot(FooVal)));
       },
       {BuiltinOptions{ContextSensitiveOptions{}}});
 }
@@ -4926,12 +4920,12 @@ TEST(TransferTest, ContextSensitiveSetBothTrueAndFalse) {
         ASSERT_THAT(BarDecl, NotNull());
 
         auto &FooVal = getFormula(*FooDecl, Env);
-        EXPECT_TRUE(Env.flowConditionImplies(FooVal));
-        EXPECT_FALSE(Env.flowConditionImplies(A.makeNot(FooVal)));
+        EXPECT_TRUE(Env.proves(FooVal));
+        EXPECT_FALSE(Env.proves(A.makeNot(FooVal)));
 
         auto &BarVal = getFormula(*BarDecl, Env);
-        EXPECT_FALSE(Env.flowConditionImplies(BarVal));
-        EXPECT_TRUE(Env.flowConditionImplies(A.makeNot(BarVal)));
+        EXPECT_FALSE(Env.proves(BarVal));
+        EXPECT_TRUE(Env.proves(A.makeNot(BarVal)));
       },
       {BuiltinOptions{ContextSensitiveOptions{}}});
 }
@@ -4959,8 +4953,8 @@ TEST(TransferTest, ContextSensitiveSetTwoLayersDepthOne) {
         ASSERT_THAT(FooDecl, NotNull());
 
         auto &FooVal = getFormula(*FooDecl, Env);
-        EXPECT_FALSE(Env.flowConditionImplies(FooVal));
-        EXPECT_FALSE(Env.flowConditionImplies(Env.arena().makeNot(FooVal)));
+        EXPECT_FALSE(Env.proves(FooVal));
+        EXPECT_FALSE(Env.proves(Env.arena().makeNot(FooVal)));
       },
       {BuiltinOptions{ContextSensitiveOptions{/*.Depth=*/1}}});
 }
@@ -4988,7 +4982,7 @@ TEST(TransferTest, ContextSensitiveSetTwoLayersDepthTwo) {
         ASSERT_THAT(FooDecl, NotNull());
 
         auto &FooVal = getFormula(*FooDecl, Env);
-        EXPECT_TRUE(Env.flowConditionImplies(FooVal));
+        EXPECT_TRUE(Env.proves(FooVal));
       },
       {BuiltinOptions{ContextSensitiveOptions{/*.Depth=*/2}}});
 }
@@ -5017,8 +5011,8 @@ TEST(TransferTest, ContextSensitiveSetThreeLayersDepthTwo) {
         ASSERT_THAT(FooDecl, NotNull());
 
         auto &FooVal = getFormula(*FooDecl, Env);
-        EXPECT_FALSE(Env.flowConditionImplies(FooVal));
-        EXPECT_FALSE(Env.flowConditionImplies(Env.arena().makeNot(FooVal)));
+        EXPECT_FALSE(Env.proves(FooVal));
+        EXPECT_FALSE(Env.proves(Env.arena().makeNot(FooVal)));
       },
       {BuiltinOptions{ContextSensitiveOptions{/*.Depth=*/2}}});
 }
@@ -5047,7 +5041,7 @@ TEST(TransferTest, ContextSensitiveSetThreeLayersDepthThree) {
         ASSERT_THAT(FooDecl, NotNull());
 
         auto &FooVal = getFormula(*FooDecl, Env);
-        EXPECT_TRUE(Env.flowConditionImplies(FooVal));
+        EXPECT_TRUE(Env.proves(FooVal));
       },
       {BuiltinOptions{ContextSensitiveOptions{/*.Depth=*/3}}});
 }
@@ -5090,8 +5084,8 @@ TEST(TransferTest, ContextSensitiveMutualRecursion) {
 
         auto &FooVal = getFormula(*FooDecl, Env);
         // ... but it also can't prove anything here.
-        EXPECT_FALSE(Env.flowConditionImplies(FooVal));
-        EXPECT_FALSE(Env.flowConditionImplies(Env.arena().makeNot(FooVal)));
+        EXPECT_FALSE(Env.proves(FooVal));
+        EXPECT_FALSE(Env.proves(Env.arena().makeNot(FooVal)));
       },
       {BuiltinOptions{ContextSensitiveOptions{/*.Depth=*/4}}});
 }
@@ -5124,12 +5118,12 @@ TEST(TransferTest, ContextSensitiveSetMultipleLines) {
         ASSERT_THAT(BarDecl, NotNull());
 
         auto &FooVal = getFormula(*FooDecl, Env);
-        EXPECT_TRUE(Env.flowConditionImplies(FooVal));
-        EXPECT_FALSE(Env.flowConditionImplies(Env.arena().makeNot(FooVal)));
+        EXPECT_TRUE(Env.proves(FooVal));
+        EXPECT_FALSE(Env.proves(Env.arena().makeNot(FooVal)));
 
         auto &BarVal = getFormula(*BarDecl, Env);
-        EXPECT_FALSE(Env.flowConditionImplies(BarVal));
-        EXPECT_TRUE(Env.flowConditionImplies(Env.arena().makeNot(BarVal)));
+        EXPECT_FALSE(Env.proves(BarVal));
+        EXPECT_TRUE(Env.proves(Env.arena().makeNot(BarVal)));
       },
       {BuiltinOptions{ContextSensitiveOptions{}}});
 }
@@ -5166,12 +5160,12 @@ TEST(TransferTest, ContextSensitiveSetMultipleBlocks) {
         ASSERT_THAT(BazDecl, NotNull());
 
         auto &BarVal = getFormula(*BarDecl, Env);
-        EXPECT_FALSE(Env.flowConditionImplies(BarVal));
-        EXPECT_TRUE(Env.flowConditionImplies(Env.arena().makeNot(BarVal)));
+        EXPECT_FALSE(Env.proves(BarVal));
+        EXPECT_TRUE(Env.proves(Env.arena().makeNot(BarVal)));
 
         auto &BazVal = getFormula(*BazDecl, Env);
-        EXPECT_TRUE(Env.flowConditionImplies(BazVal));
-        EXPECT_FALSE(Env.flowConditionImplies(Env.arena().makeNot(BazVal)));
+        EXPECT_TRUE(Env.proves(BazVal));
+        EXPECT_FALSE(Env.proves(Env.arena().makeNot(BazVal)));
       },
       {BuiltinOptions{ContextSensitiveOptions{}}});
 }
@@ -5215,7 +5209,7 @@ TEST(TransferTest, ContextSensitiveReturnTrue) {
         ASSERT_THAT(FooDecl, NotNull());
 
         auto &FooVal = getFormula(*FooDecl, Env);
-        EXPECT_TRUE(Env.flowConditionImplies(FooVal));
+        EXPECT_TRUE(Env.proves(FooVal));
       },
       {BuiltinOptions{ContextSensitiveOptions{}}});
 }
@@ -5240,7 +5234,7 @@ TEST(TransferTest, ContextSensitiveReturnFalse) {
         ASSERT_THAT(FooDecl, NotNull());
 
         auto &FooVal = getFormula(*FooDecl, Env);
-        EXPECT_TRUE(Env.flowConditionImplies(Env.arena().makeNot(FooVal)));
+        EXPECT_TRUE(Env.proves(Env.arena().makeNot(FooVal)));
       },
       {BuiltinOptions{ContextSensitiveOptions{}}});
 }
@@ -5268,7 +5262,7 @@ TEST(TransferTest, ContextSensitiveReturnArg) {
         ASSERT_THAT(BazDecl, NotNull());
 
         auto &BazVal = getFormula(*BazDecl, Env);
-        EXPECT_TRUE(Env.flowConditionImplies(BazVal));
+        EXPECT_TRUE(Env.proves(BazVal));
       },
       {BuiltinOptions{ContextSensitiveOptions{}}});
 }
@@ -5316,7 +5310,7 @@ TEST(TransferTest, ContextSensitiveMethodLiteral) {
         ASSERT_THAT(FooDecl, NotNull());
 
         auto &FooVal = getFormula(*FooDecl, Env);
-        EXPECT_TRUE(Env.flowConditionImplies(FooVal));
+        EXPECT_TRUE(Env.proves(FooVal));
       },
       {BuiltinOptions{ContextSensitiveOptions{}}});
 }
@@ -5348,7 +5342,7 @@ TEST(TransferTest, ContextSensitiveMethodGetter) {
         ASSERT_THAT(FooDecl, NotNull());
 
         auto &FooVal = getFormula(*FooDecl, Env);
-        EXPECT_TRUE(Env.flowConditionImplies(FooVal));
+        EXPECT_TRUE(Env.proves(FooVal));
       },
       {BuiltinOptions{ContextSensitiveOptions{}}});
 }
@@ -5380,7 +5374,7 @@ TEST(TransferTest, ContextSensitiveMethodSetter) {
         ASSERT_THAT(FooDecl, NotNull());
 
         auto &FooVal = getFormula(*FooDecl, Env);
-        EXPECT_TRUE(Env.flowConditionImplies(FooVal));
+        EXPECT_TRUE(Env.proves(FooVal));
       },
       {BuiltinOptions{ContextSensitiveOptions{}}});
 }
@@ -5414,7 +5408,7 @@ TEST(TransferTest, ContextSensitiveMethodGetterAndSetter) {
         ASSERT_THAT(FooDecl, NotNull());
 
         auto &FooVal = getFormula(*FooDecl, Env);
-        EXPECT_TRUE(Env.flowConditionImplies(FooVal));
+        EXPECT_TRUE(Env.proves(FooVal));
       },
       {BuiltinOptions{ContextSensitiveOptions{}}});
 }
@@ -5449,7 +5443,7 @@ TEST(TransferTest, ContextSensitiveMethodTwoLayersVoid) {
         ASSERT_THAT(FooDecl, NotNull());
 
         auto &FooVal = getFormula(*FooDecl, Env);
-        EXPECT_TRUE(Env.flowConditionImplies(FooVal));
+        EXPECT_TRUE(Env.proves(FooVal));
       },
       {BuiltinOptions{ContextSensitiveOptions{}}});
 }
@@ -5483,7 +5477,7 @@ TEST(TransferTest, ContextSensitiveMethodTwoLayersReturn) {
         ASSERT_THAT(FooDecl, NotNull());
 
         auto &FooVal = getFormula(*FooDecl, Env);
-        EXPECT_TRUE(Env.flowConditionImplies(FooVal));
+        EXPECT_TRUE(Env.proves(FooVal));
       },
       {BuiltinOptions{ContextSensitiveOptions{}}});
 }
@@ -5514,7 +5508,7 @@ TEST(TransferTest, ContextSensitiveConstructorBody) {
         ASSERT_THAT(FooDecl, NotNull());
 
         auto &FooVal = getFormula(*FooDecl, Env);
-        EXPECT_TRUE(Env.flowConditionImplies(FooVal));
+        EXPECT_TRUE(Env.proves(FooVal));
       },
       {BuiltinOptions{ContextSensitiveOptions{}}});
 }
@@ -5545,7 +5539,7 @@ TEST(TransferTest, ContextSensitiveConstructorInitializer) {
         ASSERT_THAT(FooDecl, NotNull());
 
         auto &FooVal = getFormula(*FooDecl, Env);
-        EXPECT_TRUE(Env.flowConditionImplies(FooVal));
+        EXPECT_TRUE(Env.proves(FooVal));
       },
       {BuiltinOptions{ContextSensitiveOptions{}}});
 }
@@ -5576,7 +5570,7 @@ TEST(TransferTest, ContextSensitiveConstructorDefault) {
         ASSERT_THAT(FooDecl, NotNull());
 
         auto &FooVal = getFormula(*FooDecl, Env);
-        EXPECT_TRUE(Env.flowConditionImplies(FooVal));
+        EXPECT_TRUE(Env.proves(FooVal));
       },
       {BuiltinOptions{ContextSensitiveOptions{}}});
 }
@@ -5656,7 +5650,7 @@ TEST(TransferTest, ChainedLogicalOps) {
          ASTContext &ASTCtx) {
         const Environment &Env = getEnvironmentAtAnnotation(Results, "p");
         auto &B = getValueForDecl<BoolValue>(ASTCtx, Env, "b").formula();
-        EXPECT_TRUE(Env.flowConditionImplies(B));
+        EXPECT_TRUE(Env.proves(B));
       });
 }
 
@@ -5701,30 +5695,30 @@ TEST(TransferTest, NoReturnFunctionInsideShortCircuitedBooleanOp) {
         auto &A = Env.arena();
 
         // Check that [[p]] is reachable with a non-false flow condition.
-        EXPECT_FALSE(Env.flowConditionImplies(A.makeLiteral(false)));
+        EXPECT_FALSE(Env.proves(A.makeLiteral(false)));
 
         auto &B1 = getValueForDecl<BoolValue>(ASTCtx, Env, "b1").formula();
-        EXPECT_TRUE(Env.flowConditionImplies(A.makeNot(B1)));
+        EXPECT_TRUE(Env.proves(A.makeNot(B1)));
 
         auto &NoreturnOnRhsOfAnd =
             getValueForDecl<BoolValue>(ASTCtx, Env, "NoreturnOnRhsOfAnd").formula();
-        EXPECT_TRUE(Env.flowConditionImplies(A.makeNot(NoreturnOnRhsOfAnd)));
+        EXPECT_TRUE(Env.proves(A.makeNot(NoreturnOnRhsOfAnd)));
 
         auto &B2 = getValueForDecl<BoolValue>(ASTCtx, Env, "b2").formula();
-        EXPECT_TRUE(Env.flowConditionImplies(B2));
+        EXPECT_TRUE(Env.proves(B2));
 
         auto &NoreturnOnRhsOfOr =
             getValueForDecl<BoolValue>(ASTCtx, Env, "NoreturnOnRhsOfOr")
                 .formula();
-        EXPECT_TRUE(Env.flowConditionImplies(NoreturnOnRhsOfOr));
+        EXPECT_TRUE(Env.proves(NoreturnOnRhsOfOr));
 
         auto &NoreturnOnLhsMakesAndUnreachable = getValueForDecl<BoolValue>(
             ASTCtx, Env, "NoreturnOnLhsMakesAndUnreachable").formula();
-        EXPECT_TRUE(Env.flowConditionImplies(NoreturnOnLhsMakesAndUnreachable));
+        EXPECT_TRUE(Env.proves(NoreturnOnLhsMakesAndUnreachable));
 
         auto &NoreturnOnLhsMakesOrUnreachable = getValueForDecl<BoolValue>(
             ASTCtx, Env, "NoreturnOnLhsMakesOrUnreachable").formula();
-        EXPECT_TRUE(Env.flowConditionImplies(NoreturnOnLhsMakesOrUnreachable));
+        EXPECT_TRUE(Env.proves(NoreturnOnLhsMakesOrUnreachable));
       });
 }
 
@@ -5944,7 +5938,7 @@ TEST(TransferTest, AnonymousStruct) {
             S->getChild(*cast<ValueDecl>(IndirectField->chain().front())));
 
         auto *B = cast<BoolValue>(getFieldValue(&AnonStruct, *BDecl, Env));
-        ASSERT_TRUE(Env.flowConditionImplies(B->formula()));
+        ASSERT_TRUE(Env.proves(B->formula()));
       });
 }
 
@@ -5975,7 +5969,7 @@ TEST(TransferTest, AnonymousStructWithInitializer) {
             *cast<ValueDecl>(IndirectField->chain().front())));
 
         auto *B = cast<BoolValue>(getFieldValue(&AnonStruct, *BDecl, Env));
-        ASSERT_TRUE(Env.flowConditionImplies(B->formula()));
+        ASSERT_TRUE(Env.proves(B->formula()));
       });
 }
 
@@ -6233,6 +6227,50 @@ TEST(TransferTest, LambdaCaptureThis) {
 
         const Value *FooVal = Env.getValue(*FooLoc);
         EXPECT_TRUE(isa_and_nonnull<IntegerValue>(FooVal));
+      });
+}
+
+TEST(TransferTest, DifferentReferenceLocInJoin) {
+  // This test triggers a case where the storage location for a reference-type
+  // variable is different for two states being joined. We used to believe this
+  // could not happen and therefore had an assertion disallowing this; this test
+  // exists to demonstrate that we can handle this condition without a failing
+  // assertion. See also the discussion here:
+  // https://discourse.llvm.org/t/70086/6
+  std::string Code = R"(
+    namespace std {
+      template <class T> struct initializer_list {
+        const T* begin();
+        const T* end();
+      };
+    }
+
+    void target(char* p, char* end) {
+      while (p != end) {
+        if (*p == ' ') {
+          p++;
+          continue;
+        }
+
+        auto && range = {1, 2};
+        for (auto b = range.begin(), e = range.end(); b != e; ++b) {
+        }
+        (void)0;
+        // [[p]]
+      }
+    }
+  )";
+  runDataflow(
+      Code,
+      [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
+         ASTContext &ASTCtx) {
+        const Environment &Env = getEnvironmentAtAnnotation(Results, "p");
+
+        // Joining environments with different storage locations for the same
+        // declaration results in the declaration being removed from the joined
+        // environment.
+        const ValueDecl *VD = findValueDecl(ASTCtx, "range");
+        ASSERT_EQ(Env.getStorageLocation(*VD), nullptr);
       });
 }
 

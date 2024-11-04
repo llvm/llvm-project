@@ -272,7 +272,9 @@ void fenceSystem(atomic::OrderingTy Ordering) {
 }
 
 void syncWarp(__kmpc_impl_lanemask_t) {
-  // AMDGCN doesn't need to sync threads in a warp
+  // This is a no-op on current AMDGPU hardware but it is used by the optimizer
+  // to enforce convergent behaviour between control flow graphs.
+  __builtin_amdgcn_wave_barrier();
 }
 
 void syncThreads(atomic::OrderingTy Ordering) {

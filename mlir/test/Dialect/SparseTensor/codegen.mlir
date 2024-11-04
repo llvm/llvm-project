@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s --sparse-tensor-codegen  --canonicalize -cse | FileCheck %s
+// RUN: mlir-opt %s --lower-sparse-ops-to-foreach --lower-sparse-foreach-to-scf --sparse-tensor-codegen  --canonicalize -cse | FileCheck %s
 
 #SV = #sparse_tensor.encoding<{ map = (d0) -> (d0 : compressed) }>
 
@@ -664,7 +664,7 @@ func.func @sparse_convert_element_type(%arg0: tensor<32xf32, #SparseVector>) -> 
 }
 
 // CHECK-LABEL: func.func @sparse_new_coo(
-// CHECK-SAME:  %[[A0:.*]]: !llvm.ptr<i8>) -> (memref<?xindex>, memref<?xindex>, memref<?xf32>, !sparse_tensor.storage_specifier<#sparse_tensor.encoding<{{{.*}}}>>) {
+// CHECK-SAME:  %[[A0:.*]]: !llvm.ptr) -> (memref<?xindex>, memref<?xindex>, memref<?xf32>, !sparse_tensor.storage_specifier<#sparse_tensor.encoding<{{{.*}}}>>) {
 // CHECK-DAG:   %[[VAL_1:.*]] = arith.constant false
 // CHECK-DAG:   %[[VAL_2:.*]] = arith.constant 2 : i32
 // CHECK-DAG:   %[[VAL_3:.*]] = arith.constant 1 : index
@@ -674,9 +674,9 @@ func.func @sparse_convert_element_type(%arg0: tensor<32xf32, #SparseVector>) -> 
 // CHECK:       %[[VAL_7:.*]] = memref.cast %[[VAL_6]] : memref<2xindex> to memref<?xindex>
 // CHECK:       memref.store %[[VAL_4]], %[[VAL_6]]{{\[}}%[[VAL_4]]] : memref<2xindex>
 // CHECK:       memref.store %[[VAL_4]], %[[VAL_6]]{{\[}}%[[VAL_3]]] : memref<2xindex>
-// CHECK:       %[[VAL_8:.*]] = call @createCheckedSparseTensorReader(%[[A0]], %[[VAL_7]], %[[VAL_2]]) : (!llvm.ptr<i8>, memref<?xindex>, i32) -> !llvm.ptr<i8>
-// CHECK:       %[[VAL_9:.*]] = call @getSparseTensorReaderDimSizes(%[[VAL_8]]) : (!llvm.ptr<i8>) -> memref<?xindex>
-// CHECK:       %[[VAL_10:.*]] = call @getSparseTensorReaderNSE(%[[VAL_8]]) : (!llvm.ptr<i8>) -> index
+// CHECK:       %[[VAL_8:.*]] = call @createCheckedSparseTensorReader(%[[A0]], %[[VAL_7]], %[[VAL_2]]) : (!llvm.ptr, memref<?xindex>, i32) -> !llvm.ptr
+// CHECK:       %[[VAL_9:.*]] = call @getSparseTensorReaderDimSizes(%[[VAL_8]]) : (!llvm.ptr) -> memref<?xindex>
+// CHECK:       %[[VAL_10:.*]] = call @getSparseTensorReaderNSE(%[[VAL_8]]) : (!llvm.ptr) -> index
 // CHECK:       %[[VAL_11:.*]] = memref.load %[[VAL_9]]{{\[}}%[[VAL_4]]] : memref<?xindex>
 // CHECK:       %[[VAL_12:.*]] = memref.load %[[VAL_9]]{{\[}}%[[VAL_3]]] : memref<?xindex>
 // CHECK:       %[[VAL_13:.*]] = arith.muli %[[VAL_10]], %[[VAL_5]] : index
@@ -696,7 +696,7 @@ func.func @sparse_convert_element_type(%arg0: tensor<32xf32, #SparseVector>) -> 
 // CHECK:       %[[VAL_29:.*]] = memref.cast %[[VAL_28]] : memref<2xindex> to memref<?xindex>
 // CHECK:       memref.store %[[VAL_4]], %[[VAL_28]]{{\[}}%[[VAL_4]]] : memref<2xindex>
 // CHECK:       memref.store %[[VAL_3]], %[[VAL_28]]{{\[}}%[[VAL_3]]] : memref<2xindex>
-// CHECK:       %[[VAL_30:.*]] = call @getSparseTensorReaderReadToBuffers0F32(%[[VAL_8]], %[[VAL_29]], %[[VAL_29]], %[[VAL_16]], %[[VAL_17]]) : (!llvm.ptr<i8>, memref<?xindex>, memref<?xindex>, memref<?xindex>, memref<?xf32>) -> i1
+// CHECK:       %[[VAL_30:.*]] = call @getSparseTensorReaderReadToBuffers0F32(%[[VAL_8]], %[[VAL_29]], %[[VAL_29]], %[[VAL_16]], %[[VAL_17]]) : (!llvm.ptr, memref<?xindex>, memref<?xindex>, memref<?xindex>, memref<?xf32>) -> i1
 // CHECK:       %[[VAL_31:.*]] = arith.cmpi eq, %[[VAL_30]], %[[VAL_1]] : i1
 // CHECK:       scf.if %[[VAL_31]] {
 // CHECK:         sparse_tensor.sort hybrid_quick_sort %[[VAL_10]], %[[VAL_16]] jointly %[[VAL_17]]
@@ -704,15 +704,15 @@ func.func @sparse_convert_element_type(%arg0: tensor<32xf32, #SparseVector>) -> 
 // CHECK:       memref.store %[[VAL_10]], %[[VAL_25]]{{\[}}%[[VAL_3]]] : memref<?xindex>
 // CHECK:       %[[VAL_32:.*]] = sparse_tensor.storage_specifier.set %[[VAL_27]]  crd_mem_sz at 0 with %[[VAL_13]]
 // CHECK:       %[[VAL_33:.*]] = sparse_tensor.storage_specifier.set %[[VAL_32]]  val_mem_sz with %[[VAL_10]]
-// CHECK:       call @delSparseTensorReader(%[[VAL_8]]) : (!llvm.ptr<i8>) -> ()
+// CHECK:       call @delSparseTensorReader(%[[VAL_8]]) : (!llvm.ptr) -> ()
 // CHECK:       return %[[VAL_25]], %[[VAL_16]], %[[VAL_17]], %[[VAL_33]]
-func.func @sparse_new_coo(%arg0: !llvm.ptr<i8>) -> tensor<?x?xf32, #Coo> {
-  %0 = sparse_tensor.new %arg0 : !llvm.ptr<i8> to tensor<?x?xf32, #Coo>
+func.func @sparse_new_coo(%arg0: !llvm.ptr) -> tensor<?x?xf32, #Coo> {
+  %0 = sparse_tensor.new %arg0 : !llvm.ptr to tensor<?x?xf32, #Coo>
   return %0 : tensor<?x?xf32, #Coo>
 }
 
 // CHECK-LABEL: func.func @sparse_new_coo_permute_no(
-// CHECK-SAME:  %[[A0:.*]]: !llvm.ptr<i8>) -> (memref<?xindex>, memref<?xindex>, memref<?xf32>, !sparse_tensor.storage_specifier<#sparse_tensor.encoding<{{{.*}}}>>) {
+// CHECK-SAME:  %[[A0:.*]]: !llvm.ptr) -> (memref<?xindex>, memref<?xindex>, memref<?xf32>, !sparse_tensor.storage_specifier<#sparse_tensor.encoding<{{{.*}}}>>) {
 // CHECK-DAG:   %[[VAL_1:.*]] = arith.constant 2 : i32
 // CHECK-DAG:   %[[VAL_2:.*]] = arith.constant 1 : index
 // CHECK-DAG:   %[[VAL_3:.*]] = arith.constant 0 : index
@@ -721,9 +721,9 @@ func.func @sparse_new_coo(%arg0: !llvm.ptr<i8>) -> tensor<?x?xf32, #Coo> {
 // CHECK:       %[[VAL_6:.*]] = memref.cast %[[VAL_5]] : memref<2xindex> to memref<?xindex>
 // CHECK:       memref.store %[[VAL_3]], %[[VAL_5]]{{\[}}%[[VAL_3]]] : memref<2xindex>
 // CHECK:       memref.store %[[VAL_3]], %[[VAL_5]]{{\[}}%[[VAL_2]]] : memref<2xindex>
-// CHECK:       %[[VAL_7:.*]] = call @createCheckedSparseTensorReader(%[[A0]], %[[VAL_6]], %[[VAL_1]]) : (!llvm.ptr<i8>, memref<?xindex>, i32) -> !llvm.ptr<i8>
-// CHECK:       %[[VAL_8:.*]] = call @getSparseTensorReaderDimSizes(%[[VAL_7]]) : (!llvm.ptr<i8>) -> memref<?xindex>
-// CHECK:       %[[VAL_9:.*]] = call @getSparseTensorReaderNSE(%[[VAL_7]]) : (!llvm.ptr<i8>) -> index
+// CHECK:       %[[VAL_7:.*]] = call @createCheckedSparseTensorReader(%[[A0]], %[[VAL_6]], %[[VAL_1]]) : (!llvm.ptr, memref<?xindex>, i32) -> !llvm.ptr
+// CHECK:       %[[VAL_8:.*]] = call @getSparseTensorReaderDimSizes(%[[VAL_7]]) : (!llvm.ptr) -> memref<?xindex>
+// CHECK:       %[[VAL_9:.*]] = call @getSparseTensorReaderNSE(%[[VAL_7]]) : (!llvm.ptr) -> index
 // CHECK:       %[[VAL_10:.*]] = memref.load %[[VAL_8]]{{\[}}%[[VAL_3]]] : memref<?xindex>
 // CHECK:       %[[VAL_11:.*]] = memref.load %[[VAL_8]]{{\[}}%[[VAL_2]]] : memref<?xindex>
 // CHECK:       %[[VAL_12:.*]] = arith.muli %[[VAL_9]], %[[VAL_4]] : index
@@ -747,13 +747,13 @@ func.func @sparse_new_coo(%arg0: !llvm.ptr<i8>) -> tensor<?x?xf32, #Coo> {
 // CHECK:       %[[VAL_30:.*]] = memref.cast %[[VAL_29]] : memref<2xindex> to memref<?xindex>
 // CHECK:       memref.store %[[VAL_2]], %[[VAL_29]]{{\[}}%[[VAL_3]]] : memref<2xindex>
 // CHECK:       memref.store %[[VAL_3]], %[[VAL_29]]{{\[}}%[[VAL_2]]] : memref<2xindex>
-// CHECK:       %[[VAL_31:.*]] = call @getSparseTensorReaderReadToBuffers0F32(%[[VAL_7]], %[[VAL_28]], %[[VAL_30]], %[[VAL_15]], %[[VAL_16]]) : (!llvm.ptr<i8>, memref<?xindex>, memref<?xindex>, memref<?xindex>, memref<?xf32>) -> i1
+// CHECK:       %[[VAL_31:.*]] = call @getSparseTensorReaderReadToBuffers0F32(%[[VAL_7]], %[[VAL_28]], %[[VAL_30]], %[[VAL_15]], %[[VAL_16]]) : (!llvm.ptr, memref<?xindex>, memref<?xindex>, memref<?xindex>, memref<?xf32>) -> i1
 // CHECK:       memref.store %[[VAL_9]], %[[VAL_24]]{{\[}}%[[VAL_2]]] : memref<?xindex>
 // CHECK:       %[[VAL_32:.*]] = sparse_tensor.storage_specifier.set %[[VAL_26]]  crd_mem_sz at 0 with %[[VAL_12]]
 // CHECK:       %[[VAL_33:.*]] = sparse_tensor.storage_specifier.set %[[VAL_32]]  val_mem_sz with %[[VAL_9]]
-// CHECK:       call @delSparseTensorReader(%[[VAL_7]]) : (!llvm.ptr<i8>) -> ()
+// CHECK:       call @delSparseTensorReader(%[[VAL_7]]) : (!llvm.ptr) -> ()
 // CHECK:       return %[[VAL_24]], %[[VAL_15]], %[[VAL_16]], %[[VAL_33]]
-func.func @sparse_new_coo_permute_no(%arg0: !llvm.ptr<i8>) -> tensor<?x?xf32, #CooPNo> {
-  %0 = sparse_tensor.new %arg0 : !llvm.ptr<i8> to tensor<?x?xf32, #CooPNo>
+func.func @sparse_new_coo_permute_no(%arg0: !llvm.ptr) -> tensor<?x?xf32, #CooPNo> {
+  %0 = sparse_tensor.new %arg0 : !llvm.ptr to tensor<?x?xf32, #CooPNo>
   return %0 : tensor<?x?xf32, #CooPNo>
 }

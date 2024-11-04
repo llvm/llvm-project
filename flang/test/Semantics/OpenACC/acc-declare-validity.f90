@@ -14,7 +14,7 @@ module openacc_declare_validity
 
   !$acc declare create(aa, bb)
 
-  !ERROR: 'aa' in the CREATE clause is already present in another clause in this module
+  !WARNING: 'aa' in the CREATE clause is already present in the same clause in this module
   !$acc declare create(aa)
 
   !$acc declare link(ab)
@@ -36,13 +36,16 @@ module openacc_declare_validity
   !ERROR: The ZERO modifier is not allowed for the CREATE clause on the DECLARE directive
   !$acc declare create(zero: dd)
 
+  !ERROR: 'bb' in the COPYIN clause is already present in another CREATE clause in this module
+  !$acc declare copyin(bb)
+
 contains
 
   subroutine sub1(cc, dd)
     real(8) :: cc(:)
     real(8) :: dd(:)
     !$acc declare present(cc, dd)
-    !ERROR: 'cc' in the CREATE clause is already present in another clause in this module
+    !ERROR: 'cc' in the CREATE clause is already present in another PRESENT clause in this module
     !$acc declare create(cc)
   end subroutine sub1
 

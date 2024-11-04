@@ -22,9 +22,9 @@ define void @foo4(ptr nocapture %A, ptr nocapture readonly %B, ptr nocapture rea
 ; RV32-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 625, [[TMP2]]
 ; RV32-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_MEMCHECK:%.*]]
 ; RV32:       vector.memcheck:
-; RV32-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[A:%.*]], i64 79880
-; RV32-NEXT:    [[SCEVGEP1:%.*]] = getelementptr i8, ptr [[TRIGGER:%.*]], i64 39940
-; RV32-NEXT:    [[SCEVGEP2:%.*]] = getelementptr i8, ptr [[B:%.*]], i64 159752
+; RV32-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[A:%.*]], i32 79880
+; RV32-NEXT:    [[SCEVGEP1:%.*]] = getelementptr i8, ptr [[TRIGGER:%.*]], i32 39940
+; RV32-NEXT:    [[SCEVGEP2:%.*]] = getelementptr i8, ptr [[B:%.*]], i32 159752
 ; RV32-NEXT:    [[BOUND0:%.*]] = icmp ult ptr [[A]], [[SCEVGEP1]]
 ; RV32-NEXT:    [[BOUND1:%.*]] = icmp ult ptr [[TRIGGER]], [[SCEVGEP]]
 ; RV32-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]

@@ -163,12 +163,12 @@ group("test") {
     ":lit_unit_site_cfg",
     "//clang/tools/driver:symlinks",
     "//lld/tools/lld:symlinks",
+    "//lldb/tools/lldb-dap",
     "//lldb/tools/driver:lldb",
 
     # XXX lldb-instr, darwin-debug, etc
     "//lldb/tools/lldb-server",
     "//lldb/tools/lldb-test",
-    "//lldb/tools/lldb-vscode",
     "//lldb/utils/lit-cpuid",
 
     #"//lldb/unittests",

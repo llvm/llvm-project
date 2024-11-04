@@ -3,42 +3,6 @@
 # RUN: llc -mtriple=amdgcn-mesa-mesa3d -mcpu=fiji -O0 -run-pass=legalizer %s -o - | FileCheck -check-prefix=GFX8 %s
 
 ---
-name: bswap_s8
-
-body: |
-  bb.0:
-    liveins: $vgpr0
-    ; GFX7-LABEL: name: bswap_s8
-    ; GFX7: liveins: $vgpr0
-    ; GFX7-NEXT: {{  $}}
-    ; GFX7-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
-    ; GFX7-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-    ; GFX7-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 255
-    ; GFX7-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY [[C]](s32)
-    ; GFX7-NEXT: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[COPY]], [[COPY1]](s32)
-    ; GFX7-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY [[C]](s32)
-    ; GFX7-NEXT: [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY]], [[C1]]
-    ; GFX7-NEXT: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[AND]], [[COPY2]](s32)
-    ; GFX7-NEXT: [[OR:%[0-9]+]]:_(s32) = G_OR [[LSHR]], [[SHL]]
-    ; GFX7-NEXT: $vgpr0 = COPY [[OR]](s32)
-    ; GFX8-LABEL: name: bswap_s8
-    ; GFX8: liveins: $vgpr0
-    ; GFX8-NEXT: {{  $}}
-    ; GFX8-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
-    ; GFX8-NEXT: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY]](s32)
-    ; GFX8-NEXT: [[BSWAP:%[0-9]+]]:_(s16) = G_BSWAP [[TRUNC]]
-    ; GFX8-NEXT: [[C:%[0-9]+]]:_(s16) = G_CONSTANT i16 8
-    ; GFX8-NEXT: [[LSHR:%[0-9]+]]:_(s16) = G_LSHR [[BSWAP]], [[C]](s16)
-    ; GFX8-NEXT: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[LSHR]](s16)
-    ; GFX8-NEXT: $vgpr0 = COPY [[ANYEXT]](s32)
-    %0:_(s32) = COPY $vgpr0
-    %1:_(s8) = G_TRUNC %0
-    %2:_(s8) = G_BSWAP %1
-    %3:_(s32) = G_ANYEXT %2
-    $vgpr0 = COPY %3
-...
-
----
 name: bswap_s16
 
 body: |
@@ -70,40 +34,6 @@ body: |
     %0:_(s32) = COPY $vgpr0
     %1:_(s16) = G_TRUNC %0
     %2:_(s16) = G_BSWAP %1
-    %3:_(s32) = G_ANYEXT %2
-    $vgpr0 = COPY %3
-...
-
----
-name: bswap_s24
-
-body: |
-  bb.0:
-    liveins: $vgpr0
-    ; GFX7-LABEL: name: bswap_s24
-    ; GFX7: liveins: $vgpr0
-    ; GFX7-NEXT: {{  $}}
-    ; GFX7-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
-    ; GFX7-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
-    ; GFX7-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 16777215
-    ; GFX7-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY [[C]](s32)
-    ; GFX7-NEXT: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[COPY]], [[COPY1]](s32)
-    ; GFX7-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY [[C]](s32)
-    ; GFX7-NEXT: [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY]], [[C1]]
-    ; GFX7-NEXT: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[AND]], [[COPY2]](s32)
-    ; GFX7-NEXT: [[OR:%[0-9]+]]:_(s32) = G_OR [[LSHR]], [[SHL]]
-    ; GFX7-NEXT: $vgpr0 = COPY [[OR]](s32)
-    ; GFX8-LABEL: name: bswap_s24
-    ; GFX8: liveins: $vgpr0
-    ; GFX8-NEXT: {{  $}}
-    ; GFX8-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
-    ; GFX8-NEXT: [[BSWAP:%[0-9]+]]:_(s32) = G_BSWAP [[COPY]]
-    ; GFX8-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 8
-    ; GFX8-NEXT: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[BSWAP]], [[C]](s32)
-    ; GFX8-NEXT: $vgpr0 = COPY [[LSHR]](s32)
-    %0:_(s32) = COPY $vgpr0
-    %1:_(s24) = G_TRUNC %0
-    %2:_(s24) = G_BSWAP %1
     %3:_(s32) = G_ANYEXT %2
     $vgpr0 = COPY %3
 ...
@@ -437,4 +367,40 @@ body: |
     %0:_(<2 x s64>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
     %1:_(<2 x s64>) = G_BSWAP %0
     $vgpr0_vgpr1_vgpr2_vgpr3 = COPY %1
+...
+
+---
+name: bswap_s48
+
+body: |
+  bb.0:
+    liveins: $vgpr0_vgpr1
+    ; GFX7-LABEL: name: bswap_s48
+    ; GFX7: liveins: $vgpr0_vgpr1
+    ; GFX7-NEXT: {{  $}}
+    ; GFX7-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $vgpr0_vgpr1
+    ; GFX7-NEXT: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY]](s64)
+    ; GFX7-NEXT: [[BSWAP:%[0-9]+]]:_(s32) = G_BSWAP [[UV1]]
+    ; GFX7-NEXT: [[BSWAP1:%[0-9]+]]:_(s32) = G_BSWAP [[UV]]
+    ; GFX7-NEXT: [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[BSWAP]](s32), [[BSWAP1]](s32)
+    ; GFX7-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
+    ; GFX7-NEXT: [[LSHR:%[0-9]+]]:_(s64) = G_LSHR [[MV]], [[C]](s32)
+    ; GFX7-NEXT: $vgpr0_vgpr1 = COPY [[LSHR]](s64)
+    ;
+    ; GFX8-LABEL: name: bswap_s48
+    ; GFX8: liveins: $vgpr0_vgpr1
+    ; GFX8-NEXT: {{  $}}
+    ; GFX8-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $vgpr0_vgpr1
+    ; GFX8-NEXT: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY]](s64)
+    ; GFX8-NEXT: [[BSWAP:%[0-9]+]]:_(s32) = G_BSWAP [[UV1]]
+    ; GFX8-NEXT: [[BSWAP1:%[0-9]+]]:_(s32) = G_BSWAP [[UV]]
+    ; GFX8-NEXT: [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[BSWAP]](s32), [[BSWAP1]](s32)
+    ; GFX8-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
+    ; GFX8-NEXT: [[LSHR:%[0-9]+]]:_(s64) = G_LSHR [[MV]], [[C]](s32)
+    ; GFX8-NEXT: $vgpr0_vgpr1 = COPY [[LSHR]](s64)
+    %0:_(s64) = COPY $vgpr0_vgpr1
+    %1:_(s48) = G_TRUNC %0
+    %2:_(s48) = G_BSWAP %1
+    %3:_(s64) = G_ANYEXT %2
+    $vgpr0_vgpr1 = COPY %3
 ...

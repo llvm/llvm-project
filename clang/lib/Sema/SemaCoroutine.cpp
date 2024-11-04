@@ -118,7 +118,8 @@ static QualType lookupPromiseType(Sema &S, const FunctionDecl *FD,
     auto *NNS = NestedNameSpecifier::Create(S.Context, nullptr, S.getStdNamespace());
     NNS = NestedNameSpecifier::Create(S.Context, NNS, false,
                                       CoroTrait.getTypePtr());
-    return S.Context.getElaboratedType(ETK_None, NNS, PromiseType);
+    return S.Context.getElaboratedType(ElaboratedTypeKeyword::None, NNS,
+                                       PromiseType);
   };
 
   if (!PromiseType->getAsCXXRecordDecl()) {
@@ -1197,6 +1198,11 @@ void Sema::CheckCompletedCoroutineBody(FunctionDecl *FD, Stmt *&Body) {
   // problems (see https://llvm.org/PR53413). Tell the user about it.
   if (FD->hasAttr<AlwaysInlineAttr>())
     Diag(FD->getLocation(), diag::warn_always_inline_coroutine);
+
+  // The design of coroutines means we cannot allow use of VLAs within one, so
+  // diagnose if we've seen a VLA in the body of this function.
+  if (Fn->FirstVLALoc.isValid())
+    Diag(Fn->FirstVLALoc, diag::err_vla_in_coroutine_unsupported);
 
   // [stmt.return.coroutine]p1:
   //   A coroutine shall not enclose a return statement ([stmt.return]).

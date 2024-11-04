@@ -38,8 +38,7 @@ get_temporary_buffer(ptrdiff_t __n) _NOEXCEPT
 #if !defined(_LIBCPP_HAS_NO_ALIGNED_ALLOCATION)
     if (__is_overaligned_for_new(_LIBCPP_ALIGNOF(_Tp)))
         {
-            align_val_t __al =
-                align_val_t(alignment_of<_Tp>::value);
+            align_val_t __al = align_val_t(_LIBCPP_ALIGNOF(_Tp));
             __r.first = static_cast<_Tp*>(::operator new(
                 __n * sizeof(_Tp), __al, nothrow));
         } else {

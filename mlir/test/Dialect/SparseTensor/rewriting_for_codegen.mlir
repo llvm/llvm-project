@@ -1,5 +1,5 @@
-// RUN: mlir-opt %s -post-sparsification-rewrite="enable-runtime-library=false enable-convert=false" | \
-// RUN: FileCheck %s
+// RUN: mlir-opt %s --lower-sparse-ops-to-foreach="enable-runtime-library=false enable-convert=false" \
+// RUN: --lower-sparse-foreach-to-scf | FileCheck %s
 
 #CSR = #sparse_tensor.encoding<{
   map = (d0, d1) -> (d0 : dense, d1 : compressed)

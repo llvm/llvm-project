@@ -21,7 +21,7 @@
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call bfloat @llvm.aarch64.sve.lastb.nxv8bf16(<vscale x 8 x i1> [[TMP0]], <vscale x 8 x bfloat> [[OP:%.*]])
 // CHECK-NEXT:    ret bfloat [[TMP1]]
 //
-// CPP-CHECK-LABEL: @_Z17test_svlastb_bf16u10__SVBool_tu14__SVBFloat16_t(
+// CPP-CHECK-LABEL: @_Z17test_svlastb_bf16u10__SVBool_tu14__SVBfloat16_t(
 // CPP-CHECK-NEXT:  entry:
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv8i1(<vscale x 16 x i1> [[PG:%.*]])
 // CPP-CHECK-NEXT:    [[TMP1:%.*]] = tail call bfloat @llvm.aarch64.sve.lastb.nxv8bf16(<vscale x 8 x i1> [[TMP0]], <vscale x 8 x bfloat> [[OP:%.*]])

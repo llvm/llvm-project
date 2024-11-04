@@ -17,13 +17,11 @@
 #include <errno.h>
 #include <stdint.h>
 
-using FPBits_t = LIBC_NAMESPACE::fputil::FPBits<float>;
+using LlvmLibcAsinhfTest = LIBC_NAMESPACE::testing::FPTest<float>;
 
 namespace mpfr = LIBC_NAMESPACE::testing::mpfr;
 
-DECLARE_SPECIAL_CONSTANTS(float)
-
-TEST(LlvmLibcAsinhfTest, SpecialNumbers) {
+TEST_F(LlvmLibcAsinhfTest, SpecialNumbers) {
   libc_errno = 0;
 
   EXPECT_FP_EQ_ALL_ROUNDING(aNaN, LIBC_NAMESPACE::asinhf(aNaN));
@@ -42,11 +40,11 @@ TEST(LlvmLibcAsinhfTest, SpecialNumbers) {
   EXPECT_MATH_ERRNO(0);
 }
 
-TEST(LlvmLibcAsinhfTest, InFloatRange) {
+TEST_F(LlvmLibcAsinhfTest, InFloatRange) {
   constexpr uint32_t COUNT = 1'001;
   constexpr uint32_t STEP = UINT32_MAX / COUNT;
   for (uint32_t i = 0, v = 0; i <= COUNT; ++i, v += STEP) {
-    float x = float(FPBits_t(v));
+    float x = float(FPBits(v));
     if (isnan(x) || isinf(x))
       continue;
     ASSERT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Asinh, x,
@@ -56,7 +54,7 @@ TEST(LlvmLibcAsinhfTest, InFloatRange) {
   }
 }
 
-TEST(LlvmLibcAsinhfTest, SpecificBitPatterns) {
+TEST_F(LlvmLibcAsinhfTest, SpecificBitPatterns) {
   constexpr int N = 11;
   constexpr uint32_t INPUTS[N] = {
       0x45abaf26, // |x| = 0x1.575e4cp12f
@@ -73,7 +71,7 @@ TEST(LlvmLibcAsinhfTest, SpecificBitPatterns) {
   };
 
   for (int i = 0; i < N; ++i) {
-    float x = float(FPBits_t(INPUTS[i]));
+    float x = float(FPBits(INPUTS[i]));
     EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Asinh, x,
                                    LIBC_NAMESPACE::asinhf(x), 0.5);
     EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Asinh, -x,

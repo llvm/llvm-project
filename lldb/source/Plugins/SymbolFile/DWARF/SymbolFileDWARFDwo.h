@@ -56,9 +56,9 @@ protected:
 
   DIEToVariableSP &GetDIEToVariable() override;
 
-  DIEToClangType &GetForwardDeclDieToClangType() override;
+  DIEToCompilerType &GetForwardDeclDIEToCompilerType() override;
 
-  ClangTypeToDIE &GetForwardDeclClangTypeToDie() override;
+  CompilerTypeToDIE &GetForwardDeclCompilerTypeToDIE() override;
 
   UniqueDWARFASTTypeMap &GetUniqueDWARFASTTypeMap() override;
 

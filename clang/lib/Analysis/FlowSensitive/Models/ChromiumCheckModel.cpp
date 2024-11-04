@@ -59,7 +59,7 @@ bool ChromiumCheckModel::transfer(const CFGElement &Element, Environment &Env) {
     if (const auto *M = dyn_cast<CXXMethodDecl>(Call->getDirectCallee())) {
       if (isCheckLikeMethod(CheckDecls, *M)) {
         // Mark this branch as unreachable.
-        Env.addToFlowCondition(Env.arena().makeLiteral(false));
+        Env.assume(Env.arena().makeLiteral(false));
         return true;
       }
     }

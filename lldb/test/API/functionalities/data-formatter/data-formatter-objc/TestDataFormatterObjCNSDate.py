@@ -53,12 +53,12 @@ class ObjCDataFormatterNSDate(ObjCDataFormatterTestCase):
 
         self.expect(
             "frame variable cupertino home europe",
-            substrs=['@"America/Los_Angeles"', '@"Europe/Rome"', '@"Europe/Paris"'],
+            substrs=['"America/Los_Angeles"', '"Europe/Rome"', '"Europe/Paris"'],
         )
 
         self.expect(
             "frame variable cupertino_ns home_ns europe_ns",
-            substrs=['@"America/Los_Angeles"', '@"Europe/Rome"', '@"Europe/Paris"'],
+            substrs=['"America/Los_Angeles"', '"Europe/Rome"', '"Europe/Paris"'],
         )
 
         self.expect(

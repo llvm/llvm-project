@@ -2077,6 +2077,12 @@ public:
     return BlocksVectorTy();
   }
 
+  virtual uint16_t getMinFunctionAlignment() const {
+    // We have to use at least 2-byte alignment for functions because of C++
+    // ABI.
+    return 2;
+  }
+
   // AliasMap caches a mapping of registers to the set of registers that
   // alias (are sub or superregs of itself, including itself).
   std::vector<BitVector> AliasMap;

@@ -55,7 +55,7 @@ template<int N, class ...Ts> struct A {
 // CHECK-NEXT:               `-TemplateTypeParmType 0x{{[0-9A-Fa-f]+}} 'type-parameter-0-1' dependent contains_unexpanded_pack depth 0 index 1 pack
 
   using test4 = __type_pack_element<N, int>;
-//      CHECK: `-TypeAliasDecl 0x{{[0-9A-Fa-f]+}} <line:57:3, col:43> col:9 test4 '__type_pack_element<N, int>':'__type_pack_element<N, int>'
+//      CHECK: `-TypeAliasDecl 0x{{[0-9A-Fa-f]+}} <line:57:3, col:43> col:9 test4 '__type_pack_element<N, int>'
 // CHECK-NEXT:   `-ElaboratedType 0x{{[0-9A-Fa-f]+}} '__type_pack_element<N, int>' sugar dependent
 // CHECK-NEXT:     `-TemplateSpecializationType 0x{{[0-9A-Fa-f]+}} '__type_pack_element<N, int>' sugar dependent alias __type_pack_element
 // CHECK-NEXT:       |-TemplateArgument expr

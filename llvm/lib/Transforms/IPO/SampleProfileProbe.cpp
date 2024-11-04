@@ -18,6 +18,7 @@
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DebugInfoMetadata.h"
+#include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/IntrinsicInst.h"
@@ -221,12 +222,25 @@ void SampleProfileProber::computeProbeIdForBlocks() {
 }
 
 void SampleProfileProber::computeProbeIdForCallsites() {
+  LLVMContext &Ctx = F->getContext();
+  Module *M = F->getParent();
+
   for (auto &BB : *F) {
     for (auto &I : BB) {
       if (!isa<CallBase>(I))
         continue;
       if (isa<IntrinsicInst>(&I))
         continue;
+
+      // The current implementation uses the lower 16 bits of the discriminator
+      // so anything larger than 0xFFFF will be ignored.
+      if (LastProbeId >= 0xFFFF) {
+        std::string Msg = "Pseudo instrumentation incomplete for " +
+                          std::string(F->getName()) + " because it's too large";
+        Ctx.diagnose(DiagnosticInfoSampleProfile(M->getName().data(), Msg));
+        return;
+      }
+
       CallProbeIds[&I] = ++LastProbeId;
     }
   }

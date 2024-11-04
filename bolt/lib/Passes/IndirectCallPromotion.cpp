@@ -591,7 +591,7 @@ IndirectCallPromotion::findCallTargetSymbols(std::vector<Callsite> &Targets,
 
       NewTargets.push_back(Target);
       std::vector<uint64_t>({JTIndex}).swap(NewTargets.back().JTIndices);
-      llvm::erase_value(Target.JTIndices, JTIndex);
+      llvm::erase(Target.JTIndices, JTIndex);
 
       // Keep fixCFG counts sane if more indices use this same target later
       assert(IndicesPerTarget[Target.To.Sym] > 0 && "wrong map");

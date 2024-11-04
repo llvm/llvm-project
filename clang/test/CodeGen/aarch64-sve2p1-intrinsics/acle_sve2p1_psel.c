@@ -14,7 +14,7 @@
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 16 x i1> @llvm.aarch64.sve.psel.nxv16i1(<vscale x 16 x i1> [[P1:%.*]], <vscale x 16 x i1> [[P2:%.*]], i32 [[ADD]])
 // CHECK-NEXT:    ret <vscale x 16 x i1> [[TMP0]]
 //
-// CPP-CHECK-LABEL: @_Z19test_svpsel_lane_b8u10__SVBool_tu10__SVBool_tj(
+// CPP-CHECK-LABEL: @_Z19test_svpsel_lane_b8u10__SVBool_tS_j(
 // CPP-CHECK-NEXT:  entry:
 // CPP-CHECK-NEXT:    [[ADD:%.*]] = add i32 [[IDX:%.*]], 15
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 16 x i1> @llvm.aarch64.sve.psel.nxv16i1(<vscale x 16 x i1> [[P1:%.*]], <vscale x 16 x i1> [[P2:%.*]], i32 [[ADD]])
@@ -31,7 +31,7 @@ svbool_t test_svpsel_lane_b8(svbool_t p1, svbool_t p2, uint32_t idx) {
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 16 x i1> @llvm.aarch64.sve.psel.nxv8i1(<vscale x 16 x i1> [[P1:%.*]], <vscale x 8 x i1> [[TMP0]], i32 [[ADD]])
 // CHECK-NEXT:    ret <vscale x 16 x i1> [[TMP1]]
 //
-// CPP-CHECK-LABEL: @_Z20test_svpsel_lane_b16u10__SVBool_tu10__SVBool_tj(
+// CPP-CHECK-LABEL: @_Z20test_svpsel_lane_b16u10__SVBool_tS_j(
 // CPP-CHECK-NEXT:  entry:
 // CPP-CHECK-NEXT:    [[ADD:%.*]] = add i32 [[IDX:%.*]], 7
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv8i1(<vscale x 16 x i1> [[P2:%.*]])
@@ -49,7 +49,7 @@ svbool_t test_svpsel_lane_b16(svbool_t p1, svbool_t p2, uint32_t idx) {
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 16 x i1> @llvm.aarch64.sve.psel.nxv4i1(<vscale x 16 x i1> [[P1:%.*]], <vscale x 4 x i1> [[TMP0]], i32 [[ADD]])
 // CHECK-NEXT:    ret <vscale x 16 x i1> [[TMP1]]
 //
-// CPP-CHECK-LABEL: @_Z20test_svpsel_lane_b32u10__SVBool_tu10__SVBool_tj(
+// CPP-CHECK-LABEL: @_Z20test_svpsel_lane_b32u10__SVBool_tS_j(
 // CPP-CHECK-NEXT:  entry:
 // CPP-CHECK-NEXT:    [[ADD:%.*]] = add i32 [[IDX:%.*]], 3
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> [[P2:%.*]])
@@ -67,7 +67,7 @@ svbool_t test_svpsel_lane_b32(svbool_t p1, svbool_t p2, uint32_t idx) {
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 16 x i1> @llvm.aarch64.sve.psel.nxv2i1(<vscale x 16 x i1> [[P1:%.*]], <vscale x 2 x i1> [[TMP0]], i32 [[ADD]])
 // CHECK-NEXT:    ret <vscale x 16 x i1> [[TMP1]]
 //
-// CPP-CHECK-LABEL: @_Z20test_svpsel_lane_b64u10__SVBool_tu10__SVBool_tj(
+// CPP-CHECK-LABEL: @_Z20test_svpsel_lane_b64u10__SVBool_tS_j(
 // CPP-CHECK-NEXT:  entry:
 // CPP-CHECK-NEXT:    [[ADD:%.*]] = add i32 [[IDX:%.*]], 1
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 2 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv2i1(<vscale x 16 x i1> [[P2:%.*]])

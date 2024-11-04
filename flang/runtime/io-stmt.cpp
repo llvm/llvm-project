@@ -248,8 +248,10 @@ void OpenStatementState::CompleteOperation() {
   }
   if (path_.get() || wasExtant_ ||
       (status_ && *status_ == OpenStatus::Scratch)) {
-    unit().OpenUnit(status_, action_, position_.value_or(Position::AsIs),
-        std::move(path_), pathLength_, convert_, *this);
+    if (unit().OpenUnit(status_, action_, position_.value_or(Position::AsIs),
+            std::move(path_), pathLength_, convert_, *this)) {
+      wasExtant_ = false; // existing unit was closed
+    }
   } else {
     unit().OpenAnonymousUnit(
         status_, action_, position_.value_or(Position::AsIs), convert_, *this);

@@ -19,33 +19,22 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/IR/Module.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/LineIterator.h"
 #include "llvm/Support/MemoryBuffer.h"
+using namespace llvm;
 
 namespace llvm {
 
-// This structure represents a unique ID for every block specified in the
-// input profile.
-struct ProfileBBID {
-  // Basic block id associated with `MachineBasicBlock::BBID`.
-  unsigned BBID;
-  // The clone id associated with the block. This is zero for the original
-  // block. For the cloned ones, it is equal to 1 + index of the associated
-  // path in `FunctionPathAndClusterInfo::ClonePaths`.
-  unsigned CloneID;
-};
-
 // This struct represents the cluster information for a machine basic block,
-// which is specifed by a unique ID. This templated struct is used for both the
-// raw input profile (as `BBClusterInfo<ProfileBBID>`) and the processed profile
-// after applying the clonings (as `BBClusterInfo<unsigned>`).
-template <typename BBIDType> struct BBClusterInfo {
+// which is specifed by a unique ID (`MachineBasicBlock::BBID`).
+struct BBClusterInfo {
   // Basic block ID.
-  BBIDType BasicBlockID;
+  UniqueBBID BBID;
   // Cluster ID this basic block belongs to.
   unsigned ClusterID;
   // Position of basic block within the cluster.
@@ -54,31 +43,31 @@ template <typename BBIDType> struct BBClusterInfo {
 
 // This represents the raw input profile for one function.
 struct FunctionPathAndClusterInfo {
-  // BB Cluster information specified by `ProfileBBID`s (before cloning).
-  SmallVector<BBClusterInfo<ProfileBBID>> ClusterInfo;
+  // BB Cluster information specified by `UniqueBBID`s.
+  SmallVector<BBClusterInfo> ClusterInfo;
   // Paths to clone. A path a -> b -> c -> d implies cloning b, c, and d along
   // the edge a -> b (a is not cloned). The index of the path in this vector
-  // determines the `ProfileBBID::CloneID` of the cloned blocks in that path.
+  // determines the `UniqueBBID::CloneID` of the cloned blocks in that path.
   SmallVector<SmallVector<unsigned>> ClonePaths;
 };
 
-// Provides DenseMapInfo for ProfileBBID.
-template <> struct DenseMapInfo<ProfileBBID> {
-  static inline ProfileBBID getEmptyKey() {
+// Provides DenseMapInfo for UniqueBBID.
+template <> struct DenseMapInfo<UniqueBBID> {
+  static inline UniqueBBID getEmptyKey() {
     unsigned EmptyKey = DenseMapInfo<unsigned>::getEmptyKey();
-    return ProfileBBID{EmptyKey, EmptyKey};
+    return UniqueBBID{EmptyKey, EmptyKey};
   }
-  static inline ProfileBBID getTombstoneKey() {
+  static inline UniqueBBID getTombstoneKey() {
     unsigned TombstoneKey = DenseMapInfo<unsigned>::getTombstoneKey();
-    return ProfileBBID{TombstoneKey, TombstoneKey};
+    return UniqueBBID{TombstoneKey, TombstoneKey};
   }
-  static unsigned getHashValue(const ProfileBBID &Val) {
+  static unsigned getHashValue(const UniqueBBID &Val) {
     std::pair<unsigned, unsigned> PairVal =
-        std::make_pair(Val.BBID, Val.CloneID);
+        std::make_pair(Val.BaseID, Val.CloneID);
     return DenseMapInfo<std::pair<unsigned, unsigned>>::getHashValue(PairVal);
   }
-  static bool isEqual(const ProfileBBID &LHS, const ProfileBBID &RHS) {
-    return DenseMapInfo<unsigned>::isEqual(LHS.BBID, RHS.BBID) &&
+  static bool isEqual(const UniqueBBID &LHS, const UniqueBBID &RHS) {
+    return DenseMapInfo<unsigned>::isEqual(LHS.BaseID, RHS.BaseID) &&
            DenseMapInfo<unsigned>::isEqual(LHS.CloneID, RHS.CloneID);
   }
 };
@@ -113,8 +102,12 @@ public:
   // function. If the first element is true and the second element is empty, it
   // means unique basic block sections are desired for all basic blocks of the
   // function.
-  std::pair<bool, FunctionPathAndClusterInfo>
-  getPathAndClusterInfoForFunction(StringRef FuncName) const;
+  std::pair<bool, SmallVector<BBClusterInfo>>
+  getClusterInfoForFunction(StringRef FuncName) const;
+
+  // Returns the path clonings for the given function.
+  SmallVector<SmallVector<unsigned>>
+  getClonePathsForFunction(StringRef FuncName) const;
 
   // Initializes the FunctionNameToDIFilename map for the current module and
   // then reads the profile for the matching functions.
@@ -134,11 +127,11 @@ private:
         inconvertibleErrorCode());
   }
 
-  // Parses a `ProfileBBID` from `S`. `S` must be in the form "<bbid>"
+  // Parses a `UniqueBBID` from `S`. `S` must be in the form "<bbid>"
   // (representing an original block) or "<bbid>.<cloneid>" (representing a
   // cloned block) where bbid is a non-negative integer and cloneid is a
   // positive integer.
-  Expected<ProfileBBID> parseProfileBBID(StringRef S) const;
+  Expected<UniqueBBID> parseUniqueBBID(StringRef S) const;
 
   // Reads the basic block sections profile for functions in this module.
   Error ReadProfile();

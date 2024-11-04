@@ -100,6 +100,17 @@ def LinalgContractionOpInterface : OpInterface<"ContractionOpInterface"> {
     InterfaceMethod<
     /*desc=*/[{
       Returns whether the given op has indexing maps that correspond to a
+      batched vector-matrix multiplication.
+    }],
+    /*retTy=*/"bool",
+    /*methodName=*/"isBatchVecmat",
+    /*args=*/(ins),
+    /*methodBody=*/[{
+        return mlir::isBatchVecmat($_op.getIndexingMaps());
+    }]>,
+    InterfaceMethod<
+    /*desc=*/[{
+      Returns whether the given op has indexing maps that correspond to a
       matrix-vector multiplication.
     }],
     /*retTy=*/"bool",

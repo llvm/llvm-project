@@ -605,7 +605,7 @@ FileID SourceManager::createFileIDImpl(ContentCache &File, StringRef Filename,
   unsigned FileSize = File.getSize();
   if (!(NextLocalOffset + FileSize + 1 > NextLocalOffset &&
         NextLocalOffset + FileSize + 1 <= CurrentLoadedOffset)) {
-    Diag.Report(IncludePos, diag::err_include_too_large);
+    Diag.Report(IncludePos, diag::err_sloc_space_too_large);
     noteSLocAddressSpaceUsage(Diag);
     return FileID();
   }
@@ -663,10 +663,16 @@ SourceManager::createExpansionLocImpl(const ExpansionInfo &Info,
     return SourceLocation::getMacroLoc(LoadedOffset);
   }
   LocalSLocEntryTable.push_back(SLocEntry::get(NextLocalOffset, Info));
-  // FIXME: Produce a proper diagnostic for this case.
-  assert(NextLocalOffset + Length + 1 > NextLocalOffset &&
-         NextLocalOffset + Length + 1 <= CurrentLoadedOffset &&
-         "Ran out of source locations!");
+  if (NextLocalOffset + Length + 1 <= NextLocalOffset ||
+      NextLocalOffset + Length + 1 > CurrentLoadedOffset) {
+    Diag.Report(SourceLocation(), diag::err_sloc_space_too_large);
+    // FIXME: call `noteSLocAddressSpaceUsage` to report details to users and
+    // use a source location from `Info` to point at an error.
+    // Currently, both cause Clang to run indefinitely, this needs to be fixed.
+    // FIXME: return an error instead of crashing. Returning invalid source
+    // locations causes compiler to run indefinitely.
+    llvm::report_fatal_error("ran out of source locations");
+  }
   // See createFileID for that +1.
   NextLocalOffset += Length + 1;
   return SourceLocation::getMacroLoc(NextLocalOffset - (Length + 1));

@@ -692,13 +692,18 @@ void TextNodeDumper::dumpBareType(QualType T, bool Desugar) {
   ColorScope Color(OS, ShowColors, TypeColor);
 
   SplitQualType T_split = T.split();
-  OS << "'" << QualType::getAsString(T_split, PrintPolicy) << "'";
+  std::string T_str = QualType::getAsString(T_split, PrintPolicy);
+  OS << "'" << T_str << "'";
 
   if (Desugar && !T.isNull()) {
-    // If the type is sugared, also dump a (shallow) desugared type.
+    // If the type is sugared, also dump a (shallow) desugared type when
+    // it is visibly different.
     SplitQualType D_split = T.getSplitDesugaredType();
-    if (T_split != D_split)
-      OS << ":'" << QualType::getAsString(D_split, PrintPolicy) << "'";
+    if (T_split != D_split) {
+      std::string D_str = QualType::getAsString(D_split, PrintPolicy);
+      if (T_str != D_str)
+        OS << ":'" << QualType::getAsString(D_split, PrintPolicy) << "'";
+    }
   }
 }
 
@@ -1544,12 +1549,12 @@ void TextNodeDumper::VisitRValueReferenceType(const ReferenceType *T) {
 
 void TextNodeDumper::VisitArrayType(const ArrayType *T) {
   switch (T->getSizeModifier()) {
-  case ArrayType::Normal:
+  case ArraySizeModifier::Normal:
     break;
-  case ArrayType::Static:
+  case ArraySizeModifier::Static:
     OS << " static";
     break;
-  case ArrayType::Star:
+  case ArraySizeModifier::Star:
     OS << " *";
     break;
   }
@@ -1582,30 +1587,30 @@ void TextNodeDumper::VisitDependentSizedExtVectorType(
 
 void TextNodeDumper::VisitVectorType(const VectorType *T) {
   switch (T->getVectorKind()) {
-  case VectorType::GenericVector:
+  case VectorKind::Generic:
     break;
-  case VectorType::AltiVecVector:
+  case VectorKind::AltiVecVector:
     OS << " altivec";
     break;
-  case VectorType::AltiVecPixel:
+  case VectorKind::AltiVecPixel:
     OS << " altivec pixel";
     break;
-  case VectorType::AltiVecBool:
+  case VectorKind::AltiVecBool:
     OS << " altivec bool";
     break;
-  case VectorType::NeonVector:
+  case VectorKind::Neon:
     OS << " neon";
     break;
-  case VectorType::NeonPolyVector:
+  case VectorKind::NeonPoly:
     OS << " neon poly";
     break;
-  case VectorType::SveFixedLengthDataVector:
+  case VectorKind::SveFixedLengthData:
     OS << " fixed-length sve data vector";
     break;
-  case VectorType::SveFixedLengthPredicateVector:
+  case VectorKind::SveFixedLengthPredicate:
     OS << " fixed-length sve predicate vector";
     break;
-  case VectorType::RVVFixedLengthDataVector:
+  case VectorKind::RVVFixedLengthData:
     OS << " fixed-length rvv data vector";
     break;
   }
@@ -2073,13 +2078,13 @@ void TextNodeDumper::VisitOMPDeclareReductionDecl(
     OS << " initializer";
     dumpPointer(Initializer);
     switch (D->getInitializerKind()) {
-    case OMPDeclareReductionDecl::DirectInit:
+    case OMPDeclareReductionInitKind::Direct:
       OS << " omp_priv = ";
       break;
-    case OMPDeclareReductionDecl::CopyInit:
+    case OMPDeclareReductionInitKind::Copy:
       OS << " omp_priv ()";
       break;
-    case OMPDeclareReductionDecl::CallInit:
+    case OMPDeclareReductionInitKind::Call:
       break;
     }
   }

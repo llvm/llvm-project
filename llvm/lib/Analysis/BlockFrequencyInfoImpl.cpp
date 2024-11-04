@@ -481,30 +481,24 @@ void BlockFrequencyInfoImplBase::distributeMass(const BlockNode &Source,
 
 static void convertFloatingToInteger(BlockFrequencyInfoImplBase &BFI,
                                      const Scaled64 &Min, const Scaled64 &Max) {
-  // Scale the Factor to a size that creates integers.  Ideally, integers would
-  // be scaled so that Max == UINT64_MAX so that they can be best
-  // differentiated.  However, in the presence of large frequency values, small
-  // frequencies are scaled down to 1, making it impossible to differentiate
-  // small, unequal numbers. When the spread between Min and Max frequencies
-  // fits well within MaxBits, we make the scale be at least 8.
-  const unsigned MaxBits = 64;
-  const unsigned SpreadBits = (Max / Min).lg();
-  Scaled64 ScalingFactor;
-  if (SpreadBits <= MaxBits - 3) {
-    // If the values are small enough, make the scaling factor at least 8 to
-    // allow distinguishing small values.
-    ScalingFactor = Min.inverse();
-    ScalingFactor <<= 3;
-  } else {
-    // If the values need more than MaxBits to be represented, saturate small
-    // frequency values down to 1 by using a scaling factor that benefits large
-    // frequency values.
-    ScalingFactor = Scaled64(1, MaxBits) / Max;
-  }
+  // Scale the Factor to a size that creates integers.  If possible scale
+  // integers so that Max == UINT64_MAX so that they can be best differentiated.
+  // Is is possible that the range between min and max cannot be accurately
+  // represented in a 64bit integer without either loosing precision for small
+  // values (so small unequal numbers all map to 1) or saturaturing big numbers
+  // loosing precision for big numbers (so unequal big numbers may map to
+  // UINT64_MAX). We choose to loose precision for small numbers.
+  const unsigned MaxBits = sizeof(Scaled64::DigitsType) * CHAR_BIT;
+  // Users often add up multiple BlockFrequency values or multiply them with
+  // things like instruction costs. Leave some room to avoid saturating
+  // operations reaching UIN64_MAX too early.
+  const unsigned Slack = 10;
+  Scaled64 ScalingFactor = Scaled64(1, MaxBits - Slack) / Max;
 
   // Translate the floats to integers.
   LLVM_DEBUG(dbgs() << "float-to-int: min = " << Min << ", max = " << Max
                     << ", factor = " << ScalingFactor << "\n");
+  (void)Min;
   for (size_t Index = 0; Index < BFI.Freqs.size(); ++Index) {
     Scaled64 Scaled = BFI.Freqs[Index].Scaled * ScalingFactor;
     BFI.Freqs[Index].Integer = std::max(UINT64_C(1), Scaled.toInt<uint64_t>());

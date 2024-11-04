@@ -26,10 +26,6 @@
 ; OBJDUMP-NEXT:         .amdhsa_private_segment_fixed_size 0
 ; OBJDUMP-NEXT:         .amdhsa_kernarg_size 0
 ; OBJDUMP-NEXT:         .amdhsa_shared_vgpr_count 0
-; OBJDUMP-NEXT:         ; INST_PREF_SIZE 0
-; OBJDUMP-NEXT:         ; TRAP_ON_START 0
-; OBJDUMP-NEXT:         ; TRAP_ON_END 0
-; OBJDUMP-NEXT:         ; IMAGE_OP 0
 ; OBJDUMP-NEXT:         .amdhsa_next_free_vgpr 8
 ; OBJDUMP-NEXT:         .amdhsa_reserve_vcc 0
 ; OBJDUMP-NEXT:         .amdhsa_reserve_flat_scratch 0

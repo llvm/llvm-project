@@ -110,6 +110,9 @@ FailureOr<ConvolutionDimensions> inferConvolutionDims(LinalgOp linalgOp);
 // TODO: embed within `isa<ConvolutionOpInterface>` if possible / natural.
 bool isaConvolutionOpInterface(LinalgOp linalgOp);
 
+/// Checks whether `linalgOp` is semantically equivalent to a `linalg.copyOp`.
+bool isaCopyOpInterface(LinalgOp linalgOp);
+
 namespace detail {
 
 /// Returns true if the block contains a contraction of the following form:

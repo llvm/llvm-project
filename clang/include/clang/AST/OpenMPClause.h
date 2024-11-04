@@ -3918,6 +3918,9 @@ class OMPLinearClause final
   /// Location of ':'.
   SourceLocation ColonLoc;
 
+  /// Location of 'step' modifier.
+  SourceLocation StepModifierLoc;
+
   /// Sets the linear step for clause.
   void setStep(Expr *Step) { *(getFinals().end()) = Step; }
 
@@ -3929,16 +3932,18 @@ class OMPLinearClause final
   /// \param StartLoc Starting location of the clause.
   /// \param LParenLoc Location of '('.
   /// \param ColonLoc Location of ':'.
+  /// \param StepModifierLoc Location of 'step' modifier.
   /// \param EndLoc Ending location of the clause.
   /// \param NumVars Number of variables.
   OMPLinearClause(SourceLocation StartLoc, SourceLocation LParenLoc,
                   OpenMPLinearClauseKind Modifier, SourceLocation ModifierLoc,
-                  SourceLocation ColonLoc, SourceLocation EndLoc,
-                  unsigned NumVars)
+                  SourceLocation ColonLoc, SourceLocation StepModifierLoc,
+                  SourceLocation EndLoc, unsigned NumVars)
       : OMPVarListClause<OMPLinearClause>(llvm::omp::OMPC_linear, StartLoc,
                                           LParenLoc, EndLoc, NumVars),
         OMPClauseWithPostUpdate(this), Modifier(Modifier),
-        ModifierLoc(ModifierLoc), ColonLoc(ColonLoc) {}
+        ModifierLoc(ModifierLoc), ColonLoc(ColonLoc),
+        StepModifierLoc(StepModifierLoc) {}
 
   /// Build an empty clause.
   ///
@@ -4017,6 +4022,7 @@ public:
   /// \param Modifier Modifier of 'linear' clause.
   /// \param ModifierLoc Modifier location.
   /// \param ColonLoc Location of ':'.
+  /// \param StepModifierLoc Location of 'step' modifier.
   /// \param EndLoc Ending location of the clause.
   /// \param VL List of references to the variables.
   /// \param PL List of private copies of original variables.
@@ -4030,9 +4036,10 @@ public:
   static OMPLinearClause *
   Create(const ASTContext &C, SourceLocation StartLoc, SourceLocation LParenLoc,
          OpenMPLinearClauseKind Modifier, SourceLocation ModifierLoc,
-         SourceLocation ColonLoc, SourceLocation EndLoc, ArrayRef<Expr *> VL,
-         ArrayRef<Expr *> PL, ArrayRef<Expr *> IL, Expr *Step, Expr *CalcStep,
-         Stmt *PreInit, Expr *PostUpdate);
+         SourceLocation ColonLoc, SourceLocation StepModifierLoc,
+         SourceLocation EndLoc, ArrayRef<Expr *> VL, ArrayRef<Expr *> PL,
+         ArrayRef<Expr *> IL, Expr *Step, Expr *CalcStep, Stmt *PreInit,
+         Expr *PostUpdate);
 
   /// Creates an empty clause with the place for \a NumVars variables.
   ///
@@ -4055,8 +4062,14 @@ public:
   /// Sets the location of ':'.
   void setColonLoc(SourceLocation Loc) { ColonLoc = Loc; }
 
+  /// Sets the location of 'step' modifier.
+  void setStepModifierLoc(SourceLocation Loc) { StepModifierLoc = Loc; }
+
   /// Returns the location of ':'.
   SourceLocation getColonLoc() const { return ColonLoc; }
+
+  /// Returns the location of 'step' modifier.
+  SourceLocation getStepModifierLoc() const { return StepModifierLoc; }
 
   /// Returns linear step.
   Expr *getStep() { return *(getFinals().end()); }

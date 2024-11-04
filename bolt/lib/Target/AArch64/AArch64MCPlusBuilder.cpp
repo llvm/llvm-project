@@ -1643,6 +1643,8 @@ public:
 
     return Relocation({RelOffset, RelSymbol, RelType, RelAddend, 0});
   }
+
+  uint16_t getMinFunctionAlignment() const override { return 4; }
 };
 
 } // end anonymous namespace

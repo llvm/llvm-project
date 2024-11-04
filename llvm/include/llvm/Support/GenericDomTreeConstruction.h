@@ -120,7 +120,7 @@ struct SemiNCAInfo {
     SmallVector<NodePtr, 8> Res(detail::reverse_if<!Inversed>(R));
 
     // Remove nullptr children for clang.
-    llvm::erase_value(Res, nullptr);
+    llvm::erase(Res, nullptr);
     return Res;
   }
 

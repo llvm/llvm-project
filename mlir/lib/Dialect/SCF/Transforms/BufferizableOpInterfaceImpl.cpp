@@ -602,7 +602,7 @@ struct ForOpInterface
 
     // scf::ForOp alone doesn't bufferize to a memory read, one of the uses of
     // its matching bbArg may.
-    return state.isValueRead(forOp.getRegionIterArgForOpOperand(opOperand));
+    return state.isValueRead(forOp.getTiedLoopRegionIterArg(&opOperand));
   }
 
   bool bufferizesToMemoryWrite(Operation *op, OpOperand &opOperand,
@@ -614,7 +614,7 @@ struct ForOpInterface
   AliasingValueList getAliasingValues(Operation *op, OpOperand &opOperand,
                                       const AnalysisState &state) const {
     auto forOp = cast<scf::ForOp>(op);
-    OpResult opResult = forOp.getResultForOpOperand(opOperand);
+    OpResult opResult = forOp.getTiedLoopResult(&opOperand);
     BufferRelation relation = bufferRelation(op, opResult, state);
     return {{opResult, relation,
              /*isDefinite=*/relation == BufferRelation::Equivalent}};
@@ -625,10 +625,9 @@ struct ForOpInterface
     // ForOp results are equivalent to their corresponding init_args if the
     // corresponding iter_args and yield values are equivalent.
     auto forOp = cast<scf::ForOp>(op);
-    OpOperand &forOperand = forOp.getOpOperandForResult(opResult);
-    auto bbArg = forOp.getRegionIterArgForOpOperand(forOperand);
+    BlockArgument bbArg = forOp.getTiedLoopRegionIterArg(opResult);
     bool equivalentYield = state.areEquivalentBufferizedValues(
-        bbArg, forOp.getYieldedValues()[opResult.getResultNumber()]);
+        bbArg, forOp.getTiedLoopYieldedValue(bbArg)->get());
     return equivalentYield ? BufferRelation::Equivalent
                            : BufferRelation::Unknown;
   }
@@ -703,16 +702,13 @@ struct ForOpInterface
 
     if (auto opResult = dyn_cast<OpResult>(value)) {
       // The type of an OpResult must match the corresponding iter_arg type.
-      BlockArgument bbArg = forOp.getRegionIterArgForOpOperand(
-          forOp.getOpOperandForResult(opResult));
+      BlockArgument bbArg = forOp.getTiedLoopRegionIterArg(opResult);
       return bufferization::getBufferType(bbArg, options, invocationStack);
     }
 
     // Compute result/argument number.
     BlockArgument bbArg = cast<BlockArgument>(value);
-    unsigned resultNum =
-        forOp.getResultForOpOperand(forOp.getOpOperandForRegionIterArg(bbArg))
-            .getResultNumber();
+    unsigned resultNum = forOp.getTiedLoopResult(bbArg).getResultNumber();
 
     // Compute the bufferized type.
     auto yieldOp = cast<scf::YieldOp>(forOp.getBody()->getTerminator());

@@ -13,6 +13,9 @@
 // iter_type put(iter_type s, bool intl, ios_base& f, char_type fill,
 //               long double units) const;
 
+// Bionic has minimal locale support, investigate this later.
+// XFAIL: LIBCXX-ANDROID-FIXME
+
 // REQUIRES: locale.en_US.UTF-8
 
 #include <locale>

@@ -227,7 +227,6 @@ struct LowerGpuOpsToNVVMOpsPass
         DataLayout(cast<DataLayoutOpInterface>(m.getOperation())));
     if (indexBitwidth != kDeriveIndexBitwidthFromDataLayout)
       options.overrideIndexBitwidth(indexBitwidth);
-    options.useOpaquePointers = useOpaquePointers;
     options.useBarePtrCallConv = useBarePtrCallConv;
 
     // Apply in-dialect lowering. In-dialect lowering will replace

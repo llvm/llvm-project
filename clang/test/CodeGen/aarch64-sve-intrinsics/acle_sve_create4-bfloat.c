@@ -23,7 +23,7 @@
 // CHECK-NEXT:    [[TMP3:%.*]] = tail call <vscale x 32 x bfloat> @llvm.vector.insert.nxv32bf16.nxv8bf16(<vscale x 32 x bfloat> [[TMP2]], <vscale x 8 x bfloat> [[X4:%.*]], i64 24)
 // CHECK-NEXT:    ret <vscale x 32 x bfloat> [[TMP3]]
 //
-// CPP-CHECK-LABEL: @_Z19test_svcreate4_bf16u14__SVBFloat16_tu14__SVBFloat16_tu14__SVBFloat16_tu14__SVBFloat16_t(
+// CPP-CHECK-LABEL: @_Z19test_svcreate4_bf16u14__SVBfloat16_tS_S_S_(
 // CPP-CHECK-NEXT:  entry:
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 32 x bfloat> @llvm.vector.insert.nxv32bf16.nxv8bf16(<vscale x 32 x bfloat> poison, <vscale x 8 x bfloat> [[X0:%.*]], i64 0)
 // CPP-CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 32 x bfloat> @llvm.vector.insert.nxv32bf16.nxv8bf16(<vscale x 32 x bfloat> [[TMP0]], <vscale x 8 x bfloat> [[X1:%.*]], i64 8)

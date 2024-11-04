@@ -21,7 +21,7 @@
 #include "test_macros.h"
 
 #include "../MinimalElementType.h"
-#include "CustomTestLayouts.h"
+#include "../CustomTestLayouts.h"
 #include "CustomTestAccessors.h"
 
 template <class H, class M, class A>

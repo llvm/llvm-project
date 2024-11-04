@@ -7,7 +7,9 @@ HELP-NOT: -reverse-iterate
 HELP: Dsymutil Options:
 CHECK: -accelerator
 CHECK: -arch <arch>
+CHECK: -build-variant-suffix <suffix=buildvariant>
 CHECK: -dump-debug-map
+CHECK: -D <path>
 CHECK: -fat64
 CHECK: -flat
 CHECK: -gen-reproducer

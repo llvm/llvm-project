@@ -3196,9 +3196,6 @@ void RewriteInstance::preregisterSections() {
                               ROFlags);
   BC->registerOrUpdateSection(getNewSecPrefix() + ".rodata.cold",
                               ELF::SHT_PROGBITS, ROFlags);
-  BC->registerOrUpdateSection(AddressMap::SectionName, ELF::SHT_PROGBITS,
-                              ROFlags)
-      .setLinkOnly();
 }
 
 void RewriteInstance::emitAndLink() {
@@ -3669,11 +3666,8 @@ void RewriteInstance::mapAllocatableSections(
 }
 
 void RewriteInstance::updateOutputValues(const BOLTLinker &Linker) {
-  if (auto MapSection = BC->getUniqueSectionByName(AddressMap::SectionName)) {
-    auto Map = AddressMap::parse(MapSection->getOutputContents(), *BC);
-    BC->setIOAddressMap(std::move(Map));
-    BC->deregisterSection(*MapSection);
-  }
+  if (std::optional<AddressMap> Map = AddressMap::parse(*BC))
+    BC->setIOAddressMap(std::move(*Map));
 
   for (BinaryFunction *Function : BC->getAllBinaryFunctions())
     Function->updateOutputValues(Linker);

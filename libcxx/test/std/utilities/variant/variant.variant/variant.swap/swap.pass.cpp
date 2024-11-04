@@ -17,6 +17,7 @@
 // void swap(variant& rhs) noexcept(see below)
 
 #include <cassert>
+#include <cstdlib>
 #include <string>
 #include <type_traits>
 #include <variant>

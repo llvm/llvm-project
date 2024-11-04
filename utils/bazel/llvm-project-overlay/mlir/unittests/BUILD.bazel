@@ -178,9 +178,12 @@ cc_test(
         "Dialect/SCF/*.h",
     ]),
     deps = [
+        "//mlir:ArithDialect",
         "//mlir:FuncDialect",
+        "//mlir:IR",
         "//mlir:Parser",
         "//mlir:SCFDialect",
+        "//third-party/unittest:gtest",
         "//third-party/unittest:gtest_main",
     ],
 )

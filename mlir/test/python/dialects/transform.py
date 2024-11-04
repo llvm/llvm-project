@@ -162,13 +162,16 @@ def testGetParentOp():
   )
   with InsertionPoint(sequence.body):
     transform.GetParentOp(
-        transform.AnyOpType.get(), sequence.bodyTarget, isolated_from_above=True
+        transform.AnyOpType.get(),
+        sequence.bodyTarget,
+        isolated_from_above=True,
+        nth_parent=2,
     )
     transform.YieldOp()
   # CHECK-LABEL: TEST: testGetParentOp
   # CHECK: transform.sequence
   # CHECK: ^{{.*}}(%[[ARG1:.+]]: !transform.any_op):
-  # CHECK:   = get_parent_op %[[ARG1]] {isolated_from_above}
+  # CHECK:   = get_parent_op %[[ARG1]] {isolated_from_above, nth_parent = 2 : i64}
 
 
 @run
