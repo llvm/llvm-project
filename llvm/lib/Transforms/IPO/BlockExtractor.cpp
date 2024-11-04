@@ -181,6 +181,7 @@ bool BlockExtractor::runOnModule(Module &M) {
                                 /* AllowAlloca */ false,
                                 /* AllocationBlock */ nullptr,
                                 /* Suffix */ "",
+                                /* ArgsInZeroAddressSpace */ false,
                                 /* KeepOldBlocks */ KeepOldBlocks)
                       .extractCodeRegion(CEAC);
     if (F)
