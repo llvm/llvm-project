@@ -12,7 +12,6 @@
 #include <__config>
 #include <__fwd/functional.h>
 #include <__type_traits/integral_constant.h>
-#include <__type_traits/remove_cv.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -25,7 +24,7 @@ struct __is_reference_wrapper_impl : public false_type {};
 template <class _Tp>
 struct __is_reference_wrapper_impl<reference_wrapper<_Tp> > : public true_type {};
 template <class _Tp>
-struct __is_reference_wrapper : public __is_reference_wrapper_impl<__remove_cv_t<_Tp> > {};
+struct __is_reference_wrapper : public __is_reference_wrapper_impl<__remove_cv(_Tp)> {};
 
 _LIBCPP_END_NAMESPACE_STD
 

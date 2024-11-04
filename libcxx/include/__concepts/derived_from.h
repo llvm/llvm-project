@@ -10,8 +10,6 @@
 #define _LIBCPP___CONCEPTS_DERIVED_FROM_H
 
 #include <__config>
-#include <__type_traits/is_base_of.h>
-#include <__type_traits/is_convertible.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -24,7 +22,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 // [concept.derived]
 
 template <class _Dp, class _Bp>
-concept derived_from = is_base_of_v<_Bp, _Dp> && is_convertible_v<const volatile _Dp*, const volatile _Bp*>;
+concept derived_from = __is_base_of(_Bp, _Dp) && __is_convertible(const volatile _Dp*, const volatile _Bp*);
 
 #endif // _LIBCPP_STD_VER >= 20
 

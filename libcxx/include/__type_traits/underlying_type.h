@@ -10,7 +10,6 @@
 #define _LIBCPP___TYPE_TRAITS_UNDERLYING_TYPE_H
 
 #include <__config>
-#include <__type_traits/is_enum.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -18,7 +17,7 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-template <class _Tp, bool = is_enum<_Tp>::value>
+template <class _Tp, bool>
 struct __underlying_type_impl;
 
 template <class _Tp>
@@ -30,7 +29,7 @@ struct __underlying_type_impl<_Tp, true> {
 };
 
 template <class _Tp>
-struct underlying_type : __underlying_type_impl<_Tp, is_enum<_Tp>::value> {};
+struct underlying_type : __underlying_type_impl<_Tp, __is_enum(_Tp)> {};
 
 #if _LIBCPP_STD_VER >= 14
 template <class _Tp>

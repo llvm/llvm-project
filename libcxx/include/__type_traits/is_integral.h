@@ -11,7 +11,6 @@
 
 #include <__config>
 #include <__type_traits/integral_constant.h>
-#include <__type_traits/remove_cv.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -60,7 +59,7 @@ inline constexpr bool is_integral_v = __is_integral(_Tp);
 #else
 
 template <class _Tp>
-struct _LIBCPP_TEMPLATE_VIS is_integral : public _BoolConstant<__libcpp_is_integral<__remove_cv_t<_Tp> >::value> {};
+struct _LIBCPP_TEMPLATE_VIS is_integral : public _BoolConstant<__libcpp_is_integral<__remove_cv(_Tp)>::value> {};
 
 #  if _LIBCPP_STD_VER >= 17
 template <class _Tp>

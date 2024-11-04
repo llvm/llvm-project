@@ -11,7 +11,6 @@
 
 #include <__config>
 #include <__type_traits/conditional.h>
-#include <__type_traits/is_same.h>
 #include <__type_traits/is_signed.h>
 #include <__type_traits/is_unsigned.h>
 #include <__type_traits/make_unsigned.h>
@@ -28,7 +27,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 /// The restriction is the same as the integral version of to_char.
 template <class _Tp>
 #if _LIBCPP_STD_VER >= 20
-  requires(is_signed_v<_Tp> || is_unsigned_v<_Tp> || is_same_v<_Tp, char>)
+  requires(is_signed_v<_Tp> || is_unsigned_v<_Tp> || __is_same(_Tp, char))
 #endif
 // clang-format off
 using __make_32_64_or_128_bit_t =

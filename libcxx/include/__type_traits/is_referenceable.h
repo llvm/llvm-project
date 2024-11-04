@@ -11,7 +11,6 @@
 
 #include <__config>
 #include <__type_traits/integral_constant.h>
-#include <__type_traits/is_same.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -32,8 +31,7 @@ struct __libcpp_is_referenceable_impl {
 
 template <class _Tp>
 struct __libcpp_is_referenceable
-    : integral_constant<bool, _IsNotSame<decltype(__libcpp_is_referenceable_impl::__test<_Tp>(0)), false_type>::value> {
-};
+    : integral_constant<bool, !__is_same(decltype(__libcpp_is_referenceable_impl::__test<_Tp>(0)), false_type)> {};
 #endif // __has_builtin(__is_referenceable)
 
 _LIBCPP_END_NAMESPACE_STD

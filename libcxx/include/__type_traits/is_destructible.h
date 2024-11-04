@@ -11,8 +11,6 @@
 
 #include <__config>
 #include <__type_traits/integral_constant.h>
-#include <__type_traits/is_function.h>
-#include <__type_traits/is_reference.h>
 #include <__type_traits/remove_all_extents.h>
 #include <__utility/declval.h>
 
@@ -71,13 +69,13 @@ template <class _Tp, bool>
 struct __destructible_false;
 
 template <class _Tp>
-struct __destructible_false<_Tp, false> : public __destructible_imp<_Tp, is_reference<_Tp>::value> {};
+struct __destructible_false<_Tp, false> : public __destructible_imp<_Tp, __is_reference(_Tp)> {};
 
 template <class _Tp>
 struct __destructible_false<_Tp, true> : public false_type {};
 
 template <class _Tp>
-struct is_destructible : public __destructible_false<_Tp, is_function<_Tp>::value> {};
+struct is_destructible : public __destructible_false<_Tp, __is_function(_Tp)> {};
 
 template <class _Tp>
 struct is_destructible<_Tp[]> : public false_type {};

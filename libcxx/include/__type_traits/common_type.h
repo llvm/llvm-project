@@ -12,8 +12,6 @@
 #include <__config>
 #include <__type_traits/conditional.h>
 #include <__type_traits/decay.h>
-#include <__type_traits/is_same.h>
-#include <__type_traits/remove_cvref.h>
 #include <__type_traits/type_identity.h>
 #include <__type_traits/void_t.h>
 #include <__utility/declval.h>
@@ -48,7 +46,7 @@ struct __common_type3 {};
 // sub-bullet 4 - "if COND_RES(CREF(D1), CREF(D2)) denotes a type..."
 template <class _Tp, class _Up>
 struct __common_type3<_Tp, _Up, void_t<__cond_type<const _Tp&, const _Up&>>> {
-  using type = remove_cvref_t<__cond_type<const _Tp&, const _Up&>>;
+  using type = __remove_cvref(__cond_type<const _Tp&, const _Up&>);
 };
 
 template <class _Tp, class _Up, class = void>
@@ -96,7 +94,7 @@ struct _LIBCPP_TEMPLATE_VIS common_type<_Tp> : public common_type<_Tp, _Tp> {};
 // sub-bullet 1 - "If is_same_v<T1, D1> is false or ..."
 template <class _Tp, class _Up>
 struct _LIBCPP_TEMPLATE_VIS common_type<_Tp, _Up>
-    : __conditional_t<_IsSame<_Tp, __decay_t<_Tp> >::value && _IsSame<_Up, __decay_t<_Up> >::value,
+    : __conditional_t<__is_same(_Tp, __decay_t<_Tp>) && __is_same(_Up, __decay_t<_Up>),
                       __common_type2_imp<_Tp, _Up>,
                       common_type<__decay_t<_Tp>, __decay_t<_Up> > > {};
 

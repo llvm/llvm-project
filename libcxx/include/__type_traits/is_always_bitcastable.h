@@ -12,10 +12,6 @@
 #include <__config>
 #include <__type_traits/integral_constant.h>
 #include <__type_traits/is_integral.h>
-#include <__type_traits/is_object.h>
-#include <__type_traits/is_same.h>
-#include <__type_traits/is_trivially_copyable.h>
-#include <__type_traits/remove_cv.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -31,13 +27,13 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 // considered bit-castable.
 template <class _From, class _To>
 struct __is_always_bitcastable {
-  using _UnqualFrom = __remove_cv_t<_From>;
-  using _UnqualTo   = __remove_cv_t<_To>;
+  using _UnqualFrom = __remove_cv(_From);
+  using _UnqualTo   = __remove_cv(_To);
 
   // clang-format off
   static const bool value =
       // First, the simple case -- `From` and `To` are the same object type.
-      (is_same<_UnqualFrom, _UnqualTo>::value && is_trivially_copyable<_UnqualFrom>::value) ||
+      (__is_same(_UnqualFrom, _UnqualTo) && __is_trivially_copyable(_UnqualFrom)) ||
 
       // Beyond the simple case, we say that one type is "always bit-castable" to another if:
       // - (1) `From` and `To` have the same value representation, and in addition every possible value of `From` has
@@ -75,7 +71,7 @@ struct __is_always_bitcastable {
         sizeof(_From) == sizeof(_To) &&
         is_integral<_From>::value &&
         is_integral<_To>::value &&
-        !is_same<_UnqualTo, bool>::value
+        !__is_same(_UnqualTo, bool)
       );
   // clang-format on
 };

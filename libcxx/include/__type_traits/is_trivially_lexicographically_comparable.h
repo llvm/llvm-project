@@ -12,9 +12,7 @@
 #include <__config>
 #include <__fwd/byte.h>
 #include <__type_traits/integral_constant.h>
-#include <__type_traits/is_same.h>
 #include <__type_traits/is_unsigned.h>
-#include <__type_traits/remove_cv.h>
 #include <__type_traits/void_t.h>
 #include <__utility/declval.h>
 
@@ -52,7 +50,7 @@ inline const bool __is_std_byte_v<byte> = true;
 
 template <class _Tp, class _Up>
 inline const bool __is_trivially_lexicographically_comparable_v =
-    is_same<__remove_cv_t<_Tp>, __remove_cv_t<_Up> >::value &&
+    __is_same(__remove_cv(_Tp), __remove_cv(_Up)) &&
 #ifdef _LIBCPP_LITTLE_ENDIAN
     sizeof(_Tp) == 1 &&
 #endif
