@@ -7,9 +7,9 @@
 // RUN: %t.exe
 // RUN: llvm-profdata merge -output=%code.profdata %profdata
 // RUN: %clang --target=x86_64-pc-windows-msvc -fprofile-use=%code.profdata -fuse-ld=lld %s -o %t.exe
-// RUN: dumpbin /HEADERS %t.exe | FileCheck %s
+// RUN: llvm-readobj --coff-debug-directory %t.exe | FileCheck %s
 
-// CHECK: {{.*}}PGU{{.*}}
+// CHECK: {{.*}}ugp{{.*}}
 
 int main(void) {
 

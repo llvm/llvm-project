@@ -1,12 +1,12 @@
-// This test checks if Windows PE file compiled with
-// -fprofile-generate has magic string "PGI" to indicate so.
+// This test checks if COFF file compiled with
+// -fprofile-generate has magic section ".pgi" to indicate so.
 
+// RUN: %clang --target=x86_64-pc-windows-msvc -fprofile-generate %s -c -o %t_x86
+// RUN: llvm-objdump -h %t_x86 | FileCheck --check-prefix=CHECK_PGI %s
+// RUN: %clang --target=aarch64-pc-windows-msvc -fprofile-generate %s -c -o %t_aarch
+// RUN: llvm-objdump -h %t_aarch | FileCheck --check-prefix=CHECK_PGI %s
 
-// REQUIRES: system-windows
-
-// RUN: %clang --target=x86_64-pc-windows-msvc -fprofile-generate -fuse-ld=lld %s -o %t.exe
-// RUN: dumpbin /HEADERS %t.exe | FileCheck --check-prefix=CHECK2 %s
-// CHECK2: {{.*}}PGI{{.*}}
+// CHECK_PGI: {{.*}}.pgi{{.*}}
 
 int main(void) {
 
