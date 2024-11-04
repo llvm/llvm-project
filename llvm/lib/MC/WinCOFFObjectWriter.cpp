@@ -984,12 +984,12 @@ uint64_t WinCOFFWriter::writeObject(MCAssembler &Asm) {
 
   const auto *Options = Asm.getContext().getTargetOptions();
 
-  if (Options && Options->PgoInstrumentation) {
+  if (Mode != DwoOnly && Options && Options->PgoInstrumentation) {
     auto *Section = Asm.getContext().getCOFFSection(".pgi", 0);
     defineSection(Asm, *Section);
   }
 
-  if (Options && Options->PgoUse) {
+  if (Mode != DwoOnly && Options && Options->PgoUse) {
     auto *Section = Asm.getContext().getCOFFSection(".pgu", 0);
     defineSection(Asm, *Section);
   }
