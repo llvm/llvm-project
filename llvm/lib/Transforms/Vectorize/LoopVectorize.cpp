@@ -6389,9 +6389,11 @@ bool LoopVectorizationCostModel::shouldConsiderInvariant(Value *Op) {
     return false;
   // Consider Op invariant, if it or its operands aren't predicated
   // instruction in the loop. In that case, it is not trivially hoistable.
-  return !isa<Instruction>(Op) || !TheLoop->contains(cast<Instruction>(Op)) ||
-         (!isPredicatedInst(cast<Instruction>(Op)) &&
-          all_of(cast<Instruction>(Op)->operands(),
+  auto *OpI = dyn_cast<Instruction>(Op);
+  return !OpI || !TheLoop->contains(OpI) ||
+         (!isPredicatedInst(OpI) &&
+          (!isa<PHINode>(OpI) || OpI->getParent() != TheLoop->getHeader()) &&
+          all_of(OpI->operands(),
                  [this](Value *Op) { return shouldConsiderInvariant(Op); }));
 }
 

@@ -829,7 +829,7 @@ static void insertSpirvDecorations(MachineFunction &MF, MachineIRBuilder MIB) {
     for (MachineInstr &MI : MBB) {
       if (!isSpvIntrinsic(MI, Intrinsic::spv_assign_decoration))
         continue;
-      MIB.setInsertPt(*MI.getParent(), MI);
+      MIB.setInsertPt(*MI.getParent(), MI.getNextNode());
       buildOpSpirvDecorations(MI.getOperand(1).getReg(), MIB,
                               MI.getOperand(2).getMetadata());
       ToErase.push_back(&MI);

@@ -3172,6 +3172,7 @@ cc_library(
         ":TransformUtils",
         ":Transforms",
         ":VectorDialect",
+        ":VectorTransforms",
         "//llvm:Support",
     ],
 )

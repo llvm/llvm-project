@@ -7,8 +7,8 @@ declare void @vector_user(<4 x float>)
 declare void @check_user(i1)
 
 define void @loadv4f32() {
-  ; CHECK: [[BIND:%.*]] = call %dx.types.Handle @dx.op.createHandleFromBinding
-  ; CHECK: [[HANDLE:%.*]] = call %dx.types.Handle @dx.op.annotateHandle(i32 217, %dx.types.Handle [[BIND]]
+  ; CHECK: [[BIND:%.*]] = call %dx.types.Handle @dx.op.createHandleFromBinding(i32 217,
+  ; CHECK: [[HANDLE:%.*]] = call %dx.types.Handle @dx.op.annotateHandle(i32 216, %dx.types.Handle [[BIND]]
   %buffer = call target("dx.TypedBuffer", <4 x float>, 0, 0, 0)
       @llvm.dx.handle.fromBinding.tdx.TypedBuffer_v4f32_0_0_0(
           i32 0, i32 0, i32 1, i32 0, i1 false)
@@ -63,8 +63,8 @@ define void @loadv4f32() {
 }
 
 define void @index_dynamic(i32 %bufindex, i32 %elemindex) {
-  ; CHECK: [[BIND:%.*]] = call %dx.types.Handle @dx.op.createHandleFromBinding
-  ; CHECK: [[HANDLE:%.*]] = call %dx.types.Handle @dx.op.annotateHandle(i32 217, %dx.types.Handle [[BIND]]
+  ; CHECK: [[BIND:%.*]] = call %dx.types.Handle @dx.op.createHandleFromBinding(i32 217,
+  ; CHECK: [[HANDLE:%.*]] = call %dx.types.Handle @dx.op.annotateHandle(i32 216, %dx.types.Handle [[BIND]]
   %buffer = call target("dx.TypedBuffer", <4 x float>, 0, 0, 0)
       @llvm.dx.handle.fromBinding.tdx.TypedBuffer_v4f32_0_0_0(
           i32 0, i32 0, i32 1, i32 0, i1 false)
@@ -98,8 +98,8 @@ define void @index_dynamic(i32 %bufindex, i32 %elemindex) {
 }
 
 define void @loadf32() {
-  ; CHECK: [[BIND:%.*]] = call %dx.types.Handle @dx.op.createHandleFromBinding
-  ; CHECK: [[HANDLE:%.*]] = call %dx.types.Handle @dx.op.annotateHandle(i32 217, %dx.types.Handle [[BIND]]
+  ; CHECK: [[BIND:%.*]] = call %dx.types.Handle @dx.op.createHandleFromBinding(i32 217,
+  ; CHECK: [[HANDLE:%.*]] = call %dx.types.Handle @dx.op.annotateHandle(i32 216, %dx.types.Handle [[BIND]]
   %buffer = call target("dx.TypedBuffer", float, 0, 0, 0)
       @llvm.dx.handle.fromBinding.tdx.TypedBuffer_f32_0_0_0(
           i32 0, i32 0, i32 1, i32 0, i1 false)
@@ -116,8 +116,8 @@ define void @loadf32() {
 }
 
 define void @loadv2f32() {
-  ; CHECK: [[BIND:%.*]] = call %dx.types.Handle @dx.op.createHandleFromBinding
-  ; CHECK: [[HANDLE:%.*]] = call %dx.types.Handle @dx.op.annotateHandle(i32 217, %dx.types.Handle [[BIND]]
+  ; CHECK: [[BIND:%.*]] = call %dx.types.Handle @dx.op.createHandleFromBinding(i32 217,
+  ; CHECK: [[HANDLE:%.*]] = call %dx.types.Handle @dx.op.annotateHandle(i32 216, %dx.types.Handle [[BIND]]
   %buffer = call target("dx.TypedBuffer", <2 x float>, 0, 0, 0)
       @llvm.dx.handle.fromBinding.tdx.TypedBuffer_v2f32_0_0_0(
           i32 0, i32 0, i32 1, i32 0, i1 false)
@@ -130,8 +130,8 @@ define void @loadv2f32() {
 }
 
 define void @loadv4f32_checkbit() {
-  ; CHECK: [[BIND:%.*]] = call %dx.types.Handle @dx.op.createHandleFromBinding
-  ; CHECK: [[HANDLE:%.*]] = call %dx.types.Handle @dx.op.annotateHandle(i32 217, %dx.types.Handle [[BIND]]
+  ; CHECK: [[BIND:%.*]] = call %dx.types.Handle @dx.op.createHandleFromBinding(i32 217,
+  ; CHECK: [[HANDLE:%.*]] = call %dx.types.Handle @dx.op.annotateHandle(i32 216, %dx.types.Handle [[BIND]]
   %buffer = call target("dx.TypedBuffer", <4 x float>, 0, 0, 0)
       @llvm.dx.handle.fromBinding.tdx.TypedBuffer_v4f32_0_0_0(
           i32 0, i32 0, i32 1, i32 0, i1 false)
@@ -151,8 +151,8 @@ define void @loadv4f32_checkbit() {
 }
 
 define void @loadv4i32() {
-  ; CHECK: [[BIND:%.*]] = call %dx.types.Handle @dx.op.createHandleFromBinding
-  ; CHECK: [[HANDLE:%.*]] = call %dx.types.Handle @dx.op.annotateHandle(i32 217, %dx.types.Handle [[BIND]]
+  ; CHECK: [[BIND:%.*]] = call %dx.types.Handle @dx.op.createHandleFromBinding(i32 217,
+  ; CHECK: [[HANDLE:%.*]] = call %dx.types.Handle @dx.op.annotateHandle(i32 216, %dx.types.Handle [[BIND]]
   %buffer = call target("dx.TypedBuffer", <4 x i32>, 0, 0, 0)
       @llvm.dx.handle.fromBinding.tdx.TypedBuffer_v4i32_0_0_0(
           i32 0, i32 0, i32 1, i32 0, i1 false)
@@ -165,8 +165,8 @@ define void @loadv4i32() {
 }
 
 define void @loadv4f16() {
-  ; CHECK: [[BIND:%.*]] = call %dx.types.Handle @dx.op.createHandleFromBinding
-  ; CHECK: [[HANDLE:%.*]] = call %dx.types.Handle @dx.op.annotateHandle(i32 217, %dx.types.Handle [[BIND]]
+  ; CHECK: [[BIND:%.*]] = call %dx.types.Handle @dx.op.createHandleFromBinding(i32 217,
+  ; CHECK: [[HANDLE:%.*]] = call %dx.types.Handle @dx.op.annotateHandle(i32 216, %dx.types.Handle [[BIND]]
   %buffer = call target("dx.TypedBuffer", <4 x half>, 0, 0, 0)
       @llvm.dx.handle.fromBinding.tdx.TypedBuffer_v4f16_0_0_0(
           i32 0, i32 0, i32 1, i32 0, i1 false)
@@ -179,8 +179,8 @@ define void @loadv4f16() {
 }
 
 define void @loadv4i16() {
-  ; CHECK: [[BIND:%.*]] = call %dx.types.Handle @dx.op.createHandleFromBinding
-  ; CHECK: [[HANDLE:%.*]] = call %dx.types.Handle @dx.op.annotateHandle(i32 217, %dx.types.Handle [[BIND]]
+  ; CHECK: [[BIND:%.*]] = call %dx.types.Handle @dx.op.createHandleFromBinding(i32 217,
+  ; CHECK: [[HANDLE:%.*]] = call %dx.types.Handle @dx.op.annotateHandle(i32 216, %dx.types.Handle [[BIND]]
   %buffer = call target("dx.TypedBuffer", <4 x i16>, 0, 0, 0)
       @llvm.dx.handle.fromBinding.tdx.TypedBuffer_v4i16_0_0_0(
           i32 0, i32 0, i32 1, i32 0, i1 false)
