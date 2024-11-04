@@ -72,15 +72,11 @@ def rec7 {
 // CHECK: def rec8
 // CHECK:   list<int> newSeq = [];
 // CHECK:   list<int> newSeq2 = [];
-// CHECK:   list<int> newSeq3 = [];
-// CHECK:   list<int> newSeq4 = [];
 
 class Foo <list<int> seq = []> {
-  bit containsStr = !ne(!find(NAME, "BAR"), -1);
-  list<int> newSeq  = !if(!and(!not(!empty(seq)), containsStr), !tail(seq), seq);
-  list<int> newSeq2 = !if(!and(containsStr, !not(!empty(seq))), !tail(seq), seq);
-  list<int> newSeq3 = !if(!or(containsStr, -1), seq, !tail(seq));
-  list<int> newSeq4 = !if(!or(-1, containsStr), seq, !tail(seq));
+  bit unresolved = !ne(!find(NAME, "BAR"), -1);
+  list<int> newSeq  = !if(!and(false, unresolved), !tail(seq), seq);
+  list<int> newSeq2 = !if(!or(-1, unresolved), seq, !tail(seq));
 }
 
 def rec8 : Foo<>;

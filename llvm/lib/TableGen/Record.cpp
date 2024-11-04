@@ -1558,12 +1558,6 @@ const Init *BinOpInit::resolveReferences(Resolver &R) const {
           (Opc == OR && LHSi->getValue() == -1))
         return LHSi;
     }
-    if (const auto *RHSi = dyn_cast_or_null<IntInit>(
-            rhs->convertInitializerTo(IntRecTy::get(getRecordKeeper())))) {
-      if ((Opc == AND && !RHSi->getValue()) ||
-          (Opc == OR && RHSi->getValue() == -1))
-        return RHSi;
-    }
   }
 
   if (LHS != lhs || RHS != rhs)
