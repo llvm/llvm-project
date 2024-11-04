@@ -2,7 +2,7 @@
 ; This test checks the OpDecorate MIR is generated after the associated
 ; vreg definition in the case of an array size declared through this lowering.
 
-define spir_func i32 @foo(ptr addrspace(4) %Buf, ptr addrspace(4) %Item) {
+define spir_func i32 @foo() {
 entry:
   %var = alloca i64
   br label %block
