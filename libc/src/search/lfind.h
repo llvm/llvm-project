@@ -10,7 +10,7 @@
 #define LLVM_LIBC_SRC_SEARCH_LFIND_H
 
 #include "src/__support/macros/config.h"
-#include <search.h> // size_t
+#include <stddef.h> // size_t
 
 namespace LIBC_NAMESPACE_DECL {
 void *lfind(const void *key, const void *base, size_t *nmemb, size_t size,
