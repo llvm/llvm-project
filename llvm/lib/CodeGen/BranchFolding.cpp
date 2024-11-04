@@ -1392,7 +1392,7 @@ ReoptimizeBlock:
     // destination, remove the branch, replacing it with an unconditional one or
     // a fall-through.
     if (PriorTBB && PriorTBB == PriorFBB) {
-      auto Dl = PrevBB.findBranchDebugLoc();
+      DebugLoc Dl = PrevBB.findBranchDebugLoc();
       TII->removeBranch(PrevBB);
       PriorCond.clear();
       if (PriorTBB != MBB)
@@ -1450,7 +1450,7 @@ ReoptimizeBlock:
     // If the prior block branches somewhere else on the condition and here if
     // the condition is false, remove the uncond second branch.
     if (PriorFBB == MBB) {
-      auto Dl = PrevBB.findBranchDebugLoc();
+      DebugLoc Dl = PrevBB.findBranchDebugLoc();
       TII->removeBranch(PrevBB);
       TII->insertBranch(PrevBB, PriorTBB, nullptr, PriorCond, Dl);
       MadeChange = true;
@@ -1464,7 +1464,7 @@ ReoptimizeBlock:
     if (PriorTBB == MBB) {
       SmallVector<MachineOperand, 4> NewPriorCond(PriorCond);
       if (!TII->reverseBranchCondition(NewPriorCond)) {
-        auto Dl = PrevBB.findBranchDebugLoc();
+        DebugLoc Dl = PrevBB.findBranchDebugLoc();
         TII->removeBranch(PrevBB);
         TII->insertBranch(PrevBB, PriorFBB, nullptr, NewPriorCond, Dl);
         MadeChange = true;
@@ -1502,7 +1502,7 @@ ReoptimizeBlock:
           LLVM_DEBUG(dbgs() << "\nMoving MBB: " << *MBB
                             << "To make fallthrough to: " << *PriorTBB << "\n");
 
-          auto Dl = PrevBB.findBranchDebugLoc();
+          DebugLoc Dl = PrevBB.findBranchDebugLoc();
           TII->removeBranch(PrevBB);
           TII->insertBranch(PrevBB, MBB, nullptr, NewPriorCond, Dl);
 
@@ -1565,7 +1565,7 @@ ReoptimizeBlock:
     if (CurTBB && CurFBB && CurFBB == MBB && CurTBB != MBB) {
       SmallVector<MachineOperand, 4> NewCond(CurCond);
       if (!TII->reverseBranchCondition(NewCond)) {
-        auto Dl = MBB->findBranchDebugLoc();
+        DebugLoc Dl = MBB->findBranchDebugLoc();
         TII->removeBranch(*MBB);
         TII->insertBranch(*MBB, CurFBB, CurTBB, NewCond, Dl);
         MadeChange = true;
@@ -1579,7 +1579,7 @@ ReoptimizeBlock:
     if (CurTBB && CurCond.empty() && !CurFBB &&
         IsBranchOnlyBlock(MBB) && CurTBB != MBB &&
         !MBB->hasAddressTaken() && !MBB->isEHPad()) {
-      auto Dl = MBB->findBranchDebugLoc();
+      DebugLoc Dl = MBB->findBranchDebugLoc();
       // This block may contain just an unconditional branch.  Because there can
       // be 'non-branch terminators' in the block, try removing the branch and
       // then seeing if the block is empty.
@@ -1613,7 +1613,7 @@ ReoptimizeBlock:
               assert(!PriorFBB && "Machine CFG out of date!");
               PriorFBB = MBB;
             }
-            auto PrevDl = PrevBB.findBranchDebugLoc();
+            DebugLoc PrevDl = PrevBB.findBranchDebugLoc();
             TII->removeBranch(PrevBB);
             TII->insertBranch(PrevBB, PriorTBB, PriorFBB, PriorCond, PrevDl);
           }
@@ -1648,7 +1648,7 @@ ReoptimizeBlock:
               bool NewCurUnAnalyzable = TII->analyzeBranch(
                   *PMBB, NewCurTBB, NewCurFBB, NewCurCond, true);
               if (!NewCurUnAnalyzable && NewCurTBB && NewCurTBB == NewCurFBB) {
-                auto PrevDl = PMBB->findBranchDebugLoc();
+                DebugLoc PrevDl = PMBB->findBranchDebugLoc();
                 TII->removeBranch(*PMBB);
                 NewCurCond.clear();
                 TII->insertBranch(*PMBB, NewCurTBB, nullptr, NewCurCond,
