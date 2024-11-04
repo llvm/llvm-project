@@ -44,7 +44,7 @@ int __attribute__((target_version("lse"))) main(void) { return 1; }
 
 // It is ok for the default version to appear first.
 int default_first(void) { return 1; }
-int __attribute__((target_version("lse"))) default_first(void) { return 2; }
+int __attribute__((target_version("dit"))) default_first(void) { return 2; }
 int __attribute__((target_version("mops"))) default_first(void) { return 3; }
 
 // It is ok if the default version is between other versions.
@@ -77,7 +77,7 @@ void __attribute__((target_version("rdm+rng+crc"))) redef(void) {}
 void __attribute__((target_version("rdm+rng+crc"))) redef(void) {}
 
 int def(void);
-void __attribute__((target_version("lse"))) nodef(void);
+void __attribute__((target_version("dit"))) nodef(void);
 void __attribute__((target_version("ls64"))) nodef(void);
 void __attribute__((target_version("aes"))) ovl(void);
 void __attribute__((target_version("default"))) ovl(void);

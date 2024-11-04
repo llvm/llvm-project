@@ -29,6 +29,8 @@ static void __init_cpu_features_constructor(unsigned long hwcap,
     setCPUFeature(FEAT_FP16FML);
   if (hwcap & HWCAP_FPHP)
     setCPUFeature(FEAT_FP16);
+  if (hwcap & HWCAP_DIT)
+    setCPUFeature(FEAT_DIT);
   if (hwcap & HWCAP_ASIMDRDM)
     setCPUFeature(FEAT_RDM);
   if (hwcap & HWCAP_SHA2)

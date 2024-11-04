@@ -42,6 +42,7 @@ def : FMVExtension<"bf16", "FEAT_BF16", "+bf16", 280>;
 def : FMVExtension<"bti", "FEAT_BTI", "+bti", 510>;
 def : FMVExtension<"crc", "FEAT_CRC", "+crc", 110>;
 def : FMVExtension<"dgh", "FEAT_DGH", "", 260>;
+def : FMVExtension<"dit", "FEAT_DIT", "+dit", 180>;
 def : FMVExtension<"dotprod", "FEAT_DOTPROD", "+dotprod,+fp-armv8,+neon", 104>;
 def : FMVExtension<"dpb", "FEAT_DPB", "+ccpp", 190>;
 def : FMVExtension<"dpb2", "FEAT_DPB2", "+ccpp,+ccdp", 200>;

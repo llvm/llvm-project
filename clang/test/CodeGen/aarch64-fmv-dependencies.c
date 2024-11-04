@@ -18,6 +18,9 @@ __attribute__((target_version("crc"))) int fmv(void) { return 0; }
 // CHECK: define dso_local i32 @fmv._Mdgh() #[[ATTR0:[0-9]+]] {
 __attribute__((target_version("dgh"))) int fmv(void) { return 0; }
 
+// CHECK: define dso_local i32 @fmv._Mdit() #[[dit:[0-9]+]] {
+__attribute__((target_version("dit"))) int fmv(void) { return 0; }
+
 // CHECK: define dso_local i32 @fmv._Mdotprod() #[[dotprod:[0-9]+]] {
 __attribute__((target_version("dotprod"))) int fmv(void) { return 0; }
 
@@ -155,6 +158,7 @@ int caller() {
 // CHECK: attributes #[[bti]] = { {{.*}} "target-features"="+bti,+fp-armv8,+neon,+outline-atomics,+v8a"
 // CHECK: attributes #[[crc]] = { {{.*}} "target-features"="+crc,+fp-armv8,+neon,+outline-atomics,+v8a"
 // CHECK: attributes #[[ATTR0]] = { {{.*}} "target-features"="+fp-armv8,+neon,+outline-atomics,+v8a"
+// CHECK: attributes #[[dit]] = { {{.*}} "target-features"="+dit,+fp-armv8,+neon,+outline-atomics,+v8a"
 // CHECK: attributes #[[dotprod]] = { {{.*}} "target-features"="+dotprod,+fp-armv8,+neon,+outline-atomics,+v8a"
 // CHECK: attributes #[[dpb]] = { {{.*}} "target-features"="+ccpp,+fp-armv8,+neon,+outline-atomics,+v8a"
 // CHECK: attributes #[[dpb2]] = { {{.*}} "target-features"="+ccdp,+ccpp,+fp-armv8,+neon,+outline-atomics,+v8a"

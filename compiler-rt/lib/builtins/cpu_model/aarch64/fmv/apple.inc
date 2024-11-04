@@ -85,6 +85,7 @@ void __init_cpu_features_resolver(void) {
     CHECK_BIT(CAP_BIT_FEAT_DPB2, FEAT_DPB2);
     CHECK_BIT(CAP_BIT_FEAT_BF16, FEAT_BF16);
     CHECK_BIT(CAP_BIT_FEAT_I8MM, FEAT_I8MM);
+    CHECK_BIT(CAP_BIT_FEAT_DIT, FEAT_DIT);
     CHECK_BIT(CAP_BIT_FEAT_FP16, FEAT_FP16);
     CHECK_BIT(CAP_BIT_FEAT_SSBS, FEAT_SSBS2);
     CHECK_BIT(CAP_BIT_FEAT_BTI, FEAT_BTI);
@@ -120,6 +121,7 @@ void __init_cpu_features_resolver(void) {
       {"hw.optional.arm.FEAT_SHA3", FEAT_SHA3},
       {"hw.optional.arm.FEAT_PMULL", FEAT_PMULL},
       {"hw.optional.arm.FEAT_FP16", FEAT_FP16},
+      {"hw.optional.arm.FEAT_DIT", FEAT_DIT},
       {"hw.optional.arm.FEAT_DPB", FEAT_DPB},
       {"hw.optional.arm.FEAT_DPB2", FEAT_DPB2},
       {"hw.optional.arm.FEAT_JSCVT", FEAT_JSCVT},

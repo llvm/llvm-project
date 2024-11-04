@@ -39,7 +39,7 @@ enum CPUFeatures {
   RESERVED_FEAT_AES, // previously used and now ABI legacy
   FEAT_PMULL,
   FEAT_FP16,
-  RESERVED_FEAT_DIT, // previously used and now ABI legacy
+  FEAT_DIT,
   FEAT_DPB,
   FEAT_DPB2,
   FEAT_JSCVT,
