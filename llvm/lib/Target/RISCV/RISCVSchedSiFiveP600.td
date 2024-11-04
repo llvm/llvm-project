@@ -443,12 +443,16 @@ foreach mx = SchedMxListW in {
   }
 }
 
-// Worst case needs 64 cycles if SEW is equal to 64.
+// Worst case needs 51/45/42/72 * lmul cycles for i8/16/32/64.
 foreach mx = SchedMxList in {
   foreach sew = SchedSEWSet<mx>.val in {
     defvar LMulLat = SiFiveP600GetLMulCycles<mx>.c;
     defvar IsWorstCase = SiFiveP600IsWorstCaseMXSEW<mx, sew, SchedMxList>.c;
-    let Latency = 64, ReleaseAtCycles = [LMulLat, !mul(63, LMulLat)] in {
+    defvar DivMicroOpLat =
+      !cond(!eq(sew, 8): 51, !eq(sew, 16): 45, !eq(sew, 32): 42,
+      /* SEW=64 */ true: 72);
+    defvar DivLatency = !mul(DivMicroOpLat, LMulLat);
+    let Latency = DivLatency, ReleaseAtCycles = [LMulLat, DivLatency] in {
       defm "" : LMULSEWWriteResMXSEW<"WriteVIDivV", [SiFiveP600VEXQ1, SiFiveP600VDiv], mx, sew, IsWorstCase>;
       defm "" : LMULSEWWriteResMXSEW<"WriteVIDivX", [SiFiveP600VEXQ1, SiFiveP600VDiv], mx, sew, IsWorstCase>;
     }
@@ -583,12 +587,15 @@ foreach mx = SchedMxListFW in {
   }
 }
 
-// Worst case needs 76 cycles if SEW is equal to 64.
+// Worst case needs around 29/25/37 * LMUL cycles for f16/32/64.
 foreach mx = SchedMxListF in {
   foreach sew = SchedSEWSet<mx, 1>.val in {
     defvar LMulLat = SiFiveP600GetLMulCycles<mx>.c;
     defvar IsWorstCase = SiFiveP600IsWorstCaseMXSEW<mx, sew, SchedMxListF, 1>.c;
-    let Latency = 76, ReleaseAtCycles = [LMulLat, !mul(76, LMulLat)] in {
+    defvar DivMicroOpLat =
+      !cond(!eq(sew, 16): 29, !eq(sew, 32): 25, /* SEW=64 */ true: 37);
+    defvar DivLatency = !mul(DivMicroOpLat, LMulLat);
+    let Latency = DivLatency, ReleaseAtCycles = [LMulLat, DivLatency] in {
       defm "" : LMULSEWWriteResMXSEW<"WriteVFDivV",  [SiFiveP600VEXQ1, SiFiveP600VFloatDiv], mx, sew, IsWorstCase>;
       defm "" : LMULSEWWriteResMXSEW<"WriteVFDivF",  [SiFiveP600VEXQ1, SiFiveP600VFloatDiv], mx, sew, IsWorstCase>;
       defm "" : LMULSEWWriteResMXSEW<"WriteVFSqrtV", [SiFiveP600VEXQ1, SiFiveP600VFloatDiv], mx, sew, IsWorstCase>;
