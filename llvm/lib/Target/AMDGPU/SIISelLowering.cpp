@@ -6164,12 +6164,11 @@ static SDValue lowerLaneOp(const SITargetLowering &TLI, SDNode *N,
   MVT IntVT = MVT::getIntegerVT(ValSize);
   const GCNSubtarget &ST =
       DAG.getMachineFunction().getSubtarget<GCNSubtarget>();
-  unsigned SplitSize =
-      (IID == Intrinsic::amdgcn_update_dpp && (ValSize % 64 == 0) &&
-       ST.hasDPALU_DPP() &&
-       AMDGPU::isLegalDPALU_DPPControl(N->getConstantOperandVal(3)))
-          ? 64
-          : 32;
+  unsigned SplitSize = 32;
+  if (IID == Intrinsic::amdgcn_update_dpp && (ValSize % 64 == 0) &&
+      ST.hasDPALU_DPP() &&
+      AMDGPU::isLegalDPALU_DPPControl(N->getConstantOperandVal(3)))
+    SplitSize = 64;
 
   auto createLaneOp = [&DAG, &SL, N, IID](SDValue Src0, SDValue Src1,
                                           SDValue Src2, MVT ValT) -> SDValue {

@@ -5521,12 +5521,11 @@ bool AMDGPULegalizerInfo::legalizeLaneOp(LegalizerHelper &Helper,
   LLT Ty = MRI.getType(DstReg);
   unsigned Size = Ty.getSizeInBits();
 
-  unsigned SplitSize =
-      (IID == Intrinsic::amdgcn_update_dpp && (Size % 64 == 0) &&
-       ST.hasDPALU_DPP() &&
-       AMDGPU::isLegalDPALU_DPPControl(MI.getOperand(4).getImm()))
-          ? 64
-          : 32;
+  unsigned SplitSize = 32;
+  if (IID == Intrinsic::amdgcn_update_dpp && (Size % 64 == 0) &&
+      ST.hasDPALU_DPP() &&
+      AMDGPU::isLegalDPALU_DPPControl(MI.getOperand(4).getImm()))
+    SplitSize = 64;
 
   if (Size == SplitSize) {
     // Already legal
@@ -5555,11 +5554,12 @@ bool AMDGPULegalizerInfo::legalizeLaneOp(LegalizerHelper &Helper,
   if (Ty.isVector()) {
     LLT EltTy = Ty.getElementType();
     unsigned EltSize = EltTy.getSizeInBits();
-    if (EltSize == SplitSize)
+    if (EltSize == SplitSize) {
       PartialResTy = EltTy;
-    else if (EltSize == 16 || EltSize == 32)
-      PartialResTy =
-          Ty.changeElementCount(ElementCount::getFixed(SplitSize / EltSize));
+    } else if (EltSize == 16 || EltSize == 32) {
+      unsigned NElem = SplitSize / EltSize;
+      PartialResTy = Ty.changeElementCount(ElementCount::getFixed(NElem));
+    }
     // Handle all other cases via S32/S64 pieces;
   }
 
