@@ -1495,7 +1495,7 @@ void CodeExtractor::normalizeCFGForExtraction(BasicBlock *&header) {
   // If we have to split PHI nodes of the entry or exit blocks, do so now.
   severSplitPHINodesOfEntry(header);
 
-  // If a PHI in an exit block has multiple invoming values from the outlined
+  // If a PHI in an exit block has multiple incoming values from the outlined
   // region, create a new PHI for those values within the region such that only
   // PHI itself becomes an output value, not each of its incoming values
   // individually.
