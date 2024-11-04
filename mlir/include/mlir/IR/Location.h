@@ -173,11 +173,11 @@ public:
 // FileLineColLoc
 //===----------------------------------------------------------------------===//
 
-// An instance of this location represents a tuple of file, line number, and
-// column number. This is similar to the type of location that you get from
-// most source languages.
-//
-// FileLineColLoc is a FileLineColRange with exactly one line and column.
+/// An instance of this location represents a tuple of file, line number, and
+/// column number. This is similar to the type of location that you get from
+/// most source languages.
+///
+/// FileLineColLoc is a FileLineColRange with exactly one line and column.
 class FileLineColLoc : public FileLineColRange {
 public:
   using FileLineColRange::FileLineColRange;
