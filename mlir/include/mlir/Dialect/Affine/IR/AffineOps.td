@@ -1102,12 +1102,11 @@ def AffineDelinearizeIndexOp : Affine_Op<"delinearize_index",
   ];
 
   let extraClassDeclaration = [{
-    /// Return a vector with all the static and dynamic basis values.
+    /// Returns a vector with all the static and dynamic basis values.
     SmallVector<OpFoldResult> getMixedBasis() {
       OpBuilder builder(getContext());
       return ::mlir::getMixedValues(getStaticBasis(), getDynamicBasis(), builder);
     }
-
   }];
 
   let hasVerifier = 1;
