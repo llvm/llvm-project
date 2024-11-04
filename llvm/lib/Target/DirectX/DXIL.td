@@ -788,14 +788,14 @@ def SplitDouble :  DXILOp<102, splitDouble> {
   let attributes = [Attributes<DXIL1_0, [ReadNone]>];
 }
 
-def AnnotateHandle : DXILOp<217, annotateHandle> {
+def AnnotateHandle : DXILOp<216, annotateHandle> {
   let Doc = "annotate handle with resource properties";
   let arguments = [HandleTy, ResPropsTy];
   let result = HandleTy;
   let stages = [Stages<DXIL1_6, [all_stages]>];
 }
 
-def CreateHandleFromBinding : DXILOp<218, createHandleFromBinding> {
+def CreateHandleFromBinding : DXILOp<217, createHandleFromBinding> {
   let Doc = "create resource handle from binding";
   let arguments = [ResBindTy, Int32Ty, Int1Ty];
   let result = HandleTy;
