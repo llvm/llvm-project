@@ -15,6 +15,7 @@
 #define LLVM_CLANG_SERIALIZATION_MODULEFILE_H
 
 #include "clang/Basic/FileManager.h"
+#include "clang/Basic/LLVM.h"
 #include "clang/Basic/Module.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Serialization/ASTBitCodes.h"
@@ -88,13 +89,13 @@ public:
 
   InputFile(FileEntryRef File, bool isOverridden = false,
             bool isOutOfDate = false) {
-    assert(!(isOverridden && isOutOfDate) &&
-           "an overridden cannot be out-of-date");
     unsigned intVal = 0;
-    if (isOverridden)
-      intVal = Overridden;
-    else if (isOutOfDate)
+    // Make isOutOfDate with higher priority than isOverridden.
+    // It is possible if the recorded hash value mismatches.
+    if (isOutOfDate)
       intVal = OutOfDate;
+    else if (isOverridden)
+      intVal = Overridden;
     Val.setPointerAndInt(&File.getMapEntry(), intVal);
   }
 
@@ -144,8 +145,8 @@ public:
   /// The base directory of the module.
   std::string BaseDirectory;
 
-  std::string getTimestampFilename() const {
-    return FileName + ".timestamp";
+  static std::string getTimestampFilename(StringRef FileName) {
+    return (FileName + ".timestamp").str();
   }
 
   /// The original source file name that was used to build the

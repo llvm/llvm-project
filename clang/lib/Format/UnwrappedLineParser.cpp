@@ -570,7 +570,8 @@ void UnwrappedLineParser::calculateBraceTypes(bool ExpectClassBody) {
                                 NextTok->isOneOf(Keywords.kw_of, Keywords.kw_in,
                                                  Keywords.kw_as));
           ProbablyBracedList =
-              ProbablyBracedList || (IsCpp && NextTok->is(tok::l_paren));
+              ProbablyBracedList || (IsCpp && (PrevTok->Tok.isLiteral() ||
+                                               NextTok->is(tok::l_paren)));
 
           // If there is a comma, semicolon or right paren after the closing
           // brace, we assume this is a braced initializer list.
@@ -1567,6 +1568,11 @@ void UnwrappedLineParser::parseStructuralElement(
     }
     parseCaseLabel();
     return;
+  case tok::kw_goto:
+    nextToken();
+    if (FormatTok->is(tok::kw_case))
+      nextToken();
+    break;
   case tok::kw_try:
   case tok::kw___try:
     if (Style.isJavaScript() && Line->MustBeDeclaration) {
@@ -2085,7 +2091,8 @@ void UnwrappedLineParser::parseStructuralElement(
     case tok::kw_switch:
       if (Style.Language == FormatStyle::LK_Java)
         parseSwitch(/*IsExpr=*/true);
-      nextToken();
+      else
+        nextToken();
       break;
     case tok::kw_case:
       // Proto: there are no switch/case statements.
@@ -2130,6 +2137,11 @@ void UnwrappedLineParser::parseStructuralElement(
         return;
       }
       break;
+    case tok::greater:
+      nextToken();
+      if (FormatTok->is(tok::l_brace))
+        FormatTok->Previous->setFinalizedType(TT_TemplateCloser);
+      break;
     default:
       nextToken();
       break;
@@ -2142,7 +2154,7 @@ bool UnwrappedLineParser::tryToParsePropertyAccessor() {
   if (!Style.isCSharp())
     return false;
   // See if it's a property accessor.
-  if (FormatTok->Previous->isNot(tok::identifier))
+  if (!FormatTok->Previous || FormatTok->Previous->isNot(tok::identifier))
     return false;
 
   // See if we are inside a property accessor.
@@ -2326,7 +2338,7 @@ bool UnwrappedLineParser::tryToParseLambda() {
       // This might or might not actually be a lambda arrow (this could be an
       // ObjC method invocation followed by a dereferencing arrow). We might
       // reset this back to TT_Unknown in TokenAnnotator.
-      FormatTok->setFinalizedType(TT_TrailingReturnArrow);
+      FormatTok->setFinalizedType(TT_LambdaArrow);
       SeenArrow = true;
       nextToken();
       break;
@@ -2498,6 +2510,11 @@ bool UnwrappedLineParser::parseBracedList(bool IsAngleBracket, bool IsEnum) {
       // Assume there are no blocks inside a braced init list apart
       // from the ones we explicitly parse out (like lambdas).
       FormatTok->setBlockKind(BK_BracedInit);
+      if (!IsAngleBracket) {
+        auto *Prev = FormatTok->Previous;
+        if (Prev && Prev->is(tok::greater))
+          Prev->setFinalizedType(TT_TemplateCloser);
+      }
       nextToken();
       parseBracedList();
       break;
@@ -2555,7 +2572,7 @@ bool UnwrappedLineParser::parseParens(TokenType AmpAmpTokenType) {
         parseChildBlock();
       break;
     case tok::r_paren: {
-      const auto *Prev = LeftParen->Previous;
+      auto *Prev = LeftParen->Previous;
       if (!MightBeStmtExpr && !MightBeFoldExpr && !Line->InMacroBody &&
           Style.RemoveParentheses > FormatStyle::RPS_Leave) {
         const auto *Next = Tokens->peekNextToken();
@@ -2584,9 +2601,13 @@ bool UnwrappedLineParser::parseParens(TokenType AmpAmpTokenType) {
           FormatTok->Optional = true;
         }
       }
-      if (Prev && Prev->is(TT_TypenameMacro)) {
-        LeftParen->setFinalizedType(TT_TypeDeclarationParen);
-        FormatTok->setFinalizedType(TT_TypeDeclarationParen);
+      if (Prev) {
+        if (Prev->is(TT_TypenameMacro)) {
+          LeftParen->setFinalizedType(TT_TypeDeclarationParen);
+          FormatTok->setFinalizedType(TT_TypeDeclarationParen);
+        } else if (Prev->is(tok::greater) && FormatTok->Previous == LeftParen) {
+          Prev->setFinalizedType(TT_TemplateCloser);
+        }
       }
       nextToken();
       return SeenEqual;
@@ -2636,7 +2657,10 @@ bool UnwrappedLineParser::parseParens(TokenType AmpAmpTokenType) {
         nextToken();
       break;
     case tok::kw_switch:
-      parseSwitch(/*IsExpr=*/true);
+      if (Style.Language == FormatStyle::LK_Java)
+        parseSwitch(/*IsExpr=*/true);
+      else
+        nextToken();
       break;
     case tok::kw_requires: {
       auto RequiresToken = FormatTok;
@@ -2682,6 +2706,7 @@ void UnwrappedLineParser::parseSquare(bool LambdaIntroducer) {
       break;
     }
     case tok::at:
+    case tok::colon:
       nextToken();
       if (FormatTok->is(tok::l_brace)) {
         nextToken();
@@ -3468,10 +3493,10 @@ bool UnwrappedLineParser::parseRequires() {
   case tok::r_paren:
   case tok::kw_noexcept:
   case tok::kw_const:
+  case tok::amp:
     // This is a requires clause.
     parseRequiresClause(RequiresToken);
     return true;
-  case tok::amp:
   case tok::ampamp: {
     // This can be either:
     // if (... && requires (T t) ...)
@@ -3992,6 +4017,9 @@ void UnwrappedLineParser::parseRecord(bool ParseAsExpr) {
   auto IsNonMacroIdentifier = [](const FormatToken *Tok) {
     return Tok->is(tok::identifier) && Tok->TokenText != Tok->TokenText.upper();
   };
+  // JavaScript/TypeScript supports anonymous classes like:
+  // a = class extends foo { }
+  bool JSPastExtendsOrImplements = false;
   // The actual identifier can be a nested name specifier, and in macros
   // it is often token-pasted.
   // An [[attribute]] can be before the identifier.
@@ -4002,6 +4030,7 @@ void UnwrappedLineParser::parseRecord(bool ParseAsExpr) {
           FormatTok->isOneOf(tok::period, tok::comma))) {
     if (Style.isJavaScript() &&
         FormatTok->isOneOf(Keywords.kw_extends, Keywords.kw_implements)) {
+      JSPastExtendsOrImplements = true;
       // JavaScript/TypeScript supports inline object types in
       // extends/implements positions:
       //     class Foo implements {bar: number} { }
@@ -4025,17 +4054,18 @@ void UnwrappedLineParser::parseRecord(bool ParseAsExpr) {
       }
       break;
     case tok::coloncolon:
+    case tok::hashhash:
       break;
     default:
-      if (!ClassName && Previous->is(tok::identifier) &&
-          Previous->isNot(TT_AttributeMacro)) {
+      if (!JSPastExtendsOrImplements && !ClassName &&
+          Previous->is(tok::identifier) && Previous->isNot(TT_AttributeMacro)) {
         ClassName = Previous;
       }
     }
   }
 
   auto IsListInitialization = [&] {
-    if (!ClassName || IsDerived)
+    if (!ClassName || IsDerived || JSPastExtendsOrImplements)
       return false;
     assert(FormatTok->is(tok::l_brace));
     const auto *Prev = FormatTok->getPreviousNonComment();
@@ -4607,9 +4637,9 @@ bool UnwrappedLineParser::isOnNewLine(const FormatToken &FormatTok) {
 // section on \p Line.
 static bool
 continuesLineCommentSection(const FormatToken &FormatTok,
-                            const UnwrappedLine &Line,
+                            const UnwrappedLine &Line, const FormatStyle &Style,
                             const llvm::Regex &CommentPragmasRegex) {
-  if (Line.Tokens.empty())
+  if (Line.Tokens.empty() || Style.ReflowComments != FormatStyle::RCS_Always)
     return false;
 
   StringRef IndentContent = FormatTok.TokenText;
@@ -4722,7 +4752,7 @@ void UnwrappedLineParser::flushComments(bool NewlineBeforeNext) {
     // FIXME: Consider putting separate line comment sections as children to the
     // unwrapped line instead.
     Tok->ContinuesLineCommentSection =
-        continuesLineCommentSection(*Tok, *Line, CommentPragmasRegex);
+        continuesLineCommentSection(*Tok, *Line, Style, CommentPragmasRegex);
     if (isOnNewLine(*Tok) && JustComments && !Tok->ContinuesLineCommentSection)
       addUnwrappedLine();
     pushToken(Tok);
@@ -4795,8 +4825,8 @@ void UnwrappedLineParser::distributeComments(
     if (HasTrailAlignedWithNextToken && i == StartOfTrailAlignedWithNextToken) {
       FormatTok->ContinuesLineCommentSection = false;
     } else {
-      FormatTok->ContinuesLineCommentSection =
-          continuesLineCommentSection(*FormatTok, *Line, CommentPragmasRegex);
+      FormatTok->ContinuesLineCommentSection = continuesLineCommentSection(
+          *FormatTok, *Line, Style, CommentPragmasRegex);
     }
     if (!FormatTok->ContinuesLineCommentSection &&
         (isOnNewLine(*FormatTok) || FormatTok->IsFirst)) {

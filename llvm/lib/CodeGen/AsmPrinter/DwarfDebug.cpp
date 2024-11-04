@@ -34,6 +34,7 @@
 #include "llvm/DebugInfo/DWARF/DWARFDataExtractor.h"
 #include "llvm/DebugInfo/DWARF/DWARFExpression.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/Module.h"
@@ -44,7 +45,6 @@
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/MC/MCTargetOptions.h"
 #include "llvm/MC/MachineLocation.h"
-#include "llvm/MC/SectionKind.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
@@ -352,8 +352,6 @@ DwarfDebug::DwarfDebug(AsmPrinter *A)
   else
     UseInlineStrings = DwarfInlinedStrings == Enable;
 
-  UseLocSection = !TT.isNVPTX();
-
   // Always emit .debug_aranges for SCE tuning.
   UseARangesSection = GenerateARangeSection || tuneForSCE();
 
@@ -570,7 +568,7 @@ void DwarfDebug::constructAbstractSubprogramScopeDIE(DwarfCompileUnit &SrcCU,
 /// debug expression to a register in the forwarded register worklist.
 struct FwdRegParamInfo {
   /// The described parameter register.
-  unsigned ParamReg;
+  uint64_t ParamReg;
 
   /// Debug expression that has been built up when walking through the
   /// instruction chain that produces the parameter's value.
@@ -578,7 +576,7 @@ struct FwdRegParamInfo {
 };
 
 /// Register worklist for finding call site values.
-using FwdRegWorklist = MapVector<unsigned, SmallVector<FwdRegParamInfo, 2>>;
+using FwdRegWorklist = MapVector<uint64_t, SmallVector<FwdRegParamInfo, 2>>;
 /// Container for the set of registers known to be clobbered on the path to a
 /// call site.
 using ClobberedRegSet = SmallSet<Register, 16>;
@@ -632,8 +630,7 @@ static void finishCallSiteParams(ValT Val, const DIExpression *Expr,
 static void addToFwdRegWorklist(FwdRegWorklist &Worklist, unsigned Reg,
                                 const DIExpression *Expr,
                                 ArrayRef<FwdRegParamInfo> ParamsToAdd) {
-  auto I = Worklist.insert({Reg, {}});
-  auto &ParamsForFwdReg = I.first->second;
+  auto &ParamsForFwdReg = Worklist[Reg];
   for (auto Param : ParamsToAdd) {
     assert(none_of(ParamsForFwdReg,
                    [Param](const FwdRegParamInfo &D) {
@@ -1325,15 +1322,22 @@ void DwarfDebug::finalizeModuleInfo() {
     DwarfCompileUnit &U = SkCU ? *SkCU : TheCU;
 
     if (unsigned NumRanges = TheCU.getRanges().size()) {
-      if (NumRanges > 1 && useRangesSection())
-        // A DW_AT_low_pc attribute may also be specified in combination with
-        // DW_AT_ranges to specify the default base address for use in
-        // location lists (see Section 2.6.2) and range lists (see Section
-        // 2.17.3).
-        U.addUInt(U.getUnitDie(), dwarf::DW_AT_low_pc, dwarf::DW_FORM_addr, 0);
-      else
-        U.setBaseAddress(TheCU.getRanges().front().Begin);
-      U.attachRangesOrLowHighPC(U.getUnitDie(), TheCU.takeRanges());
+      // PTX does not support subtracting labels from the code section in the
+      // debug_loc section.  To work around this, the NVPTX backend needs the
+      // compile unit to have no low_pc in order to have a zero base_address
+      // when handling debug_loc in cuda-gdb.
+      if (!(Asm->TM.getTargetTriple().isNVPTX() && tuneForGDB())) {
+        if (NumRanges > 1 && useRangesSection())
+          // A DW_AT_low_pc attribute may also be specified in combination with
+          // DW_AT_ranges to specify the default base address for use in
+          // location lists (see Section 2.6.2) and range lists (see Section
+          // 2.17.3).
+          U.addUInt(U.getUnitDie(), dwarf::DW_AT_low_pc, dwarf::DW_FORM_addr,
+                    0);
+        else
+          U.setBaseAddress(TheCU.getRanges().front().Begin);
+        U.attachRangesOrLowHighPC(U.getUnitDie(), TheCU.takeRanges());
+      }
     }
 
     // We don't keep track of which addresses are used in which CU so this
@@ -1772,18 +1776,14 @@ bool DwarfDebug::buildLocationList(SmallVectorImpl<DebugLocEntry> &DebugLoc,
     // span each individual section in the range from StartLabel to EndLabel.
     if (Asm->MF->hasBBSections() && StartLabel == Asm->getFunctionBegin() &&
         !Instr->getParent()->sameSection(&Asm->MF->front())) {
-      const MCSymbol *BeginSectionLabel = StartLabel;
-
-      for (const MachineBasicBlock &MBB : *Asm->MF) {
-        if (MBB.isBeginSection() && &MBB != &Asm->MF->front())
-          BeginSectionLabel = MBB.getSymbol();
-
-        if (MBB.sameSection(Instr->getParent())) {
-          DebugLoc.emplace_back(BeginSectionLabel, EndLabel, Values);
+      for (const auto &[MBBSectionId, MBBSectionRange] :
+           Asm->MBBSectionRanges) {
+        if (Instr->getParent()->getSectionID() == MBBSectionId) {
+          DebugLoc.emplace_back(MBBSectionRange.BeginLabel, EndLabel, Values);
           break;
         }
-        if (MBB.isEndSection())
-          DebugLoc.emplace_back(BeginSectionLabel, MBB.getEndSymbol(), Values);
+        DebugLoc.emplace_back(MBBSectionRange.BeginLabel,
+                              MBBSectionRange.EndLabel, Values);
       }
     } else {
       DebugLoc.emplace_back(StartLabel, EndLabel, Values);
@@ -1824,22 +1824,27 @@ bool DwarfDebug::buildLocationList(SmallVectorImpl<DebugLocEntry> &DebugLoc,
     RangeMBB = &Asm->MF->front();
   else
     RangeMBB = Entries.begin()->getInstr()->getParent();
+  auto RangeIt = Asm->MBBSectionRanges.find(RangeMBB->getSectionID());
+  assert(RangeIt != Asm->MBBSectionRanges.end() &&
+         "Range MBB not found in MBBSectionRanges!");
   auto *CurEntry = DebugLoc.begin();
   auto *NextEntry = std::next(CurEntry);
+  auto NextRangeIt = std::next(RangeIt);
   while (NextEntry != DebugLoc.end()) {
-    // Get the last machine basic block of this section.
-    while (!RangeMBB->isEndSection())
-      RangeMBB = RangeMBB->getNextNode();
-    if (!RangeMBB->getNextNode())
+    if (NextRangeIt == Asm->MBBSectionRanges.end())
       return false;
     // CurEntry should end the current section and NextEntry should start
     // the next section and the Values must match for these two ranges to be
-    // merged.
-    if (CurEntry->getEndSym() != RangeMBB->getEndSymbol() ||
-        NextEntry->getBeginSym() != RangeMBB->getNextNode()->getSymbol() ||
+    // merged.  Do not match the section label end if it is the entry block
+    // section.  This is because the end label for the Debug Loc and the
+    // Function end label could be different.
+    if ((RangeIt->second.EndLabel != Asm->getFunctionEnd() &&
+         CurEntry->getEndSym() != RangeIt->second.EndLabel) ||
+        NextEntry->getBeginSym() != NextRangeIt->second.BeginLabel ||
         CurEntry->getValues() != NextEntry->getValues())
       return false;
-    RangeMBB = RangeMBB->getNextNode();
+    RangeIt = NextRangeIt;
+    NextRangeIt = std::next(RangeIt);
     CurEntry = NextEntry;
     NextEntry = std::next(CurEntry);
   }
@@ -1919,10 +1924,6 @@ void DwarfDebug::collectEntityInfo(DwarfCompileUnit &TheCU,
         continue;
       }
     }
-
-    // Do not emit location lists if .debug_loc secton is disabled.
-    if (!useLocSection())
-      continue;
 
     // Handle multiple DBG_VALUE instructions describing one variable.
     DebugLocStream::ListBuilder List(DebugLocs, TheCU, *Asm, *RegVar);
@@ -2114,9 +2115,9 @@ void DwarfDebug::beginInstruction(const MachineInstr *MI) {
   // (The new location might be an explicit line 0, which we do emit.)
   if (DL.getLine() == 0 && LastAsmLine == 0)
     return;
-  if (DL == PrologEndLoc) {
+  if (MI == PrologEndLoc) {
     Flags |= DWARF2_FLAG_PROLOGUE_END | DWARF2_FLAG_IS_STMT;
-    PrologEndLoc = DebugLoc();
+    PrologEndLoc = nullptr;
   }
   // If the line changed, we call that a new statement; unless we went to
   // line 0 and came back, in which case it is not a new statement.
@@ -2132,10 +2133,11 @@ void DwarfDebug::beginInstruction(const MachineInstr *MI) {
     PrevInstLoc = DL;
 }
 
-static std::pair<DebugLoc, bool> findPrologueEndLoc(const MachineFunction *MF) {
+static std::pair<const MachineInstr *, bool>
+findPrologueEndLoc(const MachineFunction *MF) {
   // First known non-DBG_VALUE and non-frame setup location marks
   // the beginning of the function body.
-  DebugLoc LineZeroLoc;
+  const MachineInstr *LineZeroLoc = nullptr;
   const Function &F = MF->getFunction();
 
   // Some instructions may be inserted into prologue after this function. Must
@@ -2152,9 +2154,9 @@ static std::pair<DebugLoc, bool> findPrologueEndLoc(const MachineFunction *MF) {
           // meaningful breakpoint. If none is found, return the first
           // location after the frame setup.
           if (MI.getDebugLoc().getLine())
-            return std::make_pair(MI.getDebugLoc(), IsEmptyPrologue);
+            return std::make_pair(&MI, IsEmptyPrologue);
 
-          LineZeroLoc = MI.getDebugLoc();
+          LineZeroLoc = &MI;
         }
         IsEmptyPrologue = false;
       }
@@ -2185,30 +2187,29 @@ static void recordSourceLine(AsmPrinter &Asm, unsigned Line, unsigned Col,
                                          Discriminator, Fn);
 }
 
-DebugLoc DwarfDebug::emitInitialLocDirective(const MachineFunction &MF,
-                                             unsigned CUID) {
-  std::pair<DebugLoc, bool> PrologEnd = findPrologueEndLoc(&MF);
-  DebugLoc PrologEndLoc = PrologEnd.first;
+const MachineInstr *
+DwarfDebug::emitInitialLocDirective(const MachineFunction &MF, unsigned CUID) {
+  std::pair<const MachineInstr *, bool> PrologEnd = findPrologueEndLoc(&MF);
+  const MachineInstr *PrologEndLoc = PrologEnd.first;
   bool IsEmptyPrologue = PrologEnd.second;
 
-  // Get beginning of function.
-  if (PrologEndLoc) {
-    // If the prolog is empty, no need to generate scope line for the proc.
-    if (IsEmptyPrologue)
+  // If the prolog is empty, no need to generate scope line for the proc.
+  if (IsEmptyPrologue)
+    // In degenerate cases, we can have functions with no source locations
+    // at all. These want a scope line, to avoid a totally empty function.
+    // Thus, only skip scope line if there's location to place prologue_end.
+    if (PrologEndLoc)
       return PrologEndLoc;
 
-    // Ensure the compile unit is created if the function is called before
-    // beginFunction().
-    (void)getOrCreateDwarfCompileUnit(
-        MF.getFunction().getSubprogram()->getUnit());
-    // We'd like to list the prologue as "not statements" but GDB behaves
-    // poorly if we do that. Revisit this with caution/GDB (7.5+) testing.
-    const DISubprogram *SP = PrologEndLoc->getInlinedAtScope()->getSubprogram();
-    ::recordSourceLine(*Asm, SP->getScopeLine(), 0, SP, DWARF2_FLAG_IS_STMT,
-                       CUID, getDwarfVersion(), getUnits());
-    return PrologEndLoc;
-  }
-  return DebugLoc();
+  // Ensure the compile unit is created if the function is called before
+  // beginFunction().
+  DISubprogram *SP = MF.getFunction().getSubprogram();
+  (void)getOrCreateDwarfCompileUnit(SP->getUnit());
+  // We'd like to list the prologue as "not statements" but GDB behaves
+  // poorly if we do that. Revisit this with caution/GDB (7.5+) testing.
+  ::recordSourceLine(*Asm, SP->getScopeLine(), 0, SP, DWARF2_FLAG_IS_STMT,
+                     CUID, getDwarfVersion(), getUnits());
+  return PrologEndLoc;
 }
 
 // Gather pre-function debug information.  Assumes being called immediately
@@ -2831,7 +2832,8 @@ static void emitRangeList(
 
   // Gather all the ranges that apply to the same section so they can share
   // a base address entry.
-  MapVector<const MCSection *, std::vector<decltype(&*R.begin())>> SectionRanges;
+  SmallMapVector<const MCSection *, std::vector<decltype(&*R.begin())>, 16>
+      SectionRanges;
 
   for (const auto &Range : R)
     SectionRanges[&Range.Begin->getSection()].push_back(&Range);
@@ -2840,7 +2842,17 @@ static void emitRangeList(
   bool BaseIsSet = false;
   for (const auto &P : SectionRanges) {
     auto *Base = CUBase;
-    if (!Base && ShouldUseBaseAddress) {
+    if ((Asm->TM.getTargetTriple().isNVPTX() && DD.tuneForGDB())) {
+      // PTX does not support subtracting labels from the code section in the
+      // debug_loc section.  To work around this, the NVPTX backend needs the
+      // compile unit to have no low_pc in order to have a zero base_address
+      // when handling debug_loc in cuda-gdb.  Additionally, cuda-gdb doesn't
+      // seem to handle setting a per-variable base to zero.  To make cuda-gdb
+      // happy, just emit labels with no base while having no compile unit
+      // low_pc.
+      BaseIsSet = false;
+      Base = nullptr;
+    } else if (!Base && ShouldUseBaseAddress) {
       const MCSymbol *Begin = P.second.front()->Begin;
       const MCSymbol *NewBase = DD.getSectionLabel(&Begin->getSection());
       if (!UseDwarf5) {
@@ -3682,8 +3694,10 @@ void DwarfDebug::beginCodeAlignment(const MachineBasicBlock &MBB) {
     return;
 
   auto PrevLoc = Asm->OutStreamer->getContext().getCurrentDwarfLoc();
-  Asm->OutStreamer->emitDwarfLocDirective(
-      PrevLoc.getFileNum(), 0, PrevLoc.getColumn(), 0, 0, 0, StringRef());
-  MCDwarfLineEntry::make(Asm->OutStreamer.get(),
-                         Asm->OutStreamer->getCurrentSectionOnly());
+  if (PrevLoc.getLine()) {
+    Asm->OutStreamer->emitDwarfLocDirective(
+        PrevLoc.getFileNum(), 0, PrevLoc.getColumn(), 0, 0, 0, StringRef());
+    MCDwarfLineEntry::make(Asm->OutStreamer.get(),
+                           Asm->OutStreamer->getCurrentSectionOnly());
+  }
 }

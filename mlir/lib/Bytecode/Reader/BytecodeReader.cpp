@@ -2017,10 +2017,9 @@ LogicalResult BytecodeReader::Impl::sortUseListOrder(Value value) {
   DenseSet<unsigned> set;
   uint64_t accumulator = 0;
   for (const auto &elem : shuffle) {
-    if (set.contains(elem))
+    if (!set.insert(elem).second)
       return failure();
     accumulator += elem;
-    set.insert(elem);
   }
   if (numUses != shuffle.size() ||
       accumulator != (((numUses - 1) * numUses) >> 1))
@@ -2511,7 +2510,7 @@ LogicalResult BytecodeReader::Impl::defineValues(EncodingReader &reader,
 }
 
 Value BytecodeReader::Impl::createForwardRef() {
-  // Check for an avaliable existing operation to use. Otherwise, create a new
+  // Check for an available existing operation to use. Otherwise, create a new
   // fake operation to use for the reference.
   if (!openForwardRefOps.empty()) {
     Operation *op = &openForwardRefOps.back();

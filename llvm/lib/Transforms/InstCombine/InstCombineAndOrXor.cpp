@@ -181,12 +181,15 @@ static unsigned conjugateICmpMask(unsigned Mask) {
 // Adapts the external decomposeBitTestICmp for local use.
 static bool decomposeBitTestICmp(Value *LHS, Value *RHS, CmpInst::Predicate &Pred,
                                  Value *&X, Value *&Y, Value *&Z) {
-  APInt Mask;
-  if (!llvm::decomposeBitTestICmp(LHS, RHS, Pred, X, Mask))
+  auto Res = llvm::decomposeBitTestICmp(
+      LHS, RHS, Pred, /*LookThroughTrunc=*/true, /*AllowNonZeroC=*/true);
+  if (!Res)
     return false;
 
-  Y = ConstantInt::get(X->getType(), Mask);
-  Z = ConstantInt::get(X->getType(), 0);
+  Pred = Res->Pred;
+  X = Res->X;
+  Y = ConstantInt::get(X->getType(), Res->Mask);
+  Z = ConstantInt::get(X->getType(), Res->C);
   return true;
 }
 
@@ -270,6 +273,10 @@ static std::optional<std::pair<unsigned, unsigned>> getMaskedTypeForICmpPair(
       E = R2;
       Ok = true;
     }
+
+    // Avoid matching against the -1 value we created for unmasked operand.
+    if (Ok && match(A, m_AllOnes()))
+      Ok = false;
   }
 
   // Bail if RHS was a icmp that can't be decomposed into an equality.
@@ -866,11 +873,15 @@ static Value *foldSignedTruncationCheck(ICmpInst *ICmp0, ICmpInst *ICmp1,
                            APInt &UnsetBitsMask) -> bool {
     CmpInst::Predicate Pred = ICmp->getPredicate();
     // Can it be decomposed into  icmp eq (X & Mask), 0  ?
-    if (llvm::decomposeBitTestICmp(ICmp->getOperand(0), ICmp->getOperand(1),
-                                   Pred, X, UnsetBitsMask,
-                                   /*LookThroughTrunc=*/false) &&
-        Pred == ICmpInst::ICMP_EQ)
+    auto Res =
+        llvm::decomposeBitTestICmp(ICmp->getOperand(0), ICmp->getOperand(1),
+                                   Pred, /*LookThroughTrunc=*/false);
+    if (Res && Res->Pred == ICmpInst::ICMP_EQ) {
+      X = Res->X;
+      UnsetBitsMask = Res->Mask;
       return true;
+    }
+
     // Is it  icmp eq (X & Mask), 0  already?
     const APInt *Mask;
     if (match(ICmp, m_ICmp(Pred, m_And(m_Value(X), m_APInt(Mask)), m_Zero())) &&
@@ -924,9 +935,11 @@ static Value *foldSignedTruncationCheck(ICmpInst *ICmp0, ICmpInst *ICmp1,
 
 /// Fold (icmp eq ctpop(X) 1) | (icmp eq X 0) into (icmp ult ctpop(X) 2) and
 /// fold (icmp ne ctpop(X) 1) & (icmp ne X 0) into (icmp ugt ctpop(X) 1).
-/// Also used for logical and/or, must be poison safe.
+/// Also used for logical and/or, must be poison safe if range attributes are
+/// dropped.
 static Value *foldIsPowerOf2OrZero(ICmpInst *Cmp0, ICmpInst *Cmp1, bool IsAnd,
-                                   InstCombiner::BuilderTy &Builder) {
+                                   InstCombiner::BuilderTy &Builder,
+                                   InstCombinerImpl &IC) {
   CmpInst::Predicate Pred0, Pred1;
   Value *X;
   if (!match(Cmp0, m_ICmp(Pred0, m_Intrinsic<Intrinsic::ctpop>(m_Value(X)),
@@ -934,19 +947,29 @@ static Value *foldIsPowerOf2OrZero(ICmpInst *Cmp0, ICmpInst *Cmp1, bool IsAnd,
       !match(Cmp1, m_ICmp(Pred1, m_Specific(X), m_ZeroInt())))
     return nullptr;
 
-  Value *CtPop = Cmp0->getOperand(0);
-  if (IsAnd && Pred0 == ICmpInst::ICMP_NE && Pred1 == ICmpInst::ICMP_NE)
+  auto *CtPop = cast<Instruction>(Cmp0->getOperand(0));
+  if (IsAnd && Pred0 == ICmpInst::ICMP_NE && Pred1 == ICmpInst::ICMP_NE) {
+    // Drop range attributes and re-infer them in the next iteration.
+    CtPop->dropPoisonGeneratingAnnotations();
+    IC.addToWorklist(CtPop);
     return Builder.CreateICmpUGT(CtPop, ConstantInt::get(CtPop->getType(), 1));
-  if (!IsAnd && Pred0 == ICmpInst::ICMP_EQ && Pred1 == ICmpInst::ICMP_EQ)
+  }
+  if (!IsAnd && Pred0 == ICmpInst::ICMP_EQ && Pred1 == ICmpInst::ICMP_EQ) {
+    // Drop range attributes and re-infer them in the next iteration.
+    CtPop->dropPoisonGeneratingAnnotations();
+    IC.addToWorklist(CtPop);
     return Builder.CreateICmpULT(CtPop, ConstantInt::get(CtPop->getType(), 2));
+  }
 
   return nullptr;
 }
 
 /// Reduce a pair of compares that check if a value has exactly 1 bit set.
-/// Also used for logical and/or, must be poison safe.
+/// Also used for logical and/or, must be poison safe if range attributes are
+/// dropped.
 static Value *foldIsPowerOf2(ICmpInst *Cmp0, ICmpInst *Cmp1, bool JoinedByAnd,
-                             InstCombiner::BuilderTy &Builder) {
+                             InstCombiner::BuilderTy &Builder,
+                             InstCombinerImpl &IC) {
   // Handle 'and' / 'or' commutation: make the equality check the first operand.
   if (JoinedByAnd && Cmp1->getPredicate() == ICmpInst::ICMP_NE)
     std::swap(Cmp0, Cmp1);
@@ -960,7 +983,10 @@ static Value *foldIsPowerOf2(ICmpInst *Cmp0, ICmpInst *Cmp1, bool JoinedByAnd,
       match(Cmp1, m_SpecificICmp(ICmpInst::ICMP_ULT,
                                  m_Intrinsic<Intrinsic::ctpop>(m_Specific(X)),
                                  m_SpecificInt(2)))) {
-    Value *CtPop = Cmp1->getOperand(0);
+    auto *CtPop = cast<Instruction>(Cmp1->getOperand(0));
+    // Drop range attributes and re-infer them in the next iteration.
+    CtPop->dropPoisonGeneratingAnnotations();
+    IC.addToWorklist(CtPop);
     return Builder.CreateICmpEQ(CtPop, ConstantInt::get(CtPop->getType(), 1));
   }
   // (X == 0) || (ctpop(X) u> 1) --> ctpop(X) != 1
@@ -969,7 +995,10 @@ static Value *foldIsPowerOf2(ICmpInst *Cmp0, ICmpInst *Cmp1, bool JoinedByAnd,
       match(Cmp1, m_SpecificICmp(ICmpInst::ICMP_UGT,
                                  m_Intrinsic<Intrinsic::ctpop>(m_Specific(X)),
                                  m_SpecificInt(1)))) {
-    Value *CtPop = Cmp1->getOperand(0);
+    auto *CtPop = cast<Instruction>(Cmp1->getOperand(0));
+    // Drop range attributes and re-infer them in the next iteration.
+    CtPop->dropPoisonGeneratingAnnotations();
+    IC.addToWorklist(CtPop);
     return Builder.CreateICmpNE(CtPop, ConstantInt::get(CtPop->getType(), 1));
   }
   return nullptr;
@@ -1502,8 +1531,10 @@ Value *InstCombinerImpl::foldLogicOfFCmps(FCmpInst *LHS, FCmpInst *RHS,
     }
     if (IsLessThanOrLessEqual(IsAnd ? PredL : PredR)) {
       BuilderTy::FastMathFlagGuard Guard(Builder);
-      Builder.setFastMathFlags(LHS->getFastMathFlags() |
-                               RHS->getFastMathFlags());
+      FastMathFlags NewFlag = LHS->getFastMathFlags();
+      if (!IsLogicalSelect)
+        NewFlag |= RHS->getFastMathFlags();
+      Builder.setFastMathFlags(NewFlag);
 
       Value *FAbs = Builder.CreateUnaryIntrinsic(Intrinsic::fabs, LHS0);
       return Builder.CreateFCmp(PredL, FAbs,
@@ -2250,7 +2281,8 @@ foldBitwiseLogicWithIntrinsics(BinaryOperator &I,
         Builder.CreateBinOp(I.getOpcode(), X->getOperand(0), Y->getOperand(0));
     Value *NewOp1 =
         Builder.CreateBinOp(I.getOpcode(), X->getOperand(1), Y->getOperand(1));
-    Function *F = Intrinsic::getDeclaration(I.getModule(), IID, I.getType());
+    Function *F =
+        Intrinsic::getOrInsertDeclaration(I.getModule(), IID, I.getType());
     return CallInst::Create(F, {NewOp0, NewOp1, X->getOperand(2)});
   }
   case Intrinsic::bswap:
@@ -2261,7 +2293,8 @@ foldBitwiseLogicWithIntrinsics(BinaryOperator &I,
           : ConstantInt::get(I.getType(), IID == Intrinsic::bswap
                                               ? RHSC->byteSwap()
                                               : RHSC->reverseBits()));
-    Function *F = Intrinsic::getDeclaration(I.getModule(), IID, I.getType());
+    Function *F =
+        Intrinsic::getOrInsertDeclaration(I.getModule(), IID, I.getType());
     return CallInst::Create(F, {NewOp0});
   }
   default:
@@ -2691,13 +2724,15 @@ Instruction *InstCombinerImpl::visitAnd(BinaryOperator &I) {
       return BinaryOperator::CreateAnd(Builder.CreateNot(A), B);
   }
 
+  if (Value *Res =
+          foldBooleanAndOr(Op0, Op1, I, /*IsAnd=*/true, /*IsLogical=*/false))
+    return replaceInstUsesWith(I, Res);
+
   {
     ICmpInst *LHS = dyn_cast<ICmpInst>(Op0);
     ICmpInst *RHS = dyn_cast<ICmpInst>(Op1);
-    if (LHS && RHS)
-      if (Value *Res = foldAndOrOfICmps(LHS, RHS, I, /* IsAnd */ true))
-        return replaceInstUsesWith(I, Res);
 
+    // TODO: Base this on foldBooleanAndOr instead?
     // TODO: Make this recursive; it's a little tricky because an arbitrary
     // number of 'and' instructions might have to be created.
     if (LHS && match(Op1, m_OneUse(m_LogicalAnd(m_Value(X), m_Value(Y))))) {
@@ -2735,11 +2770,6 @@ Instruction *InstCombinerImpl::visitAnd(BinaryOperator &I) {
                                             : Builder.CreateAnd(X, Res));
     }
   }
-
-  if (FCmpInst *LHS = dyn_cast<FCmpInst>(I.getOperand(0)))
-    if (FCmpInst *RHS = dyn_cast<FCmpInst>(I.getOperand(1)))
-      if (Value *Res = foldLogicOfFCmps(LHS, RHS, /*IsAnd*/ true))
-        return replaceInstUsesWith(I, Res);
 
   if (Instruction *FoldedFCmps = reassociateFCmps(I, Builder))
     return FoldedFCmps;
@@ -3037,7 +3067,8 @@ InstCombinerImpl::convertOrOfShiftsToFunnelShift(Instruction &Or) {
 static Instruction *matchFunnelShift(Instruction &Or, InstCombinerImpl &IC) {
   if (auto Opt = IC.convertOrOfShiftsToFunnelShift(Or)) {
     auto [IID, FShiftArgs] = *Opt;
-    Function *F = Intrinsic::getDeclaration(Or.getModule(), IID, Or.getType());
+    Function *F =
+        Intrinsic::getOrInsertDeclaration(Or.getModule(), IID, Or.getType());
     return CallInst::Create(F, FShiftArgs);
   }
 
@@ -3076,8 +3107,7 @@ static Instruction *matchOrConcat(Instruction &Or,
     Value *NewUpper = Builder.CreateZExt(Hi, Ty);
     NewUpper = Builder.CreateShl(NewUpper, HalfWidth);
     Value *BinOp = Builder.CreateOr(NewLower, NewUpper);
-    Function *F = Intrinsic::getDeclaration(Or.getModule(), id, Ty);
-    return Builder.CreateCall(F, BinOp);
+    return Builder.CreateIntrinsic(id, Ty, BinOp);
   };
 
   // BSWAP: Push the concat down, swapping the lower/upper sources.
@@ -3337,12 +3367,18 @@ Value *InstCombinerImpl::foldAndOrOfICmps(ICmpInst *LHS, ICmpInst *RHS,
   // We can convert this case to bitwise and, because both operands are used
   // on the LHS, and as such poison from both will propagate.
   if (Value *V = foldAndOrOfICmpsWithConstEq(RHS, LHS, IsAnd,
-                                             /*IsLogical*/ false, Builder, Q))
+                                             /*IsLogical=*/false, Builder, Q)) {
+    // If RHS is still used, we should drop samesign flag.
+    if (IsLogical && RHS->hasSameSign() && !RHS->use_empty()) {
+      RHS->setSameSign(false);
+      addToWorklist(RHS);
+    }
     return V;
+  }
 
-  if (Value *V = foldIsPowerOf2OrZero(LHS, RHS, IsAnd, Builder))
+  if (Value *V = foldIsPowerOf2OrZero(LHS, RHS, IsAnd, Builder, *this))
     return V;
-  if (Value *V = foldIsPowerOf2OrZero(RHS, LHS, IsAnd, Builder))
+  if (Value *V = foldIsPowerOf2OrZero(RHS, LHS, IsAnd, Builder, *this))
     return V;
 
   // TODO: One of these directions is fine with logical and/or, the other could
@@ -3364,7 +3400,7 @@ Value *InstCombinerImpl::foldAndOrOfICmps(ICmpInst *LHS, ICmpInst *RHS,
     if (Value *V = foldSignedTruncationCheck(LHS, RHS, I, Builder))
       return V;
 
-  if (Value *V = foldIsPowerOf2(LHS, RHS, IsAnd, Builder))
+  if (Value *V = foldIsPowerOf2(LHS, RHS, IsAnd, Builder, *this))
     return V;
 
   if (Value *V = foldPowerOf2AndShiftedMask(LHS, RHS, IsAnd, Builder))
@@ -3384,9 +3420,10 @@ Value *InstCombinerImpl::foldAndOrOfICmps(ICmpInst *LHS, ICmpInst *RHS,
   // (icmp ne A, 0) | (icmp ne B, 0) --> (icmp ne (A|B), 0)
   // (icmp eq A, 0) & (icmp eq B, 0) --> (icmp eq (A|B), 0)
   // TODO: Remove this and below when foldLogOpOfMaskedICmps can handle undefs.
-  if (!IsLogical && PredL == (IsAnd ? ICmpInst::ICMP_EQ : ICmpInst::ICMP_NE) &&
+  if (PredL == (IsAnd ? ICmpInst::ICMP_EQ : ICmpInst::ICMP_NE) &&
       PredL == PredR && match(LHS1, m_ZeroInt()) && match(RHS1, m_ZeroInt()) &&
-      LHS0->getType() == RHS0->getType()) {
+      LHS0->getType() == RHS0->getType() &&
+      (!IsLogical || isGuaranteedNotToBePoison(RHS0))) {
     Value *NewOr = Builder.CreateOr(LHS0, RHS0);
     return Builder.CreateICmp(PredL, NewOr,
                               Constant::getNullValue(NewOr->getType()));
@@ -3394,9 +3431,10 @@ Value *InstCombinerImpl::foldAndOrOfICmps(ICmpInst *LHS, ICmpInst *RHS,
 
   // (icmp ne A, -1) | (icmp ne B, -1) --> (icmp ne (A&B), -1)
   // (icmp eq A, -1) & (icmp eq B, -1) --> (icmp eq (A&B), -1)
-  if (!IsLogical && PredL == (IsAnd ? ICmpInst::ICMP_EQ : ICmpInst::ICMP_NE) &&
+  if (PredL == (IsAnd ? ICmpInst::ICMP_EQ : ICmpInst::ICMP_NE) &&
       PredL == PredR && match(LHS1, m_AllOnes()) && match(RHS1, m_AllOnes()) &&
-      LHS0->getType() == RHS0->getType()) {
+      LHS0->getType() == RHS0->getType() &&
+      (!IsLogical || isGuaranteedNotToBePoison(RHS0))) {
     Value *NewAnd = Builder.CreateAnd(LHS0, RHS0);
     return Builder.CreateICmp(PredL, NewAnd,
                               Constant::getAllOnesValue(LHS0->getType()));
@@ -3481,6 +3519,27 @@ Value *InstCombinerImpl::foldAndOrOfICmps(ICmpInst *LHS, ICmpInst *RHS,
   }
 
   return foldAndOrOfICmpsUsingRanges(LHS, RHS, IsAnd);
+}
+
+/// If IsLogical is true, then the and/or is in select form and the transform
+/// must be poison-safe.
+Value *InstCombinerImpl::foldBooleanAndOr(Value *LHS, Value *RHS,
+                                          Instruction &I, bool IsAnd,
+                                          bool IsLogical) {
+  if (!LHS->getType()->isIntOrIntVectorTy(1))
+    return nullptr;
+
+  if (auto *LHSCmp = dyn_cast<ICmpInst>(LHS))
+    if (auto *RHSCmp = dyn_cast<ICmpInst>(RHS))
+      if (Value *Res = foldAndOrOfICmps(LHSCmp, RHSCmp, I, IsAnd, IsLogical))
+        return Res;
+
+  if (auto *LHSCmp = dyn_cast<FCmpInst>(LHS))
+    if (auto *RHSCmp = dyn_cast<FCmpInst>(RHS))
+      if (Value *Res = foldLogicOfFCmps(LHSCmp, RHSCmp, IsAnd, IsLogical))
+        return Res;
+
+  return nullptr;
 }
 
 static Value *foldOrOfInversions(BinaryOperator &I,
@@ -3573,6 +3632,17 @@ Instruction *InstCombinerImpl::visitOr(BinaryOperator &I) {
 
   if (Instruction *R = tryFoldInstWithCtpopWithNot(&I))
     return R;
+
+  if (cast<PossiblyDisjointInst>(I).isDisjoint()) {
+    if (Instruction *R =
+            foldAddLikeCommutative(I.getOperand(0), I.getOperand(1),
+                                   /*NSW=*/true, /*NUW=*/true))
+      return R;
+    if (Instruction *R =
+            foldAddLikeCommutative(I.getOperand(1), I.getOperand(0),
+                                   /*NSW=*/true, /*NUW=*/true))
+      return R;
+  }
 
   Value *X, *Y;
   const APInt *CV;
@@ -3753,13 +3823,15 @@ Instruction *InstCombinerImpl::visitOr(BinaryOperator &I) {
   if (SwappedForXor)
     std::swap(Op0, Op1);
 
+  if (Value *Res =
+          foldBooleanAndOr(Op0, Op1, I, /*IsAnd=*/false, /*IsLogical=*/false))
+    return replaceInstUsesWith(I, Res);
+
   {
     ICmpInst *LHS = dyn_cast<ICmpInst>(Op0);
     ICmpInst *RHS = dyn_cast<ICmpInst>(Op1);
-    if (LHS && RHS)
-      if (Value *Res = foldAndOrOfICmps(LHS, RHS, I, /* IsAnd */ false))
-        return replaceInstUsesWith(I, Res);
 
+    // TODO: Base this on foldBooleanAndOr instead?
     // TODO: Make this recursive; it's a little tricky because an arbitrary
     // number of 'or' instructions might have to be created.
     Value *X, *Y;
@@ -3798,11 +3870,6 @@ Instruction *InstCombinerImpl::visitOr(BinaryOperator &I) {
                                             : Builder.CreateOr(X, Res));
     }
   }
-
-  if (FCmpInst *LHS = dyn_cast<FCmpInst>(I.getOperand(0)))
-    if (FCmpInst *RHS = dyn_cast<FCmpInst>(I.getOperand(1)))
-      if (Value *Res = foldLogicOfFCmps(LHS, RHS, /*IsAnd*/ false))
-        return replaceInstUsesWith(I, Res);
 
   if (Instruction *FoldedFCmps = reassociateFCmps(I, Builder))
     return FoldedFCmps;
@@ -4671,12 +4738,24 @@ Instruction *InstCombinerImpl::visitXor(BinaryOperator &I) {
   if (Instruction *R = foldBinOpShiftWithShift(I))
     return R;
 
+  Value *Op0 = I.getOperand(0), *Op1 = I.getOperand(1);
+  Value *X, *Y, *M;
+
+  // (X | Y) ^ M -> (X ^ M) ^ Y
+  // (X | Y) ^ M -> (Y ^ M) ^ X
+  if (match(&I, m_c_Xor(m_OneUse(m_DisjointOr(m_Value(X), m_Value(Y))),
+                        m_Value(M)))) {
+    if (Value *XorAC = simplifyXorInst(X, M, SQ.getWithInstruction(&I)))
+      return BinaryOperator::CreateXor(XorAC, Y);
+
+    if (Value *XorBC = simplifyXorInst(Y, M, SQ.getWithInstruction(&I)))
+      return BinaryOperator::CreateXor(XorBC, X);
+  }
+
   // Fold (X & M) ^ (Y & ~M) -> (X & M) | (Y & ~M)
   // This it a special case in haveNoCommonBitsSet, but the computeKnownBits
   // calls in there are unnecessary as SimplifyDemandedInstructionBits should
   // have already taken care of those cases.
-  Value *Op0 = I.getOperand(0), *Op1 = I.getOperand(1);
-  Value *M;
   if (match(&I, m_c_Xor(m_c_And(m_Not(m_Value(M)), m_Value()),
                         m_c_And(m_Deferred(M), m_Value())))) {
     if (isGuaranteedNotToBeUndef(M))
@@ -4688,7 +4767,6 @@ Instruction *InstCombinerImpl::visitXor(BinaryOperator &I) {
   if (Instruction *Xor = visitMaskedMerge(I, Builder))
     return Xor;
 
-  Value *X, *Y;
   Constant *C1;
   if (match(Op1, m_Constant(C1))) {
     Constant *C2;
@@ -4760,7 +4838,8 @@ Instruction *InstCombinerImpl::visitXor(BinaryOperator &I) {
             match(II->getArgOperand(1), m_One()) &&
             isKnownToBeAPowerOfTwo(II->getArgOperand(0), /*OrZero */ true)) {
           IID = (IID == Intrinsic::ctlz) ? Intrinsic::cttz : Intrinsic::ctlz;
-          Function *F = Intrinsic::getDeclaration(II->getModule(), IID, Ty);
+          Function *F =
+              Intrinsic::getOrInsertDeclaration(II->getModule(), IID, Ty);
           return CallInst::Create(F, {II->getArgOperand(0), Builder.getTrue()});
         }
       }

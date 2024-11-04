@@ -290,10 +290,10 @@ static IdentifyingPassPtr overridePass(AnalysisID StandardID,
   if (StandardID == &BranchFolderPassID)
     return applyDisable(TargetID, DisableBranchFold);
 
-  if (StandardID == &TailDuplicateID)
+  if (StandardID == &TailDuplicateLegacyID)
     return applyDisable(TargetID, DisableTailDuplicate);
 
-  if (StandardID == &EarlyTailDuplicateID)
+  if (StandardID == &EarlyTailDuplicateLegacyID)
     return applyDisable(TargetID, DisableEarlyTailDup);
 
   if (StandardID == &MachineBlockPlacementID)
@@ -305,13 +305,13 @@ static IdentifyingPassPtr overridePass(AnalysisID StandardID,
   if (StandardID == &DeadMachineInstructionElimID)
     return applyDisable(TargetID, DisableMachineDCE);
 
-  if (StandardID == &EarlyIfConverterID)
+  if (StandardID == &EarlyIfConverterLegacyID)
     return applyDisable(TargetID, DisableEarlyIfConversion);
 
   if (StandardID == &EarlyMachineLICMID)
     return applyDisable(TargetID, DisableMachineLICM);
 
-  if (StandardID == &MachineCSEID)
+  if (StandardID == &MachineCSELegacyID)
     return applyDisable(TargetID, DisableMachineCSE);
 
   if (StandardID == &MachineLICMID)
@@ -521,9 +521,9 @@ void llvm::registerCodeGenCallback(PassInstrumentationCallbacks &PIC,
     DISABLE_PASS(DisableBlockPlacement, MachineBlockPlacementPass)
     DISABLE_PASS(DisableBranchFold, BranchFolderPass)
     DISABLE_PASS(DisableCopyProp, MachineCopyPropagationPass)
-    DISABLE_PASS(DisableEarlyIfConversion, EarlyIfConverterPass)
+    DISABLE_PASS(DisableEarlyIfConversion, EarlyIfConverterLegacyPass)
     DISABLE_PASS(DisableEarlyTailDup, EarlyTailDuplicatePass)
-    DISABLE_PASS(DisableMachineCSE, MachineCSEPass)
+    DISABLE_PASS(DisableMachineCSE, MachineCSELegacyPass)
     DISABLE_PASS(DisableMachineDCE, DeadMachineInstructionElimPass)
     DISABLE_PASS(DisableMachineLICM, EarlyMachineLICMPass)
     DISABLE_PASS(DisableMachineSink, MachineSinkingPass)
@@ -1206,6 +1206,7 @@ void TargetPassConfig::addMachinePasses() {
   // addPreEmitPass.  Maybe only pass "false" here for those targets?
   addPass(&FuncletLayoutID);
 
+  addPass(&RemoveLoadsIntoFakeUsesID);
   addPass(&StackMapLivenessID);
   addPass(&LiveDebugValuesID);
   addPass(&MachineSanitizerBinaryMetadataID);
@@ -1278,15 +1279,15 @@ void TargetPassConfig::addMachinePasses() {
 /// Add passes that optimize machine instructions in SSA form.
 void TargetPassConfig::addMachineSSAOptimization() {
   // Pre-ra tail duplication.
-  addPass(&EarlyTailDuplicateID);
+  addPass(&EarlyTailDuplicateLegacyID);
 
   // Optimize PHIs before DCE: removing dead PHI cycles may make more
   // instructions dead.
-  addPass(&OptimizePHIsID);
+  addPass(&OptimizePHIsLegacyID);
 
   // This pass merges large allocas. StackSlotColoring is a different pass
   // which merges spill slots.
-  addPass(&StackColoringID);
+  addPass(&StackColoringLegacyID);
 
   // If the target requests it, assign local variables to stack slots relative
   // to one another and simplify frame index references where possible.
@@ -1304,7 +1305,7 @@ void TargetPassConfig::addMachineSSAOptimization() {
   addILPOpts();
 
   addPass(&EarlyMachineLICMID);
-  addPass(&MachineCSEID);
+  addPass(&MachineCSELegacyID);
 
   addPass(&MachineSinkingID);
 
@@ -1506,7 +1507,7 @@ void TargetPassConfig::addMachineLateOptimization() {
   // performance for targets that require Structured Control Flow.
   // In addition it can also make CFG irreducible. Thus we disable it.
   if (!TM->requiresStructuredCFG())
-    addPass(&TailDuplicateID);
+    addPass(&TailDuplicateLegacyID);
 
   // Copy propagation.
   addPass(&MachineCopyPropagationID);

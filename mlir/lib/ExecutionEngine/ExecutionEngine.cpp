@@ -432,7 +432,7 @@ Expected<void *> ExecutionEngine::lookup(StringRef name) const {
     llvm::raw_string_ostream os(errorMessage);
     llvm::handleAllErrors(expectedSymbol.takeError(),
                           [&os](llvm::ErrorInfoBase &ei) { ei.log(os); });
-    return makeStringError(os.str());
+    return makeStringError(errorMessage);
   }
 
   if (void *fptr = expectedSymbol->toPtr<void *>())

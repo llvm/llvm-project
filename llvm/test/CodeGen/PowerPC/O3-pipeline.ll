@@ -70,9 +70,6 @@
 ; CHECK-NEXT:       CodeGen Prepare
 ; CHECK-NEXT:       Dominator Tree Construction
 ; CHECK-NEXT:       Exception handling preparation
-; CHECK-NEXT:       PPC Merge String Pool
-; CHECK-NEXT:       FunctionPass Manager
-; CHECK-NEXT:       Dominator Tree Construction
 ; CHECK-NEXT:       Natural Loop Information
 ; CHECK-NEXT:       Scalar Evolution Analysis
 ; CHECK-NEXT:       Prepare loop for ppc preferred instruction forms
@@ -212,9 +209,9 @@
 ; CHECK-NEXT:       Insert XRay ops
 ; CHECK-NEXT:       Implement the 'patchable-function' attribute
 ; CHECK-NEXT:       PowerPC Pre-Emit Peephole
-; CHECK-NEXT:       PowerPC Expand ISEL Generation
 ; CHECK-NEXT:       PowerPC Early-Return Creation
 ; CHECK-NEXT:       Contiguously Lay Out Funclets
+; CHECK-NEXT:       Remove Loads Into Fake Uses
 ; CHECK-NEXT:       StackMap Liveness Analysis
 ; CHECK-NEXT:       Live DEBUG_VALUE analysis
 ; CHECK-NEXT:       Machine Sanitizer Binary Metadata

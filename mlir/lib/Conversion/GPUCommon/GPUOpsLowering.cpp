@@ -340,6 +340,34 @@ static SmallString<16> getUniqueFormatGlobalName(gpu::GPUModuleOp moduleOp) {
   return stringConstName;
 }
 
+/// Create an global that contains the given format string. If a global with
+/// the same format string exists already in the module, return that global.
+static LLVM::GlobalOp getOrCreateFormatStringConstant(
+    OpBuilder &b, Location loc, gpu::GPUModuleOp moduleOp, Type llvmI8,
+    StringRef str, uint64_t alignment = 0, unsigned addrSpace = 0) {
+  llvm::SmallString<20> formatString(str);
+  formatString.push_back('\0'); // Null terminate for C
+  auto globalType =
+      LLVM::LLVMArrayType::get(llvmI8, formatString.size_in_bytes());
+  StringAttr attr = b.getStringAttr(formatString);
+
+  // Try to find existing global.
+  for (auto globalOp : moduleOp.getOps<LLVM::GlobalOp>())
+    if (globalOp.getGlobalType() == globalType && globalOp.getConstant() &&
+        globalOp.getValueAttr() == attr &&
+        globalOp.getAlignment().value_or(0) == alignment &&
+        globalOp.getAddrSpace() == addrSpace)
+      return globalOp;
+
+  // Not found: create new global.
+  OpBuilder::InsertionGuard guard(b);
+  b.setInsertionPointToStart(moduleOp.getBody());
+  SmallString<16> name = getUniqueFormatGlobalName(moduleOp);
+  return b.create<LLVM::GlobalOp>(loc, globalType,
+                                  /*isConstant=*/true, LLVM::Linkage::Internal,
+                                  name, attr, alignment, addrSpace);
+}
+
 template <typename T>
 static LLVM::LLVMFuncOp getOrDefineFunction(T &moduleOp, const Location loc,
                                             ConversionPatternRewriter &rewriter,
@@ -391,33 +419,20 @@ LogicalResult GPUPrintfOpToHIPLowering::matchAndRewrite(
   auto printfBeginCall = rewriter.create<LLVM::CallOp>(loc, ocklBegin, zeroI64);
   Value printfDesc = printfBeginCall.getResult();
 
-  // Get a unique global name for the format.
-  SmallString<16> stringConstName = getUniqueFormatGlobalName(moduleOp);
-
-  llvm::SmallString<20> formatString(adaptor.getFormat());
-  formatString.push_back('\0'); // Null terminate for C
-  size_t formatStringSize = formatString.size_in_bytes();
-
-  auto globalType = LLVM::LLVMArrayType::get(llvmI8, formatStringSize);
-  LLVM::GlobalOp global;
-  {
-    ConversionPatternRewriter::InsertionGuard guard(rewriter);
-    rewriter.setInsertionPointToStart(moduleOp.getBody());
-    global = rewriter.create<LLVM::GlobalOp>(
-        loc, globalType,
-        /*isConstant=*/true, LLVM::Linkage::Internal, stringConstName,
-        rewriter.getStringAttr(formatString));
-  }
+  // Create the global op or find an existing one.
+  LLVM::GlobalOp global = getOrCreateFormatStringConstant(
+      rewriter, loc, moduleOp, llvmI8, adaptor.getFormat());
 
   // Get a pointer to the format string's first element and pass it to printf()
   Value globalPtr = rewriter.create<LLVM::AddressOfOp>(
       loc,
       LLVM::LLVMPointerType::get(rewriter.getContext(), global.getAddrSpace()),
       global.getSymNameAttr());
-  Value stringStart = rewriter.create<LLVM::GEPOp>(
-      loc, ptrType, globalType, globalPtr, ArrayRef<LLVM::GEPArg>{0, 0});
-  Value stringLen =
-      rewriter.create<LLVM::ConstantOp>(loc, llvmI64, formatStringSize);
+  Value stringStart =
+      rewriter.create<LLVM::GEPOp>(loc, ptrType, global.getGlobalType(),
+                                   globalPtr, ArrayRef<LLVM::GEPArg>{0, 0});
+  Value stringLen = rewriter.create<LLVM::ConstantOp>(
+      loc, llvmI64, cast<StringAttr>(global.getValueAttr()).size());
 
   Value oneI32 = rewriter.create<LLVM::ConstantOp>(loc, llvmI32, 1);
   Value zeroI32 = rewriter.create<LLVM::ConstantOp>(loc, llvmI32, 0);
@@ -486,30 +501,19 @@ LogicalResult GPUPrintfOpToLLVMCallLowering::matchAndRewrite(
   LLVM::LLVMFuncOp printfDecl =
       getOrDefineFunction(moduleOp, loc, rewriter, "printf", printfType);
 
-  // Get a unique global name for the format.
-  SmallString<16> stringConstName = getUniqueFormatGlobalName(moduleOp);
-
-  llvm::SmallString<20> formatString(adaptor.getFormat());
-  formatString.push_back('\0'); // Null terminate for C
-  auto globalType =
-      LLVM::LLVMArrayType::get(llvmI8, formatString.size_in_bytes());
-  LLVM::GlobalOp global;
-  {
-    ConversionPatternRewriter::InsertionGuard guard(rewriter);
-    rewriter.setInsertionPointToStart(moduleOp.getBody());
-    global = rewriter.create<LLVM::GlobalOp>(
-        loc, globalType,
-        /*isConstant=*/true, LLVM::Linkage::Internal, stringConstName,
-        rewriter.getStringAttr(formatString), /*allignment=*/0, addressSpace);
-  }
+  // Create the global op or find an existing one.
+  LLVM::GlobalOp global = getOrCreateFormatStringConstant(
+      rewriter, loc, moduleOp, llvmI8, adaptor.getFormat(), /*alignment=*/0,
+      addressSpace);
 
   // Get a pointer to the format string's first element
   Value globalPtr = rewriter.create<LLVM::AddressOfOp>(
       loc,
       LLVM::LLVMPointerType::get(rewriter.getContext(), global.getAddrSpace()),
       global.getSymNameAttr());
-  Value stringStart = rewriter.create<LLVM::GEPOp>(
-      loc, ptrType, globalType, globalPtr, ArrayRef<LLVM::GEPArg>{0, 0});
+  Value stringStart =
+      rewriter.create<LLVM::GEPOp>(loc, ptrType, global.getGlobalType(),
+                                   globalPtr, ArrayRef<LLVM::GEPArg>{0, 0});
 
   // Construct arguments and function call
   auto argsRange = adaptor.getArgs();
@@ -541,27 +545,15 @@ LogicalResult GPUPrintfOpToVPrintfLowering::matchAndRewrite(
   LLVM::LLVMFuncOp vprintfDecl =
       getOrDefineFunction(moduleOp, loc, rewriter, "vprintf", vprintfType);
 
-  // Get a unique global name for the format.
-  SmallString<16> stringConstName = getUniqueFormatGlobalName(moduleOp);
-
-  llvm::SmallString<20> formatString(adaptor.getFormat());
-  formatString.push_back('\0'); // Null terminate for C
-  auto globalType =
-      LLVM::LLVMArrayType::get(llvmI8, formatString.size_in_bytes());
-  LLVM::GlobalOp global;
-  {
-    ConversionPatternRewriter::InsertionGuard guard(rewriter);
-    rewriter.setInsertionPointToStart(moduleOp.getBody());
-    global = rewriter.create<LLVM::GlobalOp>(
-        loc, globalType,
-        /*isConstant=*/true, LLVM::Linkage::Internal, stringConstName,
-        rewriter.getStringAttr(formatString), /*allignment=*/0);
-  }
+  // Create the global op or find an existing one.
+  LLVM::GlobalOp global = getOrCreateFormatStringConstant(
+      rewriter, loc, moduleOp, llvmI8, adaptor.getFormat());
 
   // Get a pointer to the format string's first element
   Value globalPtr = rewriter.create<LLVM::AddressOfOp>(loc, global);
-  Value stringStart = rewriter.create<LLVM::GEPOp>(
-      loc, ptrType, globalType, globalPtr, ArrayRef<LLVM::GEPArg>{0, 0});
+  Value stringStart =
+      rewriter.create<LLVM::GEPOp>(loc, ptrType, global.getGlobalType(),
+                                   globalPtr, ArrayRef<LLVM::GEPArg>{0, 0});
   SmallVector<Type> types;
   SmallVector<Value> args;
   // Promote and pack the arguments into a stack allocation.
@@ -642,11 +634,10 @@ static IntegerAttr wrapNumericMemorySpace(MLIRContext *ctx, unsigned space) {
 
 /// Generates a symbol with 0-sized array type for dynamic shared memory usage,
 /// or uses existing symbol.
-LLVM::GlobalOp
-getDynamicSharedMemorySymbol(ConversionPatternRewriter &rewriter,
-                             Operation *moduleOp, gpu::DynamicSharedMemoryOp op,
-                             const LLVMTypeConverter *typeConverter,
-                             MemRefType memrefType, unsigned alignmentBit) {
+LLVM::GlobalOp getDynamicSharedMemorySymbol(
+    ConversionPatternRewriter &rewriter, gpu::GPUModuleOp moduleOp,
+    gpu::DynamicSharedMemoryOp op, const LLVMTypeConverter *typeConverter,
+    MemRefType memrefType, unsigned alignmentBit) {
   uint64_t alignmentByte = alignmentBit / memrefType.getElementTypeBitWidth();
 
   FailureOr<unsigned> addressSpace =
@@ -661,8 +652,7 @@ getDynamicSharedMemorySymbol(ConversionPatternRewriter &rewriter,
   // Step 1. Collect symbol names of LLVM::GlobalOp Ops. Also if any of
   // LLVM::GlobalOp is suitable for shared memory, return it.
   llvm::StringSet<> existingGlobalNames;
-  for (auto globalOp :
-       moduleOp->getRegion(0).front().getOps<LLVM::GlobalOp>()) {
+  for (auto globalOp : moduleOp.getBody()->getOps<LLVM::GlobalOp>()) {
     existingGlobalNames.insert(globalOp.getSymName());
     if (auto arrayType = dyn_cast<LLVM::LLVMArrayType>(globalOp.getType())) {
       if (globalOp.getAddrSpace() == addressSpace.value() &&
@@ -684,7 +674,7 @@ getDynamicSharedMemorySymbol(ConversionPatternRewriter &rewriter,
 
   // Step 3. Generate a global op
   OpBuilder::InsertionGuard guard(rewriter);
-  rewriter.setInsertionPoint(&moduleOp->getRegion(0).front().front());
+  rewriter.setInsertionPointToStart(moduleOp.getBody());
 
   auto zeroSizedArrayType = LLVM::LLVMArrayType::get(
       typeConverter->convertType(memrefType.getElementType()), 0);
@@ -709,10 +699,8 @@ LogicalResult GPUDynamicSharedMemoryOpLowering::matchAndRewrite(
 
   // Step 2: Generate a global symbol or existing for the dynamic shared
   // memory with memref<0xi8> type
-  LLVM::LLVMFuncOp funcOp = op->getParentOfType<LLVM::LLVMFuncOp>();
-  LLVM::GlobalOp shmemOp = {};
-  Operation *moduleOp = funcOp->getParentWithTrait<OpTrait::SymbolTable>();
-  shmemOp = getDynamicSharedMemorySymbol(
+  auto moduleOp = op->getParentOfType<gpu::GPUModuleOp>();
+  LLVM::GlobalOp shmemOp = getDynamicSharedMemorySymbol(
       rewriter, moduleOp, op, getTypeConverter(), memrefType0sz, alignmentBit);
 
   // Step 3. Get address of the global symbol

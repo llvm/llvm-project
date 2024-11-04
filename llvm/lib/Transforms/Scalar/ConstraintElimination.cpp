@@ -385,7 +385,7 @@ struct Decomposition {
 struct OffsetResult {
   Value *BasePtr;
   APInt ConstantOffset;
-  MapVector<Value *, APInt> VariableOffsets;
+  SmallMapVector<Value *, APInt, 4> VariableOffsets;
   bool AllInbounds;
 
   OffsetResult() : BasePtr(nullptr), ConstantOffset(0, uint64_t(0)) {}
@@ -410,7 +410,7 @@ static OffsetResult collectOffsets(GEPOperator &GEP, const DataLayout &DL) {
   // If we have a nested GEP, check if we can combine the constant offset of the
   // inner GEP with the outer GEP.
   if (auto *InnerGEP = dyn_cast<GetElementPtrInst>(Result.BasePtr)) {
-    MapVector<Value *, APInt> VariableOffsets2;
+    SmallMapVector<Value *, APInt, 4> VariableOffsets2;
     APInt ConstantOffset2(BitWidth, 0);
     bool CanCollectInner = InnerGEP->collectOffset(
         DL, BitWidth, VariableOffsets2, ConstantOffset2);
@@ -1464,7 +1464,7 @@ static bool checkAndReplaceCmp(CmpIntrinsic *I, ConstraintInfo &Info,
     ToRemove.push_back(I);
     return true;
   }
-  if (checkCondition(ICmpInst::ICMP_EQ, LHS, RHS, I, Info)) {
+  if (checkCondition(ICmpInst::ICMP_EQ, LHS, RHS, I, Info).value_or(false)) {
     I->replaceAllUsesWith(ConstantInt::get(I->getType(), 0));
     ToRemove.push_back(I);
     return true;
@@ -1857,7 +1857,6 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT, LoopInfo &LI,
     std::string S;
     raw_string_ostream StringS(S);
     ReproducerModule->print(StringS, nullptr);
-    StringS.flush();
     OptimizationRemark Rem(DEBUG_TYPE, "Reproducer", &F);
     Rem << ore::NV("module") << S;
     ORE.emit(Rem);

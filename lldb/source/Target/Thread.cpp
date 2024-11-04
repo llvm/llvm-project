@@ -12,8 +12,6 @@
 #include "lldb/Core/FormatEntity.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/StructuredDataImpl.h"
-#include "lldb/Core/ValueObject.h"
-#include "lldb/Core/ValueObjectConstResult.h"
 #include "lldb/Host/Host.h"
 #include "lldb/Interpreter/OptionValueFileSpecList.h"
 #include "lldb/Interpreter/OptionValueProperties.h"
@@ -50,6 +48,8 @@
 #include "lldb/Utility/State.h"
 #include "lldb/Utility/Stream.h"
 #include "lldb/Utility/StreamString.h"
+#include "lldb/ValueObject/ValueObject.h"
+#include "lldb/ValueObject/ValueObjectConstResult.h"
 #include "lldb/lldb-enumerations.h"
 
 #include <memory>
@@ -619,6 +619,14 @@ void Thread::WillStop() {
 
 void Thread::SetupForResume() {
   if (GetResumeState() != eStateSuspended) {
+    // First check whether this thread is going to "actually" resume at all.
+    // For instance, if we're stepping from one level to the next of an
+    // virtual inlined call stack, we just change the inlined call stack index
+    // without actually running this thread.  In that case, for this thread we
+    // shouldn't push a step over breakpoint plan or do that work.
+    if (GetCurrentPlan()->IsVirtualStep())
+      return;
+
     // If we're at a breakpoint push the step-over breakpoint plan.  Do this
     // before telling the current plan it will resume, since we might change
     // what the current plan is.
@@ -1171,8 +1179,7 @@ Status Thread::QueueThreadPlan(ThreadPlanSP &thread_plan_sp,
   if (!thread_plan_sp->ValidatePlan(&s)) {
     DiscardThreadPlansUpToPlan(thread_plan_sp);
     thread_plan_sp.reset();
-    status.SetErrorString(s.GetString());
-    return status;
+    return Status(s.GetString().str());
   }
 
   if (abort_other_plans)
@@ -1187,8 +1194,7 @@ Status Thread::QueueThreadPlan(ThreadPlanSP &thread_plan_sp,
   if (!thread_plan_sp->ValidatePlan(&s)) {
     DiscardThreadPlansUpToPlan(thread_plan_sp);
     thread_plan_sp.reset();
-    status.SetErrorString(s.GetString());
-    return status;
+    return Status(s.GetString().str());
   }
 
   return status;
@@ -1239,7 +1245,8 @@ Status Thread::UnwindInnermostExpression() {
   Status error;
   ThreadPlan *innermost_expr_plan = GetPlans().GetInnermostExpression();
   if (!innermost_expr_plan) {
-    error.SetErrorString("No expressions currently active on this thread");
+    error = Status::FromErrorString(
+        "No expressions currently active on this thread");
     return error;
   }
   DiscardThreadPlansUpToPlan(innermost_expr_plan);
@@ -1461,7 +1468,7 @@ Status Thread::ReturnFromFrameWithIndex(uint32_t frame_idx,
   Status return_error;
 
   if (!frame_sp) {
-    return_error.SetErrorStringWithFormat(
+    return_error = Status::FromErrorStringWithFormat(
         "Could not find frame with index %d in thread 0x%" PRIx64 ".",
         frame_idx, GetID());
   }
@@ -1475,7 +1482,7 @@ Status Thread::ReturnFromFrame(lldb::StackFrameSP frame_sp,
   Status return_error;
 
   if (!frame_sp) {
-    return_error.SetErrorString("Can't return to a null frame.");
+    return_error = Status::FromErrorString("Can't return to a null frame.");
     return return_error;
   }
 
@@ -1483,14 +1490,15 @@ Status Thread::ReturnFromFrame(lldb::StackFrameSP frame_sp,
   uint32_t older_frame_idx = frame_sp->GetFrameIndex() + 1;
   StackFrameSP older_frame_sp = thread->GetStackFrameAtIndex(older_frame_idx);
   if (!older_frame_sp) {
-    return_error.SetErrorString("No older frame to return to.");
+    return_error = Status::FromErrorString("No older frame to return to.");
     return return_error;
   }
 
   if (return_value_sp) {
     lldb::ABISP abi = thread->GetProcess()->GetABI();
     if (!abi) {
-      return_error.SetErrorString("Could not find ABI to set return value.");
+      return_error =
+          Status::FromErrorString("Could not find ABI to set return value.");
       return return_error;
     }
     SymbolContext sc = frame_sp->GetSymbolContext(eSymbolContextFunction);
@@ -1538,13 +1546,14 @@ Status Thread::ReturnFromFrame(lldb::StackFrameSP frame_sp,
           BroadcastEvent(eBroadcastBitStackChanged, data_sp);
         }
       } else {
-        return_error.SetErrorString("Could not reset register values.");
+        return_error =
+            Status::FromErrorString("Could not reset register values.");
       }
     } else {
-      return_error.SetErrorString("Frame has no register context.");
+      return_error = Status::FromErrorString("Frame has no register context.");
     }
   } else {
-    return_error.SetErrorString("Returned past top frame.");
+    return_error = Status::FromErrorString("Returned past top frame.");
   }
   return return_error;
 }
@@ -1586,16 +1595,19 @@ Status Thread::JumpToLine(const FileSpec &file, uint32_t line,
   // Check if we got anything.
   if (candidates.empty()) {
     if (outside_function.empty()) {
-      return Status("Cannot locate an address for %s:%i.",
-                    file.GetFilename().AsCString(), line);
+      return Status::FromErrorStringWithFormat(
+          "Cannot locate an address for %s:%i.", file.GetFilename().AsCString(),
+          line);
     } else if (outside_function.size() == 1) {
-      return Status("%s:%i is outside the current function.",
-                    file.GetFilename().AsCString(), line);
+      return Status::FromErrorStringWithFormat(
+          "%s:%i is outside the current function.",
+          file.GetFilename().AsCString(), line);
     } else {
       StreamString sstr;
       DumpAddressList(sstr, outside_function, target);
-      return Status("%s:%i has multiple candidate locations:\n%s",
-                    file.GetFilename().AsCString(), line, sstr.GetData());
+      return Status::FromErrorStringWithFormat(
+          "%s:%i has multiple candidate locations:\n%s",
+          file.GetFilename().AsCString(), line, sstr.GetData());
     }
   }
 
@@ -1611,7 +1623,7 @@ Status Thread::JumpToLine(const FileSpec &file, uint32_t line,
   }
 
   if (!reg_ctx->SetPC(dest))
-    return Status("Cannot change PC to target address.");
+    return Status::FromErrorString("Cannot change PC to target address.");
 
   return Status();
 }
@@ -1963,7 +1975,7 @@ Status Thread::StepIn(bool source_step,
     process->GetThreadList().SetSelectedThreadByID(GetID());
     error = process->Resume();
   } else {
-    error.SetErrorString("process not stopped");
+    error = Status::FromErrorString("process not stopped");
   }
   return error;
 }
@@ -1996,7 +2008,7 @@ Status Thread::StepOver(bool source_step,
     process->GetThreadList().SetSelectedThreadByID(GetID());
     error = process->Resume();
   } else {
-    error.SetErrorString("process not stopped");
+    error = Status::FromErrorString("process not stopped");
   }
   return error;
 }
@@ -2020,7 +2032,7 @@ Status Thread::StepOut(uint32_t frame_idx) {
     process->GetThreadList().SetSelectedThreadByID(GetID());
     error = process->Resume();
   } else {
-    error.SetErrorString("process not stopped");
+    error = Status::FromErrorString("process not stopped");
   }
   return error;
 }
@@ -2066,14 +2078,16 @@ lldb::ValueObjectSP Thread::GetSiginfoValue() {
 
   CompilerType type = platform_sp->GetSiginfoType(arch.GetTriple());
   if (!type.IsValid())
-    return ValueObjectConstResult::Create(&target, Status("no siginfo_t for the platform"));
+    return ValueObjectConstResult::Create(
+        &target, Status::FromErrorString("no siginfo_t for the platform"));
 
   std::optional<uint64_t> type_size = type.GetByteSize(nullptr);
   assert(type_size);
   llvm::Expected<std::unique_ptr<llvm::MemoryBuffer>> data =
       GetSiginfo(*type_size);
   if (!data)
-    return ValueObjectConstResult::Create(&target, Status(data.takeError()));
+    return ValueObjectConstResult::Create(&target,
+                                          Status::FromError(data.takeError()));
 
   DataExtractor data_extractor{data.get()->getBufferStart(), data.get()->getBufferSize(),
     process_sp->GetByteOrder(), arch.GetAddressByteSize()};

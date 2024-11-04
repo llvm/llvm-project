@@ -14,6 +14,7 @@
 #include "mlir/Dialect/LLVMIR/NVVMDialect.h"
 #include "mlir/Target/LLVMIR/ModuleImport.h"
 
+#include "llvm/IR/ConstantRange.h"
 #include "llvm/IR/IntrinsicsNVPTX.h"
 
 using namespace mlir;
@@ -49,6 +50,12 @@ static LogicalResult convertIntrinsicImpl(OpBuilder &odsBuilder,
   if (isConvertibleIntrinsic(intrinsicID)) {
     SmallVector<llvm::Value *> args(inst->args());
     ArrayRef<llvm::Value *> llvmOperands(args);
+
+    SmallVector<llvm::OperandBundleUse> llvmOpBundles;
+    llvmOpBundles.reserve(inst->getNumOperandBundles());
+    for (unsigned i = 0; i < inst->getNumOperandBundles(); ++i)
+      llvmOpBundles.push_back(inst->getOperandBundleAt(i));
+
 #include "mlir/Dialect/LLVMIR/NVVMFromLLVMIRConversions.inc"
   }
 

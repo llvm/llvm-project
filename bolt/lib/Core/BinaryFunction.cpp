@@ -165,6 +165,12 @@ bool shouldPrint(const BinaryFunction &Function) {
     }
   }
 
+  std::optional<StringRef> Origin = Function.getOriginSectionName();
+  if (Origin && llvm::any_of(opts::PrintOnly, [&](const std::string &Name) {
+        return Name == *Origin;
+      }))
+    return true;
+
   return false;
 }
 
@@ -1339,22 +1345,10 @@ Error BinaryFunction::disassemble() {
                   BC.getBinaryFunctionContainingAddress(TargetAddress))
             TargetFunc->setIgnored();
 
-        if (IsCall && containsAddress(TargetAddress)) {
-          if (TargetAddress == getAddress()) {
-            // Recursive call.
-            TargetSymbol = getSymbol();
-          } else {
-            if (BC.isX86()) {
-              // Dangerous old-style x86 PIC code. We may need to freeze this
-              // function, so preserve the function as is for now.
-              PreserveNops = true;
-            } else {
-              BC.errs() << "BOLT-WARNING: internal call detected at 0x"
-                        << Twine::utohexstr(AbsoluteInstrAddr)
-                        << " in function " << *this << ". Skipping.\n";
-              IsSimple = false;
-            }
-          }
+        if (IsCall && TargetAddress == getAddress()) {
+          // A recursive call. Calls to internal blocks are handled by
+          // ValidateInternalCalls pass.
+          TargetSymbol = getSymbol();
         }
 
         if (!TargetSymbol) {
@@ -2583,6 +2577,7 @@ private:
     case MCCFIInstruction::OpAdjustCfaOffset:
     case MCCFIInstruction::OpWindowSave:
     case MCCFIInstruction::OpNegateRAState:
+    case MCCFIInstruction::OpNegateRAStateWithPC:
     case MCCFIInstruction::OpLLVMDefAspaceCfa:
     case MCCFIInstruction::OpLabel:
       llvm_unreachable("unsupported CFI opcode");
@@ -2721,6 +2716,7 @@ struct CFISnapshotDiff : public CFISnapshot {
     case MCCFIInstruction::OpAdjustCfaOffset:
     case MCCFIInstruction::OpWindowSave:
     case MCCFIInstruction::OpNegateRAState:
+    case MCCFIInstruction::OpNegateRAStateWithPC:
     case MCCFIInstruction::OpLLVMDefAspaceCfa:
     case MCCFIInstruction::OpLabel:
       llvm_unreachable("unsupported CFI opcode");
@@ -2870,6 +2866,7 @@ BinaryFunction::unwindCFIState(int32_t FromState, int32_t ToState,
     case MCCFIInstruction::OpAdjustCfaOffset:
     case MCCFIInstruction::OpWindowSave:
     case MCCFIInstruction::OpNegateRAState:
+    case MCCFIInstruction::OpNegateRAStateWithPC:
     case MCCFIInstruction::OpLLVMDefAspaceCfa:
     case MCCFIInstruction::OpLabel:
       llvm_unreachable("unsupported CFI opcode");
@@ -3690,9 +3687,8 @@ BinaryFunction::BasicBlockListType BinaryFunction::dfs() const {
     BinaryBasicBlock *BB = Stack.top();
     Stack.pop();
 
-    if (Visited.find(BB) != Visited.end())
+    if (!Visited.insert(BB).second)
       continue;
-    Visited.insert(BB);
     DFS.push_back(BB);
 
     for (BinaryBasicBlock *SuccBB : BB->landing_pads()) {
@@ -3885,11 +3881,8 @@ void BinaryFunction::disambiguateJumpTables(
       JumpTable *JT = getJumpTable(Inst);
       if (!JT)
         continue;
-      auto Iter = JumpTables.find(JT);
-      if (Iter == JumpTables.end()) {
-        JumpTables.insert(JT);
+      if (JumpTables.insert(JT).second)
         continue;
-      }
       // This instruction is an indirect jump using a jump table, but it is
       // using the same jump table of another jump. Try all our tricks to
       // extract the jump table symbol and make it point to a new, duplicated JT

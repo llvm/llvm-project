@@ -294,19 +294,19 @@ static void registerEPCallbacks(PassBuilder &PB) {
   if (tryParsePipelineText<ModulePassManager>(
           PB, PipelineEarlySimplificationEPPipeline))
     PB.registerPipelineEarlySimplificationEPCallback(
-        [&PB](ModulePassManager &PM, OptimizationLevel) {
+        [&PB](ModulePassManager &PM, OptimizationLevel, ThinOrFullLTOPhase) {
           ExitOnError Err("Unable to parse EarlySimplification pipeline: ");
           Err(PB.parsePassPipeline(PM, PipelineEarlySimplificationEPPipeline));
         });
   if (tryParsePipelineText<ModulePassManager>(PB, OptimizerEarlyEPPipeline))
     PB.registerOptimizerEarlyEPCallback(
-        [&PB](ModulePassManager &PM, OptimizationLevel) {
+        [&PB](ModulePassManager &PM, OptimizationLevel, ThinOrFullLTOPhase) {
           ExitOnError Err("Unable to parse OptimizerEarlyEP pipeline: ");
           Err(PB.parsePassPipeline(PM, OptimizerEarlyEPPipeline));
         });
   if (tryParsePipelineText<ModulePassManager>(PB, OptimizerLastEPPipeline))
     PB.registerOptimizerLastEPCallback(
-        [&PB](ModulePassManager &PM, OptimizationLevel) {
+        [&PB](ModulePassManager &PM, OptimizationLevel, ThinOrFullLTOPhase) {
           ExitOnError Err("Unable to parse OptimizerLastEP pipeline: ");
           Err(PB.parsePassPipeline(PM, OptimizerLastEPPipeline));
         });
@@ -343,8 +343,6 @@ bool llvm::runPassPipeline(
     bool ShouldPreserveBitcodeUseListOrder, bool EmitSummaryIndex,
     bool EmitModuleHash, bool EnableDebugify, bool VerifyDIPreserve,
     bool UnifiedLTO) {
-  bool VerifyEachPass = VK == VK_VerifyEachPass;
-
   auto FS = vfs::getRealFileSystem();
   std::optional<PGOOptions> P;
   switch (PGOKindFlag) {
@@ -410,7 +408,7 @@ bool llvm::runPassPipeline(
   PrintPassOpts.Verbose = DebugPM == DebugLogging::Verbose;
   PrintPassOpts.SkipAnalyses = DebugPM == DebugLogging::Quiet;
   StandardInstrumentations SI(M.getContext(), DebugPM != DebugLogging::None,
-                              VerifyEachPass, PrintPassOpts);
+                              VK == VerifierKind::EachPass, PrintPassOpts);
   SI.registerCallbacks(PIC, &MAM);
   DebugifyEachInstrumentation Debugify;
   DebugifyStatsMap DIStatsMap;
@@ -483,7 +481,7 @@ bool llvm::runPassPipeline(
     }
   }
 
-  if (VK > VK_NoVerifier)
+  if (VK != VerifierKind::None)
     MPM.addPass(VerifierPass());
   if (EnableDebugify)
     MPM.addPass(NewPMCheckDebugifyPass(false, "", &DIStatsMap));

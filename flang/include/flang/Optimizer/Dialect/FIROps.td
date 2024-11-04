@@ -2432,9 +2432,9 @@ def fir_CallOp : fir_Op<"call",
   let arguments = (ins
     OptionalAttr<SymbolRefAttr>:$callee,
     Variadic<AnyType>:$args,
+    OptionalAttr<fir_FortranProcedureFlagsAttr>:$procedure_attrs,
     DefaultValuedAttr<Arith_FastMathAttr,
-                      "::mlir::arith::FastMathFlags::none">:$fastmath,
-    UnitAttr:$is_bind_c
+                      "::mlir::arith::FastMathFlags::none">:$fastmath
   );
   let results = (outs Variadic<AnyType>);
 
@@ -2516,7 +2516,8 @@ def fir_DispatchOp : fir_Op<"dispatch", []> {
     StrAttr:$method,
     fir_ClassType:$object,
     Variadic<AnyType>:$args,
-    OptionalAttr<I32Attr>:$pass_arg_pos
+    OptionalAttr<I32Attr>:$pass_arg_pos,
+    OptionalAttr<fir_FortranProcedureFlagsAttr>:$procedure_attrs
   );
 
   let results = (outs Variadic<AnyType>:$results);
@@ -2525,7 +2526,8 @@ def fir_DispatchOp : fir_Op<"dispatch", []> {
 
   let assemblyFormat = [{
     $method `(` $object `:` qualified(type($object)) `)`
-    ( `(` $args^ `:` type($args) `)` )? (`->` type($results)^)? attr-dict
+    ( `(` $args^ `:` type($args) `)` )? (`->` type($results)^)?
+    (`proc_attrs` $procedure_attrs^)? attr-dict
   }];
 
   let extraClassDeclaration = [{
@@ -2609,38 +2611,15 @@ class fir_UnaryArithmeticOp<string mnemonic, list<Trait> traits = []> :
   let assemblyFormat = "operands attr-dict `:` type($result)";
 }
 
-def fir_ConstcOp : fir_Op<"constc", [NoMemoryEffect]> {
-  let summary = "create a complex constant";
-
-  let description = [{
-    A complex constant. Similar to the standard dialect complex type, but this
-    extension allows constants with APFloat values that are not supported in
-    the standard dialect.
-  }];
-
-  let results = (outs fir_ComplexType);
-
-  let hasCustomAssemblyFormat = 1;
-  let hasVerifier = 1;
-
-  let extraClassDeclaration = [{
-    static constexpr llvm::StringRef getRealAttrName() { return "real"; }
-    static constexpr llvm::StringRef getImagAttrName() { return "imaginary"; }
-
-    mlir::Attribute getReal() { return (*this)->getAttr(getRealAttrName()); }
-    mlir::Attribute getImaginary() { return (*this)->getAttr(getImagAttrName()); }
-  }];
-}
-
 class ComplexUnaryArithmeticOp<string mnemonic, list<Trait> traits = []> :
       fir_UnaryArithmeticOp<mnemonic, traits>,
-      Arguments<(ins fir_ComplexType:$operand)>;
+      Arguments<(ins AnyFirComplex:$operand)>;
 
 def fir_NegcOp : ComplexUnaryArithmeticOp<"negc">;
 
 class ComplexArithmeticOp<string mnemonic, list<Trait> traits = []> :
       fir_ArithmeticOp<mnemonic, traits>,
-      Arguments<(ins fir_ComplexType:$lhs, fir_ComplexType:$rhs,
+      Arguments<(ins AnyFirComplex:$lhs, AnyFirComplex:$rhs,
           DefaultValuedAttr<Arith_FastMathAttr,
                             "::mlir::arith::FastMathFlags::none">:$fastmath)>;
 
@@ -2664,8 +2643,8 @@ def fir_CmpcOp : fir_Op<"cmpc",
   }];
 
   let arguments = (ins
-      fir_ComplexType:$lhs,
-      fir_ComplexType:$rhs,
+      AnyFirComplex:$lhs,
+      AnyFirComplex:$rhs,
       DefaultValuedAttr<Arith_FastMathAttr, "::mlir::arith::FastMathFlags::none">:$fastmath);
 
   let results = (outs AnyLogicalLike);
@@ -2713,7 +2692,7 @@ def fir_AddrOfOp : fir_OneResultOp<"address_of", [NoMemoryEffect]> {
   let assemblyFormat = "`(` $symbol `)` attr-dict `:` type($resTy)";
 }
 
-def fir_ConvertOp : fir_OneResultOp<"convert", [NoMemoryEffect]> {
+def fir_ConvertOp : fir_SimpleOneResultOp<"convert", [NoMemoryEffect]> {
   let summary = "encapsulates all Fortran entity type conversions";
 
   let description = [{
@@ -2721,6 +2700,9 @@ def fir_ConvertOp : fir_OneResultOp<"convert", [NoMemoryEffect]> {
     Not all pairs of types have conversions. When types T and U are the same
     type, this instruction is a NOP and may be folded away. This also supports
     integer to pointer conversion and pointer to integer conversion.
+
+    This operation also allows limited interaction between FIR and LLVM
+    dialects by allowing conversion between FIR pointer types and llvm.ptr type.
 
     ```
       %v = ... : i64
@@ -2731,6 +2713,7 @@ def fir_ConvertOp : fir_OneResultOp<"convert", [NoMemoryEffect]> {
   }];
 
   let arguments = (ins AnyType:$value);
+  let results = (outs AnyType:$res);
 
   let assemblyFormat = [{
     $value attr-dict `:` functional-type($value, results)
@@ -2752,8 +2735,8 @@ def fir_ConvertOp : fir_OneResultOp<"convert", [NoMemoryEffect]> {
 }
 
 def FortranTypeAttr : Attr<And<[CPred<"mlir::isa<mlir::TypeAttr>($_self)">,
-    Or<[CPred<"mlir::isa<fir::CharacterType, fir::ComplexType, "
-              "fir::IntegerType, fir::LogicalType, fir::RealType, "
+    Or<[CPred<"mlir::isa<fir::CharacterType, fir::IntegerType,"
+              "fir::LogicalType, mlir::FloatType, mlir::ComplexType,"
               "fir::RecordType>(mlir::cast<mlir::TypeAttr>($_self).getValue())"
     >]>]>, "Fortran surface type"> {
   let storageType = [{ ::mlir::TypeAttr }];
@@ -3095,7 +3078,7 @@ def fir_IsPresentOp : fir_SimpleOp<"is_present", [NoMemoryEffect]> {
 // debug information so we would like to keep this around even if the value
 // is not used.
 def fir_DeclareOp : fir_Op<"declare", [AttrSizedOperandSegments,
-    MemoryEffects<[MemWrite<DebuggingResource>]>,
+    MemoryEffects<[MemAlloc<DebuggingResource>]>,
     DeclareOpInterfaceMethods<fir_FortranVariableOpInterface>]> {
   let summary = "declare a variable";
 

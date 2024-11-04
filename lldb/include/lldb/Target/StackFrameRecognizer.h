@@ -9,11 +9,11 @@
 #ifndef LLDB_TARGET_STACKFRAMERECOGNIZER_H
 #define LLDB_TARGET_STACKFRAMERECOGNIZER_H
 
-#include "lldb/Core/ValueObject.h"
-#include "lldb/Core/ValueObjectList.h"
 #include "lldb/Symbol/VariableList.h"
 #include "lldb/Target/StopInfo.h"
 #include "lldb/Utility/StructuredData.h"
+#include "lldb/ValueObject/ValueObject.h"
+#include "lldb/ValueObject/ValueObjectList.h"
 #include "lldb/lldb-private-forward.h"
 #include "lldb/lldb-public.h"
 
@@ -105,20 +105,33 @@ private:
 /// Class that provides a registry of known stack frame recognizers.
 class StackFrameRecognizerManager {
 public:
+  /// Add a new recognizer that triggers on a given symbol name.
+  ///
+  /// \param symbol_mangling controls whether the symbol name should be
+  /// compared to the mangled or demangled name.
   void AddRecognizer(lldb::StackFrameRecognizerSP recognizer,
                      ConstString module, llvm::ArrayRef<ConstString> symbols,
+                     Mangled::NamePreference symbol_mangling,
                      bool first_instruction_only = true);
 
+  /// Add a new recognizer that triggers on a symbol regex.
+  ///
+  /// \param symbol_mangling controls whether the regex should apply
+  /// to the mangled or demangled name.
   void AddRecognizer(lldb::StackFrameRecognizerSP recognizer,
                      lldb::RegularExpressionSP module,
                      lldb::RegularExpressionSP symbol,
+                     Mangled::NamePreference symbol_mangling,
                      bool first_instruction_only = true);
 
-  void ForEach(std::function<
-               void(uint32_t recognizer_id, std::string recognizer_name,
-                    std::string module, llvm::ArrayRef<ConstString> symbols,
-                    bool regexp)> const &callback);
+  void
+  ForEach(std::function<void(uint32_t recognizer_id, bool enabled,
+                             std::string recognizer_name, std::string module,
+                             llvm::ArrayRef<ConstString> symbols,
+                             Mangled::NamePreference name_preference,
+                             bool regexp)> const &callback);
 
+  bool SetEnabledForID(uint32_t recognizer_id, bool enabled);
   bool RemoveRecognizerWithID(uint32_t recognizer_id);
 
   void RemoveAllRecognizers();
@@ -142,11 +155,13 @@ private:
     lldb::RegularExpressionSP module_regexp;
     std::vector<ConstString> symbols;
     lldb::RegularExpressionSP symbol_regexp;
+    Mangled::NamePreference symbol_mangling;
     bool first_instruction_only;
+    bool enabled;
   };
 
   std::deque<RegisteredEntry> m_recognizers;
-  uint16_t m_generation;
+  uint16_t m_generation = 0;
 };
 
 /// \class ValueObjectRecognizerSynthesizedValue

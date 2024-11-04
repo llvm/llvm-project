@@ -1,4 +1,5 @@
 # RUN: llc -mtriple thumbv5e -run-pass=machine-cse -o - %s | FileCheck %s
+# RUN: llc -mtriple thumbv5e -passes=machine-cse -o - %s | FileCheck %s
 
 # This is a contrived example made to expose a bug in
 # MachineCSE, see PR32538.

@@ -199,8 +199,10 @@ float VirtRegAuxInfo::weightCalcHelper(LiveInterval &LI, SlotIndex *Start,
     // localLI = COPY other
     // ...
     // other   = COPY localLI
-    TotalWeight += LiveIntervals::getSpillWeight(true, false, &MBFI, LocalMBB);
-    TotalWeight += LiveIntervals::getSpillWeight(false, true, &MBFI, LocalMBB);
+    TotalWeight +=
+        LiveIntervals::getSpillWeight(true, false, &MBFI, LocalMBB, PSI);
+    TotalWeight +=
+        LiveIntervals::getSpillWeight(false, true, &MBFI, LocalMBB, PSI);
 
     NumInstr += 2;
   }
@@ -222,7 +224,7 @@ float VirtRegAuxInfo::weightCalcHelper(LiveInterval &LI, SlotIndex *Start,
 
   bool IsExiting = false;
   std::set<CopyHint> CopyHints;
-  DenseMap<unsigned, float> Hint;
+  SmallDenseMap<unsigned, float, 8> Hint;
   for (MachineRegisterInfo::reg_instr_nodbg_iterator
            I = MRI.reg_instr_nodbg_begin(LI.reg()),
            E = MRI.reg_instr_nodbg_end();
@@ -272,7 +274,7 @@ float VirtRegAuxInfo::weightCalcHelper(LiveInterval &LI, SlotIndex *Start,
       // Calculate instr weight.
       bool Reads, Writes;
       std::tie(Reads, Writes) = MI->readsWritesVirtualRegister(LI.reg());
-      Weight = LiveIntervals::getSpillWeight(Writes, Reads, &MBFI, *MI);
+      Weight = LiveIntervals::getSpillWeight(Writes, Reads, &MBFI, *MI, PSI);
 
       // Give extra weight to what looks like a loop induction variable update.
       if (Writes && IsExiting && LIS.isLiveOutOfMBB(LI, MBB))

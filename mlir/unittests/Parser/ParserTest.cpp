@@ -8,8 +8,12 @@
 
 #include "mlir/Parser/Parser.h"
 #include "mlir/AsmParser/AsmParser.h"
+#include "mlir/AsmParser/AsmParserState.h"
+#include "mlir/Dialect/Func/IR/FuncOps.h"
+#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/Verifier.h"
+#include "llvm/Support/SourceMgr.h"
 
 #include "gmock/gmock.h"
 
@@ -100,5 +104,82 @@ TEST(MLIRParser, ParseAttr) {
     Attribute attr = parseAttribute(attrAsm, &context);
     EXPECT_EQ(attr, b.getI64IntegerAttr(9));
   }
+}
+
+TEST(MLIRParser, AsmParserLocations) {
+  std::string moduleStr = R"mlir(
+func.func @foo() -> !llvm.array<2 x f32> {
+  %0 = llvm.mlir.undef : !llvm.array<2 x f32>
+  func.return %0 : !llvm.array<2 x f32>
+}
+  )mlir";
+
+  DialectRegistry registry;
+  registry.insert<func::FuncDialect, LLVM::LLVMDialect>();
+  MLIRContext context(registry);
+
+  auto memBuffer =
+      llvm::MemoryBuffer::getMemBuffer(moduleStr, "AsmParserTest.mlir",
+                                       /*RequiresNullTerminator=*/false);
+  ASSERT_TRUE(memBuffer);
+
+  llvm::SourceMgr sourceMgr;
+  sourceMgr.AddNewSourceBuffer(std::move(memBuffer), llvm::SMLoc());
+
+  Block block;
+  AsmParserState parseState;
+  const LogicalResult parseResult =
+      parseAsmSourceFile(sourceMgr, &block, &context, &parseState);
+  ASSERT_TRUE(parseResult.succeeded());
+
+  auto funcOp = *block.getOps<func::FuncOp>().begin();
+  const AsmParserState::OperationDefinition *funcOpDefinition =
+      parseState.getOpDef(funcOp);
+  ASSERT_TRUE(funcOpDefinition);
+
+  const std::pair expectedStartFunc{2u, 1u};
+  const std::pair expectedEndFunc{2u, 10u};
+  const std::pair expectedScopeEndFunc{5u, 2u};
+  ASSERT_EQ(sourceMgr.getLineAndColumn(funcOpDefinition->loc.Start),
+            expectedStartFunc);
+  ASSERT_EQ(sourceMgr.getLineAndColumn(funcOpDefinition->loc.End),
+            expectedEndFunc);
+  ASSERT_EQ(funcOpDefinition->loc.Start, funcOpDefinition->scopeLoc.Start);
+  ASSERT_EQ(sourceMgr.getLineAndColumn(funcOpDefinition->scopeLoc.End),
+            expectedScopeEndFunc);
+
+  auto llvmUndef = *funcOp.getOps<LLVM::UndefOp>().begin();
+  const AsmParserState::OperationDefinition *llvmUndefDefinition =
+      parseState.getOpDef(llvmUndef);
+  ASSERT_TRUE(llvmUndefDefinition);
+
+  const std::pair expectedStartUndef{3u, 8u};
+  const std::pair expectedEndUndef{3u, 23u};
+  const std::pair expectedScopeEndUndef{3u, 46u};
+  ASSERT_EQ(sourceMgr.getLineAndColumn(llvmUndefDefinition->loc.Start),
+            expectedStartUndef);
+  ASSERT_EQ(sourceMgr.getLineAndColumn(llvmUndefDefinition->loc.End),
+            expectedEndUndef);
+  ASSERT_EQ(llvmUndefDefinition->loc.Start,
+            llvmUndefDefinition->scopeLoc.Start);
+  ASSERT_EQ(sourceMgr.getLineAndColumn(llvmUndefDefinition->scopeLoc.End),
+            expectedScopeEndUndef);
+
+  auto funcReturn = *funcOp.getOps<func::ReturnOp>().begin();
+  const AsmParserState::OperationDefinition *funcReturnDefinition =
+      parseState.getOpDef(funcReturn);
+  ASSERT_TRUE(funcReturnDefinition);
+
+  const std::pair expectedStartReturn{4u, 3u};
+  const std::pair expectedEndReturn{4u, 14u};
+  const std::pair expectedScopeEndReturn{4u, 40u};
+  ASSERT_EQ(sourceMgr.getLineAndColumn(funcReturnDefinition->loc.Start),
+            expectedStartReturn);
+  ASSERT_EQ(sourceMgr.getLineAndColumn(funcReturnDefinition->loc.End),
+            expectedEndReturn);
+  ASSERT_EQ(funcReturnDefinition->loc.Start,
+            funcReturnDefinition->scopeLoc.Start);
+  ASSERT_EQ(sourceMgr.getLineAndColumn(funcReturnDefinition->scopeLoc.End),
+            expectedScopeEndReturn);
 }
 } // namespace

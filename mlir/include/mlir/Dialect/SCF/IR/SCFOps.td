@@ -249,7 +249,7 @@ def ForOp : SCF_Op<"for",
   let skipDefaultBuilders = 1;
   let builders = [
     OpBuilder<(ins "Value":$lowerBound, "Value":$upperBound, "Value":$step,
-      CArg<"ValueRange", "std::nullopt">:$iterArgs,
+      CArg<"ValueRange", "std::nullopt">:$initArgs,
       CArg<"function_ref<void(OpBuilder &, Location, Value, ValueRange)>",
            "nullptr">)>
   ];
@@ -1074,7 +1074,7 @@ def WhileOp : SCF_Op<"while",
   let regions = (region SizedRegion<1>:$before, SizedRegion<1>:$after);
 
   let builders = [
-    OpBuilder<(ins "TypeRange":$resultTypes, "ValueRange":$operands,
+    OpBuilder<(ins "TypeRange":$resultTypes, "ValueRange":$inits,
       "function_ref<void(OpBuilder &, Location, ValueRange)>":$beforeBuilder,
       "function_ref<void(OpBuilder &, Location, ValueRange)>":$afterBuilder)>
   ];

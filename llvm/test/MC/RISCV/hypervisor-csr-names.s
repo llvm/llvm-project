@@ -633,3 +633,20 @@ csrrs t2, 0x25C, zero
 csrrs t1, vstopi, zero
 # uimm12
 csrrs t2, 0xEB0, zero
+
+##################################
+# Control Transfer Records
+##################################
+
+# vsctrctl
+# name
+# CHECK-INST: csrrs t1, vsctrctl, zero
+# CHECK-ENC: encoding: [0x73,0x23,0xe0,0x24]
+# CHECK-INST-ALIAS: csrr t1, vsctrctl
+# uimm12
+# CHECK-INST: csrrs t2, vsctrctl, zero
+# CHECK-ENC: encoding: [0xf3,0x23,0xe0,0x24]
+# CHECK-INST-ALIAS: csrr t2, vsctrctl
+csrrs t1, vsctrctl, zero
+# uimm12
+csrrs t2, 0x24E, zero

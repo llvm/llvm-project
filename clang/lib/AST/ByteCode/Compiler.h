@@ -125,20 +125,25 @@ public:
   bool VisitIntegerLiteral(const IntegerLiteral *E);
   bool VisitFloatingLiteral(const FloatingLiteral *E);
   bool VisitImaginaryLiteral(const ImaginaryLiteral *E);
+  bool VisitFixedPointLiteral(const FixedPointLiteral *E);
   bool VisitParenExpr(const ParenExpr *E);
   bool VisitBinaryOperator(const BinaryOperator *E);
   bool VisitLogicalBinOp(const BinaryOperator *E);
   bool VisitPointerArithBinOp(const BinaryOperator *E);
   bool VisitComplexBinOp(const BinaryOperator *E);
+  bool VisitVectorBinOp(const BinaryOperator *E);
+  bool VisitFixedPointBinOp(const BinaryOperator *E);
+  bool VisitFixedPointUnaryOperator(const UnaryOperator *E);
   bool VisitCXXDefaultArgExpr(const CXXDefaultArgExpr *E);
   bool VisitCallExpr(const CallExpr *E);
-  bool VisitBuiltinCallExpr(const CallExpr *E);
+  bool VisitBuiltinCallExpr(const CallExpr *E, unsigned BuiltinID);
   bool VisitCXXDefaultInitExpr(const CXXDefaultInitExpr *E);
   bool VisitCXXBoolLiteralExpr(const CXXBoolLiteralExpr *E);
   bool VisitCXXNullPtrLiteralExpr(const CXXNullPtrLiteralExpr *E);
   bool VisitGNUNullExpr(const GNUNullExpr *E);
   bool VisitCXXThisExpr(const CXXThisExpr *E);
   bool VisitUnaryOperator(const UnaryOperator *E);
+  bool VisitVectorUnaryOperator(const UnaryOperator *E);
   bool VisitComplexUnaryOperator(const UnaryOperator *E);
   bool VisitDeclRefExpr(const DeclRefExpr *E);
   bool VisitImplicitValueInitExpr(const ImplicitValueInitExpr *E);
@@ -220,7 +225,7 @@ public:
 
 protected:
   bool visitStmt(const Stmt *S);
-  bool visitExpr(const Expr *E) override;
+  bool visitExpr(const Expr *E, bool DestroyToplevelScope) override;
   bool visitFunc(const FunctionDecl *F) override;
 
   bool visitDeclAndReturn(const VarDecl *VD, bool ConstantContext) override;
@@ -297,7 +302,8 @@ protected:
 
   /// Allocates a space storing a local given its type.
   std::optional<unsigned>
-  allocateLocal(DeclTy &&Decl, const ValueDecl *ExtendingDecl = nullptr);
+  allocateLocal(DeclTy &&Decl, QualType Ty = QualType(),
+                const ValueDecl *ExtendingDecl = nullptr);
   unsigned allocateTemporary(const Expr *E);
 
 private:
@@ -340,6 +346,10 @@ private:
     return FPO.getRoundingMode();
   }
 
+  uint32_t getFPOptions(const Expr *E) const {
+    return E->getFPFeaturesInEffect(Ctx.getLangOpts()).getAsOpaqueInt();
+  }
+
   bool emitPrimCast(PrimType FromT, PrimType ToT, QualType ToQT, const Expr *E);
   PrimType classifyComplexElementType(QualType T) const {
     assert(T->isAnyComplexType());
@@ -349,16 +359,22 @@ private:
     return *this->classify(ElemType);
   }
 
+  PrimType classifyVectorElementType(QualType T) const {
+    assert(T->isVectorType());
+    return *this->classify(T->getAs<VectorType>()->getElementType());
+  }
+
   bool emitComplexReal(const Expr *SubExpr);
   bool emitComplexBoolCast(const Expr *E);
   bool emitComplexComparison(const Expr *LHS, const Expr *RHS,
                              const BinaryOperator *E);
-
-  bool emitRecordDestruction(const Record *R);
-  bool emitDestruction(const Descriptor *Desc);
+  bool emitRecordDestruction(const Record *R, SourceInfo Loc);
+  bool emitDestruction(const Descriptor *Desc, SourceInfo Loc);
+  bool emitDummyPtr(const DeclTy &D, const Expr *E);
   unsigned collectBaseOffset(const QualType BaseType,
                              const QualType DerivedType);
   bool emitLambdaStaticInvokerBody(const CXXMethodDecl *MD);
+  bool emitBuiltinBitCast(const CastExpr *E);
   bool compileConstructor(const CXXConstructorDecl *Ctor);
   bool compileDestructor(const CXXDestructorDecl *Dtor);
 
@@ -399,8 +415,12 @@ protected:
   /// Switch case mapping.
   CaseMap CaseLabels;
 
+  /// Scope to cleanup until when we see a break statement.
+  VariableScope<Emitter> *BreakVarScope = nullptr;
   /// Point to break to.
   OptLabelTy BreakLabel;
+  /// Scope to cleanup until when we see a continue statement.
+  VariableScope<Emitter> *ContinueVarScope = nullptr;
   /// Point to continue to.
   OptLabelTy ContinueLabel;
   /// Default case label.
@@ -521,12 +541,12 @@ public:
       return true;
     // Emit destructor calls for local variables of record
     // type with a destructor.
-    for (Scope::Local &Local : this->Ctx->Descriptors[*Idx]) {
+    for (Scope::Local &Local : llvm::reverse(this->Ctx->Descriptors[*Idx])) {
       if (!Local.Desc->isPrimitive() && !Local.Desc->isPrimitiveArray()) {
         if (!this->Ctx->emitGetPtrLocal(Local.Offset, E))
           return false;
 
-        if (!this->Ctx->emitDestruction(Local.Desc))
+        if (!this->Ctx->emitDestruction(Local.Desc, Local.Desc->getLoc()))
           return false;
 
         if (!this->Ctx->emitPopPtr(E))

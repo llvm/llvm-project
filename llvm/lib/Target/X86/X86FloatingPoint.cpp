@@ -432,6 +432,24 @@ bool FPS::processBasicBlock(MachineFunction &MF, MachineBasicBlock &BB) {
     if (MI.isCall())
       FPInstClass = X86II::SpecialFP;
 
+    // A fake_use with a floating point pseudo register argument that is
+    // killed must behave like any other floating point operation and pop
+    // the floating point stack (this is done in handleSpecialFP()).
+    // Fake_use is, however, unusual, in that sometimes its operand is not
+    // killed because a later instruction (probably a return) will use it.
+    // It is this instruction that will pop the stack.
+    // In this scenario we can safely remove the fake_use's operand
+    // (it is live anyway).
+    if (MI.isFakeUse()) {
+      const MachineOperand &MO = MI.getOperand(0);
+      if (MO.isReg() && X86::RFP80RegClass.contains(MO.getReg())) {
+        if (MO.isKill())
+          FPInstClass = X86II::SpecialFP;
+        else
+          MI.removeOperand(0);
+      }
+    }
+
     if (FPInstClass == X86II::NotFP)
       continue;  // Efficiently ignore non-fp insts!
 
@@ -1735,6 +1753,20 @@ void FPS::handleSpecialFP(MachineBasicBlock::iterator &Inst) {
     }
 
     // Don't delete the inline asm!
+    return;
+  }
+
+  // FAKE_USE must pop its register operand off the stack if it is killed,
+  // because this constitutes the register's last use. If the operand
+  // is not killed, it will have its last use later, so we leave it alone.
+  // In either case we remove the operand so later passes don't see it.
+  case TargetOpcode::FAKE_USE: {
+    assert(MI.getNumExplicitOperands() == 1 &&
+           "FAKE_USE must have exactly one operand");
+    if (MI.getOperand(0).isKill()) {
+      freeStackSlotBefore(Inst, getFPReg(MI.getOperand(0)));
+    }
+    MI.removeOperand(0);
     return;
   }
   }

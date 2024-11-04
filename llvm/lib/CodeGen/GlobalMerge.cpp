@@ -119,6 +119,11 @@ static cl::opt<bool> GlobalMergeGroupByUse(
     "global-merge-group-by-use", cl::Hidden,
     cl::desc("Improve global merge pass to look at uses"), cl::init(true));
 
+static cl::opt<bool> GlobalMergeAllConst(
+    "global-merge-all-const", cl::Hidden,
+    cl::desc("Merge all const globals without looking at uses"),
+    cl::init(false));
+
 static cl::opt<bool> GlobalMergeIgnoreSingleUse(
     "global-merge-ignore-single-use", cl::Hidden,
     cl::desc("Improve global merge pass to ignore globals only used alone"),
@@ -197,12 +202,13 @@ public:
 
   explicit GlobalMerge(const TargetMachine *TM, unsigned MaximalOffset,
                        bool OnlyOptimizeForSize, bool MergeExternalGlobals,
-                       bool MergeConstantGlobals)
+                       bool MergeConstantGlobals, bool MergeConstAggressive)
       : FunctionPass(ID), TM(TM) {
     Opt.MaxOffset = MaximalOffset;
     Opt.SizeOnly = OnlyOptimizeForSize;
     Opt.MergeExternal = MergeExternalGlobals;
     Opt.MergeConstantGlobals = MergeConstantGlobals;
+    Opt.MergeConstAggressive = MergeConstAggressive;
     initializeGlobalMergePass(*PassRegistry::getPassRegistry());
   }
 
@@ -263,7 +269,7 @@ bool GlobalMergeImpl::doMerge(SmallVectorImpl<GlobalVariable *> &Globals,
       });
 
   // If we want to just blindly group all globals together, do so.
-  if (!GlobalMergeGroupByUse) {
+  if (!GlobalMergeGroupByUse || (Opt.MergeConstAggressive && isConst)) {
     BitVector AllGlobals(Globals.size());
     AllGlobals.set();
     return doMerge(Globals, AllGlobals, M, isConst, AddrSpace);
@@ -578,12 +584,18 @@ bool GlobalMergeImpl::doMerge(const SmallVectorImpl<GlobalVariable *> &Globals,
       Globals[k]->replaceAllUsesWith(GEP);
       Globals[k]->eraseFromParent();
 
-      // When the linkage is not internal we must emit an alias for the original
-      // variable name as it may be accessed from another object. On non-Mach-O
-      // we can also emit an alias for internal linkage as it's safe to do so.
-      // It's not safe on Mach-O as the alias (and thus the portion of the
-      // MergedGlobals variable) may be dead stripped at link time.
-      if (Linkage != GlobalValue::InternalLinkage || !IsMachO) {
+      // Emit an alias for the original variable name. This is necessary for an
+      // external symbol, as it may be accessed from another object. For
+      // internal symbols, it's not strictly required, but it's useful.
+      //
+      // This _should_ also work on Mach-O ever since '.alt_entry' support was
+      // added in 2016. Unfortunately, there's a bug in ld-prime (present at
+      // least from Xcode 15.0 through Xcode 16.0), in which -dead_strip doesn't
+      // always honor alt_entry. To workaround this issue, we don't emit aliases
+      // on Mach-O. Except, we _must_ do so for external symbols. That means
+      // MergeExternal is broken with that linker. (That option is currently off
+      // by default on MachO).
+      if (!IsMachO || Linkage == GlobalValue::ExternalLinkage) {
         GlobalAlias *GA = GlobalAlias::create(Tys[StructIdxs[idx]], AddrSpace,
                                               Linkage, Name, GEP, &M);
         GA->setVisibility(Visibility);
@@ -640,6 +652,18 @@ void GlobalMergeImpl::setMustKeepGlobalVariables(Module &M) {
   }
 }
 
+// This function returns true if the given data Section name has custom
+// subsection-splitting semantics in Mach-O (such as splitting by a fixed size)
+//
+// See also ObjFile::parseSections and getRecordSize in lld/MachO/InputFiles.cpp
+static bool isSpecialMachOSection(StringRef Section) {
+  // Uses starts_with, since section attributes can appear at the end of the
+  // name.
+  return Section.starts_with("__DATA,__cfstring") ||
+         Section.starts_with("__DATA,__objc_classrefs") ||
+         Section.starts_with("__DATA,__objc_selrefs");
+}
+
 bool GlobalMergeImpl::run(Module &M) {
   if (!EnableGlobalMerge)
     return false;
@@ -677,6 +701,10 @@ bool GlobalMergeImpl::run(Module &M) {
 
     unsigned AddressSpace = PT->getAddressSpace();
     StringRef Section = GV.getSection();
+
+    // On Mach-O, some section names have special semantics. Don't merge these.
+    if (IsMachO && isSpecialMachOSection(Section))
+      continue;
 
     // Ignore all 'special' globals.
     if (GV.getName().starts_with("llvm.") || GV.getName().starts_with(".llvm."))
@@ -731,10 +759,14 @@ bool GlobalMergeImpl::run(Module &M) {
 Pass *llvm::createGlobalMergePass(const TargetMachine *TM, unsigned Offset,
                                   bool OnlyOptimizeForSize,
                                   bool MergeExternalByDefault,
-                                  bool MergeConstantByDefault) {
+                                  bool MergeConstantByDefault,
+                                  bool MergeConstAggressiveByDefault) {
   bool MergeExternal = (EnableGlobalMergeOnExternal == cl::BOU_UNSET) ?
     MergeExternalByDefault : (EnableGlobalMergeOnExternal == cl::BOU_TRUE);
   bool MergeConstant = EnableGlobalMergeOnConst || MergeConstantByDefault;
+  bool MergeConstAggressive = GlobalMergeAllConst.getNumOccurrences() > 0
+                                  ? GlobalMergeAllConst
+                                  : MergeConstAggressiveByDefault;
   return new GlobalMerge(TM, Offset, OnlyOptimizeForSize, MergeExternal,
-                         MergeConstant);
+                         MergeConstant, MergeConstAggressive);
 }

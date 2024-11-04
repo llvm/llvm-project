@@ -31,7 +31,7 @@ define void @print_call_and_memory(i64 %n, ptr noalias %y, ptr noalias %x) nounw
 ; CHECK-NEXT:    "  CLONE ir\<%arrayidx\> = getelementptr inbounds ir\<%y\>, vp\<[[STEPS]]\>\l" +
 ; CHECK-NEXT:    "  vp\<[[VEC_PTR:%.+]]\> = vector-pointer ir\<%arrayidx\>\l" +
 ; CHECK-NEXT:    "  WIDEN ir\<%lv\> = load vp\<[[VEC_PTR]]\>\l" +
-; CHECK-NEXT:    "  WIDEN-CALL ir\<%call\> = call @llvm.sqrt.f32(ir\<%lv\>) (using vector intrinsic)\l" +
+; CHECK-NEXT:    "  WIDEN-INTRINSIC ir\<%call\> = call llvm.sqrt(ir\<%lv\>)\l" +
 ; CHECK-NEXT:    "  CLONE ir\<%arrayidx2\> = getelementptr inbounds ir\<%x\>, vp\<[[STEPS]]\>\l" +
 ; CHECK-NEXT:    "  vp\<[[VEC_PTR2:%.+]]\> = vector-pointer ir\<%arrayidx2\>\l" +
 ; CHECK-NEXT:    "  WIDEN store vp\<[[VEC_PTR2]]\>, ir\<%call\>\l" +

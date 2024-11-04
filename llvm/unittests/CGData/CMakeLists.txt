@@ -6,9 +6,11 @@ set(LLVM_LINK_COMPONENTS
   Support
   )
 
-add_llvm_unittest(CodeGenDataTests
+add_llvm_unittest(CGDataTests
   OutlinedHashTreeRecordTest.cpp
   OutlinedHashTreeTest.cpp
+  StableFunctionMapRecordTest.cpp
+  StableFunctionMapTest.cpp
   )
 
-target_link_libraries(CodeGenDataTests PRIVATE LLVMTestingSupport)
+target_link_libraries(CGDataTests PRIVATE LLVMTestingSupport)

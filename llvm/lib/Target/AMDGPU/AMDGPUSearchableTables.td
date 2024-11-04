@@ -239,15 +239,9 @@ def : SourceOfDivergence<int_r600_read_tidig_y>;
 def : SourceOfDivergence<int_r600_read_tidig_z>;
 def : SourceOfDivergence<int_amdgcn_atomic_cond_sub_u32>;
 def : SourceOfDivergence<int_amdgcn_global_atomic_csub>;
-def : SourceOfDivergence<int_amdgcn_global_atomic_fadd>;
-def : SourceOfDivergence<int_amdgcn_global_atomic_fmin>;
-def : SourceOfDivergence<int_amdgcn_global_atomic_fmax>;
 def : SourceOfDivergence<int_amdgcn_global_atomic_fmin_num>;
 def : SourceOfDivergence<int_amdgcn_global_atomic_fmax_num>;
 def : SourceOfDivergence<int_amdgcn_global_atomic_ordered_add_b64>;
-def : SourceOfDivergence<int_amdgcn_flat_atomic_fadd>;
-def : SourceOfDivergence<int_amdgcn_flat_atomic_fmin>;
-def : SourceOfDivergence<int_amdgcn_flat_atomic_fmax>;
 def : SourceOfDivergence<int_amdgcn_flat_atomic_fmin_num>;
 def : SourceOfDivergence<int_amdgcn_flat_atomic_fmax_num>;
 def : SourceOfDivergence<int_amdgcn_raw_buffer_atomic_swap>;
@@ -331,6 +325,7 @@ def : SourceOfDivergence<int_amdgcn_mov_dpp>;
 def : SourceOfDivergence<int_amdgcn_mov_dpp8>;
 def : SourceOfDivergence<int_amdgcn_update_dpp>;
 def : SourceOfDivergence<int_amdgcn_writelane>;
+def : SourceOfDivergence<int_amdgcn_init_whole_wave>;
 
 foreach intr = AMDGPUMFMAIntrinsics908 in
 def : SourceOfDivergence<intr>;

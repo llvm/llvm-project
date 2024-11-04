@@ -66,6 +66,18 @@
 ;; Check that the total sizes are reported if requested.
 ; RUN: opt < %s -passes='memprof-use<profile-filename=%t.memprofdata>' -pgo-warn-missing-function -S -memprof-report-hinted-sizes 2>&1 | FileCheck %s --check-prefixes=TOTALSIZES
 
+;; Make sure we emit a random hotness seed if requested.
+; RUN: llvm-profdata merge -memprof-random-hotness %S/Inputs/memprof.memprofraw --profiled-binary %S/Inputs/memprof.exe -o %t.memprofdatarand 2>&1 | FileCheck %s --check-prefix=RAND
+; RAND: random hotness seed =
+;; Can't check the exact values, but make sure applying the random profile
+;; succeeds with the same stats
+; RUN: opt < %s -passes='memprof-use<profile-filename=%t.memprofdatarand>' -pgo-warn-missing-function -S -stats 2>&1 | FileCheck %s --check-prefixes=ALL,MEMPROFONLY,MEMPROFSTATS
+
+;; Make sure we use a specific random hotness seed if requested.
+; RUN: llvm-profdata merge -memprof-random-hotness -memprof-random-hotness-seed=1730170724 %S/Inputs/memprof.memprofraw --profiled-binary %S/Inputs/memprof.exe -o %t.memprofdatarand2 2>&1 | FileCheck %s --check-prefix=RAND2
+; RAND2: random hotness seed = 1730170724
+; RUN: opt < %s -passes='memprof-use<profile-filename=%t.memprofdatarand2>' -pgo-warn-missing-function -S -stats 2>&1 | FileCheck %s --check-prefixes=MEMPROFRAND2,ALL,MEMPROFONLY,MEMPROFSTATS
+
 ; MEMPROFMATCHINFO: MemProf notcold context with id 1093248920606587996 has total profiled size 10 is matched
 ; MEMPROFMATCHINFO: MemProf notcold context with id 5725971306423925017 has total profiled size 10 is matched
 ; MEMPROFMATCHINFO: MemProf notcold context with id 6792096022461663180 has total profiled size 10 is matched
@@ -81,7 +93,7 @@ target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16
 target triple = "x86_64-unknown-linux-gnu"
 
 ; Function Attrs: mustprogress noinline optnone uwtable
-; ALL-LABEL: define dso_local noundef ptr @_Z3foov()
+; ALL-LABEL: define dso_local noundef{{.*}}ptr @_Z3foov()
 ; There should be some PGO metadata
 ; PGO: !prof
 define dso_local noundef ptr @_Z3foov() #0 !dbg !10 {
@@ -96,7 +108,7 @@ entry:
 declare noundef nonnull ptr @_Znam(i64 noundef) #1
 
 ; Function Attrs: mustprogress noinline optnone uwtable
-; ALL-LABEL: define dso_local noundef ptr @_Z4foo2v()
+; ALL-LABEL: define dso_local noundef{{.*}}ptr @_Z4foo2v()
 define dso_local noundef ptr @_Z4foo2v() #0 !dbg !15 {
 entry:
   ; MEMPROF: call {{.*}} @_Z3foov{{.*}} !callsite ![[C2:[0-9]+]]
@@ -371,6 +383,13 @@ for.end:                                          ; preds = %for.cond
 ; MEMPROFNOCOLINFO: ![[C9]] = !{i64 -962804290746547393}
 ; MEMPROFNOCOLINFO: ![[C10]] = !{i64 -4535090212904553409}
 ; MEMPROFNOCOLINFO: ![[C11]] = !{i64 3577763375057267810}
+
+;; For the specific random seed, this is the expected order of hotness
+; MEMPROFRAND2: !"cold"
+; MEMPROFRAND2: !"cold"
+; MEMPROFRAND2: !"cold"
+; MEMPROFRAND2: !"hot"
+; MEMPROFRAND2: !"hot"
 
 ; MEMPROFSTATS:  8 memprof - Number of alloc contexts in memory profile.
 ; MEMPROFSTATS: 10 memprof - Number of callsites in memory profile.

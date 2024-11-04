@@ -26,7 +26,7 @@
 ; COMBINED:       <GLOBALVAL_SUMMARY_BLOCK
 ; COMBINED-NEXT:    <VERSION
 ; COMBINED-NEXT:    <FLAGS
-; COMBINED-NEXT:    <VALUE_GUID op0=[[FUNCID:[0-9]+]] op1=7289175272376759421/>
+; COMBINED-NEXT:    <VALUE_GUID {{.*}} op0=[[FUNCID:[0-9]+]] op1=1697143370 op2=1603531901/>
 ; COMBINED-NEXT:    <VALUE_GUID
 ; COMBINED-NEXT:    <COMBINED
 ; See if the call to func is registered, using the expected hotness type.

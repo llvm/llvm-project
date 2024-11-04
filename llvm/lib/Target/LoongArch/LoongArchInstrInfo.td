@@ -1065,10 +1065,13 @@ def RDTIME_D : RDTIME_2R<0x00006800>;
 
 /// Generic pattern classes
 
+def assertsexti32 : PatFrag<(ops node:$src), (assertsext node:$src), [{
+  return cast<VTSDNode>(N->getOperand(1))->getVT().bitsLE(MVT::i32);
+}]>;
 class PatGprGpr<SDPatternOperator OpNode, LAInst Inst>
     : Pat<(OpNode GPR:$rj, GPR:$rk), (Inst GPR:$rj, GPR:$rk)>;
 class PatGprGpr_32<SDPatternOperator OpNode, LAInst Inst>
-    : Pat<(sext_inreg (OpNode GPR:$rj, GPR:$rk), i32), (Inst GPR:$rj, GPR:$rk)>;
+    : Pat<(sext_inreg (OpNode (assertsexti32 GPR:$rj), (assertsexti32 GPR:$rk)), i32), (Inst GPR:$rj, GPR:$rk)>;
 class PatGpr<SDPatternOperator OpNode, LAInst Inst>
     : Pat<(OpNode GPR:$rj), (Inst GPR:$rj)>;
 
@@ -1481,7 +1484,7 @@ def : Pat<(loongarch_call tglobaladdr:$func), (PseudoCALL tglobaladdr:$func)>;
 def : Pat<(loongarch_call texternalsym:$func), (PseudoCALL texternalsym:$func)>;
 
 // Function call with 'Medium' code model.
-let isCall = 1, Defs = [R1] in
+let isCall = 1, Defs = [R1, R20], Size = 8 in
 def PseudoCALL_MEDIUM : Pseudo<(outs), (ins bare_symbol:$func)>;
 
 let Predicates = [IsLA64] in {
@@ -1530,7 +1533,8 @@ def : Pat<(loongarch_tail (iPTR texternalsym:$dst)),
           (PseudoTAIL texternalsym:$dst)>;
 
 // Tail call with 'Medium' code model.
-let isCall = 1, isTerminator = 1, isReturn = 1, isBarrier = 1, Uses = [R3] in
+let isCall = 1, isTerminator = 1, isReturn = 1, isBarrier = 1,
+    Uses = [R3], Defs = [R20], Size = 8 in
 def PseudoTAIL_MEDIUM : Pseudo<(outs), (ins bare_symbol:$dst)>;
 
 let Predicates = [IsLA64] in {
@@ -1652,27 +1656,17 @@ let isCall = 1, isBarrier = 1, hasSideEffects = 0, mayStore = 0, mayLoad = 0,
 def PseudoDESC_CALL : Pseudo<(outs GPR:$rd), (ins GPR:$rj, simm16_lsl2:$imm16)>,
                       PseudoInstExpansion<(JIRL GPR:$rd, GPR:$rj,
                                            simm16_lsl2:$imm16)>;
-
 // TLSDESC
 let hasSideEffects = 0, mayLoad = 1, mayStore = 0, isCodeGenOnly = 0,
-    isAsmParserOnly = 1, Defs = [R1] in {
-def PseudoLA_TLS_DESC_ABS : Pseudo<(outs GPR:$dst), (ins bare_symbol:$src),
-                                   [], "la.tls.desc", "$dst, $src">,
-                                   Requires<[IsLA32, HasLaGlobalWithAbs]>;
-def PseudoLA_TLS_DESC_ABS_LARGE : Pseudo<(outs GPR:$dst),
-                                         (ins GPR:$tmp, bare_symbol:$src), [],
-                                         "la.tls.desc", "$dst, $src">,
-                                  Requires<[IsLA64, HasLaGlobalWithAbs]>;
-def PseudoLA_TLS_DESC_PC : Pseudo<(outs GPR:$dst), (ins bare_symbol:$src), [],
-                                  "la.tls.desc", "$dst, $src">;
-}
-
+    isAsmParserOnly = 1, Defs = [R1] in
+def PseudoLA_TLS_DESC : Pseudo<(outs GPR:$dst), (ins bare_symbol:$src), [],
+                               "la.tls.desc", "$dst, $src">;
 let isCall = 1, isBarrier = 1, hasSideEffects = 0, mayStore = 0, mayLoad = 0,
     isCodeGenOnly = 0, isAsmParserOnly = 1, Defs = [R1, R4] in
-def PseudoLA_TLS_DESC_PC_LARGE : Pseudo<(outs GPR:$dst),
-                                        (ins GPR:$tmp, bare_symbol:$src), [],
-                                        "la.tls.desc", "$dst, $tmp, $src">,
-                                 Requires<[IsLA64]>;
+def PseudoLA_TLS_DESC_LARGE : Pseudo<(outs GPR:$dst),
+                                     (ins GPR:$tmp, bare_symbol:$src), [],
+                                     "la.tls.desc", "$dst, $tmp, $src">,
+                              Requires<[IsLA64]>;
 
 // Load address inst alias: "la", "la.global" and "la.local".
 // Default:
@@ -2072,58 +2066,78 @@ multiclass ternary_atomic_op_failure_ord {
 defm atomic_cmp_swap_i32 : ternary_atomic_op_failure_ord;
 defm atomic_cmp_swap_i64 : ternary_atomic_op_failure_ord;
 
+// Atomic operation for word and double word
+multiclass binary_atomic_op_wd<string inst, string op, string signed = ""> {
+  def : Pat<(!cast<PatFrag>(op#"_i32_monotonic") GPR:$rj, GPR:$rk),
+            (!cast<Instruction>(inst#"_W"#signed) GPR:$rk, GPR:$rj)>;
+  def : Pat<(!cast<PatFrag>(op#"_i64_monotonic") GPR:$rj, GPR:$rk),
+            (!cast<Instruction>(inst#"_D"#signed) GPR:$rk, GPR:$rj)>;
+
+  def : Pat<(!cast<PatFrag>(op#"_i32") GPR:$rj, GPR:$rk),
+            (!cast<Instruction>(inst#"__DB_W"#signed) GPR:$rk, GPR:$rj)>;
+  def : Pat<(!cast<PatFrag>(op#"_i64") GPR:$rj, GPR:$rk),
+            (!cast<Instruction>(inst#"__DB_D"#signed) GPR:$rk, GPR:$rj)>;
+}
+
+// Atomic operation for byte and half word
+multiclass binary_atomic_op_bh<string inst, string op> {
+  def : Pat<(!cast<PatFrag>(op#"_i8_monotonic") GPR:$rj, GPR:$rk),
+            (!cast<Instruction>(inst#"_B") GPR:$rk, GPR:$rj)>;
+  def : Pat<(!cast<PatFrag>(op#"_i16_monotonic") GPR:$rj, GPR:$rk),
+            (!cast<Instruction>(inst#"_H") GPR:$rk, GPR:$rj)>;
+
+  def : Pat<(!cast<PatFrag>(op#"_i8") GPR:$rj, GPR:$rk),
+            (!cast<Instruction>(inst#"__DB_B") GPR:$rk, GPR:$rj)>;
+  def : Pat<(!cast<PatFrag>(op#"_i16") GPR:$rj, GPR:$rk),
+            (!cast<Instruction>(inst#"__DB_H") GPR:$rk, GPR:$rj)>;
+}
+
+let Predicates = [ HasLAM_BH, IsLA64 ] in {
+  
+defm : binary_atomic_op_bh<"AMSWAP", "atomic_swap">;
+defm : binary_atomic_op_bh<"AMADD", "atomic_load_add">;
+def : Pat<(atomic_load_sub_i8_monotonic GPR:$rj, GPR:$rk),
+          (AMADD_B (SUB_W R0, GPR:$rk), GPR:$rj)>;
+def : Pat<(atomic_load_sub_i16_monotonic GPR:$rj, GPR:$rk),
+          (AMADD_H (SUB_W R0, GPR:$rk), GPR:$rj)>;
+
+def : Pat<(atomic_load_sub_i8 GPR:$rj, GPR:$rk),
+          (AMADD__DB_B (SUB_W R0, GPR:$rk), GPR:$rj)>;
+def : Pat<(atomic_load_sub_i16 GPR:$rj, GPR:$rk),
+          (AMADD__DB_H (SUB_W R0, GPR:$rk), GPR:$rj)>;
+} // Predicates = [ IsLA64, HasLAM_BH ]
+
+
 let Predicates = [IsLA64] in {
-def : AtomicPat<int_loongarch_masked_atomicrmw_xchg_i64,
-                PseudoMaskedAtomicSwap32>;
-def : Pat<(atomic_swap_i32 GPR:$addr, GPR:$incr),
-          (AMSWAP__DB_W GPR:$incr, GPR:$addr)>;
-def : Pat<(atomic_swap_i64 GPR:$addr, GPR:$incr),
-          (AMSWAP__DB_D GPR:$incr, GPR:$addr)>;
-def : Pat<(atomic_load_add_i64 GPR:$rj, GPR:$rk),
-          (AMADD__DB_D GPR:$rk, GPR:$rj)>;
-def : AtomicPat<int_loongarch_masked_atomicrmw_add_i64,
-                PseudoMaskedAtomicLoadAdd32>;
+
+defm : binary_atomic_op_wd<"AMSWAP", "atomic_swap">;
+defm : binary_atomic_op_wd<"AMADD", "atomic_load_add">;
+defm : binary_atomic_op_wd<"AMAND", "atomic_load_and">;
+defm : binary_atomic_op_wd<"AMOR", "atomic_load_or">;
+defm : binary_atomic_op_wd<"AMXOR", "atomic_load_xor">;
+defm : binary_atomic_op_wd<"AMMIN", "atomic_load_umin", "U">;
+defm : binary_atomic_op_wd<"AMMAX", "atomic_load_umax", "U">;
+defm : binary_atomic_op_wd<"AMMIN", "atomic_load_min">;
+defm : binary_atomic_op_wd<"AMMAX", "atomic_load_max">;
+def : Pat<(atomic_load_sub_i32_monotonic GPR:$rj, GPR:$rk),
+          (AMADD_W (SUB_W R0, GPR:$rk), GPR:$rj)>;
+def : Pat<(atomic_load_sub_i64_monotonic GPR:$rj, GPR:$rk),
+          (AMADD_D (SUB_D R0, GPR:$rk), GPR:$rj)>;
+
 def : Pat<(atomic_load_sub_i32 GPR:$rj, GPR:$rk),
           (AMADD__DB_W (SUB_W R0, GPR:$rk), GPR:$rj)>;
 def : Pat<(atomic_load_sub_i64 GPR:$rj, GPR:$rk),
           (AMADD__DB_D (SUB_D R0, GPR:$rk), GPR:$rj)>;
+
+def : AtomicPat<int_loongarch_masked_atomicrmw_xchg_i64,
+                PseudoMaskedAtomicSwap32>;
+def : AtomicPat<int_loongarch_masked_atomicrmw_add_i64,
+                PseudoMaskedAtomicLoadAdd32>;
 def : AtomicPat<int_loongarch_masked_atomicrmw_sub_i64,
                 PseudoMaskedAtomicLoadSub32>;
 defm : PseudoBinPat<"atomic_load_nand_i64", PseudoAtomicLoadNand64>;
 def : AtomicPat<int_loongarch_masked_atomicrmw_nand_i64,
                 PseudoMaskedAtomicLoadNand32>;
-def : Pat<(atomic_load_add_i32 GPR:$rj, GPR:$rk),
-          (AMADD__DB_W GPR:$rk, GPR:$rj)>;
-def : Pat<(atomic_load_and_i32 GPR:$rj, GPR:$rk),
-          (AMAND__DB_W GPR:$rk, GPR:$rj)>;
-def : Pat<(atomic_load_and_i64 GPR:$rj, GPR:$rk),
-          (AMAND__DB_D GPR:$rk, GPR:$rj)>;
-def : Pat<(atomic_load_or_i32 GPR:$rj, GPR:$rk),
-          (AMOR__DB_W GPR:$rk, GPR:$rj)>;
-def : Pat<(atomic_load_or_i64 GPR:$rj, GPR:$rk),
-          (AMOR__DB_D GPR:$rk, GPR:$rj)>;
-def : Pat<(atomic_load_xor_i32 GPR:$rj, GPR:$rk),
-          (AMXOR__DB_W GPR:$rk, GPR:$rj)>;
-def : Pat<(atomic_load_xor_i64 GPR:$rj, GPR:$rk),
-          (AMXOR__DB_D GPR:$rk, GPR:$rj)>;
-
-def : Pat<(atomic_load_umin_i32 GPR:$rj, GPR:$rk),
-          (AMMIN__DB_WU GPR:$rk, GPR:$rj)>;
-def : Pat<(atomic_load_umin_i64 GPR:$rj, GPR:$rk),
-          (AMMIN__DB_DU GPR:$rk, GPR:$rj)>;
-def : Pat<(atomic_load_umax_i32 GPR:$rj, GPR:$rk),
-          (AMMAX__DB_WU GPR:$rk, GPR:$rj)>;
-def : Pat<(atomic_load_umax_i64 GPR:$rj, GPR:$rk),
-          (AMMAX__DB_DU GPR:$rk, GPR:$rj)>;
-
-def : Pat<(atomic_load_min_i32 GPR:$rj, GPR:$rk),
-          (AMMIN__DB_W GPR:$rk, GPR:$rj)>;
-def : Pat<(atomic_load_min_i64 GPR:$rj, GPR:$rk),
-          (AMMIN__DB_D GPR:$rk, GPR:$rj)>;
-def : Pat<(atomic_load_max_i32 GPR:$rj, GPR:$rk),
-          (AMMAX__DB_W GPR:$rk, GPR:$rj)>;
-def : Pat<(atomic_load_max_i64 GPR:$rj, GPR:$rk),
-          (AMMAX__DB_D GPR:$rk, GPR:$rj)>;
 
 def : AtomicPat<int_loongarch_masked_atomicrmw_umax_i64,
                 PseudoMaskedAtomicLoadUMax32>;

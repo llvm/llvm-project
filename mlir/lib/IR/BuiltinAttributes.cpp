@@ -229,6 +229,13 @@ void StridedLayoutAttr::print(llvm::raw_ostream &os) const {
   os << ">";
 }
 
+/// Returns true if this layout is static, i.e. the strides and offset all have
+/// a known value > 0.
+bool StridedLayoutAttr::hasStaticLayout() const {
+  return !ShapedType::isDynamic(getOffset()) &&
+         !ShapedType::isDynamicShape(getStrides());
+}
+
 /// Returns the strided layout as an affine map.
 AffineMap StridedLayoutAttr::getAffineMap() const {
   return makeStridedLinearLayoutMap(getStrides(), getOffset(), getContext());

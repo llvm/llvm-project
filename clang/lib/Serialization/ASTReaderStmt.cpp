@@ -575,6 +575,11 @@ void ASTStmtReader::VisitConstantExpr(ConstantExpr *E) {
   E->setSubExpr(Record.readSubExpr());
 }
 
+void ASTStmtReader::VisitOpenACCAsteriskSizeExpr(OpenACCAsteriskSizeExpr *E) {
+  VisitExpr(E);
+  E->setAsteriskLocation(readSourceLocation());
+}
+
 void ASTStmtReader::VisitSYCLUniqueStableNameExpr(SYCLUniqueStableNameExpr *E) {
   VisitExpr(E);
 
@@ -701,6 +706,7 @@ void ASTStmtReader::VisitCharacterLiteral(CharacterLiteral *E) {
 
 void ASTStmtReader::VisitParenExpr(ParenExpr *E) {
   VisitExpr(E);
+  E->setIsProducedByFoldExpansion(Record.readInt());
   E->setLParen(readSourceLocation());
   E->setRParen(readSourceLocation());
   E->setSubExpr(Record.readSubExpr());
@@ -2839,6 +2845,18 @@ void ASTStmtReader::VisitOpenACCLoopConstruct(OpenACCLoopConstruct *S) {
 }
 
 //===----------------------------------------------------------------------===//
+// HLSL Constructs/Directives.
+//===----------------------------------------------------------------------===//
+
+void ASTStmtReader::VisitHLSLOutArgExpr(HLSLOutArgExpr *S) {
+  VisitExpr(S);
+  S->SubExprs[HLSLOutArgExpr::BaseLValue] = Record.readSubExpr();
+  S->SubExprs[HLSLOutArgExpr::CastedTemporary] = Record.readSubExpr();
+  S->SubExprs[HLSLOutArgExpr::WritebackCast] = Record.readSubExpr();
+  S->IsInOut = Record.readBool();
+}
+
+//===----------------------------------------------------------------------===//
 // ASTReader Implementation
 //===----------------------------------------------------------------------===//
 
@@ -3040,6 +3058,10 @@ Stmt *ASTReader::ReadStmtFromStream(ModuleFile &F) {
 
     case EXPR_SYCL_UNIQUE_STABLE_NAME:
       S = SYCLUniqueStableNameExpr::CreateEmpty(Context);
+      break;
+
+    case EXPR_OPENACC_ASTERISK_SIZE:
+      S = OpenACCAsteriskSizeExpr::CreateEmpty(Context);
       break;
 
     case EXPR_PREDEFINED:
@@ -4292,11 +4314,15 @@ Stmt *ASTReader::ReadStmtFromStream(ModuleFile &F) {
       S = OpenACCLoopConstruct::CreateEmpty(Context, NumClauses);
       break;
     }
-    case EXPR_REQUIRES:
+    case EXPR_REQUIRES: {
       unsigned numLocalParameters = Record[ASTStmtReader::NumExprFields];
       unsigned numRequirement = Record[ASTStmtReader::NumExprFields + 1];
       S = RequiresExpr::Create(Context, Empty, numLocalParameters,
                                numRequirement);
+      break;
+    }
+    case EXPR_HLSL_OUT_ARG:
+      S = HLSLOutArgExpr::CreateEmpty(Context);
       break;
     }
 

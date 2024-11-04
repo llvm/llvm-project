@@ -23,6 +23,9 @@ end program
 ! DEBUG-ERR-NOT: Pass statistics report
 
 ! ALL: Pass statistics report
+! ALL: Fortran::lower::VerifierPass
+
+! ALL: Pass statistics report
 
 ! ALL: Fortran::lower::VerifierPass
 ! ALL-NEXT: Pipeline Collection : ['fir.global', 'func.func', 'omp.declare_reduction', 'omp.private']
@@ -109,6 +112,7 @@ end program
 ! ALL-NEXT: CodeGenRewrite
 ! ALL-NEXT:   (S) 0 num-dce'd - Number of operations eliminated
 ! ALL-NEXT: TargetRewrite
+! ALL-NEXT: CompilerGeneratedNamesConversion
 ! ALL-NEXT: ExternalNameConversion
 ! DEBUG-NEXT: AddDebugInfo
 ! NO-DEBUG-NOT: AddDebugInfo

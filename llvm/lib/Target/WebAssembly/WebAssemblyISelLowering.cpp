@@ -70,7 +70,7 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
     addRegisterClass(MVT::v2i64, &WebAssembly::V128RegClass);
     addRegisterClass(MVT::v2f64, &WebAssembly::V128RegClass);
   }
-  if (Subtarget->hasHalfPrecision()) {
+  if (Subtarget->hasFP16()) {
     addRegisterClass(MVT::v8f16, &WebAssembly::V128RegClass);
   }
   if (Subtarget->hasReferenceTypes()) {
@@ -95,6 +95,10 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
       setOperationAction(ISD::LOAD, T, Custom);
       setOperationAction(ISD::STORE, T, Custom);
     }
+  }
+  if (Subtarget->hasFP16()) {
+    setOperationAction(ISD::LOAD, MVT::v8f16, Custom);
+    setOperationAction(ISD::STORE, MVT::v8f16, Custom);
   }
   if (Subtarget->hasReferenceTypes()) {
     // We need custom load and store lowering for both externref, funcref and
@@ -146,7 +150,7 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
     setTruncStoreAction(T, MVT::f16, Expand);
   }
 
-  if (Subtarget->hasHalfPrecision()) {
+  if (Subtarget->hasFP16()) {
     setOperationAction(ISD::FMINIMUM, MVT::v8f16, Legal);
     setOperationAction(ISD::FMAXIMUM, MVT::v8f16, Legal);
   }
@@ -161,6 +165,13 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
     if (Subtarget->hasSIMD128())
       for (auto T : {MVT::v16i8, MVT::v8i16, MVT::v4i32, MVT::v2i64})
         setOperationAction(Op, T, Expand);
+  }
+
+  if (Subtarget->hasWideArithmetic()) {
+    setOperationAction(ISD::ADD, MVT::i128, Custom);
+    setOperationAction(ISD::SUB, MVT::i128, Custom);
+    setOperationAction(ISD::SMUL_LOHI, MVT::i64, Custom);
+    setOperationAction(ISD::UMUL_LOHI, MVT::i64, Custom);
   }
 
   if (Subtarget->hasNontrappingFPToInt())
@@ -194,8 +205,8 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
 
     setTargetDAGCombine(ISD::TRUNCATE);
 
-    // Support saturating add for i8x16 and i16x8
-    for (auto Op : {ISD::SADDSAT, ISD::UADDSAT})
+    // Support saturating add/sub for i8x16 and i16x8
+    for (auto Op : {ISD::SADDSAT, ISD::UADDSAT, ISD::SSUBSAT, ISD::USUBSAT})
       for (auto T : {MVT::v16i8, MVT::v8i16})
         setOperationAction(Op, T, Legal);
 
@@ -207,6 +218,9 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
     for (auto T : {MVT::v16i8, MVT::v8i16, MVT::v4i32, MVT::v4f32, MVT::v2i64,
                    MVT::v2f64})
       setOperationAction(ISD::BUILD_VECTOR, T, Custom);
+
+    if (Subtarget->hasFP16())
+      setOperationAction(ISD::BUILD_VECTOR, MVT::f16, Custom);
 
     // We have custom shuffle lowering to expose the shuffle mask
     for (auto T : {MVT::v16i8, MVT::v8i16, MVT::v4i32, MVT::v4f32, MVT::v2i64,
@@ -275,8 +289,12 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
         setOperationAction(Op, T, Expand);
 
     // But saturating fp_to_int converstions are
-    for (auto Op : {ISD::FP_TO_SINT_SAT, ISD::FP_TO_UINT_SAT})
+    for (auto Op : {ISD::FP_TO_SINT_SAT, ISD::FP_TO_UINT_SAT}) {
       setOperationAction(Op, MVT::v4i32, Custom);
+      if (Subtarget->hasFP16()) {
+        setOperationAction(Op, MVT::v8i16, Custom);
+      }
+    }
 
     // Support vector extending
     for (auto T : MVT::integer_fixedlen_vector_valuetypes()) {
@@ -550,6 +568,138 @@ static MachineBasicBlock *LowerFPToInt(MachineInstr &MI, DebugLoc DL,
   return DoneMBB;
 }
 
+// Lower a `MEMCPY` instruction into a CFG triangle around a `MEMORY_COPY`
+// instuction to handle the zero-length case.
+static MachineBasicBlock *LowerMemcpy(MachineInstr &MI, DebugLoc DL,
+                                      MachineBasicBlock *BB,
+                                      const TargetInstrInfo &TII, bool Int64) {
+  MachineRegisterInfo &MRI = BB->getParent()->getRegInfo();
+
+  MachineOperand DstMem = MI.getOperand(0);
+  MachineOperand SrcMem = MI.getOperand(1);
+  MachineOperand Dst = MI.getOperand(2);
+  MachineOperand Src = MI.getOperand(3);
+  MachineOperand Len = MI.getOperand(4);
+
+  // We're going to add an extra use to `Len` to test if it's zero; that
+  // use shouldn't be a kill, even if the original use is.
+  MachineOperand NoKillLen = Len;
+  NoKillLen.setIsKill(false);
+
+  // Decide on which `MachineInstr` opcode we're going to use.
+  unsigned Eqz = Int64 ? WebAssembly::EQZ_I64 : WebAssembly::EQZ_I32;
+  unsigned MemoryCopy =
+      Int64 ? WebAssembly::MEMORY_COPY_A64 : WebAssembly::MEMORY_COPY_A32;
+
+  // Create two new basic blocks; one for the new `memory.fill` that we can
+  // branch over, and one for the rest of the instructions after the original
+  // `memory.fill`.
+  const BasicBlock *LLVMBB = BB->getBasicBlock();
+  MachineFunction *F = BB->getParent();
+  MachineBasicBlock *TrueMBB = F->CreateMachineBasicBlock(LLVMBB);
+  MachineBasicBlock *DoneMBB = F->CreateMachineBasicBlock(LLVMBB);
+
+  MachineFunction::iterator It = ++BB->getIterator();
+  F->insert(It, TrueMBB);
+  F->insert(It, DoneMBB);
+
+  // Transfer the remainder of BB and its successor edges to DoneMBB.
+  DoneMBB->splice(DoneMBB->begin(), BB, std::next(MI.getIterator()), BB->end());
+  DoneMBB->transferSuccessorsAndUpdatePHIs(BB);
+
+  // Connect the CFG edges.
+  BB->addSuccessor(TrueMBB);
+  BB->addSuccessor(DoneMBB);
+  TrueMBB->addSuccessor(DoneMBB);
+
+  // Create a virtual register for the `Eqz` result.
+  unsigned EqzReg;
+  EqzReg = MRI.createVirtualRegister(&WebAssembly::I32RegClass);
+
+  // Erase the original `memory.copy`.
+  MI.eraseFromParent();
+
+  // Test if `Len` is zero.
+  BuildMI(BB, DL, TII.get(Eqz), EqzReg).add(NoKillLen);
+
+  // Insert a new `memory.copy`.
+  BuildMI(TrueMBB, DL, TII.get(MemoryCopy))
+      .add(DstMem)
+      .add(SrcMem)
+      .add(Dst)
+      .add(Src)
+      .add(Len);
+
+  // Create the CFG triangle.
+  BuildMI(BB, DL, TII.get(WebAssembly::BR_IF)).addMBB(DoneMBB).addReg(EqzReg);
+  BuildMI(TrueMBB, DL, TII.get(WebAssembly::BR)).addMBB(DoneMBB);
+
+  return DoneMBB;
+}
+
+// Lower a `MEMSET` instruction into a CFG triangle around a `MEMORY_FILL`
+// instuction to handle the zero-length case.
+static MachineBasicBlock *LowerMemset(MachineInstr &MI, DebugLoc DL,
+                                      MachineBasicBlock *BB,
+                                      const TargetInstrInfo &TII, bool Int64) {
+  MachineRegisterInfo &MRI = BB->getParent()->getRegInfo();
+
+  MachineOperand Mem = MI.getOperand(0);
+  MachineOperand Dst = MI.getOperand(1);
+  MachineOperand Val = MI.getOperand(2);
+  MachineOperand Len = MI.getOperand(3);
+
+  // We're going to add an extra use to `Len` to test if it's zero; that
+  // use shouldn't be a kill, even if the original use is.
+  MachineOperand NoKillLen = Len;
+  NoKillLen.setIsKill(false);
+
+  // Decide on which `MachineInstr` opcode we're going to use.
+  unsigned Eqz = Int64 ? WebAssembly::EQZ_I64 : WebAssembly::EQZ_I32;
+  unsigned MemoryFill =
+      Int64 ? WebAssembly::MEMORY_FILL_A64 : WebAssembly::MEMORY_FILL_A32;
+
+  // Create two new basic blocks; one for the new `memory.fill` that we can
+  // branch over, and one for the rest of the instructions after the original
+  // `memory.fill`.
+  const BasicBlock *LLVMBB = BB->getBasicBlock();
+  MachineFunction *F = BB->getParent();
+  MachineBasicBlock *TrueMBB = F->CreateMachineBasicBlock(LLVMBB);
+  MachineBasicBlock *DoneMBB = F->CreateMachineBasicBlock(LLVMBB);
+
+  MachineFunction::iterator It = ++BB->getIterator();
+  F->insert(It, TrueMBB);
+  F->insert(It, DoneMBB);
+
+  // Transfer the remainder of BB and its successor edges to DoneMBB.
+  DoneMBB->splice(DoneMBB->begin(), BB, std::next(MI.getIterator()), BB->end());
+  DoneMBB->transferSuccessorsAndUpdatePHIs(BB);
+
+  // Connect the CFG edges.
+  BB->addSuccessor(TrueMBB);
+  BB->addSuccessor(DoneMBB);
+  TrueMBB->addSuccessor(DoneMBB);
+
+  // Create a virtual register for the `Eqz` result.
+  unsigned EqzReg;
+  EqzReg = MRI.createVirtualRegister(&WebAssembly::I32RegClass);
+
+  // Erase the original `memory.fill`.
+  MI.eraseFromParent();
+
+  // Test if `Len` is zero.
+  BuildMI(BB, DL, TII.get(Eqz), EqzReg).add(NoKillLen);
+
+  // Insert a new `memory.copy`.
+  BuildMI(TrueMBB, DL, TII.get(MemoryFill)).add(Mem).add(Dst).add(Val).add(Len);
+
+  // Create the CFG triangle.
+  BuildMI(BB, DL, TII.get(WebAssembly::BR_IF)).addMBB(DoneMBB).addReg(EqzReg);
+  BuildMI(TrueMBB, DL, TII.get(WebAssembly::BR)).addMBB(DoneMBB);
+
+  return DoneMBB;
+}
+
 static MachineBasicBlock *
 LowerCallResults(MachineInstr &CallResults, DebugLoc DL, MachineBasicBlock *BB,
                  const WebAssemblySubtarget *Subtarget,
@@ -707,6 +857,14 @@ MachineBasicBlock *WebAssemblyTargetLowering::EmitInstrWithCustomInserter(
   case WebAssembly::FP_TO_UINT_I64_F64:
     return LowerFPToInt(MI, DL, BB, TII, true, true, true,
                         WebAssembly::I64_TRUNC_U_F64);
+  case WebAssembly::MEMCPY_A32:
+    return LowerMemcpy(MI, DL, BB, TII, false);
+  case WebAssembly::MEMCPY_A64:
+    return LowerMemcpy(MI, DL, BB, TII, true);
+  case WebAssembly::MEMSET_A32:
+    return LowerMemset(MI, DL, BB, TII, false);
+  case WebAssembly::MEMSET_A64:
+    return LowerMemset(MI, DL, BB, TII, true);
   case WebAssembly::CALL_RESULTS:
   case WebAssembly::RET_CALL_RESULTS:
     return LowerCallResults(MI, DL, BB, Subtarget, TII);
@@ -830,30 +988,6 @@ bool WebAssemblyTargetLowering::isOffsetFoldingLegal(
   // Wasm doesn't support function addresses with offsets
   const GlobalValue *GV = GA->getGlobal();
   return isa<Function>(GV) ? false : TargetLowering::isOffsetFoldingLegal(GA);
-}
-
-bool WebAssemblyTargetLowering::shouldSinkOperands(
-    Instruction *I, SmallVectorImpl<Use *> &Ops) const {
-  using namespace llvm::PatternMatch;
-
-  if (!I->getType()->isVectorTy() || !I->isShift())
-    return false;
-
-  Value *V = I->getOperand(1);
-  // We dont need to sink constant splat.
-  if (dyn_cast<Constant>(V))
-    return false;
-
-  if (match(V, m_Shuffle(m_InsertElt(m_Value(), m_Value(), m_ZeroInt()),
-                         m_Value(), m_ZeroMask()))) {
-    // Sink insert
-    Ops.push_back(&cast<Instruction>(V)->getOperandUse(0));
-    // Sink shuffle
-    Ops.push_back(&I->getOperandUse(1));
-    return true;
-  }
-
-  return false;
 }
 
 EVT WebAssemblyTargetLowering::getSetCCResultType(const DataLayout &DL,
@@ -1189,8 +1323,9 @@ WebAssemblyTargetLowering::LowerCall(CallLoweringInfo &CLI,
   if (IsVarArg && NumBytes) {
     // For non-fixed arguments, next emit stores to store the argument values
     // to the stack buffer at the offsets computed above.
-    int FI = MF.getFrameInfo().CreateStackObject(NumBytes,
-                                                 Layout.getStackAlignment(),
+    MaybeAlign StackAlign = Layout.getStackAlignment();
+    assert(StackAlign && "data layout string is missing stack alignment");
+    int FI = MF.getFrameInfo().CreateStackObject(NumBytes, *StackAlign,
                                                  /*isSS=*/false);
     unsigned ValNo = 0;
     SmallVector<SDValue, 8> Chains;
@@ -1431,6 +1566,10 @@ void WebAssemblyTargetLowering::ReplaceNodeResults(
     // Do not add any results, signifying that N should not be custom lowered.
     // EXTEND_VECTOR_INREG is implemented for some vectors, but not all.
     break;
+  case ISD::ADD:
+  case ISD::SUB:
+    Results.push_back(Replace128Op(N, DAG));
+    break;
   default:
     llvm_unreachable(
         "ReplaceNodeResults not implemented for this op for WebAssembly!");
@@ -1507,6 +1646,9 @@ SDValue WebAssemblyTargetLowering::LowerOperation(SDValue Op,
     return DAG.UnrollVectorOp(Op.getNode());
   case ISD::CLEAR_CACHE:
     report_fatal_error("llvm.clear_cache is not supported on wasm");
+  case ISD::SMUL_LOHI:
+  case ISD::UMUL_LOHI:
+    return LowerMUL_LOHI(Op, DAG);
   }
 }
 
@@ -1603,6 +1745,62 @@ SDValue WebAssemblyTargetLowering::LowerLoad(SDValue Op,
         false);
 
   return Op;
+}
+
+SDValue WebAssemblyTargetLowering::LowerMUL_LOHI(SDValue Op,
+                                                 SelectionDAG &DAG) const {
+  assert(Subtarget->hasWideArithmetic());
+  assert(Op.getValueType() == MVT::i64);
+  SDLoc DL(Op);
+  unsigned Opcode;
+  switch (Op.getOpcode()) {
+  case ISD::UMUL_LOHI:
+    Opcode = WebAssemblyISD::I64_MUL_WIDE_U;
+    break;
+  case ISD::SMUL_LOHI:
+    Opcode = WebAssemblyISD::I64_MUL_WIDE_S;
+    break;
+  default:
+    llvm_unreachable("unexpected opcode");
+  }
+  SDValue LHS = Op.getOperand(0);
+  SDValue RHS = Op.getOperand(1);
+  SDValue Hi =
+      DAG.getNode(Opcode, DL, DAG.getVTList(MVT::i64, MVT::i64), LHS, RHS);
+  SDValue Lo(Hi.getNode(), 1);
+  SDValue Ops[] = {Hi, Lo};
+  return DAG.getMergeValues(Ops, DL);
+}
+
+SDValue WebAssemblyTargetLowering::Replace128Op(SDNode *N,
+                                                SelectionDAG &DAG) const {
+  assert(Subtarget->hasWideArithmetic());
+  assert(N->getValueType(0) == MVT::i128);
+  SDLoc DL(N);
+  unsigned Opcode;
+  switch (N->getOpcode()) {
+  case ISD::ADD:
+    Opcode = WebAssemblyISD::I64_ADD128;
+    break;
+  case ISD::SUB:
+    Opcode = WebAssemblyISD::I64_SUB128;
+    break;
+  default:
+    llvm_unreachable("unexpected opcode");
+  }
+  SDValue LHS = N->getOperand(0);
+  SDValue RHS = N->getOperand(1);
+
+  SDValue C0 = DAG.getConstant(0, DL, MVT::i64);
+  SDValue C1 = DAG.getConstant(1, DL, MVT::i64);
+  SDValue LHS_0 = DAG.getNode(ISD::EXTRACT_ELEMENT, DL, MVT::i64, LHS, C0);
+  SDValue LHS_1 = DAG.getNode(ISD::EXTRACT_ELEMENT, DL, MVT::i64, LHS, C1);
+  SDValue RHS_0 = DAG.getNode(ISD::EXTRACT_ELEMENT, DL, MVT::i64, RHS, C0);
+  SDValue RHS_1 = DAG.getNode(ISD::EXTRACT_ELEMENT, DL, MVT::i64, RHS, C1);
+  SDValue Result_LO = DAG.getNode(Opcode, DL, DAG.getVTList(MVT::i64, MVT::i64),
+                                  LHS_0, LHS_1, RHS_0, RHS_1);
+  SDValue Result_HI(Result_LO.getNode(), 1);
+  return DAG.getNode(ISD::BUILD_PAIR, DL, N->getVTList(), Result_LO, Result_HI);
 }
 
 SDValue WebAssemblyTargetLowering::LowerCopyToReg(SDValue Op,
@@ -2050,6 +2248,18 @@ static SDValue LowerConvertLow(SDValue Op, SelectionDAG &DAG) {
 
 SDValue WebAssemblyTargetLowering::LowerBUILD_VECTOR(SDValue Op,
                                                      SelectionDAG &DAG) const {
+  MVT VT = Op.getSimpleValueType();
+  if (VT == MVT::v8f16) {
+    // BUILD_VECTOR can't handle FP16 operands since Wasm doesn't have a scaler
+    // FP16 type, so cast them to I16s.
+    MVT IVT = VT.changeVectorElementType(MVT::i16);
+    SmallVector<SDValue, 8> NewOps;
+    for (unsigned I = 0, E = Op.getNumOperands(); I < E; ++I)
+      NewOps.push_back(DAG.getBitcast(MVT::i16, Op.getOperand(I)));
+    SDValue Res = DAG.getNode(ISD::BUILD_VECTOR, SDLoc(), IVT, NewOps);
+    return DAG.getBitcast(VT, Res);
+  }
+
   if (auto ConvertLow = LowerConvertLow(Op, DAG))
     return ConvertLow;
 
@@ -2472,6 +2682,9 @@ SDValue WebAssemblyTargetLowering::LowerFP_TO_INT_SAT(SDValue Op,
     return Op;
 
   if (ResT == MVT::v4i32 && SatVT == MVT::i32)
+    return Op;
+
+  if (ResT == MVT::v8i16 && SatVT == MVT::i16)
     return Op;
 
   return SDValue();

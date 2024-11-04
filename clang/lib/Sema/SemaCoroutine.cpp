@@ -341,7 +341,7 @@ static Expr *maybeTailCall(Sema &S, QualType RetType, Expr *E,
   // EvaluateBinaryTypeTrait(BTT_IsConvertible, ...) which is at the moment
   // a private function in SemaExprCXX.cpp
 
-  ExprResult AddressExpr = buildMemberCall(S, E, Loc, "address", std::nullopt);
+  ExprResult AddressExpr = buildMemberCall(S, E, Loc, "address", {});
   if (AddressExpr.isInvalid())
     return nullptr;
 
@@ -392,8 +392,8 @@ static ReadySuspendResumeResult buildCoawaitCalls(Sema &S, VarDecl *CoroPromise,
     return Result.get();
   };
 
-  CallExpr *AwaitReady = cast_or_null<CallExpr>(
-      BuildSubExpr(ACT::ACT_Ready, "await_ready", std::nullopt));
+  CallExpr *AwaitReady =
+      cast_or_null<CallExpr>(BuildSubExpr(ACT::ACT_Ready, "await_ready", {}));
   if (!AwaitReady)
     return Calls;
   if (!AwaitReady->getType()->isDependentType()) {
@@ -454,7 +454,7 @@ static ReadySuspendResumeResult buildCoawaitCalls(Sema &S, VarDecl *CoroPromise,
     }
   }
 
-  BuildSubExpr(ACT::ACT_Resume, "await_resume", std::nullopt);
+  BuildSubExpr(ACT::ACT_Resume, "await_resume", {});
 
   // Make sure the awaiter object gets a chance to be cleaned up.
   S.Cleanup.setExprNeedsCleanups(true);
@@ -722,8 +722,8 @@ bool Sema::ActOnCoroutineBodyStart(Scope *SC, SourceLocation KWLoc,
   SourceLocation Loc = Fn->getLocation();
   // Build the initial suspend point
   auto buildSuspends = [&](StringRef Name) mutable -> StmtResult {
-    ExprResult Operand = buildPromiseCall(*this, ScopeInfo->CoroutinePromise,
-                                          Loc, Name, std::nullopt);
+    ExprResult Operand =
+        buildPromiseCall(*this, ScopeInfo->CoroutinePromise, Loc, Name, {});
     if (Operand.isInvalid())
       return StmtError();
     ExprResult Suspend =
@@ -844,6 +844,35 @@ ExprResult Sema::BuildOperatorCoawaitLookupExpr(Scope *S, SourceLocation Loc) {
   return CoawaitOp;
 }
 
+static bool isAttributedCoroAwaitElidable(const QualType &QT) {
+  auto *Record = QT->getAsCXXRecordDecl();
+  return Record && Record->hasAttr<CoroAwaitElidableAttr>();
+}
+
+static void applySafeElideContext(Expr *Operand) {
+  auto *Call = dyn_cast<CallExpr>(Operand->IgnoreImplicit());
+  if (!Call || !Call->isPRValue())
+    return;
+
+  if (!isAttributedCoroAwaitElidable(Call->getType()))
+    return;
+
+  Call->setCoroElideSafe();
+
+  // Check parameter
+  auto *Fn = llvm::dyn_cast_if_present<FunctionDecl>(Call->getCalleeDecl());
+  if (!Fn)
+    return;
+
+  size_t ParmIdx = 0;
+  for (ParmVarDecl *PD : Fn->parameters()) {
+    if (PD->hasAttr<CoroAwaitElidableArgumentAttr>())
+      applySafeElideContext(Call->getArg(ParmIdx));
+
+    ParmIdx++;
+  }
+}
+
 // Attempts to resolve and build a CoawaitExpr from "raw" inputs, bailing out to
 // DependentCoawaitExpr if needed.
 ExprResult Sema::BuildUnresolvedCoawaitExpr(SourceLocation Loc, Expr *Operand,
@@ -867,7 +896,14 @@ ExprResult Sema::BuildUnresolvedCoawaitExpr(SourceLocation Loc, Expr *Operand,
   }
 
   auto *RD = Promise->getType()->getAsCXXRecordDecl();
-  auto *Transformed = Operand;
+
+  bool CurFnAwaitElidable = isAttributedCoroAwaitElidable(
+      getCurFunctionDecl(/*AllowLambda=*/true)->getReturnType());
+
+  if (CurFnAwaitElidable)
+    applySafeElideContext(Operand);
+
+  Expr *Transformed = Operand;
   if (lookupMember(*this, "await_transform", RD, Loc)) {
     ExprResult R =
         buildPromiseCall(*this, Promise, Loc, "await_transform", Operand);
@@ -1013,7 +1049,7 @@ StmtResult Sema::BuildCoreturnStmt(SourceLocation Loc, Expr *E,
     PC = buildPromiseCall(*this, Promise, Loc, "return_value", E);
   } else {
     E = MakeFullDiscardedValueExpr(E).get();
-    PC = buildPromiseCall(*this, Promise, Loc, "return_void", std::nullopt);
+    PC = buildPromiseCall(*this, Promise, Loc, "return_void", {});
   }
   if (PC.isInvalid())
     return StmtError();
@@ -1699,8 +1735,8 @@ bool CoroutineStmtBuilder::makeOnException() {
   if (!S.getLangOpts().CXXExceptions)
     return true;
 
-  ExprResult UnhandledException = buildPromiseCall(
-      S, Fn.CoroutinePromise, Loc, "unhandled_exception", std::nullopt);
+  ExprResult UnhandledException =
+      buildPromiseCall(S, Fn.CoroutinePromise, Loc, "unhandled_exception", {});
   UnhandledException = S.ActOnFinishFullExpr(UnhandledException.get(), Loc,
                                              /*DiscardedValue*/ false);
   if (UnhandledException.isInvalid())
@@ -1723,8 +1759,8 @@ bool CoroutineStmtBuilder::makeReturnObject() {
   // [dcl.fct.def.coroutine]p7
   // The expression promise.get_return_object() is used to initialize the
   // returned reference or prvalue result object of a call to a coroutine.
-  ExprResult ReturnObject = buildPromiseCall(S, Fn.CoroutinePromise, Loc,
-                                             "get_return_object", std::nullopt);
+  ExprResult ReturnObject =
+      buildPromiseCall(S, Fn.CoroutinePromise, Loc, "get_return_object", {});
   if (ReturnObject.isInvalid())
     return false;
 

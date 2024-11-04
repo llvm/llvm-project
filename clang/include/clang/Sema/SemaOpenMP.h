@@ -891,6 +891,11 @@ public:
                                     SourceLocation StartLoc,
                                     SourceLocation LParenLoc,
                                     SourceLocation EndLoc);
+  /// Called on well-form 'permutation' clause after parsing its arguments.
+  OMPClause *ActOnOpenMPPermutationClause(ArrayRef<Expr *> PermExprs,
+                                          SourceLocation StartLoc,
+                                          SourceLocation LParenLoc,
+                                          SourceLocation EndLoc);
   /// Called on well-form 'full' clauses.
   OMPClause *ActOnOpenMPFullClause(SourceLocation StartLoc,
                                    SourceLocation EndLoc);
@@ -1191,21 +1196,21 @@ public:
       SourceLocation ModifierLoc, SourceLocation ColonLoc,
       SourceLocation EndLoc, CXXScopeSpec &ReductionIdScopeSpec,
       const DeclarationNameInfo &ReductionId,
-      ArrayRef<Expr *> UnresolvedReductions = std::nullopt);
+      ArrayRef<Expr *> UnresolvedReductions = {});
   /// Called on well-formed 'task_reduction' clause.
   OMPClause *ActOnOpenMPTaskReductionClause(
       ArrayRef<Expr *> VarList, SourceLocation StartLoc,
       SourceLocation LParenLoc, SourceLocation ColonLoc, SourceLocation EndLoc,
       CXXScopeSpec &ReductionIdScopeSpec,
       const DeclarationNameInfo &ReductionId,
-      ArrayRef<Expr *> UnresolvedReductions = std::nullopt);
+      ArrayRef<Expr *> UnresolvedReductions = {});
   /// Called on well-formed 'in_reduction' clause.
   OMPClause *ActOnOpenMPInReductionClause(
       ArrayRef<Expr *> VarList, SourceLocation StartLoc,
       SourceLocation LParenLoc, SourceLocation ColonLoc, SourceLocation EndLoc,
       CXXScopeSpec &ReductionIdScopeSpec,
       const DeclarationNameInfo &ReductionId,
-      ArrayRef<Expr *> UnresolvedReductions = std::nullopt);
+      ArrayRef<Expr *> UnresolvedReductions = {});
   /// Called on well-formed 'linear' clause.
   OMPClause *ActOnOpenMPLinearClause(
       ArrayRef<Expr *> VarList, Expr *Step, SourceLocation StartLoc,
@@ -1258,7 +1263,7 @@ public:
       OpenMPMapClauseKind MapType, bool IsMapTypeImplicit,
       SourceLocation MapLoc, SourceLocation ColonLoc, ArrayRef<Expr *> VarList,
       const OMPVarListLocTy &Locs, bool NoDiagnose = false,
-      ArrayRef<Expr *> UnresolvedMappers = std::nullopt);
+      ArrayRef<Expr *> UnresolvedMappers = {});
   /// Called on well-formed 'num_teams' clause.
   OMPClause *ActOnOpenMPNumTeamsClause(ArrayRef<Expr *> VarList,
                                        SourceLocation StartLoc,
@@ -1290,7 +1295,7 @@ public:
                       CXXScopeSpec &MapperIdScopeSpec,
                       DeclarationNameInfo &MapperId, SourceLocation ColonLoc,
                       ArrayRef<Expr *> VarList, const OMPVarListLocTy &Locs,
-                      ArrayRef<Expr *> UnresolvedMappers = std::nullopt);
+                      ArrayRef<Expr *> UnresolvedMappers = {});
   /// Called on well-formed 'from' clause.
   OMPClause *
   ActOnOpenMPFromClause(ArrayRef<OpenMPMotionModifierKind> MotionModifiers,
@@ -1298,7 +1303,7 @@ public:
                         CXXScopeSpec &MapperIdScopeSpec,
                         DeclarationNameInfo &MapperId, SourceLocation ColonLoc,
                         ArrayRef<Expr *> VarList, const OMPVarListLocTy &Locs,
-                        ArrayRef<Expr *> UnresolvedMappers = std::nullopt);
+                        ArrayRef<Expr *> UnresolvedMappers = {});
   /// Called on well-formed 'use_device_ptr' clause.
   OMPClause *ActOnOpenMPUseDevicePtrClause(ArrayRef<Expr *> VarList,
                                            const OMPVarListLocTy &Locs);

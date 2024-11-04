@@ -124,12 +124,14 @@ MVT X86TargetLowering::getRegisterTypeForCallingConv(LLVMContext &Context,
       !Subtarget.hasX87())
     return MVT::i32;
 
-  if (VT.isVector() && VT.getVectorElementType() == MVT::bf16)
-    return getRegisterTypeForCallingConv(Context, CC,
-                                         VT.changeVectorElementType(MVT::f16));
+  if (isTypeLegal(MVT::f16)) {
+    if (VT.isVector() && VT.getVectorElementType() == MVT::bf16)
+      return getRegisterTypeForCallingConv(
+          Context, CC, VT.changeVectorElementType(MVT::f16));
 
-  if (VT == MVT::bf16)
-    return MVT::f16;
+    if (VT == MVT::bf16)
+      return MVT::f16;
+  }
 
   return TargetLowering::getRegisterTypeForCallingConv(Context, CC, VT);
 }
@@ -162,7 +164,8 @@ unsigned X86TargetLowering::getNumRegistersForCallingConv(LLVMContext &Context,
       return 3;
   }
 
-  if (VT.isVector() && VT.getVectorElementType() == MVT::bf16)
+  if (VT.isVector() && VT.getVectorElementType() == MVT::bf16 &&
+      isTypeLegal(MVT::f16))
     return getNumRegistersForCallingConv(Context, CC,
                                          VT.changeVectorElementType(MVT::f16));
 
@@ -194,7 +197,8 @@ unsigned X86TargetLowering::getVectorTypeBreakdownForCallingConv(
   }
 
   // Split vNbf16 vectors according to vNf16.
-  if (VT.isVector() && VT.getVectorElementType() == MVT::bf16)
+  if (VT.isVector() && VT.getVectorElementType() == MVT::bf16 &&
+      isTypeLegal(MVT::f16))
     VT = VT.changeVectorElementType(MVT::f16);
 
   return TargetLowering::getVectorTypeBreakdownForCallingConv(Context, CC, VT, IntermediateVT,
@@ -524,8 +528,9 @@ X86TargetLowering::findRepresentativeClass(const TargetRegisterInfo *TRI,
 
 unsigned X86TargetLowering::getAddressSpace() const {
   if (Subtarget.is64Bit())
-    return (getTargetMachine().getCodeModel() == CodeModel::Kernel) ? 256 : 257;
-  return 256;
+    return (getTargetMachine().getCodeModel() == CodeModel::Kernel) ? X86AS::GS
+                                                                    : X86AS::FS;
+  return X86AS::GS;
 }
 
 static bool hasStackGuardSlotTLS(const Triple &TargetTriple) {
@@ -1435,14 +1440,14 @@ static ArrayRef<MCPhysReg> get64BitArgumentXMMs(MachineFunction &MF,
     // in their paired GPR.  So we only need to save the GPR to their home
     // slots.
     // TODO: __vectorcall will change this.
-    return std::nullopt;
+    return {};
   }
 
   bool isSoftFloat = Subtarget.useSoftFloat();
   if (isSoftFloat || !Subtarget.hasSSE1())
     // Kernel mode asks for SSE to be disabled, so there are no XMM argument
     // registers.
-    return std::nullopt;
+    return {};
 
   static const MCPhysReg XMMArgRegs64Bit[] = {
     X86::XMM0, X86::XMM1, X86::XMM2, X86::XMM3,
@@ -1903,7 +1908,7 @@ SDValue X86TargetLowering::LowerFormalArguments(
   if (shouldDisableArgRegFromCSR(CallConv) ||
       F.hasFnAttribute("no_caller_saved_registers")) {
     MachineRegisterInfo &MRI = MF.getRegInfo();
-    for (std::pair<Register, Register> Pair : MRI.liveins())
+    for (std::pair<MCRegister, Register> Pair : MRI.liveins())
       MRI.disableCalleeSavedRegister(Pair.first);
   }
 
@@ -2850,6 +2855,13 @@ bool X86TargetLowering::IsEligibleForTailCallOptimization(
     if (!TRI->regmaskSubsetEqual(CallerPreserved, CalleePreserved))
       return false;
   }
+
+  // The stack frame of the caller cannot be replaced by the tail-callee one's
+  // if the function is required to preserve all the registers. Conservatively
+  // prevent tail optimization even if hypothetically all the registers are used
+  // for passing formal parameters or returning values.
+  if (CallerF.hasFnAttribute("no_caller_saved_registers"))
+    return false;
 
   unsigned StackArgsSize = CCInfo.getStackSize();
 

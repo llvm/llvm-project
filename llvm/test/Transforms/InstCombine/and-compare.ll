@@ -172,3 +172,87 @@ define i1 @test_ne_cp2_other_okay2(i8 %x, i8 %yy) {
   %r = icmp ne i8 %and_x_y, %and_x_neg_y
   ret i1 %r
 }
+
+define i1 @test_eq_0_and_15_add_1(i8 %a) {
+; CHECK-LABEL: @test_eq_0_and_15_add_1(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = and i8 [[A:%.*]], 15
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[TMP0]], 15
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+entry:
+  %add = add i8 %a, 1
+  %and = and i8 %add, 15
+  %cmp = icmp eq i8 %and, 0
+  ret i1 %cmp
+}
+
+define i1 @test_ne_0_and_15_add_1(i8 %a) {
+; CHECK-LABEL: @test_ne_0_and_15_add_1(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = and i8 [[A:%.*]], 15
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i8 [[TMP0]], 15
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+entry:
+  %add = add i8 %a, 1
+  %and = and i8 %add, 15
+  %cmp = icmp ne i8 %and, 0
+  ret i1 %cmp
+}
+
+define i1 @test_eq_0_and_15_add_3(i8 %a) {
+; CHECK-LABEL: @test_eq_0_and_15_add_3(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = and i8 [[A:%.*]], 15
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[TMP0]], 13
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+entry:
+  %add = add i8 %a, 3
+  %and = and i8 %add, 15
+  %cmp = icmp eq i8 %and, 0
+  ret i1 %cmp
+}
+
+define i1 @test_ne_0_and_15_add_3(i8 %a) {
+; CHECK-LABEL: @test_ne_0_and_15_add_3(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = and i8 [[A:%.*]], 15
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i8 [[TMP0]], 13
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+entry:
+  %add = add i8 %a, 3
+  %and = and i8 %add, 15
+  %cmp = icmp ne i8 %and, 0
+  ret i1 %cmp
+}
+
+define i1 @test_eq_11_and_15_add_10(i8 %a) {
+; CHECK-LABEL: @test_eq_11_and_15_add_10(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = and i8 [[A:%.*]], 15
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[TMP0]], 1
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+entry:
+  %add = add i8 %a, 10
+  %and = and i8 %add, 15
+  %cmp = icmp eq i8 %and, 11
+  ret i1 %cmp
+}
+
+define i1 @test_ne_11_and_15_add_10(i8 %a) {
+; CHECK-LABEL: @test_ne_11_and_15_add_10(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = and i8 [[A:%.*]], 15
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i8 [[TMP0]], 1
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+entry:
+  %add = add i8 %a, 10
+  %and = and i8 %add, 15
+  %cmp = icmp ne i8 %and, 11
+  ret i1 %cmp
+}

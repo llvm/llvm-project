@@ -9,15 +9,15 @@ int check_all_feature() {
     return 3;
   else if (__builtin_cpu_supports("fcma+rcpc+rcpc2+rcpc3+frintts+dgh"))
     return 4;
-  else if (__builtin_cpu_supports("i8mm+bf16+ebf16+rpres+sve+sve-bf16"))
+  else if (__builtin_cpu_supports("i8mm+bf16+ebf16+rpres+sve"))
     return 5;
-  else if (__builtin_cpu_supports("sve-ebf16+sve-i8mm+f32mm+f64mm"))
+  else if (__builtin_cpu_supports("sve+ebf16+i8mm+f32mm+f64mm"))
     return 6;
   else if (__builtin_cpu_supports("sve2+sve2-aes+sve2-pmull128"))
     return 7;
   else if (__builtin_cpu_supports("sve2-bitperm+sve2-sha3+sve2-sm4"))
     return 8;
-  else if (__builtin_cpu_supports("sme+memtag+memtag2+memtag3+sb"))
+  else if (__builtin_cpu_supports("sme+memtag+memtag3+sb"))
     return 9;
   else if (__builtin_cpu_supports("predres+ssbs+ssbs2+bti+ls64+ls64_v"))
     return 10;

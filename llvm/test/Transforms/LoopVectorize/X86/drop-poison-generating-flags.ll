@@ -509,21 +509,18 @@ define void @pr70590_recipe_without_underlying_instr(i64 %n, ptr noalias %dst) {
 ; CHECK-NEXT:    [[TMP7:%.*]] = srem i64 3, 0
 ; CHECK-NEXT:    br label [[PRED_SREM_CONTINUE2]]
 ; CHECK:       pred.srem.continue2:
-; CHECK-NEXT:    [[TMP8:%.*]] = phi i64 [ poison, [[PRED_SREM_CONTINUE]] ], [ [[TMP7]], [[PRED_SREM_IF1]] ]
 ; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <4 x i1> [[TMP2]], i32 2
 ; CHECK-NEXT:    br i1 [[TMP9]], label [[PRED_SREM_IF3:%.*]], label [[PRED_SREM_CONTINUE4:%.*]]
 ; CHECK:       pred.srem.if3:
 ; CHECK-NEXT:    [[TMP10:%.*]] = srem i64 3, 0
 ; CHECK-NEXT:    br label [[PRED_SREM_CONTINUE4]]
 ; CHECK:       pred.srem.continue4:
-; CHECK-NEXT:    [[TMP11:%.*]] = phi i64 [ poison, [[PRED_SREM_CONTINUE2]] ], [ [[TMP10]], [[PRED_SREM_IF3]] ]
 ; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <4 x i1> [[TMP2]], i32 3
 ; CHECK-NEXT:    br i1 [[TMP12]], label [[PRED_SREM_IF5:%.*]], label [[PRED_SREM_CONTINUE6]]
 ; CHECK:       pred.srem.if5:
 ; CHECK-NEXT:    [[TMP13:%.*]] = srem i64 3, 0
 ; CHECK-NEXT:    br label [[PRED_SREM_CONTINUE6]]
 ; CHECK:       pred.srem.continue6:
-; CHECK-NEXT:    [[TMP14:%.*]] = phi i64 [ poison, [[PRED_SREM_CONTINUE4]] ], [ [[TMP13]], [[PRED_SREM_IF5]] ]
 ; CHECK-NEXT:    [[TMP15:%.*]] = add i64 [[TMP5]], -3
 ; CHECK-NEXT:    [[TMP16:%.*]] = add i64 [[TMP0]], [[TMP15]]
 ; CHECK-NEXT:    [[TMP17:%.*]] = getelementptr [5 x i8], ptr @c, i64 0, i64 [[TMP16]]

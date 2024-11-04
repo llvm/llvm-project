@@ -149,7 +149,6 @@ to the host (refer to QEMU's manuals for the specific options).
 * At least one to connect to the intial ``lldb-server``.
 * One more if you want to use ``lldb-server`` in ``platform mode``, and have it
   start a ``gdbserver`` instance for you.
-* A bunch more if you want to run tests against the ``lldb-server`` platform.
 
 If you are doing either of the latter 2 you should also restrict what ports
 ``lldb-server tries`` to use, otherwise it will randomly pick one that is almost
@@ -157,22 +156,14 @@ certainly not forwarded. An example of this is shown below.
 
 ::
 
-  $ lldb-server plaform --server --listen 0.0.0.0:54321 \
-    --min-gdbserver-port 49140 --max-gdbserver-port 49150
+  $ lldb-server plaform --server --listen 0.0.0.0:54321 --gdbserver-port 49140
 
 The result of this is that:
 
 * ``lldb-server`` platform mode listens externally on port ``54321``.
 
-* When it is asked to start a new gdbserver mode instance, it will use a port
-  in the range ``49140`` to ``49150``.
+* When it is asked to start a new gdbserver mode instance, it will use the port
+  ``49140``.
 
-Your VM configuration should have ports ``54321``, and ``49140`` to ``49150``
-forwarded for this to work.
-
-.. note::
-  These options are used to create a "port map" within ``lldb-server``.
-  Unfortunately this map is not cleaned up on Windows on connection close,
-  and across a few uses you may run out of valid ports. To work around this,
-  restart the platform every so often, especially after running a set of tests.
-  This is tracked here: https://github.com/llvm/llvm-project/issues/90923
+Your VM configuration should have ports ``54321`` and ``49140`` forwarded for
+this to work.

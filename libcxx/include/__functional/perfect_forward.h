@@ -11,6 +11,7 @@
 #define _LIBCPP___FUNCTIONAL_PERFECT_FORWARD_H
 
 #include <__config>
+#include <__cstddef/size_t.h>
 #include <__type_traits/enable_if.h>
 #include <__type_traits/invoke.h>
 #include <__type_traits/is_constructible.h>

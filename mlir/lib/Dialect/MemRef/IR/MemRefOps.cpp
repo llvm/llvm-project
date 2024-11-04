@@ -205,8 +205,7 @@ static LogicalResult verifyAllocLikeOp(AllocLikeOp op) {
   if (!memRefType)
     return op.emitOpError("result must be a memref");
 
-  if (static_cast<int64_t>(op.getDynamicSizes().size()) !=
-      memRefType.getNumDynamicDims())
+  if (op.getDynamicSizes().size() != memRefType.getNumDynamicDims())
     return op.emitOpError("dimension operand count does not equal memref "
                           "dynamic dimension count");
 
@@ -283,8 +282,7 @@ struct SimplifyAllocConst : public OpRewritePattern<AllocLikeOp> {
     // Create new memref type (which will have fewer dynamic dimensions).
     MemRefType newMemRefType =
         MemRefType::Builder(memrefType).setShape(newShapeConstants);
-    assert(static_cast<int64_t>(dynamicSizes.size()) ==
-           newMemRefType.getNumDynamicDims());
+    assert(dynamicSizes.size() == newMemRefType.getNumDynamicDims());
 
     // Create and insert the alloc op for the new memref.
     auto newAlloc = rewriter.create<AllocLikeOp>(
@@ -1833,6 +1831,24 @@ void ReinterpretCastOp::build(OpBuilder &b, OperationState &result,
 }
 
 void ReinterpretCastOp::build(OpBuilder &b, OperationState &result,
+                              Value source, OpFoldResult offset,
+                              ArrayRef<OpFoldResult> sizes,
+                              ArrayRef<OpFoldResult> strides,
+                              ArrayRef<NamedAttribute> attrs) {
+  auto sourceType = cast<BaseMemRefType>(source.getType());
+  SmallVector<int64_t> staticOffsets, staticSizes, staticStrides;
+  SmallVector<Value> dynamicOffsets, dynamicSizes, dynamicStrides;
+  dispatchIndexOpFoldResults(offset, dynamicOffsets, staticOffsets);
+  dispatchIndexOpFoldResults(sizes, dynamicSizes, staticSizes);
+  dispatchIndexOpFoldResults(strides, dynamicStrides, staticStrides);
+  auto stridedLayout = StridedLayoutAttr::get(
+      b.getContext(), staticOffsets.front(), staticStrides);
+  auto resultType = MemRefType::get(staticSizes, sourceType.getElementType(),
+                                    stridedLayout, sourceType.getMemorySpace());
+  build(b, result, resultType, source, offset, sizes, strides, attrs);
+}
+
+void ReinterpretCastOp::build(OpBuilder &b, OperationState &result,
                               MemRefType resultType, Value source,
                               int64_t offset, ArrayRef<int64_t> sizes,
                               ArrayRef<int64_t> strides,
@@ -1876,11 +1892,12 @@ LogicalResult ReinterpretCastOp::verify() {
   // Match sizes in result memref type and in static_sizes attribute.
   for (auto [idx, resultSize, expectedSize] :
        llvm::enumerate(resultType.getShape(), getStaticSizes())) {
-    if (!ShapedType::isDynamic(resultSize) &&
-        !ShapedType::isDynamic(expectedSize) && resultSize != expectedSize)
+    if (!ShapedType::isDynamic(resultSize) && resultSize != expectedSize)
       return emitError("expected result type with size = ")
-             << expectedSize << " instead of " << resultSize
-             << " in dim = " << idx;
+             << (ShapedType::isDynamic(expectedSize)
+                     ? std::string("dynamic")
+                     : std::to_string(expectedSize))
+             << " instead of " << resultSize << " in dim = " << idx;
   }
 
   // Match offset and strides in static_offset and static_strides attributes. If
@@ -1894,20 +1911,22 @@ LogicalResult ReinterpretCastOp::verify() {
 
   // Match offset in result memref type and in static_offsets attribute.
   int64_t expectedOffset = getStaticOffsets().front();
-  if (!ShapedType::isDynamic(resultOffset) &&
-      !ShapedType::isDynamic(expectedOffset) && resultOffset != expectedOffset)
+  if (!ShapedType::isDynamic(resultOffset) && resultOffset != expectedOffset)
     return emitError("expected result type with offset = ")
-           << expectedOffset << " instead of " << resultOffset;
+           << (ShapedType::isDynamic(expectedOffset)
+                   ? std::string("dynamic")
+                   : std::to_string(expectedOffset))
+           << " instead of " << resultOffset;
 
   // Match strides in result memref type and in static_strides attribute.
   for (auto [idx, resultStride, expectedStride] :
        llvm::enumerate(resultStrides, getStaticStrides())) {
-    if (!ShapedType::isDynamic(resultStride) &&
-        !ShapedType::isDynamic(expectedStride) &&
-        resultStride != expectedStride)
+    if (!ShapedType::isDynamic(resultStride) && resultStride != expectedStride)
       return emitError("expected result type with stride = ")
-             << expectedStride << " instead of " << resultStride
-             << " in dim = " << idx;
+             << (ShapedType::isDynamic(expectedStride)
+                     ? std::string("dynamic")
+                     : std::to_string(expectedStride))
+             << " instead of " << resultStride << " in dim = " << idx;
   }
 
   return success();
@@ -3279,11 +3298,14 @@ void SubViewOp::getCanonicalizationPatterns(RewritePatternSet &results,
 }
 
 OpFoldResult SubViewOp::fold(FoldAdaptor adaptor) {
-  auto resultShapedType = llvm::cast<ShapedType>(getResult().getType());
-  auto sourceShapedType = llvm::cast<ShapedType>(getSource().getType());
+  MemRefType sourceMemrefType = getSource().getType();
+  MemRefType resultMemrefType = getResult().getType();
+  auto resultLayout =
+      dyn_cast_if_present<StridedLayoutAttr>(resultMemrefType.getLayout());
 
-  if (resultShapedType.hasStaticShape() &&
-      resultShapedType == sourceShapedType) {
+  if (resultMemrefType == sourceMemrefType &&
+      resultMemrefType.hasStaticShape() &&
+      (!resultLayout || resultLayout.hasStaticLayout())) {
     return getViewSource();
   }
 
@@ -3301,7 +3323,7 @@ OpFoldResult SubViewOp::fold(FoldAdaptor adaptor) {
         strides, [](OpFoldResult ofr) { return isConstantIntValue(ofr, 1); });
     bool allSizesSame = llvm::equal(sizes, srcSizes);
     if (allOffsetsZero && allStridesOne && allSizesSame &&
-        resultShapedType == sourceShapedType)
+        resultMemrefType == sourceMemrefType)
       return getViewSource();
   }
 
