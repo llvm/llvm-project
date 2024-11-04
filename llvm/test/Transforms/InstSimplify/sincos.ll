@@ -106,8 +106,8 @@ define { float, float } @sincos_neginf() {
   ret { float, float } %ret
 }
 
-define { float, float } @sincos_qnam() {
-; CHECK-LABEL: define { float, float } @sincos_qnam() {
+define { float, float } @sincos_qnan() {
+; CHECK-LABEL: define { float, float } @sincos_qnan() {
 ; CHECK-NEXT:    [[RET:%.*]] = call { float, float } @llvm.sincos.f32(float 0x7FF8000000000000)
 ; CHECK-NEXT:    ret { float, float } [[RET]]
 ;
@@ -115,8 +115,8 @@ define { float, float } @sincos_qnam() {
   ret { float, float } %ret
 }
 
-define { float, float } @sincos_snam() {
-; CHECK-LABEL: define { float, float } @sincos_snam() {
+define { float, float } @sincos_snan() {
+; CHECK-LABEL: define { float, float } @sincos_snan() {
 ; CHECK-NEXT:    [[RET:%.*]] = call { float, float } @llvm.sincos.f32(float 0x7FF0000020000000)
 ; CHECK-NEXT:    ret { float, float } [[RET]]
 ;
