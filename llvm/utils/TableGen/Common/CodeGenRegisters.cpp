@@ -403,14 +403,18 @@ CodeGenRegister::computeSubRegs(CodeGenRegBank &RegBank) {
       continue;
 
     // SR is composed of multiple sub-regs. Find their names in this register.
+    bool AnyArtificial = false;
     SmallVector<CodeGenSubRegIndex *, 8> Parts;
     for (unsigned j = 0, e = SR->ExplicitSubRegs.size(); j != e; ++j) {
       CodeGenSubRegIndex &I = *SR->ExplicitSubRegIndices[j];
-      if (!I.Artificial)
-        Parts.push_back(getSubRegIndex(SR->ExplicitSubRegs[j]));
+      if (I.Artificial) {
+        AnyArtificial = true;
+        break;
+      }
+      Parts.push_back(getSubRegIndex(SR->ExplicitSubRegs[j]));
     }
 
-    if (Parts.size() != SR->ExplicitSubRegs.size())
+    if (AnyArtificial)
       continue;
 
     // Offer this as an existing spelling for the concatenation of Parts.
