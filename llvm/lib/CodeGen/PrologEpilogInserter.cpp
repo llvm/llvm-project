@@ -77,6 +77,11 @@ using MBBVector = SmallVector<MachineBasicBlock *, 4>;
 STATISTIC(NumLeafFuncWithSpills, "Number of leaf functions with CSRs");
 STATISTIC(NumFuncSeen, "Number of functions seen in PEI");
 
+// Experimental Feature enables spilling and reload FP/BP
+static cl::opt<bool>
+    EnableSpillFPBP("enable-spill-fpbp",
+                    cl::desc("Spill clobbered fp register to stack."),
+                    cl::init(false), cl::Hidden);
 
 namespace {
 
@@ -231,7 +236,8 @@ bool PEI::runOnMachineFunction(MachineFunction &MF) {
   // Spill frame pointer and/or base pointer registers if they are clobbered.
   // It is placed before call frame instruction elimination so it will not mess
   // with stack arguments.
-  TFI->spillFPBP(MF);
+  if (EnableSpillFPBP)
+    TFI->spillFPBP(MF);
 
   // Calculate the MaxCallFrameSize value for the function's frame
   // information. Also eliminates call frame pseudo instructions.

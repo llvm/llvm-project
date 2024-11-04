@@ -6,7 +6,9 @@
 ; RUN: llc < %s -mtriple=x86_64-win32 -mcpu=knl | FileCheck %s -check-prefixes=WIN64,WIN64-KNL
 ; RUN: llc < %s -mtriple=x86_64-win32 -mcpu=skx | FileCheck %s -check-prefixes=WIN64,WIN64-SKX
 ; RUN: llc < %s -mtriple=x86_64-apple-darwin -mcpu=knl | FileCheck %s -check-prefixes=X64,X64-KNL
+; RUN: llc < %s -mtriple=x86_64-apple-darwin -mcpu=knl --enable-spill-fpbp=true | FileCheck %s -check-prefixes=X64-SPILL,X64-SPILL-KNL
 ; RUN: llc < %s -mtriple=x86_64-apple-darwin -mcpu=skx | FileCheck %s -check-prefixes=X64,X64-SKX
+; RUN: llc < %s -mtriple=x86_64-apple-darwin -mcpu=skx --enable-spill-fpbp=true | FileCheck %s -check-prefixes=X64-SPILL,X64-SPILL-SKX
 
 declare <16 x float> @func_float16_ptr(<16 x float>, ptr)
 declare <16 x float> @func_float16(<16 x float>, <16 x float>)
@@ -70,17 +72,35 @@ define <16 x float> @testf16_inp(<16 x float> %a, <16 x float> %b) nounwind {
 ; X64-NEXT:    subq $128, %rsp
 ; X64-NEXT:    vaddps %zmm1, %zmm0, %zmm0
 ; X64-NEXT:    movq %rsp, %rdi
-; X64-NEXT:    pushq %rbp
-; X64-NEXT:    pushq %rax
 ; X64-NEXT:    callq _func_float16_ptr
-; X64-NEXT:    addq $8, %rsp
-; X64-NEXT:    popq %rbp
 ; X64-NEXT:    vaddps (%rsp), %zmm0, %zmm0
 ; X64-NEXT:    leaq -16(%rbp), %rsp
 ; X64-NEXT:    popq %r12
 ; X64-NEXT:    popq %r13
 ; X64-NEXT:    popq %rbp
 ; X64-NEXT:    retq
+;
+; X64-SPILL-LABEL: testf16_inp:
+; X64-SPILL:       ## %bb.0:
+; X64-SPILL-NEXT:    pushq %rbp
+; X64-SPILL-NEXT:    movq %rsp, %rbp
+; X64-SPILL-NEXT:    pushq %r13
+; X64-SPILL-NEXT:    pushq %r12
+; X64-SPILL-NEXT:    andq $-64, %rsp
+; X64-SPILL-NEXT:    subq $128, %rsp
+; X64-SPILL-NEXT:    vaddps %zmm1, %zmm0, %zmm0
+; X64-SPILL-NEXT:    movq %rsp, %rdi
+; X64-SPILL-NEXT:    pushq %rbp
+; X64-SPILL-NEXT:    pushq %rax
+; X64-SPILL-NEXT:    callq _func_float16_ptr
+; X64-SPILL-NEXT:    addq $8, %rsp
+; X64-SPILL-NEXT:    popq %rbp
+; X64-SPILL-NEXT:    vaddps (%rsp), %zmm0, %zmm0
+; X64-SPILL-NEXT:    leaq -16(%rbp), %rsp
+; X64-SPILL-NEXT:    popq %r12
+; X64-SPILL-NEXT:    popq %r13
+; X64-SPILL-NEXT:    popq %rbp
+; X64-SPILL-NEXT:    retq
   %y = alloca <16 x float>, align 64
   %x = fadd <16 x float> %a, %b
   %1 = call intel_ocl_bicc <16 x float> @func_float16_ptr(<16 x float> %x, ptr %y)
@@ -154,11 +174,7 @@ define <16 x float> @testf16_regs(<16 x float> %a, <16 x float> %b) nounwind {
 ; X64-NEXT:    vmovaps %zmm1, %zmm16
 ; X64-NEXT:    vaddps %zmm1, %zmm0, %zmm0
 ; X64-NEXT:    movq %rsp, %rdi
-; X64-NEXT:    pushq %rbp
-; X64-NEXT:    pushq %rax
 ; X64-NEXT:    callq _func_float16_ptr
-; X64-NEXT:    addq $8, %rsp
-; X64-NEXT:    popq %rbp
 ; X64-NEXT:    vaddps %zmm16, %zmm0, %zmm0
 ; X64-NEXT:    vaddps (%rsp), %zmm0, %zmm0
 ; X64-NEXT:    leaq -16(%rbp), %rsp
@@ -166,6 +182,30 @@ define <16 x float> @testf16_regs(<16 x float> %a, <16 x float> %b) nounwind {
 ; X64-NEXT:    popq %r13
 ; X64-NEXT:    popq %rbp
 ; X64-NEXT:    retq
+;
+; X64-SPILL-LABEL: testf16_regs:
+; X64-SPILL:       ## %bb.0:
+; X64-SPILL-NEXT:    pushq %rbp
+; X64-SPILL-NEXT:    movq %rsp, %rbp
+; X64-SPILL-NEXT:    pushq %r13
+; X64-SPILL-NEXT:    pushq %r12
+; X64-SPILL-NEXT:    andq $-64, %rsp
+; X64-SPILL-NEXT:    subq $128, %rsp
+; X64-SPILL-NEXT:    vmovaps %zmm1, %zmm16
+; X64-SPILL-NEXT:    vaddps %zmm1, %zmm0, %zmm0
+; X64-SPILL-NEXT:    movq %rsp, %rdi
+; X64-SPILL-NEXT:    pushq %rbp
+; X64-SPILL-NEXT:    pushq %rax
+; X64-SPILL-NEXT:    callq _func_float16_ptr
+; X64-SPILL-NEXT:    addq $8, %rsp
+; X64-SPILL-NEXT:    popq %rbp
+; X64-SPILL-NEXT:    vaddps %zmm16, %zmm0, %zmm0
+; X64-SPILL-NEXT:    vaddps (%rsp), %zmm0, %zmm0
+; X64-SPILL-NEXT:    leaq -16(%rbp), %rsp
+; X64-SPILL-NEXT:    popq %r12
+; X64-SPILL-NEXT:    popq %r13
+; X64-SPILL-NEXT:    popq %rbp
+; X64-SPILL-NEXT:    retq
   %y = alloca <16 x float>, align 64
   %x = fadd <16 x float> %a, %b
   %1 = call intel_ocl_bicc <16 x float> @func_float16_ptr(<16 x float> %x, ptr %y)
@@ -348,6 +388,55 @@ define intel_ocl_bicc <16 x float> @test_prolog_epilog(<16 x float> %a, <16 x fl
 ; X64-KNL-NEXT:    popq %rsi
 ; X64-KNL-NEXT:    retq
 ;
+; X64-SPILL-KNL-LABEL: test_prolog_epilog:
+; X64-SPILL-KNL:       ## %bb.0:
+; X64-SPILL-KNL-NEXT:    pushq %rsi
+; X64-SPILL-KNL-NEXT:    subq $1072, %rsp ## imm = 0x430
+; X64-SPILL-KNL-NEXT:    kmovw %k7, {{[-0-9]+}}(%r{{[sb]}}p) ## 2-byte Spill
+; X64-SPILL-KNL-NEXT:    kmovw %k6, {{[-0-9]+}}(%r{{[sb]}}p) ## 2-byte Spill
+; X64-SPILL-KNL-NEXT:    kmovw %k5, {{[-0-9]+}}(%r{{[sb]}}p) ## 2-byte Spill
+; X64-SPILL-KNL-NEXT:    kmovw %k4, {{[-0-9]+}}(%r{{[sb]}}p) ## 2-byte Spill
+; X64-SPILL-KNL-NEXT:    vmovups %zmm31, {{[-0-9]+}}(%r{{[sb]}}p) ## 64-byte Spill
+; X64-SPILL-KNL-NEXT:    vmovups %zmm30, {{[-0-9]+}}(%r{{[sb]}}p) ## 64-byte Spill
+; X64-SPILL-KNL-NEXT:    vmovups %zmm29, {{[-0-9]+}}(%r{{[sb]}}p) ## 64-byte Spill
+; X64-SPILL-KNL-NEXT:    vmovups %zmm28, {{[-0-9]+}}(%r{{[sb]}}p) ## 64-byte Spill
+; X64-SPILL-KNL-NEXT:    vmovups %zmm27, {{[-0-9]+}}(%r{{[sb]}}p) ## 64-byte Spill
+; X64-SPILL-KNL-NEXT:    vmovups %zmm26, {{[-0-9]+}}(%r{{[sb]}}p) ## 64-byte Spill
+; X64-SPILL-KNL-NEXT:    vmovups %zmm25, {{[-0-9]+}}(%r{{[sb]}}p) ## 64-byte Spill
+; X64-SPILL-KNL-NEXT:    vmovups %zmm24, {{[-0-9]+}}(%r{{[sb]}}p) ## 64-byte Spill
+; X64-SPILL-KNL-NEXT:    vmovups %zmm23, {{[-0-9]+}}(%r{{[sb]}}p) ## 64-byte Spill
+; X64-SPILL-KNL-NEXT:    vmovups %zmm22, {{[-0-9]+}}(%r{{[sb]}}p) ## 64-byte Spill
+; X64-SPILL-KNL-NEXT:    vmovups %zmm21, {{[-0-9]+}}(%r{{[sb]}}p) ## 64-byte Spill
+; X64-SPILL-KNL-NEXT:    vmovups %zmm20, {{[-0-9]+}}(%r{{[sb]}}p) ## 64-byte Spill
+; X64-SPILL-KNL-NEXT:    vmovups %zmm19, {{[-0-9]+}}(%r{{[sb]}}p) ## 64-byte Spill
+; X64-SPILL-KNL-NEXT:    vmovups %zmm18, {{[-0-9]+}}(%r{{[sb]}}p) ## 64-byte Spill
+; X64-SPILL-KNL-NEXT:    vmovups %zmm17, {{[-0-9]+}}(%r{{[sb]}}p) ## 64-byte Spill
+; X64-SPILL-KNL-NEXT:    vmovups %zmm16, (%rsp) ## 64-byte Spill
+; X64-SPILL-KNL-NEXT:    callq _func_float16
+; X64-SPILL-KNL-NEXT:    vmovups (%rsp), %zmm16 ## 64-byte Reload
+; X64-SPILL-KNL-NEXT:    vmovups {{[-0-9]+}}(%r{{[sb]}}p), %zmm17 ## 64-byte Reload
+; X64-SPILL-KNL-NEXT:    vmovups {{[-0-9]+}}(%r{{[sb]}}p), %zmm18 ## 64-byte Reload
+; X64-SPILL-KNL-NEXT:    vmovups {{[-0-9]+}}(%r{{[sb]}}p), %zmm19 ## 64-byte Reload
+; X64-SPILL-KNL-NEXT:    vmovups {{[-0-9]+}}(%r{{[sb]}}p), %zmm20 ## 64-byte Reload
+; X64-SPILL-KNL-NEXT:    vmovups {{[-0-9]+}}(%r{{[sb]}}p), %zmm21 ## 64-byte Reload
+; X64-SPILL-KNL-NEXT:    vmovups {{[-0-9]+}}(%r{{[sb]}}p), %zmm22 ## 64-byte Reload
+; X64-SPILL-KNL-NEXT:    vmovups {{[-0-9]+}}(%r{{[sb]}}p), %zmm23 ## 64-byte Reload
+; X64-SPILL-KNL-NEXT:    vmovups {{[-0-9]+}}(%r{{[sb]}}p), %zmm24 ## 64-byte Reload
+; X64-SPILL-KNL-NEXT:    vmovups {{[-0-9]+}}(%r{{[sb]}}p), %zmm25 ## 64-byte Reload
+; X64-SPILL-KNL-NEXT:    vmovups {{[-0-9]+}}(%r{{[sb]}}p), %zmm26 ## 64-byte Reload
+; X64-SPILL-KNL-NEXT:    vmovups {{[-0-9]+}}(%r{{[sb]}}p), %zmm27 ## 64-byte Reload
+; X64-SPILL-KNL-NEXT:    vmovups {{[-0-9]+}}(%r{{[sb]}}p), %zmm28 ## 64-byte Reload
+; X64-SPILL-KNL-NEXT:    vmovups {{[-0-9]+}}(%r{{[sb]}}p), %zmm29 ## 64-byte Reload
+; X64-SPILL-KNL-NEXT:    vmovups {{[-0-9]+}}(%r{{[sb]}}p), %zmm30 ## 64-byte Reload
+; X64-SPILL-KNL-NEXT:    vmovups {{[-0-9]+}}(%r{{[sb]}}p), %zmm31 ## 64-byte Reload
+; X64-SPILL-KNL-NEXT:    kmovw {{[-0-9]+}}(%r{{[sb]}}p), %k4 ## 2-byte Reload
+; X64-SPILL-KNL-NEXT:    kmovw {{[-0-9]+}}(%r{{[sb]}}p), %k5 ## 2-byte Reload
+; X64-SPILL-KNL-NEXT:    kmovw {{[-0-9]+}}(%r{{[sb]}}p), %k6 ## 2-byte Reload
+; X64-SPILL-KNL-NEXT:    kmovw {{[-0-9]+}}(%r{{[sb]}}p), %k7 ## 2-byte Reload
+; X64-SPILL-KNL-NEXT:    addq $1072, %rsp ## imm = 0x430
+; X64-SPILL-KNL-NEXT:    popq %rsi
+; X64-SPILL-KNL-NEXT:    retq
+;
 ; X64-SKX-LABEL: test_prolog_epilog:
 ; X64-SKX:       ## %bb.0:
 ; X64-SKX-NEXT:    pushq %rsi
@@ -396,6 +485,55 @@ define intel_ocl_bicc <16 x float> @test_prolog_epilog(<16 x float> %a, <16 x fl
 ; X64-SKX-NEXT:    addq $1072, %rsp ## imm = 0x430
 ; X64-SKX-NEXT:    popq %rsi
 ; X64-SKX-NEXT:    retq
+;
+; X64-SPILL-SKX-LABEL: test_prolog_epilog:
+; X64-SPILL-SKX:       ## %bb.0:
+; X64-SPILL-SKX-NEXT:    pushq %rsi
+; X64-SPILL-SKX-NEXT:    subq $1072, %rsp ## imm = 0x430
+; X64-SPILL-SKX-NEXT:    kmovq %k7, {{[-0-9]+}}(%r{{[sb]}}p) ## 8-byte Spill
+; X64-SPILL-SKX-NEXT:    kmovq %k6, {{[-0-9]+}}(%r{{[sb]}}p) ## 8-byte Spill
+; X64-SPILL-SKX-NEXT:    kmovq %k5, {{[-0-9]+}}(%r{{[sb]}}p) ## 8-byte Spill
+; X64-SPILL-SKX-NEXT:    kmovq %k4, {{[-0-9]+}}(%r{{[sb]}}p) ## 8-byte Spill
+; X64-SPILL-SKX-NEXT:    vmovups %zmm31, {{[-0-9]+}}(%r{{[sb]}}p) ## 64-byte Spill
+; X64-SPILL-SKX-NEXT:    vmovups %zmm30, {{[-0-9]+}}(%r{{[sb]}}p) ## 64-byte Spill
+; X64-SPILL-SKX-NEXT:    vmovups %zmm29, {{[-0-9]+}}(%r{{[sb]}}p) ## 64-byte Spill
+; X64-SPILL-SKX-NEXT:    vmovups %zmm28, {{[-0-9]+}}(%r{{[sb]}}p) ## 64-byte Spill
+; X64-SPILL-SKX-NEXT:    vmovups %zmm27, {{[-0-9]+}}(%r{{[sb]}}p) ## 64-byte Spill
+; X64-SPILL-SKX-NEXT:    vmovups %zmm26, {{[-0-9]+}}(%r{{[sb]}}p) ## 64-byte Spill
+; X64-SPILL-SKX-NEXT:    vmovups %zmm25, {{[-0-9]+}}(%r{{[sb]}}p) ## 64-byte Spill
+; X64-SPILL-SKX-NEXT:    vmovups %zmm24, {{[-0-9]+}}(%r{{[sb]}}p) ## 64-byte Spill
+; X64-SPILL-SKX-NEXT:    vmovups %zmm23, {{[-0-9]+}}(%r{{[sb]}}p) ## 64-byte Spill
+; X64-SPILL-SKX-NEXT:    vmovups %zmm22, {{[-0-9]+}}(%r{{[sb]}}p) ## 64-byte Spill
+; X64-SPILL-SKX-NEXT:    vmovups %zmm21, {{[-0-9]+}}(%r{{[sb]}}p) ## 64-byte Spill
+; X64-SPILL-SKX-NEXT:    vmovups %zmm20, {{[-0-9]+}}(%r{{[sb]}}p) ## 64-byte Spill
+; X64-SPILL-SKX-NEXT:    vmovups %zmm19, {{[-0-9]+}}(%r{{[sb]}}p) ## 64-byte Spill
+; X64-SPILL-SKX-NEXT:    vmovups %zmm18, {{[-0-9]+}}(%r{{[sb]}}p) ## 64-byte Spill
+; X64-SPILL-SKX-NEXT:    vmovups %zmm17, {{[-0-9]+}}(%r{{[sb]}}p) ## 64-byte Spill
+; X64-SPILL-SKX-NEXT:    vmovups %zmm16, (%rsp) ## 64-byte Spill
+; X64-SPILL-SKX-NEXT:    callq _func_float16
+; X64-SPILL-SKX-NEXT:    vmovups (%rsp), %zmm16 ## 64-byte Reload
+; X64-SPILL-SKX-NEXT:    vmovups {{[-0-9]+}}(%r{{[sb]}}p), %zmm17 ## 64-byte Reload
+; X64-SPILL-SKX-NEXT:    vmovups {{[-0-9]+}}(%r{{[sb]}}p), %zmm18 ## 64-byte Reload
+; X64-SPILL-SKX-NEXT:    vmovups {{[-0-9]+}}(%r{{[sb]}}p), %zmm19 ## 64-byte Reload
+; X64-SPILL-SKX-NEXT:    vmovups {{[-0-9]+}}(%r{{[sb]}}p), %zmm20 ## 64-byte Reload
+; X64-SPILL-SKX-NEXT:    vmovups {{[-0-9]+}}(%r{{[sb]}}p), %zmm21 ## 64-byte Reload
+; X64-SPILL-SKX-NEXT:    vmovups {{[-0-9]+}}(%r{{[sb]}}p), %zmm22 ## 64-byte Reload
+; X64-SPILL-SKX-NEXT:    vmovups {{[-0-9]+}}(%r{{[sb]}}p), %zmm23 ## 64-byte Reload
+; X64-SPILL-SKX-NEXT:    vmovups {{[-0-9]+}}(%r{{[sb]}}p), %zmm24 ## 64-byte Reload
+; X64-SPILL-SKX-NEXT:    vmovups {{[-0-9]+}}(%r{{[sb]}}p), %zmm25 ## 64-byte Reload
+; X64-SPILL-SKX-NEXT:    vmovups {{[-0-9]+}}(%r{{[sb]}}p), %zmm26 ## 64-byte Reload
+; X64-SPILL-SKX-NEXT:    vmovups {{[-0-9]+}}(%r{{[sb]}}p), %zmm27 ## 64-byte Reload
+; X64-SPILL-SKX-NEXT:    vmovups {{[-0-9]+}}(%r{{[sb]}}p), %zmm28 ## 64-byte Reload
+; X64-SPILL-SKX-NEXT:    vmovups {{[-0-9]+}}(%r{{[sb]}}p), %zmm29 ## 64-byte Reload
+; X64-SPILL-SKX-NEXT:    vmovups {{[-0-9]+}}(%r{{[sb]}}p), %zmm30 ## 64-byte Reload
+; X64-SPILL-SKX-NEXT:    vmovups {{[-0-9]+}}(%r{{[sb]}}p), %zmm31 ## 64-byte Reload
+; X64-SPILL-SKX-NEXT:    kmovq {{[-0-9]+}}(%r{{[sb]}}p), %k4 ## 8-byte Reload
+; X64-SPILL-SKX-NEXT:    kmovq {{[-0-9]+}}(%r{{[sb]}}p), %k5 ## 8-byte Reload
+; X64-SPILL-SKX-NEXT:    kmovq {{[-0-9]+}}(%r{{[sb]}}p), %k6 ## 8-byte Reload
+; X64-SPILL-SKX-NEXT:    kmovq {{[-0-9]+}}(%r{{[sb]}}p), %k7 ## 8-byte Reload
+; X64-SPILL-SKX-NEXT:    addq $1072, %rsp ## imm = 0x430
+; X64-SPILL-SKX-NEXT:    popq %rsi
+; X64-SPILL-SKX-NEXT:    retq
    %c = call <16 x float> @func_float16(<16 x float> %a, <16 x float> %b)
    ret <16 x float> %c
 }
@@ -465,6 +603,24 @@ define <16 x float> @testf16_inp_mask(<16 x float> %a, i16 %mask)  {
 ; X64-KNL-NEXT:    popq %rbp
 ; X64-KNL-NEXT:    retq
 ;
+; X64-SPILL-KNL-LABEL: testf16_inp_mask:
+; X64-SPILL-KNL:       ## %bb.0:
+; X64-SPILL-KNL-NEXT:    pushq %rbp
+; X64-SPILL-KNL-NEXT:    .cfi_def_cfa_offset 16
+; X64-SPILL-KNL-NEXT:    pushq %r13
+; X64-SPILL-KNL-NEXT:    .cfi_def_cfa_offset 24
+; X64-SPILL-KNL-NEXT:    pushq %r12
+; X64-SPILL-KNL-NEXT:    .cfi_def_cfa_offset 32
+; X64-SPILL-KNL-NEXT:    .cfi_offset %r12, -32
+; X64-SPILL-KNL-NEXT:    .cfi_offset %r13, -24
+; X64-SPILL-KNL-NEXT:    .cfi_offset %rbp, -16
+; X64-SPILL-KNL-NEXT:    kmovw %edi, %k1
+; X64-SPILL-KNL-NEXT:    callq _func_float16_mask
+; X64-SPILL-KNL-NEXT:    popq %r12
+; X64-SPILL-KNL-NEXT:    popq %r13
+; X64-SPILL-KNL-NEXT:    popq %rbp
+; X64-SPILL-KNL-NEXT:    retq
+;
 ; X64-SKX-LABEL: testf16_inp_mask:
 ; X64-SKX:       ## %bb.0:
 ; X64-SKX-NEXT:    pushq %rbp
@@ -482,6 +638,24 @@ define <16 x float> @testf16_inp_mask(<16 x float> %a, i16 %mask)  {
 ; X64-SKX-NEXT:    popq %r13
 ; X64-SKX-NEXT:    popq %rbp
 ; X64-SKX-NEXT:    retq
+;
+; X64-SPILL-SKX-LABEL: testf16_inp_mask:
+; X64-SPILL-SKX:       ## %bb.0:
+; X64-SPILL-SKX-NEXT:    pushq %rbp
+; X64-SPILL-SKX-NEXT:    .cfi_def_cfa_offset 16
+; X64-SPILL-SKX-NEXT:    pushq %r13
+; X64-SPILL-SKX-NEXT:    .cfi_def_cfa_offset 24
+; X64-SPILL-SKX-NEXT:    pushq %r12
+; X64-SPILL-SKX-NEXT:    .cfi_def_cfa_offset 32
+; X64-SPILL-SKX-NEXT:    .cfi_offset %r12, -32
+; X64-SPILL-SKX-NEXT:    .cfi_offset %r13, -24
+; X64-SPILL-SKX-NEXT:    .cfi_offset %rbp, -16
+; X64-SPILL-SKX-NEXT:    kmovd %edi, %k1
+; X64-SPILL-SKX-NEXT:    callq _func_float16_mask
+; X64-SPILL-SKX-NEXT:    popq %r12
+; X64-SPILL-SKX-NEXT:    popq %r13
+; X64-SPILL-SKX-NEXT:    popq %rbp
+; X64-SPILL-SKX-NEXT:    retq
   %imask = bitcast i16 %mask to <16 x i1>
   %1 = call intel_ocl_bicc <16 x float> @func_float16_mask(<16 x float> %a, <16 x i1> %imask)
   ret <16 x float> %1
@@ -521,6 +695,15 @@ define intel_ocl_bicc <16 x float> @test_prolog_epilog_with_mask(<16 x float> %a
 ; X64-NEXT:    callq _func_float16_mask
 ; X64-NEXT:    popq %rax
 ; X64-NEXT:    retq
+;
+; X64-SPILL-LABEL: test_prolog_epilog_with_mask:
+; X64-SPILL:       ## %bb.0:
+; X64-SPILL-NEXT:    pushq %rax
+; X64-SPILL-NEXT:    vpcmpeqd %zmm2, %zmm1, %k0
+; X64-SPILL-NEXT:    kxorw %k1, %k0, %k1
+; X64-SPILL-NEXT:    callq _func_float16_mask
+; X64-SPILL-NEXT:    popq %rax
+; X64-SPILL-NEXT:    retq
    %cmp_res = icmp eq <16 x i32>%x1, %x2
    %mask1 = xor <16 x i1> %cmp_res, %mask
    %c = call intel_ocl_bicc <16 x float> @func_float16_mask(<16 x float> %a, <16 x i1>%mask1)

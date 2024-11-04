@@ -2,6 +2,7 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown -mattr=+push2pop2 | FileCheck %s --check-prefix=CHECK
 ; RUN: llc < %s -mtriple=x86_64-unknown -mattr=+push2pop2,+ppx | FileCheck %s --check-prefix=PPX
 ; RUN: llc < %s -mtriple=x86_64-unknown -mattr=+push2pop2 -frame-pointer=all | FileCheck %s --check-prefix=FRAME
+; RUN: llc < %s -mtriple=x86_64-unknown -mattr=+push2pop2 -frame-pointer=all --enable-spill-fpbp=true | FileCheck %s --check-prefix=FRAME-SPILL
 
 define void @csr1() nounwind {
 ; CHECK-LABEL: csr1:
@@ -24,14 +25,23 @@ define void @csr1() nounwind {
 ; FRAME:       # %bb.0: # %entry
 ; FRAME-NEXT:    pushq %rbp
 ; FRAME-NEXT:    movq %rsp, %rbp
-; FRAME-NEXT:    pushq %rbp
-; FRAME-NEXT:    pushq %rax
 ; FRAME-NEXT:    #APP
 ; FRAME-NEXT:    #NO_APP
-; FRAME-NEXT:    popq %rax
-; FRAME-NEXT:    popq %rbp
 ; FRAME-NEXT:    popq %rbp
 ; FRAME-NEXT:    retq
+;
+; FRAME-SPILL-LABEL: csr1:
+; FRAME-SPILL:       # %bb.0: # %entry
+; FRAME-SPILL-NEXT:    pushq %rbp
+; FRAME-SPILL-NEXT:    movq %rsp, %rbp
+; FRAME-SPILL-NEXT:    pushq %rbp
+; FRAME-SPILL-NEXT:    pushq %rax
+; FRAME-SPILL-NEXT:    #APP
+; FRAME-SPILL-NEXT:    #NO_APP
+; FRAME-SPILL-NEXT:    popq %rax
+; FRAME-SPILL-NEXT:    popq %rbp
+; FRAME-SPILL-NEXT:    popq %rbp
+; FRAME-SPILL-NEXT:    retq
 entry:
   tail call void asm sideeffect "", "~{rbp},~{dirflag},~{fpsr},~{flags}"()
   ret void
@@ -63,15 +73,26 @@ define void @csr2() nounwind {
 ; FRAME-NEXT:    pushq %rbp
 ; FRAME-NEXT:    movq %rsp, %rbp
 ; FRAME-NEXT:    pushq %r15
-; FRAME-NEXT:    pushq %rbp
-; FRAME-NEXT:    pushq %rax
 ; FRAME-NEXT:    #APP
 ; FRAME-NEXT:    #NO_APP
-; FRAME-NEXT:    popq %rax
-; FRAME-NEXT:    popq %rbp
 ; FRAME-NEXT:    popq %r15
 ; FRAME-NEXT:    popq %rbp
 ; FRAME-NEXT:    retq
+;
+; FRAME-SPILL-LABEL: csr2:
+; FRAME-SPILL:       # %bb.0: # %entry
+; FRAME-SPILL-NEXT:    pushq %rbp
+; FRAME-SPILL-NEXT:    movq %rsp, %rbp
+; FRAME-SPILL-NEXT:    pushq %r15
+; FRAME-SPILL-NEXT:    pushq %rbp
+; FRAME-SPILL-NEXT:    pushq %rax
+; FRAME-SPILL-NEXT:    #APP
+; FRAME-SPILL-NEXT:    #NO_APP
+; FRAME-SPILL-NEXT:    popq %rax
+; FRAME-SPILL-NEXT:    popq %rbp
+; FRAME-SPILL-NEXT:    popq %r15
+; FRAME-SPILL-NEXT:    popq %rbp
+; FRAME-SPILL-NEXT:    retq
 entry:
   tail call void asm sideeffect "", "~{rbp},~{r15},~{dirflag},~{fpsr},~{flags}"()
   ret void
@@ -103,15 +124,26 @@ define void @csr3() nounwind {
 ; FRAME-NEXT:    pushq %rbp
 ; FRAME-NEXT:    movq %rsp, %rbp
 ; FRAME-NEXT:    push2 %r14, %r15
-; FRAME-NEXT:    pushq %rbp
-; FRAME-NEXT:    pushq %rax
 ; FRAME-NEXT:    #APP
 ; FRAME-NEXT:    #NO_APP
-; FRAME-NEXT:    popq %rax
-; FRAME-NEXT:    popq %rbp
 ; FRAME-NEXT:    pop2 %r15, %r14
 ; FRAME-NEXT:    popq %rbp
 ; FRAME-NEXT:    retq
+;
+; FRAME-SPILL-LABEL: csr3:
+; FRAME-SPILL:       # %bb.0: # %entry
+; FRAME-SPILL-NEXT:    pushq %rbp
+; FRAME-SPILL-NEXT:    movq %rsp, %rbp
+; FRAME-SPILL-NEXT:    push2 %r14, %r15
+; FRAME-SPILL-NEXT:    pushq %rbp
+; FRAME-SPILL-NEXT:    pushq %rax
+; FRAME-SPILL-NEXT:    #APP
+; FRAME-SPILL-NEXT:    #NO_APP
+; FRAME-SPILL-NEXT:    popq %rax
+; FRAME-SPILL-NEXT:    popq %rbp
+; FRAME-SPILL-NEXT:    pop2 %r15, %r14
+; FRAME-SPILL-NEXT:    popq %rbp
+; FRAME-SPILL-NEXT:    retq
 entry:
   tail call void asm sideeffect "", "~{rbp},~{r15},~{r14},~{dirflag},~{fpsr},~{flags}"()
   ret void
@@ -148,16 +180,29 @@ define void @csr4() nounwind {
 ; FRAME-NEXT:    movq %rsp, %rbp
 ; FRAME-NEXT:    push2 %r14, %r15
 ; FRAME-NEXT:    pushq %r13
-; FRAME-NEXT:    pushq %rbp
-; FRAME-NEXT:    pushq %rax
 ; FRAME-NEXT:    #APP
 ; FRAME-NEXT:    #NO_APP
-; FRAME-NEXT:    popq %rax
-; FRAME-NEXT:    popq %rbp
 ; FRAME-NEXT:    popq %r13
 ; FRAME-NEXT:    pop2 %r15, %r14
 ; FRAME-NEXT:    popq %rbp
 ; FRAME-NEXT:    retq
+;
+; FRAME-SPILL-LABEL: csr4:
+; FRAME-SPILL:       # %bb.0: # %entry
+; FRAME-SPILL-NEXT:    pushq %rbp
+; FRAME-SPILL-NEXT:    movq %rsp, %rbp
+; FRAME-SPILL-NEXT:    push2 %r14, %r15
+; FRAME-SPILL-NEXT:    pushq %r13
+; FRAME-SPILL-NEXT:    pushq %rbp
+; FRAME-SPILL-NEXT:    pushq %rax
+; FRAME-SPILL-NEXT:    #APP
+; FRAME-SPILL-NEXT:    #NO_APP
+; FRAME-SPILL-NEXT:    popq %rax
+; FRAME-SPILL-NEXT:    popq %rbp
+; FRAME-SPILL-NEXT:    popq %r13
+; FRAME-SPILL-NEXT:    pop2 %r15, %r14
+; FRAME-SPILL-NEXT:    popq %rbp
+; FRAME-SPILL-NEXT:    retq
 entry:
   tail call void asm sideeffect "", "~{rbp},~{r15},~{r14},~{r13},~{dirflag},~{fpsr},~{flags}"()
   ret void
@@ -194,16 +239,29 @@ define void @csr5() nounwind {
 ; FRAME-NEXT:    movq %rsp, %rbp
 ; FRAME-NEXT:    push2 %r14, %r15
 ; FRAME-NEXT:    push2 %r12, %r13
-; FRAME-NEXT:    pushq %rbp
-; FRAME-NEXT:    pushq %rax
 ; FRAME-NEXT:    #APP
 ; FRAME-NEXT:    #NO_APP
-; FRAME-NEXT:    popq %rax
-; FRAME-NEXT:    popq %rbp
 ; FRAME-NEXT:    pop2 %r13, %r12
 ; FRAME-NEXT:    pop2 %r15, %r14
 ; FRAME-NEXT:    popq %rbp
 ; FRAME-NEXT:    retq
+;
+; FRAME-SPILL-LABEL: csr5:
+; FRAME-SPILL:       # %bb.0: # %entry
+; FRAME-SPILL-NEXT:    pushq %rbp
+; FRAME-SPILL-NEXT:    movq %rsp, %rbp
+; FRAME-SPILL-NEXT:    push2 %r14, %r15
+; FRAME-SPILL-NEXT:    push2 %r12, %r13
+; FRAME-SPILL-NEXT:    pushq %rbp
+; FRAME-SPILL-NEXT:    pushq %rax
+; FRAME-SPILL-NEXT:    #APP
+; FRAME-SPILL-NEXT:    #NO_APP
+; FRAME-SPILL-NEXT:    popq %rax
+; FRAME-SPILL-NEXT:    popq %rbp
+; FRAME-SPILL-NEXT:    pop2 %r13, %r12
+; FRAME-SPILL-NEXT:    pop2 %r15, %r14
+; FRAME-SPILL-NEXT:    popq %rbp
+; FRAME-SPILL-NEXT:    retq
 entry:
   tail call void asm sideeffect "", "~{rbp},~{r15},~{r14},~{r13},~{r12},~{dirflag},~{fpsr},~{flags}"()
   ret void
@@ -245,17 +303,32 @@ define void @csr6() nounwind {
 ; FRAME-NEXT:    push2 %r14, %r15
 ; FRAME-NEXT:    push2 %r12, %r13
 ; FRAME-NEXT:    pushq %rbx
-; FRAME-NEXT:    pushq %rbp
-; FRAME-NEXT:    pushq %rax
 ; FRAME-NEXT:    #APP
 ; FRAME-NEXT:    #NO_APP
-; FRAME-NEXT:    popq %rax
-; FRAME-NEXT:    popq %rbp
 ; FRAME-NEXT:    popq %rbx
 ; FRAME-NEXT:    pop2 %r13, %r12
 ; FRAME-NEXT:    pop2 %r15, %r14
 ; FRAME-NEXT:    popq %rbp
 ; FRAME-NEXT:    retq
+;
+; FRAME-SPILL-LABEL: csr6:
+; FRAME-SPILL:       # %bb.0: # %entry
+; FRAME-SPILL-NEXT:    pushq %rbp
+; FRAME-SPILL-NEXT:    movq %rsp, %rbp
+; FRAME-SPILL-NEXT:    push2 %r14, %r15
+; FRAME-SPILL-NEXT:    push2 %r12, %r13
+; FRAME-SPILL-NEXT:    pushq %rbx
+; FRAME-SPILL-NEXT:    pushq %rbp
+; FRAME-SPILL-NEXT:    pushq %rax
+; FRAME-SPILL-NEXT:    #APP
+; FRAME-SPILL-NEXT:    #NO_APP
+; FRAME-SPILL-NEXT:    popq %rax
+; FRAME-SPILL-NEXT:    popq %rbp
+; FRAME-SPILL-NEXT:    popq %rbx
+; FRAME-SPILL-NEXT:    pop2 %r13, %r12
+; FRAME-SPILL-NEXT:    pop2 %r15, %r14
+; FRAME-SPILL-NEXT:    popq %rbp
+; FRAME-SPILL-NEXT:    retq
 entry:
   tail call void asm sideeffect "", "~{rbp},~{r15},~{r14},~{r13},~{r12},~{rbx},~{dirflag},~{fpsr},~{flags}"()
   ret void
@@ -421,6 +494,60 @@ define void @lea_in_epilog(i1 %arg, ptr %arg1, ptr %arg2, i64 %arg3, i64 %arg4, 
 ; FRAME-NEXT:    movq $0, (%rax)
 ; FRAME-NEXT:  .LBB6_5: # %bb14
 ; FRAME-NEXT:    retq
+;
+; FRAME-SPILL-LABEL: lea_in_epilog:
+; FRAME-SPILL:       # %bb.0: # %bb
+; FRAME-SPILL-NEXT:    testb $1, %dil
+; FRAME-SPILL-NEXT:    je .LBB6_5
+; FRAME-SPILL-NEXT:  # %bb.1: # %bb13
+; FRAME-SPILL-NEXT:    pushq %rbp
+; FRAME-SPILL-NEXT:    movq %rsp, %rbp
+; FRAME-SPILL-NEXT:    push2 %r14, %r15
+; FRAME-SPILL-NEXT:    push2 %r12, %r13
+; FRAME-SPILL-NEXT:    pushq %rbx
+; FRAME-SPILL-NEXT:    subq $24, %rsp
+; FRAME-SPILL-NEXT:    movq %rsi, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; FRAME-SPILL-NEXT:    addq 16(%rbp), %r9
+; FRAME-SPILL-NEXT:    movq 48(%rbp), %rbx
+; FRAME-SPILL-NEXT:    addq %r9, %rbx
+; FRAME-SPILL-NEXT:    movq 40(%rbp), %r12
+; FRAME-SPILL-NEXT:    addq %r9, %r12
+; FRAME-SPILL-NEXT:    movq 32(%rbp), %r15
+; FRAME-SPILL-NEXT:    addq %r9, %r15
+; FRAME-SPILL-NEXT:    xorl %r13d, %r13d
+; FRAME-SPILL-NEXT:    xorl %r14d, %r14d
+; FRAME-SPILL-NEXT:    movl %edi, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
+; FRAME-SPILL-NEXT:    .p2align 4
+; FRAME-SPILL-NEXT:  .LBB6_2: # %bb15
+; FRAME-SPILL-NEXT:    # =>This Inner Loop Header: Depth=1
+; FRAME-SPILL-NEXT:    movq %r9, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; FRAME-SPILL-NEXT:    incq %r14
+; FRAME-SPILL-NEXT:    movl $432, %edx # imm = 0x1B0
+; FRAME-SPILL-NEXT:    xorl %edi, %edi
+; FRAME-SPILL-NEXT:    movq %r12, %rsi
+; FRAME-SPILL-NEXT:    callq memcpy@PLT
+; FRAME-SPILL-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %edi # 4-byte Reload
+; FRAME-SPILL-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %r9 # 8-byte Reload
+; FRAME-SPILL-NEXT:    movq 16(%rbp), %rax
+; FRAME-SPILL-NEXT:    addq %rax, %rbx
+; FRAME-SPILL-NEXT:    addq %rax, %r12
+; FRAME-SPILL-NEXT:    addq %rax, %r15
+; FRAME-SPILL-NEXT:    addq %rax, %r9
+; FRAME-SPILL-NEXT:    addq $8, %r13
+; FRAME-SPILL-NEXT:    testb $1, %dil
+; FRAME-SPILL-NEXT:    je .LBB6_2
+; FRAME-SPILL-NEXT:  # %bb.3: # %bb11
+; FRAME-SPILL-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rax # 8-byte Reload
+; FRAME-SPILL-NEXT:    leaq {{[0-9]+}}(%rsp), %rsp
+; FRAME-SPILL-NEXT:    popq %rbx
+; FRAME-SPILL-NEXT:    pop2 %r13, %r12
+; FRAME-SPILL-NEXT:    pop2 %r15, %r14
+; FRAME-SPILL-NEXT:    popq %rbp
+; FRAME-SPILL-NEXT:    jne .LBB6_5
+; FRAME-SPILL-NEXT:  # %bb.4: # %bb12
+; FRAME-SPILL-NEXT:    movq $0, (%rax)
+; FRAME-SPILL-NEXT:  .LBB6_5: # %bb14
+; FRAME-SPILL-NEXT:    retq
 bb:
   br i1 %arg, label %bb13, label %bb14
 

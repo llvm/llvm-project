@@ -2,6 +2,7 @@
 ; Check PUSH2/POP2 is not used for vector registers
 ; RUN: llc < %s -mtriple=x86_64-pc-windows-msvc -mattr=+push2pop2 | FileCheck %s --check-prefix=CHECK
 ; RUN: llc < %s -mtriple=x86_64-pc-windows-msvc -mattr=+push2pop2 -frame-pointer=all | FileCheck %s --check-prefix=FRAME
+; RUN: llc < %s -mtriple=x86_64-pc-windows-msvc -mattr=+push2pop2 -frame-pointer=all  --enable-spill-fpbp=true | FileCheck %s --check-prefix=FRAME-SPILL
 
 define void @widget(float %arg) nounwind {
 ; CHECK-LABEL: widget:
@@ -43,17 +44,41 @@ define void @widget(float %arg) nounwind {
 ; FRAME-NEXT:    xorl %r8d, %r8d
 ; FRAME-NEXT:    callq *%rsi
 ; FRAME-NEXT:    movss %xmm6, 0
-; FRAME-NEXT:    pushq %rbp
-; FRAME-NEXT:    pushq %rax
 ; FRAME-NEXT:    #APP
 ; FRAME-NEXT:    #NO_APP
-; FRAME-NEXT:    popq %rax
-; FRAME-NEXT:    popq %rbp
 ; FRAME-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm6 # 16-byte Reload
 ; FRAME-NEXT:    addq $48, %rsp
 ; FRAME-NEXT:    pop2 %r15, %rsi
 ; FRAME-NEXT:    popq %rbp
 ; FRAME-NEXT:    retq
+;
+; FRAME-SPILL-LABEL: widget:
+; FRAME-SPILL:       # %bb.0: # %bb
+; FRAME-SPILL-NEXT:    pushq %rbp
+; FRAME-SPILL-NEXT:    push2 %rsi, %r15
+; FRAME-SPILL-NEXT:    subq $48, %rsp
+; FRAME-SPILL-NEXT:    leaq {{[0-9]+}}(%rsp), %rbp
+; FRAME-SPILL-NEXT:    movaps %xmm6, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; FRAME-SPILL-NEXT:    movaps %xmm0, %xmm6
+; FRAME-SPILL-NEXT:    xorl %esi, %esi
+; FRAME-SPILL-NEXT:    xorl %ecx, %ecx
+; FRAME-SPILL-NEXT:    callq *%rsi
+; FRAME-SPILL-NEXT:    xorl %ecx, %ecx
+; FRAME-SPILL-NEXT:    xorl %edx, %edx
+; FRAME-SPILL-NEXT:    xorl %r8d, %r8d
+; FRAME-SPILL-NEXT:    callq *%rsi
+; FRAME-SPILL-NEXT:    movss %xmm6, 0
+; FRAME-SPILL-NEXT:    pushq %rbp
+; FRAME-SPILL-NEXT:    pushq %rax
+; FRAME-SPILL-NEXT:    #APP
+; FRAME-SPILL-NEXT:    #NO_APP
+; FRAME-SPILL-NEXT:    popq %rax
+; FRAME-SPILL-NEXT:    popq %rbp
+; FRAME-SPILL-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm6 # 16-byte Reload
+; FRAME-SPILL-NEXT:    addq $48, %rsp
+; FRAME-SPILL-NEXT:    pop2 %r15, %rsi
+; FRAME-SPILL-NEXT:    popq %rbp
+; FRAME-SPILL-NEXT:    retq
 bb:
   %call = tail call float null(ptr null)
   %call1 = tail call i32 null(ptr null, i32 0, i32 0)
