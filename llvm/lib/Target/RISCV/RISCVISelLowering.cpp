@@ -2225,6 +2225,12 @@ bool RISCVTargetLowering::isExtractSubvectorCheap(EVT ResVT, EVT SrcVT,
   return Index == 0 || Index == ResElts;
 }
 
+// Prefer a wider vector_shuffle over (build_vector extract_vector_elt, ...)
+// since extract_vector_elts are expensive
+bool RISCVTargetLowering::aggressivelyPreferVectorShuffle(EVT VT) const {
+  return true;
+}
+
 MVT RISCVTargetLowering::getRegisterTypeForCallingConv(LLVMContext &Context,
                                                       CallingConv::ID CC,
                                                       EVT VT) const {

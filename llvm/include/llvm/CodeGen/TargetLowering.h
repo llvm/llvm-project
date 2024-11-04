@@ -3364,6 +3364,13 @@ public:
     return false;
   }
 
+  // Return true if a BUILD_VECTOR of EXTRACT_VECTOR_ELTs should always be
+  // combined into a VECTOR_SHUFFLE when possible regardless of
+  // isExtractSubvectorCheap.
+  virtual bool aggressivelyPreferVectorShuffle(EVT VecVT) const {
+    return false;
+  }
+
   // Return true if CodeGenPrepare should consider splitting large offset of a
   // GEP to make the GEP fit into the addressing mode and can be sunk into the
   // same blocks of its users.
