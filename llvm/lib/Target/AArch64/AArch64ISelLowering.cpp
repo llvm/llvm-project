@@ -2041,9 +2041,13 @@ bool AArch64TargetLowering::shouldExpandPartialReductionIntrinsic(
     return true;
 
   EVT VT = EVT::getEVT(I->getType());
-  return VT != MVT::nxv4i64 && VT != MVT::nxv4i32 && VT != MVT::nxv2i64 &&
-         VT != MVT::nxv8i16 && VT != MVT::v4i64 && VT != MVT::v4i32 &&
-         VT != MVT::v2i32 && VT != MVT::v8i16;
+  auto Op1 = I->getOperand(1);
+  EVT Op1VT = EVT::getEVT(Op1->getType());
+  if (Op1VT.getVectorElementType() == VT.getVectorElementType() &&
+      (VT.getVectorElementCount() * 4 == Op1VT.getVectorElementCount() ||
+       VT.getVectorElementCount() * 2 == Op1VT.getVectorElementCount()))
+    return false;
+  return true;
 }
 
 bool AArch64TargetLowering::shouldExpandCttzElements(EVT VT) const {
@@ -21793,19 +21797,18 @@ SDValue tryLowerPartialReductionToWideAdd(SDNode *N,
              Intrinsic::experimental_vector_partial_reduce_add &&
          "Expected a partial reduction node");
 
-  bool Scalable = N->getValueType(0).isScalableVector();
-  if (Scalable && !Subtarget->isSVEorStreamingSVEAvailable())
+  if (!Subtarget->isSVEorStreamingSVEAvailable())
     return SDValue();
 
   SDLoc DL(N);
 
-  auto Accumulator = N->getOperand(1);
+  auto Acc = N->getOperand(1);
   auto ExtInput = N->getOperand(2);
 
-  EVT AccumulatorType = Accumulator.getValueType();
-  EVT AccumulatorElementType = AccumulatorType.getVectorElementType();
+  EVT AccVT = Acc.getValueType();
+  EVT AccElemVT = AccVT.getVectorElementType();
 
-  if (ExtInput.getValueType().getVectorElementType() != AccumulatorElementType)
+  if (ExtInput.getValueType().getVectorElementType() != AccElemVT)
     return SDValue();
 
   unsigned ExtInputOpcode = ExtInput->getOpcode();
@@ -21813,16 +21816,15 @@ SDValue tryLowerPartialReductionToWideAdd(SDNode *N,
     return SDValue();
 
   auto Input = ExtInput->getOperand(0);
-  EVT InputType = Input.getValueType();
+  EVT InputVT = Input.getValueType();
 
   // To do this transformation, output element size needs to be double input
   // element size, and output number of elements needs to be half the input
   // number of elements
-  if (!(InputType.getVectorElementType().getSizeInBits() * 2 ==
-        AccumulatorElementType.getSizeInBits()) ||
-      !(AccumulatorType.getVectorElementCount() * 2 ==
-        InputType.getVectorElementCount()) ||
-      !(AccumulatorType.isScalableVector() == InputType.isScalableVector()))
+  if (InputVT.getVectorElementType().getSizeInBits() * 2 !=
+          AccElemVT.getSizeInBits() ||
+      AccVT.getVectorElementCount() * 2 != InputVT.getVectorElementCount() ||
+      AccVT.isScalableVector() != InputVT.isScalableVector())
     return SDValue();
 
   bool InputIsSigned = ExtInputOpcode == ISD::SIGN_EXTEND;
@@ -21831,13 +21833,12 @@ SDValue tryLowerPartialReductionToWideAdd(SDNode *N,
   auto TopIntrinsic = InputIsSigned ? Intrinsic::aarch64_sve_saddwt
                                     : Intrinsic::aarch64_sve_uaddwt;
 
-  auto BottomID =
-      DAG.getTargetConstant(BottomIntrinsic, DL, AccumulatorElementType);
-  auto BottomNode = DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, AccumulatorType,
-                                BottomID, Accumulator, Input);
-  auto TopID = DAG.getTargetConstant(TopIntrinsic, DL, AccumulatorElementType);
-  return DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, AccumulatorType, TopID,
-                     BottomNode, Input);
+  auto BottomID = DAG.getTargetConstant(BottomIntrinsic, DL, AccElemVT);
+  auto BottomNode =
+      DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, AccVT, BottomID, Acc, Input);
+  auto TopID = DAG.getTargetConstant(TopIntrinsic, DL, AccElemVT);
+  return DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, AccVT, TopID, BottomNode,
+                     Input);
 }
 
 static SDValue performIntrinsicCombine(SDNode *N,
