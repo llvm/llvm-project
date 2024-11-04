@@ -87,6 +87,8 @@ static_assert(__builtin_bit_cast(__int128_t, OneBit) == (LITTLE_END ? 1 : Expect
 
 #endif
 
+static_assert(check_round_trip<double>(17.0));
+
 
 namespace simple {
   constexpr int A = __builtin_bit_cast(int, 10);
@@ -119,7 +121,7 @@ namespace simple {
   static_assert(check_round_trip<unsigned>((int)0x12345678));
   static_assert(check_round_trip<unsigned>((int)0x87654321));
   static_assert(check_round_trip<unsigned>((int)0x0C05FEFE));
-  // static_assert(round_trip<float>((int)0x0C05FEFE));
+  static_assert(round_trip<float>((int)0x0C05FEFE));
 
 
   /// This works in GCC and in the bytecode interpreter, but the current interpreter
@@ -285,7 +287,7 @@ struct int_splicer {
 
 constexpr int_splicer splice(0x0C05FEFE, 0xCAFEBABE);
 
-#if 0
+#if 1
 static_assert(bit_cast<unsigned long long>(splice) == (LITTLE_END
                                                            ? 0xCAFEBABE0C05FEFE
                                                            : 0x0C05FEFECAFEBABE));
@@ -295,8 +297,8 @@ static_assert(bit_cast<int_splicer>(0xCAFEBABE0C05FEFE).x == (LITTLE_END
                                                                   ? 0x0C05FEFE
                                                                   : 0xCAFEBABE));
 
-static_assert(round_trip<unsigned long long>(splice));
-static_assert(round_trip<long long>(splice));
+static_assert(check_round_trip<unsigned long long>(splice));
+static_assert(check_round_trip<long long>(splice));
 #endif
 
 
@@ -338,13 +340,12 @@ void test_record() {
                                                              ? 0xCAFEBABE0C05FEFE
                                                              : 0x0C05FEFECAFEBABE));
 
-  /// FIXME: Bit casts to composite types.
-  // static_assert(bit_cast<int_splicer>(0xCAFEBABE0C05FEFE).x == (LITTLE_END
-                                                                    // ? 0x0C05FEFE
-                                                                    // : 0xCAFEBABE));
+  static_assert(bit_cast<int_splicer>(0xCAFEBABE0C05FEFE).x == (LITTLE_END
+                                                                    ? 0x0C05FEFE
+                                                                    : 0xCAFEBABE));
 
-  // static_assert(check_round_trip<unsigned long long>(splice));
-  // static_assert(check_round_trip<long long>(splice));
+  static_assert(check_round_trip<unsigned long long>(splice));
+  static_assert(check_round_trip<long long>(splice));
 
   struct base2 {
   };
@@ -366,13 +367,14 @@ void test_record() {
              z == other.z && doublez == other.doublez;
     }
   };
-  // constexpr bases b = {{1, 2}, {}, {3}, 4};
-  // constexpr tuple4 t4 = bit_cast<tuple4>(b);
-  // static_assert(t4 == tuple4{1, 2, 3, 4});
-  // static_assert(round_trip<tuple4>(b));
+  constexpr bases b = {{1, 2}, {}, {3}, 4};
+  constexpr tuple4 t4 = bit_cast<tuple4>(b);
+  static_assert(t4 == tuple4{1, 2, 3, 4});
+  static_assert(check_round_trip<tuple4>(b));
 
-  // constexpr auto b2 = bit_cast<bases>(t4);
-  // static_assert(t4 == b2);
+  /// FIXME: We need to initialize the base pointers in the pointer we're bitcasting to.
+//  constexpr auto b2 = bit_cast<bases>(t4);
+//  static_assert(t4 == b2);
 }
 
 void test_partially_initialized() {
@@ -409,16 +411,16 @@ void bad_types() {
   };
   static_assert(__builtin_bit_cast(int, X{0}) == 0); // both-error {{not an integral constant expression}} \
                                                      // both-note {{bit_cast from a union type is not allowed in a constant expression}}
-#if 0
+#if 1
 
   struct G {
     int g;
   };
-  // expected-error@+2 {{constexpr variable 'g' must be initialized by a constant expression}}
-  // expected-note@+1 {{bit_cast from a union type is not allowed in a constant expression}}
+  // both-error@+2 {{constexpr variable 'g' must be initialized by a constant expression}}
+  // both-note@+1 {{bit_cast from a union type is not allowed in a constant expression}}
   constexpr G g = __builtin_bit_cast(G, X{0});
-  // expected-error@+2 {{constexpr variable 'x' must be initialized by a constant expression}}
-  // expected-note@+1 {{bit_cast to a union type is not allowed in a constant expression}}
+  // both-error@+2 {{constexpr variable 'x' must be initialized by a constant expression}}
+  // both-note@+1 {{bit_cast to a union type is not allowed in a constant expression}}
   constexpr X x = __builtin_bit_cast(X, G{0});
 #endif
   struct has_pointer {

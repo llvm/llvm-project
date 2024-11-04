@@ -1,6 +1,6 @@
 # REQUIRES: asserts
 # RUN: llc -verify-machineinstrs -simplify-mir -mtriple=powerpc64-ibm-aix-xcoff \
-# RUN:   -debug-only=regalloc %s -o - 2>&1 | FileCheck %s
+# RUN:  -mcpu=ppc -debug-only=regalloc %s -o - 2>&1 | FileCheck %s
 
 ---
 name: i64
