@@ -2014,15 +2014,6 @@ void AsmPrinter::Impl::printLocationInternal(LocationAttr loc, bool pretty,
           os << loc.getFilename().getValue();
         else
           printEscapedString(loc.getFilename());
-        if (loc.getStartLine() == 0 && loc.getStartColumn() == 0 &&
-            loc.getEndLine() == 0 && loc.getEndColumn() == 0) {
-          return;
-        }
-        if (loc.getStartColumn() == 0 &&
-            loc.getStartLine() == loc.getEndLine()) {
-          os << ':' << loc.getStartLine();
-          return;
-        }
         if (loc.getEndColumn() == loc.getStartColumn() &&
             loc.getStartLine() == loc.getEndLine()) {
           os << ':' << loc.getStartLine() << ':' << loc.getStartColumn();

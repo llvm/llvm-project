@@ -33,7 +33,7 @@ func.func @inline_notation() -> i32 {
 // CHECK-LABEL: func private @loc_attr(i1 {foo.loc_attr = loc(callsite("foo" at "mysource.cc":10:8))})
 func.func private @loc_attr(i1 {foo.loc_attr = loc(callsite("foo" at "mysource.cc":10:8))})
 
-// CHECK-LABEL: func.func private @filelocrange_attr1(i1 {foo.loc_attr = loc("mysource.cc":10)})
+// CHECK-LABEL: func.func private @filelocrange_attr1(i1 {foo.loc_attr = loc("mysource.cc":10:0)})
 func.func private @filelocrange_attr1(i1 {foo.loc_attr = loc("mysource.cc":10)})
 // CHECK-LABEL: func.func private @filelocrange_attr2(i1 {foo.loc_attr = loc("mysource.cc":10:8)})
 func.func private @filelocrange_attr2(i1 {foo.loc_attr = loc("mysource.cc":10:8)})
