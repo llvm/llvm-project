@@ -1,5 +1,7 @@
 ; RUN: opt -passes=simplifycfg %s -S  \
 ; RUN: | FileCheck %s
+; RUN: opt --try-experimental-debuginfo-iterators -passes=simplifycfg %s -S  \
+; RUN: | FileCheck %s
 
 ;; Ensure that we correctly update the value component of dbg.assign intrinsics
 ;; after merging a conditional block with a store its the predecessor. The

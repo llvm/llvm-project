@@ -1,4 +1,5 @@
 ; RUN: opt %s -S -passes=licm -o - | FileCheck %s
+; RUN: opt --try-experimental-debuginfo-iterators %s -S -passes=licm -o - | FileCheck %s
 
 ;; $ cat test.c
 ;; int b, c, d;

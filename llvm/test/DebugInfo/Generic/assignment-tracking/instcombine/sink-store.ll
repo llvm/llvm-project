@@ -1,4 +1,5 @@
 ; RUN: opt %s -S -passes=instcombine | FileCheck %s
+; RUN: opt --try-experimental-debuginfo-iterators %s -S -passes=instcombine | FileCheck %s
 
 ;; Check that instcombine merges the DIAssignID metadata when merging two
 ;; stores into a successor. Filecheck directives inline.
