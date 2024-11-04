@@ -160,31 +160,55 @@ is a zero-based file offset, assuming ‘utf-8-unix’ coding."
                     (string-to-number (match-string 3 line)))))
       (concat (match-string 1 line) ":" (match-string 1 line)))))
 
-(defun clang-format--vc-diff-compute-diff-and-get-lines (buf-orig buf-cur)
+(defun clang-format--vc-diff-get-diff-lines (file-orig file-new)
   "Return all line regions that contain diffs between FILE-ORIG and
 FILE-NEW.  If there is no diff ‘nil’ is returned. Otherwise the
 return is a ‘list’ of lines in the format ‘--lines=<start>:<end>’
 which can be passed directly to ‘clang-format’."
   ;; Use temporary buffer for output of diff.
   (with-temp-buffer
-    (diff-no-select buf-orig buf-cur "-a -U0" t (current-buffer))
-    (let ((diff-lines '()))
-      ;; Iterate through all lines in diff buffer and collect all
-      ;; lines in current buffer that have a diff.
-      (goto-char (point-min))
-      (while (not (eobp))
-        (let ((diff-line (clang-format--vc-diff-match-diff-line
+    (let ((status (call-process
+                   "diff"
+                   nil
+                   (current-buffer)
+                   nil
+                   ;; Binary diff has different behaviors that we
+                   ;; aren't interested in.
+                   "-a"
+                   ;; Get minimal diff (copy diff config for git-clang-format).
+                   "-U0"
+                   file-orig
+                   file-new))
+          (stderr (concat (if (zerop (buffer-size)) "" ": ")
                           (buffer-substring-no-properties
-                           (line-beginning-position)
-                           (line-end-position)))))
-          (when diff-line
-            ;; Create list line regions with diffs to pass to
-            ;; clang-format.
-            (push (concat "--lines=" diff-line) diff-lines)))
-        (forward-line 1))
-      (reverse diff-lines))))
+                           (point-min) (line-end-position))))
+          (diff-lines '()))
+      (cond
+       ((stringp status)
+        (error "(diff killed by signal %s%s)" status stderr))
+       ;; Return of 0 indicates no diff.
+       ((= status 0) nil)
+       ;; Return of 1 indicates found diffs and no error.
+       ((= status 1)
+        ;; Iterate through all lines in diff buffer and collect all
+        ;; lines in current buffer that have a diff.
+        (goto-char (point-min))
+        (while (not (eobp))
+          (let ((diff-line (clang-format--vc-diff-match-diff-line
+                            (buffer-substring-no-properties
+                             (line-beginning-position)
+                             (line-end-position)))))
+            (when diff-line
+              ;; Create list line regions with diffs to pass to
+              ;; clang-format.
+              (push (concat "--lines=" diff-line) diff-lines)))
+          (forward-line 1))
+        (reverse diff-lines))
+       ;; Any return != 0 && != 1 indicates some level of error.
+       (t
+        (error "(diff returned unsuccessfully %s%s)" status stderr))))))
 
-(defun clang-format--vc-diff-get-diff-lines ()
+(defun clang-format--vc-diff-get-vc-head-file (tmpfile-vc-head)
   "Stores the contents of ‘buffer-file-name’ at vc revision HEAD into
 ‘tmpfile-vc-head’. If the current buffer is either not a file or not
 in a vc repo, this results in an error. Currently git is the only
@@ -193,44 +217,39 @@ supported vc."
   (unless (buffer-file-name)
     (error "Buffer is not visiting a file"))
 
-  (let ((inp-buf (current-buffer))
-        (base-dir (vc-root-dir))
+  (let ((base-dir (vc-root-dir))
         (backend (vc-backend (buffer-file-name))))
-    (with-temp-buffer
-      ;; We need to be able to find version control (git) root.
-      (unless base-dir
-        (error "File not known to version control system"))
-      (cond
-       ((string-equal backend "Git")
-        ;; Get the filename relative to git root.
-        (let ((vc-file-name (substring
-                             (expand-file-name (buffer-file-name inp-buf))
-                             (string-width (expand-file-name base-dir))
-                             nil)))
-          (let ((status (call-process
-                         "git"
-                         nil
-                         (current-buffer)
-                         nil
-                         "show" (concat "HEAD:" vc-file-name)))
-                (stderr (concat (if (zerop (buffer-size)) "" ": ")
-                                (buffer-substring-no-properties
-                                 (point-min) (line-end-position)))))
-            (when (stringp status)
-              (error "(git show HEAD:%s killed by signal %s%s)"
-                     vc-file-name status stderr))
-            (unless (zerop status)
-              (error "(git show HEAD:%s returned unsuccessfully %s%s)"
-                     vc-file-name status stderr)))))
-       (t
-        (error
-         "Version control %s isn't supported, currently supported backends: git"
-         backend)))
-      ;; Collect all lines where inp-buf (buffer we call
-      ;; clang-format-vc-diff on) differs from latest version of the
-      ;; backing file in the version control system.
-      (clang-format--vc-diff-compute-diff-and-get-lines
-       (current-buffer) inp-buf))))
+    ;; We need to be able to find version control (git) root.
+    (unless base-dir
+      (error "File not known to git"))
+    (cond
+     ((string-equal backend "Git")
+      ;; Get the filename relative to git root.
+      (let ((vc-file-name (substring
+                           (expand-file-name (buffer-file-name))
+                           (string-width (expand-file-name base-dir))
+                           nil)))
+        (let ((status (call-process
+                       "git"
+                       nil
+                       `(:file, tmpfile-vc-head)
+                       nil
+                       "show" (concat "HEAD:" vc-file-name)))
+              (stderr (with-temp-buffer
+                        (unless (zerop (cadr (insert-file-contents tmpfile-vc-head)))
+                          (insert ": "))
+                        (buffer-substring-no-properties
+                         (point-min) (line-end-position)))))
+          (when (stringp status)
+            (error "(git show HEAD:%s killed by signal %s%s)"
+                   vc-file-name status stderr))
+          (unless (zerop status)
+            (error "(git show HEAD:%s returned unsuccessfully %s%s)"
+                   vc-file-name status stderr)))))
+     (t
+      (error
+       "Version control %s isn't supported, currently supported backends: git"
+       backend)))))
 
 
 (defun clang-format--region-impl (start end &optional style assume-file-name lines)
@@ -304,6 +323,7 @@ specific locations for reformatting (i.e diff locations)."
       (delete-file temp-file)
       (when (buffer-name temp-buffer) (kill-buffer temp-buffer)))))
 
+
 ;;;###autoload
 (defun clang-format-vc-diff (&optional style assume-file-name)
   "The same as ‘clang-format-buffer’ but only operates on the vc
@@ -312,15 +332,35 @@ diffs from HEAD in the buffer. If no STYLE is given uses
 file. If no ASSUME-FILE-NAME is given uses the function
 ‘buffer-file-name’."
   (interactive)
-  (let ((diff-lines (clang-format--vc-diff-get-diff-lines)))
-    ;; If we have any diffs, format them.
-    (when diff-lines
-      (clang-format--region-impl
-       (point-min)
-       (point-max)
-       style
-       assume-file-name
-       diff-lines))))
+  (let ((tmpfile-vc-head nil)
+        (tmpfile-curbuf nil))
+    (unwind-protect
+        (progn
+          (setq tmpfile-vc-head
+                (make-temp-file "clang-format-vc-tmp-head-content"))
+          (clang-format--vc-diff-get-vc-head-file tmpfile-vc-head)
+          ;; Move the current buffer to a temporary file to take a
+          ;; diff. Even if current-buffer is backed by a file, we
+          ;; want to diff the buffer contents which might not be
+          ;; saved.
+          (setq tmpfile-curbuf (make-temp-file "clang-format-vc-tmp"))
+          (write-region nil nil tmpfile-curbuf nil 'nomessage)
+          ;; Get a list of lines with a diff.
+          (let ((diff-lines
+                 (clang-format--vc-diff-get-diff-lines
+                  tmpfile-vc-head tmpfile-curbuf)))
+            ;; If we have any diffs, format them.
+            (when diff-lines
+              (clang-format--region-impl
+               (point-min)
+               (point-max)
+               style
+               assume-file-name
+               diff-lines))))
+      (progn
+        ;; Cleanup temporary files we created.
+        (when tmpfile-vc-head (delete-file tmpfile-vc-head))
+        (when tmpfile-curbuf (delete-file tmpfile-curbuf))))))
 
 
 ;;;###autoload
