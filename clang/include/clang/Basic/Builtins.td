@@ -3224,6 +3224,13 @@ def AllocA : GNULibBuiltin<"stdlib.h"> {
   let AddBuiltinPrefixedAlias = 1;
 }
 
+// Available in glibc by default since since 2.29 and in GNU mode before.
+def ReallocArray : GNULibBuiltin<"stdlib.h"> {
+  let Spellings = ["reallocarray"];
+  let Prototype = "void*(void*, size_t, size_t)";
+}
+
+
 // POSIX malloc.h
 
 def MemAlign : GNULibBuiltin<"malloc.h"> {
