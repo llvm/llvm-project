@@ -147,7 +147,7 @@ is a zero-based file offset, assuming ‘utf-8-unix’ coding."
       (byte-to-position (1+ byte)))))
 
 (defun clang-format--vc-diff-match-diff-line (line)
-  ;; Matching something like:
+  ;; We are matching something like:
   ;; "@@ -80 +80 @@" or "@@ -80,2 +80,2 @@"
   ;; Return as "<LineStart>:<LineEnd>"
   (when (string-match "^@@\s-[0-9,]+\s\\+\\([0-9]+\\)\\(,\\([0-9]+\\)\\)?\s@@$" line)
@@ -162,10 +162,10 @@ is a zero-based file offset, assuming ‘utf-8-unix’ coding."
 
 (defun clang-format--vc-diff-get-diff-lines (file-orig file-new)
   "Return all line regions that contain diffs between FILE-ORIG and
-FILE-NEW.  If there is no diff 'nil' is returned. Otherwise the
-return is a 'list' of lines in the format '--lines=<start>:<end>'
-which can be passed directly to 'clang-format'"
-  ;; Temporary buffer for output of diff.
+FILE-NEW.  If there is no diff ‘nil’ is returned. Otherwise the
+return is a ‘list’ of lines in the format ‘--lines=<start>:<end>’
+which can be passed directly to ‘clang-format’."
+  ;; Use temporary buffer for output of diff.
   (with-temp-buffer
     (let ((status (call-process
                    "diff"
@@ -175,7 +175,7 @@ which can be passed directly to 'clang-format'"
                    ;; Binary diff has different behaviors that we
                    ;; aren't interested in.
                    "-a"
-                   ;; Get minimal diff (copy diff config for git-clang-format)
+                   ;; Get minimal diff (copy diff config for git-clang-format).
                    "-U0"
                    file-orig
                    file-new))
@@ -186,9 +186,9 @@ which can be passed directly to 'clang-format'"
       (cond
        ((stringp status)
         (error "(diff killed by signal %s%s)" status stderr))
-       ;; Return of 0 indicates no diff
+       ;; Return of 0 indicates no diff.
        ((= status 0) nil)
-       ;; Return of 1 indicates found diffs and no error
+       ;; Return of 1 indicates found diffs and no error.
        ((= status 1)
         ;; Iterate through all lines in diff buffer and collect all
         ;; lines in current buffer that have a diff.
@@ -200,58 +200,61 @@ which can be passed directly to 'clang-format'"
                              (line-end-position)))))
             (when diff-line
               ;; Create list line regions with diffs to pass to
-              ;; clang-format
-              (add-to-list 'diff-lines (concat "--lines=" diff-line) t)))
+              ;; clang-format.
+              (push (concat "--lines=" diff-line) diff-lines)))
           (forward-line 1))
-        diff-lines)
-       ;; Any return != 0 && != 1 indicates some level of error
+        (reverse diff-lines))
+       ;; Any return != 0 && != 1 indicates some level of error.
        (t
         (error "(diff returned unsuccessfully %s%s)" status stderr))))))
 
 (defun clang-format--vc-diff-get-vc-head-file (tmpfile-vc-head)
-  "Stores the contents of 'buffer-file-name' at vc revision HEAD into
-'tmpfile-vc-head'. If the current buffer is either not a file or not
+  "Stores the contents of ‘buffer-file-name’ at vc revision HEAD into
+‘tmpfile-vc-head’. If the current buffer is either not a file or not
 in a vc repo, this results in an error. Currently git is the only
 supported vc."
-  ;; Needs current buffer to be a file
+  ;; We need the current buffer to be a file.
   (unless (buffer-file-name)
     (error "Buffer is not visiting a file"))
-  ;; Only version control currently supported is Git
-  (unless (string-equal (vc-backend (buffer-file-name)) "Git")
-    (error "Not using git"))
 
-  (let ((base-dir (vc-root-dir)))
-    ;; Need to be able to find version control (git) root
+  (let ((base-dir (vc-root-dir))
+        (backend (vc-backend (buffer-file-name))))
+    ;; We need to be able to find version control (git) root.
     (unless base-dir
       (error "File not known to git"))
+    (cond
+     ((string-equal backend "Git")
+      ;; Get the filename relative to git root.
+      (let ((vc-file-name (substring
+                           (expand-file-name (buffer-file-name))
+                           (string-width (expand-file-name base-dir))
+                           nil)))
+        (let ((status (call-process
+                       "git"
+                       nil
+                       `(:file, tmpfile-vc-head)
+                       nil
+                       "show" (concat "HEAD:" vc-file-name)))
+              (stderr (with-temp-buffer
+                        (unless (zerop (cadr (insert-file-contents tmpfile-vc-head)))
+                          (insert ": "))
+                        (buffer-substring-no-properties
+                         (point-min) (line-end-position)))))
+          (when (stringp status)
+            (error "(git show HEAD:%s killed by signal %s%s)"
+                   vc-file-name status stderr))
+          (unless (zerop status)
+            (error "(git show HEAD:%s returned unsuccessfully %s%s)"
+                   vc-file-name status stderr)))))
+     (t
+      (error
+       "Version control %s isn't supported, currently supported backends: git"
+       backend)))))
 
-
-    ;; Get filename relative to git root
-    (let ((vc-file-name (substring
-                          (expand-file-name (buffer-file-name))
-                          (string-width (expand-file-name base-dir))
-                          nil)))
-      (let ((status (call-process
-                     "git"
-                     nil
-                     `(:file, tmpfile-vc-head)
-                     nil
-                     "show" (concat "HEAD:" vc-file-name)))
-            (stderr (with-temp-buffer
-                      (unless (zerop (cadr (insert-file-contents tmpfile-vc-head)))
-                        (insert ": "))
-                      (buffer-substring-no-properties
-                       (point-min) (line-end-position)))))
-        (when (stringp status)
-          (error "(git show HEAD:%s killed by signal %s%s)"
-                 vc-file-name status stderr))
-        (unless (zerop status)
-          (error "(git show HEAD:%s returned unsuccessfully %s%s)"
-                 vc-file-name status stderr))))))
 
 (defun clang-format--region-impl (start end &optional style assume-file-name lines)
-  "Common implementation for 'clang-format-buffer',
-'clang-format-region', and 'clang-format-vc-diff'. START and END
+  "Common implementation for ‘clang-format-buffer’,
+‘clang-format-region’, and ‘clang-format-vc-diff’. START and END
 refer to the region to be formatter. STYLE and ASSUME-FILE-NAME are
 used for configuring the clang-format. And LINES is used to pass
 specific locations for reformatting (i.e diff locations)."
@@ -323,11 +326,11 @@ specific locations for reformatting (i.e diff locations)."
 
 ;;;###autoload
 (defun clang-format-vc-diff (&optional style assume-file-name)
-  "The same as 'clang-format-buffer' but only operates on the vc
+  "The same as ‘clang-format-buffer’ but only operates on the vc
 diffs from HEAD in the buffer. If no STYLE is given uses
-`clang-format-style'. Use ASSUME-FILE-NAME to locate a style config
+‘clang-format-style’. Use ASSUME-FILE-NAME to locate a style config
 file. If no ASSUME-FILE-NAME is given uses the function
-`buffer-file-name'."
+‘buffer-file-name’."
   (interactive)
   (let ((tmpfile-vc-head nil)
         (tmpfile-curbuf nil))
@@ -336,13 +339,13 @@ file. If no ASSUME-FILE-NAME is given uses the function
           (setq tmpfile-vc-head
                 (make-temp-file "clang-format-vc-tmp-head-content"))
           (clang-format--vc-diff-get-vc-head-file tmpfile-vc-head)
-          ;; Move current buffer to a temporary file to take a
+          ;; Move the current buffer to a temporary file to take a
           ;; diff. Even if current-buffer is backed by a file, we
           ;; want to diff the buffer contents which might not be
           ;; saved.
           (setq tmpfile-curbuf (make-temp-file "clang-format-vc-tmp"))
           (write-region nil nil tmpfile-curbuf nil 'nomessage)
-          ;; Get list of lines with a diff.
+          ;; Get a list of lines with a diff.
           (let ((diff-lines
                  (clang-format--vc-diff-get-diff-lines
                   tmpfile-vc-head tmpfile-curbuf)))
@@ -355,7 +358,7 @@ file. If no ASSUME-FILE-NAME is given uses the function
                assume-file-name
                diff-lines))))
       (progn
-        ;; Cleanup temporary files
+        ;; Cleanup temporary files we created.
         (when tmpfile-vc-head (delete-file tmpfile-vc-head))
         (when tmpfile-curbuf (delete-file tmpfile-curbuf))))))
 
