@@ -21,7 +21,8 @@ using namespace llvm;
 
 namespace lldb_dap {
 
-Expected<int> RedirectFd(int fd, std::function<void(llvm::StringRef)> callback) {
+Expected<int> RedirectFd(int fd,
+                         std::function<void(llvm::StringRef)> callback) {
   int new_fd[2];
 #if defined(_WIN32)
   if (_pipe(new_fd, 4096, O_TEXT) == -1) {

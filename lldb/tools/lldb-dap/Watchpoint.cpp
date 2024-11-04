@@ -45,7 +45,9 @@ void Watchpoint::CreateJsonObject(llvm::json::Object &object) {
 }
 
 void Watchpoint::SetWatchpoint() {
-  if (!dap) return;
+  if (!dap)
+    return;
+
   wp = dap->target.WatchpointCreateByAddress(addr, size, options, error);
   if (!condition.empty())
     SetCondition();
