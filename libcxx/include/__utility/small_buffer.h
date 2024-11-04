@@ -66,24 +66,14 @@ public:
     if constexpr (__fits_in_buffer<_Stored>) {
       return std::launder(reinterpret_cast<_Stored*>(__buffer_));
     } else {
-#  ifdef _LIBCPP_HAS_LIBRARY_ALIGNED_ALLOCATION
-      byte* __allocation = static_cast<byte*>(::operator new[](sizeof(_Stored), align_val_t{alignof(_Stored)}));
-      std::construct_at(reinterpret_cast<byte**>(__buffer_), __allocation);
-      return std::launder(reinterpret_cast<_Stored*>(__allocation));
-#  else
-      return static_cast<_Stored*>(std::__libcpp_allocate(_BufferSize * sizeof(byte), _LIBCPP_ALIGNOF(byte)));
-#  endif // _LIBCPP_HAS_LIBRARY_ALIGNED_ALLOCATION
+      return static_cast<_Stored*>(std::__libcpp_allocate(_BufferSize * sizeof(byte), alignof(_Stored)));
     }
   }
 
   template <class _Stored>
   _LIBCPP_HIDE_FROM_ABI void __dealloc() noexcept {
     if constexpr (!__fits_in_buffer<_Stored>)
-#  ifdef _LIBCPP_HAS_LIBRARY_SIZED_DEALLOCATION
-      ::operator delete[](*reinterpret_cast<void**>(__buffer_), sizeof(_Stored), align_val_t{alignof(_Stored)});
-#  else
-      std::__libcpp_deallocate((void*)__buffer_, _BufferSize * sizeof(byte), _LIBCPP_ALIGNOF(_Stored));
-#  endif // _LIBCPP_HAS_LIBRARY_SIZED_DEALLOCATION
+      std::__libcpp_deallocate((void*)__buffer_, _BufferSize * sizeof(byte), alignof(_Stored));
   }
 
   template <class _Stored, class... _Args>
