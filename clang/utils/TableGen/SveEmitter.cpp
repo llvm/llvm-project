@@ -969,7 +969,7 @@ Intrinsic::Intrinsic(StringRef Name, StringRef Proto, uint64_t MergeTy,
     : Name(Name.str()), LLVMName(LLVMName), Proto(Proto.str()),
       BaseTypeSpec(BT), Class(Class), SVEGuard(SVEGuard.str()),
       SMEGuard(SMEGuard.str()), MergeSuffix(MergeSuffix.str()),
-      BaseType(BT, 'd'), Flags(Flags), ImmChecks(Checks.begin(), Checks.end()) {
+      BaseType(BT, 'd'), Flags(Flags), ImmChecks(Checks) {
   // Types[0] is the return value.
   for (unsigned I = 0; I < (getNumParams() + 1); ++I) {
     char Mod;

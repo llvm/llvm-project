@@ -2247,7 +2247,7 @@ public:
                             CalleeRepairCBTy &&CalleeRepairCB,
                             ACSRepairCBTy &&ACSRepairCB)
         : A(A), ReplacedFn(*Arg.getParent()), ReplacedArg(Arg),
-          ReplacementTypes(ReplacementTypes.begin(), ReplacementTypes.end()),
+          ReplacementTypes(ReplacementTypes),
           CalleeRepairCB(std::move(CalleeRepairCB)),
           ACSRepairCB(std::move(ACSRepairCB)) {}
 

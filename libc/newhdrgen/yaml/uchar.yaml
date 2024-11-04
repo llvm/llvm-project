@@ -1,5 +1,5 @@
 header: uchar.h
-standards: 
+standards:
   - stdc
 macros: []
 types:

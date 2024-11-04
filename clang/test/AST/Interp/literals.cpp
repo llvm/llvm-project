@@ -1196,13 +1196,15 @@ namespace incdecbool {
 }
 
 #if __cplusplus >= 201402L
-/// NOTE: The diagnostics of the two interpreters are a little
-/// different here, but they both make sense.
 constexpr int externvar1() { // both-error {{never produces a constant expression}}
-  extern char arr[]; // ref-note {{declared here}}
-   return arr[0]; // ref-note {{read of non-constexpr variable 'arr'}} \
-                  // expected-note {{indexing of array without known bound}}
+  extern char arr[]; // both-note {{declared here}}
+   return arr[0]; // both-note {{read of non-constexpr variable 'arr'}}
 }
+namespace externarr {
+  extern int arr[];
+  constexpr int *externarrindex = &arr[0]; /// No diagnostic.
+}
+
 
 namespace StmtExprs {
   constexpr int foo() {
@@ -1214,6 +1216,10 @@ namespace StmtExprs {
     return 76;
   }
   static_assert(foo() == 76, "");
+
+  namespace CrossFuncLabelDiff {
+    constexpr long a(bool x) { return x ? 0 : (intptr_t)&&lbl + (0 && ({lbl: 0;})); }
+  }
 }
 #endif
 
@@ -1303,3 +1309,15 @@ namespace VolatileReads {
   static_assert(b, ""); // both-error {{not an integral constant expression}} \
                         // both-note {{read of volatile-qualified type 'const volatile int' is not allowed in a constant expression}}
 }
+#if __cplusplus >= 201703L
+namespace {
+  struct C {
+    int x;
+  };
+
+  template <const C *p> void f() {
+    const auto &[c] = *p;
+    &c; // both-warning {{expression result unused}}
+  }
+}
+#endif

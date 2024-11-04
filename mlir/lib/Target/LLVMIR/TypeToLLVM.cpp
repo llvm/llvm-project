@@ -58,9 +58,6 @@ public:
             .Case([this](LLVM::LLVMPPCFP128Type) {
               return llvm::Type::getPPC_FP128Ty(context);
             })
-            .Case([this](LLVM::LLVMX86MMXType) {
-              return llvm::Type::getX86_MMXTy(context);
-            })
             .Case([this](LLVM::LLVMTokenType) {
               return llvm::Type::getTokenTy(context);
             })

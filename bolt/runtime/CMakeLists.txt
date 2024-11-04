@@ -16,12 +16,19 @@ add_library(bolt_rt_instr STATIC
   instr.cpp
   ${CMAKE_CURRENT_BINARY_DIR}/config.h
   )
-set_target_properties(bolt_rt_instr PROPERTIES ARCHIVE_OUTPUT_DIRECTORY "${LLVM_LIBRARY_DIR}")
+set_target_properties(bolt_rt_instr PROPERTIES ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_INSTALL_LIBDIR}${LLVM_LIBDIR_SUFFIX}")
 add_library(bolt_rt_hugify STATIC
   hugify.cpp
   ${CMAKE_CURRENT_BINARY_DIR}/config.h
   )
-set_target_properties(bolt_rt_hugify PROPERTIES ARCHIVE_OUTPUT_DIRECTORY "${LLVM_LIBRARY_DIR}")
+set_target_properties(bolt_rt_hugify PROPERTIES ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_INSTALL_LIBDIR}${LLVM_LIBDIR_SUFFIX}")
+
+if(NOT BOLT_BUILT_STANDALONE)
+  add_custom_command(TARGET bolt_rt_instr POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_CURRENT_BINARY_DIR}/lib/libbolt_rt_instr.a" "${LLVM_LIBRARY_DIR}")
+  add_custom_command(TARGET bolt_rt_hugify POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_CURRENT_BINARY_DIR}/lib/libbolt_rt_hugify.a" "${LLVM_LIBRARY_DIR}")
+endif()
 
 set(BOLT_RT_FLAGS
   -ffreestanding
@@ -46,18 +53,23 @@ target_include_directories(bolt_rt_instr PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
 target_compile_options(bolt_rt_hugify PRIVATE ${BOLT_RT_FLAGS})
 target_include_directories(bolt_rt_hugify PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
 
-install(TARGETS bolt_rt_instr DESTINATION "lib${LLVM_LIBDIR_SUFFIX}")
-install(TARGETS bolt_rt_hugify DESTINATION "lib${LLVM_LIBDIR_SUFFIX}")
+install(TARGETS bolt_rt_instr DESTINATION "${CMAKE_INSTALL_LIBDIR}${LLVM_LIBDIR_SUFFIX}")
+install(TARGETS bolt_rt_hugify DESTINATION "${CMAKE_INSTALL_LIBDIR}${LLVM_LIBDIR_SUFFIX}")
 
 if (CMAKE_CXX_COMPILER_ID MATCHES ".*Clang.*" AND CMAKE_SYSTEM_NAME STREQUAL "Darwin")
   add_library(bolt_rt_instr_osx STATIC
     instr.cpp
     ${CMAKE_CURRENT_BINARY_DIR}/config.h
   )
-  set_target_properties(bolt_rt_instr_osx PROPERTIES ARCHIVE_OUTPUT_DIRECTORY "${LLVM_LIBRARY_DIR}")
+  set_target_properties(bolt_rt_instr_osx PROPERTIES ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_INSTALL_LIBDIR}${LLVM_LIBDIR_SUFFIX}")
   target_include_directories(bolt_rt_instr_osx PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
   target_compile_options(bolt_rt_instr_osx PRIVATE
     -target x86_64-apple-darwin19.6.0
     ${BOLT_RT_FLAGS})
-  install(TARGETS bolt_rt_instr_osx DESTINATION "lib${LLVM_LIBDIR_SUFFIX}")
+  install(TARGETS bolt_rt_instr_osx DESTINATION "${CMAKE_INSTALL_LIBDIR}${LLVM_LIBDIR_SUFFIX}")
+
+  if(NOT BOLT_BUILT_STANDALONE)
+    add_custom_command(TARGET bolt_rt_instr_osx POST_BUILD
+      COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_CURRENT_BINARY_DIR}/lib/libbolt_rt_instr_osx.a" "${LLVM_LIBRARY_DIR}")
+  endif()
 endif()

@@ -515,8 +515,8 @@ class InitListChecker {
     uint64_t ElsCount = 1;
     // Otherwise try to fill whole array with embed data.
     if (Entity.getKind() == InitializedEntity::EK_ArrayElement) {
-      ValueDecl *ArrDecl = Entity.getParent()->getDecl();
-      auto *AType = SemaRef.Context.getAsArrayType(ArrDecl->getType());
+      auto *AType =
+          SemaRef.Context.getAsArrayType(Entity.getParent()->getType());
       assert(AType && "expected array type when initializing array");
       ElsCount = Embed->getDataElementCount();
       if (const auto *CAType = dyn_cast<ConstantArrayType>(AType))
@@ -1986,6 +1986,9 @@ static bool checkDestructorReference(QualType ElementType, SourceLocation Loc,
     return false;
 
   CXXDestructorDecl *Destructor = SemaRef.LookupDestructor(CXXRD);
+  if (!Destructor)
+    return false;
+
   SemaRef.CheckDestructorAccess(Loc, Destructor,
                                 SemaRef.PDiag(diag::err_access_dtor_temp)
                                 << ElementType);
@@ -2016,7 +2019,7 @@ canInitializeArrayWithEmbedDataString(ArrayRef<Expr *> ExprList,
   if (InitType->isArrayType()) {
     const ArrayType *InitArrayType = InitType->getAsArrayTypeUnsafe();
     QualType InitElementTy = InitArrayType->getElementType();
-    QualType EmbedExprElementTy = EE->getType();
+    QualType EmbedExprElementTy = EE->getDataStringLiteral()->getType();
     const bool TypesMatch =
         Context.typesAreCompatible(InitElementTy, EmbedExprElementTy) ||
         (InitElementTy->isCharType() && EmbedExprElementTy->isCharType());

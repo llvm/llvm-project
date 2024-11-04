@@ -195,7 +195,7 @@ static dfsan_origin GetOriginIfTainted(uptr addr, uptr size) {
 // random freezes in forking applications as well as in signal handlers.
 // DFSan supports only Linux. So we do not restrict the store context size.
 #define GET_STORE_STACK_TRACE_PC_BP(pc, bp) \
-  BufferedStackTrace stack;                 \
+  UNINITIALIZED BufferedStackTrace stack;                 \
   stack.Unwind(pc, bp, nullptr, true, flags().store_context_size);
 
 #define PRINT_CALLER_STACK_TRACE        \

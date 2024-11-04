@@ -491,7 +491,7 @@ void DbgVariableRecord::setAssignId(DIAssignID *New) {
 
 void DbgVariableRecord::setKillAddress() {
   resetDebugValue(
-      1, ValueAsMetadata::get(UndefValue::get(getAddress()->getType())));
+      1, ValueAsMetadata::get(PoisonValue::get(getAddress()->getType())));
 }
 
 bool DbgVariableRecord::isKillAddress() const {

@@ -6,7 +6,7 @@ enums: []
 objects: []
 functions:
   - name: uname
-    standards: 
+    standards:
       - POSIX
     return_type: int
     arguments:

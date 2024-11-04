@@ -38,3 +38,13 @@ X1<int, X1a> inst_x1a;
 X1<long, X1b> inst_x1b;
 X1<short, X1c> inst_x1c;
 X1<short, X1d> inst_x1d; // expected-error{{template template argument has different template parameters than its corresponding template template paramete}}
+
+template <int> class X2; // expected-note{{template is declared here}} \
+                         // expected-note{{template is declared here}}
+class X3 : X2<1> {}; // expected-error{{implicit instantiation of undefined template 'X2<1>'}}
+
+template <int> class X4 : X3 {
+  struct {
+    X2<1> e; // expected-error{{implicit instantiation of undefined template 'X2<1>'}}
+  } f;
+};

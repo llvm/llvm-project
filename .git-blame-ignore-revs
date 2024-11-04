@@ -87,3 +87,8 @@ e2c2ffbe7a1b5d9e32a2ce64279475b50c4cba5b
 
 # [lldb][nfc] Deindent ProcessGDBRemote::SetThreadStopInfo by two levels
 b32931c5b32eb0d2cf37d688b34f8548c9674c19
+
+# [libc++] Various consistency fixes to the CSV files that we use for tracking Standards Conformance
+64946fdaf9864d8279da1c30e4d7214fe13d1427
+b6262880b34629e9d7a72b5a42f315a3c9ed8139
+39c7dc7207e76e72da21cf4fedda21b5311bf62d

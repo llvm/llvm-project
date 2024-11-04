@@ -329,7 +329,7 @@ static bool isLegalElementTypeForRVV(Type *EltTy,
   if (EltTy->isHalfTy())
     return Subtarget.hasVInstructionsF16();
   if (EltTy->isBFloatTy())
-    return Subtarget.hasVInstructionsBF16();
+    return Subtarget.hasVInstructionsBF16Minimal();
   if (EltTy->isFloatTy())
     return Subtarget.hasVInstructionsF32();
   if (EltTy->isDoubleTy())

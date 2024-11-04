@@ -54,7 +54,7 @@ public:
     BaseArgInfo(Type *Ty,
                 ArrayRef<ISD::ArgFlagsTy> Flags = ArrayRef<ISD::ArgFlagsTy>(),
                 bool IsFixed = true)
-        : Ty(Ty), Flags(Flags.begin(), Flags.end()), IsFixed(IsFixed) {}
+        : Ty(Ty), Flags(Flags), IsFixed(IsFixed) {}
 
     BaseArgInfo() : Ty(nullptr), IsFixed(false) {}
   };
@@ -81,8 +81,8 @@ public:
     ArgInfo(ArrayRef<Register> Regs, Type *Ty, unsigned OrigIndex,
             ArrayRef<ISD::ArgFlagsTy> Flags = ArrayRef<ISD::ArgFlagsTy>(),
             bool IsFixed = true, const Value *OrigValue = nullptr)
-        : BaseArgInfo(Ty, Flags, IsFixed), Regs(Regs.begin(), Regs.end()),
-          OrigValue(OrigValue), OrigArgIndex(OrigIndex) {
+        : BaseArgInfo(Ty, Flags, IsFixed), Regs(Regs), OrigValue(OrigValue),
+          OrigArgIndex(OrigIndex) {
       if (!Regs.empty() && Flags.empty())
         this->Flags.push_back(ISD::ArgFlagsTy());
       // FIXME: We should have just one way of saying "no register".

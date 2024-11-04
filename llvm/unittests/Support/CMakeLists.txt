@@ -44,6 +44,7 @@ add_llvm_unittest(SupportTests
   FileOutputBufferTest.cpp
   FormatVariadicTest.cpp
   FSUniqueIDTest.cpp
+  GenericDomTreeTest.cpp
   GlobPatternTest.cpp
   HashBuilderTest.cpp
   IndexedAccessorTest.cpp

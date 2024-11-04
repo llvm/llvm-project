@@ -53,7 +53,6 @@
 ; LAXX-NEXT:       Expand memcmp() to load/stores
 ; LAXX-NEXT:       Lower Garbage Collection Instructions
 ; LAXX-NEXT:       Shadow Stack GC Lowering
-; LAXX-NEXT:       Lower constant intrinsics
 ; LAXX-NEXT:       Remove unreachable blocks from the CFG
 ; LAXX-NEXT:       Natural Loop Information
 ; LAXX-NEXT:       Post-Dominator Tree Construction
@@ -62,7 +61,6 @@
 ; LAXX-NEXT:       Constant Hoisting
 ; LAXX-NEXT:       Replace intrinsics with calls to vector library
 ; LAXX-NEXT:       Partially inline calls to library functions
-; LAXX-NEXT:       Expand vector predication intrinsics
 ; LAXX-NEXT:       Instrument function entry/exit with calls to e.g. mcount() (post inlining)
 ; LAXX-NEXT:       Scalarize Masked Memory Intrinsics
 ; LAXX-NEXT:       Expand reduction intrinsics

@@ -827,3 +827,34 @@ namespace CheckingNullPtrForInitialization {
     return x;
   }
 }
+
+namespace VariadicCallOperator {
+  class F {
+  public:
+    constexpr void operator()(int a, int b, ...) {}
+  };
+  constexpr int foo() {
+    F f;
+
+    f(1,2, 3);
+    return 1;
+  }
+  constexpr int A = foo();
+}
+
+namespace DefinitionLoc {
+
+  struct NonConstexprCopy {
+    constexpr NonConstexprCopy() = default;
+    NonConstexprCopy(const NonConstexprCopy &);
+    constexpr NonConstexprCopy(NonConstexprCopy &&) = default;
+
+    int n = 42;
+  };
+
+  NonConstexprCopy::NonConstexprCopy(const NonConstexprCopy &) = default; // both-note {{here}}
+
+  constexpr NonConstexprCopy ncc1 = NonConstexprCopy(NonConstexprCopy());
+  constexpr NonConstexprCopy ncc2 = ncc1; // both-error {{constant expression}} \
+                                          // both-note {{non-constexpr constructor}}
+}

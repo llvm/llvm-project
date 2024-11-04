@@ -126,10 +126,12 @@ public:
   // derived types should use isa/dyn_cast.
   bool isIndex() const;
   bool isFloat8E5M2() const;
+  bool isFloat8E4M3() const;
   bool isFloat8E4M3FN() const;
   bool isFloat8E5M2FNUZ() const;
   bool isFloat8E4M3FNUZ() const;
   bool isFloat8E4M3B11FNUZ() const;
+  bool isFloat8E3M4() const;
   bool isBF16() const;
   bool isF16() const;
   bool isTF32() const;

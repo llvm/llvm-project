@@ -627,8 +627,7 @@ static void AttemptToFoldSymbolOffsetDifference(
   // .size/.fill), disable the fast path.
   bool Layout = Asm->hasLayout();
   if (Layout && (InSet || !SecA.hasInstructions() ||
-                 !(Asm->getContext().getTargetTriple().isRISCV() ||
-                   Asm->getContext().getTargetTriple().isLoongArch()))) {
+                 !Asm->getBackend().allowLinkerRelaxation())) {
     // If both symbols are in the same fragment, return the difference of their
     // offsets. canGetFragmentOffset(FA) may be false.
     if (FA == FB && !SA.isVariable() && !SB.isVariable()) {

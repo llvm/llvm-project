@@ -118,12 +118,13 @@ public:
       return;
     }
 
-    const KeyT EmptyKey = getEmptyKey(), TombstoneKey = getTombstoneKey();
+    const KeyT EmptyKey = getEmptyKey();
     if (std::is_trivially_destructible<ValueT>::value) {
       // Use a simpler loop when values don't need destruction.
       for (BucketT *P = getBuckets(), *E = getBucketsEnd(); P != E; ++P)
         P->getFirst() = EmptyKey;
     } else {
+      const KeyT TombstoneKey = getTombstoneKey();
       unsigned NumEntries = getNumEntries();
       for (BucketT *P = getBuckets(), *E = getBucketsEnd(); P != E; ++P) {
         if (!KeyInfoT::isEqual(P->getFirst(), EmptyKey)) {
@@ -143,8 +144,7 @@ public:
 
   /// Return true if the specified key is in the map, false otherwise.
   bool contains(const_arg_type_t<KeyT> Val) const {
-    const BucketT *TheBucket;
-    return LookupBucketFor(Val, TheBucket);
+    return doFind(Val) != nullptr;
   }
 
   /// Return 1 if the specified key is in the map, 0 otherwise.
@@ -153,21 +153,17 @@ public:
   }
 
   iterator find(const_arg_type_t<KeyT> Val) {
-    BucketT *TheBucket;
-    if (LookupBucketFor(Val, TheBucket))
-      return makeIterator(TheBucket,
-                          shouldReverseIterate<KeyT>() ? getBuckets()
-                                                       : getBucketsEnd(),
-                          *this, true);
+    if (BucketT *Bucket = doFind(Val))
+      return makeIterator(
+          Bucket, shouldReverseIterate<KeyT>() ? getBuckets() : getBucketsEnd(),
+          *this, true);
     return end();
   }
   const_iterator find(const_arg_type_t<KeyT> Val) const {
-    const BucketT *TheBucket;
-    if (LookupBucketFor(Val, TheBucket))
-      return makeConstIterator(TheBucket,
-                               shouldReverseIterate<KeyT>() ? getBuckets()
-                                                            : getBucketsEnd(),
-                               *this, true);
+    if (const BucketT *Bucket = doFind(Val))
+      return makeConstIterator(
+          Bucket, shouldReverseIterate<KeyT>() ? getBuckets() : getBucketsEnd(),
+          *this, true);
     return end();
   }
 
@@ -178,31 +174,26 @@ public:
   /// type used.
   template<class LookupKeyT>
   iterator find_as(const LookupKeyT &Val) {
-    BucketT *TheBucket;
-    if (LookupBucketFor(Val, TheBucket))
-      return makeIterator(TheBucket,
-                          shouldReverseIterate<KeyT>() ? getBuckets()
-                                                       : getBucketsEnd(),
-                          *this, true);
+    if (BucketT *Bucket = doFind(Val))
+      return makeIterator(
+          Bucket, shouldReverseIterate<KeyT>() ? getBuckets() : getBucketsEnd(),
+          *this, true);
     return end();
   }
   template<class LookupKeyT>
   const_iterator find_as(const LookupKeyT &Val) const {
-    const BucketT *TheBucket;
-    if (LookupBucketFor(Val, TheBucket))
-      return makeConstIterator(TheBucket,
-                               shouldReverseIterate<KeyT>() ? getBuckets()
-                                                            : getBucketsEnd(),
-                               *this, true);
+    if (const BucketT *Bucket = doFind(Val))
+      return makeConstIterator(
+          Bucket, shouldReverseIterate<KeyT>() ? getBuckets() : getBucketsEnd(),
+          *this, true);
     return end();
   }
 
   /// lookup - Return the entry for the specified key, or a default
   /// constructed value if no such entry exists.
   ValueT lookup(const_arg_type_t<KeyT> Val) const {
-    const BucketT *TheBucket;
-    if (LookupBucketFor(Val, TheBucket))
-      return TheBucket->getSecond();
+    if (const BucketT *Bucket = doFind(Val))
+      return Bucket->getSecond();
     return ValueT();
   }
 
@@ -343,8 +334,8 @@ public:
   }
 
   bool erase(const KeyT &Val) {
-    BucketT *TheBucket;
-    if (!LookupBucketFor(Val, TheBucket))
+    BucketT *TheBucket = doFind(Val);
+    if (!TheBucket)
       return false; // not in map.
 
     TheBucket->getSecond().~ValueT();
@@ -641,6 +632,34 @@ private:
       decrementNumTombstones();
 
     return TheBucket;
+  }
+
+  template <typename LookupKeyT> BucketT *doFind(const LookupKeyT &Val) {
+    BucketT *BucketsPtr = getBuckets();
+    const unsigned NumBuckets = getNumBuckets();
+    if (NumBuckets == 0)
+      return nullptr;
+
+    const KeyT EmptyKey = getEmptyKey();
+    unsigned BucketNo = getHashValue(Val) & (NumBuckets - 1);
+    unsigned ProbeAmt = 1;
+    while (true) {
+      BucketT *Bucket = BucketsPtr + BucketNo;
+      if (LLVM_LIKELY(KeyInfoT::isEqual(Val, Bucket->getFirst())))
+        return Bucket;
+      if (LLVM_LIKELY(KeyInfoT::isEqual(Bucket->getFirst(), EmptyKey)))
+        return nullptr;
+
+      // Otherwise, it's a hash collision or a tombstone, continue quadratic
+      // probing.
+      BucketNo += ProbeAmt++;
+      BucketNo &= NumBuckets - 1;
+    }
+  }
+
+  template <typename LookupKeyT>
+  const BucketT *doFind(const LookupKeyT &Val) const {
+    return const_cast<DenseMapBase *>(this)->doFind(Val); // NOLINT
   }
 
   /// LookupBucketFor - Lookup the appropriate bucket for Val, returning it in

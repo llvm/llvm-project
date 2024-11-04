@@ -1021,6 +1021,8 @@ void Sema::CompleteLambdaCallOperator(
       getGenericLambdaTemplateParameterList(LSI, *this);
 
   DeclContext *DC = Method->getLexicalDeclContext();
+  // DeclContext::addDecl() assumes that the DeclContext we're adding to is the
+  // lexical context of the Method. Do so.
   Method->setLexicalDeclContext(LSI->Lambda);
   if (TemplateParams) {
     FunctionTemplateDecl *TemplateMethod =
@@ -1105,6 +1107,8 @@ void Sema::ActOnLambdaExpressionAfterIntroducer(LambdaIntroducer &Intro,
 
   CXXMethodDecl *Method = CreateLambdaCallOperator(Intro.Range, Class);
   LSI->CallOperator = Method;
+  // Temporarily set the lexical declaration context to the current
+  // context, so that the Scope stack matches the lexical nesting.
   Method->setLexicalDeclContext(CurContext);
 
   PushDeclContext(CurScope, Method);

@@ -48,15 +48,12 @@ class CodeGenDAGPatterns;
 using TreePatternNodePtr = IntrusiveRefCntPtr<TreePatternNode>;
 
 /// This represents a set of MVTs. Since the underlying type for the MVT
-/// is uint8_t, there are at most 256 values. To reduce the number of memory
+/// is uint16_t, there are at most 65536 values. To reduce the number of memory
 /// allocations and deallocations, represent the set as a sequence of bits.
 /// To reduce the allocations even further, make MachineValueTypeSet own
 /// the storage and use std::array as the bit container.
 struct MachineValueTypeSet {
-  static_assert(std::is_same<std::underlying_type_t<MVT::SimpleValueType>,
-                             uint8_t>::value,
-                "Change uint8_t here to the SimpleValueType's type");
-  static unsigned constexpr Capacity = std::numeric_limits<uint8_t>::max() + 1;
+  static unsigned constexpr Capacity = 512;
   using WordType = uint64_t;
   static unsigned constexpr WordWidth = CHAR_BIT * sizeof(WordType);
   static unsigned constexpr NumWords = Capacity / WordWidth;
@@ -84,9 +81,11 @@ struct MachineValueTypeSet {
   }
   LLVM_ATTRIBUTE_ALWAYS_INLINE
   unsigned count(MVT T) const {
+    assert(T.SimpleTy < Capacity && "Capacity needs to be enlarged");
     return (Words[T.SimpleTy / WordWidth] >> (T.SimpleTy % WordWidth)) & 1;
   }
   std::pair<MachineValueTypeSet &, bool> insert(MVT T) {
+    assert(T.SimpleTy < Capacity && "Capacity needs to be enlarged");
     bool V = count(T.SimpleTy);
     Words[T.SimpleTy / WordWidth] |= WordType(1) << (T.SimpleTy % WordWidth);
     return {*this, V};
@@ -98,6 +97,7 @@ struct MachineValueTypeSet {
   }
   LLVM_ATTRIBUTE_ALWAYS_INLINE
   void erase(MVT T) {
+    assert(T.SimpleTy < Capacity && "Capacity needs to be enlarged");
     Words[T.SimpleTy / WordWidth] &= ~(WordType(1) << (T.SimpleTy % WordWidth));
   }
 
@@ -193,8 +193,6 @@ struct TypeSetByHwMode : public InfoByHwMode<MachineValueTypeSet> {
   TypeSetByHwMode &operator=(const TypeSetByHwMode &) = default;
   TypeSetByHwMode(MVT::SimpleValueType VT)
       : TypeSetByHwMode(ValueTypeByHwMode(VT)) {}
-  TypeSetByHwMode(ValueTypeByHwMode VT)
-      : TypeSetByHwMode(ArrayRef<ValueTypeByHwMode>(&VT, 1)) {}
   TypeSetByHwMode(ArrayRef<ValueTypeByHwMode> VTList);
 
   SetType &getOrCreate(unsigned Mode) { return Map[Mode]; }
@@ -264,7 +262,8 @@ struct TypeInfer {
   bool MergeInTypeInfo(TypeSetByHwMode &Out, MVT::SimpleValueType InVT) const {
     return MergeInTypeInfo(Out, TypeSetByHwMode(InVT));
   }
-  bool MergeInTypeInfo(TypeSetByHwMode &Out, ValueTypeByHwMode InVT) const {
+  bool MergeInTypeInfo(TypeSetByHwMode &Out,
+                       const ValueTypeByHwMode &InVT) const {
     return MergeInTypeInfo(Out, TypeSetByHwMode(InVT));
   }
 
@@ -841,7 +840,8 @@ public: // Higher level manipulation routines.
                       TreePattern &TP);
   bool UpdateNodeType(unsigned ResNo, MVT::SimpleValueType InTy,
                       TreePattern &TP);
-  bool UpdateNodeType(unsigned ResNo, ValueTypeByHwMode InTy, TreePattern &TP);
+  bool UpdateNodeType(unsigned ResNo, const ValueTypeByHwMode &InTy,
+                      TreePattern &TP);
 
   // Update node type with types inferred from an instruction operand or result
   // def from the ins/outs lists.
@@ -996,7 +996,7 @@ inline bool TreePatternNode::UpdateNodeType(unsigned ResNo,
 }
 
 inline bool TreePatternNode::UpdateNodeType(unsigned ResNo,
-                                            ValueTypeByHwMode InTy,
+                                            const ValueTypeByHwMode &InTy,
                                             TreePattern &TP) {
   TypeSetByHwMode VTS(InTy);
   TP.getInfer().expandOverloads(VTS);

@@ -64,6 +64,7 @@ if (NOT LLD_BUILT_STANDALONE)
     llvm-profdata
     llvm-readelf
     llvm-readobj
+    llvm-strings
     llvm-strip
     llvm-symbolizer
     not

@@ -236,7 +236,7 @@ bool llvm::isTriviallyDead(const MachineInstr &MI,
   // If we can move an instruction, we can remove it.  Otherwise, it has
   // a side-effect of some sort.
   bool SawStore = false;
-  if (!MI.isSafeToMove(/*AA=*/nullptr, SawStore) && !MI.isPHI())
+  if (!MI.isSafeToMove(SawStore) && !MI.isPHI())
     return false;
 
   // Instructions without side-effects are dead iff they only define dead vregs.

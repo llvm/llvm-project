@@ -1748,6 +1748,8 @@ multiclass binary_atomic_op_fp<SDNode atomic_op> {
       let IsAtomic = true;
       let MemoryVT = vt;
     }
+
+    defm NAME#_#vt : binary_atomic_op_ord;
   }
 }
 

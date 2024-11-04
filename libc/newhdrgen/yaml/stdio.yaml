@@ -21,20 +21,20 @@ objects:
     object_type: FILE *
 functions:
   - name: remove
-    standards: 
+    standards:
       - stdc
     return_type: int
     arguments:
       - type: const char *
   - name: rename
-    standards: 
+    standards:
       - stdc
     return_type: int
     arguments:
       - type: const char *
       - type: const char *
   - name: sprintf
-    standards: 
+    standards:
       - stdc
     return_type: int
     arguments:
@@ -42,7 +42,7 @@ functions:
       - type: const char *__restrict
       - type: ...
   - name: snprintf
-    standards: 
+    standards:
       - stdc
     return_type: int
     arguments:
@@ -51,7 +51,7 @@ functions:
       - type: const char *__restrict
       - type: ...
   - name: fprintf
-    standards: 
+    standards:
       - stdc
     return_type: int
     arguments:
@@ -59,14 +59,14 @@ functions:
       - type: const char *__restrict
       - type: ...
   - name: printf
-    standards: 
+    standards:
       - stdc
     return_type: int
     arguments:
       - type: const char *__restrict
       - type: ...
   - name: vsprintf
-    standards: 
+    standards:
       - stdc
     return_type: int
     arguments:
@@ -74,7 +74,7 @@ functions:
       - type: const char *__restrict
       - type: va_list
   - name: vsnprintf
-    standards: 
+    standards:
       - stdc
     return_type: int
     arguments:
@@ -83,7 +83,7 @@ functions:
       - type: const char *__restrict
       - type: va_list
   - name: vfprintf
-    standards: 
+    standards:
       - stdc
     return_type: int
     arguments:
@@ -91,145 +91,169 @@ functions:
       - type: const char *__restrict
       - type: va_list
   - name: vprintf
-    standards: 
+    standards:
       - stdc
     return_type: int
     arguments:
       - type: const char *__restrict
       - type: va_list
+  - name: asprintf 
+    standards:
+      - GNUExtensions 
+    return_type: int 
+    arguments: 
+      - type: char **__restrict 
+      - type: const char *__restrict 
+      - type: ... 
+  - name: vasprintf 
+    standards:
+      - GNUExtensions 
+    return_type: int 
+    arguments: 
+      - type: char **__restrict 
+      - type: const char *__restrict 
+      - type: va_list
   - name: sscanf
-    standards: 
+    standards:
       - stdc
     return_type: int
     arguments:
       - type: const char *__restrict
       - type: const char *__restrict
       - type: ...
+  - name: vsscanf
+    standards:
+      - stdc
+    return_type: int
+    arguments:
+      - type: const char *__restrict
+      - type: const char *__restrict
+      - type: va_list
   - name: scanf
-    standards: 
+    standards:
       - stdc
     return_type: int
     arguments:
       - type: const char *__restrict
       - type: ...
   - name: fscanf
-    standards: 
+    standards:
       - stdc
     return_type: int
     arguments:
       - type: FILE *__restrict
       - type: const char *__restrict
-      - type: ... 
+      - type: ...
   - name: fileno
-    standards: 
+    standards:
       - POSIX
     return_type: int
     arguments:
       - type: FILE *
   - name: fdopen
-    standards: 
+    standards:
       - POSIX
     return_type: FILE *
     arguments:
       - type: int
       - type: const char *
   - name: clearerr
-    standards: 
+    standards:
       - stdc
     return_type: void
     arguments:
       - type: FILE *
   - name: clearerr_unlocked
-    standards: 
+    standards:
       - GNUExtensions
     return_type: void
     arguments:
       - type: FILE *
   - name: fclose
-    standards: 
+    standards:
       - stdc
     return_type: int
     arguments:
       - type: FILE *
   - name: flockfile
-    standards: 
-      - POSIX 
+    standards:
+      - POSIX
     return_type: void
     arguments:
       - type: FILE *
   - name: feof
-    standards: 
+    standards:
       - stdc
     return_type: int
     arguments:
       - type: FILE *
   - name: feof_unlocked
-    standards: 
+    standards:
       - GNUExtensions
     return_type: int
     arguments:
       - type: FILE *
   - name: ferror
-    standards: 
+    standards:
       - stdc
     return_type: int
     arguments:
       - type: FILE *
   - name: ferror_unlocked
-    standards: 
+    standards:
       - GNUExtensions
     return_type: int
     arguments:
       - type: FILE *
   - name: fgetc
-    standards: 
+    standards:
       - stdc
     return_type: int
     arguments:
       - type: FILE *
   - name: fgetc_unlocked
-    standards: 
+    standards:
       - GNUExtensions
     return_type: int
     arguments:
       - type: FILE *
   - name: fgets
-    standards: 
-      - stdc 
+    standards:
+      - stdc
     return_type: char *
     arguments:
       - type: char *__restrict
       - type: int
       - type: FILE *__restrict
   - name: fflush
-    standards: 
+    standards:
       - stdc
     return_type: int
     arguments:
       - type: FILE *
   - name: fopen
-    standards: 
-      - stdc 
+    standards:
+      - stdc
     return_type: FILE *
     arguments:
       - type: const char *
       - type: const char *
   - name: fputc
-    standards: 
+    standards:
       - stdc
     return_type: int
     arguments:
       - type: int
       - type: FILE *
   - name: fputs
-    standards: 
+    standards:
       - stdc
     return_type: int
     arguments:
       - type: const char *__restrict
       - type: FILE *__restrict
   - name: fopencookie
-    standards: 
+    standards:
       - GNUExtensions
     return_type: FILE *
     arguments:
@@ -237,7 +261,7 @@ functions:
       - type: const char *
       - type: cookie_io_functions_t
   - name: fread
-    standards: 
+    standards:
       - stdc
     return_type: size_t
     arguments:
@@ -246,7 +270,7 @@ functions:
       - type: size_t
       - type: FILE *__restrict
   - name: fread_unlocked
-    standards: 
+    standards:
       - GNUExtensions
     return_type: size_t
     arguments:
@@ -255,27 +279,27 @@ functions:
       - type: size_t
       - type: FILE *__restrict
   - name: fseek
-    standards: 
+    standards:
       - stdc
     return_type: int
     arguments:
       - type: FILE *
       - type: long
       - type: int
-  - name: ftell 
-    standards: 
+  - name: ftell
+    standards:
       - stdc
     return_type: long
     arguments:
       - type: FILE *
   - name: funlockfile
-    standards: 
+    standards:
       - POSIX
     return_type: void
     arguments:
       - type: FILE *
   - name: fwrite
-    standards: 
+    standards:
       - stdc
     return_type: size_t
     arguments:
@@ -284,7 +308,7 @@ functions:
       - type: size_t
       - type: FILE *__restrict
   - name: fwrite_unlocked
-    standards: 
+    standards:
       - GNUExtensions
     return_type: size_t
     arguments:
@@ -293,55 +317,55 @@ functions:
       - type: size_t
       - type: FILE *__restrict
   - name: getc
-    standards: 
+    standards:
       - stdc
     return_type: int
     arguments:
       - type: FILE *
   - name: getc_unlocked
-    standards: 
+    standards:
       - POSIX
     return_type: int
     arguments:
       - type: FILE *
   - name: getchar
-    standards: 
+    standards:
       - stdc
     return_type: int
     arguments: []
   - name: getchar_unlocked
-    standards: 
+    standards:
       - POSIX
     return_type: int
     arguments: []
   - name: putc
-    standards: 
+    standards:
       - stdc
     return_type: int
     arguments:
       - type: int
       - type: FILE *
   - name: putchar
-    standards: 
+    standards:
       - stdc
     return_type: int
     arguments:
       - type: int
   - name: puts
-    standards: 
+    standards:
       - stdc
     return_type: int
     arguments:
       - type: const char *
   - name: setbuf
-    standards: 
+    standards:
       - stdc
     return_type: void
     arguments:
       - type: FILE *__restrict
       - type: char *__restrict
   - name: setvbuf
-    standards: 
+    standards:
       - stdc
     return_type: int
     arguments:
@@ -350,7 +374,7 @@ functions:
       - type: int
       - type: size_t
   - name: ungetc
-    standards: 
+    standards:
       - stdc
     return_type: int
     arguments:

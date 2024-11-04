@@ -136,7 +136,8 @@ template <class ELFT>
 std::optional<RelocAddrEntry>
 LLDDwarfObj<ELFT>::find(const llvm::DWARFSection &s, uint64_t pos) const {
   auto &sec = static_cast<const LLDDWARFSection &>(s);
-  const RelsOrRelas<ELFT> rels = sec.sec->template relsOrRelas<ELFT>();
+  const RelsOrRelas<ELFT> rels =
+      sec.sec->template relsOrRelas<ELFT>(/*supportsCrel=*/false);
   if (rels.areRelocsRel())
     return findAux(*sec.sec, pos, rels.rels);
   return findAux(*sec.sec, pos, rels.relas);

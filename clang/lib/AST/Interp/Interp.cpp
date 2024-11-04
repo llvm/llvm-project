@@ -27,8 +27,6 @@
 #include <vector>
 
 using namespace clang;
-
-using namespace clang;
 using namespace clang::interp;
 
 static bool RetValue(InterpState &S, CodePtr &Pt, APValue &Result) {
@@ -233,7 +231,8 @@ void cleanupAfterFunctionCall(InterpState &S, CodePtr OpPC) {
       assert(false && "Can't get arguments from that expression type");
 
     assert(NumArgs >= CurFunc->getNumWrittenParams());
-    NumVarArgs = NumArgs - CurFunc->getNumWrittenParams();
+    NumVarArgs = NumArgs - (CurFunc->getNumWrittenParams() +
+                            isa<CXXOperatorCallExpr>(CallSite));
     for (unsigned I = 0; I != NumVarArgs; ++I) {
       const Expr *A = Args[NumArgs - 1 - I];
       popArg(S, A);
@@ -302,10 +301,11 @@ bool CheckConstant(InterpState &S, CodePtr OpPC, const Descriptor *Desc) {
   assert(Desc);
 
   auto IsConstType = [&S](const VarDecl *VD) -> bool {
-    if (VD->isConstexpr())
+    QualType T = VD->getType();
+
+    if (T.isConstant(S.getCtx()))
       return true;
 
-    QualType T = VD->getType();
     if (S.getLangOpts().CPlusPlus && !S.getLangOpts().CPlusPlus11)
       return (T->isSignedIntegerOrEnumerationType() ||
               T->isUnsignedIntegerOrEnumerationType()) &&
@@ -326,14 +326,14 @@ bool CheckConstant(InterpState &S, CodePtr OpPC, const Descriptor *Desc) {
   if (const auto *D = Desc->asVarDecl();
       D && D->hasGlobalStorage() && D != S.EvaluatingDecl && !IsConstType(D)) {
     diagnoseNonConstVariable(S, OpPC, D);
-    return S.inConstantContext();
+    return false;
   }
 
   return true;
 }
 
 static bool CheckConstant(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
-  if (Ptr.isIntegralPointer())
+  if (!Ptr.isBlockPointer())
     return true;
   return CheckConstant(S, OpPC, Ptr.getDeclDesc());
 }
@@ -629,7 +629,12 @@ bool CheckCallable(InterpState &S, CodePtr OpPC, const Function *F) {
 
       S.FFDiag(Loc, diag::note_constexpr_invalid_function, 1)
           << DiagDecl->isConstexpr() << (bool)CD << DiagDecl;
-      S.Note(DiagDecl->getLocation(), diag::note_declared_at);
+
+      if (DiagDecl->getDefinition())
+        S.Note(DiagDecl->getDefinition()->getLocation(),
+               diag::note_declared_at);
+      else
+        S.Note(DiagDecl->getLocation(), diag::note_declared_at);
     }
   } else {
     S.FFDiag(Loc, diag::note_invalid_subexpr_in_const_expr);
@@ -728,8 +733,8 @@ bool CheckDynamicMemoryAllocation(InterpState &S, CodePtr OpPC) {
     return true;
 
   const SourceInfo &E = S.Current->getSource(OpPC);
-  S.FFDiag(E, diag::note_constexpr_new);
-  return false;
+  S.CCEDiag(E, diag::note_constexpr_new);
+  return true;
 }
 
 bool CheckNewDeleteForms(InterpState &S, CodePtr OpPC, bool NewWasArray,
@@ -836,6 +841,12 @@ static bool runRecordDestructor(InterpState &S, CodePtr OpPC,
   assert(Desc->isRecord());
   const Record *R = Desc->ElemRecord;
   assert(R);
+
+  if (Pointer::pointToSameBlock(BasePtr, S.Current->getThis())) {
+    const SourceInfo &Loc = S.Current->getSource(OpPC);
+    S.FFDiag(Loc, diag::note_constexpr_double_destroy);
+    return false;
+  }
 
   // Fields.
   for (const Record::Field &Field : llvm::reverse(R->fields())) {

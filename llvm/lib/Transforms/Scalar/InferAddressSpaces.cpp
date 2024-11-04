@@ -369,13 +369,13 @@ bool InferAddressSpacesImpl::rewriteIntrinsicOperands(IntrinsicInst *II,
                                                       Value *OldV,
                                                       Value *NewV) const {
   Module *M = II->getParent()->getParent()->getParent();
-
-  switch (II->getIntrinsicID()) {
-  case Intrinsic::objectsize: {
+  Intrinsic::ID IID = II->getIntrinsicID();
+  switch (IID) {
+  case Intrinsic::objectsize:
+  case Intrinsic::masked_load: {
     Type *DestTy = II->getType();
     Type *SrcTy = NewV->getType();
-    Function *NewDecl =
-        Intrinsic::getDeclaration(M, II->getIntrinsicID(), {DestTy, SrcTy});
+    Function *NewDecl = Intrinsic::getDeclaration(M, IID, {DestTy, SrcTy});
     II->setArgOperand(0, NewV);
     II->setCalledFunction(NewDecl);
     return true;
@@ -386,18 +386,26 @@ bool InferAddressSpacesImpl::rewriteIntrinsicOperands(IntrinsicInst *II,
   case Intrinsic::masked_gather: {
     Type *RetTy = II->getType();
     Type *NewPtrTy = NewV->getType();
-    Function *NewDecl =
-        Intrinsic::getDeclaration(M, II->getIntrinsicID(), {RetTy, NewPtrTy});
+    Function *NewDecl = Intrinsic::getDeclaration(M, IID, {RetTy, NewPtrTy});
     II->setArgOperand(0, NewV);
     II->setCalledFunction(NewDecl);
     return true;
   }
+  case Intrinsic::masked_store:
   case Intrinsic::masked_scatter: {
     Type *ValueTy = II->getOperand(0)->getType();
     Type *NewPtrTy = NewV->getType();
     Function *NewDecl =
         Intrinsic::getDeclaration(M, II->getIntrinsicID(), {ValueTy, NewPtrTy});
     II->setArgOperand(1, NewV);
+    II->setCalledFunction(NewDecl);
+    return true;
+  }
+  case Intrinsic::prefetch:
+  case Intrinsic::is_constant: {
+    Function *NewDecl =
+        Intrinsic::getDeclaration(M, II->getIntrinsicID(), {NewV->getType()});
+    II->setArgOperand(0, NewV);
     II->setCalledFunction(NewDecl);
     return true;
   }
@@ -422,10 +430,22 @@ void InferAddressSpacesImpl::collectRewritableIntrinsicOperands(
     appendsFlatAddressExpressionToPostorderStack(II->getArgOperand(0),
                                                  PostorderStack, Visited);
     break;
+  case Intrinsic::is_constant: {
+    Value *Ptr = II->getArgOperand(0);
+    if (Ptr->getType()->isPtrOrPtrVectorTy()) {
+      appendsFlatAddressExpressionToPostorderStack(Ptr, PostorderStack,
+                                                   Visited);
+    }
+
+    break;
+  }
+  case Intrinsic::masked_load:
   case Intrinsic::masked_gather:
+  case Intrinsic::prefetch:
     appendsFlatAddressExpressionToPostorderStack(II->getArgOperand(0),
                                                  PostorderStack, Visited);
     break;
+  case Intrinsic::masked_store:
   case Intrinsic::masked_scatter:
     appendsFlatAddressExpressionToPostorderStack(II->getArgOperand(1),
                                                  PostorderStack, Visited);
@@ -1002,34 +1022,52 @@ bool InferAddressSpacesImpl::updateAddressSpace(
   return true;
 }
 
-/// \p returns true if \p U is the pointer operand of a memory instruction with
-/// a single pointer operand that can have its address space changed by simply
-/// mutating the use to a new value. If the memory instruction is volatile,
-/// return true only if the target allows the memory instruction to be volatile
-/// in the new address space.
-static bool isSimplePointerUseValidToReplace(const TargetTransformInfo &TTI,
-                                             Use &U, unsigned AddrSpace) {
-  User *Inst = U.getUser();
-  unsigned OpNo = U.getOperandNo();
-  bool VolatileIsAllowed = false;
-  if (auto *I = dyn_cast<Instruction>(Inst))
-    VolatileIsAllowed = TTI.hasVolatileVariant(I, AddrSpace);
+/// Replace operand \p OpIdx in \p Inst, if the value is the same as \p OldVal
+/// with \p NewVal.
+static bool replaceOperandIfSame(Instruction *Inst, unsigned OpIdx,
+                                 Value *OldVal, Value *NewVal) {
+  Use &U = Inst->getOperandUse(OpIdx);
+  if (U.get() == OldVal) {
+    U.set(NewVal);
+    return true;
+  }
 
+  return false;
+}
+
+template <typename InstrType>
+static bool replaceSimplePointerUse(const TargetTransformInfo &TTI,
+                                    InstrType *MemInstr, unsigned AddrSpace,
+                                    Value *OldV, Value *NewV) {
+  if (!MemInstr->isVolatile() || TTI.hasVolatileVariant(MemInstr, AddrSpace)) {
+    return replaceOperandIfSame(MemInstr, InstrType::getPointerOperandIndex(),
+                                OldV, NewV);
+  }
+
+  return false;
+}
+
+/// If \p OldV is used as the pointer operand of a compatible memory operation
+/// \p Inst, replaces the pointer operand with NewV.
+///
+/// This covers memory instructions with a single pointer operand that can have
+/// its address space changed by simply mutating the use to a new value.
+///
+/// \p returns true the user replacement was made.
+static bool replaceIfSimplePointerUse(const TargetTransformInfo &TTI,
+                                      User *Inst, unsigned AddrSpace,
+                                      Value *OldV, Value *NewV) {
   if (auto *LI = dyn_cast<LoadInst>(Inst))
-    return OpNo == LoadInst::getPointerOperandIndex() &&
-           (VolatileIsAllowed || !LI->isVolatile());
+    return replaceSimplePointerUse(TTI, LI, AddrSpace, OldV, NewV);
 
   if (auto *SI = dyn_cast<StoreInst>(Inst))
-    return OpNo == StoreInst::getPointerOperandIndex() &&
-           (VolatileIsAllowed || !SI->isVolatile());
+    return replaceSimplePointerUse(TTI, SI, AddrSpace, OldV, NewV);
 
   if (auto *RMW = dyn_cast<AtomicRMWInst>(Inst))
-    return OpNo == AtomicRMWInst::getPointerOperandIndex() &&
-           (VolatileIsAllowed || !RMW->isVolatile());
+    return replaceSimplePointerUse(TTI, RMW, AddrSpace, OldV, NewV);
 
   if (auto *CmpX = dyn_cast<AtomicCmpXchgInst>(Inst))
-    return OpNo == AtomicCmpXchgInst::getPointerOperandIndex() &&
-           (VolatileIsAllowed || !CmpX->isVolatile());
+    return replaceSimplePointerUse(TTI, CmpX, AddrSpace, OldV, NewV);
 
   return false;
 }
@@ -1228,14 +1266,9 @@ bool InferAddressSpacesImpl::rewriteWithNewAddressSpaces(
       // to the next instruction.
       I = skipToNextUser(I, E);
 
-      if (isSimplePointerUseValidToReplace(
-              *TTI, U, V->getType()->getPointerAddressSpace())) {
-        // If V is used as the pointer operand of a compatible memory operation,
-        // sets the pointer operand to NewV. This replacement does not change
-        // the element type, so the resultant load/store is still valid.
-        CurUser->replaceUsesOfWith(V, NewV);
+      unsigned AddrSpace = V->getType()->getPointerAddressSpace();
+      if (replaceIfSimplePointerUse(*TTI, CurUser, AddrSpace, V, NewV))
         continue;
-      }
 
       // Skip if the current user is the new value itself.
       if (CurUser == NewV)

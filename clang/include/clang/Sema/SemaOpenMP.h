@@ -398,8 +398,29 @@ public:
   StmtResult ActOnOpenMPExecutableDirective(
       OpenMPDirectiveKind Kind, const DeclarationNameInfo &DirName,
       OpenMPDirectiveKind CancelRegion, ArrayRef<OMPClause *> Clauses,
-      Stmt *AStmt, SourceLocation StartLoc, SourceLocation EndLoc,
-      OpenMPDirectiveKind PrevMappedDirective = llvm::omp::OMPD_unknown);
+      Stmt *AStmt, SourceLocation StartLoc, SourceLocation EndLoc);
+  /// Process an OpenMP informational directive.
+  ///
+  /// \param Kind The directive kind.
+  /// \param DirName Declaration name info.
+  /// \param Clauses Array of clauses for directive.
+  /// \param AStmt The associated statement.
+  /// \param StartLoc The start location.
+  /// \param EndLoc The end location.
+  StmtResult ActOnOpenMPInformationalDirective(
+      OpenMPDirectiveKind Kind, const DeclarationNameInfo &DirName,
+      ArrayRef<OMPClause *> Clauses, Stmt *AStmt, SourceLocation StartLoc,
+      SourceLocation EndLoc);
+  /// Process an OpenMP assume directive.
+  ///
+  /// \param Clauses Array of clauses for directive.
+  /// \param AStmt The associated statement.
+  /// \param StartLoc The start location.
+  /// \param EndLoc The end location.
+  StmtResult ActOnOpenMPAssumeDirective(ArrayRef<OMPClause *> Clauses,
+                                        Stmt *AStmt, SourceLocation StartLoc,
+                                        SourceLocation EndLoc);
+
   /// Called on well-formed '\#pragma omp parallel' after parsing
   /// of the  associated statement.
   StmtResult ActOnOpenMPParallelDirective(ArrayRef<OMPClause *> Clauses,
@@ -941,6 +962,17 @@ public:
                                      SourceLocation StartLoc,
                                      SourceLocation LParenLoc,
                                      SourceLocation EndLoc);
+  /// Called on well-formed 'holds' clause.
+  OMPClause *ActOnOpenMPHoldsClause(Expr *E, SourceLocation StartLoc,
+                                    SourceLocation LParenLoc,
+                                    SourceLocation EndLoc);
+  /// Called on well-formed 'absent' or 'contains' clauses.
+  OMPClause *ActOnOpenMPDirectivePresenceClause(
+      OpenMPClauseKind CK, llvm::ArrayRef<OpenMPDirectiveKind> DKVec,
+      SourceLocation Loc, SourceLocation LLoc, SourceLocation RLoc);
+  OMPClause *ActOnOpenMPNullaryAssumptionClause(OpenMPClauseKind CK,
+                                                SourceLocation Loc,
+                                                SourceLocation RLoc);
 
   OMPClause *ActOnOpenMPSingleExprWithArgClause(
       OpenMPClauseKind Kind, ArrayRef<unsigned> Arguments, Expr *Expr,
@@ -1227,7 +1259,8 @@ public:
       const OMPVarListLocTy &Locs, bool NoDiagnose = false,
       ArrayRef<Expr *> UnresolvedMappers = std::nullopt);
   /// Called on well-formed 'num_teams' clause.
-  OMPClause *ActOnOpenMPNumTeamsClause(Expr *NumTeams, SourceLocation StartLoc,
+  OMPClause *ActOnOpenMPNumTeamsClause(ArrayRef<Expr *> VarList,
+                                       SourceLocation StartLoc,
                                        SourceLocation LParenLoc,
                                        SourceLocation EndLoc);
   /// Called on well-formed 'thread_limit' clause.
@@ -1430,26 +1463,6 @@ private:
 
   /// All `omp assumes` we encountered so far.
   SmallVector<OMPAssumeAttr *, 4> OMPAssumeGlobal;
-
-  /// OMPD_loop is mapped to OMPD_for, OMPD_distribute or OMPD_simd depending
-  /// on the parameter of the bind clause. In the methods for the
-  /// mapped directives, check the parameters of the lastprivate clause.
-  bool checkLastPrivateForMappedDirectives(ArrayRef<OMPClause *> Clauses);
-  /// Depending on the bind clause of OMPD_loop map the directive to new
-  /// directives.
-  ///    1) loop bind(parallel) --> OMPD_for
-  ///    2) loop bind(teams) --> OMPD_distribute
-  ///    3) loop bind(thread) --> OMPD_simd
-  /// This is being handled in Sema instead of Codegen because of the need for
-  /// rigorous semantic checking in the new mapped directives.
-  bool mapLoopConstruct(llvm::SmallVector<OMPClause *> &ClausesWithoutBind,
-                        ArrayRef<OMPClause *> Clauses,
-                        OpenMPBindClauseKind &BindKind,
-                        OpenMPDirectiveKind &Kind,
-                        OpenMPDirectiveKind &PrevMappedDirective,
-                        SourceLocation StartLoc, SourceLocation EndLoc,
-                        const DeclarationNameInfo &DirName,
-                        OpenMPDirectiveKind CancelRegion);
 };
 
 } // namespace clang

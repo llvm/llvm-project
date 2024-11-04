@@ -307,6 +307,25 @@ private:
       WarnOnIoStmt(source);
     }
   }
+  template <typename A>
+  void ErrorIfHostSymbol(const A &expr, const parser::CharBlock &source) {
+    for (const Symbol &sym : CollectCudaSymbols(expr)) {
+      if (const auto *details =
+              sym.GetUltimate().detailsIf<semantics::ObjectEntityDetails>()) {
+        if (details->IsArray() &&
+            (!details->cudaDataAttr() ||
+                (details->cudaDataAttr() &&
+                    *details->cudaDataAttr() != common::CUDADataAttr::Device &&
+                    *details->cudaDataAttr() != common::CUDADataAttr::Managed &&
+                    *details->cudaDataAttr() !=
+                        common::CUDADataAttr::Unified))) {
+          context_.Say(source,
+              "Host array '%s' cannot be present in CUF kernel"_err_en_US,
+              sym.name());
+        }
+      }
+    }
+  }
   void Check(const parser::ActionStmt &stmt, const parser::CharBlock &source) {
     common::visit(
         common::visitors{
@@ -348,6 +367,19 @@ private:
             },
             [&](const common::Indirection<parser::IfStmt> &x) {
               Check(x.value());
+            },
+            [&](const common::Indirection<parser::AssignmentStmt> &x) {
+              if (IsCUFKernelDo) {
+                const evaluate::Assignment *assign{
+                    semantics::GetAssignment(x.value())};
+                if (assign) {
+                  ErrorIfHostSymbol(assign->lhs, source);
+                  ErrorIfHostSymbol(assign->rhs, source);
+                }
+              }
+              if (auto msg{ActionStmtChecker<IsCUFKernelDo>::WhyNotOk(x)}) {
+                context_.Say(source, std::move(*msg));
+              }
             },
             [&](const auto &x) {
               if (auto msg{ActionStmtChecker<IsCUFKernelDo>::WhyNotOk(x)}) {

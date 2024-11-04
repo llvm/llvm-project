@@ -78,7 +78,7 @@ namespace std_example {
   template<class T> struct A { // expected-note {{candidate}} expected-note {{implicit deduction guide}}
     template<class U>
     A(T &&, U &&, int *); // expected-note {{[with T = int, U = int] not viable: expects an rvalue}} \
-                          // expected-note {{implicit deduction guide declared as 'template <class T, class U> A(T &&, type-parameter-0-1 &&, int *) -> A<T>'}}
+                          // expected-note {{implicit deduction guide declared as 'template <class T, class U> A(T &&, U &&, int *) -> A<T>'}}
     A(T &&, int *);       // expected-note {{requires 2}} \
                           // expected-note {{implicit deduction guide declared as 'template <class T> A(T &&, int *) -> A<T>'}}
   };

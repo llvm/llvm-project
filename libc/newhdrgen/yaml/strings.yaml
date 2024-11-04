@@ -5,7 +5,7 @@ enums: []
 objects: []
 functions:
   - name: bcopy
-    standards: 
+    standards:
       - llvm_libc_ext
     return_type: void
     arguments:
@@ -13,14 +13,14 @@ functions:
       - type: void *
       - type: size_t
   - name: bzero
-    standards: 
+    standards:
       - llvm_libc_ext
     return_type: void
     arguments:
       - type: void *
       - type: size_t
   - name: bcmp
-    standards: 
+    standards:
       - llvm_libc_ext
     return_type: int
     arguments:
@@ -28,14 +28,14 @@ functions:
       - type: const void *
       - type: size_t
   - name: strcasecmp
-    standards: 
+    standards:
       - BSDExtensions
     return_type: int
     arguments:
       - type: const char *
       - type: const char *
   - name: strncasecmp
-    standards: 
+    standards:
       - BSDExtensions
     return_type: int
     arguments:
@@ -43,14 +43,14 @@ functions:
       - type: const char *
       - type: size_t
   - name: index
-    standards: 
+    standards:
       - BSDExtensions
     return_type: char *
     arguments:
       - type: const char *
       - type: int
   - name: rindex
-    standards: 
+    standards:
       - BSDExtensions
     return_type: char *
     arguments:

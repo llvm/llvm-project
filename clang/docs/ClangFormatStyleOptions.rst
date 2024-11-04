@@ -1484,7 +1484,7 @@ the configuration (without a prefix: ``Auto``).
   * ``OAS_AlignAfterOperator`` (in configuration: ``AlignAfterOperator``)
     Horizontally align operands of binary and ternary expressions.
 
-    This is similar to ``AO_Align``, except when
+    This is similar to ``OAS_Align``, except when
     ``BreakBeforeBinaryOperators`` is set, the operator is un-indented so
     that the wrapped operand is aligned with the operand on the first line.
 

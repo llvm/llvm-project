@@ -70,7 +70,7 @@ define void @types() {
   %9 = alloca [3 x i22], align 4
   %10 = alloca ptr addrspace(5), align 8
   %11 = alloca <5 x ptr>, align 64
-  %12 = alloca x86_mmx, align 8
+  %12 = alloca <1 x i64>, align 8
   ret void
 }
 

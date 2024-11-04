@@ -27,6 +27,7 @@ TEST(ToAPValue, Pointers) {
   auto AST = tooling::buildASTFromCodeWithArgs(
       Code, {"-fexperimental-new-constant-interpreter"});
 
+  auto &ASTCtx = AST->getASTContext();
   auto &Ctx = AST->getASTContext().getInterpContext();
   Program &Prog = Ctx.getProgram();
 
@@ -47,7 +48,7 @@ TEST(ToAPValue, Pointers) {
     const Pointer &GP = getGlobalPtr("b");
     const Pointer &P = GP.deref<Pointer>();
     ASSERT_TRUE(P.isLive());
-    APValue A = P.toAPValue();
+    APValue A = P.toAPValue(ASTCtx);
     ASSERT_TRUE(A.isLValue());
     ASSERT_TRUE(A.hasLValuePath());
     const auto &Path = A.getLValuePath();
@@ -62,7 +63,7 @@ TEST(ToAPValue, Pointers) {
     const Pointer &GP = getGlobalPtr("p");
     const Pointer &P = GP.deref<Pointer>();
     ASSERT_TRUE(P.isIntegralPointer());
-    APValue A = P.toAPValue();
+    APValue A = P.toAPValue(ASTCtx);
     ASSERT_TRUE(A.isLValue());
     ASSERT_TRUE(A.getLValueBase().isNull());
     APSInt I;
@@ -77,7 +78,7 @@ TEST(ToAPValue, Pointers) {
     const Pointer &GP = getGlobalPtr("nullp");
     const Pointer &P = GP.deref<Pointer>();
     ASSERT_TRUE(P.isIntegralPointer());
-    APValue A = P.toAPValue();
+    APValue A = P.toAPValue(ASTCtx);
     ASSERT_TRUE(A.isLValue());
     ASSERT_TRUE(A.getLValueBase().isNull());
     ASSERT_TRUE(A.isNullPointer());
@@ -96,6 +97,7 @@ TEST(ToAPValue, FunctionPointers) {
   auto AST = tooling::buildASTFromCodeWithArgs(
       Code, {"-fexperimental-new-constant-interpreter"});
 
+  auto &ASTCtx = AST->getASTContext();
   auto &Ctx = AST->getASTContext().getInterpContext();
   Program &Prog = Ctx.getProgram();
 
@@ -117,7 +119,7 @@ TEST(ToAPValue, FunctionPointers) {
     const Pointer &GP = getGlobalPtr("func");
     const FunctionPointer &FP = GP.deref<FunctionPointer>();
     ASSERT_FALSE(FP.isZero());
-    APValue A = FP.toAPValue();
+    APValue A = FP.toAPValue(ASTCtx);
     ASSERT_TRUE(A.hasValue());
     ASSERT_TRUE(A.isLValue());
     ASSERT_TRUE(A.hasLValuePath());
@@ -132,7 +134,7 @@ TEST(ToAPValue, FunctionPointers) {
     ASSERT_NE(D, nullptr);
     const Pointer &GP = getGlobalPtr("nullp");
     const auto &P = GP.deref<FunctionPointer>();
-    APValue A = P.toAPValue();
+    APValue A = P.toAPValue(ASTCtx);
     ASSERT_TRUE(A.isLValue());
     ASSERT_TRUE(A.getLValueBase().isNull());
     ASSERT_TRUE(A.isNullPointer());
@@ -151,6 +153,7 @@ TEST(ToAPValue, FunctionPointersC) {
   auto AST = tooling::buildASTFromCodeWithArgs(
       Code, {"-x", "c", "-fexperimental-new-constant-interpreter"});
 
+  auto &ASTCtx = AST->getASTContext();
   auto &Ctx = AST->getASTContext().getInterpContext();
   Program &Prog = Ctx.getProgram();
 
@@ -174,7 +177,7 @@ TEST(ToAPValue, FunctionPointersC) {
     ASSERT_TRUE(GP.isLive());
     const FunctionPointer &FP = GP.deref<FunctionPointer>();
     ASSERT_FALSE(FP.isZero());
-    APValue A = FP.toAPValue();
+    APValue A = FP.toAPValue(ASTCtx);
     ASSERT_TRUE(A.hasValue());
     ASSERT_TRUE(A.isLValue());
     const auto &Path = A.getLValuePath();
@@ -197,6 +200,7 @@ TEST(ToAPValue, MemberPointers) {
   auto AST = tooling::buildASTFromCodeWithArgs(
       Code, {"-fexperimental-new-constant-interpreter"});
 
+  auto &ASTCtx = AST->getASTContext();
   auto &Ctx = AST->getASTContext().getInterpContext();
   Program &Prog = Ctx.getProgram();
 
@@ -218,7 +222,7 @@ TEST(ToAPValue, MemberPointers) {
     const Pointer &GP = getGlobalPtr("pm");
     ASSERT_TRUE(GP.isLive());
     const MemberPointer &FP = GP.deref<MemberPointer>();
-    APValue A = FP.toAPValue();
+    APValue A = FP.toAPValue(ASTCtx);
     ASSERT_EQ(A.getMemberPointerDecl(), getDecl("m"));
     ASSERT_EQ(A.getKind(), APValue::MemberPointer);
   }
@@ -228,7 +232,7 @@ TEST(ToAPValue, MemberPointers) {
     ASSERT_TRUE(GP.isLive());
     const MemberPointer &NP = GP.deref<MemberPointer>();
     ASSERT_TRUE(NP.isZero());
-    APValue A = NP.toAPValue();
+    APValue A = NP.toAPValue(ASTCtx);
     ASSERT_EQ(A.getKind(), APValue::MemberPointer);
   }
 }

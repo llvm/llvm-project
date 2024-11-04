@@ -249,7 +249,9 @@ public:
   /// Return the pointer contained in this class after authenticating it and
   /// adding offset to it if necessary.
   llvm::Value *emitRawPointer(CodeGenFunction &CGF) const {
-    return getBasePointer();
+    if (!isSigned())
+      return getBasePointer();
+    return emitRawPointerSlow(CGF);
   }
 
   /// Return address with different pointer, but same element type and

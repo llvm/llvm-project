@@ -9,7 +9,7 @@ enums: []
 objects: []
 functions:
   - name: socket
-    standards: 
+    standards:
       - POSIX
     return_type: int
     arguments:
@@ -17,7 +17,7 @@ functions:
       - type: int
       - type: int
   - name: bind
-    standards: 
+    standards:
       - POSIX
     return_type: int
     arguments:

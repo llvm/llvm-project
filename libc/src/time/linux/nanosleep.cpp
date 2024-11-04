@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/time/nanosleep.h"
-
+#include "hdr/time_macros.h"
 #include "src/__support/OSUtil/syscall.h" // For syscall functions.
 #include "src/__support/common.h"
 #include "src/__support/macros/config.h"

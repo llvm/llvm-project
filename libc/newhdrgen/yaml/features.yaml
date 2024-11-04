@@ -1,5 +1,5 @@
 header: features.h
-standards: 
+standards:
   - stdc
 macros: []
 types: []

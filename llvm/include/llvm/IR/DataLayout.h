@@ -538,14 +538,6 @@ public:
   /// type.
   ///
   /// This is always at least as good as the ABI alignment.
-  /// FIXME: Deprecate this function once migration to Align is over.
-  LLVM_DEPRECATED("use getPrefTypeAlign instead", "getPrefTypeAlign")
-  uint64_t getPrefTypeAlignment(Type *Ty) const;
-
-  /// Returns the preferred stack/global alignment for the specified
-  /// type.
-  ///
-  /// This is always at least as good as the ABI alignment.
   Align getPrefTypeAlign(Type *Ty) const;
 
   /// Returns an integer type with size at least as big as that of a
@@ -693,7 +685,6 @@ inline TypeSize DataLayout::getTypeSizeInBits(Type *Ty) const {
   case Type::FloatTyID:
     return TypeSize::getFixed(32);
   case Type::DoubleTyID:
-  case Type::X86_MMXTyID:
     return TypeSize::getFixed(64);
   case Type::PPC_FP128TyID:
   case Type::FP128TyID:

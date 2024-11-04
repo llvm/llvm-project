@@ -102,9 +102,11 @@ mlir::Value ConvertFIRToLLVMPattern::getValueFromBox(
     auto p = rewriter.create<mlir::LLVM::GEPOp>(
         loc, pty, boxTy.llvm, box,
         llvm::ArrayRef<mlir::LLVM::GEPArg>{0, boxValue});
-    auto loadOp = rewriter.create<mlir::LLVM::LoadOp>(loc, resultTy, p);
+    auto fldTy = getBoxEleTy(boxTy.llvm, {boxValue});
+    auto loadOp = rewriter.create<mlir::LLVM::LoadOp>(loc, fldTy, p);
+    auto castOp = integerCast(loc, rewriter, resultTy, loadOp);
     attachTBAATag(loadOp, boxTy.fir, nullptr, p);
-    return loadOp;
+    return castOp;
   }
   return rewriter.create<mlir::LLVM::ExtractValueOp>(loc, box, boxValue);
 }

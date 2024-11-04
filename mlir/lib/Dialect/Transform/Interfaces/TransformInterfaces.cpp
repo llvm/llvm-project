@@ -237,7 +237,7 @@ transform::TransformState::setPayloadOps(Value value,
 
   // Setting new payload for the value without cleaning it first is a misuse of
   // the API, assert here.
-  SmallVector<Operation *> storedTargets(targets.begin(), targets.end());
+  SmallVector<Operation *> storedTargets(targets);
   Mappings &mappings = getMapping(value);
   bool inserted =
       mappings.direct.insert({value, std::move(storedTargets)}).second;

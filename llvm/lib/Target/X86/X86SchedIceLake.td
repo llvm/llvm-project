@@ -440,11 +440,11 @@ def : WriteRes<WriteVecInsertLd, [ICXPort5,ICXPort23]> {
 }
 def: InstRW<[WriteVecInsertLd], (instregex "(V?)MOV(H|L)(PD|PS)rm")>;
 
-def : WriteRes<WriteVecExtract, [ICXPort0,ICXPort5]> {
+def : WriteRes<WriteVecExtract, [ICXPort0,ICXPort15]> {
   let Latency = 3;
   let NumMicroOps = 2;
 }
-def : WriteRes<WriteVecExtractSt, [ICXPort49,ICXPort5,ICXPort78]> {
+def : WriteRes<WriteVecExtractSt, [ICXPort49,ICXPort15,ICXPort78]> {
   let Latency = 2;
   let NumMicroOps = 3;
 }
@@ -879,6 +879,13 @@ def ICXWriteResGroup34 : SchedWriteRes<[ICXPort0,ICXPort0156]> {
 }
 def: InstRW<[ICXWriteResGroup34], (instrs FNSTSW16r)>;
 
+def ICXWriteResGroup36 : SchedWriteRes<[ICXPort0,ICXPort5]> {
+  let Latency = 3;
+  let NumMicroOps = 2;
+  let ReleaseAtCycles = [1,1];
+}
+def: InstRW<[ICXWriteResGroup36], (instregex "(V?)EXTRACTPS(Z?)rr")>;
+
 def ICXWriteResGroup37 : SchedWriteRes<[ICXPort0,ICXPort5]> {
   let Latency = 3;
   let NumMicroOps = 3;
@@ -1021,6 +1028,13 @@ def: InstRW<[ICXWriteResGroup51], (instregex "VEXPANDPD(Z|Z128|Z256)rr",
                                              "VPMOVUSQD(Z|Z128|Z256)rr",
                                              "VPMOVUSWB(Z|Z128|Z256)rr",
                                              "VPMOVWB(Z|Z128|Z256)rr")>;
+
+def ICXWriteResGroup53 : SchedWriteRes<[ICXPort49,ICXPort5,ICXPort78]> {
+  let Latency = 2;
+  let NumMicroOps = 3;
+  let ReleaseAtCycles = [1,1,1];
+}
+def: InstRW<[ICXWriteResGroup53], (instregex "(V?)EXTRACTPS(Z?)mr")>;
 
 def ICXWriteResGroup54 : SchedWriteRes<[ICXPort49,ICXPort5,ICXPort78]> {
   let Latency = 4;

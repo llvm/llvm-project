@@ -316,14 +316,14 @@ define amdgpu_kernel void @build_v2i32_from_v4i16_shuffle(ptr addrspace(1) %out,
 ;
 ; GFX940-LABEL: build_v2i32_from_v4i16_shuffle:
 ; GFX940:       ; %bb.0: ; %entry
-; GFX940-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x24
+; GFX940-NEXT:    s_load_dwordx4 s[4:7], s[2:3], 0x24
 ; GFX940-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX940-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX940-NEXT:    s_lshl_b32 s3, s3, 16
-; GFX940-NEXT:    s_lshl_b32 s2, s2, 16
-; GFX940-NEXT:    v_mov_b32_e32 v0, s2
-; GFX940-NEXT:    v_mov_b32_e32 v1, s3
-; GFX940-NEXT:    global_store_dwordx2 v2, v[0:1], s[0:1] sc0 sc1
+; GFX940-NEXT:    s_lshl_b32 s0, s7, 16
+; GFX940-NEXT:    s_lshl_b32 s1, s6, 16
+; GFX940-NEXT:    v_mov_b32_e32 v0, s1
+; GFX940-NEXT:    v_mov_b32_e32 v1, s0
+; GFX940-NEXT:    global_store_dwordx2 v2, v[0:1], s[4:5] sc0 sc1
 ; GFX940-NEXT:    s_endpgm
 entry:
   %shuf = shufflevector <4 x i16> %in, <4 x i16> zeroinitializer, <2 x i32> <i32 0, i32 2>

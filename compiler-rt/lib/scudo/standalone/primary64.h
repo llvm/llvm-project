@@ -160,7 +160,7 @@ public:
         ScopedLock ML(Region->MMLock);
         MemMapT MemMap = Region->MemMapInfo.MemMap;
         if (MemMap.isAllocated())
-          MemMap.unmap(MemMap.getBase(), MemMap.getCapacity());
+          MemMap.unmap();
       }
       *Region = {};
     }

@@ -90,6 +90,9 @@ static bool builtinIsSupported(const Builtin::Info &BuiltinInfo,
   /* MSMode Unsupported */
   if (!LangOpts.MicrosoftExt && (BuiltinInfo.Langs & MS_LANG))
     return false;
+  /* HLSLMode Unsupported */
+  if (!LangOpts.HLSL && (BuiltinInfo.Langs & HLSL_LANG))
+    return false;
   /* ObjC Unsupported */
   if (!LangOpts.ObjC && BuiltinInfo.Langs == OBJC_LANG)
     return false;

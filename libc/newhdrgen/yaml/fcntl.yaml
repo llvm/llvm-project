@@ -1,20 +1,20 @@
 header: fcntl.h
 macros: []
-types: 
+types:
   - type_name: off_t
   - type_name: mode_t
 enums: []
 objects: []
 functions:
   - name: creat
-    standards: 
+    standards:
       - POSIX
     return_type: int
     arguments:
       - type: const char *
       - type: mode_t
   - name: fcntl
-    standards: 
+    standards:
       - POSIX
     return_type: int
     arguments:
@@ -22,7 +22,7 @@ functions:
       - type: int
       - type: ...
   - name: open
-    standards: 
+    standards:
       - POSIX
     return_type: int
     arguments:
@@ -30,7 +30,7 @@ functions:
       - type: int
       - type: ...
   - name: openat
-    standards: 
+    standards:
       - POSIX
     return_type: int
     arguments:

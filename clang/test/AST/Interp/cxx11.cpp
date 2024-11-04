@@ -152,3 +152,11 @@ void A::f(SortOrder order) {
     return;
 }
 }
+
+namespace FinalLtorDiags {
+  template<int*> struct A {}; // both-note {{template parameter is declared here}}
+  int k;
+  int *q = &k; // both-note {{declared here}}
+  A<q> c; // both-error {{non-type template argument of type 'int *' is not a constant expression}} \
+          // both-note {{read of non-constexpr variable 'q' is not allowed in a constant expression}}
+}

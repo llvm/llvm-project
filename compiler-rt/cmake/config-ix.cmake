@@ -1,6 +1,5 @@
 include(CMakePushCheckState)
 include(AddLLVM)
-include(LLVMCheckCompilerLinkerFlag)
 include(CheckCCompilerFlag)
 include(CheckCXXCompilerFlag)
 include(CheckIncludeFiles)
@@ -15,7 +14,7 @@ include(TestBigEndian)
 # in tree version of runtimes, we'd be linking against the just-built
 # libunwind (and the compiler implicit -lunwind wouldn't succeed as the newly
 # built libunwind isn't installed yet). For those cases, it'd be good to
-# link with --uwnindlib=none. Check if that option works.
+# link with --unwindlib=none. Check if that option works.
 llvm_check_compiler_linker_flag(C "--unwindlib=none" CXX_SUPPORTS_UNWINDLIB_NONE_FLAG)
 
 check_library_exists(c fopen "" COMPILER_RT_HAS_LIBC)
@@ -176,6 +175,7 @@ check_cxx_compiler_flag(-nostdlib++ COMPILER_RT_HAS_NOSTDLIBXX_FLAG)
 check_include_files("sys/auxv.h"    COMPILER_RT_HAS_AUXV)
 
 # Libraries.
+check_library_exists(atomic __atomic_load_8 "" COMPILER_RT_HAS_LIBATOMIC)
 check_library_exists(dl dlopen "" COMPILER_RT_HAS_LIBDL)
 check_library_exists(rt shm_open "" COMPILER_RT_HAS_LIBRT)
 check_library_exists(m pow "" COMPILER_RT_HAS_LIBM)
@@ -262,6 +262,19 @@ function(get_target_link_flags_for_arch arch out_var)
     # Workaround for direct calls to __tls_get_addr on Solaris/amd64.
     if(OS_NAME MATCHES "SunOS" AND ${arch} MATCHES x86_64)
       set(${out_var} "-Wl,-z,relax=transtls" PARENT_SCOPE)
+    endif()
+  endif()
+endfunction()
+
+# Returns a list of architecture specific dynamic ldflags in @out_var list.
+function(get_dynamic_link_flags_for_arch arch out_var)
+  list(FIND COMPILER_RT_SUPPORTED_ARCH ${arch} ARCH_INDEX)
+  if(ARCH_INDEX EQUAL -1)
+    message(FATAL_ERROR "Unsupported architecture: ${arch}")
+  else()
+    get_compiler_rt_output_dir(${arch} rtlib_dir)
+    if (NOT WIN32)
+      set(${out_var} "-Wl,-rpath,${rtlib_dir}" PARENT_SCOPE)
     endif()
   endif()
 endfunction()
@@ -759,7 +772,7 @@ else()
 endif()
 
 if (COMPILER_RT_HAS_SANITIZER_COMMON AND RTSAN_SUPPORTED_ARCH AND
-    OS_NAME MATCHES "Android|Darwin|Linux")
+    OS_NAME MATCHES "Darwin|Linux")
   set(COMPILER_RT_HAS_RTSAN TRUE)
 else()
   set(COMPILER_RT_HAS_RTSAN FALSE)
