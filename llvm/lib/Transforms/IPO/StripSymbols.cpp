@@ -142,8 +142,8 @@ static bool StripSymbolNames(Module &M, bool PreserveDbgInfo) {
 }
 
 static bool stripDebugDeclareImpl(Module &M) {
-
-  Function *Declare = M.getFunction("llvm.dbg.declare");
+  Function *Declare =
+      Intrinsic::getDeclarationIfExists(&M, Intrinsic::dbg_declare);
   std::vector<Constant*> DeadConstants;
 
   if (Declare) {
