@@ -14,20 +14,23 @@
 
 namespace LIBC_NAMESPACE_DECL {
 LLVM_LIBC_FUNCTION(void *, lfind,
-                   (const void *key, const void *base, size_t *nmemb, size_t size,
-                    int (*compar)(const void *, const void *))) {
-  if (key == nullptr || base == nullptr || nmemb == nullptr || compar == nullptr) 
+                   (const void *key, const void *base, size_t *nmemb,
+                    size_t size, int (*compar)(const void *, const void *))) {
+  if (key == nullptr || base == nullptr || nmemb == nullptr ||
+      compar == nullptr)
     return nullptr;
-  
+
   size_t byte_len = 0;
-  if (internal::mul_overflow(*nmemb, size, &byte_len)) return nullptr;
-    
+  if (internal::mul_overflow(*nmemb, size, &byte_len))
+    return nullptr;
+
   const cpp::byte *next = reinterpret_cast<const cpp::byte *>(base);
   const cpp::byte *end = next + byte_len;
   while (next < end) {
     if (compar(key, next) == 0) {
-      // According to IEEE Std 1003.1-2024 we are expected to accept a const reference 
-      // to base, but return a non-const reference to the element it contains.  
+      // According to IEEE Std 1003.1-2024 we are expected to accept a const
+      // reference to base, but return a non-const reference to the element it
+      // contains.
       return const_cast<cpp::byte *>(next);
     }
     next += size;
