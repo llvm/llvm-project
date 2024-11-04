@@ -3597,6 +3597,11 @@ struct OmpIfClause {
   std::tuple<std::optional<DirectiveNameModifier>, ScalarLogicalExpr> t;
 };
 
+// OpenMPv5.2 12.5.2 detach-clause -> DETACH (event-handle)
+struct OmpDetachClause {
+  WRAPPER_CLASS_BOILERPLATE(OmpDetachClause, OmpObject);
+};
+
 // OMP 5.0 2.19.5.6 in_reduction-clause -> IN_REDUCTION (reduction-identifier:
 //                                         variable-name-list)
 struct OmpInReductionClause {
