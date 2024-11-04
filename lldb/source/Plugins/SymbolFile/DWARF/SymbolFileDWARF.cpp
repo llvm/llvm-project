@@ -2404,8 +2404,6 @@ void SymbolFileDWARF::FindGlobalVariables(
 
     if (die.Tag() != DW_TAG_variable && die.Tag() != DW_TAG_member)
       return true;
-    assert(
-        !die.GetAttributeValueAsOptionalUnsigned(DW_AT_data_member_location));
 
     auto *dwarf_cu = llvm::dyn_cast<DWARFCompileUnit>(die.GetCU());
     if (!dwarf_cu)
@@ -3494,7 +3492,6 @@ VariableSP SymbolFileDWARF::ParseVariableDIE(const SymbolContext &sc,
   if (tag != DW_TAG_variable && tag != DW_TAG_constant &&
       tag != DW_TAG_member && (tag != DW_TAG_formal_parameter || !sc.function))
     return nullptr;
-  assert(!die.GetAttributeValueAsOptionalUnsigned(DW_AT_data_member_location));
 
   DWARFAttributes attributes = die.GetAttributes();
   const char *name = nullptr;
@@ -3801,7 +3798,6 @@ void SymbolFileDWARF::ParseAndAppendGlobalVariable(
   dw_tag_t tag = die.Tag();
   if (tag != DW_TAG_variable && tag != DW_TAG_constant && tag != DW_TAG_member)
     return;
-  assert(!die.GetAttributeValueAsOptionalUnsigned(DW_AT_data_member_location));
 
   // Check to see if we have already parsed this variable or constant?
   VariableSP var_sp = GetDIEToVariable()[die.GetDIE()];
