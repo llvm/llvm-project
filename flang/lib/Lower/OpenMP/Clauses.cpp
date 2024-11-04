@@ -728,21 +728,51 @@ Firstprivate make(const parser::OmpClause::Firstprivate &inp,
 
 From make(const parser::OmpClause::From &inp,
           semantics::SemanticsContext &semaCtx) {
-  // inp.v -> parser::OmpObjectList
-  return From{{/*Expectation=*/std::nullopt, /*Mapper=*/std::nullopt,
-               /*Iterator=*/std::nullopt,
-               /*LocatorList=*/makeObjects(inp.v, semaCtx)}};
+  // inp.v -> parser::OmpFromClause
+  using wrapped = parser::OmpFromClause;
+
+  CLAUSET_ENUM_CONVERT( //
+      convert, parser::OmpFromClause::Expectation, From::Expectation,
+      // clang-format off
+      MS(Present, Present)
+      // clang-format on
+  );
+
+  auto &t0 = std::get<std::optional<std::list<wrapped::Expectation>>>(inp.v.t);
+  auto &t1 =
+      std::get<std::optional<std::list<parser::OmpIteratorModifier>>>(inp.v.t);
+  auto &t2 = std::get<parser::OmpObjectList>(inp.v.t);
+
+  assert((!t0 || t0->size() == 1) && "Only one expectation modifier allowed");
+  assert((!t1 || t1->size() == 1) && "Only one iterator modifier allowed");
+
+  auto expectation = [&]() -> std::optional<From::Expectation> {
+    if (t0)
+      return convert(t0->front());
+    return std::nullopt;
+  }();
+
+  auto iterator = [&]() -> std::optional<Iterator> {
+    if (t1)
+      return makeIterator(t1->front(), semaCtx);
+    return std::nullopt;
+  }();
+
+  return From{{/*Expectation=*/std::move(expectation), /*Mapper=*/std::nullopt,
+               /*Iterator=*/std::move(iterator),
+               /*LocatorList=*/makeObjects(t2, semaCtx)}};
 }
 
 // Full: empty
 
 Grainsize make(const parser::OmpClause::Grainsize &inp,
-            semantics::SemanticsContext &semaCtx) {
+               semantics::SemanticsContext &semaCtx) {
   // inp.v -> parser::OmpGrainsizeClause
   using wrapped = parser::OmpGrainsizeClause;
 
   CLAUSET_ENUM_CONVERT( //
-      convert, parser::OmpGrainsizeClause::Prescriptiveness, Grainsize::Prescriptiveness,
+      convert, parser::OmpGrainsizeClause::Prescriptiveness,
+      Grainsize::Prescriptiveness,
       // clang-format off
       MS(Strict,   Strict)
       // clang-format on
@@ -1274,10 +1304,39 @@ ThreadLimit make(const parser::OmpClause::ThreadLimit &inp,
 
 To make(const parser::OmpClause::To &inp,
         semantics::SemanticsContext &semaCtx) {
-  // inp.v -> parser::OmpObjectList
-  return To{{/*Expectation=*/std::nullopt, /*Mapper=*/std::nullopt,
-             /*Iterator=*/std::nullopt,
-             /*LocatorList=*/makeObjects(inp.v, semaCtx)}};
+  // inp.v -> parser::OmpToClause
+  using wrapped = parser::OmpToClause;
+
+  CLAUSET_ENUM_CONVERT( //
+      convert, parser::OmpToClause::Expectation, To::Expectation,
+      // clang-format off
+      MS(Present, Present)
+      // clang-format on
+  );
+
+  auto &t0 = std::get<std::optional<std::list<wrapped::Expectation>>>(inp.v.t);
+  auto &t1 =
+      std::get<std::optional<std::list<parser::OmpIteratorModifier>>>(inp.v.t);
+  auto &t2 = std::get<parser::OmpObjectList>(inp.v.t);
+
+  assert((!t0 || t0->size() == 1) && "Only one expectation modifier allowed");
+  assert((!t1 || t1->size() == 1) && "Only one iterator modifier allowed");
+
+  auto expectation = [&]() -> std::optional<To::Expectation> {
+    if (t0)
+      return convert(t0->front());
+    return std::nullopt;
+  }();
+
+  auto iterator = [&]() -> std::optional<Iterator> {
+    if (t1)
+      return makeIterator(t1->front(), semaCtx);
+    return std::nullopt;
+  }();
+
+  return To{{/*Expectation=*/std::move(expectation), /*Mapper=*/std::nullopt,
+             /*Iterator=*/std::move(iterator),
+             /*LocatorList=*/makeObjects(t2, semaCtx)}};
 }
 
 // UnifiedAddress: empty
