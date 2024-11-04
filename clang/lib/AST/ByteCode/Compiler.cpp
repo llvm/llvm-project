@@ -6467,10 +6467,8 @@ bool Compiler<Emitter>::emitBuiltinBitCast(const CastExpr *E) {
   if (!this->visit(SubExpr))
     return false;
 
-  if (!ToT || ToT == PT_Ptr) {
-    // Conversion to an array or record type.
-    assert(false && "Implement bitcast to pointers.");
-  }
+  if (!ToT || ToT == PT_Ptr)
+    return this->emitBitCastPtr(E);
   assert(ToT);
 
   const llvm::fltSemantics *TargetSemantics = nullptr;
