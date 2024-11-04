@@ -439,6 +439,15 @@ mlir::Value lowerCirAttrAsValue(mlir::Operation *parentOp,
 
   // Iteratively lower each constant element of the struct.
   for (auto [idx, elt] : llvm::enumerate(constStruct.getMembers())) {
+    if (auto constStructType =
+            dyn_cast<mlir::cir::StructType>(constStruct.getType());
+        constStructType && constStructType.isUnion()) {
+      if (isa<mlir::cir::InactiveUnionFieldAttr>(elt))
+        continue;
+
+      idx = 0;
+    }
+
     mlir::Value init = lowerCirAttrAsValue(parentOp, elt, rewriter, converter);
     result = rewriter.create<mlir::LLVM::InsertValueOp>(loc, result, init, idx);
   }
