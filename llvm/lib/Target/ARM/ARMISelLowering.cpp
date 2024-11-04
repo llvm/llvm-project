@@ -21371,12 +21371,12 @@ void ARMTargetLowering::insertSSPDeclarations(Module &M) const {
 
   // MSVC CRT has a global variable holding security cookie.
   M.getOrInsertGlobal("__security_cookie",
-                      Type::getInt8PtrTy(M.getContext()));
+                      PointerType::getUnqual(M.getContext()));
 
   // MSVC CRT has a function to validate security cookie.
   FunctionCallee SecurityCheckCookie = M.getOrInsertFunction(
       "__security_check_cookie", Type::getVoidTy(M.getContext()),
-      Type::getInt8PtrTy(M.getContext()));
+      PointerType::getUnqual(M.getContext()));
   if (Function *F = dyn_cast<Function>(SecurityCheckCookie.getCallee()))
     F->addParamAttr(0, Attribute::AttrKind::InReg);
 }

@@ -1031,9 +1031,9 @@ void GCOVProfiler::emitGlobalConstructor(
 
 FunctionCallee GCOVProfiler::getStartFileFunc(const TargetLibraryInfo *TLI) {
   Type *Args[] = {
-      Type::getInt8PtrTy(*Ctx), // const char *orig_filename
-      Type::getInt32Ty(*Ctx),   // uint32_t version
-      Type::getInt32Ty(*Ctx),   // uint32_t checksum
+      PointerType::getUnqual(*Ctx), // const char *orig_filename
+      Type::getInt32Ty(*Ctx),       // uint32_t version
+      Type::getInt32Ty(*Ctx),       // uint32_t checksum
   };
   FunctionType *FTy = FunctionType::get(Type::getVoidTy(*Ctx), Args, false);
   return M->getOrInsertFunction("llvm_gcda_start_file", FTy,

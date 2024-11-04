@@ -5397,7 +5397,7 @@ TEST_F(OpenMPIRBuilderTest, EmitMapperCall) {
   GlobalVariable *Mapnames =
       OMPBuilder.createOffloadMapnames(Names, ".offload_mapnames");
   Value *MapnamesArg = Builder.CreateConstInBoundsGEP2_32(
-      ArrayType::get(Type::getInt8PtrTy(Ctx), TotalNbOperand), Mapnames,
+      ArrayType::get(PointerType::getUnqual(Ctx), TotalNbOperand), Mapnames,
       /*Idx0=*/0, /*Idx1=*/0);
 
   OMPBuilder.emitMapperCall(Builder.saveIP(), BeginMapperFunc, SrcLocInfo,
@@ -6177,7 +6177,7 @@ TEST_F(OpenMPIRBuilderTest, CreateTaskDepend) {
   ASSERT_NE(NumDepsNoAlias, nullptr);
   EXPECT_EQ(NumDepsNoAlias->getZExtValue(), 0U);
   EXPECT_EQ(TaskAllocCall->getOperand(6),
-            ConstantPointerNull::get(Type::getInt8PtrTy(M->getContext())));
+            ConstantPointerNull::get(PointerType::getUnqual(M->getContext())));
 
   EXPECT_FALSE(verifyModule(*M, &errs()));
 }

@@ -292,7 +292,7 @@ LowerGlobalAddress(SDValue Op, SelectionDAG &DAG) const
     return GA;
   } else {
     // Ideally we would not fold in offset with an index <= 11.
-    Type *Ty = Type::getInt8PtrTy(*DAG.getContext());
+    Type *Ty = PointerType::getUnqual(*DAG.getContext());
     Constant *GA = ConstantExpr::getBitCast(const_cast<GlobalValue*>(GV), Ty);
     Ty = Type::getInt32Ty(*DAG.getContext());
     Constant *Idx = ConstantInt::get(Ty, Offset);
