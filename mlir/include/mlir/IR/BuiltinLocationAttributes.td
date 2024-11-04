@@ -94,7 +94,6 @@ def FileLineColRange : Builtin_LocationAttr<"FileLineColRange"> {
   // locations are only set in storage.
   let parameters = (ins "StringAttr":$filename);
   let builders = [
-
     AttrBuilderWithInferredContext<(ins "StringAttr":$filename), [{
       return $_get(filename.getContext(), filename, ArrayRef<unsigned>{});
     }]>,
