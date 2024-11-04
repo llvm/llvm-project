@@ -2353,7 +2353,10 @@ ExprResult Sema::BuildBlockForLambdaConversion(SourceLocation CurrentLocation,
   Block->setBody(new (Context) CompoundStmt(ConvLocation));
 
   // Create the block literal expression.
-  Expr *BuildBlock = new (Context) BlockExpr(Block, Conv->getConversionType());
+  // TODO: Do we ever get here if we have unexpanded packs in the lambda???
+  Expr *BuildBlock =
+      new (Context) BlockExpr(Block, Conv->getConversionType(),
+                              /*ContainsUnexpandedParameterPack=*/false);
   ExprCleanupObjects.push_back(Block);
   Cleanup.setExprNeedsCleanups(true);
 

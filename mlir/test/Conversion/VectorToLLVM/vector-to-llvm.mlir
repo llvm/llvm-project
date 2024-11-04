@@ -2001,6 +2001,37 @@ func.func @vector_fma(%a: vector<8xf32>, %b: vector<2x4xf32>, %c: vector<1x1x1xf
   return %0, %1, %2, %3: vector<8xf32>, vector<2x4xf32>, vector<1x1x1xf32>, vector<f32>
 }
 
+func.func @vector_fma_scalable(%a: vector<[8]xf32>, %b: vector<2x[4]xf32>, %c: vector<1x1x[1]xf32>, %d: vector<f32>) -> (vector<[8]xf32>, vector<2x[4]xf32>, vector<1x1x[1]xf32>) {
+  // CHECK-LABEL: @vector_fma_scalable
+  //  CHECK-SAME: %[[A:.*]]: vector<[8]xf32>
+  //  CHECK-SAME: %[[B:.*]]: vector<2x[4]xf32>
+  //  CHECK-SAME: %[[C:.*]]: vector<1x1x[1]xf32>
+  //       CHECK: %[[BL:.*]] = builtin.unrealized_conversion_cast %[[B]] : vector<2x[4]xf32> to !llvm.array<2 x vector<[4]xf32>>
+  //       CHECK: llvm.intr.fmuladd
+  //  CHECK-SAME:   (vector<[8]xf32>, vector<[8]xf32>, vector<[8]xf32>) -> vector<[8]xf32>
+  %0 = vector.fma %a, %a, %a : vector<[8]xf32>
+
+  //       CHECK: %[[b00:.*]] = llvm.extractvalue %[[BL]][0] : !llvm.array<2 x vector<[4]xf32>>
+  //       CHECK: %[[b01:.*]] = llvm.extractvalue %[[BL]][0] : !llvm.array<2 x vector<[4]xf32>>
+  //       CHECK: %[[b02:.*]] = llvm.extractvalue %[[BL]][0] : !llvm.array<2 x vector<[4]xf32>>
+  //       CHECK: %[[B0:.*]] = llvm.intr.fmuladd(%[[b00]], %[[b01]], %[[b02]]) :
+  //  CHECK-SAME: (vector<[4]xf32>, vector<[4]xf32>, vector<[4]xf32>) -> vector<[4]xf32>
+  //       CHECK: llvm.insertvalue %[[B0]], {{.*}}[0] : !llvm.array<2 x vector<[4]xf32>>
+  //       CHECK: %[[b10:.*]] = llvm.extractvalue %[[BL]][1] : !llvm.array<2 x vector<[4]xf32>>
+  //       CHECK: %[[b11:.*]] = llvm.extractvalue %[[BL]][1] : !llvm.array<2 x vector<[4]xf32>>
+  //       CHECK: %[[b12:.*]] = llvm.extractvalue %[[BL]][1] : !llvm.array<2 x vector<[4]xf32>>
+  //       CHECK: %[[B1:.*]] = llvm.intr.fmuladd(%[[b10]], %[[b11]], %[[b12]]) :
+  //  CHECK-SAME: (vector<[4]xf32>, vector<[4]xf32>, vector<[4]xf32>) -> vector<[4]xf32>
+  //       CHECK: llvm.insertvalue %[[B1]], {{.*}}[1] : !llvm.array<2 x vector<[4]xf32>>
+  %1 = vector.fma %b, %b, %b : vector<2x[4]xf32>
+
+  //       CHECK: %[[C0:.*]] = llvm.intr.fmuladd
+  //  CHECK-SAME:   (vector<[1]xf32>, vector<[1]xf32>, vector<[1]xf32>) -> vector<[1]xf32>
+  %2 = vector.fma %c, %c, %c : vector<1x1x[1]xf32>
+
+  return %0, %1, %2: vector<[8]xf32>, vector<2x[4]xf32>, vector<1x1x[1]xf32>
+}
+
 // -----
 
 func.func @reduce_0d_f32(%arg0: vector<f32>) -> f32 {
@@ -2028,6 +2059,17 @@ func.func @reduce_f16(%arg0: vector<16xf16>) -> f16 {
 // CHECK-SAME: <{fastmathFlags = #llvm.fastmath<none>}> : (f16, vector<16xf16>) -> f16
 //      CHECK: return %[[V]] : f16
 
+func.func @reduce_f16_scalable(%arg0: vector<[16]xf16>) -> f16 {
+  %0 = vector.reduction <add>, %arg0 : vector<[16]xf16> into f16
+  return %0 : f16
+}
+// CHECK-LABEL: @reduce_f16_scalable(
+// CHECK-SAME: %[[A:.*]]: vector<[16]xf16>)
+//      CHECK: %[[C:.*]] = llvm.mlir.constant(0.000000e+00 : f16) : f16
+//      CHECK: %[[V:.*]] = "llvm.intr.vector.reduce.fadd"(%[[C]], %[[A]])
+// CHECK-SAME: <{fastmathFlags = #llvm.fastmath<none>}> : (f16, vector<[16]xf16>) -> f16
+//      CHECK: return %[[V]] : f16
+
 // -----
 
 func.func @reduce_f32(%arg0: vector<16xf32>) -> f32 {
@@ -2039,6 +2081,17 @@ func.func @reduce_f32(%arg0: vector<16xf32>) -> f32 {
 //      CHECK: %[[C:.*]] = llvm.mlir.constant(0.000000e+00 : f32) : f32
 //      CHECK: %[[V:.*]] = "llvm.intr.vector.reduce.fadd"(%[[C]], %[[A]])
 // CHECK-SAME: <{fastmathFlags = #llvm.fastmath<none>}> : (f32, vector<16xf32>) -> f32
+//      CHECK: return %[[V]] : f32
+
+func.func @reduce_f32_scalable(%arg0: vector<[16]xf32>) -> f32 {
+  %0 = vector.reduction <add>, %arg0 : vector<[16]xf32> into f32
+  return %0 : f32
+}
+// CHECK-LABEL: @reduce_f32_scalable(
+// CHECK-SAME: %[[A:.*]]: vector<[16]xf32>)
+//      CHECK: %[[C:.*]] = llvm.mlir.constant(0.000000e+00 : f32) : f32
+//      CHECK: %[[V:.*]] = "llvm.intr.vector.reduce.fadd"(%[[C]], %[[A]])
+// CHECK-SAME: <{fastmathFlags = #llvm.fastmath<none>}> : (f32, vector<[16]xf32>) -> f32
 //      CHECK: return %[[V]] : f32
 
 // -----
@@ -2054,6 +2107,17 @@ func.func @reduce_f64(%arg0: vector<16xf64>) -> f64 {
 // CHECK-SAME: <{fastmathFlags = #llvm.fastmath<none>}> : (f64, vector<16xf64>) -> f64
 //      CHECK: return %[[V]] : f64
 
+func.func @reduce_f64_scalable(%arg0: vector<[16]xf64>) -> f64 {
+  %0 = vector.reduction <add>, %arg0 : vector<[16]xf64> into f64
+  return %0 : f64
+}
+// CHECK-LABEL: @reduce_f64_scalable(
+// CHECK-SAME: %[[A:.*]]: vector<[16]xf64>)
+//      CHECK: %[[C:.*]] = llvm.mlir.constant(0.000000e+00 : f64) : f64
+//      CHECK: %[[V:.*]] = "llvm.intr.vector.reduce.fadd"(%[[C]], %[[A]])
+// CHECK-SAME: <{fastmathFlags = #llvm.fastmath<none>}> : (f64, vector<[16]xf64>) -> f64
+//      CHECK: return %[[V]] : f64
+
 // -----
 
 func.func @reduce_i8(%arg0: vector<16xi8>) -> i8 {
@@ -2065,6 +2129,15 @@ func.func @reduce_i8(%arg0: vector<16xi8>) -> i8 {
 //      CHECK: %[[V:.*]] = "llvm.intr.vector.reduce.add"(%[[A]])
 //      CHECK: return %[[V]] : i8
 
+func.func @reduce_i8_scalable(%arg0: vector<[16]xi8>) -> i8 {
+  %0 = vector.reduction <add>, %arg0 : vector<[16]xi8> into i8
+  return %0 : i8
+}
+// CHECK-LABEL: @reduce_i8_scalable(
+// CHECK-SAME: %[[A:.*]]: vector<[16]xi8>)
+//      CHECK: %[[V:.*]] = "llvm.intr.vector.reduce.add"(%[[A]])
+//      CHECK: return %[[V]] : i8
+
 // -----
 
 func.func @reduce_i32(%arg0: vector<16xi32>) -> i32 {
@@ -2073,6 +2146,15 @@ func.func @reduce_i32(%arg0: vector<16xi32>) -> i32 {
 }
 // CHECK-LABEL: @reduce_i32(
 // CHECK-SAME: %[[A:.*]]: vector<16xi32>)
+//      CHECK: %[[V:.*]] = "llvm.intr.vector.reduce.add"(%[[A]])
+//      CHECK: return %[[V]] : i32
+
+func.func @reduce_i32_scalable(%arg0: vector<[16]xi32>) -> i32 {
+  %0 = vector.reduction <add>, %arg0 : vector<[16]xi32> into i32
+  return %0 : i32
+}
+// CHECK-LABEL: @reduce_i32_scalable(
+// CHECK-SAME: %[[A:.*]]: vector<[16]xi32>)
 //      CHECK: %[[V:.*]] = "llvm.intr.vector.reduce.add"(%[[A]])
 //      CHECK: return %[[V]] : i32
 
@@ -2088,6 +2170,16 @@ func.func @reduce_acc_i32(%arg0: vector<16xi32>, %arg1 : i32) -> i32 {
 //       CHECK: %[[V:.*]] = llvm.add %[[ACC]], %[[R]]
 //       CHECK: return %[[V]] : i32
 
+func.func @reduce_acc_i32_scalable(%arg0: vector<[16]xi32>, %arg1 : i32) -> i32 {
+  %0 = vector.reduction <add>, %arg0, %arg1 : vector<[16]xi32> into i32
+  return %0 : i32
+}
+// CHECK-LABEL: @reduce_acc_i32_scalable(
+//  CHECK-SAME: %[[A:.*]]: vector<[16]xi32>, %[[ACC:.*]]: i32)
+//       CHECK: %[[R:.*]] = "llvm.intr.vector.reduce.add"(%[[A]])
+//       CHECK: %[[V:.*]] = llvm.add %[[ACC]], %[[R]]
+//       CHECK: return %[[V]] : i32
+
 // -----
 
 func.func @reduce_mul_i32(%arg0: vector<16xi32>) -> i32 {
@@ -2099,6 +2191,15 @@ func.func @reduce_mul_i32(%arg0: vector<16xi32>) -> i32 {
 //       CHECK: %[[V:.*]] = "llvm.intr.vector.reduce.mul"(%[[A]])
 //       CHECK: return %[[V]] : i32
 
+func.func @reduce_mul_i32_scalable(%arg0: vector<[16]xi32>) -> i32 {
+  %0 = vector.reduction <mul>, %arg0 : vector<[16]xi32> into i32
+  return %0 : i32
+}
+// CHECK-LABEL: @reduce_mul_i32_scalable(
+//  CHECK-SAME: %[[A:.*]]: vector<[16]xi32>)
+//       CHECK: %[[V:.*]] = "llvm.intr.vector.reduce.mul"(%[[A]])
+//       CHECK: return %[[V]] : i32
+
 // -----
 
 func.func @reduce_mul_acc_i32(%arg0: vector<16xi32>, %arg1 : i32) -> i32 {
@@ -2107,6 +2208,16 @@ func.func @reduce_mul_acc_i32(%arg0: vector<16xi32>, %arg1 : i32) -> i32 {
 }
 // CHECK-LABEL: @reduce_mul_acc_i32(
 //  CHECK-SAME: %[[A:.*]]: vector<16xi32>, %[[ACC:.*]]: i32)
+//       CHECK: %[[R:.*]] = "llvm.intr.vector.reduce.mul"(%[[A]])
+//       CHECK: %[[V:.*]] = llvm.mul %[[ACC]], %[[R]]
+//       CHECK: return %[[V]] : i32
+
+func.func @reduce_mul_acc_i32_scalable(%arg0: vector<[16]xi32>, %arg1 : i32) -> i32 {
+  %0 = vector.reduction <mul>, %arg0, %arg1 : vector<[16]xi32> into i32
+  return %0 : i32
+}
+// CHECK-LABEL: @reduce_mul_acc_i32_scalable(
+//  CHECK-SAME: %[[A:.*]]: vector<[16]xi32>, %[[ACC:.*]]: i32)
 //       CHECK: %[[R:.*]] = "llvm.intr.vector.reduce.mul"(%[[A]])
 //       CHECK: %[[V:.*]] = llvm.mul %[[ACC]], %[[R]]
 //       CHECK: return %[[V]] : i32
@@ -2123,6 +2234,16 @@ func.func @reduce_fmaximum_f32(%arg0: vector<16xf32>, %arg1: f32) -> f32 {
 //      CHECK: %[[R:.*]] = llvm.intr.maximum(%[[V]], %[[B]]) : (f32, f32) -> f32
 //      CHECK: return %[[R]] : f32
 
+func.func @reduce_fmaximum_f32_scalable(%arg0: vector<[16]xf32>, %arg1: f32) -> f32 {
+  %0 = vector.reduction <maximumf>, %arg0, %arg1 : vector<[16]xf32> into f32
+  return %0 : f32
+}
+// CHECK-LABEL: @reduce_fmaximum_f32_scalable(
+// CHECK-SAME: %[[A:.*]]: vector<[16]xf32>, %[[B:.*]]: f32)
+//      CHECK: %[[V:.*]] = llvm.intr.vector.reduce.fmaximum(%[[A]]) : (vector<[16]xf32>) -> f32
+//      CHECK: %[[R:.*]] = llvm.intr.maximum(%[[V]], %[[B]]) : (f32, f32) -> f32
+//      CHECK: return %[[R]] : f32
+
 // -----
 
 func.func @reduce_fminimum_f32(%arg0: vector<16xf32>, %arg1: f32) -> f32 {
@@ -2132,6 +2253,16 @@ func.func @reduce_fminimum_f32(%arg0: vector<16xf32>, %arg1: f32) -> f32 {
 // CHECK-LABEL: @reduce_fminimum_f32(
 // CHECK-SAME: %[[A:.*]]: vector<16xf32>, %[[B:.*]]: f32)
 //      CHECK: %[[V:.*]] = llvm.intr.vector.reduce.fminimum(%[[A]]) : (vector<16xf32>) -> f32
+//      CHECK: %[[R:.*]] = llvm.intr.minimum(%[[V]], %[[B]]) : (f32, f32) -> f32
+//      CHECK: return %[[R]] : f32
+
+func.func @reduce_fminimum_f32_scalable(%arg0: vector<[16]xf32>, %arg1: f32) -> f32 {
+  %0 = vector.reduction <minimumf>, %arg0, %arg1 : vector<[16]xf32> into f32
+  return %0 : f32
+}
+// CHECK-LABEL: @reduce_fminimum_f32_scalable(
+// CHECK-SAME: %[[A:.*]]: vector<[16]xf32>, %[[B:.*]]: f32)
+//      CHECK: %[[V:.*]] = llvm.intr.vector.reduce.fminimum(%[[A]]) : (vector<[16]xf32>) -> f32
 //      CHECK: %[[R:.*]] = llvm.intr.minimum(%[[V]], %[[B]]) : (f32, f32) -> f32
 //      CHECK: return %[[R]] : f32
 
@@ -2147,6 +2278,16 @@ func.func @reduce_fmax_f32(%arg0: vector<16xf32>, %arg1: f32) -> f32 {
 //      CHECK: %[[R:.*]] = llvm.intr.maxnum(%[[V]], %[[B]]) : (f32, f32) -> f32
 //      CHECK: return %[[R]] : f32
 
+func.func @reduce_fmax_f32_scalable(%arg0: vector<[16]xf32>, %arg1: f32) -> f32 {
+  %0 = vector.reduction <maxnumf>, %arg0, %arg1 : vector<[16]xf32> into f32
+  return %0 : f32
+}
+// CHECK-LABEL: @reduce_fmax_f32_scalable(
+// CHECK-SAME: %[[A:.*]]: vector<[16]xf32>, %[[B:.*]]: f32)
+//      CHECK: %[[V:.*]] = llvm.intr.vector.reduce.fmax(%[[A]]) : (vector<[16]xf32>) -> f32
+//      CHECK: %[[R:.*]] = llvm.intr.maxnum(%[[V]], %[[B]]) : (f32, f32) -> f32
+//      CHECK: return %[[R]] : f32
+
 // -----
 
 func.func @reduce_fmin_f32(%arg0: vector<16xf32>, %arg1: f32) -> f32 {
@@ -2159,6 +2300,16 @@ func.func @reduce_fmin_f32(%arg0: vector<16xf32>, %arg1: f32) -> f32 {
 //      CHECK: %[[R:.*]] = llvm.intr.minnum(%[[V]], %[[B]]) : (f32, f32) -> f32
 //      CHECK: return %[[R]] : f32
 
+func.func @reduce_fmin_f32_scalable(%arg0: vector<[16]xf32>, %arg1: f32) -> f32 {
+  %0 = vector.reduction <minnumf>, %arg0, %arg1 : vector<[16]xf32> into f32
+  return %0 : f32
+}
+// CHECK-LABEL: @reduce_fmin_f32_scalable(
+// CHECK-SAME: %[[A:.*]]: vector<[16]xf32>, %[[B:.*]]: f32)
+//      CHECK: %[[V:.*]] = llvm.intr.vector.reduce.fmin(%[[A]]) : (vector<[16]xf32>) -> f32
+//      CHECK: %[[R:.*]] = llvm.intr.minnum(%[[V]], %[[B]]) : (f32, f32) -> f32
+//      CHECK: return %[[R]] : f32
+
 // -----
 
 func.func @reduce_minui_i32(%arg0: vector<16xi32>) -> i32 {
@@ -2167,6 +2318,15 @@ func.func @reduce_minui_i32(%arg0: vector<16xi32>) -> i32 {
 }
 // CHECK-LABEL: @reduce_minui_i32(
 //  CHECK-SAME: %[[A:.*]]: vector<16xi32>)
+//       CHECK: %[[V:.*]] = "llvm.intr.vector.reduce.umin"(%[[A]])
+//       CHECK: return %[[V]] : i32
+
+func.func @reduce_minui_i32_scalable(%arg0: vector<[16]xi32>) -> i32 {
+  %0 = vector.reduction <minui>, %arg0 : vector<[16]xi32> into i32
+  return %0 : i32
+}
+// CHECK-LABEL: @reduce_minui_i32_scalable(
+//  CHECK-SAME: %[[A:.*]]: vector<[16]xi32>)
 //       CHECK: %[[V:.*]] = "llvm.intr.vector.reduce.umin"(%[[A]])
 //       CHECK: return %[[V]] : i32
 
@@ -2183,6 +2343,17 @@ func.func @reduce_minui_acc_i32(%arg0: vector<16xi32>, %arg1 : i32) -> i32 {
 //       CHECK: %[[V:.*]] = llvm.select %[[S]], %[[ACC]], %[[R]]
 //       CHECK: return %[[V]] : i32
 
+func.func @reduce_minui_acc_i32_scalable(%arg0: vector<[16]xi32>, %arg1 : i32) -> i32 {
+  %0 = vector.reduction <minui>, %arg0, %arg1 : vector<[16]xi32> into i32
+  return %0 : i32
+}
+// CHECK-LABEL: @reduce_minui_acc_i32_scalable(
+//  CHECK-SAME: %[[A:.*]]: vector<[16]xi32>, %[[ACC:.*]]: i32)
+//       CHECK: %[[R:.*]] = "llvm.intr.vector.reduce.umin"(%[[A]])
+//       CHECK: %[[S:.*]] = llvm.icmp "ule" %[[ACC]], %[[R]]
+//       CHECK: %[[V:.*]] = llvm.select %[[S]], %[[ACC]], %[[R]]
+//       CHECK: return %[[V]] : i32
+
 // -----
 
 func.func @reduce_maxui_i32(%arg0: vector<16xi32>) -> i32 {
@@ -2191,6 +2362,15 @@ func.func @reduce_maxui_i32(%arg0: vector<16xi32>) -> i32 {
 }
 // CHECK-LABEL: @reduce_maxui_i32(
 //  CHECK-SAME: %[[A:.*]]: vector<16xi32>)
+//       CHECK: %[[V:.*]] = "llvm.intr.vector.reduce.umax"(%[[A]])
+//       CHECK: return %[[V]] : i32
+
+func.func @reduce_maxui_i32_scalable(%arg0: vector<[16]xi32>) -> i32 {
+  %0 = vector.reduction <maxui>, %arg0 : vector<[16]xi32> into i32
+  return %0 : i32
+}
+// CHECK-LABEL: @reduce_maxui_i32_scalable(
+//  CHECK-SAME: %[[A:.*]]: vector<[16]xi32>)
 //       CHECK: %[[V:.*]] = "llvm.intr.vector.reduce.umax"(%[[A]])
 //       CHECK: return %[[V]] : i32
 
@@ -2207,6 +2387,17 @@ func.func @reduce_maxui_acc_i32(%arg0: vector<16xi32>, %arg1 : i32) -> i32 {
 //       CHECK: %[[V:.*]] = llvm.select %[[S]], %[[ACC]], %[[R]]
 //       CHECK: return %[[V]] : i32
 
+func.func @reduce_maxui_acc_i32_scalable(%arg0: vector<[16]xi32>, %arg1 : i32) -> i32 {
+  %0 = vector.reduction <maxui>, %arg0, %arg1 : vector<[16]xi32> into i32
+  return %0 : i32
+}
+// CHECK-LABEL: @reduce_maxui_acc_i32_scalable(
+//  CHECK-SAME: %[[A:.*]]: vector<[16]xi32>, %[[ACC:.*]]: i32)
+//       CHECK: %[[R:.*]] = "llvm.intr.vector.reduce.umax"(%[[A]])
+//       CHECK: %[[S:.*]] = llvm.icmp "uge" %[[ACC]], %[[R]]
+//       CHECK: %[[V:.*]] = llvm.select %[[S]], %[[ACC]], %[[R]]
+//       CHECK: return %[[V]] : i32
+
 // -----
 
 func.func @reduce_minsi_i32(%arg0: vector<16xi32>) -> i32 {
@@ -2215,6 +2406,15 @@ func.func @reduce_minsi_i32(%arg0: vector<16xi32>) -> i32 {
 }
 // CHECK-LABEL: @reduce_minsi_i32(
 //  CHECK-SAME: %[[A:.*]]: vector<16xi32>)
+//       CHECK: %[[V:.*]] = "llvm.intr.vector.reduce.smin"(%[[A]])
+//       CHECK: return %[[V]] : i32
+
+func.func @reduce_minsi_i32_scalable(%arg0: vector<[16]xi32>) -> i32 {
+  %0 = vector.reduction <minsi>, %arg0 : vector<[16]xi32> into i32
+  return %0 : i32
+}
+// CHECK-LABEL: @reduce_minsi_i32_scalable(
+//  CHECK-SAME: %[[A:.*]]: vector<[16]xi32>)
 //       CHECK: %[[V:.*]] = "llvm.intr.vector.reduce.smin"(%[[A]])
 //       CHECK: return %[[V]] : i32
 
@@ -2231,6 +2431,17 @@ func.func @reduce_minsi_acc_i32(%arg0: vector<16xi32>, %arg1 : i32) -> i32 {
 //       CHECK: %[[V:.*]] = llvm.select %[[S]], %[[ACC]], %[[R]]
 //       CHECK: return %[[V]] : i32
 
+func.func @reduce_minsi_acc_i32_scalable(%arg0: vector<[16]xi32>, %arg1 : i32) -> i32 {
+  %0 = vector.reduction <minsi>, %arg0, %arg1 : vector<[16]xi32> into i32
+  return %0 : i32
+}
+// CHECK-LABEL: @reduce_minsi_acc_i32_scalable(
+//  CHECK-SAME: %[[A:.*]]: vector<[16]xi32>, %[[ACC:.*]]: i32)
+//       CHECK: %[[R:.*]] = "llvm.intr.vector.reduce.smin"(%[[A]])
+//       CHECK: %[[S:.*]] = llvm.icmp "sle" %[[ACC]], %[[R]]
+//       CHECK: %[[V:.*]] = llvm.select %[[S]], %[[ACC]], %[[R]]
+//       CHECK: return %[[V]] : i32
+
 // -----
 
 func.func @reduce_maxsi_i32(%arg0: vector<16xi32>) -> i32 {
@@ -2239,6 +2450,15 @@ func.func @reduce_maxsi_i32(%arg0: vector<16xi32>) -> i32 {
 }
 // CHECK-LABEL: @reduce_maxsi_i32(
 //  CHECK-SAME: %[[A:.*]]: vector<16xi32>)
+//       CHECK: %[[V:.*]] = "llvm.intr.vector.reduce.smax"(%[[A]])
+//       CHECK: return %[[V]] : i32
+
+func.func @reduce_maxsi_i32_scalable(%arg0: vector<[16]xi32>) -> i32 {
+  %0 = vector.reduction <maxsi>, %arg0 : vector<[16]xi32> into i32
+  return %0 : i32
+}
+// CHECK-LABEL: @reduce_maxsi_i32_scalable(
+//  CHECK-SAME: %[[A:.*]]: vector<[16]xi32>)
 //       CHECK: %[[V:.*]] = "llvm.intr.vector.reduce.smax"(%[[A]])
 //       CHECK: return %[[V]] : i32
 
@@ -2255,6 +2475,17 @@ func.func @reduce_maxsi_acc_i32(%arg0: vector<16xi32>, %arg1 : i32) -> i32 {
 //       CHECK: %[[V:.*]] = llvm.select %[[S]], %[[ACC]], %[[R]]
 //       CHECK: return %[[V]] : i32
 
+func.func @reduce_maxsi_acc_i32_scalable(%arg0: vector<[16]xi32>, %arg1 : i32) -> i32 {
+  %0 = vector.reduction <maxsi>, %arg0, %arg1 : vector<[16]xi32> into i32
+  return %0 : i32
+}
+// CHECK-LABEL: @reduce_maxsi_acc_i32_scalable(
+//  CHECK-SAME: %[[A:.*]]: vector<[16]xi32>, %[[ACC:.*]]: i32)
+//       CHECK: %[[R:.*]] = "llvm.intr.vector.reduce.smax"(%[[A]])
+//       CHECK: %[[S:.*]] = llvm.icmp "sge" %[[ACC]], %[[R]]
+//       CHECK: %[[V:.*]] = llvm.select %[[S]], %[[ACC]], %[[R]]
+//       CHECK: return %[[V]] : i32
+
 // -----
 
 func.func @reduce_and_i32(%arg0: vector<16xi32>) -> i32 {
@@ -2263,6 +2494,15 @@ func.func @reduce_and_i32(%arg0: vector<16xi32>) -> i32 {
 }
 // CHECK-LABEL: @reduce_and_i32(
 //  CHECK-SAME: %[[A:.*]]: vector<16xi32>)
+//       CHECK: %[[V:.*]] = "llvm.intr.vector.reduce.and"(%[[A]])
+//       CHECK: return %[[V]] : i32
+
+func.func @reduce_and_i32_scalable(%arg0: vector<[16]xi32>) -> i32 {
+  %0 = vector.reduction <and>, %arg0 : vector<[16]xi32> into i32
+  return %0 : i32
+}
+// CHECK-LABEL: @reduce_and_i32_scalable(
+//  CHECK-SAME: %[[A:.*]]: vector<[16]xi32>)
 //       CHECK: %[[V:.*]] = "llvm.intr.vector.reduce.and"(%[[A]])
 //       CHECK: return %[[V]] : i32
 
@@ -2278,6 +2518,16 @@ func.func @reduce_and_acc_i32(%arg0: vector<16xi32>, %arg1 : i32) -> i32 {
 //       CHECK: %[[V:.*]] = llvm.and %[[ACC]], %[[R]]
 //       CHECK: return %[[V]] : i32
 
+func.func @reduce_and_acc_i32_scalable(%arg0: vector<[16]xi32>, %arg1 : i32) -> i32 {
+  %0 = vector.reduction <and>, %arg0, %arg1 : vector<[16]xi32> into i32
+  return %0 : i32
+}
+// CHECK-LABEL: @reduce_and_acc_i32_scalable(
+//  CHECK-SAME: %[[A:.*]]: vector<[16]xi32>, %[[ACC:.*]]: i32)
+//       CHECK: %[[R:.*]] = "llvm.intr.vector.reduce.and"(%[[A]])
+//       CHECK: %[[V:.*]] = llvm.and %[[ACC]], %[[R]]
+//       CHECK: return %[[V]] : i32
+
 // -----
 
 func.func @reduce_or_i32(%arg0: vector<16xi32>) -> i32 {
@@ -2286,6 +2536,15 @@ func.func @reduce_or_i32(%arg0: vector<16xi32>) -> i32 {
 }
 // CHECK-LABEL: @reduce_or_i32(
 //  CHECK-SAME: %[[A:.*]]: vector<16xi32>)
+//       CHECK: %[[V:.*]] = "llvm.intr.vector.reduce.or"(%[[A]])
+//       CHECK: return %[[V]] : i32
+
+func.func @reduce_or_i32_scalable(%arg0: vector<[16]xi32>) -> i32 {
+  %0 = vector.reduction <or>, %arg0 : vector<[16]xi32> into i32
+  return %0 : i32
+}
+// CHECK-LABEL: @reduce_or_i32_scalable(
+//  CHECK-SAME: %[[A:.*]]: vector<[16]xi32>)
 //       CHECK: %[[V:.*]] = "llvm.intr.vector.reduce.or"(%[[A]])
 //       CHECK: return %[[V]] : i32
 
@@ -2301,6 +2560,16 @@ func.func @reduce_or_acc_i32(%arg0: vector<16xi32>, %arg1 : i32) -> i32 {
 //       CHECK: %[[V:.*]] = llvm.or %[[ACC]], %[[R]]
 //       CHECK: return %[[V]] : i32
 
+func.func @reduce_or_acc_i32_scalable(%arg0: vector<[16]xi32>, %arg1 : i32) -> i32 {
+  %0 = vector.reduction <or>, %arg0, %arg1 : vector<[16]xi32> into i32
+  return %0 : i32
+}
+// CHECK-LABEL: @reduce_or_acc_i32_scalable(
+//  CHECK-SAME: %[[A:.*]]: vector<[16]xi32>, %[[ACC:.*]]: i32)
+//       CHECK: %[[R:.*]] = "llvm.intr.vector.reduce.or"(%[[A]])
+//       CHECK: %[[V:.*]] = llvm.or %[[ACC]], %[[R]]
+//       CHECK: return %[[V]] : i32
+
 // -----
 
 func.func @reduce_xor_i32(%arg0: vector<16xi32>) -> i32 {
@@ -2309,6 +2578,15 @@ func.func @reduce_xor_i32(%arg0: vector<16xi32>) -> i32 {
 }
 // CHECK-LABEL: @reduce_xor_i32(
 //  CHECK-SAME: %[[A:.*]]: vector<16xi32>)
+//       CHECK: %[[V:.*]] = "llvm.intr.vector.reduce.xor"(%[[A]])
+//       CHECK: return %[[V]] : i32
+
+func.func @reduce_xor_i32_scalable(%arg0: vector<[16]xi32>) -> i32 {
+  %0 = vector.reduction <xor>, %arg0 : vector<[16]xi32> into i32
+  return %0 : i32
+}
+// CHECK-LABEL: @reduce_xor_i32_scalable(
+//  CHECK-SAME: %[[A:.*]]: vector<[16]xi32>)
 //       CHECK: %[[V:.*]] = "llvm.intr.vector.reduce.xor"(%[[A]])
 //       CHECK: return %[[V]] : i32
 
@@ -2324,6 +2602,16 @@ func.func @reduce_xor_acc_i32(%arg0: vector<16xi32>, %arg1 : i32) -> i32 {
 //       CHECK: %[[V:.*]] = llvm.xor %[[ACC]], %[[R]]
 //       CHECK: return %[[V]] : i32
 
+func.func @reduce_xor_acc_i32_scalable(%arg0: vector<[16]xi32>, %arg1 : i32) -> i32 {
+  %0 = vector.reduction <xor>, %arg0, %arg1 : vector<[16]xi32> into i32
+  return %0 : i32
+}
+// CHECK-LABEL: @reduce_xor_acc_i32_scalable(
+//  CHECK-SAME: %[[A:.*]]: vector<[16]xi32>, %[[ACC:.*]]: i32)
+//       CHECK: %[[R:.*]] = "llvm.intr.vector.reduce.xor"(%[[A]])
+//       CHECK: %[[V:.*]] = llvm.xor %[[ACC]], %[[R]]
+//       CHECK: return %[[V]] : i32
+
 // -----
 
 func.func @reduce_i64(%arg0: vector<16xi64>) -> i64 {
@@ -2332,6 +2620,15 @@ func.func @reduce_i64(%arg0: vector<16xi64>) -> i64 {
 }
 // CHECK-LABEL: @reduce_i64(
 // CHECK-SAME: %[[A:.*]]: vector<16xi64>)
+//      CHECK: %[[V:.*]] = "llvm.intr.vector.reduce.add"(%[[A]])
+//      CHECK: return %[[V]] : i64
+
+func.func @reduce_i64_scalable(%arg0: vector<[16]xi64>) -> i64 {
+  %0 = vector.reduction <add>, %arg0 : vector<[16]xi64> into i64
+  return %0 : i64
+}
+// CHECK-LABEL: @reduce_i64_scalable(
+// CHECK-SAME: %[[A:.*]]: vector<[16]xi64>)
 //      CHECK: %[[V:.*]] = "llvm.intr.vector.reduce.add"(%[[A]])
 //      CHECK: return %[[V]] : i64
 
@@ -2344,6 +2641,17 @@ func.func @reduce_index(%arg0: vector<16xindex>) -> index {
 // CHECK-LABEL: @reduce_index(
 // CHECK-SAME: %[[A:.*]]: vector<16xindex>)
 //      CHECK: %[[T0:.*]] = builtin.unrealized_conversion_cast %[[A]] : vector<16xindex> to vector<16xi64>
+//      CHECK: %[[T1:.*]] = "llvm.intr.vector.reduce.add"(%[[T0]])
+//      CHECK: %[[T2:.*]] = builtin.unrealized_conversion_cast %[[T1]] : i64 to index
+//      CHECK: return %[[T2]] : index
+
+func.func @reduce_index_scalable(%arg0: vector<[16]xindex>) -> index {
+  %0 = vector.reduction <add>, %arg0 : vector<[16]xindex> into index
+  return %0 : index
+}
+// CHECK-LABEL: @reduce_index_scalable(
+// CHECK-SAME: %[[A:.*]]: vector<[16]xindex>)
+//      CHECK: %[[T0:.*]] = builtin.unrealized_conversion_cast %[[A]] : vector<[16]xindex> to vector<[16]xi64>
 //      CHECK: %[[T1:.*]] = "llvm.intr.vector.reduce.add"(%[[T0]])
 //      CHECK: %[[T2:.*]] = builtin.unrealized_conversion_cast %[[T1]] : i64 to index
 //      CHECK: return %[[T2]] : index

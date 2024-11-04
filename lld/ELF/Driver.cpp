@@ -155,8 +155,9 @@ bool link(ArrayRef<const char *> args, llvm::raw_ostream &stdoutOS,
 
   context->e.initialize(stdoutOS, stderrOS, exitEarly, disableOutput);
   context->e.cleanupCallback = []() {
-    elf::ctx.reset();
-    elf::ctx.partitions.emplace_back();
+    Ctx &ctx = elf::ctx;
+    ctx.reset();
+    ctx.partitions.emplace_back(ctx);
 
     SharedFile::vernauxNum = 0;
   };
@@ -165,13 +166,14 @@ bool link(ArrayRef<const char *> args, llvm::raw_ostream &stdoutOS,
       "too many errors emitted, stopping now (use "
       "--error-limit=0 to see all errors)";
 
+  Ctx &ctx = elf::ctx;
   LinkerScript script(ctx);
   ctx.script = &script;
   ctx.symAux.emplace_back();
   ctx.symtab = std::make_unique<SymbolTable>(ctx);
 
   ctx.partitions.clear();
-  ctx.partitions.emplace_back();
+  ctx.partitions.emplace_back(ctx);
 
   ctx.arg.progName = args[0];
 
@@ -967,7 +969,7 @@ static void readCallGraph(Ctx &ctx, MemoryBufferRef mb) {
         warn(mb.getBufferIdentifier() + ": no such symbol: " + name);
       return nullptr;
     }
-    maybeWarnUnorderableSymbol(sym);
+    maybeWarnUnorderableSymbol(ctx, sym);
 
     if (Defined *dr = dyn_cast_or_null<Defined>(sym))
       return dyn_cast_or_null<InputSectionBase>(dr->section);
@@ -2184,7 +2186,7 @@ static void handleUndefined(Ctx &ctx, Symbol *sym, const char *option) {
 
   if (!sym->isLazy())
     return;
-  sym->extract();
+  sym->extract(ctx);
   if (!ctx.arg.whyExtract.empty())
     ctx.whyExtractRecords.emplace_back(option, sym->file, *sym);
 }
@@ -2215,7 +2217,7 @@ static void handleLibcall(Ctx &ctx, StringRef name) {
   if (sym && sym->isLazy() && isa<BitcodeFile>(sym->file)) {
     if (!ctx.arg.whyExtract.empty())
       ctx.whyExtractRecords.emplace_back("<libcall>", sym->file, *sym);
-    sym->extract();
+    sym->extract(ctx);
   }
 }
 
@@ -2414,7 +2416,7 @@ static void findKeepUniqueSections(Ctx &ctx, opt::InputArgList &args) {
   // or DSOs, so we conservatively mark them as address-significant.
   bool icfSafe = ctx.arg.icf == ICFLevel::Safe;
   for (Symbol *sym : ctx.symtab->getSymbols())
-    if (sym->includeInDynsym())
+    if (sym->includeInDynsym(ctx))
       markAddrsig(icfSafe, sym);
 
   // Visit the address-significance table in each object file and mark each
@@ -2463,7 +2465,7 @@ static void readSymbolPartitionSection(Ctx &ctx, InputSectionBase *s) {
     sym = readEntry(s->file, rels.rels);
   else
     sym = readEntry(s->file, rels.relas);
-  if (!isa_and_nonnull<Defined>(sym) || !sym->includeInDynsym())
+  if (!isa_and_nonnull<Defined>(sym) || !sym->includeInDynsym(ctx))
     return;
 
   StringRef partName = reinterpret_cast<const char *>(s->content().data());
@@ -2495,7 +2497,7 @@ static void readSymbolPartitionSection(Ctx &ctx, InputSectionBase *s) {
   if (ctx.partitions.size() == 254)
     fatal("may not have more than 254 partitions");
 
-  ctx.partitions.emplace_back();
+  ctx.partitions.emplace_back(ctx);
   Partition &newPart = ctx.partitions.back();
   newPart.name = partName;
   sym->partition = newPart.getNumber();
@@ -2549,7 +2551,7 @@ void LinkerDriver::compileBitcodeFiles(bool skipLinkedOutput) {
     if (!ctx.arg.relocatable)
       for (Symbol *sym : obj->getGlobalSymbols())
         if (sym->hasVersionSuffix)
-          sym->parseSymbolVersion();
+          sym->parseSymbolVersion(ctx);
     ctx.objectFiles.push_back(obj);
   }
 }
@@ -2646,12 +2648,12 @@ static void combineVersionedSymbol(Ctx &ctx, Symbol &sym,
     // If both foo@v1 and foo@@v1 are defined and non-weak, report a
     // duplicate definition error.
     if (sym.isDefined()) {
-      sym2->checkDuplicate(cast<Defined>(sym));
-      sym2->resolve(cast<Defined>(sym));
+      sym2->checkDuplicate(ctx, cast<Defined>(sym));
+      sym2->resolve(ctx, cast<Defined>(sym));
     } else if (sym.isUndefined()) {
-      sym2->resolve(cast<Undefined>(sym));
+      sym2->resolve(ctx, cast<Undefined>(sym));
     } else {
-      sym2->resolve(cast<SharedSymbol>(sym));
+      sym2->resolve(ctx, cast<SharedSymbol>(sym));
     }
     // Eliminate foo@v1 from the symbol table.
     sym.symbolKind = Symbol::PlaceholderKind;
@@ -2973,7 +2975,7 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
 
   // Create elfHeader early. We need a dummy section in
   // addReservedSymbols to mark the created symbols as not absolute.
-  ctx.out.elfHeader = make<OutputSection>("", 0, SHF_ALLOC);
+  ctx.out.elfHeader = make<OutputSection>(ctx, "", 0, SHF_ALLOC);
 
   // We need to create some reserved symbols such as _end. Create them.
   if (!ctx.arg.relocatable)
@@ -3145,7 +3147,7 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
 
   // This adds a .comment section containing a version string.
   if (!ctx.arg.relocatable)
-    ctx.inputSections.push_back(createCommentSection());
+    ctx.inputSections.push_back(createCommentSection(ctx));
 
   // Split SHF_MERGE and .eh_frame sections into pieces in preparation for garbage collection.
   splitSections<ELFT>(ctx);
@@ -3157,7 +3159,7 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
   // partition.
   copySectionsIntoPartitions(ctx);
 
-  if (canHaveMemtagGlobals()) {
+  if (canHaveMemtagGlobals(ctx)) {
     llvm::TimeTraceScope timeScope("Process memory tagged symbols");
     createTaggedSymbols(ctx);
   }
@@ -3198,7 +3200,7 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
     // sectionBases.
     for (SectionCommand *cmd : ctx.script->sectionCommands)
       if (auto *osd = dyn_cast<OutputDesc>(cmd))
-        osd->osec.finalizeInputSections(ctx);
+        osd->osec.finalizeInputSections();
   }
 
   // Two input sections with different output sections should not be folded.

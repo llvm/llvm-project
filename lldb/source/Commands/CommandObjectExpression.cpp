@@ -7,9 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "CommandObjectExpression.h"
-#include "DiagnosticRendering.h"
 #include "lldb/Core/Debugger.h"
-#include "lldb/Expression/DiagnosticManager.h"
 #include "lldb/Expression/ExpressionVariable.h"
 #include "lldb/Expression/REPL.h"
 #include "lldb/Expression/UserExpression.h"
@@ -22,6 +20,7 @@
 #include "lldb/Target/Process.h"
 #include "lldb/Target/StackFrame.h"
 #include "lldb/Target/Target.h"
+#include "lldb/Utility/DiagnosticsRendering.h"
 #include "lldb/lldb-enumerations.h"
 #include "lldb/lldb-private-enumerations.h"
 
@@ -490,7 +489,7 @@ bool CommandObjectExpression::EvaluateExpression(llvm::StringRef expr,
         std::vector<DiagnosticDetail> details;
         llvm::consumeError(llvm::handleErrors(
             result_valobj_sp->GetError().ToError(),
-            [&](ExpressionError &error) { details = error.GetDetails(); }));
+            [&](DiagnosticError &error) { details = error.GetDetails(); }));
         // Find the position of the expression in the command.
         std::optional<uint16_t> expr_pos;
         size_t nchar = m_original_command.find(expr);

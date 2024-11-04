@@ -141,9 +141,10 @@ Patch657417Section::Patch657417Section(Ctx &ctx, InputSection *p, uint64_t off,
       patchee(p), patcheeOffset(off), instr(instr), isARM(isARM) {
   parent = p->getParent();
   patchSym = addSyntheticLocal(
-      saver().save("__CortexA8657417_" + utohexstr(getBranchAddr())), STT_FUNC,
-      isARM ? 0 : 1, getSize(), *this);
-  addSyntheticLocal(saver().save(isARM ? "$a" : "$t"), STT_NOTYPE, 0, 0, *this);
+      ctx, saver().save("__CortexA8657417_" + utohexstr(getBranchAddr())),
+      STT_FUNC, isARM ? 0 : 1, getSize(), *this);
+  addSyntheticLocal(ctx, saver().save(isARM ? "$a" : "$t"), STT_NOTYPE, 0, 0,
+                    *this);
 }
 
 uint64_t Patch657417Section::getBranchAddr() const {
@@ -259,6 +260,7 @@ struct ScanResult {
 // branch so the minimum offset for a patch is 4.
 static ScanResult scanCortexA8Errata657417(InputSection *isec, uint64_t &off,
                                            uint64_t limit) {
+  Ctx &ctx = isec->getCtx();
   uint64_t isecAddr = isec->getVA(0);
   // Advance Off so that (isecAddr + off) modulo 0x1000 is at least 0xffa. We
   // need to check for a 32-bit instruction immediately before a 32-bit branch

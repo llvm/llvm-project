@@ -223,7 +223,11 @@ template <class charT> class messages_byname;
 #    if !defined(__BIONIC__) && !defined(_NEWLIB_VERSION) && !defined(__EMSCRIPTEN__)
 #      define _LIBCPP_HAS_CATOPEN 1
 #      include <nl_types.h>
+#    else
+#      define _LIBCPP_HAS_CATOPEN 0
 #    endif
+#  else
+#    define _LIBCPP_HAS_CATOPEN 0
 #  endif
 
 #  ifdef _LIBCPP_LOCALE__L_EXTENSIONS
@@ -3074,7 +3078,7 @@ locale::id messages<_CharT>::id;
 
 template <class _CharT>
 typename messages<_CharT>::catalog messages<_CharT>::do_open(const basic_string<char>& __nm, const locale&) const {
-#  ifdef _LIBCPP_HAS_CATOPEN
+#  if _LIBCPP_HAS_CATOPEN
   return (catalog)catopen(__nm.c_str(), NL_CAT_LOCALE);
 #  else  // !_LIBCPP_HAS_CATOPEN
   (void)__nm;
@@ -3085,7 +3089,7 @@ typename messages<_CharT>::catalog messages<_CharT>::do_open(const basic_string<
 template <class _CharT>
 typename messages<_CharT>::string_type
 messages<_CharT>::do_get(catalog __c, int __set, int __msgid, const string_type& __dflt) const {
-#  ifdef _LIBCPP_HAS_CATOPEN
+#  if _LIBCPP_HAS_CATOPEN
   string __ndflt;
   __narrow_to_utf8<sizeof(char_type) * __CHAR_BIT__>()(
       std::back_inserter(__ndflt), __dflt.c_str(), __dflt.c_str() + __dflt.size());
@@ -3105,7 +3109,7 @@ messages<_CharT>::do_get(catalog __c, int __set, int __msgid, const string_type&
 
 template <class _CharT>
 void messages<_CharT>::do_close(catalog __c) const {
-#  ifdef _LIBCPP_HAS_CATOPEN
+#  if _LIBCPP_HAS_CATOPEN
   catclose((nl_catd)__c);
 #  else  // !_LIBCPP_HAS_CATOPEN
   (void)__c;

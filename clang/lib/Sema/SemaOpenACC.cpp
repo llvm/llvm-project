@@ -366,6 +366,19 @@ bool doesClauseApplyToDirective(OpenACCDirectiveKind DirectiveKind,
     }
   }
 
+  case OpenACCClauseKind::Gang: {
+    switch (DirectiveKind) {
+    case OpenACCDirectiveKind::Loop:
+    case OpenACCDirectiveKind::ParallelLoop:
+    case OpenACCDirectiveKind::SerialLoop:
+    case OpenACCDirectiveKind::KernelsLoop:
+    case OpenACCDirectiveKind::Routine:
+      return true;
+    default:
+      return false;
+    }
+  }
+
   default:
     // Do nothing so we can go to the 'unimplemented' diagnostic instead.
     return true;
@@ -459,6 +472,23 @@ class SemaOpenACCClauseVisitor {
     return nullptr;
   }
 
+  // OpenACC 3.3 2.9:
+  // A 'gang', 'worker', or 'vector' clause may not appear if a 'seq' clause
+  // appears.
+  bool DiagIfSeqClause(SemaOpenACC::OpenACCParsedClause &Clause) {
+    const auto *Itr =
+        llvm::find_if(ExistingClauses, llvm::IsaPred<OpenACCSeqClause>);
+
+    if (Itr != ExistingClauses.end()) {
+      SemaRef.Diag(Clause.getBeginLoc(), diag::err_acc_clause_cannot_combine)
+          << Clause.getClauseKind() << (*Itr)->getClauseKind();
+      SemaRef.Diag((*Itr)->getBeginLoc(), diag::note_acc_previous_clause_here);
+
+      return true;
+    }
+    return false;
+  }
+
 public:
   SemaOpenACCClauseVisitor(SemaOpenACC &S,
                            ArrayRef<const OpenACCClause *> ExistingClauses)
@@ -470,26 +500,14 @@ public:
 
   OpenACCClause *Visit(SemaOpenACC::OpenACCParsedClause &Clause) {
     switch (Clause.getClauseKind()) {
-  case OpenACCClauseKind::Gang:
-  case OpenACCClauseKind::Worker:
-  case OpenACCClauseKind::Vector: {
-    // TODO OpenACC: These are only implemented enough for the 'seq' diagnostic,
-    // otherwise treats itself as unimplemented.  When we implement these, we
-    // can remove them from here.
-
-    // OpenACC 3.3 2.9:
-    // A 'gang', 'worker', or 'vector' clause may not appear if a 'seq' clause
-    // appears.
-    const auto *Itr =
-        llvm::find_if(ExistingClauses, llvm::IsaPred<OpenACCSeqClause>);
-
-    if (Itr != ExistingClauses.end()) {
-      SemaRef.Diag(Clause.getBeginLoc(), diag::err_acc_clause_cannot_combine)
-          << Clause.getClauseKind() << (*Itr)->getClauseKind();
-      SemaRef.Diag((*Itr)->getBeginLoc(), diag::note_acc_previous_clause_here);
+    case OpenACCClauseKind::Worker:
+    case OpenACCClauseKind::Vector: {
+      // TODO OpenACC: These are only implemented enough for the 'seq'
+      // diagnostic, otherwise treats itself as unimplemented.  When we
+      // implement these, we can remove them from here.
+      DiagIfSeqClause(Clause);
+      return isNotImplemented();
     }
-    return isNotImplemented();
-  }
 
 #define VISIT_CLAUSE(CLAUSE_NAME)                                              \
   case OpenACCClauseKind::CLAUSE_NAME:                                         \
@@ -1006,6 +1024,84 @@ OpenACCClause *SemaOpenACCClauseVisitor::VisitIndependentClause(
                                           Clause.getEndLoc());
 }
 
+OpenACCClause *SemaOpenACCClauseVisitor::VisitGangClause(
+    SemaOpenACC::OpenACCParsedClause &Clause) {
+  if (DiagIfSeqClause(Clause))
+    return nullptr;
+
+  // Restrictions only properly implemented on 'loop' constructs, and it is
+  // the only construct that can do anything with this, so skip/treat as
+  // unimplemented for the combined constructs.
+  if (Clause.getDirectiveKind() != OpenACCDirectiveKind::Loop)
+    return isNotImplemented();
+
+  llvm::SmallVector<OpenACCGangKind> GangKinds;
+  llvm::SmallVector<Expr *> IntExprs;
+
+  // Store the existing locations, so we can do duplicate checking.  Index is
+  // the int-value of the OpenACCGangKind enum.
+  SourceLocation ExistingElemLoc[3];
+
+  for (unsigned I = 0; I < Clause.getIntExprs().size(); ++I) {
+    OpenACCGangKind GK = Clause.getGangKinds()[I];
+    ExprResult ER = SemaRef.CheckGangExpr(GK, Clause.getIntExprs()[I]);
+
+    if (!ER.isUsable())
+      continue;
+
+    // OpenACC 3.3 2.9.2: When the parent compute construct is a kernels
+    // construct, the gang clause behaves as follows. ... An argument with no
+    // keyword or with num keyword is only allowed when num_gangs does not
+    // appear on the kernels construct.
+    if (SemaRef.getActiveComputeConstructInfo().Kind ==
+            OpenACCDirectiveKind::Kernels &&
+        GK == OpenACCGangKind::Num) {
+      const auto *Itr =
+          llvm::find_if(SemaRef.getActiveComputeConstructInfo().Clauses,
+                        llvm::IsaPred<OpenACCNumGangsClause>);
+
+      if (Itr != SemaRef.getActiveComputeConstructInfo().Clauses.end()) {
+        SemaRef.Diag(ER.get()->getBeginLoc(),
+                     diag::err_acc_gang_num_gangs_conflict);
+        SemaRef.Diag((*Itr)->getBeginLoc(),
+                     diag::note_acc_previous_clause_here);
+        continue;
+      }
+    }
+
+    // OpenACC 3.3 2.9: 'gang-arg-list' may have at most one num, one dim, and
+    // one static argument.
+    if (ExistingElemLoc[static_cast<unsigned>(GK)].isValid()) {
+      SemaRef.Diag(ER.get()->getBeginLoc(), diag::err_acc_gang_multiple_elt)
+          << static_cast<unsigned>(GK);
+      SemaRef.Diag(ExistingElemLoc[static_cast<unsigned>(GK)],
+                   diag::note_acc_previous_expr_here);
+      continue;
+    }
+
+    ExistingElemLoc[static_cast<unsigned>(GK)] = ER.get()->getBeginLoc();
+    GangKinds.push_back(GK);
+    IntExprs.push_back(ER.get());
+  }
+
+  // OpenACC 3.3 2.9.2: When the parent compute construct is a kernels
+  // construct, the gang clause behaves as follows. ... The region of a loop
+  // with a gang clause may not contain another loop with a gang clause unless
+  // within a nested compute region.
+  if (SemaRef.LoopGangClauseOnKernelLoc.isValid()) {
+    // This handles the 'inner loop' diagnostic, but we cannot set that we're on
+    // one of these until we get to the end of the construct.
+    SemaRef.Diag(Clause.getBeginLoc(), diag::err_acc_gang_inside_gang);
+    SemaRef.Diag(SemaRef.LoopGangClauseOnKernelLoc,
+                 diag::note_acc_previous_clause_here);
+    return nullptr;
+  }
+
+  return OpenACCGangClause::Create(Ctx, Clause.getBeginLoc(),
+                                   Clause.getLParenLoc(), GangKinds, IntExprs,
+                                   Clause.getEndLoc());
+}
+
 OpenACCClause *SemaOpenACCClauseVisitor::VisitSeqClause(
     SemaOpenACC::OpenACCParsedClause &Clause) {
   // Restrictions only properly implemented on 'loop' constructs, and it is
@@ -1118,17 +1214,44 @@ SemaOpenACC::AssociatedStmtRAII::AssociatedStmtRAII(
     SemaOpenACC &S, OpenACCDirectiveKind DK,
     ArrayRef<const OpenACCClause *> UnInstClauses,
     ArrayRef<OpenACCClause *> Clauses)
-    : SemaRef(S), WasInsideComputeConstruct(S.InsideComputeConstruct),
-      DirKind(DK), LoopRAII(SemaRef, /*PreserveDepth=*/false) {
+    : SemaRef(S), OldActiveComputeConstructInfo(S.ActiveComputeConstructInfo),
+      DirKind(DK), OldLoopGangClauseOnKernelLoc(S.LoopGangClauseOnKernelLoc),
+      LoopRAII(SemaRef, /*PreserveDepth=*/false) {
   // Compute constructs end up taking their 'loop'.
   if (DirKind == OpenACCDirectiveKind::Parallel ||
       DirKind == OpenACCDirectiveKind::Serial ||
       DirKind == OpenACCDirectiveKind::Kernels) {
-    SemaRef.InsideComputeConstruct = true;
+    SemaRef.ActiveComputeConstructInfo.Kind = DirKind;
+    SemaRef.ActiveComputeConstructInfo.Clauses = Clauses;
     SemaRef.ParentlessLoopConstructs.swap(ParentlessLoopConstructs);
+
+    // OpenACC 3.3 2.9.2: When the parent compute construct is a kernels
+    // construct, the gang clause behaves as follows. ... The region of a loop
+    // with a gang clause may not contain another loop with a gang clause unless
+    // within a nested compute region.
+    //
+    // Implement the 'unless within a nested compute region' part.
+    SemaRef.LoopGangClauseOnKernelLoc = {};
   } else if (DirKind == OpenACCDirectiveKind::Loop) {
     SetCollapseInfoBeforeAssociatedStmt(UnInstClauses, Clauses);
     SetTileInfoBeforeAssociatedStmt(UnInstClauses, Clauses);
+
+    // OpenACC 3.3 2.9.2: When the parent compute construct is a kernels
+    // construct, the gang clause behaves as follows. ... The region of a loop
+    // with a gang clause may not contain another loop with a gang clause unless
+    // within a nested compute region.
+    //
+    // We don't bother doing this when this is a template instantiation, as
+    // there is no reason to do these checks: the existance of a
+    // gang/kernels/etc cannot be dependent.
+    if (SemaRef.getActiveComputeConstructInfo().Kind ==
+            OpenACCDirectiveKind::Kernels &&
+        UnInstClauses.empty()) {
+      // This handles the 'outer loop' part of this.
+      auto *Itr = llvm::find_if(Clauses, llvm::IsaPred<OpenACCGangClause>);
+      if (Itr != Clauses.end())
+        SemaRef.LoopGangClauseOnKernelLoc = (*Itr)->getBeginLoc();
+    }
   }
 }
 
@@ -1199,7 +1322,9 @@ void SemaOpenACC::AssociatedStmtRAII::SetTileInfoBeforeAssociatedStmt(
 }
 
 SemaOpenACC::AssociatedStmtRAII::~AssociatedStmtRAII() {
-  SemaRef.InsideComputeConstruct = WasInsideComputeConstruct;
+  SemaRef.ActiveComputeConstructInfo = OldActiveComputeConstructInfo;
+  SemaRef.LoopGangClauseOnKernelLoc = OldLoopGangClauseOnKernelLoc;
+
   if (DirKind == OpenACCDirectiveKind::Parallel ||
       DirKind == OpenACCDirectiveKind::Serial ||
       DirKind == OpenACCDirectiveKind::Kernels) {
@@ -1761,6 +1886,109 @@ ExprResult SemaOpenACC::CheckCollapseLoopCount(Expr *LoopCount) {
       ConstantExpr::Create(getASTContext(), LoopCount, APValue{*ICE})};
 }
 
+namespace {
+ExprResult CheckGangStaticExpr(SemaOpenACC &S, Expr *E) {
+  if (isa<OpenACCAsteriskSizeExpr>(E))
+    return E;
+  return S.ActOnIntExpr(OpenACCDirectiveKind::Invalid, OpenACCClauseKind::Gang,
+                        E->getBeginLoc(), E);
+}
+} // namespace
+
+ExprResult SemaOpenACC::CheckGangExpr(OpenACCGangKind GK, Expr *E) {
+  // Gang Expr legality depends on the associated compute construct.
+  switch (ActiveComputeConstructInfo.Kind) {
+  case OpenACCDirectiveKind::Invalid:
+  case OpenACCDirectiveKind::Parallel: {
+    switch (GK) {
+      // OpenACC 3.3 2.9.2: When the parent compute construct is a parallel
+      // construct, or an orphaned loop construct, the gang clause behaves as
+      // follows. ... The dim argument must be a constant positive integer value
+      // 1, 2, or 3.
+    case OpenACCGangKind::Dim: {
+      if (!E)
+        return ExprError();
+      ExprResult Res =
+          ActOnIntExpr(OpenACCDirectiveKind::Invalid, OpenACCClauseKind::Gang,
+                       E->getBeginLoc(), E);
+
+      if (!Res.isUsable())
+        return Res;
+
+      if (Res.get()->isInstantiationDependent())
+        return Res;
+
+      std::optional<llvm::APSInt> ICE =
+          Res.get()->getIntegerConstantExpr(getASTContext());
+
+      if (!ICE || *ICE <= 0 || ICE > 3) {
+        Diag(Res.get()->getBeginLoc(), diag::err_acc_gang_dim_value)
+            << ICE.has_value() << ICE.value_or(llvm::APSInt{}).getExtValue();
+        return ExprError();
+      }
+
+      return ExprResult{
+          ConstantExpr::Create(getASTContext(), Res.get(), APValue{*ICE})};
+    }
+      // OpenACC 3.3 2.9.2: When the parent compute construct is a parallel
+      // construct, or an orphaned loop construct, the gang clause behaves as
+      // follows. ... The num argument is not allowed.
+    case OpenACCGangKind::Num:
+      Diag(E->getBeginLoc(), diag::err_acc_gang_arg_invalid)
+          << GK
+          << (/*orphan/parallel=*/ActiveComputeConstructInfo.Kind ==
+                      OpenACCDirectiveKind::Parallel
+                  ? 1
+                  : 0);
+      return ExprError();
+    case OpenACCGangKind::Static:
+      return CheckGangStaticExpr(*this, E);
+    }
+  } break;
+  case OpenACCDirectiveKind::Kernels: {
+    switch (GK) {
+    // OpenACC 3.3 2.9.2: When the parent compute construct is a kernels
+    // construct, the gang clause behaves as follows. ... The dim argument is
+    // not allowed.
+    case OpenACCGangKind::Dim:
+      Diag(E->getBeginLoc(), diag::err_acc_gang_arg_invalid)
+          << GK << /*kernels=*/2;
+      return ExprError();
+    // OpenACC 3.3 2.9.2: When the parent compute construct is a kernels
+    // construct, the gang clause behaves as follows. ... An argument with no
+    // keyword or with num keyword is only allowed when num_gangs does not
+    // appear on the kernels construct. ... The region of a loop with the gang
+    // clause may not contain another loop with a gang clause unless within a
+    // nested compute region.
+    case OpenACCGangKind::Num:
+      // This isn't allowed if there is a 'num_gangs' on the kernel construct,
+      // and makes loop-with-gang-clause ill-formed inside of this 'loop', but
+      // nothing can be enforced here.
+      return ExprResult{E};
+    case OpenACCGangKind::Static:
+      return CheckGangStaticExpr(*this, E);
+    }
+  } break;
+  case OpenACCDirectiveKind::Serial: {
+    switch (GK) {
+    // 'dim' and 'num' don't really make sense on serial, and GCC rejects them
+    // too, so we disallow them too.
+    case OpenACCGangKind::Dim:
+    case OpenACCGangKind::Num:
+      Diag(E->getBeginLoc(), diag::err_acc_gang_arg_invalid)
+          << GK << /*Kernels=*/3;
+      return ExprError();
+    case OpenACCGangKind::Static:
+      return CheckGangStaticExpr(*this, E);
+    }
+  }
+  default:
+    llvm_unreachable("Non compute construct in active compute construct?");
+  }
+
+  llvm_unreachable("Compute construct directive not handled?");
+}
+
 ExprResult SemaOpenACC::CheckTileSizeExpr(Expr *SizeExpr) {
   if (!SizeExpr)
     return ExprError();
@@ -2031,7 +2259,7 @@ StmtResult SemaOpenACC::ActOnEndStmtDirective(OpenACCDirectiveKind K,
     // If we are in the scope of a compute construct, add this to the list of
     // loop constructs that need assigning to the next closing compute
     // construct.
-    if (InsideComputeConstruct)
+    if (isInComputeConstruct())
       ParentlessLoopConstructs.push_back(LoopConstruct);
 
     return LoopConstruct;

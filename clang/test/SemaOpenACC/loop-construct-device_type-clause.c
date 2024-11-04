@@ -193,7 +193,6 @@ void uses() {
   for(;;)
     for(;;);
 
-  // expected-warning@+1{{OpenACC clause 'gang' not yet implemented, clause ignored}}
 #pragma acc loop dtype(*) gang
   for(;;);
   // expected-error@+1{{OpenACC 'wait' clause is not valid on 'loop' directive}}

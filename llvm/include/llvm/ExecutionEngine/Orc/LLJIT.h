@@ -18,6 +18,7 @@
 #include "llvm/ExecutionEngine/Orc/CompileUtils.h"
 #include "llvm/ExecutionEngine/Orc/ExecutionUtils.h"
 #include "llvm/ExecutionEngine/Orc/IRCompileLayer.h"
+#include "llvm/ExecutionEngine/Orc/IRPartitionLayer.h"
 #include "llvm/ExecutionEngine/Orc/IRTransformLayer.h"
 #include "llvm/ExecutionEngine/Orc/JITTargetMachineBuilder.h"
 #include "llvm/ExecutionEngine/Orc/ThreadSafeModule.h"
@@ -271,9 +272,8 @@ class LLLazyJIT : public LLJIT {
 public:
 
   /// Sets the partition function.
-  void
-  setPartitionFunction(CompileOnDemandLayer::PartitionFunction Partition) {
-    CODLayer->setPartitionFunction(std::move(Partition));
+  void setPartitionFunction(IRPartitionLayer::PartitionFunction Partition) {
+    IPLayer->setPartitionFunction(std::move(Partition));
   }
 
   /// Returns a reference to the on-demand layer.
@@ -293,6 +293,7 @@ private:
   LLLazyJIT(LLLazyJITBuilderState &S, Error &Err);
 
   std::unique_ptr<LazyCallThroughManager> LCTMgr;
+  std::unique_ptr<IRPartitionLayer> IPLayer;
   std::unique_ptr<CompileOnDemandLayer> CODLayer;
 };
 

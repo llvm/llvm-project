@@ -300,11 +300,11 @@ void ARM::writePltHeader(uint8_t *buf) const {
 
 void ARM::addPltHeaderSymbols(InputSection &isec) const {
   if (useThumbPLTs(ctx)) {
-    addSyntheticLocal("$t", STT_NOTYPE, 0, 0, isec);
-    addSyntheticLocal("$d", STT_NOTYPE, 12, 0, isec);
+    addSyntheticLocal(ctx, "$t", STT_NOTYPE, 0, 0, isec);
+    addSyntheticLocal(ctx, "$d", STT_NOTYPE, 12, 0, isec);
   } else {
-    addSyntheticLocal("$a", STT_NOTYPE, 0, 0, isec);
-    addSyntheticLocal("$d", STT_NOTYPE, 16, 0, isec);
+    addSyntheticLocal(ctx, "$a", STT_NOTYPE, 0, 0, isec);
+    addSyntheticLocal(ctx, "$d", STT_NOTYPE, 16, 0, isec);
   }
 }
 
@@ -377,10 +377,10 @@ void ARM::writePlt(uint8_t *buf, const Symbol &sym,
 
 void ARM::addPltSymbols(InputSection &isec, uint64_t off) const {
   if (useThumbPLTs(ctx)) {
-    addSyntheticLocal("$t", STT_NOTYPE, off, 0, isec);
+    addSyntheticLocal(ctx, "$t", STT_NOTYPE, off, 0, isec);
   } else {
-    addSyntheticLocal("$a", STT_NOTYPE, off, 0, isec);
-    addSyntheticLocal("$d", STT_NOTYPE, off + 12, 0, isec);
+    addSyntheticLocal(ctx, "$a", STT_NOTYPE, off, 0, isec);
+    addSyntheticLocal(ctx, "$d", STT_NOTYPE, off + 12, 0, isec);
   }
 }
 
@@ -1397,7 +1397,7 @@ void ArmCmseSGSection::writeTo(uint8_t *buf) {
 }
 
 void ArmCmseSGSection::addMappingSymbol() {
-  addSyntheticLocal("$t", STT_NOTYPE, /*off=*/0, /*size=*/0, *this);
+  addSyntheticLocal(ctx, "$t", STT_NOTYPE, /*off=*/0, /*size=*/0, *this);
 }
 
 size_t ArmCmseSGSection::getSize() const {
@@ -1452,9 +1452,11 @@ template <typename ELFT> void elf::writeARMCmseImportLib(Ctx &ctx) {
       make<SymbolTableSection<ELFT>>(ctx, *strtab);
 
   SmallVector<std::pair<OutputSection *, SyntheticSection *>, 0> osIsPairs;
-  osIsPairs.emplace_back(make<OutputSection>(strtab->name, 0, 0), strtab);
-  osIsPairs.emplace_back(make<OutputSection>(impSymTab->name, 0, 0), impSymTab);
-  osIsPairs.emplace_back(make<OutputSection>(shstrtab->name, 0, 0), shstrtab);
+  osIsPairs.emplace_back(make<OutputSection>(ctx, strtab->name, 0, 0), strtab);
+  osIsPairs.emplace_back(make<OutputSection>(ctx, impSymTab->name, 0, 0),
+                         impSymTab);
+  osIsPairs.emplace_back(make<OutputSection>(ctx, shstrtab->name, 0, 0),
+                         shstrtab);
 
   std::sort(ctx.symtab->cmseSymMap.begin(), ctx.symtab->cmseSymMap.end(),
             [](const auto &a, const auto &b) -> bool {
@@ -1464,7 +1466,7 @@ template <typename ELFT> void elf::writeARMCmseImportLib(Ctx &ctx) {
   for (auto &p : ctx.symtab->cmseSymMap) {
     Defined *d = cast<Defined>(p.second.sym);
     impSymTab->addSymbol(makeDefined(
-        ctx.internalFile, d->getName(), d->computeBinding(),
+        ctx.internalFile, d->getName(), d->computeBinding(ctx),
         /*stOther=*/0, STT_FUNC, d->getVA(), d->getSize(), nullptr));
   }
 
@@ -1473,7 +1475,7 @@ template <typename ELFT> void elf::writeARMCmseImportLib(Ctx &ctx) {
   for (auto &[osec, isec] : osIsPairs) {
     osec->sectionIndex = ++idx;
     osec->recordSection(isec);
-    osec->finalizeInputSections(ctx);
+    osec->finalizeInputSections();
     osec->shName = shstrtab->addString(osec->name);
     osec->size = isec->getSize();
     isec->finalizeContents();
