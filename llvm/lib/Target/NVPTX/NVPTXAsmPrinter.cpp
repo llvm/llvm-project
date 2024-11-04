@@ -1603,35 +1603,34 @@ void NVPTXAsmPrinter::emitFunctionParamList(const Function *F, raw_ostream &O) {
           O << "\t.param .u" << PTySizeInBits << " ";
 
           int addrSpace = PTy->getAddressSpace();
-          if (static_cast<NVPTXTargetMachine &>(TM).getDrvInterface() ==
-              NVPTX::CUDA) {
+          const bool IsCUDA =
+              static_cast<NVPTXTargetMachine &>(TM).getDrvInterface() ==
+              NVPTX::CUDA;
+
+          O << ".ptr ";
+          switch (addrSpace) {
+          default:
             // Special handling for pointer arguments to kernel
             // CUDA kernels assume that pointers are in global address space
             // See:
             // https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#parameter-state-space
-            O << ".ptr .global ";
-            if (I->getParamAlign().valueOrOne() != 1) {
-              Align ParamAlign = I->getParamAlign().value();
-              O << ".align " << ParamAlign.value() << " ";
-            }
-          } else {
-            switch (addrSpace) {
-            default:
-              O << ".ptr ";
-              break;
-            case ADDRESS_SPACE_CONST:
-              O << ".ptr .const ";
-              break;
-            case ADDRESS_SPACE_SHARED:
-              O << ".ptr .shared ";
-              break;
-            case ADDRESS_SPACE_GLOBAL:
-              O << ".ptr .global ";
-              break;
-            }
-            Align ParamAlign = I->getParamAlign().valueOrOne();
-            O << ".align " << ParamAlign.value() << " ";
+            if (IsCUDA)
+              O << " .global ";
+            break;
+          case ADDRESS_SPACE_CONST:
+            O << " .const ";
+            break;
+          case ADDRESS_SPACE_SHARED:
+            O << " .shared ";
+            break;
+          case ADDRESS_SPACE_GLOBAL:
+            O << " .global ";
+            break;
           }
+
+          Align ParamAlign = I->getParamAlign().valueOrOne();
+          if (ParamAlign != 1 || !IsCUDA)
+            O << ".align " << ParamAlign.value() << " ";
           O << TLI->getParamName(F, paramIndex);
           continue;
         }
