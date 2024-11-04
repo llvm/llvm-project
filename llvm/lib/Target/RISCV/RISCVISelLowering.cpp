@@ -14520,10 +14520,11 @@ combineVectorSizedSetCCEquality(EVT VT, SDValue X, SDValue Y, ISD::CondCode CC,
 
     SDValue VecX = DAG.getBitcast(VecVT, X);
     SDValue VecY = DAG.getBitcast(VecVT, Y);
-    SDValue Cmp = DAG.getSetCC(DL, CmpVT, VecX, VecY, ISD::SETEQ);
-    return DAG.getSetCC(DL, VT,
-                        DAG.getNode(ISD::VECREDUCE_AND, DL, XLenVT, Cmp),
-                        DAG.getConstant(0, DL, XLenVT), CC);
+    SDValue Cmp = DAG.getSetCC(DL, CmpVT, VecX, VecY, CC);
+    unsigned ReductionOpc =
+        CC == ISD::SETEQ ? ISD::VECREDUCE_AND : ISD::VECREDUCE_OR;
+    return DAG.getSetCC(DL, VT, DAG.getNode(ReductionOpc, DL, XLenVT, Cmp),
+                        DAG.getConstant(0, DL, XLenVT), ISD::SETNE);
   }
 
   return SDValue();
