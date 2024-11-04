@@ -633,7 +633,6 @@ define <33 x double> @strided_load_v33f64(ptr %ptr, i64 %stride, <33 x i1> %mask
 
 declare <33 x double> @llvm.experimental.vp.strided.load.v33f64.p0.i64(ptr, i64, <33 x i1>, i32)
 
-; TODO: Use accurate evl.
 ; Test unmasked integer zero strided
 define <4 x i8> @zero_strided_unmasked_vpload_4i8_i8(ptr %ptr) {
 ; CHECK-OPT-LABEL: zero_strided_unmasked_vpload_4i8_i8:
@@ -652,7 +651,6 @@ define <4 x i8> @zero_strided_unmasked_vpload_4i8_i8(ptr %ptr) {
   ret <4 x i8> %load
 }
 
-; TODO: Use accurate evl.
 ; Test unmasked float zero strided
 define <4 x half> @zero_strided_unmasked_vpload_4f16(ptr %ptr) {
 ; CHECK-OPT-LABEL: zero_strided_unmasked_vpload_4f16:
