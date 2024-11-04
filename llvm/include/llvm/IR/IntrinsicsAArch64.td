@@ -565,6 +565,41 @@ let TargetPrefix = "aarch64", IntrProperties = [IntrNoMem] in {
   def int_aarch64_neon_vcmla_rot270 : AdvSIMD_3VectorArg_Intrinsic;
 }
 
+let TargetPrefix = "aarch64" in {
+def int_aarch64_neon_vluti2_lane : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+                                       [llvm_anyvector_ty, llvm_v8i8_ty,
+                                        llvm_i32_ty],
+                                       [IntrNoMem, ImmArg<ArgIndex<2>>]>;
+
+def int_aarch64_neon_vluti2_laneq : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+                                       [llvm_anyvector_ty, llvm_v16i8_ty,
+                                        llvm_i32_ty],
+                                       [IntrNoMem, ImmArg<ArgIndex<2>>]>;
+
+def int_aarch64_neon_vluti4q_lane: DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+                                       [LLVMMatchType<0>, llvm_v8i8_ty,
+                                        llvm_i32_ty],
+                                       [IntrNoMem, ImmArg<ArgIndex<2>>]>;
+
+def int_aarch64_neon_vluti4q_laneq: DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+                                       [LLVMMatchType<0>, llvm_v16i8_ty,
+                                        llvm_i32_ty],
+                                       [IntrNoMem, ImmArg<ArgIndex<2>>]>;
+
+
+def int_aarch64_neon_vluti4q_lane_x2:
+    DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+                          [LLVMMatchType<0>, LLVMMatchType<0>,
+                           llvm_v8i8_ty, llvm_i32_ty],
+                          [IntrNoMem, ImmArg<ArgIndex<3>>]>;
+
+def int_aarch64_neon_vluti4q_laneq_x2:
+    DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+                          [LLVMMatchType<0>, LLVMMatchType<0>,
+                           llvm_v16i8_ty, llvm_i32_ty],
+                          [IntrNoMem, ImmArg<ArgIndex<3>>]>;
+}
+
 let TargetPrefix = "aarch64" in {  // All intrinsics start with "llvm.aarch64.".
   class AdvSIMD_2Vector2Index_Intrinsic
     : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
@@ -1287,6 +1322,13 @@ let TargetPrefix = "aarch64" in {  // All intrinsics start with "llvm.aarch64.".
                  LLVMMatchType<0>,
                  LLVMVectorOfBitcastsToInt<0>],
                 [IntrNoMem]>;
+
+  class SVE2_LUTI_Inrinsic
+    :  DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+                [LLVMMatchType<0>,
+                 llvm_nxv16i8_ty,
+                 llvm_i32_ty],
+                 [IntrNoMem, ImmArg<ArgIndex<2>>]>;
 
   class SVE2_1VectorArg_Long_Intrinsic
     : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
@@ -2683,6 +2725,19 @@ def int_aarch64_sve_tbl2 : AdvSIMD_SVE2_TBX_Intrinsic;
 def int_aarch64_sve_tbx  : AdvSIMD_SVE2_TBX_Intrinsic;
 
 //
+// SVE2 - Lookup Table
+//
+
+def int_aarch64_sve_luti2_lane : SVE2_LUTI_Inrinsic;
+def int_aarch64_sve_luti4_lane : SVE2_LUTI_Inrinsic;
+def int_aarch64_sve_luti4_lane_x2 : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+                                    [LLVMMatchType<0>,
+                                    LLVMMatchType<0>,
+                                    llvm_nxv16i8_ty,
+                                    llvm_i32_ty],
+                                    [IntrNoMem, ImmArg<ArgIndex<3>>]>;
+
+//
 // SVE2 - Optional bit permutation
 //
 
@@ -3467,6 +3522,15 @@ let TargetPrefix = "aarch64" in {
   }
 
   //
+  // Multi-vector floating point absolute min/max number
+  //
+
+  foreach instr = ["famax", "famin"] in {
+    def int_aarch64_sme_ # instr # _x2 : SME2_VG2_Multi_Multi_Intrinsic;
+    def int_aarch64_sme_ # instr # _x4 : SME2_VG4_Multi_Multi_Intrinsic;
+  }
+
+  //
   // Multi-vector vertical dot-products
   //
 
@@ -3730,3 +3794,10 @@ def int_aarch64_sve_pmov_to_vector_lane_zeroing : SVE2_Pred_1VectorArg_Intrinsic
 def int_aarch64_sme_mopa_nonwide : SME_OuterProduct_Intrinsic;
 def int_aarch64_sme_mops_nonwide : SME_OuterProduct_Intrinsic;
 
+// SVE2/SME2 - Floating point absolute maximum and minimum
+
+def int_aarch64_sve_famax   : AdvSIMD_Pred2VectorArg_Intrinsic;
+def int_aarch64_sve_famax_u : AdvSIMD_Pred2VectorArg_Intrinsic;
+
+def int_aarch64_sve_famin   : AdvSIMD_Pred2VectorArg_Intrinsic;
+def int_aarch64_sve_famin_u : AdvSIMD_Pred2VectorArg_Intrinsic;

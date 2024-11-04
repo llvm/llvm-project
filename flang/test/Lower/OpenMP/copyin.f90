@@ -21,11 +21,11 @@
 ! CHECK:             %[[VAL_11:.*]] = omp.threadprivate %[[VAL_1]]#1 : !fir.ref<i32> -> !fir.ref<i32>
 ! CHECK:             %[[VAL_12:.*]]:2 = hlfir.declare %[[VAL_11]] {uniq_name = "_QFcopyin_scalar_arrayEx1"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:             %[[VAL_13:.*]] = fir.load %[[VAL_3]]#0 : !fir.ref<i32>
-! CHECK:             hlfir.assign %[[VAL_13]] to %[[VAL_12]]#0 temporary_lhs : i32, !fir.ref<i32>
+! CHECK:             hlfir.assign %[[VAL_13]] to %[[VAL_12]]#0 : i32, !fir.ref<i32>
 ! CHECK:             %[[VAL_14:.*]] = omp.threadprivate %[[VAL_7]]#1 : !fir.ref<!fir.array<10xi64>> -> !fir.ref<!fir.array<10xi64>>
 ! CHECK:             %[[VAL_15:.*]] = fir.shape %[[VAL_5]] : (index) -> !fir.shape<1>
 ! CHECK:             %[[VAL_16:.*]]:2 = hlfir.declare %[[VAL_14]](%[[VAL_15]]) {uniq_name = "_QFcopyin_scalar_arrayEx2"} : (!fir.ref<!fir.array<10xi64>>, !fir.shape<1>) -> (!fir.ref<!fir.array<10xi64>>, !fir.ref<!fir.array<10xi64>>)
-! CHECK:             hlfir.assign %[[VAL_10]]#0 to %[[VAL_16]]#0 temporary_lhs : !fir.ref<!fir.array<10xi64>>, !fir.ref<!fir.array<10xi64>>
+! CHECK:             hlfir.assign %[[VAL_10]]#0 to %[[VAL_16]]#0 : !fir.ref<!fir.array<10xi64>>, !fir.ref<!fir.array<10xi64>>
 ! CHECK:             omp.barrier
 ! CHECK:             fir.call @_QPsub1(%[[VAL_12]]#1, %[[VAL_16]]#1) fastmath<contract> : (!fir.ref<i32>, !fir.ref<!fir.array<10xi64>>) -> ()
 ! CHECK:             omp.terminator
@@ -61,11 +61,11 @@ end
 ! CHECK:           omp.parallel {
 ! CHECK:             %[[VAL_13:.*]] = omp.threadprivate %[[VAL_2]]#1 : !fir.ref<!fir.char<1,5>> -> !fir.ref<!fir.char<1,5>>
 ! CHECK:             %[[VAL_14:.*]]:2 = hlfir.declare %[[VAL_13]] typeparams %[[VAL_1]] {uniq_name = "_QFcopyin_char_chararrayEx3"} : (!fir.ref<!fir.char<1,5>>, index) -> (!fir.ref<!fir.char<1,5>>, !fir.ref<!fir.char<1,5>>)
-! CHECK:             hlfir.assign %[[VAL_4]]#0 to %[[VAL_14]]#0 temporary_lhs : !fir.ref<!fir.char<1,5>>, !fir.ref<!fir.char<1,5>>
+! CHECK:             hlfir.assign %[[VAL_4]]#0 to %[[VAL_14]]#0 : !fir.ref<!fir.char<1,5>>, !fir.ref<!fir.char<1,5>>
 ! CHECK:             %[[VAL_15:.*]] = omp.threadprivate %[[VAL_9]]#1 : !fir.ref<!fir.array<10x!fir.char<1,5>>> -> !fir.ref<!fir.array<10x!fir.char<1,5>>>
 ! CHECK:             %[[VAL_16:.*]] = fir.shape %[[VAL_7]] : (index) -> !fir.shape<1>
 ! CHECK:             %[[VAL_17:.*]]:2 = hlfir.declare %[[VAL_15]](%[[VAL_16]]) typeparams %[[VAL_6]] {uniq_name = "_QFcopyin_char_chararrayEx4"} : (!fir.ref<!fir.array<10x!fir.char<1,5>>>, !fir.shape<1>, index) -> (!fir.ref<!fir.array<10x!fir.char<1,5>>>, !fir.ref<!fir.array<10x!fir.char<1,5>>>)
-! CHECK:             hlfir.assign %[[VAL_12]]#0 to %[[VAL_17]]#0 temporary_lhs : !fir.ref<!fir.array<10x!fir.char<1,5>>>, !fir.ref<!fir.array<10x!fir.char<1,5>>>
+! CHECK:             hlfir.assign %[[VAL_12]]#0 to %[[VAL_17]]#0 : !fir.ref<!fir.array<10x!fir.char<1,5>>>, !fir.ref<!fir.array<10x!fir.char<1,5>>>
 ! CHECK:             omp.barrier
 ! CHECK:             %[[VAL_18:.*]] = fir.emboxchar %[[VAL_14]]#1, %[[VAL_1]] : (!fir.ref<!fir.char<1,5>>, index) -> !fir.boxchar<1>
 ! CHECK:             %[[VAL_19:.*]] = fir.convert %[[VAL_17]]#1 : (!fir.ref<!fir.array<10x!fir.char<1,5>>>) -> !fir.ref<!fir.char<1,5>>
@@ -116,7 +116,7 @@ end
 ! CHECK:           omp.parallel {
 ! CHECK:             %[[VAL_27:.*]] = omp.threadprivate %[[VAL_17]]#1 : !fir.ref<!fir.type<_QFcopyin_derived_typeTmy_type{t_i:i32,t_arr:!fir.array<5xi32>}>> -> !fir.ref<!fir.type<_QFcopyin_derived_typeTmy_type{t_i:i32,t_arr:!fir.array<5xi32>}>>
 ! CHECK:             %[[VAL_28:.*]]:2 = hlfir.declare %[[VAL_27]] {uniq_name = "_QFcopyin_derived_typeEx5"} : (!fir.ref<!fir.type<_QFcopyin_derived_typeTmy_type{t_i:i32,t_arr:!fir.array<5xi32>}>>) -> (!fir.ref<!fir.type<_QFcopyin_derived_typeTmy_type{t_i:i32,t_arr:!fir.array<5xi32>}>>, !fir.ref<!fir.type<_QFcopyin_derived_typeTmy_type{t_i:i32,t_arr:!fir.array<5xi32>}>>)
-! CHECK:             hlfir.assign %[[VAL_19]]#0 to %[[VAL_28]]#0 temporary_lhs : !fir.ref<!fir.type<_QFcopyin_derived_typeTmy_type{t_i:i32,t_arr:!fir.array<5xi32>}>>, !fir.ref<!fir.type<_QFcopyin_derived_typeTmy_type{t_i:i32,t_arr:!fir.array<5xi32>}>>
+! CHECK:             hlfir.assign %[[VAL_19]]#0 to %[[VAL_28]]#0 : !fir.ref<!fir.type<_QFcopyin_derived_typeTmy_type{t_i:i32,t_arr:!fir.array<5xi32>}>>, !fir.ref<!fir.type<_QFcopyin_derived_typeTmy_type{t_i:i32,t_arr:!fir.array<5xi32>}>>
 ! CHECK:             omp.barrier
 ! CHECK:             fir.call @_QPsub3(%[[VAL_28]]#1) fastmath<contract> : (!fir.ref<!fir.type<_QFcopyin_derived_typeTmy_type{t_i:i32,t_arr:!fir.array<5xi32>}>>) -> ()
 ! CHECK:             omp.terminator
@@ -150,7 +150,7 @@ end
 ! CHECK:             %[[VAL_8:.*]] = omp.threadprivate %[[VAL_3]]#1 : !fir.ref<i32> -> !fir.ref<i32>
 ! CHECK:             %[[VAL_9:.*]]:2 = hlfir.declare %[[VAL_8]] {uniq_name = "_QFcombined_parallel_worksharing_loopEx6"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:             %[[VAL_10:.*]] = fir.load %[[VAL_5]]#0 : !fir.ref<i32>
-! CHECK:             hlfir.assign %[[VAL_10]] to %[[VAL_9]]#0 temporary_lhs : i32, !fir.ref<i32>
+! CHECK:             hlfir.assign %[[VAL_10]] to %[[VAL_9]]#0 : i32, !fir.ref<i32>
 
 ! CHECK:             omp.barrier
 
@@ -194,7 +194,7 @@ end
 ! CHECK:             %[[VAL_4:.*]] = omp.threadprivate %[[VAL_1]]#1 : !fir.ref<i32> -> !fir.ref<i32>
 ! CHECK:             %[[VAL_5:.*]]:2 = hlfir.declare %[[VAL_4]] {uniq_name = "_QFcombined_parallel_sectionsEx7"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:             %[[VAL_6:.*]] = fir.load %[[VAL_3]]#0 : !fir.ref<i32>
-! CHECK:             hlfir.assign %[[VAL_6]] to %[[VAL_5]]#0 temporary_lhs : i32, !fir.ref<i32>
+! CHECK:             hlfir.assign %[[VAL_6]] to %[[VAL_5]]#0 : i32, !fir.ref<i32>
 ! CHECK:             omp.barrier
 ! CHECK:             omp.sections {
 ! CHECK:               omp.section {
@@ -247,7 +247,7 @@ end
 ! CHECK:             %[[VAL_18:.*]] = fir.convert %[[VAL_17]] : (!fir.ref<i8>) -> !fir.ref<i32>
 ! CHECK:             %[[VAL_19:.*]]:2 = hlfir.declare %[[VAL_18]] {uniq_name = "_QFcommon_1Ex"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:             %[[VAL_20:.*]] = fir.load %[[VAL_11]]#0 : !fir.ref<i32>
-! CHECK:             hlfir.assign %[[VAL_20]] to %[[VAL_19]]#0 temporary_lhs : i32, !fir.ref<i32>
+! CHECK:             hlfir.assign %[[VAL_20]] to %[[VAL_19]]#0 : i32, !fir.ref<i32>
 ! CHECK:             omp.barrier
 ! CHECK:             omp.sections {
 ! CHECK:               omp.section {
@@ -318,9 +318,9 @@ end subroutine
 ! CHECK:             %[[VAL_30:.*]] = fir.convert %[[VAL_29]] : (!fir.ref<i8>) -> !fir.ref<i32>
 ! CHECK:             %[[VAL_31:.*]]:2 = hlfir.declare %[[VAL_30]] {uniq_name = "_QFcommon_2Ey"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:             %[[VAL_32:.*]] = fir.load %[[VAL_13]]#0 : !fir.ref<i32>
-! CHECK:             hlfir.assign %[[VAL_32]] to %[[VAL_26]]#0 temporary_lhs : i32, !fir.ref<i32>
+! CHECK:             hlfir.assign %[[VAL_32]] to %[[VAL_26]]#0 : i32, !fir.ref<i32>
 ! CHECK:             %[[VAL_33:.*]] = fir.load %[[VAL_18]]#0 : !fir.ref<i32>
-! CHECK:             hlfir.assign %[[VAL_33]] to %[[VAL_31]]#0 temporary_lhs : i32, !fir.ref<i32>
+! CHECK:             hlfir.assign %[[VAL_33]] to %[[VAL_31]]#0 : i32, !fir.ref<i32>
 ! CHECK:             omp.barrier
 
 ! CHECK:             %[[VAL_19:.*]] = fir.alloca i32 {bindc_name = "i", pinned, {{.*}}}

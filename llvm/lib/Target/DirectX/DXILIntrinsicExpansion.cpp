@@ -16,6 +16,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Intrinsics.h"
@@ -48,6 +49,7 @@ static bool isIntrinsicExpansion(Function &F) {
   case Intrinsic::dx_fdot:
   case Intrinsic::dx_sdot:
   case Intrinsic::dx_udot:
+  case Intrinsic::dx_sign:
     return true;
   }
   return false;
@@ -359,6 +361,32 @@ static Value *expandClampIntrinsic(CallInst *Orig,
                                  {MaxCall, Max}, nullptr, "dx.min");
 }
 
+static Value *expandSignIntrinsic(CallInst *Orig) {
+  Value *X = Orig->getOperand(0);
+  Type *Ty = X->getType();
+  Type *ScalarTy = Ty->getScalarType();
+  Type *RetTy = Orig->getType();
+  Constant *Zero = Constant::getNullValue(Ty);
+
+  IRBuilder<> Builder(Orig);
+
+  Value *GT;
+  Value *LT;
+  if (ScalarTy->isFloatingPointTy()) {
+    GT = Builder.CreateFCmpOLT(Zero, X);
+    LT = Builder.CreateFCmpOLT(X, Zero);
+  } else {
+    assert(ScalarTy->isIntegerTy());
+    GT = Builder.CreateICmpSLT(Zero, X);
+    LT = Builder.CreateICmpSLT(X, Zero);
+  }
+
+  Value *ZextGT = Builder.CreateZExt(GT, RetTy);
+  Value *ZextLT = Builder.CreateZExt(LT, RetTy);
+
+  return Builder.CreateSub(ZextGT, ZextLT);
+}
+
 static bool expandIntrinsic(Function &F, CallInst *Orig) {
   Value *Result = nullptr;
   Intrinsic::ID IntrinsicId = F.getIntrinsicID();
@@ -401,6 +429,9 @@ static bool expandIntrinsic(Function &F, CallInst *Orig) {
   case Intrinsic::dx_sdot:
   case Intrinsic::dx_udot:
     Result = expandIntegerDotIntrinsic(Orig, IntrinsicId);
+    break;
+  case Intrinsic::dx_sign:
+    Result = expandSignIntrinsic(Orig);
     break;
   }
 

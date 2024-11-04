@@ -703,7 +703,7 @@ int main(int argc, const char **argv) {
       FileNames.push_back(Line);
       LineNo++;
     }
-    errs() << "Clang-formating " << LineNo << " files\n";
+    errs() << "Clang-formatting " << LineNo << " files\n";
   }
 
   if (FileNames.empty())

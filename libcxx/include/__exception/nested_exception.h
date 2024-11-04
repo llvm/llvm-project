@@ -13,6 +13,8 @@
 #include <__exception/exception_ptr.h>
 #include <__memory/addressof.h>
 #include <__type_traits/decay.h>
+#include <__type_traits/enable_if.h>
+#include <__type_traits/integral_constant.h>
 #include <__type_traits/is_base_of.h>
 #include <__type_traits/is_class.h>
 #include <__type_traits/is_constructible.h>

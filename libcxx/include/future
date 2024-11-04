@@ -369,6 +369,7 @@ template <class R, class Alloc> struct uses_allocator<packaged_task<R>, Alloc>;
 #  include <__assert>
 #  include <__chrono/duration.h>
 #  include <__chrono/time_point.h>
+#  include <__condition_variable/condition_variable.h>
 #  include <__exception/exception_ptr.h>
 #  include <__memory/addressof.h>
 #  include <__memory/allocator.h>

@@ -25,8 +25,12 @@ class Context;
 // Forward declare friend classes for MSVC.
 class PointerType;
 class VectorType;
+class IntegerType;
 class FunctionType;
+class ArrayType;
+class StructType;
 #define DEF_INSTR(ID, OPCODE, CLASS) class CLASS;
+#define DEF_CONST(ID, CLASS) class CLASS;
 #include "llvm/SandboxIR/SandboxIRValues.def"
 
 /// Just like llvm::Type these are immutable, unique, never get freed and can
@@ -34,15 +38,24 @@ class FunctionType;
 class Type {
 protected:
   llvm::Type *LLVMTy;
-  friend class VectorType;   // For LLVMTy.
-  friend class PointerType;  // For LLVMTy.
-  friend class FunctionType; // For LLVMTy.
-  friend class Function;     // For LLVMTy.
-  friend class CallBase;     // For LLVMTy.
-  friend class ConstantInt;  // For LLVMTy.
+  friend class ArrayType;      // For LLVMTy.
+  friend class StructType;     // For LLVMTy.
+  friend class VectorType;     // For LLVMTy.
+  friend class PointerType;    // For LLVMTy.
+  friend class FunctionType;   // For LLVMTy.
+  friend class IntegerType;    // For LLVMTy.
+  friend class Function;       // For LLVMTy.
+  friend class CallBase;       // For LLVMTy.
+  friend class ConstantInt;    // For LLVMTy.
+  friend class ConstantArray;  // For LLVMTy.
+  friend class ConstantStruct; // For LLVMTy.
+  friend class ConstantVector; // For LLVMTy.
+  friend class CmpInst; // For LLVMTy. TODO: Cleanup after sandboxir::VectorType
+                        // is more complete.
+
   // Friend all instruction classes because `create()` functions use LLVMTy.
 #define DEF_INSTR(ID, OPCODE, CLASS) friend class CLASS;
-  // TODO: Friend DEF_CONST()
+#define DEF_CONST(ID, CLASS) friend class CLASS;
 #include "llvm/SandboxIR/SandboxIRValues.def"
   Context &Ctx;
 
@@ -278,8 +291,32 @@ public:
   }
 };
 
+class ArrayType : public Type {
+public:
+  static ArrayType *get(Type *ElementType, uint64_t NumElements);
+  // TODO: add missing functions
+  static bool classof(const Type *From) {
+    return isa<llvm::ArrayType>(From->LLVMTy);
+  }
+};
+
+class StructType : public Type {
+public:
+  /// This static method is the primary way to create a literal StructType.
+  static StructType *get(Context &Ctx, ArrayRef<Type *> Elements,
+                         bool IsPacked = false);
+
+  bool isPacked() const { return cast<llvm::StructType>(LLVMTy)->isPacked(); }
+
+  // TODO: add missing functions
+  static bool classof(const Type *From) {
+    return isa<llvm::StructType>(From->LLVMTy);
+  }
+};
+
 class VectorType : public Type {
 public:
+  static VectorType *get(Type *ElementType, ElementCount EC);
   // TODO: add missing functions
   static bool classof(const Type *From) {
     return isa<llvm::VectorType>(From->LLVMTy);
@@ -291,6 +328,22 @@ public:
   // TODO: add missing functions
   static bool classof(const Type *From) {
     return isa<llvm::FunctionType>(From->LLVMTy);
+  }
+};
+
+/// Class to represent integer types. Note that this class is also used to
+/// represent the built-in integer types: Int1Ty, Int8Ty, Int16Ty, Int32Ty and
+/// Int64Ty.
+/// Integer representation type
+class IntegerType : public Type {
+public:
+  static IntegerType *get(Context &C, unsigned NumBits);
+  // TODO: add missing functions
+  static bool classof(const Type *From) {
+    return isa<llvm::IntegerType>(From->LLVMTy);
+  }
+  operator llvm::IntegerType &() const {
+    return *cast<llvm::IntegerType>(LLVMTy);
   }
 };
 

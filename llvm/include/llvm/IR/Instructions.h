@@ -751,8 +751,16 @@ public:
     /// *p = ((old == 0) || (old u> v)) ? v : (old - 1)
     UDecWrap,
 
+    /// Subtract only if no unsigned overflow.
+    /// *p = (old u>= v) ? old - v : old
+    USubCond,
+
+    /// *p = usub.sat(old, v)
+    /// \p usub.sat matches the behavior of \p llvm.usub.sat.*.
+    USubSat,
+
     FIRST_BINOP = Xchg,
-    LAST_BINOP = UDecWrap,
+    LAST_BINOP = USubSat,
     BAD_BINOP
   };
 
@@ -1112,9 +1120,8 @@ public:
 };
 
 template <>
-struct OperandTraits<GetElementPtrInst> :
-  public VariadicOperandTraits<GetElementPtrInst, 1> {
-};
+struct OperandTraits<GetElementPtrInst>
+    : public VariadicOperandTraits<GetElementPtrInst> {};
 
 GetElementPtrInst::GetElementPtrInst(Type *PointeeType, Value *Ptr,
                                      ArrayRef<Value *> IdxList, unsigned Values,
@@ -2723,9 +2730,7 @@ private:
   void growOperands();
 };
 
-template <>
-struct OperandTraits<PHINode> : public HungoffOperandTraits<2> {
-};
+template <> struct OperandTraits<PHINode> : public HungoffOperandTraits {};
 
 DEFINE_TRANSPARENT_OPERAND_ACCESSORS(PHINode, Value)
 
@@ -2825,8 +2830,7 @@ public:
 };
 
 template <>
-struct OperandTraits<LandingPadInst> : public HungoffOperandTraits<1> {
-};
+struct OperandTraits<LandingPadInst> : public HungoffOperandTraits {};
 
 DEFINE_TRANSPARENT_OPERAND_ACCESSORS(LandingPadInst, Value)
 
@@ -2903,8 +2907,7 @@ private:
 };
 
 template <>
-struct OperandTraits<ReturnInst> : public VariadicOperandTraits<ReturnInst> {
-};
+struct OperandTraits<ReturnInst> : public VariadicOperandTraits<ReturnInst> {};
 
 DEFINE_TRANSPARENT_OPERAND_ACCESSORS(ReturnInst, Value)
 
@@ -3039,8 +3042,7 @@ public:
 };
 
 template <>
-struct OperandTraits<BranchInst> : public VariadicOperandTraits<BranchInst, 1> {
-};
+struct OperandTraits<BranchInst> : public VariadicOperandTraits<BranchInst> {};
 
 DEFINE_TRANSPARENT_OPERAND_ACCESSORS(BranchInst, Value)
 
@@ -3428,9 +3430,7 @@ public:
   static CaseWeightOpt getSuccessorWeight(const SwitchInst &SI, unsigned idx);
 };
 
-template <>
-struct OperandTraits<SwitchInst> : public HungoffOperandTraits<2> {
-};
+template <> struct OperandTraits<SwitchInst> : public HungoffOperandTraits {};
 
 DEFINE_TRANSPARENT_OPERAND_ACCESSORS(SwitchInst, Value)
 
@@ -3554,8 +3554,7 @@ public:
 };
 
 template <>
-struct OperandTraits<IndirectBrInst> : public HungoffOperandTraits<1> {
-};
+struct OperandTraits<IndirectBrInst> : public HungoffOperandTraits {};
 
 DEFINE_TRANSPARENT_OPERAND_ACCESSORS(IndirectBrInst, Value)
 
@@ -4105,7 +4104,7 @@ public:
 };
 
 template <>
-struct OperandTraits<CatchSwitchInst> : public HungoffOperandTraits<2> {};
+struct OperandTraits<CatchSwitchInst> : public HungoffOperandTraits {};
 
 DEFINE_TRANSPARENT_OPERAND_ACCESSORS(CatchSwitchInst, Value)
 
@@ -4337,7 +4336,7 @@ private:
 
 template <>
 struct OperandTraits<CleanupReturnInst>
-    : public VariadicOperandTraits<CleanupReturnInst, /*MINARITY=*/1> {};
+    : public VariadicOperandTraits<CleanupReturnInst> {};
 
 DEFINE_TRANSPARENT_OPERAND_ACCESSORS(CleanupReturnInst, Value)
 

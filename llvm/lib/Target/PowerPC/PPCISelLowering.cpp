@@ -11492,13 +11492,33 @@ SDValue PPCTargetLowering::LowerIS_FPCLASS(SDValue Op,
 SDValue PPCTargetLowering::LowerSCALAR_TO_VECTOR(SDValue Op,
                                                  SelectionDAG &DAG) const {
   SDLoc dl(Op);
+
+  MachineFunction &MF = DAG.getMachineFunction();
+  SDValue Op0 = Op.getOperand(0);
+  ReuseLoadInfo RLI;
+  if (Subtarget.hasLFIWAX() && Subtarget.hasVSX() &&
+      Op.getValueType() == MVT::v4i32 && Op0.getOpcode() == ISD::LOAD &&
+      Op0.getValueType() == MVT::i32 && Op0.hasOneUse() &&
+      canReuseLoadAddress(Op0, MVT::i32, RLI, DAG, ISD::NON_EXTLOAD)) {
+
+    MachineMemOperand *MMO =
+        MF.getMachineMemOperand(RLI.MPI, MachineMemOperand::MOLoad, 4,
+                                RLI.Alignment, RLI.AAInfo, RLI.Ranges);
+    SDValue Ops[] = {RLI.Chain, RLI.Ptr, DAG.getValueType(Op.getValueType())};
+    SDValue Bits = DAG.getMemIntrinsicNode(
+        PPCISD::LD_SPLAT, dl, DAG.getVTList(MVT::v4i32, MVT::Other), Ops,
+        MVT::i32, MMO);
+    spliceIntoChain(RLI.ResChain, Bits.getValue(1), DAG);
+    return Bits.getValue(0);
+  }
+
   // Create a stack slot that is 16-byte aligned.
-  MachineFrameInfo &MFI = DAG.getMachineFunction().getFrameInfo();
+  MachineFrameInfo &MFI = MF.getFrameInfo();
   int FrameIdx = MFI.CreateStackObject(16, Align(16), false);
   EVT PtrVT = getPointerTy(DAG.getDataLayout());
   SDValue FIdx = DAG.getFrameIndex(FrameIdx, PtrVT);
 
-  SDValue Val = Op.getOperand(0);
+  SDValue Val = Op0;
   EVT ValVT = Val.getValueType();
   // P10 hardware store forwarding requires that a single store contains all
   // the data for the load. P10 is able to merge a pair of adjacent stores. Try
@@ -18838,6 +18858,8 @@ PPCTargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *AI) const {
   switch (AI->getOperation()) {
   case AtomicRMWInst::UIncWrap:
   case AtomicRMWInst::UDecWrap:
+  case AtomicRMWInst::USubCond:
+  case AtomicRMWInst::USubSat:
     return AtomicExpansionKind::CmpXChg;
   default:
     return TargetLowering::shouldExpandAtomicRMWInIR(AI);

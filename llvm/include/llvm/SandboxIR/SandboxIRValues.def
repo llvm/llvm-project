@@ -26,6 +26,13 @@ DEF_USER(User, User)
 DEF_VALUE(Block, BasicBlock)
 DEF_CONST(Constant, Constant)
 DEF_CONST(ConstantInt, ConstantInt)
+DEF_CONST(ConstantFP, ConstantFP)
+DEF_CONST(ConstantArray, ConstantArray)
+DEF_CONST(ConstantStruct, ConstantStruct)
+DEF_CONST(ConstantVector, ConstantVector)
+DEF_CONST(ConstantAggregateZero, ConstantAggregateZero)
+DEF_CONST(ConstantPointerNull, ConstantPointerNull)
+DEF_CONST(PoisonValue, PoisonValue)
 
 #ifndef DEF_INSTR
 #define DEF_INSTR(ID, OPCODE, CLASS)
@@ -109,6 +116,8 @@ DEF_INSTR(Cast,   OPCODES(\
                           ),                  CastInst)
 DEF_INSTR(PHI,            OP(PHI),            PHINode)
 DEF_INSTR(Unreachable,    OP(Unreachable),    UnreachableInst)
+DEF_INSTR(ICmp,           OP(ICmp),          FCmpInst)
+DEF_INSTR(FCmp,           OP(FCmp),          ICmpInst)
 
 // clang-format on
 #ifdef DEF_VALUE

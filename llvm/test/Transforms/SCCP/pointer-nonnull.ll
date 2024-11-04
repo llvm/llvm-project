@@ -232,13 +232,9 @@ define i1 @ip_test_nonnull_caller(ptr %p) {
 }
 
 define ptr @ret_nonnull_pointer(ptr nonnull %p) {
-; SCCP-LABEL: define ptr @ret_nonnull_pointer(
-; SCCP-SAME: ptr nonnull [[P:%.*]]) {
-; SCCP-NEXT:    ret ptr [[P]]
-;
-; IPSCCP-LABEL: define nonnull ptr @ret_nonnull_pointer(
-; IPSCCP-SAME: ptr nonnull [[P:%.*]]) {
-; IPSCCP-NEXT:    ret ptr [[P]]
+; CHECK-LABEL: define nonnull ptr @ret_nonnull_pointer(
+; CHECK-SAME: ptr nonnull [[P:%.*]]) {
+; CHECK-NEXT:    ret ptr [[P]]
 ;
   ret ptr %p
 }

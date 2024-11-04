@@ -322,6 +322,7 @@ public:
   /// Returns the value associated to the key in the map if it exists. If it
   /// does not exist, emplace a default value for the key and returns a
   /// reference to the newly created value.
+  LLVM_DEPRECATED("Use operator[] instead", "[Key]")
   ValueT &getOrInsertDefault(KeyT &&Key) {
     return try_emplace(Key).first->second;
   }
@@ -329,6 +330,7 @@ public:
   /// Returns the value associated to the key in the map if it exists. If it
   /// does not exist, emplace a default value for the key and returns a
   /// reference to the newly created value.
+  LLVM_DEPRECATED("Use operator[] instead", "[Key]")
   ValueT &getOrInsertDefault(const KeyT &Key) {
     return try_emplace(Key).first->second;
   }
@@ -352,7 +354,8 @@ public:
     incrementNumTombstones();
   }
 
-  value_type& FindAndConstruct(const KeyT &Key) {
+  LLVM_DEPRECATED("Use [Key] instead", "[Key]")
+  value_type &FindAndConstruct(const KeyT &Key) {
     BucketT *TheBucket;
     if (LookupBucketFor(Key, TheBucket))
       return *TheBucket;
@@ -361,10 +364,15 @@ public:
   }
 
   ValueT &operator[](const KeyT &Key) {
-    return FindAndConstruct(Key).second;
+    BucketT *TheBucket;
+    if (LookupBucketFor(Key, TheBucket))
+      return TheBucket->second;
+
+    return InsertIntoBucket(TheBucket, Key)->second;
   }
 
-  value_type& FindAndConstruct(KeyT &&Key) {
+  LLVM_DEPRECATED("Use [Key] instead", "[Key]")
+  value_type &FindAndConstruct(KeyT &&Key) {
     BucketT *TheBucket;
     if (LookupBucketFor(Key, TheBucket))
       return *TheBucket;
@@ -373,7 +381,11 @@ public:
   }
 
   ValueT &operator[](KeyT &&Key) {
-    return FindAndConstruct(std::move(Key)).second;
+    BucketT *TheBucket;
+    if (LookupBucketFor(Key, TheBucket))
+      return TheBucket->second;
+
+    return InsertIntoBucket(TheBucket, std::move(Key))->second;
   }
 
   /// isPointerIntoBucketsArray - Return true if the specified pointer points
@@ -666,10 +678,9 @@ private:
   /// FoundBucket.  If the bucket contains the key and a value, this returns
   /// true, otherwise it returns a bucket with an empty marker or tombstone and
   /// returns false.
-  template<typename LookupKeyT>
-  bool LookupBucketFor(const LookupKeyT &Val,
-                       const BucketT *&FoundBucket) const {
-    const BucketT *BucketsPtr = getBuckets();
+  template <typename LookupKeyT>
+  bool LookupBucketFor(const LookupKeyT &Val, BucketT *&FoundBucket) {
+    BucketT *BucketsPtr = getBuckets();
     const unsigned NumBuckets = getNumBuckets();
 
     if (NumBuckets == 0) {
@@ -678,7 +689,7 @@ private:
     }
 
     // FoundTombstone - Keep track of whether we find a tombstone while probing.
-    const BucketT *FoundTombstone = nullptr;
+    BucketT *FoundTombstone = nullptr;
     const KeyT EmptyKey = getEmptyKey();
     const KeyT TombstoneKey = getTombstoneKey();
     assert(!KeyInfoT::isEqual(Val, EmptyKey) &&
@@ -688,7 +699,7 @@ private:
     unsigned BucketNo = getHashValue(Val) & (NumBuckets-1);
     unsigned ProbeAmt = 1;
     while (true) {
-      const BucketT *ThisBucket = BucketsPtr + BucketNo;
+      BucketT *ThisBucket = BucketsPtr + BucketNo;
       // Found Val's bucket?  If so, return it.
       if (LLVM_LIKELY(KeyInfoT::isEqual(Val, ThisBucket->getFirst()))) {
         FoundBucket = ThisBucket;
@@ -715,15 +726,6 @@ private:
       BucketNo += ProbeAmt++;
       BucketNo &= (NumBuckets-1);
     }
-  }
-
-  template <typename LookupKeyT>
-  bool LookupBucketFor(const LookupKeyT &Val, BucketT *&FoundBucket) {
-    const BucketT *ConstFoundBucket;
-    bool Result = const_cast<const DenseMapBase *>(this)
-      ->LookupBucketFor(Val, ConstFoundBucket);
-    FoundBucket = const_cast<BucketT *>(ConstFoundBucket);
-    return Result;
   }
 
 public:

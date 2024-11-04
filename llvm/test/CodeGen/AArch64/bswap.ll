@@ -110,8 +110,8 @@ define <2 x i16> @bswap_v2i16(<2 x i16> %a){
 ; CHECK-GI-LABEL: bswap_v2i16:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-GI-NEXT:    mov s1, v0.s[1]
-; CHECK-GI-NEXT:    mov v0.h[1], v1.h[0]
+; CHECK-GI-NEXT:    mov w8, v0.s[1]
+; CHECK-GI-NEXT:    mov v0.h[1], w8
 ; CHECK-GI-NEXT:    rev16 v0.8b, v0.8b
 ; CHECK-GI-NEXT:    mov h1, v0.h[1]
 ; CHECK-GI-NEXT:    mov v0.h[1], v1.h[0]
@@ -146,7 +146,7 @@ define <1 x i32> @bswap_v1i32(<1 x i32> %a){
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    fmov w8, s0
 ; CHECK-GI-NEXT:    rev w8, w8
-; CHECK-GI-NEXT:    fmov s0, w8
+; CHECK-GI-NEXT:    mov v0.s[0], w8
 ; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-NEXT:    ret
 entry:

@@ -12,11 +12,11 @@
 # CHECK-NEXT: 	aese v0.8h, v1.8h
 # CHECK-NEXT:	^
 
-	.arch armv8+foo
+	.arch armv8+foo+nobar
 	aese v0.8h, v1.8h
 
 # CHECK: error: unsupported architectural extension: foo
-# CHECK-NEXT:   .arch armv8+foo
+# CHECK-NEXT:   .arch armv8+foo+nobar
 # CHECK-NEXT:               ^
 
 # CHECK: error: invalid operand for instruction

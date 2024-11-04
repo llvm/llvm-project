@@ -1961,12 +1961,11 @@ void parseVarLenInstOperand(const Record &Def,
 }
 
 static void debugDumpRecord(const Record &Rec) {
-  // Dump the record, so we can see what's going on...
-  std::string E;
-  raw_string_ostream S(E);
-  S << "Dumping record for previous error:\n";
-  S << Rec;
-  PrintNote(E);
+  // Dump the record, so we can see what's going on.
+  PrintNote([&Rec](raw_ostream &OS) {
+    OS << "Dumping record for previous error:\n";
+    OS << Rec;
+  });
 }
 
 /// For an operand field named OpName: populate OpInfo.InitValue with the

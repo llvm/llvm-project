@@ -258,4 +258,16 @@ void f() {
     vars<0>::x<0>();
 }
 
+} // namespace GH105900
+
+namespace GH105903 {
+
+template <typename... opts> struct temp {
+  template <unsigned s> static auto x() -> opts... [s] {} // expected-note {{invalid index 0 for pack 'opts' of size 0}}
+};
+
+void f() {
+  temp<>::x<0>(); // expected-error {{no matching}}
 }
+
+} // namespace GH105903

@@ -964,7 +964,7 @@ define void @foo(i32 %cond0, i32 %cond1) {
   EXPECT_EQ(Switch->findCaseDest(BB1), One);
 }
 
-TEST_F(TrackerTest, ShuffleVectorInstSetters) {
+TEST_F(TrackerTest, ShuffleVectorInst) {
   parseIR(C, R"IR(
 define void @foo(<2 x i8> %v1, <2 x i8> %v2) {
   %shuf = shufflevector <2 x i8> %v1, <2 x i8> %v2, <2 x i32> <i32 1, i32 2>
@@ -983,10 +983,22 @@ define void @foo(<2 x i8> %v1, <2 x i8> %v2) {
   SmallVector<int, 2> OrigMask(SVI->getShuffleMask());
   Ctx.save();
   SVI->setShuffleMask(ArrayRef<int>({0, 0}));
-  EXPECT_THAT(SVI->getShuffleMask(),
-              testing::Not(testing::ElementsAreArray(OrigMask)));
+  EXPECT_NE(SVI->getShuffleMask(), ArrayRef<int>(OrigMask));
   Ctx.revert();
-  EXPECT_THAT(SVI->getShuffleMask(), testing::ElementsAreArray(OrigMask));
+  EXPECT_EQ(SVI->getShuffleMask(), ArrayRef<int>(OrigMask));
+
+  // Check commute.
+  auto *Op0 = SVI->getOperand(0);
+  auto *Op1 = SVI->getOperand(1);
+  Ctx.save();
+  SVI->commute();
+  EXPECT_EQ(SVI->getOperand(0), Op1);
+  EXPECT_EQ(SVI->getOperand(1), Op0);
+  EXPECT_NE(SVI->getShuffleMask(), ArrayRef<int>(OrigMask));
+  Ctx.revert();
+  EXPECT_EQ(SVI->getOperand(0), Op0);
+  EXPECT_EQ(SVI->getOperand(1), Op1);
+  EXPECT_EQ(SVI->getShuffleMask(), ArrayRef<int>(OrigMask));
 }
 
 TEST_F(TrackerTest, PossiblyDisjointInstSetters) {
@@ -1438,6 +1450,49 @@ bb2:
   EXPECT_EQ(PHI->getIncomingValue(0), Arg0);
   EXPECT_EQ(PHI->getIncomingBlock(1), BB1);
   EXPECT_EQ(PHI->getIncomingValue(1), Arg1);
+}
+
+void checkCmpInst(sandboxir::Context &Ctx, sandboxir::CmpInst *Cmp) {
+  Ctx.save();
+  auto OrigP = Cmp->getPredicate();
+  auto NewP = Cmp->getSwappedPredicate();
+  Cmp->setPredicate(NewP);
+  EXPECT_EQ(Cmp->getPredicate(), NewP);
+  Ctx.revert();
+  EXPECT_EQ(Cmp->getPredicate(), OrigP);
+
+  Ctx.save();
+  auto OrigOp0 = Cmp->getOperand(0);
+  auto OrigOp1 = Cmp->getOperand(1);
+  Cmp->swapOperands();
+  EXPECT_EQ(Cmp->getPredicate(), NewP);
+  EXPECT_EQ(Cmp->getOperand(0), OrigOp1);
+  EXPECT_EQ(Cmp->getOperand(1), OrigOp0);
+  Ctx.revert();
+  EXPECT_EQ(Cmp->getPredicate(), OrigP);
+  EXPECT_EQ(Cmp->getOperand(0), OrigOp0);
+  EXPECT_EQ(Cmp->getOperand(1), OrigOp1);
+}
+
+TEST_F(TrackerTest, CmpInst) {
+  SCOPED_TRACE("TrackerTest sandboxir::CmpInst tests");
+  parseIR(C, R"IR(
+define void @foo(i64 %i0, i64 %i1, float %f0, float %f1) {
+  %foeq = fcmp ogt float %f0, %f1
+  %ioeq = icmp uge i64 %i0, %i1
+
+  ret void
+}
+)IR");
+  Function &LLVMF = *M->getFunction("foo");
+  sandboxir::Context Ctx(C);
+  auto &F = *Ctx.createFunction(&LLVMF);
+  auto *BB = &*F.begin();
+  auto It = BB->begin();
+  auto *FCmp = cast<sandboxir::CmpInst>(&*It++);
+  checkCmpInst(Ctx, FCmp);
+  auto *ICmp = cast<sandboxir::CmpInst>(&*It++);
+  checkCmpInst(Ctx, ICmp);
 }
 
 TEST_F(TrackerTest, SetVolatile) {

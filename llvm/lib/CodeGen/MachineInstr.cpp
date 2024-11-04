@@ -1041,8 +1041,8 @@ unsigned MachineInstr::getBundleSize() const {
 /// Returns true if the MachineInstr has an implicit-use operand of exactly
 /// the given register (not considering sub/super-registers).
 bool MachineInstr::hasRegisterImplicitUseOperand(Register Reg) const {
-  for (const MachineOperand &MO : operands()) {
-    if (MO.isReg() && MO.isUse() && MO.isImplicit() && MO.getReg() == Reg)
+  for (const MachineOperand &MO : implicit_operands()) {
+    if (MO.isReg() && MO.isUse() && MO.getReg() == Reg)
       return true;
   }
   return false;

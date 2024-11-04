@@ -84,9 +84,6 @@ chrono string_view
 chrono vector
 chrono version
 cinttypes cstdint
-cmath cstddef
-cmath cstdint
-cmath initializer_list
 cmath limits
 cmath version
 codecvt cctype
@@ -158,7 +155,6 @@ expected cstdint
 expected initializer_list
 expected new
 expected version
-experimental/iterator cstddef
 experimental/iterator iterator
 experimental/memory cstddef
 experimental/memory cstdint
@@ -242,10 +238,8 @@ functional vector
 functional version
 future cerrno
 future cstddef
-future cstdint
 future cstdlib
-future cstring
-future initializer_list
+future ctime
 future limits
 future mutex
 future new
@@ -650,7 +644,6 @@ tuple compare
 tuple cstddef
 tuple cstdint
 tuple version
-type_traits cstddef
 type_traits cstdint
 type_traits version
 typeindex compare

@@ -1473,7 +1473,7 @@ define iXLen @lround_f32(float %a) nounwind strictfp {
 ;
 ; RV64IZFINX-LABEL: lround_f32:
 ; RV64IZFINX:       # %bb.0:
-; RV64IZFINX-NEXT:    fcvt.l.s a0, a0
+; RV64IZFINX-NEXT:    fcvt.l.s a0, a0, rmm
 ; RV64IZFINX-NEXT:    ret
 ;
 ; RV32I-LABEL: lround_f32:
@@ -1577,7 +1577,7 @@ define i64 @llround_f32(float %a) nounwind strictfp {
 ;
 ; RV64IZFINX-LABEL: llround_f32:
 ; RV64IZFINX:       # %bb.0:
-; RV64IZFINX-NEXT:    fcvt.l.s a0, a0
+; RV64IZFINX-NEXT:    fcvt.l.s a0, a0, rmm
 ; RV64IZFINX-NEXT:    ret
 ;
 ; RV32I-LABEL: llround_f32:

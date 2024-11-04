@@ -242,8 +242,15 @@ public:
     // recursion.
     bool Recursive = false;
 
-    // The corresponding allocation or interior call.
+    // The corresponding allocation or interior call. This is the primary call
+    // for which we have created this node.
     CallInfo Call;
+
+    // List of other calls that can be treated the same as the primary call
+    // through cloning. I.e. located in the same function and have the same
+    // (possibly pruned) stack ids. They will be updated the same way as the
+    // primary call when assigning to function clones.
+    std::vector<CallInfo> MatchingCalls;
 
     // For alloc nodes this is a unique id assigned when constructed, and for
     // callsite stack nodes it is the original stack id when the node is
@@ -457,6 +464,9 @@ protected:
   /// iteration.
   MapVector<FuncTy *, std::vector<CallInfo>> FuncToCallsWithMetadata;
 
+  /// Records the function each call is located in.
+  DenseMap<CallInfo, const FuncTy *> CallToFunc;
+
   /// Map from callsite node to the enclosing caller function.
   std::map<const ContextNode *, const FuncTy *> NodeToCallingFunc;
 
@@ -474,7 +484,8 @@ private:
   /// StackIdToMatchingCalls map.
   void assignStackNodesPostOrder(
       ContextNode *Node, DenseSet<const ContextNode *> &Visited,
-      DenseMap<uint64_t, std::vector<CallContextInfo>> &StackIdToMatchingCalls);
+      DenseMap<uint64_t, std::vector<CallContextInfo>> &StackIdToMatchingCalls,
+      DenseMap<CallInfo, CallInfo> &CallToMatchingCall);
 
   /// Duplicates the given set of context ids, updating the provided
   /// map from each original id with the newly generated context ids,
@@ -519,6 +530,11 @@ private:
       std::vector<std::pair<CallTy, FuncTy *>> &FoundCalleeChain) {
     return static_cast<DerivedCCG *>(this)->calleeMatchesFunc(
         Call, Func, CallerFunc, FoundCalleeChain);
+  }
+
+  /// Returns true if both call instructions have the same callee.
+  bool sameCallee(CallTy Call1, CallTy Call2) {
+    return static_cast<DerivedCCG *>(this)->sameCallee(Call1, Call2);
   }
 
   /// Get a list of nodes corresponding to the stack ids in the given
@@ -667,6 +683,7 @@ private:
   bool calleeMatchesFunc(
       Instruction *Call, const Function *Func, const Function *CallerFunc,
       std::vector<std::pair<Instruction *, Function *>> &FoundCalleeChain);
+  bool sameCallee(Instruction *Call1, Instruction *Call2);
   bool findProfiledCalleeThroughTailCalls(
       const Function *ProfiledCallee, Value *CurCallee, unsigned Depth,
       std::vector<std::pair<Instruction *, Function *>> &FoundCalleeChain,
@@ -744,6 +761,7 @@ private:
       IndexCall &Call, const FunctionSummary *Func,
       const FunctionSummary *CallerFunc,
       std::vector<std::pair<IndexCall, FunctionSummary *>> &FoundCalleeChain);
+  bool sameCallee(IndexCall &Call1, IndexCall &Call2);
   bool findProfiledCalleeThroughTailCalls(
       ValueInfo ProfiledCallee, ValueInfo CurCallee, unsigned Depth,
       std::vector<std::pair<IndexCall, FunctionSummary *>> &FoundCalleeChain,
@@ -1230,10 +1248,11 @@ static void checkNode(const ContextNode<DerivedCCG, FuncTy, CallTy> *Node,
 
 template <typename DerivedCCG, typename FuncTy, typename CallTy>
 void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::
-    assignStackNodesPostOrder(ContextNode *Node,
-                              DenseSet<const ContextNode *> &Visited,
-                              DenseMap<uint64_t, std::vector<CallContextInfo>>
-                                  &StackIdToMatchingCalls) {
+    assignStackNodesPostOrder(
+        ContextNode *Node, DenseSet<const ContextNode *> &Visited,
+        DenseMap<uint64_t, std::vector<CallContextInfo>>
+            &StackIdToMatchingCalls,
+        DenseMap<CallInfo, CallInfo> &CallToMatchingCall) {
   auto Inserted = Visited.insert(Node);
   if (!Inserted.second)
     return;
@@ -1246,7 +1265,8 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::
     // Skip any that have been removed during the recursion.
     if (!Edge)
       continue;
-    assignStackNodesPostOrder(Edge->Caller, Visited, StackIdToMatchingCalls);
+    assignStackNodesPostOrder(Edge->Caller, Visited, StackIdToMatchingCalls,
+                              CallToMatchingCall);
   }
 
   // If this node's stack id is in the map, update the graph to contain new
@@ -1289,8 +1309,19 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::
     auto &[Call, Ids, Func, SavedContextIds] = Calls[I];
     // Skip any for which we didn't assign any ids, these don't get a node in
     // the graph.
-    if (SavedContextIds.empty())
+    if (SavedContextIds.empty()) {
+      // If this call has a matching call (located in the same function and
+      // having the same stack ids), simply add it to the context node created
+      // for its matching call earlier. These can be treated the same through
+      // cloning and get updated at the same time.
+      if (!CallToMatchingCall.contains(Call))
+        continue;
+      auto MatchingCall = CallToMatchingCall[Call];
+      assert(NonAllocationCallToContextNodeMap.contains(MatchingCall));
+      NonAllocationCallToContextNodeMap[MatchingCall]->MatchingCalls.push_back(
+          Call);
       continue;
+    }
 
     assert(LastId == Ids.back());
 
@@ -1422,6 +1453,10 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::updateStackNodes() {
   // there is more than one call with the same stack ids. Their (possibly newly
   // duplicated) context ids are saved in the StackIdToMatchingCalls map.
   DenseMap<uint32_t, DenseSet<uint32_t>> OldToNewContextIds;
+  // Save a map from each call to any that are found to match it. I.e. located
+  // in the same function and have the same (possibly pruned) stack ids. We use
+  // this to avoid creating extra graph nodes as they can be treated the same.
+  DenseMap<CallInfo, CallInfo> CallToMatchingCall;
   for (auto &It : StackIdToMatchingCalls) {
     auto &Calls = It.getSecond();
     // Skip single calls with a single stack id. These don't need a new node.
@@ -1459,6 +1494,13 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::updateStackNodes() {
     // refine the context ids by computing the intersection along all edges.
     DenseSet<uint32_t> LastNodeContextIds = LastNode->getContextIds();
     assert(!LastNodeContextIds.empty());
+
+    // Map from function to the first call from the below list (with matching
+    // stack ids) found in that function. Note that calls from different
+    // functions can have the same stack ids because this is the list of stack
+    // ids that had (possibly pruned) nodes after building the graph from the
+    // allocation MIBs.
+    DenseMap<const FuncTy *, CallInfo> FuncToCallMap;
 
     for (unsigned I = 0; I < Calls.size(); I++) {
       auto &[Call, Ids, Func, SavedContextIds] = Calls[I];
@@ -1533,6 +1575,18 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::updateStackNodes() {
           continue;
       }
 
+      const FuncTy *CallFunc = CallToFunc[Call];
+
+      // If the prior call had the same stack ids this map would not be empty.
+      // Check if we already have a call that "matches" because it is located
+      // in the same function.
+      if (FuncToCallMap.contains(CallFunc)) {
+        // Record the matching call found for this call, and skip it. We
+        // will subsequently combine it into the same node.
+        CallToMatchingCall[Call] = FuncToCallMap[CallFunc];
+        continue;
+      }
+
       // Check if the next set of stack ids is the same (since the Calls vector
       // of tuples is sorted by the stack ids we can just look at the next one).
       bool DuplicateContextIds = false;
@@ -1562,7 +1616,14 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::updateStackNodes() {
         set_subtract(LastNodeContextIds, StackSequenceContextIds);
         if (LastNodeContextIds.empty())
           break;
-      }
+        // No longer possibly in a sequence of calls with duplicate stack ids,
+        // clear the map.
+        FuncToCallMap.clear();
+      } else
+        // Record the call with its function, so we can locate it the next time
+        // we find a call from this function when processing the calls with the
+        // same stack ids.
+        FuncToCallMap[CallFunc] = Call;
     }
   }
 
@@ -1579,7 +1640,8 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::updateStackNodes() {
   // associated context ids over to the new nodes.
   DenseSet<const ContextNode *> Visited;
   for (auto &Entry : AllocationCallToContextNodeMap)
-    assignStackNodesPostOrder(Entry.second, Visited, StackIdToMatchingCalls);
+    assignStackNodesPostOrder(Entry.second, Visited, StackIdToMatchingCalls,
+                              CallToMatchingCall);
   if (VerifyCCG)
     check();
 }
@@ -1679,6 +1741,7 @@ ModuleCallsiteContextGraph::ModuleCallsiteContextGraph(
           continue;
         if (auto *MemProfMD = I.getMetadata(LLVMContext::MD_memprof)) {
           CallsWithMetadata.push_back(&I);
+          CallToFunc[&I] = &F;
           auto *AllocNode = addAllocNode(&I, &F);
           auto *CallsiteMD = I.getMetadata(LLVMContext::MD_callsite);
           assert(CallsiteMD);
@@ -1700,8 +1763,10 @@ ModuleCallsiteContextGraph::ModuleCallsiteContextGraph(
           I.setMetadata(LLVMContext::MD_callsite, nullptr);
         }
         // For callsite metadata, add to list for this function for later use.
-        else if (I.getMetadata(LLVMContext::MD_callsite))
+        else if (I.getMetadata(LLVMContext::MD_callsite)) {
           CallsWithMetadata.push_back(&I);
+          CallToFunc[&I] = &F;
+        }
       }
     }
     if (!CallsWithMetadata.empty())
@@ -1756,8 +1821,10 @@ IndexCallsiteContextGraph::IndexCallsiteContextGraph(
           // correlate properly in applyImport in the backends.
           if (AN.MIBs.empty())
             continue;
-          CallsWithMetadata.push_back({&AN});
-          auto *AllocNode = addAllocNode({&AN}, FS);
+          IndexCall AllocCall(&AN);
+          CallsWithMetadata.push_back(AllocCall);
+          CallToFunc[AllocCall] = FS;
+          auto *AllocNode = addAllocNode(AllocCall, FS);
           // Pass an empty CallStack to the CallsiteContext (second)
           // parameter, since for ThinLTO we already collapsed out the inlined
           // stack ids on the allocation call during ModuleSummaryAnalysis.
@@ -1788,8 +1855,11 @@ IndexCallsiteContextGraph::IndexCallsiteContextGraph(
       }
       // For callsite metadata, add to list for this function for later use.
       if (!FS->callsites().empty())
-        for (auto &SN : FS->mutableCallsites())
-          CallsWithMetadata.push_back({&SN});
+        for (auto &SN : FS->mutableCallsites()) {
+          IndexCall StackNodeCall(&SN);
+          CallsWithMetadata.push_back(StackNodeCall);
+          CallToFunc[StackNodeCall] = FS;
+        }
 
       if (!CallsWithMetadata.empty())
         FuncToCallsWithMetadata[FS] = CallsWithMetadata;
@@ -1829,26 +1899,76 @@ void CallsiteContextGraph<DerivedCCG, FuncTy,
   // from the profiled contexts.
   MapVector<CallInfo, ContextNode *> TailCallToContextNodeMap;
 
+  std::vector<std::pair<CallInfo, ContextNode *>> NewCallToNode;
   for (auto &Entry : NonAllocationCallToContextNodeMap) {
     auto *Node = Entry.second;
     assert(Node->Clones.empty());
     // Check all node callees and see if in the same function.
-    auto Call = Node->Call.call();
-    for (auto EI = Node->CalleeEdges.begin(); EI != Node->CalleeEdges.end();
-         ++EI) {
-      auto Edge = *EI;
-      if (!Edge->Callee->hasCall())
-        continue;
-      assert(NodeToCallingFunc.count(Edge->Callee));
-      // Check if the called function matches that of the callee node.
-      if (calleesMatch(Call, EI, TailCallToContextNodeMap))
-        continue;
+    // We need to check all of the calls recorded in this Node, because in some
+    // cases we may have had multiple calls with the same debug info calling
+    // different callees. This can happen, for example, when an object is
+    // constructed in the paramter list - the destructor call of the object has
+    // the same debug info (line/col) as the call the object was passed to.
+    // Here we will prune any that don't match all callee nodes.
+    std::vector<CallInfo> AllCalls;
+    AllCalls.reserve(Node->MatchingCalls.size() + 1);
+    AllCalls.push_back(Node->Call);
+    AllCalls.insert(AllCalls.end(), Node->MatchingCalls.begin(),
+                    Node->MatchingCalls.end());
+    auto It = AllCalls.begin();
+    // Iterate through the calls until we find the first that matches.
+    for (; It != AllCalls.end(); ++It) {
+      auto ThisCall = *It;
+      bool Match = true;
+      for (auto EI = Node->CalleeEdges.begin(); EI != Node->CalleeEdges.end();
+           ++EI) {
+        auto Edge = *EI;
+        if (!Edge->Callee->hasCall())
+          continue;
+        assert(NodeToCallingFunc.count(Edge->Callee));
+        // Check if the called function matches that of the callee node.
+        if (!calleesMatch(ThisCall.call(), EI, TailCallToContextNodeMap)) {
+          Match = false;
+          break;
+        }
+      }
+      // Found a call that matches the callee nodes, we can quit now.
+      if (Match) {
+        // If the first match is not the primary call on the Node, update it
+        // now. We will update the list of matching calls further below.
+        if (Node->Call != ThisCall) {
+          Node->setCall(ThisCall);
+          // We need to update the NonAllocationCallToContextNodeMap, but don't
+          // want to do this during iteration over that map, so save the calls
+          // that need updated entries.
+          NewCallToNode.push_back({ThisCall, Node});
+          // We should only have shared this node between calls from the same
+          // function.
+          assert(NodeToCallingFunc[Node] == CallToFunc[Node->Call]);
+        }
+        break;
+      }
+    }
+    // We will update this list below (or leave it cleared if there was no
+    // match found above).
+    Node->MatchingCalls.clear();
+    // If we hit the end of the AllCalls vector, no call matching the callee
+    // nodes was found, clear the call information in the node.
+    if (It == AllCalls.end()) {
       RemovedEdgesWithMismatchedCallees++;
       // Work around by setting Node to have a null call, so it gets
       // skipped during cloning. Otherwise assignFunctions will assert
       // because its data structures are not designed to handle this case.
       Node->setCall(CallInfo());
-      break;
+      continue;
+    }
+    // Now add back any matching calls that call the same function as the
+    // matching primary call on Node.
+    for (++It; It != AllCalls.end(); ++It) {
+      auto ThisCall = *It;
+      if (!sameCallee(Node->Call.call(), ThisCall.call()))
+        continue;
+      Node->MatchingCalls.push_back(ThisCall);
     }
   }
 
@@ -1856,8 +1976,14 @@ void CallsiteContextGraph<DerivedCCG, FuncTy,
   // (checking whether they have a null call which is set above). For a
   // MapVector like NonAllocationCallToContextNodeMap it is much more efficient
   // to do the removal via remove_if than by individually erasing entries above.
-  NonAllocationCallToContextNodeMap.remove_if(
-      [](const auto &it) { return !it.second->hasCall(); });
+  // Also remove any entries if we updated the node's primary call above.
+  NonAllocationCallToContextNodeMap.remove_if([](const auto &it) {
+    return !it.second->hasCall() || it.second->Call != it.first;
+  });
+
+  // Add entries for any new primary calls recorded above.
+  for (auto &[Call, Node] : NewCallToNode)
+    NonAllocationCallToContextNodeMap[Call] = Node;
 
   // Add the new nodes after the above loop so that the iteration is not
   // invalidated.
@@ -2083,6 +2209,21 @@ bool ModuleCallsiteContextGraph::calleeMatchesFunc(
   return true;
 }
 
+bool ModuleCallsiteContextGraph::sameCallee(Instruction *Call1,
+                                            Instruction *Call2) {
+  auto *CB1 = cast<CallBase>(Call1);
+  if (!CB1->getCalledOperand() || CB1->isIndirectCall())
+    return false;
+  auto *CalleeVal1 = CB1->getCalledOperand()->stripPointerCasts();
+  auto *CalleeFunc1 = dyn_cast<Function>(CalleeVal1);
+  auto *CB2 = cast<CallBase>(Call2);
+  if (!CB2->getCalledOperand() || CB2->isIndirectCall())
+    return false;
+  auto *CalleeVal2 = CB2->getCalledOperand()->stripPointerCasts();
+  auto *CalleeFunc2 = dyn_cast<Function>(CalleeVal2);
+  return CalleeFunc1 == CalleeFunc2;
+}
+
 bool IndexCallsiteContextGraph::findProfiledCalleeThroughTailCalls(
     ValueInfo ProfiledCallee, ValueInfo CurCallee, unsigned Depth,
     std::vector<std::pair<IndexCall, FunctionSummary *>> &FoundCalleeChain,
@@ -2209,6 +2350,14 @@ bool IndexCallsiteContextGraph::calleeMatchesFunc(
   return true;
 }
 
+bool IndexCallsiteContextGraph::sameCallee(IndexCall &Call1, IndexCall &Call2) {
+  ValueInfo Callee1 =
+      dyn_cast_if_present<CallsiteInfo *>(Call1.getBase())->Callee;
+  ValueInfo Callee2 =
+      dyn_cast_if_present<CallsiteInfo *>(Call2.getBase())->Callee;
+  return Callee1 == Callee2;
+}
+
 template <typename DerivedCCG, typename FuncTy, typename CallTy>
 void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::ContextNode::dump()
     const {
@@ -2225,6 +2374,14 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::ContextNode::print(
   if (Recursive)
     OS << " (recursive)";
   OS << "\n";
+  if (!MatchingCalls.empty()) {
+    OS << "\tMatchingCalls:\n";
+    for (auto &MatchingCall : MatchingCalls) {
+      OS << "\t";
+      MatchingCall.print(OS);
+      OS << "\n";
+    }
+  }
   OS << "\tAllocTypes: " << getAllocTypeString(AllocTypes) << "\n";
   OS << "\tContextIds:";
   // Make a copy of the computed context ids that we can sort for stability.
@@ -2478,6 +2635,7 @@ CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::moveEdgeToNewCalleeClone(
       std::make_unique<ContextNode>(Node->IsAllocation, Node->Call));
   ContextNode *Clone = NodeOwner.back().get();
   Node->addClone(Clone);
+  Clone->MatchingCalls = Node->MatchingCalls;
   assert(NodeToCallingFunc.count(Node));
   NodeToCallingFunc[Clone] = NodeToCallingFunc[Node];
   moveEdgeToExistingCalleeClone(Edge, Clone, CallerEdgeI, /*NewClone=*/true,
@@ -3021,6 +3179,14 @@ bool CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::assignFunctions() {
         if (CallMap.count(Call))
           CallClone = CallMap[Call];
         CallsiteClone->setCall(CallClone);
+        // Need to do the same for all matching calls.
+        for (auto &MatchingCall : Node->MatchingCalls) {
+          CallInfo CallClone(MatchingCall);
+          if (CallMap.count(MatchingCall))
+            CallClone = CallMap[MatchingCall];
+          // Updates the call in the list.
+          MatchingCall = CallClone;
+        }
       };
 
       // Keep track of the clones of callsite Node that need to be assigned to
@@ -3187,6 +3353,16 @@ bool CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::assignFunctions() {
               CallInfo NewCall(CallMap[OrigCall]);
               assert(NewCall);
               NewClone->setCall(NewCall);
+              // Need to do the same for all matching calls.
+              for (auto &MatchingCall : NewClone->MatchingCalls) {
+                CallInfo OrigMatchingCall(MatchingCall);
+                OrigMatchingCall.setCloneNo(0);
+                assert(CallMap.count(OrigMatchingCall));
+                CallInfo NewCall(CallMap[OrigMatchingCall]);
+                assert(NewCall);
+                // Updates the call in the list.
+                MatchingCall = NewCall;
+              }
             }
           }
           // Fall through to handling below to perform the recording of the
@@ -3373,6 +3549,7 @@ bool CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::assignFunctions() {
 
     if (Node->IsAllocation) {
       updateAllocationCall(Node->Call, allocTypeToUse(Node->AllocTypes));
+      assert(Node->MatchingCalls.empty());
       return;
     }
 
@@ -3381,6 +3558,9 @@ bool CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::assignFunctions() {
 
     auto CalleeFunc = CallsiteToCalleeFuncCloneMap[Node];
     updateCall(Node->Call, CalleeFunc);
+    // Update all the matching calls as well.
+    for (auto &Call : Node->MatchingCalls)
+      updateCall(Call, CalleeFunc);
   };
 
   // Performs DFS traversal starting from allocation nodes to update calls to

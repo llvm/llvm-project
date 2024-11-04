@@ -269,7 +269,7 @@ protected:
         transformed_args);
 
     if (llvm::Error e = expected_return_object.takeError()) {
-      error = Status(std::move(e));
+      error = Status::FromError(std::move(e));
       return ErrorWithMessage<T>(caller_signature,
                                  "Python method could not be called.", error);
     }
@@ -309,8 +309,12 @@ protected:
     return python::PythonBoolean(arg);
   }
 
-  python::PythonObject Transform(Status arg) {
-    return python::SWIGBridge::ToSWIGWrapper(arg);
+  python::PythonObject Transform(const Status &arg) {
+    return python::SWIGBridge::ToSWIGWrapper(arg.Clone());
+  }
+
+  python::PythonObject Transform(Status &&arg) {
+    return python::SWIGBridge::ToSWIGWrapper(std::move(arg));
   }
 
   python::PythonObject Transform(const StructuredDataImpl &arg) {

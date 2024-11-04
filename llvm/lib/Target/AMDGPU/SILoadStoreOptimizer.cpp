@@ -57,6 +57,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "SILoadStoreOptimizer.h"
 #include "AMDGPU.h"
 #include "GCNSubtarget.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
@@ -104,7 +105,7 @@ struct AddressRegs {
 // GFX10 image_sample instructions can have 12 vaddrs + srsrc + ssamp.
 const unsigned MaxAddressRegs = 12 + 1 + 1;
 
-class SILoadStoreOptimizer : public MachineFunctionPass {
+class SILoadStoreOptimizer {
   struct CombineInfo {
     MachineBasicBlock::iterator I;
     unsigned EltSize;
@@ -295,16 +296,20 @@ private:
   static InstClassEnum getCommonInstClass(const CombineInfo &CI,
                                           const CombineInfo &Paired);
 
-public:
-  static char ID;
-
-  SILoadStoreOptimizer() : MachineFunctionPass(ID) {
-    initializeSILoadStoreOptimizerPass(*PassRegistry::getPassRegistry());
-  }
-
   bool optimizeInstsWithSameBaseAddr(std::list<CombineInfo> &MergeList,
                                      bool &OptimizeListAgain);
   bool optimizeBlock(std::list<std::list<CombineInfo> > &MergeableInsts);
+
+public:
+  SILoadStoreOptimizer(AliasAnalysis *AA) : AA(AA) {}
+  bool run(MachineFunction &MF);
+};
+
+class SILoadStoreOptimizerLegacy : public MachineFunctionPass {
+public:
+  static char ID;
+
+  SILoadStoreOptimizerLegacy() : MachineFunctionPass(ID) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override;
 
@@ -882,18 +887,18 @@ void SILoadStoreOptimizer::CombineInfo::setMI(MachineBasicBlock::iterator MI,
 
 } // end anonymous namespace.
 
-INITIALIZE_PASS_BEGIN(SILoadStoreOptimizer, DEBUG_TYPE,
+INITIALIZE_PASS_BEGIN(SILoadStoreOptimizerLegacy, DEBUG_TYPE,
                       "SI Load Store Optimizer", false, false)
 INITIALIZE_PASS_DEPENDENCY(AAResultsWrapperPass)
-INITIALIZE_PASS_END(SILoadStoreOptimizer, DEBUG_TYPE, "SI Load Store Optimizer",
-                    false, false)
+INITIALIZE_PASS_END(SILoadStoreOptimizerLegacy, DEBUG_TYPE,
+                    "SI Load Store Optimizer", false, false)
 
-char SILoadStoreOptimizer::ID = 0;
+char SILoadStoreOptimizerLegacy::ID = 0;
 
-char &llvm::SILoadStoreOptimizerID = SILoadStoreOptimizer::ID;
+char &llvm::SILoadStoreOptimizerLegacyID = SILoadStoreOptimizerLegacy::ID;
 
-FunctionPass *llvm::createSILoadStoreOptimizerPass() {
-  return new SILoadStoreOptimizer();
+FunctionPass *llvm::createSILoadStoreOptimizerLegacyPass() {
+  return new SILoadStoreOptimizerLegacy();
 }
 
 static void addDefsUsesToList(const MachineInstr &MI,
@@ -2182,8 +2187,9 @@ bool SILoadStoreOptimizer::promoteConstantOffsetToImm(
     return false;
   }
 
-  LLVM_DEBUG(dbgs() << "  BASE: {" << MAddr.Base.HiReg << ", "
-             << MAddr.Base.LoReg << "} Offset: " << MAddr.Offset << "\n\n";);
+  LLVM_DEBUG(dbgs() << "  BASE: {" << printReg(MAddr.Base.HiReg, TRI) << ", "
+                    << printReg(MAddr.Base.LoReg, TRI)
+                    << "} Offset: " << MAddr.Offset << "\n\n";);
 
   // Step2: Traverse through MI's basic block and find an anchor(that has the
   // same base-registers) with the highest 13bit distance from MI's offset.
@@ -2522,10 +2528,15 @@ SILoadStoreOptimizer::optimizeInstsWithSameBaseAddr(
   return Modified;
 }
 
-bool SILoadStoreOptimizer::runOnMachineFunction(MachineFunction &MF) {
+bool SILoadStoreOptimizerLegacy::runOnMachineFunction(MachineFunction &MF) {
   if (skipFunction(MF.getFunction()))
     return false;
+  return SILoadStoreOptimizer(
+             &getAnalysis<AAResultsWrapperPass>().getAAResults())
+      .run(MF);
+}
 
+bool SILoadStoreOptimizer::run(MachineFunction &MF) {
   STM = &MF.getSubtarget<GCNSubtarget>();
   if (!STM->loadStoreOptEnabled())
     return false;
@@ -2534,7 +2545,6 @@ bool SILoadStoreOptimizer::runOnMachineFunction(MachineFunction &MF) {
   TRI = &TII->getRegisterInfo();
 
   MRI = &MF.getRegInfo();
-  AA = &getAnalysis<AAResultsWrapperPass>().getAAResults();
 
   LLVM_DEBUG(dbgs() << "Running SILoadStoreOptimizer\n");
 
@@ -2570,4 +2580,25 @@ bool SILoadStoreOptimizer::runOnMachineFunction(MachineFunction &MF) {
   }
 
   return Modified;
+}
+
+PreservedAnalyses
+SILoadStoreOptimizerPass::run(MachineFunction &MF,
+                              MachineFunctionAnalysisManager &MFAM) {
+  MFPropsModifier _(*this, MF);
+
+  if (MF.getFunction().hasOptNone())
+    return PreservedAnalyses::all();
+
+  auto &FAM = MFAM.getResult<FunctionAnalysisManagerMachineFunctionProxy>(MF)
+                  .getManager();
+  AAResults &AA = FAM.getResult<AAManager>(MF.getFunction());
+
+  bool Changed = SILoadStoreOptimizer(&AA).run(MF);
+  if (!Changed)
+    return PreservedAnalyses::all();
+
+  PreservedAnalyses PA = getMachineFunctionPassPreservedAnalyses();
+  PA.preserveSet<CFGAnalyses>();
+  return PA;
 }

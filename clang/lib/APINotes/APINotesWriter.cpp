@@ -147,14 +147,8 @@ class APINotesWriter::Implementation {
     for (auto piece : SelectorRef.Identifiers)
       Selector.Identifiers.push_back(getIdentifier(piece));
 
-    // Look for the stored selector.
-    auto Known = SelectorIDs.find(Selector);
-    if (Known != SelectorIDs.end())
-      return Known->second;
-
-    // Add to the selector table.
-    Known = SelectorIDs.insert({Selector, SelectorIDs.size()}).first;
-    return Known->second;
+    // Look for the stored selector.  Add to the selector table if missing.
+    return SelectorIDs.try_emplace(Selector, SelectorIDs.size()).first->second;
   }
 
 private:

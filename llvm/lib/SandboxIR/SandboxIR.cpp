@@ -2185,6 +2185,13 @@ VectorType *ShuffleVectorInst::getType() const {
       Ctx.getType(cast<llvm::ShuffleVectorInst>(Val)->getType()));
 }
 
+void ShuffleVectorInst::commute() {
+  Ctx.getTracker().emplaceIfTracking<ShuffleVectorSetMask>(this);
+  Ctx.getTracker().emplaceIfTracking<UseSwap>(getOperandUse(0),
+                                              getOperandUse(1));
+  cast<llvm::ShuffleVectorInst>(Val)->commute();
+}
+
 Constant *ShuffleVectorInst::getShuffleMaskForBitcode() const {
   return Ctx.getOrCreateConstant(
       cast<llvm::ShuffleVectorInst>(Val)->getShuffleMaskForBitcode());
@@ -2243,9 +2250,217 @@ void Constant::dumpOS(raw_ostream &OS) const {
 }
 #endif // NDEBUG
 
+ConstantInt *ConstantInt::getTrue(Context &Ctx) {
+  auto *LLVMC = llvm::ConstantInt::getTrue(Ctx.LLVMCtx);
+  return cast<ConstantInt>(Ctx.getOrCreateConstant(LLVMC));
+}
+ConstantInt *ConstantInt::getFalse(Context &Ctx) {
+  auto *LLVMC = llvm::ConstantInt::getFalse(Ctx.LLVMCtx);
+  return cast<ConstantInt>(Ctx.getOrCreateConstant(LLVMC));
+}
+ConstantInt *ConstantInt::getBool(Context &Ctx, bool V) {
+  auto *LLVMC = llvm::ConstantInt::getBool(Ctx.LLVMCtx, V);
+  return cast<ConstantInt>(Ctx.getOrCreateConstant(LLVMC));
+}
+Constant *ConstantInt::getTrue(Type *Ty) {
+  auto *LLVMC = llvm::ConstantInt::getTrue(Ty->LLVMTy);
+  return Ty->getContext().getOrCreateConstant(LLVMC);
+}
+Constant *ConstantInt::getFalse(Type *Ty) {
+  auto *LLVMC = llvm::ConstantInt::getFalse(Ty->LLVMTy);
+  return Ty->getContext().getOrCreateConstant(LLVMC);
+}
+Constant *ConstantInt::getBool(Type *Ty, bool V) {
+  auto *LLVMC = llvm::ConstantInt::getBool(Ty->LLVMTy, V);
+  return Ty->getContext().getOrCreateConstant(LLVMC);
+}
 ConstantInt *ConstantInt::get(Type *Ty, uint64_t V, bool IsSigned) {
   auto *LLVMC = llvm::ConstantInt::get(Ty->LLVMTy, V, IsSigned);
   return cast<ConstantInt>(Ty->getContext().getOrCreateConstant(LLVMC));
+}
+ConstantInt *ConstantInt::get(IntegerType *Ty, uint64_t V, bool IsSigned) {
+  auto *LLVMC = llvm::ConstantInt::get(Ty->LLVMTy, V, IsSigned);
+  return cast<ConstantInt>(Ty->getContext().getOrCreateConstant(LLVMC));
+}
+ConstantInt *ConstantInt::getSigned(IntegerType *Ty, int64_t V) {
+  auto *LLVMC =
+      llvm::ConstantInt::getSigned(cast<llvm::IntegerType>(Ty->LLVMTy), V);
+  return cast<ConstantInt>(Ty->getContext().getOrCreateConstant(LLVMC));
+}
+Constant *ConstantInt::getSigned(Type *Ty, int64_t V) {
+  auto *LLVMC = llvm::ConstantInt::getSigned(Ty->LLVMTy, V);
+  return Ty->getContext().getOrCreateConstant(LLVMC);
+}
+ConstantInt *ConstantInt::get(Context &Ctx, const APInt &V) {
+  auto *LLVMC = llvm::ConstantInt::get(Ctx.LLVMCtx, V);
+  return cast<ConstantInt>(Ctx.getOrCreateConstant(LLVMC));
+}
+ConstantInt *ConstantInt::get(IntegerType *Ty, StringRef Str, uint8_t Radix) {
+  auto *LLVMC =
+      llvm::ConstantInt::get(cast<llvm::IntegerType>(Ty->LLVMTy), Str, Radix);
+  return cast<ConstantInt>(Ty->getContext().getOrCreateConstant(LLVMC));
+}
+Constant *ConstantInt::get(Type *Ty, const APInt &V) {
+  auto *LLVMC = llvm::ConstantInt::get(Ty->LLVMTy, V);
+  return Ty->getContext().getOrCreateConstant(LLVMC);
+}
+IntegerType *ConstantInt::getIntegerType() const {
+  auto *LLVMTy = cast<llvm::ConstantInt>(Val)->getIntegerType();
+  return cast<IntegerType>(Ctx.getType(LLVMTy));
+}
+
+bool ConstantInt::isValueValidForType(Type *Ty, uint64_t V) {
+  return llvm::ConstantInt::isValueValidForType(Ty->LLVMTy, V);
+}
+bool ConstantInt::isValueValidForType(Type *Ty, int64_t V) {
+  return llvm::ConstantInt::isValueValidForType(Ty->LLVMTy, V);
+}
+
+Constant *ConstantFP::get(Type *Ty, double V) {
+  auto *LLVMC = llvm::ConstantFP::get(Ty->LLVMTy, V);
+  return Ty->getContext().getOrCreateConstant(LLVMC);
+}
+
+Constant *ConstantFP::get(Type *Ty, const APFloat &V) {
+  auto *LLVMC = llvm::ConstantFP::get(Ty->LLVMTy, V);
+  return Ty->getContext().getOrCreateConstant(LLVMC);
+}
+
+Constant *ConstantFP::get(Type *Ty, StringRef Str) {
+  auto *LLVMC = llvm::ConstantFP::get(Ty->LLVMTy, Str);
+  return Ty->getContext().getOrCreateConstant(LLVMC);
+}
+
+ConstantFP *ConstantFP::get(const APFloat &V, Context &Ctx) {
+  auto *LLVMC = llvm::ConstantFP::get(Ctx.LLVMCtx, V);
+  return cast<ConstantFP>(Ctx.getOrCreateConstant(LLVMC));
+}
+
+Constant *ConstantFP::getNaN(Type *Ty, bool Negative, uint64_t Payload) {
+  auto *LLVMC = llvm::ConstantFP::getNaN(Ty->LLVMTy, Negative, Payload);
+  return cast<Constant>(Ty->getContext().getOrCreateConstant(LLVMC));
+}
+Constant *ConstantFP::getQNaN(Type *Ty, bool Negative, APInt *Payload) {
+  auto *LLVMC = llvm::ConstantFP::getQNaN(Ty->LLVMTy, Negative, Payload);
+  return cast<Constant>(Ty->getContext().getOrCreateConstant(LLVMC));
+}
+Constant *ConstantFP::getSNaN(Type *Ty, bool Negative, APInt *Payload) {
+  auto *LLVMC = llvm::ConstantFP::getSNaN(Ty->LLVMTy, Negative, Payload);
+  return cast<Constant>(Ty->getContext().getOrCreateConstant(LLVMC));
+}
+Constant *ConstantFP::getZero(Type *Ty, bool Negative) {
+  auto *LLVMC = llvm::ConstantFP::getZero(Ty->LLVMTy, Negative);
+  return cast<Constant>(Ty->getContext().getOrCreateConstant(LLVMC));
+}
+Constant *ConstantFP::getNegativeZero(Type *Ty) {
+  auto *LLVMC = llvm::ConstantFP::getNegativeZero(Ty->LLVMTy);
+  return cast<Constant>(Ty->getContext().getOrCreateConstant(LLVMC));
+}
+Constant *ConstantFP::getInfinity(Type *Ty, bool Negative) {
+  auto *LLVMC = llvm::ConstantFP::getInfinity(Ty->LLVMTy, Negative);
+  return cast<Constant>(Ty->getContext().getOrCreateConstant(LLVMC));
+}
+bool ConstantFP::isValueValidForType(Type *Ty, const APFloat &V) {
+  return llvm::ConstantFP::isValueValidForType(Ty->LLVMTy, V);
+}
+
+Constant *ConstantArray::get(ArrayType *T, ArrayRef<Constant *> V) {
+  auto &Ctx = T->getContext();
+  SmallVector<llvm::Constant *> LLVMValues;
+  LLVMValues.reserve(V.size());
+  for (auto *Elm : V)
+    LLVMValues.push_back(cast<llvm::Constant>(Elm->Val));
+  auto *LLVMC =
+      llvm::ConstantArray::get(cast<llvm::ArrayType>(T->LLVMTy), LLVMValues);
+  return cast<ConstantArray>(Ctx.getOrCreateConstant(LLVMC));
+}
+
+ArrayType *ConstantArray::getType() const {
+  return cast<ArrayType>(
+      Ctx.getType(cast<llvm::ConstantArray>(Val)->getType()));
+}
+
+Constant *ConstantStruct::get(StructType *T, ArrayRef<Constant *> V) {
+  auto &Ctx = T->getContext();
+  SmallVector<llvm::Constant *> LLVMValues;
+  LLVMValues.reserve(V.size());
+  for (auto *Elm : V)
+    LLVMValues.push_back(cast<llvm::Constant>(Elm->Val));
+  auto *LLVMC =
+      llvm::ConstantStruct::get(cast<llvm::StructType>(T->LLVMTy), LLVMValues);
+  return cast<ConstantStruct>(Ctx.getOrCreateConstant(LLVMC));
+}
+
+StructType *ConstantStruct::getTypeForElements(Context &Ctx,
+                                               ArrayRef<Constant *> V,
+                                               bool Packed) {
+  unsigned VecSize = V.size();
+  SmallVector<Type *, 16> EltTypes;
+  EltTypes.reserve(VecSize);
+  for (Constant *Elm : V)
+    EltTypes.push_back(Elm->getType());
+  return StructType::get(Ctx, EltTypes, Packed);
+}
+
+ConstantAggregateZero *ConstantAggregateZero::get(Type *Ty) {
+  auto *LLVMC = llvm::ConstantAggregateZero::get(Ty->LLVMTy);
+  return cast<ConstantAggregateZero>(
+      Ty->getContext().getOrCreateConstant(LLVMC));
+}
+
+Constant *ConstantAggregateZero::getSequentialElement() const {
+  return cast<Constant>(Ctx.getValue(
+      cast<llvm::ConstantAggregateZero>(Val)->getSequentialElement()));
+}
+Constant *ConstantAggregateZero::getStructElement(unsigned Elt) const {
+  return cast<Constant>(Ctx.getValue(
+      cast<llvm::ConstantAggregateZero>(Val)->getStructElement(Elt)));
+}
+Constant *ConstantAggregateZero::getElementValue(Constant *C) const {
+  return cast<Constant>(
+      Ctx.getValue(cast<llvm::ConstantAggregateZero>(Val)->getElementValue(
+          cast<llvm::Constant>(C->Val))));
+}
+Constant *ConstantAggregateZero::getElementValue(unsigned Idx) const {
+  return cast<Constant>(Ctx.getValue(
+      cast<llvm::ConstantAggregateZero>(Val)->getElementValue(Idx)));
+}
+
+ConstantPointerNull *ConstantPointerNull::get(PointerType *Ty) {
+  auto *LLVMC =
+      llvm::ConstantPointerNull::get(cast<llvm::PointerType>(Ty->LLVMTy));
+  return cast<ConstantPointerNull>(Ty->getContext().getOrCreateConstant(LLVMC));
+}
+
+PointerType *ConstantPointerNull::getType() const {
+  return cast<PointerType>(
+      Ctx.getType(cast<llvm::ConstantPointerNull>(Val)->getType()));
+}
+
+PoisonValue *PoisonValue::get(Type *T) {
+  auto *LLVMC = llvm::PoisonValue::get(T->LLVMTy);
+  return cast<PoisonValue>(T->getContext().getOrCreateConstant(LLVMC));
+}
+
+PoisonValue *PoisonValue::getSequentialElement() const {
+  return cast<PoisonValue>(Ctx.getOrCreateConstant(
+      cast<llvm::PoisonValue>(Val)->getSequentialElement()));
+}
+
+PoisonValue *PoisonValue::getStructElement(unsigned Elt) const {
+  return cast<PoisonValue>(Ctx.getOrCreateConstant(
+      cast<llvm::PoisonValue>(Val)->getStructElement(Elt)));
+}
+
+PoisonValue *PoisonValue::getElementValue(Constant *C) const {
+  return cast<PoisonValue>(
+      Ctx.getOrCreateConstant(cast<llvm::PoisonValue>(Val)->getElementValue(
+          cast<llvm::Constant>(C->Val))));
+}
+
+PoisonValue *PoisonValue::getElementValue(unsigned Idx) const {
+  return cast<PoisonValue>(Ctx.getOrCreateConstant(
+      cast<llvm::PoisonValue>(Val)->getElementValue(Idx)));
 }
 
 FunctionType *Function::getFunctionType() const {
@@ -2335,14 +2550,56 @@ Value *Context::getOrCreateValueInternal(llvm::Value *LLVMV, llvm::User *U) {
     return It->second.get();
 
   if (auto *C = dyn_cast<llvm::Constant>(LLVMV)) {
-    if (auto *CI = dyn_cast<llvm::ConstantInt>(C)) {
-      It->second = std::unique_ptr<ConstantInt>(new ConstantInt(CI, *this));
+    switch (C->getValueID()) {
+    case llvm::Value::ConstantIntVal:
+      It->second = std::unique_ptr<ConstantInt>(
+          new ConstantInt(cast<llvm::ConstantInt>(C), *this));
       return It->second.get();
+    case llvm::Value::ConstantFPVal:
+      It->second = std::unique_ptr<ConstantFP>(
+          new ConstantFP(cast<llvm::ConstantFP>(C), *this));
+      return It->second.get();
+    case llvm::Value::ConstantAggregateZeroVal: {
+      auto *CAZ = cast<llvm::ConstantAggregateZero>(C);
+      It->second = std::unique_ptr<ConstantAggregateZero>(
+          new ConstantAggregateZero(CAZ, *this));
+      auto *Ret = It->second.get();
+      // Must create sandboxir for elements.
+      auto EC = CAZ->getElementCount();
+      if (EC.isFixed()) {
+        for (auto ElmIdx : seq<unsigned>(0, EC.getFixedValue()))
+          getOrCreateValueInternal(CAZ->getElementValue(ElmIdx), CAZ);
+      }
+      return Ret;
     }
-    if (auto *F = dyn_cast<llvm::Function>(LLVMV))
-      It->second = std::unique_ptr<Function>(new Function(F, *this));
-    else
+    case llvm::Value::ConstantPointerNullVal:
+      It->second = std::unique_ptr<ConstantPointerNull>(
+          new ConstantPointerNull(cast<llvm::ConstantPointerNull>(C), *this));
+      return It->second.get();
+    case llvm::Value::PoisonValueVal:
+      It->second = std::unique_ptr<PoisonValue>(
+          new PoisonValue(cast<llvm::PoisonValue>(C), *this));
+      return It->second.get();
+    case llvm::Value::ConstantArrayVal:
+      It->second = std::unique_ptr<ConstantArray>(
+          new ConstantArray(cast<llvm::ConstantArray>(C), *this));
+      break;
+    case llvm::Value::ConstantStructVal:
+      It->second = std::unique_ptr<ConstantStruct>(
+          new ConstantStruct(cast<llvm::ConstantStruct>(C), *this));
+      break;
+    case llvm::Value::ConstantVectorVal:
+      It->second = std::unique_ptr<ConstantVector>(
+          new ConstantVector(cast<llvm::ConstantVector>(C), *this));
+      break;
+    case llvm::Value::FunctionVal:
+      It->second = std::unique_ptr<Function>(
+          new Function(cast<llvm::Function>(C), *this));
+      break;
+    default:
       It->second = std::unique_ptr<Constant>(new Constant(C, *this));
+      break;
+    }
     auto *NewC = It->second.get();
     for (llvm::Value *COp : C->operands())
       getOrCreateValueInternal(COp, C);
@@ -2569,6 +2826,16 @@ Value *Context::getOrCreateValueInternal(llvm::Value *LLVMV, llvm::User *U) {
     It->second = std::unique_ptr<PHINode>(new PHINode(LLVMPhi, *this));
     return It->second.get();
   }
+  case llvm::Instruction::ICmp: {
+    auto *LLVMICmp = cast<llvm::ICmpInst>(LLVMV);
+    It->second = std::unique_ptr<ICmpInst>(new ICmpInst(LLVMICmp, *this));
+    return It->second.get();
+  }
+  case llvm::Instruction::FCmp: {
+    auto *LLVMFCmp = cast<llvm::FCmpInst>(LLVMV);
+    It->second = std::unique_ptr<FCmpInst>(new FCmpInst(LLVMFCmp, *this));
+    return It->second.get();
+  }
   case llvm::Instruction::Unreachable: {
     auto *LLVMUnreachable = cast<llvm::UnreachableInst>(LLVMV);
     It->second = std::unique_ptr<UnreachableInst>(
@@ -2756,6 +3023,79 @@ PHINode *Context::createPHINode(llvm::PHINode *I) {
   auto NewPtr = std::unique_ptr<PHINode>(new PHINode(I, *this));
   return cast<PHINode>(registerValue(std::move(NewPtr)));
 }
+ICmpInst *Context::createICmpInst(llvm::ICmpInst *I) {
+  auto NewPtr = std::unique_ptr<ICmpInst>(new ICmpInst(I, *this));
+  return cast<ICmpInst>(registerValue(std::move(NewPtr)));
+}
+FCmpInst *Context::createFCmpInst(llvm::FCmpInst *I) {
+  auto NewPtr = std::unique_ptr<FCmpInst>(new FCmpInst(I, *this));
+  return cast<FCmpInst>(registerValue(std::move(NewPtr)));
+}
+CmpInst *CmpInst::create(Predicate P, Value *S1, Value *S2,
+                         Instruction *InsertBefore, Context &Ctx,
+                         const Twine &Name) {
+  auto &Builder = Ctx.getLLVMIRBuilder();
+  Builder.SetInsertPoint(InsertBefore->getTopmostLLVMInstruction());
+  auto *LLVMI = Builder.CreateCmp(P, S1->Val, S2->Val, Name);
+  if (dyn_cast<llvm::ICmpInst>(LLVMI))
+    return Ctx.createICmpInst(cast<llvm::ICmpInst>(LLVMI));
+  return Ctx.createFCmpInst(cast<llvm::FCmpInst>(LLVMI));
+}
+CmpInst *CmpInst::createWithCopiedFlags(Predicate P, Value *S1, Value *S2,
+                                        const Instruction *F,
+                                        Instruction *InsertBefore, Context &Ctx,
+                                        const Twine &Name) {
+  CmpInst *Inst = create(P, S1, S2, InsertBefore, Ctx, Name);
+  cast<llvm::CmpInst>(Inst->Val)->copyIRFlags(F->Val);
+  return Inst;
+}
+
+Type *CmpInst::makeCmpResultType(Type *OpndType) {
+  if (auto *VT = dyn_cast<VectorType>(OpndType)) {
+    // TODO: Cleanup when we have more complete support for
+    // sandboxir::VectorType
+    return OpndType->getContext().getType(llvm::VectorType::get(
+        llvm::Type::getInt1Ty(OpndType->getContext().LLVMCtx),
+        cast<llvm::VectorType>(VT->LLVMTy)->getElementCount()));
+  }
+  return Type::getInt1Ty(OpndType->getContext());
+}
+
+void CmpInst::setPredicate(Predicate P) {
+  Ctx.getTracker()
+      .emplaceIfTracking<
+          GenericSetter<&CmpInst::getPredicate, &CmpInst::setPredicate>>(this);
+  cast<llvm::CmpInst>(Val)->setPredicate(P);
+}
+
+void CmpInst::swapOperands() {
+  if (ICmpInst *IC = dyn_cast<ICmpInst>(this))
+    IC->swapOperands();
+  else
+    cast<FCmpInst>(this)->swapOperands();
+}
+
+void ICmpInst::swapOperands() {
+  Ctx.getTracker().emplaceIfTracking<CmpSwapOperands>(this);
+  cast<llvm::ICmpInst>(Val)->swapOperands();
+}
+
+void FCmpInst::swapOperands() {
+  Ctx.getTracker().emplaceIfTracking<CmpSwapOperands>(this);
+  cast<llvm::FCmpInst>(Val)->swapOperands();
+}
+
+#ifndef NDEBUG
+void CmpInst::dumpOS(raw_ostream &OS) const {
+  dumpCommonPrefix(OS);
+  dumpCommonSuffix(OS);
+}
+
+void CmpInst::dump() const {
+  dumpOS(dbgs());
+  dbgs() << "\n";
+}
+#endif // NDEBUG
 
 Value *Context::getValue(llvm::Value *V) const {
   auto It = LLVMValueToValueMap.find(V);

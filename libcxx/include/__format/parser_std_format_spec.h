@@ -1163,7 +1163,7 @@ __estimate_column_width(basic_string_view<_CharT> __str, size_t __maximum, __col
 
 } // namespace __format_spec
 
-#endif //_LIBCPP_STD_VER >= 20
+#endif // _LIBCPP_STD_VER >= 20
 
 _LIBCPP_END_NAMESPACE_STD
 

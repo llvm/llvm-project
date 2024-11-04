@@ -43,21 +43,20 @@
 
 namespace llvm {
 
-enum class ReplacementType { Empty, Format, Literal };
+enum class ReplacementType { Format, Literal };
 
 struct ReplacementItem {
-  ReplacementItem() = default;
   explicit ReplacementItem(StringRef Literal)
       : Type(ReplacementType::Literal), Spec(Literal) {}
-  ReplacementItem(StringRef Spec, size_t Index, size_t Align, AlignStyle Where,
-                  char Pad, StringRef Options)
-      : Type(ReplacementType::Format), Spec(Spec), Index(Index), Align(Align),
+  ReplacementItem(StringRef Spec, unsigned Index, unsigned Width,
+                  AlignStyle Where, char Pad, StringRef Options)
+      : Type(ReplacementType::Format), Spec(Spec), Index(Index), Width(Width),
         Where(Where), Pad(Pad), Options(Options) {}
 
-  ReplacementType Type = ReplacementType::Empty;
+  ReplacementType Type;
   StringRef Spec;
-  size_t Index = 0;
-  size_t Align = 0;
+  unsigned Index = 0;
+  unsigned Width = 0;
   AlignStyle Where = AlignStyle::Right;
   char Pad = 0;
   StringRef Options;
@@ -81,8 +80,6 @@ public:
   void format(raw_ostream &S) const {
     const auto Replacements = parseFormatString(Fmt, Adapters.size(), Validate);
     for (const auto &R : Replacements) {
-      if (R.Type == ReplacementType::Empty)
-        continue;
       if (R.Type == ReplacementType::Literal) {
         S << R.Spec;
         continue;
@@ -94,7 +91,7 @@ public:
 
       auto *W = Adapters[R.Index];
 
-      FmtAlign Align(*W, R.Where, R.Align, R.Pad);
+      FmtAlign Align(*W, R.Where, R.Width, R.Pad);
       Align.format(S, R.Options);
     }
   }
@@ -248,14 +245,10 @@ public:
 
 // formatv() with validation enable/disable controlled by the first argument.
 template <typename... Ts>
-inline auto formatv(bool Validate, const char *Fmt, Ts &&...Vals)
-    -> formatv_object<decltype(std::make_tuple(
-        support::detail::build_format_adapter(std::forward<Ts>(Vals))...))> {
-  using ParamTuple = decltype(std::make_tuple(
-      support::detail::build_format_adapter(std::forward<Ts>(Vals))...));
+inline auto formatv(bool Validate, const char *Fmt, Ts &&...Vals) {
   auto Params = std::make_tuple(
       support::detail::build_format_adapter(std::forward<Ts>(Vals))...);
-  return formatv_object<ParamTuple>(Fmt, std::move(Params), Validate);
+  return formatv_object<decltype(Params)>(Fmt, std::move(Params), Validate);
 }
 
 // formatv() with validation enabled.

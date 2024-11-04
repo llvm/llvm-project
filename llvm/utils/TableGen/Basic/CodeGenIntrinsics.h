@@ -15,6 +15,7 @@
 
 #include "SDNodeProperties.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/ModRef.h"
 #include <string>
@@ -24,6 +25,15 @@
 namespace llvm {
 class Record;
 class RecordKeeper;
+
+// Global information needed to build intrinsics.
+struct CodeGenIntrinsicContext {
+  explicit CodeGenIntrinsicContext(const RecordKeeper &RC);
+  std::vector<const Record *> DefaultProperties;
+
+  // Maximum number of values an intrinsic can return.
+  unsigned MaxNumReturn;
+};
 
 struct CodeGenIntrinsic {
   const Record *TheDef; // The actual record defining this intrinsic.
@@ -155,8 +165,7 @@ struct CodeGenIntrinsic {
 
   bool isParamImmArg(unsigned ParamIdx) const;
 
-  CodeGenIntrinsic(const Record *R,
-                   ArrayRef<const Record *> DefaultProperties = {});
+  CodeGenIntrinsic(const Record *R, const CodeGenIntrinsicContext &Ctx);
 };
 
 class CodeGenIntrinsicTable {
@@ -171,7 +180,6 @@ public:
   std::vector<TargetSet> Targets;
 
   explicit CodeGenIntrinsicTable(const RecordKeeper &RC);
-  CodeGenIntrinsicTable() = default;
 
   bool empty() const { return Intrinsics.empty(); }
   size_t size() const { return Intrinsics.size(); }
@@ -182,6 +190,17 @@ public:
     return Intrinsics[Pos];
   }
 };
+
+// This class builds `CodeGenIntrinsic` on demand for a given Def.
+class CodeGenIntrinsicMap {
+  DenseMap<const Record *, std::unique_ptr<CodeGenIntrinsic>> Map;
+  const CodeGenIntrinsicContext Ctx;
+
+public:
+  explicit CodeGenIntrinsicMap(const RecordKeeper &RC) : Ctx(RC) {}
+  CodeGenIntrinsic &operator[](const Record *Def);
+};
+
 } // namespace llvm
 
 #endif // LLVM_UTILS_TABLEGEN_BASIC_CODEGENINTRINSICS_H

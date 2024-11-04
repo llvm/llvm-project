@@ -42,7 +42,6 @@ template <class>
 struct OperandTraits;
 
 class User : public Value {
-  template <unsigned>
   friend struct HungoffOperandTraits;
 
   LLVM_ATTRIBUTE_ALWAYS_INLINE static void *

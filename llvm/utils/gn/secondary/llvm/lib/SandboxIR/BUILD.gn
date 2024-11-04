@@ -7,5 +7,6 @@ static_library("SandboxIR") {
   sources = [
     "SandboxIR.cpp",
     "Tracker.cpp",
+    "Type.cpp",
   ]
 }

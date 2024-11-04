@@ -1262,7 +1262,7 @@ struct EmboxCommonConversion : public fir::FIROpConversion<OP> {
       } else {
         auto maskAttr = mlir::IntegerAttr::get(
             rewriter.getIntegerType(8, /*isSigned=*/false),
-            llvm::APInt(8, (uint64_t)~_CFI_ADDENDUM_FLAG, /*isSigned=*/false));
+            llvm::APInt(8, (uint64_t)~_CFI_ADDENDUM_FLAG, /*isSigned=*/true));
         mlir::LLVM::ConstantOp mask = rewriter.create<mlir::LLVM::ConstantOp>(
             loc, rewriter.getI8Type(), maskAttr);
         extraField = rewriter.create<mlir::LLVM::AndOp>(loc, extraField, mask);
@@ -1273,7 +1273,7 @@ struct EmboxCommonConversion : public fir::FIROpConversion<OP> {
     } else {
       // Compute the value of the extra field based on allocator_idx and
       // addendum present using a Descriptor object.
-      Fortran::runtime::StaticDescriptor<0> staticDescriptor;
+      Fortran::runtime::StaticDescriptor staticDescriptor;
       Fortran::runtime::Descriptor &desc{staticDescriptor.descriptor()};
       desc.raw().extra = 0;
       desc.SetAllocIdx(allocatorIdx);

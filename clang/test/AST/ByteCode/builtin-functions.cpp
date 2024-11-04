@@ -227,15 +227,26 @@ namespace floating_comparison {
   !__builtin_islessgreater(X, Y) && !__builtin_islessgreater(Y, X) &&    \
   __builtin_isunordered(X, Y) && __builtin_isunordered(Y, X)
 
-  static_assert(
-    LESS(0.0, 1.0) && EQUAL(1.0, 1.0) && EQUAL(0.0, -0.0) &&
-    UNORDERED(__builtin_nan(""), 1.0) && UNORDERED(__builtin_nan(""), __builtin_inf()) && LESS(0.0, __builtin_inf()) &&
-    LESS(0.0f, 1.0f) && EQUAL(1.0f, 1.0f) && EQUAL(0.0f, -0.0f) &&
-    UNORDERED(__builtin_nanf(""), 1.0f) && UNORDERED(__builtin_nanf(""), __builtin_inff()) && LESS(0.0f, __builtin_inff()) &&
-    LESS(0.0L, 1.0L) && EQUAL(1.0L, 1.0L) && EQUAL(0.0L, -0.0L) &&
-    UNORDERED(__builtin_nanl(""), 1.0L) && UNORDERED(__builtin_nanl(""), __builtin_infl()) && LESS(0.0L, __builtin_infl()) &&
-    true, ""
-  );
+  static_assert(LESS(0.0, 1.0));
+  static_assert(LESS(0.0, __builtin_inf()));
+  static_assert(LESS(0.0f, 1.0f));
+  static_assert(LESS(0.0f, __builtin_inff()));
+  static_assert(LESS(0.0L, 1.0L));
+  static_assert(LESS(0.0L, __builtin_infl()));
+
+  static_assert(EQUAL(1.0, 1.0));
+  static_assert(EQUAL(0.0, -0.0));
+  static_assert(EQUAL(1.0f, 1.0f));
+  static_assert(EQUAL(0.0f, -0.0f));
+  static_assert(EQUAL(1.0L, 1.0L));
+  static_assert(EQUAL(0.0L, -0.0L));
+
+  static_assert(UNORDERED(__builtin_nan(""), 1.0));
+  static_assert(UNORDERED(__builtin_nan(""), __builtin_inf()));
+  static_assert(UNORDERED(__builtin_nanf(""), 1.0f));
+  static_assert(UNORDERED(__builtin_nanf(""), __builtin_inff()));
+  static_assert(UNORDERED(__builtin_nanl(""), 1.0L));
+  static_assert(UNORDERED(__builtin_nanl(""), __builtin_infl()));
 }
 
 namespace fpclassify {
@@ -951,3 +962,9 @@ namespace shufflevector {
 }
 
 #endif
+
+namespace FunctionStart {
+  void a(void) {}
+  static_assert(__builtin_function_start(a) == a, ""); // both-error {{not an integral constant expression}} \
+                                                       // both-note {{comparison of addresses of literals has unspecified value}}
+}

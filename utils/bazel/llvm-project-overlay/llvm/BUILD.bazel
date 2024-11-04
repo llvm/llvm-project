@@ -1358,11 +1358,9 @@ gentbl(
     tblgen = ":llvm-tblgen",
     td_file = "lib/Target/AMDGPU/InstCombineTables.td",
     td_srcs = glob([
-        "include/llvm/CodeGen/*.td",
-        "include/llvm/IR/Intrinsics*.td",
+        "lib/Target/AMDGPU/*.td",
     ]) + [
-        "lib/Target/AMDGPU/InstCombineTables.td",
-        "include/llvm/TableGen/SearchableTable.td",
+        ":common_target_td_sources",
     ],
 )
 
@@ -1420,6 +1418,7 @@ cc_library(
         ":Demangle",
         ":MC",
         ":ProfileData",
+        ":Scalar",
         ":Support",
         ":Target",
         ":TargetParser",
@@ -1443,6 +1442,20 @@ cc_library(
         ":Target",
         ":TransformUtils",
         ":config",
+    ],
+)
+
+cc_library(
+    name = "SandboxIR",
+    srcs = glob([
+        "lib/SandboxIR/*.cpp",
+    ]),
+    hdrs = glob(["include/llvm/SandboxIR/*.h"]),
+    copts = llvm_copts,
+    textual_hdrs = ["include/llvm/SandboxIR/SandboxIRValues.def"],
+    deps = [
+        ":Core",
+        ":Support",
     ],
 )
 
@@ -1474,14 +1487,17 @@ cc_library(
     srcs = glob([
         "lib/Transforms/Vectorize/*.cpp",
         "lib/Transforms/Vectorize/*.h",
+        "lib/Transforms/Vectorize/SandboxVectorizer/*.cpp",
     ]),
     hdrs = glob([
         "include/llvm/Transforms/Vectorize/*.h",
+        "include/llvm/Transforms/Vectorize/SandboxVectorizer/SandboxVectorizer.h",
     ]),
     copts = llvm_copts,
     deps = [
         ":Analysis",
         ":Core",
+        ":SandboxIR",
         ":Scalar",
         ":Support",
         ":Target",
@@ -4433,6 +4449,7 @@ cc_library(
     copts = llvm_copts,
     deps = [
         ":Core",
+        ":Debuginfod",
         ":Object",
         ":ProfileData",
         ":Support",

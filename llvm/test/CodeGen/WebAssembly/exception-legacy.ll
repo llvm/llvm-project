@@ -10,10 +10,10 @@ target triple = "wasm32-unknown-unknown"
 
 ; CHECK: .tagtype  __cpp_exception i32
 
-; CHECK-LABEL: test_throw:
+; CHECK-LABEL: throw:
 ; CHECK:     throw __cpp_exception, $0
 ; CHECK-NOT: unreachable
-define void @test_throw(ptr %p) {
+define void @throw(ptr %p) {
   call void @llvm.wasm.throw(i32 0, ptr %p)
   ret void
 }
@@ -21,14 +21,14 @@ define void @test_throw(ptr %p) {
 ; Simple test with a try-catch
 ;
 ; void foo();
-; void test_catch() {
+; void catch() {
 ;   try {
 ;     foo();
 ;   } catch (int) {
 ;   }
 ; }
 
-; CHECK-LABEL: test_catch:
+; CHECK-LABEL: catch:
 ; CHECK:     global.get  ${{.+}}=, __stack_pointer
 ; CHECK:     try
 ; CHECK:       call      foo
@@ -44,7 +44,7 @@ define void @test_throw(ptr %p) {
 ; CHECK:       end_block
 ; CHECK:       rethrow   0
 ; CHECK:     end_try
-define void @test_catch() personality ptr @__gxx_wasm_personality_v0 {
+define void @catch() personality ptr @__gxx_wasm_personality_v0 {
 entry:
   invoke void @foo()
           to label %try.cont unwind label %catch.dispatch
@@ -79,12 +79,12 @@ try.cont:                                         ; preds = %catch, %entry
 ; struct Temp {
 ;   ~Temp() {}
 ; };
-; void test_cleanup() {
+; void cleanup() {
 ;   Temp t;
 ;   foo();
 ; }
 
-; CHECK-LABEL: test_cleanup:
+; CHECK-LABEL: cleanup:
 ; CHECK: try
 ; CHECK:   call      foo
 ; CHECK: catch_all
@@ -92,7 +92,7 @@ try.cont:                                         ; preds = %catch, %entry
 ; CHECK:   call      $drop=, _ZN4TempD2Ev
 ; CHECK:   rethrow   0
 ; CHECK: end_try
-define void @test_cleanup() personality ptr @__gxx_wasm_personality_v0 {
+define void @cleanup() personality ptr @__gxx_wasm_personality_v0 {
 entry:
   %t = alloca %struct.Temp, align 1
   invoke void @foo()
@@ -112,7 +112,7 @@ ehcleanup:                                        ; preds = %entry
 ; temrinatepad, because __cxa_end_catch() also can throw within 'catch (...)'.
 ;
 ; void foo();
-; void test_terminatepad() {
+; void terminatepad() {
 ;   try {
 ;     foo();
 ;   } catch (...) {
@@ -120,7 +120,7 @@ ehcleanup:                                        ; preds = %entry
 ;   }
 ; }
 
-; CHECK-LABEL: test_terminatepad
+; CHECK-LABEL: terminatepad
 ; CHECK: try
 ; CHECK:   call      foo
 ; CHECK: catch
@@ -138,7 +138,7 @@ ehcleanup:                                        ; preds = %entry
 ; CHECK:   end_try
 ; CHECK:   call      __cxa_end_catch
 ; CHECK: end_try
-define void @test_terminatepad() personality ptr @__gxx_wasm_personality_v0 {
+define void @terminatepad() personality ptr @__gxx_wasm_personality_v0 {
 entry:
   invoke void @foo()
           to label %try.cont unwind label %catch.dispatch
@@ -182,7 +182,7 @@ terminate:                                        ; preds = %ehcleanup
 ; instructions after a catch instruction.
 ;
 ; void bar(int) noexcept;
-; void test_no_prolog_epilog_in_ehpad() {
+; void no_prolog_epilog_in_ehpad() {
 ;   int stack_var = 0;
 ;   bar(stack_var);
 ;   try {
@@ -192,7 +192,7 @@ terminate:                                        ; preds = %ehcleanup
 ;   }
 ; }
 
-; CHECK-LABEL: test_no_prolog_epilog_in_ehpad
+; CHECK-LABEL: no_prolog_epilog_in_ehpad
 ; CHECK:     try
 ; CHECK:       call      foo
 ; CHECK:     catch
@@ -217,7 +217,7 @@ terminate:                                        ; preds = %ehcleanup
 ; CHECK-NOT:   global.set  __stack_pointer, $pop{{.+}}
 ; CHECK:       call      __cxa_end_catch
 ; CHECK:     end_try
-define void @test_no_prolog_epilog_in_ehpad() personality ptr @__gxx_wasm_personality_v0 {
+define void @no_prolog_epilog_in_ehpad() personality ptr @__gxx_wasm_personality_v0 {
 entry:
   %stack_var = alloca i32, align 4
   call void @bar(ptr %stack_var)
@@ -262,14 +262,14 @@ ehcleanup:                                        ; preds = %catch
 ; store SP back to __stack_pointer global at the epilog.
 ;
 ; void foo();
-; void test_no_sp_writeback() {
+; void no_sp_writeback() {
 ;   try {
 ;     foo();
 ;   } catch (...) {
 ;   }
 ; }
 
-; CHECK-LABEL: test_no_sp_writeback
+; CHECK-LABEL: no_sp_writeback
 ; CHECK:     try
 ; CHECK:       call      foo
 ; CHECK:     catch
@@ -278,7 +278,7 @@ ehcleanup:                                        ; preds = %catch
 ; CHECK:     end_try
 ; CHECK-NOT: global.set  __stack_pointer
 ; CHECK:     return
-define void @test_no_sp_writeback() personality ptr @__gxx_wasm_personality_v0 {
+define void @no_sp_writeback() personality ptr @__gxx_wasm_personality_v0 {
 entry:
   invoke void @foo()
           to label %try.cont unwind label %catch.dispatch
@@ -300,7 +300,7 @@ try.cont:                                         ; preds = %catch.start, %entry
 
 ; When the result of @llvm.wasm.get.exception is not used. This is created to
 ; fix a bug in LateEHPrepare and this should not crash.
-define void @test_get_exception_wo_use() personality ptr @__gxx_wasm_personality_v0 {
+define void @get_exception_wo_use() personality ptr @__gxx_wasm_personality_v0 {
 entry:
   invoke void @foo()
           to label %try.cont unwind label %catch.dispatch
@@ -320,7 +320,7 @@ try.cont:                                         ; preds = %catch.start, %entry
 
 ; Tests a case when a cleanup region (cleanuppad ~ clanupret) contains another
 ; catchpad
-define void @test_complex_cleanup_region() personality ptr @__gxx_wasm_personality_v0 {
+define void @complex_cleanup_region() personality ptr @__gxx_wasm_personality_v0 {
 entry:
   invoke void @foo()
           to label %invoke.cont unwind label %ehcleanup
@@ -352,7 +352,7 @@ ehcleanupret:                                     ; preds = %catch.start, %ehcle
 
 ; Regression test for the bug that 'rethrow' was not treated correctly as a
 ; terminator in isel.
-define void @test_rethrow_terminator() personality ptr @__gxx_wasm_personality_v0 {
+define void @rethrow_terminator() personality ptr @__gxx_wasm_personality_v0 {
 entry:
   invoke void @foo()
           to label %try.cont unwind label %catch.dispatch

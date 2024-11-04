@@ -60,7 +60,7 @@ Value createConstraint(OpBuilder &builder, tblgen::Constraint constraint) {
 
   if (predRec.isSubClassOf("AnyTypeOf")) {
     std::vector<Value> constraints;
-    for (Record *child : predRec.getValueAsListOfDefs("allowedTypes")) {
+    for (const Record *child : predRec.getValueAsListOfDefs("allowedTypes")) {
       constraints.push_back(
           createConstraint(builder, tblgen::Constraint(child)));
     }
@@ -70,7 +70,7 @@ Value createConstraint(OpBuilder &builder, tblgen::Constraint constraint) {
 
   if (predRec.isSubClassOf("AllOfType")) {
     std::vector<Value> constraints;
-    for (Record *child : predRec.getValueAsListOfDefs("allowedTypes")) {
+    for (const Record *child : predRec.getValueAsListOfDefs("allowedTypes")) {
       constraints.push_back(
           createConstraint(builder, tblgen::Constraint(child)));
     }
@@ -145,13 +145,6 @@ static irdl::DialectOp createIRDLDialect(OpBuilder &builder) {
                                          StringAttr::get(ctx, selectedDialect));
 }
 
-static std::vector<llvm::Record *>
-getOpDefinitions(const RecordKeeper &recordKeeper) {
-  if (!recordKeeper.getClass("Op"))
-    return {};
-  return recordKeeper.getAllDerivedDefinitions("Op");
-}
-
 static bool emitDialectIRDLDefs(const RecordKeeper &recordKeeper,
                                 raw_ostream &os) {
   // Initialize.
@@ -168,8 +161,8 @@ static bool emitDialectIRDLDefs(const RecordKeeper &recordKeeper,
   // Set insertion point to start of DialectOp.
   builder = builder.atBlockBegin(&dialect.getBody().emplaceBlock());
 
-  std::vector<Record *> defs = getOpDefinitions(recordKeeper);
-  for (auto *def : defs) {
+  for (const Record *def :
+       recordKeeper.getAllDerivedDefinitionsIfDefined("Op")) {
     tblgen::Operator tblgenOp(def);
     if (tblgenOp.getDialectName() != selectedDialect)
       continue;

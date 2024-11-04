@@ -169,7 +169,7 @@ bool ValueObjectSynthetic::UpdateValue() {
     // our parent could not update.. as we are meaningless without a parent,
     // just stop
     if (m_parent->GetError().Fail())
-      m_error = m_parent->GetError();
+      m_error = m_parent->GetError().Clone();
     return false;
   }
 

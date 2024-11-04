@@ -1,4 +1,4 @@
-; RUN: llc -march=bpfel < %s | FileCheck --check-prefix=CHECK-V1 %s
+; RUN: llc -march=bpfel -mcpu=v1 < %s | FileCheck --check-prefix=CHECK-V1 %s
 ; RUN: llc -march=bpfel -mcpu=v2 < %s | FileCheck --check-prefix=CHECK-V2 %s
 
 define i16 @sccweqand(i16 %a, i16 %b) nounwind {

@@ -109,13 +109,3 @@ static const EnumEntry<PSV::ResourceKind> ResourceKindNames[] = {
 ArrayRef<EnumEntry<PSV::ResourceKind>> PSV::getResourceKinds() {
   return ArrayRef(ResourceKindNames);
 }
-
-#define RESOURCE_FLAG(Val, Enum) {#Enum, PSV::ResourceFlag::Enum},
-
-static const EnumEntry<PSV::ResourceFlag> ResourceFlagNames[] = {
-#include "llvm/BinaryFormat/DXContainerConstants.def"
-};
-
-ArrayRef<EnumEntry<PSV::ResourceFlag>> PSV::getResourceFlags() {
-  return ArrayRef(ResourceFlagNames);
-}

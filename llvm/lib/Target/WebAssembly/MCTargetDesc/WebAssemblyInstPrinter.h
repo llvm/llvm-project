@@ -28,7 +28,7 @@ class WebAssemblyInstPrinter final : public MCInstPrinter {
   SmallVector<std::pair<uint64_t, bool>, 4> ControlFlowStack;
   SmallVector<uint64_t, 4> TryStack;
 
-  enum EHInstKind { TRY, CATCH, CATCH_ALL };
+  enum EHInstKind { TRY, CATCH_LEGACY, CATCH_ALL_LEGACY };
   SmallVector<EHInstKind, 4> EHInstStack;
 
 public:

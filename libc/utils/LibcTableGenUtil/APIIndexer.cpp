@@ -24,7 +24,7 @@ static const char StructTypeClassName[] = "Struct";
 static const char StandardSpecClassName[] = "StandardSpec";
 static const char PublicAPIClassName[] = "PublicAPI";
 
-static bool isa(llvm::Record *Def, llvm::Record *TypeClass) {
+static bool isa(const llvm::Record *Def, const llvm::Record *TypeClass) {
   llvm::RecordRecTy *RecordType = Def->getType();
   llvm::ArrayRef<llvm::Record *> Classes = RecordType->getClasses();
   // We want exact types. That is, we don't want the classes listed in
@@ -35,35 +35,35 @@ static bool isa(llvm::Record *Def, llvm::Record *TypeClass) {
   return Classes[0] == TypeClass;
 }
 
-bool APIIndexer::isaNamedType(llvm::Record *Def) {
+bool APIIndexer::isaNamedType(const llvm::Record *Def) {
   return isa(Def, NamedTypeClass);
 }
 
-bool APIIndexer::isaStructType(llvm::Record *Def) {
+bool APIIndexer::isaStructType(const llvm::Record *Def) {
   return isa(Def, StructClass);
 }
 
-bool APIIndexer::isaPtrType(llvm::Record *Def) {
+bool APIIndexer::isaPtrType(const llvm::Record *Def) {
   return isa(Def, PtrTypeClass);
 }
 
-bool APIIndexer::isaConstType(llvm::Record *Def) {
+bool APIIndexer::isaConstType(const llvm::Record *Def) {
   return isa(Def, ConstTypeClass);
 }
 
-bool APIIndexer::isaRestrictedPtrType(llvm::Record *Def) {
+bool APIIndexer::isaRestrictedPtrType(const llvm::Record *Def) {
   return isa(Def, RestrictedPtrTypeClass);
 }
 
-bool APIIndexer::isaStandardSpec(llvm::Record *Def) {
+bool APIIndexer::isaStandardSpec(const llvm::Record *Def) {
   return isa(Def, StandardSpecClass);
 }
 
-bool APIIndexer::isaPublicAPI(llvm::Record *Def) {
+bool APIIndexer::isaPublicAPI(const llvm::Record *Def) {
   return isa(Def, PublicAPIClass);
 }
 
-std::string APIIndexer::getTypeAsString(llvm::Record *TypeRecord) {
+std::string APIIndexer::getTypeAsString(const llvm::Record *TypeRecord) {
   if (isaNamedType(TypeRecord) || isaStructType(TypeRecord)) {
     return std::string(TypeRecord->getValueAsString("Name"));
   } else if (isaPtrType(TypeRecord)) {
@@ -79,7 +79,7 @@ std::string APIIndexer::getTypeAsString(llvm::Record *TypeRecord) {
   }
 }
 
-void APIIndexer::indexStandardSpecDef(llvm::Record *StandardSpec) {
+void APIIndexer::indexStandardSpecDef(const llvm::Record *StandardSpec) {
   auto HeaderSpecList = StandardSpec->getValueAsListOfDefs("Headers");
   for (llvm::Record *HeaderSpec : HeaderSpecList) {
     llvm::StringRef Header = HeaderSpec->getValueAsString("Name");
@@ -119,7 +119,7 @@ void APIIndexer::indexStandardSpecDef(llvm::Record *StandardSpec) {
   }
 }
 
-void APIIndexer::indexPublicAPIDef(llvm::Record *PublicAPI) {
+void APIIndexer::indexPublicAPIDef(const llvm::Record *PublicAPI) {
   // While indexing the public API, we do not check if any of the entities
   // requested is from an included standard. Such a check is done while
   // generating the API.
@@ -148,7 +148,7 @@ void APIIndexer::indexPublicAPIDef(llvm::Record *PublicAPI) {
     Objects.insert(std::string(ObjectName));
 }
 
-void APIIndexer::index(llvm::RecordKeeper &Records) {
+void APIIndexer::index(const llvm::RecordKeeper &Records) {
   NamedTypeClass = Records.getClass(NamedTypeClassName);
   PtrTypeClass = Records.getClass(PtrTypeClassName);
   RestrictedPtrTypeClass = Records.getClass(RestrictedPtrTypeClassName);
@@ -159,7 +159,7 @@ void APIIndexer::index(llvm::RecordKeeper &Records) {
 
   const auto &DefsMap = Records.getDefs();
   for (auto &Pair : DefsMap) {
-    llvm::Record *Def = Pair.second.get();
+    const llvm::Record *Def = Pair.second.get();
     if (isaStandardSpec(Def))
       indexStandardSpecDef(Def);
     if (isaPublicAPI(Def)) {

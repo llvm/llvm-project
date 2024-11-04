@@ -112,8 +112,17 @@ public:
   static llvm::Expected<std::unique_ptr<UDPSocket>>
   UdpConnect(llvm::StringRef host_and_port, bool child_processes_inherit);
 
-  int GetOption(int level, int option_name, int &option_value);
-  int SetOption(int level, int option_name, int option_value);
+  static int GetOption(NativeSocket sockfd, int level, int option_name,
+                       int &option_value);
+  int GetOption(int level, int option_name, int &option_value) {
+    return GetOption(m_socket, level, option_name, option_value);
+  };
+
+  static int SetOption(NativeSocket sockfd, int level, int option_name,
+                       int option_value);
+  int SetOption(int level, int option_name, int option_value) {
+    return SetOption(m_socket, level, option_name, option_value);
+  };
 
   NativeSocket GetNativeSocket() const { return m_socket; }
   SocketProtocol GetSocketProtocol() const { return m_protocol; }
@@ -138,6 +147,8 @@ protected:
 
   virtual size_t Send(const void *buf, const size_t num_bytes);
 
+  static int CloseSocket(NativeSocket sockfd);
+  static Status GetLastError();
   static void SetLastError(Status &error);
   static NativeSocket CreateSocket(const int domain, const int type,
                                    const int protocol,

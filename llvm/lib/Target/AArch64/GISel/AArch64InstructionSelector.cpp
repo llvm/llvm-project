@@ -2116,6 +2116,21 @@ bool AArch64InstructionSelector::preISelLower(MachineInstr &I) {
     I.getOperand(1).setReg(NewSrc.getReg(0));
     return true;
   }
+  case AArch64::G_INSERT_VECTOR_ELT: {
+    // Convert the type from p0 to s64 to help selection.
+    LLT DstTy = MRI.getType(I.getOperand(0).getReg());
+    LLT SrcVecTy = MRI.getType(I.getOperand(1).getReg());
+    if (!SrcVecTy.isPointerVector())
+      return false;
+    auto NewSrc = MIB.buildCopy(LLT::scalar(64), I.getOperand(2).getReg());
+    MRI.setType(I.getOperand(1).getReg(),
+                DstTy.changeElementType(LLT::scalar(64)));
+    MRI.setType(I.getOperand(0).getReg(),
+                DstTy.changeElementType(LLT::scalar(64)));
+    MRI.setRegClass(NewSrc.getReg(0), &AArch64::GPR64RegClass);
+    I.getOperand(2).setReg(NewSrc.getReg(0));
+    return true;
+  }
   case TargetOpcode::G_UITOFP:
   case TargetOpcode::G_SITOFP: {
     // If both source and destination regbanks are FPR, then convert the opcode

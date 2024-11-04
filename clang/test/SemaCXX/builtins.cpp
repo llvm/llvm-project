@@ -177,5 +177,21 @@ static void __builtin_cpu_init(); // expected-error {{static declaration of '__b
 #endif
 
 #ifdef _MSC_VER
-constexpr int x = []{ __noop; return 0; }(); // expected-no-diagnostics
+constexpr int x = [] {
+  __noop;
+  return 0;
+}(); // expected-no-diagnostics
+static_assert([] { return __noop; }() == 0);
+static_assert([] { return __noop(4); }() == 0);
+extern int not_accessed;
+void not_called();
+static_assert([] { return __noop(not_accessed *= 6); }() == 0);
+static_assert([] { return __noop(not_called()); }() == 0);
+static_assert([] { return __noop(throw ""); }() == 0);
+static_assert([] { return __noop(throw "", throw ""); }() == 0);
+static_assert([] {
+  int a = 5;
+  __noop(++a);
+  return a;
+}() == 5);
 #endif

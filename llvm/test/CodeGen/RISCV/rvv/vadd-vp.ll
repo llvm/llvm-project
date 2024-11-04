@@ -1425,7 +1425,6 @@ define <vscale x 32 x i32> @vadd_vi_nxv32i32_evl_nx8(<vscale x 32 x i32> %va, <v
   ret <vscale x 32 x i32> %v
 }
 
-; FIXME: The first vadd.vi should be able to infer that its AVL is equivalent to VLMAX.
 ; FIXME: The upper half of the operation is doing nothing but we don't catch
 ; that on RV64; we issue a usubsat(and (vscale x 16), 0xffffffff, vscale x 16)
 ; (the "original" %evl is the "and", due to known-bits issues with legalizing

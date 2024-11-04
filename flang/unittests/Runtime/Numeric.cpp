@@ -259,6 +259,11 @@ TEST(Numeric, Spacing) {
       std::isnan(RTNAME(Spacing4)(std::numeric_limits<Real<4>>::infinity())));
   EXPECT_TRUE(
       std::isnan(RTNAME(Spacing8)(std::numeric_limits<Real<8>>::quiet_NaN())));
+  EXPECT_EQ(RTNAME(Spacing2By4)(Real<4>{3.0}), std::ldexp(Real<4>{1.0}, -9));
+  EXPECT_EQ(RTNAME(Spacing2By4)(Real<4>{0.0}), Real<4>{0.00006103515625E-04});
+  EXPECT_EQ(RTNAME(Spacing3By4)(Real<4>{3.0}), std::ldexp(Real<4>{1.0}, -6));
+  EXPECT_EQ(
+      RTNAME(Spacing3By4)(Real<4>{0.0}), std::numeric_limits<Real<4>>::min());
 }
 
 TEST(Numeric, FPowI) {

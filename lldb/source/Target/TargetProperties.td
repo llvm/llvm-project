@@ -102,7 +102,7 @@ let Definition = "target" in {
     DefaultUnsignedValue<1024>,
     Desc<"Maximum number of characters to show when using %s in summary strings.">;
   def MaxMemReadSize: Property<"max-memory-read-size", "UInt64">,
-    DefaultUnsignedValue<1024>,
+    DefaultUnsignedValue<0xffffffff>,
     Desc<"Maximum number of bytes that 'memory read' will fetch before --force must be specified.">;
   def BreakpointUseAvoidList: Property<"breakpoints-use-platform-avoid-list", "Boolean">,
     DefaultTrue,

@@ -212,7 +212,7 @@ void WebAssemblyDAGToDAGISel::Select(SDNode *Node) {
       int Tag = Node->getConstantOperandVal(2);
       SDValue SymNode = getTagSymNode(Tag, CurDAG);
       MachineSDNode *Catch =
-          CurDAG->getMachineNode(WebAssembly::CATCH, DL,
+          CurDAG->getMachineNode(WebAssembly::CATCH_LEGACY, DL,
                                  {
                                      PtrVT,     // exception pointer
                                      MVT::Other // outchain type

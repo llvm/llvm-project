@@ -82,9 +82,9 @@ LoongArchMatInt::InstSeq LoongArchMatInt::generateInstSeq(int64_t Val) {
       TmpVal1 = Insts[1].Imm;
       if (N == 3)
         break;
-      TmpVal2 = Insts[3].Imm << 52 | TmpVal1;
+      TmpVal2 = static_cast<uint64_t>(Insts[3].Imm) << 52 | TmpVal1;
     }
-    TmpVal1 |= Insts[0].Imm << 12;
+    TmpVal1 |= static_cast<uint64_t>(Insts[0].Imm) << 12;
     break;
   case LoongArch::ORI:
   case LoongArch::ADDI_W:
@@ -92,12 +92,13 @@ LoongArchMatInt::InstSeq LoongArchMatInt::generateInstSeq(int64_t Val) {
     break;
   }
 
-  for (uint64_t Msb = 32; Msb < 64; ++Msb) {
-    uint64_t HighMask = ~((1ULL << (Msb + 1)) - 1);
+  uint64_t Msb = 32;
+  uint64_t HighMask = ~((1ULL << (Msb + 1)) - 1);
+  for (; Msb < 64; ++Msb, HighMask = HighMask << 1) {
     for (uint64_t Lsb = Msb; Lsb > 0; --Lsb) {
       uint64_t LowMask = (1ULL << Lsb) - 1;
       uint64_t Mask = HighMask | LowMask;
-      uint64_t LsbToZero = TmpVal1 & ((1UL << (Msb - Lsb + 1)) - 1);
+      uint64_t LsbToZero = TmpVal1 & ((1ULL << (Msb - Lsb + 1)) - 1);
       uint64_t MsbToLsb = LsbToZero << Lsb;
       if ((MsbToLsb | (TmpVal1 & Mask)) == (uint64_t)Val) {
         if (Insts[1].Opc == LoongArch::ORI && N == 3)
@@ -107,7 +108,7 @@ LoongArchMatInt::InstSeq LoongArchMatInt::generateInstSeq(int64_t Val) {
         return Insts;
       }
       if (TmpVal2 != 0) {
-        LsbToZero = TmpVal2 & ((1UL << (Msb - Lsb + 1)) - 1);
+        LsbToZero = TmpVal2 & ((1ULL << (Msb - Lsb + 1)) - 1);
         MsbToLsb = LsbToZero << Lsb;
         if ((MsbToLsb | (TmpVal2 & Mask)) == (uint64_t)Val) {
           Insts[0] = Insts[1];

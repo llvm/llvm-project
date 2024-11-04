@@ -327,6 +327,21 @@ TEST_F(TokenAnnotatorTest, UnderstandsUsesOfStarAndAmp) {
   ASSERT_EQ(Tokens.size(), 26u) << Tokens;
   EXPECT_TOKEN(Tokens[3], tok::ampamp, TT_BinaryOperator);
   EXPECT_TOKEN(Tokens[16], tok::ampamp, TT_BinaryOperator);
+
+  Tokens = annotate("#define FOO \\\n"
+                    "  void foo() { f(a * b); }");
+  ASSERT_EQ(Tokens.size(), 17u) << Tokens;
+  EXPECT_TOKEN(Tokens[11], tok::star, TT_BinaryOperator);
+
+  Tokens = annotate("#define FOO auto Foo = [] { f(a * b); };");
+  ASSERT_EQ(Tokens.size(), 19u) << Tokens;
+  EXPECT_TOKEN(Tokens[12], tok::star, TT_BinaryOperator);
+
+  Tokens = annotate("namespace {\n"
+                    "#define FOO(x) void foo(a##x *b);\n"
+                    "}");
+  ASSERT_EQ(Tokens.size(), 20u) << Tokens;
+  EXPECT_TOKEN(Tokens[14], tok::star, TT_PointerOrReference);
 }
 
 TEST_F(TokenAnnotatorTest, UnderstandsUsesOfPlusAndMinus) {
@@ -759,6 +774,12 @@ TEST_F(TokenAnnotatorTest, UnderstandsCasts) {
   EXPECT_TOKEN(Tokens[6], tok::r_paren, TT_CastRParen);
   EXPECT_TOKEN(Tokens[8], tok::r_paren, TT_Unknown);
   EXPECT_TOKEN(Tokens[9], tok::minus, TT_BinaryOperator);
+
+  Tokens = annotate("return (double)(foo(30)) - 15;");
+  ASSERT_EQ(Tokens.size(), 14u) << Tokens;
+  EXPECT_TOKEN(Tokens[3], tok::r_paren, TT_CastRParen);
+  EXPECT_TOKEN(Tokens[9], tok::r_paren, TT_Unknown);
+  EXPECT_TOKEN(Tokens[10], tok::minus, TT_BinaryOperator);
 
   auto Style = getLLVMStyle();
   Style.TypeNames.push_back("Foo");
@@ -1678,6 +1699,13 @@ TEST_F(TokenAnnotatorTest, UnderstandsObjCBlock) {
                     "}();");
   ASSERT_EQ(Tokens.size(), 19u) << Tokens;
   EXPECT_TOKEN(Tokens[9], tok::l_brace, TT_ObjCBlockLBrace);
+
+  Tokens = annotate("id (^block)(Foo *a) = ^id _Nullable(Foo *_Nullable a) {\n"
+                    "  return a;\n"
+                    "};");
+  ASSERT_EQ(Tokens.size(), 27u) << Tokens;
+  EXPECT_TOKEN(Tokens[0], tok::identifier, TT_Unknown); // Not CtorDtorDeclName.
+  EXPECT_TOKEN(Tokens[1], tok::l_paren, TT_ObjCBlockLParen);
 }
 
 TEST_F(TokenAnnotatorTest, UnderstandsObjCMethodExpr) {
@@ -3256,6 +3284,26 @@ TEST_F(TokenAnnotatorTest, BraceKind) {
   EXPECT_BRACE_KIND(Tokens[10], BK_Block);
   EXPECT_TOKEN(Tokens[11], tok::r_brace, TT_StructRBrace);
   EXPECT_BRACE_KIND(Tokens[11], BK_Block);
+
+  Tokens = annotate("#define MACRO            \\\n"
+                    "  struct hash<type> {    \\\n"
+                    "    void f() { return; } \\\n"
+                    "  };");
+  ASSERT_EQ(Tokens.size(), 20u) << Tokens;
+  EXPECT_TOKEN(Tokens[8], tok::l_brace, TT_StructLBrace);
+  EXPECT_BRACE_KIND(Tokens[8], BK_Block);
+  EXPECT_TOKEN(Tokens[10], tok::identifier, TT_FunctionDeclarationName);
+  EXPECT_TOKEN(Tokens[11], tok::l_paren, TT_FunctionDeclarationLParen);
+  EXPECT_TOKEN(Tokens[13], tok::l_brace, TT_FunctionLBrace);
+  EXPECT_BRACE_KIND(Tokens[13], BK_Block);
+  EXPECT_BRACE_KIND(Tokens[16], BK_Block);
+  EXPECT_TOKEN(Tokens[17], tok::r_brace, TT_StructRBrace);
+  EXPECT_BRACE_KIND(Tokens[17], BK_Block);
+
+  Tokens = annotate("#define MEMBER(NAME) NAME{\"\"}");
+  ASSERT_EQ(Tokens.size(), 11u) << Tokens;
+  EXPECT_BRACE_KIND(Tokens[7], BK_BracedInit);
+  EXPECT_BRACE_KIND(Tokens[9], BK_BracedInit);
 }
 
 TEST_F(TokenAnnotatorTest, UnderstandsElaboratedTypeSpecifier) {
@@ -3286,6 +3334,15 @@ TEST_F(TokenAnnotatorTest, BlockLBrace) {
   EXPECT_BRACE_KIND(Tokens[4], BK_Block);
   EXPECT_TOKEN(Tokens[5], tok::l_brace, TT_BlockLBrace);
   EXPECT_BRACE_KIND(Tokens[5], BK_Block);
+
+  Tokens = annotate("[foo bar:{{0, 1}} baz:baz];",
+                    getLLVMStyle(FormatStyle::LK_ObjC));
+  ASSERT_EQ(Tokens.size(), 17u) << Tokens;
+  EXPECT_TOKEN(Tokens[4], tok::l_brace, TT_Unknown); // Not TT_BlockLBrace.
+  EXPECT_BRACE_KIND(Tokens[4], BK_Unknown);          // Not BK_Block.
+  EXPECT_BRACE_KIND(Tokens[5], BK_BracedInit);
+  EXPECT_BRACE_KIND(Tokens[9], BK_Unknown);  // Not BK_Block.
+  EXPECT_BRACE_KIND(Tokens[10], BK_Unknown); // Not BK_Block.
 }
 
 TEST_F(TokenAnnotatorTest, SwitchExpression) {

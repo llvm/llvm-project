@@ -1431,6 +1431,10 @@ StringRef AtomicRMWInst::getOperationName(BinOp Op) {
     return "uinc_wrap";
   case AtomicRMWInst::UDecWrap:
     return "udec_wrap";
+  case AtomicRMWInst::USubCond:
+    return "usub_cond";
+  case AtomicRMWInst::USubSat:
+    return "usub_sat";
   case AtomicRMWInst::BAD_BINOP:
     return "<invalid operation>";
   }

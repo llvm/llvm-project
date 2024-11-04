@@ -536,9 +536,8 @@ class MetadataLoader::MetadataLoaderImpl {
     DenseSet<DILocalScope *> Visited;
     while (S && !isa<DISubprogram>(S)) {
       S = dyn_cast_or_null<DILocalScope>(S->getScope());
-      if (Visited.contains(S))
+      if (!Visited.insert(S).second)
         break;
-      Visited.insert(S);
     }
     ParentSubprogram[InitialScope] = llvm::dyn_cast_or_null<DISubprogram>(S);
 

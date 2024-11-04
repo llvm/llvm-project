@@ -33,7 +33,7 @@ declare void @use32(ptr)
 ;.
 define void @test_alloca() sanitize_hwaddress !dbg !15 {
 ; DYNAMIC-SHADOW-LABEL: define void @test_alloca
-; DYNAMIC-SHADOW-SAME: () #[[ATTR1:[0-9]+]] personality ptr @__hwasan_personality_thunk !dbg [[DBG8:![0-9]+]] {
+; DYNAMIC-SHADOW-SAME: () #[[ATTR0:[0-9]+]] personality ptr @__hwasan_personality_thunk !dbg [[DBG8:![0-9]+]] {
 ; DYNAMIC-SHADOW-NEXT:  entry:
 ; DYNAMIC-SHADOW-NEXT:    [[DOTHWASAN_SHADOW:%.*]] = call ptr asm "", "=r,0"(ptr @__hwasan_shadow)
 ; DYNAMIC-SHADOW-NEXT:    [[TMP0:%.*]] = call ptr @llvm.frameaddress.p0(i32 0)
@@ -68,7 +68,7 @@ define void @test_alloca() sanitize_hwaddress !dbg !15 {
 ; DYNAMIC-SHADOW-NEXT:    ret void, !dbg [[DBG15]]
 ;
 ; ZERO-BASED-SHADOW-LABEL: define void @test_alloca
-; ZERO-BASED-SHADOW-SAME: () #[[ATTR1:[0-9]+]] personality ptr @__hwasan_personality_thunk !dbg [[DBG8:![0-9]+]] {
+; ZERO-BASED-SHADOW-SAME: () #[[ATTR0:[0-9]+]] personality ptr @__hwasan_personality_thunk !dbg [[DBG8:![0-9]+]] {
 ; ZERO-BASED-SHADOW-NEXT:  entry:
 ; ZERO-BASED-SHADOW-NEXT:    [[DOTHWASAN_SHADOW:%.*]] = call ptr asm "", "=r,0"(ptr null)
 ; ZERO-BASED-SHADOW-NEXT:    [[TMP0:%.*]] = call ptr @llvm.frameaddress.p0(i32 0)
@@ -131,17 +131,15 @@ declare void @llvm.dbg.value(metadata, metadata, metadata)
 !23 = !DILocation(line: 7, column: 5, scope: !15)
 !24 = !DILocation(line: 8, column: 1, scope: !15)
 ;.
-; DYNAMIC-SHADOW: attributes #[[ATTR0:[0-9]+]] = { nobuiltin }
-; DYNAMIC-SHADOW: attributes #[[ATTR1]] = { nobuiltin sanitize_hwaddress }
-; DYNAMIC-SHADOW: attributes #[[ATTR2:[0-9]+]] = { nounwind }
-; DYNAMIC-SHADOW: attributes #[[ATTR3:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(none) }
-; DYNAMIC-SHADOW: attributes #[[ATTR4:[0-9]+]] = { nocallback nofree nounwind willreturn memory(argmem: write) }
+; DYNAMIC-SHADOW: attributes #[[ATTR0]] = { sanitize_hwaddress }
+; DYNAMIC-SHADOW: attributes #[[ATTR1:[0-9]+]] = { nounwind }
+; DYNAMIC-SHADOW: attributes #[[ATTR2:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(none) }
+; DYNAMIC-SHADOW: attributes #[[ATTR3:[0-9]+]] = { nocallback nofree nounwind willreturn memory(argmem: write) }
 ;.
-; ZERO-BASED-SHADOW: attributes #[[ATTR0:[0-9]+]] = { nobuiltin }
-; ZERO-BASED-SHADOW: attributes #[[ATTR1]] = { nobuiltin sanitize_hwaddress }
-; ZERO-BASED-SHADOW: attributes #[[ATTR2:[0-9]+]] = { nounwind }
-; ZERO-BASED-SHADOW: attributes #[[ATTR3:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(none) }
-; ZERO-BASED-SHADOW: attributes #[[ATTR4:[0-9]+]] = { nocallback nofree nounwind willreturn memory(argmem: write) }
+; ZERO-BASED-SHADOW: attributes #[[ATTR0]] = { sanitize_hwaddress }
+; ZERO-BASED-SHADOW: attributes #[[ATTR1:[0-9]+]] = { nounwind }
+; ZERO-BASED-SHADOW: attributes #[[ATTR2:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(none) }
+; ZERO-BASED-SHADOW: attributes #[[ATTR3:[0-9]+]] = { nocallback nofree nounwind willreturn memory(argmem: write) }
 ;.
 ; DYNAMIC-SHADOW: [[META0]] = !{ptr @hwasan.note}
 ; DYNAMIC-SHADOW: [[META1:![0-9]+]] = distinct !DICompileUnit(language: DW_LANG_C_plus_plus_14, file: [[META2:![0-9]+]], producer: "{{.*}}clang version {{.*}}", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: [[META3:![0-9]+]], splitDebugInlining: false, nameTableKind: None)

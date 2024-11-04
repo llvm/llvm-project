@@ -106,8 +106,8 @@ public:
   /// \return A string, including surrounding '<>', of the template parameters.
   /// If the DIE's name already has '<>', returns an empty string because
   /// it's assumed that the caller is using the DIE name anyway.
-  std::string GetDIEClassTemplateParams(
-      const lldb_private::plugin::dwarf::DWARFDIE &die) override;
+  std::string
+  GetDIEClassTemplateParams(lldb_private::plugin::dwarf::DWARFDIE die) override;
 
   void MapDeclDIEToDefDIE(const lldb_private::plugin::dwarf::DWARFDIE &decl_die,
                           const lldb_private::plugin::dwarf::DWARFDIE &def_die);

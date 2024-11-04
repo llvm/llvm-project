@@ -2052,7 +2052,6 @@ void is_implicit_lifetime(int n) {
   static_assert(__builtin_is_implicit_lifetime(float4));
   static_assert(__builtin_is_implicit_lifetime(align_value_int));
   static_assert(__builtin_is_implicit_lifetime(int[[clang::annotate_type("category2")]] *));
-  static_assert(__builtin_is_implicit_lifetime(int __attribute__((btf_type_tag("user"))) *));
   static_assert(__builtin_is_implicit_lifetime(EnforceReadOnlyPlacement));
   static_assert(__builtin_is_implicit_lifetime(int __attribute__((noderef)) *));
   static_assert(__builtin_is_implicit_lifetime(TypeVisibility));

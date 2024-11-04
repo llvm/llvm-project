@@ -940,6 +940,10 @@ StringRef clang::getParameterABISpelling(ParameterABI ABI) {
     return "swift_error_result";
   case ParameterABI::SwiftIndirectResult:
     return "swift_indirect_result";
+  case ParameterABI::HLSLOut:
+    return "out";
+  case ParameterABI::HLSLInOut:
+    return "inout";
   }
   llvm_unreachable("bad parameter ABI kind");
 }
@@ -962,7 +966,17 @@ void TypePrinter::printFunctionProtoAfter(const FunctionProtoType *T,
       if (EPI.isNoEscape())
         OS << "__attribute__((noescape)) ";
       auto ABI = EPI.getABI();
-      if (ABI != ParameterABI::Ordinary)
+      if (ABI == ParameterABI::HLSLInOut || ABI == ParameterABI::HLSLOut) {
+        OS << getParameterABISpelling(ABI) << " ";
+        if (Policy.UseHLSLTypes) {
+          // This is a bit of a hack because we _do_ use reference types in the
+          // AST for representing inout and out parameters so that code
+          // generation is sane, but when re-printing these for HLSL we need to
+          // skip the reference.
+          print(T->getParamType(i).getNonReferenceType(), OS, StringRef());
+          continue;
+        }
+      } else if (ABI != ParameterABI::Ordinary)
         OS << "__attribute__((" << getParameterABISpelling(ABI) << ")) ";
 
       print(T->getParamType(i), OS, StringRef());
@@ -1621,7 +1635,8 @@ void TypePrinter::printTemplateId(const TemplateSpecializationType *T,
                                   raw_ostream &OS, bool FullyQualify) {
   IncludeStrongLifetimeRAII Strong(Policy);
 
-  TemplateDecl *TD = T->getTemplateName().getAsTemplateDecl();
+  TemplateDecl *TD =
+      T->getTemplateName().getAsTemplateDecl(/*IgnoreDeduced=*/true);
   // FIXME: Null TD never exercised in test suite.
   if (FullyQualify && TD) {
     if (!Policy.SuppressScope)
@@ -1928,6 +1943,10 @@ void TypePrinter::printAttributedAfter(const AttributedType *T,
   case attr::BTFTypeTag:
     llvm_unreachable("BTFTypeTag attribute handled separately");
 
+  case attr::HLSLResourceClass:
+  case attr::HLSLROV:
+    llvm_unreachable("HLSL resource type attributes handled separately");
+
   case attr::OpenCLPrivateAddressSpace:
   case attr::OpenCLGlobalAddressSpace:
   case attr::OpenCLGlobalDeviceAddressSpace:
@@ -2030,10 +2049,6 @@ void TypePrinter::printAttributedAfter(const AttributedType *T,
   case attr::ArmMveStrictPolymorphism:
     OS << "__clang_arm_mve_strict_polymorphism";
     break;
-
-  // Nothing to print for this attribute.
-  case attr::HLSLParamModifier:
-    break;
   }
   OS << "))";
 }
@@ -2052,18 +2067,17 @@ void TypePrinter::printBTFTagAttributedAfter(const BTFTagAttributedType *T,
 void TypePrinter::printHLSLAttributedResourceBefore(
     const HLSLAttributedResourceType *T, raw_ostream &OS) {
   printBefore(T->getWrappedType(), OS);
+}
 
+void TypePrinter::printHLSLAttributedResourceAfter(
+    const HLSLAttributedResourceType *T, raw_ostream &OS) {
+  printAfter(T->getWrappedType(), OS);
   const HLSLAttributedResourceType::Attributes &Attrs = T->getAttrs();
   OS << " [[hlsl::resource_class("
      << HLSLResourceClassAttr::ConvertResourceClassToStr(Attrs.ResourceClass)
      << ")]]";
   if (Attrs.IsROV)
     OS << " [[hlsl::is_rov()]]";
-}
-
-void TypePrinter::printHLSLAttributedResourceAfter(
-    const HLSLAttributedResourceType *T, raw_ostream &OS) {
-  printAfter(T->getWrappedType(), OS);
 }
 
 void TypePrinter::printObjCInterfaceBefore(const ObjCInterfaceType *T,

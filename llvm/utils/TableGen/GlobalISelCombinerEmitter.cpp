@@ -1696,9 +1696,8 @@ bool CombineRuleBuilder::emitPatFragMatchPattern(
     DenseSet<const Pattern *> &SeenPats) {
   auto StackTrace = PrettyStackTraceEmit(RuleDef, &PFP);
 
-  if (SeenPats.contains(&PFP))
+  if (!SeenPats.insert(&PFP).second)
     return true;
-  SeenPats.insert(&PFP);
 
   const auto &PF = PFP.getPatFrag();
 
@@ -1919,10 +1918,8 @@ bool CombineRuleBuilder::emitInstructionApplyPattern(
     StringMap<unsigned> &OperandToTempRegID) {
   auto StackTrace = PrettyStackTraceEmit(RuleDef, &P);
 
-  if (SeenPats.contains(&P))
+  if (!SeenPats.insert(&P).second)
     return true;
-
-  SeenPats.insert(&P);
 
   // First, render the uses.
   for (auto &Op : P.named_operands()) {
@@ -2188,10 +2185,8 @@ bool CombineRuleBuilder::emitCodeGenInstructionMatchPattern(
     OperandMapperFnRef OperandMapper) {
   auto StackTrace = PrettyStackTraceEmit(RuleDef, &P);
 
-  if (SeenPats.contains(&P))
+  if (!SeenPats.insert(&P).second)
     return true;
-
-  SeenPats.insert(&P);
 
   IM.addPredicate<InstructionOpcodeMatcher>(&P.getInst());
   declareInstExpansion(CE, IM, P.getName());

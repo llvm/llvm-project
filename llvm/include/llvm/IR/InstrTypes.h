@@ -2407,7 +2407,7 @@ private:
 };
 
 template <>
-struct OperandTraits<CallBase> : public VariadicOperandTraits<CallBase, 1> {};
+struct OperandTraits<CallBase> : public VariadicOperandTraits<CallBase> {};
 
 DEFINE_TRANSPARENT_OPERAND_ACCESSORS(CallBase, Value)
 
@@ -2474,7 +2474,7 @@ public:
 
 template <>
 struct OperandTraits<FuncletPadInst>
-    : public VariadicOperandTraits<FuncletPadInst, /*MINARITY=*/1> {};
+    : public VariadicOperandTraits<FuncletPadInst> {};
 
 DEFINE_TRANSPARENT_OPERAND_ACCESSORS(FuncletPadInst, Value)
 

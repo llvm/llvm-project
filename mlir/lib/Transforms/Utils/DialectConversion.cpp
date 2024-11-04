@@ -2455,6 +2455,78 @@ legalizeUnresolvedMaterialization(RewriterBase &rewriter,
   return failure();
 }
 
+/// Erase all dead unrealized_conversion_cast ops. An op is dead if its results
+/// are not used (transitively) by any op that is not in the given list of
+/// cast ops.
+///
+/// In particular, this function erases cyclic casts that may be inserted
+/// during the dialect conversion process. E.g.:
+/// %0 = unrealized_conversion_cast(%1)
+/// %1 = unrealized_conversion_cast(%0)
+// Note: This step will become unnecessary when
+// https://github.com/llvm/llvm-project/pull/106760 has been merged.
+static void eraseDeadUnrealizedCasts(
+    ArrayRef<UnrealizedConversionCastOp> castOps,
+    SmallVectorImpl<UnrealizedConversionCastOp> *remainingCastOps) {
+  // Ops that have already been visited or are currently being visited.
+  DenseSet<Operation *> visited;
+  // Set of all cast ops for faster lookups.
+  DenseSet<Operation *> castOpSet;
+  // Set of all cast ops that have been determined to be alive.
+  DenseSet<Operation *> live;
+
+  for (UnrealizedConversionCastOp op : castOps)
+    castOpSet.insert(op);
+
+  // Visit a cast operation. Return "true" if the operation is live.
+  std::function<bool(Operation *)> visit = [&](Operation *op) -> bool {
+    // No need to traverse any IR if the op was already marked as live.
+    if (live.contains(op))
+      return true;
+
+    // Do not visit ops multiple times. If we find a circle, no live user was
+    // found on the current path.
+    if (visited.contains(op))
+      return false;
+    visited.insert(op);
+
+    // Visit all users.
+    for (Operation *user : op->getUsers()) {
+      // If the user is not an unrealized_conversion_cast op, then the given op
+      // is live.
+      if (!castOpSet.contains(user)) {
+        live.insert(op);
+        return true;
+      }
+      // Otherwise, it is live if a live op can be reached from one of its
+      // users (which must all be unrealized_conversion_cast ops).
+      if (visit(user)) {
+        live.insert(op);
+        return true;
+      }
+    }
+
+    return false;
+  };
+
+  // Visit all cast ops.
+  for (UnrealizedConversionCastOp op : castOps) {
+    visit(op);
+    visited.clear();
+  }
+
+  // Erase all cast ops that are dead.
+  for (UnrealizedConversionCastOp op : castOps) {
+    if (live.contains(op)) {
+      if (remainingCastOps)
+        remainingCastOps->push_back(op);
+      continue;
+    }
+    op->dropAllUses();
+    op->erase();
+  }
+}
+
 LogicalResult OperationConverter::convertOperations(ArrayRef<Operation *> ops) {
   if (ops.empty())
     return success();
@@ -2513,13 +2585,14 @@ LogicalResult OperationConverter::convertOperations(ArrayRef<Operation *> ops) {
   // Reconcile all UnrealizedConversionCastOps that were inserted by the
   // dialect conversion frameworks. (Not the one that were inserted by
   // patterns.)
-  SmallVector<UnrealizedConversionCastOp> remainingCastOps;
-  reconcileUnrealizedCasts(allCastOps, &remainingCastOps);
+  SmallVector<UnrealizedConversionCastOp> remainingCastOps1, remainingCastOps2;
+  eraseDeadUnrealizedCasts(allCastOps, &remainingCastOps1);
+  reconcileUnrealizedCasts(remainingCastOps1, &remainingCastOps2);
 
   // Try to legalize all unresolved materializations.
   if (config.buildMaterializations) {
     IRRewriter rewriter(rewriterImpl.context, config.listener);
-    for (UnrealizedConversionCastOp castOp : remainingCastOps) {
+    for (UnrealizedConversionCastOp castOp : remainingCastOps2) {
       auto it = rewriteMap.find(castOp.getOperation());
       assert(it != rewriteMap.end() && "inconsistent state");
       if (failed(legalizeUnresolvedMaterialization(rewriter, it->second)))

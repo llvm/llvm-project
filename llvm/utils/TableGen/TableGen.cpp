@@ -52,7 +52,7 @@ static void PrintEnums(RecordKeeper &Records, raw_ostream &OS) {
 static void PrintSets(const RecordKeeper &Records, raw_ostream &OS) {
   SetTheory Sets;
   Sets.addFieldExpander("Set", "Elements");
-  for (Record *Rec : Records.getAllDerivedDefinitions("Set")) {
+  for (const Record *Rec : Records.getAllDerivedDefinitions("Set")) {
     OS << Rec->getName() << " = [";
     const std::vector<Record *> *Elts = Sets.expand(Rec);
     assert(Elts && "Couldn't expand Set instance");

@@ -15,7 +15,9 @@
 
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
+#include "mlir/Dialect/Tosa/Utils/ShapeUtils.h"
 #include "mlir/Dialect/Utils/StructuredOpsUtils.h"
+#include "mlir/IR/ImplicitLocOpBuilder.h"
 #include "mlir/IR/PatternMatch.h"
 #include <optional>
 
@@ -78,6 +80,141 @@ checkHasDynamicBatchDims(PatternRewriter &rewriter, Op op,
 /// operator with the RESHAPE now in the graph.
 LogicalResult EqualizeRanks(PatternRewriter &rewriter, Location loc,
                             Value &input1, Value &input2);
+
+LogicalResult EqualizeRanks(ImplicitLocOpBuilder &builder, Value &input1,
+                            Value &input2);
+
+namespace {
+
+// Creates a TOSA operation and performs shape inference on the individual
+// op. This allows shape inference when lowering down to TOSA.
+template <typename TosaOp, typename... Args>
+TosaOp createOpAndInferShape(ImplicitLocOpBuilder &builder, Type resultTy,
+                             Args &&...args) {
+  auto op = builder.create<TosaOp>(resultTy, args...);
+
+  InferShapedTypeOpInterface shapeInterface =
+      dyn_cast<InferShapedTypeOpInterface>(op.getOperation());
+  if (!shapeInterface)
+    return op;
+
+  SmallVector<ShapedTypeComponents> returnedShapes;
+  if (shapeInterface
+          .inferReturnTypeComponents(op.getContext(), builder.getLoc(),
+                                     op->getOperands(), op->getAttrDictionary(),
+                                     op->getPropertiesStorage(),
+                                     op->getRegions(), returnedShapes)
+          .failed())
+    return op;
+
+  // We need to use the element type of the existing result type to generate
+  // the new result shaped type. This is because rescale can include a cast to
+  // different bit-width types and does not have a TypeAttr to define the
+  // target type.
+  auto result = op->getResult(0);
+  auto predictedShape = returnedShapes[0];
+  auto currentKnowledge = ValueKnowledge::getKnowledgeFromType(resultTy);
+
+  // Compute the knowledge based on the inferred type.
+  auto inferredKnowledge = ValueKnowledge::getPessimisticValueState();
+  inferredKnowledge.dtype = mlir::cast<ShapedType>(resultTy).getElementType();
+  inferredKnowledge.hasRank = predictedShape.hasRank();
+  if (predictedShape.hasRank()) {
+    for (auto dim : predictedShape.getDims()) {
+      inferredKnowledge.sizes.push_back(dim);
+    }
+  }
+
+  // Compute the new type based on the joined version.
+  auto newKnowledge = ValueKnowledge::join(currentKnowledge, inferredKnowledge);
+  Type newTy =
+      newKnowledge.hasRank
+          ? Type{mlir::RankedTensorType::get(llvm::ArrayRef(newKnowledge.sizes),
+                                             newKnowledge.dtype)}
+          : Type{mlir::UnrankedTensorType::get(newKnowledge.dtype)};
+  result.setType(newTy);
+  return op;
+}
+
+} // namespace
+
+// Creates a TOSA operation by:
+//   - first equalize ranks for ops with SameOperandsAndResultRank trait
+//   - create operator
+//   - performs shape inference on this operator
+template <typename TosaOp, typename... Args>
+TosaOp CreateOpAndInferShape(ImplicitLocOpBuilder &builder, Type resultTy,
+                             Args &&...args) {
+  if (TosaOp::template hasTrait<OpTrait::SameOperandsAndResultRank>()) {
+    // op requires same ranks for tensor operands
+    if constexpr (sizeof...(Args) == 2) {
+      auto argX = std::get<0>(std::tie(args...));
+      auto argY = std::get<1>(std::tie(args...));
+      using ArgX = decltype(argX);
+      using ArgY = decltype(argY);
+      if constexpr (std::is_same_v<ArgX, Value> &&
+                    std::is_same_v<ArgY, Value>) {
+        Value x = std::get<0>(std::tie(args...));
+        Value y = std::get<1>(std::tie(args...));
+        if (EqualizeRanks(builder, x, y).failed()) {
+          // incompatible broadcast shapes, no reshape is inserted
+          // ResultsBroadcastableShape verify will handle this
+        }
+        return createOpAndInferShape<TosaOp>(builder, resultTy, x, y);
+      }
+    }
+    if constexpr (sizeof...(Args) == 3) {
+      auto argX = std::get<0>(std::tie(args...));
+      auto argY = std::get<1>(std::tie(args...));
+      auto argZ = std::get<2>(std::tie(args...));
+      using ArgX = decltype(argX);
+      using ArgY = decltype(argY);
+      using ArgZ = decltype(argZ);
+      if constexpr (std::is_same_v<ArgX, Value> &&
+                    std::is_same_v<ArgY, Value> && std::is_same_v<ArgZ, bool>) {
+        // special case for ArithmeticRightShiftOp
+        Value x = std::get<0>(std::tie(args...));
+        Value y = std::get<1>(std::tie(args...));
+        bool round = std::get<2>(std::tie(args...));
+        if (EqualizeRanks(builder, x, y).failed()) {
+          // incompatible broadcast shapes, no reshape is inserted
+          // ResultsBroadcastableShape verify will handle this
+        }
+        return createOpAndInferShape<TosaOp>(builder, resultTy, x, y, round);
+      }
+      if constexpr (std::is_same_v<ArgX, Value> &&
+                    std::is_same_v<ArgY, Value> &&
+                    std::is_same_v<ArgZ, Value>) {
+        // special case for Select
+        Value x = std::get<0>(std::tie(args...));
+        Value y = std::get<1>(std::tie(args...));
+        Value z = std::get<2>(std::tie(args...));
+
+        if (EqualizeRanks(builder, x, y).failed() ||
+            EqualizeRanks(builder, x, z).failed() ||
+            EqualizeRanks(builder, y, z).failed()) {
+          // incompatible broadcast shapes, no reshape is inserted
+          // ResultsBroadcastableShape verify will handle this
+        }
+
+        return createOpAndInferShape<TosaOp>(builder, resultTy, x, y, z);
+      }
+    }
+  }
+
+  return createOpAndInferShape<TosaOp>(builder, resultTy, args...);
+}
+
+// Creates a TOSA operation by:
+//   - first equalize ranks for ops with SameOperandsAndResultRank trait
+//   - create operator
+//   - performs shape inference on this operator
+template <typename TosaOp, typename... Args>
+TosaOp CreateOpAndInferShape(PatternRewriter &rewriter, Location loc,
+                             Type resultTy, Args &&...args) {
+  ImplicitLocOpBuilder builder(loc, rewriter);
+  return CreateOpAndInferShape<TosaOp>(builder, resultTy, args...);
+}
 
 } // namespace tosa
 } // namespace mlir
