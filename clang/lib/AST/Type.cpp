@@ -43,6 +43,7 @@
 #include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/FoldingSet.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -4771,7 +4772,10 @@ bool Type::canHaveNullability(bool ResultIfUnknown) const {
                 ->getTemplateName()
                 .getAsTemplateDecl())
       if (auto *CTD = dyn_cast<ClassTemplateDecl>(templateDecl))
-        return CTD->getTemplatedDecl()->hasAttr<TypeNullableAttr>();
+        return llvm::any_of(
+            CTD->redecls(), [](const RedeclarableTemplateDecl *RTD) {
+              return RTD->getTemplatedDecl()->hasAttr<TypeNullableAttr>();
+            });
     return ResultIfUnknown;
 
   case Type::Builtin:
@@ -4838,10 +4842,14 @@ bool Type::canHaveNullability(bool ResultIfUnknown) const {
     // For template specializations, look only at primary template attributes.
     // This is a consistent regardless of whether the instantiation is known.
     if (const auto *CTSD = dyn_cast<ClassTemplateSpecializationDecl>(RD))
-      return CTSD->getSpecializedTemplate()
-          ->getTemplatedDecl()
-          ->hasAttr<TypeNullableAttr>();
-    return RD->hasAttr<TypeNullableAttr>();
+      return llvm::any_of(
+          CTSD->getSpecializedTemplate()->redecls(),
+          [](const RedeclarableTemplateDecl *RTD) {
+            return RTD->getTemplatedDecl()->hasAttr<TypeNullableAttr>();
+          });
+    return llvm::any_of(RD->redecls(), [](const TagDecl *RD) {
+      return RD->hasAttr<TypeNullableAttr>();
+    });
   }
 
   // Non-pointer types.
