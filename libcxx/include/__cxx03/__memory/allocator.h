@@ -10,18 +10,18 @@
 #ifndef _LIBCPP___MEMORY_ALLOCATOR_H
 #define _LIBCPP___MEMORY_ALLOCATOR_H
 
-#include <__config>
-#include <__memory/addressof.h>
-#include <__memory/allocate_at_least.h>
-#include <__memory/allocator_traits.h>
-#include <__type_traits/is_const.h>
-#include <__type_traits/is_constant_evaluated.h>
-#include <__type_traits/is_same.h>
-#include <__type_traits/is_void.h>
-#include <__type_traits/is_volatile.h>
-#include <__utility/forward.h>
-#include <cstddef>
-#include <new>
+#include <__cxx03/__config>
+#include <__cxx03/__memory/addressof.h>
+#include <__cxx03/__memory/allocate_at_least.h>
+#include <__cxx03/__memory/allocator_traits.h>
+#include <__cxx03/__type_traits/is_const.h>
+#include <__cxx03/__type_traits/is_constant_evaluated.h>
+#include <__cxx03/__type_traits/is_same.h>
+#include <__cxx03/__type_traits/is_void.h>
+#include <__cxx03/__type_traits/is_volatile.h>
+#include <__cxx03/__utility/forward.h>
+#include <__cxx03/cstddef>
+#include <__cxx03/new>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

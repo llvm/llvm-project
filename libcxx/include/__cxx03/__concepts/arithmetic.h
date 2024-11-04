@@ -9,12 +9,12 @@
 #ifndef _LIBCPP___CONCEPTS_ARITHMETIC_H
 #define _LIBCPP___CONCEPTS_ARITHMETIC_H
 
-#include <__config>
-#include <__type_traits/is_floating_point.h>
-#include <__type_traits/is_integral.h>
-#include <__type_traits/is_signed.h>
-#include <__type_traits/is_signed_integer.h>
-#include <__type_traits/is_unsigned_integer.h>
+#include <__cxx03/__config>
+#include <__cxx03/__type_traits/is_floating_point.h>
+#include <__cxx03/__type_traits/is_integral.h>
+#include <__cxx03/__type_traits/is_signed.h>
+#include <__cxx03/__type_traits/is_signed_integer.h>
+#include <__cxx03/__type_traits/is_unsigned_integer.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

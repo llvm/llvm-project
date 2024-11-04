@@ -1770,7 +1770,7 @@ void SelectionDAGLegalize::ExpandDYNAMIC_STACKALLOC(SDNode* Node,
   Tmp1 = DAG.getNode(Opc, dl, VT, SP, Size);       // Value
   if (Alignment > StackAlign)
     Tmp1 = DAG.getNode(ISD::AND, dl, VT, Tmp1,
-                       DAG.getConstant(-Alignment.value(), dl, VT));
+                       DAG.getSignedConstant(-Alignment.value(), dl, VT));
   Chain = DAG.getCopyToReg(Chain, dl, SPReg, Tmp1);     // Output chain
 
   Tmp2 = DAG.getCALLSEQ_END(Chain, 0, 0, SDValue(), dl);
@@ -2343,75 +2343,6 @@ static bool useSinCos(SDNode *Node) {
       return true;
   }
   return false;
-}
-
-/// Issue libcalls to sincos to compute sin / cos pairs.
-void SelectionDAGLegalize::ExpandSinCosLibCall(
-    SDNode *Node, SmallVectorImpl<SDValue> &Results) {
-  EVT VT = Node->getValueType(0);
-  Type *Ty = VT.getTypeForEVT(*DAG.getContext());
-  RTLIB::Libcall LC = RTLIB::getFSINCOS(VT);
-
-  // Find users of the node that store the results (and share input chains). The
-  // destination pointers can be used instead of creating stack allocations.
-  SDValue StoresInChain{};
-  std::array<StoreSDNode *, 2> ResultStores = {nullptr};
-  for (SDNode *User : Node->uses()) {
-    if (!ISD::isNormalStore(User))
-      continue;
-    auto *ST = cast<StoreSDNode>(User);
-    if (!ST->isSimple() || ST->getAddressSpace() != 0 ||
-        ST->getAlign() < DAG.getDataLayout().getABITypeAlign(Ty) ||
-        (StoresInChain && ST->getChain() != StoresInChain) ||
-        Node->isPredecessorOf(ST->getChain().getNode()))
-      continue;
-    ResultStores[ST->getValue().getResNo()] = ST;
-    StoresInChain = ST->getChain();
-  }
-
-  TargetLowering::ArgListTy Args;
-  TargetLowering::ArgListEntry Entry{};
-
-  // Pass the argument.
-  Entry.Node = Node->getOperand(0);
-  Entry.Ty = Ty;
-  Args.push_back(Entry);
-
-  // Pass the output pointers for sin and cos.
-  SmallVector<SDValue, 2> ResultPtrs{};
-  for (StoreSDNode *ST : ResultStores) {
-    SDValue ResultPtr = ST ? ST->getBasePtr() : DAG.CreateStackTemporary(VT);
-    Entry.Node = ResultPtr;
-    Entry.Ty = PointerType::getUnqual(Ty->getContext());
-    Args.push_back(Entry);
-    ResultPtrs.push_back(ResultPtr);
-  }
-
-  SDLoc DL(Node);
-  SDValue InChain = StoresInChain ? StoresInChain : DAG.getEntryNode();
-  SDValue Callee = DAG.getExternalSymbol(TLI.getLibcallName(LC),
-                                         TLI.getPointerTy(DAG.getDataLayout()));
-  TargetLowering::CallLoweringInfo CLI(DAG);
-  CLI.setDebugLoc(DL).setChain(InChain).setLibCallee(
-      TLI.getLibcallCallingConv(LC), Type::getVoidTy(*DAG.getContext()), Callee,
-      std::move(Args));
-
-  auto [Call, OutChain] = TLI.LowerCallTo(CLI);
-
-  for (auto [ResNo, ResultPtr] : llvm::enumerate(ResultPtrs)) {
-    MachinePointerInfo PtrInfo;
-    if (StoreSDNode *ST = ResultStores[ResNo]) {
-      // Replace store with the library call.
-      DAG.ReplaceAllUsesOfValueWith(SDValue(ST, 0), OutChain);
-      PtrInfo = ST->getPointerInfo();
-    } else {
-      PtrInfo = MachinePointerInfo::getFixedStack(
-          DAG.getMachineFunction(),
-          cast<FrameIndexSDNode>(ResultPtr)->getIndex());
-    }
-    SDValue LoadResult = DAG.getLoad(VT, DL, OutChain, ResultPtr, PtrInfo);
-    Results.push_back(LoadResult);
-  }
 }
 
 SDValue SelectionDAGLegalize::expandLdexp(SDNode *Node) const {
@@ -4633,7 +4564,7 @@ void SelectionDAGLegalize::ConvertNodeToLibcall(SDNode *Node) {
     break;
   case ISD::FSINCOS:
     // Expand into sincos libcall.
-    ExpandSinCosLibCall(Node, Results);
+    (void)DAG.expandFSINCOS(Node, Results);
     break;
   case ISD::FLOG:
   case ISD::STRICT_FLOG:
