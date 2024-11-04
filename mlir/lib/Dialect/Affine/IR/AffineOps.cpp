@@ -4723,8 +4723,8 @@ namespace {
 ///
 /// Alternatively, if `%x` in the above is a known constant 0, remove it even if
 /// the operation isn't asserted to be `disjoint`.
-struct DropLinearizeUnitComponentsIfDisjointOrZero
-    : public OpRewritePattern<affine::AffineLinearizeIndexOp> {
+struct DropLinearizeUnitComponentsIfDisjointOrZero final
+    : OpRewritePattern<affine::AffineLinearizeIndexOp> {
   using OpRewritePattern::OpRewritePattern;
 
   LogicalResult matchAndRewrite(affine::AffineLinearizeIndexOp op,

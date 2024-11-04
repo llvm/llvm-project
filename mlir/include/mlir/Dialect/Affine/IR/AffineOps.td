@@ -1109,7 +1109,7 @@ def AffineLinearizeIndexOp : Affine_Op<"linearize_index",
     The `affine.linearize_index` operation takes a sequence of index values and a
     basis of the same length and linearizes the indices using that basis.
 
-    That is, for indices %idx_1 through %i_N and basis elements b_1 through b_N,
+    That is, for indices `%idx_1` through `%i_N` and basis elements `b_1` through `b_N`,
     it computes
 
     ```
@@ -1124,13 +1124,13 @@ def AffineLinearizeIndexOp : Affine_Op<"linearize_index",
 
     Example:
 
-    ```
+    ```mlir
     %linear_index = affine.delinearize_index [%index_0, %index_1, %index_2] (16, 224, 224) : index
     ```
 
     In the above example, `%linear_index` conceptually holds the following:
 
-    ```
+    ```mlir
     #map = affine_map<()[s0, s1, s2] -> (s0 * 50176 + s1 * 224 + s2)>
     %linear_index = affine.apply #map()[%index_0, %index_1, %index_2]
     ```
