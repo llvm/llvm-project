@@ -112,7 +112,6 @@ struct ForcePassLinking {
     (void)llvm::createSROAPass();
     (void)llvm::createSingleLoopExtractorPass();
     (void)llvm::createTailCallEliminationPass();
-    (void)llvm::createTLSVariableHoistPass();
     (void)llvm::createConstantHoistingPass();
     (void)llvm::createCodeGenPrepareLegacyPass();
     (void)llvm::createPostInlineEntryExitInstrumenterPass();

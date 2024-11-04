@@ -881,9 +881,6 @@ void TargetPassConfig::addIRPasses() {
   if (!DisableExpandReductions)
     addPass(createExpandReductionsPass());
 
-  if (getOptLevel() != CodeGenOptLevel::None)
-    addPass(createTLSVariableHoistPass());
-
   // Convert conditional moves to conditional jumps when profitable.
   if (getOptLevel() != CodeGenOptLevel::None && !DisableSelectOptimize)
     addPass(createSelectOptimizePass());
