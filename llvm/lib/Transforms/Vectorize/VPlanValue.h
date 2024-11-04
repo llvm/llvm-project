@@ -329,6 +329,8 @@ public:
     VPInterleaveSC,
     VPReductionEVLSC,
     VPReductionSC,
+    VPMulAccSC,
+    VPExtendedReductionSC,
     VPReplicateSC,
     VPScalarCastSC,
     VPScalarIVStepsSC,

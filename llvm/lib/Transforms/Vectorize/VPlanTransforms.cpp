@@ -519,6 +519,30 @@ void VPlanTransforms::removeDeadRecipes(VPlan &Plan) {
   }
 }
 
+void VPlanTransforms::prepareExecute(VPlan &Plan) {
+  errs() << "\n\n\n!!Prepare to execute\n";
+  ReversePostOrderTraversal<VPBlockDeepTraversalWrapper<VPBlockBase *>> RPOT(
+      Plan.getVectorLoopRegion());
+  for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
+           vp_depth_first_deep(Plan.getEntry()))) {
+    for (VPRecipeBase &R : make_early_inc_range(*VPBB)) {
+      if (!isa<VPExtendedReductionRecipe>(&R))
+        continue;
+      auto *ExtRed = cast<VPExtendedReductionRecipe>(&R);
+      auto *Ext = new VPWidenCastRecipe(
+          ExtRed->getExtOpcode(), ExtRed->getVecOp(), ExtRed->getResultType(),
+          *ExtRed->getExtInstr());
+      auto *Red = new VPReductionRecipe(
+          ExtRed->getRecurrenceDescriptor(), ExtRed->getUnderlyingInstr(),
+          ExtRed->getChainOp(), Ext, ExtRed->getCondOp(), ExtRed->isOrdered());
+      Ext->insertBefore(ExtRed);
+      Red->insertBefore(ExtRed);
+      ExtRed->replaceAllUsesWith(Red);
+      ExtRed->eraseFromParent();
+    }
+  }
+}
+
 static VPScalarIVStepsRecipe *
 createScalarIVSteps(VPlan &Plan, InductionDescriptor::InductionKind Kind,
                     Instruction::BinaryOps InductionOpcode,

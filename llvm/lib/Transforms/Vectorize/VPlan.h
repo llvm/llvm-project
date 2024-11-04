@@ -861,6 +861,8 @@ public:
     case VPRecipeBase::VPInstructionSC:
     case VPRecipeBase::VPReductionEVLSC:
     case VPRecipeBase::VPReductionSC:
+    case VPRecipeBase::VPMulAccSC:
+    case VPRecipeBase::VPExtendedReductionSC:
     case VPRecipeBase::VPReplicateSC:
     case VPRecipeBase::VPScalarIVStepsSC:
     case VPRecipeBase::VPVectorPointerSC:
@@ -2694,6 +2696,221 @@ public:
            "Op must be an operand of the recipe");
     return Op == getEVL();
   }
+};
+
+/// A recipe to represent inloop extended reduction operations, performing a
+/// reduction on a vector operand into a scalar value, and adding the result to
+/// a chain. This recipe is high level abstract which will generate
+/// VPReductionRecipe and VPWidenCastRecipe before execution. The Operands are
+/// {ChainOp, VecOp, [Condition]}.
+class VPExtendedReductionRecipe : public VPSingleDefRecipe {
+  /// The recurrence decriptor for the reduction in question.
+  const RecurrenceDescriptor &RdxDesc;
+  bool IsOrdered;
+  /// Whether the reduction is conditional.
+  bool IsConditional = false;
+  /// Type after extend.
+  Type *ResultTy;
+  Instruction::CastOps ExtOp;
+  CastInst *CastInstr;
+  bool IsZExt;
+
+protected:
+  VPExtendedReductionRecipe(const unsigned char SC,
+                            const RecurrenceDescriptor &R, Instruction *RedI,
+                            Instruction::CastOps ExtOp, CastInst *CastI,
+                            ArrayRef<VPValue *> Operands, VPValue *CondOp,
+                            bool IsOrdered, Type *ResultTy)
+      : VPSingleDefRecipe(SC, Operands, RedI), RdxDesc(R), IsOrdered(IsOrdered),
+        ResultTy(ResultTy), ExtOp(ExtOp), CastInstr(CastI) {
+    if (CondOp) {
+      IsConditional = true;
+      addOperand(CondOp);
+    }
+    IsZExt = ExtOp == Instruction::CastOps::ZExt;
+  }
+
+public:
+  VPExtendedReductionRecipe(const RecurrenceDescriptor &R, Instruction *RedI,
+                            CastInst *CastI, VPValue *ChainOp, VPValue *VecOp,
+                            VPValue *CondOp, bool IsOrdered, Type *ResultTy)
+      : VPExtendedReductionRecipe(VPDef::VPExtendedReductionSC, R, RedI,
+                                  CastI->getOpcode(), CastI,
+                                  ArrayRef<VPValue *>({ChainOp, VecOp}), CondOp,
+                                  IsOrdered, ResultTy) {}
+
+  VPExtendedReductionRecipe(VPReductionRecipe *Red, VPWidenCastRecipe *Ext)
+      : VPExtendedReductionRecipe(
+            VPDef::VPExtendedReductionSC, Red->getRecurrenceDescriptor(),
+            Red->getUnderlyingInstr(), Ext->getOpcode(),
+            cast<CastInst>(Ext->getUnderlyingInstr()),
+            ArrayRef<VPValue *>({Red->getChainOp(), Ext->getOperand(0)}),
+            Red->getCondOp(), Red->isOrdered(), Ext->getResultType()) {}
+
+  ~VPExtendedReductionRecipe() override = default;
+
+  VPExtendedReductionRecipe *clone() override {
+    llvm_unreachable("Not implement yet");
+  }
+
+  static inline bool classof(const VPRecipeBase *R) {
+    return R->getVPDefID() == VPDef::VPExtendedReductionSC;
+  }
+
+  static inline bool classof(const VPUser *U) {
+    auto *R = dyn_cast<VPRecipeBase>(U);
+    return R && classof(R);
+  }
+
+  /// Generate the reduction in the loop
+  void execute(VPTransformState &State) override {
+    llvm_unreachable("VPExtendedReductionRecipe should be transform to "
+                     "VPExtendedRecipe + VPReductionRecipe before execution.");
+  };
+
+  /// Return the cost of VPExtendedReductionRecipe.
+  InstructionCost computeCost(ElementCount VF,
+                              VPCostContext &Ctx) const override;
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  /// Print the recipe.
+  void print(raw_ostream &O, const Twine &Indent,
+             VPSlotTracker &SlotTracker) const override;
+#endif
+
+  /// Return the recurrence decriptor for the in-loop reduction.
+  const RecurrenceDescriptor &getRecurrenceDescriptor() const {
+    return RdxDesc;
+  }
+  /// Return true if the in-loop reduction is ordered.
+  bool isOrdered() const { return IsOrdered; };
+  /// Return true if the in-loop reduction is conditional.
+  bool isConditional() const { return IsConditional; };
+  /// The VPValue of the scalar Chain being accumulated.
+  VPValue *getChainOp() const { return getOperand(0); }
+  /// The VPValue of the vector value to be extended and reduced.
+  VPValue *getVecOp() const { return getOperand(1); }
+  /// The VPValue of the condition for the block.
+  VPValue *getCondOp() const {
+    return isConditional() ? getOperand(getNumOperands() - 1) : nullptr;
+  }
+  Type *getResultType() const { return ResultTy; };
+  Instruction::CastOps getExtOpcode() const { return ExtOp; };
+  CastInst *getExtInstr() const { return CastInstr; };
+};
+
+/// A recipe to represent inloop MulAccreduction operations, performing a
+/// reduction on a vector operand into a scalar value, and adding the result to
+/// a chain. This recipe is high level abstract which will generate
+/// VPReductionRecipe VPWidenRecipe(mul)and VPWidenCastRecipe before execution.
+/// The Operands are {ChainOp, VecOp1, VecOp2, [Condition]}.
+class VPMulAccRecipe : public VPSingleDefRecipe {
+  /// The recurrence decriptor for the reduction in question.
+  const RecurrenceDescriptor &RdxDesc;
+  bool IsOrdered;
+  /// Whether the reduction is conditional.
+  bool IsConditional = false;
+  /// Type after extend.
+  Type *ResultTy;
+  /// Type for mul.
+  Type *MulTy;
+  /// reduce.add(OuterExt(mul(InnerExt(), InnerExt())))
+  Instruction::CastOps OuterExtOp;
+  Instruction::CastOps InnerExtOp;
+
+  Instruction *MulI;
+  Instruction *OuterExtI;
+  Instruction *InnerExt0I;
+  Instruction *InnerExt1I;
+
+protected:
+  VPMulAccRecipe(const unsigned char SC, const RecurrenceDescriptor &R,
+                 Instruction *RedI, Instruction::CastOps OuterExtOp,
+                 Instruction *OuterExtI, Instruction *MulI,
+                 Instruction::CastOps InnerExtOp, Instruction *InnerExt0I,
+                 Instruction *InnerExt1I, ArrayRef<VPValue *> Operands,
+                 VPValue *CondOp, bool IsOrdered, Type *ResultTy, Type *MulTy)
+      : VPSingleDefRecipe(SC, Operands, RedI), RdxDesc(R), IsOrdered(IsOrdered),
+        ResultTy(ResultTy), MulTy(MulTy), OuterExtOp(OuterExtOp),
+        InnerExtOp(InnerExtOp), MulI(MulI), OuterExtI(OuterExtI),
+        InnerExt0I(InnerExt0I), InnerExt1I(InnerExt1I) {
+    if (CondOp) {
+      IsConditional = true;
+      addOperand(CondOp);
+    }
+  }
+
+public:
+  VPMulAccRecipe(const RecurrenceDescriptor &R, Instruction *RedI,
+                 Instruction *OuterExt, Instruction *Mul,
+                 Instruction *InnerExt0, Instruction *InnerExt1,
+                 VPValue *ChainOp, VPValue *InnerExt0Op, VPValue *InnerExt1Op,
+                 VPValue *CondOp, bool IsOrdered, Type *ResultTy, Type *MulTy)
+      : VPMulAccRecipe(
+            VPDef::VPMulAccSC, R, RedI, cast<CastInst>(OuterExt)->getOpcode(),
+            OuterExt, Mul, cast<CastInst>(InnerExt0)->getOpcode(), InnerExt0,
+            InnerExt1, ArrayRef<VPValue *>({ChainOp, InnerExt0Op, InnerExt1Op}),
+            CondOp, IsOrdered, ResultTy, MulTy) {}
+
+  VPMulAccRecipe(VPReductionRecipe *Red, VPWidenCastRecipe *OuterExt,
+                 VPWidenRecipe *Mul, VPWidenCastRecipe *InnerExt0,
+                 VPWidenCastRecipe *InnerExt1)
+      : VPMulAccRecipe(
+            VPDef::VPMulAccSC, Red->getRecurrenceDescriptor(),
+            Red->getUnderlyingInstr(), OuterExt->getOpcode(),
+            OuterExt->getUnderlyingInstr(), Mul->getUnderlyingInstr(),
+            InnerExt0->getOpcode(), InnerExt0->getUnderlyingInstr(),
+            InnerExt1->getUnderlyingInstr(),
+            ArrayRef<VPValue *>({Red->getChainOp(), InnerExt0->getOperand(0),
+                                 InnerExt1->getOperand(0)}),
+            Red->getCondOp(), Red->isOrdered(), OuterExt->getResultType(),
+            InnerExt0->getResultType()) {}
+
+  ~VPMulAccRecipe() override = default;
+
+  VPMulAccRecipe *clone() override { llvm_unreachable("Not implement yet"); }
+
+  static inline bool classof(const VPRecipeBase *R) {
+    return R->getVPDefID() == VPRecipeBase::VPMulAccSC;
+  }
+
+  static inline bool classof(const VPUser *U) {
+    auto *R = dyn_cast<VPRecipeBase>(U);
+    return R && classof(R);
+  }
+
+  /// Generate the reduction in the loop
+  void execute(VPTransformState &State) override;
+
+  /// Return the cost of VPExtendedReductionRecipe.
+  InstructionCost computeCost(ElementCount VF,
+                              VPCostContext &Ctx) const override;
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  /// Print the recipe.
+  void print(raw_ostream &O, const Twine &Indent,
+             VPSlotTracker &SlotTracker) const override;
+#endif
+
+  /// Return the recurrence decriptor for the in-loop reduction.
+  const RecurrenceDescriptor &getRecurrenceDescriptor() const {
+    return RdxDesc;
+  }
+  /// Return true if the in-loop reduction is ordered.
+  bool isOrdered() const { return IsOrdered; };
+  /// Return true if the in-loop reduction is conditional.
+  bool isConditional() const { return IsConditional; };
+  /// The VPValue of the scalar Chain being accumulated.
+  VPValue *getChainOp() const { return getOperand(0); }
+  /// The VPValue of the vector value to be extended and reduced.
+  VPValue *getVecOp() const { return getOperand(1); }
+  /// The VPValue of the condition for the block.
+  VPValue *getCondOp() const {
+    return isConditional() ? getOperand(getNumOperands() - 1) : nullptr;
+  }
+  Type *getResultTy() const { return ResultTy; };
+  Instruction::CastOps getOuterExtOpcode() const { return OuterExtOp; };
+  Instruction::CastOps getInnerExtOpcode() const { return InnerExtOp; };
 };
 
 /// VPReplicateRecipe replicates a given instruction producing multiple scalar
