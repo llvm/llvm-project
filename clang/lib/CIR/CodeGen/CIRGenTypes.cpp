@@ -387,12 +387,20 @@ mlir::Type CIRGenTypes::ConvertType(QualType T) {
     llvm_unreachable("Non-canonical or dependent types aren't possible.");
 
   case Type::ArrayParameter:
+  case Type::HLSLAttributedResource:
     llvm_unreachable("NYI");
 
   case Type::Builtin: {
     switch (cast<BuiltinType>(Ty)->getKind()) {
     case BuiltinType::HLSLResource:
       llvm_unreachable("NYI");
+    case BuiltinType::SveMFloat8:
+    case BuiltinType::SveMFloat8x2:
+    case BuiltinType::SveMFloat8x3:
+    case BuiltinType::SveMFloat8x4:
+    case BuiltinType::MFloat8:
+    case BuiltinType::MFloat8x8:
+    case BuiltinType::MFloat8x16:
     case BuiltinType::SveBoolx2:
     case BuiltinType::SveBoolx4:
     case BuiltinType::SveCount:

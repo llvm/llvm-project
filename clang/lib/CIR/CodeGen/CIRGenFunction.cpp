@@ -85,6 +85,7 @@ TypeEvaluationKind CIRGenFunction::getEvaluationKind(QualType type) {
       llvm_unreachable("non-canonical or dependent type in IR-generation");
 
     case Type::ArrayParameter:
+    case Type::HLSLAttributedResource:
       llvm_unreachable("NYI");
 
     case Type::Auto:

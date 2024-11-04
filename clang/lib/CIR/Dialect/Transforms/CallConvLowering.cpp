@@ -59,7 +59,8 @@ struct CallConvLowering {
         lowerIndirectCallOp(c);
     });
 
-    lowerModule->rewriteFunctionDefinition(op);
+    if (lowerModule->rewriteFunctionDefinition(op).failed())
+      op.emitError("Unable to rewrite function definition");
   }
 
 private:
@@ -94,7 +95,8 @@ private:
   }
 
   void lowerDirectCallOp(CallOp op, FuncOp callee) {
-    lowerModule->rewriteFunctionCall(op, callee);
+    if (lowerModule->rewriteFunctionCall(op, callee).failed())
+      op.emitError("Unable to rewrite function call");
   }
 
   void lowerIndirectCallOp(CallOp op) {
@@ -102,9 +104,11 @@ private:
 
     rewriter.setInsertionPoint(op);
     auto typ = op.getIndirectCall().getType();
-    if (isFuncPointerTy(typ)) {
-      lowerModule->rewriteFunctionCall(op);
-    }
+    if (!isFuncPointerTy(typ))
+      return;
+
+    if (lowerModule->rewriteFunctionCall(op).failed())
+      op.emitError("Unable to rewrite function call");
   }
 
 private:
