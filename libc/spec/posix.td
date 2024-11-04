@@ -1625,8 +1625,8 @@ def POSIX : StandardSpec<"POSIX"> {
             "lfind",
             RetValSpec<VoidPtr>,
             [
-                ArgSpec<VoidPtr>,
-                ArgSpec<VoidPtr>,
+                ArgSpec<ConstVoidPtr>,
+                ArgSpec<ConstVoidPtr>,
                 ArgSpec<SizeTPtr>,
                 ArgSpec<SizeTType>,
                 ArgSpec<LSearchCompareT>
