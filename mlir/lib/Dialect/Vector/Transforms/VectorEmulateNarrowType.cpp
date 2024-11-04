@@ -130,12 +130,12 @@ static FailureOr<Operation *> getCompressedMaskOp(OpBuilder &rewriter,
 
 /// Extracts 1-D subvector from a 1-D vector. It is a wrapper function for
 /// emitting `vector.extract_strided_slice`.
-static Value extractSubvectorFrom(RewriterBase &rewriter, Location loc,
-                                  VectorType extractType, Value source,
-                                  int64_t frontOffset, int64_t subvecSize) {
+static Value staticallyExtractSubvector(OpBuilder &rewriter, Location loc,
+                                        VectorType extractType, Value source,
+                                        int64_t frontOffset,
+                                        int64_t subvecSize) {
   auto vectorType = cast<VectorType>(source.getType());
-  assert((vectorType.getRank() == 1 &&
-         extractType.getRank() == 1) &&
+  assert((vectorType.getRank() == 1 && extractType.getRank() == 1) &&
          "expected 1-D source and destination types");
   auto offsets = rewriter.getI64ArrayAttr({frontOffset});
   auto sizes = rewriter.getI64ArrayAttr({subvecSize});
@@ -149,12 +149,11 @@ static Value extractSubvectorFrom(RewriterBase &rewriter, Location loc,
 /// Inserts 1-D subvector into a 1-D vector by overwriting the elements starting
 /// at `offset`. it is a wrapper function for emitting
 /// `vector.insert_strided_slice`.
-static Value insertSubvectorInto(RewriterBase &rewriter, Location loc,
-                                 Value src, Value dest, int64_t offset) {
-  auto srcType = dyn_cast<VectorType>(src.getType());
-  auto destType = dyn_cast<VectorType>(dest.getType());
-  assert(srcType && srcType.getRank() == 1 && destType &&
-         destType.getRank() == 1 &&
+static Value staticallyInsertSubvector(OpBuilder &rewriter, Location loc,
+                                       Value src, Value dest, int64_t offset) {
+  auto srcType = cast<VectorType>(src.getType());
+  auto destType = cast<VectorType>(dest.getType());
+  assert(srcType.getRank() == 1 && destType.getRank() == 1 &&
          "expected source and dest to be vector type");
   auto offsets = rewriter.getI64ArrayAttr({offset});
   auto strides = rewriter.getI64ArrayAttr({1});
@@ -166,7 +165,7 @@ static Value insertSubvectorInto(RewriterBase &rewriter, Location loc,
 /// and size `numElementsToExtract`, and inserts into the `dest` vector. This
 /// function emits multiple `vector.extract` and `vector.insert` ops, so only
 /// use it when `offset` cannot be folded into a constant value.
-static Value dynamicallyExtractSubVector(RewriterBase &rewriter, Location loc,
+static Value dynamicallyExtractSubVector(OpBuilder &rewriter, Location loc,
                                          TypedValue<VectorType> source,
                                          Value dest, OpFoldResult offset,
                                          int64_t numElementsToExtract) {
@@ -188,8 +187,8 @@ static Value dynamicallyExtractSubVector(RewriterBase &rewriter, Location loc,
 /// The load location is given by `base` and `linearizedIndices`, and the
 /// load size is given by `numEmulatedElementsToLoad`.
 static TypedValue<VectorType>
-emulatedVectorLoad(ConversionPatternRewriter &rewriter, Location loc,
-                   Value base, OpFoldResult linearizedIndices,
+emulatedVectorLoad(OpBuilder &rewriter, Location loc, Value base,
+                   OpFoldResult linearizedIndices,
                    int64_t numEmultedElementsToLoad, Type origElemType,
                    Type emulatedElemType) {
   auto scale = emulatedElemType.getIntOrFloatBitWidth() /
@@ -443,8 +442,9 @@ struct ConvertVectorLoad final : OpConversionPattern<vector::LoadOp> {
 
     if (foldedIntraVectorOffset) {
       if (isUnalignedEmulation) {
-        result = extractSubvectorFrom(rewriter, loc, op.getType(), result,
-                                      *foldedIntraVectorOffset, origElements);
+        result =
+            staticallyExtractSubvector(rewriter, loc, op.getType(), result,
+                                       *foldedIntraVectorOffset, origElements);
       }
     } else {
       auto resultVector = rewriter.create<arith::ConstantOp>(
@@ -567,8 +567,8 @@ struct ConvertVectorMaskedLoad final
       // create an empty vector of the new type
       auto emptyVector = rewriter.create<arith::ConstantOp>(
           loc, newBitcastType, rewriter.getZeroAttr(newBitcastType));
-      passthru = insertSubvectorInto(rewriter, loc, passthru, emptyVector,
-                                     *foldedIntraVectorOffset);
+      passthru = staticallyInsertSubvector(rewriter, loc, passthru, emptyVector,
+                                           *foldedIntraVectorOffset);
     }
     auto newPassThru =
         rewriter.create<vector::BitCastOp>(loc, loadType, passthru);
@@ -591,16 +591,17 @@ struct ConvertVectorMaskedLoad final
       // TODO: can fold if op's mask is constant
       auto emptyVector = rewriter.create<arith::ConstantOp>(
           loc, newSelectMaskType, rewriter.getZeroAttr(newSelectMaskType));
-      mask = insertSubvectorInto(rewriter, loc, op.getMask(), emptyVector,
-                                 *foldedIntraVectorOffset);
+      mask = staticallyInsertSubvector(rewriter, loc, op.getMask(), emptyVector,
+                                       *foldedIntraVectorOffset);
     }
 
     Value result =
         rewriter.create<arith::SelectOp>(loc, mask, bitCast, passthru);
 
     if (isUnalignedEmulation) {
-      result = extractSubvectorFrom(rewriter, loc, op.getType(), result,
-                                    *foldedIntraVectorOffset, origElements);
+      result =
+          staticallyExtractSubvector(rewriter, loc, op.getType(), result,
+                                     *foldedIntraVectorOffset, origElements);
     }
     rewriter.replaceOp(op, result);
 
@@ -674,8 +675,9 @@ struct ConvertVectorTransferRead final
     Value result = bitCast->getResult(0);
     if (foldedIntraVectorOffset) {
       if (isUnalignedEmulation) {
-        result = extractSubvectorFrom(rewriter, loc, op.getType(), result,
-                                      *foldedIntraVectorOffset, origElements);
+        result =
+            staticallyExtractSubvector(rewriter, loc, op.getType(), result,
+                                       *foldedIntraVectorOffset, origElements);
       }
     } else {
       auto zeros = rewriter.create<arith::ConstantOp>(
