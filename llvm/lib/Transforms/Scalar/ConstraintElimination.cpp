@@ -905,10 +905,9 @@ static void dumpConstraint(ArrayRef<int64_t> C,
 }
 #endif
 
-static Value *getStartValueFromAddRec(PHINode &PN, Loop &L,
-                                      ScalarEvolution &SE) {
-  auto *AR = dyn_cast_or_null<SCEVAddRecExpr>(SE.getSCEV(&PN));
-  const SCEV *StartSCEV = AR->getStart();
+static Value *getStartValueFromAddRec(const SCEVAddRecExpr &AR, PHINode &PN,
+                                      Loop &L, ScalarEvolution &SE) {
+  const SCEV *StartSCEV = AR.getStart();
   Value *StartValue = nullptr;
   BasicBlock *LoopPred = L.getLoopPredecessor();
   if (auto *C = dyn_cast<SCEVConstant>(StartSCEV)) {
@@ -963,7 +962,7 @@ void State::addConditionFactsIntoLoopHeader(Loop &L) {
     BasicBlock *LoopPred = L.getLoopPredecessor();
     if (!AR || AR->getLoop() != &L || !LoopPred)
       continue;
-    Value *StartValue = getStartValueFromAddRec(PN, L, SE);
+    Value *StartValue = getStartValueFromAddRec(*AR, PN, L, SE);
     auto MI = getMonotonicityInfo(AR, SE);
 
     if (MI.isUnsignedIncreasing())
@@ -1022,7 +1021,7 @@ void State::addInfoForInductions(BasicBlock &BB) {
   if (!AR || AR->getLoop() != L || !LoopPred)
     return;
 
-  Value *StartValue = getStartValueFromAddRec(*PN, *L, SE);
+  Value *StartValue = getStartValueFromAddRec(*AR, *PN, *L, SE);
   auto MI = getMonotonicityInfo(AR, SE);
 
   DomTreeNode *DTN = DT.getNode(InLoopSucc);
