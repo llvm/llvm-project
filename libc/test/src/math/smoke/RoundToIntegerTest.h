@@ -9,8 +9,10 @@
 #ifndef LLVM_LIBC_TEST_SRC_MATH_SMOKE_ROUNDTOINTEGERTEST_H
 #define LLVM_LIBC_TEST_SRC_MATH_SMOKE_ROUNDTOINTEGERTEST_H
 
+#include "src/__support/CPP/algorithm.h"
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
+#include "src/__support/macros/properties/architectures.h"
 #include "test/UnitTest/FEnvSafeTest.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
@@ -49,10 +51,12 @@ private:
     // 0 for errno and exceptions, but this doesn't hold for
     // all math functions using RoundToInteger test:
     // https://github.com/llvm/llvm-project/pull/88816
+#ifndef LIBC_TARGET_ARCH_IS_GPU
     if (expectError) {
       ASSERT_FP_EXCEPTION(FE_INVALID);
       ASSERT_MATH_ERRNO(EDOM);
     }
+#endif
   }
 
 public:
@@ -113,8 +117,10 @@ public:
   }
 
   void testSubnormalRange(RoundToIntegerFunc func) {
-    constexpr StorageType COUNT = 1'000'001;
-    constexpr StorageType STEP = (MAX_SUBNORMAL - MIN_SUBNORMAL) / COUNT;
+    constexpr int COUNT = 1'000'001;
+    constexpr StorageType STEP = LIBC_NAMESPACE::cpp::max(
+        static_cast<StorageType>((MAX_SUBNORMAL - MIN_SUBNORMAL) / COUNT),
+        StorageType(1));
     for (StorageType i = MIN_SUBNORMAL; i <= MAX_SUBNORMAL; i += STEP) {
       F x = FPBits(i).get_val();
       if (x == F(0.0))

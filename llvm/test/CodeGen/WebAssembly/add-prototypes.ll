@@ -36,9 +36,11 @@ define ptr @to_intptr_constexpr() {
 }
 
 ; CHECK-LABEL: @null_compare
-; CHECK: br i1 icmp eq (ptr @foo, ptr null), label %if.then, label %if.end
+; CHECK: %cmp = icmp eq ptr @foo, null
+; CHECK: br i1 %cmp, label %if.then, label %if.end
 define i8 @null_compare() {
-  br i1 icmp eq (ptr @foo, ptr null), label %if.then, label %if.end
+  %cmp = icmp eq ptr @foo, null
+  br i1 %cmp, label %if.then, label %if.end
 if.then:
   ret i8 0
 if.end:

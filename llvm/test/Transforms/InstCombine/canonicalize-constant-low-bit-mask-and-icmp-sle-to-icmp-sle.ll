@@ -113,8 +113,7 @@ define i1 @oneuse0() {
 
 define i1 @c0(i8 %x) {
 ; CHECK-LABEL: @c0(
-; CHECK-NEXT:    [[TMP0:%.*]] = and i8 [[X:%.*]], 3
-; CHECK-NEXT:    [[RET:%.*]] = icmp sle i8 [[TMP0]], [[X]]
+; CHECK-NEXT:    [[RET:%.*]] = icmp sgt i8 [[X:%.*]], -1
 ; CHECK-NEXT:    ret i1 [[RET]]
 ;
   %tmp0 = and i8 %x, 3

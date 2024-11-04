@@ -4,8 +4,8 @@ RUN: link_fdata %p/Inputs/jump_table_icp.s %t.o %t.fdata --nmtool llvm-nm
 RUN: llvm-strip --strip-unneeded %t.o
 RUN: %clang %cflags -no-pie %t.o -o %t.exe -Wl,-q
 
-# This test has commands that rely on shell capabilities that won't execute
-# correctly on Windows e.g. subshell execution
+## This test has commands that rely on shell capabilities that won't execute
+## correctly on Windows e.g. subshell execution
 REQUIRES: shell
 
 RUN: (llvm-bolt %t.exe --data %t.fdata -o %t --relocs \

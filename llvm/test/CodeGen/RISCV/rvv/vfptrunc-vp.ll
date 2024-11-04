@@ -113,16 +113,16 @@ define <vscale x 16 x float> @vfptrunc_nxv16f32_nxv16f64(<vscale x 16 x double> 
 ; CHECK-NEXT:    sltu a3, a0, a2
 ; CHECK-NEXT:    addi a3, a3, -1
 ; CHECK-NEXT:    and a2, a3, a2
+; CHECK-NEXT:    addi a3, sp, 16
+; CHECK-NEXT:    vl8r.v v24, (a3) # Unknown-size Folded Reload
 ; CHECK-NEXT:    vsetvli zero, a2, e32, m4, ta, ma
-; CHECK-NEXT:    addi a2, sp, 16
-; CHECK-NEXT:    vl8r.v v24, (a2) # Unknown-size Folded Reload
 ; CHECK-NEXT:    vfncvt.f.f.w v20, v24, v0.t
 ; CHECK-NEXT:    bltu a0, a1, .LBB7_2
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    mv a0, a1
 ; CHECK-NEXT:  .LBB7_2:
-; CHECK-NEXT:    vsetvli zero, a0, e32, m4, ta, ma
 ; CHECK-NEXT:    vmv1r.v v0, v7
+; CHECK-NEXT:    vsetvli zero, a0, e32, m4, ta, ma
 ; CHECK-NEXT:    vfncvt.f.f.w v16, v8, v0.t
 ; CHECK-NEXT:    vmv8r.v v8, v16
 ; CHECK-NEXT:    csrr a0, vlenb
@@ -169,11 +169,11 @@ define <vscale x 32 x float> @vfptrunc_nxv32f32_nxv32f64(<vscale x 32 x double> 
 ; CHECK-NEXT:    sub a6, a5, a1
 ; CHECK-NEXT:    sltu a7, a5, a6
 ; CHECK-NEXT:    addi a7, a7, -1
-; CHECK-NEXT:    and a6, a7, a6
-; CHECK-NEXT:    vsetvli a7, zero, e8, mf4, ta, ma
 ; CHECK-NEXT:    vl8re64.v v24, (a0)
+; CHECK-NEXT:    vsetvli a0, zero, e8, mf4, ta, ma
 ; CHECK-NEXT:    vslidedown.vx v0, v16, a3
-; CHECK-NEXT:    vsetvli zero, a6, e32, m4, ta, ma
+; CHECK-NEXT:    and a0, a7, a6
+; CHECK-NEXT:    vsetvli zero, a0, e32, m4, ta, ma
 ; CHECK-NEXT:    vfncvt.f.f.w v20, v8, v0.t
 ; CHECK-NEXT:    bltu a5, a1, .LBB8_2
 ; CHECK-NEXT:  # %bb.1:
@@ -181,8 +181,8 @@ define <vscale x 32 x float> @vfptrunc_nxv32f32_nxv32f64(<vscale x 32 x double> 
 ; CHECK-NEXT:  .LBB8_2:
 ; CHECK-NEXT:    vsetvli a0, zero, e8, mf4, ta, ma
 ; CHECK-NEXT:    vslidedown.vx v6, v7, a3
-; CHECK-NEXT:    vsetvli zero, a5, e32, m4, ta, ma
 ; CHECK-NEXT:    vmv1r.v v0, v16
+; CHECK-NEXT:    vsetvli zero, a5, e32, m4, ta, ma
 ; CHECK-NEXT:    vfncvt.f.f.w v16, v24, v0.t
 ; CHECK-NEXT:    bltu a2, a4, .LBB8_4
 ; CHECK-NEXT:  # %bb.3:
@@ -192,22 +192,22 @@ define <vscale x 32 x float> @vfptrunc_nxv32f32_nxv32f64(<vscale x 32 x double> 
 ; CHECK-NEXT:    sltu a3, a2, a0
 ; CHECK-NEXT:    addi a3, a3, -1
 ; CHECK-NEXT:    and a0, a3, a0
-; CHECK-NEXT:    vsetvli zero, a0, e32, m4, ta, ma
 ; CHECK-NEXT:    vmv1r.v v0, v6
-; CHECK-NEXT:    addi a0, sp, 16
-; CHECK-NEXT:    vl8r.v v8, (a0) # Unknown-size Folded Reload
+; CHECK-NEXT:    addi a3, sp, 16
+; CHECK-NEXT:    vl8r.v v8, (a3) # Unknown-size Folded Reload
+; CHECK-NEXT:    vsetvli zero, a0, e32, m4, ta, ma
 ; CHECK-NEXT:    vfncvt.f.f.w v28, v8, v0.t
 ; CHECK-NEXT:    bltu a2, a1, .LBB8_6
 ; CHECK-NEXT:  # %bb.5:
 ; CHECK-NEXT:    mv a2, a1
 ; CHECK-NEXT:  .LBB8_6:
-; CHECK-NEXT:    vsetvli zero, a2, e32, m4, ta, ma
 ; CHECK-NEXT:    vmv1r.v v0, v7
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 3
 ; CHECK-NEXT:    add a0, sp, a0
 ; CHECK-NEXT:    addi a0, a0, 16
 ; CHECK-NEXT:    vl8r.v v8, (a0) # Unknown-size Folded Reload
+; CHECK-NEXT:    vsetvli zero, a2, e32, m4, ta, ma
 ; CHECK-NEXT:    vfncvt.f.f.w v24, v8, v0.t
 ; CHECK-NEXT:    vmv8r.v v8, v24
 ; CHECK-NEXT:    csrr a0, vlenb

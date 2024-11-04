@@ -116,10 +116,6 @@ STATISTIC(
 STATISTIC(NumDeleted, "Number of instructions deleted");
 STATISTIC(NumVectorized, "Number of vectorized aggregates");
 
-/// Hidden option to experiment with completely strict handling of inbounds
-/// GEPs.
-static cl::opt<bool> SROAStrictInbounds("sroa-strict-inbounds", cl::init(false),
-                                        cl::Hidden);
 /// Disable running mem2reg during SROA in order to test or debug SROA.
 static cl::opt<bool> SROASkipMem2Reg("sroa-skip-mem2reg", cl::init(false),
                                      cl::Hidden);
@@ -630,7 +626,7 @@ public:
     int OldSize = Slices.size();
     Slices.append(NewSlices.begin(), NewSlices.end());
     auto SliceI = Slices.begin() + OldSize;
-    llvm::sort(SliceI, Slices.end());
+    std::stable_sort(SliceI, Slices.end());
     std::inplace_merge(Slices.begin(), SliceI, Slices.end());
   }
 
@@ -1094,45 +1090,6 @@ private:
   void visitGetElementPtrInst(GetElementPtrInst &GEPI) {
     if (GEPI.use_empty())
       return markAsDead(GEPI);
-
-    if (SROAStrictInbounds && GEPI.isInBounds()) {
-      // FIXME: This is a manually un-factored variant of the basic code inside
-      // of GEPs with checking of the inbounds invariant specified in the
-      // langref in a very strict sense. If we ever want to enable
-      // SROAStrictInbounds, this code should be factored cleanly into
-      // PtrUseVisitor, but it is easier to experiment with SROAStrictInbounds
-      // by writing out the code here where we have the underlying allocation
-      // size readily available.
-      APInt GEPOffset = Offset;
-      const DataLayout &DL = GEPI.getModule()->getDataLayout();
-      for (gep_type_iterator GTI = gep_type_begin(GEPI),
-                             GTE = gep_type_end(GEPI);
-           GTI != GTE; ++GTI) {
-        ConstantInt *OpC = dyn_cast<ConstantInt>(GTI.getOperand());
-        if (!OpC)
-          break;
-
-        // Handle a struct index, which adds its field offset to the pointer.
-        if (StructType *STy = GTI.getStructTypeOrNull()) {
-          unsigned ElementIdx = OpC->getZExtValue();
-          const StructLayout *SL = DL.getStructLayout(STy);
-          GEPOffset +=
-              APInt(Offset.getBitWidth(), SL->getElementOffset(ElementIdx));
-        } else {
-          // For array or vector indices, scale the index by the size of the
-          // type.
-          APInt Index = OpC->getValue().sextOrTrunc(Offset.getBitWidth());
-          GEPOffset += Index * APInt(Offset.getBitWidth(),
-                                     GTI.getSequentialElementStride(DL));
-        }
-
-        // If this index has computed an intermediate pointer which is not
-        // inbounds, then the result of the GEP is a poison value and we can
-        // delete it and all uses.
-        if (GEPOffset.ugt(AllocSize))
-          return markAsDead(GEPI);
-      }
-    }
 
     return Base::visitGetElementPtrInst(GEPI);
   }
@@ -5122,7 +5079,7 @@ bool SROA::splitAlloca(AllocaInst &AI, AllocaSlices &AS) {
   }
 
   if (!IsSorted)
-    llvm::sort(AS);
+    llvm::stable_sort(AS);
 
   /// Describes the allocas introduced by rewritePartition in order to migrate
   /// the debug info.

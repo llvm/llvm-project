@@ -1,5 +1,5 @@
-# Verify that BOLT detects fixed destination of indirect jump for PIC
-# case.
+## Verify that BOLT detects fixed destination of indirect jump for PIC
+## case.
 
 XFAIL: *
 

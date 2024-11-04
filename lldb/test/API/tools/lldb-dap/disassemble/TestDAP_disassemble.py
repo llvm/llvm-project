@@ -13,7 +13,6 @@ import os
 
 class TestDAP_disassemble(lldbdap_testcase.DAPTestCaseBase):
     @skipIfWindows
-    @skipIfRemote
     def test_disassemble(self):
         """
         Tests the 'disassemble' request.

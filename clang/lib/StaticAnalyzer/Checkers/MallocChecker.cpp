@@ -46,6 +46,7 @@
 
 #include "AllocationState.h"
 #include "InterCheckerAPI.h"
+#include "NoOwnershipChangeVisitor.h"
 #include "clang/AST/Attr.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclTemplate.h"
@@ -60,6 +61,7 @@
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Lex/Lexer.h"
 #include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
+#include "clang/StaticAnalyzer/Checkers/Taint.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/CommonBugCategories.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
@@ -78,13 +80,11 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/SymbolManager.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetOperations.h"
-#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
-#include <climits>
 #include <functional>
 #include <optional>
 #include <utility>
@@ -322,6 +322,7 @@ public:
     CK_NewDeleteLeaksChecker,
     CK_MismatchedDeallocatorChecker,
     CK_InnerPointerChecker,
+    CK_TaintedAllocChecker,
     CK_NumCheckKinds
   };
 
@@ -365,6 +366,7 @@ private:
   mutable std::unique_ptr<BugType> BT_MismatchedDealloc;
   mutable std::unique_ptr<BugType> BT_OffsetFree[CK_NumCheckKinds];
   mutable std::unique_ptr<BugType> BT_UseZerroAllocated[CK_NumCheckKinds];
+  mutable std::unique_ptr<BugType> BT_TaintedAlloc;
 
 #define CHECK_FN(NAME)                                                         \
   void NAME(const CallEvent &Call, CheckerContext &C) const;
@@ -411,7 +413,7 @@ private:
   bool isFreeingCall(const CallEvent &Call) const;
   static bool isFreeingOwnershipAttrCall(const FunctionDecl *Func);
 
-  friend class NoOwnershipChangeVisitor;
+  friend class NoMemOwnershipChangeVisitor;
 
   CallDescriptionMap<CheckFn> AllocatingMemFnMap{
       {{CDM::CLibrary, {"alloca"}, 1}, &MallocChecker::checkAlloca},
@@ -462,6 +464,13 @@ private:
   };
 
   bool isMemCall(const CallEvent &Call) const;
+  void reportTaintBug(StringRef Msg, ProgramStateRef State, CheckerContext &C,
+                      llvm::ArrayRef<SymbolRef> TaintedSyms,
+                      AllocationFamily Family) const;
+
+  void checkTaintedness(CheckerContext &C, const CallEvent &Call,
+                        const SVal SizeSVal, ProgramStateRef State,
+                        AllocationFamily Family) const;
 
   // TODO: Remove mutable by moving the initializtaion to the registry function.
   mutable std::optional<uint64_t> KernelZeroFlagVal;
@@ -521,9 +530,9 @@ private:
   /// malloc leaves it undefined.
   /// \param [in] State The \c ProgramState right before allocation.
   /// \returns The ProgramState right after allocation.
-  [[nodiscard]] static ProgramStateRef
+  [[nodiscard]] ProgramStateRef
   MallocMemAux(CheckerContext &C, const CallEvent &Call, const Expr *SizeEx,
-               SVal Init, ProgramStateRef State, AllocationFamily Family);
+               SVal Init, ProgramStateRef State, AllocationFamily Family) const;
 
   /// Models memory allocation.
   ///
@@ -534,9 +543,10 @@ private:
   /// malloc leaves it undefined.
   /// \param [in] State The \c ProgramState right before allocation.
   /// \returns The ProgramState right after allocation.
-  [[nodiscard]] static ProgramStateRef
-  MallocMemAux(CheckerContext &C, const CallEvent &Call, SVal Size, SVal Init,
-               ProgramStateRef State, AllocationFamily Family);
+  [[nodiscard]] ProgramStateRef MallocMemAux(CheckerContext &C,
+                                             const CallEvent &Call, SVal Size,
+                                             SVal Init, ProgramStateRef State,
+                                             AllocationFamily Family) const;
 
   // Check if this malloc() for special flags. At present that means M_ZERO or
   // __GFP_ZERO (in which case, treat it like calloc).
@@ -649,8 +659,9 @@ private:
   /// \param [in] Call The expression that reallocated memory
   /// \param [in] State The \c ProgramState right before reallocation.
   /// \returns The ProgramState right after allocation.
-  [[nodiscard]] static ProgramStateRef
-  CallocMem(CheckerContext &C, const CallEvent &Call, ProgramStateRef State);
+  [[nodiscard]] ProgramStateRef CallocMem(CheckerContext &C,
+                                          const CallEvent &Call,
+                                          ProgramStateRef State) const;
 
   /// See if deallocation happens in a suspicious context. If so, escape the
   /// pointers that otherwise would have been deallocated and return true.
@@ -753,61 +764,8 @@ private:
 //===----------------------------------------------------------------------===//
 
 namespace {
-class NoOwnershipChangeVisitor final : public NoStateChangeFuncVisitor {
-  // The symbol whose (lack of) ownership change we are interested in.
-  SymbolRef Sym;
-  const MallocChecker &Checker;
-  using OwnerSet = llvm::SmallPtrSet<const MemRegion *, 8>;
-
-  // Collect which entities point to the allocated memory, and could be
-  // responsible for deallocating it.
-  class OwnershipBindingsHandler : public StoreManager::BindingsHandler {
-    SymbolRef Sym;
-    OwnerSet &Owners;
-
-  public:
-    OwnershipBindingsHandler(SymbolRef Sym, OwnerSet &Owners)
-        : Sym(Sym), Owners(Owners) {}
-
-    bool HandleBinding(StoreManager &SMgr, Store Store, const MemRegion *Region,
-                       SVal Val) override {
-      if (Val.getAsSymbol() == Sym)
-        Owners.insert(Region);
-      return true;
-    }
-
-    LLVM_DUMP_METHOD void dump() const { dumpToStream(llvm::errs()); }
-    LLVM_DUMP_METHOD void dumpToStream(llvm::raw_ostream &out) const {
-      out << "Owners: {\n";
-      for (const MemRegion *Owner : Owners) {
-        out << "  ";
-        Owner->dumpToStream(out);
-        out << ",\n";
-      }
-      out << "}\n";
-    }
-  };
-
+class NoMemOwnershipChangeVisitor final : public NoOwnershipChangeVisitor {
 protected:
-  OwnerSet getOwnersAtNode(const ExplodedNode *N) {
-    OwnerSet Ret;
-
-    ProgramStateRef State = N->getState();
-    OwnershipBindingsHandler Handler{Sym, Ret};
-    State->getStateManager().getStoreManager().iterBindings(State->getStore(),
-                                                            Handler);
-    return Ret;
-  }
-
-  LLVM_DUMP_METHOD static std::string
-  getFunctionName(const ExplodedNode *CallEnterN) {
-    if (const CallExpr *CE = llvm::dyn_cast_or_null<CallExpr>(
-            CallEnterN->getLocationAs<CallEnter>()->getCallExpr()))
-      if (const FunctionDecl *FD = CE->getDirectCallee())
-        return FD->getQualifiedNameAsString();
-    return "";
-  }
-
   /// Syntactically checks whether the callee is a deallocating function. Since
   /// we have no path-sensitive information on this call (we would need a
   /// CallEvent instead of a CallExpr for that), its possible that a
@@ -816,8 +774,9 @@ protected:
   /// See namespace `memory_passed_to_fn_call_free_through_fn_ptr` in
   /// clang/test/Analysis/NewDeleteLeaks.cpp.
   bool isFreeingCallAsWritten(const CallExpr &Call) const {
-    if (Checker.FreeingMemFnMap.lookupAsWritten(Call) ||
-        Checker.ReallocatingMemFnMap.lookupAsWritten(Call))
+    const auto *MallocChk = static_cast<const MallocChecker *>(&Checker);
+    if (MallocChk->FreeingMemFnMap.lookupAsWritten(Call) ||
+        MallocChk->ReallocatingMemFnMap.lookupAsWritten(Call))
       return true;
 
     if (const auto *Func =
@@ -827,22 +786,20 @@ protected:
     return false;
   }
 
+  bool hasResourceStateChanged(ProgramStateRef CallEnterState,
+                               ProgramStateRef CallExitEndState) final {
+    return CallEnterState->get<RegionState>(Sym) !=
+           CallExitEndState->get<RegionState>(Sym);
+  }
+
   /// Heuristically guess whether the callee intended to free memory. This is
   /// done syntactically, because we are trying to argue about alternative
   /// paths of execution, and as a consequence we don't have path-sensitive
   /// information.
-  bool doesFnIntendToHandleOwnership(const Decl *Callee, ASTContext &ACtx) {
+  bool doesFnIntendToHandleOwnership(const Decl *Callee,
+                                     ASTContext &ACtx) final {
     using namespace clang::ast_matchers;
     const FunctionDecl *FD = dyn_cast<FunctionDecl>(Callee);
-
-    // Given that the stack frame was entered, the body should always be
-    // theoretically obtainable. In case of body farms, the synthesized body
-    // is not attached to declaration, thus triggering the '!FD->hasBody()'
-    // branch. That said, would a synthesized body ever intend to handle
-    // ownership? As of today they don't. And if they did, how would we
-    // put notes inside it, given that it doesn't match any source locations?
-    if (!FD || !FD->hasBody())
-      return false;
 
     auto Matches = match(findAll(stmt(anyOf(cxxDeleteExpr().bind("delete"),
                                             callExpr().bind("call")))),
@@ -861,30 +818,7 @@ protected:
     return false;
   }
 
-  bool wasModifiedInFunction(const ExplodedNode *CallEnterN,
-                             const ExplodedNode *CallExitEndN) override {
-    if (!doesFnIntendToHandleOwnership(
-            CallExitEndN->getFirstPred()->getLocationContext()->getDecl(),
-            CallExitEndN->getState()->getAnalysisManager().getASTContext()))
-      return true;
-
-    if (CallEnterN->getState()->get<RegionState>(Sym) !=
-        CallExitEndN->getState()->get<RegionState>(Sym))
-      return true;
-
-    OwnerSet CurrOwners = getOwnersAtNode(CallEnterN);
-    OwnerSet ExitOwners = getOwnersAtNode(CallExitEndN);
-
-    // Owners in the current set may be purged from the analyzer later on.
-    // If a variable is dead (is not referenced directly or indirectly after
-    // some point), it will be removed from the Store before the end of its
-    // actual lifetime.
-    // This means that if the ownership status didn't change, CurrOwners
-    // must be a superset of, but not necessarily equal to ExitOwners.
-    return !llvm::set_is_subset(ExitOwners, CurrOwners);
-  }
-
-  static PathDiagnosticPieceRef emitNote(const ExplodedNode *N) {
+  PathDiagnosticPieceRef emitNote(const ExplodedNode *N) final {
     PathDiagnosticLocation L = PathDiagnosticLocation::create(
         N->getLocation(),
         N->getState()->getStateManager().getContext().getSourceManager());
@@ -893,42 +827,9 @@ protected:
            "later deallocation");
   }
 
-  PathDiagnosticPieceRef
-  maybeEmitNoteForObjCSelf(PathSensitiveBugReport &R,
-                           const ObjCMethodCall &Call,
-                           const ExplodedNode *N) override {
-    // TODO: Implement.
-    return nullptr;
-  }
-
-  PathDiagnosticPieceRef
-  maybeEmitNoteForCXXThis(PathSensitiveBugReport &R,
-                          const CXXConstructorCall &Call,
-                          const ExplodedNode *N) override {
-    // TODO: Implement.
-    return nullptr;
-  }
-
-  PathDiagnosticPieceRef
-  maybeEmitNoteForParameters(PathSensitiveBugReport &R, const CallEvent &Call,
-                             const ExplodedNode *N) override {
-    // TODO: Factor the logic of "what constitutes as an entity being passed
-    // into a function call" out by reusing the code in
-    // NoStoreFuncVisitor::maybeEmitNoteForParameters, maybe by incorporating
-    // the printing technology in UninitializedObject's FieldChainInfo.
-    ArrayRef<ParmVarDecl *> Parameters = Call.parameters();
-    for (unsigned I = 0; I < Call.getNumArgs() && I < Parameters.size(); ++I) {
-      SVal V = Call.getArgSVal(I);
-      if (V.getAsSymbol() == Sym)
-        return emitNote(N);
-    }
-    return nullptr;
-  }
-
 public:
-  NoOwnershipChangeVisitor(SymbolRef Sym, const MallocChecker *Checker)
-      : NoStateChangeFuncVisitor(bugreporter::TrackingKind::Thorough), Sym(Sym),
-        Checker(*Checker) {}
+  NoMemOwnershipChangeVisitor(SymbolRef Sym, const MallocChecker *Checker)
+      : NoOwnershipChangeVisitor(Sym, Checker) {}
 
   void Profile(llvm::FoldingSetNodeID &ID) const override {
     static int Tag = 0;
@@ -1695,6 +1596,11 @@ MallocChecker::processNewAllocation(const CXXAllocatorCall &Call,
   // MallocUpdateRefState() instead of MallocMemAux() which breaks the
   // existing binding.
   SVal Target = Call.getObjectUnderConstruction();
+  if (Call.getOriginExpr()->isArray()) {
+    if (auto SizeEx = NE->getArraySize())
+      checkTaintedness(C, Call, C.getSVal(*SizeEx), State, AF_CXXNewArray);
+  }
+
   State = MallocUpdateRefState(C, NE, State, Family, Target);
   State = ProcessZeroAllocCheck(Call, 0, State, Target);
   return State;
@@ -1779,7 +1685,7 @@ ProgramStateRef MallocChecker::MallocMemAux(CheckerContext &C,
                                             const CallEvent &Call,
                                             const Expr *SizeEx, SVal Init,
                                             ProgramStateRef State,
-                                            AllocationFamily Family) {
+                                            AllocationFamily Family) const {
   if (!State)
     return nullptr;
 
@@ -1787,10 +1693,66 @@ ProgramStateRef MallocChecker::MallocMemAux(CheckerContext &C,
   return MallocMemAux(C, Call, C.getSVal(SizeEx), Init, State, Family);
 }
 
+void MallocChecker::reportTaintBug(StringRef Msg, ProgramStateRef State,
+                                   CheckerContext &C,
+                                   llvm::ArrayRef<SymbolRef> TaintedSyms,
+                                   AllocationFamily Family) const {
+  if (ExplodedNode *N = C.generateNonFatalErrorNode(State, this)) {
+    if (!BT_TaintedAlloc)
+      BT_TaintedAlloc.reset(new BugType(CheckNames[CK_TaintedAllocChecker],
+                                        "Tainted Memory Allocation",
+                                        categories::TaintedData));
+    auto R = std::make_unique<PathSensitiveBugReport>(*BT_TaintedAlloc, Msg, N);
+    for (auto TaintedSym : TaintedSyms) {
+      R->markInteresting(TaintedSym);
+    }
+    C.emitReport(std::move(R));
+  }
+}
+
+void MallocChecker::checkTaintedness(CheckerContext &C, const CallEvent &Call,
+                                     const SVal SizeSVal, ProgramStateRef State,
+                                     AllocationFamily Family) const {
+  if (!ChecksEnabled[CK_TaintedAllocChecker])
+    return;
+  std::vector<SymbolRef> TaintedSyms =
+      taint::getTaintedSymbols(State, SizeSVal);
+  if (TaintedSyms.empty())
+    return;
+
+  SValBuilder &SVB = C.getSValBuilder();
+  QualType SizeTy = SVB.getContext().getSizeType();
+  QualType CmpTy = SVB.getConditionType();
+  // In case the symbol is tainted, we give a warning if the
+  // size is larger than SIZE_MAX/4
+  BasicValueFactory &BVF = SVB.getBasicValueFactory();
+  const llvm::APSInt MaxValInt = BVF.getMaxValue(SizeTy);
+  NonLoc MaxLength =
+      SVB.makeIntVal(MaxValInt / APSIntType(MaxValInt).getValue(4));
+  std::optional<NonLoc> SizeNL = SizeSVal.getAs<NonLoc>();
+  auto Cmp = SVB.evalBinOpNN(State, BO_GE, *SizeNL, MaxLength, CmpTy)
+                 .getAs<DefinedOrUnknownSVal>();
+  if (!Cmp)
+    return;
+  auto [StateTooLarge, StateNotTooLarge] = State->assume(*Cmp);
+  if (!StateTooLarge && StateNotTooLarge) {
+    // We can prove that size is not too large so there is no issue.
+    return;
+  }
+
+  std::string Callee = "Memory allocation function";
+  if (Call.getCalleeIdentifier())
+    Callee = Call.getCalleeIdentifier()->getName().str();
+  reportTaintBug(
+      Callee + " is called with a tainted (potentially attacker controlled) "
+               "value. Make sure the value is bound checked.",
+      State, C, TaintedSyms, Family);
+}
+
 ProgramStateRef MallocChecker::MallocMemAux(CheckerContext &C,
                                             const CallEvent &Call, SVal Size,
                                             SVal Init, ProgramStateRef State,
-                                            AllocationFamily Family) {
+                                            AllocationFamily Family) const {
   if (!State)
     return nullptr;
 
@@ -1819,9 +1781,7 @@ ProgramStateRef MallocChecker::MallocMemAux(CheckerContext &C,
   if (Size.isUndef())
     Size = UnknownVal();
 
-  // TODO: If Size is tainted and we cannot prove that it is within
-  // reasonable bounds, emit a warning that an attacker may
-  // provoke a memory exhaustion error.
+  checkTaintedness(C, Call, Size, State, AF_Malloc);
 
   // Set the region's extent.
   State = setDynamicExtent(State, RetVal.getAsRegion(),
@@ -2761,7 +2721,7 @@ MallocChecker::ReallocMemAux(CheckerContext &C, const CallEvent &Call,
 
 ProgramStateRef MallocChecker::CallocMem(CheckerContext &C,
                                          const CallEvent &Call,
-                                         ProgramStateRef State) {
+                                         ProgramStateRef State) const {
   if (!State)
     return nullptr;
 
@@ -2878,7 +2838,7 @@ void MallocChecker::HandleLeak(SymbolRef Sym, ExplodedNode *N,
   R->markInteresting(Sym);
   R->addVisitor<MallocBugVisitor>(Sym, true);
   if (ShouldRegisterNoOwnershipChangeVisitor)
-    R->addVisitor<NoOwnershipChangeVisitor>(Sym, this);
+    R->addVisitor<NoMemOwnershipChangeVisitor>(Sym, this);
   C.emitReport(std::move(R));
 }
 
@@ -3734,3 +3694,4 @@ REGISTER_CHECKER(MallocChecker)
 REGISTER_CHECKER(NewDeleteChecker)
 REGISTER_CHECKER(NewDeleteLeaksChecker)
 REGISTER_CHECKER(MismatchedDeallocatorChecker)
+REGISTER_CHECKER(TaintedAllocChecker)

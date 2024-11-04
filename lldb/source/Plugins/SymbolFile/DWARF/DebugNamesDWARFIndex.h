@@ -10,7 +10,6 @@
 #define LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_DEBUGNAMESDWARFINDEX_H
 
 #include "Plugins/SymbolFile/DWARF/DWARFIndex.h"
-#include "Plugins/SymbolFile/DWARF/LogChannelDWARF.h"
 #include "Plugins/SymbolFile/DWARF/ManualDWARFIndex.h"
 #include "Plugins/SymbolFile/DWARF/SymbolFileDWARF.h"
 #include "lldb/Utility/ConstString.h"
@@ -84,7 +83,8 @@ private:
   std::unique_ptr<DebugNames> m_debug_names_up;
   ManualDWARFIndex m_fallback;
 
-  std::optional<DIERef> ToDIERef(const DebugNames::Entry &entry) const;
+  DWARFUnit *GetNonSkeletonUnit(const DebugNames::Entry &entry) const;
+  DWARFDIE GetDIE(const DebugNames::Entry &entry) const;
   bool ProcessEntry(const DebugNames::Entry &entry,
                     llvm::function_ref<bool(DWARFDIE die)> callback);
 

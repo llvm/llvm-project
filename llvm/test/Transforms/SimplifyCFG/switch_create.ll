@@ -9,8 +9,8 @@ declare void @foo2()
 define void @test1(i32 %V) {
 ; CHECK-LABEL: @test1(
 ; CHECK-NEXT:    switch i32 [[V:%.*]], label [[F:%.*]] [
-; CHECK-NEXT:    i32 17, label [[T:%.*]]
-; CHECK-NEXT:    i32 4, label [[T]]
+; CHECK-NEXT:      i32 17, label [[T:%.*]]
+; CHECK-NEXT:      i32 4, label [[T]]
 ; CHECK-NEXT:    ]
 ; CHECK:       common.ret:
 ; CHECK-NEXT:    ret void
@@ -36,8 +36,8 @@ F:              ; preds = %0
 define void @test1_select(i32 %V) {
 ; CHECK-LABEL: @test1_select(
 ; CHECK-NEXT:    switch i32 [[V:%.*]], label [[F:%.*]] [
-; CHECK-NEXT:    i32 17, label [[T:%.*]]
-; CHECK-NEXT:    i32 4, label [[T]]
+; CHECK-NEXT:      i32 17, label [[T:%.*]]
+; CHECK-NEXT:      i32 4, label [[T]]
 ; CHECK-NEXT:    ]
 ; CHECK:       common.ret:
 ; CHECK-NEXT:    ret void
@@ -64,8 +64,8 @@ define void @test1_ptr(ptr %V) {
 ; DL-LABEL: @test1_ptr(
 ; DL-NEXT:    [[MAGICPTR:%.*]] = ptrtoint ptr [[V:%.*]] to i32
 ; DL-NEXT:    switch i32 [[MAGICPTR]], label [[F:%.*]] [
-; DL-NEXT:    i32 17, label [[T:%.*]]
-; DL-NEXT:    i32 4, label [[T]]
+; DL-NEXT:      i32 17, label [[T:%.*]]
+; DL-NEXT:      i32 4, label [[T]]
 ; DL-NEXT:    ]
 ; DL:       common.ret:
 ; DL-NEXT:    ret void
@@ -92,8 +92,8 @@ define void @test1_ptr_as1(ptr addrspace(1) %V) {
 ; DL-LABEL: @test1_ptr_as1(
 ; DL-NEXT:    [[MAGICPTR:%.*]] = ptrtoint ptr addrspace(1) [[V:%.*]] to i16
 ; DL-NEXT:    switch i16 [[MAGICPTR]], label [[F:%.*]] [
-; DL-NEXT:    i16 17, label [[T:%.*]]
-; DL-NEXT:    i16 4, label [[T]]
+; DL-NEXT:      i16 17, label [[T:%.*]]
+; DL-NEXT:      i16 4, label [[T]]
 ; DL-NEXT:    ]
 ; DL:       common.ret:
 ; DL-NEXT:    ret void
@@ -119,8 +119,8 @@ F:              ; preds = %0
 define void @test2(i32 %V) {
 ; CHECK-LABEL: @test2(
 ; CHECK-NEXT:    switch i32 [[V:%.*]], label [[T:%.*]] [
-; CHECK-NEXT:    i32 17, label [[F:%.*]]
-; CHECK-NEXT:    i32 4, label [[F]]
+; CHECK-NEXT:      i32 17, label [[F:%.*]]
+; CHECK-NEXT:      i32 4, label [[F]]
 ; CHECK-NEXT:    ]
 ; CHECK:       common.ret:
 ; CHECK-NEXT:    ret void
@@ -146,8 +146,8 @@ F:              ; preds = %0
 define void @test2_select(i32 %V) {
 ; CHECK-LABEL: @test2_select(
 ; CHECK-NEXT:    switch i32 [[V:%.*]], label [[T:%.*]] [
-; CHECK-NEXT:    i32 17, label [[F:%.*]]
-; CHECK-NEXT:    i32 4, label [[F]]
+; CHECK-NEXT:      i32 17, label [[F:%.*]]
+; CHECK-NEXT:      i32 4, label [[F]]
 ; CHECK-NEXT:    ]
 ; CHECK:       common.ret:
 ; CHECK-NEXT:    ret void
@@ -173,8 +173,8 @@ F:
 define void @test3(i32 %V) {
 ; CHECK-LABEL: @test3(
 ; CHECK-NEXT:    switch i32 [[V:%.*]], label [[F:%.*]] [
-; CHECK-NEXT:    i32 4, label [[T:%.*]]
-; CHECK-NEXT:    i32 17, label [[T]]
+; CHECK-NEXT:      i32 4, label [[T:%.*]]
+; CHECK-NEXT:      i32 17, label [[T]]
 ; CHECK-NEXT:    ]
 ; CHECK:       common.ret:
 ; CHECK-NEXT:    ret void
@@ -205,9 +205,9 @@ define i32 @test4(i8 zeroext %c) nounwind ssp noredzone {
 ; CHECK-LABEL: @test4(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    switch i8 [[C:%.*]], label [[LOR_RHS:%.*]] [
-; CHECK-NEXT:    i8 62, label [[LOR_END:%.*]]
-; CHECK-NEXT:    i8 34, label [[LOR_END]]
-; CHECK-NEXT:    i8 92, label [[LOR_END]]
+; CHECK-NEXT:      i8 62, label [[LOR_END:%.*]]
+; CHECK-NEXT:      i8 34, label [[LOR_END]]
+; CHECK-NEXT:      i8 92, label [[LOR_END]]
 ; CHECK-NEXT:    ]
 ; CHECK:       lor.rhs:
 ; CHECK-NEXT:    br label [[LOR_END]]
@@ -239,9 +239,9 @@ define i32 @test5(i8 zeroext %c) nounwind ssp noredzone {
 ; CHECK-LABEL: @test5(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    switch i8 [[C:%.*]], label [[LOR_RHS:%.*]] [
-; CHECK-NEXT:    i8 62, label [[LOR_END:%.*]]
-; CHECK-NEXT:    i8 34, label [[LOR_END]]
-; CHECK-NEXT:    i8 92, label [[LOR_END]]
+; CHECK-NEXT:      i8 62, label [[LOR_END:%.*]]
+; CHECK-NEXT:      i8 34, label [[LOR_END]]
+; CHECK-NEXT:      i8 92, label [[LOR_END]]
 ; CHECK-NEXT:    ]
 ; CHECK:       lor.rhs:
 ; CHECK-NEXT:    br label [[LOR_END]]
@@ -314,8 +314,8 @@ define void @test7(i8 zeroext %c, i32 %x) nounwind ssp noredzone {
 ; CHECK-NEXT:    br i1 [[TMP0]], label [[IF_THEN:%.*]], label [[SWITCH_EARLY_TEST:%.*]]
 ; CHECK:       switch.early.test:
 ; CHECK-NEXT:    switch i8 [[C:%.*]], label [[COMMON_RET:%.*]] [
-; CHECK-NEXT:    i8 99, label [[IF_THEN]]
-; CHECK-NEXT:    i8 97, label [[IF_THEN]]
+; CHECK-NEXT:      i8 99, label [[IF_THEN]]
+; CHECK-NEXT:      i8 97, label [[IF_THEN]]
 ; CHECK-NEXT:    ]
 ; CHECK:       common.ret:
 ; CHECK-NEXT:    ret void
@@ -350,8 +350,8 @@ define i32 @test8(i8 zeroext %c, i32 %x, i1 %C) nounwind ssp noredzone {
 ; CHECK-NEXT:    br i1 [[TMP0]], label [[IF_THEN]], label [[SWITCH_EARLY_TEST:%.*]]
 ; CHECK:       switch.early.test:
 ; CHECK-NEXT:    switch i8 [[C:%.*]], label [[COMMON_RET:%.*]] [
-; CHECK-NEXT:    i8 99, label [[IF_THEN]]
-; CHECK-NEXT:    i8 97, label [[IF_THEN]]
+; CHECK-NEXT:      i8 99, label [[IF_THEN]]
+; CHECK-NEXT:      i8 97, label [[IF_THEN]]
 ; CHECK-NEXT:    ]
 ; CHECK:       common.ret:
 ; CHECK-NEXT:    [[COMMON_RET_OP:%.*]] = phi i32 [ [[A:%.*]], [[IF_THEN]] ], [ 0, [[SWITCH_EARLY_TEST]] ]
@@ -390,15 +390,15 @@ define i32 @test9(i8 zeroext %c) nounwind ssp noredzone {
 ; CHECK-NEXT:    br i1 [[TMP0]], label [[LOR_END:%.*]], label [[SWITCH_EARLY_TEST:%.*]]
 ; CHECK:       switch.early.test:
 ; CHECK-NEXT:    switch i8 [[C]], label [[LOR_RHS:%.*]] [
-; CHECK-NEXT:    i8 92, label [[LOR_END]]
-; CHECK-NEXT:    i8 62, label [[LOR_END]]
-; CHECK-NEXT:    i8 60, label [[LOR_END]]
-; CHECK-NEXT:    i8 59, label [[LOR_END]]
-; CHECK-NEXT:    i8 58, label [[LOR_END]]
-; CHECK-NEXT:    i8 46, label [[LOR_END]]
-; CHECK-NEXT:    i8 44, label [[LOR_END]]
-; CHECK-NEXT:    i8 34, label [[LOR_END]]
-; CHECK-NEXT:    i8 39, label [[LOR_END]]
+; CHECK-NEXT:      i8 92, label [[LOR_END]]
+; CHECK-NEXT:      i8 62, label [[LOR_END]]
+; CHECK-NEXT:      i8 60, label [[LOR_END]]
+; CHECK-NEXT:      i8 59, label [[LOR_END]]
+; CHECK-NEXT:      i8 58, label [[LOR_END]]
+; CHECK-NEXT:      i8 46, label [[LOR_END]]
+; CHECK-NEXT:      i8 44, label [[LOR_END]]
+; CHECK-NEXT:      i8 34, label [[LOR_END]]
+; CHECK-NEXT:      i8 39, label [[LOR_END]]
 ; CHECK-NEXT:    ]
 ; CHECK:       lor.rhs:
 ; CHECK-NEXT:    br label [[LOR_END]]
@@ -461,8 +461,8 @@ define i32 @test10(i32 %mode, i1 %Cond) {
 ; CHECK-NEXT:    br i1 [[TMP1]], label [[SWITCH_EARLY_TEST:%.*]], label [[F:%.*]]
 ; CHECK:       switch.early.test:
 ; CHECK-NEXT:    switch i32 [[MODE:%.*]], label [[T:%.*]] [
-; CHECK-NEXT:    i32 51, label [[F]]
-; CHECK-NEXT:    i32 0, label [[F]]
+; CHECK-NEXT:      i32 51, label [[F]]
+; CHECK-NEXT:      i32 0, label [[F]]
 ; CHECK-NEXT:    ]
 ; CHECK:       common.ret:
 ; CHECK-NEXT:    [[COMMON_RET_OP:%.*]] = phi i32 [ 123, [[T]] ], [ 324, [[F]] ]
@@ -494,8 +494,8 @@ define i32 @test10_select(i32 %mode, i1 %Cond) {
 ; CHECK-NEXT:    br i1 [[TMP1]], label [[SWITCH_EARLY_TEST:%.*]], label [[F:%.*]]
 ; CHECK:       switch.early.test:
 ; CHECK-NEXT:    switch i32 [[MODE:%.*]], label [[T:%.*]] [
-; CHECK-NEXT:    i32 51, label [[F]]
-; CHECK-NEXT:    i32 0, label [[F]]
+; CHECK-NEXT:      i32 51, label [[F]]
+; CHECK-NEXT:      i32 0, label [[F]]
 ; CHECK-NEXT:    ]
 ; CHECK:       common.ret:
 ; CHECK-NEXT:    [[COMMON_RET_OP:%.*]] = phi i32 [ 123, [[T]] ], [ 324, [[F]] ]
@@ -528,8 +528,8 @@ define i32 @test10_select_and(i32 %mode, i1 %Cond) {
 ; CHECK-NEXT:    br i1 [[TMP1]], label [[SWITCH_EARLY_TEST:%.*]], label [[F:%.*]]
 ; CHECK:       switch.early.test:
 ; CHECK-NEXT:    switch i32 [[MODE:%.*]], label [[T:%.*]] [
-; CHECK-NEXT:    i32 51, label [[F]]
-; CHECK-NEXT:    i32 0, label [[F]]
+; CHECK-NEXT:      i32 51, label [[F]]
+; CHECK-NEXT:      i32 0, label [[F]]
 ; CHECK-NEXT:    ]
 ; CHECK:       common.ret:
 ; CHECK-NEXT:    [[COMMON_RET_OP:%.*]] = phi i32 [ 123, [[T]] ], [ 324, [[F]] ]
@@ -560,8 +560,8 @@ define i32 @test10_select_nofreeze(i32 %mode, i1 noundef %Cond) {
 ; CHECK-NEXT:    br i1 [[COND:%.*]], label [[SWITCH_EARLY_TEST:%.*]], label [[F:%.*]]
 ; CHECK:       switch.early.test:
 ; CHECK-NEXT:    switch i32 [[MODE:%.*]], label [[T:%.*]] [
-; CHECK-NEXT:    i32 51, label [[F]]
-; CHECK-NEXT:    i32 0, label [[F]]
+; CHECK-NEXT:      i32 51, label [[F]]
+; CHECK-NEXT:      i32 0, label [[F]]
 ; CHECK-NEXT:    ]
 ; CHECK:       common.ret:
 ; CHECK-NEXT:    [[COMMON_RET_OP:%.*]] = phi i32 [ 123, [[T]] ], [ 324, [[F]] ]
@@ -592,13 +592,13 @@ define i32 @test11(i32 %bar) nounwind {
 ; CHECK-LABEL: @test11(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    switch i32 [[BAR:%.*]], label [[IF_END:%.*]] [
-; CHECK-NEXT:    i32 55, label [[RETURN:%.*]]
-; CHECK-NEXT:    i32 53, label [[RETURN]]
-; CHECK-NEXT:    i32 35, label [[RETURN]]
-; CHECK-NEXT:    i32 24, label [[RETURN]]
-; CHECK-NEXT:    i32 23, label [[RETURN]]
-; CHECK-NEXT:    i32 12, label [[RETURN]]
-; CHECK-NEXT:    i32 4, label [[RETURN]]
+; CHECK-NEXT:      i32 55, label [[RETURN:%.*]]
+; CHECK-NEXT:      i32 53, label [[RETURN]]
+; CHECK-NEXT:      i32 35, label [[RETURN]]
+; CHECK-NEXT:      i32 24, label [[RETURN]]
+; CHECK-NEXT:      i32 23, label [[RETURN]]
+; CHECK-NEXT:      i32 12, label [[RETURN]]
+; CHECK-NEXT:      i32 4, label [[RETURN]]
 ; CHECK-NEXT:    ]
 ; CHECK:       if.end:
 ; CHECK-NEXT:    br label [[RETURN]]
@@ -673,11 +673,11 @@ define void @test13(i32 %x) nounwind ssp noredzone {
 ; CHECK-LABEL: @test13(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    switch i32 [[X:%.*]], label [[IF_END:%.*]] [
-; CHECK-NEXT:    i32 6, label [[IF_THEN:%.*]]
-; CHECK-NEXT:    i32 4, label [[IF_THEN]]
-; CHECK-NEXT:    i32 3, label [[IF_THEN]]
-; CHECK-NEXT:    i32 1, label [[IF_THEN]]
-; CHECK-NEXT:    i32 0, label [[IF_THEN]]
+; CHECK-NEXT:      i32 6, label [[IF_THEN:%.*]]
+; CHECK-NEXT:      i32 4, label [[IF_THEN]]
+; CHECK-NEXT:      i32 3, label [[IF_THEN]]
+; CHECK-NEXT:      i32 1, label [[IF_THEN]]
+; CHECK-NEXT:      i32 0, label [[IF_THEN]]
 ; CHECK-NEXT:    ]
 ; CHECK:       if.then:
 ; CHECK-NEXT:    call void @foo1() #[[ATTR3:[0-9]+]]
@@ -714,12 +714,12 @@ define void @test14(i32 %x) nounwind ssp noredzone {
 ; CHECK-LABEL: @test14(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    switch i32 [[X:%.*]], label [[IF_END:%.*]] [
-; CHECK-NEXT:    i32 6, label [[IF_THEN:%.*]]
-; CHECK-NEXT:    i32 4, label [[IF_THEN]]
-; CHECK-NEXT:    i32 3, label [[IF_THEN]]
-; CHECK-NEXT:    i32 2, label [[IF_THEN]]
-; CHECK-NEXT:    i32 1, label [[IF_THEN]]
-; CHECK-NEXT:    i32 0, label [[IF_THEN]]
+; CHECK-NEXT:      i32 6, label [[IF_THEN:%.*]]
+; CHECK-NEXT:      i32 4, label [[IF_THEN]]
+; CHECK-NEXT:      i32 3, label [[IF_THEN]]
+; CHECK-NEXT:      i32 2, label [[IF_THEN]]
+; CHECK-NEXT:      i32 1, label [[IF_THEN]]
+; CHECK-NEXT:      i32 0, label [[IF_THEN]]
 ; CHECK-NEXT:    ]
 ; CHECK:       if.then:
 ; CHECK-NEXT:    call void @foo1() #[[ATTR3]]
@@ -934,9 +934,9 @@ if.end29:                                         ; preds = %entry
 define void @test19(i32 %arg) {
 ; CHECK-LABEL: @test19(
 ; CHECK-NEXT:    switch i32 [[ARG:%.*]], label [[COMMON_RET:%.*]] [
-; CHECK-NEXT:    i32 32, label [[IF:%.*]]
-; CHECK-NEXT:    i32 13, label [[IF]]
-; CHECK-NEXT:    i32 12, label [[IF]]
+; CHECK-NEXT:      i32 32, label [[IF:%.*]]
+; CHECK-NEXT:      i32 13, label [[IF]]
+; CHECK-NEXT:      i32 12, label [[IF]]
 ; CHECK-NEXT:    ]
 ; CHECK:       common.ret:
 ; CHECK-NEXT:    ret void
@@ -961,9 +961,9 @@ else:
 define void @test19_select(i32 %arg) {
 ; CHECK-LABEL: @test19_select(
 ; CHECK-NEXT:    switch i32 [[ARG:%.*]], label [[COMMON_RET:%.*]] [
-; CHECK-NEXT:    i32 32, label [[IF:%.*]]
-; CHECK-NEXT:    i32 13, label [[IF]]
-; CHECK-NEXT:    i32 12, label [[IF]]
+; CHECK-NEXT:      i32 32, label [[IF:%.*]]
+; CHECK-NEXT:      i32 13, label [[IF]]
+; CHECK-NEXT:      i32 12, label [[IF]]
 ; CHECK-NEXT:    ]
 ; CHECK:       common.ret:
 ; CHECK-NEXT:    ret void
@@ -1017,9 +1017,9 @@ else:
 define void @test21(i32 %arg) {
 ; CHECK-LABEL: @test21(
 ; CHECK-NEXT:    switch i32 [[ARG:%.*]], label [[IF:%.*]] [
-; CHECK-NEXT:    i32 32, label [[COMMON_RET:%.*]]
-; CHECK-NEXT:    i32 13, label [[COMMON_RET]]
-; CHECK-NEXT:    i32 12, label [[COMMON_RET]]
+; CHECK-NEXT:      i32 32, label [[COMMON_RET:%.*]]
+; CHECK-NEXT:      i32 13, label [[COMMON_RET]]
+; CHECK-NEXT:      i32 12, label [[COMMON_RET]]
 ; CHECK-NEXT:    ]
 ; CHECK:       common.ret:
 ; CHECK-NEXT:    ret void

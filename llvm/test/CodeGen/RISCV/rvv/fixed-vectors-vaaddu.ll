@@ -38,9 +38,9 @@ define <8 x i8> @vaaddu_vx_v8i8_floor(<8 x i8> %x, i8 %y) {
 define <8 x i8> @vaaddu_vv_v8i8_floor_sexti16(<8 x i8> %x, <8 x i8> %y) {
 ; CHECK-LABEL: vaaddu_vv_v8i8_floor_sexti16:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    csrwi vxrm, 2
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
-; CHECK-NEXT:    vwadd.vv v10, v8, v9
-; CHECK-NEXT:    vnsrl.wi v8, v10, 1
+; CHECK-NEXT:    vaadd.vv v8, v8, v9
 ; CHECK-NEXT:    ret
   %xzv = sext <8 x i8> %x to <8 x i16>
   %yzv = sext <8 x i8> %y to <8 x i16>
@@ -248,12 +248,9 @@ define <8 x i8> @vaaddu_vx_v8i8_ceil(<8 x i8> %x, i8 %y) {
 define <8 x i8> @vaaddu_vv_v8i8_ceil_sexti16(<8 x i8> %x, <8 x i8> %y) {
 ; CHECK-LABEL: vaaddu_vv_v8i8_ceil_sexti16:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    csrwi vxrm, 0
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
-; CHECK-NEXT:    vwadd.vv v10, v8, v9
-; CHECK-NEXT:    vsetvli zero, zero, e16, m1, ta, ma
-; CHECK-NEXT:    vadd.vi v8, v10, 1
-; CHECK-NEXT:    vsetvli zero, zero, e8, mf2, ta, ma
-; CHECK-NEXT:    vnsrl.wi v8, v8, 1
+; CHECK-NEXT:    vaadd.vv v8, v8, v9
 ; CHECK-NEXT:    ret
   %xzv = sext <8 x i8> %x to <8 x i16>
   %yzv = sext <8 x i8> %y to <8 x i16>

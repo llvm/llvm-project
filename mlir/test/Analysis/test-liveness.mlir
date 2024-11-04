@@ -493,3 +493,27 @@ func.func @nested_region3(
   }
   return %1 : i32
 }
+
+// -----
+
+// CHECK-LABEL: Testing : nested_region4
+
+func.func @nested_region4(%arg0: index, %arg1: index, %arg2: index) {
+  // CHECK: Block: 0
+  // CHECK-NEXT: LiveIn:{{ *$}}
+  // CHECK-NEXT: LiveOut:{{ *$}}
+
+  // CHECK: {{^// +}}[[VAL3:[a-z0-9_]+]]{{ *:}}
+  // CHECK: {{^// +}}[[VAL4:[a-z0-9_]+]]{{ *:}}
+  %c0_i32 = arith.constant 0 : i32
+  %c1_i32 = arith.constant 1 : i32
+
+  %0 = scf.for %arg3 = %arg0 to %arg1 step %arg2 iter_args(%arg4 = %c0_i32) -> (i32) {
+    // CHECK: Block: 1
+    // CHECK-NEXT: LiveIn: [[VAL4]]{{ *$}}
+    // CHECK-NEXT: LiveOut:{{ *$}}
+    %1 = arith.addi %arg4, %c1_i32 : i32
+    scf.yield %1 : i32
+  }
+  return
+}

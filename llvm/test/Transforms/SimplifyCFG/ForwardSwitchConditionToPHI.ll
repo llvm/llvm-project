@@ -14,10 +14,10 @@ define i32 @t(i32 %m) nounwind readnone {
 ; NO_FWD-LABEL: @t(
 ; NO_FWD-NEXT:  entry:
 ; NO_FWD-NEXT:    switch i32 [[M:%.*]], label [[SW_BB4:%.*]] [
-; NO_FWD-NEXT:    i32 0, label [[RETURN:%.*]]
-; NO_FWD-NEXT:    i32 1, label [[SW_BB1:%.*]]
-; NO_FWD-NEXT:    i32 2, label [[SW_BB2:%.*]]
-; NO_FWD-NEXT:    i32 3, label [[SW_BB3:%.*]]
+; NO_FWD-NEXT:      i32 0, label [[RETURN:%.*]]
+; NO_FWD-NEXT:      i32 1, label [[SW_BB1:%.*]]
+; NO_FWD-NEXT:      i32 2, label [[SW_BB2:%.*]]
+; NO_FWD-NEXT:      i32 3, label [[SW_BB3:%.*]]
 ; NO_FWD-NEXT:    ]
 ; NO_FWD:       sw.bb1:
 ; NO_FWD-NEXT:    br label [[RETURN]]
@@ -73,9 +73,9 @@ define i32 @PR34471(i32 %x) {
 ; NO_FWD-LABEL: @PR34471(
 ; NO_FWD-NEXT:  entry:
 ; NO_FWD-NEXT:    switch i32 [[X:%.*]], label [[ELSE3:%.*]] [
-; NO_FWD-NEXT:    i32 17, label [[RETURN:%.*]]
-; NO_FWD-NEXT:    i32 19, label [[IF19:%.*]]
-; NO_FWD-NEXT:    i32 42, label [[IF42:%.*]]
+; NO_FWD-NEXT:      i32 17, label [[RETURN:%.*]]
+; NO_FWD-NEXT:      i32 19, label [[IF19:%.*]]
+; NO_FWD-NEXT:      i32 42, label [[IF42:%.*]]
 ; NO_FWD-NEXT:    ]
 ; NO_FWD:       if19:
 ; NO_FWD-NEXT:    br label [[RETURN]]
@@ -90,9 +90,9 @@ define i32 @PR34471(i32 %x) {
 ; FWD-LABEL: @PR34471(
 ; FWD-NEXT:  entry:
 ; FWD-NEXT:    switch i32 [[X:%.*]], label [[ELSE3:%.*]] [
-; FWD-NEXT:    i32 17, label [[RETURN:%.*]]
-; FWD-NEXT:    i32 19, label [[RETURN]]
-; FWD-NEXT:    i32 42, label [[RETURN]]
+; FWD-NEXT:      i32 17, label [[RETURN:%.*]]
+; FWD-NEXT:      i32 19, label [[RETURN]]
+; FWD-NEXT:      i32 42, label [[RETURN]]
 ; FWD-NEXT:    ]
 ; FWD:       else3:
 ; FWD-NEXT:    br label [[RETURN]]

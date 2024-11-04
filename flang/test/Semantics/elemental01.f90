@@ -1,4 +1,4 @@
-! RUN: %python %S/test_errors.py %s %flang_fc1
+! RUN: %python %S/test_errors.py %s %flang_fc1 -pedantic
 ! Tests ELEMENTAL subprogram constraints C15100-15102
 
 !ERROR: An ELEMENTAL subroutine may not have an alternate return dummy argument

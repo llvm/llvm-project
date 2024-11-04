@@ -20,23 +20,23 @@ __attribute__((noinline)) void foo(int n, int N) {
 // PROMO: load{{.*}}@__profc_foo, align
 // PROMO-NEXT: add
 // PROMO-NEXT: store{{.*}}@__profc_foo, align
-// PROMO-NEXT: load{{.*}}@__profc_foo{{.*}} 1){{.*}}
+// PROMO-NEXT: load{{.*}}@__profc_foo{{.*}} 8){{.*}}
 // PROMO-NEXT: add
-// PROMO-NEXT: store{{.*}}@__profc_foo{{.*}} 1){{.*}}
-// PROMO-NEXT: load{{.*}}@__profc_foo{{.*}} 2){{.*}}
+// PROMO-NEXT: store{{.*}}@__profc_foo{{.*}} 8){{.*}}
+// PROMO-NEXT: load{{.*}}@__profc_foo{{.*}} 16){{.*}}
 // PROMO-NEXT: add
-// PROMO-NEXT: store{{.*}}@__profc_foo{{.*}} 2){{.*}}
+// PROMO-NEXT: store{{.*}}@__profc_foo{{.*}} 16){{.*}}
 //
 // NOPROMO-LABEL: @foo
 // NOPROMO: load{{.*}}@__profc_foo, align
 // NOPROMO-NEXT: add
 // NOPROMO-NEXT: store{{.*}}@__profc_foo, align
-// NOPROMO: load{{.*}}@__profc_foo{{.*}} 1){{.*}}
+// NOPROMO: load{{.*}}@__profc_foo{{.*}} 8){{.*}}
 // NOPROMO-NEXT: add
-// NOPROMO-NEXT: store{{.*}}@__profc_foo{{.*}} 1){{.*}}
-// NOPROMO: load{{.*}}@__profc_foo{{.*}} 2){{.*}}
+// NOPROMO-NEXT: store{{.*}}@__profc_foo{{.*}} 8){{.*}}
+// NOPROMO: load{{.*}}@__profc_foo{{.*}} 16){{.*}}
 // NOPROMO-NEXT: add
-// NOPROMO-NEXT: store{{.*}}@__profc_foo{{.*}} 2){{.*}}
+// NOPROMO-NEXT: store{{.*}}@__profc_foo{{.*}} 16){{.*}}
   int i = 0;
   while (i < N) {
     if (i < n + 1)

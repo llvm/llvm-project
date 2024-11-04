@@ -1,14 +1,22 @@
-// RUN: %clang_cc1 -triple x86_64-linux-gnu -std=c++98 -verify=expected %s
-// RUN: %clang_cc1 -triple x86_64-linux-gnu -std=c++11 -verify=expected %s
-// RUN: %clang_cc1 -triple x86_64-linux-gnu -std=c++14 -verify=expected %s
-// RUN: %clang_cc1 -triple x86_64-linux-gnu -std=c++17 -verify=expected %s
-// RUN: %clang_cc1 -triple x86_64-linux-gnu -std=c++20 -verify=expected %s
-// RUN: %clang_cc1 -triple x86_64-linux-gnu -std=c++23 -verify=expected,since-cxx23 %s
-// RUN: %clang_cc1 -triple x86_64-linux-gnu -std=c++2c -verify=expected,since-cxx23,since-cxx26 %s
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -std=c++98 -pedantic-errors -verify=expected %s
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -std=c++11 -pedantic-errors -verify=expected %s
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -std=c++14 -pedantic-errors -verify=expected %s
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -std=c++17 -pedantic-errors -verify=expected %s
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -std=c++20 -pedantic-errors -verify=expected %s
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -std=c++23 -pedantic-errors -verify=expected,since-cxx23 %s
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -std=c++2c -pedantic-errors -verify=expected,since-cxx23,since-cxx26 %s
 
-#if __cplusplus <= 202002L
-// expected-no-diagnostics
-#endif
+namespace cwg2718 { // cwg2718: 2.7
+struct B {};
+struct D;
+
+void f(B b) {
+  static_cast<D&>(b);
+  // expected-error@-1 {{non-const lvalue reference to type 'D' cannot bind to a value of unrelated type 'B'}}
+}
+
+struct D : B {};
+} // namespace cwg2718
 
 namespace cwg2759 { // cwg2759: 19
 #if __cplusplus >= 201103L

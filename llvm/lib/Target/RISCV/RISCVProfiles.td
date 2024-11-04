@@ -8,7 +8,15 @@
 
 class RISCVProfile<string name, list<SubtargetFeature> features>
     : SubtargetFeature<name, "Is" # NAME, "true",
-                       "RISC-V " # name # " profile", features>;
+                       "RISC-V " # name # " profile", features> {
+  // Indicates if the profile is not yet ratified, so should be treated as
+  // experimental.
+  bit Experimental = false;
+}
+class RISCVExperimentalProfile<string name, list<SubtargetFeature> features>
+    : RISCVProfile<"experimental-"#name, features> {
+  let Experimental = true;
+}
 
 defvar RVI20U32Features = [Feature32Bit, FeatureStdExtI];
 defvar RVI20U64Features = [Feature64Bit, FeatureStdExtI];
@@ -197,8 +205,8 @@ def RVA20U64 : RISCVProfile<"rva20u64", RVA20U64Features>;
 def RVA20S64 : RISCVProfile<"rva20s64", RVA20S64Features>;
 def RVA22U64 : RISCVProfile<"rva22u64", RVA22U64Features>;
 def RVA22S64 : RISCVProfile<"rva22s64", RVA22S64Features>;
-def RVA23U64 : RISCVProfile<"rva23u64", RVA23U64Features>;
-def RVA23S64 : RISCVProfile<"rva23s64", RVA23S64Features>;
-def RVB23U64 : RISCVProfile<"rvb23u64", RVB23U64Features>;
-def RVB23S64 : RISCVProfile<"rvb23s64", RVB23S64Features>;
-def RVM23U32 : RISCVProfile<"rvm23u32", RVM23U32Features>;
+def RVA23U64 : RISCVExperimentalProfile<"rva23u64", RVA23U64Features>;
+def RVA23S64 : RISCVExperimentalProfile<"rva23s64", RVA23S64Features>;
+def RVB23U64 : RISCVExperimentalProfile<"rvb23u64", RVB23U64Features>;
+def RVB23S64 : RISCVExperimentalProfile<"rvb23s64", RVB23S64Features>;
+def RVM23U32 : RISCVExperimentalProfile<"rvm23u32", RVM23U32Features>;

@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-print-scops -disable-output < %s | FileCheck %s
+; RUN: opt %loadNPMPolly '-passes=print<polly-function-scops>' -disable-output < %s 2>&1 | FileCheck %s
 ;
 ; The load access to A has a pointer-bitcast to another elements size before the
 ; GetElementPtr. Verify that we do not the GEP delinearization because it

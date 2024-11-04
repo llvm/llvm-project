@@ -15,7 +15,7 @@ declare <vscale x 2 x double> @llvm.cos.nxv2f64(<vscale x 2 x double>)
 declare <vscale x 4 x float> @llvm.cos.nxv4f32(<vscale x 4 x float>)
 
 ;.
-; CHECK: @llvm.compiler.used = appending global [36 x ptr] [ptr @armpl_vcosq_f64, ptr @armpl_vcosq_f32, ptr @armpl_svcos_f64_x, ptr @armpl_svcos_f32_x, ptr @armpl_vexpq_f64, ptr @armpl_vexpq_f32, ptr @armpl_svexp_f64_x, ptr @armpl_svexp_f32_x, ptr @armpl_vexp10q_f64, ptr @armpl_vexp10q_f32, ptr @armpl_svexp10_f64_x, ptr @armpl_svexp10_f32_x, ptr @armpl_vexp2q_f64, ptr @armpl_vexp2q_f32, ptr @armpl_svexp2_f64_x, ptr @armpl_svexp2_f32_x, ptr @armpl_vlogq_f64, ptr @armpl_vlogq_f32, ptr @armpl_svlog_f64_x, ptr @armpl_svlog_f32_x, ptr @armpl_vlog10q_f64, ptr @armpl_vlog10q_f32, ptr @armpl_svlog10_f64_x, ptr @armpl_svlog10_f32_x, ptr @armpl_vlog2q_f64, ptr @armpl_vlog2q_f32, ptr @armpl_svlog2_f64_x, ptr @armpl_svlog2_f32_x, ptr @armpl_vsinq_f64, ptr @armpl_vsinq_f32, ptr @armpl_svsin_f64_x, ptr @armpl_svsin_f32_x, ptr @armpl_vfmodq_f64, ptr @armpl_vfmodq_f32, ptr @armpl_svfmod_f64_x, ptr @armpl_svfmod_f32_x], section "llvm.metadata"
+; CHECK: @llvm.compiler.used = appending global [36 x ptr] [ptr @armpl_vcosq_f64, ptr @armpl_vcosq_f32, ptr @armpl_svcos_f64_x, ptr @armpl_svcos_f32_x, ptr @armpl_vexpq_f64, ptr @armpl_vexpq_f32, ptr @armpl_svexp_f64_x, ptr @armpl_svexp_f32_x, ptr @armpl_vexp10q_f64, ptr @armpl_vexp10q_f32, ptr @armpl_svexp10_f64_x, ptr @armpl_svexp10_f32_x, ptr @armpl_vexp2q_f64, ptr @armpl_vexp2q_f32, ptr @armpl_svexp2_f64_x, ptr @armpl_svexp2_f32_x, ptr @armpl_vlogq_f64, ptr @armpl_vlogq_f32, ptr @armpl_svlog_f64_x, ptr @armpl_svlog_f32_x, ptr @armpl_vlog10q_f64, ptr @armpl_vlog10q_f32, ptr @armpl_svlog10_f64_x, ptr @armpl_svlog10_f32_x, ptr @armpl_vlog2q_f64, ptr @armpl_vlog2q_f32, ptr @armpl_svlog2_f64_x, ptr @armpl_svlog2_f32_x, ptr @armpl_vsinq_f64, ptr @armpl_vsinq_f32, ptr @armpl_svsin_f64_x, ptr @armpl_svsin_f32_x, ptr @armpl_vtanq_f64, ptr @armpl_vtanq_f32, ptr @armpl_svtan_f64_x, ptr @armpl_svtan_f32_x], section "llvm.metadata"
 ;.
 define <2 x double> @llvm_cos_f64(<2 x double> %in) {
 ; CHECK-LABEL: define <2 x double> @llvm_cos_f64
@@ -424,44 +424,48 @@ define <vscale x 4 x float> @llvm_sin_vscale_f32(<vscale x 4 x float> %in) #0 {
   ret <vscale x 4 x float> %1
 }
 
+declare <2 x double> @llvm.tan.v2f64(<2 x double>)
+declare <4 x float> @llvm.tan.v4f32(<4 x float>)
+declare <vscale x 2 x double> @llvm.tan.nxv2f64(<vscale x 2 x double>)
+declare <vscale x 4 x float> @llvm.tan.nxv4f32(<vscale x 4 x float>)
 
-define <2 x double> @frem_f64(<2 x double> %in) {
-; CHECK-LABEL: define <2 x double> @frem_f64
+define <2 x double> @llvm_tan_f64(<2 x double> %in) {
+; CHECK-LABEL: define <2 x double> @llvm_tan_f64
 ; CHECK-SAME: (<2 x double> [[IN:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x double> @armpl_vfmodq_f64(<2 x double> [[IN]], <2 x double> [[IN]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call fast <2 x double> @armpl_vtanq_f64(<2 x double> [[IN]])
 ; CHECK-NEXT:    ret <2 x double> [[TMP1]]
 ;
-  %1= frem <2 x double> %in, %in
+  %1 = call fast <2 x double> @llvm.tan.v2f64(<2 x double> %in)
   ret <2 x double> %1
 }
 
-define <4 x float> @frem_f32(<4 x float> %in) {
-; CHECK-LABEL: define <4 x float> @frem_f32
+define <4 x float> @llvm_tan_f32(<4 x float> %in) {
+; CHECK-LABEL: define <4 x float> @llvm_tan_f32
 ; CHECK-SAME: (<4 x float> [[IN:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x float> @armpl_vfmodq_f32(<4 x float> [[IN]], <4 x float> [[IN]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call fast <4 x float> @armpl_vtanq_f32(<4 x float> [[IN]])
 ; CHECK-NEXT:    ret <4 x float> [[TMP1]]
 ;
-  %1= frem <4 x float> %in, %in
+  %1 = call fast <4 x float> @llvm.tan.v4f32(<4 x float> %in)
   ret <4 x float> %1
 }
 
-define <vscale x 2 x double> @frem_vscale_f64(<vscale x 2 x double> %in) #0 {
-; CHECK-LABEL: define <vscale x 2 x double> @frem_vscale_f64
+define <vscale x 2 x double> @llvm_tan_vscale_f64(<vscale x 2 x double> %in) #0 {
+; CHECK-LABEL: define <vscale x 2 x double> @llvm_tan_vscale_f64
 ; CHECK-SAME: (<vscale x 2 x double> [[IN:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x double> @armpl_svfmod_f64_x(<vscale x 2 x double> [[IN]], <vscale x 2 x double> [[IN]], <vscale x 2 x i1> shufflevector (<vscale x 2 x i1> insertelement (<vscale x 2 x i1> poison, i1 true, i64 0), <vscale x 2 x i1> poison, <vscale x 2 x i32> zeroinitializer))
+; CHECK-NEXT:    [[TMP1:%.*]] = call fast <vscale x 2 x double> @armpl_svtan_f64_x(<vscale x 2 x double> [[IN]], <vscale x 2 x i1> shufflevector (<vscale x 2 x i1> insertelement (<vscale x 2 x i1> poison, i1 true, i64 0), <vscale x 2 x i1> poison, <vscale x 2 x i32> zeroinitializer))
 ; CHECK-NEXT:    ret <vscale x 2 x double> [[TMP1]]
 ;
-  %1= frem <vscale x 2 x double> %in, %in
+  %1 = call fast <vscale x 2 x double> @llvm.tan.nxv2f64(<vscale x 2 x double> %in)
   ret <vscale x 2 x double> %1
 }
 
-define <vscale x 4 x float> @frem_vscale_f32(<vscale x 4 x float> %in) #0 {
-; CHECK-LABEL: define <vscale x 4 x float> @frem_vscale_f32
+define <vscale x 4 x float> @llvm_tan_vscale_f32(<vscale x 4 x float> %in) #0 {
+; CHECK-LABEL: define <vscale x 4 x float> @llvm_tan_vscale_f32
 ; CHECK-SAME: (<vscale x 4 x float> [[IN:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x float> @armpl_svfmod_f32_x(<vscale x 4 x float> [[IN]], <vscale x 4 x float> [[IN]], <vscale x 4 x i1> shufflevector (<vscale x 4 x i1> insertelement (<vscale x 4 x i1> poison, i1 true, i64 0), <vscale x 4 x i1> poison, <vscale x 4 x i32> zeroinitializer))
+; CHECK-NEXT:    [[TMP1:%.*]] = call fast <vscale x 4 x float> @armpl_svtan_f32_x(<vscale x 4 x float> [[IN]], <vscale x 4 x i1> shufflevector (<vscale x 4 x i1> insertelement (<vscale x 4 x i1> poison, i1 true, i64 0), <vscale x 4 x i1> poison, <vscale x 4 x i32> zeroinitializer))
 ; CHECK-NEXT:    ret <vscale x 4 x float> [[TMP1]]
 ;
-  %1= frem <vscale x 4 x float> %in, %in
+  %1 = call fast <vscale x 4 x float> @llvm.tan.nxv4f32(<vscale x 4 x float> %in)
   ret <vscale x 4 x float> %1
 }
 

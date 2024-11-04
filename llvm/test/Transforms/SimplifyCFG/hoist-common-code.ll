@@ -57,8 +57,8 @@ bb2:              ; preds = %0
 define void @test_switch_reach_terminator(i64 %i, ptr %p) {
 ; CHECK-LABEL: @test_switch_reach_terminator(
 ; CHECK-NEXT:    switch i64 [[I:%.*]], label [[BB0:%.*]] [
-; CHECK-NEXT:    i64 1, label [[BB1:%.*]]
-; CHECK-NEXT:    i64 2, label [[COMMON_RET:%.*]]
+; CHECK-NEXT:      i64 1, label [[BB1:%.*]]
+; CHECK-NEXT:      i64 2, label [[COMMON_RET:%.*]]
 ; CHECK-NEXT:    ]
 ; CHECK:       common.ret:
 ; CHECK-NEXT:    ret void
@@ -116,8 +116,8 @@ define i1 @partial_common_instr_on_switch(i64 %a, i64 %b, i64 %c) unnamed_addr {
 ; CHECK-LABEL: @partial_common_instr_on_switch(
 ; CHECK-NEXT:  start:
 ; CHECK-NEXT:    switch i64 [[A:%.*]], label [[BB0:%.*]] [
-; CHECK-NEXT:    i64 1, label [[BB1:%.*]]
-; CHECK-NEXT:    i64 2, label [[BB2:%.*]]
+; CHECK-NEXT:      i64 1, label [[BB1:%.*]]
+; CHECK-NEXT:      i64 2, label [[BB2:%.*]]
 ; CHECK-NEXT:    ]
 ; CHECK:       bb0:
 ; CHECK-NEXT:    [[TMP0:%.*]] = icmp eq i64 [[B:%.*]], [[C:%.*]]

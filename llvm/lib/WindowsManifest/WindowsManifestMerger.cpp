@@ -669,7 +669,6 @@ WindowsManifestMerger::WindowsManifestMergerImpl::getMergedManifest() {
     xmlDocSetRootElement(OutputDoc.get(), CombinedRoot);
     assert(nullptr == xmlDocGetRootElement(CombinedDoc));
 
-    xmlKeepBlanksDefault(0);
     xmlChar *Buff = nullptr;
     xmlDocDumpFormatMemoryEnc(OutputDoc.get(), &Buff, &BufferSize, "UTF-8", 1);
     Buffer.reset(Buff);

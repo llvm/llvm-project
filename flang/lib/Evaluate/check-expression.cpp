@@ -801,8 +801,14 @@ public:
       // simple contiguity to allow their use in contexts like
       // data targets in pointer assignments with remapping.
       return true;
-    } else if (ultimate.has<semantics::AssocEntityDetails>()) {
-      return Base::operator()(ultimate); // use expr
+    } else if (const auto *details{
+                   ultimate.detailsIf<semantics::AssocEntityDetails>()}) {
+      // RANK(*) associating entity is contiguous.
+      if (details->IsAssumedSize()) {
+        return true;
+      } else {
+        return Base::operator()(ultimate); // use expr
+      }
     } else if (semantics::IsPointer(ultimate) ||
         semantics::IsAssumedShape(ultimate) || IsAssumedRank(ultimate)) {
       return std::nullopt;

@@ -4,10 +4,6 @@
 define void @test() {
 ; CHECK-LABEL: @test(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = extractelement <8 x half> zeroinitializer, i64 1
-; CHECK-NEXT:    [[TOBOOL:%.*]] = fcmp une half [[TMP0]], 0xH0000
-; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <8 x half> zeroinitializer, i64 1
-; CHECK-NEXT:    [[TOBOOL3:%.*]] = fcmp une half [[TMP1]], 0xH0000
 ; CHECK-NEXT:    ret void
 ;
 entry:

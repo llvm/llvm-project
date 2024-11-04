@@ -32,6 +32,12 @@ mlir::Value genLboundDim(fir::FirOpBuilder &builder, mlir::Location loc,
 void genUbound(fir::FirOpBuilder &builder, mlir::Location loc,
                mlir::Value resultBox, mlir::Value array, mlir::Value kind);
 
+/// Generate call to `Shape` runtime routine.
+/// First argument is a raw pointer to the result array storage that
+/// must be allocated by the caller.
+void genShape(fir::FirOpBuilder &builder, mlir::Location loc,
+              mlir::Value resultAddr, mlir::Value arrayt, mlir::Value kind);
+
 /// Generate call to `Size` runtime routine. This routine is a specialized
 /// version when the DIM argument is not specified by the user.
 mlir::Value genSize(fir::FirOpBuilder &builder, mlir::Location loc,

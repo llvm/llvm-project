@@ -40,7 +40,7 @@
     br i1 undef, label %for.inc, label %if.then5
 
   if.then5:
-    br i1 icmp ne (i16 2, i16 0), label %cleanup.loopexit, label %if.end
+    br i1 true, label %cleanup.loopexit, label %if.end
 
   if.end:
     br label %for.inc

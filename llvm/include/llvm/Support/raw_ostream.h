@@ -55,6 +55,7 @@ public:
   enum class OStreamKind {
     OK_OStream,
     OK_FDStream,
+    OK_SVecStream,
   };
 
 private:
@@ -703,7 +704,11 @@ public:
   ///
   /// \param O The vector to write to; this should generally have at least 128
   /// bytes free to avoid any extraneous memory overhead.
-  explicit raw_svector_ostream(SmallVectorImpl<char> &O) : OS(O) {
+  explicit raw_svector_ostream(SmallVectorImpl<char> &O)
+      : raw_pwrite_stream(false, raw_ostream::OStreamKind::OK_SVecStream),
+        OS(O) {
+    // FIXME: here and in a few other places, set directly to unbuffered in the
+    // ctor.
     SetUnbuffered();
   }
 
@@ -713,10 +718,13 @@ public:
 
   /// Return a StringRef for the vector contents.
   StringRef str() const { return StringRef(OS.data(), OS.size()); }
+  SmallVectorImpl<char> &buffer() { return OS; }
 
   void reserveExtraSpace(uint64_t ExtraSize) override {
     OS.reserve(tell() + ExtraSize);
   }
+
+  static bool classof(const raw_ostream *OS);
 };
 
 /// A raw_ostream that discards all output.

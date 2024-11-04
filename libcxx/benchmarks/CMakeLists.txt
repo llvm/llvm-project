@@ -252,10 +252,6 @@ endforeach()
 if (LIBCXX_INCLUDE_TESTS)
   include(AddLLVM)
 
-  if (NOT DEFINED LIBCXX_TEST_DEPS)
-    message(FATAL_ERROR "Expected LIBCXX_TEST_DEPS to be defined")
-  endif()
-
   configure_lit_site_cfg(
           ${CMAKE_CURRENT_SOURCE_DIR}/lit.site.cfg.py.in
           ${CMAKE_CURRENT_BINARY_DIR}/lit.site.cfg.py)
@@ -265,6 +261,6 @@ if (LIBCXX_INCLUDE_TESTS)
   add_lit_target(check-cxx-benchmarks
           "Running libcxx benchmarks tests"
           ${CMAKE_CURRENT_BINARY_DIR}
-          DEPENDS cxx-benchmarks ${LIBCXX_TEST_DEPS}
+          DEPENDS cxx-benchmarks cxx-test-depends
           ARGS ${BENCHMARK_LIT_ARGS})
 endif()

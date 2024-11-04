@@ -68,8 +68,8 @@ define <2 x i1> @test_vp_splice_v2i1_masked(<2 x i1> %va, <2 x i1> %vb, <2 x i1>
 ; CHECK-NEXT:    vmv1r.v v0, v10
 ; CHECK-NEXT:    vmerge.vim v10, v11, 1, v0
 ; CHECK-NEXT:    addi a0, a0, -5
-; CHECK-NEXT:    vsetvli zero, a0, e8, mf8, ta, ma
 ; CHECK-NEXT:    vmv1r.v v0, v9
+; CHECK-NEXT:    vsetvli zero, a0, e8, mf8, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v10, v10, 5, v0.t
 ; CHECK-NEXT:    vsetvli zero, a1, e8, mf8, ta, mu
 ; CHECK-NEXT:    vslideup.vx v10, v8, a0, v0.t
@@ -141,8 +141,8 @@ define <4 x i1> @test_vp_splice_v4i1_masked(<4 x i1> %va, <4 x i1> %vb, <4 x i1>
 ; CHECK-NEXT:    vmv1r.v v0, v10
 ; CHECK-NEXT:    vmerge.vim v10, v11, 1, v0
 ; CHECK-NEXT:    addi a0, a0, -5
-; CHECK-NEXT:    vsetvli zero, a0, e8, mf4, ta, ma
 ; CHECK-NEXT:    vmv1r.v v0, v9
+; CHECK-NEXT:    vsetvli zero, a0, e8, mf4, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v10, v10, 5, v0.t
 ; CHECK-NEXT:    vsetvli zero, a1, e8, mf4, ta, mu
 ; CHECK-NEXT:    vslideup.vx v10, v8, a0, v0.t
@@ -214,8 +214,8 @@ define <8 x i1> @test_vp_splice_v8i1_masked(<8 x i1> %va, <8 x i1> %vb, <8 x i1>
 ; CHECK-NEXT:    vmv1r.v v0, v10
 ; CHECK-NEXT:    vmerge.vim v10, v11, 1, v0
 ; CHECK-NEXT:    addi a0, a0, -5
-; CHECK-NEXT:    vsetvli zero, a0, e8, mf2, ta, ma
 ; CHECK-NEXT:    vmv1r.v v0, v9
+; CHECK-NEXT:    vsetvli zero, a0, e8, mf2, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v10, v10, 5, v0.t
 ; CHECK-NEXT:    vsetvli zero, a1, e8, mf2, ta, mu
 ; CHECK-NEXT:    vslideup.vx v10, v8, a0, v0.t
@@ -287,8 +287,8 @@ define <16 x i1> @test_vp_splice_v16i1_masked(<16 x i1> %va, <16 x i1> %vb, <16 
 ; CHECK-NEXT:    vmv1r.v v0, v10
 ; CHECK-NEXT:    vmerge.vim v10, v11, 1, v0
 ; CHECK-NEXT:    addi a0, a0, -5
-; CHECK-NEXT:    vsetvli zero, a0, e8, m1, ta, ma
 ; CHECK-NEXT:    vmv1r.v v0, v9
+; CHECK-NEXT:    vsetvli zero, a0, e8, m1, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v10, v10, 5, v0.t
 ; CHECK-NEXT:    vsetvli zero, a1, e8, m1, ta, mu
 ; CHECK-NEXT:    vslideup.vx v10, v8, a0, v0.t

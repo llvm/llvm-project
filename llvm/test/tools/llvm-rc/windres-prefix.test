@@ -1,5 +1,3 @@
-; REQUIRES: shell
-
 ; RUN: rm -rf %t && mkdir %t
 
 ; Check that a triple prefix on the executable gets picked up as target triple.

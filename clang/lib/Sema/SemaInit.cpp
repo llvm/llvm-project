@@ -28,6 +28,7 @@
 #include "clang/Sema/Lookup.h"
 #include "clang/Sema/Ownership.h"
 #include "clang/Sema/SemaInternal.h"
+#include "clang/Sema/SemaObjC.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/FoldingSet.h"
 #include "llvm/ADT/PointerIntPair.h"
@@ -813,19 +814,13 @@ InitListChecker::FillInEmptyInitializations(const InitializedEntity &Entity,
 
   if (const RecordType *RType = ILE->getType()->getAs<RecordType>()) {
     const RecordDecl *RDecl = RType->getDecl();
-    if (RDecl->isUnion() && ILE->getInitializedFieldInUnion())
-      FillInEmptyInitForField(0, ILE->getInitializedFieldInUnion(),
-                              Entity, ILE, RequiresSecondPass, FillWithNoInit);
-    else if (RDecl->isUnion() && isa<CXXRecordDecl>(RDecl) &&
-             cast<CXXRecordDecl>(RDecl)->hasInClassInitializer()) {
-      for (auto *Field : RDecl->fields()) {
-        if (Field->hasInClassInitializer()) {
-          FillInEmptyInitForField(0, Field, Entity, ILE, RequiresSecondPass,
-                                  FillWithNoInit);
-          break;
-        }
-      }
+    if (RDecl->isUnion() && ILE->getInitializedFieldInUnion()) {
+      FillInEmptyInitForField(0, ILE->getInitializedFieldInUnion(), Entity, ILE,
+                              RequiresSecondPass, FillWithNoInit);
     } else {
+      assert((!RDecl->isUnion() || !isa<CXXRecordDecl>(RDecl) ||
+              !cast<CXXRecordDecl>(RDecl)->hasInClassInitializer()) &&
+             "We should have computed initialized fields already");
       // The fields beyond ILE->getNumInits() are default initialized, so in
       // order to leave them uninitialized, the ILE is expanded and the extra
       // fields are then filled with NoInitExpr.
@@ -875,7 +870,7 @@ InitListChecker::FillInEmptyInitializations(const InitializedEntity &Entity,
 
   InitializedEntity ElementEntity = Entity;
   unsigned NumInits = ILE->getNumInits();
-  unsigned NumElements = NumInits;
+  uint64_t NumElements = NumInits;
   if (const ArrayType *AType = SemaRef.Context.getAsArrayType(ILE->getType())) {
     ElementType = AType->getElementType();
     if (const auto *CAType = dyn_cast<ConstantArrayType>(AType))
@@ -895,7 +890,7 @@ InitListChecker::FillInEmptyInitializations(const InitializedEntity &Entity,
     ElementType = ILE->getType();
 
   bool SkipEmptyInitChecks = false;
-  for (unsigned Init = 0; Init != NumElements; ++Init) {
+  for (uint64_t Init = 0; Init != NumElements; ++Init) {
     if (hadError)
       return;
 
@@ -2163,12 +2158,15 @@ void InitListChecker::CheckStructUnionTypes(
         return;
       for (RecordDecl::field_iterator FieldEnd = RD->field_end();
            Field != FieldEnd; ++Field) {
-        if (Field->hasInClassInitializer()) {
+        if (Field->hasInClassInitializer() ||
+            (Field->isAnonymousStructOrUnion() &&
+             Field->getType()->getAsCXXRecordDecl()->hasInClassInitializer())) {
           StructuredList->setInitializedFieldInUnion(*Field);
           // FIXME: Actually build a CXXDefaultInitExpr?
           return;
         }
       }
+      llvm_unreachable("Couldn't find in-class initializer");
     }
 
     // Value-initialize the first member of the union that isn't an unnamed
@@ -6018,8 +6016,8 @@ static bool tryObjCWritebackConversion(Sema &S,
 
   // Handle write-back conversion.
   QualType ConvertedArgType;
-  if (!S.isObjCWritebackConversion(ArgType, Entity.getType(),
-                                   ConvertedArgType))
+  if (!S.ObjC().isObjCWritebackConversion(ArgType, Entity.getType(),
+                                          ConvertedArgType))
     return false;
 
   // We should copy unless we're passing to an argument explicitly
@@ -6211,10 +6209,10 @@ void InitializationSequence::InitializeFrom(Sema &S,
   if (Args.size() == 1) {
     Initializer = Args[0];
     if (S.getLangOpts().ObjC) {
-      if (S.CheckObjCBridgeRelatedConversions(Initializer->getBeginLoc(),
-                                              DestType, Initializer->getType(),
-                                              Initializer) ||
-          S.CheckConversionToObjCLiteral(DestType, Initializer))
+      if (S.ObjC().CheckObjCBridgeRelatedConversions(
+              Initializer->getBeginLoc(), DestType, Initializer->getType(),
+              Initializer) ||
+          S.ObjC().CheckConversionToObjCLiteral(DestType, Initializer))
         Args[0] = Initializer;
     }
     if (!isa<InitListExpr>(Initializer))
@@ -8065,6 +8063,11 @@ static void visitLocalsRetainedByInitializer(IndirectLocalPath &Path,
 enum PathLifetimeKind {
   /// Lifetime-extend along this path.
   Extend,
+  /// We should lifetime-extend, but we don't because (due to technical
+  /// limitations) we can't. This happens for default member initializers,
+  /// which we don't clone for every use, so we don't have a unique
+  /// MaterializeTemporaryExpr to update.
+  ShouldExtend,
   /// Do not lifetime extend along this path.
   NoExtend
 };
@@ -8076,7 +8079,7 @@ shouldLifetimeExtendThroughPath(const IndirectLocalPath &Path) {
   PathLifetimeKind Kind = PathLifetimeKind::Extend;
   for (auto Elem : Path) {
     if (Elem.Kind == IndirectLocalPathEntry::DefaultInit)
-      Kind = PathLifetimeKind::Extend;
+      Kind = PathLifetimeKind::ShouldExtend;
     else if (Elem.Kind != IndirectLocalPathEntry::LambdaCaptureInit)
       return PathLifetimeKind::NoExtend;
   }
@@ -8196,6 +8199,18 @@ void Sema::checkInitializerLifetime(const InitializedEntity &Entity,
                               ExtendingEntity->allocateManglingNumber());
         // Also visit the temporaries lifetime-extended by this initializer.
         return true;
+
+      case PathLifetimeKind::ShouldExtend:
+        // We're supposed to lifetime-extend the temporary along this path (per
+        // the resolution of DR1815), but we don't support that yet.
+        //
+        // FIXME: Properly handle this situation. Perhaps the easiest approach
+        // would be to clone the initializer expression on each use that would
+        // lifetime extend its temporaries.
+        Diag(DiagLoc, diag::warn_unsupported_lifetime_extension)
+            << RK << DiagRange;
+        break;
+
       case PathLifetimeKind::NoExtend:
         // If the path goes through the initialization of a variable or field,
         // it can't possibly reach a temporary created in this full-expression.
@@ -9558,12 +9573,12 @@ static void emitBadConversionNotes(Sema &S, const InitializedEntity &entity,
 
     // Emit a possible note about the conversion failing because the
     // operand is a message send with a related result type.
-    S.EmitRelatedResultTypeNote(op);
+    S.ObjC().EmitRelatedResultTypeNote(op);
 
     // Emit a possible note about a return failing because we're
     // expecting a related result type.
     if (entity.getKind() == InitializedEntity::EK_Result)
-      S.EmitRelatedResultTypeNoteForReturn(destType);
+      S.ObjC().EmitRelatedResultTypeNoteForReturn(destType);
   }
   QualType fromType = op->getType();
   QualType fromPointeeType = fromType.getCanonicalType()->getPointeeType();

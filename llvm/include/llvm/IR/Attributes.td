@@ -285,6 +285,9 @@ def SanitizeHWAddress : EnumAttr<"sanitize_hwaddress", [FnAttr]>;
 /// MemTagSanitizer is on.
 def SanitizeMemTag : EnumAttr<"sanitize_memtag", [FnAttr]>;
 
+/// NumericalStabilitySanitizer is on.
+def SanitizeNumericalStability : EnumAttr<"sanitize_numerical_stability", [FnAttr]>;
+
 /// Speculative Load Hardening is enabled.
 ///
 /// Note that this uses the default compatibility (always compatible during
@@ -372,6 +375,7 @@ def : CompatRule<"isEqual<SanitizeThreadAttr>">;
 def : CompatRule<"isEqual<SanitizeMemoryAttr>">;
 def : CompatRule<"isEqual<SanitizeHWAddressAttr>">;
 def : CompatRule<"isEqual<SanitizeMemTagAttr>">;
+def : CompatRule<"isEqual<SanitizeNumericalStabilityAttr>">;
 def : CompatRule<"isEqual<SafeStackAttr>">;
 def : CompatRule<"isEqual<ShadowCallStackAttr>">;
 def : CompatRule<"isEqual<UseSampleProfileAttr>">;

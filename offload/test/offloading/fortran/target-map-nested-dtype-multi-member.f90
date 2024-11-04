@@ -25,18 +25,18 @@ program main
       integer, allocatable :: array_j(:)
       integer(4) :: k
     end type top_layer
-    
+
     type(top_layer) :: top_dtype
 
 !$omp target map(tofrom: top_dtype%nested%i2, top_dtype%k, top_dtype%nested%array_i2)
-    do i = 1, 10 
+    do i = 1, 10
       top_dtype%nested%array_i2(i) = i * 2
-    end do 
+    end do
 
     top_dtype%nested%i2 = 30.30
     top_dtype%k = 74
 !$omp end target
-  
+
   print *, top_dtype%nested%i2
   print *, top_dtype%k
   print *, top_dtype%nested%array_i2

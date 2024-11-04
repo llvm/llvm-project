@@ -209,13 +209,12 @@ export namespace std {
     using std::chrono::reload_tzdb;
     using std::chrono::remote_version;
 
-#    if 0
+#  endif //  !defined(_LIBCPP_HAS_NO_TIME_ZONE_DATABASE) && !defined(_LIBCPP_HAS_NO_FILESYSTEM) &&
+         //  !defined(_LIBCPP_HAS_NO_LOCALIZATION)
+
     // [time.zone.exception], exception classes
     using std::chrono::ambiguous_local_time;
     using std::chrono::nonexistent_local_time;
-#    endif // if 0
-#  endif   //  !defined(_LIBCPP_HAS_NO_TIME_ZONE_DATABASE) && !defined(_LIBCPP_HAS_NO_FILESYSTEM) &&
-           //  !defined(_LIBCPP_HAS_NO_LOCALIZATION)
 
     // [time.zone.info], information classes
     using std::chrono::local_info;
@@ -224,18 +223,14 @@ export namespace std {
 #  if !defined(_LIBCPP_HAS_NO_TIME_ZONE_DATABASE) && !defined(_LIBCPP_HAS_NO_FILESYSTEM) &&                            \
       !defined(_LIBCPP_HAS_NO_LOCALIZATION)
 
-#    if 0
     // [time.zone.timezone], class time_zone
     using std::chrono::choose;
-#    endif // if 0
-
     using std::chrono::time_zone;
-
-#    if 0
 
     // [time.zone.zonedtraits], class template zoned_traits
     using std::chrono::zoned_traits;
 
+#    if 0
     // [time.zone.zonedtime], class template zoned_time
     using std::chrono::zoned_time;
 

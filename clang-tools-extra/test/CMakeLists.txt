@@ -97,7 +97,6 @@ add_lit_testsuite(check-clang-extra "Running clang-tools-extra/test"
    ${CMAKE_CURRENT_BINARY_DIR}
    DEPENDS ${CLANG_TOOLS_TEST_DEPS}
    )
-set_target_properties(check-clang-extra PROPERTIES FOLDER "Clang extra tools' tests")
 
 add_lit_testsuites(CLANG-EXTRA ${CMAKE_CURRENT_SOURCE_DIR}
   DEPENDS ${CLANG_TOOLS_TEST_DEPS}

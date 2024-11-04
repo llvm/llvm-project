@@ -1344,7 +1344,7 @@ public:
   InsertPointTy createReductions(const LocationDescription &Loc,
                                  InsertPointTy AllocaIP,
                                  ArrayRef<ReductionInfo> ReductionInfos,
-                                 bool IsNoWait = false, bool IsByRef = false);
+                                 ArrayRef<bool> IsByRef, bool IsNoWait = false);
 
   ///}
 

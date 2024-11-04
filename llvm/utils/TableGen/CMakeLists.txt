@@ -23,7 +23,6 @@ add_tablegen(llvm-min-tblgen LLVM_HEADERS
 
   PARTIAL_SOURCES_INTENDED
   )
-set_target_properties(llvm-min-tblgen PROPERTIES FOLDER "Tablegenning")
 
 set(LLVM_LINK_COMPONENTS
   CodeGenTypes
@@ -71,7 +70,7 @@ add_tablegen(llvm-tblgen LLVM
   TableGen.cpp
   VTEmitter.cpp
   WebAssemblyDisassemblerEmitter.cpp
-  X86CompressEVEXTablesEmitter.cpp
+  X86InstrMappingEmitter.cpp
   X86DisassemblerTables.cpp
   X86FoldTablesEmitter.cpp
   X86MnemonicTables.cpp
@@ -83,4 +82,3 @@ add_tablegen(llvm-tblgen LLVM
   DEPENDS
   intrinsics_gen # via llvm-min-tablegen
   )
-set_target_properties(llvm-tblgen PROPERTIES FOLDER "Tablegenning")

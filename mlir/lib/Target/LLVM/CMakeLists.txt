@@ -47,7 +47,7 @@ add_mlir_dialect_library(MLIRNVVMTarget
   MLIRNVVMToLLVMIRTranslation
   )
 
-if(MLIR_ENABLE_CUDA_CONVERSIONS)
+if ("NVPTX" IN_LIST LLVM_TARGETS_TO_BUILD)
   # Find the CUDA toolkit.
   find_package(CUDAToolkit)
 

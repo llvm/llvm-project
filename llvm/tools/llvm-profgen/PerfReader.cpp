@@ -552,7 +552,7 @@ bool PerfScriptReader::extractLBRStack(TraceStream &TraceIt,
   //                           ... 0x4005c8/0x4005dc/P/-/-/0
   // It's in FIFO order and seperated by whitespace.
   SmallVector<StringRef, 32> Records;
-  TraceIt.getCurrentLine().split(Records, " ", -1, false);
+  TraceIt.getCurrentLine().rtrim().split(Records, " ", -1, false);
   auto WarnInvalidLBR = [](TraceStream &TraceIt) {
     WithColor::warning() << "Invalid address in LBR record at line "
                          << TraceIt.getLineNumber() << ": "

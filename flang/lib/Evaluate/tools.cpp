@@ -818,10 +818,10 @@ bool IsCoarray(const Symbol &symbol) {
   return GetAssociationRoot(symbol).Corank() > 0;
 }
 
-bool IsProcedure(const Expr<SomeType> &expr) {
+bool IsProcedureDesignator(const Expr<SomeType> &expr) {
   return std::holds_alternative<ProcedureDesignator>(expr.u);
 }
-bool IsFunction(const Expr<SomeType> &expr) {
+bool IsFunctionDesignator(const Expr<SomeType> &expr) {
   const auto *designator{std::get_if<ProcedureDesignator>(&expr.u)};
   return designator && designator->GetType().has_value();
 }
@@ -845,6 +845,10 @@ bool IsProcedurePointer(const Expr<SomeType> &expr) {
   } else {
     return false;
   }
+}
+
+bool IsProcedure(const Expr<SomeType> &expr) {
+  return IsProcedureDesignator(expr) || IsProcedurePointer(expr);
 }
 
 bool IsProcedurePointerTarget(const Expr<SomeType> &expr) {

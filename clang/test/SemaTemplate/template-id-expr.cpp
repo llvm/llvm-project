@@ -65,11 +65,11 @@ struct Y0 {
   template<typename U>
   void f() {
     Y0::template f1<U>(0);
-    Y0::template f1(0);
-    this->template f1(0);
+    Y0::template f1(0); // expected-error {{a template argument list is expected after a name prefixed by the template keyword}}
+    this->template f1(0); // expected-error {{a template argument list is expected after a name prefixed by the template keyword}}
 
     Y0::template f2<U>(0);
-    Y0::template f2(0);
+    Y0::template f2(0); // expected-error {{a template argument list is expected after a name prefixed by the template keyword}}
 
     Y0::template f3(0); // expected-error {{'f3' following the 'template' keyword does not refer to a template}}
     Y0::template f3(); // expected-error {{'f3' following the 'template' keyword does not refer to a template}}
@@ -77,11 +77,11 @@ struct Y0 {
     int x;
     x = Y0::f4(0);
     x = Y0::f4<int>(0); // expected-error {{assigning to 'int' from incompatible type 'void'}}
-    x = Y0::template f4(0); // expected-error {{assigning to 'int' from incompatible type 'void'}}
+    x = Y0::template f4(0); // expected-error {{a template argument list is expected after a name prefixed by the template keyword}} expected-error {{assigning to 'int' from incompatible type 'void'}}
 
     x = this->f4(0);
     x = this->f4<int>(0); // expected-error {{assigning to 'int' from incompatible type 'void'}}
-    x = this->template f4(0); // expected-error {{assigning to 'int' from incompatible type 'void'}}
+    x = this->template f4(0); // expected-error {{a template argument list is expected after a name prefixed by the template keyword}} expected-error {{assigning to 'int' from incompatible type 'void'}}
   }
 };
 
@@ -109,11 +109,11 @@ struct Y1 {
   template<typename U>
   void f() {
     Y1::template f1<U>(0);
-    Y1::template f1(0);
-    this->template f1(0);
+    Y1::template f1(0); // expected-error {{a template argument list is expected after a name prefixed by the template keyword}}
+    this->template f1(0); // expected-error {{a template argument list is expected after a name prefixed by the template keyword}}
 
     Y1::template f2<U>(0);
-    Y1::template f2(0);
+    Y1::template f2(0); // expected-error {{a template argument list is expected after a name prefixed by the template keyword}}
 
     Y1::template f3(0); // expected-error {{'f3' following the 'template' keyword does not refer to a template}}
     Y1::template f3(); // expected-error {{'f3' following the 'template' keyword does not refer to a template}}
@@ -121,11 +121,11 @@ struct Y1 {
     int x;
     x = Y1::f4(0);
     x = Y1::f4<int>(0); // expected-error {{assigning to 'int' from incompatible type 'void'}}
-    x = Y1::template f4(0); // expected-error {{assigning to 'int' from incompatible type 'void'}}
+    x = Y1::template f4(0); // expected-error {{a template argument list is expected after a name prefixed by the template keyword}} expected-error {{assigning to 'int' from incompatible type 'void'}}
 
     x = this->f4(0);
     x = this->f4<int>(0); // expected-error {{assigning to 'int' from incompatible type 'void'}}
-    x = this->template f4(0); // expected-error {{assigning to 'int' from incompatible type 'void'}}
+    x = this->template f4(0); // expected-error {{a template argument list is expected after a name prefixed by the template keyword}} expected-error {{assigning to 'int' from incompatible type 'void'}}
   }
 };
 
@@ -138,23 +138,23 @@ struct Y2 : Y1<T> {
   template<typename U>
   void f(Y1 *p) {
     Y1::template f1<U>(0);
-    Y1::template f1(0);
-    p->template f1(0);
+    Y1::template f1(0); // expected-error {{a template argument list is expected after a name prefixed by the template keyword}}
+    p->template f1(0); // expected-error {{a template argument list is expected after a name prefixed by the template keyword}}
 
     Y1::template f2<U>(0);
-    Y1::template f2(0);
+    Y1::template f2(0); // expected-error {{a template argument list is expected after a name prefixed by the template keyword}}
 
-    Y1::template f3(0); // expected-error {{'f3' following the 'template' keyword does not refer to a template}}
-    Y1::template f3(); // expected-error {{'f3' following the 'template' keyword does not refer to a template}}
+    Y1::template f3(0); // expected-error {{'f3' following the 'template' keyword does not refer to a template}} expected-error {{a template argument list is expected after a name prefixed by the template keyword}}
+    Y1::template f3(); // expected-error {{'f3' following the 'template' keyword does not refer to a template}} expected-error {{a template argument list is expected after a name prefixed by the template keyword}}
 
     int x;
     x = Y1::f4(0);
     x = Y1::f4<int>(0); // expected-error {{use 'template'}} expected-error {{assigning to 'int' from incompatible type 'void'}}
-    x = Y1::template f4(0); // expected-error {{assigning to 'int' from incompatible type 'void'}}
+    x = Y1::template f4(0); // expected-error {{assigning to 'int' from incompatible type 'void'}} expected-error {{a template argument list is expected after a name prefixed by the template keyword}}
 
     x = p->f4(0);
     x = p->f4<int>(0); // expected-error {{assigning to 'int' from incompatible type 'void'}} expected-error {{use 'template'}}
-    x = p->template f4(0); // expected-error {{assigning to 'int' from incompatible type 'void'}}
+    x = p->template f4(0); // expected-error {{assigning to 'int' from incompatible type 'void'}} expected-error {{a template argument list is expected after a name prefixed by the template keyword}}
   }
 };
 
@@ -169,7 +169,7 @@ struct A {
 
 template<int I>
 void f5() {
-  A::template B<I>::template b1(); // expected-error {{'b1' following the 'template' keyword does not refer to a template}}
+  A::template B<I>::template b1(); // expected-error {{'b1' following the 'template' keyword does not refer to a template}} expected-error {{a template argument list is expected after a name prefixed by the template keyword}}
 }
 
 template void f5<0>(); // expected-note {{in instantiation of function template specialization 'f5<0>' requested here}}
@@ -179,7 +179,7 @@ template <template <typename> class D>
 class E {
   template class D<C>;  // expected-error {{expected '<' after 'template'}}
   template<> class D<C>;  // expected-error {{cannot specialize a template template parameter}}
-  friend class D<C>; // expected-error {{type alias template 'D' cannot be referenced with a class specifier}}
+  friend class D<C>; // expected-error {{alias template 'D' cannot be referenced with the 'class' specifier}}
 };
 #if __cplusplus <= 199711L
 // expected-warning@+2 {{extension}}

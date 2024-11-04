@@ -1665,12 +1665,10 @@ NonTypeTemplateParmDecl *SubstNonTypeTemplateParmExpr::getParameter() const {
       getReplacedTemplateParameterList(getAssociatedDecl())->asArray()[Index]);
 }
 
-PackIndexingExpr *PackIndexingExpr::Create(ASTContext &Context,
-                                           SourceLocation EllipsisLoc,
-                                           SourceLocation RSquareLoc,
-                                           Expr *PackIdExpr, Expr *IndexExpr,
-                                           std::optional<int64_t> Index,
-                                           ArrayRef<Expr *> SubstitutedExprs) {
+PackIndexingExpr *PackIndexingExpr::Create(
+    ASTContext &Context, SourceLocation EllipsisLoc, SourceLocation RSquareLoc,
+    Expr *PackIdExpr, Expr *IndexExpr, std::optional<int64_t> Index,
+    ArrayRef<Expr *> SubstitutedExprs, bool ExpandedToEmptyPack) {
   QualType Type;
   if (Index && !SubstitutedExprs.empty())
     Type = SubstitutedExprs[*Index]->getType();
@@ -1679,8 +1677,9 @@ PackIndexingExpr *PackIndexingExpr::Create(ASTContext &Context,
 
   void *Storage =
       Context.Allocate(totalSizeToAlloc<Expr *>(SubstitutedExprs.size()));
-  return new (Storage) PackIndexingExpr(
-      Type, EllipsisLoc, RSquareLoc, PackIdExpr, IndexExpr, SubstitutedExprs);
+  return new (Storage)
+      PackIndexingExpr(Type, EllipsisLoc, RSquareLoc, PackIdExpr, IndexExpr,
+                       SubstitutedExprs, ExpandedToEmptyPack);
 }
 
 NamedDecl *PackIndexingExpr::getPackDecl() const {

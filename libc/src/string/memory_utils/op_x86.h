@@ -14,7 +14,7 @@
 
 #include "src/__support/macros/properties/architectures.h"
 
-#if defined(LIBC_TARGET_ARCH_IS_X86_64)
+#if defined(LIBC_TARGET_ARCH_IS_X86)
 
 #include "src/__support/common.h"
 #include "src/string/memory_utils/op_builtin.h"
@@ -316,6 +316,6 @@ LIBC_INLINE MemcmpReturnType cmp_neq<__m512i>(CPtr p1, CPtr p2, size_t offset) {
 
 } // namespace LIBC_NAMESPACE::generic
 
-#endif // LIBC_TARGET_ARCH_IS_X86_64
+#endif // LIBC_TARGET_ARCH_IS_X86
 
 #endif // LLVM_LIBC_SRC_STRING_MEMORY_UTILS_OP_X86_H

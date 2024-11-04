@@ -2043,12 +2043,33 @@ bool GetElementPtrInst::hasAllConstantIndices() const {
   return true;
 }
 
+void GetElementPtrInst::setNoWrapFlags(GEPNoWrapFlags NW) {
+  SubclassOptionalData = NW.getRaw();
+}
+
 void GetElementPtrInst::setIsInBounds(bool B) {
-  cast<GEPOperator>(this)->setIsInBounds(B);
+  GEPNoWrapFlags NW = cast<GEPOperator>(this)->getNoWrapFlags();
+  if (B)
+    NW |= GEPNoWrapFlags::inBounds();
+  else
+    NW = NW.withoutInBounds();
+  setNoWrapFlags(NW);
+}
+
+GEPNoWrapFlags GetElementPtrInst::getNoWrapFlags() const {
+  return cast<GEPOperator>(this)->getNoWrapFlags();
 }
 
 bool GetElementPtrInst::isInBounds() const {
   return cast<GEPOperator>(this)->isInBounds();
+}
+
+bool GetElementPtrInst::hasNoUnsignedSignedWrap() const {
+  return cast<GEPOperator>(this)->hasNoUnsignedSignedWrap();
+}
+
+bool GetElementPtrInst::hasNoUnsignedWrap() const {
+  return cast<GEPOperator>(this)->hasNoUnsignedWrap();
 }
 
 bool GetElementPtrInst::accumulateConstantOffset(const DataLayout &DL,
@@ -5178,7 +5199,11 @@ void SwitchInstProfUpdateWrapper::init() {
   if (!ProfileData)
     return;
 
-  if (ProfileData->getNumOperands() != SI.getNumSuccessors() + 1) {
+  // FIXME: This check belongs in ProfDataUtils. Its almost equivalent to
+  // getValidBranchWeightMDNode(), but the need to use llvm_unreachable
+  // makes them slightly different.
+  if (ProfileData->getNumOperands() !=
+      SI.getNumSuccessors() + getBranchWeightOffset(ProfileData)) {
     llvm_unreachable("number of prof branch_weights metadata operands does "
                      "not correspond to number of succesors");
   }

@@ -24,6 +24,7 @@
 //                                              Proj1 proj1 = {}, Proj2 proj2 = {});                 // since C++23
 
 #include <algorithm>
+#include <array>
 #include <cassert>
 #include <concepts>
 #include <ranges>
@@ -130,10 +131,10 @@ constexpr void test_iterators() {
   }
 
   { // range has zero length
-    int a[]       = {};
-    int p[]       = {3, 4, 2};
-    auto whole    = std::ranges::subrange(Iter1(a), Sent1(Iter1(a)));
-    auto subrange = std::ranges::subrange(Iter2(p), Sent2(Iter2(std::end(p))));
+    std::array<int, 0> a = {};
+    int p[]              = {3, 4, 2};
+    auto whole           = std::ranges::subrange(Iter1(a.data()), Sent1(Iter1(a.data())));
+    auto subrange        = std::ranges::subrange(Iter2(p), Sent2(Iter2(std::end(p))));
     {
       bool ret = std::ranges::contains_subrange(whole.begin(), whole.end(), subrange.begin(), subrange.end());
       assert(!ret);
@@ -145,10 +146,10 @@ constexpr void test_iterators() {
   }
 
   { // subrange has zero length
-    int a[]       = {3, 4, 2};
-    int p[]       = {};
-    auto whole    = std::ranges::subrange(Iter1(a), Sent1(Iter1(std::end(a))));
-    auto subrange = std::ranges::subrange(Iter2(p), Sent2(Iter2(p)));
+    int a[]              = {3, 4, 2};
+    std::array<int, 0> p = {};
+    auto whole           = std::ranges::subrange(Iter1(a), Sent1(Iter1(std::end(a))));
+    auto subrange        = std::ranges::subrange(Iter2(p.data()), Sent2(Iter2(p.data())));
     {
       bool ret = std::ranges::contains_subrange(whole.begin(), whole.end(), subrange.begin(), subrange.end());
       assert(ret);
@@ -160,10 +161,10 @@ constexpr void test_iterators() {
   }
 
   { // range and subrange both have zero length
-    int a[]       = {};
-    int p[]       = {};
-    auto whole    = std::ranges::subrange(Iter1(a), Sent1(Iter1(a)));
-    auto subrange = std::ranges::subrange(Iter2(p), Sent2(Iter2(p)));
+    std::array<int, 0> a = {};
+    std::array<int, 0> p = {};
+    auto whole           = std::ranges::subrange(Iter1(a.data()), Sent1(Iter1(a.data())));
+    auto subrange        = std::ranges::subrange(Iter2(p.data()), Sent2(Iter2(p.data())));
     {
       bool ret = std::ranges::contains_subrange(whole.begin(), whole.end(), subrange.begin(), subrange.end());
       assert(ret);

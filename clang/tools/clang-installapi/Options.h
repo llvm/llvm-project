@@ -161,6 +161,8 @@ private:
   bool processXarchOption(llvm::opt::InputArgList &Args, arg_iterator Curr);
   bool processXplatformOption(llvm::opt::InputArgList &Args, arg_iterator Curr);
   bool processXprojectOption(llvm::opt::InputArgList &Args, arg_iterator Curr);
+  bool processOptionList(llvm::opt::InputArgList &Args,
+                         llvm::opt::OptTable *Table);
 
 public:
   /// The various options grouped together.

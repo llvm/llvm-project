@@ -49,6 +49,17 @@ define i16 @test4(i16 %x) {
   ret i16 %cond
 }
 
+define i16 @test4_with_range(i16 %x) {
+; CHECK-LABEL: @test4_with_range(
+; CHECK-NEXT:    [[CT:%.*]] = call range(i16 0, 17) i16 @llvm.ctlz.i16(i16 [[X:%.*]], i1 false)
+; CHECK-NEXT:    ret i16 [[CT]]
+;
+  %ct = call range(i16 0, 16) i16 @llvm.ctlz.i16(i16 %x, i1 true)
+  %tobool = icmp eq i16 %x, 0
+  %cond = select i1 %tobool, i16 16, i16 %ct
+  ret i16 %cond
+}
+
 define i32 @test5(i32 %x) {
 ; CHECK-LABEL: @test5(
 ; CHECK-NEXT:    [[CT:%.*]] = tail call range(i32 0, 33) i32 @llvm.ctlz.i32(i32 [[X:%.*]], i1 false)
@@ -110,6 +121,17 @@ define i16 @test4b(i16 %x) {
 ; CHECK-NEXT:    ret i16 [[CT]]
 ;
   %ct = tail call i16 @llvm.cttz.i16(i16 %x, i1 true)
+  %tobool = icmp eq i16 %x, 0
+  %cond = select i1 %tobool, i16 16, i16 %ct
+  ret i16 %cond
+}
+
+define i16 @test4b_with_range(i16 %x) {
+; CHECK-LABEL: @test4b_with_range(
+; CHECK-NEXT:    [[CT:%.*]] = call range(i16 0, 17) i16 @llvm.cttz.i16(i16 [[X:%.*]], i1 false)
+; CHECK-NEXT:    ret i16 [[CT]]
+;
+  %ct = call range(i16 0, 16) i16 @llvm.cttz.i16(i16 %x, i1 true)
   %tobool = icmp eq i16 %x, 0
   %cond = select i1 %tobool, i16 16, i16 %ct
   ret i16 %cond

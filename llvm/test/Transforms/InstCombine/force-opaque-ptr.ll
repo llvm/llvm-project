@@ -5,14 +5,14 @@
 
 define ptr @gep_constexpr_gv_1() {
 ; CHECK-LABEL: @gep_constexpr_gv_1(
-; CHECK-NEXT:    ret ptr getelementptr inbounds ([16 x i16], ptr @g, i64 0, i64 10)
+; CHECK-NEXT:    ret ptr getelementptr inbounds (i8, ptr @g, i64 20)
 ;
   ret ptr getelementptr([16 x i16], ptr @g, i64 0, i64 10)
 }
 
 define ptr @gep_constexpr_gv_2() {
 ; CHECK-LABEL: @gep_constexpr_gv_2(
-; CHECK-NEXT:    ret ptr getelementptr inbounds ([16 x i16], ptr @g, i64 0, i64 12)
+; CHECK-NEXT:    ret ptr getelementptr inbounds (i8, ptr @g, i64 24)
 ;
   ret ptr getelementptr(i32, ptr getelementptr([16 x i16], ptr @g, i64 0, i64 10), i64 1)
 }

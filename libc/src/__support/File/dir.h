@@ -50,14 +50,16 @@ class Dir {
   // A directory is to be opened by the static method open and closed
   // by the close method. So, all constructors and destructor are declared
   // as private. Inappropriate constructors are declared as deleted.
-  Dir() = delete;
-  Dir(const Dir &) = delete;
+  LIBC_INLINE Dir() = delete;
+  LIBC_INLINE Dir(const Dir &) = delete;
 
-  explicit Dir(int fdesc)
-      : fd(fdesc), readptr(0), fillsize(0), mutex(false, false, false) {}
-  ~Dir() = default;
+  LIBC_INLINE explicit Dir(int fdesc)
+      : fd(fdesc), readptr(0), fillsize(0),
+        mutex(/*timed=*/false, /*recursive=*/false, /*robust=*/false,
+              /*pshared=*/false) {}
+  LIBC_INLINE ~Dir() = default;
 
-  Dir &operator=(const Dir &) = delete;
+  LIBC_INLINE Dir &operator=(const Dir &) = delete;
 
 public:
   static ErrorOr<Dir *> open(const char *path);
@@ -69,7 +71,7 @@ public:
   // cleaned up.
   int close();
 
-  int getfd() { return fd; }
+  LIBC_INLINE int getfd() { return fd; }
 };
 
 } // namespace LIBC_NAMESPACE

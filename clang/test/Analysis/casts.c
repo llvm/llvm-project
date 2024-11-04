@@ -138,7 +138,9 @@ void multiDimensionalArrayPointerCasts(void) {
   clang_analyzer_eval(y1 == y2); // expected-warning{{TRUE}}
 
   // FIXME: should be FALSE (i.e. equal pointers).
+  // FIXME: pointer subtraction warning might be incorrect
   clang_analyzer_eval(y1 - y2); // expected-warning{{UNKNOWN}}
+  // expected-warning@-1{{Subtraction of two pointers that do not point into the same array is undefined behavior}}
   // FIXME: should be TRUE (i.e. same symbol).
   clang_analyzer_eval(*y1 == *y2); // expected-warning{{UNKNOWN}}
 
@@ -147,7 +149,9 @@ void multiDimensionalArrayPointerCasts(void) {
   clang_analyzer_eval(y1 == y3); // expected-warning{{TRUE}}
 
   // FIXME: should be FALSE (i.e. equal pointers).
+  // FIXME: pointer subtraction warning might be incorrect
   clang_analyzer_eval(y1 - y3); // expected-warning{{UNKNOWN}}
+  // expected-warning@-1{{Subtraction of two pointers that do not point into the same array is undefined behavior}}
   // FIXME: should be TRUE (i.e. same symbol).
   clang_analyzer_eval(*y1 == *y3); // expected-warning{{UNKNOWN}}
 

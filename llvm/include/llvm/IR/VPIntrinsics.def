@@ -174,10 +174,10 @@ HELPER_REGISTER_BINARY_INT_VP(vp_add, VP_ADD, Add, ADD)
 HELPER_REGISTER_BINARY_INT_VP(vp_and, VP_AND, And, AND)
 
 // llvm.vp.ashr(x,y,mask,vlen)
-HELPER_REGISTER_BINARY_INT_VP(vp_ashr, VP_ASHR, AShr, SRA)
+HELPER_REGISTER_BINARY_INT_VP(vp_ashr, VP_SRA, AShr, SRA)
 
 // llvm.vp.lshr(x,y,mask,vlen)
-HELPER_REGISTER_BINARY_INT_VP(vp_lshr, VP_LSHR, LShr, SRL)
+HELPER_REGISTER_BINARY_INT_VP(vp_lshr, VP_SRL, LShr, SRL)
 
 // llvm.vp.mul(x,y,mask,vlen)
 HELPER_REGISTER_BINARY_INT_VP(vp_mul, VP_MUL, Mul, MUL)

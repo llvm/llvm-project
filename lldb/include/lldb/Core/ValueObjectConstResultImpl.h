@@ -38,8 +38,8 @@ public:
 
   lldb::ValueObjectSP Dereference(Status &error);
 
-  ValueObject *CreateChildAtIndex(size_t idx, bool synthetic_array_member,
-                                  int32_t synthetic_index);
+  ValueObject *CreateChildAtIndex(size_t idx);
+  ValueObject *CreateSyntheticArrayMember(size_t idx);
 
   lldb::ValueObjectSP
   GetSyntheticChildAtOffset(uint32_t offset, const CompilerType &type,

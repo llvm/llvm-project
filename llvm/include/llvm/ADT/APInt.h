@@ -17,6 +17,7 @@
 
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/MathExtras.h"
+#include "llvm/Support/float128.h"
 #include <cassert>
 #include <climits>
 #include <cstring>
@@ -1676,6 +1677,13 @@ public:
   /// re-interprets the bits as a double. Note that it is valid to do this on
   /// any bit width. Exactly 64 bits will be translated.
   double bitsToDouble() const { return llvm::bit_cast<double>(getWord(0)); }
+
+#ifdef HAS_IEE754_FLOAT128
+  float128 bitsToQuad() const {
+    __uint128_t ul = ((__uint128_t)U.pVal[1] << 64) + U.pVal[0];
+    return llvm::bit_cast<float128>(ul);
+  }
+#endif
 
   /// Converts APInt bits to a float
   ///

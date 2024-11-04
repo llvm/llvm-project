@@ -72,6 +72,7 @@
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/MC/TargetRegistry.h"
+#include "llvm/Support/Alignment.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Endian.h"
@@ -370,11 +371,10 @@ void NVPTXAsmPrinter::printReturnValStr(const Function *F, raw_ostream &O) {
         << " func_retval0";
     } else if (ShouldPassAsArray(Ty)) {
       unsigned totalsz = DL.getTypeAllocSize(Ty);
-      unsigned retAlignment = 0;
-      if (!getAlign(*F, 0, retAlignment))
-        retAlignment = TLI->getFunctionParamOptimizedAlign(F, Ty, DL).value();
-      O << ".param .align " << retAlignment << " .b8 func_retval0[" << totalsz
-        << "]";
+      Align RetAlignment = TLI->getFunctionArgumentAlignment(
+          F, Ty, AttributeList::ReturnIndex, DL);
+      O << ".param .align " << RetAlignment.value() << " .b8 func_retval0["
+        << totalsz << "]";
     } else
       llvm_unreachable("Unknown return type");
   } else {
@@ -542,30 +542,24 @@ void NVPTXAsmPrinter::emitKernelFunctionDirectives(const Function &F,
   // If the NVVM IR has some of reqntid* specified, then output
   // the reqntid directive, and set the unspecified ones to 1.
   // If none of Reqntid* is specified, don't output reqntid directive.
-  unsigned Reqntidx, Reqntidy, Reqntidz;
-  Reqntidx = Reqntidy = Reqntidz = 1;
-  bool ReqSpecified = false;
-  ReqSpecified |= getReqNTIDx(F, Reqntidx);
-  ReqSpecified |= getReqNTIDy(F, Reqntidy);
-  ReqSpecified |= getReqNTIDz(F, Reqntidz);
+  std::optional<unsigned> Reqntidx = getReqNTIDx(F);
+  std::optional<unsigned> Reqntidy = getReqNTIDy(F);
+  std::optional<unsigned> Reqntidz = getReqNTIDz(F);
 
-  if (ReqSpecified)
-    O << ".reqntid " << Reqntidx << ", " << Reqntidy << ", " << Reqntidz
-      << "\n";
+  if (Reqntidx || Reqntidy || Reqntidz)
+    O << ".reqntid " << Reqntidx.value_or(1) << ", " << Reqntidy.value_or(1)
+      << ", " << Reqntidz.value_or(1) << "\n";
 
   // If the NVVM IR has some of maxntid* specified, then output
   // the maxntid directive, and set the unspecified ones to 1.
   // If none of maxntid* is specified, don't output maxntid directive.
-  unsigned Maxntidx, Maxntidy, Maxntidz;
-  Maxntidx = Maxntidy = Maxntidz = 1;
-  bool MaxSpecified = false;
-  MaxSpecified |= getMaxNTIDx(F, Maxntidx);
-  MaxSpecified |= getMaxNTIDy(F, Maxntidy);
-  MaxSpecified |= getMaxNTIDz(F, Maxntidz);
+  std::optional<unsigned> Maxntidx = getMaxNTIDx(F);
+  std::optional<unsigned> Maxntidy = getMaxNTIDy(F);
+  std::optional<unsigned> Maxntidz = getMaxNTIDz(F);
 
-  if (MaxSpecified)
-    O << ".maxntid " << Maxntidx << ", " << Maxntidy << ", " << Maxntidz
-      << "\n";
+  if (Maxntidx || Maxntidy || Maxntidz)
+    O << ".maxntid " << Maxntidx.value_or(1) << ", " << Maxntidy.value_or(1)
+      << ", " << Maxntidz.value_or(1) << "\n";
 
   unsigned Mincta = 0;
   if (getMinCTASm(F, Mincta))
@@ -1558,6 +1552,10 @@ void NVPTXAsmPrinter::emitFunctionParamList(const Function *F, raw_ostream &O) {
 
     auto getOptimalAlignForParam = [TLI, &DL, &PAL, F,
                                     paramIndex](Type *Ty) -> Align {
+      if (MaybeAlign StackAlign =
+              getAlign(*F, paramIndex + AttributeList::FirstArgIndex))
+        return StackAlign.value();
+
       Align TypeAlign = TLI->getFunctionParamOptimizedAlign(F, Ty, DL);
       MaybeAlign ParamAlign = PAL.getParamAlignment(paramIndex);
       return std::max(TypeAlign, ParamAlign.valueOrOne());
@@ -1847,9 +1845,13 @@ void NVPTXAsmPrinter::bufferLEByte(const Constant *CPV, int Bytes,
   auto AddIntToBuffer = [AggBuffer, Bytes](const APInt &Val) {
     size_t NumBytes = (Val.getBitWidth() + 7) / 8;
     SmallVector<unsigned char, 16> Buf(NumBytes);
-    for (unsigned I = 0; I < NumBytes; ++I) {
+    for (unsigned I = 0; I < NumBytes - 1; ++I) {
       Buf[I] = Val.extractBitsAsZExtValue(8, I * 8);
     }
+    size_t LastBytePosition = (NumBytes - 1) * 8;
+    size_t LastByteBits = Val.getBitWidth() - LastBytePosition;
+    Buf[NumBytes - 1] =
+        Val.extractBitsAsZExtValue(LastByteBits, LastBytePosition);
     AggBuffer->addBytes(Buf.data(), NumBytes, Bytes);
   };
 

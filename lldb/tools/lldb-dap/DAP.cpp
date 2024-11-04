@@ -14,6 +14,7 @@
 
 #include "DAP.h"
 #include "LLDBUtils.h"
+#include "lldb/API/SBCommandInterpreter.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/FormatVariadic.h"
 
@@ -102,7 +103,9 @@ void DAP::SendJSON(const llvm::json::Value &json) {
   SendJSON(json_str);
 
   if (log) {
-    *log << "<-- " << std::endl
+    auto now = std::chrono::duration<double>(
+        std::chrono::system_clock::now().time_since_epoch());
+    *log << llvm::formatv("{0:f9} <-- ", now.count()).str() << std::endl
          << "Content-Length: " << json_str.size() << "\r\n\r\n"
          << llvm::formatv("{0:2}", json).str() << std::endl;
   }
@@ -129,9 +132,12 @@ std::string DAP::ReadJSON() {
   if (!input.read_full(log.get(), length, json_str))
     return json_str;
 
-  if (log)
-    *log << "--> " << std::endl << "Content-Length: " << length << "\r\n\r\n";
-
+  if (log) {
+    auto now = std::chrono::duration<double>(
+        std::chrono::system_clock::now().time_since_epoch());
+    *log << llvm::formatv("{0:f9} --> ", now.count()).str() << std::endl
+         << "Content-Length: " << length << "\r\n\r\n";
+  }
   return json_str;
 }
 
@@ -405,9 +411,10 @@ ExpressionContext DAP::DetectExpressionContext(lldb::SBFrame frame,
     std::pair<llvm::StringRef, llvm::StringRef> token =
         llvm::getToken(expression);
     std::string term = token.first.str();
-    lldb::SBCommandReturnObject result;
-    debugger.GetCommandInterpreter().ResolveCommand(term.c_str(), result);
-    bool term_is_command = result.Succeeded();
+    lldb::SBCommandInterpreter interpreter = debugger.GetCommandInterpreter();
+    bool term_is_command = interpreter.CommandExists(term.c_str()) ||
+                           interpreter.UserCommandExists(term.c_str()) ||
+                           interpreter.AliasExists(term.c_str());
     bool term_is_variable = frame.FindVariable(term.c_str()).IsValid();
 
     // If we have both a variable and command, warn the user about the conflict.

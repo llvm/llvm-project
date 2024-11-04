@@ -912,6 +912,13 @@ public:
     return getBackedgeTakenCount(L, SymbolicMaximum);
   }
 
+  /// Similar to getSymbolicMaxBackedgeTakenCount, except it will add a set of
+  /// SCEV predicates to Predicates that are required to be true in order for
+  /// the answer to be correct. Predicates can be checked with run-time
+  /// checks and can be used to perform loop versioning.
+  const SCEV *getPredicatedSymbolicMaxBackedgeTakenCount(
+      const Loop *L, SmallVector<const SCEVPredicate *, 4> &Predicates);
+
   /// Return true if the backedge taken count is either the value returned by
   /// getConstantMaxBackedgeTakenCount or zero.
   bool isBackedgeTakenCountMaxOrZero(const Loop *L);
@@ -1549,7 +1556,9 @@ private:
                                ScalarEvolution *SE) const;
 
     /// Get the symbolic max backedge taken count for the loop.
-    const SCEV *getSymbolicMax(const Loop *L, ScalarEvolution *SE);
+    const SCEV *
+    getSymbolicMax(const Loop *L, ScalarEvolution *SE,
+                   SmallVector<const SCEVPredicate *, 4> *Predicates = nullptr);
 
     /// Get the symbolic max backedge taken count for the particular loop exit.
     const SCEV *getSymbolicMax(const BasicBlock *ExitingBlock,
@@ -1647,9 +1656,7 @@ private:
     DenseMap<const SCEV *, ConstantRange> &Cache =
         Hint == HINT_RANGE_UNSIGNED ? UnsignedRanges : SignedRanges;
 
-    auto Pair = Cache.try_emplace(S, std::move(CR));
-    if (!Pair.second)
-      Pair.first->second = std::move(CR);
+    auto Pair = Cache.insert_or_assign(S, std::move(CR));
     return Pair.first->second;
   }
 
@@ -1746,7 +1753,7 @@ private:
 
   /// Similar to getBackedgeTakenInfo, but will add predicates as required
   /// with the purpose of returning complete information.
-  const BackedgeTakenInfo &getPredicatedBackedgeTakenInfo(const Loop *L);
+  BackedgeTakenInfo &getPredicatedBackedgeTakenInfo(const Loop *L);
 
   /// Compute the number of times the specified loop will iterate.
   /// If AllowPredicates is set, we will create new SCEV predicates as
@@ -1760,11 +1767,6 @@ private:
   /// return an exact answer.
   ExitLimit computeExitLimit(const Loop *L, BasicBlock *ExitingBlock,
                              bool AllowPredicates = false);
-
-  /// Return a symbolic upper bound for the backedge taken count of the loop.
-  /// This is more general than getConstantMaxBackedgeTakenCount as it returns
-  /// an arbitrary expression as opposed to only constants.
-  const SCEV *computeSymbolicMaxBackedgeTakenCount(const Loop *L);
 
   // Helper functions for computeExitLimitFromCond to avoid exponential time
   // complexity.
@@ -2316,6 +2318,9 @@ public:
   /// Get the (predicated) backedge count for the analyzed loop.
   const SCEV *getBackedgeTakenCount();
 
+  /// Get the (predicated) symbolic max backedge count for the analyzed loop.
+  const SCEV *getSymbolicMaxBackedgeTakenCount();
+
   /// Adds a new predicate.
   void addPredicate(const SCEVPredicate &Pred);
 
@@ -2384,6 +2389,9 @@ private:
 
   /// The backedge taken count.
   const SCEV *BackedgeCount = nullptr;
+
+  /// The symbolic backedge taken count.
+  const SCEV *SymbolicMaxBackedgeCount = nullptr;
 };
 
 template <> struct DenseMapInfo<ScalarEvolution::FoldID> {

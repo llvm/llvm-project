@@ -20,7 +20,7 @@
 # RUN: llvm-dwarfdump --show-form --verbose --debug-line main.bolt | FileCheck --check-prefix=POSTCHECK-LINE %s
 
 
-# Check BOLT handles monolithic mix of DWARF4 and DWARF5.
+## Check BOLT handles monolithic mix of DWARF4 and DWARF5.
 
 # main.cpp
 # PRECHECK: version = 0x0005
@@ -89,7 +89,7 @@
 # PRECHECK-NEXT: DW_AT_low_pc [DW_FORM_addr]
 # PRECHECK-NEXT: DW_AT_high_pc
 
-# Checking debug line.
+## Checking debug line.
 
 # PRECHECK-LINE: debug_line[
 # PRECHECK-LINE: version: 5
@@ -262,7 +262,7 @@
 # POSTCHECK-DWO-HELPER1-NEXT: DW_AT_ranges [DW_FORM_rnglistx] (indexed (0x1) rangelist = 0x00000018
 # POSTCHECK-DWO-HELPER1-NEXT: [0x0000000000000000, 0x0000000000000003))
 
-# Checking debug line.
+## Checking debug line.
 
 # POSTCHECK-LINE: debug_line[
 # POSTCHECK-LINE: version: 5

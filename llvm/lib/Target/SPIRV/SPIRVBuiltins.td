@@ -58,6 +58,7 @@ def LoadStore : BuiltinGroup;
 def IntelSubgroups : BuiltinGroup;
 def AtomicFloating : BuiltinGroup;
 def GroupUniform : BuiltinGroup;
+def KernelClock : BuiltinGroup;
 
 //===----------------------------------------------------------------------===//
 // Class defining a demangled builtin record. The information in the record
@@ -585,6 +586,7 @@ defm : DemangledNativeBuiltin<"__spirv_SpecConstantComposite", OpenCL_std, SpecC
 
 // Async Copy and Prefetch builtin records:
 defm : DemangledNativeBuiltin<"async_work_group_copy", OpenCL_std, AsyncCopy, 4, 4, OpGroupAsyncCopy>;
+defm : DemangledNativeBuiltin<"async_work_group_strided_copy", OpenCL_std, AsyncCopy, 5, 5, OpGroupAsyncCopy>;
 defm : DemangledNativeBuiltin<"__spirv_GroupAsyncCopy", OpenCL_std, AsyncCopy, 6, 6, OpGroupAsyncCopy>;
 defm : DemangledNativeBuiltin<"wait_group_events", OpenCL_std, AsyncCopy, 2, 2, OpGroupWaitEvents>;
 defm : DemangledNativeBuiltin<"__spirv_GroupWaitEvents", OpenCL_std, AsyncCopy, 3, 3, OpGroupWaitEvents>;
@@ -952,6 +954,14 @@ defm : DemangledGroupBuiltin<"group_scan_exclusive_logical_xor", OnlyWork, OpGro
 defm : DemangledGroupBuiltin<"group_scan_inclusive_logical_xor", OnlyWork, OpGroupLogicalXorKHR>;
 defm : DemangledGroupBuiltin<"group_reduce_logical_xor", OnlyWork, OpGroupLogicalXorKHR>;
 
+// cl_khr_kernel_clock / SPV_KHR_shader_clock
+defm : DemangledNativeBuiltin<"clock_read_device", OpenCL_std, KernelClock, 0, 0, OpReadClockKHR>;
+defm : DemangledNativeBuiltin<"clock_read_work_group", OpenCL_std, KernelClock, 0, 0, OpReadClockKHR>;
+defm : DemangledNativeBuiltin<"clock_read_sub_group", OpenCL_std, KernelClock, 0, 0, OpReadClockKHR>;
+defm : DemangledNativeBuiltin<"clock_read_hilo_device", OpenCL_std, KernelClock, 0, 0, OpReadClockKHR>;
+defm : DemangledNativeBuiltin<"clock_read_hilo_work_group", OpenCL_std, KernelClock, 0, 0, OpReadClockKHR>;
+defm : DemangledNativeBuiltin<"clock_read_hilo_sub_group", OpenCL_std, KernelClock, 0, 0, OpReadClockKHR>;
+
 //===----------------------------------------------------------------------===//
 // Class defining an atomic instruction on floating-point numbers.
 //
@@ -1045,6 +1055,21 @@ foreach i = ["", "2", "4", "8", "16"] in {
   }
 }
 // OpSubgroupImageBlockReadINTEL and OpSubgroupImageBlockWriteINTEL are to be resolved later on (in code)
+
+// Multiclass used to define builtin wrappers for the SPV_INTEL_subgroups extension.
+multiclass DemangledIntelSubgroupsBuiltinWrapper<string name, bits<8> numArgs, Op operation> {
+  def : DemangledBuiltin<!strconcat("__spirv_", name), OpenCL_std, IntelSubgroups, numArgs, numArgs>;
+  def : IntelSubgroupsBuiltin<!strconcat("__spirv_", name), operation>;
+}
+
+defm : DemangledIntelSubgroupsBuiltinWrapper<"SubgroupShuffleINTEL", 2, OpSubgroupShuffleINTEL>;
+defm : DemangledIntelSubgroupsBuiltinWrapper<"SubgroupShuffleDownINTEL", 3, OpSubgroupShuffleDownINTEL>;
+defm : DemangledIntelSubgroupsBuiltinWrapper<"SubgroupShuffleUpINTEL", 3, OpSubgroupShuffleUpINTEL>;
+defm : DemangledIntelSubgroupsBuiltinWrapper<"SubgroupShuffleXorINTEL", 2, OpSubgroupShuffleXorINTEL>;
+defm : DemangledIntelSubgroupsBuiltinWrapper<"SubgroupBlockReadINTEL", 1, OpSubgroupBlockReadINTEL>;
+defm : DemangledIntelSubgroupsBuiltinWrapper<"SubgroupBlockWriteINTEL", 2, OpSubgroupBlockWriteINTEL>;
+defm : DemangledIntelSubgroupsBuiltinWrapper<"SubgroupImageBlockReadINTEL", 2, OpSubgroupImageBlockReadINTEL>;
+defm : DemangledIntelSubgroupsBuiltinWrapper<"SubgroupImageBlockWriteINTEL", 3, OpSubgroupImageBlockWriteINTEL>;
 
 //===----------------------------------------------------------------------===//
 // Class defining a builtin for group operations within uniform control flow.

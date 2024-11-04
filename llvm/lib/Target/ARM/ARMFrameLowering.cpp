@@ -215,7 +215,7 @@ bool ARMFrameLowering::hasFP(const MachineFunction &MF) const {
 /// isFPReserved - Return true if the frame pointer register should be
 /// considered a reserved register on the scope of the specified function.
 bool ARMFrameLowering::isFPReserved(const MachineFunction &MF) const {
-  return hasFP(MF) || MF.getSubtarget<ARMSubtarget>().createAAPCSFrameChain();
+  return hasFP(MF) || MF.getTarget().Options.FramePointerIsReserved(MF);
 }
 
 /// hasReservedCallFrame - Under normal circumstances, when a frame pointer is
@@ -2233,10 +2233,10 @@ bool ARMFrameLowering::enableShrinkWrapping(const MachineFunction &MF) const {
   return true;
 }
 
-static bool requiresAAPCSFrameRecord(const MachineFunction &MF) {
+bool ARMFrameLowering::requiresAAPCSFrameRecord(
+    const MachineFunction &MF) const {
   const auto &Subtarget = MF.getSubtarget<ARMSubtarget>();
-  return Subtarget.createAAPCSFrameChainLeaf() ||
-         (Subtarget.createAAPCSFrameChain() && MF.getFrameInfo().hasCalls());
+  return Subtarget.createAAPCSFrameChain() && hasFP(MF);
 }
 
 // Thumb1 may require a spill when storing to a frame index through FP (or any

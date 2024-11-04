@@ -102,8 +102,6 @@ inline constexpr size_t countof(const T* const begin, const T* const end) {
   return static_cast<size_t>(end - begin);
 }
 
-} // namespace
-
 string build_name(const string& other, const string& one, locale::category c) {
   if (other == "*" || one == "*")
     return "*";
@@ -114,6 +112,8 @@ string build_name(const string& other, const string& one, locale::category c) {
   // different names for different categories.
   return "*";
 }
+
+} // namespace
 
 const locale::category locale::none;
 const locale::category locale::collate;

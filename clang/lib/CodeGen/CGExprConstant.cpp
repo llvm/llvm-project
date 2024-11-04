@@ -393,7 +393,7 @@ bool ConstantAggregateBuilder::split(size_t Index, CharUnits Hint) {
 
 static llvm::Constant *
 EmitArrayConstant(CodeGenModule &CGM, llvm::ArrayType *DesiredType,
-                  llvm::Type *CommonElementType, unsigned ArrayBound,
+                  llvm::Type *CommonElementType, uint64_t ArrayBound,
                   SmallVectorImpl<llvm::Constant *> &Elements,
                   llvm::Constant *Filler);
 
@@ -949,11 +949,11 @@ tryEmitGlobalCompoundLiteral(ConstantEmitter &emitter,
 
 static llvm::Constant *
 EmitArrayConstant(CodeGenModule &CGM, llvm::ArrayType *DesiredType,
-                  llvm::Type *CommonElementType, unsigned ArrayBound,
+                  llvm::Type *CommonElementType, uint64_t ArrayBound,
                   SmallVectorImpl<llvm::Constant *> &Elements,
                   llvm::Constant *Filler) {
   // Figure out how long the initial prefix of non-zero elements is.
-  unsigned NonzeroLength = ArrayBound;
+  uint64_t NonzeroLength = ArrayBound;
   if (Elements.size() < NonzeroLength && Filler->isNullValue())
     NonzeroLength = Elements.size();
   if (NonzeroLength == Elements.size()) {
@@ -965,7 +965,7 @@ EmitArrayConstant(CodeGenModule &CGM, llvm::ArrayType *DesiredType,
     return llvm::ConstantAggregateZero::get(DesiredType);
 
   // Add a zeroinitializer array filler if we have lots of trailing zeroes.
-  unsigned TrailingZeroes = ArrayBound - NonzeroLength;
+  uint64_t TrailingZeroes = ArrayBound - NonzeroLength;
   if (TrailingZeroes >= 8) {
     assert(Elements.size() >= NonzeroLength &&
            "missing initializer for non-zero element");
@@ -1252,12 +1252,12 @@ public:
   llvm::Constant *EmitArrayInitialization(const InitListExpr *ILE, QualType T) {
     auto *CAT = CGM.getContext().getAsConstantArrayType(ILE->getType());
     assert(CAT && "can't emit array init for non-constant-bound array");
-    unsigned NumInitElements = ILE->getNumInits();
-    unsigned NumElements = CAT->getZExtSize();
+    const uint64_t NumElements = CAT->getZExtSize();
 
     // Initialising an array requires us to automatically
     // initialise any elements that have not been initialised explicitly
-    unsigned NumInitableElts = std::min(NumInitElements, NumElements);
+    uint64_t NumInitableElts =
+        std::min<uint64_t>(ILE->getNumInits(), NumElements);
 
     QualType EltType = CAT->getElementType();
 

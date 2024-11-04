@@ -370,11 +370,10 @@ static void finalizeDwarfRegNumsKeys(DwarfRegNumsVecTy &DwarfRegNums) {
                                       "specified multiple times");
     LastSeenReg = Reg;
   }
-  auto Last = std::unique(
-      DwarfRegNums.begin(), DwarfRegNums.end(),
-      [](const DwarfRegNumsMapPair &A, const DwarfRegNumsMapPair &B) {
-        return A.first->getName() == B.first->getName();
-      });
+  auto Last = llvm::unique(DwarfRegNums, [](const DwarfRegNumsMapPair &A,
+                                            const DwarfRegNumsMapPair &B) {
+    return A.first->getName() == B.first->getName();
+  });
   DwarfRegNums.erase(Last, DwarfRegNums.end());
 }
 

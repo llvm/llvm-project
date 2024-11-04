@@ -2173,6 +2173,11 @@ TEST(FindReferences, WithinAST) {
         using $def[[MyTypeD^ef]] = int;
         enum MyEnum : $(MyEnum)[[MyTy^peDef]] { };
       )cpp",
+      // UDL
+      R"cpp(
+        bool $decl[[operator]]"" _u^dl(unsigned long long value);
+        bool x = $(x)[[1_udl]];
+      )cpp",
   };
   for (const char *Test : Tests)
     checkFindRefs(Test);
@@ -2358,7 +2363,13 @@ TEST(FindReferences, UsedSymbolsFromInclude) {
 
       R"cpp([[#in^clude <vector>]]
         std::[[vector]]<int> vec;
-      )cpp"};
+      )cpp",
+
+      R"cpp(
+        [[#include ^"udl_header.h"]]
+        auto x = [[1_b]];
+      )cpp",
+  };
   for (const char *Test : Tests) {
     Annotations T(Test);
     auto TU = TestTU::withCode(T.code());
@@ -2374,6 +2385,9 @@ TEST(FindReferences, UsedSymbolsFromInclude) {
         template<typename>
         class vector{};
       }
+    )cpp");
+    TU.AdditionalFiles["udl_header.h"] = guard(R"cpp(
+      bool operator"" _b(unsigned long long value);
     )cpp");
     TU.ExtraArgs.push_back("-isystem" + testPath("system"));
 

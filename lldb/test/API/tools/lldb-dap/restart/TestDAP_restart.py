@@ -9,7 +9,6 @@ import lldbdap_testcase
 
 class TestDAP_restart(lldbdap_testcase.DAPTestCaseBase):
     @skipIfWindows
-    @skipIfRemote
     def test_basic_functionality(self):
         """
         Tests the basic restarting functionality: set two breakpoints in
@@ -45,7 +44,6 @@ class TestDAP_restart(lldbdap_testcase.DAPTestCaseBase):
         )
 
     @skipIfWindows
-    @skipIfRemote
     def test_stopOnEntry(self):
         """
         Check that the stopOnEntry setting is still honored after a restart.
@@ -87,7 +85,6 @@ class TestDAP_restart(lldbdap_testcase.DAPTestCaseBase):
                     )
 
     @skipIfWindows
-    @skipIfRemote
     def test_arguments(self):
         """
         Tests that lldb-dap will use updated launch arguments included

@@ -61,7 +61,7 @@ struct MachinePassModel
 #ifndef NDEBUG
     if constexpr (is_detected<has_get_required_properties_t, PassT>::value) {
       auto &MFProps = IR.getProperties();
-      auto RequiredProperties = PassT::getRequiredProperties();
+      auto RequiredProperties = this->Pass.getRequiredProperties();
       if (!MFProps.verifyRequiredProperties(RequiredProperties)) {
         errs() << "MachineFunctionProperties required by " << PassT::name()
                << " pass are not met by function " << IR.getName() << ".\n"
@@ -78,9 +78,9 @@ struct MachinePassModel
     auto PA = this->Pass.run(IR, AM);
 
     if constexpr (is_detected<has_get_set_properties_t, PassT>::value)
-      IR.getProperties().set(PassT::getSetProperties());
+      IR.getProperties().set(this->Pass.getSetProperties());
     if constexpr (is_detected<has_get_cleared_properties_t, PassT>::value)
-      IR.getProperties().reset(PassT::getClearedProperties());
+      IR.getProperties().reset(this->Pass.getClearedProperties());
     return PA;
   }
 

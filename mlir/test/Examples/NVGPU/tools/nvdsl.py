@@ -431,7 +431,7 @@ class NVDSL:
                 # saveIR(module)
 
                 # Verify the module
-                # module.operation.verify()
+                module.operation.verify()
 
                 # Compile and JIT MLIR module
                 options = f"cubin-chip=sm_90a cubin-features=+ptx80 opt-level=3"

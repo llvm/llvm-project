@@ -14,4 +14,3 @@ endif()
 add_lit_testsuite(check-interception "Running the Interception tests"
   ${INTERCEPTION_TESTSUITES}
   DEPENDS ${INTERCEPTION_TEST_DEPS})
-set_target_properties(check-interception PROPERTIES FOLDER "Compiler-RT Misc")

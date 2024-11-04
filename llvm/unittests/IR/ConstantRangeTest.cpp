@@ -209,6 +209,10 @@ static bool CheckAll(const ConstantRange &, const ConstantRange &) {
   return true;
 }
 
+static bool CheckCorrectnessOnly(const ConstantRange &, const ConstantRange &) {
+  return false;
+}
+
 static bool CheckSingleElementsOnly(const ConstantRange &CR1,
                                     const ConstantRange &CR2) {
   return CR1.isSingleElement() && CR2.isSingleElement();
@@ -1019,18 +1023,102 @@ TEST_F(ConstantRangeTest, Multiply) {
       });
 }
 
+TEST_F(ConstantRangeTest, MultiplyWithNoWrap) {
+  using OBO = OverflowingBinaryOperator;
+
+  EXPECT_EQ(Empty.multiplyWithNoWrap(Some, OBO::NoUnsignedWrap), Empty);
+  EXPECT_EQ(Some.multiplyWithNoWrap(Empty, OBO::NoUnsignedWrap), Empty);
+  EXPECT_EQ(Full.multiplyWithNoWrap(Full, OBO::NoUnsignedWrap), Full);
+  EXPECT_EQ(Full.multiplyWithNoWrap(Some, OBO::NoUnsignedWrap), Full);
+  EXPECT_EQ(Some.multiplyWithNoWrap(Full, OBO::NoUnsignedWrap), Full);
+  EXPECT_EQ(ConstantRange(APInt(4, 0), APInt(4, 2))
+                .multiplyWithNoWrap(ConstantRange(APInt(4, 2), APInt(4, 0)),
+                                    OBO::NoUnsignedWrap),
+            ConstantRange::getFull(4));
+  EXPECT_EQ(ConstantRange(APInt(4, 1), APInt(4, 5))
+                .multiplyWithNoWrap(ConstantRange(APInt(4, 1), APInt(4, 5)),
+                                    OBO::NoUnsignedWrap),
+            ConstantRange(APInt(4, 1), APInt(4, 0)));
+  EXPECT_EQ(ConstantRange(APInt(8, 254), APInt(8, 0))
+                .multiplyWithNoWrap(ConstantRange(APInt(8, 252), APInt(8, 4)),
+                                    OBO::NoUnsignedWrap),
+            ConstantRange(APInt(8, 250), APInt(8, 9)));
+  EXPECT_EQ(ConstantRange(APInt(8, 254), APInt(8, 255))
+                .multiplyWithNoWrap(ConstantRange(APInt(8, 2), APInt(8, 4)),
+                                    OBO::NoUnsignedWrap),
+            ConstantRange::getEmpty(8));
+
+  EXPECT_EQ(Empty.multiplyWithNoWrap(Some, OBO::NoSignedWrap), Empty);
+  EXPECT_EQ(Some.multiplyWithNoWrap(Empty, OBO::NoSignedWrap), Empty);
+  EXPECT_EQ(Full.multiplyWithNoWrap(Full, OBO::NoSignedWrap), Full);
+  EXPECT_EQ(Full.multiplyWithNoWrap(Some, OBO::NoSignedWrap), Full);
+  EXPECT_EQ(Some.multiplyWithNoWrap(Full, OBO::NoSignedWrap), Full);
+  EXPECT_EQ(
+      ConstantRange(APInt(4, 0), APInt(4, 4))
+          .multiplyWithNoWrap(ConstantRange(APInt(4, -5, true), APInt(4, 4)),
+                              OBO::NoSignedWrap),
+      ConstantRange::getFull(4));
+  EXPECT_EQ(ConstantRange(APInt(4, 0), APInt(4, 3))
+                .multiplyWithNoWrap(ConstantRange(APInt(4, 0), APInt(4, 5)),
+                                    OBO::NoSignedWrap),
+            ConstantRange(APInt(4, 0), APInt(4, -8, true)));
+  EXPECT_EQ(ConstantRange(APInt(8, 3), APInt(8, -11, true))
+                .multiplyWithNoWrap(ConstantRange(APInt(8, -1, true)),
+                                    OBO::NoSignedWrap),
+            ConstantRange(APInt(8, 12), APInt(8, -2, true)));
+  EXPECT_EQ(ConstantRange(APInt(8, 254), APInt(8, 255))
+                .multiplyWithNoWrap(ConstantRange(APInt(8, 100), APInt(8, 121)),
+                                    OBO::NoSignedWrap),
+            ConstantRange::getEmpty(8));
+
+  TestBinaryOpExhaustive(
+      [](const ConstantRange &CR1, const ConstantRange &CR2) {
+        return CR1.multiplyWithNoWrap(CR2, OBO::NoUnsignedWrap);
+      },
+      [](const APInt &N1, const APInt &N2) -> std::optional<APInt> {
+        bool IsOverflow;
+        APInt Res = N1.umul_ov(N2, IsOverflow);
+        if (IsOverflow)
+          return std::nullopt;
+        return Res;
+      },
+      PreferSmallest, CheckCorrectnessOnly);
+  TestBinaryOpExhaustive(
+      [](const ConstantRange &CR1, const ConstantRange &CR2) {
+        return CR1.multiplyWithNoWrap(CR2, OBO::NoSignedWrap);
+      },
+      [](const APInt &N1, const APInt &N2) -> std::optional<APInt> {
+        bool IsOverflow;
+        APInt Res = N1.smul_ov(N2, IsOverflow);
+        if (IsOverflow)
+          return std::nullopt;
+        return Res;
+      },
+      PreferSmallest, CheckCorrectnessOnly);
+  TestBinaryOpExhaustive(
+      [](const ConstantRange &CR1, const ConstantRange &CR2) {
+        return CR1.multiplyWithNoWrap(CR2,
+                                      OBO::NoUnsignedWrap | OBO::NoSignedWrap);
+      },
+      [](const APInt &N1, const APInt &N2) -> std::optional<APInt> {
+        bool IsOverflow1, IsOverflow2;
+        APInt Res1 = N1.umul_ov(N2, IsOverflow1);
+        APInt Res2 = N1.smul_ov(N2, IsOverflow2);
+        if (IsOverflow1 || IsOverflow2)
+          return std::nullopt;
+        assert(Res1 == Res2 && "Multiplication results differ?");
+        return Res1;
+      },
+      PreferSmallest, CheckCorrectnessOnly);
+}
+
 TEST_F(ConstantRangeTest, smul_fast) {
   TestBinaryOpExhaustive(
       [](const ConstantRange &CR1, const ConstantRange &CR2) {
         return CR1.smul_fast(CR2);
       },
-      [](const APInt &N1, const APInt &N2) {
-        return N1 * N2;
-      },
-      PreferSmallest,
-      [](const ConstantRange &, const ConstantRange &) {
-        return false; // Check correctness only.
-      });
+      [](const APInt &N1, const APInt &N2) { return N1 * N2; }, PreferSmallest,
+      CheckCorrectnessOnly);
 }
 
 TEST_F(ConstantRangeTest, UMax) {

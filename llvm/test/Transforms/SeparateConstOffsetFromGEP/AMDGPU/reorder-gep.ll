@@ -284,3 +284,29 @@ entry:
   %idx3 = getelementptr i8, ptr addrspace(3) %const3, i64 %in.idx2
   ret void
 }
+
+define void @multiple_index_maybe_neg(ptr %in.ptr, i64 %in.idx1) {
+; CHECK-LABEL: define void @multiple_index_maybe_neg(
+; CHECK-SAME: ptr [[IN_PTR:%.*]], i64 [[IN_IDX1:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr [2 x <2 x i8>], ptr [[IN_PTR]], i64 0, i64 [[IN_IDX1]]
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr [2 x <2 x i8>], ptr [[TMP1]], i64 0, i64 1
+; CHECK-NEXT:    ret void
+;
+  %const1 = getelementptr inbounds [2 x <2 x i8>], ptr %in.ptr, i64 0, i64 1
+  %idx1 = getelementptr inbounds [2 x <2 x i8>], ptr %const1, i64 0, i64 %in.idx1
+  ret void
+}
+
+define void @multiple_index_nonneg(ptr %in.ptr, i64 %in.idx1) {
+; CHECK-LABEL: define void @multiple_index_nonneg(
+; CHECK-SAME: ptr [[IN_PTR:%.*]], i64 [[IN_IDX1:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[IN_IDX1_NNEG:%.*]] = and i64 [[IN_IDX1]], 9223372036854775807
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [2 x <2 x i8>], ptr [[IN_PTR]], i64 0, i64 [[IN_IDX1_NNEG]]
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds [2 x <2 x i8>], ptr [[TMP1]], i64 0, i64 1
+; CHECK-NEXT:    ret void
+;
+  %in.idx1.nneg = and i64 %in.idx1, 9223372036854775807
+  %const1 = getelementptr inbounds [2 x <2 x i8>], ptr %in.ptr, i64 0, i64 1
+  %idx1 = getelementptr inbounds [2 x <2 x i8>], ptr %const1, i64 0, i64 %in.idx1.nneg
+  ret void
+}

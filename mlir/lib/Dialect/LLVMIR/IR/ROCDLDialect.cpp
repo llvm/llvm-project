@@ -40,54 +40,6 @@ using namespace ROCDL;
 //===----------------------------------------------------------------------===//
 
 // <operation> ::=
-//     `llvm.amdgcn.buffer.load.* %rsrc, %vindex, %offset, %glc, %slc :
-//     result_type`
-ParseResult MubufLoadOp::parse(OpAsmParser &parser, OperationState &result) {
-  SmallVector<OpAsmParser::UnresolvedOperand, 8> ops;
-  Type type;
-  if (parser.parseOperandList(ops, 5) || parser.parseColonType(type) ||
-      parser.addTypeToList(type, result.types))
-    return failure();
-
-  MLIRContext *context = parser.getContext();
-  auto int32Ty = IntegerType::get(context, 32);
-  auto int1Ty = IntegerType::get(context, 1);
-  auto i32x4Ty = LLVM::getFixedVectorType(int32Ty, 4);
-  return parser.resolveOperands(ops,
-                                {i32x4Ty, int32Ty, int32Ty, int1Ty, int1Ty},
-                                parser.getNameLoc(), result.operands);
-}
-
-void MubufLoadOp::print(OpAsmPrinter &p) {
-  p << " " << getOperands() << " : " << (*this)->getResultTypes();
-}
-
-// <operation> ::=
-//     `llvm.amdgcn.buffer.store.* %vdata, %rsrc, %vindex, %offset, %glc, %slc :
-//     result_type`
-ParseResult MubufStoreOp::parse(OpAsmParser &parser, OperationState &result) {
-  SmallVector<OpAsmParser::UnresolvedOperand, 8> ops;
-  Type type;
-  if (parser.parseOperandList(ops, 6) || parser.parseColonType(type))
-    return failure();
-
-  MLIRContext *context = parser.getContext();
-  auto int32Ty = IntegerType::get(context, 32);
-  auto int1Ty = IntegerType::get(context, 1);
-  auto i32x4Ty = LLVM::getFixedVectorType(int32Ty, 4);
-
-  if (parser.resolveOperands(ops,
-                             {type, i32x4Ty, int32Ty, int32Ty, int1Ty, int1Ty},
-                             parser.getNameLoc(), result.operands))
-    return failure();
-  return success();
-}
-
-void MubufStoreOp::print(OpAsmPrinter &p) {
-  p << " " << getOperands() << " : " << getVdata().getType();
-}
-
-// <operation> ::=
 //     `llvm.amdgcn.raw.buffer.load.* %rsrc, %offset, %soffset, %aux
 //     : result_type`
 ParseResult RawBufferLoadOp::parse(OpAsmParser &parser,

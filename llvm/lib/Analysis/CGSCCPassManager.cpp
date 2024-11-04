@@ -340,6 +340,11 @@ ModuleToPostOrderCGSCCPassAdaptor::run(Module &M, ModuleAnalysisManager &AM) {
     } while (!RCWorklist.empty());
   }
 
+#if defined(EXPENSIVE_CHECKS)
+  // Verify that the call graph is still valid.
+  CG.verify();
+#endif
+
   // By definition we preserve the call garph, all SCC analyses, and the
   // analysis proxies by handling them above and in any nested pass managers.
   PA.preserveSet<AllAnalysesOn<LazyCallGraph::SCC>>();

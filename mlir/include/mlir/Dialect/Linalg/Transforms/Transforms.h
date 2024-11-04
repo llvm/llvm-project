@@ -876,8 +876,8 @@ struct ForallReductionTilingResult {
   Operation *parallelTiledOp;
   /// The final reduction operation merging all the partial reductions.
   Operation *mergeOp;
-  /// The op initializing the tensor used for partial reductions.
-  Operation *initialOp;
+  /// Initial values used for partial reductions.
+  SmallVector<Value> initialValues;
   /// The `scf.forall` operation that iterate over the tiles.
   scf::ForallOp loops;
 };

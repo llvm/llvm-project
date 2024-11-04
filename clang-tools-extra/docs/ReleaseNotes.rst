@@ -84,13 +84,22 @@ Objective-C
 Miscellaneous
 ^^^^^^^^^^^^^
 
+- Added a boolean option `AnalyzeAngledIncludes` to `Includes` config section,
+  which allows to enable unused includes detection for all angled ("system") headers.
+  At this moment umbrella headers are not supported, so enabling this option
+  may result in false-positives.
+
 Improvements to clang-doc
 -------------------------
 
 Improvements to clang-query
 ---------------------------
 
-The improvements are...
+- Added the `file` command to dynamically load a list of commands and matchers
+  from an external file, allowing the cost of reading the compilation database
+  and building the AST to be imposed just once for faster prototyping.
+
+- Removed support for ``enable output srcloc``. Fixes #GH82591
 
 Improvements to clang-rename
 ----------------------------
@@ -112,6 +121,9 @@ Improvements to clang-tidy
 
 - Fixed `--verify-config` option not properly parsing checks when using the
   literal operator in the `.clang-tidy` config.
+
+- Added argument `--exclude-header-filter` and config option `ExcludeHeaderFilterRegex`
+  to exclude headers from analysis via a RegEx.
 
 New checks
 ^^^^^^^^^^
@@ -136,6 +148,12 @@ New checks
   to reading out-of-bounds data due to inadequate or incorrect string null
   termination.
 
+- New :doc:`misc-use-internal-linkage
+  <clang-tidy/checks/misc/use-internal-linkage>` check.
+
+  Detects variables and functions that can be marked as static or moved into
+  an anonymous namespace to enforce internal linkage.
+
 - New :doc:`modernize-min-max-use-initializer-list
   <clang-tidy/checks/modernize/min-max-use-initializer-list>` check.
 
@@ -147,6 +165,15 @@ New checks
 
   Finds initializer lists for aggregate types that could be
   written as designated initializers instead.
+
+- New :doc:`modernize-use-std-format
+  <clang-tidy/checks/modernize/use-std-format>` check.
+
+  Converts calls to ``absl::StrFormat``, or other functions via
+  configuration options, to C++20's ``std::format``, or another function
+  via a configuration option, modifying the format string appropriately and
+  removing now-unnecessary calls to ``std::string::c_str()`` and
+  ``std::string::data()``.
 
 - New :doc:`readability-enum-initial-value
   <clang-tidy/checks/readability/enum-initial-value>` check.
@@ -197,10 +224,18 @@ Changes in existing checks
   check by ignoring ``__func__`` macro in lambda captures, initializers of
   default parameters and nested function declarations.
 
+- Improved :doc:`bugprone-multi-level-implicit-pointer-conversion
+  <clang-tidy/checks/bugprone/multi-level-implicit-pointer-conversion>` check
+  by ignoring implicit pointer conversions that are part of a cast expression.
+
 - Improved :doc:`bugprone-non-zero-enum-to-bool-conversion
   <clang-tidy/checks/bugprone/non-zero-enum-to-bool-conversion>` check by
   eliminating false positives resulting from direct usage of bitwise operators
   within parentheses.
+
+- Improved :doc:`bugprone-optional-value-conversion
+  <clang-tidy/checks/bugprone/optional-value-conversion>` check by eliminating
+  false positives resulting from use of optionals in unevaluated context.
 
 - Improved :doc:`bugprone-suspicious-include
   <clang-tidy/checks/bugprone/suspicious-include>` check by replacing the local
@@ -244,6 +279,12 @@ Changes in existing checks
   <clang-tidy/checks/cppcoreguidelines/use-default-member-init>`. Fixed
   incorrect hints when using list-initialization.
 
+- Improved :doc:`cppcoreguidelines-special-member-functions
+  <clang-tidy/checks/cppcoreguidelines/special-member-functions>` check with a
+  new option `AllowImplicitlyDeletedCopyOrMove`, which removes the requirement
+  for explicit copy or move special member functions when they are already
+  implicitly deleted.
+
 - Improved :doc:`google-build-namespaces
   <clang-tidy/checks/google/build-namespaces>` check by replacing the local
   option `HeaderFileExtensions` by the global option of the same name.
@@ -286,6 +327,10 @@ Changes in existing checks
   Additionally, the option `UseHeaderFileExtensions` is removed, so that the
   check uses the `HeaderFileExtensions` option unconditionally.
 
+- Improved :doc:`misc-header-include-cycle
+  <clang-tidy/checks/misc/header-include-cycle>` check by avoiding crash for self
+  include cycles.
+
 - Improved :doc:`misc-unused-using-decls
   <clang-tidy/checks/misc/unused-using-decls>` check by replacing the local
   option `HeaderFileExtensions` by the global option of the same name.
@@ -304,6 +349,10 @@ Changes in existing checks
   don't remove parentheses used in ``sizeof`` calls when they have array index
   accesses as arguments.
 
+- Improved :doc:`modernize-use-constraints
+  <clang-tidy/checks/modernize/use-constraints>` check by fixing a crash that
+  occurred in some scenarios and excluding system headers from analysis.
+
 - Improved :doc:`modernize-use-nullptr
   <clang-tidy/checks/modernize/use-nullptr>` check to include support for C23,
   which also has introduced the ``nullptr`` keyword.
@@ -316,14 +365,21 @@ Changes in existing checks
   <clang-tidy/checks/modernize/use-starts-ends-with>` check to also handle
   calls to ``compare`` method.
 
+- Improved :doc:`modernize-use-std-print
+  <clang-tidy/checks/modernize/use-std-print>` check to not crash if the
+  format string parameter of the function to be replaced is not of the
+  expected type.
+
 - Improved :doc:`modernize-use-using <clang-tidy/checks/modernize/use-using>`
   check by adding support for detection of typedefs declared on function level.
 
 - Improved :doc:`performance-unnecessary-copy-initialization
   <clang-tidy/checks/performance/unnecessary-copy-initialization>` check by
   detecting more cases of constant access. In particular, pointers can be
-  analyzed, se the check now handles the common patterns
+  analyzed, so the check now handles the common patterns
   `const auto e = (*vector_ptr)[i]` and `const auto e = vector_ptr->at(i);`.
+  Calls to mutable function where there exists a `const` overload are also
+  handled.
 
 - Improved :doc:`readability-avoid-return-with-void-value
   <clang-tidy/checks/readability/avoid-return-with-void-value>` check by adding
@@ -333,24 +389,42 @@ Changes in existing checks
   <clang-tidy/checks/readability/const-return-type>` check to eliminate false
   positives when returning types with const not at the top level.
 
+- Improved :doc:`readability-container-size-empty
+  <clang-tidy/checks/readability/container-size-empty>` check to prevent false
+  positives when utilizing ``size`` or ``length`` methods that accept parameter.
+  Fixed crash when facing template user defined literals.
+
 - Improved :doc:`readability-duplicate-include
   <clang-tidy/checks/readability/duplicate-include>` check by excluding include
   directives that form the filename using macro.
+
+- Improved :doc:`readability-else-after-return
+  <clang-tidy/checks/readability/else-after-return>` check to ignore
+  `if consteval` statements, for which the `else` branch must not be removed.
 
 - Improved :doc:`readability-identifier-naming
   <clang-tidy/checks/readability/identifier-naming>` check in `GetConfigPerFile`
   mode by resolving symbolic links to header files. Fixed handling of Hungarian
   Prefix when configured to `LowerCase`. Added support for renaming designated
-  initializers. Added support for renaming macro arguments.
+  initializers. Added support for renaming macro arguments. Fixed renaming
+  conflicts arising from out-of-line member function template definitions.
 
 - Improved :doc:`readability-implicit-bool-conversion
   <clang-tidy/checks/readability/implicit-bool-conversion>` check to provide
   valid fix suggestions for ``static_cast`` without a preceding space and
-  fixed problem with duplicate parentheses in double implicit casts.
+  fixed problem with duplicate parentheses in double implicit casts. Corrected
+  the fix suggestions for C23 and later by using C-style casts instead of
+  ``static_cast``. Fixed false positives in C++20 spaceship operator by ignoring
+  casts in implicit and defaulted functions.
 
 - Improved :doc:`readability-redundant-inline-specifier
   <clang-tidy/checks/readability/redundant-inline-specifier>` check to properly
   emit warnings for static data member with an in-class initializer.
+
+- Improved :doc:`readability-redundant-member-init
+  <clang-tidy/checks/readability/redundant-member-init>` check to avoid
+  false-positives when type of the member does not match the type of the
+  initializer.
 
 - Improved :doc:`readability-static-accessed-through-instance
   <clang-tidy/checks/readability/static-accessed-through-instance>` check to

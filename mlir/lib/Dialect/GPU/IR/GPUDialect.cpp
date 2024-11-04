@@ -1730,12 +1730,11 @@ void GPUModuleOp::build(OpBuilder &builder, OperationState &result,
                         StringRef name, ArrayAttr targets,
                         Attribute offloadingHandler) {
   ensureTerminator(*result.addRegion(), builder, result.location);
-  result.attributes.push_back(builder.getNamedAttr(
-      ::mlir::SymbolTable::getSymbolAttrName(), builder.getStringAttr(name)));
 
   Properties &props = result.getOrAddProperties<Properties>();
   if (targets)
     props.targets = targets;
+  props.setSymName(builder.getStringAttr(name));
   props.offloadingHandler = offloadingHandler;
 }
 
@@ -1751,11 +1750,11 @@ ParseResult GPUModuleOp::parse(OpAsmParser &parser, OperationState &result) {
   StringAttr nameAttr;
   ArrayAttr targetsAttr;
 
-  if (parser.parseSymbolName(nameAttr, mlir::SymbolTable::getSymbolAttrName(),
-                             result.attributes))
+  if (parser.parseSymbolName(nameAttr))
     return failure();
 
   Properties &props = result.getOrAddProperties<Properties>();
+  props.setSymName(nameAttr);
 
   // Parse the optional offloadingHandler
   if (succeeded(parser.parseOptionalLess())) {

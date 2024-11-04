@@ -139,6 +139,7 @@ void Flang::addCodegenOptions(const ArgList &Args,
 
   Args.addAllArgs(CmdArgs, {options::OPT_flang_experimental_hlfir,
                             options::OPT_flang_deprecated_no_hlfir,
+                            options::OPT_flang_experimental_integer_overflow,
                             options::OPT_fno_ppc_native_vec_elem_order,
                             options::OPT_fppc_native_vec_elem_order});
 }
@@ -764,6 +765,9 @@ void Flang::ConstructJob(Compilation &C, const JobAction &JA,
       CmdArgs.push_back("-fopenmp");
       Args.AddAllArgs(CmdArgs, options::OPT_fopenmp_version_EQ);
 
+      if (Args.hasArg(options::OPT_fopenmp_force_usm))
+        CmdArgs.push_back("-fopenmp-force-usm");
+
       // FIXME: Clang supports a whole bunch more flags here.
       break;
     default:
@@ -797,6 +801,9 @@ void Flang::ConstructJob(Compilation &C, const JobAction &JA,
   switch (FPKeepKind) {
   case CodeGenOptions::FramePointerKind::None:
     FPKeepKindStr = "-mframe-pointer=none";
+    break;
+   case CodeGenOptions::FramePointerKind::Reserved:
+    FPKeepKindStr = "-mframe-pointer=reserved";
     break;
   case CodeGenOptions::FramePointerKind::NonLeaf:
     FPKeepKindStr = "-mframe-pointer=non-leaf";

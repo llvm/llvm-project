@@ -558,6 +558,7 @@ bool RISCVInstructionSelector::select(MachineInstr &MI) {
   case TargetOpcode::G_PTRTOINT:
   case TargetOpcode::G_INTTOPTR:
   case TargetOpcode::G_TRUNC:
+  case TargetOpcode::G_FREEZE:
     return selectCopy(MI, MRI);
   case TargetOpcode::G_CONSTANT: {
     Register DstReg = MI.getOperand(0).getReg();
@@ -848,6 +849,8 @@ const TargetRegisterClass *RISCVInstructionSelector::getRegClassForTypeOnBank(
   }
 
   if (RB.getID() == RISCV::FPRBRegBankID) {
+    if (Ty.getSizeInBits() == 16)
+      return &RISCV::FPR16RegClass;
     if (Ty.getSizeInBits() == 32)
       return &RISCV::FPR32RegClass;
     if (Ty.getSizeInBits() == 64)

@@ -1379,7 +1379,7 @@ define <8 x i8> @sextmask2v8i8(<8 x i16> %src1, <8 x i8> %src2) {
 define <8 x i8> @sextmask3v8i8(<8 x i16> %src1, <8 x i8> %src2) {
 ; CHECK-LABEL: sextmask3v8i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sshr.8h v0, v0, #7
+; CHECK-NEXT:    ushr.8h v0, v0, #7
 ; CHECK-NEXT:    sshll.8h v1, v1, #0
 ; CHECK-NEXT:    shadd.8h v0, v0, v1
 ; CHECK-NEXT:    xtn.8b v0, v0

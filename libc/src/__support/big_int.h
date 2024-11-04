@@ -299,7 +299,8 @@ LIBC_INLINE constexpr cpp::array<word, N> shift(cpp::array<word, N> array,
     if (bit_offset == 0)
       dst = part1; // no crosstalk between parts.
     else if constexpr (direction == LEFT)
-      dst = (part1 << bit_offset) | (part2 >> (WORD_BITS - bit_offset));
+      dst = static_cast<word>((part1 << bit_offset) |
+                              (part2 >> (WORD_BITS - bit_offset)));
     else
       dst = (part1 >> bit_offset) | (part2 << (WORD_BITS - bit_offset));
   }
@@ -969,7 +970,8 @@ struct WordTypeSelector : cpp::type_identity<
 #endif // LIBC_TYPES_HAS_INT64
                               > {
 };
-// Except if we request 32 bits explicitly.
+// Except if we request 16 or 32 bits explicitly.
+template <> struct WordTypeSelector<16> : cpp::type_identity<uint16_t> {};
 template <> struct WordTypeSelector<32> : cpp::type_identity<uint32_t> {};
 template <size_t Bits>
 using WordTypeSelectorT = typename WordTypeSelector<Bits>::type;

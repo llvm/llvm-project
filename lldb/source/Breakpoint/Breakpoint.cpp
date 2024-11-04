@@ -885,7 +885,7 @@ void Breakpoint::GetDescription(Stream *s, lldb::DescriptionLevel level,
         s->Printf("Names:");
         s->EOL();
         s->IndentMore();
-        for (std::string name : m_name_list) {
+        for (const std::string &name : m_name_list) {
           s->Indent();
           s->Printf("%s\n", name.c_str());
         }

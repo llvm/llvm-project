@@ -205,7 +205,8 @@ protected:
 
   /// Executes the given \p Executable and returns the stdout.
   llvm::Expected<std::unique_ptr<llvm::MemoryBuffer>>
-  executeToolChainProgram(StringRef Executable) const;
+  executeToolChainProgram(StringRef Executable,
+                          unsigned SecondsToWait = 0) const;
 
   void setTripleEnvironment(llvm::Triple::EnvironmentType Env);
 

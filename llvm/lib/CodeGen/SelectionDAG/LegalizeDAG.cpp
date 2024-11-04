@@ -1105,6 +1105,11 @@ void SelectionDAGLegalize::LegalizeOp(SDNode *Node) {
     if (Action == TargetLowering::Legal)
       Action = TargetLowering::Custom;
     break;
+  case ISD::CLEAR_CACHE:
+    // This operation is typically going to be LibCall unless the target wants
+    // something differrent.
+    Action = TLI.getOperationAction(Node->getOpcode(), Node->getValueType(0));
+    break;
   case ISD::READCYCLECOUNTER:
   case ISD::READSTEADYCOUNTER:
     // READCYCLECOUNTER and READSTEADYCOUNTER return a i64, even if type
@@ -2050,8 +2055,15 @@ SDValue SelectionDAGLegalize::ExpandSPLAT_VECTOR(SDNode *Node) {
 std::pair<SDValue, SDValue> SelectionDAGLegalize::ExpandLibCall(RTLIB::Libcall LC, SDNode *Node,
                                             TargetLowering::ArgListTy &&Args,
                                             bool isSigned) {
-  SDValue Callee = DAG.getExternalSymbol(TLI.getLibcallName(LC),
-                                         TLI.getPointerTy(DAG.getDataLayout()));
+  EVT CodePtrTy = TLI.getPointerTy(DAG.getDataLayout());
+  SDValue Callee;
+  if (const char *LibcallName = TLI.getLibcallName(LC))
+    Callee = DAG.getExternalSymbol(LibcallName, CodePtrTy);
+  else {
+    Callee = DAG.getUNDEF(CodePtrTy);
+    DAG.getContext()->emitError(Twine("no libcall available for ") +
+                                Node->getOperationName(&DAG));
+  }
 
   EVT RetVT = Node->getValueType(0);
   Type *RetTy = RetVT.getTypeForEVT(*DAG.getContext());
@@ -4152,7 +4164,8 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
              "expanded.");
       EVT CCVT = getSetCCResultType(CmpVT);
       SDValue Cond = DAG.getNode(ISD::SETCC, dl, CCVT, Tmp1, Tmp2, CC, Node->getFlags());
-      Results.push_back(DAG.getSelect(dl, VT, Cond, Tmp3, Tmp4));
+      Results.push_back(
+          DAG.getSelect(dl, VT, Cond, Tmp3, Tmp4, Node->getFlags()));
       break;
     }
 
@@ -4289,6 +4302,11 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
   case ISD::VP_CTTZ_ELTS:
   case ISD::VP_CTTZ_ELTS_ZERO_UNDEF:
     Results.push_back(TLI.expandVPCTTZElements(Node, DAG));
+    break;
+  case ISD::CLEAR_CACHE:
+    // The default expansion of llvm.clear_cache is simply a no-op for those
+    // targets where it is not needed.
+    Results.push_back(Node->getOperand(0));
     break;
   case ISD::GLOBAL_OFFSET_TABLE:
   case ISD::GlobalAddress:
@@ -4447,6 +4465,17 @@ void SelectionDAGLegalize::ConvertNodeToLibcall(SDNode *Node) {
     Results.push_back(CallResult.second);
     break;
   }
+  case ISD::CLEAR_CACHE: {
+    TargetLowering::MakeLibCallOptions CallOptions;
+    SDValue InputChain = Node->getOperand(0);
+    SDValue StartVal = Node->getOperand(1);
+    SDValue EndVal = Node->getOperand(2);
+    std::pair<SDValue, SDValue> Tmp = TLI.makeLibCall(
+        DAG, RTLIB::CLEAR_CACHE, MVT::isVoid, {StartVal, EndVal}, CallOptions,
+        SDLoc(Node), InputChain);
+    Results.push_back(Tmp.second);
+    break;
+  }
   case ISD::FMINNUM:
   case ISD::STRICT_FMINNUM:
     ExpandFPLibCall(Node, RTLIB::FMIN_F32, RTLIB::FMIN_F64,
@@ -4484,6 +4513,11 @@ void SelectionDAGLegalize::ConvertNodeToLibcall(SDNode *Node) {
     ExpandFPLibCall(Node, RTLIB::COS_F32, RTLIB::COS_F64,
                     RTLIB::COS_F80, RTLIB::COS_F128,
                     RTLIB::COS_PPCF128, Results);
+    break;
+  case ISD::FTAN:
+  case ISD::STRICT_FTAN:
+    ExpandFPLibCall(Node, RTLIB::TAN_F32, RTLIB::TAN_F64, RTLIB::TAN_F80,
+                    RTLIB::TAN_F128, RTLIB::TAN_PPCF128, Results);
     break;
   case ISD::FSINCOS:
     // Expand into sincos libcall.
@@ -5032,7 +5066,7 @@ void SelectionDAGLegalize::PromoteNode(SDNode *Node) {
   case ISD::CTTZ_ZERO_UNDEF:
   case ISD::CTLZ:
   case ISD::CTLZ_ZERO_UNDEF:
-  case ISD::CTPOP:
+  case ISD::CTPOP: {
     // Zero extend the argument unless its cttz, then use any_extend.
     if (Node->getOpcode() == ISD::CTTZ ||
         Node->getOpcode() == ISD::CTTZ_ZERO_UNDEF)
@@ -5040,7 +5074,8 @@ void SelectionDAGLegalize::PromoteNode(SDNode *Node) {
     else
       Tmp1 = DAG.getNode(ISD::ZERO_EXTEND, dl, NVT, Node->getOperand(0));
 
-    if (Node->getOpcode() == ISD::CTTZ) {
+    unsigned NewOpc = Node->getOpcode();
+    if (NewOpc == ISD::CTTZ) {
       // The count is the same in the promoted type except if the original
       // value was zero.  This can be handled by setting the bit just off
       // the top of the original type.
@@ -5048,12 +5083,12 @@ void SelectionDAGLegalize::PromoteNode(SDNode *Node) {
                                         OVT.getSizeInBits());
       Tmp1 = DAG.getNode(ISD::OR, dl, NVT, Tmp1,
                          DAG.getConstant(TopBit, dl, NVT));
+      NewOpc = ISD::CTTZ_ZERO_UNDEF;
     }
     // Perform the larger operation. For CTPOP and CTTZ_ZERO_UNDEF, this is
     // already the correct result.
-    Tmp1 = DAG.getNode(Node->getOpcode(), dl, NVT, Tmp1);
-    if (Node->getOpcode() == ISD::CTLZ ||
-        Node->getOpcode() == ISD::CTLZ_ZERO_UNDEF) {
+    Tmp1 = DAG.getNode(NewOpc, dl, NVT, Tmp1);
+    if (NewOpc == ISD::CTLZ || NewOpc == ISD::CTLZ_ZERO_UNDEF) {
       // Tmp1 = Tmp1 - (sizeinbits(NVT) - sizeinbits(Old VT))
       Tmp1 = DAG.getNode(ISD::SUB, dl, NVT, Tmp1,
                           DAG.getConstant(NVT.getSizeInBits() -
@@ -5061,6 +5096,7 @@ void SelectionDAGLegalize::PromoteNode(SDNode *Node) {
     }
     Results.push_back(DAG.getNode(ISD::TRUNCATE, dl, OVT, Tmp1));
     break;
+  }
   case ISD::BITREVERSE:
   case ISD::BSWAP: {
     unsigned DiffBits = NVT.getSizeInBits() - OVT.getSizeInBits();
@@ -5437,6 +5473,7 @@ void SelectionDAGLegalize::PromoteNode(SDNode *Node) {
   case ISD::FSQRT:
   case ISD::FSIN:
   case ISD::FCOS:
+  case ISD::FTAN:
   case ISD::FLOG:
   case ISD::FLOG2:
   case ISD::FLOG10:
@@ -5461,6 +5498,7 @@ void SelectionDAGLegalize::PromoteNode(SDNode *Node) {
   case ISD::STRICT_FSQRT:
   case ISD::STRICT_FSIN:
   case ISD::STRICT_FCOS:
+  case ISD::STRICT_FTAN:
   case ISD::STRICT_FLOG:
   case ISD::STRICT_FLOG2:
   case ISD::STRICT_FLOG10:

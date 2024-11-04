@@ -16,7 +16,7 @@ define void @test_not_first_lane_only_constant(ptr %A, ptr noalias %B)  {
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = trunc i32 [[INDEX]] to i16
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i16 [[OFFSET_IDX]], 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i16, ptr [[A]], i16 [[TMP0]]
-; CHECK-NEXT:    [[TMP13:%.*]] = load i16, ptr %B, align 2
+; CHECK-NEXT:    [[TMP13:%.*]] = load i16, ptr [[B]], align 2
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT5:%.*]] = insertelement <4 x i16> poison, i16 [[TMP13]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT6:%.*]] = shufflevector <4 x i16> [[BROADCAST_SPLATINSERT5]], <4 x i16> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i16, ptr [[TMP1]], i32 0
@@ -86,8 +86,6 @@ define void @test_not_first_lane_only_wide_compare(ptr %A, ptr noalias %B, i16 %
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i16> poison, i16 [[X]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <4 x i16> [[BROADCAST_SPLATINSERT]], <4 x i16> poison, <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT3:%.*]] = insertelement <4 x ptr> poison, ptr [[B]], i64 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT4:%.*]] = shufflevector <4 x ptr> [[BROADCAST_SPLATINSERT3]], <4 x ptr> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
@@ -97,8 +95,8 @@ define void @test_not_first_lane_only_wide_compare(ptr %A, ptr noalias %B, i16 %
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i16, ptr [[TMP1]], i32 0
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i16>, ptr [[TMP2]], align 2
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp ult <4 x i16> [[WIDE_LOAD]], [[BROADCAST_SPLAT2]]
-; CHECK-NEXT:    [[PREDPHI:%.*]] = select <4 x i1> [[TMP5]], <4 x ptr> poison, <4 x ptr> [[BROADCAST_SPLAT4]]
-; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <4 x ptr> [[PREDPHI]], i32 0
+; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <4 x i1> [[TMP5]], i32 0
+; CHECK-NEXT:    [[TMP12:%.*]] = select i1 [[TMP4]], ptr poison, ptr [[B]]
 ; CHECK-NEXT:    [[TMP13:%.*]] = load i16, ptr [[TMP12]], align 2
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT5:%.*]] = insertelement <4 x i16> poison, i16 [[TMP13]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT6:%.*]] = shufflevector <4 x i16> [[BROADCAST_SPLATINSERT5]], <4 x i16> poison, <4 x i32> zeroinitializer
@@ -165,6 +163,93 @@ loop.latch:
 exit:
   ret void
 }
+
+define void @test_not_first_lane_only_wide_compare_incoming_order_swapped(ptr %A, ptr noalias %B, i16 %x, i16 %y)  {
+; CHECK-LABEL: define void @test_not_first_lane_only_wide_compare_incoming_order_swapped(
+; CHECK-SAME: ptr [[A:%.*]], ptr noalias [[B:%.*]], i16 [[X:%.*]], i16 [[Y:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; CHECK:       vector.ph:
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i16> poison, i16 [[X]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i16> [[BROADCAST_SPLATINSERT]], <4 x i16> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
+; CHECK:       vector.body:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = trunc i32 [[INDEX]] to i16
+; CHECK-NEXT:    [[TMP0:%.*]] = add i16 [[OFFSET_IDX]], 0
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i16, ptr [[A]], i16 [[TMP0]]
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i16, ptr [[TMP1]], i32 0
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i16>, ptr [[TMP2]], align 2
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp ult <4 x i16> [[WIDE_LOAD]], [[BROADCAST_SPLAT]]
+; CHECK-NEXT:    [[TMP4:%.*]] = xor <4 x i1> [[TMP3]], <i1 true, i1 true, i1 true, i1 true>
+; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <4 x i1> [[TMP4]], i32 0
+; CHECK-NEXT:    [[PREDPHI:%.*]] = select i1 [[TMP9]], ptr [[B]], ptr poison
+; CHECK-NEXT:    [[TMP12:%.*]] = load i16, ptr [[PREDPHI]], align 2
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT3:%.*]] = insertelement <4 x i16> poison, i16 [[TMP12]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT4:%.*]] = shufflevector <4 x i16> [[BROADCAST_SPLATINSERT3]], <4 x i16> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    store <4 x i16> [[BROADCAST_SPLAT4]], ptr [[TMP2]], align 2
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
+; CHECK-NEXT:    [[TMP13:%.*]] = icmp eq i32 [[INDEX_NEXT]], 1000
+; CHECK-NEXT:    br i1 [[TMP13]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
+; CHECK:       middle.block:
+; CHECK-NEXT:    br i1 true, label [[EXIT:%.*]], label [[SCALAR_PH]]
+; CHECK:       scalar.ph:
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i16 [ 1000, [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    br label [[LOOP_HEADER:%.*]]
+; CHECK:       loop.header:
+; CHECK-NEXT:    [[IV:%.*]] = phi i16 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LOOP_LATCH:%.*]] ]
+; CHECK-NEXT:    [[GEP_A:%.*]] = getelementptr inbounds i16, ptr [[A]], i16 [[IV]]
+; CHECK-NEXT:    [[L_0:%.*]] = load i16, ptr [[GEP_A]], align 2
+; CHECK-NEXT:    [[C_0:%.*]] = icmp ult i16 [[L_0]], [[X]]
+; CHECK-NEXT:    br i1 [[C_0]], label [[LOOP_LATCH]], label [[ELSE_1:%.*]]
+; CHECK:       else.1:
+; CHECK-NEXT:    [[C_1:%.*]] = icmp ult i16 [[L_0]], [[Y]]
+; CHECK-NEXT:    br i1 [[C_1]], label [[THEN_2:%.*]], label [[ELSE_2:%.*]]
+; CHECK:       then.2:
+; CHECK-NEXT:    br label [[ELSE_2]]
+; CHECK:       else.2:
+; CHECK-NEXT:    br label [[LOOP_LATCH]]
+; CHECK:       loop.latch:
+; CHECK-NEXT:    [[MERGE:%.*]] = phi ptr [ poison, [[LOOP_HEADER]] ], [ [[B]], [[ELSE_2]] ]
+; CHECK-NEXT:    [[L:%.*]] = load i16, ptr [[MERGE]], align 2
+; CHECK-NEXT:    [[IV_NEXT]] = add i16 [[IV]], 1
+; CHECK-NEXT:    store i16 [[L]], ptr [[GEP_A]], align 2
+; CHECK-NEXT:    [[C_2:%.*]] = icmp eq i16 [[IV_NEXT]], 1000
+; CHECK-NEXT:    br i1 [[C_2]], label [[EXIT]], label [[LOOP_HEADER]], !llvm.loop [[LOOP7:![0-9]+]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %loop.header
+
+loop.header:
+  %iv = phi i16 [ 0, %entry ], [ %iv.next, %loop.latch ]
+  %gep.A = getelementptr inbounds i16, ptr %A, i16 %iv
+  %l.0 = load i16, ptr %gep.A
+  %c.0 = icmp ult i16 %l.0, %x
+  br i1 %c.0, label %loop.latch, label %else.1
+
+else.1:
+  %c.1 = icmp ult i16 %l.0, %y
+  br i1 %c.1, label %then.2, label %else.2
+
+then.2:
+  br label %else.2
+
+else.2:
+  br label %loop.latch
+
+loop.latch:
+  %merge = phi ptr [ poison, %loop.header ], [ %B, %else.2 ]
+  %l = load i16, ptr %merge, align 2
+  %iv.next = add i16 %iv, 1
+  store i16 %l, ptr %gep.A
+  %c.2 = icmp  eq i16 %iv.next, 1000
+  br i1 %c.2, label %exit, label %loop.header
+
+exit:
+  ret void
+}
 ;.
 ; CHECK: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]]}
 ; CHECK: [[META1]] = !{!"llvm.loop.isvectorized", i32 1}
@@ -172,4 +257,6 @@ exit:
 ; CHECK: [[LOOP3]] = distinct !{[[LOOP3]], [[META2]], [[META1]]}
 ; CHECK: [[LOOP4]] = distinct !{[[LOOP4]], [[META1]], [[META2]]}
 ; CHECK: [[LOOP5]] = distinct !{[[LOOP5]], [[META2]], [[META1]]}
+; CHECK: [[LOOP6]] = distinct !{[[LOOP6]], [[META1]], [[META2]]}
+; CHECK: [[LOOP7]] = distinct !{[[LOOP7]], [[META2]], [[META1]]}
 ;.

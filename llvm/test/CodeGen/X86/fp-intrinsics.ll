@@ -2758,6 +2758,58 @@ entry:
   ret float %result
 }
 
+; Verify that tan(42.0) isn't simplified when the rounding mode is unknown.
+define double @ftan() #0 {
+; X87-LABEL: ftan:
+; X87:       # %bb.0: # %entry
+; X87-NEXT:    subl $12, %esp
+; X87-NEXT:    .cfi_def_cfa_offset 16
+; X87-NEXT:    flds {{\.?LCPI[0-9]+_[0-9]+}}
+; X87-NEXT:    fstpl (%esp)
+; X87-NEXT:    wait
+; X87-NEXT:    calll tan
+; X87-NEXT:    addl $12, %esp
+; X87-NEXT:    .cfi_def_cfa_offset 4
+; X87-NEXT:    retl
+;
+; X86-SSE-LABEL: ftan:
+; X86-SSE:       # %bb.0: # %entry
+; X86-SSE-NEXT:    subl $12, %esp
+; X86-SSE-NEXT:    .cfi_def_cfa_offset 16
+; X86-SSE-NEXT:    movsd {{.*#+}} xmm0 = [4.2E+1,0.0E+0]
+; X86-SSE-NEXT:    movsd %xmm0, (%esp)
+; X86-SSE-NEXT:    calll tan
+; X86-SSE-NEXT:    addl $12, %esp
+; X86-SSE-NEXT:    .cfi_def_cfa_offset 4
+; X86-SSE-NEXT:    retl
+;
+; SSE-LABEL: ftan:
+; SSE:       # %bb.0: # %entry
+; SSE-NEXT:    pushq %rax
+; SSE-NEXT:    .cfi_def_cfa_offset 16
+; SSE-NEXT:    movsd {{.*#+}} xmm0 = [4.2E+1,0.0E+0]
+; SSE-NEXT:    callq tan@PLT
+; SSE-NEXT:    popq %rax
+; SSE-NEXT:    .cfi_def_cfa_offset 8
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: ftan:
+; AVX:       # %bb.0: # %entry
+; AVX-NEXT:    pushq %rax
+; AVX-NEXT:    .cfi_def_cfa_offset 16
+; AVX-NEXT:    vmovsd {{.*#+}} xmm0 = [4.2E+1,0.0E+0]
+; AVX-NEXT:    callq tan@PLT
+; AVX-NEXT:    popq %rax
+; AVX-NEXT:    .cfi_def_cfa_offset 8
+; AVX-NEXT:    retq
+entry:
+  %result = call double @llvm.experimental.constrained.tan.f64(double 42.0,
+                                               metadata !"round.dynamic",
+                                               metadata !"fpexcept.strict") #0
+  ret double %result
+}
+
+
 attributes #0 = { strictfp }
 
 @llvm.fp.env = thread_local global i8 zeroinitializer, section "llvm.metadata"
@@ -2771,6 +2823,7 @@ declare double @llvm.experimental.constrained.pow.f64(double, double, metadata, 
 declare double @llvm.experimental.constrained.powi.f64(double, i32, metadata, metadata)
 declare double @llvm.experimental.constrained.sin.f64(double, metadata, metadata)
 declare double @llvm.experimental.constrained.cos.f64(double, metadata, metadata)
+declare double @llvm.experimental.constrained.tan.f64(double, metadata, metadata)
 declare double @llvm.experimental.constrained.exp.f64(double, metadata, metadata)
 declare double @llvm.experimental.constrained.exp2.f64(double, metadata, metadata)
 declare double @llvm.experimental.constrained.log.f64(double, metadata, metadata)

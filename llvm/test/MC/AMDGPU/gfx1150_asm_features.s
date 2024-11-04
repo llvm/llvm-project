@@ -1,5 +1,6 @@
 // RUN: llvm-mc -triple=amdgcn -show-encoding -mcpu=gfx1150 %s | FileCheck --check-prefix=GFX1150 %s
 // RUN: llvm-mc -triple=amdgcn -show-encoding -mcpu=gfx1151 %s | FileCheck --check-prefix=GFX1150 %s
+// RUN: llvm-mc -triple=amdgcn -show-encoding -mcpu=gfx1152 %s | FileCheck --check-prefix=GFX1150 %s
 
 //
 // Subtargets allow src1 of VOP3 DPP instructions to be SGPR or inlinable

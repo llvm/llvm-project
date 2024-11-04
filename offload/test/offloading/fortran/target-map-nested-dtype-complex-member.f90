@@ -27,21 +27,21 @@ program main
       integer(4) :: k
       complex :: l
     end type top_layer
-    
+
     type(top_layer) :: top_dtype
 
 !$omp target map(tofrom: top_dtype%nested%i2, top_dtype%k, top_dtype%nested%j2, top_dtype%nested%array_i2, top_dtype%l)
-    do i = 1, 10 
+    do i = 1, 10
       top_dtype%nested%array_i2(i) = i * 2
-    end do 
+    end do
 
     top_dtype%l = (10,20)
     top_dtype%nested%j2 = (510,210)
-    
+
     top_dtype%nested%i2 = 30.30
     top_dtype%k = 74
 !$omp end target
-  
+
   print *, top_dtype%nested%i2
   print *, top_dtype%k
   print *, top_dtype%nested%array_i2

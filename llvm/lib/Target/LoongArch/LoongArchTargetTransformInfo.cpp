@@ -69,6 +69,10 @@ unsigned LoongArchTTIImpl::getRegisterClassForType(bool Vector,
   return LoongArchRegisterClass::GPRRC;
 }
 
+unsigned LoongArchTTIImpl::getMaxInterleaveFactor(ElementCount VF) {
+  return ST->getMaxInterleaveFactor();
+}
+
 const char *LoongArchTTIImpl::getRegisterClassName(unsigned ClassID) const {
   switch (ClassID) {
   case LoongArchRegisterClass::GPRRC:

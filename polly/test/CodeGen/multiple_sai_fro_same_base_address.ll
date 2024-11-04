@@ -1,5 +1,5 @@
-; RUN: opt %loadPolly -polly-position=before-vectorizer -polly-print-scops -disable-output < %s | FileCheck %s --check-prefix=SCOP
-; RUN: opt %loadPolly -polly-position=before-vectorizer -polly-codegen -S < %s | FileCheck %s --check-prefix=IR
+; RUN: opt %loadNPMPolly -polly-position=before-vectorizer '-passes=print<polly-function-scops>' -disable-output < %s 2>&1 | FileCheck %s --check-prefix=SCOP
+; RUN: opt %loadNPMPolly -polly-position=before-vectorizer -passes=polly-codegen -S < %s | FileCheck %s --check-prefix=IR
 
 ; The IR has two ScopArrayInfo for the value %next.0. This used to produce two
 ; phi nodes in polly.merge_new_and_old, one illegaly using the result of the

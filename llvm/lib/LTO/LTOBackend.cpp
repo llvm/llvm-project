@@ -452,9 +452,8 @@ static void splitCodeGen(const Config &C, TargetMachine *TM,
         CodegenThreadPool.async(
             [&](const SmallString<0> &BC, unsigned ThreadId) {
               LTOLLVMContext Ctx(C);
-              Expected<std::unique_ptr<Module>> MOrErr = parseBitcodeFile(
-                  MemoryBufferRef(StringRef(BC.data(), BC.size()), "ld-temp.o"),
-                  Ctx);
+              Expected<std::unique_ptr<Module>> MOrErr =
+                  parseBitcodeFile(MemoryBufferRef(BC.str(), "ld-temp.o"), Ctx);
               if (!MOrErr)
                 report_fatal_error("Failed to read bitcode");
               std::unique_ptr<Module> MPartInCtx = std::move(MOrErr.get());

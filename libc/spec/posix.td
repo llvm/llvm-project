@@ -1235,6 +1235,11 @@ def POSIX : StandardSpec<"POSIX"> {
           [ArgSpec<PThreadRWLockAttrTPtr>]
       >,
       FunctionSpec<
+          "pthread_rwlockattr_getkind_np",
+          RetValSpec<IntType>,
+          [ArgSpec<PThreadRWLockAttrTPtr>, ArgSpec<IntPtr>]
+      >,
+      FunctionSpec<
           "pthread_rwlockattr_getpshared",
           RetValSpec<IntType>,
           [ArgSpec<ConstPThreadRWLockAttrTPtr>, ArgSpec<IntPtr>]
@@ -1243,6 +1248,11 @@ def POSIX : StandardSpec<"POSIX"> {
           "pthread_rwlockattr_init",
           RetValSpec<IntType>,
           [ArgSpec<PThreadRWLockAttrTPtr>]
+      >,
+      FunctionSpec<
+          "pthread_rwlockattr_setkind_np",
+          RetValSpec<IntType>,
+          [ArgSpec<PThreadRWLockAttrTPtr>, ArgSpec<IntType>]
       >,
       FunctionSpec<
           "pthread_rwlockattr_setpshared",

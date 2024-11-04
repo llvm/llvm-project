@@ -533,12 +533,8 @@ protected:
   NameToOffsetMap m_function_scope_qualified_name_map;
   std::unique_ptr<DWARFDebugRanges> m_ranges;
   UniqueDWARFASTTypeMap m_unique_ast_type_map;
-  // A map from DIE to lldb_private::Type. For record type, the key might be
-  // either declaration DIE or definition DIE.
   DIEToTypePtr m_die_to_type;
   DIEToVariableSP m_die_to_variable_sp;
-  // A map from CompilerType to the struct/class/union/enum DIE (might be a
-  // declaration or a definition) that is used to construct it.
   CompilerTypeToDIE m_forward_decl_compiler_type_to_die;
   llvm::DenseMap<dw_offset_t, std::unique_ptr<SupportFileList>>
       m_type_unit_support_files;
