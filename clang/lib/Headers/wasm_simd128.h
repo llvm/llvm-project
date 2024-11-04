@@ -957,7 +957,7 @@ static __inline__ uint32_t __DEFAULT_FN_ATTRS wasm_i8x16_bitmask(v128_t __a) {
 }
 
 static __inline__ v128_t __DEFAULT_FN_ATTRS wasm_i8x16_popcnt(v128_t __a) {
-  return (v128_t)__builtin_wasm_popcnt_i8x16((__i8x16)__a);
+  return (v128_t)__builtin_elementwise_popcount((__i8x16)__a);
 }
 
 static __inline__ v128_t __DEFAULT_FN_ATTRS wasm_i8x16_shl(v128_t __a,
@@ -1888,18 +1888,17 @@ static __inline__ v128_t __FP16_FN_ATTRS wasm_f16x8_splat(float __a) {
   return (v128_t)__builtin_wasm_splat_f16x8(__a);
 }
 
-static __inline__ float __FP16_FN_ATTRS wasm_f16x8_extract_lane(v128_t __a,
-                                                                int __i)
-    __REQUIRE_CONSTANT(__i) {
-  return __builtin_wasm_extract_lane_f16x8((__f16x8)__a, __i);
-}
+#ifdef __wasm_fp16__
+// TODO Replace the following macros with regular C functions and use normal
+// target-independent vector code like the other replace/extract instructions.
 
-static __inline__ v128_t __FP16_FN_ATTRS wasm_f16x8_replace_lane(v128_t __a,
-                                                                 int __i,
-                                                                 float __b)
-    __REQUIRE_CONSTANT(__i) {
-  return (v128_t)__builtin_wasm_replace_lane_f16x8((__f16x8)__a, __i, __b);
-}
+#define wasm_f16x8_extract_lane(__a, __i)                                      \
+  (__builtin_wasm_extract_lane_f16x8((__f16x8)(__a), __i))
+
+#define wasm_f16x8_replace_lane(__a, __i, __b)                                 \
+  ((v128_t)__builtin_wasm_replace_lane_f16x8((__f16x8)(__a), __i, __b))
+
+#endif
 
 static __inline__ v128_t __FP16_FN_ATTRS wasm_f16x8_abs(v128_t __a) {
   return (v128_t)__builtin_wasm_abs_f16x8((__f16x8)__a);

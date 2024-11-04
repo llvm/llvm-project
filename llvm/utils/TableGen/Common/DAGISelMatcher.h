@@ -370,7 +370,7 @@ public:
   static bool classof(const Matcher *N) { return N->getKind() == MoveParent; }
 
 private:
-  void printImpl(raw_ostream &OS, unsigned indent) const override;
+  void printImpl(raw_ostream &OS, unsigned Indent) const override;
   bool isEqualImpl(const Matcher *M) const override { return true; }
 };
 
@@ -389,7 +389,7 @@ public:
   static bool classof(const Matcher *N) { return N->getKind() == CheckSame; }
 
 private:
-  void printImpl(raw_ostream &OS, unsigned indent) const override;
+  void printImpl(raw_ostream &OS, unsigned Indent) const override;
   bool isEqualImpl(const Matcher *M) const override {
     return cast<CheckSameMatcher>(M)->getMatchNumber() == getMatchNumber();
   }
@@ -414,7 +414,7 @@ public:
   }
 
 private:
-  void printImpl(raw_ostream &OS, unsigned indent) const override;
+  void printImpl(raw_ostream &OS, unsigned Indent) const override;
   bool isEqualImpl(const Matcher *M) const override {
     return cast<CheckChildSameMatcher>(M)->ChildNo == ChildNo &&
            cast<CheckChildSameMatcher>(M)->MatchNumber == MatchNumber;
@@ -983,14 +983,14 @@ private:
 /// recorded node and records the result.
 class EmitNodeXFormMatcher : public Matcher {
   unsigned Slot;
-  Record *NodeXForm;
+  const Record *NodeXForm;
 
 public:
-  EmitNodeXFormMatcher(unsigned slot, Record *nodeXForm)
+  EmitNodeXFormMatcher(unsigned slot, const Record *nodeXForm)
       : Matcher(EmitNodeXForm), Slot(slot), NodeXForm(nodeXForm) {}
 
   unsigned getSlot() const { return Slot; }
-  Record *getNodeXForm() const { return NodeXForm; }
+  const Record *getNodeXForm() const { return NodeXForm; }
 
   static bool classof(const Matcher *N) {
     return N->getKind() == EmitNodeXForm;

@@ -1,3 +1,5 @@
+add_subdirectory(SandboxVectorizer)
+
 set(LLVM_LINK_COMPONENTS
   Analysis
   Core

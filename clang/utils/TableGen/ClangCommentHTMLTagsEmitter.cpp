@@ -19,10 +19,11 @@
 
 using namespace llvm;
 
-void clang::EmitClangCommentHTMLTags(RecordKeeper &Records, raw_ostream &OS) {
-  std::vector<Record *> Tags = Records.getAllDerivedDefinitions("Tag");
+void clang::EmitClangCommentHTMLTags(const RecordKeeper &Records,
+                                     raw_ostream &OS) {
+  ArrayRef<const Record *> Tags = Records.getAllDerivedDefinitions("Tag");
   std::vector<StringMatcher::StringPair> Matches;
-  for (Record *Tag : Tags) {
+  for (const Record *Tag : Tags) {
     Matches.emplace_back(std::string(Tag->getValueAsString("Spelling")),
                          "return true;");
   }
@@ -35,12 +36,12 @@ void clang::EmitClangCommentHTMLTags(RecordKeeper &Records, raw_ostream &OS) {
      << "}\n\n";
 }
 
-void clang::EmitClangCommentHTMLTagsProperties(RecordKeeper &Records,
+void clang::EmitClangCommentHTMLTagsProperties(const RecordKeeper &Records,
                                                raw_ostream &OS) {
-  std::vector<Record *> Tags = Records.getAllDerivedDefinitions("Tag");
+  ArrayRef<const Record *> Tags = Records.getAllDerivedDefinitions("Tag");
   std::vector<StringMatcher::StringPair> MatchesEndTagOptional;
   std::vector<StringMatcher::StringPair> MatchesEndTagForbidden;
-  for (Record *Tag : Tags) {
+  for (const Record *Tag : Tags) {
     std::string Spelling = std::string(Tag->getValueAsString("Spelling"));
     StringMatcher::StringPair Match(Spelling, "return true;");
     if (Tag->getValueAsBit("EndTagOptional"))

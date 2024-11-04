@@ -206,7 +206,7 @@ namespace cwg1814 { // cwg1814: yes
 #endif
 }
 
-namespace cwg1815 { // cwg1815: 19
+namespace cwg1815 { // cwg1815: 20
 #if __cplusplus >= 201402L
   struct A { int &&r = 0; };
   A a = {};

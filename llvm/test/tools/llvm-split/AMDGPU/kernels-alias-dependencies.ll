@@ -1,6 +1,6 @@
 ; RUN: llvm-split -o %t %s -j 2 -mtriple amdgcn-amd-amdhsa
-; RUN: llvm-dis -o - %t0 | FileCheck --check-prefix=CHECK0 %s
-; RUN: llvm-dis -o - %t1 | FileCheck --check-prefix=CHECK1 %s
+; RUN: llvm-dis -o - %t0 | FileCheck --check-prefix=CHECK0 --implicit-check-not=define %s
+; RUN: llvm-dis -o - %t1 | FileCheck --check-prefix=CHECK1 --implicit-check-not=define %s
 
 ; 3 kernels:
 ;   - A calls nothing
@@ -13,16 +13,12 @@
 ; Additionally, @PerryThePlatypus gets externalized as
 ; the alias counts as taking its address.
 
-; CHECK0-NOT: define
-; CHECK0: @Perry = internal alias ptr (), ptr @PerryThePlatypus
-; CHECK0: define hidden void @PerryThePlatypus()
-; CHECK0: define amdgpu_kernel void @B
-; CHECK0: define amdgpu_kernel void @C
-; CHECK0-NOT: define
+; CHECK0: define amdgpu_kernel void @A
 
-; CHECK1-NOT: define
-; CHECK1: define amdgpu_kernel void @A
-; CHECK1-NOT: define
+; CHECK1: @Perry = internal alias ptr (), ptr @PerryThePlatypus
+; CHECK1: define hidden void @PerryThePlatypus()
+; CHECK1: define amdgpu_kernel void @B
+; CHECK1: define amdgpu_kernel void @C
 
 @Perry = internal alias ptr(), ptr @PerryThePlatypus
 

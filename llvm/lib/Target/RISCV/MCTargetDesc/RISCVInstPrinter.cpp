@@ -265,8 +265,6 @@ void RISCVInstPrinter::printRegReg(const MCInst *MI, unsigned OpNo,
   const MCOperand &MO = MI->getOperand(OpNo);
 
   assert(MO.isReg() && "printRegReg can only print register operands");
-  if (MO.getReg() == RISCV::NoRegister)
-    return;
   printRegName(O, MO.getReg());
 
   O << "(";

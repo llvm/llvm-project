@@ -111,8 +111,17 @@ write_cmake_config("lit_common_configured") {
   }
 
   if (llvm_enable_zlib) {
-    values += [ "ZLIB_FOUND_PYBOOL=1" ]
+    # FIXME: Include dir and library are wrong on Windows; look at zlib_path.
+    values += [
+      "ZLIB_FOUND_PYBOOL=1",
+      "ZLIB_INCLUDE_DIR=-I=",
+      "ZLIB_LIBRARY=-lz",
+    ]
   } else {
-    values += [ "ZLIB_FOUND_PYBOOL=0" ]
+    values += [
+      "ZLIB_FOUND_PYBOOL=0",
+      "ZLIB_INCLUDE_DIR=",
+      "ZLIB_LIBRARY=",
+    ]
   }
 }

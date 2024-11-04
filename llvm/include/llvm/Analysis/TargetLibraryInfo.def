@@ -2183,6 +2183,21 @@ TLI_DEFINE_ENUM_INTERNAL(sinl)
 TLI_DEFINE_STRING_INTERNAL("sinl")
 TLI_DEFINE_SIG_INTERNAL(LDbl, LDbl)
 
+/// void sincos(double x, double *sin_out, double *cos_out);
+TLI_DEFINE_ENUM_INTERNAL(sincos)
+TLI_DEFINE_STRING_INTERNAL("sincos")
+TLI_DEFINE_SIG_INTERNAL(Void, Dbl, Ptr, Ptr)
+
+/// void sincosf(float x, float *sin_out, float *cos_out);
+TLI_DEFINE_ENUM_INTERNAL(sincosf)
+TLI_DEFINE_STRING_INTERNAL("sincosf")
+TLI_DEFINE_SIG_INTERNAL(Void, Flt, Ptr, Ptr)
+
+/// void sincosl(long double x, long double *sin_out, long double *cos_out);
+TLI_DEFINE_ENUM_INTERNAL(sincosl)
+TLI_DEFINE_STRING_INTERNAL("sincosl")
+TLI_DEFINE_SIG_INTERNAL(Void, LDbl, Ptr, Ptr)
+
 /// int siprintf(char *str, const char *format, ...);
 TLI_DEFINE_ENUM_INTERNAL(siprintf)
 TLI_DEFINE_STRING_INTERNAL("siprintf")

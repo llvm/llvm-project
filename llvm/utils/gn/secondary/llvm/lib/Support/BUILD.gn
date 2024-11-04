@@ -114,6 +114,7 @@ static_library("Support") {
     "ModRef.cpp",
     "NativeFormatting.cpp",
     "OptimizedStructLayout.cpp",
+    "OptionStrCmp.cpp",
     "Optional.cpp",
     "PGOOptions.cpp",
     "Parallel.cpp",

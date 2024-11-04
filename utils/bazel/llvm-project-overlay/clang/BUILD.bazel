@@ -26,7 +26,6 @@ exports_files([
     "tools/clang-format/clang-format.el",
     "tools/clang-format/clang-format-test.el",
     "tools/clang-format/clang-format.py",
-    "tools/clang-rename/clang-rename.el",
     "tools/extra/clang-include-fixer/tool/clang-include-fixer.el",
     "tools/extra/clang-include-fixer/tool/clang-include-fixer-test.el",
 ])
@@ -2583,20 +2582,6 @@ cc_binary(
         ":format",
         ":frontend",
         ":lex",
-        ":rewrite",
-        ":tooling",
-        ":tooling_refactoring",
-        "//llvm:Support",
-    ],
-)
-
-cc_binary(
-    name = "clang-rename",
-    srcs = glob(["tools/clang-rename/*.cpp"]),
-    stamp = 0,
-    deps = [
-        ":basic",
-        ":frontend",
         ":rewrite",
         ":tooling",
         ":tooling_refactoring",

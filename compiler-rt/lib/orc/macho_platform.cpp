@@ -16,6 +16,7 @@
 #include "debug.h"
 #include "error.h"
 #include "interval_map.h"
+#include "jit_dispatch.h"
 #include "wrapper_function_utils.h"
 
 #include <algorithm>
@@ -30,8 +31,8 @@
 
 #define DEBUG_TYPE "macho_platform"
 
-using namespace __orc_rt;
-using namespace __orc_rt::macho;
+using namespace orc_rt;
+using namespace orc_rt::macho;
 
 // Declare function tags for functions in the JIT process.
 ORC_RT_JIT_DISPATCH_TAG(__orc_rt_macho_push_initializers_tag)
@@ -82,7 +83,7 @@ using MachOJITDylibDepInfoMap =
 
 } // anonymous namespace
 
-namespace __orc_rt {
+namespace orc_rt {
 
 using SPSMachOObjectPlatformSectionsMap =
     SPSSequence<SPSTuple<SPSString, SPSExecutorAddrRange>>;
@@ -139,7 +140,7 @@ public:
   }
 };
 
-} // namespace __orc_rt
+} // namespace orc_rt
 
 namespace {
 struct TLVDescriptor {
@@ -330,6 +331,7 @@ public:
 
   const char *dlerror();
   void *dlopen(std::string_view Name, int Mode);
+  int dlupdate(void *DSOHandle, int Mode);
   int dlclose(void *DSOHandle);
   void *dlsym(void *DSOHandle, const char *Symbol);
 
@@ -379,6 +381,12 @@ private:
   Error dlopenInitialize(std::unique_lock<std::mutex> &JDStatesLock,
                          JITDylibState &JDS, MachOJITDylibDepInfoMap &DepInfo);
 
+  Error dlupdateImpl(void *DSOHandle, int Mode);
+  Error dlupdateFull(std::unique_lock<std::mutex> &JDStatesLock,
+                     JITDylibState &JDS);
+  Error dlupdateInitialize(std::unique_lock<std::mutex> &JDStatesLock,
+                           JITDylibState &JDS);
+
   Error dlcloseImpl(void *DSOHandle);
   Error dlcloseDeinitialize(std::unique_lock<std::mutex> &JDStatesLock,
                             JITDylibState &JDS);
@@ -406,7 +414,7 @@ private:
 
 } // anonymous namespace
 
-namespace __orc_rt {
+namespace orc_rt {
 
 class SPSMachOExecutorSymbolFlags;
 
@@ -441,7 +449,7 @@ public:
   }
 };
 
-} // namespace __orc_rt
+} // namespace orc_rt
 
 namespace {
 
@@ -788,6 +796,20 @@ void *MachOPlatformRuntimeState::dlopen(std::string_view Path, int Mode) {
   }
 }
 
+int MachOPlatformRuntimeState::dlupdate(void *DSOHandle, int Mode) {
+  ORC_RT_DEBUG({
+    std::string S;
+    printdbg("MachOPlatform::dlupdate(%p) (%s)\n", DSOHandle, S.c_str());
+  });
+  std::lock_guard<std::recursive_mutex> Lock(DyldAPIMutex);
+  if (auto Err = dlupdateImpl(DSOHandle, Mode)) {
+    // FIXME: Make dlerror thread safe.
+    DLFcnError = toString(std::move(Err));
+    return -1;
+  }
+  return 0;
+}
+
 int MachOPlatformRuntimeState::dlclose(void *DSOHandle) {
   ORC_RT_DEBUG({
     auto *JDS = getJITDylibStateByHeader(DSOHandle);
@@ -915,7 +937,7 @@ Error MachOPlatformRuntimeState::requestPushSymbols(
   Error OpErr = Error::success();
   if (auto Err = WrapperFunction<SPSError(
           SPSExecutorAddr, SPSSequence<SPSTuple<SPSString, bool>>)>::
-          call(&__orc_rt_macho_push_symbols_tag, OpErr,
+          call(JITDispatch(&__orc_rt_macho_push_symbols_tag), OpErr,
                ExecutorAddr::fromPtr(JDS.Header), Symbols)) {
     cantFail(std::move(OpErr));
     return std::move(Err);
@@ -1145,8 +1167,9 @@ Error MachOPlatformRuntimeState::dlopenFull(
   // Unlock so that we can accept the initializer update.
   JDStatesLock.unlock();
   if (auto Err = WrapperFunction<SPSExpected<SPSMachOJITDylibDepInfoMap>(
-          SPSExecutorAddr)>::call(&__orc_rt_macho_push_initializers_tag,
-                                  DepInfo, ExecutorAddr::fromPtr(JDS.Header)))
+          SPSExecutorAddr)>::
+          call(JITDispatch(&__orc_rt_macho_push_initializers_tag), DepInfo,
+               ExecutorAddr::fromPtr(JDS.Header)))
     return Err;
   JDStatesLock.lock();
 
@@ -1238,6 +1261,67 @@ Error MachOPlatformRuntimeState::dlopenInitialize(
       if (auto Err = dlcloseDeinitialize(JDStatesLock, *DepJDS))
         return Err;
   }
+
+  return Error::success();
+}
+
+Error MachOPlatformRuntimeState::dlupdateImpl(void *DSOHandle, int Mode) {
+  std::unique_lock<std::mutex> Lock(JDStatesMutex);
+
+  // Try to find JITDylib state by DSOHandle.
+  auto *JDS = getJITDylibStateByHeader(DSOHandle);
+
+  if (!JDS) {
+    std::ostringstream ErrStream;
+    ErrStream << "No registered JITDylib for " << DSOHandle;
+    return make_error<StringError>(ErrStream.str());
+  }
+
+  if (!JDS->referenced())
+    return make_error<StringError>("dlupdate failed, JITDylib must be open.");
+
+  if (!JDS->Sealed) {
+    if (auto Err = dlupdateFull(Lock, *JDS))
+      return Err;
+  }
+
+  return Error::success();
+}
+
+Error MachOPlatformRuntimeState::dlupdateFull(
+    std::unique_lock<std::mutex> &JDStatesLock, JITDylibState &JDS) {
+  // Call back to the JIT to push the initializers.
+  Expected<MachOJITDylibDepInfoMap> DepInfo((MachOJITDylibDepInfoMap()));
+  // Unlock so that we can accept the initializer update.
+  JDStatesLock.unlock();
+  if (auto Err = WrapperFunction<SPSExpected<SPSMachOJITDylibDepInfoMap>(
+          SPSExecutorAddr)>::
+          call(JITDispatch(&__orc_rt_macho_push_initializers_tag), DepInfo,
+               ExecutorAddr::fromPtr(JDS.Header)))
+    return Err;
+  JDStatesLock.lock();
+
+  if (!DepInfo)
+    return DepInfo.takeError();
+
+  if (auto Err = dlupdateInitialize(JDStatesLock, JDS))
+    return Err;
+
+  return Error::success();
+}
+
+Error MachOPlatformRuntimeState::dlupdateInitialize(
+    std::unique_lock<std::mutex> &JDStatesLock, JITDylibState &JDS) {
+  ORC_RT_DEBUG({
+    printdbg("MachOPlatformRuntimeState::dlupdateInitialize(\"%s\")\n",
+             JDS.Name.c_str());
+  });
+
+  // Initialize this JITDylib.
+  if (auto Err = registerObjCRegistrationObjects(JDStatesLock, JDS))
+    return Err;
+  if (auto Err = runModInits(JDStatesLock, JDS))
+    return Err;
 
   return Error::success();
 }
@@ -1515,6 +1599,10 @@ void *__orc_rt_macho_jit_dlopen(const char *path, int mode) {
   return MachOPlatformRuntimeState::get().dlopen(path, mode);
 }
 
+int __orc_rt_macho_jit_dlupdate(void *dso_handle, int mode) {
+  return MachOPlatformRuntimeState::get().dlupdate(dso_handle, mode);
+}
+
 int __orc_rt_macho_jit_dlclose(void *dso_handle) {
   return MachOPlatformRuntimeState::get().dlclose(dso_handle);
 }
@@ -1532,8 +1620,8 @@ ORC_RT_INTERFACE int64_t __orc_rt_macho_run_program(const char *JITDylibName,
                                                     int argc, char *argv[]) {
   using MainTy = int (*)(int, char *[]);
 
-  void *H = __orc_rt_macho_jit_dlopen(JITDylibName,
-                                      __orc_rt::macho::ORC_RT_RTLD_LAZY);
+  void *H =
+      __orc_rt_macho_jit_dlopen(JITDylibName, orc_rt::macho::ORC_RT_RTLD_LAZY);
   if (!H) {
     __orc_rt_log_error(__orc_rt_macho_jit_dlerror());
     return -1;

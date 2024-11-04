@@ -5052,6 +5052,19 @@ TEST(ForEachConstructorInitializer, MatchesInitializers) {
     cxxConstructorDecl(forEachConstructorInitializer(cxxCtorInitializer()))));
 }
 
+TEST(LambdaCapture, InvalidLambdaCapture) {
+  // not crash
+  EXPECT_FALSE(matches(
+      R"(int main() {
+        struct A { A()=default; A(A const&)=delete; };
+        A a; [a]() -> void {}();
+        return 0;
+      })",
+      traverse(TK_IgnoreUnlessSpelledInSource,
+               lambdaExpr(has(lambdaCapture()))),
+      langCxx11OrLater()));
+}
+
 TEST(ForEachLambdaCapture, MatchesCaptures) {
   EXPECT_TRUE(matches(
       "int main() { int x, y; auto f = [x, y]() { return x + y; }; }",

@@ -405,12 +405,6 @@ i32x4 bitselect(i32x4 x, i32x4 y, i32x4 c) {
   // WEBASSEMBLY-NEXT: ret
 }
 
-i8x16 popcnt(i8x16 x) {
-  return __builtin_wasm_popcnt_i8x16(x);
-  // WEBASSEMBLY: call  range(i8 0, 9) <16 x i8> @llvm.ctpop.v16i8(<16 x i8> %x)
-  // WEBASSEMBLY-NEXT: ret
-}
-
 int any_true_v128(i8x16 x) {
   return __builtin_wasm_any_true_v128(x);
   // WEBASSEMBLY: call i32 @llvm.wasm.anytrue.v16i8(<16 x i8> %x)
@@ -834,16 +828,16 @@ f16x8 splat_f16x8(float a) {
   return __builtin_wasm_splat_f16x8(a);
 }
 
-float extract_lane_f16x8(f16x8 a, int i) {
-  // WEBASSEMBLY:  %0 = tail call float @llvm.wasm.extract.lane.f16x8(<8 x half> %a, i32 %i)
+float extract_lane_f16x8(f16x8 a) {
+  // WEBASSEMBLY:  %0 = tail call float @llvm.wasm.extract.lane.f16x8(<8 x half> %a, i32 7)
   // WEBASSEMBLY-NEXT: ret float %0
-  return __builtin_wasm_extract_lane_f16x8(a, i);
+  return __builtin_wasm_extract_lane_f16x8(a, 7);
 }
 
-f16x8 replace_lane_f16x8(f16x8 a, int i, float v) {
-  // WEBASSEMBLY:  %0 = tail call <8 x half> @llvm.wasm.replace.lane.f16x8(<8 x half> %a, i32 %i, float %v)
+f16x8 replace_lane_f16x8(f16x8 a, float v) {
+  // WEBASSEMBLY:  %0 = tail call <8 x half> @llvm.wasm.replace.lane.f16x8(<8 x half> %a, i32 7, float %v)
   // WEBASSEMBLY-NEXT: ret <8 x half> %0
-  return __builtin_wasm_replace_lane_f16x8(a, i, v);
+  return __builtin_wasm_replace_lane_f16x8(a, 7, v);
 }
 
 f16x8 min_f16x8(f16x8 a, f16x8 b) {

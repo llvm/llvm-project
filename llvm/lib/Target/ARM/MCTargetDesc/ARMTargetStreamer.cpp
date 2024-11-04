@@ -96,7 +96,7 @@ void ARMTargetStreamer::emitSetFP(unsigned FpReg, unsigned SpReg,
                                   int64_t Offset) {}
 void ARMTargetStreamer::emitMovSP(unsigned Reg, int64_t Offset) {}
 void ARMTargetStreamer::emitPad(int64_t Offset) {}
-void ARMTargetStreamer::emitRegSave(const SmallVectorImpl<unsigned> &RegList,
+void ARMTargetStreamer::emitRegSave(const SmallVectorImpl<MCRegister> &RegList,
                                     bool isVector) {}
 void ARMTargetStreamer::emitUnwindRaw(int64_t StackOffset,
                                       const SmallVectorImpl<uint8_t> &Opcodes) {

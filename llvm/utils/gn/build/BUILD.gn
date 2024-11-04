@@ -183,9 +183,11 @@ config("compiler_defaults") {
     cflags += [ "/EHs-c-" ]
     cflags_cc += [ "/std:c++17" ]
 
-    # cl.exe doesn't set __cplusplus correctly by default.
-    # clang-cl gets it right by default, so don't needlessly add the flag there.
     if (!is_clang) {
+      # expand __VA_ARGS__ in "OPTION(...) LLVM_MAKE_OPT_ID(__VA_ARGS__)"
+      cflags += [ "/Zc:preprocessor" ]
+      # cl.exe doesn't set __cplusplus correctly by default.
+      # clang-cl gets it right by default, so don't needlessly add the flag there.
       cflags_cc += [ "/Zc:__cplusplus" ]
     }
 

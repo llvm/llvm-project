@@ -58,6 +58,7 @@ define void @vector_reverse_i64(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; CHECK-NEXT:  vp<%2> = original trip-count
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<for.body.preheader>:
+; CHECK-NEXT:    IR %0 = zext i32 %n to i64
 ; CHECK-NEXT:    EMIT vp<%2> = EXPAND SCEV (zext i32 %n to i64)
 ; CHECK-NEXT:  No successors
 ; CHECK-EMPTY:
@@ -141,6 +142,7 @@ define void @vector_reverse_i64(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; CHECK-NEXT:  vp<%2> = original trip-count
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<for.body.preheader>:
+; CHECK-NEXT:    IR %0 = zext i32 %n to i64
 ; CHECK-NEXT:    EMIT vp<%2> = EXPAND SCEV (zext i32 %n to i64)
 ; CHECK-NEXT:  No successors
 ; CHECK-EMPTY:
@@ -260,6 +262,7 @@ define void @vector_reverse_f32(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; CHECK-NEXT:  vp<%2> = original trip-count
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<for.body.preheader>:
+; CHECK-NEXT:    IR %0 = zext i32 %n to i64
 ; CHECK-NEXT:    EMIT vp<%2> = EXPAND SCEV (zext i32 %n to i64)
 ; CHECK-NEXT:  No successors
 ; CHECK-EMPTY:
@@ -343,6 +346,7 @@ define void @vector_reverse_f32(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; CHECK-NEXT:  vp<%2> = original trip-count
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<for.body.preheader>:
+; CHECK-NEXT:    IR %0 = zext i32 %n to i64
 ; CHECK-NEXT:    EMIT vp<%2> = EXPAND SCEV (zext i32 %n to i64)
 ; CHECK-NEXT:  No successors
 ; CHECK-EMPTY:

@@ -31,4 +31,13 @@ program omp_default
   end do
   !$omp end teams
 
+  !$omp parallel
+  !ERROR: DEFAULT clause is not allowed on the DO directive
+  !$omp do default(private)
+  do i = 1, 10
+     k = i
+  end do
+  !$omp end do
+  !$omp end parallel
+
 end program omp_default

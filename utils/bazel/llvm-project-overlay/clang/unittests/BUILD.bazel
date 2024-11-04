@@ -299,32 +299,6 @@ cc_library(
 )
 
 cc_test(
-    name = "rename_tests",
-    size = "small",
-    timeout = "moderate",
-    srcs = glob(
-        [
-            "Rename/*.cpp",
-            "Rename/*.h",
-        ],
-        allow_empty = False,
-    ),
-    shard_count = 20,
-    deps = [
-        ":rename_tests_tooling_hdrs",
-        "//clang:ast_matchers",
-        "//clang:basic",
-        "//clang:format",
-        "//clang:frontend",
-        "//clang:tooling",
-        "//clang:tooling_refactoring",
-        "//llvm:Support",
-        "//third-party/unittest:gtest",
-        "//third-party/unittest:gtest_main",
-    ],
-)
-
-cc_test(
     name = "rewrite_tests",
     size = "small",
     srcs = glob(

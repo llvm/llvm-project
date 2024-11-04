@@ -12,8 +12,8 @@
 
 #include <__config>
 #include <__functional/binary_function.h>
-#include <__functional/invoke.h>
 #include <__functional/weak_result_type.h>
+#include <__type_traits/invoke.h>
 #include <__utility/forward.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)

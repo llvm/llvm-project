@@ -108,8 +108,8 @@ define i32 @abs32(i32 %x) {
 ;
 ; RV64ZBB-LABEL: abs32:
 ; RV64ZBB:       # %bb.0:
+; RV64ZBB-NEXT:    negw a1, a0
 ; RV64ZBB-NEXT:    sext.w a0, a0
-; RV64ZBB-NEXT:    neg a1, a0
 ; RV64ZBB-NEXT:    max a0, a0, a1
 ; RV64ZBB-NEXT:    ret
   %abs = tail call i32 @llvm.abs.i32(i32 %x, i1 true)

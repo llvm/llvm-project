@@ -1,5 +1,5 @@
-// RUN: llvm-mc -triple=amdgcn -mcpu=gfx1100 -mattr=+wavefrontsize32 -show-encoding %s | FileCheck --check-prefix=GFX11 --implicit-check-not=_e32 %s
-// RUN: llvm-mc -triple=amdgcn -mcpu=gfx1100 -mattr=+wavefrontsize64 -show-encoding %s | FileCheck --check-prefix=GFX11 --implicit-check-not=_e32 %s
+// RUN: llvm-mc -triple=amdgcn -mcpu=gfx1100 -mattr=+wavefrontsize32,+real-true16 -show-encoding %s | FileCheck --check-prefix=GFX11 --implicit-check-not=_e32 %s
+// RUN: llvm-mc -triple=amdgcn -mcpu=gfx1100 -mattr=+wavefrontsize64,+real-true16 -show-encoding %s | FileCheck --check-prefix=GFX11 --implicit-check-not=_e32 %s
 
 v_ceil_f16 v128, 0xfe0b
 // GFX11: v_ceil_f16_e64
@@ -97,49 +97,94 @@ v_cos_f16 v255, vcc_lo
 v_cos_f16 v5, v199
 // GFX11: v_cos_f16_e64
 
-v_cvt_f16_f32 v128, 0xaf123456
+v_cvt_f16_f32 v128.l, 0xaf123456
 // GFX11: v_cvt_f16_f32_e64
 
-v_cvt_f16_f32 v255, -1
+v_cvt_f16_f32 v128.h, 0xaf123456
 // GFX11: v_cvt_f16_f32_e64
 
-v_cvt_f16_f32 v255, 0.5
+v_cvt_f16_f32 v255.l, -1
 // GFX11: v_cvt_f16_f32_e64
 
-v_cvt_f16_f32 v255, exec_hi
+v_cvt_f16_f32 v255.h, -1
 // GFX11: v_cvt_f16_f32_e64
 
-v_cvt_f16_f32 v255, exec_lo
+v_cvt_f16_f32 v255.l, 0.5
 // GFX11: v_cvt_f16_f32_e64
 
-v_cvt_f16_f32 v255, m0
+v_cvt_f16_f32 v255.h, 0.5
 // GFX11: v_cvt_f16_f32_e64
 
-v_cvt_f16_f32 v255, null
+v_cvt_f16_f32 v255.l, exec_hi
 // GFX11: v_cvt_f16_f32_e64
 
-v_cvt_f16_f32 v255, s1
+v_cvt_f16_f32 v255.h, exec_hi
 // GFX11: v_cvt_f16_f32_e64
 
-v_cvt_f16_f32 v255, s105
+v_cvt_f16_f32 v255.l, exec_lo
 // GFX11: v_cvt_f16_f32_e64
 
-v_cvt_f16_f32 v255, src_scc
+v_cvt_f16_f32 v255.h, exec_lo
 // GFX11: v_cvt_f16_f32_e64
 
-v_cvt_f16_f32 v255, ttmp15
+v_cvt_f16_f32 v255.l, m0
 // GFX11: v_cvt_f16_f32_e64
 
-v_cvt_f16_f32 v255, v1
+v_cvt_f16_f32 v255.h, m0
 // GFX11: v_cvt_f16_f32_e64
 
-v_cvt_f16_f32 v255, v255
+v_cvt_f16_f32 v255.l, null
 // GFX11: v_cvt_f16_f32_e64
 
-v_cvt_f16_f32 v255, vcc_hi
+v_cvt_f16_f32 v255.h, null
 // GFX11: v_cvt_f16_f32_e64
 
-v_cvt_f16_f32 v255, vcc_lo
+v_cvt_f16_f32 v255.l, s1
+// GFX11: v_cvt_f16_f32_e64
+
+v_cvt_f16_f32 v255.h, s1
+// GFX11: v_cvt_f16_f32_e64
+
+v_cvt_f16_f32 v255.l, s105
+// GFX11: v_cvt_f16_f32_e64
+
+v_cvt_f16_f32 v255.h, s105
+// GFX11: v_cvt_f16_f32_e64
+
+v_cvt_f16_f32 v255.l, src_scc
+// GFX11: v_cvt_f16_f32_e64
+
+v_cvt_f16_f32 v255.h, src_scc
+// GFX11: v_cvt_f16_f32_e64
+
+v_cvt_f16_f32 v255.l, ttmp15
+// GFX11: v_cvt_f16_f32_e64
+
+v_cvt_f16_f32 v255.h, ttmp15
+// GFX11: v_cvt_f16_f32_e64
+
+v_cvt_f16_f32 v255.l, v1
+// GFX11: v_cvt_f16_f32_e64
+
+v_cvt_f16_f32 v255.h, v1
+// GFX11: v_cvt_f16_f32_e64
+
+v_cvt_f16_f32 v255.l, v255
+// GFX11: v_cvt_f16_f32_e64
+
+v_cvt_f16_f32 v255.h, v255
+// GFX11: v_cvt_f16_f32_e64
+
+v_cvt_f16_f32 v255.l, vcc_hi
+// GFX11: v_cvt_f16_f32_e64
+
+v_cvt_f16_f32 v255.h, vcc_hi
+// GFX11: v_cvt_f16_f32_e64
+
+v_cvt_f16_f32 v255.l, vcc_lo
+// GFX11: v_cvt_f16_f32_e64
+
+v_cvt_f16_f32 v255.h, vcc_lo
 // GFX11: v_cvt_f16_f32_e64
 
 v_cvt_f16_i16 v128, 0xfe0b
@@ -238,7 +283,10 @@ v_cvt_f16_u16 v255, vcc_lo
 v_cvt_f16_u16 v5, v199
 // GFX11: v_cvt_f16_u16_e64
 
-v_cvt_f32_f16 v5, v199
+v_cvt_f32_f16 v5, v199.l
+// GFX11: v_cvt_f32_f16_e64
+
+v_cvt_f32_f16 v5, v199.h
 // GFX11: v_cvt_f32_f16_e64
 
 v_cvt_i16_f16 v128, 0xfe0b
@@ -1084,10 +1132,16 @@ v_cos_f16 v255, v127 quad_perm:[3,2,1,0]
 v_cos_f16 v5, v199 quad_perm:[3,2,1,0]
 // GFX11: v_cos_f16_e64
 
-v_cvt_f16_f32 v255, v1 quad_perm:[3,2,1,0]
+v_cvt_f16_f32 v255.l, v1 quad_perm:[3,2,1,0]
 // GFX11: v_cvt_f16_f32_e64
 
-v_cvt_f16_f32 v255, v255 quad_perm:[3,2,1,0]
+v_cvt_f16_f32 v255.h, v1 quad_perm:[3,2,1,0]
+// GFX11: v_cvt_f16_f32_e64
+
+v_cvt_f16_f32 v255.l, v255 quad_perm:[3,2,1,0]
+// GFX11: v_cvt_f16_f32_e64
+
+v_cvt_f16_f32 v255.h, v255 quad_perm:[3,2,1,0]
 // GFX11: v_cvt_f16_f32_e64
 
 v_cvt_f16_i16 v255, v1 quad_perm:[3,2,1,0]
@@ -1108,7 +1162,10 @@ v_cvt_f16_u16 v255, v127 quad_perm:[3,2,1,0]
 v_cvt_f16_u16 v5, v199 quad_perm:[3,2,1,0]
 // GFX11: v_cvt_f16_u16_e64
 
-v_cvt_f32_f16 v5, v199 quad_perm:[3,2,1,0]
+v_cvt_f32_f16 v5, v199.l quad_perm:[3,2,1,0]
+// GFX11: v_cvt_f32_f16_e64
+
+v_cvt_f32_f16 v5, v199.h quad_perm:[3,2,1,0]
 // GFX11: v_cvt_f32_f16_e64
 
 v_cvt_i16_f16 v255, v1 quad_perm:[3,2,1,0]
@@ -1291,10 +1348,16 @@ v_cos_f16 v255, v127 dpp8:[7,6,5,4,3,2,1,0]
 v_cos_f16 v5, v199 dpp8:[7,6,5,4,3,2,1,0]
 // GFX11: v_cos_f16_e64
 
-v_cvt_f16_f32 v255, v1 dpp8:[7,6,5,4,3,2,1,0]
+v_cvt_f16_f32 v255.l, v1 dpp8:[7,6,5,4,3,2,1,0]
 // GFX11: v_cvt_f16_f32_e64
 
-v_cvt_f16_f32 v255, v255 dpp8:[7,6,5,4,3,2,1,0]
+v_cvt_f16_f32 v255.h v1 dpp8:[7,6,5,4,3,2,1,0]
+// GFX11: v_cvt_f16_f32_e64
+
+v_cvt_f16_f32 v255.l, v255 dpp8:[7,6,5,4,3,2,1,0]
+// GFX11: v_cvt_f16_f32_e64
+
+v_cvt_f16_f32 v255.h, v255 dpp8:[7,6,5,4,3,2,1,0]
 // GFX11: v_cvt_f16_f32_e64
 
 v_cvt_f16_i16 v255, v1 dpp8:[7,6,5,4,3,2,1,0]
@@ -1315,7 +1378,10 @@ v_cvt_f16_u16 v255, v127 dpp8:[7,6,5,4,3,2,1,0]
 v_cvt_f16_u16 v5, v199 dpp8:[7,6,5,4,3,2,1,0]
 // GFX11: v_cvt_f16_u16_e64
 
-v_cvt_f32_f16 v5, v199 dpp8:[7,6,5,4,3,2,1,0]
+v_cvt_f32_f16 v5, v199.l dpp8:[7,6,5,4,3,2,1,0]
+// GFX11: v_cvt_f32_f16_e64
+
+v_cvt_f32_f16 v5, v199.h dpp8:[7,6,5,4,3,2,1,0]
 // GFX11: v_cvt_f32_f16_e64
 
 v_cvt_i16_f16 v255, v1 dpp8:[7,6,5,4,3,2,1,0]

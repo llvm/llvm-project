@@ -52,36 +52,37 @@ using namespace llvm;
 
 namespace {
 class MacroFusionPredicatorEmitter {
-  RecordKeeper &Records;
-  CodeGenTarget Target;
+  const RecordKeeper &Records;
+  const CodeGenTarget Target;
 
-  void emitMacroFusionDecl(ArrayRef<Record *> Fusions, PredicateExpander &PE,
-                           raw_ostream &OS);
-  void emitMacroFusionImpl(ArrayRef<Record *> Fusions, PredicateExpander &PE,
-                           raw_ostream &OS);
-  void emitPredicates(ArrayRef<Record *> FirstPredicate, bool IsCommutable,
-                      PredicateExpander &PE, raw_ostream &OS);
-  void emitFirstPredicate(Record *SecondPredicate, bool IsCommutable,
-                          PredicateExpander &PE, raw_ostream &OS);
-  void emitSecondPredicate(Record *SecondPredicate, bool IsCommutable,
+  void emitMacroFusionDecl(ArrayRef<const Record *> Fusions,
                            PredicateExpander &PE, raw_ostream &OS);
-  void emitBothPredicate(Record *Predicates, bool IsCommutable,
+  void emitMacroFusionImpl(ArrayRef<const Record *> Fusions,
+                           PredicateExpander &PE, raw_ostream &OS);
+  void emitPredicates(ArrayRef<const Record *> FirstPredicate,
+                      bool IsCommutable, PredicateExpander &PE,
+                      raw_ostream &OS);
+  void emitFirstPredicate(const Record *SecondPredicate, bool IsCommutable,
+                          PredicateExpander &PE, raw_ostream &OS);
+  void emitSecondPredicate(const Record *SecondPredicate, bool IsCommutable,
+                           PredicateExpander &PE, raw_ostream &OS);
+  void emitBothPredicate(const Record *Predicates, bool IsCommutable,
                          PredicateExpander &PE, raw_ostream &OS);
 
 public:
-  MacroFusionPredicatorEmitter(RecordKeeper &R) : Records(R), Target(R) {}
+  MacroFusionPredicatorEmitter(const RecordKeeper &R) : Records(R), Target(R) {}
 
   void run(raw_ostream &OS);
 };
 } // End anonymous namespace.
 
 void MacroFusionPredicatorEmitter::emitMacroFusionDecl(
-    ArrayRef<Record *> Fusions, PredicateExpander &PE, raw_ostream &OS) {
+    ArrayRef<const Record *> Fusions, PredicateExpander &PE, raw_ostream &OS) {
   OS << "#ifdef GET_" << Target.getName() << "_MACRO_FUSION_PRED_DECL\n";
   OS << "#undef GET_" << Target.getName() << "_MACRO_FUSION_PRED_DECL\n\n";
   OS << "namespace llvm {\n";
 
-  for (Record *Fusion : Fusions) {
+  for (const Record *Fusion : Fusions) {
     OS << "bool is" << Fusion->getName() << "(const TargetInstrInfo &, "
        << "const TargetSubtargetInfo &, "
        << "const MachineInstr *, "
@@ -93,14 +94,14 @@ void MacroFusionPredicatorEmitter::emitMacroFusionDecl(
 }
 
 void MacroFusionPredicatorEmitter::emitMacroFusionImpl(
-    ArrayRef<Record *> Fusions, PredicateExpander &PE, raw_ostream &OS) {
+    ArrayRef<const Record *> Fusions, PredicateExpander &PE, raw_ostream &OS) {
   OS << "#ifdef GET_" << Target.getName() << "_MACRO_FUSION_PRED_IMPL\n";
   OS << "#undef GET_" << Target.getName() << "_MACRO_FUSION_PRED_IMPL\n\n";
   OS << "namespace llvm {\n";
 
-  for (Record *Fusion : Fusions) {
-    std::vector<Record *> Predicates =
-        Fusion->getValueAsListOfDefs("Predicates");
+  for (const Record *Fusion : Fusions) {
+    std::vector<const Record *> Predicates =
+        Fusion->getValueAsListOfConstDefs("Predicates");
     bool IsCommutable = Fusion->getValueAsBit("IsCommutable");
 
     OS << "bool is" << Fusion->getName() << "(\n";
@@ -121,12 +122,11 @@ void MacroFusionPredicatorEmitter::emitMacroFusionImpl(
   OS << "\n#endif\n";
 }
 
-void MacroFusionPredicatorEmitter::emitPredicates(ArrayRef<Record *> Predicates,
-                                                  bool IsCommutable,
-                                                  PredicateExpander &PE,
-                                                  raw_ostream &OS) {
-  for (Record *Predicate : Predicates) {
-    Record *Target = Predicate->getValueAsDef("Target");
+void MacroFusionPredicatorEmitter::emitPredicates(
+    ArrayRef<const Record *> Predicates, bool IsCommutable,
+    PredicateExpander &PE, raw_ostream &OS) {
+  for (const Record *Predicate : Predicates) {
+    const Record *Target = Predicate->getValueAsDef("Target");
     if (Target->getName() == "first_fusion_target")
       emitFirstPredicate(Predicate, IsCommutable, PE, OS);
     else if (Target->getName() == "second_fusion_target")
@@ -139,7 +139,7 @@ void MacroFusionPredicatorEmitter::emitPredicates(ArrayRef<Record *> Predicates,
   }
 }
 
-void MacroFusionPredicatorEmitter::emitFirstPredicate(Record *Predicate,
+void MacroFusionPredicatorEmitter::emitFirstPredicate(const Record *Predicate,
                                                       bool IsCommutable,
                                                       PredicateExpander &PE,
                                                       raw_ostream &OS) {
@@ -172,7 +172,7 @@ void MacroFusionPredicatorEmitter::emitFirstPredicate(Record *Predicate,
   }
 }
 
-void MacroFusionPredicatorEmitter::emitSecondPredicate(Record *Predicate,
+void MacroFusionPredicatorEmitter::emitSecondPredicate(const Record *Predicate,
                                                        bool IsCommutable,
                                                        PredicateExpander &PE,
                                                        raw_ostream &OS) {
@@ -223,7 +223,7 @@ void MacroFusionPredicatorEmitter::emitSecondPredicate(Record *Predicate,
   }
 }
 
-void MacroFusionPredicatorEmitter::emitBothPredicate(Record *Predicate,
+void MacroFusionPredicatorEmitter::emitBothPredicate(const Record *Predicate,
                                                      bool IsCommutable,
                                                      PredicateExpander &PE,
                                                      raw_ostream &OS) {
@@ -277,9 +277,7 @@ void MacroFusionPredicatorEmitter::run(raw_ostream &OS) {
   PE.setByRef(false);
   PE.setExpandForMC(false);
 
-  std::vector<Record *> Fusions = Records.getAllDerivedDefinitions("Fusion");
-  // Sort macro fusions by name.
-  sort(Fusions, LessRecord());
+  ArrayRef<const Record *> Fusions = Records.getAllDerivedDefinitions("Fusion");
   emitMacroFusionDecl(Fusions, PE, OS);
   OS << "\n";
   emitMacroFusionImpl(Fusions, PE, OS);

@@ -3,8 +3,6 @@
 // RUN: llvm-mc -triple=amdgcn -mcpu=gfx1200 -mattr=+wavefrontsize64,+real-true16 -show-encoding -comment-column=0 %s | FileCheck --strict-whitespace --check-prefixes=GFX12,GFX12-ASM %s
 // RUN: llvm-mc -triple=amdgcn -mcpu=gfx1200 -mattr=+wavefrontsize64,+real-true16 -show-encoding %s | %extract-encodings | llvm-mc -triple=amdgcn -mcpu=gfx1200 -mattr=+wavefrontsize64,+real-true16 -disassemble -show-encoding -comment-column=0 | FileCheck --strict-whitespace --check-prefixes=GFX12,GFX12-DIS %s
 
-// this file will be converted to true16 format when more true16 instructions are supported
-
 v_bfrev_b32_e32 v5, v1
 // GFX12: v_bfrev_b32_e32 v5, v1 ; encoding: [0x01,0x71,0x0a,0x7e]
 
@@ -446,50 +444,56 @@ v_cvt_pk_f32_fp8_e32 v[2:3], 3
 v_cvt_pk_f32_fp8_e32 v[2:3], v3
 // GFX12: v_cvt_pk_f32_fp8_e32 v[2:3], v3 ; encoding: [0x03,0xdd,0x04,0x7e]
 
-v_cvt_f16_f32 v5, v1
-// GFX12: v_cvt_f16_f32_e32 v5, v1 ; encoding: [0x01,0x15,0x0a,0x7e]
+v_cvt_f16_f32 v5.l, v1
+// GFX12: v_cvt_f16_f32_e32 v5.l, v1 ; encoding: [0x01,0x15,0x0a,0x7e]
 
-v_cvt_f16_f32 v5, v255
-// GFX12: v_cvt_f16_f32_e32 v5, v255 ; encoding: [0xff,0x15,0x0a,0x7e]
+v_cvt_f16_f32 v5.l, v255
+// GFX12: v_cvt_f16_f32_e32 v5.l, v255 ; encoding: [0xff,0x15,0x0a,0x7e]
 
-v_cvt_f16_f32 v5, s1
-// GFX12: v_cvt_f16_f32_e32 v5, s1 ; encoding: [0x01,0x14,0x0a,0x7e]
+v_cvt_f16_f32 v5.l, s1
+// GFX12: v_cvt_f16_f32_e32 v5.l, s1 ; encoding: [0x01,0x14,0x0a,0x7e]
 
-v_cvt_f16_f32 v5, s105
-// GFX12: v_cvt_f16_f32_e32 v5, s105 ; encoding: [0x69,0x14,0x0a,0x7e]
+v_cvt_f16_f32 v5.l, s105
+// GFX12: v_cvt_f16_f32_e32 v5.l, s105 ; encoding: [0x69,0x14,0x0a,0x7e]
 
-v_cvt_f16_f32 v5, vcc_lo
-// GFX12: v_cvt_f16_f32_e32 v5, vcc_lo ; encoding: [0x6a,0x14,0x0a,0x7e]
+v_cvt_f16_f32 v5.l, vcc_lo
+// GFX12: v_cvt_f16_f32_e32 v5.l, vcc_lo ; encoding: [0x6a,0x14,0x0a,0x7e]
 
-v_cvt_f16_f32 v5, vcc_hi
-// GFX12: v_cvt_f16_f32_e32 v5, vcc_hi ; encoding: [0x6b,0x14,0x0a,0x7e]
+v_cvt_f16_f32 v5.l, vcc_hi
+// GFX12: v_cvt_f16_f32_e32 v5.l, vcc_hi ; encoding: [0x6b,0x14,0x0a,0x7e]
 
-v_cvt_f16_f32 v5, ttmp15
-// GFX12: v_cvt_f16_f32_e32 v5, ttmp15 ; encoding: [0x7b,0x14,0x0a,0x7e]
+v_cvt_f16_f32 v5.l, ttmp15
+// GFX12: v_cvt_f16_f32_e32 v5.l, ttmp15 ; encoding: [0x7b,0x14,0x0a,0x7e]
 
-v_cvt_f16_f32 v5, m0
-// GFX12: v_cvt_f16_f32_e32 v5, m0 ; encoding: [0x7d,0x14,0x0a,0x7e]
+v_cvt_f16_f32 v5.l, m0
+// GFX12: v_cvt_f16_f32_e32 v5.l, m0 ; encoding: [0x7d,0x14,0x0a,0x7e]
 
-v_cvt_f16_f32 v5, exec_lo
-// GFX12: v_cvt_f16_f32_e32 v5, exec_lo ; encoding: [0x7e,0x14,0x0a,0x7e]
+v_cvt_f16_f32 v5.l, exec_lo
+// GFX12: v_cvt_f16_f32_e32 v5.l, exec_lo ; encoding: [0x7e,0x14,0x0a,0x7e]
 
-v_cvt_f16_f32 v5, exec_hi
-// GFX12: v_cvt_f16_f32_e32 v5, exec_hi ; encoding: [0x7f,0x14,0x0a,0x7e]
+v_cvt_f16_f32 v5.l, exec_hi
+// GFX12: v_cvt_f16_f32_e32 v5.l, exec_hi ; encoding: [0x7f,0x14,0x0a,0x7e]
 
-v_cvt_f16_f32 v5, null
-// GFX12: v_cvt_f16_f32_e32 v5, null ; encoding: [0x7c,0x14,0x0a,0x7e]
+v_cvt_f16_f32 v5.l, null
+// GFX12: v_cvt_f16_f32_e32 v5.l, null ; encoding: [0x7c,0x14,0x0a,0x7e]
 
-v_cvt_f16_f32 v5, -1
-// GFX12: v_cvt_f16_f32_e32 v5, -1 ; encoding: [0xc1,0x14,0x0a,0x7e]
+v_cvt_f16_f32 v5.l, -1
+// GFX12: v_cvt_f16_f32_e32 v5.l, -1 ; encoding: [0xc1,0x14,0x0a,0x7e]
 
-v_cvt_f16_f32 v5, 0.5
-// GFX12: v_cvt_f16_f32_e32 v5, 0.5 ; encoding: [0xf0,0x14,0x0a,0x7e]
+v_cvt_f16_f32 v5.l, 0.5
+// GFX12: v_cvt_f16_f32_e32 v5.l, 0.5 ; encoding: [0xf0,0x14,0x0a,0x7e]
 
-v_cvt_f16_f32 v5, src_scc
-// GFX12: v_cvt_f16_f32_e32 v5, src_scc ; encoding: [0xfd,0x14,0x0a,0x7e]
+v_cvt_f16_f32 v5.l, src_scc
+// GFX12: v_cvt_f16_f32_e32 v5.l, src_scc ; encoding: [0xfd,0x14,0x0a,0x7e]
 
-v_cvt_f16_f32 v127, 0xaf123456
-// GFX12: v_cvt_f16_f32_e32 v127, 0xaf123456 ; encoding: [0xff,0x14,0xfe,0x7e,0x56,0x34,0x12,0xaf]
+v_cvt_f16_f32 v127.l, 0xaf123456
+// GFX12: v_cvt_f16_f32_e32 v127.l, 0xaf123456 ; encoding: [0xff,0x14,0xfe,0x7e,0x56,0x34,0x12,0xaf]
+
+v_cvt_f16_f32 v5.h, src_scc
+// GFX12: v_cvt_f16_f32_e32 v5.h, src_scc ; encoding: [0xfd,0x14,0x0a,0x7f]
+
+v_cvt_f16_f32 v127.h, 0xaf123456
+// GFX12: v_cvt_f16_f32_e32 v127.h, 0xaf123456 ; encoding: [0xff,0x14,0xfe,0x7f,0x56,0x34,0x12,0xaf]
 
 v_cvt_f16_i16 v5, v1
 // GFX12: v_cvt_f16_i16_e32 v5, v1 ; encoding: [0x01,0xa3,0x0a,0x7e]
@@ -583,11 +587,17 @@ v_cvt_f16_u16 v5, src_scc
 v_cvt_f16_u16 v127, 0xfe0b
 // GFX12: v_cvt_f16_u16_e32 v127, 0xfe0b ; encoding: [0xff,0xa0,0xfe,0x7e,0x0b,0xfe,0x00,0x00]
 
-v_cvt_f32_f16 v5, v1
-// GFX12: v_cvt_f32_f16_e32 v5, v1 ; encoding: [0x01,0x17,0x0a,0x7e]
+v_cvt_f32_f16 v5, v1.l
+// GFX12: v_cvt_f32_f16_e32 v5, v1.l ; encoding: [0x01,0x17,0x0a,0x7e]
 
-v_cvt_f32_f16 v5, v127
-// GFX12: v_cvt_f32_f16_e32 v5, v127 ; encoding: [0x7f,0x17,0x0a,0x7e]
+v_cvt_f32_f16 v5, v127.l
+// GFX12: v_cvt_f32_f16_e32 v5, v127.l ; encoding: [0x7f,0x17,0x0a,0x7e]
+
+v_cvt_f32_f16 v5, v1.h
+// GFX12: v_cvt_f32_f16_e32 v5, v1.h ; encoding: [0x81,0x17,0x0a,0x7e]
+
+v_cvt_f32_f16 v5, v127.h
+// GFX12: v_cvt_f32_f16_e32 v5, v127.h ; encoding: [0xff,0x17,0x0a,0x7e]
 
 v_cvt_f32_f16 v5, s1
 // GFX12: v_cvt_f32_f16_e32 v5, s1 ; encoding: [0x01,0x16,0x0a,0x7e]

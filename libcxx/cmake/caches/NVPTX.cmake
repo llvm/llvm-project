@@ -33,4 +33,4 @@ set(LIBCXX_ADDITIONAL_COMPILE_FLAGS
     "-nogpulib;-flto;-fconvergent-functions;--cuda-feature=+ptx63" CACHE STRING "")
 set(LIBCXXABI_ADDITIONAL_COMPILE_FLAGS
     "-nogpulib;-flto;-fconvergent-functions;--cuda-feature=+ptx63" CACHE STRING "")
-set(CMAKE_REQUIRED_FLAGS "-nogpulib -nodefaultlibs -flto -c" CACHE STRING "")
+set(CMAKE_REQUIRED_FLAGS "-nogpulib -flto -c" CACHE STRING "")

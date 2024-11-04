@@ -59,6 +59,7 @@ group("unittests") {
     "Transforms/Scalar:ScalarTests",
     "Transforms/Utils:UtilsTests",
     "Transforms/Vectorize:VectorizeTests",
+    "Transforms/Vectorize/SandboxVectorizer:SandboxVectorizerTests",
     "XRay:XRayTests",
     "tools/llvm-cfi-verify:CFIVerifyTests",
     "tools/llvm-exegesis:LLVMExegesisTests",

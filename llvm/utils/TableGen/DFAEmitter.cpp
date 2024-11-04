@@ -170,7 +170,7 @@ void DfaEmitter::printActionValue(action_type A, raw_ostream &OS) { OS << A; }
 
 namespace {
 
-using Action = std::variant<Record *, unsigned, std::string>;
+using Action = std::variant<const Record *, unsigned, std::string>;
 using ActionTuple = std::vector<Action>;
 class Automaton;
 
@@ -356,7 +356,7 @@ void CustomDfaEmitter::printActionValue(action_type A, raw_ostream &OS) {
   ListSeparator LS;
   for (const auto &SingleAction : AT) {
     OS << LS;
-    if (const auto *R = std::get_if<Record *>(&SingleAction))
+    if (const auto *R = std::get_if<const Record *>(&SingleAction))
       OS << (*R)->getName();
     else if (const auto *S = std::get_if<std::string>(&SingleAction))
       OS << '"' << *S << '"';

@@ -62,7 +62,7 @@ static __rtsan::Context &GetContextForThisThreadImpl() {
     Until then, and to keep the first PRs small, only the exit mode
     is available.
 */
-static void InvokeViolationDetectedAction() { exit(EXIT_FAILURE); }
+static void InvokeViolationDetectedAction() { Die(); }
 
 __rtsan::Context::Context() = default;
 
@@ -95,10 +95,11 @@ void __rtsan::PrintDiagnostics(const char *intercepted_function_name, uptr pc,
                                uptr bp) {
   ScopedErrorReportLock l;
 
-  fprintf(stderr,
-          "Real-time violation: intercepted call to real-time unsafe function "
-          "`%s` in real-time context! Stack trace:\n",
-          intercepted_function_name);
+  Report("ERROR: RealtimeSanitizer: unsafe-library-call\n");
+  Printf("Intercepted call to real-time unsafe function "
+         "`%s` in real-time context!\n",
+         intercepted_function_name);
+
   __rtsan::PrintStackTrace(pc, bp);
 }
 

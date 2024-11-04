@@ -12,9 +12,9 @@
 
 #include <__config>
 #include <__functional/binary_function.h>
-#include <__functional/invoke.h>
 #include <__functional/unary_function.h>
 #include <__type_traits/integral_constant.h>
+#include <__type_traits/invoke.h>
 #include <__type_traits/is_same.h>
 #include <__utility/declval.h>
 

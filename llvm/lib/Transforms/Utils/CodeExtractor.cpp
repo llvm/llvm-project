@@ -993,6 +993,7 @@ Function *CodeExtractor::constructFunctionDeclaration(
       case Attribute::DeadOnUnwind:
       case Attribute::Range:
       case Attribute::Initializes:
+      case Attribute::NoExt:
       //  These are not really attributes.
       case Attribute::None:
       case Attribute::EndAttrKinds:
