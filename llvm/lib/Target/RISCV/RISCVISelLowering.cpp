@@ -4477,10 +4477,9 @@ static bool isDeinterleaveShuffle(MVT VT, MVT ContainerVT, SDValue V1,
   if (Mask[0] != 0 && Mask[0] != 1)
     return false;
 
-  // The others must increase by 2 each time.
-  // TODO: Support undef elements?
+  // The others must increase by 2 each time (or be undef).
   for (unsigned i = 1; i != Mask.size(); ++i)
-    if (Mask[i] != Mask[i - 1] + 2)
+    if (Mask[i] != -1 && Mask[i] != Mask[0] + (int)i * 2)
       return false;
 
   return true;
