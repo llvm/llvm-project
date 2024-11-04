@@ -61,25 +61,22 @@ private:
   DependencyConsumer &C;
 };
 
-static bool checkHeaderSearchPaths(const HeaderSearchOptions &HSOpts,
-                                   const HeaderSearchOptions &ExistingHSOpts,
-                                   DiagnosticsEngine *Diags,
-                                   const LangOptions &LangOpts) {
-  if (LangOpts.Modules) {
-    if (HSOpts.VFSOverlayFiles != ExistingHSOpts.VFSOverlayFiles) {
-      if (Diags) {
-        Diags->Report(diag::warn_pch_vfsoverlay_mismatch);
-        auto VFSNote = [&](int Type, ArrayRef<std::string> VFSOverlays) {
-          if (VFSOverlays.empty()) {
-            Diags->Report(diag::note_pch_vfsoverlay_empty) << Type;
-          } else {
-            std::string Files = llvm::join(VFSOverlays, "\n");
-            Diags->Report(diag::note_pch_vfsoverlay_files) << Type << Files;
-          }
-        };
-        VFSNote(0, HSOpts.VFSOverlayFiles);
-        VFSNote(1, ExistingHSOpts.VFSOverlayFiles);
-      }
+static bool checkFileSystemOpts(const FileSystemOptions &FSOpts,
+                                const FileSystemOptions &ExistingFSOpts,
+                                DiagnosticsEngine *Diags) {
+  if (FSOpts.VFSOverlayFiles != ExistingFSOpts.VFSOverlayFiles) {
+    if (Diags) {
+      Diags->Report(diag::warn_pch_vfsoverlay_mismatch);
+      auto VFSNote = [&](int Type, ArrayRef<std::string> VFSOverlays) {
+        if (VFSOverlays.empty()) {
+          Diags->Report(diag::note_pch_vfsoverlay_empty) << Type;
+        } else {
+          std::string Files = llvm::join(VFSOverlays, "\n");
+          Diags->Report(diag::note_pch_vfsoverlay_files) << Type << Files;
+        }
+      };
+      VFSNote(0, FSOpts.VFSOverlayFiles);
+      VFSNote(1, ExistingFSOpts.VFSOverlayFiles);
     }
   }
   return false;
@@ -94,11 +91,11 @@ public:
   PrebuiltModuleListener(PrebuiltModuleFilesT &PrebuiltModuleFiles,
                          llvm::SmallVector<std::string> &NewModuleFiles,
                          PrebuiltModuleVFSMapT &PrebuiltModuleVFSMap,
-                         const HeaderSearchOptions &HSOpts,
+                         const FileSystemOptions &FSOpts,
                          const LangOptions &LangOpts, DiagnosticsEngine &Diags)
       : PrebuiltModuleFiles(PrebuiltModuleFiles),
         NewModuleFiles(NewModuleFiles),
-        PrebuiltModuleVFSMap(PrebuiltModuleVFSMap), ExistingHSOpts(HSOpts),
+        PrebuiltModuleVFSMap(PrebuiltModuleVFSMap), ExistingFSOpts(FSOpts),
         ExistingLangOpts(LangOpts), Diags(Diags) {}
 
   bool needsImportVisitation() const override { return true; }
@@ -113,20 +110,23 @@ public:
     CurrentFile = Filename;
   }
 
-  bool ReadHeaderSearchPaths(const HeaderSearchOptions &HSOpts,
+  bool ReadFileSystemOptions(const FileSystemOptions &FSOpts,
                              bool Complain) override {
-    std::vector<std::string> VFSOverlayFiles = HSOpts.VFSOverlayFiles;
     PrebuiltModuleVFSMap.insert(
-        {CurrentFile, llvm::StringSet<>(VFSOverlayFiles)});
-    return checkHeaderSearchPaths(
-        HSOpts, ExistingHSOpts, Complain ? &Diags : nullptr, ExistingLangOpts);
+        {CurrentFile, llvm::StringSet<>(FSOpts.VFSOverlayFiles)});
+
+    if (!ExistingLangOpts.Modules)
+      return false;
+
+    return checkFileSystemOpts(FSOpts, ExistingFSOpts,
+                               Complain ? &Diags : nullptr);
   }
 
 private:
   PrebuiltModuleFilesT &PrebuiltModuleFiles;
   llvm::SmallVector<std::string> &NewModuleFiles;
   PrebuiltModuleVFSMapT &PrebuiltModuleVFSMap;
-  const HeaderSearchOptions &ExistingHSOpts;
+  const FileSystemOptions &ExistingFSOpts;
   const LangOptions &ExistingLangOpts;
   DiagnosticsEngine &Diags;
   std::string CurrentFile;
@@ -142,7 +142,7 @@ static bool visitPrebuiltModule(StringRef PrebuiltModuleFilename,
   // List of module files to be processed.
   llvm::SmallVector<std::string> Worklist;
   PrebuiltModuleListener Listener(ModuleFiles, Worklist, PrebuiltModuleVFSMap,
-                                  CI.getHeaderSearchOpts(), CI.getLangOpts(),
+                                  CI.getFileSystemOpts(), CI.getLangOpts(),
                                   Diags);
 
   Listener.visitModuleFile(PrebuiltModuleFilename,

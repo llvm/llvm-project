@@ -184,9 +184,6 @@ public:
   /// of computing the module hash.
   llvm::SmallSetVector<llvm::CachedHashString, 16> ModulesIgnoreMacros;
 
-  /// The set of user-provided virtual filesystem overlay files.
-  std::vector<std::string> VFSOverlayFiles;
-
   /// Include the compiler builtin includes.
   LLVM_PREFERRED_TYPE(bool)
   unsigned UseBuiltinIncludes : 1;
@@ -302,10 +299,6 @@ public:
   /// header.
   void AddSystemHeaderPrefix(StringRef Prefix, bool IsSystemHeader) {
     SystemHeaderPrefixes.emplace_back(Prefix, IsSystemHeader);
-  }
-
-  void AddVFSOverlayFile(StringRef Name) {
-    VFSOverlayFiles.push_back(std::string(Name));
   }
 
   void AddPrebuiltModulePath(StringRef Name) {
