@@ -59,8 +59,7 @@ OPTIONS
 
 .. option:: --quote
 
-  Add `"` `"` around demangled function symbols. Do not quote already quoted
-  symbols.
+  Add `"` `"` around demangled names. Do not quote already quoted names.
 
 .. option:: --strip-underscore, -_
 
@@ -69,7 +68,7 @@ OPTIONS
 
 .. option:: --types, -t
 
-  Attempt to demangle names as type names as well as function names.
+  Attempt to demangle names as type names as well as symbol names.
 
 .. option:: --version
 

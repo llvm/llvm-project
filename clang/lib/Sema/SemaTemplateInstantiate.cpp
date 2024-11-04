@@ -200,7 +200,7 @@ struct TemplateInstantiationArgumentCollecter
     if (Innermost)
       AddInnermostTemplateArguments(FTD);
     else if (ForConstraintInstantiation)
-      AddOuterTemplateArguments(FTD, FTD->getInjectedTemplateArgs(),
+      AddOuterTemplateArguments(FTD, FTD->getInjectedTemplateArgs(S.Context),
                                 /*Final=*/false);
 
     if (FTD->isMemberSpecialization())
@@ -219,7 +219,7 @@ struct TemplateInstantiationArgumentCollecter
     if (Innermost)
       AddInnermostTemplateArguments(VTD);
     else if (ForConstraintInstantiation)
-      AddOuterTemplateArguments(VTD, VTD->getInjectedTemplateArgs(),
+      AddOuterTemplateArguments(VTD, VTD->getInjectedTemplateArgs(S.Context),
                                 /*Final=*/false);
 
     if (VTD->isMemberSpecialization())
@@ -237,7 +237,8 @@ struct TemplateInstantiationArgumentCollecter
     if (Innermost)
       AddInnermostTemplateArguments(VTPSD);
     else if (ForConstraintInstantiation)
-      AddOuterTemplateArguments(VTPSD, VTPSD->getInjectedTemplateArgs(),
+      AddOuterTemplateArguments(VTPSD,
+                                VTPSD->getInjectedTemplateArgs(S.Context),
                                 /*Final=*/false);
 
     if (VTPSD->isMemberSpecialization())
@@ -254,7 +255,7 @@ struct TemplateInstantiationArgumentCollecter
     if (Innermost)
       AddInnermostTemplateArguments(CTD);
     else if (ForConstraintInstantiation)
-      AddOuterTemplateArguments(CTD, CTD->getInjectedTemplateArgs(),
+      AddOuterTemplateArguments(CTD, CTD->getInjectedTemplateArgs(S.Context),
                                 /*Final=*/false);
 
     if (CTD->isMemberSpecialization())
@@ -274,7 +275,8 @@ struct TemplateInstantiationArgumentCollecter
     if (Innermost)
       AddInnermostTemplateArguments(CTPSD);
     else if (ForConstraintInstantiation)
-      AddOuterTemplateArguments(CTPSD, CTPSD->getInjectedTemplateArgs(),
+      AddOuterTemplateArguments(CTPSD,
+                                CTPSD->getInjectedTemplateArgs(S.Context),
                                 /*Final=*/false);
 
     if (CTPSD->isMemberSpecialization())
@@ -290,7 +292,7 @@ struct TemplateInstantiationArgumentCollecter
     if (Innermost)
       AddInnermostTemplateArguments(TATD);
     else if (ForConstraintInstantiation)
-      AddOuterTemplateArguments(TATD, TATD->getInjectedTemplateArgs(),
+      AddOuterTemplateArguments(TATD, TATD->getInjectedTemplateArgs(S.Context),
                                 /*Final=*/false);
 
     return UseNextDecl(TATD);
@@ -341,7 +343,7 @@ struct TemplateInstantiationArgumentCollecter
       // If this function was instantiated from a specialized member that is
       // a function template, we're done.
       assert(FD->getPrimaryTemplate() && "No function template?");
-      if (FD->getPrimaryTemplate()->hasMemberSpecialization())
+      if (FD->getPrimaryTemplate()->isMemberSpecialization())
         return Done();
 
       // If this function is a generic lambda specialization, we are done.
@@ -440,11 +442,11 @@ struct TemplateInstantiationArgumentCollecter
         Specialized = CTSD->getSpecializedTemplateOrPartial();
     if (auto *CTPSD =
             Specialized.dyn_cast<ClassTemplatePartialSpecializationDecl *>()) {
-      if (CTPSD->hasMemberSpecialization())
+      if (CTPSD->isMemberSpecialization())
         return Done();
     } else {
       auto *CTD = Specialized.get<ClassTemplateDecl *>();
-      if (CTD->hasMemberSpecialization())
+      if (CTD->isMemberSpecialization())
         return Done();
     }
     return UseNextDecl(CTSD);
@@ -476,11 +478,11 @@ struct TemplateInstantiationArgumentCollecter
         Specialized = VTSD->getSpecializedTemplateOrPartial();
     if (auto *VTPSD =
             Specialized.dyn_cast<VarTemplatePartialSpecializationDecl *>()) {
-      if (VTPSD->hasMemberSpecialization())
+      if (VTPSD->isMemberSpecialization())
         return Done();
     } else {
       auto *VTD = Specialized.get<VarTemplateDecl *>();
-      if (VTD->hasMemberSpecialization())
+      if (VTD->isMemberSpecialization())
         return Done();
     }
     return UseNextDecl(VTSD);
@@ -732,8 +734,7 @@ Sema::InstantiatingTemplate::InstantiatingTemplate(
     : InstantiatingTemplate(
           SemaRef, CodeSynthesisContext::RequirementInstantiation,
           PointOfInstantiation, InstantiationRange, /*Entity=*/nullptr,
-          /*Template=*/nullptr, /*TemplateArgs=*/std::nullopt, &DeductionInfo) {
-}
+          /*Template=*/nullptr, /*TemplateArgs=*/{}, &DeductionInfo) {}
 
 Sema::InstantiatingTemplate::InstantiatingTemplate(
     Sema &SemaRef, SourceLocation PointOfInstantiation,
@@ -742,7 +743,7 @@ Sema::InstantiatingTemplate::InstantiatingTemplate(
     : InstantiatingTemplate(
           SemaRef, CodeSynthesisContext::NestedRequirementConstraintsCheck,
           PointOfInstantiation, InstantiationRange, /*Entity=*/nullptr,
-          /*Template=*/nullptr, /*TemplateArgs=*/std::nullopt) {}
+          /*Template=*/nullptr, /*TemplateArgs=*/{}) {}
 
 Sema::InstantiatingTemplate::InstantiatingTemplate(
     Sema &SemaRef, SourceLocation PointOfInstantiation, const RequiresExpr *RE,
@@ -750,8 +751,7 @@ Sema::InstantiatingTemplate::InstantiatingTemplate(
     : InstantiatingTemplate(
           SemaRef, CodeSynthesisContext::RequirementParameterInstantiation,
           PointOfInstantiation, InstantiationRange, /*Entity=*/nullptr,
-          /*Template=*/nullptr, /*TemplateArgs=*/std::nullopt, &DeductionInfo) {
-}
+          /*Template=*/nullptr, /*TemplateArgs=*/{}, &DeductionInfo) {}
 
 Sema::InstantiatingTemplate::InstantiatingTemplate(
     Sema &SemaRef, SourceLocation PointOfInstantiation,
@@ -2654,7 +2654,7 @@ QualType TemplateInstantiator::TransformSubstTemplateTypeParmPackType(
 
 static concepts::Requirement::SubstitutionDiagnostic *
 createSubstDiag(Sema &S, TemplateDeductionInfo &Info,
-                concepts::EntityPrinter Printer) {
+                Sema::EntityPrinter Printer) {
   SmallString<128> Message;
   SourceLocation ErrorLoc;
   if (Info.hasSFINAEDiagnostic()) {
@@ -2675,12 +2675,11 @@ createSubstDiag(Sema &S, TemplateDeductionInfo &Info,
 }
 
 concepts::Requirement::SubstitutionDiagnostic *
-concepts::createSubstDiagAt(Sema &S, SourceLocation Location,
-                            EntityPrinter Printer) {
+Sema::createSubstDiagAt(SourceLocation Location, EntityPrinter Printer) {
   SmallString<128> Entity;
   llvm::raw_svector_ostream OS(Entity);
   Printer(OS);
-  const ASTContext &C = S.Context;
+  const ASTContext &C = Context;
   return new (C) concepts::Requirement::SubstitutionDiagnostic{
       /*SubstitutedEntity=*/C.backupStr(Entity),
       /*DiagLoc=*/Location, /*DiagMessage=*/StringRef()};
@@ -3979,11 +3978,24 @@ bool Sema::usesPartialOrExplicitSpecialization(
     return true;
 
   SmallVector<ClassTemplatePartialSpecializationDecl *, 4> PartialSpecs;
-  ClassTemplateSpec->getSpecializedTemplate()
-                   ->getPartialSpecializations(PartialSpecs);
-  for (unsigned I = 0, N = PartialSpecs.size(); I != N; ++I) {
+  ClassTemplateDecl *CTD = ClassTemplateSpec->getSpecializedTemplate();
+  CTD->getPartialSpecializations(PartialSpecs);
+  for (ClassTemplatePartialSpecializationDecl *CTPSD : PartialSpecs) {
+    // C++ [temp.spec.partial.member]p2:
+    //   If the primary member template is explicitly specialized for a given
+    //   (implicit) specialization of the enclosing class template, the partial
+    //   specializations of the member template are ignored for this
+    //   specialization of the enclosing class template. If a partial
+    //   specialization of the member template is explicitly specialized for a
+    //   given (implicit) specialization of the enclosing class template, the
+    //   primary member template and its other partial specializations are still
+    //   considered for this specialization of the enclosing class template.
+    if (CTD->getMostRecentDecl()->isMemberSpecialization() &&
+        !CTPSD->getMostRecentDecl()->isMemberSpecialization())
+      continue;
+
     TemplateDeductionInfo Info(Loc);
-    if (DeduceTemplateArguments(PartialSpecs[I],
+    if (DeduceTemplateArguments(CTPSD,
                                 ClassTemplateSpec->getTemplateArgs().asArray(),
                                 Info) == TemplateDeductionResult::Success)
       return true;
@@ -4026,8 +4038,21 @@ getPatternForClassTemplateSpecialization(
     SmallVector<ClassTemplatePartialSpecializationDecl *, 4> PartialSpecs;
     Template->getPartialSpecializations(PartialSpecs);
     TemplateSpecCandidateSet FailedCandidates(PointOfInstantiation);
-    for (unsigned I = 0, N = PartialSpecs.size(); I != N; ++I) {
-      ClassTemplatePartialSpecializationDecl *Partial = PartialSpecs[I];
+    for (ClassTemplatePartialSpecializationDecl *Partial : PartialSpecs) {
+      // C++ [temp.spec.partial.member]p2:
+      //   If the primary member template is explicitly specialized for a given
+      //   (implicit) specialization of the enclosing class template, the
+      //   partial specializations of the member template are ignored for this
+      //   specialization of the enclosing class template. If a partial
+      //   specialization of the member template is explicitly specialized for a
+      //   given (implicit) specialization of the enclosing class template, the
+      //   primary member template and its other partial specializations are
+      //   still considered for this specialization of the enclosing class
+      //   template.
+      if (Template->getMostRecentDecl()->isMemberSpecialization() &&
+          !Partial->getMostRecentDecl()->isMemberSpecialization())
+        continue;
+
       TemplateDeductionInfo Info(FailedCandidates.getLocation());
       if (TemplateDeductionResult Result = S.DeduceTemplateArguments(
               Partial, ClassTemplateSpec->getTemplateArgs().asArray(), Info);
@@ -4116,7 +4141,7 @@ getPatternForClassTemplateSpecialization(
   CXXRecordDecl *Pattern = nullptr;
   Specialized = ClassTemplateSpec->getSpecializedTemplateOrPartial();
   if (auto *CTD = Specialized.dyn_cast<ClassTemplateDecl *>()) {
-    while (!CTD->hasMemberSpecialization()) {
+    while (!CTD->isMemberSpecialization()) {
       if (auto *NewCTD = CTD->getInstantiatedFromMemberTemplate())
         CTD = NewCTD;
       else
@@ -4126,7 +4151,7 @@ getPatternForClassTemplateSpecialization(
   } else if (auto *CTPSD =
                  Specialized
                      .dyn_cast<ClassTemplatePartialSpecializationDecl *>()) {
-    while (!CTPSD->hasMemberSpecialization()) {
+    while (!CTPSD->isMemberSpecialization()) {
       if (auto *NewCTPSD = CTPSD->getInstantiatedFromMemberTemplate())
         CTPSD = NewCTPSD;
       else

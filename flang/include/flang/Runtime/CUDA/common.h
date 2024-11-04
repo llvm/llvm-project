@@ -30,7 +30,7 @@ static constexpr unsigned kDeviceToDevice = 2;
     const char *name = cudaGetErrorName(err); \
     if (!name) \
       name = "<unknown>"; \
-    Terminator terminator{__FILE__, __LINE__}; \
+    Fortran::runtime::Terminator terminator{__FILE__, __LINE__}; \
     terminator.Crash("'%s' failed with '%s'", #expr, name); \
   }(expr)
 

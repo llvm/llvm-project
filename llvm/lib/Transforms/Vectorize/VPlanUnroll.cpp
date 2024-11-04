@@ -15,19 +15,14 @@
 #include "VPlan.h"
 #include "VPlanAnalysis.h"
 #include "VPlanCFG.h"
-#include "VPlanDominatorTree.h"
 #include "VPlanPatternMatch.h"
 #include "VPlanTransforms.h"
 #include "VPlanUtils.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
-#include "llvm/ADT/SetVector.h"
-#include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Analysis/IVDescriptors.h"
-#include "llvm/Analysis/VectorUtils.h"
 #include "llvm/IR/Intrinsics.h"
-#include "llvm/IR/PatternMatch.h"
 
 using namespace llvm;
 
@@ -316,12 +311,12 @@ void UnrollState::unrollRecipeByUF(VPRecipeBase &R) {
     // Add operand indicating the part to generate code for, to recipes still
     // requiring it.
     if (isa<VPScalarIVStepsRecipe, VPWidenCanonicalIVRecipe,
-            VPVectorPointerRecipe>(Copy) ||
+            VPVectorPointerRecipe, VPReverseVectorPointerRecipe>(Copy) ||
         match(Copy, m_VPInstruction<VPInstruction::CanonicalIVIncrementForPart>(
                         m_VPValue())))
       Copy->addOperand(getConstantVPV(Part));
 
-    if (isa<VPVectorPointerRecipe>(R))
+    if (isa<VPVectorPointerRecipe, VPReverseVectorPointerRecipe>(R))
       Copy->setOperand(0, R.getOperand(0));
   }
 }
@@ -447,12 +442,6 @@ void VPlanTransforms::unrollByUF(VPlan &Plan, unsigned UF, LLVMContext &Ctx) {
     }
     Unroller.remapOperands(&H, Part);
     Part++;
-  }
-
-  // Remap the operand of live-outs to the last part.
-  for (const auto &[_, LO] : Plan.getLiveOuts()) {
-    VPValue *In = Unroller.getValueForPart(LO->getOperand(0), UF - 1);
-    LO->setOperand(0, In);
   }
 
   VPlanTransforms::removeDeadRecipes(Plan);

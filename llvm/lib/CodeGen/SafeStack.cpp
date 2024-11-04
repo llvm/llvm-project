@@ -898,7 +898,7 @@ public:
     bool ShouldPreserveDominatorTree;
     std::optional<DominatorTree> LazilyComputedDomTree;
 
-    // Do we already have a DominatorTree avaliable from the previous pass?
+    // Do we already have a DominatorTree available from the previous pass?
     // Note that we should *NOT* require it, to avoid the case where we end up
     // not needing it, but the legacy PM would have computed it for us anyways.
     if (auto *DTWP = getAnalysisIfAvailable<DominatorTreeWrapperPass>()) {

@@ -319,7 +319,118 @@ used in the '``llvm.nvvm.idp4a.[us].u``' variants, while sign-extension is used
 with '``llvm.nvvm.idp4a.[us].s``' variants. The dot product of these 4-element
 vectors is added to ``%c`` to produce the return.
 
+Bit Manipulation Intrinsics
+---------------------------
 
+'``llvm.nvvm.fshl.clamp.*``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+    declare i32 @llvm.nvvm.fshl.clamp.i32(i32 %hi, i32 %lo, i32 %n)
+
+Overview:
+"""""""""
+
+The '``llvm.nvvm.fshl.clamp``' family of intrinsics performs a clamped funnel
+shift left. These intrinsics are very similar to '``llvm.fshl``', except the
+shift ammont is clamped at the integer width (instead of modulo it). Currently,
+only ``i32`` is supported.
+
+Semantics:
+""""""""""
+
+The '``llvm.nvvm.fshl.clamp``' family of intrinsic functions performs a clamped
+funnel shift left: the first two values are concatenated as { %hi : %lo } (%hi
+is the most significant bits of the wide value), the combined value is shifted
+left, and the most significant bits are extracted to produce a result that is
+the same size as the original arguments. The shift amount is the minimum of the
+value of %n and the bit width of the integer type.
+
+'``llvm.nvvm.fshr.clamp.*``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+    declare i32 @llvm.nvvm.fshr.clamp.i32(i32 %hi, i32 %lo, i32 %n)
+
+Overview:
+"""""""""
+
+The '``llvm.nvvm.fshr.clamp``' family of intrinsics perform a clamped funnel
+shift right. These intrinsics are very similar to '``llvm.fshr``', except the
+shift ammont is clamped at the integer width (instead of modulo it). Currently,
+only ``i32`` is supported.
+
+Semantics:
+""""""""""
+
+The '``llvm.nvvm.fshr.clamp``' family of intrinsic functions performs a clamped
+funnel shift right: the first two values are concatenated as { %hi : %lo } (%hi
+is the most significant bits of the wide value), the combined value is shifted
+right, and the least significant bits are extracted to produce a result that is
+the same size as the original arguments. The shift amount is the minimum of the
+value of %n and the bit width of the integer type.
+
+'``llvm.nvvm.flo.u.*``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+    declare i32 @llvm.nvvm.flo.u.i32(i32 %a, i1 %shiftamt)
+    declare i32 @llvm.nvvm.flo.u.i64(i64 %a, i1 %shiftamt)
+
+Overview:
+"""""""""
+
+The '``llvm.nvvm.flo.u``' family of intrinsics identifies the bit position of the
+leading one, returning either it's offset from the most or least significant bit.
+
+Semantics:
+""""""""""
+
+The '``llvm.nvvm.flo.u``' family of intrinsics returns the bit position of the
+most significant 1. If %shiftamt is true, The result is the shift amount needed
+to left-shift the found bit into the most-significant bit position, otherwise
+the result is the shift amount needed to right-shift the found bit into the
+least-significant bit position. 0xffffffff is returned if no 1 bit is found.
+
+'``llvm.nvvm.flo.s.*``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+    declare i32 @llvm.nvvm.flo.s.i32(i32 %a, i1 %shiftamt)
+    declare i32 @llvm.nvvm.flo.s.i64(i64 %a, i1 %shiftamt)
+
+Overview:
+"""""""""
+
+The '``llvm.nvvm.flo.s``' family of intrinsics identifies the bit position of the
+leading non-sign bit, returning either it's offset from the most or least
+significant bit.
+
+Semantics:
+""""""""""
+
+The '``llvm.nvvm.flo.s``' family of intrinsics returns the bit position of the
+most significant 0 for negative inputs and the most significant 1 for 
+non-negative inputs. If %shiftamt is true, The result is the shift amount needed
+to left-shift the found bit into the most-significant bit position, otherwise
+the result is the shift amount needed to right-shift the found bit into the
+least-significant bit position. 0xffffffff is returned if no 1 bit is found.
 
 Other Intrinsics
 ----------------

@@ -7,7 +7,7 @@ void __attribute__((target_clones("default+sha3"))) warn1(void);
 
 // expected-error@+2 {{'target_clones' and 'target_version' attributes are not compatible}}
 // expected-note@+1 {{conflicting attribute is here}}
-void __attribute__((target_version("sve-bf16"), target_clones("sme+memtag"))) not_compat(void);
+void __attribute__((target_version("sve"), target_clones("sme+memtag"))) not_compat(void);
 
 int redecl(void);
 int __attribute__((target_clones("frintts", "simd+fp", "default"))) redecl(void) { return 1; }
@@ -38,7 +38,7 @@ int __attribute__((target_clones("rdm+lse+rdm", "lse+rdm"))) dup1(void) { return
 // expected-warning@+1 {{version list contains duplicate entries}}
 int __attribute__((target_clones("rdm+lse+rdm", "rdm+lse+rdm"))) dup2(void) { return 2; }
 // expected-warning@+1 {{version list contains duplicate entries}}
-int __attribute__((target_clones("rcpc2+sve2-pmull128", "rcpc2+sve2-pmull128"))) dup3(void) { return 3; }
+int __attribute__((target_clones("rcpc2+sve2-aes", "rcpc2+sve2-aes"))) dup3(void) { return 3; }
 // expected-warning@+1 {{version list contains duplicate entries}}
 void __attribute__((target_clones("sha3", "default", "default"))) dup4(void);
 // expected-warning@+2 {{version list contains duplicate entries}}
@@ -78,4 +78,4 @@ int useage(void) {
 // expected-error@+1 {{function declaration cannot become a multiversioned function after first usage}}
 int __attribute__((target_clones("sve2-sha3+ssbs", "sm4"))) mv_after_use(void) { return 1; }
 // expected-error@+1 {{'main' cannot be a multiversioned function}}
-int __attribute__((target_clones("sve-i8mm"))) main() { return 1; }
+int __attribute__((target_clones("i8mm"))) main() { return 1; }

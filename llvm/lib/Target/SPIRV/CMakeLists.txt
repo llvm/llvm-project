@@ -58,6 +58,7 @@ add_llvm_target(SPIRVCodeGen
   MC
   SPIRVDesc
   SPIRVInfo
+  ScalarOpts
   SelectionDAG
   Support
   Target

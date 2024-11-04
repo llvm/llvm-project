@@ -66,6 +66,7 @@ class Header:
             "cmath",
             "csetjmp",
             "csignal",
+            "cstdalign",
             "cstdarg",
             "cstdbool",
             "cstddef",
@@ -92,8 +93,12 @@ class Header:
         experimental headers.
         """
         # These headers have been removed in C++20 so are never part of a module.
-        removed_in_20 = ["ccomplex", "ciso646", "cstdbool", "ctgmath"]
+        removed_in_20 = ["ccomplex", "ciso646", "cstdalign", "cstdbool", "ctgmath"]
         return self.is_public() and not self.is_experimental() and not self.is_C_compatibility() and not self._name in removed_in_20
+
+    def is_cxx03_frozen_header(self) -> bool:
+        """Returns whether the header is a frozen C++03 support header."""
+        return self._name.startswith("__cxx03/")
 
     def is_in_modulemap(self) -> bool:
         """Returns whether a header should be listed in the modulemap."""
@@ -118,6 +123,11 @@ class Header:
         # burden ourself with maintaining them in any way.
         if self._name.startswith("ext/"):
             return False
+
+        # TODO: Frozen C++03 headers should probably be in the modulemap as well
+        if self.is_cxx03_frozen_header():
+            return False
+
         return True
 
     def __str__(self) -> str:
@@ -154,7 +164,6 @@ module_c_headers = [h for h in all_headers if h.has_cxx20_module() and h.is_cstd
 # modules will fail to build if a header is added but this list is not updated.
 headers_not_available = list(map(Header, [
     "debugging",
-    "flat_map",
     "flat_set",
     "generator",
     "hazard_pointer",
@@ -228,6 +237,15 @@ lit_header_restrictions = {
     "wctype.h": "// UNSUPPORTED: no-wide-characters",
 }
 
+# Undeprecate headers that are deprecated in C++17 and removed in C++20.
+lit_header_undeprecations = {
+    "ccomplex": "// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DISABLE_DEPRECATION_WARNINGS",
+    "ciso646": "// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DISABLE_DEPRECATION_WARNINGS",
+    "cstdalign": "// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DISABLE_DEPRECATION_WARNINGS",
+    "cstdbool": "// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DISABLE_DEPRECATION_WARNINGS",
+    "ctgmath": "// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DISABLE_DEPRECATION_WARNINGS",
+}
+
 # This table was produced manually, by grepping the TeX source of the Standard's
 # library clauses for the string "#include". Each header's synopsis contains
 # explicit "#include" directives for its mandatory inclusions.
@@ -242,6 +260,7 @@ mandatory_inclusions = {
     "coroutine": ["compare"],
     "deque": ["compare", "initializer_list"],
     "filesystem": ["compare"],
+    "flat_map": ["compare", "initializer_list"],
     "forward_list": ["compare", "initializer_list"],
     "ios": ["iosfwd"],
     "iostream": ["ios", "istream", "ostream", "streambuf"],

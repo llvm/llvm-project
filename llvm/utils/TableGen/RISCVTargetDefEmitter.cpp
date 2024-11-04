@@ -244,13 +244,13 @@ static void emitRISCVExtensionBitmask(const RecordKeeper &RK, raw_ostream &OS) {
   OS << "#endif\n";
 }
 
-static void EmitRISCVTargetDef(const RecordKeeper &RK, raw_ostream &OS) {
+static void emitRiscvTargetDef(const RecordKeeper &RK, raw_ostream &OS) {
   emitRISCVExtensions(RK, OS);
   emitRISCVProfiles(RK, OS);
   emitRISCVProcs(RK, OS);
   emitRISCVExtensionBitmask(RK, OS);
 }
 
-static TableGen::Emitter::Opt X("gen-riscv-target-def", EmitRISCVTargetDef,
+static TableGen::Emitter::Opt X("gen-riscv-target-def", emitRiscvTargetDef,
                                 "Generate the list of CPUs and extensions for "
                                 "RISC-V");
