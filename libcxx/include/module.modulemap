@@ -2003,6 +2003,7 @@ module std [system] {
     module priority_tag               { header "__utility/priority_tag.h" }
     module private_constructor_tag    { header "__utility/private_constructor_tag.h" }
     module rel_ops                    { header "__utility/rel_ops.h" }
+    module scope_guard                { header "__utility/scope_guard.h" }
     module small_buffer               { header "__utility/small_buffer.h" }
     module swap                       { header "__utility/swap.h" }
     module to_underlying              { header "__utility/to_underlying.h" }
