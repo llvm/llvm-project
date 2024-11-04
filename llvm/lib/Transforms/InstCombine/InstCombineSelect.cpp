@@ -2804,19 +2804,24 @@ static Instruction *foldSelectWithClampedShift(SelectInst &SI,
   Value *Amt;
   if (match(CondVal, m_SpecificICmp(ICmpInst::ICMP_UGT, m_Value(Amt),
                                     m_SpecificInt(BW - 1)))) {
-    if (BinaryOperator *ShiftI = MatchClampedShift(FalseVal, Amt))
+    if (BinaryOperator *ShiftI = MatchClampedShift(FalseVal, Amt)) {
+      Amt = Builder.CreateFreeze(Amt);
       return SelectInst::Create(
-          CondVal, TrueVal,
+          Builder.CreateICmpUGT(Amt, cast<Instruction>(CondVal)->getOperand(1)),
+          TrueVal,
           Builder.CreateBinOp(ShiftI->getOpcode(), ShiftI->getOperand(0), Amt));
+    }
   }
 
   if (match(CondVal, m_SpecificICmp(ICmpInst::ICMP_ULT, m_Value(Amt),
                                     m_SpecificInt(BW)))) {
-    if (BinaryOperator *ShiftI = MatchClampedShift(TrueVal, Amt))
+    if (BinaryOperator *ShiftI = MatchClampedShift(TrueVal, Amt)) {
+      Amt = Builder.CreateFreeze(Amt);
       return SelectInst::Create(
-          CondVal,
+          Builder.CreateICmpULT(Amt, cast<Instruction>(CondVal)->getOperand(1)),
           Builder.CreateBinOp(ShiftI->getOpcode(), ShiftI->getOperand(0), Amt),
           FalseVal);
+    }
   }
 
   return nullptr;
