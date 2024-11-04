@@ -1516,7 +1516,8 @@ llvm::getPtrStride(PredicatedScalarEvolution &PSE, Type *AccessTy, Value *Ptr,
   // location will be larger than half the pointer index type space. In that
   // case, the GEP would be  poison and any memory access dependent on it would
   // be immediate UB when executed.
-  if (auto *GEP = dyn_cast<GetElementPtrInst>(Ptr); GEP && GEP->hasNoUnsignedSignedWrap())
+  if (auto *GEP = dyn_cast<GetElementPtrInst>(Ptr);
+      GEP && GEP->hasNoUnsignedSignedWrap())
     return Stride;
 
   // If the null pointer is undefined, then a access sequence which would
