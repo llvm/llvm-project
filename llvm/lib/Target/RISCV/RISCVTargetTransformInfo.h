@@ -239,12 +239,7 @@ public:
     if (!ST->enableUnalignedVectorMem() && Alignment < ElemType.getStoreSize())
       return false;
 
-    // TODO: Move bf16/f16 support into isLegalElementTypeForRVV
-    return TLI->isLegalElementTypeForRVV(ElemType) ||
-           (DataTypeVT.getVectorElementType() == MVT::bf16 &&
-            ST->hasVInstructionsBF16Minimal()) ||
-           (DataTypeVT.getVectorElementType() == MVT::f16 &&
-            ST->hasVInstructionsF16Minimal());
+    return TLI->isLegalElementTypeForRVV(ElemType);
   }
 
   bool isLegalMaskedLoad(Type *DataType, Align Alignment) {
@@ -274,12 +269,7 @@ public:
     if (!ST->enableUnalignedVectorMem() && Alignment < ElemType.getStoreSize())
       return false;
 
-    // TODO: Move bf16/f16 support into isLegalElementTypeForRVV
-    return TLI->isLegalElementTypeForRVV(ElemType) ||
-           (DataTypeVT.getVectorElementType() == MVT::bf16 &&
-            ST->hasVInstructionsBF16Minimal()) ||
-           (DataTypeVT.getVectorElementType() == MVT::f16 &&
-            ST->hasVInstructionsF16Minimal());
+    return TLI->isLegalElementTypeForRVV(ElemType);
   }
 
   bool isLegalMaskedGather(Type *DataType, Align Alignment) {
@@ -342,8 +332,14 @@ public:
       return false;
 
     switch (RdxDesc.getRecurrenceKind()) {
-    case RecurKind::Add:
     case RecurKind::FAdd:
+    case RecurKind::FMulAdd:
+      // We can't promote f16/bf16 fadd reductions and scalable vectors can't be
+      // expanded.
+      if (Ty->isBFloatTy() || (Ty->isHalfTy() && !ST->hasVInstructionsF16()))
+        return false;
+      [[fallthrough]];
+    case RecurKind::Add:
     case RecurKind::And:
     case RecurKind::Or:
     case RecurKind::Xor:
@@ -353,7 +349,6 @@ public:
     case RecurKind::UMax:
     case RecurKind::FMin:
     case RecurKind::FMax:
-    case RecurKind::FMulAdd:
     case RecurKind::IAnyOf:
     case RecurKind::FAnyOf:
       return true;
