@@ -10,28 +10,28 @@
 #ifndef _LIBCPP___MEMORY_COMPRESSED_PAIR_H
 #define _LIBCPP___MEMORY_COMPRESSED_PAIR_H
 
-#include <__config>
-#include <__fwd/tuple.h>
-#include <__tuple/tuple_indices.h>
-#include <__type_traits/decay.h>
-#include <__type_traits/dependent_type.h>
-#include <__type_traits/enable_if.h>
-#include <__type_traits/is_constructible.h>
-#include <__type_traits/is_empty.h>
-#include <__type_traits/is_final.h>
-#include <__type_traits/is_same.h>
-#include <__type_traits/is_swappable.h>
-#include <__utility/forward.h>
-#include <__utility/move.h>
-#include <__utility/piecewise_construct.h>
-#include <cstddef>
+#include <__cxx03/__config>
+#include <__cxx03/__fwd/tuple.h>
+#include <__cxx03/__tuple/tuple_indices.h>
+#include <__cxx03/__type_traits/decay.h>
+#include <__cxx03/__type_traits/dependent_type.h>
+#include <__cxx03/__type_traits/enable_if.h>
+#include <__cxx03/__type_traits/is_constructible.h>
+#include <__cxx03/__type_traits/is_empty.h>
+#include <__cxx03/__type_traits/is_final.h>
+#include <__cxx03/__type_traits/is_same.h>
+#include <__cxx03/__type_traits/is_swappable.h>
+#include <__cxx03/__utility/forward.h>
+#include <__cxx03/__utility/move.h>
+#include <__cxx03/__utility/piecewise_construct.h>
+#include <__cxx03/cstddef>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
 #endif
 
 _LIBCPP_PUSH_MACROS
-#include <__undef_macros>
+#include <__cxx03/__undef_macros>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 

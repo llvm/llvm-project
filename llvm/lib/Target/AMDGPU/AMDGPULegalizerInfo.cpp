@@ -5494,6 +5494,8 @@ bool AMDGPULegalizerInfo::legalizeLaneOp(LegalizerHelper &Helper,
           .addImm(Src5)
           .getReg(0);
     }
+    case Intrinsic::amdgcn_mov_dpp8:
+      return LaneOp.addImm(MI.getOperand(3).getImm()).getReg(0);
     default:
       llvm_unreachable("unhandled lane op");
     }
@@ -7612,6 +7614,7 @@ bool AMDGPULegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
   case Intrinsic::amdgcn_permlane64:
   case Intrinsic::amdgcn_set_inactive:
   case Intrinsic::amdgcn_set_inactive_chain_arg:
+  case Intrinsic::amdgcn_mov_dpp8:
     return legalizeLaneOp(Helper, MI, IntrID);
   case Intrinsic::amdgcn_s_buffer_prefetch_data:
     return legalizeSBufferPrefetch(Helper, MI);

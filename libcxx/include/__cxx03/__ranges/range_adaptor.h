@@ -10,27 +10,27 @@
 #ifndef _LIBCPP___RANGES_RANGE_ADAPTOR_H
 #define _LIBCPP___RANGES_RANGE_ADAPTOR_H
 
-#include <__concepts/constructible.h>
-#include <__concepts/derived_from.h>
-#include <__concepts/invocable.h>
-#include <__concepts/same_as.h>
-#include <__config>
-#include <__functional/compose.h>
-#include <__functional/invoke.h>
-#include <__ranges/concepts.h>
-#include <__type_traits/decay.h>
-#include <__type_traits/is_class.h>
-#include <__type_traits/is_nothrow_constructible.h>
-#include <__type_traits/remove_cvref.h>
-#include <__utility/forward.h>
-#include <__utility/move.h>
+#include <__cxx03/__concepts/constructible.h>
+#include <__cxx03/__concepts/derived_from.h>
+#include <__cxx03/__concepts/invocable.h>
+#include <__cxx03/__concepts/same_as.h>
+#include <__cxx03/__config>
+#include <__cxx03/__functional/compose.h>
+#include <__cxx03/__functional/invoke.h>
+#include <__cxx03/__ranges/concepts.h>
+#include <__cxx03/__type_traits/decay.h>
+#include <__cxx03/__type_traits/is_class.h>
+#include <__cxx03/__type_traits/is_nothrow_constructible.h>
+#include <__cxx03/__type_traits/remove_cvref.h>
+#include <__cxx03/__utility/forward.h>
+#include <__cxx03/__utility/move.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
 #endif
 
 _LIBCPP_PUSH_MACROS
-#include <__undef_macros>
+#include <__cxx03/__undef_macros>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 

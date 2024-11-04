@@ -10,13 +10,13 @@
 #ifndef _LIBCPP___STOP_TOKEN_STOP_STATE_H
 #define _LIBCPP___STOP_TOKEN_STOP_STATE_H
 
-#include <__assert>
-#include <__config>
-#include <__stop_token/atomic_unique_lock.h>
-#include <__stop_token/intrusive_list_view.h>
-#include <__thread/id.h>
-#include <atomic>
-#include <cstdint>
+#include <__cxx03/__assert>
+#include <__cxx03/__config>
+#include <__cxx03/__stop_token/atomic_unique_lock.h>
+#include <__cxx03/__stop_token/intrusive_list_view.h>
+#include <__cxx03/__thread/id.h>
+#include <__cxx03/atomic>
+#include <__cxx03/cstdint>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

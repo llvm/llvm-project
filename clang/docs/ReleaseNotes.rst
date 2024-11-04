@@ -338,6 +338,19 @@ Removed Compiler Flags
 Attribute Changes in Clang
 --------------------------
 
+- The ``swift_attr`` can now be applied to types. To make it possible to use imported APIs
+  in Swift safely there has to be a way to annotate individual parameters and result types
+  with relevant attributes that indicate that e.g. a block is called on a particular actor
+  or it accepts a Sendable or global-actor (i.e. ``@MainActor``) isolated parameter.
+
+  For example:
+
+  .. code-block:: objc
+
+     @interface MyService
+       -(void) handle: (void (^ __attribute__((swift_attr("@Sendable"))))(id)) handler;
+     @end
+
 - Clang now disallows more than one ``__attribute__((ownership_returns(class, idx)))`` with
   different class names attached to one function.
 
@@ -576,6 +589,7 @@ Bug Fixes to C++ Support
 - Fixed an assertion failure in range calculations for conditional throw expressions. (#GH111854)
 - Clang now correctly ignores previous partial specializations of member templates explicitly specialized for
   an implicitly instantiated class template specialization. (#GH51051)
+- Fixed an assertion failure caused by invalid enum forward declarations. (#GH112208)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -661,6 +675,8 @@ X86 Support
 
 - Supported intrinsics for ``MOVRS AND AVX10.2``.
   * Supported intrinsics of ``_mm(256|512)_(mask(z))_loadrs_epi(8|16|32|64)``.
+- Support ISA of ``AMX-FP8``.
+- Support ISA of ``AMX-TRANSPOSE``.
 
 Arm and AArch64 Support
 ^^^^^^^^^^^^^^^^^^^^^^^

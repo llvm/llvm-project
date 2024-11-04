@@ -10,12 +10,12 @@
 #ifndef _LIBCPP___ITERATOR_ISTREAMBUF_ITERATOR_H
 #define _LIBCPP___ITERATOR_ISTREAMBUF_ITERATOR_H
 
-#include <__config>
-#include <__fwd/istream.h>
-#include <__fwd/streambuf.h>
-#include <__iterator/default_sentinel.h>
-#include <__iterator/iterator.h>
-#include <__iterator/iterator_traits.h>
+#include <__cxx03/__config>
+#include <__cxx03/__fwd/istream.h>
+#include <__cxx03/__fwd/streambuf.h>
+#include <__cxx03/__iterator/default_sentinel.h>
+#include <__cxx03/__iterator/iterator.h>
+#include <__cxx03/__iterator/iterator_traits.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
