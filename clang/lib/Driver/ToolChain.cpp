@@ -109,7 +109,8 @@ ToolChain::ToolChain(const Driver &D, const llvm::Triple &T,
 llvm::Expected<std::unique_ptr<llvm::MemoryBuffer>>
 ToolChain::executeToolChainProgram(StringRef Executable) const {
   llvm::SmallString<64> OutputFile;
-  llvm::sys::fs::createTemporaryFile("toolchain-program", "txt", OutputFile);
+  llvm::sys::fs::createTemporaryFile("toolchain-program", "txt", OutputFile,
+                                     llvm::sys::fs::OF_Text);
   llvm::FileRemover OutputRemover(OutputFile.c_str());
   std::optional<llvm::StringRef> Redirects[] = {
       {""},
@@ -128,7 +129,8 @@ ToolChain::executeToolChainProgram(StringRef Executable) const {
                                          *Str + "'");
     SecondsToWait = std::max(SecondsToWait, 0); // infinite
   }
-  if (llvm::sys::ExecuteAndWait(Executable, {}, {}, Redirects, SecondsToWait,
+  if (llvm::sys::ExecuteAndWait(Executable, {Executable}, {}, Redirects,
+                                SecondsToWait,
                                 /*MemoryLimit=*/0, &ErrorMessage))
     return llvm::createStringError(std::error_code(),
                                    Executable + ": " + ErrorMessage);

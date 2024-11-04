@@ -2842,7 +2842,7 @@ def int_amdgcn_permlanex16 :
 // <sel> is a 32-bit constant whose high 8 bits must be zero which selects
 // the lanes to read from.
 def int_amdgcn_mov_dpp8 :
-  Intrinsic<[llvm_anyint_ty],
+  Intrinsic<[llvm_any_ty],
             [LLVMMatchType<0>, llvm_i32_ty],
             [IntrNoMem, IntrConvergent, IntrWillReturn,
              ImmArg<ArgIndex<1>>, IntrNoCallback, IntrNoFree]>;

@@ -589,10 +589,27 @@ static void genLoopVars(
   llvm::SmallVector<mlir::Location> locs(args.size(), loc);
   firOpBuilder.createBlock(&region, {}, tiv, locs);
 
+  // Update nested wrapper operands if parent wrappers have mapped these values
+  // to block arguments.
+  //
+  // Binding these values earlier would take care of this, but we cannot rely on
+  // that approach because binding in between the creation of a wrapper and the
+  // next one would result in 'hlfir.declare' operations being introduced inside
+  // of a wrapper, which is illegal.
+  mlir::IRMapping mapper;
+  for (auto [argGeneratingOp, blockArgs] : wrapperArgs) {
+    for (mlir::OpOperand &operand : argGeneratingOp->getOpOperands())
+      operand.set(mapper.lookupOrDefault(operand.get()));
+
+    for (const auto [arg, var] : llvm::zip_equal(
+             argGeneratingOp->getRegion(0).getArguments(), blockArgs.getVars()))
+      mapper.map(var, arg);
+  }
+
   // Bind the entry block arguments of parent wrappers to the corresponding
   // symbols.
-  for (auto [argGeneratingOp, args] : wrapperArgs)
-    bindEntryBlockArgs(converter, argGeneratingOp, args);
+  for (auto [argGeneratingOp, blockArgs] : wrapperArgs)
+    bindEntryBlockArgs(converter, argGeneratingOp, blockArgs);
 
   // The argument is not currently in memory, so make a temporary for the
   // argument, and store it there, then bind that location to the argument.
@@ -2708,6 +2725,21 @@ static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
                    const parser::OpenMPCancellationPointConstruct
                        &cancellationPointConstruct) {
   TODO(converter.getCurrentLocation(), "OpenMPCancelConstruct");
+}
+
+static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
+                   semantics::SemanticsContext &semaCtx,
+                   lower::pft::Evaluation &eval,
+                   const parser::OpenMPDepobjConstruct &construct) {
+  // These values will be ignored until the construct itself is implemented,
+  // but run them anyway for the sake of testing (via a Todo test).
+  auto &ompObj = std::get<parser::OmpObject>(construct.t);
+  const Object &depObj = makeObject(ompObj, semaCtx);
+  Clause clause = makeClause(std::get<parser::OmpClause>(construct.t), semaCtx);
+  (void)depObj;
+  (void)clause;
+
+  TODO(converter.getCurrentLocation(), "OpenMPDepobjConstruct");
 }
 
 static void

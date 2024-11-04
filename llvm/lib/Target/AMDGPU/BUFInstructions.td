@@ -1042,15 +1042,20 @@ defm BUFFER_LOAD_LDS_U16 : MUBUF_Pseudo_Loads_LDSOpc <
 >;
 
 defm : MUBUF_Pseudo_Load_Pats<"BUFFER_LOAD_UBYTE", i32, atomic_load_8_global>;
+defm : MUBUF_Pseudo_Load_Pats<"BUFFER_LOAD_UBYTE", i32, atomic_load_zext_8_global>;
 defm : MUBUF_Pseudo_Load_Pats<"BUFFER_LOAD_USHORT", i32, atomic_load_16_global>;
+defm : MUBUF_Pseudo_Load_Pats<"BUFFER_LOAD_USHORT", i32, atomic_load_zext_16_global>;
 defm : MUBUF_Pseudo_Load_Pats<"BUFFER_LOAD_UBYTE", i16, atomic_load_8_global>;
 defm : MUBUF_Pseudo_Load_Pats<"BUFFER_LOAD_USHORT", i16, atomic_load_16_global>;
 defm : MUBUF_Pseudo_Load_Pats<"BUFFER_LOAD_UBYTE", i32, extloadi8_global>;
 defm : MUBUF_Pseudo_Load_Pats<"BUFFER_LOAD_UBYTE", i32, zextloadi8_global>;
 defm : MUBUF_Pseudo_Load_Pats<"BUFFER_LOAD_SBYTE", i32, sextloadi8_global>;
+defm : MUBUF_Pseudo_Load_Pats<"BUFFER_LOAD_SBYTE", i32, atomic_load_sext_8_global>;
+defm : MUBUF_Pseudo_Load_Pats<"BUFFER_LOAD_SBYTE", i32, atomic_load_sext_16_global>;
 defm : MUBUF_Pseudo_Load_Pats<"BUFFER_LOAD_USHORT", i32, extloadi16_global>;
 defm : MUBUF_Pseudo_Load_Pats<"BUFFER_LOAD_USHORT", i32, zextloadi16_global>;
 defm : MUBUF_Pseudo_Load_Pats<"BUFFER_LOAD_SSHORT", i32, sextloadi16_global>;
+defm : MUBUF_Pseudo_Load_Pats<"BUFFER_LOAD_SSHORT", i32, atomic_load_sext_16_global>;
 
 foreach vt = Reg32Types.types in {
 defm : MUBUF_Pseudo_Load_Pats<"BUFFER_LOAD_DWORD", vt, load_global>;
@@ -2763,11 +2768,9 @@ multiclass MUBUF_Real_AllAddr_gfx11_Impl<bits<8> op, bit hasTFE,
     defm _TFE : MUBUF_Real_AllAddr_gfx11_Impl2<op, real_name>;
 }
 
-multiclass MUBUF_Real_AllAddr_gfx11_gfx12_Impl<bits<8> op, bit hasTFE,
-                                               string real_name> {
+multiclass MUBUF_Real_AllAddr_gfx11_gfx12_Impl<bits<8> op, string real_name> {
   defm NAME : MUBUF_Real_AllAddr_gfx11_gfx12_Impl2<op, real_name>;
-  if hasTFE then
-    defm _TFE : MUBUF_Real_AllAddr_gfx11_gfx12_Impl2<op, real_name>;
+  defm _TFE : MUBUF_Real_AllAddr_gfx11_gfx12_Impl2<op, real_name>;
 }
 
 // Non-renamed, non-atomic gfx11/gfx12 mubuf instructions.
@@ -2776,7 +2779,7 @@ multiclass MUBUF_Real_AllAddr_gfx11<bits<8> op, bit hasTFE = 1> :
 
 multiclass MUBUF_Real_AllAddr_gfx11_gfx12<bits<8> op,
                                  string real_name = get_BUF_ps<NAME>.Mnemonic> :
-  MUBUF_Real_AllAddr_gfx11_gfx12_Impl<op, /*hasTFE=*/1, real_name> {
+  MUBUF_Real_AllAddr_gfx11_gfx12_Impl<op, real_name> {
   defvar ps = get_BUF_ps<NAME>;
   if !ne(ps.Mnemonic, real_name) then
     def : Mnem_gfx11_gfx12<ps.Mnemonic, real_name>;

@@ -27291,6 +27291,53 @@ static SDValue LowerINTRINSIC_W_CHAIN(SDValue Op, const X86Subtarget &Subtarget,
       return DAG.getNode(ISD::MERGE_VALUES, dl, Op->getVTList(), SetCC,
                          Operation.getValue(1));
     }
+    case Intrinsic::x86_t2rpntlvwz0_internal:
+    case Intrinsic::x86_t2rpntlvwz0t1_internal:
+    case Intrinsic::x86_t2rpntlvwz1_internal:
+    case Intrinsic::x86_t2rpntlvwz1t1_internal: {
+      if (!Subtarget.hasAMXTILE())
+        break;
+      auto *X86MFI = DAG.getMachineFunction().getInfo<X86MachineFunctionInfo>();
+      X86MFI->setAMXProgModel(AMXProgModelEnum::ManagedRA);
+      unsigned IntNo = Op.getConstantOperandVal(1);
+      unsigned Opc = 0;
+      switch (IntNo) {
+      default:
+        llvm_unreachable("Unexpected intrinsic!");
+      case Intrinsic::x86_t2rpntlvwz0_internal:
+        Opc = X86::PT2RPNTLVWZ0V;
+        break;
+      case Intrinsic::x86_t2rpntlvwz0t1_internal:
+        Opc = X86::PT2RPNTLVWZ0T1V;
+        break;
+      case Intrinsic::x86_t2rpntlvwz1_internal:
+        Opc = X86::PT2RPNTLVWZ1V;
+        break;
+      case Intrinsic::x86_t2rpntlvwz1t1_internal:
+        Opc = X86::PT2RPNTLVWZ1T1V;
+        break;
+      }
+
+      SDLoc DL(Op);
+      SDVTList VTs = DAG.getVTList(MVT::Untyped, MVT::Other);
+
+      SDValue Ops[] = {Op.getOperand(2),                       // Row
+                       Op.getOperand(3),                       // Col0
+                       Op.getOperand(4),                       // Col1
+                       Op.getOperand(5),                       // Base
+                       DAG.getTargetConstant(1, DL, MVT::i8),  // Scale
+                       Op.getOperand(6),                       // Index
+                       DAG.getTargetConstant(0, DL, MVT::i32), // Disp
+                       DAG.getRegister(0, MVT::i16),           // Segment
+                       Op.getOperand(0)};                      // Chain
+
+      MachineSDNode *Res = DAG.getMachineNode(Opc, DL, VTs, Ops);
+      SDValue Res0 = DAG.getTargetExtractSubreg(X86::sub_t0, DL, MVT::x86amx,
+                                                SDValue(Res, 0));
+      SDValue Res1 = DAG.getTargetExtractSubreg(X86::sub_t1, DL, MVT::x86amx,
+                                                SDValue(Res, 0));
+      return DAG.getMergeValues({Res0, Res1, SDValue(Res, 1)}, DL);
+    }
     case Intrinsic::x86_atomic_bts_rm:
     case Intrinsic::x86_atomic_btc_rm:
     case Intrinsic::x86_atomic_btr_rm: {
@@ -37039,6 +37086,10 @@ X86TargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     assert (Imm < 8 && "Illegal tmm index");
     return X86::TMM0 + Imm;
   };
+  auto TMMImmToTMMPair = [](unsigned Imm) {
+    assert(Imm < 8 && "Illegal tmm pair index.");
+    return X86::TMM0_TMM1 + Imm / 2;
+  };
   switch (MI.getOpcode()) {
   default: llvm_unreachable("Unexpected instr type to insert");
   case X86::TLS_addr32:
@@ -37420,7 +37471,11 @@ X86TargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
   case X86::PTDPBUSD:
   case X86::PTDPBUUD:
   case X86::PTDPBF16PS:
-  case X86::PTDPFP16PS: {
+  case X86::PTDPFP16PS:
+  case X86::PTDPBF8PS:
+  case X86::PTDPBHF8PS:
+  case X86::PTDPHBF8PS:
+  case X86::PTDPHF8PS: {
     unsigned Opc;
     switch (MI.getOpcode()) {
     // clang-format off
@@ -37431,6 +37486,10 @@ X86TargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     case X86::PTDPBUUD: Opc = X86::TDPBUUD; break;
     case X86::PTDPBF16PS: Opc = X86::TDPBF16PS; break;
     case X86::PTDPFP16PS: Opc = X86::TDPFP16PS; break;
+    case X86::PTDPBF8PS: Opc = X86::TDPBF8PS; break;
+    case X86::PTDPBHF8PS: Opc = X86::TDPBHF8PS; break;
+    case X86::PTDPHBF8PS: Opc = X86::TDPHBF8PS; break;
+    case X86::PTDPHF8PS: Opc = X86::TDPHF8PS; break;
     // clang-format on
     }
 
@@ -37510,6 +37569,49 @@ X86TargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     MIB.addReg(TMMImmToTMMReg(MI.getOperand(0).getImm()), RegState::Undef);
     MIB.addReg(TMMImmToTMMReg(MI.getOperand(1).getImm()), RegState::Undef);
     MIB.addReg(TMMImmToTMMReg(MI.getOperand(2).getImm()), RegState::Undef);
+    MI.eraseFromParent(); // The pseudo is gone now.
+    return BB;
+  }
+  case X86::PT2RPNTLVWZ0:
+  case X86::PT2RPNTLVWZ0T1:
+  case X86::PT2RPNTLVWZ1:
+  case X86::PT2RPNTLVWZ1T1: {
+    const DebugLoc &DL = MI.getDebugLoc();
+    unsigned Opc;
+    switch (MI.getOpcode()) {
+    default:
+      llvm_unreachable("Unexpected instruction!");
+    case X86::PT2RPNTLVWZ0:
+      Opc = X86::T2RPNTLVWZ0;
+      break;
+    case X86::PT2RPNTLVWZ0T1:
+      Opc = X86::T2RPNTLVWZ0T1;
+      break;
+    case X86::PT2RPNTLVWZ1:
+      Opc = X86::T2RPNTLVWZ1;
+      break;
+    case X86::PT2RPNTLVWZ1T1:
+      Opc = X86::T2RPNTLVWZ1T1;
+      break;
+    }
+    MachineInstrBuilder MIB = BuildMI(*BB, MI, DL, TII->get(Opc));
+    MIB.addReg(TMMImmToTMMPair(MI.getOperand(0).getImm()), RegState::Define);
+
+    MIB.add(MI.getOperand(1)); // base
+    MIB.add(MI.getOperand(2)); // scale
+    MIB.add(MI.getOperand(3)); // index
+    MIB.add(MI.getOperand(4)); // displacement
+    MIB.add(MI.getOperand(5)); // segment
+    MI.eraseFromParent();      // The pseudo is gone now.
+    return BB;
+  }
+  case X86::PTTRANSPOSED: {
+    const DebugLoc &DL = MI.getDebugLoc();
+
+    MachineInstrBuilder MIB = BuildMI(*BB, MI, DL, TII->get(X86::TTRANSPOSED));
+    MIB.addReg(TMMImmToTMMReg(MI.getOperand(0).getImm()), RegState::Define);
+    MIB.addReg(TMMImmToTMMReg(MI.getOperand(1).getImm()), RegState::Undef);
+
     MI.eraseFromParent(); // The pseudo is gone now.
     return BB;
   }
@@ -49321,7 +49423,7 @@ static SDValue combineVectorShiftImm(SDNode *N, SelectionDAG &DAG,
   if (!LogicalShift && ISD::isBuildVectorAllOnes(N0.getNode()))
     // N0 is all ones or undef. We guarantee that the bits shifted into the
     // result are all ones, not undef.
-    return DAG.getConstant(-1, SDLoc(N), VT);
+    return DAG.getAllOnesConstant(SDLoc(N), VT);
 
   auto MergeShifts = [&](SDValue X, uint64_t Amt0, uint64_t Amt1) {
     unsigned NewShiftVal = Amt0 + Amt1;

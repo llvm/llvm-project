@@ -20,11 +20,28 @@
   AMDGPU_TYPE(Name, Id, SingletonId, Width, Align)
 #endif
 
+#ifndef AMDGPU_SEMAPHORE_TYPE
+#define AMDGPU_SEMAPHORE_TYPE(Name, Id, SingletonId, Width, Align, Rank) \
+  AMDGPU_TYPE(Name, Id, SingletonId, Width, Align)
+#endif
+
 AMDGPU_OPAQUE_PTR_TYPE("__amdgpu_buffer_rsrc_t", AMDGPUBufferRsrc, AMDGPUBufferRsrcTy, 128, 128, 8)
 
 AMDGPU_NAMED_BARRIER_TYPE("__amdgpu_named_workgroup_barrier_t", AMDGPUNamedWorkgroupBarrier, AMDGPUNamedWorkgroupBarrierTy, 128, 32, 0)
 AMDGPU_NAMED_BARRIER_TYPE("__amdgpu_named_cluster_barrier_t", AMDGPUNamedClusterBarrier, AMDGPUNamedClusterBarrierTy, 128, 32, 1)
 
+// Define a separate type for semaphores owned by each of the 8 possible ranks
+// in a wavegroup.
+AMDGPU_SEMAPHORE_TYPE("__amdgpu_semaphore0_t", AMDGPUSemaphore0, AMDGPUSemaphore0Ty, 128, 32, 0)
+AMDGPU_SEMAPHORE_TYPE("__amdgpu_semaphore1_t", AMDGPUSemaphore1, AMDGPUSemaphore1Ty, 128, 32, 1)
+AMDGPU_SEMAPHORE_TYPE("__amdgpu_semaphore2_t", AMDGPUSemaphore2, AMDGPUSemaphore2Ty, 128, 32, 2)
+AMDGPU_SEMAPHORE_TYPE("__amdgpu_semaphore3_t", AMDGPUSemaphore3, AMDGPUSemaphore3Ty, 128, 32, 3)
+AMDGPU_SEMAPHORE_TYPE("__amdgpu_semaphore4_t", AMDGPUSemaphore4, AMDGPUSemaphore4Ty, 128, 32, 4)
+AMDGPU_SEMAPHORE_TYPE("__amdgpu_semaphore5_t", AMDGPUSemaphore5, AMDGPUSemaphore5Ty, 128, 32, 5)
+AMDGPU_SEMAPHORE_TYPE("__amdgpu_semaphore6_t", AMDGPUSemaphore6, AMDGPUSemaphore6Ty, 128, 32, 6)
+AMDGPU_SEMAPHORE_TYPE("__amdgpu_semaphore7_t", AMDGPUSemaphore7, AMDGPUSemaphore7Ty, 128, 32, 7)
+
 #undef AMDGPU_TYPE
 #undef AMDGPU_OPAQUE_PTR_TYPE
 #undef AMDGPU_NAMED_BARRIER_TYPE
+#undef AMDGPU_SEMAPHORE_TYPE

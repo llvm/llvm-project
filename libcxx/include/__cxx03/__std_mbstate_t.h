@@ -10,8 +10,8 @@
 #ifndef _LIBCPP___STD_MBSTATE_T_H
 #define _LIBCPP___STD_MBSTATE_T_H
 
-#include <__config>
-#include <__mbstate_t.h>
+#include <__cxx03/__config>
+#include <__cxx03/__mbstate_t.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

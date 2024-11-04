@@ -201,7 +201,7 @@ within an area of a project:
     * aid release managers with backporting and other release-related
       activities,
     * be a point of contact for contributors who need help (answering questions
-      on Discord/Discourse/IRC or holding office hours).
+      on Discord/Discourse or holding office hours).
 
 Each top-level project in the monorepo will specify one or more
 lead maintainers who are responsible for ensuring community needs are

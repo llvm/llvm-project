@@ -32,10 +32,9 @@ define <4 x double> @PR50392(<4 x double> %a, <4 x double> %b) {
 ; AVX1-NEXT:    ret <4 x double> [[SHUFFLE]]
 ;
 ; AVX2-LABEL: @PR50392(
-; AVX2-NEXT:    [[TMP1:%.*]] = shufflevector <4 x double> [[A:%.*]], <4 x double> [[B:%.*]], <2 x i32> <i32 0, i32 4>
-; AVX2-NEXT:    [[TMP2:%.*]] = shufflevector <4 x double> [[A]], <4 x double> [[B]], <2 x i32> <i32 1, i32 5>
-; AVX2-NEXT:    [[TMP3:%.*]] = fadd <2 x double> [[TMP1]], [[TMP2]]
-; AVX2-NEXT:    [[TMP4:%.*]] = shufflevector <2 x double> [[TMP3]], <2 x double> poison, <4 x i32> <i32 0, i32 poison, i32 1, i32 poison>
+; AVX2-NEXT:    [[TMP1:%.*]] = shufflevector <4 x double> [[A:%.*]], <4 x double> [[B:%.*]], <4 x i32> <i32 0, i32 poison, i32 4, i32 poison>
+; AVX2-NEXT:    [[TMP2:%.*]] = shufflevector <4 x double> [[A]], <4 x double> [[B]], <4 x i32> <i32 1, i32 poison, i32 5, i32 poison>
+; AVX2-NEXT:    [[TMP4:%.*]] = fadd <4 x double> [[TMP1]], [[TMP2]]
 ; AVX2-NEXT:    [[SHIFT:%.*]] = shufflevector <4 x double> [[B]], <4 x double> poison, <4 x i32> <i32 poison, i32 poison, i32 3, i32 poison>
 ; AVX2-NEXT:    [[TMP5:%.*]] = fadd <4 x double> [[B]], [[SHIFT]]
 ; AVX2-NEXT:    [[SHUFFLE:%.*]] = shufflevector <4 x double> [[TMP4]], <4 x double> [[TMP5]], <4 x i32> <i32 0, i32 poison, i32 2, i32 6>

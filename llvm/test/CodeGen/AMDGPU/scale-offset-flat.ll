@@ -334,12 +334,100 @@ entry:
 }
 
 define amdgpu_ps <2 x float> @flat_atomicrmw_b64_rtn_idxprom(ptr align 8 inreg %p, i32 %idx) {
-; GCN-LABEL: flat_atomicrmw_b64_rtn_idxprom:
-; GCN:       ; %bb.0: ; %entry
-; GCN-NEXT:    v_mov_b64_e32 v[2:3], 1
-; GCN-NEXT:    flat_atomic_add_u64 v[0:1], v0, v[2:3], s[0:1] scale_offset th:TH_ATOMIC_RETURN scope:SCOPE_SYS
-; GCN-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GCN-NEXT:    ; return to shader part epilog
+; SDAG-LABEL: flat_atomicrmw_b64_rtn_idxprom:
+; SDAG:       ; %bb.0: ; %entry
+; SDAG-NEXT:    v_ashrrev_i32_e32 v1, 31, v0
+; SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; SDAG-NEXT:    v_lshl_add_u64 v[2:3], v[0:1], 3, s[0:1]
+; SDAG-NEXT:    v_xor_b32_e32 v0, src_flat_scratch_base_hi, v3
+; SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; SDAG-NEXT:    v_cmp_lt_u32_e32 vcc_lo, 0x3ffffff, v0
+; SDAG-NEXT:    ; implicit-def: $vgpr0_vgpr1
+; SDAG-NEXT:    s_and_saveexec_b32 s0, vcc_lo
+; SDAG-NEXT:    s_wait_alu 0xfffe
+; SDAG-NEXT:    s_xor_b32 s0, exec_lo, s0
+; SDAG-NEXT:    s_cbranch_execnz .LBB21_3
+; SDAG-NEXT:  ; %bb.1: ; %Flow
+; SDAG-NEXT:    s_wait_alu 0xfffe
+; SDAG-NEXT:    s_and_not1_saveexec_b32 s0, s0
+; SDAG-NEXT:    s_cbranch_execnz .LBB21_4
+; SDAG-NEXT:  .LBB21_2: ; %atomicrmw.phi
+; SDAG-NEXT:    s_wait_alu 0xfffe
+; SDAG-NEXT:    s_or_b32 exec_lo, exec_lo, s0
+; SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0
+; SDAG-NEXT:    s_branch .LBB21_5
+; SDAG-NEXT:  .LBB21_3: ; %atomicrmw.global
+; SDAG-NEXT:    v_mov_b64_e32 v[0:1], 1
+; SDAG-NEXT:    flat_atomic_add_u64 v[0:1], v[2:3], v[0:1] th:TH_ATOMIC_RETURN scope:SCOPE_SYS
+; SDAG-NEXT:    ; implicit-def: $vgpr2_vgpr3
+; SDAG-NEXT:    s_wait_xcnt 0x0
+; SDAG-NEXT:    s_wait_alu 0xfffe
+; SDAG-NEXT:    s_and_not1_saveexec_b32 s0, s0
+; SDAG-NEXT:    s_cbranch_execz .LBB21_2
+; SDAG-NEXT:  .LBB21_4: ; %atomicrmw.private
+; SDAG-NEXT:    v_cmp_ne_u64_e32 vcc_lo, 0, v[2:3]
+; SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0
+; SDAG-NEXT:    v_subrev_nc_u32_e32 v0, src_flat_scratch_base_lo, v2
+; SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; SDAG-NEXT:    v_cndmask_b32_e32 v4, -1, v0, vcc_lo
+; SDAG-NEXT:    scratch_load_b64 v[0:1], v4, off
+; SDAG-NEXT:    s_wait_loadcnt 0x0
+; SDAG-NEXT:    v_add_nc_u64_e32 v[2:3], 1, v[0:1]
+; SDAG-NEXT:    scratch_store_b64 v4, v[2:3], off
+; SDAG-NEXT:    s_wait_xcnt 0x0
+; SDAG-NEXT:    s_wait_alu 0xfffe
+; SDAG-NEXT:    s_or_b32 exec_lo, exec_lo, s0
+; SDAG-NEXT:    s_branch .LBB21_5
+; SDAG-NEXT:  .LBB21_5:
+;
+; GISEL-LABEL: flat_atomicrmw_b64_rtn_idxprom:
+; GISEL:       ; %bb.0: ; %entry
+; GISEL-NEXT:    v_mov_b32_e32 v2, v0
+; GISEL-NEXT:    v_mov_b64_e32 v[4:5], s[0:1]
+; GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GISEL-NEXT:    v_ashrrev_i32_e32 v3, 31, v2
+; GISEL-NEXT:    v_lshlrev_b64_e32 v[0:1], 3, v[2:3]
+; GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GISEL-NEXT:    v_add_co_u32 v4, vcc_lo, v4, v0
+; GISEL-NEXT:    v_add_co_ci_u32_e32 v5, vcc_lo, v5, v1, vcc_lo
+; GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GISEL-NEXT:    v_xor_b32_e32 v0, src_flat_scratch_base_hi, v5
+; GISEL-NEXT:    v_cmp_le_u32_e32 vcc_lo, 0x4000000, v0
+; GISEL-NEXT:    ; implicit-def: $vgpr0_vgpr1
+; GISEL-NEXT:    s_and_saveexec_b32 s2, vcc_lo
+; GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GISEL-NEXT:    s_xor_b32 s2, exec_lo, s2
+; GISEL-NEXT:    s_cbranch_execnz .LBB21_3
+; GISEL-NEXT:  ; %bb.1: ; %Flow
+; GISEL-NEXT:    s_and_not1_saveexec_b32 s0, s2
+; GISEL-NEXT:    s_cbranch_execnz .LBB21_4
+; GISEL-NEXT:  .LBB21_2: ; %atomicrmw.phi
+; GISEL-NEXT:    s_wait_alu 0xfffe
+; GISEL-NEXT:    s_or_b32 exec_lo, exec_lo, s0
+; GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GISEL-NEXT:    s_branch .LBB21_5
+; GISEL-NEXT:  .LBB21_3: ; %atomicrmw.global
+; GISEL-NEXT:    v_mov_b64_e32 v[0:1], 1
+; GISEL-NEXT:    ; implicit-def: $vgpr4
+; GISEL-NEXT:    flat_atomic_add_u64 v[0:1], v2, v[0:1], s[0:1] scale_offset th:TH_ATOMIC_RETURN scope:SCOPE_SYS
+; GISEL-NEXT:    s_wait_xcnt 0x0
+; GISEL-NEXT:    s_and_not1_saveexec_b32 s0, s2
+; GISEL-NEXT:    s_cbranch_execz .LBB21_2
+; GISEL-NEXT:  .LBB21_4: ; %atomicrmw.private
+; GISEL-NEXT:    v_cmp_ne_u64_e32 vcc_lo, 0, v[4:5]
+; GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GISEL-NEXT:    v_subrev_nc_u32_e32 v0, src_flat_scratch_base_lo, v4
+; GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GISEL-NEXT:    v_cndmask_b32_e32 v4, -1, v0, vcc_lo
+; GISEL-NEXT:    scratch_load_b64 v[0:1], v4, off
+; GISEL-NEXT:    s_wait_loadcnt 0x0
+; GISEL-NEXT:    v_add_nc_u64_e32 v[2:3], 1, v[0:1]
+; GISEL-NEXT:    scratch_store_b64 v4, v[2:3], off
+; GISEL-NEXT:    s_wait_xcnt 0x0
+; GISEL-NEXT:    s_wait_alu 0xfffe
+; GISEL-NEXT:    s_or_b32 exec_lo, exec_lo, s0
+; GISEL-NEXT:    s_branch .LBB21_5
+; GISEL-NEXT:  .LBB21_5:
 entry:
   %idxprom = sext i32 %idx to i64
   %arrayidx = getelementptr inbounds i64, ptr %p, i64 %idxprom
