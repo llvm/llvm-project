@@ -1030,7 +1030,8 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
     if ((ST->getCPU().empty() || ST->getCPU() == "generic") &&
         !ST->getFeatureString().contains("+wavefrontsize"))
       break;
-    return IC.replaceInstUsesWith(II, ConstantInt::get(II.getType(),
+    return IC.replaceInstUsesWith(
+        II, ConstantInt::get(II.getType(),
                                                        ST->getWavefrontSize()));
   }
   case Intrinsic::amdgcn_wqm_vote: {
