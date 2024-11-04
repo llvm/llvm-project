@@ -14,10 +14,8 @@
 #include <__concepts/same_as.h>
 #include <__config>
 #include <__iterator/iterator_traits.h>
+#include <__type_traits/is_constructible.h>
 #include <__type_traits/is_convertible.h>
-#include <__type_traits/is_copy_constructible.h>
-#include <__type_traits/is_default_constructible.h>
-#include <__type_traits/is_move_constructible.h>
 #include <__type_traits/is_signed.h>
 #include <__type_traits/is_void.h>
 #include <__utility/as_const.h>

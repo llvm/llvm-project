@@ -580,17 +580,24 @@ public:
 };
 
 /// Sparse conversion rule for the insertion operator.
-class SparseTensorInsertConverter : public OpConversionPattern<InsertOp> {
+class SparseTensorInsertConverter
+    : public OpConversionPattern<tensor::InsertOp> {
 public:
   using OpConversionPattern::OpConversionPattern;
   LogicalResult
-  matchAndRewrite(InsertOp op, OpAdaptor adaptor,
+  matchAndRewrite(tensor::InsertOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     // Note that the current regime only allows for strict lexicographic
     // coordinate order. All values are passed by reference through stack
     // allocated memrefs.
     Location loc = op->getLoc();
-    const auto stt = getSparseTensorType(op.getTensor());
+    const auto stt = getSparseTensorType(op.getDest());
+
+    // Dense tensor insertion.
+    if (!stt.hasEncoding())
+      return failure();
+
+    assert(stt.isIdentity() && "Run reinterpret-map before conversion.");
     const auto elemTp = stt.getElementType();
     const Level lvlRank = stt.getLvlRank();
     Value lvlCoords, vref;
@@ -608,12 +615,12 @@ public:
       lvlCoords = genAlloca(rewriter, loc, lvlRank, rewriter.getIndexType());
       vref = genAllocaScalar(rewriter, loc, elemTp);
     }
-    storeAll(rewriter, loc, lvlCoords, adaptor.getLvlCoords());
-    rewriter.create<memref::StoreOp>(loc, adaptor.getValue(), vref);
+    storeAll(rewriter, loc, lvlCoords, adaptor.getIndices());
+    rewriter.create<memref::StoreOp>(loc, adaptor.getScalar(), vref);
     SmallString<12> name{"lexInsert", primaryTypeFunctionSuffix(elemTp)};
     createFuncCall(rewriter, loc, name, {},
-                   {adaptor.getTensor(), lvlCoords, vref}, EmitCInterface::On);
-    rewriter.replaceOp(op, adaptor.getTensor());
+                   {adaptor.getDest(), lvlCoords, vref}, EmitCInterface::On);
+    rewriter.replaceOp(op, adaptor.getDest());
     return success();
   }
 };
@@ -833,6 +840,19 @@ public:
   }
 };
 
+struct SparseHasRuntimeLibraryConverter
+    : public OpConversionPattern<HasRuntimeLibraryOp> {
+  using OpConversionPattern::OpConversionPattern;
+  LogicalResult
+  matchAndRewrite(HasRuntimeLibraryOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    auto i1Type = rewriter.getI1Type();
+    rewriter.replaceOpWithNewOp<arith::ConstantOp>(
+        op, i1Type, rewriter.getIntegerAttr(i1Type, 1));
+    return success();
+  }
+};
+
 } // namespace
 
 //===----------------------------------------------------------------------===//
@@ -861,6 +881,7 @@ void mlir::populateSparseTensorConversionPatterns(TypeConverter &typeConverter,
            SparseTensorToValuesConverter, SparseNumberOfEntriesConverter,
            SparseTensorLoadConverter, SparseTensorInsertConverter,
            SparseTensorExpandConverter, SparseTensorCompressConverter,
-           SparseTensorAssembleConverter, SparseTensorDisassembleConverter>(
-          typeConverter, patterns.getContext());
+           SparseTensorAssembleConverter, SparseTensorDisassembleConverter,
+           SparseHasRuntimeLibraryConverter>(typeConverter,
+                                             patterns.getContext());
 }

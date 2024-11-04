@@ -780,8 +780,8 @@ private:
       } else {
         const SymbolContext &sc =
             cur_frame->GetSymbolContext(eSymbolContextLineEntry);
-        if (sc.line_entry.file) {
-          file = sc.line_entry.file;
+        if (sc.line_entry.GetFile()) {
+          file = sc.line_entry.GetFile();
         } else {
           result.AppendError("Can't find the file for the selected frame to "
                              "use as the default file.");

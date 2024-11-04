@@ -24,13 +24,16 @@ void test_trap(void) {
   __tw(ia, ib, 0); //expected-error {{argument value 0 is outside the valid range [1, 31]}}
 }
 
+#ifdef __PPC64__
 void test_builtin_ppc_rldimi() {
   unsigned int shift;
   unsigned long long mask;
   unsigned long long res = __builtin_ppc_rldimi(ull, ull, shift, 7); // expected-error {{argument to '__builtin_ppc_rldimi' must be a constant integer}}
   res = __builtin_ppc_rldimi(ull, ull, 63, mask);                    // expected-error {{argument to '__builtin_ppc_rldimi' must be a constant integer}}
   res = __builtin_ppc_rldimi(ull, ull, 63, 0xFFFF000000000F00);      // expected-error {{argument 3 value should represent a contiguous bit field}}
+  res = __builtin_ppc_rldimi(ull, ull, 64, 0xFFFF000000000000);      // expected-error {{argument value 64 is outside the valid range [0, 63]}}
 }
+#endif
 
 void test_builtin_ppc_rlwimi() {
   unsigned int shift;
@@ -83,6 +86,10 @@ void testalignx(const void *pointer, unsigned int alignment) {
 }
 
 #ifndef __PPC64__
+unsigned long long testrldimi32() {
+  return __rldimi(ull, ui, 3, 0x7ffff8ULL); //expected-error {{this builtin is only available on 64-bit targets}}
+}
+
 long long testbpermd(long long bit_selector, long long source) {
   return __bpermd(bit_selector, source); //expected-error {{this builtin is only available on 64-bit targets}}
 }

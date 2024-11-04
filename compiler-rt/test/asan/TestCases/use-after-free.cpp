@@ -16,11 +16,11 @@ int main() {
   // CHECK: {{0x.* is located 5 bytes inside of 10-byte region .0x.*,0x.*}}
   // CHECK: {{freed by thread T0 here:}}
   // CHECK: {{    #0 0x.* in .*free}}
-  // CHECK: {{    #1 0x.* in main .*use-after-free.cpp:}}[[@LINE-9]]
+  // CHECK: {{    #[1-3] 0x.* in main .*use-after-free.cpp:}}[[@LINE-9]]
 
   // CHECK: {{previously allocated by thread T0 here:}}
   // CHECK: {{    #0 0x.* in .*malloc}}
-  // CHECK: {{    #1 0x.* in main .*use-after-free.cpp:}}[[@LINE-14]]
+  // CHECK: {{    #[1-3] 0x.* in main .*use-after-free.cpp:}}[[@LINE-14]]
   // CHECK: Shadow byte legend (one shadow byte represents {{[0-9]+}} application bytes):
   // CHECK: Global redzone:
   // CHECK: ASan internal:

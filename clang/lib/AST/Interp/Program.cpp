@@ -145,11 +145,20 @@ std::optional<unsigned> Program::getOrCreateGlobal(const ValueDecl *VD,
 
 std::optional<unsigned> Program::getOrCreateDummy(const ValueDecl *VD) {
   // Dedup blocks since they are immutable and pointers cannot be compared.
-  if (auto It = DummyParams.find(VD); It != DummyParams.end())
+  if (auto It = DummyVariables.find(VD); It != DummyVariables.end())
     return It->second;
 
   // Create dummy descriptor.
-  Descriptor *Desc = allocateDescriptor(VD, std::nullopt);
+  // We create desriptors of 'array of unknown size' if the type is an array
+  // type _and_ the size isn't known (it's not a ConstantArrayType). If the size
+  // is known however, we create a regular dummy pointer.
+  Descriptor *Desc;
+  if (const auto *AT = VD->getType()->getAsArrayTypeUnsafe();
+      AT && !isa<ConstantArrayType>(AT))
+    Desc = allocateDescriptor(VD, Descriptor::UnknownSize{});
+  else
+    Desc = allocateDescriptor(VD);
+
   // Allocate a block for storage.
   unsigned I = Globals.size();
 
@@ -158,7 +167,7 @@ std::optional<unsigned> Program::getOrCreateDummy(const ValueDecl *VD) {
   G->block()->invokeCtor();
 
   Globals.push_back(G);
-  DummyParams[VD] = I;
+  DummyVariables[VD] = I;
   return I;
 }
 

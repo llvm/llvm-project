@@ -575,7 +575,7 @@ bool writeThinLTOBitcode(raw_ostream &OS, raw_ostream *ThinLinkOS,
 }
 
 } // anonymous namespace
-
+extern bool WriteNewDbgInfoFormatToBitcode;
 PreservedAnalyses
 llvm::ThinLTOBitcodeWriterPass::run(Module &M, ModuleAnalysisManager &AM) {
   FunctionAnalysisManager &FAM =
@@ -583,8 +583,9 @@ llvm::ThinLTOBitcodeWriterPass::run(Module &M, ModuleAnalysisManager &AM) {
 
   // RemoveDIs: there's no bitcode representation of the DPValue debug-info,
   // convert to dbg.values before writing out.
-  bool IsNewDbgInfoFormat = M.IsNewDbgInfoFormat;
-  if (IsNewDbgInfoFormat)
+  bool ConvertToOldDbgFormatForWrite =
+      M.IsNewDbgInfoFormat && !WriteNewDbgInfoFormatToBitcode;
+  if (ConvertToOldDbgFormatForWrite)
     M.convertFromNewDbgValues();
 
   bool Changed = writeThinLTOBitcode(
@@ -594,7 +595,7 @@ llvm::ThinLTOBitcodeWriterPass::run(Module &M, ModuleAnalysisManager &AM) {
       },
       M, &AM.getResult<ModuleSummaryIndexAnalysis>(M));
 
-  if (IsNewDbgInfoFormat)
+  if (ConvertToOldDbgFormatForWrite)
     M.convertToNewDbgValues();
 
   return Changed ? PreservedAnalyses::none() : PreservedAnalyses::all();

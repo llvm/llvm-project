@@ -3805,6 +3805,28 @@ def CALL_PROTOTYPE :
   NVPTXInst<(outs), (ins ProtoIdent:$ident),
             "$ident", [(CallPrototype (i32 texternalsym:$ident))]>;
 
+def SDTDynAllocaOp :
+  SDTypeProfile<1, 2, [SDTCisSameAs<0, 1>, SDTCisInt<1>, SDTCisInt<2>]>;
+
+def dyn_alloca :
+  SDNode<"NVPTXISD::DYNAMIC_STACKALLOC", SDTDynAllocaOp,
+         [SDNPHasChain, SDNPSideEffect]>;
+
+def DYNAMIC_STACKALLOC32 :
+  NVPTXInst<(outs Int32Regs:$ptr),
+            (ins Int32Regs:$size, i32imm:$align),
+            "alloca.u32 \t$ptr, $size, $align;\n\t"
+            "cvta.local.u32 \t$ptr, $ptr;",
+            [(set (i32 Int32Regs:$ptr), (dyn_alloca Int32Regs:$size, (i32 timm:$align)))]>,
+            Requires<[hasPTX<73>, hasSM<52>]>;
+
+def DYNAMIC_STACKALLOC64 :
+  NVPTXInst<(outs Int64Regs:$ptr),
+            (ins Int64Regs:$size, i32imm:$align),
+            "alloca.u64 \t$ptr, $size, $align;\n\t"
+            "cvta.local.u64 \t$ptr, $ptr;",
+            [(set Int64Regs:$ptr, (dyn_alloca Int64Regs:$size, (i32 timm:$align)))]>,
+            Requires<[hasPTX<73>, hasSM<52>]>;
 
 include "NVPTXIntrinsics.td"
 

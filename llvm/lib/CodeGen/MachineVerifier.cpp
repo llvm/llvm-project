@@ -1195,13 +1195,16 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
       const MachineMemOperand &MMO = **MI->memoperands_begin();
       if (MI->getOpcode() == TargetOpcode::G_ZEXTLOAD ||
           MI->getOpcode() == TargetOpcode::G_SEXTLOAD) {
-        if (MMO.getSizeInBits() >= ValTy.getSizeInBits())
+        if (TypeSize::isKnownGE(MMO.getSizeInBits().getValue(),
+                                ValTy.getSizeInBits()))
           report("Generic extload must have a narrower memory type", MI);
       } else if (MI->getOpcode() == TargetOpcode::G_LOAD) {
-        if (MMO.getSize() > ValTy.getSizeInBytes())
+        if (TypeSize::isKnownGT(MMO.getSize().getValue(),
+                                ValTy.getSizeInBytes()))
           report("load memory size cannot exceed result size", MI);
       } else if (MI->getOpcode() == TargetOpcode::G_STORE) {
-        if (ValTy.getSizeInBytes() < MMO.getSize())
+        if (TypeSize::isKnownLT(ValTy.getSizeInBytes(),
+                                MMO.getSize().getValue()))
           report("store memory size cannot exceed value size", MI);
       }
 
@@ -1611,6 +1614,17 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
     LLT DstTy = MRI->getType(MI->getOperand(0).getReg());
     if (DstTy.getScalarSizeInBits() % 16 != 0)
       report("G_BSWAP size must be a multiple of 16 bits", MI);
+    break;
+  }
+  case TargetOpcode::G_VSCALE: {
+    if (!MI->getOperand(1).isCImm()) {
+      report("G_VSCALE operand must be cimm", MI);
+      break;
+    }
+    if (MI->getOperand(1).getCImm()->isZero()) {
+      report("G_VSCALE immediate cannot be zero", MI);
+      break;
+    }
     break;
   }
   case TargetOpcode::G_INSERT_SUBVECTOR: {

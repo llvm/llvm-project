@@ -222,7 +222,9 @@ struct Config {
   CGProfileSortKind callGraphProfileSort;
   bool checkSections;
   bool checkDynamicRelocs;
-  llvm::DebugCompressionType compressDebugSections;
+  std::optional<llvm::DebugCompressionType> compressDebugSections;
+  llvm::SmallVector<std::pair<llvm::GlobPattern, llvm::DebugCompressionType>, 0>
+      compressSections;
   bool cref;
   llvm::SmallVector<std::pair<llvm::GlobPattern, uint64_t>, 0>
       deadRelocInNonAlloc;
@@ -271,6 +273,7 @@ struct Config {
   bool printGcSections;
   bool printIcfSections;
   bool printMemoryUsage;
+  bool rejectMismatch;
   bool relax;
   bool relaxGP;
   bool relocatable;

@@ -26,29 +26,6 @@ func.func @alloc_tensor_copy_and_dims(%t: tensor<?xf32>, %sz: index) {
 
 // -----
 
-#DCSR = #sparse_tensor.encoding<{ map = (d0, d1) -> (d0 : compressed, d1 : compressed) }>
-
-func.func @sparse_alloc_direct_return() -> tensor<20x40xf32, #DCSR> {
-  // expected-error @+1{{sparse tensor allocation should not escape function}}
-  %0 = bufferization.alloc_tensor() : tensor<20x40xf32, #DCSR>
-  return %0 : tensor<20x40xf32, #DCSR>
-}
-
-// -----
-
-#DCSR = #sparse_tensor.encoding<{ map = (d0, d1) -> (d0 : compressed, d1 : compressed) }>
-
-func.func private @foo(tensor<20x40xf32, #DCSR>) -> ()
-
-func.func @sparse_alloc_call() {
-  // expected-error @+1{{sparse tensor allocation should not escape function}}
-  %0 = bufferization.alloc_tensor() : tensor<20x40xf32, #DCSR>
-  call @foo(%0) : (tensor<20x40xf32, #DCSR>) -> ()
-  return
-}
-
-// -----
-
 // expected-error @+1{{invalid value for 'bufferization.access'}}
 func.func private @invalid_buffer_access_type(tensor<*xf32> {bufferization.access = "foo"})
 

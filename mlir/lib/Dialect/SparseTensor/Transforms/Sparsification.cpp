@@ -428,7 +428,7 @@ static void genInsertionStore(CodegenEnv &env, OpBuilder &builder, OpOperand *t,
           /*else=*/true);
       // True branch.
       builder.setInsertionPointToStart(ifValidLexInsert.thenBlock());
-      Value res = builder.create<InsertOp>(loc, rhs, chain, ivs);
+      Value res = builder.create<tensor::InsertOp>(loc, rhs, chain, ivs);
       builder.create<scf::YieldOp>(loc, res);
       // False branch.
       builder.setInsertionPointToStart(ifValidLexInsert.elseBlock());
@@ -438,7 +438,8 @@ static void genInsertionStore(CodegenEnv &env, OpBuilder &builder, OpOperand *t,
       env.updateInsertionChain(ifValidLexInsert.getResult(0));
     } else {
       // Generates regular insertion chain.
-      env.updateInsertionChain(builder.create<InsertOp>(loc, rhs, chain, ivs));
+      env.updateInsertionChain(
+          builder.create<tensor::InsertOp>(loc, rhs, chain, ivs));
     }
     return;
   }

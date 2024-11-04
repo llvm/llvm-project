@@ -85,38 +85,6 @@ define void @unsupported_argument(i64 %arg1) {
 
 ; // -----
 
-; Check that debug intrinsics that depend on cyclic metadata are dropped.
-
-declare void @llvm.dbg.value(metadata, metadata, metadata)
-
-; CHECK:      import-failure.ll
-; CHECK-SAME: warning: dropped instruction: call void @llvm.dbg.label(metadata !{{.*}})
-; CHECK:      import-failure.ll
-; CHECK-SAME: warning: dropped intrinsic: call void @llvm.dbg.value(metadata i64 %{{.*}}, metadata !3, metadata !DIExpression())
-define void @cylic_metadata(i64 %arg1) {
-  call void @llvm.dbg.value(metadata i64 %arg1, metadata !10, metadata !DIExpression()), !dbg !14
-  call void @llvm.dbg.label(metadata !13), !dbg !14
-  ret void
-}
-
-!llvm.dbg.cu = !{!1}
-!llvm.module.flags = !{!0}
-!0 = !{i32 2, !"Debug Info Version", i32 3}
-!1 = distinct !DICompileUnit(language: DW_LANG_C, file: !2)
-!2 = !DIFile(filename: "import-failure.ll", directory: "/")
-!3 = !DICompositeType(tag: DW_TAG_array_type, size: 42, baseType: !4)
-!4 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !3)
-!5 = distinct !DISubprogram(name: "class_method", scope: !2, file: !2, type: !6, spFlags: DISPFlagDefinition, unit: !1)
-!6 = !DISubroutineType(types: !7)
-!7 = !{!3}
-!10 = !DILocalVariable(scope: !5, name: "arg1", file: !2, line: 1, arg: 1, align: 64);
-!11 = !DILexicalBlock(scope: !5)
-!12 = !DILexicalBlockFile(scope: !11, discriminator: 0)
-!13 = !DILabel(scope: !12, name: "label", file: !2, line: 42)
-!14 = !DILocation(line: 1, column: 2, scope: !5)
-
-; // -----
-
 ; global_dtors with non-null data fields cannot be represented in MLIR.
 ; CHECK:      <unknown>
 ; CHECK-SAME: error: unhandled global variable: @llvm.global_dtors

@@ -42,10 +42,6 @@ def StructDirentPtr : PtrType<StructDirent>;
 def StructDirentPtrPtr : PtrType<StructDirentPtr>;
 def ConstStructDirentPtrPtr : ConstType<StructDirentPtrPtr>;
 
-def StructTimeSpec : NamedType<"struct timespec">;
-def StructTimeSpecPtr : PtrType<StructTimeSpec>;
-def ConstStructTimeSpecPtr : ConstType<StructTimeSpecPtr>;
-
 def StructSchedParam : NamedType<"struct sched_param">;
 def StructSchedParamPtr : PtrType<StructSchedParam>;
 def ConstStructSchedParamPtr : ConstType<StructSchedParamPtr>;
@@ -250,6 +246,7 @@ def POSIX : StandardSpec<"POSIX"> {
       [
         SizeTType,
         OffTType,
+        ModeTType,
       ],
       [], // Enumerations
       [
@@ -313,6 +310,16 @@ def POSIX : StandardSpec<"POSIX"> {
           "msync",
           RetValSpec<IntType>,
           [ArgSpec<VoidPtr>, ArgSpec<SizeTType>, ArgSpec<IntType>]
+        >,
+        FunctionSpec<
+          "shm_open",
+          RetValSpec<IntType>,
+          [ArgSpec<ConstCharPtr>, ArgSpec<IntType>, ArgSpec<ModeTType>]
+        >,
+        FunctionSpec<
+          "shm_unlink",
+          RetValSpec<IntType>,
+          [ArgSpec<ConstCharPtr>]
         >,
       ]
   >;

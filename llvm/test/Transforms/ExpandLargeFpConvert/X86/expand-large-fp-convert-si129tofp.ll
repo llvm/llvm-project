@@ -15,12 +15,12 @@ define half @si129tohalf(i129 %a) {
 ; CHECK-NEXT:    [[TMP5:%.*]] = trunc i129 [[TMP4]] to i32
 ; CHECK-NEXT:    [[TMP6:%.*]] = sub i32 129, [[TMP5]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = sub i32 128, [[TMP5]]
-; CHECK-NEXT:    [[TMP8:%.*]] = icmp sgt i32 [[TMP7]], 24
+; CHECK-NEXT:    [[TMP8:%.*]] = icmp sgt i32 [[TMP6]], 24
 ; CHECK-NEXT:    br i1 [[TMP8]], label [[ITOFP_IF_THEN4:%.*]], label [[ITOFP_IF_ELSE:%.*]]
 ; CHECK:       itofp-if-then4:
 ; CHECK-NEXT:    switch i32 [[TMP6]], label [[ITOFP_SW_DEFAULT:%.*]] [
-; CHECK-NEXT:    i32 25, label [[ITOFP_SW_BB:%.*]]
-; CHECK-NEXT:    i32 26, label [[ITOFP_SW_EPILOG:%.*]]
+; CHECK-NEXT:      i32 25, label [[ITOFP_SW_BB:%.*]]
+; CHECK-NEXT:      i32 26, label [[ITOFP_SW_EPILOG:%.*]]
 ; CHECK-NEXT:    ]
 ; CHECK:       itofp-sw-bb:
 ; CHECK-NEXT:    [[TMP9:%.*]] = shl i129 [[TMP3]], 1
@@ -100,12 +100,12 @@ define float @si129tofloat(i129 %a) {
 ; CHECK-NEXT:    [[TMP5:%.*]] = trunc i129 [[TMP4]] to i32
 ; CHECK-NEXT:    [[TMP6:%.*]] = sub i32 129, [[TMP5]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = sub i32 128, [[TMP5]]
-; CHECK-NEXT:    [[TMP8:%.*]] = icmp sgt i32 [[TMP7]], 24
+; CHECK-NEXT:    [[TMP8:%.*]] = icmp sgt i32 [[TMP6]], 24
 ; CHECK-NEXT:    br i1 [[TMP8]], label [[ITOFP_IF_THEN4:%.*]], label [[ITOFP_IF_ELSE:%.*]]
 ; CHECK:       itofp-if-then4:
 ; CHECK-NEXT:    switch i32 [[TMP6]], label [[ITOFP_SW_DEFAULT:%.*]] [
-; CHECK-NEXT:    i32 25, label [[ITOFP_SW_BB:%.*]]
-; CHECK-NEXT:    i32 26, label [[ITOFP_SW_EPILOG:%.*]]
+; CHECK-NEXT:      i32 25, label [[ITOFP_SW_BB:%.*]]
+; CHECK-NEXT:      i32 26, label [[ITOFP_SW_EPILOG:%.*]]
 ; CHECK-NEXT:    ]
 ; CHECK:       itofp-sw-bb:
 ; CHECK-NEXT:    [[TMP9:%.*]] = shl i129 [[TMP3]], 1
@@ -184,12 +184,12 @@ define double @si129todouble(i129 %a) {
 ; CHECK-NEXT:    [[TMP5:%.*]] = trunc i129 [[TMP4]] to i32
 ; CHECK-NEXT:    [[TMP6:%.*]] = sub i32 129, [[TMP5]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = sub i32 128, [[TMP5]]
-; CHECK-NEXT:    [[TMP8:%.*]] = icmp sgt i32 [[TMP7]], 53
+; CHECK-NEXT:    [[TMP8:%.*]] = icmp sgt i32 [[TMP6]], 53
 ; CHECK-NEXT:    br i1 [[TMP8]], label [[ITOFP_IF_THEN4:%.*]], label [[ITOFP_IF_ELSE:%.*]]
 ; CHECK:       itofp-if-then4:
 ; CHECK-NEXT:    switch i32 [[TMP6]], label [[ITOFP_SW_DEFAULT:%.*]] [
-; CHECK-NEXT:    i32 54, label [[ITOFP_SW_BB:%.*]]
-; CHECK-NEXT:    i32 55, label [[ITOFP_SW_EPILOG:%.*]]
+; CHECK-NEXT:      i32 54, label [[ITOFP_SW_BB:%.*]]
+; CHECK-NEXT:      i32 55, label [[ITOFP_SW_EPILOG:%.*]]
 ; CHECK-NEXT:    ]
 ; CHECK:       itofp-sw-bb:
 ; CHECK-NEXT:    [[TMP9:%.*]] = shl i129 [[TMP3]], 1
@@ -273,12 +273,12 @@ define x86_fp80 @si129tox86_fp80(i129 %a) {
 ; CHECK-NEXT:    [[TMP5:%.*]] = trunc i129 [[TMP4]] to i32
 ; CHECK-NEXT:    [[TMP6:%.*]] = sub i129 129, [[TMP4]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = sub i129 128, [[TMP4]]
-; CHECK-NEXT:    [[TMP8:%.*]] = icmp sgt i129 [[TMP7]], 113
+; CHECK-NEXT:    [[TMP8:%.*]] = icmp sgt i129 [[TMP6]], 113
 ; CHECK-NEXT:    br i1 [[TMP8]], label [[ITOFP_IF_THEN4:%.*]], label [[ITOFP_IF_ELSE:%.*]]
 ; CHECK:       itofp-if-then4:
 ; CHECK-NEXT:    switch i129 [[TMP6]], label [[ITOFP_SW_DEFAULT:%.*]] [
-; CHECK-NEXT:    i129 114, label [[ITOFP_SW_BB:%.*]]
-; CHECK-NEXT:    i129 115, label [[ITOFP_SW_EPILOG:%.*]]
+; CHECK-NEXT:      i129 114, label [[ITOFP_SW_BB:%.*]]
+; CHECK-NEXT:      i129 115, label [[ITOFP_SW_EPILOG:%.*]]
 ; CHECK-NEXT:    ]
 ; CHECK:       itofp-sw-bb:
 ; CHECK-NEXT:    [[TMP9:%.*]] = shl i129 [[TMP3]], 1
@@ -357,12 +357,12 @@ define fp128 @si129tofp128(i129 %a) {
 ; CHECK-NEXT:    [[TMP5:%.*]] = trunc i129 [[TMP4]] to i32
 ; CHECK-NEXT:    [[TMP6:%.*]] = sub i129 129, [[TMP4]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = sub i129 128, [[TMP4]]
-; CHECK-NEXT:    [[TMP8:%.*]] = icmp sgt i129 [[TMP7]], 113
+; CHECK-NEXT:    [[TMP8:%.*]] = icmp sgt i129 [[TMP6]], 113
 ; CHECK-NEXT:    br i1 [[TMP8]], label [[ITOFP_IF_THEN4:%.*]], label [[ITOFP_IF_ELSE:%.*]]
 ; CHECK:       itofp-if-then4:
 ; CHECK-NEXT:    switch i129 [[TMP6]], label [[ITOFP_SW_DEFAULT:%.*]] [
-; CHECK-NEXT:    i129 114, label [[ITOFP_SW_BB:%.*]]
-; CHECK-NEXT:    i129 115, label [[ITOFP_SW_EPILOG:%.*]]
+; CHECK-NEXT:      i129 114, label [[ITOFP_SW_BB:%.*]]
+; CHECK-NEXT:      i129 115, label [[ITOFP_SW_EPILOG:%.*]]
 ; CHECK-NEXT:    ]
 ; CHECK:       itofp-sw-bb:
 ; CHECK-NEXT:    [[TMP9:%.*]] = shl i129 [[TMP3]], 1

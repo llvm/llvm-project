@@ -22,6 +22,18 @@
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 #if _LIBCPP_STD_VER >= 23
+
+// TODO: GCC and Clang both have this builtin. Remove the false case once we've updated to GCC 14.
+#  if __has_builtin(__is_scoped_enum)
+
+template <class _Tp>
+struct _LIBCPP_TEMPLATE_VIS is_scoped_enum : bool_constant<__is_scoped_enum(_Tp)> {};
+
+template <class _Tp>
+inline constexpr bool is_scoped_enum_v = __is_scoped_enum(_Tp);
+
+#  else
+
 template <class _Tp, bool = is_enum_v<_Tp> >
 struct __is_scoped_enum_helper : false_type {};
 
@@ -33,7 +45,10 @@ struct _LIBCPP_TEMPLATE_VIS is_scoped_enum : public __is_scoped_enum_helper<_Tp>
 
 template <class _Tp>
 inline constexpr bool is_scoped_enum_v = is_scoped_enum<_Tp>::value;
-#endif
+
+#  endif // __has_builtin(__is_scoped_enum)
+
+#endif // _LIBCPP_STD_VER >= 23
 
 _LIBCPP_END_NAMESPACE_STD
 

@@ -32,6 +32,9 @@
 /clang/www/cxx_dr_status.html @Endilll
 /clang/www/make_cxx_dr_status @Endilll
 
+clang/lib/AST/Interp/ @tbaederr
+clang/test/AST/Interp/ @tbaederr
+
 /lldb/ @JDevlieghere
 
 # MLIR Interfaces.
@@ -105,3 +108,6 @@
 
 # BOLT
 /bolt/ @aaupov @maksfb @rafaelauler @ayermolo @dcci
+
+# Bazel build system.
+/utils/bazel/ @rupprecht

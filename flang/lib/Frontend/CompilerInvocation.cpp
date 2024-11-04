@@ -581,6 +581,8 @@ static bool parseFrontendArgs(FrontendOptions &opts, llvm::opt::ArgList &args,
                 // pre-processed inputs.
                 .Case("f95", Language::Fortran)
                 .Case("f95-cpp-input", Language::Fortran)
+                // CUDA Fortran
+                .Case("cuda", Language::Fortran)
                 .Default(Language::Unknown);
 
     // Flang's intermediate representations.
@@ -876,6 +878,13 @@ static bool parseDialectArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
   }
   if (args.hasArg(clang::driver::options::OPT_flarge_sizes))
     res.getDefaultKinds().set_sizeIntegerKind(8);
+
+  // -x cuda
+  auto language = args.getLastArgValue(clang::driver::options::OPT_x);
+  if (language.equals("cuda")) {
+    res.getFrontendOpts().features.Enable(
+        Fortran::common::LanguageFeature::CUDA);
+  }
 
   // -fopenmp and -fopenacc
   if (args.hasArg(clang::driver::options::OPT_fopenacc)) {

@@ -3,10 +3,12 @@ static_library("InstallAPI") {
   configs += [ "//llvm/utils/gn/build:clang_code" ]
   deps = [
     "//clang/lib/AST",
+    "//llvm/lib/Demangle",
     "//llvm/lib/Support",
     "//llvm/lib/TextAPI",
   ]
   sources = [
+    "DylibVerifier.cpp",
     "FileList.cpp",
     "Frontend.cpp",
     "HeaderFile.cpp",

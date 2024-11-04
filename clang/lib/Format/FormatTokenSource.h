@@ -15,10 +15,7 @@
 #ifndef LLVM_CLANG_LIB_FORMAT_FORMATTOKENSOURCE_H
 #define LLVM_CLANG_LIB_FORMAT_FORMATTOKENSOURCE_H
 
-#include "FormatToken.h"
 #include "UnwrappedLineParser.h"
-#include "llvm/ADT/DenseMap.h"
-#include <cstddef>
 
 #define DEBUG_TYPE "format-token-source"
 

@@ -230,11 +230,36 @@ LIBC_INLINE T nextafter(T from, U to) {
   return from_bits.get_val();
 }
 
+template <bool IsDown, typename T,
+          cpp::enable_if_t<cpp::is_floating_point_v<T>, int> = 0>
+LIBC_INLINE constexpr T nextupdown(T x) {
+  constexpr Sign sign = IsDown ? Sign::NEG : Sign::POS;
+
+  FPBits<T> xbits(x);
+  if (xbits.is_nan() || xbits == FPBits<T>::max_normal(sign) ||
+      xbits == FPBits<T>::inf(sign))
+    return x;
+
+  using StorageType = typename FPBits<T>::StorageType;
+  if (x != T(0)) {
+    if (xbits.sign() == sign) {
+      xbits = FPBits<T>(StorageType(xbits.uintval() + 1));
+    } else {
+      xbits = FPBits<T>(StorageType(xbits.uintval() - 1));
+    }
+  } else {
+    xbits = FPBits<T>::min_subnormal(sign);
+  }
+
+  return xbits.get_val();
+}
+
 } // namespace fputil
 } // namespace LIBC_NAMESPACE
 
 #ifdef LIBC_TYPES_LONG_DOUBLE_IS_X86_FLOAT80
 #include "x86_64/NextAfterLongDouble.h"
+#include "x86_64/NextUpDownLongDouble.h"
 #endif // LIBC_TYPES_LONG_DOUBLE_IS_X86_FLOAT80
 
 #endif // LLVM_LIBC_SRC___SUPPORT_FPUTIL_MANIPULATIONFUNCTIONS_H

@@ -13,13 +13,11 @@
 #ifndef MLIR_TARGET_CPP_CPPEMITTER_H
 #define MLIR_TARGET_CPP_CPPEMITTER_H
 
-#include "mlir/IR/BuiltinTypes.h"
-#include "mlir/IR/Value.h"
-#include "llvm/ADT/ScopedHashTable.h"
-#include "llvm/Support/raw_ostream.h"
-#include <stack>
+#include "mlir/Support/LLVM.h"
 
 namespace mlir {
+struct LogicalResult;
+class Operation;
 namespace emitc {
 
 /// Translates the given operation to C++ code. The operation or operations in

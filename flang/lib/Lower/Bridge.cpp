@@ -748,7 +748,8 @@ public:
 
   void copyVar(mlir::Location loc, mlir::Value dst,
                mlir::Value src) override final {
-    copyVarHLFIR(loc, dst, src);
+    copyVarHLFIR(loc, Fortran::lower::SymbolBox::Intrinsic{dst},
+                 Fortran::lower::SymbolBox::Intrinsic{src});
   }
 
   void copyHostAssociateVar(
@@ -1009,10 +1010,7 @@ private:
       // `omp.private`'s `alloc` block. If this is the case, we return this
       // `SymbolBox::Intrinsic` value.
       if (Fortran::lower::SymbolBox v = symMap->lookupSymbol(sym))
-        return v.match(
-            [&](const Fortran::lower::SymbolBox::Intrinsic &)
-                -> Fortran::lower::SymbolBox { return v; },
-            [](const auto &) -> Fortran::lower::SymbolBox { return {}; });
+        return v;
 
       return {};
     }
@@ -1060,15 +1058,16 @@ private:
                const Fortran::lower::SymbolBox &rhs_sb) {
     mlir::Location loc = genLocation(sym.name());
     if (lowerToHighLevelFIR())
-      copyVarHLFIR(loc, lhs_sb.getAddr(), rhs_sb.getAddr());
+      copyVarHLFIR(loc, lhs_sb, rhs_sb);
     else
       copyVarFIR(loc, sym, lhs_sb, rhs_sb);
   }
 
-  void copyVarHLFIR(mlir::Location loc, mlir::Value dst, mlir::Value src) {
+  void copyVarHLFIR(mlir::Location loc, Fortran::lower::SymbolBox dst,
+                    Fortran::lower::SymbolBox src) {
     assert(lowerToHighLevelFIR());
-    hlfir::Entity lhs{dst};
-    hlfir::Entity rhs{src};
+    hlfir::Entity lhs{dst.getAddr()};
+    hlfir::Entity rhs{src.getAddr()};
     // Temporary_lhs is set to true in hlfir.assign below to avoid user
     // assignment to be used and finalization to be called on the LHS.
     // This may or may not be correct but mimics the current behaviour
@@ -1082,7 +1081,22 @@ private:
           /*keepLhsLengthInAllocatableAssignment=*/false,
           /*temporary_lhs=*/true);
     };
-    if (lhs.isAllocatable()) {
+
+    bool isBoxAllocatable = dst.match(
+        [](const fir::MutableBoxValue &box) { return box.isAllocatable(); },
+        [](const fir::FortranVariableOpInterface &box) {
+          return fir::FortranVariableOpInterface(box).isAllocatable();
+        },
+        [](const auto &box) { return false; });
+
+    bool isBoxPointer = dst.match(
+        [](const fir::MutableBoxValue &box) { return box.isPointer(); },
+        [](const fir::FortranVariableOpInterface &box) {
+          return fir::FortranVariableOpInterface(box).isPointer();
+        },
+        [](const auto &box) { return false; });
+
+    if (isBoxAllocatable) {
       // Deep copy allocatable if it is allocated.
       // Note that when allocated, the RHS is already allocated with the LHS
       // shape for copy on entry in createHostAssociateVarClone.
@@ -1097,7 +1111,7 @@ private:
             copyData(lhs, rhs);
           })
           .end();
-    } else if (lhs.isPointer()) {
+    } else if (isBoxPointer) {
       // Set LHS target to the target of RHS (do not copy the RHS
       // target data into the LHS target storage).
       auto loadVal = builder->create<fir::LoadOp>(loc, rhs);
@@ -2508,19 +2522,32 @@ private:
     if (nestedLoops > 1)
       n = builder->getIntegerAttr(builder->getI64Type(), nestedLoops);
 
-    const std::list<Fortran::parser::ScalarIntExpr> &grid = std::get<1>(dir.t);
-    const std::list<Fortran::parser::ScalarIntExpr> &block = std::get<2>(dir.t);
+    const std::list<Fortran::parser::CUFKernelDoConstruct::StarOrExpr> &grid =
+        std::get<1>(dir.t);
+    const std::list<Fortran::parser::CUFKernelDoConstruct::StarOrExpr> &block =
+        std::get<2>(dir.t);
     const std::optional<Fortran::parser::ScalarIntExpr> &stream =
         std::get<3>(dir.t);
 
     llvm::SmallVector<mlir::Value> gridValues;
-    for (const Fortran::parser::ScalarIntExpr &expr : grid)
-      gridValues.push_back(fir::getBase(
-          genExprValue(*Fortran::semantics::GetExpr(expr), stmtCtx)));
+    for (const Fortran::parser::CUFKernelDoConstruct::StarOrExpr &expr : grid) {
+      if (expr.v) {
+        gridValues.push_back(fir::getBase(
+            genExprValue(*Fortran::semantics::GetExpr(*expr.v), stmtCtx)));
+      } else {
+        // TODO: '*'
+      }
+    }
     llvm::SmallVector<mlir::Value> blockValues;
-    for (const Fortran::parser::ScalarIntExpr &expr : block)
-      blockValues.push_back(fir::getBase(
-          genExprValue(*Fortran::semantics::GetExpr(expr), stmtCtx)));
+    for (const Fortran::parser::CUFKernelDoConstruct::StarOrExpr &expr :
+         block) {
+      if (expr.v) {
+        blockValues.push_back(fir::getBase(
+            genExprValue(*Fortran::semantics::GetExpr(*expr.v), stmtCtx)));
+      } else {
+        // TODO: '*'
+      }
+    }
     mlir::Value streamValue;
     if (stream)
       streamValue = fir::getBase(

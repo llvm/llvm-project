@@ -344,7 +344,7 @@ bool MipsLegalizerInfo::legalizeCustom(
   switch (MI.getOpcode()) {
   case G_LOAD:
   case G_STORE: {
-    unsigned MemSize = (**MI.memoperands_begin()).getSize();
+    unsigned MemSize = (**MI.memoperands_begin()).getSize().getValue();
     Register Val = MI.getOperand(0).getReg();
     unsigned Size = MRI.getType(Val).getSizeInBits();
 

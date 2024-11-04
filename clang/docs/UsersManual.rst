@@ -4227,7 +4227,68 @@ Clang expects the GCC executable "gcc.exe" compiled for
 
 AIX
 ^^^
+TOC Data Transformation
+"""""""""""""""""""""""
+TOC data transformation is off by default (``-mno-tocdata``).
+When ``-mtocdata`` is specified, the TOC data transformation will be applied to
+all suitable variables with static storage duration, including static data
+members of classes and block-scope static variables (if not marked as exceptions,
+see further below).
 
+Suitable variables must:
+
+-  have complete types
+-  be independently generated (i.e., not placed in a pool)
+-  be at most as large as a pointer
+-  not be aligned more strictly than a pointer
+-  not be structs containing flexible array members
+-  not have internal linkage
+-  not have aliases
+-  not have section attributes
+-  not be thread local storage
+
+The TOC data transformation results in the variable, not its address,
+being placed in the TOC. This eliminates the need to load the address of the
+variable from the TOC.
+
+Note:
+If the TOC data transformation is applied to a variable whose definition
+is imported, the linker will generate fixup code for reading or writing to the
+variable.
+
+When multiple toc-data options are used, the last option used has the affect.
+For example: -mno-tocdata=g5,g1 -mtocdata=g1,g2 -mno-tocdata=g2 -mtocdata=g3,g4
+results in -mtocdata=g1,g3,g4
+
+Names of variables not having external linkage will be ignored.
+
+**Options:**
+
+.. option:: -mno-tocdata
+
+  This is the default behaviour. Only variables explicitly specified with
+  ``-mtocdata=`` will have the TOC data transformation applied.
+
+.. option:: -mtocdata
+
+  Apply the TOC data transformation to all suitable variables with static
+  storage duration (including static data members of classes and block-scope
+  static variables) that are not explicitly specified with ``-mno-tocdata=``.
+
+.. option:: -mno-tocdata=
+
+  Can be used in conjunction with ``-mtocdata`` to mark the comma-separated
+  list of external linkage variables, specified using their mangled names, as
+  exceptions to ``-mtocdata``.
+
+.. option:: -mtocdata=
+
+  Apply the TOC data transformation to the comma-separated list of external
+  linkage variables, specified using their mangled names, if they are suitable.
+  Emit diagnostics for all unsuitable variables specified.
+
+Default Visibility Export Mapping
+"""""""""""""""""""""""""""""""""
 The ``-mdefault-visibility-export-mapping=`` option can be used to control
 mapping of default visibility to an explicit shared object export
 (i.e. XCOFF exported visibility). Three values are provided for the option:

@@ -1507,6 +1507,22 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  nanf128_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    nanf128_test.cpp
+  DEPENDS
+    libc.include.math
+    libc.include.signal
+    libc.src.math.nanf128
+    libc.src.__support.FPUtil.fp_bits
+  # FIXME: The nan tests currently have death tests, which aren't supported for
+  # hermetic tests.
+  UNIT_TEST_ONLY
+)
+
+add_fp_unittest(
   nextafter_test
   SUITE
     libc-math-smoke-tests
@@ -1547,6 +1563,21 @@ add_fp_unittest(
   DEPENDS
     libc.include.math
     libc.src.math.nextafterl
+    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  nextafterf128_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    nextafterf128_test.cpp
+  HDRS
+    NextAfterTest.h
+  DEPENDS
+    libc.include.math
+    libc.src.math.nextafterf128
     libc.src.__support.FPUtil.basic_operations
     libc.src.__support.FPUtil.fp_bits
 )
@@ -1597,6 +1628,118 @@ add_fp_unittest(
     libc.src.math.nexttowardl
     libc.src.__support.FPUtil.basic_operations
     libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  nextdown_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    nextdown_test.cpp
+  HDRS
+    NextDownTest.h
+  DEPENDS
+    libc.include.math
+    libc.src.math.nextdown
+    libc.src.__support.FPUtil.manipulation_functions
+)
+
+add_fp_unittest(
+  nextdownf_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    nextdownf_test.cpp
+  HDRS
+    NextDownTest.h
+  DEPENDS
+    libc.include.math
+    libc.src.math.nextdownf
+    libc.src.__support.FPUtil.manipulation_functions
+)
+
+add_fp_unittest(
+  nextdownl_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    nextdownl_test.cpp
+  HDRS
+    NextDownTest.h
+  DEPENDS
+    libc.include.math
+    libc.src.math.nextdownl
+    libc.src.__support.FPUtil.manipulation_functions
+)
+
+add_fp_unittest(
+  nextdownf128_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    nextdownf128_test.cpp
+  HDRS
+    NextDownTest.h
+  DEPENDS
+    libc.include.math
+    libc.src.math.nextdownf128
+    libc.src.__support.FPUtil.manipulation_functions
+)
+
+add_fp_unittest(
+  nextup_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    nextup_test.cpp
+  HDRS
+    NextUpTest.h
+  DEPENDS
+    libc.include.math
+    libc.src.math.nextup
+    libc.src.__support.FPUtil.manipulation_functions
+)
+
+add_fp_unittest(
+  nextupf_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    nextupf_test.cpp
+  HDRS
+    NextUpTest.h
+  DEPENDS
+    libc.include.math
+    libc.src.math.nextupf
+    libc.src.__support.FPUtil.manipulation_functions
+)
+
+add_fp_unittest(
+  nextupl_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    nextupl_test.cpp
+  HDRS
+    NextUpTest.h
+  DEPENDS
+    libc.include.math
+    libc.src.math.nextupl
+    libc.src.__support.FPUtil.manipulation_functions
+)
+
+add_fp_unittest(
+  nextupf128_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    nextupf128_test.cpp
+  HDRS
+    NextUpTest.h
+  DEPENDS
+    libc.include.math
+    libc.src.math.nextupf128
+    libc.src.__support.FPUtil.manipulation_functions
 )
 
 # TODO(lntue): The current implementation of fputil::general::fma<float> is only

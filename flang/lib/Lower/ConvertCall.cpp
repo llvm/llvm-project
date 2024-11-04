@@ -416,7 +416,7 @@ std::pair<fir::ExtendedValue, bool> Fortran::lower::genCallOpAndResult(
     mlir::Type i32Ty = builder.getI32Type();
     mlir::Value one = builder.createIntegerConstant(loc, i32Ty, 1);
 
-    mlir::Value grid_x, grid_y;
+    mlir::Value grid_x, grid_y, grid_z;
     if (caller.getCallDescription().chevrons()[0].GetType()->category() ==
         Fortran::common::TypeCategory::Integer) {
       // If grid is an integer, it is converted to dim3(grid,1,1). Since z is
@@ -426,11 +426,13 @@ std::pair<fir::ExtendedValue, bool> Fortran::lower::genCallOpAndResult(
           fir::getBase(converter.genExprValue(
               caller.getCallDescription().chevrons()[0], stmtCtx)));
       grid_y = one;
+      grid_z = one;
     } else {
       auto dim3Addr = converter.genExprAddr(
           caller.getCallDescription().chevrons()[0], stmtCtx);
       grid_x = readDim3Value(builder, loc, fir::getBase(dim3Addr), "x");
       grid_y = readDim3Value(builder, loc, fir::getBase(dim3Addr), "y");
+      grid_z = readDim3Value(builder, loc, fir::getBase(dim3Addr), "z");
     }
 
     mlir::Value block_x, block_y, block_z;
@@ -466,8 +468,8 @@ std::pair<fir::ExtendedValue, bool> Fortran::lower::genCallOpAndResult(
               caller.getCallDescription().chevrons()[3], stmtCtx)));
 
     builder.create<fir::CUDAKernelLaunch>(
-        loc, funcType.getResults(), funcSymbolAttr, grid_x, grid_y, block_x,
-        block_y, block_z, bytes, stream, operands);
+        loc, funcType.getResults(), funcSymbolAttr, grid_x, grid_y, grid_z,
+        block_x, block_y, block_z, bytes, stream, operands);
     callNumResults = 0;
   } else if (caller.requireDispatchCall()) {
     // Procedure call requiring a dynamic dispatch. Call is created with

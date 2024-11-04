@@ -1987,7 +1987,7 @@ bool AMDGPUCodeGenPrepareImpl::visitPHINode(PHINode &I) {
   for (VectorSlice &S : Slices) {
     // We need to reset the build on each iteration, because getSlicedVal may
     // have inserted something into I's BB.
-    B.SetInsertPoint(I.getParent()->getFirstNonPHI());
+    B.SetInsertPoint(I.getParent()->getFirstNonPHIIt());
     S.NewPHI = B.CreatePHI(S.Ty, I.getNumIncomingValues());
 
     for (const auto &[Idx, BB] : enumerate(I.blocks())) {

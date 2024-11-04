@@ -163,8 +163,8 @@ struct ModuleAnalysisInfo {
   Register getFuncReg(const Function *F) {
     assert(F && "Function is null");
     auto FuncPtrRegPair = FuncMap.find(F);
-    assert(FuncPtrRegPair != FuncMap.end() && "Cannot find function ID");
-    return FuncPtrRegPair->second;
+    return FuncPtrRegPair == FuncMap.end() ? Register(0)
+                                           : FuncPtrRegPair->second;
   }
   Register getExtInstSetReg(unsigned SetNum) { return ExtInstSetMap[SetNum]; }
   InstrList &getMSInstrs(unsigned MSType) { return MS[MSType]; }

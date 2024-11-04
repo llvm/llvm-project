@@ -3391,12 +3391,25 @@ void ModuleVisitor::ApplyDefaultAccess() {
   const auto *moduleDetails{
       DEREF(currScope().symbol()).detailsIf<ModuleDetails>()};
   CHECK(moduleDetails);
+  Attr defaultAttr{
+      DEREF(moduleDetails).isDefaultPrivate() ? Attr::PRIVATE : Attr::PUBLIC};
   for (auto &pair : currScope()) {
     Symbol &symbol{*pair.second};
     if (!symbol.attrs().HasAny({Attr::PUBLIC, Attr::PRIVATE})) {
-      SetImplicitAttr(symbol,
-          DEREF(moduleDetails).isDefaultPrivate() ? Attr::PRIVATE
-                                                  : Attr::PUBLIC);
+      Attr attr{defaultAttr};
+      if (auto *generic{symbol.detailsIf<GenericDetails>()}) {
+        if (generic->derivedType()) {
+          // If a generic interface has a derived type of the same
+          // name that has an explicit accessibility attribute, then
+          // the generic must have the same accessibility.
+          if (generic->derivedType()->attrs().test(Attr::PUBLIC)) {
+            attr = Attr::PUBLIC;
+          } else if (generic->derivedType()->attrs().test(Attr::PRIVATE)) {
+            attr = Attr::PRIVATE;
+          }
+        }
+      }
+      SetImplicitAttr(symbol, attr);
     }
   }
 }

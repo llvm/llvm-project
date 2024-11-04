@@ -332,7 +332,15 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
   bool typesCompatible{typesCompatibleWithIgnoreTKR ||
       dummy.type.type().IsTkCompatibleWith(actualType.type())};
   int dummyRank{dummy.type.Rank()};
-  if (!typesCompatible && dummyRank == 0 && allowActualArgumentConversions) {
+  if (typesCompatible) {
+    if (const auto *constantChar{
+            evaluate::UnwrapConstantValue<evaluate::Ascii>(actual)};
+        constantChar && constantChar->wasHollerith() &&
+        dummy.type.type().IsUnlimitedPolymorphic()) {
+      messages.Say(
+          "passing Hollerith to unlimited polymorphic as if it were CHARACTER"_port_en_US);
+    }
+  } else if (dummyRank == 0 && allowActualArgumentConversions) {
     // Extension: pass Hollerith literal to scalar as if it had been BOZ
     if (auto converted{evaluate::HollerithToBOZ(
             foldingContext, actual, dummy.type.type())}) {

@@ -293,7 +293,7 @@ bool SpeculativeExecutionPass::considerHoistingFromTo(
   for (const auto &I : FromBlock) {
     // Make note of any DPValues that need hoisting. DPLabels
     // get left behind just like llvm.dbg.labels.
-    for (DPValue &DPV : DPValue::filter(I.getDbgRecordRange())) {
+    for (DPValue &DPV : filterDbgVars(I.getDbgRecordRange())) {
       if (HasNoUnhoistedInstr(DPV.location_ops()))
         DPValuesToHoist[DPV.getInstruction()].push_back(&DPV);
     }

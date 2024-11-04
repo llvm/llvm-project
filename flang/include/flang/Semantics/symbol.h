@@ -91,12 +91,15 @@ public:
     return moduleFileHash_;
   }
   void set_moduleFileHash(ModuleCheckSumType x) { moduleFileHash_ = x; }
+  const Symbol *previous() const { return previous_; }
+  void set_previous(const Symbol *p) { previous_ = p; }
 
 private:
   bool isSubmodule_;
   bool isDefaultPrivate_{false};
   const Scope *scope_{nullptr};
   std::optional<ModuleCheckSumType> moduleFileHash_;
+  const Symbol *previous_{nullptr}; // same name, different module file hash
 };
 
 class MainProgramDetails : public WithOmpDeclarative {

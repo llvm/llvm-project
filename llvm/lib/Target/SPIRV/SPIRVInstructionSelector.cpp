@@ -125,6 +125,8 @@ private:
 
   bool selectConstVector(Register ResVReg, const SPIRVType *ResType,
                          MachineInstr &I) const;
+  bool selectSplatVector(Register ResVReg, const SPIRVType *ResType,
+                         MachineInstr &I) const;
 
   bool selectCmp(Register ResVReg, const SPIRVType *ResType,
                  unsigned comparisonOpcode, MachineInstr &I) const;
@@ -313,6 +315,8 @@ bool SPIRVInstructionSelector::spvSelect(Register ResVReg,
 
   case TargetOpcode::G_BUILD_VECTOR:
     return selectConstVector(ResVReg, ResType, I);
+  case TargetOpcode::G_SPLAT_VECTOR:
+    return selectSplatVector(ResVReg, ResType, I);
 
   case TargetOpcode::G_SHUFFLE_VECTOR: {
     MachineBasicBlock &BB = *I.getParent();
@@ -1185,6 +1189,43 @@ bool SPIRVInstructionSelector::selectConstVector(Register ResVReg,
   return MIB.constrainAllUses(TII, TRI, RBI);
 }
 
+bool SPIRVInstructionSelector::selectSplatVector(Register ResVReg,
+                                                 const SPIRVType *ResType,
+                                                 MachineInstr &I) const {
+  if (ResType->getOpcode() != SPIRV::OpTypeVector)
+    report_fatal_error("Cannot select G_SPLAT_VECTOR with a non-vector result");
+  unsigned N = GR.getScalarOrVectorComponentCount(ResType);
+  unsigned OpIdx = I.getNumExplicitDefs();
+  if (!I.getOperand(OpIdx).isReg())
+    report_fatal_error("Unexpected argument in G_SPLAT_VECTOR");
+
+  // check if we may construct a constant vector
+  Register OpReg = I.getOperand(OpIdx).getReg();
+  bool IsConst = false;
+  if (SPIRVType *OpDef = MRI->getVRegDef(OpReg)) {
+    if (OpDef->getOpcode() == SPIRV::ASSIGN_TYPE &&
+        OpDef->getOperand(1).isReg()) {
+      if (SPIRVType *RefDef = MRI->getVRegDef(OpDef->getOperand(1).getReg()))
+        OpDef = RefDef;
+    }
+    IsConst = OpDef->getOpcode() == TargetOpcode::G_CONSTANT ||
+              OpDef->getOpcode() == TargetOpcode::G_FCONSTANT;
+  }
+
+  if (!IsConst && N < 2)
+    report_fatal_error(
+        "There must be at least two constituent operands in a vector");
+
+  auto MIB = BuildMI(*I.getParent(), I, I.getDebugLoc(),
+                     TII.get(IsConst ? SPIRV::OpConstantComposite
+                                     : SPIRV::OpCompositeConstruct))
+                 .addDef(ResVReg)
+                 .addUse(GR.getSPIRVTypeID(ResType));
+  for (unsigned i = 0; i < N; ++i)
+    MIB.addUse(OpReg);
+  return MIB.constrainAllUses(TII, TRI, RBI);
+}
+
 bool SPIRVInstructionSelector::selectCmp(Register ResVReg,
                                          const SPIRVType *ResType,
                                          unsigned CmpOpc,
@@ -1526,7 +1567,8 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
                                                const SPIRVType *ResType,
                                                MachineInstr &I) const {
   MachineBasicBlock &BB = *I.getParent();
-  switch (cast<GIntrinsic>(I).getIntrinsicID()) {
+  Intrinsic::ID IID = cast<GIntrinsic>(I).getIntrinsicID();
+  switch (IID) {
   case Intrinsic::spv_load:
     return selectLoad(ResVReg, ResType, I);
   case Intrinsic::spv_store:
@@ -1620,8 +1662,25 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
     break;
   case Intrinsic::spv_thread_id:
     return selectSpvThreadId(ResVReg, ResType, I);
-  default:
-    llvm_unreachable("Intrinsic selection not implemented");
+  case Intrinsic::spv_lifetime_start:
+  case Intrinsic::spv_lifetime_end: {
+    unsigned Op = IID == Intrinsic::spv_lifetime_start ? SPIRV::OpLifetimeStart
+                                                       : SPIRV::OpLifetimeStop;
+    int64_t Size = I.getOperand(I.getNumExplicitDefs() + 1).getImm();
+    Register PtrReg = I.getOperand(I.getNumExplicitDefs() + 2).getReg();
+    unsigned PonteeOpType = GR.getPointeeTypeOp(PtrReg);
+    bool IsNonvoidPtr = PonteeOpType != 0 && PonteeOpType != SPIRV::OpTypeVoid;
+    if (Size == -1 || IsNonvoidPtr)
+      Size = 0;
+    BuildMI(BB, I, I.getDebugLoc(), TII.get(Op)).addUse(PtrReg).addImm(Size);
+  } break;
+  default: {
+    std::string DiagMsg;
+    raw_string_ostream OS(DiagMsg);
+    I.print(OS);
+    DiagMsg = "Intrinsic selection not implemented: " + DiagMsg;
+    report_fatal_error(DiagMsg.c_str(), false);
+  }
   }
   return true;
 }
