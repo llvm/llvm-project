@@ -32,13 +32,14 @@ public:
 
   /// Creates a new frame for a method call.
   InterpFrame(InterpState &S, const Function *Func, InterpFrame *Caller,
-              CodePtr RetPC);
+              CodePtr RetPC, unsigned ArgSize);
 
   /// Creates a new frame with the values that make sense.
   /// I.e., the caller is the current frame of S,
   /// the This() pointer is the current Pointer on the top of S's stack,
   /// and the RVO pointer is before that.
-  InterpFrame(InterpState &S, const Function *Func, CodePtr RetPC);
+  InterpFrame(InterpState &S, const Function *Func, CodePtr RetPC,
+              unsigned VarArgSize = 0);
 
   /// Destroys the frame, killing all live pointers to stack slots.
   ~InterpFrame();

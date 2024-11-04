@@ -75,6 +75,7 @@ MachineTypes getEmulation(StringRef S) {
       .Case("i386:x86-64", IMAGE_FILE_MACHINE_AMD64)
       .Case("arm", IMAGE_FILE_MACHINE_ARMNT)
       .Case("arm64", IMAGE_FILE_MACHINE_ARM64)
+      .Case("arm64ec", IMAGE_FILE_MACHINE_ARM64EC)
       .Default(IMAGE_FILE_MACHINE_UNKNOWN);
 }
 
@@ -87,7 +88,8 @@ MachineTypes getMachine(Triple T) {
   case Triple::arm:
     return COFF::IMAGE_FILE_MACHINE_ARMNT;
   case Triple::aarch64:
-    return COFF::IMAGE_FILE_MACHINE_ARM64;
+    return T.isWindowsArm64EC() ? COFF::IMAGE_FILE_MACHINE_ARM64EC
+                                : COFF::IMAGE_FILE_MACHINE_ARM64;
   default:
     return COFF::IMAGE_FILE_MACHINE_UNKNOWN;
   }
@@ -110,6 +112,46 @@ std::optional<std::string> getPrefix(StringRef Argv0) {
   return ProgName.str();
 }
 
+bool parseModuleDefinition(StringRef DefFileName, MachineTypes Machine,
+                           bool AddUnderscores,
+                           std::vector<COFFShortExport> &Exports,
+                           std::string &OutputFile) {
+  std::unique_ptr<MemoryBuffer> MB = openFile(DefFileName);
+  if (!MB)
+    return false;
+
+  if (!MB->getBufferSize()) {
+    llvm::errs() << "definition file empty\n";
+    return false;
+  }
+
+  Expected<COFFModuleDefinition> Def = parseCOFFModuleDefinition(
+      *MB, Machine, /*MingwDef=*/true, AddUnderscores);
+  if (!Def) {
+    llvm::errs() << "error parsing definition\n"
+                 << errorToErrorCode(Def.takeError()).message() << "\n";
+    return false;
+  }
+
+  if (OutputFile.empty())
+    OutputFile = std::move(Def->OutputFile);
+
+  // If ExtName is set (if the "ExtName = Name" syntax was used), overwrite
+  // Name with ExtName and clear ExtName. When only creating an import
+  // library and not linking, the internal name is irrelevant. This avoids
+  // cases where writeImportLibrary tries to transplant decoration from
+  // symbol decoration onto ExtName.
+  for (COFFShortExport &E : Def->Exports) {
+    if (!E.ExtName.empty()) {
+      E.Name = E.ExtName;
+      E.ExtName.clear();
+    }
+  }
+
+  Exports = std::move(Def->Exports);
+  return true;
+}
+
 } // namespace
 
 int llvm::dlltoolDriverMain(llvm::ArrayRef<const char *> ArgsArr) {
@@ -128,7 +170,7 @@ int llvm::dlltoolDriverMain(llvm::ArrayRef<const char *> ArgsArr) {
       (!Args.hasArgNoClaim(OPT_d) && !Args.hasArgNoClaim(OPT_l))) {
     Table.printHelp(outs(), "llvm-dlltool [options] file...", "llvm-dlltool",
                     false);
-    llvm::outs() << "\nTARGETS: i386, i386:x86-64, arm, arm64\n";
+    llvm::outs() << "\nTARGETS: i386, i386:x86-64, arm, arm64, arm64ec\n";
     return 1;
   }
 
@@ -138,16 +180,6 @@ int llvm::dlltoolDriverMain(llvm::ArrayRef<const char *> ArgsArr) {
 
   if (!Args.hasArg(OPT_d)) {
     llvm::errs() << "no definition file specified\n";
-    return 1;
-  }
-
-  std::unique_ptr<MemoryBuffer> MB =
-      openFile(Args.getLastArg(OPT_d)->getValue());
-  if (!MB)
-    return 1;
-
-  if (!MB->getBufferSize()) {
-    llvm::errs() << "definition file empty\n";
     return 1;
   }
 
@@ -166,40 +198,35 @@ int llvm::dlltoolDriverMain(llvm::ArrayRef<const char *> ArgsArr) {
   }
 
   bool AddUnderscores = !Args.hasArg(OPT_no_leading_underscore);
-  Expected<COFFModuleDefinition> Def = parseCOFFModuleDefinition(
-      *MB, Machine, /*MingwDef=*/true, AddUnderscores);
 
-  if (!Def) {
-    llvm::errs() << "error parsing definition\n"
-                 << errorToErrorCode(Def.takeError()).message() << "\n";
-    return 1;
+  std::string OutputFile;
+  if (auto *Arg = Args.getLastArg(OPT_D))
+    OutputFile = Arg->getValue();
+
+  std::vector<COFFShortExport> Exports, NativeExports;
+
+  if (Args.hasArg(OPT_N)) {
+    if (!isArm64EC(Machine)) {
+      llvm::errs() << "native .def file is supported only on arm64ec target\n";
+      return 1;
+    }
+    if (!parseModuleDefinition(Args.getLastArg(OPT_N)->getValue(),
+                               IMAGE_FILE_MACHINE_ARM64, AddUnderscores,
+                               NativeExports, OutputFile))
+      return 1;
   }
 
-  // Do this after the parser because parseCOFFModuleDefinition sets OutputFile.
-  if (auto *Arg = Args.getLastArg(OPT_D))
-    Def->OutputFile = Arg->getValue();
+  if (!parseModuleDefinition(Args.getLastArg(OPT_d)->getValue(), Machine,
+                             AddUnderscores, Exports, OutputFile))
+    return 1;
 
-  if (Def->OutputFile.empty()) {
+  if (OutputFile.empty()) {
     llvm::errs() << "no DLL name specified\n";
     return 1;
   }
 
-  std::string Path = std::string(Args.getLastArgValue(OPT_l));
-
-  // If ExtName is set (if the "ExtName = Name" syntax was used), overwrite
-  // Name with ExtName and clear ExtName. When only creating an import
-  // library and not linking, the internal name is irrelevant. This avoids
-  // cases where writeImportLibrary tries to transplant decoration from
-  // symbol decoration onto ExtName.
-  for (COFFShortExport& E : Def->Exports) {
-    if (!E.ExtName.empty()) {
-      E.Name = E.ExtName;
-      E.ExtName.clear();
-    }
-  }
-
   if (Machine == IMAGE_FILE_MACHINE_I386 && Args.hasArg(OPT_k)) {
-    for (COFFShortExport& E : Def->Exports) {
+    for (COFFShortExport &E : Exports) {
       if (!E.AliasTarget.empty() || (!E.Name.empty() && E.Name[0] == '?'))
         continue;
       E.SymbolName = E.Name;
@@ -215,8 +242,9 @@ int llvm::dlltoolDriverMain(llvm::ArrayRef<const char *> ArgsArr) {
     }
   }
 
-  if (!Path.empty() && writeImportLibrary(Def->OutputFile, Path, Def->Exports,
-                                          Machine, /*MinGW=*/true))
+  std::string Path = std::string(Args.getLastArgValue(OPT_l));
+  if (!Path.empty() && writeImportLibrary(OutputFile, Path, Exports, Machine,
+                                          /*MinGW=*/true, NativeExports))
     return 1;
   return 0;
 }

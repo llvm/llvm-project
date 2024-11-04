@@ -98,7 +98,6 @@ module attributes {transform.with_named_sequence} {
     // Step 1: Tile
     %tiled_matmul, %loops:3 = transform.structured.tile_using_for %matmul [2, [4], 1]
       : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op, !transform.any_op)
-    transform.print %tiled_matmul {name = "matmul lal"}: !transform.any_op
 
     // Step 2: Vectorize
     transform.structured.vectorize %tiled_matmul vector_sizes [2, [4], 1] : !transform.any_op

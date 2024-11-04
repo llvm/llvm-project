@@ -237,6 +237,9 @@ public:
     return getLosslessTrunc(C, TruncTy, Instruction::SExt);
   }
 
+  std::optional<std::pair<Intrinsic::ID, SmallVector<Value *, 3>>>
+  convertOrOfShiftsToFunnelShift(Instruction &Or);
+
 private:
   bool annotateAnyAllocSite(CallBase &Call, const TargetLibraryInfo *TLI);
   bool isDesirableIntType(unsigned BitWidth) const;
@@ -565,6 +568,15 @@ public:
   Value *SimplifyDemandedVectorElts(Value *V, APInt DemandedElts,
                                     APInt &PoisonElts, unsigned Depth = 0,
                                     bool AllowMultipleUsers = false) override;
+
+  /// Attempts to replace V with a simpler value based on the demanded
+  /// floating-point classes
+  Value *SimplifyDemandedUseFPClass(Value *V, FPClassTest DemandedMask,
+                                    KnownFPClass &Known, unsigned Depth,
+                                    Instruction *CxtI);
+  bool SimplifyDemandedFPClass(Instruction *I, unsigned Op,
+                               FPClassTest DemandedMask, KnownFPClass &Known,
+                               unsigned Depth = 0);
 
   /// Canonicalize the position of binops relative to shufflevector.
   Instruction *foldVectorBinop(BinaryOperator &Inst);

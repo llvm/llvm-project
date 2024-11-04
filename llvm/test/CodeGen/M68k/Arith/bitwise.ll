@@ -117,7 +117,7 @@ define i32 @eorl(i32 %a, i32 %b) nounwind {
 ; op reg, imm
 ; For type i8 and i16, value is loaded from memory to avoid optimizing it to *.l
 
-define void @andib(i8* %a) nounwind {
+define void @andib(ptr %a) nounwind {
 ; CHECK-LABEL: andib:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    move.l (4,%sp), %a0
@@ -125,13 +125,13 @@ define void @andib(i8* %a) nounwind {
 ; CHECK-NEXT:    and.b #18, %d0
 ; CHECK-NEXT:    move.b %d0, (%a0)
 ; CHECK-NEXT:    rts
-  %1 = load i8, i8* %a
+  %1 = load i8, ptr %a
   %2 = and i8 %1, 18
-  store i8 %2, i8* %a
+  store i8 %2, ptr %a
   ret void
 }
 
-define void @andiw(i16* %a) nounwind {
+define void @andiw(ptr %a) nounwind {
 ; CHECK-LABEL: andiw:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    move.l (4,%sp), %a0
@@ -139,9 +139,9 @@ define void @andiw(i16* %a) nounwind {
 ; CHECK-NEXT:    and.w #4660, %d0
 ; CHECK-NEXT:    move.w %d0, (%a0)
 ; CHECK-NEXT:    rts
-  %1 = load i16, i16* %a
+  %1 = load i16, ptr %a
   %2 = and i16 %1, 4660
-  store i16 %2, i16* %a
+  store i16 %2, ptr %a
   ret void
 }
 
@@ -155,7 +155,7 @@ define i32 @andil(i32 %a) nounwind {
   ret i32 %1
 }
 
-define void @orib(i8* %a) nounwind {
+define void @orib(ptr %a) nounwind {
 ; CHECK-LABEL: orib:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    move.l (4,%sp), %a0
@@ -163,13 +163,13 @@ define void @orib(i8* %a) nounwind {
 ; CHECK-NEXT:    or.b #18, %d0
 ; CHECK-NEXT:    move.b %d0, (%a0)
 ; CHECK-NEXT:    rts
-  %1 = load i8, i8* %a
+  %1 = load i8, ptr %a
   %2 = or i8 %1, 18
-  store i8 %2, i8* %a
+  store i8 %2, ptr %a
   ret void
 }
 
-define void @oriw(i16* %a) nounwind {
+define void @oriw(ptr %a) nounwind {
 ; CHECK-LABEL: oriw:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    move.l (4,%sp), %a0
@@ -177,9 +177,9 @@ define void @oriw(i16* %a) nounwind {
 ; CHECK-NEXT:    or.w #4660, %d0
 ; CHECK-NEXT:    move.w %d0, (%a0)
 ; CHECK-NEXT:    rts
-  %1 = load i16, i16* %a
+  %1 = load i16, ptr %a
   %2 = or i16 %1, 4660
-  store i16 %2, i16* %a
+  store i16 %2, ptr %a
   ret void
 }
 
@@ -193,7 +193,7 @@ define i32 @oril(i32 %a) nounwind {
   ret i32 %1
 }
 
-define void @eorib(i8* %a) nounwind {
+define void @eorib(ptr %a) nounwind {
 ; CHECK-LABEL: eorib:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    move.l (4,%sp), %a0
@@ -201,13 +201,13 @@ define void @eorib(i8* %a) nounwind {
 ; CHECK-NEXT:    eori.b #18, %d0
 ; CHECK-NEXT:    move.b %d0, (%a0)
 ; CHECK-NEXT:    rts
-  %1 = load i8, i8* %a
+  %1 = load i8, ptr %a
   %2 = xor i8 %1, 18
-  store i8 %2, i8* %a
+  store i8 %2, ptr %a
   ret void
 }
 
-define void @eoriw(i16* %a) nounwind {
+define void @eoriw(ptr %a) nounwind {
 ; CHECK-LABEL: eoriw:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    move.l (4,%sp), %a0
@@ -215,9 +215,9 @@ define void @eoriw(i16* %a) nounwind {
 ; CHECK-NEXT:    eori.w #4660, %d0
 ; CHECK-NEXT:    move.w %d0, (%a0)
 ; CHECK-NEXT:    rts
-  %1 = load i16, i16* %a
+  %1 = load i16, ptr %a
   %2 = xor i16 %1, 4660
-  store i16 %2, i16* %a
+  store i16 %2, ptr %a
   ret void
 }
 

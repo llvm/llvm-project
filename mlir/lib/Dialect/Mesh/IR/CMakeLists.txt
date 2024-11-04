@@ -9,6 +9,7 @@ add_mlir_dialect_library(MLIRMeshDialect
 
   LINK_LIBS PUBLIC
   MLIRArithDialect
+  MLIRDialectUtils
   MLIRIR
   MLIRSupport
   MLIRViewLikeInterface

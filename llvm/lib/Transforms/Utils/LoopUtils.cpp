@@ -917,6 +917,58 @@ bool llvm::hasIterationCountInvariantInParent(Loop *InnerLoop,
   return true;
 }
 
+unsigned llvm::getArithmeticReductionInstruction(Intrinsic::ID RdxID) {
+  switch (RdxID) {
+  case Intrinsic::vector_reduce_fadd:
+    return Instruction::FAdd;
+  case Intrinsic::vector_reduce_fmul:
+    return Instruction::FMul;
+  case Intrinsic::vector_reduce_add:
+    return Instruction::Add;
+  case Intrinsic::vector_reduce_mul:
+    return Instruction::Mul;
+  case Intrinsic::vector_reduce_and:
+    return Instruction::And;
+  case Intrinsic::vector_reduce_or:
+    return Instruction::Or;
+  case Intrinsic::vector_reduce_xor:
+    return Instruction::Xor;
+  case Intrinsic::vector_reduce_smax:
+  case Intrinsic::vector_reduce_smin:
+  case Intrinsic::vector_reduce_umax:
+  case Intrinsic::vector_reduce_umin:
+    return Instruction::ICmp;
+  case Intrinsic::vector_reduce_fmax:
+  case Intrinsic::vector_reduce_fmin:
+    return Instruction::FCmp;
+  default:
+    llvm_unreachable("Unexpected ID");
+  }
+}
+
+Intrinsic::ID llvm::getMinMaxReductionIntrinsicOp(Intrinsic::ID RdxID) {
+  switch (RdxID) {
+  default:
+    llvm_unreachable("Unknown min/max recurrence kind");
+  case Intrinsic::vector_reduce_umin:
+    return Intrinsic::umin;
+  case Intrinsic::vector_reduce_umax:
+    return Intrinsic::umax;
+  case Intrinsic::vector_reduce_smin:
+    return Intrinsic::smin;
+  case Intrinsic::vector_reduce_smax:
+    return Intrinsic::smax;
+  case Intrinsic::vector_reduce_fmin:
+    return Intrinsic::minnum;
+  case Intrinsic::vector_reduce_fmax:
+    return Intrinsic::maxnum;
+  case Intrinsic::vector_reduce_fminimum:
+    return Intrinsic::minimum;
+  case Intrinsic::vector_reduce_fmaximum:
+    return Intrinsic::maximum;
+  }
+}
+
 Intrinsic::ID llvm::getMinMaxReductionIntrinsicOp(RecurKind RK) {
   switch (RK) {
   default:
@@ -937,6 +989,25 @@ Intrinsic::ID llvm::getMinMaxReductionIntrinsicOp(RecurKind RK) {
     return Intrinsic::minimum;
   case RecurKind::FMaximum:
     return Intrinsic::maximum;
+  }
+}
+
+RecurKind llvm::getMinMaxReductionRecurKind(Intrinsic::ID RdxID) {
+  switch (RdxID) {
+  case Intrinsic::vector_reduce_smax:
+    return RecurKind::SMax;
+  case Intrinsic::vector_reduce_smin:
+    return RecurKind::SMin;
+  case Intrinsic::vector_reduce_umax:
+    return RecurKind::UMax;
+  case Intrinsic::vector_reduce_umin:
+    return RecurKind::UMin;
+  case Intrinsic::vector_reduce_fmax:
+    return RecurKind::FMax;
+  case Intrinsic::vector_reduce_fmin:
+    return RecurKind::FMin;
+  default:
+    return RecurKind::None;
   }
 }
 

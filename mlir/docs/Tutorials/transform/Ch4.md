@@ -205,7 +205,7 @@ transform.named_sequence @__transform_main(
     %root: !transform.any_op {transform.readonly}) {
   // Collect groups of operations that match the criteria specified in the
   // named sequence.
-  %matmul, %el1, %el2 = transform.collect_matching @match_matmul_elemwise in %root 
+  %matmul, %el1, %el2 = transform.collect_matching @match_matmul_elemwise in %root
     : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
   %elemwise = transform.merge_handles %el1, %el2 : !transform.any_op
 

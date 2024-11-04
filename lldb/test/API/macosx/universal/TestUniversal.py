@@ -1,4 +1,4 @@
-import unittest2
+import unittest
 import os
 import lldb
 from lldbsuite.test.decorators import *
@@ -24,7 +24,7 @@ class UniversalTestCase(TestBase):
 
     @add_test_categories(["pyapi"])
     @skipUnlessDarwin
-    @unittest2.skipUnless(
+    @unittest.skipUnless(
         hasattr(os, "uname") and os.uname()[4] in ["x86_64"], "requires x86_64"
     )
     @skipIfDarwinEmbedded  # this test file assumes we're targetting an x86 system
@@ -50,7 +50,7 @@ class UniversalTestCase(TestBase):
         self.assertTrue(process, PROCESS_IS_VALID)
 
     @skipUnlessDarwin
-    @unittest2.skipUnless(
+    @unittest.skipUnless(
         hasattr(os, "uname") and os.uname()[4] in ["x86_64"], "requires x86_64"
     )
     @skipIfDarwinEmbedded  # this test file assumes we're targetting an x86 system
@@ -115,7 +115,7 @@ class UniversalTestCase(TestBase):
         self.runCmd("continue")
 
     @skipUnlessDarwin
-    @unittest2.skipUnless(
+    @unittest.skipUnless(
         hasattr(os, "uname") and os.uname()[4] in ["x86_64"], "requires x86_64"
     )
     @skipIfDarwinEmbedded  # this test file assumes we're targetting an x86 system
@@ -165,6 +165,6 @@ class UniversalTestCase(TestBase):
         # backtracing failed.
 
         threads = lldbutil.continue_to_breakpoint(process, bkpt)
-        self.assertEquals(len(threads), 1)
+        self.assertEqual(len(threads), 1)
         thread = threads[0]
         self.assertTrue(thread.GetNumFrames() > 1, "We were able to backtrace.")

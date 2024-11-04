@@ -87,29 +87,6 @@ void test() {
 </pre></div></div></td></tr>
 
 
-<tr><td><a id="alpha.core.CallAndMessageUnInitRefArg"><div class="namedescr expandable"><span class="name">
-alpha.core.CallAndMessageUnInitRefArg</span><span class="lang">
-(C, C++)</span><div class="descr">
-Check for uninitialized arguments in function calls and Objective-C
-message expressions.</div></div></a></td>
-<td><div class="exampleContainer expandable">
-<div class="example"><pre>
-void test(void) {
-  int t;
-  int &p = t;
-  int &s = p;
-  int &q = s;
-  foo(q); // warn
-}
-</pre></div><div class="separator"></div>
-<div class="example"><pre>
-void test(void) {
-  int x;
-  foo(&x); // warn
-}
-</pre></div></div></td></tr>
-
-
 <tr><td><a id="alpha.core.CastSize"><div class="namedescr expandable"><span class="name">
 alpha.core.CastSize</span><span class="lang">
 (C)</span><div class="descr">

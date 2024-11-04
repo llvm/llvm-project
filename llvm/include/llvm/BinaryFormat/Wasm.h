@@ -350,6 +350,8 @@ struct WasmGlobal {
   WasmGlobalType Type;
   WasmInitExpr InitExpr;
   StringRef SymbolName; // from the "linking" section
+  uint32_t Offset; // Offset of the definition in the binary's Global section
+  uint32_t Size;   // Size of the definition in the binary's Global section
 };
 
 struct WasmTag {

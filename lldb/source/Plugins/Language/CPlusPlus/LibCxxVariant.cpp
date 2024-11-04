@@ -204,7 +204,7 @@ public:
   }
 
   bool MightHaveChildren() override { return true; }
-  bool Update() override;
+  lldb::ChildCacheState Update() override;
   size_t CalculateNumChildren() override { return m_size; }
   ValueObjectSP GetChildAtIndex(size_t idx) override;
 
@@ -213,24 +213,24 @@ private:
 };
 } // namespace
 
-bool VariantFrontEnd::Update() {
+lldb::ChildCacheState VariantFrontEnd::Update() {
   m_size = 0;
   ValueObjectSP impl_sp = formatters::GetChildMemberWithName(
       m_backend, {ConstString("__impl_"), ConstString("__impl")});
   if (!impl_sp)
-    return false;
+    return lldb::ChildCacheState::eRefetch;
 
   LibcxxVariantIndexValidity validity = LibcxxVariantGetIndexValidity(impl_sp);
 
   if (validity == LibcxxVariantIndexValidity::Invalid)
-    return false;
+    return lldb::ChildCacheState::eRefetch;
 
   if (validity == LibcxxVariantIndexValidity::NPos)
-    return true;
+    return lldb::ChildCacheState::eReuse;
 
   m_size = 1;
 
-  return false;
+  return lldb::ChildCacheState::eRefetch;
 }
 
 ValueObjectSP VariantFrontEnd::GetChildAtIndex(size_t idx) {

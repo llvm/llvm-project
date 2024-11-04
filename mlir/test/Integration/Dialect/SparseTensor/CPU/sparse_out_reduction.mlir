@@ -110,6 +110,8 @@ module {
     bufferization.dealloc_tensor %st1 : tensor<?x?x?xi32, #SparseTensor>
     bufferization.dealloc_tensor %st2 : tensor<?x?x?xi32, #SparseTensor>
     bufferization.dealloc_tensor %0 : tensor<?x?xi32, #SparseMatrix>
+    bufferization.dealloc_tensor %dm : tensor<?x?xi32>
+
     return
   }
 }

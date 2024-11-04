@@ -30,6 +30,12 @@ describes the typical workflow of creating a Pull Request and getting it reviewe
 and accepted. This is meant as an overview of the GitHub workflow, for complete
 documentation refer to `GitHub's documentation <https://docs.github.com/pull-requests>`_.
 
+.. note::
+   If you are using a Pull Request for purposes other than review
+   (eg: precommit CI results, convenient web-based reverts, etc)
+   `skip-precommit-approval<https://github.com/llvm/llvm-project/labels?q=skip-precommit-approval>`
+   label to the PR.
+
 GitHub Tools
 ------------
 You can interact with GitHub in several ways: via git command line tools,

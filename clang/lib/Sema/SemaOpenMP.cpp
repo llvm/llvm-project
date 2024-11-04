@@ -21124,6 +21124,8 @@ Sema::ActOnOpenMPDependClause(const OMPDependClause::DependDataTy &Data,
               ExprTy = ATy->getElementType();
             else
               ExprTy = BaseType->getPointeeType();
+            if (BaseType.isNull() || ExprTy.isNull())
+              return nullptr;
             ExprTy = ExprTy.getNonReferenceType();
             const Expr *Length = OASE->getLength();
             Expr::EvalResult Result;

@@ -298,6 +298,7 @@ protected:
   }
 
   std::unique_ptr<LLVMTargetMachine> TM;
+  std::unique_ptr<MachineModuleInfo> MMI;
 
   LLVMContext Context;
   std::unique_ptr<Module> M;
@@ -355,9 +356,9 @@ protected:
             TripleName, "", "", TargetOptions(), std::nullopt)));
     if (!TM)
       GTEST_SKIP();
-    MachineModuleInfo MMI(TM.get());
-    M = parseMIR(*TM, MIRString, MMI);
-    AM.registerPass([&] { return MachineModuleAnalysis(TM.get()); });
+    MMI = std::make_unique<MachineModuleInfo>(TM.get());
+    M = parseMIR(*TM, MIRString, *MMI);
+    AM.registerPass([&] { return MachineModuleAnalysis(*MMI); });
   }
 
   MachineFunctionCallbacksTest()

@@ -28974,7 +28974,7 @@ define <32 x bfloat> @v_vselect_v32bf16(<32 x i1> %cond, <32 x bfloat> %a, <32 x
 ; GFX11-LABEL: v_vselect_v32bf16:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_clause 0x20
+; GFX11-NEXT:    s_clause 0x1f
 ; GFX11-NEXT:    scratch_load_u16 v31, off, s32
 ; GFX11-NEXT:    scratch_load_b32 v32, off, s32 offset:128
 ; GFX11-NEXT:    scratch_load_b32 v33, off, s32 offset:64

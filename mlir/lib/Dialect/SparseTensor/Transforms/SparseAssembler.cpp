@@ -61,7 +61,7 @@ void convTypes(TypeRange types, SmallVectorImpl<Type> &convTypes,
   }
 }
 
-// Convert input and output values to [dis[assemble ops for sparse tensors.
+// Convert input and output values to [dis]assemble ops for sparse tensors.
 void convVals(OpBuilder &builder, Location loc, TypeRange types,
               ValueRange fromVals, ValueRange extraVals,
               SmallVectorImpl<Value> &toVals, unsigned extra, bool isIn) {
@@ -161,8 +161,6 @@ namespace {
 //
 // TODO: refine output sparse tensors to work well with external framework
 //
-// TODO: use "inlining" instead of a wrapper?
-//
 struct SparseFuncAssembler : public OpRewritePattern<func::FuncOp> {
   using OpRewritePattern::OpRewritePattern;
 
@@ -211,7 +209,8 @@ struct SparseFuncAssembler : public OpRewritePattern<func::FuncOp> {
     convVals(rewriter, loc, funcOp.getArgumentTypes(), body->getArguments(),
              ValueRange(), inputs, 0, /*isIn=*/true);
 
-    // Call original, now internal method.
+    // Call the original, now private method. A subsequent inlining pass can
+    // determine whether cloning the method body in place is worthwhile.
     auto org = SymbolRefAttr::get(context, wrapper);
     auto call = rewriter.create<func::CallOp>(loc, funcOp.getResultTypes(), org,
                                               inputs);

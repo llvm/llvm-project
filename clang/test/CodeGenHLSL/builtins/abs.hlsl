@@ -3,10 +3,11 @@
 // RUN:   -emit-llvm -disable-llvm-passes -O3 -o - | FileCheck %s
 // RUN: %clang_cc1 -std=hlsl2021 -finclude-default-header -x hlsl -triple \
 // RUN:   dxil-pc-shadermodel6.3-library %s -emit-llvm -disable-llvm-passes \
-// RUN:   -D__HLSL_ENABLE_16_BIT -o - | FileCheck %s --check-prefix=NO_HALF
+// RUN:   -o - | FileCheck %s --check-prefix=NO_HALF
 
 using hlsl::abs;
 
+#ifdef __HLSL_ENABLE_16_BIT
 // CHECK: define noundef i16 @
 // CHECK: call i16 @llvm.abs.i16(
 int16_t test_abs_int16_t ( int16_t p0 ) {
@@ -27,6 +28,8 @@ int16_t3 test_abs_int16_t3 ( int16_t3 p0 ) {
 int16_t4 test_abs_int16_t4 ( int16_t4 p0 ) {
   return abs ( p0 );
 }
+#endif // __HLSL_ENABLE_16_BIT
+
 // CHECK: define noundef half @
 // CHECK: call half @llvm.fabs.f16(
 // NO_HALF: define noundef float @"?test_abs_half@@YA$halff@$halff@@Z"(

@@ -10,6 +10,8 @@
 // expected-no-diagnostics
 #endif
 
+// dr2504 is in dr2504.cpp
+
 namespace dr2516 { // dr2516: 3.0
                    // NB: reusing 1482 test
 #if __cplusplus >= 201103L
@@ -83,7 +85,7 @@ using ::dr2521::operator""_div;
 
 
 #if __cplusplus >= 202302L
-namespace dr2553 { // dr2553: 18 review
+namespace dr2553 { // dr2553: 18 review 2023-07-14
 struct B {
   virtual void f(this B&); 
   // since-cxx23-error@-1 {{an explicit object parameter cannot appear in a virtual function}}
@@ -101,7 +103,7 @@ struct D : B {
 #endif
 
 #if __cplusplus >= 202302L
-namespace dr2554 { // dr2554: 18 review
+namespace dr2554 { // dr2554: 18 review 2021-12-10
 struct B {
   virtual void f(); // #dr2554-g
 };
@@ -128,7 +130,7 @@ struct D3 : B {
 #endif
 
 #if __cplusplus >= 202302L
-namespace dr2561 { // dr2561: 18 review
+namespace dr2561 { // dr2561: 18 review 2023-11-09
 struct C {
     constexpr C(auto) { }
 };
@@ -143,7 +145,7 @@ void foo() {
 #endif
 
 
-namespace dr2565 { // dr2565: 16 open
+namespace dr2565 { // dr2565: 16 open 2023-06-07
 #if __cplusplus >= 202002L
   template<typename T>
     concept C = requires (typename T::type x) {

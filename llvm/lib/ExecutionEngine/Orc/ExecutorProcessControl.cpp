@@ -89,8 +89,9 @@ SelfExecutorProcessControl::loadDylib(const char *DylibPath) {
   return ExecutorAddr::fromPtr(Dylib.getOSSpecificHandle());
 }
 
-Expected<std::vector<tpctypes::LookupResult>>
-SelfExecutorProcessControl::lookupSymbols(ArrayRef<LookupRequest> Request) {
+void SelfExecutorProcessControl::lookupSymbolsAsync(
+    ArrayRef<LookupRequest> Request,
+    ExecutorProcessControl::SymbolLookupCompleteFn Complete) {
   std::vector<tpctypes::LookupResult> R;
 
   for (auto &Elem : Request) {
@@ -105,7 +106,8 @@ SelfExecutorProcessControl::lookupSymbols(ArrayRef<LookupRequest> Request) {
         // FIXME: Collect all failing symbols before erroring out.
         SymbolNameVector MissingSymbols;
         MissingSymbols.push_back(Sym);
-        return make_error<SymbolsNotFound>(SSP, std::move(MissingSymbols));
+        return Complete(
+            make_error<SymbolsNotFound>(SSP, std::move(MissingSymbols)));
       }
       // FIXME: determine accurate JITSymbolFlags.
       R.back().push_back(
@@ -113,7 +115,7 @@ SelfExecutorProcessControl::lookupSymbols(ArrayRef<LookupRequest> Request) {
     }
   }
 
-  return R;
+  Complete(std::move(R));
 }
 
 Expected<int32_t>

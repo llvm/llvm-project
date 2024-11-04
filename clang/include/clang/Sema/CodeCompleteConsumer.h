@@ -581,6 +581,7 @@ private:
   unsigned Priority : 16;
 
   /// The availability of this code-completion result.
+  LLVM_PREFERRED_TYPE(CXAvailabilityKind)
   unsigned Availability : 2;
 
   /// The name of the parent context.

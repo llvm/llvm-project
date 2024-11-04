@@ -56,6 +56,12 @@ Clang Frontend Potentially Breaking Changes
   ``ArrayRef<TemplateArgument>`` reduces AST memory usage by 0.4% when compiling clang, and is
   expected to show similar improvements on other workloads.
 
+- The ``-Wgnu-binary-literal`` diagnostic group no longer controls any
+  diagnostics. Binary literals are no longer a GNU extension, they're now a C23
+  extension which is controlled via ``-pedantic`` or ``-Wc23-extensions``. Use
+  of ``-Wno-gnu-binary-literal`` will no longer silence this pedantic warning,
+  which may break existing uses with ``-Werror``.
+
 Target OS macros extension
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 A new Clang extension (see :ref:`here <target_os_detail>`) is enabled for
@@ -90,6 +96,12 @@ C++20 Feature Support
   behavior can use the flag '-Xclang -fno-skip-odr-check-in-gmf'.
   (`#79240 <https://github.com/llvm/llvm-project/issues/79240>`_).
 
+- Implemented the `__is_layout_compatible` intrinsic to support
+  `P0466R5: Layout-compatibility and Pointer-interconvertibility Traits <https://wg21.link/P0466R5>`_.
+  Note: `CWG1719: Layout compatibility and cv-qualification revisited  <https://cplusplus.github.io/CWG/issues/1719.html>`_
+  and `CWG2759: [[no_unique_address] and common initial sequence <https://cplusplus.github.io/CWG/issues/2759.html>`_
+  are not yet implemented.
+
 C++23 Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
 
@@ -113,9 +125,35 @@ C Language Changes
 
 C23 Feature Support
 ^^^^^^^^^^^^^^^^^^^
+- No longer diagnose use of binary literals as an extension in C23 mode. Fixes
+  `#72017 <https://github.com/llvm/llvm-project/issues/72017>`_.
+
+- Corrected parsing behavior for the ``alignas`` specifier/qualifier in C23. We
+  previously handled it as an attribute as in C++, but there are parsing
+  differences. The behavioral differences are:
+
+  .. code-block:: c
+
+     struct alignas(8) /* was accepted, now rejected */ S {
+       char alignas(8) /* was rejected, now accepted */ C;
+     };
+     int i alignas(8) /* was accepted, now rejected */ ;
+
+  Fixes (`#81472 <https://github.com/llvm/llvm-project/issues/81472>`_).
+
+- Clang now generates predefined macros of the form ``__TYPE_FMTB__`` and
+  ``__TYPE_FMTb__`` (e.g., ``__UINT_FAST64_FMTB__``) in C23 mode for use with
+  macros typically exposed from ``<inttypes.h>``, such as ``PRIb8``.
+  (`#81896: <https://github.com/llvm/llvm-project/issues/81896>`_).
 
 Non-comprehensive list of changes in this release
 -------------------------------------------------
+
+- Added ``__builtin_readsteadycounter`` for reading fixed frequency hardware
+  counters.
+
+- ``__builtin_addc``, ``__builtin_subc``, and the other sizes of those
+  builtins are now constexpr and may be used in constant expressions.
 
 New Compiler Flags
 ------------------
@@ -140,6 +178,8 @@ Modified Compiler Flags
 Removed Compiler Flags
 -------------------------
 
+- The ``-freroll-loops`` flag has been removed. It had no effect since Clang 13.
+
 Attribute Changes in Clang
 --------------------------
 
@@ -149,7 +189,17 @@ Improvements to Clang's diagnostics
   prints.
 
 - Clang now diagnoses member template declarations with multiple declarators.
-- Clang now diagnoses use of the ``template`` keyword after declarative nested name specifiers.
+
+- Clang now diagnoses use of the ``template`` keyword after declarative nested
+  name specifiers.
+
+- The ``-Wshorten-64-to-32`` diagnostic is now grouped under ``-Wimplicit-int-conversion`` instead
+   of ``-Wconversion``. Fixes `#69444 <https://github.com/llvm/llvm-project/issues/69444>`_.
+
+- Clang now diagnoses friend declarations with an ``enum`` elaborated-type-specifier in language modes after C++98.
+
+- Added diagnostics for C11 keywords being incompatible with language standards
+  before C11, under a new warning group: ``-Wpre-c11-compat``.
 
 Improvements to Clang's time-trace
 ----------------------------------
@@ -160,6 +210,9 @@ Bug Fixes in This Version
   a member class template for an implicit instantiation of a class template.
 
 - Fixed missing warnings when doing bool-like conversions in C23 (`#79435 <https://github.com/llvm/llvm-project/issues/79435>`_).
+- Clang's ``-Wshadow`` no longer warns when an init-capture is named the same as
+  a class field unless the lambda can capture this.
+  Fixes (`#71976 <https://github.com/llvm/llvm-project/issues/71976>`_)
 
 - Clang now accepts qualified partial/explicit specializations of variable templates that
   are not nominable in the lookup context of the specialization.
@@ -177,6 +230,10 @@ Bug Fixes to Attribute Support
 Bug Fixes to C++ Support
 ^^^^^^^^^^^^^^^^^^^^^^^^
 
+- Fix crash when calling the constructor of an invalid class.
+  Fixes (`#10518 <https://github.com/llvm/llvm-project/issues/10518>`_),
+  (`#67914 <https://github.com/llvm/llvm-project/issues/10518>`_),
+  and (`#78388 <https://github.com/llvm/llvm-project/issues/78388>`_)
 - Fix crash when using lifetimebound attribute in function with trailing return.
   Fixes (`#73619 <https://github.com/llvm/llvm-project/issues/73619>`_)
 - Addressed an issue where constraints involving injected class types are perceived
@@ -208,6 +265,21 @@ Bug Fixes to C++ Support
   parameter where we did an incorrect specialization of the initialization of
   the default parameter.
   Fixes (`#68490 <https://github.com/llvm/llvm-project/issues/68490>`_)
+- Fix a crash when trying to call a varargs function that also has an explicit object parameter.
+  Fixes (`#80971 ICE when explicit object parameter be a function parameter pack`)
+- Fixed a bug where abbreviated function templates would append their invented template parameters to
+  an empty template parameter lists.
+- Clang now classifies aggregate initialization in C++17 and newer as constant
+  or non-constant more accurately. Previously, only a subset of the initializer
+  elements were considered, misclassifying some initializers as constant. Fixes
+  some of (`#80510 <https://github.com/llvm/llvm-project/issues/80510>`).
+- Clang now ignores top-level cv-qualifiers on function parameters in template partial orderings.
+  (`#75404 <https://github.com/llvm/llvm-project/issues/75404>`_)
+- No longer reject valid use of the ``_Alignas`` specifier when declaring a
+  local variable, which is supported as a C11 extension in C++. Previously, it
+  was only accepted at namespace scope but not at local function scope.
+- Clang no longer tries to call consteval constructors at runtime when they appear in a member initializer.
+  (`#782154 <https://github.com/llvm/llvm-project/issues/82154>`_`)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -268,11 +340,24 @@ DWARF Support in Clang
 Floating Point Support in Clang
 -------------------------------
 
+Fixed Point Support in Clang
+----------------------------
+
+- Support fixed point precision macros according to ``7.18a.3`` of
+  `ISO/IEC TR 18037:2008 <https://standards.iso.org/ittf/PubliclyAvailableStandards/c051126_ISO_IEC_TR_18037_2008.zip>`_.
+
 AST Matchers
 ------------
 
+- ``isInStdNamespace`` now supports Decl declared with ``extern "C++"``.
+
 clang-format
 ------------
+
+- ``AlwaysBreakTemplateDeclarations`` is deprecated and renamed to
+  ``BreakTemplateDeclarations``.
+- ``AlwaysBreakAfterReturnType`` is deprecated and renamed to
+  ``BreakAfterReturnType``.
 
 libclang
 --------

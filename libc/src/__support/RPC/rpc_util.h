@@ -21,8 +21,9 @@ namespace rpc {
 
 /// Suspend the thread briefly to assist the thread scheduler during busy loops.
 LIBC_INLINE void sleep_briefly() {
-#if defined(LIBC_TARGET_ARCH_IS_NVPTX) && __CUDA_ARCH__ >= 700
-  __nvvm_nanosleep(64);
+#if defined(LIBC_TARGET_ARCH_IS_NVPTX)
+  if (__nvvm_reflect("__CUDA_ARCH") >= 700)
+    LIBC_INLINE_ASM("nanosleep.u32 64;" ::: "memory");
 #elif defined(LIBC_TARGET_ARCH_IS_AMDGPU)
   __builtin_amdgcn_s_sleep(2);
 #elif defined(LIBC_TARGET_ARCH_IS_X86)

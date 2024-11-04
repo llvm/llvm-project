@@ -49,14 +49,15 @@ public:
 
   virtual size_t GetIndexOfChildWithName(ConstString name) = 0;
 
-  // this function is assumed to always succeed and it if fails, the front-end
-  // should know to deal with it in the correct way (most probably, by refusing
-  // to return any children) the return value of Update() should actually be
-  // interpreted as "ValueObjectSyntheticFilter cache is good/bad" if =true,
-  // ValueObjectSyntheticFilter is allowed to use the children it fetched
-  // previously and cached if =false, ValueObjectSyntheticFilter must throw
-  // away its cache, and query again for children
-  virtual bool Update() = 0;
+  /// This function is assumed to always succeed and if it fails, the front-end
+  /// should know to deal with it in the correct way (most probably, by refusing
+  /// to return any children). The return value of \ref Update should actually
+  /// be interpreted as "ValueObjectSyntheticFilter cache is good/bad". If this
+  /// function returns \ref lldb::ChildCacheState::eReuse, \ref
+  /// ValueObjectSyntheticFilter is allowed to use the children it fetched
+  /// previously and cached. Otherwise, \ref ValueObjectSyntheticFilter must
+  /// throw away its cache, and query again for children.
+  virtual lldb::ChildCacheState Update() = 0;
 
   // if this function returns false, then CalculateNumChildren() MUST return 0
   // since UI frontends might validly decide not to inquire for children given
@@ -116,7 +117,9 @@ public:
     return UINT32_MAX;
   }
 
-  bool Update() override { return false; }
+  lldb::ChildCacheState Update() override {
+    return lldb::ChildCacheState::eRefetch;
+  }
 
   bool MightHaveChildren() override { return false; }
 
@@ -328,7 +331,9 @@ public:
           filter->GetExpressionPathAtIndex(idx), true);
     }
 
-    bool Update() override { return false; }
+    lldb::ChildCacheState Update() override {
+      return lldb::ChildCacheState::eRefetch;
+    }
 
     bool MightHaveChildren() override { return filter->GetCount() > 0; }
 
@@ -427,7 +432,7 @@ public:
 
     lldb::ValueObjectSP GetChildAtIndex(size_t idx) override;
 
-    bool Update() override;
+    lldb::ChildCacheState Update() override;
 
     bool MightHaveChildren() override;
 

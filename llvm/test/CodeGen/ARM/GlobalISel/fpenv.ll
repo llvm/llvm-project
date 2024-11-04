@@ -74,5 +74,19 @@ entry:
   ret void
 }
 
+define void @func_reset_soft() #0 {
+; CHECK-LABEL: func_reset_soft:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    .save {r11, lr}
+; CHECK-NEXT:    push {r11, lr}
+; CHECK-NEXT:    mvn r0, #0
+; CHECK-NEXT:    bl fesetenv
+; CHECK-NEXT:    pop {r11, lr}
+; CHECK-NEXT:    mov pc, lr
+entry:
+  call void @llvm.reset.fpenv()
+  ret void
+}
+
 attributes #0 = { nounwind "use-soft-float"="true" }
 

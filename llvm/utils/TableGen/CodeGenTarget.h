@@ -17,6 +17,7 @@
 #define LLVM_UTILS_TABLEGEN_CODEGENTARGET_H
 
 #include "CodeGenHwModes.h"
+#include "CodeGenInstruction.h"
 #include "InfoByHwMode.h"
 #include "SDNodeProperties.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -34,7 +35,6 @@ namespace llvm {
 
 class RecordKeeper;
 class Record;
-class CodeGenInstruction;
 class CodeGenRegBank;
 class CodeGenRegister;
 class CodeGenRegisterClass;
@@ -58,10 +58,10 @@ class CodeGenTarget {
   RecordKeeper &Records;
   Record *TargetRec;
 
-  mutable DenseMap<const Record*,
-                   std::unique_ptr<CodeGenInstruction>> Instructions;
+  mutable DenseMap<const Record *, std::unique_ptr<CodeGenInstruction>>
+      Instructions;
   mutable std::unique_ptr<CodeGenRegBank> RegBank;
-  mutable std::vector<Record*> RegAltNameIndices;
+  mutable std::vector<Record *> RegAltNameIndices;
   mutable SmallVector<ValueTypeByHwMode, 8> LegalValueTypes;
   CodeGenHwModes CGH;
   std::vector<Record *> MacroFusions;
@@ -73,8 +73,9 @@ class CodeGenTarget {
   mutable std::unique_ptr<CodeGenSchedModels> SchedModels;
 
   mutable StringRef InstNamespace;
-  mutable std::vector<const CodeGenInstruction*> InstrsByEnum;
+  mutable std::vector<const CodeGenInstruction *> InstrsByEnum;
   mutable unsigned NumPseudoInstructions = 0;
+
 public:
   CodeGenTarget(RecordKeeper &Records);
   ~CodeGenTarget();
@@ -130,8 +131,9 @@ public:
   /// return it.
   const CodeGenRegister *getRegisterByName(StringRef Name) const;
 
-  const std::vector<Record*> &getRegAltNameIndices() const {
-    if (RegAltNameIndices.empty()) ReadRegAltNameIndices();
+  const std::vector<Record *> &getRegAltNameIndices() const {
+    if (RegAltNameIndices.empty())
+      ReadRegAltNameIndices();
     return RegAltNameIndices;
   }
 
@@ -156,15 +158,17 @@ public:
   const std::vector<Record *> getMacroFusions() const { return MacroFusions; }
 
 private:
-  DenseMap<const Record*, std::unique_ptr<CodeGenInstruction>> &
+  DenseMap<const Record *, std::unique_ptr<CodeGenInstruction>> &
   getInstructions() const {
-    if (Instructions.empty()) ReadInstructions();
+    if (Instructions.empty())
+      ReadInstructions();
     return Instructions;
   }
-public:
 
+public:
   CodeGenInstruction &getInstruction(const Record *InstRec) const {
-    if (Instructions.empty()) ReadInstructions();
+    if (Instructions.empty())
+      ReadInstructions();
     auto I = Instructions.find(InstRec);
     assert(I != Instructions.end() && "Not an instruction");
     return *I->second;
@@ -192,10 +196,18 @@ public:
     return InstrsByEnum;
   }
 
-  typedef ArrayRef<const CodeGenInstruction *>::const_iterator inst_iterator;
-  inst_iterator inst_begin() const{return getInstructionsByEnumValue().begin();}
-  inst_iterator inst_end() const { return getInstructionsByEnumValue().end(); }
+  /// Return the integer enum value corresponding to this instruction record.
+  unsigned getInstrIntValue(const Record *R) const {
+    if (InstrsByEnum.empty())
+      ComputeInstrsByEnum();
+    return getInstruction(R).EnumVal;
+  }
 
+  typedef ArrayRef<const CodeGenInstruction *>::const_iterator inst_iterator;
+  inst_iterator inst_begin() const {
+    return getInstructionsByEnumValue().begin();
+  }
+  inst_iterator inst_end() const { return getInstructionsByEnumValue().end(); }
 
   /// isLittleEndianEncoding - are instruction bit patterns defined as  [0..n]?
   ///
@@ -219,22 +231,21 @@ class ComplexPattern {
   Record *Ty;
   unsigned NumOperands;
   std::string SelectFunc;
-  std::vector<Record*> RootNodes;
+  std::vector<Record *> RootNodes;
   unsigned Properties; // Node properties
   unsigned Complexity;
+
 public:
   ComplexPattern(Record *R);
 
   Record *getValueType() const { return Ty; }
   unsigned getNumOperands() const { return NumOperands; }
   const std::string &getSelectFunc() const { return SelectFunc; }
-  const std::vector<Record*> &getRootNodes() const {
-    return RootNodes;
-  }
+  const std::vector<Record *> &getRootNodes() const { return RootNodes; }
   bool hasProperty(enum SDNP Prop) const { return Properties & (1 << Prop); }
   unsigned getComplexity() const { return Complexity; }
 };
 
-} // End llvm namespace
+} // namespace llvm
 
 #endif

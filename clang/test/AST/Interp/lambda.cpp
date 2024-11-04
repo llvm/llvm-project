@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -fexperimental-new-constant-interpreter -verify -std=c++20 %s
-// RUN: %clang_cc1 -verify=ref -std=c++20 %s
+// RUN: %clang_cc1 -fexperimental-new-constant-interpreter -verify=expected,both -std=c++20 %s
+// RUN: %clang_cc1 -verify=ref,both -std=c++20 %s
 
 constexpr int a = 12;
 constexpr int f = [c = a]() { return c; }();
@@ -43,18 +43,15 @@ static_assert(add2(4, 5) == 11);
 
 constexpr int div(int a, int b) {
   auto f = [=]() {
-    return a / b; // expected-note {{division by zero}} \
-                  // ref-note {{division by zero}}
+    return a / b; // both-note {{division by zero}}
   };
 
   return f(); // expected-note {{in call to '&f->operator()()'}} \
               // ref-note {{in call to 'f.operator()()'}}
 }
 static_assert(div(8, 2) == 4);
-static_assert(div(8, 0) == 4); // expected-error {{not an integral constant expression}} \
-                               // expected-note {{in call to 'div(8, 0)'}} \
-                               // ref-error {{not an integral constant expression}} \
-                               // ref-note {{in call to 'div(8, 0)'}}
+static_assert(div(8, 0) == 4); // both-error {{not an integral constant expression}} \
+                               // both-note {{in call to 'div(8, 0)'}}
 
 
 struct F {
@@ -155,6 +152,19 @@ namespace StaticInvoker {
     return fp(i).a;
   }
   static_assert(sv6(12) == 12);
+
+
+  /// A generic lambda.
+  auto GL = [](auto a) { return a; };
+  constexpr char (*fp2)(char) = GL;
+  static_assert(fp2('3') == '3', "");
+
+  struct GLS {
+    int a;
+  };
+  auto GL2 = [](auto a) { return GLS{a}; };
+  constexpr GLS (*fp3)(char) = GL2;
+  static_assert(fp3('3').a == '3', "");
 }
 
 namespace LambdasAsParams {
@@ -199,4 +209,29 @@ namespace ThisCapture {
   constexpr Foo F;
   static_assert(F.a == 33, "");
   static_assert(F.Aplus2() == (33 + 2), "");
+}
+
+namespace GH62611 {
+  template <auto A = [](auto x){}>
+  struct C {
+    static constexpr auto B = A;
+  };
+
+  int test() {
+    C<>::B(42);
+    return 0;
+  }
+}
+
+namespace LambdaToAPValue {
+  void wrapper() {
+    constexpr auto f = []() constexpr {
+      return 0;
+    };
+
+    constexpr auto g = [f]() constexpr {
+      return f();
+    };
+    static_assert(g() == f(), "");
+  }
 }

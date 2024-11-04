@@ -3,30 +3,65 @@
 ; RUN: llc -mtriple=riscv64 -target-abi=lp64d -mattr=+v,+zfh,+zvfh,+f,+d -verify-machineinstrs < %s | FileCheck %s -check-prefixes=CHECK,RV64
 
 define void @vselect_vv_v6i32(ptr %a, ptr %b, ptr %cc, ptr %z) {
-; CHECK-LABEL: vselect_vv_v6i32:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 6, e32, m2, ta, ma
-; CHECK-NEXT:    lbu a2, 0(a2)
-; CHECK-NEXT:    vle32.v v8, (a1)
-; CHECK-NEXT:    srli a1, a2, 1
-; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
-; CHECK-NEXT:    vmv.v.x v10, a2
-; CHECK-NEXT:    vslide1down.vx v10, v10, a1
-; CHECK-NEXT:    srli a1, a2, 2
-; CHECK-NEXT:    vslide1down.vx v10, v10, a1
-; CHECK-NEXT:    srli a1, a2, 3
-; CHECK-NEXT:    vslide1down.vx v10, v10, a1
-; CHECK-NEXT:    srli a1, a2, 4
-; CHECK-NEXT:    vslide1down.vx v10, v10, a1
-; CHECK-NEXT:    srli a2, a2, 5
-; CHECK-NEXT:    vslide1down.vx v10, v10, a2
-; CHECK-NEXT:    vslidedown.vi v10, v10, 2
-; CHECK-NEXT:    vand.vi v10, v10, 1
-; CHECK-NEXT:    vmsne.vi v0, v10, 0
-; CHECK-NEXT:    vsetivli zero, 6, e32, m2, tu, mu
-; CHECK-NEXT:    vle32.v v8, (a0), v0.t
-; CHECK-NEXT:    vse32.v v8, (a3)
-; CHECK-NEXT:    ret
+; RV32-LABEL: vselect_vv_v6i32:
+; RV32:       # %bb.0:
+; RV32-NEXT:    vsetivli zero, 6, e32, m2, ta, ma
+; RV32-NEXT:    lbu a2, 0(a2)
+; RV32-NEXT:    vle32.v v8, (a1)
+; RV32-NEXT:    slli a1, a2, 30
+; RV32-NEXT:    srli a1, a1, 31
+; RV32-NEXT:    andi a4, a2, 1
+; RV32-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
+; RV32-NEXT:    vmv.v.x v10, a4
+; RV32-NEXT:    vslide1down.vx v10, v10, a1
+; RV32-NEXT:    slli a1, a2, 29
+; RV32-NEXT:    srli a1, a1, 31
+; RV32-NEXT:    vslide1down.vx v10, v10, a1
+; RV32-NEXT:    slli a1, a2, 28
+; RV32-NEXT:    srli a1, a1, 31
+; RV32-NEXT:    vslide1down.vx v10, v10, a1
+; RV32-NEXT:    slli a1, a2, 27
+; RV32-NEXT:    srli a1, a1, 31
+; RV32-NEXT:    vslide1down.vx v10, v10, a1
+; RV32-NEXT:    srli a2, a2, 5
+; RV32-NEXT:    vslide1down.vx v10, v10, a2
+; RV32-NEXT:    vslidedown.vi v10, v10, 2
+; RV32-NEXT:    vand.vi v10, v10, 1
+; RV32-NEXT:    vmsne.vi v0, v10, 0
+; RV32-NEXT:    vsetivli zero, 6, e32, m2, tu, mu
+; RV32-NEXT:    vle32.v v8, (a0), v0.t
+; RV32-NEXT:    vse32.v v8, (a3)
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: vselect_vv_v6i32:
+; RV64:       # %bb.0:
+; RV64-NEXT:    vsetivli zero, 6, e32, m2, ta, ma
+; RV64-NEXT:    lbu a2, 0(a2)
+; RV64-NEXT:    vle32.v v8, (a1)
+; RV64-NEXT:    slli a1, a2, 62
+; RV64-NEXT:    srli a1, a1, 63
+; RV64-NEXT:    andi a4, a2, 1
+; RV64-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
+; RV64-NEXT:    vmv.v.x v10, a4
+; RV64-NEXT:    vslide1down.vx v10, v10, a1
+; RV64-NEXT:    slli a1, a2, 61
+; RV64-NEXT:    srli a1, a1, 63
+; RV64-NEXT:    vslide1down.vx v10, v10, a1
+; RV64-NEXT:    slli a1, a2, 60
+; RV64-NEXT:    srli a1, a1, 63
+; RV64-NEXT:    vslide1down.vx v10, v10, a1
+; RV64-NEXT:    slli a1, a2, 59
+; RV64-NEXT:    srli a1, a1, 63
+; RV64-NEXT:    vslide1down.vx v10, v10, a1
+; RV64-NEXT:    srli a2, a2, 5
+; RV64-NEXT:    vslide1down.vx v10, v10, a2
+; RV64-NEXT:    vslidedown.vi v10, v10, 2
+; RV64-NEXT:    vand.vi v10, v10, 1
+; RV64-NEXT:    vmsne.vi v0, v10, 0
+; RV64-NEXT:    vsetivli zero, 6, e32, m2, tu, mu
+; RV64-NEXT:    vle32.v v8, (a0), v0.t
+; RV64-NEXT:    vse32.v v8, (a3)
+; RV64-NEXT:    ret
   %va = load <6 x i32>, ptr %a
   %vb = load <6 x i32>, ptr %b
   %vcc = load <6 x i1>, ptr %cc
@@ -36,31 +71,67 @@ define void @vselect_vv_v6i32(ptr %a, ptr %b, ptr %cc, ptr %z) {
 }
 
 define void @vselect_vx_v6i32(i32 %a, ptr %b, ptr %cc, ptr %z) {
-; CHECK-LABEL: vselect_vx_v6i32:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 6, e32, m2, ta, ma
-; CHECK-NEXT:    lbu a2, 0(a2)
-; CHECK-NEXT:    vle32.v v8, (a1)
-; CHECK-NEXT:    srli a1, a2, 1
-; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
-; CHECK-NEXT:    vmv.v.x v10, a2
-; CHECK-NEXT:    vslide1down.vx v10, v10, a1
-; CHECK-NEXT:    srli a1, a2, 2
-; CHECK-NEXT:    vslide1down.vx v10, v10, a1
-; CHECK-NEXT:    srli a1, a2, 3
-; CHECK-NEXT:    vslide1down.vx v10, v10, a1
-; CHECK-NEXT:    srli a1, a2, 4
-; CHECK-NEXT:    vslide1down.vx v10, v10, a1
-; CHECK-NEXT:    srli a2, a2, 5
-; CHECK-NEXT:    vslide1down.vx v10, v10, a2
-; CHECK-NEXT:    vslidedown.vi v10, v10, 2
-; CHECK-NEXT:    vand.vi v10, v10, 1
-; CHECK-NEXT:    vmsne.vi v0, v10, 0
-; CHECK-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
-; CHECK-NEXT:    vmerge.vxm v8, v8, a0, v0
-; CHECK-NEXT:    vsetivli zero, 6, e32, m2, ta, ma
-; CHECK-NEXT:    vse32.v v8, (a3)
-; CHECK-NEXT:    ret
+; RV32-LABEL: vselect_vx_v6i32:
+; RV32:       # %bb.0:
+; RV32-NEXT:    vsetivli zero, 6, e32, m2, ta, ma
+; RV32-NEXT:    lbu a2, 0(a2)
+; RV32-NEXT:    vle32.v v8, (a1)
+; RV32-NEXT:    slli a1, a2, 30
+; RV32-NEXT:    srli a1, a1, 31
+; RV32-NEXT:    andi a4, a2, 1
+; RV32-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
+; RV32-NEXT:    vmv.v.x v10, a4
+; RV32-NEXT:    vslide1down.vx v10, v10, a1
+; RV32-NEXT:    slli a1, a2, 29
+; RV32-NEXT:    srli a1, a1, 31
+; RV32-NEXT:    vslide1down.vx v10, v10, a1
+; RV32-NEXT:    slli a1, a2, 28
+; RV32-NEXT:    srli a1, a1, 31
+; RV32-NEXT:    vslide1down.vx v10, v10, a1
+; RV32-NEXT:    slli a1, a2, 27
+; RV32-NEXT:    srli a1, a1, 31
+; RV32-NEXT:    vslide1down.vx v10, v10, a1
+; RV32-NEXT:    srli a2, a2, 5
+; RV32-NEXT:    vslide1down.vx v10, v10, a2
+; RV32-NEXT:    vslidedown.vi v10, v10, 2
+; RV32-NEXT:    vand.vi v10, v10, 1
+; RV32-NEXT:    vmsne.vi v0, v10, 0
+; RV32-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
+; RV32-NEXT:    vmerge.vxm v8, v8, a0, v0
+; RV32-NEXT:    vsetivli zero, 6, e32, m2, ta, ma
+; RV32-NEXT:    vse32.v v8, (a3)
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: vselect_vx_v6i32:
+; RV64:       # %bb.0:
+; RV64-NEXT:    vsetivli zero, 6, e32, m2, ta, ma
+; RV64-NEXT:    lbu a2, 0(a2)
+; RV64-NEXT:    vle32.v v8, (a1)
+; RV64-NEXT:    slli a1, a2, 62
+; RV64-NEXT:    srli a1, a1, 63
+; RV64-NEXT:    andi a4, a2, 1
+; RV64-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
+; RV64-NEXT:    vmv.v.x v10, a4
+; RV64-NEXT:    vslide1down.vx v10, v10, a1
+; RV64-NEXT:    slli a1, a2, 61
+; RV64-NEXT:    srli a1, a1, 63
+; RV64-NEXT:    vslide1down.vx v10, v10, a1
+; RV64-NEXT:    slli a1, a2, 60
+; RV64-NEXT:    srli a1, a1, 63
+; RV64-NEXT:    vslide1down.vx v10, v10, a1
+; RV64-NEXT:    slli a1, a2, 59
+; RV64-NEXT:    srli a1, a1, 63
+; RV64-NEXT:    vslide1down.vx v10, v10, a1
+; RV64-NEXT:    srli a2, a2, 5
+; RV64-NEXT:    vslide1down.vx v10, v10, a2
+; RV64-NEXT:    vslidedown.vi v10, v10, 2
+; RV64-NEXT:    vand.vi v10, v10, 1
+; RV64-NEXT:    vmsne.vi v0, v10, 0
+; RV64-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
+; RV64-NEXT:    vmerge.vxm v8, v8, a0, v0
+; RV64-NEXT:    vsetivli zero, 6, e32, m2, ta, ma
+; RV64-NEXT:    vse32.v v8, (a3)
+; RV64-NEXT:    ret
   %vb = load <6 x i32>, ptr %b
   %ahead = insertelement <6 x i32> poison, i32 %a, i32 0
   %va = shufflevector <6 x i32> %ahead, <6 x i32> poison, <6 x i32> zeroinitializer
@@ -71,31 +142,67 @@ define void @vselect_vx_v6i32(i32 %a, ptr %b, ptr %cc, ptr %z) {
 }
 
 define void @vselect_vi_v6i32(ptr %b, ptr %cc, ptr %z) {
-; CHECK-LABEL: vselect_vi_v6i32:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 6, e32, m2, ta, ma
-; CHECK-NEXT:    lbu a1, 0(a1)
-; CHECK-NEXT:    vle32.v v8, (a0)
-; CHECK-NEXT:    srli a0, a1, 1
-; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
-; CHECK-NEXT:    vmv.v.x v10, a1
-; CHECK-NEXT:    vslide1down.vx v10, v10, a0
-; CHECK-NEXT:    srli a0, a1, 2
-; CHECK-NEXT:    vslide1down.vx v10, v10, a0
-; CHECK-NEXT:    srli a0, a1, 3
-; CHECK-NEXT:    vslide1down.vx v10, v10, a0
-; CHECK-NEXT:    srli a0, a1, 4
-; CHECK-NEXT:    vslide1down.vx v10, v10, a0
-; CHECK-NEXT:    srli a1, a1, 5
-; CHECK-NEXT:    vslide1down.vx v10, v10, a1
-; CHECK-NEXT:    vslidedown.vi v10, v10, 2
-; CHECK-NEXT:    vand.vi v10, v10, 1
-; CHECK-NEXT:    vmsne.vi v0, v10, 0
-; CHECK-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
-; CHECK-NEXT:    vmerge.vim v8, v8, -1, v0
-; CHECK-NEXT:    vsetivli zero, 6, e32, m2, ta, ma
-; CHECK-NEXT:    vse32.v v8, (a2)
-; CHECK-NEXT:    ret
+; RV32-LABEL: vselect_vi_v6i32:
+; RV32:       # %bb.0:
+; RV32-NEXT:    vsetivli zero, 6, e32, m2, ta, ma
+; RV32-NEXT:    lbu a1, 0(a1)
+; RV32-NEXT:    vle32.v v8, (a0)
+; RV32-NEXT:    slli a0, a1, 30
+; RV32-NEXT:    srli a0, a0, 31
+; RV32-NEXT:    andi a3, a1, 1
+; RV32-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
+; RV32-NEXT:    vmv.v.x v10, a3
+; RV32-NEXT:    vslide1down.vx v10, v10, a0
+; RV32-NEXT:    slli a0, a1, 29
+; RV32-NEXT:    srli a0, a0, 31
+; RV32-NEXT:    vslide1down.vx v10, v10, a0
+; RV32-NEXT:    slli a0, a1, 28
+; RV32-NEXT:    srli a0, a0, 31
+; RV32-NEXT:    vslide1down.vx v10, v10, a0
+; RV32-NEXT:    slli a0, a1, 27
+; RV32-NEXT:    srli a0, a0, 31
+; RV32-NEXT:    vslide1down.vx v10, v10, a0
+; RV32-NEXT:    srli a1, a1, 5
+; RV32-NEXT:    vslide1down.vx v10, v10, a1
+; RV32-NEXT:    vslidedown.vi v10, v10, 2
+; RV32-NEXT:    vand.vi v10, v10, 1
+; RV32-NEXT:    vmsne.vi v0, v10, 0
+; RV32-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
+; RV32-NEXT:    vmerge.vim v8, v8, -1, v0
+; RV32-NEXT:    vsetivli zero, 6, e32, m2, ta, ma
+; RV32-NEXT:    vse32.v v8, (a2)
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: vselect_vi_v6i32:
+; RV64:       # %bb.0:
+; RV64-NEXT:    vsetivli zero, 6, e32, m2, ta, ma
+; RV64-NEXT:    lbu a1, 0(a1)
+; RV64-NEXT:    vle32.v v8, (a0)
+; RV64-NEXT:    slli a0, a1, 62
+; RV64-NEXT:    srli a0, a0, 63
+; RV64-NEXT:    andi a3, a1, 1
+; RV64-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
+; RV64-NEXT:    vmv.v.x v10, a3
+; RV64-NEXT:    vslide1down.vx v10, v10, a0
+; RV64-NEXT:    slli a0, a1, 61
+; RV64-NEXT:    srli a0, a0, 63
+; RV64-NEXT:    vslide1down.vx v10, v10, a0
+; RV64-NEXT:    slli a0, a1, 60
+; RV64-NEXT:    srli a0, a0, 63
+; RV64-NEXT:    vslide1down.vx v10, v10, a0
+; RV64-NEXT:    slli a0, a1, 59
+; RV64-NEXT:    srli a0, a0, 63
+; RV64-NEXT:    vslide1down.vx v10, v10, a0
+; RV64-NEXT:    srli a1, a1, 5
+; RV64-NEXT:    vslide1down.vx v10, v10, a1
+; RV64-NEXT:    vslidedown.vi v10, v10, 2
+; RV64-NEXT:    vand.vi v10, v10, 1
+; RV64-NEXT:    vmsne.vi v0, v10, 0
+; RV64-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
+; RV64-NEXT:    vmerge.vim v8, v8, -1, v0
+; RV64-NEXT:    vsetivli zero, 6, e32, m2, ta, ma
+; RV64-NEXT:    vse32.v v8, (a2)
+; RV64-NEXT:    ret
   %vb = load <6 x i32>, ptr %b
   %a = insertelement <6 x i32> poison, i32 -1, i32 0
   %va = shufflevector <6 x i32> %a, <6 x i32> poison, <6 x i32> zeroinitializer
@@ -107,30 +214,65 @@ define void @vselect_vi_v6i32(ptr %b, ptr %cc, ptr %z) {
 
 
 define void @vselect_vv_v6f32(ptr %a, ptr %b, ptr %cc, ptr %z) {
-; CHECK-LABEL: vselect_vv_v6f32:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 6, e32, m2, ta, ma
-; CHECK-NEXT:    lbu a2, 0(a2)
-; CHECK-NEXT:    vle32.v v8, (a1)
-; CHECK-NEXT:    srli a1, a2, 1
-; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
-; CHECK-NEXT:    vmv.v.x v10, a2
-; CHECK-NEXT:    vslide1down.vx v10, v10, a1
-; CHECK-NEXT:    srli a1, a2, 2
-; CHECK-NEXT:    vslide1down.vx v10, v10, a1
-; CHECK-NEXT:    srli a1, a2, 3
-; CHECK-NEXT:    vslide1down.vx v10, v10, a1
-; CHECK-NEXT:    srli a1, a2, 4
-; CHECK-NEXT:    vslide1down.vx v10, v10, a1
-; CHECK-NEXT:    srli a2, a2, 5
-; CHECK-NEXT:    vslide1down.vx v10, v10, a2
-; CHECK-NEXT:    vslidedown.vi v10, v10, 2
-; CHECK-NEXT:    vand.vi v10, v10, 1
-; CHECK-NEXT:    vmsne.vi v0, v10, 0
-; CHECK-NEXT:    vsetivli zero, 6, e32, m2, tu, mu
-; CHECK-NEXT:    vle32.v v8, (a0), v0.t
-; CHECK-NEXT:    vse32.v v8, (a3)
-; CHECK-NEXT:    ret
+; RV32-LABEL: vselect_vv_v6f32:
+; RV32:       # %bb.0:
+; RV32-NEXT:    vsetivli zero, 6, e32, m2, ta, ma
+; RV32-NEXT:    lbu a2, 0(a2)
+; RV32-NEXT:    vle32.v v8, (a1)
+; RV32-NEXT:    slli a1, a2, 30
+; RV32-NEXT:    srli a1, a1, 31
+; RV32-NEXT:    andi a4, a2, 1
+; RV32-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
+; RV32-NEXT:    vmv.v.x v10, a4
+; RV32-NEXT:    vslide1down.vx v10, v10, a1
+; RV32-NEXT:    slli a1, a2, 29
+; RV32-NEXT:    srli a1, a1, 31
+; RV32-NEXT:    vslide1down.vx v10, v10, a1
+; RV32-NEXT:    slli a1, a2, 28
+; RV32-NEXT:    srli a1, a1, 31
+; RV32-NEXT:    vslide1down.vx v10, v10, a1
+; RV32-NEXT:    slli a1, a2, 27
+; RV32-NEXT:    srli a1, a1, 31
+; RV32-NEXT:    vslide1down.vx v10, v10, a1
+; RV32-NEXT:    srli a2, a2, 5
+; RV32-NEXT:    vslide1down.vx v10, v10, a2
+; RV32-NEXT:    vslidedown.vi v10, v10, 2
+; RV32-NEXT:    vand.vi v10, v10, 1
+; RV32-NEXT:    vmsne.vi v0, v10, 0
+; RV32-NEXT:    vsetivli zero, 6, e32, m2, tu, mu
+; RV32-NEXT:    vle32.v v8, (a0), v0.t
+; RV32-NEXT:    vse32.v v8, (a3)
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: vselect_vv_v6f32:
+; RV64:       # %bb.0:
+; RV64-NEXT:    vsetivli zero, 6, e32, m2, ta, ma
+; RV64-NEXT:    lbu a2, 0(a2)
+; RV64-NEXT:    vle32.v v8, (a1)
+; RV64-NEXT:    slli a1, a2, 62
+; RV64-NEXT:    srli a1, a1, 63
+; RV64-NEXT:    andi a4, a2, 1
+; RV64-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
+; RV64-NEXT:    vmv.v.x v10, a4
+; RV64-NEXT:    vslide1down.vx v10, v10, a1
+; RV64-NEXT:    slli a1, a2, 61
+; RV64-NEXT:    srli a1, a1, 63
+; RV64-NEXT:    vslide1down.vx v10, v10, a1
+; RV64-NEXT:    slli a1, a2, 60
+; RV64-NEXT:    srli a1, a1, 63
+; RV64-NEXT:    vslide1down.vx v10, v10, a1
+; RV64-NEXT:    slli a1, a2, 59
+; RV64-NEXT:    srli a1, a1, 63
+; RV64-NEXT:    vslide1down.vx v10, v10, a1
+; RV64-NEXT:    srli a2, a2, 5
+; RV64-NEXT:    vslide1down.vx v10, v10, a2
+; RV64-NEXT:    vslidedown.vi v10, v10, 2
+; RV64-NEXT:    vand.vi v10, v10, 1
+; RV64-NEXT:    vmsne.vi v0, v10, 0
+; RV64-NEXT:    vsetivli zero, 6, e32, m2, tu, mu
+; RV64-NEXT:    vle32.v v8, (a0), v0.t
+; RV64-NEXT:    vse32.v v8, (a3)
+; RV64-NEXT:    ret
   %va = load <6 x float>, ptr %a
   %vb = load <6 x float>, ptr %b
   %vcc = load <6 x i1>, ptr %cc
@@ -140,31 +282,67 @@ define void @vselect_vv_v6f32(ptr %a, ptr %b, ptr %cc, ptr %z) {
 }
 
 define void @vselect_vx_v6f32(float %a, ptr %b, ptr %cc, ptr %z) {
-; CHECK-LABEL: vselect_vx_v6f32:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 6, e32, m2, ta, ma
-; CHECK-NEXT:    lbu a1, 0(a1)
-; CHECK-NEXT:    vle32.v v8, (a0)
-; CHECK-NEXT:    srli a0, a1, 1
-; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
-; CHECK-NEXT:    vmv.v.x v10, a1
-; CHECK-NEXT:    vslide1down.vx v10, v10, a0
-; CHECK-NEXT:    srli a0, a1, 2
-; CHECK-NEXT:    vslide1down.vx v10, v10, a0
-; CHECK-NEXT:    srli a0, a1, 3
-; CHECK-NEXT:    vslide1down.vx v10, v10, a0
-; CHECK-NEXT:    srli a0, a1, 4
-; CHECK-NEXT:    vslide1down.vx v10, v10, a0
-; CHECK-NEXT:    srli a1, a1, 5
-; CHECK-NEXT:    vslide1down.vx v10, v10, a1
-; CHECK-NEXT:    vslidedown.vi v10, v10, 2
-; CHECK-NEXT:    vand.vi v10, v10, 1
-; CHECK-NEXT:    vmsne.vi v0, v10, 0
-; CHECK-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
-; CHECK-NEXT:    vfmerge.vfm v8, v8, fa0, v0
-; CHECK-NEXT:    vsetivli zero, 6, e32, m2, ta, ma
-; CHECK-NEXT:    vse32.v v8, (a2)
-; CHECK-NEXT:    ret
+; RV32-LABEL: vselect_vx_v6f32:
+; RV32:       # %bb.0:
+; RV32-NEXT:    vsetivli zero, 6, e32, m2, ta, ma
+; RV32-NEXT:    lbu a1, 0(a1)
+; RV32-NEXT:    vle32.v v8, (a0)
+; RV32-NEXT:    slli a0, a1, 30
+; RV32-NEXT:    srli a0, a0, 31
+; RV32-NEXT:    andi a3, a1, 1
+; RV32-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
+; RV32-NEXT:    vmv.v.x v10, a3
+; RV32-NEXT:    vslide1down.vx v10, v10, a0
+; RV32-NEXT:    slli a0, a1, 29
+; RV32-NEXT:    srli a0, a0, 31
+; RV32-NEXT:    vslide1down.vx v10, v10, a0
+; RV32-NEXT:    slli a0, a1, 28
+; RV32-NEXT:    srli a0, a0, 31
+; RV32-NEXT:    vslide1down.vx v10, v10, a0
+; RV32-NEXT:    slli a0, a1, 27
+; RV32-NEXT:    srli a0, a0, 31
+; RV32-NEXT:    vslide1down.vx v10, v10, a0
+; RV32-NEXT:    srli a1, a1, 5
+; RV32-NEXT:    vslide1down.vx v10, v10, a1
+; RV32-NEXT:    vslidedown.vi v10, v10, 2
+; RV32-NEXT:    vand.vi v10, v10, 1
+; RV32-NEXT:    vmsne.vi v0, v10, 0
+; RV32-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
+; RV32-NEXT:    vfmerge.vfm v8, v8, fa0, v0
+; RV32-NEXT:    vsetivli zero, 6, e32, m2, ta, ma
+; RV32-NEXT:    vse32.v v8, (a2)
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: vselect_vx_v6f32:
+; RV64:       # %bb.0:
+; RV64-NEXT:    vsetivli zero, 6, e32, m2, ta, ma
+; RV64-NEXT:    lbu a1, 0(a1)
+; RV64-NEXT:    vle32.v v8, (a0)
+; RV64-NEXT:    slli a0, a1, 62
+; RV64-NEXT:    srli a0, a0, 63
+; RV64-NEXT:    andi a3, a1, 1
+; RV64-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
+; RV64-NEXT:    vmv.v.x v10, a3
+; RV64-NEXT:    vslide1down.vx v10, v10, a0
+; RV64-NEXT:    slli a0, a1, 61
+; RV64-NEXT:    srli a0, a0, 63
+; RV64-NEXT:    vslide1down.vx v10, v10, a0
+; RV64-NEXT:    slli a0, a1, 60
+; RV64-NEXT:    srli a0, a0, 63
+; RV64-NEXT:    vslide1down.vx v10, v10, a0
+; RV64-NEXT:    slli a0, a1, 59
+; RV64-NEXT:    srli a0, a0, 63
+; RV64-NEXT:    vslide1down.vx v10, v10, a0
+; RV64-NEXT:    srli a1, a1, 5
+; RV64-NEXT:    vslide1down.vx v10, v10, a1
+; RV64-NEXT:    vslidedown.vi v10, v10, 2
+; RV64-NEXT:    vand.vi v10, v10, 1
+; RV64-NEXT:    vmsne.vi v0, v10, 0
+; RV64-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
+; RV64-NEXT:    vfmerge.vfm v8, v8, fa0, v0
+; RV64-NEXT:    vsetivli zero, 6, e32, m2, ta, ma
+; RV64-NEXT:    vse32.v v8, (a2)
+; RV64-NEXT:    ret
   %vb = load <6 x float>, ptr %b
   %ahead = insertelement <6 x float> poison, float %a, i32 0
   %va = shufflevector <6 x float> %ahead, <6 x float> poison, <6 x i32> zeroinitializer
@@ -175,31 +353,67 @@ define void @vselect_vx_v6f32(float %a, ptr %b, ptr %cc, ptr %z) {
 }
 
 define void @vselect_vfpzero_v6f32(ptr %b, ptr %cc, ptr %z) {
-; CHECK-LABEL: vselect_vfpzero_v6f32:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 6, e32, m2, ta, ma
-; CHECK-NEXT:    lbu a1, 0(a1)
-; CHECK-NEXT:    vle32.v v8, (a0)
-; CHECK-NEXT:    srli a0, a1, 1
-; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
-; CHECK-NEXT:    vmv.v.x v10, a1
-; CHECK-NEXT:    vslide1down.vx v10, v10, a0
-; CHECK-NEXT:    srli a0, a1, 2
-; CHECK-NEXT:    vslide1down.vx v10, v10, a0
-; CHECK-NEXT:    srli a0, a1, 3
-; CHECK-NEXT:    vslide1down.vx v10, v10, a0
-; CHECK-NEXT:    srli a0, a1, 4
-; CHECK-NEXT:    vslide1down.vx v10, v10, a0
-; CHECK-NEXT:    srli a1, a1, 5
-; CHECK-NEXT:    vslide1down.vx v10, v10, a1
-; CHECK-NEXT:    vslidedown.vi v10, v10, 2
-; CHECK-NEXT:    vand.vi v10, v10, 1
-; CHECK-NEXT:    vmsne.vi v0, v10, 0
-; CHECK-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
-; CHECK-NEXT:    vmerge.vim v8, v8, 0, v0
-; CHECK-NEXT:    vsetivli zero, 6, e32, m2, ta, ma
-; CHECK-NEXT:    vse32.v v8, (a2)
-; CHECK-NEXT:    ret
+; RV32-LABEL: vselect_vfpzero_v6f32:
+; RV32:       # %bb.0:
+; RV32-NEXT:    vsetivli zero, 6, e32, m2, ta, ma
+; RV32-NEXT:    lbu a1, 0(a1)
+; RV32-NEXT:    vle32.v v8, (a0)
+; RV32-NEXT:    slli a0, a1, 30
+; RV32-NEXT:    srli a0, a0, 31
+; RV32-NEXT:    andi a3, a1, 1
+; RV32-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
+; RV32-NEXT:    vmv.v.x v10, a3
+; RV32-NEXT:    vslide1down.vx v10, v10, a0
+; RV32-NEXT:    slli a0, a1, 29
+; RV32-NEXT:    srli a0, a0, 31
+; RV32-NEXT:    vslide1down.vx v10, v10, a0
+; RV32-NEXT:    slli a0, a1, 28
+; RV32-NEXT:    srli a0, a0, 31
+; RV32-NEXT:    vslide1down.vx v10, v10, a0
+; RV32-NEXT:    slli a0, a1, 27
+; RV32-NEXT:    srli a0, a0, 31
+; RV32-NEXT:    vslide1down.vx v10, v10, a0
+; RV32-NEXT:    srli a1, a1, 5
+; RV32-NEXT:    vslide1down.vx v10, v10, a1
+; RV32-NEXT:    vslidedown.vi v10, v10, 2
+; RV32-NEXT:    vand.vi v10, v10, 1
+; RV32-NEXT:    vmsne.vi v0, v10, 0
+; RV32-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
+; RV32-NEXT:    vmerge.vim v8, v8, 0, v0
+; RV32-NEXT:    vsetivli zero, 6, e32, m2, ta, ma
+; RV32-NEXT:    vse32.v v8, (a2)
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: vselect_vfpzero_v6f32:
+; RV64:       # %bb.0:
+; RV64-NEXT:    vsetivli zero, 6, e32, m2, ta, ma
+; RV64-NEXT:    lbu a1, 0(a1)
+; RV64-NEXT:    vle32.v v8, (a0)
+; RV64-NEXT:    slli a0, a1, 62
+; RV64-NEXT:    srli a0, a0, 63
+; RV64-NEXT:    andi a3, a1, 1
+; RV64-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
+; RV64-NEXT:    vmv.v.x v10, a3
+; RV64-NEXT:    vslide1down.vx v10, v10, a0
+; RV64-NEXT:    slli a0, a1, 61
+; RV64-NEXT:    srli a0, a0, 63
+; RV64-NEXT:    vslide1down.vx v10, v10, a0
+; RV64-NEXT:    slli a0, a1, 60
+; RV64-NEXT:    srli a0, a0, 63
+; RV64-NEXT:    vslide1down.vx v10, v10, a0
+; RV64-NEXT:    slli a0, a1, 59
+; RV64-NEXT:    srli a0, a0, 63
+; RV64-NEXT:    vslide1down.vx v10, v10, a0
+; RV64-NEXT:    srli a1, a1, 5
+; RV64-NEXT:    vslide1down.vx v10, v10, a1
+; RV64-NEXT:    vslidedown.vi v10, v10, 2
+; RV64-NEXT:    vand.vi v10, v10, 1
+; RV64-NEXT:    vmsne.vi v0, v10, 0
+; RV64-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
+; RV64-NEXT:    vmerge.vim v8, v8, 0, v0
+; RV64-NEXT:    vsetivli zero, 6, e32, m2, ta, ma
+; RV64-NEXT:    vse32.v v8, (a2)
+; RV64-NEXT:    ret
   %vb = load <6 x float>, ptr %b
   %a = insertelement <6 x float> poison, float 0.0, i32 0
   %va = shufflevector <6 x float> %a, <6 x float> poison, <6 x i32> zeroinitializer
@@ -497,6 +711,3 @@ define <64 x i1> @vselect_v64i1(<64 x i1> %a, <64 x i1> %b, <64 x i1> %cc) {
   %v = select <64 x i1> %cc, <64 x i1> %a, <64 x i1> %b
   ret <64 x i1> %v
 }
-;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
-; RV32: {{.*}}
-; RV64: {{.*}}

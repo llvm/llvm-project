@@ -817,7 +817,9 @@ The table entries in ``ATable`` are sorted in order by ``Val1``, and within
 each of those values, by ``Val2``. This allows a binary search of the table,
 which is performed in the lookup function by ``std::lower_bound``. The
 lookup function returns a reference to the found table entry, or the null
-pointer if no entry is found.
+pointer if no entry is found. If the table has a single primary key field
+which is integral and densely numbered, a direct lookup is generated rather
+than a binary search.
 
 This example includes a field whose type TableGen cannot deduce. The ``Kind``
 field uses the enumerated type ``CEnum`` defined above. To inform TableGen

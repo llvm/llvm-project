@@ -489,6 +489,10 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
   setOperationAction(ISD::INSERT_VECTOR_ELT, MVT::v2f16, Expand);
   setOperationAction(ISD::VECTOR_SHUFFLE, MVT::v2f16, Expand);
 
+  setOperationAction(ISD::READCYCLECOUNTER, MVT::i64, Legal);
+  if (STI.getSmVersion() >= 30 && STI.getPTXVersion() > 31)
+    setOperationAction(ISD::READSTEADYCOUNTER, MVT::i64, Legal);
+
   setFP16OperationAction(ISD::SETCC, MVT::f16, Legal, Promote);
   setFP16OperationAction(ISD::SETCC, MVT::v2f16, Legal, Expand);
 
@@ -858,623 +862,432 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
 }
 
 const char *NVPTXTargetLowering::getTargetNodeName(unsigned Opcode) const {
+
+#define MAKE_CASE(V)                                                           \
+  case V:                                                                      \
+    return #V;
+
   switch ((NVPTXISD::NodeType)Opcode) {
   case NVPTXISD::FIRST_NUMBER:
     break;
-  case NVPTXISD::CALL:
-    return "NVPTXISD::CALL";
-  case NVPTXISD::RET_GLUE:
-    return "NVPTXISD::RET_GLUE";
-  case NVPTXISD::LOAD_PARAM:
-    return "NVPTXISD::LOAD_PARAM";
-  case NVPTXISD::Wrapper:
-    return "NVPTXISD::Wrapper";
-  case NVPTXISD::DeclareParam:
-    return "NVPTXISD::DeclareParam";
-  case NVPTXISD::DeclareScalarParam:
-    return "NVPTXISD::DeclareScalarParam";
-  case NVPTXISD::DeclareRet:
-    return "NVPTXISD::DeclareRet";
-  case NVPTXISD::DeclareScalarRet:
-    return "NVPTXISD::DeclareScalarRet";
-  case NVPTXISD::DeclareRetParam:
-    return "NVPTXISD::DeclareRetParam";
-  case NVPTXISD::PrintCall:
-    return "NVPTXISD::PrintCall";
-  case NVPTXISD::PrintConvergentCall:
-    return "NVPTXISD::PrintConvergentCall";
-  case NVPTXISD::PrintCallUni:
-    return "NVPTXISD::PrintCallUni";
-  case NVPTXISD::PrintConvergentCallUni:
-    return "NVPTXISD::PrintConvergentCallUni";
-  case NVPTXISD::LoadParam:
-    return "NVPTXISD::LoadParam";
-  case NVPTXISD::LoadParamV2:
-    return "NVPTXISD::LoadParamV2";
-  case NVPTXISD::LoadParamV4:
-    return "NVPTXISD::LoadParamV4";
-  case NVPTXISD::StoreParam:
-    return "NVPTXISD::StoreParam";
-  case NVPTXISD::StoreParamV2:
-    return "NVPTXISD::StoreParamV2";
-  case NVPTXISD::StoreParamV4:
-    return "NVPTXISD::StoreParamV4";
-  case NVPTXISD::StoreParamS32:
-    return "NVPTXISD::StoreParamS32";
-  case NVPTXISD::StoreParamU32:
-    return "NVPTXISD::StoreParamU32";
-  case NVPTXISD::CallArgBegin:
-    return "NVPTXISD::CallArgBegin";
-  case NVPTXISD::CallArg:
-    return "NVPTXISD::CallArg";
-  case NVPTXISD::LastCallArg:
-    return "NVPTXISD::LastCallArg";
-  case NVPTXISD::CallArgEnd:
-    return "NVPTXISD::CallArgEnd";
-  case NVPTXISD::CallVoid:
-    return "NVPTXISD::CallVoid";
-  case NVPTXISD::CallVal:
-    return "NVPTXISD::CallVal";
-  case NVPTXISD::CallSymbol:
-    return "NVPTXISD::CallSymbol";
-  case NVPTXISD::Prototype:
-    return "NVPTXISD::Prototype";
-  case NVPTXISD::MoveParam:
-    return "NVPTXISD::MoveParam";
-  case NVPTXISD::StoreRetval:
-    return "NVPTXISD::StoreRetval";
-  case NVPTXISD::StoreRetvalV2:
-    return "NVPTXISD::StoreRetvalV2";
-  case NVPTXISD::StoreRetvalV4:
-    return "NVPTXISD::StoreRetvalV4";
-  case NVPTXISD::PseudoUseParam:
-    return "NVPTXISD::PseudoUseParam";
-  case NVPTXISD::RETURN:
-    return "NVPTXISD::RETURN";
-  case NVPTXISD::CallSeqBegin:
-    return "NVPTXISD::CallSeqBegin";
-  case NVPTXISD::CallSeqEnd:
-    return "NVPTXISD::CallSeqEnd";
-  case NVPTXISD::CallPrototype:
-    return "NVPTXISD::CallPrototype";
-  case NVPTXISD::ProxyReg:
-    return "NVPTXISD::ProxyReg";
-  case NVPTXISD::LoadV2:
-    return "NVPTXISD::LoadV2";
-  case NVPTXISD::LoadV4:
-    return "NVPTXISD::LoadV4";
-  case NVPTXISD::LDGV2:
-    return "NVPTXISD::LDGV2";
-  case NVPTXISD::LDGV4:
-    return "NVPTXISD::LDGV4";
-  case NVPTXISD::LDUV2:
-    return "NVPTXISD::LDUV2";
-  case NVPTXISD::LDUV4:
-    return "NVPTXISD::LDUV4";
-  case NVPTXISD::StoreV2:
-    return "NVPTXISD::StoreV2";
-  case NVPTXISD::StoreV4:
-    return "NVPTXISD::StoreV4";
-  case NVPTXISD::FUN_SHFL_CLAMP:
-    return "NVPTXISD::FUN_SHFL_CLAMP";
-  case NVPTXISD::FUN_SHFR_CLAMP:
-    return "NVPTXISD::FUN_SHFR_CLAMP";
-  case NVPTXISD::IMAD:
-    return "NVPTXISD::IMAD";
-  case NVPTXISD::BFE:
-    return "NVPTXISD::BFE";
-  case NVPTXISD::BFI:
-    return "NVPTXISD::BFI";
-  case NVPTXISD::PRMT:
-    return "NVPTXISD::PRMT";
-  case NVPTXISD::SETP_F16X2:
-    return "NVPTXISD::SETP_F16X2";
-  case NVPTXISD::SETP_BF16X2:
-    return "NVPTXISD::SETP_BF16X2";
-  case NVPTXISD::Dummy:
-    return "NVPTXISD::Dummy";
-  case NVPTXISD::MUL_WIDE_SIGNED:
-    return "NVPTXISD::MUL_WIDE_SIGNED";
-  case NVPTXISD::MUL_WIDE_UNSIGNED:
-    return "NVPTXISD::MUL_WIDE_UNSIGNED";
-  case NVPTXISD::Tex1DFloatS32:        return "NVPTXISD::Tex1DFloatS32";
-  case NVPTXISD::Tex1DFloatFloat:      return "NVPTXISD::Tex1DFloatFloat";
-  case NVPTXISD::Tex1DFloatFloatLevel:
-    return "NVPTXISD::Tex1DFloatFloatLevel";
-  case NVPTXISD::Tex1DFloatFloatGrad:
-    return "NVPTXISD::Tex1DFloatFloatGrad";
-  case NVPTXISD::Tex1DS32S32:          return "NVPTXISD::Tex1DS32S32";
-  case NVPTXISD::Tex1DS32Float:        return "NVPTXISD::Tex1DS32Float";
-  case NVPTXISD::Tex1DS32FloatLevel:
-    return "NVPTXISD::Tex1DS32FloatLevel";
-  case NVPTXISD::Tex1DS32FloatGrad:
-    return "NVPTXISD::Tex1DS32FloatGrad";
-  case NVPTXISD::Tex1DU32S32:          return "NVPTXISD::Tex1DU32S32";
-  case NVPTXISD::Tex1DU32Float:        return "NVPTXISD::Tex1DU32Float";
-  case NVPTXISD::Tex1DU32FloatLevel:
-    return "NVPTXISD::Tex1DU32FloatLevel";
-  case NVPTXISD::Tex1DU32FloatGrad:
-    return "NVPTXISD::Tex1DU32FloatGrad";
-  case NVPTXISD::Tex1DArrayFloatS32:   return "NVPTXISD::Tex1DArrayFloatS32";
-  case NVPTXISD::Tex1DArrayFloatFloat: return "NVPTXISD::Tex1DArrayFloatFloat";
-  case NVPTXISD::Tex1DArrayFloatFloatLevel:
-    return "NVPTXISD::Tex1DArrayFloatFloatLevel";
-  case NVPTXISD::Tex1DArrayFloatFloatGrad:
-    return "NVPTXISD::Tex1DArrayFloatFloatGrad";
-  case NVPTXISD::Tex1DArrayS32S32:     return "NVPTXISD::Tex1DArrayS32S32";
-  case NVPTXISD::Tex1DArrayS32Float:   return "NVPTXISD::Tex1DArrayS32Float";
-  case NVPTXISD::Tex1DArrayS32FloatLevel:
-    return "NVPTXISD::Tex1DArrayS32FloatLevel";
-  case NVPTXISD::Tex1DArrayS32FloatGrad:
-    return "NVPTXISD::Tex1DArrayS32FloatGrad";
-  case NVPTXISD::Tex1DArrayU32S32:     return "NVPTXISD::Tex1DArrayU32S32";
-  case NVPTXISD::Tex1DArrayU32Float:   return "NVPTXISD::Tex1DArrayU32Float";
-  case NVPTXISD::Tex1DArrayU32FloatLevel:
-    return "NVPTXISD::Tex1DArrayU32FloatLevel";
-  case NVPTXISD::Tex1DArrayU32FloatGrad:
-    return "NVPTXISD::Tex1DArrayU32FloatGrad";
-  case NVPTXISD::Tex2DFloatS32:        return "NVPTXISD::Tex2DFloatS32";
-  case NVPTXISD::Tex2DFloatFloat:      return "NVPTXISD::Tex2DFloatFloat";
-  case NVPTXISD::Tex2DFloatFloatLevel:
-    return "NVPTXISD::Tex2DFloatFloatLevel";
-  case NVPTXISD::Tex2DFloatFloatGrad:
-    return "NVPTXISD::Tex2DFloatFloatGrad";
-  case NVPTXISD::Tex2DS32S32:          return "NVPTXISD::Tex2DS32S32";
-  case NVPTXISD::Tex2DS32Float:        return "NVPTXISD::Tex2DS32Float";
-  case NVPTXISD::Tex2DS32FloatLevel:
-    return "NVPTXISD::Tex2DS32FloatLevel";
-  case NVPTXISD::Tex2DS32FloatGrad:
-    return "NVPTXISD::Tex2DS32FloatGrad";
-  case NVPTXISD::Tex2DU32S32:          return "NVPTXISD::Tex2DU32S32";
-  case NVPTXISD::Tex2DU32Float:        return "NVPTXISD::Tex2DU32Float";
-  case NVPTXISD::Tex2DU32FloatLevel:
-    return "NVPTXISD::Tex2DU32FloatLevel";
-  case NVPTXISD::Tex2DU32FloatGrad:
-    return "NVPTXISD::Tex2DU32FloatGrad";
-  case NVPTXISD::Tex2DArrayFloatS32:   return "NVPTXISD::Tex2DArrayFloatS32";
-  case NVPTXISD::Tex2DArrayFloatFloat: return "NVPTXISD::Tex2DArrayFloatFloat";
-  case NVPTXISD::Tex2DArrayFloatFloatLevel:
-    return "NVPTXISD::Tex2DArrayFloatFloatLevel";
-  case NVPTXISD::Tex2DArrayFloatFloatGrad:
-    return "NVPTXISD::Tex2DArrayFloatFloatGrad";
-  case NVPTXISD::Tex2DArrayS32S32:     return "NVPTXISD::Tex2DArrayS32S32";
-  case NVPTXISD::Tex2DArrayS32Float:   return "NVPTXISD::Tex2DArrayS32Float";
-  case NVPTXISD::Tex2DArrayS32FloatLevel:
-    return "NVPTXISD::Tex2DArrayS32FloatLevel";
-  case NVPTXISD::Tex2DArrayS32FloatGrad:
-    return "NVPTXISD::Tex2DArrayS32FloatGrad";
-  case NVPTXISD::Tex2DArrayU32S32:     return "NVPTXISD::Tex2DArrayU32S32";
-  case NVPTXISD::Tex2DArrayU32Float:   return "NVPTXISD::Tex2DArrayU32Float";
-  case NVPTXISD::Tex2DArrayU32FloatLevel:
-    return "NVPTXISD::Tex2DArrayU32FloatLevel";
-  case NVPTXISD::Tex2DArrayU32FloatGrad:
-    return "NVPTXISD::Tex2DArrayU32FloatGrad";
-  case NVPTXISD::Tex3DFloatS32:        return "NVPTXISD::Tex3DFloatS32";
-  case NVPTXISD::Tex3DFloatFloat:      return "NVPTXISD::Tex3DFloatFloat";
-  case NVPTXISD::Tex3DFloatFloatLevel:
-    return "NVPTXISD::Tex3DFloatFloatLevel";
-  case NVPTXISD::Tex3DFloatFloatGrad:
-    return "NVPTXISD::Tex3DFloatFloatGrad";
-  case NVPTXISD::Tex3DS32S32:          return "NVPTXISD::Tex3DS32S32";
-  case NVPTXISD::Tex3DS32Float:        return "NVPTXISD::Tex3DS32Float";
-  case NVPTXISD::Tex3DS32FloatLevel:
-    return "NVPTXISD::Tex3DS32FloatLevel";
-  case NVPTXISD::Tex3DS32FloatGrad:
-    return "NVPTXISD::Tex3DS32FloatGrad";
-  case NVPTXISD::Tex3DU32S32:          return "NVPTXISD::Tex3DU32S32";
-  case NVPTXISD::Tex3DU32Float:        return "NVPTXISD::Tex3DU32Float";
-  case NVPTXISD::Tex3DU32FloatLevel:
-    return "NVPTXISD::Tex3DU32FloatLevel";
-  case NVPTXISD::Tex3DU32FloatGrad:
-    return "NVPTXISD::Tex3DU32FloatGrad";
-  case NVPTXISD::TexCubeFloatFloat:      return "NVPTXISD::TexCubeFloatFloat";
-  case NVPTXISD::TexCubeFloatFloatLevel:
-    return "NVPTXISD::TexCubeFloatFloatLevel";
-  case NVPTXISD::TexCubeS32Float:        return "NVPTXISD::TexCubeS32Float";
-  case NVPTXISD::TexCubeS32FloatLevel:
-    return "NVPTXISD::TexCubeS32FloatLevel";
-  case NVPTXISD::TexCubeU32Float:        return "NVPTXISD::TexCubeU32Float";
-  case NVPTXISD::TexCubeU32FloatLevel:
-    return "NVPTXISD::TexCubeU32FloatLevel";
-  case NVPTXISD::TexCubeArrayFloatFloat:
-    return "NVPTXISD::TexCubeArrayFloatFloat";
-  case NVPTXISD::TexCubeArrayFloatFloatLevel:
-    return "NVPTXISD::TexCubeArrayFloatFloatLevel";
-  case NVPTXISD::TexCubeArrayS32Float:
-    return "NVPTXISD::TexCubeArrayS32Float";
-  case NVPTXISD::TexCubeArrayS32FloatLevel:
-    return "NVPTXISD::TexCubeArrayS32FloatLevel";
-  case NVPTXISD::TexCubeArrayU32Float:
-    return "NVPTXISD::TexCubeArrayU32Float";
-  case NVPTXISD::TexCubeArrayU32FloatLevel:
-    return "NVPTXISD::TexCubeArrayU32FloatLevel";
-  case NVPTXISD::Tld4R2DFloatFloat:
-    return "NVPTXISD::Tld4R2DFloatFloat";
-  case NVPTXISD::Tld4G2DFloatFloat:
-    return "NVPTXISD::Tld4G2DFloatFloat";
-  case NVPTXISD::Tld4B2DFloatFloat:
-    return "NVPTXISD::Tld4B2DFloatFloat";
-  case NVPTXISD::Tld4A2DFloatFloat:
-    return "NVPTXISD::Tld4A2DFloatFloat";
-  case NVPTXISD::Tld4R2DS64Float:
-    return "NVPTXISD::Tld4R2DS64Float";
-  case NVPTXISD::Tld4G2DS64Float:
-    return "NVPTXISD::Tld4G2DS64Float";
-  case NVPTXISD::Tld4B2DS64Float:
-    return "NVPTXISD::Tld4B2DS64Float";
-  case NVPTXISD::Tld4A2DS64Float:
-    return "NVPTXISD::Tld4A2DS64Float";
-  case NVPTXISD::Tld4R2DU64Float:
-    return "NVPTXISD::Tld4R2DU64Float";
-  case NVPTXISD::Tld4G2DU64Float:
-    return "NVPTXISD::Tld4G2DU64Float";
-  case NVPTXISD::Tld4B2DU64Float:
-    return "NVPTXISD::Tld4B2DU64Float";
-  case NVPTXISD::Tld4A2DU64Float:
-    return "NVPTXISD::Tld4A2DU64Float";
 
-  case NVPTXISD::TexUnified1DFloatS32:
-    return "NVPTXISD::TexUnified1DFloatS32";
-  case NVPTXISD::TexUnified1DFloatFloat:
-    return "NVPTXISD::TexUnified1DFloatFloat";
-  case NVPTXISD::TexUnified1DFloatFloatLevel:
-    return "NVPTXISD::TexUnified1DFloatFloatLevel";
-  case NVPTXISD::TexUnified1DFloatFloatGrad:
-    return "NVPTXISD::TexUnified1DFloatFloatGrad";
-  case NVPTXISD::TexUnified1DS32S32:
-    return "NVPTXISD::TexUnified1DS32S32";
-  case NVPTXISD::TexUnified1DS32Float:
-    return "NVPTXISD::TexUnified1DS32Float";
-  case NVPTXISD::TexUnified1DS32FloatLevel:
-    return "NVPTXISD::TexUnified1DS32FloatLevel";
-  case NVPTXISD::TexUnified1DS32FloatGrad:
-    return "NVPTXISD::TexUnified1DS32FloatGrad";
-  case NVPTXISD::TexUnified1DU32S32:
-    return "NVPTXISD::TexUnified1DU32S32";
-  case NVPTXISD::TexUnified1DU32Float:
-    return "NVPTXISD::TexUnified1DU32Float";
-  case NVPTXISD::TexUnified1DU32FloatLevel:
-    return "NVPTXISD::TexUnified1DU32FloatLevel";
-  case NVPTXISD::TexUnified1DU32FloatGrad:
-    return "NVPTXISD::TexUnified1DU32FloatGrad";
-  case NVPTXISD::TexUnified1DArrayFloatS32:
-    return "NVPTXISD::TexUnified1DArrayFloatS32";
-  case NVPTXISD::TexUnified1DArrayFloatFloat:
-    return "NVPTXISD::TexUnified1DArrayFloatFloat";
-  case NVPTXISD::TexUnified1DArrayFloatFloatLevel:
-    return "NVPTXISD::TexUnified1DArrayFloatFloatLevel";
-  case NVPTXISD::TexUnified1DArrayFloatFloatGrad:
-    return "NVPTXISD::TexUnified1DArrayFloatFloatGrad";
-  case NVPTXISD::TexUnified1DArrayS32S32:
-    return "NVPTXISD::TexUnified1DArrayS32S32";
-  case NVPTXISD::TexUnified1DArrayS32Float:
-    return "NVPTXISD::TexUnified1DArrayS32Float";
-  case NVPTXISD::TexUnified1DArrayS32FloatLevel:
-    return "NVPTXISD::TexUnified1DArrayS32FloatLevel";
-  case NVPTXISD::TexUnified1DArrayS32FloatGrad:
-    return "NVPTXISD::TexUnified1DArrayS32FloatGrad";
-  case NVPTXISD::TexUnified1DArrayU32S32:
-    return "NVPTXISD::TexUnified1DArrayU32S32";
-  case NVPTXISD::TexUnified1DArrayU32Float:
-    return "NVPTXISD::TexUnified1DArrayU32Float";
-  case NVPTXISD::TexUnified1DArrayU32FloatLevel:
-    return "NVPTXISD::TexUnified1DArrayU32FloatLevel";
-  case NVPTXISD::TexUnified1DArrayU32FloatGrad:
-    return "NVPTXISD::TexUnified1DArrayU32FloatGrad";
-  case NVPTXISD::TexUnified2DFloatS32:
-    return "NVPTXISD::TexUnified2DFloatS32";
-  case NVPTXISD::TexUnified2DFloatFloat:
-    return "NVPTXISD::TexUnified2DFloatFloat";
-  case NVPTXISD::TexUnified2DFloatFloatLevel:
-    return "NVPTXISD::TexUnified2DFloatFloatLevel";
-  case NVPTXISD::TexUnified2DFloatFloatGrad:
-    return "NVPTXISD::TexUnified2DFloatFloatGrad";
-  case NVPTXISD::TexUnified2DS32S32:
-    return "NVPTXISD::TexUnified2DS32S32";
-  case NVPTXISD::TexUnified2DS32Float:
-    return "NVPTXISD::TexUnified2DS32Float";
-  case NVPTXISD::TexUnified2DS32FloatLevel:
-    return "NVPTXISD::TexUnified2DS32FloatLevel";
-  case NVPTXISD::TexUnified2DS32FloatGrad:
-    return "NVPTXISD::TexUnified2DS32FloatGrad";
-  case NVPTXISD::TexUnified2DU32S32:
-    return "NVPTXISD::TexUnified2DU32S32";
-  case NVPTXISD::TexUnified2DU32Float:
-    return "NVPTXISD::TexUnified2DU32Float";
-  case NVPTXISD::TexUnified2DU32FloatLevel:
-    return "NVPTXISD::TexUnified2DU32FloatLevel";
-  case NVPTXISD::TexUnified2DU32FloatGrad:
-    return "NVPTXISD::TexUnified2DU32FloatGrad";
-  case NVPTXISD::TexUnified2DArrayFloatS32:
-    return "NVPTXISD::TexUnified2DArrayFloatS32";
-  case NVPTXISD::TexUnified2DArrayFloatFloat:
-    return "NVPTXISD::TexUnified2DArrayFloatFloat";
-  case NVPTXISD::TexUnified2DArrayFloatFloatLevel:
-    return "NVPTXISD::TexUnified2DArrayFloatFloatLevel";
-  case NVPTXISD::TexUnified2DArrayFloatFloatGrad:
-    return "NVPTXISD::TexUnified2DArrayFloatFloatGrad";
-  case NVPTXISD::TexUnified2DArrayS32S32:
-    return "NVPTXISD::TexUnified2DArrayS32S32";
-  case NVPTXISD::TexUnified2DArrayS32Float:
-    return "NVPTXISD::TexUnified2DArrayS32Float";
-  case NVPTXISD::TexUnified2DArrayS32FloatLevel:
-    return "NVPTXISD::TexUnified2DArrayS32FloatLevel";
-  case NVPTXISD::TexUnified2DArrayS32FloatGrad:
-    return "NVPTXISD::TexUnified2DArrayS32FloatGrad";
-  case NVPTXISD::TexUnified2DArrayU32S32:
-    return "NVPTXISD::TexUnified2DArrayU32S32";
-  case NVPTXISD::TexUnified2DArrayU32Float:
-    return "NVPTXISD::TexUnified2DArrayU32Float";
-  case NVPTXISD::TexUnified2DArrayU32FloatLevel:
-    return "NVPTXISD::TexUnified2DArrayU32FloatLevel";
-  case NVPTXISD::TexUnified2DArrayU32FloatGrad:
-    return "NVPTXISD::TexUnified2DArrayU32FloatGrad";
-  case NVPTXISD::TexUnified3DFloatS32:
-    return "NVPTXISD::TexUnified3DFloatS32";
-  case NVPTXISD::TexUnified3DFloatFloat:
-    return "NVPTXISD::TexUnified3DFloatFloat";
-  case NVPTXISD::TexUnified3DFloatFloatLevel:
-    return "NVPTXISD::TexUnified3DFloatFloatLevel";
-  case NVPTXISD::TexUnified3DFloatFloatGrad:
-    return "NVPTXISD::TexUnified3DFloatFloatGrad";
-  case NVPTXISD::TexUnified3DS32S32:
-    return "NVPTXISD::TexUnified3DS32S32";
-  case NVPTXISD::TexUnified3DS32Float:
-    return "NVPTXISD::TexUnified3DS32Float";
-  case NVPTXISD::TexUnified3DS32FloatLevel:
-    return "NVPTXISD::TexUnified3DS32FloatLevel";
-  case NVPTXISD::TexUnified3DS32FloatGrad:
-    return "NVPTXISD::TexUnified3DS32FloatGrad";
-  case NVPTXISD::TexUnified3DU32S32:
-    return "NVPTXISD::TexUnified3DU32S32";
-  case NVPTXISD::TexUnified3DU32Float:
-    return "NVPTXISD::TexUnified3DU32Float";
-  case NVPTXISD::TexUnified3DU32FloatLevel:
-    return "NVPTXISD::TexUnified3DU32FloatLevel";
-  case NVPTXISD::TexUnified3DU32FloatGrad:
-    return "NVPTXISD::TexUnified3DU32FloatGrad";
-  case NVPTXISD::TexUnifiedCubeFloatFloat:
-    return "NVPTXISD::TexUnifiedCubeFloatFloat";
-  case NVPTXISD::TexUnifiedCubeFloatFloatLevel:
-    return "NVPTXISD::TexUnifiedCubeFloatFloatLevel";
-  case NVPTXISD::TexUnifiedCubeS32Float:
-    return "NVPTXISD::TexUnifiedCubeS32Float";
-  case NVPTXISD::TexUnifiedCubeS32FloatLevel:
-    return "NVPTXISD::TexUnifiedCubeS32FloatLevel";
-  case NVPTXISD::TexUnifiedCubeU32Float:
-    return "NVPTXISD::TexUnifiedCubeU32Float";
-  case NVPTXISD::TexUnifiedCubeU32FloatLevel:
-    return "NVPTXISD::TexUnifiedCubeU32FloatLevel";
-  case NVPTXISD::TexUnifiedCubeArrayFloatFloat:
-    return "NVPTXISD::TexUnifiedCubeArrayFloatFloat";
-  case NVPTXISD::TexUnifiedCubeArrayFloatFloatLevel:
-    return "NVPTXISD::TexUnifiedCubeArrayFloatFloatLevel";
-  case NVPTXISD::TexUnifiedCubeArrayS32Float:
-    return "NVPTXISD::TexUnifiedCubeArrayS32Float";
-  case NVPTXISD::TexUnifiedCubeArrayS32FloatLevel:
-    return "NVPTXISD::TexUnifiedCubeArrayS32FloatLevel";
-  case NVPTXISD::TexUnifiedCubeArrayU32Float:
-    return "NVPTXISD::TexUnifiedCubeArrayU32Float";
-  case NVPTXISD::TexUnifiedCubeArrayU32FloatLevel:
-    return "NVPTXISD::TexUnifiedCubeArrayU32FloatLevel";
-  case NVPTXISD::TexUnifiedCubeFloatFloatGrad:
-    return "NVPTXISD::TexUnifiedCubeFloatFloatGrad";
-  case NVPTXISD::TexUnifiedCubeS32FloatGrad:
-    return "NVPTXISD::TexUnifiedCubeS32FloatGrad";
-  case NVPTXISD::TexUnifiedCubeU32FloatGrad:
-    return "NVPTXISD::TexUnifiedCubeU32FloatGrad";
-  case NVPTXISD::TexUnifiedCubeArrayFloatFloatGrad:
-    return "NVPTXISD::TexUnifiedCubeArrayFloatFloatGrad";
-  case NVPTXISD::TexUnifiedCubeArrayS32FloatGrad:
-    return "NVPTXISD::TexUnifiedCubeArrayS32FloatGrad";
-  case NVPTXISD::TexUnifiedCubeArrayU32FloatGrad:
-    return "NVPTXISD::TexUnifiedCubeArrayU32FloatGrad";
-  case NVPTXISD::Tld4UnifiedR2DFloatFloat:
-    return "NVPTXISD::Tld4UnifiedR2DFloatFloat";
-  case NVPTXISD::Tld4UnifiedG2DFloatFloat:
-    return "NVPTXISD::Tld4UnifiedG2DFloatFloat";
-  case NVPTXISD::Tld4UnifiedB2DFloatFloat:
-    return "NVPTXISD::Tld4UnifiedB2DFloatFloat";
-  case NVPTXISD::Tld4UnifiedA2DFloatFloat:
-    return "NVPTXISD::Tld4UnifiedA2DFloatFloat";
-  case NVPTXISD::Tld4UnifiedR2DS64Float:
-    return "NVPTXISD::Tld4UnifiedR2DS64Float";
-  case NVPTXISD::Tld4UnifiedG2DS64Float:
-    return "NVPTXISD::Tld4UnifiedG2DS64Float";
-  case NVPTXISD::Tld4UnifiedB2DS64Float:
-    return "NVPTXISD::Tld4UnifiedB2DS64Float";
-  case NVPTXISD::Tld4UnifiedA2DS64Float:
-    return "NVPTXISD::Tld4UnifiedA2DS64Float";
-  case NVPTXISD::Tld4UnifiedR2DU64Float:
-    return "NVPTXISD::Tld4UnifiedR2DU64Float";
-  case NVPTXISD::Tld4UnifiedG2DU64Float:
-    return "NVPTXISD::Tld4UnifiedG2DU64Float";
-  case NVPTXISD::Tld4UnifiedB2DU64Float:
-    return "NVPTXISD::Tld4UnifiedB2DU64Float";
-  case NVPTXISD::Tld4UnifiedA2DU64Float:
-    return "NVPTXISD::Tld4UnifiedA2DU64Float";
+    MAKE_CASE(NVPTXISD::CALL)
+    MAKE_CASE(NVPTXISD::RET_GLUE)
+    MAKE_CASE(NVPTXISD::LOAD_PARAM)
+    MAKE_CASE(NVPTXISD::Wrapper)
+    MAKE_CASE(NVPTXISD::DeclareParam)
+    MAKE_CASE(NVPTXISD::DeclareScalarParam)
+    MAKE_CASE(NVPTXISD::DeclareRet)
+    MAKE_CASE(NVPTXISD::DeclareScalarRet)
+    MAKE_CASE(NVPTXISD::DeclareRetParam)
+    MAKE_CASE(NVPTXISD::PrintCall)
+    MAKE_CASE(NVPTXISD::PrintConvergentCall)
+    MAKE_CASE(NVPTXISD::PrintCallUni)
+    MAKE_CASE(NVPTXISD::PrintConvergentCallUni)
+    MAKE_CASE(NVPTXISD::LoadParam)
+    MAKE_CASE(NVPTXISD::LoadParamV2)
+    MAKE_CASE(NVPTXISD::LoadParamV4)
+    MAKE_CASE(NVPTXISD::StoreParam)
+    MAKE_CASE(NVPTXISD::StoreParamV2)
+    MAKE_CASE(NVPTXISD::StoreParamV4)
+    MAKE_CASE(NVPTXISD::StoreParamS32)
+    MAKE_CASE(NVPTXISD::StoreParamU32)
+    MAKE_CASE(NVPTXISD::CallArgBegin)
+    MAKE_CASE(NVPTXISD::CallArg)
+    MAKE_CASE(NVPTXISD::LastCallArg)
+    MAKE_CASE(NVPTXISD::CallArgEnd)
+    MAKE_CASE(NVPTXISD::CallVoid)
+    MAKE_CASE(NVPTXISD::CallVal)
+    MAKE_CASE(NVPTXISD::CallSymbol)
+    MAKE_CASE(NVPTXISD::Prototype)
+    MAKE_CASE(NVPTXISD::MoveParam)
+    MAKE_CASE(NVPTXISD::StoreRetval)
+    MAKE_CASE(NVPTXISD::StoreRetvalV2)
+    MAKE_CASE(NVPTXISD::StoreRetvalV4)
+    MAKE_CASE(NVPTXISD::PseudoUseParam)
+    MAKE_CASE(NVPTXISD::RETURN)
+    MAKE_CASE(NVPTXISD::CallSeqBegin)
+    MAKE_CASE(NVPTXISD::CallSeqEnd)
+    MAKE_CASE(NVPTXISD::CallPrototype)
+    MAKE_CASE(NVPTXISD::ProxyReg)
+    MAKE_CASE(NVPTXISD::LoadV2)
+    MAKE_CASE(NVPTXISD::LoadV4)
+    MAKE_CASE(NVPTXISD::LDGV2)
+    MAKE_CASE(NVPTXISD::LDGV4)
+    MAKE_CASE(NVPTXISD::LDUV2)
+    MAKE_CASE(NVPTXISD::LDUV4)
+    MAKE_CASE(NVPTXISD::StoreV2)
+    MAKE_CASE(NVPTXISD::StoreV4)
+    MAKE_CASE(NVPTXISD::FUN_SHFL_CLAMP)
+    MAKE_CASE(NVPTXISD::FUN_SHFR_CLAMP)
+    MAKE_CASE(NVPTXISD::IMAD)
+    MAKE_CASE(NVPTXISD::BFE)
+    MAKE_CASE(NVPTXISD::BFI)
+    MAKE_CASE(NVPTXISD::PRMT)
+    MAKE_CASE(NVPTXISD::SETP_F16X2)
+    MAKE_CASE(NVPTXISD::SETP_BF16X2)
+    MAKE_CASE(NVPTXISD::Dummy)
+    MAKE_CASE(NVPTXISD::MUL_WIDE_SIGNED)
+    MAKE_CASE(NVPTXISD::MUL_WIDE_UNSIGNED)
+    MAKE_CASE(NVPTXISD::Tex1DFloatS32)
+    MAKE_CASE(NVPTXISD::Tex1DFloatFloat)
+    MAKE_CASE(NVPTXISD::Tex1DFloatFloatLevel)
+    MAKE_CASE(NVPTXISD::Tex1DFloatFloatGrad)
+    MAKE_CASE(NVPTXISD::Tex1DS32S32)
+    MAKE_CASE(NVPTXISD::Tex1DS32Float)
+    MAKE_CASE(NVPTXISD::Tex1DS32FloatLevel)
+    MAKE_CASE(NVPTXISD::Tex1DS32FloatGrad)
+    MAKE_CASE(NVPTXISD::Tex1DU32S32)
+    MAKE_CASE(NVPTXISD::Tex1DU32Float)
+    MAKE_CASE(NVPTXISD::Tex1DU32FloatLevel)
+    MAKE_CASE(NVPTXISD::Tex1DU32FloatGrad)
+    MAKE_CASE(NVPTXISD::Tex1DArrayFloatS32)
+    MAKE_CASE(NVPTXISD::Tex1DArrayFloatFloat)
+    MAKE_CASE(NVPTXISD::Tex1DArrayFloatFloatLevel)
+    MAKE_CASE(NVPTXISD::Tex1DArrayFloatFloatGrad)
+    MAKE_CASE(NVPTXISD::Tex1DArrayS32S32)
+    MAKE_CASE(NVPTXISD::Tex1DArrayS32Float)
+    MAKE_CASE(NVPTXISD::Tex1DArrayS32FloatLevel)
+    MAKE_CASE(NVPTXISD::Tex1DArrayS32FloatGrad)
+    MAKE_CASE(NVPTXISD::Tex1DArrayU32S32)
+    MAKE_CASE(NVPTXISD::Tex1DArrayU32Float)
+    MAKE_CASE(NVPTXISD::Tex1DArrayU32FloatLevel)
+    MAKE_CASE(NVPTXISD::Tex1DArrayU32FloatGrad)
+    MAKE_CASE(NVPTXISD::Tex2DFloatS32)
+    MAKE_CASE(NVPTXISD::Tex2DFloatFloat)
+    MAKE_CASE(NVPTXISD::Tex2DFloatFloatLevel)
+    MAKE_CASE(NVPTXISD::Tex2DFloatFloatGrad)
+    MAKE_CASE(NVPTXISD::Tex2DS32S32)
+    MAKE_CASE(NVPTXISD::Tex2DS32Float)
+    MAKE_CASE(NVPTXISD::Tex2DS32FloatLevel)
+    MAKE_CASE(NVPTXISD::Tex2DS32FloatGrad)
+    MAKE_CASE(NVPTXISD::Tex2DU32S32)
+    MAKE_CASE(NVPTXISD::Tex2DU32Float)
+    MAKE_CASE(NVPTXISD::Tex2DU32FloatLevel)
+    MAKE_CASE(NVPTXISD::Tex2DU32FloatGrad)
+    MAKE_CASE(NVPTXISD::Tex2DArrayFloatS32)
+    MAKE_CASE(NVPTXISD::Tex2DArrayFloatFloat)
+    MAKE_CASE(NVPTXISD::Tex2DArrayFloatFloatLevel)
+    MAKE_CASE(NVPTXISD::Tex2DArrayFloatFloatGrad)
+    MAKE_CASE(NVPTXISD::Tex2DArrayS32S32)
+    MAKE_CASE(NVPTXISD::Tex2DArrayS32Float)
+    MAKE_CASE(NVPTXISD::Tex2DArrayS32FloatLevel)
+    MAKE_CASE(NVPTXISD::Tex2DArrayS32FloatGrad)
+    MAKE_CASE(NVPTXISD::Tex2DArrayU32S32)
+    MAKE_CASE(NVPTXISD::Tex2DArrayU32Float)
+    MAKE_CASE(NVPTXISD::Tex2DArrayU32FloatLevel)
+    MAKE_CASE(NVPTXISD::Tex2DArrayU32FloatGrad)
+    MAKE_CASE(NVPTXISD::Tex3DFloatS32)
+    MAKE_CASE(NVPTXISD::Tex3DFloatFloat)
+    MAKE_CASE(NVPTXISD::Tex3DFloatFloatLevel)
+    MAKE_CASE(NVPTXISD::Tex3DFloatFloatGrad)
+    MAKE_CASE(NVPTXISD::Tex3DS32S32)
+    MAKE_CASE(NVPTXISD::Tex3DS32Float)
+    MAKE_CASE(NVPTXISD::Tex3DS32FloatLevel)
+    MAKE_CASE(NVPTXISD::Tex3DS32FloatGrad)
+    MAKE_CASE(NVPTXISD::Tex3DU32S32)
+    MAKE_CASE(NVPTXISD::Tex3DU32Float)
+    MAKE_CASE(NVPTXISD::Tex3DU32FloatLevel)
+    MAKE_CASE(NVPTXISD::Tex3DU32FloatGrad)
+    MAKE_CASE(NVPTXISD::TexCubeFloatFloat)
+    MAKE_CASE(NVPTXISD::TexCubeFloatFloatLevel)
+    MAKE_CASE(NVPTXISD::TexCubeS32Float)
+    MAKE_CASE(NVPTXISD::TexCubeS32FloatLevel)
+    MAKE_CASE(NVPTXISD::TexCubeU32Float)
+    MAKE_CASE(NVPTXISD::TexCubeU32FloatLevel)
+    MAKE_CASE(NVPTXISD::TexCubeArrayFloatFloat)
+    MAKE_CASE(NVPTXISD::TexCubeArrayFloatFloatLevel)
+    MAKE_CASE(NVPTXISD::TexCubeArrayS32Float)
+    MAKE_CASE(NVPTXISD::TexCubeArrayS32FloatLevel)
+    MAKE_CASE(NVPTXISD::TexCubeArrayU32Float)
+    MAKE_CASE(NVPTXISD::TexCubeArrayU32FloatLevel)
+    MAKE_CASE(NVPTXISD::Tld4R2DFloatFloat)
+    MAKE_CASE(NVPTXISD::Tld4G2DFloatFloat)
+    MAKE_CASE(NVPTXISD::Tld4B2DFloatFloat)
+    MAKE_CASE(NVPTXISD::Tld4A2DFloatFloat)
+    MAKE_CASE(NVPTXISD::Tld4R2DS64Float)
+    MAKE_CASE(NVPTXISD::Tld4G2DS64Float)
+    MAKE_CASE(NVPTXISD::Tld4B2DS64Float)
+    MAKE_CASE(NVPTXISD::Tld4A2DS64Float)
+    MAKE_CASE(NVPTXISD::Tld4R2DU64Float)
+    MAKE_CASE(NVPTXISD::Tld4G2DU64Float)
+    MAKE_CASE(NVPTXISD::Tld4B2DU64Float)
+    MAKE_CASE(NVPTXISD::Tld4A2DU64Float)
 
-  case NVPTXISD::Suld1DI8Clamp:          return "NVPTXISD::Suld1DI8Clamp";
-  case NVPTXISD::Suld1DI16Clamp:         return "NVPTXISD::Suld1DI16Clamp";
-  case NVPTXISD::Suld1DI32Clamp:         return "NVPTXISD::Suld1DI32Clamp";
-  case NVPTXISD::Suld1DI64Clamp:         return "NVPTXISD::Suld1DI64Clamp";
-  case NVPTXISD::Suld1DV2I8Clamp:        return "NVPTXISD::Suld1DV2I8Clamp";
-  case NVPTXISD::Suld1DV2I16Clamp:       return "NVPTXISD::Suld1DV2I16Clamp";
-  case NVPTXISD::Suld1DV2I32Clamp:       return "NVPTXISD::Suld1DV2I32Clamp";
-  case NVPTXISD::Suld1DV2I64Clamp:       return "NVPTXISD::Suld1DV2I64Clamp";
-  case NVPTXISD::Suld1DV4I8Clamp:        return "NVPTXISD::Suld1DV4I8Clamp";
-  case NVPTXISD::Suld1DV4I16Clamp:       return "NVPTXISD::Suld1DV4I16Clamp";
-  case NVPTXISD::Suld1DV4I32Clamp:       return "NVPTXISD::Suld1DV4I32Clamp";
+    MAKE_CASE(NVPTXISD::TexUnified1DFloatS32)
+    MAKE_CASE(NVPTXISD::TexUnified1DFloatFloat)
+    MAKE_CASE(NVPTXISD::TexUnified1DFloatFloatLevel)
+    MAKE_CASE(NVPTXISD::TexUnified1DFloatFloatGrad)
+    MAKE_CASE(NVPTXISD::TexUnified1DS32S32)
+    MAKE_CASE(NVPTXISD::TexUnified1DS32Float)
+    MAKE_CASE(NVPTXISD::TexUnified1DS32FloatLevel)
+    MAKE_CASE(NVPTXISD::TexUnified1DS32FloatGrad)
+    MAKE_CASE(NVPTXISD::TexUnified1DU32S32)
+    MAKE_CASE(NVPTXISD::TexUnified1DU32Float)
+    MAKE_CASE(NVPTXISD::TexUnified1DU32FloatLevel)
+    MAKE_CASE(NVPTXISD::TexUnified1DU32FloatGrad)
+    MAKE_CASE(NVPTXISD::TexUnified1DArrayFloatS32)
+    MAKE_CASE(NVPTXISD::TexUnified1DArrayFloatFloat)
+    MAKE_CASE(NVPTXISD::TexUnified1DArrayFloatFloatLevel)
+    MAKE_CASE(NVPTXISD::TexUnified1DArrayFloatFloatGrad)
+    MAKE_CASE(NVPTXISD::TexUnified1DArrayS32S32)
+    MAKE_CASE(NVPTXISD::TexUnified1DArrayS32Float)
+    MAKE_CASE(NVPTXISD::TexUnified1DArrayS32FloatLevel)
+    MAKE_CASE(NVPTXISD::TexUnified1DArrayS32FloatGrad)
+    MAKE_CASE(NVPTXISD::TexUnified1DArrayU32S32)
+    MAKE_CASE(NVPTXISD::TexUnified1DArrayU32Float)
+    MAKE_CASE(NVPTXISD::TexUnified1DArrayU32FloatLevel)
+    MAKE_CASE(NVPTXISD::TexUnified1DArrayU32FloatGrad)
+    MAKE_CASE(NVPTXISD::TexUnified2DFloatS32)
+    MAKE_CASE(NVPTXISD::TexUnified2DFloatFloat)
+    MAKE_CASE(NVPTXISD::TexUnified2DFloatFloatLevel)
+    MAKE_CASE(NVPTXISD::TexUnified2DFloatFloatGrad)
+    MAKE_CASE(NVPTXISD::TexUnified2DS32S32)
+    MAKE_CASE(NVPTXISD::TexUnified2DS32Float)
+    MAKE_CASE(NVPTXISD::TexUnified2DS32FloatLevel)
+    MAKE_CASE(NVPTXISD::TexUnified2DS32FloatGrad)
+    MAKE_CASE(NVPTXISD::TexUnified2DU32S32)
+    MAKE_CASE(NVPTXISD::TexUnified2DU32Float)
+    MAKE_CASE(NVPTXISD::TexUnified2DU32FloatLevel)
+    MAKE_CASE(NVPTXISD::TexUnified2DU32FloatGrad)
+    MAKE_CASE(NVPTXISD::TexUnified2DArrayFloatS32)
+    MAKE_CASE(NVPTXISD::TexUnified2DArrayFloatFloat)
+    MAKE_CASE(NVPTXISD::TexUnified2DArrayFloatFloatLevel)
+    MAKE_CASE(NVPTXISD::TexUnified2DArrayFloatFloatGrad)
+    MAKE_CASE(NVPTXISD::TexUnified2DArrayS32S32)
+    MAKE_CASE(NVPTXISD::TexUnified2DArrayS32Float)
+    MAKE_CASE(NVPTXISD::TexUnified2DArrayS32FloatLevel)
+    MAKE_CASE(NVPTXISD::TexUnified2DArrayS32FloatGrad)
+    MAKE_CASE(NVPTXISD::TexUnified2DArrayU32S32)
+    MAKE_CASE(NVPTXISD::TexUnified2DArrayU32Float)
+    MAKE_CASE(NVPTXISD::TexUnified2DArrayU32FloatLevel)
+    MAKE_CASE(NVPTXISD::TexUnified2DArrayU32FloatGrad)
+    MAKE_CASE(NVPTXISD::TexUnified3DFloatS32)
+    MAKE_CASE(NVPTXISD::TexUnified3DFloatFloat)
+    MAKE_CASE(NVPTXISD::TexUnified3DFloatFloatLevel)
+    MAKE_CASE(NVPTXISD::TexUnified3DFloatFloatGrad)
+    MAKE_CASE(NVPTXISD::TexUnified3DS32S32)
+    MAKE_CASE(NVPTXISD::TexUnified3DS32Float)
+    MAKE_CASE(NVPTXISD::TexUnified3DS32FloatLevel)
+    MAKE_CASE(NVPTXISD::TexUnified3DS32FloatGrad)
+    MAKE_CASE(NVPTXISD::TexUnified3DU32S32)
+    MAKE_CASE(NVPTXISD::TexUnified3DU32Float)
+    MAKE_CASE(NVPTXISD::TexUnified3DU32FloatLevel)
+    MAKE_CASE(NVPTXISD::TexUnified3DU32FloatGrad)
+    MAKE_CASE(NVPTXISD::TexUnifiedCubeFloatFloat)
+    MAKE_CASE(NVPTXISD::TexUnifiedCubeFloatFloatLevel)
+    MAKE_CASE(NVPTXISD::TexUnifiedCubeS32Float)
+    MAKE_CASE(NVPTXISD::TexUnifiedCubeS32FloatLevel)
+    MAKE_CASE(NVPTXISD::TexUnifiedCubeU32Float)
+    MAKE_CASE(NVPTXISD::TexUnifiedCubeU32FloatLevel)
+    MAKE_CASE(NVPTXISD::TexUnifiedCubeArrayFloatFloat)
+    MAKE_CASE(NVPTXISD::TexUnifiedCubeArrayFloatFloatLevel)
+    MAKE_CASE(NVPTXISD::TexUnifiedCubeArrayS32Float)
+    MAKE_CASE(NVPTXISD::TexUnifiedCubeArrayS32FloatLevel)
+    MAKE_CASE(NVPTXISD::TexUnifiedCubeArrayU32Float)
+    MAKE_CASE(NVPTXISD::TexUnifiedCubeArrayU32FloatLevel)
+    MAKE_CASE(NVPTXISD::TexUnifiedCubeFloatFloatGrad)
+    MAKE_CASE(NVPTXISD::TexUnifiedCubeS32FloatGrad)
+    MAKE_CASE(NVPTXISD::TexUnifiedCubeU32FloatGrad)
+    MAKE_CASE(NVPTXISD::TexUnifiedCubeArrayFloatFloatGrad)
+    MAKE_CASE(NVPTXISD::TexUnifiedCubeArrayS32FloatGrad)
+    MAKE_CASE(NVPTXISD::TexUnifiedCubeArrayU32FloatGrad)
+    MAKE_CASE(NVPTXISD::Tld4UnifiedR2DFloatFloat)
+    MAKE_CASE(NVPTXISD::Tld4UnifiedG2DFloatFloat)
+    MAKE_CASE(NVPTXISD::Tld4UnifiedB2DFloatFloat)
+    MAKE_CASE(NVPTXISD::Tld4UnifiedA2DFloatFloat)
+    MAKE_CASE(NVPTXISD::Tld4UnifiedR2DS64Float)
+    MAKE_CASE(NVPTXISD::Tld4UnifiedG2DS64Float)
+    MAKE_CASE(NVPTXISD::Tld4UnifiedB2DS64Float)
+    MAKE_CASE(NVPTXISD::Tld4UnifiedA2DS64Float)
+    MAKE_CASE(NVPTXISD::Tld4UnifiedR2DU64Float)
+    MAKE_CASE(NVPTXISD::Tld4UnifiedG2DU64Float)
+    MAKE_CASE(NVPTXISD::Tld4UnifiedB2DU64Float)
+    MAKE_CASE(NVPTXISD::Tld4UnifiedA2DU64Float)
 
-  case NVPTXISD::Suld1DArrayI8Clamp:   return "NVPTXISD::Suld1DArrayI8Clamp";
-  case NVPTXISD::Suld1DArrayI16Clamp:  return "NVPTXISD::Suld1DArrayI16Clamp";
-  case NVPTXISD::Suld1DArrayI32Clamp:  return "NVPTXISD::Suld1DArrayI32Clamp";
-  case NVPTXISD::Suld1DArrayI64Clamp:  return "NVPTXISD::Suld1DArrayI64Clamp";
-  case NVPTXISD::Suld1DArrayV2I8Clamp: return "NVPTXISD::Suld1DArrayV2I8Clamp";
-  case NVPTXISD::Suld1DArrayV2I16Clamp:return "NVPTXISD::Suld1DArrayV2I16Clamp";
-  case NVPTXISD::Suld1DArrayV2I32Clamp:return "NVPTXISD::Suld1DArrayV2I32Clamp";
-  case NVPTXISD::Suld1DArrayV2I64Clamp:return "NVPTXISD::Suld1DArrayV2I64Clamp";
-  case NVPTXISD::Suld1DArrayV4I8Clamp: return "NVPTXISD::Suld1DArrayV4I8Clamp";
-  case NVPTXISD::Suld1DArrayV4I16Clamp:return "NVPTXISD::Suld1DArrayV4I16Clamp";
-  case NVPTXISD::Suld1DArrayV4I32Clamp:return "NVPTXISD::Suld1DArrayV4I32Clamp";
+    MAKE_CASE(NVPTXISD::Suld1DI8Clamp)
+    MAKE_CASE(NVPTXISD::Suld1DI16Clamp)
+    MAKE_CASE(NVPTXISD::Suld1DI32Clamp)
+    MAKE_CASE(NVPTXISD::Suld1DI64Clamp)
+    MAKE_CASE(NVPTXISD::Suld1DV2I8Clamp)
+    MAKE_CASE(NVPTXISD::Suld1DV2I16Clamp)
+    MAKE_CASE(NVPTXISD::Suld1DV2I32Clamp)
+    MAKE_CASE(NVPTXISD::Suld1DV2I64Clamp)
+    MAKE_CASE(NVPTXISD::Suld1DV4I8Clamp)
+    MAKE_CASE(NVPTXISD::Suld1DV4I16Clamp)
+    MAKE_CASE(NVPTXISD::Suld1DV4I32Clamp)
 
-  case NVPTXISD::Suld2DI8Clamp:          return "NVPTXISD::Suld2DI8Clamp";
-  case NVPTXISD::Suld2DI16Clamp:         return "NVPTXISD::Suld2DI16Clamp";
-  case NVPTXISD::Suld2DI32Clamp:         return "NVPTXISD::Suld2DI32Clamp";
-  case NVPTXISD::Suld2DI64Clamp:         return "NVPTXISD::Suld2DI64Clamp";
-  case NVPTXISD::Suld2DV2I8Clamp:        return "NVPTXISD::Suld2DV2I8Clamp";
-  case NVPTXISD::Suld2DV2I16Clamp:       return "NVPTXISD::Suld2DV2I16Clamp";
-  case NVPTXISD::Suld2DV2I32Clamp:       return "NVPTXISD::Suld2DV2I32Clamp";
-  case NVPTXISD::Suld2DV2I64Clamp:       return "NVPTXISD::Suld2DV2I64Clamp";
-  case NVPTXISD::Suld2DV4I8Clamp:        return "NVPTXISD::Suld2DV4I8Clamp";
-  case NVPTXISD::Suld2DV4I16Clamp:       return "NVPTXISD::Suld2DV4I16Clamp";
-  case NVPTXISD::Suld2DV4I32Clamp:       return "NVPTXISD::Suld2DV4I32Clamp";
+    MAKE_CASE(NVPTXISD::Suld1DArrayI8Clamp)
+    MAKE_CASE(NVPTXISD::Suld1DArrayI16Clamp)
+    MAKE_CASE(NVPTXISD::Suld1DArrayI32Clamp)
+    MAKE_CASE(NVPTXISD::Suld1DArrayI64Clamp)
+    MAKE_CASE(NVPTXISD::Suld1DArrayV2I8Clamp)
+    MAKE_CASE(NVPTXISD::Suld1DArrayV2I16Clamp)
+    MAKE_CASE(NVPTXISD::Suld1DArrayV2I32Clamp)
+    MAKE_CASE(NVPTXISD::Suld1DArrayV2I64Clamp)
+    MAKE_CASE(NVPTXISD::Suld1DArrayV4I8Clamp)
+    MAKE_CASE(NVPTXISD::Suld1DArrayV4I16Clamp)
+    MAKE_CASE(NVPTXISD::Suld1DArrayV4I32Clamp)
 
-  case NVPTXISD::Suld2DArrayI8Clamp:   return "NVPTXISD::Suld2DArrayI8Clamp";
-  case NVPTXISD::Suld2DArrayI16Clamp:  return "NVPTXISD::Suld2DArrayI16Clamp";
-  case NVPTXISD::Suld2DArrayI32Clamp:  return "NVPTXISD::Suld2DArrayI32Clamp";
-  case NVPTXISD::Suld2DArrayI64Clamp:  return "NVPTXISD::Suld2DArrayI64Clamp";
-  case NVPTXISD::Suld2DArrayV2I8Clamp: return "NVPTXISD::Suld2DArrayV2I8Clamp";
-  case NVPTXISD::Suld2DArrayV2I16Clamp:return "NVPTXISD::Suld2DArrayV2I16Clamp";
-  case NVPTXISD::Suld2DArrayV2I32Clamp:return "NVPTXISD::Suld2DArrayV2I32Clamp";
-  case NVPTXISD::Suld2DArrayV2I64Clamp:return "NVPTXISD::Suld2DArrayV2I64Clamp";
-  case NVPTXISD::Suld2DArrayV4I8Clamp: return "NVPTXISD::Suld2DArrayV4I8Clamp";
-  case NVPTXISD::Suld2DArrayV4I16Clamp:return "NVPTXISD::Suld2DArrayV4I16Clamp";
-  case NVPTXISD::Suld2DArrayV4I32Clamp:return "NVPTXISD::Suld2DArrayV4I32Clamp";
+    MAKE_CASE(NVPTXISD::Suld2DI8Clamp)
+    MAKE_CASE(NVPTXISD::Suld2DI16Clamp)
+    MAKE_CASE(NVPTXISD::Suld2DI32Clamp)
+    MAKE_CASE(NVPTXISD::Suld2DI64Clamp)
+    MAKE_CASE(NVPTXISD::Suld2DV2I8Clamp)
+    MAKE_CASE(NVPTXISD::Suld2DV2I16Clamp)
+    MAKE_CASE(NVPTXISD::Suld2DV2I32Clamp)
+    MAKE_CASE(NVPTXISD::Suld2DV2I64Clamp)
+    MAKE_CASE(NVPTXISD::Suld2DV4I8Clamp)
+    MAKE_CASE(NVPTXISD::Suld2DV4I16Clamp)
+    MAKE_CASE(NVPTXISD::Suld2DV4I32Clamp)
 
-  case NVPTXISD::Suld3DI8Clamp:          return "NVPTXISD::Suld3DI8Clamp";
-  case NVPTXISD::Suld3DI16Clamp:         return "NVPTXISD::Suld3DI16Clamp";
-  case NVPTXISD::Suld3DI32Clamp:         return "NVPTXISD::Suld3DI32Clamp";
-  case NVPTXISD::Suld3DI64Clamp:         return "NVPTXISD::Suld3DI64Clamp";
-  case NVPTXISD::Suld3DV2I8Clamp:        return "NVPTXISD::Suld3DV2I8Clamp";
-  case NVPTXISD::Suld3DV2I16Clamp:       return "NVPTXISD::Suld3DV2I16Clamp";
-  case NVPTXISD::Suld3DV2I32Clamp:       return "NVPTXISD::Suld3DV2I32Clamp";
-  case NVPTXISD::Suld3DV2I64Clamp:       return "NVPTXISD::Suld3DV2I64Clamp";
-  case NVPTXISD::Suld3DV4I8Clamp:        return "NVPTXISD::Suld3DV4I8Clamp";
-  case NVPTXISD::Suld3DV4I16Clamp:       return "NVPTXISD::Suld3DV4I16Clamp";
-  case NVPTXISD::Suld3DV4I32Clamp:       return "NVPTXISD::Suld3DV4I32Clamp";
+    MAKE_CASE(NVPTXISD::Suld2DArrayI8Clamp)
+    MAKE_CASE(NVPTXISD::Suld2DArrayI16Clamp)
+    MAKE_CASE(NVPTXISD::Suld2DArrayI32Clamp)
+    MAKE_CASE(NVPTXISD::Suld2DArrayI64Clamp)
+    MAKE_CASE(NVPTXISD::Suld2DArrayV2I8Clamp)
+    MAKE_CASE(NVPTXISD::Suld2DArrayV2I16Clamp)
+    MAKE_CASE(NVPTXISD::Suld2DArrayV2I32Clamp)
+    MAKE_CASE(NVPTXISD::Suld2DArrayV2I64Clamp)
+    MAKE_CASE(NVPTXISD::Suld2DArrayV4I8Clamp)
+    MAKE_CASE(NVPTXISD::Suld2DArrayV4I16Clamp)
+    MAKE_CASE(NVPTXISD::Suld2DArrayV4I32Clamp)
 
-  case NVPTXISD::Suld1DI8Trap:          return "NVPTXISD::Suld1DI8Trap";
-  case NVPTXISD::Suld1DI16Trap:         return "NVPTXISD::Suld1DI16Trap";
-  case NVPTXISD::Suld1DI32Trap:         return "NVPTXISD::Suld1DI32Trap";
-  case NVPTXISD::Suld1DI64Trap:         return "NVPTXISD::Suld1DI64Trap";
-  case NVPTXISD::Suld1DV2I8Trap:        return "NVPTXISD::Suld1DV2I8Trap";
-  case NVPTXISD::Suld1DV2I16Trap:       return "NVPTXISD::Suld1DV2I16Trap";
-  case NVPTXISD::Suld1DV2I32Trap:       return "NVPTXISD::Suld1DV2I32Trap";
-  case NVPTXISD::Suld1DV2I64Trap:       return "NVPTXISD::Suld1DV2I64Trap";
-  case NVPTXISD::Suld1DV4I8Trap:        return "NVPTXISD::Suld1DV4I8Trap";
-  case NVPTXISD::Suld1DV4I16Trap:       return "NVPTXISD::Suld1DV4I16Trap";
-  case NVPTXISD::Suld1DV4I32Trap:       return "NVPTXISD::Suld1DV4I32Trap";
+    MAKE_CASE(NVPTXISD::Suld3DI8Clamp)
+    MAKE_CASE(NVPTXISD::Suld3DI16Clamp)
+    MAKE_CASE(NVPTXISD::Suld3DI32Clamp)
+    MAKE_CASE(NVPTXISD::Suld3DI64Clamp)
+    MAKE_CASE(NVPTXISD::Suld3DV2I8Clamp)
+    MAKE_CASE(NVPTXISD::Suld3DV2I16Clamp)
+    MAKE_CASE(NVPTXISD::Suld3DV2I32Clamp)
+    MAKE_CASE(NVPTXISD::Suld3DV2I64Clamp)
+    MAKE_CASE(NVPTXISD::Suld3DV4I8Clamp)
+    MAKE_CASE(NVPTXISD::Suld3DV4I16Clamp)
+    MAKE_CASE(NVPTXISD::Suld3DV4I32Clamp)
 
-  case NVPTXISD::Suld1DArrayI8Trap:     return "NVPTXISD::Suld1DArrayI8Trap";
-  case NVPTXISD::Suld1DArrayI16Trap:    return "NVPTXISD::Suld1DArrayI16Trap";
-  case NVPTXISD::Suld1DArrayI32Trap:    return "NVPTXISD::Suld1DArrayI32Trap";
-  case NVPTXISD::Suld1DArrayI64Trap:    return "NVPTXISD::Suld1DArrayI64Trap";
-  case NVPTXISD::Suld1DArrayV2I8Trap:   return "NVPTXISD::Suld1DArrayV2I8Trap";
-  case NVPTXISD::Suld1DArrayV2I16Trap:  return "NVPTXISD::Suld1DArrayV2I16Trap";
-  case NVPTXISD::Suld1DArrayV2I32Trap:  return "NVPTXISD::Suld1DArrayV2I32Trap";
-  case NVPTXISD::Suld1DArrayV2I64Trap:  return "NVPTXISD::Suld1DArrayV2I64Trap";
-  case NVPTXISD::Suld1DArrayV4I8Trap:   return "NVPTXISD::Suld1DArrayV4I8Trap";
-  case NVPTXISD::Suld1DArrayV4I16Trap:  return "NVPTXISD::Suld1DArrayV4I16Trap";
-  case NVPTXISD::Suld1DArrayV4I32Trap:  return "NVPTXISD::Suld1DArrayV4I32Trap";
+    MAKE_CASE(NVPTXISD::Suld1DI8Trap)
+    MAKE_CASE(NVPTXISD::Suld1DI16Trap)
+    MAKE_CASE(NVPTXISD::Suld1DI32Trap)
+    MAKE_CASE(NVPTXISD::Suld1DI64Trap)
+    MAKE_CASE(NVPTXISD::Suld1DV2I8Trap)
+    MAKE_CASE(NVPTXISD::Suld1DV2I16Trap)
+    MAKE_CASE(NVPTXISD::Suld1DV2I32Trap)
+    MAKE_CASE(NVPTXISD::Suld1DV2I64Trap)
+    MAKE_CASE(NVPTXISD::Suld1DV4I8Trap)
+    MAKE_CASE(NVPTXISD::Suld1DV4I16Trap)
+    MAKE_CASE(NVPTXISD::Suld1DV4I32Trap)
 
-  case NVPTXISD::Suld2DI8Trap:          return "NVPTXISD::Suld2DI8Trap";
-  case NVPTXISD::Suld2DI16Trap:         return "NVPTXISD::Suld2DI16Trap";
-  case NVPTXISD::Suld2DI32Trap:         return "NVPTXISD::Suld2DI32Trap";
-  case NVPTXISD::Suld2DI64Trap:         return "NVPTXISD::Suld2DI64Trap";
-  case NVPTXISD::Suld2DV2I8Trap:        return "NVPTXISD::Suld2DV2I8Trap";
-  case NVPTXISD::Suld2DV2I16Trap:       return "NVPTXISD::Suld2DV2I16Trap";
-  case NVPTXISD::Suld2DV2I32Trap:       return "NVPTXISD::Suld2DV2I32Trap";
-  case NVPTXISD::Suld2DV2I64Trap:       return "NVPTXISD::Suld2DV2I64Trap";
-  case NVPTXISD::Suld2DV4I8Trap:        return "NVPTXISD::Suld2DV4I8Trap";
-  case NVPTXISD::Suld2DV4I16Trap:       return "NVPTXISD::Suld2DV4I16Trap";
-  case NVPTXISD::Suld2DV4I32Trap:       return "NVPTXISD::Suld2DV4I32Trap";
+    MAKE_CASE(NVPTXISD::Suld1DArrayI8Trap)
+    MAKE_CASE(NVPTXISD::Suld1DArrayI16Trap)
+    MAKE_CASE(NVPTXISD::Suld1DArrayI32Trap)
+    MAKE_CASE(NVPTXISD::Suld1DArrayI64Trap)
+    MAKE_CASE(NVPTXISD::Suld1DArrayV2I8Trap)
+    MAKE_CASE(NVPTXISD::Suld1DArrayV2I16Trap)
+    MAKE_CASE(NVPTXISD::Suld1DArrayV2I32Trap)
+    MAKE_CASE(NVPTXISD::Suld1DArrayV2I64Trap)
+    MAKE_CASE(NVPTXISD::Suld1DArrayV4I8Trap)
+    MAKE_CASE(NVPTXISD::Suld1DArrayV4I16Trap)
+    MAKE_CASE(NVPTXISD::Suld1DArrayV4I32Trap)
 
-  case NVPTXISD::Suld2DArrayI8Trap:     return "NVPTXISD::Suld2DArrayI8Trap";
-  case NVPTXISD::Suld2DArrayI16Trap:    return "NVPTXISD::Suld2DArrayI16Trap";
-  case NVPTXISD::Suld2DArrayI32Trap:    return "NVPTXISD::Suld2DArrayI32Trap";
-  case NVPTXISD::Suld2DArrayI64Trap:    return "NVPTXISD::Suld2DArrayI64Trap";
-  case NVPTXISD::Suld2DArrayV2I8Trap:   return "NVPTXISD::Suld2DArrayV2I8Trap";
-  case NVPTXISD::Suld2DArrayV2I16Trap:  return "NVPTXISD::Suld2DArrayV2I16Trap";
-  case NVPTXISD::Suld2DArrayV2I32Trap:  return "NVPTXISD::Suld2DArrayV2I32Trap";
-  case NVPTXISD::Suld2DArrayV2I64Trap:  return "NVPTXISD::Suld2DArrayV2I64Trap";
-  case NVPTXISD::Suld2DArrayV4I8Trap:   return "NVPTXISD::Suld2DArrayV4I8Trap";
-  case NVPTXISD::Suld2DArrayV4I16Trap:  return "NVPTXISD::Suld2DArrayV4I16Trap";
-  case NVPTXISD::Suld2DArrayV4I32Trap:  return "NVPTXISD::Suld2DArrayV4I32Trap";
+    MAKE_CASE(NVPTXISD::Suld2DI8Trap)
+    MAKE_CASE(NVPTXISD::Suld2DI16Trap)
+    MAKE_CASE(NVPTXISD::Suld2DI32Trap)
+    MAKE_CASE(NVPTXISD::Suld2DI64Trap)
+    MAKE_CASE(NVPTXISD::Suld2DV2I8Trap)
+    MAKE_CASE(NVPTXISD::Suld2DV2I16Trap)
+    MAKE_CASE(NVPTXISD::Suld2DV2I32Trap)
+    MAKE_CASE(NVPTXISD::Suld2DV2I64Trap)
+    MAKE_CASE(NVPTXISD::Suld2DV4I8Trap)
+    MAKE_CASE(NVPTXISD::Suld2DV4I16Trap)
+    MAKE_CASE(NVPTXISD::Suld2DV4I32Trap)
 
-  case NVPTXISD::Suld3DI8Trap:          return "NVPTXISD::Suld3DI8Trap";
-  case NVPTXISD::Suld3DI16Trap:         return "NVPTXISD::Suld3DI16Trap";
-  case NVPTXISD::Suld3DI32Trap:         return "NVPTXISD::Suld3DI32Trap";
-  case NVPTXISD::Suld3DI64Trap:         return "NVPTXISD::Suld3DI64Trap";
-  case NVPTXISD::Suld3DV2I8Trap:        return "NVPTXISD::Suld3DV2I8Trap";
-  case NVPTXISD::Suld3DV2I16Trap:       return "NVPTXISD::Suld3DV2I16Trap";
-  case NVPTXISD::Suld3DV2I32Trap:       return "NVPTXISD::Suld3DV2I32Trap";
-  case NVPTXISD::Suld3DV2I64Trap:       return "NVPTXISD::Suld3DV2I64Trap";
-  case NVPTXISD::Suld3DV4I8Trap:        return "NVPTXISD::Suld3DV4I8Trap";
-  case NVPTXISD::Suld3DV4I16Trap:       return "NVPTXISD::Suld3DV4I16Trap";
-  case NVPTXISD::Suld3DV4I32Trap:       return "NVPTXISD::Suld3DV4I32Trap";
+    MAKE_CASE(NVPTXISD::Suld2DArrayI8Trap)
+    MAKE_CASE(NVPTXISD::Suld2DArrayI16Trap)
+    MAKE_CASE(NVPTXISD::Suld2DArrayI32Trap)
+    MAKE_CASE(NVPTXISD::Suld2DArrayI64Trap)
+    MAKE_CASE(NVPTXISD::Suld2DArrayV2I8Trap)
+    MAKE_CASE(NVPTXISD::Suld2DArrayV2I16Trap)
+    MAKE_CASE(NVPTXISD::Suld2DArrayV2I32Trap)
+    MAKE_CASE(NVPTXISD::Suld2DArrayV2I64Trap)
+    MAKE_CASE(NVPTXISD::Suld2DArrayV4I8Trap)
+    MAKE_CASE(NVPTXISD::Suld2DArrayV4I16Trap)
+    MAKE_CASE(NVPTXISD::Suld2DArrayV4I32Trap)
 
-  case NVPTXISD::Suld1DI8Zero:          return "NVPTXISD::Suld1DI8Zero";
-  case NVPTXISD::Suld1DI16Zero:         return "NVPTXISD::Suld1DI16Zero";
-  case NVPTXISD::Suld1DI32Zero:         return "NVPTXISD::Suld1DI32Zero";
-  case NVPTXISD::Suld1DI64Zero:         return "NVPTXISD::Suld1DI64Zero";
-  case NVPTXISD::Suld1DV2I8Zero:        return "NVPTXISD::Suld1DV2I8Zero";
-  case NVPTXISD::Suld1DV2I16Zero:       return "NVPTXISD::Suld1DV2I16Zero";
-  case NVPTXISD::Suld1DV2I32Zero:       return "NVPTXISD::Suld1DV2I32Zero";
-  case NVPTXISD::Suld1DV2I64Zero:       return "NVPTXISD::Suld1DV2I64Zero";
-  case NVPTXISD::Suld1DV4I8Zero:        return "NVPTXISD::Suld1DV4I8Zero";
-  case NVPTXISD::Suld1DV4I16Zero:       return "NVPTXISD::Suld1DV4I16Zero";
-  case NVPTXISD::Suld1DV4I32Zero:       return "NVPTXISD::Suld1DV4I32Zero";
+    MAKE_CASE(NVPTXISD::Suld3DI8Trap)
+    MAKE_CASE(NVPTXISD::Suld3DI16Trap)
+    MAKE_CASE(NVPTXISD::Suld3DI32Trap)
+    MAKE_CASE(NVPTXISD::Suld3DI64Trap)
+    MAKE_CASE(NVPTXISD::Suld3DV2I8Trap)
+    MAKE_CASE(NVPTXISD::Suld3DV2I16Trap)
+    MAKE_CASE(NVPTXISD::Suld3DV2I32Trap)
+    MAKE_CASE(NVPTXISD::Suld3DV2I64Trap)
+    MAKE_CASE(NVPTXISD::Suld3DV4I8Trap)
+    MAKE_CASE(NVPTXISD::Suld3DV4I16Trap)
+    MAKE_CASE(NVPTXISD::Suld3DV4I32Trap)
 
-  case NVPTXISD::Suld1DArrayI8Zero:     return "NVPTXISD::Suld1DArrayI8Zero";
-  case NVPTXISD::Suld1DArrayI16Zero:    return "NVPTXISD::Suld1DArrayI16Zero";
-  case NVPTXISD::Suld1DArrayI32Zero:    return "NVPTXISD::Suld1DArrayI32Zero";
-  case NVPTXISD::Suld1DArrayI64Zero:    return "NVPTXISD::Suld1DArrayI64Zero";
-  case NVPTXISD::Suld1DArrayV2I8Zero:   return "NVPTXISD::Suld1DArrayV2I8Zero";
-  case NVPTXISD::Suld1DArrayV2I16Zero:  return "NVPTXISD::Suld1DArrayV2I16Zero";
-  case NVPTXISD::Suld1DArrayV2I32Zero:  return "NVPTXISD::Suld1DArrayV2I32Zero";
-  case NVPTXISD::Suld1DArrayV2I64Zero:  return "NVPTXISD::Suld1DArrayV2I64Zero";
-  case NVPTXISD::Suld1DArrayV4I8Zero:   return "NVPTXISD::Suld1DArrayV4I8Zero";
-  case NVPTXISD::Suld1DArrayV4I16Zero:  return "NVPTXISD::Suld1DArrayV4I16Zero";
-  case NVPTXISD::Suld1DArrayV4I32Zero:  return "NVPTXISD::Suld1DArrayV4I32Zero";
+    MAKE_CASE(NVPTXISD::Suld1DI8Zero)
+    MAKE_CASE(NVPTXISD::Suld1DI16Zero)
+    MAKE_CASE(NVPTXISD::Suld1DI32Zero)
+    MAKE_CASE(NVPTXISD::Suld1DI64Zero)
+    MAKE_CASE(NVPTXISD::Suld1DV2I8Zero)
+    MAKE_CASE(NVPTXISD::Suld1DV2I16Zero)
+    MAKE_CASE(NVPTXISD::Suld1DV2I32Zero)
+    MAKE_CASE(NVPTXISD::Suld1DV2I64Zero)
+    MAKE_CASE(NVPTXISD::Suld1DV4I8Zero)
+    MAKE_CASE(NVPTXISD::Suld1DV4I16Zero)
+    MAKE_CASE(NVPTXISD::Suld1DV4I32Zero)
 
-  case NVPTXISD::Suld2DI8Zero:          return "NVPTXISD::Suld2DI8Zero";
-  case NVPTXISD::Suld2DI16Zero:         return "NVPTXISD::Suld2DI16Zero";
-  case NVPTXISD::Suld2DI32Zero:         return "NVPTXISD::Suld2DI32Zero";
-  case NVPTXISD::Suld2DI64Zero:         return "NVPTXISD::Suld2DI64Zero";
-  case NVPTXISD::Suld2DV2I8Zero:        return "NVPTXISD::Suld2DV2I8Zero";
-  case NVPTXISD::Suld2DV2I16Zero:       return "NVPTXISD::Suld2DV2I16Zero";
-  case NVPTXISD::Suld2DV2I32Zero:       return "NVPTXISD::Suld2DV2I32Zero";
-  case NVPTXISD::Suld2DV2I64Zero:       return "NVPTXISD::Suld2DV2I64Zero";
-  case NVPTXISD::Suld2DV4I8Zero:        return "NVPTXISD::Suld2DV4I8Zero";
-  case NVPTXISD::Suld2DV4I16Zero:       return "NVPTXISD::Suld2DV4I16Zero";
-  case NVPTXISD::Suld2DV4I32Zero:       return "NVPTXISD::Suld2DV4I32Zero";
+    MAKE_CASE(NVPTXISD::Suld1DArrayI8Zero)
+    MAKE_CASE(NVPTXISD::Suld1DArrayI16Zero)
+    MAKE_CASE(NVPTXISD::Suld1DArrayI32Zero)
+    MAKE_CASE(NVPTXISD::Suld1DArrayI64Zero)
+    MAKE_CASE(NVPTXISD::Suld1DArrayV2I8Zero)
+    MAKE_CASE(NVPTXISD::Suld1DArrayV2I16Zero)
+    MAKE_CASE(NVPTXISD::Suld1DArrayV2I32Zero)
+    MAKE_CASE(NVPTXISD::Suld1DArrayV2I64Zero)
+    MAKE_CASE(NVPTXISD::Suld1DArrayV4I8Zero)
+    MAKE_CASE(NVPTXISD::Suld1DArrayV4I16Zero)
+    MAKE_CASE(NVPTXISD::Suld1DArrayV4I32Zero)
 
-  case NVPTXISD::Suld2DArrayI8Zero:     return "NVPTXISD::Suld2DArrayI8Zero";
-  case NVPTXISD::Suld2DArrayI16Zero:    return "NVPTXISD::Suld2DArrayI16Zero";
-  case NVPTXISD::Suld2DArrayI32Zero:    return "NVPTXISD::Suld2DArrayI32Zero";
-  case NVPTXISD::Suld2DArrayI64Zero:    return "NVPTXISD::Suld2DArrayI64Zero";
-  case NVPTXISD::Suld2DArrayV2I8Zero:   return "NVPTXISD::Suld2DArrayV2I8Zero";
-  case NVPTXISD::Suld2DArrayV2I16Zero:  return "NVPTXISD::Suld2DArrayV2I16Zero";
-  case NVPTXISD::Suld2DArrayV2I32Zero:  return "NVPTXISD::Suld2DArrayV2I32Zero";
-  case NVPTXISD::Suld2DArrayV2I64Zero:  return "NVPTXISD::Suld2DArrayV2I64Zero";
-  case NVPTXISD::Suld2DArrayV4I8Zero:   return "NVPTXISD::Suld2DArrayV4I8Zero";
-  case NVPTXISD::Suld2DArrayV4I16Zero:  return "NVPTXISD::Suld2DArrayV4I16Zero";
-  case NVPTXISD::Suld2DArrayV4I32Zero:  return "NVPTXISD::Suld2DArrayV4I32Zero";
+    MAKE_CASE(NVPTXISD::Suld2DI8Zero)
+    MAKE_CASE(NVPTXISD::Suld2DI16Zero)
+    MAKE_CASE(NVPTXISD::Suld2DI32Zero)
+    MAKE_CASE(NVPTXISD::Suld2DI64Zero)
+    MAKE_CASE(NVPTXISD::Suld2DV2I8Zero)
+    MAKE_CASE(NVPTXISD::Suld2DV2I16Zero)
+    MAKE_CASE(NVPTXISD::Suld2DV2I32Zero)
+    MAKE_CASE(NVPTXISD::Suld2DV2I64Zero)
+    MAKE_CASE(NVPTXISD::Suld2DV4I8Zero)
+    MAKE_CASE(NVPTXISD::Suld2DV4I16Zero)
+    MAKE_CASE(NVPTXISD::Suld2DV4I32Zero)
 
-  case NVPTXISD::Suld3DI8Zero:          return "NVPTXISD::Suld3DI8Zero";
-  case NVPTXISD::Suld3DI16Zero:         return "NVPTXISD::Suld3DI16Zero";
-  case NVPTXISD::Suld3DI32Zero:         return "NVPTXISD::Suld3DI32Zero";
-  case NVPTXISD::Suld3DI64Zero:         return "NVPTXISD::Suld3DI64Zero";
-  case NVPTXISD::Suld3DV2I8Zero:        return "NVPTXISD::Suld3DV2I8Zero";
-  case NVPTXISD::Suld3DV2I16Zero:       return "NVPTXISD::Suld3DV2I16Zero";
-  case NVPTXISD::Suld3DV2I32Zero:       return "NVPTXISD::Suld3DV2I32Zero";
-  case NVPTXISD::Suld3DV2I64Zero:       return "NVPTXISD::Suld3DV2I64Zero";
-  case NVPTXISD::Suld3DV4I8Zero:        return "NVPTXISD::Suld3DV4I8Zero";
-  case NVPTXISD::Suld3DV4I16Zero:       return "NVPTXISD::Suld3DV4I16Zero";
-  case NVPTXISD::Suld3DV4I32Zero:       return "NVPTXISD::Suld3DV4I32Zero";
+    MAKE_CASE(NVPTXISD::Suld2DArrayI8Zero)
+    MAKE_CASE(NVPTXISD::Suld2DArrayI16Zero)
+    MAKE_CASE(NVPTXISD::Suld2DArrayI32Zero)
+    MAKE_CASE(NVPTXISD::Suld2DArrayI64Zero)
+    MAKE_CASE(NVPTXISD::Suld2DArrayV2I8Zero)
+    MAKE_CASE(NVPTXISD::Suld2DArrayV2I16Zero)
+    MAKE_CASE(NVPTXISD::Suld2DArrayV2I32Zero)
+    MAKE_CASE(NVPTXISD::Suld2DArrayV2I64Zero)
+    MAKE_CASE(NVPTXISD::Suld2DArrayV4I8Zero)
+    MAKE_CASE(NVPTXISD::Suld2DArrayV4I16Zero)
+    MAKE_CASE(NVPTXISD::Suld2DArrayV4I32Zero)
+
+    MAKE_CASE(NVPTXISD::Suld3DI8Zero)
+    MAKE_CASE(NVPTXISD::Suld3DI16Zero)
+    MAKE_CASE(NVPTXISD::Suld3DI32Zero)
+    MAKE_CASE(NVPTXISD::Suld3DI64Zero)
+    MAKE_CASE(NVPTXISD::Suld3DV2I8Zero)
+    MAKE_CASE(NVPTXISD::Suld3DV2I16Zero)
+    MAKE_CASE(NVPTXISD::Suld3DV2I32Zero)
+    MAKE_CASE(NVPTXISD::Suld3DV2I64Zero)
+    MAKE_CASE(NVPTXISD::Suld3DV4I8Zero)
+    MAKE_CASE(NVPTXISD::Suld3DV4I16Zero)
+    MAKE_CASE(NVPTXISD::Suld3DV4I32Zero)
   }
   return nullptr;
+
+#undef MAKE_CASE
 }
 
 TargetLoweringBase::LegalizeTypeAction
@@ -3070,8 +2883,7 @@ SDValue NVPTXTargetLowering::LowerFormalArguments(
   // See similar issue in LowerCall.
   unsigned InsIdx = 0;
 
-  int idx = 0;
-  for (unsigned i = 0, e = theArgs.size(); i != e; ++i, ++idx, ++InsIdx) {
+  for (unsigned i = 0, e = theArgs.size(); i != e; ++i, ++InsIdx) {
     Type *Ty = argTypes[i];
 
     if (theArgs[i]->use_empty()) {
@@ -3107,10 +2919,10 @@ SDValue NVPTXTargetLowering::LowerFormalArguments(
       continue;
     }
 
-    // In the following cases, assign a node order of "idx+1"
+    // In the following cases, assign a node order of "i+1"
     // to newly created nodes. The SDNodes for params have to
     // appear in the same order as their order of appearance
-    // in the original function. "idx+1" holds that order.
+    // in the original function. "i+1" holds that order.
     if (!PAL.hasParamAttr(i, Attribute::ByVal)) {
       bool aggregateIsPacked = false;
       if (StructType *STy = dyn_cast<StructType>(Ty))
@@ -3125,7 +2937,7 @@ SDValue NVPTXTargetLowering::LowerFormalArguments(
       auto VectorInfo =
           VectorizePTXValueVTs(VTs, Offsets, DL.getABITypeAlign(Ty));
 
-      SDValue Arg = getParamSymbol(DAG, idx, PtrVT);
+      SDValue Arg = getParamSymbol(DAG, i, PtrVT);
       int VecIdx = -1; // Index of the first element of the current vector.
       for (unsigned parti = 0, parte = VTs.size(); parti != parte; ++parti) {
         if (VectorInfo[parti] & PVF_FIRST) {
@@ -3159,7 +2971,7 @@ SDValue NVPTXTargetLowering::LowerFormalArguments(
                                   MachineMemOperand::MODereferenceable |
                                       MachineMemOperand::MOInvariant);
           if (P.getNode())
-            P.getNode()->setIROrder(idx + 1);
+            P.getNode()->setIROrder(i + 1);
           for (unsigned j = 0; j < NumElts; ++j) {
             SDValue Elt = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl, LoadVT, P,
                                       DAG.getIntPtrConstant(j, dl));
@@ -3208,10 +3020,10 @@ SDValue NVPTXTargetLowering::LowerFormalArguments(
     EVT ObjectVT = getValueType(DL, Ty);
     assert(ObjectVT == Ins[InsIdx].VT &&
            "Ins type did not match function type");
-    SDValue Arg = getParamSymbol(DAG, idx, PtrVT);
+    SDValue Arg = getParamSymbol(DAG, i, PtrVT);
     SDValue p = DAG.getNode(NVPTXISD::MoveParam, dl, ObjectVT, Arg);
     if (p.getNode())
-      p.getNode()->setIROrder(idx + 1);
+      p.getNode()->setIROrder(i + 1);
     InVals.push_back(p);
   }
 
@@ -5546,10 +5358,11 @@ static SDValue PerformEXTRACTCombine(SDNode *N,
   if (Vector->getOpcode() == ISD::LOAD && VectorVT.isSimple() &&
       IsPTXVectorType(VectorVT.getSimpleVT()))
     return SDValue(); // Native vector loads already combine nicely w/
-                      // extract_vector_elt, except for v4i8.
-  // Don't mess with singletons or v2*16 types, we already handle them OK.
+                      // extract_vector_elt.
+  // Don't mess with singletons or v2*16, v4i8 and v8i8 types, we already
+  // handle them OK.
   if (VectorVT.getVectorNumElements() == 1 || Isv2x16VT(VectorVT) ||
-      VectorVT == MVT::v4i8)
+      VectorVT == MVT::v4i8 || VectorVT == MVT::v8i8)
     return SDValue();
 
   uint64_t VectorBits = VectorVT.getSizeInBits();

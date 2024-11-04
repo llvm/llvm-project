@@ -1228,7 +1228,7 @@ feature_test_macros = [
             "name": "__cpp_lib_tuple_like",
             "values": {
                 "c++23": 202207,  # P2165R4 Compatibility between tuple, pair and tuple-like objects
-                "c++26": 202311,  # P2819R2 Add tuple protocol to complex
+                "c++26": 202311,  # P2819R2 Add tuple protocol to complex (implemented)
             },
             "headers": ["map", "tuple", "unordered_map", "utility"],
             "unimplemented": True,
@@ -1769,7 +1769,7 @@ def pad_cell(s, length, left_align=True):
 def get_status_table():
     table = [["Macro Name", "Value"]]
     for std in get_std_dialects():
-        table += [["**" + std.replace("c++", "C++ ") + "**", ""]]
+        table += [["**" + std.replace("c++", "C++") + "**", ""]]
         for tc in feature_test_macros:
             if std not in tc["values"].keys():
                 continue

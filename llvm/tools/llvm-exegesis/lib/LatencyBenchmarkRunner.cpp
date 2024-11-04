@@ -15,6 +15,8 @@
 #include <algorithm>
 #include <cmath>
 
+#define DEBUG_TYPE "exegesis-latency-benchmarkrunner"
+
 namespace llvm {
 namespace exegesis {
 
@@ -91,9 +93,11 @@ Expected<std::vector<BenchmarkMeasure>> LatencyBenchmarkRunner::runMeasurements(
     if (!ExpectedCounterValues)
       return ExpectedCounterValues.takeError();
     ValuesCount = ExpectedCounterValues.get().size();
-    if (ValuesCount == 1)
+    if (ValuesCount == 1) {
+      LLVM_DEBUG(dbgs() << "Latency value: " << ExpectedCounterValues.get()[0]
+                        << "\n");
       AccumulatedValues.push_back(ExpectedCounterValues.get()[0]);
-    else {
+    } else {
       // We'll keep the reading with lowest variance (ie., most stable)
       double Variance = computeVariance(*ExpectedCounterValues);
       if (MinVariance > Variance) {
@@ -102,8 +106,11 @@ Expected<std::vector<BenchmarkMeasure>> LatencyBenchmarkRunner::runMeasurements(
       }
     }
 
-    for (size_t I = 0; I < ValCounterValues.size(); ++I)
+    for (size_t I = 0; I < ValCounterValues.size(); ++I) {
+      LLVM_DEBUG(dbgs() << validationEventToString(ValidationCounters[I])
+                        << ": " << IterationValCounterValues[I] << "\n");
       ValCounterValues[I] += IterationValCounterValues[I];
+    }
   }
 
   std::map<ValidationEvent, int64_t> ValidationInfo;

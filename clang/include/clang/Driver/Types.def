@@ -94,6 +94,7 @@ TYPE("lto-bc",                   LTO_BC,       INVALID,         "o",      phases
 TYPE("ast",                      AST,          INVALID,         "ast",    phases::Compile, phases::Backend, phases::Assemble, phases::Link)
 TYPE("ifs",                      IFS,          INVALID,         "ifs",    phases::IfsMerge)
 TYPE("ifs-cpp",                  IFS_CPP,      INVALID,         "ifs",    phases::Compile, phases::IfsMerge)
+TYPE("tbd",                      TextAPI,      INVALID,         "tbd",    phases::Precompile)
 TYPE("pcm",                      ModuleFile,   INVALID,         "pcm",    phases::Compile, phases::Backend, phases::Assemble, phases::Link)
 TYPE("header-unit",              HeaderUnit,   INVALID,         "pcm",    phases::Compile, phases::Backend, phases::Assemble, phases::Link)
 TYPE("plist",                    Plist,        INVALID,         "plist",  phases::Compile, phases::Backend, phases::Assemble, phases::Link)

@@ -1,9 +1,9 @@
-// RUN: %clang_cc1 -fexperimental-new-constant-interpreter -verify %s
-// RUN: %clang_cc1 -std=c++14 -fexperimental-new-constant-interpreter -verify %s
-// RUN: %clang_cc1 -std=c++20 -fexperimental-new-constant-interpreter -verify %s
-// RUN: %clang_cc1 -verify=ref %s
-// RUN: %clang_cc1 -std=c++14 -verify=ref %s
-// RUN: %clang_cc1 -std=c++20 -verify=ref %s
+// RUN: %clang_cc1 -fexperimental-new-constant-interpreter -verify=expected,both %s
+// RUN: %clang_cc1 -std=c++14 -fexperimental-new-constant-interpreter -verify=expected,both %s
+// RUN: %clang_cc1 -std=c++20 -fexperimental-new-constant-interpreter -verify=expected,both %s
+// RUN: %clang_cc1 -verify=ref,both %s
+// RUN: %clang_cc1 -std=c++14 -verify=ref,both %s
+// RUN: %clang_cc1 -std=c++20 -verify=ref,both %s
 
 constexpr void doNothing() {}
 constexpr int gimme5() {
@@ -23,16 +23,13 @@ static_assert(!identity(false), "");
 
 template<typename A, typename B>
 constexpr bool sameSize() {
-  static_assert(sizeof(A) == sizeof(B), ""); // expected-error {{static assertion failed}} \
-                                             // ref-error {{static assertion failed}} \
-                                             // expected-note {{evaluates to}} \
-                                             // ref-note {{evaluates to}}
+  static_assert(sizeof(A) == sizeof(B), ""); // both-error {{static assertion failed}} \
+                                             // both-note {{evaluates to}}
   return true;
 }
 static_assert(sameSize<int, int>(), "");
 static_assert(sameSize<unsigned int, int>(), "");
-static_assert(sameSize<char, long>(), ""); // expected-note {{in instantiation of function template specialization}} \
-                                           // ref-note {{in instantiation of function template specialization}}
+static_assert(sameSize<char, long>(), ""); // both-note {{in instantiation of function template specialization}}
 
 
 constexpr auto add(int a, int b) -> int {
@@ -92,12 +89,9 @@ static_assert(getNum<-2>() == -2, "");
 static_assert(getNum<10>() == 10, "");
 static_assert(getNum() == 5, "");
 
-constexpr int f(); // expected-note {{declared here}} \
-                   // ref-note {{declared here}}
-static_assert(f() == 5, ""); // expected-error {{not an integral constant expression}} \
-                             // expected-note {{undefined function 'f'}} \
-                             // ref-error {{not an integral constant expression}} \
-                             // ref-note {{undefined function 'f'}}
+constexpr int f(); // both-note {{declared here}}
+static_assert(f() == 5, ""); // both-error {{not an integral constant expression}} \
+                             // both-note {{undefined function 'f'}}
 constexpr int a() {
   return f();
 }
@@ -108,17 +102,14 @@ static_assert(a() == 5, "");
 
 constexpr int invalid() {
   // Invalid expression in visit().
-  while(huh) {} // expected-error {{use of undeclared identifier}} \
-                // ref-error {{use of undeclared identifier}}
-
+  while(huh) {} // both-error {{use of undeclared identifier}}
   return 0;
 }
 
 constexpr void invalid2() {
   int i = 0;
   // Invalid expression in discard().
-  huh(); // expected-error {{use of undeclared identifier}} \
-         // ref-error {{use of undeclared identifier}}
+  huh(); // both-error {{use of undeclared identifier}}
 }
 
 namespace FunctionPointers {
@@ -160,8 +151,7 @@ namespace FunctionReturnType {
   constexpr ptr fun() {
       return &fun1;
   }
-  static_assert(fun() == nullptr, ""); // expected-error {{static assertion failed}} \
-                                       // ref-error {{static assertion failed}}
+  static_assert(fun() == nullptr, ""); // both-error {{static assertion failed}}
 
   constexpr int foo() {
     int (*f)(int *) = fun();
@@ -187,25 +177,24 @@ namespace FunctionReturnType {
   static_assert(!!op, "");
   constexpr int (*op2)(int, int) = nullptr;
   static_assert(!op2, "");
+
+  int m() { return 5;} // both-note {{declared here}}
+  constexpr int (*invalidFnPtr)() = m;
+  static_assert(invalidFnPtr() == 5, ""); // both-error {{not an integral constant expression}} \
+                                          // both-note {{non-constexpr function 'm'}}
 }
 
 namespace Comparison {
   void f(), g();
   constexpr void (*pf)() = &f, (*pg)() = &g;
 
-  constexpr bool u13 = pf < pg; // ref-warning {{ordered comparison of function pointers}} \
-                                // ref-error {{must be initialized by a constant expression}} \
-                                // ref-note {{comparison between '&f' and '&g' has unspecified value}} \
-                                // expected-warning {{ordered comparison of function pointers}} \
-                                // expected-error {{must be initialized by a constant expression}} \
-                                // expected-note {{comparison between '&f' and '&g' has unspecified value}}
+  constexpr bool u13 = pf < pg; // both-warning {{ordered comparison of function pointers}} \
+                                // both-error {{must be initialized by a constant expression}} \
+                                // both-note {{comparison between '&f' and '&g' has unspecified value}}
 
-  constexpr bool u14 = pf < (void(*)())nullptr; // ref-warning {{ordered comparison of function pointers}} \
-                                                // ref-error {{must be initialized by a constant expression}} \
-                                                // ref-note {{comparison between '&f' and 'nullptr' has unspecified value}} \
-                                                // expected-warning {{ordered comparison of function pointers}} \
-                                                // expected-error {{must be initialized by a constant expression}} \
-                                                // expected-note {{comparison between '&f' and 'nullptr' has unspecified value}}
+  constexpr bool u14 = pf < (void(*)())nullptr; // both-warning {{ordered comparison of function pointers}} \
+                                                // both-error {{must be initialized by a constant expression}} \
+                                                // both-note {{comparison between '&f' and 'nullptr' has unspecified value}}
 
 
 
@@ -241,31 +230,22 @@ static_assert(doit() == 10, "");
 
 namespace InvalidCall {
   struct S {
-    constexpr int a() const { // expected-error {{never produces a constant expression}} \
-                              // ref-error {{never produces a constant expression}}
-      return 1 / 0; // expected-note 2{{division by zero}} \
-                    // expected-warning {{is undefined}} \
-                    // ref-note 2{{division by zero}} \
-                    // ref-warning {{is undefined}}
+    constexpr int a() const { // both-error {{never produces a constant expression}}
+      return 1 / 0; // both-note 2{{division by zero}} \
+                    // both-warning {{is undefined}}
     }
   };
   constexpr S s;
-  static_assert(s.a() == 1, ""); // expected-error {{not an integral constant expression}} \
-                                 // expected-note {{in call to}} \
-                                 // ref-error {{not an integral constant expression}} \
-                                 // ref-note {{in call to}}
+  static_assert(s.a() == 1, ""); // both-error {{not an integral constant expression}} \
+                                 // both-note {{in call to}}
 
   /// This used to cause an assertion failure in the new constant interpreter.
-  constexpr void func(); // expected-note {{declared here}} \
-                         // ref-note {{declared here}}
+  constexpr void func(); // both-note {{declared here}}
   struct SS {
-    constexpr SS() { func(); } // expected-note {{undefined function }} \
-                               // ref-note {{undefined function}}
+    constexpr SS() { func(); } // both-note {{undefined function }}
   };
-  constexpr SS ss; // expected-error {{must be initialized by a constant expression}} \
-                   // expected-note {{in call to 'SS()'}} \
-                   // ref-error {{must be initialized by a constant expression}} \
-                   // ref-note {{in call to 'SS()'}}
+  constexpr SS ss; // both-error {{must be initialized by a constant expression}} \
+                   // both-note {{in call to 'SS()'}}
 
 
   /// This should not emit a diagnostic.
@@ -291,8 +271,7 @@ namespace CallWithArgs {
 namespace ReturnLocalPtr {
   constexpr int *p() {
     int a = 12;
-    return &a; // ref-warning {{address of stack memory}} \
-               // expected-warning {{address of stack memory}}
+    return &a; // both-warning {{address of stack memory}}
   }
 
   /// GCC rejects the expression below, just like the new interpreter. The current interpreter
@@ -305,13 +284,11 @@ namespace ReturnLocalPtr {
   /// new one does not.
   constexpr const int &p2() {
     int a = 12; // ref-note {{declared here}}
-    return a; // ref-warning {{reference to stack memory associated with local variable}} \
-              // expected-warning {{reference to stack memory associated with local variable}}
+    return a; // both-warning {{reference to stack memory associated with local variable}}
   }
 
-  static_assert(p2() == 12, ""); // ref-error {{not an integral constant expression}} \
-                                 // ref-note {{read of variable whose lifetime has ended}} \
-                                 // expected-error {{not an integral constant expression}}
+  static_assert(p2() == 12, ""); // both-error {{not an integral constant expression}} \
+                                 // ref-note {{read of variable whose lifetime has ended}}
 }
 
 namespace VoidReturn {
@@ -324,22 +301,16 @@ namespace VoidReturn {
 }
 
 namespace InvalidReclRefs {
-  void param(bool b) { // ref-note {{declared here}} \
-                       // expected-note {{declared here}}
-    static_assert(b, ""); // ref-error {{not an integral constant expression}} \
-                          // ref-note {{function parameter 'b' with unknown value}} \
-                          // expected-error {{not an integral constant expression}} \
-                          // expected-note {{function parameter 'b' with unknown value}}
+  void param(bool b) { // both-note {{declared here}}
+    static_assert(b, ""); // both-error {{not an integral constant expression}} \
+                          // both-note {{function parameter 'b' with unknown value}}
     static_assert(true ? true : b, "");
   }
 
 #if __cplusplus >= 202002L
-  consteval void param2(bool b) { // ref-note {{declared here}} \
-                                 // expected-note {{declared here}}
-    static_assert(b, ""); // ref-error {{not an integral constant expression}} \
-                          // ref-note {{function parameter 'b' with unknown value}} \
-                          // expected-error {{not an integral constant expression}} \
-                          // expected-note {{function parameter 'b' with unknown value}}
+  consteval void param2(bool b) { // both-note {{declared here}}
+    static_assert(b, ""); // both-error {{not an integral constant expression}} \
+                          // both-note {{function parameter 'b' with unknown value}}
   }
 #endif
 }
@@ -381,6 +352,81 @@ namespace Variadic {
 
   constexpr int (*VFP)(...) = variadic_function2;
   static_assert(VFP() == 12, "");
+
+  /// Member functions
+  struct Foo {
+    int a = 0;
+    constexpr void bla(...) {}
+    constexpr S bla2(...) {
+      return S{12, true};
+    }
+    constexpr Foo(...) : a(1337) {}
+    constexpr Foo(void *c, bool b, void*p, ...) : a('a' + b) {}
+    constexpr Foo(int a, const S* s, ...) : a(a) {}
+  };
+
+  constexpr int foo2() {
+    Foo f(1, nullptr);
+    auto s = f.bla2(1, 2, S{1, false});
+    return s.a + s.b;
+  }
+  static_assert(foo2() == 13, "");
+
+  constexpr Foo _f = 123;
+  static_assert(_f.a == 1337, "");
+
+  constexpr Foo __f(nullptr, false, nullptr, nullptr, 'a', Foo());
+  static_assert(__f.a ==  'a', "");
+
+
+#if __cplusplus >= 202002L
+namespace VariadicVirtual {
+  class A {
+  public:
+    constexpr virtual void foo(int &a, ...) {
+      a = 1;
+    }
+  };
+
+  class B : public A {
+  public:
+    constexpr void foo(int &a, ...) override {
+      a = 2;
+    }
+  };
+
+  constexpr int foo() {
+    B b;
+    int a;
+    b.foo(a, 1,2,nullptr);
+    return a;
+  }
+  static_assert(foo() == 2, "");
+} // VariadicVirtual
+
+namespace VariadicQualified {
+  class A {
+      public:
+      constexpr virtual int foo(...) const {
+          return 5;
+      }
+  };
+  class B : public A {};
+  class C : public B {
+      public:
+      constexpr int foo(...) const override {
+          return B::foo(1,2,3); // B doesn't have a foo(), so this should call A::foo().
+      }
+      constexpr int foo2() const {
+        return this->A::foo(1,2,3,this);
+      }
+  };
+  constexpr C c;
+  static_assert(c.foo() == 5);
+  static_assert(c.foo2() == 5);
+} // VariadicQualified
+#endif
+
 }
 
 namespace Packs {
@@ -399,13 +445,10 @@ namespace AddressOf {
   static_assert(&pt->n == &t.n, "");
 
   struct U { int n : 5; } u;
-  int *pbf = __builtin_addressof(u.n); // expected-error {{address of bit-field requested}} \
-                                       // ref-error {{address of bit-field requested}}
+  int *pbf = __builtin_addressof(u.n); // both-error {{address of bit-field requested}}
 
-  S *ptmp = __builtin_addressof(S{}); // expected-error {{taking the address of a temporary}} \
-                                      // expected-warning {{temporary whose address is used as value of local variable 'ptmp' will be destroyed at the end of the full-expression}} \
-                                      // ref-error {{taking the address of a temporary}} \
-                                      // ref-warning {{temporary whose address is used as value of local variable 'ptmp' will be destroyed at the end of the full-expression}}
+  S *ptmp = __builtin_addressof(S{}); // both-error {{taking the address of a temporary}} \
+                                      // both-warning {{temporary whose address is used as value of local variable 'ptmp' will be destroyed at the end of the full-expression}}
 
   constexpr int foo() {return 1;}
   static_assert(__builtin_addressof(foo) == foo, "");
@@ -426,8 +469,7 @@ constexpr typename std::remove_reference<T>::type&& move(T &&t) noexcept {
 /// The std::move declaration above gets translated to a builtin function.
 namespace Move {
 #if __cplusplus >= 202002L
-  consteval int f_eval() { // expected-note 12{{declared here}} \
-                           // ref-note 12{{declared here}}
+  consteval int f_eval() { // both-note 12{{declared here}}
     return 0;
   }
 
@@ -447,58 +489,66 @@ namespace Move {
     // there is no the copy constructor call when its argument is a prvalue because of garanteed copy elision.
     // so we need to test with both prvalue and xvalues.
     { Copy c(C); }
-    { Copy c((Copy(&f_eval))); } // expected-error {{cannot take address of consteval}} \
-                                 // ref-error {{cannot take address of consteval}}
+    { Copy c((Copy(&f_eval))); } // both-error {{cannot take address of consteval}}
     { Copy c(std::move(C)); }
-    { Copy c(std::move(Copy(&f_eval))); } // expected-error {{is not a constant expression}} \
-                                          // expected-note {{to a consteval}} \
-                                          // ref-error {{is not a constant expression}} \
-                                          // ref-note {{to a consteval}}
-    { Copy c(to_lvalue_ref((Copy(&f_eval)))); } // expected-error {{is not a constant expression}} \
-                                                // expected-note {{to a consteval}} \
-                                                // ref-error {{is not a constant expression}} \
-                                                // ref-note {{to a consteval}}
+    { Copy c(std::move(Copy(&f_eval))); } // both-error {{is not a constant expression}} \
+                                          // both-note {{to a consteval}}
+    { Copy c(to_lvalue_ref((Copy(&f_eval)))); } // both-error {{is not a constant expression}} \
+                                                // both-note {{to a consteval}}
     { Copy c(to_lvalue_ref(std::move(C))); }
-    { Copy c(to_lvalue_ref(std::move(Copy(&f_eval)))); } // expected-error {{is not a constant expression}} \
-                                                         // expected-note {{to a consteval}} \
-                                                         // ref-error {{is not a constant expression}} \
-                                                         // ref-note {{to a consteval}}
+    { Copy c(to_lvalue_ref(std::move(Copy(&f_eval)))); } // both-error {{is not a constant expression}} \
+                                                         // both-note {{to a consteval}}
     { Copy c = Copy(C); }
-    { Copy c = Copy(Copy(&f_eval)); } // expected-error {{cannot take address of consteval}} \
-                                      // ref-error {{cannot take address of consteval}}
+    { Copy c = Copy(Copy(&f_eval)); } // both-error {{cannot take address of consteval}}
     { Copy c = Copy(std::move(C)); }
-    { Copy c = Copy(std::move(Copy(&f_eval))); } // expected-error {{is not a constant expression}} \
-                                                 // expected-note {{to a consteval}} \
-                                                 // ref-error {{is not a constant expression}} \
-                                                 // ref-note {{to a consteval}}
-    { Copy c = Copy(to_lvalue_ref(Copy(&f_eval))); } // expected-error {{is not a constant expression}} \
-                                                     // expected-note {{to a consteval}} \
-                                                     // ref-error {{is not a constant expression}} \
-                                                     // ref-note {{to a consteval}}
+    { Copy c = Copy(std::move(Copy(&f_eval))); } // both-error {{is not a constant expression}} \
+                                                 // both-note {{to a consteval}}
+    { Copy c = Copy(to_lvalue_ref(Copy(&f_eval))); } // both-error {{is not a constant expression}} \
+                                                     // both-note {{to a consteval}}
     { Copy c = Copy(to_lvalue_ref(std::move(C))); }
-    { Copy c = Copy(to_lvalue_ref(std::move(Copy(&f_eval)))); } // expected-error {{is not a constant expression}} \
-                                                                // expected-note {{to a consteval}} \
-                                                                // ref-error {{is not a constant expression}} \
-                                                                // ref-note {{to a consteval}}
+    { Copy c = Copy(to_lvalue_ref(std::move(Copy(&f_eval)))); } // both-error {{is not a constant expression}} \
+                                                                // both-note {{to a consteval}}
     { Copy c; c = Copy(C); }
-    { Copy c; c = Copy(Copy(&f_eval)); } // expected-error {{cannot take address of consteval}} \
-                                         // ref-error {{cannot take address of consteval}}
+    { Copy c; c = Copy(Copy(&f_eval)); } // both-error {{cannot take address of consteval}}
     { Copy c; c = Copy(std::move(C)); }
-    { Copy c; c = Copy(std::move(Copy(&f_eval))); } // expected-error {{is not a constant expression}} \
-                                                    // expected-note {{to a consteval}} \
-                                                    // ref-error {{is not a constant expression}} \
-                                                    // ref-note {{to a consteval}}
-    { Copy c; c = Copy(to_lvalue_ref(Copy(&f_eval))); } // expected-error {{is not a constant expression}} \
-                                                        // expected-note {{to a consteval}} \
-                                                        // ref-error {{is not a constant expression}} \
-                                                        // ref-note {{to a consteval}}
+    { Copy c; c = Copy(std::move(Copy(&f_eval))); } // both-error {{is not a constant expression}} \
+                                                    // both-note {{to a consteval}}
+    { Copy c; c = Copy(to_lvalue_ref(Copy(&f_eval))); } // both-error {{is not a constant expression}} \
+                                                        // both-note {{to a consteval}}
     { Copy c; c = Copy(to_lvalue_ref(std::move(C))); }
-    { Copy c; c = Copy(to_lvalue_ref(std::move(Copy(&f_eval)))); } // expected-error {{is not a constant expression}} \
-                                                                   // expected-note {{to a consteval}} \
-                                                                   // ref-error {{is not a constant expression}} \
-                                                                   // ref-note {{to a consteval}}
+    { Copy c; c = Copy(to_lvalue_ref(std::move(Copy(&f_eval)))); } // both-error {{is not a constant expression}} \
+                                                                   // both-note {{to a consteval}}
   }
 #endif
   constexpr int A = std::move(5);
   static_assert(A == 5, "");
+}
+
+namespace StaticLocals {
+  void test() {
+    static int j; // both-note {{declared here}}
+    static_assert(&j != nullptr, ""); // both-warning {{always true}}
+
+    static_assert(j == 0, ""); // both-error {{not an integral constant expression}} \
+                               // both-note {{read of non-const variable 'j'}}
+
+    static int k = 0; // both-note {{declared here}}
+    static_assert(k == 0, ""); // both-error {{not an integral constant expression}} \
+                               // both-note {{read of non-const variable 'k'}}
+
+    static const int l = 12;
+    static_assert(l == 12, "");
+
+    static const int m; // both-error {{default initialization}}
+    static_assert(m == 0, "");
+  }
+}
+
+namespace Local {
+  /// We used to run into infinite recursin here because we were
+  /// trying to evaluate t's initializer while evaluating t's initializer.
+  int a() {
+    const int t=t;
+    return t;
+  }
 }

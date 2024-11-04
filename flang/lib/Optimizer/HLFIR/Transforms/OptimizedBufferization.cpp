@@ -20,7 +20,7 @@
 #include "flang/Optimizer/HLFIR/HLFIRDialect.h"
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
 #include "flang/Optimizer/HLFIR/Passes.h"
-#include "flang/Optimizer/Support/Utils.h"
+#include "flang/Optimizer/Transforms/Utils.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/IR/Dominance.h"
 #include "mlir/IR/PatternMatch.h"
@@ -854,7 +854,7 @@ public:
         const llvm::fltSemantics &sem = ty.getFloatSemantics();
         return builder.createRealConstant(
             loc, elementType,
-            llvm::APFloat::getLargest(sem, /*Negative=*/!isMax));
+            llvm::APFloat::getLargest(sem, /*Negative=*/isMax));
       }
       unsigned bits = elementType.getIntOrFloatBitWidth();
       int64_t limitInt =

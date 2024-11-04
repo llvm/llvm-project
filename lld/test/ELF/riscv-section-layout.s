@@ -3,20 +3,20 @@
 
 # RUN: llvm-mc -filetype=obj -triple=riscv32 %s -o %t.32.o
 # RUN: ld.lld -pie %t.32.o -o %t.32
-# RUN: llvm-readelf -S -s %t.32 | FileCheck %s --check-prefix=NOSDATA
+# RUN: llvm-readelf -S -sX %t.32 | FileCheck %s --check-prefix=NOSDATA
 # RUN: llvm-mc -filetype=obj -triple=riscv32 --defsym=SDATA=1 %s -o %t.32s.o
 # RUN: ld.lld -pie %t.32s.o -o %t.32s
-# RUN: llvm-readelf -S -s %t.32s | FileCheck %s
+# RUN: llvm-readelf -S -sX %t.32s | FileCheck %s
 
 # RUN: llvm-mc -filetype=obj -triple=riscv64 %s -o %t.64.o
 # RUN: ld.lld -pie %t.64.o -o %t.64
-# RUN: llvm-readelf -S -s %t.64 | FileCheck %s --check-prefix=NOSDATA
+# RUN: llvm-readelf -S -sX %t.64 | FileCheck %s --check-prefix=NOSDATA
 # RUN: llvm-mc -filetype=obj -triple=riscv64 --defsym=SDATA=1 %s -o %t.64s.o
 # RUN: ld.lld -pie %t.64s.o -o %t.64s
-# RUN: llvm-readelf -S -s %t.64s | FileCheck %s
+# RUN: llvm-readelf -S -sX %t.64s | FileCheck %s
 
 # NOSDATA:      .text
-# NOSDATA-NEXT: .tdata
+# NOSDATA-NEXT: .tdata   PROGBITS [[#%x,TDATA:]]
 # NOSDATA-NEXT: .tbss
 # NOSDATA-NEXT: .dynamic
 # NOSDATA-NEXT: .got
@@ -28,9 +28,10 @@
 ## exist, define __global_pointer$ and set its st_shndx arbitrarily to 1.
 ## The symbol value should not be used by the program.
 
-# NOSDATA-DAG:  [[#]]: {{0*}}[[#BSS]]         0 NOTYPE  GLOBAL DEFAULT [[#]] _edata
-# NOSDATA-DAG:  [[#]]: {{0*}}[[#BSS]]         0 NOTYPE  GLOBAL DEFAULT [[#]] __bss_start
-# NOSDATA-DAG:  [[#]]: {{0*}}800              0 NOTYPE  GLOBAL DEFAULT     1 __global_pointer$
+# NOSDATA-DAG:  [[#]]: {{.*}}                 0 NOTYPE  GLOBAL DEFAULT [[#]] (.text) _etext
+# NOSDATA-DAG:  [[#]]: {{0*}}[[#BSS]]         0 NOTYPE  GLOBAL DEFAULT [[#]] (.data) _edata
+# NOSDATA-DAG:  [[#]]: {{0*}}[[#BSS]]         0 NOTYPE  GLOBAL DEFAULT [[#]] (.bss) __bss_start
+# NOSDATA-DAG:  [[#]]: {{0*}}800              0 NOTYPE  GLOBAL DEFAULT  1 (.dynsym) __global_pointer$
 
 # CHECK:      .text
 # CHECK-NEXT: .tdata
@@ -43,11 +44,11 @@
 # CHECK-NEXT: .sbss      NOBITS   [[#%x,SBSS:]]
 # CHECK-NEXT: .bss
 
-# CHECK-DAG:  [[#]]: {{0*}}[[#SBSS]]        0 NOTYPE  GLOBAL DEFAULT [[#]] _edata
-# CHECK-DAG:  [[#]]: {{0*}}[[#SBSS]]        0 NOTYPE  GLOBAL DEFAULT [[#]] __bss_start
-# CHECK-DAG:  [[#]]: {{0*}}[[#SDATA+0x800]] 0 NOTYPE  GLOBAL DEFAULT [[#]] __global_pointer$
+# CHECK-DAG:  [[#]]: {{0*}}[[#SBSS]]        0 NOTYPE  GLOBAL DEFAULT [[#]] (.sdata) _edata
+# CHECK-DAG:  [[#]]: {{0*}}[[#SBSS]]        0 NOTYPE  GLOBAL DEFAULT [[#]] (.sbss) __bss_start
+# CHECK-DAG:  [[#]]: {{0*}}[[#SDATA+0x800]] 0 NOTYPE  GLOBAL DEFAULT [[#]] (.sdata) __global_pointer$
 
-.globl _edata, __bss_start
+.globl _etext, _edata, __bss_start
   lla gp, __global_pointer$
 
 .section .data,"aw",@progbits; .long _GLOBAL_OFFSET_TABLE_ - .

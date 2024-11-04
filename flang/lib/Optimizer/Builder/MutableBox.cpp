@@ -406,7 +406,8 @@ static bool readToBoxValue(const fir::MutableBoxValue &box,
 fir::ExtendedValue
 fir::factory::genMutableBoxRead(fir::FirOpBuilder &builder, mlir::Location loc,
                                 const fir::MutableBoxValue &box,
-                                bool mayBePolymorphic) {
+                                bool mayBePolymorphic,
+                                bool preserveLowerBounds) {
   if (box.hasAssumedRank())
     TODO(loc, "assumed rank allocatables or pointers");
   llvm::SmallVector<mlir::Value> lbounds;
@@ -414,7 +415,8 @@ fir::factory::genMutableBoxRead(fir::FirOpBuilder &builder, mlir::Location loc,
   llvm::SmallVector<mlir::Value> lengths;
   if (readToBoxValue(box, mayBePolymorphic)) {
     auto reader = MutablePropertyReader(builder, loc, box);
-    reader.getLowerBounds(lbounds);
+    if (preserveLowerBounds)
+      reader.getLowerBounds(lbounds);
     return fir::BoxValue{reader.getIrBox(), lbounds,
                          box.nonDeferredLenParams()};
   }
@@ -422,6 +424,8 @@ fir::factory::genMutableBoxRead(fir::FirOpBuilder &builder, mlir::Location loc,
   // fir.box.
   auto addr =
       MutablePropertyReader(builder, loc, box).read(lbounds, extents, lengths);
+  if (!preserveLowerBounds)
+    lbounds.clear();
   auto rank = box.rank();
   if (box.isCharacter()) {
     auto len = lengths.empty() ? mlir::Value{} : lengths[0];

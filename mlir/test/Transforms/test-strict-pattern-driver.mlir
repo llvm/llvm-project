@@ -52,8 +52,8 @@ func.func @test_replace_with_new_op() {
 // -----
 
 // CHECK-EN: notifyOperationInserted: test.erase_op, was unlinked
-// CHECK-EN: notifyOperationRemoved: test.replace_with_new_op
-// CHECK-EN: notifyOperationRemoved: test.erase_op
+// CHECK-EN: notifyOperationErased: test.replace_with_new_op
+// CHECK-EN: notifyOperationErased: test.erase_op
 // CHECK-EN-LABEL: func @test_replace_with_erase_op
 //  CHECK-EN-SAME:     {pattern_driver_all_erased = true, pattern_driver_changed = true}
 //   CHECK-EN-NOT:   "test.replace_with_new_op"
@@ -91,10 +91,10 @@ func.func @test_trigger_rewrite_through_block() {
 
 // -----
 
-// CHECK-AN: notifyOperationRemoved: test.foo_b
-// CHECK-AN: notifyOperationRemoved: test.foo_a
-// CHECK-AN: notifyOperationRemoved: test.graph_region
-// CHECK-AN: notifyOperationRemoved: test.erase_op
+// CHECK-AN: notifyOperationErased: test.foo_b
+// CHECK-AN: notifyOperationErased: test.foo_a
+// CHECK-AN: notifyOperationErased: test.graph_region
+// CHECK-AN: notifyOperationErased: test.erase_op
 // CHECK-AN-LABEL: func @test_remove_graph_region()
 //  CHECK-AN-NEXT:   return
 func.func @test_remove_graph_region() {
@@ -109,13 +109,13 @@ func.func @test_remove_graph_region() {
 
 // -----
 
-// CHECK-AN: notifyOperationRemoved: cf.br
-// CHECK-AN: notifyOperationRemoved: test.bar
-// CHECK-AN: notifyOperationRemoved: cf.br
-// CHECK-AN: notifyOperationRemoved: test.foo
-// CHECK-AN: notifyOperationRemoved: cf.br
-// CHECK-AN: notifyOperationRemoved: test.dummy_op
-// CHECK-AN: notifyOperationRemoved: test.erase_op
+// CHECK-AN: notifyOperationErased: cf.br
+// CHECK-AN: notifyOperationErased: test.bar
+// CHECK-AN: notifyOperationErased: cf.br
+// CHECK-AN: notifyOperationErased: test.foo
+// CHECK-AN: notifyOperationErased: cf.br
+// CHECK-AN: notifyOperationErased: test.dummy_op
+// CHECK-AN: notifyOperationErased: test.erase_op
 // CHECK-AN-LABEL: func @test_remove_cyclic_blocks()
 //  CHECK-AN-NEXT:   return
 func.func @test_remove_cyclic_blocks() {
@@ -134,14 +134,14 @@ func.func @test_remove_cyclic_blocks() {
 
 // -----
 
-// CHECK-AN: notifyOperationRemoved: test.dummy_op
-// CHECK-AN: notifyOperationRemoved: test.bar
-// CHECK-AN: notifyOperationRemoved: test.qux
-// CHECK-AN: notifyOperationRemoved: test.qux_unreachable
-// CHECK-AN: notifyOperationRemoved: test.nested_dummy
-// CHECK-AN: notifyOperationRemoved: cf.br
-// CHECK-AN: notifyOperationRemoved: test.foo
-// CHECK-AN: notifyOperationRemoved: test.erase_op
+// CHECK-AN: notifyOperationErased: test.dummy_op
+// CHECK-AN: notifyOperationErased: test.bar
+// CHECK-AN: notifyOperationErased: test.qux
+// CHECK-AN: notifyOperationErased: test.qux_unreachable
+// CHECK-AN: notifyOperationErased: test.nested_dummy
+// CHECK-AN: notifyOperationErased: cf.br
+// CHECK-AN: notifyOperationErased: test.foo
+// CHECK-AN: notifyOperationErased: test.erase_op
 // CHECK-AN-LABEL: func @test_remove_dead_blocks()
 //  CHECK-AN-NEXT:   return
 func.func @test_remove_dead_blocks() {
@@ -169,20 +169,20 @@ func.func @test_remove_dead_blocks() {
 // test.nested_* must be deleted before test.foo.
 // test.bar must be deleted before test.foo.
 
-// CHECK-AN: notifyOperationRemoved: cf.br
-// CHECK-AN: notifyOperationRemoved: test.bar
-// CHECK-AN: notifyOperationRemoved: cf.br
-// CHECK-AN: notifyOperationRemoved: test.nested_b
-// CHECK-AN: notifyOperationRemoved: test.nested_a
-// CHECK-AN: notifyOperationRemoved: test.nested_d
-// CHECK-AN: notifyOperationRemoved: cf.br
-// CHECK-AN: notifyOperationRemoved: test.nested_e
-// CHECK-AN: notifyOperationRemoved: cf.br
-// CHECK-AN: notifyOperationRemoved: test.nested_c
-// CHECK-AN: notifyOperationRemoved: test.foo
-// CHECK-AN: notifyOperationRemoved: cf.br
-// CHECK-AN: notifyOperationRemoved: test.dummy_op
-// CHECK-AN: notifyOperationRemoved: test.erase_op
+// CHECK-AN: notifyOperationErased: cf.br
+// CHECK-AN: notifyOperationErased: test.bar
+// CHECK-AN: notifyOperationErased: cf.br
+// CHECK-AN: notifyOperationErased: test.nested_b
+// CHECK-AN: notifyOperationErased: test.nested_a
+// CHECK-AN: notifyOperationErased: test.nested_d
+// CHECK-AN: notifyOperationErased: cf.br
+// CHECK-AN: notifyOperationErased: test.nested_e
+// CHECK-AN: notifyOperationErased: cf.br
+// CHECK-AN: notifyOperationErased: test.nested_c
+// CHECK-AN: notifyOperationErased: test.foo
+// CHECK-AN: notifyOperationErased: cf.br
+// CHECK-AN: notifyOperationErased: test.dummy_op
+// CHECK-AN: notifyOperationErased: test.erase_op
 // CHECK-AN-LABEL: func @test_remove_nested_ops()
 //  CHECK-AN-NEXT:   return
 func.func @test_remove_nested_ops() {
@@ -212,12 +212,12 @@ func.func @test_remove_nested_ops() {
 
 // -----
 
-// CHECK-AN: notifyOperationRemoved: test.qux
-// CHECK-AN: notifyOperationRemoved: cf.br
-// CHECK-AN: notifyOperationRemoved: test.foo
-// CHECK-AN: notifyOperationRemoved: cf.br
-// CHECK-AN: notifyOperationRemoved: test.bar
-// CHECK-AN: notifyOperationRemoved: cf.cond_br
+// CHECK-AN: notifyOperationErased: test.qux
+// CHECK-AN: notifyOperationErased: cf.br
+// CHECK-AN: notifyOperationErased: test.foo
+// CHECK-AN: notifyOperationErased: cf.br
+// CHECK-AN: notifyOperationErased: test.bar
+// CHECK-AN: notifyOperationErased: cf.cond_br
 // CHECK-AN-LABEL: func @test_remove_diamond(
 //  CHECK-AN-NEXT:   return
 func.func @test_remove_diamond(%c: i1) {
@@ -277,7 +277,7 @@ func.func @test_inline_block_before() {
 // CHECK-AN: notifyOperationInserted: test.op_2, was last in block
 // CHECK-AN: notifyOperationInserted: test.split_block_here, was last in block
 // CHECK-AN: notifyOperationInserted: test.new_op, was unlinked
-// CHECK-AN: notifyOperationRemoved: test.split_block_here
+// CHECK-AN: notifyOperationErased: test.split_block_here
 // CHECK-AN-LABEL: func @test_split_block(
 //       CHECK-AN:   "test.op_with_region"() ({
 //       CHECK-AN:     test.op_1

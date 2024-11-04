@@ -581,7 +581,7 @@ public:
 #endif
   _LIBCPP_HIDE_FROM_ABI deque(size_type __n, const value_type& __v);
 
-  template <class = __enable_if_t<__is_allocator<_Allocator>::value> >
+  template <__enable_if_t<__is_allocator<_Allocator>::value, int> = 0>
   _LIBCPP_HIDE_FROM_ABI deque(size_type __n, const value_type& __v, const allocator_type& __a)
       : __map_(__pointer_allocator(__a)), __start_(0), __size_(0, __a) {
     __annotate_new(0);

@@ -44,7 +44,7 @@ public:
   size_t CalculateNumChildren() override { return m_has_value ? 1U : 0U; }
 
   ValueObjectSP GetChildAtIndex(size_t idx) override;
-  bool Update() override;
+  lldb::ChildCacheState Update() override;
 
 private:
   bool m_has_value = false;
@@ -61,7 +61,7 @@ GenericOptionalFrontend::GenericOptionalFrontend(ValueObject &valobj,
   }
 }
 
-bool GenericOptionalFrontend::Update() {
+lldb::ChildCacheState GenericOptionalFrontend::Update() {
   ValueObjectSP engaged_sp;
 
   if (m_stdlib == StdLib::LibCxx)
@@ -71,14 +71,14 @@ bool GenericOptionalFrontend::Update() {
                      ->GetChildMemberWithName("_M_engaged");
 
   if (!engaged_sp)
-    return false;
+    return lldb::ChildCacheState::eRefetch;
 
   // _M_engaged/__engaged is a bool flag and is true if the optional contains a
   // value. Converting it to unsigned gives us a size of 1 if it contains a
   // value and 0 if not.
   m_has_value = engaged_sp->GetValueAsUnsigned(0) != 0;
 
-  return false;
+  return lldb::ChildCacheState::eRefetch;
 }
 
 ValueObjectSP GenericOptionalFrontend::GetChildAtIndex(size_t _idx) {

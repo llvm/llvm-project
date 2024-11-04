@@ -107,7 +107,7 @@ public:
 
   lldb::ValueObjectSP GetChildAtIndex(size_t idx) override;
 
-  bool Update() override;
+  lldb::ChildCacheState Update() override;
 
   bool MightHaveChildren() override;
 
@@ -148,7 +148,7 @@ public:
 
   lldb::ValueObjectSP GetChildAtIndex(size_t idx) override;
 
-  bool Update() override;
+  lldb::ChildCacheState Update() override;
 
   bool MightHaveChildren() override;
 
@@ -180,7 +180,7 @@ public:
 
   lldb::ValueObjectSP GetChildAtIndex(size_t idx) override;
 
-  bool Update() override;
+  lldb::ChildCacheState Update() override;
 
   bool MightHaveChildren() override;
 
@@ -213,7 +213,7 @@ public:
 
   lldb::ValueObjectSP GetChildAtIndex(size_t idx) override;
 
-  bool Update() override;
+  lldb::ChildCacheState Update() override;
 
   bool MightHaveChildren() override;
 
@@ -234,7 +234,7 @@ public:
 
   lldb::ValueObjectSP GetChildAtIndex(size_t idx) override;
 
-  bool Update() override;
+  lldb::ChildCacheState Update() override;
 
   bool MightHaveChildren() override;
 
@@ -266,9 +266,9 @@ namespace Foundation1100 {
     size_t CalculateNumChildren() override;
     
     lldb::ValueObjectSP GetChildAtIndex(size_t idx) override;
-    
-    bool Update() override;
-    
+
+    lldb::ChildCacheState Update() override;
+
     bool MightHaveChildren() override;
     
     size_t GetIndexOfChildWithName(ConstString name) override;
@@ -613,7 +613,8 @@ size_t lldb_private::formatters::NSDictionaryISyntheticFrontEnd::
   return (m_data_32 ? m_data_32->_used : m_data_64->_used);
 }
 
-bool lldb_private::formatters::NSDictionaryISyntheticFrontEnd::Update() {
+lldb::ChildCacheState
+lldb_private::formatters::NSDictionaryISyntheticFrontEnd::Update() {
   m_children.clear();
   delete m_data_32;
   m_data_32 = nullptr;
@@ -622,13 +623,13 @@ bool lldb_private::formatters::NSDictionaryISyntheticFrontEnd::Update() {
   m_ptr_size = 0;
   ValueObjectSP valobj_sp = m_backend.GetSP();
   if (!valobj_sp)
-    return false;
+    return lldb::ChildCacheState::eRefetch;
   m_exe_ctx_ref = valobj_sp->GetExecutionContextRef();
   Status error;
   error.Clear();
   lldb::ProcessSP process_sp(valobj_sp->GetProcessSP());
   if (!process_sp)
-    return false;
+    return lldb::ChildCacheState::eRefetch;
   m_ptr_size = process_sp->GetAddressByteSize();
   m_order = process_sp->GetByteOrder();
   uint64_t data_location = valobj_sp->GetValueAsUnsigned(0) + m_ptr_size;
@@ -642,9 +643,9 @@ bool lldb_private::formatters::NSDictionaryISyntheticFrontEnd::Update() {
                            error);
   }
   if (error.Fail())
-    return false;
+    return lldb::ChildCacheState::eRefetch;
   m_data_ptr = data_location + m_ptr_size;
-  return false;
+  return lldb::ChildCacheState::eRefetch;
 }
 
 bool lldb_private::formatters::NSDictionaryISyntheticFrontEnd::
@@ -750,20 +751,23 @@ size_t lldb_private::formatters::NSCFDictionarySyntheticFrontEnd::
   return m_hashtable.GetCount();
 }
 
-bool lldb_private::formatters::NSCFDictionarySyntheticFrontEnd::Update() {
+lldb::ChildCacheState
+lldb_private::formatters::NSCFDictionarySyntheticFrontEnd::Update() {
   m_children.clear();
   ValueObjectSP valobj_sp = m_backend.GetSP();
   m_ptr_size = 0;
   if (!valobj_sp)
-    return false;
+    return lldb::ChildCacheState::eRefetch;
   m_exe_ctx_ref = valobj_sp->GetExecutionContextRef();
 
   lldb::ProcessSP process_sp(valobj_sp->GetProcessSP());
   if (!process_sp)
-    return false;
+    return lldb::ChildCacheState::eRefetch;
   m_ptr_size = process_sp->GetAddressByteSize();
   m_order = process_sp->GetByteOrder();
-  return m_hashtable.Update(valobj_sp->GetValueAsUnsigned(0), m_exe_ctx_ref);
+  return m_hashtable.Update(valobj_sp->GetValueAsUnsigned(0), m_exe_ctx_ref)
+             ? lldb::ChildCacheState::eReuse
+             : lldb::ChildCacheState::eRefetch;
 }
 
 bool lldb_private::formatters::NSCFDictionarySyntheticFrontEnd::
@@ -881,30 +885,33 @@ size_t lldb_private::formatters::NSConstantDictionarySyntheticFrontEnd::
   return m_size;
 }
 
-bool lldb_private::formatters::NSConstantDictionarySyntheticFrontEnd::Update() {
+lldb::ChildCacheState
+lldb_private::formatters::NSConstantDictionarySyntheticFrontEnd::Update() {
   ValueObjectSP valobj_sp = m_backend.GetSP();
   if (!valobj_sp)
-    return false;
+    return lldb::ChildCacheState::eRefetch;
   m_exe_ctx_ref = valobj_sp->GetExecutionContextRef();
   Status error;
   error.Clear();
   lldb::ProcessSP process_sp(valobj_sp->GetProcessSP());
   if (!process_sp)
-    return false;
+    return lldb::ChildCacheState::eRefetch;
   m_ptr_size = process_sp->GetAddressByteSize();
   m_order = process_sp->GetByteOrder();
   uint64_t valobj_addr = valobj_sp->GetValueAsUnsigned(0);
   m_size = process_sp->ReadUnsignedIntegerFromMemory(
       valobj_addr + 2 * m_ptr_size, m_ptr_size, 0, error);
   if (error.Fail())
-    return false;
+    return lldb::ChildCacheState::eRefetch;
   m_keys_ptr =
       process_sp->ReadPointerFromMemory(valobj_addr + 3 * m_ptr_size, error);
   if (error.Fail())
-    return false;
+    return lldb::ChildCacheState::eRefetch;
   m_objects_ptr =
       process_sp->ReadPointerFromMemory(valobj_addr + 4 * m_ptr_size, error);
-  return !error.Fail();
+
+  return error.Success() ? lldb::ChildCacheState::eReuse
+                         : lldb::ChildCacheState::eRefetch;
 }
 
 bool lldb_private::formatters::NSConstantDictionarySyntheticFrontEnd::
@@ -992,9 +999,10 @@ size_t lldb_private::formatters::NSDictionary1SyntheticFrontEnd::
   return 1;
 }
 
-bool lldb_private::formatters::NSDictionary1SyntheticFrontEnd::Update() {
+lldb::ChildCacheState
+lldb_private::formatters::NSDictionary1SyntheticFrontEnd::Update() {
   m_pair.reset();
-  return false;
+  return lldb::ChildCacheState::eRefetch;
 }
 
 bool lldb_private::formatters::NSDictionary1SyntheticFrontEnd::
@@ -1087,9 +1095,9 @@ lldb_private::formatters::GenericNSDictionaryMSyntheticFrontEnd<D32,D64>::Calcul
 }
 
 template <typename D32, typename D64>
-bool
-lldb_private::formatters::GenericNSDictionaryMSyntheticFrontEnd<D32,D64>::
-  Update() {
+lldb::ChildCacheState
+lldb_private::formatters::GenericNSDictionaryMSyntheticFrontEnd<D32,
+                                                                D64>::Update() {
   m_children.clear();
   ValueObjectSP valobj_sp = m_backend.GetSP();
   m_ptr_size = 0;
@@ -1098,13 +1106,13 @@ lldb_private::formatters::GenericNSDictionaryMSyntheticFrontEnd<D32,D64>::
   delete m_data_64;
   m_data_64 = nullptr;
   if (!valobj_sp)
-    return false;
+    return lldb::ChildCacheState::eRefetch;
   m_exe_ctx_ref = valobj_sp->GetExecutionContextRef();
   Status error;
   error.Clear();
   lldb::ProcessSP process_sp(valobj_sp->GetProcessSP());
   if (!process_sp)
-    return false;
+    return lldb::ChildCacheState::eRefetch;
   m_ptr_size = process_sp->GetAddressByteSize();
   m_order = process_sp->GetByteOrder();
   uint64_t data_location = valobj_sp->GetValueAsUnsigned(0) + m_ptr_size;
@@ -1118,7 +1126,8 @@ lldb_private::formatters::GenericNSDictionaryMSyntheticFrontEnd<D32,D64>::
                            error);
   }
 
-  return error.Success();
+  return error.Success() ? lldb::ChildCacheState::eReuse
+                         : lldb::ChildCacheState::eRefetch;
 }
 
 template <typename D32, typename D64>
@@ -1249,9 +1258,8 @@ lldb_private::formatters::Foundation1100::
   return (m_data_32 ? m_data_32->_used : m_data_64->_used);
 }
 
-bool
-lldb_private::formatters::Foundation1100::
-  NSDictionaryMSyntheticFrontEnd::Update() {
+lldb::ChildCacheState lldb_private::formatters::Foundation1100::
+    NSDictionaryMSyntheticFrontEnd::Update() {
   m_children.clear();
   ValueObjectSP valobj_sp = m_backend.GetSP();
   m_ptr_size = 0;
@@ -1260,13 +1268,13 @@ lldb_private::formatters::Foundation1100::
   delete m_data_64;
   m_data_64 = nullptr;
   if (!valobj_sp)
-    return false;
+    return lldb::ChildCacheState::eRefetch;
   m_exe_ctx_ref = valobj_sp->GetExecutionContextRef();
   Status error;
   error.Clear();
   lldb::ProcessSP process_sp(valobj_sp->GetProcessSP());
   if (!process_sp)
-    return false;
+    return lldb::ChildCacheState::eRefetch;
   m_ptr_size = process_sp->GetAddressByteSize();
   m_order = process_sp->GetByteOrder();
   uint64_t data_location = valobj_sp->GetValueAsUnsigned(0) + m_ptr_size;
@@ -1280,7 +1288,8 @@ lldb_private::formatters::Foundation1100::
                            error);
   }
 
-  return error.Success();
+  return error.Success() ? lldb::ChildCacheState::eReuse
+                         : lldb::ChildCacheState::eRefetch;
 }
 
 bool

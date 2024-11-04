@@ -1897,14 +1897,14 @@ define i8 @not_ashr_bitwidth_mask_use1(i8 %x, i8 %y) {
   ret i8 %r
 }
 
-; negative test - extra use
+; extra use of xor is ok
 
 define i8 @not_ashr_bitwidth_mask_use2(i8 %x, i8 %y) {
 ; CHECK-LABEL: @not_ashr_bitwidth_mask_use2(
 ; CHECK-NEXT:    [[ISNOTNEG:%.*]] = icmp sgt i8 [[X:%.*]], -1
 ; CHECK-NEXT:    [[NOT:%.*]] = sext i1 [[ISNOTNEG]] to i8
 ; CHECK-NEXT:    call void @use8(i8 [[NOT]])
-; CHECK-NEXT:    [[R:%.*]] = and i8 [[NOT]], [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[ISNOTNEG]], i8 [[Y:%.*]], i8 0
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %sign = ashr i8 %x, 7
@@ -2004,14 +2004,14 @@ define i16 @invert_signbit_splat_mask_use2(i8 %x, i16 %y) {
   ret i16 %r
 }
 
-; negative test - extra use
+; extra use of sext is ok 
 
 define i16 @invert_signbit_splat_mask_use3(i8 %x, i16 %y) {
 ; CHECK-LABEL: @invert_signbit_splat_mask_use3(
 ; CHECK-NEXT:    [[ISNOTNEG:%.*]] = icmp sgt i8 [[X:%.*]], -1
 ; CHECK-NEXT:    [[S:%.*]] = sext i1 [[ISNOTNEG]] to i16
 ; CHECK-NEXT:    call void @use16(i16 [[S]])
-; CHECK-NEXT:    [[R:%.*]] = and i16 [[S]], [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[ISNOTNEG]], i16 [[Y:%.*]], i16 0
 ; CHECK-NEXT:    ret i16 [[R]]
 ;
   %a = ashr i8 %x, 7
@@ -2853,4 +2853,19 @@ define i32 @add_constant_equal_with_the_top_bit_of_demandedbits_insertpt(i32 %x,
   %or = or i32 %add, %y
   %and = and i32 %or, 24
   ret i32 %and
+}
+
+define i32 @and_sext_multiuse(i32 %x, i32 %y, i32 %a, i32 %b) {
+; CHECK-LABEL: @and_sext_multiuse(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[ADD:%.*]] = select i1 [[CMP]], i32 [[TMP1]], i32 0
+; CHECK-NEXT:    ret i32 [[ADD]]
+;
+  %cmp = icmp sgt i32 %x, %y
+  %sext = sext i1 %cmp to i32
+  %and1 = and i32 %sext, %a
+  %and2 = and i32 %sext, %b
+  %add = add i32 %and1, %and2
+  ret i32 %add
 }

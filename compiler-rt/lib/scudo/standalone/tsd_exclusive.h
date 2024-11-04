@@ -30,7 +30,7 @@ template <class Allocator> struct TSDRegistryExT {
   using ThisT = TSDRegistryExT<Allocator>;
 
   struct ScopedTSD {
-    ScopedTSD(ThisT &TSDRegistry) {
+    ALWAYS_INLINE ScopedTSD(ThisT &TSDRegistry) {
       CurrentTSD = TSDRegistry.getTSDAndLock(&UnlockRequired);
       DCHECK_NE(CurrentTSD, nullptr);
     }

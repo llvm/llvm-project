@@ -36,12 +36,12 @@ body:             |
     ; GCN-LABEL: name: preserve_active_lanes_above_args
     ; GCN: liveins: $sgpr0, $vgpr8, $vgpr9, $vgpr10
     ; GCN-NEXT: {{  $}}
-    ; GCN-NEXT: SCRATCH_STORE_DWORD_ST killed $vgpr10, 4, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %stack.0, addrspace 5)
+    ; GCN-NEXT: SCRATCH_STORE_DWORD_ST killed $vgpr10, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %stack.0, addrspace 5)
     ; GCN-NEXT: renamable $vgpr10 = V_MOV_B32_e32 10, implicit $exec
     ; GCN-NEXT: $vgpr8 = COPY killed renamable $vgpr10
     ; GCN-NEXT: renamable $sgpr4_sgpr5 = SI_PC_ADD_REL_OFFSET target-flags(amdgpu-gotprel32-lo) @callee + 4, target-flags(amdgpu-gotprel32-hi) @callee + 12, implicit-def dead $scc
     ; GCN-NEXT: renamable $sgpr4_sgpr5 = S_LOAD_DWORDX2_IMM killed renamable $sgpr4_sgpr5, 0, 0 :: (dereferenceable invariant load (p0) from got, addrspace 4)
-    ; GCN-NEXT: $vgpr10 = SCRATCH_LOAD_DWORD_ST 4, 0, implicit $exec, implicit $flat_scr :: (load (s32) from %stack.0, addrspace 5)
+    ; GCN-NEXT: $vgpr10 = SCRATCH_LOAD_DWORD_ST 0, 0, implicit $exec, implicit $flat_scr :: (load (s32) from %stack.0, addrspace 5)
     ; GCN-NEXT: SI_CS_CHAIN_TC_W32 killed renamable $sgpr4_sgpr5, @callee, 0, -1, amdgpu_allvgprs, implicit $sgpr0, implicit $vgpr8, implicit $vgpr9
     renamable $vgpr10 = V_MOV_B32_e32 10, implicit $exec
     $vgpr8 = COPY renamable killed $vgpr10
@@ -70,8 +70,8 @@ body:             |
     ; GCN: liveins: $sgpr0, $sgpr35, $vgpr8, $vgpr9, $vgpr10
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: $sgpr1 = S_OR_SAVEEXEC_B32 -1, implicit-def $exec, implicit-def dead $scc, implicit $exec
-    ; GCN-NEXT: SCRATCH_STORE_DWORD_ST $vgpr10, 4, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %stack.0, addrspace 5)
-    ; GCN-NEXT: SCRATCH_STORE_DWORD_ST killed $vgpr11, 8, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %stack.1, addrspace 5)
+    ; GCN-NEXT: SCRATCH_STORE_DWORD_ST $vgpr10, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %stack.0, addrspace 5)
+    ; GCN-NEXT: SCRATCH_STORE_DWORD_ST killed $vgpr11, 4, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %stack.1, addrspace 5)
     ; GCN-NEXT: $exec_lo = S_MOV_B32 killed $sgpr1
     ; GCN-NEXT: renamable $vgpr10 = SI_SPILL_S32_TO_VGPR $sgpr35, 0, killed $vgpr10
     ; GCN-NEXT: $sgpr35 = S_MOV_B32 5
@@ -81,8 +81,8 @@ body:             |
     ; GCN-NEXT: renamable $sgpr4_sgpr5 = SI_PC_ADD_REL_OFFSET target-flags(amdgpu-gotprel32-lo) @callee + 4, target-flags(amdgpu-gotprel32-hi) @callee + 12, implicit-def dead $scc
     ; GCN-NEXT: renamable $sgpr4_sgpr5 = S_LOAD_DWORDX2_IMM killed renamable $sgpr4_sgpr5, 0, 0 :: (dereferenceable invariant load (p0) from got, addrspace 4)
     ; GCN-NEXT: $sgpr1 = S_OR_SAVEEXEC_B32 -1, implicit-def $exec, implicit-def dead $scc, implicit $exec
-    ; GCN-NEXT: $vgpr10 = SCRATCH_LOAD_DWORD_SADDR $sgpr32, 4, 0, implicit $exec, implicit $flat_scr :: (load (s32) from %stack.0, addrspace 5)
-    ; GCN-NEXT: $vgpr11 = SCRATCH_LOAD_DWORD_SADDR $sgpr32, 8, 0, implicit $exec, implicit $flat_scr :: (load (s32) from %stack.1, addrspace 5)
+    ; GCN-NEXT: $vgpr10 = SCRATCH_LOAD_DWORD_SADDR $sgpr32, 0, 0, implicit $exec, implicit $flat_scr :: (load (s32) from %stack.0, addrspace 5)
+    ; GCN-NEXT: $vgpr11 = SCRATCH_LOAD_DWORD_SADDR $sgpr32, 4, 0, implicit $exec, implicit $flat_scr :: (load (s32) from %stack.1, addrspace 5)
     ; GCN-NEXT: $exec_lo = S_MOV_B32 killed $sgpr1
     ; GCN-NEXT: SI_CS_CHAIN_TC_W32 killed renamable $sgpr4_sgpr5, @callee, 0, -1, amdgpu_allvgprs, implicit $sgpr0, implicit $vgpr8, implicit $vgpr9
     renamable $vgpr10 = SI_SPILL_S32_TO_VGPR $sgpr35, 0, killed $vgpr10
@@ -142,8 +142,8 @@ body:             |
     ; GCN: liveins: $sgpr0, $sgpr35, $vgpr8, $vgpr9, $vgpr10
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: $sgpr1 = S_OR_SAVEEXEC_B32 -1, implicit-def $exec, implicit-def dead $scc, implicit $exec
-    ; GCN-NEXT: SCRATCH_STORE_DWORD_ST $vgpr8, 4, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %stack.0, addrspace 5)
-    ; GCN-NEXT: SCRATCH_STORE_DWORD_ST $vgpr9, 8, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %stack.1, addrspace 5)
+    ; GCN-NEXT: SCRATCH_STORE_DWORD_ST $vgpr8, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %stack.0, addrspace 5)
+    ; GCN-NEXT: SCRATCH_STORE_DWORD_ST $vgpr9, 4, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %stack.1, addrspace 5)
     ; GCN-NEXT: $exec_lo = S_MOV_B32 killed $sgpr1
     ; GCN-NEXT: renamable $vgpr8 = SI_SPILL_S32_TO_VGPR $sgpr35, 0, killed $vgpr8
     ; GCN-NEXT: $sgpr35 = S_MOV_B32 5
@@ -152,8 +152,8 @@ body:             |
     ; GCN-NEXT: renamable $sgpr4_sgpr5 = SI_PC_ADD_REL_OFFSET target-flags(amdgpu-gotprel32-lo) @callee + 4, target-flags(amdgpu-gotprel32-hi) @callee + 12, implicit-def dead $scc
     ; GCN-NEXT: renamable $sgpr4_sgpr5 = S_LOAD_DWORDX2_IMM killed renamable $sgpr4_sgpr5, 0, 0 :: (dereferenceable invariant load (p0) from got, addrspace 4)
     ; GCN-NEXT: $sgpr1 = S_OR_SAVEEXEC_B32 -1, implicit-def $exec, implicit-def dead $scc, implicit $exec
-    ; GCN-NEXT: $vgpr8 = SCRATCH_LOAD_DWORD_SADDR $sgpr32, 4, 0, implicit $exec, implicit $flat_scr, implicit $vgpr8(tied-def 0) :: (load (s32) from %stack.0, addrspace 5)
-    ; GCN-NEXT: $vgpr9 = SCRATCH_LOAD_DWORD_SADDR $sgpr32, 8, 0, implicit $exec, implicit $flat_scr, implicit $vgpr9(tied-def 0) :: (load (s32) from %stack.1, addrspace 5)
+    ; GCN-NEXT: $vgpr8 = SCRATCH_LOAD_DWORD_SADDR $sgpr32, 0, 0, implicit $exec, implicit $flat_scr, implicit $vgpr8(tied-def 0) :: (load (s32) from %stack.0, addrspace 5)
+    ; GCN-NEXT: $vgpr9 = SCRATCH_LOAD_DWORD_SADDR $sgpr32, 4, 0, implicit $exec, implicit $flat_scr, implicit $vgpr9(tied-def 0) :: (load (s32) from %stack.1, addrspace 5)
     ; GCN-NEXT: $exec_lo = S_MOV_B32 killed $sgpr1
     ; GCN-NEXT: SI_CS_CHAIN_TC_W32 killed renamable $sgpr4_sgpr5, @callee, 0, -1, amdgpu_allvgprs, implicit $sgpr0, implicit $vgpr8, implicit $vgpr9
     renamable $vgpr8 = SI_SPILL_S32_TO_VGPR $sgpr35, 0, killed $vgpr8

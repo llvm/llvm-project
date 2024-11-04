@@ -899,9 +899,13 @@ namespace {
                          const ObjCPropertyImplDecl *propImpl);
 
   private:
+    LLVM_PREFERRED_TYPE(StrategyKind)
     unsigned Kind : 8;
+    LLVM_PREFERRED_TYPE(bool)
     unsigned IsAtomic : 1;
+    LLVM_PREFERRED_TYPE(bool)
     unsigned IsCopy : 1;
+    LLVM_PREFERRED_TYPE(bool)
     unsigned HasStrong : 1;
 
     CharUnits IvarSize;

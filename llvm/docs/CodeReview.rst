@@ -103,6 +103,12 @@ ready to be committed. Specifically, once a patch is sent out for review, it
 needs an explicit approval before it is committed. Do not assume silent
 approval, or solicit objections to a patch with a deadline.
 
+.. note::
+   If you are using a Pull Request for purposes other than review
+   (eg: precommit CI results, convenient web-based reverts, etc)
+   `skip-precommit-approval<https://github.com/llvm/llvm-project/labels?q=skip-precommit-approval>`
+   label to the PR.
+
 Acknowledge All Reviewer Feedback
 ---------------------------------
 

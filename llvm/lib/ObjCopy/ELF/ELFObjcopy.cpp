@@ -182,7 +182,9 @@ static std::unique_ptr<Writer> createWriter(const CommonConfig &Config,
   case FileFormat::Binary:
     return std::make_unique<BinaryWriter>(Obj, Out, Config);
   case FileFormat::IHex:
-    return std::make_unique<IHexWriter>(Obj, Out);
+    return std::make_unique<IHexWriter>(Obj, Out, Config.OutputFilename);
+  case FileFormat::SREC:
+    return std::make_unique<SRECWriter>(Obj, Out, Config.OutputFilename);
   default:
     return createELFWriter(Config, Obj, Out, OutputElfType);
   }
@@ -328,6 +330,11 @@ static Error updateAndRemoveSymbols(const CommonConfig &Config,
     const auto I = Config.SymbolsToRename.find(Sym.Name);
     if (I != Config.SymbolsToRename.end())
       Sym.Name = std::string(I->getValue());
+
+    if (!Config.SymbolsPrefixRemove.empty() && Sym.Type != STT_SECTION)
+      if (Sym.Name.compare(0, Config.SymbolsPrefixRemove.size(),
+                           Config.SymbolsPrefixRemove) == 0)
+        Sym.Name = Sym.Name.substr(Config.SymbolsPrefixRemove.size());
 
     if (!Config.SymbolsPrefix.empty() && Sym.Type != STT_SECTION)
       Sym.Name = (Config.SymbolsPrefix + Sym.Name).str();

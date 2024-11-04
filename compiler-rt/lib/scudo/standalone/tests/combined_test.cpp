@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "memtag.h"
+#include "stack_depot.h"
 #include "tests/scudo_unit_test.h"
 
 #include "allocator_config.h"
@@ -870,8 +871,8 @@ SCUDO_TYPED_TEST(ScudoCombinedTest, ReallocateInPlaceStress) {
 SCUDO_TYPED_TEST(ScudoCombinedTest, RingBufferSize) {
   auto *Allocator = this->Allocator.get();
   auto Size = Allocator->getRingBufferSize();
-  if (Size > 0)
-    EXPECT_EQ(Allocator->getRingBufferAddress()[Size - 1], '\0');
+  ASSERT_GT(Size, 0u);
+  EXPECT_EQ(Allocator->getRingBufferAddress()[Size - 1], '\0');
 }
 
 SCUDO_TYPED_TEST(ScudoCombinedTest, RingBufferAddress) {
@@ -879,6 +880,39 @@ SCUDO_TYPED_TEST(ScudoCombinedTest, RingBufferAddress) {
   auto *Addr = Allocator->getRingBufferAddress();
   EXPECT_NE(Addr, nullptr);
   EXPECT_EQ(Addr, Allocator->getRingBufferAddress());
+}
+
+SCUDO_TYPED_TEST(ScudoCombinedTest, StackDepotSize) {
+  auto *Allocator = this->Allocator.get();
+  auto Size = Allocator->getStackDepotSize();
+  ASSERT_GT(Size, 0u);
+  EXPECT_EQ(Allocator->getStackDepotAddress()[Size - 1], '\0');
+}
+
+SCUDO_TYPED_TEST(ScudoCombinedTest, StackDepotAddress) {
+  auto *Allocator = this->Allocator.get();
+  auto *Addr = Allocator->getStackDepotAddress();
+  EXPECT_NE(Addr, nullptr);
+  EXPECT_EQ(Addr, Allocator->getStackDepotAddress());
+}
+
+SCUDO_TYPED_TEST(ScudoCombinedTest, StackDepot) {
+  alignas(scudo::StackDepot) char Buf[sizeof(scudo::StackDepot) +
+                                      1024 * sizeof(scudo::atomic_u64) +
+                                      1024 * sizeof(scudo::atomic_u32)] = {};
+  auto *Depot = reinterpret_cast<scudo::StackDepot *>(Buf);
+  Depot->init(1024, 1024);
+  ASSERT_TRUE(Depot->isValid(sizeof(Buf)));
+  ASSERT_FALSE(Depot->isValid(sizeof(Buf) - 1));
+  scudo::uptr Stack[] = {1, 2, 3};
+  scudo::u32 Elem = Depot->insert(&Stack[0], &Stack[3]);
+  scudo::uptr RingPosPtr = 0;
+  scudo::uptr SizePtr = 0;
+  ASSERT_TRUE(Depot->find(Elem, &RingPosPtr, &SizePtr));
+  ASSERT_EQ(SizePtr, 3u);
+  EXPECT_EQ(Depot->at(RingPosPtr), 1u);
+  EXPECT_EQ(Depot->at(RingPosPtr + 1), 2u);
+  EXPECT_EQ(Depot->at(RingPosPtr + 2), 3u);
 }
 
 #if SCUDO_CAN_USE_PRIMARY64

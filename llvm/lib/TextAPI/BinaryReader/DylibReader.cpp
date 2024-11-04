@@ -17,6 +17,7 @@
 #include "llvm/Object/MachOUniversal.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/TargetParser/Triple.h"
+#include "llvm/TextAPI/InterfaceFile.h"
 #include "llvm/TextAPI/RecordsSlice.h"
 #include "llvm/TextAPI/TextAPIError.h"
 #include <iomanip>
@@ -408,6 +409,7 @@ Expected<Records> DylibReader::readFile(MemoryBufferRef Buffer,
         Results.emplace_back(std::make_shared<RecordsSlice>(RecordsSlice({T})));
         if (auto Err = load(&Obj, *Results.back(), Opt, Arch))
           return std::move(Err);
+        Results.back()->getBinaryAttrs().Path = Buffer.getBufferIdentifier();
       }
       break;
     }

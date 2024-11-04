@@ -3218,3 +3218,74 @@ entry:
   call void @bar(ptr %0, ptr %var)
   ret i32 %x
 }
+
+define void @spill_x10() {
+; RV32IZCMP-LABEL: spill_x10:
+; RV32IZCMP:       # %bb.0: # %entry
+; RV32IZCMP-NEXT:    cm.push {ra, s0-s11}, -64
+; RV32IZCMP-NEXT:    .cfi_def_cfa_offset 64
+; RV32IZCMP-NEXT:    .cfi_offset s10, -8
+; RV32IZCMP-NEXT:    #APP
+; RV32IZCMP-NEXT:    li s10, 0
+; RV32IZCMP-NEXT:    #NO_APP
+; RV32IZCMP-NEXT:    cm.popret {ra, s0-s11}, 64
+;
+; RV64IZCMP-LABEL: spill_x10:
+; RV64IZCMP:       # %bb.0: # %entry
+; RV64IZCMP-NEXT:    cm.push {ra, s0-s11}, -112
+; RV64IZCMP-NEXT:    .cfi_def_cfa_offset 112
+; RV64IZCMP-NEXT:    .cfi_offset s10, -16
+; RV64IZCMP-NEXT:    #APP
+; RV64IZCMP-NEXT:    li s10, 0
+; RV64IZCMP-NEXT:    #NO_APP
+; RV64IZCMP-NEXT:    cm.popret {ra, s0-s11}, 112
+;
+; RV32IZCMP-SR-LABEL: spill_x10:
+; RV32IZCMP-SR:       # %bb.0: # %entry
+; RV32IZCMP-SR-NEXT:    cm.push {ra, s0-s11}, -64
+; RV32IZCMP-SR-NEXT:    .cfi_def_cfa_offset 64
+; RV32IZCMP-SR-NEXT:    .cfi_offset s10, -8
+; RV32IZCMP-SR-NEXT:    #APP
+; RV32IZCMP-SR-NEXT:    li s10, 0
+; RV32IZCMP-SR-NEXT:    #NO_APP
+; RV32IZCMP-SR-NEXT:    cm.popret {ra, s0-s11}, 64
+;
+; RV64IZCMP-SR-LABEL: spill_x10:
+; RV64IZCMP-SR:       # %bb.0: # %entry
+; RV64IZCMP-SR-NEXT:    cm.push {ra, s0-s11}, -112
+; RV64IZCMP-SR-NEXT:    .cfi_def_cfa_offset 112
+; RV64IZCMP-SR-NEXT:    .cfi_offset s10, -16
+; RV64IZCMP-SR-NEXT:    #APP
+; RV64IZCMP-SR-NEXT:    li s10, 0
+; RV64IZCMP-SR-NEXT:    #NO_APP
+; RV64IZCMP-SR-NEXT:    cm.popret {ra, s0-s11}, 112
+;
+; RV32I-LABEL: spill_x10:
+; RV32I:       # %bb.0: # %entry
+; RV32I-NEXT:    addi sp, sp, -16
+; RV32I-NEXT:    .cfi_def_cfa_offset 16
+; RV32I-NEXT:    sw s10, 12(sp) # 4-byte Folded Spill
+; RV32I-NEXT:    .cfi_offset s10, -4
+; RV32I-NEXT:    #APP
+; RV32I-NEXT:    li s10, 0
+; RV32I-NEXT:    #NO_APP
+; RV32I-NEXT:    lw s10, 12(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    addi sp, sp, 16
+; RV32I-NEXT:    ret
+;
+; RV64I-LABEL: spill_x10:
+; RV64I:       # %bb.0: # %entry
+; RV64I-NEXT:    addi sp, sp, -16
+; RV64I-NEXT:    .cfi_def_cfa_offset 16
+; RV64I-NEXT:    sd s10, 8(sp) # 8-byte Folded Spill
+; RV64I-NEXT:    .cfi_offset s10, -8
+; RV64I-NEXT:    #APP
+; RV64I-NEXT:    li s10, 0
+; RV64I-NEXT:    #NO_APP
+; RV64I-NEXT:    ld s10, 8(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    addi sp, sp, 16
+; RV64I-NEXT:    ret
+entry:
+  tail call void asm sideeffect "li s10, 0", "~{s10}"()
+  ret void
+}

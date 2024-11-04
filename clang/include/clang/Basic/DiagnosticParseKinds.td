@@ -165,6 +165,9 @@ def ext_c99_feature : Extension<
   "'%0' is a C99 extension">, InGroup<C99>;
 def ext_c11_feature : Extension<
   "'%0' is a C11 extension">, InGroup<C11>;
+def warn_c11_compat_keyword : Warning<
+  "'%0' is incompatible with C standards before C11">,
+  InGroup<CPre11Compat>, DefaultIgnore;
 def warn_c23_compat_keyword : Warning<
  "'%0' is incompatible with C standards before C23">,
  InGroup<CPre23Compat>, DefaultIgnore;
@@ -1355,9 +1358,6 @@ def warn_pragma_acc_ignored
       DefaultIgnore;
 def err_acc_unexpected_directive
     : Error<"unexpected OpenACC directive %select{|'#pragma acc %1'}0">;
-def warn_pragma_acc_unimplemented
-    : Warning<"OpenACC directives not yet implemented, pragma ignored">,
-      InGroup<SourceUsesOpenACC>;
 def err_acc_invalid_directive
     : Error<"invalid OpenACC directive %select{%1|'%1 %2'}0">;
 def err_acc_invalid_clause : Error<"invalid OpenACC clause %0">;

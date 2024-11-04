@@ -227,5 +227,9 @@ func.func @entry() {
   bufferization.dealloc_tensor %CDCD_ret : tensor<?x?x?x?xf32, #CDCD>
   bufferization.dealloc_tensor %DCCD_ret : tensor<?x?x?x?xf32, #DCCD>
 
+  bufferization.dealloc_tensor %1 : tensor<?x?x?x?xf32>
+  bufferization.dealloc_tensor %2 : tensor<?x?x?x?xf32>
+  bufferization.dealloc_tensor %3 : tensor<?x?x?x?xf32>
+
   return
 }

@@ -271,16 +271,15 @@ public:
   std::optional<uint64_t> getFragmentSizeInBits() const;
 
   bool isEquivalentTo(const DPValue &Other) {
-    return std::tie(Type, DebugValues, Variable, Expression, DbgLoc) ==
-           std::tie(Other.Type, Other.DebugValues, Other.Variable,
-                    Other.Expression, Other.DbgLoc);
+    return DbgLoc == Other.DbgLoc && isIdenticalToWhenDefined(Other);
   }
   // Matches the definition of the Instruction version, equivalent to above but
   // without checking DbgLoc.
   bool isIdenticalToWhenDefined(const DPValue &Other) {
-    return std::tie(Type, DebugValues, Variable, Expression) ==
+    return std::tie(Type, DebugValues, Variable, Expression,
+                    AddressExpression) ==
            std::tie(Other.Type, Other.DebugValues, Other.Variable,
-                    Other.Expression);
+                    Other.Expression, Other.AddressExpression);
   }
 
   /// @name DbgAssign Methods

@@ -42,7 +42,7 @@ class UnwindFromExpressionTest(TestBase):
         main_frame = self.thread.GetFrameAtIndex(0)
         val = main_frame.EvaluateExpression("second_function(47)", options)
         self.assertSuccess(val.GetError(), "We did complete the execution.")
-        self.assertEquals(47, val.GetValueAsSigned())
+        self.assertEqual(47, val.GetValueAsSigned())
 
     @add_test_categories(["pyapi"])
     @expectedFlakeyNetBSD

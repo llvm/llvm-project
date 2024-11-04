@@ -378,13 +378,12 @@ std::string getPGOFuncName(const Function &F, bool InLTO, uint64_t Version) {
   return getPGOFuncName(F.getName(), GlobalValue::ExternalLinkage, "");
 }
 
-// See getIRPGOFuncName() for a discription of the format.
-std::pair<StringRef, StringRef>
-getParsedIRPGOFuncName(StringRef IRPGOFuncName) {
-  auto [FileName, FuncName] = IRPGOFuncName.split(';');
-  if (FuncName.empty())
-    return std::make_pair(StringRef(), IRPGOFuncName);
-  return std::make_pair(FileName, FuncName);
+// See getIRPGOObjectName() for a discription of the format.
+std::pair<StringRef, StringRef> getParsedIRPGOName(StringRef IRPGOName) {
+  auto [FileName, MangledName] = IRPGOName.split(kGlobalIdentifierDelimiter);
+  if (MangledName.empty())
+    return std::make_pair(StringRef(), IRPGOName);
+  return std::make_pair(FileName, MangledName);
 }
 
 StringRef getFuncNameWithoutPrefix(StringRef PGOFuncName, StringRef FileName) {
@@ -518,35 +517,46 @@ Error InstrProfSymtab::create(StringRef NameStrings) {
       std::bind(&InstrProfSymtab::addFuncName, this, std::placeholders::_1));
 }
 
-Error InstrProfSymtab::addFuncWithName(Function &F, StringRef PGOFuncName) {
-  if (Error E = addFuncName(PGOFuncName))
-    return E;
-  MD5FuncMap.emplace_back(Function::getGUID(PGOFuncName), &F);
+StringRef InstrProfSymtab::getCanonicalName(StringRef PGOName) {
   // In ThinLTO, local function may have been promoted to global and have
   // suffix ".llvm." added to the function name. We need to add the
   // stripped function name to the symbol table so that we can find a match
   // from profile.
   //
-  // We may have other suffixes similar as ".llvm." which are needed to
-  // be stripped before the matching, but ".__uniq." suffix which is used
-  // to differentiate internal linkage functions in different modules
-  // should be kept. Now this is the only suffix with the pattern ".xxx"
-  // which is kept before matching.
+  // ".__uniq." suffix is used to differentiate internal linkage functions in
+  // different modules and should be kept. This is the only suffix with the
+  // pattern ".xxx" which is kept before matching, other suffixes similar as
+  // ".llvm." will be stripped.
   const std::string UniqSuffix = ".__uniq.";
-  auto pos = PGOFuncName.find(UniqSuffix);
-  // Search '.' after ".__uniq." if ".__uniq." exists, otherwise
-  // search '.' from the beginning.
-  if (pos != std::string::npos)
+  size_t pos = PGOName.find(UniqSuffix);
+  if (pos != StringRef::npos)
     pos += UniqSuffix.length();
   else
     pos = 0;
-  pos = PGOFuncName.find('.', pos);
-  if (pos != std::string::npos && pos != 0) {
-    StringRef OtherFuncName = PGOFuncName.substr(0, pos);
-    if (Error E = addFuncName(OtherFuncName))
+
+  // Search '.' after ".__uniq." if ".__uniq." exists, otherwise search '.' from
+  // the beginning.
+  pos = PGOName.find('.', pos);
+  if (pos != StringRef::npos && pos != 0)
+    return PGOName.substr(0, pos);
+
+  return PGOName;
+}
+
+Error InstrProfSymtab::addFuncWithName(Function &F, StringRef PGOFuncName) {
+  auto mapName = [&](StringRef Name) -> Error {
+    if (Error E = addFuncName(Name))
       return E;
-    MD5FuncMap.emplace_back(Function::getGUID(OtherFuncName), &F);
-  }
+    MD5FuncMap.emplace_back(Function::getGUID(Name), &F);
+    return Error::success();
+  };
+  if (Error E = mapName(PGOFuncName))
+    return E;
+
+  StringRef CanonicalFuncName = getCanonicalName(PGOFuncName);
+  if (CanonicalFuncName != PGOFuncName)
+    return mapName(CanonicalFuncName);
+
   return Error::success();
 }
 

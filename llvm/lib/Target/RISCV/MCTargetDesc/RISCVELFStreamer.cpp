@@ -87,14 +87,14 @@ void RISCVTargetELFStreamer::finishAttributeSection() {
 void RISCVTargetELFStreamer::finish() {
   RISCVTargetStreamer::finish();
   MCAssembler &MCA = getStreamer().getAssembler();
-  const FeatureBitset &Features = STI.getFeatureBits();
   RISCVABI::ABI ABI = getTargetABI();
 
   unsigned EFlags = MCA.getELFHeaderEFlags();
 
-  if (Features[RISCV::FeatureStdExtC])
+  if (STI.hasFeature(RISCV::FeatureStdExtC) ||
+      STI.hasFeature(RISCV::FeatureStdExtZca))
     EFlags |= ELF::EF_RISCV_RVC;
-  if (Features[RISCV::FeatureStdExtZtso])
+  if (STI.hasFeature(RISCV::FeatureStdExtZtso))
     EFlags |= ELF::EF_RISCV_TSO;
 
   switch (ABI) {

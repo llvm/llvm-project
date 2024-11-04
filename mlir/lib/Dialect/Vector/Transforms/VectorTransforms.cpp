@@ -160,8 +160,9 @@ struct MultiReduceToContract
         iteratorTypes.push_back(vector::IteratorType::reduction);
       }
     }
-    auto dstMap = AffineMap::get(/*dimCount=*/reductionMask.size(),
-                                 /*symCount=*/0, exprs, reduceOp.getContext());
+    auto dstMap =
+        AffineMap::get(/*dimCount=*/reductionMask.size(),
+                       /*symbolCount=*/0, exprs, reduceOp.getContext());
     rewriter.replaceOpWithNewOp<mlir::vector::ContractionOp>(
         reduceOp, mulOp->getOperand(0), mulOp->getOperand(1), reduceOp.getAcc(),
         rewriter.getAffineMapArrayAttr({srcMap, srcMap, dstMap}),
@@ -1236,7 +1237,7 @@ class DropInnerMostUnitDimsTransferRead
       return failure();
 
     auto srcType = dyn_cast<MemRefType>(readOp.getSource().getType());
-    if (!srcType || !srcType.hasStaticShape())
+    if (!srcType)
       return failure();
 
     if (!readOp.getPermutationMap().isMinorIdentity())
@@ -1260,19 +1261,21 @@ class DropInnerMostUnitDimsTransferRead
                         targetType.getElementType());
 
     auto loc = readOp.getLoc();
+    SmallVector<OpFoldResult> sizes =
+        memref::getMixedSizes(rewriter, loc, readOp.getSource());
+    SmallVector<OpFoldResult> offsets(srcType.getRank(),
+                                      rewriter.getIndexAttr(0));
+    SmallVector<OpFoldResult> strides(srcType.getRank(),
+                                      rewriter.getIndexAttr(1));
     MemRefType resultMemrefType =
         getMemRefTypeWithDroppingInnerDims(rewriter, srcType, dimsToDrop);
-    SmallVector<int64_t> offsets(srcType.getRank(), 0);
-    SmallVector<int64_t> strides(srcType.getRank(), 1);
-
     ArrayAttr inBoundsAttr =
         readOp.getInBounds()
             ? rewriter.getArrayAttr(
                   readOp.getInBoundsAttr().getValue().drop_back(dimsToDrop))
             : ArrayAttr();
     Value rankedReducedView = rewriter.create<memref::SubViewOp>(
-        loc, resultMemrefType, readOp.getSource(), offsets, srcType.getShape(),
-        strides);
+        loc, resultMemrefType, readOp.getSource(), offsets, sizes, strides);
     auto permMap = getTransferMinorIdentityMap(
         cast<ShapedType>(rankedReducedView.getType()), resultTargetVecType);
     Value result = rewriter.create<vector::TransferReadOp>(
@@ -1399,7 +1402,9 @@ struct CanonicalizeContractMatmulToMMT final
 
     // Set up the parallel/reduction structure in right form.
     using MapList = ArrayRef<ArrayRef<AffineExpr>>;
-    auto infer = [](MapList m) { return AffineMap::inferFromExprList(m); };
+    auto infer = [&](MapList m) {
+      return AffineMap::inferFromExprList(m, op.getContext());
+    };
     AffineExpr m;
     AffineExpr n;
     AffineExpr k;

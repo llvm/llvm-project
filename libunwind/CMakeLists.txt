@@ -21,6 +21,7 @@ set(LIBUNWIND_LIBCXX_PATH "${CMAKE_CURRENT_LIST_DIR}/../libcxx" CACHE PATH
         "Specify path to libc++ source.")
 
 include(GNUInstallDirs)
+include(CheckSymbolExists)
 
 #===============================================================================
 # Setup CMake Options
@@ -95,6 +96,20 @@ else()
 endif()
 option(LIBUNWIND_HIDE_SYMBOLS
   "Do not export any symbols from the static library." ${LIBUNWIND_DEFAULT_HIDE_SYMBOLS})
+
+# If toolchain is FPXX, we switch to FP64 to save the full FPRs. See:
+# https://web.archive.org/web/20180828210612/https://dmz-portal.mips.com/wiki/MIPS_O32_ABI_-_FR0_and_FR1_Interlinking
+check_symbol_exists(__mips_hard_float "" __MIPSHF)
+check_symbol_exists(_ABIO32 "" __MIPS_O32)
+if (__MIPSHF AND __MIPS_O32)
+  file(WRITE ${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/CMakeTmp/mips_is_fpxx.c
+    "#if __mips_fpr != 0\n"
+    "# error\n"
+    "#endif\n")
+  try_compile(MIPS_FPABI_FPXX ${CMAKE_BINARY_DIR}
+    ${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/CMakeTmp/mips_is_fpxx.c
+    CMAKE_FLAGS -DCMAKE_C_LINK_EXECUTABLE='echo')
+endif()
 
 #===============================================================================
 # Configure System
@@ -177,6 +192,10 @@ if (WIN32)
   # necessarily the ones that the callers will use anyway) with the
   # attributes.
   add_compile_flags_if_supported(-Wno-dll-attribute-on-redeclaration)
+endif()
+
+if (MIPS_FPABI_FPXX)
+  add_compile_flags(-mfp64)
 endif()
 
 # Get feature flags.

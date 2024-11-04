@@ -2920,6 +2920,11 @@ bool MipsAsmParser::loadAndAddSymbolAddress(const MCExpr *SymExpr,
         (Res.getSymA()->getSymbol().isELF() &&
          cast<MCSymbolELF>(Res.getSymA()->getSymbol()).getBinding() ==
              ELF::STB_LOCAL);
+    // For O32, "$"-prefixed symbols are recognized as temporary while
+    // .L-prefixed symbols are not (PrivateGlobalPrefix is "$"). Recognize ".L"
+    // manually.
+    if (ABI.IsO32() && Res.getSymA()->getSymbol().getName().starts_with(".L"))
+      IsLocalSym = true;
     bool UseXGOT = STI->hasFeature(Mips::FeatureXGOT) && !IsLocalSym;
 
     // The case where the result register is $25 is somewhat special. If the
@@ -6359,7 +6364,7 @@ bool MipsAsmParser::parseOperand(OperandVector &Operands, StringRef Mnemonic) {
       return true;
 
     SMLoc E = SMLoc::getFromPointer(Parser.getTok().getLoc().getPointer() - 1);
-    MCSymbol *Sym = getContext().getOrCreateSymbol("$" + Identifier);
+    MCSymbol *Sym = getContext().getOrCreateSymbol(Identifier);
     // Otherwise create a symbol reference.
     const MCExpr *SymRef =
         MCSymbolRefExpr::create(Sym, MCSymbolRefExpr::VK_None, getContext());
