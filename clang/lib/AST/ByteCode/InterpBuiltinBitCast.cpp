@@ -321,7 +321,7 @@ static bool readPointerToBuffer(const Context &Ctx, const Pointer &FromPtr,
         // This is really just `long double` on x86, which is the only
         // fundamental type with padding bytes.
         if (T == PT_Float) {
-          Floating &F = P.deref<Floating>();
+          const Floating &F = P.deref<Floating>();
           unsigned NumBits =
               llvm::APFloatBase::getSizeInBits(F.getAPFloat().getSemantics());
           assert(NumBits % 8 == 0);
