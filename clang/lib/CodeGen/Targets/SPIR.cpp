@@ -368,14 +368,14 @@ llvm::Type *CommonSPIRTargetCodeGenInfo::getSPIRVImageTypeFromHLSLResource(
   if (ElementType->isVectorTy())
     ElementType = ElementType->getScalarType();
 
-  assert(!ElementType->isIntegerTy() && !ElementType->isFloatingPointTy() &&
+  assert((ElementType->isIntegerTy() || ElementType->isFloatingPointTy()) &&
          "The element type for a SPIR-V resource must be a scalar integer or "
          "floating point type.");
 
   // These parameters correspond to the operands to the OpTypeImage SPIR-V
   // instruction. See
   // https://registry.khronos.org/SPIR-V/specs/unified1/SPIRV.html#OpTypeImage.
-  SmallVector<unsigned, 6> IntParams = {0};
+  SmallVector<unsigned, 6> IntParams(6, 0);
 
   // Dim
   // For now we assume everything is a buffer.
