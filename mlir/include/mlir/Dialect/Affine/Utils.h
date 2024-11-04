@@ -311,6 +311,10 @@ DivModValue getDivMod(OpBuilder &b, Location loc, Value lhs, Value rhs);
 FailureOr<SmallVector<Value>> delinearizeIndex(OpBuilder &b, Location loc,
                                                Value linearIndex,
                                                ArrayRef<Value> basis);
+
+FailureOr<SmallVector<Value>> delinearizeIndex(OpBuilder &b, Location loc,
+                                               Value linearIndex,
+                                               ArrayRef<OpFoldResult> basis);
 // Generate IR that extracts the linear index from a multi-index according to
 // a basis/shape.
 OpFoldResult linearizeIndex(ArrayRef<OpFoldResult> multiIndex,

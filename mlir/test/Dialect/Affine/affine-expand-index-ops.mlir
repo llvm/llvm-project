@@ -11,10 +11,7 @@
 //       CHECK:   %[[Q:.+]] = affine.apply #[[$map2]]()[%[[IDX]]]
 //       CHECK:   return %[[N]], %[[P]], %[[Q]]
 func.func @static_basis(%linear_index: index) -> (index, index, index) {
-  %b0 = arith.constant 16 : index
-  %b1 = arith.constant 224 : index
-  %b2 = arith.constant 224 : index
-  %1:3 = affine.delinearize_index %linear_index into (%b0, %b1, %b2) : index, index, index
+  %1:3 = affine.delinearize_index %linear_index into (16, 224, 224) : index, index, index
   return %1#0, %1#1, %1#2 : index, index, index
 }
 
