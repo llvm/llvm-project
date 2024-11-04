@@ -424,7 +424,7 @@ AArch64RegisterInfo::explainReservedReg(const MachineFunction &MF,
   return {};
 }
 
-static MCPhysReg ReservedHi[] = {
+static const MCPhysReg ReservedHi[] = {
     AArch64::B0_HI,  AArch64::B1_HI,  AArch64::B2_HI,  AArch64::B3_HI,
     AArch64::B4_HI,  AArch64::B5_HI,  AArch64::B6_HI,  AArch64::B7_HI,
     AArch64::B8_HI,  AArch64::B9_HI,  AArch64::B10_HI, AArch64::B11_HI,
