@@ -3,10 +3,10 @@
 
 %struct.Large = type { [16 x double] }
 
-; CHECK-LABEL: func_align
+; CHECK-LABEL: .entry func_align(
 ; CHECK: .param .u64 .ptr .global .align 16 func_align_param_0,
 ; CHECK: .param .u64 .ptr .global func_align_param_1,
-; CHECK: .param .u32 .ptr .global func_align_param_2
+; CHECK: .param .u64 .ptr .global func_align_param_2
 define void @func_align(ptr nocapture readonly align 16 %input, ptr nocapture %out, ptr addrspace(3) %n) {
 entry:
   %0 = addrspacecast ptr %out to ptr addrspace(1)
@@ -17,7 +17,7 @@ entry:
   ret void
 }
 
-; CHECK-LABEL: func
+; CHECK-LABEL: .entry func(
 ; CHECK: .param .u64 .ptr .global func_param_0,
 ; CHECK: .param .u64 .ptr .global func_param_1,
 ; CHECK: .param .u32 func_param_2
