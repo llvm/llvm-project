@@ -6,9 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
+// UNSUPPORTED: c++03, c++11, c++14, c++17
+
 #include <format>
 
 #include <array>
+#include <bit>
+#include <cmath>
 #include <limits>
 #include <random>
 #include <string>
@@ -90,9 +94,9 @@ struct Value<ValueE::Random> {
     std::array<F, 1000> result;
     std::generate(result.begin(), result.end(), [&] {
       while (true) {
-        auto result = std::bit_cast<F>(distribution(generator));
-        if (std::isfinite(result))
-          return result;
+        auto val = std::bit_cast<F>(distribution(generator));
+        if (std::isfinite(val))
+          return val;
       }
     });
     return result;
