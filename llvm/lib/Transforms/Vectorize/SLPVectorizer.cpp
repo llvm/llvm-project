@@ -15374,9 +15374,6 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E, bool PostponedPHIs) {
     case Instruction::ShuffleVector: {
       Value *V;
       if (SLPReVec && !E->isAltShuffle()) {
-        assert(E->ReuseShuffleIndices.empty() &&
-               "Not support ReuseShuffleIndices yet.");
-        assert(E->ReorderIndices.empty() && "Not support ReorderIndices yet.");
         setInsertPointAfterBundle(E);
         Value *Src = vectorizeOperand(E, 0, PostponedPHIs);
         if (E->VectorizedValue) {
@@ -15394,6 +15391,9 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E, bool PostponedPHIs) {
                   [&SVSrc](int Mask) { return SVSrc->getShuffleMask()[Mask]; });
         V = Builder.CreateShuffleVector(SVSrc->getOperand(0), NewMask);
         propagateIRFlags(V, E->Scalars, VL0);
+        if (auto *I = dyn_cast<Instruction>(V))
+          V = propagateMetadata(I, E->Scalars);
+        V = FinalShuffle(V, E);
       } else {
         assert(E->isAltShuffle() &&
                ((Instruction::isBinaryOp(E->getOpcode()) &&
@@ -15524,11 +15524,11 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E, bool PostponedPHIs) {
           transformScalarShuffleIndiciesToVector(VecTy->getNumElements(), Mask);
         }
         V = Builder.CreateShuffleVector(V0, V1, Mask);
-      }
-      if (auto *I = dyn_cast<Instruction>(V)) {
-        V = propagateMetadata(I, E->Scalars);
-        GatherShuffleExtractSeq.insert(I);
-        CSEBlocks.insert(I->getParent());
+        if (auto *I = dyn_cast<Instruction>(V)) {
+          V = propagateMetadata(I, E->Scalars);
+          GatherShuffleExtractSeq.insert(I);
+          CSEBlocks.insert(I->getParent());
+        }
       }
 
       E->VectorizedValue = V;
