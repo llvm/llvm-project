@@ -1092,6 +1092,23 @@ static void ConfigureResourceDirs(swift::CompilerInvocation &invocation,
   invocation.setRuntimeResourcePath(resource_dir);
 }
 
+static void ConfigureModuleCachePath(SwiftASTContext &swift_ast_sp) {
+  std::string moduleCachePath =
+      swift_ast_sp.GetCompilerInvocation().getClangModuleCachePath().str();
+  if (!moduleCachePath.empty())
+    return;
+
+  // If the moduleCachePath is not configured, setup a default path location.
+  llvm::SmallString<0> path;
+  std::error_code ec =
+      llvm::sys::fs::createUniqueDirectory("ModuleCache", path);
+  if (!ec)
+    moduleCachePath = std::string(path);
+  else
+    moduleCachePath = "/tmp/lldb-ModuleCache";
+  swift_ast_sp.GetCompilerInvocation().setClangModuleCachePath(moduleCachePath);
+}
+
 static const char *getImportFailureString(swift::serialization::Status status) {
   switch (status) {
   case swift::serialization::Status::Valid:
@@ -1777,7 +1794,10 @@ static void applyOverrideOptions(std::vector<std::string> &args,
 }
 
 void SwiftASTContext::AddExtraClangArgs(
-    const std::vector<std::string> &ExtraArgs, StringRef overrideOpts) {
+    const std::vector<std::string> &ExtraArgs,
+    const std::vector<std::string> &module_search_paths,
+    const std::vector<std::pair<std::string, bool>> framework_search_paths,
+    StringRef overrideOpts) {
   if (ExtraArgs.empty())
     return;
 
@@ -1803,7 +1823,8 @@ void SwiftASTContext::AddExtraClangArgs(
   if (importer_options.DirectClangCC1ModuleBuild) {
     if (!fresh_invocation)
       importer_options.ExtraArgs.clear();
-    AddExtraClangCC1Args(ExtraArgs, importer_options.ExtraArgs);
+    AddExtraClangCC1Args(ExtraArgs, module_search_paths, framework_search_paths,
+                         importer_options.ExtraArgs);
     applyOverrideOptions(importer_options.ExtraArgs, overrideOpts);
     return;
   }
@@ -1821,10 +1842,17 @@ void SwiftASTContext::AddExtraClangArgs(
 }
 
 void SwiftASTContext::AddExtraClangCC1Args(
-    const std::vector<std::string> &source, std::vector<std::string> &dest) {
+    const std::vector<std::string> &source,
+    const std::vector<std::string> &module_search_paths,
+    const std::vector<std::pair<std::string, bool>> framework_search_paths,
+    std::vector<std::string> &dest) {
   clang::CompilerInvocation invocation;
+  std::vector<std::string> default_paths = {"/usr/include",
+                                            "/user/local/include"};
   llvm::SmallVector<const char *> clangArgs;
-  clangArgs.reserve(source.size());
+  clangArgs.reserve(source.size() + module_search_paths.size() * 2 +
+                    framework_search_paths.size() * 2 +
+                    default_paths.size() * 2);
   llvm::for_each(source, [&](const std::string &Arg) {
     // Workaround for the extra driver argument embedded in the swiftmodule by
     // some swift compiler version. It always starts with `--target=` and it is
@@ -1832,6 +1860,25 @@ void SwiftASTContext::AddExtraClangCC1Args(
     if (!StringRef(Arg).starts_with("--target="))
       clangArgs.push_back(Arg.c_str());
   });
+  // Append some search paths from swift invocation so lldb can import
+  // additional clang modules when doing type reconstruction.
+  for (auto &path : module_search_paths) {
+    clangArgs.push_back("-I");
+    clangArgs.push_back(path.c_str());
+  }
+  for (auto &path : default_paths) {
+    llvm::SmallString<128> search_path(GetPlatformSDKPath());
+    llvm::sys::path::append(search_path, path);
+    path = std::string(search_path);
+  }
+  for (auto &path : default_paths) {
+    clangArgs.push_back("-I");
+    clangArgs.push_back(path.c_str());
+  }
+  for (auto &path : framework_search_paths) {
+    clangArgs.push_back("-F");
+    clangArgs.push_back(path.first.c_str());
+  }
 
   std::string diags;
   llvm::raw_string_ostream os(diags);
@@ -1857,6 +1904,12 @@ void SwiftASTContext::AddExtraClangCC1Args(
 
   // Ignore CAS info inside modules when loading.
   invocation.getFrontendOpts().ModuleLoadIgnoreCAS = true;
+
+  // Add options to allow clang importer to do implicit module build.
+  invocation.getLangOpts().ImplicitModules = true;
+  invocation.getHeaderSearchOpts().ImplicitModuleMaps = true;
+  invocation.getHeaderSearchOpts().ModuleCachePath =
+      GetCompilerInvocation().getClangModuleCachePath().str();
 
   // Remove non-existing modules in a systematic way.
   bool module_missing = false;
@@ -1897,7 +1950,7 @@ void SwiftASTContext::AddUserClangArgs(TargetProperties &props) {
   std::vector<std::string> user_clang_flags;
   for (const auto &arg : args.entries())
     user_clang_flags.push_back(arg.ref().str());
-  AddExtraClangArgs(user_clang_flags);
+  AddExtraClangArgs(user_clang_flags, {}, {});
 }
 
 /// Turn relative paths in clang options into absolute paths based on
@@ -2470,6 +2523,7 @@ SwiftASTContext::CreateInstance(lldb::LanguageType language, Module &module,
       HostInfo::GetSwiftResourceDir(triple, swift_ast_sp->GetPlatformSDKPath());
   ConfigureResourceDirs(swift_ast_sp->GetCompilerInvocation(), resource_dir,
                         triple);
+  ConfigureModuleCachePath(*swift_ast_sp);
 
   swift_ast_sp->SetCompilerInvocationLLDBOverrides();
 
@@ -2493,7 +2547,8 @@ SwiftASTContext::CreateInstance(lldb::LanguageType language, Module &module,
 
   // Apply the working directory to all relative paths.
   StringRef overrideOpts = target ? target->GetSwiftClangOverrideOptions() : "";
-  swift_ast_sp->AddExtraClangArgs(extra_clang_args, overrideOpts);
+  swift_ast_sp->AddExtraClangArgs(extra_clang_args, module_search_paths,
+                                  framework_search_paths, overrideOpts);
   if (target)
     swift_ast_sp->AddUserClangArgs(*target);
   else
@@ -2929,6 +2984,7 @@ SwiftASTContext::CreateInstance(const SymbolContext &sc,
       triple, swift_ast_sp->GetPlatformSDKPath());
   ConfigureResourceDirs(swift_ast_sp->GetCompilerInvocation(), resource_dir,
                         triple);
+  ConfigureModuleCachePath(*swift_ast_sp);
 
   std::vector<swift::PluginSearchOption> plugin_search_options;
   std::vector<std::string> module_search_paths;
@@ -2967,7 +3023,8 @@ SwiftASTContext::CreateInstance(const SymbolContext &sc,
       swift_ast_sp->AddDiagnostic(eSeverityError, error);
     StringRef override_opts =
         target_sp ? target_sp->GetSwiftClangOverrideOptions() : "";
-    swift_ast_sp->AddExtraClangArgs(extra_clang_args, override_opts);
+    swift_ast_sp->AddExtraClangArgs(extra_clang_args, module_search_paths,
+                                    framework_search_paths, override_opts);
   }
 
   // Now fold any extra options we were passed. This has to be done
@@ -3568,7 +3625,8 @@ ThreadSafeASTContext SwiftASTContext::GetASTContext() {
   }
 
   // Create the ClangImporter and determine the Clang module cache path.
-  std::string moduleCachePath = "";
+  std::string moduleCachePath =
+      GetCompilerInvocation().getClangModuleCachePath().str();
   std::unique_ptr<swift::ClangImporter> clang_importer_ap;
   auto &clang_importer_options = GetClangImporterOptions();
   if (!m_ast_context_ap->SearchPathOpts.getSDKPath().empty() ||
@@ -3595,24 +3653,12 @@ ThreadSafeASTContext SwiftASTContext::GetASTContext() {
                             underlying_error.c_str());
         }
       }
-      if (clang_importer_ap)
-        moduleCachePath = swift::getModuleCachePathFromClang(
+      if (clang_importer_ap) {
+        auto clangModuleCache = swift::getModuleCachePathFromClang(
             clang_importer_ap->getClangInstance());
-    }
-  }
-
-  if (moduleCachePath.empty()) {
-    moduleCachePath = GetClangModulesCacheProperty();
-    // Even though it is initialized to the default Clang location at startup a
-    // user could have overwritten it with an empty path.
-    if (moduleCachePath.empty()) {
-      llvm::SmallString<0> path;
-      std::error_code ec =
-          llvm::sys::fs::createUniqueDirectory("ModuleCache", path);
-      if (!ec)
-        moduleCachePath = std::string(path);
-      else
-        moduleCachePath = "/tmp/lldb-ModuleCache";
+        if (!clangModuleCache.empty())
+          moduleCachePath = clangModuleCache;
+      }
     }
   }
   LOG_PRINTF(GetLog(LLDBLog::Types), "Using Clang module cache path: %s",

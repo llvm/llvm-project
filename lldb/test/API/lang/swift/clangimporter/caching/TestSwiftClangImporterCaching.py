@@ -28,6 +28,13 @@ class TestSwiftClangImporterCaching(TestBase):
         self.filecheck('platform shell cat "%s"' % log, __file__)
 ### -cc1 should be round-tripped so there is no more `-cc1` in the extra args. Look for `-triple` which is a cc1 flag.
 #       CHECK:  SwiftASTContextForExpressions(module: "a", cu: "main.swift")::LogConfiguration() --     -triple
+### Check include paths in the module are forwards. The first argument is the source directory.
+#       CHECK:  SwiftASTContextForExpressions(module: "a", cu: "main.swift")::LogConfiguration() --     -I
+#       CHECK-NEXT:  SwiftASTContextForExpressions(module: "a", cu: "main.swift")::LogConfiguration() --
+#       CHECK:  SwiftASTContextForExpressions(module: "a", cu: "main.swift")::LogConfiguration() --     -I
+#       CHECK-NEXT:  SwiftASTContextForExpressions(module: "a", cu: "main.swift")::LogConfiguration() --     /TEST_DIR
+#       CHECK:  SwiftASTContextForExpressions(module: "a", cu: "main.swift")::LogConfiguration() --     -F
+#       CHECK-NEXT:  SwiftASTContextForExpressions(module: "a", cu: "main.swift")::LogConfiguration() --     /FRAMEWORK_DIR
 #       CHECK:  SwiftASTContextForExpressions(module: "a", cu: "main.swift")::LogConfiguration() --     -DADDED=1
 #       CHECK:  SwiftASTContextForExpressions(module: "a", cu: "main.swift") Module import remark: loaded module 'ClangA'
 #       CHECK-NOT: -cc1
