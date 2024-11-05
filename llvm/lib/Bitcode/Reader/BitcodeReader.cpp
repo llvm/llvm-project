@@ -2659,7 +2659,8 @@ Error BitcodeReader::parseTypeTableBody() {
       }
       if (EltTys.size() != Record.size()-1)
         return error("Invalid named struct record");
-      Res->setBody(EltTys, Record[0]);
+      if (auto E = Res->setBodyOrError(EltTys, Record[0]))
+        return E;
       ContainedIDs.append(Record.begin() + 1, Record.end());
       ResultTy = Res;
       break;
