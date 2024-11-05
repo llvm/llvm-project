@@ -478,8 +478,10 @@ SDValue TargetLowering::expandIndirectJTBranch(const SDLoc &dl, SDValue Value,
                                                SDValue Addr, int JTI,
                                                SelectionDAG &DAG) const {
   SDValue Chain = Value;
-  // Jump table debug info is only needed if CodeView is enabled.
-  if (DAG.getTarget().getTargetTriple().isOSBinFormatCOFF()) {
+  const auto &Triple = DAG.getTarget().getTargetTriple();
+  // Jump table debug info is only needed if CodeView is enabled,
+  // or when adding jump table annotations to ELF objects.
+  if (Triple.isOSBinFormatCOFF() || Triple.isOSBinFormatELF()) {
     Chain = DAG.getJumpTableDebugInfo(JTI, Chain, dl);
   }
   return DAG.getNode(ISD::BRIND, dl, MVT::Other, Chain, Addr);

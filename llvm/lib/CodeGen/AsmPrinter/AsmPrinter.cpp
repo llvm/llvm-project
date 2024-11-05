@@ -165,6 +165,10 @@ static cl::opt<bool> EmitJumpTableSizesSection(
     cl::desc("Emit a section containing jump table addresses and sizes"),
     cl::Hidden, cl::init(false));
 
+static cl::opt<bool> AnnotateJumpTables("annotate-jump-tables",
+                                        cl::desc("Annotate jump tables"),
+                                        cl::Hidden, cl::init(false));
+
 STATISTIC(EmittedInsts, "Number of machine instrs printed");
 
 char AsmPrinter::ID = 0;
@@ -1550,6 +1554,25 @@ void AsmPrinter::emitPseudoProbe(const MachineInstr &MI) {
   }
 }
 
+void AsmPrinter::emitJumpTableAnnotation(const MachineFunction &MF,
+                                         const MachineInstr &MI) {
+  if (!AnnotateJumpTables || !TM.getTargetTriple().isOSBinFormatELF())
+    return;
+
+  MCSymbol *JTISymbol = GetJTISymbol(MI.getOperand(0).getImm());
+  MCSymbol *ProvenanceLabel = OutContext.createTempSymbol("jtp");
+
+  const MCExpr *OffsetExpr =
+      MCSymbolRefExpr::create(ProvenanceLabel, OutContext);
+  const MCExpr *JTISymbolExpr =
+      MCSymbolRefExpr::create(JTISymbol, OutContext);
+
+  OutStreamer->emitRelocDirective(*OffsetExpr, "BFD_RELOC_NONE",
+                                  JTISymbolExpr, SMLoc(),
+                                  *OutContext.getSubtargetInfo());
+  OutStreamer->emitLabel(ProvenanceLabel);
+}
+
 void AsmPrinter::emitStackSizeSection(const MachineFunction &MF) {
   if (!MF.getTarget().Options.EmitStackSizeSection)
     return;
@@ -1877,8 +1900,7 @@ void AsmPrinter::emitFunctionBody() {
         OutStreamer->emitRawComment("MEMBARRIER");
         break;
       case TargetOpcode::JUMP_TABLE_DEBUG_INFO:
-        // This instruction is only used to note jump table debug info, it's
-        // purely meta information.
+        emitJumpTableAnnotation(*MF, MI);
         break;
       case TargetOpcode::INIT_UNDEF:
         // This is only used to influence register allocation behavior, no
@@ -2846,6 +2868,25 @@ void AsmPrinter::emitJumpTableInfo() {
     // label differences will be evaluated at write time.
     for (const MachineBasicBlock *MBB : JTBBs)
       emitJumpTableEntry(MJTI, MBB, JTI);
+
+    if (AnnotateJumpTables && TM.getTargetTriple().isOSBinFormatELF()) {
+      // Create a temp symbol for the end of the jump table.
+      MCSymbol *JTIEndSymbol = createTempSymbol("jt_end");
+      OutStreamer->emitLabel(JTIEndSymbol);
+
+      const MCExpr *JTISymbolExpr =
+          MCSymbolRefExpr::create(JTISymbol, OutContext);
+
+      MCSymbol *JTISymbolForSize = OutContext.getOrCreateSymbol(
+          "$JTI" + Twine(MF->getFunctionNumber()) + "_" + Twine(JTI));
+      OutStreamer->emitAssignment(JTISymbolForSize, JTISymbolExpr);
+      OutStreamer->emitSymbolAttribute(JTISymbolForSize, MCSA_ELF_TypeObject);
+
+      const MCExpr *SizeExp = MCBinaryExpr::createSub(
+          MCSymbolRefExpr::create(JTIEndSymbol, OutContext), JTISymbolExpr,
+          OutContext);
+      OutStreamer->emitELFSize(JTISymbolForSize, SizeExp);
+    }
   }
 
   if (EmitJumpTableSizesSection)
