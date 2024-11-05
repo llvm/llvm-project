@@ -67,12 +67,8 @@ XRayArgs::XRayArgs(const ToolChain &TC, const ArgList &Args) {
                    false)) {
     XRayShared = true;
 
-    // Certain targets support DSO instrumentation
-    switch (Triple.getArch()) {
-    case llvm::Triple::aarch64:
-    case llvm::Triple::x86_64:
-      break;
-    default:
+    // DSO instrumentation is currently limited to x86_64
+    if (Triple.getArch() != llvm::Triple::x86_64) {
       D.Diag(diag::err_drv_unsupported_opt_for_target)
           << "-fxray-shared" << Triple.str();
     }
