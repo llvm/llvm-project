@@ -23,31 +23,20 @@ define amdgpu_ps void @v_add_u64(i64 %a, ptr addrspace(1) %out) {
 }
 
 define amdgpu_ps i64 @s_add_neg_u64(i64 inreg %a) {
-; GCN-SDAG-LABEL: s_add_neg_u64:
-; GCN-SDAG:       ; %bb.0:
-; GCN-SDAG-NEXT:    s_add_nc_u64 s[0:1], s[0:1], 0xfffffff0edcba988
-; GCN-SDAG-NEXT:    ; return to shader part epilog
-;
-; GCN-GISEL-LABEL: s_add_neg_u64:
-; GCN-GISEL:       ; %bb.0:
-; GCN-GISEL-NEXT:    s_sub_nc_u64 s[0:1], s[0:1], 0xf12345678
-; GCN-GISEL-NEXT:    ; return to shader part epilog
+; GCN-LABEL: s_add_neg_u64:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_add_nc_u64 s[0:1], s[0:1], 0xfffffff0edcba988
+; GCN-NEXT:    ; return to shader part epilog
   %result = sub i64 %a, 64729929336
   ret i64 %result
 }
 
 define amdgpu_ps void @v_add_neg_u64(i64 %a, ptr addrspace(1) %out) {
-; GCN-SDAG-LABEL: v_add_neg_u64:
-; GCN-SDAG:       ; %bb.0:
-; GCN-SDAG-NEXT:    v_add_nc_u64_e32 v[0:1], 0xfffffff0edcba988, v[0:1]
-; GCN-SDAG-NEXT:    global_store_b64 v[2:3], v[0:1], off
-; GCN-SDAG-NEXT:    s_endpgm
-;
-; GCN-GISEL-LABEL: v_add_neg_u64:
-; GCN-GISEL:       ; %bb.0:
-; GCN-GISEL-NEXT:    v_sub_nc_u64_e32 v[0:1], 0xf12345678, v[0:1]
-; GCN-GISEL-NEXT:    global_store_b64 v[2:3], v[0:1], off
-; GCN-GISEL-NEXT:    s_endpgm
+; GCN-LABEL: v_add_neg_u64:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    v_add_nc_u64_e32 v[0:1], 0xfffffff0edcba988, v[0:1]
+; GCN-NEXT:    global_store_b64 v[2:3], v[0:1], off
+; GCN-NEXT:    s_endpgm
   %result = sub i64 %a, 64729929336
   store i64 %result, ptr addrspace(1) %out, align 8
   ret void
