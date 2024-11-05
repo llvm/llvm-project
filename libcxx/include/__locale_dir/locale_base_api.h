@@ -221,6 +221,7 @@ __strftime(char* __s, size_t __max, const char* __format, const tm* __tm, __loca
 inline _LIBCPP_HIDE_FROM_ABI decltype(__libcpp_mb_cur_max_l(__locale_t())) __mb_len_max(__locale_t __loc) {
   return __libcpp_mb_cur_max_l(__loc);
 }
+#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
 inline _LIBCPP_HIDE_FROM_ABI wint_t __btowc(int __ch, __locale_t __loc) { return __libcpp_btowc_l(__ch, __loc); }
 inline _LIBCPP_HIDE_FROM_ABI int __wctob(wint_t __ch, __locale_t __loc) { return __libcpp_wctob_l(__ch, __loc); }
 inline _LIBCPP_HIDE_FROM_ABI size_t
@@ -248,6 +249,7 @@ inline _LIBCPP_HIDE_FROM_ABI size_t
 __mbsrtowcs(wchar_t* __dest, const char** __src, size_t __len, mbstate_t* __ps, __locale_t __loc) {
   return __libcpp_mbsrtowcs_l(__dest, __src, __len, __ps, __loc);
 }
+#endif
 
 _LIBCPP_DIAGNOSTIC_PUSH
 _LIBCPP_CLANG_DIAGNOSTIC_IGNORED("-Wgcc-compat")
