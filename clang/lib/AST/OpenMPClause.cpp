@@ -2255,8 +2255,9 @@ void OMPClausePrinter::VisitOMPAllocateClause(OMPAllocateClause *Node) {
       OS << "(";
       Allocator->printPretty(OS, nullptr, Policy, 0);
       OS << ")";
-    } else
+    } else {
       Allocator->printPretty(OS, nullptr, Policy, 0);
+    }
     OS << ":";
     VisitOMPClauseList(Node, ' ');
   } else {

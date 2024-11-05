@@ -4539,8 +4539,6 @@ bool Parser::ParseOpenMPVarList(OpenMPDirectiveKind DKind,
   bool NeedRParenForLinear = false;
   BalancedDelimiterTracker LinearT(*this, tok::l_paren,
                                    tok::annot_pragma_openmp_end);
-  BalancedDelimiterTracker AllocateT(*this, tok::l_paren,
-                                     tok::annot_pragma_openmp_end);
   // Handle reduction-identifier for reduction clause.
   if (Kind == OMPC_reduction || Kind == OMPC_task_reduction ||
       Kind == OMPC_in_reduction) {
@@ -4807,6 +4805,8 @@ bool Parser::ParseOpenMPVarList(OpenMPDirectiveKind DKind,
       if (Modifier == OMPC_ALLOCATE_allocator) {
         Data.AllocClauseModifier = Modifier;
         ConsumeToken();
+        BalancedDelimiterTracker AllocateT(*this, tok::l_paren,
+                                           tok::annot_pragma_openmp_end);
         if (Tok.is(tok::l_paren)) {
           AllocateT.consumeOpen();
           Tail = ParseAssignmentExpression();
