@@ -3926,6 +3926,7 @@ cc_library(
         ":AffineOpsIncGen",
         ":ArithDialect",
         ":ControlFlowInterfaces",
+        ":DialectUtils",
         ":IR",
         ":InliningUtils",
         ":LoopLikeInterface",
