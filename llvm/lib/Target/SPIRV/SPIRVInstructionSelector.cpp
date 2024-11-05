@@ -2929,14 +2929,16 @@ bool SPIRVInstructionSelector::selectFirstBitHigh64(Register ResVReg,
   unsigned selectOp;
   unsigned addOp;
   if (isScalarRes) {
-    NegOneReg = GR.getOrCreateConstInt(-1, I, ResType, TII, ZeroAsNull);
+    NegOneReg =
+        GR.getOrCreateConstInt((unsigned)-1, I, ResType, TII, ZeroAsNull);
     Reg0 = GR.getOrCreateConstInt(0, I, ResType, TII, ZeroAsNull);
     Reg32 = GR.getOrCreateConstInt(32, I, ResType, TII, ZeroAsNull);
     selectOp = SPIRV::OpSelectSISCond;
     addOp = SPIRV::OpIAddS;
   } else {
     BoolType = GR.getOrCreateSPIRVVectorType(BoolType, count, MIRBuilder);
-    NegOneReg = GR.getOrCreateConstVector(-1, I, ResType, TII, ZeroAsNull);
+    NegOneReg =
+        GR.getOrCreateConstVector((unsigned)-1, I, ResType, TII, ZeroAsNull);
     Reg0 = GR.getOrCreateConstVector(0, I, ResType, TII, ZeroAsNull);
     Reg32 = GR.getOrCreateConstVector(32, I, ResType, TII, ZeroAsNull);
     selectOp = SPIRV::OpSelectVIVCond;
