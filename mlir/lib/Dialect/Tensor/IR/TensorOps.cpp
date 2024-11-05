@@ -4699,13 +4699,11 @@ OpFoldResult UnPackOp::fold(FoldAdaptor adaptor) {
 // Common Canonicalizers and Folders.
 //===----------------------------------------------------------------------===//
 bool foldTensorCastPrecondition(DestinationStyleOpInterface op) {
-  // InsertSliceOp has its own logic about folding tensor.cast ops.
-  if (isa<InsertSliceOp>(op.getOperation()))
-    return false;
-
-  // Exclude DPS ops that are also LoopLike from this interface as they
+  // 1. InsertSliceOp has its own logic about folding tensor.cast ops.
+  // 2. Exclude DPS ops that are also LoopLike from this interface as they
   // might need special handling of attached regions.
-  if (isa<LoopLikeOpInterface>(op.getOperation()))
+  if (isa<InsertSliceOp>(op.getOperation()) ||
+      isa<LoopLikeOpInterface>(op.getOperation()))
     return false;
 
   // If no operand comes from a tensor::CastOp and can be folded then fail.
@@ -4780,7 +4778,7 @@ struct FoldTensorCastPackOp : public OpRewritePattern<PackOp> {
         // Already a constant
         newMixedTileSizes.push_back(std::get<1>(it));
       } else {
-        auto tileSize = getConstantIntValue(std::get<1>(it));
+        int64_t tileSize = getConstantIntValue(std::get<1>(it)).value();
         assert(tileSize == shape && "tile size and dim size don't match!");
         newMixedTileSizes.push_back(
             (rewriter.getIntegerAttr(rewriter.getIndexType(), shape)));
@@ -4792,16 +4790,15 @@ struct FoldTensorCastPackOp : public OpRewritePattern<PackOp> {
         op.getLoc(), newOperands[0], newOperands[1], op.getInnerDimsPos(),
         newMixedTileSizes, op.getPaddingValue(), op.getOuterDimsPerm());
 
-    SmallVector<Value, 4> replacements;
-    replacements.reserve(newOp->getNumResults());
-    for (auto [oldResult, newResult] :
-         llvm::zip(op->getResults(), newOp->getResults())) {
-      newResult.getType() != oldResult.getType()
-          ? replacements.push_back(rewriter.create<tensor::CastOp>(
-                op->getLoc(), oldResult.getType(), newResult))
-          : replacements.push_back(newResult);
-    }
-    rewriter.replaceOp(op, replacements);
+    // Replace op.
+    Value oldResult = op.getResult();
+    Value newResult = newOp.getResult();
+    Value replacement = (newResult.getType() != oldResult.getType())
+                            ? rewriter.create<tensor::CastOp>(
+                                  op->getLoc(), oldResult.getType(), newResult)
+                            : newResult;
+
+    rewriter.replaceOp(op, {replacement});
 
     return success();
   }
@@ -4831,6 +4828,7 @@ struct FoldTensorCastProducerOp
   LogicalResult matchAndRewrite(DestinationStyleOpInterface op,
                                 PatternRewriter &rewriter) const override {
 
+    // Reject tensor::PackOp - there's dedicated pattern for that instead.
     if (!foldTensorCastPrecondition(op) || dyn_cast<tensor::PackOp>(*op))
       return failure();
 
