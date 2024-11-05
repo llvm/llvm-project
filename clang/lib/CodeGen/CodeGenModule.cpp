@@ -5233,11 +5233,18 @@ llvm::Constant *CodeGenModule::GetAddrOfGlobalVar(const VarDecl *D,
                                                   llvm::Type *Ty,
                                            ForDefinition_t IsForDefinition) {
   assert(D->hasGlobalStorage() && "Not a global variable");
+
+  StringRef MangledName = getMangledName(D);
+  llvm::GlobalValue *Entry = GetGlobalValue(MangledName);
   QualType ASTTy = D->getType();
+  LangAS AddrSpace = ASTTy.getAddressSpace();
+
+  if (Entry && !Ty && Entry->getAddressSpace() == getContext().getTargetAddressSpace(AddrSpace))
+    return Entry;
+
   if (!Ty)
     Ty = getTypes().ConvertTypeForMem(ASTTy);
 
-  StringRef MangledName = getMangledName(D);
   return GetOrCreateLLVMGlobal(MangledName, Ty, ASTTy.getAddressSpace(), D,
                                IsForDefinition);
 }
