@@ -137,6 +137,7 @@ static Value staticallyExtractSubvector(OpBuilder &rewriter, Location loc,
   auto vectorType = cast<VectorType>(source.getType());
   assert((vectorType.getRank() == 1 && extractType.getRank() == 1) &&
          "expected 1-D source and destination types");
+  (void)vectorType;
   auto offsets = rewriter.getI64ArrayAttr({frontOffset});
   auto sizes = rewriter.getI64ArrayAttr({subvecSize});
   auto strides = rewriter.getI64ArrayAttr({1});
@@ -155,6 +156,8 @@ static Value staticallyInsertSubvector(OpBuilder &rewriter, Location loc,
   auto destType = cast<VectorType>(dest.getType());
   assert(srcType.getRank() == 1 && destType.getRank() == 1 &&
          "expected source and dest to be vector type");
+  (void)srcType;
+  (void)destType;
   auto offsets = rewriter.getI64ArrayAttr({offset});
   auto strides = rewriter.getI64ArrayAttr({1});
   return rewriter.create<vector::InsertStridedSliceOp>(loc, dest.getType(), src,
@@ -199,7 +202,7 @@ emulatedVectorLoad(OpBuilder &rewriter, Location loc, Value base,
   return rewriter.create<vector::BitCastOp>(
       loc, VectorType::get(numEmultedElementsToLoad * scale, origElemType),
       newLoad);
-};
+}
 
 namespace {
 
