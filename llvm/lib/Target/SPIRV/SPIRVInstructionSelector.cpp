@@ -1653,7 +1653,7 @@ bool SPIRVInstructionSelector::selectIntegerDot(Register ResVReg,
   // Multiply the vectors, then sum the results
   Register Vec0 = I.getOperand(2).getReg();
   Register Vec1 = I.getOperand(3).getReg();
-  Register TmpVec = MRI->createVirtualRegister(&SPIRV::IDRegClass);
+  Register TmpVec = MRI->createVirtualRegister(GR.getRegClass(ResType));
   SPIRVType *VecType = GR.getSPIRVTypeForVReg(Vec0);
 
   bool Result = BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpIMulV))
@@ -1667,8 +1667,8 @@ bool SPIRVInstructionSelector::selectIntegerDot(Register ResVReg,
          GR.getScalarOrVectorComponentCount(VecType) > 1 &&
          "dot product requires a vector of at least 2 components");
 
-  Register Res = MRI->createVirtualRegister(&SPIRV::IDRegClass);
-  Result |= BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpCompositeExtract))
+  Register Res = MRI->createVirtualRegister(GR.getRegClass(ResType));
+  Result &= BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpCompositeExtract))
                 .addDef(Res)
                 .addUse(GR.getSPIRVTypeID(ResType))
                 .addUse(TmpVec)
@@ -1676,9 +1676,9 @@ bool SPIRVInstructionSelector::selectIntegerDot(Register ResVReg,
                 .constrainAllUses(TII, TRI, RBI);
 
   for (unsigned i = 1; i < GR.getScalarOrVectorComponentCount(VecType); i++) {
-    Register Elt = MRI->createVirtualRegister(&SPIRV::IDRegClass);
+    Register Elt = MRI->createVirtualRegister(GR.getRegClass(ResType));
 
-    Result |=
+    Result &=
         BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpCompositeExtract))
             .addDef(Elt)
             .addUse(GR.getSPIRVTypeID(ResType))
@@ -1687,10 +1687,10 @@ bool SPIRVInstructionSelector::selectIntegerDot(Register ResVReg,
             .constrainAllUses(TII, TRI, RBI);
 
     Register Sum = i < GR.getScalarOrVectorComponentCount(VecType) - 1
-                       ? MRI->createVirtualRegister(&SPIRV::IDRegClass)
+                       ? MRI->createVirtualRegister(GR.getRegClass(ResType))
                        : ResVReg;
 
-    Result |= BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpIAddS))
+    Result &= BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpIAddS))
                   .addDef(Sum)
                   .addUse(GR.getSPIRVTypeID(ResType))
                   .addUse(Res)
@@ -1713,7 +1713,7 @@ bool SPIRVInstructionSelector::selectDot4AddPacked(Register ResVReg,
   MachineBasicBlock &BB = *I.getParent();
 
   auto DotOp = Signed ? SPIRV::OpSDot : SPIRV::OpUDot;
-  Register Dot = MRI->createVirtualRegister(&SPIRV::IDRegClass);
+  Register Dot = MRI->createVirtualRegister(GR.getRegClass(ResType));
   bool Result = BuildMI(BB, I, I.getDebugLoc(), TII.get(DotOp))
                     .addDef(Dot)
                     .addUse(GR.getSPIRVTypeID(ResType))
@@ -1721,7 +1721,7 @@ bool SPIRVInstructionSelector::selectDot4AddPacked(Register ResVReg,
                     .addUse(I.getOperand(3).getReg())
                     .constrainAllUses(TII, TRI, RBI);
 
-  Result |= BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpIAddS))
+  Result &= BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpIAddS))
                 .addDef(ResVReg)
                 .addUse(GR.getSPIRVTypeID(ResType))
                 .addUse(Dot)
