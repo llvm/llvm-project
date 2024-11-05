@@ -27,22 +27,8 @@ define void @merge_load_store(ptr noalias nocapture noundef readonly align 1 der
 ;
 ; LA64-LABEL: merge_load_store:
 ; LA64:       # %bb.0: # %start
-; LA64-NEXT:    ld.b $a2, $a0, 0
-; LA64-NEXT:    ld.b $a3, $a0, 1
-; LA64-NEXT:    ld.b $a4, $a0, 2
-; LA64-NEXT:    ld.b $a5, $a0, 3
-; LA64-NEXT:    st.b $a2, $a1, 0
-; LA64-NEXT:    st.b $a3, $a1, 1
-; LA64-NEXT:    st.b $a4, $a1, 2
-; LA64-NEXT:    st.b $a5, $a1, 3
-; LA64-NEXT:    ld.b $a2, $a0, 4
-; LA64-NEXT:    ld.b $a3, $a0, 5
-; LA64-NEXT:    ld.b $a4, $a0, 6
-; LA64-NEXT:    ld.b $a0, $a0, 7
-; LA64-NEXT:    st.b $a2, $a1, 4
-; LA64-NEXT:    st.b $a3, $a1, 5
-; LA64-NEXT:    st.b $a4, $a1, 6
-; LA64-NEXT:    st.b $a0, $a1, 7
+; LA64-NEXT:    ld.d $a0, $a0, 0
+; LA64-NEXT:    st.d $a0, $a1, 0
 ; LA64-NEXT:    ret
 start:
   %_3 = load i8, ptr %src, align 1
