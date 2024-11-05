@@ -2227,6 +2227,28 @@ LLVM_DUMP_METHOD void SourceManager::dump() const {
   }
 }
 
+static std::string NumberToHumanString(uint64_t number) {
+  static constexpr std::array<std::pair<uint64_t, char>, 4> Units = {
+      {{1'000'000'000'000UL, 'T'},
+       {1'000'000'000UL, 'G'},
+       {1'000'000UL, 'M'},
+       {1'000UL, 'k'}}};
+
+  std::string human_string;
+  llvm::raw_string_ostream human_string_stream(human_string);
+  for (const auto &[UnitSize, UnitSign] : Units) {
+    if (number >= UnitSize) {
+      human_string_stream << llvm::format(
+          "%.2f%c", number / static_cast<double>(UnitSize), UnitSign);
+      break;
+    }
+  }
+  if (human_string.empty()) {
+    human_string_stream << number;
+  }
+  return human_string;
+}
+
 void SourceManager::noteSLocAddressSpaceUsage(
     DiagnosticsEngine &Diag, std::optional<unsigned> MaxNotes) const {
   struct Info {
@@ -2296,7 +2318,9 @@ void SourceManager::noteSLocAddressSpaceUsage(
   int UsagePercent = static_cast<int>(100.0 * double(LocalUsage + LoadedUsage) /
                                       MaxLoadedOffset);
   Diag.Report(SourceLocation(), diag::note_total_sloc_usage)
-    << LocalUsage << LoadedUsage << (LocalUsage + LoadedUsage) << UsagePercent;
+      << LocalUsage << NumberToHumanString(LocalUsage) << LoadedUsage
+      << NumberToHumanString(LoadedUsage) << (LocalUsage + LoadedUsage)
+      << NumberToHumanString(LocalUsage + LoadedUsage) << UsagePercent;
 
   // Produce notes on sloc address space usage for each file with a high usage.
   uint64_t ReportedSize = 0;
@@ -2304,14 +2328,17 @@ void SourceManager::noteSLocAddressSpaceUsage(
        llvm::make_range(SortedUsage.begin(), SortedEnd)) {
     Diag.Report(FileInfo.Loc, diag::note_file_sloc_usage)
         << FileInfo.Inclusions << FileInfo.DirectSize
-        << (FileInfo.TotalSize - FileInfo.DirectSize);
+        << NumberToHumanString(FileInfo.DirectSize)
+        << (FileInfo.TotalSize - FileInfo.DirectSize)
+        << NumberToHumanString(FileInfo.TotalSize - FileInfo.DirectSize);
     ReportedSize += FileInfo.TotalSize;
   }
 
   // Describe any remaining usage not reported in the per-file usage.
   if (ReportedSize != CountedSize) {
     Diag.Report(SourceLocation(), diag::note_file_misc_sloc_usage)
-        << (SortedUsage.end() - SortedEnd) << CountedSize - ReportedSize;
+        << (SortedUsage.end() - SortedEnd) << CountedSize - ReportedSize
+        << NumberToHumanString(CountedSize - ReportedSize);
   }
 }
 
