@@ -348,7 +348,7 @@ define amdgpu_kernel void @expand_requires_expand(i32 %cond0) #0 {
 ; GCN-NEXT:    s_and_b32 vcc_lo, exec_lo, s0
 ; GCN-NEXT:    s_cbranch_vccnz .LBB7_2
 ; GCN-NEXT:  ; %bb.1: ; %bb1
-; GCN-NEXT:    s_load_b32 s0, s[0:1], 0x0
+; GCN-NEXT:    s_load_b32 s0, s[0:1], 0x0 scope:SCOPE_SYS
 ; GCN-NEXT:    s_wait_kmcnt 0x0
 ; GCN-NEXT:    s_cmp_lg_u32 s0, 3
 ; GCN-NEXT:    s_cselect_b32 s0, -1, 0
@@ -594,7 +594,6 @@ define amdgpu_kernel void @long_branch_hang(ptr addrspace(1) nocapture %arg, i32
 ; GCN-NEXT:    s_load_b64 s[2:3], s[2:3], 0x24
 ; GCN-NEXT:    v_mov_b32_e32 v1, 0
 ; GCN-NEXT:    s_wait_kmcnt 0x0
-; GCN-NEXT:    s_wait_alu 0xfffe
 ; GCN-NEXT:    s_lshl_b64 s[0:1], s[0:1], 2
 ; GCN-NEXT:    s_wait_alu 0xfffe
 ; GCN-NEXT:    s_add_nc_u64 s[0:1], s[2:3], s[0:1]

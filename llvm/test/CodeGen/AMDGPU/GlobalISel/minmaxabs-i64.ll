@@ -136,6 +136,7 @@ define amdgpu_ps i64 @test_umin_i64_s(i64 inreg %a, i64 inreg %b) {
 ; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; CHECK-NEXT:    v_readfirstlane_b32 s0, v0
 ; CHECK-NEXT:    v_readfirstlane_b32 s1, v1
+; CHECK-NEXT:    s_wait_alu 0xf1ff
 ; CHECK-NEXT:    ; return to shader part epilog
   %r = call i64 @llvm.umin.i64(i64 %a, i64 %b)
   ret i64 %r
@@ -148,6 +149,7 @@ define amdgpu_ps i64 @test_umax_i64_s(i64 inreg %a, i64 inreg %b) {
 ; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; CHECK-NEXT:    v_readfirstlane_b32 s0, v0
 ; CHECK-NEXT:    v_readfirstlane_b32 s1, v1
+; CHECK-NEXT:    s_wait_alu 0xf1ff
 ; CHECK-NEXT:    ; return to shader part epilog
   %r = call i64 @llvm.umax.i64(i64 %a, i64 %b)
   ret i64 %r
@@ -160,6 +162,7 @@ define amdgpu_ps i64 @test_smin_i64_s(i64 inreg %a, i64 inreg %b) {
 ; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; CHECK-NEXT:    v_readfirstlane_b32 s0, v0
 ; CHECK-NEXT:    v_readfirstlane_b32 s1, v1
+; CHECK-NEXT:    s_wait_alu 0xf1ff
 ; CHECK-NEXT:    ; return to shader part epilog
   %r = call i64 @llvm.smin.i64(i64 %a, i64 %b)
   ret i64 %r
@@ -172,6 +175,7 @@ define amdgpu_ps i64 @test_smax_i64_s(i64 inreg %a, i64 inreg %b) {
 ; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; CHECK-NEXT:    v_readfirstlane_b32 s0, v0
 ; CHECK-NEXT:    v_readfirstlane_b32 s1, v1
+; CHECK-NEXT:    s_wait_alu 0xf1ff
 ; CHECK-NEXT:    ; return to shader part epilog
   %r = call i64 @llvm.smax.i64(i64 %a, i64 %b)
   ret i64 %r

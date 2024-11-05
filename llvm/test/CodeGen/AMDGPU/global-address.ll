@@ -29,7 +29,6 @@ define amdgpu_kernel void @caller_internal() {
 ; GFX1210-PAL:       ; %bb.0:
 ; GFX1210-PAL-NEXT:    s_mov_b64 s[0:1], internal_func@abs64
 ; GFX1210-PAL-NEXT:    s_mov_b32 s32, 0
-; GFX1210-PAL-NEXT:    s_wait_alu 0xfffe
 ; GFX1210-PAL-NEXT:    s_swap_pc_i64 s[30:31], s[0:1]
 ; GFX1210-PAL-NEXT:    s_endpgm
 ;
@@ -47,12 +46,10 @@ define amdgpu_kernel void @caller_internal() {
 ; GFX1210-HSA-LABEL: caller_internal:
 ; GFX1210-HSA:       ; %bb.0:
 ; GFX1210-HSA-NEXT:    s_get_pc_i64 s[0:1]
-; GFX1210-HSA-NEXT:    s_wait_alu 0xfffe
-; GFX1210-HSA-NEXT:    s_add_nc_u64 s[0:1], s[0:1], internal_func@GOTPCREL+8
+; GFX1210-HSA-NEXT:    s_add_nc_u64 s[0:1], s[0:1], internal_func@GOTPCREL+4
 ; GFX1210-HSA-NEXT:    s_mov_b32 s32, 0
 ; GFX1210-HSA-NEXT:    s_load_b64 s[0:1], s[0:1], 0x0
 ; GFX1210-HSA-NEXT:    s_wait_kmcnt 0x0
-; GFX1210-HSA-NEXT:    s_wait_alu 0xfffe
 ; GFX1210-HSA-NEXT:    s_swap_pc_i64 s[30:31], s[0:1]
 ; GFX1210-HSA-NEXT:    s_endpgm
   call amdgpu_gfx void @internal_func()
@@ -98,7 +95,6 @@ define amdgpu_kernel void @caller_exterinal() {
 ; GFX1210-PAL-NEXT:    s_mov_b64 s[4:5], s[0:1]
 ; GFX1210-PAL-NEXT:    s_mov_b64 s[8:9], s[2:3]
 ; GFX1210-PAL-NEXT:    s_mov_b32 s32, 0
-; GFX1210-PAL-NEXT:    s_wait_alu 0xfffe
 ; GFX1210-PAL-NEXT:    s_swap_pc_i64 s[30:31], s[6:7]
 ; GFX1210-PAL-NEXT:    s_endpgm
 ;
@@ -127,9 +123,8 @@ define amdgpu_kernel void @caller_exterinal() {
 ; GFX1210-HSA-NEXT:    s_mov_b64 s[8:9], s[2:3]
 ; GFX1210-HSA-NEXT:    s_mov_b32 s32, 0
 ; GFX1210-HSA-NEXT:    s_get_pc_i64 s[6:7]
-; GFX1210-HSA-NEXT:    s_wait_alu 0xfffe
-; GFX1210-HSA-NEXT:    s_add_nc_u64 s[6:7], s[6:7], external_func@rel64+8
-; GFX1210-HSA-NEXT:    s_wait_alu 0xfffe
+; GFX1210-HSA-NEXT:    s_add_nc_u64 s[6:7], s[6:7], external_func@rel64+4
+; GFX1210-HSA-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1210-HSA-NEXT:    s_swap_pc_i64 s[30:31], s[6:7]
 ; GFX1210-HSA-NEXT:    s_endpgm
   call void @external_func()

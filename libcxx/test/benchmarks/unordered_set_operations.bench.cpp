@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// UNSUPPORTED: c++03, c++11, c++14, c++17, c++20
+
 #include <cstdint>
 #include <cstdlib>
 #include <cstring>
@@ -23,77 +25,9 @@ using namespace ContainerBenchmarks;
 
 constexpr std::size_t TestNumInputs = 1024;
 
-template <class _Size>
-inline TEST_ALWAYS_INLINE _Size loadword(const void* __p) {
-  _Size __r;
-  std::memcpy(&__r, __p, sizeof(__r));
-  return __r;
-}
-
-inline TEST_ALWAYS_INLINE std::size_t rotate_by_at_least_1(std::size_t __val, int __shift) {
-  return (__val >> __shift) | (__val << (64 - __shift));
-}
-
-inline TEST_ALWAYS_INLINE std::size_t hash_len_16(std::size_t __u, std::size_t __v) {
-  const std::size_t __mul = 0x9ddfea08eb382d69ULL;
-  std::size_t __a         = (__u ^ __v) * __mul;
-  __a ^= (__a >> 47);
-  std::size_t __b = (__v ^ __a) * __mul;
-  __b ^= (__b >> 47);
-  __b *= __mul;
-  return __b;
-}
-
-template <std::size_t _Len>
-inline TEST_ALWAYS_INLINE std::size_t hash_len_0_to_8(const char* __s) {
-  static_assert(_Len == 4 || _Len == 8, "");
-  const uint64_t __a = loadword<uint32_t>(__s);
-  const uint64_t __b = loadword<uint32_t>(__s + _Len - 4);
-  return hash_len_16(_Len + (__a << 3), __b);
-}
-
-struct UInt32Hash {
-  UInt32Hash() = default;
-  inline TEST_ALWAYS_INLINE std::size_t operator()(uint32_t data) const {
-    return hash_len_0_to_8<4>(reinterpret_cast<const char*>(&data));
-  }
-};
-
-struct UInt64Hash {
-  UInt64Hash() = default;
-  inline TEST_ALWAYS_INLINE std::size_t operator()(uint64_t data) const {
-    return hash_len_0_to_8<8>(reinterpret_cast<const char*>(&data));
-  }
-};
-
-struct UInt128Hash {
-  UInt128Hash() = default;
-  inline TEST_ALWAYS_INLINE std::size_t operator()(__uint128_t data) const {
-    const __uint128_t __mask = static_cast<std::size_t>(-1);
-    const std::size_t __a    = (std::size_t)(data & __mask);
-    const std::size_t __b    = (std::size_t)((data & (__mask << 64)) >> 64);
-    return hash_len_16(__a, rotate_by_at_least_1(__b + 16, 16)) ^ __b;
-  }
-};
-
-struct UInt32Hash2 {
-  UInt32Hash2() = default;
-  inline TEST_ALWAYS_INLINE std::size_t operator()(uint32_t data) const {
-    const uint32_t __m = 0x5bd1e995;
-    const uint32_t __r = 24;
-    uint32_t __h       = 4;
-    uint32_t __k       = data;
-    __k *= __m;
-    __k ^= __k >> __r;
-    __k *= __m;
-    __h *= __m;
-    __h ^= __k;
-    __h ^= __h >> 13;
-    __h *= __m;
-    __h ^= __h >> 15;
-    return __h;
-  }
-};
+// The purpose of this hash function is to NOT be implemented as the identity function,
+// which is how std::hash is implemented for smaller integral types.
+struct NonIdentityScalarHash : std::hash<unsigned long long> {};
 
 // The sole purpose of this comparator is to be used in BM_Rehash, where
 // we need something slow enough to be easily noticable in benchmark results.
@@ -138,7 +72,7 @@ BENCHMARK_CAPTURE(BM_InsertValue,
 
 BENCHMARK_CAPTURE(BM_InsertValueRehash,
                   unordered_set_top_bits_uint32,
-                  std::unordered_set<uint32_t, UInt32Hash>{},
+                  std::unordered_set<uint32_t, NonIdentityScalarHash>{},
                   getSortedTopBitsIntegerInputs<uint32_t>)
     ->Arg(TestNumInputs);
 
@@ -171,7 +105,7 @@ BENCHMARK_CAPTURE(
 
 BENCHMARK_CAPTURE(BM_FindRehash,
                   unordered_set_random_uint64,
-                  std::unordered_set<uint64_t, UInt64Hash>{},
+                  std::unordered_set<uint64_t, NonIdentityScalarHash>{},
                   getRandomIntegerInputs<uint64_t>)
     ->Arg(TestNumInputs);
 
@@ -182,22 +116,24 @@ BENCHMARK_CAPTURE(
 
 BENCHMARK_CAPTURE(BM_FindRehash,
                   unordered_set_sorted_uint64,
-                  std::unordered_set<uint64_t, UInt64Hash>{},
+                  std::unordered_set<uint64_t, NonIdentityScalarHash>{},
                   getSortedIntegerInputs<uint64_t>)
     ->Arg(TestNumInputs);
 
 // Sorted //
+#ifndef TEST_HAS_NO_INT128
 BENCHMARK_CAPTURE(BM_Find,
                   unordered_set_sorted_uint128,
-                  std::unordered_set<__uint128_t, UInt128Hash>{},
+                  std::unordered_set<__uint128_t>{},
                   getSortedTopBitsIntegerInputs<__uint128_t>)
     ->Arg(TestNumInputs);
 
 BENCHMARK_CAPTURE(BM_FindRehash,
                   unordered_set_sorted_uint128,
-                  std::unordered_set<__uint128_t, UInt128Hash>{},
+                  std::unordered_set<__uint128_t>{},
                   getSortedTopBitsIntegerInputs<__uint128_t>)
     ->Arg(TestNumInputs);
+#endif
 
 // Sorted //
 BENCHMARK_CAPTURE(
@@ -206,7 +142,7 @@ BENCHMARK_CAPTURE(
 
 BENCHMARK_CAPTURE(BM_FindRehash,
                   unordered_set_sorted_uint32,
-                  std::unordered_set<uint32_t, UInt32Hash2>{},
+                  std::unordered_set<uint32_t, NonIdentityScalarHash>{},
                   getSortedIntegerInputs<uint32_t>)
     ->Arg(TestNumInputs);
 
@@ -217,7 +153,7 @@ BENCHMARK_CAPTURE(
 
 BENCHMARK_CAPTURE(BM_FindRehash,
                   unordered_set_sorted_large_uint64,
-                  std::unordered_set<uint64_t, UInt64Hash>{},
+                  std::unordered_set<uint64_t, NonIdentityScalarHash>{},
                   getSortedLargeIntegerInputs<uint64_t>)
     ->Arg(TestNumInputs);
 
@@ -228,7 +164,7 @@ BENCHMARK_CAPTURE(
 
 BENCHMARK_CAPTURE(BM_FindRehash,
                   unordered_set_top_bits_uint64,
-                  std::unordered_set<uint64_t, UInt64Hash>{},
+                  std::unordered_set<uint64_t, NonIdentityScalarHash>{},
                   getSortedTopBitsIntegerInputs<uint64_t>)
     ->Arg(TestNumInputs);
 

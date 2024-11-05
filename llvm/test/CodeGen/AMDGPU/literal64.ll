@@ -87,7 +87,6 @@ define void @v_mov_b64_double(ptr addrspace(1) %ptr) {
 ; GFX1210-NEXT:    s_cbranch_execnz .LBB6_1
 ; GFX1210-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX1210-NEXT:    s_or_b32 exec_lo, exec_lo, s0
-; GFX1210-NEXT:    s_wait_alu 0xfffe
 ; GFX1210-NEXT:    s_set_pc_i64 s[30:31]
 ;
 ; GFX1300-LABEL: v_mov_b64_double:
@@ -172,7 +171,6 @@ define i1 @class_f64() noinline optnone {
 ; GFX1210-SDAG-NEXT:    s_wait_kmcnt 0x0
 ; GFX1210-SDAG-NEXT:    s_mov_b32 s2, 1
 ; GFX1210-SDAG-NEXT:    s_mov_b64 s[0:1], 0x4063233333333333
-; GFX1210-SDAG-NEXT:    s_wait_alu 0xfffe
 ; GFX1210-SDAG-NEXT:    v_cmp_class_f64_e64 s0, s[0:1], s2
 ; GFX1210-SDAG-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
 ; GFX1210-SDAG-NEXT:    s_set_pc_i64 s[30:31]
@@ -183,7 +181,6 @@ define i1 @class_f64() noinline optnone {
 ; GFX1210-GISEL-NEXT:    s_wait_kmcnt 0x0
 ; GFX1210-GISEL-NEXT:    s_mov_b32 s2, 1
 ; GFX1210-GISEL-NEXT:    s_mov_b64 s[0:1], 0x4063233333333333
-; GFX1210-GISEL-NEXT:    s_wait_alu 0xfffe
 ; GFX1210-GISEL-NEXT:    v_mov_b64_e32 v[0:1], s[0:1]
 ; GFX1210-GISEL-NEXT:    v_mov_b32_e32 v2, s2
 ; GFX1210-GISEL-NEXT:    v_cmp_class_f64_e64 s0, v[0:1], v2

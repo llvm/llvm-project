@@ -50,7 +50,6 @@ define amdgpu_cs void @with_calls_inline_const() #0 {
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_getreg_b32 s33, hwreg(HW_REG_HW_ID2, 8, 1)
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 15
-; CHECK-NEXT:    s_wait_alu 0xfffe
 ; CHECK-NEXT:    s_cmp_lg_u32 0, s33
 ; CHECK-NEXT:    s_mov_b32 s1, callee@abs32@hi
 ; CHECK-NEXT:    s_cmovk_i32 s33, 0x1c0
@@ -59,7 +58,6 @@ define amdgpu_cs void @with_calls_inline_const() #0 {
 ; CHECK-NEXT:    s_wait_storecnt 0x0
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 0x47
 ; CHECK-NEXT:    s_cselect_b32 s32, 0x1d0, 16
-; CHECK-NEXT:    s_wait_alu 0xfffe
 ; CHECK-NEXT:    s_swappc_b64 s[30:31], s[0:1]
 ; CHECK-NEXT:    s_alloc_vgpr 0
 ; CHECK-NEXT:    s_endpgm
@@ -76,7 +74,6 @@ define amdgpu_cs void @with_calls_no_inline_const() #0 {
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_getreg_b32 s33, hwreg(HW_REG_HW_ID2, 8, 1)
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 15
-; CHECK-NEXT:    s_wait_alu 0xfffe
 ; CHECK-NEXT:    s_cmp_lg_u32 0, s33
 ; CHECK-NEXT:    s_mov_b32 s1, callee@abs32@hi
 ; CHECK-NEXT:    s_cmovk_i32 s33, 0x1c0
@@ -86,7 +83,6 @@ define amdgpu_cs void @with_calls_no_inline_const() #0 {
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 0x47
 ; CHECK-NEXT:    s_movk_i32 s32, 0x100
 ; CHECK-NEXT:    s_cmovk_i32 s32, 0x2c0
-; CHECK-NEXT:    s_wait_alu 0xfffe
 ; CHECK-NEXT:    s_swappc_b64 s[30:31], s[0:1]
 ; CHECK-NEXT:    s_alloc_vgpr 0
 ; CHECK-NEXT:    s_endpgm
@@ -157,7 +153,6 @@ define amdgpu_cs void @realign_stack(<32 x i32> %x) #0 {
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_getreg_b32 s33, hwreg(HW_REG_HW_ID2, 8, 1)
 ; CHECK-NEXT:    s_mov_b32 s1, callee@abs32@hi
-; CHECK-NEXT:    s_wait_alu 0xfffe
 ; CHECK-NEXT:    s_cmp_lg_u32 0, s33
 ; CHECK-NEXT:    s_mov_b32 s0, callee@abs32@lo
 ; CHECK-NEXT:    s_cmovk_i32 s33, 0x200
@@ -173,7 +168,6 @@ define amdgpu_cs void @realign_stack(<32 x i32> %x) #0 {
 ; CHECK-NEXT:    scratch_store_b128 off, v[0:3], s33
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 0x47
 ; CHECK-NEXT:    s_cmovk_i32 s32, 0x300
-; CHECK-NEXT:    s_wait_alu 0xfffe
 ; CHECK-NEXT:    s_swappc_b64 s[30:31], s[0:1]
 ; CHECK-NEXT:    s_alloc_vgpr 0
 ; CHECK-NEXT:    s_endpgm
@@ -195,7 +189,6 @@ define amdgpu_gs void @amdgpu_gs() #0 {
 ; CHECK-NEXT:    scratch_store_b8 off, v0, off scope:SCOPE_SYS
 ; CHECK-NEXT:    s_wait_storecnt 0x0
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 0x47
-; CHECK-NEXT:    s_wait_alu 0xfffe
 ; CHECK-NEXT:    s_swappc_b64 s[30:31], s[0:1]
 ; CHECK-NEXT:    s_alloc_vgpr 0
 ; CHECK-NEXT:    s_endpgm

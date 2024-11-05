@@ -1257,6 +1257,12 @@ unsigned decodeFieldVmVsrc(unsigned Encoded);
 /// \returns Decoded SaSdst from given immediate \p Encoded.
 unsigned decodeFieldSaSdst(unsigned Encoded);
 
+/// \returns Decoded VaSdst from given immediate \p Encoded.
+unsigned decodeFieldVaSdst(unsigned Encoded);
+
+/// \returns Decoded VaVcc from given immediate \p Encoded.
+unsigned decodeFieldVaVcc(unsigned Encoded);
+
 /// \returns \p VmVsrc as an encoded Depctr immediate.
 unsigned encodeFieldVmVsrc(unsigned VmVsrc);
 
@@ -1274,6 +1280,18 @@ unsigned encodeFieldSaSdst(unsigned SaSdst);
 
 /// \returns \p Encoded combined with encoded \p SaSdst.
 unsigned encodeFieldSaSdst(unsigned Encoded, unsigned SaSdst);
+
+/// \returns \p VaSdst as an encoded Depctr immediate.
+unsigned encodeFieldVaSdst(unsigned VaSdst);
+
+/// \returns \p Encoded combined with encoded \p VaSdst.
+unsigned encodeFieldVaSdst(unsigned Encoded, unsigned VaSdst);
+
+/// \returns \p VaVcc as an encoded Depctr immediate.
+unsigned encodeFieldVaVcc(unsigned VaSdst);
+
+/// \returns \p Encoded combined with encoded \p VaVcc.
+unsigned encodeFieldVaVcc(unsigned Encoded, unsigned VaVcc);
 
 } // namespace DepCtr
 

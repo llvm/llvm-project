@@ -2890,9 +2890,8 @@ define amdgpu_kernel void @v_test_umin_ult_i32_multi_use(ptr addrspace(1) %out0,
 ; GFX1210-NEXT:    s_wait_kmcnt 0x0
 ; GFX1210-NEXT:    s_cmp_lt_u32 s4, s5
 ; GFX1210-NEXT:    s_cselect_b32 s6, -1, 0
-; GFX1210-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_3) | instid1(SALU_CYCLE_1)
+; GFX1210-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_2) | instid1(SALU_CYCLE_1)
 ; GFX1210-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s6
-; GFX1210-NEXT:    s_wait_alu 0xfffe
 ; GFX1210-NEXT:    s_and_b32 s6, s6, exec_lo
 ; GFX1210-NEXT:    s_cselect_b32 s4, s4, s5
 ; GFX1210-NEXT:    v_mov_b32_e32 v2, s4
@@ -3055,9 +3054,8 @@ define amdgpu_kernel void @v_test_umin_ult_i16_multi_use(ptr addrspace(1) %out0,
 ; GFX1210-NEXT:    s_wait_kmcnt 0x0
 ; GFX1210-NEXT:    s_cmp_lt_u32 s4, s5
 ; GFX1210-NEXT:    s_cselect_b32 s6, -1, 0
-; GFX1210-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_3) | instid1(SALU_CYCLE_1)
+; GFX1210-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_2) | instid1(SALU_CYCLE_1)
 ; GFX1210-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s6
-; GFX1210-NEXT:    s_wait_alu 0xfffe
 ; GFX1210-NEXT:    s_and_b32 s6, s6, exec_lo
 ; GFX1210-NEXT:    s_cselect_b32 s4, s4, s5
 ; GFX1210-NEXT:    v_mov_b32_e32 v2, s4
