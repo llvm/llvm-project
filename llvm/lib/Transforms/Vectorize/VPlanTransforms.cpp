@@ -1791,51 +1791,33 @@ void VPlanTransforms::createInterleaveGroups(
   }
 }
 
-void VPlanTransforms::convertToMultiCond(VPlan &Plan, ScalarEvolution &SE,
-                                         Loop *OrigLoop,
-                                         VPRecipeBuilder &RecipeBuilder) {
+void VPlanTransforms::handleUncountableEarlyExit(
+    VPlan &Plan, ScalarEvolution &SE, Loop *OrigLoop,
+    VPRecipeBuilder &RecipeBuilder) {
   auto *LatchVPBB =
       cast<VPBasicBlock>(Plan.getVectorLoopRegion()->getExiting());
   VPBuilder Builder(LatchVPBB->getTerminator());
   auto *MiddleVPBB = Plan.getMiddleBlock();
-
   VPRegionBlock *LoopRegion = Plan.getVectorLoopRegion();
-
-  const SCEV *BackedgeTakenCount =
-      SE.getExitCount(OrigLoop, OrigLoop->getLoopLatch());
-  const SCEV *TripCount = SE.getTripCountFromExitCount(
-      BackedgeTakenCount, Plan.getCanonicalIV()->getScalarType(), OrigLoop);
-  VPValue *NewTC = vputils::getOrCreateVPValueForSCEVExpr(Plan, TripCount, SE);
-  Plan.getTripCount()->replaceAllUsesWith(NewTC);
-  Plan.resetTripCount(NewTC);
 
   VPValue *EarlyExitTaken = nullptr;
   SmallVector<BasicBlock *> ExitingBBs;
   OrigLoop->getExitingBlocks(ExitingBBs);
+
+  // Process all uncountable exiting blocks. For each exiting block, update the
+  // EarlyExitTaken, which tracks if any uncountable early exit has been taken.
+  // Also split the middle block and branch to the exit block for the early exit
+  // if it has been taken.
   for (BasicBlock *Exiting : ExitingBBs) {
+    if (Exiting == OrigLoop->getLoopLatch())
+      continue;
+
     auto *ExitingTerm = cast<BranchInst>(Exiting->getTerminator());
     BasicBlock *TrueSucc = ExitingTerm->getSuccessor(0);
     BasicBlock *FalseSucc = ExitingTerm->getSuccessor(1);
     VPIRBasicBlock *VPExitBlock;
-    if (OrigLoop->getUniqueExitBlock() || Exiting == OrigLoop->getLoopLatch())
-      VPExitBlock = cast<VPIRBasicBlock>(MiddleVPBB->getSuccessors()[0]);
-    else
-      VPExitBlock = VPIRBasicBlock::fromBasicBlock(
-          !OrigLoop->contains(TrueSucc) ? TrueSucc : FalseSucc);
-
-    for (VPRecipeBase &R : *VPExitBlock) {
-      auto *ExitIRI = cast<VPIRInstruction>(&R);
-      auto *ExitPhi = dyn_cast<PHINode>(&ExitIRI->getInstruction());
-      if (!ExitPhi)
-        break;
-      Value *IncomingValue = ExitPhi->getIncomingValueForBlock(Exiting);
-      VPValue *V = RecipeBuilder.getVPValueOrAddLiveIn(IncomingValue);
-      ExitIRI->addOperand(V);
-    }
-
-    if (Exiting == OrigLoop->getLoopLatch()) {
-      continue;
-    }
+    VPExitBlock = VPIRBasicBlock::fromBasicBlock(
+        !OrigLoop->contains(TrueSucc) ? TrueSucc : FalseSucc);
 
     VPValue *M = RecipeBuilder.getBlockInMask(
         OrigLoop->contains(TrueSucc) ? TrueSucc : FalseSucc);
@@ -1851,6 +1833,10 @@ void VPlanTransforms::convertToMultiCond(VPlan &Plan, ScalarEvolution &SE,
     VPBuilder MiddleBuilder(NewMiddle);
     MiddleBuilder.createNaryOp(VPInstruction::BranchOnCond, {EarlyExitTaken});
   }
+
+  // Replace the condition controlling the exit from the vector loop with one
+  // exiting if either the original condition of the vector latch is true or any
+  // early exit has been taken.
   auto *Term = dyn_cast<VPInstruction>(LatchVPBB->getTerminator());
   auto *IsLatchExiting = Builder.createICmp(
       CmpInst::ICMP_EQ, Term->getOperand(0), Term->getOperand(1));

@@ -43,10 +43,6 @@ AllowStridedPointerIVs("lv-strided-pointer-ivs", cl::init(false), cl::Hidden,
                        cl::desc("Enable recognition of non-constant strided "
                                 "pointer induction variables."));
 
-static cl::opt<bool>
-    EnableEarlyExitVectorization("enable-early-exit-vectorization",
-                                 cl::init(false), cl::Hidden, cl::desc(""));
-
 namespace llvm {
 cl::opt<bool>
     HintsAllowReordering("hints-allow-reordering", cl::init(true), cl::Hidden,
@@ -1381,7 +1377,7 @@ bool LoopVectorizationLegality::isFixedOrderRecurrence(
 bool LoopVectorizationLegality::blockNeedsPredication(BasicBlock *BB) const {
   // When vectorizing early exits, create predicates for all blocks, except the
   // header.
-  if (canVectorizeEarlyExit() && BB != TheLoop->getHeader())
+  if (hasUncountableEarlyExit() && BB != TheLoop->getHeader())
     return true;
   return LoopAccessInfo::blockNeedsPredication(BB, TheLoop, DT);
 }
@@ -1523,8 +1519,6 @@ bool LoopVectorizationLegality::canVectorizeEarlyExit() const {
   // Currently only allow vectorizing loops with early exits, if early-exit
   // vectorization is explicitly enabled and the loop has metadata to force
   // vectorization.
-  if (!EnableEarlyExitVectorization)
-    return false;
 
   SmallVector<BasicBlock *> Exiting;
   TheLoop->getExitingBlocks(Exiting);

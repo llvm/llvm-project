@@ -878,15 +878,9 @@ VPlanPtr VPlan::createInitialVPlan(Type *InductionTy,
   auto Plan = std::make_unique<VPlan>(Entry, VecPreheader, ScalarHeader);
 
   // Create SCEV and VPValue for the trip count.
-
-  // Currently only loops with countable exits are vectorized, but calling
-  // getSymbolicMaxBackedgeTakenCount allows enablement work for loops with
-  // uncountable exits whilst also ensuring the symbolic maximum and known
-  // back-edge taken count remain identical for loops with countable exits.
+  // We use the symbolic max backedge-taken-count, which is used when
+  // vectorizing loops with uncountable early exits
   const SCEV *BackedgeTakenCountSCEV = PSE.getSymbolicMaxBackedgeTakenCount();
-  assert((!isa<SCEVCouldNotCompute>(BackedgeTakenCountSCEV) &&
-          BackedgeTakenCountSCEV == PSE.getBackedgeTakenCount()) &&
-         "Invalid loop count");
   ScalarEvolution &SE = *PSE.getSE();
   const SCEV *TripCount = SE.getTripCountFromExitCount(BackedgeTakenCountSCEV,
                                                        InductionTy, TheLoop);
@@ -922,6 +916,9 @@ VPlanPtr VPlan::createInitialVPlan(Type *InductionTy,
   // 3) Otherwise, construct a runtime check.
   BasicBlock *IRExitBlock = TheLoop->getUniqueExitBlock();
   if (!IRExitBlock) {
+    // If there's no unique exit block (i.e. vectorizing with an uncountable
+    // early exit), use the block exiting from the latch. The other uncountable
+    // exit blocks will be added later.
     auto *Term = cast<BranchInst>(TheLoop->getLoopLatch()->getTerminator());
     IRExitBlock = TheLoop->contains(Term->getSuccessor(0))
                       ? Term->getSuccessor(1)

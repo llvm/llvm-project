@@ -124,9 +124,9 @@ struct VPlanTransforms {
   /// Remove dead recipes from \p Plan.
   static void removeDeadRecipes(VPlan &Plan);
 
-  static void convertToMultiCond(VPlan &Plan, ScalarEvolution &SE,
-                                 Loop *OrigLoop,
-                                 VPRecipeBuilder &RecipeBuilder);
+  static void handleUncountableEarlyExit(VPlan &Plan, ScalarEvolution &SE,
+                                         Loop *OrigLoop,
+                                         VPRecipeBuilder &RecipeBuilder);
 };
 
 } // namespace llvm
