@@ -68,6 +68,9 @@ Sema
 | Sirraide
 | aeternalmail\@gmail.com (email), Sirraide (GitHub), Ætérnal (Discord), Sirraide (Discourse)
 
+| Mariya Podchishchaeva
+| mariya.podchishchaeva\@intel.com (email), Fznamznon (GitHub), fznamznon (Discord), Fznamznon (Discourse)
+
 
 Recovery AST
 ~~~~~~~~~~~~
@@ -138,6 +141,15 @@ Compiler options
 | jan_svoboda\@apple.com (email), jansvoboda11 (Phabricator), jansvoboda11 (GitHub)
 
 
+API Notes
+~~~~~~~~~~~~~~~~
+| Egor Zhdan
+| e_zhdan\@apple.com (email), egorzhdan (GitHub), egor.zhdan (Discourse)
+
+| Saleem Abdulrasool
+| compnerd\@compnerd.org (email), compnerd (GitHub), compnerd (Discourse)
+
+
 OpenBSD driver
 ~~~~~~~~~~~~~~
 | Brad Smith
@@ -148,6 +160,12 @@ Driver parts not covered by someone else
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 | Fangrui Song
 | i\@maskray.me (email), MaskRay (Phabricator), MaskRay (GitHub)
+
+
+Constant Expressions
+~~~~~~~~~~~~~~~~~~~~
+| Mariya Podchishchaeva
+| mariya.podchishchaeva\@intel.com (email), Fznamznon (GitHub), fznamznon (Discord), Fznamznon (Discourse)
 
 
 Tools
@@ -299,6 +317,12 @@ SYCL conformance
 ~~~~~~~~~~~~~~~~
 | Alexey Bader
 | alexey.bader\@intel.com (email), bader (Phabricator), bader (GitHub)
+
+
+HLSL conformance
+~~~~~~~~~~~~~~~~
+| Chris Bieneman
+| chris.bieneman\@gmail.com (email), llvm-beanz (GitHub), beanz (Discord), beanz (Discourse)
 
 
 Issue Triage

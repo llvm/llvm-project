@@ -2723,8 +2723,10 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
         std::swap(FIOperandNum, OtherOpIdx);
       }
 
-      for (unsigned SrcIdx : {Src1Idx, Src0Idx}) {
-        // Depending on operand constraints we may need to insert another copy.
+      // We need at most one mov to satisfy the operand constraints. Prefer to
+      // move the FI operand first, as it may be a literal in a VOP3
+      // instruction.
+      for (unsigned SrcIdx : {FIOperandNum, OtherOpIdx}) {
         if (!TII->isOperandLegal(*MI, SrcIdx)) {
           // If commuting didn't make the operands legal, we need to materialize
           // in a register.
@@ -2743,6 +2745,7 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
 
           Src.ChangeToRegister(ScavengedVGPR, false);
           Src.setIsKill(true);
+          break;
         }
       }
 
