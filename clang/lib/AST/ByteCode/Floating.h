@@ -135,7 +135,7 @@ public:
     return Floating(APFloat(Sem, API));
   }
 
-  void bitcastToMemory(std::byte *Buff) {
+  void bitcastToMemory(std::byte *Buff) const {
     llvm::APInt API = F.bitcastToAPInt();
     llvm::StoreIntToMemory(API, (uint8_t *)Buff, bitWidth() / 8);
   }

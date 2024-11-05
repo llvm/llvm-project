@@ -164,6 +164,9 @@ Changes to the MIPS Backend
 Changes to the PowerPC Backend
 ------------------------------
 
+* The Linux `ppc64` LLC default cpu is updated from `ppc` to `ppc64`.
+* The AIX LLC default cpu is updated from `generic` to `pwr7`.
+
 Changes to the RISC-V Backend
 -----------------------------
 

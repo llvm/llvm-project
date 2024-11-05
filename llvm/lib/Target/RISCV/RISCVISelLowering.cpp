@@ -1338,10 +1338,13 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
                             ISD::VECTOR_COMPRESS},
                            VT, Custom);
 
-        // FIXME: mload, mstore, mgather, mscatter, vp_load/store,
-        // vp_stride_load/store, vp_gather/scatter can be hoisted to here.
+        // FIXME: mload, mstore, mgather, mscatter, vp_gather/scatter can be
+        // hoisted to here.
         setOperationAction({ISD::LOAD, ISD::STORE}, VT, Custom);
-        setOperationAction({ISD::VP_LOAD, ISD::VP_STORE}, VT, Custom);
+        setOperationAction({ISD::VP_LOAD, ISD::VP_STORE,
+                            ISD::EXPERIMENTAL_VP_STRIDED_LOAD,
+                            ISD::EXPERIMENTAL_VP_STRIDED_STORE},
+                           VT, Custom);
 
         setOperationAction({ISD::FP_ROUND, ISD::FP_EXTEND}, VT, Custom);
         setOperationAction({ISD::STRICT_FP_ROUND, ISD::STRICT_FP_EXTEND}, VT,
@@ -1381,6 +1384,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
         if (VT.getVectorElementType() == MVT::bf16) {
           setOperationAction(ISD::BITCAST, VT, Custom);
           setOperationAction({ISD::VP_FP_ROUND, ISD::VP_FP_EXTEND}, VT, Custom);
+          setOperationAction(ISD::VECTOR_SHUFFLE, VT, Custom);
           if (Subtarget.hasStdExtZfbfmin()) {
             setOperationAction(ISD::BUILD_VECTOR, VT, Custom);
           } else {
@@ -1410,10 +1414,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
         setOperationAction(
             {ISD::MLOAD, ISD::MSTORE, ISD::MGATHER, ISD::MSCATTER}, VT, Custom);
 
-        setOperationAction({ISD::EXPERIMENTAL_VP_STRIDED_LOAD,
-                            ISD::EXPERIMENTAL_VP_STRIDED_STORE, ISD::VP_GATHER,
-                            ISD::VP_SCATTER},
-                           VT, Custom);
+        setOperationAction({ISD::VP_GATHER, ISD::VP_SCATTER}, VT, Custom);
 
         setOperationAction({ISD::FADD, ISD::FSUB, ISD::FMUL, ISD::FDIV,
                             ISD::FNEG, ISD::FABS, ISD::FCOPYSIGN, ISD::FSQRT,
@@ -4475,10 +4476,9 @@ static bool isDeinterleaveShuffle(MVT VT, MVT ContainerVT, SDValue V1,
   if (Mask[0] != 0 && Mask[0] != 1)
     return false;
 
-  // The others must increase by 2 each time.
-  // TODO: Support undef elements?
+  // The others must increase by 2 each time (or be undef).
   for (unsigned i = 1; i != Mask.size(); ++i)
-    if (Mask[i] != Mask[i - 1] + 2)
+    if (Mask[i] != -1 && Mask[i] != Mask[0] + (int)i * 2)
       return false;
 
   return true;
@@ -5197,8 +5197,9 @@ static SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG,
 
         MVT SplatVT = ContainerVT;
 
-        // If we don't have Zfh, we need to use an integer scalar load.
-        if (SVT == MVT::f16 && !Subtarget.hasStdExtZfh()) {
+        // f16 with zvfhmin and bf16 need to use an integer scalar load.
+        if (SVT == MVT::bf16 ||
+            (SVT == MVT::f16 && !Subtarget.hasStdExtZfh())) {
           SVT = MVT::i16;
           SplatVT = ContainerVT.changeVectorElementType(SVT);
         }
