@@ -18671,6 +18671,12 @@ Value *EmitAMDGPUGridSize(CodeGenFunction &CGF, unsigned Index) {
   auto *GEP = CGF.Builder.CreateGEP(CGF.Int8Ty, DP, Offset);
   auto *LD = CGF.Builder.CreateLoad(
       Address(GEP, CGF.Int32Ty, CharUnits::fromQuantity(4)));
+
+  llvm::MDBuilder MDB(CGF.getLLVMContext());
+
+  // Known non-zero.
+  LD->setMetadata(llvm::LLVMContext::MD_range,
+                  MDB.createRange(APInt(32, 1), APInt::getZero(32)));
   LD->setMetadata(llvm::LLVMContext::MD_invariant_load,
                   llvm::MDNode::get(CGF.getLLVMContext(), {}));
   return LD;
