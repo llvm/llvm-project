@@ -51,6 +51,22 @@ All patches go through the regular `LLVM review process
 
 Q: How to build an OpenMP GPU offload capable compiler?
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The easiest way to create an offload capable compiler is to use the provided 
+CMake cache file. This will enable the projects and runtimes necessary for 
+offloading as well as some extra options.
+
+.. code-block:: sh
+
+  $> cd llvm-project  # The llvm-project checkout
+  $> mkdir build
+  $> cd build
+  $> cmake ../llvm -G Ninja                                                 \
+     -C ../offload/cmake/caches/Offload.cmake \ # The preset cache file
+     -DCMAKE_BUILD_TYPE=<Debug|Release>   \ # Select build type
+     -DCMAKE_INSTALL_PREFIX=<PATH>        \ # Where the libraries will live
+  $> ninja install
+
 To build an *effective* OpenMP offload capable compiler, only one extra CMake
 option, ``LLVM_ENABLE_RUNTIMES="openmp;offload"``, is needed when building LLVM (Generic
 information about building LLVM is available `here
