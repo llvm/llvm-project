@@ -9701,7 +9701,8 @@ def err_no_matching_type_aware_cleanup_deallocator_mismatch : Error<
 def err_type_aware_operator_found : Note<
   "type aware %0 found in %1">;
 def warn_mismatching_type_aware_cleanup_deallocator : Warning<
-  "mismatching type aware allocation operators for constructor cleanup">, InGroup<TypeAwareAllocatorMismatch>;
+  "mismatched type aware allocation operators for constructor cleanup">,
+  InGroup<TypeAwareAllocatorMismatch>;
 def note_type_aware_operator_declared : Note<
   "%select{|non-}0type aware %1 declared here">;
 def note_implicit_delete_this_in_destructor_here : Note<
