@@ -329,11 +329,11 @@ class TestInlineStepping(TestBase):
         self.thread.StepOver()
         frame_0 = self.thread.frames[0]
         line_entry = frame_0.line_entry
-        self.assertEqual(line_entry.file.basename, self.main_source_spec.basename, "File matches")
+        self.assertEqual(
+            line_entry.file.basename, self.main_source_spec.basename, "File matches"
+        )
         target_line = line_number("calling.cpp", "// At caller_trivial_inline_1")
         self.assertEqual(line_entry.line, target_line, "Lines match as well.")
-        
-        
 
     def step_in_template(self):
         """Use Python APIs to test stepping in to templated functions."""
