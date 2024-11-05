@@ -1333,9 +1333,9 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
         // expansion to a build_vector of 0s.
         setOperationAction(ISD::UNDEF, VT, Custom);
 
-        setOperationAction({ISD::CONCAT_VECTORS, ISD::VECTOR_REVERSE,
-                            ISD::INSERT_SUBVECTOR, ISD::EXTRACT_SUBVECTOR,
-                            ISD::VECTOR_COMPRESS},
+        setOperationAction({ISD::CONCAT_VECTORS, ISD::INSERT_SUBVECTOR,
+                            ISD::EXTRACT_SUBVECTOR, ISD::VECTOR_REVERSE,
+                            ISD::VECTOR_SHUFFLE, ISD::VECTOR_COMPRESS},
                            VT, Custom);
 
         // FIXME: mload, mstore, mgather, mscatter, vp_gather/scatter can be
@@ -1359,7 +1359,6 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
               Custom);
           setOperationAction({ISD::VP_SINT_TO_FP, ISD::VP_UINT_TO_FP}, VT,
                              Custom);
-          setOperationAction(ISD::VECTOR_SHUFFLE, VT, Custom);
           if (Subtarget.hasStdExtZfhmin()) {
             setOperationAction(ISD::BUILD_VECTOR, VT, Custom);
           } else {
@@ -1384,7 +1383,6 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
         if (VT.getVectorElementType() == MVT::bf16) {
           setOperationAction(ISD::BITCAST, VT, Custom);
           setOperationAction({ISD::VP_FP_ROUND, ISD::VP_FP_EXTEND}, VT, Custom);
-          setOperationAction(ISD::VECTOR_SHUFFLE, VT, Custom);
           if (Subtarget.hasStdExtZfbfmin()) {
             setOperationAction(ISD::BUILD_VECTOR, VT, Custom);
           } else {
@@ -1406,7 +1404,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
           continue;
         }
 
-        setOperationAction({ISD::BUILD_VECTOR, ISD::VECTOR_SHUFFLE,
+        setOperationAction({ISD::BUILD_VECTOR,
                             ISD::INSERT_VECTOR_ELT, ISD::EXTRACT_VECTOR_ELT,
                             ISD::SCALAR_TO_VECTOR},
                            VT, Custom);
