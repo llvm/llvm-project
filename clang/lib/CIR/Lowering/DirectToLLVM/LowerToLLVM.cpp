@@ -2982,12 +2982,13 @@ static mlir::LLVM::CallIntrinsicOp replaceOpWithCallLLVMIntrinsicOp(
 }
 
 class CIRIntrinsicCallLowering
-    : public mlir::OpConversionPattern<mlir::cir::IntrinsicCallOp> {
+    : public mlir::OpConversionPattern<mlir::cir::LLVMIntrinsicCallOp> {
 public:
-  using OpConversionPattern<mlir::cir::IntrinsicCallOp>::OpConversionPattern;
+  using OpConversionPattern<
+      mlir::cir::LLVMIntrinsicCallOp>::OpConversionPattern;
 
   mlir::LogicalResult
-  matchAndRewrite(mlir::cir::IntrinsicCallOp op, OpAdaptor adaptor,
+  matchAndRewrite(mlir::cir::LLVMIntrinsicCallOp op, OpAdaptor adaptor,
                   mlir::ConversionPatternRewriter &rewriter) const override {
     mlir::Type llvmResTy =
         getTypeConverter()->convertType(op->getResultTypes()[0]);
@@ -3004,7 +3005,7 @@ public:
     // TODO(cir): MLIR LLVM dialect should handle this part as CIR has no way
     // to set LLVM IR attribute.
     assert(!::cir::MissingFeatures::llvmIntrinsicElementTypeSupport());
-    replaceOpWithCallLLVMIntrinsicOp(rewriter, op, name, llvmResTy,
+    replaceOpWithCallLLVMIntrinsicOp(rewriter, op, "llvm." + name, llvmResTy,
                                      adaptor.getOperands());
     return mlir::success();
   }

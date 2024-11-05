@@ -456,7 +456,7 @@ uint8x8_t test_vqmovun_s16(int16x8_t a) {
   return vqmovun_s16(a);
 
   // CIR-LABEL: vqmovun_s16
-  // CIR: {{%.*}} = cir.llvm.intrinsic "llvm.aarch64.neon.sqxtun" {{%.*}} :
+  // CIR: {{%.*}} = cir.llvm.intrinsic "aarch64.neon.sqxtun" {{%.*}} :
   // CIR-SAME: (!cir.vector<!s16i x 8>) -> !cir.vector<!u8i x 8>
   
   // LLVM: {{.*}}test_vqmovun_s16(<8 x i16>{{.*}}[[A:%.*]])
@@ -469,7 +469,7 @@ uint16x4_t test_vqmovun_s32(int32x4_t a) {
   return vqmovun_s32(a);
 
   // CIR-LABEL: vqmovun_s32
-  // CIR: {{%.*}} = cir.llvm.intrinsic "llvm.aarch64.neon.sqxtun" {{%.*}} :
+  // CIR: {{%.*}} = cir.llvm.intrinsic "aarch64.neon.sqxtun" {{%.*}} :
   // CIR-SAME: (!cir.vector<!s32i x 4>) -> !cir.vector<!u16i x 4>
 
   // LLVM: {{.*}}test_vqmovun_s32(<4 x i32>{{.*}}[[A:%.*]])
@@ -483,7 +483,7 @@ uint32x2_t test_vqmovun_s64(int64x2_t a) {
   return vqmovun_s64(a);
 
   // CIR-LABEL: vqmovun_s64
-  // CIR: {{%.*}} = cir.llvm.intrinsic "llvm.aarch64.neon.sqxtun" {{%.*}} :
+  // CIR: {{%.*}} = cir.llvm.intrinsic "aarch64.neon.sqxtun" {{%.*}} :
   // CIR-SAME: (!cir.vector<!s64i x 2>) -> !cir.vector<!u32i x 2>
 
   // LLVM: {{.*}}test_vqmovun_s64(<2 x i64>{{.*}}[[A:%.*]])

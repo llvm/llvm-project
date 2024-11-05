@@ -3445,11 +3445,11 @@ def FuncOp : CIR_Op<"func", [
 }
 
 //===----------------------------------------------------------------------===//
-// IntrinsicCallOp
+// LLVMIntrinsicCallOp
 //===----------------------------------------------------------------------===//
 
-def IntrinsicCallOp : CIR_Op<"llvm.intrinsic"> {
-  let summary = "Call to intrinsic functions that is not defined in CIR";
+def LLVMIntrinsicCallOp : CIR_Op<"llvm.intrinsic"> {
+  let summary = "Call to llvm intrinsic functions that is not defined in CIR";
   let description = [{
     `cir.llvm.intrinsic` operation represents a call-like expression which has
     return type and arguments that maps directly to a llvm intrinsic.
@@ -3476,7 +3476,6 @@ def IntrinsicCallOp : CIR_Op<"llvm.intrinsic"> {
     }]>,
   ];
 
-  let hasVerifier = 1;
 }
 
 //===----------------------------------------------------------------------===//
