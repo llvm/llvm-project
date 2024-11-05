@@ -6,18 +6,21 @@
 //
 //===----------------------------------------------------------------------===//
 
+// UNSUPPORTED: c++03, c++11, c++14, c++17, c++20
+
 // This test formats a larger piece of text in "escaped" mode. It uses several
 // datasets to give an impression how the amount of multibyte UTF-8 sequences
 // and larger grapheme clusters affect the performance.
 
 #ifndef _LIBCPP_HAS_NO_UNICODE
 
+#  include <concepts>
 #  include <format>
 #  include <string_view>
 
 #  include "benchmark/benchmark.h"
-
 #  include "make_string.h"
+#  include "test_macros.h"
 
 #  define SV(S) MAKE_STRING_VIEW(CharT, S)
 
@@ -285,11 +288,13 @@ BENCHMARK(BM_cyrillic_escaped<char>);
 BENCHMARK(BM_japanese_escaped<char>);
 BENCHMARK(BM_emoji_escaped<char>);
 
+#  ifndef TEST_HAS_NO_WIDE_CHARACTERS
 BENCHMARK(BM_ascii_escaped<wchar_t>);
 BENCHMARK(BM_unicode_escaped<wchar_t>);
 BENCHMARK(BM_cyrillic_escaped<wchar_t>);
 BENCHMARK(BM_japanese_escaped<wchar_t>);
 BENCHMARK(BM_emoji_escaped<wchar_t>);
+#  endif
 
 BENCHMARK_MAIN();
 
