@@ -335,7 +335,9 @@ public:
 
     ScanInstance.getFrontendOpts().GenerateGlobalModuleIndex = false;
     ScanInstance.getFrontendOpts().UseGlobalModuleIndex = false;
-    ScanInstance.getFrontendOpts().ModulesShareFileManager = false;
+    // This will prevent us compiling individual modules asynchronously since
+    // FileManager is not thread-safe, but it does improve performance for now.
+    ScanInstance.getFrontendOpts().ModulesShareFileManager = true;
     ScanInstance.getHeaderSearchOpts().ModuleFormat = "raw";
     ScanInstance.getHeaderSearchOpts().ModulesIncludeVFSUsage =
         any(OptimizeArgs & ScanningOptimizations::VFS);
