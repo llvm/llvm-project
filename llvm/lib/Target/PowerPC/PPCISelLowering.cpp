@@ -15775,7 +15775,7 @@ static SDValue generateSToVPermutedForVecShuffle(
   // because elements 1 and higher of a scalar_to_vector are undefined.
   // It is also not 4 because the original scalar_to_vector is wider and
   // actually contains two i32 elements.
-  LastElt = (uint64_t) ScalarSize > ShuffleEltWidth
+  LastElt = (uint64_t)ScalarSize > ShuffleEltWidth
                 ? ScalarSize / ShuffleEltWidth - 1 + FirstElt
                 : FirstElt;
   SDValue SToVPermuted = getSToVPermuted(SToVNode, DAG, Subtarget);
