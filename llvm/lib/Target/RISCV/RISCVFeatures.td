@@ -1381,6 +1381,25 @@ def FeaturePredictableSelectIsExpensive
     : SubtargetFeature<"predictable-select-expensive", "PredictableSelectIsExpensive", "true",
                        "Prefer likely predicted branches over selects">;
 
+// This is not a feature that is documented in the RVV spec, but a result of
+// messy change history of the whole register move.
+//
+// The whole register move should be designed as ignoring the vtype, but it was
+// somehow constrained to specific microarchitecture and got a dependency of
+// vtype. Because people didn't notice the impact of this mistake and the spec
+// is very vague and self-contradictory in several places, many cores that are
+// already on the market didn't implement the whole register move in the trapped
+// way.
+//
+// This feature is used to indicate that the implementation won't trap on vill
+// so that no extra vset(i)vl(i) is needed before the whole register move
+// instructions.
+// 
+// See #114518 for more details.
+def FeatureNoTrappedWholeRegisterMove
+    : SubtargetFeature<"no-trapped-whole-register-move", "HasTrappedWholeRegisterMove", "false",
+                       "The whole register move won't trap on vill">;
+
 def TuneOptimizedZeroStrideLoad
    : SubtargetFeature<"optimized-zero-stride-load", "HasOptimizedZeroStrideLoad",
                       "true", "Optimized (perform fewer memory operations)"
