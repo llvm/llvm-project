@@ -687,13 +687,27 @@ void Sema::diagnoseZeroToNullptrConversion(CastKind Kind, const Expr *E) {
       << FixItHint::CreateReplacement(E->getSourceRange(), "nullptr");
 }
 
-void Sema::DiagnoseImplicitCastBoolAssignment(Expr* E,QualType Ty) {
+void Sema::DiagnoseAssignmentBoolContext(Expr* E,QualType Ty) {
   if (Ty->isBooleanType()) {
+    // `bool(x=0)` and if (x=0){} emit:
+    // -ImplicitCastExpr bool IntegralToBoolean
+    // -- ImplicitCastExpr int LValueToRValue
+    // --- Assignment ...
+    // But should still emit this warning (at least gcc does), even if bool-cast is not directly followed by assignment
+    // NOTE: Is this robust enough or can there be other semantic expression until the assignment?
+    while (auto *ICE = dyn_cast<ImplicitCastExpr>(E)) {
+      // If there is another implicit cast to bool then this warning would have been already emitted
+      if (ICE->getType()->isBooleanType()) 
+        return;
+      E = ICE->getSubExpr();
+    }
+
     if (BinaryOperator* Op = dyn_cast<BinaryOperator>(E)) {
-      // should only be issued for regular assignment `=`, not for e.g `+=`
+      // Should only be issued for regular assignment `=`, not for compound-assign like `+=`.
+      // NOTE: Might make sense to emit for all assignments even if gcc only does for regular assignment
       if (Op->getOpcode() == BO_Assign) {
         SourceLocation Loc = Op->getOperatorLoc();
-        Diag(Loc,diag::warn_parens_bool_assign) << E->getSourceRange();
+        Diag(Loc,diag::warn_assignment_bool_context) << E->getSourceRange();
       }
     }
   }
@@ -773,7 +787,13 @@ ExprResult Sema::ImpCastExprToType(Expr *E, QualType Ty,
     }
   }
 
-  DiagnoseImplicitCastBoolAssignment(E,Ty);
+  // FIXME: Doesn't include C89, so this warning isn't emitted when passing `std=c99`.
+  auto isC = getLangOpts().C99 || getLangOpts().C11 || getLangOpts().C17 || getLangOpts().C23;
+  // Do not emit this warning for Objective-C, since it's a common idiom.
+  // NOTE: Are there other languages that this could affect besides C and C++?
+  // Ideally would check `getLangOpts().Cplusplus || getLangOpts().C` but there is no option for C (only C99 etc.).
+  if ((getLangOpts().CPlusPlus || isC) && !getLangOpts().ObjC)
+    DiagnoseAssignmentBoolContext(E,Ty);
 
   if (ImplicitCastExpr *ImpCast = dyn_cast<ImplicitCastExpr>(E)) {
     if (ImpCast->getCastKind() == Kind && (!BasePath || BasePath->empty())) {

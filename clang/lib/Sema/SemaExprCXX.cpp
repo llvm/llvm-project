@@ -4393,8 +4393,6 @@ Sema::PerformImplicitConversion(Expr *From, QualType ToType,
     FromType = From->getType();
   }
 
-  DiagnoseImplicitCastBoolAssignment(From,ToType);
-
   // If we're converting to an atomic type, first convert to the corresponding
   // non-atomic type.
   QualType ToAtomicType;

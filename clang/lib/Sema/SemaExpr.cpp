@@ -20276,7 +20276,11 @@ void Sema::DiagnoseEqualityWithExtraParens(ParenExpr *ParenE) {
 
 ExprResult Sema::CheckBooleanCondition(SourceLocation Loc, Expr *E,
                                        bool IsConstexpr) {
-  DiagnoseAssignmentAsCondition(E);
+  // This warning is already covered by `warn_assignment_bool_context` in C++.
+  // NOTE: Ideally both warnings would be combined
+  if (!getLangOpts().CPlusPlus || getLangOpts().ObjC)
+    DiagnoseAssignmentAsCondition(E);
+  
   if (ParenExpr *parenE = dyn_cast<ParenExpr>(E))
     DiagnoseEqualityWithExtraParens(parenE);
 
