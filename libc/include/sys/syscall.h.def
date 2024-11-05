@@ -2349,5 +2349,12 @@
 #define SYS_writev __NR_writev
 #endif
 
+#ifdef __NR_process_mrelease
+#define SYS_process_mrelease __NR_process_mrelease
+#endif
+
+#ifdef __NR_pidfd_open
+#define SYS_pidfd_open __NR_pidfd_open
+#endif
 
 #endif // LLVM_LIBC_SYS_SYSCALL_H

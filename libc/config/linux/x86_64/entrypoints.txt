@@ -252,6 +252,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.sys.mman.munmap
     libc.src.sys.mman.remap_file_pages
     libc.src.sys.mman.posix_madvise
+    libc.src.sys.mman.process_mrelease
     libc.src.sys.mman.shm_open
     libc.src.sys.mman.shm_unlink
 
