@@ -93,25 +93,15 @@ struct CollectBoundNodes : MatchFinder::MatchCallback {
   StringRef getID() const override { return Unit; }
 };
 
-class QueryProfiler {
-public:
-  QueryProfiler() = default;
-  ~QueryProfiler() { printUserFriendlyTable(llvm::errs()); }
+struct QueryProfiler {
+  llvm::StringMap<llvm::TimeRecord> Records;
 
-  void addASTUnitRecord(llvm::StringRef Unit, const llvm::TimeRecord &Record) {
-    Records[Unit] += Record;
-  }
-
-private:
-  void printUserFriendlyTable(llvm::raw_ostream &OS) {
+  ~QueryProfiler() {
     llvm::TimerGroup TG("clang-query", "clang-query matcher profiling",
                         Records);
-    TG.print(OS);
-    OS.flush();
+    TG.print(llvm::errs());
+    llvm::errs().flush();
   }
-
-private:
-  llvm::StringMap<llvm::TimeRecord> Records;
 };
 
 } // namespace
@@ -150,7 +140,7 @@ bool MatchQuery::run(llvm::raw_ostream &OS, QuerySession &QS) const {
     Ctx.getParentMapContext().setTraversalKind(QS.TK);
     Finder.matchAST(Ctx);
     if (QS.EnableProfile)
-      Profiler->addASTUnitRecord(OrigSrcName, (*Records)[OrigSrcName]);
+      Profiler->Records[OrigSrcName] += (*Records)[OrigSrcName];
 
     if (QS.PrintMatcher) {
       SmallVector<StringRef, 4> Lines;
