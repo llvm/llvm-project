@@ -388,7 +388,7 @@ void nb26() [[clang::nonblocking]] {
 	abort_wrapper(); // no diagnostic
 }
 
-// --- Make sure we don't traverse a requires clause. ---
+// --- Make sure we don't traverse requires and noexcept clauses. ---
 
 // Apparently some requires clauses are able to be collapsed into a constant before the nonblocking
 // analysis sees any function calls. This example (extracted from a real-world case where
@@ -420,7 +420,9 @@ public:
   constexpr expected()
     {}
 
+  // This is a deliberate corruption of the real implementation for simplicity.
   constexpr expected(const expected&)
+    noexcept(is_copy_constructible_v<_Tp> && is_copy_constructible_v<_Err>)
     requires(is_copy_constructible_v<_Tp> && is_copy_constructible_v<_Err>)
   = default;
 };
@@ -428,10 +430,16 @@ public:
 void test() [[clang::nonblocking]]
 {
 	expected<int, int> a;
-	auto b = a;
+	auto b = a;            // Copy constructor.
 }
 
 } // namespace ExpectedTest
+
+// Make sure that simple type traits don't cause violations.
+
+void nb27() [[clang::nonblocking]] {
+	bool x = __is_constructible(int, const int&);
+}
 
 // --- nonblocking implies noexcept ---
 #pragma clang diagnostic warning "-Wperf-constraint-implies-noexcept"
