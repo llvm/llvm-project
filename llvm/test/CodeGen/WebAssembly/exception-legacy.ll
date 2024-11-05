@@ -443,13 +443,10 @@ unreachable:                                      ; preds = %rethrow
 ; CHECK:         end_try
 ; CHECK:       delegate    3
 ; CHECK:     end_try
-; CHECK:     unreachable
 ; CHECK:   catch_all
 ; CHECK:     call  _ZSt9terminatev
-; CHECK:     unreachable
 ; CHECK:   end_try
 ; CHECK: end_try
-; CHECK: unreachable
 define void @inlined_cleanupret() personality ptr @__gxx_wasm_personality_v0 {
 entry:
   %exception = tail call ptr @__cxa_allocate_exception(i32 4)

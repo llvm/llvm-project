@@ -468,40 +468,44 @@ unreachable:                                      ; preds = %rethrow
 ; compute throw_ref's argument correctly.
 
 ; CHECK-LABEL: inlined_cleanupret:
-; CHECK: block
-; CHECK:   block     exnref
-; CHECK:     try_table    (catch_all_ref 0)
-; CHECK:       call  __cxa_throw
-; CHECK:     end_try_table
-; CHECK:   end_block
-; try_table (catch_all_ref 0)'s caught exception is stored in local 2
-; CHECK:   local.set  2
+; CHECK: block     exnref
 ; CHECK:   block
-; CHECK:     try_table    (catch_all 0)
-; CHECK:       block
-; CHECK:         block     i32
-; CHECK:           try_table    (catch __cpp_exception 0)
-; CHECK:             call  __cxa_throw
-; CHECK:           end_try_table
-; CHECK:         end_block
-; CHECK:         call  __cxa_end_catch
-; CHECK:         block     i32
-; CHECK:           try_table    (catch __cpp_exception 0)
+; CHECK:     block     exnref
+; CHECK:       try_table    (catch_all_ref 0)
+; CHECK:         call  __cxa_throw
+; CHECK:       end_try_table
+; CHECK:     end_block
+; try_table (catch_all_ref 0)'s caught exception is stored in local 2
+; CHECK:     local.set  2
+; CHECK:     block
+; CHECK:       try_table    (catch_all 0)
+; CHECK:         block
+; CHECK:           block     i32
+; CHECK:             try_table    (catch __cpp_exception 0)
+; CHECK:               call  __cxa_throw
+; CHECK:             end_try_table
+; CHECK:           end_block
+; CHECK:           call  __cxa_end_catch
+; CHECK:           block     i32
+; CHECK:             try_table    (catch_all_ref 5)
+; CHECK:               try_table    (catch __cpp_exception 1)
 ; Note that the throw_ref below targets the top-level catch_all_ref (local 2)
-; CHECK:             local.get  2
-; CHECK:             throw_ref
+; CHECK:                 local.get  2
+; CHECK:                 throw_ref
+; CHECK:               end_try_table
+; CHECK:             end_try_table
+; CHECK:           end_block
+; CHECK:           try_table    (catch_all_ref 4)
+; CHECK:             call  __cxa_end_catch
 ; CHECK:           end_try_table
+; CHECK:           return
 ; CHECK:         end_block
-; CHECK:         call  __cxa_end_catch
-; CHECK:         return
-; CHECK:       end_block
-; CHECK:       unreachable
-; CHECK:     end_try_table
+; CHECK:       end_try_table
+; CHECK:     end_block
+; CHECK:     call  _ZSt9terminatev
 ; CHECK:   end_block
-; CHECK:   call  _ZSt9terminatev
-; CHECK:   unreachable
 ; CHECK: end_block
-; CHECK: unreachable
+; CHECK: throw_ref
 define void @inlined_cleanupret() personality ptr @__gxx_wasm_personality_v0 {
 entry:
   %exception = tail call ptr @__cxa_allocate_exception(i32 4)
