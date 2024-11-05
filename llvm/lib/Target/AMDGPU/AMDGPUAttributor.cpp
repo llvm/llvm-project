@@ -878,12 +878,6 @@ struct AAAMDMaxNumWorkgroups
 
     SmallVector<unsigned> MaxNumWorkgroups = InfoCache.getMaxNumWorkGroups(*F);
 
-    // FIXME: What is the interpretation of 0?
-    for (unsigned &Entry : MaxNumWorkgroups) {
-      if (Entry == 0)
-        Entry = std::numeric_limits<uint32_t>::max();
-    }
-
     X.takeKnownMinimum(MaxNumWorkgroups[0]);
     Y.takeKnownMinimum(MaxNumWorkgroups[1]);
     Z.takeKnownMinimum(MaxNumWorkgroups[2]);
