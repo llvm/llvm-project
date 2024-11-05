@@ -39,7 +39,7 @@ static mlir::Value getOriginalDef(mlir::Value v) {
   while (!breakFromLoop && (defOp = v.getDefiningOp())) {
     llvm::TypeSwitch<Operation *>(defOp)
         .Case<fir::ConvertOp>([&](fir::ConvertOp op) { v = op.getValue(); })
-        .Case<fir::DeclareOp, hlfir::DeclareOp, fir::cg::XDeclareOp>(
+        .Case<fir::DeclareOp, hlfir::DeclareOp>(
             [&](auto op) { v = op.getMemref(); })
         .Default([&](auto op) { breakFromLoop = true; });
   }
@@ -471,8 +471,7 @@ AliasAnalysis::Source AliasAnalysis::getSource(mlir::Value v,
           // continue tracking.
           Operation *loadMemrefOp = op.getMemref().getDefiningOp();
           bool isDeclareOp = llvm::isa<fir::DeclareOp>(loadMemrefOp) ||
-                             llvm::isa<hlfir::DeclareOp>(loadMemrefOp) ||
-                             llvm::isa<fir::cg::XDeclareOp>(loadMemrefOp);
+                             llvm::isa<hlfir::DeclareOp>(loadMemrefOp);
           if (isDeclareOp &&
               llvm::isa<omp::TargetOp>(loadMemrefOp->getParentOp())) {
             v = op.getMemref();
@@ -501,7 +500,7 @@ AliasAnalysis::Source AliasAnalysis::getSource(mlir::Value v,
           global = llvm::cast<fir::AddrOfOp>(op).getSymbol();
           breakFromLoop = true;
         })
-        .Case<hlfir::DeclareOp, fir::DeclareOp, fir::cg::XDeclareOp>([&](auto op) {
+        .Case<hlfir::DeclareOp, fir::DeclareOp>([&](auto op) {
           if (omp::BlockArgOpenMPOpInterface argIface =
                   dyn_cast<omp::BlockArgOpenMPOpInterface>(op->getParentOp())) {
             Value ompValArg;
