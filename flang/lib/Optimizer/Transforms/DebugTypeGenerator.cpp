@@ -629,7 +629,12 @@ mlir::LLVM::DITypeAttr DebugTypeGenerator::convertPointerLikeType(
     return convertCharacterType(charTy, fileAttr, scope, declOp,
                                 /*hasDescriptor=*/true);
 
-  mlir::LLVM::DITypeAttr elTyAttr = convertType(elTy, fileAttr, scope, declOp);
+  // If elTy is null or none then generate a void*
+  mlir::LLVM::DITypeAttr elTyAttr;
+  if (!elTy || mlir::isa<mlir::NoneType>(elTy))
+    elTyAttr = mlir::LLVM::DINullTypeAttr::get(context);
+  else
+    elTyAttr = convertType(elTy, fileAttr, scope, declOp);
 
   return mlir::LLVM::DIDerivedTypeAttr::get(
       context, llvm::dwarf::DW_TAG_pointer_type,
@@ -668,20 +673,6 @@ DebugTypeGenerator::convertType(mlir::Type Ty, mlir::LLVM::DIFileAttr fileAttr,
     return convertRecordType(recTy, fileAttr, scope, declOp);
   } else if (auto tupleTy = mlir::dyn_cast_if_present<mlir::TupleType>(Ty)) {
     return convertTupleType(tupleTy, fileAttr, scope, declOp);
-  } else if (auto classTy = mlir::dyn_cast_if_present<fir::ClassType>(Ty)) {
-    // ClassType when passed to the function have double indirection so it
-    // is represented as pointer to type (and not type as a RecordType will be
-    // for example). If ClassType wraps a pointer or allocatable then we get
-    // the real underlying type to avoid translating the Ty to
-    // Ptr -> Ptr -> type.
-    mlir::Type elTy = classTy.getEleTy();
-    if (auto ptrTy = mlir::dyn_cast_if_present<fir::PointerType>(elTy))
-      elTy = ptrTy.getElementType();
-    else if (auto heapTy = mlir::dyn_cast_if_present<fir::HeapType>(elTy))
-      elTy = heapTy.getElementType();
-    return convertPointerLikeType(elTy, fileAttr, scope, declOp,
-                                  /*genAllocated=*/false,
-                                  /*genAssociated=*/false);
   } else if (auto refTy = mlir::dyn_cast_if_present<fir::ReferenceType>(Ty)) {
     auto elTy = refTy.getEleTy();
     return convertPointerLikeType(elTy, fileAttr, scope, declOp,
@@ -693,8 +684,13 @@ DebugTypeGenerator::convertType(mlir::Type Ty, mlir::LLVM::DIFileAttr fileAttr,
     return genBasicType(context, mlir::StringAttr::get(context, "integer"),
                         llvmTypeConverter.getIndexTypeBitwidth(),
                         llvm::dwarf::DW_ATE_signed);
-  } else if (auto boxTy = mlir::dyn_cast_or_null<fir::BoxType>(Ty)) {
-    auto elTy = boxTy.getElementType();
+  } else if (auto boxTy = mlir::dyn_cast_or_null<fir::BaseBoxType>(Ty)) {
+    if (mlir::isa<fir::ClassType>(Ty))
+      return convertPointerLikeType(boxTy.unwrapInnerType(), fileAttr, scope,
+                                    declOp, /*genAllocated=*/false,
+                                    /*genAssociated=*/true);
+
+    auto elTy = boxTy.getEleTy();
     if (auto seqTy = mlir::dyn_cast_or_null<fir::SequenceType>(elTy))
       return convertBoxedSequenceType(seqTy, fileAttr, scope, declOp, false,
                                       false);
