@@ -17,6 +17,7 @@
 #include "llvm/Config/llvm-config.h"
 #include "llvm/Support/Alignment.h"
 #include "llvm/Support/BLAKE3.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Path.h"
 
 #define DEBUG_TYPE "action-caches"
@@ -212,13 +213,14 @@ UnifiedOnDiskActionCache::getImpl(ArrayRef<uint8_t> Key,
 Error UnifiedOnDiskActionCache::putImpl(ArrayRef<uint8_t> Key,
                                         const CASID &Result,
                                         bool /*Globally*/) {
-  ondisk::ObjectID Expected =
-      UniDB->getGraphDB().getReference(Result.getHash());
+  auto Expected = UniDB->getGraphDB().getReference(Result.getHash());
+  if (LLVM_UNLIKELY(!Expected))
+    return Expected.takeError();
   std::optional<ondisk::ObjectID> Observed;
-  if (Error E = UniDB->KVPut(Key, Expected).moveInto(Observed))
+  if (Error E = UniDB->KVPut(Key, *Expected).moveInto(Observed))
     return E;
 
-  if (Expected == Observed)
+  if (*Expected == Observed)
     return Error::success();
 
   return createResultCachePoisonedError(

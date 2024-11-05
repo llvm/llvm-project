@@ -68,14 +68,15 @@ TEST(OnDiskHashMappedTrieTest, Insertion) {
     std::optional<FileOffset> Offset;
     std::optional<MutableArrayRef<char>> Data;
     {
-      auto Insertion = Trie1->insert({Hash0, Data0v1});
-      ASSERT_TRUE(Insertion);
-      EXPECT_EQ(Hash0, Insertion->Hash);
-      EXPECT_EQ(Data0v1, Insertion->Data);
-      EXPECT_TRUE(isAddrAligned(Align(8), Insertion->Data.data()));
+      std::optional<OnDiskHashMappedTrie::pointer> Insertion;
+      ASSERT_THAT_ERROR(Trie1->insert({Hash0, Data0v1}).moveInto(Insertion),
+                        Succeeded());
+      EXPECT_EQ(Hash0, (*Insertion)->Hash);
+      EXPECT_EQ(Data0v1, (*Insertion)->Data);
+      EXPECT_TRUE(isAddrAligned(Align(8), (*Insertion)->Data.data()));
 
-      Offset = Insertion.getOffset();
-      Data = Insertion->Data;
+      Offset = Insertion->getOffset();
+      Data = (*Insertion)->Data;
     }
 
     // Find.
@@ -133,14 +134,44 @@ TEST(OnDiskHashMappedTrieTest, Insertion) {
 
     // Insert another thing.
     {
-      auto Insertion = Trie1->insert({Hash1, Data1});
-      ASSERT_TRUE(Insertion);
-      EXPECT_EQ(Hash1, Insertion->Hash);
-      EXPECT_EQ(Data1, Insertion->Data);
-      EXPECT_TRUE(isAddrAligned(Align(8), Insertion->Data.data()));
-      EXPECT_NE(Offset->get(), Insertion.getOffset().get());
+      std::optional<OnDiskHashMappedTrie::pointer> Insertion;
+      ASSERT_THAT_ERROR(Trie1->insert({Hash1, Data1}).moveInto(Insertion),
+                        Succeeded());
+      EXPECT_EQ(Hash1, (*Insertion)->Hash);
+      EXPECT_EQ(Data1, (*Insertion)->Data);
+      EXPECT_TRUE(isAddrAligned(Align(8), (*Insertion)->Data.data()));
+
+      EXPECT_NE(Offset->get(), Insertion->getOffset().get());
     }
   }
+}
+TEST(OnDiskHashMappedTrieTest, OutOfSpace) {
+  unittest::TempDir Temp("on-disk-hash-mapped-trie", /*Unique=*/true);
+  std::optional<OnDiskHashMappedTrie> Trie;
+
+  // Too small to create header.
+  ASSERT_THAT_ERROR(OnDiskHashMappedTrie::create(
+                        Temp.path("NoSpace1").str(), "index",
+                        /*NumHashBits=*/8, /*DataSize=*/8, /*MaxFileSize=*/8,
+                        /*NewInitialFileSize=*/std::nullopt)
+                        .moveInto(Trie),
+                    Failed());
+
+  // Just enough for root node but not enough for any insertion.
+  ASSERT_THAT_ERROR(OnDiskHashMappedTrie::create(
+                        Temp.path("NoSpace2").str(), "index",
+                        /*NumHashBits=*/8, /*DataSize=*/8, /*MaxFileSize=*/100,
+                        /*NewInitialFileSize=*/std::nullopt,
+                        /*NewTableNumRootBits=*/1, /*NewTableNumSubtrieBits=*/1)
+                        .moveInto(Trie),
+                    Succeeded());
+  uint8_t Hash0Bytes[1] = {0};
+  auto Hash0 = ArrayRef(Hash0Bytes);
+  constexpr StringLiteral Data0v1Bytes = "data0.v1";
+  ArrayRef<char> Data0v1 = ArrayRef(Data0v1Bytes.data(), Data0v1Bytes.size());
+  std::optional<OnDiskHashMappedTrie::pointer> Insertion;
+  ASSERT_THAT_ERROR(Trie->insert({Hash0, Data0v1}).moveInto(Insertion),
+                    Failed());
 }
 
 } // namespace

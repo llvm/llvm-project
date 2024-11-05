@@ -52,10 +52,13 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/Alignment.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Errc.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Process.h"
+#include <optional>
 
 #if __has_include(<sys/mount.h>)
 #include <sys/mount.h> // statfs
@@ -919,8 +922,9 @@ void OnDiskGraphDB::print(raw_ostream &OS) const {
   }
 }
 
-OnDiskGraphDB::IndexProxy OnDiskGraphDB::indexHash(ArrayRef<uint8_t> Hash) {
-  OnDiskHashMappedTrie::pointer P = Index.insertLazy(
+Expected<OnDiskGraphDB::IndexProxy>
+OnDiskGraphDB::indexHash(ArrayRef<uint8_t> Hash) {
+  auto P = Index.insertLazy(
       Hash, [](FileOffset TentativeOffset,
                OnDiskHashMappedTrie::ValueProxy TentativeValue) {
         assert(TentativeValue.Data.size() == sizeof(TrieRecord));
@@ -928,8 +932,11 @@ OnDiskGraphDB::IndexProxy OnDiskGraphDB::indexHash(ArrayRef<uint8_t> Hash) {
             isAddrAligned(Align::Of<TrieRecord>(), TentativeValue.Data.data()));
         new (TentativeValue.Data.data()) TrieRecord();
       });
-  assert(P && "Expected insertion");
-  return getIndexProxyFromPointer(P);
+  if (LLVM_UNLIKELY(!P))
+    return P.takeError();
+
+  assert(*P && "Expected insertion");
+  return getIndexProxyFromPointer(*P);
 }
 
 OnDiskGraphDB::IndexProxy OnDiskGraphDB::getIndexProxyFromPointer(
@@ -941,9 +948,11 @@ OnDiskGraphDB::IndexProxy OnDiskGraphDB::getIndexProxyFromPointer(
                         reinterpret_cast<const TrieRecord *>(P->Data.data()))};
 }
 
-ObjectID OnDiskGraphDB::getReference(ArrayRef<uint8_t> Hash) {
-  IndexProxy I = indexHash(Hash);
-  return getExternalReference(I);
+Expected<ObjectID> OnDiskGraphDB::getReference(ArrayRef<uint8_t> Hash) {
+  auto I = indexHash(Hash);
+  if (LLVM_UNLIKELY(!I))
+    return I.takeError();
+  return getExternalReference(*I);
 }
 
 ObjectID OnDiskGraphDB::getExternalReference(const IndexProxy &I) {
@@ -958,10 +967,13 @@ OnDiskGraphDB::getExistingReference(ArrayRef<uint8_t> Digest) {
       return std::nullopt;
     std::optional<ObjectID> UpstreamID =
         UpstreamDB->getExistingReference(Digest);
-    if (!UpstreamID)
+    if (LLVM_UNLIKELY(!UpstreamID))
+      return std::nullopt;
+    auto Ref = expectedToOptional(indexHash(Digest));
+    if (!Ref)
       return std::nullopt;
     if (!I)
-      I.emplace(indexHash(Digest));
+      I.emplace(*Ref);
     return getExternalReference(*I);
   };
 
@@ -1250,14 +1262,16 @@ Error OnDiskGraphDB::store(ObjectID ID, ArrayRef<ObjectID> Refs,
   auto Alloc = [&](size_t Size) -> Expected<char *> {
     if (Size <= TrieRecord::MaxEmbeddedSize) {
       SK = TrieRecord::StorageKind::DataPool;
-      OnDiskDataAllocator::pointer P = DataPool.allocate(Size);
-      PoolOffset = P.getOffset();
+      auto P = DataPool.allocate(Size);
+      if (LLVM_UNLIKELY(!P))
+        return P.takeError();
+      PoolOffset = P->getOffset();
       LLVM_DEBUG({
         dbgs() << "pool-alloc addr=" << (void *)PoolOffset.get()
                << " size=" << Size
                << " end=" << (void *)(PoolOffset.get() + Size) << "\n";
       });
-      return P->data();
+      return (*P)->data();
     }
 
     SK = TrieRecord::StorageKind::Standalone;
@@ -1490,19 +1504,21 @@ Error OnDiskGraphDB::importFullTree(ObjectID PrimaryID,
     }
 
     ObjectID UpstreamID = *(Cur.RefI++);
-    ObjectID PrimaryID = getReference(UpstreamDB->getDigest(UpstreamID));
-    if (containsObject(PrimaryID, /*CheckUpstream=*/false)) {
+    auto PrimaryID = getReference(UpstreamDB->getDigest(UpstreamID));
+    if (LLVM_UNLIKELY(!PrimaryID))
+      return PrimaryID.takeError();
+    if (containsObject(*PrimaryID, /*CheckUpstream=*/false)) {
       // This \p ObjectID already exists in the primary. Either it was imported
       // via \p importFullTree or the client created it, in which case the
       // client takes responsibility for how it was formed.
-      enqueueNode(PrimaryID, std::nullopt);
+      enqueueNode(*PrimaryID, std::nullopt);
       continue;
     }
     Expected<std::optional<ObjectHandle>> UpstreamNode =
         UpstreamDB->load(UpstreamID);
     if (!UpstreamNode)
       return UpstreamNode.takeError();
-    enqueueNode(PrimaryID, *UpstreamNode);
+    enqueueNode(*PrimaryID, *UpstreamNode);
   }
 
   assert(PrimaryNodesStack.size() == 1);
@@ -1522,8 +1538,12 @@ Error OnDiskGraphDB::importSingleNode(ObjectID PrimaryID,
   auto UpstreamRefs = UpstreamDB->getObjectRefs(UpstreamNode);
   SmallVector<ObjectID, 64> Refs;
   Refs.reserve(std::distance(UpstreamRefs.begin(), UpstreamRefs.end()));
-  for (ObjectID UpstreamRef : UpstreamRefs)
-    Refs.push_back(getReference(UpstreamDB->getDigest(UpstreamRef)));
+  for (ObjectID UpstreamRef : UpstreamRefs) {
+    auto Ref = getReference(UpstreamDB->getDigest(UpstreamRef));
+    if (LLVM_UNLIKELY(!Ref))
+      return Ref.takeError();
+    Refs.push_back(*Ref);
+  }
 
   return store(PrimaryID, Refs, Data);
 }
@@ -1532,9 +1552,12 @@ Expected<std::optional<ObjectHandle>>
 OnDiskGraphDB::faultInFromUpstream(ObjectID PrimaryID) {
   assert(UpstreamDB);
 
-  ObjectID UpstreamID = UpstreamDB->getReference(getDigest(PrimaryID));
+  auto UpstreamID = UpstreamDB->getReference(getDigest(PrimaryID));
+  if (LLVM_UNLIKELY(!UpstreamID))
+    return UpstreamID.takeError();
+
   Expected<std::optional<ObjectHandle>> UpstreamNode =
-      UpstreamDB->load(UpstreamID);
+      UpstreamDB->load(*UpstreamID);
   if (!UpstreamNode)
     return UpstreamNode.takeError();
   if (!*UpstreamNode)

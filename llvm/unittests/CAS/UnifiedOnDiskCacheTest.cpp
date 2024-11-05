@@ -88,17 +88,18 @@ TEST(UnifiedOnDiskCacheTest, Basic) {
     EXPECT_EQ(IDRoot, Val);
 
     Key2Hash = digest("key2");
-    ASSERT_THAT_ERROR(
-        UniDB->KVPut(DB.getReference(Key2Hash), *ID1).moveInto(Val),
-        Succeeded());
+    std::optional<ObjectID> KeyID;
+    ASSERT_THAT_ERROR(DB.getReference(Key2Hash).moveInto(KeyID), Succeeded());
+    ASSERT_THAT_ERROR(UniDB->KVPut(*KeyID, *ID1).moveInto(Val), Succeeded());
   }
 
   auto checkTree = [&](const HashType &Digest, StringRef ExpectedTree) {
     OnDiskGraphDB &DB = UniDB->getGraphDB();
-    ObjectID ID = DB.getReference(Digest);
+    std::optional<ObjectID> ID;
+    ASSERT_THAT_ERROR(DB.getReference(Digest).moveInto(ID), Succeeded());
     std::string PrintedTree;
     raw_string_ostream OS(PrintedTree);
-    ASSERT_THAT_ERROR(printTree(DB, ID, OS), Succeeded());
+    ASSERT_THAT_ERROR(printTree(DB, *ID, OS), Succeeded());
     EXPECT_EQ(PrintedTree, ExpectedTree);
   };
   auto checkRootTree = [&]() {
@@ -181,7 +182,9 @@ TEST(UnifiedOnDiskCacheTest, Basic) {
   // 'Other' tree and 'Key2' got garbage-collected.
   {
     OnDiskGraphDB &DB = UniDB->getGraphDB();
-    EXPECT_FALSE(DB.containsObject(DB.getReference(OtherHash)));
+    std::optional<ObjectID> ID;
+    ASSERT_THAT_ERROR(DB.getReference(OtherHash).moveInto(ID), Succeeded());
+    EXPECT_FALSE(DB.containsObject(*ID));
     std::optional<ObjectID> Val;
     ASSERT_THAT_ERROR(UniDB->KVGet(Key2Hash).moveInto(Val), Succeeded());
     EXPECT_FALSE(Val.has_value());

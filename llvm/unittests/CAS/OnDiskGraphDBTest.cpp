@@ -43,7 +43,8 @@ TEST(OnDiskGraphDBTest, Basic) {
   EXPECT_EQ(toStringRef(DB->getObjectData(*Obj1)), "hello");
 
   ArrayRef<uint8_t> Digest1 = DB->getDigest(*ID1);
-  ObjectID ID2 = DB->getReference(Digest1);
+  std::optional<ObjectID> ID2;
+  ASSERT_THAT_ERROR(DB->getReference(Digest1).moveInto(ID2), Succeeded());
   EXPECT_EQ(ID1, ID2);
 
   ObjectID ID3 = digest("world", {});
@@ -214,9 +215,10 @@ TEST(OnDiskGraphDBTest, FaultInFullTree) {
                     Succeeded());
 
   {
-    ObjectID IDRoot = DB->getReference(RootHash);
+    std::optional<ObjectID> IDRoot;
+    ASSERT_THAT_ERROR(DB->getReference(RootHash).moveInto(IDRoot), Succeeded());
     std::optional<ondisk::ObjectHandle> Obj;
-    ASSERT_THAT_ERROR(DB->load(IDRoot).moveInto(Obj), Succeeded());
+    ASSERT_THAT_ERROR(DB->load(*IDRoot).moveInto(Obj), Succeeded());
     ASSERT_TRUE(Obj.has_value());
     EXPECT_EQ(toStringRef(DB->getObjectData(*Obj)), "root");
     auto Refs = DB->getObjectRefs(*Obj);
@@ -231,10 +233,11 @@ TEST(OnDiskGraphDBTest, FaultInFullTree) {
                         .moveInto(DB),
                     Succeeded());
 
-  ObjectID IDRoot = DB->getReference(RootHash);
+  std::optional<ObjectID> IDRoot;
+  ASSERT_THAT_ERROR(DB->getReference(RootHash).moveInto(IDRoot), Succeeded());
   std::string PrintedTree;
   raw_string_ostream OS(PrintedTree);
-  ASSERT_THAT_ERROR(printTree(*DB, IDRoot, OS), Succeeded());
+  ASSERT_THAT_ERROR(printTree(*DB, *IDRoot, OS), Succeeded());
   StringRef Expected = R"(root
   1
     11

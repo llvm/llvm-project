@@ -271,7 +271,7 @@ public:
 
   /// Form a reference for the provided hash. The reference can be used as part
   /// of a CAS object even if it's not associated with an object yet.
-  ObjectID getReference(ArrayRef<uint8_t> Hash);
+  Expected<ObjectID> getReference(ArrayRef<uint8_t> Hash);
 
   /// Get an existing reference to the object \p Digest.
   ///
@@ -362,7 +362,7 @@ private:
   Error importFullTree(ObjectID PrimaryID, ObjectHandle UpstreamNode);
   Error importSingleNode(ObjectID PrimaryID, ObjectHandle UpstreamNode);
 
-  IndexProxy indexHash(ArrayRef<uint8_t> Hash);
+  Expected<IndexProxy> indexHash(ArrayRef<uint8_t> Hash);
 
   Error createStandaloneLeaf(IndexProxy &I, ArrayRef<char> Data);
 

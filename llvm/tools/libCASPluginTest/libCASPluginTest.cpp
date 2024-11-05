@@ -16,6 +16,7 @@
 #include "llvm/CAS/UnifiedOnDiskCache.h"
 #include "llvm/Support/CBindingWrapping.h"
 #include "llvm/Support/Errc.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/ThreadPool.h"
 
 using namespace llvm;
@@ -184,9 +185,13 @@ bool CASWrapper::containsObject(ObjectID ID, bool Globally) {
   if (!Globally || !UpstreamDB)
     return false;
 
-  ObjectID UpstreamID =
-      UpstreamDB->getGraphDB().getReference(DB->getGraphDB().getDigest(ID));
-  return UpstreamDB->getGraphDB().containsObject(UpstreamID);
+  auto UpstreamID = expectedToOptional(
+      UpstreamDB->getGraphDB().getReference(DB->getGraphDB().getDigest(ID)));
+
+  if (!UpstreamID)
+    return false;
+
+  return UpstreamDB->getGraphDB().containsObject(*UpstreamID);
 }
 
 Expected<std::optional<ondisk::ObjectHandle>>
@@ -200,10 +205,12 @@ CASWrapper::loadObject(ObjectID ID) {
     return std::nullopt;
 
   // Try "downloading" the node from upstream.
-  ObjectID UpstreamID =
+  auto UpstreamID =
       UpstreamDB->getGraphDB().getReference(DB->getGraphDB().getDigest(ID));
+  if (!UpstreamID)
+    return UpstreamID.takeError();
   std::optional<ObjectID> Ret;
-  if (Error E = downstreamNode(UpstreamID).moveInto(Ret))
+  if (Error E = downstreamNode(*UpstreamID).moveInto(Ret))
     return std::move(E);
   return DB->getGraphDB().load(ID);
 }
@@ -211,8 +218,10 @@ CASWrapper::loadObject(ObjectID ID) {
 /// Imports a single object node.
 static Expected<ObjectID> importNode(ObjectID FromID, OnDiskGraphDB &FromDB,
                                      OnDiskGraphDB &ToDB) {
-  ObjectID ToID = ToDB.getReference(FromDB.getDigest(FromID));
-  if (ToDB.containsObject(ToID))
+  auto ToID = ToDB.getReference(FromDB.getDigest(FromID));
+  if (!ToID)
+    return ToID.takeError();
+  if (ToDB.containsObject(*ToID))
     return ToID;
 
   std::optional<ondisk::ObjectHandle> FromH;
@@ -224,10 +233,14 @@ static Expected<ObjectID> importNode(ObjectID FromID, OnDiskGraphDB &FromDB,
   auto Data = FromDB.getObjectData(*FromH);
   auto FromRefs = FromDB.getObjectRefs(*FromH);
   SmallVector<ObjectID> Refs;
-  for (ObjectID FromRef : FromRefs)
-    Refs.push_back(ToDB.getReference(FromDB.getDigest(FromRef)));
+  for (ObjectID FromRef : FromRefs) {
+    auto Ref = ToDB.getReference(FromDB.getDigest(FromRef));
+    if (!Ref)
+      return Ref.takeError();
+    Refs.push_back(*Ref);
+  }
 
-  if (Error E = ToDB.store(ToID, Refs, Data))
+  if (Error E = ToDB.store(*ToID, Refs, Data))
     return std::move(E);
   return ToID;
 }
@@ -280,12 +293,14 @@ CASWrapper::downstreamKey(ArrayRef<uint8_t> Key) {
   if (!UpstreamValue)
     return std::nullopt;
 
-  ObjectID Value = DB->getGraphDB().getReference(
+  auto Value = DB->getGraphDB().getReference(
       UpstreamDB->getGraphDB().getDigest(*UpstreamValue));
-  Expected<ObjectID> PutValue = DB->KVPut(Key, Value);
+  if (!Value)
+    return Value.takeError();
+  Expected<ObjectID> PutValue = DB->KVPut(Key, *Value);
   if (!PutValue)
     return PutValue.takeError();
-  assert(*PutValue == Value);
+  assert(*PutValue == *Value);
   return PutValue;
 }
 
@@ -387,8 +402,11 @@ bool llcas_digest_print(llcas_cas_t c_cas, llcas_digest_t c_digest,
 bool llcas_cas_get_objectid(llcas_cas_t c_cas, llcas_digest_t c_digest,
                             llcas_objectid_t *c_id_p, char **error) {
   auto &CAS = unwrap(c_cas)->DB->getGraphDB();
-  ObjectID ID = CAS.getReference(ArrayRef(c_digest.data, c_digest.size));
-  *c_id_p = llcas_objectid_t{ID.getOpaqueData()};
+  auto ID = CAS.getReference(ArrayRef(c_digest.data, c_digest.size));
+  if (!ID)
+    return reportError(ID.takeError(), error, true);
+
+  *c_id_p = llcas_objectid_t{ID->getOpaqueData()};
   return false;
 }
 
@@ -512,11 +530,13 @@ bool llcas_cas_store_object(llcas_cas_t c_cas, llcas_data_t c_data,
   for (ObjectID Ref : Refs)
     RefHashes.push_back(CAS.getDigest(Ref));
   HashType Digest = BuiltinObjectHasher<HasherT>::hashObject(RefHashes, Data);
-  ObjectID StoredID = CAS.getReference(Digest);
+  auto StoredID = CAS.getReference(Digest);
+  if (!StoredID)
+    return reportError(StoredID.takeError(), error, true);
 
-  if (Error E = CAS.store(StoredID, Refs, Data))
+  if (Error E = CAS.store(*StoredID, Refs, Data))
     return reportError(std::move(E), error, true);
-  *c_id_p = llcas_objectid_t{StoredID.getOpaqueData()};
+  *c_id_p = llcas_objectid_t{StoredID->getOpaqueData()};
   return false;
 }
 

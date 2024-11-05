@@ -53,6 +53,7 @@
 #include "OnDiskCommon.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/CAS/OnDiskKeyValueDB.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
@@ -114,9 +115,11 @@ UnifiedOnDiskCache::faultInFromUpstreamKV(ArrayRef<uint8_t> Key) {
   assert(UpstreamValue->size() == sizeof(uint64_t));
   ObjectID UpstreamID = ObjectID::fromOpaqueData(
       support::endian::read64le(UpstreamValue->data()));
-  ObjectID PrimaryID =
+  auto PrimaryID =
       PrimaryGraphDB->getReference(UpstreamGraphDB->getDigest(UpstreamID));
-  return KVPut(Key, PrimaryID);
+  if (LLVM_UNLIKELY(!PrimaryID))
+    return PrimaryID.takeError();
+  return KVPut(Key, *PrimaryID);
 }
 
 /// \returns all the 'v<version>.<x>' names of sub-directories, sorted with

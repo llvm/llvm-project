@@ -220,15 +220,26 @@ void MappedFileRegionBumpPtr::initializeBumpPtr(int64_t BumpPtrOffset) {
            "Expected 0, or past the end of the BumpPtr itself");
 }
 
-int64_t MappedFileRegionBumpPtr::allocateOffset(uint64_t AllocSize) {
+static Error createAllocatorOutOfSpaceError() {
+  return createStringError(std::make_error_code(std::errc::not_enough_memory),
+                           "memory mapped file allocator is out of space");
+}
+
+Expected<int64_t> MappedFileRegionBumpPtr::allocateOffset(uint64_t AllocSize) {
   AllocSize = alignTo(AllocSize, getAlign());
   int64_t OldEnd = BumpPtr->fetch_add(AllocSize);
   int64_t NewEnd = OldEnd + AllocSize;
   if (LLVM_UNLIKELY(NewEnd > (int64_t)capacity())) {
-    // Try to return the allocation.
-    (void)BumpPtr->compare_exchange_strong(OldEnd, NewEnd);
-    report_fatal_error(
-        errorCodeToError(std::make_error_code(std::errc::not_enough_memory)));
+    // Return the allocation. If the start already passed the end, that means
+    // some other concurrent allocations already consumed all the capacity.
+    // There is no need to return the original value. If the start was not
+    // passed the end, current allocation certainly bumped it passed the end.
+    // All other allocation afterwards must have failed and current allocation
+    // is in charge of return the allocation back to a valid value.
+    if (OldEnd <= (int64_t)capacity())
+      (void)BumpPtr->exchange(OldEnd);
+
+    return createAllocatorOutOfSpaceError();
   }
   return OldEnd;
 }

@@ -63,11 +63,14 @@ public:
   }
 
   /// Allocate at least \p AllocSize. Rounds up to \a getAlign().
-  char *allocate(uint64_t AllocSize) {
-    return data() + allocateOffset(AllocSize);
+  Expected<char *> allocate(uint64_t AllocSize) {
+    auto Offset = allocateOffset(AllocSize);
+    if (LLVM_UNLIKELY(!Offset))
+      return Offset.takeError();
+    return data() + *Offset;
   }
   /// Allocate, returning the offset from \a data() instead of a pointer.
-  int64_t allocateOffset(uint64_t AllocSize);
+  Expected<int64_t> allocateOffset(uint64_t AllocSize);
 
   char *data() const { return Region.data(); }
   uint64_t size() const { return *BumpPtr; }

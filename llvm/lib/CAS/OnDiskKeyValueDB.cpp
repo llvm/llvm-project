@@ -10,6 +10,7 @@
 #include "OnDiskCommon.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/Alignment.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/Path.h"
 
@@ -27,13 +28,15 @@ Expected<ArrayRef<char>> OnDiskKeyValueDB::put(ArrayRef<uint8_t> Key,
                              "expected value size of " + itostr(ValueSize) +
                                  ", got: " + itostr(Value.size()));
   assert(Value.size() == ValueSize);
-  OnDiskHashMappedTrie::pointer ActionP = Cache.insertLazy(
+  auto ActionP = Cache.insertLazy(
       Key, [&](FileOffset TentativeOffset,
                OnDiskHashMappedTrie::ValueProxy TentativeValue) {
         assert(TentativeValue.Data.size() == ValueSize);
         llvm::copy(Value, TentativeValue.Data.data());
       });
-  return ActionP->Data;
+  if (LLVM_UNLIKELY(!ActionP))
+    return ActionP.takeError();
+  return (*ActionP)->Data;
 }
 
 Expected<std::optional<ArrayRef<char>>>
