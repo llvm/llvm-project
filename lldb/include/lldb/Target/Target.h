@@ -37,7 +37,6 @@
 #include "lldb/Utility/RealpathPrefixes.h"
 #include "lldb/Utility/Timeout.h"
 #include "lldb/lldb-public.h"
-#include "llvm/ADT/StringRef.h"
 
 namespace lldb_private {
 
@@ -114,8 +113,6 @@ public:
   bool GetDisableSTDIO() const;
 
   void SetDisableSTDIO(bool b);
-
-  llvm::StringRef GetLaunchWorkingDirectory() const;
 
   const char *GetDisassemblyFlavor() const;
 
