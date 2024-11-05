@@ -133,7 +133,6 @@ void uses() {
   // expected-error@+1{{OpenACC 'present_or_create' clause is not valid on 'loop' directive}}
 #pragma acc loop auto present_or_create(Var)
   for(;;);
-  // expected-warning@+1{{OpenACC clause 'reduction' not yet implemented}}
 #pragma acc loop auto reduction(+:Var)
   for(;;);
 #pragma acc loop auto collapse(1)
@@ -268,7 +267,6 @@ void uses() {
   // expected-error@+1{{OpenACC 'present_or_create' clause is not valid on 'loop' directive}}
 #pragma acc loop present_or_create(Var) auto
   for(;;);
-  // expected-warning@+1{{OpenACC clause 'reduction' not yet implemented}}
 #pragma acc loop reduction(+:Var) auto
   for(;;);
 #pragma acc loop collapse(1) auto
@@ -404,7 +402,6 @@ void uses() {
   // expected-error@+1{{OpenACC 'present_or_create' clause is not valid on 'loop' directive}}
 #pragma acc loop independent present_or_create(Var)
   for(;;);
-  // expected-warning@+1{{OpenACC clause 'reduction' not yet implemented}}
 #pragma acc loop independent reduction(+:Var)
   for(;;);
 #pragma acc loop independent collapse(1)
@@ -539,7 +536,6 @@ void uses() {
   // expected-error@+1{{OpenACC 'present_or_create' clause is not valid on 'loop' directive}}
 #pragma acc loop present_or_create(Var) independent
   for(;;);
-  // expected-warning@+1{{OpenACC clause 'reduction' not yet implemented}}
 #pragma acc loop reduction(+:Var) independent
   for(;;);
 #pragma acc loop collapse(1) independent
@@ -683,7 +679,6 @@ void uses() {
   // expected-error@+1{{OpenACC 'present_or_create' clause is not valid on 'loop' directive}}
 #pragma acc loop seq present_or_create(Var)
   for(;;);
-  // expected-warning@+1{{OpenACC clause 'reduction' not yet implemented}}
 #pragma acc loop seq reduction(+:Var)
   for(;;);
 #pragma acc loop seq collapse(1)
@@ -824,7 +819,6 @@ void uses() {
   // expected-error@+1{{OpenACC 'present_or_create' clause is not valid on 'loop' directive}}
 #pragma acc loop present_or_create(Var) seq
   for(;;);
-  // expected-warning@+1{{OpenACC clause 'reduction' not yet implemented}}
 #pragma acc loop reduction(+:Var) seq
   for(;;);
 #pragma acc loop collapse(1) seq
