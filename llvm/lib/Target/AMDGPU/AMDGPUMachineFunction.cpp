@@ -104,10 +104,11 @@ unsigned AMDGPUMachineFunction::allocateLDSGlobal(const DataLayout &DL,
   unsigned Offset;
   if (GV.getAddressSpace() == AMDGPUAS::LOCAL_ADDRESS) {
     if (TargetExtType *TTy = AMDGPU::isNamedBarrier(GV)) {
-      auto Offset = getLDSAbsoluteAddress(GV);
-      assert(Offset && "named barrier should have an absolute address");
-      Entry.first->second = Offset.value();
-      return Offset.value();
+      std::optional<unsigned> BarAddr = getLDSAbsoluteAddress(GV);
+      if (!BarAddr)
+        llvm_unreachable("named barrier should have an assigned address");
+      Entry.first->second = BarAddr.value();
+      return BarAddr.value();
     }
 
     std::optional<uint32_t> MaybeAbs = getLDSAbsoluteAddress(GV);
