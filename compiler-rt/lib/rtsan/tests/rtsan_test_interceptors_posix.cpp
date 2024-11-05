@@ -714,7 +714,7 @@ TEST(TestRtsanInterceptors, ListeningOnASocketDiesWhenRealtime) {
 }
 
 TEST(TestRtsanInterceptors, AcceptingASocketDiesWhenRealtime) {
-  auto Func = []() { EXPECT_NE(accept(kNotASocketFd, nullptr, nullptr), 0); };
+  auto Func = []() { EXPECT_LT(accept(kNotASocketFd, nullptr, nullptr), 0); };
   ExpectRealtimeDeath(Func, "accept");
   ExpectNonRealtimeSurvival(Func);
 }
