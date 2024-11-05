@@ -31,6 +31,9 @@ TEST(AMDGPU, TestWave64DwarfRegMapping) {
           EXPECT_EQ(llvmReg, MRI->getDwarfRegNum(PCReg, false));
           EXPECT_EQ(llvmReg, MRI->getDwarfRegNum(PCReg, true));
         }
+
+        EXPECT_EQ(MRI->getDwarfRegNum(AMDGPU::VGPR511, false), 3071);
+        EXPECT_EQ(MRI->getDwarfRegNum(AMDGPU::VGPR512, false), -1);
       }
     }
   }
@@ -55,6 +58,11 @@ TEST(AMDGPU, TestWave32DwarfRegMapping) {
           EXPECT_EQ(llvmReg, MRI->getDwarfRegNum(PCReg, false));
           EXPECT_EQ(llvmReg, MRI->getDwarfRegNum(PCReg, true));
         }
+
+        EXPECT_EQ(MRI->getDwarfRegNum(AMDGPU::VGPR511, false), 2047);
+        EXPECT_EQ(MRI->getLLVMRegNum(2047, false), AMDGPU::VGPR511_LO16);
+        EXPECT_EQ(MRI->getDwarfRegNum(AMDGPU::VGPR512, false), 3584);
+        EXPECT_EQ(MRI->getLLVMRegNum(3584, false), AMDGPU::VGPR512_LO16);
       }
     }
   }

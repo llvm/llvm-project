@@ -368,8 +368,8 @@ foreach Index = 0...1023 in {
   defm VGPR#Index :
     SIRegLoHi16 <"v"#Index, Index, /* ArtificialHigh= */ 0,
                  /* isVGPR= */ 1, /* isAGPR= */ 0>,
-    DwarfRegNum<[!if(!le(Index, 511), !add(Index, 2560), !add(Index, 2816)),
-                 !if(!le(Index, 511), !add(Index, 1536), !add(Index, 1792))]>;
+    DwarfRegNum<[!if(!le(Index, 511), !add(Index, 2560), -1),
+                 !if(!le(Index, 511), !add(Index, 1536), !add(Index, !sub(3584, 512)))]>;
 }
 
 // AccVGPR registers
