@@ -4605,23 +4605,14 @@ struct DropUnitExtentBasis
   }
 };
 
-/// Drop delinearization pattern related to loops in the following way
+/// Drop delinearization with a single basis element
 ///
-/// ```
-/// <loop>(%iv) = (%c0) to (%ub) step (%c1) {
-///   %0 = affine.delinearize_index %iv into (%ub) : index
-///   <some_use>(%0)
-/// }
-/// ```
-///
-/// can be canonicalized to
-///
-/// ```
-/// <loop>(%iv) = (%c0) to (%ub) step (%c1) {
-///   <some_use>(%iv)
-/// }
-/// ```
-struct DropDelinearizeOfSingleLoop
+/// By definition, `delinearize_index %linear into (%basis)` is
+/// `%linear floorDiv 1` (since `1` is the product of the basis elememts,
+/// ignoring the 0th one, and since there is no previous division we need
+/// to use the remainder of). Therefore, a single-element `delinearize`
+/// can be replaced by the underlying linear index.
+struct DropDelinearizeOneBasisElement
     : public OpRewritePattern<affine::AffineDelinearizeIndexOp> {
   using OpRewritePattern::OpRewritePattern;
 
@@ -4629,50 +4620,7 @@ struct DropDelinearizeOfSingleLoop
                                 PatternRewriter &rewriter) const override {
     if (delinearizeOp.getStaticBasis().size() != 1)
       return failure();
-    auto basis = delinearizeOp.getMixedBasis();
-
-    // Check that the `linear_index` is an induction variable.
-    auto inductionVar = dyn_cast<BlockArgument>(delinearizeOp.getLinearIndex());
-    if (!inductionVar)
-      return failure();
-
-    // Check that the parent is a `LoopLikeOpInterface`.
-    auto loopLikeOp = dyn_cast<LoopLikeOpInterface>(
-        inductionVar.getParentRegion()->getParentOp());
-    if (!loopLikeOp)
-      return failure();
-
-    // Check that loop is unit-rank and that the `linear_index` is the induction
-    // variable.
-    auto inductionVars = loopLikeOp.getLoopInductionVars();
-    if (!inductionVars || inductionVars->size() != 1 ||
-        inductionVars->front() != inductionVar) {
-      return rewriter.notifyMatchFailure(
-          delinearizeOp, "`linear_index` is not loop induction variable");
-    }
-
-    // Check that the upper-bound is the basis.
-    auto upperBounds = loopLikeOp.getLoopUpperBounds();
-    if (!upperBounds || upperBounds->size() != 1 ||
-        upperBounds->front() != basis.front()) {
-      return rewriter.notifyMatchFailure(delinearizeOp,
-                                         "`basis` is not upper bound");
-    }
-
-    // Check that the lower bound is zero.
-    auto lowerBounds = loopLikeOp.getLoopLowerBounds();
-    if (!lowerBounds || lowerBounds->size() != 1 ||
-        !isZeroIndex(lowerBounds->front())) {
-      return rewriter.notifyMatchFailure(delinearizeOp,
-                                         "loop lower bound is not zero");
-    }
-
-    // Check that the step is one.
-    auto steps = loopLikeOp.getLoopSteps();
-    if (!steps || steps->size() != 1 || !isConstantIntValue(steps->front(), 1))
-      return rewriter.notifyMatchFailure(delinearizeOp, "loop step is not one");
-
-    rewriter.replaceOp(delinearizeOp, inductionVar);
+    rewriter.replaceOp(delinearizeOp, delinearizeOp.getLinearIndex());
     return success();
   }
 };
@@ -4681,7 +4629,7 @@ struct DropDelinearizeOfSingleLoop
 
 void affine::AffineDelinearizeIndexOp::getCanonicalizationPatterns(
     RewritePatternSet &patterns, MLIRContext *context) {
-  patterns.insert<DropDelinearizeOfSingleLoop, DropUnitExtentBasis>(context);
+  patterns.insert<DropDelinearizeOneBasisElement, DropUnitExtentBasis>(context);
 }
 
 //===----------------------------------------------------------------------===//

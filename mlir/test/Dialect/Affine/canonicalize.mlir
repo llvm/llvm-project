@@ -1517,6 +1517,7 @@ func.func @drop_single_loop_delinearize(%arg0 : index, %arg1 : index) -> index {
 // -----
 
 // CHECK-LABEL: func @delinearize_non_induction_variable
+// CHECK-NOT: affine.delinearize
 func.func @delinearize_non_induction_variable(%arg0: memref<?xi32>, %i : index, %t0 : index, %t1 : index, %t2 : index) -> index {
   %1 = affine.apply affine_map<(d0)[s0, s1, s2] -> (d0 + s0 + s1 * 64 + s2 * 128)>(%i)[%t0, %t1, %t2]
   %2 = affine.delinearize_index %1 into (1024) : index
@@ -1526,6 +1527,7 @@ func.func @delinearize_non_induction_variable(%arg0: memref<?xi32>, %i : index, 
 // -----
 
 // CHECK-LABEL: func @delinearize_non_loop_like
+// CHECK-NOT: affine.delinearize
 func.func @delinearize_non_loop_like(%arg0: memref<?xi32>, %i : index) -> index {
   %2 = affine.delinearize_index %i into (1024) : index
   return %2 : index
