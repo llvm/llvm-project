@@ -87,6 +87,12 @@ private:
   ComplexRendererFns selectShiftMask(MachineOperand &Root) const;
   ComplexRendererFns selectAddrRegImm(MachineOperand &Root) const;
 
+  ComplexRendererFns selectZExtBits(MachineOperand &Root, unsigned Bits) const;
+  template <unsigned Bits>
+  ComplexRendererFns selectZExtBits(MachineOperand &Root) const {
+    return selectZExtBits(Root, Bits);
+  }
+
   ComplexRendererFns selectSHXADDOp(MachineOperand &Root, unsigned ShAmt) const;
   template <unsigned ShAmt>
   ComplexRendererFns selectSHXADDOp(MachineOperand &Root) const {
@@ -240,6 +246,25 @@ RISCVInstructionSelector::selectShiftMask(MachineOperand &Root) const {
   }
 
   return {{[=](MachineInstrBuilder &MIB) { MIB.addReg(ShAmtReg); }}};
+}
+
+InstructionSelector::ComplexRendererFns
+RISCVInstructionSelector::selectZExtBits(MachineOperand &Root,
+                                         unsigned Bits) const {
+  if (!Root.isReg())
+    return std::nullopt;
+  Register RootReg = Root.getReg();
+
+  Register RegX;
+  int64_t C;
+  if (mi_match(RootReg, *MRI, m_GAnd(m_Reg(RegX), m_ICst(C))) &&
+      (uint64_t)C == maskTrailingOnes<uint64_t>(Bits)) {
+    return {{[=](MachineInstrBuilder &MIB) { MIB.addReg(RegX); }}};
+  }
+
+  // TODO: Use computeKnownBits.
+
+  return std::nullopt;
 }
 
 InstructionSelector::ComplexRendererFns
