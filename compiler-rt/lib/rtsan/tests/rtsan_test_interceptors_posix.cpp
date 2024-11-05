@@ -28,11 +28,6 @@
 #include <malloc.h>
 #endif
 
-#include <atomic>
-#include <chrono>
-#include <string>
-#include <thread>
-
 #include <fcntl.h>
 #include <pthread.h>
 #include <stdio.h>
