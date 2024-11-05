@@ -319,9 +319,8 @@ ConstantIntRanges
 mlir::intrange::inferCeilDivU(ArrayRef<ConstantIntRanges> argRanges) {
   const ConstantIntRanges &lhs = argRanges[0], &rhs = argRanges[1];
 
-  auto ceilDivUIFix =
-      [](const APInt &lhs, const APInt &rhs,
-         const APInt &result) -> std::optional<APInt> {
+  auto ceilDivUIFix = [](const APInt &lhs, const APInt &rhs,
+                         const APInt &result) -> std::optional<APInt> {
     if (!lhs.urem(rhs).isZero()) {
       bool overflowed = false;
       APInt corrected =
@@ -368,9 +367,8 @@ ConstantIntRanges
 mlir::intrange::inferCeilDivS(ArrayRef<ConstantIntRanges> argRanges) {
   const ConstantIntRanges &lhs = argRanges[0], &rhs = argRanges[1];
 
-  auto ceilDivSIFix =
-      [](const APInt &lhs, const APInt &rhs,
-         const APInt &result) -> std::optional<APInt> {
+  auto ceilDivSIFix = [](const APInt &lhs, const APInt &rhs,
+                         const APInt &result) -> std::optional<APInt> {
     if (!lhs.srem(rhs).isZero() && lhs.isNonNegative() == rhs.isNonNegative()) {
       bool overflowed = false;
       APInt corrected =
@@ -386,9 +384,8 @@ ConstantIntRanges
 mlir::intrange::inferFloorDivS(ArrayRef<ConstantIntRanges> argRanges) {
   const ConstantIntRanges &lhs = argRanges[0], &rhs = argRanges[1];
 
-  auto floorDivSIFix =
-      [](const APInt &lhs, const APInt &rhs,
-         const APInt &result) -> std::optional<APInt> {
+  auto floorDivSIFix = [](const APInt &lhs, const APInt &rhs,
+                          const APInt &result) -> std::optional<APInt> {
     if (!lhs.srem(rhs).isZero() && lhs.isNonNegative() != rhs.isNonNegative()) {
       bool overflowed = false;
       APInt corrected =
@@ -603,8 +600,7 @@ ConstantIntRanges
 mlir::intrange::inferShrS(ArrayRef<ConstantIntRanges> argRanges) {
   const ConstantIntRanges &lhs = argRanges[0], &rhs = argRanges[1];
 
-  auto ashr = [](const APInt &l,
-                         const APInt &r) -> std::optional<APInt> {
+  auto ashr = [](const APInt &l, const APInt &r) -> std::optional<APInt> {
     return r.uge(r.getBitWidth()) ? std::optional<APInt>() : l.ashr(r);
   };
 
@@ -616,8 +612,7 @@ ConstantIntRanges
 mlir::intrange::inferShrU(ArrayRef<ConstantIntRanges> argRanges) {
   const ConstantIntRanges &lhs = argRanges[0], &rhs = argRanges[1];
 
-  auto lshr = [](const APInt &l,
-                         const APInt &r) -> std::optional<APInt> {
+  auto lshr = [](const APInt &l, const APInt &r) -> std::optional<APInt> {
     return r.uge(r.getBitWidth()) ? std::optional<APInt>() : l.lshr(r);
   };
   return minMaxBy(lshr, {lhs.umin(), lhs.umax()}, {rhs.umin(), rhs.umax()},
