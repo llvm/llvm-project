@@ -529,7 +529,7 @@ libc_support_library(
         ":__support_macros_properties_os",
         ":func_aligned_alloc",
         ":func_free",
-        ":func_malloc"
+        ":func_malloc",
     ],
 )
 
@@ -576,6 +576,9 @@ libc_support_library(
         ":__support_common",
         ":__support_cpp_string_view",
         ":__support_integer_to_string",
+        ":func_free",
+        ":func_malloc",
+        ":func_realloc",
         ":string_memory_utils",
         ":string_utils",
     ],
@@ -657,6 +660,9 @@ libc_support_library(
     hdrs = ["src/__support/char_vector.h"],
     deps = [
         ":__support_common",
+        ":func_free",
+        ":func_malloc",
+        ":func_realloc",
     ],
 )
 
@@ -861,13 +867,13 @@ libc_support_library(
         ":__support_error_or",
         ":__support_threads_mutex",
         ":errno",
-        ":hdr_stdio_macros",
-        ":hdr_stdio_overlay",
-        ":types_off_t",
         ":func_aligned_alloc",
         ":func_free",
         ":func_malloc",
         ":func_realloc",
+        ":hdr_stdio_macros",
+        ":hdr_stdio_overlay",
+        ":types_off_t",
     ],
 )
 
