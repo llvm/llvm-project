@@ -222,78 +222,7 @@ static memory_order to_mo(morder mo) {
   return memory_order_seq_cst;
 }
 
-template <typename T>
-static T NoTsanAtomicLoad(const volatile T *a, morder mo) {
-  return atomic_load(to_atomic(a), to_mo(mo));
-}
-
-#if __TSAN_HAS_INT128 && !SANITIZER_GO
-static a128 NoTsanAtomicLoad(const volatile a128 *a, morder mo) {
-  SpinMutexLock lock(&mutex128);
-  return *a;
-}
-#endif
-
-template <typename T>
-static T AtomicLoad(ThreadState *thr, uptr pc, const volatile T *a, morder mo) {
-  DCHECK(IsLoadOrder(mo));
-  // This fast-path is critical for performance.
-  // Assume the access is atomic.
-  if (!IsAcquireOrder(mo)) {
-    MemoryAccess(thr, pc, (uptr)a, AccessSize<T>(),
-                 kAccessRead | kAccessAtomic);
-    return NoTsanAtomicLoad(a, mo);
-  }
-  // Don't create sync object if it does not exist yet. For example, an atomic
-  // pointer is initialized to nullptr and then periodically acquire-loaded.
-  T v = NoTsanAtomicLoad(a, mo);
-  SyncVar *s = ctx->metamap.GetSyncIfExists((uptr)a);
-  if (s) {
-    SlotLocker locker(thr);
-    ReadLock lock(&s->mtx);
-    thr->clock.Acquire(s->clock);
-    // Re-read under sync mutex because we need a consistent snapshot
-    // of the value and the clock we acquire.
-    v = NoTsanAtomicLoad(a, mo);
-  }
-  MemoryAccess(thr, pc, (uptr)a, AccessSize<T>(), kAccessRead | kAccessAtomic);
-  return v;
-}
-
-template <typename T>
-static void NoTsanAtomicStore(volatile T *a, T v, morder mo) {
-  atomic_store(to_atomic(a), v, to_mo(mo));
-}
-
-#if __TSAN_HAS_INT128 && !SANITIZER_GO
-static void NoTsanAtomicStore(volatile a128 *a, a128 v, morder mo) {
-  SpinMutexLock lock(&mutex128);
-  *a = v;
-}
-#endif
-
-template <typename T>
-static void AtomicStore(ThreadState *thr, uptr pc, volatile T *a, T v,
-                        morder mo) {
-  DCHECK(IsStoreOrder(mo));
-  MemoryAccess(thr, pc, (uptr)a, AccessSize<T>(), kAccessWrite | kAccessAtomic);
-  // This fast-path is critical for performance.
-  // Assume the access is atomic.
-  // Strictly saying even relaxed store cuts off release sequence,
-  // so must reset the clock.
-  if (!IsReleaseOrder(mo)) {
-    NoTsanAtomicStore(a, v, mo);
-    return;
-  }
-  SlotLocker locker(thr);
-  {
-    auto s = ctx->metamap.GetSyncOrCreate(thr, pc, (uptr)a, false);
-    Lock lock(&s->mtx);
-    thr->clock.ReleaseStore(&s->clock);
-    NoTsanAtomicStore(a, v, mo);
-  }
-  IncrementEpoch(thr);
-}
+namespace {
 
 template <typename T, T (*F)(volatile T *v, T op)>
 static T AtomicRMW(ThreadState *thr, uptr pc, volatile T *a, T v, morder mo) {
@@ -317,163 +246,254 @@ static T AtomicRMW(ThreadState *thr, uptr pc, volatile T *a, T v, morder mo) {
   return v;
 }
 
-template <typename T>
-static T NoTsanAtomicExchange(volatile T *a, T v, morder mo) {
-  return func_xchg(a, v);
-}
+struct OpLoad {
+  template <typename T>
+  static T NoTsanAtomic(const volatile T *a, morder mo) {
+    return atomic_load(to_atomic(a), to_mo(mo));
+  }
 
-template <typename T>
-static T NoTsanAtomicFetchAdd(volatile T *a, T v, morder mo) {
-  return func_add(a, v);
-}
+#if __TSAN_HAS_INT128 && !SANITIZER_GO
+  static a128 NoTsanAtomic(const volatile a128 *a, morder mo) {
+    SpinMutexLock lock(&mutex128);
+    return *a;
+  }
+#endif
 
-template <typename T>
-static T NoTsanAtomicFetchSub(volatile T *a, T v, morder mo) {
-  return func_sub(a, v);
-}
+  template <typename T>
+  static T Atomic(ThreadState *thr, uptr pc, const volatile T *a, morder mo) {
+    DCHECK(IsLoadOrder(mo));
+    // This fast-path is critical for performance.
+    // Assume the access is atomic.
+    if (!IsAcquireOrder(mo)) {
+      MemoryAccess(thr, pc, (uptr)a, AccessSize<T>(),
+                   kAccessRead | kAccessAtomic);
+      return NoTsanAtomic(a, mo);
+    }
+    // Don't create sync object if it does not exist yet. For example, an atomic
+    // pointer is initialized to nullptr and then periodically acquire-loaded.
+    T v = NoTsanAtomic(a, mo);
+    SyncVar *s = ctx->metamap.GetSyncIfExists((uptr)a);
+    if (s) {
+      SlotLocker locker(thr);
+      ReadLock lock(&s->mtx);
+      thr->clock.Acquire(s->clock);
+      // Re-read under sync mutex because we need a consistent snapshot
+      // of the value and the clock we acquire.
+      v = NoTsanAtomic(a, mo);
+    }
+    MemoryAccess(thr, pc, (uptr)a, AccessSize<T>(),
+                 kAccessRead | kAccessAtomic);
+    return v;
+  }
+};
 
-template <typename T>
-static T NoTsanAtomicFetchAnd(volatile T *a, T v, morder mo) {
-  return func_and(a, v);
-}
+struct OpStore {
+  template <typename T>
+  static void NoTsanAtomic(volatile T *a, T v, morder mo) {
+    atomic_store(to_atomic(a), v, to_mo(mo));
+  }
 
-template <typename T>
-static T NoTsanAtomicFetchOr(volatile T *a, T v, morder mo) {
-  return func_or(a, v);
-}
+#if __TSAN_HAS_INT128 && !SANITIZER_GO
+  static void NoTsanAtomic(volatile a128 *a, a128 v, morder mo) {
+    SpinMutexLock lock(&mutex128);
+    *a = v;
+  }
+#endif
 
-template <typename T>
-static T NoTsanAtomicFetchXor(volatile T *a, T v, morder mo) {
-  return func_xor(a, v);
-}
+  template <typename T>
+  static void Atomic(ThreadState *thr, uptr pc, volatile T *a, T v, morder mo) {
+    DCHECK(IsStoreOrder(mo));
+    MemoryAccess(thr, pc, (uptr)a, AccessSize<T>(),
+                 kAccessWrite | kAccessAtomic);
+    // This fast-path is critical for performance.
+    // Assume the access is atomic.
+    // Strictly saying even relaxed store cuts off release sequence,
+    // so must reset the clock.
+    if (!IsReleaseOrder(mo)) {
+      NoTsanAtomic(a, v, mo);
+      return;
+    }
+    SlotLocker locker(thr);
+    {
+      auto s = ctx->metamap.GetSyncOrCreate(thr, pc, (uptr)a, false);
+      Lock lock(&s->mtx);
+      thr->clock.ReleaseStore(&s->clock);
+      NoTsanAtomic(a, v, mo);
+    }
+    IncrementEpoch(thr);
+  }
+};
 
-template <typename T>
-static T NoTsanAtomicFetchNand(volatile T *a, T v, morder mo) {
-  return func_nand(a, v);
-}
+struct OpExchange {
+  template <typename T>
+  static T NoTsanAtomic(volatile T *a, T v, morder mo) {
+    return func_xchg(a, v);
+  }
+  template <typename T>
+  static T Atomic(ThreadState *thr, uptr pc, volatile T *a, T v, morder mo) {
+    return AtomicRMW<T, func_xchg>(thr, pc, a, v, mo);
+  }
+};
 
-template <typename T>
-static T AtomicExchange(ThreadState *thr, uptr pc, volatile T *a, T v,
-                        morder mo) {
-  return AtomicRMW<T, func_xchg>(thr, pc, a, v, mo);
-}
+struct OpFetchAdd {
+  template <typename T>
+  static T NoTsanAtomic(volatile T *a, T v, morder mo) {
+    return func_add(a, v);
+  }
 
-template <typename T>
-static T AtomicFetchAdd(ThreadState *thr, uptr pc, volatile T *a, T v,
-                        morder mo) {
-  return AtomicRMW<T, func_add>(thr, pc, a, v, mo);
-}
+  template <typename T>
+  static T Atomic(ThreadState *thr, uptr pc, volatile T *a, T v, morder mo) {
+    return AtomicRMW<T, func_add>(thr, pc, a, v, mo);
+  }
+};
 
-template <typename T>
-static T AtomicFetchSub(ThreadState *thr, uptr pc, volatile T *a, T v,
-                        morder mo) {
-  return AtomicRMW<T, func_sub>(thr, pc, a, v, mo);
-}
+struct OpFetchSub {
+  template <typename T>
+  static T NoTsanAtomic(volatile T *a, T v, morder mo) {
+    return func_sub(a, v);
+  }
 
-template <typename T>
-static T AtomicFetchAnd(ThreadState *thr, uptr pc, volatile T *a, T v,
-                        morder mo) {
-  return AtomicRMW<T, func_and>(thr, pc, a, v, mo);
-}
+  template <typename T>
+  static T Atomic(ThreadState *thr, uptr pc, volatile T *a, T v, morder mo) {
+    return AtomicRMW<T, func_sub>(thr, pc, a, v, mo);
+  }
+};
 
-template <typename T>
-static T AtomicFetchOr(ThreadState *thr, uptr pc, volatile T *a, T v,
-                       morder mo) {
-  return AtomicRMW<T, func_or>(thr, pc, a, v, mo);
-}
+struct OpFetchAnd {
+  template <typename T>
+  static T NoTsanAtomic(volatile T *a, T v, morder mo) {
+    return func_and(a, v);
+  }
 
-template <typename T>
-static T AtomicFetchXor(ThreadState *thr, uptr pc, volatile T *a, T v,
-                        morder mo) {
-  return AtomicRMW<T, func_xor>(thr, pc, a, v, mo);
-}
+  template <typename T>
+  static T Atomic(ThreadState *thr, uptr pc, volatile T *a, T v, morder mo) {
+    return AtomicRMW<T, func_and>(thr, pc, a, v, mo);
+  }
+};
 
-template <typename T>
-static T AtomicFetchNand(ThreadState *thr, uptr pc, volatile T *a, T v,
-                         morder mo) {
-  return AtomicRMW<T, func_nand>(thr, pc, a, v, mo);
-}
+struct OpFetchOr {
+  template <typename T>
+  static T NoTsanAtomic(volatile T *a, T v, morder mo) {
+    return func_or(a, v);
+  }
 
-template <typename T>
-static bool NoTsanAtomicCAS(volatile T *a, T *c, T v, morder mo, morder fmo) {
-  return atomic_compare_exchange_strong(to_atomic(a), c, v, to_mo(mo));
-}
+  template <typename T>
+  static T Atomic(ThreadState *thr, uptr pc, volatile T *a, T v, morder mo) {
+    return AtomicRMW<T, func_or>(thr, pc, a, v, mo);
+  }
+};
+
+struct OpFetchXor {
+  template <typename T>
+  static T NoTsanAtomic(volatile T *a, T v, morder mo) {
+    return func_xor(a, v);
+  }
+
+  template <typename T>
+  static T Atomic(ThreadState *thr, uptr pc, volatile T *a, T v, morder mo) {
+    return AtomicRMW<T, func_xor>(thr, pc, a, v, mo);
+  }
+};
+
+struct OpFetchNand {
+  template <typename T>
+  static T NoTsanAtomic(volatile T *a, T v, morder mo) {
+    return func_nand(a, v);
+  }
+
+  template <typename T>
+  static T Atomic(ThreadState *thr, uptr pc, volatile T *a, T v, morder mo) {
+    return AtomicRMW<T, func_nand>(thr, pc, a, v, mo);
+  }
+};
+
+struct OpCAS {
+  template <typename T>
+  static bool NoTsanAtomic(volatile T *a, T *c, T v, morder mo, morder fmo) {
+    return atomic_compare_exchange_strong(to_atomic(a), c, v, to_mo(mo));
+  }
 
 #if __TSAN_HAS_INT128
-static bool NoTsanAtomicCAS(volatile a128 *a, a128 *c, a128 v, morder mo,
-                            morder fmo) {
-  a128 old = *c;
-  a128 cur = func_cas(a, old, v);
-  if (cur == old)
-    return true;
-  *c = cur;
-  return false;
-}
-#endif
-
-template <typename T>
-static T NoTsanAtomicCAS(volatile T *a, T c, T v, morder mo, morder fmo) {
-  NoTsanAtomicCAS(a, &c, v, mo, fmo);
-  return c;
-}
-
-template <typename T>
-static bool AtomicCAS(ThreadState *thr, uptr pc, volatile T *a, T *c, T v,
-                      morder mo, morder fmo) {
-  // 31.7.2.18: "The failure argument shall not be memory_order_release
-  // nor memory_order_acq_rel". LLVM (2021-05) fallbacks to Monotonic
-  // (mo_relaxed) when those are used.
-  DCHECK(IsLoadOrder(fmo));
-
-  MemoryAccess(thr, pc, (uptr)a, AccessSize<T>(), kAccessWrite | kAccessAtomic);
-  if (LIKELY(mo == mo_relaxed && fmo == mo_relaxed)) {
-    T cc = *c;
-    T pr = func_cas(a, cc, v);
-    if (pr == cc)
+  static bool NoTsanAtomic(volatile a128 *a, a128 *c, a128 v, morder mo,
+                           morder fmo) {
+    a128 old = *c;
+    a128 cur = func_cas(a, old, v);
+    if (cur == old)
       return true;
-    *c = pr;
+    *c = cur;
     return false;
   }
-  SlotLocker locker(thr);
-  bool release = IsReleaseOrder(mo);
-  bool success;
-  {
-    auto s = ctx->metamap.GetSyncOrCreate(thr, pc, (uptr)a, false);
-    RWLock lock(&s->mtx, release);
-    T cc = *c;
-    T pr = func_cas(a, cc, v);
-    success = pr == cc;
-    if (!success) {
-      *c = pr;
-      mo = fmo;
-    }
-    if (success && IsAcqRelOrder(mo))
-      thr->clock.ReleaseAcquire(&s->clock);
-    else if (success && IsReleaseOrder(mo))
-      thr->clock.Release(&s->clock);
-    else if (IsAcquireOrder(mo))
-      thr->clock.Acquire(s->clock);
-  }
-  if (success && release)
-    IncrementEpoch(thr);
-  return success;
-}
+#endif
 
-template <typename T>
-static T AtomicCAS(ThreadState *thr, uptr pc, volatile T *a, T c, T v,
-                   morder mo, morder fmo) {
-  AtomicCAS(thr, pc, a, &c, v, mo, fmo);
-  return c;
-}
+  template <typename T>
+  static T NoTsanAtomic(volatile T *a, T c, T v, morder mo, morder fmo) {
+    NoTsanAtomic(a, &c, v, mo, fmo);
+    return c;
+  }
+
+  template <typename T>
+  static bool Atomic(ThreadState *thr, uptr pc, volatile T *a, T *c, T v,
+                     morder mo, morder fmo) {
+    // 31.7.2.18: "The failure argument shall not be memory_order_release
+    // nor memory_order_acq_rel". LLVM (2021-05) fallbacks to Monotonic
+    // (mo_relaxed) when those are used.
+    DCHECK(IsLoadOrder(fmo));
+
+    MemoryAccess(thr, pc, (uptr)a, AccessSize<T>(),
+                 kAccessWrite | kAccessAtomic);
+    if (LIKELY(mo == mo_relaxed && fmo == mo_relaxed)) {
+      T cc = *c;
+      T pr = func_cas(a, cc, v);
+      if (pr == cc)
+        return true;
+      *c = pr;
+      return false;
+    }
+    SlotLocker locker(thr);
+    bool release = IsReleaseOrder(mo);
+    bool success;
+    {
+      auto s = ctx->metamap.GetSyncOrCreate(thr, pc, (uptr)a, false);
+      RWLock lock(&s->mtx, release);
+      T cc = *c;
+      T pr = func_cas(a, cc, v);
+      success = pr == cc;
+      if (!success) {
+        *c = pr;
+        mo = fmo;
+      }
+      if (success && IsAcqRelOrder(mo))
+        thr->clock.ReleaseAcquire(&s->clock);
+      else if (success && IsReleaseOrder(mo))
+        thr->clock.Release(&s->clock);
+      else if (IsAcquireOrder(mo))
+        thr->clock.Acquire(s->clock);
+    }
+    if (success && release)
+      IncrementEpoch(thr);
+    return success;
+  }
+
+  template <typename T>
+  static T Atomic(ThreadState *thr, uptr pc, volatile T *a, T c, T v, morder mo,
+                  morder fmo) {
+    Atomic(thr, pc, a, &c, v, mo, fmo);
+    return c;
+  }
+};
 
 #if !SANITIZER_GO
-static void NoTsanAtomicFence(morder mo) { __sync_synchronize(); }
+struct OpFence {
+  static void NoTsanAtomic(morder mo) { __sync_synchronize(); }
 
-static void AtomicFence(ThreadState *thr, uptr pc, morder mo) {
-  // FIXME(dvyukov): not implemented.
-  __sync_synchronize();
-}
+  static void Atomic(ThreadState *thr, uptr pc, morder mo) {
+    // FIXME(dvyukov): not implemented.
+    __sync_synchronize();
+  }
+};
 #endif
+
+}  // namespace
 
 // Interface functions follow.
 #if !SANITIZER_GO
@@ -501,9 +521,9 @@ static morder convert_morder(morder mo) {
     ThreadState *const thr = cur_thread();                      \
     ProcessPendingSignals(thr);                                 \
     if (UNLIKELY(thr->ignore_sync || thr->ignore_interceptors)) \
-      return NoTsanAtomic##func(__VA_ARGS__);                   \
+      return Op##func::NoTsanAtomic(__VA_ARGS__);               \
     mo = convert_morder(mo);                                    \
-    return Atomic##func(thr, GET_CALLER_PC(), __VA_ARGS__);
+    return Op##func::Atomic(thr, GET_CALLER_PC(), __VA_ARGS__);
 
 extern "C" {
 SANITIZER_INTERFACE_ATTRIBUTE
@@ -856,22 +876,22 @@ void __tsan_atomic_signal_fence(morder mo) {}
 
 // Go
 
-#  define ATOMIC(func, ...)               \
-    if (thr->ignore_sync) {               \
-      NoTsanAtomic##func(__VA_ARGS__);    \
-    } else {                              \
-      FuncEntry(thr, cpc);                \
-      Atomic##func(thr, pc, __VA_ARGS__); \
-      FuncExit(thr);                      \
+#  define ATOMIC(func, ...)                   \
+    if (thr->ignore_sync) {                   \
+      Op##func::NoTsanAtomic(__VA_ARGS__);    \
+    } else {                                  \
+      FuncEntry(thr, cpc);                    \
+      Op##func::Atomic(thr, pc, __VA_ARGS__); \
+      FuncExit(thr);                          \
     }
 
-#  define ATOMIC_RET(func, ret, ...)              \
-    if (thr->ignore_sync) {                       \
-      (ret) = NoTsanAtomic##func(__VA_ARGS__);    \
-    } else {                                      \
-      FuncEntry(thr, cpc);                        \
-      (ret) = Atomic##func(thr, pc, __VA_ARGS__); \
-      FuncExit(thr);                              \
+#  define ATOMIC_RET(func, ret, ...)                  \
+    if (thr->ignore_sync) {                           \
+      (ret) = Op##func::NoTsanAtomic(__VA_ARGS__);    \
+    } else {                                          \
+      FuncEntry(thr, cpc);                            \
+      (ret) = Op##func::Atomic(thr, pc, __VA_ARGS__); \
+      FuncExit(thr);                                  \
     }
 
 extern "C" {
