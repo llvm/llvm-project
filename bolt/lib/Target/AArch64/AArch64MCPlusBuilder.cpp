@@ -1325,7 +1325,7 @@ public:
 
   /// Match the following pattern:
   ///
-  ///   ADR x16, .L1
+  ///   LDR x16, .L1
   ///   BR  x16
   /// L1:
   ///   .quad Target
