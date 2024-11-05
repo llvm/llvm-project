@@ -1478,6 +1478,7 @@ define <vscale x 8 x i64> @vwadd_vx_splat_zext(<vscale x 8 x i32> %va, i32 %b) {
 ; RV32-NEXT:    vwaddu.wv v16, v16, v8
 ; RV32-NEXT:    vmv8r.v v8, v16
 ; RV32-NEXT:    addi sp, sp, 16
+; RV32-NEXT:    .cfi_def_cfa_offset 0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vwadd_vx_splat_zext:
@@ -1537,6 +1538,7 @@ define <vscale x 8 x i64> @vwadd_wx_splat_zext(<vscale x 8 x i64> %va, i32 %b) {
 ; RV32-NEXT:    vlse64.v v16, (a0), zero
 ; RV32-NEXT:    vadd.vv v8, v8, v16
 ; RV32-NEXT:    addi sp, sp, 16
+; RV32-NEXT:    .cfi_def_cfa_offset 0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vwadd_wx_splat_zext:
