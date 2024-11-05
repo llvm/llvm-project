@@ -69,7 +69,8 @@ private:
 public:
   mlir::ModuleOp getModule() const { return theModule; }
 
-  /// Helpers to convert Clang's SourceLocation to an MLIR Location.
+  /// Helpers to convert the presumed location of Clang's SourceLocation to an
+  /// MLIR Location.
   mlir::Location getLoc(clang::SourceLocation cLoc);
   mlir::Location getLoc(clang::SourceRange cRange);
 
