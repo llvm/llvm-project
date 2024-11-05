@@ -3,6 +3,9 @@
 
 // Mock version of googletest macros.
 
+#define GTEST_TEST_CLASS_NAME_(test_suite_name, test_name)                     \
+  test_suite_name##_##test_name##_Test
+
 #define GTEST_TEST(test_suite_name, test_name)                                 \
   class GTEST_TEST_CLASS_NAME_(test_suite_name, test_name) {                   \
   public:                                                                      \
