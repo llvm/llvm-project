@@ -7399,16 +7399,13 @@ SDValue DAGCombiner::visitAND(SDNode *N) {
   //
   // Note: the SimplifyDemandedBits fold below can make an information-losing
   // transform, and then we have no way to find this better fold.
-  if (N1C && N1C->isOne() && N0.getOpcode() == ISD::SUB) {
-    if (isNullOrNullSplat(N0.getOperand(0))) {
-      SDValue SubRHS = N0.getOperand(1);
-      if (SubRHS.getOpcode() == ISD::ZERO_EXTEND &&
-          SubRHS.getOperand(0).getScalarValueSizeInBits() == 1)
-        return SubRHS;
-      if (SubRHS.getOpcode() == ISD::SIGN_EXTEND &&
-          SubRHS.getOperand(0).getScalarValueSizeInBits() == 1)
-        return DAG.getNode(ISD::ZERO_EXTEND, DL, VT, SubRHS.getOperand(0));
-    }
+  if (sd_match(N, m_And(m_Sub(m_Zero(), m_Value(X)), m_One()))) {
+    if (X.getOpcode() == ISD::ZERO_EXTEND &&
+        X.getOperand(0).getScalarValueSizeInBits() == 1)
+      return X;
+    if (X.getOpcode() == ISD::SIGN_EXTEND &&
+        X.getOperand(0).getScalarValueSizeInBits() == 1)
+      return DAG.getNode(ISD::ZERO_EXTEND, DL, VT, X.getOperand(0));
   }
 
   // fold (and (sign_extend_inreg x, i16 to i32), 1) -> (and x, 1)
