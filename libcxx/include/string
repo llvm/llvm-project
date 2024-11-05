@@ -1912,6 +1912,9 @@ private:
 #ifndef _LIBCPP_CXX03_LANG
     if constexpr (__libcpp_is_contiguous_iterator<_ForwardIter>::value &&
                   is_same<value_type, __iter_value_type<_ForwardIter>>::value && is_same<_ForwardIter, _Sent>::value) {
+      _LIBCPP_ASSERT_INTERNAL(
+          !std::__is_overlapping_range(std::__to_address(__first), std::__to_address(__last), __dest),
+          "__copy_non_overlapping_range called with an overlapping range!");
       traits_type::copy(__dest, std::__to_address(__first), __last - __first);
       return __dest + (__last - __first);
     }
@@ -1966,9 +1969,12 @@ private:
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void __set_long_size(size_type __s) _NOEXCEPT {
     __rep_.__l.__size_ = __s;
   }
+
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 size_type __get_long_size() const _NOEXCEPT {
+    _LIBCPP_ASSERT_INTERNAL(__rep_.__l.__is_long_, "String has to be long when trying to get the long size");
     return __rep_.__l.__size_;
   }
+
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void __set_size(size_type __s) _NOEXCEPT {
     if (__is_long())
       __set_long_size(__s);
@@ -1977,11 +1983,13 @@ private:
   }
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void __set_long_cap(size_type __s) _NOEXCEPT {
+    _LIBCPP_ASSERT_INTERNAL(!__fits_in_sso(__s), "Long capacity should always be larger than the SSO");
     __rep_.__l.__cap_     = __s / __endian_factor;
     __rep_.__l.__is_long_ = true;
   }
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 size_type __get_long_cap() const _NOEXCEPT {
+    _LIBCPP_ASSERT_INTERNAL(__rep_.__l.__is_long_, "String has to be long when trying to get the long capacity");
     return __rep_.__l.__cap_ * __endian_factor;
   }
 
@@ -1990,10 +1998,12 @@ private:
   }
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 pointer __get_long_pointer() _NOEXCEPT {
+    _LIBCPP_ASSERT_INTERNAL(__rep_.__l.__is_long_, "String has to be long when trying to get the long pointer");
     return _LIBCPP_ASAN_VOLATILE_WRAPPER(__rep_.__l.__data_);
   }
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 const_pointer __get_long_pointer() const _NOEXCEPT {
+    _LIBCPP_ASSERT_INTERNAL(__rep_.__l.__is_long_, "String has to be long when trying to get the long pointer");
     return _LIBCPP_ASAN_VOLATILE_WRAPPER(__rep_.__l.__data_);
   }
 
@@ -2137,6 +2147,7 @@ private:
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_NOINLINE basic_string& __assign_no_alias(const value_type* __s, size_type __n);
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void __erase_to_end(size_type __pos) {
+    _LIBCPP_ASSERT_INTERNAL(__pos <= capacity(), "Trying to erase at position outside the strings capacity!");
     __null_terminate_at(std::__to_address(__get_pointer()), __pos);
   }
 

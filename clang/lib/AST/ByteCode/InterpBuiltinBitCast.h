@@ -19,6 +19,8 @@ class CodePtr;
 
 bool DoBitCast(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
                std::byte *Buff, size_t BuffSize, bool &HasIndeterminateBits);
+bool DoBitCastPtr(InterpState &S, CodePtr OpPC, const Pointer &FromPtr,
+                  Pointer &ToPtr);
 
 } // namespace interp
 } // namespace clang

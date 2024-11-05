@@ -1,5 +1,5 @@
 #include <clc/clc.h>
-#include "../clcmacro.h"
+#include <clc/clcmacro.h>
 
 _CLC_OVERLOAD _CLC_DEF char mad_sat(char x, char y, char z) {
   return clamp((short)mad24((short)x, (short)y, (short)z), (short)CHAR_MIN, (short) CHAR_MAX);
