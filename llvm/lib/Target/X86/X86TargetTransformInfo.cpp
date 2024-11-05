@@ -1559,6 +1559,23 @@ InstructionCost X86TTIImpl::getShuffleCost(
       return TTI::TCC_Free;
   }
 
+  // Attempt to detect a cheaper inlane shuffle, avoiding 128-bit subvector
+  // permutation.
+  bool IsInLaneShuffle = false;
+  if (BaseTp->getPrimitiveSizeInBits() > 0 &&
+      (BaseTp->getPrimitiveSizeInBits() % 128) == 0 &&
+      BaseTp->getScalarSizeInBits() == LT.second.getScalarSizeInBits() &&
+      Mask.size() == BaseTp->getElementCount().getKnownMinValue()) {
+    unsigned NumLanes = BaseTp->getPrimitiveSizeInBits() / 128;
+    unsigned NumEltsPerLane = Mask.size() / NumLanes;
+    if ((Mask.size() % NumLanes) == 0)
+      IsInLaneShuffle = all_of(enumerate(Mask), [&](const auto &P) {
+        return P.value() == PoisonMaskElem ||
+               ((P.value() % Mask.size()) / NumEltsPerLane) ==
+                   (P.index() / NumEltsPerLane);
+      });
+  }
+
   // Treat <X x bfloat> shuffles as <X x half>.
   if (LT.second.isVector() && LT.second.getScalarType() == MVT::bf16)
     LT.second = LT.second.changeVectorElementType(MVT::f16);
@@ -1897,6 +1914,25 @@ InstructionCost X86TTIImpl::getShuffleCost(
       if (auto KindCost = Entry->Cost[CostKind])
         return LT.first * *KindCost;
 
+  static const CostTblEntry AVX2InLaneShuffleTbl[] = {
+      {TTI::SK_PermuteSingleSrc, MVT::v16i16, 1}, // vpshufb
+      {TTI::SK_PermuteSingleSrc, MVT::v16f16, 1}, // vpshufb
+      {TTI::SK_PermuteSingleSrc, MVT::v32i8,  1}, // vpshufb
+
+      {TTI::SK_PermuteTwoSrc, MVT::v4f64,     2}, // 2*vshufpd + vblendpd
+      {TTI::SK_PermuteTwoSrc, MVT::v8f32,     2}, // 2*vshufps + vblendps
+      {TTI::SK_PermuteTwoSrc, MVT::v4i64,     2}, // 2*vpshufd + vpblendd
+      {TTI::SK_PermuteTwoSrc, MVT::v8i32,     2}, // 2*vpshufd + vpblendd
+      {TTI::SK_PermuteTwoSrc, MVT::v16i16,    2}, // 2*vpshufb + vpor
+      {TTI::SK_PermuteTwoSrc, MVT::v16f16,    2}, // 2*vpshufb + vpor
+      {TTI::SK_PermuteTwoSrc, MVT::v32i8,     2}, // 2*vpshufb + vpor
+  };
+
+  if (IsInLaneShuffle && ST->hasAVX2())
+    if (const auto *Entry =
+            CostTableLookup(AVX2InLaneShuffleTbl, Kind, LT.second))
+      return LT.first * Entry->Cost;
+
   static const CostTblEntry AVX2ShuffleTbl[] = {
       {TTI::SK_Broadcast, MVT::v4f64, 1},  // vbroadcastpd
       {TTI::SK_Broadcast, MVT::v8f32, 1},  // vbroadcastps
@@ -1971,6 +2007,36 @@ InstructionCost X86TTIImpl::getShuffleCost(
 
   if (ST->hasXOP())
     if (const auto *Entry = CostTableLookup(XOPShuffleTbl, Kind, LT.second))
+      return LT.first * Entry->Cost;
+
+  static const CostTblEntry AVX1InLaneShuffleTbl[] = {
+      {TTI::SK_PermuteSingleSrc, MVT::v4f64,  1},  // vpermilpd
+      {TTI::SK_PermuteSingleSrc, MVT::v4i64,  1},  // vpermilpd
+      {TTI::SK_PermuteSingleSrc, MVT::v8f32,  1},  // vpermilps
+      {TTI::SK_PermuteSingleSrc, MVT::v8i32,  1},  // vpermilps
+
+      {TTI::SK_PermuteSingleSrc, MVT::v16i16, 4}, // vextractf128 + 2*pshufb
+                                                  // + vpor + vinsertf128
+      {TTI::SK_PermuteSingleSrc, MVT::v16f16, 4}, // vextractf128 + 2*pshufb
+                                                  // + vpor + vinsertf128
+      {TTI::SK_PermuteSingleSrc, MVT::v32i8,  4}, // vextractf128 + 2*pshufb
+                                                  // + vpor + vinsertf128
+
+      {TTI::SK_PermuteTwoSrc, MVT::v4f64,     2}, // 2*vshufpd + vblendpd
+      {TTI::SK_PermuteTwoSrc, MVT::v8f32,     2}, // 2*vshufps + vblendps
+      {TTI::SK_PermuteTwoSrc, MVT::v4i64,     2}, // 2*vpermilpd + vblendpd
+      {TTI::SK_PermuteTwoSrc, MVT::v8i32,     2}, // 2*vpermilps + vblendps
+      {TTI::SK_PermuteTwoSrc, MVT::v16i16,    9}, // 2*vextractf128 + 4*pshufb
+                                                  // + 2*vpor + vinsertf128
+      {TTI::SK_PermuteTwoSrc, MVT::v16f16,    9}, // 2*vextractf128 + 4*pshufb
+                                                  // + 2*vpor + vinsertf128
+      {TTI::SK_PermuteTwoSrc, MVT::v32i8,     9}, // 2*vextractf128 + 4*pshufb
+                                                  // + 2*vpor + vinsertf128
+  };
+
+  if (IsInLaneShuffle && ST->hasAVX())
+    if (const auto *Entry =
+            CostTableLookup(AVX1InLaneShuffleTbl, Kind, LT.second))
       return LT.first * Entry->Cost;
 
   static const CostTblEntry AVX1ShuffleTbl[] = {
@@ -3068,6 +3134,13 @@ InstructionCost X86TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
         if (auto KindCost = Entry->Cost[CostKind])
           return *KindCost;
     }
+
+    if ((ISD == ISD::FP_ROUND && SimpleDstTy == MVT::f16) ||
+        (ISD == ISD::FP_EXTEND && SimpleSrcTy == MVT::f16)) {
+      // fp16 conversions not covered by any table entries require a libcall.
+      // Return a large (arbitrary) number to model this.
+      return InstructionCost(64);
+    }
   }
 
   // Fall back to legalized types.
@@ -3172,11 +3245,6 @@ InstructionCost X86TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
     return getCastInstrCost(Instruction::FPToSI, TruncDst, Src, CCH, CostKind) +
            getCastInstrCost(Instruction::Trunc, Dst, TruncDst,
                             TTI::CastContextHint::None, CostKind);
-  }
-
-  if (ISD == ISD::FP_ROUND && LTDest.second.getScalarType() == MVT::f16) {
-    // Conversion requires a libcall.
-    return InstructionCost::getInvalid();
   }
 
   // TODO: Allow non-throughput costs that aren't binary.

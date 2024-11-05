@@ -9,29 +9,29 @@
 #ifndef _LIBCPP___ALGORITHM_COPY_MOVE_COMMON_H
 #define _LIBCPP___ALGORITHM_COPY_MOVE_COMMON_H
 
-#include <__algorithm/iterator_operations.h>
-#include <__algorithm/unwrap_iter.h>
-#include <__algorithm/unwrap_range.h>
-#include <__config>
-#include <__iterator/iterator_traits.h>
-#include <__memory/pointer_traits.h>
-#include <__string/constexpr_c_functions.h>
-#include <__type_traits/enable_if.h>
-#include <__type_traits/is_always_bitcastable.h>
-#include <__type_traits/is_constant_evaluated.h>
-#include <__type_traits/is_constructible.h>
-#include <__type_traits/is_trivially_assignable.h>
-#include <__type_traits/is_volatile.h>
-#include <__utility/move.h>
-#include <__utility/pair.h>
-#include <cstddef>
+#include <__cxx03/__algorithm/iterator_operations.h>
+#include <__cxx03/__algorithm/unwrap_iter.h>
+#include <__cxx03/__algorithm/unwrap_range.h>
+#include <__cxx03/__config>
+#include <__cxx03/__iterator/iterator_traits.h>
+#include <__cxx03/__memory/pointer_traits.h>
+#include <__cxx03/__string/constexpr_c_functions.h>
+#include <__cxx03/__type_traits/enable_if.h>
+#include <__cxx03/__type_traits/is_always_bitcastable.h>
+#include <__cxx03/__type_traits/is_constant_evaluated.h>
+#include <__cxx03/__type_traits/is_constructible.h>
+#include <__cxx03/__type_traits/is_trivially_assignable.h>
+#include <__cxx03/__type_traits/is_volatile.h>
+#include <__cxx03/__utility/move.h>
+#include <__cxx03/__utility/pair.h>
+#include <__cxx03/cstddef>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
 #endif
 
 _LIBCPP_PUSH_MACROS
-#include <__undef_macros>
+#include <__cxx03/__undef_macros>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 

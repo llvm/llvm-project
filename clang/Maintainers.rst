@@ -69,10 +69,16 @@ Sema
 | aeternalmail\@gmail.com (email), Sirraide (GitHub), Ætérnal (Discord), Sirraide (Discourse)
 
 
+Recovery AST
+~~~~~~~~~~~~
+| Haojian Wu
+| hokein.wu\@gmail.com (email), hokein (Phabricator), hokein (GitHub), hokein (Discourse)
+
+
 Experimental new constant interpreter
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 | Timm Bäder
-| tbaeder\@redhat.com (em), tbaeder (Phabricator), tbaederr (GitHub), tbaeder (Discourse), tbaeder (Discord)
+| tbaeder\@redhat.com (email), tbaeder (Phabricator), tbaederr (GitHub), tbaeder (Discourse), tbaeder (Discord)
 
 
 Modules & serialization
@@ -293,6 +299,15 @@ SYCL conformance
 ~~~~~~~~~~~~~~~~
 | Alexey Bader
 | alexey.bader\@intel.com (email), bader (Phabricator), bader (GitHub)
+
+
+Issue Triage
+~~~~~~~~~~~~
+| Shafik Yaghmour
+| shafik.yaghmour\@intel.com (email), shafik (GitHub), shafik.yaghmour (Discord), shafik (Discourse)
+
+| hstk30
+| hanwei62\@huawei.com (email), hstk30-hw (GitHub), hstk30(Discord), hstk30 (Discourse)
 
 
 Inactive Maintainers

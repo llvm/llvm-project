@@ -137,6 +137,8 @@ genDependKindAttr(fir::FirOpBuilder &firOpBuilder,
   case omp::clause::Depend::TaskDependenceType::Mutexinoutset:
   case omp::clause::Depend::TaskDependenceType::Inoutset:
   case omp::clause::Depend::TaskDependenceType::Depobj:
+  case omp::clause::Depend::TaskDependenceType::Sink:
+  case omp::clause::Depend::TaskDependenceType::Source:
     llvm_unreachable("unhandled parser task dependence type");
     break;
   }
@@ -1017,16 +1019,22 @@ bool ClauseProcessor::processMotionClauses(lower::StatementContext &stmtCtx,
 
   auto callbackFn = [&](const auto &clause, const parser::CharBlock &source) {
     mlir::Location clauseLocation = converter.genLocation(source);
-
+    const auto &[expectation, mapper, iterator, objects] = clause.t;
     // TODO Support motion modifiers: present, mapper, iterator.
+    if (expectation) {
+      TODO(clauseLocation, "PRESENT modifier is not supported yet");
+    } else if (mapper) {
+      TODO(clauseLocation, "Mapper modifier is not supported yet");
+    } else if (iterator) {
+      TODO(clauseLocation, "Iterator modifier is not supported yet");
+    }
     constexpr llvm::omp::OpenMPOffloadMappingFlags mapTypeBits =
         std::is_same_v<llvm::remove_cvref_t<decltype(clause)>, omp::clause::To>
             ? llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_TO
             : llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_FROM;
 
-    processMapObjects(stmtCtx, clauseLocation, std::get<ObjectList>(clause.t),
-                      mapTypeBits, parentMemberIndices, result.mapVars,
-                      mapSymbols);
+    processMapObjects(stmtCtx, clauseLocation, objects, mapTypeBits,
+                      parentMemberIndices, result.mapVars, mapSymbols);
   };
 
   bool clauseFound = findRepeatableClause<omp::clause::To>(callbackFn);

@@ -47,8 +47,7 @@ class RedirectableSymbolManager : public RedirectionManager {
 public:
   /// Create redirectable symbols with given symbol names and initial
   /// desitnation symbol addresses.
-  Error createRedirectableSymbols(ResourceTrackerSP RT,
-                                  const SymbolMap &InitialDests);
+  Error createRedirectableSymbols(ResourceTrackerSP RT, SymbolMap InitialDests);
 
   /// Create a single redirectable symbol with given symbol name and initial
   /// desitnation symbol address.
@@ -60,7 +59,7 @@ public:
   /// Emit redirectable symbol
   virtual void
   emitRedirectableSymbols(std::unique_ptr<MaterializationResponsibility> MR,
-                          const SymbolMap &InitialDests) = 0;
+                          SymbolMap InitialDests) = 0;
 };
 
 /// RedirectableMaterializationUnit materializes redirectable symbol
@@ -68,9 +67,9 @@ public:
 class RedirectableMaterializationUnit : public MaterializationUnit {
 public:
   RedirectableMaterializationUnit(RedirectableSymbolManager &RM,
-                                  const SymbolMap &InitialDests)
+                                  SymbolMap InitialDests)
       : MaterializationUnit(convertToFlags(InitialDests)), RM(RM),
-        InitialDests(InitialDests) {}
+        InitialDests(std::move(InitialDests)) {}
 
   StringRef getName() const override {
     return "RedirectableSymbolMaterializationUnit";
