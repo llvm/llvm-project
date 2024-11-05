@@ -309,7 +309,6 @@ define <32 x i32> @v32i32_v4i32(<4 x i32>) {
   ret <32 x i32> %2
 }
 
-; TODO: This case should be a simple vnsrl, but gets scalarized instead
 define <32 x i8> @vnsrl_v32i8_v64i8(<64 x i8> %in) {
 ; CHECK-LABEL: vnsrl_v32i8_v64i8:
 ; CHECK:       # %bb.0:
