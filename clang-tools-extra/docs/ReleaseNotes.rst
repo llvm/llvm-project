@@ -119,7 +119,7 @@ New checks
   <clang-tidy/checks/cppcoreguidelines/pro-bounds-avoid-unchecked-container-accesses>`
   check.
 
-  Flags calls to operator[] in STL containers and suggests replacing it with
+  Flags calls to ``operator[]`` in STL containers and suggests replacing it with
   safe alternatives.
 
 - New :doc:`readability-ambiguous-smartptr-reset-call
