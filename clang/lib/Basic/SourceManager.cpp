@@ -2227,26 +2227,26 @@ LLVM_DUMP_METHOD void SourceManager::dump() const {
   }
 }
 
-static std::string NumberToHumanString(uint64_t number) {
+static std::string NumberToHumanString(uint64_t Number) {
   static constexpr std::array<std::pair<uint64_t, char>, 4> Units = {
       {{1'000'000'000'000UL, 'T'},
        {1'000'000'000UL, 'G'},
        {1'000'000UL, 'M'},
        {1'000UL, 'k'}}};
 
-  std::string human_string;
-  llvm::raw_string_ostream human_string_stream(human_string);
+  std::string HumanString;
+  llvm::raw_string_ostream HumanStringStream(HumanString);
   for (const auto &[UnitSize, UnitSign] : Units) {
-    if (number >= UnitSize) {
-      human_string_stream << llvm::format(
-          "%.2f%c", number / static_cast<double>(UnitSize), UnitSign);
+    if (Number >= UnitSize) {
+      HumanStringStream << llvm::format(
+          "%.2f%c", Number / static_cast<double>(UnitSize), UnitSign);
       break;
     }
   }
-  if (human_string.empty()) {
-    human_string_stream << number;
+  if (HumanString.empty()) {
+    HumanStringStream << Number;
   }
-  return human_string;
+  return HumanString;
 }
 
 void SourceManager::noteSLocAddressSpaceUsage(
