@@ -2403,24 +2403,11 @@ SDValue DAGTypeLegalizer::PromoteIntOp_STORE(StoreSDNode *N, unsigned OpNo){
 
 SDValue DAGTypeLegalizer::PromoteIntOp_VP_STORE(VPStoreSDNode *N,
                                                 unsigned OpNo) {
-  SDValue DataOp = N->getValue();
-  SDValue Operand = N->getOperand(OpNo);
-
-  if (OpNo >= 4) {
-    // The Mask or EVL. Update in place.
-    EVT DataVT = DataOp.getValueType();
-    SDValue PromotedOperand = OpNo == 4 ? PromoteTargetBoolean(Operand, DataVT)
-                                        : ZExtPromotedInteger(Operand);
-    SmallVector<SDValue, 6> NewOps(N->op_begin(), N->op_end());
-    NewOps[OpNo] = PromotedOperand;
-    return SDValue(DAG.UpdateNodeOperands(N, NewOps), 0);
-  }
 
   assert(OpNo == 1 && "Unexpected operand for promotion");
-  DataOp = GetPromotedInteger(DataOp);
-
   assert(!N->isIndexed() && "expecting unindexed vp_store!");
 
+  SDValue DataOp = GetPromotedInteger(N->getValue());
   return DAG.getTruncStoreVP(N->getChain(), SDLoc(N), DataOp, N->getBasePtr(),
                              N->getMask(), N->getVectorLength(),
                              N->getMemoryVT(), N->getMemOperand(),
