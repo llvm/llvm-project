@@ -2091,8 +2091,8 @@ func.func @fold_expand_shape_from_elements(%arg0: i32) -> tensor<1xi32> {
 
 // -----
 
-// CHECK-LABEL: func @propogate_index_cast
-func.func @propogate_index_cast(%arg0: tensor<1xi32>) -> index {
+// CHECK-LABEL: func @propagate_index_cast
+func.func @propagate_index_cast(%arg0: tensor<1xi32>) -> index {
   // CHECK: %[[IDX:.+]] = arith.constant 0
   // CHECK: %[[EXT:.+]] = tensor.extract %arg0[%[[IDX]]] : tensor<1xi32>
   // CHECK: %[[CAST:.+]] = arith.index_cast %[[EXT]]

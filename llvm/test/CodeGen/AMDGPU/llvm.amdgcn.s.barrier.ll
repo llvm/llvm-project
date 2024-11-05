@@ -139,7 +139,7 @@ define amdgpu_kernel void @test_barrier(ptr addrspace(1) %out, i32 %size) #0 {
 ; VARIANT6-NEXT:    s_load_b96 s[0:2], s[2:3], 0x24
 ; VARIANT6-NEXT:    s_wait_kmcnt 0x0
 ; VARIANT6-NEXT:    v_dual_mov_b32 v3, s1 :: v_dual_and_b32 v4, 0x3ff, v0
-; VARIANT6-NEXT:    s_sub_co_i32 s2, s2, 1
+; VARIANT6-NEXT:    s_add_co_i32 s2, s2, -1
 ; VARIANT6-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; VARIANT6-NEXT:    v_dual_mov_b32 v2, s0 :: v_dual_lshlrev_b32 v5, 2, v4
 ; VARIANT6-NEXT:    v_sub_nc_u32_e32 v0, s2, v4
