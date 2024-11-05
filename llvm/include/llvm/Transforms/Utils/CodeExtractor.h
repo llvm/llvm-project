@@ -103,11 +103,23 @@ public:
     // Bits of intermediate state computed at various phases of extraction.
     SetVector<BasicBlock *> Blocks;
 
-    /// Lists of blocks that are branched from the code region to be extracted.
-    /// Each block is contained at most once. Its order defines the return value
-    /// of the extracted function, when leaving the extracted function via the
-    /// first block it returns 0. When leaving via the second entry it returns
-    /// 1, etc.
+    /// Lists of blocks that are branched from the code region to be extracted,
+    /// also called the exit blocks. Each block is contained at most once. Its
+    /// order defines the return value of the extracted function.
+    ///
+    /// When there is just one (or no) exit block, the return value is
+    /// irrelevant.
+    ///
+    /// When there are exactly two exit blocks, the extracted function returns a
+    /// boolean. For SwitchCases[0], it returns 'true'. For SwitchCases[1] it
+    /// returns 'false'.
+    /// NOTE: Since a boolean is represented by i1, SwitchCases[0] returns 1 and
+    ///       SwitchCases[1] returns 0, which is inverted with the the regular
+    ///       switch case below.
+    ///
+    /// When there are 3 or more exit blocks, leaving the extracted function via
+    /// the first block it returns 0. When leaving via the second entry it
+    /// returns 1, etc.
     SmallVector<BasicBlock *> SwitchCases;
 
     // Suffix to use when creating extracted function (appended to the original
