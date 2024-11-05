@@ -3,10 +3,7 @@
 
 define float @select_fcmp_fsub_oeq(float %x) {
 ; CHECK-LABEL: @select_fcmp_fsub_oeq(
-; CHECK-NEXT:    [[FCMP:%.*]] = fcmp oeq float [[X:%.*]], 2.000000e+00
-; CHECK-NEXT:    [[FADD:%.*]] = fsub float [[X]], 2.000000e+00
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[FCMP]], float [[FADD]], float 0.000000e+00
-; CHECK-NEXT:    ret float [[SEL]]
+; CHECK-NEXT:    ret float 0.000000e+00
 ;
   %fcmp = fcmp oeq float %x, 2.0
   %fadd = fsub float %x, 2.0
@@ -42,10 +39,7 @@ define float @select_fcmp_fsub_ueq(float %x) {
 
 define float @select_fcmp_fsub_ueq_nnan(float %x) {
 ; CHECK-LABEL: @select_fcmp_fsub_ueq_nnan(
-; CHECK-NEXT:    [[FCMP:%.*]] = fcmp nnan ueq float [[X:%.*]], 2.000000e+00
-; CHECK-NEXT:    [[FADD:%.*]] = fsub float [[X]], 2.000000e+00
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[FCMP]], float [[FADD]], float 0.000000e+00
-; CHECK-NEXT:    ret float [[SEL]]
+; CHECK-NEXT:    ret float 0.000000e+00
 ;
   %fcmp = fcmp nnan ueq float %x, 2.0
   %fadd = fsub float %x, 2.0
@@ -55,10 +49,7 @@ define float @select_fcmp_fsub_ueq_nnan(float %x) {
 
 define float @select_fcmp_fsub_une(float %x) {
 ; CHECK-LABEL: @select_fcmp_fsub_une(
-; CHECK-NEXT:    [[FCMP:%.*]] = fcmp une float [[X:%.*]], 2.000000e+00
-; CHECK-NEXT:    [[FADD:%.*]] = fsub float [[X]], 2.000000e+00
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[FCMP]], float 0.000000e+00, float [[FADD]]
-; CHECK-NEXT:    ret float [[SEL]]
+; CHECK-NEXT:    ret float 0.000000e+00
 ;
   %fcmp = fcmp une float %x, 2.0
   %fadd = fsub float %x, 2.0
@@ -94,10 +85,7 @@ define float @select_fcmp_fsub_one(float %x) {
 
 define float @select_fcmp_fsub_one_nnan(float %x) {
 ; CHECK-LABEL: @select_fcmp_fsub_one_nnan(
-; CHECK-NEXT:    [[FCMP:%.*]] = fcmp nnan one float [[X:%.*]], 2.000000e+00
-; CHECK-NEXT:    [[FADD:%.*]] = fsub float [[X]], 2.000000e+00
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[FCMP]], float 0.000000e+00, float [[FADD]]
-; CHECK-NEXT:    ret float [[SEL]]
+; CHECK-NEXT:    ret float 0.000000e+00
 ;
   %fcmp = fcmp nnan one float %x, 2.0
   %fadd = fsub float %x, 2.0
@@ -107,10 +95,7 @@ define float @select_fcmp_fsub_one_nnan(float %x) {
 
 define float @select_fcmp_fadd(float %x) {
 ; CHECK-LABEL: @select_fcmp_fadd(
-; CHECK-NEXT:    [[FCMP:%.*]] = fcmp oeq float [[X:%.*]], 2.000000e+00
-; CHECK-NEXT:    [[FADD:%.*]] = fadd float [[X]], 2.000000e+00
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[FCMP]], float [[FADD]], float 4.000000e+00
-; CHECK-NEXT:    ret float [[SEL]]
+; CHECK-NEXT:    ret float 4.000000e+00
 ;
   %fcmp = fcmp oeq float %x, 2.0
   %fadd = fadd float %x, 2.0
@@ -120,10 +105,7 @@ define float @select_fcmp_fadd(float %x) {
 
 define <2 x float> @select_fcmp_fadd_vec(<2 x float> %x) {
 ; CHECK-LABEL: @select_fcmp_fadd_vec(
-; CHECK-NEXT:    [[FCMP:%.*]] = fcmp oeq <2 x float> [[X:%.*]], splat (float 2.000000e+00)
-; CHECK-NEXT:    [[FADD:%.*]] = fadd <2 x float> [[X]], splat (float 2.000000e+00)
-; CHECK-NEXT:    [[SEL:%.*]] = select <2 x i1> [[FCMP]], <2 x float> [[FADD]], <2 x float> splat (float 4.000000e+00)
-; CHECK-NEXT:    ret <2 x float> [[SEL]]
+; CHECK-NEXT:    ret <2 x float> splat (float 4.000000e+00)
 ;
   %fcmp = fcmp oeq <2 x float> %x, <float 2.0, float 2.0>
   %fadd = fadd <2 x float> %x, <float 2.0, float 2.0>
@@ -134,10 +116,8 @@ define <2 x float> @select_fcmp_fadd_vec(<2 x float> %x) {
 
 define float @select_fcmp_fmul_nonrefinement(float %x, float %y) {
 ; CHECK-LABEL: @select_fcmp_fmul_nonrefinement(
-; CHECK-NEXT:    [[FCMP:%.*]] = fcmp oeq float [[X:%.*]], 1.000000e+00
-; CHECK-NEXT:    [[FMUL:%.*]] = fmul float [[Y:%.*]], [[X]]
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[FCMP]], float [[Y]], float [[FMUL]]
-; CHECK-NEXT:    ret float [[SEL]]
+; CHECK-NEXT:    [[FMUL:%.*]] = fmul float [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    ret float [[FMUL]]
 ;
   %fcmp = fcmp oeq float %x, 1.0
   %fmul = fmul float %y, %x
@@ -147,10 +127,7 @@ define float @select_fcmp_fmul_nonrefinement(float %x, float %y) {
 
 define float @select_fcmp_fmul(float %x) {
 ; CHECK-LABEL: @select_fcmp_fmul(
-; CHECK-NEXT:    [[FCMP:%.*]] = fcmp oeq float [[X:%.*]], 2.000000e+00
-; CHECK-NEXT:    [[FMUL:%.*]] = fmul float [[X]], 2.000000e+00
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[FCMP]], float [[FMUL]], float 4.000000e+00
-; CHECK-NEXT:    ret float [[SEL]]
+; CHECK-NEXT:    ret float 4.000000e+00
 ;
   %fcmp = fcmp oeq float %x, 2.0
   %fmul = fmul float %x, 2.0
@@ -160,10 +137,8 @@ define float @select_fcmp_fmul(float %x) {
 
 define float @select_fcmp_fdiv_nonrefinement(float %x, float %y) {
 ; CHECK-LABEL: @select_fcmp_fdiv_nonrefinement(
-; CHECK-NEXT:    [[FCMP:%.*]] = fcmp oeq float [[X:%.*]], 1.000000e+00
-; CHECK-NEXT:    [[FDIV:%.*]] = fdiv float [[Y:%.*]], [[X]]
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[FCMP]], float [[Y]], float [[FDIV]]
-; CHECK-NEXT:    ret float [[SEL]]
+; CHECK-NEXT:    [[FDIV:%.*]] = fdiv float [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    ret float [[FDIV]]
 ;
   %fcmp = fcmp oeq float %x, 1.0
   %fdiv = fdiv float %y, %x
@@ -173,10 +148,7 @@ define float @select_fcmp_fdiv_nonrefinement(float %x, float %y) {
 
 define float @select_fcmp_fdiv(float %x) {
 ; CHECK-LABEL: @select_fcmp_fdiv(
-; CHECK-NEXT:    [[FCMP:%.*]] = fcmp oeq float [[X:%.*]], 2.000000e+00
-; CHECK-NEXT:    [[FDIV:%.*]] = fdiv float [[X]], 2.000000e+00
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[FCMP]], float [[FDIV]], float 1.000000e+00
-; CHECK-NEXT:    ret float [[SEL]]
+; CHECK-NEXT:    ret float 1.000000e+00
 ;
   %fcmp = fcmp oeq float %x, 2.0
   %fdiv = fdiv float %x, 2.0
@@ -186,10 +158,7 @@ define float @select_fcmp_fdiv(float %x) {
 
 define float @select_fcmp_frem(float %x) {
 ; CHECK-LABEL: @select_fcmp_frem(
-; CHECK-NEXT:    [[FCMP:%.*]] = fcmp oeq float [[X:%.*]], 3.000000e+00
-; CHECK-NEXT:    [[FREM:%.*]] = frem float [[X]], 2.000000e+00
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[FCMP]], float [[FREM]], float 1.000000e+00
-; CHECK-NEXT:    ret float [[SEL]]
+; CHECK-NEXT:    ret float 1.000000e+00
 ;
   %fcmp = fcmp oeq float %x, 3.0
   %frem = frem float %x, 2.0
@@ -199,10 +168,7 @@ define float @select_fcmp_frem(float %x) {
 
 define <2 x float> @select_fcmp_insertelement(<2 x float> %x) {
 ; CHECK-LABEL: @select_fcmp_insertelement(
-; CHECK-NEXT:    [[FCMP:%.*]] = fcmp oeq <2 x float> [[X:%.*]], splat (float 2.000000e+00)
-; CHECK-NEXT:    [[INSERT:%.*]] = insertelement <2 x float> [[X]], float 4.000000e+00, i64 0
-; CHECK-NEXT:    [[SEL:%.*]] = select <2 x i1> [[FCMP]], <2 x float> [[INSERT]], <2 x float> <float 4.000000e+00, float 2.000000e+00>
-; CHECK-NEXT:    ret <2 x float> [[SEL]]
+; CHECK-NEXT:    ret <2 x float> <float 4.000000e+00, float 2.000000e+00>
 ;
   %fcmp = fcmp oeq <2 x float> %x, <float 2.0, float 2.0>
   %insert = insertelement <2 x float> %x, float 4.0, i64 0
@@ -212,10 +178,7 @@ define <2 x float> @select_fcmp_insertelement(<2 x float> %x) {
 
 define <4 x float> @select_fcmp_shufflevector_select(<4 x float> %x) {
 ; CHECK-LABEL: @select_fcmp_shufflevector_select(
-; CHECK-NEXT:    [[FCMP:%.*]] = fcmp oeq <4 x float> [[X:%.*]], splat (float 2.000000e+00)
-; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <4 x float> [[X]], <4 x float> poison, <4 x i32> <i32 4, i32 1, i32 6, i32 3>
-; CHECK-NEXT:    [[SEL:%.*]] = select <4 x i1> [[FCMP]], <4 x float> [[SHUFFLE]], <4 x float> <float poison, float 2.000000e+00, float poison, float 2.000000e+00>
-; CHECK-NEXT:    ret <4 x float> [[SEL]]
+; CHECK-NEXT:    ret <4 x float> <float poison, float 2.000000e+00, float poison, float 2.000000e+00>
 ;
   %fcmp = fcmp oeq <4 x float> %x, <float 2.0, float 2.0, float 2.0, float 2.0>
   %shuffle = shufflevector <4 x float> %x, <4 x float> poison, <4 x i32> <i32 4, i32 1, i32 6, i32 3>
@@ -240,10 +203,7 @@ define float @select_fcmp_sin_nonrefinement(float %x) {
 ; The hexfloat constant is PI / 2.
 define float @select_fcmp_sin(float %x) {
 ; CHECK-LABEL: @select_fcmp_sin(
-; CHECK-NEXT:    [[FCMP:%.*]] = fcmp oeq float [[X:%.*]], 0x3FF921FB60000000
-; CHECK-NEXT:    [[SIN:%.*]] = call float @llvm.sin.f32(float [[X]])
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[FCMP]], float [[SIN]], float 1.000000e+00
-; CHECK-NEXT:    ret float [[SEL]]
+; CHECK-NEXT:    ret float 1.000000e+00
 ;
   %fcmp = fcmp oeq float %x, 0x3FF921FB60000000
   %sin = call float @llvm.sin.f32(float %x)
@@ -268,10 +228,7 @@ define float @select_fcmp_cos_nonrefinement(float %x) {
 ; The hexfloat constant is PI.
 define float @select_fcmp_cos(float %x) {
 ; CHECK-LABEL: @select_fcmp_cos(
-; CHECK-NEXT:    [[FCMP:%.*]] = fcmp oeq float [[X:%.*]], 0x400921FB60000000
-; CHECK-NEXT:    [[COS:%.*]] = call float @llvm.cos.f32(float [[X]])
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[FCMP]], float [[COS]], float -1.000000e+00
-; CHECK-NEXT:    ret float [[SEL]]
+; CHECK-NEXT:    ret float -1.000000e+00
 ;
   %fcmp = fcmp oeq float %x, 0x400921FB60000000
   %cos = call float @llvm.cos.f32(float %x)
