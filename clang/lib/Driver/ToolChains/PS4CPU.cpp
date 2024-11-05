@@ -248,8 +248,9 @@ void tools::PS5cpu::Linker::ConstructJob(Compilation &C, const JobAction &JA,
       Args.MakeArgString("--sysroot=" + TC.getSDKLibraryRootDir()));
 
   // Default to PIE for non-static executables.
-  const bool PIE = !Relocatable && !Shared && !Static;
-  if (Args.hasFlag(options::OPT_pie, options::OPT_no_pie, PIE))
+  const bool PIE = Args.hasFlag(options::OPT_pie, options::OPT_no_pie,
+                                !Relocatable && !Shared && !Static);
+  if (PIE)
     CmdArgs.push_back("-pie");
 
   if (!Relocatable) {
@@ -276,6 +277,12 @@ void tools::PS5cpu::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back("-z");
     CmdArgs.push_back("start-stop-visibility=hidden");
 
+    CmdArgs.push_back("-z");
+    CmdArgs.push_back("common-page-size=0x4000");
+
+    CmdArgs.push_back("-z");
+    CmdArgs.push_back("max-page-size=0x4000");
+
     // Patch relocated regions of DWARF whose targets are eliminated at link
     // time with specific tombstones, such that they're recognisable by the
     // PlayStation debugger.
@@ -286,6 +293,16 @@ void tools::PS5cpu::Linker::ConstructJob(Compilation &C, const JobAction &JA,
         "dead-reloc-in-nonalloc=.debug_ranges=0xfffffffffffffffe");
     CmdArgs.push_back("-z");
     CmdArgs.push_back("dead-reloc-in-nonalloc=.debug_loc=0xfffffffffffffffe");
+
+    // The PlayStation loader expects linked objects to be laid out in a
+    // particular way. This is achieved by linker scripts that are supplied
+    // with the SDK. The scripts are inside <sdkroot>/target/lib, which is
+    // added as a search path elsewhere.
+    // "PRX" has long stood for "PlayStation Relocatable eXecutable".
+    CmdArgs.push_back("--default-script");
+    CmdArgs.push_back(Static   ? "static.script"
+                      : Shared ? "prx.script"
+                               : "main.script");
   }
 
   if (Static)
@@ -294,6 +311,11 @@ void tools::PS5cpu::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back("-export-dynamic");
   if (Shared)
     CmdArgs.push_back("--shared");
+
+  // Provide a base address for non-PIE executables. This includes cases where
+  // -static is supplied without -pie.
+  if (!Relocatable && !Shared && !PIE)
+    CmdArgs.push_back("--image-base=0x400000");
 
   assert((Output.isFilename() || Output.isNothing()) && "Invalid output.");
   if (Output.isFilename()) {

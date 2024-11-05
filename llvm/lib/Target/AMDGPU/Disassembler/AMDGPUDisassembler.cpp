@@ -219,9 +219,6 @@ static DecodeStatus decodeRsrcRegOp(MCInst &Inst, unsigned Imm,
                                     uint64_t /* Addr */,
                                     const MCDisassembler *Decoder,
                                     AMDGPUDisassembler::OpWidthTy OPW) {
-  const auto *DAsm = static_cast<const AMDGPUDisassembler *>(Decoder);
-  if (Imm > 120 && !DAsm->isGFX13Plus())
-    return DecodeStatus::Fail;
   // Uniform-indexed resource. SGPR[0..123] encoded as 128-251
   if (Imm >= 128 && Imm < 256)
     Imm -= 128;

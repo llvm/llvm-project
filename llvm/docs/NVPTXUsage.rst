@@ -250,6 +250,36 @@ The ``@llvm.nvvm.fence.proxy.tensormap_generic.*`` is a uni-directional fence us
 
 The address operand ``addr`` and the operand ``size`` together specify the memory range ``[addr, addr+size)`` on which the ordering guarantees on the memory accesses across the proxies is to be provided. The only supported value for the ``size`` operand is ``128`` and must be an immediate. Generic Addressing is used unconditionally, and the address specified by the operand addr must fall within the ``.global`` state space. Otherwise, the behavior is undefined. For more information, see `PTX ISA <https://docs.nvidia.com/cuda/parallel-thread-execution/#parallel-synchronization-and-communication-instructions-membar>`_.
 
+Address Space Intrinsics
+------------------------
+
+'``llvm.nvvm.isspacep.*``' Intrinsics
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+    declare i1 @llvm.nvvm.isspacep.const(ptr %p)
+    declare i1 @llvm.nvvm.isspacep.global(ptr %p)
+    declare i1 @llvm.nvvm.isspacep.local(ptr %p)
+    declare i1 @llvm.nvvm.isspacep.shared(ptr %p)
+    declare i1 @llvm.nvvm.isspacep.shared.cluster(ptr %p)
+
+Overview:
+"""""""""
+
+The '``llvm.nvvm.isspacep.*``' intrinsics determine whether the provided generic
+pointer references memory which falls within a particular address space.
+
+Semantics:
+""""""""""
+
+If the given pointer in the generic address space refers to memory which falls
+within the state space of the intrinsic (and therefore could be safely address
+space casted to this space), 1 is returned, otherwise 0 is returned.
+
 Arithmetic Intrinsics
 ---------------------
 
@@ -378,6 +408,59 @@ right, and the least significant bits are extracted to produce a result that is
 the same size as the original arguments. The shift amount is the minimum of the
 value of %n and the bit width of the integer type.
 
+'``llvm.nvvm.flo.u.*``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+    declare i32 @llvm.nvvm.flo.u.i32(i32 %a, i1 %shiftamt)
+    declare i32 @llvm.nvvm.flo.u.i64(i64 %a, i1 %shiftamt)
+
+Overview:
+"""""""""
+
+The '``llvm.nvvm.flo.u``' family of intrinsics identifies the bit position of the
+leading one, returning either it's offset from the most or least significant bit.
+
+Semantics:
+""""""""""
+
+The '``llvm.nvvm.flo.u``' family of intrinsics returns the bit position of the
+most significant 1. If %shiftamt is true, The result is the shift amount needed
+to left-shift the found bit into the most-significant bit position, otherwise
+the result is the shift amount needed to right-shift the found bit into the
+least-significant bit position. 0xffffffff is returned if no 1 bit is found.
+
+'``llvm.nvvm.flo.s.*``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+    declare i32 @llvm.nvvm.flo.s.i32(i32 %a, i1 %shiftamt)
+    declare i32 @llvm.nvvm.flo.s.i64(i64 %a, i1 %shiftamt)
+
+Overview:
+"""""""""
+
+The '``llvm.nvvm.flo.s``' family of intrinsics identifies the bit position of the
+leading non-sign bit, returning either it's offset from the most or least
+significant bit.
+
+Semantics:
+""""""""""
+
+The '``llvm.nvvm.flo.s``' family of intrinsics returns the bit position of the
+most significant 0 for negative inputs and the most significant 1 for 
+non-negative inputs. If %shiftamt is true, The result is the shift amount needed
+to left-shift the found bit into the most-significant bit position, otherwise
+the result is the shift amount needed to right-shift the found bit into the
+least-significant bit position. 0xffffffff is returned if no 1 bit is found.
 
 Other Intrinsics
 ----------------

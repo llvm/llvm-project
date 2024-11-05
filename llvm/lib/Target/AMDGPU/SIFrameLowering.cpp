@@ -898,7 +898,7 @@ void SIFrameLowering::emitEntryFunctionPrologue(MachineFunction &MF,
         .addReg(WaveIdReg)
         .addTargetIndex(AMDGPU::TI_NUM_VGPRS);
 
-    unsigned RankVGPRStart = alignTo(MFI->getLaneSharedVGPRSize(), 4u) / 4u;
+    unsigned RankVGPRStart = MFI->getLaneSharedVGPRSize() / 4u;
     if (RankVGPRStart != 0) {
       BuildMI(MBB, I, DL, TII->get(AMDGPU::S_ADD_U32), Tmp32Reg)
           .addReg(Tmp32Reg)

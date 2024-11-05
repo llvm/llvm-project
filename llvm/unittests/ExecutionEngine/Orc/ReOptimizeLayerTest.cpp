@@ -128,7 +128,7 @@ TEST_F(ReOptimizeLayerTest, BasicReOptimization) {
                           {ExecutorAddr(), JITSymbolFlags::Exported}}})),
                     Succeeded());
 
-  auto RM = JITLinkRedirectableSymbolManager::Create(*ObjLinkingLayer, *JD);
+  auto RM = JITLinkRedirectableSymbolManager::Create(*ObjLinkingLayer);
   EXPECT_THAT_ERROR(RM.takeError(), Succeeded());
 
   ROLayer = std::make_unique<ReOptimizeLayer>(*ES, *DL, *CompileLayer, **RM);

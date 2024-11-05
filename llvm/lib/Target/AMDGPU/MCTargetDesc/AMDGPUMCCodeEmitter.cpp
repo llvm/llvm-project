@@ -695,9 +695,6 @@ void AMDGPUMCCodeEmitter::getMachineOpValueRsrcRegOp(
   bool IsVGPROrAGPR =
       Enc & (AMDGPU::HWEncoding::IS_VGPR | AMDGPU::HWEncoding::IS_AGPR);
   Op = Idx | IsVGPROrAGPR << 8 | IsSReg32 << 7;
-  if (!AMDGPU::isGFX13Plus(STI))
-    assert(Op.ule(120) &&
-           "Indexed resources encoding is only available on GFX13Plus.");
   return;
 }
 

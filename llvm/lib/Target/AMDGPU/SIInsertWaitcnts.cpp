@@ -2972,7 +2972,7 @@ bool SIInsertWaitcnts::runOnMachineFunction(MachineFunction &MF) {
   Encoding.VGPRL = Encoding.VGPR0 + NumVGPRsMax - 1;
   Encoding.SGPR0 = TRI->getHWRegIndex(AMDGPU::SGPR0);
   Encoding.SGPRL = Encoding.SGPR0 + NumSGPRsMax - 1;
-  Encoding.LaneSharedSize = divideCeil(MFI->getLaneSharedVGPRSize(), 4u);
+  Encoding.LaneSharedSize = MFI->getLaneSharedVGPRSize() / 4u;
 
   BlockInfos.clear();
   bool Modified = false;

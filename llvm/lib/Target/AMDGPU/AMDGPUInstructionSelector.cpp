@@ -5849,22 +5849,6 @@ AMDGPUInstructionSelector::selectBUFSOffset(MachineOperand &Root) const {
   return {{[=](MachineInstrBuilder &MIB) { MIB.addReg(SOffset); }}};
 }
 
-InstructionSelector::ComplexRendererFns
-AMDGPUInstructionSelector::selectBufIndex(MachineOperand &Root) const {
-  Register Rsrc = Root.getReg();
-  return {{[=](MachineInstrBuilder &MIB) { MIB.addReg(Rsrc); }}};
-}
-
-InstructionSelector::ComplexRendererFns
-AMDGPUInstructionSelector::selectBufDesc(MachineOperand &Root) const {
-  Register Rsrc = Root.getReg();
-
-  const LLT Ty = MRI->getType(Rsrc);
-  if (Ty != LLT::fixed_vector(4, 32))
-    return {};
-  return {{[=](MachineInstrBuilder &MIB) { MIB.addReg(Rsrc); }}};
-}
-
 /// Get an immediate that must be 32-bits, and treated as zero extended.
 static std::optional<uint64_t>
 getConstantZext32Val(Register Reg, const MachineRegisterInfo &MRI) {

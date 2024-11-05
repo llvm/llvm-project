@@ -409,7 +409,7 @@ class RegisterTypes<list<ValueType> reg_types> {
 
 def Reg16Types : RegisterTypes<[i16, f16, bf16]>;
 def Reg32Types : RegisterTypes<[i32, f32, v2i16, v2f16, v2bf16, p2, p3, p5, p6]>;
-def Reg64Types : RegisterTypes<[i64, f64, v2i32, v2f32, p0, v4i16, v4f16, v4bf16]>;
+def Reg64Types : RegisterTypes<[i64, f64, v2i32, v2f32, p0, p1, p4, v4i16, v4f16, v4bf16]>;
 def Reg96Types : RegisterTypes<[v3i32, v3f32]>;
 def Reg128Types : RegisterTypes<[v4i32, v4f32, v2i64, v2f64, v8i16, v8f16, v8bf16]>;
 def Reg256Types : RegisterTypes<[v8i32, v8f32, v4i64, v4f64, v16i16, v16f16, v16bf16]>;
@@ -1199,12 +1199,7 @@ def AV_32 : SIRegisterClass<"AMDGPU", VGPR_32.RegTypes, 32, (add VGPR_32, AGPR_3
 }
 } // End GeneratePressureSet = 0
 
-def RsrcReg128 : SIRegisterClass<"AMDGPU", !listconcat(Reg32Types.types, [v4i32]), 32, (add VGPR_32, SReg_32, SReg_128)> {
-  let isAllocatable = 0;
-  let HasVGPR = 1;
-}
-
-def RsrcReg256 : SIRegisterClass<"AMDGPU", !listconcat(Reg32Types.types, [v8i32]), 32, (add VGPR_32, SReg_32, SReg_256)> {
+def RsrcReg : SIRegisterClass<"AMDGPU", Reg32Types.types, 32, (add VGPR_32, SReg_32, SReg_256, SReg_128)> {
   let isAllocatable = 0;
   let HasVGPR = 1;
 }
@@ -1289,12 +1284,12 @@ def OperandSemantics {
   int FP64 = 4;
 }
 
-def RsrcReg256Op : RegisterOperand<RsrcReg256> {
+def RsrcReg256Op : RegisterOperand<RsrcReg> {
   let DecoderMethod = "decodeRsrcReg256";
   let EncoderMethod = "getMachineOpValueRsrcRegOp";
 }
 
-def RsrcReg128Op : RegisterOperand<RsrcReg128> {
+def RsrcReg128Op : RegisterOperand<RsrcReg> {
   let DecoderMethod = "decodeRsrcReg128";
   let EncoderMethod = "getMachineOpValueRsrcRegOp";
 }

@@ -152,12 +152,6 @@ private:
                          SDValue &Offset) const;
   bool SelectBUFSOffset(SDValue Addr, SDValue &SOffset) const;
 
-  bool SelectUniformIndex(SDValue RsrcNode, SDValue &SRsrc) const;
-
-  bool SelectNonUniformIndex(SDValue RsrcNode, SDValue &SRsrc) const;
-
-  bool SelectBufDesc(SDValue RsrcNode, SDValue &SRsrc) const;
-
   bool SelectFlatOffsetImpl(SDNode *N, SDValue Addr, SDValue &VAddr,
                             SDValue &Offset, uint64_t FlatVariant) const;
   bool SelectFlatOffset(SDNode *N, SDValue Addr, SDValue &VAddr,

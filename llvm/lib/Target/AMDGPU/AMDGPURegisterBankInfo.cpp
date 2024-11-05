@@ -1011,18 +1011,6 @@ bool AMDGPURegisterBankInfo::executeInWaterfallLoop(
                                 SGPROperandRegs);
 }
 
-void AMDGPURegisterBankInfo::executeBufferInWaterfallLoop(
-    MachineRegisterInfo &MRI, MachineInstr &MI, const GCNSubtarget &Subtarget,
-    MachineIRBuilder B, unsigned Idx) const {
-  const LLT Ty = MRI.getType(MI.getOperand(Idx).getReg());
-  if (Ty.isScalar())
-    // Waterfall on soffset.
-    executeInWaterfallLoop(B, MI, {Idx + 3});
-  else
-    // Waterfall on rsrc and soffset.
-    executeInWaterfallLoop(B, MI, {Idx, Idx + 3});
-}
-
 // Legalize an operand that must be an SGPR by inserting a readfirstlane.
 void AMDGPURegisterBankInfo::constrainOpWithReadfirstlane(
     MachineIRBuilder &B, MachineInstr &MI, unsigned OpIdx) const {
@@ -3077,14 +3065,14 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
   case AMDGPU::G_AMDGPU_TBUFFER_STORE_FORMAT:
   case AMDGPU::G_AMDGPU_TBUFFER_STORE_FORMAT_D16: {
     applyDefaultMapping(OpdMapper);
-    executeBufferInWaterfallLoop(MRI, MI, Subtarget, B, 1);
+    executeInWaterfallLoop(B, MI, {1, 4});
     return;
   }
   case AMDGPU::G_AMDGPU_BUFFER_DISCARD_B32:
   case AMDGPU::G_AMDGPU_BUFFER_DISCARD_B128:
   case AMDGPU::G_AMDGPU_BUFFER_DISCARD_B1024: {
     applyDefaultMapping(OpdMapper);
-    executeBufferInWaterfallLoop(MRI, MI, Subtarget, B, 0);
+    executeInWaterfallLoop(B, MI, {0, 3});
     return;
   }
   case AMDGPU::G_AMDGPU_BUFFER_ATOMIC_SWAP:
@@ -3103,12 +3091,12 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
   case AMDGPU::G_AMDGPU_BUFFER_ATOMIC_FMIN:
   case AMDGPU::G_AMDGPU_BUFFER_ATOMIC_FMAX: {
     applyDefaultMapping(OpdMapper);
-    executeBufferInWaterfallLoop(MRI, MI, Subtarget, B, 2);
+    executeInWaterfallLoop(B, MI, {2, 5});
     return;
   }
   case AMDGPU::G_AMDGPU_BUFFER_ATOMIC_CMPSWAP: {
     applyDefaultMapping(OpdMapper);
-    executeBufferInWaterfallLoop(MRI, MI, Subtarget, B, 3);
+    executeInWaterfallLoop(B, MI, {3, 6});
     return;
   }
   case AMDGPU::G_AMDGPU_S_BUFFER_LOAD:

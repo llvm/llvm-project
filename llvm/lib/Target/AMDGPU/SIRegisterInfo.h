@@ -379,10 +379,6 @@ public:
                     : &AMDGPU::SReg_64_XEXECRegClass;
   }
 
-  bool isRsrcRegClass(const TargetRegisterClass *RC) const {
-    return RC == &AMDGPU::RsrcReg128RegClass ||
-           RC == &AMDGPU::RsrcReg256RegClass;
-  }
   // Return the appropriate register class to use for 64-bit VGPRs for the
   // subtarget.
   const TargetRegisterClass *getVGPR64Class() const;

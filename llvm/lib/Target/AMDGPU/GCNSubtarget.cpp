@@ -538,7 +538,7 @@ unsigned GCNSubtarget::getMaxNumVGPRs(const Function &F) const {
 unsigned GCNSubtarget::getMaxNumVGPRs(const MachineFunction &MF) const {
   const Function &F = MF.getFunction();
   const SIMachineFunctionInfo &MFI = *MF.getInfo<SIMachineFunctionInfo>();
-  auto NumExcludedVGRs = divideCeil(MFI.getLaneSharedVGPRSize(), 4u);
+  auto NumExcludedVGRs = MFI.getLaneSharedVGPRSize() / 4u;
   return getBaseMaxNumVGPRs(F, MFI.getWavesPerEU(), NumExcludedVGRs);
 }
 

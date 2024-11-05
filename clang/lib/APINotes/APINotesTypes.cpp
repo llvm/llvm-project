@@ -65,6 +65,8 @@ LLVM_DUMP_METHOD void ParamInfo::dump(llvm::raw_ostream &OS) const {
   static_cast<const VariableInfo &>(*this).dump(OS);
   if (NoEscapeSpecified)
     OS << (NoEscape ? "[NoEscape] " : "");
+  if (LifetimeboundSpecified)
+    OS << (Lifetimebound ? "[Lifetimebound] " : "");
   OS << "RawRetainCountConvention: " << RawRetainCountConvention << ' ';
   OS << '\n';
 }
