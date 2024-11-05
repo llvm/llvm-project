@@ -90,15 +90,12 @@ static cl::opt<bool> SpecializeLiteralConstant(
         "Enable specialization of functions that take a literal constant as an "
         "argument"));
 
-bool InstCostVisitor::canEliminateSuccessor(BasicBlock *BB, BasicBlock *Succ,
-                                            DenseSet<BasicBlock *> &DeadBlocks,
-                                            const SCCPSolver &Solver) {
+bool InstCostVisitor::canEliminateSuccessor(BasicBlock *BB,
+                                            BasicBlock *Succ) const {
   unsigned I = 0;
-  return all_of(predecessors(Succ), [&I, BB, Succ, &DeadBlocks,
-                                     &Solver](BasicBlock *Pred) {
+  return all_of(predecessors(Succ), [&I, BB, Succ, this](BasicBlock *Pred) {
     return I++ < MaxBlockPredecessors &&
-           (Pred == BB || Pred == Succ || DeadBlocks.contains(Pred) ||
-            !Solver.isBlockExecutable(Pred));
+           (Pred == BB || Pred == Succ || !isBlockExecutable(Pred));
   });
 }
 
@@ -136,15 +133,13 @@ Cost InstCostVisitor::estimateBasicBlocks(
     // Keep adding dead successors to the list as long as they are
     // executable and only reachable from dead blocks.
     for (BasicBlock *SuccBB : successors(BB))
-      if (isBlockExecutable(SuccBB) &&
-          canEliminateSuccessor(BB, SuccBB, DeadBlocks, Solver))
+      if (isBlockExecutable(SuccBB) && canEliminateSuccessor(BB, SuccBB))
         WorkList.push_back(SuccBB);
   }
   return CodeSize;
 }
 
-static Constant *findConstantFor(Value *V, ConstMap &KnownConstants,
-                                 const SCCPSolver &Solver) {
+Constant *InstCostVisitor::findConstantFor(Value *V) const {
   if (auto *C = dyn_cast<Constant>(V))
     return C;
   if (auto *C = Solver.getConstantOrNull(V))
@@ -271,7 +266,7 @@ Cost InstCostVisitor::estimateSwitchInst(SwitchInst &I) {
   for (const auto &Case : I.cases()) {
     BasicBlock *BB = Case.getCaseSuccessor();
     if (BB != Succ && isBlockExecutable(BB) &&
-        canEliminateSuccessor(I.getParent(), BB, DeadBlocks, Solver))
+        canEliminateSuccessor(I.getParent(), BB))
       WorkList.push_back(BB);
   }
 
@@ -288,8 +283,7 @@ Cost InstCostVisitor::estimateBranchInst(BranchInst &I) {
   // Initialize the worklist with the dead successor as long as
   // it is executable and has a unique predecessor.
   SmallVector<BasicBlock *> WorkList;
-  if (isBlockExecutable(Succ) &&
-      canEliminateSuccessor(I.getParent(), Succ, DeadBlocks, Solver))
+  if (isBlockExecutable(Succ) && canEliminateSuccessor(I.getParent(), Succ))
     WorkList.push_back(Succ);
 
   return estimateBasicBlocks(WorkList);
@@ -320,7 +314,7 @@ bool InstCostVisitor::discoverTransitivelyIncomingValues(
         if (Inst == PN || !isBlockExecutable(PN->getIncomingBlock(I)))
           continue;
 
-      if (Constant *C = findConstantFor(V, KnownConstants, Solver)) {
+      if (Constant *C = findConstantFor(V)) {
         // Not all incoming values are the same constant. Bail immediately.
         if (C != Const)
           return false;
@@ -355,7 +349,7 @@ Constant *InstCostVisitor::visitPHINode(PHINode &I) {
       if (Inst == &I || !isBlockExecutable(I.getIncomingBlock(Idx)))
         continue;
 
-    if (Constant *C = findConstantFor(V, KnownConstants, Solver)) {
+    if (Constant *C = findConstantFor(V)) {
       if (!Const)
         Const = C;
       // Not all incoming values are the same constant. Bail immediately.
@@ -420,7 +414,7 @@ Constant *InstCostVisitor::visitCallBase(CallBase &I) {
 
   for (unsigned Idx = 0, E = I.getNumOperands() - 1; Idx != E; ++Idx) {
     Value *V = I.getOperand(Idx);
-    Constant *C = findConstantFor(V, KnownConstants, Solver);
+    Constant *C = findConstantFor(V);
     if (!C)
       return nullptr;
     Operands.push_back(C);
@@ -444,7 +438,7 @@ Constant *InstCostVisitor::visitGetElementPtrInst(GetElementPtrInst &I) {
 
   for (unsigned Idx = 0, E = I.getNumOperands(); Idx != E; ++Idx) {
     Value *V = I.getOperand(Idx);
-    Constant *C = findConstantFor(V, KnownConstants, Solver);
+    Constant *C = findConstantFor(V);
     if (!C)
       return nullptr;
     Operands.push_back(C);
@@ -460,10 +454,9 @@ Constant *InstCostVisitor::visitSelectInst(SelectInst &I) {
   if (I.getCondition() == LastVisited->first) {
     Value *V = LastVisited->second->isZeroValue() ? I.getFalseValue()
                                                   : I.getTrueValue();
-    return findConstantFor(V, KnownConstants, Solver);
+    return findConstantFor(V);
   }
-  if (Constant *Condition =
-          findConstantFor(I.getCondition(), KnownConstants, Solver))
+  if (Constant *Condition = findConstantFor(I.getCondition()))
     if ((I.getTrueValue() == LastVisited->first && Condition->isOneValue()) ||
         (I.getFalseValue() == LastVisited->first && Condition->isZeroValue()))
       return LastVisited->second;
@@ -481,7 +474,7 @@ Constant *InstCostVisitor::visitCmpInst(CmpInst &I) {
   Constant *Const = LastVisited->second;
   bool ConstOnRHS = I.getOperand(1) == LastVisited->first;
   Value *V = ConstOnRHS ? I.getOperand(0) : I.getOperand(1);
-  Constant *Other = findConstantFor(V, KnownConstants, Solver);
+  Constant *Other = findConstantFor(V);
 
   if (Other) {
     if (ConstOnRHS)
@@ -509,7 +502,7 @@ Constant *InstCostVisitor::visitBinaryOperator(BinaryOperator &I) {
 
   bool ConstOnRHS = I.getOperand(1) == LastVisited->first;
   Value *V = ConstOnRHS ? I.getOperand(0) : I.getOperand(1);
-  Constant *Other = findConstantFor(V, KnownConstants, Solver);
+  Constant *Other = findConstantFor(V);
   Value *OtherVal = Other ? Other : V;
   Value *ConstVal = LastVisited->second;
 
