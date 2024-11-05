@@ -1195,9 +1195,7 @@ void VectorLegalizer::Expand(SDNode *Node, SmallVectorImpl<SDValue> &Results) {
   case ISD::FSINCOS: {
     RTLIB::Libcall LC =
         RTLIB::getFSINCOS(Node->getValueType(0).getVectorElementType());
-    if (DAG.expandMultipleResultFPLibCall(
-            LC, Node, Results, /*CallRetResNo=*/std::nullopt,
-            [this](SDValue Op) { return LegalizeOp(Op); }))
+    if (DAG.expandMultipleResultFPLibCall(LC, Node, Results))
       return;
     break;
   }

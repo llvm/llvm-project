@@ -2486,8 +2486,7 @@ SDValue SelectionDAG::getPartialReduceAdd(SDLoc DL, EVT ReducedTy, SDValue Op1,
 
 bool SelectionDAG::expandMultipleResultFPLibCall(
     RTLIB::Libcall LC, SDNode *Node, SmallVectorImpl<SDValue> &Results,
-    std::optional<unsigned> CallRetResNo,
-    function_ref<SDValue(SDValue)> LegalizeOp) {
+    std::optional<unsigned> CallRetResNo) {
   LLVMContext &Ctx = *getContext();
   EVT VT = Node->getValueType(0);
   unsigned NumResults = Node->getNumValues();
@@ -2602,14 +2601,17 @@ bool SelectionDAG::expandMultipleResultFPLibCall(
   // FIXME: Find a way to avoid updating the root. This is needed for x86, which
   // uses a floating-point stack. If (for example) the node to be expanded has
   // two results one floating-point which is returned by the call, and one
-  // integer result, set returned via an output pointer. If only the integer
-  // result is used then the `CopyFromReg` for the FP result may be optimized
-  // out. This prevents an FP stack pop from being emitted for it. Setting the
-  // root like this ensures there will be a use of the `CopyFromReg` chain, and
-  // ensures the FP pop will be emitted.
+  // integer result, returned via an output pointer. If only the integer result
+  // is used then the `CopyFromReg` for the FP result may be optimized out. This
+  // prevents an FP stack pop from being emitted for it. Setting the root like
+  // this ensures there will be a use of the `CopyFromReg` chain, and ensures
+  // the FP pop will be emitted.
   SDValue OutputChain =
       getNode(ISD::TokenFactor, DL, MVT::Other, getRoot(), CallChain);
-  setRoot(LegalizeOp ? LegalizeOp(OutputChain) : OutputChain);
+  setRoot(OutputChain);
+
+  // Ensure the new root is reachable from the results.
+  Results[0] = getMergeValues({Results[0], OutputChain}, DL);
 
   return true;
 }
