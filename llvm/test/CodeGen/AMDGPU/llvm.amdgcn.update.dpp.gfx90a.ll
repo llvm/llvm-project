@@ -256,3 +256,21 @@ define amdgpu_ps void @update_dpp_bfloat(bfloat %in, bfloat %old, ptr addrspace(
   store bfloat %tmp0, ptr addrspace(1) %out
   ret void
 }
+
+; GCN-LABEL: update_dpp_v2p0_poison:
+;
+; GFX90A-DAG:    v_mov_b32_dpp v0, v0 row_newbcast:1 row_mask:0x1 bank_mask:0x2
+; GFX90A-DAG:    v_mov_b32_dpp v1, v1 row_newbcast:1 row_mask:0x1 bank_mask:0x2
+; GFX90A-DAG:    v_mov_b32_dpp v2, v2 row_newbcast:1 row_mask:0x1 bank_mask:0x2
+; GFX90A-DAG:    v_mov_b32_dpp v3, v3 row_newbcast:1 row_mask:0x1 bank_mask:0x2
+;
+; GFX942-DAG:    v_mov_b64_dpp v[2:3], v[2:3] row_newbcast:1 row_mask:0x1 bank_mask:0x2
+; GFX942-DAG:    v_mov_b64_dpp v[0:1], v[0:1] row_newbcast:1 row_mask:0x1 bank_mask:0x2
+;
+; GCN:           global_store_dwordx4 v[4:5], v[0:3], off
+
+define amdgpu_ps void @update_dpp_v2p0_poison(<2 x ptr> %in, ptr addrspace(1) %out) {
+  %tmp0 = call <2 x ptr> @llvm.amdgcn.update.dpp.v2p0(<2 x ptr> poison, <2 x ptr> %in, i32 337, i32 1, i32 2, i1 0)
+  store <2 x ptr> %tmp0, ptr addrspace(1) %out
+  ret void
+}
