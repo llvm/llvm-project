@@ -459,6 +459,8 @@ public:
   BuiltinTypeMethodBuilder &
   callBuiltin(StringRef BuiltinName, ArrayRef<Expr *> CallParms,
               bool AddResourceHandleAsFirstArg = true) {
+
+    // The first statement added to a method creates the declaration.
     if (!Method)
       createMethodDecl();
 
@@ -480,14 +482,6 @@ public:
         FD->getReturnType(), VK_PRValue, SourceLocation(), FPOptionsOverride());
     StmtsList.push_back(Call);
     return *this;
-  }
-
-  BuiltinTypeMethodBuilder &
-  callBuiltinForwardArgs(StringRef BuiltinName,
-                         bool AddResourceHandleAsFirstArg = true) {
-    // FIXME: Call the buildin with all of the method parameters
-    // plus optional resource handle as the first arg.
-    llvm_unreachable("not yet implemented");
   }
 
   BuiltinTypeDeclBuilder &finalizeMethod() {
