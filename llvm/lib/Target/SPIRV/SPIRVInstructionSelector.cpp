@@ -2944,7 +2944,7 @@ bool SPIRVInstructionSelector::selectFirstBitHigh64(Register ResVReg,
     selectOp = SPIRV::OpSelectVIVCond;
     addOp = SPIRV::OpIAddV;
   }
-  
+
   // check if the high bits are == -1; true if -1
   Register BReg = MRI->createVirtualRegister(GR.getRegClass(BoolType));
   Result &= selectNAryOpWithSrcs(BReg, BoolType, I, {HighReg, NegOneReg},
