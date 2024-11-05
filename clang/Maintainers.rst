@@ -72,7 +72,7 @@ Sema
 Recovery AST
 ~~~~~~~~~~~~
 | Haojian Wu
-| hokein.wu\@gmail.com (email), hokein (Phabricator), hokein (GitHub)
+| hokein.wu\@gmail.com (email), hokein (Phabricator), hokein (GitHub), hokein (Discourse)
 
 
 Experimental new constant interpreter
