@@ -44,7 +44,6 @@
 #include <iterator>
 #include <numeric>
 #include <optional>
-#include <type_traits>
 #include <utility>
 
 using namespace llvm;

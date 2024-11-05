@@ -29,7 +29,6 @@
 #include "llvm/Analysis/CaptureTracking.h"
 #include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/Analysis/MemoryLocation.h"
-#include "llvm/Analysis/ObjCARCAliasAnalysis.h"
 #include "llvm/Analysis/ScalarEvolutionAliasAnalysis.h"
 #include "llvm/Analysis/ScopedNoAliasAA.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
@@ -47,7 +46,6 @@
 #include "llvm/Support/AtomicOrdering.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
-#include <algorithm>
 #include <cassert>
 #include <functional>
 #include <iterator>
