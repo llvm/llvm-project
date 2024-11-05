@@ -24,7 +24,7 @@ entry:
   %i = add nsw i32 %a, -1
   %i.2 = sext i32 %i to i64
   %i.3 = getelementptr inbounds double, ptr %b, i64 %i.2
-  %i.4 = atomicrmw fadd ptr %i.3, double %c syncscope("agent") seq_cst, align 8, !amdgpu.no.fine.grained.memory !0
+  %i.4 = atomicrmw fadd ptr %i.3, double %c syncscope("agent") seq_cst, align 8, !noalias.addrspace !1, !amdgpu.no.fine.grained.memory !0
   ret void
 }
 
@@ -59,7 +59,7 @@ entry:
   %i.2 = sext i32 %i to i64
   %i.3 = getelementptr inbounds double, ptr addrspace(1) %b, i64 %i.2
   %i.4 = addrspacecast ptr addrspace(1) %i.3 to ptr
-  %0 = atomicrmw fadd ptr %i.4, double %c syncscope("agent") seq_cst, align 8, !amdgpu.no.fine.grained.memory !0
+  %0 = atomicrmw fadd ptr %i.4, double %c syncscope("agent") seq_cst, align 8, !noalias.addrspace !1, !amdgpu.no.fine.grained.memory !0
   ret void
 }
 
@@ -107,9 +107,9 @@ bb1:                                              ; preds = %entry
   %i.7 = ptrtoint ptr addrspace(1) %i.3 to i64
   %i.8 = add nsw i64 %i.7, 1
   %i.9 = inttoptr i64 %i.8 to ptr addrspace(1)
-  %0 = atomicrmw fadd ptr %d, double %c syncscope("agent") seq_cst, align 8, !amdgpu.no.fine.grained.memory !0
+  %0 = atomicrmw fadd ptr %d, double %c syncscope("agent") seq_cst, align 8, !noalias.addrspace !1, !amdgpu.no.fine.grained.memory !0
   %i.11 = addrspacecast ptr addrspace(1) %i.9 to ptr
-  %1 = atomicrmw fadd ptr %i.11, double %c syncscope("agent") seq_cst, align 8, !amdgpu.no.fine.grained.memory !0
+  %1 = atomicrmw fadd ptr %i.11, double %c syncscope("agent") seq_cst, align 8, !noalias.addrspace !1, !amdgpu.no.fine.grained.memory !0
   ret void
 }
 
@@ -175,3 +175,4 @@ attributes #0 = { nocallback nofree nounwind willreturn memory(argmem: readwrite
 attributes #1 = { mustprogress nounwind willreturn memory(argmem: readwrite) "target-cpu"="gfx90a" }
 
 !0 = !{}
+!1 = !{i32 5, i32 6}

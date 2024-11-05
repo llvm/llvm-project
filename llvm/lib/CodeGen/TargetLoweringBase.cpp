@@ -773,8 +773,9 @@ void TargetLoweringBase::initActions() {
     setOperationAction({ISD::BITREVERSE, ISD::PARITY}, VT, Expand);
 
     // These library functions default to expand.
-    setOperationAction({ISD::FROUND, ISD::FPOWI, ISD::FLDEXP, ISD::FFREXP}, VT,
-                       Expand);
+    setOperationAction(
+        {ISD::FROUND, ISD::FPOWI, ISD::FLDEXP, ISD::FFREXP, ISD::FSINCOS}, VT,
+        Expand);
 
     // These operations default to expand for vector types.
     if (VT.isVector())
@@ -1633,7 +1634,6 @@ bool TargetLoweringBase::isSuitableForJumpTable(const SwitchInst *SI,
   // performed in findJumpTable() in SelectionDAGBuiler and
   // getEstimatedNumberOfCaseClusters() in BasicTTIImpl.
   const bool OptForSize =
-      SI->getParent()->getParent()->hasOptSize() ||
       llvm::shouldOptimizeForSize(SI->getParent(), PSI, BFI);
   const unsigned MinDensity = getMinimumJumpTableDensity(OptForSize);
   const unsigned MaxJumpTableSize = getMaximumJumpTableSize();
@@ -1849,7 +1849,8 @@ TargetLoweringBase::getDefaultSafeStackPointerLocation(IRBuilderBase &IRB,
   auto UnsafeStackPtr =
       dyn_cast_or_null<GlobalVariable>(M->getNamedValue(UnsafeStackPtrVar));
 
-  Type *StackPtrTy = PointerType::getUnqual(M->getContext());
+  const DataLayout &DL = M->getDataLayout();
+  PointerType *StackPtrTy = DL.getAllocaPtrType(M->getContext());
 
   if (!UnsafeStackPtr) {
     auto TLSModel = UseTLS ?
@@ -1863,6 +1864,8 @@ TargetLoweringBase::getDefaultSafeStackPointerLocation(IRBuilderBase &IRB,
         UnsafeStackPtrVar, nullptr, TLSModel);
   } else {
     // The variable exists, check its type and attributes.
+    //
+    // FIXME: Move to IR verifier.
     if (UnsafeStackPtr->getValueType() != StackPtrTy)
       report_fatal_error(Twine(UnsafeStackPtrVar) + " must have void* type");
     if (UseTLS != UnsafeStackPtr->isThreadLocal())

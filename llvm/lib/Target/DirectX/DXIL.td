@@ -47,6 +47,7 @@ def ResRetInt32Ty : DXILOpParamType;
 def HandleTy : DXILOpParamType;
 def ResBindTy : DXILOpParamType;
 def ResPropsTy : DXILOpParamType;
+def SplitDoubleTy : DXILOpParamType;
 
 class DXILOpClass;
 
@@ -553,11 +554,10 @@ def Rbits :  DXILOp<30, unary> {
   let attributes = [Attributes<DXIL1_0, [ReadNone]>];
 }
 
-def CBits :  DXILOp<31, unary> {
+def CountBits :  DXILOp<31, unaryBits> {
   let Doc = "Returns the number of 1 bits in the specified value.";
-  let LLVMIntrinsic = int_ctpop;
   let arguments = [OverloadTy];
-  let result = OverloadTy;
+  let result = Int32Ty;
   let overloads =
       [Overloads<DXIL1_0, [Int16Ty, Int32Ty, Int64Ty]>];
   let stages = [Stages<DXIL1_0, [all_stages]>];
@@ -779,14 +779,23 @@ def FlattenedThreadIdInGroup :  DXILOp<96, flattenedThreadIdInGroup> {
   let attributes = [Attributes<DXIL1_0, [ReadNone]>];
 }
 
-def AnnotateHandle : DXILOp<217, annotateHandle> {
+def SplitDouble :  DXILOp<102, splitDouble> {
+  let Doc = "Splits a double into 2 uints";
+  let arguments = [OverloadTy];
+  let result = SplitDoubleTy;
+  let overloads = [Overloads<DXIL1_0, [DoubleTy]>];
+  let stages = [Stages<DXIL1_0, [all_stages]>];
+  let attributes = [Attributes<DXIL1_0, [ReadNone]>];
+}
+
+def AnnotateHandle : DXILOp<216, annotateHandle> {
   let Doc = "annotate handle with resource properties";
   let arguments = [HandleTy, ResPropsTy];
   let result = HandleTy;
   let stages = [Stages<DXIL1_6, [all_stages]>];
 }
 
-def CreateHandleFromBinding : DXILOp<218, createHandleFromBinding> {
+def CreateHandleFromBinding : DXILOp<217, createHandleFromBinding> {
   let Doc = "create resource handle from binding";
   let arguments = [ResBindTy, Int32Ty, Int1Ty];
   let result = HandleTy;

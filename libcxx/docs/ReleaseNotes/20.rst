@@ -38,11 +38,13 @@ What's New in Libc++ 20.0.0?
 Implemented Papers
 ------------------
 
+- P0619R4: Reviewing Deprecated Facilities of C++17 for C++20 (`Github <https://github.com/llvm/llvm-project/issues/99985>`__)
 - P2747R2: ``constexpr`` placement new (`Github <https://github.com/llvm/llvm-project/issues/105427>`__)
 - P2609R3: Relaxing Ranges Just A Smidge (`Github <https://github.com/llvm/llvm-project/issues/105253>`__)
 - P2985R0: A type trait for detecting virtual base classes (`Github <https://github.com/llvm/llvm-project/issues/105432>`__)
 - ``std::jthread`` and ``<stop_token>`` are not guarded behind ``-fexperimental-library`` anymore
 - P2674R1: A trait for implicit lifetime types (`Github <https://github.com/llvm/llvm-project/issues/105259>`__)
+- P0429R9: A Standard ``flat_map`` is partially implemented and ``flat_map`` is provided (`Github <https://github.com/llvm/llvm-project/issues/105190>`__)
 
 Improvements and New Features
 -----------------------------
@@ -60,11 +62,16 @@ Improvements and New Features
   compile times and smaller debug information as well as better code generation if optimizations are disabled.
   The Chromium project measured a 5% reduction in object file and debug information size.
 
+- The ``_LIBCPP_ABI_BOUNDED_UNIQUE_PTR`` ABI configuration was added, which allows ``std::unique_ptr<T[]>`` to
+  detect out-of-bounds accesses in certain circumstances. ``std::unique_ptr<T[]>`` can now also detect out-of-bounds
+  accesses for a limited set of types (non-trivially destructible types) when the ABI configuration is disabled.
+
 Deprecations and Removals
 -------------------------
 
-- TODO: The ``LIBCXX_ENABLE_ASSERTIONS`` CMake variable and the ``_LIBCPP_ENABLE_ASSERTIONS`` macro that were used to
-  enable the safe mode will be removed in LLVM 20.
+- The ``LIBCXX_ENABLE_ASSERTIONS`` CMake variable and the ``_LIBCPP_ENABLE_ASSERTIONS`` macro that were used to
+  enable the safe mode have been removed in LLVM 20. Please use :ref:`support for hardening <using-hardening-modes>`
+  instead.
 
 - Support for the C++20 synchronization library (``<barrier>``, ``<latch>``, ``atomic::wait``, etc.) has been
   removed in language modes prior to C++20. If you are using these features prior to C++20, you will need to
@@ -87,14 +94,13 @@ Deprecations and Removals
   the ``_LIBCPP_VERBOSE_ABORT_NOT_NOEXCEPT`` macro can be defined to make the function non-``noexcept``. That macro
   will be removed in LLVM 21.
 
+- ``<ccomplex>``, ``<cstdalign>`` (previously missing), ``<cstdbool>``, and ``<ctgmath>`` are deprecated since C++17 as
+  specified by the standard. They, together with ``<ciso646>``, are removed in C++20, but libc++ still provides these
+  headers as an extension and only deprecates them. The ``_LIBCPP_DISABLE_DEPRECATION_WARNINGS`` macro can be defined to
+  suppress deprecation for these headers.
+
 Upcoming Deprecations and Removals
 ----------------------------------
-
-LLVM 20
-~~~~~~~
-
-- TODO
-
 
 LLVM 21
 ~~~~~~~

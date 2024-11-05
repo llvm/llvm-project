@@ -3391,7 +3391,9 @@ bool LLParser::parseStructDefinition(SMLoc TypeLoc, StringRef Name,
       (isPacked && parseToken(lltok::greater, "expected '>' in packed struct")))
     return true;
 
-  STy->setBody(Body, isPacked);
+  if (auto E = STy->setBodyOrError(Body, isPacked))
+    return tokError(toString(std::move(E)));
+
   ResultTy = STy;
   return false;
 }
@@ -8525,7 +8527,7 @@ int LLParser::parseGetElementPtr(Instruction *&Inst, PerFunctionState &PFS) {
     return error(Loc, "base element of getelementptr must be sized");
 
   auto *STy = dyn_cast<StructType>(Ty);
-  if (STy && STy->containsScalableVectorType())
+  if (STy && STy->isScalableTy())
     return error(Loc, "getelementptr cannot target structure that contains "
                       "scalable vector type");
 

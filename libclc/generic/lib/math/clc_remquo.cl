@@ -21,9 +21,11 @@
  */
 
 #include <clc/clc.h>
+#include <clc/clcmacro.h>
+#include <clc/math/clc_floor.h>
+#include <clc/math/clc_trunc.h>
 
 #include <math/clc_remainder.h>
-#include "../clcmacro.h"
 #include "config.h"
 #include "math.h"
 
@@ -154,7 +156,7 @@ _CLC_DEF _CLC_OVERLOAD double __clc_remquo(double x, double y, __private int *pq
 
     for (i = 0; i < ntimes; i++) {
         // Compute integral multiplier
-        t = trunc(dx / w);
+        t = __clc_trunc(dx / w);
 
         // Compute w * t in quad precision
         p = w * t;
@@ -173,7 +175,7 @@ _CLC_DEF _CLC_OVERLOAD double __clc_remquo(double x, double y, __private int *pq
 
     // One more time
     // Variable todd says whether the integer t is odd or not
-    t = floor(dx / w);
+    t = __clc_floor(dx / w);
     long lt = (long)t;
     int todd = lt & 1;
 

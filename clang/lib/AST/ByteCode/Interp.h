@@ -20,6 +20,7 @@
 #include "Floating.h"
 #include "Function.h"
 #include "FunctionPointer.h"
+#include "InterpBuiltinBitCast.h"
 #include "InterpFrame.h"
 #include "InterpStack.h"
 #include "InterpState.h"
@@ -162,6 +163,8 @@ bool CallPtr(InterpState &S, CodePtr OpPC, uint32_t ArgSize,
              const CallExpr *CE);
 bool CheckLiteralType(InterpState &S, CodePtr OpPC, const Type *T);
 bool InvalidShuffleVectorIndex(InterpState &S, CodePtr OpPC, uint32_t Index);
+bool CheckBitCast(InterpState &S, CodePtr OpPC, bool HasIndeterminateBits,
+                  bool TargetIsUCharOrByte);
 
 template <typename T>
 static bool handleOverflow(InterpState &S, CodePtr OpPC, const T &SrcValue) {
@@ -273,8 +276,14 @@ bool CheckArraySize(InterpState &S, CodePtr OpPC, SizeT *NumElements,
       *NumElements > MaxElements) {
     if (!IsNoThrow) {
       const SourceInfo &Loc = S.Current->getSource(OpPC);
-      S.FFDiag(Loc, diag::note_constexpr_new_too_large)
-          << NumElements->toDiagnosticString(S.getASTContext());
+
+      if (NumElements->isSigned() && NumElements->isNegative()) {
+        S.FFDiag(Loc, diag::note_constexpr_new_negative)
+            << NumElements->toDiagnosticString(S.getASTContext());
+      } else {
+        S.FFDiag(Loc, diag::note_constexpr_new_too_large)
+            << NumElements->toDiagnosticString(S.getASTContext());
+      }
     }
     return false;
   }
@@ -3033,6 +3042,54 @@ bool CheckNewTypeMismatchArray(InterpState &S, CodePtr OpPC, const Expr *E) {
   return CheckNewTypeMismatch(S, OpPC, E, static_cast<uint64_t>(Size));
 }
 bool InvalidNewDeleteExpr(InterpState &S, CodePtr OpPC, const Expr *E);
+
+template <PrimType Name, class T = typename PrimConv<Name>::T>
+inline bool BitCast(InterpState &S, CodePtr OpPC, bool TargetIsUCharOrByte,
+                    uint32_t ResultBitWidth, const llvm::fltSemantics *Sem) {
+  const Pointer &FromPtr = S.Stk.pop<Pointer>();
+
+  if (!CheckLoad(S, OpPC, FromPtr))
+    return false;
+
+  size_t BuffSize = ResultBitWidth / 8;
+  llvm::SmallVector<std::byte> Buff(BuffSize);
+  bool HasIndeterminateBits = false;
+
+  if (!DoBitCast(S, OpPC, FromPtr, Buff.data(), BuffSize, HasIndeterminateBits))
+    return false;
+
+  if (!CheckBitCast(S, OpPC, HasIndeterminateBits, TargetIsUCharOrByte))
+    return false;
+
+  if constexpr (std::is_same_v<T, Floating>) {
+    assert(Sem);
+    ptrdiff_t Offset = 0;
+
+    if (llvm::sys::IsBigEndianHost) {
+      unsigned NumBits = llvm::APFloatBase::getSizeInBits(*Sem);
+      assert(NumBits % 8 == 0);
+      assert(NumBits <= ResultBitWidth);
+      Offset = (ResultBitWidth - NumBits) / 8;
+    }
+
+    S.Stk.push<Floating>(T::bitcastFromMemory(Buff.data() + Offset, *Sem));
+  } else {
+    assert(!Sem);
+    S.Stk.push<T>(T::bitcastFromMemory(Buff.data(), ResultBitWidth));
+  }
+  return true;
+}
+
+inline bool BitCastPtr(InterpState &S, CodePtr OpPC) {
+  const Pointer &FromPtr = S.Stk.pop<Pointer>();
+  Pointer &ToPtr = S.Stk.peek<Pointer>();
+
+  if (!DoBitCastPtr(S, OpPC, FromPtr, ToPtr))
+    return false;
+
+  return true;
+}
+
 //===----------------------------------------------------------------------===//
 // Read opcode arguments
 //===----------------------------------------------------------------------===//

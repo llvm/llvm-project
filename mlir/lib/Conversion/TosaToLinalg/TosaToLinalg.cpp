@@ -555,9 +555,10 @@ static Value createLinalgBodyCalculationForElementwiseOp(
       auto intMaxPlusOneFP = rewriter.create<arith::ConstantOp>(
           loc, rewriter.getFloatAttr(
                    getElementTypeOrSelf(srcTy),
-                   APInt::getSignedMaxValue(dstTy.getIntOrFloatBitWidth())
-                           .getSExtValue() +
-                       1));
+                   static_cast<double>(
+                       APInt::getSignedMaxValue(dstTy.getIntOrFloatBitWidth())
+                           .getSExtValue()) +
+                       1.0f));
 
       auto intMax = rewriter.create<arith::ConstantOp>(
           loc, rewriter.getIntegerAttr(
@@ -1151,6 +1152,9 @@ public:
     if (op.getDoubleRound() && !op.getScale32())
       return rewriter.notifyMatchFailure(
           op, "tosa.rescale requires scale32 for double_round to be true");
+
+    if (!isa<IntegerType>(inputTy.getElementType()))
+      return rewriter.notifyMatchFailure(op, "only support integer type");
 
     SmallVector<Value> dynDims;
     for (int i = 0; i < outputTy.getRank(); i++) {

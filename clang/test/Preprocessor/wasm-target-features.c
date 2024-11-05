@@ -163,8 +163,10 @@
 // RUN:     -target wasm64-unknown-unknown -mcpu=generic \
 // RUN:   | FileCheck %s -check-prefix=GENERIC-INCLUDE
 //
+// GENERIC-INCLUDE-DAG: #define __wasm_bulk_memory__ 1{{$}}
 // GENERIC-INCLUDE-DAG: #define __wasm_multivalue__ 1{{$}}
 // GENERIC-INCLUDE-DAG: #define __wasm_mutable_globals__ 1{{$}}
+// GENERIC-INCLUDE-DAG: #define __wasm_nontrapping_fptoint__ 1{{$}}
 // GENERIC-INCLUDE-DAG: #define __wasm_reference_types__ 1{{$}}
 // GENERIC-INCLUDE-DAG: #define __wasm_sign_ext__ 1{{$}}
 //
@@ -176,12 +178,10 @@
 // RUN:   | FileCheck %s -check-prefix=GENERIC
 //
 // GENERIC-NOT: #define __wasm_atomics__ 1{{$}}
-// GENERIC-NOT: #define __wasm_bulk_memory__ 1{{$}}
 // GENERIC-NOT: #define __wasm_exception_handling__ 1{{$}}
 // GENERIC-NOT: #define __wasm_extended_const__ 1{{$}}
 // GENERIC-NOT: #define __wasm__fp16__ 1{{$}}
 // GENERIC-NOT: #define __wasm_multimemory__ 1{{$}}
-// GENERIC-NOT: #define __wasm_nontrapping_fptoint__ 1{{$}}
 // GENERIC-NOT: #define __wasm_relaxed_simd__ 1{{$}}
 // GENERIC-NOT: #define __wasm_simd128__ 1{{$}}
 // GENERIC-NOT: #define __wasm_tail_call__ 1{{$}}

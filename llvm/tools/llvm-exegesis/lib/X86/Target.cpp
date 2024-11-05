@@ -1054,18 +1054,22 @@ std::vector<MCInst> ExegesisX86Target::setRegTo(const MCSubtargetInfo &STI,
   ConstantInliner CI(Value);
   if (X86::VR64RegClass.contains(Reg))
     return CI.loadAndFinalize(Reg, 64, X86::MMX_MOVQ64rm);
-  if (X86::VR128XRegClass.contains(Reg)) {
-    if (STI.getFeatureBits()[X86::FeatureAVX512])
-      return CI.loadAndFinalize(Reg, 128, X86::VMOVDQU32Z128rm);
+  if (X86::VR128RegClass.contains(Reg)) {
     if (STI.getFeatureBits()[X86::FeatureAVX])
       return CI.loadAndFinalize(Reg, 128, X86::VMOVDQUrm);
     return CI.loadAndFinalize(Reg, 128, X86::MOVDQUrm);
   }
+  if (X86::VR128XRegClass.contains(Reg)) {
+    if (STI.getFeatureBits()[X86::FeatureAVX512])
+      return CI.loadAndFinalize(Reg, 128, X86::VMOVDQU32Z128rm);
+  }
+  if (X86::VR256RegClass.contains(Reg)) {
+    if (STI.getFeatureBits()[X86::FeatureAVX])
+      return CI.loadAndFinalize(Reg, 256, X86::VMOVDQUYrm);
+  }
   if (X86::VR256XRegClass.contains(Reg)) {
     if (STI.getFeatureBits()[X86::FeatureAVX512])
       return CI.loadAndFinalize(Reg, 256, X86::VMOVDQU32Z256rm);
-    if (STI.getFeatureBits()[X86::FeatureAVX])
-      return CI.loadAndFinalize(Reg, 256, X86::VMOVDQUYrm);
   }
   if (X86::VR512RegClass.contains(Reg))
     if (STI.getFeatureBits()[X86::FeatureAVX512])

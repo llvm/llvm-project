@@ -158,6 +158,7 @@
     __cpp_lib_not_fn                                        201603L [C++17]
     __cpp_lib_null_iterators                                201304L [C++14]
     __cpp_lib_optional                                      201606L [C++17]
+                                                            202106L [C++20]
                                                             202110L [C++23]
     __cpp_lib_optional_range_support                        202406L [C++26]
     __cpp_lib_out_ptr                                       202106L [C++23]
@@ -244,6 +245,8 @@
     __cpp_lib_unreachable                                   202202L [C++23]
     __cpp_lib_unwrap_ref                                    201811L [C++20]
     __cpp_lib_variant                                       202102L [C++17]
+                                                            202106L [C++20]
+                                                            202306L [C++26]
     __cpp_lib_void_t                                        201411L [C++17]
 */
 
@@ -4087,8 +4090,8 @@
 # ifndef __cpp_lib_optional
 #   error "__cpp_lib_optional should be defined in c++20"
 # endif
-# if __cpp_lib_optional != 201606L
-#   error "__cpp_lib_optional should have the value 201606L in c++20"
+# if __cpp_lib_optional != 202106L
+#   error "__cpp_lib_optional should have the value 202106L in c++20"
 # endif
 
 # ifdef __cpp_lib_optional_range_support
@@ -4341,17 +4344,11 @@
 #   error "__cpp_lib_shift should have the value 201806L in c++20"
 # endif
 
-# if !defined(_LIBCPP_VERSION)
-#   ifndef __cpp_lib_smart_ptr_for_overwrite
-#     error "__cpp_lib_smart_ptr_for_overwrite should be defined in c++20"
-#   endif
-#   if __cpp_lib_smart_ptr_for_overwrite != 202002L
-#     error "__cpp_lib_smart_ptr_for_overwrite should have the value 202002L in c++20"
-#   endif
-# else // _LIBCPP_VERSION
-#   ifdef __cpp_lib_smart_ptr_for_overwrite
-#     error "__cpp_lib_smart_ptr_for_overwrite should not be defined because it is unimplemented in libc++!"
-#   endif
+# ifndef __cpp_lib_smart_ptr_for_overwrite
+#   error "__cpp_lib_smart_ptr_for_overwrite should be defined in c++20"
+# endif
+# if __cpp_lib_smart_ptr_for_overwrite != 202002L
+#   error "__cpp_lib_smart_ptr_for_overwrite should have the value 202002L in c++20"
 # endif
 
 # ifdef __cpp_lib_smart_ptr_owner_equality
@@ -4569,8 +4566,8 @@
 # ifndef __cpp_lib_variant
 #   error "__cpp_lib_variant should be defined in c++20"
 # endif
-# if __cpp_lib_variant != 202102L
-#   error "__cpp_lib_variant should have the value 202102L in c++20"
+# if __cpp_lib_variant != 202106L
+#   error "__cpp_lib_variant should have the value 202106L in c++20"
 # endif
 
 # ifndef __cpp_lib_void_t
@@ -5926,17 +5923,11 @@
 #   error "__cpp_lib_shift should have the value 201806L in c++23"
 # endif
 
-# if !defined(_LIBCPP_VERSION)
-#   ifndef __cpp_lib_smart_ptr_for_overwrite
-#     error "__cpp_lib_smart_ptr_for_overwrite should be defined in c++23"
-#   endif
-#   if __cpp_lib_smart_ptr_for_overwrite != 202002L
-#     error "__cpp_lib_smart_ptr_for_overwrite should have the value 202002L in c++23"
-#   endif
-# else // _LIBCPP_VERSION
-#   ifdef __cpp_lib_smart_ptr_for_overwrite
-#     error "__cpp_lib_smart_ptr_for_overwrite should not be defined because it is unimplemented in libc++!"
-#   endif
+# ifndef __cpp_lib_smart_ptr_for_overwrite
+#   error "__cpp_lib_smart_ptr_for_overwrite should be defined in c++23"
+# endif
+# if __cpp_lib_smart_ptr_for_overwrite != 202002L
+#   error "__cpp_lib_smart_ptr_for_overwrite should have the value 202002L in c++23"
 # endif
 
 # ifdef __cpp_lib_smart_ptr_owner_equality
@@ -6196,8 +6187,8 @@
 # ifndef __cpp_lib_variant
 #   error "__cpp_lib_variant should be defined in c++23"
 # endif
-# if __cpp_lib_variant != 202102L
-#   error "__cpp_lib_variant should have the value 202102L in c++23"
+# if __cpp_lib_variant != 202106L
+#   error "__cpp_lib_variant should have the value 202106L in c++23"
 # endif
 
 # ifndef __cpp_lib_void_t
@@ -7826,17 +7817,11 @@
 #   error "__cpp_lib_shift should have the value 201806L in c++26"
 # endif
 
-# if !defined(_LIBCPP_VERSION)
-#   ifndef __cpp_lib_smart_ptr_for_overwrite
-#     error "__cpp_lib_smart_ptr_for_overwrite should be defined in c++26"
-#   endif
-#   if __cpp_lib_smart_ptr_for_overwrite != 202002L
-#     error "__cpp_lib_smart_ptr_for_overwrite should have the value 202002L in c++26"
-#   endif
-# else // _LIBCPP_VERSION
-#   ifdef __cpp_lib_smart_ptr_for_overwrite
-#     error "__cpp_lib_smart_ptr_for_overwrite should not be defined because it is unimplemented in libc++!"
-#   endif
+# ifndef __cpp_lib_smart_ptr_for_overwrite
+#   error "__cpp_lib_smart_ptr_for_overwrite should be defined in c++26"
+# endif
+# if __cpp_lib_smart_ptr_for_overwrite != 202002L
+#   error "__cpp_lib_smart_ptr_for_overwrite should have the value 202002L in c++26"
 # endif
 
 # if !defined(_LIBCPP_VERSION)
@@ -8141,8 +8126,8 @@
 # ifndef __cpp_lib_variant
 #   error "__cpp_lib_variant should be defined in c++26"
 # endif
-# if __cpp_lib_variant != 202102L
-#   error "__cpp_lib_variant should have the value 202102L in c++26"
+# if __cpp_lib_variant != 202306L
+#   error "__cpp_lib_variant should have the value 202306L in c++26"
 # endif
 
 # ifndef __cpp_lib_void_t

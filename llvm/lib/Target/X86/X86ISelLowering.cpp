@@ -2393,6 +2393,8 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::INSERT_VECTOR_ELT, MVT::bf16, Custom);
     for (auto VT : {MVT::v8bf16, MVT::v16bf16}) {
       setF16Action(VT, Expand);
+      if (!Subtarget.hasBF16())
+        setOperationAction(ISD::VSELECT, VT, Custom);
       setOperationAction(ISD::BUILD_VECTOR, VT, Custom);
       setOperationAction(ISD::VECTOR_SHUFFLE, VT, Custom);
       setOperationAction(ISD::INSERT_SUBVECTOR, VT, Legal);
@@ -2406,7 +2408,8 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     addLegalFPImmediate(APFloat::getZero(APFloat::BFloat()));
   }
 
-  if (!Subtarget.useSoftFloat() && Subtarget.hasBF16()) {
+  if (!Subtarget.useSoftFloat() && Subtarget.hasBF16() &&
+      Subtarget.useAVX512Regs()) {
     addRegisterClass(MVT::v32bf16, &X86::VR512RegClass);
     setF16Action(MVT::v32bf16, Expand);
     for (unsigned Opc : {ISD::FADD, ISD::FSUB, ISD::FMUL, ISD::FDIV})
@@ -2419,27 +2422,27 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
   }
 
   if (!Subtarget.useSoftFloat() && Subtarget.hasAVX10_2()) {
-    addRegisterClass(MVT::v8bf16, &X86::VR128XRegClass);
-    addRegisterClass(MVT::v16bf16, &X86::VR256XRegClass);
-    addRegisterClass(MVT::v32bf16, &X86::VR512RegClass);
-
-    setOperationAction(ISD::FADD, MVT::v32bf16, Legal);
-    setOperationAction(ISD::FSUB, MVT::v32bf16, Legal);
-    setOperationAction(ISD::FMUL, MVT::v32bf16, Legal);
-    setOperationAction(ISD::FDIV, MVT::v32bf16, Legal);
-    setOperationAction(ISD::FSQRT, MVT::v32bf16, Legal);
-    setOperationAction(ISD::FMA, MVT::v32bf16, Legal);
-    setOperationAction(ISD::SETCC, MVT::v32bf16, Custom);
-    if (Subtarget.hasVLX()) {
-      for (auto VT : {MVT::v8bf16, MVT::v16bf16}) {
-        setOperationAction(ISD::FADD, VT, Legal);
-        setOperationAction(ISD::FSUB, VT, Legal);
-        setOperationAction(ISD::FMUL, VT, Legal);
-        setOperationAction(ISD::FDIV, VT, Legal);
-        setOperationAction(ISD::FSQRT, VT, Legal);
-        setOperationAction(ISD::FMA, VT, Legal);
-        setOperationAction(ISD::SETCC, VT, Custom);
-      }
+    for (auto VT : {MVT::v8bf16, MVT::v16bf16}) {
+      setOperationAction(ISD::FADD, VT, Legal);
+      setOperationAction(ISD::FSUB, VT, Legal);
+      setOperationAction(ISD::FMUL, VT, Legal);
+      setOperationAction(ISD::FDIV, VT, Legal);
+      setOperationAction(ISD::FSQRT, VT, Legal);
+      setOperationAction(ISD::FMA, VT, Legal);
+      setOperationAction(ISD::SETCC, VT, Custom);
+    }
+    if (Subtarget.hasAVX10_2_512()) {
+      setOperationAction(ISD::FADD, MVT::v32bf16, Legal);
+      setOperationAction(ISD::FSUB, MVT::v32bf16, Legal);
+      setOperationAction(ISD::FMUL, MVT::v32bf16, Legal);
+      setOperationAction(ISD::FDIV, MVT::v32bf16, Legal);
+      setOperationAction(ISD::FSQRT, MVT::v32bf16, Legal);
+      setOperationAction(ISD::FMA, MVT::v32bf16, Legal);
+      setOperationAction(ISD::SETCC, MVT::v32bf16, Custom);
+    }
+    for (auto VT : {MVT::f16, MVT::f32, MVT::f64}) {
+      setCondCodeAction(ISD::SETOEQ, VT, Custom);
+      setCondCodeAction(ISD::SETUNE, VT, Custom);
     }
   }
 
@@ -18828,44 +18831,66 @@ X86TargetLowering::LowerGlobalAddress(SDValue Op, SelectionDAG &DAG) const {
   return LowerGlobalOrExternal(Op, DAG, /*ForCall=*/false);
 }
 
-static SDValue
-GetTLSADDR(SelectionDAG &DAG, SDValue Chain, GlobalAddressSDNode *GA,
-           SDValue *InGlue, const EVT PtrVT, unsigned ReturnReg,
-           unsigned char OperandFlags, bool LocalDynamic = false) {
+static SDValue GetTLSADDR(SelectionDAG &DAG, GlobalAddressSDNode *GA,
+                          const EVT PtrVT, unsigned ReturnReg,
+                          unsigned char OperandFlags,
+                          bool LoadGlobalBaseReg = false,
+                          bool LocalDynamic = false) {
   MachineFrameInfo &MFI = DAG.getMachineFunction().getFrameInfo();
   SDVTList NodeTys = DAG.getVTList(MVT::Other, MVT::Glue);
   SDLoc dl(GA);
   SDValue TGA;
   bool UseTLSDESC = DAG.getTarget().useTLSDESC();
+  SDValue Chain = DAG.getEntryNode();
+  SDValue Ret;
   if (LocalDynamic && UseTLSDESC) {
     TGA = DAG.getTargetExternalSymbol("_TLS_MODULE_BASE_", PtrVT, OperandFlags);
     auto UI = TGA->use_begin();
     // Reuse existing GetTLSADDR node if we can find it.
-    if (UI != TGA->use_end())
-      return SDValue(*UI->use_begin()->use_begin(), 0);
+    if (UI != TGA->use_end()) {
+      // TLSDESC uses TGA.
+      auto TLSDescOp = UI;
+      assert(TLSDescOp->getOpcode() == X86ISD::TLSDESC &&
+             "Unexpected TLSDESC DAG");
+      // CALLSEQ_END uses TGA via a chain and glue.
+      auto *CallSeqEndOp = TLSDescOp->getGluedUser();
+      assert(CallSeqEndOp && CallSeqEndOp->getOpcode() == ISD::CALLSEQ_END &&
+             "Unexpected TLSDESC DAG");
+      // CopyFromReg uses CALLSEQ_END via a chain and glue.
+      auto *CopyFromRegOp = CallSeqEndOp->getGluedUser();
+      assert(CopyFromRegOp && CopyFromRegOp->getOpcode() == ISD::CopyFromReg &&
+             "Unexpected TLSDESC DAG");
+      Ret = SDValue(CopyFromRegOp, 0);
+    }
   } else {
     TGA = DAG.getTargetGlobalAddress(GA->getGlobal(), dl, GA->getValueType(0),
                                      GA->getOffset(), OperandFlags);
   }
 
-  X86ISD::NodeType CallType = UseTLSDESC     ? X86ISD::TLSDESC
-                              : LocalDynamic ? X86ISD::TLSBASEADDR
-                                             : X86ISD::TLSADDR;
+  if (!Ret) {
+    X86ISD::NodeType CallType = UseTLSDESC     ? X86ISD::TLSDESC
+                                : LocalDynamic ? X86ISD::TLSBASEADDR
+                                               : X86ISD::TLSADDR;
 
-  if (InGlue) {
-    SDValue Ops[] = { Chain,  TGA, *InGlue };
-    Chain = DAG.getNode(CallType, dl, NodeTys, Ops);
-  } else {
-    SDValue Ops[]  = { Chain, TGA };
-    Chain = DAG.getNode(CallType, dl, NodeTys, Ops);
+    Chain = DAG.getCALLSEQ_START(Chain, 0, 0, dl);
+    if (LoadGlobalBaseReg) {
+      SDValue InGlue;
+      Chain = DAG.getCopyToReg(Chain, dl, X86::EBX,
+                               DAG.getNode(X86ISD::GlobalBaseReg, dl, PtrVT),
+                               InGlue);
+      InGlue = Chain.getValue(1);
+      Chain = DAG.getNode(CallType, dl, NodeTys, {Chain, TGA, InGlue});
+    } else {
+      Chain = DAG.getNode(CallType, dl, NodeTys, {Chain, TGA});
+    }
+    Chain = DAG.getCALLSEQ_END(Chain, 0, 0, Chain.getValue(1), dl);
+
+    // TLSADDR will be codegen'ed as call. Inform MFI that function has calls.
+    MFI.setHasCalls(true);
+
+    SDValue Glue = Chain.getValue(1);
+    Ret = DAG.getCopyFromReg(Chain, dl, ReturnReg, PtrVT, Glue);
   }
-
-  // TLSADDR will be codegen'ed as call. Inform MFI that function has calls.
-  MFI.setAdjustsStack(true);
-  MFI.setHasCalls(true);
-
-  SDValue Glue = Chain.getValue(1);
-  SDValue Ret = DAG.getCopyFromReg(Chain, dl, ReturnReg, PtrVT, Glue);
 
   if (!UseTLSDESC)
     return Ret;
@@ -18884,30 +18909,22 @@ GetTLSADDR(SelectionDAG &DAG, SDValue Chain, GlobalAddressSDNode *GA,
 static SDValue
 LowerToTLSGeneralDynamicModel32(GlobalAddressSDNode *GA, SelectionDAG &DAG,
                                 const EVT PtrVT) {
-  SDValue InGlue;
-  SDLoc dl(GA);  // ? function entry point might be better
-  SDValue Chain = DAG.getCopyToReg(DAG.getEntryNode(), dl, X86::EBX,
-                                   DAG.getNode(X86ISD::GlobalBaseReg,
-                                               SDLoc(), PtrVT), InGlue);
-  InGlue = Chain.getValue(1);
-
-  return GetTLSADDR(DAG, Chain, GA, &InGlue, PtrVT, X86::EAX, X86II::MO_TLSGD);
+  return GetTLSADDR(DAG, GA, PtrVT, X86::EAX, X86II::MO_TLSGD,
+                    /*LoadGlobalBaseReg=*/true);
 }
 
 // Lower ISD::GlobalTLSAddress using the "general dynamic" model, 64 bit LP64
 static SDValue
 LowerToTLSGeneralDynamicModel64(GlobalAddressSDNode *GA, SelectionDAG &DAG,
                                 const EVT PtrVT) {
-  return GetTLSADDR(DAG, DAG.getEntryNode(), GA, nullptr, PtrVT,
-                    X86::RAX, X86II::MO_TLSGD);
+  return GetTLSADDR(DAG, GA, PtrVT, X86::RAX, X86II::MO_TLSGD);
 }
 
 // Lower ISD::GlobalTLSAddress using the "general dynamic" model, 64 bit ILP32
 static SDValue
 LowerToTLSGeneralDynamicModelX32(GlobalAddressSDNode *GA, SelectionDAG &DAG,
                                  const EVT PtrVT) {
-  return GetTLSADDR(DAG, DAG.getEntryNode(), GA, nullptr, PtrVT,
-                    X86::EAX, X86II::MO_TLSGD);
+  return GetTLSADDR(DAG, GA, PtrVT, X86::EAX, X86II::MO_TLSGD);
 }
 
 static SDValue LowerToTLSLocalDynamicModel(GlobalAddressSDNode *GA,
@@ -18916,22 +18933,20 @@ static SDValue LowerToTLSLocalDynamicModel(GlobalAddressSDNode *GA,
   SDLoc dl(GA);
 
   // Get the start address of the TLS block for this module.
-  X86MachineFunctionInfo *MFI = DAG.getMachineFunction()
-      .getInfo<X86MachineFunctionInfo>();
+  X86MachineFunctionInfo *MFI =
+      DAG.getMachineFunction().getInfo<X86MachineFunctionInfo>();
   MFI->incNumLocalDynamicTLSAccesses();
 
   SDValue Base;
   if (Is64Bit) {
     unsigned ReturnReg = Is64BitLP64 ? X86::RAX : X86::EAX;
-    Base = GetTLSADDR(DAG, DAG.getEntryNode(), GA, nullptr, PtrVT, ReturnReg,
-                      X86II::MO_TLSLD, /*LocalDynamic=*/true);
+    Base = GetTLSADDR(DAG, GA, PtrVT, ReturnReg, X86II::MO_TLSLD,
+                      /*LoadGlobalBaseReg=*/false,
+                      /*LocalDynamic=*/true);
   } else {
-    SDValue InGlue;
-    SDValue Chain = DAG.getCopyToReg(DAG.getEntryNode(), dl, X86::EBX,
-        DAG.getNode(X86ISD::GlobalBaseReg, SDLoc(), PtrVT), InGlue);
-    InGlue = Chain.getValue(1);
-    Base = GetTLSADDR(DAG, Chain, GA, &InGlue, PtrVT, X86::EAX,
-                      X86II::MO_TLSLDM, /*LocalDynamic=*/true);
+    Base = GetTLSADDR(DAG, GA, PtrVT, X86::EAX, X86II::MO_TLSLDM,
+                      /*LoadGlobalBaseReg=*/true,
+                      /*LocalDynamic=*/true);
   }
 
   // Note: the CleanupLocalDynamicTLSPass will remove redundant computations
@@ -24073,6 +24088,13 @@ SDValue X86TargetLowering::LowerSETCC(SDValue Op, SelectionDAG &DAG) const {
     return IsStrict ? DAG.getMergeValues({Res, Chain}, dl) : Res;
   }
 
+  if (Subtarget.hasAVX10_2()) {
+    if (CC == ISD::SETOEQ || CC == ISD::SETUNE) {
+      auto NewCC = (CC == ISD::SETOEQ) ? X86::COND_E : (X86::COND_NE);
+      return getSETCC(NewCC, DAG.getNode(X86ISD::UCOMX, dl, MVT::i32, Op0, Op1),
+                      dl, DAG);
+    }
+  }
   // Handle floating point.
   X86::CondCode CondCode = TranslateX86CC(CC, dl, /*IsFP*/ true, Op0, Op1, DAG);
   if (CondCode == X86::COND_INVALID)
@@ -27280,6 +27302,53 @@ static SDValue LowerINTRINSIC_W_CHAIN(SDValue Op, const X86Subtarget &Subtarget,
       SDValue SetCC = getSETCC(X86::COND_B, Operation.getValue(0), dl, DAG);
       return DAG.getNode(ISD::MERGE_VALUES, dl, Op->getVTList(), SetCC,
                          Operation.getValue(1));
+    }
+    case Intrinsic::x86_t2rpntlvwz0_internal:
+    case Intrinsic::x86_t2rpntlvwz0t1_internal:
+    case Intrinsic::x86_t2rpntlvwz1_internal:
+    case Intrinsic::x86_t2rpntlvwz1t1_internal: {
+      if (!Subtarget.hasAMXTILE())
+        break;
+      auto *X86MFI = DAG.getMachineFunction().getInfo<X86MachineFunctionInfo>();
+      X86MFI->setAMXProgModel(AMXProgModelEnum::ManagedRA);
+      unsigned IntNo = Op.getConstantOperandVal(1);
+      unsigned Opc = 0;
+      switch (IntNo) {
+      default:
+        llvm_unreachable("Unexpected intrinsic!");
+      case Intrinsic::x86_t2rpntlvwz0_internal:
+        Opc = X86::PT2RPNTLVWZ0V;
+        break;
+      case Intrinsic::x86_t2rpntlvwz0t1_internal:
+        Opc = X86::PT2RPNTLVWZ0T1V;
+        break;
+      case Intrinsic::x86_t2rpntlvwz1_internal:
+        Opc = X86::PT2RPNTLVWZ1V;
+        break;
+      case Intrinsic::x86_t2rpntlvwz1t1_internal:
+        Opc = X86::PT2RPNTLVWZ1T1V;
+        break;
+      }
+
+      SDLoc DL(Op);
+      SDVTList VTs = DAG.getVTList(MVT::Untyped, MVT::Other);
+
+      SDValue Ops[] = {Op.getOperand(2),                       // Row
+                       Op.getOperand(3),                       // Col0
+                       Op.getOperand(4),                       // Col1
+                       Op.getOperand(5),                       // Base
+                       DAG.getTargetConstant(1, DL, MVT::i8),  // Scale
+                       Op.getOperand(6),                       // Index
+                       DAG.getTargetConstant(0, DL, MVT::i32), // Disp
+                       DAG.getRegister(0, MVT::i16),           // Segment
+                       Op.getOperand(0)};                      // Chain
+
+      MachineSDNode *Res = DAG.getMachineNode(Opc, DL, VTs, Ops);
+      SDValue Res0 = DAG.getTargetExtractSubreg(X86::sub_t0, DL, MVT::x86amx,
+                                                SDValue(Res, 0));
+      SDValue Res1 = DAG.getTargetExtractSubreg(X86::sub_t1, DL, MVT::x86amx,
+                                                SDValue(Res, 0));
+      return DAG.getMergeValues({Res0, Res1, SDValue(Res, 1)}, DL);
     }
     case Intrinsic::x86_atomic_bts_rm:
     case Intrinsic::x86_atomic_btc_rm:
@@ -34158,9 +34227,9 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
   }
   case ISD::BITREVERSE: {
     assert(N->getValueType(0) == MVT::i64 && "Unexpected VT!");
-    assert(Subtarget.hasXOP() && "Expected XOP");
-    // We can use VPPERM by copying to a vector register and back. We'll need
-    // to move the scalar in two i32 pieces.
+    assert((Subtarget.hasXOP() || Subtarget.hasGFNI()) && "Expected XOP/GFNI");
+    // We can use VPPERM/GF2P8AFFINEQB by copying to a vector register and back.
+    // We'll need to move the scalar in two i32 pieces.
     Results.push_back(LowerBITREVERSE(SDValue(N, 0), Subtarget, DAG));
     return;
   }
@@ -36003,36 +36072,6 @@ X86TargetLowering::EmitLoweredCatchRet(MachineInstr &MI,
 }
 
 MachineBasicBlock *
-X86TargetLowering::EmitLoweredTLSAddr(MachineInstr &MI,
-                                      MachineBasicBlock *BB) const {
-  // So, here we replace TLSADDR with the sequence:
-  // adjust_stackdown -> TLSADDR -> adjust_stackup.
-  // We need this because TLSADDR is lowered into calls
-  // inside MC, therefore without the two markers shrink-wrapping
-  // may push the prologue/epilogue pass them.
-  const TargetInstrInfo &TII = *Subtarget.getInstrInfo();
-  const MIMetadata MIMD(MI);
-  MachineFunction &MF = *BB->getParent();
-
-  // Emit CALLSEQ_START right before the instruction.
-  MF.getFrameInfo().setAdjustsStack(true);
-  unsigned AdjStackDown = TII.getCallFrameSetupOpcode();
-  MachineInstrBuilder CallseqStart =
-      BuildMI(MF, MIMD, TII.get(AdjStackDown)).addImm(0).addImm(0).addImm(0);
-  BB->insert(MachineBasicBlock::iterator(MI), CallseqStart);
-
-  // Emit CALLSEQ_END right after the instruction.
-  // We don't call erase from parent because we want to keep the
-  // original instruction around.
-  unsigned AdjStackUp = TII.getCallFrameDestroyOpcode();
-  MachineInstrBuilder CallseqEnd =
-      BuildMI(MF, MIMD, TII.get(AdjStackUp)).addImm(0).addImm(0);
-  BB->insertAfter(MachineBasicBlock::iterator(MI), CallseqEnd);
-
-  return BB;
-}
-
-MachineBasicBlock *
 X86TargetLowering::EmitLoweredTLSCall(MachineInstr &MI,
                                       MachineBasicBlock *BB) const {
   // This is pretty easy.  We're taking the value that we received from
@@ -37029,17 +37068,13 @@ X86TargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     assert (Imm < 8 && "Illegal tmm index");
     return X86::TMM0 + Imm;
   };
+  auto TMMImmToTMMPair = [](unsigned Imm) {
+    assert(Imm < 8 && "Illegal tmm pair index.");
+    return X86::TMM0_TMM1 + Imm / 2;
+  };
   switch (MI.getOpcode()) {
-  default: llvm_unreachable("Unexpected instr type to insert");
-  case X86::TLS_addr32:
-  case X86::TLS_addr64:
-  case X86::TLS_addrX32:
-  case X86::TLS_base_addr32:
-  case X86::TLS_base_addr64:
-  case X86::TLS_base_addrX32:
-  case X86::TLS_desc32:
-  case X86::TLS_desc64:
-    return EmitLoweredTLSAddr(MI, BB);
+  default:
+    llvm_unreachable("Unexpected instr type to insert");
   case X86::INDIRECT_THUNK_CALL32:
   case X86::INDIRECT_THUNK_CALL64:
   case X86::INDIRECT_THUNK_TCRETURN32:
@@ -37410,7 +37445,11 @@ X86TargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
   case X86::PTDPBUSD:
   case X86::PTDPBUUD:
   case X86::PTDPBF16PS:
-  case X86::PTDPFP16PS: {
+  case X86::PTDPFP16PS:
+  case X86::PTDPBF8PS:
+  case X86::PTDPBHF8PS:
+  case X86::PTDPHBF8PS:
+  case X86::PTDPHF8PS: {
     unsigned Opc;
     switch (MI.getOpcode()) {
     // clang-format off
@@ -37421,6 +37460,10 @@ X86TargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     case X86::PTDPBUUD: Opc = X86::TDPBUUD; break;
     case X86::PTDPBF16PS: Opc = X86::TDPBF16PS; break;
     case X86::PTDPFP16PS: Opc = X86::TDPFP16PS; break;
+    case X86::PTDPBF8PS: Opc = X86::TDPBF8PS; break;
+    case X86::PTDPBHF8PS: Opc = X86::TDPBHF8PS; break;
+    case X86::PTDPHBF8PS: Opc = X86::TDPHBF8PS; break;
+    case X86::PTDPHF8PS: Opc = X86::TDPHF8PS; break;
     // clang-format on
     }
 
@@ -37500,6 +37543,49 @@ X86TargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     MIB.addReg(TMMImmToTMMReg(MI.getOperand(0).getImm()), RegState::Undef);
     MIB.addReg(TMMImmToTMMReg(MI.getOperand(1).getImm()), RegState::Undef);
     MIB.addReg(TMMImmToTMMReg(MI.getOperand(2).getImm()), RegState::Undef);
+    MI.eraseFromParent(); // The pseudo is gone now.
+    return BB;
+  }
+  case X86::PT2RPNTLVWZ0:
+  case X86::PT2RPNTLVWZ0T1:
+  case X86::PT2RPNTLVWZ1:
+  case X86::PT2RPNTLVWZ1T1: {
+    const DebugLoc &DL = MI.getDebugLoc();
+    unsigned Opc;
+    switch (MI.getOpcode()) {
+    default:
+      llvm_unreachable("Unexpected instruction!");
+    case X86::PT2RPNTLVWZ0:
+      Opc = X86::T2RPNTLVWZ0;
+      break;
+    case X86::PT2RPNTLVWZ0T1:
+      Opc = X86::T2RPNTLVWZ0T1;
+      break;
+    case X86::PT2RPNTLVWZ1:
+      Opc = X86::T2RPNTLVWZ1;
+      break;
+    case X86::PT2RPNTLVWZ1T1:
+      Opc = X86::T2RPNTLVWZ1T1;
+      break;
+    }
+    MachineInstrBuilder MIB = BuildMI(*BB, MI, DL, TII->get(Opc));
+    MIB.addReg(TMMImmToTMMPair(MI.getOperand(0).getImm()), RegState::Define);
+
+    MIB.add(MI.getOperand(1)); // base
+    MIB.add(MI.getOperand(2)); // scale
+    MIB.add(MI.getOperand(3)); // index
+    MIB.add(MI.getOperand(4)); // displacement
+    MIB.add(MI.getOperand(5)); // segment
+    MI.eraseFromParent();      // The pseudo is gone now.
+    return BB;
+  }
+  case X86::PTTRANSPOSED: {
+    const DebugLoc &DL = MI.getDebugLoc();
+
+    MachineInstrBuilder MIB = BuildMI(*BB, MI, DL, TII->get(X86::TTRANSPOSED));
+    MIB.addReg(TMMImmToTMMReg(MI.getOperand(0).getImm()), RegState::Define);
+    MIB.addReg(TMMImmToTMMReg(MI.getOperand(1).getImm()), RegState::Undef);
+
     MI.eraseFromParent(); // The pseudo is gone now.
     return BB;
   }
@@ -49311,7 +49397,7 @@ static SDValue combineVectorShiftImm(SDNode *N, SelectionDAG &DAG,
   if (!LogicalShift && ISD::isBuildVectorAllOnes(N0.getNode()))
     // N0 is all ones or undef. We guarantee that the bits shifted into the
     // result are all ones, not undef.
-    return DAG.getConstant(-1, SDLoc(N), VT);
+    return DAG.getAllOnesConstant(SDLoc(N), VT);
 
   auto MergeShifts = [&](SDValue X, uint64_t Amt0, uint64_t Amt1) {
     unsigned NewShiftVal = Amt0 + Amt1;

@@ -2259,7 +2259,7 @@ the configuration (without a prefix: ``Auto``).
 **BraceWrapping** (``BraceWrappingFlags``) :versionbadge:`clang-format 3.8` :ref:`¶ <BraceWrapping>`
   Control of individual brace wrapping cases.
 
-  If ``BreakBeforeBraces`` is set to ``BS_Custom``, use this to specify how
+  If ``BreakBeforeBraces`` is set to ``Custom``, use this to specify how
   each individual brace case should be handled. Otherwise, this is ignored.
 
   .. code-block:: yaml
@@ -4662,6 +4662,14 @@ the configuration (without a prefix: ``Auto``).
 
 **KeepEmptyLinesAtTheStartOfBlocks** (``Boolean``) :versionbadge:`clang-format 3.7` :ref:`¶ <KeepEmptyLinesAtTheStartOfBlocks>`
   This option is deprecated. See ``AtStartOfBlock`` of ``KeepEmptyLines``.
+
+.. _KeepFormFeed:
+
+**KeepFormFeed** (``Boolean``) :versionbadge:`clang-format 20` :ref:`¶ <KeepFormFeed>`
+  Keep the form feed character if it's immediately preceded and followed by
+  a newline. Multiple form feeds and newlines within a whitespace range are
+  replaced with a single newline and form feed followed by the remaining
+  newlines.
 
 .. _LambdaBodyIndentation:
 

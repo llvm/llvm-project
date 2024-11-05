@@ -43,6 +43,7 @@
 #include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/FoldingSet.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -1241,8 +1242,8 @@ public:
           == T->getEquivalentType().getAsOpaquePtr())
       return QualType(T, 0);
 
-    return Ctx.getAttributedType(T->getAttrKind(), modifiedType,
-                                 equivalentType);
+    return Ctx.getAttributedType(T->getAttrKind(), modifiedType, equivalentType,
+                                 T->getAttr());
   }
 
   QualType VisitSubstTemplateTypeParmType(const SubstTemplateTypeParmType *T) {
@@ -1545,7 +1546,8 @@ struct SubstObjCTypeArgsVisitor
 
     // Rebuild the attributed type.
     return Ctx.getAttributedType(newAttrType->getAttrKind(),
-                                 newAttrType->getModifiedType(), newEquivType);
+                                 newAttrType->getModifiedType(), newEquivType,
+                                 newAttrType->getAttr());
   }
 };
 
@@ -4115,6 +4117,19 @@ bool RecordType::hasConstFields() const {
   return false;
 }
 
+AttributedType::AttributedType(QualType canon, const Attr *attr,
+                               QualType modified, QualType equivalent)
+    : AttributedType(canon, attr->getKind(), attr, modified, equivalent) {}
+
+AttributedType::AttributedType(QualType canon, attr::Kind attrKind,
+                               const Attr *attr, QualType modified,
+                               QualType equivalent)
+    : Type(Attributed, canon, equivalent->getDependence()), Attribute(attr),
+      ModifiedType(modified), EquivalentType(equivalent) {
+  AttributedTypeBits.AttrKind = attrKind;
+  assert(!attr || attr->getKind() == attrKind);
+}
+
 bool AttributedType::isQualifier() const {
   // FIXME: Generate this with TableGen.
   switch (getAttrKind()) {
@@ -4760,7 +4775,10 @@ bool Type::canHaveNullability(bool ResultIfUnknown) const {
                 ->getTemplateName()
                 .getAsTemplateDecl())
       if (auto *CTD = dyn_cast<ClassTemplateDecl>(templateDecl))
-        return CTD->getTemplatedDecl()->hasAttr<TypeNullableAttr>();
+        return llvm::any_of(
+            CTD->redecls(), [](const RedeclarableTemplateDecl *RTD) {
+              return RTD->getTemplatedDecl()->hasAttr<TypeNullableAttr>();
+            });
     return ResultIfUnknown;
 
   case Type::Builtin:
@@ -4827,10 +4845,14 @@ bool Type::canHaveNullability(bool ResultIfUnknown) const {
     // For template specializations, look only at primary template attributes.
     // This is a consistent regardless of whether the instantiation is known.
     if (const auto *CTSD = dyn_cast<ClassTemplateSpecializationDecl>(RD))
-      return CTSD->getSpecializedTemplate()
-          ->getTemplatedDecl()
-          ->hasAttr<TypeNullableAttr>();
-    return RD->hasAttr<TypeNullableAttr>();
+      return llvm::any_of(
+          CTSD->getSpecializedTemplate()->redecls(),
+          [](const RedeclarableTemplateDecl *RTD) {
+            return RTD->getTemplatedDecl()->hasAttr<TypeNullableAttr>();
+          });
+    return llvm::any_of(RD->redecls(), [](const TagDecl *RD) {
+      return RD->hasAttr<TypeNullableAttr>();
+    });
   }
 
   // Non-pointer types.

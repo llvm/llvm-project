@@ -108,7 +108,8 @@ std::optional<bool> isRefCountable(const clang::CXXRecordDecl *R) {
 }
 
 std::optional<bool> isCheckedPtrCapable(const clang::CXXRecordDecl *R) {
-  return isSmartPtrCompatible(R, "incrementPtrCount", "decrementPtrCount");
+  return isSmartPtrCompatible(R, "incrementCheckedPtrCount",
+                              "decrementCheckedPtrCount");
 }
 
 bool isRefType(const std::string &Name) {
@@ -135,7 +136,16 @@ bool isCtorOfRefCounted(const clang::FunctionDecl *F) {
          || FunctionName == "Identifier";
 }
 
-bool isRefType(const clang::QualType T) {
+bool isCtorOfCheckedPtr(const clang::FunctionDecl *F) {
+  assert(F);
+  return isCheckedPtr(safeGetName(F));
+}
+
+bool isCtorOfSafePtr(const clang::FunctionDecl *F) {
+  return isCtorOfRefCounted(F) || isCtorOfCheckedPtr(F);
+}
+
+bool isSafePtrType(const clang::QualType T) {
   QualType type = T;
   while (!type.isNull()) {
     if (auto *elaboratedT = type->getAs<ElaboratedType>()) {
@@ -145,7 +155,7 @@ bool isRefType(const clang::QualType T) {
     if (auto *specialT = type->getAs<TemplateSpecializationType>()) {
       if (auto *decl = specialT->getTemplateName().getAsTemplateDecl()) {
         auto name = decl->getNameAsString();
-        return isRefType(name);
+        return isRefType(name) || isCheckedPtr(name);
       }
       return false;
     }
@@ -177,6 +187,12 @@ std::optional<bool> isUncounted(const CXXRecordDecl* Class)
   return (*IsRefCountable);
 }
 
+std::optional<bool> isUnchecked(const CXXRecordDecl *Class) {
+  if (isCheckedPtr(Class))
+    return false; // Cheaper than below
+  return isCheckedPtrCapable(Class);
+}
+
 std::optional<bool> isUncountedPtr(const QualType T) {
   if (T->isPointerType() || T->isReferenceType()) {
     if (auto *CXXRD = T->getPointeeCXXRecordDecl())
@@ -185,14 +201,33 @@ std::optional<bool> isUncountedPtr(const QualType T) {
   return false;
 }
 
-std::optional<bool> isGetterOfRefCounted(const CXXMethodDecl* M)
-{
+std::optional<bool> isUncheckedPtr(const QualType T) {
+  if (T->isPointerType() || T->isReferenceType()) {
+    if (auto *CXXRD = T->getPointeeCXXRecordDecl())
+      return isUnchecked(CXXRD);
+  }
+  return false;
+}
+
+std::optional<bool> isUnsafePtr(const QualType T) {
+  if (T->isPointerType() || T->isReferenceType()) {
+    if (auto *CXXRD = T->getPointeeCXXRecordDecl()) {
+      return isUncounted(CXXRD) || isUnchecked(CXXRD);
+    }
+  }
+  return false;
+}
+
+std::optional<bool> isGetterOfSafePtr(const CXXMethodDecl *M) {
   assert(M);
 
   if (isa<CXXMethodDecl>(M)) {
     const CXXRecordDecl *calleeMethodsClass = M->getParent();
     auto className = safeGetName(calleeMethodsClass);
     auto method = safeGetName(M);
+
+    if (isCheckedPtr(className) && (method == "get" || method == "ptr"))
+      return true;
 
     if ((isRefType(className) && (method == "get" || method == "ptr")) ||
         ((className == "String" || className == "AtomString" ||
@@ -205,7 +240,12 @@ std::optional<bool> isGetterOfRefCounted(const CXXMethodDecl* M)
     // FIXME: Currently allowing any Ref<T> -> whatever cast.
     if (isRefType(className)) {
       if (auto *maybeRefToRawOperator = dyn_cast<CXXConversionDecl>(M))
-        return isUncountedPtr(maybeRefToRawOperator->getConversionType());
+        return isUnsafePtr(maybeRefToRawOperator->getConversionType());
+    }
+
+    if (isCheckedPtr(className)) {
+      if (auto *maybeRefToRawOperator = dyn_cast<CXXConversionDecl>(M))
+        return isUnsafePtr(maybeRefToRawOperator->getConversionType());
     }
   }
   return false;
@@ -414,7 +454,8 @@ public:
         Name == "isMainThreadOrGCThread" || Name == "isMainRunLoop" ||
         Name == "isWebThread" || Name == "isUIThread" ||
         Name == "mayBeGCThread" || Name == "compilerFenceForCrash" ||
-        Name == "bitwise_cast" || Name.find("__builtin") == 0)
+        Name == "bitwise_cast" || Name.find("__builtin") == 0 ||
+        Name == "__libcpp_verbose_abort")
       return true;
 
     return IsFunctionTrivial(Callee);
@@ -447,7 +488,7 @@ public:
     if (!Callee)
       return false;
 
-    std::optional<bool> IsGetterOfRefCounted = isGetterOfRefCounted(Callee);
+    std::optional<bool> IsGetterOfRefCounted = isGetterOfSafePtr(Callee);
     if (IsGetterOfRefCounted && *IsGetterOfRefCounted)
       return true;
 
