@@ -9,10 +9,8 @@
 #ifndef LLDB_TOOLS_LLDB_DAP_BREAKPOINTBASE_H
 #define LLDB_TOOLS_LLDB_DAP_BREAKPOINTBASE_H
 
-#include "lldb/API/SBBreakpoint.h"
 #include "llvm/Support/JSON.h"
 #include <string>
-#include <vector>
 
 namespace lldb_dap {
 

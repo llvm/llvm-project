@@ -84,11 +84,9 @@
 #include "llvm/Transforms/Utils/LoopConstrainer.h"
 #include "llvm/Transforms/Utils/LoopSimplify.h"
 #include "llvm/Transforms/Utils/LoopUtils.h"
-#include "llvm/Transforms/Utils/ScalarEvolutionExpander.h"
 #include "llvm/Transforms/Utils/ValueMapper.h"
 #include <algorithm>
 #include <cassert>
-#include <iterator>
 #include <optional>
 #include <utility>
 

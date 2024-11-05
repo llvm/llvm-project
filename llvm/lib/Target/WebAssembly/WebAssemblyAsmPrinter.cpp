@@ -518,7 +518,6 @@ void WebAssemblyAsmPrinter::EmitTargetFeatures(Module &M) {
 
     // Silently ignore invalid metadata
     if (Entry.Prefix != wasm::WASM_FEATURE_PREFIX_USED &&
-        Entry.Prefix != wasm::WASM_FEATURE_PREFIX_REQUIRED &&
         Entry.Prefix != wasm::WASM_FEATURE_PREFIX_DISALLOWED)
       return;
 

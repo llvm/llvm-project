@@ -44,7 +44,6 @@
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
-#include "llvm/CodeGen/RuntimeLibcallUtil.h"
 #include "llvm/CodeGen/SelectionDAG.h"
 #include "llvm/CodeGen/SelectionDAGTargetInfo.h"
 #include "llvm/CodeGen/StackMaps.h"
@@ -104,8 +103,6 @@
 #include "llvm/TargetParser/Triple.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include <cstddef>
-#include <deque>
-#include <iterator>
 #include <limits>
 #include <optional>
 #include <tuple>
@@ -3654,6 +3651,10 @@ void SelectionDAGBuilder::visitICmp(const ICmpInst &I) {
     Op2 = DAG.getPtrExtOrTrunc(Op2, getCurSDLoc(), MemVT);
   }
 
+  SDNodeFlags Flags;
+  Flags.setSameSign(I.hasSameSign());
+  SelectionDAG::FlagInserter FlagsInserter(DAG, Flags);
+
   EVT DestVT = DAG.getTargetLoweringInfo().getValueType(DAG.getDataLayout(),
                                                         I.getType());
   setValue(&I, DAG.getSetCC(getCurSDLoc(), DestVT, Op1, Op2, Opcode));
@@ -4117,61 +4118,61 @@ void SelectionDAGBuilder::visitShuffleVector(const User &I) {
     return;
   }
 
-  if (SrcNumElts > MaskNumElts) {
-    // Analyze the access pattern of the vector to see if we can extract
-    // two subvectors and do the shuffle.
-    int StartIdx[2] = { -1, -1 };  // StartIdx to extract from
-    bool CanExtract = true;
-    for (int Idx : Mask) {
-      unsigned Input = 0;
-      if (Idx < 0)
-        continue;
+  assert(SrcNumElts > MaskNumElts);
 
-      if (Idx >= (int)SrcNumElts) {
-        Input = 1;
-        Idx -= SrcNumElts;
-      }
+  // Analyze the access pattern of the vector to see if we can extract
+  // two subvectors and do the shuffle.
+  int StartIdx[2] = {-1, -1}; // StartIdx to extract from
+  bool CanExtract = true;
+  for (int Idx : Mask) {
+    unsigned Input = 0;
+    if (Idx < 0)
+      continue;
 
-      // If all the indices come from the same MaskNumElts sized portion of
-      // the sources we can use extract. Also make sure the extract wouldn't
-      // extract past the end of the source.
-      int NewStartIdx = alignDown(Idx, MaskNumElts);
-      if (NewStartIdx + MaskNumElts > SrcNumElts ||
-          (StartIdx[Input] >= 0 && StartIdx[Input] != NewStartIdx))
-        CanExtract = false;
-      // Make sure we always update StartIdx as we use it to track if all
-      // elements are undef.
-      StartIdx[Input] = NewStartIdx;
+    if (Idx >= (int)SrcNumElts) {
+      Input = 1;
+      Idx -= SrcNumElts;
     }
 
-    if (StartIdx[0] < 0 && StartIdx[1] < 0) {
-      setValue(&I, DAG.getUNDEF(VT)); // Vectors are not used.
-      return;
-    }
-    if (CanExtract) {
-      // Extract appropriate subvector and generate a vector shuffle
-      for (unsigned Input = 0; Input < 2; ++Input) {
-        SDValue &Src = Input == 0 ? Src1 : Src2;
-        if (StartIdx[Input] < 0)
-          Src = DAG.getUNDEF(VT);
-        else {
-          Src = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, VT, Src,
-                            DAG.getVectorIdxConstant(StartIdx[Input], DL));
-        }
-      }
+    // If all the indices come from the same MaskNumElts sized portion of
+    // the sources we can use extract. Also make sure the extract wouldn't
+    // extract past the end of the source.
+    int NewStartIdx = alignDown(Idx, MaskNumElts);
+    if (NewStartIdx + MaskNumElts > SrcNumElts ||
+        (StartIdx[Input] >= 0 && StartIdx[Input] != NewStartIdx))
+      CanExtract = false;
+    // Make sure we always update StartIdx as we use it to track if all
+    // elements are undef.
+    StartIdx[Input] = NewStartIdx;
+  }
 
-      // Calculate new mask.
-      SmallVector<int, 8> MappedOps(Mask);
-      for (int &Idx : MappedOps) {
-        if (Idx >= (int)SrcNumElts)
-          Idx -= SrcNumElts + StartIdx[1] - MaskNumElts;
-        else if (Idx >= 0)
-          Idx -= StartIdx[0];
+  if (StartIdx[0] < 0 && StartIdx[1] < 0) {
+    setValue(&I, DAG.getUNDEF(VT)); // Vectors are not used.
+    return;
+  }
+  if (CanExtract) {
+    // Extract appropriate subvector and generate a vector shuffle
+    for (unsigned Input = 0; Input < 2; ++Input) {
+      SDValue &Src = Input == 0 ? Src1 : Src2;
+      if (StartIdx[Input] < 0)
+        Src = DAG.getUNDEF(VT);
+      else {
+        Src = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, VT, Src,
+                          DAG.getVectorIdxConstant(StartIdx[Input], DL));
       }
-
-      setValue(&I, DAG.getVectorShuffle(VT, DL, Src1, Src2, MappedOps));
-      return;
     }
+
+    // Calculate new mask.
+    SmallVector<int, 8> MappedOps(Mask);
+    for (int &Idx : MappedOps) {
+      if (Idx >= (int)SrcNumElts)
+        Idx -= SrcNumElts + StartIdx[1] - MaskNumElts;
+      else if (Idx >= 0)
+        Idx -= StartIdx[0];
+    }
+
+    setValue(&I, DAG.getVectorShuffle(VT, DL, Src1, Src2, MappedOps));
+    return;
   }
 
   // We can't use either concat vectors or extract subvectors so fall back to
@@ -4320,7 +4321,7 @@ void SelectionDAGBuilder::visitGetElementPtr(const User &I) {
         SDNodeFlags Flags;
         if (NW.hasNoUnsignedWrap() ||
             (int64_t(Offset) >= 0 && NW.hasNoUnsignedSignedWrap()))
-          Flags.setNoUnsignedWrap(true);
+          Flags |= SDNodeFlags::NoUnsignedWrap;
 
         N = DAG.getNode(ISD::ADD, dl, N.getValueType(), N,
                         DAG.getConstant(Offset, dl, N.getValueType()), Flags);
@@ -4486,10 +4487,9 @@ void SelectionDAGBuilder::visitAlloca(const AllocaInst &I) {
   // Round the size of the allocation up to the stack alignment size
   // by add SA-1 to the size. This doesn't overflow because we're computing
   // an address inside an alloca.
-  SDNodeFlags Flags;
-  Flags.setNoUnsignedWrap(true);
   AllocSize = DAG.getNode(ISD::ADD, dl, AllocSize.getValueType(), AllocSize,
-                          DAG.getConstant(StackAlignMask, dl, IntPtr), Flags);
+                          DAG.getConstant(StackAlignMask, dl, IntPtr),
+                          SDNodeFlags::NoUnsignedWrap);
 
   // Mask out the low bits for alignment purposes.
   AllocSize = DAG.getNode(ISD::AND, dl, AllocSize.getValueType(), AllocSize,
@@ -6938,12 +6938,24 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
                              getValue(I.getArgOperand(0)),
                              getValue(I.getArgOperand(1)), Flags));
     return;
+  case Intrinsic::sincos:
   case Intrinsic::frexp: {
+    unsigned Opcode;
+    switch (Intrinsic) {
+    default:
+      llvm_unreachable("unexpected intrinsic");
+    case Intrinsic::sincos:
+      Opcode = ISD::FSINCOS;
+      break;
+    case Intrinsic::frexp:
+      Opcode = ISD::FFREXP;
+      break;
+    }
     SmallVector<EVT, 2> ValueVTs;
     ComputeValueVTs(TLI, DAG.getDataLayout(), I.getType(), ValueVTs);
     SDVTList VTs = DAG.getVTList(ValueVTs);
-    setValue(&I,
-             DAG.getNode(ISD::FFREXP, sdl, VTs, getValue(I.getArgOperand(0))));
+    setValue(
+        &I, DAG.getNode(Opcode, sdl, VTs, getValue(I.getArgOperand(0)), Flags));
     return;
   }
   case Intrinsic::arithmetic_fence: {
@@ -11214,15 +11226,13 @@ TargetLowering::LowerCallTo(TargetLowering::CallLoweringInfo &CLI) const {
 
     // An aggregate return value cannot wrap around the address space, so
     // offsets to its parts don't wrap either.
-    SDNodeFlags Flags;
-    Flags.setNoUnsignedWrap(true);
-
     MachineFunction &MF = CLI.DAG.getMachineFunction();
     Align HiddenSRetAlign = MF.getFrameInfo().getObjectAlign(DemoteStackIdx);
     for (unsigned i = 0; i < NumValues; ++i) {
-      SDValue Add = CLI.DAG.getNode(ISD::ADD, CLI.DL, PtrVT, DemoteStackSlot,
-                                    CLI.DAG.getConstant(Offsets[i], CLI.DL,
-                                                        PtrVT), Flags);
+      SDValue Add =
+          CLI.DAG.getNode(ISD::ADD, CLI.DL, PtrVT, DemoteStackSlot,
+                          CLI.DAG.getConstant(Offsets[i], CLI.DL, PtrVT),
+                          SDNodeFlags::NoUnsignedWrap);
       SDValue L = CLI.DAG.getLoad(
           RetTys[i], CLI.DL, CLI.Chain, Add,
           MachinePointerInfo::getFixedStack(CLI.DAG.getMachineFunction(),

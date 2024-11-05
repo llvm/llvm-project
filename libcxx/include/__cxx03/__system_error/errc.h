@@ -100,8 +100,8 @@ enum class errc
 
 */
 
-#include <__config>
-#include <cerrno>
+#include <__cxx03/__config>
+#include <__cxx03/cerrno>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

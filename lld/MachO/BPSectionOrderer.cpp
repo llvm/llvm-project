@@ -53,11 +53,8 @@ getRelocHash(const Reloc &reloc,
     kind = ("Section " + Twine(static_cast<uint8_t>(isec->kind()))).str();
   if (auto *sym = reloc.referent.dyn_cast<Symbol *>()) {
     kind += (" Symbol " + Twine(static_cast<uint8_t>(sym->kind()))).str();
-    if (auto *d = dyn_cast<Defined>(sym)) {
-      if (isa_and_nonnull<CStringInputSection>(isec))
-        return getRelocHash(kind, 0, isec->getOffset(d->value), reloc.addend);
+    if (auto *d = dyn_cast<Defined>(sym))
       return getRelocHash(kind, sectionIdx.value_or(0), d->value, reloc.addend);
-    }
   }
   return getRelocHash(kind, sectionIdx.value_or(0), 0, reloc.addend);
 }

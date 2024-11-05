@@ -33,6 +33,12 @@ AST matchers
 | aaron\@aaronballman.com (email), aaron.ballman (Phabricator), AaronBallman (GitHub), AaronBallman (Discourse), aaronballman (Discord), AaronBallman (IRC)
 
 
+AST Visitors
+~~~~~~~~~~~~
+| Sirraide
+| aeternalmail\@gmail.com (email), Sirraide (GitHub), Ætérnal (Discord), Sirraide (Discourse)
+
+
 Clang LLVM IR generation
 ~~~~~~~~~~~~~~~~~~~~~~~~
 | John McCall
@@ -57,10 +63,16 @@ Analysis & CFG
 | sgatev\@google.com (email), sgatev (Phabricator), sgatev (GitHub)
 
 
+Sema
+~~~~
+| Sirraide
+| aeternalmail\@gmail.com (email), Sirraide (GitHub), Ætérnal (Discord), Sirraide (Discourse)
+
+
 Experimental new constant interpreter
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 | Timm Bäder
-| tbaeder\@redhat.com (em), tbaeder (Phabricator), tbaederr (GitHub), tbaeder (Discourse), tbaeder (Discord)
+| tbaeder\@redhat.com (email), tbaeder (Phabricator), tbaederr (GitHub), tbaeder (Discourse), tbaeder (Discord)
 
 
 Modules & serialization
@@ -71,11 +83,20 @@ Modules & serialization
 | Michael Spencer
 | bigcheesegs\@gmail.com (email), Bigcheese (Phabricator), Bigcheese (GitHub)
 
+| Vassil Vassilev
+| Vassil.Vassilev\@cern.ch (email), v.g.vassilev (Phabricator), vgvassilev (GitHub)
+
 
 Templates
 ~~~~~~~~~
 | Erich Keane
 | ekeane\@nvidia.com (email), ErichKeane (Phabricator), erichkeane (GitHub)
+
+
+Lambdas
+~~~~~~~
+| Corentin Jabot
+| corentin.jabot\@gmail.com (email), cor3ntin (Phabricator), cor3ntin (GitHub)
 
 
 Debug information
@@ -172,6 +193,12 @@ Attributes
 | ekeane\@nvidia.com (email), ErichKeane (Phabricator), erichkeane (GitHub)
 
 
+Plugins
+~~~~~~~
+| Vassil Vassilev
+| Vassil.Vassilev\@cern.ch (email), v.g.vassilev (Phabricator), vgvassilev (GitHub)
+
+
 Inline assembly
 ~~~~~~~~~~~~~~~
 | Eric Christopher
@@ -225,6 +252,18 @@ C++ conformance
 | Hubert Tong
 | hubert.reinterpretcast\@gmail.com (email), hubert.reinterpretcast (Phabricator), hubert-reinterpretcast (GitHub)
 
+| Shafik Yaghmour
+| shafik.yaghmour\@intel.com (email), shafik (GitHub), shafik.yaghmour (Discord), shafik (Discourse)
+
+| Vlad Serebrennikov
+| serebrennikov.vladislav\@gmail.com (email), Endilll (GitHub), Endill (Discord), Endill (Discourse)
+
+
+C++ Defect Reports
+~~~~~~~~~~~~~~~~~~
+| Vlad Serebrennikov
+| serebrennikov.vladislav\@gmail.com (email), Endilll (GitHub), Endill (Discord), Endill (Discourse)
+
 
 Objective-C/C++ conformance
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -244,10 +283,25 @@ OpenCL conformance
 | anastasia\@compiler-experts.com (email), Anastasia (Phabricator), AnastasiaStulova (GitHub)
 
 
+OpenACC
+~~~~~~~
+| Erich Keane
+| ekeane\@nvidia.com (email), ErichKeane (Phabricator), erichkeane (GitHub)
+
+
 SYCL conformance
 ~~~~~~~~~~~~~~~~
 | Alexey Bader
 | alexey.bader\@intel.com (email), bader (Phabricator), bader (GitHub)
+
+
+Issue Triage
+~~~~~~~~~~~~
+| Shafik Yaghmour
+| shafik.yaghmour\@intel.com (email), shafik (GitHub), shafik.yaghmour (Discord), shafik (Discourse)
+
+| hstk30
+| hanwei62\@huawei.com (email), hstk30-hw (GitHub), hstk30(Discord), hstk30 (Discourse)
 
 
 Inactive Maintainers
