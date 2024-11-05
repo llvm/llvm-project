@@ -14164,6 +14164,7 @@ SDValue tryWhileWRFromOR(SDValue Op, SelectionDAG &DAG,
                          const AArch64Subtarget &Subtarget) {
   if (!Subtarget.hasSVE2())
     return SDValue();
+  unsigned MaskNumElements = Op.getValueType().getVectorMinNumElements();
   SDValue LaneMask = Op.getOperand(0);
   SDValue Splat = Op.getOperand(1);
 
@@ -14190,6 +14191,27 @@ SDValue tryWhileWRFromOR(SDValue Op, SelectionDAG &DAG,
     if (!DiffDivConst)
       return SDValue();
     EltSize = 1 << DiffDivConst->getZExtValue();
+  }
+
+  switch (EltSize) {
+  case 1:
+    if (MaskNumElements != 16)
+      return SDValue();
+    break;
+  case 2:
+    if (MaskNumElements != 8)
+      return SDValue();
+    break;
+  case 4:
+    if (MaskNumElements != 4)
+      return SDValue();
+    break;
+  case 8:
+    if (MaskNumElements != 2)
+      return SDValue();
+    break;
+  default:
+    return SDValue();
   }
 
   SDValue Diff = Cmp.getOperand(0);
