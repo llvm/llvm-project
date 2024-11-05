@@ -2274,6 +2274,7 @@ void AArch64AsmPrinter::LowerMOVaddrPAC(const MachineInstr &MI) {
                                                      : AArch64PACKey::DA);
 
         emitPtrauthCheckAuthenticatedValue(AArch64::X16, AArch64::X17, AuthKey,
+                                           AArch64PAuth::AuthCheckMethod::XPAC,
                                            /*ShouldTrap=*/true,
                                            /*OnFailure=*/nullptr);
       }
@@ -2406,6 +2407,7 @@ void AArch64AsmPrinter::LowerLOADgotAUTH(const MachineInstr &MI) {
         (AuthOpcode == AArch64::AUTIA ? AArch64PACKey::IA : AArch64PACKey::DA);
 
     emitPtrauthCheckAuthenticatedValue(AuthResultReg, AArch64::X17, AuthKey,
+                                       AArch64PAuth::AuthCheckMethod::XPAC,
                                        /*ShouldTrap=*/true,
                                        /*OnFailure=*/nullptr);
 
