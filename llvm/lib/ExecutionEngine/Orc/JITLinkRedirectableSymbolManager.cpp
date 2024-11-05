@@ -24,7 +24,7 @@ constexpr StringRef StubSuffix = "$__stub_ptr";
 
 void JITLinkRedirectableSymbolManager::emitRedirectableSymbols(
     std::unique_ptr<MaterializationResponsibility> R,
-    const SymbolAddrMap &InitialDests) {
+    SymbolAddrMap InitialDests) {
 
   auto &ES = ObjLinkingLayer.getExecutionSession();
   Triple TT = ES.getTargetTriple();
