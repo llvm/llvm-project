@@ -198,6 +198,30 @@ libc_support_library(
 ############################ Type Proxy Header Files ###########################
 
 libc_support_library(
+    name = "func_aligned_alloc",
+    hdrs = ["hdr/func/aligned_alloc.h"],
+    deps = [":hdr_stdlib_overlay"],
+)
+
+libc_support_library(
+    name = "func_free",
+    hdrs = ["hdr/func/free.h"],
+    deps = [":hdr_stdlib_overlay"],
+)
+
+libc_support_library(
+    name = "func_malloc",
+    hdrs = ["hdr/func/malloc.h"],
+    deps = [":hdr_stdlib_overlay"],
+)
+
+libc_support_library(
+    name = "func_realloc",
+    hdrs = ["hdr/func/realloc.h"],
+    deps = [":hdr_stdlib_overlay"],
+)
+
+libc_support_library(
     name = "types_clockid_t",
     hdrs = ["hdr/types/clockid_t.h"],
 )
@@ -503,6 +527,9 @@ libc_support_library(
     deps = [
         ":__support_common",
         ":__support_macros_properties_os",
+        ":func_aligned_alloc",
+        ":func_free",
+        ":func_malloc",
     ],
 )
 
@@ -549,6 +576,9 @@ libc_support_library(
         ":__support_common",
         ":__support_cpp_string_view",
         ":__support_integer_to_string",
+        ":func_free",
+        ":func_malloc",
+        ":func_realloc",
         ":string_memory_utils",
         ":string_utils",
     ],
@@ -630,6 +660,9 @@ libc_support_library(
     hdrs = ["src/__support/char_vector.h"],
     deps = [
         ":__support_common",
+        ":func_free",
+        ":func_malloc",
+        ":func_realloc",
     ],
 )
 
@@ -834,6 +867,10 @@ libc_support_library(
         ":__support_error_or",
         ":__support_threads_mutex",
         ":errno",
+        ":func_aligned_alloc",
+        ":func_free",
+        ":func_malloc",
+        ":func_realloc",
         ":hdr_stdio_macros",
         ":hdr_stdio_overlay",
         ":types_off_t",

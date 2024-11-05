@@ -6,11 +6,17 @@
 //
 //===----------------------------------------------------------------------===//
 
+// REQUIRES: -fsized-deallocation
+// ADDITIONAL_COMPILE_FLAGS: -fsized-deallocation
+
 #include "benchmark/benchmark.h"
 
 #include <cassert>
+#include <cstdlib>
 #include <new>
 #include <vector>
+
+#include "test_macros.h"
 
 struct PointerList {
   PointerList* Next = nullptr;
@@ -26,6 +32,7 @@ struct NewWrapper {
   __attribute__((always_inline)) static void Deallocate(void* P, size_t) { ::operator delete(P); }
 };
 
+#ifdef TEST_COMPILER_CLANG
 struct BuiltinNewWrapper {
   __attribute__((always_inline)) static void* Allocate(size_t N) { return __builtin_operator_new(N); }
   __attribute__((always_inline)) static void Deallocate(void* P, size_t) { __builtin_operator_delete(P); }
@@ -35,6 +42,7 @@ struct BuiltinSizedNewWrapper {
   __attribute__((always_inline)) static void* Allocate(size_t N) { return __builtin_operator_new(N); }
   __attribute__((always_inline)) static void Deallocate(void* P, size_t N) { __builtin_operator_delete(P, N); }
 };
+#endif
 
 template <class AllocWrapper>
 static void BM_AllocateAndDeallocate(benchmark::State& st) {
@@ -93,11 +101,12 @@ static int RegisterAllocBenchmarks() {
   } TestCases[] = {
       {"BM_Malloc", &BM_AllocateAndDeallocate<MallocWrapper>},
       {"BM_New", &BM_AllocateAndDeallocate<NewWrapper>},
+#ifdef TEST_COMPILER_CLANG
       {"BM_BuiltinNewDelete", BM_AllocateAndDeallocate<BuiltinNewWrapper>},
       {"BM_BuiltinSizedNewDelete", BM_AllocateAndDeallocate<BuiltinSizedNewWrapper>},
       {"BM_BuiltinNewAllocateOnly", BM_AllocateOnly<BuiltinSizedNewWrapper>},
       {"BM_BuiltinNewSizedDeallocateOnly", BM_DeallocateOnly<BuiltinSizedNewWrapper>},
-
+#endif
   };
   for (auto TC : TestCases) {
     benchmark::RegisterBenchmark(TC.name, TC.func)->Range(16, 4096 * 2);
