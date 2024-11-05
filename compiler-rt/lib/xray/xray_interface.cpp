@@ -57,6 +57,8 @@ static const int16_t cSledLength = 64;
 static const int16_t cSledLength = 8;
 #elif defined(__hexagon__)
 static const int16_t cSledLength = 20;
+#elif defined(__s390x__)
+static const int16_t cSledLength = 18;
 #else
 #error "Unsupported CPU Architecture"
 #endif /* CPU architecture */
