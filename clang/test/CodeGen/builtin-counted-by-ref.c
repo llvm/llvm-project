@@ -25,13 +25,8 @@ struct a {
 // X86_64-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[P]], align 8
 // X86_64-NEXT:    [[DOT_COUNTED_BY_GEP:%.*]] = getelementptr inbounds [[STRUCT_A:%.*]], ptr [[TMP2]], i32 0, i32 1
 // X86_64-NEXT:    store i16 [[CONV1]], ptr [[DOT_COUNTED_BY_GEP]], align 2
-// X86_64-NEXT:    [[TMP3:%.*]] = load i32, ptr [[SIZE_ADDR]], align 4
-// X86_64-NEXT:    [[CONV2:%.*]] = trunc i32 [[TMP3]] to i16
-// X86_64-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[P]], align 8
-// X86_64-NEXT:    [[DOT_COUNTED_BY_GEP3:%.*]] = getelementptr inbounds [[STRUCT_A]], ptr [[TMP4]], i32 0, i32 1
-// X86_64-NEXT:    store i16 [[CONV2]], ptr [[DOT_COUNTED_BY_GEP3]], align 2
-// X86_64-NEXT:    [[TMP5:%.*]] = load ptr, ptr [[P]], align 8
-// X86_64-NEXT:    ret ptr [[TMP5]]
+// X86_64-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[P]], align 8
+// X86_64-NEXT:    ret ptr [[TMP3]]
 //
 // I386-LABEL: define dso_local ptr @test1(
 // I386-SAME: i32 noundef [[SIZE:%.*]]) #[[ATTR0:[0-9]+]] {
@@ -49,19 +44,13 @@ struct a {
 // I386-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[P]], align 4
 // I386-NEXT:    [[DOT_COUNTED_BY_GEP:%.*]] = getelementptr inbounds [[STRUCT_A:%.*]], ptr [[TMP2]], i32 0, i32 1
 // I386-NEXT:    store i16 [[CONV]], ptr [[DOT_COUNTED_BY_GEP]], align 2
-// I386-NEXT:    [[TMP3:%.*]] = load i32, ptr [[SIZE_ADDR]], align 4
-// I386-NEXT:    [[CONV1:%.*]] = trunc i32 [[TMP3]] to i16
-// I386-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[P]], align 4
-// I386-NEXT:    [[DOT_COUNTED_BY_GEP2:%.*]] = getelementptr inbounds [[STRUCT_A]], ptr [[TMP4]], i32 0, i32 1
-// I386-NEXT:    store i16 [[CONV1]], ptr [[DOT_COUNTED_BY_GEP2]], align 2
-// I386-NEXT:    [[TMP5:%.*]] = load ptr, ptr [[P]], align 4
-// I386-NEXT:    ret ptr [[TMP5]]
+// I386-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[P]], align 4
+// I386-NEXT:    ret ptr [[TMP3]]
 //
 struct a *test1(int size) {
   struct a *p = __builtin_malloc(sizeof(struct a) + sizeof(int) * size);
 
   *__builtin_counted_by_ref(p->array) = size;
-  *__builtin_counted_by_ref(&p->array[0]) = size;
   return p;
 }
 
@@ -104,13 +93,8 @@ struct b {
 // X86_64-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[P]], align 8
 // X86_64-NEXT:    [[DOT_COUNTED_BY_GEP:%.*]] = getelementptr inbounds [[STRUCT_B:%.*]], ptr [[TMP2]], i32 0, i32 1, i32 1, i32 1, i32 0
 // X86_64-NEXT:    store i8 [[CONV1]], ptr [[DOT_COUNTED_BY_GEP]], align 1
-// X86_64-NEXT:    [[TMP3:%.*]] = load i32, ptr [[SIZE_ADDR]], align 4
-// X86_64-NEXT:    [[CONV2:%.*]] = trunc i32 [[TMP3]] to i8
-// X86_64-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[P]], align 8
-// X86_64-NEXT:    [[DOT_COUNTED_BY_GEP3:%.*]] = getelementptr inbounds [[STRUCT_B]], ptr [[TMP4]], i32 0, i32 1, i32 1, i32 1, i32 0
-// X86_64-NEXT:    store i8 [[CONV2]], ptr [[DOT_COUNTED_BY_GEP3]], align 1
-// X86_64-NEXT:    [[TMP5:%.*]] = load ptr, ptr [[P]], align 8
-// X86_64-NEXT:    ret ptr [[TMP5]]
+// X86_64-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[P]], align 8
+// X86_64-NEXT:    ret ptr [[TMP3]]
 //
 // I386-LABEL: define dso_local ptr @test2(
 // I386-SAME: i32 noundef [[SIZE:%.*]]) #[[ATTR0]] {
@@ -128,19 +112,13 @@ struct b {
 // I386-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[P]], align 4
 // I386-NEXT:    [[DOT_COUNTED_BY_GEP:%.*]] = getelementptr inbounds [[STRUCT_B:%.*]], ptr [[TMP2]], i32 0, i32 1, i32 1, i32 1, i32 0
 // I386-NEXT:    store i8 [[CONV]], ptr [[DOT_COUNTED_BY_GEP]], align 1
-// I386-NEXT:    [[TMP3:%.*]] = load i32, ptr [[SIZE_ADDR]], align 4
-// I386-NEXT:    [[CONV1:%.*]] = trunc i32 [[TMP3]] to i8
-// I386-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[P]], align 4
-// I386-NEXT:    [[DOT_COUNTED_BY_GEP2:%.*]] = getelementptr inbounds [[STRUCT_B]], ptr [[TMP4]], i32 0, i32 1, i32 1, i32 1, i32 0
-// I386-NEXT:    store i8 [[CONV1]], ptr [[DOT_COUNTED_BY_GEP2]], align 1
-// I386-NEXT:    [[TMP5:%.*]] = load ptr, ptr [[P]], align 4
-// I386-NEXT:    ret ptr [[TMP5]]
+// I386-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[P]], align 4
+// I386-NEXT:    ret ptr [[TMP3]]
 //
 struct b *test2(int size) {
   struct b *p = __builtin_malloc(sizeof(struct a) + sizeof(int) * size);
 
   *__builtin_counted_by_ref(p->array) = size;
-  *__builtin_counted_by_ref(&p->array[0]) = size;
   return p;
 }
 
@@ -191,72 +169,9 @@ struct c *test3(int size) {
   unsigned long int __ignored;
 
   *_Generic(
-    __builtin_counted_by_ref(&p->array[0]),
+    __builtin_counted_by_ref(p->array),
       void *: &__ignored,
-      default: __builtin_counted_by_ref(&p->array[0])) = size;
-
-  return p;
-}
-
-struct d {
-  char x;
-  short count;
-  int array[] __attribute__((counted_by(count)));
-};
-
-// X86_64-LABEL: define dso_local ptr @test4(
-// X86_64-SAME: i32 noundef [[SIZE:%.*]], i32 noundef [[IDX:%.*]]) #[[ATTR0]] {
-// X86_64-NEXT:  [[ENTRY:.*:]]
-// X86_64-NEXT:    [[SIZE_ADDR:%.*]] = alloca i32, align 4
-// X86_64-NEXT:    [[IDX_ADDR:%.*]] = alloca i32, align 4
-// X86_64-NEXT:    [[P:%.*]] = alloca ptr, align 8
-// X86_64-NEXT:    [[__IGNORED:%.*]] = alloca i64, align 8
-// X86_64-NEXT:    store i32 [[SIZE]], ptr [[SIZE_ADDR]], align 4
-// X86_64-NEXT:    store i32 [[IDX]], ptr [[IDX_ADDR]], align 4
-// X86_64-NEXT:    [[TMP0:%.*]] = load i32, ptr [[SIZE_ADDR]], align 4
-// X86_64-NEXT:    [[CONV:%.*]] = sext i32 [[TMP0]] to i64
-// X86_64-NEXT:    [[MUL:%.*]] = mul i64 4, [[CONV]]
-// X86_64-NEXT:    [[ADD:%.*]] = add i64 4, [[MUL]]
-// X86_64-NEXT:    [[CALL:%.*]] = call ptr @malloc(i64 noundef [[ADD]]) #[[ATTR2]]
-// X86_64-NEXT:    store ptr [[CALL]], ptr [[P]], align 8
-// X86_64-NEXT:    [[TMP1:%.*]] = load i32, ptr [[SIZE_ADDR]], align 4
-// X86_64-NEXT:    [[CONV1:%.*]] = trunc i32 [[TMP1]] to i16
-// X86_64-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[P]], align 8
-// X86_64-NEXT:    [[DOT_COUNTED_BY_GEP:%.*]] = getelementptr inbounds [[STRUCT_D:%.*]], ptr [[TMP2]], i32 0, i32 1
-// X86_64-NEXT:    store i16 [[CONV1]], ptr [[DOT_COUNTED_BY_GEP]], align 2
-// X86_64-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[P]], align 8
-// X86_64-NEXT:    ret ptr [[TMP3]]
-//
-// I386-LABEL: define dso_local ptr @test4(
-// I386-SAME: i32 noundef [[SIZE:%.*]], i32 noundef [[IDX:%.*]]) #[[ATTR0]] {
-// I386-NEXT:  [[ENTRY:.*:]]
-// I386-NEXT:    [[SIZE_ADDR:%.*]] = alloca i32, align 4
-// I386-NEXT:    [[IDX_ADDR:%.*]] = alloca i32, align 4
-// I386-NEXT:    [[P:%.*]] = alloca ptr, align 4
-// I386-NEXT:    [[__IGNORED:%.*]] = alloca i32, align 4
-// I386-NEXT:    store i32 [[SIZE]], ptr [[SIZE_ADDR]], align 4
-// I386-NEXT:    store i32 [[IDX]], ptr [[IDX_ADDR]], align 4
-// I386-NEXT:    [[TMP0:%.*]] = load i32, ptr [[SIZE_ADDR]], align 4
-// I386-NEXT:    [[MUL:%.*]] = mul i32 4, [[TMP0]]
-// I386-NEXT:    [[ADD:%.*]] = add i32 4, [[MUL]]
-// I386-NEXT:    [[CALL:%.*]] = call ptr @malloc(i32 noundef [[ADD]]) #[[ATTR2]]
-// I386-NEXT:    store ptr [[CALL]], ptr [[P]], align 4
-// I386-NEXT:    [[TMP1:%.*]] = load i32, ptr [[SIZE_ADDR]], align 4
-// I386-NEXT:    [[CONV:%.*]] = trunc i32 [[TMP1]] to i16
-// I386-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[P]], align 4
-// I386-NEXT:    [[DOT_COUNTED_BY_GEP:%.*]] = getelementptr inbounds [[STRUCT_D:%.*]], ptr [[TMP2]], i32 0, i32 1
-// I386-NEXT:    store i16 [[CONV]], ptr [[DOT_COUNTED_BY_GEP]], align 2
-// I386-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[P]], align 4
-// I386-NEXT:    ret ptr [[TMP3]]
-//
-struct d *test4(int size, int idx) {
-  struct d *p = __builtin_malloc(sizeof(struct d) + sizeof(int) * size);
-  unsigned long int __ignored;
-
-  *_Generic(
-    __builtin_counted_by_ref(&p->array[0]),
-      void *: &__ignored,
-      default: __builtin_counted_by_ref(&p->array[idx++])) = size;
+      default: __builtin_counted_by_ref(p->array)) = size;
 
   return p;
 }
