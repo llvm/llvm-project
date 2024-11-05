@@ -913,8 +913,9 @@ auto AtomicGoRet(ThreadState *thr, uptr cpc, uptr pc, Types... args) {
     return Op::NoTsanAtomic(args...);
   } else {
     FuncEntry(thr, cpc);
-    return Op::Atomic(thr, pc, args...);
+    auto ret = Op::Atomic(thr, pc, args...);
     FuncExit(thr);
+    return ret;
   }
 }
 
