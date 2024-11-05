@@ -1032,9 +1032,15 @@ bool VectorCombine::scalarizeBinopOrCmp(Instruction &I) {
 /// a vector into vector operations followed by extract. Note: The SLP pass
 /// may miss this pattern because of implementation problems.
 bool VectorCombine::foldExtractedCmps(Instruction &I) {
+  auto *BI = dyn_cast<BinaryOperator>(&I);
+
   // We are looking for a scalar binop of booleans.
   // binop i1 (cmp Pred I0, C0), (cmp Pred I1, C1)
-  if (!I.isBinaryOp() || !I.getType()->isIntegerTy(1))
+  if (!BI || !I.getType()->isIntegerTy(1))
+    return false;
+
+  // TODO: Support non-commutative binary ops.
+  if (!BI->isCommutative())
     return false;
 
   // The compare predicates should match, and each compare should have a
@@ -1113,8 +1119,7 @@ bool VectorCombine::foldExtractedCmps(Instruction &I) {
   Value *VCmp = Builder.CreateCmp(Pred, X, ConstantVector::get(CmpC));
 
   Value *Shuf = createShiftShuffle(VCmp, ExpensiveIndex, CheapIndex, Builder);
-  Value *VecLogic = Builder.CreateBinOp(cast<BinaryOperator>(I).getOpcode(),
-                                        VCmp, Shuf);
+  Value *VecLogic = Builder.CreateBinOp(BI->getOpcode(), VCmp, Shuf);
   Value *NewExt = Builder.CreateExtractElement(VecLogic, CheapIndex);
   replaceValue(I, *NewExt);
   ++NumVecCmpBO;
