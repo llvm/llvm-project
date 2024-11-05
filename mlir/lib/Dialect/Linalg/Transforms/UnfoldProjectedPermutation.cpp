@@ -56,13 +56,15 @@ namespace {
 ///
 /// ```mlir
 ///   ...
-///   %transposed = linalg.transpose ins(%x : tensor<7x8x9xf32>)
-///                    outs(%e1 : tensor<9x7x8xf32>) permutation = [2, 0, 1]
+///   %x_trans = linalg.transpose
+///                   ins(%x : tensor<7x8x9xf32>)
+///                   outs(%e1 : tensor<9x7x8xf32>) permutation = [2, 0, 1]
 ///   ...
-///   %broadcasted = linalg.broadcast ins(%transposed : tensor<9x7x8xf32>)
-///                    outs(%e2 : tensor<5x9x7x8x10xf32>) dimensions = [0, 4]
+///   %x_trans_bc = linalg.broadcast
+///                   ins(%x_trans : tensor<9x7x8xf32>)
+///                   outs(%e2 : tensor<5x9x7x8x10xf32>) dimensions = [0, 4]
 ///   %2 = linalg.div
-///           ins(%broadcasted, %y :
+///           ins(%x_trans_bc, %y :
 ///                  tensor<5x9x7x8x10xf32>, tensor<5x9x7x8x10xf32>)
 ///           outs(%arg2 : tensor<5x9x7x8x10xf32>) -> tensor<5x9x7x8x10xf32>
 ///
