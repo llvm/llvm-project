@@ -347,8 +347,10 @@ makeDepType(const parser::OmpTaskDependenceType &inp) {
     return clause::TaskDependenceType::In;
   case parser::OmpTaskDependenceType::Type::Inout:
     return clause::TaskDependenceType::Inout;
-  // Inoutset        // missing-in-parser
-  // Mutexinoutset   // missing-in-parser
+  case parser::OmpTaskDependenceType::Type::Inoutset:
+    return clause::TaskDependenceType::Inoutset;
+  case parser::OmpTaskDependenceType::Type::Mutexinoutset:
+    return clause::TaskDependenceType::Mutexinoutset;
   case parser::OmpTaskDependenceType::Type::Out:
     return clause::TaskDependenceType::Out;
   case parser::OmpTaskDependenceType::Type::Sink:
