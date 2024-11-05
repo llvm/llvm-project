@@ -1299,11 +1299,11 @@ void WebAssemblyCFGStackify::addNestedTryDelegate(
 //     end_try_table
 //     ...
 //   end_block                      ;; Trampoline BB
-//   throw_fef
+//   throw_ref
 // end_try_table
 MachineBasicBlock *
 WebAssemblyCFGStackify::getTrampolineBlock(MachineBasicBlock *UnwindDest) {
-  // We need one trampoline BB per an unwind destination, even though there are
+  // We need one trampoline BB per unwind destination, even though there are
   // multiple try_tables target the same unwind destination. If we have already
   // created one for the given UnwindDest, return it.
   auto It = UnwindDestToTrampoline.find(UnwindDest);
@@ -1486,7 +1486,7 @@ void WebAssemblyCFGStackify::addNestedTryTable(MachineInstr *RangeBegin,
     PreBB->addSuccessor(PostBB);
   }
 
-  // Add a 'try_table' instruction in the delegate BB created above.
+  // Add a 'end_try_table' instruction in the EndTryTable BB created above.
   MachineInstr *EndTryTable = BuildMI(EndTryTableBB, RangeEnd->getDebugLoc(),
                                       TII.get(WebAssembly::END_TRY_TABLE));
   registerTryScope(TryTable, EndTryTable, nullptr);
