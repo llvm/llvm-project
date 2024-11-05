@@ -375,7 +375,7 @@ static void replaceFallthroughCoroEnd(AnyCoroEndInst *End,
     if (auto *RetStructTy = dyn_cast<StructType>(RetTy)) {
       assert(RetStructTy->getNumElements() == NumReturns &&
              "numbers of returns should match resume function singature");
-      Value *ReturnValue = UndefValue::get(RetStructTy);
+      Value *ReturnValue = PoisonValue::get(RetStructTy);
       unsigned Idx = 0;
       for (Value *RetValEl : CoroResults->return_values())
         ReturnValue = Builder.CreateInsertValue(ReturnValue, RetValEl, Idx++);
@@ -406,7 +406,7 @@ static void replaceFallthroughCoroEnd(AnyCoroEndInst *End,
 
     Value *ReturnValue = ConstantPointerNull::get(ContinuationTy);
     if (RetStructTy) {
-      ReturnValue = Builder.CreateInsertValue(UndefValue::get(RetStructTy),
+      ReturnValue = Builder.CreateInsertValue(PoisonValue::get(RetStructTy),
                                               ReturnValue, 0);
     }
     Builder.CreateRet(ReturnValue);
@@ -1304,7 +1304,7 @@ static void handleNoSuspendCoroutine(coro::Shape &Shape) {
   case coro::ABI::Async:
   case coro::ABI::Retcon:
   case coro::ABI::RetconOnce:
-    CoroBegin->replaceAllUsesWith(UndefValue::get(CoroBegin->getType()));
+    CoroBegin->replaceAllUsesWith(PoisonValue::get(CoroBegin->getType()));
     break;
   }
 
@@ -1758,7 +1758,7 @@ static void replaceAsyncResumeFunction(CoroSuspendAsyncInst *Suspend,
   ResumeIntrinsic->replaceAllUsesWith(Val);
   ResumeIntrinsic->eraseFromParent();
   Suspend->setOperand(CoroSuspendAsyncInst::ResumeFunctionArg,
-                      UndefValue::get(Int8PtrTy));
+                      PoisonValue::get(Int8PtrTy));
 }
 
 /// Coerce the arguments in \p FnArgs according to \p FnTy in \p CallArgs.
