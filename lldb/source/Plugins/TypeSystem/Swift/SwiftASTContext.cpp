@@ -1800,11 +1800,11 @@ void SwiftASTContext::AddExtraClangArgs(
   importer_options.DirectClangCC1ModuleBuild = invocation_direct_cc1;
 
   // If using direct cc1 flags, compute the arguments and return.
-  // Since this is cc1 flags, override options are driver flags and don't apply.
   if (importer_options.DirectClangCC1ModuleBuild) {
     if (!fresh_invocation)
       importer_options.ExtraArgs.clear();
     AddExtraClangCC1Args(ExtraArgs, importer_options.ExtraArgs);
+    applyOverrideOptions(importer_options.ExtraArgs, overrideOpts);
     return;
   }
 
