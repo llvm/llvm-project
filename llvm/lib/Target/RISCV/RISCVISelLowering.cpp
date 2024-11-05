@@ -4817,6 +4817,24 @@ static SDValue lowerVECTOR_SHUFFLEAsVSlide1(const SDLoc &DL, MVT VT,
 
   MVT ContainerVT = getContainerForFixedLengthVector(DAG, VT, Subtarget);
   auto [TrueMask, VL] = getDefaultVLOps(VT, ContainerVT, DL, DAG, Subtarget);
+
+  // zvfhmin and zvfbfmin don't have vfslide1{down,up}.vf so use fmv.x.h +
+  // vslide1{down,up}.vx instead.
+  if (VT.getVectorElementType() == MVT::bf16 ||
+      (VT.getVectorElementType() == MVT::f16 &&
+       !Subtarget.hasVInstructionsF16())) {
+    MVT IntVT = ContainerVT.changeVectorElementTypeToInteger();
+    Splat =
+        DAG.getNode(RISCVISD::FMV_X_ANYEXTH, DL, Subtarget.getXLenVT(), Splat);
+    V2 = DAG.getBitcast(
+        IntVT, convertToScalableVector(ContainerVT, V2, DAG, Subtarget));
+    SDValue Vec = DAG.getNode(
+        IsVSlidedown ? RISCVISD::VSLIDE1DOWN_VL : RISCVISD::VSLIDE1UP_VL, DL,
+        IntVT, DAG.getUNDEF(IntVT), V2, Splat, TrueMask, VL);
+    Vec = DAG.getBitcast(ContainerVT, Vec);
+    return convertFromScalableVector(VT, Vec, DAG, Subtarget);
+  }
+
   auto OpCode = IsVSlidedown ?
     (VT.isFloatingPoint() ? RISCVISD::VFSLIDE1DOWN_VL : RISCVISD::VSLIDE1DOWN_VL) :
     (VT.isFloatingPoint() ? RISCVISD::VFSLIDE1UP_VL : RISCVISD::VSLIDE1UP_VL);
