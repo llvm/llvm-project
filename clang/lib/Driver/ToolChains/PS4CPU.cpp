@@ -277,6 +277,10 @@ void tools::PS5cpu::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back("-z");
     CmdArgs.push_back("start-stop-visibility=hidden");
 
+    // DT_DEBUG is not supported on PlayStation.
+    CmdArgs.push_back("-z");
+    CmdArgs.push_back("rodynamic");
+
     CmdArgs.push_back("-z");
     CmdArgs.push_back("common-page-size=0x4000");
 

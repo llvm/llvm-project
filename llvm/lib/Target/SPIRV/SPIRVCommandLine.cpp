@@ -56,6 +56,8 @@ static const std::map<std::string, SPIRV::Extension::Extension>
          SPIRV::Extension::Extension::SPV_KHR_expect_assume},
         {"SPV_KHR_bit_instructions",
          SPIRV::Extension::Extension::SPV_KHR_bit_instructions},
+        {"SPV_KHR_integer_dot_product",
+         SPIRV::Extension::Extension::SPV_KHR_integer_dot_product},
         {"SPV_KHR_linkonce_odr",
          SPIRV::Extension::Extension::SPV_KHR_linkonce_odr},
         {"SPV_INTEL_inline_assembly",

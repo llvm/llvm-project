@@ -523,7 +523,7 @@ llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
     if (!BI)
       continue;
 
-    ExitInfo &Info = ExitInfos.try_emplace(ExitingBlock).first->second;
+    ExitInfo &Info = ExitInfos[ExitingBlock];
     Info.TripCount = SE->getSmallConstantTripCount(L, ExitingBlock);
     Info.TripMultiple = SE->getSmallConstantTripMultiple(L, ExitingBlock);
     if (Info.TripCount != 0) {
