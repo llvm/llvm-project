@@ -270,8 +270,7 @@ bool WebAssemblyLateEHPrepare::replaceFuncletReturns(MachineFunction &MF) {
       // rethrow:
       //   ;; rethrows the exception caught in 'catch.start'
       //   call @llvm.wasm.rethrow()
-      while (TI->getNumOperands() > 0)
-        TI->removeOperand(TI->getNumOperands() - 1);
+      TI->removeOperand(0);
       TI->addOperand(MachineOperand::CreateMBB(getMatchingEHPad(TI)));
       Changed = true;
       break;
