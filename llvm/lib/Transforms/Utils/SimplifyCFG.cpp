@@ -7476,10 +7476,13 @@ template <> struct DenseMapInfo<const CaseHandleWrapper *> {
     // Since we assume the BB is just a single BranchInst with a single
     // succsessor, we hash as the BB and the incoming Values of its PHIs.
     // Initially, we tried to just use the sucessor BB as the hash, but this had
-    // poor performance.
+    // poor performance. If the BB has no Phis, then just use BB as the hash.
     BasicBlock *BB = BI->getSuccessor(0);
+    if (CHW->PhiVals->begin() == CHW->PhiVals->end())
+      return hash_value(BB);
     return hash_combine(
-        BB, hash_combine_range(CHW->PhiVals->begin(), CHW->PhiVals->end()));
+        hash_value(BB),
+        hash_combine_range(CHW->PhiVals->begin(), CHW->PhiVals->end()));
   }
   static bool isEqual(const CaseHandleWrapper *LHS,
                       const CaseHandleWrapper *RHS) {
