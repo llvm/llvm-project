@@ -245,10 +245,6 @@ struct VectorInsertOpConvert final
     std::optional<int64_t> id =
         getConstantIntValue(insertOp.getMixedPosition()[0]);
 
-    //    rewriter.replaceOpWithNewOp<spirv::CompositeInsertOp>(
-    //        insertOp, adaptor.getSource(), adaptor.getDest(), id);
-    //    return success();
-
     if (id.has_value())
       rewriter.replaceOpWithNewOp<spirv::CompositeInsertOp>(
           insertOp, adaptor.getSource(), adaptor.getDest(), id.value());

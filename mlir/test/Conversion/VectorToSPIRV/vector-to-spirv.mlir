@@ -186,6 +186,17 @@ func.func @extract_size1_vector(%arg0 : vector<1xf32>) -> f32 {
 
 // -----
 
+// CHECK-LABEL: @extract_size1_vector_dynamic
+//  CHECK-SAME: %[[ARG0:.+]]: vector<1xf32>
+//       CHECK:   %[[R:.+]] = builtin.unrealized_conversion_cast %[[ARG0]]
+//       CHECK:   return %[[R]]
+func.func @extract_size1_vector_dynamic(%arg0 : vector<1xf32>, %id : index) -> f32 {
+  %0 = vector.extract %arg0[%id] : f32 from vector<1xf32>
+  return %0: f32
+}
+
+// -----
+
 // CHECK-LABEL: @extract_dynamic
 //  CHECK-SAME: %[[V:.*]]: vector<4xf32>, %[[ARG1:.*]]: index
 //       CHECK:   %[[ID:.+]] = builtin.unrealized_conversion_cast %[[ARG1]] : index to i32
@@ -231,6 +242,17 @@ func.func @insert_index_vector(%arg0 : vector<4xindex>, %arg1: index) -> vector<
 //       CHECK:   return %[[R]]
 func.func @insert_size1_vector(%arg0 : vector<1xf32>, %arg1: f32) -> vector<1xf32> {
   %1 = vector.insert %arg1, %arg0[0] : f32 into vector<1xf32>
+  return %1 : vector<1xf32>
+}
+
+// -----
+
+// CHECK-LABEL: @insert_size1_vector_dynamic
+//  CHECK-SAME: %[[V:.*]]: vector<1xf32>, %[[S:.*]]: f32
+//       CHECK:   %[[R:.+]] = builtin.unrealized_conversion_cast %[[S]]
+//       CHECK:   return %[[R]]
+func.func @insert_size1_vector_dynamic(%arg0 : vector<1xf32>, %arg1: f32, %id : index) -> vector<1xf32> {
+  %1 = vector.insert %arg1, %arg0[%id] : f32 into vector<1xf32>
   return %1 : vector<1xf32>
 }
 
