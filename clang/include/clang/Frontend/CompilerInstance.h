@@ -559,7 +559,7 @@ public:
   bool hasSema() const { return (bool)TheSema; }
 
   Sema &getSema() const {
-    // assert(TheSema && "Compiler instance has no Sema object!");
+    assert(TheSema && "Compiler instance has no Sema object!");
     return *TheSema;
   }
 
