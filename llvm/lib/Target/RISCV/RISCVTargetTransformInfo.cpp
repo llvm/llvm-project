@@ -2491,3 +2491,36 @@ bool RISCVTTIImpl::isProfitableToSinkOperands(
   }
   return true;
 }
+
+RISCVTTIImpl::TTI::MemCmpExpansionOptions
+RISCVTTIImpl::enableMemCmpExpansion(bool OptSize, bool IsZeroCmp) const {
+  TTI::MemCmpExpansionOptions Options;
+  // Here we assume that a core that has implemented unaligned vector access
+  // should also have implemented scalar vector access.
+  Options.AllowOverlappingLoads =
+      (ST->enableUnalignedScalarMem() || ST->enableUnalignedVectorMem()) &&
+      (ST->hasStdExtZbb() || ST->hasStdExtZbkb() || IsZeroCmp);
+  Options.MaxNumLoads = TLI->getMaxExpandSizeMemcmp(OptSize);
+  Options.NumLoadsPerBlock = Options.MaxNumLoads;
+  if (ST->is64Bit())
+    Options.LoadSizes = {8, 4, 2, 1};
+  else
+    Options.LoadSizes = {4, 2, 1};
+  if (IsZeroCmp && ST->hasVInstructions()) {
+    unsigned RealMinVLen = ST->getRealMinVLen();
+    // Support Fractional LMULs if the lengths are larger than XLen.
+    // TODO: Support non-power-of-2 types.
+    for (unsigned LMUL = 8; LMUL >= 2; LMUL /= 2) {
+      unsigned Len = RealMinVLen / LMUL;
+      if (Len > ST->getXLen())
+        Options.LoadSizes.insert(Options.LoadSizes.begin(), Len / 8);
+    }
+    for (unsigned LMUL = 1; LMUL <= ST->getMaxLMULForFixedLengthVectors();
+         LMUL *= 2) {
+      unsigned Len = RealMinVLen * LMUL;
+      if (Len > ST->getXLen())
+        Options.LoadSizes.insert(Options.LoadSizes.begin(), Len / 8);
+    }
+  }
+  return Options;
+}
