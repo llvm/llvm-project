@@ -9,6 +9,7 @@
 #include "flang/Runtime/CUDA/memory.h"
 #include "../terminator.h"
 #include "flang/Runtime/CUDA/common.h"
+#include "flang/Runtime/CUDA/descriptor.h"
 #include "flang/Runtime/assign.h"
 
 #include "cuda_runtime.h"
@@ -111,17 +112,32 @@ void RTDEF(CUFDataTransferPtrDesc)(void *addr, Descriptor *desc,
 
 void RTDECL(CUFDataTransferDescDesc)(Descriptor *dstDesc, Descriptor *srcDesc,
     unsigned mode, const char *sourceFile, int sourceLine) {
-  Terminator terminator{sourceFile, sourceLine};
   MemmoveFct memmoveFct;
+  Terminator terminator{sourceFile, sourceLine};
   if (mode == kHostToDevice) {
     memmoveFct = &MemmoveHostToDevice;
   } else if (mode == kDeviceToHost) {
     memmoveFct = &MemmoveDeviceToHost;
   } else if (mode == kDeviceToDevice) {
     memmoveFct = &MemmoveDeviceToDevice;
+  } else {
+    terminator.Crash("host to host copy not supported");
   }
   Fortran::runtime::Assign(
       *dstDesc, *srcDesc, terminator, MaybeReallocate, memmoveFct);
+}
+
+void RTDECL(CUFDataTransferGlobalDescDesc)(Descriptor *dstDesc,
+    Descriptor *srcDesc, unsigned mode, const char *sourceFile,
+    int sourceLine) {
+  RTNAME(CUFDataTransferDescDesc)
+  (dstDesc, srcDesc, mode, sourceFile, sourceLine);
+  if ((mode == kHostToDevice) || (mode == kDeviceToDevice)) {
+    void *deviceAddr{
+        RTNAME(CUFGetDeviceAddress)((void *)dstDesc, sourceFile, sourceLine)};
+    RTNAME(CUFDescriptorSync)
+    ((Descriptor *)deviceAddr, srcDesc, sourceFile, sourceLine);
+  }
 }
 }
 } // namespace Fortran::runtime::cuda
