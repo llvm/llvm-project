@@ -311,7 +311,7 @@ define <32 x i32> @v32i32_v4i32(<4 x i32>) {
 
 ; TODO: This case should be a simple vnsrl, but gets scalarized instead
 define <32 x i8> @vnsrl_v32i8_v64i8(<64 x i8> %in) {
-; RV32-LABEL: v32i8_v64i8:
+; RV32-LABEL: vnsrl_v32i8_v64i8:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    addi sp, sp, -128
 ; RV32-NEXT:    .cfi_def_cfa_offset 128
@@ -429,7 +429,7 @@ define <32 x i8> @vnsrl_v32i8_v64i8(<64 x i8> %in) {
 ; RV32-NEXT:    addi sp, sp, 128
 ; RV32-NEXT:    ret
 ;
-; RV64-LABEL: v32i8_v64i8:
+; RV64-LABEL: vnsrl_v32i8_v64i8:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    addi sp, sp, -128
 ; RV64-NEXT:    .cfi_def_cfa_offset 128
