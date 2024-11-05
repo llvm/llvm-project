@@ -319,7 +319,7 @@ ConstantIntRanges
 mlir::intrange::inferCeilDivU(ArrayRef<ConstantIntRanges> argRanges) {
   const ConstantIntRanges &lhs = argRanges[0], &rhs = argRanges[1];
 
-  DivisionFixupFn ceilDivUIFix =
+  auto ceilDivUIFix =
       [](const APInt &lhs, const APInt &rhs,
          const APInt &result) -> std::optional<APInt> {
     if (!lhs.urem(rhs).isZero()) {
@@ -368,7 +368,7 @@ ConstantIntRanges
 mlir::intrange::inferCeilDivS(ArrayRef<ConstantIntRanges> argRanges) {
   const ConstantIntRanges &lhs = argRanges[0], &rhs = argRanges[1];
 
-  DivisionFixupFn ceilDivSIFix =
+  auto ceilDivSIFix =
       [](const APInt &lhs, const APInt &rhs,
          const APInt &result) -> std::optional<APInt> {
     if (!lhs.srem(rhs).isZero() && lhs.isNonNegative() == rhs.isNonNegative()) {
@@ -386,7 +386,7 @@ ConstantIntRanges
 mlir::intrange::inferFloorDivS(ArrayRef<ConstantIntRanges> argRanges) {
   const ConstantIntRanges &lhs = argRanges[0], &rhs = argRanges[1];
 
-  DivisionFixupFn floorDivSIFix =
+  auto floorDivSIFix =
       [](const APInt &lhs, const APInt &rhs,
          const APInt &result) -> std::optional<APInt> {
     if (!lhs.srem(rhs).isZero() && lhs.isNonNegative() != rhs.isNonNegative()) {
@@ -603,7 +603,7 @@ ConstantIntRanges
 mlir::intrange::inferShrS(ArrayRef<ConstantIntRanges> argRanges) {
   const ConstantIntRanges &lhs = argRanges[0], &rhs = argRanges[1];
 
-  ConstArithFn ashr = [](const APInt &l,
+  auto ashr = [](const APInt &l,
                          const APInt &r) -> std::optional<APInt> {
     return r.uge(r.getBitWidth()) ? std::optional<APInt>() : l.ashr(r);
   };
@@ -616,7 +616,7 @@ ConstantIntRanges
 mlir::intrange::inferShrU(ArrayRef<ConstantIntRanges> argRanges) {
   const ConstantIntRanges &lhs = argRanges[0], &rhs = argRanges[1];
 
-  ConstArithFn lshr = [](const APInt &l,
+  auto lshr = [](const APInt &l,
                          const APInt &r) -> std::optional<APInt> {
     return r.uge(r.getBitWidth()) ? std::optional<APInt>() : l.lshr(r);
   };
