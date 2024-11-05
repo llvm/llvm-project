@@ -1743,7 +1743,7 @@ bool SPIRVInstructionSelector::selectDot4AddPackedExpansion(
   assert(I.getOperand(4).isReg());
   MachineBasicBlock &BB = *I.getParent();
 
-  bool Result = false;
+  bool Result = true;
 
   // Acc = C
   Register Acc = I.getOperand(4).getReg();
@@ -1755,7 +1755,7 @@ bool SPIRVInstructionSelector::selectDot4AddPackedExpansion(
   for (unsigned i = 0; i < 4; i++) {
     // A[i]
     Register AElt = MRI->createVirtualRegister(&SPIRV::IDRegClass);
-    Result |= BuildMI(BB, I, I.getDebugLoc(), TII.get(ExtractOp))
+    Result &= BuildMI(BB, I, I.getDebugLoc(), TII.get(ExtractOp))
                   .addDef(AElt)
                   .addUse(GR.getSPIRVTypeID(ResType))
                   .addUse(I.getOperand(2).getReg())
@@ -1765,7 +1765,7 @@ bool SPIRVInstructionSelector::selectDot4AddPackedExpansion(
 
     // B[i]
     Register BElt = MRI->createVirtualRegister(&SPIRV::IDRegClass);
-    Result |= BuildMI(BB, I, I.getDebugLoc(), TII.get(ExtractOp))
+    Result &= BuildMI(BB, I, I.getDebugLoc(), TII.get(ExtractOp))
                   .addDef(BElt)
                   .addUse(GR.getSPIRVTypeID(ResType))
                   .addUse(I.getOperand(3).getReg())
@@ -1775,7 +1775,7 @@ bool SPIRVInstructionSelector::selectDot4AddPackedExpansion(
 
     // A[i] * B[i]
     Register Mul = MRI->createVirtualRegister(&SPIRV::IDRegClass);
-    Result |= BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpIMulS))
+    Result &= BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpIMulS))
                   .addDef(Mul)
                   .addUse(GR.getSPIRVTypeID(ResType))
                   .addUse(AElt)
@@ -1784,7 +1784,7 @@ bool SPIRVInstructionSelector::selectDot4AddPackedExpansion(
 
     // Discard 24 highest-bits so that stored i32 register is i8 equivalent
     Register MaskMul = MRI->createVirtualRegister(&SPIRV::IDRegClass);
-    Result |= BuildMI(BB, I, I.getDebugLoc(), TII.get(ExtractOp))
+    Result &= BuildMI(BB, I, I.getDebugLoc(), TII.get(ExtractOp))
                   .addDef(MaskMul)
                   .addUse(GR.getSPIRVTypeID(ResType))
                   .addUse(Mul)
@@ -1795,7 +1795,7 @@ bool SPIRVInstructionSelector::selectDot4AddPackedExpansion(
     // Acc = Acc + A[i] * B[i]
     Register Sum =
         i < 3 ? MRI->createVirtualRegister(&SPIRV::IDRegClass) : ResVReg;
-    Result |= BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpIAddS))
+    Result &= BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpIAddS))
                   .addDef(Sum)
                   .addUse(GR.getSPIRVTypeID(ResType))
                   .addUse(Acc)
@@ -2646,6 +2646,11 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
         STI.isAtLeastSPIRVVer(VersionTuple(1, 6)))
       return selectDot4AddPacked<true>(ResVReg, ResType, I);
     return selectDot4AddPackedExpansion<true>(ResVReg, ResType, I);
+  case Intrinsic::spv_dot4add_u8packed:
+    if (STI.canUseExtension(SPIRV::Extension::SPV_KHR_integer_dot_product) ||
+        STI.isAtLeastSPIRVVer(VersionTuple(1, 6)))
+      return selectDot4AddPacked<false>(ResVReg, ResType, I);
+    return selectDot4AddPackedExpansion<false>(ResVReg, ResType, I);
   case Intrinsic::spv_all:
     return selectAll(ResVReg, ResType, I);
   case Intrinsic::spv_any:

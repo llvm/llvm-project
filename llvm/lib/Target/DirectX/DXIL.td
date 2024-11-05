@@ -798,6 +798,16 @@ def Dot4AddI8Packed : DXILOp<163, dot4AddPacked> {
   let stages = [Stages<DXIL1_0, [all_stages]>];
 }
 
+def Dot4AddU8Packed : DXILOp<164, dot4AddPacked> {
+  let Doc = "unsigned dot product of 4 x i8 vectors packed into i32, with "
+            "accumulate to i32";
+  let LLVMIntrinsic = int_dx_dot4add_u8packed;
+  let arguments = [Int32Ty, Int32Ty, Int32Ty];
+  let result = Int32Ty;
+  let attributes = [Attributes<DXIL1_0, [ReadNone]>];
+  let stages = [Stages<DXIL1_0, [all_stages]>];
+}
+
 def AnnotateHandle : DXILOp<216, annotateHandle> {
   let Doc = "annotate handle with resource properties";
   let arguments = [HandleTy, ResPropsTy];
