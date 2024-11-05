@@ -3854,91 +3854,55 @@ void EmitClangAttrSpellingListIndex(const RecordKeeper &Records,
       continue;
     }
 
-    bool HasSingleUniqueSpellingName = true;
-    StringMap<std::vector<const FlattenedSpelling *>> SpellingMap;
+    std::vector<StringRef> Names;
+    llvm::transform(Spellings, std::back_inserter(Names),
+                    [](const FlattenedSpelling &FS) { return FS.name(); });
+    llvm::sort(Names);
+    Names.erase(llvm::unique(Names), Names.end());
 
-    StringRef FirstName = Spellings.front().name();
-    for (const auto &S : Spellings) {
-      StringRef Name = S.name();
-      if (Name != FirstName)
-        HasSingleUniqueSpellingName = false;
-      SpellingMap[Name].push_back(&S);
-    }
-
-    // If parsed attribute has only one possible spelling name, only compare
-    // syntax and scope.
-    if (HasSingleUniqueSpellingName) {
-      for (const auto &[Idx, S] : enumerate(SpellingMap[FirstName])) {
-        OS << "    if (getSyntax() == AttributeCommonInfo::AS_" << S->variety()
+    for (const auto &[Idx, FS] : enumerate(Spellings)) {
+      if (Names.size() == 1) {
+        OS << "    if (getSyntax() == AttributeCommonInfo::AS_" << FS.variety()
            << " && ComputedScope == ";
 
-        if (S->nameSpace() == "")
-          OS << "AttributeCommonInfo::SC_NONE";
+        if (FS.nameSpace() == "")
+          OS << "AttributeCommonInfo::Scope::NONE";
         else
-          OS << "AttributeCommonInfo::SC_" + S->nameSpace().upper();
+          OS << "AttributeCommonInfo::Scope::" + FS.nameSpace().upper();
 
         OS << ")\n"
            << "      return " << Idx << ";\n";
-      }
-    } else {
-      size_t Idx = 0;
-      StringMap<bool> Completed;
-      for (const auto &Spell : Spellings) {
-        if (Completed.contains(Spell.name()))
-          continue;
+      } else {
+        SmallVector<StringRef, 6> SameLenNames;
+        llvm::copy_if(
+            Names, std::back_inserter(SameLenNames),
+            [&](StringRef N) { return N.size() == FS.name().size(); });
 
-        const std::vector<const FlattenedSpelling *> &Cases =
-            SpellingMap[Spell.name()];
-
-        if (Cases.size() > 1) {
-          // For names with multiple possible cases, emit an enclosing if such
-          // that the name is compared against only once. Eg:
-          //
-          // if (Name == "always_inline") {
-          //   if (getSyntax() == AttributeCommonInfo::AS_GNU &&
-          //       ComputedScope == AttributeCommonInfo::SC_None)
-          //     return 0;
-          //   ...
-          // }
-          OS << "    if (Name == \"" << Spell.name() << "\") {\n";
-          for (const auto &S : SpellingMap[Spell.name()]) {
-            OS << "      if (getSyntax() == AttributeCommonInfo::AS_"
-               << S->variety() << " && ComputedScope == ";
-
-            if (S->nameSpace() == "")
-              OS << "AttributeCommonInfo::SC_NONE";
-            else
-              OS << "AttributeCommonInfo::SC_" + S->nameSpace().upper();
-
-            OS << ")\n"
-               << "        return " << Idx << ";\n";
-            Idx++;
-          }
-          OS << "    }\n";
-        } else {
-          // If there is only possible case for the spelling name, no need of
-          // enclosing if. Eg.
-          //
-          // if (Name == "__forceinline" &&
-          //     getSyntax() == AttributeCommonInfo::AS_Keyword
-          //     && ComputedScope == AttributeCommonInfo::SC_NONE)
-          //   return 5;
-          const FlattenedSpelling *S = Cases.front();
-          OS << "    if (Name == \"" << Spell.name() << "\""
-             << " && getSyntax() == AttributeCommonInfo::AS_" << S->variety()
+        if (SameLenNames.size() == 1) {
+          OS << "    if (Name.size() == " << FS.name().size()
+             << " && getSyntax() == AttributeCommonInfo::AS_" << FS.variety()
              << " && ComputedScope == ";
 
-          std::string ScopeStr = "AttributeCommonInfo::SC_";
-          if (S->nameSpace() == "")
-            OS << "AttributeCommonInfo::SC_NONE";
+          if (FS.nameSpace() == "")
+            OS << "AttributeCommonInfo::Scope::NONE";
           else
-            OS << "AttributeCommonInfo::SC_" + S->nameSpace().upper();
+            OS << "AttributeCommonInfo::Scope::" + FS.nameSpace().upper();
 
           OS << ")\n"
-             << "        return " << Idx << ";\n";
-          Idx++;
+             << "      return " << Idx << ";\n";
+        } else {
+          OS << "    if (Name == \"" << FS.name() << "\""
+             << " && getSyntax() == AttributeCommonInfo::AS_" << FS.variety()
+             << " && ComputedScope == ";
+
+          if (FS.nameSpace() == "")
+            OS << "AttributeCommonInfo::Scope::NONE";
+          else
+            OS << "AttributeCommonInfo::Scope::" + FS.nameSpace().upper();
+
+          OS << ")\n"
+             << "      return " << Idx << ";\n";
         }
-        Completed[Spell.name()] = true;
       }
     }
 

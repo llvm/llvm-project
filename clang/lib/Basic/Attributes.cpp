@@ -17,6 +17,8 @@
 #include "clang/Basic/ParsedAttrInfo.h"
 #include "clang/Basic/TargetInfo.h"
 
+#include "llvm/ADT/StringMap.h"
+
 using namespace clang;
 
 static int hasAttributeImpl(AttributeCommonInfo::Syntax Syntax, StringRef Name,
@@ -153,18 +155,18 @@ std::string AttributeCommonInfo::getNormalizedFullName() const {
       normalizeName(getAttrName(), getScopeName(), getSyntax()));
 }
 
-const std::map<StringRef, AttributeCommonInfo::Scope> ScopeMap = {
-    {"", AttributeCommonInfo::SC_NONE},
-    {"clang", AttributeCommonInfo::SC_CLANG},
-    {"gnu", AttributeCommonInfo::SC_GNU},
-    {"msvc", AttributeCommonInfo::SC_MSVC},
-    {"omp", AttributeCommonInfo::SC_OMP},
-    {"hlsl", AttributeCommonInfo::SC_HLSL},
-    {"gsl", AttributeCommonInfo::SC_GSL},
-    {"riscv", AttributeCommonInfo::SC_RISCV}};
+const llvm::StringMap<AttributeCommonInfo::Scope> ScopeMap = {
+    {"", AttributeCommonInfo::Scope::NONE},
+    {"clang", AttributeCommonInfo::Scope::CLANG},
+    {"gnu", AttributeCommonInfo::Scope::GNU},
+    {"msvc", AttributeCommonInfo::Scope::MSVC},
+    {"omp", AttributeCommonInfo::Scope::OMP},
+    {"hlsl", AttributeCommonInfo::Scope::HLSL},
+    {"gsl", AttributeCommonInfo::Scope::GSL},
+    {"riscv", AttributeCommonInfo::Scope::RISCV}};
 
 AttributeCommonInfo::Scope
-getScopeFromNormalizedScopeName(const StringRef ScopeName) {
+getScopeFromNormalizedScopeName(StringRef ScopeName) {
   auto It = ScopeMap.find(ScopeName);
   if (It == ScopeMap.end()) {
     llvm_unreachable("Unknown normalized scope name. Shouldn't get here");
