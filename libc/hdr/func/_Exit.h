@@ -10,8 +10,7 @@
 #define LLVM_LIBC_HDR_FUNC_EXIT_H
 
 #ifdef LIBC_FULL_BUILD
-// We will use the `_Exit` declaration from our generated stdlib.h
-#include <stdlib.h>
+extern "C" [[noreturn]] void _Exit(int) noexcept;
 
 #else // Overlay mode
 
