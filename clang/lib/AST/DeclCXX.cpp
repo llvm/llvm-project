@@ -2484,7 +2484,7 @@ bool CXXMethodDecl::isUsualDeallocationFunction(
     // Addendum: a template instance is a usual deallocation function if there
     // is a single template parameter, that parameter is a type, only the first
     // parameter is dependent, and that parameter is a specialization of
-    // std::type_identity
+    // std::type_identity.
     if (!IsTypeAware) {
       // Stop early on if the specialization is not explicitly type aware
       return false;
