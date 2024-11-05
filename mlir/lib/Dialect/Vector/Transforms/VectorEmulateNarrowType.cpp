@@ -199,7 +199,7 @@ emulatedVectorLoad(OpBuilder &rewriter, Location loc, Value base,
   return rewriter.create<vector::BitCastOp>(
       loc, VectorType::get(numEmultedElementsToLoad * scale, origElemType),
       newLoad);
-};
+}
 
 namespace {
 
