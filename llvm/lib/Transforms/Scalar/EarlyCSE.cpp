@@ -965,6 +965,7 @@ private:
                         const ParseMemoryInst &Later);
 
   Value *getOrCreateResult(Instruction *Inst, Type *ExpectedType) const {
+    // TODO: We could insert relevant casts on type mismatch.
     // The load or the store's first operand.
     Value *V;
     if (auto *II = dyn_cast<IntrinsicInst>(Inst)) {
