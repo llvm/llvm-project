@@ -211,7 +211,13 @@ std::optional<bool> isUncheckedPtr(const QualType T) {
 std::optional<bool> isUnsafePtr(const QualType T) {
   if (T->isPointerType() || T->isReferenceType()) {
     if (auto *CXXRD = T->getPointeeCXXRecordDecl()) {
-      return isUncounted(CXXRD) || isUnchecked(CXXRD);
+      auto isUncountedPtr = isUncounted(CXXRD);
+      auto isUncheckedPtr = isUnchecked(CXXRD);
+      if (isUncountedPtr && isUncheckedPtr)
+        return *isUncountedPtr || *isUncheckedPtr;
+      if (isUncountedPtr)
+        return *isUncountedPtr;
+      return isUncheckedPtr;
     }
   }
   return false;

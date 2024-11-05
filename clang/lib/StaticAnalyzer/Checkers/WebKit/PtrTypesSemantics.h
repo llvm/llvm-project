@@ -67,6 +67,10 @@ std::optional<bool> isUncountedPtr(const clang::QualType T);
 /// class, false if not, std::nullopt if inconclusive.
 std::optional<bool> isUncheckedPtr(const clang::QualType T);
 
+/// \returns true if \p T is either a raw pointer or reference to an uncounted
+/// or unchecked class, false if not, std::nullopt if inconclusive.
+std::optional<bool> isUnsafePtr(const QualType T);
+
 /// \returns true if \p T is a RefPtr, Ref, CheckedPtr, CheckedRef, or its
 /// variant, false if not.
 bool isSafePtrType(const clang::QualType T);
