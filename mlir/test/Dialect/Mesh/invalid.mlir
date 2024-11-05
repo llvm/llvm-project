@@ -90,7 +90,7 @@ func.func @sharding_attribute_invalid_halo(%arg0 : tensor<4x8xf32>) {
 
 func.func @sharding_attribute_invalid_sizes(%arg0 : tensor<4x8xf32>) {
   // expected-error@+1 {{halo sizes and shard offsets are mutually exclusive}}
-  %s = mesh.sharding @mesh0 split_axes = [[0]] halo_sizes = [1, 2] sharded_dims_offsets = [2, 2] : !mesh.sharding
+  %s = mesh.sharding @mesh0 split_axes = [[0]] halo_sizes = [1, 2] sharded_dims_offsets = [0, 2, 2] : !mesh.sharding
   %0 = mesh.shard %arg0 to %s : tensor<4x8xf32>
   return
 }
@@ -100,7 +100,7 @@ func.func @sharding_attribute_invalid_sizes(%arg0 : tensor<4x8xf32>) {
 mesh.mesh @mesh_dyn(shape = ?x?)
 func.func @sharding_dyn_mesh_and_sizes(%arg0 : tensor<4x8xf32>) {
   // expected-error@+1 {{sharded dims offsets are not allowed for devices meshes with dynamic shape}}
-  %s = mesh.sharding @mesh_dyn split_axes = [[0]] sharded_dims_offsets = [2, 2] : !mesh.sharding
+  %s = mesh.sharding @mesh_dyn split_axes = [[0]] sharded_dims_offsets = [0, 2, 2] : !mesh.sharding
   %0 = mesh.shard %arg0 to %s : tensor<4x8xf32>
   return
 }

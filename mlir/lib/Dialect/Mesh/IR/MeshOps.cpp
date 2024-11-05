@@ -198,7 +198,7 @@ static void shardShape(const InShape &inShape, const MeshShape &meshShape,
             llvm::adl_begin(outShape));
 
   if (!shardedDimsOffsets.empty()) {
-    uint64_t pos = 0;
+    uint64_t pos = 1;
     for (auto [tensorAxis, innerSplitAxes] : llvm::enumerate(splitAxes)) {
       if (!innerSplitAxes.empty()) {
         auto sz = shardedDimsOffsets[pos];

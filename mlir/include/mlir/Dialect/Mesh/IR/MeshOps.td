@@ -190,23 +190,25 @@ def Mesh_ShardingOp : Mesh_Op<"sharding", [
     `generic`: is not an allowed value inside a shard attribute.
 
     5. [Optional] Sizes of halos to be added for each sharded tensor dimension.
-    `halo_sizes`is provided as a flattened 1d array of i64s, 2 values for each sharded dimension.
-    `halo_sizes` = [1, 2] means that the first sharded dimension gets an additional
-    halo of size 1 at the start of the first dimension and a halo size is 2 at its end.
-    `halo_sizes` = [1, 2, 2, 3] defines halos for the first 2 sharded dimensions
-    e.g. the first sharded dimension gets [1,2] halos and the seconds gets [2,3] halos.
-    `?` indicates dynamic halo sizes.
+    `halo_sizes` is provided as a flattened 1d array of i64s, 2 values for each
+    sharded dimension. `halo_sizes = [1, 2]` means that the first sharded dimension
+    gets an additional halo of size 1 at the start of the first dimension and a halo
+    size is 2 at its end. `halo_sizes = [1, 2, 2, 3]` defines halos for the first 2
+    sharded dimensions e.g. the first sharded dimension gets `[1,2]` halos and the
+    seconds gets `[2,3]` halos. `?` indicates dynamic halo sizes.
     
     6. [Optional] Offsets for each shard and sharded tensor dimension.
-    `sharded_dims_offsets` is provided as a flattened 1d array of i64s.
-    For each sharded tensor dimension the offsets (starting index) of all shards in that dimension.
-    The offset of each first shard is omitted and is implicitly assumed to be 0.
-    The last value per dimension denotes the end of the last shard.
+    `sharded_dims_offsets` is provided as a flattened 1d array of i64s. For each
+    sharded tensor dimension the offsets (starting index) of all shards in that
+    dimension and an additional value for the end of the last shard are provided.
+    For a 1d sharding this means that position `i` has the exclusive prefix sum for
+    shard `i`, and since only contiguous sharding is supported, its inclusive prefix
+    sum is at position 'i+1'.
+    
     Assuming a 3d-tensor of shape 32x32x32 with the first 2 dimensions being sharded,
-    `sharded_dims_offsets` = [24, 32, 20, 32] means that the first device of
-    the device-mesh will get a shard of shape 24x20x32 and the second device will get a
-    shard of shape 8x12x32.
-    `?` indicates dynamic shard dimensions.
+    `sharded_dims_offsets` = [0, 24, 32, 0, 20, 32] means that the first device of
+    the device-mesh will get a shard of shape 24x20x32 and the second device will get
+    a shard of shape 8x12x32. `?` indicates dynamic shard dimensions.
     
     `halo_sizes` and `sharded_dims_offsets` are mutually exclusive.
 
@@ -243,7 +245,7 @@ def Mesh_ShardingOp : Mesh_Op<"sharding", [
     // The tensor is sharded on its second dimension along axis 0 of @mesh1d_4
     // and it has pre-defined shard sizes. The shards of the devices will have
     // the following shapes: [4x2, 4x3, 4x4, 4x5]
-    %sharding4 = mesh.sharding @mesh1d_4 split_axes = [[], [0]] sharded_dims_offsets = [2, 5, 9, 14]
+    %sharding4 = mesh.sharding @mesh1d_4 split_axes = [[], [0]] sharded_dims_offsets = [0, 2, 5, 9, 14]
     %sharded2 = mesh.shard %arg0 to %sharding4 : tensor<4x14xf32>
     ```
   }];

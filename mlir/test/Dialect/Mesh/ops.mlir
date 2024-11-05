@@ -144,10 +144,10 @@ func.func @mesh_shard_halo_sizes() -> () {
 func.func @mesh_shard_dims_sizes() -> () {
   // CHECK: %[[C3:.*]] = arith.constant 3 : i64
   %c3 = arith.constant 3 : i64
-  // CHECK: mesh.sharding @mesh4 split_axes = {{\[\[}}0]] sharded_dims_offsets = [1, 4, 2] : !mesh.sharding
-  %sharding1 = mesh.sharding @mesh4 split_axes = [[0]] sharded_dims_offsets = [1, 4, 2] : !mesh.sharding
-  // CHECK: mesh.sharding @mesh4 split_axes = {{\[\[}}0]] sharded_dims_offsets = [4, %[[C3]], 1] : !mesh.sharding
-  %sharding2 = mesh.sharding @mesh4 split_axes = [[0]] sharded_dims_offsets = [4, %c3, 1] : !mesh.sharding
+  // CHECK: mesh.sharding @mesh4 split_axes = {{\[\[}}0]] sharded_dims_offsets = [0, 1, 4, 6] : !mesh.sharding
+  %sharding1 = mesh.sharding @mesh4 split_axes = [[0]] sharded_dims_offsets = [0, 1, 4, 6] : !mesh.sharding
+  // CHECK: mesh.sharding @mesh4 split_axes = {{\[\[}}0]] sharded_dims_offsets = [0, 2, %[[C3]], 5] : !mesh.sharding
+  %sharding2 = mesh.sharding @mesh4 split_axes = [[0]] sharded_dims_offsets = [0, 2, %c3, 5] : !mesh.sharding
   return
 }
 
