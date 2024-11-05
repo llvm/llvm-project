@@ -33,6 +33,8 @@
 #error "This header is only meant to be used on GPU architectures."
 #endif
 
+#include <stdint.h>
+
 #if !defined(__cplusplus)
 _Pragma("push_macro(\"bool\")");
 #define bool _Bool
