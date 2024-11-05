@@ -256,8 +256,8 @@ bool WebAssemblyLateEHPrepare::replaceFuncletReturns(MachineFunction &MF) {
       // generated in Clang for when an exception is not caught by the given
       // type (e.g. catch (int)).
       //
-      // RETHROW's BB argument is the EH pad where the exception to rethrow has been
-      // caught. (Until this point, RETHROW has just a '0' as a placeholder
+      // RETHROW's BB argument is the EH pad where the exception to rethrow has
+      // been caught. (Until this point, RETHROW has just a '0' as a placeholder
       // argument.) For these llvm.wasm.rethrow()s, we can safely assume the
       // exception comes from the nearest dominating EH pad, because catch.start
       // EH pad is structured like this:
