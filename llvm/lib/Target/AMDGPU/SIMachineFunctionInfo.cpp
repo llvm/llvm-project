@@ -709,6 +709,9 @@ yaml::SIMachineFunctionInfo::SIMachineFunctionInfo(
       PSInputAddr(MFI.getPSInputAddr()),
       PSInputEnable(MFI.getPSInputEnable()),
       Mode(MFI.getMode()) {
+  for (Register Reg : MFI.getSGPRSpillPhysVGPRs())
+    SpillPhysVGPRS.push_back(regToString(Reg, TRI));
+
   for (Register Reg : MFI.getWWMReservedRegs())
     WWMReservedRegs.push_back(regToString(Reg, TRI));
 
