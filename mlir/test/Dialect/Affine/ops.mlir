@@ -282,3 +282,19 @@ func.func @delinearize_mixed(%linear_idx: index, %basis1: index) -> (index, inde
   %1:3 = affine.delinearize_index %linear_idx into (2, %basis1, 3) : index, index, index
   return %1#0, %1#1, %1#2 : index, index, index
 }
+
+// -----
+
+// CHECK-LABEL: func @linearize
+func.func @linearize(%index0: index, %index1: index, %basis0: index, %basis1 :index) -> index {
+  // CHECK: affine.linearize_index [%{{.+}}, %{{.+}}] by (%{{.+}}, %{{.+}}) : index
+  %1 = affine.linearize_index [%index0, %index1] by (%basis0, %basis1) : index
+  return %1 : index
+}
+
+// CHECK-LABEL: @linearize_mixed
+func.func @linearize_mixed(%index0: index, %index1: index, %index2: index, %basis1: index) -> index {
+  // CHECK: affine.linearize_index disjoint [%{{.+}}, %{{.+}}, %{{.+}}] by (2, %{{.+}}, 3) : index
+  %1 = affine.linearize_index disjoint [%index0, %index1, %index2] by (2, %basis1, 3) : index
+  return %1 : index
+}

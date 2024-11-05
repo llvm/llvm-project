@@ -1732,6 +1732,45 @@ void OmpStructureChecker::CheckTargetUpdate() {
   }
 }
 
+void OmpStructureChecker::CheckTaskDependenceType(
+    const parser::OmpTaskDependenceType::Type &x) {
+  // Common checks for task-dependence-type (DEPEND and UPDATE clauses).
+  unsigned version{context_.langOptions().OpenMPVersion};
+  unsigned since{0}, deprecatedIn{~0u};
+
+  switch (x) {
+  case parser::OmpTaskDependenceType::Type::In:
+  case parser::OmpTaskDependenceType::Type::Out:
+  case parser::OmpTaskDependenceType::Type::Inout:
+    break;
+  case parser::OmpTaskDependenceType::Type::Source:
+  case parser::OmpTaskDependenceType::Type::Sink:
+    deprecatedIn = 52;
+    break;
+  case parser::OmpTaskDependenceType::Type::Mutexinoutset:
+  case parser::OmpTaskDependenceType::Type::Depobj:
+    since = 50;
+    break;
+  case parser::OmpTaskDependenceType::Type::Inoutset:
+    since = 52;
+    break;
+  }
+
+  if (version >= deprecatedIn) {
+    context_.Say(GetContext().clauseSource,
+        "%s task-dependence-type is deprecated in %s"_warn_en_US,
+        parser::ToUpperCaseLetters(
+            parser::OmpTaskDependenceType::EnumToString(x)),
+        ThisVersion(deprecatedIn));
+  } else if (version < since) {
+    context_.Say(GetContext().clauseSource,
+        "%s task-dependence-type is not supported in %s, %s"_warn_en_US,
+        parser::ToUpperCaseLetters(
+            parser::OmpTaskDependenceType::EnumToString(x)),
+        ThisVersion(version), TryVersion(since));
+  }
+}
+
 void OmpStructureChecker::Enter(
     const parser::OpenMPSimpleStandaloneConstruct &x) {
   const auto &dir{std::get<parser::OmpSimpleStandaloneDirective>(x.t)};
@@ -2648,11 +2687,19 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Destroy &x) {
   llvm::omp::Directive dir{GetContext().directive};
   unsigned version{context_.langOptions().OpenMPVersion};
   if (dir == llvm::omp::Directive::OMPD_depobj) {
-    if (version < 52) {
-      context_.Say(GetContext().clauseSource,
-          "The object parameter in DESTROY clause in DEPOPJ construct "
-          "was introduced in %s"_port_en_US,
-          ThisVersion(52));
+    unsigned argSince{52}, noargDeprecatedIn{52};
+    if (x.v) {
+      if (version < argSince) {
+        context_.Say(GetContext().clauseSource,
+            "The object parameter in DESTROY clause on DEPOPJ construct is not allowed in %s, %s"_warn_en_US,
+            ThisVersion(version), TryVersion(argSince));
+      }
+    } else {
+      if (version >= noargDeprecatedIn) {
+        context_.Say(GetContext().clauseSource,
+            "The DESTROY clause without argument on DEPOBJ construct is deprecated in %s"_warn_en_US,
+            ThisVersion(noargDeprecatedIn));
+      }
     }
   }
 }
@@ -3393,20 +3440,7 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Depend &x) {
   using DepType = parser::OmpTaskDependenceType::Type;
   DepType depType = x.v.GetDepType();
 
-  if (version >= 52) {
-    switch (depType) {
-    case DepType::Sink:
-    case DepType::Source:
-      context_.Say(GetContext().clauseSource,
-          "The %s task-dependence-type is deprecated in %s"_warn_en_US,
-          parser::ToUpperCaseLetters(
-              parser::OmpTaskDependenceType::EnumToString(depType)),
-          ThisVersion(version));
-      break;
-    default:
-      break;
-    }
-  }
+  CheckTaskDependenceType(depType);
 
   if (directive == llvm::omp::OMPD_depobj) {
     // [5.0:255:11], [5.1:288:3]
@@ -3592,6 +3626,8 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Update &x) {
   CheckAllowedClause(llvm::omp::Clause::OMPC_update);
   llvm::omp::Directive directive{GetContext().directive};
   unsigned version{context_.langOptions().OpenMPVersion};
+
+  CheckTaskDependenceType(x.v.v.v);
 
   // [5.1:288:4-5]
   // An update clause on a depobj construct must not have source, sink or depobj

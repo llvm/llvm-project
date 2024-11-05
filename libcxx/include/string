@@ -2083,6 +2083,8 @@ private:
     size_type __guess          = __align_it<__boundary>(__s + 1) - 1;
     if (__guess == __min_cap)
       __guess += __endian_factor;
+
+    _LIBCPP_ASSERT_INTERNAL(__guess >= __s, "recommendation is below the requested size");
     return __guess;
   }
 
@@ -3346,12 +3348,7 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 void basic_string<_CharT, _Traits, _Allocator>::re
   if (__requested_capacity <= capacity())
     return;
 
-  size_type __target_capacity = std::max(__requested_capacity, size());
-  __target_capacity           = __recommend(__target_capacity);
-  if (__target_capacity == capacity())
-    return;
-
-  __shrink_or_extend(__target_capacity);
+  __shrink_or_extend(__recommend(__requested_capacity));
 }
 
 template <class _CharT, class _Traits, class _Allocator>

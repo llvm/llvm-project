@@ -208,6 +208,7 @@ class ProcessLaunchTestCase(TestBase):
         process.Continue()
         self.assertState(process.GetState(), lldb.eStateExited, PROCESS_EXITED)
 
+    @skipIfRemote
     def test_target_launch_working_dir_prop(self):
         """Test that the setting `target.launch-working-dir` is correctly used when launching a process."""
         d = {"CXX_SOURCES": "print_cwd.cpp"}

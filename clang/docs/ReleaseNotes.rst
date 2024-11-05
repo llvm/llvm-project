@@ -748,6 +748,7 @@ CUDA Support
 ^^^^^^^^^^^^
 - Clang now supports CUDA SDK up to 12.6
 - Added support for sm_100
+- Added support for `__grid_constant__` attribute.
 
 AIX Support
 ^^^^^^^^^^^
