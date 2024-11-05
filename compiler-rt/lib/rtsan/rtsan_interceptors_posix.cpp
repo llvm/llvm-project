@@ -15,12 +15,10 @@
 
 #include "interception/interception.h"
 #include "sanitizer_common/sanitizer_allocator_dlsym.h"
-#include "sanitizer_common/sanitizer_allocator_internal.h"
 #include "sanitizer_common/sanitizer_platform_interceptors.h"
 
 #include "interception/interception.h"
 #include "rtsan/rtsan.h"
-#include "rtsan/rtsan_context.h"
 
 #if SANITIZER_APPLE
 
@@ -33,11 +31,11 @@ extern "C" {
 typedef int32_t OSSpinLock;
 void OSSpinLockLock(volatile OSSpinLock *__lock);
 }
-#endif
+#endif // TARGET_OS_MAC
 
 #include <libkern/OSAtomic.h>
 #include <os/lock.h>
-#endif
+#endif // SANITIZER_APPLE
 
 #if SANITIZER_INTERCEPT_MEMALIGN || SANITIZER_INTERCEPT_PVALLOC
 #include <malloc.h>
@@ -431,9 +429,12 @@ INTERCEPTOR(void, free, void *ptr) {
   if (DlsymAlloc::PointerIsMine(ptr))
     return DlsymAlloc::Free(ptr);
 
-  if (ptr != NULL) {
+  // According to the C and C++ standard, freeing a nullptr is guaranteed to be
+  // a no-op (and thus real-time safe). This can be confirmed for looking at
+  // __libc_free in the glibc source.
+  if (ptr != nullptr)
     __rtsan_notify_intercepted_call("free");
-  }
+
   return REAL(free)(ptr);
 }
 
@@ -464,10 +465,19 @@ INTERCEPTOR(void *, valloc, SIZE_T size) {
 }
 
 #if SANITIZER_INTERCEPT_ALIGNED_ALLOC
+
+// In some cases, when targeting older Darwin versions, this warning may pop up.
+// Because we are providing a wrapper, the client is responsible to check
+// whether aligned_alloc is available, not us. We still succeed linking on an
+// old OS, because we are using a weak symbol (see aligned_alloc in
+// sanitizer_platform_interceptors.h)
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wunguarded-availability-new"
 INTERCEPTOR(void *, aligned_alloc, SIZE_T alignment, SIZE_T size) {
   __rtsan_notify_intercepted_call("aligned_alloc");
   return REAL(aligned_alloc)(alignment, size);
 }
+#pragma clang diagnostic pop
 #define RTSAN_MAYBE_INTERCEPT_ALIGNED_ALLOC INTERCEPT_FUNCTION(aligned_alloc)
 #else
 #define RTSAN_MAYBE_INTERCEPT_ALIGNED_ALLOC
@@ -491,6 +501,38 @@ INTERCEPTOR(void *, pvalloc, size_t size) {
   return REAL(pvalloc)(size);
 }
 #endif
+
+INTERCEPTOR(void *, mmap, void *addr, size_t length, int prot, int flags,
+            int fd, off_t offset) {
+  __rtsan_notify_intercepted_call("mmap");
+  return REAL(mmap)(addr, length, prot, flags, fd, offset);
+}
+
+#if SANITIZER_INTERCEPT_MMAP64
+INTERCEPTOR(void *, mmap64, void *addr, size_t length, int prot, int flags,
+            int fd, off64_t offset) {
+  __rtsan_notify_intercepted_call("mmap64");
+  return REAL(mmap64)(addr, length, prot, flags, fd, offset);
+}
+#define RTSAN_MAYBE_INTERCEPT_MMAP64 INTERCEPT_FUNCTION(mmap64)
+#else
+#define RTSAN_MAYBE_INTERCEPT_MMAP64
+#endif // SANITIZER_INTERCEPT_MMAP64
+
+INTERCEPTOR(int, munmap, void *addr, size_t length) {
+  __rtsan_notify_intercepted_call("munmap");
+  return REAL(munmap)(addr, length);
+}
+
+INTERCEPTOR(int, shm_open, const char *name, int oflag, mode_t mode) {
+  __rtsan_notify_intercepted_call("shm_open");
+  return REAL(shm_open)(name, oflag, mode);
+}
+
+INTERCEPTOR(int, shm_unlink, const char *name) {
+  __rtsan_notify_intercepted_call("shm_unlink");
+  return REAL(shm_unlink)(name);
+}
 
 // Sockets
 INTERCEPTOR(int, socket, int domain, int type, int protocol) {
@@ -546,6 +588,11 @@ void __rtsan::InitializeInterceptors() {
   INTERCEPT_FUNCTION(valloc);
   RTSAN_MAYBE_INTERCEPT_ALIGNED_ALLOC;
   INTERCEPT_FUNCTION(posix_memalign);
+  INTERCEPT_FUNCTION(mmap);
+  RTSAN_MAYBE_INTERCEPT_MMAP64;
+  INTERCEPT_FUNCTION(munmap);
+  INTERCEPT_FUNCTION(shm_open);
+  INTERCEPT_FUNCTION(shm_unlink);
 #if SANITIZER_INTERCEPT_MEMALIGN
   INTERCEPT_FUNCTION(memalign);
 #endif

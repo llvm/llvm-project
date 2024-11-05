@@ -239,7 +239,8 @@ struct MapperT {
 ENUM(MemoryOrder, AcqRel, Acquire, Relaxed, Release, SeqCst);
 ENUM(MotionExpectation, Present);
 // V5.2: [15.9.1] `task-dependence-type` modifier
-ENUM(TaskDependenceType, In, Out, Inout, Mutexinoutset, Inoutset, Depobj);
+ENUM(TaskDependenceType, Depobj, In, Inout, Inoutset, Mutexinoutset, Out, Sink,
+     Source);
 
 template <typename I, typename E> //
 struct LoopIterationT {

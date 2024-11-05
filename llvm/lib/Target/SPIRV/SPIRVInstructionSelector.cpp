@@ -164,6 +164,13 @@ private:
   bool selectIntegerDot(Register ResVReg, const SPIRVType *ResType,
                         MachineInstr &I) const;
 
+  template <bool Signed>
+  bool selectDot4AddPacked(Register ResVReg, const SPIRVType *ResType,
+                           MachineInstr &I) const;
+  template <bool Signed>
+  bool selectDot4AddPackedExpansion(Register ResVReg, const SPIRVType *ResType,
+                                    MachineInstr &I) const;
+
   void renderImm32(MachineInstrBuilder &MIB, const MachineInstr &I,
                    int OpIdx) const;
   void renderFImm64(MachineInstrBuilder &MIB, const MachineInstr &I,
@@ -260,6 +267,7 @@ private:
                                            SPIRVType *SrcPtrTy) const;
   Register buildPointerToResource(const SPIRVType *ResType, uint32_t Set,
                                   uint32_t Binding, uint32_t ArraySize,
+                                  Register IndexReg, bool IsNonUniform,
                                   MachineIRBuilder MIRBuilder) const;
 };
 
@@ -989,13 +997,13 @@ bool SPIRVInstructionSelector::selectMemOperation(Register ResVReg,
     Register VarReg = MRI->createGenericVirtualRegister(LLT::scalar(64));
     GR.add(GV, GR.CurMF, VarReg);
 
-    buildOpDecorate(VarReg, I, TII, SPIRV::Decoration::Constant, {});
     BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(SPIRV::OpVariable))
         .addDef(VarReg)
         .addUse(GR.getSPIRVTypeID(VarTy))
         .addImm(SPIRV::StorageClass::UniformConstant)
         .addUse(Const)
         .constrainAllUses(TII, TRI, RBI);
+    buildOpDecorate(VarReg, I, TII, SPIRV::Decoration::Constant, {});
     SPIRVType *SourceTy = GR.getOrCreateSPIRVPointerType(
         ValTy, I, TII, SPIRV::StorageClass::UniformConstant);
     SrcReg = MRI->createGenericVirtualRegister(LLT::scalar(64));
@@ -1645,7 +1653,7 @@ bool SPIRVInstructionSelector::selectIntegerDot(Register ResVReg,
   // Multiply the vectors, then sum the results
   Register Vec0 = I.getOperand(2).getReg();
   Register Vec1 = I.getOperand(3).getReg();
-  Register TmpVec = MRI->createVirtualRegister(&SPIRV::IDRegClass);
+  Register TmpVec = MRI->createVirtualRegister(GR.getRegClass(ResType));
   SPIRVType *VecType = GR.getSPIRVTypeForVReg(Vec0);
 
   bool Result = BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpIMulV))
@@ -1659,8 +1667,8 @@ bool SPIRVInstructionSelector::selectIntegerDot(Register ResVReg,
          GR.getScalarOrVectorComponentCount(VecType) > 1 &&
          "dot product requires a vector of at least 2 components");
 
-  Register Res = MRI->createVirtualRegister(&SPIRV::IDRegClass);
-  Result |= BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpCompositeExtract))
+  Register Res = MRI->createVirtualRegister(GR.getRegClass(ResType));
+  Result &= BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpCompositeExtract))
                 .addDef(Res)
                 .addUse(GR.getSPIRVTypeID(ResType))
                 .addUse(TmpVec)
@@ -1668,9 +1676,9 @@ bool SPIRVInstructionSelector::selectIntegerDot(Register ResVReg,
                 .constrainAllUses(TII, TRI, RBI);
 
   for (unsigned i = 1; i < GR.getScalarOrVectorComponentCount(VecType); i++) {
-    Register Elt = MRI->createVirtualRegister(&SPIRV::IDRegClass);
+    Register Elt = MRI->createVirtualRegister(GR.getRegClass(ResType));
 
-    Result |=
+    Result &=
         BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpCompositeExtract))
             .addDef(Elt)
             .addUse(GR.getSPIRVTypeID(ResType))
@@ -1679,16 +1687,122 @@ bool SPIRVInstructionSelector::selectIntegerDot(Register ResVReg,
             .constrainAllUses(TII, TRI, RBI);
 
     Register Sum = i < GR.getScalarOrVectorComponentCount(VecType) - 1
-                       ? MRI->createVirtualRegister(&SPIRV::IDRegClass)
+                       ? MRI->createVirtualRegister(GR.getRegClass(ResType))
                        : ResVReg;
 
-    Result |= BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpIAddS))
+    Result &= BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpIAddS))
                   .addDef(Sum)
                   .addUse(GR.getSPIRVTypeID(ResType))
                   .addUse(Res)
                   .addUse(Elt)
                   .constrainAllUses(TII, TRI, RBI);
     Res = Sum;
+  }
+
+  return Result;
+}
+
+template <bool Signed>
+bool SPIRVInstructionSelector::selectDot4AddPacked(Register ResVReg,
+                                                   const SPIRVType *ResType,
+                                                   MachineInstr &I) const {
+  assert(I.getNumOperands() == 5);
+  assert(I.getOperand(2).isReg());
+  assert(I.getOperand(3).isReg());
+  assert(I.getOperand(4).isReg());
+  MachineBasicBlock &BB = *I.getParent();
+
+  auto DotOp = Signed ? SPIRV::OpSDot : SPIRV::OpUDot;
+  Register Dot = MRI->createVirtualRegister(GR.getRegClass(ResType));
+  bool Result = BuildMI(BB, I, I.getDebugLoc(), TII.get(DotOp))
+                    .addDef(Dot)
+                    .addUse(GR.getSPIRVTypeID(ResType))
+                    .addUse(I.getOperand(2).getReg())
+                    .addUse(I.getOperand(3).getReg())
+                    .constrainAllUses(TII, TRI, RBI);
+
+  Result &= BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpIAddS))
+                .addDef(ResVReg)
+                .addUse(GR.getSPIRVTypeID(ResType))
+                .addUse(Dot)
+                .addUse(I.getOperand(4).getReg())
+                .constrainAllUses(TII, TRI, RBI);
+
+  return Result;
+}
+
+// Since pre-1.6 SPIRV has no DotProductInput4x8BitPacked implementation,
+// extract the elements of the packed inputs, multiply them and add the result
+// to the accumulator.
+template <bool Signed>
+bool SPIRVInstructionSelector::selectDot4AddPackedExpansion(
+    Register ResVReg, const SPIRVType *ResType, MachineInstr &I) const {
+  assert(I.getNumOperands() == 5);
+  assert(I.getOperand(2).isReg());
+  assert(I.getOperand(3).isReg());
+  assert(I.getOperand(4).isReg());
+  MachineBasicBlock &BB = *I.getParent();
+
+  bool Result = false;
+
+  // Acc = C
+  Register Acc = I.getOperand(4).getReg();
+  SPIRVType *EltType = GR.getOrCreateSPIRVIntegerType(8, I, TII);
+  auto ExtractOp =
+      Signed ? SPIRV::OpBitFieldSExtract : SPIRV::OpBitFieldUExtract;
+
+  // Extract the i8 element, multiply and add it to the accumulator
+  for (unsigned i = 0; i < 4; i++) {
+    // A[i]
+    Register AElt = MRI->createVirtualRegister(&SPIRV::IDRegClass);
+    Result |= BuildMI(BB, I, I.getDebugLoc(), TII.get(ExtractOp))
+                  .addDef(AElt)
+                  .addUse(GR.getSPIRVTypeID(ResType))
+                  .addUse(I.getOperand(2).getReg())
+                  .addUse(GR.getOrCreateConstInt(i * 8, I, EltType, TII))
+                  .addUse(GR.getOrCreateConstInt(8, I, EltType, TII))
+                  .constrainAllUses(TII, TRI, RBI);
+
+    // B[i]
+    Register BElt = MRI->createVirtualRegister(&SPIRV::IDRegClass);
+    Result |= BuildMI(BB, I, I.getDebugLoc(), TII.get(ExtractOp))
+                  .addDef(BElt)
+                  .addUse(GR.getSPIRVTypeID(ResType))
+                  .addUse(I.getOperand(3).getReg())
+                  .addUse(GR.getOrCreateConstInt(i * 8, I, EltType, TII))
+                  .addUse(GR.getOrCreateConstInt(8, I, EltType, TII))
+                  .constrainAllUses(TII, TRI, RBI);
+
+    // A[i] * B[i]
+    Register Mul = MRI->createVirtualRegister(&SPIRV::IDRegClass);
+    Result |= BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpIMulS))
+                  .addDef(Mul)
+                  .addUse(GR.getSPIRVTypeID(ResType))
+                  .addUse(AElt)
+                  .addUse(BElt)
+                  .constrainAllUses(TII, TRI, RBI);
+
+    // Discard 24 highest-bits so that stored i32 register is i8 equivalent
+    Register MaskMul = MRI->createVirtualRegister(&SPIRV::IDRegClass);
+    Result |= BuildMI(BB, I, I.getDebugLoc(), TII.get(ExtractOp))
+                  .addDef(MaskMul)
+                  .addUse(GR.getSPIRVTypeID(ResType))
+                  .addUse(Mul)
+                  .addUse(GR.getOrCreateConstInt(0, I, EltType, TII))
+                  .addUse(GR.getOrCreateConstInt(8, I, EltType, TII))
+                  .constrainAllUses(TII, TRI, RBI);
+
+    // Acc = Acc + A[i] * B[i]
+    Register Sum =
+        i < 3 ? MRI->createVirtualRegister(&SPIRV::IDRegClass) : ResVReg;
+    Result |= BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpIAddS))
+                  .addDef(Sum)
+                  .addUse(GR.getSPIRVTypeID(ResType))
+                  .addUse(Acc)
+                  .addUse(MaskMul)
+                  .constrainAllUses(TII, TRI, RBI);
+
+    Acc = Sum;
   }
 
   return Result;
@@ -2527,6 +2641,11 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
   case Intrinsic::spv_udot:
   case Intrinsic::spv_sdot:
     return selectIntegerDot(ResVReg, ResType, I);
+  case Intrinsic::spv_dot4add_i8packed:
+    if (STI.canUseExtension(SPIRV::Extension::SPV_KHR_integer_dot_product) ||
+        STI.isAtLeastSPIRVVer(VersionTuple(1, 6)))
+      return selectDot4AddPacked<true>(ResVReg, ResType, I);
+    return selectDot4AddPackedExpansion<true>(ResVReg, ResType, I);
   case Intrinsic::spv_all:
     return selectAll(ResVReg, ResType, I);
   case Intrinsic::spv_any:
@@ -2616,10 +2735,15 @@ void SPIRVInstructionSelector::selectHandleFromBinding(Register &ResVReg,
   uint32_t Set = foldImm(I.getOperand(2), MRI);
   uint32_t Binding = foldImm(I.getOperand(3), MRI);
   uint32_t ArraySize = foldImm(I.getOperand(4), MRI);
+  Register IndexReg = I.getOperand(5).getReg();
+  bool IsNonUniform = ArraySize > 1 && foldImm(I.getOperand(6), MRI);
 
   MachineIRBuilder MIRBuilder(I);
-  Register VarReg =
-      buildPointerToResource(ResType, Set, Binding, ArraySize, MIRBuilder);
+  Register VarReg = buildPointerToResource(ResType, Set, Binding, ArraySize,
+                                           IndexReg, IsNonUniform, MIRBuilder);
+
+  if (IsNonUniform)
+    buildOpDecorate(ResVReg, I, TII, SPIRV::Decoration::NonUniformEXT, {});
 
   // TODO: For now we assume the resource is an image, which needs to be
   // loaded to get the handle. That will not be true for storage buffers.
@@ -2631,10 +2755,35 @@ void SPIRVInstructionSelector::selectHandleFromBinding(Register &ResVReg,
 
 Register SPIRVInstructionSelector::buildPointerToResource(
     const SPIRVType *ResType, uint32_t Set, uint32_t Binding,
-    uint32_t ArraySize, MachineIRBuilder MIRBuilder) const {
-  assert(ArraySize == 1 && "Resource arrays are not implemented yet.");
-  return GR.getOrCreateGlobalVariableWithBinding(ResType, Set, Binding,
-                                                 MIRBuilder);
+    uint32_t ArraySize, Register IndexReg, bool IsNonUniform,
+    MachineIRBuilder MIRBuilder) const {
+  if (ArraySize == 1)
+    return GR.getOrCreateGlobalVariableWithBinding(ResType, Set, Binding,
+                                                   MIRBuilder);
+
+  const SPIRVType *VarType = GR.getOrCreateSPIRVArrayType(
+      ResType, ArraySize, *MIRBuilder.getInsertPt(), TII);
+  Register VarReg = GR.getOrCreateGlobalVariableWithBinding(
+      VarType, Set, Binding, MIRBuilder);
+
+  SPIRVType *ResPointerType = GR.getOrCreateSPIRVPointerType(
+      ResType, MIRBuilder, SPIRV::StorageClass::UniformConstant);
+
+  Register AcReg = MRI->createVirtualRegister(&SPIRV::iIDRegClass);
+  if (IsNonUniform) {
+    // It is unclear which value needs to be marked an non-uniform, so both
+    // the index and the access changed are decorated as non-uniform.
+    buildOpDecorate(IndexReg, MIRBuilder, SPIRV::Decoration::NonUniformEXT, {});
+    buildOpDecorate(AcReg, MIRBuilder, SPIRV::Decoration::NonUniformEXT, {});
+  }
+
+  MIRBuilder.buildInstr(SPIRV::OpAccessChain)
+      .addDef(AcReg)
+      .addUse(GR.getSPIRVTypeID(ResPointerType))
+      .addUse(VarReg)
+      .addUse(IndexReg);
+
+  return AcReg;
 }
 
 bool SPIRVInstructionSelector::selectAllocaArray(Register ResVReg,

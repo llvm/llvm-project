@@ -27,6 +27,10 @@ int const &f3(TConstRef a) { return a; }
 int const &f4(TConst &a) { return a; }
 // CHECK-MESSAGES: :[[@LINE-1]]:35: warning: returning a constant reference parameter
 
+int const &f5(TConst &a) { return true ? a : a; }
+// CHECK-MESSAGES: :[[@LINE-1]]:42: warning: returning a constant reference parameter
+// CHECK-MESSAGES: :[[@LINE-2]]:46: warning: returning a constant reference parameter
+
 template <typename T>
 const T& tf1(const T &a) { return a; }
 // CHECK-MESSAGES: :[[@LINE-1]]:35: warning: returning a constant reference parameter
@@ -46,6 +50,11 @@ typename ConstRef<T>::type itf3(typename ConstRef<T>::type a) { return a; }
 template <typename T>
 const T& itf4(typename ConstRef<T>::type a) { return a; }
 // CHECK-MESSAGES: :[[@LINE-1]]:54: warning: returning a constant reference parameter
+
+template <typename T>
+const T& itf5(const T &a) { return true ? a : a; }
+// CHECK-MESSAGES: :[[@LINE-1]]:43: warning: returning a constant reference parameter
+// CHECK-MESSAGES: :[[@LINE-2]]:47: warning: returning a constant reference parameter
 
 void instantiate(const int &param, const float &paramf, int &mut_param, float &mut_paramf) {
         itf1(0);

@@ -1472,7 +1472,7 @@ func.func @prefetch_canonicalize(%arg0: memref<512xf32>) -> () {
 func.func @drop_unit_basis_in_delinearize(%arg0 : index, %arg1 : index, %arg2 : index) ->
     (index, index, index, index, index, index) {
   %c1 = arith.constant 1 : index
-  %0:6 = affine.delinearize_index %arg0 into (%c1, %arg1, %c1, %c1, %arg2, %c1)
+  %0:6 = affine.delinearize_index %arg0 into (1, %arg1, 1, 1, %arg2, %c1)
       : index, index, index, index, index, index
   return %0#0, %0#1, %0#2, %0#3, %0#4, %0#5 : index, index, index, index, index, index
 }
@@ -1487,8 +1487,7 @@ func.func @drop_unit_basis_in_delinearize(%arg0 : index, %arg1 : index, %arg2 : 
 // -----
 
 func.func @drop_all_unit_bases(%arg0 : index) -> (index, index) {
-  %c1 = arith.constant 1 : index
-  %0:2 = affine.delinearize_index %arg0 into (%c1, %c1) : index, index
+  %0:2 = affine.delinearize_index %arg0 into (1, 1) : index, index
   return %0#0, %0#1 : index, index
 }
 // CHECK-LABEL: func @drop_all_unit_bases(
@@ -1518,18 +1517,52 @@ func.func @drop_single_loop_delinearize(%arg0 : index, %arg1 : index) -> index {
 // -----
 
 // CHECK-LABEL: func @delinearize_non_induction_variable
+// CHECK-NOT: affine.delinearize
 func.func @delinearize_non_induction_variable(%arg0: memref<?xi32>, %i : index, %t0 : index, %t1 : index, %t2 : index) -> index {
-  %c1024 = arith.constant 1024 : index
   %1 = affine.apply affine_map<(d0)[s0, s1, s2] -> (d0 + s0 + s1 * 64 + s2 * 128)>(%i)[%t0, %t1, %t2]
-  %2 = affine.delinearize_index %1 into (%c1024) : index
+  %2 = affine.delinearize_index %1 into (1024) : index
   return %2 : index
 }
 
 // -----
 
 // CHECK-LABEL: func @delinearize_non_loop_like
+// CHECK-NOT: affine.delinearize
 func.func @delinearize_non_loop_like(%arg0: memref<?xi32>, %i : index) -> index {
-  %c1024 = arith.constant 1024 : index
-  %2 = affine.delinearize_index %i into (%c1024) : index
+  %2 = affine.delinearize_index %i into (1024) : index
   return %2 : index
+}
+
+// -----
+
+// CHECK-LABEL: @linearize_unit_basis_disjoint
+// CHECK-SAME: (%[[arg0:.+]]: index, %[[arg1:.+]]: index, %[[arg2:.+]]: index, %[[arg3:.+]]: index)
+// CHECK: %[[ret:.+]] = affine.linearize_index disjoint [%[[arg0]], %[[arg2]]] by (3, %[[arg3]]) : index
+// CHECK: return %[[ret]]
+func.func @linearize_unit_basis_disjoint(%arg0: index, %arg1: index, %arg2: index, %arg3: index) -> index {
+  %ret = affine.linearize_index disjoint [%arg0, %arg1, %arg2] by (3, 1, %arg3) : index
+  return %ret : index
+}
+
+// -----
+
+// CHECK-LABEL: @linearize_unit_basis_zero
+// CHECK-SAME: (%[[arg0:.+]]: index, %[[arg1:.+]]: index, %[[arg2:.+]]: index)
+// CHECK: %[[ret:.+]] = affine.linearize_index [%[[arg0]], %[[arg1]]] by (3, %[[arg2]]) : index
+// CHECK: return %[[ret]]
+func.func @linearize_unit_basis_zero(%arg0: index, %arg1: index, %arg2: index) -> index {
+  %c0 = arith.constant 0 : index
+  %ret = affine.linearize_index [%arg0, %c0, %arg1] by (3, 1, %arg2) : index
+  return %ret : index
+}
+
+// -----
+
+// CHECK-LABEL: @linearize_all_zero_unit_basis
+// CHECK: arith.constant 0 : index
+// CHECK-NOT: affine.linearize_index
+func.func @linearize_all_zero_unit_basis() -> index {
+  %c0 = arith.constant 0 : index
+  %ret = affine.linearize_index [%c0, %c0] by (1, 1) : index
+  return %ret : index
 }

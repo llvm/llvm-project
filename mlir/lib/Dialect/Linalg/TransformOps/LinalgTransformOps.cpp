@@ -3488,6 +3488,7 @@ transform::VectorizeChildrenAndApplyPatternsOp::applyToOne(
 
   if (getVectorizePadding())
     linalg::populatePadOpVectorizationPatterns(patterns);
+  vector::populateVectorStepLoweringPatterns(patterns);
 
   TrackingListener listener(state, *this);
   GreedyRewriteConfig config;

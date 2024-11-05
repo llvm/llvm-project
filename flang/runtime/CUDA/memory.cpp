@@ -9,10 +9,33 @@
 #include "flang/Runtime/CUDA/memory.h"
 #include "../terminator.h"
 #include "flang/Runtime/CUDA/common.h"
+#include "flang/Runtime/CUDA/descriptor.h"
+#include "flang/Runtime/assign.h"
 
 #include "cuda_runtime.h"
 
 namespace Fortran::runtime::cuda {
+static void *MemmoveHostToDevice(
+    void *dst, const void *src, std::size_t count) {
+  // TODO: Use cudaMemcpyAsync when we have support for stream.
+  CUDA_REPORT_IF_ERROR(cudaMemcpy(dst, src, count, cudaMemcpyHostToDevice));
+  return dst;
+}
+
+static void *MemmoveDeviceToHost(
+    void *dst, const void *src, std::size_t count) {
+  // TODO: Use cudaMemcpyAsync when we have support for stream.
+  CUDA_REPORT_IF_ERROR(cudaMemcpy(dst, src, count, cudaMemcpyDeviceToHost));
+  return dst;
+}
+
+static void *MemmoveDeviceToDevice(
+    void *dst, const void *src, std::size_t count) {
+  // TODO: Use cudaMemcpyAsync when we have support for stream.
+  CUDA_REPORT_IF_ERROR(cudaMemcpy(dst, src, count, cudaMemcpyDeviceToDevice));
+  return dst;
+}
+
 extern "C" {
 
 void *RTDEF(CUFMemAlloc)(
@@ -49,8 +72,8 @@ void RTDEF(CUFMemFree)(
   }
 }
 
-void RTDEF(CUFMemsetDescriptor)(const Descriptor &desc, void *value,
-    const char *sourceFile, int sourceLine) {
+void RTDEF(CUFMemsetDescriptor)(
+    Descriptor *desc, void *value, const char *sourceFile, int sourceLine) {
   Terminator terminator{sourceFile, sourceLine};
   terminator.Crash("not yet implemented: CUDA data transfer from a scalar "
                    "value to a descriptor");
@@ -73,26 +96,41 @@ void RTDEF(CUFDataTransferPtrPtr)(void *dst, void *src, std::size_t bytes,
   CUDA_REPORT_IF_ERROR(cudaMemcpy(dst, src, bytes, kind));
 }
 
-void RTDEF(CUFDataTransferDescPtr)(const Descriptor &desc, void *addr,
-    std::size_t bytes, unsigned mode, const char *sourceFile, int sourceLine) {
-  Terminator terminator{sourceFile, sourceLine};
-  terminator.Crash(
-      "not yet implemented: CUDA data transfer from a pointer to a descriptor");
-}
-
-void RTDEF(CUFDataTransferPtrDesc)(void *addr, const Descriptor &desc,
+void RTDEF(CUFDataTransferPtrDesc)(void *addr, Descriptor *desc,
     std::size_t bytes, unsigned mode, const char *sourceFile, int sourceLine) {
   Terminator terminator{sourceFile, sourceLine};
   terminator.Crash(
       "not yet implemented: CUDA data transfer from a descriptor to a pointer");
 }
 
-void RTDECL(CUFDataTransferDescDesc)(const Descriptor &dstDesc,
-    const Descriptor &srcDesc, unsigned mode, const char *sourceFile,
-    int sourceLine) {
+void RTDECL(CUFDataTransferDescDesc)(Descriptor *dstDesc, Descriptor *srcDesc,
+    unsigned mode, const char *sourceFile, int sourceLine) {
+  MemmoveFct memmoveFct;
   Terminator terminator{sourceFile, sourceLine};
-  terminator.Crash(
-      "not yet implemented: CUDA data transfer between two descriptors");
+  if (mode == kHostToDevice) {
+    memmoveFct = &MemmoveHostToDevice;
+  } else if (mode == kDeviceToHost) {
+    memmoveFct = &MemmoveDeviceToHost;
+  } else if (mode == kDeviceToDevice) {
+    memmoveFct = &MemmoveDeviceToDevice;
+  } else {
+    terminator.Crash("host to host copy not supported");
+  }
+  Fortran::runtime::Assign(
+      *dstDesc, *srcDesc, terminator, MaybeReallocate, memmoveFct);
+}
+
+void RTDECL(CUFDataTransferGlobalDescDesc)(Descriptor *dstDesc,
+    Descriptor *srcDesc, unsigned mode, const char *sourceFile,
+    int sourceLine) {
+  RTNAME(CUFDataTransferDescDesc)
+  (dstDesc, srcDesc, mode, sourceFile, sourceLine);
+  if ((mode == kHostToDevice) || (mode == kDeviceToDevice)) {
+    void *deviceAddr{
+        RTNAME(CUFGetDeviceAddress)((void *)dstDesc, sourceFile, sourceLine)};
+    RTNAME(CUFDescriptorSync)
+    ((Descriptor *)deviceAddr, srcDesc, sourceFile, sourceLine);
+  }
 }
 }
 } // namespace Fortran::runtime::cuda

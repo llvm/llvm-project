@@ -9,11 +9,11 @@
 #ifndef _LIBCPP___ALGORITHM_THREE_WAY_COMP_REF_TYPE_H
 #define _LIBCPP___ALGORITHM_THREE_WAY_COMP_REF_TYPE_H
 
-#include <__assert>
-#include <__compare/ordering.h>
-#include <__config>
-#include <__utility/declval.h>
-#include <__utility/forward.h>
+#include <__cxx03/__assert>
+#include <__cxx03/__compare/ordering.h>
+#include <__cxx03/__config>
+#include <__cxx03/__utility/declval.h>
+#include <__cxx03/__utility/forward.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
