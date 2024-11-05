@@ -3008,49 +3008,6 @@ MachineBasicBlock *AArch64TargetLowering::EmitLoweredCatchRet(
 }
 
 MachineBasicBlock *
-AArch64TargetLowering::EmitLoweredSetFpmr(MachineInstr &MI,
-                                          MachineBasicBlock *MBB) const {
-  MachineFunction *MF = MBB->getParent();
-  const TargetInstrInfo *TII = Subtarget->getInstrInfo();
-  DebugLoc DL = MI.getDebugLoc();
-  const BasicBlock *LLVM_BB = MBB->getBasicBlock();
-  Register NewFpmrVal = MI.getOperand(0).getReg();
-
-  // Test if FPMR is set correctly already
-  Register OldFpmrVal =
-      MI.getMF()->getRegInfo().createVirtualRegister(&AArch64::GPR64RegClass);
-  BuildMI(*MBB, MI, DL, TII->get(AArch64::MRS), OldFpmrVal)
-      .addImm(0xda22)
-      .addUse(AArch64::FPMR, RegState::Implicit);
-  BuildMI(*MBB, MI, DL, TII->get(AArch64::SUBSXrs), AArch64::XZR)
-      .addReg(OldFpmrVal)
-      .addReg(NewFpmrVal)
-      .addImm(0);
-
-  MachineBasicBlock *MsrBB = MF->CreateMachineBasicBlock(LLVM_BB);
-  // Transfer rest of current basic-block to EndBB
-  MachineBasicBlock *EndBB = MBB->splitAt(MI);
-  MF->insert(++MBB->getIterator(), MsrBB);
-
-  // If already set continue
-  BuildMI(*MBB, MI, DL, TII->get(AArch64::Bcc))
-      .addImm(AArch64CC::EQ)
-      .addMBB(EndBB);
-
-  BuildMI(*MsrBB, MsrBB->begin(), DL, TII->get(AArch64::MSR))
-      .addImm(0xda22)
-      .addReg(NewFpmrVal)
-      .addDef(AArch64::FPMR, RegState::Implicit);
-
-  MBB->addSuccessor(MsrBB);
-  // MsrBB falls through to the end.
-  MsrBB->addSuccessor(EndBB);
-
-  MI.eraseFromParent();
-  return EndBB;
-}
-
-MachineBasicBlock *
 AArch64TargetLowering::EmitDynamicProbedAlloc(MachineInstr &MI,
                                               MachineBasicBlock *MBB) const {
   MachineFunction &MF = *MBB->getParent();
@@ -3335,8 +3292,6 @@ MachineBasicBlock *AArch64TargetLowering::EmitInstrWithCustomInserter(
     return EmitZTInstr(MI, BB, AArch64::ZERO_T, /*Op0IsDef=*/true);
   case AArch64::MOVT_TIZ_PSEUDO:
     return EmitZTInstr(MI, BB, AArch64::MOVT_TIZ, /*Op0IsDef=*/true);
-  case AArch64::SET_FPMR:
-    return EmitLoweredSetFpmr(MI, BB);
   }
 }
 
