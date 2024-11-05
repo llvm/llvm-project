@@ -4522,7 +4522,9 @@ void SelectionDAGLegalize::ConvertNodeToLibcall(SDNode *Node) {
     break;
   case ISD::FSINCOS: {
     RTLIB::Libcall LC = RTLIB::getFSINCOS(Node->getValueType(0));
-    DAG.expandMultipleResultFPLibCall(LC, Node, Results);
+    bool Expanded = DAG.expandMultipleResultFPLibCall(LC, Node, Results);
+    if (!Expanded)
+      llvm_unreachable("Expected scalar FSINCOS to expand to libcall!");
     break;
   }
   case ISD::FLOG:
@@ -4609,7 +4611,10 @@ void SelectionDAGLegalize::ConvertNodeToLibcall(SDNode *Node) {
     break;
   case ISD::FFREXP: {
     RTLIB::Libcall LC = RTLIB::getFREXP(Node->getValueType(0));
-    DAG.expandMultipleResultFPLibCall(LC, Node, Results, /*CallRetResNo=*/0);
+    bool Expanded = DAG.expandMultipleResultFPLibCall(LC, Node, Results,
+                                                      /*CallRetResNo=*/0);
+    if (!Expanded)
+      llvm_unreachable("Expected scalar FFREXP to expand to libcall!");
     break;
   }
   case ISD::FPOWI:

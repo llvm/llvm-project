@@ -2533,28 +2533,30 @@ bool SelectionDAG::expandMultipleResultFPLibCall(
   }
 
   TargetLowering::ArgListTy Args;
-  TargetLowering::ArgListEntry Entry{};
+  auto AddArgListEntry = [&](SDValue Node, Type *Ty) {
+    TargetLowering::ArgListEntry Entry{};
+    Entry.Ty = Ty;
+    Entry.Node = Node;
+    Args.push_back(Entry);
+  };
 
   // Pass the arguments.
   for (const SDValue &Op : Node->op_values()) {
     EVT ArgVT = Op.getValueType();
     Type *ArgTy = ArgVT.getTypeForEVT(Ctx);
-    Entry.Node = Node->getOperand(0);
-    Entry.Ty = ArgTy;
-    Args.push_back(Entry);
+    AddArgListEntry(Op, ArgTy);
   }
 
   // Pass the output pointers.
   SmallVector<SDValue, 2> ResultPtrs(NumResults);
+  Type *PointerTy = PointerType::getUnqual(Ctx);
   for (auto [ResNo, ST] : llvm::enumerate(ResultStores)) {
     if (ResNo == CallRetResNo)
       continue;
     EVT ResVT = Node->getValueType(ResNo);
     SDValue ResultPtr = ST ? ST->getBasePtr() : CreateStackTemporary(ResVT);
-    Entry.Node = ResultPtr;
-    Entry.Ty = PointerType::getUnqual(Ctx);
     ResultPtrs[ResNo] = ResultPtr;
-    Args.push_back(Entry);
+    AddArgListEntry(ResultPtr, PointerTy);
   }
 
   SDLoc DL(Node);
@@ -2562,9 +2564,8 @@ bool SelectionDAG::expandMultipleResultFPLibCall(
   // Pass the vector mask (if required).
   if (VD && VD->isMasked()) {
     EVT MaskVT = TLI->getSetCCResultType(getDataLayout(), Ctx, VT);
-    Entry.Node = getBoolConstant(true, DL, MaskVT, VT);
-    Entry.Ty = MaskVT.getTypeForEVT(Ctx);
-    Args.push_back(Entry);
+    SDValue Mask = getBoolConstant(true, DL, MaskVT, VT);
+    AddArgListEntry(Mask, MaskVT.getTypeForEVT(Ctx));
   }
 
   Type *RetType = CallRetResNo.has_value()
