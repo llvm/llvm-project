@@ -332,6 +332,9 @@ void ReadParamInfo(const uint8_t *&Data, ParamInfo &Info) {
   }
   Payload >>= 3;
   if (Payload & 0x01)
+    Info.setLifetimebound(Payload & 0x02);
+  Payload >>= 2;
+  if (Payload & 0x01)
     Info.setNoEscape(Payload & 0x02);
   Payload >>= 2;
   assert(Payload == 0 && "Bad API notes");

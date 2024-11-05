@@ -21,11 +21,11 @@
  */
 
 #include <clc/clc.h>
+#include <clc/clcmacro.h>
 
 #include "config.h"
 #include "math.h"
 #include "tables.h"
-#include "../clcmacro.h"
 
 //    Algorithm:
 //
