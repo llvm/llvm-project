@@ -31,7 +31,8 @@ class BottomUpVec final : public FunctionPass {
   /// \p Bndl. \p Operands are the already vectorized operands.
   Value *createVectorInstr(ArrayRef<Value *> Bndl, ArrayRef<Value *> Operands);
   void tryEraseDeadInstrs();
-  Value *vectorizeRec(ArrayRef<Value *> Bndl);
+  Value *createPack(ArrayRef<Value *> ToPack);
+  Value *vectorizeRec(ArrayRef<Value *> Bndl, unsigned Depth);
   bool tryVectorize(ArrayRef<Value *> Seeds);
 
   // The PM containing the pipeline of region passes.
