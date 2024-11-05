@@ -960,14 +960,18 @@ void VPWidenIntrinsicRecipe::execute(VPTransformState &State) {
     Args.push_back(Arg);
   }
 
-  if (VPIntrinsic::isVPIntrinsic(VectorIntrinsicID) &&
-      VectorIntrinsicID != Intrinsic::vp_select) {
-    Value *Mask =
-        State.Builder.CreateVectorSplat(State.VF, State.Builder.getTrue());
+  if (VPIntrinsic::isVPIntrinsic(VectorIntrinsicID)) {
     Value *EVL = Args.back();
     Args.pop_back();
-    Args.push_back(Mask);
-    Args.push_back(EVL);
+    // Add EVL && Mask Ops for vector-predication intrinsics.
+    if (VPIntrinsic::getMaskParamPos(VectorIntrinsicID)) {
+      Value *Mask =
+          State.Builder.CreateVectorSplat(State.VF, State.Builder.getTrue());
+      Args.push_back(Mask);
+    }
+    if (VPIntrinsic::getVectorLengthParamPos(VectorIntrinsicID)) {
+      Args.push_back(EVL);
+    }
   }
 
   // Use vector version of the intrinsic.
@@ -982,6 +986,7 @@ void VPWidenIntrinsicRecipe::execute(VPTransformState &State) {
     CI->getOperandBundlesAsDefs(OpBundles);
 
   CallInst *V = State.Builder.CreateCall(VectorF, Args, OpBundles);
+
   setFlags(V);
 
   if (!V->getType()->isVoidTy())

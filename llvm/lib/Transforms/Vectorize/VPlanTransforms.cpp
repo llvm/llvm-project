@@ -1484,13 +1484,13 @@ static void transformRecipestoEVLRecipes(VPlan &Plan, VPValue &EVL) {
               .Case<VPWidenIntrinsicRecipe>(
                   [&](VPWidenIntrinsicRecipe *CInst) -> VPRecipeBase * {
                     auto *CI = cast<CallInst>(CInst->getUnderlyingInstr());
-                    SmallVector<VPValue *> Ops(CInst->operands());
-                    Ops.push_back(&EVL);
-
                     Intrinsic::ID VPID = VPIntrinsic::getForIntrinsic(
                         CI->getCalledFunction()->getIntrinsicID());
                     if (VPID == Intrinsic::not_intrinsic)
                       return nullptr;
+
+                    SmallVector<VPValue *> Ops(CInst->operands());
+                    Ops.push_back(&EVL);
                     return new VPWidenIntrinsicRecipe(
                         *CI, VPID, Ops, CI->getType(), CI->getDebugLoc());
                   })
