@@ -337,7 +337,7 @@ void CIRGenFunction::buildAutoVarInit(const AutoVarEmission &emission) {
     assert(allocaOp && "Address should come straight out of the alloca");
 
     if (!allocaOp.use_empty())
-      allocaOp.setInitAttr(mlir::UnitAttr::get(builder.getContext()));
+      allocaOp.setInitAttr(mlir::UnitAttr::get(&getMLIRContext()));
     return;
   }
 
@@ -595,7 +595,7 @@ mlir::cir::GlobalOp CIRGenFunction::addInitializerToStaticVarDecl(
     // Given those constraints, thread in the GetGlobalOp and update it
     // directly.
     GVAddr.getAddr().setType(
-        mlir::cir::PointerType::get(builder.getContext(), Init.getType()));
+        mlir::cir::PointerType::get(&getMLIRContext(), Init.getType()));
     OldGV->erase();
   }
 

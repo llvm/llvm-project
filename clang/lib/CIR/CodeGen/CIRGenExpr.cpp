@@ -631,7 +631,7 @@ void CIRGenFunction::buildStoreOfScalar(mlir::Value value, Address addr,
     const VarDecl *VD = currVarDecl;
     assert(VD && "VarDecl expected");
     if (VD->hasInit())
-      SrcAlloca.setInitAttr(mlir::UnitAttr::get(builder.getContext()));
+      SrcAlloca.setInitAttr(mlir::UnitAttr::get(&getMLIRContext()));
   }
 
   assert(currSrcLoc && "must pass in source location");
@@ -1286,7 +1286,7 @@ LValue CIRGenFunction::buildUnaryOpLValue(const UnaryOperator *E) {
     // Tag 'load' with deref attribute.
     if (auto loadOp =
             dyn_cast<::mlir::cir::LoadOp>(Addr.getPointer().getDefiningOp())) {
-      loadOp.setIsDerefAttr(mlir::UnitAttr::get(builder.getContext()));
+      loadOp.setIsDerefAttr(mlir::UnitAttr::get(&getMLIRContext()));
     }
 
     LValue LV = LValue::makeAddr(Addr, T, BaseInfo);
@@ -1497,15 +1497,14 @@ RValue CIRGenFunction::buildCall(clang::QualType CalleeType,
     // get non-variadic function type
     CalleeTy = mlir::cir::FuncType::get(CalleeTy.getInputs(),
                                         CalleeTy.getReturnType(), false);
-    auto CalleePtrTy =
-        mlir::cir::PointerType::get(builder.getContext(), CalleeTy);
+    auto CalleePtrTy = mlir::cir::PointerType::get(&getMLIRContext(), CalleeTy);
 
     auto *Fn = Callee.getFunctionPointer();
     mlir::Value Addr;
     if (auto funcOp = llvm::dyn_cast<mlir::cir::FuncOp>(Fn)) {
       Addr = builder.create<mlir::cir::GetGlobalOp>(
           getLoc(E->getSourceRange()),
-          mlir::cir::PointerType::get(builder.getContext(),
+          mlir::cir::PointerType::get(&getMLIRContext(),
                                       funcOp.getFunctionType()),
           funcOp.getSymName());
     } else {
@@ -2675,7 +2674,7 @@ mlir::LogicalResult CIRGenFunction::buildIfOnBoolExpr(const Expr *cond,
   // one fused location that has either 2 or 4 total locations, depending
   // on else's availability.
   auto getStmtLoc = [this](const Stmt &s) {
-    return mlir::FusedLoc::get(builder.getContext(),
+    return mlir::FusedLoc::get(&getMLIRContext(),
                                {getLoc(s.getSourceRange().getBegin()),
                                 getLoc(s.getSourceRange().getEnd())});
   };
@@ -2716,7 +2715,7 @@ mlir::cir::IfOp CIRGenFunction::buildIfOnBoolExpr(
   SmallVector<mlir::Location, 2> ifLocs{thenLoc};
   if (elseLoc)
     ifLocs.push_back(*elseLoc);
-  auto loc = mlir::FusedLoc::get(builder.getContext(), ifLocs);
+  auto loc = mlir::FusedLoc::get(&getMLIRContext(), ifLocs);
 
   // Emit the code with the fully general case.
   mlir::Value condV = buildOpOnBoolExpr(loc, cond);
@@ -2825,7 +2824,7 @@ mlir::Value CIRGenFunction::buildAlloca(StringRef name, mlir::Type ty,
                                 /*var type*/ ty, name, alignIntAttr, arraySize);
     if (currVarDecl) {
       auto alloca = cast<mlir::cir::AllocaOp>(addr.getDefiningOp());
-      alloca.setAstAttr(ASTVarDeclAttr::get(builder.getContext(), currVarDecl));
+      alloca.setAstAttr(ASTVarDeclAttr::get(&getMLIRContext(), currVarDecl));
     }
   }
   return addr;
@@ -2909,8 +2908,8 @@ mlir::Value CIRGenFunction::buildLoadOfScalar(Address addr, bool isVolatile,
 
   auto Ptr = addr.getPointer();
   if (mlir::isa<mlir::cir::VoidType>(ElemTy)) {
-    ElemTy = mlir::cir::IntType::get(builder.getContext(), 8, true);
-    auto ElemPtrTy = mlir::cir::PointerType::get(builder.getContext(), ElemTy);
+    ElemTy = mlir::cir::IntType::get(&getMLIRContext(), 8, true);
+    auto ElemPtrTy = mlir::cir::PointerType::get(&getMLIRContext(), ElemTy);
     Ptr = builder.create<mlir::cir::CastOp>(loc, ElemPtrTy,
                                             mlir::cir::CastKind::bitcast, Ptr);
   }

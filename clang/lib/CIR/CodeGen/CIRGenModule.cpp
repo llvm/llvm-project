@@ -113,40 +113,38 @@ CIRGenModule::CIRGenModule(mlir::MLIRContext &context,
       VTables{*this}, openMPRuntime(new CIRGenOpenMPRuntime(*this)) {
 
   // Initialize CIR signed integer types cache.
-  SInt8Ty =
-      ::mlir::cir::IntType::get(builder.getContext(), 8, /*isSigned=*/true);
+  SInt8Ty = ::mlir::cir::IntType::get(&getMLIRContext(), 8, /*isSigned=*/true);
   SInt16Ty =
-      ::mlir::cir::IntType::get(builder.getContext(), 16, /*isSigned=*/true);
+      ::mlir::cir::IntType::get(&getMLIRContext(), 16, /*isSigned=*/true);
   SInt32Ty =
-      ::mlir::cir::IntType::get(builder.getContext(), 32, /*isSigned=*/true);
+      ::mlir::cir::IntType::get(&getMLIRContext(), 32, /*isSigned=*/true);
   SInt64Ty =
-      ::mlir::cir::IntType::get(builder.getContext(), 64, /*isSigned=*/true);
+      ::mlir::cir::IntType::get(&getMLIRContext(), 64, /*isSigned=*/true);
   SInt128Ty =
-      ::mlir::cir::IntType::get(builder.getContext(), 128, /*isSigned=*/true);
+      ::mlir::cir::IntType::get(&getMLIRContext(), 128, /*isSigned=*/true);
 
   // Initialize CIR unsigned integer types cache.
-  UInt8Ty =
-      ::mlir::cir::IntType::get(builder.getContext(), 8, /*isSigned=*/false);
+  UInt8Ty = ::mlir::cir::IntType::get(&getMLIRContext(), 8, /*isSigned=*/false);
   UInt16Ty =
-      ::mlir::cir::IntType::get(builder.getContext(), 16, /*isSigned=*/false);
+      ::mlir::cir::IntType::get(&getMLIRContext(), 16, /*isSigned=*/false);
   UInt32Ty =
-      ::mlir::cir::IntType::get(builder.getContext(), 32, /*isSigned=*/false);
+      ::mlir::cir::IntType::get(&getMLIRContext(), 32, /*isSigned=*/false);
   UInt64Ty =
-      ::mlir::cir::IntType::get(builder.getContext(), 64, /*isSigned=*/false);
+      ::mlir::cir::IntType::get(&getMLIRContext(), 64, /*isSigned=*/false);
   UInt128Ty =
-      ::mlir::cir::IntType::get(builder.getContext(), 128, /*isSigned=*/false);
+      ::mlir::cir::IntType::get(&getMLIRContext(), 128, /*isSigned=*/false);
 
-  VoidTy = ::mlir::cir::VoidType::get(builder.getContext());
+  VoidTy = ::mlir::cir::VoidType::get(&getMLIRContext());
 
   // Initialize CIR pointer types cache.
-  VoidPtrTy = ::mlir::cir::PointerType::get(builder.getContext(), VoidTy);
+  VoidPtrTy = ::mlir::cir::PointerType::get(&getMLIRContext(), VoidTy);
 
-  FP16Ty = ::mlir::cir::FP16Type::get(builder.getContext());
-  BFloat16Ty = ::mlir::cir::BF16Type::get(builder.getContext());
-  FloatTy = ::mlir::cir::SingleType::get(builder.getContext());
-  DoubleTy = ::mlir::cir::DoubleType::get(builder.getContext());
-  FP80Ty = ::mlir::cir::FP80Type::get(builder.getContext());
-  FP128Ty = ::mlir::cir::FP128Type::get(builder.getContext());
+  FP16Ty = ::mlir::cir::FP16Type::get(&getMLIRContext());
+  BFloat16Ty = ::mlir::cir::BF16Type::get(&getMLIRContext());
+  FloatTy = ::mlir::cir::SingleType::get(&getMLIRContext());
+  DoubleTy = ::mlir::cir::DoubleType::get(&getMLIRContext());
+  FP80Ty = ::mlir::cir::FP80Type::get(&getMLIRContext());
+  FP128Ty = ::mlir::cir::FP128Type::get(&getMLIRContext());
 
   // TODO: PointerWidthInBits
   PointerAlignInBytes =
@@ -156,14 +154,14 @@ CIRGenModule::CIRGenModule(mlir::MLIRContext &context,
           .getQuantity();
   // TODO: SizeSizeInBytes
   // TODO: IntAlignInBytes
-  UCharTy = ::mlir::cir::IntType::get(builder.getContext(),
+  UCharTy = ::mlir::cir::IntType::get(&getMLIRContext(),
                                       astCtx.getTargetInfo().getCharWidth(),
                                       /*isSigned=*/false);
-  UIntTy = ::mlir::cir::IntType::get(builder.getContext(),
+  UIntTy = ::mlir::cir::IntType::get(&getMLIRContext(),
                                      astCtx.getTargetInfo().getIntWidth(),
                                      /*isSigned=*/false);
   UIntPtrTy = ::mlir::cir::IntType::get(
-      builder.getContext(), astCtx.getTargetInfo().getMaxPointerWidth(),
+      &getMLIRContext(), astCtx.getTargetInfo().getMaxPointerWidth(),
       /*isSigned=*/false);
   UInt8PtrTy = builder.getPointerTo(UInt8Ty);
   UInt8PtrPtrTy = builder.getPointerTo(UInt8PtrTy);
@@ -173,7 +171,7 @@ CIRGenModule::CIRGenModule(mlir::MLIRContext &context,
   CIRAllocaAddressSpace = getTargetCIRGenInfo().getCIRAllocaAddressSpace();
 
   PtrDiffTy = ::mlir::cir::IntType::get(
-      builder.getContext(), astCtx.getTargetInfo().getMaxPointerWidth(),
+      &getMLIRContext(), astCtx.getTargetInfo().getMaxPointerWidth(),
       /*isSigned=*/true);
 
   if (langOpts.OpenCL) {
@@ -652,7 +650,7 @@ void CIRGenModule::AddGlobalCtor(mlir::cir::FuncOp Ctor, int Priority) {
   //
   // FIXME(from traditional LLVM): Type coercion of void()* types.
   Ctor->setAttr(Ctor.getGlobalCtorAttrName(),
-                mlir::cir::GlobalCtorAttr::get(builder.getContext(),
+                mlir::cir::GlobalCtorAttr::get(&getMLIRContext(),
                                                Ctor.getName(), Priority));
 }
 
@@ -668,7 +666,7 @@ void CIRGenModule::AddGlobalDtor(mlir::cir::FuncOp Dtor, int Priority,
 
   // FIXME(from traditional LLVM): Type coercion of void()* types.
   Dtor->setAttr(Dtor.getGlobalDtorAttrName(),
-                mlir::cir::GlobalDtorAttr::get(builder.getContext(),
+                mlir::cir::GlobalDtorAttr::get(&getMLIRContext(),
                                                Dtor.getName(), Priority));
 }
 
@@ -807,7 +805,7 @@ void CIRGenModule::replaceGlobal(mlir::cir::GlobalOp Old,
         if (auto GGO = dyn_cast<mlir::cir::GetGlobalOp>(Use.getUser())) {
           auto UseOpResultValue = GGO.getAddr();
           UseOpResultValue.setType(
-              mlir::cir::PointerType::get(builder.getContext(), NewTy));
+              mlir::cir::PointerType::get(&getMLIRContext(), NewTy));
         }
       }
     }
@@ -878,7 +876,7 @@ CIRGenModule::getOrCreateCIRGlobal(StringRef MangledName, mlir::Type Ty,
       if (D && !D->hasAttr<WeakAttr>()) {
         auto LT = mlir::cir::GlobalLinkageKind::ExternalLinkage;
         Entry.setLinkageAttr(
-            mlir::cir::GlobalLinkageKindAttr::get(builder.getContext(), LT));
+            mlir::cir::GlobalLinkageKindAttr::get(&getMLIRContext(), LT));
         mlir::SymbolTable::setSymbolVisibility(Entry, getMLIRVisibility(Entry));
       }
     }
@@ -1242,8 +1240,8 @@ void CIRGenModule::buildGlobalVarDefinition(const clang::VarDecl *D,
     // TODO(cir): pointer to array decay. Should this be modeled explicitly in
     // CIR?
     if (arrayTy)
-      InitType = mlir::cir::PointerType::get(builder.getContext(),
-                                             arrayTy.getEltType());
+      InitType =
+          mlir::cir::PointerType::get(&getMLIRContext(), arrayTy.getEltType());
   } else {
     assert(mlir::isa<mlir::TypedAttr>(Init) && "This should have a type");
     auto TypedInitAttr = mlir::cast<mlir::TypedAttr>(Init);
@@ -1462,7 +1460,7 @@ CIRGenModule::getConstantArrayFromStringLiteral(const StringLiteral *E) {
   for (uint64_t i = 0; i < arraySize; ++i)
     elements.push_back(mlir::cir::IntAttr::get(arrayEltTy, elementValues[i]));
 
-  auto elementsAttr = mlir::ArrayAttr::get(builder.getContext(), elements);
+  auto elementsAttr = mlir::ArrayAttr::get(&getMLIRContext(), elements);
   return builder.getConstArray(elementsAttr, arrayTy);
 }
 
@@ -1572,7 +1570,7 @@ CIRGenModule::getAddrOfConstantStringFromLiteral(const StringLiteral *S,
   auto ArrayTy = mlir::dyn_cast<mlir::cir::ArrayType>(GV.getSymType());
   assert(ArrayTy && "String literal must be array");
   auto PtrTy =
-      mlir::cir::PointerType::get(builder.getContext(), ArrayTy.getEltType());
+      mlir::cir::PointerType::get(&getMLIRContext(), ArrayTy.getEltType());
 
   return builder.getGlobalViewAttr(PtrTy, GV);
 }
@@ -1980,10 +1978,10 @@ mlir::cir::VisibilityAttr
 CIRGenModule::getGlobalVisibilityAttrFromDecl(const Decl *decl) {
   const clang::VisibilityAttr *VA = decl->getAttr<clang::VisibilityAttr>();
   mlir::cir::VisibilityAttr cirVisibility =
-      mlir::cir::VisibilityAttr::get(builder.getContext());
+      mlir::cir::VisibilityAttr::get(&getMLIRContext());
   if (VA) {
     cirVisibility = mlir::cir::VisibilityAttr::get(
-        builder.getContext(),
+        &getMLIRContext(),
         getGlobalVisibilityKindFromClangVisibility(VA->getVisibility()));
   }
   return cirVisibility;
@@ -2110,7 +2108,7 @@ void CIRGenModule::ReplaceUsesOfNonProtoTypeWithRealFunction(
                    dyn_cast<mlir::cir::GetGlobalOp>(Use.getUser())) {
       // Replace type
       getGlobalOp.getAddr().setType(mlir::cir::PointerType::get(
-          builder.getContext(), NewFn.getFunctionType()));
+          &getMLIRContext(), NewFn.getFunctionType()));
     } else {
       llvm_unreachable("NIY");
     }
@@ -2401,7 +2399,7 @@ CIRGenModule::createCIRFunction(mlir::Location loc, StringRef name,
     f = builder.create<mlir::cir::FuncOp>(loc, name, Ty);
 
     if (FD)
-      f.setAstAttr(makeFuncDeclAttr(FD, builder.getContext()));
+      f.setAstAttr(makeFuncDeclAttr(FD, &getMLIRContext()));
 
     if (FD && !FD->hasPrototype())
       f.setNoProtoAttr(builder.getUnitAttr());
@@ -2411,13 +2409,13 @@ CIRGenModule::createCIRFunction(mlir::Location loc, StringRef name,
     // A declaration gets private visibility by default, but external linkage
     // as the default linkage.
     f.setLinkageAttr(mlir::cir::GlobalLinkageKindAttr::get(
-        builder.getContext(), mlir::cir::GlobalLinkageKind::ExternalLinkage));
+        &getMLIRContext(), mlir::cir::GlobalLinkageKind::ExternalLinkage));
     mlir::SymbolTable::setSymbolVisibility(
         f, mlir::SymbolTable::Visibility::Private);
 
     // Initialize with empty dict of extra attributes.
     f.setExtraAttrsAttr(mlir::cir::ExtraFuncAttributesAttr::get(
-        builder.getContext(), builder.getDictionaryAttr({})));
+        &getMLIRContext(), builder.getDictionaryAttr({})));
 
     if (!curCGF)
       theModule.push_back(f);
@@ -2493,7 +2491,7 @@ void CIRGenModule::setCIRFunctionAttributesForDefinition(const Decl *decl,
   mlir::NamedAttrList attrs{f.getExtraAttrs().getElements().getValue()};
 
   if (!hasUnwindExceptions(getLangOpts())) {
-    auto attr = mlir::cir::NoThrowAttr::get(builder.getContext());
+    auto attr = mlir::cir::NoThrowAttr::get(&getMLIRContext());
     attrs.set(attr.getMnemonic(), attr);
   }
 
@@ -2503,23 +2501,23 @@ void CIRGenModule::setCIRFunctionAttributesForDefinition(const Decl *decl,
     // disabled, mark the function as noinline.
     if (codeGenOpts.getInlining() == CodeGenOptions::OnlyAlwaysInlining) {
       auto attr = mlir::cir::InlineAttr::get(
-          builder.getContext(), mlir::cir::InlineKind::AlwaysInline);
+          &getMLIRContext(), mlir::cir::InlineKind::AlwaysInline);
       attrs.set(attr.getMnemonic(), attr);
     }
   } else if (decl->hasAttr<NoInlineAttr>()) {
     // Add noinline if the function isn't always_inline.
-    auto attr = mlir::cir::InlineAttr::get(builder.getContext(),
+    auto attr = mlir::cir::InlineAttr::get(&getMLIRContext(),
                                            mlir::cir::InlineKind::NoInline);
     attrs.set(attr.getMnemonic(), attr);
   } else if (decl->hasAttr<AlwaysInlineAttr>()) {
     // (noinline wins over always_inline, and we can't specify both in IR)
-    auto attr = mlir::cir::InlineAttr::get(builder.getContext(),
+    auto attr = mlir::cir::InlineAttr::get(&getMLIRContext(),
                                            mlir::cir::InlineKind::AlwaysInline);
     attrs.set(attr.getMnemonic(), attr);
   } else if (codeGenOpts.getInlining() == CodeGenOptions::OnlyAlwaysInlining) {
     // If we're not inlining, then force everything that isn't always_inline
     // to carry an explicit noinline attribute.
-    auto attr = mlir::cir::InlineAttr::get(builder.getContext(),
+    auto attr = mlir::cir::InlineAttr::get(&getMLIRContext(),
                                            mlir::cir::InlineKind::NoInline);
     attrs.set(attr.getMnemonic(), attr);
   } else {
@@ -2538,11 +2536,11 @@ void CIRGenModule::setCIRFunctionAttributesForDefinition(const Decl *decl,
       return any_of(Pattern->redecls(), CheckRedeclForInline);
     };
     if (CheckForInline(cast<FunctionDecl>(decl))) {
-      auto attr = mlir::cir::InlineAttr::get(builder.getContext(),
+      auto attr = mlir::cir::InlineAttr::get(&getMLIRContext(),
                                              mlir::cir::InlineKind::InlineHint);
       attrs.set(attr.getMnemonic(), attr);
     } else if (codeGenOpts.getInlining() == CodeGenOptions::OnlyHintInlining) {
-      auto attr = mlir::cir::InlineAttr::get(builder.getContext(),
+      auto attr = mlir::cir::InlineAttr::get(&getMLIRContext(),
                                              mlir::cir::InlineKind::NoInline);
       attrs.set(attr.getMnemonic(), attr);
     }
@@ -2559,17 +2557,17 @@ void CIRGenModule::setCIRFunctionAttributesForDefinition(const Decl *decl,
   }
 
   if (ShouldAddOptNone) {
-    auto optNoneAttr = mlir::cir::OptNoneAttr::get(builder.getContext());
+    auto optNoneAttr = mlir::cir::OptNoneAttr::get(&getMLIRContext());
     attrs.set(optNoneAttr.getMnemonic(), optNoneAttr);
 
     // OptimizeNone implies noinline; we should not be inlining such functions.
     auto noInlineAttr = mlir::cir::InlineAttr::get(
-        builder.getContext(), mlir::cir::InlineKind::NoInline);
+        &getMLIRContext(), mlir::cir::InlineKind::NoInline);
     attrs.set(noInlineAttr.getMnemonic(), noInlineAttr);
   }
 
   f.setExtraAttrsAttr(mlir::cir::ExtraFuncAttributesAttr::get(
-      builder.getContext(), attrs.getDictionary(builder.getContext())));
+      &getMLIRContext(), attrs.getDictionary(&getMLIRContext())));
 }
 
 void CIRGenModule::setCIRFunctionAttributes(GlobalDecl GD,
@@ -2584,7 +2582,7 @@ void CIRGenModule::setCIRFunctionAttributes(GlobalDecl GD,
   constructAttributeList(func.getName(), info, GD, PAL, callingConv,
                          /*AttrOnCallSite=*/false, isThunk);
   func.setExtraAttrsAttr(mlir::cir::ExtraFuncAttributesAttr::get(
-      builder.getContext(), PAL.getDictionary(builder.getContext())));
+      &getMLIRContext(), PAL.getDictionary(&getMLIRContext())));
 
   // TODO(cir): Check X86_VectorCall incompatibility with WinARM64EC
 
@@ -2820,13 +2818,13 @@ mlir::Location CIRGenModule::getLoc(SourceRange SLoc) {
   mlir::Location E = getLoc(SLoc.getEnd());
   SmallVector<mlir::Location, 2> locs = {B, E};
   mlir::Attribute metadata;
-  return mlir::FusedLoc::get(locs, metadata, builder.getContext());
+  return mlir::FusedLoc::get(locs, metadata, &getMLIRContext());
 }
 
 mlir::Location CIRGenModule::getLoc(mlir::Location lhs, mlir::Location rhs) {
   SmallVector<mlir::Location, 2> locs = {lhs, rhs};
   mlir::Attribute metadata;
-  return mlir::FusedLoc::get(locs, metadata, builder.getContext());
+  return mlir::FusedLoc::get(locs, metadata, &getMLIRContext());
 }
 
 void CIRGenModule::buildGlobalDecl(clang::GlobalDecl &D) {
@@ -2945,7 +2943,7 @@ void CIRGenModule::buildDefaultMethods() {
 }
 
 mlir::IntegerAttr CIRGenModule::getSize(CharUnits size) {
-  return builder.getSizeFromCharUnits(builder.getContext(), size);
+  return builder.getSizeFromCharUnits(&getMLIRContext(), size);
 }
 
 mlir::Operation *
@@ -3265,7 +3263,7 @@ mlir::cir::GlobalOp CIRGenModule::createOrReplaceCXXRuntimeVariable(
 
   // Set up extra information and add to the module
   GV.setLinkageAttr(
-      mlir::cir::GlobalLinkageKindAttr::get(builder.getContext(), Linkage));
+      mlir::cir::GlobalLinkageKindAttr::get(&getMLIRContext(), Linkage));
   mlir::SymbolTable::setSymbolVisibility(GV,
                                          CIRGenModule::getMLIRVisibility(GV));
 
@@ -3456,7 +3454,7 @@ LangAS CIRGenModule::getGlobalVarAddressSpace(const VarDecl *D) {
 mlir::ArrayAttr CIRGenModule::buildAnnotationArgs(const AnnotateAttr *attr) {
   ArrayRef<Expr *> exprs = {attr->args_begin(), attr->args_size()};
   if (exprs.empty()) {
-    return mlir::ArrayAttr::get(builder.getContext(), {});
+    return mlir::ArrayAttr::get(&getMLIRContext(), {});
   }
   llvm::FoldingSetNodeID id;
   for (Expr *e : exprs) {
@@ -3479,7 +3477,7 @@ mlir::ArrayAttr CIRGenModule::buildAnnotationArgs(const AnnotateAttr *attr) {
       const auto &ap = ce.getAPValueResult();
       if (ap.isInt()) {
         args.push_back(mlir::IntegerAttr::get(
-            mlir::IntegerType::get(builder.getContext(),
+            mlir::IntegerType::get(&getMLIRContext(),
                                    ap.getInt().getBitWidth()),
             ap.getInt()));
       } else {
@@ -3498,7 +3496,7 @@ mlir::cir::AnnotationAttr
 CIRGenModule::buildAnnotateAttr(const clang::AnnotateAttr *aa) {
   mlir::StringAttr annoGV = builder.getStringAttr(aa->getAnnotation());
   mlir::ArrayAttr args = buildAnnotationArgs(aa);
-  return mlir::cir::AnnotationAttr::get(builder.getContext(), annoGV, args);
+  return mlir::cir::AnnotationAttr::get(&getMLIRContext(), annoGV, args);
 }
 
 void CIRGenModule::addGlobalAnnotations(const ValueDecl *d,

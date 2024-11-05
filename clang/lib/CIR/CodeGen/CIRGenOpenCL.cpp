@@ -179,7 +179,7 @@ void CIRGenModule::genKernelArgMetadata(mlir::cir::FuncOp Fn,
     auto oldValue = items.set(value.getMnemonic(), value);
     if (oldValue != value) {
       Fn.setExtraAttrsAttr(mlir::cir::ExtraFuncAttributesAttr::get(
-          builder.getContext(), builder.getDictionaryAttr(items)));
+          &getMLIRContext(), builder.getDictionaryAttr(items)));
     }
   } else {
     if (shouldEmitArgName)
@@ -242,12 +242,12 @@ void CIRGenFunction::buildKernelMetadata(const FunctionDecl *FD,
   attrs.append(Fn.getExtraAttrs().getElements());
 
   auto kernelMetadataAttr = OpenCLKernelMetadataAttr::get(
-      builder.getContext(), workGroupSizeHintAttr, reqdWorkGroupSizeAttr,
+      &getMLIRContext(), workGroupSizeHintAttr, reqdWorkGroupSizeAttr,
       vecTypeHintAttr, vecTypeHintSignedness, intelReqdSubGroupSizeAttr);
   attrs.append(kernelMetadataAttr.getMnemonic(), kernelMetadataAttr);
 
   Fn.setExtraAttrsAttr(mlir::cir::ExtraFuncAttributesAttr::get(
-      builder.getContext(), attrs.getDictionary(builder.getContext())));
+      &getMLIRContext(), attrs.getDictionary(&getMLIRContext())));
 }
 
 void CIRGenModule::buildOpenCLMetadata() {
@@ -259,7 +259,7 @@ void CIRGenModule::buildOpenCLMetadata() {
   unsigned minor = (version % 100) / 10;
 
   auto clVersionAttr =
-      mlir::cir::OpenCLVersionAttr::get(builder.getContext(), major, minor);
+      mlir::cir::OpenCLVersionAttr::get(&getMLIRContext(), major, minor);
 
   theModule->setAttr("cir.cl.version", clVersionAttr);
 }

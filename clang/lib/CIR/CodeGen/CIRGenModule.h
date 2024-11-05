@@ -167,6 +167,7 @@ public:
   }
 
   CIRGenCXXABI &getCXXABI() const { return *ABI; }
+  mlir::MLIRContext &getMLIRContext() { return *builder.getContext(); }
 
   /// -------
   /// Handling globals
@@ -728,7 +729,7 @@ public:
   void setFunctionLinkage(GlobalDecl GD, mlir::cir::FuncOp f) {
     auto L = getFunctionLinkage(GD);
     f.setLinkageAttr(
-        mlir::cir::GlobalLinkageKindAttr::get(builder.getContext(), L));
+        mlir::cir::GlobalLinkageKindAttr::get(&getMLIRContext(), L));
     mlir::SymbolTable::setSymbolVisibility(f,
                                            getMLIRVisibilityFromCIRLinkage(L));
   }

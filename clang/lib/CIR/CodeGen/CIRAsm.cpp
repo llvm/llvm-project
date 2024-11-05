@@ -212,7 +212,7 @@ std::pair<mlir::Value, mlir::Type> CIRGenFunction::buildAsmInputLValue(
     uint64_t Size = CGM.getDataLayout().getTypeSizeInBits(Ty);
     if ((Size <= 64 && llvm::isPowerOf2_64(Size)) ||
         getTargetHooks().isScalarizableAsmOperand(*this, Ty)) {
-      Ty = mlir::cir::IntType::get(builder.getContext(), Size, false);
+      Ty = mlir::cir::IntType::get(&getMLIRContext(), Size, false);
 
       return {builder.createLoad(getLoc(Loc),
                                  InputValue.getAddress().withElementType(Ty)),
@@ -434,7 +434,7 @@ mlir::LogicalResult CIRGenFunction::buildAsmStmt(const AsmStmt &S) {
 
       if (RequiresCast) {
         unsigned Size = getContext().getTypeSize(QTy);
-        Ty = mlir::cir::IntType::get(builder.getContext(), Size, false);
+        Ty = mlir::cir::IntType::get(&getMLIRContext(), Size, false);
       }
       ResultRegTypes.push_back(Ty);
       // If this output is tied to an input, and if the input is larger, then
@@ -657,7 +657,7 @@ mlir::LogicalResult CIRGenFunction::buildAsmStmt(const AsmStmt &S) {
         assert(cast<mlir::cir::PointerType>(op.getType()).getPointee() == typ &&
                "element type differs from pointee type!");
 
-        operandAttrs.push_back(mlir::UnitAttr::get(builder.getContext()));
+        operandAttrs.push_back(mlir::UnitAttr::get(&getMLIRContext()));
       } else {
         // We need to add an attribute for every arg since later, during
         // the lowering to LLVM IR the attributes will be assigned to the

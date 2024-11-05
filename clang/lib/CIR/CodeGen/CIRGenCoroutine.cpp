@@ -175,7 +175,7 @@ mlir::cir::CallOp CIRGenFunction::buildCoroIDBuiltinCall(mlir::Location loc,
                                  int32Ty),
         /*FD=*/nullptr);
     assert(fnOp && "should always succeed");
-    fnOp.setBuiltinAttr(mlir::UnitAttr::get(builder.getContext()));
+    fnOp.setBuiltinAttr(mlir::UnitAttr::get(&getMLIRContext()));
   } else
     fnOp = cast<mlir::cir::FuncOp>(builtin);
 
@@ -197,7 +197,7 @@ CIRGenFunction::buildCoroAllocBuiltinCall(mlir::Location loc) {
                                  mlir::cir::FuncType::get({int32Ty}, boolTy),
                                  /*FD=*/nullptr);
     assert(fnOp && "should always succeed");
-    fnOp.setBuiltinAttr(mlir::UnitAttr::get(builder.getContext()));
+    fnOp.setBuiltinAttr(mlir::UnitAttr::get(&getMLIRContext()));
   } else
     fnOp = cast<mlir::cir::FuncOp>(builtin);
 
@@ -218,7 +218,7 @@ CIRGenFunction::buildCoroBeginBuiltinCall(mlir::Location loc,
         mlir::cir::FuncType::get({int32Ty, VoidPtrTy}, VoidPtrTy),
         /*FD=*/nullptr);
     assert(fnOp && "should always succeed");
-    fnOp.setBuiltinAttr(mlir::UnitAttr::get(builder.getContext()));
+    fnOp.setBuiltinAttr(mlir::UnitAttr::get(&getMLIRContext()));
   } else
     fnOp = cast<mlir::cir::FuncOp>(builtin);
 
@@ -239,7 +239,7 @@ mlir::cir::CallOp CIRGenFunction::buildCoroEndBuiltinCall(mlir::Location loc,
         mlir::cir::FuncType::get({VoidPtrTy, boolTy}, boolTy),
         /*FD=*/nullptr);
     assert(fnOp && "should always succeed");
-    fnOp.setBuiltinAttr(mlir::UnitAttr::get(builder.getContext()));
+    fnOp.setBuiltinAttr(mlir::UnitAttr::get(&getMLIRContext()));
   } else
     fnOp = cast<mlir::cir::FuncOp>(builtin);
 
@@ -254,7 +254,7 @@ CIRGenFunction::buildCoroutineBody(const CoroutineBodyStmt &S) {
 
   auto Fn = dyn_cast<mlir::cir::FuncOp>(CurFn);
   assert(Fn && "other callables NYI");
-  Fn.setCoroutineAttr(mlir::UnitAttr::get(builder.getContext()));
+  Fn.setCoroutineAttr(mlir::UnitAttr::get(&getMLIRContext()));
   auto coroId = buildCoroIDBuiltinCall(openCurlyLoc, nullPtrCst);
   createCoroData(*this, CurCoro, coroId);
 

@@ -164,7 +164,7 @@ mlir::Location CIRGenFunction::getLoc(SourceRange SLoc) {
     mlir::Location E = getLoc(SLoc.getEnd());
     SmallVector<mlir::Location, 2> locs = {B, E};
     mlir::Attribute metadata;
-    return mlir::FusedLoc::get(locs, metadata, builder.getContext());
+    return mlir::FusedLoc::get(locs, metadata, &getMLIRContext());
   } else if (currSrcLoc) {
     return *currSrcLoc;
   }
@@ -176,7 +176,7 @@ mlir::Location CIRGenFunction::getLoc(SourceRange SLoc) {
 mlir::Location CIRGenFunction::getLoc(mlir::Location lhs, mlir::Location rhs) {
   SmallVector<mlir::Location, 2> locs = {lhs, rhs};
   mlir::Attribute metadata;
-  return mlir::FusedLoc::get(locs, metadata, builder.getContext());
+  return mlir::FusedLoc::get(locs, metadata, &getMLIRContext());
 }
 
 /// Return true if the statement contains a label in it.  If
@@ -311,9 +311,9 @@ mlir::LogicalResult CIRGenFunction::declare(const Decl *var, QualType ty,
   addr = buildAlloca(namedVar->getName(), ty, loc, alignment);
   auto allocaOp = cast<mlir::cir::AllocaOp>(addr.getDefiningOp());
   if (isParam)
-    allocaOp.setInitAttr(mlir::UnitAttr::get(builder.getContext()));
+    allocaOp.setInitAttr(mlir::UnitAttr::get(&getMLIRContext()));
   if (ty->isReferenceType() || ty.isConstQualified())
-    allocaOp.setConstantAttr(mlir::UnitAttr::get(builder.getContext()));
+    allocaOp.setConstantAttr(mlir::UnitAttr::get(&getMLIRContext()));
 
   symbolTable.insert(var, addr);
   return mlir::success();
@@ -331,9 +331,9 @@ mlir::LogicalResult CIRGenFunction::declare(Address addr, const Decl *var,
   addrVal = addr.getPointer();
   auto allocaOp = cast<mlir::cir::AllocaOp>(addrVal.getDefiningOp());
   if (isParam)
-    allocaOp.setInitAttr(mlir::UnitAttr::get(builder.getContext()));
+    allocaOp.setInitAttr(mlir::UnitAttr::get(&getMLIRContext()));
   if (ty->isReferenceType() || ty.isConstQualified())
-    allocaOp.setConstantAttr(mlir::UnitAttr::get(builder.getContext()));
+    allocaOp.setConstantAttr(mlir::UnitAttr::get(&getMLIRContext()));
 
   symbolTable.insert(var, addrVal);
   return mlir::success();
@@ -682,7 +682,7 @@ CIRGenFunction::generateCode(clang::GlobalDecl GD, mlir::cir::FuncOp Fn,
   auto FnBeginLoc = bSrcLoc.isValid() ? getLoc(bSrcLoc) : unknownLoc;
   auto FnEndLoc = eSrcLoc.isValid() ? getLoc(eSrcLoc) : unknownLoc;
   const auto fusedLoc =
-      mlir::FusedLoc::get(builder.getContext(), {FnBeginLoc, FnEndLoc});
+      mlir::FusedLoc::get(&getMLIRContext(), {FnBeginLoc, FnEndLoc});
   SourceLocRAIIObject fnLoc{*this, Loc.isValid() ? getLoc(Loc) : unknownLoc};
 
   assert(Fn.isDeclaration() && "Function already has body?");
@@ -1277,7 +1277,7 @@ void CIRGenFunction::StartFunction(GlobalDecl GD, QualType RetTy,
       // We're in a lambda.
       auto Fn = dyn_cast<mlir::cir::FuncOp>(CurFn);
       assert(Fn && "other callables NYI");
-      Fn.setLambdaAttr(mlir::UnitAttr::get(builder.getContext()));
+      Fn.setLambdaAttr(mlir::UnitAttr::get(&getMLIRContext()));
 
       // Figure out the captures.
       MD->getParent()->getCaptureFields(LambdaCaptureFields,

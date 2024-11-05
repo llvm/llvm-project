@@ -1001,7 +1001,7 @@ RValue CIRGenFunction::buildBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
       Probability.convert(llvm::APFloat::IEEEdouble(),
                           llvm::RoundingMode::Dynamic, &LoseInfo);
       ProbAttr = mlir::FloatAttr::get(
-          mlir::Float64Type::get(builder.getContext()), Probability);
+          mlir::Float64Type::get(&getMLIRContext()), Probability);
     }
 
     auto result = builder.create<mlir::cir::ExpectOp>(
@@ -1176,7 +1176,7 @@ RValue CIRGenFunction::buildBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     llvm_unreachable("BI__builtin_readsteadycounter NYI");
 
   case Builtin::BI__builtin___clear_cache: {
-    mlir::Type voidTy = mlir::cir::VoidType::get(builder.getContext());
+    mlir::Type voidTy = mlir::cir::VoidType::get(&getMLIRContext());
     mlir::Value begin =
         builder.createPtrBitcast(buildScalarExpr(E->getArg(0)), voidTy);
     mlir::Value end =
@@ -1743,7 +1743,7 @@ RValue CIRGenFunction::buildBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
         EncompassingIntegerType({LeftInfo, RightInfo, ResultInfo});
 
     auto EncompassingCIRTy = mlir::cir::IntType::get(
-        builder.getContext(), EncompassingInfo.Width, EncompassingInfo.Signed);
+        &getMLIRContext(), EncompassingInfo.Width, EncompassingInfo.Signed);
     auto ResultCIRTy =
         mlir::cast<mlir::cir::IntType>(CGM.getTypes().ConvertType(ResultQTy));
 
@@ -2034,7 +2034,7 @@ RValue CIRGenFunction::buildBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     auto fnOp =
         CGM.GetOrCreateCIRFunction(ND->getName(), ty, gd, /*ForVTable=*/false,
                                    /*DontDefer=*/false);
-    fnOp.setBuiltinAttr(mlir::UnitAttr::get(builder.getContext()));
+    fnOp.setBuiltinAttr(mlir::UnitAttr::get(&getMLIRContext()));
     return buildCall(E->getCallee()->getType(), CIRGenCallee::forDirect(fnOp),
                      E, ReturnValue);
   }

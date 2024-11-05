@@ -344,8 +344,7 @@ void CIRGenModule::buildCXXGlobalVarDeclInit(const VarDecl *varDecl,
   CIRGenFunction::SourceLocRAIIObject fnLoc{cgf,
                                             getLoc(varDecl->getLocation())};
 
-  addr.setAstAttr(
-      mlir::cir::ASTVarDeclAttr::get(builder.getContext(), varDecl));
+  addr.setAstAttr(mlir::cir::ASTVarDeclAttr::get(&getMLIRContext(), varDecl));
 
   if (ty->isReferenceType()) {
     mlir::OpBuilder::InsertionGuard guard(builder);

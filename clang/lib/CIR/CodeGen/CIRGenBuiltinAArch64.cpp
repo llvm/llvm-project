@@ -2368,7 +2368,7 @@ mlir::Value CIRGenFunction::buildCommonNeonBuiltinExpr(
     mlir::cir::VectorType resTy =
         (builtinID == NEON::BI__builtin_neon_vqdmulhq_lane_v ||
          builtinID == NEON::BI__builtin_neon_vqrdmulhq_lane_v)
-            ? mlir::cir::VectorType::get(builder.getContext(), vTy.getEltType(),
+            ? mlir::cir::VectorType::get(&getMLIRContext(), vTy.getEltType(),
                                          vTy.getSize() * 2)
             : vTy;
     mlir::cir::VectorType mulVecT =
@@ -3055,73 +3055,73 @@ CIRGenFunction::buildAArch64BuiltinExpr(unsigned BuiltinID, const CallExpr *E,
   case NEON::BI__builtin_neon_vget_lane_i8:
   case NEON::BI__builtin_neon_vdupb_lane_i8:
     Ops[0] = builder.createBitcast(
-        Ops[0], mlir::cir::VectorType::get(builder.getContext(), UInt8Ty, 8));
+        Ops[0], mlir::cir::VectorType::get(&getMLIRContext(), UInt8Ty, 8));
     return builder.create<mlir::cir::VecExtractOp>(
         getLoc(E->getExprLoc()), Ops[0], buildScalarExpr(E->getArg(1)));
   case NEON::BI__builtin_neon_vgetq_lane_i8:
   case NEON::BI__builtin_neon_vdupb_laneq_i8:
     Ops[0] = builder.createBitcast(
-        Ops[0], mlir::cir::VectorType::get(builder.getContext(), UInt8Ty, 16));
+        Ops[0], mlir::cir::VectorType::get(&getMLIRContext(), UInt8Ty, 16));
     return builder.create<mlir::cir::VecExtractOp>(
         getLoc(E->getExprLoc()), Ops[0], buildScalarExpr(E->getArg(1)));
   case NEON::BI__builtin_neon_vget_lane_i16:
   case NEON::BI__builtin_neon_vduph_lane_i16:
     Ops[0] = builder.createBitcast(
-        Ops[0], mlir::cir::VectorType::get(builder.getContext(), UInt16Ty, 4));
+        Ops[0], mlir::cir::VectorType::get(&getMLIRContext(), UInt16Ty, 4));
     return builder.create<mlir::cir::VecExtractOp>(
         getLoc(E->getExprLoc()), Ops[0], buildScalarExpr(E->getArg(1)));
   case NEON::BI__builtin_neon_vgetq_lane_i16:
   case NEON::BI__builtin_neon_vduph_laneq_i16:
     Ops[0] = builder.createBitcast(
-        Ops[0], mlir::cir::VectorType::get(builder.getContext(), UInt16Ty, 8));
+        Ops[0], mlir::cir::VectorType::get(&getMLIRContext(), UInt16Ty, 8));
     return builder.create<mlir::cir::VecExtractOp>(
         getLoc(E->getExprLoc()), Ops[0], buildScalarExpr(E->getArg(1)));
   case NEON::BI__builtin_neon_vget_lane_i32:
   case NEON::BI__builtin_neon_vdups_lane_i32:
     Ops[0] = builder.createBitcast(
-        Ops[0], mlir::cir::VectorType::get(builder.getContext(), UInt32Ty, 2));
+        Ops[0], mlir::cir::VectorType::get(&getMLIRContext(), UInt32Ty, 2));
     return builder.create<mlir::cir::VecExtractOp>(
         getLoc(E->getExprLoc()), Ops[0], buildScalarExpr(E->getArg(1)));
   case NEON::BI__builtin_neon_vget_lane_f32:
   case NEON::BI__builtin_neon_vdups_lane_f32:
     Ops[0] = builder.createBitcast(
-        Ops[0], mlir::cir::VectorType::get(builder.getContext(), FloatTy, 2));
+        Ops[0], mlir::cir::VectorType::get(&getMLIRContext(), FloatTy, 2));
     return builder.create<mlir::cir::VecExtractOp>(
         getLoc(E->getExprLoc()), Ops[0], buildScalarExpr(E->getArg(1)));
   case NEON::BI__builtin_neon_vgetq_lane_i32:
   case NEON::BI__builtin_neon_vdups_laneq_i32:
     Ops[0] = builder.createBitcast(
-        Ops[0], mlir::cir::VectorType::get(builder.getContext(), UInt32Ty, 4));
+        Ops[0], mlir::cir::VectorType::get(&getMLIRContext(), UInt32Ty, 4));
     return builder.create<mlir::cir::VecExtractOp>(
         getLoc(E->getExprLoc()), Ops[0], buildScalarExpr(E->getArg(1)));
   case NEON::BI__builtin_neon_vget_lane_i64:
   case NEON::BI__builtin_neon_vdupd_lane_i64:
     Ops[0] = builder.createBitcast(
-        Ops[0], mlir::cir::VectorType::get(builder.getContext(), UInt64Ty, 1));
+        Ops[0], mlir::cir::VectorType::get(&getMLIRContext(), UInt64Ty, 1));
     return builder.create<mlir::cir::VecExtractOp>(
         getLoc(E->getExprLoc()), Ops[0], buildScalarExpr(E->getArg(1)));
   case NEON::BI__builtin_neon_vdupd_lane_f64:
   case NEON::BI__builtin_neon_vget_lane_f64:
     Ops[0] = builder.createBitcast(
-        Ops[0], mlir::cir::VectorType::get(builder.getContext(), DoubleTy, 1));
+        Ops[0], mlir::cir::VectorType::get(&getMLIRContext(), DoubleTy, 1));
     return builder.create<mlir::cir::VecExtractOp>(
         getLoc(E->getExprLoc()), Ops[0], buildScalarExpr(E->getArg(1)));
   case NEON::BI__builtin_neon_vgetq_lane_i64:
   case NEON::BI__builtin_neon_vdupd_laneq_i64:
     Ops[0] = builder.createBitcast(
-        Ops[0], mlir::cir::VectorType::get(builder.getContext(), UInt64Ty, 2));
+        Ops[0], mlir::cir::VectorType::get(&getMLIRContext(), UInt64Ty, 2));
     return builder.create<mlir::cir::VecExtractOp>(
         getLoc(E->getExprLoc()), Ops[0], buildScalarExpr(E->getArg(1)));
   case NEON::BI__builtin_neon_vgetq_lane_f32:
   case NEON::BI__builtin_neon_vdups_laneq_f32:
     Ops[0] = builder.createBitcast(
-        Ops[0], mlir::cir::VectorType::get(builder.getContext(), FloatTy, 4));
+        Ops[0], mlir::cir::VectorType::get(&getMLIRContext(), FloatTy, 4));
     return builder.create<mlir::cir::VecExtractOp>(
         getLoc(E->getExprLoc()), Ops[0], buildScalarExpr(E->getArg(1)));
   case NEON::BI__builtin_neon_vgetq_lane_f64:
   case NEON::BI__builtin_neon_vdupd_laneq_f64:
     Ops[0] = builder.createBitcast(
-        Ops[0], mlir::cir::VectorType::get(builder.getContext(), DoubleTy, 2));
+        Ops[0], mlir::cir::VectorType::get(&getMLIRContext(), DoubleTy, 2));
     return builder.create<mlir::cir::VecExtractOp>(
         getLoc(E->getExprLoc()), Ops[0], buildScalarExpr(E->getArg(1)));
   case NEON::BI__builtin_neon_vaddh_f16:

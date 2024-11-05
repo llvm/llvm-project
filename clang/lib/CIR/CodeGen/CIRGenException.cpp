@@ -708,7 +708,7 @@ mlir::Operation *CIRGenFunction::buildLandingPad(mlir::cir::TryOp tryOp) {
     assert(!(hasCatchAll && hasFilter));
     if (hasCatchAll) {
       // Attach the catch_all region. Can't coexist with an unwind one.
-      auto catchAll = mlir::cir::CatchAllAttr::get(builder.getContext());
+      auto catchAll = mlir::cir::CatchAllAttr::get(&getMLIRContext());
       clauses.push_back(catchAll);
 
       // If we have an EH filter, we need to add those handlers in the
@@ -729,13 +729,12 @@ mlir::Operation *CIRGenFunction::buildLandingPad(mlir::cir::TryOp tryOp) {
     // If there's no catch_all, attach the unwind region. This needs to be the
     // last region in the TryOp operation catch list.
     if (!hasCatchAll) {
-      auto catchUnwind = mlir::cir::CatchUnwindAttr::get(builder.getContext());
+      auto catchUnwind = mlir::cir::CatchUnwindAttr::get(&getMLIRContext());
       clauses.push_back(catchUnwind);
     }
 
     // Add final array of clauses into TryOp.
-    tryOp.setCatchTypesAttr(
-        mlir::ArrayAttr::get(builder.getContext(), clauses));
+    tryOp.setCatchTypesAttr(mlir::ArrayAttr::get(&getMLIRContext(), clauses));
   }
 
   // In traditional LLVM codegen. this tells the backend how to generate the

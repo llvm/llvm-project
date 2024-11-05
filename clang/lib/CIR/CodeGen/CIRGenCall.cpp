@@ -382,7 +382,7 @@ void CIRGenModule::constructAttributeList(StringRef Name,
   if (TargetDecl) {
 
     if (TargetDecl->hasAttr<NoThrowAttr>()) {
-      auto nu = mlir::cir::NoThrowAttr::get(builder.getContext());
+      auto nu = mlir::cir::NoThrowAttr::get(&getMLIRContext());
       funcAttrs.set(nu.getMnemonic(), nu);
     }
 
@@ -434,12 +434,11 @@ void CIRGenModule::constructAttributeList(StringRef Name,
     }
 
     if (TargetDecl->hasAttr<OpenCLKernelAttr>()) {
-      auto cirKernelAttr =
-          mlir::cir::OpenCLKernelAttr::get(builder.getContext());
+      auto cirKernelAttr = mlir::cir::OpenCLKernelAttr::get(&getMLIRContext());
       funcAttrs.set(cirKernelAttr.getMnemonic(), cirKernelAttr);
 
       auto uniformAttr = mlir::cir::OpenCLKernelUniformWorkGroupSizeAttr::get(
-          builder.getContext());
+          &getMLIRContext());
       if (getLangOpts().OpenCLVersion <= 120) {
         // OpenCL v1.2 Work groups are always uniform
         funcAttrs.set(uniformAttr.getMnemonic(), uniformAttr);
@@ -779,7 +778,7 @@ RValue CIRGenFunction::buildCall(const CIRGenFunctionInfo &CallInfo,
     CannotThrow = true;
   } else {
     // Otherwise, nounwind call sites will never throw.
-    auto noThrowAttr = mlir::cir::NoThrowAttr::get(builder.getContext());
+    auto noThrowAttr = mlir::cir::NoThrowAttr::get(&getMLIRContext());
     CannotThrow = Attrs.getNamed(noThrowAttr.getMnemonic()).has_value();
 
     if (auto fptr = dyn_cast<mlir::cir::FuncOp>(CalleePtr))
@@ -825,7 +824,7 @@ RValue CIRGenFunction::buildCall(const CIRGenFunctionInfo &CallInfo,
     }
 
     auto extraFnAttrs = mlir::cir::ExtraFuncAttributesAttr::get(
-        builder.getContext(), Attrs.getDictionary(builder.getContext()));
+        &getMLIRContext(), Attrs.getDictionary(&getMLIRContext()));
 
     mlir::cir::CIRCallOpInterface callLikeOp = buildCallLikeOp(
         *this, callLoc, indirectFuncTy, indirectFuncVal, directFuncOp,
@@ -833,7 +832,7 @@ RValue CIRGenFunction::buildCall(const CIRGenFunctionInfo &CallInfo,
 
     if (E)
       callLikeOp->setAttr(
-          "ast", mlir::cir::ASTCallExprAttr::get(builder.getContext(), *E));
+          "ast", mlir::cir::ASTCallExprAttr::get(&getMLIRContext(), *E));
 
     if (callOrTryCall)
       *callOrTryCall = callLikeOp;
