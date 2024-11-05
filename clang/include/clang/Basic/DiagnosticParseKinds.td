@@ -203,8 +203,13 @@ def err_expected_equal_designator : Error<"expected '=' or another designator">;
 def ext_gnu_old_style_field_designator : ExtWarn<
   "use of GNU old-style field designator extension">,
   InGroup<GNUDesignator>;
-def ext_gnu_case_range : Extension<"use of GNU case range extension">,
-  InGroup<GNUCaseRange>;
+def ext_gnu_case_range : Extension<
+  "case ranges are a GNU extension">, InGroup<GNUCaseRange>;
+def warn_c23_compat_case_range : Warning<
+  "case ranges are incompatible with C standards before C2y">,
+  DefaultIgnore, InGroup<CPre2yCompat>;
+def ext_c2y_case_range : Extension<
+  "case ranges are a C2y extension">, InGroup<C2y>;
 
 // Generic errors.
 def err_expected_expression : Error<"expected expression">;
