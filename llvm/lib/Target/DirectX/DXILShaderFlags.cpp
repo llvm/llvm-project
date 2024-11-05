@@ -48,18 +48,36 @@ static void updateResourceFlags(ComputedShaderFlags &Flags, Module &M,
   if (DRM.empty())
     return;
 
-  const dxil::ModuleMetadataInfo &MMDI = AM->getResult<DXILMetadataAnalysis>(M);
-  VersionTuple SM = MMDI.ShaderModelVersion;
-  Triple::EnvironmentType SP = MMDI.ShaderProfile;
-
-  // RWBuffer
   for (const ResourceInfo &RI : DRM.uavs()) {
-    if (RI.getResourceKind() == ResourceKind::TypedBuffer) {
+    switch (RI.getResourceKind()) {
+    case ResourceKind::RawBuffer:
+    case ResourceKind::StructuredBuffer:
       Flags.EnableRawAndStructuredBuffers = true;
-      Flags.ComputeShadersPlusRawAndStructuredBuffers =
-          (SP == Triple::EnvironmentType::Compute && SM.getMajor() == 4);
+      break;
+    default:
       break;
     }
+  }
+
+  for (const ResourceInfo &RI : DRM.srvs()) {
+    switch (RI.getResourceKind()) {
+    case ResourceKind::RawBuffer:
+    case ResourceKind::StructuredBuffer:
+      Flags.EnableRawAndStructuredBuffers = true;
+      break;
+    default:
+      break;
+    }
+  }
+
+  if (Flags.EnableRawAndStructuredBuffers) {
+    const dxil::ModuleMetadataInfo &MMDI =
+        AM->getResult<DXILMetadataAnalysis>(M);
+    VersionTuple SM = MMDI.ShaderModelVersion;
+    Triple::EnvironmentType SP = MMDI.ShaderProfile;
+
+    Flags.ComputeShadersPlusRawAndStructuredBuffers =
+        (SP == Triple::EnvironmentType::Compute && SM.getMajor() == 4);
   }
 }
 

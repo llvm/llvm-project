@@ -6,18 +6,18 @@ target triple = "dxil-pc-shadermodel6.3-compute"
 
 define void @test_bufferflags() {
 
-  ; RWBuffer<int> Buf : register(u7, space2)
-  %uav0 = call target("dx.TypedBuffer", i32, 1, 0, 1)
-      @llvm.dx.handle.fromBinding.tdx.TypedBuffer_i32_1_0t(
-          i32 2, i32 7, i32 1, i32 0, i1 false)
+  ; RWByteAddressBuffer Buf : register(u8, space1)
+  %uav0 = call target("dx.RawBuffer", i8, 1, 0)
+      @llvm.dx.handle.fromBinding.tdx.RawBuffer_i8_0_0t(
+          i32 1, i32 8, i32 1, i32 0, i1 false)
+
+  ret void
+}
+
+attributes #0 = { nocallback nofree nosync nounwind willreturn memory(none) }
 
 ; CHECK: ; Shader Flags Value: 0x00000010
 ; CHECK: ; Note: shader requires additional functionality:
 ; CHECK-NEXT: ; Note: extra DXIL module flags:
 ; CHECK-NEXT: ; D3D11_SB_GLOBAL_FLAG_ENABLE_RAW_AND_STRUCTURED_BUFFERS
 ; CHECK-NEXT: {{^;$}}
-
-  ret void
-}
-
-attributes #0 = { nocallback nofree nosync nounwind willreturn memory(none) }
