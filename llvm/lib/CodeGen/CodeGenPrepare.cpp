@@ -1770,8 +1770,10 @@ bool CodeGenPrepare::combineToUSubWithOverflow(CmpInst *Cmp,
 /// lose; some adjustment may be wanted there.
 ///
 /// Return true if any changes are made.
-static bool sinkCmpExpression(CmpInst *Cmp, const TargetLowering &TLI) {
-  if (TLI.hasMultipleConditionRegisters())
+static bool sinkCmpExpression(const DataLayout &DL, CmpInst *Cmp,
+                              const TargetLowering &TLI) {
+  EVT ResVT = TLI.getValueType(DL, Cmp->getType());
+  if (TLI.hasMultiplePredicateRegisters(ResVT))
     return false;
 
   // Avoid sinking soft-FP comparisons, since this can move them into a loop.
@@ -2176,7 +2178,7 @@ static bool adjustIsPower2Test(CmpInst *Cmp, const TargetLowering &TLI,
 }
 
 bool CodeGenPrepare::optimizeCmp(CmpInst *Cmp, ModifyDT &ModifiedDT) {
-  if (sinkCmpExpression(Cmp, *TLI))
+  if (sinkCmpExpression(*DL, Cmp, *TLI))
     return true;
 
   if (combineToUAddWithOverflow(Cmp, ModifiedDT))

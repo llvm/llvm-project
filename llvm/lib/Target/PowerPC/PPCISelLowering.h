@@ -1492,6 +1492,8 @@ namespace llvm {
     /// through to determine the optimal load/store instruction format.
     unsigned computeMOFlags(const SDNode *Parent, SDValue N,
                             SelectionDAG &DAG) const;
+
+    virtual bool hasMultiplePredicateRegisters(EVT VT) const override;
   }; // end class PPCTargetLowering
 
   namespace PPC {

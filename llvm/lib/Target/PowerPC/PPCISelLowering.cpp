@@ -1461,10 +1461,8 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
 
   // With 32 condition bits, we don't need to sink (and duplicate) compares
   // aggressively in CodeGenPrep.
-  if (Subtarget.useCRBits()) {
-    setHasMultipleConditionRegisters();
+  if (Subtarget.useCRBits())
     setJumpIsExpensive();
-  }
 
   // TODO: The default entry number is set to 64. This stops most jump table
   // generation on PPC. But it is good for current PPC HWs because the indirect
@@ -19136,4 +19134,10 @@ Value *PPCTargetLowering::emitMaskedAtomicCmpXchgIntrinsic(
   Hi = Builder.CreateZExt(Hi, ValTy, "hi64");
   return Builder.CreateOr(
       Lo, Builder.CreateShl(Hi, ConstantInt::get(ValTy, 64)), "val64");
+}
+
+bool PPCTargetLowering::hasMultiplePredicateRegisters(EVT VT) const {
+  // With 32 condition bits, we don't need to sink (and duplicate) compares
+  // aggressively in CodeGenPrep.
+  return Subtarget.useCRBits();
 }

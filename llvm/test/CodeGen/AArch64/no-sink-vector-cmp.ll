@@ -6,14 +6,16 @@ target triple = "aarch64-unknown-linux-gnu"
 define <4 x i32> @no_sink_simple(<4 x i32> %a, <4 x i32> %b, i1 %c, ptr %p) {
 ; CHECK-LABEL: no_sink_simple:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    cmgt v2.4s, v1.4s, v0.4s
+; CHECK-NEXT:    xtn v2.4h, v2.4s
 ; CHECK-NEXT:    tbz w0, #0, .LBB0_2
 ; CHECK-NEXT:  // %bb.1: // %s
-; CHECK-NEXT:    cmgt v1.4s, v1.4s, v0.4s
+; CHECK-NEXT:    sshll v1.4s, v2.4h, #0
 ; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    str q0, [x1]
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:  .LBB0_2: // %t
-; CHECK-NEXT:    cmgt v0.4s, v1.4s, v0.4s
+; CHECK-NEXT:    sshll v0.4s, v2.4h, #0
 ; CHECK-NEXT:    and v0.16b, v1.16b, v0.16b
 ; CHECK-NEXT:    ret
   %d = icmp slt <4 x i32> %a, %b
@@ -32,68 +34,64 @@ t:
 define void @vector_loop_with_icmp(ptr nocapture noundef writeonly %dest) {
 ; CHECK-LABEL: vector_loop_with_icmp:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov w8, #15 // =0xf
+; CHECK-NEXT:    mov w9, #15 // =0xf
 ; CHECK-NEXT:    mov w10, #4 // =0x4
-; CHECK-NEXT:    adrp x9, .LCPI1_0
+; CHECK-NEXT:    adrp x8, .LCPI1_0
 ; CHECK-NEXT:    adrp x11, .LCPI1_1
-; CHECK-NEXT:    dup v0.2d, x8
+; CHECK-NEXT:    dup v0.2d, x9
 ; CHECK-NEXT:    dup v1.2d, x10
-; CHECK-NEXT:    ldr q2, [x9, :lo12:.LCPI1_0]
+; CHECK-NEXT:    ldr q2, [x8, :lo12:.LCPI1_0]
 ; CHECK-NEXT:    ldr q3, [x11, :lo12:.LCPI1_1]
-; CHECK-NEXT:    add x9, x0, #8
-; CHECK-NEXT:    mov w10, #16 // =0x10
-; CHECK-NEXT:    mov w11, #1 // =0x1
+; CHECK-NEXT:    add x8, x0, #8
+; CHECK-NEXT:    mov w9, #16 // =0x10
+; CHECK-NEXT:    mov w10, #1 // =0x1
 ; CHECK-NEXT:    b .LBB1_2
 ; CHECK-NEXT:  .LBB1_1: // %pred.store.continue18
 ; CHECK-NEXT:    // in Loop: Header=BB1_2 Depth=1
 ; CHECK-NEXT:    add v2.2d, v2.2d, v1.2d
 ; CHECK-NEXT:    add v3.2d, v3.2d, v1.2d
-; CHECK-NEXT:    subs x10, x10, #4
-; CHECK-NEXT:    add x9, x9, #16
+; CHECK-NEXT:    subs x9, x9, #4
+; CHECK-NEXT:    add x8, x8, #16
 ; CHECK-NEXT:    b.eq .LBB1_10
 ; CHECK-NEXT:  .LBB1_2: // %vector.body
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    cmhi v4.2d, v0.2d, v3.2d
-; CHECK-NEXT:    xtn v4.2s, v4.2d
-; CHECK-NEXT:    uzp1 v4.4h, v4.4h, v0.4h
-; CHECK-NEXT:    umov w12, v4.h[0]
-; CHECK-NEXT:    tbz w12, #0, .LBB1_4
-; CHECK-NEXT:  // %bb.3: // %pred.store.if
+; CHECK-NEXT:    cmhi v4.2d, v0.2d, v2.2d
+; CHECK-NEXT:    cmhi v5.2d, v0.2d, v3.2d
+; CHECK-NEXT:    uzp1 v4.4s, v5.4s, v4.4s
+; CHECK-NEXT:    xtn v4.4h, v4.4s
+; CHECK-NEXT:    umov w11, v4.h[0]
+; CHECK-NEXT:    tbnz w11, #0, .LBB1_6
+; CHECK-NEXT:  // %bb.3: // %pred.store.continue
 ; CHECK-NEXT:    // in Loop: Header=BB1_2 Depth=1
-; CHECK-NEXT:    stur w11, [x9, #-8]
-; CHECK-NEXT:  .LBB1_4: // %pred.store.continue
+; CHECK-NEXT:    umov w11, v4.h[1]
+; CHECK-NEXT:    tbnz w11, #0, .LBB1_7
+; CHECK-NEXT:  .LBB1_4: // %pred.store.continue6
 ; CHECK-NEXT:    // in Loop: Header=BB1_2 Depth=1
-; CHECK-NEXT:    dup v4.2d, x8
-; CHECK-NEXT:    cmhi v4.2d, v4.2d, v3.2d
-; CHECK-NEXT:    xtn v4.2s, v4.2d
-; CHECK-NEXT:    uzp1 v4.4h, v4.4h, v0.4h
-; CHECK-NEXT:    umov w12, v4.h[1]
-; CHECK-NEXT:    tbz w12, #0, .LBB1_6
-; CHECK-NEXT:  // %bb.5: // %pred.store.if5
+; CHECK-NEXT:    umov w11, v4.h[2]
+; CHECK-NEXT:    tbnz w11, #0, .LBB1_8
+; CHECK-NEXT:  .LBB1_5: // %pred.store.continue8
 ; CHECK-NEXT:    // in Loop: Header=BB1_2 Depth=1
-; CHECK-NEXT:    stur w11, [x9, #-4]
-; CHECK-NEXT:  .LBB1_6: // %pred.store.continue6
+; CHECK-NEXT:    umov w11, v4.h[3]
+; CHECK-NEXT:    tbz w11, #0, .LBB1_1
+; CHECK-NEXT:    b .LBB1_9
+; CHECK-NEXT:  .LBB1_6: // %pred.store.if
 ; CHECK-NEXT:    // in Loop: Header=BB1_2 Depth=1
-; CHECK-NEXT:    dup v4.2d, x8
-; CHECK-NEXT:    cmhi v4.2d, v4.2d, v2.2d
-; CHECK-NEXT:    xtn v4.2s, v4.2d
-; CHECK-NEXT:    uzp1 v4.4h, v0.4h, v4.4h
-; CHECK-NEXT:    umov w12, v4.h[2]
-; CHECK-NEXT:    tbz w12, #0, .LBB1_8
-; CHECK-NEXT:  // %bb.7: // %pred.store.if7
+; CHECK-NEXT:    stur w10, [x8, #-8]
+; CHECK-NEXT:    umov w11, v4.h[1]
+; CHECK-NEXT:    tbz w11, #0, .LBB1_4
+; CHECK-NEXT:  .LBB1_7: // %pred.store.if5
 ; CHECK-NEXT:    // in Loop: Header=BB1_2 Depth=1
-; CHECK-NEXT:    str w11, [x9]
-; CHECK-NEXT:  .LBB1_8: // %pred.store.continue8
+; CHECK-NEXT:    stur w10, [x8, #-4]
+; CHECK-NEXT:    umov w11, v4.h[2]
+; CHECK-NEXT:    tbz w11, #0, .LBB1_5
+; CHECK-NEXT:  .LBB1_8: // %pred.store.if7
 ; CHECK-NEXT:    // in Loop: Header=BB1_2 Depth=1
-; CHECK-NEXT:    dup v4.2d, x8
-; CHECK-NEXT:    cmhi v4.2d, v4.2d, v2.2d
-; CHECK-NEXT:    xtn v4.2s, v4.2d
-; CHECK-NEXT:    uzp1 v4.4h, v0.4h, v4.4h
-; CHECK-NEXT:    umov w12, v4.h[3]
-; CHECK-NEXT:    tbz w12, #0, .LBB1_1
-; CHECK-NEXT:  // %bb.9: // %pred.store.if9
+; CHECK-NEXT:    str w10, [x8]
+; CHECK-NEXT:    umov w11, v4.h[3]
+; CHECK-NEXT:    tbz w11, #0, .LBB1_1
+; CHECK-NEXT:  .LBB1_9: // %pred.store.if9
 ; CHECK-NEXT:    // in Loop: Header=BB1_2 Depth=1
-; CHECK-NEXT:    str w11, [x9, #4]
+; CHECK-NEXT:    str w10, [x8, #4]
 ; CHECK-NEXT:    b .LBB1_1
 ; CHECK-NEXT:  .LBB1_10: // %for.cond.cleanup
 ; CHECK-NEXT:    ret
