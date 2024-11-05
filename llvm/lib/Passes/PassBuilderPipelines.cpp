@@ -1830,10 +1830,10 @@ PassBuilder::buildLTODefaultPipeline(OptimizationLevel Level,
 
     // Promoting by-reference arguments to by-value exposes more constants to
     // IPSCCP.
-    MPM.addPass(
-        createModuleToPostOrderCGSCCPassAdaptor(PostOrderFunctionAttrsPass()));
-    MPM.addPass(
-        createModuleToPostOrderCGSCCPassAdaptor(ArgumentPromotionPass()));
+    CGSCCPassManager CGPM;
+    CGPM.addPass(PostOrderFunctionAttrsPass());
+    CGPM.addPass(ArgumentPromotionPass());
+    MPM.addPass(createModuleToPostOrderCGSCCPassAdaptor(std::move(CGPM)));
     MPM.addPass(
         createModuleToFunctionPassAdaptor(SROAPass(SROAOptions::ModifyCFG)));
 
