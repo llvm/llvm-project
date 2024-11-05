@@ -344,7 +344,7 @@ static LogicalResult getFuncOpsOrderedByCalls(
   }
 
   // Put all other functions in the list of remaining functions. These are
-  // functions that call each each circularly.
+  // functions that call each other circularly.
   for (auto it : numberCallOpsContainedInFuncOp)
     remainingFuncOps.push_back(it.first);
 
@@ -387,8 +387,13 @@ mlir::bufferization::analyzeModuleOp(ModuleOp moduleOp,
          "expected that function boundary bufferization is activated");
   FuncAnalysisState &funcState = getOrCreateFuncAnalysisState(state);
 
-  // A list of functions in the order in which they are analyzed + bufferized.
-  SmallVector<func::FuncOp> orderedFuncOps, remainingFuncOps;
+  // A list of non-circular functions in the order in which they are analyzed
+  // and bufferized.
+  SmallVector<func::FuncOp> orderedFuncOps;
+  // A list of all other functions. I.e., functions that call each other
+  // recursively. For these, we analyze the function body but not the function
+  // boundary.
+  SmallVector<func::FuncOp> remainingFuncOps;
 
   // A mapping of FuncOps to their callers.
   FuncCallerMap callerMap;
@@ -397,8 +402,8 @@ mlir::bufferization::analyzeModuleOp(ModuleOp moduleOp,
                                       remainingFuncOps, callerMap)))
     return failure();
 
-  // Analyze ops in order. Starting with functions that are not calling any
-  // other functions.
+  // Analyze functions in order. Starting with functions that are not calling
+  // any other functions.
   for (func::FuncOp funcOp : orderedFuncOps) {
     if (!state.getOptions().isOpAllowed(funcOp))
       continue;
@@ -422,7 +427,7 @@ mlir::bufferization::analyzeModuleOp(ModuleOp moduleOp,
     funcState.analyzedFuncOps[funcOp] = FuncOpAnalysisState::Analyzed;
   }
 
-  // Analyze all other ops.
+  // Analyze all other functions. All function boundary analyses are skipped.
   for (func::FuncOp funcOp : remainingFuncOps) {
     if (!state.getOptions().isOpAllowed(funcOp))
       continue;
@@ -459,8 +464,13 @@ LogicalResult mlir::bufferization::bufferizeModuleOp(
          "expected that function boundary bufferization is activated");
   IRRewriter rewriter(moduleOp.getContext());
 
-  // A list of functions in the order in which they are analyzed + bufferized.
-  SmallVector<func::FuncOp> orderedFuncOps, remainingFuncOps;
+  // A list of non-circular functions in the order in which they are analyzed
+  // and bufferized.
+  SmallVector<func::FuncOp> orderedFuncOps;
+  // A list of all other functions. I.e., functions that call each other
+  // recursively. For these, we analyze the function body but not the function
+  // boundary.
+  SmallVector<func::FuncOp> remainingFuncOps;
 
   // A mapping of FuncOps to their callers.
   FuncCallerMap callerMap;
