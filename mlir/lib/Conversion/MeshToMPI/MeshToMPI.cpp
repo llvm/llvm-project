@@ -75,8 +75,8 @@ struct ConvertUpdateHaloOp
     auto opSplitAxes = op.getSplitAxes().getAxes();
     auto mesh = op.getMesh();
     auto meshOp = getMesh(op, symbolTableCollection);
-    auto haloSizes = getMixedValues(op.getStaticHaloSizes(),
-                                    op.getHaloSizes(), rewriter);
+    auto haloSizes =
+        getMixedValues(op.getStaticHaloSizes(), op.getHaloSizes(), rewriter);
     // subviews need Index values
     for (auto &sz : haloSizes) {
       if (sz.is<Value>()) {
