@@ -161,12 +161,13 @@ BlockT *LoopBase<BlockT, LoopT>::getUniqueExitBlock() const {
 
 template <class BlockT, class LoopT>
 BlockT *LoopBase<BlockT, LoopT>::getUniqueLatchExitBlock() const {
-  const BlockT *Latch = getLoopLatch();
+  BlockT *Latch = getLoopLatch();
   assert(Latch && "Latch block must exists");
-  SmallVector<BlockT *, 4> ExitBlocks;
-  getUniqueExitBlocksHelper(this, ExitBlocks,
-                            [Latch](const BlockT *BB) { return BB == Latch; });
-  return ExitBlocks.size() == 1 ? ExitBlocks[0] : nullptr;
+  auto IsExitBlock = [&](BlockT *BB, bool AllowRepeats) -> BlockT * {
+    assert(!AllowRepeats && "Unexpected parameter value.");
+    return !contains(BB) ? BB : nullptr;
+  };
+  return find_singleton<BlockT>(children<BlockT *>(Latch), IsExitBlock);
 }
 
 /// getExitEdges - Return all pairs of (_inside_block_,_outside_block_).
