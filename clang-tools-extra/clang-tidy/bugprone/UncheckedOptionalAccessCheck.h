@@ -12,7 +12,6 @@
 #include "../ClangTidyCheck.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Analysis/FlowSensitive/Models/UncheckedOptionalAccessModel.h"
-#include <optional>
 
 namespace clang::tidy::bugprone {
 
@@ -30,6 +29,7 @@ public:
             Options.getLocalOrGlobal("IgnoreSmartPointerDereference", false)} {}
   void registerMatchers(ast_matchers::MatchFinder *Finder) override;
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
+  void onStartOfTranslationUnit() override;
   bool isLanguageVersionSupported(const LangOptions &LangOpts) const override {
     return LangOpts.CPlusPlus;
   }
@@ -40,6 +40,12 @@ public:
 
 private:
   dataflow::UncheckedOptionalAccessModelOptions ModelOptions;
+
+  // Records whether the current TU includes the googletest headers, in which
+  // case we assume it is a test TU of some sort. The googletest assertion
+  // macros are not currently recognized, so we have many false positives in
+  // tests. So, we disable checking for all test TUs.
+  bool is_test_tu_ = false;
 };
 
 } // namespace clang::tidy::bugprone

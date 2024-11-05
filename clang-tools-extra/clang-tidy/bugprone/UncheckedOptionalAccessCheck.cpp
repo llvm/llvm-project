@@ -40,10 +40,27 @@ void UncheckedOptionalAccessCheck::registerMatchers(MatchFinder *Finder) {
       this);
 }
 
+void UncheckedOptionalAccessCheck::onStartOfTranslationUnit() {
+  // Reset the flag for each TU.
+  is_test_tu_ = false;
+}
+
 void UncheckedOptionalAccessCheck::check(
     const MatchFinder::MatchResult &Result) {
-  if (Result.SourceManager->getDiagnostics().hasUncompilableErrorOccurred())
+  // The googletest assertion macros are not currently recognized, so we have
+  // many false positives in tests. So, do not check functions in a test TU.
+  if (is_test_tu_ ||
+      Result.SourceManager->getDiagnostics().hasUncompilableErrorOccurred())
     return;
+
+  // Look for two (public) googletest macros; if found, we'll mark this TU as a
+  // test TU. We look for ASSERT_TRUE because it is a problematic macro that
+  // we don't (yet) support, and GTEST_TEST to disambiguate ASSERT_TRUE.
+  if (Result.Context->Idents.get("ASSERT_TRUE").hasMacroDefinition() &&
+      Result.Context->Idents.get("GTEST_TEST").hasMacroDefinition()) {
+    is_test_tu_ = true;
+    return;
+  }
 
   const auto *FuncDecl = Result.Nodes.getNodeAs<FunctionDecl>(FuncID);
   if (FuncDecl->isTemplated())
