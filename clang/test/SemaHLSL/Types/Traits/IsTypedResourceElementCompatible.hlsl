@@ -107,3 +107,5 @@ struct TypeDefTest {
 };
 
 _Static_assert(__builtin_hlsl_is_typed_resource_element_compatible(TypeDefTest), "");
+
+
