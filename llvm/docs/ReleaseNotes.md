@@ -56,6 +56,8 @@ Makes programs 10x faster by doing Special New Thing.
 Changes to the LLVM IR
 ----------------------
 
+* Types are no longer allowed to be recursive.
+
 * The `x86_mmx` IR type has been removed. It will be translated to
   the standard vector type `<1 x i64>` in bitcode upgrade.
 * Renamed `llvm.experimental.stepvector` intrinsic to `llvm.stepvector`.
@@ -163,6 +165,9 @@ Changes to the MIPS Backend
 
 Changes to the PowerPC Backend
 ------------------------------
+
+* The Linux `ppc64` LLC default cpu is updated from `ppc` to `ppc64`.
+* The AIX LLC default cpu is updated from `generic` to `pwr7`.
 
 Changes to the RISC-V Backend
 -----------------------------

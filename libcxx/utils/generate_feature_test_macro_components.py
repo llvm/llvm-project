@@ -1196,7 +1196,6 @@ feature_test_macros = [
             "name": "__cpp_lib_smart_ptr_for_overwrite",
             "values": {"c++20": 202002},
             "headers": ["memory"],
-            "unimplemented": True,
         },
         {
             "name": "__cpp_lib_smart_ptr_owner_equality",

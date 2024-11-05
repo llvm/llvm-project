@@ -732,8 +732,9 @@ TEST(VPBasicBlockTest, print) {
 
   LLVMContext C;
   auto *ScalarHeader = BasicBlock::Create(C, "");
-  VPIRBasicBlock *ScalarHeaderVPBB = new VPIRBasicBlock(ScalarHeader);
-  VPlan Plan(VPBB0, TC, VPBB1, ScalarHeaderVPBB);
+  // FIXME: This looks wrong.
+  auto ScalarHeaderVPBB = std::make_unique<VPIRBasicBlock>(ScalarHeader);
+  VPlan Plan(VPBB0, TC, VPBB1, ScalarHeaderVPBB.get());
   std::string FullDump;
   raw_string_ostream OS(FullDump);
   Plan.printDOT(OS);
