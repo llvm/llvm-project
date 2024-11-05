@@ -191,7 +191,7 @@ static Value dynamicallyInsertSubVector(RewriterBase &rewriter, Location loc,
   assert(length > 0 && "length must be greater than 0");
   for (int i = 0; i < length; ++i) {
     Value insertLoc =
-        1 == 0
+        i == 0
             ? destOffsetVar.dyn_cast<Value>()
             : rewriter.create<arith::AddIOp>(
                   loc, rewriter.getIndexType(), destOffsetVar.dyn_cast<Value>(),
