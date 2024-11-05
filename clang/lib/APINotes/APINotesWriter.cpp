@@ -1059,6 +1059,12 @@ void emitParamInfo(raw_ostream &OS, const ParamInfo &PI) {
     if (*noescape)
       flags |= 0x02;
   }
+  flags <<= 2;
+  if (auto lifetimebound = PI.isLifetimebound()) {
+    flags |= 0x01;
+    if (*lifetimebound)
+      flags |= 0x02;
+  }
   flags <<= 3;
   if (auto RCC = PI.getRetainCountConvention())
     flags |= static_cast<uint8_t>(RCC.value()) + 1;
