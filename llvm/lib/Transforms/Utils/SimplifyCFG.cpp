@@ -7460,8 +7460,8 @@ template <> struct DenseMapInfo<const CaseHandleWrapper *> {
     return static_cast<CaseHandleWrapper *>(
         DenseMapInfo<void *>::getTombstoneKey());
   }
-  static unsigned getHashValue(const CaseHandleWrapper *CT) {
-    BasicBlock *Succ = CT->Case.getCaseSuccessor();
+  static unsigned getHashValue(const CaseHandleWrapper *CHW) {
+    BasicBlock *Succ = CHW->Case.getCaseSuccessor();
     BranchInst *BI = cast<BranchInst>(Succ->getTerminator());
     assert(BI->isUnconditional() &&
            "Only supporting unconditional branches for now");
@@ -7478,7 +7478,7 @@ template <> struct DenseMapInfo<const CaseHandleWrapper *> {
     BasicBlock *BB = BI->getSuccessor(0);
     SmallVector<Value *> PhiValsForBB;
     for (PHINode &Phi : BB->phis())
-      PhiValsForBB.emplace_back(CT->PhiPredIVs[&Phi][BB]);
+      PhiValsForBB.emplace_back(CHW->PhiPredIVs[&Phi][BB]);
 
     return hash_combine(
         BB, hash_combine_range(PhiValsForBB.begin(), PhiValsForBB.end()));
@@ -7530,8 +7530,8 @@ bool SimplifyCFGOpt::simplifyDuplicateSwitchArms(SwitchInst *SI) {
   SmallPtrSet<PHINode *, 8> Phis;
   SmallPtrSet<BasicBlock *, 8> Seen;
   DenseMap<PHINode *, DenseMap<BasicBlock *, Value *>> PhiPredIVs;
-  SmallVector<CaseHandleWrapper> Cases;
-  for (auto Case : SI->cases()) {
+  std::vector<CaseHandleWrapper> Cases;
+  for (auto &Case : SI->cases()) {
     BasicBlock *BB = Case.getCaseSuccessor();
 
     // FIXME: Support more than just a single BranchInst. One way we could do
@@ -7555,8 +7555,7 @@ bool SimplifyCFGOpt::simplifyDuplicateSwitchArms(SwitchInst *SI) {
     if (!BI || BI->isConditional())
       continue;
 
-    if (!Seen.contains(BB)) {
-      Seen.insert(BB);
+    if (Seen.insert(BB).second) {
       // Keep track of which PHIs we need as keys in PhiPredIVs below.
       for (BasicBlock *Succ : BI->successors())
         for (PHINode &Phi : Succ->phis())
@@ -7566,7 +7565,8 @@ bool SimplifyCFGOpt::simplifyDuplicateSwitchArms(SwitchInst *SI) {
   }
 
   for (PHINode *Phi : Phis) {
-    PhiPredIVs[Phi] = DenseMap<BasicBlock *, Value *>();
+    PhiPredIVs[Phi] =
+        DenseMap<BasicBlock *, Value *>(Phi->getNumIncomingValues());
     for (auto &IV : Phi->incoming_values())
       PhiPredIVs[Phi].insert({Phi->getIncomingBlock(IV), IV.get()});
   }
@@ -7580,14 +7580,15 @@ bool SimplifyCFGOpt::simplifyDuplicateSwitchArms(SwitchInst *SI) {
   // nested loop since there is no O(1) lookup of BasicBlock -> Cases in
   // SwichInst.
   DenseSet<const CaseHandleWrapper *, DenseMapInfo<const CaseHandleWrapper *>>
-      ReplaceWith;
+      ReplaceWith(Cases.size());
+
   bool MadeChange = false;
   for (auto &CHW : Cases) {
     // CHW is a candidate for simplification. If we find a duplicate BB,
     // replace it.
-    const auto Res = ReplaceWith.find(&CHW);
-    if (Res != ReplaceWith.end()) {
-      CHW.Case.setSuccessor((*Res)->Case.getCaseSuccessor());
+    const auto [It, Inserted] = ReplaceWith.insert(&CHW);
+    if (!Inserted) {
+      CHW.Case.setSuccessor((*It)->Case.getCaseSuccessor());
       MadeChange = true;
     } else {
       ReplaceWith.insert(&CHW);
