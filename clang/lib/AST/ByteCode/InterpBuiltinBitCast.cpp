@@ -26,8 +26,8 @@ using namespace clang;
 using namespace clang::interp;
 
 /// Used to iterate over pointer fields.
-using DataFunc =
-    llvm::function_ref<bool(const Pointer &P, PrimType Ty, size_t BitOffset)>;
+using DataFunc = llvm::function_ref<bool(const Pointer &P, PrimType Ty,
+                                         size_t BitOffset, bool PackedBools)>;
 
 #define BITCAST_TYPE_SWITCH(Expr, B)                                           \
   do {                                                                         \
@@ -89,6 +89,7 @@ struct BitcastBuffer {
 
   std::byte *getBytes(unsigned BitOffset) const {
     assert(BitOffset % 8 == 0);
+    assert(BitOffset < SizeInBits);
     return const_cast<std::byte *>(data() + (BitOffset / 8));
   }
 
@@ -147,7 +148,7 @@ static bool enumerateData(const Pointer &P, const Context &Ctx, size_t Offset,
 
   // Primitives.
   if (FieldDesc->isPrimitive())
-    return F(P, FieldDesc->getPrimType(), Offset);
+    return F(P, FieldDesc->getPrimType(), Offset, false);
 
   // Primitive arrays.
   if (FieldDesc->isPrimitiveArray()) {
@@ -155,10 +156,12 @@ static bool enumerateData(const Pointer &P, const Context &Ctx, size_t Offset,
     QualType ElemType = FieldDesc->getElemQualType();
     size_t ElemSizeInBits = Ctx.getASTContext().getTypeSize(ElemType);
     PrimType ElemT = *Ctx.classify(ElemType);
+    // Special case, since the bools here are packed.
+    bool PackedBools = FieldDesc->getType()->isExtVectorBoolType();
     bool Ok = true;
     for (unsigned I = 0; I != FieldDesc->getNumElems(); ++I) {
       unsigned Index = BigEndianTarget ? (FieldDesc->getNumElems() - 1 - I) : I;
-      Ok = Ok && F(P.atIndex(Index), ElemT, Offset);
+      Ok = Ok && F(P.atIndex(Index), ElemT, Offset, PackedBools);
       Offset += ElemSizeInBits;
     }
     return Ok;
@@ -302,7 +305,8 @@ static bool readPointerToBuffer(const Context &Ctx, const Pointer &FromPtr,
 
   return enumeratePointerFields(
       FromPtr, Ctx,
-      [&](const Pointer &P, PrimType T, size_t BitOffset) -> bool {
+      [&](const Pointer &P, PrimType T, size_t BitOffset,
+          bool PackedBools) -> bool {
         if (!P.isInitialized()) {
           assert(false && "Implement uninitialized value tracking");
           return ReturnOnUninit;
@@ -334,6 +338,8 @@ static bool readPointerToBuffer(const Context &Ctx, const Pointer &FromPtr,
         } else {
           if (const FieldDecl *FD = P.getField(); FD && FD->isBitField())
             BitWidth = FD->getBitWidthValue(ASTCtx);
+          else if (T == PT_Bool && PackedBools)
+            BitWidth = 1;
 
           BITCAST_TYPE_SWITCH(T, {
             T Val = P.deref<T>();
@@ -401,7 +407,7 @@ bool clang::interp::DoBitCastPtr(InterpState &S, CodePtr OpPC,
   size_t BitOffset = 0;
   bool Success = enumeratePointerFields(
       ToPtr, S.getContext(),
-      [&](const Pointer &P, PrimType T, size_t _) -> bool {
+      [&](const Pointer &P, PrimType T, size_t _, bool PackedBools) -> bool {
         if (T == PT_Float) {
           CharUnits ObjectReprChars = ASTCtx.getTypeSizeInChars(P.getType());
           const auto &Semantics = ASTCtx.getFloatTypeSemantics(P.getType());
