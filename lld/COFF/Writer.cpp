@@ -1204,7 +1204,6 @@ void Writer::createMiscChunks() {
   bool writePgu = !writePgi && searchForPgoMagicSection(pguSectionName);
   bool writeLTO = ctx.bitcodeFileInstances.size();
 
-
   for (MergeChunk *p : ctx.mergeChunkInstances) {
     if (p) {
       p->finalizeContents();
@@ -1245,7 +1244,6 @@ void Writer::createMiscChunks() {
                               make<ExtendedDllCharacteristicsChunk>(
                                   IMAGE_DLL_CHARACTERISTICS_EX_CET_COMPAT));
   }
-
 
   if (writeLTO) {
     debugRecords.emplace_back(COFF::IMAGE_DEBUG_TYPE_POGO,
