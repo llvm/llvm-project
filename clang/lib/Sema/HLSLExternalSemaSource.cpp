@@ -305,7 +305,8 @@ struct TemplateParameterListBuilder {
 
   TemplateParameterListBuilder &
   addTypeParameter(StringRef Name, QualType DefaultValue = QualType()) {
-    assert(!Builder.Record->isCompleteDefinition() && "record is already complete");
+    assert(!Builder.Record->isCompleteDefinition() &&
+           "record is already complete");
     ASTContext &AST = Builder.S.getASTContext();
     unsigned Position = static_cast<unsigned>(Params.size());
     auto *Decl = TemplateTypeParmDecl::Create(
@@ -490,8 +491,11 @@ public:
   }
 
   BuiltinTypeDeclBuilder &finalizeMethod() {
-    assert(!DeclBuilder.Record->isCompleteDefinition() && "record is already complete");
-    assert(Method != nullptr && "method decl not created; are you missing a call to build the body?");
+    assert(!DeclBuilder.Record->isCompleteDefinition() &&
+           "record is already complete");
+    assert(
+        Method != nullptr &&
+        "method decl not created; are you missing a call to build the body?");
 
     if (!Method->hasBody()) {
       ASTContext &AST = DeclBuilder.S.getASTContext();
@@ -532,7 +536,8 @@ BuiltinTypeDeclBuilder &
 BuiltinTypeDeclBuilder::addSimpleTemplateParams(ArrayRef<StringRef> Names) {
   if (Record->isCompleteDefinition()) {
     assert(Template && "existing record it not a template");
-    assert(Template->getTemplateParameters()->size() == Names.size() && "template param count mismatch");
+    assert(Template->getTemplateParameters()->size() == Names.size() &&
+           "template param count mismatch");
     return *this;
   }
 
