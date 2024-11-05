@@ -45,9 +45,9 @@ private:
   void printAuxiliaryHeader();
   void printAuxiliaryHeader(const XCOFFAuxiliaryHeader32 *AuxHeader);
   void printAuxiliaryHeader(const XCOFFAuxiliaryHeader64 *AuxHeader);
-  template <typename MemberOfAuxiliaryHeader, typename XCOFFAuxiliaryHeader>
+  template <typename AuxHeaderMemberType, typename XCOFFAuxiliaryHeader>
   void printAuxMemberHelper(PrintStyle Style, const char *MemberName,
-                            const MemberOfAuxiliaryHeader &Member,
+                            const AuxHeaderMemberType &Member,
                             const XCOFFAuxiliaryHeader *AuxHeader,
                             uint16_t AuxSize, uint16_t &PartialFieldOffset,
                             const char *&PartialFieldName);
@@ -57,13 +57,11 @@ private:
                                         uint16_t AuxSize,
                                         XCOFFAuxiliaryHeader &AuxHeader);
 
-  void printBinary(StringRef Name, ArrayRef<uint8_t> B);
+  void printBinary(StringRef Name, ArrayRef<uint8_t> Data);
   void printHex(StringRef Name, uint64_t Value);
   void printNumber(StringRef Name, uint64_t Value);
   FormattedString formatName(StringRef Name);
   void printStrHex(StringRef Name, StringRef Str, uint64_t Value);
-  void setWidth(unsigned W) { Width = W; };
-  unsigned getWidth() { return Width; }
 };
 
 void XCOFFDumper::printPrivateHeaders() {
@@ -88,34 +86,36 @@ void XCOFFDumper::printStrHex(StringRef Name, StringRef Str, uint64_t Value) {
          << ")\n";
 }
 
-void XCOFFDumper::printBinary(StringRef Name, ArrayRef<uint8_t> B) {
-  unsigned OrgWidth = getWidth();
-  setWidth(0);
-  outs() << formatName(Name) << " (" << format_bytes(B) << ")\n";
-  setWidth(OrgWidth);
+void XCOFFDumper::printBinary(StringRef Name, ArrayRef<uint8_t> Data) {
+  unsigned OrgWidth = Width;
+  Width = 0;
+  outs() << formatName(Name) << " (" << format_bytes(Data) << ")\n";
+  Width = OrgWidth;
 }
 
 void XCOFFDumper::printAuxiliaryHeader() {
-  setWidth(36);
+  Width = 36;
   if (Obj.is64Bit())
     printAuxiliaryHeader(Obj.auxiliaryHeader64());
   else
     printAuxiliaryHeader(Obj.auxiliaryHeader32());
 }
 
-template <typename MemberOfAuxiliaryHeader, typename XCOFFAuxiliaryHeader>
+template <typename AuxHeaderMemberType, typename XCOFFAuxiliaryHeader>
 void XCOFFDumper::printAuxMemberHelper(PrintStyle Style, const char *MemberName,
-                                       const MemberOfAuxiliaryHeader &Member,
+                                       const AuxHeaderMemberType &Member,
                                        const XCOFFAuxiliaryHeader *AuxHeader,
                                        uint16_t AuxSize,
                                        uint16_t &PartialFieldOffset,
                                        const char *&PartialFieldName) {
   ptrdiff_t Offset = reinterpret_cast<const char *>(&Member) -
                      reinterpret_cast<const char *>(AuxHeader);
-  if (Offset + sizeof(Member) <= AuxSize)
-    Style == Hex ? printHex(MemberName, Member)
-                 : printNumber(MemberName, Member);
-  else if (Offset < AuxSize) {
+  if (Offset + sizeof(Member) <= AuxSize) {
+    if (Style == Hex)
+      printHex(MemberName, Member);
+    else
+      printNumber(MemberName, Member);
+  } else if (Offset < AuxSize) {
     PartialFieldOffset = Offset;
     PartialFieldName = MemberName;
   }
@@ -264,7 +264,7 @@ void XCOFFDumper::printAuxiliaryHeader(
 }
 
 void XCOFFDumper::printFileHeader() {
-  setWidth(20);
+  Width = 20;
   outs() << "\n---File Header:\n";
   printHex("Magic:", Obj.getMagic());
   printNumber("NumberOfSections:", Obj.getNumberOfSections());

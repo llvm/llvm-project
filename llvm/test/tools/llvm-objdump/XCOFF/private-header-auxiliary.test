@@ -1,4 +1,4 @@
-## Test that `the llvm-objdump --private-headers` prints out the auxiliary header of XCOFF object file.
+## Test that `llvm-objdump --private-headers` prints out the auxiliary header of an XCOFF object file.
 # RUN: yaml2obj %s -o %t1
 # RUN: llvm-objdump --private-headers %t1 | \
 # RUN:   FileCheck %s --check-prefixes=CHECK32,COMMON --match-full-lines --strict-whitespace
@@ -99,4 +99,5 @@ Sections:
 # RUN: %python -c "with open(r'%t1_extra', 'r+b') as input: input.seek(17); input.write(b'\x4f'); input.seek(4); input.write(b'\x00')"
 # RUN: llvm-objdump --private-headers %t1_extra 2>&1 | FileCheck %s --check-prefix=EXTRA --match-full-lines --strict-whitespace
 
-# EXTRA:Extra raw data (00000000 000000)
+#     EXTRA:Extra raw data (00000000 000000)
+# EXTRA-NOT:{{.}}
