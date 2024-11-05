@@ -4159,22 +4159,36 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
     });
     SimplifyQuery Q = SQ.getWithInstruction(&SI).getWithCondContext(CC);
     if (!CC.AffectedValues.empty()) {
-      if (!isa<Constant>(TrueVal) &&
-          hasAffectedValue(TrueVal, CC.AffectedValues, /*Depth=*/0)) {
-        KnownBits Known = llvm::computeKnownBits(TrueVal, /*Depth=*/0, Q);
-        if (Known.isConstant())
-          return replaceOperand(SI, 1,
-                                ConstantInt::get(SelType, Known.getConstant()));
-      }
+      std::optional<bool> NotUndef;
+      auto SimplifyOp = [&](unsigned OpNum) -> Instruction * {
+        Value *V = SI.getOperand(OpNum);
+        if (isa<Constant>(V) ||
+            !hasAffectedValue(V, CC.AffectedValues, /*Depth=*/0))
+          return nullptr;
 
+        if (!NotUndef)
+          NotUndef = isGuaranteedNotToBeUndef(CondVal);
+
+        if (*NotUndef) {
+          unsigned BitWidth = SelType->getScalarSizeInBits();
+          KnownBits Known(BitWidth);
+          if (SimplifyDemandedBits(&SI, OpNum, APInt::getAllOnes(BitWidth),
+                                   Known, /*Depth=*/0, Q))
+            return &SI;
+        } else {
+          KnownBits Known = llvm::computeKnownBits(V, /*Depth=*/0, Q);
+          if (Known.isConstant())
+            return replaceOperand(
+                SI, OpNum, ConstantInt::get(SelType, Known.getConstant()));
+        }
+        return nullptr;
+      };
+
+      if (Instruction *Res = SimplifyOp(1))
+        return Res;
       CC.Invert = true;
-      if (!isa<Constant>(FalseVal) &&
-          hasAffectedValue(FalseVal, CC.AffectedValues, /*Depth=*/0)) {
-        KnownBits Known = llvm::computeKnownBits(FalseVal, /*Depth=*/0, Q);
-        if (Known.isConstant())
-          return replaceOperand(SI, 2,
-                                ConstantInt::get(SelType, Known.getConstant()));
-      }
+      if (Instruction *Res = SimplifyOp(2))
+        return Res;
     }
   }
 
