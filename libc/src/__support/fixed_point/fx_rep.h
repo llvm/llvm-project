@@ -297,7 +297,7 @@ template <>
 struct FXRep<unsigned long sat accum> : FXRep<unsigned long accum> {};
 
 template<typename FXRep>
-constexpr int get_value_len() {
+LIBC_INLINE constexpr int get_value_len() {
   return FXRep::INTEGRAL_LEN + FXRep::FRACTION_LEN; 
 }
 
