@@ -976,3 +976,20 @@ func.func @test_dilinearize_index(%linear_index: index) -> (index, index, index)
 // CHECK:           %[[VAL_38:.*]] = arith.select %[[VAL_36]], %[[VAL_37]], %[[VAL_34]] : index
 // CHECK:           return %[[VAL_11]], %[[VAL_32]], %[[VAL_38]] : index, index, index
 // CHECK:         }
+
+/////////////////////////////////////////////////////////////////////
+
+func.func @test_linearize_index(%arg0: index, %arg1: index, %arg2: index) -> index {
+  %ret = affine.linearize_index disjoint [%arg0, %arg1, %arg2] by (2, 3, 5) : index
+  return %ret : index
+}
+
+// CHECK-LABEL: @test_linearize_index
+// CHECK-SAME: (%[[arg0:.+]]: index, %[[arg1:.+]]: index, %[[arg2:.+]]: index)
+// CHECK: %[[c15:.+]] = arith.constant 15 : index
+// CHECK-NEXT: %[[tmp0:.+]] = arith.muli %[[arg0]], %[[c15]] : index
+// CHECK-NEXT: %[[c5:.+]] = arith.constant 5 : index
+// CHECK-NEXT: %[[tmp1:.+]] = arith.muli %[[arg1]], %[[c5]] : index
+// CHECK-NEXT: %[[tmp2:.+]] = arith.addi %[[tmp0]], %[[tmp1]] : index
+// CHECK-NEXT: %[[ret:.+]] = arith.addi %[[tmp2]], %[[arg2]] : index
+// CHECK-NEXT: return %[[ret]]
