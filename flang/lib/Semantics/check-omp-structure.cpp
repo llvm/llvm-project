@@ -2687,11 +2687,19 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Destroy &x) {
   llvm::omp::Directive dir{GetContext().directive};
   unsigned version{context_.langOptions().OpenMPVersion};
   if (dir == llvm::omp::Directive::OMPD_depobj) {
-    if (version < 52) {
-      context_.Say(GetContext().clauseSource,
-          "The object parameter in DESTROY clause in DEPOPJ construct "
-          "was introduced in %s"_port_en_US,
-          ThisVersion(52));
+    unsigned argSince{52}, noargDeprecatedIn{52};
+    if (x.v) {
+      if (version < argSince) {
+        context_.Say(GetContext().clauseSource,
+            "The object parameter in DESTROY clause on DEPOPJ construct is not allowed in %s, %s"_warn_en_US,
+            ThisVersion(version), TryVersion(argSince));
+      }
+    } else {
+      if (version >= noargDeprecatedIn) {
+        context_.Say(GetContext().clauseSource,
+            "The DESTROY clause without argument on DEPOBJ construct is deprecated in %s"_warn_en_US,
+            ThisVersion(noargDeprecatedIn));
+      }
     }
   }
 }
