@@ -560,6 +560,28 @@ public:
     return result;
   }
 
+  MPFRNumber tanpi() const {
+    MPFRNumber result(*this);
+
+#if MPFR_VERSION_MAJOR > 4 ||                                                  \
+    (MPFR_VERSION_MAJOR == 4 && MPFR_VERSION_MINOR >= 2)
+
+    mpfr_tanpi(result.value, value, mpfr_rounding);
+    return result;
+#else
+    if (mpfr_integer_p(value)) {
+      mpfr_set_si(result.value, 0, mpfr_rounding);
+      return result;
+    }
+
+    MPFRNumber value_pi(0.0, 1280);
+    mpfr_const_pi(value_pi.value, MPFR_RNDN);
+    mpfr_mul(value_pi.value, value_pi.value, value, MPFR_RNDN);
+    mpfr_tan(result.value, value_pi.value, mpfr_rounding);
+    return result;
+#endif
+  }
+  
   MPFRNumber trunc() const {
     MPFRNumber result(*this);
     mpfr_trunc(result.value, value);
@@ -798,6 +820,8 @@ unary_operation(Operation op, InputType input, unsigned int precision,
     return mpfrInput.tan();
   case Operation::Tanh:
     return mpfrInput.tanh();
+  case Operation::Tanpi:
+    return mpfrInput.tanpi();
   case Operation::Trunc:
     return mpfrInput.trunc();
   default:
