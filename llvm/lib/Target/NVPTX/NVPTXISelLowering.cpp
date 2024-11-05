@@ -5602,10 +5602,6 @@ static SDValue PerformANDCombine(SDNode *N,
     Val = Val->getOperand(0);
   }
 
-  if (Val->isMachineOpcode() && Val->getMachineOpcode() == NVPTX::IMOV16rr) {
-    Val = Val->getOperand(0);
-  }
-
   if (Val->getOpcode() == NVPTXISD::LoadV2 ||
       Val->getOpcode() == NVPTXISD::LoadV4) {
     ConstantSDNode *MaskCnst = dyn_cast<ConstantSDNode>(Mask);
