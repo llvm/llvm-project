@@ -26,7 +26,7 @@ public:
   typedef int (*CountlsFunc)(T);
 
   void testSpecialNumbers(CountlsFunc func) {
-    constexpr bool is_signed = (min != zero);
+    constexpr bool is_signed = (FXRep::SIGN_LEN > 0);
 
     EXPECT_EQ(FXRep::INTEGRAL_LEN, func(one_half));
     EXPECT_EQ(FXRep::INTEGRAL_LEN + 1, func(one_fourth));
@@ -38,8 +38,20 @@ public:
     // bits according to ISO/IEC TR 18037.
     EXPECT_EQ(is_signed ? 0 : value_len, func(min));
 
+    if (10 <= static_cast<int>(max)) {
+      EXPECT_EQ(FXRep::INTEGRAL_LEN - 4, func(10));
+    }
+    
+    if (static_cast<int>(min) <= -10) {
+      EXPECT_EQ(FXRep::INTEGRAL_LEN - 4, func(-10));
+    }
+
     if constexpr (is_signed) {
       EXPECT_EQ(value_len, func(-eps));
+      EXPECT_EQ(FXRep::INTEGRAL_LEN + 1, func(-one_half));
+      if (FXRep::FRACTION_LEN >= 2) {
+        EXPECT_EQ(FXRep::INTEGRAL_LEN + 2, func(-one_fourth));
+      }
     }
   }
 };
