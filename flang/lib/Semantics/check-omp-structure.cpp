@@ -1758,13 +1758,12 @@ void OmpStructureChecker::CheckTaskDependenceType(
 
   if (version >= deprecatedIn) {
     context_.Say(GetContext().clauseSource,
-                 "%s task-dependence-type is deprecated in %s"_warn_en_US,
-                 parser::ToUpperCaseLetters(
-                     parser::OmpTaskDependenceType::EnumToString(x)),
-                 ThisVersion(deprecatedIn));
+        "%s task-dependence-type is deprecated in %s"_warn_en_US,
+        parser::ToUpperCaseLetters(
+            parser::OmpTaskDependenceType::EnumToString(x)),
+        ThisVersion(deprecatedIn));
   } else if (version < since) {
-    context_.Say(
-        GetContext().clauseSource,
+    context_.Say(GetContext().clauseSource,
         "%s task-dependence-type is not supported in %s, %s"_warn_en_US,
         parser::ToUpperCaseLetters(
             parser::OmpTaskDependenceType::EnumToString(x)),
