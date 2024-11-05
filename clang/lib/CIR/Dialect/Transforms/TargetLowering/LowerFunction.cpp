@@ -79,6 +79,64 @@ Value enterStructPointerForCoercedAccess(Value SrcPtr, StructType SrcSTy,
                  // above.
 }
 
+/// Convert a value Val to the specific Ty where both
+/// are either integers or pointers.  This does a truncation of the value if it
+/// is too large or a zero extension if it is too small.
+///
+/// This behaves as if the value were coerced through memory, so on big-endian
+/// targets the high bits are preserved in a truncation, while little-endian
+/// targets preserve the low bits.
+static Value coerceIntOrPtrToIntOrPtr(Value val, Type typ, LowerFunction &CGF) {
+  if (val.getType() == typ)
+    return val;
+
+  auto &bld = CGF.getRewriter();
+
+  if (isa<PointerType>(val.getType())) {
+    // If this is Pointer->Pointer avoid conversion to and from int.
+    if (isa<PointerType>(typ))
+      return bld.create<CastOp>(val.getLoc(), typ, CastKind::bitcast, val);
+
+    // Convert the pointer to an integer so we can play with its width.
+    val = bld.create<CastOp>(val.getLoc(), typ, CastKind::ptr_to_int, val);
+  }
+
+  auto dstIntTy = typ;
+  if (isa<PointerType>(dstIntTy))
+    cir_cconv_unreachable("NYI");
+
+  if (val.getType() != dstIntTy) {
+    const auto &layout = CGF.LM.getDataLayout();
+    if (layout.isBigEndian()) {
+      // Preserve the high bits on big-endian targets.
+      // That is what memory coercion does.
+      uint64_t srcSize = layout.getTypeSizeInBits(val.getType());
+      uint64_t dstSize = layout.getTypeSizeInBits(dstIntTy);
+      uint64_t diff = srcSize > dstSize ? srcSize - dstSize : dstSize - srcSize;
+      auto loc = val.getLoc();
+      if (srcSize > dstSize) {
+        auto intAttr = IntAttr::get(val.getType(), diff);
+        auto amount = bld.create<ConstantOp>(loc, intAttr);
+        val = bld.create<ShiftOp>(loc, val.getType(), val, amount, false);
+        val = bld.create<CastOp>(loc, dstIntTy, CastKind::integral, val);
+      } else {
+        val = bld.create<CastOp>(loc, dstIntTy, CastKind::integral, val);
+        auto intAttr = IntAttr::get(val.getType(), diff);
+        auto amount = bld.create<ConstantOp>(loc, intAttr);
+        val = bld.create<ShiftOp>(loc, val.getType(), val, amount, true);
+      }
+    } else {
+      // Little-endian targets preserve the low bits. No shifts required.
+      val = bld.create<CastOp>(val.getLoc(), dstIntTy, CastKind::integral, val);
+    }
+  }
+
+  if (isa<PointerType>(typ))
+    val = bld.create<CastOp>(val.getLoc(), typ, CastKind::int_to_ptr, val);
+
+  return val;
+}
+
 /// Create a store to \param Dst from \param Src where the source and
 /// destination may have different types.
 ///
@@ -92,38 +150,39 @@ void createCoercedStore(Value Src, Value Dst, bool DstIsVolatile,
     cir_cconv_unreachable("NYI");
   }
 
-  // FIXME(cir): We need a better way to handle datalayout queries.
-  cir_cconv_assert(isa<IntType>(SrcTy));
   llvm::TypeSize SrcSize = CGF.LM.getDataLayout().getTypeAllocSize(SrcTy);
+  auto dstPtrTy = dyn_cast<PointerType>(DstTy);
 
-  if (StructType DstSTy = dyn_cast<StructType>(DstTy)) {
-    Dst = enterStructPointerForCoercedAccess(Dst, DstSTy,
-                                             SrcSize.getFixedValue(), CGF);
-    cir_cconv_assert(isa<PointerType>(Dst.getType()));
-    DstTy = cast<PointerType>(Dst.getType()).getPointee();
-  }
+  if (dstPtrTy)
+    if (auto dstSTy = dyn_cast<StructType>(dstPtrTy.getPointee()))
+      if (SrcTy != dstSTy)
+        Dst = enterStructPointerForCoercedAccess(Dst, dstSTy,
+                                                 SrcSize.getFixedValue(), CGF);
 
-  PointerType SrcPtrTy = dyn_cast<PointerType>(SrcTy);
-  PointerType DstPtrTy = dyn_cast<PointerType>(DstTy);
-  // TODO(cir): Implement address space.
-  if (SrcPtrTy && DstPtrTy && !::cir::MissingFeatures::addressSpace()) {
-    cir_cconv_unreachable("NYI");
-  }
+  auto &layout = CGF.LM.getDataLayout();
+  llvm::TypeSize DstSize = dstPtrTy
+                               ? layout.getTypeAllocSize(dstPtrTy.getPointee())
+                               : layout.getTypeAllocSize(DstTy);
 
-  // If the source and destination are integer or pointer types, just do an
-  // extension or truncation to the desired type.
-  if ((isa<IntegerType>(SrcTy) || isa<PointerType>(SrcTy)) &&
-      (isa<IntegerType>(DstTy) || isa<PointerType>(DstTy))) {
-    cir_cconv_unreachable("NYI");
-  }
-
-  llvm::TypeSize DstSize = CGF.LM.getDataLayout().getTypeAllocSize(DstTy);
-
-  // If store is legal, just bitcast the src pointer.
-  cir_cconv_assert(!::cir::MissingFeatures::vectorType());
-  if (SrcSize.getFixedValue() <= DstSize.getFixedValue()) {
-    Dst = createCoercedBitcast(Dst, SrcTy, CGF);
-    CGF.buildAggregateStore(Src, Dst, DstIsVolatile);
+  if (SrcSize.isScalable() || SrcSize <= DstSize) {
+    if (isa<IntType>(SrcTy) && dstPtrTy &&
+        isa<PointerType>(dstPtrTy.getPointee()) &&
+        SrcSize == layout.getTypeAllocSize(dstPtrTy.getPointee())) {
+      cir_cconv_unreachable("NYI");
+    } else if (auto STy = dyn_cast<StructType>(SrcTy)) {
+      cir_cconv_unreachable("NYI");
+    } else {
+      Dst = createCoercedBitcast(Dst, SrcTy, CGF);
+      CGF.buildAggregateStore(Src, Dst, DstIsVolatile);
+    }
+  } else if (isa<IntType>(SrcTy)) {
+    auto &bld = CGF.getRewriter();
+    auto *ctxt = CGF.LM.getMLIRContext();
+    auto dstIntTy = IntType::get(ctxt, DstSize.getFixedValue() * 8, false);
+    Src = coerceIntOrPtrToIntOrPtr(Src, dstIntTy, CGF);
+    auto ptrTy = PointerType::get(ctxt, dstIntTy);
+    auto addr = bld.create<CastOp>(Dst.getLoc(), ptrTy, CastKind::bitcast, Dst);
+    bld.create<StoreOp>(Dst.getLoc(), Src, addr);
   } else {
     cir_cconv_unreachable("NYI");
   }
