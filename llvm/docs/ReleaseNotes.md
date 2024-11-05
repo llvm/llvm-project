@@ -309,6 +309,8 @@ Changes to LLDB
 * Program stdout/stderr redirection will now open the file with O_TRUNC flag, make sure to truncate the file if path already exists.
   * eg. `settings set target.output-path/target.error-path <path/to/file>`
 
+* A new setting `target.launch-working-dir` can be used to set a persistent cwd that is used by default by `process launch` and `run`.
+
 Changes to BOLT
 ---------------------------------
 
