@@ -626,7 +626,7 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 void __uninitialized_allocat
       !__allocator_has_trivial_destroy<_Alloc, _ValueType>::value) {
     auto __destruct_first = __result;
     auto __guard          = std::__make_exception_guard(
-        _AllocatorDestroyRangeReverse<_Alloc, _ValueType*>(__alloc, __destruct_first, __result));
+        _AllocatorDestroyRangeReverse<_Alloc, _ContiguousIterator>(__alloc, __destruct_first, __result));
     auto __iter = __first;
     while (__iter != __last) {
 #if _LIBCPP_HAS_EXCEPTIONS
