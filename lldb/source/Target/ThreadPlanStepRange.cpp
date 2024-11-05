@@ -395,7 +395,7 @@ bool ThreadPlanStepRange::SetNextBranchBreakpoint() {
                     m_next_branch_bp_sp->GetID(), bp_site_id,
                     run_to_address.GetLoadAddress(&m_process.GetTarget()));
         }
-        // The "next branch breakpoint might land on an virtual inlined call
+        // The "next branch breakpoint might land on a virtual inlined call
         // stack.  If that's true, we should always stop at the top of the
         // inlined call stack.  Only virtual steps should walk deeper into the
         // inlined call stack.
