@@ -2849,15 +2849,16 @@ IntrinsicProcTable::Implementation::HandleC_F_Pointer(
               "FPTR= argument to C_F_POINTER() may not have a deferred type parameter"_err_en_US);
         } else if (type->category() == TypeCategory::Derived) {
           if (context.languageFeatures().ShouldWarn(
-                  common::UsageWarning::Interoperability)) {
-            if (type->IsUnlimitedPolymorphic()) {
-              context.messages().Say(common::UsageWarning::Interoperability, at,
-                  "FPTR= argument to C_F_POINTER() should not be unlimited polymorphic"_warn_en_US);
-            } else if (!type->GetDerivedTypeSpec().typeSymbol().attrs().test(
-                           semantics::Attr::BIND_C)) {
-              context.messages().Say(common::UsageWarning::Interoperability, at,
-                  "FPTR= argument to C_F_POINTER() should not have a derived type that is not BIND(C)"_warn_en_US);
-            }
+                  common::UsageWarning::Interoperability) &&
+              type->IsUnlimitedPolymorphic()) {
+            context.messages().Say(common::UsageWarning::Interoperability, at,
+                "FPTR= argument to C_F_POINTER() should not be unlimited polymorphic"_warn_en_US);
+          } else if (!type->GetDerivedTypeSpec().typeSymbol().attrs().test(
+                         semantics::Attr::BIND_C) &&
+              context.languageFeatures().ShouldWarn(
+                  common::UsageWarning::Portability)) {
+            context.messages().Say(common::UsageWarning::Portability, at,
+                "FPTR= argument to C_F_POINTER() should not have a derived type that is not BIND(C)"_port_en_US);
           }
         } else if (!IsInteroperableIntrinsicType(
                        *type, &context.languageFeatures())
