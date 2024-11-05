@@ -925,7 +925,7 @@ public:
   bool matchUnmergeValuesAnyExtBuildVector(const MachineInstr &MI,
                                            BuildFnTy &MatchInfo);
 
-  // merge_values(_, undef) -> zext
+  // merge_values(_, undef) -> anyext
   bool matchMergeXAndUndef(const MachineInstr &MI, BuildFnTy &MatchInfo);
 
 private:

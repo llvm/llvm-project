@@ -420,7 +420,7 @@ def binop_right_undef_to_undef: GICombineRule<
 
 def unary_undef_to_zero: GICombineRule<
   (defs root:$root),
-  (match (wip_match_opcode G_ABS, G_ZEXT):$root,
+  (match (wip_match_opcode G_ABS):$root,
          [{ return Helper.matchOperandIsUndef(*${root}, 1); }]),
   (apply [{ Helper.replaceInstWithConstant(*${root}, 0); }])>;
 
@@ -856,7 +856,7 @@ def unmerge_zext_to_zext : GICombineRule<
   (apply [{ Helper.applyCombineUnmergeZExtToZExt(*${d}); }])
 >;
 
-/// Transform merge_x_undef -> zext.
+/// Transform merge_x_undef -> anyext.
 def merge_of_x_and_undef : GICombineRule <
   (defs root:$root, build_fn_matchinfo:$matchinfo),
   (match (G_IMPLICIT_DEF $undef),

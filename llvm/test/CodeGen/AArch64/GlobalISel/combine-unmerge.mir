@@ -535,7 +535,7 @@ body:             |
     $q1 = COPY %un2(s128)
 ...
 
-# Check that we zext the merge
+# Check that we anyext the merge
 ---
 name:            test_merge_undef
 body:             |
@@ -550,7 +550,7 @@ body:             |
     $q0 = COPY %me(s128)
 ...
 
-# Check that we don't zext the merge, multi-use
+# Check that we don't anyext the merge, multi-use
 ---
 name:            test_merge_undef_multi_use
 body:             |

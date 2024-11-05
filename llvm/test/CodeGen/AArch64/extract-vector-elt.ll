@@ -8,10 +8,17 @@
 ; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for extract_v4i32_vector_extract_const
 
 define i64 @extract_v2i64_undef_index(<2 x i64> %a, i32 %c) {
-; CHECK-LABEL: extract_v2i64_undef_index:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    fmov x0, d0
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: extract_v2i64_undef_index:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    fmov x0, d0
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: extract_v2i64_undef_index:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    str q0, [sp, #-16]!
+; CHECK-GI-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-GI-NEXT:    ldr x0, [sp], #16
+; CHECK-GI-NEXT:    ret
 entry:
   %d = extractelement <2 x i64> %a, i32 undef
   ret i64 %d
