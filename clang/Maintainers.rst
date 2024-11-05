@@ -68,6 +68,9 @@ Sema
 | Sirraide
 | aeternalmail\@gmail.com (email), Sirraide (GitHub), Ætérnal (Discord), Sirraide (Discourse)
 
+| Mariya Podchishchaeva
+| mariya.podchishchaeva\@intel.com (email), Fznamznon (GitHub), fznamznon (Discord), Fznamznon (Discourse)
+
 
 Recovery AST
 ~~~~~~~~~~~~
@@ -148,6 +151,12 @@ Driver parts not covered by someone else
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 | Fangrui Song
 | i\@maskray.me (email), MaskRay (Phabricator), MaskRay (GitHub)
+
+
+Constant Expressions
+~~~~~~~~~~~~~~~~~~~~
+| Mariya Podchishchaeva
+| mariya.podchishchaeva\@intel.com (email), Fznamznon (GitHub), fznamznon (Discord), Fznamznon (Discourse)
 
 
 Tools
