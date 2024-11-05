@@ -291,4 +291,34 @@ void foo() {
 #pragma acc loop vector
   for(;;);
 
+  int *iPtr;
+  bool SomeB;
+
+//CHECK: #pragma acc loop reduction(+: iPtr)
+#pragma acc loop reduction(+: iPtr)
+  for(;;);
+//CHECK: #pragma acc loop reduction(*: i)
+#pragma acc loop reduction(*: i)
+  for(;;);
+//CHECK: #pragma acc loop reduction(max: SomeB)
+#pragma acc loop reduction(max: SomeB)
+  for(;;);
+//CHECK: #pragma acc loop reduction(min: iPtr)
+#pragma acc loop reduction(min: iPtr)
+  for(;;);
+//CHECK: #pragma acc loop reduction(&: i)
+#pragma acc loop reduction(&: i)
+  for(;;);
+//CHECK: #pragma acc loop reduction(|: SomeB)
+#pragma acc loop reduction(|: SomeB)
+  for(;;);
+//CHECK: #pragma acc loop reduction(^: iPtr)
+#pragma acc loop reduction(^: iPtr)
+  for(;;);
+//CHECK: #pragma acc loop reduction(&&: i)
+#pragma acc loop reduction(&&: i)
+  for(;;);
+//CHECK: #pragma acc loop reduction(||: SomeB)
+#pragma acc loop reduction(||: SomeB)
+  for(;;);
 }

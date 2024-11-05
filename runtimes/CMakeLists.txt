@@ -94,9 +94,6 @@ endif()
 set(LLVM_MAIN_SRC_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../llvm)
 set(LLVM_CMAKE_DIR ${LLVM_MAIN_SRC_DIR}/cmake/modules)
 
-# This variable is used by individual runtimes to locate LLVM files.
-set(LLVM_PATH ${CMAKE_CURRENT_SOURCE_DIR}/../llvm)
-
 include(CheckLibraryExists)
 include(LLVMCheckCompilerLinkerFlag)
 include(CheckCCompilerFlag)

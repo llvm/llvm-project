@@ -57,7 +57,7 @@ void WebAssemblyInstPrinter::printInst(const MCInst *MI, uint64_t Address,
     // operand isn't a symbol, then we have an MVP compilation unit, and the
     // table shouldn't appear in the output.
     OS << "\t";
-    OS << getMnemonic(MI).first;
+    OS << getMnemonic(*MI).first;
     OS << " ";
 
     assert(MI->getNumOperands() == 2);
