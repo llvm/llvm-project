@@ -8961,6 +8961,7 @@ define void @v_permlane16_i8(ptr addrspace(1) %out, i8 %src0, i32 %src1, i32 %sr
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    v_readfirstlane_b32 s0, v3
 ; GFX12-NEXT:    v_readfirstlane_b32 s1, v4
+; GFX12-NEXT:    s_wait_alu 0xf1ff
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-NEXT:    v_permlane16_b32 v2, v2, s0, s1
 ; GFX12-NEXT:    global_store_b8 v[0:1], v2, off
@@ -9001,6 +9002,7 @@ define void @v_permlane16_i1(ptr addrspace(1) %out, i1 %src0, i32 %src1, i32 %sr
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    v_readfirstlane_b32 s0, v3
 ; GFX12-NEXT:    v_readfirstlane_b32 s1, v4
+; GFX12-NEXT:    s_wait_alu 0xf1ff
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX12-NEXT:    v_permlane16_b32 v2, v2, s0, s1
 ; GFX12-NEXT:    v_and_b32_e32 v2, 1, v2
@@ -9539,6 +9541,7 @@ define void @v_permlanex16_i8(ptr addrspace(1) %out, i8 %src0, i32 %src1, i32 %s
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    v_readfirstlane_b32 s0, v3
 ; GFX12-NEXT:    v_readfirstlane_b32 s1, v4
+; GFX12-NEXT:    s_wait_alu 0xf1ff
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-NEXT:    v_permlanex16_b32 v2, v2, s0, s1
 ; GFX12-NEXT:    global_store_b8 v[0:1], v2, off
@@ -9579,6 +9582,7 @@ define void @v_permlanex16_i1(ptr addrspace(1) %out, i1 %src0, i32 %src1, i32 %s
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    v_readfirstlane_b32 s0, v3
 ; GFX12-NEXT:    v_readfirstlane_b32 s1, v4
+; GFX12-NEXT:    s_wait_alu 0xf1ff
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX12-NEXT:    v_permlanex16_b32 v2, v2, s0, s1
 ; GFX12-NEXT:    v_and_b32_e32 v2, 1, v2
