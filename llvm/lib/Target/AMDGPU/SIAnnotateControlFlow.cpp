@@ -224,8 +224,13 @@ Value *SIAnnotateControlFlow::handleLoopCondition(
   if (Instruction *Inst = dyn_cast<Instruction>(Cond)) {
     BasicBlock *Parent = Inst->getParent();
     Instruction *Insert;
-    if (L->contains(Inst)) {
+    if (LI->getLoopFor(Parent) == L) {
+      // Insert IfBreak in the same BB as Cond, which can help
+      // SILowerControlFlow to know that it does not have to insert an
+      // AND with EXEC.
       Insert = Parent->getTerminator();
+    } else if (L->contains(Inst)) {
+      Insert = Term;
     } else {
       Insert = L->getHeader()->getFirstNonPHIOrDbgOrLifetime();
     }
