@@ -1183,7 +1183,8 @@ static AnalysisResult analyzePathForGSLPointer(const IndirectLocalPath &Path,
   // lifetimebound attribute returns a "owner" type.
   if (Path.back().Kind == IndirectLocalPathEntry::LifetimeBoundCall) {
     // The lifetimebound applies to the implicit object parameter of a method.
-    const FunctionDecl* FD = llvm::dyn_cast_or_null<FunctionDecl>(Path.back().D);
+    const FunctionDecl *FD =
+        llvm::dyn_cast_or_null<FunctionDecl>(Path.back().D);
     // The lifetimebound applies to a function parameter.
     if (const auto *PD = llvm::dyn_cast<ParmVarDecl>(Path.back().D))
       FD = llvm::dyn_cast<FunctionDecl>(PD->getDeclContext());
@@ -1197,7 +1198,7 @@ static AnalysisResult analyzePathForGSLPointer(const IndirectLocalPath &Path,
     // Check if the return type has an Owner attribute.
     //   e.g., const GSLOwner& func(const Foo& foo [[clang::lifetimebound]])
     if (FD && FD->getReturnType()->isReferenceType() &&
-          isRecordWithAttr<OwnerAttr>(FD->getReturnType()->getPointeeType()))
+        isRecordWithAttr<OwnerAttr>(FD->getReturnType()->getPointeeType()))
       return Report;
 
     return Abandon;
