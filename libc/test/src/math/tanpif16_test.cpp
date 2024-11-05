@@ -31,11 +31,10 @@ TEST_F(LlvmLibcTanpif16Test, PositiveRange) {
   }
 }
 
-
 TEST_F(LlvmLibcTanpif16Test, NegativeRange) {
   for (uint16_t v = NEG_START; v <= NEG_STOP; ++v) {
     float16 x = FPBits(v).get_val();
     EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Tanpi, x,
-		                   LIBC_NAMESPACE::tanpif16(x), 0.5);
+                                   LIBC_NAMESPACE::tanpif16(x), 0.5);
   }
 }

@@ -581,7 +581,7 @@ public:
     return result;
 #endif
   }
-  
+
   MPFRNumber trunc() const {
     MPFRNumber result(*this);
     mpfr_trunc(result.value, value);
