@@ -108,6 +108,26 @@ func.func @sharding_dyn_mesh_and_sizes(%arg0 : tensor<4x8xf32>) {
 // -----
 
 mesh.mesh @mesh0(shape = 2x4)
+func.func @sharding_sizes_count(%arg0 : tensor<4x8xf32>) {
+  // expected-error@+1 {{sharded dims offsets has wrong size}}
+  %s = mesh.sharding @mesh0 split_axes = [[0], [1]] sharded_dims_offsets = [0, 2, 4, 0, 2, 4, 6] : !mesh.sharding
+  %0 = mesh.shard %arg0 to %s : tensor<4x8xf32>
+  return
+}
+
+// -----
+
+mesh.mesh @mesh0(shape = 4)
+func.func @sharding_sizes_decreasing(%arg0 : tensor<4x8xf32>) {
+  // expected-error@+1 {{sharded dims offsets must be non-decreasing}}
+  %s = mesh.sharding @mesh0 split_axes = [[0]] sharded_dims_offsets = [0, 2, 3, 2] : !mesh.sharding
+  %0 = mesh.shard %arg0 to %s : tensor<4x8xf32>
+  return
+}
+
+// -----
+
+mesh.mesh @mesh0(shape = 2x4)
 
 func.func @mesh_shape_mesh_axis_out_of_bounds() -> (index, index) {
   // expected-error@+1 {{0-based mesh axis index 2 is out of bounds. The referenced mesh "mesh0" is of rank 2.}}

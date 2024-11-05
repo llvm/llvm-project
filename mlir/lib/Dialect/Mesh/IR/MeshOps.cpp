@@ -198,11 +198,12 @@ static void shardShape(const InShape &inShape, const MeshShape &meshShape,
             llvm::adl_begin(outShape));
 
   if (!shardedDimsOffsets.empty()) {
+    auto isDynShape = ShapedType::isDynamicShape(meshShape);
     uint64_t pos = 1;
     for (auto [tensorAxis, innerSplitAxes] : llvm::enumerate(splitAxes)) {
       if (!innerSplitAxes.empty()) {
         auto sz = shardedDimsOffsets[pos];
-        bool same = !ShapedType::isDynamicShape(meshShape);
+        bool same = !isDynShape;
         if (same) {
           // Find sharded dims in shardedDimsOffsets with same static size on
           // all devices. Use kDynamic for dimensions with dynamic or
@@ -218,7 +219,7 @@ static void shardShape(const InShape &inShape, const MeshShape &meshShape,
               break;
             }
           }
-          pos += numShards;
+          pos += numShards + 1;
         }
         outShape[tensorAxis] = same ? sz : ShapedType::kDynamic;
       }
@@ -543,6 +544,34 @@ LogicalResult ShardingOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
       getStaticShardedDimsOffsets().size() > 0) {
     return emitError() << "sharded dims offsets are not allowed for "
                           "devices meshes with dynamic shape.";
+  }
+
+  auto shardedDimsOffsets = getStaticShardedDimsOffsets();
+  if (!shardedDimsOffsets.empty()) {
+    auto meshShape = mesh.value().getShape();
+    assert(!ShapedType::isDynamicShape(meshShape));
+    uint64_t pos = 0;
+    for (auto [tensorAxis, innerSplitAxes] : llvm::enumerate(getSplitAxes())) {
+      if (!innerSplitAxes.empty()) {
+        int64_t numShards = 0, off = 0;
+        for (auto i : innerSplitAxes.asArrayRef()) {
+          numShards += meshShape[i];
+        }
+        for (int64_t i = 0; i <= numShards; ++i) {
+          if (shardedDimsOffsets.size() <= pos + i) {
+            return emitError() << "sharded dims offsets has wrong size.";
+          }
+          if (!ShapedType::isDynamic(shardedDimsOffsets[pos + i])) {
+            if (shardedDimsOffsets[pos + i] < off) {
+              return emitError()
+                     << "sharded dims offsets must be non-decreasing.";
+            }
+            off = shardedDimsOffsets[pos + i];
+          }
+        }
+        pos += numShards + 1;
+      }
+    }
   }
   return success();
 }
