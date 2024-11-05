@@ -806,7 +806,11 @@ public:
   DebugLoc getDebugLoc() const { return DL; }
 
   /// Returns the IR flags for the recipe.
-  virtual VPRecipeIRFlags *getIRFlags() { return nullptr; }
+  virtual const VPRecipeIRFlags *getIRFlags() const { return nullptr; }
+  VPRecipeIRFlags *getIRFlags() {
+    return const_cast<VPRecipeIRFlags *>(
+        const_cast<const VPRecipeBase *>(this)->getIRFlags());
+  }
 
 protected:
   /// Compute the cost of this recipe either using a recipe's specialized
@@ -1143,6 +1147,8 @@ public:
 class VPSingleDefRecipeWithIRFlags : public VPSingleDefRecipe,
                                      public VPRecipeIRFlags {
 public:
+  using VPRecipeBase::getIRFlags;
+
   template <typename IterT>
   VPSingleDefRecipeWithIRFlags(const unsigned char SC, IterT Operands,
                                DebugLoc DL = {})
@@ -1175,8 +1181,8 @@ public:
                                DebugLoc DL = {})
       : VPSingleDefRecipe(SC, Operands, DL), VPRecipeIRFlags(DisjointFlags) {}
 
-  virtual VPRecipeIRFlags *getIRFlags() override {
-    return static_cast<VPRecipeIRFlags *>(this);
+  virtual const VPRecipeIRFlags *getIRFlags() const override {
+    return static_cast<const VPRecipeIRFlags *>(this);
   }
 
 protected:
