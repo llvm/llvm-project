@@ -23,14 +23,6 @@ package(
 
 licenses(["notice"])
 
-exports_files([
-    "tools/clang-format/clang-format.el",
-    "tools/clang-format/clang-format-test.el",
-    "tools/clang-format/clang-format.py",
-    "tools/extra/clang-include-fixer/tool/clang-include-fixer.el",
-    "tools/extra/clang-include-fixer/tool/clang-include-fixer-test.el",
-])
-
 cc_binary(
     name = "clang-tblgen",
     srcs = glob([

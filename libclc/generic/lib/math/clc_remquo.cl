@@ -21,11 +21,11 @@
  */
 
 #include <clc/clc.h>
+#include <clc/clcmacro.h>
 #include <clc/math/clc_floor.h>
 #include <clc/math/clc_trunc.h>
 
 #include <math/clc_remainder.h>
-#include "../clcmacro.h"
 #include "config.h"
 #include "math.h"
 
