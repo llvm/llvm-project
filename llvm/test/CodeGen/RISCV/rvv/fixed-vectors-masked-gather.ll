@@ -13487,7 +13487,6 @@ define <32 x i64> @mgather_strided_split(ptr %base) {
 ; RV32ZVE32F-NEXT:    vid.v v8
 ; RV32ZVE32F-NEXT:    vsll.vi v8, v8, 4
 ; RV32ZVE32F-NEXT:    vadd.vx v8, v8, a1
-; RV32ZVE32F-NEXT:    vmv.x.s a1, v8
 ; RV32ZVE32F-NEXT:    lw a3, 0(a1)
 ; RV32ZVE32F-NEXT:    sw a3, 252(sp) # 4-byte Folded Spill
 ; RV32ZVE32F-NEXT:    lw a1, 4(a1)
@@ -13587,10 +13586,10 @@ define <32 x i64> @mgather_strided_split(ptr %base) {
 ; RV32ZVE32F-NEXT:    lw s9, 4(a1)
 ; RV32ZVE32F-NEXT:    lw s10, 0(a2)
 ; RV32ZVE32F-NEXT:    lw s11, 4(a2)
-; RV32ZVE32F-NEXT:    lw t5, 0(a3)
-; RV32ZVE32F-NEXT:    lw t6, 4(a3)
-; RV32ZVE32F-NEXT:    lw s2, 0(a4)
-; RV32ZVE32F-NEXT:    lw s3, 4(a4)
+; RV32ZVE32F-NEXT:    lw s4, 0(a3)
+; RV32ZVE32F-NEXT:    lw s5, 4(a3)
+; RV32ZVE32F-NEXT:    lw s6, 0(a4)
+; RV32ZVE32F-NEXT:    lw s7, 4(a4)
 ; RV32ZVE32F-NEXT:    lw a2, 336(sp)
 ; RV32ZVE32F-NEXT:    lw a4, 340(sp)
 ; RV32ZVE32F-NEXT:    lw a5, 344(sp)
@@ -13607,8 +13606,8 @@ define <32 x i64> @mgather_strided_split(ptr %base) {
 ; RV32ZVE32F-NEXT:    lw a6, 356(sp)
 ; RV32ZVE32F-NEXT:    lw t3, 360(sp)
 ; RV32ZVE32F-NEXT:    lw t4, 364(sp)
-; RV32ZVE32F-NEXT:    lw s4, 0(a5)
-; RV32ZVE32F-NEXT:    sw s4, 116(sp) # 4-byte Folded Spill
+; RV32ZVE32F-NEXT:    lw t5, 0(a5)
+; RV32ZVE32F-NEXT:    sw t5, 116(sp) # 4-byte Folded Spill
 ; RV32ZVE32F-NEXT:    lw a5, 4(a5)
 ; RV32ZVE32F-NEXT:    sw a5, 112(sp) # 4-byte Folded Spill
 ; RV32ZVE32F-NEXT:    lw a5, 0(a6)
@@ -13626,10 +13625,10 @@ define <32 x i64> @mgather_strided_split(ptr %base) {
 ; RV32ZVE32F-NEXT:    lw a6, 372(sp)
 ; RV32ZVE32F-NEXT:    lw t3, 376(sp)
 ; RV32ZVE32F-NEXT:    lw t4, 380(sp)
-; RV32ZVE32F-NEXT:    lw s4, 0(a5)
-; RV32ZVE32F-NEXT:    lw s5, 4(a5)
-; RV32ZVE32F-NEXT:    lw s6, 0(a6)
-; RV32ZVE32F-NEXT:    lw s7, 4(a6)
+; RV32ZVE32F-NEXT:    lw t5, 0(a5)
+; RV32ZVE32F-NEXT:    lw t6, 4(a5)
+; RV32ZVE32F-NEXT:    lw s2, 0(a6)
+; RV32ZVE32F-NEXT:    lw s3, 4(a6)
 ; RV32ZVE32F-NEXT:    lw a5, 0(t3)
 ; RV32ZVE32F-NEXT:    lw a6, 4(t3)
 ; RV32ZVE32F-NEXT:    lw t3, 0(t4)
@@ -13642,10 +13641,10 @@ define <32 x i64> @mgather_strided_split(ptr %base) {
 ; RV32ZVE32F-NEXT:    sw t0, 164(a0)
 ; RV32ZVE32F-NEXT:    sw t1, 168(a0)
 ; RV32ZVE32F-NEXT:    sw t2, 172(a0)
-; RV32ZVE32F-NEXT:    sw t5, 144(a0)
-; RV32ZVE32F-NEXT:    sw t6, 148(a0)
-; RV32ZVE32F-NEXT:    sw s2, 152(a0)
-; RV32ZVE32F-NEXT:    sw s3, 156(a0)
+; RV32ZVE32F-NEXT:    sw s4, 144(a0)
+; RV32ZVE32F-NEXT:    sw s5, 148(a0)
+; RV32ZVE32F-NEXT:    sw s6, 152(a0)
+; RV32ZVE32F-NEXT:    sw s7, 156(a0)
 ; RV32ZVE32F-NEXT:    sw s8, 128(a0)
 ; RV32ZVE32F-NEXT:    sw s9, 132(a0)
 ; RV32ZVE32F-NEXT:    sw s10, 136(a0)
@@ -13686,10 +13685,10 @@ define <32 x i64> @mgather_strided_split(ptr %base) {
 ; RV32ZVE32F-NEXT:    sw a6, 244(a0)
 ; RV32ZVE32F-NEXT:    sw t3, 248(a0)
 ; RV32ZVE32F-NEXT:    sw t4, 252(a0)
-; RV32ZVE32F-NEXT:    sw s4, 224(a0)
-; RV32ZVE32F-NEXT:    sw s5, 228(a0)
-; RV32ZVE32F-NEXT:    sw s6, 232(a0)
-; RV32ZVE32F-NEXT:    sw s7, 236(a0)
+; RV32ZVE32F-NEXT:    sw t5, 224(a0)
+; RV32ZVE32F-NEXT:    sw t6, 228(a0)
+; RV32ZVE32F-NEXT:    sw s2, 232(a0)
+; RV32ZVE32F-NEXT:    sw s3, 236(a0)
 ; RV32ZVE32F-NEXT:    sw ra, 208(a0)
 ; RV32ZVE32F-NEXT:    lw a1, 108(sp) # 4-byte Folded Reload
 ; RV32ZVE32F-NEXT:    sw a1, 212(a0)

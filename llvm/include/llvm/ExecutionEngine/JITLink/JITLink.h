@@ -1077,6 +1077,16 @@ public:
     return MutableArrayRef<char>(AllocatedBuffer, SourceStr.size());
   }
 
+  /// Allocate a copy of the given string using the LinkGraph's allocator
+  /// and return it as a StringRef.
+  ///
+  /// This is a convenience wrapper around allocateContent(Twine) that is
+  /// handy when creating new symbol names within the graph.
+  StringRef allocateName(Twine Source) {
+    auto Buf = allocateContent(Source);
+    return {Buf.data(), Buf.size()};
+  }
+
   /// Allocate a copy of the given string using the LinkGraph's allocator.
   ///
   /// The allocated string will be terminated with a null character, and the
@@ -1931,9 +1941,9 @@ Error makeAlignmentError(llvm::orc::ExecutorAddr Loc, uint64_t Value, int N,
 ///   alignment: PointerSize
 ///   alignment-offset: 0
 ///   address: highest allowable
-using AnonymousPointerCreator = unique_function<Expected<Symbol &>(
-    LinkGraph &G, Section &PointerSection, Symbol *InitialTarget,
-    uint64_t InitialAddend)>;
+using AnonymousPointerCreator =
+    unique_function<Symbol &(LinkGraph &G, Section &PointerSection,
+                             Symbol *InitialTarget, uint64_t InitialAddend)>;
 
 /// Get target-specific AnonymousPointerCreator
 AnonymousPointerCreator getAnonymousPointerCreator(const Triple &TT);
@@ -1942,7 +1952,7 @@ AnonymousPointerCreator getAnonymousPointerCreator(const Triple &TT);
 /// an anonymous symbol pointing to it. Return the anonymous symbol.
 ///
 /// The stub block will be created by createPointerJumpStubBlock.
-using PointerJumpStubCreator = unique_function<Expected<Symbol &>(
+using PointerJumpStubCreator = unique_function<Symbol &(
     LinkGraph &G, Section &StubSection, Symbol &PointerSymbol)>;
 
 /// Get target-specific PointerJumpStubCreator

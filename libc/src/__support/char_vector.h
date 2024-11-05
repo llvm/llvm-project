@@ -9,11 +9,13 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_CHARVECTOR_H
 #define LLVM_LIBC_SRC___SUPPORT_CHARVECTOR_H
 
+#include "hdr/func/free.h"
+#include "hdr/func/malloc.h"
+#include "hdr/func/realloc.h"
 #include "src/__support/common.h" // LIBC_INLINE
 #include "src/__support/macros/config.h"
 
 #include <stddef.h> // size_t
-#include <stdlib.h> // malloc, realloc, free
 
 namespace LIBC_NAMESPACE_DECL {
 

@@ -33,12 +33,11 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Operator.h"
-#include "llvm/IR/PatternMatch.h"
 #include "llvm/IR/PassManager.h"
+#include "llvm/IR/PatternMatch.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Support/Casting.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include <cassert>
 #include <optional>
@@ -832,9 +831,7 @@ static bool expandUDivOrURem(BinaryOperator *Instr, const ConstantRange &XCR,
 
   // Even if we don't know X's range, the divisor may be so large, X can't ever
   // be 2x larger than that. I.e. if divisor is always negative.
-  if (!XCR.icmp(ICmpInst::ICMP_ULT,
-                YCR.umul_sat(APInt(YCR.getBitWidth(), 2))) &&
-      !YCR.isAllNegative())
+  if (!XCR.icmp(ICmpInst::ICMP_ULT, YCR.uadd_sat(YCR)) && !YCR.isAllNegative())
     return false;
 
   IRBuilder<> B(Instr);

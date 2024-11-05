@@ -37,7 +37,6 @@
 #include "llvm/CodeGen/ISDOpcodes.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineMemOperand.h"
-#include "llvm/CodeGen/RuntimeLibcallUtil.h"
 #include "llvm/CodeGen/SDPatternMatch.h"
 #include "llvm/CodeGen/SelectionDAG.h"
 #include "llvm/CodeGen/SelectionDAGAddressAnalysis.h"
@@ -7393,6 +7392,16 @@ SDValue DAGCombiner::visitAND(SDNode *N) {
       return DAG.getNode(ISD::AND, DL, VT, X,
                          DAG.getNOT(DL, DAG.getNode(Opc, DL, VT, Y, Z), VT));
 
+  // Fold (and (srl X, C), 1) -> (srl X, BW-1) for signbit extraction
+  // If we are shifting down an extended sign bit, see if we can simplify
+  // this to shifting the MSB directly to expose further simplifications.
+  // This pattern often appears after sext_inreg legalization.
+  APInt Amt;
+  if (sd_match(N, m_And(m_Srl(m_Value(X), m_ConstInt(Amt)), m_One())) &&
+      Amt.ult(BitWidth - 1) && Amt.uge(BitWidth - DAG.ComputeNumSignBits(X)))
+    return DAG.getNode(ISD::SRL, DL, VT, X,
+                       DAG.getShiftAmountConstant(BitWidth - 1, VT, DL));
+
   // Masking the negated extension of a boolean is just the zero-extended
   // boolean:
   // and (sub 0, zext(bool X)), 1 --> zext(bool X)
@@ -7400,16 +7409,13 @@ SDValue DAGCombiner::visitAND(SDNode *N) {
   //
   // Note: the SimplifyDemandedBits fold below can make an information-losing
   // transform, and then we have no way to find this better fold.
-  if (N1C && N1C->isOne() && N0.getOpcode() == ISD::SUB) {
-    if (isNullOrNullSplat(N0.getOperand(0))) {
-      SDValue SubRHS = N0.getOperand(1);
-      if (SubRHS.getOpcode() == ISD::ZERO_EXTEND &&
-          SubRHS.getOperand(0).getScalarValueSizeInBits() == 1)
-        return SubRHS;
-      if (SubRHS.getOpcode() == ISD::SIGN_EXTEND &&
-          SubRHS.getOperand(0).getScalarValueSizeInBits() == 1)
-        return DAG.getNode(ISD::ZERO_EXTEND, DL, VT, SubRHS.getOperand(0));
-    }
+  if (sd_match(N, m_And(m_Sub(m_Zero(), m_Value(X)), m_One()))) {
+    if (X.getOpcode() == ISD::ZERO_EXTEND &&
+        X.getOperand(0).getScalarValueSizeInBits() == 1)
+      return X;
+    if (X.getOpcode() == ISD::SIGN_EXTEND &&
+        X.getOperand(0).getScalarValueSizeInBits() == 1)
+      return DAG.getNode(ISD::ZERO_EXTEND, DL, VT, X.getOperand(0));
   }
 
   // fold (and (sign_extend_inreg x, i16 to i32), 1) -> (and x, 1)
