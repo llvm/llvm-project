@@ -265,10 +265,10 @@ public:
     Builder.setInstr(MI);
     Register DstReg = MI.getOperand(0).getReg();
     const LLT DstTy = MRI.getType(DstReg);
-    Register SrcReg = lookThroughCopyInstrs(MI.getOperand(1).getReg());
-
     if (DstTy.isScalableVector())
       return false;
+
+    Register SrcReg = lookThroughCopyInstrs(MI.getOperand(1).getReg());
 
     // Try to fold trunc(g_constant) when the smaller constant type is legal.
     auto *SrcMI = MRI.getVRegDef(SrcReg);
