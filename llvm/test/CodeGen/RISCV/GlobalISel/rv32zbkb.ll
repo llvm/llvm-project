@@ -153,9 +153,7 @@ define i64 @packh_i64_2(i64 %a, i64 %b) nounwind {
 ; CHECK-NEXT:    andi a0, a0, 255
 ; CHECK-NEXT:    andi a1, a2, 255
 ; CHECK-NEXT:    slli a2, a1, 8
-; CHECK-NEXT:    slli a3, zero, 8
 ; CHECK-NEXT:    srli a1, a1, 24
-; CHECK-NEXT:    or a1, a3, a1
 ; CHECK-NEXT:    or a0, a2, a0
 ; CHECK-NEXT:    ret
   %and = and i64 %a, 255
