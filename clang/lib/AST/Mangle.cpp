@@ -183,20 +183,36 @@ void MangleContext::mangleName(GlobalDecl GD, raw_ostream &Out) {
       }
     }
 
+    // TODO: if only 1 variant is specified (i.e., C1 or C2)
+    // and we're looking for C1 or C2, pick the single one.
+    // Will that always do the right thing? What if C1 was
+    // optimized out because it was actually never called
+    // in the source.  But then we tried to call it in expression
+    // evaluator? Maybe that's a sacrifice we have to make?
+    //
     // Parse the LLDB [variant -> special name] mappings.
     llvm::DenseMap<CtorDtor, llvm::StringRef> names;
     for (auto name : SMA->mangledNames()) {
       auto [structor_variant, mangled_name] = name.split(':');
       auto variant = llvm::StringSwitch<CtorDtor>(structor_variant)
                          .Case("0", CtorDtor::Deleting)
-                         .Case("1", CtorDtor::Base)
-                         .Case("2", CtorDtor::Complete)
-                         .Case("3", CtorDtor::Complete)
+                         .Case("1", CtorDtor::Complete)
+                         .Case("2", CtorDtor::Base)
                          .Default(CtorDtor::None);
       names[variant] = mangled_name;
     }
 
     assert(CtorDtorVariant != CtorDtor::None);
+
+    // If there is no definition for a completing structor variant but
+    // Clang is calling it lets take call the base variant since the
+    // definitions should (?) be the same.
+    if (!names.contains(CtorDtorVariant)
+        && names.size() == 1
+        && CtorDtorVariant == CtorDtor::Complete) {
+      CtorDtorVariant = CtorDtor::Base;
+      assert(names.contains(CtorDtorVariant));
+    }
 
     // Pick the mapping
     Out << names[CtorDtorVariant];
