@@ -244,21 +244,22 @@ static bool generateCode(Scop &S, IslAstInfo &AI, LoopInfo &LI,
   // loop when 'polly-annotate-metadata-vectorize' is passed.
   if (PollyVectorizeMetadata) {
     LLVMContext &Ctx = S.getFunction().getContext();
+    for (Loop *L : LI.getLoopsInPreorder()) {
+      if (!L || !S.contains(L))
+        continue;
+      MDNode *LoopID = L->getLoopID();
+      SmallVector<Metadata *, 3> Args;
+      if (LoopID)
+        for (unsigned i = 0, e = LoopID->getNumOperands(); i != e; ++i)
+          Args.push_back(LoopID->getOperand(i));
+      else
+        Args.push_back(nullptr);
 
-    if (!L || !S.contains(L))
-      continue;
-    MDNode *LoopID = L->getLoopID();
-    SmallVector<Metadata *, 3> Args;
-    if (LoopID)
-      for (unsigned i = 0, e = LoopID->getNumOperands(); i != e; ++i)
-        Args.push_back(LoopID->getOperand(i));
-    else
-      Args.push_back(nullptr);
-
-    Annotator.addVectorizeMetadata(Ctx, &Args, false);
-    MDNode *NewLoopID = MDNode::get(Ctx, Args);
-    NewLoopID->replaceOperandWith(0, NewLoopID);
-    L->setLoopID(NewLoopID);
+      Annotator.addVectorizeMetadata(Ctx, &Args, false);
+      MDNode *NewLoopID = MDNode::get(Ctx, Args);
+      NewLoopID->replaceOperandWith(0, NewLoopID);
+      L->setLoopID(NewLoopID);
+    }
   }
 
   if (PerfMonitoring) {
