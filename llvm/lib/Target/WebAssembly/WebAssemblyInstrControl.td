@@ -181,7 +181,7 @@ let isTerminator = 1, hasSideEffects = 1, isBarrier = 1, hasCtrlDep = 1,
 // Rethrowing an exception: rethrow
 // The new exnref proposal also uses this instruction as an interim pseudo
 // instruction before we convert it to a THROW_REF.
-// $ehpad is the EH pad where the exception the rethrow has been caught.
+// $ehpad is the EH pad where the exception to rethrow has been caught.
 let isTerminator = 1, hasCtrlDep = 1, isBarrier = 1 in
 defm RETHROW : NRI<(outs), (ins bb_op:$ehpad), [], "rethrow \t$ehpad", 0x09>;
 
