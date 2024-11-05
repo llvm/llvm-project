@@ -7564,6 +7564,7 @@ bool SimplifyCFGOpt::simplifyDuplicateSwitchArms(SwitchInst *SI) {
     Cases.emplace_back(CaseHandleWrapper{Case, PhiPredIVs});
   }
 
+  PhiPredIVs.reserve(Phis.size());
   for (PHINode *Phi : Phis) {
     PhiPredIVs[Phi] =
         DenseMap<BasicBlock *, Value *>(Phi->getNumIncomingValues());
