@@ -33,7 +33,8 @@
 ! SOLARIS-F128NONE-NOT: FortranFloat128Math
 ! UNIX-F128LIBQUADMATH-SAME: "-lFortranFloat128Math" "--as-needed" "-lquadmath" "--no-as-needed"
 ! SOLARIS-F128LIBQUADMATH-SAME: "-lFortranFloat128Math" "-z" "ignore" "-lquadmath" "-z" "record"
-! UNIX-SAME: "-lFortranRuntime" "-lFortranDecimal" "-lm"
+! UNIX-SAME: "-lFortranRuntime" "-lFortranDecimal"
+! UNIX-SAME: "-lm"
 ! COMPILER-RT: "{{.*}}{{\\|/}}libclang_rt.builtins.a"
 
 ! DARWIN-LABEL:  "{{.*}}ld{{(\.exe)?}}"

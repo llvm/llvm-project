@@ -1183,7 +1183,11 @@ void tools::addOpenMPRuntimeLibraryPath(const ToolChain &TC,
 void tools::addArchSpecificRPath(const ToolChain &TC, const ArgList &Args,
                                  ArgStringList &CmdArgs) {
   if (!Args.hasFlag(options::OPT_frtlib_add_rpath,
+#ifdef ENABLE_LINKER_RPATH_BY_DEFAULT
+                    options::OPT_fno_rtlib_add_rpath, true))
+#else
                     options::OPT_fno_rtlib_add_rpath, false))
+#endif
     return;
 
   SmallVector<std::string> CandidateRPaths(TC.getArchSpecificLibPaths());

@@ -227,3 +227,7 @@ if config.flang_runtime_f128_math_lib:
     )
 else:
     config.substitutions.append(("%f128-lib", "NONE"))
+
+# Pass -rpath to the linker by default.
+if config.enable_rpath_by_default:
+    config.available_features.add("enable_rpath_by_default")

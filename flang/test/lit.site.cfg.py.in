@@ -26,6 +26,7 @@ config.osx_sysroot = path(r"@CMAKE_OSX_SYSROOT@")
 config.targets_to_build = "@TARGETS_TO_BUILD@"
 config.default_sysroot = "@DEFAULT_SYSROOT@"
 config.have_openmp_rtl = ("@LLVM_TOOL_OPENMP_BUILD@" == "TRUE") or ("openmp" in "@LLVM_ENABLE_RUNTIMES@".lower().split(";"))
+config.enable_rpath_by_default = @ENABLE_LINKER_RPATH_BY_DEFAULT@
 if "openmp" in "@LLVM_ENABLE_RUNTIMES@".lower().split(";"):
     config.openmp_module_dir = "@CMAKE_BINARY_DIR@/runtimes/runtimes-bins/openmp/runtime/src"
 else:

@@ -3,6 +3,7 @@
 add_subdirectory(lib)
 
 llvm_canonicalize_cmake_booleans(
+  ENABLE_LINKER_RPATH_BY_DEFAULT
   FLANG_STANDALONE_BUILD
   LLVM_BUILD_EXAMPLES
   LLVM_BYE_LINK_INTO_TOOLS

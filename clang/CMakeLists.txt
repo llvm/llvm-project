@@ -216,6 +216,8 @@ endif()
 
 set(ENABLE_LINKER_BUILD_ID OFF CACHE BOOL "pass --build-id to ld")
 
+set(ENABLE_LINKER_RPATH_BY_DEFAULT OFF CACHE BOOL "pass -rpath to the linker by default")
+
 set(ENABLE_X86_RELAX_RELOCATIONS ON CACHE BOOL
     "enable x86 relax relocations by default")
 
