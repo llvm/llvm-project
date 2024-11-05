@@ -7447,7 +7447,7 @@ static bool simplifySwitchOfCmpIntrinsic(SwitchInst *SI, IRBuilderBase &Builder,
 /// of the incoming values.
 struct CaseHandleWrapper {
   const SwitchInst::CaseHandle Case;
-  DenseMap<PHINode *, DenseMap<BasicBlock *, Value *>> &PhiPredIVs;
+  DenseMap<PHINode *, DenseMap<BasicBlock *, Value *>> *PhiPredIVs;
 };
 
 namespace llvm {
@@ -7478,7 +7478,7 @@ template <> struct DenseMapInfo<const CaseHandleWrapper *> {
     BasicBlock *BB = BI->getSuccessor(0);
     SmallVector<Value *> PhiValsForBB;
     for (PHINode &Phi : BB->phis())
-      PhiValsForBB.emplace_back(CHW->PhiPredIVs[&Phi][BB]);
+      PhiValsForBB.emplace_back((*CHW->PhiPredIVs)[&Phi][BB]);
 
     return hash_combine(
         BB, hash_combine_range(PhiValsForBB.begin(), PhiValsForBB.end()));
@@ -7512,7 +7512,7 @@ template <> struct DenseMapInfo<const CaseHandleWrapper *> {
     // Need to check that PHIs in successor have matching values
     BasicBlock *Succ = ABI->getSuccessor(0);
     for (PHINode &Phi : Succ->phis()) {
-      auto &PredIVs = LHS->PhiPredIVs[&Phi];
+      auto &PredIVs = (*LHS->PhiPredIVs)[&Phi];
       if (PredIVs[A] != PredIVs[B])
         return false;
     }
@@ -7531,6 +7531,7 @@ bool SimplifyCFGOpt::simplifyDuplicateSwitchArms(SwitchInst *SI) {
   SmallPtrSet<BasicBlock *, 8> Seen;
   DenseMap<PHINode *, DenseMap<BasicBlock *, Value *>> PhiPredIVs;
   std::vector<CaseHandleWrapper> Cases;
+  Cases.reserve(SI->getNumCases());
   for (auto &Case : SI->cases()) {
     BasicBlock *BB = Case.getCaseSuccessor();
 
@@ -7561,7 +7562,7 @@ bool SimplifyCFGOpt::simplifyDuplicateSwitchArms(SwitchInst *SI) {
         for (PHINode &Phi : Succ->phis())
           Phis.insert(&Phi);
     }
-    Cases.emplace_back(CaseHandleWrapper{Case, PhiPredIVs});
+    Cases.emplace_back(CaseHandleWrapper{Case, &PhiPredIVs});
   }
 
   PhiPredIVs.reserve(Phis.size());
@@ -7581,7 +7582,8 @@ bool SimplifyCFGOpt::simplifyDuplicateSwitchArms(SwitchInst *SI) {
   // nested loop since there is no O(1) lookup of BasicBlock -> Cases in
   // SwichInst.
   DenseSet<const CaseHandleWrapper *, DenseMapInfo<const CaseHandleWrapper *>>
-      ReplaceWith(Cases.size());
+      ReplaceWith;
+  ReplaceWith.reserve(Cases.size());
 
   bool MadeChange = false;
   for (auto &CHW : Cases) {
