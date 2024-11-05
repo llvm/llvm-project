@@ -467,3 +467,22 @@ struct ref_mem {
 // both-error@+2 {{constexpr variable 'run_ref_mem' must be initialized by a constant expression}}
 // both-note@+1 {{bit_cast from a type with a reference member is not allowed in a constant expression}}
 constexpr intptr_t run_ref_mem = __builtin_bit_cast(intptr_t, ref_mem{global_int});
+
+
+
+
+namespace test_complex {
+  constexpr _Complex unsigned test_int_complex = { 0x0C05FEFE, 0xCAFEBABE };
+  static_assert(round_trip<_Complex unsigned>(0xCAFEBABE0C05FEFEULL), "");
+  static_assert(bit_cast<unsigned long long>(test_int_complex) == (LITTLE_END
+                                                                   ? 0xCAFEBABE0C05FEFE
+                                                                   : 0x0C05FEFECAFEBABE), "");
+  static_assert(sizeof(double) == 2 * sizeof(float));
+  struct TwoFloats { float A; float B; };
+  constexpr _Complex float test_float_complex = {1.0f, 2.0f};
+  constexpr TwoFloats TF = __builtin_bit_cast(TwoFloats, test_float_complex);
+  static_assert(TF.A == 1.0f && TF.B == 2.0f);
+
+  constexpr double D = __builtin_bit_cast(double, test_float_complex);
+  constexpr int M = __builtin_bit_cast(int, test_int_complex); // both-error {{__builtin_bit_cast source size does not equal destination size}}
+}

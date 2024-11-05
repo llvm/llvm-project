@@ -2735,7 +2735,7 @@ bool Compiler<Emitter>::VisitMaterializeTemporaryExpr(
       InitLinkScope<Emitter> ILS(this, InitLink::Temp(*LocalIndex));
       if (!this->emitGetPtrLocal(*LocalIndex, E))
         return false;
-      return this->visitInitializer(SubExpr);
+      return this->visitInitializer(SubExpr) && this->emitFinishInit(E);
     }
   }
   return false;
