@@ -262,7 +262,7 @@ void llvm::addLiveIns(MachineBasicBlock &MBB, const LivePhysRegs &LiveRegs) {
   const MachineRegisterInfo &MRI = MF.getRegInfo();
   const TargetRegisterInfo &TRI = *MRI.getTargetRegisterInfo();
   for (MCPhysReg Reg : LiveRegs) {
-    if (TRI.getReservedRegs(MF).test(Reg))
+    if (MRI.isReserved(Reg))
       continue;
     // Skip the register if we are about to add one of its super registers.
     if (any_of(TRI.superregs(Reg), [&](MCPhysReg SReg) {
