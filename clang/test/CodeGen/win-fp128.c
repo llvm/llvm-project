@@ -3,10 +3,10 @@
 // __float128 is unsupported on MSVC
 
 __float128 fp128_ret(void) { return 0; }
-// CHECK-GNU64: define dso_local fp128 @fp128_ret()
+// CHECK-GNU64: define dso_local <2 x i64>  @fp128_ret()
 
 __float128 fp128_args(__float128 a, __float128 b) { return a * b; }
-// CHECK-GNU64: define dso_local fp128 @fp128_args(fp128 noundef %a, fp128 noundef %b)
+// CHECK-GNU64: define dso_local <2 x i64> @fp128_args(ptr noundef %0, ptr noundef %1)
 
 void fp128_vararg(int a, ...) {
   // CHECK-GNU64-LABEL: define dso_local void @fp128_vararg
