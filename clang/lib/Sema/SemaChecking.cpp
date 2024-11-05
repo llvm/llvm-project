@@ -5586,8 +5586,9 @@ bool Sema::BuiltinCountedByRef(CallExpr *TheCall) {
     return true;
 
   // For simplicity, we support only limited expressions for the argument.
-  // Specifically 'ptr->array' and '&ptr->array[0]'. This allows us to reject
-  // arguments with complex casting, which really shouldn't be a huge problem.
+  // Specifically a pointer to a flexible array member:'ptr->array'. This
+  // allows us to reject arguments with complex casting, which really shouldn't
+  // be a huge problem.
   const Expr *Arg = ArgRes.get()->IgnoreParenImpCasts();
   if (!isa<PointerType>(Arg->getType()) && !Arg->getType()->isArrayType())
     return Diag(Arg->getBeginLoc(),
@@ -5595,17 +5596,9 @@ bool Sema::BuiltinCountedByRef(CallExpr *TheCall) {
            << Arg->getSourceRange();
 
   if (Arg->HasSideEffects(Context))
-    Diag(Arg->getBeginLoc(), diag::err_builtin_counted_by_ref_has_side_effects)
-        << Arg->getSourceRange();
-
-  // See if we have something like '&ptr->fam[0]`.
-  if (auto *UO = dyn_cast<UnaryOperator>(Arg);
-      UO && UO->getOpcode() == UO_AddrOf) {
-    Arg = UO->getSubExpr()->IgnoreParenImpCasts();
-
-    if (auto *ASE = dyn_cast<ArraySubscriptExpr>(Arg))
-      Arg = ASE->getBase()->IgnoreParenImpCasts();
-  }
+    return Diag(Arg->getBeginLoc(),
+                diag::err_builtin_counted_by_ref_has_side_effects)
+           << Arg->getSourceRange();
 
   if (const auto *ME = dyn_cast<MemberExpr>(Arg)) {
     if (!ME->isFlexibleArrayMemberLike(

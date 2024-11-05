@@ -15,9 +15,6 @@ void test1(struct fam_struct *ptr, int size, int idx) {
   size_t size_of = sizeof(__builtin_counted_by_ref(ptr->array)); // ok
 
   *__builtin_counted_by_ref(ptr->array) = size;             // ok
-  *__builtin_counted_by_ref(&ptr->array[idx]) = size;       // ok
-  *__builtin_counted_by_ref(&ptr->array) = size;            // ok
-
 
   {
       size_t __ignored_assignment;
@@ -33,6 +30,8 @@ void test2(struct fam_struct *ptr, int idx) {
 }
 
 void test3(struct fam_struct *ptr, int idx) {
+  __builtin_counted_by_ref(&ptr->array[idx]);               // expected-error {{'__builtin_counted_by_ref' argument must reference a flexible array member}}
+  __builtin_counted_by_ref(&ptr->array);                    // expected-error {{'__builtin_counted_by_ref' argument must reference a flexible array member}}
   __builtin_counted_by_ref(ptr->x);                         // expected-error {{'__builtin_counted_by_ref' argument must reference a flexible array member}}
   __builtin_counted_by_ref(&ptr->x);                        // expected-error {{'__builtin_counted_by_ref' argument must reference a flexible array member}}
   __builtin_counted_by_ref(global_array);                   // expected-error {{'__builtin_counted_by_ref' argument must reference a flexible array member}}
@@ -77,10 +76,10 @@ struct non_fam_struct {
 };
 
 void *test7(struct non_fam_struct *ptr, int size) {
-  *__builtin_counted_by_ref(ptr->array) = size          // expected-error {{'__builtin_counted_by_ref' argument must reference a flexible array member}}
-  *__builtin_counted_by_ref(&ptr->array[0]) = size;     // expected-error {{'__builtin_counted_by_ref' argument must reference a flexible array member}}
-  *__builtin_counted_by_ref(ptr->pointer) = size;       // expected-error {{'__builtin_counted_by_ref' argument must reference a flexible array member}}
-  *__builtin_counted_by_ref(&ptr->pointer[0]) = size;   // expected-error {{'__builtin_counted_by_ref' argument must reference a flexible array member}}
+  *__builtin_counted_by_ref(ptr->array) = size              // expected-error {{'__builtin_counted_by_ref' argument must reference a flexible array member}}
+  *__builtin_counted_by_ref(&ptr->array[0]) = size;         // expected-error {{'__builtin_counted_by_ref' argument must reference a flexible array member}}
+  *__builtin_counted_by_ref(ptr->pointer) = size;           // expected-error {{'__builtin_counted_by_ref' argument must reference a flexible array member}}
+  *__builtin_counted_by_ref(&ptr->pointer[0]) = size;       // expected-error {{'__builtin_counted_by_ref' argument must reference a flexible array member}}
 }
 
 struct char_count {
