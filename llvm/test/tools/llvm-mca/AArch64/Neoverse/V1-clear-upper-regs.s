@@ -55,12 +55,12 @@ add v0.16b, v0.16b, v0.16b
 
 # CHECK:      Iterations:        100
 # CHECK-NEXT: Instructions:      200
-# CHECK-NEXT: Total Cycles:      41
+# CHECK-NEXT: Total Cycles:      107
 # CHECK-NEXT: Total uOps:        200
 
 # CHECK:      Dispatch Width:    15
-# CHECK-NEXT: uOps Per Cycle:    4.88
-# CHECK-NEXT: IPC:               4.88
+# CHECK-NEXT: uOps Per Cycle:    1.87
+# CHECK-NEXT: IPC:               1.87
 # CHECK-NEXT: Block RThroughput: 0.3
 
 # CHECK:      Instruction Info:
@@ -94,24 +94,25 @@ add v0.16b, v0.16b, v0.16b
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0.0]  [0.1]  [1.0]  [1.1]  [2]    [3.0]  [3.1]  [4]    [5]    [6.0]  [6.1]  [7]    [8]    [9]    [10]
-# CHECK-NEXT:  -      -      -      -     0.33   0.33   0.34   0.22   0.22   0.28   0.28    -      -      -      -
+# CHECK-NEXT:  -      -      -      -     0.33   0.33   0.34    -      -     0.50   0.50    -      -      -      -
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0.0]  [0.1]  [1.0]  [1.1]  [2]    [3.0]  [3.1]  [4]    [5]    [6.0]  [6.1]  [7]    [8]    [9]    [10]   Instructions:
 # CHECK-NEXT:  -      -      -      -     0.33   0.33   0.34    -      -      -      -      -      -      -      -     ldr	w0, [sp]
-# CHECK-NEXT:  -      -      -      -      -      -      -     0.22   0.22   0.28   0.28    -      -      -      -     add	x0, x0, x0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -     add	x0, x0, x0
 
 # CHECK:      Timeline view:
-# CHECK-NEXT: Index     012345678
+# CHECK-NEXT:                     0
+# CHECK-NEXT: Index     0123456789
 
-# CHECK:      [0,0]     DeeeeER .   ldr	w0, [sp]
-# CHECK-NEXT: [0,1]     D====eER.   add	x0, x0, x0
-# CHECK-NEXT: [1,0]     DeeeeE-R.   ldr	w0, [sp]
-# CHECK-NEXT: [1,1]     D====eER.   add	x0, x0, x0
-# CHECK-NEXT: [2,0]     DeeeeE-R.   ldr	w0, [sp]
-# CHECK-NEXT: [2,1]     D====eER.   add	x0, x0, x0
-# CHECK-NEXT: [3,0]     D=eeeeER.   ldr	w0, [sp]
-# CHECK-NEXT: [3,1]     D=====eER   add	x0, x0, x0
+# CHECK:      [0,0]     DeeeeER   .   ldr	w0, [sp]
+# CHECK-NEXT: [0,1]     D====eER  .   add	x0, x0, x0
+# CHECK-NEXT: [1,0]     DeeeeE-R  .   ldr	w0, [sp]
+# CHECK-NEXT: [1,1]     D=====eER .   add	x0, x0, x0
+# CHECK-NEXT: [2,0]     DeeeeE--R .   ldr	w0, [sp]
+# CHECK-NEXT: [2,1]     D======eER.   add	x0, x0, x0
+# CHECK-NEXT: [3,0]     D=eeeeE--R.   ldr	w0, [sp]
+# CHECK-NEXT: [3,1]     D=======eER   add	x0, x0, x0
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -120,20 +121,20 @@ add v0.16b, v0.16b, v0.16b
 # CHECK-NEXT: [3]: Average time elapsed from WB until retire stage
 
 # CHECK:            [0]    [1]    [2]    [3]
-# CHECK-NEXT: 0.     4     1.3    1.3    0.5       ldr	w0, [sp]
-# CHECK-NEXT: 1.     4     5.3    0.0    0.0       add	x0, x0, x0
-# CHECK-NEXT:        4     3.3    0.6    0.3       <total>
+# CHECK-NEXT: 0.     4     1.3    1.3    1.3       ldr	w0, [sp]
+# CHECK-NEXT: 1.     4     6.5    0.0    0.0       add	x0, x0, x0
+# CHECK-NEXT:        4     3.9    0.6    0.6       <total>
 
 # CHECK:      [1] Code Region - FPR8-bit
 
 # CHECK:      Iterations:        100
 # CHECK-NEXT: Instructions:      200
-# CHECK-NEXT: Total Cycles:      44
+# CHECK-NEXT: Total Cycles:      209
 # CHECK-NEXT: Total uOps:        200
 
 # CHECK:      Dispatch Width:    15
-# CHECK-NEXT: uOps Per Cycle:    4.55
-# CHECK-NEXT: IPC:               4.55
+# CHECK-NEXT: uOps Per Cycle:    0.96
+# CHECK-NEXT: IPC:               0.96
 # CHECK-NEXT: Block RThroughput: 0.3
 
 # CHECK:      Instruction Info:
@@ -175,17 +176,17 @@ add v0.16b, v0.16b, v0.16b
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   fadd	d0, d0, d0
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     01
+# CHECK-NEXT:                     0123456
 # CHECK-NEXT: Index     0123456789
 
-# CHECK:      [0,0]     DeeeeeeER ..   ldr	b0, [sp]
-# CHECK-NEXT: [0,1]     D======eeER.   fadd	d0, d0, d0
-# CHECK-NEXT: [1,0]     DeeeeeeE--R.   ldr	b0, [sp]
-# CHECK-NEXT: [1,1]     D======eeER.   fadd	d0, d0, d0
-# CHECK-NEXT: [2,0]     DeeeeeeE--R.   ldr	b0, [sp]
-# CHECK-NEXT: [2,1]     D======eeER.   fadd	d0, d0, d0
-# CHECK-NEXT: [3,0]     D=eeeeeeE-R.   ldr	b0, [sp]
-# CHECK-NEXT: [3,1]     D=======eeER   fadd	d0, d0, d0
+# CHECK:      [0,0]     DeeeeeeER .    ..   ldr	b0, [sp]
+# CHECK-NEXT: [0,1]     D======eeER    ..   fadd	d0, d0, d0
+# CHECK-NEXT: [1,0]     DeeeeeeE--R    ..   ldr	b0, [sp]
+# CHECK-NEXT: [1,1]     D========eeER  ..   fadd	d0, d0, d0
+# CHECK-NEXT: [2,0]     DeeeeeeE----R  ..   ldr	b0, [sp]
+# CHECK-NEXT: [2,1]     D==========eeER..   fadd	d0, d0, d0
+# CHECK-NEXT: [3,0]     D=eeeeeeE-----R..   ldr	b0, [sp]
+# CHECK-NEXT: [3,1]     D============eeER   fadd	d0, d0, d0
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -194,20 +195,20 @@ add v0.16b, v0.16b, v0.16b
 # CHECK-NEXT: [3]: Average time elapsed from WB until retire stage
 
 # CHECK:            [0]    [1]    [2]    [3]
-# CHECK-NEXT: 0.     4     1.3    1.3    1.3       ldr	b0, [sp]
-# CHECK-NEXT: 1.     4     7.3    0.0    0.0       fadd	d0, d0, d0
-# CHECK-NEXT:        4     4.3    0.6    0.6       <total>
+# CHECK-NEXT: 0.     4     1.3    1.3    2.8       ldr	b0, [sp]
+# CHECK-NEXT: 1.     4     10.0   0.0    0.0       fadd	d0, d0, d0
+# CHECK-NEXT:        4     5.6    0.6    1.4       <total>
 
 # CHECK:      [2] Code Region - FPR16-bit
 
 # CHECK:      Iterations:        100
 # CHECK-NEXT: Instructions:      200
-# CHECK-NEXT: Total Cycles:      44
+# CHECK-NEXT: Total Cycles:      209
 # CHECK-NEXT: Total uOps:        200
 
 # CHECK:      Dispatch Width:    15
-# CHECK-NEXT: uOps Per Cycle:    4.55
-# CHECK-NEXT: IPC:               4.55
+# CHECK-NEXT: uOps Per Cycle:    0.96
+# CHECK-NEXT: IPC:               0.96
 # CHECK-NEXT: Block RThroughput: 0.3
 
 # CHECK:      Instruction Info:
@@ -249,17 +250,17 @@ add v0.16b, v0.16b, v0.16b
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   fadd	d0, d0, d0
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     01
+# CHECK-NEXT:                     0123456
 # CHECK-NEXT: Index     0123456789
 
-# CHECK:      [0,0]     DeeeeeeER ..   ldr	h0, [sp]
-# CHECK-NEXT: [0,1]     D======eeER.   fadd	d0, d0, d0
-# CHECK-NEXT: [1,0]     DeeeeeeE--R.   ldr	h0, [sp]
-# CHECK-NEXT: [1,1]     D======eeER.   fadd	d0, d0, d0
-# CHECK-NEXT: [2,0]     DeeeeeeE--R.   ldr	h0, [sp]
-# CHECK-NEXT: [2,1]     D======eeER.   fadd	d0, d0, d0
-# CHECK-NEXT: [3,0]     D=eeeeeeE-R.   ldr	h0, [sp]
-# CHECK-NEXT: [3,1]     D=======eeER   fadd	d0, d0, d0
+# CHECK:      [0,0]     DeeeeeeER .    ..   ldr	h0, [sp]
+# CHECK-NEXT: [0,1]     D======eeER    ..   fadd	d0, d0, d0
+# CHECK-NEXT: [1,0]     DeeeeeeE--R    ..   ldr	h0, [sp]
+# CHECK-NEXT: [1,1]     D========eeER  ..   fadd	d0, d0, d0
+# CHECK-NEXT: [2,0]     DeeeeeeE----R  ..   ldr	h0, [sp]
+# CHECK-NEXT: [2,1]     D==========eeER..   fadd	d0, d0, d0
+# CHECK-NEXT: [3,0]     D=eeeeeeE-----R..   ldr	h0, [sp]
+# CHECK-NEXT: [3,1]     D============eeER   fadd	d0, d0, d0
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -268,20 +269,20 @@ add v0.16b, v0.16b, v0.16b
 # CHECK-NEXT: [3]: Average time elapsed from WB until retire stage
 
 # CHECK:            [0]    [1]    [2]    [3]
-# CHECK-NEXT: 0.     4     1.3    1.3    1.3       ldr	h0, [sp]
-# CHECK-NEXT: 1.     4     7.3    0.0    0.0       fadd	d0, d0, d0
-# CHECK-NEXT:        4     4.3    0.6    0.6       <total>
+# CHECK-NEXT: 0.     4     1.3    1.3    2.8       ldr	h0, [sp]
+# CHECK-NEXT: 1.     4     10.0   0.0    0.0       fadd	d0, d0, d0
+# CHECK-NEXT:        4     5.6    0.6    1.4       <total>
 
 # CHECK:      [3] Code Region - FPR32-bit
 
 # CHECK:      Iterations:        100
 # CHECK-NEXT: Instructions:      200
-# CHECK-NEXT: Total Cycles:      44
+# CHECK-NEXT: Total Cycles:      209
 # CHECK-NEXT: Total uOps:        200
 
 # CHECK:      Dispatch Width:    15
-# CHECK-NEXT: uOps Per Cycle:    4.55
-# CHECK-NEXT: IPC:               4.55
+# CHECK-NEXT: uOps Per Cycle:    0.96
+# CHECK-NEXT: IPC:               0.96
 # CHECK-NEXT: Block RThroughput: 0.3
 
 # CHECK:      Instruction Info:
@@ -323,17 +324,17 @@ add v0.16b, v0.16b, v0.16b
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   fadd	d0, d0, d0
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     01
+# CHECK-NEXT:                     0123456
 # CHECK-NEXT: Index     0123456789
 
-# CHECK:      [0,0]     DeeeeeeER ..   ldr	s0, [sp]
-# CHECK-NEXT: [0,1]     D======eeER.   fadd	d0, d0, d0
-# CHECK-NEXT: [1,0]     DeeeeeeE--R.   ldr	s0, [sp]
-# CHECK-NEXT: [1,1]     D======eeER.   fadd	d0, d0, d0
-# CHECK-NEXT: [2,0]     DeeeeeeE--R.   ldr	s0, [sp]
-# CHECK-NEXT: [2,1]     D======eeER.   fadd	d0, d0, d0
-# CHECK-NEXT: [3,0]     D=eeeeeeE-R.   ldr	s0, [sp]
-# CHECK-NEXT: [3,1]     D=======eeER   fadd	d0, d0, d0
+# CHECK:      [0,0]     DeeeeeeER .    ..   ldr	s0, [sp]
+# CHECK-NEXT: [0,1]     D======eeER    ..   fadd	d0, d0, d0
+# CHECK-NEXT: [1,0]     DeeeeeeE--R    ..   ldr	s0, [sp]
+# CHECK-NEXT: [1,1]     D========eeER  ..   fadd	d0, d0, d0
+# CHECK-NEXT: [2,0]     DeeeeeeE----R  ..   ldr	s0, [sp]
+# CHECK-NEXT: [2,1]     D==========eeER..   fadd	d0, d0, d0
+# CHECK-NEXT: [3,0]     D=eeeeeeE-----R..   ldr	s0, [sp]
+# CHECK-NEXT: [3,1]     D============eeER   fadd	d0, d0, d0
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -342,20 +343,20 @@ add v0.16b, v0.16b, v0.16b
 # CHECK-NEXT: [3]: Average time elapsed from WB until retire stage
 
 # CHECK:            [0]    [1]    [2]    [3]
-# CHECK-NEXT: 0.     4     1.3    1.3    1.3       ldr	s0, [sp]
-# CHECK-NEXT: 1.     4     7.3    0.0    0.0       fadd	d0, d0, d0
-# CHECK-NEXT:        4     4.3    0.6    0.6       <total>
+# CHECK-NEXT: 0.     4     1.3    1.3    2.8       ldr	s0, [sp]
+# CHECK-NEXT: 1.     4     10.0   0.0    0.0       fadd	d0, d0, d0
+# CHECK-NEXT:        4     5.6    0.6    1.4       <total>
 
 # CHECK:      [4] Code Region - SIMD64-bit-b
 
 # CHECK:      Iterations:        100
 # CHECK-NEXT: Instructions:      200
-# CHECK-NEXT: Total Cycles:      44
+# CHECK-NEXT: Total Cycles:      209
 # CHECK-NEXT: Total uOps:        200
 
 # CHECK:      Dispatch Width:    15
-# CHECK-NEXT: uOps Per Cycle:    4.55
-# CHECK-NEXT: IPC:               4.55
+# CHECK-NEXT: uOps Per Cycle:    0.96
+# CHECK-NEXT: IPC:               0.96
 # CHECK-NEXT: Block RThroughput: 0.3
 
 # CHECK:      Instruction Info:
@@ -397,17 +398,17 @@ add v0.16b, v0.16b, v0.16b
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   add	v0.16b, v0.16b, v0.16b
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     01
+# CHECK-NEXT:                     0123456
 # CHECK-NEXT: Index     0123456789
 
-# CHECK:      [0,0]     DeeeeeeER ..   ld1	{ v0.8b }, [sp]
-# CHECK-NEXT: [0,1]     D======eeER.   add	v0.16b, v0.16b, v0.16b
-# CHECK-NEXT: [1,0]     DeeeeeeE--R.   ld1	{ v0.8b }, [sp]
-# CHECK-NEXT: [1,1]     D======eeER.   add	v0.16b, v0.16b, v0.16b
-# CHECK-NEXT: [2,0]     DeeeeeeE--R.   ld1	{ v0.8b }, [sp]
-# CHECK-NEXT: [2,1]     D======eeER.   add	v0.16b, v0.16b, v0.16b
-# CHECK-NEXT: [3,0]     D=eeeeeeE-R.   ld1	{ v0.8b }, [sp]
-# CHECK-NEXT: [3,1]     D=======eeER   add	v0.16b, v0.16b, v0.16b
+# CHECK:      [0,0]     DeeeeeeER .    ..   ld1	{ v0.8b }, [sp]
+# CHECK-NEXT: [0,1]     D======eeER    ..   add	v0.16b, v0.16b, v0.16b
+# CHECK-NEXT: [1,0]     DeeeeeeE--R    ..   ld1	{ v0.8b }, [sp]
+# CHECK-NEXT: [1,1]     D========eeER  ..   add	v0.16b, v0.16b, v0.16b
+# CHECK-NEXT: [2,0]     DeeeeeeE----R  ..   ld1	{ v0.8b }, [sp]
+# CHECK-NEXT: [2,1]     D==========eeER..   add	v0.16b, v0.16b, v0.16b
+# CHECK-NEXT: [3,0]     D=eeeeeeE-----R..   ld1	{ v0.8b }, [sp]
+# CHECK-NEXT: [3,1]     D============eeER   add	v0.16b, v0.16b, v0.16b
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -416,20 +417,20 @@ add v0.16b, v0.16b, v0.16b
 # CHECK-NEXT: [3]: Average time elapsed from WB until retire stage
 
 # CHECK:            [0]    [1]    [2]    [3]
-# CHECK-NEXT: 0.     4     1.3    1.3    1.3       ld1	{ v0.8b }, [sp]
-# CHECK-NEXT: 1.     4     7.3    0.0    0.0       add	v0.16b, v0.16b, v0.16b
-# CHECK-NEXT:        4     4.3    0.6    0.6       <total>
+# CHECK-NEXT: 0.     4     1.3    1.3    2.8       ld1	{ v0.8b }, [sp]
+# CHECK-NEXT: 1.     4     10.0   0.0    0.0       add	v0.16b, v0.16b, v0.16b
+# CHECK-NEXT:        4     5.6    0.6    1.4       <total>
 
 # CHECK:      [5] Code Region - SIMD64-bit-h
 
 # CHECK:      Iterations:        100
 # CHECK-NEXT: Instructions:      200
-# CHECK-NEXT: Total Cycles:      44
+# CHECK-NEXT: Total Cycles:      209
 # CHECK-NEXT: Total uOps:        200
 
 # CHECK:      Dispatch Width:    15
-# CHECK-NEXT: uOps Per Cycle:    4.55
-# CHECK-NEXT: IPC:               4.55
+# CHECK-NEXT: uOps Per Cycle:    0.96
+# CHECK-NEXT: IPC:               0.96
 # CHECK-NEXT: Block RThroughput: 0.3
 
 # CHECK:      Instruction Info:
@@ -471,17 +472,17 @@ add v0.16b, v0.16b, v0.16b
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   add	v0.8h, v0.8h, v0.8h
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     01
+# CHECK-NEXT:                     0123456
 # CHECK-NEXT: Index     0123456789
 
-# CHECK:      [0,0]     DeeeeeeER ..   ld1	{ v0.4h }, [sp]
-# CHECK-NEXT: [0,1]     D======eeER.   add	v0.8h, v0.8h, v0.8h
-# CHECK-NEXT: [1,0]     DeeeeeeE--R.   ld1	{ v0.4h }, [sp]
-# CHECK-NEXT: [1,1]     D======eeER.   add	v0.8h, v0.8h, v0.8h
-# CHECK-NEXT: [2,0]     DeeeeeeE--R.   ld1	{ v0.4h }, [sp]
-# CHECK-NEXT: [2,1]     D======eeER.   add	v0.8h, v0.8h, v0.8h
-# CHECK-NEXT: [3,0]     D=eeeeeeE-R.   ld1	{ v0.4h }, [sp]
-# CHECK-NEXT: [3,1]     D=======eeER   add	v0.8h, v0.8h, v0.8h
+# CHECK:      [0,0]     DeeeeeeER .    ..   ld1	{ v0.4h }, [sp]
+# CHECK-NEXT: [0,1]     D======eeER    ..   add	v0.8h, v0.8h, v0.8h
+# CHECK-NEXT: [1,0]     DeeeeeeE--R    ..   ld1	{ v0.4h }, [sp]
+# CHECK-NEXT: [1,1]     D========eeER  ..   add	v0.8h, v0.8h, v0.8h
+# CHECK-NEXT: [2,0]     DeeeeeeE----R  ..   ld1	{ v0.4h }, [sp]
+# CHECK-NEXT: [2,1]     D==========eeER..   add	v0.8h, v0.8h, v0.8h
+# CHECK-NEXT: [3,0]     D=eeeeeeE-----R..   ld1	{ v0.4h }, [sp]
+# CHECK-NEXT: [3,1]     D============eeER   add	v0.8h, v0.8h, v0.8h
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -490,20 +491,20 @@ add v0.16b, v0.16b, v0.16b
 # CHECK-NEXT: [3]: Average time elapsed from WB until retire stage
 
 # CHECK:            [0]    [1]    [2]    [3]
-# CHECK-NEXT: 0.     4     1.3    1.3    1.3       ld1	{ v0.4h }, [sp]
-# CHECK-NEXT: 1.     4     7.3    0.0    0.0       add	v0.8h, v0.8h, v0.8h
-# CHECK-NEXT:        4     4.3    0.6    0.6       <total>
+# CHECK-NEXT: 0.     4     1.3    1.3    2.8       ld1	{ v0.4h }, [sp]
+# CHECK-NEXT: 1.     4     10.0   0.0    0.0       add	v0.8h, v0.8h, v0.8h
+# CHECK-NEXT:        4     5.6    0.6    1.4       <total>
 
 # CHECK:      [6] Code Region - SIMD64-bit-s
 
 # CHECK:      Iterations:        100
 # CHECK-NEXT: Instructions:      200
-# CHECK-NEXT: Total Cycles:      44
+# CHECK-NEXT: Total Cycles:      209
 # CHECK-NEXT: Total uOps:        200
 
 # CHECK:      Dispatch Width:    15
-# CHECK-NEXT: uOps Per Cycle:    4.55
-# CHECK-NEXT: IPC:               4.55
+# CHECK-NEXT: uOps Per Cycle:    0.96
+# CHECK-NEXT: IPC:               0.96
 # CHECK-NEXT: Block RThroughput: 0.3
 
 # CHECK:      Instruction Info:
@@ -545,17 +546,17 @@ add v0.16b, v0.16b, v0.16b
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   add	v0.4s, v0.4s, v0.4s
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     01
+# CHECK-NEXT:                     0123456
 # CHECK-NEXT: Index     0123456789
 
-# CHECK:      [0,0]     DeeeeeeER ..   ld1	{ v0.2s }, [sp]
-# CHECK-NEXT: [0,1]     D======eeER.   add	v0.4s, v0.4s, v0.4s
-# CHECK-NEXT: [1,0]     DeeeeeeE--R.   ld1	{ v0.2s }, [sp]
-# CHECK-NEXT: [1,1]     D======eeER.   add	v0.4s, v0.4s, v0.4s
-# CHECK-NEXT: [2,0]     DeeeeeeE--R.   ld1	{ v0.2s }, [sp]
-# CHECK-NEXT: [2,1]     D======eeER.   add	v0.4s, v0.4s, v0.4s
-# CHECK-NEXT: [3,0]     D=eeeeeeE-R.   ld1	{ v0.2s }, [sp]
-# CHECK-NEXT: [3,1]     D=======eeER   add	v0.4s, v0.4s, v0.4s
+# CHECK:      [0,0]     DeeeeeeER .    ..   ld1	{ v0.2s }, [sp]
+# CHECK-NEXT: [0,1]     D======eeER    ..   add	v0.4s, v0.4s, v0.4s
+# CHECK-NEXT: [1,0]     DeeeeeeE--R    ..   ld1	{ v0.2s }, [sp]
+# CHECK-NEXT: [1,1]     D========eeER  ..   add	v0.4s, v0.4s, v0.4s
+# CHECK-NEXT: [2,0]     DeeeeeeE----R  ..   ld1	{ v0.2s }, [sp]
+# CHECK-NEXT: [2,1]     D==========eeER..   add	v0.4s, v0.4s, v0.4s
+# CHECK-NEXT: [3,0]     D=eeeeeeE-----R..   ld1	{ v0.2s }, [sp]
+# CHECK-NEXT: [3,1]     D============eeER   add	v0.4s, v0.4s, v0.4s
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -564,20 +565,20 @@ add v0.16b, v0.16b, v0.16b
 # CHECK-NEXT: [3]: Average time elapsed from WB until retire stage
 
 # CHECK:            [0]    [1]    [2]    [3]
-# CHECK-NEXT: 0.     4     1.3    1.3    1.3       ld1	{ v0.2s }, [sp]
-# CHECK-NEXT: 1.     4     7.3    0.0    0.0       add	v0.4s, v0.4s, v0.4s
-# CHECK-NEXT:        4     4.3    0.6    0.6       <total>
+# CHECK-NEXT: 0.     4     1.3    1.3    2.8       ld1	{ v0.2s }, [sp]
+# CHECK-NEXT: 1.     4     10.0   0.0    0.0       add	v0.4s, v0.4s, v0.4s
+# CHECK-NEXT:        4     5.6    0.6    1.4       <total>
 
 # CHECK:      [7] Code Region - SIMD64-bit-d
 
 # CHECK:      Iterations:        100
 # CHECK-NEXT: Instructions:      200
-# CHECK-NEXT: Total Cycles:      44
+# CHECK-NEXT: Total Cycles:      209
 # CHECK-NEXT: Total uOps:        200
 
 # CHECK:      Dispatch Width:    15
-# CHECK-NEXT: uOps Per Cycle:    4.55
-# CHECK-NEXT: IPC:               4.55
+# CHECK-NEXT: uOps Per Cycle:    0.96
+# CHECK-NEXT: IPC:               0.96
 # CHECK-NEXT: Block RThroughput: 0.3
 
 # CHECK:      Instruction Info:
@@ -619,17 +620,17 @@ add v0.16b, v0.16b, v0.16b
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   add	v0.2d, v0.2d, v0.2d
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     01
+# CHECK-NEXT:                     0123456
 # CHECK-NEXT: Index     0123456789
 
-# CHECK:      [0,0]     DeeeeeeER ..   ld1	{ v0.1d }, [sp]
-# CHECK-NEXT: [0,1]     D======eeER.   add	v0.2d, v0.2d, v0.2d
-# CHECK-NEXT: [1,0]     DeeeeeeE--R.   ld1	{ v0.1d }, [sp]
-# CHECK-NEXT: [1,1]     D======eeER.   add	v0.2d, v0.2d, v0.2d
-# CHECK-NEXT: [2,0]     DeeeeeeE--R.   ld1	{ v0.1d }, [sp]
-# CHECK-NEXT: [2,1]     D======eeER.   add	v0.2d, v0.2d, v0.2d
-# CHECK-NEXT: [3,0]     D=eeeeeeE-R.   ld1	{ v0.1d }, [sp]
-# CHECK-NEXT: [3,1]     D=======eeER   add	v0.2d, v0.2d, v0.2d
+# CHECK:      [0,0]     DeeeeeeER .    ..   ld1	{ v0.1d }, [sp]
+# CHECK-NEXT: [0,1]     D======eeER    ..   add	v0.2d, v0.2d, v0.2d
+# CHECK-NEXT: [1,0]     DeeeeeeE--R    ..   ld1	{ v0.1d }, [sp]
+# CHECK-NEXT: [1,1]     D========eeER  ..   add	v0.2d, v0.2d, v0.2d
+# CHECK-NEXT: [2,0]     DeeeeeeE----R  ..   ld1	{ v0.1d }, [sp]
+# CHECK-NEXT: [2,1]     D==========eeER..   add	v0.2d, v0.2d, v0.2d
+# CHECK-NEXT: [3,0]     D=eeeeeeE-----R..   ld1	{ v0.1d }, [sp]
+# CHECK-NEXT: [3,1]     D============eeER   add	v0.2d, v0.2d, v0.2d
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -638,9 +639,9 @@ add v0.16b, v0.16b, v0.16b
 # CHECK-NEXT: [3]: Average time elapsed from WB until retire stage
 
 # CHECK:            [0]    [1]    [2]    [3]
-# CHECK-NEXT: 0.     4     1.3    1.3    1.3       ld1	{ v0.1d }, [sp]
-# CHECK-NEXT: 1.     4     7.3    0.0    0.0       add	v0.2d, v0.2d, v0.2d
-# CHECK-NEXT:        4     4.3    0.6    0.6       <total>
+# CHECK-NEXT: 0.     4     1.3    1.3    2.8       ld1	{ v0.1d }, [sp]
+# CHECK-NEXT: 1.     4     10.0   0.0    0.0       add	v0.2d, v0.2d, v0.2d
+# CHECK-NEXT:        4     5.6    0.6    1.4       <total>
 
 # CHECK:      [8] Code Region - ins
 

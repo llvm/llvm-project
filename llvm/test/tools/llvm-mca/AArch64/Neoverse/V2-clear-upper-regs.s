@@ -55,12 +55,12 @@ add z0.s, z0.s, z0.s
 
 # CHECK:      Iterations:        100
 # CHECK-NEXT: Instructions:      200
-# CHECK-NEXT: Total Cycles:      44
+# CHECK-NEXT: Total Cycles:      209
 # CHECK-NEXT: Total uOps:        200
 
 # CHECK:      Dispatch Width:    16
-# CHECK-NEXT: uOps Per Cycle:    4.55
-# CHECK-NEXT: IPC:               4.55
+# CHECK-NEXT: uOps Per Cycle:    0.96
+# CHECK-NEXT: IPC:               0.96
 # CHECK-NEXT: Block RThroughput: 0.3
 
 # CHECK:      Instruction Info:
@@ -104,17 +104,17 @@ add z0.s, z0.s, z0.s
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   add	z0.d, z0.d, z0.d
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     01
+# CHECK-NEXT:                     0123456
 # CHECK-NEXT: Index     0123456789
 
-# CHECK:      [0,0]     DeeeeeeER ..   ldr	b0, [sp]
-# CHECK-NEXT: [0,1]     D======eeER.   add	z0.d, z0.d, z0.d
-# CHECK-NEXT: [1,0]     DeeeeeeE--R.   ldr	b0, [sp]
-# CHECK-NEXT: [1,1]     D======eeER.   add	z0.d, z0.d, z0.d
-# CHECK-NEXT: [2,0]     DeeeeeeE--R.   ldr	b0, [sp]
-# CHECK-NEXT: [2,1]     D======eeER.   add	z0.d, z0.d, z0.d
-# CHECK-NEXT: [3,0]     D=eeeeeeE-R.   ldr	b0, [sp]
-# CHECK-NEXT: [3,1]     D=======eeER   add	z0.d, z0.d, z0.d
+# CHECK:      [0,0]     DeeeeeeER .    ..   ldr	b0, [sp]
+# CHECK-NEXT: [0,1]     D======eeER    ..   add	z0.d, z0.d, z0.d
+# CHECK-NEXT: [1,0]     DeeeeeeE--R    ..   ldr	b0, [sp]
+# CHECK-NEXT: [1,1]     D========eeER  ..   add	z0.d, z0.d, z0.d
+# CHECK-NEXT: [2,0]     DeeeeeeE----R  ..   ldr	b0, [sp]
+# CHECK-NEXT: [2,1]     D==========eeER..   add	z0.d, z0.d, z0.d
+# CHECK-NEXT: [3,0]     D=eeeeeeE-----R..   ldr	b0, [sp]
+# CHECK-NEXT: [3,1]     D============eeER   add	z0.d, z0.d, z0.d
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -123,20 +123,20 @@ add z0.s, z0.s, z0.s
 # CHECK-NEXT: [3]: Average time elapsed from WB until retire stage
 
 # CHECK:            [0]    [1]    [2]    [3]
-# CHECK-NEXT: 0.     4     1.3    1.3    1.3       ldr	b0, [sp]
-# CHECK-NEXT: 1.     4     7.3    0.0    0.0       add	z0.d, z0.d, z0.d
-# CHECK-NEXT:        4     4.3    0.6    0.6       <total>
+# CHECK-NEXT: 0.     4     1.3    1.3    2.8       ldr	b0, [sp]
+# CHECK-NEXT: 1.     4     10.0   0.0    0.0       add	z0.d, z0.d, z0.d
+# CHECK-NEXT:        4     5.6    0.6    1.4       <total>
 
 # CHECK:      [1] Code Region - FPR16-bit
 
 # CHECK:      Iterations:        100
 # CHECK-NEXT: Instructions:      200
-# CHECK-NEXT: Total Cycles:      44
+# CHECK-NEXT: Total Cycles:      209
 # CHECK-NEXT: Total uOps:        200
 
 # CHECK:      Dispatch Width:    16
-# CHECK-NEXT: uOps Per Cycle:    4.55
-# CHECK-NEXT: IPC:               4.55
+# CHECK-NEXT: uOps Per Cycle:    0.96
+# CHECK-NEXT: IPC:               0.96
 # CHECK-NEXT: Block RThroughput: 0.3
 
 # CHECK:      Instruction Info:
@@ -180,17 +180,17 @@ add z0.s, z0.s, z0.s
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   add	z0.d, z0.d, z0.d
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     01
+# CHECK-NEXT:                     0123456
 # CHECK-NEXT: Index     0123456789
 
-# CHECK:      [0,0]     DeeeeeeER ..   ldr	h0, [sp]
-# CHECK-NEXT: [0,1]     D======eeER.   add	z0.d, z0.d, z0.d
-# CHECK-NEXT: [1,0]     DeeeeeeE--R.   ldr	h0, [sp]
-# CHECK-NEXT: [1,1]     D======eeER.   add	z0.d, z0.d, z0.d
-# CHECK-NEXT: [2,0]     DeeeeeeE--R.   ldr	h0, [sp]
-# CHECK-NEXT: [2,1]     D======eeER.   add	z0.d, z0.d, z0.d
-# CHECK-NEXT: [3,0]     D=eeeeeeE-R.   ldr	h0, [sp]
-# CHECK-NEXT: [3,1]     D=======eeER   add	z0.d, z0.d, z0.d
+# CHECK:      [0,0]     DeeeeeeER .    ..   ldr	h0, [sp]
+# CHECK-NEXT: [0,1]     D======eeER    ..   add	z0.d, z0.d, z0.d
+# CHECK-NEXT: [1,0]     DeeeeeeE--R    ..   ldr	h0, [sp]
+# CHECK-NEXT: [1,1]     D========eeER  ..   add	z0.d, z0.d, z0.d
+# CHECK-NEXT: [2,0]     DeeeeeeE----R  ..   ldr	h0, [sp]
+# CHECK-NEXT: [2,1]     D==========eeER..   add	z0.d, z0.d, z0.d
+# CHECK-NEXT: [3,0]     D=eeeeeeE-----R..   ldr	h0, [sp]
+# CHECK-NEXT: [3,1]     D============eeER   add	z0.d, z0.d, z0.d
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -199,20 +199,20 @@ add z0.s, z0.s, z0.s
 # CHECK-NEXT: [3]: Average time elapsed from WB until retire stage
 
 # CHECK:            [0]    [1]    [2]    [3]
-# CHECK-NEXT: 0.     4     1.3    1.3    1.3       ldr	h0, [sp]
-# CHECK-NEXT: 1.     4     7.3    0.0    0.0       add	z0.d, z0.d, z0.d
-# CHECK-NEXT:        4     4.3    0.6    0.6       <total>
+# CHECK-NEXT: 0.     4     1.3    1.3    2.8       ldr	h0, [sp]
+# CHECK-NEXT: 1.     4     10.0   0.0    0.0       add	z0.d, z0.d, z0.d
+# CHECK-NEXT:        4     5.6    0.6    1.4       <total>
 
 # CHECK:      [2] Code Region - FPR32-bit
 
 # CHECK:      Iterations:        100
 # CHECK-NEXT: Instructions:      200
-# CHECK-NEXT: Total Cycles:      44
+# CHECK-NEXT: Total Cycles:      209
 # CHECK-NEXT: Total uOps:        200
 
 # CHECK:      Dispatch Width:    16
-# CHECK-NEXT: uOps Per Cycle:    4.55
-# CHECK-NEXT: IPC:               4.55
+# CHECK-NEXT: uOps Per Cycle:    0.96
+# CHECK-NEXT: IPC:               0.96
 # CHECK-NEXT: Block RThroughput: 0.3
 
 # CHECK:      Instruction Info:
@@ -256,17 +256,17 @@ add z0.s, z0.s, z0.s
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   add	z0.d, z0.d, z0.d
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     01
+# CHECK-NEXT:                     0123456
 # CHECK-NEXT: Index     0123456789
 
-# CHECK:      [0,0]     DeeeeeeER ..   ldr	s0, [sp]
-# CHECK-NEXT: [0,1]     D======eeER.   add	z0.d, z0.d, z0.d
-# CHECK-NEXT: [1,0]     DeeeeeeE--R.   ldr	s0, [sp]
-# CHECK-NEXT: [1,1]     D======eeER.   add	z0.d, z0.d, z0.d
-# CHECK-NEXT: [2,0]     DeeeeeeE--R.   ldr	s0, [sp]
-# CHECK-NEXT: [2,1]     D======eeER.   add	z0.d, z0.d, z0.d
-# CHECK-NEXT: [3,0]     D=eeeeeeE-R.   ldr	s0, [sp]
-# CHECK-NEXT: [3,1]     D=======eeER   add	z0.d, z0.d, z0.d
+# CHECK:      [0,0]     DeeeeeeER .    ..   ldr	s0, [sp]
+# CHECK-NEXT: [0,1]     D======eeER    ..   add	z0.d, z0.d, z0.d
+# CHECK-NEXT: [1,0]     DeeeeeeE--R    ..   ldr	s0, [sp]
+# CHECK-NEXT: [1,1]     D========eeER  ..   add	z0.d, z0.d, z0.d
+# CHECK-NEXT: [2,0]     DeeeeeeE----R  ..   ldr	s0, [sp]
+# CHECK-NEXT: [2,1]     D==========eeER..   add	z0.d, z0.d, z0.d
+# CHECK-NEXT: [3,0]     D=eeeeeeE-----R..   ldr	s0, [sp]
+# CHECK-NEXT: [3,1]     D============eeER   add	z0.d, z0.d, z0.d
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -275,20 +275,20 @@ add z0.s, z0.s, z0.s
 # CHECK-NEXT: [3]: Average time elapsed from WB until retire stage
 
 # CHECK:            [0]    [1]    [2]    [3]
-# CHECK-NEXT: 0.     4     1.3    1.3    1.3       ldr	s0, [sp]
-# CHECK-NEXT: 1.     4     7.3    0.0    0.0       add	z0.d, z0.d, z0.d
-# CHECK-NEXT:        4     4.3    0.6    0.6       <total>
+# CHECK-NEXT: 0.     4     1.3    1.3    2.8       ldr	s0, [sp]
+# CHECK-NEXT: 1.     4     10.0   0.0    0.0       add	z0.d, z0.d, z0.d
+# CHECK-NEXT:        4     5.6    0.6    1.4       <total>
 
 # CHECK:      [3] Code Region - FPR64-bit
 
 # CHECK:      Iterations:        100
 # CHECK-NEXT: Instructions:      200
-# CHECK-NEXT: Total Cycles:      44
+# CHECK-NEXT: Total Cycles:      209
 # CHECK-NEXT: Total uOps:        200
 
 # CHECK:      Dispatch Width:    16
-# CHECK-NEXT: uOps Per Cycle:    4.55
-# CHECK-NEXT: IPC:               4.55
+# CHECK-NEXT: uOps Per Cycle:    0.96
+# CHECK-NEXT: IPC:               0.96
 # CHECK-NEXT: Block RThroughput: 0.3
 
 # CHECK:      Instruction Info:
@@ -332,17 +332,17 @@ add z0.s, z0.s, z0.s
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   add	z0.d, z0.d, z0.d
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     01
+# CHECK-NEXT:                     0123456
 # CHECK-NEXT: Index     0123456789
 
-# CHECK:      [0,0]     DeeeeeeER ..   ldr	d0, [sp]
-# CHECK-NEXT: [0,1]     D======eeER.   add	z0.d, z0.d, z0.d
-# CHECK-NEXT: [1,0]     DeeeeeeE--R.   ldr	d0, [sp]
-# CHECK-NEXT: [1,1]     D======eeER.   add	z0.d, z0.d, z0.d
-# CHECK-NEXT: [2,0]     DeeeeeeE--R.   ldr	d0, [sp]
-# CHECK-NEXT: [2,1]     D======eeER.   add	z0.d, z0.d, z0.d
-# CHECK-NEXT: [3,0]     D=eeeeeeE-R.   ldr	d0, [sp]
-# CHECK-NEXT: [3,1]     D=======eeER   add	z0.d, z0.d, z0.d
+# CHECK:      [0,0]     DeeeeeeER .    ..   ldr	d0, [sp]
+# CHECK-NEXT: [0,1]     D======eeER    ..   add	z0.d, z0.d, z0.d
+# CHECK-NEXT: [1,0]     DeeeeeeE--R    ..   ldr	d0, [sp]
+# CHECK-NEXT: [1,1]     D========eeER  ..   add	z0.d, z0.d, z0.d
+# CHECK-NEXT: [2,0]     DeeeeeeE----R  ..   ldr	d0, [sp]
+# CHECK-NEXT: [2,1]     D==========eeER..   add	z0.d, z0.d, z0.d
+# CHECK-NEXT: [3,0]     D=eeeeeeE-----R..   ldr	d0, [sp]
+# CHECK-NEXT: [3,1]     D============eeER   add	z0.d, z0.d, z0.d
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -351,20 +351,20 @@ add z0.s, z0.s, z0.s
 # CHECK-NEXT: [3]: Average time elapsed from WB until retire stage
 
 # CHECK:            [0]    [1]    [2]    [3]
-# CHECK-NEXT: 0.     4     1.3    1.3    1.3       ldr	d0, [sp]
-# CHECK-NEXT: 1.     4     7.3    0.0    0.0       add	z0.d, z0.d, z0.d
-# CHECK-NEXT:        4     4.3    0.6    0.6       <total>
+# CHECK-NEXT: 0.     4     1.3    1.3    2.8       ldr	d0, [sp]
+# CHECK-NEXT: 1.     4     10.0   0.0    0.0       add	z0.d, z0.d, z0.d
+# CHECK-NEXT:        4     5.6    0.6    1.4       <total>
 
 # CHECK:      [4] Code Region - FPR128-bit
 
 # CHECK:      Iterations:        100
 # CHECK-NEXT: Instructions:      200
-# CHECK-NEXT: Total Cycles:      44
+# CHECK-NEXT: Total Cycles:      209
 # CHECK-NEXT: Total uOps:        200
 
 # CHECK:      Dispatch Width:    16
-# CHECK-NEXT: uOps Per Cycle:    4.55
-# CHECK-NEXT: IPC:               4.55
+# CHECK-NEXT: uOps Per Cycle:    0.96
+# CHECK-NEXT: IPC:               0.96
 # CHECK-NEXT: Block RThroughput: 0.3
 
 # CHECK:      Instruction Info:
@@ -408,17 +408,17 @@ add z0.s, z0.s, z0.s
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   add	z0.d, z0.d, z0.d
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     01
+# CHECK-NEXT:                     0123456
 # CHECK-NEXT: Index     0123456789
 
-# CHECK:      [0,0]     DeeeeeeER ..   ldr	q0, [sp]
-# CHECK-NEXT: [0,1]     D======eeER.   add	z0.d, z0.d, z0.d
-# CHECK-NEXT: [1,0]     DeeeeeeE--R.   ldr	q0, [sp]
-# CHECK-NEXT: [1,1]     D======eeER.   add	z0.d, z0.d, z0.d
-# CHECK-NEXT: [2,0]     DeeeeeeE--R.   ldr	q0, [sp]
-# CHECK-NEXT: [2,1]     D======eeER.   add	z0.d, z0.d, z0.d
-# CHECK-NEXT: [3,0]     D=eeeeeeE-R.   ldr	q0, [sp]
-# CHECK-NEXT: [3,1]     D=======eeER   add	z0.d, z0.d, z0.d
+# CHECK:      [0,0]     DeeeeeeER .    ..   ldr	q0, [sp]
+# CHECK-NEXT: [0,1]     D======eeER    ..   add	z0.d, z0.d, z0.d
+# CHECK-NEXT: [1,0]     DeeeeeeE--R    ..   ldr	q0, [sp]
+# CHECK-NEXT: [1,1]     D========eeER  ..   add	z0.d, z0.d, z0.d
+# CHECK-NEXT: [2,0]     DeeeeeeE----R  ..   ldr	q0, [sp]
+# CHECK-NEXT: [2,1]     D==========eeER..   add	z0.d, z0.d, z0.d
+# CHECK-NEXT: [3,0]     D=eeeeeeE-----R..   ldr	q0, [sp]
+# CHECK-NEXT: [3,1]     D============eeER   add	z0.d, z0.d, z0.d
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -427,20 +427,20 @@ add z0.s, z0.s, z0.s
 # CHECK-NEXT: [3]: Average time elapsed from WB until retire stage
 
 # CHECK:            [0]    [1]    [2]    [3]
-# CHECK-NEXT: 0.     4     1.3    1.3    1.3       ldr	q0, [sp]
-# CHECK-NEXT: 1.     4     7.3    0.0    0.0       add	z0.d, z0.d, z0.d
-# CHECK-NEXT:        4     4.3    0.6    0.6       <total>
+# CHECK-NEXT: 0.     4     1.3    1.3    2.8       ldr	q0, [sp]
+# CHECK-NEXT: 1.     4     10.0   0.0    0.0       add	z0.d, z0.d, z0.d
+# CHECK-NEXT:        4     5.6    0.6    1.4       <total>
 
 # CHECK:      [5] Code Region - SIMD64-bit-b
 
 # CHECK:      Iterations:        100
 # CHECK-NEXT: Instructions:      200
-# CHECK-NEXT: Total Cycles:      44
+# CHECK-NEXT: Total Cycles:      209
 # CHECK-NEXT: Total uOps:        200
 
 # CHECK:      Dispatch Width:    16
-# CHECK-NEXT: uOps Per Cycle:    4.55
-# CHECK-NEXT: IPC:               4.55
+# CHECK-NEXT: uOps Per Cycle:    0.96
+# CHECK-NEXT: IPC:               0.96
 # CHECK-NEXT: Block RThroughput: 0.3
 
 # CHECK:      Instruction Info:
@@ -484,17 +484,17 @@ add z0.s, z0.s, z0.s
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   add	z0.d, z0.d, z0.d
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     01
+# CHECK-NEXT:                     0123456
 # CHECK-NEXT: Index     0123456789
 
-# CHECK:      [0,0]     DeeeeeeER ..   ld1	{ v0.8b }, [sp]
-# CHECK-NEXT: [0,1]     D======eeER.   add	z0.d, z0.d, z0.d
-# CHECK-NEXT: [1,0]     DeeeeeeE--R.   ld1	{ v0.8b }, [sp]
-# CHECK-NEXT: [1,1]     D======eeER.   add	z0.d, z0.d, z0.d
-# CHECK-NEXT: [2,0]     DeeeeeeE--R.   ld1	{ v0.8b }, [sp]
-# CHECK-NEXT: [2,1]     D======eeER.   add	z0.d, z0.d, z0.d
-# CHECK-NEXT: [3,0]     D=eeeeeeE-R.   ld1	{ v0.8b }, [sp]
-# CHECK-NEXT: [3,1]     D=======eeER   add	z0.d, z0.d, z0.d
+# CHECK:      [0,0]     DeeeeeeER .    ..   ld1	{ v0.8b }, [sp]
+# CHECK-NEXT: [0,1]     D======eeER    ..   add	z0.d, z0.d, z0.d
+# CHECK-NEXT: [1,0]     DeeeeeeE--R    ..   ld1	{ v0.8b }, [sp]
+# CHECK-NEXT: [1,1]     D========eeER  ..   add	z0.d, z0.d, z0.d
+# CHECK-NEXT: [2,0]     DeeeeeeE----R  ..   ld1	{ v0.8b }, [sp]
+# CHECK-NEXT: [2,1]     D==========eeER..   add	z0.d, z0.d, z0.d
+# CHECK-NEXT: [3,0]     D=eeeeeeE-----R..   ld1	{ v0.8b }, [sp]
+# CHECK-NEXT: [3,1]     D============eeER   add	z0.d, z0.d, z0.d
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -503,20 +503,20 @@ add z0.s, z0.s, z0.s
 # CHECK-NEXT: [3]: Average time elapsed from WB until retire stage
 
 # CHECK:            [0]    [1]    [2]    [3]
-# CHECK-NEXT: 0.     4     1.3    1.3    1.3       ld1	{ v0.8b }, [sp]
-# CHECK-NEXT: 1.     4     7.3    0.0    0.0       add	z0.d, z0.d, z0.d
-# CHECK-NEXT:        4     4.3    0.6    0.6       <total>
+# CHECK-NEXT: 0.     4     1.3    1.3    2.8       ld1	{ v0.8b }, [sp]
+# CHECK-NEXT: 1.     4     10.0   0.0    0.0       add	z0.d, z0.d, z0.d
+# CHECK-NEXT:        4     5.6    0.6    1.4       <total>
 
 # CHECK:      [6] Code Region - SIMD64-bit-h
 
 # CHECK:      Iterations:        100
 # CHECK-NEXT: Instructions:      200
-# CHECK-NEXT: Total Cycles:      44
+# CHECK-NEXT: Total Cycles:      209
 # CHECK-NEXT: Total uOps:        200
 
 # CHECK:      Dispatch Width:    16
-# CHECK-NEXT: uOps Per Cycle:    4.55
-# CHECK-NEXT: IPC:               4.55
+# CHECK-NEXT: uOps Per Cycle:    0.96
+# CHECK-NEXT: IPC:               0.96
 # CHECK-NEXT: Block RThroughput: 0.3
 
 # CHECK:      Instruction Info:
@@ -560,17 +560,17 @@ add z0.s, z0.s, z0.s
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   add	z0.d, z0.d, z0.d
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     01
+# CHECK-NEXT:                     0123456
 # CHECK-NEXT: Index     0123456789
 
-# CHECK:      [0,0]     DeeeeeeER ..   ld1	{ v0.4h }, [sp]
-# CHECK-NEXT: [0,1]     D======eeER.   add	z0.d, z0.d, z0.d
-# CHECK-NEXT: [1,0]     DeeeeeeE--R.   ld1	{ v0.4h }, [sp]
-# CHECK-NEXT: [1,1]     D======eeER.   add	z0.d, z0.d, z0.d
-# CHECK-NEXT: [2,0]     DeeeeeeE--R.   ld1	{ v0.4h }, [sp]
-# CHECK-NEXT: [2,1]     D======eeER.   add	z0.d, z0.d, z0.d
-# CHECK-NEXT: [3,0]     D=eeeeeeE-R.   ld1	{ v0.4h }, [sp]
-# CHECK-NEXT: [3,1]     D=======eeER   add	z0.d, z0.d, z0.d
+# CHECK:      [0,0]     DeeeeeeER .    ..   ld1	{ v0.4h }, [sp]
+# CHECK-NEXT: [0,1]     D======eeER    ..   add	z0.d, z0.d, z0.d
+# CHECK-NEXT: [1,0]     DeeeeeeE--R    ..   ld1	{ v0.4h }, [sp]
+# CHECK-NEXT: [1,1]     D========eeER  ..   add	z0.d, z0.d, z0.d
+# CHECK-NEXT: [2,0]     DeeeeeeE----R  ..   ld1	{ v0.4h }, [sp]
+# CHECK-NEXT: [2,1]     D==========eeER..   add	z0.d, z0.d, z0.d
+# CHECK-NEXT: [3,0]     D=eeeeeeE-----R..   ld1	{ v0.4h }, [sp]
+# CHECK-NEXT: [3,1]     D============eeER   add	z0.d, z0.d, z0.d
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -579,20 +579,20 @@ add z0.s, z0.s, z0.s
 # CHECK-NEXT: [3]: Average time elapsed from WB until retire stage
 
 # CHECK:            [0]    [1]    [2]    [3]
-# CHECK-NEXT: 0.     4     1.3    1.3    1.3       ld1	{ v0.4h }, [sp]
-# CHECK-NEXT: 1.     4     7.3    0.0    0.0       add	z0.d, z0.d, z0.d
-# CHECK-NEXT:        4     4.3    0.6    0.6       <total>
+# CHECK-NEXT: 0.     4     1.3    1.3    2.8       ld1	{ v0.4h }, [sp]
+# CHECK-NEXT: 1.     4     10.0   0.0    0.0       add	z0.d, z0.d, z0.d
+# CHECK-NEXT:        4     5.6    0.6    1.4       <total>
 
 # CHECK:      [7] Code Region - SIMD64-bit-s
 
 # CHECK:      Iterations:        100
 # CHECK-NEXT: Instructions:      200
-# CHECK-NEXT: Total Cycles:      44
+# CHECK-NEXT: Total Cycles:      209
 # CHECK-NEXT: Total uOps:        200
 
 # CHECK:      Dispatch Width:    16
-# CHECK-NEXT: uOps Per Cycle:    4.55
-# CHECK-NEXT: IPC:               4.55
+# CHECK-NEXT: uOps Per Cycle:    0.96
+# CHECK-NEXT: IPC:               0.96
 # CHECK-NEXT: Block RThroughput: 0.3
 
 # CHECK:      Instruction Info:
@@ -636,17 +636,17 @@ add z0.s, z0.s, z0.s
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   add	z0.d, z0.d, z0.d
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     01
+# CHECK-NEXT:                     0123456
 # CHECK-NEXT: Index     0123456789
 
-# CHECK:      [0,0]     DeeeeeeER ..   ld1	{ v0.2s }, [sp]
-# CHECK-NEXT: [0,1]     D======eeER.   add	z0.d, z0.d, z0.d
-# CHECK-NEXT: [1,0]     DeeeeeeE--R.   ld1	{ v0.2s }, [sp]
-# CHECK-NEXT: [1,1]     D======eeER.   add	z0.d, z0.d, z0.d
-# CHECK-NEXT: [2,0]     DeeeeeeE--R.   ld1	{ v0.2s }, [sp]
-# CHECK-NEXT: [2,1]     D======eeER.   add	z0.d, z0.d, z0.d
-# CHECK-NEXT: [3,0]     D=eeeeeeE-R.   ld1	{ v0.2s }, [sp]
-# CHECK-NEXT: [3,1]     D=======eeER   add	z0.d, z0.d, z0.d
+# CHECK:      [0,0]     DeeeeeeER .    ..   ld1	{ v0.2s }, [sp]
+# CHECK-NEXT: [0,1]     D======eeER    ..   add	z0.d, z0.d, z0.d
+# CHECK-NEXT: [1,0]     DeeeeeeE--R    ..   ld1	{ v0.2s }, [sp]
+# CHECK-NEXT: [1,1]     D========eeER  ..   add	z0.d, z0.d, z0.d
+# CHECK-NEXT: [2,0]     DeeeeeeE----R  ..   ld1	{ v0.2s }, [sp]
+# CHECK-NEXT: [2,1]     D==========eeER..   add	z0.d, z0.d, z0.d
+# CHECK-NEXT: [3,0]     D=eeeeeeE-----R..   ld1	{ v0.2s }, [sp]
+# CHECK-NEXT: [3,1]     D============eeER   add	z0.d, z0.d, z0.d
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -655,20 +655,20 @@ add z0.s, z0.s, z0.s
 # CHECK-NEXT: [3]: Average time elapsed from WB until retire stage
 
 # CHECK:            [0]    [1]    [2]    [3]
-# CHECK-NEXT: 0.     4     1.3    1.3    1.3       ld1	{ v0.2s }, [sp]
-# CHECK-NEXT: 1.     4     7.3    0.0    0.0       add	z0.d, z0.d, z0.d
-# CHECK-NEXT:        4     4.3    0.6    0.6       <total>
+# CHECK-NEXT: 0.     4     1.3    1.3    2.8       ld1	{ v0.2s }, [sp]
+# CHECK-NEXT: 1.     4     10.0   0.0    0.0       add	z0.d, z0.d, z0.d
+# CHECK-NEXT:        4     5.6    0.6    1.4       <total>
 
 # CHECK:      [8] Code Region - SIMD64-bit-d
 
 # CHECK:      Iterations:        100
 # CHECK-NEXT: Instructions:      200
-# CHECK-NEXT: Total Cycles:      44
+# CHECK-NEXT: Total Cycles:      209
 # CHECK-NEXT: Total uOps:        200
 
 # CHECK:      Dispatch Width:    16
-# CHECK-NEXT: uOps Per Cycle:    4.55
-# CHECK-NEXT: IPC:               4.55
+# CHECK-NEXT: uOps Per Cycle:    0.96
+# CHECK-NEXT: IPC:               0.96
 # CHECK-NEXT: Block RThroughput: 0.3
 
 # CHECK:      Instruction Info:
@@ -712,17 +712,17 @@ add z0.s, z0.s, z0.s
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   add	z0.d, z0.d, z0.d
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     01
+# CHECK-NEXT:                     0123456
 # CHECK-NEXT: Index     0123456789
 
-# CHECK:      [0,0]     DeeeeeeER ..   ld1	{ v0.1d }, [sp]
-# CHECK-NEXT: [0,1]     D======eeER.   add	z0.d, z0.d, z0.d
-# CHECK-NEXT: [1,0]     DeeeeeeE--R.   ld1	{ v0.1d }, [sp]
-# CHECK-NEXT: [1,1]     D======eeER.   add	z0.d, z0.d, z0.d
-# CHECK-NEXT: [2,0]     DeeeeeeE--R.   ld1	{ v0.1d }, [sp]
-# CHECK-NEXT: [2,1]     D======eeER.   add	z0.d, z0.d, z0.d
-# CHECK-NEXT: [3,0]     D=eeeeeeE-R.   ld1	{ v0.1d }, [sp]
-# CHECK-NEXT: [3,1]     D=======eeER   add	z0.d, z0.d, z0.d
+# CHECK:      [0,0]     DeeeeeeER .    ..   ld1	{ v0.1d }, [sp]
+# CHECK-NEXT: [0,1]     D======eeER    ..   add	z0.d, z0.d, z0.d
+# CHECK-NEXT: [1,0]     DeeeeeeE--R    ..   ld1	{ v0.1d }, [sp]
+# CHECK-NEXT: [1,1]     D========eeER  ..   add	z0.d, z0.d, z0.d
+# CHECK-NEXT: [2,0]     DeeeeeeE----R  ..   ld1	{ v0.1d }, [sp]
+# CHECK-NEXT: [2,1]     D==========eeER..   add	z0.d, z0.d, z0.d
+# CHECK-NEXT: [3,0]     D=eeeeeeE-----R..   ld1	{ v0.1d }, [sp]
+# CHECK-NEXT: [3,1]     D============eeER   add	z0.d, z0.d, z0.d
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -731,9 +731,9 @@ add z0.s, z0.s, z0.s
 # CHECK-NEXT: [3]: Average time elapsed from WB until retire stage
 
 # CHECK:            [0]    [1]    [2]    [3]
-# CHECK-NEXT: 0.     4     1.3    1.3    1.3       ld1	{ v0.1d }, [sp]
-# CHECK-NEXT: 1.     4     7.3    0.0    0.0       add	z0.d, z0.d, z0.d
-# CHECK-NEXT:        4     4.3    0.6    0.6       <total>
+# CHECK-NEXT: 0.     4     1.3    1.3    2.8       ld1	{ v0.1d }, [sp]
+# CHECK-NEXT: 1.     4     10.0   0.0    0.0       add	z0.d, z0.d, z0.d
+# CHECK-NEXT:        4     5.6    0.6    1.4       <total>
 
 # CHECK:      [9] Code Region - insr
 
