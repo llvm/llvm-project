@@ -2735,7 +2735,7 @@ bool Compiler<Emitter>::VisitMaterializeTemporaryExpr(
       InitLinkScope<Emitter> ILS(this, InitLink::Temp(*LocalIndex));
       if (!this->emitGetPtrLocal(*LocalIndex, E))
         return false;
-      return this->visitInitializer(SubExpr);
+      return this->visitInitializer(SubExpr) && this->emitFinishInit(E);
     }
   }
   return false;
@@ -6467,10 +6467,8 @@ bool Compiler<Emitter>::emitBuiltinBitCast(const CastExpr *E) {
   if (!this->visit(SubExpr))
     return false;
 
-  if (!ToT || ToT == PT_Ptr) {
-    // Conversion to an array or record type.
-    assert(false && "Implement bitcast to pointers.");
-  }
+  if (!ToT || ToT == PT_Ptr)
+    return this->emitBitCastPtr(E);
   assert(ToT);
 
   const llvm::fltSemantics *TargetSemantics = nullptr;

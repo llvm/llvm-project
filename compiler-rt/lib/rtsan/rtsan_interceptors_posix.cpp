@@ -504,6 +504,38 @@ INTERCEPTOR(void *, pvalloc, size_t size) {
 }
 #endif
 
+INTERCEPTOR(void *, mmap, void *addr, size_t length, int prot, int flags,
+            int fd, off_t offset) {
+  __rtsan_notify_intercepted_call("mmap");
+  return REAL(mmap)(addr, length, prot, flags, fd, offset);
+}
+
+#if SANITIZER_INTERCEPT_MMAP64
+INTERCEPTOR(void *, mmap64, void *addr, size_t length, int prot, int flags,
+            int fd, off64_t offset) {
+  __rtsan_notify_intercepted_call("mmap64");
+  return REAL(mmap64)(addr, length, prot, flags, fd, offset);
+}
+#define RTSAN_MAYBE_INTERCEPT_MMAP64 INTERCEPT_FUNCTION(mmap64)
+#else
+#define RTSAN_MAYBE_INTERCEPT_MMAP64
+#endif // SANITIZER_INTERCEPT_MMAP64
+
+INTERCEPTOR(int, munmap, void *addr, size_t length) {
+  __rtsan_notify_intercepted_call("munmap");
+  return REAL(munmap)(addr, length);
+}
+
+INTERCEPTOR(int, shm_open, const char *name, int oflag, mode_t mode) {
+  __rtsan_notify_intercepted_call("shm_open");
+  return REAL(shm_open)(name, oflag, mode);
+}
+
+INTERCEPTOR(int, shm_unlink, const char *name) {
+  __rtsan_notify_intercepted_call("shm_unlink");
+  return REAL(shm_unlink)(name);
+}
+
 // Sockets
 INTERCEPTOR(int, socket, int domain, int type, int protocol) {
   __rtsan_notify_intercepted_call("socket");
@@ -558,6 +590,11 @@ void __rtsan::InitializeInterceptors() {
   INTERCEPT_FUNCTION(valloc);
   RTSAN_MAYBE_INTERCEPT_ALIGNED_ALLOC;
   INTERCEPT_FUNCTION(posix_memalign);
+  INTERCEPT_FUNCTION(mmap);
+  RTSAN_MAYBE_INTERCEPT_MMAP64;
+  INTERCEPT_FUNCTION(munmap);
+  INTERCEPT_FUNCTION(shm_open);
+  INTERCEPT_FUNCTION(shm_unlink);
 #if SANITIZER_INTERCEPT_MEMALIGN
   INTERCEPT_FUNCTION(memalign);
 #endif
