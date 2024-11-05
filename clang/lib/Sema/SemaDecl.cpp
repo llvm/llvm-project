@@ -6967,9 +6967,9 @@ static void checkAttributesAfterMerging(Sema &S, NamedDecl &ND) {
         } else if (isa<CXXConstructorDecl>(MD) || isa<CXXDestructorDecl>(MD)) {
           S.Diag(A->getLocation(), diag::err_lifetimebound_ctor_dtor)
               << isa<CXXDestructorDecl>(MD) << A->getRange();
-        } else if (FD->getReturnType()->isVoidType()) {
+        } else if (MD->getReturnType()->isVoidType()) {
           S.Diag(
-              FD->getLocation(),
+              MD->getLocation(),
               diag::
                   err_lifetimebound_implicit_object_parameter_void_return_type);
         }
