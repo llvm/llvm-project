@@ -1492,7 +1492,7 @@ int codecvt<wchar_t, char, mbstate_t>::do_encoding() const noexcept {
     return -1;
 
   // stateless encoding
-  if (__l_ == 0 || __locale::__mb_cur_max(__l_) == 1) // there are no known constant length encodings
+  if (__l_ == 0 || __locale::__mb_len_max(__l_) == 1) // there are no known constant length encodings
     return 1;                                         // which take more than 1 char to form a wchar_t
   return 0;
 }
@@ -1522,7 +1522,7 @@ int codecvt<wchar_t, char, mbstate_t>::do_length(
 }
 
 int codecvt<wchar_t, char, mbstate_t>::do_max_length() const noexcept {
-  return __l_ == 0 ? 1 : static_cast<int>(__locale::__mb_cur_max(__l_));
+  return __l_ == 0 ? 1 : static_cast<int>(__locale::__mb_len_max(__l_));
 }
 #endif // _LIBCPP_HAS_WIDE_CHARACTERS
 

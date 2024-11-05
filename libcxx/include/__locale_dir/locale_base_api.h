@@ -79,7 +79,7 @@
 // Other functions
 // ---------------
 // namespace __locale {
-//  implementation-defined __mb_cur_max(__locale_t);
+//  implementation-defined __mb_len_max(__locale_t);
 //  wint_t  __btowc(int, __locale_t);
 //  int     __wctob(wint_t, __locale_t);
 //  size_t  __wcsnrtombs(char*, const wchar_t**, size_t, size_t, mbstate_t*, __locale_t);
@@ -218,7 +218,7 @@ __strftime(char* __s, size_t __max, const char* __format, const tm* __tm, __loca
 //
 // Other functions
 //
-inline _LIBCPP_HIDE_FROM_ABI decltype(__libcpp_mb_cur_max_l(__locale_t())) __mb_cur_max(__locale_t __loc) {
+inline _LIBCPP_HIDE_FROM_ABI decltype(__libcpp_mb_cur_max_l(__locale_t())) __mb_len_max(__locale_t __loc) {
   return __libcpp_mb_cur_max_l(__loc);
 }
 inline _LIBCPP_HIDE_FROM_ABI wint_t __btowc(int __ch, __locale_t __loc) { return __libcpp_btowc_l(__ch, __loc); }
