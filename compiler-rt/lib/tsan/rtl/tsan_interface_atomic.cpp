@@ -34,28 +34,26 @@ static StaticSpinMutex mutex128;
 
 #if SANITIZER_DEBUG
 static bool IsLoadOrder(morder mo) {
-  return mo == morder::relaxed || mo == morder::consume ||
-         mo == morder::acquire || mo == morder::seq_cst;
+  return mo == mo_relaxed || mo == mo_consume || mo == mo_acquire ||
+         mo == mo_seq_cst;
 }
 
 static bool IsStoreOrder(morder mo) {
-  return mo == morder::relaxed || mo == morder::release ||
-         mo == morder::seq_cst;
+  return mo == mo_relaxed || mo == mo_release || mo == mo_seq_cst;
 }
 #endif
 
 static bool IsReleaseOrder(morder mo) {
-  return mo == morder::release || mo == morder::acq_rel ||
-         mo == morder::seq_cst;
+  return mo == mo_release || mo == mo_acq_rel || mo == mo_seq_cst;
 }
 
 static bool IsAcquireOrder(morder mo) {
-  return mo == morder::consume || mo == morder::acquire ||
-         mo == morder::acq_rel || mo == morder::seq_cst;
+  return mo == mo_consume || mo == mo_acquire || mo == mo_acq_rel ||
+         mo == mo_seq_cst;
 }
 
 static bool IsAcqRelOrder(morder mo) {
-  return mo == morder::acq_rel || mo == morder::seq_cst;
+  return mo == mo_acq_rel || mo == mo_seq_cst;
 }
 
 template <typename T>
@@ -207,17 +205,17 @@ static atomic_uint64_t *to_atomic(const volatile a64 *a) {
 
 static memory_order to_mo(morder mo) {
   switch (mo) {
-    case morder::relaxed:
+    case mo_relaxed:
       return memory_order_relaxed;
-    case morder::consume:
+    case mo_consume:
       return memory_order_consume;
-    case morder::acquire:
+    case mo_acquire:
       return memory_order_acquire;
-    case morder::release:
+    case mo_release:
       return memory_order_release;
-    case morder::acq_rel:
+    case mo_acq_rel:
       return memory_order_acq_rel;
-    case morder::seq_cst:
+    case mo_seq_cst:
       return memory_order_seq_cst;
   }
   DCHECK(0);
@@ -229,7 +227,7 @@ namespace {
 template <typename T, T (*F)(volatile T *v, T op)>
 static T AtomicRMW(ThreadState *thr, uptr pc, volatile T *a, T v, morder mo) {
   MemoryAccess(thr, pc, (uptr)a, AccessSize<T>(), kAccessWrite | kAccessAtomic);
-  if (LIKELY(mo == morder::relaxed))
+  if (LIKELY(mo == mo_relaxed))
     return F(a, v);
   SlotLocker locker(thr);
   {
@@ -250,30 +248,30 @@ static T AtomicRMW(ThreadState *thr, uptr pc, volatile T *a, T v, morder mo) {
 
 struct OpLoad {
   template <typename T>
-  static T NoTsanAtomic(morder mo, const volatile T *a) {
+  static T NoTsanAtomic(const volatile T *a, morder mo) {
     return atomic_load(to_atomic(a), to_mo(mo));
   }
 
 #if __TSAN_HAS_INT128 && !SANITIZER_GO
-  static a128 NoTsanAtomic(morder mo, const volatile a128 *a) {
+  static a128 NoTsanAtomic(const volatile a128 *a, morder mo) {
     SpinMutexLock lock(&mutex128);
     return *a;
   }
 #endif
 
   template <typename T>
-  static T Atomic(ThreadState *thr, uptr pc, morder mo, const volatile T *a) {
+  static T Atomic(ThreadState *thr, uptr pc, const volatile T *a, morder mo) {
     DCHECK(IsLoadOrder(mo));
     // This fast-path is critical for performance.
     // Assume the access is atomic.
     if (!IsAcquireOrder(mo)) {
       MemoryAccess(thr, pc, (uptr)a, AccessSize<T>(),
                    kAccessRead | kAccessAtomic);
-      return NoTsanAtomic(mo, a);
+      return NoTsanAtomic(a, mo);
     }
     // Don't create sync object if it does not exist yet. For example, an atomic
     // pointer is initialized to nullptr and then periodically acquire-loaded.
-    T v = NoTsanAtomic(mo, a);
+    T v = NoTsanAtomic(a, mo);
     SyncVar *s = ctx->metamap.GetSyncIfExists((uptr)a);
     if (s) {
       SlotLocker locker(thr);
@@ -281,7 +279,7 @@ struct OpLoad {
       thr->clock.Acquire(s->clock);
       // Re-read under sync mutex because we need a consistent snapshot
       // of the value and the clock we acquire.
-      v = NoTsanAtomic(mo, a);
+      v = NoTsanAtomic(a, mo);
     }
     MemoryAccess(thr, pc, (uptr)a, AccessSize<T>(),
                  kAccessRead | kAccessAtomic);
@@ -291,19 +289,19 @@ struct OpLoad {
 
 struct OpStore {
   template <typename T>
-  static void NoTsanAtomic(morder mo, volatile T *a, T v) {
+  static void NoTsanAtomic(volatile T *a, T v, morder mo) {
     atomic_store(to_atomic(a), v, to_mo(mo));
   }
 
 #if __TSAN_HAS_INT128 && !SANITIZER_GO
-  static void NoTsanAtomic(morder mo, volatile a128 *a, a128 v) {
+  static void NoTsanAtomic(volatile a128 *a, a128 v, morder mo) {
     SpinMutexLock lock(&mutex128);
     *a = v;
   }
 #endif
 
   template <typename T>
-  static void Atomic(ThreadState *thr, uptr pc, morder mo, volatile T *a, T v) {
+  static void Atomic(ThreadState *thr, uptr pc, volatile T *a, T v, morder mo) {
     DCHECK(IsStoreOrder(mo));
     MemoryAccess(thr, pc, (uptr)a, AccessSize<T>(),
                  kAccessWrite | kAccessAtomic);
@@ -312,7 +310,7 @@ struct OpStore {
     // Strictly saying even relaxed store cuts off release sequence,
     // so must reset the clock.
     if (!IsReleaseOrder(mo)) {
-      NoTsanAtomic(mo, a, v);
+      NoTsanAtomic(a, v, mo);
       return;
     }
     SlotLocker locker(thr);
@@ -320,7 +318,7 @@ struct OpStore {
       auto s = ctx->metamap.GetSyncOrCreate(thr, pc, (uptr)a, false);
       Lock lock(&s->mtx);
       thr->clock.ReleaseStore(&s->clock);
-      NoTsanAtomic(mo, a, v);
+      NoTsanAtomic(a, v, mo);
     }
     IncrementEpoch(thr);
   }
@@ -328,96 +326,96 @@ struct OpStore {
 
 struct OpExchange {
   template <typename T>
-  static T NoTsanAtomic(morder mo, volatile T *a, T v) {
+  static T NoTsanAtomic(volatile T *a, T v, morder mo) {
     return func_xchg(a, v);
   }
   template <typename T>
-  static T Atomic(ThreadState *thr, uptr pc, morder mo, volatile T *a, T v) {
+  static T Atomic(ThreadState *thr, uptr pc, volatile T *a, T v, morder mo) {
     return AtomicRMW<T, func_xchg>(thr, pc, a, v, mo);
   }
 };
 
 struct OpFetchAdd {
   template <typename T>
-  static T NoTsanAtomic(morder mo, volatile T *a, T v) {
+  static T NoTsanAtomic(volatile T *a, T v, morder mo) {
     return func_add(a, v);
   }
 
   template <typename T>
-  static T Atomic(ThreadState *thr, uptr pc, morder mo, volatile T *a, T v) {
+  static T Atomic(ThreadState *thr, uptr pc, volatile T *a, T v, morder mo) {
     return AtomicRMW<T, func_add>(thr, pc, a, v, mo);
   }
 };
 
 struct OpFetchSub {
   template <typename T>
-  static T NoTsanAtomic(morder mo, volatile T *a, T v) {
+  static T NoTsanAtomic(volatile T *a, T v, morder mo) {
     return func_sub(a, v);
   }
 
   template <typename T>
-  static T Atomic(ThreadState *thr, uptr pc, morder mo, volatile T *a, T v) {
+  static T Atomic(ThreadState *thr, uptr pc, volatile T *a, T v, morder mo) {
     return AtomicRMW<T, func_sub>(thr, pc, a, v, mo);
   }
 };
 
 struct OpFetchAnd {
   template <typename T>
-  static T NoTsanAtomic(morder mo, volatile T *a, T v) {
+  static T NoTsanAtomic(volatile T *a, T v, morder mo) {
     return func_and(a, v);
   }
 
   template <typename T>
-  static T Atomic(ThreadState *thr, uptr pc, morder mo, volatile T *a, T v) {
+  static T Atomic(ThreadState *thr, uptr pc, volatile T *a, T v, morder mo) {
     return AtomicRMW<T, func_and>(thr, pc, a, v, mo);
   }
 };
 
 struct OpFetchOr {
   template <typename T>
-  static T NoTsanAtomic(morder mo, volatile T *a, T v) {
+  static T NoTsanAtomic(volatile T *a, T v, morder mo) {
     return func_or(a, v);
   }
 
   template <typename T>
-  static T Atomic(ThreadState *thr, uptr pc, morder mo, volatile T *a, T v) {
+  static T Atomic(ThreadState *thr, uptr pc, volatile T *a, T v, morder mo) {
     return AtomicRMW<T, func_or>(thr, pc, a, v, mo);
   }
 };
 
 struct OpFetchXor {
   template <typename T>
-  static T NoTsanAtomic(morder mo, volatile T *a, T v) {
+  static T NoTsanAtomic(volatile T *a, T v, morder mo) {
     return func_xor(a, v);
   }
 
   template <typename T>
-  static T Atomic(ThreadState *thr, uptr pc, morder mo, volatile T *a, T v) {
+  static T Atomic(ThreadState *thr, uptr pc, volatile T *a, T v, morder mo) {
     return AtomicRMW<T, func_xor>(thr, pc, a, v, mo);
   }
 };
 
 struct OpFetchNand {
   template <typename T>
-  static T NoTsanAtomic(morder mo, volatile T *a, T v) {
+  static T NoTsanAtomic(volatile T *a, T v, morder mo) {
     return func_nand(a, v);
   }
 
   template <typename T>
-  static T Atomic(ThreadState *thr, uptr pc, morder mo, volatile T *a, T v) {
+  static T Atomic(ThreadState *thr, uptr pc, volatile T *a, T v, morder mo) {
     return AtomicRMW<T, func_nand>(thr, pc, a, v, mo);
   }
 };
 
 struct OpCAS {
   template <typename T>
-  static bool NoTsanAtomic(morder mo, morder fmo, volatile T *a, T *c, T v) {
+  static bool NoTsanAtomic(volatile T *a, T *c, T v, morder mo, morder fmo) {
     return atomic_compare_exchange_strong(to_atomic(a), c, v, to_mo(mo));
   }
 
 #if __TSAN_HAS_INT128
-  static bool NoTsanAtomic(morder mo, morder fmo, volatile a128 *a, a128 *c,
-                           a128 v) {
+  static bool NoTsanAtomic(volatile a128 *a, a128 *c, a128 v, morder mo,
+                           morder fmo) {
     a128 old = *c;
     a128 cur = func_cas(a, old, v);
     if (cur == old)
@@ -428,22 +426,22 @@ struct OpCAS {
 #endif
 
   template <typename T>
-  static T NoTsanAtomic(morder mo, morder fmo, volatile T *a, T c, T v) {
-    NoTsanAtomic(mo, fmo, a, &c, v);
+  static T NoTsanAtomic(volatile T *a, T c, T v, morder mo, morder fmo) {
+    NoTsanAtomic(a, &c, v, mo, fmo);
     return c;
   }
 
   template <typename T>
-  static bool Atomic(ThreadState *thr, uptr pc, morder mo, morder fmo,
-                     volatile T *a, T *c, T v) {
+  static bool Atomic(ThreadState *thr, uptr pc, volatile T *a, T *c, T v,
+                     morder mo, morder fmo) {
     // 31.7.2.18: "The failure argument shall not be memory_order_release
     // nor memory_order_acq_rel". LLVM (2021-05) fallbacks to Monotonic
-    // (morder::relaxed) when those are used.
+    // (mo_relaxed) when those are used.
     DCHECK(IsLoadOrder(fmo));
 
     MemoryAccess(thr, pc, (uptr)a, AccessSize<T>(),
                  kAccessWrite | kAccessAtomic);
-    if (LIKELY(mo == morder::relaxed && fmo == morder::relaxed)) {
+    if (LIKELY(mo == mo_relaxed && fmo == mo_relaxed)) {
       T cc = *c;
       T pr = func_cas(a, cc, v);
       if (pr == cc)
@@ -477,9 +475,9 @@ struct OpCAS {
   }
 
   template <typename T>
-  static T Atomic(ThreadState *thr, uptr pc, morder mo, morder fmo,
-                  volatile T *a, T c, T v) {
-    Atomic(thr, pc, mo, fmo, a, &c, v);
+  static T Atomic(ThreadState *thr, uptr pc, volatile T *a, T c, T v, morder mo,
+                  morder fmo) {
+    Atomic(thr, pc, a, &c, v, mo, fmo);
     return c;
   }
 };
@@ -504,7 +502,7 @@ struct OpFence {
 
 static morder convert_morder(morder mo) {
   if (flags()->force_seq_cst_atomics)
-    return (morder)morder::seq_cst;
+    return (morder)mo_seq_cst;
 
   // Filter out additional memory order flags:
   // MEMMODEL_SYNC        = 1 << 15
@@ -516,364 +514,362 @@ static morder convert_morder(morder mo) {
   // since we use __sync_ atomics for actual atomic operations,
   // we can safely ignore it as well. It also subtly affects semantics,
   // but we don't model the difference.
-  return static_cast<morder>(static_cast<int>(mo) & 0x7fff);
+  return (morder)(mo & 0x7fff);
 }
 
-#  define ATOMIC_IMPL(func, mo, ...)                                  \
-    ThreadState *const thr = cur_thread();                            \
-    ProcessPendingSignals(thr);                                       \
-    if (UNLIKELY(thr->ignore_sync || thr->ignore_interceptors))       \
-      return Op##func::NoTsanAtomic(mo, ##__VA_ARGS__);               \
-    return Op##func::Atomic(thr, GET_CALLER_PC(), convert_morder(mo), \
-                            ##__VA_ARGS__);
+#  define ATOMIC_IMPL(func, ...)                                \
+    ThreadState *const thr = cur_thread();                      \
+    ProcessPendingSignals(thr);                                 \
+    if (UNLIKELY(thr->ignore_sync || thr->ignore_interceptors)) \
+      return Op##func::NoTsanAtomic(__VA_ARGS__);               \
+    mo = convert_morder(mo);                                    \
+    return Op##func::Atomic(thr, GET_CALLER_PC(), __VA_ARGS__);
 
 extern "C" {
 SANITIZER_INTERFACE_ATTRIBUTE
-a8 __tsan_atomic8_load(const volatile a8 *a, int mo) {
-  ATOMIC_IMPL(Load, static_cast<morder>(mo), a);
+a8 __tsan_atomic8_load(const volatile a8 *a, morder mo) {
+  ATOMIC_IMPL(Load, a, mo);
 }
 
 SANITIZER_INTERFACE_ATTRIBUTE
-a16 __tsan_atomic16_load(const volatile a16 *a, int mo) {
-  ATOMIC_IMPL(Load, static_cast<morder>(mo), a);
+a16 __tsan_atomic16_load(const volatile a16 *a, morder mo) {
+  ATOMIC_IMPL(Load, a, mo);
 }
 
 SANITIZER_INTERFACE_ATTRIBUTE
-a32 __tsan_atomic32_load(const volatile a32 *a, int mo) {
-  ATOMIC_IMPL(Load, static_cast<morder>(mo), a);
+a32 __tsan_atomic32_load(const volatile a32 *a, morder mo) {
+  ATOMIC_IMPL(Load, a, mo);
 }
 
 SANITIZER_INTERFACE_ATTRIBUTE
-a64 __tsan_atomic64_load(const volatile a64 *a, int mo) {
-  ATOMIC_IMPL(Load, static_cast<morder>(mo), a);
-}
-
-#  if __TSAN_HAS_INT128
-SANITIZER_INTERFACE_ATTRIBUTE
-a128 __tsan_atomic128_load(const volatile a128 *a, int mo) {
-  ATOMIC_IMPL(Load, static_cast<morder>(mo), a);
-}
-#  endif
-
-SANITIZER_INTERFACE_ATTRIBUTE
-void __tsan_atomic8_store(volatile a8 *a, a8 v, int mo) {
-  ATOMIC_IMPL(Store, static_cast<morder>(mo), a, v);
-}
-
-SANITIZER_INTERFACE_ATTRIBUTE
-void __tsan_atomic16_store(volatile a16 *a, a16 v, int mo) {
-  ATOMIC_IMPL(Store, static_cast<morder>(mo), a, v);
-}
-
-SANITIZER_INTERFACE_ATTRIBUTE
-void __tsan_atomic32_store(volatile a32 *a, a32 v, int mo) {
-  ATOMIC_IMPL(Store, static_cast<morder>(mo), a, v);
-}
-
-SANITIZER_INTERFACE_ATTRIBUTE
-void __tsan_atomic64_store(volatile a64 *a, a64 v, int mo) {
-  ATOMIC_IMPL(Store, static_cast<morder>(mo), a, v);
+a64 __tsan_atomic64_load(const volatile a64 *a, morder mo) {
+  ATOMIC_IMPL(Load, a, mo);
 }
 
 #  if __TSAN_HAS_INT128
 SANITIZER_INTERFACE_ATTRIBUTE
-void __tsan_atomic128_store(volatile a128 *a, a128 v, int mo) {
-  ATOMIC_IMPL(Store, static_cast<morder>(mo), a, v);
+a128 __tsan_atomic128_load(const volatile a128 *a, morder mo) {
+  ATOMIC_IMPL(Load, a, mo);
 }
 #  endif
 
 SANITIZER_INTERFACE_ATTRIBUTE
-a8 __tsan_atomic8_exchange(volatile a8 *a, a8 v, int mo) {
-  ATOMIC_IMPL(Exchange, static_cast<morder>(mo), a, v);
+void __tsan_atomic8_store(volatile a8 *a, a8 v, morder mo) {
+  ATOMIC_IMPL(Store, a, v, mo);
 }
 
 SANITIZER_INTERFACE_ATTRIBUTE
-a16 __tsan_atomic16_exchange(volatile a16 *a, a16 v, int mo) {
-  ATOMIC_IMPL(Exchange, static_cast<morder>(mo), a, v);
+void __tsan_atomic16_store(volatile a16 *a, a16 v, morder mo) {
+  ATOMIC_IMPL(Store, a, v, mo);
 }
 
 SANITIZER_INTERFACE_ATTRIBUTE
-a32 __tsan_atomic32_exchange(volatile a32 *a, a32 v, int mo) {
-  ATOMIC_IMPL(Exchange, static_cast<morder>(mo), a, v);
+void __tsan_atomic32_store(volatile a32 *a, a32 v, morder mo) {
+  ATOMIC_IMPL(Store, a, v, mo);
 }
 
 SANITIZER_INTERFACE_ATTRIBUTE
-a64 __tsan_atomic64_exchange(volatile a64 *a, a64 v, int mo) {
-  ATOMIC_IMPL(Exchange, static_cast<morder>(mo), a, v);
+void __tsan_atomic64_store(volatile a64 *a, a64 v, morder mo) {
+  ATOMIC_IMPL(Store, a, v, mo);
 }
 
 #  if __TSAN_HAS_INT128
 SANITIZER_INTERFACE_ATTRIBUTE
-a128 __tsan_atomic128_exchange(volatile a128 *a, a128 v, int mo) {
-  ATOMIC_IMPL(Exchange, static_cast<morder>(mo), a, v);
+void __tsan_atomic128_store(volatile a128 *a, a128 v, morder mo) {
+  ATOMIC_IMPL(Store, a, v, mo);
 }
 #  endif
 
 SANITIZER_INTERFACE_ATTRIBUTE
-a8 __tsan_atomic8_fetch_add(volatile a8 *a, a8 v, int mo) {
-  ATOMIC_IMPL(FetchAdd, static_cast<morder>(mo), a, v);
+a8 __tsan_atomic8_exchange(volatile a8 *a, a8 v, morder mo) {
+  ATOMIC_IMPL(Exchange, a, v, mo);
 }
 
 SANITIZER_INTERFACE_ATTRIBUTE
-a16 __tsan_atomic16_fetch_add(volatile a16 *a, a16 v, int mo) {
-  ATOMIC_IMPL(FetchAdd, static_cast<morder>(mo), a, v);
+a16 __tsan_atomic16_exchange(volatile a16 *a, a16 v, morder mo) {
+  ATOMIC_IMPL(Exchange, a, v, mo);
 }
 
 SANITIZER_INTERFACE_ATTRIBUTE
-a32 __tsan_atomic32_fetch_add(volatile a32 *a, a32 v, int mo) {
-  ATOMIC_IMPL(FetchAdd, static_cast<morder>(mo), a, v);
+a32 __tsan_atomic32_exchange(volatile a32 *a, a32 v, morder mo) {
+  ATOMIC_IMPL(Exchange, a, v, mo);
 }
 
 SANITIZER_INTERFACE_ATTRIBUTE
-a64 __tsan_atomic64_fetch_add(volatile a64 *a, a64 v, int mo) {
-  ATOMIC_IMPL(FetchAdd, static_cast<morder>(mo), a, v);
+a64 __tsan_atomic64_exchange(volatile a64 *a, a64 v, morder mo) {
+  ATOMIC_IMPL(Exchange, a, v, mo);
 }
 
 #  if __TSAN_HAS_INT128
 SANITIZER_INTERFACE_ATTRIBUTE
-a128 __tsan_atomic128_fetch_add(volatile a128 *a, a128 v, int mo) {
-  ATOMIC_IMPL(FetchAdd, static_cast<morder>(mo), a, v);
+a128 __tsan_atomic128_exchange(volatile a128 *a, a128 v, morder mo) {
+  ATOMIC_IMPL(Exchange, a, v, mo);
 }
 #  endif
 
 SANITIZER_INTERFACE_ATTRIBUTE
-a8 __tsan_atomic8_fetch_sub(volatile a8 *a, a8 v, int mo) {
-  ATOMIC_IMPL(FetchSub, static_cast<morder>(mo), a, v);
+a8 __tsan_atomic8_fetch_add(volatile a8 *a, a8 v, morder mo) {
+  ATOMIC_IMPL(FetchAdd, a, v, mo);
 }
 
 SANITIZER_INTERFACE_ATTRIBUTE
-a16 __tsan_atomic16_fetch_sub(volatile a16 *a, a16 v, int mo) {
-  ATOMIC_IMPL(FetchSub, static_cast<morder>(mo), a, v);
+a16 __tsan_atomic16_fetch_add(volatile a16 *a, a16 v, morder mo) {
+  ATOMIC_IMPL(FetchAdd, a, v, mo);
 }
 
 SANITIZER_INTERFACE_ATTRIBUTE
-a32 __tsan_atomic32_fetch_sub(volatile a32 *a, a32 v, int mo) {
-  ATOMIC_IMPL(FetchSub, static_cast<morder>(mo), a, v);
+a32 __tsan_atomic32_fetch_add(volatile a32 *a, a32 v, morder mo) {
+  ATOMIC_IMPL(FetchAdd, a, v, mo);
 }
 
 SANITIZER_INTERFACE_ATTRIBUTE
-a64 __tsan_atomic64_fetch_sub(volatile a64 *a, a64 v, int mo) {
-  ATOMIC_IMPL(FetchSub, static_cast<morder>(mo), a, v);
+a64 __tsan_atomic64_fetch_add(volatile a64 *a, a64 v, morder mo) {
+  ATOMIC_IMPL(FetchAdd, a, v, mo);
 }
 
 #  if __TSAN_HAS_INT128
 SANITIZER_INTERFACE_ATTRIBUTE
-a128 __tsan_atomic128_fetch_sub(volatile a128 *a, a128 v, int mo) {
-  ATOMIC_IMPL(FetchSub, static_cast<morder>(mo), a, v);
+a128 __tsan_atomic128_fetch_add(volatile a128 *a, a128 v, morder mo) {
+  ATOMIC_IMPL(FetchAdd, a, v, mo);
 }
 #  endif
 
 SANITIZER_INTERFACE_ATTRIBUTE
-a8 __tsan_atomic8_fetch_and(volatile a8 *a, a8 v, int mo) {
-  ATOMIC_IMPL(FetchAnd, static_cast<morder>(mo), a, v);
+a8 __tsan_atomic8_fetch_sub(volatile a8 *a, a8 v, morder mo) {
+  ATOMIC_IMPL(FetchSub, a, v, mo);
 }
 
 SANITIZER_INTERFACE_ATTRIBUTE
-a16 __tsan_atomic16_fetch_and(volatile a16 *a, a16 v, int mo) {
-  ATOMIC_IMPL(FetchAnd, static_cast<morder>(mo), a, v);
+a16 __tsan_atomic16_fetch_sub(volatile a16 *a, a16 v, morder mo) {
+  ATOMIC_IMPL(FetchSub, a, v, mo);
 }
 
 SANITIZER_INTERFACE_ATTRIBUTE
-a32 __tsan_atomic32_fetch_and(volatile a32 *a, a32 v, int mo) {
-  ATOMIC_IMPL(FetchAnd, static_cast<morder>(mo), a, v);
+a32 __tsan_atomic32_fetch_sub(volatile a32 *a, a32 v, morder mo) {
+  ATOMIC_IMPL(FetchSub, a, v, mo);
 }
 
 SANITIZER_INTERFACE_ATTRIBUTE
-a64 __tsan_atomic64_fetch_and(volatile a64 *a, a64 v, int mo) {
-  ATOMIC_IMPL(FetchAnd, static_cast<morder>(mo), a, v);
+a64 __tsan_atomic64_fetch_sub(volatile a64 *a, a64 v, morder mo) {
+  ATOMIC_IMPL(FetchSub, a, v, mo);
 }
 
 #  if __TSAN_HAS_INT128
 SANITIZER_INTERFACE_ATTRIBUTE
-a128 __tsan_atomic128_fetch_and(volatile a128 *a, a128 v, int mo) {
-  ATOMIC_IMPL(FetchAnd, static_cast<morder>(mo), a, v);
+a128 __tsan_atomic128_fetch_sub(volatile a128 *a, a128 v, morder mo) {
+  ATOMIC_IMPL(FetchSub, a, v, mo);
 }
 #  endif
 
 SANITIZER_INTERFACE_ATTRIBUTE
-a8 __tsan_atomic8_fetch_or(volatile a8 *a, a8 v, int mo) {
-  ATOMIC_IMPL(FetchOr, static_cast<morder>(mo), a, v);
+a8 __tsan_atomic8_fetch_and(volatile a8 *a, a8 v, morder mo) {
+  ATOMIC_IMPL(FetchAnd, a, v, mo);
 }
 
 SANITIZER_INTERFACE_ATTRIBUTE
-a16 __tsan_atomic16_fetch_or(volatile a16 *a, a16 v, int mo) {
-  ATOMIC_IMPL(FetchOr, static_cast<morder>(mo), a, v);
+a16 __tsan_atomic16_fetch_and(volatile a16 *a, a16 v, morder mo) {
+  ATOMIC_IMPL(FetchAnd, a, v, mo);
 }
 
 SANITIZER_INTERFACE_ATTRIBUTE
-a32 __tsan_atomic32_fetch_or(volatile a32 *a, a32 v, int mo) {
-  ATOMIC_IMPL(FetchOr, static_cast<morder>(mo), a, v);
+a32 __tsan_atomic32_fetch_and(volatile a32 *a, a32 v, morder mo) {
+  ATOMIC_IMPL(FetchAnd, a, v, mo);
 }
 
 SANITIZER_INTERFACE_ATTRIBUTE
-a64 __tsan_atomic64_fetch_or(volatile a64 *a, a64 v, int mo) {
-  ATOMIC_IMPL(FetchOr, static_cast<morder>(mo), a, v);
+a64 __tsan_atomic64_fetch_and(volatile a64 *a, a64 v, morder mo) {
+  ATOMIC_IMPL(FetchAnd, a, v, mo);
 }
 
 #  if __TSAN_HAS_INT128
 SANITIZER_INTERFACE_ATTRIBUTE
-a128 __tsan_atomic128_fetch_or(volatile a128 *a, a128 v, int mo) {
-  ATOMIC_IMPL(FetchOr, static_cast<morder>(mo), a, v);
+a128 __tsan_atomic128_fetch_and(volatile a128 *a, a128 v, morder mo) {
+  ATOMIC_IMPL(FetchAnd, a, v, mo);
 }
 #  endif
 
 SANITIZER_INTERFACE_ATTRIBUTE
-a8 __tsan_atomic8_fetch_xor(volatile a8 *a, a8 v, int mo) {
-  ATOMIC_IMPL(FetchXor, static_cast<morder>(mo), a, v);
+a8 __tsan_atomic8_fetch_or(volatile a8 *a, a8 v, morder mo) {
+  ATOMIC_IMPL(FetchOr, a, v, mo);
 }
 
 SANITIZER_INTERFACE_ATTRIBUTE
-a16 __tsan_atomic16_fetch_xor(volatile a16 *a, a16 v, int mo) {
-  ATOMIC_IMPL(FetchXor, static_cast<morder>(mo), a, v);
+a16 __tsan_atomic16_fetch_or(volatile a16 *a, a16 v, morder mo) {
+  ATOMIC_IMPL(FetchOr, a, v, mo);
 }
 
 SANITIZER_INTERFACE_ATTRIBUTE
-a32 __tsan_atomic32_fetch_xor(volatile a32 *a, a32 v, int mo) {
-  ATOMIC_IMPL(FetchXor, static_cast<morder>(mo), a, v);
+a32 __tsan_atomic32_fetch_or(volatile a32 *a, a32 v, morder mo) {
+  ATOMIC_IMPL(FetchOr, a, v, mo);
 }
 
 SANITIZER_INTERFACE_ATTRIBUTE
-a64 __tsan_atomic64_fetch_xor(volatile a64 *a, a64 v, int mo) {
-  ATOMIC_IMPL(FetchXor, static_cast<morder>(mo), a, v);
+a64 __tsan_atomic64_fetch_or(volatile a64 *a, a64 v, morder mo) {
+  ATOMIC_IMPL(FetchOr, a, v, mo);
 }
 
 #  if __TSAN_HAS_INT128
 SANITIZER_INTERFACE_ATTRIBUTE
-a128 __tsan_atomic128_fetch_xor(volatile a128 *a, a128 v, int mo) {
-  ATOMIC_IMPL(FetchXor, static_cast<morder>(mo), a, v);
+a128 __tsan_atomic128_fetch_or(volatile a128 *a, a128 v, morder mo) {
+  ATOMIC_IMPL(FetchOr, a, v, mo);
 }
 #  endif
 
 SANITIZER_INTERFACE_ATTRIBUTE
-a8 __tsan_atomic8_fetch_nand(volatile a8 *a, a8 v, int mo) {
-  ATOMIC_IMPL(FetchNand, static_cast<morder>(mo), a, v);
+a8 __tsan_atomic8_fetch_xor(volatile a8 *a, a8 v, morder mo) {
+  ATOMIC_IMPL(FetchXor, a, v, mo);
 }
 
 SANITIZER_INTERFACE_ATTRIBUTE
-a16 __tsan_atomic16_fetch_nand(volatile a16 *a, a16 v, int mo) {
-  ATOMIC_IMPL(FetchNand, static_cast<morder>(mo), a, v);
+a16 __tsan_atomic16_fetch_xor(volatile a16 *a, a16 v, morder mo) {
+  ATOMIC_IMPL(FetchXor, a, v, mo);
 }
 
 SANITIZER_INTERFACE_ATTRIBUTE
-a32 __tsan_atomic32_fetch_nand(volatile a32 *a, a32 v, int mo) {
-  ATOMIC_IMPL(FetchNand, static_cast<morder>(mo), a, v);
+a32 __tsan_atomic32_fetch_xor(volatile a32 *a, a32 v, morder mo) {
+  ATOMIC_IMPL(FetchXor, a, v, mo);
 }
 
 SANITIZER_INTERFACE_ATTRIBUTE
-a64 __tsan_atomic64_fetch_nand(volatile a64 *a, a64 v, int mo) {
-  ATOMIC_IMPL(FetchNand, static_cast<morder>(mo), a, v);
+a64 __tsan_atomic64_fetch_xor(volatile a64 *a, a64 v, morder mo) {
+  ATOMIC_IMPL(FetchXor, a, v, mo);
 }
 
 #  if __TSAN_HAS_INT128
 SANITIZER_INTERFACE_ATTRIBUTE
-a128 __tsan_atomic128_fetch_nand(volatile a128 *a, a128 v, int mo) {
-  ATOMIC_IMPL(FetchNand, static_cast<morder>(mo), a, v);
+a128 __tsan_atomic128_fetch_xor(volatile a128 *a, a128 v, morder mo) {
+  ATOMIC_IMPL(FetchXor, a, v, mo);
 }
 #  endif
 
 SANITIZER_INTERFACE_ATTRIBUTE
-int __tsan_atomic8_compare_exchange_strong(volatile a8 *a, a8 *c, a8 v, int mo,
-                                           int fmo) {
-  ATOMIC_IMPL(CAS, static_cast<morder>(mo), static_cast<morder>(fmo), a, c, v);
+a8 __tsan_atomic8_fetch_nand(volatile a8 *a, a8 v, morder mo) {
+  ATOMIC_IMPL(FetchNand, a, v, mo);
+}
+
+SANITIZER_INTERFACE_ATTRIBUTE
+a16 __tsan_atomic16_fetch_nand(volatile a16 *a, a16 v, morder mo) {
+  ATOMIC_IMPL(FetchNand, a, v, mo);
+}
+
+SANITIZER_INTERFACE_ATTRIBUTE
+a32 __tsan_atomic32_fetch_nand(volatile a32 *a, a32 v, morder mo) {
+  ATOMIC_IMPL(FetchNand, a, v, mo);
+}
+
+SANITIZER_INTERFACE_ATTRIBUTE
+a64 __tsan_atomic64_fetch_nand(volatile a64 *a, a64 v, morder mo) {
+  ATOMIC_IMPL(FetchNand, a, v, mo);
+}
+
+#  if __TSAN_HAS_INT128
+SANITIZER_INTERFACE_ATTRIBUTE
+a128 __tsan_atomic128_fetch_nand(volatile a128 *a, a128 v, morder mo) {
+  ATOMIC_IMPL(FetchNand, a, v, mo);
+}
+#  endif
+
+SANITIZER_INTERFACE_ATTRIBUTE
+int __tsan_atomic8_compare_exchange_strong(volatile a8 *a, a8 *c, a8 v,
+                                           morder mo, morder fmo) {
+  ATOMIC_IMPL(CAS, a, c, v, mo, fmo);
 }
 
 SANITIZER_INTERFACE_ATTRIBUTE
 int __tsan_atomic16_compare_exchange_strong(volatile a16 *a, a16 *c, a16 v,
-                                            int mo, int fmo) {
-  ATOMIC_IMPL(CAS, static_cast<morder>(mo), static_cast<morder>(fmo), a, c, v);
+                                            morder mo, morder fmo) {
+  ATOMIC_IMPL(CAS, a, c, v, mo, fmo);
 }
 
 SANITIZER_INTERFACE_ATTRIBUTE
 int __tsan_atomic32_compare_exchange_strong(volatile a32 *a, a32 *c, a32 v,
-                                            int mo, int fmo) {
-  ATOMIC_IMPL(CAS, static_cast<morder>(mo), static_cast<morder>(fmo), a, c, v);
+                                            morder mo, morder fmo) {
+  ATOMIC_IMPL(CAS, a, c, v, mo, fmo);
 }
 
 SANITIZER_INTERFACE_ATTRIBUTE
 int __tsan_atomic64_compare_exchange_strong(volatile a64 *a, a64 *c, a64 v,
-                                            int mo, int fmo) {
-  ATOMIC_IMPL(CAS, static_cast<morder>(mo), static_cast<morder>(fmo), a, c, v);
+                                            morder mo, morder fmo) {
+  ATOMIC_IMPL(CAS, a, c, v, mo, fmo);
 }
 
 #  if __TSAN_HAS_INT128
 SANITIZER_INTERFACE_ATTRIBUTE
 int __tsan_atomic128_compare_exchange_strong(volatile a128 *a, a128 *c, a128 v,
-                                             int mo, int fmo) {
-  ATOMIC_IMPL(CAS, static_cast<morder>(mo), static_cast<morder>(fmo), a, c, v);
+                                             morder mo, morder fmo) {
+  ATOMIC_IMPL(CAS, a, c, v, mo, fmo);
 }
 #  endif
 
 SANITIZER_INTERFACE_ATTRIBUTE
-int __tsan_atomic8_compare_exchange_weak(volatile a8 *a, a8 *c, a8 v, int mo,
-                                         int fmo) {
-  ATOMIC_IMPL(CAS, static_cast<morder>(mo), static_cast<morder>(fmo), a, c, v);
+int __tsan_atomic8_compare_exchange_weak(volatile a8 *a, a8 *c, a8 v, morder mo,
+                                         morder fmo) {
+  ATOMIC_IMPL(CAS, a, c, v, mo, fmo);
 }
 
 SANITIZER_INTERFACE_ATTRIBUTE
 int __tsan_atomic16_compare_exchange_weak(volatile a16 *a, a16 *c, a16 v,
-                                          int mo, int fmo) {
-  ATOMIC_IMPL(CAS, static_cast<morder>(mo), static_cast<morder>(fmo), a, c, v);
+                                          morder mo, morder fmo) {
+  ATOMIC_IMPL(CAS, a, c, v, mo, fmo);
 }
 
 SANITIZER_INTERFACE_ATTRIBUTE
 int __tsan_atomic32_compare_exchange_weak(volatile a32 *a, a32 *c, a32 v,
-                                          int mo, int fmo) {
-  ATOMIC_IMPL(CAS, static_cast<morder>(mo), static_cast<morder>(fmo), a, c, v);
+                                          morder mo, morder fmo) {
+  ATOMIC_IMPL(CAS, a, c, v, mo, fmo);
 }
 
 SANITIZER_INTERFACE_ATTRIBUTE
 int __tsan_atomic64_compare_exchange_weak(volatile a64 *a, a64 *c, a64 v,
-                                          int mo, int fmo) {
-  ATOMIC_IMPL(CAS, static_cast<morder>(mo), static_cast<morder>(fmo), a, c, v);
+                                          morder mo, morder fmo) {
+  ATOMIC_IMPL(CAS, a, c, v, mo, fmo);
 }
 
 #  if __TSAN_HAS_INT128
 SANITIZER_INTERFACE_ATTRIBUTE
 int __tsan_atomic128_compare_exchange_weak(volatile a128 *a, a128 *c, a128 v,
-                                           int mo, int fmo) {
-  ATOMIC_IMPL(CAS, static_cast<morder>(mo), static_cast<morder>(fmo), a, c, v);
+                                           morder mo, morder fmo) {
+  ATOMIC_IMPL(CAS, a, c, v, mo, fmo);
 }
 #  endif
 
 SANITIZER_INTERFACE_ATTRIBUTE
-a8 __tsan_atomic8_compare_exchange_val(volatile a8 *a, a8 c, a8 v, int mo,
-                                       int fmo) {
-  ATOMIC_IMPL(CAS, static_cast<morder>(mo), static_cast<morder>(fmo), a, c, v);
+a8 __tsan_atomic8_compare_exchange_val(volatile a8 *a, a8 c, a8 v, morder mo,
+                                       morder fmo) {
+  ATOMIC_IMPL(CAS, a, c, v, mo, fmo);
 }
 
 SANITIZER_INTERFACE_ATTRIBUTE
-a16 __tsan_atomic16_compare_exchange_val(volatile a16 *a, a16 c, a16 v, int mo,
-                                         int fmo) {
-  ATOMIC_IMPL(CAS, static_cast<morder>(mo), static_cast<morder>(fmo), a, c, v);
+a16 __tsan_atomic16_compare_exchange_val(volatile a16 *a, a16 c, a16 v,
+                                         morder mo, morder fmo) {
+  ATOMIC_IMPL(CAS, a, c, v, mo, fmo);
 }
 
 SANITIZER_INTERFACE_ATTRIBUTE
-a32 __tsan_atomic32_compare_exchange_val(volatile a32 *a, a32 c, a32 v, int mo,
-                                         int fmo) {
-  ATOMIC_IMPL(CAS, static_cast<morder>(mo), static_cast<morder>(fmo), a, c, v);
+a32 __tsan_atomic32_compare_exchange_val(volatile a32 *a, a32 c, a32 v,
+                                         morder mo, morder fmo) {
+  ATOMIC_IMPL(CAS, a, c, v, mo, fmo);
 }
 
 SANITIZER_INTERFACE_ATTRIBUTE
-a64 __tsan_atomic64_compare_exchange_val(volatile a64 *a, a64 c, a64 v, int mo,
-                                         int fmo) {
-  ATOMIC_IMPL(CAS, static_cast<morder>(mo), static_cast<morder>(fmo), a, c, v);
+a64 __tsan_atomic64_compare_exchange_val(volatile a64 *a, a64 c, a64 v,
+                                         morder mo, morder fmo) {
+  ATOMIC_IMPL(CAS, a, c, v, mo, fmo);
 }
 
 #  if __TSAN_HAS_INT128
 SANITIZER_INTERFACE_ATTRIBUTE
 a128 __tsan_atomic128_compare_exchange_val(volatile a128 *a, a128 c, a128 v,
-                                           int mo, int fmo) {
-  ATOMIC_IMPL(CAS, static_cast<morder>(mo), static_cast<morder>(fmo), a, c, v);
+                                           morder mo, morder fmo) {
+  ATOMIC_IMPL(CAS, a, c, v, mo, fmo);
 }
 #  endif
 
 SANITIZER_INTERFACE_ATTRIBUTE
-void __tsan_atomic_thread_fence(int mo) {
-  ATOMIC_IMPL(Fence, static_cast<morder>(mo));
-}
+void __tsan_atomic_thread_fence(morder mo) { ATOMIC_IMPL(Fence, mo); }
 
 SANITIZER_INTERFACE_ATTRIBUTE
-void __tsan_atomic_signal_fence(int mo) {}
+void __tsan_atomic_signal_fence(morder mo) {}
 }  // extern "C"
 
 #else  // #if !SANITIZER_GO
@@ -901,70 +897,70 @@ void __tsan_atomic_signal_fence(int mo) {}
 extern "C" {
 SANITIZER_INTERFACE_ATTRIBUTE
 void __tsan_go_atomic32_load(ThreadState *thr, uptr cpc, uptr pc, u8 *a) {
-  ATOMIC_RET(Load, *(a32 *)(a + 8), morder::acquire, *(a32 **)a);
+  ATOMIC_RET(Load, *(a32 *)(a + 8), *(a32 **)a, mo_acquire);
 }
 
 SANITIZER_INTERFACE_ATTRIBUTE
 void __tsan_go_atomic64_load(ThreadState *thr, uptr cpc, uptr pc, u8 *a) {
-  ATOMIC_RET(Load, *(a64 *)(a + 8), morder::acquire, *(a64 **)a);
+  ATOMIC_RET(Load, *(a64 *)(a + 8), *(a64 **)a, mo_acquire);
 }
 
 SANITIZER_INTERFACE_ATTRIBUTE
 void __tsan_go_atomic32_store(ThreadState *thr, uptr cpc, uptr pc, u8 *a) {
-  ATOMIC(Store, morder::release, *(a32 **)a, *(a32 *)(a + 8));
+  ATOMIC(Store, *(a32 **)a, *(a32 *)(a + 8), mo_release);
 }
 
 SANITIZER_INTERFACE_ATTRIBUTE
 void __tsan_go_atomic64_store(ThreadState *thr, uptr cpc, uptr pc, u8 *a) {
-  ATOMIC(Store, morder::release, *(a64 **)a, *(a64 *)(a + 8));
+  ATOMIC(Store, *(a64 **)a, *(a64 *)(a + 8), mo_release);
 }
 
 SANITIZER_INTERFACE_ATTRIBUTE
 void __tsan_go_atomic32_fetch_add(ThreadState *thr, uptr cpc, uptr pc, u8 *a) {
-  ATOMIC_RET(FetchAdd, *(a32 *)(a + 16), morder::acq_rel, *(a32 **)a,
-             *(a32 *)(a + 8));
+  ATOMIC_RET(FetchAdd, *(a32 *)(a + 16), *(a32 **)a, *(a32 *)(a + 8),
+             mo_acq_rel);
 }
 
 SANITIZER_INTERFACE_ATTRIBUTE
 void __tsan_go_atomic64_fetch_add(ThreadState *thr, uptr cpc, uptr pc, u8 *a) {
-  ATOMIC_RET(FetchAdd, *(a64 *)(a + 16), morder::acq_rel, *(a64 **)a,
-             *(a64 *)(a + 8));
+  ATOMIC_RET(FetchAdd, *(a64 *)(a + 16), *(a64 **)a, *(a64 *)(a + 8),
+             mo_acq_rel);
 }
 
 SANITIZER_INTERFACE_ATTRIBUTE
 void __tsan_go_atomic32_fetch_and(ThreadState *thr, uptr cpc, uptr pc, u8 *a) {
-  ATOMIC_RET(FetchAnd, *(a32 *)(a + 16), morder::acq_rel, *(a32 **)a,
-             *(a32 *)(a + 8));
+  ATOMIC_RET(FetchAnd, *(a32 *)(a + 16), *(a32 **)a, *(a32 *)(a + 8),
+             mo_acq_rel);
 }
 
 SANITIZER_INTERFACE_ATTRIBUTE
 void __tsan_go_atomic64_fetch_and(ThreadState *thr, uptr cpc, uptr pc, u8 *a) {
-  ATOMIC_RET(FetchAnd, *(a64 *)(a + 16), morder::acq_rel, *(a64 **)a,
-             *(a64 *)(a + 8));
+  ATOMIC_RET(FetchAnd, *(a64 *)(a + 16), *(a64 **)a, *(a64 *)(a + 8),
+             mo_acq_rel);
 }
 
 SANITIZER_INTERFACE_ATTRIBUTE
 void __tsan_go_atomic32_fetch_or(ThreadState *thr, uptr cpc, uptr pc, u8 *a) {
-  ATOMIC_RET(FetchOr, *(a32 *)(a + 16), morder::acq_rel, *(a32 **)a,
-             *(a32 *)(a + 8));
+  ATOMIC_RET(FetchOr, *(a32 *)(a + 16), *(a32 **)a, *(a32 *)(a + 8),
+             mo_acq_rel);
 }
 
 SANITIZER_INTERFACE_ATTRIBUTE
 void __tsan_go_atomic64_fetch_or(ThreadState *thr, uptr cpc, uptr pc, u8 *a) {
-  ATOMIC_RET(FetchOr, *(a64 *)(a + 16), morder::acq_rel, *(a64 **)a,
-             *(a64 *)(a + 8));
+  ATOMIC_RET(FetchOr, *(a64 *)(a + 16), *(a64 **)a, *(a64 *)(a + 8),
+             mo_acq_rel);
 }
 
 SANITIZER_INTERFACE_ATTRIBUTE
 void __tsan_go_atomic32_exchange(ThreadState *thr, uptr cpc, uptr pc, u8 *a) {
-  ATOMIC_RET(Exchange, *(a32 *)(a + 16), morder::acq_rel, *(a32 **)a,
-             *(a32 *)(a + 8));
+  ATOMIC_RET(Exchange, *(a32 *)(a + 16), *(a32 **)a, *(a32 *)(a + 8),
+             mo_acq_rel);
 }
 
 SANITIZER_INTERFACE_ATTRIBUTE
 void __tsan_go_atomic64_exchange(ThreadState *thr, uptr cpc, uptr pc, u8 *a) {
-  ATOMIC_RET(Exchange, *(a64 *)(a + 16), morder::acq_rel, *(a64 **)a,
-             *(a64 *)(a + 8));
+  ATOMIC_RET(Exchange, *(a64 *)(a + 16), *(a64 **)a, *(a64 *)(a + 8),
+             mo_acq_rel);
 }
 
 SANITIZER_INTERFACE_ATTRIBUTE
@@ -972,8 +968,8 @@ void __tsan_go_atomic32_compare_exchange(ThreadState *thr, uptr cpc, uptr pc,
                                          u8 *a) {
   a32 cur = 0;
   a32 cmp = *(a32 *)(a + 8);
-  ATOMIC_RET(CAS, cur, morder::acq_rel, morder::acquire, *(a32 **)a, cmp,
-             *(a32 *)(a + 12));
+  ATOMIC_RET(CAS, cur, *(a32 **)a, cmp, *(a32 *)(a + 12), mo_acq_rel,
+             mo_acquire);
   *(bool *)(a + 16) = (cur == cmp);
 }
 
@@ -982,8 +978,8 @@ void __tsan_go_atomic64_compare_exchange(ThreadState *thr, uptr cpc, uptr pc,
                                          u8 *a) {
   a64 cur = 0;
   a64 cmp = *(a64 *)(a + 8);
-  ATOMIC_RET(CAS, cur, morder::acq_rel, morder::acquire, *(a64 **)a, cmp,
-             *(a64 *)(a + 16));
+  ATOMIC_RET(CAS, cur, *(a64 **)a, cmp, *(a64 *)(a + 16), mo_acq_rel,
+             mo_acquire);
   *(bool *)(a + 24) = (cur == cmp);
 }
 }  // extern "C"
