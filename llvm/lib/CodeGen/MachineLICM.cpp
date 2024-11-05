@@ -1371,7 +1371,8 @@ bool MachineLICMImpl::IsProfitableToHoist(MachineInstr &MI,
                }) &&
         IsLoopInvariantInst(MI, CurLoop) &&
         any_of(MRI->use_nodbg_instructions(DefReg),
-               [&CurLoop, this, DefReg, Cost](MachineInstr &UseMI) {
+               [&CurLoop, this, DefReg,
+                Cost = std::move(Cost)](MachineInstr &UseMI) {
                  if (!CurLoop->contains(&UseMI))
                    return false;
 
