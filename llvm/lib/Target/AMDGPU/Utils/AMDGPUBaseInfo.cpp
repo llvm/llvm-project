@@ -1307,15 +1307,16 @@ getIntegerPairAttribute(const Function &F, StringRef Name,
 }
 
 SmallVector<unsigned> getIntegerVecAttribute(const Function &F, StringRef Name,
-                                             unsigned Size) {
+                                             unsigned Size,
+                                             unsigned DefaultVal) {
   assert(Size > 2);
-  SmallVector<unsigned> Default(Size, 0);
+  SmallVector<unsigned> Default(Size, DefaultVal);
 
   Attribute A = F.getFnAttribute(Name);
   if (!A.isStringAttribute())
     return Default;
 
-  SmallVector<unsigned> Vals(Size, 0);
+  SmallVector<unsigned> Vals(Size, DefaultVal);
 
   LLVMContext &Ctx = F.getContext();
 
