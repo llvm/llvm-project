@@ -30,8 +30,8 @@ TEST(VPVerifierTest, VPInstructionUseBeforeDefSameBB) {
   VPBlockUtils::connectBlocks(VPBB1, R1);
 
   LLVMContext C;
-  auto ScalarHeader = std::make_unique<BasicBlock *>(BasicBlock::Create(C, ""));
-  VPIRBasicBlock *ScalarHeaderVPBB = new VPIRBasicBlock(*ScalarHeader);
+  auto *ScalarHeader = BasicBlock::Create(C, "");
+  VPIRBasicBlock *ScalarHeaderVPBB = new VPIRBasicBlock(ScalarHeader);
   VPBlockUtils::connectBlocks(R1, ScalarHeaderVPBB);
   VPlan Plan(VPPH, &*TC, VPBB1, ScalarHeaderVPBB);
 
@@ -43,6 +43,7 @@ TEST(VPVerifierTest, VPInstructionUseBeforeDefSameBB) {
   EXPECT_STREQ("Use before def!\n",
                ::testing::internal::GetCapturedStderr().c_str());
 #endif
+  delete ScalarHeader;
 }
 
 TEST(VPVerifierTest, VPInstructionUseBeforeDefDifferentBB) {
@@ -66,8 +67,8 @@ TEST(VPVerifierTest, VPInstructionUseBeforeDefDifferentBB) {
 
   auto TC = std::make_unique<VPValue>();
   LLVMContext C;
-  auto ScalarHeader = std::make_unique<BasicBlock *>(BasicBlock::Create(C, ""));
-  VPIRBasicBlock *ScalarHeaderVPBB = new VPIRBasicBlock(*ScalarHeader);
+  auto *ScalarHeader = BasicBlock::Create(C, "");
+  VPIRBasicBlock *ScalarHeaderVPBB = new VPIRBasicBlock(ScalarHeader);
   VPBlockUtils::connectBlocks(R1, ScalarHeaderVPBB);
   VPlan Plan(VPPH, &*TC, VPBB1, ScalarHeaderVPBB);
 
@@ -79,6 +80,7 @@ TEST(VPVerifierTest, VPInstructionUseBeforeDefDifferentBB) {
   EXPECT_STREQ("Use before def!\n",
                ::testing::internal::GetCapturedStderr().c_str());
 #endif
+  delete ScalarHeader;
 }
 
 TEST(VPVerifierTest, VPBlendUseBeforeDefDifferentBB) {
@@ -112,8 +114,8 @@ TEST(VPVerifierTest, VPBlendUseBeforeDefDifferentBB) {
   VPBB3->setParent(R1);
 
   auto TC = std::make_unique<VPValue>();
-  auto ScalarHeader = std::make_unique<BasicBlock *>(BasicBlock::Create(C, ""));
-  VPIRBasicBlock *ScalarHeaderVPBB = new VPIRBasicBlock(*ScalarHeader);
+  auto *ScalarHeader = BasicBlock::Create(C, "");
+  VPIRBasicBlock *ScalarHeaderVPBB = new VPIRBasicBlock(ScalarHeader);
   VPBlockUtils::connectBlocks(R1, ScalarHeaderVPBB);
   VPlan Plan(VPPH, &*TC, VPBB1, ScalarHeaderVPBB);
 
@@ -127,6 +129,7 @@ TEST(VPVerifierTest, VPBlendUseBeforeDefDifferentBB) {
 #endif
 
   delete Phi;
+  delete ScalarHeader;
 }
 
 TEST(VPVerifierTest, DuplicateSuccessorsOutsideRegion) {
@@ -152,8 +155,8 @@ TEST(VPVerifierTest, DuplicateSuccessorsOutsideRegion) {
 
   auto TC = std::make_unique<VPValue>();
   LLVMContext C;
-  auto ScalarHeader = std::make_unique<BasicBlock *>(BasicBlock::Create(C, ""));
-  VPIRBasicBlock *ScalarHeaderVPBB = new VPIRBasicBlock(*ScalarHeader);
+  auto *ScalarHeader = BasicBlock::Create(C, "");
+  VPIRBasicBlock *ScalarHeaderVPBB = new VPIRBasicBlock(ScalarHeader);
   VPBlockUtils::connectBlocks(R1, ScalarHeaderVPBB);
   VPlan Plan(VPPH, &*TC, VPBB1, ScalarHeaderVPBB);
 
@@ -165,6 +168,7 @@ TEST(VPVerifierTest, DuplicateSuccessorsOutsideRegion) {
   EXPECT_STREQ("Multiple instances of the same successor.\n",
                ::testing::internal::GetCapturedStderr().c_str());
 #endif
+  delete ScalarHeader;
 }
 
 TEST(VPVerifierTest, DuplicateSuccessorsInsideRegion) {
@@ -193,8 +197,8 @@ TEST(VPVerifierTest, DuplicateSuccessorsInsideRegion) {
 
   auto TC = std::make_unique<VPValue>();
   LLVMContext C;
-  auto ScalarHeader = std::make_unique<BasicBlock *>(BasicBlock::Create(C, ""));
-  VPIRBasicBlock *ScalarHeaderVPBB = new VPIRBasicBlock(*ScalarHeader);
+  auto *ScalarHeader = BasicBlock::Create(C, "");
+  VPIRBasicBlock *ScalarHeaderVPBB = new VPIRBasicBlock(ScalarHeader);
   VPBlockUtils::connectBlocks(R1, ScalarHeaderVPBB);
   VPlan Plan(VPPH, &*TC, VPBB1, ScalarHeaderVPBB);
 
@@ -206,6 +210,7 @@ TEST(VPVerifierTest, DuplicateSuccessorsInsideRegion) {
   EXPECT_STREQ("Multiple instances of the same successor.\n",
                ::testing::internal::GetCapturedStderr().c_str());
 #endif
+  delete ScalarHeader;
 }
 
 TEST(VPVerifierTest, BlockOutsideRegionWithParent) {
@@ -226,8 +231,8 @@ TEST(VPVerifierTest, BlockOutsideRegionWithParent) {
 
   auto TC = std::make_unique<VPValue>();
   LLVMContext C;
-  auto ScalarHeader = std::make_unique<BasicBlock *>(BasicBlock::Create(C, ""));
-  VPIRBasicBlock *ScalarHeaderVPBB = new VPIRBasicBlock(*ScalarHeader);
+  auto *ScalarHeader = BasicBlock::Create(C, "");
+  VPIRBasicBlock *ScalarHeaderVPBB = new VPIRBasicBlock(ScalarHeader);
   VPBlockUtils::connectBlocks(R1, ScalarHeaderVPBB);
   VPlan Plan(VPPH, &*TC, VPBB1, ScalarHeaderVPBB);
 
@@ -239,6 +244,7 @@ TEST(VPVerifierTest, BlockOutsideRegionWithParent) {
   EXPECT_STREQ("Predecessor is not in the same region.\n",
                ::testing::internal::GetCapturedStderr().c_str());
 #endif
+  delete ScalarHeader;
 }
 
 } // namespace
