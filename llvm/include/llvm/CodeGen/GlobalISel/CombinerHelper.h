@@ -249,6 +249,18 @@ public:
   /// or an implicit_def if \p Ops is empty.
   void applyCombineShuffleConcat(MachineInstr &MI, SmallVector<Register> &Ops);
 
+  /// Check if an instruction whose operations can be represented
+  /// by a mapping from one index to another in a vector can be replaced
+  /// by another operations.
+  /// \p Ops will contain the operands to produce the flattened
+  /// operation.
+  /// \p Mask is an array to numbers that represent the order that
+  /// the elements of \p SrcRegs will be put into \p DstReg.
+  bool analysePatternVectorMask(MachineInstr &MI, SmallVectorImpl<Register> &Ops,
+                                const Register DstReg,
+                                const std::pair<Register, Register> SrcRegs,
+                                ArrayRef<int> Mask);
+
   /// Try to combine G_SHUFFLE_VECTOR into G_CONCAT_VECTORS.
   /// Returns true if MI changed.
   ///
@@ -582,6 +594,12 @@ public:
 
   bool matchExtractVecEltBuildVec(MachineInstr &MI, Register &Reg);
   void applyExtractVecEltBuildVec(MachineInstr &MI, Register &Reg);
+
+  /// Combine extracts of two different arrays into one build vector into a
+  /// shuffle vector.
+  bool
+  matchCombineExtractToShuffle(MachineInstr &MI, SmallVectorImpl<Register> &Ops,
+                               std::pair<Register, Register> &VectorRegisters);
 
   bool matchExtractAllEltsFromBuildVector(
       MachineInstr &MI,
