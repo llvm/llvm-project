@@ -2393,8 +2393,8 @@ size_t DWARFASTParserClang::ParseChildEnumerators(
   if (!NumPositiveBits && !NumNegativeBits)
     NumPositiveBits = 1;
 
-  clang::QualType qual_type(ClangUtil::GetQualType(clang_type));
-  clang::EnumDecl *enum_decl = qual_type->getAs<clang::EnumType>()->getDecl();
+  clang::EnumDecl *enum_decl =
+      ClangUtil::GetQualType(clang_type)->getAs<clang::EnumType>()->getDecl();
   enum_decl->setNumPositiveBits(NumPositiveBits);
   enum_decl->setNumNegativeBits(NumNegativeBits);
 
@@ -2433,7 +2433,8 @@ size_t DWARFASTParserClang::ParseChildEnumerators(
     } else {
       BestWidth = Context.getTargetInfo().getLongLongWidth();
     }
-    BestPromotionType = (BestWidth <= IntWidth ? Context.IntTy : qual_type);
+    BestPromotionType =
+        BestWidth <= IntWidth ? Context.IntTy : enum_decl->getIntegerType();
   } else {
     // If there is no negative value, figure out the smallest type that fits
     // all of the enumerator values.
