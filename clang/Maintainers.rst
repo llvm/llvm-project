@@ -131,6 +131,8 @@ Clang static analyzer
 | Gábor Horváth
 | xazax.hun\@gmail.com (email), xazax.hun (Phabricator), Xazax-hun (GitHub)
 
+| Balázs Benics
+| benicsbalazs\@gmail.com (email), steakhal (Phabricator), steakhal (GitHub)
 
 Compiler options
 ~~~~~~~~~~~~~~~~
