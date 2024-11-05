@@ -131,8 +131,6 @@ class PPCAsmParser : public MCTargetAsmParser {
 
   void processInstruction(MCInst &Inst, const OperandVector &Ops);
 
-  bool hasMemOp(const OperandVector &Ops);
-
   /// @name Auto-generated Match Functions
   /// {
 
@@ -187,7 +185,7 @@ struct PPCOperand : public MCParsedAsmOperand {
 
   struct ImmOp {
     int64_t Val;
-    bool IsMemOp;
+    bool IsMemOpBase;
   };
 
   struct ExprOp {
@@ -248,10 +246,8 @@ public:
   /// isPPC64 - True if this operand is for an instruction in 64-bit mode.
   bool isPPC64() const { return IsPPC64; }
 
-  /// isMemOp - True if this operand is a memory operand.
-  bool isMemOp() const { 
-    return Kind == Immediate && Imm.IsMemOp; 
-  }
+  /// isMemOpBase - True if this operand is the base of a memory operand.
+  bool isMemOpBase() const { return Kind == Immediate && Imm.IsMemOpBase; }
 
   int64_t getImm() const {
     assert(Kind == Immediate && "Invalid access!");
@@ -703,12 +699,11 @@ public:
     Op->IsPPC64 = IsPPC64;
     return Op;
   }
-
-  static std::unique_ptr<PPCOperand> CreateImm(int64_t Val, SMLoc S, SMLoc E,
-                                               bool IsPPC64, bool IsMemOp = false) {
+  static std::unique_ptr<PPCOperand>
+  CreateImm(int64_t Val, SMLoc S, SMLoc E, bool IsPPC64, bool IsMemOpBase = false) {
     auto Op = std::make_unique<PPCOperand>(Immediate);
     Op->Imm.Val = Val;
-    Op->Imm.IsMemOp = IsMemOp;
+    Op->Imm.IsMemOpBase = IsMemOpBase;
     Op->StartLoc = S;
     Op->EndLoc = E;
     Op->IsPPC64 = IsPPC64;
@@ -1262,6 +1257,15 @@ void PPCAsmParser::processInstruction(MCInst &Inst,
 static std::string PPCMnemonicSpellCheck(StringRef S, const FeatureBitset &FBS,
                                          unsigned VariantID = 0);
 
+static bool hasMemOp(const OperandVector &Operands) {
+  for (const auto &Operand : Operands) {
+    const PPCOperand &Op = static_cast<const PPCOperand &>(*Operand);
+    if (Op.isMemOpBase())
+      return true;
+  }
+  return false;
+}
+
 bool PPCAsmParser::matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
                                            OperandVector &Operands,
                                            MCStreamer &Out, uint64_t &ErrorInfo,
@@ -1630,7 +1634,8 @@ bool PPCAsmParser::parseOperand(OperandVector &Operands) {
     E = Parser.getTok().getLoc();
     if (parseToken(AsmToken::RParen, "missing ')'"))
       return true;
-    Operands.push_back(PPCOperand::CreateImm(IntVal, S, E, isPPC64(), /*IsMemOp=*/true));
+    Operands.push_back(
+        PPCOperand::CreateImm(IntVal, S, E, isPPC64(), /*IsMemOpBase=*/true));
   }
 
   return false;
@@ -1917,13 +1922,4 @@ PPCAsmParser::applyModifierToExpr(const MCExpr *E,
   default:
     return nullptr;
   }
-}
-
-bool PPCAsmParser::hasMemOp(const OperandVector &Operands) {
-  for (const auto &Operand : Operands) {
-    const PPCOperand &Op = static_cast<const PPCOperand &>(*Operand);
-    if (Op.isMemOp())
-      return true;
-  }
-  return false;
 }
