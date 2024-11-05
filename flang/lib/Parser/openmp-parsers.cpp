@@ -402,7 +402,9 @@ TYPE_PARSER(
 TYPE_PARSER(construct<OmpTaskDependenceType>(
     "DEPOBJ" >> pure(OmpTaskDependenceType::Type::Depobj) ||
     "IN"_id >> pure(OmpTaskDependenceType::Type::In) ||
-    "INOUT" >> pure(OmpTaskDependenceType::Type::Inout) ||
+    "INOUT"_id >> pure(OmpTaskDependenceType::Type::Inout) ||
+    "INOUTSET"_id >> pure(OmpTaskDependenceType::Type::Inoutset) ||
+    "MUTEXINOUTSET" >> pure(OmpTaskDependenceType::Type::Mutexinoutset) ||
     "OUT" >> pure(OmpTaskDependenceType::Type::Out) ||
     "SINK" >> pure(OmpTaskDependenceType::Type::Sink) ||
     "SOURCE" >> pure(OmpTaskDependenceType::Type::Source)))
