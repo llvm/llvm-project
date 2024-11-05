@@ -3832,6 +3832,10 @@ public:
     return cast<VPBasicBlock>(getScalarPreheader()->getSinglePredecessor());
   }
 
+  /// Return the exit blocks of the VPlan, that is leaf nodes except the scalar
+  /// header.
+  auto getExitBlocks();
+
   /// The trip count of the original loop.
   VPValue *getTripCount() const {
     assert(TripCount && "trip count needs to be set before accessing it");

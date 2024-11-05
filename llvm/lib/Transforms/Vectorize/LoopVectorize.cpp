@@ -8839,11 +8839,7 @@ static SetVector<VPIRInstruction *> collectUsersInExitBlocks(
     Loop *OrigLoop, VPRecipeBuilder &Builder, VPlan &Plan,
     const MapVector<PHINode *, InductionDescriptor> &Inductions) {
   SetVector<VPIRInstruction *> ExitUsersToFix;
-  for (VPBlockBase *VPB : vp_depth_first_shallow(
-           Plan.getVectorLoopRegion()->getSingleSuccessor())) {
-    if (VPB->getNumSuccessors() != 0 || VPB == Plan.getScalarHeader())
-      continue;
-    auto *ExitVPBB = cast<VPIRBasicBlock>(VPB);
+  for (VPIRBasicBlock *ExitVPBB : Plan.getExitBlocks()) {
     BasicBlock *ExitBB = ExitVPBB->getIRBasicBlock();
     for (VPRecipeBase &R : *ExitVPBB) {
       auto *ExitIRI = dyn_cast<VPIRInstruction>(&R);
@@ -9178,14 +9174,31 @@ LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(VFRange &Range) {
   RecipeBuilder.fixHeaderPhis();
 
   if (Legal->hasUncountableEarlyExit()) {
-    VPlanTransforms::handleUncountableEarlyExit(*Plan, *PSE.getSE(), OrigLoop,
-                                                RecipeBuilder);
+    VPlanTransforms::handleUncountableEarlyExit(
+        *Plan, *PSE.getSE(), OrigLoop, Legal->getUncountableExitingBlocks(),
+        RecipeBuilder);
   }
   addScalarResumePhis(RecipeBuilder, *Plan);
   SetVector<VPIRInstruction *> ExitUsersToFix = collectUsersInExitBlocks(
       OrigLoop, RecipeBuilder, *Plan, Legal->getInductionVars());
   addExitUsersForFirstOrderRecurrences(*Plan, ExitUsersToFix);
   addUsersInExitBlocks(*Plan, ExitUsersToFix);
+
+  // Currently only live-ins can be used by exit values. We also bail out if any
+  // exit value isn't handled in VPlan yet, i.e. a VPIRInstruction in the exit
+  // without any operands.
+  if (Legal->hasUncountableEarlyExit()) {
+    if (any_of(Plan->getExitBlocks(), [](VPIRBasicBlock *ExitBB) {
+          return any_of(*ExitBB, [](VPRecipeBase &R) {
+            auto VPIRI = cast<VPIRInstruction>(&R);
+            return VPIRI->getNumOperands() == 0 ||
+                   any_of(VPIRI->operands(),
+                          [](VPValue *Op) { return !Op->isLiveIn(); });
+          });
+        }))
+      return nullptr;
+  }
+
   // ---------------------------------------------------------------------------
   // Transform initial VPlan: Apply previously taken decisions, in order, to
   // bring the VPlan to its final state.

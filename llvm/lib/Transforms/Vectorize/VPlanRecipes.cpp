@@ -872,7 +872,6 @@ void VPIRInstruction::print(raw_ostream &O, const Twine &Indent,
   O << Indent << "IR " << I;
 
   if (getNumOperands() != 0) {
-    // assert(getNumOperands() == 1 && "can have at most 1 operand");
     O << " (extra operand: ";
     printOperands(O, SlotTracker);
     O << ")";

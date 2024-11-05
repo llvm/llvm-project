@@ -1793,31 +1793,26 @@ void VPlanTransforms::createInterleaveGroups(
 
 void VPlanTransforms::handleUncountableEarlyExit(
     VPlan &Plan, ScalarEvolution &SE, Loop *OrigLoop,
+    ArrayRef<BasicBlock *> UncountableExitingBlocks,
     VPRecipeBuilder &RecipeBuilder) {
   auto *LatchVPBB =
       cast<VPBasicBlock>(Plan.getVectorLoopRegion()->getExiting());
   VPBuilder Builder(LatchVPBB->getTerminator());
   auto *MiddleVPBB = Plan.getMiddleBlock();
   VPRegionBlock *LoopRegion = Plan.getVectorLoopRegion();
-
   VPValue *EarlyExitTaken = nullptr;
-  SmallVector<BasicBlock *> ExitingBBs;
-  OrigLoop->getExitingBlocks(ExitingBBs);
 
   // Process all uncountable exiting blocks. For each exiting block, update the
   // EarlyExitTaken, which tracks if any uncountable early exit has been taken.
   // Also split the middle block and branch to the exit block for the early exit
   // if it has been taken.
-  for (BasicBlock *Exiting : ExitingBBs) {
-    if (Exiting == OrigLoop->getLoopLatch())
-      continue;
-
+  for (BasicBlock *Exiting : UncountableExitingBlocks) {
     auto *ExitingTerm = cast<BranchInst>(Exiting->getTerminator());
     BasicBlock *TrueSucc = ExitingTerm->getSuccessor(0);
     BasicBlock *FalseSucc = ExitingTerm->getSuccessor(1);
-    VPBasicBlock *VPExitBlock;
+    VPIRBasicBlock *VPExitBlock;
     if (OrigLoop->getUniqueExitBlock()) {
-      VPExitBlock = cast<VPBasicBlock>(MiddleVPBB->getSuccessors()[0]);
+      VPExitBlock = cast<VPIRBasicBlock>(MiddleVPBB->getSuccessors()[0]);
     } else {
       VPExitBlock = VPIRBasicBlock::fromBasicBlock(
           !OrigLoop->contains(TrueSucc) ? TrueSucc : FalseSucc);
