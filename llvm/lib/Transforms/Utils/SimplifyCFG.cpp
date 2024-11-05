@@ -7451,7 +7451,7 @@ static bool simplifySwitchOfCmpIntrinsic(SwitchInst *SI, IRBuilderBase &Builder,
 struct CaseHandleWrapper {
   const SwitchInst::CaseHandle Case;
   DenseMap<PHINode *, DenseMap<BasicBlock *, Value *>> *PhiPredIVs;
-  SmallVector<Value *> *PhiVals;
+  DenseMap<BasicBlock *, SmallVector<Value *>> *PhiVals;
 };
 
 namespace llvm {
@@ -7478,9 +7478,9 @@ template <> struct DenseMapInfo<const CaseHandleWrapper *> {
     // Initially, we tried to just use the successor BB as the hash, but this
     // has better performance.
     BasicBlock *BB = BI->getSuccessor(0);
-    return hash_combine(
-        hash_value(BB),
-        hash_combine_range(CHW->PhiVals->begin(), CHW->PhiVals->end()));
+    auto &Vals = (*CHW->PhiVals)[BB];
+    return hash_combine(hash_value(BB),
+                        hash_combine_range(Vals.begin(), Vals.end()));
   }
   static bool isEqual(const CaseHandleWrapper *LHS,
                       const CaseHandleWrapper *RHS) {
@@ -7557,14 +7557,16 @@ bool SimplifyCFGOpt::simplifyDuplicateSwitchArms(SwitchInst *SI) {
     if (!BI || BI->isConditional())
       continue;
 
-    if (Seen.insert(BB).second)
+    if (Seen.insert(BB).second) {
       // Keep track of which PHIs we need as keys in PhiPredIVs.
-      for (BasicBlock *Succ : BI->successors())
-        for (PHINode &Phi : Succ->phis())
+      for (BasicBlock *Succ : BI->successors()) {
+        for (PHINode &Phi : Succ->phis()) {
           Phis.insert(&Phi);
-
-    PhiVals[BB] = SmallVector<Value *>();
-    Cases.emplace_back(CaseHandleWrapper{Case, &PhiPredIVs, &PhiVals[BB]});
+          PhiVals[BB] = SmallVector<Value *>();
+        }
+      }
+    }
+    Cases.emplace_back(CaseHandleWrapper{Case, &PhiPredIVs, &PhiVals});
   }
 
   // Precompute the data structures to improve performance of isEqual and
@@ -7578,8 +7580,9 @@ bool SimplifyCFGOpt::simplifyDuplicateSwitchArms(SwitchInst *SI) {
       PhiPredIVs[Phi].insert({BB, IV.get()});
       // Only need to track PhiVals for BBs we've added as keys in the loop
       // above.
-      if (PhiVals.contains(BB))
-        PhiVals[BB].emplace_back(IV.get());
+      auto Res = PhiVals.find(BB);
+      if (Res != PhiVals.end())
+        Res->second.emplace_back(IV.get());
     }
   }
 
