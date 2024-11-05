@@ -183,6 +183,7 @@ namespace {
 struct Param {
   unsigned Position;
   std::optional<bool> NoEscape = false;
+  std::optional<bool> Lifetimebound = false;
   std::optional<NullabilityKind> Nullability;
   std::optional<RetainCountConventionKind> RetainCountConvention;
   StringRef Type;
@@ -234,6 +235,7 @@ template <> struct MappingTraits<Param> {
     IO.mapOptional("Nullability", P.Nullability, std::nullopt);
     IO.mapOptional("RetainCountConvention", P.RetainCountConvention);
     IO.mapOptional("NoEscape", P.NoEscape);
+    IO.mapOptional("Lifetimebound", P.Lifetimebound);
     IO.mapOptional("Type", P.Type, StringRef(""));
   }
 };
@@ -847,6 +849,7 @@ public:
       if (P.Nullability)
         PI.setNullabilityAudited(*P.Nullability);
       PI.setNoEscape(P.NoEscape);
+      PI.setLifetimebound(P.Lifetimebound);
       PI.setType(std::string(P.Type));
       PI.setRetainCountConvention(P.RetainCountConvention);
       if (OutInfo.Params.size() <= P.Position)
