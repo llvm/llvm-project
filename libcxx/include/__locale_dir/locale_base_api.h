@@ -124,6 +124,7 @@
 
 #include <__cstddef/size_t.h>
 #include <__utility/forward.h>
+#include <ctype.h>
 #include <string.h>
 #include <time.h>
 #ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
