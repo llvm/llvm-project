@@ -1030,6 +1030,10 @@ Function *CodeExtractor::constructFunctionDeclaration(
   return newFunction;
 }
 
+/// If the original function has debug info, we have to add a debug location
+/// to the new branch instruction from the artificial entry block.
+/// We use the debug location of the first instruction in the extracted
+/// blocks, as there is no other equivalent line in the source code.
 static void applyFirstDebugLoc(Function *oldFunction,
                                ArrayRef<BasicBlock *> Blocks,
                                Instruction *BranchI) {
@@ -1037,6 +1041,10 @@ static void applyFirstDebugLoc(Function *oldFunction,
     any_of(Blocks, [&BranchI](const BasicBlock *BB) {
       return any_of(*BB, [&BranchI](const Instruction &I) {
         if (!I.getDebugLoc())
+          return false;
+        // Don't use source locations attached to debug-intrinsics: they could
+        // be from completely unrelated scopes.
+        if (isa<DbgInfoIntrinsic>(I))
           return false;
         BranchI->setDebugLoc(I.getDebugLoc());
         return true;
