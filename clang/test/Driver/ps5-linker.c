@@ -21,6 +21,22 @@
 // CHECK-NO-PIE-NOT: "-pie"
 // CHECK-SHARED: "--shared"
 
+// Test the driver supplies an --image-base to the linker only for non-pie
+// executables.
+
+// RUN: %clang --target=x86_64-sie-ps5 -static %s -### 2>&1 | FileCheck --check-prefixes=CHECK-BASE %s
+// RUN: %clang --target=x86_64-sie-ps5 -no-pie %s -### 2>&1 | FileCheck --check-prefixes=CHECK-BASE %s
+
+// CHECK-BASE: {{ld(\.exe)?}}"
+// CHECK-BASE-SAME: "--image-base=0x400000"
+
+// RUN: %clang --target=x86_64-sie-ps5 %s -### 2>&1 | FileCheck --check-prefixes=CHECK-NO-BASE %s
+// RUN: %clang --target=x86_64-sie-ps5 -r %s -### 2>&1 | FileCheck --check-prefixes=CHECK-NO-BASE %s
+// RUN: %clang --target=x86_64-sie-ps5 -shared %s -### 2>&1 | FileCheck --check-prefixes=CHECK-NO-BASE %s
+
+// CHECK-NO-BASE: {{ld(\.exe)?}}"
+// CHECK-NO-BASE-NOT: --image-base
+
 // Test the driver passes PlayStation-specific options to the linker that are
 // appropriate for the type of output. Many options don't apply for relocatable
 // output (-r).
@@ -37,6 +53,8 @@
 // CHECK-EXE-SAME: "--unresolved-symbols=report-all"
 // CHECK-EXE-SAME: "-z" "now"
 // CHECK-EXE-SAME: "-z" "start-stop-visibility=hidden"
+// CHECK-EXE-SAME: "-z" "common-page-size=0x4000"
+// CHECK-EXE-SAME: "-z" "max-page-size=0x4000"
 // CHECK-EXE-SAME: "-z" "dead-reloc-in-nonalloc=.debug_*=0xffffffffffffffff"
 // CHECK-EXE-SAME: "-z" "dead-reloc-in-nonalloc=.debug_ranges=0xfffffffffffffffe"
 // CHECK-EXE-SAME: "-z" "dead-reloc-in-nonalloc=.debug_loc=0xfffffffffffffffe"
@@ -47,6 +65,19 @@
 // CHECK-NO-EXE-NOT: "--build-id
 // CHECK-NO-EXE-NOT: "--unresolved-symbols
 // CHECK-NO-EXE-NOT: "-z"
+
+// Test that an appropriate linker script is supplied by the driver.
+
+// RUN: %clang --target=x86_64-sie-ps5 %s -### 2>&1 | FileCheck --check-prefixes=CHECK-SCRIPT -DSCRIPT=main %s
+// RUN: %clang --target=x86_64-sie-ps5 %s -shared -### 2>&1 | FileCheck --check-prefixes=CHECK-SCRIPT -DSCRIPT=prx %s
+// RUN: %clang --target=x86_64-sie-ps5 %s -static -### 2>&1 | FileCheck --check-prefixes=CHECK-SCRIPT -DSCRIPT=static %s
+// RUN: %clang --target=x86_64-sie-ps5 %s -r -### 2>&1 | FileCheck --check-prefixes=CHECK-NO-SCRIPT %s
+
+// CHECK-SCRIPT: {{ld(\.exe)?}}"
+// CHECK-SCRIPT-SAME: "--default-script" "[[SCRIPT]].script"
+
+// CHECK-NO-SCRIPT: {{ld(\.exe)?}}"
+// CHECK-NO-SCRIPT-NOT: "--default-script"
 
 // Test that -static is forwarded to the linker
 

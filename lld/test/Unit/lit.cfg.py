@@ -38,7 +38,7 @@ if sys.platform in ["win32", "cygwin"] and os.path.isdir(config.shlibdir):
     config.environment["PATH"] = os.path.pathsep.join((
             config.shlibdir, config.environment["PATH"]))
 
-# Win32 may use %SYSTEMDRIVE% during file system shell operations, so propogate.
+# Win32 may use %SYSTEMDRIVE% during file system shell operations, so propagate.
 if sys.platform == "win32" and "SYSTEMDRIVE" in os.environ:
     config.environment["SYSTEMDRIVE"] = os.environ["SYSTEMDRIVE"]
 
