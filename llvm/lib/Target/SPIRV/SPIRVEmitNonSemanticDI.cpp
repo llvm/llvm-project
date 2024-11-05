@@ -215,7 +215,46 @@ template <typename T> struct DebugLiveContainer {
   SmallVector<T> Values;
   SmallVector<size_t> BackIdx;
 };
-
+///  @class LiveRepository
+///  @brief Container for the connection graph between newly emitted Debug
+///  instructions.
+///
+///  The architecture consists of two tiers:
+///  - The **Main tier**, represented by an array of `Instructions`.
+///  - The **Concrete Type tier**, represented by separate arrays for each
+///  corresponding debug type.
+///
+///  The `Instructions` array contains records that include:
+///  - `Type`: An enum value pointing to the specific debug type array in the
+///  Concrete Type tier.
+///  - `Id`: An index into the corresponding array in the Concrete Type tier.
+///
+///  The class is designed to ensure safe and controlled access to its internal
+///  state. All interactions with the repository are done through the
+///  `getOrCreateIdx` function, which restricts direct manipulation of the
+///  underlying data structures, thus minimizing the risk of memory errors or
+///  logical mistakes.
+///
+///  Users of this class interact exclusively with the indexes of the
+///  `Instructions` array and never directly access the internal concrete type
+///  arrays. This property flattens the instruction access,
+//   making it easily retrievable.
+///
+///
+///       getOrCreateIdx() <--+ Iidx
+///             V             |
+/// +-------------------------+-+
+/// |[Instructions]--{Cidx,Type}|<----+
+/// +------+--------------+-----+     |
+///        v              v           |
+/// [PrimitiveType]  [ConcreteType_0] |
+///      {Data}        {Instruction}  |
+///    (i32)(i32)      (Iidx) (Iidx)  |
+///                        |    |     |
+///                        +----+-----+
+///
+///  Class is designed to be easily removable by simply replacing the
+///  `getOrConstructIdx` method with another mechanism.
 class LiveRepository {
   DebugLiveContainer<int64_t> PrimitiveInts;
   DebugLiveContainer<StringRef> PrimitiveStrings;
@@ -317,8 +356,26 @@ class LiveRepository {
   }
 
 public:
-  size_t push(const int64_t Val, MachineIRBuilder &MIRBuilder,
-              const SPIRVTargetMachine *TM) {
+  /// @brief Retrieves or creates an index for the int64_t primitive type.
+  ///
+  /// It's backed by OpConstantI instruction.
+  /// It either retrieves an existing index or creates a new one based on the
+  /// provided parameters. The function currently has a linear, cache-friendly
+  /// search time for duplicate entries. It assumes that no single type of
+  /// instruction will become so dominant in the module and every entry of that
+  /// type will be unique.
+  ///
+  /// @param[in] Val A int64_t value to retreive or construct.
+  /// @param[in] MIRBuilder A reference to the `MachineIRBuilder` used for
+  /// constructing IR.
+  /// @param[in] TM A pointer to the target machine (`SPIRVTargetMachine`) used
+  /// for this operation.
+  ///
+  /// @return The index (`size_t`) of the retrieved duplicate or newly created
+  /// entry.
+  ///
+  size_t getOrCreateIdx(const int64_t Val, MachineIRBuilder &MIRBuilder,
+                        const SPIRVTargetMachine *TM) {
     auto &SV = values<int64_t>();
     const auto [ConcreteIdx, IsDuplicate] = emplaceOrReturnDuplicate(Val, SV);
     if (IsDuplicate) {
@@ -333,7 +390,25 @@ public:
     return Instructions.size() - 1;
   }
 
-  size_t push(const StringRef Val, MachineIRBuilder &MIRBuilder) {
+  /// @brief Retrieves or creates an index for the StringRef primitive type.
+  ///
+  /// It's backed by OpString instruction.
+  /// It either retrieves an existing index or creates a new one based on the
+  /// provided parameters. The function currently has a linear, cache-friendly
+  /// search time for duplicate entries. It assumes that no single type of
+  /// instruction will become so dominant in the module and every entry of that
+  /// type will be unique.
+  ///
+  /// @param[in] Val A StringRef value to retreive or construct.
+  /// @param[in] MIRBuilder A reference to the `MachineIRBuilder` used for
+  /// constructing IR.
+  /// @param[in] TM A pointer to the target machine (`SPIRVTargetMachine`) used
+  /// for this operation.
+  ///
+  /// @return The index (`size_t`) of the retrieved duplicate or newly created
+  /// entry.
+  ///
+  size_t getOrCreateIdx(const StringRef Val, MachineIRBuilder &MIRBuilder) {
     auto &SV = values<StringRef>();
     const auto [ConcreteIdx, IsDuplicate] = emplaceOrReturnDuplicate(Val, SV);
     if (IsDuplicate) {
@@ -345,9 +420,29 @@ public:
     return Instructions.size() - 1;
   }
 
+  /// @brief Retrieves or creates an index for the specified type.
+  /// It either retrieves an existing index or creates a new one based on the
+  /// provided parameters. The function currently has a linear, cache-friendly
+  /// search time for duplicate entries. It assumes that no single type of
+  /// instruction will become so dominant in the module and every entry of that
+  /// type will be unique.:w
+  ///
+  /// @tparam T The specific type being used for this instantiation.
+  ///
+  /// @param[in] arrayRef A reference to an array containing indices (of type
+  /// `size_t`).
+  /// @param[in] MIRBuilder A reference to the `MachineIRBuilder` used for
+  /// constructing IR.
+  /// @param[in] TM A pointer to the target machine (`SPIRVTargetMachine`) used
+  /// for this operation.
+  ///
+  /// @return The index (`size_t`) of the retrieved duplicate or newly created
+  /// entry.
+  ///
   template <typename T>
-  constexpr size_t push(ArrayRef<size_t> Args, MachineIRBuilder &MIRBuilder,
-                        const SPIRVTargetMachine *TM) {
+  constexpr size_t getOrCreateIdx(ArrayRef<size_t> Args,
+                                  MachineIRBuilder &MIRBuilder,
+                                  const SPIRVTargetMachine *TM) {
     auto &SV = values<T>();
     const auto [ConcreteIdx, IsDuplicate] =
         emplaceOrReturnDuplicate(T(Args), SV);
@@ -363,9 +458,10 @@ public:
 };
 
 template <>
-size_t LiveRepository::push<DebugInfoNone>(ArrayRef<size_t>,
-                                           MachineIRBuilder &MIRBuilder,
-                                           const SPIRVTargetMachine *TM) {
+size_t
+LiveRepository::getOrCreateIdx<DebugInfoNone>(ArrayRef<size_t>,
+                                              MachineIRBuilder &MIRBuilder,
+                                              const SPIRVTargetMachine *TM) {
   static std::optional<size_t> DebugInfoNoneIdx = std::nullopt;
   if (!DebugInfoNoneIdx.has_value()) {
     Instructions.emplace_back(DebugTypeContainer<DebugInfoNone>::TM, 0);
@@ -380,8 +476,9 @@ size_t emitDebugSource(const DIFile *File, MachineIRBuilder &MIRBuilder,
                        SPIRVTargetMachine *TM, LiveRepository &LR) {
   SmallString<128> FilePath;
   sys::path::append(FilePath, File->getDirectory(), File->getFilename());
-  const size_t FilePathId = LR.push(StringRef(FilePath.c_str()), MIRBuilder);
-  return LR.push<DebugSource>({FilePathId}, MIRBuilder, TM);
+  const size_t FilePathId =
+      LR.getOrCreateIdx(StringRef(FilePath.c_str()), MIRBuilder);
+  return LR.getOrCreateIdx<DebugSource>({FilePathId}, MIRBuilder, TM);
 }
 
 size_t emitDebugCompilationUnits(const Module *M, MachineIRBuilder &MIRBuilder,
@@ -397,13 +494,13 @@ size_t emitDebugCompilationUnits(const Module *M, MachineIRBuilder &MIRBuilder,
           cast<ConstantInt>(
               cast<ConstantAsMetadata>(Op->getOperand(2))->getValue())
               ->getSExtValue();
-      DwarfVersionId = LR.push(DwarfVersion, MIRBuilder, TM);
+      DwarfVersionId = LR.getOrCreateIdx(DwarfVersion, MIRBuilder, TM);
     } else if (MaybeStrOp.equalsStr("Debug Info Version")) {
       const int64_t DebugInfoVersion =
           cast<ConstantInt>(
               cast<ConstantAsMetadata>(Op->getOperand(2))->getValue())
               ->getSExtValue();
-      DebugInfoVersionId = LR.push(DebugInfoVersion, MIRBuilder, TM);
+      DebugInfoVersionId = LR.getOrCreateIdx(DebugInfoVersion, MIRBuilder, TM);
     }
   }
   assert(DwarfVersionId.has_value() && DebugInfoVersionId.has_value());
@@ -415,9 +512,9 @@ size_t emitDebugCompilationUnits(const Module *M, MachineIRBuilder &MIRBuilder,
       sys::path::append(FilePath, File->getDirectory(), File->getFilename());
 
       const size_t FilePathId =
-          LR.push(StringRef(FilePath.c_str()), MIRBuilder);
+          LR.getOrCreateIdx(StringRef(FilePath.c_str()), MIRBuilder);
       const size_t DebugSourceId =
-          LR.push<DebugSource>({FilePathId}, MIRBuilder, TM);
+          LR.getOrCreateIdx<DebugSource>({FilePathId}, MIRBuilder, TM);
 
       SourceLanguage SpirvSourceLanguage;
       switch (CompileUnit->getSourceLanguage()) {
@@ -447,11 +544,11 @@ size_t emitDebugCompilationUnits(const Module *M, MachineIRBuilder &MIRBuilder,
       }
 
       const size_t SpirvSourceLanguageId =
-          LR.push(SpirvSourceLanguage, MIRBuilder, TM);
-      LR.push<DebugCompilationUnit>({DebugInfoVersionId.value(),
-                                     DwarfVersionId.value(), DebugSourceId,
-                                     SpirvSourceLanguageId},
-                                    MIRBuilder, TM);
+          LR.getOrCreateIdx(SpirvSourceLanguage, MIRBuilder, TM);
+      LR.getOrCreateIdx<DebugCompilationUnit>(
+          {DebugInfoVersionId.value(), DwarfVersionId.value(), DebugSourceId,
+           SpirvSourceLanguageId},
+          MIRBuilder, TM);
     }
   }
   return 0;
@@ -461,10 +558,10 @@ size_t emitDebugTypeBasic(const DIBasicType *BT, size_t I32ZeroIdx,
                           MachineIRBuilder &MIRBuilder,
                           const SPIRVTargetMachine *TM, LiveRepository &LR) {
 
-  const size_t BasicTypeStrId = LR.push(BT->getName(), MIRBuilder);
+  const size_t BasicTypeStrId = LR.getOrCreateIdx(BT->getName(), MIRBuilder);
 
   const size_t ConstIntBitWidthId =
-      LR.push(BT->getSizeInBits(), MIRBuilder, TM);
+      LR.getOrCreateIdx(BT->getSizeInBits(), MIRBuilder, TM);
 
   uint64_t AttributeEncoding;
   switch (BT->getEncoding()) {
@@ -493,9 +590,10 @@ size_t emitDebugTypeBasic(const DIBasicType *BT, size_t I32ZeroIdx,
     AttributeEncoding = BaseTypeAttributeEncoding::Unspecified;
   }
 
-  const size_t AttributeEncodingId = LR.push(AttributeEncoding, MIRBuilder, TM);
+  const size_t AttributeEncodingId =
+      LR.getOrCreateIdx(AttributeEncoding, MIRBuilder, TM);
 
-  return LR.push<DebugTypeBasic>(
+  return LR.getOrCreateIdx<DebugTypeBasic>(
       {BasicTypeStrId, ConstIntBitWidthId, AttributeEncodingId, I32ZeroIdx},
       MIRBuilder, TM);
 }
@@ -506,13 +604,13 @@ size_t emitDebugTypePointer(const DIDerivedType *DT, const size_t BasicTypeIdx,
                             const SPIRVTargetMachine *TM, LiveRepository &LR) {
   assert(DT->getDWARFAddressSpace().has_value());
 
-  size_t StorageClassIdx =
-      LR.push(addressSpaceToStorageClass(DT->getDWARFAddressSpace().value(),
-                                         *TM->getSubtargetImpl()),
-              MIRBuilder, TM);
+  size_t StorageClassIdx = LR.getOrCreateIdx(
+      addressSpaceToStorageClass(DT->getDWARFAddressSpace().value(),
+                                 *TM->getSubtargetImpl()),
+      MIRBuilder, TM);
 
-  return LR.push<DebugTypePointer>({BasicTypeIdx, StorageClassIdx, I32ZeroIdx},
-                                   MIRBuilder, TM);
+  return LR.getOrCreateIdx<DebugTypePointer>(
+      {BasicTypeIdx, StorageClassIdx, I32ZeroIdx}, MIRBuilder, TM);
 }
 
 size_t emitDebugTypePointer(const DIDerivedType *DT, const size_t I32ZeroIdx,
@@ -520,12 +618,13 @@ size_t emitDebugTypePointer(const DIDerivedType *DT, const size_t I32ZeroIdx,
                             const SPIRVTargetMachine *TM, LiveRepository &LR) {
   assert(DT->getDWARFAddressSpace().has_value());
 
-  size_t StorageClassIdx =
-      LR.push(addressSpaceToStorageClass(DT->getDWARFAddressSpace().value(),
-                                         *TM->getSubtargetImpl()),
-              MIRBuilder, TM);
-  size_t DebugInfoNoneIdx = LR.push<DebugInfoNone>({}, MIRBuilder, TM);
-  return LR.push<DebugTypePointer>(
+  size_t StorageClassIdx = LR.getOrCreateIdx(
+      addressSpaceToStorageClass(DT->getDWARFAddressSpace().value(),
+                                 *TM->getSubtargetImpl()),
+      MIRBuilder, TM);
+  size_t DebugInfoNoneIdx =
+      LR.getOrCreateIdx<DebugInfoNone>({}, MIRBuilder, TM);
+  return LR.getOrCreateIdx<DebugTypePointer>(
       {DebugInfoNoneIdx, StorageClassIdx, I32ZeroIdx}, MIRBuilder, TM);
 }
 } // namespace
@@ -588,14 +687,14 @@ bool SPIRVEmitNonSemanticDI::emitGlobalDI(MachineFunction &MF, const Module *M,
                   dyn_cast<DIBasicType>(LocalVariable->getType())) {
             // Currently, we are not extracting any DebugInfoFlags,
             // so we emit zero as the <id>Flags argument for DebugBasicType.
-            const size_t I32ZeroIdx = LR.push(0, MIRBuilder, TM);
+            const size_t I32ZeroIdx = LR.getOrCreateIdx(0, MIRBuilder, TM);
             emitDebugTypeBasic(BasicType, I32ZeroIdx, MIRBuilder, TM, LR);
             continue;
           }
           if (const auto *DerivedType =
                   dyn_cast<DIDerivedType>(LocalVariable->getType())) {
             if (DerivedType->getTag() == dwarf::DW_TAG_pointer_type) {
-              const size_t I32ZeroIdx = LR.push(0, MIRBuilder, TM);
+              const size_t I32ZeroIdx = LR.getOrCreateIdx(0, MIRBuilder, TM);
               // DIBasicType may be unreachable from DbgRecord and can only be
               // referenced by other Debug Information (DI) types. Note:
               // DerivedType->getBaseType returns null when the pointer
@@ -630,10 +729,10 @@ bool SPIRVEmitNonSemanticDI::emitLineDI(MachineFunction &MF,
         assert(DL.getScope() && "DL.getScope() must exist and be DISubprogram");
         const auto *File = cast<DISubprogram>(DL.getScope())->getFile();
         const size_t ScopeIdx = emitDebugSource(File, MIRBuilder, TM, LR);
-        const size_t LineIdx = LR.push(DL.getLine(), MIRBuilder, TM);
-        const size_t ColIdx = LR.push(DL.getCol(), MIRBuilder, TM);
-        LR.push<DebugLine>({ScopeIdx, LineIdx, LineIdx, ColIdx, ColIdx},
-                           MIRBuilder, TM);
+        const size_t LineIdx = LR.getOrCreateIdx(DL.getLine(), MIRBuilder, TM);
+        const size_t ColIdx = LR.getOrCreateIdx(DL.getCol(), MIRBuilder, TM);
+        LR.getOrCreateIdx<DebugLine>(
+            {ScopeIdx, LineIdx, LineIdx, ColIdx, ColIdx}, MIRBuilder, TM);
         IsModified = true;
       }
     }
