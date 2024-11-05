@@ -19,26 +19,8 @@ define ptr addrspace(10) @japi1_vect_42283(ptr nocapture readonly %0, i32 %1) lo
 ; CHECK-NEXT:    [[DOTELT1:%.*]] = getelementptr inbounds { ptr addrspace(10), i64 }, ptr addrspace(10) [[TMP5]], i64 0, i32 1
 ; CHECK-NEXT:    [[DOTUNPACK2:%.*]] = load i64, ptr addrspace(10) [[DOTELT1]], align 8, !tbaa [[TBAA8]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = add nsw i64 [[TMP2]], 1
-; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP8]], 60
-; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_SCEVCHECK:%.*]]
-; CHECK:       vector.scevcheck:
-; CHECK-NEXT:    [[MUL:%.*]] = call { i64, i1 } @llvm.umul.with.overflow.i64(i64 16, i64 [[TMP2]])
-; CHECK-NEXT:    [[MUL_RESULT:%.*]] = extractvalue { i64, i1 } [[MUL]], 0
-; CHECK-NEXT:    [[MUL_OVERFLOW:%.*]] = extractvalue { i64, i1 } [[MUL]], 1
-; CHECK-NEXT:    [[TMP9:%.*]] = sub i64 0, [[MUL_RESULT]]
-; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr i8, ptr addrspace(13) [[TMP7]], i64 [[MUL_RESULT]]
-; CHECK-NEXT:    [[TMP11:%.*]] = icmp ult ptr addrspace(13) [[TMP10]], [[TMP7]]
-; CHECK-NEXT:    [[TMP12:%.*]] = or i1 [[TMP11]], [[MUL_OVERFLOW]]
-; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr addrspace(13) [[TMP7]], i64 8
-; CHECK-NEXT:    [[MUL1:%.*]] = call { i64, i1 } @llvm.umul.with.overflow.i64(i64 16, i64 [[TMP2]])
-; CHECK-NEXT:    [[MUL_RESULT2:%.*]] = extractvalue { i64, i1 } [[MUL1]], 0
-; CHECK-NEXT:    [[MUL_OVERFLOW3:%.*]] = extractvalue { i64, i1 } [[MUL1]], 1
-; CHECK-NEXT:    [[TMP13:%.*]] = sub i64 0, [[MUL_RESULT2]]
-; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr i8, ptr addrspace(13) [[SCEVGEP]], i64 [[MUL_RESULT2]]
-; CHECK-NEXT:    [[TMP15:%.*]] = icmp ult ptr addrspace(13) [[TMP14]], [[SCEVGEP]]
-; CHECK-NEXT:    [[TMP16:%.*]] = or i1 [[TMP15]], [[MUL_OVERFLOW3]]
-; CHECK-NEXT:    [[TMP17:%.*]] = or i1 [[TMP12]], [[TMP16]]
-; CHECK-NEXT:    br i1 [[TMP17]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
+; CHECK-NEXT:    [[TMP17:%.*]] = icmp ult i64 [[TMP8]], 16
+; CHECK-NEXT:    br i1 [[TMP17]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP8]], 16
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP8]], [[N_MOD_VF]]
@@ -77,7 +59,7 @@ define ptr addrspace(10) @japi1_vect_42283(ptr nocapture readonly %0, i32 %1) lo
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP8]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[L44:%.*]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[TOP:%.*]] ], [ 0, [[VECTOR_SCEVCHECK]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[TOP:%.*]] ]
 ; CHECK-NEXT:    br label [[L26:%.*]]
 ; CHECK:       L26:
 ; CHECK-NEXT:    [[VALUE_PHI5:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[TMP27:%.*]], [[L26]] ]
