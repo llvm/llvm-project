@@ -10,6 +10,13 @@
 #ifndef _LIBCPP___LOCALE_DIR_LOCALE_BASE_API_FREEBSD_H
 #define _LIBCPP___LOCALE_DIR_LOCALE_BASE_API_FREEBSD_H
 
+#include <__config>
+#include <string.h>
+#include <time.h>
+#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#  include <wctype.h>
+#endif
+
 #include <xlocale.h>
 
 #endif // _LIBCPP___LOCALE_DIR_LOCALE_BASE_API_FREEBSD_H
