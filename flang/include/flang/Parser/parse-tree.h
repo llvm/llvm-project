@@ -3447,7 +3447,8 @@ WRAPPER_CLASS(OmpObjectList, std::list<OmpObject>);
 //    MUTEXINOUTSET | DEPOBJ |  // since 5.0
 //    INOUTSET                  // since 5.2
 struct OmpTaskDependenceType {
-  ENUM_CLASS(Type, In, Out, Inout, Source, Sink, Depobj)
+  ENUM_CLASS(
+      Type, In, Out, Inout, Inoutset, Mutexinoutset, Source, Sink, Depobj)
   WRAPPER_CLASS_BOILERPLATE(OmpTaskDependenceType, Type);
 };
 
