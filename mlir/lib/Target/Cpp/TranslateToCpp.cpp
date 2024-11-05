@@ -114,7 +114,8 @@ static FailureOr<int> getOperatorPrecedence(Operation *operation) {
 namespace {
 /// Emitter that uses dialect specific emitters to emit C++ code.
 struct CppEmitter {
-  explicit CppEmitter(raw_ostream &os, bool declareVariablesAtTop);
+  explicit CppEmitter(raw_ostream &os, bool declareVariablesAtTop,
+                      StringRef fileId);
 
   /// Emits attribute or returns failure.
   LogicalResult emitAttribute(Location loc, Attribute attr);
@@ -231,6 +232,11 @@ struct CppEmitter {
   /// be declared at the beginning of a function.
   bool shouldDeclareVariablesAtTop() { return declareVariablesAtTop; };
 
+  /// Returns whether this translation unit should be emitted
+  bool shouldEmitFile(FileOp file) {
+    return !fileId.empty() && file.getId() == fileId;
+  }
+
   /// Get expression currently being emitted.
   ExpressionOp getEmittedExpression() { return emittedExpression; }
 
@@ -257,6 +263,9 @@ private:
   /// arguments are declared at the beginning of the function. This also
   /// includes results from ops located in nested regions.
   bool declareVariablesAtTop;
+
+  /// Only emit translation units whos id matches this value.
+  std::string fileId;
 
   /// Map from value to name of C++ variable that contain the name.
   ValueMapper valueMapper;
@@ -960,6 +969,19 @@ static LogicalResult printOperation(CppEmitter &emitter, ModuleOp moduleOp) {
   return success();
 }
 
+static LogicalResult printOperation(CppEmitter &emitter, FileOp file) {
+  if (!emitter.shouldEmitFile(file))
+    return success();
+
+  CppEmitter::Scope scope(emitter);
+
+  for (Operation &op : file) {
+    if (failed(emitter.emitOperation(op, /*trailingSemicolon=*/false)))
+      return failure();
+  }
+  return success();
+}
+
 static LogicalResult printFunctionArgs(CppEmitter &emitter,
                                        Operation *functionOp,
                                        ArrayRef<Type> arguments) {
@@ -1159,8 +1181,10 @@ static LogicalResult printOperation(CppEmitter &emitter,
   return success();
 }
 
-CppEmitter::CppEmitter(raw_ostream &os, bool declareVariablesAtTop)
-    : os(os), declareVariablesAtTop(declareVariablesAtTop) {
+CppEmitter::CppEmitter(raw_ostream &os, bool declareVariablesAtTop,
+                       StringRef fileId)
+    : os(os), declareVariablesAtTop(declareVariablesAtTop),
+      fileId(fileId.str()) {
   valueInScopeCount.push(0);
   labelInScopeCount.push(0);
 }
@@ -1561,8 +1585,9 @@ LogicalResult CppEmitter::emitOperation(Operation &op, bool trailingSemicolon) {
                 emitc::GlobalOp, emitc::IfOp, emitc::IncludeOp, emitc::LoadOp,
                 emitc::LogicalAndOp, emitc::LogicalNotOp, emitc::LogicalOrOp,
                 emitc::MulOp, emitc::RemOp, emitc::ReturnOp, emitc::SubOp,
-                emitc::SwitchOp, emitc::UnaryMinusOp, emitc::UnaryPlusOp,
-                emitc::VariableOp, emitc::VerbatimOp>(
+                emitc::SwitchOp, emitc::FileOp, emitc::UnaryMinusOp,
+                emitc::UnaryPlusOp, emitc::VariableOp, emitc::VerbatimOp>(
+
               [&](auto op) { return printOperation(*this, op); })
           // Func ops.
           .Case<func::CallOp, func::FuncOp, func::ReturnOp>(
@@ -1742,7 +1767,8 @@ LogicalResult CppEmitter::emitTupleType(Location loc, ArrayRef<Type> types) {
 }
 
 LogicalResult emitc::translateToCpp(Operation *op, raw_ostream &os,
-                                    bool declareVariablesAtTop) {
-  CppEmitter emitter(os, declareVariablesAtTop);
+                                    bool declareVariablesAtTop,
+                                    StringRef fileId) {
+  CppEmitter emitter(os, declareVariablesAtTop, fileId);
   return emitter.emitOperation(*op, /*trailingSemicolon=*/false);
 }
