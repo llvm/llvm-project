@@ -944,7 +944,7 @@ _HLSL_AVAILABILITY(shadermodel, 6.4)
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_dot4add_i8packed)
 int dot4add_i8packed(uint, uint, int);
 
-/// \fn uint dot4add_i8packed(uint A, uint B, uint C)
+/// \fn uint dot4add_u8packed(uint A, uint B, uint C)
 
 _HLSL_AVAILABILITY(shadermodel, 6.4)
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_dot4add_u8packed)
