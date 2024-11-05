@@ -222,6 +222,11 @@ static cl::opt<unsigned> RangeIterThreshold(
     cl::desc("Threshold for switching to iteratively computing SCEV ranges"),
     cl::init(32));
 
+static cl::opt<unsigned> MaxLoopGuardCollectionDepth(
+    "scalar-evolution-max-loop-guard-collection-depth", cl::Hidden,
+    cl::desc("Maximum depth for recrusive loop guard collection"),
+    cl::init(1));
+
 static cl::opt<bool>
 ClassifyExpressions("scalar-evolution-classify-expressions",
     cl::Hidden, cl::init(true),
@@ -15220,13 +15225,72 @@ ScalarEvolution::LoopGuards::collect(const Loop *L, ScalarEvolution &SE) {
   BasicBlock *Header = L->getHeader();
   BasicBlock *Pred = L->getLoopPredecessor();
   LoopGuards Guards(SE);
-  return collectFromBlock(SE, Guards, Header, Pred, {});
+  SmallPtrSet<const BasicBlock *, 8> VisitedBlocks;
+  collectFromBlock(SE, Guards, Header, Pred, VisitedBlocks);
+  return Guards;
 }
 
-ScalarEvolution::LoopGuards ScalarEvolution::LoopGuards::collectFromBlock(
+void ScalarEvolution::LoopGuards::collectFromPHI(
+    ScalarEvolution &SE, ScalarEvolution::LoopGuards &Guards,
+    const PHINode &Phi, SmallPtrSet<const BasicBlock *, 8> &VisitedBlocks,
+    unsigned Depth) {
+  if (!SE.isSCEVable(Phi.getType()))
+    return;
+
+  using MinMaxPattern = std::pair<const SCEVConstant *, SCEVTypes>;
+  auto GetMinMaxConst = [&](unsigned In) -> MinMaxPattern {
+    if (!VisitedBlocks.insert(Phi.getIncomingBlock(In)).second)
+      return {nullptr, scCouldNotCompute};
+    LoopGuards G(SE);
+    collectFromBlock(SE, G, Phi.getParent(), Phi.getIncomingBlock(In),
+                     VisitedBlocks, Depth + 1);
+    const SCEV *S = G.RewriteMap[SE.getSCEV(Phi.getIncomingValue(In))];
+    auto *SM = dyn_cast_if_present<SCEVMinMaxExpr>(S);
+    if (!SM)
+      return {nullptr, scCouldNotCompute};
+    if (const SCEVConstant *C0 = dyn_cast<SCEVConstant>(SM->getOperand(0)))
+      return {C0, SM->getSCEVType()};
+    if (const SCEVConstant *C1 = dyn_cast<SCEVConstant>(SM->getOperand(1)))
+      return {C1, SM->getSCEVType()};
+    return {nullptr, scCouldNotCompute};
+  };
+  auto MergeMinMaxConst = [](MinMaxPattern P1,
+                             MinMaxPattern P2) -> MinMaxPattern {
+    auto [C1, T1] = P1;
+    auto [C2, T2] = P2;
+    if (!C1 || !C2 || T1 != T2)
+      return {nullptr, scCouldNotCompute};
+    switch (T1) {
+    case scUMaxExpr:
+      return {C1->getAPInt().ult(C2->getAPInt()) ? C1 : C2, T1};
+    case scSMaxExpr:
+      return {C1->getAPInt().slt(C2->getAPInt()) ? C1 : C2, T1};
+    case scUMinExpr:
+      return {C1->getAPInt().ugt(C2->getAPInt()) ? C1 : C2, T1};
+    case scSMinExpr:
+      return {C1->getAPInt().sgt(C2->getAPInt()) ? C1 : C2, T1};
+    default:
+      llvm_unreachable("Trying to merge non-MinMaxExpr SCEVs.");
+    }
+  };
+  auto P = GetMinMaxConst(0);
+  for (unsigned int In = 1; In < Phi.getNumIncomingValues(); In++) {
+    if (!P.first)
+      break;
+    P = MergeMinMaxConst(P, GetMinMaxConst(In));
+  }
+  if (P.first) {
+    const SCEV *LHS = SE.getSCEV(const_cast<PHINode *>(&Phi));
+    SmallVector<const SCEV *, 2> Ops({P.first, LHS});
+    const SCEV *RHS = SE.getMinMaxExpr(P.second, Ops);
+    Guards.RewriteMap.insert({LHS, RHS});
+  }
+}
+
+void ScalarEvolution::LoopGuards::collectFromBlock(
     ScalarEvolution &SE, ScalarEvolution::LoopGuards &Guards,
     const BasicBlock *Block, const BasicBlock *Pred,
-    SmallPtrSet<const BasicBlock *, 8> VisitedBlocks) {
+    SmallPtrSet<const BasicBlock *, 8> &VisitedBlocks, unsigned Depth) {
   SmallVector<const SCEV *> ExprsToRewrite;
   auto CollectCondition = [&](ICmpInst::Predicate Predicate, const SCEV *LHS,
                               const SCEV *RHS,
@@ -15608,59 +15672,10 @@ ScalarEvolution::LoopGuards ScalarEvolution::LoopGuards::collectFromBlock(
   // for PHINodes by recursively following all of their incoming
   // blocks and try to merge the found conditions to build a new one
   // for the Phi.
-  if (Pair.second->hasNPredecessorsOrMore(2)) {
+  if (Pair.second->hasNPredecessorsOrMore(2) &&
+      Depth < MaxLoopGuardCollectionDepth) {
     for (auto &Phi : Pair.second->phis()) {
-      if (!SE.isSCEVable(Phi.getType()))
-        continue;
-
-      using MinMaxPattern = std::pair<const SCEVConstant *, SCEVTypes>;
-      auto GetMinMaxConst = [&SE, &VisitedBlocks, &Pair,
-                             &Phi](unsigned int In) -> MinMaxPattern {
-        LoopGuards G(SE);
-        if (VisitedBlocks.insert(Phi.getIncomingBlock(In)).second)
-          collectFromBlock(SE, G, Pair.second, Phi.getIncomingBlock(In),
-                           VisitedBlocks);
-        const SCEV *S = G.RewriteMap[SE.getSCEV(Phi.getIncomingValue(In))];
-        auto *SM = dyn_cast_if_present<SCEVMinMaxExpr>(S);
-        if (!SM)
-          return {nullptr, scCouldNotCompute};
-        if (const SCEVConstant *C0 = dyn_cast<SCEVConstant>(SM->getOperand(0)))
-          return {C0, SM->getSCEVType()};
-        if (const SCEVConstant *C1 = dyn_cast<SCEVConstant>(SM->getOperand(1)))
-          return {C1, SM->getSCEVType()};
-        return {nullptr, scCouldNotCompute};
-      };
-      auto MergeMinMaxConst = [](MinMaxPattern P1,
-                                 MinMaxPattern P2) -> MinMaxPattern {
-        auto [C1, T1] = P1;
-        auto [C2, T2] = P2;
-        if (!C1 || !C2 || T1 != T2)
-          return {nullptr, scCouldNotCompute};
-        switch (T1) {
-        case scUMaxExpr:
-          return {C1->getAPInt().ult(C2->getAPInt()) ? C1 : C2, T1};
-        case scSMaxExpr:
-          return {C1->getAPInt().slt(C2->getAPInt()) ? C1 : C2, T1};
-        case scUMinExpr:
-          return {C1->getAPInt().ugt(C2->getAPInt()) ? C1 : C2, T1};
-        case scSMinExpr:
-          return {C1->getAPInt().sgt(C2->getAPInt()) ? C1 : C2, T1};
-        default:
-          llvm_unreachable("Trying to merge non-MinMaxExpr SCEVs.");
-        }
-      };
-      auto P = GetMinMaxConst(0);
-      for (unsigned int In = 1; In < Phi.getNumIncomingValues(); In++) {
-        if (!P.first)
-          break;
-        P = MergeMinMaxConst(P, GetMinMaxConst(In));
-      }
-      if (P.first) {
-        const SCEV *LHS = SE.getSCEV(const_cast<PHINode *>(&Phi));
-        SmallVector<const SCEV *, 2> Ops({P.first, LHS});
-        const SCEV *RHS = SE.getMinMaxExpr(P.second, Ops);
-        Guards.RewriteMap.insert({LHS, RHS});
-      }
+      collectFromPHI(SE, Guards, Phi, VisitedBlocks, Depth);
     }
   }
 
@@ -15718,7 +15733,6 @@ ScalarEvolution::LoopGuards ScalarEvolution::LoopGuards::collectFromBlock(
       Guards.RewriteMap.insert({Expr, Guards.rewrite(RewriteTo)});
     }
   }
-  return Guards;
 }
 
 const SCEV *ScalarEvolution::LoopGuards::rewrite(const SCEV *Expr) const {
