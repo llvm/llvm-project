@@ -432,7 +432,7 @@ Expr<Type<TypeCategory::Real, KIND>> FoldIntrinsicFunction(
                               common::UsageWarning::FoldingException)) {
                         context.messages().Say(
                             common::UsageWarning::FoldingException,
-                            "SCALE intrinsic folding overflow"_warn_en_US);
+                            "SCALE/IEEE_SCALB intrinsic folding overflow"_warn_en_US);
                       }
                       return result.value;
                     }));
