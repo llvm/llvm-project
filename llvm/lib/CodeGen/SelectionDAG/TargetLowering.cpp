@@ -1978,6 +1978,22 @@ bool TargetLowering::SimplifyDemandedBits(
         }
       }
 
+      // If we are shifting down an extended sign bit, see if we can simplify
+      // this to shifting the MSB directly to expose further simplifications.
+      // This pattern often appears after sext_inreg legalization.
+      // 
+      // NOTE: We might be able to generalize this and merge with the SRA fold
+      // above, but there are currently regressions.
+      if (DemandedBits == 1 && (BitWidth - 1) > ShAmt) {
+        unsigned NumSignBits =
+            TLO.DAG.ComputeNumSignBits(Op0, DemandedElts, Depth + 1);
+        if (ShAmt >= (BitWidth - NumSignBits))
+          return TLO.CombineTo(
+              Op, TLO.DAG.getNode(
+                      ISD::SRL, dl, VT, Op0,
+                      TLO.DAG.getShiftAmountConstant(BitWidth - 1, VT, dl)));
+      }
+
       APInt InDemandedMask = (DemandedBits << ShAmt);
 
       // If the shift is exact, then it does demand the low bits (and knows that
