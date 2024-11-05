@@ -698,10 +698,28 @@ void test() {
 namespace LifetimeboundInterleave {
 
 const std::string& Ref(const std::string& abc [[clang::lifetimebound]]);
+
+std::string_view TakeSv(std::string_view abc [[clang::lifetimebound]]);
+std::string_view TakeStrRef(const std::string& abc [[clang::lifetimebound]]);
+std::string_view TakeStr(std::string abc [[clang::lifetimebound]]);
+
 std::string_view test1() {
   std::string_view t1 = Ref(std::string()); // expected-warning {{object backing}}
   t1 = Ref(std::string()); // expected-warning {{object backing}}
   return Ref(std::string()); // expected-warning {{returning address}}
+  
+  std::string_view t2 = TakeSv(std::string()); // expected-warning {{object backing}}
+  t2 = TakeSv(std::string()); // expected-warning {{object backing}}
+  return TakeSv(std::string()); // expected-warning {{returning address}}
+
+  std::string_view t3 = TakeStrRef(std::string()); // expected-warning {{temporary}}
+  t3 = TakeStrRef(std::string()); // expected-warning {{object backing}}
+  return TakeStrRef(std::string()); // expected-warning {{returning address}}
+
+
+  std::string_view t4 = TakeStr(std::string());
+  t4 = TakeStr(std::string());
+  return TakeStr(std::string());
 }
 
 template <typename T>

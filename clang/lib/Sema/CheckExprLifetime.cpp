@@ -1179,8 +1179,8 @@ static AnalysisResult analyzePathForGSLPointer(const IndirectLocalPath &Path,
   //    const std::string& Ref(const std::string& a [[clang::lifetimebound]]);
   //    string_view abc = Ref(std::string());
   // The "Path" is [GSLPointerInit, LifetimeboundCall], where "L" is the
-  // temporary "std::string()" object. We need to check if the function with the
-  // lifetimebound attribute returns a "owner" type.
+  // temporary "std::string()" object. We need to check the return type of the
+  // function with the lifetimebound attribute.
   if (Path.back().Kind == IndirectLocalPathEntry::LifetimeBoundCall) {
     // The lifetimebound applies to the implicit object parameter of a method.
     const FunctionDecl *FD =
@@ -1195,10 +1195,13 @@ static AnalysisResult analyzePathForGSLPointer(const IndirectLocalPath &Path,
       // We still respect this case even the type S is not an owner.
       return Report;
     }
-    // Check if the return type has an Owner attribute.
-    //   e.g., const GSLOwner& func(const Foo& foo [[clang::lifetimebound]])
-    if (FD && FD->getReturnType()->isReferenceType() &&
-        isRecordWithAttr<OwnerAttr>(FD->getReturnType()->getPointeeType()))
+    // Check the return type, e.g.
+    //   const GSLOwner& func(const Foo& foo [[clang::lifetimebound]])
+    //   GSLPointer func(const Foo& foo [[clang::lifetimebound]])
+    if (FD &&
+        ((FD->getReturnType()->isReferenceType() &&
+          isRecordWithAttr<OwnerAttr>(FD->getReturnType()->getPointeeType())) ||
+         isRecordWithAttr<PointerAttr>(FD->getReturnType())))
       return Report;
 
     return Abandon;
