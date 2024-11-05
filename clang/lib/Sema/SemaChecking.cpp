@@ -5595,7 +5595,7 @@ bool Sema::BuiltinCountedByRef(CallExpr *TheCall) {
            << Arg->getSourceRange();
 
   if (Arg->HasSideEffects(Context))
-    Diag(Arg->getBeginLoc(), diag::warn_builtin_counted_by_ref_has_side_effects)
+    Diag(Arg->getBeginLoc(), diag::err_builtin_counted_by_ref_has_side_effects)
         << Arg->getSourceRange();
 
   // See if we have something like '&ptr->fam[0]`.

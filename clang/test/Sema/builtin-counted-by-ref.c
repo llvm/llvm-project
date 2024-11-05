@@ -41,7 +41,8 @@ void test3(struct fam_struct *ptr, int idx) {
 }
 
 void test4(struct fam_struct *ptr, int idx) {
-  __builtin_counted_by_ref(&ptr->array[idx++]);             // expected-warning {{'__builtin_counted_by_ref' argument has side-effects that will be discarded}}
+  __builtin_counted_by_ref(ptr++->array);                   // expected-error {{'__builtin_counted_by_ref' argument cannot have side-effects}}
+  __builtin_counted_by_ref(&ptr->array[idx++]);             // expected-error {{'__builtin_counted_by_ref' argument cannot have side-effects}}
 }
 
 void foo(char *);

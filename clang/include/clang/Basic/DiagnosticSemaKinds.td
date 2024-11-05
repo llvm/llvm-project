@@ -6661,10 +6661,8 @@ def err_builtin_counted_by_ref_cannot_leak_reference : Error<
 def err_builtin_counted_by_ref_invalid_lhs_use : Error<
   "value returned by '__builtin_counted_by_ref' cannot be used in "
   "%select{an array subscript|a binary}0 expression">;
-
-def warn_builtin_counted_by_ref_has_side_effects : Warning<
-  "'__builtin_counted_by_ref' argument has side-effects that will be discarded">,
-  InGroup<CountedByRefSideEffects>;
+def err_builtin_counted_by_ref_has_side_effects : Error<
+  "'__builtin_counted_by_ref' argument cannot have side-effects">;
 
 let CategoryName = "ARC Semantic Issue" in {
 
