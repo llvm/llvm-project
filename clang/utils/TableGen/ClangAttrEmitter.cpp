@@ -3848,9 +3848,9 @@ void EmitClangAttrSpellingListIndex(const RecordKeeper &Records,
     // If there are none or one spelling to check, resort to the default
     // behavior of returning index as 0.
     if (Spellings.size() <= 1) {
-      OS << "    return 0;\n";
-      OS << "    break;\n";
-      OS << "  }\n";
+      OS << "    return 0;\n"
+         << "    break;\n"
+         << "  }\n";
       continue;
     }
 
@@ -3869,22 +3869,26 @@ void EmitClangAttrSpellingListIndex(const RecordKeeper &Records,
     // syntax and scope.
     if (HasSingleUniqueSpellingName) {
       for (const auto &[Idx, S] : enumerate(SpellingMap[FirstName])) {
-        OS << "    if (getSyntax() == AttributeCommonInfo::AS_" << S->variety();
+        OS << "    if (getSyntax() == AttributeCommonInfo::AS_" << S->variety()
+           << " && ComputedScope == ";
 
-        std::string ScopeStr = "AttributeCommonInfo::SC_";
         if (S->nameSpace() == "")
-          ScopeStr += "NONE";
+          OS << "AttributeCommonInfo::SC_NONE";
         else
-          ScopeStr += S->nameSpace().upper();
+          OS << "AttributeCommonInfo::SC_" + S->nameSpace().upper();
 
-        OS << " && ComputedScope == " << ScopeStr << ")\n"
+        OS << ")\n"
            << "      return " << Idx << ";\n";
       }
     } else {
       size_t Idx = 0;
-      for (const auto &MapEntry : SpellingMap) {
-        StringRef Name = MapEntry.first();
-        const std::vector<const FlattenedSpelling *> &Cases = SpellingMap[Name];
+      StringMap<bool> Completed;
+      for (const auto &Spell : Spellings) {
+        if (Completed.contains(Spell.name()))
+          continue;
+
+        const std::vector<const FlattenedSpelling *> &Cases =
+            SpellingMap[Spell.name()];
 
         if (Cases.size() > 1) {
           // For names with multiple possible cases, emit an enclosing if such
@@ -3896,17 +3900,17 @@ void EmitClangAttrSpellingListIndex(const RecordKeeper &Records,
           //     return 0;
           //   ...
           // }
-          OS << "    if (Name == \"" << Name << "\") {\n";
-          for (const auto &S : SpellingMap[Name]) {
+          OS << "    if (Name == \"" << Spell.name() << "\") {\n";
+          for (const auto &S : SpellingMap[Spell.name()]) {
             OS << "      if (getSyntax() == AttributeCommonInfo::AS_"
-               << S->variety();
-            std::string ScopeStr = "AttributeCommonInfo::SC_";
-            if (S->nameSpace() == "")
-              ScopeStr += "NONE";
-            else
-              ScopeStr += S->nameSpace().upper();
+               << S->variety() << " && ComputedScope == ";
 
-            OS << " && ComputedScope == " << ScopeStr << ")\n"
+            if (S->nameSpace() == "")
+              OS << "AttributeCommonInfo::SC_NONE";
+            else
+              OS << "AttributeCommonInfo::SC_" + S->nameSpace().upper();
+
+            OS << ")\n"
                << "        return " << Idx << ";\n";
             Idx++;
           }
@@ -3920,27 +3924,30 @@ void EmitClangAttrSpellingListIndex(const RecordKeeper &Records,
           //     && ComputedScope == AttributeCommonInfo::SC_NONE)
           //   return 5;
           const FlattenedSpelling *S = Cases.front();
-          OS << "    if (Name == \"" << Name << "\"";
-          OS << " && getSyntax() == AttributeCommonInfo::AS_" << S->variety();
+          OS << "    if (Name == \"" << Spell.name() << "\""
+             << " && getSyntax() == AttributeCommonInfo::AS_" << S->variety()
+             << " && ComputedScope == ";
+
           std::string ScopeStr = "AttributeCommonInfo::SC_";
           if (S->nameSpace() == "")
-            ScopeStr += "NONE";
+            OS << "AttributeCommonInfo::SC_NONE";
           else
-            ScopeStr += S->nameSpace().upper();
+            OS << "AttributeCommonInfo::SC_" + S->nameSpace().upper();
 
-          OS << " && ComputedScope == " << ScopeStr << ")\n"
+          OS << ")\n"
              << "        return " << Idx << ";\n";
           Idx++;
         }
+        Completed[Spell.name()] = true;
       }
     }
 
-    OS << "    break;\n";
-    OS << "  }\n";
+    OS << "    break;\n"
+       << "  }\n";
   }
 
-  OS << "  }\n";
-  OS << "  return 0;\n";
+  OS << "  }\n"
+     << "  return 0;\n";
 }
 
 // Emits code used by RecursiveASTVisitor to visit attributes

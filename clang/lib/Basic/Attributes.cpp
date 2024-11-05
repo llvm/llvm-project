@@ -16,7 +16,6 @@
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/ParsedAttrInfo.h"
 #include "clang/Basic/TargetInfo.h"
-#include "llvm/ADT/StringMap.h"
 
 using namespace clang;
 
@@ -154,7 +153,7 @@ std::string AttributeCommonInfo::getNormalizedFullName() const {
       normalizeName(getAttrName(), getScopeName(), getSyntax()));
 }
 
-static const llvm::StringMap<AttributeCommonInfo::Scope> ScopeMap = {
+const std::map<StringRef, AttributeCommonInfo::Scope> ScopeMap = {
     {"", AttributeCommonInfo::SC_NONE},
     {"clang", AttributeCommonInfo::SC_CLANG},
     {"gnu", AttributeCommonInfo::SC_GNU},
