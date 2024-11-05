@@ -8,7 +8,6 @@
 
 #include "Query.h"
 #include "QueryParser.h"
-#include "QueryProfile.h"
 #include "QuerySession.h"
 #include "clang/AST/ASTDumper.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
@@ -94,14 +93,35 @@ struct CollectBoundNodes : MatchFinder::MatchCallback {
   StringRef getID() const override { return Unit; }
 };
 
+class QueryProfiler {
+public:
+  QueryProfiler() = default;
+  ~QueryProfiler() { printUserFriendlyTable(llvm::errs()); }
+
+  void addASTUnitRecord(llvm::StringRef Unit, const llvm::TimeRecord &Record) {
+    Records[Unit] += Record;
+  }
+
+private:
+  void printUserFriendlyTable(llvm::raw_ostream &OS) {
+    llvm::TimerGroup TG("clang-query", "clang-query matcher profiling",
+                        Records);
+    TG.print(OS);
+    OS.flush();
+  }
+
+private:
+  llvm::StringMap<llvm::TimeRecord> Records;
+};
+
 } // namespace
 
 bool MatchQuery::run(llvm::raw_ostream &OS, QuerySession &QS) const {
   unsigned MatchCount = 0;
 
-  std::optional<QueryProfile> Profiling;
+  std::optional<QueryProfiler> Profiler;
   if (QS.EnableProfile)
-    Profiling.emplace();
+    Profiler.emplace();
 
   for (auto &AST : QS.ASTs) {
     ast_matchers::MatchFinder::MatchFinderOptions FinderOptions;
@@ -130,7 +150,7 @@ bool MatchQuery::run(llvm::raw_ostream &OS, QuerySession &QS) const {
     Ctx.getParentMapContext().setTraversalKind(QS.TK);
     Finder.matchAST(Ctx);
     if (QS.EnableProfile)
-      Profiling->Records[OrigSrcName] += (*Records)[OrigSrcName];
+      Profiler->addASTUnitRecord(OrigSrcName, (*Records)[OrigSrcName]);
 
     if (QS.PrintMatcher) {
       SmallVector<StringRef, 4> Lines;

@@ -7,7 +7,6 @@ set(LLVM_LINK_COMPONENTS
 add_clang_library(clangQuery STATIC
   Query.cpp
   QueryParser.cpp
-  QueryProfile.cpp
 
   DEPENDS
   omp_gen
