@@ -171,10 +171,14 @@ public:
     return IntegralAP<false>(Copy);
   }
 
-  void bitcastToMemory(std::byte *Dest) const { assert(false); }
+  void bitcastToMemory(std::byte *Dest) const {
+    llvm::StoreIntToMemory(V, (uint8_t *)Dest, bitWidth() / 8);
+  }
 
   static IntegralAP bitcastFromMemory(const std::byte *Src, unsigned BitWidth) {
-    return IntegralAP();
+    APInt V(BitWidth, static_cast<uint64_t>(0), Signed);
+    llvm::LoadIntFromMemory(V, (const uint8_t *)Src, BitWidth / 8);
+    return IntegralAP(V);
   }
 
   ComparisonCategoryResult compare(const IntegralAP &RHS) const {

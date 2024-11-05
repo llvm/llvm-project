@@ -21,10 +21,10 @@
  */
 
 #include <clc/clc.h>
+#include <clc/clcmacro.h>
 
 #include "ep_log.h"
 #include "math.h"
-#include "../clcmacro.h"
 
 _CLC_OVERLOAD _CLC_DEF  float acosh(float x) {
     uint ux = as_uint(x);
