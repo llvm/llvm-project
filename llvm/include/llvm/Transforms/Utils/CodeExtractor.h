@@ -102,7 +102,6 @@ public:
     // Bits of intermediate state computed at various phases of extraction.
     SetVector<BasicBlock *> Blocks;
     unsigned NumExitBlocks = std::numeric_limits<unsigned>::max();
-    Type *RetTy;
 
     // Mapping from the original exit blocks, to the new blocks inside
     // the function.
@@ -237,6 +236,10 @@ public:
     LifetimeMarkerInfo
     getLifetimeMarkers(const CodeExtractorAnalysisCache &CEAC,
                        Instruction *Addr, BasicBlock *ExitBlock) const;
+
+    /// Return the type used for the return code of the extracted function to
+    /// indicate which exit block to jump to.
+    Type *getSwitchType();
 
     void severSplitPHINodesOfEntry(BasicBlock *&Header);
     void severSplitPHINodesOfExits(const SetVector<BasicBlock *> &Exits);

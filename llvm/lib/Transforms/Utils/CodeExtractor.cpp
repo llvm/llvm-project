@@ -813,14 +813,6 @@ Function *CodeExtractor::constructFunction(const ValueSet &inputs,
   LLVM_DEBUG(dbgs() << "inputs: " << inputs.size() << "\n");
   LLVM_DEBUG(dbgs() << "outputs: " << outputs.size() << "\n");
 
-  // This function returns unsigned, outputs will go back by reference.
-  switch (NumExitBlocks) {
-  case 0:
-  case 1: RetTy = Type::getVoidTy(header->getContext()); break;
-  case 2: RetTy = Type::getInt1Ty(header->getContext()); break;
-  default: RetTy = Type::getInt16Ty(header->getContext()); break;
-  }
-
   std::vector<Type *> ParamTy;
   std::vector<Type *> AggParamTy;
   std::vector<std::tuple<unsigned, Value *>> NumberedInputs;
@@ -870,6 +862,7 @@ Function *CodeExtractor::constructFunction(const ValueSet &inputs,
         StructTy, ArgsInZeroAddressSpace ? 0 : DL.getAllocaAddrSpace()));
   }
 
+  Type *RetTy = getSwitchType();
   LLVM_DEBUG({
     dbgs() << "Function type: " << *RetTy << " f(";
     for (Type *i : ParamTy)
@@ -1078,6 +1071,22 @@ Function *CodeExtractor::constructFunction(const ValueSet &inputs,
         I->replaceUsesOfWith(header, newHeader);
 
   return newFunction;
+}
+
+Type *CodeExtractor::getSwitchType() {
+  LLVMContext &Context = Blocks.front()->getContext();
+
+  assert(NumExitBlocks < 0xffff && "too many exit blocks for switch");
+  switch (NumExitBlocks) {
+  case 0:
+  case 1:
+    return Type::getVoidTy(Context);
+  case 2:
+    // Conditional branch, return a bool
+    return Type::getInt1Ty(Context);
+  default:
+    return Type::getInt16Ty(Context);
+  }
 }
 
 /// Erase lifetime.start markers which reference inputs to the extraction
