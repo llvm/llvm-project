@@ -264,6 +264,11 @@ public:
   succ_iterator succ_end() { return getSuccessors().end(); }
   SuccessorRange getSuccessors() { return SuccessorRange(this); }
 
+  /// Return "true" if there is a path from this block to the given block
+  /// (according to the successors relationship). Both blocks must be in the
+  /// same region. Paths that contain a block from `except` do not count.
+  bool isReachable(Block *other, ArrayRef<Block *> except = {});
+
   //===--------------------------------------------------------------------===//
   // Walkers
   //===--------------------------------------------------------------------===//

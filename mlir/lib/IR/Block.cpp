@@ -7,9 +7,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/IR/Block.h"
+
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/Operation.h"
 #include "llvm/ADT/BitVector.h"
+#include "llvm/ADT/SmallPtrSet.h"
+
 using namespace mlir;
 
 //===----------------------------------------------------------------------===//
@@ -331,7 +334,7 @@ unsigned PredecessorIterator::getSuccessorIndex() const {
 }
 
 //===----------------------------------------------------------------------===//
-// SuccessorRange
+// Successors
 //===----------------------------------------------------------------------===//
 
 SuccessorRange::SuccessorRange() : SuccessorRange(nullptr, 0) {}
@@ -347,6 +350,23 @@ SuccessorRange::SuccessorRange(Block *block) : SuccessorRange() {
 SuccessorRange::SuccessorRange(Operation *term) : SuccessorRange() {
   if ((count = term->getNumSuccessors()))
     base = term->getBlockOperands().data();
+}
+
+bool Block::isReachable(Block *other, ArrayRef<Block *> except) {
+  assert(getParent() == other->getParent() && "expected same region");
+  SmallVector<Block *> worklist(succ_begin(), succ_end());
+  SmallPtrSet<Block *, 16> visited;
+  while (!worklist.empty()) {
+    Block *next = worklist.pop_back_val();
+    if (llvm::is_contained(except, next))
+      continue;
+    if (next == other)
+      return true;
+    if (!visited.insert(next).second)
+      continue;
+    worklist.append(next->succ_begin(), next->succ_end());
+  }
+  return false;
 }
 
 //===----------------------------------------------------------------------===//
