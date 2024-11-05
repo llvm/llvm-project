@@ -1,5 +1,5 @@
 #include <clc/clc.h>
-#include "../clcmacro.h"
+#include <clc/clcmacro.h>
 
 // This file provides OpenCL C implementations of nextafter for
 // targets that don't support the clang builtin.
