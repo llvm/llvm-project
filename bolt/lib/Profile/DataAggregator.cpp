@@ -173,8 +173,9 @@ void DataAggregator::findPerfExecutable() {
 void DataAggregator::start() {
   outs() << "PERF2BOLT: Starting data aggregation job for " << Filename << "\n";
 
-  // Don't launch perf for pre-aggregated files
-  if (opts::ReadPreAggregated)
+  // Don't launch perf for pre-aggregated files or when perf input is specified
+  // by the user.
+  if (opts::ReadPreAggregated || !opts::ReadPerfEvents.empty())
     return;
 
   findPerfExecutable();
