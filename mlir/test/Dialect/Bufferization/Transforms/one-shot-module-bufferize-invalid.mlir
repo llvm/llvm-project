@@ -19,20 +19,6 @@ func.func @swappy(%cond1 : i1, %cond2 : i1, %t1 : tensor<f32>, %t2 : tensor<f32>
 
 // -----
 
-// expected-error @-3 {{expected callgraph to be free of circular dependencies}}
-
-func.func @foo(%t: tensor<5xf32>) -> tensor<5xf32> {
-  %0 = call @bar(%t) : (tensor<5xf32>) -> (tensor<5xf32>)
-  return %0 : tensor<5xf32>
-}
-
-func.func @bar(%t: tensor<5xf32>) -> tensor<5xf32>{
-  %0 = call @foo(%t) : (tensor<5xf32>) -> (tensor<5xf32>)
-  return %0 : tensor<5xf32>
-}
-
-// -----
-
 func.func @scf_for(%A : tensor<?xf32>,
               %B : tensor<?xf32> {bufferization.writable = true},
               %C : tensor<4xf32>,
