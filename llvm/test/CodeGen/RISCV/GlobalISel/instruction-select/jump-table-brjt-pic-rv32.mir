@@ -115,8 +115,8 @@ body:             |
     %12:gprb(s32) = G_CONSTANT i32 3
     %13:gprb(s32) = G_CONSTANT i32 4
     %14:gprb(s32) = G_CONSTANT i32 1000
-    %1:gprb(s32) = G_CONSTANT i32 1
-    %2:gprb(s32) = G_SUB %0, %1
+    %1:gprb(s32) = G_CONSTANT i32 -1
+    %2:gprb(s32) = G_ADD %0, %1
     %16:gprb(s32) = G_ICMP intpred(ugt), %2(s32), %4
     G_BRCOND %16(s32), %bb.8
 

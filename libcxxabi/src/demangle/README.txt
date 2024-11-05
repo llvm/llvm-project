@@ -53,7 +53,7 @@ Testing
 -------
 
 The tests are split up between libcxxabi/test/{unit,}test_demangle.cpp, and
-llvm/unittest/Demangle. The llvm directory should only get tests for stuff not
+llvm/unittests/Demangle. The llvm directory should only get tests for stuff not
 included in the core library. In the future though, we should probably move all
 the tests to LLVM.
 
