@@ -109,6 +109,7 @@ endfunction()
 #==============================================================================
 set(BENCHMARK_TESTS
     algorithms.partition_point.bench.cpp
+    algorithms/adjacent_find.bench.cpp
     algorithms/count.bench.cpp
     algorithms/equal.bench.cpp
     algorithms/find.bench.cpp
