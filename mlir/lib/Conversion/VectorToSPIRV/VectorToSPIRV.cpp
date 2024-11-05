@@ -154,10 +154,8 @@ struct VectorExtractOpConvert final
       return success();
     }
 
-    std::optional<int64_t> id =
-        getConstantIntValue(extractOp.getMixedPosition()[0]);
-
-    if (id.has_value())
+    if (std::optional<int64_t> id =
+            getConstantIntValue(extractOp.getMixedPosition()[0]))
       rewriter.replaceOpWithNewOp<spirv::CompositeExtractOp>(
           extractOp, dstType, adaptor.getVector(),
           rewriter.getI32ArrayAttr(id.value()));
@@ -242,10 +240,8 @@ struct VectorInsertOpConvert final
       return success();
     }
 
-    std::optional<int64_t> id =
-        getConstantIntValue(insertOp.getMixedPosition()[0]);
-
-    if (id.has_value())
+    if (std::optional<int64_t> id =
+            getConstantIntValue(insertOp.getMixedPosition()[0]))
       rewriter.replaceOpWithNewOp<spirv::CompositeInsertOp>(
           insertOp, adaptor.getSource(), adaptor.getDest(), id.value());
     else
