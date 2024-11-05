@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.2-compute -finclude-default-header -fnative-half-type -emit-llvm -o - %s | Filecheck %s -check-prefixes=DXIL
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.2-compute -finclude-default-header -fnative-half-type -emit-llvm -o - %s | FileCheck %s -check-prefixes=DXIL
 
 // NOTE: The number in type name and whether the struct is packed or not will mostly
 // likely change once subscript operators are properly implemented (llvm/llvm-project#95956) 
