@@ -347,6 +347,7 @@ void InitHeaderSearch::AddDefaultIncludePaths(
       } else {
         AddPath("/System/Library/Frameworks", System, true);
         AddPath("/Library/Frameworks", System, true);
+        AddPath("/System/Library/SubFrameworks", System, true);
       }
     }
     return;
