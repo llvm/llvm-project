@@ -505,6 +505,16 @@ bool fromJSON(const llvm::json::Value &Params, ClientCapabilities &R,
                   P.field("offsetEncoding")))
       return false;
   }
+
+  if (auto *Experimental = O->getObject("experimental")) {
+    if (auto *TextDocument = Experimental->getObject("textDocument")) {
+      if (auto *Completion = TextDocument->getObject("completion")) {
+        if (auto EditsNearCursor = Completion->getBoolean("editsNearCursor"))
+          R.CompletionFixes |= *EditsNearCursor;
+      }
+    }
+  }
+
   return true;
 }
 
