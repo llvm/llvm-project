@@ -360,10 +360,10 @@ file. If no ASSUME-FILE-NAME is given uses the function
                style
                assume-file-name
                diff-lines))))
-      (ignore-errors
+      (progn
         ;; Cleanup temporary files we created.
-        (when tmpfile-vc-head (delete-file tmpfile-vc-head))
-        (when tmpfile-curbuf (delete-file tmpfile-curbuf))))))
+        (when tmpfile-vc-head (ignore-errors (delete-file tmpfile-vc-head)))
+        (when tmpfile-curbuf (ignore-errors (delete-file tmpfile-curbuf)))))))
 
 
 ;;;###autoload
