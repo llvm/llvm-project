@@ -464,7 +464,7 @@ Improvements to Clang's diagnostics
 
 - Clang now diagnoses ``[[deprecated]]`` attribute usage on local variables (#GH90073).
 
-- Clang now omits shadowing warnings for parameter names using deducing this (#GH95707).
+- Clang now omits shadowing warnings for parameter names in explicit object member functions (#GH95707).
 
 Improvements to Clang's time-trace
 ----------------------------------
